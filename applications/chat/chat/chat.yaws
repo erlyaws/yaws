@@ -1,3 +1,4 @@
+<html>
 <erl>
 out(A) ->
      case chat:check_session(A) of
@@ -8,16 +9,69 @@ out(A) ->
      end.
 </erl>
 
-<html>
+<script>
+
+function handleEnter(event) {
+   if (event == null) 
+      event = window.event;
+
+   var keyCode = event.keyCode ? event.keyCode : event.which ?
+		      event.which : event.charCode;
+
+   if (keyCode == 13) {
+     sendmsg();
+     return false;
+   }
+}
+
+</script>
+
+<style>
+
+body {
+        font: 10px/15px Verdana, Lucida, Arial, sans-serif;
+}
+
+h1 {
+        font: 15px/20px Verdana, Lucida, Arial, sans-serif;
+        font-weight: bold;
+}
+
+#msgs {
+       border:1px solid #ccc;
+       height: 25em;
+       width: 500px;
+       background-color: #f5f5ff;
+       overflow: auto;
+       float: left;
+}
+
+#members {
+       border:1px solid #ccc;
+       height: 25em;
+       width: 100px;
+       background-color: #f5f5ff;
+       overflow: auto;
+}
+
+#msg {
+	width: 604px;
+	clear: both;
+}
+
+</style>
 
 <script src="chat.js"></script>
 
 <body onload="setTimeout('reader_init()', 0);" onunload="stop_all()">
+
 <H1> Welcome to the chat room </h1>
-<form action="javascript:sendmsg()">
-<textarea id="msgs" name="msgs" cols=80 rows=25>
-</textarea><br>
-<input id="msg" name="msg" type="text" size="80" value=""
-style='font-family:courier'>
-</form>
+
+<div id="msgs"></div>
+<div id="members"></div>
+
+<textarea id="msg" rows="3"  value=""
+          onKeyPress="return handleEnter(event)">
+</textarea>
+
 </html>

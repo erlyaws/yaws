@@ -5,8 +5,11 @@
 //    Purpose:   
  
 
+// Uncomment this to get debug printouts in a separate window.
+
+
+
 /*
- // Uncomment this to get debug printouts in a separate window.
 
 var _console=null;
 var _console_txt = null;
@@ -29,8 +32,10 @@ function debug(msg)
 
 */
 
+
 function debug(msg) {
 }
+
 
 function sendmsg() {
    var message = document.getElementById("msg").value;
@@ -71,20 +76,55 @@ function reader_init() {
 
     if (xml_reader.readyState == 4) {
       var msgs = document.getElementById("msgs");
+      var memb = document.getElementById("members");
       var reply = xml_reader.responseText;
 
       debug("reader_init(): something");
 
       if (reply.substring(0,2) == "ok") {
-	msgs.value = msgs.value + "\n" + reply.substring(2);
-	move_to_end(msgs);
+	var msg = reply.substring(2);
+	var messages = "";
+	var members = "";
+
+	while(msg.length > 0) {
+	  var op   = msg.substring(0,1);
+	  var i    = msg.indexOf(":");
+	  var len  = parseInt(msg.substring(1,i));
+	  var body = msg.substring(i+1, i+len+1);
+
+	  msg = msg.substring(i+len+1);
+
+	  debug("msg = " + msg);
+	  debug("i = " + i);
+	  debug("len = " + len);
+	  debug("body = " + body);
+	  debug("op = " + op);
+
+	  switch(op) {
+	  case "m":
+	    messages += body.replace(/\n/g,"<br>");
+	    break;
+	  case "e":
+	    members = body;
+	    break;
+	  default:
+	  }
+	}
+
+	if (messages.length > 0)
+	  msgs.innerHTML = msgs.innerHTML + "<br>" + messages;
+
+	if (members.length > 0)
+	  memb.innerHTML = members;
+
+	// move_to_end(msgs);
 	setTimeout("reader_init()", 0);
       }
       else if (reply.substring(0,7) == "timeout") {
 	setTimeout("reader_init()", 0);
       }
       else {
-	alert("Chat server got unsupported reply.'" + reply+"'");
+	// alert("Chat server got unsupported reply.'" + reply+"'");
       }
     }
   }

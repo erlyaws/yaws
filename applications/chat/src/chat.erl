@@ -28,9 +28,10 @@
 -include("../../../include/yaws_api.hrl").
 
 -record(user, {last_read,
-	       buffer="",
+	       buffer=[],
 	       user,
 	       pid,
+	       color,
 	       cookie}).
 
  
@@ -39,8 +40,7 @@ login(User, Password) ->
     erlang:send(chat_server, {new_session, User, self()}),
     receive
 	{session_manager, Cookie, Session} ->
-	    erlang:send(chat_server, {send_to, Session, "Welcome"}),
-	    erlang:send(chat_server, {join_message, User}),
+	    chat_server ! {join_message, User},
 	    {ok, Cookie};
 	_ ->
 	    error
@@ -65,7 +65,7 @@ check_session(A) ->
 
 check_cookie(Cookie) ->
     session_server(),
-    erlang:send(chat_server, {get_session, Cookie, self()}),
+    chat_server ! {get_session, Cookie, self()},
     receive
 	{session_manager, {ok, Session}} ->
 	    Session;
@@ -129,16 +129,17 @@ session_server() ->
 chat_server_init() ->
     process_flag(trap_exit, true),
     io:format("Starting chat server\n"),
+    put(color_idx, 0),
     chat_server([]).
 
 %%
 
 chat_server(Users0) ->
     Users = gc_users(Users0),
-    io:format("Users = ~p\n", [Users]),
+    %% io:format("Users = ~p\n", [Users]),
     receive
 	{get_session, Cookie, From} ->
-	    io:format("get_session ~p\n", [Cookie]),
+	    %% io:format("get_session ~p\n", [Cookie]),
 	    case lists:keysearch(Cookie, #user.cookie, Users) of
 		{value, Session} ->
 		    From ! {session_manager, {ok, Session}};
@@ -148,23 +149,30 @@ chat_server(Users0) ->
 	    chat_server(Users);
 	{new_session, User, From} ->
 	    Cookie = integer_to_list(random:uniform(1 bsl 50)),
-	    Session = #user{cookie=Cookie, user=User},
+	    Session = #user{cookie=Cookie, user=User, color=pick_color()},
 	    From ! {session_manager, Cookie, Session},
 	    chat_server([Session|Users]);
 	{write, Session, Msg} ->
-	    NewUsers = send_to_all(fmt_msg(Session#user.user, Msg), Users),
+	    NewUsers = send_to_all(msg,
+				   fmt_msg(Session#user.user, Msg,
+					   Session#user.color),
+				   Users),
 	    chat_server(NewUsers);
 	{send_to, User, Msg} ->
-	    NewUsers = send_to_one(Msg, Users, User),
+	    NewUsers = send_to_one(msg, Msg, Users, User),
 	    chat_server(NewUsers);
 	{join_message, User} ->
-	    NewUsers = send_to_all(fmt_join(User), Users),
-	    chat_server(NewUsers);
+	    NewUsers0 = send_to_all(msg,fmt_join(User), Users),
+	    NewUsers1 = send_to_all(members,
+				    fmt_members(NewUsers0), NewUsers0),
+	    chat_server(NewUsers1);
 	{left_message, User} ->
-	    NewUsers = send_to_all(fmt_left(User), Users),
-	    chat_server(NewUsers);
+	    NewUsers0 = send_to_all(msg,fmt_left(User), Users),
+	    NewUsers1 = send_to_all(members,
+				    fmt_members(NewUsers0), NewUsers0),
+	    chat_server(NewUsers1);
 	{read, Session, Pid} ->
-	    io:format("~p want read ~p\n", [Session#user.user, Pid]),
+	    %% io:format("~p want read ~p\n", [Session#user.user, Pid]),
 	    NewUsers = user_read(Users, Session, Pid),
 	    chat_server(NewUsers);
 	{cancel_read, Pid} ->
@@ -195,9 +203,9 @@ user_read([], User, Pid, All) ->
     All;
 
 user_read([U|Users], User, Pid, All) when U#user.cookie == User#user.cookie ->
-    if U#user.buffer /= "" ->
-	    erlang:send(Pid, {msgs,U#user.buffer}),
-	    [U#user{buffer=""}|Users];
+    if U#user.buffer /= [] ->
+	    Pid ! {msgs,lists:reverse(U#user.buffer)},
+	    [U#user{buffer=[]}|Users];
        true ->
 	    [U#user{pid=Pid}|Users]
     end;
@@ -207,30 +215,30 @@ user_read([U|Users], User, Pid, All) ->
 
 %%
 
-send_to_all(Msg, Users) ->
+send_to_all(Type, Msg, Users) ->
     Now = inow(now()),
     F = fun(U) ->
 		if U#user.pid /= undefined ->
-			io:format("Sending ~s to ~p\n", [Msg, U#user.user]),
-			erlang:send(U#user.pid, {msgs, Msg}),
+			%% io:format("Sending ~p to ~p\n", [Msg, U#user.user]),
+			U#user.pid ! {msgs, [{Type, Msg}]},
 			U#user{pid=undefined, last_read = Now}; 
 		   true ->
-			U#user{buffer=U#user.buffer++"\n"++ Msg}
+			U#user{buffer=[{Type,Msg}|U#user.buffer]}
 		end
 	end,
     lists:map(F, Users).
 
 %%
 
-send_to_one(Msg, Users, User) ->
+send_to_one(Type, Msg, Users, User) ->
     Now = inow(now()),
     F = fun(U) when U#user.cookie == User#user.cookie  ->
 		if U#user.pid /= undefined ->
-			io:format("Sending ~s to ~p\n", [Msg, U#user.user]),
-			erlang:send(U#user.pid, {msgs, Msg}),
+			%% io:format("Sending ~p to ~p\n", [Msg, U#user.user]),
+			U#user.pid ! {msgs, [{Type, Msg}]},
 			U#user{pid=undefined, last_read = Now}; 
 		   true ->
-			U#user{buffer=U#user.buffer++"\n"++ Msg}
+			U#user{buffer=[{Type,Msg}|U#user.buffer]}
 		end;
 	   (U) ->
 		U
@@ -273,10 +281,11 @@ chat_read(A) ->
     session_server(),
     case check_session(A) of
 	{ok, Session} ->
-	    erlang:send(chat_server, {read, Session, self()}),
+	    chat_server ! {read, Session, self()},
 	    receive
-		{msgs, Message} ->
-		    dynamic_headers()++[{html, ["ok",Message]}, break]
+		{msgs, Messages} ->
+		    M = [fmt_type(Type,L) || {Type, L} <- Messages],
+		    dynamic_headers()++[{html, ["ok",M]}, break]
 	    after
 		20000 ->
 		    catch erlang:send(chat_server, {cancel_read, self()}),
@@ -286,6 +295,15 @@ chat_read(A) ->
 	    dynamic_headers()++[{html, "error"}, break]
     end.
 
+type2tag(msg) -> $m;
+type2tag(members) -> $e.
+
+%
+
+fmt_type(Type, L) ->
+    Data = list_to_binary(L),
+    [type2tag(Type), integer_to_list(size(Data)),":", Data].
+
 %
 
 -ifdef(ERL_BUG).
@@ -293,8 +311,7 @@ chat_write(A) ->
     session_server(),
     case check_session(A) of
 	{ok, Session} ->
-	    erlang:send(chat_server, {write, Session,
-				      binary_to_list(A#arg.clidata)}),
+	    chat_server ! {write, Session, A#arg.clidata},
             [{html, "ok"},
 	      break];
 	Error ->
@@ -305,8 +322,7 @@ chat_write(A) ->
     session_server(),
     case check_session(A) of
 	{ok, Session} ->
-	    erlang:send(chat_server, {write, Session,
-				      binary_to_list(A#arg.clidata)}),
+	    chat_server ! {write, Session,A#arg.clidata},
 	    [{header, {connection,"close"}},
 	     {html, "ok"},
 	     break];
@@ -318,21 +334,41 @@ chat_write(A) ->
 %%
 
 fmt_join(User) ->
-    date_str()++" "++User ++ " joined".
+    ["<strong>",date_str()," ",User, " joined</strong>"].
 
 %%
 
 fmt_left(User) ->
-    date_str()++" "++User ++ " left".
+    ["<strong>",date_str()," ",User," left</strong>"].
 
 %%
 
-fmt_msg(User, Msg) ->
-    date_str()++" "++User ++ ": " ++ Msg.
+fmt_msg(User, Msg, Color) ->
+    ["<font color=",Color,">",date_str()," <strong>",User,":</strong></font> ",
+     Msg].
+
+%%
+
+fmt_members(Users) -> 
+    [[U#user.user,"<br>"] || U <- Users].
 
 %%
 
 date_str() ->
     {_,{H,M,S}} = calendar:local_time(),
-    io_lib:format("~2.2.0w:~2.2.0w:~2.2.0w", [H,M,S]).
+    io_lib:format("<small>(~2.2.0w:~2.2.0w:~2.2.0w)</small>", [H,M,S]).
+
+%%
+
+pick_color() ->
+    Nr = get(color_idx),
+    put(color_idx, (Nr+1) rem 4),
+    colors(Nr).
+
+%%
+
+colors(0) -> "blue";
+colors(1) -> "orange";
+colors(2) -> "red";
+colors(3) -> "green".
 
