@@ -2,7 +2,7 @@
 <html>
 <erl>
 out(Arg) ->
-    F = allRefsToMe,,
+    F = allRefsToMe,
     wiki_yaws:call_with_data(wiki, F, Arg).
 </erl>
 </html>
