@@ -29,6 +29,7 @@
 -export([find_cookie_val/2, secs/0, 
 	 url_decode/1, url_decode_q_split/1,
 	 url_encode/1, parse_url/1, parse_url/2, format_url/1]).
+-export([is_absolute_URI/1]).
 -export([path_norm/1, path_norm_reverse/1]).
 -export([get_line/1, mime_type/1]).
 -export([stream_chunk_deliver/2, stream_chunk_deliver_blocking/2,
@@ -1177,7 +1178,21 @@ format_url(Url) when record(Url, url) ->
      end
     ].
 
-
+is_absolute_URI([C|T]) when ((C>=$a) and (C=<$z)) or ((C>=$A) and (C=<$Z))->
+    is_abs_URI1(T);
+is_absolute_URI(_) ->
+    false.
+    
+is_abs_URI1([$:|_]) ->
+    true;
+is_abs_URI1([C|T]) when 
+  ((C>=$a) and (C=<$z)) 
+  or ((C>=$A) and (C=<$Z))
+  or ((C>=$0) and (C=<$9))
+  or (C==$+) or (C==$-) or (C==$.) ->
+    is_abs_URI1(T);
+is_abs_URI1(_) ->
+    false.
 
 
 %% ------------------------------------------------------------

@@ -1773,6 +1773,29 @@ handle_out_reply(break, _LineNo, _YawsFile, _SC, _A) ->
 handle_out_reply({redirect_local, Path}, LN, YF, SC, A) ->
     handle_out_reply({redirect_local, Path, 302}, LN, YF, SC, A);
 
+%% What about:
+%%
+%% handle_out_reply({redirect_local, Path, Status}, LineNo,
+%%		 YawsFile, SC, A) when string(Path) ->
+%%   handle_out_reply({redirect_local, {any_path, Path}, Status}, LineNo,
+%%		 YawsFile, SC, A);    
+%%
+%% It would introduce a slight incompatibility with earlier versions,
+%% but might be desirable.
+
+handle_out_reply({redirect_local, {any_path, URL}, Status}, LineNo,
+		 YawsFile, SC, A) ->
+    PathType = 
+	case yaws_api:is_absolute_URI(URL) of
+	    true -> net_path;
+	    false -> case URL of
+			 [$/|_] -> abs_path;
+			 _ -> rel_path
+		     end
+	end,
+    handle_out_reply({redirect_local, {PathType, URL}, Status}, LineNo,
+		     YawsFile, SC, A);
+
 handle_out_reply({redirect_local, {net_path, URL}, Status}, _LineNo,
 		  _YawsFile, _SC, _A) ->
     Loc = ["Location: ", URL, "\r\n"],

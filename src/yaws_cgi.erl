@@ -128,6 +128,8 @@ iscontent({streamcontent, _, _}) ->
 iscontent(_) ->
     false.
 
+isredirect({redirect_local, _}) ->
+    true;
 isredirect({redirect, _}) ->
     true;
 isredirect(_) ->
@@ -250,7 +252,7 @@ do_header(Arg, "Content-Type: "++CT, {partial_data, Data}) ->
 do_header(Arg, "Content-Type: "++CT, {all_data, Data}) ->
     {content, CT, Data};
 do_header(Arg, "Location: "++Loc, _) ->
-    {redirect, Loc};
+    {redirect_local, {any_path, Loc}};
 do_header(Arg, "Status: "++[N1,N2,N3|_], _) ->
     {status, list_to_integer([N1,N2,N3])};
 do_header(Arg, Line, _) ->
