@@ -2005,7 +2005,7 @@ do_url_type(SC, Path) ->
 
 
 maybe_return_dir(DR, FlatPath) ->
-    ?Debug("maybe_return_dir(~p,, ~p)", [DR, FlatPath]),
+    ?Debug("maybe_return_dir(~p, ~p)", [DR, FlatPath]),
     case prim_file:read_file_info([DR, FlatPath, "/index.yaws"]) of
 	{ok, FI} ->
 	    #urltype{type = yaws,
@@ -2013,7 +2013,7 @@ maybe_return_dir(DR, FlatPath) ->
 		     path = {noflat, [DR, FlatPath]},
 		     mime = "text/html",
 		     dir = FlatPath,
-		     fullpath = ?f([DR, "/index.yaws"])};
+		     fullpath = ?f([DR, FlatPath, "/index.yaws"])};
 	_ ->
 	    case prim_file:read_file_info([DR, FlatPath, "/index.html"]) of
 		{ok, FI} ->
