@@ -404,10 +404,14 @@ getFile([{node, Page}, {file,FileName}|_], Root, Prefix) ->
 	    show({no_such_file,Page})
     end.
 
-editPage([{node,N},{password,P},_], Root, Prefix) ->
-    editPage(N, P, Root, Prefix);
-editPage([{node,N}], Root, Prefix) ->
-    editPage(N, "", Root, Prefix).
+%% mikl: Fixed a function clause error when the number of parameter is not 1 or 3
+editPage(ArgsList, Root, Prefix) ->
+    Passwd = case lists:keysearch(password, 1, ArgsList) of
+                  {value, {password, Password}} -> Password;
+		  false -> ""
+	       end,
+    {value, {node, Node}} = lists:keysearch(node, 1, ArgsList),
+    editPage(Node, Passwd, Root, Prefix).
 
 editPage(Page, Password, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
