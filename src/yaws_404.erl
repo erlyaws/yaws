@@ -13,13 +13,15 @@
 -include("../include/yaws_api.hrl").
 
 %% The default error 404 error delivery module
+%% This function can be used to generate
+%% a special page on 404's (it doesn't even have to be a 404)
 
-out(Arg, GC, SC) ->
+
+out404(Arg, GC, SC) ->
     yaws_api:set_status_code(404),
     Req = Arg#arg.req,
     {abs_path, Path} = Req#http_request.path,
     B = not_found_body(Path, GC, SC),
-    io:format("In 404 \n",[]),
     {html, B}.
 
 

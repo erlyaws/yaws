@@ -985,7 +985,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    DCC = req_to_dcc(Req),
 	    make_dyn_headers(DCC, Req),
 
-	    do_appmod(SC#sconf.errormod_404, CliSock, GC, SC, 
+	    do_appmod(SC#sconf.errormod_404, out404, CliSock, GC, SC, 
 		      Req, H, [A2, GC, SC], UT, N);
 	directory ->
 	    P = UT#urltype.dir,
@@ -1006,7 +1006,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    {Mod, PathData} = UT#urltype.data,
 	    A2 = ARG#arg{appmoddata = PathData,
 			 querydata = UT#urltype.q},
-	    do_appmod(Mod, CliSock, GC, SC, Req, H, [A2], UT, N)
+	    do_appmod(Mod, out, CliSock, GC, SC, Req, H, [A2], UT, N)
     end.
 
 	
@@ -1173,9 +1173,9 @@ get_client_data(_CliSock, all, eof, _GC, _) ->
 
 
 
-do_appmod(Mod, CliSock, GC, SC, Req, H, ARG, UT, N) ->
+do_appmod(Mod, FunName, CliSock, GC, SC, Req, H, ARG, UT, N) ->
     DCC = req_to_dcc(Req),
-    case yaws_call(DCC, 0, "appmod", Mod, out, ARG, GC,SC, N) of
+    case yaws_call(DCC, 0, "appmod", Mod, FunName, ARG, GC,SC, N) of
 	{streamcontent, MimeType, FirstChunk} ->
 	    put(content_type, MimeType),
 	    accumulate_chunk(DCC, FirstChunk),
