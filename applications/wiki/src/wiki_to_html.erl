@@ -45,7 +45,8 @@ format_link({wikiLink, Page}, _, Root, _Mode) ->
     %% MR: I first need to extract the code here into a separate function:
     wiki_link(Page, Page, Root);
 format_link({editTag, Tag}, Page, Root, show) ->
-    ["<a href=\"editTag.yaws?node=",Page,"&tag=",i2s(Tag),"\">",
+    ["<a href=\"editTag.yaws?node=",wiki:str2urlencoded(Page),
+     "&tag=",i2s(Tag),"\">",
      "<img border=0 src='WikiPreferences.files/edit.gif'></a> "];
 format_link({editTag, Tag}, _Page, _Root, preview) ->
     ["<img border=0 src='WikiPreferences.files/edit.gif'>"].
@@ -66,9 +67,11 @@ wiki_link(LinkName, Page, Root) ->
     FullName = Root ++ "/" ++ Page ++ ".wob",
     case is_file(FullName) of
 	true ->
-	    ["<a href=\"showPage.yaws?node=",Page,"\">",LinkName,"</a> "];
+	    ["<a href=\"showPage.yaws?node=",
+	     wiki:str2urlencoded(Page),"\">",LinkName,"</a> "];
 	false ->
-	    [" ",Page,"<a href=\"createNewPage.yaws?node=",Page,"\">???</a>"]
+	    [" ",Page,"<a href=\"createNewPage.yaws?node=",
+	     wiki:str2urlencoded(Page),"\">???</a>"]
     end.
 
 %% Same as format_link, but drop the prefix
