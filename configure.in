@@ -1,0 +1,151 @@
+dnl define([AC_CACHE_LOAD], )dnl
+dnl define([AC_CACHE_SAVE], )dnl
+
+AC_INIT(Makefile)
+
+
+dnl work out who the cpu, vendor and OS are
+AC_CANONICAL_SYSTEM
+AC_DEFINE_UNQUOTED(CPU_VENDOR_OS, "$target")
+
+AC_PATH_PROG(ERL, erl)
+AC_PATH_PROG(ERLC, erlc)
+AC_SUBST(ERL)
+AC_SUBST(ERLC)
+
+
+
+case "$target_os" in
+	*cygwin*)
+	  ERLDIR=`echo ${ERL} | sed 's/\/erts.*//'`
+          ERL_DLL_LIB=`ntpath.sh ${ERLDIR}/usr/lib/erl_dll.lib`
+          AC_SUBST(ERL_DLL_LIB)
+	;;
+	*)	
+    	  ERLDIR=`awk -F= '/ROOTDIR=/ { print [$]2; exit; }' $ERL`;;
+    esac
+
+if test ! -d $ERLDIR ; then
+	AC_MSG_ERROR([Broken Erlang installation, $ERLDIR does not exist!])
+fi
+AC_SUBST(ERLDIR)
+
+
+
+ERL_INTERFACE_LIB=${ERLDIR}/lib/erl_interface-${ERL_INTERFACE_VSN}/lib
+    case $target_os in
+       *cygwin*)
+          ERL_INTERFACE_LIBS=`./ntpath.sh "$ERL_INTERFACE_LIB/erl_interface.lib $ERL_INTERFACE_LIB/ei.lib"`;;
+	*)
+	  ERL_INTERFACE_LIBS="-lerl_interface -lei ";;
+    esac
+
+	
+
+
+ERL_INTERFACE_INCLUDE=${ERLDIR}/lib/erl_interface-${ERL_INTERFACE_VSN}/include
+AC_SUBST(ERL_INTERFACE_LIB)dnl
+AC_SUBST(ERL_INTERFACE_LIBS)dnl
+AC_SUBST(ERL_INTERFACE_INCLUDE)dnl
+
+
+
+dnl ===============================================================
+dnl Checks for programs.
+dnl ===============================================================
+
+case "$target_os" in
+     *cygwin*)
+        WIN32=win32
+	AC_DEFINE(WIN32)
+	AC_SUBST(WIN32)
+
+	STRIP=echo
+	AC_SUBST(STRIP)
+
+	OUT="/out:"
+	AC_SUBST(OUT)
+
+	AC_SUBST(MATHLIB)
+
+	EXE=.exe
+	AC_SUBST(EXE)
+
+	DLL=dll
+	AC_SUBST(DLL)
+
+	OBJ=obj
+	AC_SUBST(OBJ)
+	;;
+      *)
+	AC_PROG_CC
+	AC_PROG_GCC_TRADITIONAL
+
+	STRIP=strip
+	AC_SUBST(STRIP)
+
+	LINKER=$CC
+	AC_SUBST(LINKER)
+
+	AC_SUBST(CFLAGS)
+
+	OUT="-o "
+	AC_SUBST(OUT)
+
+	MATHLIB=-lm
+	AC_SUBST(MATHLIB)
+
+	DLL=so
+	AC_SUBST(DLL)
+
+	OBJ=o
+	AC_SUBST(OBJ)
+
+	FPIC=-fpic
+	AC_SUBST(FPIC)
+
+	;;
+esac
+
+AC_PROG_MAKE_SET
+AC_PROG_INSTALL
+
+
+case "$target_os" in
+	*linux*)
+	   AC_DEFINE(LINUX)
+	   LD_SHARED="ld -shared"
+	   AC_SUBST(LD_SHARED)
+	   ;;
+
+	*solaris*)
+	   AC_DEFINE(SOLARIS)
+	   LD_SHARED="ld -G"
+	   AC_SUBST(LD_SHARED)
+	   LIBS="$LIBS -lsocket -lnsl -lresolv"
+	   AC_SUBST(LIBS)
+	   ;;
+
+	*bsd*)
+	   AC_DEFINE(BSD)
+	   case "$target_os" in
+		bsdi*)
+                    BSDI=bsdi
+		    AC_DEFINE(BSDI)
+		    AC_SUBST(BSDI)
+		    ;;
+	   esac
+	   LD_SHARED="ld -Bshareable"	  
+	   AC_SUBST(LD_SHARED)
+	   ;;
+	 *cygwin*)
+	   ;;
+	*)
+           AC_MSG_RESULT(unknown)
+	   AC_MSG_ERROR(Non-supported target OS!)
+	   ;;
+esac
+
+
+
+AC_OUTPUT(include.mk)
