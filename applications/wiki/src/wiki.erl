@@ -313,8 +313,9 @@ addFileInit(Params, Root, Prefix) ->
 		    "</table>",
 		    input("submit", "add", "Add"),
 		    input("button", "Cancel",
-			  "parent.location='showPage.yaws?node="++
-			  str2urlencoded(Page)++"'")])
+			  "parent.location='editFiles.yaws?node="++
+			  str2urlencoded(Page)++"&password="++
+			  str2urlencoded(Password)++"'")])
 	     ]).
     
 -record(addfile, {
@@ -388,7 +389,8 @@ addFileChunk([], State) when State#addfile.last==true,
     B           = term_to_binary(Ds),
     file:write_file(File, B),
     Res = file:close(State#addfile.fd),
-    {done, redirect({node, Page}, State#addfile.prefix)};
+    {done, redirect_files(Page, Pwd, State#addfile.prefix)};
+%    {done, redirect({node, Page}, State#addfile.prefix)};
 addFileChunk([], State) when State#addfile.last==true ->
     Page        = State#addfile.node,
     {done, show({error_in_upload, Page})};
@@ -502,7 +504,7 @@ updateFilesInit(Params, Root, Prefix) ->
     Ds = {wik002,Pwd, Email,Time,Who,Txt,NewFiles,Patches},
     B = term_to_binary(Ds),
     file:write_file(File, B),
-    redirect({node, Page}, Prefix).
+    redirect_files(Page, Pwd, Prefix).
 
 
 deleteFilesInit(Params, Root, Prefix) ->
@@ -603,7 +605,7 @@ deleteFiles1(Params, Root, Prefix) ->
 			  file:delete(Root++"/"++FileDir++"/"++F)
 		  end, DelFiles),
     file:write_file(File, B),
-    redirect({node, Page}, Prefix).
+    redirect_files(Page, Pwd, Prefix).
 
 
 copyFilesInit(Params, Root, Prefix) ->
@@ -754,6 +756,11 @@ showHistory(Params, Root, Prefix) ->
 
 redirect({node, Page}, Prefix) ->
     {redirect_local, Prefix++"showPage.yaws?node="++str2urlencoded(Page)}.
+
+redirect_files(Page, Password, Prefix) ->
+    {redirect_local,
+     Prefix++"editFiles.yaws?node="++str2urlencoded(Page)++
+     "&password="++str2urlencoded(Password)}.
 
 redirect_edit(Page, Sid, Password, Prefix) ->
     UrlSid = str2urlencoded(Sid),
@@ -1294,7 +1301,7 @@ editFiles1(Page, Password, Root, Prefix) ->
 			    input("submit", "update", "Update"),
 			    input("submit", "delete", "Delete"),
 			    input("submit", "copy", "Copy"),
-			    input("submit", "cancel", "Cancel"),
+			    input("submit", "cancel", "Done"),
 			    input("hidden", "node", Page),
 			    input("hidden", "password", Password)
 			   ])]);
