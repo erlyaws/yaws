@@ -793,8 +793,8 @@ is_special(C) ->
 
 parse_appmods(['<', PathElem, ',' , AppMod, '>' | Tail], Ack) ->
     parse_appmods(Tail, [{PathElem, AppMod} |Ack]);
-parse_appmods([AppMod | Tail], Ack) when atom(AppMod) ->
-    case atom_to_list(AppMod) of
+parse_appmods([AppMod | Tail], Ack) ->
+    case AppMod of
 	[Char] ->
 	    case is_special(Char) of
 		true ->
