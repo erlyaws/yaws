@@ -743,6 +743,22 @@ outh_set_static_headers(Req, UT, Headers) ->
 	       },
     put(outh, H2).
 
+ outh_set_304_headers(Req, UT, Headers) ->
+     H = get(outh),
+     {DoClose, _Chunked} = dcc(Req, Headers),
+     H2 = H#outh{
+          status = 304,
+          chunked = false,
+          date = make_date_header(),
+          server = make_server_header(),
+          last_modified = make_last_modified_header(UT#urltype.finfo),
+          etag = make_etag_header(UT#urltype.finfo),
+          content_length = make_content_length_header(0),
+          connection  = make_connection_close_header(DoClose),
+          doclose = DoClose,
+          contlen = 0
+              },
+     put(outh, H2).
 
 outh_set_dyn_headers(Req, Headers) ->
     H = get(outh),
@@ -839,10 +855,13 @@ make_location_header(Where) ->
 
 
 make_etag_header(FI) ->
+    ETag = make_etag(FI),
+    ["Etag: ", ETag, "\r\n"].
+
+make_etag(FI) ->
     {{_Y,M,D}, {H,Min, S}}  = FI#file_info.mtime,
     Inode = FI#file_info.inode,
-    ["Etag: ", pack_ints([M, D, H, Min, S, Inode]), "\r\n"].
-
+    pack_ints([M, D, H, Min, S, Inode]).
 
 pack_ints(L) ->
     [$" | pack_ints2(L) ].

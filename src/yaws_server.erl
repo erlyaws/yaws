@@ -1108,9 +1108,23 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	directory ->
 	    yaws:outh_set_dyn_headers(Req, H),
 	    deliver_403(CliSock, Req, GC, SC);
-	regular -> 
-	    yaws:outh_set_static_headers(Req, UT, H),
-	    deliver_file(CliSock, GC, SC, Req, UT);
+	regular ->
+	    ETag = yaws:make_etag(UT#urltype.finfo),
+	    case H#headers.if_none_match of
+		undefined ->
+		    yaws:outh_set_static_headers(Req, UT, H),
+		    deliver_file(CliSock, GC, SC, Req, UT);
+		ETag ->
+		    yaws:outh_set_304_headers(Req, UT, H),
+		    deliver_accumulated(CliSock, GC, SC),
+		    case yaws:outh_get_doclose() of
+			true  -> done;
+			false -> continue
+		    end;
+		_ ->
+		    yaws:outh_set_static_headers(Req, UT, H),
+		    deliver_file(CliSock, GC, SC, Req, UT)
+	    end;
 	yaws ->
 	    yaws:outh_set_dyn_headers(Req, H),
 	    do_yaws(CliSock, GC, SC, Req, H, 
