@@ -631,7 +631,8 @@ acceptor0(GS, Top) ->
 aloop(CliSock, GS, Num) ->
     SSL = GS#gs.ssl,
     case  yaws:http_get_headers(CliSock, SSL) of
-	{Req, H} ->
+	{Req0, H0} ->
+	    {Req, H} = fix_abs_uri(Req0, H0),
 	    SC = pick_sconf(GS#gs.gconf, H, GS#gs.group, SSL),
 	    ?Debug("SC: ~p", [?format_record(SC, sconf)]),
 	    ?TC([{record, SC, sconf}]),
@@ -725,6 +726,21 @@ deepforeach(F, [H|T]) ->
 deepforeach(F, X) ->
     F(X).
 
+
+fix_abs_uri(Req, H) ->
+    case Req#http_request.path of
+	{absoluteURI, Scheme, Host0, Port, RawPath} ->
+	    Host = case Port of
+		       P when integer(P) ->
+			   Host0 ++ [$: | integer_to_list(P)];
+						% Is this ok?
+		       _ ->
+			   Host0
+		   end,
+	    {Req#http_request{path={abs_path, RawPath}},
+	     H#headers{host=Host}};
+	_ -> {Req, H}
+    end.
 
 pick_sconf(_GS, _H, Group, ssl) ->
     hd(Group);
@@ -1031,17 +1047,8 @@ handle_request(CliSock, ARG, N) ->
 			    deliver_401(CliSock, Req, Realm)
 		    end
 	    end;
-	{absoluteURI, _Scheme, _Host, _Port, _RawPath} ->
-						% FIXME:
-						% 
-						% We MUST accept this.
-						% We cannot fix it at
-						% this point alone
-						% however, because we
-						% may already have
-						% picked the wrong
-						% sconf.
-	    deliver_501(CliSock, Req);
+	%%{absoluteURI, _Scheme, _Host, _Port, _RawPath}
+	%%will not make it here.
 	{scheme, _Scheme, _RequestString} ->
 	    deliver_501(CliSock, Req);
 	_ ->                                    % for completeness
