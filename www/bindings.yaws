@@ -40,59 +40,60 @@ out(A) ->
     An example:
   </p>
 
-  <div class="box"> 
-    <pre>
 
-&lt;erl&gt;
-out(A) -&gt; {bindings, [{"A", "foo"}, {"B", "baz"}]}.
-&lt;/erl&gt;
+  <div class="box">
+  <verbatim>
+<erl>
+out(A) -> {bindings, [{"A", "foo"}, {"B", "baz"}]}.
+</erl>
 
-&lt;html&gt;
-  &lt;body&gt;
-    &lt;p&gt;%%A%%&lt;/p&gt;
-    &lt;p&gt;&lt;font size="4"&gt;%%A%% != %%B%%&lt;/font&gt;&lt;/p&gt;
-    &lt;p&gt;An enormous amount of plain html source here.&lt;/p&gt;
+<html>
+  <body>
+    <p>%%A%%</p>
+    <p><font size="4">%%A%% != %%B%%</font></p>
+    <p>An enormous amount of plain html source here.</p>
 
-&lt;erl&gt;
-out(A) -&gt;
+<erl>
+out(A) ->
     Value = yaws_api:binding("A"),
     {ehtml, {ul, [],
              [{li, [],
                Value},
               {li, [],
                "gazonk"}]}}.
-&lt;/erl&gt;
+</erl>
 
 %%A%% = %%A%% (hit me)
-&lt;/body&gt;
-&lt;/html&gt;
-    </pre>
-  </div>
+</body>
+</html>
+
+</verbatim>
+</div>
+
 
 
 <p>
   Which expands to:</p>
 
   <div class="box"> 
-    <pre>
+    <verbatim>
 
+<html>
+  <body>
+    <p>foo</p>
+    <p><font size="4">foo != baz</font></p>
+    <p>An enormous amount of plain html source here.</p>
 
-
-&lt;html&gt;
-&lt;body&gt;
-&lt;p&gt;foo&lt;/p&gt;
-&lt;p&gt;&lt;font size="4"&gt;foo != baz&lt;/font&gt;&lt;/p&gt;
-&lt;p&gt;An enormous amount of plain html source here.&lt;/p&gt;
-
-&lt;ul&gt;
-&lt;li&gt;foo&lt;/li&gt;
-&lt;li&gt;gazonk&lt;/li&gt;&lt;/ul&gt;
+    <ul>
+      <li>foo</li>
+      <li>gazonk</li></ul>
 
 foo = foo (hit me)
 
+  </body>
+</html>
 
-
-    </pre>
+    </verbatim>
   </div>
 
 

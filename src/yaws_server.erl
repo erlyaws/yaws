@@ -1567,6 +1567,10 @@ deliver_dyn_file(CliSock, Bin, Fd, [H|T],Arg, UT, N) ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
 	    accumulate_content(Str),
 	    deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT, N);
+	{verbatim, NumChars, Data} ->
+	    {_Send, Bin2} = skip_data(Bin, Fd, NumChars),
+	    accumulate_content(Data),
+	    deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT,N);
 	yssi ->
 	    ok
     end;

@@ -6,6 +6,9 @@ out(A) ->
      {ehtml,
       [{'div', [{id, "entry"}],
 	[{h1,[],"Yaws"},
+
+	{pre_html, "<pre> < > < > & </pre>"},
+
 	{p,[],"Yaws is a HTTP high perfomance 1.1 webserver."
 	 "Two separate modes of operations are supported."},
 	{ul,[],
@@ -25,9 +28,7 @@ out(A) ->
 	 " underlying Erlang system and its ability to handle concurrent "
 	 " processes in an efficent way. Its elegance comes from Erlang as "
 	 "well. Web applications dont have to be written in ugly adhoc "
-	 "languages. A Yaws web server can handle high load in a way that an apache/php server"
-	 " isn't even close to match."
-	},
+	 "languages."},
 	
 	{h2,[], "yaws.hyber.org"},
 	

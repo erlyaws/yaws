@@ -43,7 +43,9 @@ out(A) ->
   <ol>
     <li><p>GC is a #gconf{} record. The definition of the
       record is:</p>
-      <pre>
+
+<div class="box">	
+      <verbatim>
 %% global conf
 -record(gconf,{file,
 	       yaws_dir,
@@ -66,7 +68,8 @@ out(A) ->
 	       username,            %% maybe run as a different user than root
 	       uid                  %% unix uid of user that started yaws
 	      }).  
-      </pre>
+      </verbatim>
+</div>
 
       <p>The easiest way to figure out what the individual record
         fields mean is to have a look in the source file yaws_config.erl</p>
@@ -83,7 +86,8 @@ out(A) ->
       </p>
       <p>
         The sconf record is defined as:</p>
-      <pre>
+<div class="box">
+      <verbatim>
 
 -record(ssl, 
 	{
@@ -128,7 +132,8 @@ out(A) ->
 	 allowed_scripts = [yaws]
 	}).
 
-      </pre>
+      </verbatim>
+    </div>
     </li>
   </ol>
 
@@ -139,10 +144,11 @@ out(A) ->
   </p>
   <p>We start Erlang as:
   </p>
-
+<div class="box">
   <pre>
 # erl -pa /usr/local/lib/yaws/ebin -yaws embedded true -s ybed
   </pre>
+</div>
 
   <p>The ybed module is very small and is named 
     <a href="code.yaws?file=/ybed.erl">ybed.erl</a>
@@ -151,18 +157,20 @@ out(A) ->
   <p>The above "erl" command line gives:
   </p>
 
-  <pre>
+<div class="box">
+  <verbatim>
 #  erl -pa /usr/local/lib/yaws/ebin -yaws embedded true -s ybed
 Erlang (BEAM) emulator version 5.3.b1 [source] [hipe]
 
 Eshell V5.3.b1  (abort with ^G)
-1&gt; 
+1> 
 =INFO REPORT==== 25-Nov-2003::00:27:18 ===
 Yaws: Listening to 0.0.0.0:8888 for servers
  - foobar under /tmp
 
 1> 
-</pre>
+</verbatim>
+</div>
 
 
 <p>The actual web server then runs inside the larger application
@@ -188,18 +196,25 @@ make up the web GUI application, is easily available there.
 
 
 <p>In essence, if we construct the #sconf as</p>
-<pre>
+
+<div class="box">
+<verbatim>
 SC#sconf{opaque = {mystruct, foobar},
          .....
-</pre>
+</verbatim>
+</div>
+
 
 <p>A .yaws web page, can do:</p>
-<pre>
+
+<div class="box">
+<verbatim>
 out(Arg) ->
    MyStruct = Arg#arg.opaque
    .....
 
-</pre>
+</verbatim>
+</div>
 
 <p>Thus passing data from the surrounding applications configuration routines
   down to each .yaws web page.</p>

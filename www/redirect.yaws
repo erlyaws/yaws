@@ -61,7 +61,7 @@ out(_A) ->
   For example:</p>
 
 <div class="box">
-<pre>
+<verbatim>
 # curl -I http://rubin.hyber.org:8000/redirect3.yaws
 HTTP/1.1 302 Found
 Server: Yaws/1.49 Yet Another Web Server
@@ -69,7 +69,7 @@ Location: http://rubin.hyber.org:8000/redirect2.yaws
 Date: Tue, 16 Nov 2004 20:16:01 GMT
 Content-Type: text/html
 
-<pre>
+<verbatim>
 </div>
 
   <p>Where <tt> http://rubin.hyber.org:8000</tt> is where I am currently

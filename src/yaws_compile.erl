@@ -65,6 +65,7 @@ compile_file(File) ->
 				 erase(yfile),
 				 erase(yfile_data),
 				 erase(yfile_data_orig),
+				 ?Debug("Spec: ~p~n", [Spec]),
 				 Spec;
 			     _Err ->
 				 yaws:elog("can't open ~s~n", [File]),
@@ -74,10 +75,17 @@ compile_file(File) ->
 		 [node()], infinity).
 
 			  
+clump_data([{data, I}, {data, J} | Tail]) ->
+    clump_data([{data, I+J}|Tail]);
+clump_data([H|T]) ->
+    [H|clump_data(T)];
+clump_data([]) ->
+    [].
+
 
 compile_file(C,  _LineNo, eof, _Mode, NumChars, Ack, Errors) ->
     file_close(C#comp.infd),
-    {ok, [{errors, Errors} |lists:reverse([{data, NumChars} |Ack])]};
+    {ok, [{errors, Errors} | clump_data(lists:reverse([{data, NumChars} |Ack]))]};
 
 
 %% skip initial space if first thing is <erl> otherwise not
@@ -107,6 +115,30 @@ compile_file(C, LineNo,  Chars = "<erl>" ++ _Tail, html,  NumChars, Ack,Es) ->
 	true -> %% just ignore zero byte data segments
 	    compile_file(C3, LineNo+1, line() , erl, L + (-NumChars), 
 			 Ack, Es) %hack
+    end;
+
+compile_file(C, LineNo,  Chars = "<verbatim>" ++ _Tail, html,  NumChars, Ack,Es) ->
+    ?Debug("start verbatim:~p",[LineNo]),
+    Len = length(Chars),
+    C2 = C#comp{outfile = ["<pre>\n"]},  %% use as accumulator
+    compile_file(C2,  LineNo+1, line() , verbatim , Len, [{data, NumChars} | Ack], Es);
+
+compile_file(C, LineNo,  Chars = "</verbatim>" ++ Tail, verbatim, NumChars, Ack, Es) ->
+    Data = list_to_binary(lists:reverse(["</pre>\n" | C#comp.outfile])),
+    Len = length(Chars),
+    io:format("Data = ~p~n", [Data]),
+    compile_file(C#comp{outfile = undefined}, LineNo, line(), html, 0, 
+		 [{verbatim, NumChars+Len, Data} |Ack], Es);
+
+compile_file(C, LineNo,  Chars, verbatim, NumChars, Ack,Es) ->
+    case has_str(Chars, ["</verbatim>"]) of
+	{ok, Skipped, Chars2} ->
+	    compile_file(C, LineNo,  Chars2, verbatim, NumChars + Skipped, Ack,Es);
+	false ->
+	    io:format("Ack ~p~n",[Chars]),
+	    C2 = C#comp{outfile = [yaws_api:htmlize(Chars) | C#comp.outfile]},
+	    compile_file(C2, LineNo+1, line(), verbatim, NumChars + 
+			 length(Chars), Ack,Es)
     end;
 
 compile_file(C, LineNo,  Chars = "</erl>" ++ Tail, erl, NumChars, Ack, Es) ->
@@ -158,8 +190,10 @@ compile_file(C, LineNo, [], html, NumChars, Ack, Es) ->
     compile_file(C, LineNo+1, line(), html, NumChars, Ack, Es);
 
 compile_file(C, LineNo,  Chars, html, NumChars, Ack,Es) ->
-    case has_str(Chars, ["<erl>", "%%"]) of
+    case has_str(Chars, ["<erl>", "%%", "<verbatim>"]) of
 	{ok, Skipped, "<erl>"++_ = Chars2} ->
+	    compile_file(C, LineNo, Chars2, html, NumChars+Skipped, Ack, Es);
+	{ok, Skipped, "<verbatim>"++_ = Chars2} ->
 	    compile_file(C, LineNo, Chars2, html, NumChars+Skipped, Ack, Es);
 	{ok, Skipped, "%%"++Chars2} ->
 	    compile_file(C, LineNo, Chars2, binding, 2,
