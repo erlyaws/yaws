@@ -91,25 +91,25 @@ build_toolbar([{[],Url,Cmd}|Rest], Used) ->
 	    {font, [{size,2},{color,"#000000"},{title,Cmd}], Cmd}}]} |
 	 build_toolbar(Rest, Used+3)];    
 build_toolbar([{Gif,Url,Cmd}|Rest], Used) ->
-    if Used == -1 ->
-	    [];
-       true ->
-	    [{td, [nowrap,{width,"1%"},{valign,middle},{align,left}],
-	      {img, [{src,"tool-div.gif"},{width,2},{height,16},
-		     {alt,""},{border,0},{hspace,2}]}}]
-    end ++
-	[{td, [nowrap,{width,"2%"},{valign,middle},{align,left}],
-	  {a, [{class,nolink},
-	       {href,Url}],
-	   [{img, [{src,Gif},{vspace,2},{width,20},
-		   {height,20},{alt,Cmd},{border,0}],[]}]}
+    (if Used == -1 ->
+	     [];
+	true ->
+	     [{td, [nowrap,{width,"1%"},{valign,middle},{align,left}],
+	       {img, [{src,"tool-div.gif"},{width,2},{height,16},
+		      {alt,""},{border,0},{hspace,2}]}}]
+     end ++
+     [{td, [nowrap,{width,"2%"},{valign,middle},{align,left}],
+       {a, [{class,nolink},
+	    {href,Url}],
+	[{img, [{src,Gif},{vspace,2},{width,20},
+		{height,20},{alt,Cmd},{border,0}],[]}]}
 
-	 },
-	 {td, [nowrap,{width,"2%"},{valign,middle},{align,left}],
-	  [{a, [{class,nolink},
-		{href,Url}],
-	    {font, [{size,2},{color,"#000000"},{title,Cmd}], Cmd}}]} |
-	 build_toolbar(Rest, Used+4)].
+      },
+      {td, [nowrap,{width,"2%"},{valign,middle},{align,left}],
+       [{a, [{class,nolink},
+	     {href,Url}],
+	 {font, [{size,2},{color,"#000000"},{title,Cmd}], Cmd}}]} |
+      build_toolbar(Rest, Used+4)]).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -125,9 +125,9 @@ delete(Session, ToDelete) ->
 
 send(Session, To, Cc, Bcc, Subject, Msg) ->
     tick_session(Session#session.cookie),
-    RTo = string:tokens(To,","),
-    RCc = string:tokens(Cc,","),
-    RBcc = string:tokens(Bcc,","),
+    RTo = parse_addr(To),
+    RCc = parse_addr(Cc),
+    RBcc = parse_addr(Bcc),
     Recipients = RTo ++ RCc ++ RBcc,
     Date = date_and_time_to_string(yaws:date_and_time()),
     Headers =
@@ -208,21 +208,24 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 		       {font,[{color,"#000000"},{size,2},nowrap],
 			{pre_html,"&nbsp;To:&nbsp;"}}},
 		      {td,[{height,35},{align,left},{valign,top}],
-		       {input,[{name,to},{type,text},{size,66},{value,To}]}}]},
+		       {input,[{name,to},{type,text},{size,66},
+			       {value,To}]}}]},
 	      {tr,[],[{td,[{height,0},{align,left},{valign,top}],[]},
 		      {td,[{height,0},{align,left},{valign,top}],[]}]},
 	      {tr,[],[{td,[{height,35},{align,left},{valign,top}],
 		       {font,[{color,"#000000"},{size,2},nowrap],
 			{pre_html,"&nbsp;Cc:&nbsp;"}}},
 		      {td,[{height,35},{align,left},{valign,top}],
-		       {input,[{name,cc},{type,text},{size,66},{value,Cc}]}}]},
+		       {input,[{name,cc},{type,text},{size,66},
+			       {value,Cc}]}}]},
 	      {tr,[],[{td,[{height,0},{align,left},{valign,top}],[]},
 		      {td,[{height,0},{align,left},{valign,top}],[]}]},
 	      {tr,[],[{td,[{height,35},{align,left},{valign,top}],
 		       {font,[{color,"#000000"},{size,2},nowrap],
 			{pre_html,"&nbsp;Bcc:&nbsp;"}}},
 		      {td,[{height,35},{align,left},{valign,top}],
-		       {input,[{name,bcc},{type,text},{size,66},{value,Bcc}]}}
+		       {input,[{name,bcc},{type,text},{size,66},
+			       {value,Bcc}]}}
 		     ]},
 	      {tr,[],[{td,[{height,35},{align,left},{valign,top},nowrap],
 		       {font,[{color,"#000000"},{size,2}],
@@ -252,10 +255,15 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 showmail(Session, MailNr) ->
     MailStr = integer_to_list(MailNr),
     tick_session(Session#session.cookie),
-    Message = retr(?POPSERVER, Session#session.user,
-		   Session#session.passwd, MailNr),
 
-    Formated = format_message(Message, MailNr),
+    Formated = 
+	case retr(?POPSERVER, Session#session.user,
+		  Session#session.passwd, MailNr) of
+	    {error, Reason} ->
+		format_error(Reason);
+	    Message ->
+		format_message(Message, MailNr)
+	end,
 
     (dynamic_headers() ++
      [{ehtml,
@@ -271,6 +279,7 @@ showmail(Session, MailNr) ->
 	 "}"
 	},
 	{style, [{type,"text/css"}],
+	 ".conts    { visibility:hidden }\n"
 	 "A:link    { color: 0;text-decoration: none}\n"
 	 "A:visited { color: 0;text-decoration: none}\n"
 	 "A:active  { color: 0;text-decoration: none}\n"},
@@ -306,6 +315,7 @@ showheaders(Session, MailNr) ->
 	 "}"
 	},
 	{style, [{type,"text/css"}],
+	 ".conts    { visibility:hidden }\n"
 	 "A:link    { color: 0;text-decoration: none}\n"
 	 "A:visited { color: 0;text-decoration: none}\n"
 	 "A:active  { color: 0;text-decoration: none}\n"},
@@ -393,14 +403,15 @@ showheaders(Session, MailNr) ->
 	   },
 	   {input,[{type,hidden},{name,nr}, {value,MailNr}],[]},
 	   {input,[{type,hidden},{name,from},
-		   {value,retr_from(H#mail.from)}],[]},
+		   {value,yaws_api:url_encode(H#mail.from)}],[]},
 	   {input,[{type,hidden},{name,to},
-		   {value,retr_from(H#mail.to)}],[]},
+		   {value,yaws_api:url_encode(H#mail.to)}],[]},
 	   {input,[{type,hidden},{name,cc},
-		   {value,retr_from(H#mail.cc)}],[]},
+		   {value,yaws_api:url_encode(H#mail.cc)}],[]},
 	   {input,[{type,hidden},{name,bcc},
-		   {value,retr_from(H#mail.bcc)}],[]},
-	   {input,[{type,hidden},{name,subject},{value,H#mail.subject}],[]},
+		   {value,yaws_api:url_encode(H#mail.bcc)}],[]},
+	   {input,[{type,hidden},{name,subject},
+		   {value,yaws_api:url_encode(H#mail.subject)}],[]},
 	   {input,[{type,hidden},{name,cmd},{value,""}],[]}
 	  ]
 	 }
@@ -493,19 +504,34 @@ format_from(From) ->
 	    end
     end.
 
-retr_from(FromStr) ->
+parse_addr(AddrStr) ->
+    Addrs = token_addrs(AddrStr, [], false),
     Op =
 	fun(From) ->
 		case {string:chr(From,$<),string:chr(From,$>)} of
 		    {S,E} when S>0, E>0 ->
 			string:substr(From,S,(E-S)+1);
 		    _ ->
-			From
+			string:strip(From)
 		end
 	end,
-    FromList = string:tokens(FromStr, ","),
-    Fs = [Op(F) || F <- FromList],
-    format_list(Fs).
+    Fs = [Op(F) || F <- Addrs].
+
+format_addr(Addr) ->
+    format_list(Addr).
+
+token_addrs([], [], _) ->
+    [];
+token_addrs([], Acc, _) ->
+    [lists:reverse(Acc)];
+token_addrs([C=$"|R], Acc, true) ->
+    token_addrs(R, [C|Acc], false);
+token_addrs([C=$"|R], Acc, false) ->
+    token_addrs(R, [C|Acc], true);
+token_addrs([C=$,|R], Acc, false) ->
+    [lists:reverse(Acc)|token_addrs(R, [], false)];
+token_addrs([C|R], Acc, InQuote) ->
+    token_addrs(R, [C|Acc], InQuote).
 
 format_list([]) -> [];
 format_list([E]) -> E;
@@ -555,7 +581,6 @@ decode_b64([$?,$=|Rest],Acc) ->
     end;
 decode_b64([C|Rest], Acc) ->
     decode_b64(Rest,[C|Acc]).
-
 
 unquote([]) -> [];
 unquote([$"|R]) -> unquote(R);
@@ -734,16 +759,15 @@ seed() ->
 
 retr(Server, User, Password, Nr) ->
     Req = [ret(Nr)],
-    [{ok,Msg}] = pop_request(Req, Server, User, Password),
-    Msg.
+    case pop_request(Req, Server, User, Password) of
+	[{ok,Msg}] ->
+	    Msg;
+	[{error, Reason}] ->
+	    {error, Reason}
+    end.
 
 parse_message(Msg) ->
-    {Ls,M}=split_head_body(Msg),
-    H = parse_headers(Ls),
-    {H,M}.
-
-split_head_body(Msg) ->
-    split_head_body(Msg,[]).
+    split_head_body(Msg, []).
 
 split_head_body(Msg, Acc) ->
     case get_next_line(Msg) of
@@ -1327,22 +1351,32 @@ check_diff(_) -> false.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+format_error(Reason) ->
+    [build_toolbar([{"","mail.yaws","Close"}]),
+     {p, [], {font, [{size,4},{color,red}],["Error: ", Reason]}}].
+
 format_message(Message, MailNr) ->
-    {H,Msg} = parse_message(Message),
+    {Headers,Msg} = parse_message(Message),
+    H = parse_headers(Headers),
     Formated = format_body(H,Msg),
     MailStr = integer_to_list(MailNr),
+    To = lists:flatten(decode(H#mail.to)),
+    From = lists:flatten(decode(H#mail.from)),
+    Subject = lists:flatten(decode(H#mail.subject)),
+    CC = lists:flatten(decode(H#mail.cc)),
+    ToolBar =
+	if 
+	    MailNr == -1 ->
+		[{"tool-newmail.gif", "javascript:setCmd('reply');", "Reply"}];
+	    true ->
+		[{"tool-newmail.gif","compose.yaws","New"},
+		 {"tool-newmail.gif", "javascript:setCmd('reply');", "Reply"},
+		 {"","headers.yaws?nr="++MailStr,"Headers"},
+		 {"tool-delete.gif","javascript:setCmd('delete');", "Delete"},
+		 {"","mail.yaws","Close"}]
+	end,
     [{form, [{name,compose},{action,"reply.yaws"},{method,post}],
-     [build_toolbar([{"tool-newmail.gif","compose.yaws","New"},
-		     {"tool-newmail.gif", "javascript:setCmd('reply');",
-		      "Reply"}]++
-		    if 
-			MailNr == -1 -> [];
-			true -> 
-			    [{"","headers.yaws?nr="++MailStr,"Headers"},
-			     {"tool-delete.gif","javascript:setCmd('delete');",
-			      "Delete"}]
-		    end ++
-		    [{"","mail.yaws","Close"}]),
+     [build_toolbar(ToolBar),
       {table,[{width,645},{height,"100%"},{border,0},{bgcolor,silver},
 	      {cellspacing,0},{callpadding,0}],
        {tr,[],{td,[{valign,top},{height,"1%"}],
@@ -1357,7 +1391,7 @@ format_message(Message, MailNr) ->
 		    {td, [{valign,middle},{align,left}],
 		     {font, [{color,"#000000"},{size,2}],
 		      [{pre_html,"&nbsp;"},
-		       unquote(decode(H#mail.from))]}},
+		       unquote(From)]}},
 		    {td,[{valign,middle},{align,right},{height,"25"}],
 		     {font, [{color,"#000000"},{size,2}],
 		      {nobr,[],{pre_html,"&nbsp;Sent:&nbsp;"}}}},
@@ -1373,7 +1407,7 @@ format_message(Message, MailNr) ->
 		    {td, [{valign,top},{align,left},{width,"100%"}],
 		     {font, [{color,"#000000"},{size,2}],
 		      [{pre_html,"&nbsp;"},
-		       unquote(decode(H#mail.to))]}}]},
+		       unquote(To)]}}]},
 		  {tr,[],
 		   [{td,[{valign,middle},{align,left},{width,"15%"},
 			 {height,25}],
@@ -1381,7 +1415,7 @@ format_message(Message, MailNr) ->
 		      {nobr,[],{pre_html,"&nbsp;Cc:&nbsp;"}}}},
 		    {td, [{valign,middle},{align,left},{width,"100%"}],
 		     {font, [{color,"#000000"},{size,2}],
-		      [{pre_html,"&nbsp;"},H#mail.cc]}}]},
+		      [{pre_html,"&nbsp;"},CC]}}]},
 		  {tr,[],
 		   [{td,[{valign,middle},{align,left},{width,"15%"},
 			 {height,25}],
@@ -1389,15 +1423,16 @@ format_message(Message, MailNr) ->
 		      {nobr,[],{pre_html,"&nbsp;Subject:&nbsp;"}}}},
 		    {td, [{valign,middle},{align,left},{width,"100%"}],
 		     {font, [{color,"#000000"},{size,2}],
-		      [{pre_html,"&nbsp;"},decode(H#mail.subject)]}}]}
+		      [{pre_html,"&nbsp;"},Subject]}}]}
 		 ]},
 		{table, [{width,"100%"},{border,1},{cellpadding,6},
 			 {class,msgbody}],
-		 {tr,[],
-		  {td,[{width,"100%"},{height,300},{valign,top},
-		       {bgcolor,white}],
-		   {p,[],{font,[{size,3}], Formated}}}
-		 }
+		 [{tr,[],
+		   {td,[{width,"100%"},{height,300},{valign,top},
+			{bgcolor,white}],
+		    {p,[],{font,[{size,3},{id, contents}], Formated}}}
+		  }
+		 ]
 		}
 	       ]
 	      }
@@ -1409,14 +1444,15 @@ format_message(Message, MailNr) ->
 	     [{input,[{type,hidden},{name,nr}, {value,MailNr}],[]}]
      end++
      [{input,[{type,hidden},{name,from},
-	      {value,retr_from(H#mail.from)}],[]},
+	      {value,yaws_api:url_encode(From)}],[]},
       {input,[{type,hidden},{name,to},
-	      {value,retr_from(H#mail.to)}],[]},
+	      {value,yaws_api:url_encode(To)}],[]},
       {input,[{type,hidden},{name,cc},
-	      {value,retr_from(H#mail.cc)}],[]},
+	      {value,yaws_api:url_encode(CC)}],[]},
       {input,[{type,hidden},{name,bcc},
-	      {value,retr_from(H#mail.bcc)}],[]},
-      {input,[{type,hidden},{name,subject},{value,H#mail.subject}],[]},
+	      {value,yaws_api:url_encode(decode(H#mail.bcc))}],[]},
+      {input,[{type,hidden},{name,subject},
+	      {value,yaws_api:url_encode(Subject)}],[]},
       {input,[{type,hidden},{name,cmd},{value,""}],[]}
      ]
     }].
