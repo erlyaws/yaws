@@ -11,7 +11,8 @@
 %% -compile(export_all).
 -include("yaws.hrl").
 
--export([parse_post_data/1, code_to_phrase/1, ssi/2, redirect/1]).
+-export([parse_post_data/1, parse_query/1,
+	 code_to_phrase/1, ssi/2, redirect/1]).
 -export([setcookie/2, setcookie/3, setcookie/4, setcookie/5]).
 -export([pre_ssi_files/2,  pre_ssi_string/1, pre_ssi_string/2,
 	 htmlize/1, htmlize_char/1, f/2, fl/1]).
@@ -96,10 +97,17 @@ parse_post_data(Arg) ->
 		'POST' ->
 		    parse_post_data_urlencoded(un_partial(Arg#arg.clidata));
 		_ ->
+		    %% kinda weird default bahaviour here
 		    parse_post_data_urlencoded(Arg#arg.querydata)
 	    end
     end.
 	    
+
+%% parse the command line query data
+parse_query(Arg) ->
+     parse_post_data_urlencoded(Arg#arg.querydata).
+
+
 un_partial({partial, Bin}) ->
     Bin;
 un_partial(Bin) ->
