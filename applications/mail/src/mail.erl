@@ -170,14 +170,20 @@ send(Session, A) ->
 		{done, Result} ->
 		    Result;
 		{cont, NewState} ->
-		    {get_more, Cont, NewState}
+		    {get_more, Cont, NewState};
+		{error, Reason} ->
+		    {ehtml,
+		     format_error("Failed to send email. Reason: "++Reason)}
 	    end;
 	{result, Res} ->
 	    case catch sendChunk(Res, State#send{last=true}) of
 		{done, Result} ->
 		    Result;
 		{cont, _} ->
-		    format_error("Failed to send email.")
+		    {ehtml,format_error("Failed to send email.")};
+		{error, Reason} ->
+		    {ehtml,
+		     format_error("Failed to send email. Reason: "++Reason)}
 	    end
     end.
 
@@ -513,7 +519,7 @@ showmail(Session, MailNr) ->
     showmail(Session, MailNr, ?RETRYCOUNT).
 
 showmail(Session, MailNr, 0) ->
-    format_error("Mailbox locked by other mail session.");
+    {ehtml,format_error("Mailbox locked by other mail session.")} ;
 showmail(Session, MailNr, Count) ->
     MailStr = integer_to_list(MailNr),
     tick_session(Session#session.cookie),
@@ -558,7 +564,7 @@ list(Session, {Refresh,Sort}) ->
     list_msg(Session, Refresh, Sort, ?RETRYCOUNT).
 
 list_msg(Session, Refresh, Sort, 0) ->
-    format_error("Mailbox locked by other mail process.");
+    {ehtml,format_error("Mailbox locked by other mail process.")};
 list_msg(Session, Refresh, Sort, Count) ->
     tick_session(Session#session.cookie),
     OldList = Session#session.listing,
@@ -582,7 +588,7 @@ list_msg(Session, Refresh, Sort, Count) ->
 	{error, Reason} ->
 	    case string:str(lowercase(Reason), "lock") of
 		0 ->
-		    format_error(Reason);
+		    {ehtml,format_error(Reason)};
 		N ->
 		    sleep(?RETRYTIMEOUT),
 		    list_msg(Session, Refresh, Sort, Count-1)
