@@ -56,6 +56,16 @@ HUPing the daemon is the fastest way to see the content updates.
 \fB\-s\fR
 Stop the daemon.
 .TP
+\fB-S\fR
+Query a running yaws daemon for its status, and print it.
+.TP
+\fB-load Modules\fR 
+Try to (re)load erlang modules into a running daemon.  This is useful
+after modifying appmods or modules used by scripts.
+.TP
+\fB-check YawsFile [IncDirs]\fR
+Test compile a `.yaws' file.
+.TP
 \fB\-v\fR
 output version information and exit
 .SH AUTHOR
