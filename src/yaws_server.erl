@@ -1426,8 +1426,8 @@ handle_out_reply(ok, _DCC, _LineNo, _YawsFile, _SC, _A) ->
 handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile, SC, A) ->
     L = ?F("~n~nERROR erlang  code  crashed:~n "
 	   "File: ~s:~w~n"
-	   "Reason: ~p~n~n",
-	   [YawsFile, LineNo, Err]),
+	   "Reason: ~p~nReq: ~p~n",
+	   [YawsFile, LineNo, Err, A#arg.req]),
     handle_crash(A, DCC, L, SC);
 
 handle_out_reply({get_more, Cont, State}, _DCC, _LineNo, _YawsFile, _SC, _A) ->
@@ -1435,8 +1435,8 @@ handle_out_reply({get_more, Cont, State}, _DCC, _LineNo, _YawsFile, _SC, _A) ->
 
 handle_out_reply(Reply, DCC, LineNo, YawsFile, SC, A) ->
     L =  ?F("yaws code at ~s:~p crashed or "
-	    "ret bad val:~p ~n",
-	    [YawsFile, LineNo, Reply]),
+	    "ret bad val:~p ~nReq: ~p",
+	    [YawsFile, LineNo, Reply, A#arg.req]),
     handle_crash(A, DCC, L, SC).
 
     
