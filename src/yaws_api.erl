@@ -553,7 +553,9 @@ htmlize(<<Char, Tail/binary>>) ->
             <<Bin/binary, (htmlize(Tail))/binary>>
     end;
 htmlize(<<>>) ->			 
-    <<>>.
+    <<>>;
+htmlize(List) when list(List) ->
+    htmlize_l(List).
 
 htmlize_char($>) ->
     <<"&gt;">>;

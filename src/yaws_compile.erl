@@ -43,7 +43,7 @@
 comp_opts(GC) ->
     ?Debug("I=~p~n", [GC#gconf.include_dir]),
     I = lists:map(fun(Dir) -> {i, Dir} end, GC#gconf.include_dir),
-    Opts = [binary, report_errors | I],
+    Opts = [binary, return_errors | I],
     ?Debug("Compile opts = ~p~n", [Opts]),
     Opts.
 
@@ -53,7 +53,7 @@ compile_file(File, GC, SC) ->
 	{ok, Fd} ->
 	    Spec = compile_file(#comp{infile = File, 
 				      infd = Fd, gc = GC, sc = SC}, 
-				1,  
+				1,   
 				io:get_line(Fd, ''), init, 0, [], 0),
 	    Spec;
 	_Err ->
@@ -61,7 +61,7 @@ compile_file(File, GC, SC) ->
 	    exit(normal)
     end.
 
-compile_file(C, _LineNo, eof, _Mode, NumChars, Ack, Errors) ->
+compile_file(C,  _LineNo, eof, _Mode, NumChars, Ack, Errors) ->
     file:close(C#comp.infd),
     {ok, [{errors, Errors} |lists:reverse([{data, NumChars} |Ack])]};
 
@@ -79,7 +79,7 @@ compile_file(C, LineNo,  Chars, init, NumChars, Ack, Errs) ->
 	    %% first chunk is html, keep whitespace
 	    Fd=C#comp.infd,
 	    file:position(Fd, bof),
-	    compile_file(C,1,io:get_line(Fd,''),html,0,[], Errs)
+	    compile_file(C,noline,io:get_line(Fd,''),html,0,[], Errs)
     end;
 
 compile_file(C, LineNo,  Chars = "<erl>" ++ _Tail, html,  NumChars, Ack,Es) ->
@@ -122,8 +122,8 @@ compile_file(C, LineNo,  Chars = "</erl>" ++ _Tail, erl, NumChars, Ack, Es) ->
 	    %% this is boring but does actually happen
 	    %% in order to get proper user errors here we need to catch i/o
 	    %% or hack compiler/parser
-	    yaws:elog("Dynamic compile error in file ~s, line~w",
-		      [C#comp.infile, LineNo]),
+	    yaws:elog("Dynamic compile error in file ~s, line ~w~n~s",
+		      [C#comp.infile, LineNo, Str]),
 	    A2 = {error, NumChars2, ?F("<pre> Dynamic compile error in file "
 				       " ~s line ~w~n~s </pre>", 
 				       [C#comp.infile, LineNo, Str])},
