@@ -1410,13 +1410,15 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
 		    Comment  = element(3, PictFile),
 		    DeepStr =
 			["<table width='100%'>"
-			 "<tr><td><a href=\"slideShow.yaws?node=",
-			 Page,"&prev=",integer_to_list(NewIndex-1),
-			 "\">Previous</a> </td>",
-			 "<td><a href=\"slideShow.yaws?node=",Page,
-			 "&next=",integer_to_list(NewIndex+1),"\">Next</a><br>"
+			 "<tr><td>"
+			 "<a href=\"slideShow.yaws?node=", Page,"&prev=",
+			 integer_to_list(NewIndex-1),"\">prev</a> ",
+			 build_slide_list(Page, NewIndex, length(Files)),
+			 "<a href=\"slideShow.yaws?node=",Page,"&next=",
+			 integer_to_list(NewIndex+1),"\">next</a> "
 			 "</td></tr></table>"
-			 "<p><b>",Comment,"</b></p><p>",
+			 "<p><b>",integer_to_list(NewIndex)," - ",
+			 Comment,"</b></p><p>",
 			 "<a href=\"",
 			 wiki:str2urlencoded(FileDir), "/",
 			 wiki:str2urlencoded(FileName),"\" target=\"pict\">",
@@ -1437,6 +1439,22 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
 	_ ->
 	    show({no_such_page,Page})
     end.
+
+build_slide_list(Page, Index, Nr) when Nr =< 10 ->
+    Interval = 1,
+    lists:flatmap(
+      fun(X) ->
+	      I = integer_to_list(X),
+	      [" <a href=\"slideShow.yaws?node=",Page,"&next=",I,"\">",
+	       I,"</a> "]
+      end, lists:seq(1,Nr,Interval));
+build_slide_list(Page, Index, Nr) ->
+    lists:flatmap(
+      fun(X) ->
+	      I = if X==0 -> "1" ; true -> integer_to_list(X) end,
+	      [" <a href=\"slideShow.yaws?node=",Page,"&next=",I,"\">",
+	       I,"</a> "]
+      end, lists:seq(0,Nr,5)).
 
 lowercase([C|S]) -> [lowercase(C)|lowercase(S)];
 lowercase(C) when C>=$A, C=<$Z -> C+32;
