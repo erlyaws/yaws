@@ -1356,7 +1356,6 @@ handle_out_reply_l([], _DCC, _LineNo, _YawsFile, _SC, _A, Res) ->
 %% the HTTP 1.1 RFC (2616, page 62). -luke
 redirect_code(A) ->
     #arg{req=Req} = hd(A),
-    io:format("Req = ~p~n", [Req]),
     case Req#http_request.version of
 	{1,0} -> 302;
 	_     -> 303

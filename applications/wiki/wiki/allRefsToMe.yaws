@@ -1,13 +1,8 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <erl>
-
 out(Arg) ->
-    WikiRoot = filename:dirname(Arg#arg.fullpath),
-    {abs_path, P} = (Arg#arg.req)#http_request.path,
-    Path = yaws_api:url_decode(P),
-    Prefix = wiki_yaws:get_path_prefix(Path),
-    wiki:allRefsToMe(wiki_yaws:parse_post_data(Arg), WikiRoot, Prefix).
-
+    F = allRefsToMe,,
+    wiki_yaws:call_with_data(wiki, F, Arg).
 </erl>
 </html>

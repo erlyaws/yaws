@@ -38,6 +38,8 @@
 
 -import(wiki_templates, [template/4]).
 
+-include("../../../include/yaws_api.hrl").
+
 % This should be -include:ed instead
 
 showPage(Params, Root, Prefix) ->
@@ -261,6 +263,8 @@ addFileInit(Params, Root, Prefix) ->
 	     [h1(Page), 
 	      form("POST", "addFile.yaws", 
 		   [
+		    input("hidden", "node", Page),
+		    input("hidden", "password", Password),
 		    "<table width=\"100%\"><tr>",
 		    "<th align=left>Attach new file: ",
 		    "<td align=left>",
@@ -271,62 +275,148 @@ addFileInit(Params, Root, Prefix) ->
 		    textarea("text", 10, 72,""),"\n",
 		    "</table>",
 		    input("submit", "add", "Add"),
-		    input("submit", "cancel", "Cancel"),
-		    input("hidden", "node", Page),
-		    input("hidden", "password", Password)])
+		    input("button", "Cancel",
+			  "parent.location='showPage.yaws?node="++
+			  Page++"'")])
 	     ]).
     
-addFile(Params, Root, Prefix) ->
-    Password = getopt(password, Params, ""),
-    Page     = getopt(node, Params), 
-    Cancel   = getopt(cancel, Params),
+-record(addfile, {
+	  root,
+	  prefix,
+	  param,
+	  password,
+	  node,
+	  text,
+	  cancel,
+	  fd,
+	  last,
+	  filename
+	  }).
 
+
+%%% addFile
+%%% More than a bit messy due to the chunked arguments :-(
+
+addFile(Arg, Root, Prefix) ->
+    State = prepare_addFile_state(Arg#arg.state, Root, Prefix),
+    case yaws_api:parse_post_data(Arg) of
+	{cont, Cont, Res} ->
+	    case addFileChunk(Res, State) of
+		{done, Result} ->
+		    Result;
+		{cont, NewState} ->
+		    {get_more, Cont, NewState}
+	    end;
+	{result, Res} ->
+	    case addFileChunk(Res, State#addfile{last=true}) of
+		{done, Result} ->
+		    Result;
+		{cont, _} ->
+		    show({error_on_upload, State#addfile.node})
+	    end
+    end.
+		
+
+prepare_addFile_state(undefined, Root, Prefix) ->
+    #addfile{root=Root, prefix=Prefix};
+prepare_addFile_state(State, Root, Prefix) ->
+    State#addfile{root=Root, prefix=Prefix}.
+
+    
+merge_body(undefined, Data) ->
+    Data;
+merge_body(Acc, New) ->
+    Acc ++ New.
+
+
+
+addFileChunk([{part_body, Data}|Res], State) ->
+    addFileChunk([{body, Data}|Res], State);
+
+addFileChunk([], State) when State#addfile.last==true,
+			     State#addfile.filename /= undefined,
+			     State#addfile.fd /= undefined ->
+    Page        = State#addfile.node,
+    {File,FileDir} = page2filename(Page, State#addfile.root),
+    {ok, Bin}   = file:read_file(File),
+    {wik002,Pwd,Email,_,_,Txt,OldFiles,Patches} = bin_to_wik002(Bin),
+    Description = State#addfile.text,
+    FileName    = State#addfile.filename,
+    NewFile     = {file, FileName, Description, []},
+    KeptOld     = lists:keydelete(FileName, 2, OldFiles),
+    NewFiles    = [NewFile|KeptOld],
+    Time        = {date(), time()},
+    Who         = "unknown",
+    Ds          = {wik002,Pwd, Email,Time,Who,Txt,NewFiles,Patches},
+    B           = term_to_binary(Ds),
+    file:write_file(File, B),
+    file:close(State#addfile.fd),
+    {done, redirect({node, Page}, State#addfile.prefix)};
+addFileChunk([], State) when State#addfile.last==true ->
+    Page        = State#addfile.node,
+    {done, show({error_in_upload, Page})};
+addFileChunk([], State) ->
+    {cont, State};
+
+addFileChunk([{head, {add, _Opts}}|Res], State ) ->
+    addFileChunk(Res, State#addfile{param = add});
+addFileChunk([{body, Data}|Res], State) when State#addfile.param == add ->
+    addFileChunk(Res, State);
+
+addFileChunk([{head, {node, _Opts}}|Res], State ) ->
+    addFileChunk(Res, State#addfile{param = node});
+addFileChunk([{body, Data}|Res], State) when State#addfile.param == node ->
+    Node = State#addfile.node,
+    NewNode = merge_body(Node, Data),
+    addFileChunk(Res, State#addfile{node = NewNode});
+
+addFileChunk([{head, {password, _Opts}}|Res], State) ->
+    addFileChunk(Res, State#addfile{param = password});
+addFileChunk([{body, Data}|Res], State) when State#addfile.param == password ->
+    Password = State#addfile.node,
+    NewPW = merge_body(Password, Data),
+    addFileChunk(Res, State#addfile{password = NewPW});
+
+addFileChunk([{head, {cancel, _Opts}}|Res], State) ->
+    {done, redirect({node, State#addfile.node}, State#addfile.prefix)};
+
+addFileChunk([{head, {text, _Opts}}|Res], State) ->
+    addFileChunk(Res, State#addfile{param = text});
+addFileChunk([{body, Data}|Res], State) when State#addfile.param == text ->
+    Text = State#addfile.text,
+    NewText = merge_body(Text, Data),
+    addFileChunk(Res, State#addfile{text = NewText});
+
+addFileChunk([{head, {attached, Opts}}|Res], State) ->
+    addFileChunk(Res, State#addfile{param = attached}),
+    Page = State#addfile.node,
+    Password = State#addfile.password,
+    FilePath = getopt(filename, Opts),
+    FileName = basename(FilePath),
+    Root     = State#addfile.root,
+    Prefix   = State#addfile.prefix,
+    {_,FileDir} = page2filename(Page, Root),
     if
-	Cancel /= undefined ->
-	    redirect({node, Page}, Prefix);
+	FileName == "" ->
+	    {done, show({empty_content, Page})};
 	true ->
 	    case checkPassword(Page, Password, Root, Prefix) of
 		true ->
-		    addFile1(Params, Root, Prefix);
+		    {ok, Fd} = file:open(Root++"/"++FileDir++"/"++
+					 FileName, write),
+		    addFileChunk(Res, State#addfile{fd=Fd,param=attached,
+						    filename=FileName});
 		false ->
-		    show({bad_password, Page});
-		error ->
-		    show({no_such_page,Page})
+		    {done, show({bad_password, Page})};
+		error->
+		    {done, show({no_such_page,Page})}
 	    end
-    end.
+    end;
+addFileChunk([{body, Data}|Res], State) when State#addfile.param == attached ->
+    file:write(State#addfile.fd, Data),
+    addFileChunk(Res, State).
 
-addFile1(Params, Root, Prefix) ->
-    Page        = getopt(node, Params),
-    ContentL    = getopt(attached, Params),
-    Description = getopt(text, Params),
-    FileOpts    = getopt_options(attached, Params),
-    FilePath    = getopt(filename, FileOpts, ""),
 
-    FileName = basename(FilePath),
-
-    Content = list_to_binary(ContentL),
-    {File,FileDir} = page2filename(Page, Root),
-
-    {ok, Bin} = file:read_file(File),
-    Wik = {wik002,Pwd,Email,_Time, _Who,Txt,OldFiles,Patches} =
-	bin_to_wik002(Bin),
-
-    NewFiles =
-	case {FileName,Content} of
-	    {[],<<>>} -> OldFiles;
-	    _ ->
-		NewFile = {file, FileName, Description, []},
-		KeptOld = lists:keydelete(FileName, 2, OldFiles),
-		[NewFile|KeptOld]
-	end,
-
-    Time = {date(), time()},
-    Who = "unknown",
-    Ds = {wik002,Pwd, Email,Time,Who,Txt,NewFiles,Patches},
-    B = term_to_binary(Ds),
-    file:write_file(Root++"/"++FileDir++"/"++FileName, Content),
-    file:write_file(File, B),
-    redirect({node, Page}, Prefix).
 
 
 updateFilesInit(Params, Root, Prefix) ->
@@ -1328,6 +1418,8 @@ banner(File, Password) ->
 password_entry(Name, Size) ->
     ["<INPUT TYPE=password name=", Name,"  SIZE=", i2s(Size),">\n"].
 
+input(Type="button", Name, OnClick) ->
+    ["<INPUT TYPE=",Type,"  Value=\"",Name,"\" onClick=\"", OnClick, "\">\n"];
 input(Type="file", Name, Size) ->
     ["<INPUT TYPE=",Type,"  Name=\"",Name,"\" Size=\"", Size, "\">\n"];
 input(Type="checkbox", Name, Value) ->
