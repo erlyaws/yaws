@@ -25,7 +25,7 @@
 
 -export([showPage/3, createNewPage/3, showHistory/3, allPages/3,
 	 lastEdited/3, wikiZombies/3, editPage/3, editFiles/3,
-	 previewNewPage/3, allRefsToMe/3, deletePage/3, deletePage/4,
+	 previewNewPage/3, allRefsToMe/3, deletePage/3, 
 	 editTag/3, finalDeletePage/3, storePage/3, putPassword/3,
 	 storeNewPage/3, previewPage/3, previewTagged/3, copyFiles/3,
 	 deleteFiles/3, addFile/3, storeTagged/3, fixupFiles/3, moveFiles/3,
@@ -136,29 +136,40 @@ createNewPage(Params, Root, Prefix) ->
 
 
 storePage(Params, Root, Prefix) ->
+    Password = getopt(password, Params, ""),
+    Page     = getopt(node, Params), 
+    Cancel   = getopt(cancel, Params),
+    
+    if 
+	Cancel /= undefined ->
+	    redirect({node, Page}, Prefix);
+	true  ->
+	    case checkPassword(Page, Password, Root, Prefix) of
+		true ->
+		    storePage1(Params, Root, Prefix);
+		false ->
+		    show({bad_password, Page});
+		error ->
+		    show({no_such_page,Page})
+	    end
+    end.
+    
 
+storePage1(Params, Root, Prefix) ->
     Page     = getopt(node,Params),
-    Password = getopt(password, Params),
     Txt0     = getopt(txt, Params),
 
     Txt = zap_cr(urlencoded2str(Txt0)),
-    %% Check the password
+
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
 	    Wik = {wik002,Pwd,_Email,_Time,_Who,_OldTxt,_Files,_Patches} =
 		bin_to_wik002(Bin),
-	    case Pwd of 
-		"" ->
-		    store_ok(Page, Root, Prefix, Txt, Wik);
-		Password ->
-		    store_ok(Page, Root, Prefix, Txt, Wik);
-		_ ->
-		    show({invalid_password, shouldbe, Pwd, was, Password})
-	    end;
+	    store_ok(Page, Root, Prefix, Txt, Wik);
 	_ ->
 	    show({no_such_page,Page})
-   end.
+    end.
 
 storeNewPage(Params, Root, Prefix) ->
     
@@ -695,43 +706,88 @@ take(0, _) -> [];
 take(N, [{P,_,_}|T]) -> [P|take(N-1, T)].
 
 deletePage(Params,  Root, Prefix) ->
-    Delete = getopt(delete, Params),
-    N      = getopt(node, Params),
-    P      = getopt(password, Params, ""),
-    deletePage(N, P, Root, Prefix).
+    Page     = getopt(node, Params),
+    Password = getopt(password, Params, ""),
 
-deletePage(Page, Password, Root, Prefix) ->
+    case checkPassword(Page, Password, Root, Prefix) of
+	true ->
+	    deletePage1(Params, Root, Prefix);
+	false ->
+	    show({bad_password, Page});
+	error ->
+	    show({no_such_page,Page})
+    end.
+
+deletePage1(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+    Password = getopt(password, Params),
+    
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
-	    {wik002, Pwd,_Email,_Time,_Who,TxtStr,_Files,_Patches} =
+	    {wik002, _Pwd,_Email,_Time,_Who,Content,_Files,_Patches} =
 		bin_to_wik002(Bin),
-	    case Pwd of 
-		"" ->
-		    delete1(Page, Password, TxtStr);
-		Password ->
-		    delete1(Page, Password, TxtStr);
-		_ ->
-		    template("Error", bgcolor("white"), "",
-			 [
-			  h1("Incorrect password"),
-			  p("You have supplied an incorrect password"),
-			  p("To find out the password fill in your "
-			    "email address and click on <i>Show password</i>. "
-			    " If you are "
-			    "the registered "
-			    "owner of this page then I will tell you "
-			    "the password."),
-			  form("POST", "sendMeThePassword.yaws",
-			       [input("hidden", "node", Page),
-				"email address:",
-				input("text", "email", ""),
-				input("submit", "send", "Show password")])
-			 ])
-		end;
+    
+	    Txt = quote_lt(Content),
+	    template("Delete", background("info"), "",
+		     [h1(Page),
+		      p("Reconfirm deleting this page - hit the 'Delete' "
+			"button to permanently remove the page."),
+		      form("POST", "finalDeletePage.yaws",
+			   [input("submit", "finaldelete", "Delete"),
+			    input("submit", "cancel", "Cancel"),
+			    input("hidden", "node", Page),
+			    input("hidden", "password", Password),
+			    p(),
+			    textarea("text", 25, 75, Txt),
+			    p(),
+			    hr()])]);
 	_ ->
 	    show({no_such_page,Page})
     end.
+
+finalDeletePage(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+    Password = getopt(password, Params, ""),
+    Cancel   = getopt(cancel, Params),
+
+    if
+	Cancel /= undefined ->
+	    redirect({node, Page}, Prefix);
+	true ->
+	    case checkPassword(Page, Password, Root, Prefix) of
+		true ->
+		    finalDeletePage1(Params, Root, Prefix);
+		false ->
+		    show({bad_password, Page});
+		error ->
+		    show({no_such_page,Page})
+	    end
+    end.
+
+finalDeletePage1(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+    Password = getopt(password, Params, ""),
+    Txt0 = getopt(text, Params),
+    
+    {File,FileDir} = page2filename(Page, Root),
+    case file:delete(File) of
+	ok ->
+	    Files = files(Root++"/"++FileDir, "*"),
+	    [file:delete(F) || F <- Files],
+	    file:del_dir(Root++"/"++FileDir),
+	    wiki_templates:template("Page Deleted",background("info"),"",
+		     [h1(Page),
+		      p("Page has been permanently deleted."),
+		      p("<a href='showPage.yaws?node=home'>Home</a>"),
+		      hr()]);
+	_ ->
+	    wiki_templates:template("Error",background("info"),"",
+		     [h1(Page),
+		      p("Failed to delete page."),
+		      hr()])
+    end.
+
 
 getPassword(Page, Root, Prefix, Target, Values) ->
     Vs = [{target, atom_to_list(Target), []}|
@@ -771,21 +827,6 @@ putPassword(Params, Root, Prefix) ->
 	    end
     end.
 
-delete1(Page, Password, Content) ->
-    Txt = quote_lt(Content),
-    template("Delete", background("info"), "",
-	     [h1(Page),
-	      p("Reconfirm deleting this page - hit the 'Delete' "
-		"button to permanently remove the page."),
-	      form("POST", "finalDeletePage.yaws",
-		   [input("submit", "finaldelete", "Delete"),
-		    input("hidden", "node", Page),
-		    input("hidden", "password", Password),
-		    p(),
-		    textarea("text", 25, 75, Txt),
-		    p(),
-		    hr()])]).
-
 editPage(Params, Root, Prefix) ->
     Password = getopt(password, Params, ""),
     Page     = getopt(node, Params), 
@@ -819,12 +860,9 @@ edit1(Page, Password, Content) ->
 	  form("POST", "previewPage.yaws",
 	       [textarea("text", 25, 75, Txt),
 		p(),
-		input("submit", "review", "preview"),
-		input("hidden", "node", Page),
-		input("hidden", "password", Password),
-		hr()]),
-	  form("POST", "deletePage.yaws",
-	       [input("submit", "delete", "delete"),
+		input("submit", "preview", "preview"),
+		input("submit", "delete", "delete"),
+		input("submit", "cancel", "cancel"),
 		input("hidden", "node", Page),
 		input("hidden", "password", Password),
 		hr()])
@@ -1040,10 +1078,24 @@ editTag(Params, Root, Prefix) ->
 
 
 previewPage(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
-    Password = getopt(password, Params),
-    Txt0 = getopt(text, Params),
+    Page     = getopt(node, Params),
+    Cancel   = getopt(cancel, Params),
+    Delete   = getopt(delete, Params),
 
+    if
+	Cancel /= undefined ->
+	    redirect({node, Page}, Prefix);
+	Delete /= undefined ->
+	    deletePage(Params, Root, Prefix);
+	true ->
+	    previewPage1(Params, Root, Prefix)
+    end.
+
+previewPage1(Params, Root, Prefix) ->
+    Page     = getopt(node, Params),
+    Password = getopt(password, Params),
+    Txt0     = getopt(text, Params),
+    
     Txt = zap_cr(Txt0),
     Wik = wiki_split:str2wiki(Txt),
     template("Preview",background("info"),"",
@@ -1053,31 +1105,12 @@ previewPage(Params, Root, Prefix) ->
 		"button in your browser."),
 	      form("POST", "storePage.yaws",
 		   [input("submit", "store", "Store"),
+		    input("submit", "cancel", "Cancel"),
 		    input("hidden", "node", Page),
 		    input("hidden", "password", Password),
 		    input("hidden", "txt", str2formencoded(Txt))]),
 	      p(),hr(),h1(Page), 
 	      wiki_to_html:format_wiki(Page, Wik, Root)]).
-
-finalDeletePage(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
-    Password = getopt(password, Params, ""),
-    Txt0 = getopt(text, Params),
-    
-    {File,FileDir} = page2filename(Page, Root),
-    case file:delete(File) of
-	ok ->
-	    wiki_templates:template("Page Deleted",background("info"),"",
-		     [h1(Page),
-		      p("Page has been permanently deleted."),
-		      p("<a href='showPage.yaws?node=home'>Home</a>"),
-		      hr()]);
-	_ ->
-	    wiki_templates:template("Error",background("info"),"",
-		     [h1(Page),
-		      p("Failed to delete page."),
-		      hr()])
-    end.
 
 %% Preview Tagged
 %% Tagged stuff is inside comment and append regions
