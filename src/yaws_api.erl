@@ -607,6 +607,9 @@ setcookie(Name, Value, Path, Expire) ->
 setcookie(Name, Value, Path, Expire, Domain) ->
     setcookie(Name, Value, Path, Expire, Domain,[]).
 
+setcookie(Name, Value, [], [], Domain, []) when list(Domain) ->
+    {header, f("Set-Cookie: ~s=~s; Domain=~s;", [Name,Value,Domain])};
+
 setcookie(_Name, _Value, _Path, _Expire, _Domain, _Secure) ->
     exit(nyi).
 
