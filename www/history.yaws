@@ -12,7 +12,7 @@ out(A) ->
 <table border="2">
 
 
-<tr><td> Ma4 4   2002 made release 0.24 <td><tr>
+<tr><td> Ma4 4   2002 made release 0.30 <td><tr>
 <tr><td> Feb 28, 2002 Added traffic trace -t flag and ~/public_html support.
 <tr><td> Feb 26, 2002 Cought I/O from the erlang compiler when compiling.
 The compiler will (wrongly) produce some errors plainly to the tty.

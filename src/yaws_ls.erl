@@ -32,7 +32,7 @@ list_directory(CliSock, List, DirName, GC, SC) ->
     D = [yaws_server:make_200(), 
 	 yaws_server:make_dyn_headers(true, "text/html"),
 	 "\r\n", Bin],
-    yaws_server:safe_send(true, CliSock, D),
+    yaws_server:safe_send(true, CliSock, D, GC),
     done.
 
 
