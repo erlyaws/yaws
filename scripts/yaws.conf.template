@@ -26,12 +26,16 @@ include_dir = %yawsdir%/examples/include
 
 
 
+
+
 # This is a debug variable, possible values are http | traffic | false
 # It is also possible to set the trace (possibly to the tty) while
 # invoking yaws from the shell as in
 # yaws -i -T -x (see man yaws)
 
 trace = false
+
+
 
 
 
@@ -58,6 +62,13 @@ log_wrap_size = 1000000
 # can produce the nice geography piechart
 
 log_resolve_hostname = false
+
+
+
+# fail completely or not if yaws fails 
+# to bind a listen socket
+fail_on_bind_err = true
+
 
 
 # If yaws is started as root, it can, once it has opened

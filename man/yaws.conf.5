@@ -103,8 +103,14 @@ is 1000000, 1 M. This value can changed.
 
 
 .TP
-\B log_resolve_hostname = Boll\fR
+\B log_resolve_hostname = Bool\fR
 By default the client host IP is not resolved in the access logs.
+
+
+.TP
+\B fail_on_bind_err = Bool\fR
+Fail completely or not if yaws fails to bind a listen socket
+Default is true.
 
 
 .TP

@@ -190,13 +190,20 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
 
 
 start_group(GC, Group) ->
-    case proc_lib:start_link(?MODULE, gserv, [GC, Group]) of
+    FailOnBind = ?gc_fail_on_bind_err(GC),
+    case proc_lib:start_link(?MODULE, gserv, [self(), GC, Group]) of
+	{error, F, A} when FailOnBind == false ->
+	    error_logger:error_msg(F, A),
+	    false;
 	{error, F, A} ->
 	    error_logger:error_msg(F, A),
+	    erlang:fault(badbind);
+	{error, Reason} when FailOnBind == false ->
+	    error_logger:error_msg("FATAL: ~p~n", [Reason]),
 	    false;
 	{error, Reason} ->
 	    error_logger:error_msg("FATAL: ~p~n", [Reason]),
-	    false;
+	    erlang:fault(badbind);
 	{Pid, SCs} ->
 	    {true, {Pid, SCs}};
 	none ->
@@ -386,14 +393,15 @@ set_dir_mode(Dir, Mode) ->
     end.
 
 
-gserv(_, []) ->
+gserv(Top, _, []) ->
     proc_lib:init_ack(none);
 
 %% One server per IP we listen to
-gserv(GC, Group0) ->
+gserv(Top, GC, Group0) ->
     process_flag(trap_exit, true),
     ?TC([{record, GC, gconf}]),
     put(gc, GC),
+    put(top, Top),
     Group = map(fun(SC) -> setup_ets(SC)
 		end, Group0),
     SC = hd(Group),
@@ -487,8 +495,15 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 		    gserv_loop(GS2, [From | Ready], Rnum+1, Last)
 	    end;
 	{'EXIT', _Pid, _} ->
-	    gserv_loop(GS, Ready, Rnum, Last);
-
+	    case get(top) of
+		Pid -> 
+		    error_logger:format("Top proc died, terminate gserv",[]),
+		    {links, Ls} = process_info(self(), links),
+		    foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
+		    exit(noserver);
+		_ ->
+		    gserv_loop(GS, Ready, Rnum, Last)
+	    end;
 	{From, stop} ->   
 	    unlink(From),
 	    {links, Ls} = process_info(self(), links),

@@ -223,9 +223,11 @@ make_default_gconf(Debug) ->
 					30
 				end,
 	   flags = if Debug ->
-			   ?GC_DEBUG bor ?GC_AUTH_LOG bor ?GC_COPY_ERRLOG;
+			   ?GC_DEBUG bor ?GC_AUTH_LOG bor 
+			       ?GC_COPY_ERRLOG bor ?GC_FAIL_ON_BIND_ERR;
 		      true ->
-			   ?GC_AUTH_LOG bor ?GC_COPY_ERRLOG
+			   ?GC_AUTH_LOG bor ?GC_COPY_ERRLOG bor 
+			       ?GC_FAIL_ON_BIND_ERR
 		   end,
 	   uid = element(2, yaws:getuid()),
 	   yaws = "Yaws " ++ yaws_vsn:version()}.
@@ -321,6 +323,15 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 	    case is_bool(Bool) of
 		{true, Val} ->
 		    fload(FD, globals, ?gc_log_set_resolve_hostname(GC, Val),
+			  C, Cs, Lno+1, Next);
+		false ->
+		    {error, ?F("Expect true|false at line ~w", [Lno])}
+	    end;
+
+	["fail_on_bind_err", '=',  Bool] ->
+	    case is_bool(Bool) of
+		{true, Val} ->
+		    fload(FD, globals, ?gc_set_fail_on_bind_err(GC, Val),
 			  C, Cs, Lno+1, Next);
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}
