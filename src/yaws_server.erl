@@ -1540,6 +1540,16 @@ deliver_dyn_file(CliSock, GC, SC, Bin, Fd, [H|T],Arg,N) ->
 	{skip, NumChars} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
 	    deliver_dyn_file(CliSock, GC, SC, Bin2, Fd, T,Arg,N);
+	{binding, NumChars} ->
+	    {Send, Bin2} = skip_data(Bin, Fd, NumChars),
+	    "%%"++Key = binary_to_list(Send),
+	    Chunk =
+		case get({binding, Key--"%%"}) of
+		    undefined -> Send;
+		    Value -> Value
+		end,
+	    accumulate_chunk(Chunk),
+	    deliver_dyn_file(CliSock, GC, SC, Bin2, Fd, T, Arg, N);
 	{error, NumChars, Str} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
 	    accumulate_chunk(Str),
@@ -1792,6 +1802,10 @@ handle_out_reply({redirect, URL, Status}, _LineNo, _YawsFile, _SC, _A) ->
     Loc = ["Location: ", URL, "\r\n"],
     OH = get(outh),
     new_redir_h(OH, Loc, Status),
+    ok;
+
+handle_out_reply({bindings, L}, _LineNo, _YawsFile, _SC, _A) ->
+    lists:foreach(fun({Key, Value}) -> put({binding, Key}, Value) end, L),
     ok;
 
 handle_out_reply(ok, _LineNo, _YawsFile, _SC, _A) ->

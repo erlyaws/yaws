@@ -74,9 +74,6 @@ compile_file(File, GC, SC) ->
 
 			  
 
-compile_file(C,  _LineNo, eof, aftererl, NumChars, Ack, Errors) ->
-    file_close(C#comp.infd),
-    {ok, [{errors, Errors} |lists:reverse([{skip, NumChars} |Ack])]};
 compile_file(C,  _LineNo, eof, _Mode, NumChars, Ack, Errors) ->
     file_close(C#comp.infd),
     {ok, [{errors, Errors} |lists:reverse([{data, NumChars} |Ack])]};
@@ -97,22 +94,6 @@ compile_file(C, LineNo,  Chars, init, NumChars, Ack, Errs) ->
 	    compile_file(C,1,line(),html,0,[], Errs)
     end;
 
-
-%% skip initial space if first thing is <erl> otherwise not
-compile_file(C, LineNo,  Chars, aftererl, NumChars, Ack, Errs) ->
-    case Chars -- [$\s, $\t, $\n, $\r] of
-	[] ->
-	    ?Debug("ASKIP ~p~n", [Chars]),
-	    L=length(Chars),
-	    compile_file(C, LineNo+1, line(),aftererl, NumChars+L, Ack, Errs);
-	_ when NumChars == 0 ->
-	    compile_file(C, LineNo,  Chars, html, NumChars, Ack, Errs);
-	_ ->
-	    A = {skip, NumChars},
-	    compile_file(C, LineNo,  Chars, html, 0, [A|Ack], Errs)
-    end;
-
-
 compile_file(C, LineNo,  Chars = "<erl>" ++ _Tail, html,  NumChars, Ack,Es) ->
     ?Debug("start erl:~p",[LineNo]),
     C2 = new_out_file(LineNo, C, C#comp.gc),
@@ -127,50 +108,42 @@ compile_file(C, LineNo,  Chars = "<erl>" ++ _Tail, html,  NumChars, Ack,Es) ->
 			 Ack, Es) %hack
     end;
 
-compile_file(C, LineNo,  Chars = "</erl>" ++ _Tail, erl, NumChars, Ack, Es) ->
+compile_file(C, LineNo,  Chars = "</erl>" ++ Tail, erl, NumChars, Ack, Es) ->
     ?Debug("stop erl:~p",[LineNo]),
     file:close(C#comp.outfd),
-    NumChars2 = NumChars + length(Chars),
     case proc_compile_file(C#comp.outfile, comp_opts(C#comp.gc)) of
 	{ok, ModuleName, Binary} ->
 	    case code:load_binary(ModuleName, C#comp.outfile, Binary) of
 		{module, ModuleName} ->
 		    C2 = C#comp{modnum = C#comp.modnum+1},
-		    L2 = check_exported(C, LineNo,NumChars2, ModuleName),
-		    compile_file(C2, LineNo+1, line(),aftererl,0,L2++Ack, Es);
+		    L2 = check_exported(C, LineNo, NumChars, ModuleName),
+		    compile_file(C2, LineNo, Tail, html, 0,
+				 L2++[{skip, 6}|Ack], Es);
 		Err ->
-		    A2 = gen_err(C, LineNo, NumChars2,
+		    A2 = gen_err(C, LineNo, NumChars,
 				 ?F("Cannot load module ~p: ~p", 
 				    [ModuleName, Err])),
-		    compile_file(C, LineNo+1, line(),
-				 aftererl, 0, [A2|Ack], Es+1)
+		    compile_file(C, LineNo, Tail, html, 0,
+				 [A2, {skip, 6}|Ack], Es+1)
 	    end;
 	{error, Errors, _Warnings} ->
 	    %% FIXME remove outfile here ... keep while debuging
-	    A2 = comp_err(C, LineNo, NumChars2, Errors),
-	    compile_file(C, LineNo+1, line(), aftererl, 0, [A2|Ack], Es+1);
+	    A2 = comp_err(C, LineNo, NumChars, Errors),
+	    compile_file(C, LineNo, Tail, html, 0, [A2, {skip, 6}|Ack], Es+1);
 	{error, Str} ->  
 	    %% this is boring but does actually happen
 	    %% in order to get proper user errors here we need to catch i/o
 	    %% or hack compiler/parser
 	    yaws:elog("Dynamic compile error in file ~s, line ~w~n~s",
 		      [C#comp.infile, LineNo, Str]),
-	    A2 = {error, NumChars2, ?F("<pre> Dynamic compile error in file "
-				       " ~s line ~w~n~s </pre>", 
+	    A2 = {error, NumChars, ?F("<pre> Dynamic compile error in file "
+		                      " ~s line ~w~n~s </pre>", 
 				       [C#comp.infile, LineNo, Str])},
-	    compile_file(C, LineNo+1, line(), aftererl, 0, [A2|Ack], Es+1)
+	    compile_file(C, LineNo, Tail, html, 0, [A2, {skip, 6}|Ack], Es+1)
     end;
 
-compile_file(C, LineNo,  Chars = "<pre>" ++ _Tail, html,  NumChars, Ack, Es) ->
-    ?Debug("start pre:~p",[LineNo]),
-    compile_file(C, LineNo+1, line() , pre, NumChars + length(Chars), Ack,Es);
-
-compile_file(C, LineNo,  Chars = "</pre>" ++ _Tail, pre,  NumChars, Ack,Es) ->
-    ?Debug("stop pre:~p",[LineNo]),
-    compile_file(C, LineNo+1, line() , html, NumChars + length(Chars), Ack,Es);
-
 compile_file(C, LineNo,  Chars, erl, NumChars, Ack,Es) ->
-    case has_tag(Chars, "</erl>") of
+    case has_str(Chars, ["</erl>"]) of
 	{ok, Skipped, Chars2} ->
 	    compile_file(C, LineNo,  Chars2, erl, NumChars + Skipped, Ack,Es);
 	false ->
@@ -180,37 +153,42 @@ compile_file(C, LineNo,  Chars, erl, NumChars, Ack,Es) ->
 			 length(Chars), Ack,Es)
     end;
 
+compile_file(C, LineNo, [], html, NumChars, Ack, Es) ->
+    compile_file(C, LineNo+1, line(), html, NumChars, Ack, Es);
 
 compile_file(C, LineNo,  Chars, html, NumChars, Ack,Es) ->
-    case has_tag(Chars, "<erl>") of
-	{ok, Skipped, Chars2} ->
-	    compile_file(C, LineNo,  Chars2, html, NumChars+Skipped, Ack,Es);
+    case has_str(Chars, ["<erl>", "%%"]) of
+	{ok, Skipped, "<erl>"++_ = Chars2} ->
+	    compile_file(C, LineNo, Chars2, html, NumChars+Skipped, Ack, Es);
+	{ok, Skipped, "%%"++Chars2} ->
+	    compile_file(C, LineNo, Chars2, binding, 2,
+			 [{data, NumChars+Skipped}|Ack], Es);
 	false ->
-	    compile_file(C, LineNo+1, line(), html, NumChars + 
-			 length(Chars), Ack,Es)
+	    compile_file(C, LineNo, tl(Chars), html, NumChars+1, Ack, Es)
     end;
 
-compile_file(C, LineNo,  Chars, pre, NumChars, Ack,Es) ->
-    compile_file(C, LineNo+1, line(), pre, NumChars + length(Chars), Ack,Es).
+compile_file(C, LineNo, [], binding, NumChars, Ack, Es) ->
+    compile_file(C, LineNo+1, line(), html, NumChars, Ack, Es);
+
+compile_file(C, LineNo, "%%"++Chars, binding, NumChars, Ack, Es) ->
+    compile_file(C, LineNo, Chars, html, 0, [{binding, NumChars+2}|Ack], Es);
+
+compile_file(C, LineNo, [H|T], binding, NumChars, Ack, Es) ->
+    compile_file(C, LineNo, T, binding, NumChars+1, Ack, Es).
 
 
-
-has_tag(L, Str) ->
-    has_tag(L, Str, 0).
-has_tag([H|T], Tag, Num) ->
+has_str(L, Strs) -> has_str(L, Strs, 0).
+has_str([H|T], Strs, Num) ->
     case yaws:is_space(H) of
-	true ->
-	    has_tag(T, Tag, Num+1);
+	true -> has_str(T, Strs, Num+1);
 	false ->
-	    case lists:prefix(Tag, [H|T]) of
-		true ->
-		    {ok, Num, [H|T]};
-		false ->
-		    false
+	    case lists:any(fun(Str) -> lists:prefix(Str, [H|T]) end, Strs) of
+		true -> {ok, Num, [H|T]};
+		false -> false
 	    end
     end;
-has_tag(_,_,_) ->
-    false.
+has_str(_,_,_) -> false.
+
 
 check_exported(C, LineNo, NumChars, Mod) ->
     case is_exported(out, 1, Mod) of

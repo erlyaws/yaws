@@ -52,6 +52,8 @@
 -export([parse_set_cookie/1, format_set_cookie/1, 
 	 postvar/2, queryvar/2]).
 
+-export([binding/1]).
+
 %% remove entirely
 -export([parse_post_data/1]).
 
@@ -1628,3 +1630,8 @@ parse_post_data(_Arg) ->
     exit(removed).
 
 
+binding(Key) ->
+    case get({binding, Key}) of
+	undefined -> exit({unknown_binding, Key});
+	Value -> Value
+    end.
