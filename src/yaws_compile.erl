@@ -61,7 +61,7 @@ compile_file(File, GC, SC) ->
     end.
 
 compile_file(C,  _LineNo, eof, _Mode, NumChars, Ack, Errors) ->
-    file:close(C#comp.infd),
+    file_close(C#comp.infd),
     {ok, [{errors, Errors} |lists:reverse([{data, NumChars} |Ack])]};
 
 
@@ -306,18 +306,16 @@ file_open(Fname) ->
     case file:read_file(Fname) of
 	{ok, Bin} ->
 	    put(yfile_data, binary_to_list(Bin)),
-	    {ok, xxx};
+	    {ok, yfile_data};
 	Err ->
 	    Err
     end.
 
+file_close(Key) ->
+    erase(Key).
+
 
 get_line(Fd) ->
-    L = get_line0(Fd),
-    io:format("LINE ~s~n", [L]),
-    L.
-
-get_line0(Fd) ->
     case get (yfile_data) of
 	[] ->
 	    eof;
