@@ -24,6 +24,7 @@
 	       large_file_chunk_size = 10240,
 	       cache_refresh_secs = 30,  % seconds  (auto zero when debug)
 	       default_type = "text/html",
+	       auth_log = true,            %% log 401's and also good auths
 	       timeout = 30000,
 	       include_dir = [],
 	       yaws,                %% server string
@@ -57,7 +58,7 @@
 	 rhost,                      %% forced redirect host (+ optional port)
 	 rmethod,                    %% forced redirect method
 	 docroot,                    %% path to the docs
-	 access_log = true,          %% log acces 
+	 access_log = true,          %% log access 
 	 listen = {127,0,0,1},       %% bind to this IP, {0,0,0,0} is possible
 	 servername = "localhost",   %% servername is what Host: header is
          add_port = true,            %% add port after reading config

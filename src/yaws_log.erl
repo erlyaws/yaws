@@ -32,6 +32,7 @@
 	  now,
 	  tracefd,
 	  tty_trace = false,
+	  auth_log,
 	  alogs =  []}).
 
 
@@ -60,6 +61,8 @@ open_trace(What) ->
 trace_traffic(ServerOrClient , Data) ->
     gen_server:cast(?MODULE, {trace, ServerOrClient, Data}).
 
+authlog(ServerName, IP, Path, Item) ->
+    gen_server:cast(?MODULE, {auth, ServerName, IP, Path, Item}).
 
 
 uid_change(GC) ->
@@ -143,9 +146,21 @@ handle_call({setdir, Dir, Sconfs}, _From, State)
 			  false
 		  end
 	  end, SCs),
+    AuthLogFileName = filename:join([Dir, "auth.log"]),
+    AuthLog = case file:open(AuthLogFileName, [write, raw, append]) of
+		  {ok, AFd} ->
+		      AFd;
+		  _Err ->
+		      error_logger:format("Cannot open ~s~n", 
+					  [AuthLogFileName]),
+		      false
+	      end,
     S2 = State#state{running = true,
 		     dir  = Dir,
 		     now = fmtnow(),
+		     auth_log = #alog{fd = AuthLog,
+				      servername = undefined,
+				      filename = AuthLogFileName},
 		     alogs = L},
 
     yaws:ticker(3000, secs3),
@@ -227,6 +242,18 @@ handle_cast({access, ServerName, Ip, Req, Status, Length, Referrer, UserAgent}, 
 	false ->
 	    {noreply, State}
     end;
+
+handle_cast({auth, ServerName, IP, Path, Item}, State) ->
+    case State#state.running of 
+	true ->
+	    do_auth_log(ServerName, IP, Path, Item, State),
+	    {noreply, State};
+	false ->
+	    {noreply,State}
+    end;
+	    
+	
+
 handle_cast({trace, from_server, Data}, State) ->
     Str = ["*** SRV -> CLI *** ", Data],
     file:write(State#state.tracefd, Str),
@@ -249,6 +276,22 @@ do_alog(ServerName, Ip, Req, Status, Length, Referrer, UserAgent, State) ->
 	_ ->
 	    false
     end.
+
+do_auth_log(ServerName, IP, Path, Item, State) ->
+    AL = State#state.auth_log,
+    I = [yaws:fmt_ip(IP), 
+	 " ", State#state.now,
+	 " ", ServerName, " " ,"\"", Path,"\"",
+	 case Item of
+	     {ok, User} ->
+		 [" OK user=", User];
+	     {401, Realm} ->
+		 [" 401 realm=", Realm];
+	     {401, User, PWD} ->
+		 [" 401 user=", User, " badpwd=", PWD]
+	 end, "\n"],
+    file:write(AL#alog.fd, I).
+
 
 
 tty_trace(Str, State) ->
@@ -276,13 +319,7 @@ handle_info(secs3, State) ->
 handle_info(minute10, State) ->
     L = lists:map(
 	  fun(AL) ->
-		  {ok, FI} = file:read_file_info(AL#alog.filename),
-		  if
-		      FI#file_info.size > ?WRAP_LOG_SIZE ->
-			  wrap(AL);
-		      true ->
-			  AL
-		  end
+		  wrap(AL)
 	  end, State#state.alogs),
     
     Dir = State#state.dir,
@@ -298,18 +335,36 @@ handle_info(minute10, State) ->
 	true ->
 	    ok
     end,
-    {noreply, State#state{alogs= L}}.
+    {noreply, State#state{alogs= L,
+			  auth_log = wrap(State#state.auth_log)}}.
 
     
 
+wrap_p(AL) when record(AL, alog) ->
+    {ok, FI} = file:read_file_info(AL#alog.filename),
+    if
+	FI#file_info.size > ?WRAP_LOG_SIZE ->
+	    true;
+	true ->
+	    false
+    end;
+wrap_p(_) ->
+    false.
+
+
 
 wrap(AL) ->
-    file:close(AL#alog.fd),
-    Old = [AL#alog.filename, ".old"],
-    file:delete(Old),
-    file:rename(AL#alog.filename, Old),
-    {ok, Fd2} = file:open(AL#alog.filename, [write, raw]),
-    AL#alog{fd = Fd2}.
+    case wrap_p(AL) of
+	true ->
+	    file:close(AL#alog.fd),
+	    Old = [AL#alog.filename, ".old"],
+	    file:delete(Old),
+	    file:rename(AL#alog.filename, Old),
+	    {ok, Fd2} = file:open(AL#alog.filename, [write, raw]),
+	    AL#alog{fd = Fd2};
+	false ->
+	    AL
+    end.
 
 
 

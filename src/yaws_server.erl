@@ -800,6 +800,36 @@ inet_peername(Sock, SC) ->
     end.
 	    
 
+
+maybe_auth_log(GC, SC, Item, ARG) ->
+    case GC#gconf.auth_log of
+	false ->
+	    ok;
+	true ->
+	    Req = ARG#arg.req,
+	    CliSock = ARG#arg.clisock,
+	    IP = if
+		     port(CliSock) ->
+			 case inet:peername(CliSock) of
+			     {ok, {Ip, _}} ->
+				 Ip;
+			     _ ->
+				 unknown
+			 end;
+		     true ->
+			 case ssl:peername(CliSock) of
+			     {ok, {Ip, _}} ->
+				 Ip;
+			     _ ->
+				 unknown
+			 end
+		 end,
+	    Path = safe_decode_path(Req#http_request.path),
+	    yaws_log:authlog(SC#sconf.servername, IP, Path, Item)
+    end.
+
+
+
 maybe_access_log(Ip, SC, Req, H) ->
     ?TC([{record, SC, sconf}]),
     case SC#sconf.access_log of
@@ -996,7 +1026,8 @@ handle_request(CliSock, GC, SC, ARG, N) ->
 		{DecPath, QueryPart} ->
 		    ?Debug("Test revproxy: ~p and ~p~n", [DecPath, 
 			                                  SC#sconf.revproxy]),
-		    case {is_auth(DecPath,ARG#arg.headers,SC#sconf.authdirs),
+		    case {is_auth(GC, SC, ARG, DecPath,
+				  ARG#arg.headers,SC#sconf.authdirs),
 			  is_revproxy(DecPath, SC#sconf.revproxy)} of
 			{true, false} ->
 			    UT   = url_type(GC, SC, DecPath),
@@ -1030,23 +1061,28 @@ handle_request(CliSock, GC, SC, ARG, N) ->
     end.
 
 
-is_auth(_Req_dir, _H, [] ) -> true;
-is_auth(Req_dir, H, [{Auth_dir, #auth{realm=Realm, users=Users}} | T ] ) ->
+is_auth(_GC, _SC, _ARG, _Req_dir, _H, [] ) -> 
+    true;
+is_auth(GC, SC, ARG, Req_dir, H,
+	[{Auth_dir, #auth{realm=Realm, users=Users}} | T ] ) ->
     case lists:prefix(Auth_dir, Req_dir) of
 	true ->
 	    case H#headers.authorization of
 		undefined ->
+		    maybe_auth_log(GC, SC, {401, Realm}, ARG),
 		    {false, Realm};
 		{User, Password, _OrigString} ->
 		    case lists:member({User, Password}, Users) of
 			true ->
+			    maybe_auth_log(GC, SC, {ok, User}, ARG),
 			    true;
 			false ->
+			    maybe_auth_log(GC, SC, {401, User, Password}, ARG),
 			    {false, Realm}
 		    end
 	    end;
 	false ->
-	    is_auth(Req_dir, H, T)
+	    is_auth(GC, SC, ARG, Req_dir, H, T)
     end.
 
 

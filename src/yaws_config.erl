@@ -332,6 +332,16 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 			  C, Cs, Lno+1, Next)
 	    end;
 
+	["auth_log", '=', Bool] ->
+	    case is_bool(Bool) of
+		{true, Val} ->
+		    fload(FD, globals, GC#gconf{auth_log = Bool},
+			  C, Cs, Lno+1, Next);
+		false ->
+		    {error, ?F("Expect true|false at line ~w", [Lno])}
+	    end;
+
+
 	['<', "server", Server, '>'] ->  %% first server 
 	    fload(FD, server, GC, #sconf{servername = Server},
 		  Cs, Lno+1, Next);
