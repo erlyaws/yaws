@@ -342,7 +342,7 @@ do_header(Head) ->
 	{value, {_,"form-data"++Line}} ->
 	    Parameters = parse_arg_line(Line),
 	    {value, {_,Name}} = lists:keysearch(name, 1, Parameters),
-	    {list_to_atom(Name), Parameters};
+	    {mkkey(Name), Parameters};
 	_ ->
 	    {Header}
     end.
@@ -400,7 +400,7 @@ do_parse_spec(<<$%, Hi:8, Lo:8, Tail/binary>>, Spec, Last, Cur, State) ->
     do_parse_spec(Tail, Spec, Last, [ Hex | Cur],  State);
 
 do_parse_spec(<<$&, Tail/binary>>, Spec, _Last , Cur,  key) ->
-    [{mkkey(Cur), undefined} |
+    [{mkkey_reverse(Cur), undefined} |
      do_parse_spec(Tail, Spec, nokey, [], key)];  %% cont keymode
 
 do_parse_spec(<<$&, Tail/binary>>, Spec, Last, Cur, value) ->
@@ -412,12 +412,12 @@ do_parse_spec(<<$+, Tail/binary>>, Spec, Last, Cur,  State) ->
     do_parse_spec(Tail, Spec, Last, [$\s|Cur], State);
 
 do_parse_spec(<<$=, Tail/binary>>, Spec, _Last, Cur, key) ->
-    do_parse_spec(Tail, Spec, mkkey(Cur), [], value); %% change mode
+    do_parse_spec(Tail, Spec, mkkey_reverse(Cur), [], value); %% change mode
 
 do_parse_spec(<<H:8, Tail/binary>>, Spec, Last, Cur, State) ->
     do_parse_spec(Tail, Spec, Last, [H|Cur], State);
 do_parse_spec(<<>>, _Spec, nokey, Cur, _State) ->
-    [{mkkey(Cur), undefined}];
+    [{mkkey_reverse(Cur), undefined}];
 do_parse_spec(<<>>, Spec, Last, Cur, _State) ->
    [S|_Ss] = tail_spec(Spec),
     [{Last, coerce_type(S, Cur)}];
@@ -451,13 +451,15 @@ coerce_type(ip, _Str) ->
 coerce_type(binary, Str) ->
     list_to_binary(lists:reverse(Str)).
 
+mkkey_reverse(S) ->
+    mkkey(lists:reverse(S)).
 mkkey(S) ->
     GC=get(gc),
     if
 	?gc_has_backwards_compat_parse(GC) ->
-	    list_to_atom(lists:reverse(S));
+	    list_to_atom(S);
 	true ->
-	    lists:reverse(S)
+	    S
     end.
 
 
