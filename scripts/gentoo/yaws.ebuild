@@ -6,17 +6,14 @@ HOMEPAGE="http://yaws.hyber.org/"
 SRC_URI="http://yaws.hyber.org/download/${P}.tar.gz"
 LICENSE="BSD"
 SLOT="0"
-KEYWORDS="~x86 ~ppc ~sparc ~alpha ~arm"
+KEYWORDS="x86 ppc sparc alpha arm"
 IUSE="ssl"
 
-#DEPEND=">=dev-lang/erlang-r8
-#	ssl?	( >=dev-libs/openssl-0.9.6d )"
+DEPEND=">=dev-lang/erlang-r8
+	ssl?	( >=dev-libs/openssl-0.9.6d )"
 
 
  src_compile() {
-
-    echo "D = $D"
-    set -x
 
     ./configure                    \
         --prefix=${D}/usr/         \

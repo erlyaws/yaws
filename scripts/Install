@@ -22,16 +22,17 @@ fi
 sh ./mangle ${prefix}/lib/yaws ${erl} yaws.conf.template ${t}
 
 
-if [ -d /etc/init.d ]; then
-    # sysV init scripts
-    if [ -f /etc/gentoo-release ]; then
-	cp gentoo/init.d.yaws  ${etcdir}/init.d/yaws
-	cp gentoo/conf.d.yaws  ${etcdir}/conf.d/yaws
-    elif [ `uname` = Linux ]; then
-	install -d ${etcdir}/init.d
-	cp yaws.init.d ${etcdir}/init.d/yaws
-	chmod +x ${etcdir}/init.d/yaws
-    fi
+if [ -f /etc/gentoo-release ]; then
+    cp gentoo/init.d.yaws  ${etcdir}/init.d/yaws
+    cp gentoo/conf.d.yaws  ${etcdir}/conf.d/yaws
+elif [ -f /etc/redhat-release ]; then
+    install -d ${etcdir}/init.d
+    cp yaws.init.d ${etcdir}/init.d/yaws
+    chmod +x ${etcdir}/init.d/yaws
+else
+    echo "Don't know how to make /etc/init scrips for this system"
 fi
+
+
 
 
