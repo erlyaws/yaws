@@ -19,13 +19,13 @@
 
 list_directory(CliSock, List, DirName, Req) ->
     {abs_path, Path} = Req#http_request.path,
-    {DirStr, Pos, Direction} = parse_query(Path),
+    {DirStr, Pos, Direction, Qry} = parse_query(Path),
     ?Debug("List=~p Dirname~p~n", [List, DirName]), 
     [Up | L0] = lists:zf(
 		  fun(F) ->
 			  File = DirName ++ [$/|F],
 			  FI = file:read_file_info(File),
-			  file_entry(FI, DirName, F)
+			  file_entry(FI, DirName, F, Qry)
 		  end, [".." | List]),
     L1 = lists:keysort(Pos, L0),
     L2 = if Direction == normal -> L1;
@@ -58,7 +58,7 @@ list_directory(CliSock, List, DirName, Req) ->
 
 parse_query(Path) ->
     case string:tokens(Path, [$?]) of
-	[DirStr, [PosC, $=, DirC]] ->
+	[DirStr, [PosC, $=, DirC] = Q] ->
 	    Pos = case PosC of
 		      $D -> 2; % date
 		      $S -> 3; % size
@@ -68,9 +68,9 @@ parse_query(Path) ->
 		      $r -> reverse;
 		      _  -> normal
 		  end,
-	    {DirStr, Pos, Dir};
+	    {DirStr, Pos, Dir, "/?"++Q};
 	_ ->
-	    {Path, 1, normal}
+	    {Path, 1, normal, ""}
     end.
     
 
@@ -124,7 +124,7 @@ list_head(Direction) ->
 list_tail() ->
     "</table>".
 
-file_entry({ok, FI}, _DirName, Name) ->
+file_entry({ok, FI}, _DirName, Name, Qry) ->
     ?Debug("file_entry(~p) ", [Name]),
     Ext = filename:extension(Name),
     {Gif, Alt} = list_gif(FI#file_info.type, Ext),
@@ -134,7 +134,7 @@ file_entry({ok, FI}, _DirName, Name) ->
 	   "<td>~s</td>\n"
 	   "<td>~s</td>\n"
 	   "</tr>\n",
-	   [yaws_api:url_encode(Name),
+	   [yaws_api:url_encode(Name)++Qry,
 	    FI#file_info.size,
 	    "/icons/" ++ Gif,
 	    Alt,
@@ -143,7 +143,7 @@ file_entry({ok, FI}, _DirName, Name) ->
 	    sizestr(FI)]),
     ?Debug("Entry:~p", [Entry]),
     {true, {Name, FI#file_info.mtime, FI#file_info.size, Entry}};
-file_entry(_Err, _, _Name) ->
+file_entry(_Err, _, _Name, _) ->
     ?Debug("no entry for ~p: ~p", [_Name, _Err]),
     false.
 
