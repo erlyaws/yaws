@@ -1675,7 +1675,7 @@ binding(Key) ->
     end.
 
 
-%% Return the parse url the client requested.
+%% Return the parsed url that the client requested.
 request_url(ARG) ->
     SC = get(sc),
     Headers = ARG#arg.headers,
@@ -1695,15 +1695,9 @@ request_url(ARG) ->
 		  end,
 	 host = case Headers#headers.host of
 		    undefined ->
-			Sname = SC#sconf.servername,
-			case string:chr(Sname, $:) of
-			    0 ->
-				Sname;
-			    N ->
-				lists:sublist(Sname, N-1)
-			end;
+			yaws:upto_char($:, SC#sconf.servername);
 		    HostHdr ->
-			HostHdr
+			yaws:upto_char($:, HostHdr)
 		end,
 	 port = case {SC#sconf.ssl, SC#sconf.port} of
 		    {_, 80} ->
@@ -1715,5 +1709,7 @@ request_url(ARG) ->
 		end,
 	 path = P,
 	 querypart = Q}.
+
+
 
 			    

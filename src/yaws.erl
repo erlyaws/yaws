@@ -1960,3 +1960,20 @@ load(M) ->
 			  c:l(Mod)
 		  end, M).
 
+
+
+upto_char(Char, [Char|_]) ->
+    [];
+upto_char(Char, [H|T]) when integer(H) ->
+    [H|upto_char(Char, T)];
+upto_char(_, []) ->
+    [];
+%% deep lists
+upto_char(Char, [H|T]) when list(H) ->
+    case lists:member(Char ,H) of
+	true ->
+	    upto_char(Char, H);
+	false ->
+	    [H, upto_char(Char, T)]
+    end.
+

@@ -195,7 +195,7 @@ actl_trace(What) ->
 		{true, What} ->
 		      io_lib:format("Trace of ~p is already turned on, ose 'off' "
 				    "to turn off~n", [What]);
-		{true, Other} ->
+		{true, _Other} ->
 		    yaws_api:setconf(GC#gconf{trace = {true, What}},SCs),
 		    io_lib:format(
 		      "Turning on trace of ~p to file ~s~n",
@@ -369,7 +369,6 @@ lls(Dir) ->
 			  {error, eacces} ->
 			      "unknown";
 			  Err ->
-			      io:format("Err ~p~n", [Err]),
 			      "stopped"
 		      end,
 	    io:format("~-15s~-10s~-10s~n",

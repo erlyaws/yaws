@@ -2827,24 +2827,8 @@ suffix_type(SC, L) ->
     end.
 
 suffix_type(L) ->
-    L2 = upto_dot(L),
+    L2 = yaws:upto_char($., L),
     mime_types:revt(L2).
-
-upto_dot([$.|_]) ->
-    [];
-upto_dot([H|T]) when integer(H) ->
-    [H|upto_dot(T)];
-upto_dot([]) ->
-    [];
-%% deep lists
-upto_dot([H|T]) when list(H) ->
-    case lists:member($. ,H) of
-	true ->
-	    upto_dot(H);
-	false ->
-	    [H, upto_dot(T)]
-    end.
-
 
 		     
 
