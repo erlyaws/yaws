@@ -1036,9 +1036,8 @@ inet_setopts(_,_,_) ->
     ?Debug("GET ~p", [?format_record(Req, http_request)]),
     ok = inet_setopts(SC, CliSock, [{packet, raw}, binary]),
     flush(SC, CliSock, Head#headers.content_length),
-    ARG = make_arg(CliSock, Head, Req, GC, SC),
-    ARG2 = apply(SC#sconf.arg_rewrite_mod, arg_rewrite, [ARG]),
-    handle_request(CliSock, GC, SC, ARG2, 0).
+    ARG = make_arg(CliSock, Head, Req, GC, SC, undefined),
+    handle_request(CliSock, GC, SC, ARG, 0).
 
 
 'POST'(CliSock, GC, SC, Req, Head) ->
@@ -1080,10 +1079,8 @@ inet_setopts(_,_,_) ->
 		  end
 	  end,
     ?Debug("POST data = ~s~n", [binary_to_list(un_partial(Bin))]),
-    ARG = make_arg(CliSock, Head, Req, GC, SC),
-    ARG2 = ARG#arg{clidata = Bin},
-    ARG3 = apply(SC#sconf.arg_rewrite_mod, arg_rewrite, [ARG2]),
-    handle_request(CliSock, GC, SC, ARG3, size(un_partial(Bin))).
+    ARG = make_arg(CliSock, Head, Req, GC, SC, Bin),
+    handle_request(CliSock, GC, SC, ARG, size(un_partial(Bin))).
 
 
 is_ssl(undefined) ->
@@ -1132,18 +1129,20 @@ not_implemented(CliSock, GC, SC, Req, Head) ->
     ?Debug("OPTIONS", []),
     ok = inet_setopts(SC, CliSock, [{packet, raw}, binary]),
     flush(SC, CliSock, Head#headers.content_length),
-    _ARG = make_arg(CliSock, Head, Req, GC, SC),
+ %% _ARG = make_arg(CliSock, Head, Req, GC, SC),
     ?Debug("OPTIONS delivering", []),
     deliver_options(CliSock, Req, GC, SC).
 
-make_arg(CliSock, Head, Req, _GC, SC) ->
+make_arg(CliSock, Head, Req, _GC, SC, Bin) ->
     ?TC([{record, _GC, gconf}, {record, SC, sconf}]),
-    #arg{clisock = CliSock,
-	 headers = Head,
-	 req = Req,
-	 opaque = SC#sconf.opaque,
-	 pid = self(),
-	 docroot = SC#sconf.docroot}.
+    ARG = #arg{clisock = CliSock,
+	       headers = Head,
+	       req = Req,
+	       opaque = SC#sconf.opaque,
+	       pid = self(),
+	       docroot = SC#sconf.docroot,
+	       clidata = Bin},
+    apply(SC#sconf.arg_rewrite_mod, arg_rewrite, [ARG]).
 
 bad_request(CliSock, GC, SC, Req, Head) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
@@ -1162,29 +1161,22 @@ handle_extension_method(Method, CliSock, GC, SC, Req, Head) ->
 handle_request(CliSock, GC, SC, ARG, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     Req = ARG#arg.req,
-    H = ARG#arg.headers,
     case Req#http_request.path of
 	{abs_path, RawPath} ->
 	    case (catch yaws_api:url_decode_q_split(RawPath)) of
 		{'EXIT', _} ->   %% weird broken cracker requests
 		    deliver_403(CliSock, Req, GC, SC);
 		{DecPath, QueryPart} ->
-		    UT =  url_type(GC, SC, DecPath, QueryPart),
-		    ARG2 = ARG#arg{fullpath=UT#urltype.fullpath,
-				   pathinfo=UT#urltype.pathinfo},
-		    case SC#sconf.authdirs of
-			[] ->
-			    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT, N);
-			_Adirs ->
-			    %% we have authentication enabled, check auth
-			    UT2 = unflat(UT),
-			    case is_authenticated(SC, UT2, Req, H) of
-				true ->
-				    handle_ut(CliSock, GC, SC, 
-					      Req, H, ARG2, UT2, N);
-				{false, Realm} ->
-				    deliver_401(CliSock, Req, GC, Realm, SC)
-			    end
+		    case is_auth(DecPath, ARG#arg.headers, SC#sconf.authdirs) of
+			true ->
+			    UT   = url_type(GC, SC, DecPath),
+			    ARG2 = ARG#arg{server_path = DecPath,
+					   querydata= QueryPart,
+					   fullpath=UT#urltype.fullpath,
+					   pathinfo=UT#urltype.pathinfo},
+			    handle_ut(CliSock, GC, SC, ARG2, UT, N);
+			{false, Realm} ->
+			    deliver_401(CliSock, Req, GC, Realm, SC)
 		    end
 	    end;
 	{absoluteURI, Scheme, Host, Port, RawPath} ->
@@ -1212,19 +1204,10 @@ unflat(U) ->
 	 end,
     U2.
 
-is_authdir(Req_dir, [{Auth_dir, Auth}|T]) ->
+is_auth(Req_dir, H, [] ) -> true;
+is_auth(Req_dir, H, [{Auth_dir, #auth{realm=Realm, users=Users}} | T ] ) ->
     case lists:prefix(Auth_dir, Req_dir) of
 	true ->
-	    {true, Auth};
-	false ->
-	    is_authdir(Req_dir, T)
-    end;
-is_authdir(_, []) ->
-    false.
-
-is_authenticated(SC, UT, _Req, H) ->
-    case is_authdir(UT#urltype.path, SC#sconf.authdirs) of
-	{true, #auth{dir = _Dir, realm = Realm, users = Users}} ->
 	    case H#headers.authorization of
 		undefined ->
 		    {false, Realm};
@@ -1233,26 +1216,28 @@ is_authenticated(SC, UT, _Req, H) ->
 			true ->
 			    true;
 			false ->
-			    {false, "Got username"}
+			    {false, Realm}
 		    end
 	    end;
 	false ->
-	    true
+	    is_auth(Req_dir, H, T)
     end.
+
 
 
 %% Return values:
 %% continue, done, {page, Page}
 
-handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
+handle_ut(CliSock, GC, SC, ARG, UT, N) ->
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
     case UT#urltype.type of
 	error ->
-	    A2 = ARG#arg{querydata = UT#urltype.q},
 	    yaws:outh_set_dyn_headers(Req, H),
 	    deliver_dyn_part(CliSock, GC, SC, 
 			     0, "404",
 			     N,
-			     A2,
+			     ARG,
 			     fun(A)->(SC#sconf.errormod_404):
 					 out404(A,GC,SC) 
 			     end,
@@ -1319,8 +1304,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    end;
 	yaws ->
 	    yaws:outh_set_dyn_headers(Req, H),
-	    do_yaws(CliSock, GC, SC, Req,  
-		    ARG#arg{querydata = UT#urltype.q}, UT, N);
+	    do_yaws(CliSock, GC, SC, Req, ARG, UT, N);
 	forbidden ->
 	    yaws:outh_set_dyn_headers(Req, H),
 	    deliver_403(CliSock, Req, GC, SC);
@@ -1331,7 +1315,6 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    yaws:outh_set_dyn_headers(Req, H),
  	    {Mod, PathData} = UT#urltype.data,
  	    A2 = ARG#arg{appmoddata = PathData,
- 			 querydata = UT#urltype.q,
  			 appmod_prepath = UT#urltype.path},
 	    deliver_dyn_part(CliSock, GC, SC, 
 			     0, "appmod",
@@ -1346,7 +1329,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    deliver_dyn_part(CliSock, GC, SC, 
 			     0, "cgi",
 			     N,
-			     ARG#arg{querydata = UT#urltype.q},
+			     ARG,
 			     fun(A)->yaws_cgi:call_cgi(A,
 						       UT#urltype.fullpath)
 			     end,
@@ -1358,7 +1341,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    deliver_dyn_part(CliSock, GC, SC, 
 			     0, "php",
 			     N,
-			     ARG#arg{querydata = UT#urltype.q},
+			     ARG,
 			     fun(A)->yaws_cgi:call_cgi(A,
 						       "php",
 						       UT#urltype.fullpath)
@@ -2300,13 +2283,13 @@ now_secs() ->
 
 
 %% a file cache,
-url_type(GC, SC, Path, QueryPart) ->
+url_type(GC, SC, Path) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     E = SC#sconf.ets,
     update_total(E, Path),
     case ets:lookup(E, {url, Path}) of
 	[] ->
-	    UT = do_url_type(SC, Path, QueryPart),
+	    UT = do_url_type(SC, Path),
 	    ?TC([{record, UT, urltype}]),
 	    ?Debug("UT=~p\n", [UT]),
 	    CF = cache_file(GC, SC, Path, UT),
@@ -2324,15 +2307,10 @@ url_type(GC, SC, Path, QueryPart) ->
 		    ets:delete(E, {urlc, Path}),
 		    ets:update_counter(E, num_files, -1),
 		    ets:update_counter(E, num_bytes, -FI#file_info.size),
-		    url_type(GC, SC, Path, QueryPart);
+		    url_type(GC, SC, Path);
 		true ->
 		    ?Debug("Serve page from cache ~p", [{When , N, N-When}]),
-		    ets:update_counter(E, {urlc, Path}, 1),
-		    %% Kindof ugly here, we cache the yaws file
-		    %% with the first time query part and then
-		    %% replace the q here .....
-
-		    UT#urltype{q = QueryPart}
+		    ets:update_counter(E, {urlc, Path}, 1)
 	    end
     end.
 
@@ -2414,8 +2392,8 @@ clear_ets(E) ->
     
 
 %% return #urltype{}
-do_url_type(SC, Path, QueryPart) ->
-    case split_path(SC, Path, QueryPart, [], []) of
+do_url_type(SC, Path) ->
+    case split_path(SC, Path, [], []) of
 	slash ->
 	    maybe_return_dir(SC#sconf.docroot, lists:flatten(Path));
 	forbidden ->  %% generate 403 forbidden
@@ -2461,16 +2439,16 @@ maybe_return_dir(DR, FlatPath) ->
     end.
 
 
-split_path(_SC, [$/], _Q, _Comps, []) ->
+split_path(_SC, [$/], _Comps, []) ->
     %% its a URL that ends with /
     slash;
-split_path(SC, [$/, $/ |Tail], Q, Comps, Part) ->  %% security clause
-    split_path(SC, [$/|Tail], Q, Comps, Part);
-split_path(_SC, [$/, $., $., $/ |_], _, _, _) ->  %% security clause
+split_path(SC, [$/, $/ |Tail], Comps, Part) ->  %% security clause
+    split_path(SC, [$/|Tail], Comps, Part);
+split_path(_SC, "/../" ++ _ , _, _) ->  %% security clause
     forbidden;
-split_path(SC, [], Query, Comps, Part) ->
-    ret_reg_split(SC, Comps, Part, Query);
-split_path(SC, [$/|Tail], Query, Comps, Part)  when Part /= [] ->
+split_path(SC, [], Comps, Part) ->
+    ret_reg_split(SC, Comps, Part);
+split_path(SC, [$/|Tail], Comps, Part)  when Part /= [] ->
     ?Debug("Tail=~s Part=~s", [Tail,Part]),
     Component = lists:reverse(Part),
     CName = tl(Component),
@@ -2478,20 +2456,19 @@ split_path(SC, [$/|Tail], Query, Comps, Part)  when Part /= [] ->
 	true  ->
 	    %% we've found an appmod
 	    PrePath = conc_path(Comps),
-	    ret_app_mod(SC, [$/|Tail], Query, list_to_atom(CName), PrePath);
+	    ret_app_mod(SC, [$/|Tail], list_to_atom(CName), PrePath);
 	_ ->
-	    case ret_script(SC, Comps, Part, Query) of
+	    case ret_script(SC, Comps, Part) of
 		false -> 
-		    split_path(SC, [$/|Tail], Query, 
+		    split_path(SC, [$/|Tail],
 			       [lists:reverse(Part) | Comps], []);
 		UT -> UT#urltype{pathinfo=[$/|Tail]}
 	    end
     end;
-split_path(SC, [$~|Tail], Query, Comps, Part) ->  %% user dir
-    ret_user_dir(SC, Comps, Query, Part, Tail);
-split_path(SC, [H|T], Query, Comps, Part) ->
-    split_path(SC, T, Query, Comps, [H|Part]).
-
+split_path(SC, [$~|Tail], Comps, Part) ->  %% user dir
+    ret_user_dir(SC, Comps, Part, Tail);
+split_path(SC, [H|T], Comps, Part) ->
+    split_path(SC, T, Comps, [H|Part]).
 
 
 
@@ -2501,16 +2478,16 @@ conc_path([H|T]) ->
     H ++ conc_path(T).
 
 
-ret_app_mod(_SC, Path, Query, Mod, PrePath) ->
+
+ret_app_mod(_SC, Path, Mod, PrePath) ->
     #urltype{type = appmod,
 	     data = {Mod, Path},
-	     path = PrePath,   %% need to set for WWW-Autenticate to work
-	     q = Query}.
+	     path = PrePath}.
 
 
 
 %% http://a.b.c/~user URLs
-ret_user_dir(SC, [], Query, "/", Upath) when SC#sconf.tilde_expand == true ->
+ret_user_dir(SC, [], "/", Upath) when SC#sconf.tilde_expand == true ->
     ?Debug("UserPart = ~p~n", [Upath]),
     case parse_user_path(SC#sconf.docroot, Upath, []) of
 	{ok, User, Path} ->
@@ -2525,12 +2502,12 @@ ret_user_dir(SC, [], Query, "/", Upath) when SC#sconf.tilde_expand == true ->
 		    #urltype{type=error};
 		Home ->
 		    DR2 = Home ++ "/public_html/",
-		    do_url_type(SC#sconf{docroot=DR2}, Path, Query) %% recurse
+		    do_url_type(SC#sconf{docroot=DR2}, Path) %% recurse
 	    end;
 	redir_dir ->
 	    redir_dir
     end;
-ret_user_dir(_SC, _, _, _, _Upath)  ->
+ret_user_dir(_SC, _, _, _Upath)  ->
     forbidden.
 
 
@@ -2546,8 +2523,8 @@ parse_user_path(DR, [H|T], User) ->
 
 
 
-ret_reg_split(SC, Comps, RevFile, Query) ->
-    ?Debug("ret_reg_split(~p)", [[SC#sconf.docroot, Comps, RevFile, Query]]),
+ret_reg_split(SC, Comps, RevFile) ->
+    ?Debug("ret_reg_split(~p)", [[SC#sconf.docroot, Comps, RevFile]]),
     Dir = lists:reverse(Comps),
     FlatDir = {noflat, Dir},
     DR = SC#sconf.docroot,
@@ -2570,8 +2547,7 @@ ret_reg_split(SC, Comps, RevFile, Query) ->
 			     path = {noflat, [DR, Dir]},
 			     dir = FlatDir,
 			     fullpath = lists:flatten(L),
-			     mime=Mime, 
-			     q=Query}
+			     mime=Mime}
 	    end;
 	{ok, FI} when FI#file_info.type == directory, hd(RevFile) == $/ ->
 	    maybe_return_dir(DR, lists:flatten(Dir) ++ File);
@@ -2582,8 +2558,8 @@ ret_reg_split(SC, Comps, RevFile, Query) ->
     end.
 
 
-ret_script(SC, Comps, RevFile, Query) ->
-    ?Debug("ret_script(~p)", [[SC#sconf.docroot, Comps, RevFile, Query]]),
+ret_script(SC, Comps, RevFile) ->
+    ?Debug("ret_script(~p)", [[SC#sconf.docroot, Comps, RevFile]]),
     case suffix_type(SC, RevFile) of
 	{regular, _} -> false;
 	{forbidden, _} -> false;
@@ -2601,8 +2577,7 @@ ret_script(SC, Comps, RevFile, Query) ->
 			     path = {noflat, [DR, Dir]},
 			     dir = FlatDir,
 			     fullpath = lists:flatten(L),
-			     mime=Mime, 
-			     q=Query};
+			     mime=Mime};
 		_ -> false
 	    end
     end.
@@ -2730,4 +2705,3 @@ safe_ehtml_expand(X) ->
 	Val ->
 	    {ok, Val}
     end.
-
