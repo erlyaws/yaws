@@ -1380,6 +1380,13 @@ accumulate_header({set_cookie, What}) ->
 accumulate_header({content_type, What}) ->
     put(outh, (get(outh))#outh{content_type = ["Content-Type: " , What, "\r\n"]});
 
+accumulate_header({content_length, Len}) when integer(Len) ->
+    H = get(outh),
+    put(outh, H#outh{
+		chunked = false,
+		transfer_encoding = undefined,
+		content_length = make_content_length_header(Len)});
+
 
 %% backwards compatible clause
 accumulate_header(Str) when list(Str) ->

@@ -5,7 +5,7 @@ yaws_api \- api available to yaws web server programmers
 .B yaws_api:Function(...)
 
 .SH DESCRIPTION
-.\" Add any additional description here
+
 .PP
 This is the api available to yaws web server programmers. The erlang
 module yaws_api contains a wide variety of functions that can
@@ -414,14 +414,57 @@ html parts at all.
 \fB{streamcontent, MimeType, FirstChunk}\fR
 This return value plays the same role as the \fIcontent\fR return
 value above. 
+
 However it makes it possible to stream data to the client
 if the yaws code doesn't have access to all the data in one go. (Typically
 if a file is very large or if data arrives from back end servers on the network.
 
 .TP
 \fB{header, H}\fR
-Accumulates a HTTP header. Used by for example the \fBsetcookie/2-6\fR
-function. 
+Accumulates a HTTP header. The trailing CRNL which is supposed
+to end all HTTp headers must not be added. It is added by the server.
+The following list of headers are given special treatment.
+
+\fI{connection, What}\fR  
+
+This sets the connection header. If \fIWhat\fR is the special value
+\fI"close"\fR, the connection will be closed once the yaws page is delivered
+to the client.
+
+\fI{location, Url}\fR
+
+Sets the Location: header. This header is typically combined with
+the \fI{status, 302}\fR return value.
+
+\fI{cache_control, What}\fR
+
+Sets the Cache-Control: header.
+
+\fI{set_cookie, Cookie}\fR
+
+Prepends a a Set-Cookie: header to the list of previousy
+set Set-Cookie: headers.
+
+\fI{content_type, MimeType}\fR
+
+Sets the Content-Type header.
+
+\fI{content_length, Len}\fR
+
+Normally yaws will ship Yaws pages using Transfer-Encoding: chunked. This
+is because we generally can't know how long a yaws page will be. If we for
+some reason want to force a Content-Length: header (and we actually do
+know the length of the content, we can force yaws to not ship the
+page chunked.
+
+
+All other headers must be added using the normal HTTP syntax.
+Example:
+
+{header, "My-X-Header: gadong"}
+
+
+
 
 .TP
 \fB{allheaders, HeaderList}\fB

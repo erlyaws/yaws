@@ -902,23 +902,8 @@ lmap(_, []) ->
 
 %% interactively turn on|off tracing
 set_trace(Val) ->
-    case lists:member(Val, [traffic, http, false]) of
-	true ->
-	    {ok, GC, Groups} = getconf(),
-	    Tval = case Val of
-		       http ->
-			   {true, http};
-		       traffic ->
-			   {true, traffic};
-		       false ->
-			   false
-		   end,
-	    setconf(GC#gconf{trace = Tval}, Groups);
-	_ ->
-	    io:format(
-	      "Usage: set_trace(true | false, traffic | http | access)",[])
-    end.
-
+    Str = yaws_ctl:actl_trace(Val),
+    io:format("~s", [Str]).
 
 
 set_access_log(Bool) ->
@@ -927,8 +912,6 @@ set_access_log(Bool) ->
 			   SC#sconf{access_log = Bool}
 		   end, Groups),
     setconf(GC, Groups2).
-
-
 
 
 %% interactively turn on|off tracing to the tty (as well)
