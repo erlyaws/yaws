@@ -14,19 +14,38 @@ EOF
     exit 1
 }
 
+wikisrc=%%wikisrcdir%%
+
+updategifs=
+while [ x$updategifs = x ]; do
+   echo
+   echo "Do you want to replace the gifs in WikiPreferences.files? [yes or no] "
+   read reply leftover
+   case $reply in
+      y* | Y*)
+         updategifs=1
+	 ;;
+      n* | N*)
+         updategifs=0
+	 ;;
+   esac
+done
+
 function updateDir () {
     if test -d $udir ; then
-	suffix=`date -I`
+	suffix="."`date -I`
 	echo "updating  $udir"
-	install -C -b -S $suffix wiki/*.yaws $udir
-	install -C -b -S $suffix wiki/*.wob $udir
+	install -C -b -S $suffix $wikisrc/*.yaws $udir
+	install -C -b -S $suffix $wikisrc/*.wob $udir
 	if test '!' -d $udir/WikiPreferences.files ; then
 	    mkdir $udir/WikiPreferences.files
 	fi
-	install -C -b -S $suffix wiki/WikiPreferences.files/*.css \
+	install -C -b -S $suffix $wikisrc/WikiPreferences.files/*.css \
 	    $udir/WikiPreferences.files
-	install -C -b -S $suffix wiki/WikiPreferences.files/*.gif \
-	    $udir/WikiPreferences.files
+	if [ $updategifs = 1 ]; then
+	    install -C -b -S $suffix $wikisrc/WikiPreferences.files/*.gif \
+		$udir/WikiPreferences.files
+	fi
     else
 	echo "$progname: $udir is not a directory"
 	usage
@@ -42,3 +61,4 @@ while test $# -gt 0 ; do
     shift 1
     updateDir
 done
+

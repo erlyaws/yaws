@@ -6,7 +6,7 @@
  
 include ../include.mk
 
-SCRIPTS=importFiles getPassword
+SCRIPTS=importFiles getPassword updateWiki
 
 all: $(SCRIPTS)
 
@@ -18,5 +18,14 @@ getPassword : getPassword.src
 	sed "s|%%ebindir%%|$(EBININSTALLDIR)|" $< > $@
 	chmod +x $@
 
+updateWiki : updateWiki.src
+	sed "s|%%wikisrcdir%%|$(shell cd ../wiki ; pwd)|" $< > $@
+	chmod +x $@
+
 clean:
-	rm importFiles getPassword
+	rm importFiles getPassword updateWiki
+
+
+
+
+
