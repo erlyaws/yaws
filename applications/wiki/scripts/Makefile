@@ -26,6 +26,6 @@ clean:
 	rm importFiles getPassword updateWiki
 
 
-
+install:
 
 
