@@ -21,7 +21,7 @@ compile() ->
 
 c() ->
     {ok, F} = file:open("mime.types", [read]),
-    io:format("Compiling mime.types ... ~n", []),
+    io:format("Compiling mime.types ... > mime_types.erl ~n", []),
     T = ets:new(aa, [set, public]),
     c(F, T, io:get_line(F, '')).
 
@@ -34,13 +34,15 @@ c(F, T, {error, terminated}) ->
 c(F, T, Line) ->
     case Line of
 	[$#|_] ->
-	    c(F, T,  io:get_line(F, ''));
+	    ignore;
 	[$\s|_ ] ->
-	    c(F, T,  io:get_line(F, ''));
+	    ignore;
 	L ->
 	    case string:tokens(L, [$\s, $\t]) of
-		[_] ->  %% uhh single entry ..
-		    c(F, T,  io:get_line(F, ''));
+		[] ->
+		    ignore;
+		[_] ->  
+		    ignore;
 		[MimeType | Exts] ->
 		    lists:foreach(
 		      fun(E) ->
@@ -48,6 +50,7 @@ c(F, T, Line) ->
 			      ets:insert(T, {up(E), MimeType})
 		      end, Exts)
 	    end
+    
     end,
     c(F, T, io:get_line(F, '')).
 
