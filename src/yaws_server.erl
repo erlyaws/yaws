@@ -1098,7 +1098,7 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin, Fd, [H|T],ARG,N) ->
 		    stream_loop(DCC, CliSock, GC, SC),
 		    case DCC#dcc.chunked of
 			true ->
-			    gen_tcp_send(CliSock, [crnl(), "0", crnl2()], GC,SC),
+			    gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
 			    continue;
 			false ->
 			    done
