@@ -11,7 +11,7 @@ function usage () {
     cat <<EOF
 usage: $progname [directories]
 EOF
-    exit 0
+    exit 1
 }
 
 function updateDir () {
@@ -30,13 +30,11 @@ function updateDir () {
     else
 	echo "$progname: $udir is not a directory"
 	usage
-	exit 1
     fi
 }
 
 if test $# -lt 1 ; then
     usage
-    exit 1
 fi
 
 while test $# -gt 0 ; do

@@ -37,6 +37,9 @@
 -export([show/1, ls/1, h1/1, read_page/2, p/1,
 	 str2urlencoded/1, session_manager_init/2]).
 
+-export([getPassword/1]).
+-export([importFiles/1]).
+
 -import(lists, [reverse/1, map/2, sort/1]).
 
 -import(wiki_templates, [template/4]).
@@ -111,6 +114,44 @@ importFiles(Page, Root, Prefix) ->
 	_ ->
 	    NewSid = session_new(initial_page_content()),
 	    redirect_create(Page, NewSid, Prefix)
+    end.
+
+importFiles([WobFile]) ->
+    FileDir = wobfile_to_filedir(WobFile),
+    case file:read_file(WobFile) of
+	{ok, Bin} ->
+	    {wik002, Pwd, Email, Time, Who, TxtStr, Files, Patches} =
+		bin_to_wik002(Bin),
+
+	    CurFiles = files(FileDir, "*"),
+
+	    CurFileNames = [basename(CF) || CF <- CurFiles],
+
+	    F = fun(Fn) ->
+			case lists:keysearch(Fn, 2, Files) of
+			    {value, File} ->
+				File;
+			    false ->
+				{file, Fn, "", []}
+			end
+		end,
+
+	    AddedFiles = [tostring(Y)++" " ||
+			     Y <- CurFileNames,
+			     not(lists:keymember(Y,2,Files))],
+	    NewFiles = [F(X) || X <- CurFileNames],
+
+	    Ds = {wik002, Pwd,Email,Time,Who,TxtStr,NewFiles,Patches},
+	    B = term_to_binary(Ds),
+	    BackupFile = tostring(WobFile)++".bak",
+	    file:write_file(BackupFile, Bin),
+	    io:format("Saved old wob file as ~s\n", [BackupFile]),
+	    file:write_file(WobFile, B),
+	    io:format("Added files: ~s\n", [AddedFiles]),
+	    halt();
+	_ ->
+	    io:format("Error - failed to read wob file"),
+	    halt()
     end.
 
 
@@ -2154,4 +2195,33 @@ basename(FilePath) ->
 	    %% probably a DOS name, remove everything after last \
 	    string:substr(FilePath, N+1)
     end.
+
+
+%
+
+getPassword([File]) ->
+    case file:read_file(File) of
+	{ok, Bin} ->
+	    {wik002,Pwd,Email,Time,Who,OldTxt,Files,Patches} =
+		bin_to_wik002(Bin),
+	    io:format("Password is: '~s'\n", [Pwd]),
+	    halt();
+	_ ->
+	    io:format("Error - failed to open ~s\n", File),
+	    halt()
+    end.
+
+%%
+
+tostring(A) when atom(A) ->
+    atom_to_list(A);
+tostring(S) ->
+    S.
+
+%
+
+wobfile_to_filedir(Wob) ->
+    WobFile = tostring(Wob),
+    string:substr(WobFile, 1, length(WobFile)-3)++"files".
+
 

@@ -26,3 +26,21 @@ and replace the gifs with our own favorites.
 
 The password to the WikiPreferences page is ForgetMe.
 
+To maintain
+-----------
+
+There are a number of useful scripts in the script directory.
+
+updateWiki.sh - takes a number of wiki directories and updates
+		the .yaws files etc
+
+getPassword   - takes a path to a wob file as argument. Will print
+		the password associated with that node. 
+
+importFiles   - takes a path to a wob file as argument. Will add
+		any files in the corresponding .files directory
+		to the page. Useful when you want to import many
+		files without going through the WEB GUI. Just
+		copy the files to the .files directory and run
+		the importFiles command.
+
