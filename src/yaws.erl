@@ -257,7 +257,7 @@ lowercase_string(String) ->
 
 
 integer_to_hex(I) ->
-    case catch erlang:integer_to_hex(I, 16) of
+    case catch erlang:integer_to_list(I, 16) of
 	{'EXIT', _} ->
 	    old_integer_to_hex(I);
 	Int ->
