@@ -752,7 +752,8 @@ inet_setopts(_,_,_) ->
 	      undefined ->
 		  case Head#headers.connection of
 		      "close" ->
-			  get_client_data(CliSock, all, GC, is_ssl(SC#sconf.ssl));
+			  get_client_data(CliSock, all, GC,
+					  is_ssl(SC#sconf.ssl));
 		      _ ->
 			  ?Debug("No content length header ",[]),
 			  exit(normal)
@@ -765,7 +766,11 @@ inet_setopts(_,_,_) ->
 		     true ->
 			  get_client_data(CliSock, list_to_integer(Len), GC, 
 					  is_ssl(SC#sconf.ssl))
-		  end
+		  end;
+	      Len when PPS == nolimit ->
+		  Int_len = list_to_integer(Len),
+		  get_client_data(CliSock, list_to_integer(Len), GC, 
+				  is_ssl(SC#sconf.ssl))
 	  end,
     ?Debug("POST data = ~s~n", [binary_to_list(un_partial(Bin))]),
     ARG = make_arg(CliSock, Head, Req, GC, SC),
