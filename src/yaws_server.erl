@@ -1229,7 +1229,8 @@ handle_ut(CliSock, ARG, UT, N) ->
 done_or_continue() ->
     case yaws:outh_get_doclose() of
 	true -> done;
-	false -> continue
+	false -> continue;
+	keep_alive -> continue 
     end.
 	    
 
