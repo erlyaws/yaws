@@ -48,18 +48,27 @@ comp_opts(GC) ->
 
 
 compile_file(File, GC, SC) ->
-    ?Debug("Compile ~s~n", [File]),
-    case file_open(File) of
-	{ok, Fd} ->
-	    Spec = compile_file(#comp{infile = File, 
-				      infd = Fd, gc = GC, sc = SC}, 
-				1,   
-				get_line(), init, 0, [], 0),
-	    Spec;
-	_Err ->
-	    yaws:elog("can't open ~s~n", [File]),
-	    exit(normal)
-    end.
+    %% broken erlang comppiler isn't
+    %% reentrant, can only have one erlanf compiler at a time running 
+    global:trans({yaws, self()},
+		 fun() ->
+			 ?Debug("Compile ~s~n", [File]),
+			 case file_open(File) of
+			     {ok, Fd} ->
+				 Spec = compile_file(
+					  #comp{infile = File, 
+						infd = Fd, gc = GC, sc = SC}, 
+					  1,   
+					  get_line(), init, 0, [], 0),
+				 Spec;
+			     _Err ->
+				 yaws:elog("can't open ~s~n", [File]),
+				 exit(normal)
+			 end
+		 end,
+		 [node()], infinity).
+
+			  
 
 compile_file(C,  _LineNo, eof, aftererl, NumChars, Ack, Errors) ->
     file_close(C#comp.infd),
