@@ -760,7 +760,74 @@ split_sep([C|Tail], Sep, AccW, AccL) ->
     split_sep(Tail, Sep, [C|AccW], AccL).
 		      
 		    
+%% header parsing
 
+parse_qval(S) ->
+    parse_qval([], S).
+
+parse_qval(A, ";q="++Q) ->   
+    {lists:reverse(A), parse_qvalue(Q)};
+parse_qval(A, "") ->
+    {lists:reverse(A), 1000};
+parse_qval(A, [C|T]) ->
+    parse_qval([C|A], T).
+
+
+parse_qvalue("0") ->
+    0;
+parse_qvalue("0.") ->
+    0;
+parse_qvalue("1") ->
+    1000;
+parse_qvalue("1.") ->
+    1000;
+parse_qvalue("1.0") ->
+    1000;
+parse_qvalue("1.00") ->
+    1000;
+parse_qvalue("1.000") ->
+    1000;
+parse_qvalue("0."++[D1]) ->
+    three_digits_to_integer(D1,$0,$0);
+parse_qvalue("0."++[D1,D2]) ->
+    three_digits_to_integer(D1,D2,$0);
+parse_qvalue("0."++[D1,D2,D3]) ->
+    three_digits_to_integer(D1,D2,D3);
+parse_qvalue(_) ->
+						% error
+    0.
+
+three_digits_to_integer(D1, D2, D3) ->
+    100*(D1-$0)+10*(D2-$0)+D3-$0.
+
+accepts_deflate(H) ->
+    case [Val || {_,_,'Accept-Encoding',_,Val}<- H#headers.other] of
+	[] ->
+	    false;
+	[AcceptEncoding] ->
+	    EncodingList = [parse_qval(X) || 
+			       X <- split_sep(AcceptEncoding, $,)],
+	    case [Q || {"deflate", Q} <- EncodingList] 
+		++ [Q || {"*", Q} <- EncodingList] of
+		[] ->
+		    false;
+		[Q|_] -> Q > 100  % just for fun
+	    end;
+	_ ->
+	    false
+    end.
+
+
+compressible_mime_type("text/"++_) ->
+    true;
+compressible_mime_type("application/rtf") ->
+    true;
+compressible_mime_type("application/msword") ->
+    true;
+compressible_mime_type("application/postscript") ->
+    true;
+compressible_mime_type(_) ->
+    false.
 
 %% imperative out header management
 
@@ -796,27 +863,51 @@ outh_set_static_headers(Req, UT, Headers) ->
 
 outh_set_static_headers(Req, UT, Headers, Range) ->
     H = get(outh),
-    {DoClose, _Chunked} = dcc(Req, Headers),
+    FI = UT#urltype.finfo,
+    {DoClose0, Chunked0} = dcc(Req, Headers),
+    {DoDeflate, Length} 
+	= case Range of 
+	      all ->
+		  case UT#urltype.deflate of
+		      DB when binary(DB) -> % cached
+			  case accepts_deflate(Headers) of
+			      true -> {true, size(DB)};
+			      false -> {false, FI}
+			  end;
+		      undefined -> {false, FI};
+		      dynamic ->
+			  case accepts_deflate(Headers) of
+			      true ->
+				  {true, undefined};
+			      false ->
+				  {false, FI}
+			  end
+		  end;
+	      {fromto, From, To, _} ->
+		  {false, To - From + 1}
+	  end,
+    ContentEncoding = case DoDeflate of
+			  true -> deflate;
+			  false -> identity
+		      end,
+    Chunked = Chunked0 and (Length == undefined),
+    DoClose = DoClose0 or ((Length == undefined) and not Chunked),
     H2 = H#outh{
 	   status = case Range of
 			all -> 200;
-			{fromto, _From, _To, _Tot} -> 206
+			{fromto, _, _, _} -> 206
 		    end,
-	   chunked = false,
+	   chunked = Chunked,
+	   encoding = ContentEncoding,
 	   date = make_date_header(),
 	   server = make_server_header(),
 	   last_modified = make_last_modified_header(UT#urltype.finfo),
 	   etag = make_etag_header(UT#urltype.finfo),
 	   content_range = make_content_range_header(Range),
-	   content_length = make_content_length_header(
-			      case Range of
-				  all ->
-				      UT#urltype.finfo;
-				  {fromto, From, To, _Tot} ->
-				      To - From + 1
-			      end
-			     ),
+	   content_length = make_content_length_header(Length),
 	   content_type = make_content_type_header(UT#urltype.mime),
+	   content_encoding = make_content_encoding_header(ContentEncoding),
+	   transfer_encoding = make_transfer_encoding_chunked_header(Chunked),
 	   connection  = make_connection_close_header(DoClose),
 	   doclose = DoClose,
 	   contlen = (UT#urltype.finfo)#file_info.size
@@ -1000,10 +1091,16 @@ make_content_range_header({fromto, From, To, Tot}) ->
 
 make_content_length_header(Size) when integer(Size) ->
     ["Content-Length: ", integer_to_list(Size), "\r\n"];
-make_content_length_header(FI) ->
+make_content_length_header(FI) when record(FI, file_info) ->
     Size = FI#file_info.size,
-    ["Content-Length: ", integer_to_list(Size), "\r\n"].
+    ["Content-Length: ", integer_to_list(Size), "\r\n"];
+make_content_length_header(_) ->
+    undefined.
 
+make_content_encoding_header(identity) ->
+    undefined;
+make_content_encoding_header(deflate) ->
+    "Content-Encoding: deflate\r\n".
 
 make_connection_close_header(true) ->
     "Connection: close\r\n";
@@ -1063,6 +1160,8 @@ outh_get_doclose() ->
 outh_get_chunked() ->
     (get(outh))#outh.chunked.
 
+outh_get_content_encoding() ->
+    (get(outh))#outh.encoding.
     
 
 outh_serialize() ->
@@ -1084,6 +1183,7 @@ outh_serialize() ->
 	       noundef(H#outh.content_range),
 	       noundef(H#outh.content_length),
 	       noundef(H#outh.content_type),
+	       noundef(H#outh.content_encoding),
 	       noundef(H#outh.set_cookie),
 	       noundef(H#outh.transfer_encoding),
 	       noundef(H#outh.www_authenticate),

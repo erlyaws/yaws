@@ -362,6 +362,14 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}
 	    end;
+	["deflate", '=', Bool] ->
+	    case is_bool(Bool) of
+		{true, Val} ->
+		    C2 = C#sconf{deflate = Val},
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+		false ->
+		    {error, ?F("Expect true|false at line ~w", [Lno])}
+	    end;
 	["port", '=', Val] ->
 	    case (catch list_to_integer(Val)) of
 		I when integer(I) ->

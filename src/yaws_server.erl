@@ -2055,15 +2055,25 @@ do_tcp_close(Sock, SC) ->
 
 ut_open(UT) ->
     ?Debug("ut_open() UT.fullpath = ~p~n", [UT#urltype.fullpath]),
-    case UT#urltype.data of
-	undefined ->
-	    
-	    ?Debug("ut_open reading\n",[]),
-	    {ok, Bin} = file:read_file(UT#urltype.fullpath),
-	    ?Debug("ut_open read ~p\n",[size(Bin)]),
-	    {bin, Bin};
-	B when binary(B) ->
-	    {bin, B}
+    case yaws:outh_get_content_encoding() of
+	identity ->
+	    case UT#urltype.data of
+		undefined ->
+
+		    ?Debug("ut_open reading\n",[]),
+		    {ok, Bin} = file:read_file(UT#urltype.fullpath),
+		    ?Debug("ut_open read ~p\n",[size(Bin)]),
+		    {bin, Bin};
+		B when binary(B) ->
+		    {bin, B}
+	    end;
+	deflate -> 
+	    case UT#urltype.deflate of
+		B when binary(B) ->
+		    ?Debug("ut_open using deflated binary of size ~p~n", 
+			[size(B)]),
+		    {bin, B}
+	    end
     end.
 
 
@@ -2077,6 +2087,8 @@ ut_close({bin, _}) ->
     ok;
 ut_close(Fd) ->
     file:close(Fd).
+
+
 
 
 parse_range(L, Tot) ->
@@ -2150,12 +2162,12 @@ deliver_file(CliSock, GC, SC, Req, UT, Range) ->
 	    %% cached
 	    deliver_small_file(CliSock, GC, SC, Req, UT, Range);
 	true ->
-	    case (UT#urltype.finfo)#file_info.size of
-		N when N < GC#gconf.large_file_chunk_size ->
-		    deliver_small_file(CliSock, GC, SC, Req, UT, Range);
-		_ ->
+%	    case (UT#urltype.finfo)#file_info.size of
+%		N when N < GC#gconf.large_file_chunk_size ->
+%		    deliver_small_file(CliSock, GC, SC, Req, UT, Range);
+%		_ ->
 		    deliver_large_file(CliSock, GC, SC, Req, UT, Range)
-	    end
+%	    end
     end.
 
 deliver_small_file(CliSock, GC, SC, _Req, UT, Range) ->
@@ -2185,7 +2197,23 @@ deliver_large_file(CliSock, GC, SC, _Req, UT, Range) ->
 
 
 send_file(CliSock, Fd, SC, GC, all) ->
-    send_file(CliSock, Fd, SC, GC);
+    case yaws:outh_get_content_encoding() of
+	identity ->
+	    send_file(CliSock, Fd, SC, GC);
+	deflate ->
+	    Z = zlib:open(),
+	    ok = zlib:deflateInit(Z, default),
+	    case catch send_file_deflated(CliSock, Fd, Z, SC, GC) of
+						% Is this necessary?
+		Ret ->
+		    zlib:deflateEnd(Z),
+		    zlib:close(Z),
+		    case Ret of
+			{'EXIT', Err} -> throw(Ret);
+			_ -> Ret
+		    end
+	    end
+    end;
 send_file(CliSock, Fd, SC, GC, {fromto, From, To, _Tot}) ->
     file:position(Fd, {bof, From}),
     send_file_range(CliSock, Fd, SC, GC, To - From + 1).
@@ -2198,6 +2226,27 @@ send_file(CliSock, Fd, SC, GC) ->
 	    send_file(CliSock, Fd, SC, GC);
 	eof ->
 	    file:close(Fd),
+	    case yaws:outh_get_chunked() of
+		true ->
+		    yaws:gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
+		    done_or_continue();
+		false ->
+		    done_or_continue()
+	    end
+    end.
+
+send_file_deflated(CliSock, Fd, Z, SC, GC) ->
+    ?Debug("send_file_deflated(~p,~p,~p,...)~n", 
+	[CliSock, Fd, Z]),
+    case file:read(Fd, GC#gconf.large_file_chunk_size) of
+	{ok, Bin} ->
+	    {ok, DD} = zlib:deflate(Z, Bin, none),
+	    send_file_chunk(DD, CliSock, SC, GC),
+	    send_file_deflated(CliSock, Fd, Z, SC, GC);
+	eof ->
+	    file:close(Fd),
+	    {ok, DD} = zlib:deflate(Z, <<>>, finish),
+	    send_file_chunk(DD, CliSock, SC, GC),
 	    case yaws:outh_get_chunked() of
 		true ->
 		    yaws:gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
@@ -2230,9 +2279,13 @@ send_file_range(CliSock, Fd, SC, GC, 0) ->
 send_file_chunk(Bin, CliSock, SC, GC) ->
      case yaws:outh_get_chunked() of
 	 true ->
-	     CRNL = crnl(),
-	     Data2 = [CRNL, yaws:integer_to_hex(size(Bin)) , crnl(), Bin],
-	     yaws:gen_tcp_send(CliSock, Data2, SC, GC);
+	     case binary_size(Bin) of
+		 0 -> ok;
+		 Size ->
+		     CRNL = crnl(),
+		     Data2 = [CRNL, yaws:integer_to_hex(Size) , CRNL, Bin],
+		     yaws:gen_tcp_send(CliSock, Data2, SC, GC)
+	     end;
 	 false ->
 	     yaws:gen_tcp_send(CliSock, Bin, SC, GC)
      end.
@@ -2270,17 +2323,48 @@ url_type(GC, SC, Path) ->
 		((N-When) >= Refresh) ->
 		    ?Debug("Timed out entry for ~s ~p~n", [Path, {When, N}]),
 		    %% more than 30 secs old entry
-		    ets:delete(E, {url, Path}),
-		    ets:delete(E, {urlc, Path}),
-		    ets:update_counter(E, num_files, -1),
-		    ets:update_counter(E, num_bytes, -FI#file_info.size),
-		    url_type(GC, SC, Path);
+		    UT2 = do_url_type(SC, Path),
+		    case file_changed(UT, UT2) of
+			true ->
+			    ?Debug("Recaching~n", []),
+			    ets:delete(E, {url, Path}),
+			    ets:delete(E, {urlc, Path}),
+			    ets:update_counter(E, num_files, -1),
+			    ets:update_counter(E, num_bytes, -cache_size(UT)),
+			    cache_file(GC, SC, Path, UT2);
+			false ->
+			    ?Debug("Using unchanged cached version~n", []),
+			    ets:update_counter(E, {urlc, Path}, 1),
+			    UT
+		    end;
 		true ->
 		    ?Debug("Serve page from cache ~p", [{When , N, N-When}]),
 		    ets:update_counter(E, {urlc, Path}, 1),
 		    UT
 	    end
     end.
+
+
+file_changed(UT1, UT2) ->
+    case {UT1#urltype.type, UT2#urltype.type} of
+	{T, T} when T==yaws; T==regular->
+	    F1 = UT1#urltype.finfo,
+	    F2 = UT2#urltype.finfo,
+	    {F1#file_info.inode, F1#file_info.mtime} 
+		/= {F2#file_info.inode, F2#file_info.mtime};
+	_ ->
+	    true % don't care too much
+    end.
+	
+	    
+
+cache_size(UT) when binary(UT#urltype.deflate), 
+		    binary(UT#urltype.data) ->
+    size(UT#urltype.deflate) + size(UT#urltype.data);
+cache_size(UT) when binary(UT#urltype.data) ->
+    size(UT#urltype.data);
+cache_size(UT) ->
+    0.
 
 
 update_total(E, Path) ->
@@ -2304,7 +2388,7 @@ cache_file(GC, SC, Path, UT) when
     if
 	N + 1 > GC#gconf.max_num_cached_files ->
 	    error_logger:info_msg("Max NUM cached files reached for server "
-			      "~p", [SC#sconf.servername]),
+				  "~p", [SC#sconf.servername]),
 	    cleanup_cache(E, num),
 	    cache_file(GC, SC, Path, UT);
 	FI#file_info.size < GC#gconf.max_size_cached_file,
@@ -2323,12 +2407,28 @@ cache_file(GC, SC, Path, UT) when
 		    ?Debug("File fits\n",[]),
 		    {ok, Bin} = prim_file:read_file(
 				  UT#urltype.fullpath),
-		    UT2 = UT#urltype{data = Bin},
+		    Deflated = 
+			case SC#sconf.deflate 
+			    and (UT#urltype.type==regular) of
+			    true ->
+				case zlib:compress(Bin) of
+				    {ok, DB} when binary(DB), 
+						  size(DB)*10<size(Bin)*9 ->
+					?Debug("storing deflated version "
+					    "of ~p~n",
+					[UT#urltype.fullpath]),
+					DB;
+				    _ -> undefined
+				end;
+			    false -> undefined
+			end,
+		    UT2 = UT#urltype{data = Bin, 
+				     deflate = Deflated},
 		    ets:insert(E, {{url, Path}, now_secs(), UT2}),
 		    ets:insert(E, {{urlc, Path}, 1}),
 		    ets:update_counter(E, num_files, 1),
 		    ets:update_counter(E, num_bytes, 
-				       FI#file_info.size),
+				       cache_size(UT2)),
 		    UT2
 	    end
     end;
@@ -2484,6 +2584,13 @@ parse_user_path(DR, [H|T], User) ->
     parse_user_path(DR, T, [H|User]).
 
 
+deflate_q(true, regular, Mime) ->
+    case compressible_mime_type(Mime) of
+	true -> dynamic;
+	false -> undefined
+    end;
+deflate_q(_, _, _) ->
+    undefined.
 
 ret_reg_split(SC, Comps, RevFile) ->
     ?Debug("ret_reg_split(~p)", [[SC#sconf.docroot, Comps, RevFile]]),
@@ -2503,9 +2610,10 @@ ret_reg_split(SC, Comps, RevFile) ->
 						%
 						% We could also treat
 						% it as a plain file.
-		{X, Mime} -> 
+		{X, Mime} ->
 		    #urltype{type=X, 
 			     finfo=FI,
+			     deflate=deflate_q(SC#sconf.deflate, X, Mime),
 			     path = {noflat, [DR, Dir]},
 			     dir = FlatDir,
 			     fullpath = lists:flatten(L),
@@ -2567,6 +2675,19 @@ drop_till_dot([H|T]) ->
     [H|drop_till_dot(T)];
 drop_till_dot([]) ->
     [].
+
+%% Some silly heuristics.
+
+compressible_mime_type("text/"++_) ->
+    true;
+compressible_mime_type("application/rtf") ->
+    true;
+compressible_mime_type("application/msword") ->
+    true;
+compressible_mime_type("application/postscript") ->
+    true;
+compressible_mime_type(_) ->
+    false.
 
 
 flush(SC, Sock, Sz) ->

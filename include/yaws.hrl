@@ -71,6 +71,7 @@
 	 arg_rewrite_mod = yaws,
 	 tilde_expand = false,        %% allow public_html user dirs
 	 dir_listings = false,        %% allow dir listings
+	 deflate = false,             %% support deflate encoding (needs zlib)
 	 opaque = [],                 %% useful in embedded mode
 	 start_mod,                   %% user provided module to be started
 	 allowed_scripts = [yaws],
@@ -99,6 +100,7 @@
 		  dir,     %% relative dir where the path leads to
 		           %% flat | unflat need flat for authentication
 		  data,    %% Binary | FileDescriptor | DirListing | undefined
+		  deflate, %% undefined | Binary | dynamic
 		  mime = "text/html",    %% MIME type
 		  pathinfo
 		 }).
@@ -114,6 +116,8 @@
 
 	  doclose,       %% bool
 	  chunked,       %% bool
+	  encoding=identity,
+	                 %% identity, deflate
 	  contlen,       %% integer
 	  act_contlen,   %% actual content length for dynamic pages
 
@@ -132,6 +136,7 @@
 	  content_range,
 	  content_length,
 	  content_type,
+	  content_encoding,
 	  transfer_encoding,
 	  www_authenticate,
 	  other     %% misc other headers
