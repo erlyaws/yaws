@@ -86,11 +86,22 @@ embedded application inside another Erlang program.
 <h3>Daemon mode</h3>
 
  Yaws look for its configuration file in the following locations:
+<ul>
+<li> when running as root
+
+<ol>
+<li>./yaws.config
+<li>/etc/yaws.config
+</ol>
+
+<li> When not running as root
 <ol>
 <li>$HOME/yaws.config
 <li>./yaws.config
 <li>/etc/yaws.config
 </ol>
+</ul>
+
 
 <p>The configuration file has a global part and then specific
 parts for each virtual host that is defined. A very simple 
@@ -186,7 +197,38 @@ Let the server listen to the address IpAddr.
 Let the server serv its content from the directory Dir.
 <li> <tt>ssl = true | false </tt><br>
 NYI
+<li> <tt> default_server_on_this_ip = true|false </tt>
+When virthosting more than one server on the same IP address, we must
+indicate to the yaws server which one of the virtual servers is the default 
+server if the client doesn't provide a Host: header in its GET request.
+All real WWW clients do that, however, for correctness,  whenever more that 
+one host reside on the same IP address, we MUST indicate which server is the
+default server.
+
 </ul>
+
+<p> A virtual hosting example could look as:
+
+<erl>
+out(A) -> yaws_api:pre_ssi_string("
+<server www.mydomain.org>
+        default_server_on_this_ip = true
+	port = 80
+	listen = 201.6.7.8
+	docroot = /var/yaws/www.mydomain.org
+</server>
+
+
+
+<server www.noshit.net>
+        default_server_on_this_ip = false
+	port = 80
+	listen = 201.6.7.8
+	docroot = /var/yaws/www.noshit.net
+</server>
+
+").
+</erl>
 
 
 
