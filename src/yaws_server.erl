@@ -2561,13 +2561,19 @@ do_url_type(SC, GetPath) ->
 			    maybe_return_path_info(SC, Comps, RevFile)
 		    end;
 		{ok, Head, {PathElem, Mod}, Trail} ->
+		    File = lists:reverse(RevFile),
+		    ?Debug("PathElem = ~p Trail = ~p File = ~p~n", 
+			   [PathElem, Trail, File]),
 		    #urltype{type = appmod, 
 			     data = {Mod, if
-					      Trail == [] ->
+					      Trail==[],PathElem == File ->
+						  [];
+					      hd(File) == $/, 
+					      PathElem == tl(File) ->
 						  [];
 					      true ->
 						  [$/ | conc_path(Trail) ++
-						   lists:reverse(RevFile)]
+						   File]
 					  end},
 			     path = conc_path(Head)}
 	    
