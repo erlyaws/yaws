@@ -33,7 +33,7 @@ setuid_drv.$(OBJ):	setuid_drv.c
 	$(CC) -c $(FPIC) $(CFLAGS) -DDYNAMIC_DRIVER setuid_drv.c
 
 ../priv/.foo:
-	touch ../priv/.foo
+	touch ../priv/.foo	
 
 
 
