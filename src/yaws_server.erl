@@ -638,10 +638,7 @@ get_path({abs_path, Path}) ->
 %    P = yaws_api:url_decode(Path),
 %    io:format("P = ~p\n", [P]),
 %    P.
-%     yaws_api:url_decode(Path).
-    %% It is too early url_decode here, it has to wait 'til after the
-    %% query string parsed, incase it has escaped &'s. -luke
-    Path.
+    yaws_api:url_decode(Path).
 
 do_recv(Sock, Num, TO, nossl) ->
     gen_tcp:recv(Sock, Num, TO);

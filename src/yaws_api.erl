@@ -562,6 +562,10 @@ find_cookie_val3([H|T], Ack) ->
 %% 
 %% FIXME: This scheme is derived from what MSIE generates. I've
 %% not tried to find the proper RFC.
+%%
+%% Does not unescape the query string - that has to wait until it is
+%% parsed, otherwise we can unescape '&', '=', etc too early and make
+%% it unparsable. -luke
 
 url_decode([$%, $C, $2, $%, Hi, Lo | Tail]) ->
     Hex = yaws:hex_to_integer([Hi, Lo]),
@@ -575,6 +579,9 @@ url_decode([$%, $C, $3, $%, Hi, Lo | Tail]) when Hi < $A ->
 url_decode([$%, Hi, Lo | Tail]) ->
     Hex = yaws:hex_to_integer([Hi, Lo]),
     [Hex | url_decode(Tail)];
+url_decode([$?|T]) ->
+    %% Don't decode the query string here, that is parsed separately.
+    [$?|T];
 url_decode([H|T]) ->
     [H |url_decode(T)];
 url_decode([]) ->

@@ -1,3 +1,16 @@
+2002-10-07  Luke Gorrie  <luke@bluetail.com>
+
+	* src/yaws_server.erl (get_path/1): Fixed bug and security hole
+	introduced by my previous changes to URL decoding. The problem
+	was that I skipped URL decoding, so you could e.g. read the
+	source to a Yaws file by saying "foo.yaw%73" instead of
+	"foo.yaws".
+
+	Now we initially decode the URL but not the query part. The query
+	part is decoded in yaws_api:parse_query. It can't be done
+	earlier, because unescaping characters like '&' and '=' would
+	break the parsing.
+	
 2002-09-12  Luke Gorrie  <luke@bluetail.com>
 
 	* src/yaws_server.erl: Removed url_decode in get_path/1 - it is
