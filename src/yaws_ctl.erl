@@ -56,7 +56,6 @@ aloop(L) ->
 handle_a(A) ->
     case gen_tcp:recv(A, 0) of
 	{ok, Data} ->
-	    io:format("got ~p~n", [Data]),
 	    case binary_to_term(Data) of
 		hup ->
 		    Res = yaws:dohup(A),
