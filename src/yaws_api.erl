@@ -1120,39 +1120,30 @@ format_url(Url) when record(Url, url) ->
 %% Key 	 = atom()
 %% Value = string()
 %% Body  = EHTML
-ehtml_expand(Ch) when Ch >= 0, Ch =< 255 ->
-    yaws_api:htmlize_char(Ch);
-ehtml_expand(Bin) when binary(Bin) ->
-    yaws_api:htmlize(Bin);
-ehtml_expand({Tag}) ->
-    ehtml_expand({Tag,[]});
-ehtml_expand({pre_html, X}) ->
-    X;
-ehtml_expand({pre, Attrs}) ->
-    ["<pre", ehtml_attrs(Attrs), ">"];
+ehtml_expand(Ch) when Ch >= 0, Ch =< 255 -> yaws_api:htmlize_char(Ch);
+ehtml_expand(Bin) when binary(Bin) -> yaws_api:htmlize(Bin);
+ehtml_expand({Tag}) -> ehtml_expand({Tag, []});
+ehtml_expand({pre_html, X}) -> X;
+ehtml_expand({pre, Attrs}) -> ["<pre", ehtml_attrs(Attrs), ">"];
+ehtml_expand({img, Attrs}) -> ["<img", ehtml_attrs(Attrs), ">"];
 ehtml_expand({Tag, Attrs}) ->
-    ["<", atom_to_list(Tag), ehtml_attrs(Attrs), ">"];
+    ["<", atom_to_list(Tag), ehtml_attrs(Attrs), ">\n"];
 ehtml_expand({Tag, Attrs, Body}) when atom(Tag) ->
     Ts = atom_to_list(Tag),
-    ["<",Ts, ehtml_attrs(Attrs),">",
-     ehtml_expand(Body),
-     "</", Ts, ">"];
-ehtml_expand([H|T]) ->
-    [ehtml_expand(H) | ehtml_expand(T)];
-ehtml_expand([]) ->
-    [].
+    ["<", Ts, ehtml_attrs(Attrs), ">\n", ehtml_expand(Body), "</", Ts, ">\n"];
+ehtml_expand([H|T]) -> [ehtml_expand(H)|ehtml_expand(T)];
+ehtml_expand([]) -> [].
 
-
-ehtml_attrs([]) ->
-    [];
+ehtml_attrs([]) -> [];
 ehtml_attrs([Attribute|Tail]) when atom(Attribute) ->
     [[$ |atom_to_list(Attribute)]|ehtml_attrs(Tail)];
 ehtml_attrs([{Name, Value} | Tail]) ->
     ValueString = if atom(Value) -> [$",atom_to_list(Value),$"];
-		     list(Value) -> [$",Value,$"]
+		     list(Value) -> [$",Value,$"];
+		     integer(Value) -> [$",integer_to_list(Value),$"];
+		     float(Value) -> [$",float_to_list(Value),$"]
 		  end,
-    [[$ |atom_to_list(Name)], [$=|ValueString]| ehtml_attrs(Tail)].
-
+    [[$ |atom_to_list(Name)], [$=|ValueString]|ehtml_attrs(Tail)].
 
 %% ------------------------------------------------------------
 %% ehtml_expander/1: an EHTML optimizer
@@ -1204,36 +1195,39 @@ ehtml_expander({pre, Attrs}, Before, After) ->
 			 ehtml_attrs_expander(Attrs),">"],
 			Before,
 			After);
-ehtml_expander({Tag, Attrs}, Before, After) ->
-    ehtml_expander_done(["<",atom_to_list(Tag),
+ehtml_expander({img, Attrs}, Before, After) ->
+    ehtml_expander_done(["<img",
 			 ehtml_attrs_expander(Attrs),">"],
+			Before,
+			After);
+ehtml_expander({Tag, Attrs}, Before, After) ->
+    ehtml_expander_done(["<", atom_to_list(Tag),
+			 ehtml_attrs_expander(Attrs), ">\n"],
 			Before,
 			After);
 ehtml_expander({Tag, Attrs, Body}, Before, After) ->
     ehtml_expander(Body,
-		   [["<",atom_to_list(Tag), ehtml_attrs_expander(Attrs), ">"] |
+		   [["<", atom_to_list(Tag), ehtml_attrs_expander(Attrs), ">\n"]|
 		    Before],
-		   ["</",atom_to_list(Tag),">" | After]);
+		   ["</", atom_to_list(Tag), ">\n"|After]);
 %% Variable references
 ehtml_expander(Var, Before, After) when atom(Var) ->
     [reverse(Before), {ehtml, ehtml_var_name(Var)}, After];
 %% Lists
 ehtml_expander([H|T], Before, After) ->
-    ehtml_expander(T, [ehtml_expander(H, [], []) | Before], After);
+    ehtml_expander(T, [ehtml_expander(H, [], [])|Before], After);
 ehtml_expander([], Before, After) ->
     ehtml_expander_done("", Before, After).
 
-
 %% Expander for attributes. The attribute name and value can each be a
 %% variable reference.
-ehtml_attrs_expander([]) ->
-    "";
+ehtml_attrs_expander([]) -> "";
 ehtml_attrs_expander([{Var,Val}|T]) ->
     [[" ",
       ehtml_attr_part_expander(Var),
       "=",
-      "\"", ehtml_attr_part_expander(Val), "\""]
-     | ehtml_attrs_expander(T)];
+      "\"", ehtml_attr_part_expander(Val), "\""]|
+     ehtml_attrs_expander(T)];
 ehtml_attrs_expander(Var) when atom(Var) ->
     %% Var in the cdr of an attribute list
     [{ehtml_attrs, ehtml_var_name(Var)}].
@@ -1243,13 +1237,10 @@ ehtml_attr_part_expander(A) when atom(A) ->
 	true  -> {preformatted, ehtml_var_name(A)};
 	false -> atom_to_list(A)
     end;
-ehtml_attr_part_expander(I) when integer(I) ->
-    integer_to_list(I);
-ehtml_attr_part_expander(S) when list(S) ->
-    S.
+ehtml_attr_part_expander(I) when integer(I) -> integer_to_list(I);
+ehtml_attr_part_expander(S) when list(S) -> S.
 
-ehtml_expander_done(X, Before, After) ->
-    [reverse([X|Before]), After].
+ehtml_expander_done(X, Before, After) -> [reverse([X|Before]), After].
 
 %% Compress an EHTML expander, converting all adjacent bits of text into
 %% binaries.
@@ -1257,31 +1248,24 @@ ehtml_expander_done(X, Before, After) ->
 %% Var = atom()
 ehtml_expander_compress([Tag|T], Acc) when tuple(Tag) ->
     [list_to_binary(reverse(Acc)), Tag | ehtml_expander_compress(T, [])];
-ehtml_expander_compress([], Acc) ->
-    [list_to_binary(reverse(Acc))];
+ehtml_expander_compress([], Acc) -> [list_to_binary(reverse(Acc))];
 ehtml_expander_compress([H|T], Acc) when integer(H) ->
     ehtml_expander_compress(T, [H|Acc]).
 
 %% Apply an expander with the variable bindings in Env.  Env is a list of
 %% {VarName, Value} tuples, where VarName is an atom and Value is an ehtml
 %% term.
-ehtml_apply(Expander, Env) ->
-    [ehtml_eval(X, Env) || X <- Expander].
+ehtml_apply(Expander, Env) -> [ehtml_eval(X, Env) || X <- Expander].
 
-ehtml_eval(Bin, Env) when binary(Bin) ->
-    Bin;
+ehtml_eval(Bin, Env) when binary(Bin) -> Bin;
 ehtml_eval({Type, Var}, Env) ->
     case lists:keysearch(Var, 1, Env) of
-	false ->
-	    exit({ehtml_unbound, Var});
+	false -> exit({ehtml_unbound, Var});
 	{value, {Var, Val}} ->
 	    case Type of
-		ehtml ->
-		    ehtml_expand(Val);
-		preformatted ->
-		    Val;
-		ehtml_attrs ->
-		    ehtml_attrs(Val)
+		ehtml -> ehtml_expand(Val);
+		preformatted -> Val;
+		ehtml_attrs -> ehtml_attrs(Val)
 	    end
     end.
 
@@ -1289,17 +1273,13 @@ ehtml_eval({Type, Var}, Env) ->
 %% e.g. ehtml_var_name('$foo') -> foo.
 ehtml_var_name(A) when atom(A) ->
     case ehtml_var_p(A) of
-	true ->
-	    list_to_atom(tl(atom_to_list(A)));
-	false ->
-	    exit({bad_ehtml_var_name, A})
+	true -> list_to_atom(tl(atom_to_list(A)));
+	false -> exit({bad_ehtml_var_name, A})
     end.
 
 %% Is X a variable reference? Variable references are atoms starting with $.
-ehtml_var_p(X) when atom(X) ->
-    hd(atom_to_list(X)) == $$;
-ehtml_var_p(_) ->
-    false.
+ehtml_var_p(X) when atom(X) -> hd(atom_to_list(X)) == $$;
+ehtml_var_p(_) -> false.
 
 ehtml_expander_test() ->
     %% Expr is a template containing variables.
