@@ -433,7 +433,7 @@ text/css			css
 text/directory
 text/enriched
 text/parityfec
-text/plain			asc txt
+text/plain			asc txt erl hrl
 text/prs.lines.tag
 text/rfc822-headers
 text/richtext			rtx

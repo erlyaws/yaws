@@ -1,0 +1,99 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+
+<head>
+ <meta name="keywords" content="Yaws">
+ <title>Yaws</title>
+ <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+ <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<html>
+
+<h2> The source for the shopping cart </h2>
+
+<p class=pp>The shoppingcart contains a number of tricks and "prefered" ways to
+a code different typical solutions to servers side state applications.
+
+The source itself resides in the www/shopingcart direcory in the
+source code tree. A <a href="shopcart.erl">link to the source it self</a> to view from
+the browser.
+
+<h3> The first trick, the <tt>break</tt> statement </h3>
+
+<p class="pp">
+The source of all yaws pages including for example index.yaws 
+look very similar in this application: They look like:
+
+<div style="background: rgb(211, 211, 211)">
+<pre>
+out(A) -> 
+    case shopcart:top(A) of
+	ok ->
+	    shopcart:index(A);
+	X ->
+	    X
+    end.
+</pre>
+</div>
+
+<p class=pp>All code, including the head containing the link 
+to the stylesheet is dynamically
+generated. The first function in all code snippets in yaws files is always
+a call to <tt>shopcart:top(A)</tt>
+<p class=pp>The <tt>top/1</tt> function will check the cookie and if a cookie
+which is associated to an active session is found, the request is granted, 
+otherwise the login page is displayed by the <tt>shopcart:login(A)</tt> function.
+<p class=pp>The last item displayed by the login function is the atom <tt>break</tt>. When the
+yaws server sees the <tt>break</tt>, it will not process any more data from the
+yaws page being requested. Thus, we can have the login call at the top of a yaws
+page and still have subsequent html/yaws code on the same page.
+
+
+<h3>Redirect to the requested page</h3>
+
+<p class=pp>Since the <tt>login(A)</tt> function is supplied with the 
+Arg of the requested page, the login function
+will set the path of the requestd page in a hidden field in the login form.
+The code that processes the login form, will then issue a redirect to the
+value of this hidden field if the login in successful.
+
+
+<h3>Ehtml</h3>
+<p class=pp>The use of the ehtml output syntax make it more convenient to dynamically
+generate structured content. 
+
+<ul>
+<li><p class=pp>
+It makes it easier to get the structure right
+<li><p class=pp>It makes
+it easier to inject the dynamically generated parts in the structure.
+<li><p class=pp>It is <em>much </em> more beautiful.
+</ul>
+ 
+<p class=pp>See the <a href="shopcart.erl">source</a> for a number of "proofs" for this.
+
+<h3>The use of the <b>yaws_session_server</h3>
+<p class=pp>The yaws_session_server is designed to facilitate server side
+state applications. It supplies the yaws application writer
+with the following capabilities.
+
+<ol>
+<li><p class=pp>It generates a truly random cookie which can subsequently be 
+used to uniquely identify a session.
+
+<li><p class=pp>It keeps an opaque application state in a ets table.
+This state is readily available to the yaws page by means of the cookie.
+
+
+<li><p class=pp>It garbage collects old idle sessions.
+
+</li>
+</ol>
+
+
+
+</body>
+</html>
+
+

@@ -38,6 +38,13 @@
   }
 
 
+  .pp {
+      text-decoration: none;
+      font-family: Verdana, Arial, Helvetica, sans-serif;
+      font-size: medium
+   }     
+  
+
   A { text-decoration: none;
       font-family: Verdana, Arial, Helvetica, sans-serif;
       font-weight: normal; 

@@ -45,6 +45,7 @@ erlang code. A file which contains embedded erlang code must have the file
 suffix <tt>.yaws</tt>
 <br>
 
+
 <p>
 The embedded erlang code can return the different values which will
 trigger the yaws webserver do different thing. We list some of the simple
@@ -55,6 +56,48 @@ return values here:
 <p>
 <tt>{html, DeepCharOrBinaryList}</tt> which will make the value of
 <tt>DeepCharOrBinaryList</tt> be substituted into the HTML document.
+
+<li>
+<p>
+<tt>
+{ehtml, ErlangTermStructure}</tt> 
+
+
+<p>It is often more convenient to return
+erlang terms which are then transformed to HTML instead
+of returning plain HTML in string form using the <tt>html</tt> tag.
+
+<p>Using the ehtml return value, we can return deep structured
+erlang terms that correspond directly to HTML code. For example:
+<br>
+<div class = "box">
+<pre>
+{table, [{bgcolor, tan}],
+ {tr, []
+  [
+   {td, [{width, "70%"}], {p, [{class="foo"}], "Hi there"}}]}}
+</pre>
+</div>
+
+<p>Corresponds to the following HTML code: 
+
+<div class = "box">
+<pre>
+
+&lt;table bgcolor="tan"&gt;
+   &lt;tr&gt;
+      &lt;td width="70%"&gt;
+        &lt;p class="foo"&gt; Hi there &lt;/p&gt;
+      &lt;/td&gt;
+   &lt;/tr&gt;
+&lt;/table&gt;
+</pre>
+</div>
+<br>
+
+
+
+
 
 <li>
 <p>

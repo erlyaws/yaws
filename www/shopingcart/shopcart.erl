@@ -110,6 +110,7 @@ toprow() ->
        {tr, [], 
 	[{td, [], {a, [{href, "buy.yaws"}] , {p, [{class, toprow}], "Buy"}}},
 	 {td, [], {a, [{href, "logout.yaws"}], {p, [{class, toprow}], "Logout"}}},
+	 {td, [], {a, [{href, "source.html"}], {p, [{class, toprow}], "The Source"}}},
 	 {td, [{width, "70%"}], ""} 
 	]}
       ]
@@ -157,7 +158,7 @@ login(A) ->
 	   ]
 	   }
 	 ]},
-    [CSS, Head, Top, Login, bot()].
+    [CSS, Head, Top, Login, bot(), break].
 
 
 
