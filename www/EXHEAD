@@ -9,22 +9,31 @@
     <td> <A HREF="/query.yaws">Query part of url</a> </td>
     <td> <A HREF="/form.yaws">Forms</a> </td>
     <td> <A HREF="/redirect.yaws">Redirect</a> </td>
-    <td> <A HREF="/ssi.yaws">Server side include</a> </td>
-    <td> <A HREF="/bindings.yaws">Bindings</a> </td>
+    <td> <A HREF="/arg.yaws">Arg</a> </td>
 
 
 </tr>
 <tr border="2">
-    <td> <A HREF="/arg.yaws">Arg</a> </td>
+    <td> <A HREF="/ssi.yaws">Server side include</a> </td>
+    <td> <A HREF="/bindings.yaws">Bindings</a> </td>
+
     <td> <A HREF="/upload0.yaws">File upload</a> </td>
     <td> <A HREF="/cookies.yaws">Cookies</a> </td>
     <td> <A HREF="/pcookie.yaws">Persistent Cookies</a> </td>
     <td> <A HREF="/session.yaws">Cookie sessions</a> </td>
     <td> <A HREF="/appmods.yaws">Appmods</a> </td>
-    <td> <A HREF="/shopingcart/index.yaws">Tiny shopping cart</a> </td>
-    <td> <A HREF="/embed.yaws">Embedding Yaws</a> </td>
+
+
 
 </tr>
+
+<tr border="2">
+    <td> <A HREF="/stream.yaws">Streaming data</a> </td>
+    <td> <A HREF="/shopingcart/index.yaws">Tiny shopping cart</a> </td>
+    <td> <A HREF="/embed.yaws">Embedding Yaws</a> </td>
+</tr>
+
+
 </table>
 <hr>
 
