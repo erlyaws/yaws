@@ -163,12 +163,13 @@ init([]) ->
 		{error, E} ->
 		    case erase(logdir) of
 			undefined ->
-			    error_logger:error_msg("Bad conf: ~p~n", [E]),
+			    error_logger:error_msg("Yaws: Bad conf: ~p~n", 
+						   [E]),
 			    init:stop(),
 			    {stop, E};
 			Dir ->
 			    yaws_log:setdir(Dir, []),
-			    error_logger:error_msg("bad conf: ~s~n",[E]),
+			    error_logger:error_msg("Yaws: bad conf: ~s~n",[E]),
 			    init:stop(),
 			    {stop, E}
 		    end
@@ -249,7 +250,7 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
     case (catch setup_tdir(GC2)) of
 	ok ->
 	    ok;
-	Error ->
+	_Error ->
 	    exit(error)
     end,
     lists:foreach(fun({Pid, _}) -> Pid ! {newuid, GC2#gconf.uid} end, L2),
@@ -405,11 +406,16 @@ gserv(GC, Group0) ->
     case do_listen(SC) of
 	{SSLBOOL, {ok, Listen}} ->
 	    call_start_mod(SC),
-	    error_logger:info_msg("Listening to ~s:~w for servers ~p~n",
-			      [yaws:fmt_ip(SC#sconf.listen),
-			       SC#sconf.port,
-			       catch map(fun(S) ->  S#sconf.servername end, 
-					 Group)]),
+	    error_logger:info_msg(
+	      "Yaws: Listening to ~s:~w for servers~s~n",
+	      [yaws:fmt_ip(SC#sconf.listen),
+	       SC#sconf.port,
+	       catch map(fun(S) ->  
+				 io_lib:format("~n - ~s under ~s",
+					       [S#sconf.servername,
+						S#sconf.docroot])
+			 end, Group)
+	      ]),
 	    proc_lib:init_ack({self(), Group}),
 	    N = receive
 		    {newuid, UID} ->
@@ -422,7 +428,7 @@ gserv(GC, Group0) ->
 	    acceptor(GS),
 	    gserv(GS, [], 0);
 	{_,Err} ->
-	    error_logger:format("Failed to listen ~s:~w  : ~p~n",
+	    error_logger:format("Yaws: Failed to listen ~s:~w  : ~p~n",
 				[yaws:fmt_ip(SC#sconf.listen),
 				 SC#sconf.port, Err]),
 	    proc_lib:init_ack({error, "Can't listen to socket: ~p ",[Err]}),
@@ -1088,7 +1094,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    deliver_403(CliSock, Req, GC, SC);
 	redir_dir ->
 	    yaws:outh_set_dyn_headers(Req, H),
-	    deliver_303(CliSock, Req, GC, SC, ARG);
+	    deliver_302(CliSock, Req, GC, SC, ARG);
 	appmod ->
 	    yaws:outh_set_dyn_headers(Req, H),
 	    close_if_HEAD(Req, 
@@ -1125,13 +1131,13 @@ parse_auth(_) ->
 
 
 
-% we must deliver a 303 if the browser asks for a dir
+% we must deliver a 302 if the browser asks for a dir
 % without a trailing / in the HTTP req
 % otherwise the relative urls in /dir/index.html will be broken.
 
 
-deliver_303(CliSock, Req, GC, SC, Arg) ->
-    ?Debug("in redir 303 ",[]),
+deliver_302(CliSock, Req, GC, SC, Arg) ->
+    ?Debug("in redir 302 ",[]),
     H = get(outh),
 
     Scheme = redirect_scheme(SC),
@@ -1141,7 +1147,7 @@ deliver_303(CliSock, Req, GC, SC, Arg) ->
 	   decode_path(Req#http_request.path), "/\r\n"],
     
 
-    H2 = H#outh{status = 303,
+    H2 = H#outh{status = 302,
 		doclose = true,
 		content_type = undefined,
 		server = yaws:make_server_header(),
@@ -1543,7 +1549,7 @@ handle_out_reply({redirect_local, Path0}, _LineNo, _YawsFile, SC, A) ->
 			 true
 		 end,
 
-    OH2 = OH#outh{status = redirect_code(A),
+    OH2 = OH#outh{status = 302,
 		  doclose = true,
 		  chunked = NewChunked,
 		  connection = yaws:make_connection_close_header(true),
@@ -1554,7 +1560,7 @@ handle_out_reply({redirect_local, Path0}, _LineNo, _YawsFile, SC, A) ->
     ok;
 
 
-handle_out_reply({redirect, URL}, _LineNo, _YawsFile, _SC, A) ->
+handle_out_reply({redirect, URL}, _LineNo, _YawsFile, _SC, _A) ->
     Loc = ["Location: ", URL, "\r\n"],
     OH = get(outh),
     Cont = get(acc_content),
@@ -1568,7 +1574,7 @@ handle_out_reply({redirect, URL}, _LineNo, _YawsFile, _SC, A) ->
 			 true
 		 end,
 
-    OH2 = OH#outh{status = redirect_code(A),
+    OH2 = OH#outh{status = 302,
 		  doclose = true,
 		  chunked = NewChunked,
 		  connection = yaws:make_connection_close_header(true),
@@ -1649,17 +1655,6 @@ handle_crash(A, L, SC) ->
 	
     end.
 
-
-%% Get redirect reply code.
-%% HTTP/1.0 clients (e.g. Netscape 4, aka The Last Simple Browser)
-%% don't understand 303, so we send them 302. This is suggested by
-%% the HTTP 1.1 RFC (2616, page 62). -luke
-redirect_code(A) ->
-    #arg{req=Req} = hd(A),
-    case Req#http_request.version of
-	{1,0} -> 302;
-	_     -> 303
-    end.
 
 deliver_accumulated(Sock, GC, SC) ->
     {StatusLine, Headers} = yaws:outh_serialize(),
