@@ -803,6 +803,18 @@ outh_set_dcc(Req, Headers) ->
     put(outh, H2).
 
 
+%% can only turn if off, not on.
+%% if it allready is off, it's off because the cli headers forced us.
+
+outh_set_transfer_encoding_off() ->
+    H = get(outh),
+    H2 = H#outh{chunked = false,
+		transfer_encoding = 
+		make_transfer_encoding_chunked_header(false)},
+    put(outh, H2).
+
+
+
 
 dcc(Req, Headers) ->
     DoClose = case Req#http_request.version of

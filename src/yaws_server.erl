@@ -1410,6 +1410,17 @@ do_appmod(Mod, FunName, CliSock, GC, SC, Req, ARG, UT, N) ->
 		false ->
 		    done
 	    end;
+
+	{streamcontent_with_size, Sz, MimeType, FirstChunk} ->
+	    yaws:outh_set_content_type(MimeType),
+	    yaws:outh_set_transfer_encoding_off(),
+	    yaws:outh_set_content_length(Sz),
+	    accumulate_chunk(FirstChunk),
+	    deliver_accumulated(CliSock, GC, SC),
+	    stream_loop(CliSock, GC, SC),
+	    done;
+
+
 	_ ->
 	    %% finish up
 	    deliver_dyn_file(CliSock, GC,SC,Req, UT, [], [], [], ARG,N)
@@ -1457,7 +1468,14 @@ deliver_dyn_file(CliSock, GC, SC, Req, UT, Bin, Fd, [H|T],ARG,N) ->
 			false ->
 			    done
 		    end;
-		    
+		{streamcontent_with_size, Sz, MimeType, FirstChunk} ->
+		    yaws:outh_set_content_type(MimeType),
+		    yaws:outh_set_transfer_encoding_off(),
+		    yaws:outh_set_content_length(Sz),
+		    accumulate_chunk(FirstChunk),
+		    deliver_accumulated(CliSock, GC, SC),
+		    stream_loop(CliSock, GC, SC),
+		    done;
 		_ ->
 		    deliver_dyn_file(CliSock, GC, SC, Req, 
 				     UT, Bin2,Fd,T,ARG,0)
@@ -1612,6 +1630,10 @@ handle_out_reply({streamcontent, MimeType, First},
     yaws:outh_set_content_type(MimeType),
     {streamcontent, MimeType, First};
 
+handle_out_reply({streamcontent_with_size, Sz, MimeType, First}, 
+		 _LineNo,_YawsFile, _SC, _A) ->
+    yaws:outh_set_content_type(MimeType),
+    {streamcontent_with_size, Sz, MimeType, First};
 
 handle_out_reply({header, H},  _LineNo, _YawsFile, _SC, _A) ->
     yaws:accumulate_header(H);
