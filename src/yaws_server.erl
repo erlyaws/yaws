@@ -2327,7 +2327,8 @@ url_type(GC, SC, Path) ->
 		    url_type(GC, SC, Path);
 		true ->
 		    ?Debug("Serve page from cache ~p", [{When , N, N-When}]),
-		    ets:update_counter(E, {urlc, Path}, 1)
+		    ets:update_counter(E, {urlc, Path}, 1),
+		    UT
 	    end
     end.
 
