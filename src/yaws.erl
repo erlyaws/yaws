@@ -754,7 +754,10 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
     H = get(outh),
     {DoClose, _Chunked} = dcc(Req, Headers),
     H2 = H#outh{
-	   status = 200,
+	   status = case Range of
+			all -> 200;
+			{fromto, _From, _To, _Tot} -> 206
+		    end,
 	   chunked = false,
 	   date = make_date_header(),
 	   server = make_server_header(),
