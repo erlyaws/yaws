@@ -119,7 +119,6 @@ do
 	        $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl load ${id} $*
 		exit 0;;
 	   -j)
-	        id=$1
 	        ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl trace $1"
 		shift;;
 	   -v) 
