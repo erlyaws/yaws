@@ -4,7 +4,7 @@
 
 out(Arg) ->
     F = lastEdited,
-    wiki_yaws:call_with_query(wiki, F, Arg).
+    wiki_yaws:call_wiki(wiki, F, Arg).
 
 </erl>
 </html>

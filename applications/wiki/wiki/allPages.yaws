@@ -4,7 +4,7 @@
 <erl>
 out(Arg) ->
     F = allPages,
-    wiki_yaws:call_with_query(wiki, F, Arg).
+    wiki_yaws:call_wiki(wiki, F, Arg).
 </erl>
 
 </html>

@@ -3,6 +3,6 @@
 <erl>
 out(Arg) ->
     F = storePage, 
-    wiki_yaws:call_with_data(wiki, F, Arg).
+    wiki_yaws:call_with_multi(wiki, F, Arg).
 </erl>
 </html>

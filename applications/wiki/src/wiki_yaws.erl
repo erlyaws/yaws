@@ -7,8 +7,9 @@
 -module('wiki_yaws').
 -author('jb@son.bevemyr.com').
 
--export([get_path_prefix/1, parse_post_data/1, parse_post/2,
-	 call_with_data/3, call_with_query/3]).
+-export([get_path_prefix/1, parse_multipost/1, parse_post/2,
+	 call_with_multi/3, call_with_query/3, call_with_post/3,
+	 call_wiki/3]).
 
 -include("../../../include/yaws_api.hrl").
 
@@ -23,8 +24,8 @@ get_path_prefix(UrlPath) ->
     end.
 
  
-parse_post_data(Arg) ->
-    case yaws_api:parse_post_data(Arg) of
+parse_multipost(Arg) ->
+    case yaws_api:parse_multipart_post(Arg) of
 	{result, PostList} when Arg#arg.state == undefined->
 	    {done, parse_post(PostList,[])};
 	{result, PostList} ->
@@ -33,9 +34,7 @@ parse_post_data(Arg) ->
 	{cont, Cont, Res} when Arg#arg.state == undefined ->
 	    {get_more, Cont, Res};
 	{cont, Cont, Res} ->
-	    {get_more, Cont, Arg#arg.state ++ Res};
-	Post ->
-	    {done, [{N,V,[]} || {N,V} <- Post]}
+	    {get_more, Cont, Arg#arg.state ++ Res}
     end.
 
 parse_post([], Acc) -> Acc;
@@ -48,9 +47,8 @@ parse_post([{part_body, Data}|Rest], [{Name, Value, Opts}|Acc]) ->
 parse_post([{Name, Value}|Rest], Acc) ->
     parse_post(Rest, [{Name, Value, []}|Acc]).
 
-
-call_with_data(M, F, Arg) ->
-    case wiki_yaws:parse_post_data(Arg) of
+call_with_multi(M, F, Arg) ->
+    case parse_multipost(Arg) of
 	{done, Params} ->
 	    WikiRoot      = filename:dirname(Arg#arg.fullpath),
 	    {abs_path, P} = (Arg#arg.req)#http_request.path,
@@ -61,6 +59,14 @@ call_with_data(M, F, Arg) ->
 	    {get_more, Cont, State}
     end.
 
+call_with_post(M, F, Arg) ->
+    QueryArgs     = yaws_api:parse_post(Arg),
+    Params        = [{N,V,[]} || {N,V} <- QueryArgs],
+    WikiRoot      = filename:dirname(Arg#arg.fullpath),
+    {abs_path, P} = (Arg#arg.req)#http_request.path,
+    Path          = yaws_api:url_decode(P),
+    Prefix        = wiki_yaws:get_path_prefix(Path),
+    M:F(Params, WikiRoot, Prefix).
 
 call_with_query(M, F, Arg) ->
     QueryArgs     = yaws_api:parse_query(Arg),
@@ -70,3 +76,10 @@ call_with_query(M, F, Arg) ->
     Path          = yaws_api:url_decode(P),
     Prefix        = wiki_yaws:get_path_prefix(Path),
     M:F(Params, WikiRoot, Prefix).
+
+call_wiki(M, F, Arg) ->
+    WikiRoot      = filename:dirname(Arg#arg.fullpath),
+    {abs_path, P} = (Arg#arg.req)#http_request.path,
+    Path          = yaws_api:url_decode(P),
+    Prefix        = wiki_yaws:get_path_prefix(Path),
+    M:F([], WikiRoot, Prefix).

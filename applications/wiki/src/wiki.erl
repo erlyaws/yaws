@@ -29,7 +29,7 @@
 	 editTag/3, finalDeletePage/3, storePage/3, putPassword/3,
 	 storeNewPage/3, previewPage/3, previewTagged/3, copyFiles/3,
 	 deleteFiles/3, addFile/3, storeTagged/3, fixupFiles/3,
-	 moveAttached/3, sendMeThePassword/3, storeFiles/3, showOldPage/3]).
+	 sendMeThePassword/3, storeFiles/3, showOldPage/3]).
 
 -export([show/1, ls/1, h1/1, read_page/2, background/1, p/1,
 	 str2urlencoded/1]).
@@ -987,44 +987,6 @@ sendMeThePassword(Params, Root, Prefix) ->
 	    show({no_such_file,Page})
     end.
 
-
-moveAttached(Params, Root, Prefix) ->
-    Page     = getopt(node, Params),
-    Password = getopt(password, Params, ""),
-    Dest     = getopt(destination, Params),
-    case checkPassword(Page, Password, Root, Prefix) of
-	true ->
-	    moveAttached1(Page, Dest, Password, Root, Prefix);
-	false ->
-	    show({bad_password, Page});
-	error ->
-	    show({no_such_page,Page})
-    end.
-
-moveAttached1(Page, Dest, Password, Root, Prefix) ->
-    {SrcWobFile, SrcFileDir} = page2filename(Page, Root),
-    {DstWobFile, DstFileDir} = page2filename(Dest, Root),
-    
-    SrcFiles = files(Root++"/"++SrcFileDir, "*"),
-    SrcFileNames = [basename(CF) || CF <- SrcFiles],
-
-    SrcDir = Root ++ "/" ++ SrcFileDir ++ "/",
-    DstDir = Root ++ "/" ++ DstFileDir ++ "/",
-
-    case file:read_file(SrcWobFile) of
-	{ok, Bin} ->
-	    {wik002, Pwd,Email,Time,Who,TxtStr,_,Patches} = bin_to_wik002(Bin),
-	    Ds = {wik002, Pwd,Email,Time,Who,TxtStr,[],Patches},
-	    B = term_to_binary(Ds),
-	    file:write_file(SrcWobFile, B),
-
-	    [file:rename(SrcDir++F,DstDir++F) || F <- SrcFileNames],
-	    file:del_dir(SrcDir),
-
-	    importFiles(Dest, Root, Prefix);
-	_  ->
-	    createNewPage([{node, Page}], Root, Prefix)
-    end.
 
 checkPassword(Page, Password, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
