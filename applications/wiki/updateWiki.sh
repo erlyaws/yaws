@@ -1,10 +1,10 @@
 #!/bin/bash --
 
-progname=$0
+progname=`basename $0`
 
 function usage () {
     cat <<EOF
-Usage: $progname [directories]
+usage: $progname [directories]
 EOF
     exit 0
 }
@@ -12,7 +12,7 @@ EOF
 function updateDir () {
     if test -d $udir ; then
 	suffix=`date -I`
-	echo "updating " $udir
+	echo "updating  $udir"
 	install -C -b -S $suffix wiki/*.yaws $udir
 	install -C -b -S $suffix wiki/*.wob $udir
 	if test '!' -d $udir/WikiPreferences.files ; then
@@ -20,7 +20,7 @@ function updateDir () {
 	fi
 	install -C -b -S $suffix wiki/WikiPreferences.files/* $udir/WikiPreferences.files
     else
-	echo "Error: " $udir " is not a directory"
+	echo "$progname: $udir is not a directory"
 	usage
 	exit 1
     fi
