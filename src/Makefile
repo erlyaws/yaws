@@ -45,7 +45,7 @@ all: yaws_vsn.erl $(EBIN_FILES)
 
 $(EBIN_FILES) : ../include/yaws.hrl ../include/yaws_api.hrl
 
-yaws_vsn.erl:	yaws_vsn.template
+yaws_vsn.erl:	yaws_vsn.template ../vsn.mk
 	. ../vsn.mk; \
 	sed "s/%VSN%/${YAWS_VSN}/" < yaws_vsn.template > yaws_vsn.erl
 
