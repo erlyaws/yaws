@@ -168,6 +168,10 @@ case "$target_os" in
 	   LD_SHARED="ld -Bshareable"	  
 	   AC_SUBST(LD_SHARED)
 	   ;;
+	 *darwin*)
+	   LD_SHARED="gcc -bundle -fPIC -flat_namespace -undefined suppress"
+   	   AC_SUBST(LD_SHARED)
+	   ;;
 	 *cygwin*)
 	   ;;
 	*)

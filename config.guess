@@ -147,6 +147,9 @@ EOF
 		echo pyramid-pyramid-bsd
 	fi
 	exit 0 ;;
+    *Macintosh:Darwin:*:*)
+        echo powerpc-apple-darwin
+	exit 0 ;;
     NILE:*:*:dcosx)
 	echo pyramid-pyramid-svr4
 	exit 0 ;;
