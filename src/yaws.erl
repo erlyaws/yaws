@@ -1986,7 +1986,7 @@ deepmap(Fun, [H|T]) when list(H) ->
     [deepmap(Fun, H) | deepmap(Fun, T)];
 deepmap(Fun, [H|T]) ->
     [Fun(H) | deepmap(Fun,T)];
-deepmap(Fun, []) ->
+deepmap(_Fun, []) ->
     [].
 
     

@@ -1234,7 +1234,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     ARG,
 			     fun(A)->yaws_cgi:call_cgi(
 				       A,
-				       SC#sconf.phpexe,
+				       GC#gconf.phpexe,
 				       flatten(UT#urltype.fullpath))
 			     end,
 			     fun(A)->finish_up_dyn_file(CliSock)
@@ -1824,6 +1824,7 @@ handle_out_reply({ssi, File,Delimiter,Bindings}, LineNo, YawsFile, A) ->
 	OutData ->
 	    accumulate_chunk(OutData)
     end;
+
 
 handle_out_reply(break, _LineNo, _YawsFile, _A) ->
     break;

@@ -58,6 +58,7 @@
 	       cache_refresh_secs = 30,  % seconds  (auto zero when debug)
 	       default_type = "text/html",
 	       include_dir = [],
+	       phpexe = "php",
 	       yaws,                %% server string
 	       username,            %% maybe run as a different user than root
 	       uid,                 %% unix uid of user that started yaws
@@ -135,7 +136,6 @@
 	 opaque = [],                 %% useful in embedded mode
 	 start_mod,                   %% user provided module to be started
 	 allowed_scripts = [yaws],
-	 phpexe = "php",
 	 revproxy = []
 	}).
 

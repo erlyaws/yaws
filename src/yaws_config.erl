@@ -276,6 +276,10 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		     {error, ?F("Expect integer at line ~w", [Lno])}
 	     end;
 
+	["php_exe_path", '=' , PhpPath] ->
+	    fload(FD, globals, GC#gconf{phpexe = PhpPath},
+		  C, Cs, Lno+1, Next);
+
 
 	%% deprected, don't use
 	["read_timeout", '=', _Val] ->
@@ -505,9 +509,11 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 				   Suffixes)},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
-	["php_exe_path", '=' , PhpPath] ->
-	    C2 = C#sconf{phpexe = PhpPath},
-	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+	["php_exe_path", '=' , _PhpPath] ->
+	    error_logger:format("php_exe_path must now be specified in"
+				" in the global part of the conf instead of"
+				"within the server ",[]),
+	    fload(FD, server, GC, C, Cs, Lno+1, Next);
 
 	["revproxy", '=', Prefix, Url] ->
 	    case (catch yaws_api:parse_url(Url)) of
