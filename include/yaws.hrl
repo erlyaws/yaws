@@ -72,7 +72,8 @@
 	 tilde_expand = true,         %% allow public_html user dirs
 	 dir_listings = true,         %% allow dir listings
 	 opaque = [],                 %% useful in embedded mode
-	 start_mod                    %% user provided module to be started
+	 start_mod,                   %% user provided module to be started
+	 allowed_scripts = [yaws]
 	}).
 
 

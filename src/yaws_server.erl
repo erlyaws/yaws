@@ -54,22 +54,22 @@ stats() ->
     {_GC, Srvs, _} = S,
     Diff = calendar:time_difference(Time, calendar:local_time()),
     G = fun(L) -> lists:reverse(lists:keysort(2, L)) end,
-    
+
     R= flatmap(
-      fun({_Pid, SCS}) ->
-	      map(
-		fun(SC) ->
-			
-			E = SC#sconf.ets,
-			L = ets:match(E, {{urlc_total, '$1'}, '$2'}),
-			{SC#sconf.servername,  
-			 flatten(yaws:fmt_ip(SC#sconf.listen)),
-			 G(map(fun(P) -> list_to_tuple(P) end, L))}
-		end, SCS)
-      end, Srvs),
+	 fun({_Pid, SCS}) ->
+		 map(
+		   fun(SC) ->
+
+			   E = SC#sconf.ets,
+			   L = ets:match(E, {{urlc_total, '$1'}, '$2'}),
+			   {SC#sconf.servername,  
+			    flatten(yaws:fmt_ip(SC#sconf.listen)),
+			    G(map(fun(P) -> list_to_tuple(P) end, L))}
+		   end, SCS)
+	 end, Srvs),
     {Diff, R}.
 
-			      
+
 get_app_args() ->
     AS=init:get_arguments(),
     Debug = case application:get_env(yaws, debug) of
@@ -224,7 +224,7 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 		{CTL, {error, R}} ->
 		    exit(R)
 	    end;
-		
+
 	true ->
 	    ok
     end,
@@ -241,7 +241,7 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 
     %% and now finally, we've opened the ctl socket and are
     %% listening to all sockets we can possibly change username
- 
+
 
     GC2 = case (catch yaws:setuser(Gconf#gconf.username)) of
 	      ignore ->
@@ -303,8 +303,8 @@ handle_call(getconf, _From, State) ->
     {GC, Pairs, _} = State,
     Groups = lists:map(fun({_Pid, SCs}) -> SCs end, Pairs),
     {reply, {ok, GC, Groups}, State}.
-			       
-			      
+
+
 
 
 
@@ -355,8 +355,8 @@ terminate(_Reason, _State) ->
 setup_auth(SC) ->
     ?Debug("setup_auth(~p)", [yaws_debug:nobin(SC)]),
     ?f(lists:map(fun(Auth) ->
-		      add_yaws_auth(Auth#auth.dir, Auth)
-	      end, SC#sconf.authdirs)).
+	add_yaws_auth(Auth#auth.dir, Auth)
+end, SC#sconf.authdirs)).
 
 add_yaws_auth(Dirs, A) ->
     lists:map(
@@ -2289,14 +2289,23 @@ ret_reg_split(SC, Comps, RevFile, Query) ->
     ?Debug("ret_reg_split: L =~p~n",[L]),
     case prim_file:read_file_info(L) of
 	{ok, FI} when FI#file_info.type == regular ->
-	    {X, Mime} = suffix_type(RevFile),
-	    #urltype{type=X, 
-		     finfo=FI,
-		     path = {noflat, [DR, Dir]},
-		     dir = FlatDir,
-		     fullpath = lists:flatten(L),
-		     mime=Mime, 
-		     q=Query};
+	    case suffix_type(SC, RevFile) of
+		{forbidden, _} -> 
+		    #urltype{type=error, data=undefined};
+						% Forbidden script
+						% types are treated as
+						% non-existing.  We
+						% could also treat
+						% them as plain files.
+		{X, Mime} -> 
+		    #urltype{type=X, 
+			     finfo=FI,
+			     path = {noflat, [DR, Dir]},
+			     dir = FlatDir,
+			     fullpath = lists:flatten(L),
+			     mime=Mime, 
+			     q=Query}
+	    end;
 	{ok, FI} when FI#file_info.type == directory, hd(RevFile) == $/ ->
 	    maybe_return_dir(DR, lists:flatten(Dir) ++ File);
 	{ok, FI} when FI#file_info.type == directory, hd(RevFile) /= $/ ->
@@ -2308,8 +2317,9 @@ ret_reg_split(SC, Comps, RevFile, Query) ->
 
 ret_script(SC, Comps, RevFile, Query) ->
     ?Debug("ret_script(~p)", [[SC#sconf.docroot, Comps, RevFile, Query]]),
-    case suffix_type(RevFile) of
+    case suffix_type(SC, RevFile) of
 	{regular, _} -> false;
+	{forbidden, _} -> false;
 	{X, Mime} -> 
 	    Dir = lists:reverse(Comps),
 	    FlatDir = {noflat, Dir},
@@ -2331,6 +2341,17 @@ ret_script(SC, Comps, RevFile, Query) ->
     end.
 
 
+suffix_type(SC, L) ->
+    R=suffix_type(L),
+    case R of
+	{regular, _} ->
+	    R;
+	{X, Mime} -> 
+	    case lists:member(X, SC#sconf.allowed_scripts) of
+		true -> R;
+		false -> {forbidden, []}
+	    end
+    end.
 
 suffix_type(L) ->
     L2 = drop_till_dot(L),

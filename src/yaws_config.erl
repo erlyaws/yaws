@@ -459,6 +459,12 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    C2 = C#sconf{start_mod = list_to_atom(Module)},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
+	["allowed_scripts", '=' | Suffixes] ->
+	    C2 = C#sconf{allowed_scripts = 
+			 lists:map(fun(X)->element(1,mime_types:t(X)) end,
+				   Suffixes)},
+	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+
 	[H|T] ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end;
