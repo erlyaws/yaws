@@ -8,7 +8,7 @@ endif
 
 include ../vsn.mk
 VSN=$(YAWS_VSN)
-MODULES=mail attachment smtp
+MODULES=mail attachment smtp mail_html
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) 
 

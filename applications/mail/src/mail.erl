@@ -141,7 +141,7 @@ build_toolbar([{Gif,Url,Cmd}|Rest], Used) ->
 delete(Session, ToDelete) ->
     tick_session(Session#session.cookie),
     Req = [del(M) || M <- ToDelete],
-    pop_request(Req++[{"QUIT",sl}], popserver(),
+    pop_request(Req, popserver(),
 		Session#session.user, Session#session.passwd),
     {redirect_local, {rel_path, "mail.yaws?refresh"}}.
 
@@ -230,6 +230,9 @@ sendChunk([{head, {bcc, _Opts}}|Rest], State) ->
 
 sendChunk([{head, {subject, _Opts}}|Rest], State) ->
     sendChunk(Rest, State#send{param=subject});
+
+sendChunk([{head, {html_subject, _Opts}}|Rest], State) ->
+    sendChunk(Rest, State#send{param=ignore});
 
 sendChunk([{head, {message, _Opts}}|Rest], S) ->
     RTo = parse_addr(S#send.to),
@@ -372,10 +375,26 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 	 "A:link    { color: 0;text-decoration: none}\n"
 	 "A:visited { color: 0;text-decoration: none}\n"
 	 "A:active  { color: 0;text-decoration: none}\n"
+	 "textarea { background-color: #fff; border: 1px solid 00f; }\n"
 	 "DIV.tag-body { background: white; }\n"},
+	{script, [{type,"text/javascript"}],
+	 "_editor_url='/htmlarea/';\n"
+	 "_editor_lagn='se';\n"},
+	{script, [{type,"text/javascript"},{src,"/htmlarea/htmlarea.js"}],""},
+	{script, [{type,"text/javascript"}],
+	 "var editor = null;\n"
+	 "function initEditor() {\n"
+	 "editor = new HTMLArea('html_message');\n"
+	 "editor.generate();\n"
+	 "return false;\n}"},
+%	{script,[{type,"text/javascript"},{defer,"1"}],
+%%	 "HTMLArea.replace('html_message');\n"},
+%	 "HTMLArea.replaceAll();\n"},
 	{body,[{bgcolor,silver},{marginheight,0},{link,"#000000"},
 	       {topmargin,0},{leftmargin,0},{rightmargin,0},
-	       {marginwidth,0}, {onload, "document.compose.to.focus();"}],
+	       {marginwidth,0},
+%	       {onload, "initEditor();document.compose.to.focus();"}],
+	       {onload, "document.compose.to.focus();"}],
 	 [{form, [{name,compose},{action,"send.yaws"},{method,post},
 		  {enctype,"multipart/form-data"}
 		 ],
@@ -433,6 +452,7 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 			       {check,value,quote(Subject)}]}}]}
 	     ]
 	    },
+	    {input,[{type,hidden},{name,message},{value,""}],[]},
 	    {table,[{width,645},{border,0},{cellspacing,0},{cellpadding,0}],
 	     {tr,[],
 	      [
@@ -442,22 +462,44 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 			 {cellpadding,0}],
 		 {tr,[],
 		  {td,[{align,left},{valign,top}],
-		   {textarea, [{wrap,virtual},{name,message},
-			       {cols,78},{rows,21}],
-		    Msg}}
+		   [{textarea, [{wrap,virtual},
+				{name,html_message},
+				{id,html_message},
+			       {cols,80},{rows,24}],
+		    Msg},
+% 		    {a, [{href,"javascript:alert(editor.getHTML());"}],"html"},
+% 		    " ",
+% 		    {a, [{href,"javascript:document.compose.foo.innerHTML=editor.getHTML();alert(document.compose.foo.value);"}],"debug"},
+% 		    " ",
+% 		    {a, [{href,"javascript:filur();"}],"debug"},
+		    ""
+		   ]
+		   }
 		 }
 		}
 	       },
 	       {'div', [{id, "tab-body:1"},{style,"display: none;"}],
-		["Attached files:",
-		 {table,[],
-		  file_attachements(5)
+		{table, [{bgcolor,silver},{border,0},{cellspacing,0},
+			 {cellpadding,0}],
+		 {tr,[],
+		  {td,[{align,left},{valign,top}],
+		   ["Attached files:",
+		    {table,[],
+		     file_attachements(5)
+		    }
+		   ]
+		  }
 		 }
-		]
+		}
 	       }
 	      ]
 	      }
 	     },
+% 	    {textarea, [{wrap,virtual},
+% 			{name,foo},
+% 			{id,foo},
+% 			{cols,80},{rows,24}],
+% 	     ""},
 	    {input,[{type,hidden},{name,cmd},{value,""}],[]}
 	   ]
 	  }
@@ -482,7 +524,9 @@ file_attachement(N) ->
     
 
 build_tabs(Tabs) ->
-    [{'div',
+    [{script,[{type,"text/javascript"}],
+      ["tabCount = ",integer_to_list(length(Tabs)),";\n"]},
+     {'div',
       [{align,"left"}],
       {table,[{border,"0"},
 	      {cellspacing,"0"},
@@ -1423,14 +1467,14 @@ ploop(sl, State) ->
 	{more, State2} ->
 	    ploop(sl, State2)
     end;
-ploop(sl_flush, State) ->
+ploop(close, State) ->
     case receive_reply(State) of
 	{ok, Reply, State2} ->
-	    next_cmd(State2);
-	{error, Reason, State2} ->
+	    ploop(close, State2);
+	{error, _, State2} ->
 	    next_cmd(State2);
 	{more, State2} ->
-	    ploop(sl_flush, State2)
+	    ploop(close, State2)
     end;
 ploop(sized, State) ->
     case receive_reply(State) of
@@ -1486,12 +1530,12 @@ ploop(ml_cont, State) ->
 
 %%
 
-next_cmd(State=#pstate{cmd=Cmd,reply=Reply}) when Cmd==quit->
+next_cmd(State=#pstate{cmd=Cmd,reply=Reply}) when Cmd==quit ->
     State#pstate.from ! {pop_response, lists:reverse(Reply)},
     gen_tcp:close(State#pstate.port);
 next_cmd(State=#pstate{cmd=Cmd}) when Cmd==[]->
     psend("QUIT", State#pstate.port),
-    ploop(sl_flush, State#pstate{cmd=quit});
+    ploop(close, State#pstate{cmd=quit});
 next_cmd(State=#pstate{cmd=[Cmd|Cmds]}) ->
     {C,S} = Cmd,
     psend(C, State#pstate.port),
@@ -1518,6 +1562,8 @@ receive_reply(State=#pstate{port=Port,acc=Acc,more=true}) ->
 	{ok, Bin} ->
 	    NAcc = Acc++binary_to_list(Bin),
 	    check_reply(NAcc, State);
+	{error, closed} ->
+	    {error, "closed", State};
 	Err ->
 	    {error, Err, State}
     end.

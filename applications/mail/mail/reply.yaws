@@ -20,7 +20,7 @@ out(A) ->
 		    mail:compose(Session,"",From,NewCc,Bcc,"RE: "++Subject,"");
 		"delete" ->
 		    Nr = mail:get_val("nr", L, ""),
-		    mail:delete(Session, [list_to_atom(Nr)])
+		    mail:delete(Session, [Nr])
 	    end;
 	Error ->
 	    Error

@@ -42,10 +42,17 @@ function setComposeCmd(val) {
        return;
    }
 
+   if (editor)
+     document.compose.message.value = editor.getHTML();
+   else
+     document.compose.message.value = document.compose.html_message.value;
+
+   // alert(editor.getHTML());
+
    if (document.compose.message.value.length == 0) {
-       alert('The message field must not be empty.');
-       document.compose.message.focus();
-       return;
+     alert('The message field must not be empty.');
+     document.compose.html_message.focus();
+     return;
    }
 
    /* check for attachements */
@@ -64,8 +71,6 @@ function setComposeCmd(val) {
    document.compose.cmd.value=val;
    document.compose.submit();
 }
-
-tabCount = 2;
 
 function changeActiveTab(i) {
   var j;
