@@ -4,7 +4,7 @@
 
 out(Arg) ->
     F = editFiles,
-    wiki_yaws:call_with_data(wiki, F, Arg).
+    wiki_yaws:call_with_query(wiki, F, Arg).
 
 </erl>
 </html>

@@ -28,7 +28,7 @@
 	 previewNewPage/3, allRefsToMe/3, deletePage/3, 
 	 editTag/3, finalDeletePage/3, storePage/3, putPassword/3,
 	 storeNewPage/3, previewPage/3, previewTagged/3, copyFiles/3,
-	 deleteFiles/3, addFile/3, storeTagged/3, fixupFiles/3, moveFiles/3,
+	 deleteFiles/3, addFile/3, storeTagged/3, fixupFiles/3,
 	 moveAttached/3, sendMeThePassword/3, storeFiles/3, showOldPage/3]).
 
 -export([show/1, ls/1, h1/1, read_page/2, background/1, p/1,
@@ -987,37 +987,6 @@ sendMeThePassword(Params, Root, Prefix) ->
 	    show({no_such_file,Page})
     end.
 
-
-moveFiles(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
-    Password = getopt(password, Params, ""),
-    case checkPassword(Page, Password, Root, Prefix) of
-	true ->
-	    moveFiles1(Page, Password, Root, Prefix);
-	false ->
-	    show({bad_password, Page});
-	error ->
-	    show({no_such_page,Page})
-    end.
-
-moveFiles1(Page, Password, Root, Prefix) ->
-    Files = sort(files(Root, "*.wob")),
-    Pages = [filename:basename(P,".wob") || P <- Files, P /= Page],
-    template("Move", bgcolor("white"), "",
-	     [h1(Page),
-	      p(),
-	      "Move all the files attached to this page to another page.",
-	      p(),
-	      form("POST", "moveAttached.yaws",
-		   [input("hidden","node",Page),
-		    input("hidden","password",Password),
-		    hr(),
-		    "Select the destination page: ",
-		    input("select","destination",Pages),
-		    input("submit","move","Move")
-   		   ])
-	     ]
-	    ).
 
 moveAttached(Params, Root, Prefix) ->
     Page     = getopt(node, Params),

@@ -8,7 +8,7 @@
 -author('jb@son.bevemyr.com').
 
 -export([get_path_prefix/1, parse_post_data/1, parse_post/2,
-	 call_with_data/3]).
+	 call_with_data/3, call_with_query/3]).
 
 -include("../../../include/yaws_api.hrl").
 
@@ -60,3 +60,13 @@ call_with_data(M, F, Arg) ->
 	{get_more, Cont, State} ->
 	    {get_more, Cont, State}
     end.
+
+
+call_with_query(M, F, Arg) ->
+    QueryArgs     = yaws_api:parse_query(Arg),
+    Params        = [{N,V,[]} || {N,V} <- QueryArgs],
+    WikiRoot      = filename:dirname(Arg#arg.fullpath),
+    {abs_path, P} = (Arg#arg.req)#http_request.path,
+    Path          = yaws_api:url_decode(P),
+    Prefix        = wiki_yaws:get_path_prefix(Path),
+    M:F(Params, WikiRoot, Prefix).
