@@ -2550,8 +2550,13 @@ do_url_type(SC, GetPath) ->
 		    end;
 		{ok, Head, {PathElem, Mod}, Trail} ->
 		    #urltype{type = appmod, 
-			     data = {Mod, [$/ | conc_path(Trail) ++ 
-					   lists:reverse(RevFile)]},
+			     data = {Mod, if
+					      Trail == [] ->
+						  [];
+					      true ->
+						  [$/ | conc_path(Trail) ++
+						   lists:reverse(RevFile)]
+					  end},
 			     path = conc_path(Head)}
 	    
 	    end
