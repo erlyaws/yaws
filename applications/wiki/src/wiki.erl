@@ -317,7 +317,8 @@ showOldPage([{node,Page},{index, Nt}], Root, Prefix) ->
 	    TxtStr = wiki_diff:patchL(Txt, ThePatches),
 	    W = wiki_split:str2wiki(TxtStr),
 	    DeepStr = wiki_to_html:format_wiki(Page, W, Root),
-	    DeepFiles = wiki_to_html:format_wiki_files(Page, Files, Root),
+	    DeepFiles = wiki_to_html:format_wiki_files(
+			  Page, FileDir,Files, Root),
 	    Form = form("POST", "noop.yaws",
 			[textarea("text", 25, 75, TxtStr)]),
 	    wiki_templates:template(Page, old_pic(), "",
