@@ -1994,6 +1994,7 @@ ssi(File, Delimiter, Bindings, Dir, SC) ->
 		    ets:insert(SC#sconf.ets,{Key,D, Mtime}),
 		    ssi(File, Delimiter, Bindings, Dir, SC);
 		{error, Rsn} ->
+		    error_logger:format("Failed to read/ssi file ~p~n", [FullPath]),
 		    {error,Rsn}
 	    end
     end.

@@ -37,7 +37,7 @@ div.links {
     background: green;
   }
 
-div.box { border: solid; border-width: thin; width: 90%; 
+div.box { border: solid; border-width: thin; width: 96%; 
           background: rgb(211, 211, 211)  }
 
 div.box pre {margin: 0.66em 0 0.33em 1%; padding: 0;}

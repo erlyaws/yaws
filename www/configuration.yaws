@@ -20,9 +20,15 @@ out(A) ->
 			 {alt,"SourceForge.net Logo"}]}},
 		 " The Yaws SourceForge www page is ",
 		 {a ,[{href,"http://sourceforge.net/projects/erlyaws/"}], 
-		  "http://sourceforge.net/projects/erlyaws"}
-	       ]},
-       {p,[], ["To cvs check out the latest source first install an ",
+		  "http://sourceforge.net/projects/erlyaws"}]},
+	 
+	 {p, [], ["Tested releases are downloadable from the yaws website download "
+		  " directory, use a regular release unless you plan to hack yaws.  "
+		  "Regular releases are found at ",
+		  {a, [{href, "http://yaws.hyber.org/download"}],
+		   "http://yaws.hyber.org/download}"}]},
+
+	 {p,[], ["To cvs check out the latest source first install an ",
 	       {a, [{href,"http://www.erlang.org"}],"Erlang"},
 	       " system, then do: "]},
        box("
@@ -40,7 +46,7 @@ out(A) ->
        {p,[], "Run ./configure"},
 
        {p, [], [{tt, [], "make"} ,
-		"(without install) will build the yaws system and ",
+		" (without install) will build the yaws system and ",
 		{tt, [], "make local_install"},
 		" does a local install at http://127.0.0.1:8000. This is the typical mode of operation"
 		" while either just trying out yaws, or hacking yaws. This will install "
@@ -110,3 +116,6 @@ out(A) ->
     ].
 
 </erl>
+
+
+
