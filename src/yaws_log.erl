@@ -7,7 +7,7 @@
 
 -module(yaws_log).
 -author('klacke@hyber.org').
-
+-include_lib("kernel/include/file.hrl").
 -compile(export_all).
 %%-export([Function/Arity, ...]).
 
@@ -25,9 +25,7 @@
 	  now,
 	  ack,
 	  tracefd,
-	  accesslog,
-	  afd}).
-
+	  alogs =  []}).
 		
 
 %%%----------------------------------------------------------------------
@@ -36,16 +34,17 @@
 start_link() ->
     gen_server:start_link({local, yaws_log}, yaws_log, [], []).
 
-accesslog(Ip, Req, Status, Length) ->
-    gen_server:cast(?MODULE, {access, Ip, Req, Status, Length}).
+accesslog(ServerName, Ip, Req, Status, Length) ->
+    gen_server:cast(?MODULE, {access, ServerName, Ip, Req, 
+			      Status, Length}).
 errlog(F, A) ->     
     gen_server:cast(?MODULE, {errlog, F, A}).
 infolog(F, A) ->     
     gen_server:cast(?MODULE, {infolog, F, A}).
 sync_errlog(F, A) ->     
     gen_server:call(?MODULE, {errlog, F, A}).
-setdir(Dir) ->
-    gen_server:call(?MODULE, {setdir, Dir}).
+setdir(Dir, Sconfs) ->
+    gen_server:call(?MODULE, {setdir, Dir, Sconfs}).
 
 open_trace(What) ->
     gen_server:call(?MODULE, {open_trace, What}).
@@ -65,7 +64,8 @@ trace_traffic(ServerOrClient , Data) ->
 %%          {stop, Reason}
 %%----------------------------------------------------------------------
 init([]) ->
-    yaws:ticker(3000),
+    yaws:ticker(3000, secs3),
+    yaws:ticker(60 * 1000, minute),
     {ok, #state{running = false, now = fmtnow(), ack = []}}.
 
 %%----------------------------------------------------------------------
@@ -77,32 +77,39 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-handle_call({setdir, Dir}, From, State) when State#state.running == false ->
+handle_call({setdir, Dir, Sconfs}, From, State) 
+  when State#state.running == false ->
     ?Debug("setdir ~s~n~p", [Dir, State#state.ack]),
-    error_logger:logfile({open,filename:join([Dir, "log"])}),
-    Alog = filename:join([Dir, "access"]),
-    case file:open(Alog, [write, raw, append]) of  %% FIXME wrap log
-	{ok, Fd} ->
-	    lists:foreach(fun({err, F, A}) ->
-				  error_logger:format(F, A);
-			     ({info, F, A}) ->
-				  error_logger:info_msg(F,A);
-			     ({access, Ip, Req, Status, Length}) ->
-				  I = fmt_alog(State#state.now,
-					       Ip, Req, Status, 
-					       Length),
-				  file:write(Fd, I)
-			  end, State#state.ack),
-	    S2 = State#state{running = true,
-			     ack = [],
-			     dir  = Dir,
-			     accesslog = Alog,
-			     afd = Fd},
-	    {reply, ok, S2};
-	Err ->
-	    error_logger:format("Cannot open ~s~n", [Alog]),
-	    {stop, Err}
-    end;
+
+    error_logger:logfile({open,filename:join([Dir, "report.log"])}),
+    SCs = lists:flatten(Sconfs),
+    
+    L = lists:zf(
+	  fun(SC) ->
+		  A = filename:join([Dir, SC#sconf.servername ++ ".access"]),
+		  case file:open(A, [write, raw, append]) of
+		      {ok, Fd} ->
+			  {true, {SC#sconf.servername, Fd, A}};
+		      Err ->
+			  error_logger:format("Cannot open ~p",[A]),
+			  false
+		  end
+	  end, SCs),
+
+    lists:foreach(fun({err, F, A}) ->
+			  error_logger:format(F, A);
+		     ({info, F, A}) ->
+			  error_logger:info_msg(F,A);
+		     ({access, ServerName, Ip, Req, Status, Length}) ->
+			  do_alog(ServerName, Ip, Req, Status, Length, State)
+		  end, State#state.ack),
+    S2 = State#state{running = true,
+		     ack = [],
+		     dir  = Dir,
+		     alogs = L},
+    {reply, ok, S2};
+
+
 handle_call({errlog, F, A}, From, State) when State#state.running == true ->
     error_logger:format(F, A),
     {reply, ok, State};
@@ -144,14 +151,14 @@ handle_cast({infolog, F, A}, State) when State#state.running == false ->
 
 
 
-handle_cast({access, Ip, Req, Status, Length}, State) ->
+handle_cast({access, ServerName, Ip, Req, Status, Length}, State) ->
     case State#state.running of 
 	true ->
-	    I = fmt_alog(State#state.now,Ip, Req, Status,  Length),
-	    file:write(State#state.afd, I),
+	    do_alog(ServerName, Ip, Req, Status, Length, State),
 	    {noreply, State};
 	false ->
-	    {noreply, State#state{ack = [{access, Ip, Req, Status,  Length} |
+	    {noreply, State#state{ack = [{access, ServerName, Ip, Req, 
+					  Status,  Length} |
 					 State#state.ack]}}
     end;
 handle_cast({trace, from_server, Data}, State) ->
@@ -163,7 +170,14 @@ handle_cast({trace, from_client, Data}, State) ->
 
 
 
-
+do_alog(ServerName, Ip, Req, Status, Length, State) ->
+    case lists:keysearch(ServerName, 1, State#state.alogs) of
+	{value, {_, FD, _}} ->
+	    I = fmt_alog(State#state.now, Ip, Req, Status,  Length),
+	    file:write(FD, I);
+	_ ->
+	    false
+    end.
 
 
 %%----------------------------------------------------------------------
@@ -172,8 +186,52 @@ handle_cast({trace, from_client, Data}, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-handle_info(tick, State) ->
-    {noreply, State#state{now = fmtnow()}}.
+handle_info(secs3, State) ->
+    {noreply, State#state{now = fmtnow()}};
+
+%% once a minute, check log sizes
+handle_info(minute, State) ->
+    L = lists:map(
+	  fun({FD, Sname, Filename}) ->
+		  {ok, FI} = file:read_file_info(Filename),
+		  if
+		      FI#file_info.size > 50000 ->
+			  file:close(FD),
+			  B = filename:basename(Filename, ".access"),
+			  Old = B ++ ".old",
+			  file:delete(Old),
+			  file:rename(Filename, Old),
+			  {ok, Fd2} = file:open(Filename, [write, raw]),
+			  {Fd2, Sname, Filename};
+		      true ->
+			  {FD, Sname, Filename}
+		  end
+	  end, State#state.alogs),
+    
+    Dir = State#state.dir,
+    E = filename:join([Dir, "report.log"]),
+    {ok, FI} = file:read_file_info(E),
+    if
+	FI#file_info.size > 50000 ->
+	    B = filename:basename(E, ".log"),
+	    error_logger:logfile(close),
+	    Old = B ++ ".old",
+	    file:delete(Old),
+	    file:rename(E, Old),
+	    error_logger:logfile({open, E});
+	true ->
+	    ok
+    end,
+    {noreply, State#state{alogs= L}}.
+
+    
+
+		  
+
+
+
+
+
 
 %%----------------------------------------------------------------------
 %% Func: terminate/2

@@ -11,21 +11,39 @@ out(A) ->
 
 <table border="2">
 
+
+<tr> <td> Mar 26, 2002. Fixed a bug where chunked encodings were
+missing a CRNL which made all yaws pages not render in IE </td> </tr>
+
+<tr> <td> Mar 25 2002 Fixed a bug with empty initial lines in yaws files.
+<p>Made access log files per virt host.
+<p>Made the access log as well as the info/err log a wrap log, wraps at 50k.
+
 <tr><td> Mar 17 2002, buxfix in cache + added -T flag to yaws, which is
 http protocol trace in log file
 
 <tr><td> Mar4 4   2002 made release 0.30 <td><tr>
+
 <tr><td> Feb 28, 2002 Added traffic trace -t flag and ~/public_html support.
+
 <tr><td> Feb 26, 2002 Cought I/O from the erlang compiler when compiling.
 The compiler will (wrongly) produce some errors plainly to the tty.
 The RightThing would be to fix that, but .....
+
 <tr><td> Feb 22, 2002 yaws_api:set_cookie + examples    </td></tr>
+
 <tr><td> Feb 14, 2002 redid HTML tables for top docs    </td></tr>
+
 <tr><td> Feb 13, 2002 released first version to the net 0.20    </td></tr>
+
 <tr><td> Feb 12, 2002 cached pages in RAM (ets tables)    </td></tr>
+
 <tr><td> Feb 7, 2002 added virtual hosting capabilities    </td></tr>
+
 <tr><td> Feb 6, added query strings in URLs passed in #arg{}    </td></tr>
+
 <tr><td> Feb 5, 2002 added directory listings    </td></tr>
+
 <tr><td> Jan 15, 2002. Started to hack the thing </td></tr>
 </table>
 

@@ -444,21 +444,21 @@ is_modified_p(FI, UTC_string) ->
 
 
 
-ticker(Time) ->
+ticker(Time, Msg) ->
     S = self(),
-    spawn_link(yaws, ticker, [Time, S]).
-ticker(Time, To) ->
+    spawn_link(yaws, ticker, [Time, S, Msg]).
+ticker(Time, To, Msg) ->
     process_flag(trap_exit, true),
-    ticker2(Time, To).
+    ticker2(Time, To, Msg).
 
-ticker2(Time, To) ->
+ticker2(Time, To, Msg) ->
     receive
 	{'EXIT', _} ->
 	    exit(normal)
     after Time ->
-	    To ! tick
+	    To ! Msg
     end,
-    ticker2(Time, To).
+    ticker2(Time, To, Msg).
 
 fmt_ip({A,B,C,D}) ->
     [integer_to_list(A), $.,

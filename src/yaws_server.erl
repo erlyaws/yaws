@@ -121,7 +121,7 @@ init([]) ->
 	{ok, Gconf, Sconfs} ->
 	    erase(logdir),
 	    ?Debug("Conf = ~p~n", [?format_record(Gconf, gconf)]),
-	    yaws_log:setdir(Gconf#gconf.logdir),
+	    yaws_log:setdir(Gconf#gconf.logdir, Sconfs),
 	    case Gconf#gconf.trace of
 		{true, What} ->
 		    yaws_log:open_trace(What);
@@ -406,7 +406,8 @@ maybe_access_log(CliSock, SC, Req) ->
 		  end,
 	    Path = get_path(Req#http_request.path),
 	    Meth = atom_to_list(Req#http_request.method),
-	    yaws_log:accesslog(Ip, [Meth, $\s, Path] , Status, Len);
+	    yaws_log:accesslog(SC#sconf.servername, Ip, 
+			       [Meth, $\s, Path] , Status, Len);
 	false ->
 	    ignore
     end.
@@ -558,6 +559,7 @@ make_arg(CliSock, Head, Req, GC, SC) ->
 		  data,    %% Binary | FileDescriptor | DirListing | undefined
 		  mime,    %% MIME type
 		  q        %% query for GET requests
+		  wwwauth = false  %% or #auth{}
 		 }).
 
 
@@ -589,6 +591,7 @@ deliver_403(CliSock, Req, GC) ->
 	 make_content_length(size(B)), crnl()],
     send_headers_and_data(true, CliSock, D, B, GC),
     done.
+
 
 
 deliver_404(CliSock, GC, SC,  Req) ->
