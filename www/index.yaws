@@ -60,7 +60,37 @@ powered by Yaws.
 
 <div class="man"> 
 
-<h3> Mar 6, 2003.  Version 1.2 released  </h3>
+<h3> Jun 1, 2003.  Version 1.22 released  </h3>
+
+<ul>
+
+
+<li><p> This is bugfix release. 
+<li><p> cosmetic changes in ehtml output
+<li><p> wiki install problems
+<li><p> many fixes to the wiki
+<li><p> ssl config was broken
+<li><p> /etc/rc scripts for redhat/gentoo/suse linux
+<li><p> a redir bug fixed.
+<li><p> ebuild for gentoo added
+<li><p> slideshow support added to the wiki
+<li><p> cosmetic updates to the latex docs
+
+</ul>
+
+
+</div>
+
+
+
+
+
+<h2> Old News </h2>
+<div class="box">
+
+
+<ul>
+<li> Mar 6, 2003.  Version 1.2 released  
 
 <ul>
 
@@ -76,14 +106,7 @@ powered by Yaws.
 
 
 </ul>
-</div>
-
-
-
-
-
-<h2> Old News </h2>
-<div class="box">
+</ul>
 
 
 
