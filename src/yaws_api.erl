@@ -1291,6 +1291,10 @@ ehtml_attrs_expander([{Var,Val}|T]) ->
       "=",
       "\"", ehtml_attr_part_expander(Val), "\""]|
      ehtml_attrs_expander(T)];
+ehtml_attrs_expander([Var|T]) ->
+    [[" ",
+      ehtml_attr_part_expander(Var)]|
+     ehtml_attrs_expander(T)];
 ehtml_attrs_expander(Var) when atom(Var) ->
     %% Var in the cdr of an attribute list
     [{ehtml_attrs, ehtml_var_name(Var)}].
