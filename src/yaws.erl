@@ -696,26 +696,38 @@ is_prefix(_,_) ->
 
 
 
-%% out header management
+%% imperative out header management
 
 outh_set_status_code(Code) ->
-    put(outh, (get(outh))#outh{status = Code}).
+    put(outh, (get(outh))#outh{status = Code}),
+    ok.
 
 outh_set_non_cacheable(_Version) ->
-    put(outh, (get(outh))#outh{cache_control = "Cache-Control: no-cache\r\n"}).
+    put(outh, (get(outh))#outh{cache_control = "Cache-Control: no-cache\r\n"}),
+    ok.
 
 outh_set_content_type(Mime) ->
     put(outh, (get(outh))#outh{content_type = 
-			       make_content_type_header(Mime)}).
+			       make_content_type_header(Mime)}),
+    ok.
 
 outh_set_cookie(C) ->
-    put(outh, (get(outh))#outh{set_cookie = ["Set-Cookie: " , C, "\r\n"]}).
+    put(outh, (get(outh))#outh{set_cookie = ["Set-Cookie: " , C, "\r\n"]}),
+    ok.
 
+
+outh_clear_headers() ->
+    H = get(outh),
+    put(outh, #outh{status = H#outh.status,
+		    doclose = true,
+		    chunked = false,
+		    connection  = make_connection_close_header(true)}),
+    ok.
 
 
 outh_set_static_headers(Req, UT, Headers) ->
     H = get(outh),
-    {DoClose, Chunked} = dcc(Req, Headers),
+    {DoClose, _Chunked} = dcc(Req, Headers),
     H2 = H#outh{
 	   status = 200,
 	   chunked = false,
@@ -752,7 +764,8 @@ outh_set_connection_close(Bool) ->
     H = get(outh),
     H2 = H#outh{connection = make_connection_close_header(Bool),
 		doclose = Bool},
-    put(outh, H2).
+    put(outh, H2),
+    ok.
 
 
 outh_set_dcc(Req, Headers) ->
@@ -880,18 +893,18 @@ make_www_authenticate_header(Realm) ->
 
 make_date_header() ->
     N = element(2, now()),
-    Head=case get(date_header) of
-	     {Str, Secs} when (Secs+10) > N ->
-		 H = ["Date: ", yaws:universal_time_as_string(), "\r\n"],
-		 put(date_header, {H, N}),
-		 H;
-	     {Str, Secs} ->
-		 Str;
-	     undefined ->
-		 H = ["Date: ", yaws:universal_time_as_string(), "\r\n"],
-		 put(date_header, {H, N}),
-		 H
-	 end.
+    case get(date_header) of
+	{Str, Secs} when (Secs+10) > N ->
+	    H = ["Date: ", yaws:universal_time_as_string(), "\r\n"],
+	    put(date_header, {H, N}),
+	    H;
+	{Str, Secs} ->
+	    Str;
+	undefined ->
+	    H = ["Date: ", yaws:universal_time_as_string(), "\r\n"],
+	    put(date_header, {H, N}),
+	    H
+    end.
 
 
 
@@ -909,7 +922,7 @@ outh_get_doclose() ->
 outh_get_chunked() ->
     (get(outh))#outh.chunked.
 
-
+    
 
 outh_serialize() ->
     H = get(outh),
@@ -931,7 +944,9 @@ outh_serialize() ->
 	       noundef(H#outh.content_type),
 	       noundef(H#outh.set_cookie),
 	       noundef(H#outh.transfer_encoding),
-	       noundef(H#outh.www_authenticate)],
+	       noundef(H#outh.www_authenticate),
+	       noundef(H#outh.other)
+	      ],
     {StatusLine, Headers}.
     
 	       
@@ -942,3 +957,37 @@ noundef(Str) ->
 
 	
 
+accumulate_header({connection, What}) ->
+    DC = case What of
+	     "close" ->
+		 true;
+	     _ ->
+		 false
+	 end,
+    H = get(outh),
+    put(outh, (H#outh{connection = ["Connection: ", What, "\r\n"],
+		      doclose = DC}));
+accumulate_header({location, What}) ->
+    put(outh, (get(outh))#outh{location = ["Location: " , What, "\r\n"]});
+
+accumulate_header({cache_control, What}) ->
+    put(outh, (get(outh))#outh{location = ["Cache-Control: " , What, "\r\n"]});
+
+accumulate_header({set_cookie, What}) ->
+    put(outh, (get(outh))#outh{location = ["Set-Cookie: " , What, "\r\n"]});
+
+accumulate_header({content_type, What}) ->
+    put(outh, (get(outh))#outh{location = ["Content-Type: " , What, "\r\n"]});
+
+
+%% backwards compatible clause
+accumulate_header(Str) when list(Str) ->
+    H = get(outh),
+    Old = case H#outh.other of
+	      undefined ->
+		  [];
+	      V ->
+		  V
+	  end,
+    H2 = H#outh{other = [Str, "\r\n", Old]},
+    put(outh, H2).

@@ -1421,13 +1421,11 @@ handle_out_reply({streamcontent, MimeType, First},
 
 
 handle_out_reply({header, H},  _LineNo, _YawsFile, _SC, _A) ->
-    %%accumulate_header(H);
-    exit(arghhhhhhhhhh);
+    yaws:accumulate_header(H);
 
 handle_out_reply({allheaders, Hs}, _LineNo, _YawsFile, _SC, _A) ->
-    %%%erase(acc_headers),
-    %%%lists:foreach(fun({header, Head}) -> accumulate_header(Head) end, Hs);
-    exit(ooooooooooooooooooooooooo);
+    yaws:outh_clear_headers(),
+    lists:foreach(fun({header, Head}) -> yaws:accumulate_header(Head) end, Hs);
 
 handle_out_reply({status, Code},_LineNo,_YawsFile,_SC,_A) when integer(Code) ->
     yaws:outh_set_status_code(Code);

@@ -598,10 +598,10 @@ secs() ->
 
 
 setcookie(Name, Value) ->
-    yaws:outh_set_cookie(f("~s=~s;", [Name, Value])).
+    {header, {set_cookie, f("~s=~s;", [Name, Value])}}.
 
 setcookie(Name, Value, Path) ->
-     yaws:outh_set_cookie(f("~s=~s; path=~s", [Name, Value, Path])).
+     {header, {set_cookie, f("~s=~s; path=~s", [Name, Value, Path])}}.
 
 setcookie(Name, Value, Path, Expire) ->
     setcookie(Name, Value, Path,  Expire, [], []).
@@ -619,8 +619,9 @@ setcookie(Name, Value, Path, Expire, Domain, _Secure) ->
     SetPath = if Path == [] -> "/";
                  true -> Path
               end,
-    yaws:outh_set_cookie(f("~s=~s; Version=\"1\";~s~sPath=~s",
-			   [Name,Value,SetDomain,SetExpire,SetPath])).
+    {header, {set_cookie, f("~s=~s; Version=\"1\";~s~sPath=~s",
+			    [Name,Value,SetDomain,SetExpire,SetPath])}}.
+
 
 %% This function can be passed the cookie we get in the Arg#arg.headers.cookies
 %% to search for a specific cookie 
@@ -862,7 +863,8 @@ set_tty_trace(Bool) ->
 
 
 set_status_code(Code) ->
-    yaws:outh_set_status_code(Code).
+    {status, Code}.
+
 
 
 
@@ -974,7 +976,7 @@ reformat_header(H) ->
 
 
 set_content_type(MimeType) ->
-    yaws:outh_set_content_type(MimeType).
+    {header, {content_type, MimeType}}.
 
 
 %% returns a #url{} record

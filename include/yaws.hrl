@@ -82,12 +82,6 @@
          }).
 
 
--record(dcc, {
-	  doclose = true,
-	  chunked = false}).
-
-
-
 
 %% this internal record is used and returned by the URL path parser
 
@@ -132,7 +126,9 @@
 	  content_length,
 	  content_type,
 	  transfer_encoding,
-	  www_authenticate}).
+	  www_authenticate,
+	  other     %% misc other headers
+}).
 
 
 	  

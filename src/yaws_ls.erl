@@ -44,12 +44,12 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
     yaws_server:close_if_HEAD(
       Req, 
       fun() -> 
-	      yaws_server:deliver_accumulated(#dcc{}, CliSock, GC, SC),
+	      yaws_server:deliver_accumulated(CliSock, GC, SC),
 	      yaws_server:do_tcp_close(CliSock, SC),
 	      throw({ok, 1})
       end),
     yaws_server:accumulate_content(B),
-    yaws_server:deliver_accumulated(#dcc{}, CliSock, GC, SC),
+    yaws_server:deliver_accumulated(CliSock, GC, SC),
     done.
 
 inline_readme(SC,DirName,L) ->
@@ -124,7 +124,7 @@ sizestr(FI) when FI#file_info.size > 1000000 ->
     ?F("~.1fM", [FI#file_info.size / 1000000]);
 sizestr(FI) when FI#file_info.size > 1000 ->
     ?F("~wk", [trunc(FI#file_info.size / 1000)]);
-sizestr(FI) ->
+sizestr(_FI) ->
     ?F("1k", []). % As apache does it...
 
 

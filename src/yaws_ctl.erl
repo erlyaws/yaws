@@ -166,10 +166,10 @@ check([File| IncludeDirs]) ->
     SC = #sconf{},
 
     case yaws_compile:compile_file(atom_to_list(File), GC2, SC) of
-	{ok, [{errors, 0}| Spec]} ->
+	{ok, [{errors, 0}| _Spec]} ->
 	    io:format("ok~n",[]),
 	    init:stop();
-	Other ->
+	_Other ->
 	    io:format("~nErrors in ~p~n", [File]),
 	    init:stop()
     end.
