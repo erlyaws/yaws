@@ -2726,8 +2726,6 @@ compressible_mime_type("application/postscript") ->
     true;
 compressible_mime_type("application/pdf") ->
     true;
-compressible_mime_type("application/vnd"++_) ->
-    true;
 compressible_mime_type(_) ->
     false.
 
