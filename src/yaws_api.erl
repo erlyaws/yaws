@@ -113,7 +113,6 @@ parse_post_data(Arg) ->
 	    end
     end.
 	    
-
 %% parse the command line query data
 parse_query(Arg) ->
      parse_post_data_urlencoded(Arg#arg.querydata).
@@ -201,6 +200,8 @@ parse_multipart(Data, St) ->
     end.
 
 % Re-entry
+parse_multi(Data, {cont, {boundary, Start_data, PartBoundary, Acc, {Possible,Boundary}}}) ->
+    parse_multi(boundary, Start_data++Data, PartBoundary, Acc, [], {Possible++Data,Boundary});
 parse_multi(Data, {cont, {State, Start_data, Boundary, Acc, Tmp}}) ->
     parse_multi(State, Start_data++Data, Boundary, Acc, [], Tmp);
 
