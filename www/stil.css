@@ -1,0 +1,38 @@
+
+<STYLE TYPE="text/css">
+  BODY {
+    background: #C6C6B5;
+      font-family: Verdana, Arial, Helvetica, sans-serif;
+    color: black;
+  }
+
+#menu {
+  background: #B6B6A5;
+}
+
+  div.links {
+    background: green;
+  }
+
+  H1, H2, H3, H4, H5 {
+      text-decoration: none;
+      font-family: Verdana, Arial, Helvetica, sans-serif;
+      font-weight: bold; 
+      font-variant: small-caps
+  }
+  I {      font-family: Times, Verdana, Arial, Helvetica, sans-serif;}
+  P { text-decoration: none;
+      font-family: Verdana, Arial, Helvetica, sans-serif;
+      font-weight: normal; 
+  }
+
+  A { text-decoration: none;
+      font-family: Verdana, Arial, Helvetica, sans-serif;
+      font-weight: normal; 
+  }
+  A:visited { font-style: oblique; color: #600000;}
+  A:link { color: #0000f0 }          /* unvisited link */
+  A:active { color: lime }        /* active links */
+  A:hover { background: #edb }
+
+</STYLE>

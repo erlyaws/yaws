@@ -41,10 +41,13 @@ start_link() ->
 status() ->
     gen_server:call(?MODULE, status).
 
-stats() ->
-    S = status(),
+stats() -> 
+    {S, Time} = status(),
     {GC, Srvs, _} = S,
-    flatmap(
+    Diff = calendar:time_difference(Time, calendar:local_time()),
+    G = fun(L) -> lists:reverse(lists:keysort(2, L)) end,
+    
+    R= flatmap(
       fun({Pid, SCS}) ->
 	      map(
 		fun(SC) ->
@@ -53,9 +56,10 @@ stats() ->
 			L = ets:match(E, {{urlc_total, '$1'}, '$2'}),
 			{SC#sconf.servername,  
 			 flatten(yaws:fmt_ip(SC#sconf.listen)),
-			 lists:keysort(2,map(fun(P) -> list_to_tuple(P) end, L))}
+			 G(map(fun(P) -> list_to_tuple(P) end, L))}
 		end, SCS)
-      end, Srvs).
+      end, Srvs),
+    {Diff, R}.
 
 			      
 
@@ -67,6 +71,7 @@ stats() ->
 %%          {stop, Reason}
 %%----------------------------------------------------------------------
 init([]) ->
+    put(start_time, calendar:local_time()),  %% for uptime
     case yaws_config:load() of
 	{ok, Gconf, Sconfs} ->
 	    erase(logdir),
@@ -125,7 +130,7 @@ init2(Gconf, Sconfs) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
 handle_call(status, From, State) ->
-    Reply = State,
+    Reply = {State, get(start_time)},
     {reply, Reply, State};
 handle_call(mnum, From, {GC, Group, Mnum}) ->
     {reply, Mnum+1,   {GC, Group, Mnum+1}}.
@@ -160,10 +165,6 @@ handle_info(Msg, State) ->
 %%----------------------------------------------------------------------
 terminate(Reason, State) ->
     ok.
-
-
-			  
-
 
 
 %% One server per IP we listen to
@@ -327,7 +328,7 @@ maybe_access_log(CliSock, SC, Req) ->
     ?TC([{record, SC, sconf}]),
     case SC#sconf.access_log of
 	true ->
-	    {ok, {Ip, Port}} = inet:sockname(CliSock),
+	    {ok, {Ip, Port}} = inet:peername(CliSock),
 	    Status = case erase(status_code) of
 			 undefined -> "-";
 			 I -> integer_to_list(I)

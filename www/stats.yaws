@@ -9,13 +9,16 @@ out(A) ->
 
 <erl>
 out(A) ->
-    L = yaws_server:stats(),
-    H = "<html> \n ",
+    {UpTime, L} = yaws_server:stats(),
+    {Days, {Hours, Minutes, Secs}} = UpTime,
+    H = f("<html> ~n <h4>Uptime: ~w Days, ~w Hours, ~w Minutes </h4> ~n",
+           [Days, Hours, Minutes]),
+    
     T =lists:map(
 	 fun({Host,IP,Hits}) ->
 		 L1= f("<hr><h3> stats for ~p at ~p  </h3>~n",
 		       [Host,IP]),
-		 T = "<table border-4 > \n"
+		 T = "<table border=\"2\" > \n"
                      "<TR> <TH>URL</TH> <TH>Number of hits</TH> </TR>",
 		 L2=lists:map(
 		      fun({Url, Hits}) ->

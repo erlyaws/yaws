@@ -4,7 +4,7 @@
 
 # first we have a set of globals
 
-logdir = /var/yaws/www
+logdir = /var/log/yaws
 ebin_dir = %yawsdir%/examples/ebin
 include_dir = %yawsdir%/examples/include
 keepalive_timeout = 15000

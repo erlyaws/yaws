@@ -24,6 +24,9 @@
 %% Content-type: multipart/form-data; boundary=-------------------7cd1d6371ec
 %% which is used for file upload
 
+parse_post_data(Bin) ->
+    parse_post_data(Bin, ['ALLSTRINGS']).
+
 parse_post_data(Bin, Spec) ->
     do_parse_spec(Bin, Spec, nokey, [], key).
 
@@ -34,9 +37,9 @@ parse_post_data(Bin, Spec) ->
 %% float
 %% string
 %% ip
-%% onoff
 %% binary
-
+%% checkbox
+%% 'ALLSTRINGS' 
 
 %% special value ['ALLSTRINGS'] can be used in order to denote that
 %% the remainder of the args are all strings
@@ -84,15 +87,18 @@ tail_spec(['ALLSTRINGS']) ->
 tail_spec(L) ->
      L.
 
+coerce_type(_, []) ->
+    undefined;
 coerce_type(int, Str) ->
     list_to_integer(lists:reverse(Str));
 coerce_type(float, Str) ->
     list_to_float(lists:reverse(Str));
 coerce_type(string, Str) ->
     lists:reverse(Str);
-coerce_type(onoff, "no") ->
+coerce_type(checkbox, "no") ->
     on;
-coerce_type(onoff, "ffo") ->
+coerce_type(checkbox, Str) ->
+    io:format("XX ~s~n", [Str]),
     off;
 coerce_type(ip, Str) ->
     exit(nyi_ip);
@@ -181,3 +187,47 @@ fl([Fmt, Arg | Tail]) ->
     [f(Fmt, Arg) | fl(Tail)];
 fl([]) ->
     [].
+
+
+
+%% htmlize  ( <xmp> doesn't seem to work with opera )
+%% FIXME add all the html weirdo chars here
+htmlize(<<Char, Tail/binary>>) ->
+    case htmlize_char(Char) of
+	Char ->
+	    <<Char, (htmlize(Tail))/binary>>;
+        Bin ->		
+            <<Bin/binary, (htmlize(Tail))/binary>>
+    end;
+htmlize(<<>>) ->			 
+    <<>>.
+
+htmlize_char($>) ->
+    <<"&gt;">>;
+htmlize_char($<) ->
+    <<"&lt;">>;
+htmlize_char($\n) ->
+    <<"<br>">>;
+htmlize_char(X) ->
+    X.
+
+
+
+secs() ->
+    {MS, S, _} = now(),
+    (MS * 1000000) + S.
+
+
+setcookie(Name) ->
+    setcookie(Name, "/",  secs() + 3600, [], []).
+setcookie(Name, Path) ->
+    setcookie(Name, Path,  secs() + 3600, [], []).
+setcookie(Name, Path, Expire) ->
+    setcookie(Name, Path,  Expire, [], []).
+setcookie(Name, Path, Expire, Domain) ->
+    setcookie(Name, Path, Expire, Domain,[]).
+setcookie(Name, Path, Expire, Domain, Secure) ->
+    exit(nyi).
+
+		    
+	    

@@ -1,68 +1,16 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<HTML>
-<HEAD>
- <meta name="keywords" content="Yaws">
+<IMG SRC="/icons/yaws_head.gif" WIDTH="600" ALT="YAWS">
+<br><br>
+
+<table bgcolor="#B6b6a5" border="2" cellpadding="5" cellspacing="0" width="100%">
+<tr border="2">
+    <td> <A HREF="index.yaws">- Top Page</a> </td>
+    <td> <A HREF="simple.yaws">Simple</a></td>
+    <td> <A HREF="form.yaws">Forms</a> </td>
+    <td> <A HREF="redirect.yaws">Redirect</a> </td>
+    <td> <A HREF="cookies.yaws">Cookies</a> </td>
+    <td> <A HREF="pcookie.yaws">Persistant Cookies</a> </td>
+</tr>
+</table>
+<hr>
 
 
- <TITLE>HYBER.ORG</TITLE>
-
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-
-<STYLE TYPE="text/css">
-  BODY {
-    background: #C6C6B5;
-      font-family: Verdana, Arial, Helvetica, sans-serif;
-    color: black;
-  }
-
-#menu {
-  background: #B6B6A5;
-}
-
-  div.links {
-    background: green;
-  }
-
-  H1, H2, H3, H4, H5 {
-      text-decoration: none;
-      font-family: Verdana, Arial, Helvetica, sans-serif;
-      font-weight: bold; 
-      font-variant: small-caps
-  }
-  I {      font-family: Times, Verdana, Arial, Helvetica, sans-serif;}
-  P { text-decoration: none;
-      font-family: Verdana, Arial, Helvetica, sans-serif;
-      font-weight: normal; 
-  }
-  UL { margin-left: -2em }
-
-  A { text-decoration: none;
-      font-family: Verdana, Arial, Helvetica, sans-serif;
-      font-weight: normal; 
-  }
-  A:visited { font-style: oblique; color: #600000;}
-  A:link { color: #0000f0 }          /* unvisited link */
-  A:active { color: lime }        /* active links */
-
-</STYLE>
-
-</HEAD>
-<BODY BGCOLOR="#C6C6B5" text="#333333">
-
-<IMG SRC="/icons/yaws_head.gif"   width=400 ALT="YAWS">
-
-<table border="0" cellpadding="5" cellspacing="0" height="100%">
-<tr>
-  <td valign=top BGCOLOR="#B6B6A5">
-    <IMG SRC="spacer.gif" width=1 height=74 ALT=""><p></p>
-    <A HREF="index.yaws">- Top Page</a><br><hr>
-    <A HREF="simple.yaws">-Simple example</a><br><hr>
-    <A HREF="forms.yaws">--A forms POST</a><br><hr>
-    <A HREF="redirect.yaws">-Redirect</a><br><hr>	
-    <A HREF="cookies.yaws">-Cookie session</a><br><hr>
-    <A HREF="pcookie.yaws">-Persistant cookies</a><br><hr>
-    <A HREF="externalcode.yaws">-Using External code </a><br><hr>
-    <A HREF="mnesiacluster.yaws">-Using Mnesia DBMS to keep cookie state in a cluster </a><br><hr>
-  </td>
-
-  <td valign=right width=75%>

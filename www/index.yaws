@@ -64,8 +64,9 @@ an <a href="http://www.erlang.org">Erlang</a> system, then do:
 <pre>
 
 # export CVS_RSH=ssh 
-# cvs -d:pserver:anonymous@cvs.erlyaws.sourceforge.net:/cvsroot/erlyaws login
-# cvs -z3 -d:pserver:anonymous@cvs.erlyaws.sourceforge.net:/cvsroot/erlyaws co .
+# export CVSROOT=:pserver:anonymous@cvs.erlyaws.sourceforge.net:/cvsroot/erlyaws
+# cvs  login
+# cvs -z3 co .
 # cd yaws; make; make install
 </pre>
 

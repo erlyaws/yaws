@@ -1,0 +1,31 @@
+<erl>
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]).
+</erl>
+
+
+
+<h1>Yaws and Cookies</h1>
+<p>
+Cookies are the means in HTTP to assign data to a session. A HTTP session
+typically consists of many (and sometimes concurrent) TCP connections from the
+client to the web server. The first time a client arrives to our webserver, we
+issue the HTTP header <tt>SetCookie: someval</tt>. The browser will then in 
+subsequent connections to the same server pass this value "someval" in its
+client side <tt>Cookie: someval</tt> header. We can thereby assign state to a
+session, either through data actualy encoded into the cookie value itself, or by
+associating server side session data to the cookie.
+<p>
+Let's do an example where we set a simple cookie, and create a specific erlang process
+which is then responsible for that session. The cookie value will be a string encoding of
+the pid handling the session.
+
+<p>
+The yaws code in <a href="setcookie.yaws">setcookie.yaws</a> sets the cookie in the browser.
+
+<p>And the yaws code in <a href="readcookie.yaws">readcookie.yaws</a> will read the cookie
+and report some uninteresting session data.
+
+
+
+A correct definition of cookies can be found at Netscapes 
+<a href="http://www.netscape.com/newsref/std/cookie_spec.html">cookie spec</a>

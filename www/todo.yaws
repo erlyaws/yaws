@@ -1,4 +1,3 @@
-
 <erl>
 
 out(A) -> 
@@ -7,28 +6,21 @@ out(A) ->
 </erl>
 
 
-<H2>TODO</h2>
 
+<H2>TODO</H2>
 
 <ul>
 
-<li> ssl
-<li> virtual hosting  (done Thu Feb  7 20:23:23 CET 2002)
-<li> handle the If-..... headers
+<li> ssl 
+<li> handle the If-..... headers 
 <li> generate Etag for static content
-<li> directory listings   (done, {2002,2,5})
 <li> handle Range header
 <li> TRACE, PUT, OPTIONS ......
 <li> optimize with some precalculated headers
 <li> documentation in the www directory
-<li> cache pages in memory, cache filedescriptors  (done Feb 12, didn't help much)
-<li> cache headers ... (done Feb 7)
-<li> remove all filename:join .... calls, they suck (done Feb 6)
 <li> error codes
 <li> more functions in yaws_api   redirect(), push() ....
 <li> lots of examples
-<li> do something with URL parameters ala http://a.b.com/foo?a=1
-and pass them down to the yaws code in the arg structure  (done Feb 6)
 <li> make stop and control functions to ctl and HUP the daemon
 <li> maybe do .htaccess
 <li> do something cool, maybe a streaming audio app
@@ -38,6 +30,8 @@ and pass them down to the yaws code in the arg structure  (done Feb 6)
 <li> HTTP trailer support
 <li> a cool statistics yaws page that talks to the server
 <li> man pages for yaws as well as yaws.conf
+<li> ~user public_html syntax
+<li> #fragments in URLs
 </ul>
 
 

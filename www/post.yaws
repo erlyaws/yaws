@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <HTML>
 <HEAD>
- <meta name="keywords" content="HYBER dot ORG">
+ <meta name="keywords" content="post">
 
 
  <TITLE>Top EE page</TITLE>
@@ -16,24 +16,75 @@
 
 <H1> post.yaws </H1>
 
-<p> Pre ee code
+<p> This is the <tt>post.yaws</tt>. This yaws file gets invoked with client data.
+This is the data that is submitted from the forms page <a href="/form.yaws">form.yaws</a>.
+<p>POST data is naturally organized as a <tt>{Key, Value}</tt> list. A call to
+the function <tt>yaws_api:parse_post_data(A#arg.clidata)</tt> will parse the
+POSTed data. 
+
+<pre>
+out(A) -> 
+   L = f("&lt;pre>~n clidata: ~p~n &lt;/pre>", 
+         [yaws_api:parse_post_data(A#arg.clidata)]),
+   {ok,L}.
+</pre>
+
+<p>Will produce the following output:
 
 <erl>
 
-
 out(A) -> 
-    Spec = ['ALLSTRINGS'],
-    L = io_lib:format(
-	  "~n<xmp>~n  Yes here we go ~nARG=~p ~n~n"
-	  "Client data is:~p~n"
-	  "</xmp>",
-	  [A, yaws_api:parse_post_data(A#arg.clidata, Spec)]),
-    
-    {ok, L}.
-
-
-
+ L = f("<pre>~n clidata: ~p~n </pre>", 
+         [yaws_api:parse_post_data(A#arg.clidata)]),
+   {ok,L}.
 </erl>
+
+<p>Above, we got all the <tt>Value</tt> arguments as strings, however
+it is also possible to let the parser coerce data types of the posted data.
+
+<p>In this specific case we know the expected type of the arguments posted from
+the form. If <a href="form.yaws">back</a> back to the forms page, we can see that
+the arguments are
+<ol>
+<li> string    (the "lang" field)
+<li> checkbox  (the "imperative" field)
+<li> integer   (the "tabs" field)
+<li> checkbox  (the "os1" field)
+<li> checkbox  (the "os2" field)
+<li> checkbox  (the "os3" field)
+<li> string    (the "other" field)
+<li> string    (the "contact" field)
+</ol>
+
+<p>Since we know the types we expect in the form, we can indicate that to
+the <tt>parse_post_data/2</tt> function as in the following code:
+
+
+<pre>
+out(A) -> 
+   Spec = [string, checkbox, integer,
+           checkbox, checkbox, checkbox,
+           string, string],
+   L = f("&lt;pre>~n clidata: ~p~n &lt;/pre>", 
+         [yaws_api:parse_post_data(A#arg.clidata, Spec)]),
+   {ok,L}.
+</pre>
+
+<p>
+
+
+This will produce the following output:
+
+<erl>
+out(A) -> 
+   Spec = [string, checkbox, int,
+           checkbox, checkbox, checkbox,
+           string, string],
+   L = f("~n<pre>~n clidata: ~p~n </pre>", 
+         [yaws_api:parse_post_data(A#arg.clidata, Spec)]),
+   {ok,L}.
+</erl>
+
 
 
 </HTML>

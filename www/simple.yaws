@@ -15,7 +15,8 @@ HTML code.
 <erl>
 out(A) -> 
   {ok, B} = file:read_file([A#arg.docroot, "/simple_ex1.yaws"]),
-  {ok, ["<xmp> \n", B, "</xmp\n>"]}.
+  B2 = yaws_api:htmlize(B),
+  {ok, ["<pre> \n", B2, "</pre>\n"]}.
 </erl>
 
 <br>
@@ -32,7 +33,8 @@ HTML code.
 <erl>
 out(A) -> 
   {ok, B} = file:read_file([A#arg.docroot, "/simple_ex2.yaws"]),
-  {ok, ["<xmp> \n", B, "</xmp\n>"]}.
+  B2 = yaws_api:htmlize(B),
+  {ok, ["<pre> \n", B2, "</pre>\n"]}.
 </erl>
 
 The file has one very simple function which just returns a tuple
@@ -40,13 +42,6 @@ The file has one very simple function which just returns a tuple
 <br>
 The String will be substituted into the delivered HTML data instead of the
 Erlang code.
-
-
-
-
-
-
-
 
 
 </html>

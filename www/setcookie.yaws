@@ -1,0 +1,22 @@
+<erl>
+
+session(A, Visits) ->
+    receive
+        {From, tick} ->
+	    N = calendar:local_time(),
+	    From ! {self(), [N|Visits]},
+	    session(A, [N|Visits])
+    after 30000 ->    %% keep state for 30 secs only
+	    exit(normal)
+    end.
+
+someheaders(A) ->
+    H=A#arg.headers,
+    case H#headers.cookie of
+        undefined ->
+	    Now = calendar:local_time(),
+	    P = spawn(fun() -> session(A, [Now]) end),
+	    yaws_api:setcookie(pid_to_list(P), "/");
+	PidStr ->
+	    
+			       

@@ -1,20 +1,22 @@
-<IMG SRC="/icons/yaws_head.gif" WIDTH=400 ALT="YAWS">
+<IMG SRC="/icons/yaws_head.gif" WIDTH="600" ALT="YAWS">
+<br><br>
 
-<table border="0" cellpadding="5" cellspacing="0" height="100%">
-<tr>
-  <td valign=top width=25% BGCOLOR="#B6B6A5">
-    <IMG SRC="spacer.gif" width=1 height=74 ALT=""><p></p>
-    <A HREF="index.yaws">- Top Page</a><br><hr>
-    <A HREF="configuration.yaws">-Configuring and Building Yaws</a><br><hr>
-    <A HREF="dynamic.yaws">-Generating dynamic content</a><br><hr>
-    <A HREF="running.yaws">-Running yaws</a><br><hr>	
-    <A HREF="examples.yaws">-Examples</a><br><hr>
-    <A HREF="features.yaws">-Features</a><br><hr>
-    <A HREF="todo.yaws">-TODO list </a><br><hr>
-    <A HREF="motivation.yaws">-Motivation </a><br><hr>
-    <A HREF="download">-Download </a><br><hr>
-    <A HREF="contacts.yaws">-Contacts </a><br><hr>
-  </td>
+<table bgcolor="#B6b6a5" border="2" cellpadding="5" cellspacing="0" width="100%">
 
+<tr border="2">
+    <td> <A HREF="index.yaws">Top Page</a> </td>
+    <td> <A HREF="configuration.yaws">Config</a></td>
+    <td> <A HREF="dynamic.yaws">Dynamic content</a> </td>
+    <td> <A HREF="running.yaws">Running yaws</a> </td>
+    <td> <A HREF="history.yaws">History</a> </td>
+</tr>
 
- <td valign=right width=75%>
+<tr border="1">
+    <td> <A HREF="examples.yaws">Examples</a> </td>
+    <td> <A HREF="todo.yaws">TODO list </a> </td>
+    <td> <A HREF="motivation.yaws">Motivation </a> </td>
+    <td> <A HREF="download">Download </a> </td>
+</tr>
+
+</table>
+<hr>

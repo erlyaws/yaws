@@ -1,5 +1,5 @@
 <erl>
-out(A) -> file:read_file([A#arg.docroot, "/EXHEAD"]).
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]).
 </erl>
 
 
