@@ -1,16 +1,278 @@
-2003-04-10 08:10  mikl
+2003-06-01 20:35  klacke
 
-	* include.mk.in, Makefile, README, scripts/Install,
-	scripts/Makefile, src/Makefile, www/shopingcart/Makefile,
-	doc/Makefile, ChangeLog: Small modifications of the build
-	system. The build of the documentation is now optional to simplify
-	build on server where Latex is not present. You now have to
-	explicitly type 'make docs' before install.
-	I also removed the hard coded path in the build Makefile. The path
-	of the install is now fully configurable with configure options
-	(--localstatedir for /var and --sysconfdir for /etc). This is
-	usefull to install everything in a specific directory and use the
-	Stow tool to create symlinks to /usr/local/
+	* doc/yaws.pdf: ""
+
+2003-05-27 14:56  klacke
+
+	* src/yaws_api.erl: the ehtml expander code has to be updated again
+	in order to not interfer with rendering when it comes to genereated
+	newlines
+
+2003-05-26 23:58  klacke
+
+	* configure, configure.in, vsn.mk, scripts/Install,
+	scripts/Makefile, scripts/ntpath.sh, scripts/yaws.init.d,
+	scripts/yaws.ss, scripts/suse/yaws.init.d, src/yaws_config.erl,
+	src/yaws_server.erl: cvs fixes + install scripts gentoo/suse/redhat
+
+2003-05-24 15:36  jbevemyr
+
+	* applications/wiki/scripts/updateWiki.src: Fixed install problem.
+
+2003-05-20 00:31  klacke
+
+	* src/yaws_api.erl: added newlines to strategic places in
+	ehtml_expand/1 and ehtml_exapnder/1. No newlines after img tags.
+
+2003-05-19 23:55  jbevemyr
+
+	* applications/wiki/wiki/FormattingWikiPages.wob: [no log message]
+
+2003-05-19 23:42  jbevemyr
+
+	* applications/wiki/src/wiki_format_txt.erl: Added expires region.
+
+2003-05-17 23:58  jbevemyr
+
+	* applications/wiki/src/wiki.erl: Added number table for slideshow
+	in Wiki
+
+2003-05-17 23:25  jbevemyr
+
+	* src/yaws_config.erl, src/yaws_server.erl, include/yaws.hrl,
+	man/yaws.conf.5: Added rhost option for setting explicit redirect
+	host (and port if needed)
+
+2003-05-17 21:52  jbevemyr
+
+	* applications/wiki/wiki/FormattingWikiPages.wob: [no log message]
+
+2003-05-17 21:43  jbevemyr
+
+	* applications/wiki/: Makefile, README, src/wiki_format_txt.erl,
+	wiki/FormattingWikiPages.wob: Added underline macro
+
+2003-05-17 21:42  jbevemyr
+
+	* applications/wiki/scripts/updateWiki.src: [no log message]
+
+2003-05-17 21:39  jbevemyr
+
+	* applications/wiki/scripts/: Makefile, updateWiki.sh,
+	updateWiki.src: Minor wiki script fixes
+
+2003-05-17 13:52  jbevemyr
+
+	* applications/wiki/: README, updateWiki.sh, scripts/Makefile,
+	scripts/getPassword.src, scripts/importFiles.src,
+	scripts/updateWiki.sh, src/wiki.erl: Added some useful scripts
+
+2003-05-16 22:09  jbevemyr
+
+	* applications/wiki/: updateWiki.sh, updateWiki.sh: [no log
+	message]
+
+2003-05-16 22:05  jbevemyr
+
+	* applications/wiki/updateWiki.sh: [no log message]
+
+2003-05-16 21:48  jbevemyr
+
+	* applications/wiki/updateWiki.sh: Added wiki update script
+
+2003-05-16 13:45  jbevemyr
+
+	* applications/wiki/: src/wiki.erl, src/wiki_templates.erl,
+	src/wiki_utils.erl, wiki/WikiPreferences.files/custom.css: Menu is
+	now red when a page is locked.
+
+2003-05-16 13:12  jbevemyr
+
+	* applications/wiki/src/: wiki.erl, wiki_format_txt.erl: Added
+	header tags =H3= ==H2== ===H1===
+
+2003-05-14 13:25  klacke
+
+	* src/yaws_server.erl: more redir   fixes
+
+2003-05-13 22:35  jbevemyr
+
+	* src/yaws_server.erl: Fixed yaws redirect bug
+
+2003-05-13 13:35  klacke
+
+	* src/: yaws.erl, yaws_debug.hrl, yaws_server.erl: when a gserv()
+	dies, exit app + 302 without content shall have a conten length
+	header, newest mozilla hangs (correctly) on 302's from yaws
+
+2003-05-12 09:56  jbevemyr
+
+	* applications/wiki/README: [no log message]
+
+2003-05-12 09:53  jbevemyr
+
+	* applications/wiki/src/wiki.erl: [no log message]
+
+2003-05-12 09:49  klacke
+
+	* src/yaws_api.erl: newlines added by jocke in bluetail cvs
+
+2003-05-08 23:53  jbevemyr
+
+	* applications/wiki/src/: wiki.erl, wiki_format_txt.erl: [no log
+	message]
+
+2003-05-08 23:12  jbevemyr
+
+	* applications/wiki/src/wiki_format_txt.erl: minor bugfixes
+
+2003-05-07 10:13  klacke
+
+	* scripts/suse/yaws.init.d: ""
+
+2003-05-07 10:09  klacke
+
+	* scripts/yaws.ss: ""
+
+2003-05-05 01:22  klacke
+
+	* scripts/gentoo/yaws.ebuild: ""
+
+2003-05-04 23:47  klacke
+
+	* include.mk.in, scripts/Install, scripts/Makefile,
+	scripts/yaws.init.d, scripts/gentoo/conf.d.yaws,
+	scripts/gentoo/yaws.ebuild: ""
+
+2003-05-04 23:13  klacke
+
+	* scripts/: Install, gentoo/conf.d.yaws: ""
+
+2003-05-04 21:31  klacke
+
+	* scripts/Install: ""
+
+2003-05-04 21:24  klacke
+
+	* scripts/Install: ""
+
+2003-05-04 20:47  klacke
+
+	* doc/Makefile: ""
+
+2003-05-04 20:34  klacke
+
+	* scripts/mangle, www/index.yaws: ""
+
+2003-05-04 18:55  klacke
+
+	* scripts/Install: ""
+
+2003-05-04 18:41  klacke
+
+	* scripts/: Install, gentoo/yaws.ebuild: ""
+
+2003-05-04 18:21  klacke
+
+	* Makefile, vsn.mk, doc/Makefile, doc/yaws.pdf, man/Makefile,
+	scripts/Install, scripts/gentoo/conf.d.yaws,
+	scripts/gentoo/init.d.yaws, scripts/gentoo/yaws.ebuild: ""
+
+2003-05-03 21:04  jbevemyr
+
+	* applications/wiki/: src/wiki.erl, src/wiki_format_txt.erl,
+	src/wiki_to_html.erl, wiki/FormattingWikiPages.wob: Added slideshow
+	support. With a slideshow:MySlideShow link on a page you will get a
+	slide show of all the files stored in that page (image files
+	preferably :-)
+
+2003-05-02 23:25  klacke
+
+	* doc/: Makefile, yaws.tex: nicer latex docs in patch from
+	nniclausse on sourceforge
+
+2003-05-02 22:49  klacke
+
+	* www/man.yaws: ""
+
+2003-05-02 22:39  klacke
+
+	* vsn.mk: ""
+
+2003-05-02 22:37  klacke
+
+	* www/index.yaws: 1.2 checkin
+
+2003-05-02 21:34  klacke
+
+	* src/yaws_ls.erl: small bugs with listdir, no 0 on chunked
+	encodings, and no url_encode on iso chars in filenames
+
+2003-04-28 23:48  etnt
+
+	* scripts/Install: Added the setting of etcdir
+
+2003-04-25 10:02  etnt
+
+	* src/yaws_config.erl: Set the debug entry in #gconf{}, in
+	make_default_gconf/1.
+
+2003-04-22 15:06  klacke
+
+	* vsn.mk: ""
+
+2003-04-10 12:46  klacke
+
+	* src/yaws_compile.erl: [no log message]
+
+2003-04-10 12:20  mikl
+
+	* src/yaws_config.erl: Cosmetic change for logs: Missing ~n.
+
+2003-04-10 10:59  mikl
+
+	* ChangeLog, Makefile, README, include.mk.in, doc/Makefile,
+	scripts/Install, scripts/Makefile, src/Makefile,
+	www/shopingcart/Makefile: Build chain modifications: Install target
+	directories is now totally controllable; The docs build is
+	optionnal
+
+2003-04-09 13:12  klacke
+
+	* src/Makefile: [no log message]
+
+2003-04-09 13:04  klacke
+
+	* src/yaws_compile.erl: use lock on comiler, erlc is not reentrant
+
+2003-03-25 11:14  klacke
+
+	* src/yaws_server.erl:	Bug with cached yaws files with a query
+	part
+
+2003-03-11 06:49  brucefitzsimons
+
+	* src/yaws_log.erl: Fixed the TZ determination code, its not
+	perfect or fast yet.
+
+2003-03-10 10:25  brucefitzsimons
+
+	* src/: yaws_log.erl, yaws_server.erl: Added referrer "referer" and
+	user-agent to complete the "combined" log format. It will log - for
+	either field if it is not supplied. The old logging command has
+	been retained for backward compatibility.
+	
+	Also added code to log the time in localtime, and log the offset in
+	the apache/Common Log Format. This is significant for anyone using
+	the logs...
+
+2003-03-06 21:47  jbevemyr
+
+	* src/yaws_api.erl: Removed 'Version' from set-cookie.
+
+2003-03-06 19:36  klacke
+
+	* ChangeLog, www/index.yaws: 1.01 checkin
 
 2003-03-06 12:22  klacke
 
@@ -1873,8 +2135,8 @@
 	www/icons/small/rainbow.gif, www/icons/small/sound.gif,
 	www/icons/small/sound2.gif, www/icons/small/tar.gif,
 	www/icons/small/text.gif, www/icons/small/transfer.gif,
-	www/icons/small/unknown.gif, www/icons/small/uu.gif: Initial
-	revision
+	www/icons/small/unknown.gif, www/icons/small/uu.gif: first time
+	import
 
 2002-02-11 17:19  klacke
 
@@ -1945,6 +2207,6 @@
 	www/icons/small/rainbow.gif, www/icons/small/sound.gif,
 	www/icons/small/sound2.gif, www/icons/small/tar.gif,
 	www/icons/small/text.gif, www/icons/small/transfer.gif,
-	www/icons/small/unknown.gif, www/icons/small/uu.gif: first time
-	import
+	www/icons/small/unknown.gif, www/icons/small/uu.gif: Initial
+	revision
 
