@@ -74,6 +74,7 @@
 	 opaque = [],                 %% useful in embedded mode
 	 start_mod,                   %% user provided module to be started
 	 allowed_scripts = [yaws],
+	 phpexe = "php",
 	 revproxy = []
 	}).
 

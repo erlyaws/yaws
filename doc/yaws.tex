@@ -1486,11 +1486,11 @@ must be called to indicate the end of the stream.
               Does a redirect to the same Scheme://Host:Port/Path
               as we currently are executing in. Path can be 
 	      either be the path directly (equivalent to 
-	      abs_path), or one of \verb+{{abs_path, Path}+ or 
-	      \verb+{{rel_path, RelativePath}}
+	      \verb+abs_path+), or one of \verb+{{abs_path, Path}+ or 
+	      \verb+{{rel_path, RelativePath}}+ 
 
 \item       \verb+{redirect_local, Path, Status}+
-              Same as redirect_local above with the additional 
+              Same as \verb+redirect_local+ above with the additional 
 	      option of supplying the status code. The default
 	      for a redirect is 302 but 301, 303 and 307 are also
 	      valid redirect status codes.
@@ -1570,8 +1570,9 @@ trying to execute the corresponding file.
 If you have a Php executable compiled for using CGI in the \verb+PATH+
 of the Yaws server, you can enable Php support by adding \verb+php+ to
 \verb+allowed_scripts+.  Requests for pages ending in \verb+.php+ will
-then result in Yaws executing \verb+php+ and passing the name of the
-corresponding file to it via the appropriate environment variable.
+then result in Yaws executing \verb+php+ (configurable via
+\verb+php_exe_path+) and passing the name of the corresponding file to
+it via the appropriate environment variable.
 
 These ways of calling CGI scripts are also available to \verb+.yaws+
 scripts and appmods via the functions \verb+yaws_api:call_cgi/2+ and
@@ -1839,6 +1840,11 @@ The
               The allowed script types for this server.  Recognized
               are `yaws', `cgi', `php'.  Default is 
               \verb+allowed_scripts = yaws+.
+
+\item       \verb+php_exe_path = Path+ -
+              The name of (and possibly path to) the php executable
+	      used to interpret php scripts (if allowed).  Default is
+	      \verb+php_exe_path = php+.
 
 \item       \verb+appmods = [ListOfModuleNames]+ -
               If any the names in ListOfModuleNames appear

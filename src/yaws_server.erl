@@ -1169,7 +1169,7 @@ handle_ut(CliSock, GC, SC, ARG, UT, N) ->
 			     N,
 			     ARG,
 			     fun(A)->yaws_cgi:call_cgi(A,
-						       "php",
+						       SC#sconf.phpexe,
 						       UT#urltype.fullpath)
 			     end,
 			     fun(A)->finish_up_dyn_file(CliSock, GC, SC)

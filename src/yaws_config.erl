@@ -468,6 +468,10 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 				   Suffixes)},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
+	["php_exe_path", '=' , PhpPath] ->
+	    C2 = C#sconf{phpexe = PhpPath},
+	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+
 	["revproxy", '=', Prefix, Url] ->
 	    case (catch yaws_api:parse_url(Url)) of
 		{'EXIT', _} ->

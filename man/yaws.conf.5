@@ -148,6 +148,12 @@ The allowed script types for this server.  Recognized are `yaws',
 `cgi', `php'.  Default is \fIallowed_scripts = yaws\fR.
 
 .TP
+\fBphp_exe_path = Path\fR
+The name of (and possibly path to) the php executable used to
+interpret php scripts (if allowed).  Default is 
+\fIphp_exe_path = php\fR.
+
+.TP
 \fBappmods = [ListOfModuleNames]\fR
 If any the names in ListOfModuleNames appear as components in the
 path for a request, the path request parsing will terminate and
