@@ -123,11 +123,14 @@ createNewPage(Params, Root, Prefix) ->
 	    [input("submit", "review", "Preview"),
 	     input("hidden", "node", Page),
 	     hr(),
-	     "Password:", password_entry("password1", 8), br(),
-	     "Reconfirm password:", password_entry("password2", 8),
-	     p(),
-	     "Email:",
-	     input("text","email",""),
+	     "<table>\n"
+	     "<tr> <td align=left>Password: </td>",
+	     "<td align=left> ", password_entry("password1", 8),"</td></tr>\n",
+	     "<tr> <td align=left>Reconfirm password: </td>",
+	     "<td align=left> ",password_entry("password2", 8),"</td></tr>\n",
+	     "<tr> <td align=left>Email: </td>",
+	     "<td align=left> ",input("text","email",""),"</td></tr>\n",
+	     "</table>\n",
 	     p(),
 	     textarea("text", 25, 72,initial_page_content()),
 	     hr()
@@ -767,7 +770,6 @@ finalDeletePage(Params, Root, Prefix) ->
 
 finalDeletePage1(Params, Root, Prefix) ->
     Page = getopt(node, Params),
-    Password = getopt(password, Params, ""),
     Txt0 = getopt(text, Params),
     
     {File,FileDir} = page2filename(Page, Root),
@@ -776,11 +778,7 @@ finalDeletePage1(Params, Root, Prefix) ->
 	    Files = files(Root++"/"++FileDir, "*"),
 	    [file:delete(F) || F <- Files],
 	    file:del_dir(Root++"/"++FileDir),
-	    wiki_templates:template("Page Deleted",background("info"),"",
-		     [h1(Page),
-		      p("Page has been permanently deleted."),
-		      p("<a href='showPage.yaws?node=home'>Home</a>"),
-		      hr()]);
+	    redirect({node, "home"}, Prefix);
 	_ ->
 	    wiki_templates:template("Error",background("info"),"",
 		     [h1(Page),
@@ -1293,19 +1291,30 @@ table(Color, X) ->
 mk_image_link(X, Img) ->
     ["<a href=\"", X, "\"><img border=0 src='",Img, "'></a>&nbsp;&nbsp;\n"].
 
+mk_image_link(X, Img, Title) ->
+    ["<a href=\"", X, "\"><img border=0 src='",Img, "' ",
+     "title='", Title,"'></a>&nbsp;&nbsp;\n"].
+
 body_pic("") -> background("normal");
 body_pic(_)  -> background("locked").
 
 banner(File, Password) ->			    
     [table("#FFFFFF",
 	   [
-	    mk_image_link("showPage.yaws?node=home", "home.gif"),
-	    mk_image_link("showHistory.yaws?node=" ++ File, "history.gif"),
-	    mk_image_link("allPages.yaws", "allpages.gif"),
-	    mk_image_link("lastEdited.yaws", "lastedited.gif"),
-	    mk_image_link("wikiZombies.yaws", "zombies.gif"),
-	    mk_image_link("editPage.yaws?node=" ++ File, "editme.gif"),
-	    mk_image_link("editFiles.yaws?node=" ++ File, "editfiles.gif")
+	    mk_image_link("showPage.yaws?node=home", "home.gif",
+			  "Go to initial page"),
+	    mk_image_link("showHistory.yaws?node=" ++ File, "history.gif",
+			  "History of page evolution"),
+	    mk_image_link("allPages.yaws", "allpages.gif",
+			  "Lists all pages on this site"),
+	    mk_image_link("lastEdited.yaws", "lastedited.gif",
+			  "Site editing history"),
+	    mk_image_link("wikiZombies.yaws", "zombies.gif",
+			  "Unreachable pages"),
+	    mk_image_link("editPage.yaws?node=" ++ File, "editme.gif",
+			  "Edit this page"),
+	    mk_image_link("editFiles.yaws?node=" ++ File, "editfiles.gif",
+			  "Edit attached files")
 	   ])].
 
 password_entry(Name, Size) ->

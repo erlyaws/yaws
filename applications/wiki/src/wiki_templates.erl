@@ -5,7 +5,6 @@
 %% B = normal | locked | old
 template(Title,Background,Menu,Data) ->
     {html,["<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">
-<HTML> 
 <HEAD> 
 <TITLE>", Title, "</TITLE>
 <style type=\"text/css\">
@@ -15,11 +14,8 @@ TEXTAREA{
 }
 -->
 </style>
-", Background, "
 <table width='100%'>
 <tr> 
-<!-- first gutter to allow space for the bgimage --> 
-<td ><pre>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre></td>
 <td> 
 <table width='100%'> 
 <tr> 
@@ -45,7 +41,7 @@ Data,"
 </tr> 
 </table> 
 </body>
-</html>"]}.
+"]}.
 
 
 
