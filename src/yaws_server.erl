@@ -1653,8 +1653,6 @@ deliver_dyn_part(CliSock, GC, SC,          % essential params
 	    end;
 	break ->
 	    finish_up_dyn_file(CliSock, GC, SC);
-	ok ->
-	    finish_up_dyn_file(CliSock, GC, SC);
 	{page, Page} ->
 	    {page, Page};
 	{streamcontent, MimeType, FirstChunk} ->
