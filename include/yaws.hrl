@@ -55,6 +55,7 @@
 	       max_num_cached_bytes = 1000000,  %% 1 MEG
 	       max_size_cached_file = 8000,
 	       large_file_chunk_size = 10240,
+	       log_wrap_size = 1000000,  % wrap logs after 1M
 	       cache_refresh_secs = 30,  % seconds  (auto zero when debug)
 	       include_dir = [],
 	       phpexe = "php",

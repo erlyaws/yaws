@@ -1,10 +1,10 @@
 <erl>
 out(A) ->
-    [{ssi, "HEAD", [],[]},
-     {ssi, "EXHEAD", [],[]}].
+    {ssi, "TAB.inc", [],[]}.
 </erl>
 
 
+<div id="entry">
 <h2> Bindings </h2>
 <p>
 Bindings are the opposite of <a href="ssi.yaws"> Server Side Includes (SSI)</a>.
@@ -92,7 +92,8 @@ foo = foo (hit me)
 </div>
 
 
-And is rendered as:
+<p> And is rendered as:
+
 <div class="box"> 
 <p>foo</p>
 <p><font size="4">foo != baz</font></p>
@@ -107,9 +108,12 @@ foo = foo (hit me)
 
 
 
+</div>
 
 
-</html>
+<erl>
+out(A) -> {ssi, "END2",[],[]}.
+</erl>
 
 
 

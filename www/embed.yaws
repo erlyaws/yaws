@@ -1,6 +1,10 @@
 <erl>
-out(A) -> yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]).
+out(A) -> 
+       {ssi, "TAB.inc", [],[]}.
 </erl>
+
+
+<div id="entry">
 
 
 <h1>Running yaws embedded in another larger application</h1>
@@ -186,6 +190,9 @@ down to each .yaws web page.
 
 
 
+</div>
+
+
 <erl>
-out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+out(A) -> {ssi, "END2",[],[]}.
 </erl>

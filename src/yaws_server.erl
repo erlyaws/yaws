@@ -236,8 +236,6 @@ handle_call(getconf, _From, State) ->
 
 
 
-
-
 %%----------------------------------------------------------------------
 %% Func: handle_cast/2
 %% Returns: {noreply, State}          |
@@ -614,7 +612,6 @@ acceptor0(GS, Top) ->
 		    acceptor0(GS, Top)
 	    end;
 	{error, timeout} ->
-	    ?Debug("SSL timeout~n", []),
 	    Top ! {self(), done_client, 0},
 	    receive
 		{Top, stop} ->
@@ -1802,13 +1799,16 @@ handle_out_reply({yssi, Yfile}, _LineNo, YawsFile, UT, [ARG]) ->
 handle_out_reply({html, Html}, _LineNo, _YawsFile,  _UT, _A) ->
     accumulate_content(Html);
 
-handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  _UT, A) ->
-    case safe_ehtml_expand(E) of
+handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  UT, A) ->
+    put(yaws_ut, UT),
+    Res = case safe_ehtml_expand(E) of
 	{ok, Val} ->
 	    accumulate_content(Val);
 	{error, ErrStr} ->
 	    handle_crash(A,ErrStr)
-    end;
+    end,
+    erase(yaws_ut),
+    Res;
 
 handle_out_reply({content, MimeType, Cont}, _LineNo,_YawsFile, _UT, _A) ->
     yaws:outh_set_content_type(MimeType),

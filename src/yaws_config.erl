@@ -256,6 +256,15 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 	    fload(FD, globals, GC#gconf{runmods = [Mod|GC#gconf.runmods]},
 		  C, Cs, Lno+1, Next);
 
+	["log_wrap_size", '=', Int] ->
+	     case (catch list_to_integer(Int)) of
+		 I when integer(I) ->
+		    fload(FD, globals, GC#gconf{log_wrap_size = I},
+			  C, Cs, Lno+1, Next);
+		_ ->
+		     {error, ?F("Expect integer at line ~w", [Lno])}
+	     end;
+
 	["include_dir", '=', Incdir] ->
 	    Dir = filename:absname(Incdir),
 	    case is_dir(Dir) of
@@ -838,3 +847,38 @@ ssl_start() ->
 	Err ->
 	    error_logger:format("Failed to start ssl: ~p~n", [Err])
     end.
+
+
+
+%% search for an SC within Pairs that have the same, listen,port,ssl,severname
+%% Return {Pid, SC} or false
+%% Pairs is the pairs in yaws_server #state{}
+search_sconf(NewSC, Pairs) ->
+     case lists:zf(
+	    fun({Pid, [SC|ScList]}) ->
+		    case eq_prop(NewSC, SC) of
+			true ->
+			    case lists:key_search(NewSC#sconf.servername,
+						  #sconf.servername, ScList) of
+				{value, Found} ->
+				    {true, {Pid, Found}};
+				false ->
+				    false
+			    end;
+			false ->
+			    false
+		    end
+	    end, Pairs) of
+	 [] ->
+	     false;
+	 [{Pid, Found}] ->
+	     {Pid, Found}
+     end.
+
+
+eq_prop(S, NewSc) ->
+    (S#sconf.listen == NewSc#sconf.listen) 
+	and
+	  (S#sconf.port == NewSc#sconf.port) and 
+             (S#sconf.ssl == NewSc#sconf.ssl).
+

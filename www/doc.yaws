@@ -2,15 +2,21 @@
 <erl>
 
 out(A) -> 
-    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
-	    
+       {ssi, "TAB.inc",[],[]}.
 </erl>
 
 
-<H2>Documentation</h2>
+<div id="entry">
+
+<h2>Documentation</h2>
 
 
 <h3> User manual </h3>
+
+<p> The version of the usermanual is currently getting a bit old. 
+There are several features of yaws which are yet not properly described
+in the user manual, they are all described in the Example collection or
+man pages though.
 
 <ul>
 <li> <a href="yaws.pdf"> yaws.pdf</a>
@@ -22,14 +28,14 @@ out(A) ->
 
 <ul>
 <li>
-<a href="man.yaws?page=yaws_api"> man page for yaws_api (5) </a>
+<a href="yman.yaws?page=yaws_api"> man page for yaws_api (5) </a>
 
 <li>
-<a href="man.yaws?page=yaws.conf"> man page for Yaws config file </a>
+<a href="yman.yaws?page=yaws.conf"> man page for Yaws config file </a>
 
 
 <li>
-<a href="man.yaws?page=yaws"> man page for yaws</a>
+<a href="yman.yaws?page=yaws"> man page for yaws</a>
 
 </ul>
 
@@ -37,6 +43,6 @@ out(A) ->
 
 
 <erl>
-out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+	out(_) -> {ssi, "END2", [],[]}.
 </erl>
 

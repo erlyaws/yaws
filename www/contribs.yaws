@@ -1,13 +1,12 @@
 <erl>
-
 out(A) -> 
-    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
-	    
+       {ssi, "TAB.inc", [],[]}.
 </erl>
 
 
+<div id="entry">
 
-<H2>Contributions and Applications</H2>
+<h1>Contributions and Applications</h1>
 
 <p>This is a list of (some of) the currently known 
 Yaws applications. 
@@ -52,9 +51,10 @@ easy to configure and run.
 
 
 
+</div>
 
 
 <erl>
-out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+out(A) -> {ssi, "END2",[],[]}.
 </erl>
 

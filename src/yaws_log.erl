@@ -25,12 +25,16 @@
 -include_lib("yaws/include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
+%% 1 meg log we wrap
+-define(WRAP_LOG_SIZE, 1000000).
+
 
 -record(state, {
 	  running,
 	  dir,
 	  now,
 	  tracefd,
+	  log_wrap_size = ?WRAP_LOG_SIZE,
 	  tty_trace = false,
 	  copy_errlog,
 	  auth_log,
@@ -167,6 +171,7 @@ handle_call({setdir, GC, Sconfs}, _From, State)
     S2 = State#state{running = true,
 		     dir  = Dir,
 		     now = fmtnow(),
+		     log_wrap_size = GC#gconf.log_wrap_size,
 		     copy_errlog = Copy,
 		     auth_log = AuthLog,
 		     alogs = L},
@@ -335,8 +340,6 @@ tty_trace(Str, State) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
 
--define(WRAP_LOG_SIZE, 400000).
-
 handle_info(secs3, State) ->
     {noreply, State#state{now = fmtnow()}};
 
@@ -345,44 +348,45 @@ handle_info(secs3, State) ->
 handle_info(minute10, State) ->
     L = lists:map(
 	  fun(AL) ->
-		  wrap(AL)
+		  wrap(AL, State)
 	  end, State#state.alogs),
     
     Dir = State#state.dir,
     E = filename:join([Dir, "report.log"]),
     case file:read_file_info(E) of
-	{ok, FI} when  FI#file_info.size > ?WRAP_LOG_SIZE, 
+	{ok, FI} when  FI#file_info.size > State#state.log_wrap_size, 
 		       State#state.copy_errlog == true ->
 	    gen_event:call(error_logger, yaws_log_file_h, wrap);
 	_ ->
 	    ok
     end,
     {noreply, State#state{alogs= L,
-			  auth_log = wrap(State#state.auth_log)}}.
+			  auth_log = wrap(State#state.auth_log, State)}}.
 
     
 
-wrap_p(AL) when record(AL, alog) ->
+wrap_p(AL, State) when record(AL, alog) ->
     {ok, FI} = file:read_file_info(AL#alog.filename),
     if
-	FI#file_info.size > ?WRAP_LOG_SIZE ->
+	FI#file_info.size > State#state.log_wrap_size->
 	    true;
 	true ->
 	    false
     end;
-wrap_p(_) ->
+wrap_p(_,_) ->
     false.
 
 
 
-wrap(AL) ->
-    case (catch wrap_p(AL)) of
+wrap(AL, State) ->
+    case (catch wrap_p(AL, State)) of
 	true ->
 	    file:close(AL#alog.fd),
 	    Old = [AL#alog.filename, ".old"],
 	    file:delete(Old),
 	    file:rename(AL#alog.filename, Old),
 	    {ok, Fd2} = file:open(AL#alog.filename, [write, raw]),
+	    error_logger:info_msg("Wrap log ~p",[AL#alog.filename]), 
 	    AL#alog{fd = Fd2};
 	false ->
 	    AL;

@@ -1,8 +1,9 @@
 <erl>
-out(A) -> yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]).
+out(A) -> {ssi, "TAB.inc", [],[]}.
 </erl>
 
 
+<div id="entry">
 
 <h1>Persistent Cookies</h1>
 <p>
@@ -38,7 +39,10 @@ out(A) -> yaws_api:pre_ssi_files(A#arg.docroot, ["readpcookie.yaws"]).
 </erl>
 
 
+</div>
 
 
-</html>
+<erl>
+out(A) -> {ssi, "END2",[],[]}.
+</erl>
 

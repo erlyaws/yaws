@@ -1,10 +1,12 @@
 <erl>
 
 out(A) -> 
-    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]).
+       {ssi, "TAB.inc", [],[]}.
+
 
 </erl>
 
+<div id="entry">
 
 <h2>The query part of the url</h2>
 
@@ -21,46 +23,49 @@ In the above example, we have key=page and its value "cat".
 The code in the page man.yaws, will read these key/value pairs
 in the A#arg.querydata and display the man page.
 
+Assuming a predifined CSS class called box, defined as:
+
+<div class="box"
+<pre>
+div.box { border: solid; border-width: thin; width: 90%; 
+          background: rgb(211, 211, 211)  }
+</pre>
+</div>
+
+<p>
 The following code:
+
 <erl>
+
 out(A) ->
-L=" 
-    out(A) ->
-        P = yaws_api:parse_query_data(A),
-        L = case lists:keysearch(page, 1, P) of
-           {value, {page, Page}} ->
-              os:cmd(\"man \" ++ Page ++ \" | col -b\");
-           false ->
-              \"no man page found in query arg \"
-        end,
-        yaws_api:pre_ssi_string(L, \"man\").
-",
-yaws_api:pre_ssi_string(L).
+       {ehtml,ssi("man.yaws")}.
+
+ssi(File) ->
+    {'div',[{class,"box"}],
+     {pre,[], {ssi, File, [],[]}}}.
+
 
 </erl>
+
 
 <p> will display a man page if invoked with a proper key/value
 pair in the query part of the URL.
 
-<p> This fairly awkward way of getting at the query (or POST)
-data in the Arg structure was only illustrated for the sake of
-explaining the Arg structure and its fields. It is much easier
-to access query data through the <tt>queryvar(ARG,Key)</tt> function.
-The above example again:
+<p> This fairly convenient way of getting at the query (or POST)
+is equivalent of the code:
 
+<div class="box">
+<pre>
+P = yaws_api:parse_query_data(A),
+L = case lists:keysearch(page, 1, P) of
+           {value, {page, Page}} ->
+               .....
+</pre>
+</div>
 
-<erl>
-out(A) ->
-L=" 
-    out(A) ->
-        {ok,Page} = queryvar(A,\"page\"),
-        L = os:cmd(\"man \" ++ Page ++ \" | col -b\"),
-        yaws_api:pre_ssi_string(L, \"man\").
-",
-yaws_api:pre_ssi_string(L).
-
-
-</erl>
+<p>The querypart of the URL is part as field in the Arg structure.
+The function <tt>parse_query/1</tt> parses the raw data into 
+a key/value list. 
 
 
 <p>The <tt>queryvar(ARG,Key)</tt> function returns the value of the
@@ -69,4 +74,12 @@ or if the variable is unset, the <tt>queryvar(ARG,Key)</tt> function returns <tt
 
 
 
-</html>
+</div>
+
+
+<erl>
+out(A) -> {ssi, "END2",[],[]}.
+</erl>
+
+
+

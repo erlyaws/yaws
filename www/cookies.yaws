@@ -1,6 +1,9 @@
 <erl>
-out(A) -> yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]).
+out(A) -> 
+       {ssi, "TAB.inc", [],[]}.
 </erl>
+
+<div id="entry">
 
 
 
@@ -37,11 +40,21 @@ A correct definition of cookies can be found at Netscapes
 <p>The code to set the cookie looks like:
 
 <erl>
-out(A) -> yaws_api:pre_ssi_files(A#arg.docroot, ["setcookie.yaws"]).
+out(A) ->
+       {ok, B} = file:read_file(A#arg.docroot ++ "/setcookie.yaws"),
+       {ehtml,
+        {'div', [{class, "box"}],
+        {pre,[], B}}}.
+
 </erl>
 
 
 
 
-</html>
+</div>
+
+
+<erl>
+out(A) -> {ssi, "END2",[],[]}.
+</erl>
 

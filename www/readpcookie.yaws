@@ -38,7 +38,10 @@ The code is:
 
 <erl>
 out(A) ->
-    yaws_api:pre_ssi_files(A#arg.docroot, ["readpcookie.yaws"]).
+    {ok, B} = file:read_file(A#arg.docroot ++ "/readpcookie.yaws"),
+       {ehtml,
+        {'div', [{class, "box"}],
+        {pre,[], B}}}.
 </erl>
 
  

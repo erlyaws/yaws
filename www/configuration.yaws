@@ -7,20 +7,20 @@ box(Str) ->
 
 
 out(A) -> 
-    [{ssi, "HEAD", [],[]},
-     {ssi, "TOPTAB", [],[]},
+    [{ssi, "TAB.inc", [],[]},
      {ehtml,
-      [{h2,[],"Build and install"},
-       {p,[], ["Yaws is hosted by the excellent source code site SourceForge ",
-	       {a ,[{href,"http://sourceforge.net"}], 
-		{img, [{src,"http://sourceforge.net/sflogo.php?group_id=45637&type=1"}, 
-		       {width,"88"}, 
-		       {height,"31"}, 
-		       {border,"0"}, 
-		       {alt,"SourceForge.net Logo"}]}},
-	       " The Yaws SourceForge www page is ",
-	       {a ,[{href,"http://sourceforge.net/projects/erlyaws/"}], 
-		"http://sourceforge.net/projects/erlyaws"}
+      [{'div', [{id, "entry"}],
+	[{h1,[],"Build and install"},
+	 {p,[], ["Yaws is hosted by the excellent source code site SourceForge ",
+		 {a ,[{href,"http://sourceforge.net"}], 
+		  {img, [{src,"http://sourceforge.net/sflogo.php?group_id=45637&type=1"}, 
+			 {width,"88"}, 
+			 {height,"31"}, 
+			 {border,"0"}, 
+			 {alt,"SourceForge.net Logo"}]}},
+		 " The Yaws SourceForge www page is ",
+		 {a ,[{href,"http://sourceforge.net/projects/erlyaws/"}], 
+		  "http://sourceforge.net/projects/erlyaws"}
 	       ]},
        {p,[], ["To cvs check out the latest source first install an ",
 	       {a, [{href,"http://www.erlang.org"}],"Erlang"},
@@ -64,7 +64,7 @@ out(A) ->
        {p,[], ["The yaws executable is a shell script which invokes the   "
 	       "erlang system and instructs it to start yaws. "
 	       " The command line flags for yaws are documented in  ",
-	       {a,[{href, "man.yaws?page=yaws"}], 
+	       {a,[{href, "yman.yaws?page=yaws"}], 
 		["man page for ",
 		 {tt, [], "yaws (1)"}]}]},
 
@@ -88,7 +88,7 @@ out(A) ->
 	      "on whether we run yaws as a standalone daemon or if we run yaws as an "
 	      "	embedded application inside another Erlang program. "]},
        {p,[],["The yaws configuration is described in ",
-	      {a, [{href,"man.yaws?page=yaws.conf"}], 
+	      {a, [{href,"yman.yaws?page=yaws.conf"}], 
 	       ["man page for ",
 		{tt,[], "yaws.conf (5)"}]}]},
 
@@ -105,8 +105,8 @@ out(A) ->
 	       {tt, [], "{embedded, true}"},
 	       " The embedded mode is fully described at ",
 	       {a, [{url, "embed.yaws"}], "embed.yaws"}]}
-       ]},
-     {ssi, "END",[],[]}
+       ]}]},
+     {ssi, "END2",[],[]}
     ].
 
 </erl>

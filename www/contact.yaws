@@ -2,11 +2,11 @@
 <erl>
 
 out(A) -> 
-    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
+       {ssi, "TAB.inc",[],[]}.
 
 </erl>
 
-
+<div id="entry">
 
 <H2>Contact</H2>
 
@@ -23,6 +23,9 @@ Cell: +46 0702097763
 </pre>
 
 
+
+</div>
+
 <erl>
-out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+out(A) -> {ssi, "END2",[],[]}.
 </erl>

@@ -17,9 +17,9 @@ ssi(File) ->
 
 
 out(A) -> 
-    [{ssi, "HEAD", [],[]},
-     {ssi, "EXHEAD", [],[]},
+    [{ssi, "TAB.inc", [],[]},
      {ehtml,
+     {'div',[{id, "entry"}],
       [{h1, [], "Streaming data to the client"},
        
        {p, [],
@@ -50,7 +50,9 @@ out(A) ->
        box("yaws_api:stream_chunk_deliver_blocking(YawsPid, Data)")
 
 
-       ]}].
+       ]}},
+       {ssi, "END2",[],[]}
+       ].
 
        
 </erl>

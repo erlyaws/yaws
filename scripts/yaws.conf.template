@@ -49,6 +49,11 @@ trace = false
 copy_error_log = true
 
 
+# Logs are wrap logs
+
+log_wrap_size = 1000000
+
+
 # If yaws is started as root, it can, once it has opened
 # all relevant sockets for listening, change the uid to a 
 # user with lower accessrights than root 

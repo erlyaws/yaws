@@ -1,7 +1,13 @@
 
 <erl>
 
+prebox(Str) ->
+    {'div',[{class,"man"}],
+     {pre,[], Str}}.
+
+
 out(A) -> 
+    H = {ssi, "TAB.inc", [],[]},
     L = case queryvar(A,"page") of
             {ok, Page} ->
 		%% only allow regular chars in Page
@@ -27,11 +33,9 @@ out(A) ->
 	    undefined ->
 		"no man page found in query arg "
 	end,
-    {ehtml, 
-     {html,[], 
-      {'div',[{class,"man"}],
-       {pre,[], L}}}}.
-
-
+	
+    Man = {ehtml, {'div', [{id, "entry"}], prebox(L)}},
+    Trail = {ssi, "END2",[],[]},
+    [H, Man, Trail].
 
 </erl>

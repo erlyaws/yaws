@@ -63,10 +63,12 @@ out(A) ->
 <erl>
 
 
-out(A) -> yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]).
-
-
+out(A) -> {ssi, "TAB.inc", [],[]}.
 </erl>
+
+<div id="entry">
+
+
 
 
 
@@ -77,7 +79,12 @@ the browser.
 <a href="readpcookie.yaws">readpcookie.yaws</a> will 
 read the cookie and report persistent information.
 
-</html>
-
-
 			       
+
+</div>
+
+
+<erl>
+out(A) -> {ssi, "END2",[],[]}.
+</erl>
+

@@ -1,7 +1,9 @@
 <erl>
-out(A) -> yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]).
+out(A) -> 
+       {ssi, "TAB.inc", [],[]}.
 </erl>
 
+<div id="entry">
 
 
 <h1>The session server</h1>
@@ -14,11 +16,12 @@ The code in <a href="code.yaws?file=/session1.yaws">session1.yaws</a>
 shows a minimalistic way to handle sessions.
 To run it click <a href="session1.yaws">here</a>
 
+The actual session API is documented in the man page for yaws_api.
+
+</div>
 
 
-
-
-</html>
-
-
+<erl>
+out(A) -> {ssi, "END2",[],[]}.
+</erl>
 

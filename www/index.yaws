@@ -2,47 +2,47 @@
 
 
 out(A) ->
-    [{ssi, "HEAD",[],[]},
-     {ssi, "TOPTAB", [],[]},
+    [{ssi, "TAB.inc",[],[]},
      {ehtml,
-      [{h2,[],"Yaws"},
-       {p,[],"Yaws is a HTTP high perfomance 1.1 webserver."
-	"Two separate modes of operations are supported."},
-       {ul,[],
-	[{li,[],
-	  {p,[],"Standalone mode where Yaws runs as a regular webserver " 
-	   "daemon. This is the default mode."}},
-	 {li,[],
-	  {p,[], "Embedded mode where Yaws runs as an embedded webserver in "
-	   "another erlang application."}}
-	]},
-       {p,[], ["Yaws is entirely written in ",
-	       {a, [{href, "http://www.erlang.org"}],  "Erlang"},
-	       " furthermore it is a multithreaded webserver where one "
-	       "Erlang light weight process is used to handle each client."]},
-       {p,[], "The main advantages of yaws compared to other Web technologies"
-	" are performance and elegance. The performance comes from the "
-	" underlying Erlang system and its ability to handle concurrent "
-	" processes in an efficent way. Its elegance comes from Erlang as "
-	"well. Web applications dont have to be written in ugly adhoc "
-	"languages."},
-       
-       {h2,[], "yaws.hyber.org"},
-
-       {p,[], ["The www page for Yaws is ",
-	       {a ,[{href,"http://yaws.hyber.org"}], "yaws.hyber.org"},
-	       " The documentation, examples as well as releases can be "
-	       "found there, and of course, ",
-	       {a ,[{href,"http://yaws.hyber.org"}],"yaws.hyber.org"},
-	       " is itself powered by Yaws."]},
-
-       {p,[], ["A mailing list exists at: ",
-	       {a,[{href,"https://lists.sourceforge.net/lists/listinfo/""erlyaws-list"}],
-		"https://lists.sourceforge.net/lists/listinfo/erlyaws-list"}]},
-       {hr},
-       gen_news(A),
-       {ssi, "END",[],[]}
-      ]}].
+      [{'div', [{id, "entry"}],
+	[{h1,[],"Yaws"},
+	{p,[],"Yaws is a HTTP high perfomance 1.1 webserver."
+	 "Two separate modes of operations are supported."},
+	{ul,[],
+	 [{li,[],
+	   {p,[],"Standalone mode where Yaws runs as a regular webserver " 
+	    "daemon. This is the default mode."}},
+	  {li,[],
+	   {p,[], "Embedded mode where Yaws runs as an embedded webserver in "
+	    "another erlang application."}}
+	 ]},
+	{p,[], ["Yaws is entirely written in ",
+		{a, [{href, "http://www.erlang.org"}],  "Erlang"},
+		" furthermore it is a multithreaded webserver where one "
+		"Erlang light weight process is used to handle each client."]},
+	{p,[], "The main advantages of yaws compared to other Web technologies"
+	 " are performance and elegance. The performance comes from the "
+	 " underlying Erlang system and its ability to handle concurrent "
+	 " processes in an efficent way. Its elegance comes from Erlang as "
+	 "well. Web applications dont have to be written in ugly adhoc "
+	 "languages."},
+	
+	{h2,[], "yaws.hyber.org"},
+	
+	{p,[], ["The www page for Yaws is ",
+		{a ,[{href,"http://yaws.hyber.org"}], "yaws.hyber.org"},
+		" The documentation, examples as well as releases can be "
+		"found there, and of course, ",
+		{a ,[{href,"http://yaws.hyber.org"}],"yaws.hyber.org"},
+		" is itself powered by Yaws."]},
+	
+	{p,[], ["A mailing list exists at: ",
+		{a,[{href,"https://lists.sourceforge.net/lists/listinfo/""erlyaws-list"}],
+		 "https://lists.sourceforge.net/lists/listinfo/erlyaws-list"}]},
+	 {h2, [], "News"},
+	 gen_news(A)]}]},
+     {ssi, "END2",[],[]}].
+    
 
 
 gen_news(A) ->

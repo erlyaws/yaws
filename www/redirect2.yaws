@@ -1,6 +1,8 @@
 
 <erl>
-out(_) ->
-      yaws_api:redirect(
-              "http://www.google.com/search?num=20&hl=en&lr=lang_en%7Clang_sv&q=yaws").
+%% redirect2.yaws
+
+out(_Arg) ->
+    L="http://www.google.com/search?num=20&hl=en&lr=lang_en%7Clang_sv&q=yaws",
+    {redirect, L}.
 </erl>

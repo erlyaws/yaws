@@ -1,12 +1,13 @@
 
+<erl>
 
-<html>
-<head>
-<title>This is a practice form.</title>
-</head>
+out(A) -> 
+       {ssi, "TAB.inc", [],[]}.
+	    
+</erl>
 
-<body>
 
+<div id="entry">
 <h2>POST example </h2>
 
 <p>This is a simple example where we get to fill in 
@@ -45,6 +46,12 @@ POSTed data.
     <p><input TYPE=submit> <input TYPE=reset>
 
 </form>
-</body>
-</html>
+
+</div>
+
+
+
+<erl>
+out(A) -> {ssi, "END2",[],[]}.
+</erl>
 

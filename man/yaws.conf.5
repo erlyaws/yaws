@@ -95,6 +95,11 @@ a command line flag to yaws.
 \fB auth_log  = true | false\fR
 Enable or disable the auth log. Default is true.
 
+.TP
+\B log_wrap_size = Integer\fR
+The logs written by yaws are all wrap logs, the default value at the
+size where they wrap around and the original gets renamed to File.old
+is 1000000, 1 M. This value can changed.
 
 .TP
 \fB copy_error_log  = true | false\fR

@@ -1227,7 +1227,8 @@ ehtml_expand(Ch) when Ch >= 0, Ch =< 255 -> yaws_api:htmlize_char(Ch);
 ehtml_expand(Bin) when binary(Bin) -> yaws_api:htmlize(Bin);
 
 ehtml_expand({ssi,File, Del, Bs}) ->
-    case yaws_server:ssi(File, Del, Bs) of
+    UT = get(yaws_ut),
+    case yaws_server:ssi(File, Del, Bs, UT#urltype.dir) of
 	{error, Rsn} ->
 	    io_lib:format("ERROR: ~p~n",[Rsn]);
 	X ->

@@ -1,52 +1,55 @@
 
 <style TYPE="text/css">
-  body {
-    background: rgb(250,240,230);
-    font-family: Verdana, Arial, Helvetica, sans-serif;
-    color: black;
-  }
 
-#menu {
-  background: #B6B6A5;
-}
 
-  div.links {
+html {margin: 0; padding: 0;}
+
+body {font: 12px Verdana, Arial, Helvetica, sans-serif;
+   margin: 0; padding: 0;
+   background: rgb(95%,95%,95%); color: black;}
+
+h1 {font-size: 200%; text-transform: lowercase; letter-spacing: 3px;
+   margin: 0.66em 0 0.33em 3%; padding: 0;}
+
+h3 {font-size: 133%; margin: 0; padding: 0; 
+   border-bottom: 1px solid black;}
+
+h4 {font-size: 100%; margin: 0; padding: 0.33em 0 0;
+   border-bottom: 1px solid rgb(50%,50%,35%);
+   color: rgb(50%,50%,35%);}
+
+
+h5 {font-size: 100%; margin: 0; padding: 0.33em 0 0;
+   color: rgb(50%,50%,35%);}
+
+p {line-height: 1.66; margin: 0.5em 0 1em 3em;}
+
+div#entry {margin: 0 33% 1em 7%; padding: 0;}
+
+div#sidebar {position: absolute; top: 4em; right: 0; width: 20%; font-size: 11px;}
+
+div#sidebar a {display: block; padding: 8px 0 2px 10px; margin: 0;
+   border-left: 1px solid rgb(50%,50%,35%);}
+
+div#sidebar a:hover {background: rgb(85%,85%,70%);}
+
+div.links {
     background: green;
   }
 
-  div.box { border: solid; border-width: thin; width: 90%; 
-            margin : 4;
-            background: rgb(211, 211, 211)  }
+div.box { border: solid; border-width: thin; width: 90%; 
+          background: rgb(211, 211, 211)  }
+
+div.box pre {margin: 0.66em 0 0.33em 1%; padding: 0;}
+
+div.man { border: solid; border-width: thin; width: 100%; 
+          font-size: 70%
+          margin : 4;
+          background: rgb(211,211,211)  }
 
 
 
-  div.man { border: solid; border-width: thin; width: 100%; 
-            font-size: 70%
-            margin : 4;
-            background: rgb(240, 230, 140)  }
-
-
-
-  H1, H2,  H4, H5 {
-      text-decoration: none;
-      font-family: Verdana, Arial, Helvetica, sans-serif;
-      font-weight: bold; 
-      font-variant: small-caps
-  }
-  I {       font-size : 9pt; 
-            font-family: Times, Verdana, Arial, Helvetica, sans-serif;}
-  P { text-decoration: none;
-      font-family: Verdana, Arial, Helvetica, sans-serif;
-      font-weight: normal; 
-  }
-
-  A { text-decoration: none;
-      font-family: Verdana, Arial, Helvetica, sans-serif;
-      font-weight: normal; 
-  }
-  A:visited { font-style: oblique; color: #600000;}
-  A:link { color: #0000f0 }          /* unvisited link */
-  A:active { color: lime }        /* active links */
-  A:hover { background: rgb(189,183,107) }
+I {       font-size : 12px; 
+          font-family: Times, Verdana, Arial, Helvetica, sans-serif;}
 
 </style>

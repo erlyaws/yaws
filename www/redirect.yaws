@@ -1,40 +1,101 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<HTML>
-<HEAD>
- <meta name="keywords" content="post">
-
-
-<TITLE>Redirect example</TITLE>
-
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-
-</HEAD>
-<BODY BGCOLOR="#C6C6B5" text="#333333">
-
-
-<HTML>
-
-<H1> redirect.yaws </H1>
-
-<p> This a redirection example, the following <a href="redirect2.yaws">redirection url</a> contains the following code in its first erl group.
-
 
 <erl>
 
-out(_) -> yaws_api:pre_ssi_string(
-"
-     out(_) ->
-          yaws_api:redirect(
-              \"http://www.google.com/search?num=20&hl=en&lr=lang_en%7Clang_sv&q=yaws\").
-").
+out(A) -> 
+       {ssi, "TAB.inc",[],[]}.
 
 </erl>
 
-<p>The redirection code in the yaws_api module returns a new status code
-as well as a Location header.
+<div id="entry">
+
+<h2>Redirects</H2>
+
+<p> Redirs are a powerful tool in the webapp programmer toolbox. The 
+Webserver returns a specific status code (302) and adds a "Location:" header
+to the responce headers to the Browser. The Browser then displays the new
+page as indicated in the "Location" header.
+
+<p> Yaws supports a number of different forms of redirect return values
+from the out/1 function.
+
+The code:
+
+<erl>
+out(_A) ->
+	{ehtml,
+	{'div', [{class,"box"}],
+	 {pre,[],
+          {ssi, "redirect2.yaws",[],[]}}}}.
+</erl>
+
+<p> Clickable <a href="redirect2.yaws"> On this link </a> executes the
+above redirect code.
+
+<p> The code above redirects to an external URL. The HTTP RFC mandates
+that the Loaction header must contain complete URLs, including the 
+the method, http, https etc. A very common case of redirection, is 
+a to redirect to another file on the same server. The code
+in <a href="redirect3.yaws"> redirect3.yaws </a> shows an example of
+a yaws redirect relative to the "current" server.
+
+<erl>
+out(_A) ->
+	{ehtml,
+	{'div', [{class,"box"}],
+	 {pre,[],
+          {ssi, "redirect3.yaws",[],[]}}}}.
+</erl>
 
 
+<p> The code in <a href="redirect3.yaws"> redirect3.yaws </a> will
+do a relative redirect to the code in  
+<a href="redirect2.yaws"> redirect2.yaws </a> which in its turn redirects, once again, to google. Double redirects.
 
-</HTML>
+<p>While working with redirects, the tool <a href="http://curl.haxx.se/"> 
+curl </a> is an excellent way to troubleshoot the behaviour of your redirects.
+For example:
+
+<div class="box">
+<pre>
+# curl -I http://rubin.hyber.org:8000/redirect3.yaws
+HTTP/1.1 302 Found
+Server: Yaws/1.49 Yet Another Web Server
+Location: http://rubin.hyber.org:8000/redirect2.yaws
+Date: Tue, 16 Nov 2004 20:16:01 GMT
+Content-Type: text/html
+
+<pre>
+</div>
+
+<p>Where <tt> http://rubin.hyber.org:8000</tt> is where I am currently
+testing the <a href="redirect3.yaws"> redirect3.yaws </a> code.
+Learn and use the <a href="http://curl.haxx.se/"> curl </a>
+web client, it may not render pictures pretty, but it sure displays
+headers.
+
+<br>
+
+<p> We show one additional version of redirect code. The code in
+<a href="redirect3.yaws"> redirect3.yaws </a> requires an absolute path.
+If we want to supply a path relative to the current url, we can use 
+either the Redirect modifier <tt>rel_path</tt> or <tt>any_path</tt>
+as in :
 
 
+<erl>
+out(_A) ->
+	{ehtml,
+	{'div', [{class,"box"}],
+	 {pre,[],
+          {ssi, "redirect4.yaws",[],[]}}}}.
+</erl>
+
+<p> <a href = "redirect4.yaws"> Clickable here </a>
+
+
+</div>
+
+
+<erl>
+out(A) -> {ssi, "END2",[],[]}.
+</erl>

@@ -17,9 +17,10 @@ ssi(File) ->
 
 
 out(A) -> 
-    [{ssi, "HEAD", [],[]},
-     {ssi, "EXHEAD", [],[]},
+    [{ssi, "TAB.inc", [],[]},
      {ehtml,
+      {'div', [{id, "entry"}],
+
       [{h1, [], "Appmods (Application modules)"},
        
        {p, [],
@@ -69,14 +70,15 @@ A#arg.querydata = \"a=b\""),
 	"Appmods would typically be used by webapplications that want to provide the illusion of proper paths to the browser. "}
 
 
-       ]}].
+       ]
+       }},
+       {ssi, "END2",[],[]}
+       ].
 
 
 
 </erl>
 
-
-</html>
 
 
 

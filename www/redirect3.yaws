@@ -1,0 +1,7 @@
+
+<erl>
+%% redirect 3 yaws
+
+out(_Arg) ->
+    {redirect_local, "/redirect2.yaws"}.
+</erl>

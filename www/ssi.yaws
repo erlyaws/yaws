@@ -17,12 +17,13 @@ ssi(File) ->
 
 
 out(A) -> 
-    [{ssi, "HEAD", [],[]},
-     {ssi, "EXHEAD", [],[]},
+    [{ssi, "TAB.inc", [],[]},
      {ehtml,
-      [{h1, [], "Server side includes (with variable expansion)"},
+      {'div', [{id, "entry"}],	
+      [	
+      {h1, [], "Server side includes (with variable expansion)"},
        
-       {p, [],
+        {p, [],
 	"This feature is useful when we are writing applications where "
 	"basically the entire page is dynamically generated but we also "
 	"want to include snippets of either html or, even more typically,"
@@ -94,7 +95,7 @@ out(A) ->
 	" out/1 function(s) "}
 
       ]
-      
+      }
      }
     ].
     

@@ -17,7 +17,7 @@ regular erlang system.
 Here we describe the functions available in the yaws_api module 
 
 
-<a href="man.yaws?page=yaws_api"> man page for <tt>yaws_api (5)</tt> </a>
+<a href="yman.yaws?page=yaws_api"> man page for <tt>yaws_api (5)</tt> </a>
 
 
 <erl>

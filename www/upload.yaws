@@ -2,7 +2,9 @@
 
 <h2> File upload </h2>
 
-<p>This page shows how to upload a file to the webserver
+<p>This page shows how to upload a file to the webserver, nothing of cource
+does actually gets written to disc, but the upload code is 
+<a href="code.yaws?file=/upload.yaws"> Here in file upload.yaws </a>
 
 
 <erl>

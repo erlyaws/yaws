@@ -14,12 +14,11 @@ fpostvar(A, Key) ->
     
 
 out(A) ->
-     [{ssi, "HEAD", [],[]},
-     {ssi, "EXHEAD", [],[]},
+     [{ssi, "TAB.inc", [],[]},
      {ehtml,
-      [{h2, [],"post.yaws"},
+      {'div',[{id, "entry"}], [{h2, [],"post.yaws"},
        {p,[],[ "This is the ", {tt, [], "post.yaws"}, " file ",
-	       "This yaws file gets invoked with client data. "
+	       "This yaws file gets invoked with POSTed client data. "
 	       "This is the data that is submitted from the forms page ",
 	       {a, [{href, "form.yaws"}], " form.yaws "}]},
        
@@ -59,7 +58,7 @@ out(A) ->
                   undefined -> "None";
                   {ok, Val} -> Val
               end]}}
-         ]},
+         ]}},
         {ssi, "END",[],[]}].
 
 

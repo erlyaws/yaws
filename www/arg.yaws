@@ -1,10 +1,58 @@
-<html>
+
+<erl>
+
+out(A) -> 
+       {ssi, "TAB.inc", [],[]}.
+	    
+</erl>
+
+<div id="entry">
 
 <h2> The Arg </h2>
 
-<p>This page displays the Arg #argument structure
+<p>This page displays the Arg #arg structure
 supplied to the out/1 function.
-<p> The code is in file <a href="code.yaws?file=/arg.yaws">arg.yaws</a>
+
+<p> The #arg structure is a very important datastructure for the 
+yaws programmer. It is the main mechanism whereby the server can pass 
+data to the web application. There are several data items 
+which is of interest to the webapplication, such as which headers
+were sent from the client, etc.
+The #arg recored is defined in <tt>yaws_api.hrl</tt> and is defined as:
+
+<div class="box">
+<pre>
+
+
+-record(arg, {
+	  clisock,        %% the socket leading to the peer client
+	  headers,        %% headers
+	  req,            %% request
+	  clidata,        %% The client data (as a binary in POST requests)
+	  server_path,    %% The normalized server path
+	  querydata,      %% Was the URL on the form of ...?query (GET reqs)
+	  appmoddata,     %% the remainder of the path leading up to the query
+	  docroot,        %% where's the data
+	  fullpath,       %% full deep path to yaws file
+	  cont,		  %% Continuation for chunked multipart uploads
+	  state,          %% State for use by users of the out/1 callback
+	  pid,            %% pid of the yaws worker process
+	  opaque,         %% useful to pass static data
+	  appmod_prepath, %% path in front of: <appmod><appmoddata>
+	  pathinfo        %% Set to 'd/e' when calling c.yaws for the request
+                          %% http://some.host/a/b/c.yaws/d/e
+	 }).              
+</pre>
+</div>
+
+<p> As we have seen is several previous examples, the <tt> out/1</tt> function
+defined in .yaws files, gets inviked with a single argument which is
+a #arg{} record, fitting the specific HTTP request being served.
+
+
+<p> The code to display the #arg{} record
+is in defined in file <a href="code.yaws?file=/arg.yaws">arg.yaws</a>
+
 
 <erl>
 
@@ -12,34 +60,40 @@ out(A) ->
     Req = A#arg.req,
     H = yaws_api:reformat_header(A#arg.headers),
     {ehtml,
-     [{h4,[], "The headers passed to us were:"},
+     [{h5,[], "The headers passed to us were:"},
       {hr},
       {ol, [],lists:map(fun(S) -> {li,[], {p,[],S}} end,H)},
 
-      {h4, [], "The request"},
+      {h5, [], "The request"},
       {ul,[],
        [{li,[], f("method: ~s", [Req#http_request.method])},
 	{li,[], f("path: ~p", [Req#http_request.path])},
 	{li,[], f("version: ~p", [Req#http_request.version])}]},
 
       {hr},
-      {h4, [], "Other items"},
+      {h5, [], "Other items"},
       {ul,[],
        [{li, [], f("clisock from: ~p", [inet:peername(A#arg.clisock)])},
 	{li,[], f("docroot: ~s", [A#arg.docroot])},
 	{li,[], f("fullpath: ~s", [A#arg.fullpath])}]},
       {hr},
-      {h4, [], "Parsed query data"},
+      {h5, [], "Parsed query data"},
       {pre,[], f("~p", [yaws_api:parse_query(A)])},
       {hr},
-      {h4,[], "Parsed POST data "},
+      {h5,[], "Parsed POST data "},
       {pre,[],  f("~p", [yaws_api:parse_post(A)])}]}.
 
 </erl>
 
-</html>
-
-
 	
 	
+
+
+</div>
+
+
+<erl>
+out(A) -> {ssi, "END2",[],[]}.
+</erl>
+
 				

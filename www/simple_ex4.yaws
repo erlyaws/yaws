@@ -1,0 +1,12 @@
+<html>
+
+
+<h1> simple ex 3</h1>
+
+<erl>
+out(Arg) -> {html, f("Printing the arg structure :"
+	             "~n<pre>~p~n</pre>~n", [Arg])}.
+</erl>
+
+
+</html>
