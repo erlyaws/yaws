@@ -1,3 +1,123 @@
+2003-10-04 20:36  klacke
+
+	* configure, www/contribs.yaws: ""
+
+2003-09-24 16:13  klacke
+
+	* c_src/setuid_drv.c: ""
+
+2003-09-21 00:42  jbevemyr
+
+	* src/yaws_server.erl: Attempted to fix redirect problem when a
+	host header isn't present, or when rhost or rport is present. We
+	first look for an rhost setting and if that is missing we look for
+	a host header, if that is also missing we use the servername and
+	rport or port.
+
+2003-09-21 00:18  jbevemyr
+
+	* src/yaws_server.erl: Reverted previous redirect_local fix.
+
+2003-09-16 06:44  lpsmith
+
+	* src/yaws_server.erl: We now return 403 on relative paths and
+	other malformed requests.
+	
+	Also some small code clean ups.  I really wish I had a visual
+	browser for dataflow analysis... it would make simplifing the code
+	much easier, as well as give one a quick rundown of code you aren't
+	familiar with.
+
+2003-09-15 03:38  lpsmith
+
+	* doc/yaws.tex: Updated documentation relating to WWW-Authenticate.
+
+2003-09-15 03:12  lpsmith
+
+	* include/yaws.hrl, src/yaws_server.erl: Removed unused fields "q"
+	and "wwwauth" in the #urltype{} record.
+	
+	Removed unused function yaws_server:unflat().
+
+2003-09-09 21:07  jbevemyr
+
+	* src/yaws_server.erl: Fixed problem with serving cached files.
+
+2003-09-09 02:53  lpsmith
+
+	* src/yaws_config.erl: [no log message]
+
+2003-09-09 00:49  klacke
+
+	* c_src/Makefile: [no log message]
+
+2003-09-09 00:43  klacke
+
+	* configure, configure.in, include.mk.in, vsn.mk, c_src/Makefile,
+	scripts/Install, scripts/Makefile, scripts/mangle, scripts/yaws.ss,
+	src/yaws.erl, src/yaws_compile.erl, src/yaws_config.erl,
+	src/yaws_ctl.erl, src/yaws_log.erl, src/yaws_server.erl: first
+	attempt to run properly under cygwin
+
+2003-09-08 23:02  lpsmith
+
+	* src/yaws_config.erl: 
+	Removed the code that checks that a directory exists in the case
+	of:
+	
+	<auth>	dir= ...  </auth>
+	
+	as www-authentication is now specified by server path and not
+	filesystem path.
+
+2003-09-08 22:37  lpsmith
+
+	* src/yaws_server.erl: 
+	WWW-Authentication directories are now specified by server path and
+	not filesystem path.  Code cleanup for www-authentication.  Major
+	authentication enhancements to come.
+	
+	Numerous other code cleanups, focusing on reducing the number of
+	arguments passed to various functions.	The biggest change is that
+	the query part of a URL isn't passed through all the URL-parsing
+	functions.   #urltype.q is now unused, should remove it at some
+	point in the future.
+	
+	We update the ARG record a lot less now.
+
+2003-09-04 13:15  cschultz
+
+	* src/yaws_server.erl: Fixed bug in deliver_dyn_part.
+
+2003-09-03 22:36  jbevemyr
+
+	* src/yaws_server.erl: Fixed problem when dynamic file only
+	returned {redirect, X} or {redirect_local, Y}.
+
+2003-08-28 22:42  klacke
+
+	* TODO: ""
+
+2003-08-25 23:09  klacke
+
+	* doc/yaws.pdf, man/yaws.1, scripts/yaws.ss: -sname and mnesia flag
+	added to start script
+
+2003-08-25 22:22  klacke
+
+	* ChangeLog: ""
+
+2003-08-25 22:21  klacke
+
+	* vsn.mk, doc/yaws.pdf, man/yaws.1, man/yaws.conf.5,
+	scripts/yaws.ss, src/yaws.erl, src/yaws_config.erl,
+	src/yaws_debug.erl, src/yaws_log.erl, src/yaws_server.erl,
+	www/index.yaws: added -x flag for tty trace and did the 1.3 release
+
+2003-08-25 20:06  klacke
+
+	* include.mk.in: removed the -b beam flag
+
 2003-08-25 12:06  cschultz
 
 	* doc/yaws.tex, man/yaws_api.5, src/yaws_api.erl: 
