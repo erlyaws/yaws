@@ -1517,15 +1517,27 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
 		    Node = str2urlencoded(Page),
 		    DeepStr =
 			["<table width='100%'>"
-			 "<tr><td>"
+			 "<tr><td valign=middle>"
 			 "<a href=\"slideShow.yaws?node=", Node,"&prev=",
-			 integer_to_list(NewIndex-1),"\">prev</a> ",
+			 integer_to_list(NewIndex-1),"\">"
+			 "<img align=middle border=0 src='WikiPreferences.files/back.gif' "
+			 "alt='Back' title='Previous Image'>"
+			 "</a> ",
 			 build_slide_list(Node, NewIndex, length(Files)),
 			 "<a href=\"slideShow.yaws?node=",Node,"&next=",
-			 integer_to_list(NewIndex+1),"\">next</a> "
+			 integer_to_list(NewIndex+1),"\">"
+			 "<img align=middle border=0 src='WikiPreferences.files/forward.gif' "
+			 "alt='Next' title='Next Image'>"
+			 "</a> "
 			 "<a href=\"slideShow.yaws?node=",Node,"&auto=",
-			 integer_to_list(NewIndex+1),"\">auto</a> "
-			 "<a href=\"thumbIndex.yaws?node=",Node,"\">index</a> "
+			 integer_to_list(NewIndex+1),"\">"
+			 "<img align=middle border=0 src='WikiPreferences.files/kamera.gif' "
+			 "alt='Play' title='Show slideshow'>"
+			 "</a> "
+			 "<a href=\"thumbIndex.yaws?node=",Node,"\">"
+			 "<img align=middle border=0 src='WikiPreferences.files/index.gif' "
+			 "alt='Thumbnails' title='All images'>"
+			 "</a> "
 			 "</td></tr></table>"
 			 "<p><b>",integer_to_list(NewIndex)," - ",
 			 Comment,"</b></p><p>",
@@ -1535,7 +1547,7 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
 			 "<img src=\"getMidSize.yaws?node=", Node,"&pict=",
 			 wiki:str2urlencoded(FileName),
 			 "\" alt='",FileName,
-			 "'></a></p>"],
+			 "'></a></p>Click on image to enlarge."],
 		    Auto =
 			if Direction==auto ->
 				["<META HTTP-EQUIV=\"REFRESH\" "
