@@ -152,6 +152,10 @@ do_header(Arg, "Content-type: "++CT, {partial_data, Data}) ->
     {streamcontent, CT, Data};
 do_header(Arg, "Content-type: "++CT, {all_data, Data}) ->
     {content, CT, Data};
+do_header(Arg, "Content-Type: "++CT, {partial_data, Data}) ->
+    {streamcontent, CT, Data};
+do_header(Arg, "Content-Type: "++CT, {all_data, Data}) ->
+    {content, CT, Data};
 do_header(Arg, "Location: "++Loc, _) ->
     {redirect, Loc};
 do_header(Arg, "Status: "++[N1,N2,N3|_], _) ->
