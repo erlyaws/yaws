@@ -42,10 +42,11 @@ function setComposeCmd(val) {
        return;
    }
 
-   if (editor)
+   try {
      document.compose.message.value = editor.getHTML();
-   else
+   } catch (e) {
      document.compose.message.value = document.compose.html_message.value;
+   }
 
    // alert(editor.getHTML());
 
