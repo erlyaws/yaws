@@ -66,7 +66,7 @@
 	 errormod_crash = yaws_404,   %% use the same module for crashes
 	 arg_rewrite_mod = yaws,
 	 tilde_expand = true,         %% allow public_html user dirs
-	 opaque                       %% useful in embedded mode
+	 opaque = []                  %% useful in embedded mode
 	}).
 
 

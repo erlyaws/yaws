@@ -356,6 +356,7 @@ gserv(GC, Group0) ->
     SC = hd(Group),
     case do_listen(SC) of
 	{SSLBOOL, {ok, Listen}} ->
+	    call_opaque_mod(SC#sconf.opaque),
 	    error_logger:info_msg("Listening to ~s:~w for servers ~p~n",
 			      [yaws:fmt_ip(SC#sconf.listen),
 			       SC#sconf.port,
@@ -426,6 +427,12 @@ gserv(GS, Ready, Rnum) ->
 	    exit(normal)
     end.
 	    
+ 
+call_opaque_mod(Opaque) ->
+    case catch lists:keysearch("module", 1, Opaque) of
+	{value,{_,Module}} -> catch spawn(l2a(Module), yaws_opaque, [Opaque]);
+	_                  -> false  
+    end.
 
 
 

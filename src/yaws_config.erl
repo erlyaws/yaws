@@ -432,6 +432,10 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    end;
 	['<', "/server", '>'] ->
 	    fload(FD, globals, GC, undefined, [C|Cs], Lno+1, Next);
+
+	['<', "opaque", '>'] ->
+	    fload(FD, opaque, GC, C, Cs, Lno+1, Next);
+
 	[H|T] ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end;
@@ -524,6 +528,26 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
 	
 	[H|T] ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
+    end;
+
+
+fload(FD, opaque, _GC, _C, _Cs, Lno, eof) ->
+    file:close(FD),
+    {error, ?F("Unexpected end of file at line ~w", [Lno])};
+
+fload(FD, opaque, GC, C, Cs, Lno, Chars) ->
+    %?Debug("Chars: ~s", [Chars]),
+    Next = io:get_line(FD, ''),
+    case toks(Chars) of
+	[] ->
+	    fload(FD, opaque, GC, C, Cs, Lno+1, Next);
+	['<', "/opaque", '>'] ->
+	    fload(FD, server, GC, C, Cs, Lno+1, Next);
+	[Key, '=', Value] ->
+	    C2 = C#sconf{opaque = [{Key,Value} | C#sconf.opaque]},
+	    fload(FD, opaque, GC, C2, Cs, Lno+1, Next);
+	[H|T] ->
+	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end.
 
 
@@ -542,7 +566,7 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
     Next = io:get_line(FD, ''),
     case toks(Chars) of
 	[] ->
-	    fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth);
+	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, Auth);
 	["dir", '=', Dir] ->
     	    case is_dir(Dir) of
 		true ->
