@@ -10,8 +10,8 @@
 -export([findallrefsto/2, zombies/1]).
 
 -import(lists,  [filter/2, member/2, reverse/1, sort/1, map/2]).
--import(wiki, [p/1, background/1, h1/1, show/1]).
--import(wiki_templates, [template/4]).
+-import(wiki, [p/1, h1/1, show/1]).
+-import(wiki_templates, [template/3]).
 
 findallrefsto(Page, Root) ->
     All = wiki:ls(Root),
@@ -25,7 +25,7 @@ findallrefsto(Page, Root) ->
 			   end
 		   end, All),
     Spages = sort(Pages),
-    template("References", background("info"), "",
+    template("References", "",
 	 ["<p>The following pages contain references to ",
 	  wiki_to_html:format_link(Page, Root),".",
 	  "<ul>",
@@ -40,7 +40,7 @@ zombies(Root) ->
     %% Missing = Pages refered to but do not exists at all
     %% This is not an error
     NotReached = sort(All -- Reached),
-    template("Zombies", background("info"), "", 
+    template("Zombies", "", 
 	 [h1("Zombies"),
 	  p("These pages have no links to them."),
 	  "<ul>",

@@ -32,12 +32,12 @@
 	 sendMeThePassword/3, storeFiles/3, showOldPage/3,
 	 changePassword/3, changePassword2/3]).
 
--export([show/1, ls/1, h1/1, read_page/2, background/1, p/1,
+-export([show/1, ls/1, h1/1, read_page/2, p/1,
 	 str2urlencoded/1, session_manager_init/2]).
 
 -import(lists, [reverse/1, map/2, sort/1]).
 
--import(wiki_templates, [template/4]).
+-import(wiki_templates, [template/3]).
 
 -include("../../../include/yaws_api.hrl").
 
@@ -58,7 +58,7 @@ showPage(Params, Root, Prefix) ->
 		    DeepStr = wiki_to_html:format_wiki(Page, Wik, Root),
 		    DeepFiles = wiki_to_html:format_wiki_files(
 				  Page, FileDir, Files, Root),
-		    wiki_templates:template(Page, body_pic(Pwd),
+		    wiki_templates:template(Page, 
 					    banner(Page, Pwd),
 					    [top_header(Page),DeepStr,
 					     DeepFiles]);
@@ -128,7 +128,7 @@ createNewPage(Params, Root, Prefix) ->
 createNewPage1(Page, Sid, Prefix, Content, Passwd, Email) ->
     Txt = quote_lt(Content),
     wiki_templates:template(
-      "New Page",bgcolor("white"),"",
+      "New Page","",
       [h1(Page),
        p("Creating a new page. "
 	 "If you want a password protected page "
@@ -296,7 +296,7 @@ storeFiles(Params, Root, Prefix) ->
 addFileInit(Params, Root, Prefix) ->
     Page        = getopt(node, Params),
     Password    = getopt(password, Params),
-    template("Add File", bgcolor("white"), "",
+    template("Add File", "",
 	     [h1(Page), 
 	      form("POST", "addFile.yaws", 
 		   [
@@ -522,7 +522,7 @@ deleteFilesInit(Params, Root, Prefix) ->
     DelList = [input("hidden", "del_"++Name, Name) ||
 		  {file, Name, _, _} <- DelFiles],
 
-    template("Confirm", bgcolor("white"), "",
+    template("Confirm", "",
 	     [h1(Page),
 	      List,
 	      form("POST", "deleteFiles.yaws", 
@@ -629,7 +629,7 @@ copyFilesInit(Params, Root, Prefix) ->
 	length(CheckedFiles) == 0 ->
 	    editFiles(Params, Root, Prefix);
 	true ->
-	    template("Confirm", bgcolor("white"), "",
+	    template("Confirm", "",
 		     [h1(Page),
 		      List,
 		      form("POST", "copyFiles.yaws", 
@@ -730,7 +730,7 @@ showHistory(Params, Root, Prefix) ->
 	    {wik002,Pwd,Email,_Time,_Who,OldTxt,_Files,Patches} = 
 		bin_to_wik002(Bin),
 	    Links = reverse(mk_history_links(reverse(Patches), Page, 1)),
-	    template("History",background("info"), "", Links);
+	    template("History", "", Links);
 	_ ->
 	    show({no_such_page, Page})
     end.
@@ -768,7 +768,7 @@ format_time({{Year,Month,Day},{Hour,Min,Sec}}) ->
 
 allPages(_, Root, Prefix) ->
     Files = sort(files(Root, "*.wob")),
-    template("All Pages", background("info"), "",
+    template("All Pages", "",
 	     [h1("All Pages"),
 	      p("This is a list of all pages known to the system."),
 	      lists:map(fun(I) ->
@@ -795,7 +795,7 @@ lastEdited(_, Root, Prefix) ->
 				  [J,"<br>"] end, Fx),
 		      "</ul>"]
 	     end, Groups),
-    template("Last Edited", background("info"), "", 
+    template("Last Edited", "", 
 	     [h1("Last Edited"),
 	      p("These are the last edited files."),S1]).
 
@@ -841,7 +841,7 @@ showOldPage(Params, Root, Prefix) ->
 			  Page, FileDir,Files, Root),
 	    Form = form("POST", "noop.yaws",
 			[textarea("text", 25, 75, TxtStr)]),
-	    wiki_templates:template(Page, old_pic(), "",
+	    wiki_templates:template(Page, "",
 				    [h1(Page),DeepStr,DeepFiles,"<hr>",Form]);
 	_ ->
 	    show({no_such_page, Page})
@@ -874,7 +874,7 @@ deletePage1(Params, Root, Prefix) ->
 		bin_to_wik002(Bin),
     
 	    Txt = quote_lt(Content),
-	    template("Delete", background("info"), "",
+	    template("Delete", "",
 		     [h1(Page),
 		      p("Reconfirm deleting this page - hit the 'Delete' "
 			"button to permanently remove the page."),
@@ -922,7 +922,7 @@ finalDeletePage1(Params, Root, Prefix) ->
 	    file:del_dir(Root++"/"++FileDir),
 	    redirect({node, "home"}, Prefix);
 	_ ->
-	    wiki_templates:template("Error",background("info"),"",
+	    wiki_templates:template("Error","",
 		     [h1(Page),
 		      p("Failed to delete page."),
 		      hr()])
@@ -934,7 +934,7 @@ getPassword(Page, Root, Prefix, Target, Values) ->
 	  lists:keydelete(password, 1, Values)],
     Hidden = [[input("hidden", atom_to_list(Name), Value),"\n"] ||
 		 {Name, Value, _} <- Vs],
-    template("Password", background("info"), "",
+    template("Password", "",
 	     [h1(Page),
 	      p("This page is password protected - provide a password"
 		"and hit the 'Continue' button."),
@@ -1171,7 +1171,7 @@ editPage(Page, Password, Root, Prefix, Sid) ->
 
 edit1(Page, Password, Content, Sid) ->
     Txt = quote_lt(Content),
-    template("Edit", background("info"), "",
+    template("Edit", "",
 	 [h1(Page),
 	  p("Edit this page - when you have finished hit the 'Preview' "
 	    "button to check your results."),
@@ -1200,18 +1200,18 @@ sendMeThePassword(Params, Root, Prefix) ->
 	    %% io:format("Here Email=~p EMailOwner=~p~n",[Email,EmailOwner]),
 	    case Email of
 		"" ->
-		    template("Error", bgcolor("pink"), "",
+		    template("Error", "",
 			 [h1("Failure"),
 			  p("This page has no associated email address")]);
 		EmailOwner ->
 		    mail(Page, Email, Pwd),
-		    template("Ok",bgcolor("white"),"",
+		    template("Ok", "",
 			 [h1("Success"),
 			  p("The password has been mailed to "),
 			  Email,
 			  p("Have a nice day")]);
 		Other ->
-		    template("Error",bgcolor("pink"),"",
+		    template("Error", "",
 			 [h1("Failure"),
 			  p("Incorrect email address")])
 	    end;
@@ -1279,7 +1279,7 @@ editFiles1(Page, Password, Root, Prefix) ->
 		     "</table>\n",
 		     p(),
 		     hr()],
-	    wiki_templates:template("Edit", bgcolor("white"),"",
+	    wiki_templates:template("Edit", "",
 		     [h1(Page),
 		      form("POST", "storeFiles.yaws",
 			   [Check,
@@ -1312,7 +1312,7 @@ editTag(Params, Root, Prefix) ->
 		       open -> quote_lt(Str);
 		       write_append -> ""
 		   end,
-	    wiki_templates:template("Edit", bgcolor("white"),"",
+	    wiki_templates:template("Edit", "",
 		     [h1(Page),
 		      p("Edit this page - when you have finished hit the "
 			"'Preview' button to check your results."),
@@ -1332,7 +1332,7 @@ changePassword(Params, Root, Prefix) ->
     Page     = getopt(node, Params),
 
     wiki_templates:template(
-      "Edit", bgcolor("white"),"",
+      "Edit", "",
       [h1(Page),
        p("Change password setting for page - to remove a password leave "
 	 "the new passwords blank."),
@@ -1415,7 +1415,7 @@ previewPage1(Params, Root, Prefix) ->
     Txt = zap_cr(Txt0),
     Wik = wiki_split:str2wiki(Txt),
     session_set_text(Sid, Txt),
-    template("Preview",background("info"),"",
+    template("Preview","",
 	     [h1(Page),
 	      p("If this page is ok hit the \"Store\" button "
 		"otherwise return to the editing phase by clicking the edit "
@@ -1444,7 +1444,7 @@ previewTagged(Params, Root, Prefix) ->
     %% io:format("Here previewTagged:~p~n",[Txt]),
     case legal_flat_text(Txt) of
 	true ->
-	    wiki_templates:template("Preview",bgcolor("white"),"",
+	    wiki_templates:template("Preview","",
 		     [p("If this region is ok hit the <i>Store</i> button "
 			"otherwise return to the editing phase by clicking "
 			"the back button in your browser."),
@@ -1484,7 +1484,7 @@ previewNewPage(Params, Root, Prefix) ->
     if 
 	P1 == P2 ->
 	    session_set_all(Sid,Txt,P1,Email),
-	    template("Preview", bgcolor("white"),"",
+	    template("Preview", "",
 		     [p("If this page is ok hit the \"Store\" button "
 			"otherwise return to the editing phase by clicking "
 			"the back button in your browser."),
@@ -1602,11 +1602,6 @@ create_wiki_files(Root, FileDir, Files) ->
 
 %%
 
-old_pic() -> background("old").
-
-background(F) ->
-    ["<body background='", F, ".gif'>\n"].
-
 table(Id, X) ->
     ["<table width=\"100%\"><tr><td id=\"", Id, "\">\n",
      X,"</td></tr></table>\n"].
@@ -1620,33 +1615,34 @@ mk_image_link(X, Img, Alt, Title) ->
      "alt='", Alt, "' "
      "title='", Title,"'></a>&nbsp;&nbsp;\n"].
 
-body_pic("") -> background("normal");
-body_pic(_)  -> background("locked").
-
 banner(File, Password) ->			    
     [table("menu",
 	   [
-	    mk_image_link("showPage.yaws?node=home", "home.gif", "Home",
+	    mk_image_link("showPage.yaws?node=home",
+			  "WikiPreferences.files/home.gif", "Home",
 			  "Go to initial page"),
 	    mk_image_link("showHistory.yaws?node=" ++ str2urlencoded(File),
-			  "history.gif",
+			  "WikiPreferences.files/history.gif",
 			  "History",
 			  "History of page evolution"),
-	    mk_image_link("allPages.yaws", "allpages.gif",
+	    mk_image_link("allPages.yaws",
+			  "WikiPreferences.files/allpages.gif",
 			  "All Pages",
 			  "Lists all pages on this site"),
-	    mk_image_link("lastEdited.yaws", "lastedited.gif",
+	    mk_image_link("lastEdited.yaws",
+			  "WikiPreferences.files/lastedited.gif",
 			  "Last Edited",
 			  "Site editing history"),
-	    mk_image_link("wikiZombies.yaws", "zombies.gif",
+	    mk_image_link("wikiZombies.yaws",
+			  "WikiPreferences.files/zombies.gif",
 			  "Zombies",
 			  "Unreachable pages"),
 	    mk_image_link("editPage.yaws?node=" ++ str2urlencoded(File),
-			  "editme.gif",
+			  "WikiPreferences.files/editme.gif",
 			  "Edit Me",
 			  "Edit this page"),
 	    mk_image_link("editFiles.yaws?node=" ++ str2urlencoded(File),
-			  "editfiles.gif",
+			  "WikiPreferences.files/editfiles.gif",
 			  "Edit Files",
 			  "Edit attached files")
 	   ])].
@@ -1755,7 +1751,7 @@ little_letter($ö) -> true;
 little_letter(_)  -> false.
 
 show({bad_password, Page}) ->
-    template("Error", bgcolor("white"), "",
+    template("Error", "",
 	     [h1("Incorrect password"),
 	      p("You have supplied an incorrect password"),
 	      p("To find out the the password fill "

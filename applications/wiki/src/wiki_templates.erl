@@ -1,15 +1,15 @@
 -module(wiki_templates).
 
--export([template/4]).
+-export([template/3]).
 
 %% B = normal | locked | old
-template(Title,Background,Menu,Data) ->
+template(Title,Menu,Data) ->
     {html,["
 <head> 
 <title>", Title, "</title>
 <style type=\"text/css\">
 <!--
-   @import url(custom.css);
+   @import url(\"WikiPreferences.files/custom.css\");
 -->
 </style>
 </head>

@@ -19,3 +19,9 @@ It is possible to have several Wiki instances on the same server.
 Just install the wiki/* files in the directory where you want a 
 Wiki instance.
 
+To edit the wiki preferences to to the wiki page WikiPreferences
+(for example by clicking on the "All Pages" or "Zombies" icon)
+and replace the gifs with our own favorites.
+
+The password to the WikiPreferences page is ForgetMe.
+

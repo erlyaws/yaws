@@ -45,9 +45,9 @@ format_link({wikiLink, Page}, _, Root, _Mode) ->
     end;
 format_link({editTag, Tag}, Page, Root, show) ->
     ["<a href=\"editTag.yaws?node=",Page,"&tag=",i2s(Tag),"\">",
-     "<img border=0 src='edit.gif'></a> "];
+     "<img border=0 src='WikiPreferences.files/edit.gif'></a> "];
 format_link({editTag, Tag}, Page, Root, preview) ->
-    ["<img border=0 src='edit.gif'>"].
+    ["<img border=0 src='WikiPreferences.files/edit.gif'>"].
 
 format_link({file, FileName, C}, FileDir, Page, Root, Mode) ->
     format_link({file, FileName, "", C}, FileDir, Page, Root, Mode);
