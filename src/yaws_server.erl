@@ -226,11 +226,12 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
     file:make_dir("/tmp/yaws"),
     set_writeable("/tmp/yaws"),
 
-    case yaws_log:uid_change(Gconf) of
+    case (catch yaws_log:uid_change(Gconf)) of
 	ok ->
 	    ok;
 	{error, Reason} ->
-	    error_logger:error_msg("Failed to change uid on logfiles"),
+	    error_logger:error_msg("Failed to change uid on logfiles:~n~p",
+				   [Reason]),
 	    exit(Reason)
     end,
 
@@ -238,10 +239,12 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
     %% listening to all sockets we can possibly change username
 
     GC2 = case (catch setuser(Gconf#gconf.username)) of
+	      ignore ->
+		  Gconf;
 	      {ok, NewUid} ->
 		  Gconf#gconf{uid = NewUid};
 	      Other ->
-		  error_logger:error_msg("Failed to set user:~n", [Other]),
+		  error_logger:error_msg("Failed to set user:~n~p", [Other]),
 		  exit(Other)
 	  end,
     case setup_tdir(GC2) of
@@ -255,7 +258,7 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 
 	
 setuser(undefined) ->	     
-    "ok";
+    ignore;
 setuser(User) ->	     
     erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
 			 "/../priv/", "setuid_drv"),
