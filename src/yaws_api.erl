@@ -29,7 +29,8 @@
 	 url_decode/1, 
 	 url_encode/1, parse_url/1, parse_url/2, format_url/1]).
 -export([get_line/1, mime_type/1]).
--export([stream_chunk_deliver/2, stream_chunk_end/1]).
+-export([stream_chunk_deliver/2, stream_chunk_deliver_blocking/2,
+	 stream_chunk_end/1]).
 -export([new_cookie_session/1,
 	 cookieval_to_opaque/1,
 	 print_cookie_sessions/0,
@@ -747,8 +748,28 @@ mime_type(FileName) ->
     MT.
 
 
+%% Asynchronously delivery
 stream_chunk_deliver(YawsPid, Data) ->
     YawsPid  ! {streamcontent, Data}.
+
+%% Synchronous (on ultimate gen_tcp:send) delivery
+%% Returns: ok | {error, Rsn}
+stream_chunk_deliver_blocking(YawsPid, Data) ->
+    Ref = erlang:monitor(process, YawsPid),
+    YawsPid  ! {streamcontent_with_ack, self(), Data},
+    receive
+	{YawsPid, streamcontent_ack} ->
+	    erlang:demonitor(Ref),
+	    %% flush incase a DOWN message was sent before the demonitor call
+	    receive
+		{'DOWN', Ref, _, _, _} ->
+		    ok
+	    after 0 ->
+		    ok
+	    end;
+	{'DOWN', Ref, _, _, Info} ->
+	    {error, {ypid_crash, Info}}
+    end.
 
 stream_chunk_end(YawsPid) ->
     YawsPid ! endofstreamcontent.

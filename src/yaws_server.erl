@@ -1322,11 +1322,11 @@ deliver_dyn_file(CliSock, GC, SC, _Req, _Head,_UT, DCC, _Bin, _Fd, [], _ARG,_N) 
 stream_loop(DCC, CliSock, GC, SC) ->
     receive
 	{streamcontent, Cont} ->
-	    accumulate_chunk(DCC, Cont),
-	    Data = erase(acc_content),
-	    ?Debug("send ~p bytes to ~p ~n", 
-		   [size(list_to_binary(Data)), CliSock]),
-	    gen_tcp_send(CliSock, Data, SC, GC),
+	    send_streamcontent_chunk(DCC, CliSock, GC, SC, Cont),
+	    stream_loop(DCC, CliSock, GC, SC) ;
+	{streamcontent_with_ack, From, Cont} ->	% acknowledge after send
+	    send_streamcontent_chunk(DCC, CliSock, GC, SC, Cont),
+	    From ! {self(), streamcontent_ack},
 	    stream_loop(DCC, CliSock, GC, SC) ;
 	endofstreamcontent ->
 	    ok
@@ -1334,7 +1334,13 @@ stream_loop(DCC, CliSock, GC, SC) ->
 	    exit(normal)
     end.
 
-
+send_streamcontent_chunk(DCC, CliSock, GC, SC, Chunk) ->
+    accumulate_chunk(DCC, Chunk),
+    Data = erase(acc_content),
+    ?Debug("send ~p bytes to ~p ~n", 
+	[size(list_to_binary(Data)), CliSock]),
+    gen_tcp_send(CliSock, Data, SC, GC).
+    
 
 %% what about trailers ??
 
