@@ -1583,7 +1583,7 @@ stream_loop_send(Priv, CliSock, FlushStatus) ->
     after TimeOut ->
 	    case FlushStatus of
 		flushed ->
-		    exit(normal);
+		    exit(stream_timeout);
 		unflushed ->
 		    P = sync_streamcontent(Priv, CliSock),
 		    stream_loop_send(P, CliSock, flushed)
