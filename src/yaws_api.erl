@@ -820,8 +820,12 @@ get_line([H|T], Cur) ->
 
 
 mime_type(FileName) ->
-    {_, MT} = mime_types:t(filename:extension(FileName)),
-    MT.
+    case filename:extension(FileName)
+	[_|T] ->
+	    element(2, mime_types:t(T));
+	[] ->
+	    element(2, mime_types:t([]))
+    end.
 
 
 %% Asynchronously delivery
