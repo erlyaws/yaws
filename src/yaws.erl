@@ -818,17 +818,6 @@ accepts_deflate(H) ->
     end.
 
 
-compressible_mime_type("text/"++_) ->
-    true;
-compressible_mime_type("application/rtf") ->
-    true;
-compressible_mime_type("application/msword") ->
-    true;
-compressible_mime_type("application/postscript") ->
-    true;
-compressible_mime_type(_) ->
-    false.
-
 %% imperative out header management
 
 outh_set_status_code(Code) ->
@@ -863,7 +852,7 @@ outh_set_static_headers(Req, UT, Headers) ->
 
 outh_set_static_headers(Req, UT, Headers, Range) ->
     H = get(outh),
-    FI = UT#urltype.finfo,
+    FIL = (UT#urltype.finfo)#file_info.size,
     {DoClose0, Chunked0} = dcc(Req, Headers),
     {DoDeflate, Length} 
 	= case Range of 
@@ -872,15 +861,15 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
 		      DB when binary(DB) -> % cached
 			  case accepts_deflate(Headers) of
 			      true -> {true, size(DB)};
-			      false -> {false, FI}
+			      false -> {false, FIL}
 			  end;
-		      undefined -> {false, FI};
+		      undefined -> {false, FIL};
 		      dynamic ->
 			  case accepts_deflate(Headers) of
 			      true ->
 				  {true, undefined};
 			      false ->
-				  {false, FI}
+				  {false, FIL}
 			  end
 		  end;
 	      {fromto, From, To, _} ->
@@ -910,7 +899,7 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
 	   transfer_encoding = make_transfer_encoding_chunked_header(Chunked),
 	   connection  = make_connection_close_header(DoClose),
 	   doclose = DoClose,
-	   contlen = (UT#urltype.finfo)#file_info.size
+	   contlen = Length
 	  },
     put(outh, H2).
 

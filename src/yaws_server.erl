@@ -2277,18 +2277,19 @@ send_file_range(CliSock, Fd, SC, GC, 0) ->
     
 
 send_file_chunk(Bin, CliSock, SC, GC) ->
-     case yaws:outh_get_chunked() of
-	 true ->
-	     case binary_size(Bin) of
-		 0 -> ok;
-		 Size ->
-		     CRNL = crnl(),
-		     Data2 = [CRNL, yaws:integer_to_hex(Size) , CRNL, Bin],
-		     yaws:gen_tcp_send(CliSock, Data2, SC, GC)
-	     end;
-	 false ->
-	     yaws:gen_tcp_send(CliSock, Bin, SC, GC)
-     end.
+    case binary_size(Bin) of
+	0 -> ok;
+	Size ->
+	    yaws:outh_inc_act_contlen(Size),
+	    case yaws:outh_get_chunked() of
+		true ->
+		    CRNL = crnl(),
+		    Data2 = [CRNL, yaws:integer_to_hex(Size) , CRNL, Bin],
+		    yaws:gen_tcp_send(CliSock, Data2, SC, GC);
+		false ->
+		    yaws:gen_tcp_send(CliSock, Bin, SC, GC)
+	    end
+    end.
 
 
 
