@@ -2077,7 +2077,7 @@ get_more_post_data(PPS, ARG) ->
 		    {error, Else}
 	    end;
        true ->
-	    case yaws:cli_recv(ARG#arg.clisock, Len - N, 
+	    case yaws:cli_recv(ARG#arg.clisock, Len - PPS, 
 			       is_ssl(SC#sconf.ssl)) of
 		{ok, Bin} ->
 		    Bin;
