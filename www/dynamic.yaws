@@ -46,7 +46,10 @@ suffix <tt>.yaws</tt>
 <br>
 
 <p>
-The embedded erlang code can return the following values:
+The embedded erlang code can return the different values which will
+trigger the yaws webserver do different thing. We list some of the simple
+return values here:
+
 <ul>
 <li>
 <p>
@@ -128,6 +131,10 @@ above values. For example the following value
 Can be returned if we want to issue a redirect and set a cookie
 at the same time.
 
+
+
+<p>All possible return values from the out/1 function are documented in
+the man page for <a href="man.yaws?page=yaws_api"> man page for <tt>yaws_api (5)</tt> </a>
 
 
 <h2>The argument</h2>
