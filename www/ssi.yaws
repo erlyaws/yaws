@@ -1,0 +1,83 @@
+
+<erl>
+
+
+box(Str) ->
+    {'div',[{class,"box"}],
+     {pre,[],Str}}.
+
+tbox(T) ->
+    box(lists:flatten(io_lib:format("~p",[T]))).
+
+
+ssi(File) ->
+    {'div',[{class,"box"}],
+     {pre,[],
+      {ssi, File,[],[]}}}.
+
+
+out(A) -> 
+    [{ssi, "HEAD", [],[]},
+     {ssi, "EXHEAD", [],[]},
+     {ehtml,
+      [{h1, [], "Server side includes (with variable expansion)"},
+       
+       {p, [],
+	"This feature is useful when we are writing applications where "
+	"basically the entire page is dynamically generated but we also "
+	"want to include snippets of either html or, even mory typically,"
+	" javascript which is almost static, but not quite."},
+
+       {p, [], "In particular the case with dynamically generated javascript "
+	"can get syntactically ugly. So instead of generating strings in "
+	"the erlang code for the javascripts and returning them as "
+	"{pre_html, Data} tuples, it is more beautifult to keep the "
+	"javascript functions in separate files and include them whith "
+	"the {ssi ... return value."},
+
+       {p, [], "The format of the ssi statement is:"},
+       {br},
+       box("{ssi, File, Delimiter, Bindings}"),
+       
+       {p, [],"The ssi structure can occur in two radically different places"
+	" but with identical semantics. It can be a return value in the "
+	" out/1 function and it is a specially treated return value "
+	"in ehtml output, here is an example of an odd return value "
+	"from out/1"},
+       
+       tbox([{ssi, "ssi_ex1", "%", [{"a", "gazzonk"}]},
+	     {ehtml,
+	      [
+	       {h1, "a Header"},
+	       {ssi, "ssi_ex1", "%", [{"a", "zippo"}]}]}]),
+
+       {p,[], "The file ssi_ex1 contains the following text:"},
+       ssi("ssi_ex1"),
+       {p, [], "And the following ehtml output:"},
+       tbox({ehtml,[{ssi, "ssi_ex1", "%", [{"a", "Godzilla"}]}]}),
+       {p,[], "Generates the following output"},
+       {'div',[{class,"box"}],
+	{pre,[],
+	 {ssi, "ssi_ex1", "%", [{"a", "Godzilla"}]}}},
+       {p, [], "And so does the following out/1 function"},
+       box("out(A) -> [{ssi, \"ssi_ex1\", \"%\", [{\"a\", \"Godzilla\"}]}]."),
+       {p,[], "So this is the way to do when we want to embed dynamic content"
+	" deep inside an ehtml structure, but the content isn't representable"
+	" as ehtml. This is typiucally the case for dynamically generated "
+	" javascript"}
+
+      ]}].
+    
+    
+
+
+
+
+</erl>
+
+
+</html>
+
+
+
+

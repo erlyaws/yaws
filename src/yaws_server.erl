@@ -240,8 +240,8 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
     file:make_dir(Tdir0),
     set_writeable(Tdir0),
     Tdir = Tdir0 ++ Gconf#gconf.uid,
-    file:make_dir(Tdir0),
-    set_writeable(Tdir0),
+    file:make_dir(Tdir),
+    set_writeable(Tdir),
 
     case (catch yaws_log:uid_change(Gconf)) of
 	ok ->
@@ -409,7 +409,7 @@ set_dir_mode(Dir, Mode) ->
     case file:read_file_info(Dir) of
 	{ok, FI} ->
 	    file:write_file_info(Dir, FI#file_info{mode = Mode});
-	Err ->
+	_Err ->
 	    error_logger:format("Failed to read_file_info(~s)~n", [Dir])
     end.
 
@@ -726,9 +726,9 @@ handle_method_result(Res, CliSock, IP, GS, SC, Req, H, Num) ->
 		      fun(X) -> case X of
 				    {header, Header} ->
 					yaws:accumulate_header(Header);
-				    Something ->
+				    _Something ->
 					?Debug("Got ~p in page option list.",
-					    [Something])
+					    [_Something])
 				end
 		      end,
 		      Options);
@@ -750,7 +750,7 @@ peername(CliSock, nossl) ->
     inet:peername(CliSock).
 
 
-deepforeach(F, []) ->
+deepforeach(_F, []) ->
     ok;
 deepforeach(F, [H|T]) ->
     deepforeach(F, H),
@@ -759,7 +759,7 @@ deepforeach(F, X) ->
     F(X).
 
 
-pick_sconf(GS, H, Group, ssl) ->
+pick_sconf(_GS, _H, Group, ssl) ->
     hd(Group);
 
 pick_sconf(GS, H, Group, nossl) ->
@@ -970,7 +970,7 @@ bad_request(CliSock, GC, SC, Req, Head) ->
     flush(SC, CliSock, Head#headers.content_length),
     deliver_400(CliSock, Req, GC, SC).
 
-handle_extension_method(Method, CliSock, GC, SC, Req, Head) ->
+handle_extension_method(_Method, CliSock, GC, SC, Req, Head) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     not_implemented(CliSock, GC, SC, Req, Head).
 
@@ -1016,14 +1016,14 @@ handle_request(CliSock, GC, SC, ARG, N) ->
 						% picked the wrong
 						% sconf.
 	    deliver_501(CliSock, Req, GC, SC);
-	{scheme, Scheme, RequestString} ->
+	{scheme, _Scheme, _RequestString} ->
 	    deliver_501(CliSock, Req, GC, SC);
 	_ ->                                    % for completeness
 	    deliver_403(CliSock, Req, GC, SC)
     end.
 
 
-is_auth(Req_dir, H, [] ) -> true;
+is_auth(_Req_dir, _H, [] ) -> true;
 is_auth(Req_dir, H, [{Auth_dir, #auth{realm=Realm, users=Users}} | T ] ) ->
     case lists:prefix(Auth_dir, Req_dir) of
 	true ->
@@ -1589,9 +1589,9 @@ stream_loop_discard(CliSock, GC, SC) ->
 						% might end up if we
 						% don't!
     receive
-	{streamcontent, Cont} ->
+	{streamcontent, _Cont} ->
 	    stream_loop_discard(CliSock, GC, SC) ;
-	{streamcontent_with_ack, From, Cont} ->	% acknowledge after send
+	{streamcontent_with_ack, From, _Cont} -> % acknowledge after send
 	    From ! {self(), streamcontent_ack},
 	    stream_loop_discard(CliSock, GC, SC) ;
 	endofstreamcontent ->
@@ -1699,7 +1699,7 @@ handle_out_reply({html, Html}, _LineNo, _YawsFile, _SC, _A) ->
     accumulate_chunk(Html);
 
 handle_out_reply({ehtml, E}, _LineNo, _YawsFile, SC, A) ->
-    case safe_ehtml_expand(E) of
+    case safe_ehtml_expand(E, SC) of
 	{ok, Val} ->
 	    accumulate_chunk(Val);
 	{error, ErrStr} ->
@@ -1736,6 +1736,16 @@ handle_out_reply({status, Code},_LineNo,_YawsFile,_SC,_A) when integer(Code) ->
 
 handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _SC, _A) ->
     exit(normal);
+
+handle_out_reply({ssi, File,Delimiter,Bindings}, LineNo, YawsFile, SC, A) ->
+    case ssi(File, Delimiter, Bindings, SC) of
+	{error, Rsn} ->
+	    L = ?F("yaws code at~s:~p had the following err:~n~p",
+		   [YawsFile, LineNo, Rsn]),
+	    handle_crash(A, L, SC);
+	OutData ->
+	    accumulate_chunk(OutData)
+    end;
 
 handle_out_reply(break, _LineNo, _YawsFile, _SC, _A) ->
     break;
@@ -1813,6 +1823,69 @@ handle_out_reply_l([], _LineNo, _YawsFile, _SC, _A, Res) ->
     Res.
 
 
+%% fast server side include with macrolike variable bindings expansion
+ssi(File, Delimiter, Bindings) ->
+    ssi(File, Delimiter, Bindings, get(sc)).
+ssi(File, Delimiter, Bindings, SC) ->
+    Key = {ssi, File, Delimiter},
+    io:format("Key:~p~n", [Key]),
+    case ets:lookup(SC#sconf.ets, Key) of
+	[] ->
+	    case file:read_file(
+		   filename:join([SC#sconf.docroot, File])) of
+		{ok, Bin} ->
+		    D =delim_split_file(Delimiter,binary_to_list(Bin),data,[]),
+		    io:format("delim: ~p~n",[D]),
+		    ets:insert(SC#sconf.ets,{Key,D}),
+		    ssi(File, Delimiter, Bindings, SC);
+		{error, Rsn} ->
+		    {error,Rsn}
+	    end;
+	[{_, Parts}] ->
+	    expand_parts(Parts, Bindings, [])
+    end.
+
+
+expand_parts([{data, D} |T], Bs, Ack) ->	    
+    expand_parts(T, Bs, [D|Ack]);
+expand_parts([{var, V} |T] , Bs, Ack) ->
+    case lists:keysearch(V, 1, Bs) of
+	{value, {_, Val}} ->
+	    expand_parts(T, Bs, [Val|Ack]);
+	false ->
+	    {error, ?F("No variable binding found for ~p", [V])}
+    end;
+expand_parts([], _,Ack) ->
+    lists:reverse(Ack).
+
+	    
+
+delim_split_file([], Data, _, Ack) ->
+    [{data, Data}];
+delim_split_file(Del, Data, State, Ack) ->
+    case delim_split(Del, Del, Data, []) of
+	{H, []} when State == data ->
+	    %% Ok, last chunk
+	    lists:reverse([{data, H} | Ack]);
+	{H, T} when State == data ->
+	    delim_split_file(Del, T, var, [{data, H}|Ack]);
+	{H, []} when State == var ->
+	    lists:reverse([{var, H} | Ack]);
+	{H, T} when State == var ->
+	    delim_split_file(Del, T, data, [{var, H}|Ack])
+    end.
+
+
+delim_split([H|T], Odel, [H|T1], Ack) ->
+    delim_split(T,Odel,T1,Ack);
+delim_split([], _Odel, T, Ack) ->
+    {lists:reverse(Ack),T};
+delim_split([H|_T],Odel, [H1|T1], Ack) when H /= H1 ->
+    delim_split(Odel, Odel, T1, [H1|Ack]);
+delim_split(_,_,[],Ack) ->
+    {lists:reverse(Ack),[]}.
+
+
 
 %% Erlang yaws code crashed, display either the
 %% actual crash or a custimized error message 
@@ -1825,7 +1898,7 @@ handle_crash(A, L, SC) ->
 	    accumulate_chunk(Str),
 	    break;
 	{ehtml, Term} ->
-	    case safe_ehtml_expand(Term) of
+	    case safe_ehtml_expand(Term, SC) of
 		{error, Reason} ->
 		    yaws:elog("~s", [Reason]),
 		    %% Aghhh, yet another user crash :-(
@@ -2024,13 +2097,13 @@ deliver_file(CliSock, GC, SC, Req, UT, Range) ->
 	    end
     end.
 
-deliver_small_file(CliSock, GC, SC, Req, UT, Range) ->
+deliver_small_file(CliSock, GC, SC, _Req, UT, Range) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT, urltype}]),
     Fd = ut_open(UT),
     case Range of
 	all ->
 	    Bin = ut_read(Fd);
-	{fromto, From, To, Tot} ->
+	{fromto, From, To, _Tot} ->
 	    Length = To - From + 1,
 	    <<_:From/binary, Bin:Length/binary, _/binary>> = ut_read(Fd)
     end,
@@ -2039,7 +2112,7 @@ deliver_small_file(CliSock, GC, SC, Req, UT, Range) ->
     deliver_accumulated(CliSock, GC, SC),
     done_or_continue().
     
-deliver_large_file(CliSock, GC, SC, Req, UT, Range) ->
+deliver_large_file(CliSock, GC, SC, _Req, UT, Range) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT, urltype}]),
     case deliver_accumulated(CliSock, GC, SC) of
 	discard -> ok;
@@ -2422,7 +2495,7 @@ suffix_type(SC, L) ->
     case R of
 	{regular, _} ->
 	    R;
-	{X, Mime} -> 
+	{X, _Mime} -> 
 	    case lists:member(X, SC#sconf.allowed_scripts) of
 		true -> R;
 		false -> {forbidden, []}
@@ -2492,7 +2565,8 @@ load_and_run(Mod) ->
     end.
 
 
-safe_ehtml_expand(X) ->
+safe_ehtml_expand(X, SC) ->
+    put(sc,SC),
     case (catch ehtml_expand(X)) of
 	{'EXIT', R} ->
 	    {error, io_lib:format("<pre> ~n~p~n </pre>~n", [R])};
