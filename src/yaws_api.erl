@@ -24,7 +24,9 @@
 -export([setcookie/2, setcookie/3, setcookie/4, setcookie/5]).
 -export([pre_ssi_files/2,  pre_ssi_string/1, pre_ssi_string/2,
 	 htmlize/1, htmlize_char/1, f/2, fl/1]).
--export([find_cookie_val/2, secs/0, url_decode/1]).
+-export([find_cookie_val/2, secs/0, 
+	 url_decode/1, 
+	 url_encode/1]).
 -export([get_line/1, mime_type/1]).
 -export([stream_chunk_deliver/2, stream_chunk_end/1]).
 -export([new_cookie_session/1,
@@ -677,6 +679,32 @@ url_decode([H|T]) ->
     [H |url_decode(T)];
 url_decode([]) ->
     [].
+
+
+
+url_encode([H|T]) ->
+    if
+	H =< $a, $z =< H ->
+	    [H|url_decode(T)];
+	H =< $A, $Z =< H ->
+	    [H|url_decode(T)];
+	H =< $1, $9 =< H ->
+	    [H|url_decode(T)];
+	H == $_ ->
+	    [H|url_decode(T)];
+	true ->
+	    case yaws:integer_to_hex(H) of
+		[X, Y] ->
+		    [$%, X, Y | url_decode(T)];
+		[X] ->
+		    [$%, 0, X | url_decode(T)]
+	    end
+    end;
+
+url_encode([]) ->
+    [].
+
+
 
 redirect(Url) -> [{redirect, Url}].
 

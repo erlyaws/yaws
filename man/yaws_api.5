@@ -286,6 +286,21 @@ a list of lists of \fI#sconf{}\fR records. Each sublist must
 contain \fI#sconf{}\fR records with the same IP/Port listen address.
 
 
+
+.TP
+\fBurl_decode(Str)\fR
+Decode url-encoded string. A URL ncoded string is a string where
+all alfa numeric characters and the the character _ are preserved
+and all other characters are encode as "%XY" where X and Y are the
+hex values of the least respective most significat 4 bits in the 8 bit 
+character.
+
+.TP
+\fBurl_encode(Str)\fR
+Url-encodes a string. All URLs in HTML documents must be URL encoded.
+
+
+
 .SH RETURN VALUES from out/1
 .PP
 The out/1 function can return different values to control the behavior
