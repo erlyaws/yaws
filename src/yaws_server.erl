@@ -688,11 +688,29 @@ handle_method_result(Res, CliSock, IP, GS, SC, Req, H, Num) ->
 	done ->
 	    maybe_access_log(IP, SC, Req, H),
 	    {ok, Num+1};
-	{page, Page} ->		    
+	{page, P} ->		    
 	    put(outh, #outh{}),
-						% Should we set the
-						% Content-Location
-						% header here?
+	    case P of
+		{Options, Page} ->
+						% We got additional headers
+						% for the page to deliver.
+						%
+						% Might be useful for
+						% `Vary' or
+						% `Content-Location'.
+		    deepforeach(
+		      fun(X) -> case X of
+				    {header, Header} ->
+					yaws:accumulate_header(Header);
+				    Something ->
+					?Debug("Got ~p in page option list.",
+					    [Something])
+				end
+		      end,
+		      Options);
+		Page ->
+		    ok
+	    end,
 	    handle_method_result(
 	      call_method(Req#http_request.method, 
 			CliSock, GS#gs.gconf, SC#sconf{appmods=[]}, 
@@ -707,6 +725,14 @@ peername(CliSock, ssl) ->
 peername(CliSock, nossl) ->
     inet:peername(CliSock).
 
+
+deepforeach(F, []) ->
+    ok;
+deepforeach(F, [H|T]) ->
+    deepforeach(F, H),
+    deepforeach(F, T);
+deepforeach(F, X) ->
+    F(X).
 
 
 pick_sconf(GS, H, Group, ssl) ->
