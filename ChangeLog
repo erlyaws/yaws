@@ -1,3 +1,228 @@
+2004-05-26 13:26  klacke
+
+	* src/yaws_ctl.erl: ""
+
+2004-05-26 13:16  klacke
+
+	* man/yaws.1, scripts/yaws.template, src/yaws_ctl.erl: added a
+	'yaws -ls' command that lists all yaws servers on localhost
+
+2004-05-25 18:04  klacke
+
+	* c_src/setuid_drv.c, src/yaws.erl, src/yaws_ctl.erl: ""
+
+2004-05-25 16:10  klacke
+
+	* scripts/yaws.conf.template, src/yaws_server.erl: patch from Jimmy
+	Olgeni to handle embedded mode better, no ctl process is started
+	for an embedded node
+
+2004-05-25 15:53  klacke
+
+	* vsn.mk, src/yaws_log.erl: don't create logs when we're using
+	nolog
+
+2004-05-25 13:47  klacke
+
+	* src/yaws_server.erl: ""
+
+2004-05-25 13:26  klacke
+
+	* Makefile, src/yaws_server.erl, www/EXHEAD, www/appmods.yaws,
+	www/code/Makefile, www/code/myappmod.erl: documented appmods as an
+	example
+
+2004-05-25 10:40  klacke
+
+	* include/yaws.hrl, src/yaws.erl, src/yaws_config.erl,
+	src/yaws_server.erl: Rewrote url splitting (again), and made the
+	redir to index.{html,yaws} go away, it was a bad decision to redir
+	to index.yaws when it exists and the url doesn't contain it, also
+	reworked appmods a bit
+
+2004-05-24 15:37  klacke
+
+	* include.mk.in, debian/rules, scripts/Install, scripts/Makefile,
+	scripts/yaws.conf, src/Makefile: debian patch from David Welton
+	applied
+
+2004-05-12 15:59  klacke
+
+	* www/ybed.erl: [no log message]
+
+2004-04-23 16:07  jbevemyr
+
+	* src/yaws_config.erl: Fixed appmod problem.
+
+2004-04-22 22:40  mbj
+
+	* src/yaws_ls.erl: use the same file list sort in subdirs as in
+	parent dir
+
+2004-04-22 21:55  mbj
+
+	* src/: yaws_log.erl, yaws_server.erl: added username from
+	authorization header to access log
+
+2004-04-22 19:53  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed mail delete bug.
+
+2004-04-16 00:02  klacke
+
+	* www/: news, news: ""
+
+2004-04-15 23:54  klacke
+
+	* src/: yaws_server.erl, yaws_server.erl: ""
+
+2004-04-15 23:48  klacke
+
+	* src/yaws_config.erl: ""
+
+2004-04-15 23:41  klacke
+
+	* vsn.mk: ""
+
+2004-04-15 23:41  klacke
+
+	* man/yaws.conf.5, src/yaws_config.erl, src/yaws_server.erl: new
+	appmod config syntax and ~user bug fixes
+
+2004-04-06 14:31  klacke
+
+	* src/yaws.erl: ""
+
+2004-04-02 15:44  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed attachement reading bug in
+	webmail.
+
+2004-04-02 00:20  jbevemyr
+
+	* applications/wiki/src/wiki.erl: [no log message]
+
+2004-03-31 23:27  jbevemyr
+
+	* src/yaws_server.erl: Removed debug printout.
+
+2004-03-31 23:24  jbevemyr
+
+	* applications/wiki/src/wiki.erl: Added support for uploading
+	multiple files in one go.
+
+2004-03-30 20:49  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed error message in webmail.
+
+2004-03-27 16:45  cschultz
+
+	* src/yaws_server.erl: Fixed previous fix, sorry.  Will have to
+	clean this up later...
+
+2004-03-25 14:28  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed problem with error messages
+	in webmail.
+
+2004-03-23 00:39  cschultz
+
+	* src/yaws_server.erl: Bug fix:  Large posts and SSL.  (NB
+	yaws:cli_recv may return less data than requested.) (plus an
+	unrelated code cleanup)
+
+2004-03-22 16:54  klacke
+
+	* scripts/yaws.template: ""
+
+2004-03-22 15:08  klacke
+
+	* src/yaws_ctl.erl: ""
+
+2004-03-22 14:56  klacke
+
+	* scripts/yaws.template, src/yaws_ctl.erl: ""
+
+2004-03-22 14:45  klacke
+
+	* src/yaws_ctl.erl: ""
+
+2004-03-22 02:03  cschultz
+
+	* src/yaws.erl: Bug fix: We cannot keep the connection alive if we
+	are dynamically compressing the content (and therfore do not know
+	its length in advance) and cannot use chunked transfer.
+
+2004-03-21 22:49  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed delete of email problem
+	introduced in yaws rewrite.
+
+2004-03-21 21:30  klacke
+
+	* TODO, vsn.mk, scripts/yaws.template, src/yaws_server.erl,
+	www/favicon.ico, scripts/yaws.template: ""
+
+2004-03-21 06:04  lpsmith
+
+	* src/yaws_ls.erl: Fixed XSS vulnerability
+
+2004-03-20 23:08  jbevemyr
+
+	* applications/wiki/src/wiki.erl: Fixed spelling error which
+	resulted in javascript error in wiki.
+
+2004-03-20 23:03  jbevemyr
+
+	* src/yaws_server.erl: Fixed completely broken get_more_post_data.
+	Probably cleanup gone bad :-)
+
+2004-03-20 20:24  jbevemyr
+
+	* applications/wiki/src/: wiki.erl, wiki_yaws.erl: Fixed bug
+	introduced by change of query format.
+
+2004-03-20 20:24  jbevemyr
+
+	* src/yaws_server.erl: Fixed multipart bug.
+
+2004-03-20 09:43  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed sorting problem for webmail
+
+2004-03-19 15:35  klacke
+
+	* src/yaws_config.erl: ""
+
+2004-03-19 13:56  cschultz
+
+	* src/yaws.erl: Bug fix in uid_change_files.
+
+2004-03-19 10:50  cschultz
+
+	* src/yaws_ls.erl: trivial CSS fix
+
+2004-03-18 17:26  klacke
+
+	* src/yaws_server.erl: [no log message]
+
+2004-03-18 16:04  klacke
+
+	* src/yaws_server.erl: cgi bug
+
+2004-03-18 15:43  klacke
+
+	* www/shopingcart/shopcart.erl: [no log message]
+
+2004-03-18 15:33  klacke
+
+	* www/news: [no log message]
+
+2004-03-18 15:28  klacke
+
+	* ChangeLog, vsn.mk, src/yaws_api.erl, src/yaws_server.erl,
+	www/news: ""
+
 2004-03-18 14:45  klacke
 
 	* src/yaws_config.erl: ""

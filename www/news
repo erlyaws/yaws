@@ -1,3 +1,6 @@
+Thu May 27, 2004 Version 1.47 released
+Appmods were slightly broken in 1.46
+
 Wed May 26, 2004 Version 1.46 released
 Bugfix release. Several fixes to different parts of the web server. No new features.
 Debian  support (David Welton)
