@@ -137,6 +137,8 @@ collect_url([], L)            -> {reverse(L), []}.
 
 collect_mail(S=[$ |_], L)      -> {reverse(L), S};
 collect_mail(S=[$)|_], L)      -> {reverse(L), S};
+collect_mail(S=[$<|_], L)      -> {reverse(L), S};
+collect_mail(S=[$>|_], L)      -> {reverse(L), S};
 collect_mail(S=[$.,$ |_], L)   -> {reverse(L), S};
 collect_mail(S=[$.,$\n|_], L)  -> {reverse(L), S};
 collect_mail(S=[$.,$\r|_], L)  -> {reverse(L), S};
@@ -266,12 +268,12 @@ add_dl([], Env, L, Doc) ->
 count_indent_levels([$-|T], N) -> count_indent_levels(T, N+1);
 count_indent_levels(T, N)      -> {N, T}.
 
-adjust_indents(Env, K, L) ->
+adjust_indents(Env, K, L) when Env#env.n == K ->
     {Env, L};
 adjust_indents(Env, K, L) when Env#env.n > K ->
     adjust_indents(Env#env{n=Env#env.n-1}, K, reverse("</ul>", L));
 adjust_indents(Env, K, L) when K > Env#env.n ->
-    adjust_indents(Env#env{n=Env#env.n-1}, K, reverse("<ul>", L)).
+    adjust_indents(Env#env{n=Env#env.n+1}, K, reverse("<ul>", L)).
 
 clear_line(Env, L) when Env#env.f1==true ->
     clear_line(Env#env{f1=false}, reverse("</b>", L));
@@ -290,7 +292,7 @@ clear_line(Env, L) ->
 char_style(b, Env, L) when Env#env.f1 == false ->
     {Env#env{f1=true},reverse("<b>", L)};
 char_style(b, Env, L) when Env#env.f1 == true ->
-    {Env#env{f1=false},reverse("<b>", L)};
+    {Env#env{f1=false},reverse("</b>", L)};
 char_style(i, Env, L) when Env#env.f2 == false ->
     {Env#env{f2=true},reverse("<i>", L)};
 char_style(i, Env, L) when Env#env.f2 == true ->
