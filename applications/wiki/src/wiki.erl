@@ -29,7 +29,8 @@
 	 editTag/3, finalDeletePage/3, storePage/3, putPassword/3,
 	 storeNewPage/3, previewPage/3, previewTagged/3, copyFiles/3,
 	 deleteFiles/3, addFile/3, storeTagged/3, fixupFiles/3,
-	 sendMeThePassword/3, storeFiles/3, showOldPage/3]).
+	 sendMeThePassword/3, storeFiles/3, showOldPage/3,
+	 changePassword/3, changePassword2/3]).
 
 -export([show/1, ls/1, h1/1, read_page/2, background/1, p/1,
 	 str2urlencoded/1, session_manager_init/2]).
@@ -313,7 +314,7 @@ addFileInit(Params, Root, Prefix) ->
 		    input("submit", "add", "Add"),
 		    input("button", "Cancel",
 			  "parent.location='showPage.yaws?node="++
-			  Page++"'")])
+			  str2urlencoded(Page)++"'")])
 	     ]).
     
 -record(addfile, {
@@ -735,21 +736,26 @@ showHistory(Params, Root, Prefix) ->
     end.
 
 redirect({node, Page}, Prefix) ->
-    {redirect_local, Prefix++"showPage.yaws?node="++Page}.
+    {redirect_local, Prefix++"showPage.yaws?node="++str2urlencoded(Page)}.
 
 redirect_edit(Page, Sid, Password, Prefix) ->
     UrlSid = str2urlencoded(Sid),
     UrlPW = str2urlencoded(Password),
-    {redirect_local, Prefix++"editPage.yaws?node="++Page++
+    {redirect_local, Prefix++"editPage.yaws?node="++str2urlencoded(Page)++
      "&sid="++UrlSid++"&password="++UrlPW}.
 
 redirect_create(Page, Sid, Prefix) ->
     UrlSid = str2urlencoded(Sid),
-    {redirect_local, Prefix++"createNewPage.yaws?node="++Page++
+    {redirect_local, Prefix++"createNewPage.yaws?node="++str2urlencoded(Page)++
      "&sid="++UrlSid}.    
 
+redirect_change(Page, Prefix) ->
+    {redirect_local, Prefix++"changePassword.yaws?node="++
+     str2urlencoded(Page)}.    
+
 mk_history_links([{C,Time,Who}|T], Page, N) ->
-    [["<li>",i2s(N)," modified on <a href='showOldPage.yaws?node=",Page,
+    [["<li>",i2s(N)," modified on <a href='showOldPage.yaws?node=",
+      str2urlencoded(Page),
       "&index=",i2s(N),
      "'>",format_time(Time),"</a> size ", i2s(size(C)), " bytes",
      "\n"]|mk_history_links(T, Page, N+1)];
@@ -1173,9 +1179,10 @@ edit1(Page, Password, Content, Sid) ->
 	       "f1",
 	       [textarea("text", 25, 75, Txt),
 		p(),
-		input("submit", "preview", "preview"),
-		input("submit", "delete", "delete"),
-		input("submit", "cancel", "cancel"),
+		input("submit", "preview", "Preview"),
+		input("submit", "delete", "Delete"),
+		input("submit", "cancel", "Cancel"),
+		input("submit", "chpasswd", "Password"),
 		input("hidden", "node", Page),
 		input("hidden", "password", Password),
 		hr()])
@@ -1321,11 +1328,68 @@ editTag(Params, Root, Prefix) ->
 	    show({no_such_page, Page})
     end.
 
+changePassword(Params, Root, Prefix) ->
+    Page     = getopt(node, Params),
+
+    wiki_templates:template(
+      "Edit", bgcolor("white"),"",
+      [h1(Page),
+       p("Change password setting for page - to remove a password leave "
+	 "the new passwords blank."),
+       form("POST", "changePassword2.yaws?node="++
+	    str2urlencoded(Page), "f",
+	    ["<table>\n"
+	     "<tr> <td align=left> Old password: </td>"
+	     "<td aligh=left> ", password_entry("password", 8),
+	     "</td></tr>\n"
+	     "<tr> <td align=left>New password: </td>"
+	     "<td aligh=left> ", password_entry("password1", 8),
+	     "</td></tr>\n"
+	     "<tr> <td align=left>Reconfirm password: </td>"
+	     "<td aligh=left> ", password_entry("password2", 8),
+	     "</td></tr>\n"
+	     "</table>",
+	     input("submit", "change", "Change"),
+	     script("document.f.password.focud();")
+	    ]
+	   )
+      ]).
+
+
+changePassword2(Params, Root, Prefix) ->
+    Page     = getopt(node, Params),
+    OldPw    = getopt(password, Params),
+    Pw1      = getopt(password1, Params),
+    Pw2      = getopt(password2, Params),
+
+    {File,FileDir} = page2filename(Page, Root),
+    case file:read_file(File) of
+	{ok, Bin} ->
+	    {wik002,Pwd,Email,Time,Who,Txt,Files,Patches} =
+		bin_to_wik002(Bin),
+	    if
+		OldPw == Pwd ->
+		    if
+			Pw1 == Pw2 ->
+			    Ds = {wik002,Pw1,Email,Time,Who,Txt,Files,Patches},
+			    B = term_to_binary(Ds),
+			    file:write_file(File, B),
+			    redirect({node, Page}, Prefix);
+			true ->
+			    show({password_mismatch, Page})
+		    end;
+		 true ->
+		    show({bad_password, Page})
+	    end;
+	Error ->
+	    show({no_such_page, Page})
+    end.
 
 previewPage(Params, Root, Prefix) ->
     Page     = getopt(node, Params),
     Cancel   = getopt(cancel, Params),
     Delete   = getopt(delete, Params),
+    Change   = getopt(chpasswd, Params),
     Sid      = getopt(sid, Params),
 
     if
@@ -1335,6 +1399,9 @@ previewPage(Params, Root, Prefix) ->
 	Delete /= undefined ->
 	    session_end(Sid),
 	    deletePage(Params, Root, Prefix);
+	Change /= undefined ->
+	    session_end(Sid),
+	    redirect_change(Page, Prefix);
 	true ->
 	    previewPage1(Params, Root, Prefix)
     end.
@@ -1561,7 +1628,8 @@ banner(File, Password) ->
 	   [
 	    mk_image_link("showPage.yaws?node=home", "home.gif", "Home",
 			  "Go to initial page"),
-	    mk_image_link("showHistory.yaws?node=" ++ File, "history.gif",
+	    mk_image_link("showHistory.yaws?node=" ++ str2urlencoded(File),
+			  "history.gif",
 			  "History",
 			  "History of page evolution"),
 	    mk_image_link("allPages.yaws", "allpages.gif",
@@ -1573,10 +1641,12 @@ banner(File, Password) ->
 	    mk_image_link("wikiZombies.yaws", "zombies.gif",
 			  "Zombies",
 			  "Unreachable pages"),
-	    mk_image_link("editPage.yaws?node=" ++ File, "editme.gif",
+	    mk_image_link("editPage.yaws?node=" ++ str2urlencoded(File),
+			  "editme.gif",
 			  "Edit Me",
 			  "Edit this page"),
-	    mk_image_link("editFiles.yaws?node=" ++ File, "editfiles.gif",
+	    mk_image_link("editFiles.yaws?node=" ++ str2urlencoded(File),
+			  "editfiles.gif",
 			  "Edit Files",
 			  "Edit attached files")
 	   ])].
@@ -1655,7 +1725,8 @@ bgcolor(C) ->
 
 top_header(Page) ->
     F1 = add_blanks_nicely(Page),
-    ["<h1><a href='allRefsToMe.yaws?node=",Page,"'>",F1,"</a></h1>\n"].
+    ["<h1><a href='allRefsToMe.yaws?node=",str2urlencoded(Page),
+     "'>",F1,"</a></h1>\n"].
 
 add_blanks_nicely([H1,H2|T]) ->
     case {little_letter(H1),
