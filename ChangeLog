@@ -1,3 +1,279 @@
+2003-12-18 17:23  klacke
+
+	* include/yaws.hrl, src/yaws_config.erl, src/yaws_revproxy.erl,
+	src/yaws_server.erl: revproxy fixes
+
+2003-12-17 23:26  klacke
+
+	* src/yaws_api.erl, src/yaws_server.erl, www/arg.yaws,
+	www/man.yaws, www/news, www/readcookie.yaws, www/readpcookie.yaws:
+	""
+
+2003-12-17 15:21  klacke
+
+	* www/shopingcart/: shopcart.erl, shopcart.erl: ""
+
+2003-12-17 15:18  klacke
+
+	* include/yaws_api.hrl, man/yaws_api.5, src/yaws_api.erl,
+	src/yaws_compile.erl, www/index.yaws, www/man.yaws, www/post.yaws,
+	www/query.yaws, www/redirect.yaws, www/ssi.yaws: postvar(),
+	queryvar(), ssi docs
+
+2003-12-17 01:19  klacke
+
+	* vsn.mk, include/yaws_api.hrl, www/configuration.yaws,
+	www/dynamic.yaws, www/index.yaws, www/man.yaws, www/query.yaws,
+	www/ssi.yaws, www/ssi/dynamic.1, www/ssi/dynamic.2,
+	www/ssi/dynamic.3: ssi include with var expansion + docs
+
+2003-12-16 20:23  klacke
+
+	* src/yaws_api.erl, src/yaws_server.erl, www/EXHEAD, www/ssi.yaws,
+	www/ssi_ex1: ""
+
+2003-12-16 10:23  jbevemyr
+
+	* src/yaws_server.erl: Fixed redirect local to handle {net_path, _}
+
+2003-12-16 00:44  klacke
+
+	* include/yaws.hrl, include/yaws_api.hrl, src/Makefile,
+	src/yaws.erl, src/yaws_api.erl, src/yaws_config.erl,
+	src/yaws_revproxy.erl, src/yaws_server.erl, src/yaws_ssl.erl,
+	src/yaws_ticker.erl, www/TOPTAB, www/arg.yaws, www/embed.yaws,
+	www/post.yaws, www/readcookie.yaws, www/readpcookie.yaws,
+	www/session.yaws, www/session1.yaws, www/setcookie.yaws,
+	www/setpcookie.yaws, www/upload0.yaws: first almost working vsn of
+	revproxy
+
+2003-12-09 17:45  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed session starvation problem.
+
+2003-12-05 16:09  jbevemyr
+
+	* include/yaws_api.hrl, src/yaws_api.erl, src/yaws_html.erl: Added
+	set cookie parser
+
+2003-12-03 14:51  klacke
+
+	* src/yaws_compile.erl: -yawsfile patcg from tobbe
+
+2003-12-03 10:01  jbevemyr
+
+	* src/yaws_html.erl: [no log message]
+
+2003-11-28 12:06  jbevemyr
+
+	* src/yaws_api.erl: Fixed byg in ehtml_attr_expander.
+
+2003-11-27 12:49  jbevemyr
+
+	* src/: Makefile, yaws_html.erl: Added html->ehtml parser.
+
+2003-11-27 12:43  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed problem with quoted
+	addresses
+
+2003-11-25 01:08  klacke
+
+	* src/yaws_server.erl: changed behaviour when yaws cannor bind() to
+	addr, to just log and not fail startup completely
+
+2003-11-25 00:50  klacke
+
+	* www/: EXHEAD, embed.yaws, ybed.erl: ""
+
+2003-11-24 15:06  klacke
+
+	* src/: yaws.erl, yaws_api.erl: timezone fix, crashed on odd
+	timezones
+
+2003-11-24 14:47  klacke
+
+	* src/yaws_api.erl: mime type patch by Rob Schmersel
+
+2003-11-20 22:24  jbevemyr
+
+	* applications/mail/src/mail.erl: Various webmail fixes.
+
+2003-11-14 12:08  jbevemyr
+
+	* include/yaws.hrl: Security fix: turned off tilde expand and
+	directory listing by default.
+
+2003-11-11 19:49  jbevemyr
+
+	* applications/mail/TODO: [no log message]
+
+2003-11-11 19:41  jbevemyr
+
+	* src/yaws_api.erl: Fixed problem with checking for quotes in
+	attribute values. You can now use {check,Key,Value} to make ehtml
+	choose the proper qote for the Value part. Without the check
+	keyword the default quote will be used.
+
+2003-11-11 19:39  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed problem with locked mail
+	boxes.
+
+2003-11-10 23:39  klacke
+
+	* vsn.mk: [no log message]
+
+2003-11-10 23:28  klacke
+
+	* Makefile, applications/mail/README,
+	applications/mail/src/Makefile, applications/mail/src/defs.hrl,
+	applications/mail/src/mail.erl,
+	applications/mail/src/yaws-webmail.conf, src/yaws.erl,
+	src/yaws_api.erl, src/yaws_config.erl, www/contribs.yaws: added
+	proper config file support to the webmail
+
+2003-11-10 22:09  klacke
+
+	* ChangeLog, applications/webmail/HEAD,
+	applications/webmail/Makefile, applications/webmail/TOP,
+	applications/webmail/att.yaws, applications/webmail/blurulr3.gif,
+	applications/webmail/blurulr4.gif,
+	applications/webmail/compose.yaws, applications/webmail/index.yaws,
+	applications/webmail/logout.yaws, applications/webmail/mail.gif,
+	applications/webmail/mstil.css,
+	applications/webmail/pop3lib_cli.erl,
+	applications/webmail/read_mail.yaws,
+	applications/webmail/rmail.yaws,
+	applications/webmail/smtp_client.erl,
+	applications/webmail/test.erl, applications/webmail/webmail.erl,
+	applications/webmail/webmail.hrl,
+	applications/webmail/webmail_login.yaws,
+	applications/webmail/webmail_login_post.yaws,
+	applications/webmail/ylwmail.gif: [no log message]
+
+2003-11-10 00:08  jbevemyr
+
+	* applications/mail/src/mail.erl: Mail address handling cleaned up.
+
+2003-11-09 23:01  jbevemyr
+
+	* src/yaws_api.erl: Fixed bug in url_encode and modified ehtml to
+	use alternate quote for string attributes if the quote character
+	occurs in the string.
+
+2003-11-09 22:01  jbevemyr
+
+	* scripts/redhat/yaws.init.d: Redhat init script bug.
+
+2003-11-05 23:44  jbevemyr
+
+	* applications/mail/src/mail.erl: WebMail improvements - line
+	wrapping and best content type selection for multipart/alternative
+
+2003-11-04 23:09  jbevemyr
+
+	* applications/mail/src/mail.erl: Added support for displaying
+	forwarded messages.
+
+2003-11-04 23:08  jbevemyr
+
+	* src/yaws_api.erl: Extended parse_multi to cover one more special
+	case for MIME parsing.
+
+2003-11-04 14:44  cschultz
+
+	* src/yaws.erl: Removed dead code.
+
+2003-11-04 11:28  mikl
+
+	* applications/wiki/src/: wiki.erl, wiki_templates.erl: The action
+	bar can now be configured in the wiki_templates modules.
+
+2003-11-04 01:16  jbevemyr
+
+	* src/yaws_api.erl: Exposed parse_multipart, now used by mail app
+	as well.
+
+2003-11-04 01:15  jbevemyr
+
+	* applications/mail/src/mail.erl: Added basic multipart support.
+
+2003-11-01 16:04  mikl
+
+	* applications/wiki/: Makefile, start.sh, wiki.conf: Added a
+	process to release an independant tarball of the Wiki. This will
+	allow optional standalone distribution, while depending on a local
+	install of Yaws.
+
+2003-10-30 15:26  jbevemyr
+
+	* applications/mail/: mail/reply.yaws, src/mail.erl: Added message
+	delete in webmail
+
+2003-10-30 00:22  jbevemyr
+
+	* applications/mail/: Makefile, README, include.mk, vsn.mk,
+	mail/compose.yaws, mail/headers.yaws, mail/index.yaws,
+	mail/listop.yaws, mail/login.yaws, mail/logout.yaws,
+	mail/mail.yaws, mail/reply.yaws, mail/send.yaws,
+	mail/showmail.yaws, mail/spacer.gif, mail/tool-delete.gif,
+	mail/tool-div.gif, mail/tool-newmail.gif, mail/tool-send.gif,
+	mail/view-mark.gif, src/Makefile, src/defs.hrl, src/mail.erl,
+	src/mail_vsn.template: Added a another WebMail example application
+	:-). Includes a cookie based session server, among other things.
+
+2003-10-27 21:04  jbevemyr
+
+	* src/yaws_server.erl: Added support for {redirect_local,
+	{rel_path, Path}}
+
+2003-10-26 22:04  mikl
+
+	* applications/wiki/src/wiki_to_html.erl: Fixed an ugly bug I
+	previously introduced (Due to some thing in the code that need
+	refactoring.
+
+2003-10-26 21:30  mikl
+
+	* applications/wiki/src/: wiki_plugin_menu.erl, wiki_to_html.erl:
+	Menu plugin is now working; Links in menu are presented without the
+	"category" prefix.
+
+2003-10-22 23:56  mikl
+
+	* applications/wiki/src/: Makefile, utils.erl, wiki.erl,
+	wiki_format_txt.erl, wiki_utils.erl: The plugin menu is now
+	working. You can add list of page based on their Prefix.
+
+2003-10-22 22:42  mikl
+
+	* applications/wiki/src/: Makefile, utils.erl, wiki.erl,
+	wiki_utils.erl: Added last date-time of modification of a page.
+
+2003-10-20 18:22  mikl
+
+	* applications/wiki/: src/Makefile, src/wiki_format_txt.erl,
+	src/wiki_plugin_backlinks.erl, src/wiki_plugin_dummy.erl,
+	src/wiki_utils.erl, wiki/FormattingWikiPages.wob: Started coding
+	the plugin architecture: dummy and backlinks are provided as
+	example
+
+2003-10-20 10:58  mikl
+
+	* applications/wiki/: src/wiki_format_txt.erl,
+	wiki/WikiPreferences.wob, wiki/WikiPreferences.files/ftp.png,
+	wiki/WikiPreferences.files/http.png,
+	wiki/WikiPreferences.files/https.png,
+	wiki/WikiPreferences.files/interwiki.png,
+	wiki/WikiPreferences.files/mailto.png,
+	wiki/WikiPreferences.files/url.png: Added Wiki icons for external
+	http links and mailto links
+
+2003-10-04 20:46  klacke
+
+	* www/index.yaws: ""
+
 2003-10-04 20:36  klacke
 
 	* configure, www/contribs.yaws: ""
