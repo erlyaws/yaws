@@ -55,6 +55,7 @@
 	      h1 = false,
 	      h2 = false,
 	      h3 = false,
+	      u = false,
 	      n = 0, 
 	      dl = false
 	     }).
@@ -82,13 +83,16 @@ format_txt([$\\,H|T], Env, L, Doc) ->
 format_txt([$*|T], Env, L, Doc) ->
     {Env1, L1} = char_style(b, Env, L),
     format_txt(T, Env1, L1, Doc);
-format_txt([$=,$=,$=|T], Env, L, Doc) ->
+format_txt([$_|T], Env, L, Doc) ->
+    {Env1, L1} = char_style(u, Env, L),
+    format_txt(T, Env1, L1, Doc);
+format_txt([$=,$=,$=,$=|T], Env, L, Doc) ->
     {Env1, L1} = char_style(h1, Env, L),
     format_txt(T, Env1, L1, Doc);
-format_txt([$=,$=|T], Env, L, Doc) ->
+format_txt([$=,$=,$=|T], Env, L, Doc) ->
     {Env1, L1} = char_style(h2, Env, L),
     format_txt(T, Env1, L1, Doc);
-format_txt([$=|T], Env, L, Doc) ->
+format_txt([$=,$=|T], Env, L, Doc) ->
     {Env1, L1} = char_style(h3, Env, L),
     format_txt(T, Env1, L1, Doc);
 format_txt([${,${|T], Env, L, Doc) ->
@@ -301,6 +305,10 @@ clear_line(Env, L) when Env#env.n /= 0 ->
 clear_line(Env, L) ->
     {Env, L}.
 
+char_style(u, Env, L) when Env#env.u == false ->
+    {Env#env{u=true},reverse("<u>", L)};
+char_style(u, Env, L) when Env#env.u == true ->
+    {Env#env{u=false},reverse("</u>", L)};
 char_style(b, Env, L) when Env#env.f1 == false ->
     {Env#env{f1=true},reverse("<b>", L)};
 char_style(b, Env, L) when Env#env.f1 == true ->

@@ -1,4 +1,4 @@
-SUBDIRS	=	src
+SUBDIRS	= src scripts
 include ./include.mk
 
 

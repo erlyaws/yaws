@@ -31,7 +31,7 @@ To maintain
 
 There are a number of useful scripts in the script directory.
 
-updateWiki.sh - takes a number of wiki directories and updates
+updateWiki    - takes a number of wiki directories and updates
 		the .yaws files etc
 
 getPassword   - takes a path to a wob file as argument. Will print
