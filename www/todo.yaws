@@ -30,6 +30,7 @@ out(A) ->
 <li> HTTP trailer support
 <li> man pages for yaws as well as yaws.conf
 <li> #fragments in URLs
+<li> make sure yaws vsn gets inserted correctly in http output
 </ul>
 
 

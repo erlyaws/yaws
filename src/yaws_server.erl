@@ -32,6 +32,21 @@
 	     reqs = 0}).    %% number of HTTP requests
 
 
+
+
+-record(urltype, {type,   %% error | yaws | regular | directory | dotdot
+		  finfo,
+		  path,
+		  fullpath,
+		  dir,     %% relative dir where the path leads to
+		  data,    %% Binary | FileDescriptor | DirListing | undefined
+		  mime,    %% MIME type
+		  q,       %% query for GET requests
+		  wwwauth = undefined  %% or #auth{}
+		 }).
+
+
+
 %%%----------------------------------------------------------------------
 %%% API
 %%%----------------------------------------------------------------------
@@ -218,7 +233,9 @@ terminate(Reason, State) ->
     ok.
 
 
-%% we 
+%% we search and setup www authenticate for each directory
+%% specified as an auth directory
+
 setup_auth(SC, E) ->
     ok.
 
@@ -506,11 +523,14 @@ get_headers(CliSock, Req, GC, H) ->
 	    get_headers(CliSock, Req, GC, H#headers{keep_alive = X});
 	{ok, {http_header, Num, 'Content-Length', _, X}} ->
 	    get_headers(CliSock, Req, GC, H#headers{content_length = X});
+	{ok, {http_header, Num, 'Authorization', _, X}} ->
+	    get_headers(CliSock, Req, GC, 
+			H#headers{authorization = parse_auth(X)});
 	{ok, http_eoh} ->
 	    H;
 	{ok, Other} ->
 	    ?Debug("OTHER header ~p~n", [Other]),
-	    get_headers(CliSock, Req, GC, H);
+	    get_headers(CliSock, Req, GC, H#headers{other=[X|H#header.other]});
 	Err ->
 	    exit(normal)
     
@@ -558,20 +578,31 @@ make_arg(CliSock, Head, Req, GC, SC) ->
 
 
 
--record(urltype, {type,   %% error | yaws | regular | directory | dotdot
-		  finfo,
-		  path,
-		  fullpath,
-		  data,    %% Binary | FileDescriptor | DirListing | undefined
-		  mime,    %% MIME type
-		  q,       %% query for GET requests
-		  wwwauth = false  %% or #auth{}
-		 }).
-
-
 handle_request(CliSock, GC, SC, Req, H, ARG) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     UT =  url_type(GC, SC,P=get_path(Req#http_request.path)),
+    if
+	SC#sconf.authdirs == [] ->
+	    handle_ut(CliSock, GC, SC, Req, H, ARG, UT);
+	Adirs ->
+	    %% we have authentication enabled, check auth
+	    case lists:member(UT#urltype.dir, SC#sconf.authdirs) of
+		false ->
+		    handle_ut(CliSock, GC, SC, Req, H, ARG, UT);
+		true ->
+		    case is_authenticated(SC, UT, Req, H) of
+			true ->
+			    handle_ut(CliSock, GC, SC, Req, H, ARG, UT);
+			{false, Realm} ->
+			    deliver_401(CliSock, Req, GC, Realm)
+		    end
+	    end
+    end.
+
+
+
+
+handle_ut(CliSock, GC, SC, Req, H, ARG, UT) ->
     case UT#urltype.type of
 	error ->
 	    deliver_404(CliSock, GC, SC, Req);
@@ -587,6 +618,77 @@ handle_request(CliSock, GC, SC, Req, H, ARG) ->
     end.
 
 	
+
+-record(auth,
+	{dir,
+	 realm = "",
+	 type = "Basic",
+	 users
+	}).
+
+
+parse_auth(Dir) ->
+    case file:consult([Dir, [$/|".yaws_access"]]) of
+	{ok, [{realm, Realm} |TermList]} ->
+	    {ok, #auth{dir = Dir,
+		       realm Realm,
+		       users = TermList}};
+	{ok, TermList} ->
+	    {ok, #auth{dir = Dir,
+		       users = TermList}};
+	Err ->
+	    Err
+    end.
+
+
+
+is_authenticated(UT, Req, H) ->
+    case ets:info(auth_tab, size) of
+	undefined ->
+	    ets:new(auth_tab, [public, set, named_table]);
+	_ ->
+	    ok
+    end,
+    N = now_secs(),
+    case ets:lookup(auth_tab, UT#urltype.dir) of
+	[{Dir, Auth, Then}] when Then+200 < N ->
+	    case H#header.authorization of
+		undefined ->
+		    {false, Auth#auth.realm};
+		{User, Password} ->
+		    
+
+
+
+
+		    
+
+
+
+
+
+
+	    
+
+
+    
+
+
+
+
+
+
+deliver_401(CliSock, Req, GC, Realm) ->
+    H = make_date_and_server_headers(),
+    B = list_to_binary("<html> <h1> 401 authentication needed  "
+		       "</h1></html>"),
+    D = [make_400(401), H, 
+	 make_connection_close(true),
+	 make_www_authenticate(Realm),
+	 make_content_length(size(B)), crnl()],
+    send_headers_and_data(true, CliSock, D, B, GC),
+    done.
+    
 
 
 deliver_403(CliSock, Req, GC) ->
@@ -1065,6 +1167,11 @@ make_connection_close(false) ->
 make_chunked() ->
     ["Transfer-Encoding: chunked",  crnl()].
 
+make_www_authenticate(Realm) ->
+    ["WWW-Authenticate: Basic realm=\"", Realm, [$"|crnl()]].
+
+
+
 now_secs() ->
     {M,S,_}=now(),
     (M*1000000)+S.
@@ -1096,6 +1203,7 @@ url_type(GC, SC, Path) ->
 		    UT
 	    end
     end.
+
 
 update_total(E, Path) ->
     case (catch ets:update_counter(E, {urlc_total, Path}, 1)) of
@@ -1153,32 +1261,40 @@ cleanup_cache(E, num) ->
 do_url_type(Droot, Path) ->
     case split_path(Droot, Path, [], []) of
 	slash ->
-	    case file:read_file_info([Droot, Path, "/index.yaws"]) of
-		{ok, FI} ->
-		    #urltype{type = yaws,
-			     finfo = FI,
-			     mime = "text/html",
-			     fullpath = ?f([Droot, Path,"/index.yaws"])};
-		_ ->
-		    case file:read_file_info([Droot, Path, "/index.html"]) of
-			{ok, FI} ->
-			    #urltype{type = regular,
-				     finfo = FI,
-				     mime = "text/html",
-				     fullpath =?f([Droot,Path,"/index.html"])};
-			_ ->
-			    case file:list_dir([Droot, Path]) of
-				{ok, List} ->
-				    #urltype{type = directory, data=List};
-				Err ->
-				    #urltype{type=error}
-			    end
-		    end
-	    end;
+	    maybe_return_dir(Droot, lists:flatten(Path));
 	dotdot ->  %% generate 403 forbidden
 	    #urltype{type=dotdot};
-	Other ->
-	    Other
+	OK ->
+	    OK
+    end.
+
+
+maybe_return_dir(DR, FlatPath) ->
+    case file:read_file_info([Droot, Path, "/index.yaws"]) of
+	{ok, FI} ->
+	    #urltype{type = yaws,
+		     finfo = FI,
+		     mime = "text/html",
+		     dir = FlatPath,
+		     fullpath = ?f([Droot, Path,"/index.yaws"])};
+	_ ->
+	    case file:read_file_info([Droot, Path, "/index.html"]) of
+		{ok, FI} ->
+		    #urltype{type = regular,
+			     finfo = FI,
+			     mime = "text/html",
+			     dir = FlatPath,
+			     fullpath =?f([Droot,Path,"/index.html"])};
+		_ ->
+		    case file:list_dir([Droot, Path]) of
+			{ok, List} ->
+			    #urltype{type = directory, 
+				     dir = FlatPath,
+				     data=List};
+			Err ->
+			    #urltype{type=error}
+		    end
+	    end
     end.
 
 
@@ -1198,46 +1314,54 @@ split_path(DR, [$?|Tail], Comps, Part) ->
 split_path(DR, [$/|Tail], Comps, Part)  when Part /= [] ->
     ?Debug("Tail=~s Part=~s", [Tail,Part]),
     split_path(DR, [$/|Tail], [lists:reverse(Part) | Comps], []);
-split_path(DR, [$#|Tail], Comps, Part) ->  %% fragment
-    ret_reg_split(DR, Comps, Part, []);
-split_path(DR, [$~|Tail], Comps, Part) ->  %% fragment
+split_path(DR, [$~|Tail], Comps, Part) ->  %% user dir
     ret_user_dir(DR, Comps, Part, Tail);
 split_path(DR, [H|T], Comps, Part) ->
     split_path(DR, T, Comps, [H|Part]).
 
- %% http:/a.b.c/~user URLs
-ret_user_dir(DR, [], "/", User) ->
-    ?Debug("User = ~p~n", [User]),
-    %% FIXME doesn't work if passwd contains ::
-    Home = lists:nth(6, string:tokens(os:cmd(["grep ", User, " /etc/passwd "]),[$:])),
-    L = [Home, "/public_html/index.html"],
-    case file:read_file_info(L) of
-	{ok, FI} -> 
-	    #urltype{mime = "text/html",
-		     finfo = FI,
-		     type = regular,
-		     fullpath = lists:flatten(L)};
-	Err ->
-	    #urltype{type=error, data=Err}
-    end.
 
 
-ret_reg_split(DR, Comms, File, Query) ->
-    ?Debug("ret_reg_split(~p)", [[DR, Comms, File]]),
-    L = [DR, lists:reverse(Comms), lists:reverse(File)],
+%% http:/a.b.c/~user URLs
+ret_user_dir(DR, [], "/", Upath) ->
+    ?Debug("User = ~p~n", [Upath]),
+    {User, Path} = parse_user_path(DR, Upath, []),
+
+    %% FIXME doesn't work if passwd contains :: 
+    %% also this is unix only
+
+    Home = lists:nth(6, string:tokens(
+			  os:cmd(["grep ", User, " /etc/passwd "]),[$:])),
+    DR2 = [Home, "/public_html"],
+    do_url_type(DR2, Path). %% recurse
+
+
+
+parse_user_path(DR, [], User) ->
+    {lists:reverse(User), []};
+parse_user_path(DR, [$/], User) ->
+    {lists:reverse(User), []};
+parse_user_path(DR, [$/|Tail], User) ->
+    {lists:reverse(User), Tail};
+parse_user_path(DR, [H|T], User) ->
+    parse_user_path(DR, T, [H|User]).
+
+
+
+ret_reg_split(DR, Comps, File, Query) ->
+    ?Debug("ret_reg_split(~p)", [[DR, Comps, File]]),
+    Dir = lists:reverse(Comps),
+    FlatDir = lists:flatten(Dir),
+    L = [DR, Dir, lists:reverse(File)],
     case file:read_file_info(L) of
 	{ok, FI} when FI#file_info.type == regular ->
 	    {X, Mime} = suffix_type(File),
-	    #urltype{type=X, finfo=FI,
+	    #urltype{type=X, 
+		     finfo=FI,
+		     dir = FlatDir,
 		     fullpath = lists:flatten(L),
 		     mime=Mime, q=Query};
 	{ok, FI} when FI#file_info.type == directory ->
-	    case file:list_dir(L) of
-		{ok, List} ->
-		    #urltype{type=directory, data=List};
-		Err ->
-		    #urltype{type=error, data=Err}
-	    end;
+	    maybe_return_dir(DR, FlatDir);
 	Err ->
 	    #urltype{type=error, data=Err}
     end.

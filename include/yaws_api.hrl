@@ -39,7 +39,10 @@
 	  accept_ranges,
 	  cookie = [],
 	  keep_alive,
-	  content_length}).
+	  content_length,
+	  authorization,
+	  other = []   %% misc other headers
+	 }).
 
 
 
