@@ -2,7 +2,7 @@
 <erl>
 
 out(A) -> 
-    Head = yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]),
+    Head = yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]),
     
     L = yaws_api:parse_query(A),
     {Code, F} = case lists:keysearch(file, 1, L) of

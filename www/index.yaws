@@ -74,7 +74,7 @@ Yaws is fast, it delivers 3000 static/dynamic pages/sec on my 2Ghz home box.
 <li><p> some backwards incompatible changes such as ssl config and
 yaws_api:parse_post_data/1. See the docs for details.
 <li><p> Arg rewrite, customized errors etc.
-<li><p> Lots of new documentation
+<li><p> Lots of new documentation and new examples
 <li><p> Optimized ehtml generation
 
 </ul>
