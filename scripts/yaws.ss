@@ -32,6 +32,7 @@ interactive="";
 trace="";
 conf="";
 runmod="";
+sname="";
 
 while [ $# -gt 0 ] 
 do
@@ -69,6 +70,9 @@ do
 	   -v) 
 	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws printversion;
 		exit normal;;
+           -sname)
+		sname=" -sname $1 "
+		shift;;
 	    *)
 		help
        esac
@@ -76,6 +80,6 @@ done
 
 [ -z "$daemon" ] && [ -z "$interactive" ] && help
 
-exec $erl ${daemon} -pa ${yawsdir}/ebin  ${debug} -s yaws $trace $conf $runmod
+exec $erl ${daemon} -pa ${yawsdir}/ebin  ${sname} ${debug} -s yaws $trace $conf $runmod
 
 
