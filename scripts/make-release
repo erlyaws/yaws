@@ -8,7 +8,11 @@ echo tagging and packing release ${YAWS_VSN}
 
 CVS_RSH=ssh
 Y=`echo ${YAWS_VSN} | sed 's/\./-/g'`
-test -f ./make-release || echo "need to be in scripts dir"; exit 1
+
+if [ ! -f ./make-release ]; then
+    echo "need to be in scripts dir"; exit 1;
+fi
+
 
 cd ../..
 
