@@ -96,7 +96,11 @@ get_req("HEAD " ++ Tail) ->
 
 get_req("TRACE " ++ Tail) ->
     get_req(skip_space(Tail), #http_request{method = 'TRACE'});
-get_req([]) ->
+
+get_req("OPTIONS " ++ Tail) ->
+    get_req(skip_space(Tail), #http_request{method = 'OPTIONS'});
+
+get_req(_) ->
     done.
 
 
