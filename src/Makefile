@@ -23,7 +23,8 @@ MODULES=yaws \
 	yaws_vsn \
 	mime_type_c \
 	mime_types \
-	yaws_session_server
+	yaws_session_server \
+	yaws_404
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app
 
@@ -33,10 +34,9 @@ ERLC_FLAGS+=-W +debug_info $(DEBUG_FLAGS) -pa ../../yaws
 # Targets
 #
 
+all: yaws_vsn.erl $(EBIN_FILES) 
 
 $(EBIN_FILES) : ../include/yaws.hrl ../include/yaws_api.hrl
-
-all: yaws_vsn.erl $(EBIN_FILES) 
 
 yaws_vsn.erl:	yaws_vsn.template
 	. ../vsn.mk; sed "s/%VSN%/${YAWS_VSN}/" < yaws_vsn.template > yaws_vsn.erl

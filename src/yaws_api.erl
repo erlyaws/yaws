@@ -31,7 +31,7 @@
 	 cookieval_to_opaque/1,
 	 print_cookie_sessions/0,
 	 replace_cookie_session/2, delete_cookie_session/1]).
--export([setconf/2]).
+-export([setconf/2, set_status_code/1]).
 
 %% these are a bunch of function that are useful inside
 %% yaws scripts
@@ -744,3 +744,8 @@ setconf(GC, Groups) ->
 	E ->
 	    E
     end.
+
+
+set_status_code(Code) ->
+    put(status_code, Code).
+

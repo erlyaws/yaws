@@ -980,7 +980,13 @@ is_authenticated(SC, UT, _Req, H) ->
 handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
     case UT#urltype.type of
 	error ->
-	    deliver_404(CliSock, GC, SC, Req, SC);
+	    %deliver_404(CliSock, GC, SC, Req, SC);
+	    A2 = ARG#arg{querydata = UT#urltype.q},
+	    DCC = req_to_dcc(Req),
+	    make_dyn_headers(DCC, Req),
+
+	    do_appmod(SC#sconf.errormod_404, CliSock, GC, SC, 
+		      Req, H, [A2, GC, SC], UT, N);
 	directory ->
 	    P = UT#urltype.dir,
 	    yaws_ls:list_directory(CliSock, UT#urltype.data, P, Req, GC, SC);
@@ -988,16 +994,19 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    deliver_file(CliSock, GC, SC, Req, H, UT);
 	yaws ->
 	    do_yaws(CliSock, GC, SC, Req, H, 
-		    ARG#arg{querydata = UT#urltype.q}, UT, N);
+		    [ARG#arg{querydata = UT#urltype.q}], UT, N);
 	forbidden ->
 	    deliver_403(CliSock, Req, GC, SC);
 	redir_dir ->
 	     deliver_303(CliSock, Req, GC, SC);
 	appmod ->
+	    DCC = req_to_dcc(Req),
+	    make_dyn_headers(DCC, Req),
+
 	    {Mod, PathData} = UT#urltype.data,
 	    A2 = ARG#arg{appmoddata = PathData,
 			 querydata = UT#urltype.q},
-	    do_appmod(Mod, CliSock, GC, SC, Req, H, A2, UT, N)
+	    do_appmod(Mod, CliSock, GC, SC, Req, H, [A2], UT, N)
     end.
 
 	
@@ -1095,23 +1104,13 @@ deliver_401(CliSock, _Req, GC, Realm, SC) ->
     
 
 
+    
+
+
 deliver_403(CliSock, _Req, GC, SC) ->
     set_status_code(403),
     make_date_and_server_headers(),
     B = list_to_binary("<html> <h1> 403 Forbidden</h1></html>"),
-    make_connection_close(true),
-    make_content_length(size(B)),
-    make_content_type(),
-    accumulate_content(B),
-    deliver_accumulated(#dcc{}, CliSock, GC, SC),
-    done.
-
-
-deliver_404(CliSock, GC, SC,  Req, SC) ->
-    ?TC([{record, GC, gconf}, {record, SC, sconf}]),
-    set_status_code(404),
-    make_date_and_server_headers(),
-    B = not_found_body(get_path(Req#http_request.path), GC, SC),
     make_connection_close(true),
     make_content_length(size(B)),
     make_content_type(),
@@ -1176,7 +1175,7 @@ get_client_data(_CliSock, all, eof, _GC, _) ->
 
 do_appmod(Mod, CliSock, GC, SC, Req, H, ARG, UT, N) ->
     DCC = req_to_dcc(Req),
-    case yaws_call(DCC, 0, "appmod", Mod, out, [ARG], GC,SC, N) of
+    case yaws_call(DCC, 0, "appmod", Mod, out, ARG, GC,SC, N) of
 	{streamcontent, MimeType, FirstChunk} ->
 	    put(content_type, MimeType),
 	    accumulate_chunk(DCC, FirstChunk),
@@ -1228,7 +1227,7 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin, Fd, [H|T],ARG,N) ->
     case H of
 	{mod, LineNo, YawsFile, NumChars, Mod, out} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
-	    case yaws_call(DCC, LineNo, YawsFile, Mod, out, [ARG], GC,SC, N) of
+	    case yaws_call(DCC, LineNo, YawsFile, Mod, out, ARG, GC,SC, N) of
 		break ->
 		    deliver_dyn_file(CliSock, GC, SC, Req, Head, 
 				     UT, DCC, Bin, Fd, [],ARG,N) ;
@@ -1269,18 +1268,9 @@ deliver_dyn_file(CliSock, GC, SC, _Req, _Head,_UT, DCC, _Bin, _Fd, [], _ARG,_N) 
     Ret = case {DCC#dcc.chunked, get(status_code)} of
 	      {false, _} ->
 		  done;
-	      {true, undefined} ->
-		  accumulate_content([crnl(), "0", crnl2()]),
-		  continue;
-	      {true, 200} ->
-		  accumulate_content([crnl(), "0", crnl2()]),
-		  continue;
-	      {true, 303} ->
-		  accumulate_content([crnl(), "0", crnl2()]),
-		  continue;
 	      {true, _} ->
-		  accumulate_header("Connection: close"),
-		  done
+		  accumulate_content([crnl(), "0", crnl2()]),
+		  continue
 	  end,
     case erase(content_type) of
 	undefined ->
@@ -1536,6 +1526,7 @@ deliver_accumulated(DCC, Sock, GC, SC) ->
 	       Content ->
 		   Content
 	   end,
+    ?Debug("Content size=~p~n", [size(list_to_binary([Cont]))]),
     CRNL = if
 	       DCC#dcc.chunked == true ->
 		   [];
@@ -1572,12 +1563,12 @@ yaws_call(DCC, LineNo, YawsFile, M, F, A, GC, SC, N) ->
 				cont = Cont,
 				state = State},
 		    yaws_call(DCC, LineNo, YawsFile, M, F,
-			      [A2], GC, SC, N+size(un_partial(More)));
+			      [A2| tl(A)], GC, SC, N+size(un_partial(More)));
 		Err ->
 		    A2 = A1#arg{clidata = Err,
 				cont = undefined,
 				state = State},
-		    catch apply(M,F,[A2]),
+		    catch apply(M,F,[A2 | tl(A)]),
 		    exit(normal)
 	    end;
 	Else ->
@@ -2228,31 +2219,8 @@ ssl_flush(_Sock, 0) ->
 ssl_flush(Sock, Sz) ->
     split_recv(ssl:recv(Sock, Sz, 1000), Sz).
 
-
-			
-
-
 mtime(F) ->
     F#file_info.mtime.
-
-
-
-not_found_body(Url, GC, SC) ->
-    ?Debug("Sconf: ~p", [?format_record(SC, sconf)]),
-    L = ["<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">"
-	 "<HTML><HEAD>"
-	 "<TITLE>404 Not Found</TITLE>"
-	 "</HEAD><BODY>"
-	 "<H1>Not Found</H1>"
-	 "The requested URL ", 
-	 Url, 
-	 " was not found on this server.<P>"
-	 "<HR>",
-	 yaws:address(GC, SC),
-	 "  </BODY></HTML>"
-	],
-    list_to_binary(L).
-
 
 runmod(Mod) ->
     proc_lib:spawn(?MODULE, load_and_run, [Mod]).
