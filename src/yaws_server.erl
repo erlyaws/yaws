@@ -12,7 +12,11 @@
 %%-export([Function/Arity, ...]).
 
 -behaviour(gen_server).
--include("yaws.hrl").
+
+-include_lib("yaws/include/yaws.hrl").
+-include_lib("yaws/include/yaws_api.hrl").
+-include("yaws_debug.hrl").
+
 -include_lib("kernel/include/file.hrl").
 
 %% External exports

@@ -18,7 +18,12 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
--include("yaws.hrl").
+
+-include_lib("yaws/include/yaws.hrl").
+-include_lib("yaws/include/yaws_api.hrl").
+-include("yaws_debug.hrl").
+
+
 -record(state, {
 	  running,
 	  dir,

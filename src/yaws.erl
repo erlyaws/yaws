@@ -7,7 +7,13 @@
 
 -module(yaws).
 -author('klacke@bluetail.com').
--include ("yaws.hrl").
+
+-include_lib("yaws/include/yaws.hrl").
+-include_lib("yaws/include/yaws_api.hrl").
+-include("yaws_debug.hrl").
+
+
+
 -include_lib("kernel/include/file.hrl").
 
 -compile(export_all).

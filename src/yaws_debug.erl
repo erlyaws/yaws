@@ -8,7 +8,11 @@
 -module(yaws_debug).
 -author('klacke@hyber.org').
 -compile(export_all).
--include("yaws.hrl").
+
+
+-include_lib("yaws/include/yaws.hrl").
+-include_lib("yaws/include/yaws_api.hrl").
+-include("yaws_debug.hrl").
 
 
 typecheck([{record, Rec, X} | Tail], File, Line) when atom(X),

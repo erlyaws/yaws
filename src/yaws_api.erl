@@ -9,7 +9,12 @@
 -author('klacke@hyber.org').
 
 %% -compile(export_all).
--include("yaws.hrl").
+
+
+-include_lib("yaws/include/yaws.hrl").
+-include_lib("yaws/include/yaws_api.hrl").
+-include("yaws_debug.hrl").
+
 
 -export([parse_post_data/1, parse_query/1,
 	 code_to_phrase/1, ssi/2, redirect/1]).
