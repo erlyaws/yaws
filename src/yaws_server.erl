@@ -331,6 +331,11 @@ do_listen(SC) ->
 	    {ssl, ssl:listen(SC#sconf.port, ssl_opts(SC, SSL))}
     end.
 
+set_writeable(Dir) ->
+    {ok, FI} = file:read_file_info(Dir),
+    Mode = 777,
+    file:write_file_info(Dir, FI#file_info{mode = Mode}).
+
 
 %% One server per IP we listen to
 gserv(GC, Group0) ->
@@ -353,6 +358,7 @@ gserv(GC, Group0) ->
 			       catch map(fun(S) ->  S#sconf.servername end, 
 					 Group)]),
 	    file:make_dir("/tmp/yaws"),
+	    set_writeable("/tmp/yaws"),
 	    Tdir = "/tmp/yaws/" ++ GC#gconf.uid,
 	    file:make_dir(Tdir),
 	    {ok, Files} = file:list_dir(Tdir),
