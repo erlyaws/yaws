@@ -1,6 +1,7 @@
 SUBDIRS	=	src scripts man
 include ./include.mk
 
+
 all debug clean install:
 	@set -e ; \
 	  for d in $(SUBDIRS) ; do \
