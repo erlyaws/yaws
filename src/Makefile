@@ -17,7 +17,6 @@ MODULES=yaws \
 	yaws_api \
 	yaws_log \
 	yaws_ls \
-	yaws_ls_all \
 	yaws_debug \
 	yaws_compile \
 	yaws_ctl \
