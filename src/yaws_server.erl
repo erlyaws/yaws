@@ -1024,8 +1024,6 @@ deliver_303(CliSock, Req, GC, SC) ->
 	       end,
 
     set_status_code(303),
-    make_connection_close(true),
-    make_content_length(0),
     accumulate_header(["Location: ", Scheme,
 		       servername_sans_port(SC#sconf.servername), 
 		       PortPart, get_path(Req#http_request.path), "/"]),
@@ -1247,6 +1245,9 @@ deliver_dyn_file(CliSock, GC, SC, _Req, _Head,_UT, DCC, _Bin, _Fd, [], _ARG,_N) 
 	      {true, 200} ->
 		  accumulate_content([crnl(), "0", crnl2()]),
 		  continue;
+	      {true, 303} ->
+		  accumulate_content([crnl(), "0", crnl2()]),
+		  continue;
 	      {true, _} ->
 		  accumulate_header("Connection: close"),
 		  done
@@ -1385,7 +1386,6 @@ handle_out_reply(break, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     break;
 
 handle_out_reply({redirect_local, Path}, _DCC, _LineNo, _YawsFile, SC, A) ->
-    erase(acc_headers),
     Scheme = case SC#sconf.ssl of
 		 undefined ->
 		     "http://";
@@ -1402,20 +1402,16 @@ handle_out_reply({redirect_local, Path}, _DCC, _LineNo, _YawsFile, SC, A) ->
 		   {_SSL, Port} ->
 		       io_lib:format(":~w",[Port])
 	       end,
-
     set_status_code(redirect_code(A)),
-    make_content_length(0),
     accumulate_header(["Location: ", Scheme,
 		       servername_sans_port(SC#sconf.servername), 
 		       PortPart, Path]),
-    ok;
+    break;
 
 handle_out_reply({redirect, URL}, _DCC, _LineNo, _YawsFile, _SC, A) ->
-    erase(acc_headers),
     set_status_code(redirect_code(A)),
-    make_content_length(0),
     accumulate_header(["Location: ", URL]),
-    ok;
+    break;
 
 handle_out_reply(ok, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     ok;
@@ -1835,6 +1831,8 @@ make_content_length(FI) ->
     accumulate_header(["Content-Length: ", integer_to_list(Size)]).
 make_content_type() ->
     make_content_type("text/html").
+make_content_type(no_content_type) ->
+    ok;
 make_content_type(MimeType) ->
     accumulate_header(["Content-Type: ", MimeType]).
 
