@@ -30,7 +30,8 @@ MODULES=yaws \
 	yaws_404 \
 	yaws_revproxy \
 	yaws_html  \
-	yaws_log_file_h
+	yaws_log_file_h \
+	yaws_rss
 
 
 
