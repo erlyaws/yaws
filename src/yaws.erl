@@ -1879,8 +1879,8 @@ uid_change_files(GC, Dir, Files) ->
 		Int when integer(Int) ->
 		    file:change_owner(Dir, Int),
 		    lists:foreach(
-		      fun(F) ->
-			      F=filename:join([Dir,F]),
+		      fun(FN) ->
+			      F=filename:join([Dir,FN]),
 			      case file:change_owner(F, Int) of
 				  ok -> ok;
 				  {error, Rsn} ->
