@@ -9,7 +9,9 @@ all debug clean install:
 	    if [ -f $$d/Makefile ]; then ( cd $$d && $(MAKE) $@ ) || exit 1 ; fi ; \
 	  done
 
-
+# mremond: The build of the doc is better optionnal (latex is not always installed on servers)
+docs:
+	( cd doc && $(MAKE) docs )
 
 conf_clean:
 	-rm include.mk config.cache config.status config.log 2> /dev/null

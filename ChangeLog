@@ -1,3 +1,17 @@
+2003-04-10 08:10  mikl
+
+	* include.mk.in, Makefile, README, scripts/Install,
+	scripts/Makefile, src/Makefile, www/shopingcart/Makefile,
+	doc/Makefile, ChangeLog: Small modifications of the build
+	system. The build of the documentation is now optional to simplify
+	build on server where Latex is not present. You now have to
+	explicitly type 'make docs' before install.
+	I also removed the hard coded path in the build Makefile. The path
+	of the install is now fully configurable with configure options
+	(--localstatedir for /var and --sysconfdir for /etc). This is
+	usefull to install everything in a specific directory and use the
+	Stow tool to create symlinks to /usr/local/
+
 2003-03-06 12:22  klacke
 
 	* Makefile, src/yaws_compile.erl, src/yaws_server.erl: skip empty

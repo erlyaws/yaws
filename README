@@ -9,8 +9,23 @@ To build and install
 
 2. ./configure --prefix=/usr/local
 
+Note: If can also change the target directory for etc and var directories by using:
+  --localstatedir=DIR for files that should go in /var
+  --sysconfdir=DIR for files that should go in /etc
+This way you can precisely control where you install the software (This is
+usefull for computers where you do not have right access to the standard system
+dirs). It is now possible to install everything in a single directory
+and use Stow to create symlinks to /usr/local
+For example:
+./configure --prefix=/home/install/yaws-1.01 --localstatedir=/home/install/yaws-1.01/var --sysconfdir=/home/install/yaws-1.01/etc
+
+
 3. make
      This will build the system
+
+  make docs 
+     (Optionnal) You can issue this command if you want to build Yaws
+     documentation.
 
   make local_install
      and perform something we call a

@@ -1,10 +1,11 @@
+include ../../include.mk
 
 all:	shopcart.beam
 	cp shopcart.beam ../../examples/ebin
 debug:
 
 install:	all
-	cp shopcart.beam /var/yaws/ebin
+	cp shopcart.beam $(VARDIR)/yaws/ebin
 
 clean:
 	$(RM) shopcart.beam

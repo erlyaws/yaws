@@ -53,14 +53,14 @@ install: all docsinstall
 	install -d $(INSTALLPREFIX)/lib/yaws/examples/ebin
 	install -d $(INSTALLPREFIX)/lib/yaws/examples/include
 	install -d $(INSTALLPREFIX)/lib/yaws/ebin
-	install -d /var/log/yaws
-	install -d /var/yaws/ebin
+	install -d $(VARDIR)/log/yaws
+	install -d $(VARDIR)/yaws/ebin
 	(cd ..; tar cf - ebin ) | (cd $(INSTALLPREFIX)/lib/yaws; tar xf - )
 	(cd ..; tar cf - include ) | (cd $(INSTALLPREFIX)/lib/yaws; tar xf - )
 
 docsinstall:
-	install -d /var/yaws/www
-	(cd ..; tar cf - www ) | (cd /var/yaws; tar xf - )
+	install -d $(VARDIR)/yaws/www
+	(cd ..; tar cf - www ) | (cd $(VARDIR)/yaws; tar xf - )
 
 
 

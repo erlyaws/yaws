@@ -13,15 +13,16 @@ sh ./mangle ${prefix}/lib/yaws ${erl} yaws.ss ${prefix}/bin/yaws
 install -d ${prefix}/lib/yaws/examples/ebin
 install -d ${prefix}/lib/yaws/examples/include
 chmod +x ${prefix}/bin/yaws
-if [ -f /etc/yaws.conf ]; then
-   t=/etc/yaws.conf.template
+if [ -f ${etcdir}/yaws.conf ]; then
+   t=${etcdir}/yaws.conf.template
 else
-   t=/etc/yaws.conf
+   t=${etcdir}/yaws.conf
 fi
 
 sh ./mangle ${prefix}/lib/yaws ${erl} yaws.conf.template ${t}
 if [ `uname` = Linux ]; then
-    cp yaws.init.d /etc/init.d/yaws
-    chmod +x /etc/init.d/yaws
+    install -d ${etcdir}/init.d
+    cp yaws.init.d ${etcdir}/init.d/yaws
+    chmod +x ${etcdir}/init.d/yaws
 fi
 

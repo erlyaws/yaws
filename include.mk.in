@@ -1,6 +1,8 @@
 ###-*-makefile-*-   ; force emacs to enter makefile-mode
 
 INSTALLPREFIX      = @prefix@
+ETCDIR             = @sysconfdir@
+VARDIR             = @localstatedir@
 
 ERL=@ERL@
 ERLC=@ERLC@
