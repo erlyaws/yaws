@@ -912,7 +912,12 @@ http_get_headers(CliSock, GC, SSL) ->
 	ssl ->
 	    case yaws_ssl:ssl_get_headers(CliSock, GC) of
 		{Req, H, Trail} ->
-		    put(ssltrail, Trail),  %% hack hack hack
+		    case erase(ssltrail) of   %% hack hack hack
+			undefined ->
+			    put(ssltrail, Trail);
+			B ->
+			    put(ssltrail, <<Trail/binary,B/binary>>)
+		    end,
 		    {Req, H};
 		R -> R
 	    end;
