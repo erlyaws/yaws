@@ -208,7 +208,7 @@ formupdate(A) ->
     {ok, Sess, Cookie} = check_cookie(A),
     J = junk(),
     Items = Sess#sess.items,
-    L0 = yaws_api:parse_post_data(A),
+    L0 = yaws_api:parse_post(A),
 
     %% One of the oddities of parse_post_data is that
     %% it will make the first elem an atom, we don't want that
