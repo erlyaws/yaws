@@ -14,7 +14,7 @@
 -export([parse_headers/1, list/1, list/3, ploop/5,pop_request/4, diff/2,
 	 session_manager_init/0, check_cookie/1, check_session/1, 
 	 login/2, display_login/2, stat/3, showmail/2, compose/1, compose/7,
-	 send/6, get_val/3, logout/1, base64_2_str/1, retr/4, 
+	 send/6, send/2, get_val/3, logout/1, base64_2_str/1, retr/4, 
 	 delete/2, send_attachment/2]).
 
 -include("../../../include/yaws_api.hrl").
@@ -137,6 +137,183 @@ delete(Session, ToDelete) ->
 		Session#session.user, Session#session.passwd),
     {redirect_local, {rel_path, "mail.yaws"}}.
 
+-record(send, {param,
+	       last = false,
+	       encoding,
+	       estate="",
+	       boundary="",
+	       from="",
+	       to="",
+	       cc="",
+	       bcc="",
+	       subject="",
+	       message="",
+	       attached="",
+	       port,
+	       session
+	      }).
+
+
+send(Session, A) ->
+    State = prepare_send_state(A#arg.state, Session),
+    case yaws_api:parse_multipart_post(A) of
+ 	{cont, Cont, Res} ->
+	    case catch sendChunk(Res, State) of
+		{done, Result} ->
+		    Result;
+		{cont, NewState} ->
+		    {get_more, Cont, NewState}
+	    end;
+	{result, Res} ->
+	    case catch sendChunk(Res, State#send{last=true}) of
+		{done, Result} ->
+		    Result;
+		{cont, _} ->
+		    format_error("Failed to send email.")
+	    end
+    end.
+
+
+prepare_send_state(undefined, Session) ->
+    #send{session=Session};
+prepare_send_state(State, Session) ->
+    State#send{session=Session}.
+
+sendChunk([{part_body, Data}|Rest], State) ->
+    sendChunk([{body, Data}|Rest], State);
+
+sendChunk([], State) when State#send.last/=true ->
+    {cont, State};
+
+sendChunk([], S0) when S0#send.last==true,
+		       S0#send.boundary/=[] ->
+    if S0#send.estate /= "" ->
+	    smtp_send_b64_final(S0);
+       true ->
+	    ok
+    end,
+    S = S0#send{estate=""},
+    smtp_send_part(S, ["\r\n--",S#send.boundary,"--\r\n"]),
+    smtp_close(S),
+    {done, {redirect_local, {rel_path, "mail.yaws"}}};
+
+sendChunk([], State) when State#send.last==true,
+			  State#send.boundary==[] ->
+    smtp_send_part(State, ["\r\n.\r\n"]),
+    {done, {redirect_local, {rel_path, "mail.yaws"}}};
+
+sendChunk([{head, {to, _Opts}}|Rest], State) ->
+    sendChunk(Rest, State#send{param=to});
+
+sendChunk([{head, {cc, _Opts}}|Rest], State) ->
+    sendChunk(Rest, State#send{param=cc});
+
+sendChunk([{head, {bcc, _Opts}}|Rest], State) ->
+    sendChunk(Rest, State#send{param=bcc});
+
+sendChunk([{head, {subject, _Opts}}|Rest], State) ->
+    sendChunk(Rest, State#send{param=subject});
+
+sendChunk([{head, {message, _Opts}}|Rest], S) ->
+    RTo = parse_addr(S#send.to),
+    RCc = parse_addr(S#send.cc),
+    RBcc = parse_addr(S#send.bcc),
+    Recipients =  RTo ++ RCc ++ RBcc,
+    {ok, Port} = smtp_init(smtpserver(), S#send.session, Recipients),
+    S2 = S#send{port=Port},
+    MailDomain = maildomain(),
+    Session = S#send.session,
+    CommonHeaders = 
+	[mail_header("To: ", S#send.to),
+	 mail_header("From: ", Session#session.user++"@"++MailDomain),
+	 mail_header("Cc: ", S#send.cc),
+	 mail_header("Bcc: ", S#send.bcc),
+	 mail_header("Subject: ", S#send.subject)],
+    {Headers,S3} = 
+	case S#send.attached of
+	    "no" ->
+		{CommonHeaders ++
+		 [mail_header("Content-Type: ", "text/plain"),
+		  mail_header("Content-Transfer-Encoding: ", "8bit")],
+		 S2};
+	    "yes" ->
+	        Boundary="--Next_Part("++boundary_date()++")--",
+		{CommonHeaders ++
+		 [mail_header("Mime-Version: ", "1.0"),
+		  mail_header("Content-Type: ",
+			      "Multipart/Mixed;\r\n boundary=\""++
+			      Boundary++"\""),
+		  mail_header("Content-Transfer-Encoding: ", "8bit")],
+		 S2#send{boundary=Boundary}}
+	    end,
+    smtp_send_part(S3, [Headers,"\r\n"]),
+    case S3#send.attached of
+	"yes" ->
+	    smtp_send_part(S3, ["--",S3#send.boundary,"\r\n",
+				mail_header("Content-Type: ",
+					    "Text/Plain; charset=us-ascii"),
+				mail_header("Content-Transfer-Encoding: ",
+					    "8bit"),
+				"\r\n"]);
+	"no" ->
+	    ok
+    end,
+    sendChunk(Rest, S3#send{param=message});
+
+sendChunk([{head, {attached, _Opts}}|Rest], State) ->
+    sendChunk(Rest, State#send{param=attached});
+
+sendChunk([{head, {File, _Opts}}|Rest], S) when S#send.attached=="no" ->
+    sendChunk(Rest, S#send{param=ignore});
+
+sendChunk([{head, {File, Opts}}|Rest], S0) when S0#send.attached=="yes" ->
+    if S0#send.estate /= "" ->
+	    smtp_send_b64_final(S0);
+       true ->
+	    ok
+    end,
+    S = S0#send{estate=""},
+    FilePath = getopt(filename, Opts),
+    case FilePath of
+       [_|_] ->
+	    FileName = basename(FilePath),
+	    ContentType = content_type(FileName),
+	    smtp_send_part(S, ["\r\n--",S#send.boundary,"\r\n",
+			       mail_header("Content-Type: ", ContentType),
+			       mail_header("Content-Transfer-Encoding: ",
+					   "base64"),
+			       mail_header("Content-Disposition: ",
+					   "attachment; filename=\""++
+					   FileName++"\""),
+			       "\r\n"
+			      ]),
+	    sendChunk(Rest, S#send{param=file});
+	_ ->
+	    sendChunk(Rest, S#send{param=ignore})
+    end;
+
+sendChunk([{body, Data}|Rest], S) ->
+    case S#send.param of
+	to ->
+	    sendChunk(Rest, S#send{to=S#send.to++Data});
+	cc ->
+	    sendChunk(Rest, S#send{cc=S#send.cc++Data});
+	bcc ->
+	    sendChunk(Rest, S#send{bcc=S#send.bcc++Data});
+	subject ->
+	    sendChunk(Rest, S#send{subject=S#send.subject++Data});
+	attached ->
+	    sendChunk(Rest, S#send{attached=S#send.attached++Data});
+	message ->
+	    smtp_send_part(S, Data),
+	    sendChunk(Rest, S);
+	ignore ->
+	    sendChunk(Rest, S);
+	file ->
+	    NewS = smtp_send_b64(S, Data),
+	    sendChunk(Rest, NewS)
+    end.
+
 send(Session, To, Cc, Bcc, Subject, Msg) ->
     tick_session(Session#session.cookie),
     RTo = parse_addr(To),
@@ -182,8 +359,8 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 	{body,[{bgcolor,silver},{marginheight,0},{link,"#000000"},
 	       {topmargin,0},{leftmargin,0},{rightmargin,0},
 	       {marginwidth,0}, {onload, "document.compose.to.focus();"}],
-	 [{form, [{name,compose},{action,"send.yaws"},{method,post}
-%		 ,{enctype,"multipart/form-data"}
+	 [{form, [{name,compose},{action,"send.yaws"},{method,post},
+		  {enctype,"multipart/form-data"}
 		 ],
 	   [{table, [{border,0},{bgcolor,"c0c0c0"},{cellspacing,0},
 		     {width,"100%"}],
@@ -193,6 +370,7 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 	    build_toolbar([{"tool-send.gif",
 			    "javascript:setComposeCmd('send');","Send"},
 			   {"", "mail.yaws", "Close"}]),
+	    {input,[{type,hidden},{name,attached},{value,"no"}],[]},
 	    {table, [{width,645},{border,0},{bgcolor,silver},{cellspacing,0},
 		     {cellpadding,0}],
 	     if
@@ -247,7 +425,8 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 			 {cellpadding,0}],
 		 {tr,[],
 		  {td,[{align,left},{valign,top}],
-		   {textarea, [{wrap,virtual},{name,text},{cols,78},{rows,21}],
+		   {textarea, [{wrap,virtual},{name,message},
+			       {cols,78},{rows,21}],
 		    Msg}}
 		 }
 		}
@@ -280,13 +459,7 @@ file_attachement(N) ->
     {tr,[],
      [{td,[],"File: "},
       {td,[],
-       {input, [{type,"file"},{name,"file"++I},{size,"30"}],[]}},
-      {td,[],
-       {select,[{name,"type"++I}],
-	[{option,[{value,"binary"}],"Binary"},
-	 {option,[{value,"text"}],"Text"}
-	]}
-      }
+       {input, [{type,"file"},{name,"file"++I},{size,"30"}],[]}}
      ]
     }.
     
@@ -1198,7 +1371,7 @@ receive_data(State=#pstate{port=Port,acc=[],more=true,remain=Remain}) ->
 	    {error, Err, State}
     end.
 
-						%
+%%
 
 check_reply(Str, State) ->
     case split_reply(Str, []) of
@@ -1221,7 +1394,7 @@ check_reply(Str, State) ->
 	    {more, State#pstate{acc=Str, more=true}}
     end.
 
-						%
+%%
 
 split_reply("\r\n"++Rest, Pre) ->
     {lists:reverse(Pre), Rest};
@@ -1230,7 +1403,7 @@ split_reply([H|T], Pre) ->
 split_reply("", Pre) ->
     more.
 
-						%
+%%
 
 split_at(L,N) ->
     split_at(L,N,[]).
@@ -1252,6 +1425,38 @@ get_val(Key, L, Default) ->
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+smtp_init(Server, Session, Recipients) ->
+    {ok, Port} = gen_tcp:connect(Server, 25, [{active, false},
+					      {reuseaddr,true},
+					      binary]),
+    smtp_expect(220, Port, "SMTP server does not respond"),
+    smtp_put("MAIL FROM: " ++ Session#session.user++"@"++maildomain(), Port),
+    smtp_expect(250, Port, "Sender not accepted by mail server"),
+    send_recipients(Recipients,Port),
+    smtp_put("DATA", Port),
+    smtp_expect(354, Port, "Message not accepted by mail server."),
+    {ok, Port}.
+
+smtp_close(State) ->
+    smtp_put(".", State#send.port),
+    smtp_expect(250, State#send.port, "Message not accepted by mail server."),
+    gen_tcp:close(State#send.port),
+    ok.
+
+smtp_send_part(State, Data) ->
+    gen_tcp:send(State#send.port, Data).
+
+smtp_send_b64(State, Data0) ->
+    Data = State#send.estate++Data0,
+    {Rest,B64} = str2b64(Data),
+    gen_tcp:send(State#send.port, B64),
+    State#send{estate=Rest}.
+
+smtp_send_b64_final(State) ->
+    Data = State#send.estate,
+    B64 = str2b64_final(Data),
+    gen_tcp:send(State#send.port, B64).
 
 smtp_send(Server, Session, Recipients, Message) ->
     case catch smtp_send2(Server, Session, Recipients, Message) of
@@ -1314,6 +1519,68 @@ smtp_expect(Code, Port, Acc, ErrorMsg) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+str2b64(String) ->
+    str2b64(String, []).
+
+str2b64([], Acc) ->
+    {[], lists:reverse(Acc)};
+str2b64(String, Acc) ->
+    case str2b64_line(String, []) of
+	{ok, Line, Rest} ->
+	    str2b64(Rest, ["\n",Line|Acc]);
+	{more, _} ->
+	    {String, lists:reverse(Acc)}
+    end.
+
+
+%
+
+str2b64_final(String) ->
+    str2b64_final(String, []).
+
+
+str2b64_final([], Acc) ->
+    lists:reverse(Acc);
+str2b64_final(String, Acc) ->
+    case str2b64_line(String, []) of
+	{ok, Line, Rest} ->
+	    str2b64_final(Rest, ["\n",Line|Acc]);
+	{more, Cont} ->
+	    lists:reverse(["\n",str2b64_end(Cont)|Acc])
+    end.
+
+%
+
+str2b64_line(S, []) -> str2b64_line(S, [], 0);
+str2b64_line(S, {Rest,Acc,N}) -> str2b64_line(Rest ++ S, Acc, N).
+
+str2b64_line(S, Out, 76) -> {ok,lists:reverse(Out),S};
+str2b64_line([C1,C2,C3|S], Out, N) ->
+    O1 = e(C1 bsr 2),
+    O2 = e(((C1 band 16#03) bsl 4) bor (C2 bsr 4)),
+    O3 = e(((C2 band 16#0f) bsl 2) bor (C3 bsr 6)),
+    O4 = e(C3 band 16#3f),
+    str2b64_line(S, [O4,O3,O2,O1|Out], N+4);
+str2b64_line(S, Out, N) ->
+    {more,{S,Out,N}}.
+
+%
+
+str2b64_end({[C1,C2],Out,N}) ->
+    O1 = e(C1 bsr 2),
+    O2 = e(((C1 band 16#03) bsl 4) bor (C2 bsr 4)),
+    O3 = e((C2 band 16#0f) bsl 2),
+    lists:reverse(Out, [O1,O2,O3,$=]);
+str2b64_end({[C1],Out,N}) ->
+    O1 = e(C1 bsr 2),
+    O2 = e((C1 band 16#03) bsl 4),
+    lists:reverse(Out, [O1,O2,$=,$=]);
+str2b64_end({[],Out,N}) -> lists:reverse(Out);
+str2b64_end([]) -> [].
+
+%
+
+
 base64_2_str(Str) ->
     b642str(Str, 0, 0, []).
 
@@ -1358,7 +1625,24 @@ d($+)                     -> 62;
 d($/)                     -> 63;
 d(_)                      -> no.
 
+e(X) when X >= 0, X < 26 -> X + $A;
+e(X) when X >= 26, X < 52 -> X + $a - 26;
+e(X) when X >= 52, X < 62 -> X + $0 - 52;
+e(62) -> $+;
+e(63) -> $/;
+e(X) -> erlang:fault({badchar,X}).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+boundary_date() ->
+    dat2str_boundary(yaws:date_and_time()).
+
+dat2str_boundary([Y1,Y2, Mo, D, H, M, S | Diff]) ->
+    lists:flatten(
+      io_lib:format("~s_~2.2.0w_~s_~w_~2.2.0w:~2.2.0w:~2.2.0w_~w",
+		    [weekday(Y1,Y2,Mo,D), D, int_to_mt(Mo),
+		     y(Y1,Y2),H,M,S,random:uniform(5000)])).
 
 date_and_time_to_string(DAT) ->
     case validate_date_and_time(DAT) of
@@ -2017,4 +2301,53 @@ send_attachment(Session, Number) ->
 	    exit(normal)
     end.
 
+%
+
+basename(FilePath) ->
+    case string:rchr(FilePath, $\\) of
+	0 ->
+	    %% probably not a DOS name
+	    filename:basename(FilePath);
+	N ->
+	    %% probably a DOS name, remove everything after last \
+	    string:substr(FilePath, N+1)
+    end.
+
+
+%%
+
+getopt(Key, KeyList) ->
+    getopt(Key, KeyList, undefined).
+
+getopt(Key, KeyList, Default) ->
+    case lists:keysearch(Key, 1, KeyList) of
+	false ->
+	    Default;
+	{value, Tuple} ->
+	    Val = element(2,Tuple),
+	    if 
+		Val == undefined -> Default;
+		true -> Val
+	    end
+    end.
+
+getopt_options(Key, KeyList) ->
+    case lists:keysearch(Key, 1, KeyList) of
+	{value, Tuple} when size(Tuple) >= 3 ->
+	    element(3,Tuple);
+	_ ->
+	    undefined
+    end.
+
+%%
+
+content_type(FileName) ->
+    case yaws_api:mime_type(FileName) of
+	"text/plain" ->
+	    "application/octet-stream";
+	Type ->
+	    Type
+    end.
+
+%%
 

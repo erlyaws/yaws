@@ -41,11 +41,26 @@ function setComposeCmd(val) {
        document.compose.to.focus();
        return;
    }
-   if (document.compose.text.value.length == 0) {
+
+   if (document.compose.message.value.length == 0) {
        alert('The message field must not be empty.');
-       document.compose.text.focus();
+       document.compose.message.focus();
        return;
    }
+
+   /* check for attachements */
+   if (document.compose.file1.value.length > 0) {
+     document.compose.attached.value="yes";
+   } else if (document.compose.file2.value.length > 0) {
+     document.compose.attached.value="yes";
+   } else if (document.compose.file3.value.length > 0) {
+     document.compose.attached.value="yes";
+   } else if (document.compose.file4.value.length > 0) {
+     document.compose.attached.value="yes";
+   } else if (document.compose.file5.value.length > 0) {
+     document.compose.attached.value="yes";
+   }
+      
    document.compose.cmd.value=val;
    document.compose.submit();
 }
