@@ -15,7 +15,8 @@
 	 session_manager_init/0, check_cookie/1, check_session/1, 
 	 login/2, display_login/2, stat/3, showmail/2, compose/1, compose/7,
 	 send/6, send/2, get_val/3, logout/1, base64_2_str/1, retr/4, 
-	 delete/2, send_attachment/2, send_attachment_plain/2, wrap_text/2]).
+	 delete/2, send_attachment/2, send_attachment_plain/2,
+	 wrap_text/2, getopt/3]).
 
 -include("../../../include/yaws_api.hrl").
 -include("defs.hrl").

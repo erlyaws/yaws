@@ -7,32 +7,14 @@ out(A) ->
 	    'POST' ->
 		yaws_api:parse_post(A)
 	end,
-    case {lists:keysearch("user", 1, L),
-	  lists:keysearch("password", 1, L)} of
-	{{value, {_, User}}, {value, {_,Passwd}}} ->
-	    case mail:login(User, Passwd) of
-		{ok, Cookie} ->
-		    [yaws_api:setcookie("mailsession", Cookie),
-		     {redirect_local, {rel_path,"mail.yaws"}}];
-		{error, Reason} ->
-		    mail:display_login(A, Reason)
-	    end;
-	_ ->
-	    mail:display_login(A, "badly formated POST/GET")
+    User = mail:getopt("user", L, ""),
+    Passwd = mail:getopt("password", L, ""),
+    case mail:login(User, Passwd) of
+	{ok, Cookie} ->
+	    [yaws_api:setcookie("mailsession", Cookie),
+	     {redirect_local, {rel_path,"mail.yaws"}}];
+	{error, Reason} ->
+	    mail:display_login(A, Reason)
     end.
 
 </erl>	    
-	 
-
-
-
-
-
-
-
-
-
-
-
-
-
