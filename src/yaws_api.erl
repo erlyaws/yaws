@@ -1104,7 +1104,7 @@ reformat_response(Resp) ->
 
 %% stringify the scheme://host[:port] part of a #url
 reformat_url(U) ->
-    [atom_to_list(U#url.scheme),
+    [yaws:to_string(U#url.scheme),
      "://",
      U#url.host,
      if
@@ -1731,9 +1731,9 @@ request_url(ARG) ->
 		end,
 	 port = case {SC#sconf.ssl, SC#sconf.port} of
 		    {_, 80} ->
-			"";
+			undefined;
 		    {_, 443} ->
-			"";
+			undefined;
 		    {_, Port} ->
 			Port
 		end,
