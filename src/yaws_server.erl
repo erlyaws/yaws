@@ -1273,8 +1273,9 @@ make_x_pad() ->
     "X-Pad: avoid browser bug\r\n".
 
 
-make_non_cache_able() ->
-    []. %% FIXME
+make_non_cache_able() -> 
+    "Cache-Control: no-cache \r\nPragma: no-cache\r\n".
+
 
 make_date_and_server_headers() ->
     [make_date_header(),
