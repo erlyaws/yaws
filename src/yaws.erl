@@ -941,7 +941,6 @@ make_etag_header(FI) ->
 make_etag(FI) ->
     {{Y,M,D}, {H,Min, S}}  = FI#file_info.mtime,
     Inode = FI#file_info.inode,
-    %% pack_ints([M, D, H, Min, S, Inode]).
     pack_bin( <<0:6,(Y band 2#11111111):8,M:4,D:5,H:5,Min:6,S:6,Inode:32>> ).
 
 pack_bin(<<_:6,A:6,B:6,C:6,D:6,E:6,F:6,G:6,H:6,I:6,J:6,K:6>>) ->
@@ -961,29 +960,6 @@ pc(62) ->
 pc(63) ->
     $/.
 
-%% This function seems not to be injective. 
-%% If the original author agrees to change it to the above,
-%% please remove.
-%%
-%% cschultz
-pack_ints(L) ->
-    [$" | pack_ints2(L) ].
-
-
-pack_ints2([0|T]) ->
-    pack_ints2(T);
-pack_ints2([H|T]) ->
-    X = H band 2#11111,
-    Val = X + $A,
-    V2 = if 
-	     Val > $Z, Val < $a ->
-		 Val + ($a-$Z);
-	     true ->
-		 Val
-	 end,
-    [V2 |pack_ints2([H bsr 5|T])];
-pack_ints2([]) ->
-    [$"]. %"
 
 
 make_content_type_header(no_content_type) ->
