@@ -614,7 +614,13 @@ pick_sconf(GS, H, Group) ->
 
 pick_host(_GC, Host, [H|_T], _Group) when H#sconf.servername == Host ->
     H;
-pick_host(GC, Host, [H|T], Group) when integer(H#sconf.rport) ->
+pick_host(GC, Host, [_|T], Group) ->
+    pick_host(GC, Host, T, Group);
+pick_host(GC, Host, [], Group) ->
+    % none matched try with servername:rport
+    pick_host_rport(GC, Host, Group, Group).
+
+pick_host_rport(GC, Host, [H|T], Group) when integer(H#sconf.rport) ->
     % check if Host matches servername : rport
     Name = servername_sans_port(H#sconf.servername),
     ServerName =
@@ -625,16 +631,18 @@ pick_host(GC, Host, [H|T], Group) when integer(H#sconf.rport) ->
 	end,
     if
 	Host == ServerName ->  H;
-	Host /= ServerName -> pick_host(GC, Host, T, Group)
+	Host /= ServerName -> pick_host_rport(GC, Host, T, Group)
     end;
-pick_host(GC, Host, [_|T], Group) ->
-    pick_host(GC, Host, T, Group);
-pick_host(GC, Host, [], Group) ->
+pick_host_rport(GC, Host, [_|T], Group) ->
+    pick_host_rport(GC, Host, T, Group);
+pick_host_rport(GC, Host, [], Group) ->
     H = hd(Group),
     yaws_debug:dinfo(GC, "Got Host: header ~p which didn't match any host "
 		     "field in config, ~npicking the first one : ~p~n ",
 		     [Host, H#sconf.servername]),
     H.
+
+
 
 inet_peername(Sock, SC) ->
     case SC#sconf.ssl of
