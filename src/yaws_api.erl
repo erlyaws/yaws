@@ -313,7 +313,7 @@ pre_ssi_string(Str) ->
 
 pre_ssi_string(Str, Class) ->
     {html, ["<br><br>\n<div class=\"", Class, "\"> <pre>", 
-	    htmlize(list_to_binary(Str)),
+	    htmlize_l(Str),
 	    "</pre></div>\n<br>\n\n"]}.
     
     
@@ -351,12 +351,24 @@ htmlize_char(X) ->
     X.
 
 
+%% htmlize list (usually much more efficient than above)
+htmlize_l(List) ->
+    htmlize_l(List, []).
+
+htmlize_l([], Acc) -> lists:reverse(Acc);
+htmlize_l([$>|Tail], Acc) ->
+    htmlize_l(Tail, [$;,$t,$g,$&|Acc]);
+htmlize_l([$<|Tail], Acc) ->
+    htmlize_l(Tail, [$;,$t,$l,$&|Acc]);
+htmlize_l([$&|Tail], Acc) ->
+    htmlize_l(Tail, [$;,$p,$m,$a,$&|Acc]);
+htmlize_l([X|Tail], Acc) ->
+    htmlize_l(Tail, [X|Acc]).
+
 
 secs() ->
     {MS, S, _} = now(),
     (MS * 1000000) + S.
-
-
 
 
 
