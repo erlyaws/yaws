@@ -68,7 +68,7 @@ showPage(Params, Root, Prefix) ->
 				  Page, FileDir, Files, Root),
 		    Locked = Pwd /= "",
 		    wiki_templates:template(Page, Root,
-					    [top_header(Page), DeepStr,
+					    [DeepStr,
 					     DeepFiles],
 					    utils:time_to_string(Time),
 					    Locked);

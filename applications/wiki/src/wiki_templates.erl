@@ -23,6 +23,7 @@ template(Node,Root,Data,Modified,Locked) ->
     {ssi,
      "WikiPreferences.files/template.html", "@@",
      [{"NODE", Node},
+      {"ALLREFS", "allRefsToMe.yaws?node="++Node},
       {"HOME", "showPage.yaws?node=home"},
       {"HISTORY", "showHistory.yaws?node="++Node},
       {"ALL", "allPages.yaws"},
@@ -93,6 +94,7 @@ template_file() ->
 <p>&nbsp;<br>
   
 <!-- the generated page -->
+<h1><a href='@@ALLREFS@@'>@@NODE@@</a></h1>
 @@DATA@@
 <hr><p>Last Modified: @@MODIFIED@@
 </td> 
