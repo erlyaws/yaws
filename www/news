@@ -1,4 +1,4 @@
-Mar 18, 2004 Version 1.42 released
+Mar 18, 2004 Version 1.43 released
 This is a major release. Not so much for added functionality as for internal rewrites of the code. The release contains the following:
 Compression support using zlib. Still experimental. (cshultz)
 Minor bugfixes in the reverse proxy. This code is still not ready (klacke)
