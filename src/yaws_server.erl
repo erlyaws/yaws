@@ -1584,38 +1584,33 @@ del_old_files([{_FileAtom, spec, _Mtime1, Spec, _}]) ->
 		     
 
 get_client_data(CliSock, all, GC, SSlBool) ->
-    get_client_data(CliSock, all, cli_recv(CliSock, 4000, GC, SSlBool), 
-		    GC, SSlBool);
+    get_client_data_all(CliSock, [], GC, SSlBool);
 
 get_client_data(CliSock, Len, GC, SSlBool) ->
+    get_client_data_len(CliSock, Len, [], GC, SSlBool).
+
+
+get_client_data_len(_CliSock, 0, Bs, _GC, _SSlBool) ->
+    list_to_binary(Bs);
+get_client_data_len(CliSock, Len, Bs, GC, SSlBool) ->
     case cli_recv(CliSock, Len, GC, SSlBool) of
-	{ok, B} when size(B) == Len ->
-	    B;
-	{ok, B} when size(B) < Len ->
-	    get_client_data_acc(CliSock, Len-size(B), B, GC, SSlBool);
+	{ok, B} ->
+	    get_client_data_len(CliSock, Len-size(B), [Bs|B], GC, SSlBool);
 	_Other ->
-	    ?Debug("get_client_data: ~p~n", [_Other]),
+	    ?Debug("get_client_data_len: ~p~n", [_Other]),
 	    exit(normal)
     end.
 
-get_client_data_acc(CliSock, Len, B0, GC, SSlBool) ->
-    case cli_recv(CliSock, Len, GC, SSlBool) of
-	{ok, B} when size(B) == Len ->
-	    <<B0/binary,B/binary>>;
-	{ok, B} when size(B) < Len ->
-	    get_client_data_acc(CliSock, Len-size(B), 
-			    <<B0/binary,B/binary>>, GC, SSlBool);
+get_client_data_all(CliSock, Bs, GC, SSlBool) ->
+    case cli_recv(CliSock, 4000, GC, SSlBool) of
+	{ok, B} ->
+	    get_client_data_all(CliSock, [Bs|B] , GC, SSlBool);
+	eof ->
+	    list_to_binary(Bs);
 	_Other ->
-	    ?Debug("get_client_data_acc: ~p~n", [_Other]),
+	    ?Debug("get_client_data_all: ~p~n", [_Other]),
 	    exit(normal)
     end.
-
-get_client_data(CliSock, all, {ok, B}, GC, SSlBool) ->
-    B2 = get_client_data(CliSock, all, 
-			 cli_recv(CliSock, 4000, GC, SSlBool), SSlBool),
-    <<B/binary, B2/binary>>;
-get_client_data(_CliSock, all, eof, _GC, _) ->
-    <<>>.
 
 
 
@@ -1650,8 +1645,8 @@ deliver_dyn_part(CliSock, GC, SC,          % essential params
 		     );
 		Err ->
 		    A2 = Arg#arg{clidata = Err,
-				cont = undefined,
-				state = State},
+				 cont = undefined,
+				 state = State},
 		    catch YawsFun(A2),
 		    exit(normal)         % ???
 	    end;
