@@ -40,6 +40,7 @@
 		  path,
 		  fullpath,
 		  dir,     %% relative dir where the path leads to
+		           %% flat | unflat need flat for authentication
 		  data,    %% Binary | FileDescriptor | DirListing | undefined
 		  mime = "text/html",    %% MIME type
 		  q,       %% query for GET requests
@@ -1326,7 +1327,7 @@ make_date_header() ->
     end.
 %% FIXME read vsn from conf at compile time
 make_server_header() ->
-    ["Server: Yaws/0.32 Yet Another Web Server", crnl()].
+    ["Server: Yaws/", yaws_vsn:version(), " Yet Another Web Server", crnl()].
 make_last_modified(_) ->
     [];
 make_last_modified(FI) ->
@@ -1437,7 +1438,7 @@ cache_file(GC, SC, Path, UT) when UT#urltype.type == regular ;
 		FI#file_info.size > GC#gconf.max_size_cached_file ->
 		    UT;
 		true ->
-		    {ok, Bin} = file:read_file(UT#urltype.fullpath),
+		    {ok, Bin} = prim_file:read_file(UT#urltype.fullpath),
 		    UT2 = UT#urltype{data = Bin},
 		    ets:insert(E, {{url, Path}, now_secs(), UT2}),
 		    ets:insert(E, {{urlc, Path}, 1}),
@@ -1471,7 +1472,8 @@ do_url_type(Droot, Path) ->
 
 
 maybe_return_dir(DR, FlatPath) ->
-    case file:read_file_info([DR, FlatPath, "/index.yaws"]) of
+    ?Debug("maybe_return_dir(~p, ~p)", [DR, FlatPath]),
+    case prim_file:read_file_info([DR, FlatPath, "/index.yaws"]) of
 	{ok, FI} ->
 	    #urltype{type = yaws,
 		     finfo = FI,
@@ -1479,7 +1481,7 @@ maybe_return_dir(DR, FlatPath) ->
 		     dir = FlatPath,
 		     fullpath = ?f([DR, FlatPath,"/index.yaws"])};
 	_ ->
-	    case file:read_file_info([DR, FlatPath, "/index.html"]) of
+	    case prim_file:read_file_info([DR, FlatPath, "/index.html"]) of
 		{ok, FI} ->
 		    #urltype{type = regular,
 			     finfo = FI,
@@ -1559,7 +1561,7 @@ ret_reg_split(DR, Comps, RevFile, Query) ->
     File = lists:reverse(RevFile),
     L = [DR, Dir, File],
     ?Debug("ret_reg_split: L =~p~n",[L]),
-    case file:read_file_info(L) of
+    case prim_file:read_file_info(L) of
 	{ok, FI} when FI#file_info.type == regular ->
 	    {X, Mime} = suffix_type(RevFile),
 	    #urltype{type=X, 

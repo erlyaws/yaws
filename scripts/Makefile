@@ -1,7 +1,7 @@
 include ../include.mk
 
 
-all:	yaws.ss
+all debug:	yaws.ss
 	@sh ./mangle `pwd`/.. $(ERL) yaws.ss ../bin/yaws
 	@chmod +x ../bin/yaws
 	@if [ -f $$HOME/yaws.conf ]; \

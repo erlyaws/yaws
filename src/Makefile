@@ -19,7 +19,8 @@ MODULES=yaws \
 	yaws_debug \
 	yaws_compile \
 	yaws_ctl \
-	yaws_ssl
+	yaws_ssl \
+	yaws_vsn
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app
 
@@ -31,7 +32,10 @@ ERLC_FLAGS+=-W +debug_info $(DEBUG_FLAGS) -pa ../../yaws
 
 
 
-all: $(EBIN_FILES) 
+all: yaws_vsn.erl $(EBIN_FILES) 
+
+yaws_vsn.erl:	yaws_vsn.template
+	. ../vsn.mk; sed "s/%VSN%/${YAWS_VSN}/" < yaws_vsn.template > yaws_vsn.erl
 
 debug:
 	$(MAKE) TYPE=debug

@@ -1,0 +1,16 @@
+%%%----------------------------------------------------------------------
+%%% File    : yaws_vsn.template
+%%% Author  : Klacke <klacke@bluetail.com>
+%%% Purpose : 
+%%% Created : 10 Jun 2002 by Klacke <klacke@bluetail.com>
+%%%----------------------------------------------------------------------
+
+-module(yaws_vsn).
+-author('klacke@bluetail.com').
+
+-compile(export_all).
+
+version() -> "%VSN%".
+
+    
+
