@@ -69,7 +69,7 @@ init(CliSock, ARG, DecPath, QueryPart, {Prefix, URL}, N) ->
 	      CliSock,  
 	      0, "404",
 	      0,
-	      ARG,
+	      ARG, no_UT_defined,
 	      fun(A)->(SC#sconf.errormod_404):out404(A,get(gc),get(sc)) 
 	      end,
 	      fun()->yaws_server:finish_up_dyn_file(CliSock)

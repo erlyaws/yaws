@@ -20,7 +20,7 @@
 -include_lib("kernel/include/file.hrl").
 
 %% External exports
--export([start_link/0]).
+-export([start_link/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
@@ -41,12 +41,13 @@
 
 -record(state, {gc,         %% Global conf #gc{} record
 		pairs,      %% [{GservPid, ScList}] 
-		mnum = 0    %% dyn compiled erl module  number
+		mnum = 0,   %% dyn compiled erl module  number
+		embedded    %% true if in embedded mode, false otherwise
 	       }).
 
 
-start_link() ->
-    gen_server:start_link({local, yaws_server}, yaws_server, [], []).
+start_link(A) ->
+    gen_server:start_link({local, yaws_server}, yaws_server, A, []).
 
 status() ->
     gen_server:call(?MODULE, status).
@@ -71,75 +72,6 @@ stats() ->
 	 end, S#state.pairs),
     {Diff, R}.
 
-
-get_app_args() ->
-    AS=init:get_arguments(),
-    Debug = case application:get_env(yaws, debug) of
-		undefined ->
-		    member({yaws, ["debug"]}, AS);
-		{ok, Val}  ->
-		    Val
-	    end,
-    Trace = case application:get_env(yaws, trace) of
-		undefined ->
-		    case {member({yaws, ["trace", "http"]}, AS),
-			  member({yaws, ["trace", "traffic"]}, AS)} of
-			{true, _} ->
-			    {true, http};
-			{_, true} ->
-			    {true, traffic};
-			_ ->
-			    false
-		    end;
-		{ok, http} ->
-		    {true, http};
-		{ok, traffic} ->
-		    {true, traffic};
-		_ ->
-		    false
-	    end,
-    TraceOutput = case application:get_env(yaws, traceoutput) of
-		undefined ->
-		    member({yaws, ["tracedebug"]}, AS);
-		{ok, Val3}  ->
-		    Val3
-	    end,
-    Conf = case application:get_env(yaws, conf) of
-	       undefined ->
-		   find_c(AS);
-	       {ok, File} ->
-		   {file, File}
-	   end,
-    RunMod = case application:get_env(yaws, runmod) of
-		 undefined ->
-		     find_runmod(AS);
-		 {ok,Mod} ->
-		     {ok,Mod}
-	     end,
-    {Debug, Trace, TraceOutput, Conf, RunMod}.
-
-get_app_args_embedded() ->
-    case application:get_env(yaws, embedded) of
-	undefined ->
-	    false;
-	{ok, Val0} ->
-	    Val0
-    end.
-
-find_c([{conf, [File]} |_]) ->
-    {file, File};
-find_c([_|T]) ->
-    find_c(T);
-find_c([]) ->
-    false.
-
-find_runmod([{runmod, [Mod]} |_]) ->
-    {ok,l2a(Mod)};
-find_runmod([_|T]) ->
-    find_runmod(T);
-find_runmod([]) ->
-    false.
-
 l2a(L) when list(L) -> list_to_atom(L);
 l2a(A) when atom(A) -> A.
 
@@ -153,11 +85,10 @@ l2a(A) when atom(A) -> A.
 %%          {stop, Reason}
 %%----------------------------------------------------------------------
 
-init([]) ->
+init({Debug, Trace, TraceOut, Conf, RunMod, Embedded}) ->
     process_flag(trap_exit, true),
     put(start_time, calendar:local_time()),  %% for uptime
-    {Debug, Trace, TraceOut, Conf, RunMod} = get_app_args(),
-    case get_app_args_embedded() of 
+    case Embedded of 
 	false ->
 	    Config = yaws_config:load(Conf, Trace, TraceOut, Debug),
 	    ?Debug("Config= ~p~n", [Config]),
@@ -174,7 +105,7 @@ init([]) ->
 			_ ->
 			    ok
 		    end,
-		    init2(Gconf, Sconfs, RunMod, true);
+		    init2(Gconf, Sconfs, RunMod, Embedded, true);
 		{error, E} ->
 		    case erase(logdir) of
 			undefined ->
@@ -195,7 +126,7 @@ init([]) ->
     end.
 
 
-init2(GC, Sconfs, RunMod, FirstTime) ->
+init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
     put(gc, GC),
     foreach(
       fun(D) ->
@@ -209,7 +140,7 @@ init2(GC, Sconfs, RunMod, FirstTime) ->
 
     setup_dirs(GC),
 
-    case get_app_args_embedded() of
+    case Embedded of
 	false ->
 	    yaws_ctl:start(GC, FirstTime);
         true -> 
@@ -254,7 +185,8 @@ init2(GC, Sconfs, RunMod, FirstTime) ->
     foreach(fun({Pid, _}) -> Pid ! {newuid, GC2#gconf.uid} end, L2),
     {ok, #state{gc = GC2,
 		pairs = L2,
-		mnum = 0}}.
+		mnum = 0,
+		embedded = Embedded}}.
 
 
 
@@ -290,7 +222,7 @@ handle_call({setconf, GC, Groups}, _From, State) ->
 			    ok
 		    end
 	    end, Curr),
-    case init2(GC, Groups, undef, false) of
+    case init2(GC, Groups, undef, State#state.embedded, false) of
 	{ok, State2} ->
 	    {reply, ok, State2};
 	Err ->

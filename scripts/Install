@@ -12,6 +12,8 @@ y=yaws-${YAWS_VSN}
 p=${prefix}
 
 
+install -d ${installprefix}/bin
+
 cat yaws.template | \
     ./Subst %yawsdir% ${prefix}/lib/yaws | \
     ./Subst %erl% "${erl}" | \
