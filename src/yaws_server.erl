@@ -183,6 +183,7 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 
     lists:foreach(
       fun(D) ->
+	      yaws_debug:format(Gconf, "Add path ~p~n", [D]),
 	      code:add_pathz(D)
       end, Gconf#gconf.ebin_dir),
 
@@ -507,7 +508,19 @@ gserv(GS, Ready, Rnum) ->
 	    
  
 call_start_mod(SC) ->
-    spawn(l2a(SC#sconf.start_mod), start, [SC]).
+    case SC#sconf.start_mod of
+	undefined ->
+	    ok;
+	Mod0 ->
+	    Mod = l2a(Mod0),
+	    case code:ensure_loaded(Mod) of
+		{module, Mod} ->
+		    spawn(Mod, start, [SC]);
+		Err ->
+		    error_logger:format("Cannot load module ~p~n", [Mod])
+	    end
+    end.
+
 
 
 opts(SC) ->
