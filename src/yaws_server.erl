@@ -204,6 +204,7 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 	_ -> 
 	    false
     end,
+    lists:foreach(fun(M) -> runmod(M) end, Gconf#gconf.runmods),
 
     %% start the individual server processes
     L = lists:map(
@@ -585,7 +586,9 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == nossl ->
 		continue ->
 		    aloop(CliSock, GS, Num+1);
 		done ->
-		    {ok, Num+1}
+		    {ok, Num+1};
+		{page, Page} ->
+		    nyi
 	    end
     end;
 
@@ -1516,45 +1519,6 @@ redirect_code(A) ->
 	{1,0} -> 302;
 	_     -> 303
     end.
-
-check_headers(L) ->
-    Hs = string:tokens(lists:flatten(L), "\r\n"),
-    io:format("XX ~p~n", [Hs]),
-    lists:foreach(
-      fun(H) ->
-	  case lists:reverse(H) of
-	      [_,_,$\r|_] ->
-		  yaws_log:errlog("Bad header ~p, it contains"
-					      " '\\r' or '\\n' at end ", 
-					      [lists:flatten(H)]),
-		  exit(normal);
-	      [_,_,$\n|_] ->
-		  yaws_log:errlog("Bad header ~p, it contains"
-					      " '\\r' or '\\n' at end ", 
-					      [lists:flatten(H)]),
-		  exit(normal);
-	      _ ->
-		  ok
-	  end
-      end, Hs).
-
-
-check_headers([$\r, $\n |Tail], Last) when Tail /= [] ->
-    case lists:member(hd(Tail), [$\r, $\n]) of
-	true ->
-	     yaws_log:errlog("Bad header ~p, it contains"
-			     " '\\r' or '\\n' at end ", [lists:reverse(Last)]),
-	    exit(normal);
-	_ ->
-	    check_headers(Tail, [])
-    end;
-
-check_headers([H|T], Last) ->
-    check_headers(T, [H|Last]);
-check_headers([], _) ->
-    ok.
-
-
 deliver_accumulated(DCC, Sock, GC, SC) ->
     Code = case get(status_code) of
 	       undefined -> 200;
@@ -1566,7 +1530,7 @@ deliver_accumulated(DCC, Sock, GC, SC) ->
 
     if
 	GC#gconf.debug == true ->
-	    check_headers(lists:flatten(Headers), []);
+	    yaws_debug:check_headers(lists:flatten(Headers), []);
 	true ->
 	    ok
     end,

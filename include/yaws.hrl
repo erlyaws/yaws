@@ -15,6 +15,7 @@
 	       debug,
 	       logdir,
 	       ebin_dir = [],
+	       runmods = [],
 	       keepalive_timeout = 15000,
 	       max_num_cached_files = 400,
 	       max_num_cached_bytes = 1000000,  %% 1 MEG

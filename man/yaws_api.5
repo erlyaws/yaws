@@ -43,43 +43,45 @@ We have the following relevant record definitions:
 .nf
 
 -record(arg, {
-	  clisock,        %% the socket leading to the peer client
-	  headers,        %% headers
-	  req,            %% request
-	  clidata,        %% The client data (as a binary in POST requests)
-	  querydata,      %% Was the URL on the form of ...?query (GET reqs)
-	  docroot,        %% where's the data
-	  fullpath,       %% full path to yaws file
-          cont,		  %% Continuation for chunked multipart uploads
-	  state,          %% State for use by users of the out/1 callback
-	  pid             %% pid of the yaws process
-	 }).              
+          clisock,        %% the socket leading to the peer client
+          headers,        %% headers
+          req,            %% request
+          clidata,        %% The client data (as a binary in POST requests)
+          querydata,      %% Was the URL on the form of ...?query (GET reqs)
+          docroot,        %% where's the data
+          fullpath,       %% full path to yaws file
+          cont,           %% Continuation for chunked multipart uploads
+          state,          %% State for use by users of the out/1 callback
+          pid,            %% pid of the yaws process
+          opaque          %% useful to pass static data
+
+         }).              
 .fi
 \fR
 
 The headers argument is also a record:
 \fI
 .nf
-	    
+            
 -record(headers, {
-	  connection,
-	  accept,
-	  host,
-	  if_modified_since,
-	  if_match,
-	  if_none_match,
-	  if_range,
-	  if_unmodified_since,
-	  range,
-	  referer,
-	  user_agent,
-	  accept_ranges,
-	  cookie = [],
-	  keep_alive,
-	  content_length,
-	  authorization,
-	  other = []   %% misc other headers
-	 }).
+          connection,
+          accept,
+          host,
+          if_modified_since,
+          if_match,
+          if_none_match,
+          if_range,
+          if_unmodified_since,
+          range,
+          referer,
+          user_agent,
+          accept_ranges,
+          cookie = [],
+          keep_alive,
+          content_length,
+          authorization,
+          other = []   %% misc other headers
+         }).
 
 .fi
 \fR
@@ -301,7 +303,7 @@ Url-encodes a string. All URLs in HTML documents must be URL encoded.
 
 
 .TP
-\freformat_header(H)\fR
+\fBreformat_header(H)\fR
 Returns a list of reformated header values from a #header{}
 record. The return list is suitable for retransmit.
 
@@ -326,9 +328,9 @@ is
 .nf
 EHTML = [EHTML] | {Tag, Attrs, Body} | {Tag, Attrs} | {Tag} |
         binary() | character()
-Tag 	 = atom()
+Tag      = atom()
 Attrs = [{Key, Value}]  or {EventTag, {jscall, FunName, [Args]}}
-Key 	 = atom()
+Key      = atom()
 Value = string()
 Body  = EHTML
 .fi

@@ -249,6 +249,11 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}
 	    end;
 
+	["runmod", '=', Mod0] ->
+	    Mod = list_to_atom(Mod0),
+	    fload(FD, globals, GC#gconf{runmods = [Mod|GC#gconf.runmods]},
+		  C, Cs, Lno+1, Next);
+
 	["include_dir", '=', Dir] ->
 	    case is_dir(Dir) of
 		true ->
