@@ -62,6 +62,32 @@ powered by Yaws.
 <ul>
 
 <li>
+<p> Oct 7, version 0.56 released. 
+<ul>
+<li><p>Improved file editing if in the wiki
+<li><p>New returnvalue from out/1 <tt>break</tt>
+<li><p>The wiki returns w3c compliant code
+<li><p>New return value from out/1 <tt>{ehtml, ErlangTermStructure}</tt>
+<li><p>Multiple users by uid can now run yaws simultaneously.
+<li><p>Support for streamed large content from yaws code
+<li><p>Never cache yaws files that disn't compile properly.
+<li><p>Much more documentation, man page for yaws_api
+<li><p>added a cookie_session-server for
+        persistant cookie sessions
+
+<li><p>full argument chunking support in Wiki
+<li><p>Install properly on FreeBSD.
+<li><p>Support for embedded mode (finally)
+
+<li><p> bugfix for empty POST
+<li><p> The shopingcart example is now fully implemented.
+
+
+</ul>
+
+
+
+<li>
 <p>
 Sep 2, version 0.54 released.
 

@@ -1,34 +1,280 @@
-2002-10-07  Luke Gorrie  <luke@bluetail.com>
+2002-10-07 23:37  klacke
 
-	* src/yaws_server.erl (get_path/1): Fixed bug and security hole
-	introduced by my previous changes to URL decoding. The problem
-	was that I skipped URL decoding, so you could e.g. read the
-	source to a Yaws file by saying "foo.yaw%73" instead of
+	* Makefile, src/mime.types, www/dynamic.yaws,
+	www/shopingcart/Makefile, www/shopingcart/shopcart.erl,
+	www/shopingcart/source.html, www/shopingcart/style.css: added more
+	documentation
+
+2002-10-07 18:26  lukeg
+
+	* src/yaws_server.erl, src/yaws_api.erl, ChangeLog: Fixed bug and
+	security hole introduced by my previous changes to URL decoding.
+	The problem was that I skipped URL decoding, so you could e.g. read
+	the source to a Yaws file by saying "foo.yaw%73" instead of
 	"foo.yaws".
-
-	Now we initially decode the URL but not the query part. The query
-	part is decoded in yaws_api:parse_query. It can't be done
-	earlier, because unescaping characters like '&' and '=' would
-	break the parsing.
 	
-2002-09-12  Luke Gorrie  <luke@bluetail.com>
+	Now we initially decode the URL but not the query part. The query
+	part is decoded in yaws_api:parse_query. It can't be done earlier,
+	because unescaping characters like '&' and '=' would break the
+	parsing.
 
-	* src/yaws_server.erl: Removed url_decode in get_path/1 - it is
-	too early, causes problems if it unescapes &'s in the query
-	string. Has to wait until the query is parsed (and it looks like
-	yaws_api:do_parse_spec does the unescaping for us already)
+2002-10-07 15:36  jbevemyr
+
+	* src/: yaws.hrl, yaws_config.erl: Upped read timeout and made it
+	configurable
+
+2002-10-06 23:59  klacke
+
+	* include/yaws_api.hrl, man/yaws_api.5, src/yaws_api.erl,
+	src/yaws_session_server.erl, www/EXHEAD, www/shopingcart/buy.yaws,
+	www/shopingcart/cart.yaws, www/shopingcart/index.yaws,
+	www/shopingcart/loginpost.yaws, www/shopingcart/logout.yaws,
+	www/shopingcart/mall.yaws, www/shopingcart/shopcart.erl,
+	www/shopingcart/shopcart_form.yaws, www/shopingcart/style.css:
+	wrote the shopppingcart example
+
+2002-10-06 19:32  jbevemyr
+
+	* applications/wiki/src/wiki_yaws.erl, src/yaws_config.erl,
+	src/yaws_server.erl: Fixed problem with chunked posts
+
+2002-10-02 13:20  klacke
+
+	* src/yaws_server.erl: bug in empty POST
+
+2002-10-02 13:20  klacke
+
+	* src/yaws_api.erl: bad export
+
+2002-10-01 20:53  jbevemyr
+
+	* applications/wiki/src/wiki.erl,
+	applications/wiki/src/wiki_yaws.erl, src/yaws_server.erl: Fixed
+	problem with file uploads
+
+2002-10-01 20:35  jbevemyr
+
+	* applications/wiki/wiki/allRefsToMe.yaws: [no log message]
+
+2002-09-27 14:46  klacke
+
+	* scripts/yaws.init.d: readded jb's chkconfig comment
+
+2002-09-27 14:39  klacke
+
+	* vsn.mk, www/dynamic.yaws: ""
+
+2002-09-27 14:20  klacke
+
+	* man/yaws_api.5: [no log message]
+
+2002-09-27 14:16  klacke
+
+	* scripts/yaws.init.d: ""
+
+2002-09-27 13:05  klacke
+
+	* applications/webmail/test.erl: ""
+
+2002-09-27 13:03  klacke
+
+	* applications/webmail/test.erl, man/yaws_api.5, src/yaws.erl,
+	src/yaws_api.erl, src/yaws_config.erl, src/yaws_ctl.erl,
+	src/yaws_server.erl, www/configuration.yaws: added support/docs for
+	embedded mode
+
+2002-09-26 15:08  klacke
+
+	* man/Makefile: ""
+
+2002-09-25 22:44  etnt
+
+	* src/Makefile: Now, tar also works on FreeBSD.
+
+2002-09-22 22:06  jbevemyr
+
+	* applications/wiki/: src/wiki.erl, src/wiki_templates.erl,
+	wiki/allpages.gif, wiki/editfiles.gif, wiki/editme.gif,
+	wiki/history.gif, wiki/home.gif, wiki/lastedited.gif,
+	wiki/zombies.gif, wiki/custom.css: Some look and feel enhancements
+
+2002-09-20 22:10  jbevemyr
+
+	* applications/wiki/: src/wiki_format_txt.erl,
+	src/wiki_to_html.erl, wiki/FormattingWikiPages.wob: Fixed editTag
+	bug and added embedded HTML support
+
+2002-09-18 22:26  jbevemyr
+
+	* applications/wiki/src/wiki.erl,
+	applications/wiki/src/wiki_yaws.erl,
+	applications/wiki/wiki/addFile.yaws,
+	applications/wiki/wiki/allPages.yaws,
+	applications/wiki/wiki/allRefsToMe.yaws,
+	applications/wiki/wiki/copyFiles.yaws,
+	applications/wiki/wiki/createNewPage.yaws,
+	applications/wiki/wiki/deleteFiles.yaws,
+	applications/wiki/wiki/deletePage.yaws,
+	applications/wiki/wiki/editFiles.yaws,
+	applications/wiki/wiki/editPage.yaws,
+	applications/wiki/wiki/editTag.yaws,
+	applications/wiki/wiki/finalDeletePage.yaws,
+	applications/wiki/wiki/getFile.yaws,
+	applications/wiki/wiki/importFiles.yaws,
+	applications/wiki/wiki/lastEdited.yaws,
+	applications/wiki/wiki/previewNewPage.yaws,
+	applications/wiki/wiki/previewPage.yaws,
+	applications/wiki/wiki/previewTagged.yaws,
+	applications/wiki/wiki/putPassword.yaws,
+	applications/wiki/wiki/sendMeThePassword.yaws,
+	applications/wiki/wiki/showHistory.yaws,
+	applications/wiki/wiki/showOldPage.yaws,
+	applications/wiki/wiki/showPage.yaws,
+	applications/wiki/wiki/storeFiles.yaws,
+	applications/wiki/wiki/storeNewPage.yaws,
+	applications/wiki/wiki/storePage.yaws,
+	applications/wiki/wiki/storeTagged.yaws,
+	applications/wiki/wiki/wikiZombies.yaws, src/yaws_server.erl: Added
+	full argument chunking support in Wiki
+
+2002-09-18 01:15  klacke
+
+	* include/yaws_api.hrl, src/Makefile, src/yaws_api.erl,
+	src/yaws_config.erl, src/yaws_server.erl,
+	src/yaws_session_server.erl, src/yaws_sup.erl, www/api.yaws:
+	cache_refresh to 0 if debug, added a cookie_session-server for
+	persistant cookie sessions
+
+2002-09-18 01:05  klacke
+
+	* man/yaws_api.5: documented yaws_api
+
+2002-09-17 23:27  klacke
+
+	* man/yaws.conf.5: documented auth and some other config opts
+
+2002-09-17 21:46  klacke
+
+	* src/yaws_server.erl: fixed bug in jb's implementation of chunking
+	large files
+
+2002-09-17 21:44  klacke
+
+	* src/: yaws_compile.erl, yaws_ctl.erl, yaws_server.erl: a file
+	which has at least one compilation error shouldn't be cached in the
+	code cache, the nect time the same file is GET'ed it a
+	recompilation is attempted
+
+2002-09-16 23:55  jbevemyr
+
+	* src/: yaws.hrl, yaws_server.erl: [no log message]
+
+2002-09-16 23:36  jbevemyr
+
+	* src/yaws_server.erl: Fixed broken sending of files > 1000000
+	bytes. Added support for sending very large files by chunking.
+
+2002-09-16 19:05  klacke
+
+	* src/: yaws.erl, yaws_api.erl: ""
+
+2002-09-15 19:40  klacke
+
+	* src/yaws_api.erl: ""
+
+2002-09-15 17:04  klacke
+
+	* src/yaws_api.erl: api:parse_query/1
+
+2002-09-14 01:20  klacke
+
+	* src/yaws_server.erl: minor bug in streamed content
+
+2002-09-13 17:22  klacke
+
+	* include/yaws_api.hrl, src/yaws.erl, src/yaws_server.erl: support
+	for streamed large content from yaws code
+
+2002-09-12 17:26  klacke
+
+	* src/yaws_ctl.erl: multiple user by uid can now run yaws
+
+2002-09-12 17:25  klacke
+
+	* src/: yaws.hrl, yaws_compile.erl, yaws_config.erl, yaws_ctl.erl,
+	yaws_server.erl: javascript support in ehtml
+
+2002-09-12 04:51  lukeg
+
+	* ChangeLog: [no log message]
+
+2002-09-12 04:22  lukeg
+
+	* src/yaws_api.erl: Exported htmlize_char/1
+
+2002-09-12 04:21  lukeg
+
+	* src/yaws_server.erl: Removed url_decode in get_path/1 - it is too
+	early, causes problems if it unescapes &'s in the query string. Has
+	to wait until the query is parsed (and it looks like
+	yaws_api:do_parse_spec does it for us already)
 	
 	For redirects, using 302 for HTTP 1.0 browsers because they don't
 	understand 303. This change is small but noisy since I had to pass
 	another arg to handle_out_reply (many clauses).
-
-	Added an {ehtml, ...} return type for out/1 functions. It does
-	very basic tuple->HTML expansions.
-
+	
+	Added an {ehtml, ...} return type for out/1 functions. It does very
+	basic tuple->HTML expansions.
+	
 	Chunked encoding: skip accumulating 0-length chunks, e.g. when
-	out/1 returns {html,""}, because they look like terminators.
+	out/1 returns an empty result, because they look like terminators.
 
-	* src/yaws_api.erl: Exported htmlize_char/1.
+2002-09-10 00:03  jbevemyr
+
+	* applications/wiki/: src/wiki.erl, src/wiki_templates.erl,
+	wiki/addFile.yaws, wiki/allPages.yaws, wiki/allRefsToMe.yaws,
+	wiki/copyFiles.yaws, wiki/createNewPage.yaws,
+	wiki/deleteFiles.yaws, wiki/deletePage.yaws, wiki/editFiles.yaws,
+	wiki/editPage.yaws, wiki/editTag.yaws, wiki/finalDeletePage.yaws,
+	wiki/importFiles.yaws, wiki/lastEdited.yaws,
+	wiki/previewNewPage.yaws, wiki/previewPage.yaws,
+	wiki/previewTagged.yaws, wiki/putPassword.yaws,
+	wiki/sendMeThePassword.yaws, wiki/showHistory.yaws,
+	wiki/showOldPage.yaws, wiki/showPage.yaws, wiki/storeFiles.yaws,
+	wiki/storeNewPage.yaws, wiki/storePage.yaws, wiki/storeTagged.yaws,
+	wiki/wikiZombies.yaws: w3c compliant html code
+
+2002-09-09 23:06  uid50986
+
+	* src/yaws_server.erl: added new break ret val from out/1 function
+
+2002-09-09 10:09  jbevemyr
+
+	* scripts/yaws.init.d: Added chkconfig support to init.d file
+
+2002-09-06 09:18  jbevemyr
+
+	* applications/wiki/src/: wiki.erl, wiki_templates.erl: Minor
+	modifications to the HTML templates
+
+2002-09-03 01:04  jbevemyr
+
+	* applications/wiki/src/wiki.erl: Some more interface improvements
+
+2002-09-03 00:32  jbevemyr
+
+	* applications/wiki/: src/wiki.erl, src/wiki_to_html.erl,
+	src/wiki_yaws.erl, wiki/addFile.yaws, wiki/copyFiles.yaws,
+	wiki/deleteFiles.yaws, wiki/putPassword.yaws: improved file editing
+	interface
+
+2002-09-02 23:10  klacke
+
+	* www/index.yaws: ""
+
+2002-09-02 22:58  klacke
+
+	* ChangeLog: auto generated changelog
 
 2002-09-02 22:26  klacke
 
