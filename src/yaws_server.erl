@@ -1007,9 +1007,11 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    do_yaws(CliSock, GC, SC, Req, H, 
 		    [ARG#arg{querydata = UT#urltype.q}], UT, N);
 	forbidden ->
+	    yaws:outh_set_dyn_headers(Req, H),
 	    deliver_403(CliSock, Req, GC, SC);
 	redir_dir ->
-	     deliver_303(CliSock, Req, GC, SC, ARG);
+	    yaws:outh_set_dyn_headers(Req, H),
+	    deliver_303(CliSock, Req, GC, SC, ARG);
 	appmod ->
 	    yaws:outh_set_dyn_headers(Req, H),
 	    close_if_HEAD(Req, 
@@ -1052,6 +1054,7 @@ parse_auth(_) ->
 
 
 deliver_303(CliSock, Req, GC, SC, Arg) ->
+    ?Debug("in redir 303 ",[]),
     H = get(outh),
 
     Scheme = redirect_scheme(SC),
@@ -1063,10 +1066,11 @@ deliver_303(CliSock, Req, GC, SC, Arg) ->
 
     H2 = H#outh{status = 303,
 		doclose = true,
+		content_type = undefined,
 		server = yaws:make_server_header(),
 		location = Loc,
 		connection = yaws:make_connection_close_header(true)},
-    
+    put(outh, H2),
     deliver_accumulated(CliSock, GC, SC),
     done.
 
@@ -1584,7 +1588,7 @@ deliver_accumulated(Sock, GC, SC) ->
     {StatusLine, Headers} = yaws:outh_serialize(),
     if
 	GC#gconf.debug == trueeeeeeeeeeeeeee ->
-	    yaws_debug:check_headers(lists:flatten(Headers), []);
+	    yaws_debug:check_headers(get(outh));
 	true ->
 	    ok
     end,

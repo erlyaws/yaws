@@ -26,7 +26,7 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
 		  FI = file:read_file_info(File),
 		  file_entry(FI, DirName, F)
 	  end, [".." | List]),
-    Body = [doc_head(DirName), 
+    Body = [doc_head(DirName),  
 	    list_head(), 
 	    L,
 	    "\n</pre><pre>",
@@ -36,11 +36,6 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
 	    "</body>\n</html>\n"],
     B = list_to_binary(Body),
     
-    yaws_server:make_date_and_server_headers(),
-    yaws_server:make_connection_close(true),
-    yaws_server:make_content_length(size(B)),
-    yaws_server:make_content_type("text/html"),
-
     yaws_server:close_if_HEAD(
       Req, 
       fun() -> 
@@ -48,7 +43,7 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
 	      yaws_server:do_tcp_close(CliSock, SC),
 	      throw({ok, 1})
       end),
-    yaws_server:accumulate_content(B),
+    yaws_server:accumulate_chunk(B),
     yaws_server:deliver_accumulated(CliSock, GC, SC),
     done.
 
