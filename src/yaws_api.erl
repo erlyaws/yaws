@@ -19,8 +19,58 @@
 %% these are a bunch of function that are useful inside
 %% yaws scripts
 
-
-
+%
+% Changed implementation of multipart form data. There is a new config
+% parameter called
+%
+%      partial_post_size
+%
+% which if set to an integer value
+% will cause the content of the post content to be sent to the out/1
+% function in chunks of this size.
+%
+% It is possible to get the server to maintain a state on behalf of the
+% out/1 user by returning {get_more, Cont, State}.
+%
+% 
+% yaws_api:parse_post_data/1 will return either:
+% 
+% {cont, Cont, Res} where Res is new result(s) from this segment. This
+% indicates that there is more data to co me and the out/1 function
+% should return {get_more, Cont, User_state} where User_state might
+% usefully be a File Descriptor.
+%
+% or {result, Res} if this is the last (or only) segment.
+% 
+% Res is a list of {header, Header} | {part_body, Binary} | {body, Binary}
+% 
+% Example usage could be:
+% 
+% <erl>
+% 
+% out(A) ->
+%        case yaws_api:parse_post_data(A) of
+%             {cont, Cont, Res} ->
+%                    St = handle_res(A, Res),
+%                    {get_more, Cont, St};
+%             {result, Res} ->
+%                    handle_res(A, Res),
+%                    {html, f("<pre>Done </pre>",[])}
+%        end.
+% 
+% handle_res(A, [{head, Name}|T]) ->
+%      io:format("head:~p~n",[Name]),
+%      handle_res(A, T);
+% handle_res(A, [{part_body, Data}|T]) ->
+%      io:format("part_body:~p~n",[Data]),
+%      handle_res(A, T);
+% handle_res(A, [{body, Data}|T]) ->
+%      io:format("body:~p~n",[Data]),
+%      handle_res(A, T);
+% handle_res(A, []) ->
+%      io:format("End_res~n").
+% 
+% </erl>
 
 parse_post_data(Arg) ->
     Headers = Arg#arg.headers,
@@ -29,14 +79,15 @@ parse_post_data(Arg) ->
 	{value, {_,_,_,_,"multipart/form-data"++Line}} ->
 	    case Arg#arg.cont of
 		{cont, Cont} ->
-		    parse_multipart(binary_to_list(
-				      un_partial(Arg#arg.clidata)), {cont, Cont});
+		    parse_multipart(
+		      binary_to_list(un_partial(Arg#arg.clidata)),
+		      {cont, Cont});
 		undefined ->
 		    LineArgs = parse_arg_line(Line),
 		    {value, {_, Boundary}} =
 			lists:keysearch(boundary, 1, LineArgs),
-		    parse_multipart(binary_to_list(un_partial(Arg#arg.clidata)),
-				    Boundary)
+		    parse_multipart(
+		      binary_to_list(un_partial(Arg#arg.clidata)), Boundary)
 	    end;
 	_ ->
 	    case Req#http_request.method of
@@ -289,12 +340,6 @@ coerce_type(binary, Str) ->
 
 mkkey(S) ->
     list_to_atom(lists:reverse(S)).
-
-
-
-
-
-
 
 
 
