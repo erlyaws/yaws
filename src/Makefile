@@ -43,15 +43,17 @@ debug:
 clean:
 	rm -f $(EBIN_FILES) yaws_vsn.erl
 
-install: all
+install: all docsinstall
 	install -d $(INSTALLPREFIX)/lib/yaws/examples/ebin
 	install -d $(INSTALLPREFIX)/lib/yaws/examples/include
 	install -d $(INSTALLPREFIX)/lib/yaws/ebin
 	install -d /var/log/yaws
-	install -d /var/yaws/www
 	install -d /var/yaws/ebin
 	(cd ..; tar cz  ebin  --) | (cd $(INSTALLPREFIX)/lib/yaws; tar xz -- )
 	(cd ..; tar cz  include  --) | (cd $(INSTALLPREFIX)/lib/yaws; tar xz -- )
+
+docsinstall:
+	install -d /var/yaws/www
 	(cd ..; tar cz  www  --) | (cd /var/yaws; tar xz -- )
 
 
