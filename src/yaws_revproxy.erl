@@ -30,18 +30,25 @@
 
 
 
-init(CliSock, GC, SC, ARG, DecPath, QueryPart, {Prefix, URL}) ->
+init(CliSock, GC, SC, ARG, DecPath, QueryPart, {Prefix, URL}, N) ->
     case connect_url(URL) of
 	{ok, Ssock} ->
 	    Headers0 = ARG#arg.headers,
 	    Cli = sockmode(Headers0, ARG#arg.req,
 			   #psock{s = CliSock, prefix = Prefix,
 				  url = URL, type = client}),
+	    ?Debug("CLI: ~p~n",[?format_record(Cli, psock)]),
 	    Headers = rewrite_headers(SC, Cli, Headers0),
 	    ReqStr = yaws_api:reformat_request(
 		       rewrite_path(ARG#arg.req, Prefix)),
 	    Hstr = headers_to_str(Headers),
 	    yaws:gen_tcp_send(Ssock, [ReqStr, "\r\n", Hstr, "\r\n"], SC,GC),
+	    if
+		N /= 0 ->
+		    yaws:gen_tcp_send(Ssock,ARG#arg.clidata, SC, GC);
+		true ->
+		    ok
+	    end,
 	    Srv = #psock{s = Ssock, 
 			 prefix = Prefix, 
 			 url = URL,
@@ -49,7 +56,7 @@ init(CliSock, GC, SC, ARG, DecPath, QueryPart, {Prefix, URL}) ->
 			 r_host = (ARG#arg.headers)#headers.host,
 			 mode = expectheaders, type = server},
 	    
-	    %% Now we _must_ spawn a process here, casuse we
+	    %% Now we _must_ spawn a process here, because we
 	    %% can't use {active, once} due to the inefficencies
 	    %% that would occur with chunked encodings
 	    
@@ -205,7 +212,6 @@ get_chunk(Fd, N, Asz) ->
 
 
 
-
 ploop(From0, To, GC, SC) ->
     From = receive
 	       {cli2srv, Method, Host} ->
@@ -278,10 +284,12 @@ ploop(From0, To, GC, SC) ->
 	    case gen_tcp:recv(From#psock.s, From#psock.state, 20000) of
 		{ok, Bin} ->
 		    SZ = size(Bin),
+                    ?Debug("Read ~p bytes~n", [SZ]),
 		    yaws:gen_tcp_send(TS, Bin, SC, GC),
 		    ploop(From#psock{state = From#psock.state - SZ},
 			  To, GC,SC);
-		_ ->
+		Rsn ->
+                    ?Debug("Failed to read :~p~n", [Rsn]),  
 		    exit(normal)
 	    end;
 	undefined ->

@@ -892,6 +892,35 @@ inet_setopts(_,_,_) ->
     ok.  %% noop for ssl
 
 
+
+%% This is a request that is completely
+%% broken, it can either be evil, but the most
+%% probable cause is a broken (perl) test script that
+%% tries to to talk to us ... albeit in a bad way ...
+%% so let's log a small entry. I see no good reason to 
+%% play nice and reply to this ...
+
+bad_request(CliSock, GC, SC, Req, Head) ->
+    From = if
+	       port(CliSock) ->
+		   case inet:peername(CliSock) of
+		       {ok, {IP, _Port}} ->
+			   yaws:fmt_ip(IP);
+		       _ ->
+			   "unknown"
+		   end;
+	       true ->
+		   case ssl:peername(CliSock) of
+		       {ok, {IP, _Port}} ->
+			   yaws:fmt_ip(IP);
+		       _ ->
+			   "unknown"
+		   end
+	   end,
+    error_logger:info_msg("Bad req from ~s~n", [From]),
+    exit(normal).
+
+
 %% ret:  continue | done
 'GET'(CliSock, GC, SC, Req, Head) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
@@ -1038,7 +1067,7 @@ handle_request(CliSock, GC, SC, ARG, N) ->
 			    handle_ut(CliSock, GC, SC, ARG2, UT, N);
 			{true, {true, PP}} ->
 			    yaws_revproxy:init(CliSock, GC,SC,ARG,
-					       DecPath,QueryPart,PP);
+					       DecPath,QueryPart,PP, N);
 			{{false, Realm}, _} ->
 			    deliver_401(CliSock, Req, GC, Realm, SC)
 		    end

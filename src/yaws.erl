@@ -1676,7 +1676,8 @@ http_get_headers(CliSock, GC) ->
 	bad_request ->
 	    {#http_request{method=bad_request, version={0,9}},
 	     #headers{}};
-	closed -> closed;
+	closed -> 
+	    closed;
 	R -> 
 	    H = http_get_headers(CliSock, R, GC, #headers{}),
 	    {R, H}
