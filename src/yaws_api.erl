@@ -1182,7 +1182,7 @@ parse_url(path, Strict, U, Str, Ack) ->
 		
 format_url(Url) when record(Url, url) ->
     [
-     atom_to_list(Url#url.scheme), "://",
+     yaws:to_string(Url#url.scheme), "://",
      Url#url.host,
      if
 	 Url#url.port == undefined ->
