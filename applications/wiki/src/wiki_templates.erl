@@ -1,6 +1,6 @@
 -module(wiki_templates).
 
--export([template/5, template2/4]).
+-export([template/5, template2/5]).
 
 %% B = normal | locked | old
 template(Node,Root,Data,Modified,Locked) ->
@@ -35,7 +35,7 @@ template(Node,Root,Data,Modified,Locked) ->
       {"MENUID", MenuId},
       {"MODIFIED", Modified}]}.
 
-template2(Root,Title,Data,Locked) ->
+template2(Root,Title,Header,Data,Locked) ->
     MenuId =
 	if Locked == true -> "lockedmenuframe" ; 
 	   true -> "menuframe"
@@ -55,6 +55,7 @@ template2(Root,Title,Data,Locked) ->
     {ssi,
      "WikiPreferences.files/template_info.html", "@@",
      [{"TITLE", Title},
+      {"HEADER", Header},
       {"DATA", Data},
       {"MENUID", MenuId}]}.
 
@@ -135,6 +136,7 @@ template_info_file() ->
 <p>&nbsp;<br>
   
 <!-- the generated page -->
+<h1>@@HEADER@@</h1>
 @@DATA@@
 </td> 
 </tr> 

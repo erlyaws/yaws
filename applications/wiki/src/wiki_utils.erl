@@ -19,7 +19,7 @@
 %% HTML structure of the backlink list
 findallrefsto(Page, Root) ->
     Pages = getallrefs(Page, Root),
-    template2(Root, "References", 
+    template2(Root, "References",  "References",
 	 ["<p>The following pages contain references to ",
 	  wiki_to_html:format_link(Page, Root),".",
 	  "<ul>",
@@ -48,9 +48,8 @@ zombies(Root) ->
     %% Missing = Pages refered to but do not exists at all
     %% This is not an error
     NotReached = sort(All -- Reached),
-    template2(Root, "Zombies",
-	 [h1("Zombies"),
-	  p("These pages have no links to them."),
+    template2(Root, "Zombies", "Zombies",
+	 [p("These pages have no links to them."),
 	  "<ul>",
 	  map(fun(F) -> 
 		      [wiki_to_html:format_link(F, Root),"<br>"] end, 
