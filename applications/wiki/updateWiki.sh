@@ -1,4 +1,9 @@
 #!/bin/bash --
+#    -*- Shell-script -*- 
+#    File:	 updateWiki.sh
+#    Author:	 Johan Bevemyr
+#    Created:	 Fri May 16 22:06:00 2003
+#    Purpose:    Update existing Wiki installations
 
 progname=`basename $0`
 
@@ -18,7 +23,8 @@ function updateDir () {
 	if test '!' -d $udir/WikiPreferences.files ; then
 	    mkdir $udir/WikiPreferences.files
 	fi
-	install -C -b -S $suffix wiki/WikiPreferences.files/* $udir/WikiPreferences.files
+	install -C -b -S $suffix wiki/WikiPreferences.files/*.css $udir/WikiPreferences.files
+	install -C -b -S $suffix wiki/WikiPreferences.files/*.gif $udir/WikiPreferences.files
     else
 	echo "$progname: $udir is not a directory"
 	usage
