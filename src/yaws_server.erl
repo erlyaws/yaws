@@ -1840,8 +1840,8 @@ handle_out_reply({status, Code},_LineNo,_YawsFile,_UT,_A) when integer(Code) ->
 handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _UT, _A) ->
     exit(normal);
 
-handle_out_reply({ssi, File,Delimiter,Bindings}, LineNo, YawsFile, _UT,A) ->
-    case ssi(File, Delimiter, Bindings) of
+handle_out_reply({ssi, File, Delimiter, Bindings}, LineNo, YawsFile, UT,A) ->
+    case ssi(File, Delimiter, Bindings, UT#urltype.dir) of
 	{error, Rsn} ->
 	    L = ?F("yaws code at~s:~p had the following err:~n~p",
 		   [YawsFile, LineNo, Rsn]),
@@ -1964,11 +1964,19 @@ handle_out_reply_l([], _LineNo, _YawsFile, _UT, _A, Res) ->
 
 
 %% fast server side include with macrolike variable bindings expansion
-ssi(File, Delimiter, Bindings) ->
-    ssi(File, Delimiter, Bindings, get(sc)).
-ssi(File, Delimiter, Bindings, SC) ->
+ssi(File, Delimiter, Bindings, Dir) ->
+    ssi(File, Delimiter, Bindings, Dir, get(sc)).
+ssi(File, Delimiter, Bindings, Dir, SC) ->
     Key = {ssi, File, Delimiter},
-    FullPath = [SC#sconf.docroot, [$/|File]],
+    FullPath =
+	case File of
+	    {rel_path, FileName} ->
+		[SC#sconf.docroot, Dir,FileName];
+	    {abs_path, FileName} ->
+		[SC#sconf.docroot, [$/|FileName]];
+	    FileName when list(FileName) ->
+		[SC#sconf.docroot, [$/|FileName]]
+	end,
     Mtime = path_to_mtime(FullPath),
     case ets:lookup(SC#sconf.ets, Key) of
 	[{_, Parts, Mtime}] ->
@@ -1983,7 +1991,7 @@ ssi(File, Delimiter, Bindings, SC) ->
 		{ok, Bin} ->
 		    D =delim_split_file(Delimiter,binary_to_list(Bin),data,[]),
 		    ets:insert(SC#sconf.ets,{Key,D, Mtime}),
-		    ssi(File, Delimiter, Bindings, SC);
+		    ssi(File, Delimiter, Bindings, Dir, SC);
 		{error, Rsn} ->
 		    {error,Rsn}
 	    end
@@ -1997,9 +2005,6 @@ path_to_mtime(FullPath) ->
 	Err ->
 	    Err
     end.
-
-		     
-
 
 expand_parts([{data, D} |T], Bs, Ack) ->	    
     expand_parts(T, Bs, [D|Ack]);
