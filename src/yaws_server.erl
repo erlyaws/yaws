@@ -1783,7 +1783,7 @@ handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _UT, _A) ->
     exit(normal);
 
 handle_out_reply({ssi, File,Delimiter,Bindings}, LineNo, YawsFile, _UT,A) ->
-    case ssi(File, Delimiter, Bindings) of
+    case ssi(A, File, Delimiter, Bindings) of
 	{error, Rsn} ->
 	    L = ?F("yaws code at~s:~p had the following err:~n~p",
 		   [YawsFile, LineNo, Rsn]),
@@ -1906,21 +1906,21 @@ handle_out_reply_l([], _LineNo, _YawsFile, _UT, _A, Res) ->
 
 
 %% fast server side include with macrolike variable bindings expansion
-ssi(File, Delimiter, Bindings) ->
-    ssi(File, Delimiter, Bindings, get(sc)).
-ssi(File, Delimiter, Bindings, SC) ->
+ssi(A, File, Delimiter, Bindings) ->
+    ssi(A, File, Delimiter, Bindings, get(sc)).
+ssi(A, File, Delimiter, Bindings, SC) ->
     Key = {ssi, File, Delimiter},
     FullPath = [SC#sconf.docroot, [$/|File]],
     Mtime = path_to_mtime(FullPath),
     case ets:lookup(SC#sconf.ets, Key) of
 	[{_, Parts, Mtime}] ->
-	    expand_parts(Parts, Bindings, []);
+	    expand_parts(A, Parts, Bindings, []);
 	_ ->
 	    case prim_file:read_file(FullPath) of
 		{ok, Bin} ->
 		    D =delim_split_file(Delimiter,binary_to_list(Bin),data,[]),
 		    ets:insert(SC#sconf.ets,{Key,D, Mtime}),
-		    ssi(File, Delimiter, Bindings, SC);
+		    ssi(A, File, Delimiter, Bindings, SC);
 		{error, Rsn} ->
 		    {error,Rsn}
 	    end
@@ -1938,16 +1938,23 @@ path_to_mtime(FullPath) ->
 		     
 
 
-expand_parts([{data, D} |T], Bs, Ack) ->	    
-    expand_parts(T, Bs, [D|Ack]);
-expand_parts([{var, V} |T] , Bs, Ack) ->
+expand_parts(A, [{data, D} |T], Bs, Ack) ->	    
+    expand_parts(A, T, Bs, [D|Ack]);
+expand_parts(A, [{var, V} |T] , Bs, Ack) ->
     case lists:keysearch(V, 1, Bs) of
+	{value, {_, {ehtml, E}}} ->
+	    case safe_ehtml_expand(E) of
+		{ok, Val} ->
+		    expand_parts(A, T, Bs, [Val|Ack]);
+		{error, ErrStr} ->
+		    handle_crash(A,ErrStr)
+	    end;
 	{value, {_, Val}} ->
-	    expand_parts(T, Bs, [Val|Ack]);
+	    expand_parts(A, T, Bs, [Val|Ack]);
 	false ->
 	    {error, ?F("No variable binding found for ~p", [V])}
     end;
-expand_parts([], _,Ack) ->
+expand_parts(A, [], _,Ack) ->
     lists:reverse(Ack).
 
 	    
