@@ -354,7 +354,7 @@ handle_info(minute10, State) ->
 	{ok, FI} when  FI#file_info.size > ?WRAP_LOG_SIZE, 
 		       State#state.copy_errlog == true ->
 	    gen_event:call(error_logger, yaws_log_file_h, wrap);
-	true ->
+	_ ->
 	    ok
     end,
     {noreply, State#state{alogs= L,
