@@ -1190,7 +1190,10 @@ done_or_continue() ->
 %% we may have content, 
 
 new_redir_h(OH, Loc) ->
-    OH2 = OH#outh{status = 302,
+    new_redir_h(OH, Loc, 302).
+
+new_redir_h(OH, Loc, Status) ->
+    OH2 = OH#outh{status = Status,
 		  location = Loc},
     put(outh, OH2).
 
@@ -1748,14 +1751,17 @@ handle_out_reply({ssi, File,Delimiter,Bindings}, LineNo, YawsFile, SC, A) ->
 handle_out_reply(break, _LineNo, _YawsFile, _SC, _A) ->
     break;
 
-handle_out_reply({redirect_local, {net_path, URL}}, _LineNo,
+handle_out_reply({redirect_local, Path}, LN, YF, SC, A) ->
+    handle_out_reply({redirect_local, Path, 302}, LN, YF, SC, A);
+
+handle_out_reply({redirect_local, {net_path, URL}, Status}, _LineNo,
 		  _YawsFile, _SC, _A) ->
     Loc = ["Location: ", URL, "\r\n"],
     OH = get(outh),
-    new_redir_h(OH, Loc),
+    new_redir_h(OH, Loc, Status),
     ok;
 
-handle_out_reply({redirect_local, Path0}, _LineNo, _YawsFile, SC, A) ->
+handle_out_reply({redirect_local, Path0, Status}, _LineNo, _YawsFile, SC, A) ->
     Arg = hd(A),
     Path = case Path0 of
 	       {abs_path, P} ->
@@ -1776,13 +1782,16 @@ handle_out_reply({redirect_local, Path0}, _LineNo, _YawsFile, SC, A) ->
     HostPort = redirect_host(SC, Headers#headers.host),
     Loc = ["Location: ", Scheme, HostPort, Path, "\r\n"],
     OH = get(outh),
-    new_redir_h(OH, Loc),
+    new_redir_h(OH, Loc, Status),
     ok;
 
-handle_out_reply({redirect, URL}, _LineNo, _YawsFile, _SC, _A) ->
+handle_out_reply({redirect, URL}, LN, YF, SC, A) ->
+    handle_out_reply({redirect, URL, 302}, LN, YF, SC, A);
+
+handle_out_reply({redirect, URL, Status}, _LineNo, _YawsFile, _SC, _A) ->
     Loc = ["Location: ", URL, "\r\n"],
     OH = get(outh),
-    new_redir_h(OH, Loc),
+    new_redir_h(OH, Loc, Status),
     ok;
 
 handle_out_reply(ok, _LineNo, _YawsFile, _SC, _A) ->

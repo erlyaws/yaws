@@ -1203,7 +1203,9 @@ described later.
 
 \item The tuple \verb+{redirect_local, Path}+. 
 This particular redirect return value will make the 
-\Yaws\  web server return a 303 redirect to the specified Path.
+\Yaws\  web server return a 302 redirect to the specified Path.
+Optionally a different status code can be supplied which will
+be used in place of 302, eg \verb+{redirect_local, Path, 307}+. 
 
 \item \verb+yaws_api:setcookie("myapp_sid",Cookie)+ generates
 a \verb+Set-Cookie+ header
@@ -1474,9 +1476,24 @@ must be called to indicate the end of the stream.
               Erase  all previous headers and accumulate a single
               Location header. Set the status code.
 
+\item       \verb+{redirect, Url}+
+              Same as redirect above with the additional 
+	      option of supplying the status code. The default
+	      for a redirect is 302 but 301, 303 and 307 are also
+	      valid redirect status codes.
+
 \item       \verb+{redirect_local, Path}+
               Does a redirect to the same Scheme://Host:Port/Path
-              as we currently are executing in.
+              as we currently are executing in. Path can be 
+	      either be the path directly (equivalent to 
+	      abs_path), or one of \verb+{{abs_path, Path}+ or 
+	      \verb+{{rel_path, RelativePath}}
+
+\item       \verb+{redirect_local, Path, Status}+
+              Same as redirect_local above with the additional 
+	      option of supplying the status code. The default
+	      for a redirect is 302 but 301, 303 and 307 are also
+	      valid redirect status codes.
 
 \item       \verb+{get_more, Cont, State}+
               When  we  are  receiving  large POSTs we can return
