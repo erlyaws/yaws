@@ -9,7 +9,7 @@ SLOT="0"
 KEYWORDS="x86 ppc sparc alpha arm"
 IUSE="ssl"
 
-DEPEND=">=dev-lang/erlang-r8
+DEPEND=">=dev-lang/erlang-8b
 	ssl?	( >=dev-libs/openssl-0.9.6d )"
 
 
