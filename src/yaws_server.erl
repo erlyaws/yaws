@@ -157,11 +157,13 @@ init([]) ->
     {Debug, Trace, TraceOut, Conf, RunMod, Embed} = get_app_args(),
     case Embed of 
 	false ->
-	    case yaws_config:load(Conf, Trace, TraceOut, Debug) of
+	    Config = yaws_config:load(Conf, Trace, TraceOut, Debug),
+	    ?Debug("Config= ~p~n", [Config]),
+	    case Config of
 		{ok, Gconf, Sconfs} ->
 		    erase(logdir),
-		    %?Debug("GC = ~p~n", [?format_record(Gconf, gconf)]),
-		    %?Debug("SCS: ~p~n", [Sconfs]),
+		    ?Debug("GC = ~p~n", [?format_record(Gconf, gconf)]),
+		    ?Debug("SCS: ~p~n", [Sconfs]),
 		    yaws_log:setdir(Gconf, Sconfs),
 		    case Gconf#gconf.trace of
 			{true, What} ->
@@ -2495,12 +2497,10 @@ clear_ets(E) ->
 
 %% return #urltype{}
 do_url_type(SC, GetPath) ->
+    ?Debug("do_url_type ~p~n~p~n", [SC, GetPath]),
     case split_path(GetPath, [], []) of
 	slash ->
 	    maybe_return_dir(SC#sconf.docroot, GetPath);
-	redir_dir ->
-	    #urltype{type = redir,
-		     path = [GetPath, $/]};
 	UT ->
 	    UT#urltype{getpath = GetPath}
     end.
@@ -2539,12 +2539,12 @@ split_path([$/|Tail], Comps, Part)  when Part /= [] ->
     ?Debug("Tail=~s Part=~s", [Tail,Part]),
     Component = lists:reverse(Part),
     CName = tl(Component),
-    case member(CName, (get(sc))#sconf.appmods) of
-	true  ->
+    case lists:keysearch(CName, 1, (get(sc))#sconf.appmods) of
+	{value, {_, Mod}}  ->
 	    %% we've found an appmod
 	    PrePath = conc_path(Comps),
-	    ret_app_mod([$/|Tail], list_to_atom(CName), PrePath);
-	_ ->
+	    ret_app_mod([$/|Tail], Mod, PrePath);
+	false ->
 	    case ret_script(Comps, Part) of
 		false -> 
 		    split_path([$/|Tail],[lists:reverse(Part) | Comps], []);
@@ -2575,6 +2575,7 @@ ret_app_mod(Path, Mod, PrePath) ->
 
 %% http://a.b.c/~user URLs
 ret_user_dir([], "/", Upath)  ->
+    ?Debug("ret_user_dir ~p~n", [Upath]),
     SC = get(sc),
     if ?sc_has_tilde_expand(SC) ->
 	    case parse_user_path(SC#sconf.docroot, Upath, []) of
@@ -2587,19 +2588,34 @@ ret_user_dir([], "/", Upath)  ->
 			    #urltype{type=error};
 			Home ->
 			    DR2 = Home ++ "/public_html/",
-			    put(sc, SC#sconf{docroot=DR2}),
-			    do_url_type(SC, Path) %% recurse
+			    SC2 = SC#sconf{
+				    allowed_scripts = [],
+				    docroot=DR2},
+			    put(sc, SC2),
+			    redir_user(do_url_type(SC2, Path), User)%% recurse
 		    end;
-		redir_dir ->
-		    redir_dir
+		{redir_dir, User} ->
+		    #urltype {type = redir,
+			      path = ["~", User, "/"]}
 	    end;
        true ->
 	    #urltype{type=error}
     end.
 
 
-parse_user_path(_DR, [], _User) ->
-    redir_dir;
+redir_user(UT, User) ->
+    case UT#urltype.type of
+	redir ->
+	    UT#urltype{path = ["/~", User, UT#urltype.path]};
+	_ ->
+	    UT
+    end.
+
+
+
+
+parse_user_path(_DR, [], User) ->
+    {redir_dir, User};
 parse_user_path(_DR, [$/], User) ->
     {ok, reverse(User), [$/]};
 parse_user_path(_DR, [$/|Tail], User) ->
@@ -2644,7 +2660,8 @@ ret_reg_split(Comps, RevFile) ->
 	{ok, FI} when FI#file_info.type == directory, hd(RevFile) == $/ ->
 	    maybe_return_dir(DR, [Dir, File]);
 	{ok, FI} when FI#file_info.type == directory, hd(RevFile) /= $/ ->
-	    redir_dir;
+	    #urltype{type = redir,
+		     path = [Dir, File, "/"]};
 	Err ->
 	    #urltype{type=error, data=Err}
     end.

@@ -461,10 +461,14 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    ssl:start(),
 	    fload(FD, ssl, GC, C#sconf{ssl = #ssl{}}, Cs, Lno+1, Next);
 	
-	["appmods", '=' | Modules] ->
-	    C2 = C#sconf{appmods = Modules},
-	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-
+	["appmods", '=' | AppMods] ->
+	    case parse_appmods(AppMods, []) of
+		{ok, L} ->
+		    C2 = C#sconf{appmods = L},
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+		{error, Str} ->
+		    {error, ?F("~s at line ~w", [Str, Lno])}
+	    end;
 	["errormod_404", '=' , Module] ->
 	    C2 = C#sconf{errormod_404 = list_to_atom(Module)},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
@@ -783,6 +787,28 @@ is_space(C) ->
     lists:member(C, [$\s, $\n, $\t, $\r]).
 
 is_special(C) ->
-    lists:member(C, [$=, $<, $>]).
+    lists:member(C, [$=, $<, $>, $,]).
+
+
+
+parse_appmods(['<', PathElem, ',' , AppMod, '>' | Tail], Ack) ->
+    parse_appmods(Tail, [{PathElem, AppMod} |Ack]);
+parse_appmods([AppMod | Tail], Ack) when atom(AppMod) ->
+    case atom_to_list(AppMod) of
+	[Char] ->
+	    case is_special(Char) of
+		true ->
+		    {error, "Bad appmod syntax"};
+		false ->
+		    parse_appmods(Tail, [{AppMod, AppMod}  | Ack])
+	    end;
+	_ ->
+	    parse_appmods(Tail,  [{AppMod, AppMod} |Ack])
+    end;
+parse_appmods([], Ack) ->
+    {ok, Ack};
+parse_appmods(_, _) ->
+    {error, "Wrong appmod spec"}.
+
 
 

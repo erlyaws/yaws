@@ -208,7 +208,12 @@ interpret php scripts (if allowed).  Default is
 \fBappmods = [ListOfModuleNames]\fR
 If any the names in ListOfModuleNames appear as components in the
 path for a request, the path request parsing will terminate and
-that module will be called.
+that module will be called. There is also an alternate syntax for
+specifying the appmods if we don't want our internal erlang module
+names to be exposed in the URL paths. 
+We can specify
+
+   appmods = <Path1, Module1> <Path2, Modules2> ...
 
 Assume for example that we have
 the URL http://www.hyber.org/myapp/foo/bar/baz?user=joe 
