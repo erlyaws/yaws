@@ -2463,7 +2463,8 @@ update_total(E, Path) ->
 
 cache_file(SC, GC, Path, UT) when 
   UT#urltype.type == regular ;
-  UT#urltype.type == yaws  ->
+  UT#urltype.type == yaws,
+  UT#urltype.pathinfo == undefined ->
     E = SC#sconf.ets,
     [{num_files, N}] = ets:lookup(E, num_files),
     [{num_bytes, B}] = ets:lookup(E, num_bytes),
