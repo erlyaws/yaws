@@ -81,6 +81,21 @@ When virthosting several servers on the same ip/port address, if the
 browser doesn't sebd a Host: field, yaws will pick the \fIfirst\fR
 server specified in the config file
 .TP
+\fBrport = Port \fR
+This forces all local redirects issued by the server to go to Port.
+This is useful when yaws listens to a port which is different from 
+the port that the user connects to. For example, running yaws as a
+non-privileged user makes it impossible to listen to port 80, since
+that port can only be opened by a privileged user. Instead yaws
+listens to a high port number port, 8000, and iptables are used to 
+redirect traffic to port 80 to port 8000 (most NAT:ing firewalls 
+will also do this for you).
+.TP
+\fBrscheme = http | https \fR
+This forces all local redirects issued by the server to use this 
+method. This is useful when an SSL off-loader, or stunnel, is used in 
+front of yaws.
+.TP
 .TP
 \fBaccess_log = true | false\fR
 Setting this directive to false turns of traffic logging for this

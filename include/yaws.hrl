@@ -51,6 +51,8 @@
 %% server conf
 -record(sconf,
 	{port = 8000,                %% which port is this server lsitenintg to
+	 rport,                      %% forced redirect port
+	 rmethod,                    %% forced redirect method
 	 docroot,                    %% path to the docs
 	 access_log = true,          %% log acces 
 	 listen = {127,0,0,1},       %% bind to this IP, {0,0,0,0} is possible

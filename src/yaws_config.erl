@@ -346,6 +346,25 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		_ ->
 		    {error, ?F("Expect integer at line ~w", [Lno])}
 	    end;
+	["rport", '=', Val] ->
+	    case (catch list_to_integer(Val)) of
+		I when integer(I) ->
+		    C2 = C#sconf{rport = I},
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+		_ ->
+		    {error, ?F("Expect integer at line ~w", [Lno])}
+	    end;
+	["rmethod", '=', Val] ->
+	    case Val of
+		"http" -> 
+		    C2 = C#sconf{rmethod = Val},
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+		"https" -> 
+		    C2 = C#sconf{rmethod = Val},
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+		_ ->
+		    {error, ?F("Expect http or https at line ~w", [Lno])}
+	    end;
 	["listen", '=', IP] ->
 	    case yaws:parse_ip(IP) of
 		error ->

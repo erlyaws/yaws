@@ -1005,24 +1005,9 @@ parse_auth(_) ->
 % without a trailing / in the HTTP req
 % otherwise the relative urls in /dir/index.html will be broken.
 
-deliver_303(CliSock, Req, GC, SC) ->
-    Scheme = case SC#sconf.ssl of
-		 undefined ->
-		     "http://";
-		 _SSl ->
-		     "https://"
-	     end,
-    PortPart = case {SC#sconf.ssl, SC#sconf.port} of
-		   {undefined, 80} ->
-		       "";
-		   {undefined, Port} ->
-		       io_lib:format(":~w",[Port]);
-		   {_SSL, 443} ->
-		       "";
-		   {_SSL, Port} ->
-		       io_lib:format(":~w",[Port])
-	       end,
 
+deliver_303(CliSock, Req, GC, SC) ->
+    {Scheme, PortPart} = redirect_scheme_port(SC),
     set_status_code(303),
     accumulate_header(["Location: ", Scheme,
 		       servername_sans_port(SC#sconf.servername), 
@@ -1030,6 +1015,30 @@ deliver_303(CliSock, Req, GC, SC) ->
     
     deliver_accumulated(#dcc{}, CliSock, GC, SC),
     done.
+
+redirect_scheme_port(SC) ->
+    Scheme = case {SC#sconf.ssl,SC#sconf.rmethod} of
+		 {_, Method} when list(Method) ->
+		     Method++"://";
+		 {undefined,_} ->
+		     "http://";
+		 {_SSl,_} ->
+		     "https://"
+	     end,
+    PortPart = case {SC#sconf.ssl, SC#sconf.port, SC#sconf.rport} of
+		   {_,_,ForcePort} when integer(ForcePort) ->
+		       io_lib:format(":~w",[ForcePort]);
+		   {undefined, 80, _} ->
+		       "";
+		   {undefined, Port, _} ->
+		       io_lib:format(":~w",[Port]);
+		   {_SSL, 443, _} ->
+		       "";
+		   {_SSL, Port, _} ->
+		       io_lib:format(":~w",[Port])
+	       end,
+    {Scheme, PortPart}.
+    
 
 servername_sans_port(Servername) ->
     case string:chr(Servername, $:) of
@@ -1386,32 +1395,17 @@ handle_out_reply(break, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     break;
 
 handle_out_reply({redirect_local, Path}, _DCC, _LineNo, _YawsFile, SC, A) ->
-    Scheme = case SC#sconf.ssl of
-		 undefined ->
-		     "http://";
-		 _SSl ->
-		     "https://"
-	     end,
-    PortPart = case {SC#sconf.ssl, SC#sconf.port} of
-		   {undefined, 80} ->
-		       "";
-		   {undefined, Port} ->
-		       io_lib:format(":~w",[Port]);
-		   {_SSL, 443} ->
-		       "";
-		   {_SSL, Port} ->
-		       io_lib:format(":~w",[Port])
-	       end,
+    {Scheme, PortPart} = redirect_scheme_port(SC),
     set_status_code(redirect_code(A)),
     accumulate_header(["Location: ", Scheme,
 		       servername_sans_port(SC#sconf.servername), 
 		       PortPart, Path]),
-    break;
+    ok;
 
 handle_out_reply({redirect, URL}, _DCC, _LineNo, _YawsFile, _SC, A) ->
     set_status_code(redirect_code(A)),
     accumulate_header(["Location: ", URL]),
-    break;
+    ok;
 
 handle_out_reply(ok, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     ok;
