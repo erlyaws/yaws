@@ -865,7 +865,6 @@ dcc(Req, Headers) ->
 		      false;
 		  {0,9} ->
 		      true
-	      
 	      end,
     Chunked = case Req#http_request.version of
 		  {1, 0} ->
