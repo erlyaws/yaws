@@ -1,8 +1,8 @@
-%%% Utility function for zlib.
+%%% Utility functions for zlib.
 -module(yaws_zlib).
 -author('carsten@codimi.de').
 
--export([gzipInit/1, gzipEnd/1, gzipDeflate/4]).
+-export([gzipInit/1, gzipEnd/1, gzipDeflate/4, gzip/1]).
 
 
 gzipInit(Z) ->
@@ -49,7 +49,48 @@ gzipDeflate(Z, {Crc32,Size}, Bin, Flush) ->
 		Bs
 	end,
     {ok, {Crc1, Size1}, Data}.
-    
+
+
+%% like zlib:gzip/1, but returns an io list
+
+gzip(Data) when binary(Data) ->
+    Z = zlib:open(),
+    {ok, _, D} = gzipDeflate(Z, gzipInit(Z), Data, finish),
+    gzipEnd(Z),
+    zlib:close(Z),
+    {ok, D};
+
+gzip(Data) ->
+    Z = zlib:open(),
+    gzip_loop(Z, gzipInit(Z), Data, [], []).
+
+gzip_loop(Z, P, [], [], A) ->
+    {ok, _, D} = gzipDeflate(Z, P, <<>>, finish),
+    gzipEnd(Z),
+    zlib:close(Z),
+    {ok, [A|D]};
+gzip_loop(Z, P, B, C, A) when binary(B) ->
+    {ok, P1, D} = gzipDeflate(Z, P, B, none),
+    gzip_loop(Z, P1, C, [],
+	      case D of
+		 [] -> A;
+		 _ -> 
+		      case A of
+			  [] -> D;
+			  _ -> [A|D]
+		      end
+	      end);
+gzip_loop(Z, P, [I|T], C, A) when integer(I) ->
+    gzip_loop(Z, P, list_to_binary([I|T]), C, A);
+gzip_loop(Z, P, [H], C, A) ->
+    gzip_loop(Z, P, H, C, A);
+gzip_loop(Z, P, [H|T], C, A) ->
+    gzip_loop(Z, P, H, [T|C], A);
+gzip_loop(Z, P, [], C, A) ->
+    gzip_loop(Z, P, C, [], A);
+gzip_loop(Z, P, I, C, A) when integer(I) ->
+    gzip_loop(Z, P, <<I>>, C, A).
+
 
 %% To work around a bug in zlib.
 

@@ -1003,6 +1003,11 @@ outh_set_content_type(Mime) ->
 			       make_content_type_header(Mime)}),
     ok.
 
+outh_set_content_encoding(Encoding) ->
+    put(outh, (get(outh))#outh{content_encoding = 
+			       make_content_encoding_header(Encoding)}),
+    ok.
+
 outh_set_cookie(C) ->
     put(outh, (get(outh))#outh{set_cookie = ["Set-Cookie: " , C, "\r\n"]}),
     ok.
@@ -1134,7 +1139,8 @@ outh_set_connection(What) ->
 
 outh_set_content_length(Int) ->
     H = get(outh),
-    H2 = H#outh{content_length = make_content_length_header(Int)},
+    H2 = H#outh{content_length = make_content_length_header(Int),
+		contlen=Int},
     put(outh, H2).
 
 
@@ -1161,7 +1167,16 @@ outh_set_transfer_encoding_off() ->
     put(outh, H2).
 
 
-
+outh_fix_doclose() ->
+    H = get(outh),
+    if
+	(H#outh.doclose /= true) and (H#outh.contlen==undefined) and
+	(H#outh.chunked == false) ->
+	    put(outh, H#outh{doclose=true,
+			     connection=make_connection_close_header(true)});
+	true -> ok
+    end.
+	    
 
 dcc(Req, Headers) ->
     DoClose = case Req#http_request.version of
@@ -1323,12 +1338,14 @@ outh_get_act_contlen() ->
 
 outh_inc_act_contlen(Int) ->
     O = get(outh),
-    case O#outh.act_contlen of
-	undefined ->
-	    put(outh, O#outh{act_contlen = Int});
-	Len ->    
-	    put(outh, O#outh{act_contlen = Len + Int})
-    end.
+    L = case O#outh.act_contlen of
+	    undefined ->
+		Int;
+	    Len ->    
+		Len+Int
+	end,
+    put(outh, O#outh{act_contlen = L}),
+    L.
 
 outh_get_doclose() ->
     (get(outh))#outh.doclose.
@@ -1339,6 +1356,14 @@ outh_get_chunked() ->
 outh_get_content_encoding() ->
     (get(outh))#outh.encoding.
     
+outh_get_content_encoding_header() ->
+    (get(outh))#outh.content_encoding.
+
+outh_get_content_type() ->    
+    case (get(outh))#outh.content_type of
+	[_, Mime, _] ->
+	    Mime
+    end.
 
 outh_serialize() ->
     H = get(outh),
@@ -1354,6 +1379,12 @@ outh_serialize() ->
        true ->
 	    ok
     end,
+    case H#outh.content_encoding of
+	undefined ->
+	    ContentEncoding = make_content_encoding_header(H#outh.encoding);
+	ContentEncoding ->
+	    ok
+    end,	
     Headers = [noundef(H#outh.connection),
 	       noundef(H#outh.server),
 	       noundef(H#outh.location),
@@ -1365,7 +1396,7 @@ outh_serialize() ->
 	       noundef(H#outh.content_range),
 	       noundef(H#outh.content_length),
 	       noundef(H#outh.content_type),
-	       noundef(H#outh.content_encoding),
+	       noundef(ContentEncoding),
 	       noundef(H#outh.set_cookie),
 	       noundef(H#outh.transfer_encoding),
 	       noundef(H#outh.www_authenticate),
@@ -1384,6 +1415,8 @@ noundef(Str) ->
 accumulate_header({X, erase}) when atom(X) ->
     erase_header(X);
 
+%% special headers
+
 accumulate_header({connection, What}) ->
     DC = case What of
 	     "close" ->
@@ -1394,12 +1427,18 @@ accumulate_header({connection, What}) ->
     H = get(outh),
     put(outh, (H#outh{connection = ["Connection: ", What, "\r\n"],
 		      doclose = DC}));
+accumulate_header({"Connection", What}) ->
+    accumulate_header({connection, What});
 
 accumulate_header({location, What}) ->
     put(outh, (get(outh))#outh{location = ["Location: " , What, "\r\n"]});
+accumulate_header({"Location", What}) ->
+    accumulate_header({location, What});
 
 accumulate_header({cache_control, What}) ->
     put(outh, (get(outh))#outh{cache_control = ["Cache-Control: " , What, "\r\n"]});
+accumulate_header({"Cache-Control", What}) ->
+    accumulate_header({cache_control, What});
 
 accumulate_header({set_cookie, What}) ->
     O = get(outh),
@@ -1408,20 +1447,38 @@ accumulate_header({set_cookie, What}) ->
 	      X -> X
 	  end,
     put(outh, O#outh{set_cookie = ["Set-Cookie: " , What, "\r\n"|Old]});
+accumulate_header({"Set-Cookie", What}) ->
+    accumulate_header({set_cookie, What});
 
 accumulate_header({content_type, What}) ->
     put(outh, (get(outh))#outh{content_type = ["Content-Type: " , What, "\r\n"]});
+accumulate_header({"Content-Type", What}) ->
+    accumulate_header({content_type, What});
+
+accumulate_header({content_encoding, What}) ->
+    put(outh, (get(outh))#outh{content_encoding = 
+			       ["Content-Encoding: " , What, "\r\n"]});
+accumulate_header({"Content-Encoding", What}) ->
+    accumulate_header({content_encoding, What});
 
 accumulate_header({content_length, Len}) when integer(Len) ->
     H = get(outh),
     put(outh, H#outh{
 		chunked = false,
 		transfer_encoding = undefined,
+		contlen = Len,
 		content_length = make_content_length_header(Len)});
+accumulate_header({"Content-Length", Len}) ->
+    case Len of
+	I when integer(I) ->
+	    accumulate_header({content_length, I});
+	L when list(L) ->
+	    accumulate_header({content_length, list_to_integer(L)})
+    end;
 
+%% non-special headers (which may be special in a future Yaws version)
 
-%% backwards compatible clause
-accumulate_header(Str) when list(Str) ->
+accumulate_header({Name, What}) when list(Name) ->
     H = get(outh),
     Old = case H#outh.other of
 	      undefined ->
@@ -1429,9 +1486,26 @@ accumulate_header(Str) when list(Str) ->
 	      V ->
 		  V
 	  end,
-    H2 = H#outh{other = [Str, "\r\n", Old]},
-    put(outh, H2).
+    H2 = H#outh{other = [Name, ": ", What, "\r\n", Old]},
+    put(outh, H2);
 
+
+
+%% backwards compatible clause
+accumulate_header(Data) when list(Data) ->
+    Str = lists:flatten(Data),
+    accumulate_header(split_header(Str)).
+
+split_header(Str) ->
+    split_header(Str, []).
+split_header([], A) ->
+    {lists:reverse(A), ""};
+split_header([$:, $ |W], A) ->
+    {lists:reverse(A), W};
+split_header([$:|W], A) ->
+    {lists:reverse(A), W};
+split_header([C|S], A) ->
+    split_header(S, [C|A]).
 
 
 erase_header(connection) ->
@@ -1442,6 +1516,8 @@ erase_header(set_cookie) ->
     put(outh, (get(outh))#outh{set_cookie = undefined});
 erase_header(content_type) ->
     put(outh, (get(outh))#outh{content_type = undefined});
+erase_header(content_encoding) ->
+    put(outh, (get(outh))#outh{content_encoding = undefined});
 erase_header(location) ->
     put(outh, (get(outh))#outh{location = undefined}).
 
@@ -1644,8 +1720,9 @@ gen_tcp_send(S, Data) ->
 		Err ->
 		    {B2, Size} = strip(Data),
 		    yaws_debug:derror("Failed to send ~w bytes:~n~p "
-				      "on socket ~p: ~p~n",
-				      [Size, B2, S, Err]),
+				      "on socket ~p: ~p~n~p~n",
+				      [Size, B2, S, Err,
+				       yaws_debug:nobin(Data)]),
 		    exit(Err)
 	    end
     end.

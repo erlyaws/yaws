@@ -17,7 +17,7 @@
 
 -include_lib("kernel/include/file.hrl").
 
-list_directory(CliSock, List, DirName, Req) ->
+list_directory(Arg, CliSock, List, DirName, Req) ->
     {abs_path, Path} = Req#http_request.path,
     {DirStr, Pos, Direction, Qry} = parse_query(Path),
     ?Debug("List=~p Dirname~p~n", [List, DirName]), 
@@ -43,18 +43,9 @@ list_directory(CliSock, List, DirName, Req) ->
 	     "</body>\n</html>\n"],
     B = list_to_binary(Body),
 
-    yaws_server:accumulate_chunk(B),
-    case yaws:outh_get_chunked() of
-	true ->
-	    yaws_server:accumulate_content(["\r\n", "0", "\r\n\r\n"]),
-	    yaws_server:deliver_accumulated(CliSock),
-	    continue;
-	false ->
-	    case yaws_server:deliver_accumulated(CliSock) of
-		discard -> yaws_server:done_or_continue();
-		_ -> done
-	    end
-    end.
+    yaws_server:accumulate_content(B),
+    yaws_server:deliver_accumulated(Arg, CliSock, decide, undefined, final),
+    yaws_server:done_or_continue().
 
 parse_query(Path) ->
     case string:tokens(Path, [$?]) of

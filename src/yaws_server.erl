@@ -1067,13 +1067,13 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     fun(A)->(SC#sconf.errormod_404):
 					 out404(A,GC,SC) 
 			     end,
-			     fun(_A)->finish_up_dyn_file(CliSock)
+			     fun(A)->finish_up_dyn_file(A, CliSock)
 			     end
 			    );
 	directory when ?sc_has_dir_listings(SC) ->
 	    P = UT#urltype.dir,
 	    yaws:outh_set_dyn_headers(Req, H),
-	    yaws_ls:list_directory(CliSock, UT#urltype.data, P, Req);
+	    yaws_ls:list_directory(ARG, CliSock, UT#urltype.data, P, Req);
 	directory ->
 	    handle_ut(CliSock, ARG, #urltype{type = error}, N);
 	regular ->
@@ -1143,7 +1143,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     N,
 			     A2,UT,
 			     fun(A)->Mod:out(A) end,
-			     fun(_A)->finish_up_dyn_file(CliSock)
+			     fun(A)->finish_up_dyn_file(A, CliSock)
 			     end
 			    );
 	cgi ->
@@ -1155,7 +1155,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     fun(A)->yaws_cgi:call_cgi(
 				       A,flatten(UT#urltype.fullpath))
 			     end,
-			     fun(_A)->finish_up_dyn_file(CliSock)
+			     fun(A)->finish_up_dyn_file(A, CliSock)
 			     end
 			    );
 	php ->
@@ -1169,7 +1169,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 				       GC#gconf.phpexe,
 				       flatten(UT#urltype.fullpath))
 			     end,
-			     fun(_A)->finish_up_dyn_file(CliSock)
+			     fun(A)->finish_up_dyn_file(A, CliSock)
 			     end
 			    )
     end.
@@ -1218,18 +1218,10 @@ deliver_302(CliSock, _Req, Arg, Path) ->
 		  ["Location: ", Scheme,
 		   RedirHost, P, "?", Q, "\r\n"]
 	  end,
-    
-    Ret = case yaws:outh_get_chunked() of
-	      true ->
-		  accumulate_content([crnl(), "0", crnl2()]),
-		  continue;
-	      false ->
-		  done
-	  end,
-    
+
     new_redir_h(H, Loc),
     deliver_accumulated(CliSock),
-    Ret.
+    done_or_continue().
 
 
 redirect_scheme(SC) ->
@@ -1455,59 +1447,30 @@ deliver_dyn_part(CliSock,                  % essential params
 		    exit(normal)         % ???
 	    end;
 	break ->
-	    finish_up_dyn_file(CliSock);
+	    finish_up_dyn_file(Arg, CliSock);
 	{page, Page} ->
 	    {page, Page};
         Arg2 = #arg{} ->
 	    DeliverCont(Arg2);
 	{streamcontent, MimeType, FirstChunk} ->
 	    yaws:outh_set_content_type(MimeType),
-	    accumulate_chunk(FirstChunk),
-	    case deliver_accumulated(CliSock) of
-		discard ->
-		    stream_loop_discard(CliSock);
-		_ -> 
-		    stream_loop_send(CliSock)
-	    end;
+	    accumulate_content(FirstChunk),
+	    Priv = deliver_accumulated(Arg, CliSock, 
+				       decide, undefined, stream),
+	    stream_loop_send(Priv, CliSock);
 	{streamcontent_with_size, Sz, MimeType, FirstChunk} ->
 	    yaws:outh_set_content_type(MimeType),
-	    yaws:outh_set_transfer_encoding_off(),
-	    yaws:outh_set_content_length(Sz),
-	    accumulate_chunk(FirstChunk),
-	    case deliver_accumulated(CliSock) of
-		discard ->
-		    stream_loop_discard(CliSock);
-		_ -> 
-		    stream_loop_send(CliSock)
-	    end,
-	    done;
+	    accumulate_content(FirstChunk),
+	    Priv = deliver_accumulated(Arg, CliSock, 
+				       decide, Sz, stream),
+	    stream_loop_send(Priv, CliSock);
 	_ ->
 	    DeliverCont(Arg)
     end.
 
-finish_up_dyn_file(CliSock) ->
-    case yaws:outh_get_chunked() of
-	true ->
-	    accumulate_content([crnl(), "0", crnl2()]),
-	    deliver_accumulated(CliSock),
-	    continue;
-	false ->
-	     case yaws:outh_get_doclose() of                                 
-                keep_alive -> 
-		     Len = yaws:outh_get_act_contlen(),
-		     yaws:outh_set_content_length(Len),
-		     discard_deliver_accumulated(CliSock);
-		 _ ->
-		     discard_deliver_accumulated(CliSock)
-	     end
-    end.
-
-discard_deliver_accumulated(CliSock) ->
-    case deliver_accumulated(CliSock) of
-	discard -> done_or_continue();
-	_ -> done
-    end.
-
+finish_up_dyn_file(Arg, CliSock) ->
+    deliver_accumulated(Arg, CliSock, decide, undefined, final),
+    done_or_continue().
 
 
 
@@ -1534,7 +1497,7 @@ deliver_dyn_file(CliSock, Bin, Fd, [H|T],Arg, UT, N) ->
 	    deliver_dyn_file(CliSock, Bin, Fd,T,Arg,UT,N);
 	{data, NumChars} ->
 	    {Send, Bin2} = skip_data(Bin, Fd, NumChars),
-	    accumulate_chunk(Send),
+	    accumulate_content(Send),
 	    deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT,N);
 	{skip, 0} ->
 	    deliver_dyn_file(CliSock, Bin, Fd,T,Arg,UT,N);
@@ -1549,69 +1512,140 @@ deliver_dyn_file(CliSock, Bin, Fd, [H|T],Arg, UT, N) ->
 		    undefined -> Send;
 		    Value -> Value
 		end,
-	    accumulate_chunk(Chunk),
+	    accumulate_content(Chunk),
 	    deliver_dyn_file(CliSock, Bin2, Fd, T, Arg, UT, N);
 	{error, NumChars, Str} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
-	    accumulate_chunk(Str),
+	    accumulate_content(Str),
 	    deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT, N);
 	yssi ->
 	    ok
     end;
 
 
-deliver_dyn_file(CliSock, _Bin, _Fd, [], _ARG,_UT,_N) ->
+deliver_dyn_file(CliSock, _Bin, _Fd, [], ARG,_UT,_N) ->
     ?Debug("deliver_dyn: done~n", []),
-    finish_up_dyn_file(CliSock).
+    finish_up_dyn_file(ARG, CliSock).
 
 
-stream_loop_send(CliSock) ->
+stream_loop_send(Priv, CliSock) ->
+    stream_loop_send(Priv, CliSock, unflushed).
+
+stream_loop_send(Priv, CliSock, FlushStatus) ->
+    TimeOut = case FlushStatus of
+		  flushed -> 30000;
+		  unflushed -> 300
+	      end,
     receive
 	{streamcontent, Cont} ->
-	    send_streamcontent_chunk(CliSock, Cont),
-	    stream_loop_send(CliSock) ;
+	    P = send_streamcontent_chunk(Priv, CliSock, Cont),
+	    stream_loop_send(P, CliSock, unflushed) ;
 	{streamcontent_with_ack, From, Cont} ->	% acknowledge after send
-	    send_streamcontent_chunk(CliSock, Cont),
+	    P = send_streamcontent_chunk(Priv, CliSock, Cont),
 	    From ! {self(), streamcontent_ack},
-	    stream_loop_send(CliSock) ;
+	    stream_loop_send(P, CliSock, unflushed) ;
 	endofstreamcontent ->
-	    case yaws:outh_get_chunked() of
-		true ->
-		    yaws:gen_tcp_send(CliSock, [crnl(), "0",crnl2()]),
-		    continue;
-		false ->
-		    done
+	    end_streaming(Priv, CliSock)
+    after TimeOut ->
+	    case FlushStatus of
+		flushed ->
+		    exit(normal);
+		unflushed ->
+		    P = sync_streamcontent(Priv, CliSock),
+		    stream_loop_send(P, CliSock, flushed)
 	    end
-    after 30000 ->
-	    exit(normal)
     end.
 
 
+make_chunk(Data) ->
+    case yaws:outh_get_chunked() of
+	true ->
+	    case binary_size(Data) of
+		0 ->
+		    empty;
+		S ->
+		    CRNL = crnl(),
+		    {S, [yaws:integer_to_hex(S), CRNL, Data, CRNL]}
+	    end;
+	false ->
+	    {binary_size(Data), Data}
+    end.
 
-send_streamcontent_chunk(CliSock, Chunk) ->
-    accumulate_chunk(Chunk),
-    Data = erase(acc_content),
+make_final_chunk(Data) ->
+    case yaws:outh_get_chunked() of
+	true ->
+	    CRNL = crnl(),
+	    case binary_size(Data) of
+		0 ->
+		    {0, ["0",CRNL,CRNL]};
+		S ->
+		    {S, [yaws:integer_to_hex(S), CRNL, Data, CRNL, 
+			 "0", CRNL, CRNL]}
+	    end;
+	false ->
+	    {binary_size(Data), Data}
+    end.
+
+send_streamcontent_chunk(discard, _, _) ->
+    discard;
+send_streamcontent_chunk(undeflated, CliSock, Data) ->
+    case make_chunk(Data) of
+	empty -> ok;
+	{Size, Chunk} ->
+	    ?Debug("send ~p bytes to ~p ~n", 
+		[Size, CliSock]),
+	    yaws:outh_inc_act_contlen(Size),
+	    yaws:gen_tcp_send(CliSock, Chunk)
+    end,
+    undeflated;
+send_streamcontent_chunk({Z, Priv}, CliSock, Data) ->
     ?Debug("send ~p bytes to ~p ~n", 
-	[size(list_to_binary(Data)), CliSock]),
-    yaws:gen_tcp_send(CliSock, Data).
+		[binary_size(Data), CliSock]),
+    {ok, P, D} = yaws_zlib:gzipDeflate(Z, Priv, to_binary(Data), none),
+    case make_chunk(D) of
+	empty -> ok;
+	{Size, Chunk} ->
+	    yaws:outh_inc_act_contlen(Size),
+	    yaws:gen_tcp_send(CliSock, Chunk)
+    end,
+    {Z, P}.
+
+
+sync_streamcontent(discard, CliSock) ->
+    discard;
+sync_streamcontent(undeflated, CliSock) ->
+    undeflated;
+sync_streamcontent({Z, Priv}, CliSock) ->
+    ?Debug("syncing~n", []),
+    {ok, P, D} = yaws_zlib:gzipDeflate(Z, Priv, <<>>, sync),
+    case make_chunk(D) of
+	empty -> ok;
+	{Size, Chunk} ->
+	    yaws:outh_inc_act_contlen(Size),
+	    yaws:gen_tcp_send(CliSock, Chunk)
+    end,
+    {Z, P}.
     
 
-stream_loop_discard(CliSock) ->
-						% Eat up everything,
-						% who knows, where it
-						% might end up if we
-						% don't!
-    receive
-	{streamcontent, _Cont} ->
-	    stream_loop_discard(CliSock) ;
-	{streamcontent_with_ack, From, _Cont} -> % acknowledge after send
-	    From ! {self(), streamcontent_ack},
-	    stream_loop_discard(CliSock) ;
-	endofstreamcontent ->
-	    done_or_continue()
-    after 30000 ->
-	    exit(normal)
-    end.
+end_streaming(discard, _) ->
+    done_or_continue();
+end_streaming(undeflated, CliSock) ->
+    ?Debug("end_streaming~n", []),
+    {_, Chunk} = make_final_chunk(<<>>),
+    yaws:gen_tcp_send(CliSock, Chunk),
+    done_or_continue();
+end_streaming({Z, Priv}, CliSock) ->
+    ?Debug("end_streaming~n", []),
+    {ok, P, Data} = yaws_zlib:gzipDeflate(Z, Priv, <<>>, finish),
+    {Size, Chunk} = make_final_chunk(Data),
+    yaws:outh_inc_act_contlen(Size),
+    yaws:gen_tcp_send(CliSock, Chunk),
+    yaws_zlib:gzipEnd(Z),
+    zlib:close(Z),
+    done_or_continue().
+
+    
+
 
 %% what about trailers ??
 
@@ -1661,14 +1695,6 @@ binary_size(I, B) when binary(B) ->
 binary_size(I, _Int) when integer(_Int) ->
     I+1.
 
-accumulate_header(Data) ->
-    case get(acc_headers) of
-	undefined ->
-	    put(acc_headers, [Data, crnl()]);
-	List ->
-	    put(acc_headers, [List, Data, crnl()])
-    end.
-
 accumulate_content(Data) ->
     case get(acc_content) of
 	undefined ->
@@ -1678,25 +1704,6 @@ accumulate_content(Data) ->
 	List ->
 	    put(acc_content, [List, Data])
     end.
-
-accumulate_chunk(Data) ->
-    case yaws:outh_get_chunked() of
-	false ->
-	    yaws:outh_inc_act_contlen(binary_size(Data)),
-	    accumulate_content(Data);
-	true ->
-	    B = to_binary(Data),
-	    yaws:outh_inc_act_contlen(size(B)),
-	    case size(B) of
-		0 ->
-		    skip;
-		Len ->
-		    CRNL = crnl(),
-		    Data2 = [CRNL, yaws:integer_to_hex(Len) , crnl(), B], 
-		    accumulate_content(Data2)
-	    end
-    end.
-
 
 
 %% handle_out_reply(R, ...)
@@ -1741,19 +1748,19 @@ handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, [ARG]) ->
 
 
 handle_out_reply({html, Html}, _LineNo, _YawsFile,  _UT, _A) ->
-    accumulate_chunk(Html);
+    accumulate_content(Html);
 
 handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  _UT, A) ->
     case safe_ehtml_expand(E) of
 	{ok, Val} ->
-	    accumulate_chunk(Val);
+	    accumulate_content(Val);
 	{error, ErrStr} ->
 	    handle_crash(A,ErrStr)
     end;
 
 handle_out_reply({content, MimeType, Cont}, _LineNo,_YawsFile, _UT, _A) ->
     yaws:outh_set_content_type(MimeType),
-    accumulate_chunk(Cont);
+    accumulate_content(Cont);
 
 handle_out_reply({streamcontent, MimeType, First}, 
 		 _LineNo,_YawsFile, _UT, _A) ->
@@ -1789,7 +1796,7 @@ handle_out_reply({ssi, File,Delimiter,Bindings}, LineNo, YawsFile, _UT,A) ->
 		   [YawsFile, LineNo, Rsn]),
 	    handle_crash(A, L);
 	OutData ->
-	    accumulate_chunk(OutData)
+	    accumulate_content(OutData)
     end;
 
 
@@ -2000,7 +2007,7 @@ handle_crash(A, L) ->
     yaws:elog("~s", [L]),
     case catch apply(SC#sconf.errormod_crash, crashmsg, [A, SC, L]) of
 	{html, Str} ->
-	    accumulate_chunk(Str),
+	    accumulate_content(Str),
 	    break;
 	{ehtml, Term} ->
 	    case safe_ehtml_expand(Term) of
@@ -2009,47 +2016,135 @@ handle_crash(A, L) ->
 		    %% Aghhh, yet another user crash :-(
 		    T2 = [{h2, [], "Internal error"}, {hr},
 			  {p, [], "Customized crash display code crashed !!!"}],
-		    accumulate_chunk(ehtml_expand(T2)),
+		    accumulate_content(ehtml_expand(T2)),
 		    break;
 		{ok, Out} ->
-		    accumulate_chunk(Out),
+		    accumulate_content(Out),
 		    break
 	    end;
 	Other ->
 	    yaws:elog("Bad return value from errmod_crash ~n~p~n",[Other]),
 	    T2 = [{h2, [], "Internal error"}, {hr},
 		  {p, [], "Customized crash display code returned bad val"}],
-	    accumulate_chunk(ehtml_expand(T2)),
+	    accumulate_content(ehtml_expand(T2)),
 	    break
 	
     end.
 
+%% Ret: true | false | {data, Data}
+decide_deflate(false, _, _, _, _) ->
+    false;
+decide_deflate(_, _, _, no, _) ->
+    false;
+decide_deflate(true, _, _, deflate, stream) ->
+    true;
+decide_deflate(true, Arg, Data, decide, Mode) ->
+    case yaws:outh_get_content_encoding_header() of
+	undefined ->
+	    ?Debug("No Content-Encoding defined~n",[]),
+	    Mime = yaws:outh_get_content_type(),
+	    ?Debug("Mime-Type: ~p~n", [Mime]),
+	    case compressible_mime_type(Mime) of
+		true ->
+		    case yaws:accepts_gzip(Arg#arg.headers,
+					   Mime) of
+			true -> 
+			    case Mode of 
+				final ->
+				    case yaws_zlib:gzip(to_binary(Data)) of
+					{ok, DB} ->
+					    {data, DB};
+					_Err -> 
+					    ?Debug(
+						"gzip Err: ~p~n", [_Err]),
+						false
+					end;
+				    stream ->
+					true
+				end;
+			false -> false
+		    end;
+		false ->
+		    false
+	    end;
+	_CE -> ?Debug("Content-Encoding: ~p~n",[_CE]),
+	       false
+    end.
+
 
 deliver_accumulated(Sock) ->
-    Chunked = yaws:outh_get_chunked(),
+    deliver_accumulated(undefined, Sock, no, undefined, final).
+
+%% Mode = final | stream
+%% Encoding = deflate    (gzip content)
+%%          | no         (keep as is)
+%%          | decide     (do as you like)
+%% ContentLength = Int | undefined
+%% Mode = final | stream
+%%
+%% For Mode==final: (all content has been accumulated before calling
+%%                   deliver_accumulated)
+%%     Ret: can be ignored
+%%
+%% For Mode==stream:
+%%     Ret: opaque value to be threaded through 
+%%                   send_streamcontent_chunk / end_streaming
+deliver_accumulated(Arg, Sock, Encoding, ContentLength, Mode) ->
     Cont = case erase(acc_content) of
 	       undefined ->
 		   [];
 	       Cont2 ->
 		   Cont2
 	   end,
-
     case Cont of
 	discard ->
 	    yaws:outh_set_transfer_encoding_off(),
 	    {StatusLine, Headers} = yaws:outh_serialize(),
 	    ?Debug("discard accumulated~n", []),
-	    All = [StatusLine, Headers, crnl()];
+	    All = [StatusLine, Headers, crnl()],
+	    Ret = discard;
 	_ ->
+	    SC = get(sc),
+	    case decide_deflate(?sc_has_deflate(SC), 
+				Arg, Cont, Encoding, Mode) of
+		{data, Data} -> % implies Mode==final
+		    yaws:outh_set_content_encoding(deflate),
+		    Size = binary_size(Data),
+		    Ret = ok;
+		true -> % implies Mode==stream
+		    yaws:outh_set_content_encoding(deflate),
+		    Z = zlib:open(),
+		    {ok, Priv, Data} = 
+			yaws_zlib:gzipDeflate(Z, yaws_zlib:gzipInit(Z), 
+					      to_binary(Cont), none),
+		    Ret = {Z, Priv},
+		    Size = undefined;
+		false ->
+		    Ret = undeflated,
+		    Data = Cont,
+		    Size = case Mode of
+			       final ->
+				   binary_size(Data);
+			       stream ->
+				   ContentLength
+			   end
+	    end,
+	    case Size of 
+		undefined -> 
+		    yaws:outh_fix_doclose();
+		_ -> yaws:accumulate_header({content_length, Size})
+	    end,
 	    {StatusLine, Headers} = yaws:outh_serialize(),
-	    ?Debug("deliver accumulated size=~p~n", [binary_size(Cont)]),
-	    CRNL = case Chunked of
-		       true ->
-			   [];
-		       false ->
-			   crnl()
-		   end,
-	    All = [StatusLine, Headers, CRNL, Cont]
+	    case make_chunk(Data) of
+		empty ->
+		    Chunk = [];
+		{S, Chunk} ->
+		    case Mode of
+			stream -> yaws:outh_inc_act_contlen(S);
+			_ -> ok
+		    end
+	    end,		    
+	    All = [StatusLine, Headers, crnl(), Chunk]
     end,
     yaws:gen_tcp_send(Sock, All),
     GC=get(gc),
@@ -2061,7 +2156,7 @@ deliver_accumulated(Sock) ->
 	GC#gconf.trace == {true, traffic} ->
 	    yaws_log:trace_traffic(from_server, ["\n",All])
     end,
-    Cont.
+    Ret.
 
 
 get_more_post_data(PPS, ARG) ->
@@ -2225,68 +2320,42 @@ deliver_small_file(CliSock, _Req, UT, Range) ->
     done_or_continue().
     
 deliver_large_file(CliSock,  _Req, UT, Range) ->
-    case deliver_accumulated(CliSock) of
+    case deliver_accumulated(undefined, CliSock, 
+			     case Range of
+				all -> 
+				     case yaws:outh_get_content_encoding() of
+					identity -> no;
+					D -> D
+				     end;
+				_ -> no
+			     end, 
+			     undefined, stream) of
 	discard -> 
 	    ok;
-	_ ->
+	Priv ->
 	    {ok,Fd} = file:open(UT#urltype.fullpath, [raw, binary, read]),
-	    send_file(CliSock, Fd, Range)
+	    send_file(CliSock, Fd, Range, Priv)
     end,
     done_or_continue().
 
 
-send_file(CliSock, Fd, all) ->
-    case yaws:outh_get_content_encoding() of
-	identity ->
-	    send_file(CliSock, Fd);
-	deflate ->
-	    Z = zlib:open(),
-	    ZPriv = yaws_zlib:gzipInit(Z),
-	    Ret=send_file_deflated(CliSock, Fd, Z, ZPriv),
-	    yaws_zlib:gzipEnd(Z),
-	    zlib:close(Z),
-	    Ret
-    end;
-send_file(CliSock, Fd,  {fromto, From, To, _Tot}) ->
+send_file(CliSock, Fd, all, Priv) ->
+    send_file(CliSock, Fd, Priv);
+send_file(CliSock, Fd,  {fromto, From, To, _Tot}, undeflated) ->
     file:position(Fd, {bof, From}),
     send_file_range(CliSock, Fd, To - From + 1).
 
 
-send_file(CliSock, Fd) ->
+send_file(CliSock, Fd, Priv) ->
+    ?Debug("send_file(~p,~p, ...)~n", 
+	[CliSock, Fd]),
     case file:read(Fd, (get(gc))#gconf.large_file_chunk_size) of
 	{ok, Bin} ->
-	    send_file_chunk(Bin, CliSock),
-	    send_file(CliSock, Fd);
+	    Priv1 = send_streamcontent_chunk(Priv, CliSock, Bin),
+	    send_file(CliSock, Fd, Priv1);
 	eof ->
 	    file:close(Fd),
-	    case yaws:outh_get_chunked() of
-		true ->
-		    yaws:gen_tcp_send(CliSock, [crnl(), "0", crnl2()]),
-		    done_or_continue();
-		false ->
-		    done_or_continue()
-	    end
-    end.
-
-send_file_deflated(CliSock, Fd, Z, ZPriv) ->
-    ?Debug("send_file_deflated(~p,~p,~p,...)~n", 
-	[CliSock, Fd, Z]),
-    case file:read(Fd, (get(gc))#gconf.large_file_chunk_size) of
-	{ok, Bin} ->
-	    {ok, ZPriv1, DD} = yaws_zlib:gzipDeflate(Z, ZPriv, Bin, none),
-	    send_file_chunk(DD, CliSock),
-	    send_file_deflated(CliSock, Fd, Z, ZPriv1);
-	eof ->
-	    file:close(Fd),
-	    {ok, _, DD} = yaws_zlib:gzipDeflate(Z, ZPriv, <<>>, finish),
-	    send_file_chunk(DD, CliSock),
-	    case yaws:outh_get_chunked() of
-		true ->
-		    yaws:gen_tcp_send(CliSock, [crnl(), "0", crnl2()]),
-		    done_or_continue();
-		false ->
-		    done_or_continue()
-	    end
+	    end_streaming(Priv, CliSock)
     end.
 
 send_file_range(CliSock, Fd, Len) when Len > 0 ->
@@ -2296,34 +2365,13 @@ send_file_range(CliSock, Fd, Len) when Len > 0 ->
 			      _ -> Len
 			  end
 			 ),
-    send_file_chunk(Bin, CliSock),
+    send_streamcontent_chunk(undeflated, Bin, CliSock),
     send_file_range(CliSock, Fd, Len - size(Bin));
 send_file_range(CliSock, Fd, 0) ->
     file:close(Fd),
-    case yaws:outh_get_chunked() of
-	true ->
-	    yaws:gen_tcp_send(CliSock, [crnl(), "0", crnl2()]),
-	    done_or_continue();
-	false ->
-	    done_or_continue()
-    end.
+    end_streaming(undeflated, CliSock).
     
 
-send_file_chunk(Bin, CliSock) ->
-    case binary_size(Bin) of
-	0 -> ok;
-	Size ->
-	    ?Debug("send_file_chunk size: ~p~n", [Size]),
-	    yaws:outh_inc_act_contlen(Size),
-	    case yaws:outh_get_chunked() of
-		true ->
-		    CRNL = crnl(),
-		    Data2 = [CRNL, yaws:integer_to_hex(Size) , CRNL, Bin],
-		    yaws:gen_tcp_send(CliSock, Data2);
-		false ->
-		    yaws:gen_tcp_send(CliSock, Bin)
-	    end
-    end.
 
 
 
