@@ -557,6 +557,7 @@ get_path({abs_path, Path}) ->
 
 
 do_recv(Sock, Num, TO, nossl) ->
+    ?Debug("XXX ~p", [{Sock, Num, TO}]),
     gen_tcp:recv(Sock, Num, TO);
 do_recv(Sock, Num, _TO, ssl) ->
     case erase(ssltrail) of %% hack from above ...
@@ -694,7 +695,7 @@ http_get_headers(CliSock, Req, GC, H) ->
     end.
 
 
-inet_setopts(SC, S, Opts) when SC#sconf.ssl == nossl ->
+inet_setopts(SC, S, Opts) when SC#sconf.ssl == undefined ->
     inet:setopts(S, Opts);
 inet_setopts(_,_,_) ->
     ok.  %% noop for ssl
@@ -721,6 +722,7 @@ inet_setopts(_,_,_) ->
 		"close" ->
 		    get_client_data(CliSock, all, GC, is_ssl(SC#sconf.ssl));
 		_ ->
+		    ?Debug("No content length header ",[]),
 		    exit(normal)
 	    end;
 	Len ->
@@ -919,7 +921,8 @@ get_client_data(CliSock, Len, GC, SSlBool) ->
     case cli_recv(CliSock, Len, GC, SSlBool) of
 	{ok, B} when size(B) == Len ->
 	    B;
-	_ ->
+	_Other ->
+	    ?Debug("get_client_data: ~p~n", [_Other]),
 	    exit(normal)
     end.
 
@@ -1162,9 +1165,9 @@ safe_call(DoClose, LineNo, YawsFile, CliSock, M, F, A, GC, SC) ->
 
 do_tcp_close(Sock, SC) ->
     case SC#sconf.ssl of
-	nossl ->
+	undefined ->
 	    gen_tcp:close(Sock);
-	ssl ->
+	_SSL ->
 	    ssl:close(Sock)
     end.
 
