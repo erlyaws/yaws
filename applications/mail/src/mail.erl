@@ -15,7 +15,7 @@
 	 session_manager_init/0, check_cookie/1, check_session/1, 
 	 login/2, display_login/2, stat/3, showmail/2, compose/1, compose/7,
 	 send/6, get_val/3, logout/1, base64_2_str/1, retr/4, 
-	 showheaders/2, delete/2, send_attachment/2]).
+	 delete/2, send_attachment/2]).
 
 -include("../../../include/yaws_api.hrl").
 -include("defs.hrl").
@@ -101,7 +101,8 @@ build_toolbar([{[],Url,Cmd}|Rest], Used) ->
     end ++
 	[{td, [nowrap,{width,"2%"},{valign,middle},{align,left}],
 	  [{a, [{class,nolink}, {href,Url}],
-	    {font, [{size,2},{color,"#000000"},{title,Cmd}], Cmd}}]} |
+	    {font, [{size,2},{color,"#000000"},{title,Cmd}],
+	     {pre_html,Cmd}}}]} |
 	 build_toolbar(Rest, Used+3)];    
 build_toolbar([{Gif,Url,Cmd}|Rest], Used) ->
     (if Used == -1 ->
@@ -172,26 +173,12 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
     tick_session(Session#session.cookie),
     (dynamic_headers()++
      [{ehtml,
-       [{script,[],
-	 "function setCmd(val) { \n"
-	 "   if (document.compose.to.value.length == 0) {\n"
-	 "       alert('The To: field must not be empty.');\n"
-	 "       document.compose.to.focus();\n"
-	 "       return;\n"
-	 "   }\n"
-	 "   if (document.compose.text.value.length == 0) {\n"
-	 "       alert('The message field must not be empty.');\n"
-	 "       document.compose.text.focus();\n"
-	 "       return;\n"
-	 "   }\n"
-	 "   document.compose.cmd.value=val;\n"
-	 "   document.compose.submit();\n"
-	 "}"
-	},
+       [{script,[{src,"mail.js"}],[]},
 	{style, [{type,"text/css"}],
 	 "A:link    { color: 0;text-decoration: none}\n"
 	 "A:visited { color: 0;text-decoration: none}\n"
-	 "A:active  { color: 0;text-decoration: none}\n"},
+	 "A:active  { color: 0;text-decoration: none}\n"
+	 "DIV.msg-body { background: white; }\n"},
 	{body,[{bgcolor,silver},{marginheight,0},{link,"#000000"},
 	       {topmargin,0},{leftmargin,0},{rightmargin,0},
 	       {marginwidth,0}, {onload, "document.compose.to.focus();"}],
@@ -202,8 +189,11 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 		     {font, [{size,6},{color,black}],
 		      "Yaws WebMail at "++maildomain()}}}},
 	    build_toolbar([{"tool-send.gif",
-			    "javascript:setCmd('send');","Send"},
-			   {"", "att.yaws", "Attach file"},
+			    "javascript:setComposeCmd('send');","Send"},
+			   {"","javascript:setCompActive();",
+			    "<div id='att-button' style='display: block;'>Attachments</div>"
+			    "<div id='msg-button' style='display: none;' >Message</div>"
+			   },
 			   {"", "mail.yaws", "Close"}]),
 	    {table, [{width,645},{border,0},{bgcolor,silver},{cellspacing,0},
 		     {cellpadding,0}],
@@ -250,13 +240,22 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 			       {check,value,quote(Subject)}]}}]}
 	     ]
 	    },
-	    {table, [{bgcolor,silver},{border,0},{cellspacing,0},
-		     {cellpadding,0}],
-	     {tr,[],
-	      {td,[{align,left},{valign,top}],
-	       {textarea, [{wrap,virtual},{name,text},{cols,78},{rows,21}],
-		Msg}}
+	    {'div', [{id, "compose-msg"},{style,"display: block;"}],
+	     {table, [{bgcolor,silver},{border,0},{cellspacing,0},
+		      {cellpadding,0}],
+	      {tr,[],
+	       {td,[{align,left},{valign,top}],
+		{textarea, [{wrap,virtual},{name,text},{cols,78},{rows,21}],
+		 Msg}}
+	      }
 	     }
+	    },
+	    {'div', [{id, "compose-att"},{style,"display: none;"}],
+	     ["Attached files:",
+	      {table,[],
+	       file_attachements(5)
+	      }
+	     ]
 	    },
 	    {input,[{type,hidden},{name,cmd},{value,""}],[]}
 	   ]
@@ -266,6 +265,27 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
        ]
       }]).
 
+
+file_attachements(0) -> [];
+file_attachements(N) ->
+    [file_attachement(N)|file_attachements(N-1)].
+
+file_attachement(N) ->
+    I = integer_to_list(N),
+    {tr,[],
+     [{td,[],"File: "},
+      {td,[],
+       {input, [{type,"file"},{name,"file"++I},{size,"30"}],[]}},
+      {td,[],
+       {select,[{name,"type"++I}],
+	[{option,[{value,"binary"}],"Binary"},
+	 {option,[{value,"text"}],"Text"}
+	]}
+      }
+     ]
+    }.
+    
+    
 
 showmail(Session, MailNr) ->
     showmail(Session, MailNr, ?RETRYCOUNT).
@@ -293,22 +313,14 @@ showmail(Session, MailNr, Count) ->
 
     (dynamic_headers() ++
      [{ehtml,
-       [{script,[],
-	 "function setCmd(val) { \n"
-	 "   if (val == 'delete') {\n"
-	 "      var msg = 'Are you sure you want to delete this message?';\n"
-	 "      if (!confirm(msg))\n"
-	 "          return;\n"
-	 "   }\n"
-	 "   document.compose.cmd.value=val;\n"
-	 "   document.compose.submit();\n"
-	 "}"
-	},
+       [{script,[{src,"mail.js"}], []},
 	{style, [{type,"text/css"}],
 	 ".conts    { visibility:hidden }\n"
 	 "A:link    { color: 0;text-decoration: none}\n"
 	 "A:visited { color: 0;text-decoration: none}\n"
-	 "A:active  { color: 0;text-decoration: none}\n"},
+	 "A:active  { color: 0;text-decoration: none}\n"
+	 "DIV.msg-body { background: white; }\n"
+	},
 	{body,[{bgcolor,silver},{marginheight,0},{topmargin,0},{leftmargin,0},
 	       {rightmargin,0},{marginwidth,0}],
 	 [{table, [{border,0},{bgcolor,"c0c0c0"},{cellspacing,0},
@@ -317,148 +329,6 @@ showmail(Session, MailNr, Count) ->
 		  {font, [{size,6},{color,black}],
 		   "WebMail at "++maildomain()}}}}] ++
       	 Formated
-	}
-       ]}]).
-
-showheaders(Session, MailNr) ->
-    showheaders(Session, MailNr, ?RETRYCOUNT).
-
-showheaders(Session, MailNr, 0) ->
-    format_error("Mailbox loxed by other mail process.");
-showheaders(Session, MailNr, Count) ->
-    tick_session(Session#session.cookie),
-    case rtop(popserver(), Session#session.user,
-	      Session#session.passwd, MailNr) of
-	{error, Reason} ->
-	    case string:str(lowercase(Reason), "lock") of
-		0 ->
-		    format_error(Reason);
-		N ->
-		    sleep(?RETRYTIMEOUT),
-		    showheaders(Session, MailNr, Count-1)
-	    end;
-	{H,Msg} ->
-	    format_headers(Session, MailNr, H, Msg)
-    end.
-
-format_headers(Session, MailNr, H, Msg) ->
-    ContentType = undefined,
-
-    (dynamic_headers() ++
-     [{ehtml,
-       [{script,[],
-	 "function setCmd(val) { \n"
-	 "   if (val == 'delete') {\n"
-	 "      var msg = 'Are you sure you want to delete this message?';\n"
-	 "      if (!confirm(msg))\n"
-	 "          return;\n"
-	 "   }\n"
-	 "   document.compose.cmd.value=val;\n"
-	 "   document.compose.submit();\n"
-	 "}"
-	},
-	{style, [{type,"text/css"}],
-	 ".conts    { visibility:hidden }\n"
-	 "A:link    { color: 0;text-decoration: none}\n"
-	 "A:visited { color: 0;text-decoration: none}\n"
-	 "A:active  { color: 0;text-decoration: none}\n"},
-	{body,[{bgcolor,silver},{marginheight,0},{topmargin,0},{leftmargin,0},
-	       {rightmargin,0},{marginwidth,0}],
-	 {form, [{name,compose},{action,"reply.yaws"},{method,post}],
-	  [{table, [{border,0},{bgcolor,"c0c0c0"},{cellspacing,0},
-		    {width,"100%"}],
-	    {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
-		    {font, [{size,6},{color,black}],
-		     "WebMail at "++maildomain()}}}},
-	   build_toolbar([{"tool-newmail.gif","compose.yaws","New"},
-			  {"tool-newmail.gif", "javascript:setCmd('send');",
-			   "Reply"},
-			  {"","showmail.yaws?nr="++integer_to_list(MailNr),
-			   "Message"},
-			  {"tool-delete.gif","javascript:setCmd('delete');",
-			   "Delete"},
-			  {"","mail.yaws","Close"}]),
-	   {table,[{width,645},{height,"100%"},{border,0},{bgcolor,silver},
-		   {cellspacing,0},{callpadding,0}],
-	    {tr,[],{td,[{valign,top},{height,"1%"}],
-		    [{table,
-		      [{border,0},{cellspacing,0},{cellpadding,0},
-		       {width,"100%"},
-		       {bgcolor,silver}],
-		      [{tr,[],
-			[{td,[{valign,middle},{align,left},{width,"15%"},
-			      {height,25}],
-			  {font, [{color,"#000000"},{size,2}],
-			   {nobr,[],{pre_html,"&nbsp;From:&nbsp;"}}}},
-			 {td, [{valign,middle},{align,left}],
-			  {font, [{color,"#000000"},{size,2}],
-			   [{pre_html,"&nbsp;"},
-			    unquote(decode(H#mail.from))]}},
-			 {td,[{valign,middle},{align,right},{height,"25"}],
-			  {font, [{color,"#000000"},{size,2}],
-			   {nobr,[],{pre_html,"&nbsp;Sent:&nbsp;"}}}},
-			 {td, [nowrap,{valign,middle},{align,right},
-			       {width,"30%"}],
-			  {font, [{color,"#000000"},{size,2}],
-			   {pre_html,"&nbsp;"++H#mail.date}}}]},
-		       {tr,[],
-			[{td,[{valign,top},{align,left},{width,"15%"},
-			      {height,25}],
-			  {font, [{color,"#000000"},{size,2}],
-			   {nobr,[],{pre_html,"&nbsp;To:&nbsp;"}}}},
-			 {td, [{valign,top},{align,left},{width,"100%"}],
-			  {font, [{color,"#000000"},{size,2}],
-			   [{pre_html,"&nbsp;"},
-			    unquote(decode(H#mail.to))]}}]},
-		       {tr,[],
-			[{td,[{valign,middle},{align,left},{width,"15%"},
-			      {height,25}],
-			  {font, [{color,"#000000"},{size,2}],
-			   {nobr,[],{pre_html,"&nbsp;Cc:&nbsp;"}}}},
-			 {td, [{valign,middle},{align,left},{width,"100%"}],
-			  {font, [{color,"#000000"},{size,2}],
-			   [{pre_html,"&nbsp;"},H#mail.cc]}}]},
-		       {tr,[],
-			[{td,[{valign,middle},{align,left},{width,"15%"},
-			      {height,25}],
-			  {font, [{color,"#000000"},{size,2}],
-			   {nobr,[],{pre_html,"&nbsp;Subject:&nbsp;"}}}},
-			 {td, [{valign,middle},{align,left},{width,"100%"}],
-			  {font, [{color,"#000000"},{size,2}],
-			   [{pre_html,"&nbsp;"},decode(H#mail.subject)]}}]}
-		      ]},
-		     {table, [{width,"100%"},{border,1},{cellpadding,6},
-			      {class,msgbody}],
-		      {tr,[],
-		       {td,[{width,"100%"},{height,300},{valign,top},
-			    {bgcolor,white}],
-			{p,[],{font,[{size,3}], 
-			       if ContentType == "text/html" ->
-				       {pre_html,Msg};
-				  true ->
-				       {pre,[],Msg}
-			       end
-			      }}}
-		      }
-		     }
-		    ]
-		   }
-	    }
-	   },
-	   {input,[{type,hidden},{name,nr}, {value,MailNr}],[]},
-	   {input,[{type,hidden},{name,from},
-		   {value,yaws_api:url_encode(H#mail.from)}],[]},
-	   {input,[{type,hidden},{name,to},
-		   {value,yaws_api:url_encode(H#mail.to)}],[]},
-	   {input,[{type,hidden},{name,cc},
-		   {value,yaws_api:url_encode(H#mail.cc)}],[]},
-	   {input,[{type,hidden},{name,bcc},
-		   {value,yaws_api:url_encode(H#mail.bcc)}],[]},
-	   {input,[{type,hidden},{name,subject},
-		   {value,yaws_api:url_encode(H#mail.subject)}],[]},
-	   {input,[{type,hidden},{name,cmd},{value,""}],[]}
-	  ]
-	 }
 	}
        ]}]).
 
@@ -1519,9 +1389,10 @@ format_error(Reason) ->
      {p, [], {font, [{size,4},{color,red}],["Error: ", Reason]}}].
 
 format_message(Session, Message, MailNr, Depth) ->
-    {Headers,Msg} = parse_message(Message),
-    H = parse_headers(Headers),
-    Formated = format_body(Session, H,Msg, Depth),
+    {HeadersList,Msg} = parse_message(Message),
+    H = parse_headers(HeadersList),
+    Headers = [[Head,$\n] || Head <- HeadersList],
+    Formated = format_body(Session, H, Msg, Depth),
     MailStr = integer_to_list(MailNr),
     To = lists:flatten(decode(H#mail.to)),
     From = lists:flatten(decode(H#mail.from)),
@@ -1534,7 +1405,10 @@ format_message(Session, Message, MailNr, Depth) ->
 	    true ->
 		[{"tool-newmail.gif","compose.yaws","New"},
 		 {"tool-newmail.gif", "javascript:setCmd('reply');", "Reply"},
-		 {"","headers.yaws?nr="++MailStr,"Headers"},
+		 {"","javascript:changeActive("++Depth++");",
+		  "<div id='msg-button:"++Depth++"' style='display: block;'>Headers</div>"
+		  "<div id='hdr-button:"++Depth++"' style='display: none;' >Message</div>"
+		 },
 		 {"tool-delete.gif","javascript:setCmd('delete');", "Delete"},
 		 {"","mail.yaws","Close"}]
 	end,
@@ -1593,7 +1467,22 @@ format_message(Session, Message, MailNr, Depth) ->
 		 [{tr,[],
 		   {td,[{width,"100%"},{height,300},{valign,top},
 			{bgcolor,white}],
-		    {p,[],{font,[{size,3},{id, contents}], Formated}}}
+		    {p,[],{font,[{size,3},{id, contents}],
+			   [
+			    {'div', [{id,"msg-body:msg"++Depth},
+				   {class,"msg-body"},
+				   {style,"display: block;"}],
+			     Formated
+			    },
+			    {'div', [{id,"msg-body:hdr"++Depth},
+				   {class,"msg-body"},
+				   {style, "display: none;"}],
+			     {pre, [], Headers}
+			    }
+			   ]
+			  }
+		    }
+		   }
 		  }
 		 ]
 		}
