@@ -178,9 +178,9 @@ logout(A) ->
 %% to the original URL.
 
 loginpost(A) ->
-    case {yaws_api:query_var(A, "user"),
-	  yaws_api:query_var(A, "url"),
-	  yaws_api:query_var(A, "password")} of
+    case {yaws_api:queryvar(A, "user"),
+	  yaws_api:queryvar(A, "url"),
+	  yaws_api:queryvar(A, "password")} of
 
 	{{ok, User},
 	 {ok, Url},
