@@ -1194,7 +1194,7 @@ dcc(Req, Headers) ->
 			  _ -> true                                          
 		      end;              
 		  {1, 1} ->
-		      false;
+		      Headers#headers.connection == "close";
 		  {0,9} ->
 		      true
 	      end,
