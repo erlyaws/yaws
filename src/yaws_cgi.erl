@@ -42,22 +42,52 @@ call_cgi(Arg, Exefilename, Scriptfilename, Pathinfo) ->
 		   [self(), Arg, ExeFN, Scriptfilename, PI]),
     {Headers, Data} = get_resp(Worker),
     AllResps = lists:map(fun(X)->do_header(Arg, X, Data) end, Headers),
-    StreamResps = lists:filter(fun isstream/1, AllResps),
-    case AllResps of 
-	[{redirect, URL}|_] ->
+    {ContentResps, Others} = filter2(fun iscontent/1, AllResps),
+    {RedirResps, OtherResps} = filter2(fun isredirect/1, Others), 
+    case RedirResps of
+	[R|_] ->
 	    Worker ! {self(), no_data},
-	    {redirect, URL};
-	_ ->
-	    case StreamResps of
-		[S|_] ->
+	    OtherResps ++ [R];
+	[] ->
+	    case ContentResps of
+		[C={streamcontent, _, _}|_] ->
 		    Worker ! {self(), stream_data},
-		    S;                % This should be done better.
-		_ ->
+		    OtherResps++[C];
+		[C={content, _, _}|_] ->
 		    Worker ! {self(), no_data},
-		    AllResps
+		    OtherResps++[C];
+		[] ->
+		    Worker ! {self(), no_data},
+		    OtherResps
 	    end
     end.
 
+
+filter2(Pred, Xs) ->
+    filter2(Pred, Xs, [], []).
+
+filter2(Pred, [], Ts, Fs) ->
+    {lists:reverse(Ts), lists:reverse(Fs)};
+filter2(Pred, [X|Xs], Ts, Fs) ->
+    case Pred(X) of
+	true ->
+	    filter2(Pred, Xs, [X|Ts], Fs);
+	false ->
+	    filter2(Pred, Xs, Ts, [X|Fs])
+    end.
+
+
+iscontent({content, _, _}) ->
+    true;
+iscontent({streamcontent, _, _}) ->
+    true;
+iscontent(_) ->
+    false.
+
+isredirect({redirect, _}) ->
+    true;
+isredirect(_) ->
+    false.
 
 checkdef(undefined) ->
     "";
@@ -137,12 +167,6 @@ pathof(F) ->
 	[$/ | Tail] -> lists:reverse(Tail)
     end.
 
-
-
-isstream({streamcontent, _, _}) ->    
-    true;
-isstream(_)  ->
-    false.
 
 
 % We almost always generate stream content.
