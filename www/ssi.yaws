@@ -17,7 +17,7 @@ ssi(File) ->
 
 
 out(A) -> 
-    [{ssi, "TAB.inc", [],[]},
+    [{ssi, "TAB.inc", "%%",[{"ssi", "choosen"}]},
      {ehtml,
       {'div', [{id, "entry"}],	
       [	
@@ -68,7 +68,7 @@ out(A) ->
 	" javascript as well as dynamically generated java applets."},
        
        {p, [], "In the above example, \"a\" can be seen as the Variable "
-	"name whereas \"Godzilla\" can be vievwe upon as the value "
+	"name whereas \"Godzilla\" can be vieved upon as the value "
 	"of variable \"a\". It is also possible to have the variable "
 	" value be a complete ehtml structure, not just plain ascii "
 	"strings. Here is an example"},

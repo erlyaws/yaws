@@ -1,7 +1,7 @@
 <erl>
 
 out(A) -> 
-       {ssi, "TAB.inc", [],[]}.
+       {ssi, "TAB.inc", "%%",[{"query", "choosen"}]}.
 
 
 </erl>

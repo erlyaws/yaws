@@ -17,7 +17,7 @@ ssi(File) ->
 
 
 out(A) -> 
-    [{ssi, "TAB.inc", [],[]},
+    [{ssi, "TAB.inc", "%%",[{"stream", "choosen"}]},
      {ehtml,
      {'div',[{id, "entry"}],
       [{h1, [], "Streaming data to the client"},

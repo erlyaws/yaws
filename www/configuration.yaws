@@ -7,7 +7,7 @@ box(Str) ->
 
 
 out(A) -> 
-    [{ssi, "TAB.inc", [],[]},
+    [{ssi, "TAB.inc", "%%",[{"configuration", "choosen"}]},
      {ehtml,
       [{'div', [{id, "entry"}],
 	[{h1,[],"Build and install"},

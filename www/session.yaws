@@ -1,6 +1,6 @@
 <erl>
 out(A) -> 
-       {ssi, "TAB.inc", [],[]}.
+       {ssi, "TAB.inc", "%%",[{"session", "choosen"}]}.
 </erl>
 
 <div id="entry">

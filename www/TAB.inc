@@ -15,37 +15,38 @@
 
 
 
+<div class="logo"
+<img src="icons/yaws_head.gif" width="600" alt="YAWS">	
+</div>
 
-<img src="icons/yaws_head.gif" width="600" alt="YAWS">
 
 
 <div id="sidebar">
 <h4> Yaws </h4>
-<a href="index.yaws" id="index" >Top Page</a> 
-<a href="configuration.yaws" id="configuration">Build Config & Run</a>
-<a href="dynamic.yaws" id="dynamic" >Dynamic content</a>
-<a href="contribs.yaws" id="contribs">Contribs/Apps</a> 
-<a href="download" id="download">Download </a> 
-<a href="contact.yaws" id="contact">Contact </a> 
-<a href="doc.yaws" id="doc">Documentation</a> 
+<div class="%%index%%" <a href="index.yaws" id="index" >Top Page</a> </div>
+<div class="%%configuration%%" <a href="configuration.yaws" id="configuration">Build Config & Run</a></div>
+<div class="%%dynamic%%" <a href="dynamic.yaws" id="dynamic" >Dynamic content</a> </div>
+<div class="%%contribs%%" <a href="contribs.yaws" id="contribs">Contribs/Apps</a> </div>
+<div class="%%download%%" <a href="download" id="download">Download </a> </div>
+<div class="%%contact%%" <a href="contact.yaws" id="contact">Contact </a> </div>
+<div class="%%doc%%" <a href="doc.yaws" id="doc">Documentation</a>  </div>
 <h4> Examples </h4>
-<a href="/simple.yaws">Simple</a>
-<a href="/dynamic.yaws">Dynamic content</a>
-<a href="/query.yaws">Query part of url</a>
-<a href="/form.yaws">Forms</a>
-<a href="/redirect.yaws">Redirect</a>
-<a href="/arg.yaws">Arg</a>
-<a href="/ssi.yaws">Server side includes</a>
-<a href="/bindings.yaws">Bindings</a>
-<a href="/upload0.yaws">File upload</a>
-<a href="/cookies.yaws">Cookies</a> 
-<a href="/pcookie.yaws">Persistent Cookies</a> 
-<a href="/session.yaws">Cookie sessions</a>   
-<a href="/appmods.yaws">Appmods</a> 
-<a href="/stream.yaws">Streaming data</a>
+<div class="%%simple%%" <a href="/simple.yaws">Simple</a> </div>
+<div class="%%dynamic%%" <a href="/dynamic.yaws">Dynamic content</a> </div>
+<div class="%%query%%" <a href="/query.yaws">Query part of url</a></div>
+<div class="%%form%%" <a href="/form.yaws">Forms</a> </div>
+<div class="%%redirect%%" <a href="/redirect.yaws">Redirect</a> </div>
+<div class="%%arg%%" <a href="/arg.yaws">Arg</a> </div>
+<div class="%%ssi%%" <a href="/ssi.yaws">Server side includes</a> </div>
+<div class="%%bindings%%" <a href="/bindings.yaws">Bindings</a> </div>
+<div class = "%%upload0%%" <a href="/upload0.yaws">File upload</a> </div>
+<div class="%%cookies%%" <a href="/cookies.yaws">Cookies</a>  </div>
+<div class="%%pcookie%%" <a href="/pcookie.yaws">Persistent Cookies</a> </div>
+<div class="%%session%%" <a href="/session.yaws">Cookie sessions</a>   </div>
+<div class="%%appmods%%" <a href="/appmods.yaws">Appmods</a> </div>
+<div class="%%stream%%" <a href="/stream.yaws">Streaming data</a> </div>
 <a href="/shopingcart/index.yaws">Tiny shopping cart</a>
-<a href="/embed.yaws">Embedding Yaws</a>
-
+<div class="%%embed%%" <a href="/embed.yaws">Embedding Yaws</a></div>
 
 
 

@@ -2022,7 +2022,8 @@ expand_parts([{var, V} |T] , Bs, Ack) ->
 	{value, {_, Val}} ->
 	    expand_parts(T, Bs, [Val|Ack]);
 	false ->
-	    {error, ?F("No variable binding found for ~p", [V])}
+	    expand_parts(T, Bs, Ack)
+	    %%{error, ?F("No variable binding found for ~p", [V])}
     end;
 expand_parts([], _,Ack) ->
     lists:reverse(Ack).
@@ -2714,6 +2715,7 @@ check_comps([Pair |Tail], Comps) ->
 split_at(_, [], _Ack) ->
     false;
 split_at(AM={PE, _Mod}, [PEslash|Tail], Ack) ->
+    ?Debug("AM=~p PEslash=~p~n", [AM, PEslash]),
     case no_slash_eq(PE, PEslash) of
 	true ->
 	    {ok, lists:reverse(Ack), AM, Tail};
@@ -2735,7 +2737,7 @@ no_slash_eq(_,_) ->
 
 
 maybe_return_dir(DR, GetPath) ->
-    ?Debug("maybe_return_dir(~p, ~p)", [DR, GetPath]),
+    ?Debug("maybe_return_dir(~p, ~p)", [DR, GetPath]), 
     case prim_file:read_file_info([DR, GetPath, "index.yaws"]) of
 	{ok, FI} when FI#file_info.type == regular ->
 	    do_url_type(get(sc), GetPath ++ "index.yaws");

@@ -1,5 +1,5 @@
 <erl>
-out(A) -> {ssi, "TAB.inc", [],[]}.
+out(A) -> {ssi, "TAB.inc", "%%",[{"pcookie", "choosen"}]}.
 </erl>
 
 

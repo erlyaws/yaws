@@ -16,7 +16,7 @@ ssi(File) ->
       {ssi, File,[],[]}}}.
 
 out(A) -> 
-     [{ssi, "TAB.inc", [],[]},
+     [{ssi, "TAB.inc", "%%",[{"dynamic", "choosen"}]},
       {ehtml,
        [{'div', [{id, "entry"}],
 	 [
