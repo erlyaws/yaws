@@ -11,7 +11,7 @@
 -module('mail').
 -author('jb@trut.bluetail.com').
 
--export([parse_headers/1, list/1, list/3, ploop/5,pop_request/4, diff/2,
+-export([parse_headers/1, list/2, list/3, ploop/5,pop_request/4, diff/2,
 	 session_manager_init/0, check_cookie/1, check_session/1, 
 	 login/2, display_login/2, stat/3, showmail/2, compose/1, compose/7,
 	 send/6, send/2, get_val/3, logout/1, base64_2_str/1, retr/4, 
@@ -67,6 +67,7 @@
 	  user,
 	  passwd,
 	  cookie,
+	  listing,
 	  attachments = []   %% list of #satt{} records
 	 }).
 
@@ -135,7 +136,7 @@ delete(Session, ToDelete) ->
     Req = [del(M) || M <- ToDelete],
     pop_request(Req++[{"QUIT",sl}], popserver(),
 		Session#session.user, Session#session.passwd),
-    {redirect_local, {rel_path, "mail.yaws"}}.
+    {redirect_local, {rel_path, "mail.yaws?refresh"}}.
 
 -record(send, {param,
 	       last = false,
@@ -547,24 +548,36 @@ showmail(Session, MailNr, Count) ->
 	}
        ]}]).
 
-list(Session) ->
-    list(Session, ?RETRYCOUNT).
+list(Session, Refresh) ->
+    list_msg(Session, Refresh, ?RETRYCOUNT).
 
-list(Session, 0) ->
+list_msg(Session, Refresh, 0) ->
     format_error("Mailbox locked by other mail process.");
-list(Session, Count) ->
+list_msg(Session, Refresh, Count) ->
     tick_session(Session#session.cookie),
-    case list(popserver(), Session#session.user, Session#session.passwd) of
+    OldList = Session#session.listing,
+    Listing =
+	if Refresh == true ->
+		list(popserver(), Session#session.user, Session#session.passwd);
+	   OldList == undefined ->
+		list(popserver(), Session#session.user, Session#session.passwd);
+	   true ->
+		OldList
+	end,
+    case Listing of
 	{error, Reason} ->
 	    case string:str(lowercase(Reason), "lock") of
 		0 ->
 		    format_error(Reason);
 		N ->
 		    sleep(?RETRYTIMEOUT),
-		    list(Session, Count-1)
+		    list_msg(Session, Refresh, Count-1)
 	    end;
+	H when Refresh == true ->
+	    set_listing(Session#session.cookie, H),
+	    {redirect_local, {rel_path, "mail.yaws"}};
 	H ->
-	    (dynamic_headers()++
+	    (%% dynamic_headers()++
 	     [{ehtml,
 	       [{script,[],
 		 "function setCmd(val) { \n"
@@ -599,6 +612,7 @@ list(Session, Count) ->
 				 {"tool-delete.gif",
 				  "javascript:setCmd('delete')",
 				  "Delete"},
+				 {"","mail.yaws?refresh","Refresh"},
 				 {"","logout.yaws","Logout"}]),
 		  {table, [{border,0},{bgcolor,"666666"},{cellspacing,0},
 			   {width,"100%"}],
@@ -852,6 +866,16 @@ check_cookie(Cookie) ->
 	    error
     end.
 
+set_listing(Cookie, Listing) ->
+    session_server(),
+    mail_session_manager ! {set_listing, Cookie, self(), Listing},
+    receive
+	{session_manager, listing_added} ->
+	    ok;
+	{session_manager, error} ->
+	    error
+    end.
+
 logout_cookie(Cookie) ->
     session_server(),
     mail_session_manager ! {del_session, Cookie}.
@@ -910,6 +934,19 @@ session_manager(C0, LastGC0, Cfg) ->
 	{From, cfg , Req} ->
 	    sm_reply(Req, From, Cfg),
 	    session_manager(C, LastGC, Cfg);
+	{set_listing, Cookie, From, Listing} ->
+	    case lists:keysearch(Cookie, 1, C) of
+		{value, {_,Session,_}} ->
+		    S2 = Session#session{listing=Listing},
+		    From ! {session_manager, listing_added},
+		    session_manager(lists:keyreplace(
+				      Cookie, 1, C, {Cookie, S2, now()}),
+				    LastGC, Cfg);
+		false ->
+		    io:format("Error, no session found! ~p\n", [Cookie]),
+		    From ! {session_manager, error},
+		    session_manager(C, LastGC, Cfg)
+	    end;
 	{session_set_attach_data, From, Cookie, Fname, Ctype, Data} ->
 	    case lists:keysearch(Cookie, 1, C) of
 		{value, {_,Session,_}} ->
@@ -944,7 +981,6 @@ session_manager(C0, LastGC0, Cfg) ->
 	    session_manager(C3, now(), Cfg)
     end.
 
-
 add_att(Fname, Ctype, Data, Atts) ->
     case lists:keysearch(Fname, #satt.filename, Atts) of
 	false ->
@@ -962,8 +998,6 @@ add_att(Fname, Ctype, Data, Atts) ->
 		   data = Data} | Atts]
     end.
 		
-
-
 
 session_manager_gc(C, Cfg) ->
     lists:zf(fun(Entry={Cookie,Session,Time}) ->

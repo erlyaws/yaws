@@ -3,7 +3,13 @@
 out(A) ->
     case mail:check_session(A) of
 	{ok, Session} ->
-	    mail:list(Session);
+	    L = yaws_api:parse_query(A),
+	    Refresh =
+		case lists:keysearch("refresh",2,L) of
+	             {value, _} -> true;
+	             _          -> false
+	        end,
+	    mail:list(Session, Refresh);
 	Error ->
 	    Error
     end.
