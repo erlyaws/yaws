@@ -1309,7 +1309,12 @@ parse_headers([Line|Lines], Headers) ->
 	    Headers;
 	N ->
 	    Key = lowercase(string:strip(string:sub_string(Line, 1, N-1))),
-	    Value = string:sub_string(Line, N+2),
+	    Value = 
+		if length(Line) > N+1 ->
+			string:sub_string(Line, N+2);
+		   true ->
+			[]
+		end,
 	    NewH = add_header(Key, Value, Headers),
 	    parse_headers(Lines, NewH)
     end.
