@@ -1152,6 +1152,11 @@ ehtml_expander({pre_html, X}, Before, After) ->
 %% Tags
 ehtml_expander({Tag}, Before, After) ->
     ehtml_expander({Tag, []}, Before, After);
+ehtml_expander({pre, Attrs}, Before, After) ->
+    ehtml_expander_done(["<pre",
+			 ehtml_attrs_expander(Attrs),">"],
+			Before,
+			After);
 ehtml_expander({Tag, Attrs}, Before, After) ->
     ehtml_expander_done(["<",atom_to_list(Tag),
 			 ehtml_attrs_expander(Attrs),">\n"],
