@@ -41,7 +41,7 @@ load({file, File}, Trace, Debug) ->
     yaws_log:infolog("Using config file ~s", [File]),
     case file:open(File, [read]) of
 	{ok, FD} ->
-	    GC = make_default_gconf(),
+	    GC = make_default_gconf(Debug),
 	    R = (catch fload(FD, globals, GC#gconf{file = File,
 						   trace = Trace,
 						   debug = Debug
@@ -153,12 +153,18 @@ add_port(C, Port) ->
     end.
 
 
-make_default_gconf() ->
+make_default_gconf(Debug) ->
     Y = yaws_dir(),
     #gconf{yaws_dir = Y,
 	   ebin_dir = [filename:join([Y, "examples/ebin"])],
 	   include_dir = [filename:join([Y, "examples/include"])],
 	   logdir = ".",
+	   cache_refresh_secs = if
+				    Debug == true ->
+					0;
+				    true ->
+					30
+				end,
 	   uid = os:cmd("id -u") -- [10],
 	   yaws = "Yaws " ++ yaws_vsn:version()}.
 
@@ -302,6 +308,15 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
     case toks(Chars) of
 	[] ->
 	    fload(FD, server, GC, C, Cs, Lno+1, Next);
+
+	["access_log", '=', Bool] ->
+	    case is_bool(Bool) of
+		{true, Val} ->
+		    C2 = C#sconf{access_log = Val},
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+		false ->
+		    {error, ?F("Expect true|false at line ~w", [Lno])}
+	    end;
 	["port", '=', Val] ->
 	    case (catch list_to_integer(Val)) of
 		I when integer(I) ->

@@ -14,78 +14,10 @@ First and foremost, the entire regular erlang API is available, this
 include mnesia ans all other erlang applications that are part of the
 regular erlang system.
 <p>
-Here we describe the functions available in the module 
-<code>yaws_api</code>. 
+Here we describe the functions available in the yaws_api module 
 
 
-<hr><h3> <code>redirect(Location)</code></h3>
-Issue a HTTP redirect to <code>Location</code>
-
-
-<hr><h3> <code>setcookie(Name, Value, [Path, [Expire, [Domain, Secure]]])</code></h3>
-Sets a cookie. Usage examples avilable in <a href="cookies.yaws">cookies.yaws</a>
-
-
-
-<hr><h3> <code>pre_ssi_files(DocRoot, Files)</code></h3>
-This function will perform a server side include on the files in
-<code>Files</code>. The data will be transformed so that all
-&lt;, &gt;, &amp; cahracters are htmlized. This useful for including
-code snippets in the yaws code.
-
-
-<hr><h3> <code>pre_ssi_string(String)</code></h3>
-Same as above, but for an explicit string
-
-
-
-<hr><h3><code>htmlize(Binary)</code></h3>
-Transform data so that all
-&lt;, &gt;, &amp; characters and line breaks are htmlized.
-
-<hr><h3><code>f(Fmt, Args)</code></h3>
-This function is automatically included in all yaws code. It is just
-a shortcut for: <code>io_lib:format(Fmt, Args)
-
-
-<hr><h3><code>fl([Fmt, Args .......])</code></h3>
-This function is automatically included in all yaws code. It will
-apply io_lib:format to a consecutive list of Fmt and Args arguments.
-
-
-<hr><h3><code>ssi([File1, File2 ...])</code></h3>
-Server side include, the files will be included as is into the
-document.
-
-
-
-<hr>
-<h3> <tt> parse_post_data(Arg) </tt> </h2>
-
-<p>
-When data is POST ed to a yaws page, 
-this function can be used to parse the 
-data in a convenient way. Data which is posted from a form is naturally 
-arranged as a list of {key,value} pairs. 
-<p> Similarly, when data is fed to a yaws page in the URL as a query part,
-the query can be parsed by this function. More info on this at
-<a href="query.yaws">query.yaws</a>
-
-<p>We can see examples of the usage of this function in the files
-<a href="form.yaws">form.yaws</a> which feeds the POST data to the file
-<a href="post.yaws">post.yaws</a>. The file post.yaws will call this function 
-to parse the data POSTed from the previous page.
-
-
-
-
-<hr>
-<h3><code> code_to_phrase(Code) </code></h2>
-<p>Makes a mapping from HTTP status codes to HTTP status code phrases. 
-
-
-
-
+<a href="man.yaws?page=yaws_api"> man page for <tt>yaws_api (5)</tt> </a>
 
 
 <erl>

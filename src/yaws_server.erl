@@ -1789,7 +1789,7 @@ url_type(GC, SC, Path) ->
 	    FI = UT#urltype.finfo,
 	    Refresh = GC#gconf.cache_refresh_secs,
 	    if 
-		((N-When) > Refresh) ->
+		((N-When) >= Refresh) ->
 		    ?Debug("Timed out entry for ~s ~p~n", [Path, {When, N}]),
 		    %% more than 30 secs old entry
 		    ets:delete(E, {url, Path}),
@@ -2041,28 +2041,6 @@ drop_till_dot([H|T]) ->
     [H|drop_till_dot(T)];
 drop_till_dot([]) ->
     [].
-
-
-
-
-% %% FIXME add all mime types here
-% suffix_type("sway." ++ _) ->
-%     {yaws, "text/html"};
-% suffix_type("lmth." ++ _) ->
-%     {regular, "text/html"};
-% suffix_type("gpj." ++ _) ->
-%     {regular, "image/jpeg"};
-% suffix_type("gnp." ++ _) ->
-%     {regular, "image/png"};
-% suffix_type("fig." ++ _) ->
-%     {regular, "image/gif"};
-% suffix_type("3pm." ++ _) ->
-%     {regular, "audio/mpeg"};
-% suffix_type("zg." ++ _) ->
-%     {regular, "application/x-gzip"};
-% suffix_type(_) ->
-%     {regular, "application/octet-stream"}.
-
 
 
 flush(SC, Sock, Sz) ->

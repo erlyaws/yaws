@@ -22,7 +22,8 @@ MODULES=yaws \
 	yaws_ssl \
 	yaws_vsn \
 	mime_type_c \
-	mime_types
+	mime_types \
+	yaws_session_server
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app
 

@@ -30,10 +30,14 @@ start_link() ->
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------
 init([]) ->
+
+    Sess = {yaws_session_server, {yaws_session_server, start_link, []},
+	       permanent, 5000, worker, [yaws_session_server]},
+
     YawsLog = {yaws_log, {yaws_log, start_link, []},
 	       permanent, 5000, worker, [yaws_log]},
 
     YawsServ = {yaws_server, {yaws_server, start_link, []},
 	       permanent, 5000, worker, [yaws_server]},
 
-    {ok,{{one_for_all,4,30}, [YawsLog, YawsServ]}}.
+    {ok,{{one_for_all,4,30}, [YawsLog, YawsServ, Sess]}}.

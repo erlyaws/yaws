@@ -19,6 +19,10 @@
 -export([find_cookie_val/2, secs/0, url_decode/1]).
 -export([get_line/1, mime_type/1]).
 -export([stream_chunk_deliver/2, stream_chunk_end/1]).
+-export([new_cookie_session/3,
+	 cookieval_to_session/1,
+	 print_cookie_sessions/0,
+	 replace_cookie_session/2]).
 
 %% these are a bunch of function that are useful inside
 %% yaws scripts
@@ -511,7 +515,7 @@ setcookie(_Name, _Value, _Path, _Expire, _Domain, _Secure) ->
 	    
 
 
-%% This function can be passed the cookie we get in the Arg#arg.cookies
+%% This function can be passed the cookie we get in the Arg#arg.headers.cookies
 %% to search for a specific cookie 
 %% return [] if not found
 %%        Str if found
@@ -597,12 +601,11 @@ get_line("\r\n" ++ Tail, Cur) ->
 get_line([H|T], Cur) ->
     get_line(T, [H|Cur]).
 
+
+
 mime_type(FileName) ->
     {_, MT} = mime_types:t(filename:extension(FileName)),
     MT.
-
-
-
 
 
 stream_chunk_deliver(YawsPid, Data) ->
@@ -611,3 +614,22 @@ stream_chunk_deliver(YawsPid, Data) ->
 stream_chunk_end(YawsPid) ->
     YawsPid ! endofstreamcontent.
 
+
+
+
+new_cookie_session(User, Passwd, Opaque) ->
+    yaws_session_server:new_session(User, Passwd, Opaque).
+
+%% as returned in #ysession.cookie
+cookieval_to_session(CookieVal) ->
+    yaws_session_server:cookieval_to_session(CookieVal).
+
+print_cookie_sessions() ->
+    yaws_session_server:print_sessions().
+
+replace_cookie_session(Session, User) ->
+    yaws_session_server:replace_session(Session, User).
+
+
+
+    
