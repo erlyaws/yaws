@@ -1201,8 +1201,9 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     0, "cgi",
 			     N,
 			     ARG,
-			     fun(A)->yaws_cgi:call_cgi(A,
-						       UT#urltype.fullpath)
+			     fun(A)->yaws_cgi:call_cgi(
+				       A,
+				       lists:flatten(UT#urltype.fullpath))
 			     end,
 			     fun(A)->finish_up_dyn_file(CliSock)
 			     end
@@ -1213,9 +1214,10 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     0, "php",
 			     N,
 			     ARG,
-			     fun(A)->yaws_cgi:call_cgi(A,
-						       SC#sconf.phpexe,
-						       UT#urltype.fullpath)
+			     fun(A)->yaws_cgi:call_cgi(
+				       A,
+				       SC#sconf.phpexe,
+				       lists:flatten(UT#urltype.fullpath))
 			     end,
 			     fun(A)->finish_up_dyn_file(CliSock)
 			     end
