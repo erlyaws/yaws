@@ -1706,8 +1706,8 @@ handle_out_reply_l([Reply|T], LineNo, YawsFile, SC, A, Res) ->
 	    break;
 	{page, Page} ->
 	    {page, Page};
-	_ ->
-	    handle_out_reply_l(T, LineNo, YawsFile, SC, A, Res)
+	RetVal ->
+	    handle_out_reply_l(T, LineNo, YawsFile, SC, A, RetVal)
     end;
 handle_out_reply_l([], _LineNo, _YawsFile, _SC, _A, Res) ->
     Res.
