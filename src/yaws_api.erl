@@ -1632,7 +1632,9 @@ skip_space(T) -> T.
 %
 
 
-queryvar(ARG,Key) ->
+queryvar(ARG,Key) when atom(Key) ->
+    queryvar(ARG, atom_to_list(Key));
+queryvar(ARG, Key) ->
     Parse = case get(query_parse) of
 		undefined ->
 		    Pval = yaws_api:parse_query(ARG),
@@ -1647,6 +1649,8 @@ queryvar(ARG,Key) ->
 	false -> undefined
     end.
 
+postvar(ARG, Key) when atom(Key) ->
+    postvar(ARG, atom_to_list(Key));
 postvar(ARG, Key) ->
     Parse = case get(post_parse) of
 		undefined ->

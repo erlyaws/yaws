@@ -1,3 +1,27 @@
+Mar 18, 2004 Version 1.42 released
+This is a major release. Not so much for added functionality as for internal rewrites of the code. The release contains the following:
+Compression support using zlib. Still experimental. (cshultz)
+Minor bugfixes in the reverse proxy. This code is still not ready (klacke)
+Added a specific auth log which logs good and bad HTTP auth requests.
+QNX port (cschatz@networkadvantage.biz)
+Beautification of dir listings (cshultz)
+Never let ehtml generate extra spaces where it is not entirely correct (patch from tomas abrahamsson)
+Webmail app, Completed support for attachments, proper esacping, faster listing of large mboxes. Added sorting of mails (jb)
+Date header bug (chandru)
+postvar put/get bug fixed (hal snyder)
+Added yaws_api:query_url(Arg) which reconstructs the url from the original GET request.
+Added the "id = Key" configuration parameter. Earlier when we were running multiple yaws servers on the same machine, they had to run with different uid since yaws was writing temporary files under /tmp/yaws/${uid}. This is now changed and if we want 2 _different_ yaws servers on the same machine they must be given different "id" in their respective config files. The yaws ctl scripts, such as yaws -s and friends now have an extra (optional) "-j id" flag to control which specific instance of Yaws is ment.
+Added explicit support for Content-Length header from .yaws files for applications that require Content-Length instead of chunked encodings.
+Changed the #sconf{} and #gconf{} records so that all the booleans in those 2 records are now a bitmask flag. This is a slightly backwards incompatible change and it affects those that use Yaws in embedded mode where the #sconf and #gconf records are explicitly manipulated. It sholdn't be a big deal to change though.
+Workaround buggy otp error_logger_file_h which truncates the report file whenever it is reopened. 
+Removed the calls inside the server that were doing list_to_atom/1 We were suceptible to DOS attacks. This is unfortunately a backwards incompatible change since it affects the return value from API functions yaws_api:parse_query/1 and yaws_api:parse_post/1. They both used to return lists on the form of {Key, Val} tuples where Key was an atom. It is now a string. There is a configuration option for yaws.conf which keeps the old (broken) behaviour. 
+Optimized url parsing and removed at least one call to lists:flatten/1 in the fast path. 
+Better support for old Netscape and the Connection: Keep-Alive header.
+More beautiful trace output. Try "yaws -i -x -T"
+More and better debug support.
+New install procedure with a more interesting yaws.conf template generated.
+Updated the ssl test certs that come with yaws. The old ones had expired.
+
 Feb 6, 2004 Version1.41 released
 Bugfixes and feature release.
 Minor bugfixes to the reverse proxy implementation (klacke)

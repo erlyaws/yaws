@@ -1,3 +1,289 @@
+2004-03-18 14:45  klacke
+
+	* src/yaws_config.erl: ""
+
+2004-03-18 14:31  klacke
+
+	* Makefile, README, man/yaws.conf.5, scripts/Install,
+	scripts/Makefile, scripts/Subst, scripts/mangle,
+	scripts/yaws.conf.basic_auth, scripts/yaws.conf.template,
+	scripts/yaws.conf.template.local, scripts/yaws.ss,
+	scripts/yaws.template, src/Makefile, src/yaws_config.erl,
+	src/yaws_server.erl, ssl/cert.example, ssl/key.example,
+	ssl/yaws-cert.pem, ssl/yaws-key.pem: New better install procedure,
+	better (more interesting) yaws.conf template generated
+
+2004-03-17 17:01  klacke
+
+	* src/yaws.erl, src/yaws_api.erl, src/yaws_config.erl,
+	src/yaws_debug.erl, src/yaws_server.erl, www/code.yaws,
+	www/dynamic.yaws, www/form.yaws, www/post.yaws: some more debug
+	support
+
+2004-03-17 12:40  klacke
+
+	* src/: yaws.erl, yaws_server.erl: more beautiful http/traffic
+	tracing
+
+2004-03-17 12:33  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed problem with encoded
+	attachements.
+
+2004-03-16 17:40  klacke
+
+	* src/: yaws.erl, yaws_config.erl, yaws_server.erl: better support
+	for old netscape browser, keep-alive
+
+2004-03-16 13:19  klacke
+
+	* applications/mail/mail/headers.yaws,
+	applications/mail/mail/listop.yaws,
+	applications/mail/mail/login.yaws,
+	applications/mail/mail/mail.yaws,
+	applications/mail/mail/reply.yaws,
+	applications/mail/mail/showmail.yaws,
+	applications/mail/src/attachment.erl,
+	applications/wiki/src/wiki.erl, include/yaws.hrl,
+	include/yaws_api.hrl, man/yaws.conf.5, src/yaws.erl,
+	src/yaws_404.erl, src/yaws_api.erl, src/yaws_compile.erl,
+	src/yaws_config.erl, src/yaws_ctl.erl, src/yaws_debug.erl,
+	src/yaws_ls.erl, src/yaws_revproxy.erl, src/yaws_server.erl,
+	src/yaws_ssl.erl, www/index.yaws, www/man.yaws, www/post.yaws,
+	www/query.yaws, www/shopingcart/shopcart.erl: Removed the atoms in
+	parse_post and parse query, backwards incompatible change updateed
+	wiki and mail for this, added a backwards_compat_flag to gconf put
+	gconf and sconf in the dictionary as opposed to passing them around
+	as args reworked url_type so there are no more flat lists, removed
+	the list_to_atom call for the spec cache.
+
+2004-03-14 23:53  jbevemyr
+
+	* applications/mail/: TODO, mail/down.gif, mail/mail.yaws,
+	mail/up.gif, src/mail.erl: Added sorting capability to webmail. You
+	can now sort/reverse sort on mail nr, sender, subject, date and
+	size.
+
+2004-03-13 12:02  klacke
+
+	* config.guess, config.sub, include/yaws_api.hrl,
+	src/yaws_server.erl, www/index.yaws: ""
+
+2004-03-12 21:09  klacke
+
+	* www/icons/yaws_y.gif: ""
+
+2004-03-12 00:09  klacke
+
+	* include/yaws.hrl, man/yaws.conf.5, src/Makefile, src/yaws.erl,
+	src/yaws_api.erl, src/yaws_config.erl, src/yaws_debug.erl,
+	src/yaws_log.erl, src/yaws_log_file_h.erl, src/yaws_revproxy.erl,
+	src/yaws_server.erl, www/todo.yaws: backwards incomp cahnge with
+	flags in gc and sc instead of many bools, chunk bugs in revproxy,
+	possibility to not copy the error_log, workaround buggy
+	error_logger_file_h which doesn't append when you reopen a file,
+	now we have the report files kept over restarts
+
+2004-03-11 11:22  klacke
+
+	* man/yaws_api.5, src/yaws.erl, src/yaws_api.erl: explicit support
+	for content_length
+
+2004-03-11 00:41  klacke
+
+	* include/yaws.hrl, include/yaws_api.hrl, man/yaws.1,
+	man/yaws.conf.5, man/yaws_api.5, scripts/Makefile, scripts/yaws.ss,
+	src/yaws.erl, src/yaws_api.erl, src/yaws_compile.erl,
+	src/yaws_config.erl, src/yaws_ctl.erl, src/yaws_log.erl,
+	src/yaws_server.erl: postvar bug by hal snyder, added
+	yaws_api:query_url/1 added the id support and removed the uid
+	stuff, added -j to control trace of a running daemon, bugfixes in
+	the logger,
+
+2004-03-10 12:23  etnt
+
+	* scripts/yaws.ss: added -pa switch to the yaws start script
+
+2004-03-01 14:21  klacke
+
+	* src/mime.types: ""
+
+2004-02-29 23:13  klacke
+
+	* src/: yaws.erl, yaws_revproxy.erl, yaws_server.erl: fixed POST
+	for revproxy
+
+2004-02-26 09:59  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed refresh error in webmail.
+
+2004-02-26 09:49  jbevemyr
+
+	* applications/mail/src/Makefile: [no log message]
+
+2004-02-26 09:45  jbevemyr
+
+	* applications/mail/: mail/mail.yaws, src/Makefile, src/mail.erl,
+	src/smtp.erl: Added mail sending API in smtp.erl and improved speed
+	of listing for large mail boxes.
+
+2004-02-24 20:52  klacke
+
+	* man/yaws.conf.5: ""
+
+2004-02-24 20:28  klacke
+
+	* src/yaws.erl: Date header nug fixed by chandru
+
+2004-02-23 22:58  jbevemyr
+
+	* applications/mail/: mail/send.yaws, src/mail.erl,
+	src/yaws-webmail.conf: Added proper . escaping form smtp send and
+	pop message.
+
+2004-02-23 00:52  jbevemyr
+
+	* applications/mail/: mail/mail.js, mail/send.yaws, src/mail.erl:
+	Completed support for attachements. Minor GUI improvements still
+	needed.
+
+2004-02-17 10:36  klacke
+
+	* man/yaws.conf.5: ""
+
+2004-02-17 10:13  klacke
+
+	* doc/yaws.tex, include/yaws.hrl, man/yaws.conf.5,
+	src/yaws_config.erl: backed off the is_default patch
+
+2004-02-16 19:19  cschultz
+
+	* src/yaws_server.erl: [no log message]
+
+2004-02-16 19:08  cschultz
+
+	* src/yaws_server.erl: Forgot to save a file...  Sorry.  More on
+	gzip.
+
+2004-02-16 19:00  cschultz
+
+	* src/: Makefile, yaws.erl, yaws_server.erl, yaws_zlib.erl: Changed
+	compression from `deflate' to `gzip'.
+
+2004-02-16 15:54  cschultz
+
+	* src/yaws_cgi.erl: Change of my email address.
+
+2004-02-16 15:04  cschultz
+
+	* src/yaws.erl: Disabled `deflate' for IE.  This of course means
+	that we will have to abondon `deflate' (in favor of `gzip')
+	altogether.  To do...
+
+2004-02-16 10:40  klacke
+
+	* doc/yaws.pdf, doc/yaws.tex, include/yaws.hrl, man/yaws.conf.5,
+	src/yaws_api.erl, src/yaws_config.erl: patch by tomas abrahamsson
+	to not generate newlines for certain tags in ehtml, as well as
+	default virt server support
+
+2004-02-16 01:41  jbevemyr
+
+	* applications/mail/: mail/mail.js, mail/tab-bg_active.gif,
+	mail/tab-bg_inactive.gif, mail/tab-hr.gif,
+	mail/tab-left_active.gif, mail/tab-left_inactive.gif,
+	mail/tab-right_active.gif, mail/tab-right_inactive.gif,
+	src/mail.erl: [no log message]
+
+2004-02-16 00:54  jbevemyr
+
+	* applications/mail/: mail/reply.yaws, src/mail.erl: Added some
+	support for sending attachments, more needed. Cleaned up display
+	message code.
+
+2004-02-14 22:17  cschultz
+
+	* src/yaws_ls.erl: Modified ALT texts for better appearance in text
+	browsers.
+
+2004-02-14 20:11  cschultz
+
+	* src/yaws.erl: More deflate bug workarounds.
+
+2004-02-14 18:52  cschultz
+
+	* src/yaws.erl: Added deflate workaround for buggy clients (w3m)
+	depending on MIME type.
+
+2004-02-14 17:42  cschultz
+
+	* src/: yaws.erl, yaws_server.erl: Disable `deflate' for Clients
+	with implementations which are believed to be buggy.
+
+2004-02-13 01:03  klacke
+
+	* config.guess, config.sub, configure, man/yaws.conf.5,
+	man/yaws_api.5, www/EXHEAD, www/bindings.yaws,
+	www/configuration.yaws, www/contact.yaws, www/contribs.yaws,
+	www/dynamic.yaws, www/examples.yaws, www/index.yaws, www/man.yaws,
+	www/news, www/pcookie.yaws, www/readpcookie.yaws,
+	www/redirect.yaws, www/setcookie.yaws, www/setpcookie.yaws,
+	www/ssi.yaws, www/shopingcart/source.html: qnx port + docs overhaul
+	by cschatz@networkadvantage.biz
+
+2004-02-11 22:13  jbevemyr
+
+	* applications/wiki/scripts/updateWiki.src: [no log message]
+
+2004-02-11 15:30  klacke
+
+	* include/yaws.hrl, man/yaws.conf.5, src/yaws_config.erl,
+	src/yaws_log.erl, src/yaws_server.erl: added an auth log that keeps
+	track of good/bad 401 requests
+
+2004-02-10 13:24  klacke
+
+	* vsn.mk: up vsn
+
+2004-02-10 13:22  klacke
+
+	* src/: yaws.erl, yaws_api.erl, yaws_server.erl: auth + revproxy
+	fix
+
+2004-02-08 03:26  cschultz
+
+	* src/: yaws_server.erl, yaws_ssl.erl: Make Content-Encoding in
+	yaws_ssl into an atom.
+
+2004-02-08 02:19  cschultz
+
+	* src/: yaws.erl, yaws_server.erl: Fixed logged length for deflated
+	files.
+
+2004-02-08 01:47  cschultz
+
+	* include/yaws.hrl, include/yaws_api.hrl, src/yaws.erl,
+	src/yaws_config.erl, src/yaws_server.erl: Support for
+	`Content-Encoding: deflate' using zlib.  This feature has to be
+	turned on in the server part of yaws.conf (`deflate = true').
+	
+	Still experimental and for static files only.  Cached files are
+	compressed just once.  Large files are compressed on the fly, and
+	only if the mime type makes it seem wothwhile (see
+	yaws_server:compressible_mime_type).  No docs so far.
+
+2004-02-06 22:59  klacke
+
+	* applications/mail/ebin/.empty: [no log message]
+
+2004-02-06 22:51  klacke
+
+	* ChangeLog: [no log message]
+
+2004-02-06 22:51  klacke
+
+	* www/news: release 1.41
+
 2004-02-06 22:31  klacke
 
 	* applications/mail/src/attachment.erl, src/yaws.erl, vsn.mk: ""
