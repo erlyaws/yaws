@@ -25,11 +25,11 @@ format_wiki_files(Page, FileDir, Files, Root, Heading) ->
 
 format_wiki(Page, Wik, Root) ->
     LinkFun = fun(I) -> format_link(I, Page, Root, show) end,
-    pp(Wik, LinkFun).
+    pp(Wik, LinkFun, Page).
 
 format_wiki(Page, Wik, Root, preview) ->
     LinkFun = fun(I) -> format_link(I, Page, Root, preview) end,
-    pp(Wik, LinkFun).
+    pp(Wik, LinkFun, Page).
 
 format_link(Page, Root) ->
     format_link({wikiLink, Page}, [], Root, show).
@@ -73,15 +73,15 @@ get_filesize(File) ->
 i2s(X) ->
     integer_to_list(X).
 
-pp({wik,L}, F) ->
-    map(fun(I) -> pp(I, F) end, L);
-pp({txt,_,Str}, F) ->
-    wiki_format_txt:format(Str, F);
-pp({open,Tag,Str}, F) -> 
-    open("#CCFFCC",Tag,F,pp({txt,9999,Str}, F));
-pp({write_append,Tag,Str}, F) -> 
-    open("#99FFFF",Tag,F,pp({txt,8888,Str}, F));
-pp(Other, F) ->
+pp({wik,L}, F, Node) ->
+    map(fun(I) -> pp(I, F, Node) end, L);
+pp({txt,_,Str}, F, Node) ->
+    wiki_format_txt:format(Str, F, Node);
+pp({open,Tag,Str}, F, Node) -> 
+    open("#CCFFCC",Tag,F,pp({txt,9999,Str}, F, Node));
+pp({write_append,Tag,Str}, F, Node) -> 
+    open("#99FFFF",Tag,F,pp({txt,8888,Str}, F, Node));
+pp(Other, F, Node) ->
     wiki:show({cannot,format,Other}).
 
 open(Color, Tag, F, Stuff) ->

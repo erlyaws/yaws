@@ -42,13 +42,22 @@
 %%                                       and the * (or Header) and Text
 %%                                       are not significant.
 
--export([format/2, collect_wiki_link/1]).
+-export([format/3, collect_wiki_link/1]).
 -compile(export_all).
 
 -import(lists, [member/2, map/2, reverse/1, reverse/2]).
 
-format(Str, F) ->
-    Env = {F, false, false, false, 0, false},
+-record(env, {node,
+	      f,
+	      f1 = false,
+	      f2 = false,
+	      f3 = false,
+	      n = 0, 
+	      dl = false
+	     }).
+
+format(Str, F, Node) ->
+    Env = #env{node=Node,f=F},
     Str1 = case Str of [$\n|_] -> Str; _ -> [$\n|Str] end,
     format_txt(Str1, Env, [], Str1).
 
@@ -86,6 +95,11 @@ format_txt("http://" ++ T, Env, L, Doc) ->
     {Url, T1} = collect_url(T, []),
     Txt = format_external_url(Url),
     format_txt(T1, Env, reverse(Txt, L), Doc);
+format_txt("slideshow:" ++ T, Env, L, Doc) ->
+    {X, T1} = collect_wiki_link(T),
+    Txt = "<a href='slideShow.yaws?node="++Env#env.node++
+	"&index=1'>"++X++ "</a>",
+    format_txt(T1, Env, reverse(Txt, L), Doc);
 format_txt("mailto:" ++ T, Env, L, Doc) ->
     {X, T1} = collect_mail(T, []),
     Txt = "<a href='mailto:" ++ X ++ "'>" ++ X ++ "</a>",
@@ -106,7 +120,8 @@ format_txt([], Env, L, Doc) ->
     {_, L1} = clear_line(Env, L),
     reverse(L1).
 
-format_wiki_word(Str, {F,F1,F2,F3,Lev,Dl}) ->
+format_wiki_word(Str, Env) ->
+    F = Env#env.f,
     F({wikiLink, Str}).
 
 collect_url(S=[$ |_], L)      -> {reverse(L), S};
@@ -235,8 +250,9 @@ skip_blanks([$\n|T]) -> skip_blanks(T);
 skip_blanks([$\t|T]) -> skip_blanks(T);
 skip_blanks(X)       -> X.
 
-open_dl({F,F1,F2,F3,N,false}, L) -> {{F,F1,F2,F3,N,true}, reverse("<dl>", L)};
-open_dl(Env, L)                  -> {Env, L}.
+open_dl(Env, L) when Env#env.dl == false ->
+    {Env#env{dl=true}, reverse("<dl>", L)};
+open_dl(Env, L) -> {Env, L}.
 
 add_dl([$]|T], Env, L, Doc) ->
     format_txt(T, Env, reverse("</dt><dd>", L), Doc);
@@ -250,39 +266,39 @@ add_dl([], Env, L, Doc) ->
 count_indent_levels([$-|T], N) -> count_indent_levels(T, N+1);
 count_indent_levels(T, N)      -> {N, T}.
 
-adjust_indents(Env={F,F1,F2,F3,K,Dl}, K, L) ->
+adjust_indents(Env, K, L) ->
     {Env, L};
-adjust_indents(Env={F,F1,F2,F3,N,Dl}, K, L) when N > K ->
-    adjust_indents({F,F1,F2,F3,N-1,Dl}, K, reverse("</ul>", L));
-adjust_indents(Env={F,F1,F2,F3,N,Dl}, K, L) when K > N ->
-    adjust_indents({F,F1,F2,F3,N+1,Dl}, K, reverse("<ul>", L)).
+adjust_indents(Env, K, L) when Env#env.n > K ->
+    adjust_indents(Env#env{n=Env#env.n-1}, K, reverse("</ul>", L));
+adjust_indents(Env, K, L) when K > Env#env.n ->
+    adjust_indents(Env#env{n=Env#env.n-1}, K, reverse("<ul>", L)).
 
-clear_line({F, true, F2, F3, Lev, Dl}, L) ->
-    clear_line({F, false, F2,F3,Lev,Dl}, reverse("</b>", L));
-clear_line({F, F1, true, F3, Lev, Dl}, L) ->
-    clear_line({F,F1,false,F3,Lev,Dl}, reverse("</i>", L));
-clear_line({F, F1, F2, true, Lev,Dl}, L) ->
-    clear_line({F, F1,F2,false,Lev,Dl}, reverse("</tt>", L));
-clear_line({F, F1, F2, F3, N,true}, L) ->
-    clear_line({F, F1,F2,F3,N,false}, reverse("</dl>", L));
-clear_line(Env={F, F1, F2, F3, N, false}, L) when N /= 0 ->
+clear_line(Env, L) when Env#env.f1==true ->
+    clear_line(Env#env{f1=false}, reverse("</b>", L));
+clear_line(Env,  L) when Env#env.f2==true ->
+    clear_line(Env#env{f2=false}, reverse("</i>", L));
+clear_line(Env,  L) when Env#env.f3==true ->
+    clear_line(Env#env{f3=false}, reverse("</tt>", L));
+clear_line(Env, L) when Env#env.dl==true->
+    clear_line(Env#env{dl=false}, reverse("</dl>", L));
+clear_line(Env, L) when Env#env.n /= 0 ->
     {Env1, L1} = adjust_indents(Env,0,L),
     clear_line(Env1, L1);
 clear_line(Env, L) ->
     {Env, L}.
 
-char_style(b, {F,false,F2,F3,Lev,Dl}, L) ->
-    {{F,true,F2,F3,Lev,Dl},reverse("<b>", L)};
-char_style(b, {F,true,F2,F3,Lev,Dl}, L) ->
-    {{F,false,F2,F3,Lev,Dl},reverse("</b>", L)};
-char_style(i, {F,F1,false,F3,Lev,Dl}, L) ->
-    {{F,F1,true,F3,Lev,Dl},reverse("<i>", L)};
-char_style(i, {F,F1,true,F3,Lev,Dl}, L) ->
-    {{F,F1,false,F3,Lev,Dl},reverse("</i>", L)};
-char_style(tt, {F,F1,F2,false,Lev,Dl}, L) ->
-    {{F,F1,F2,true,Lev,Dl},reverse("<tt>", L)};
-char_style(tt, {F,F1,F2,true,Lev,Dl}, L) ->
-    {{F,F1,F2,false,Lev,Dl},reverse("</tt>", L)}.
+char_style(b, Env, L) when Env#env.f1 == false ->
+    {Env#env{f1=true},reverse("<b>", L)};
+char_style(b, Env, L) when Env#env.f1 == true ->
+    {Env#env{f1=false},reverse("<b>", L)};
+char_style(i, Env, L) when Env#env.f2 == false ->
+    {Env#env{f2=true},reverse("<i>", L)};
+char_style(i, Env, L) when Env#env.f2 == true ->
+    {Env#env{f2=false},reverse("</i>", L)};
+char_style(tt, Env, L) when Env#env.f3==false ->
+    {Env#env{f3=true},reverse("<tt>", L)};
+char_style(tt, Env, L) when Env#env.f3==true ->
+    {Env#env{f3=false},reverse("</tt>", L)}.
 
 collect_wiki_link([$"|X]) ->
     collect_wiki_link(X, [], true);

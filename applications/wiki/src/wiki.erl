@@ -32,6 +32,8 @@
 	 sendMeThePassword/3, storeFiles/3, showOldPage/3,
 	 changePassword/3, changePassword2/3]).
 
+-export([slideShow/3]).
+
 -export([show/1, ls/1, h1/1, read_page/2, p/1,
 	 str2urlencoded/1, session_manager_init/2]).
 
@@ -1310,6 +1312,52 @@ editFiles1(Page, Password, Root, Prefix) ->
     end.
 
 
+
+slideShow(Params, Root, Prefix) ->
+    Page     = getopt(node, Params),
+    IndexArg = getopt(index, Params),
+    Index = case catch list_to_integer(IndexArg) of
+		{'EXIT', Reason} -> 1;
+		Num when integer(Num) -> Num
+	    end,
+    {File,FileDir} = page2filename(Page, Root),
+    case file:read_file(File) of
+	{ok, Bin} ->
+	    {wik002, Pwd,_Email,_Time,_Who,TxtStr,Files,_Patches} =
+		bin_to_wik002(Bin),
+	    case catch lists:nth(Index, Files) of
+		{'EXIT', _} ->
+		    % done
+		    redirect({node, Page}, Prefix);
+		PictFile ->
+		    FileName = element(2,PictFile),
+		    Comment = element(3, PictFile),
+		    DeepStr =
+			["<table width='100%'>"
+			 "<tr><td><a href=\"slideShow.yaws?node=",
+			 Page,"&index=",integer_to_list(Index-1),
+			 "\">Previous</a> </td>",
+			 "<td><a href=\"slideShow.yaws?node=",Page,
+			 "&index=",integer_to_list(Index+1),"\">Next</a><br>"
+			 "</td></tr></table>"
+			 "<p><b>",Comment,"</b></p><p>",
+			 "<img src=\"",
+			 wiki:str2urlencoded(FileDir), "/",
+			 wiki:str2urlencoded(FileName),
+			 "\" alt='",FileName,
+			 "'></p>"],
+		    F1 = add_blanks_nicely(Page),
+		    TopHeader = 
+			["<h1><a href='showPage.yaws?node=",
+			 str2urlencoded(Page),
+			 "'>",F1,"</a></h1>\n"],
+		    Link = 
+			template(Page, banner(Page, Pwd),
+				 [TopHeader, DeepStr])
+	    end;
+	_ ->
+	    show({no_such_page,Page})
+    end.
 
 editTag(Params, Root, Prefix) ->
     Page = getopt(node, Params),
