@@ -211,10 +211,10 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 	  end, Sconfs),
     L2 = lists:zf(fun({error, F, A}) ->	
 			  error_logger:error_msg(F, A),
-			  exit(nostart);
+			  false;
 		     ({error, Reason}) ->
 			  error_logger:error_msg("FATAL: ~p~n", [Reason]),
-			  exit(nostart);
+			  false;
 		     ({_Pid, _SCs}) ->
 			  true;
 		     (none) ->
