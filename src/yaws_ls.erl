@@ -44,8 +44,15 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
 	      throw({ok, 1})
       end),
     yaws_server:accumulate_chunk(B),
+    Ret = case yaws:outh_get_chunked() of
+	      true ->
+		  yaws_server:accumulate_content(["\r\n", "0", "\r\n\r\n"]),
+		  continue;
+	      false ->
+		  done
+	  end,
     yaws_server:deliver_accumulated(CliSock, GC, SC),
-    done.
+    Ret.
 
 inline_readme(SC,DirName,L) ->
     F = fun("README", _Acc) ->
@@ -84,7 +91,7 @@ file_entry({ok, FI}, _DirName, Name) ->
     Entry = ?F("<img SRC=~p  ALT=~p> <a HREF=~p title=\"~w bytes\">~s</a> ~s~s ~8.s~n",
 	       ["/icons/" ++ Gif,
 	        Alt,
-		Name, 
+		yaws_api:url_encode(Name), 
 	        FI#file_info.size,
 		Trim,
 		lists:duplicate(22 - TrimLen, $\s),
