@@ -1660,6 +1660,8 @@ deliver_dyn_part(CliSock, GC, SC,          % essential params
 	    end;
 	break ->
 	    finish_up_dyn_file(CliSock, GC, SC);
+	ok ->
+	    finish_up_dyn_file(CliSock, GC, SC);
 	{page, Page} ->
 	    {page, Page};
 	{streamcontent, MimeType, FirstChunk} ->
@@ -1954,8 +1956,6 @@ handle_out_reply({redirect_local, Path0}, _LineNo, _YawsFile, SC, A) ->
     OH = get(outh),
     new_redir_h(OH, Loc),
     ok;
-
-
 
 handle_out_reply({redirect, URL}, _LineNo, _YawsFile, _SC, _A) ->
     Loc = ["Location: ", URL, "\r\n"],
