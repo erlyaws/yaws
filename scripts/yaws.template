@@ -119,6 +119,7 @@ do
 	        $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl load ${id} $*
 		exit 0;;
 	   -j)
+	        id=$1
 	        ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl trace $1"
 		shift;;
 	   -v) 
@@ -130,10 +131,9 @@ do
            -heart)
 		heart=" -heart ";;
            -check)
-                ID=`id -u`
 		mkdir /tmp/yaws 2> /dev/null
 	        mkdir /tmp/yaws/${ID} 2> /dev/null
-                out=`exec $erl -noshell -pa ${yawsdir}${delim}ebin ${xpath} -s yaws_ctl check $*`
+                out=`exec $erl -noshell -pa ${yawsdir}${delim}ebin ${xpath} -s yaws_ctl check ${id} $*`
 		if [ "$out" = "ok" ]; then
                     echo "$1" ok
 		    exit 0

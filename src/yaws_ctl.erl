@@ -355,10 +355,12 @@ load(X) ->
     [SID | Modules] = lists:reverse(X),
     actl(SID, {load, Modules}).
 
-check([File| IncludeDirs]) ->
+check([Id, File| IncludeDirs]) ->
     GC = yaws_config:make_default_gconf(false),
     GC2 = GC#gconf{include_dir = lists:map(fun(X) -> atom_to_list(X) end, 
-					   IncludeDirs)},
+					   IncludeDirs),
+		   id = atom_to_list(Id)
+		  },
     put(sc, #sconf{}),
     put(gc, GC2),
     case yaws_compile:compile_file(atom_to_list(File)) of
