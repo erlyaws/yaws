@@ -1,4 +1,20 @@
 \documentclass[11pt,oneside,english]{book}
+\newif\ifpdf
+\ifx\pdfoutput\undefined
+   \pdffalse              % we are not running PDFLaTeX
+\else
+   \pdfoutput=1           % we are running PDFLaTeX
+   \pdftrue
+\fi
+
+\ifpdf
+  \usepackage[pdftex]{graphicx}
+  \pdfcompresslevel=9
+  \DeclareGraphicsExtensions{.png,.jpg,.pdf,.mps}
+\else
+  \usepackage{graphicx}
+  \DeclareGraphicsExtensions{.ps,.eps}
+\fi
 \usepackage[T1]{fontenc}
 \usepackage[latin1]{inputenc}
 \usepackage{geometry}
@@ -8,7 +24,8 @@
 \setlength\parskip{\medskipamount}
 \setlength\parindent{0pt}
 \usepackage{url}
-\usepackage[dvips]{graphicx}
+\usepackage{pslatex}
+\usepackage[colorlinks=false]{hyperref}
 
 \newcommand{\Erlang}            % Write Erlang correctly
         {{\sc Erlang}}
@@ -50,7 +67,7 @@ klacke@hyber.org}
 \begin{figure}[h]
 \begin{center}
 
- \includegraphics[scale=0.6] {yaws_head.eps}
+ \includegraphics[scale=0.6] {yaws_head}
 
 \end{center}           
 \end{figure}    
@@ -162,7 +179,7 @@ in order to control the behavior and output from the \Yaws\  web server.
 This chapter is more of a ``Getting started'' guide than a full
 description of the \Yaws\  configuration. 
 \Yaws\  is hosted on Sourceforge at 
-\textit { http://sourceforge.net/projects/erlyaws/ }. This is where the source code
+\url{ http://sourceforge.net/projects/erlyaws/ }. This is where the source code
 resides in a CVS repository and the latest unreleased version is
 available through anonymous CVS through the following commands:
 
@@ -177,7 +194,7 @@ available through anonymous CVS through the following commands:
 
 
 Released version of \Yaws\  are available either at the Sourceforge site or
-at \textit{http://yaws.hyber.org/download}. 
+at \url{http://yaws.hyber.org/download}. 
 
 
 
@@ -186,7 +203,7 @@ at \textit{http://yaws.hyber.org/download}.
 To compile and install a \Yaws\  release
 one of the prerequisites is a properly installed \Erlang\  system. \Yaws\ 
 runs on \Erlang\  releases OTP R8 and later. Get \Erlang\  from
-\textit{http://www.erlang.org}
+\url{http://www.erlang.org/}
 
 Compile and install is straight forward:
 \begin{verbatim}
@@ -718,7 +735,7 @@ This will produce a page with a simple input field and a Submit button.
 \begin{figure}[h]
 \begin{center}
 
- \includegraphics[scale=0.6] {a.eps}
+ \includegraphics[scale=0.6] {a}
 
 \end{center}           
 \end{figure}    
@@ -786,7 +803,7 @@ It looks like:
 \begin{figure}[h]
 \begin{center}
 
- \includegraphics[scale=0.6] {b.eps} 
+ \includegraphics[scale=0.6] {b} 
 
 \end{center}           
 \end{figure}    
@@ -828,7 +845,7 @@ Say that the page is 400 bytes big has the following layout:
 \begin{figure}[h]
 \begin{center}
 
- \includegraphics[scale=0.4] {layout.eps}
+ \includegraphics[scale=0.4] {layout}
 
 \end{center}           
 \end{figure}    
@@ -887,7 +904,7 @@ on-line shopping today is done with SSL encryption. There are many
 good sources on the net that describes SSL in detail - and I will not
 try to do that here. 
 There  is for example a good document at:
-\verb+http://www.tldp.org/HOWTO/SSL-Certificates-HOWTO/+ which
+\url{http://www.tldp.org/HOWTO/SSL-Certificates-HOWTO/} which
 describes how to manage certificates and keys.
 
 In order to run an SSL server we must have a certificate. Either we
