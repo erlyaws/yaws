@@ -418,6 +418,10 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    C2 = C#sconf{errormod_crash = list_to_atom(Module)},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
+	["arg_rewrite_mod", '=', Module] ->
+	    C2 = C#sconf{arg_rewrite_mod = list_to_atom(Module)},
+	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+
 	["tilde_expand", '=', Bool] ->
 	    case is_bool(Bool) of
 		{true, Val} ->

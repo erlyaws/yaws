@@ -839,7 +839,8 @@ inet_setopts(_,_,_) ->
     ok = inet_setopts(SC, CliSock, [{packet, raw}, binary]),
     flush(SC, CliSock, Head#headers.content_length),
     ARG = make_arg(CliSock, Head, Req, GC, SC),
-    handle_request(CliSock, GC, SC, Req, Head, ARG, 0).
+    ARG2 = apply(SC#sconf.arg_rewrite_mod, arg_rewrite, [ARG]),
+    handle_request(CliSock, GC, SC, Req, Head, ARG2, 0).
 
 
 'POST'(CliSock, GC, SC, Req, Head) ->
@@ -883,7 +884,8 @@ inet_setopts(_,_,_) ->
     ?Debug("POST data = ~s~n", [binary_to_list(un_partial(Bin))]),
     ARG = make_arg(CliSock, Head, Req, GC, SC),
     ARG2 = ARG#arg{clidata = Bin},
-    handle_request(CliSock, GC, SC, Req, Head, ARG2, size(un_partial(Bin))).
+    ARG3 = apply(SC#sconf.arg_rewrite_mod, arg_rewrite, [ARG2]),
+    handle_request(CliSock, GC, SC, Req, Head, ARG3, size(un_partial(Bin))).
 
 
 is_ssl(undefined) ->

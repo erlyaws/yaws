@@ -136,6 +136,45 @@ The Arg argument will have the missing path part supplied in its
 appmoddata field. 
 
 
+.TP
+\fBerrormod_404 = Module\fR
+It is possible to set a special module that handles
+404 Not Found messages.
+
+The function \fIModule:out404(Arg, GC, SC)\fR will
+be invoked. The arguments are
+
+Arg is a #arg{} record
+
+GC is a #gconf{} record (defined in yaws.hrl)
+
+SC is a #sconf{} record (defined in yaws.hrl)
+
+The function can and must do the same things that 
+a normal \fIout/1\fR does.
+
+
+.TP
+\fBerrormod_crash = Module\fR
+It is possible to set a special module that handles
+the HTML generation of server crash messages. The default
+is to display the entire formated crash message in the
+browser. This is good for debugging but not in production.
+
+The function \fIModule:crashmsg(Arg, SC, Str)\fR will be
+called. The \fIStr\fR is the real crash message formated as a string.
+
+
+.TP
+\fBarg_rewrite_mod = Module\fR
+It is possible to install a module that rewrites all the 
+Arg #arg{} records at an early stage in the yaws server.
+This can be used to do various things such as checking a cookie,
+rewriting paths etc.
+
+
+
+
 
 .TP
 \fB <ssl>  .... </ssl> \fR
@@ -163,7 +202,11 @@ String If the private key is encrypted on disc, this password is the 3des key to
 \fB ciphers = String\fR
 * This string specifies the ssl cipher string. The syntax of the ssl cipher string is a little horrible sublanguage of its own. It is documented in the ssl man page for "ciphers". 
 
+.TP
+\fB </ssl> \fR
+Ends an SSL definition
 
+ 
 .TP
 \fB<auth> ... </auth>\fR
 Defines an auth structure. The following items are allowed
@@ -187,7 +230,9 @@ the password Password in the popup dialogue presented by the browser.
 We can obviouslu have several of these value inside a single <auth> </auth>
 pair.
 
-
+.TP
+\fB</auth>\fR
+Ends an auth definition
 
 
 .SH EXAMPLES
@@ -211,7 +256,6 @@ And this example shows a similar setup but two webservers on the same ip address
 logdir = /var/log/yaws
 <server www.mydomain.org>
         port = 80
-        default_server_on_this_ip = true
         listen = 192.168.128.31
         docroot = /var/yaws/www
 </server>
@@ -264,7 +308,6 @@ max_num_cached_bytes = 6000000
 
 <server www.mydomain.org>
         port = 80
-        default_server_on_this_ip = true
         listen = 192.168.128.31
         docroot = /var/yaws/www
 </server>

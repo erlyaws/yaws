@@ -631,3 +631,6 @@ printversion() ->
     io:format("Yaws ~s~n", [yaws_vsn:version()]),
     init:stop().
 
+%% our default arg rewriteer does's of cource nothing
+arg_rewrite(A) ->
+    A.
