@@ -8,6 +8,8 @@
     <td> <A HREF="/query.yaws">Query part of url</a> </td>
     <td> <A HREF="/form.yaws">Forms</a> </td>
     <td> <A HREF="/redirect.yaws">Redirect</a> </td>
+    <td> <A HREF="/embed.yaws">Embedding Yaws</a> </td>
+
 </tr>
 <tr border="2">
     <td> <A HREF="/arg.yaws">Arg</a> </td>

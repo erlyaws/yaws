@@ -1,0 +1,191 @@
+<erl>
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]).
+</erl>
+
+
+<h1>Running yaws embedded in another larger application</h1>
+<p>
+Yaws is ideal to embed inside another larger erlang application.
+Many typical erlang applications are control applications 
+in need of a webgui specific for the actual application.
+
+<p>In order to run Yaws inside another application, we need to
+perform  the following steps.
+
+<ol>
+<li> <p>Either integrate yaws into the build system of the
+larger application or specifically provide the ebin path to
+yaws for the larger application. 
+
+<li><p> Provide the application environment {embedded, true}
+to Yaws.
+
+<li><p> The large application typically has it's configuration
+data fed from internal databases, anyway it's usually not feasible
+to let Yaws read it's configuration data from /etc/yaws.conf.
+
+<p>To solve this, when Yaws is started in embedded mode, it doesn't
+read it's config from /etc, rather it expects the larger application
+to feed it the Yaws configuration through the function call
+yaws_api:set_conf(GC, Groups)
+
+<p> The two arguments here are
+<ol>
+<li><p>GC is a #gconf{} record. The definition of the
+record is:
+<pre>
+%% global conf
+-record(gconf,{file,
+	       yaws_dir,
+	       tty_trace = false,
+	       trace,
+	       debug,
+	       logdir,
+	       ebin_dir = [],
+	       runmods = [],
+	       keepalive_timeout = 15000,
+	       max_num_cached_files = 400,
+	       max_num_cached_bytes = 1000000,  %% 1 MEG
+	       max_size_cached_file = 8000,
+	       large_file_chunk_size = 10240,
+	       cache_refresh_secs = 30,  % seconds  (auto zero when debug)
+	       default_type = "text/html",
+	       timeout = 30000,
+	       include_dir = [],
+	       yaws,                %% server string
+	       username,            %% maybe run as a different user than root
+	       uid                  %% unix uid of user that started yaws
+	      }).  
+</pre>
+
+<p>The easiest way to figure out what the individual record
+fields mean is to have a look in the source file yaws_config.erl
+
+<li><p>Groups, is a list of lists of #sconf records.
+Yaws is capable of listening on several IP address and also 
+do Virtual Hosting on each IP address.
+
+<p>Each #sconf{} record describes one web server, whereas a list of
+#sconf{} records describe a web server Virt Hosting several different
+servers.
+
+The sconf record is defined as:
+<pre>
+
+-record(ssl, 
+	{
+	 keyfile,
+	 certfile,
+	 verify = 0,
+	 depth = 1,
+	 password,
+	 cacertfile,
+	 ciphers,
+	 cachetimeout}).
+
+
+
+
+%% a list of lists of #sconfs
+%% one list of #sconf's per listen ip
+
+
+%% server conf
+-record(sconf,
+	{port = 8000,                %% which port is this server listening to
+	 rhost,                      %% forced redirect host (+ optional port)
+	 rmethod,                    %% forced redirect method
+	 docroot,                    %% path to the docs
+	 access_log = true,          %% log acces 
+	 listen = {127,0,0,1},       %% bind to this IP, {0,0,0,0} is possible
+	 servername = "localhost",   %% servername is what Host: header is
+         add_port = true,            %% add port after reading config
+	 ets,                        %% local store for this server
+	 ssl,
+	 authdirs = [],
+	 partial_post_size = nolimit,
+	 appmods = [],                %% list of modules for this app
+	 errormod_404 = yaws_404,     %% the default 404 error module 
+	 errormod_crash = yaws_404,   %% use the same module for crashes
+	 arg_rewrite_mod = yaws,
+	 tilde_expand = false,        %% allow public_html user dirs
+	 dir_listings = false,        %% allow dir listings
+	 opaque = [],                 %% useful in embedded mode
+	 start_mod,                   %% user provided module to be started
+	 allowed_scripts = [yaws]
+	}).
+
+</pre>
+
+</ol>
+</ol>
+
+
+<h2> A very small actual example </h2>
+<p>We provide a minimal example which "embeds" yaws in
+a normal Erlang shell.
+
+<p>We start Erlang as:
+
+<pre>
+# erl -pa /usr/local/lib/yaws/ebin -yaws embedded true -s ybed
+</pre>
+
+<p>The ybed module is very small and is named 
+<a href="/code.yaws?file=/ybed.erl">ybed.erl</a>
+
+<p>The above "erl" command line gives:
+
+<pre>
+#  erl -pa /usr/local/lib/yaws/ebin -yaws embedded true -s ybed
+Erlang (BEAM) emulator version 5.3.b1 [source] [hipe]
+
+Eshell V5.3.b1  (abort with ^G)
+1> 
+=INFO REPORT==== 25-Nov-2003::00:27:18 ===
+Yaws: Listening to 0.0.0.0:8888 for servers
+ - foobar under /tmp
+
+1> 
+</pre>
+
+
+<p>The actual web server then runs inside the larger application
+and  _all_ that remain is to design a decent web GUI. This is
+harder than it might seem at a first glance. The configuration of the
+web server was programmatically fed into Yaws from the surrounding application, 
+in this case, the Erlang shell + the module 
+<a href="/code.yaws?file=/ybed.erl">ybed.erl</a>
+
+
+<h2>The opaque field in the sconf structure </h2>
+
+<p>The sconf structure (which is constructed by the program that 
+starts and configures Yaws), contains a field, SC#sconf.opaque
+
+<p> This field is passed on into the #arg{} record, so that any application
+specific configuration data which is needed by the .yaws pages that
+make up the web GUI application, is easily available there.
+
+<p>In essence, if we construct the #sconf as
+<pre>
+SC#sconf{opaque = {mystruct, foobar},
+         .....
+</pre>
+
+<p>A .yaws web page, can do:
+<pre>
+out(Arg) ->
+   MyStruct = Arg#arg.opaque
+   .....
+
+</pre>
+
+<p>Thus passing data from the surrounding applications configuration routines
+down to each .yaws web page.
+
+
+
+<erl>
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+</erl>
