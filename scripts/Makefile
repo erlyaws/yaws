@@ -44,4 +44,10 @@ install:
 		"$(WERL)" /etc/ /var/
 	@cp ../ssl/yaws-cert.pem $(ETCDIR)
 	@cp ../ssl/yaws-key.pem $(ETCDIR)
-	cp yaws.conf $(prefix)/etc/
+	@if [ -f $(prefix)/etc/yaws.conf ]; \
+		then echo "Keeping old config file "; \
+		cp yaws.conf $(prefix)/etc/yaws.conf.template; \
+	else \
+		echo "Installing $(prefix)/etc/yaws.conf"; \
+		cp yaws.conf $(prefix)/etc/yaws.conf; \
+	fi
