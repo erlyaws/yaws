@@ -22,7 +22,7 @@
 -export([parse_query/1, parse_post/1, parse_multipart_post/1,
 	 parse_multipart/2]).
 -export([code_to_phrase/1, ssi/2, redirect/1]).
--export([setcookie/2, setcookie/3, setcookie/4, setcookie/5]).
+-export([setcookie/2, setcookie/3, setcookie/4, setcookie/5, setcookie/6]).
 -export([pre_ssi_files/2,  pre_ssi_string/1, pre_ssi_string/2,
 	 set_content_type/1,
 	 htmlize/1, htmlize_char/1, f/2, fl/1]).
