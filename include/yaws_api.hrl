@@ -15,7 +15,9 @@
 	  clidata,        %% The client data (as a binary in POST requests)
 	  querydata,      %% Was the URL on the form of ...?query (GET reqs)
 	  docroot,        %% where's the data
-	  fullpath        %% full path to yaws file
+	  fullpath,       %% full path to yaws file
+	  cont,		  %% Continuation for chunked multipart uploads
+	  state           %% State for use by users of the out/1 callback
 	 }).              
 
 
