@@ -43,7 +43,7 @@
 
 -import(lists, [reverse/1, map/2, sort/1]).
 
--import(wiki_templates, [template/4]).
+-import(wiki_templates, [template/4, actionbar/2]).
 
 -include("../../../include/yaws_api.hrl").
 -include_lib("kernel/include/file.hrl").
@@ -67,7 +67,7 @@ showPage(Params, Root, Prefix) ->
 				  Page, FileDir, Files, Root),
 		    Locked = Pwd /= "",
 		    wiki_templates:template(Page, 
-					    banner(Page, Locked),
+					    actionbar(Page, Locked),
 					    [top_header(Page), DeepStr,
 					     DeepFiles,
 					     "<hr><p>Last Modified: ",
@@ -1550,7 +1550,7 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
 			 str2urlencoded(Page),
 			 "'>",F1,"</a></h1>\n"],
 		    Link = 
-			template(Page, banner(Page, Pwd/=""),
+			template(Page, actionbar(Page, Pwd/=""),
 				 [TopHeader, DeepStr, Auto], false)
 	    end;
 	_ ->
@@ -1578,7 +1578,7 @@ thumbIndex(Params, Root, Prefix) ->
 		["<h1><a href='showPage.yaws?node=",Node,"'>",
 		 F1,"</a></h1>\n"],
 	    Link = 
-		template(Page, banner(Page, Pwd/=""),
+		template(Page, actionbar(Page, Pwd/=""),
 			 [TopHeader, DeepStr], false);
 	_ ->
 	    show({no_such_page,Page})
@@ -1960,55 +1960,6 @@ create_wiki_files(Root, FileDir, Files) ->
     ok.
 
 %%
-
-table(Id, X) ->
-    ["<table width=\"100%\"><tr><td id=\"", Id, "\">\n",
-     X,"</td></tr></table>\n"].
-
-mk_image_link(X, Img, Alt) ->
-    ["<a href=\"", X, "\"><img border=0 src='",Img, "' alt='",Alt,"'>"
-     "</a>&nbsp;&nbsp;\n"].
-
-mk_image_link(X, Img, Alt, Title) ->
-    ["<a href=\"", X, "\"><img border=0 src='",Img, "' ",
-     "alt='", Alt, "' "
-     "title='", Title,"'></a>&nbsp;&nbsp;\n"].
-
-banner(File, Locked) ->			    
-    MenuId = if Locked == false -> "menu";
-		true -> "lockedmenu"
-	     end,
-    [table(MenuId,
-	   [
-	    mk_image_link("showPage.yaws?node=home",
-			  "WikiPreferences.files/home.gif", "Home",
-			  "Go to initial page"),
-	    mk_image_link("showHistory.yaws?node=" ++ str2urlencoded(File),
-			  "WikiPreferences.files/history.gif",
-			  "History",
-			  "History of page evolution"),
-	    mk_image_link("allPages.yaws",
-			  "WikiPreferences.files/allpages.gif",
-			  "All Pages",
-			  "Lists all pages on this site"),
-	    mk_image_link("lastEdited.yaws",
-			  "WikiPreferences.files/lastedited.gif",
-			  "Last Edited",
-			  "Site editing history"),
-	    mk_image_link("wikiZombies.yaws",
-			  "WikiPreferences.files/zombies.gif",
-			  "Zombies",
-			  "Unreachable pages"),
-	    mk_image_link("editPage.yaws?node=" ++ str2urlencoded(File),
-			  "WikiPreferences.files/editme.gif",
-			  "Edit Me",
-			  "Edit this page"),
-	    mk_image_link("editFiles.yaws?node=" ++ str2urlencoded(File),
-			  "WikiPreferences.files/editfiles.gif",
-			  "Edit Files",
-			  "Edit attached files")
-	   ])].
-
 password_entry(Name, Size) ->
     ["<INPUT TYPE=password name=", Name,"  SIZE=", i2s(Size),">\n"].
 
