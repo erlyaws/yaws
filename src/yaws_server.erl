@@ -219,7 +219,7 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 		     (none) ->
 			  false
 		  end, L),
-    ?Debug("L=~p~n", [L]),
+    ?Debug("L=~p~n", [yaws_debug:nobin(L)]),
     if
 	FirstTime == true ->
 	    proc_lib:spawn_link(yaws_ctl, start, 
@@ -769,17 +769,26 @@ gen_tcp_send(S, Data, SC, GC) ->
 	      _SSL ->
 		  ssl:send(S, Data)
 	  end,
-    case Res of
-	ok ->
-	    ok;
-	Err when GC#gconf.debug == true ->
-	    {B2, Size} = strip(Data),
-	    yaws_debug:derror(GC, "Failed to send ~w bytes:~n~p "
-			      "on socket ~p: ~p~n",
-			      [Size, B2, S, Err]),
-	    exit(normal);
-	Err ->
-	    exit(normal)
+    case GC#gconf.debug of
+	false ->
+	    case Res of
+		ok ->
+		    ok;
+		Err ->
+		    exit(Err)
+	    end;
+	true ->
+	    case Res of
+		ok ->
+		    ?Debug("Sent ~p~n", [yaws_debug:nobin(Data)]),
+		    ok;
+		Err ->
+		    {B2, Size} = strip(Data),
+		    yaws_debug:derror(GC, "Failed to send ~w bytes:~n~p "
+				      "on socket ~p: ~p~n",
+				      [Size, B2, S, Err]),
+		    exit(Err)
+	    end
     end.
 
 
@@ -787,9 +796,9 @@ strip(Data) ->
     L = list_to_binary([Data]),
     case L of
 	<<Head:50/binary, _/binary>> ->
-	    {<<Head/binary, ".....">>, size(L)};
+	    {binary_to_list(<<Head/binary, ".....">>), size(L)};
 	_ ->
-	    {L, size(L)}
+	    {binary_to_list(L), size(L)}
     end.
 	 
 
@@ -1041,7 +1050,11 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	appmod ->
 	    DCC = req_to_dcc(Req),
 	    make_dyn_headers(DCC, Req),
-
+	    close_if_HEAD(Req, 
+			  fun() ->
+				  deliver_accumulated(DCC, CliSock, GC,SC),
+				  throw({ok, 1}) 
+			  end),
 	    {Mod, PathData} = UT#urltype.data,
 	    A2 = ARG#arg{appmoddata = PathData,
 			 querydata = UT#urltype.q},
@@ -1213,7 +1226,7 @@ get_client_data(_CliSock, all, eof, _GC, _) ->
 
 
 do_appmod(Mod, FunName, CliSock, GC, SC, Req, H, ARG, UT, N) ->
-    DCC = req_to_dcc(Req),
+    DCC = req_to_dcc(Req),  %% possibly sets chunked
     case yaws_call(DCC, 0, "appmod", Mod, FunName, ARG, GC,SC, N) of
 	{streamcontent, MimeType, FirstChunk} ->
 	    put(content_type, MimeType),
@@ -1221,9 +1234,12 @@ do_appmod(Mod, FunName, CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    set_status_code(200),
 	    deliver_accumulated(DCC, CliSock, GC, SC),
 	    stream_loop(DCC, CliSock, GC, SC),
+	    io:format("XX ~p~n", [DCC]),
 	    case DCC#dcc.chunked of
 		true ->
+		    io:format("XX send last ~n",[]),
 		    gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
+		    io:format("XXX send last ~n",[]),
 		    erase(content_type),
 		    continue;
 		false ->
@@ -1326,7 +1342,10 @@ stream_loop(DCC, CliSock, GC, SC) ->
     receive
 	{streamcontent, Cont} ->
 	    accumulate_chunk(DCC, Cont),
-	    gen_tcp_send(CliSock, erase(acc_content), SC, GC),
+	    Data = erase(acc_content),
+	    ?Debug("send ~p bytes to ~p ~n", 
+		   [size(list_to_binary(Data)), CliSock]),
+	    gen_tcp_send(CliSock, Data, SC, GC),
 	    stream_loop(DCC, CliSock, GC, SC) ;
 	endofstreamcontent ->
 	    ok
@@ -1549,6 +1568,7 @@ redirect_code(A) ->
 	{1,0} -> 302;
 	_     -> 303
     end.
+
 deliver_accumulated(DCC, Sock, GC, SC) ->
     Code = case get(status_code) of
 	       undefined -> 200;
@@ -1562,6 +1582,12 @@ deliver_accumulated(DCC, Sock, GC, SC) ->
 	    accumulate_header("Content-Type: text/html");
 	MimeType ->
 	    accumulate_header(["Content-Type: ", MimeType])
+    end,
+    case erase(chunked) of
+	true ->
+	    accumulate_header("Transfer-Encoding: chunked");
+	_ ->
+	    ok
     end,
 
     Headers = erase(acc_headers),
@@ -1579,7 +1605,7 @@ deliver_accumulated(DCC, Sock, GC, SC) ->
 	       Content ->
 		   Content
 	   end,
-    ?Debug("Content size=~p~n", [size(list_to_binary([Cont]))]),
+    ?Debug("deliver accumulated size=~p~n", [size(list_to_binary([Cont]))]),
     CRNL = if
 	       DCC#dcc.chunked == true ->
 		   [];
@@ -1605,7 +1631,7 @@ yaws_call(DCC, LineNo, YawsFile, M, F, A, GC, SC, N) ->
 %	   [M, F, ?format_record(hd(A), arg)]),
     ?Debug("safe_call ~w:~w~n",[M,F]),
     Res = (catch apply(M,F,A)),
-    ?Debug("safe_call result = ~p~n",[Res]),
+    ?Debug("safe_call result = ~p~n",[yaws_debug:nobin(Res)]),
     A1 = hd(A),
     case handle_out_reply(Res, DCC, LineNo, YawsFile, SC, A) of
 	{get_more, Cont, State} when element(1, A1#arg.clidata) == partial  ->
@@ -1904,7 +1930,7 @@ make_connection_close(false) ->
     ok.
 
 make_chunked() ->
-    accumulate_header("Transfer-Encoding: chunked").
+    put(chunked, true).
 
 make_www_authenticate(Realm) ->
     accumulate_header(["WWW-Authenticate: Basic realm=\"", Realm, $"]).
@@ -1946,7 +1972,7 @@ url_type(GC, SC, Path) ->
 	    ?TC([{record, UT, urltype}]),
 	    ?Debug("UT=~p\n", [UT]),
 	    CF = cache_file(GC, SC, Path, UT),
-	    ?Debug("CF=~p\n", [CF]),
+	    ?Debug("CF=~p\n", [yaws_debug:nobin(CF)]),
 	    CF;
 	[{_, When, UT}] ->
 	    N = now_secs(),

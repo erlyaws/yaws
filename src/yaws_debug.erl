@@ -45,7 +45,7 @@ format_record(Record, Name, Fields) ->
 format_record([], []) ->
     [];
 format_record([Val|Vals], [F|Fs]) ->
-    [{F, ?F("~p", [Val])} |
+    [{F, ?F("~p", [nobin(Val)])} |
      format_record(Vals, Fs)].
 
 
@@ -239,3 +239,13 @@ check_headers([], _) ->
     ok.
 
 
+
+
+nobin(B) when binary(B) ->
+    lists:flatten(io_lib:format("#Bin(~w)", [size(B)]));
+nobin(L) when list(L) ->
+    lists:map( fun nobin/1, L);
+nobin(T) when tuple(T) ->
+    list_to_tuple(nobin(tuple_to_list(T)));
+nobin(X) ->
+    X.
