@@ -26,6 +26,7 @@
 -record(ysession,
 	{cookie,       %% the cookie assigned to the session
 	 to,           %% greg secs untill timeout death
+     ttl,          %% default time to live
 	 starttime,    %% When calendar:local_time() did sess start
 	 opaque        %% any data the user supplies
 	}).
@@ -50,12 +51,15 @@ stop() ->
 
 %% will return a new cookie as a string
 new_session(Opaque) ->
-    gen_server:call(?MODULE, {new_session, Opaque}).
+    gen_server:call(?MODULE, {new_session, Opaque, ?TTL}).
+
+new_session(Opaque, TTL) ->
+    gen_server:call(?MODULE, {new_session, Opaque, TTL}).
 
 cookieval_to_opaque(CookieString) ->
     case ets:lookup(?MODULE, CookieString) of
 	[Y] ->
-	    Y2 = Y#ysession{to = gnow() + ?TTL},
+	    Y2 = Y#ysession{to = gnow() + Y#ysession.ttl},
 	    ets:insert(?MODULE, Y2),
 	    {ok, Y#ysession.opaque};
 	[] ->
@@ -79,9 +83,9 @@ print_sessions() ->
 replace_session(Cookie, NewOpaque) ->
     case ets:lookup(?MODULE, Cookie) of
 	[Y] ->
-	    Y2 = Y#ysession{to = gnow() + ?TTL},
-	    ets:insert(?MODULE, Y2),
-	    ets:insert(?MODULE, Y#ysession{opaque = NewOpaque});
+	    Y2 = Y#ysession{to = gnow() + Y#ysession.ttl,
+			    opaque = NewOpaque},
+	    ets:insert(?MODULE, Y2);
 	[] ->
 	    error
     end.
@@ -136,8 +140,7 @@ seed() ->
 %%----------------------------------------------------------------------
 
 
-
-handle_call({new_session, Opaque}, _From, _State) ->
+handle_call({new_session, Opaque, TTL}, _From, _State) ->
     Now = gnow(),
     N = random:uniform(16#ffffffffffffffff), %% 64 bits
     TS = calendar:local_time(),
@@ -145,7 +148,8 @@ handle_call({new_session, Opaque}, _From, _State) ->
     NS = #ysession{cookie = C,
 		   starttime = TS,
 		   opaque = Opaque,
-		   to = Now + ?TTL},
+		   to = Now + TTL,
+		   ttl = TTL},
     ets:insert(?MODULE, NS),
     {reply, C, undefined, to()};
 

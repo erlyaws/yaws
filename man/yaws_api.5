@@ -276,6 +276,11 @@ cookie. The new randomgenerated cookie is returned from this
 function. The Opaque argument will typically contain user data
 such as username and password
 
+.TP
+\fBnew_cookie_session(Opaque, TTL)\fR
+As above, but allows to set a session specific time-out value,
+overriding teh system specified time-out value.
+
 .TP 
 \fBcookieval_to_opaque(CookieVal)\fR
 
