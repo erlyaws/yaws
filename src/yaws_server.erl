@@ -2716,8 +2716,9 @@ cleanup_cache(E, num) ->
 
 
 
+%% Clear everything, but *not* the Yaws specs, because otherwise we
+%% would have orphan modules loaded.
 clear_ets(E) ->
-    ets:match_delete(E, {'_', spec, '_', '_', '_'}),
     ets:match_delete(E, {{url, '_'}, '_', '_'}),
     ets:match_delete(E, {{urlc, '_'}, '_', '_'}),
     ets:insert(E, {num_files, 0}),
@@ -2923,6 +2924,12 @@ maybe_return_path_info(SC, Comps, RevFile) ->
 				     path = [HeadComps, $/, File],
 				     fullpath = FullPath,
 				     pathinfo = Trail,
+				     getpath = case HeadComps of
+						   [] -> [$/|File];
+						   [_|_] ->
+						       conc_path(
+							 HeadComps++[File])
+					       end,
 				     mime = Mime};
 			_ ->
 			    #urltype{type = error}
