@@ -503,3 +503,10 @@ address(GConf, Sconf) ->
 	Sconf#sconf.port]).
 
 
+
+
+mktags() ->
+    tags:dirs(["."]),
+    init:stop().
+
+

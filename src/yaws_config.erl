@@ -273,46 +273,56 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 fload(FD, server, GC, C, Cs, Lno, Chars) ->
     %?Debug("Chars: ~s", [Chars]),
     Next = io:get_line(FD, ''),
-     case toks(Chars) of
-	 [] ->
-	     fload(FD, globals, GC, C, Cs, Lno+1, Next);
-	 ["port", '=', Val] ->
-	     case (catch list_to_integer(Val)) of
-		 I when integer(I) ->
-		     C2 = C#sconf{port = I},
-		     fload(FD, server, GC, C2, Cs, Lno, Next);
-		 _ ->
-		     {error, ?F("Expect integer at line ~w", [Lno])}
-	     end;
-	 ["listen", '=', IP] ->
-	     case yaws:parse_ip(IP) of
-		 error ->
-		     {error, ?F("Expect IP address at line ~w:", [Lno])};
-		 Addr ->
-		     C2 = C#sconf{listen = Addr},
-		     fload(FD, server, GC, C2, Cs, Lno, Next)
-	     end;
-	 ["docroot", '=', Root] ->
-	     case is_dir(Root) of
-		 true ->
-		     C2 = C#sconf{docroot = Root},
-		     fload(FD, server, GC, C2, Cs, Lno, Next);
-		 false ->
-		     {error, ?F("Expect directory at line ~w", [Lno])}
-	     end;
-	 ["default_server_on_this_ip", '=', Bool] ->
-	     case is_bool(Bool) of
-		 {true, Val} ->
-		     C2 = C#sconf{default_server_on_this_ip = Val},
-		     fload(FD, server, GC, C2, Cs, Lno, Next);
-		 false ->
-		     {error, ?F("Expect true|false at line ~w", [Lno])}
-	     end;
-	 ['<', "/server", '>'] ->
-	      fload(FD, globals, GC, undefined, [C|Cs], Lno+1, Next);
-	 [H|_] ->
-	     {error, ?F("Unexpected input ~p at line ~w", [H, Lno])}
-     end.
+    case toks(Chars) of
+	[] ->
+	    fload(FD, server, GC, C, Cs, Lno+1, Next);
+	["port", '=', Val] ->
+	    case (catch list_to_integer(Val)) of
+		I when integer(I) ->
+		    C2 = C#sconf{port = I},
+		    fload(FD, server, GC, C2, Cs, Lno, Next);
+		_ ->
+		    {error, ?F("Expect integer at line ~w", [Lno])}
+	    end;
+	["listen", '=', IP] ->
+	    case yaws:parse_ip(IP) of
+		error ->
+		    {error, ?F("Expect IP address at line ~w:", [Lno])};
+		Addr ->
+		    C2 = C#sconf{listen = Addr},
+		    fload(FD, server, GC, C2, Cs, Lno, Next)
+	    end;
+	["docroot", '=', Root] ->
+	    case is_dir(Root) of
+		true ->
+		    C2 = C#sconf{docroot = Root},
+		    fload(FD, server, GC, C2, Cs, Lno, Next);
+		false ->
+		    {error, ?F("Expect directory at line ~w", [Lno])}
+	    end;
+	["authdir", '=', Dir] ->
+	    case is_dir(Dir) of
+		true ->
+		    C2 = C#sconf{authdirs = [Dir | C#sconf.authdirs]},
+		    fload(FD, server, GC, C2, Cs, Lno, Next);
+		false ->
+		    {error, ?F("Expect directory at line ~w", [Lno])}
+	    end;
+
+	["default_server_on_this_ip", '=', Bool] ->
+	    case is_bool(Bool) of
+		{true, Val} ->
+		    C2 = C#sconf{default_server_on_this_ip = Val},
+		    fload(FD, server, GC, C2, Cs, Lno, Next);
+		false ->
+		    {error, ?F("Expect true|false at line ~w", [Lno])}
+	    end;
+	['<', "/server", '>'] ->
+	    fload(FD, globals, GC, undefined, [C|Cs], Lno+1, Next);
+	[H|_] ->
+	    {error, ?F("Unexpected input ~p at line ~w", [H, Lno])}
+    end.
+
 
 	    
 

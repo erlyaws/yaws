@@ -218,6 +218,11 @@ terminate(Reason, State) ->
     ok.
 
 
+%% we 
+setup_auth(SC, E) ->
+    ok.
+
+
 %% One server per IP we listen to
 gserv(GC, Group0) ->
     ?TC([{record, GC, gconf}]),
@@ -225,6 +230,7 @@ gserv(GC, Group0) ->
 			E = ets:new(yaws_code, [public, set]),
 			ets:insert(E, {num_files, 0}),
 			ets:insert(E, {num_bytes, 0}),
+			setup_auth(SC, E),
 			SC#sconf{ets = E}
 		end, Group0),
     SC = hd(Group),

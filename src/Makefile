@@ -48,3 +48,7 @@ install: all
 	(cd ..; tar cz  include  --) | (cd $(INSTALLPREFIX)/lib/yaws; tar xz -- )
 	(cd ..; tar cz  www  --) | (cd /var/yaws; tar xz -- )
 
+
+
+tags:
+	erl  -noshell -pa ../ebin -s yaws mktags
