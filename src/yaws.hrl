@@ -6,7 +6,7 @@
 %%%----------------------------------------------------------------------
 
 -author('klacke@hyber.org').
--include_lib("yaws_api.hrl").
+-include_lib("yaws/include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
 %% global conf
