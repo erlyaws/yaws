@@ -20,7 +20,7 @@
 
 
 
-  div.man { border: solid; border-width: thin; width: 80%; 
+  div.man { border: solid; border-width: thin; width: 100%; 
             font-size: 70%
             margin : 4;
             background: rgb(240, 230, 140)  }
