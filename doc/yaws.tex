@@ -1899,14 +1899,6 @@ The
               used to do various things such as checking a
               cookie, rewriting paths etc.
 
-\item        \verb+is_default = true|false+ -
-              Sets the virtual host defined in this server part to be
-              the default.  This means that if there are several
-              virtual hosts defined for the same IP number and port,
-              and an HTTP request arrives with a Host field that does
-              not match any defined virtual host, then the one with
-              \verb+is_default+ set to true is chosen. Do not set
-              \verb+is_default+ to true in more than one server part.
 
 \item        \verb+<ssl>  .... </ssl>+
               This begins and ends  an  SSL  configuration
@@ -2030,7 +2022,16 @@ The
 
 \end{verbatim}
 
-       An example with www-authenticate and no access logging at all.
+
+
+When there are several
+virtual hosts defined for the same IP number and port,
+and an HTTP request arrives with a Host field that does
+not match any defined virtual host, then the one which
+defined ``first'' in the file is choosen.
+
+
+An example with www-authenticate and no access logging at all.
 
 \begin{verbatim}
        logdir = /var/log/yaws

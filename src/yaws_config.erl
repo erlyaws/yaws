@@ -85,31 +85,10 @@ validate_cs(GC, Cs) ->
     L3 = arrange(L2, start, [], []),
     case validate_groups(L3) of
 	ok ->
-	    {ok, GC, sort_groups_by_default_then_servername(L3)};
+	    {ok, GC, L3};
 	Err ->
 	    Err
     end.
-
-sort_groups_by_default_then_servername(Groups) ->
-    lists:map(
-      fun(SCs) ->
-	      lists:sort(
-		fun(C1,C2) ->
-			case {C1#sconf.is_default, C1#sconf.is_default} of
-			    {true, true} ->
-				C1#sconf.servername < C2#sconf.servername;
-			    {true, false} ->
-				true;
-			    {false, true} ->
-				false;
-			    {false, false} ->
-				C1#sconf.servername < C2#sconf.servername
-			end
-		end,
-		SCs)
-      end,
-      Groups).
-	      
 
 
 validate_groups([]) ->
@@ -527,14 +506,6 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		URL ->
 		    {error, "Can't revproxy to an URL with a path "}
-	    end;
-	["is_default", '=', Bool] ->
-	    case is_bool(Bool) of
-		{true, Val} ->
-		    C2 = C#sconf{is_default = Val},
-		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-		false ->
-		    {error, ?F("Expect true|false at line ~w", [Lno])}
 	    end;
 	[H|T] ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
