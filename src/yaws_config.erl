@@ -458,7 +458,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    fload(FD, server, GC, C, Cs, Lno+1, Next);
 
 	[ '<', "ssl", '>'] ->
-	    ssl:start(),
+	    ssl_start(),
 	    fload(FD, ssl, GC, C#sconf{ssl = #ssl{}}, Cs, Lno+1, Next);
 	
 	["appmods", '=' | AppMods] ->
@@ -816,3 +816,10 @@ parse_appmods([], Ack) ->
 
 
 
+ssl_start() ->
+    case catch ssl:start() of
+	ok ->
+	    ok;
+	Err ->
+	    error_logger:format("Failed to start ssl: ~p~n", [Err])
+    end.
