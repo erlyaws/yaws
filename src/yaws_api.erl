@@ -1151,8 +1151,8 @@ is_abs_URI1(_) ->
 %% Value = string()
 %% Body  = EHTML
 
-ehtml_expand(Ch) when Ch >= 0, Ch =< 255 -> yaws_api:htmlize_char(Ch);
-ehtml_expand(Bin) when binary(Bin) -> yaws_api:htmlize(Bin);
+ehtml_expand(Ch) when Ch >= 0, Ch =< 255 -> Ch; %yaws_api:htmlize_char(Ch);
+ehtml_expand(Bin) when binary(Bin) -> Bin; % yaws_api:htmlize(Bin);
 
 ehtml_expand({ssi,File, Del, Bs}) ->
     UT = get(yaws_ut),
@@ -1167,7 +1167,8 @@ ehtml_expand({Tag}) -> ehtml_expand({Tag, []});
 ehtml_expand({pre_html, X}) -> X;
 ehtml_expand({Tag, Attrs}) ->
     NL = ehtml_nl(Tag),
-    [NL, "<", atom_to_list(Tag), ehtml_attrs(Attrs), ">"];
+    [NL, "<", atom_to_list(Tag), ehtml_attrs(Attrs), "></",
+     atom_to_list(Tag), ">"];
 ehtml_expand({Tag, Attrs, Body}) when atom(Tag) ->
     Ts = atom_to_list(Tag),
     NL = ehtml_nl(Tag),
@@ -1301,8 +1302,8 @@ ehtml_expander({Tag}, Before, After) ->
     ehtml_expander({Tag, []}, Before, After);
 ehtml_expander({Tag, Attrs}, Before, After) ->
     NL = ehtml_nl(Tag),
-    ehtml_expander_done([NL, "<", atom_to_list(Tag),
-			 ehtml_attrs_expander(Attrs), ">"],
+    ehtml_expander_done([NL, "<", atom_to_list(Tag), ehtml_attrs(Attrs), "></",
+			 atom_to_list(Tag), ">"],
 			Before,
 			After);
 ehtml_expander({Tag, Attrs, Body}, Before, After) ->
