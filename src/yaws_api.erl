@@ -784,7 +784,7 @@ url_encode([H|T]) ->
 		[X, Y] ->
 		    [$%, X, Y | url_encode(T)];
 		[X] ->
-		    [$%, 0, X | url_encode(T)]
+		    [$%, $0, X | url_encode(T)]
 	    end
     end;
 
@@ -1184,7 +1184,12 @@ ehtml_attrs([Attribute|Tail]) when atom(Attribute) ->
     [[$ |atom_to_list(Attribute)]|ehtml_attrs(Tail)];
 ehtml_attrs([{Name, Value} | Tail]) ->
     ValueString = if atom(Value) -> [$",atom_to_list(Value),$"];
-		     list(Value) -> [$",Value,$"];
+		     list(Value) ->
+			  Q = case deepmember($", Value) of
+				  true -> $';
+				  false -> $"
+			      end,
+			  [Q,Value,Q];
 		     integer(Value) -> [$",integer_to_list(Value),$"];
 		     float(Value) -> [$",float_to_list(Value),$"]
 		  end,
@@ -1372,3 +1377,16 @@ call_cgi(Arg, Scriptfilename) ->
 call_cgi(Arg, Exefilename, Scriptfilename) -> 
     yaws_cgi:call_cgi(Arg, Exefilename, Scriptfilename).
 
+%%
+
+deepmember(C,[]) ->
+    false;
+deepmember(C,[C|Cs]) ->
+    true;
+deepmember(C,[L|Cs]) when list(L) ->
+    case deepmember(C,L) of
+	true  -> true;
+	false -> deepmember(C,Cs)
+    end;
+deepmember(C,[N|Cs]) when C /= N ->
+    deepmember(C, Cs).
