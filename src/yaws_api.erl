@@ -16,8 +16,11 @@
 -include("yaws_debug.hrl").
 
 
--export([parse_post_data/1, parse_query/1,
-	 code_to_phrase/1, ssi/2, redirect/1]).
+-export([parse_post_data/1]).
+
+
+-export([parse_query/1, parse_post/1, parse_multipart_post/1]).
+-export([code_to_phrase/1, ssi/2, redirect/1]).
 -export([setcookie/2, setcookie/3, setcookie/4, setcookie/5]).
 -export([pre_ssi_files/2,  pre_ssi_string/1, pre_ssi_string/2,
 	 htmlize/1, htmlize_char/1, f/2, fl/1]).
@@ -33,60 +36,13 @@
 %% these are a bunch of function that are useful inside
 %% yaws scripts
 
-%
-% Changed implementation of multipart form data. There is a new config
-% parameter called
-%
-%      partial_post_size
-%
-% which if set to an integer value
-% will cause the content of the post content to be sent to the out/1
-% function in chunks of this size.
-%
-% It is possible to get the server to maintain a state on behalf of the
-% out/1 user by returning {get_more, Cont, State}.
-%
-% 
-% yaws_api:parse_post_data/1 will return either:
-% 
-% {cont, Cont, Res} where Res is new result(s) from this segment. This
-% indicates that there is more data to come and the out/1 function
-% should return {get_more, Cont, User_state} where User_state might
-% usefully be a File Descriptor.
-%
-% or {result, Res} if this is the last (or only) segment.
-% 
-% Res is a list of {header, Header} | {part_body, Binary} | {body, Binary}
-% 
-% Example usage could be:
-% 
-% <erl>
-% 
-% out(A) ->
-%        case yaws_api:parse_post_data(A) of
-%             {cont, Cont, Res} ->
-%                    St = handle_res(A, Res),
-%                    {get_more, Cont, St};
-%             {result, Res} ->
-%                    handle_res(A, Res),
-%                    {html, f("<pre>Done </pre>",[])}
-%        end.
-% 
-% handle_res(A, [{head, Name}|T]) ->
-%      io:format("head:~p~n",[Name]),
-%      handle_res(A, T);
-% handle_res(A, [{part_body, Data}|T]) ->
-%      io:format("part_body:~p~n",[Data]),
-%      handle_res(A, T);
-% handle_res(A, [{body, Data}|T]) ->
-%      io:format("body:~p~n",[Data]),
-%      handle_res(A, T);
-% handle_res(A, []) ->
-%      io:format("End_res~n").
-% 
-% </erl>
 
 parse_post_data(Arg) ->
+
+    yawslog:infolog("Warning Warning !!!! function "
+		    "yaws_api:parse_post_data will be removed ", []),
+
+    
     Headers = Arg#arg.headers,
     Req = Arg#arg.req,
     case lists:keysearch('Content-Type', 3, Headers#headers.other) of
@@ -113,9 +69,143 @@ parse_post_data(Arg) ->
 	    end
     end.
 	    
+
+
+
+
 %% parse the command line query data
 parse_query(Arg) ->
-     parse_post_data_urlencoded(Arg#arg.querydata).
+    D = Arg#arg.querydata,
+    Req = Arg#arg.req,
+    case Req#http_request.method of
+	'GET' ->
+	    if
+		D == [] ->
+		    yawslog:errlog("Tried to parse_query with "
+				   "no query data ",[]),
+		    [];
+		true ->
+		    parse_post_data_urlencoded(D)
+	    end;
+	Other ->
+	    yawslogg:errlog("Can't parse url query if we get a ~p",[Other]),
+	    []
+    end.
+
+%% parse url encoded POST data
+parse_post(Arg) ->
+    D = Arg#arg.clidata,
+    Req = Arg#arg.req,
+    case Req#http_request.method of
+	'POST' ->
+	    if
+		D == [] ->
+		    yawslog:errlog("Tried to parse_post with "
+				   "no POST data ",[]),
+		    [];
+		true ->
+		    parse_post_data_urlencoded(D)
+	    end;
+	Other ->
+	    yawslogg:errlog("Can't parse post body if get a ~p",[Other]),
+	    []
+    end.
+
+	    
+
+
+%
+% Changed implementation of multipart form data. There is a new config
+% parameter called
+%
+%      partial_post_size
+%
+% which if set to an integer value
+% will cause the content of the post content to be sent to the out/1
+% function in chunks of this size.
+%
+% It is possible to get the server to maintain a state on behalf of the
+% out/1 user by returning {get_more, Cont, State}.
+%
+% 
+% yaws_api:parse_multipart_post/1 will return either:
+% 
+% {cont, Cont, Res} where Res is new result(s) from this segment. This
+% indicates that there is more data to come and the out/1 function
+% should return {get_more, Cont, User_state} where User_state might
+% usefully be a File Descriptor.
+%
+% or {result, Res} if this is the last (or only) segment.
+% 
+% Res is a list of {header, Header} | {part_body, Binary} | {body, Binary}
+% 
+% Example usage could be:
+% 
+% <erl>
+% 
+% out(A) ->
+%        case yaws_api:parse_multipart_post(A) of
+%             {cont, Cont, Res} ->
+%                    St = handle_res(A, Res),
+%                    {get_more, Cont, St};
+%             {result, Res} ->
+%                    handle_res(A, Res),
+%                    {html, f("<pre>Done </pre>",[])}
+%        end.
+% 
+% handle_res(A, [{head, Name}|T]) ->
+%      io:format("head:~p~n",[Name]),
+%      handle_res(A, T);
+% handle_res(A, [{part_body, Data}|T]) ->
+%      io:format("part_body:~p~n",[Data]),
+%      handle_res(A, T);
+% handle_res(A, [{body, Data}|T]) ->
+%      io:format("body:~p~n",[Data]),
+%      handle_res(A, T);
+% handle_res(A, []) ->
+%      io:format("End_res~n").
+% 
+% </erl>
+
+
+
+parse_multipart_post(Arg) ->
+    H = Arg#arg.headers,
+    CT = H#headers.content_type,
+    Req = Arg#arg.req,
+    case Req#http_request.method of
+	'POST' ->
+	    case CT of
+		undefined ->
+		    yawslog:errlog("Can't parse multipart if we "
+				   "have no Content-Type header",[]),
+		    [];
+		"multipart/form-data"++Line ->
+		    case Arg#arg.cont of
+			{cont, Cont} ->
+			    parse_multipart(
+			      binary_to_list(un_partial(Arg#arg.clidata)),
+			      {cont, Cont});
+			undefined ->
+			    LineArgs = parse_arg_line(Line),
+			    {value, {_, Boundary}} =
+				lists:keysearch(boundary, 1, LineArgs),
+			    parse_multipart(
+			      binary_to_list(un_partial(Arg#arg.clidata)), 
+			      Boundary)
+		    end;
+		Other ->
+		    yawslog:errlog("Can't parse multipart if we "
+				   "find no multipart/form-data",[]),
+		    []
+	    end;
+	Other ->
+	    yawslogg:errlog("Can't parse multipart if get a ~p",[Other]),
+	    []
+    end.
+
+		
+
 
 
 un_partial({partial, Bin}) ->

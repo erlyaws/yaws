@@ -788,6 +788,8 @@ http_get_headers(CliSock, Req, GC, H) ->
 	    http_get_headers(CliSock, Req, GC, H#headers{keep_alive = X});
 	{ok, {http_header, _Num, 'Content-Length', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{content_length = X});
+	{ok, {http_header, _Num, 'Content-Type', _, X}} ->
+	    http_get_headers(CliSock, Req, GC, H#headers{content_type = X});
 	{ok, {http_header, _Num, 'Authorization', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, 
 			H#headers{authorization = parse_auth(X)});
@@ -1173,8 +1175,8 @@ req_to_dcc(Req) ->
 			     {1, 1} -> make_chunked(), 
 				       {false, true}
 			 end,
-    DCC = #dcc{doclose = DoClose,
-	       chunked = Chunked}.
+    #dcc{doclose = DoClose,
+	 chunked = Chunked}.
 
 %% do the header and continue
 deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT, N) ->
@@ -2067,7 +2069,7 @@ conc_path([H|T]) ->
     H ++ conc_path(T).
 
 
-ret_app_mod(SC, Path, Mod, PrePath) ->
+ret_app_mod(_SC, Path, Mod, PrePath) ->
     {PathData, Query} = q_splitpath(Path, []),
     #urltype{type = appmod,
 	     data = {Mod, PathData},
