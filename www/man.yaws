@@ -7,9 +7,9 @@ out(A) ->
     P = yaws_api:parse_post_data(A),
     io:format("P = ~p~n", [P]),
     L = case lists:keysearch(page, 1, P) of
-	    {value, {page, Page}} ->
+	    {value, {page, Page0}} ->
 		case lists:any(fun(C) -> lists:member(C, Page) end,
-			       "$$\\!#%^&*()[]~\"'`<>|") of
+			       "\n$$\\!#%^&*()[]~\"'`<>|") of
 		    true -> 
 			"illegal character detected in query arg";
 		    false ->
