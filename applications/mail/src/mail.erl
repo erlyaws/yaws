@@ -682,15 +682,6 @@ sort_href(Sort, Cur, Text) ->
     {a, [{href,"mail.yaws?sort="++Sort}], Text}.
 
 
-sort_href(Sort, Cur) when atom(Cur) ->
-    sort_href(Sort, atom_to_list(Cur));
-sort_href(Sort, "rev_"++Cur) ->
-    "mail.yaws?sort="++Sort;
-sort_href(Sort, Sort) ->
-    "mail.yaws?sort=rev_"++Sort;
-sort_href(Sort, Cur) ->
-    "mail.yaws?sort="++Sort.
-
 format_summary(Hs,Sorting) ->
     SHs = sort_summary(Hs, Sorting),
     [format_summary_line(H) || H <- SHs].
@@ -807,9 +798,6 @@ parse_addr(AddrStr) ->
 	end,
     Fs = [Op(F) || F <- Addrs].
 
-format_addr(Addr) ->
-    format_list(Addr).
-
 token_addrs([], [], _) ->
     [];
 token_addrs([], Acc, _) ->
@@ -822,11 +810,6 @@ token_addrs([C=$,|R], Acc, false) ->
     [lists:reverse(Acc)|token_addrs(R, [], false)];
 token_addrs([C|R], Acc, InQuote) ->
     token_addrs(R, [C|Acc], InQuote).
-
-format_list([]) -> [];
-format_list([E]) -> E;
-format_list([E|Es]) ->
-    E++","++format_list(Es).
 
 decode(Text) ->
     decode(Text, []).
@@ -1173,7 +1156,7 @@ req(Req) ->
 	    exit("No reply from session manager")
     end.
 
-ttl() ->         req(ttl).
+% ttl() ->         req(ttl).
 popserver() ->   req(popserver).
 smtpserver() ->  req(smtpserver).
 maildomain() ->  req(maildomain).
@@ -1240,36 +1223,24 @@ stat(Server, User, Password) ->
 	    {error, Reason}
     end.
 
-
-rtop(Server, User, Password, Nr) ->
-    Req = [top(Nr)],
-    [{ok,Msg}] = pop_request(Req, Server, User, Password),
-    {parse_headers(Msg), [M++"\n" || M <- Msg]}.
-
 list(Server, User, Password) ->
     case pop_request([{"LIST",ml}], Server, User, Password) of
 	[{ok, Stats}] ->
 	    Info = lists:reverse([info(S) || S <- Stats]),
 	    Req = [top(I#info.nr) || I <- Info],
-	    Res = pop_request(Req, Server, User, Password),
-	    Hdrs = lists:map(fun({ok,Ls}) -> parse_headers(Ls) end, Res),
-	    add_hdrs(Info,Hdrs);
+	    case pop_request(Req, Server, User, Password) of
+		{error, Reason} ->
+		    {error, Reason};
+		Res ->
+		    Hdrs = lists:map(fun({ok,Ls}) ->
+					     parse_headers(Ls)
+				     end, Res),
+		    add_hdrs(Info,Hdrs)
+	    end;
 	{error, Reason} ->
 	    {error, Reason}
     end.
 
-list(Server, User, Password, From, To) ->
-    case pop_request([{"LIST",ml}], Server, User, Password) of
-	[{ok, Stats}] ->
-	    SortStats = lists:sublist(lists:reverse(Stats), From, To),
-	    Info = [info(S) || S <- SortStats],
-	    Req = [top(I#info.nr) || I <- Info],
-	    Res = pop_request(Req, Server, User, Password),
-	    Hdrs = lists:map(fun({ok,Ls}) -> parse_headers(Ls) end, Res),
-	    add_hdrs(Info,Hdrs);
-	{error, Reason} ->
-	    {error, Reason}
-    end.
 
 add_hdrs([], []) -> [];
 add_hdrs([I|Is], [H|Hs]) ->
@@ -2608,14 +2579,6 @@ getopt(Key, KeyList, Default) ->
 		Val == undefined -> Default;
 		true -> Val
 	    end
-    end.
-
-getopt_options(Key, KeyList) ->
-    case lists:keysearch(Key, 1, KeyList) of
-	{value, Tuple} when size(Tuple) >= 3 ->
-	    element(3,Tuple);
-	_ ->
-	    undefined
     end.
 
 %%
