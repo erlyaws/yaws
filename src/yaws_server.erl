@@ -1947,7 +1947,11 @@ url_type(GC, SC, Path, QueryPart) ->
 		true ->
 		    ?Debug("Serve page from cache ~p", [{When , N, N-When}]),
 		    ets:update_counter(E, {urlc, Path}, 1),
-		    UT
+		    %% Kindof ugly here, we cache the yaws file
+		    %% with the first time query part and then
+		    %% replace the q here .....
+
+		    UT#urltype{q = QueryPart}
 	    end
     end.
 
@@ -1989,22 +1993,16 @@ cache_file(GC, SC, Path, UT) when
 		    ?Debug("To large\n",[]),
 		    UT;
 		true ->
-		    %% don't cache yaws files with a query part
-		    case {UT#urltype.type, UT#urltype.q} of
-			{yaws, Q} when Q /= [] ->
-			    UT;
-			_ ->
-			    ?Debug("File fits\n",[]),
-			    {ok, Bin} = prim_file:read_file(
-					  UT#urltype.fullpath),
-			    UT2 = UT#urltype{data = Bin},
-			    ets:insert(E, {{url, Path}, now_secs(), UT2}),
-			    ets:insert(E, {{urlc, Path}, 1}),
-			    ets:update_counter(E, num_files, 1),
-			    ets:update_counter(E, num_bytes, 
-					       FI#file_info.size),
-			    UT2
-		    end
+		    ?Debug("File fits\n",[]),
+		    {ok, Bin} = prim_file:read_file(
+				  UT#urltype.fullpath),
+		    UT2 = UT#urltype{data = Bin},
+		    ets:insert(E, {{url, Path}, now_secs(), UT2}),
+		    ets:insert(E, {{urlc, Path}, 1}),
+		    ets:update_counter(E, num_files, 1),
+		    ets:update_counter(E, num_bytes, 
+				       FI#file_info.size),
+		    UT2
 	    end
     end;
 cache_file(_GC, _SC, _Path, UT) ->
