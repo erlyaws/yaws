@@ -596,7 +596,9 @@ acceptor0(GS, Top) ->
 		    Top ! {self(), done_client, Int};
 		{'EXIT', normal} ->
 		    exit(normal);
-		{error, einval} ->
+		{'EXIT', {error, einval}} ->
+		    %% Typically clients that close their end of the socket
+		    %% don't log. Happens all the time.
 		    exit(normal);
 		{'EXIT', Reason} ->
 		    error_logger:error_msg("Yaws process died: ~p~n", 
