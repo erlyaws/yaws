@@ -106,7 +106,8 @@ cgi_env(Arg, Scriptfilename, Pathinfo) ->
     H = Arg#arg.headers,
     R = Arg#arg.req,
     {Maj,Min} = R#http_request.version,
-    {Hostname, Hosttail}=lists:splitwith(fun(X)->X /= $: end, H#headers.host),
+    {Hostname, Hosttail}=lists:splitwith(fun(X)->X /= $: end, 
+					 checkdef(H#headers.host)),
     Hostport = case Hosttail of
 		   [$: | P] -> P;
 		   [] -> "80"
