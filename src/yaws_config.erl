@@ -49,7 +49,7 @@ load(false, Trace, Debug) ->
 	    load({file, File}, Trace, Debug)
     end;
 load({file, File}, Trace, Debug) ->
-    yaws_log:infolog("Using config file ~s", [File]),
+    error_logger:info_msg("Yaws: Using config file ~s", [File]),
     case file:open(File, [read]) of
 	{ok, FD} ->
 	    GC = make_default_gconf(Debug),

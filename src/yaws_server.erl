@@ -163,12 +163,12 @@ init([]) ->
 		{error, E} ->
 		    case erase(logdir) of
 			undefined ->
-			    error_logger:format("Bad conf: ~p~n", [E]),
+			    error_logger:error_msg("Bad conf: ~p~n", [E]),
 			    init:stop(),
 			    {stop, E};
 			Dir ->
 			    yaws_log:setdir(Dir, []),
-			    yaws_log:sync_errlog("bad conf: ~s~n",[E]),
+			    error_logger:error_msg("bad conf: ~s~n",[E]),
 			    init:stop(),
 			    {stop, E}
 		    end
@@ -200,7 +200,7 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 		  proc_lib:start_link(?MODULE, gserv, [Gconf, Group])
 	  end, Sconfs),
     L2 = lists:zf(fun({error, F, A}) ->	
-		  error_logger:error_msg(F, A),
+			  error_logger:error_msg(F, A),
 			  exit(nostart);
 		     ({_Pid, _SCs}) ->
 			  true;
@@ -608,7 +608,7 @@ acceptor0(GS, Top) ->
 		{'EXIT', normal} ->
 		    exit(normal);
 		{'EXIT', Reason} ->
-		    yaws_log:errlog("~p~n", [Reason]),
+		    error_logger:error_msg("~p~n", [Reason]),
 		    exit(normal)
 	    end,
 	    %% we cache processes
@@ -1964,11 +1964,13 @@ cache_file(_GC, _SC, _Path, UT) ->
 %% FIXME, should not wipe entire ets table this way
 cleanup_cache(E, size) ->
     %% remove the largest files with the least hit count  (urlc)
-    yaws_log:infolog("Clearing yaws internal content cache, size overflow",[]),
+    error_logger:info_msg("Clearing yaws internal content "
+			  "cache, size overflow",[]),
     clear_ets(E);
 
 cleanup_cache(E, num) ->
-    yaws_log:infolog("Clearing yaws internal content cache, num overflow",[]),
+    error_logger:info_msg("Clearing yaws internal content "
+			  "cache, num overflow",[]),
     clear_ets(E).
 
 
@@ -2203,7 +2205,8 @@ load_and_run(Mod) ->
 	{module,Mod} ->
 	    Mod:start();
 	Error ->
-	    yaws_log:errlog("Loading '~w' failed, reason ~p~n",[Mod,Error])
+	    error_logger:error_msg("Loading '~w' failed, reason ~p~n",
+				   [Mod,Error])
     end.
 
 decode_base64([]) ->

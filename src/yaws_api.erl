@@ -52,8 +52,8 @@
 
 parse_post_data(Arg) ->
 
-    yaws_log:infolog("Warning Warning !!!! function "
-		    "yaws_api:parse_post_data will be removed ", []),
+    error_logger:info_msg("Warning Warning !!!! function "
+			  "yaws_api:parse_post_data will be removed ", []),
 
     
     Headers = Arg#arg.headers,
@@ -91,8 +91,8 @@ parse_query(Arg) ->
     D = Arg#arg.querydata,
     if
 	D == [] ->
-	    yaws_log:errlog("Tried to parse_query with "
-			    "no query data ",[]),
+	    error_logger:error_msg("Tried to parse_query with "
+				   "no query data ",[]),
 	    [];
 	true ->
 	    parse_post_data_urlencoded(D)
@@ -107,14 +107,15 @@ parse_post(Arg) ->
 	'POST' ->
 	    if
 		D == [] ->
-		    yaws_log:errlog("Tried to parse_post with "
-				   "no POST data ",[]),
+		    error_logger:error_msg("Tried to parse_post with "
+					   "no POST data ",[]),
 		    [];
 		true ->
 		    parse_post_data_urlencoded(D)
 	    end;
 	Other ->
-	    yaws_log:errlog("Can't parse post body if get a ~p",[Other]),
+	    error_logger:error_msg("Can't parse post body if get a ~p",
+				   [Other]),
 	    []
     end.
 
@@ -184,7 +185,7 @@ parse_multipart_post(Arg) ->
 	'POST' ->
 	    case CT of
 		undefined ->
-		    yaws_log:errlog("Can't parse multipart if we "
+		    error_logger:error_msg("Can't parse multipart if we "
 				   "have no Content-Type header",[]),
 		    [];
 		"multipart/form-data"++Line ->
@@ -202,12 +203,13 @@ parse_multipart_post(Arg) ->
 			      Boundary)
 		    end;
 		Other ->
-		    yaws_log:errlog("Can't parse multipart if we "
+		    error_logger:error_msg("Can't parse multipart if we "
 				   "find no multipart/form-data",[]),
 		    []
 	    end;
 	Other ->
-	    yaws_log:errlog("Can't parse multipart if get a ~p",[Other]),
+	    error_logger:error_msg("Can't parse multipart if get a ~p",
+				   [Other]),
 	    []
     end.
 

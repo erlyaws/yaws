@@ -137,7 +137,7 @@ format(GC, F, A) ->
 derror(GC, F, A) ->
     if
 	GC#gconf.debug == true ->
-	    yaws_log:errlog(F, A);
+	    error_logger:error_msg(F, A);
 	true ->
 	    ok
     end.
@@ -146,7 +146,7 @@ derror(GC, F, A) ->
 dinfo(GC, F, A) ->
     if
 	GC#gconf.debug == true ->
-	    yaws_log:infolog(F, A);
+	    error_logger:info_msg(F, A);
 	true ->
 	    ok
     end.
@@ -208,12 +208,12 @@ check_headers(L) ->
       fun(H) ->
 	  case lists:reverse(H) of
 	      [_,_,$\r|_] ->
-		  yaws_log:errlog("Bad header ~p, it contains"
+		  error_logger:error_msg("Bad header ~p, it contains"
 					      " '\\r' or '\\n' at end ", 
 					      [lists:flatten(H)]),
 		  exit(normal);
 	      [_,_,$\n|_] ->
-		  yaws_log:errlog("Bad header ~p, it contains"
+		  error_logger:error_msg("Bad header ~p, it contains"
 					      " '\\r' or '\\n' at end ", 
 					      [lists:flatten(H)]),
 		  exit(normal);
@@ -226,7 +226,7 @@ check_headers(L) ->
 check_headers([$\r, $\n |Tail], Last) when Tail /= [] ->
     case lists:member(hd(Tail), [$\r, $\n]) of
 	true ->
-	     yaws_log:errlog("Bad header ~p, it contains"
+	     error_logger:error_msg("Bad header ~p, it contains"
 			     " '\\r' or '\\n' at end ", [lists:reverse(Last)]),
 	    exit(normal);
 	_ ->
