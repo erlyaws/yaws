@@ -1071,6 +1071,10 @@ make_arg(CliSock, Head, Req, _GC, SC) ->
 	 pid = self(),
 	 docroot = SC#sconf.docroot}.
 
+
+%% Return values:
+%% continue, done, {page, Page}
+
 handle_request(CliSock, GC, SC, ARG, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     Req = ARG#arg.req,
@@ -1136,13 +1140,24 @@ is_authenticated(SC, UT, _Req, H) ->
     end.
 
 
+%% Return values:
+%% continue, done, {page, Page}
+
 handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
     case UT#urltype.type of
 	error ->
 	    A2 = ARG#arg{querydata = UT#urltype.q},
 	    yaws:outh_set_dyn_headers(Req, H),
-	    do_appmod(SC#sconf.errormod_404, out404, CliSock, GC, SC, 
-		      Req, [A2, GC, SC], UT, N);
+	    deliver_dyn_part(CliSock, GC, SC, 
+			     0, "404",
+			     N,
+			     A2,
+			     fun(A)->(SC#sconf.errormod_404):
+					 out404(A,GC,SC) 
+			     end,
+			     fun()->finish_up_dyn_file(CliSock, GC, SC)
+			     end
+			    );
 	directory when SC#sconf.dir_listings == true ->
 	    P = UT#urltype.dir,
 	    yaws:outh_set_dyn_headers(Req, H),
@@ -1170,7 +1185,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	yaws ->
 	    yaws:outh_set_dyn_headers(Req, H),
 	    do_yaws(CliSock, GC, SC, Req,  
-		    [ARG#arg{querydata = UT#urltype.q}], UT, N);
+		    ARG#arg{querydata = UT#urltype.q}, UT, N);
 	forbidden ->
 	    yaws:outh_set_dyn_headers(Req, H),
 	    deliver_403(CliSock, Req, GC, SC);
@@ -1188,7 +1203,14 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    A2 = ARG#arg{appmoddata = PathData,
 			 querydata = UT#urltype.q,
 			 appmod_prepath = UT#urltype.path},
-	    do_appmod(Mod, out, CliSock, GC, SC, Req,  [A2], UT, N)
+	    deliver_dyn_part(CliSock, GC, SC, 
+			     0, "appmod",
+			     N,
+			     A2,
+			     fun(A)->Mod:out(A) end,
+			     fun()->finish_up_dyn_file(CliSock, GC, SC)
+			     end
+			    )
     end.
 
 	
@@ -1413,8 +1435,46 @@ get_client_data(_CliSock, all, eof, _GC, _) ->
 
 
 
-do_appmod(Mod, FunName, CliSock, GC, SC, Req, ARG, UT, N) ->
-    case yaws_call(0, "appmod", Mod, FunName, ARG, GC,SC, N) of
+
+%% Return values:
+%% continue, done, {page, Page}
+
+deliver_dyn_part(CliSock, GC, SC,          % essential params
+		 LineNo, YawsFile,         % for diagnostic output
+		 CliDataPos,               % for `get_more'
+		 Arg,
+		 YawsFun,                  % call YawsFun(Arg)
+		 DeliverCont               % call DeliverCont()
+						% to continue normally
+		) ->
+    ?TC([{record, GC, gconf}, {record, SC, sconf},{record, Arg, arg}]),
+    Res = (catch YawsFun(Arg)),
+    case handle_out_reply(Res, LineNo, YawsFile, SC, [Arg]) of
+	{get_more, Cont, State} when 
+	      element(1, Arg#arg.clidata) == partial  ->
+	    More = get_more_post_data(SC#sconf.partial_post_size, 
+				      CliDataPos, SC, GC, Arg),
+	    case un_partial(More) of
+		Bin when binary(Bin) ->
+		    A2 = Arg#arg{clidata = More,
+				 cont = Cont,
+				 state = State},
+		    deliver_dyn_part(
+		      CliSock, GC, SC, LineNo, YawsFile, 
+		      CliDataPos+size(un_partial(More)), 
+		      A2, YawsFun, Cont
+		     );
+		Err ->
+		    A2 = Arg#arg{clidata = Err,
+				cont = undefined,
+				state = State},
+		    catch YawsFun(A2),
+		    exit(normal)         % ???
+	    end;
+	break ->
+	    finish_up_dyn_file(CliSock, GC, SC);
+	{page, Page} ->
+	    {page, Page};
 	{streamcontent, MimeType, FirstChunk} ->
 	    yaws:outh_set_content_type(MimeType),
 	    accumulate_chunk(FirstChunk),
@@ -1422,12 +1482,12 @@ do_appmod(Mod, FunName, CliSock, GC, SC, Req, ARG, UT, N) ->
 	    stream_loop(CliSock, GC, SC),
 	    case yaws:outh_get_chunked() of
 		true ->
-		    gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
+		    gen_tcp_send(CliSock, [crnl(), "0", 
+					   crnl2()], SC, GC),
 		    continue;
 		false ->
 		    done
 	    end;
-
 	{streamcontent_with_size, Sz, MimeType, FirstChunk} ->
 	    yaws:outh_set_content_type(MimeType),
 	    yaws:outh_set_transfer_encoding_off(),
@@ -1436,13 +1496,20 @@ do_appmod(Mod, FunName, CliSock, GC, SC, Req, ARG, UT, N) ->
 	    deliver_accumulated(CliSock, GC, SC),
 	    stream_loop(CliSock, GC, SC),
 	    done;
-
-
 	_ ->
-	    %% finish up
-	    deliver_dyn_file(CliSock, GC,SC,Req, UT, [], [], [], ARG,N)
+	    DeliverCont()
     end.
 
+finish_up_dyn_file(CliSock, GC, SC) ->
+    Ret = case yaws:outh_get_chunked() of
+	      true ->
+		  accumulate_content([crnl(), "0", crnl2()]),
+		  continue;
+	      false ->
+		  done
+	  end,
+    deliver_accumulated(CliSock, GC, SC),
+    Ret.
 
 
 
@@ -1460,72 +1527,42 @@ deliver_dyn_file(CliSock, GC, SC, Req, Specs, ARG, UT, N) ->
 
 
 
-deliver_dyn_file(CliSock, GC, SC, Req, UT, Bin, Fd, [H|T],ARG,N) ->
-    ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT,urltype}]),
+deliver_dyn_file(CliSock, GC, SC, Req, UT, Bin, Fd, [H|T],Arg,N) ->
+    ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT,urltype},
+       {record, Arg, arg}]),
     ?Debug("deliver_dyn_file: ~p~n", [H]),
     case H of
 	{mod, LineNo, YawsFile, NumChars, Mod, out} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
-	    case yaws_call(LineNo, YawsFile, Mod, out, ARG, GC,SC, N) of
-		break ->
-		    deliver_dyn_file(CliSock, GC, SC, Req,  
-				     UT, Bin, Fd, [],ARG,N) ;
-		{page, Page} ->
-		    {page, Page};
-		{streamcontent, MimeType, FirstChunk} ->
-		    yaws:outh_set_content_type(MimeType),
-		    accumulate_chunk(FirstChunk),
-		    deliver_accumulated(CliSock, GC, SC),
-		    stream_loop(CliSock, GC, SC),
-		    case yaws:outh_get_chunked() of
-			true ->
-			    gen_tcp_send(CliSock, [crnl(), "0", 
-						   crnl2()], SC, GC),
-			    continue;
-			false ->
-			    done
-		    end;
-		{streamcontent_with_size, Sz, MimeType, FirstChunk} ->
-		    yaws:outh_set_content_type(MimeType),
-		    yaws:outh_set_transfer_encoding_off(),
-		    yaws:outh_set_content_length(Sz),
-		    accumulate_chunk(FirstChunk),
-		    deliver_accumulated(CliSock, GC, SC),
-		    stream_loop(CliSock, GC, SC),
-		    done;
-		_ ->
-		    deliver_dyn_file(CliSock, GC, SC, Req, 
-				     UT, Bin2,Fd,T,ARG,0)
-	    end;
+	    deliver_dyn_part(CliSock, GC, SC, LineNo, YawsFile,
+			     N, Arg, 
+			     fun(A)->Mod:out(A) end,
+			     fun()->deliver_dyn_file(
+				      CliSock, GC, SC, Req, 
+				      UT, Bin2,Fd,T,Arg,0)
+			     end);
 	{data, 0} ->
-	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin, Fd,T,ARG,N);
+	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin, Fd,T,Arg,N);
 	{data, NumChars} ->
 	    {Send, Bin2} = skip_data(Bin, Fd, NumChars),
 	    accumulate_chunk(Send),
-	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin2, Fd, T,ARG,N);
+	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin2, Fd, T,Arg,N);
 	{skip, 0} ->
-	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin, Fd,T,ARG,N);
+	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin, Fd,T,Arg,N);
 	{skip, NumChars} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
-	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin2, Fd, T,ARG,N);
+	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin2, Fd, T,Arg,N);
 	{error, NumChars, Str} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
 	    accumulate_chunk(Str),
-	    deliver_dyn_file(CliSock, GC, SC, Req, UT, Bin2, Fd, T,ARG,N)
+	    deliver_dyn_file(CliSock, GC, SC, Req, UT, Bin2, Fd, T,Arg,N)
     end;
 
 deliver_dyn_file(CliSock, GC, SC, _Req, _UT, _Bin, _Fd, [], _ARG,_N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     ?Debug("deliver_dyn: done~n", []),
-    Ret = case yaws:outh_get_chunked() of
-	      true ->
-		  accumulate_content([crnl(), "0", crnl2()]),
-		  continue;
-	      false ->
-		  done
-	  end,
-    deliver_accumulated(CliSock, GC, SC),
-    Ret.
+    finish_up_dyn_file(CliSock, GC, SC).
+
 
 
 stream_loop(CliSock, GC, SC) ->
@@ -1639,6 +1676,12 @@ accumulate_chunk(Data) ->
 
 
 
+%% handle_out_reply(R, ...)
+%% 
+%% R is a reply or a deep list of replies.  The special return values
+%% `streamcontent', `get_more_data' etc, which are not handled here
+%% completely but returned, have to be the last element of the list.
+
 handle_out_reply(L, LineNo, YawsFile, SC, A) when list (L) ->
     handle_out_reply_l(L, LineNo, YawsFile, SC, A, undefined);
 
@@ -1661,6 +1704,10 @@ handle_out_reply({streamcontent, MimeType, First},
 		 _LineNo,_YawsFile, _SC, _A) ->
     yaws:outh_set_content_type(MimeType),
     {streamcontent, MimeType, First};
+
+handle_out_reply(Res = {page, Page},
+		 _LineNo,_YawsFile, _SC, _A) ->
+    Res;
 
 handle_out_reply({streamcontent_with_size, Sz, MimeType, First}, 
 		 _LineNo,_YawsFile, _SC, _A) ->
@@ -1806,33 +1853,6 @@ deliver_accumulated(Sock, GC, SC) ->
     end.
 
 		
-
-		    
-yaws_call(LineNo, YawsFile, M, F, A, GC, SC, N) ->
-    ?Debug("safe_call ~w:~w~n",[M,F]),
-    Res = (catch apply(M,F,A)),
-    ?Debug("safe_call result = ~p~n",[yaws_debug:nobin(Res)]),
-    A1 = hd(A),
-    case handle_out_reply(Res, LineNo, YawsFile, SC, A) of
-	{get_more, Cont, State} when element(1, A1#arg.clidata) == partial  ->
-	    More = get_more_post_data(SC#sconf.partial_post_size, N, SC, GC, A1),
-	    case un_partial(More) of
-		Bin when binary(Bin) ->
-		    A2 = A1#arg{clidata = More,
-				cont = Cont,
-				state = State},
-		    yaws_call(LineNo, YawsFile, M, F,
-			      [A2| tl(A)], GC, SC, N+size(un_partial(More)));
-		Err ->
-		    A2 = A1#arg{clidata = Err,
-				cont = undefined,
-				state = State},
-		    catch apply(M,F,[A2 | tl(A)]),
-		    exit(normal)
-	    end;
-	Else ->
-	    Else
-    end.
 
 get_more_post_data(PPS, N, SC, GC, ARG) ->
     Len = list_to_integer((ARG#arg.headers)#headers.content_length),
