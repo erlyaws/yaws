@@ -2550,8 +2550,9 @@ do_url_type(SC, GetPath) ->
 		    end;
 		{ok, Head, {PathElem, Mod}, Trail} ->
 		    #urltype{type = appmod, 
-			     data = {Mod, conc_path(Head)},
-			     path = conc_path(Trail)}
+			     data = {Mod, [$/ | conc_path(Trail) ++ 
+					   lists:reverse(RevFile)]},
+			     path = conc_path(Head)}
 	    
 	    end
     end.
@@ -2603,7 +2604,7 @@ split_at(AM={PE, Mod}, [PEslash|Tail], Ack) ->
 	true ->
 	    {ok, lists:reverse(Ack), AM, Tail};
 	false ->
-	    split_at(AM, Tail, [PE|Ack])
+	    split_at(AM, Tail, [PEslash|Ack])
     end.
 
 

@@ -1,0 +1,15 @@
+include ../../include.mk
+
+all:	myappmod.beam
+	cp myappmod.beam ../../examples/ebin
+debug:
+
+install:	all
+	cp myappmod.beam $(VARDIR)/yaws/ebin
+
+clean:
+	$(RM) myappmod.beam
+	$(RM) ../../examples/ebin/myappmod.beam
+
+myappmod.beam:	myappmod.erl
+	erlc myappmod.erl

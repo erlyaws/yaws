@@ -20,6 +20,7 @@
     <td> <A HREF="/cookies.yaws">Cookies</a> </td>
     <td> <A HREF="/pcookie.yaws">Persistent Cookies</a> </td>
     <td> <A HREF="/session.yaws">Cookie sessions</a> </td>
+    <td> <A HREF="/appmods.yaws">Appmods</a> </td>
     <td> <A HREF="/shopingcart/index.yaws">Tiny shopping cart</a> </td>
     <td> <A HREF="/embed.yaws">Embedding Yaws</a> </td>
 
