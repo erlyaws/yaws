@@ -1,9 +1,8 @@
 
 <style TYPE="text/css">
   body {
-    background: #C6C6B5;
+    background: rgb(250,240,230);
     font-family: Verdana, Arial, Helvetica, sans-serif;
-    font-size : 9pt;
     color: black;
   }
 
@@ -16,7 +15,6 @@
   }
 
   div.box { border: solid; border-width: thin; width: 100%; 
-            font-size : 9pt;
             margin : 4;
             background: rgb(211, 211, 211)  }
 
@@ -32,12 +30,10 @@
             font-family: Times, Verdana, Arial, Helvetica, sans-serif;}
   P { text-decoration: none;
       font-family: Verdana, Arial, Helvetica, sans-serif;
-      font-size : 9pt;
       font-weight: normal; 
   }
 
   A { text-decoration: none;
-      font-size : 9pt;
       font-family: Verdana, Arial, Helvetica, sans-serif;
       font-weight: normal; 
   }
