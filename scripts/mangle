@@ -5,5 +5,6 @@ e=$2
 s=$3
 t=$4
 
+install -d `dirname $t`
 sed -e "s;%yawsdir%;$d;g" -e "s;%erl%;$e;" $s > $t
 
