@@ -87,7 +87,7 @@ The following directives are allowed inside a server definition.
 \fBport = Port \fR
 This makes the server listen on Port
 .TP
-\fB listen = IpAddress\fR
+\fBlisten = IpAddress\fR
 This makes the server listen on IpAddress
 When virthosting several servers on the same ip/port address, if the
 browser doesn't sebd a Host: field, yaws will pick the \fIfirst\fR
@@ -138,6 +138,11 @@ mechanism whereby a URL ob the form http://www.foo.com/~username
 is changed into a request where the docroot for that
 particular request is set to the directory ~username/public_html/
 The default value is true.
+
+.TP
+\fBallowed_scripts = [ListOfSuffixes]\fR
+The allowed script types for this server.  Recognized are `yaws',
+`cgi', `php'.  Default is \fIallowed_scripts = yaws\fR.
 
 .TP
 \fBappmods = [ListOfModuleNames]\fR
