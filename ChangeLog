@@ -1,3 +1,152 @@
+2004-02-06 22:31  klacke
+
+	* applications/mail/src/attachment.erl, src/yaws.erl, vsn.mk: ""
+
+2004-02-06 18:05  klacke
+
+	* applications/mail/README, www/index.yaws: ""
+
+2004-02-06 18:00  klacke
+
+	* applications/mail/src/: Makefile, attachment.erl, mail.erl: ""
+
+2004-02-06 14:59  klacke
+
+	* www/icons/yaws_y.gif: ""
+
+2004-02-06 14:48  klacke
+
+	* www/: HEAD, icons/yaws_y.gif: ""
+
+2004-02-04 21:45  klacke
+
+	* src/yaws_api.erl: ""
+
+2004-02-01 16:53  cschultz
+
+	* src/: yaws_api.erl, yaws_cgi.erl, yaws_server.erl: Introduce
+	{redirect_local, {any_path, URI}} and make yaws_cgi use it.
+
+2004-01-27 16:58  klacke
+
+	* src/yaws.erl: use new hex bifs
+
+2004-01-27 16:36  klacke
+
+	* man/yaws_api.5, src/yaws_compile.erl, src/yaws_server.erl,
+	www/EXHEAD, www/bindings.yaws, www/man.yaws, www/redirect.yaws:
+	documented jockes new bindings feature
+
+2004-01-26 23:42  jockeg
+
+	* src/: yaws_api.erl, yaws_compile.erl, yaws_server.erl: The yaws
+	callback out/1 can now return {bindings, [{Key, Value}]}. All
+	bindings can then be used in the rest of yaws code (in HTML source
+	and within erl tags). In HTML source %%Key%% is expanded to Value
+	and within erl tags yaws_api:get_binding(Key) can be used to
+	extract Value.
+	
+	With this addition it is easier to write transparant yaws code
+	making it easier to to work together with Web people knowing little
+	or nothing about Erlang.
+	
+	A stupid example:
+	
+	----
+	
+	$ cat ex.yaws <erl> out(A) -> {bindings, [{"A", "foo"}, {"B",
+	"baz"}]}.  </erl> <html> <body> <p>%%A%%</p> <p><font
+	size="4">%%A%% != %%B%%</font></p> <p>An enormous amount of plain
+	html source here.</p> <erl> out(A) ->	  Value =
+	yaws_api:binding("A"),	   {ehtml, {ul, [],	     [{li, [],	   
+	   Value},	  {li, [],	   "gazonk"}]}}.  </erl>
+	
+	%%A%% = %%A%% (hit me) </body> </html>
+	
+	----
+	
+	Which expands to:
+	
+	<html> <body> <p>foo</p> <p><font size="4">foo != baz</font></p>
+	<p>An enormous amount of plain html source here.</p>
+	
+	<ul> <li>foo</li> <li>gazonk</li></ul>
+	
+	foo = foo (hit me)
+	
+	</body> </html>
+
+2004-01-24 17:33  cschultz
+
+	* doc/yaws.tex, include/yaws.hrl, man/yaws.conf.5,
+	src/yaws_config.erl, src/yaws_server.erl: Made the php executable
+	configurable
+
+2004-01-22 21:42  jbevemyr
+
+	* src/yaws_server.erl, doc/yaws.tex: Added support for 301, 303,
+	and 307 redirects.
+
+2004-01-18 07:59  lpsmith
+
+	* src/yaws_server.erl: Added #arg{} to the out/1 return values.
+	
+	Fixed redirect bug when adding a slash to a URL with a query.
+	
+	Returns a more informative 400 instead of 403 on malformed urls.
+	
+	Cleaned up a bit of debugging code that was left behind.
+
+2004-01-13 21:56  mbj
+
+	* src/yaws_ls.erl: modified file listing layout, implemented sort
+	based on name, date and size, and direction
+
+2004-01-10 23:05  cschultz
+
+	* src/yaws_cgi.erl: Added CGI variable REQUEST_URI
+
+2004-01-09 07:44  lpsmith
+
+	* src/yaws_server.erl: when user directories/directory listings are
+	disabled, we now return a 404 instead of a 403.
+
+2003-12-21 12:56  jbevemyr
+
+	* applications/wiki/: src/wiki.erl,
+	wiki/WikiPreferences.files/back.gif,
+	wiki/WikiPreferences.files/forward.gif,
+	wiki/WikiPreferences.files/index.gif,
+	wiki/WikiPreferences.files/kamera.gif: [no log message]
+
+2003-12-21 12:37  jbevemyr
+
+	* applications/wiki/wiki/slideShow.yaws: Added slideShow.yaws.
+
+2003-12-20 22:10  klacke
+
+	* doc/yaws.pdf, src/yaws_api.erl, src/yaws_compile.erl,
+	src/yaws_server.erl, www/index.yaws: timestamp on the ssi files
+
+2003-12-19 16:05  klacke
+
+	* src/yaws_api.erl: ssi for ehtml expander as well
+
+2003-12-19 00:34  klacke
+
+	* src/: yaws.erl, yaws_revproxy.erl: slash_append
+
+2003-12-18 21:34  klacke
+
+	* www/news, man/yaws.conf.5, src/Makefile, src/yaws_revproxy.erl,
+	src/yaws_server.erl, www/EXHEAD, www/index.yaws: ""
+
+2003-12-18 21:15  klacke
+
+	* ChangeLog: 
+	
+	prepare for 1.40 release
+
 2003-12-18 17:23  klacke
 
 	* include/yaws.hrl, src/yaws_config.erl, src/yaws_revproxy.erl,
