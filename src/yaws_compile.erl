@@ -246,7 +246,7 @@ comp_err(C, _LineNo, NumChars, Err) ->
 	    {Line0, Mod, E}=ErrInfo,
 	    Line = Line0 + C#comp.startline - 9,
 	    ?Debug("XX ~p~n", [{_LineNo, Line0}]),
-	    Str = io_lib:format("~s:~w: ~s\n", 
+	    Str = io_lib:format("~s:~w:~n ~s\n", 
 				[C#comp.infile, Line,
 				 apply(Mod, format_error, [E])]),
 	    HtmlStr = ?F("~n<pre>~nDynamic compile error: ~s~n</pre>~n", 
