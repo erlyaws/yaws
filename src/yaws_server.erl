@@ -1185,8 +1185,10 @@ do_appmod(Mod, FunName, CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    case DCC#dcc.chunked of
 		true ->
 		    gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
+		    erase(content_type),
 		    continue;
 		false ->
+		    erase(content_type),
 		    done
 	    end;
 	_ ->
