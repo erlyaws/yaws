@@ -31,7 +31,7 @@
         {{\sc Erlang}}
 
 
-\newcommand{\Yaws}            % Write Erlang correctly
+\newcommand{\Yaws}            % Write Yaws correctly
         {{\sc Yaws}}
 
 
@@ -563,19 +563,23 @@ that is processing the request.
 
 
 -record(arg, {
-          clisock,        %% the socket leading to the peer client
-          headers,        %% headers
-          req,            %% request
-          clidata,        %% The client data (as a binary in POST requests)
-          querydata,      %% Was the URL on the form of ...?query (GET reqs)
-          appmoddata,     %% the remainder of the path leading up to the query
-          docroot,        %% where's the data
-          fullpath,       %% full path to yaws file
-          cont,           %% Continuation for chunked multipart uploads
-          state,          %% State for use by users of the out/1 callback
-          pid,            %% pid of the yaws worker process
-          opaque          %% useful to pass static data
-         }).              
+	  clisock,        %% the socket leading to the peer client
+	  headers,        %% headers
+	  req,            %% request
+	  clidata,        %% The client data (as a binary in POST requests)
+	  server_path,    %% The normalized server path
+	  querydata,      %% Was the URL on the form of ...?query (GET reqs)
+	  appmoddata,     %% the remainder of the path leading up to the querey
+	  docroot,        %% where's the data
+	  fullpath,       %% full path to yaws file
+	  cont,		  %% Continuation for chunked multipart uploads
+	  state,          %% State for use by users of the out/1 callback
+	  pid,            %% pid of the yaws worker process
+	  opaque,         %% useful to pass static data
+	  appmod_prepath, %% path in front of: <appmod><appmoddata>
+	  pathinfo        %% Set to 'd/e' when calling c.yaws for the request
+                          %% http://some.host/a/b/c.yaws/d/e
+	 }).              
 
 
 -record(http_request, {method,
@@ -1479,9 +1483,23 @@ must be called to indicate the end of the stream.
               this value and be  invoked  again  when  more  Data
               arrives.
 
+\item       \verb+{page, Page}+
+              Make Yaws return a different page than the one being
+              requested.
+
+\item       \verb+{page, {Options, Page}}+
+
+              Like the above, but supplying an additional deep list of
+              options.  For now, the only type of option is
+              \verb+{header, H}+ with the effect of accumulating the
+              HTTP header \verb+H+ for page \verb+Page+.
+
 \item       \verb+[ListOfValues]+
-              It  is  possible  to  return  a  list  of the above
-              defined return values.
+
+              It is possible to return a list of the above defined
+              return values.  Any occurrence of \verb+stream_content+,
+              \verb+get_more+, or \verb+page+ in this list is legal
+              only if it is the last position of the list.
 
 \end{itemize}
 
@@ -1523,6 +1541,28 @@ all traffic or just all HTTP messages and write them to a file.
 \end{itemize}
 
 
+\chapter{External scripts via CGI}
+
+Yaws can also interface to external programs generating dynamic
+content via the Common Gateway Interface (CGI).  This has to be
+explicitly enabled for a virtual host by listing \verb+cgi+ in the
+\verb+allowed_scripts+ line in the configuration file.  Any request
+for a page ending in \verb+.cgi+ (or \verb+.CGI+) will then result in
+trying to execute the corresponding file.
+
+If you have a Php executable compiled for using CGI in the \verb+PATH+
+of the Yaws server, you can enable Php support by adding \verb+php+ to
+\verb+allowed_scripts+.  Requests for pages ending in \verb+.php+ will
+then result in Yaws executing \verb+php+ and passing the name of the
+corresponding file to it via the appropriate environment variable.
+
+This is a new feature in Yaws.  It is used by its author for self
+written CGI programs as well as for using a standard CGI package, so
+it is working.  You should not be surprised however, should some
+scripts not work as expected due to an incomplete or incorrect
+implementation of certain CGI meta-variables.  The author of this
+feature is therefore interested in hearing about your experiences with
+it.  He can be contacted as \verb+carsten@codimi.de+.
 
 \chapter{Security}
 
@@ -1766,6 +1806,11 @@ The
               a request where the docroot for that particular  
            request is set to the directory 
               \verb+~user­name/public_html/+ The default value is true.
+
+\item       \verb+allowed_scripts = [ListOfSuffixes]+ -
+              The allowed script types for this server.  Recognized
+              are `yaws', `cgi', `php'.  Default is 
+	      \verb+allowed_scripts = yaws+.
 
 \item       \verb+appmods = [ListOfModuleNames]+ -
               If any the names in ListOfModuleNames appear
