@@ -671,14 +671,7 @@ aloop(CliSock, GS, Num) ->
 		 undefined
 	 end,
     put(outh, #outh{}),
-    Res = case Req#http_request.method of
-	      F when atom(F) -> 
-		  apply(yaws_server, F, 
-			[CliSock, GS#gs.gconf, SC, Req, H]);
-	      L when list(L) ->
-		  handle_extension_method(L, CliSock, 
-					  GS#gs.gconf, SC, Req, H)
-	  end,
+    Res=call_method(Req#http_request.method, CliSock, GS#gs.gconf, SC, Req, H),
     maybe_access_log(IP, SC, Req, H),
     case Res of
 	continue ->
@@ -687,9 +680,9 @@ aloop(CliSock, GS, Num) ->
 	    {ok, Num+1};
 	{page, Page} ->
 	    put(outh, #outh{}),
-	    apply(yaws_server, Req#http_request.method, 
-		  [CliSock, GS#gs.gconf, SC#sconf{appmods=[]}, 
-		   Req#http_request{path = {abs_path, Page}}, H])
+	    call_method(Req#http_request.method, 
+			CliSock, GS#gs.gconf, SC#sconf{appmods=[]}, 
+			Req#http_request{path = {abs_path, Page}}, H)
     end.
 
 
@@ -1038,6 +1031,15 @@ un_partial({partial, Bin}) ->
     Bin;
 un_partial(Bin) ->
     Bin.
+
+
+call_method(Method, CliSock, GC, SC, Req, H) ->
+    case Method of
+	F when atom(F) ->
+	    ?MODULE:F(CliSock, GC, SC, Req, H);
+	L when list(L) ->
+	    handle_extension_method(L, CliSock, GC, SC, Req, H)
+    end.
 
 %% will throw
 'HEAD'(CliSock, GC, SC, Req, Head) ->
