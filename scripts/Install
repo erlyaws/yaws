@@ -19,29 +19,8 @@ cat yaws.template | \
 
 chmod +x ${installprefix}/bin/yaws
 
-
-
-
 install -d ${installprefix}/lib/yaws/examples/ebin
 install -d ${installprefix}/lib/yaws/examples/include
-
-if [ -f ${etcdir}/yaws.conf ]; then
-   target=${etcdir}/yaws.conf.template
-else
-   target=${etcdir}/yaws.conf
-fi
-echo "--- Writing config file to ${target}"
-
-
-cat yaws.conf.template | \
-    ./Subst %yawsdir% ${prefix}/lib/yaws | \
-    ./Subst %logdir% /var/log/yaws | \
-    ./Subst %host% `hostname` | \
-    ./Subst %port% 80 | \
-    ./Subst %docroot% ${vardir}/yaws/www | \
-    ./Subst %certdir% ${etcdir} | \
-    ./Subst %sslport% 443 > ${target}
-
 
 if [ -f /etc/gentoo-release ]; then
     install -d  ${etcdir}/init.d/

@@ -2,8 +2,8 @@
 
 
 PREFIX             = @prefix@
-ETCDIR             = $(DESTDIR)@sysconfdir@
-VARDIR             = $(DESTDIR)@localstatedir@
+ETCDIR             = $(DESTDIR)/etc
+VARDIR             = $(DESTDIR)/var
 INSTALLPREFIX      = $(DESTDIR)$(PREFIX)
 
 ERL=@ERL@
