@@ -650,7 +650,7 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, Auth);
 	["dir", '=', Authdir] ->
 	    case file:list_dir(Authdir) of
-		{ok,_} ->
+		{ok,_} when Authdir /= "/" ->
 		    error_logger:info_msg("Warning, authdir must be set "
 					  "relative docroot ~n",[]);
 		_ ->
