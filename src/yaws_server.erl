@@ -658,8 +658,20 @@ gen_tcp_send(S, Data, SC, GC) ->
 	    ok;
 	Err ->
 	    yaws_debug:derror(GC, "Failed to send ~p on socket ~p: ~p~n",
-			      [Data, S, Err])
+			      [strip(Data), S, Err]),
+	    exit(normal)
     end.
+
+
+strip(Data) ->
+    L = list_to_binary([Data]),
+    case L of
+	<<Head:50/binary, _/binary>> ->
+	    <<Head/binary, ".....">>;
+	_ ->
+	    L
+    end.
+	 
 
 
 http_get_headers(CliSock, GC) ->
@@ -802,7 +814,7 @@ un_partial(Bin) ->
     ?Debug("OPTIONS", []),
     ok = inet_setopts(SC, CliSock, [{packet, raw}, binary]),
     flush(SC, CliSock, Head#headers.content_length),
-    ARG = make_arg(CliSock, Head, Req, GC, SC),
+    _ARG = make_arg(CliSock, Head, Req, GC, SC),
     ?Debug("OPTIONS delivering", []),
     deliver_options(CliSock, Req, GC, SC).
 
@@ -1570,7 +1582,7 @@ deliver_large_file(CliSock, GC, SC, Req, InH, UT) ->
 send_file(CliSock, Fd, DCC, SC, GC) ->
     case file:read(Fd, GC#gconf.large_file_chunk_size) of
 	{ok, Bin} ->
-	    send_file_chunk(Bin, CliSock, Fd, DCC, SC, GC),
+	    send_file_chunk(Bin, CliSock, DCC, SC, GC),
 	    send_file(CliSock, Fd, DCC, SC, GC);
 	eof ->
 	    file:close(Fd),
@@ -1583,14 +1595,14 @@ send_file(CliSock, Fd, DCC, SC, GC) ->
 	    end
     end.
 
-send_file_chunk(Bin, CliSock, Fd, DCC, SC, GC) ->
+send_file_chunk(Bin, CliSock, DCC, SC, GC) ->
     if
 	DCC#dcc.chunked == false ->
 	    gen_tcp_send(CliSock, Bin, SC, GC);
 	DCC#dcc.chunked == true ->
 	    CRNL = crnl(),
 	    Data2 = [CRNL, yaws:integer_to_hex(size(Bin)) , crnl(), Bin],
-	    gen_tcp_send(CliSock, Bin, SC, GC)
+	    gen_tcp_send(CliSock, Data2, SC, GC)
     end.
 
 
