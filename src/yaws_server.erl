@@ -2280,6 +2280,7 @@ send_file_chunk(Bin, CliSock, SC, GC) ->
     case binary_size(Bin) of
 	0 -> ok;
 	Size ->
+	    ?Debug("send_file_chunk size: ~p~n", [Size]),
 	    yaws:outh_inc_act_contlen(Size),
 	    case yaws:outh_get_chunked() of
 		true ->

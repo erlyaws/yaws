@@ -212,6 +212,11 @@ parse_line("Content-length:"++Con, H) ->
     H#headers{content_length = space_strip(Con)};
 parse_line("Cookie:"++Con, H) ->
     H#headers{cookie = [space_strip(Con)|H#headers.cookie]};
+parse_line("Accept-Encoding:"++Con, H) ->
+    Other = H#headers.other,
+    H#headers{other=[{http_header, undefined, 'Accept-Encoding', 
+		      undefined, space_strip(Con)}
+		     |Other]};
 parse_line(S, H) ->
     case lists:splitwith(fun(C)->C /= $: end, S) of
 	{Name, [$:|Val]} ->
