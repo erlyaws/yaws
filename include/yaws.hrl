@@ -98,8 +98,6 @@
 		           %% flat | unflat need flat for authentication
 		  data,    %% Binary | FileDescriptor | DirListing | undefined
 		  mime = "text/html",    %% MIME type
-		  q,       %% query for GET requests
-		  wwwauth = undefined,  %% or #auth{}
 		  pathinfo
 		 }).
 

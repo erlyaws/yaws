@@ -1211,15 +1211,6 @@ handle_request(CliSock, GC, SC, ARG, N) ->
     end.
 
 
-unflat(U) ->
-    U2 = case U#urltype.path of
-	     {noflat, F} ->
-		 U#urltype{path = lists:flatten(F)};
-	     _ ->
-		 U
-	 end,
-    U2.
-
 is_auth(Req_dir, H, [] ) -> true;
 is_auth(Req_dir, H, [{Auth_dir, #auth{realm=Realm, users=Users}} | T ] ) ->
     case lists:prefix(Auth_dir, Req_dir) of
