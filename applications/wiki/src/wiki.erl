@@ -1315,30 +1315,45 @@ editFiles1(Page, Password, Root, Prefix) ->
 
 slideShow(Params, Root, Prefix) ->
     Page     = getopt(node, Params),
-    IndexArg = getopt(index, Params),
-    Index = case catch list_to_integer(IndexArg) of
-		{'EXIT', Reason} -> 1;
-		Num when integer(Num) -> Num
-	    end,
+    NextArg = getopt(next, Params, undefined),
+    PrevArg = getopt(prev, Params, undefined),
+    case {NextArg, PrevArg} of
+	{undefined, undefined} ->
+	    nextSlide(1, next, Page, Root, Prefix);
+	{undefined, _} ->
+	    Index = case catch list_to_integer(PrevArg) of
+			{'EXIT', Reason} -> 1;
+			Num when integer(Num) -> Num
+		    end,
+	    nextSlide(Index, prev, Page, Root, Prefix);
+	{_, undefined} ->
+	    Index = case catch list_to_integer(NextArg) of
+			{'EXIT', Reason} -> 1;
+			Num when integer(Num) -> Num
+		    end,
+	    nextSlide(Index, next, Page, Root, Prefix)
+    end.
+
+nextSlide(Index, Direction, Page, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
 	    {wik002, Pwd,_Email,_Time,_Who,TxtStr,Files,_Patches} =
 		bin_to_wik002(Bin),
-	    case catch lists:nth(Index, Files) of
-		{'EXIT', _} ->
+	    case get_img(Index, Direction, lists:keysort(2,Files)) of
+		false ->
 		    % done
 		    redirect({node, Page}, Prefix);
-		PictFile ->
-		    FileName = element(2,PictFile),
-		    Comment = element(3, PictFile),
+		{ok, NewIndex, PictFile} ->
+		    FileName = element(2, PictFile),
+		    Comment  = element(3, PictFile),
 		    DeepStr =
 			["<table width='100%'>"
 			 "<tr><td><a href=\"slideShow.yaws?node=",
-			 Page,"&index=",integer_to_list(Index-1),
+			 Page,"&prev=",integer_to_list(NewIndex-1),
 			 "\">Previous</a> </td>",
 			 "<td><a href=\"slideShow.yaws?node=",Page,
-			 "&index=",integer_to_list(Index+1),"\">Next</a><br>"
+			 "&next=",integer_to_list(NewIndex+1),"\">Next</a><br>"
 			 "</td></tr></table>"
 			 "<p><b>",Comment,"</b></p><p>",
 			 "<img src=\"",
@@ -1358,6 +1373,36 @@ slideShow(Params, Root, Prefix) ->
 	_ ->
 	    show({no_such_page,Page})
     end.
+
+lowercase([C|S]) -> [lowercase(C)|lowercase(S)];
+lowercase(C) when C>=$A, C=<$Z -> C+32;
+lowercase(C) -> C.
+
+get_img(Index, Direction, Files) ->
+    case catch lists:nth(Index, Files) of
+	{'EXIT', _} ->
+	    false;
+	PictFile ->
+	    FileName = element(2, PictFile),
+	    case lowercase(lists:reverse(FileName)) of
+		"fig."++_ ->
+		    io:format("~p\n", [PictFile]),
+		    {ok, Index, PictFile};
+		"gepj."++_ ->
+		    io:format("~p\n", [PictFile]),
+		    {ok, Index, PictFile};
+		"gpj."++_ ->
+		    io:format("~p\n", [PictFile]),
+		    {ok, Index, PictFile};
+		Any ->
+		    if Direction == next ->
+			    get_img(Index+1, Direction, Files);
+		       true  ->
+			    get_img(Index-1, Direction, Files)
+		    end
+	    end
+    end.
+	    
 
 editTag(Params, Root, Prefix) ->
     Page = getopt(node, Params),

@@ -98,7 +98,7 @@ format_txt("http://" ++ T, Env, L, Doc) ->
 format_txt("slideshow:" ++ T, Env, L, Doc) ->
     {X, T1} = collect_wiki_link(T),
     Txt = "<a href='slideShow.yaws?node="++Env#env.node++
-	"&index=1'>"++X++ "</a>",
+	"&next=1'>"++X++ "</a>",
     format_txt(T1, Env, reverse(Txt, L), Doc);
 format_txt("mailto:" ++ T, Env, L, Doc) ->
     {X, T1} = collect_mail(T, []),
