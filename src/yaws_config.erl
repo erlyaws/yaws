@@ -1,6 +1,6 @@
-%%%----------------------------------------------------------------------
+%%----------------------------------------------------------------------
 %%% File    : yaws_config.erl
-%%% Author  : Claes Wikstrom <klacke@bluetail.com>
+%% Author  : Claes Wikstrom <klacke@bluetail.com>
 %%% Purpose : 
 %%% Created : 16 Jan 2002 by Claes Wikstrom <klacke@bluetail.com>
 %%%----------------------------------------------------------------------
@@ -176,6 +176,7 @@ make_default_gconf(Debug) ->
 				    true ->
 					30
 				end,
+	   trace = false,
 	   uid = os:cmd("id -u") -- [10],
 	   yaws = "Yaws " ++ yaws_vsn:version()}.
 

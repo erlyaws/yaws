@@ -617,9 +617,11 @@ pick_host(_GC, Host, [H|_T], _Group) when H#sconf.servername == Host ->
 pick_host(GC, Host, [_|T], Group) ->
     pick_host(GC, Host, T, Group);
 pick_host(GC, Host, [], Group) ->
-    yaws_debug:derror(GC, "Got Host: header ~p which didn't match any host "
-		      "field in config, picking the first one ",[Host]),
-    hd(Group).
+    H = hd(Group),
+    yaws_debug:dinfo(GC, "Got Host: header ~p which didn't match any host "
+		     "field in config, ~npicking the first one : ~p~n ",
+		     [Host, H#sconf.servername]),
+    H.
 
 inet_peername(Sock, SC) ->
     case SC#sconf.ssl of
@@ -2066,7 +2068,7 @@ conc_path([H|T]) ->
 
 
 ret_app_mod(SC, Path, Mod, PrePath) ->
-    {PathData, Query} = q_splitpath(Path, [], []),
+    {PathData, Query} = q_splitpath(Path, []),
     #urltype{type = appmod,
 	     data = {Mod, PathData},
 	     path = PrePath,   %% need to set for WWW-Autenticate to work
@@ -2074,36 +2076,20 @@ ret_app_mod(SC, Path, Mod, PrePath) ->
 
 
 
-q_splitpath([$?|T], Comps, Part) ->
-    if
-	Part == [] ->
-	    {lists:reverse(Comps), 
-	     if T == [] -> undefined; true -> T end};
-	true ->
-	    {lists:reverse([lists:reverse(Part)|Comps]), 
-	     if T == [] -> undefined; true -> T end}
-    end;
-q_splitpath([], Comps, Part) ->
-    if
-	Part == [] ->
-	    {lists:reverse(Comps), undefined};
-	true ->
-	    {lists:reverse([lists:reverse(Part)|Comps]), undefined}
-    end;
-q_splitpath([$/|Tail], Comps, Part) when Part /= [] ->
-    q_splitpath(Tail, [lists:reverse(Part)|Comps], []);
-q_splitpath([$/|Tail], Comps, Part) ->
-    q_splitpath(Tail, Comps, Part);
-q_splitpath([H|T], Comps, Part) ->
-    q_splitpath(T, Comps, [H|Part]).
-		   
+q_splitpath([$?|T], Ack) ->
+    {lists:reverse(Ack), if T == [] -> undefined; true -> T end};
+    
+q_splitpath([], Ack) ->
+     {lists:reverse(Ack), undefined};
 
+q_splitpath([H|T], Ack) ->
+    q_splitpath(T, [H|Ack]).
      
 	     
 	
 
 
-%% http:/a.b.c/~user URLs
+%% http://a.b.c/~user URLs
 ret_user_dir(SC, [], "/", Upath) ->
     ?Debug("UserPart = ~p~n", [Upath]),
     case parse_user_path(SC#sconf.docroot, Upath, []) of

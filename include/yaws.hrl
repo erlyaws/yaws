@@ -20,11 +20,11 @@
 	       max_num_cached_bytes = 1000000,  %% 1 MEG
 	       max_size_cached_file = 8000,
 	       large_file_chunk_size = 10240,
-	       cache_refresh_secs = 30,  % seconds
+	       cache_refresh_secs = 30,  % seconds  (auto zero when debug)
 	       default_type = "text/html",
 	       timeout = 30000,
 	       include_dir = [],
-	       yaws,
+	       yaws,                %% server string
 	       uid                  %% unix uid of user running yaws
 	      }).  
 

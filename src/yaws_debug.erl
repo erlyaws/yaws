@@ -143,6 +143,17 @@ derror(GC, F, A) ->
     end.
 
 
+dinfo(GC, F, A) ->
+    if
+	GC#gconf.debug == true ->
+	    yaws_log:infolog(F, A);
+	true ->
+	    ok
+    end.
+
+
+
+
 mktags() ->
     tags:dirs(["."]),
     init:stop().
