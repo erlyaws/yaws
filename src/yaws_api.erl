@@ -41,9 +41,49 @@
 	 set_tty_trace/1,
 	 set_access_log/1]).
 
+-export([ehtml_expand/1, ehtml_expander/1, ehtml_apply/2,
+	ehtml_expander_test/0]).
+
+-import(lists, [map/2, flatten/1, reverse/1]).
 
 %% these are a bunch of function that are useful inside
 %% yaws scripts
+
+
+parse_post_data(Arg) ->
+
+    yaws_log:infolog("Warning Warning !!!! function "
+		    "yaws_api:parse_post_data will be removed ", []),
+
+    
+    Headers = Arg#arg.headers,
+    Req = Arg#arg.req,
+    case lists:keysearch('Content-Type', 3, Headers#headers.other) of
+	{value, {_,_,_,_,"multipart/form-data"++Line}} ->
+	    case Arg#arg.cont of
+		{cont, Cont} ->
+		    parse_multipart(
+		      binary_to_list(un_partial(Arg#arg.clidata)),
+		      {cont, Cont});
+		undefined ->
+		    LineArgs = parse_arg_line(Line),
+		    {value, {_, Boundary}} =
+			lists:keysearch(boundary, 1, LineArgs),
+		    parse_multipart(
+		      binary_to_list(un_partial(Arg#arg.clidata)), Boundary)
+	    end;
+	_ ->
+	    case Req#http_request.method of
+		'POST' ->
+		    parse_post_data_urlencoded(un_partial(Arg#arg.clidata));
+		_ ->
+		    %% kinda weird default bahaviour here
+		    parse_post_data_urlencoded(Arg#arg.querydata)
+	    end
+    end.
+	    
+
+
 
 
 %% parse the command line query data
@@ -684,7 +724,7 @@ url_encode([]) ->
 
 
 
-redirect(Url) -> {redirect, Url}.
+redirect(Url) -> [{redirect, Url}].
 
 is_nb_space(X) ->
     lists:member(X, [$\s, $\t]).
@@ -1022,40 +1062,210 @@ format_url(Url) when record(Url, url) ->
 
 
 
+%% ------------------------------------------------------------
+%% simple erlang term representation of HTML:
+%% EHTML = [EHTML] | {Tag, Attrs, Body} | {Tag, Attrs} | {Tag} |
+%%         binary() | character()
+%% Tag 	 = atom()
+%% Attrs = [{Key, Value}]  or {EventTag, {jscall, FunName, [Args]}}
+%% Key 	 = atom()
+%% Value = string()
+%% Body  = EHTML
+ehtml_expand(Ch) when Ch >= 0, Ch =< 255 ->
+    yaws_api:htmlize_char(Ch);
+ehtml_expand(Bin) when binary(Bin) ->
+    yaws_api:htmlize(Bin);
+ehtml_expand({Tag}) ->
+    ehtml_expand({Tag,[]});
+ehtml_expand({pre_html, X}) ->
+    X;
+ehtml_expand({Tag, Attrs}) ->
+    ["<", atom_to_list(Tag), ehtml_attrs(Attrs), ">\n"];
+ehtml_expand({Tag, Attrs, Body}) when atom(Tag) ->
+    Ts = atom_to_list(Tag),
+    ["<",Ts, ehtml_attrs(Attrs),">",
+     ehtml_expand(Body),
+     "</", Ts, ">\n"];
+ehtml_expand([H|T]) ->
+    [ehtml_expand(H) | ehtml_expand(T)];
+ehtml_expand([]) ->
+    [].
 
 
+ehtml_attrs([]) ->
+    [];
+ehtml_attrs([{Name, Value} | Tail]) ->
+    ValueString = if atom(Value) -> [$",atom_to_list(Value),$"];
+		     list(Value) -> [$",Value,$"]
+		  end,
+    [[$ |atom_to_list(Name)], [$=|ValueString]| ehtml_attrs(Tail)].
 
-parse_post_data(Arg) ->
 
-    yaws_log:infolog("Warning Warning !!!! function "
-		    "yaws_api:parse_post_data will be removed ", []),
+%% ------------------------------------------------------------
+%% ehtml_expander/1: an EHTML optimizer
+%%
+%% This is an optimization for generating the same EHTML multiple times with
+%% only small differences, by using fast re-usable templates that contain
+%% variables. The variables are atoms starting with a dollar sign, like
+%% '$myvar'. There are two functions: ehtml_expander/1 to create an optimized
+%% EHTML template, then ehtml_apply/2 takes a template and a dictionary of
+%% variable values and generates the actual HTML.
+%%
+%% If you are spending a lot of time regenerating similar EHTML fragments then
+%% this is for you.
+%%
+%% Variables can appear in three places:
+%% - As a body element, where you would normally have a tag. The values of
+%%   these variables are expanded as EHTML.
+%% - As the name or value of an attribute. The values of these variables are
+%%   strings.
+%% - As the CDR of an attribute list. The values of these variables are
+%%   key-value lists of more attributes.
+%%
+%% See ehtml_expander_test/0 for an example.
+%%
+%% The approach is inspired by the way that Yaws already treats .yaws files,
+%% and the article ``A Hacker's Introduction To Partial Evaluation'' by Darius
+%% Bacon (cool guy), http://www.lisp-p.org/htdocs/peval/peval.cgi
+%%
+%% (For now I flatter myself that this is some kind of partial evaluator, but
+%% I don't really know :-) -luke)
 
-    
-    Headers = Arg#arg.headers,
-    Req = Arg#arg.req,
-    case lists:keysearch('Content-Type', 3, Headers#headers.other) of
-	{value, {_,_,_,_,"multipart/form-data"++Line}} ->
-	    case Arg#arg.cont of
-		{cont, Cont} ->
-		    parse_multipart(
-		      binary_to_list(un_partial(Arg#arg.clidata)),
-		      {cont, Cont});
-		undefined ->
-		    LineArgs = parse_arg_line(Line),
-		    {value, {_, Boundary}} =
-			lists:keysearch(boundary, 1, LineArgs),
-		    parse_multipart(
-		      binary_to_list(un_partial(Arg#arg.clidata)), Boundary)
-	    end;
-	_ ->
-	    case Req#http_request.method of
-		'POST' ->
-		    parse_post_data_urlencoded(un_partial(Arg#arg.clidata));
-		_ ->
-		    %% kinda weird default bahaviour here
-		    parse_post_data_urlencoded(Arg#arg.querydata)
+ehtml_expander(X) ->
+    ehtml_expander_compress(flatten(ehtml_expander(X, [], [])), []).
+
+%% Returns a deep list of text and variable references (atoms)
+
+%% Text
+ehtml_expander(Ch, Before, After) when Ch >= 0, Ch =< 255 ->
+    ehtml_expander_done(yaws_api:htmlize_char(Ch), Before, After);
+ehtml_expander(Bin, Before, After) when binary(Bin) ->
+    ehtml_expander_done(yaws_api:htmlize(Bin), Before, After);
+ehtml_expander({pre_html, X}, Before, After) ->
+    ehtml_expander_done(X, Before, After);
+%% Tags
+ehtml_expander({Tag}, Before, After) ->
+    ehtml_expander({Tag, []}, Before, After);
+ehtml_expander({Tag, Attrs}, Before, After) ->
+    ehtml_expander_done(["<",atom_to_list(Tag),
+			 ehtml_attrs_expander(Attrs),">\n"],
+			Before,
+			After);
+ehtml_expander({Tag, Attrs, Body}, Before, After) ->
+    ehtml_expander(Body,
+		   [["<",atom_to_list(Tag), ehtml_attrs_expander(Attrs), ">"] |
+		    Before],
+		   ["</",atom_to_list(Tag),">\n" | After]);
+%% Variable references
+ehtml_expander(Var, Before, After) when atom(Var) ->
+    [reverse(Before), {ehtml, ehtml_var_name(Var)}, After];
+%% Lists
+ehtml_expander([H|T], Before, After) ->
+    ehtml_expander(T, [ehtml_expander(H, [], []) | Before], After);
+ehtml_expander([], Before, After) ->
+    ehtml_expander_done("", Before, After).
+
+
+%% Expander for attributes. The attribute name and value can each be a
+%% variable reference.
+ehtml_attrs_expander([]) ->
+    "";
+ehtml_attrs_expander([{Var,Val}|T]) ->
+    [[" ",
+      ehtml_attr_part_expander(Var),
+      "=",
+      "\"", ehtml_attr_part_expander(Val), "\""]
+     | ehtml_attrs_expander(T)];
+ehtml_attrs_expander(Var) when atom(Var) ->
+    %% Var in the cdr of an attribute list
+    [{ehtml_attrs, ehtml_var_name(Var)}].
+
+ehtml_attr_part_expander(A) when atom(A) ->
+    case ehtml_var_p(A) of
+	true  -> {preformatted, ehtml_var_name(A)};
+	false -> atom_to_list(A)
+    end;
+ehtml_attr_part_expander(S) when list(S) ->
+    S.
+
+ehtml_expander_done(X, Before, After) ->
+    [reverse([X|Before]), After].
+
+%% Compress an EHTML expander, converting all adjacent bits of text into
+%% binaries.
+%% Returns: [binary() | {ehtml, Var} | {preformatted, Var}, {ehtml_attrs, Var}]
+%% Var = atom()
+ehtml_expander_compress([Tag|T], Acc) when tuple(Tag) ->
+    [list_to_binary(reverse(Acc)), Tag | ehtml_expander_compress(T, [])];
+ehtml_expander_compress([], Acc) ->
+    [list_to_binary(reverse(Acc))];
+ehtml_expander_compress([H|T], Acc) when integer(H) ->
+    ehtml_expander_compress(T, [H|Acc]).
+
+%% Apply an expander with the variable bindings in Env.  Env is a list of
+%% {VarName, Value} tuples, where VarName is an atom and Value is an ehtml
+%% term.
+ehtml_apply(Expander, Env) ->
+    [ehtml_eval(X, Env) || X <- Expander].
+
+ehtml_eval(Bin, Env) when binary(Bin) ->
+    Bin;
+ehtml_eval({Type, Var}, Env) ->
+    case lists:keysearch(Var, 1, Env) of
+	false ->
+	    exit({ehtml_unbound, Var});
+	{value, {Var, Val}} ->
+	    case Type of
+		ehtml ->
+		    ehtml_expand(Val);
+		preformatted ->
+		    Val;
+		ehtml_attrs ->
+		    ehtml_attrs(Val)
 	    end
     end.
-	    
 
+%% Get the name part of a variable reference.
+%% e.g. ehtml_var_name('$foo') -> foo.
+ehtml_var_name(A) when atom(A) ->
+    case ehtml_var_p(A) of
+	true ->
+	    list_to_atom(tl(atom_to_list(A)));
+	false ->
+	    exit({bad_ehtml_var_name, A})
+    end.
+
+%% Is X a variable reference? Variable references are atoms starting with $.
+ehtml_var_p(X) when atom(X) ->
+    hd(atom_to_list(X)) == $$;
+ehtml_var_p(_) ->
+    false.
+
+ehtml_expander_test() ->
+    %% Expr is a template containing variables.
+    Expr = {html, [{title, '$title'}],
+	    {body, [],
+	     [{h1, [], '$heading'},
+	      '$text']}},
+    %% Expand is an expander that can be used to quickly generate the HTML
+    %% specified in Expr.
+    Expand = ehtml_expander(Expr),
+    %% Bs{1,2} are lists of variable bindings to fill in the gaps in the
+    %% template. We can reuse the template on many sets of bindings, and this
+    %% is much faster than doing a full ehtml of the whole page each time.
+    Bs1 = [{title, "First page"},
+	  {heading, "Heading"},
+	  {text, {pre_html, "<b>My text!</b>"}}],
+    Bs2 = [{title, "Second page"},
+	  {heading, "Foobar"},
+	  {text, {b, [], "My text again!"}}],
+    %% Page1 and Page2 are generated from the template. They are I/O lists
+    %% (i.e. deep lists of strings and binaries, ready to ship)
+    Page1 = ehtml_apply(Expand, Bs1),
+    Page2 = ehtml_apply(Expand, Bs2),
+    %% We return the two pages as strings, plus the actual expander (which is
+    %% an "opaque" data structure, but maybe interesting to see.)
+    {binary_to_list(list_to_binary(Page1)),
+     binary_to_list(list_to_binary(Page2)),
+     Expand}.
 
