@@ -10,8 +10,7 @@
 -export([html_to_text/1]).
 
 html_to_text(Input) ->
-    Tokens = tokenize(Input, [], [], 1),
-    %%    parse(Tokens, {ehtml,[],0}, [], []).
+    Tokens = tokenize(lists:flatten(Input), [], [], 1),
     Ehtml = parse(Tokens),
     RevText = ehtml_to_text(Ehtml, []),
     lists:reverse(RevText).
@@ -20,22 +19,36 @@ ehtml_to_text([], Acc) ->
     Acc;
 ehtml_to_text([{Tag, Opts}|Rest], Acc) ->
     Acc2 = add_tag_space(Tag, Acc),
+    ehtml_to_text(Rest, Acc2);
+ehtml_to_text([{script, Opts, Body}|Rest], Acc) ->
     ehtml_to_text(Rest, Acc);
 ehtml_to_text([{Tag, Opts, Body}|Rest], Acc) ->
     Acc1 = add_tag_space(Tag, Acc),
     Acc2 = ehtml_to_text(Body, Acc1),
     ehtml_to_text(Rest, Acc2);
 ehtml_to_text([Text|Rest], Acc) ->
-    ehtml_to_text(Rest, [Text|Acc]).
+    Text2 = text_reformat(Text, []),
+    ehtml_to_text(Rest, [Text2|Acc]).
 
 add_tag_space(p, Acc) ->
-    ["\n"|Acc];
+    [$\n,$\r|Acc];
 add_tag_space(br, Acc) ->
-    ["\n"|Acc];
+    [$\n,$\r|Acc];
 add_tag_space(hr, Acc) ->
-    ["\n"|Acc];
+    [$\n,$\r|Acc];
 add_tag_space(_, Acc) ->
     Acc.
+
+text_reformat([], Acc) ->
+    lists:reverse(Acc);
+text_reformat([$\n|R], [$ |Acc]) ->
+    text_reformat(R, Acc);
+text_reformat([$\n|R], Acc) ->
+    text_reformat(R, [$ |Acc]);
+text_reformat([$\r|R], Acc) ->
+    text_reformat(R, Acc);
+text_reformat([C|R], Acc) ->
+    text_reformat(R, [C|Acc]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%

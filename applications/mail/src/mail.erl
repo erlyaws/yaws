@@ -15,7 +15,7 @@
 	 session_manager_init/0, check_cookie/1, check_session/1, 
 	 login/2, display_login/2, stat/3, showmail/2, compose/1, compose/7,
 	 send/6, send/2, get_val/3, logout/1, base64_2_str/1, retr/4, 
-	 delete/2, send_attachment/2, send_attachment_plain/2]).
+	 delete/2, send_attachment/2, send_attachment_plain/2, wrap_text/2]).
 
 -include("../../../include/yaws_api.hrl").
 -include("defs.hrl").
@@ -2034,6 +2034,7 @@ format_message(Session, Message, MailNr, Depth) ->
     H = parse_headers(HeadersList),
     Headers = [[Head,$\n] || Head <- HeadersList],
     Formated = format_body(Session, H, Msg, Depth),
+    Quoted = quote_format(Session, H, Msg),
     To = lists:flatten(decode(H#mail.to)),
     From = lists:flatten(decode(H#mail.from)),
     Subject = lists:flatten(decode(H#mail.subject)),
@@ -2158,6 +2159,8 @@ format_message(Session, Message, MailNr, Depth) ->
 	      {check,value,yaws_api:url_encode(decode(H#mail.bcc))}],[]},
       {input,[{type,hidden},{name,subject},
 	      {check,value,yaws_api:url_encode(Subject)}],[]},
+      {input,[{type,hidden},{name,quote},
+	      {check,value,yaws_api:url_encode(Quoted)}],[]},
       {input,[{type,hidden},{name,cmd},{value,""}],[]}
      ]
     }].
@@ -2253,8 +2256,85 @@ format_body(Session, H,Msg,Depth) ->
 		    []
 	    end;
 	{_,_} ->
-	    {pre, [], wrap_text(Msg,80)}
+	    {pre, [], wrap_text(Msg, 80)}
     end.
+
+quote_format(Session, H, Msg) ->
+    Text = quote_format_body(Session, H, Msg),
+    From = lists:flatten(decode(H#mail.from)),
+    include_quote(Text, From).
+
+quote_format_body(Session, H,Msg) ->
+    ContentType =
+	case H#mail.content_type of
+	    {CT,Ops} -> {lowercase(CT), Ops};
+	    Other -> Other
+	end,
+    case {ContentType,H#mail.transfer_encoding} of
+	{{"text/html",_}, Encoding} ->
+	    Decoded = decode_message(Encoding, Msg),
+	    wrap_text(mail_html:html_to_text(Decoded), 78);
+	{{"text/plain",_}, Encoding} ->
+	    Decoded = decode_message(Encoding, Msg),
+	    wrap_text(Decoded, 78);
+	{{"multipart/mixed",Opts}, Encoding} ->
+	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
+	    [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
+	    PartHeaders =
+		lists:foldl(fun({K,V},MH) ->
+				    add_header(K,V,MH)
+			    end, #mail{}, Headers),
+	    quote_format_body(Session, PartHeaders, Body);
+	{{"multipart/alternative",Opts}, Encoding} ->
+	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
+	    Parts = parse_multipart(Msg, Boundary),
+	    HParts =
+		lists:map(
+		  fun({Head,Body}) ->
+			  NewHead =
+			      lists:foldl(fun({K,V},MH) ->
+						  add_header(K,V,MH)
+					  end, #mail{}, Head),
+			  {NewHead, Body}
+		  end, Parts),
+	    {H1,B1} = select_alt_body(["text/plain","text/html"], HParts),
+	    quote_format_body(Session, H1,B1);
+	{{"multipart/signed",Opts}, Encoding} ->
+	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
+	    [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
+	    PartHeaders =
+		lists:foldl(fun({K,V},MH) ->
+				    add_header(K,V,MH)
+			    end, #mail{}, Headers),
+	    quote_format_body(Session, PartHeaders, Body);
+	{{"message/rfc822",_},_} ->
+	    "";
+	{{ContT="application/"++_,_},_} ->
+	    "";
+	{_,_} ->
+	    wrap_text(Msg, 78)
+    end.
+
+include_quote(Text, From) ->
+    {Quoted, _} = include_quote(Text, [], ">", nl),
+    From++" wrote: \n"++lists:reverse(Quoted).
+
+include_quote([], Acc, Prefix, State) ->
+    {Acc, State};
+include_quote([L|Text], Acc, Prefix, State) when list(L) ->
+    {Acc1, State1} = include_quote(L, Acc, Prefix, State),
+    include_quote(Text, Acc1, Prefix, State1);
+include_quote(Text, Acc, Prefix, nl) ->
+    case lists:prefix(Prefix, Text) of
+	true ->
+	    include_quote(Text, Prefix++Acc, Prefix, body);
+	false ->
+	    include_quote(Text, [$ |Prefix++Acc], Prefix, body)
+    end;
+include_quote([$\n|Text], Acc, Prefix, body) ->
+    include_quote(Text, [$\n|Acc], Prefix, nl);
+include_quote([C|Text], Acc, Prefix, body) ->
+    include_quote(Text, [C|Acc], Prefix, body).
 
 format_attachements(S, [], _Depth) -> [];
 format_attachements(S, Bs, Depth) ->
@@ -2402,53 +2482,61 @@ process_parts([{part_body,B}|Ps], Head, Body, Res) ->
 %
 
 wrap_text(Text, Max) ->
-    wrap_text(Text, [], [], 0, Max).
+    wrap_text(Text, [], [], [], 0, Max, []).
 
-wrap_text([], [], Unwrapped, Col, Max) ->
+%% wrap_text(Text, ContText, PendingWord, PendingSpace, CurrentCol, WrapCol, Acc)
+
+wrap_text([], [], Unwrapped, Space, Col, Max, Acc) ->
     if
 	Col < Max ->
-	    lists:reverse(Unwrapped);
+	    lists:reverse(Acc,add_space(Space,lists:reverse(Unwrapped)));
 	true ->
-	    [$\n|lists:reverse(Unwrapped)]
+	    lists:reverse(Acc, [$\n|lists:reverse(Unwrapped)])
     end;
 
-wrap_text([], Cont, Unwrapped, Col, Max) ->
-    wrap_text(Cont, [], Unwrapped, Col, Max);
+wrap_text([], Cont, Unwrapped, Space, Col, Max, Acc) ->
+    wrap_text(Cont, [], Unwrapped, Space, Col, Max, Acc);
 
-wrap_text([L|Rest], [], Unwrapped, Col, Max) when list(L) ->
-    wrap_text(L, Rest, Unwrapped, Col, Max);
+wrap_text([L|Rest], [], Unwrapped, Space, Col, Max, Acc) when list(L) ->
+    wrap_text(L, Rest, Unwrapped, Space, Col, Max, Acc);
 
-wrap_text([L|Rest], Cont, Unwrapped, Col, Max) when list(L) ->
-    wrap_text(L, [Rest|Cont], Unwrapped, Col, Max);
+wrap_text([L|Rest], Cont, Unwrapped, Space, Col, Max, Acc) when list(L) ->
+    wrap_text(L, [Rest|Cont], Unwrapped, Space, Col, Max, Acc);
 
-wrap_text([C|Rest], Cont, Unwrapped, Col, Max) when Col < Max ->
+wrap_text([C|Rest], Cont, Unwrapped, Space, Col, Max, Acc) when Col < Max ->
     case char_class(C) of
 	space ->
-	    [lists:reverse(Unwrapped),
-	     [C|wrap_text(Rest, Cont, [], Col+1, Max)]];
+	    wrap_text(Rest, Cont, [], C, Col+1, Max,
+		      Unwrapped++add_space(Space,Acc));
 	tab ->
-	    [lists:reverse(Unwrapped),
-	     [C|wrap_text(Rest, Cont, [], Col+8, Max)]];
+	    wrap_text(Rest, Cont, [], C, Col+8, Max,
+		      Unwrapped++add_space(Space,Acc));
 	nl ->
-	    [lists:reverse(Unwrapped),
-	     [C|wrap_text(Rest, Cont, [], 0, Max)]];
+	    wrap_text(Rest, Cont, [], [], 0, Max,
+		      [C|Unwrapped++add_space(Space,Acc)]);
 	text ->
-	    wrap_text(Rest, Cont, [C|Unwrapped], Col+1, Max)
+	    wrap_text(Rest, Cont, [C|Unwrapped], Space, Col+1, Max, Acc)
     end;
-wrap_text([C|Rest], Cont, Unwrapped, Col, Max) when Col >= Max ->
+
+wrap_text([C|Rest], Cont, Unwrapped, Space, Col, Max, Acc) when Col >= Max ->
     case char_class(C) of
 	space ->
-	    [[$\n|lists:reverse(Unwrapped)], [C],
-	     wrap_text(Rest, Cont, [], length(Unwrapped), Max)];
+	    wrap_text(Rest, Cont, [], C, length(Unwrapped), Max,
+		      Unwrapped++[$\n|Acc]);
 	tab ->
-	    [[$\n|lists:reverse(Unwrapped)], [C],
-	     wrap_text(Rest, Cont, [], length(Unwrapped), Max)];
+	    wrap_text(Rest, Cont, [], C, length(Unwrapped), Max,
+		      Unwrapped++[$\n|Acc]);
 	nl ->
-	    [[$\n|lists:reverse(Unwrapped)], [C],
-	     wrap_text(Rest, Cont, [], length(Unwrapped), Max)];
+	    wrap_text(Rest, Cont, [], [], length(Unwrapped), Max,
+		      Unwrapped++[$\n|Acc]);
 	text ->
-	    wrap_text(Rest, Cont, [C|Unwrapped], Col+1, Max)
+	    wrap_text(Rest, Cont, [C|Unwrapped], Space, Col+1, Max, Acc)
     end.
+
+add_space([], Text) ->
+    Text;
+add_space(C, Text) ->
+    [C|Text].
 
 char_class($\n) -> nl;
 char_class($\r) -> nl;
@@ -2709,7 +2797,6 @@ send_attachment_plain(Session, Number) ->
 	{session_manager, error} ->
 	    none;
 	{session_manager, A} ->
-	    io:format("Send attachement plain\n"),
 	    {content, "text/plain", A#satt.data}
     after 15000 ->
 	    exit(normal)

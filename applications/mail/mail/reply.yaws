@@ -12,12 +12,14 @@ out(A) ->
 		    To = yaws_api:url_decode(mail:get_val("to", L, "")),
 		    Cc = yaws_api:url_decode(mail:get_val("cc", L, "")),
 		    Bcc = yaws_api:url_decode(mail:get_val("bcc", L, "")),
+		    Quote = yaws_api:url_decode(mail:get_val("quote", L, "")),
 		    NewCc =
 			if To == [] -> Cc;
 			   Cc == [] -> To;
 			   true -> To ++ ", " ++ Cc
 			end,
-		    mail:compose(Session,"",From,NewCc,Bcc,"RE: "++Subject,"");
+		    mail:compose(Session,"",From,NewCc,Bcc,"RE: "++Subject,
+				 Quote);
 		"delete" ->
 		    Nr = mail:get_val("nr", L, ""),
 		    mail:delete(Session, [Nr])
