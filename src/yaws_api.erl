@@ -39,7 +39,7 @@
 
 parse_post_data(Arg) ->
 
-    yawslog:infolog("Warning Warning !!!! function "
+    yaws_log:infolog("Warning Warning !!!! function "
 		    "yaws_api:parse_post_data will be removed ", []),
 
     
