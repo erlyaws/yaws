@@ -713,7 +713,7 @@ is_prefix(_,_) ->
 split_sep(undefined, _Sep) ->
     [];
 split_sep(L, Sep) ->
-    case lists:dropwhile(fun is_space/1, L) of
+    case drop_spaces(L) of
 	[] -> [];
 	[Sep|T] -> split_sep(T, Sep);
 	[C|T]   -> split_sep(T, Sep, [C], [])
@@ -727,11 +727,11 @@ split_sep([C|T], Sep, AccL) ->
     split_sep(T, Sep, [C], AccL).
 
 split_sep([], _Sep, AccW, AccL) ->
-    lists:reverse([lists:reverse(lists:dropwhile(fun is_space/1, AccW))|AccL]);
+    lists:reverse([lists:reverse(drop_spaces(AccW))|AccL]);
 split_sep([Sep|Tail], Sep, AccW, AccL) ->
-    split_sep(lists:dropwhile(fun is_space/1, Tail), 
+    split_sep(drop_spaces(Tail), 
 	      Sep, 
-	      [lists:reverse(lists:dropwhile(fun is_space/1, AccW))|AccL]);
+	      [lists:reverse(drop_spaces(AccW))|AccL]);
 split_sep([C|Tail], Sep, AccW, AccL) ->
     split_sep(Tail, Sep, [C|AccW], AccL).
 		      
