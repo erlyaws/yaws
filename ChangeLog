@@ -1,3 +1,89 @@
+2002-12-01 13:24  klacke
+
+	* src/yaws_log.erl: bugs in wrap log
+
+2002-11-29 19:30  klacke
+
+	* src/yaws_log.erl, src/yaws_ls.erl, src/yaws_server.erl,
+	www/configuration.yaws, www/index.yaws: Even more fixes on the
+	change user thingie, fixed a bug with dir listings together with
+	~expansion Cleanup code removed old dead code catch around broken
+	requests from nimda et at.el which produced crashes in our report
+	log + bugdix on 403 replies
+
+2002-11-29 14:33  klacke
+
+	* src/yaws_server.erl: ""
+
+2002-11-29 14:08  klacke
+
+	* src/yaws_404.erl: ""
+
+2002-11-29 14:02  klacke
+
+	* src/yaws_log.erl: ""
+
+2002-11-29 14:01  klacke
+
+	* include.mk: run as nobody may work now
+
+2002-11-29 13:50  klacke
+
+	* src/: yaws_log.erl, yaws_server.erl: ""
+
+2002-11-28 22:14  klacke
+
+	* scripts/yaws.ss: ""
+
+2002-11-28 20:32  klacke
+
+	* README, configure, configure.in: ""
+
+2002-11-28 00:24  klacke
+
+	* Makefile, config.guess, config.sub, include.mk, include.mk.in,
+	install-sh, c_src/Makefile, c_src/setuid_drv.c, include/yaws.hrl,
+	man/yaws.conf.5, src/yaws.erl, src/yaws_config.erl,
+	src/yaws_ctl.erl, src/yaws_log.erl, src/yaws_server.erl,
+	src/yaws_sup.erl: added ability to run as different user than root
+
+2002-11-27 11:13  klacke
+
+	* src/yaws_api.erl: ""
+
+2002-11-26 19:50  klacke
+
+	* src/: yaws_ls.erl, yaws_server.erl: ""
+
+2002-11-26 19:21  klacke
+
+	* www/stil.css: ""
+
+2002-11-26 19:05  klacke
+
+	* www/: EXHEAD, code.yaws, index.yaws, pcookie.yaws, session.yaws,
+	session1.yaws: ""
+
+2002-11-26 17:11  klacke
+
+	* src/yaws.erl, src/yaws_api.erl, src/yaws_ctl.erl, www/arg.yaws,
+	www/code.yaws, www/index.yaws, www/upload0.yaws: ""
+
+2002-11-25 23:52  klacke
+
+	* examples/ebin/.empty, examples/include/.empty,
+	scripts/make-release, scripts/make-release, scripts/make-release:
+	""
+
+2002-11-25 23:35  klacke
+
+	* doc/Makefile: ""
+
+2002-11-25 23:34  klacke
+
+	* CHANGELOG, ChangeLog, vsn.mk, www/index.yaws, www/static.html:
+	vsn 0.59 ci
+
 2002-11-25 23:00  klacke
 
 	* www/TOPTAB: ""

@@ -59,7 +59,40 @@ powered by Yaws.
 
 <div class="man"> 
 
-<h3> Nov 25, 2002.  Version 0.59 released  </h3>
+<h3> Dec 1, 2002.  Version 0.60 released  </h3>
+
+<ul>
+
+
+<li><p> This is minor maintenance release.
+
+<li><p> Support to run Yaws first as root, then under a 
+a non privileged user
+
+<li><p> A bug in listdir together with ~username expansion fixed
+
+<li><p> Bugs in wraplog fixed
+
+</ul>
+</div>
+
+
+
+
+
+<h2> Old News </h2>
+<div class="box">
+
+
+
+
+
+<ul>
+
+
+
+
+<li> Nov 25, 2002.  Version 0.59 released  
 
 <ul>
 <li><p> Lots of fixes and new features in this release. This release of
@@ -77,16 +110,12 @@ yaws_api:parse_post_data/1. See the docs for details.
 <li><p> Optimized ehtml generation
 
 </ul>
-</div>
 
 
 
 
 
-<h2> Old News </h2>
-<div class="box">
 
-<ul>
 
 <li>
 <p> Oct 7, version 0.56 released. 

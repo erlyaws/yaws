@@ -1,0 +1,38 @@
+<erl>
+
+out(A) -> 
+    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
+	    
+</erl>
+
+
+
+<H2>Contributions and Applications</H2>
+
+<p>This is a list of (some of) the currently known 
+Yaws applications. 
+
+
+<ul>
+<li> <h4>The Yaws wiki </h4>
+<p>This applictaion is part of the Yaws source code distribution. It's
+a fullblown wiki web.
+
+
+<li><h4> cvstat </h4>
+
+<p> CVS realtime statistics through Web interface at
+<a href=http://downloads.erlang-fr.org> http://downloads.erlang-fr.org </a>
+
+
+
+</ul>
+
+
+
+
+
+<erl>
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+</erl>
+

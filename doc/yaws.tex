@@ -193,15 +193,12 @@ Compile and install is straight forward:
 # cd /usr/local/src
 # tar xfz yaws-X.XX.tar.gz
 # cd yaws
-# make 
+# ./configure && make 
 # make install
 \end{verbatim}
 
-There is no configure script (yet) since there are no items
-to configure. 
-
 The make command will compile the \Yaws\  web server with the \verb+erlc+
-compiler found in \$PATH.
+compiler found by the configure script.
 
 make install - will install the executable - called \verb+yaws+ in
 /usr/local/bin/ and a working configuration file in \textit{ /etc/yaws.conf}
@@ -1512,8 +1509,8 @@ all traffic or just all HTTP messages and write them to a file.
 
 \chapter{Security}
 
-\Yaws\  is of course susceptible to intrusions. \Yaws\  has no (yet)
-abilities to run under a different user than root - Assuming we need
+\Yaws\  is of course susceptible to intrusions. \Yaws\  has the
+ability to run under a different user than root - Assuming we need
 to listen to privileged port numbers. Running as root is generally a
 bad idea.  
 
@@ -1672,6 +1669,12 @@ The
               This  enables  traffic  or http tracing. Tracing is
               also possible to enable with a command line flag to
               \Yaws\ .
+
+\item        \verb+username  = User+ -
+             When Yaws is run as root, it can be configured to 
+             change userid once it has created the necessary
+	     listen sockets on privilged ports.
+
 
 \end{itemize}
 
