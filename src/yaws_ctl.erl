@@ -164,13 +164,13 @@ check([File| IncludeDirs]) ->
     GC2 = GC#gconf{include_dir = lists:map(fun(X) -> atom_to_list(X) end, 
 					   IncludeDirs)},
     SC = #sconf{},
+
     case yaws_compile:compile_file(atom_to_list(File), GC2, SC) of
 	{ok, [{errors, 0}| Spec]} ->
 	    io:format("ok~n",[]),
 	    init:stop();
 	Other ->
-	    io:format("Other = ~p~n", [Other]),
-	    io:format("Errors in ~p~n", [File]),
+	    io:format("~nErrors in ~p~n", [File]),
 	    init:stop()
     end.
 

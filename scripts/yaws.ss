@@ -28,6 +28,7 @@ help()
 	echo "        yaws -h         -- hup the daemon  "
 	echo "        yaws -s         -- stop the daemon "
 	echo "        yaws -S         -- query the daemon status "
+	echo "        yaws -check YawsFile [IncDirs] -- test compile File "
 	exit 1
 }
      
@@ -83,8 +84,9 @@ do
            -heart)
 		heart=" -heart ";;
            -check)
-                out=`exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl check $1`
+                out=`exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl check $*`
 		if [ "$out" = "ok" ]; then
+                    echo "$1" ok
 		    exit 0
 		fi
 		echo $out
