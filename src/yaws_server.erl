@@ -119,7 +119,8 @@ init({Debug, Trace, TraceOut, Conf, RunMod, Embedded}) ->
 			    init:stop(),
 			    {stop, E};
 			Dir ->
-			    yaws_log:setdir(#gconf{logdir = Dir}, []),
+			    GC = yaws_config:make_default_gconf(true),
+			    yaws_log:setdir(GC#gconf{logdir = Dir}, []),
 			    error_logger:error_msg("Yaws: bad conf: ~s~n",[E]),
 			    init:stop(),
 			    {stop, E}
