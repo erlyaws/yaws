@@ -13,7 +13,7 @@ out(A) ->
     
     T =lists:map(
 	 fun({Host,IP,Hits}) ->
-		 L1= f("<hr><h3> stats for ~p at ~p  </h3>~n",
+		 L1= f("<hr \><h3> stats for ~p at ~p  </h3>~n",
 		       [Host,IP]),
 		 T = "<table border=\"2\" > \n"
                      "<TR> <TH>URL</TH> <TH>Number of hits</TH> </TR>",
@@ -32,7 +32,7 @@ out(A) ->
 
 
 
-<hr>
+<hr \>
 </td>
 </table>
 </html>

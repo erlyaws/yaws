@@ -62,7 +62,7 @@ out(A) ->
     H = yaws_api:reformat_header(A#arg.headers),
     {ehtml,
      [{h5,[], "The headers passed to us were:"},
-      {hr},
+      {hr,[],[]},
       {ol, [],lists:map(fun(S) -> {li,[], {p,[],S}} end,H)},
 
       {h5, [], "The request"},
@@ -71,16 +71,16 @@ out(A) ->
 	{li,[], f("path: ~p", [Req#http_request.path])},
 	{li,[], f("version: ~p", [Req#http_request.version])}]},
 
-      {hr},
+      {hr,[],[]},
       {h5, [], "Other items"},
       {ul,[],
        [{li, [], f("clisock from: ~p", [inet:peername(A#arg.clisock)])},
 	{li,[], f("docroot: ~s", [A#arg.docroot])},
 	{li,[], f("fullpath: ~s", [A#arg.fullpath])}]},
-      {hr},
+      {hr,[],[]},
       {h5, [], "Parsed query data"},
       {pre,[], f("~p", [yaws_api:parse_query(A)])},
-      {hr},
+      {hr,[],[]},
       {h5,[], "Parsed POST data "},
       {pre,[],  f("~p", [yaws_api:parse_post(A)])}]}.
 

@@ -44,6 +44,11 @@ div.links {
 div.box { border: solid; border-width: thin; width: 96%; 
           background: rgb(211, 211, 211)  }
 
+div.news { border: solid; border-width: thin; width: 96%; 
+	   border-bottom: 3px solid black;
+	   margin: 18px 5px 2px 10px;
+           background: rgb(211, 211, 211)  }
+
 div.box pre {margin: 0.66em 0 0.33em 1%; padding: 0;}
 
 div.man { border: solid; border-width: thin; width: 100%; 

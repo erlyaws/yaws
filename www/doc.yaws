@@ -17,29 +17,30 @@ out(A) ->
 There are several features of yaws which are yet not properly described
 in the user manual, they are all described in the Example collection or
 man pages though.
+</p>
 
-<ul>
-<li> <a href="yaws.pdf"> yaws.pdf</a>
-<li> <a href="yaws.ps"> yaws.ps</a>
-</ul>
+  <ul>
+    <li> <a href="yaws.pdf"> yaws.pdf</a></li>
+    <li> <a href="yaws.ps"> yaws.ps</a></li>
+  </ul>
 
 
 <h3> Man pages </h3>
 
-<ul>
-<li>
-<a href="yman.yaws?page=yaws_api"> man page for yaws_api (5) </a>
+  <ul>
+    <li>
+      <a href="yman.yaws?page=yaws_api"> man page for yaws_api (5) </a></li>
 
-<li>
-<a href="yman.yaws?page=yaws.conf"> man page for Yaws config file </a>
-
-
-<li>
-<a href="yman.yaws?page=yaws"> man page for yaws</a>
-
-</ul>
+    <li>
+      <a href="yman.yaws?page=yaws.conf"> man page for Yaws config file </a></li>
 
 
+    <li>
+      <a href="yman.yaws?page=yaws"> man page for yaws</a></li>
+
+  </ul>
+
+</div>
 
 
 <erl>

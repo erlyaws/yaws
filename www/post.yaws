@@ -51,7 +51,7 @@ out(A) ->
 "),
 
         {p,[], "Produces the following output:"},
-        {hr},
+        {hr,[],[]},
         {'div',[{class,"box"}],
           {p,[], ["The favourite programming language is ", 
               case postvar(A,"lang") of

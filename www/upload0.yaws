@@ -8,8 +8,8 @@ out(A) ->
        [{h1, [], "Upload a file to the webserver"},
 	{p, [], "The code that parses the multipart form data resides in"},
 	{a, [{href, "code.yaws?file=/upload.yaws"}], "upload.yaws"},
-	{br},
-	{hr},
+	{br,[],[]},
+	{hr,[],[]},
 	{form, [{enctype, "multipart/form-data"},	
 		{method, post},
 		{action, "/upload.yaws"}

@@ -64,7 +64,7 @@ A#arg.appmoddata = \"/foo/bar/x.pdf\"
 A#arg.appmod_prepath = \"/zap/\"
 A#arg.querydata = \"a=b\""),
        
-       {br},
+       {br,[],[]},
 
        {p, [],
 	"Appmods would typically be used by webapplications that want to provide the illusion of proper paths to the browser. "}

@@ -37,7 +37,7 @@ out(A) ->
 	"the {ssi ...} return value."},
 
        {p, [], "The format of the ssi statement is:"},
-       {br},
+       {br,[],[]},
        box("{ssi, File, Delimiter, Bindings}"),
        
        {p, [],"The ssi structure can occur in two radically different places"

@@ -58,12 +58,18 @@ gen_news(Fd, eof) ->
     [];
 gen_news(Fd, Line) ->
     Items = gen_items(Fd, io:get_line(Fd, '')),
-    X = [{'div', [{class, "box"}],
-	  [{h3, [], Line},
-	   {ul, [], Items}]},
-	 {br}, {hr}],
+    case Items of
+      [] ->
+         gen_news(Fd, io:get_line(Fd,''));
+      _ ->
+         X = [{'div', [{class, "news"}],
+	   [{h3, [], Line},
+	    {ul, [], Items}]}
+	  ],
 	  
-    [X | gen_news(Fd, io:get_line(Fd,''))].
+    [X | gen_news(Fd, io:get_line(Fd,''))]
+   end.
+
 
 gen_items(Fd, [10]) ->
     [];

@@ -13,11 +13,11 @@ out(A) ->
 	[{h1,[],"Build and install"},
 	 {p,[], ["Yaws is hosted by the excellent source code site SourceForge ",
 		 {a ,[{href,"http://sourceforge.net"}], 
-		  {img, [{src,"http://sourceforge.net/sflogo.php?group_id=45637&type=1"}, 
+		  {img, [{src,"http://sourceforge.net/sflogo.php?group_id=45637&amp;type=1"}, 
 			 {width,"88"}, 
 			 {height,"31"}, 
 			 {border,"0"}, 
-			 {alt,"SourceForge.net Logo"}]}},
+			 {alt,"SourceForge.net Logo"}],[]}},
 		 " The Yaws SourceForge www page is ",
 		 {a ,[{href,"http://sourceforge.net/projects/erlyaws/"}], 
 		  "http://sourceforge.net/projects/erlyaws"}]},
@@ -77,7 +77,7 @@ out(A) ->
        
        {p,[], "When developing yaws code, the interactive mode is ideal. Typically "
 	"yaws is then started as: "},
-       {br},
+       {br,[],[]},
        box("yaws -i"),
 
 
@@ -110,7 +110,7 @@ out(A) ->
 	       " To execute Yaws in embedded mode, it must be started with the environment ",
 	       {tt, [], "{embedded, true}"},
 	       " The embedded mode is fully described at ",
-	       {a, [{url, "embed.yaws"}], "embed.yaws"}]}
+	       {a, [{href, "embed.yaws"}], "embed.yaws"}]}
        ]}]},
      {ssi, "END2",[],[]}
     ].
