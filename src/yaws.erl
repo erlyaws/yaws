@@ -542,6 +542,26 @@ is_space(_) ->
     false.
 
 
+strip_spaces(String) ->
+    strip_spaces(String, both).
+
+strip_spaces(String, left) ->
+    drop_spaces(String);
+strip_spaces(String, right) ->
+    lists:reverse(drop_spaces(lists:reverse(String)));
+strip_spaces(String, both) ->
+    strip_spaces(drop_spaces(String), right).
+
+drop_spaces([]) ->
+    [];
+drop_spaces(YS=[X|XS]) ->
+    case is_space(X) of
+	true ->
+	    drop_spaces(XS);
+	false ->
+	    YS
+    end.
+
 
 %%% basic uuencode and decode functionality    
 
