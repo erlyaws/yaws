@@ -2615,7 +2615,7 @@ redir_user(UT, User) ->
 
 
 parse_user_path(_DR, [], User) ->
-    {redir_dir, User};
+    {redir_dir, reverse(User)};
 parse_user_path(_DR, [$/], User) ->
     {ok, reverse(User), [$/]};
 parse_user_path(_DR, [$/|Tail], User) ->
