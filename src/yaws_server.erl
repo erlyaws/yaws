@@ -180,6 +180,7 @@ init([]) ->
 
 
 init2(Gconf, Sconfs, RunMod, FirstTime) ->
+
     lists:foreach(
       fun(D) ->
 	      code:add_pathz(D)
@@ -202,6 +203,9 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 	  end, Sconfs),
     L2 = lists:zf(fun({error, F, A}) ->	
 			  error_logger:error_msg(F, A),
+			  exit(nostart);
+		     ({error, Reason}) ->
+			  error_logger:error_msg("FATAL: ~p~n", [Reason]),
 			  exit(nostart);
 		     ({_Pid, _SCs}) ->
 			  true;
@@ -349,6 +353,7 @@ terminate(_Reason, _State) ->
 %% specified as an auth directory. These are merged with server conf.
 
 setup_auth(SC) ->
+    ?Debug("setup_auth(~p)", [yaws_debug:nobin(SC)]),
     ?f(lists:map(fun(Auth) ->
 		      add_yaws_auth(Auth#auth.dir, Auth)
 	      end, SC#sconf.authdirs)).

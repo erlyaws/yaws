@@ -91,8 +91,6 @@ parse_query(Arg) ->
     D = Arg#arg.querydata,
     if
 	D == [] ->
-	    error_logger:error_msg("Tried to parse_query with "
-				   "no query data ",[]),
 	    [];
 	true ->
 	    parse_post_data_urlencoded(D)
@@ -107,8 +105,6 @@ parse_post(Arg) ->
 	'POST' ->
 	    if
 		D == [] ->
-		    error_logger:error_msg("Tried to parse_post with "
-					   "no POST data ",[]),
 		    [];
 		true ->
 		    parse_post_data_urlencoded(D)
@@ -805,19 +801,44 @@ delete_cookie_session(Cookie) ->
 %% to pass a config to yaws from another data source
 %% than /etc/yaws.conf, for example from a database
 
-setconf(GC, Groups) ->
-    case gen_server:call(yaws_server, {setconf, GC, Groups}) of
-	ok ->
-	    yaws_log:setdir(GC#gconf.logdir, Groups),
-	    case GC#gconf.trace of
-		false ->
-		    ok;
-		{true, What} ->
-		     yaws_log:open_trace(What)
+setconf(GC, Groups) when record(GC, gconf) ->
+    case is_groups(Groups) of
+	true ->
+	    case gen_server:call(yaws_server, {setconf, GC, Groups}) of
+		ok ->
+		    yaws_log:setdir(GC#gconf.logdir, Groups),
+		    case GC#gconf.trace of
+			false ->
+			    ok;
+			{true, What} ->
+			    yaws_log:open_trace(What)
+		    end;
+		E ->
+		    E
 	    end;
-	E ->
-	    E
+	false ->
+	    exit({badarg, {badgroups, Groups}})
     end.
+
+%% verify args to setconf
+is_groups([H|T]) ->
+    case is_list_of_scs(H) of
+	true ->
+	    is_groups(T);
+	false ->
+	    false
+    end;
+is_groups([]) ->
+    true.
+
+is_list_of_scs([H|T]) when record(H, sconf) ->
+    is_list_of_scs(T);
+is_list_of_scs([]) ->
+    true;
+is_list_of_scs(_) ->
+    false.
+
+    
 
 %% return {ok, GC, Groups}.
 getconf() ->
