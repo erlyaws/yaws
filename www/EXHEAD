@@ -10,6 +10,8 @@
     <td> <A HREF="/form.yaws">Forms</a> </td>
     <td> <A HREF="/redirect.yaws">Redirect</a> </td>
     <td> <A HREF="/ssi.yaws">Server side include</a> </td>
+    <td> <A HREF="/bindings.yaws">Bindings</a> </td>
+
 
 </tr>
 <tr border="2">

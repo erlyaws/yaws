@@ -134,8 +134,8 @@ compile_file(C, LineNo,  Chars = "</erl>" ++ Tail, erl, NumChars, Ack, Es) ->
 	    %% this is boring but does actually happen
 	    %% in order to get proper user errors here we need to catch i/o
 	    %% or hack compiler/parser
-	    yaws:elog("Dynamic compile error in file ~s, line ~w~n~s",
-		      [C#comp.infile, LineNo, Str]),
+	    yaws:elog("Dynamic compile error in file ~s (~s), line ~w~n~s",
+		      [C#comp.infile, C#comp.outfile,LineNo, Str]),
 	    A2 = {error, NumChars, ?F("<pre> Dynamic compile error in file "
 		                      " ~s line ~w~n~s </pre>", 
 				       [C#comp.infile, LineNo, Str])},
@@ -262,9 +262,11 @@ comp_err(C, _LineNo, NumChars, Err) ->
 	[{_FileName, [ {Line0, Mod, E} |_]} |_] when integer(Line0) ->
 	    Line = Line0 + C#comp.startline - 10,
 	    ?Debug("XX ~p~n", [{_LineNo, Line0}]),
-	    Str = io_lib:format("~s:~w:~n ~s\n", 
+	    Str = io_lib:format("~s:~w:~n ~s\ngenerated file at: ~s~n", 
 				[C#comp.infile, Line,
-				 apply(Mod, format_error, [E])]),
+				 apply(Mod, format_error, [E]),
+				 C#comp.outfile
+				]),
 	    HtmlStr = ?F("~n<pre>~nDynamic compile error: ~s~n</pre>~n", 
 			[Str]),
 	    yaws:elog("Dynamic compiler err ~s", [Str]),

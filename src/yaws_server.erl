@@ -712,6 +712,15 @@ handle_method_result(Res, CliSock, IP, GS, SC, Req, H, Num) ->
 	    erase(post_parse),
 	    erase(query_parse),
 	    erase(outh),
+	    lists:foreach(fun(X) ->
+				  case X of
+				      {binding, _} ->
+					  erase(X);
+				      _ ->
+					  ok
+				  end
+			  end, get()),
+				      
 	    aloop(CliSock, GS, Num+1);
 	done ->
 	    maybe_access_log(IP, SC, Req, H),

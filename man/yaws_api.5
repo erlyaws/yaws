@@ -489,6 +489,15 @@ occur inside a deep ehtml structure.
 
 
 .TP
+\fB{bindings, [{Key1, Value2}, {Key2, Value2} .....]}\fR
+Establish variable bindings that can be used in the page.
+
+All bindings can then be used in the rest of yaws code 
+(in HTML source and within erl tags). 
+In HTML source %%Key%% is expanded to Value and within erl 
+tags yaws_api:get_binding(Key) can be used to extract Value.
+
+.TP
 \fB[ListOfValues]\fR
 It is possible to return a deep list of the above defined
 return values.  Any occurrence of \fIstream_content\fR, \fIget_more\fR

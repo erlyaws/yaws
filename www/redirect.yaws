@@ -4,7 +4,7 @@
  <meta name="keywords" content="post">
 
 
-<TITLE>Top EE page</TITLE>
+<TITLE>Redirect example</TITLE>
 
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 
@@ -16,12 +16,12 @@
 
 <H1> redirect.yaws </H1>
 
-<p> This a redirection example, the following <a href="redirect2.yaws">redirection url</a> contains the following code in its first <erl> group.
+<p> This a redirection example, the following <a href="redirect2.yaws">redirection url</a> contains the following code in its first erl group.
 
 
 <erl>
 
-out(_) -> yaws_api:pre_ssi_string(
+out(_) -> 1 yaws_api:pre_ssi_string(
 "
      out(_) ->
           yaws_api:redirect(
@@ -36,4 +36,5 @@ as well as a Location header.
 
 
 </HTML>
+
 
