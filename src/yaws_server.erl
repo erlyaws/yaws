@@ -2069,7 +2069,7 @@ ssi(File, Delimiter, Bindings, Dir, SC) ->
     FullPath =
 	case File of
 	    {rel_path, FileName} ->
-		[SC#sconf.docroot, Dir,FileName];
+		[SC#sconf.docroot, Dir,[$/|FileName]];
 	    {abs_path, FileName} ->
 		[SC#sconf.docroot, [$/|FileName]];
 	    FileName when list(FileName) ->
