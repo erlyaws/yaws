@@ -39,7 +39,7 @@ not_found_body(Path, GC, SC) ->
 	 "</HEAD><BODY>"
 	 "<H1>Not Found</H1>"
 	 "The requested URL ", 
-	 Path, 
+	 yaws_api:htmlize(Path), 
 	 " was not found on this server.<P>"
 	 "<HR>",
 	 yaws:address(GC, SC),
