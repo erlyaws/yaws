@@ -25,6 +25,19 @@ pop(N) ->
     {Stat, Scan}.
 
 
+
+x(Host, User, Passwd, N) ->
+    {ok, S} = pop3lib_cli:connect([{user, User},
+			 {addr, Host},
+			 {passwd, Passwd}]),
+    
+    Stat = pop3lib_cli:stat(S),
+    Scan = pop3lib_cli:scan(S),
+    {ok, Re} = pop3lib_cli:retrieve(S, N),
+    io:format("Mail ~p: ~n~s", [N, Re]),
+    {Stat, Scan}.
+
+
 s() ->
    {ok, S} = pop3lib_cli:connect([{user, "klacke"},
 			 {addr, {127,0,0,1}},
