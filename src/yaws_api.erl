@@ -171,3 +171,13 @@ ssi(DocRoot, Files) ->
 
 
     
+%% convenience
+
+f(Fmt, Args) ->
+    io_lib:format(Fmt, Args).
+
+
+fl([Fmt, Arg | Tail]) ->
+    [f(Fmt, Arg) | fl(Tail)];
+fl([]) ->
+    [].

@@ -21,16 +21,15 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 -import(filename, [join/1]).
--import(lists, [foreach/2, map/2]).
+-import(lists, [foreach/2, map/2, flatten/1, flatmap/2]).
 
 
 -record(gs, {gconf,
-	     group,
-	     l,
-	     count = 0,  %% number of active sessions
-	     mnum = 0,   %% dyn compiled erl module  number
-	     sessions = 0,
-	     reqs = 0}).
+	     group,         %% list of #sconf{} s
+	     l,             %% listen socket
+	     mnum = 0,      %% dyn compiled erl module  number
+	     sessions = 0,  %% number of HTTP sessions
+	     reqs = 0}).    %% number of HTTP requests
 
 
 %%%----------------------------------------------------------------------
@@ -42,9 +41,23 @@ start_link() ->
 status() ->
     gen_server:call(?MODULE, status).
 
-%%%----------------------------------------------------------------------
-%%% Callback functions from gen_server
-%%%----------------------------------------------------------------------
+stats() ->
+    S = status(),
+    {GC, Srvs, _} = S,
+    flatmap(
+      fun({Pid, SCS}) ->
+	      map(
+		fun(SC) ->
+			
+			E = SC#sconf.ets,
+			L = ets:match(E, {{urlc_total, '$1'}, '$2'}),
+			{SC#sconf.servername,  
+			 flatten(yaws:fmt_ip(SC#sconf.listen)),
+			 map(fun(P) -> list_to_tuple(P) end, L)}
+		end, SCS)
+      end, Srvs).
+
+			      
 
 %%----------------------------------------------------------------------
 %% Func: init/1
@@ -890,6 +903,7 @@ make_chunked() ->
 url_type(GC, SC, Path) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     E = SC#sconf.ets,
+    update_total(E, Path),
     case ets:lookup(E, {url, Path}) of
 	[] ->
 	    UT = do_url_type(SC#sconf.docroot, Path),
@@ -911,6 +925,15 @@ url_type(GC, SC, Path) ->
 		    UT
 	    end
     end.
+
+update_total(E, Path) ->
+    case (catch ets:update_counter(E, {urlc_total, Path}, 1)) of
+	{'EXIT', _} ->
+	    ets:insert(E, {{urlc_total, Path}, 1});
+	_ ->
+	    ok
+    end.
+
 
 cache_file(GC, SC, Path, UT) when UT#urltype.type == regular ;
 				  UT#urltype.type == yaws ->
@@ -1241,7 +1264,7 @@ new_out_file(Line, C, GC) ->
     io:format(Out, "%%~n%% code at line ~w from file ~s~n%%~n",
 	      [Line, C#comp.infile]),
 
-    io:format(Out, "-import(yaws_api, [parse_post_data/2]). ~n~n", []),
+    io:format(Out, "-import(yaws_api, [f/2, fl/1, parse_post_data/2]). ~n~n", []),
     io:format(Out, '-include("~s/include/yaws_api.hrl").~n', 
 	      [GC#gconf.yaws_dir]),
     C#comp{outfd = Out,

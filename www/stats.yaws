@@ -1,0 +1,38 @@
+
+
+<erl>
+
+out(A) -> 
+    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
+</erl>
+
+
+<erl>
+out(A) ->
+    L = yaws_server:stats(),
+    H = "<html> \n ",
+    T =lists:map(
+	 fun({Host,IP,Hits}) ->
+		 L1= f("<hr><h3> stats for ~p at ~p  </h3>~n",
+		       [Host,IP]),
+		 T = "<table border-4 > \n"
+                     "<TR> <TH>URL</TH> <TH>Number of hits</TH> </TR>",
+		 L2=lists:map(
+		      fun({Url, Hits}) ->
+			      f("<TR> <TD>~s</TD> <TD>~w</TD> </TR>~n",
+				[Url, Hits])
+		      end, Hits),
+		 END = "</table>",
+		 [L1, T, L2, END]
+	 end, L),
+    {ok, [H, T]}.
+</erl>
+
+
+
+
+
+<hr>
+</td>
+</table>
+</html>
