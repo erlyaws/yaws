@@ -210,7 +210,7 @@ formupdate(A) ->
     Items = Sess#sess.items,
     L0 = yaws_api:parse_post(A),
 
-    %% One of the oddities of parse_post_data is that
+    %% One of the oddities of parse_post is that
     %% it will make the first elem an atom, we don't want that
     %% it is nice and convenient most of the time though
     L = lists:map(fun({Name, Val}) -> {atom_to_list(Name), Val} end, L0),
