@@ -124,7 +124,7 @@ handle_call({setdir, GC, Sconfs}, _From, State)
 	   end,
     SCs = lists:flatten(Sconfs),
     L = lists:zf(
-	  fun(SC) ->
+	  fun(SC) when ?sc_has_access_log(SC)  ->
 		  FileName = case os:type() of
 				 {win32,_ } ->
 				     lists:map(fun($:) -> $.;
@@ -143,7 +143,9 @@ handle_call({setdir, GC, Sconfs}, _From, State)
 		      _Err ->
 			  error_logger:format("Cannot open ~p~n",[A]),
 			  false
-		  end
+		  end;
+	     (_) ->
+		  false
 	  end, SCs),
 
     AuthLogFileName = filename:join([Dir, "auth.log"]),
@@ -207,7 +209,7 @@ handle_call({setdir, GC, Sconfs}, _From, State)
     
     %% reopen logfiles
     L = lists:zf(
-	  fun(SC) ->
+	  fun(SC) when ?sc_has_access_log(SC) ->
 		  A = filename:join([Dir, SC#sconf.servername ++ ".access"]),
 		  case file:open(A, [write, raw, append]) of
 		      {ok, Fd} ->
@@ -217,7 +219,9 @@ handle_call({setdir, GC, Sconfs}, _From, State)
 		      _Err ->
 			  error_logger:format("Cannot open ~p",[A]),
 			  false
-		  end
+		  end;
+	     (_) ->
+		  false
 	  end, SCs),
     S2 = State#state{running = true,
 		     dir  = Dir,
@@ -346,9 +350,9 @@ handle_info(minute10, State) ->
     
     Dir = State#state.dir,
     E = filename:join([Dir, "report.log"]),
-    {ok, FI} = file:read_file_info(E),
-    if
-	FI#file_info.size > ?WRAP_LOG_SIZE, State#state.copy_errlog == true ->
+    case file:read_file_info(E) of
+	{ok, FI} when  FI#file_info.size > ?WRAP_LOG_SIZE, 
+		       State#state.copy_errlog == true ->
 	    gen_event:call(error_logger, yaws_log_file_h, wrap);
 	true ->
 	    ok
@@ -372,7 +376,7 @@ wrap_p(_) ->
 
 
 wrap(AL) ->
-    case wrap_p(AL) of
+    case (catch wrap_p(AL)) of
 	true ->
 	    file:close(AL#alog.fd),
 	    Old = [AL#alog.filename, ".old"],
@@ -381,6 +385,10 @@ wrap(AL) ->
 	    {ok, Fd2} = file:open(AL#alog.filename, [write, raw]),
 	    AL#alog{fd = Fd2};
 	false ->
+	    AL;
+	{'EXIT', Rsn} ->
+	    error_logger:format("Failed to wraplog ~p:~p~n",
+				[AL#alog.filename, Rsn]),
 	    AL
     end.
 
