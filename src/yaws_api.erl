@@ -1094,6 +1094,8 @@ ehtml_expand([]) ->
 
 ehtml_attrs([]) ->
     [];
+ehtml_attrs([Attribute|Tail]) when atom(Attribute) ->
+    [[$ |atom_to_list(Attribute)]|ehtml_attrs(Tail)];
 ehtml_attrs([{Name, Value} | Tail]) ->
     ValueString = if atom(Value) -> [$",atom_to_list(Value),$"];
 		     list(Value) -> [$",Value,$"]
@@ -1268,5 +1270,4 @@ ehtml_expander_test() ->
     {binary_to_list(list_to_binary(Page1)),
      binary_to_list(list_to_binary(Page2)),
      Expand}.
-
 
