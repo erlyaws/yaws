@@ -279,7 +279,7 @@ showmail(Session, MailNr, Count) ->
 			showmail(Session, MailNr, Count-1)
 		end;
 	    Message ->
-		format_message(Message, MailNr)
+		format_message(Message, MailNr, "1")
 	end,
 
     (dynamic_headers() ++
@@ -514,13 +514,17 @@ list(Session, Count) ->
 		  {table, [{border,0},{cellspacing,0},{cellpadding,1},
 			   {width,"100%"}],
 		   [{tr, [{bgcolor,"c0c0c0"},{valign,middle}],
-		     [{th,[{class,head}],
+		     [{th,[{align,left},{valign,middle},{class,head}],
+		       {font,[{size,2},{color,black}],"Nr"}},
+		      {th,[{class,head}],
 		       {img,[{src,"view-mark.gif"},{width,13},
 			     {height,13}],[]}},
 		      {th,[{align,left},{valign,middle},{class,head}],
 		       {font,[{size,2},{color,black}],"From"}},
 		      {th,[{align,left},{valign,middle},{class,head}],
 		       {font,[{size,2},{color,black}],"Subject"}},
+		      {th,[{align,left},{valign,middle},{class,head}],
+		       {font,[{size,2},{color,black}],"Date"}},
 		      {th,[{align,left},{valign,middle},{class,head}],
 		       {font,[{size,2},{color,black}],"Size"}}]}] ++
 		   format_summary(H)},
@@ -534,15 +538,22 @@ format_summary(Hs) ->
 format_summary_line(I) ->
     H = I#info.headers,
     {tr, [{align,center},{valign,top}],
-     [{td, [{align,center},{valign,top},{class,"List"}],
+     [{td, [{nowrap,true},{align,left},{valign,top},{class,"List"}],
+       {a, [{href,"showmail.yaws?nr="++integer_to_list(I#info.nr)}],
+	{font,[{size,2},{color,black}],{b,[],integer_to_list(I#info.nr)}}}},
+      {td, [{nowrap,true},{align,center},{valign,top},{class,"List"}],
        {input, [{type,checkbox},{name,I#info.nr},{value,yes}],[]}},
-      {td, [{align,left},{valign,top},{class,"List"}],
+      {td, [{nowrap,true},{align,left},{valign,top},{class,"List"}],
        {a, [{href,"showmail.yaws?nr="++integer_to_list(I#info.nr)}],
 	{font,[{size,2},{color,black}],{b,[],format_from(H#mail.from)}}}},
-      {td, [{align,left},{valign,top},{class,"List"}],
+      {td, [{nowrap,true},{align,left},{valign,top},{class,"List"}],
        {a, [{href,"showmail.yaws?nr="++integer_to_list(I#info.nr)}],
 	{font,[{size,2},{color,black}],{b,[],decode(H#mail.subject)}}}},
-      {td, [{align,left},{valign,top},{class,"List"}],
+      {td, [{nowrap,true},{align,left},{valign,top},{class,"List"}],
+       {a, [{href,"showmail.yaws?nr="++integer_to_list(I#info.nr)}],
+	{font,[{size,2},{color,black}],
+	 {b,[],format_date(parse_date(H#mail.date))}}}},
+      {td, [{nowrap,true},{align,left},{valign,top},{class,"List"}],
        {a, [{href,"showmail.yaws?nr="++integer_to_list(I#info.nr)}],
 	{font,[{size,2},{color,black}],{b,[],integer_to_list(I#info.size)}}}}
      ]}.
@@ -902,7 +913,20 @@ rtop(Server, User, Password, Nr) ->
 list(Server, User, Password) ->
     case pop_request([{"LIST",ml}], Server, User, Password) of
 	[{ok, Stats}] ->
-	    Info = [info(S) || S <- Stats],
+	    Info = lists:reverse([info(S) || S <- Stats]),
+	    Req = [top(I#info.nr) || I <- Info],
+	    Res = pop_request(Req, Server, User, Password),
+	    Hdrs = lists:map(fun({ok,Ls}) -> parse_headers(Ls) end, Res),
+	    add_hdrs(Info,Hdrs);
+	{error, Reason} ->
+	    {error, Reason}
+    end.
+
+list(Server, User, Password, From, To) ->
+    case pop_request([{"LIST",ml}], Server, User, Password) of
+	[{ok, Stats}] ->
+	    SortStats = lists:sublist(lists:reverse(Stats), From, To),
+	    Info = [info(S) || S <- SortStats],
 	    Req = [top(I#info.nr) || I <- Info],
 	    Res = pop_request(Req, Server, User, Password),
 	    Hdrs = lists:map(fun({ok,Ls}) -> parse_headers(Ls) end, Res),
@@ -1417,10 +1441,10 @@ format_error(Reason) ->
     [build_toolbar([{"","mail.yaws","Close"}]),
      {p, [], {font, [{size,4},{color,red}],["Error: ", Reason]}}].
 
-format_message(Message, MailNr) ->
+format_message(Message, MailNr, Depth) ->
     {Headers,Msg} = parse_message(Message),
     H = parse_headers(Headers),
-    Formated = format_body(H,Msg),
+    Formated = format_body(H,Msg, Depth),
     MailStr = integer_to_list(MailNr),
     To = lists:flatten(decode(H#mail.to)),
     From = lists:flatten(decode(H#mail.from)),
@@ -1536,7 +1560,7 @@ has_body_type(Type, {H,B}) ->
 	_ -> false
     end.
 
-format_body(H,Msg) ->
+format_body(H,Msg,Depth) ->
     ContentType =
 	case H#mail.content_type of
 	    {CT,Ops} -> {lowercase(CT), Ops};
@@ -1556,7 +1580,8 @@ format_body(H,Msg) ->
 		lists:foldl(fun({K,V},MH) ->
 				    add_header(K,V,MH)
 			    end, #mail{}, Headers),
-	    format_body(PartHeaders, Body);
+	    [format_body(PartHeaders, Body, Depth++".1"),
+	     format_attachements(Parts, Depth)];
 	{{"multipart/alternative",Opts}, Encoding} ->
 	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
 	    Parts = parse_multipart(Msg, Boundary),
@@ -1570,7 +1595,7 @@ format_body(H,Msg) ->
 			  {NewHead, Body}
 		  end, Parts),
 	    {H1,B1} = select_alt_body(["text/html","text/plain"],HParts),
-	    format_body(H1,B1);
+	    format_body(H1,B1,Depth++".1");
 	{{"multipart/signed",Opts}, Encoding} ->
 	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
 	    [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
@@ -1578,13 +1603,24 @@ format_body(H,Msg) ->
 		lists:foldl(fun({K,V},MH) ->
 				    add_header(K,V,MH)
 			    end, #mail{}, Headers),
-	    format_body(PartHeaders, Body);
+	    format_body(PartHeaders, Body, Depth++".1");
 	{{"message/rfc822",Opts}, Encoding} ->
 	    Decoded = decode_message(Encoding, Msg),
-	    format_message(Decoded, -1);
+	    format_message(Decoded, -1, Depth);
 	{_,_} ->
 	    {pre, [], wrap_text(Msg,80)}
     end.
+
+format_attachements([], _Depth) -> [];
+format_attachements(Bs, Depth) ->
+    {table, [], format_attach(Bs, Depth)}.
+
+format_attach([], Depth) ->
+    [];
+format_attach([{Headers,B}|Bs], Depth) ->
+    H = lists:foldl(fun({K,V},MH) -> add_header(K,V,MH) end, #mail{}, Headers),
+    [{tr,[],{td,[],io_lib:format("~p", [H#mail.content_type])}}|
+     format_attach(Bs, Depth)].
 
 decode_message("7bit"++_, Msg) -> Msg;
 decode_message("8bit"++_, Msg) -> Msg;
@@ -1797,3 +1833,124 @@ read_config(FD, Cfg, Lno, Chars) ->
 	    read_config(FD, Cfg, Lno+1, Next)
     end.
 	
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-record(date, {year, month, day, hours, minutes, seconds}).
+
+parse_date([]) -> [];
+parse_date(Date) ->
+    D = parse_date(Date, #date{}),
+    if 
+	integer(D#date.year),integer(D#date.month),
+	integer(D#date.day),integer(D#date.hours),
+	integer(D#date.minutes),integer(D#date.seconds) ->
+	    {{D#date.year, D#date.month, D#date.day},
+	     {D#date.hours, D#date.minutes, D#date.seconds}};
+	true -> error
+    end.
+
+parse_date([], D) -> D;
+parse_date([D|Ds], Date) ->
+    case char_type(D) of
+	space -> parse_date(Ds, Date);
+	alpha when Date#date.month == undefined ->
+	    case is_month(lowercase([D|Ds])) of
+		false ->
+		    parse_date(Ds, Date);
+		{true, M, Rest} ->
+		    parse_date(Rest, Date#date{month=M})
+	    end;
+	alpha ->
+	    parse_date(Ds, Date);
+	digit ->
+	    case parse_time([D|Ds]) of
+		error ->
+		    {Number,Rest} = get_number([D|Ds], 0),
+		    if
+			Number < 32, Date#date.day == undefined ->
+			    parse_date(Rest, Date#date{day=Number});
+			Number < 50, Date#date.year == undefined ->
+			    parse_date(Rest, Date#date{year=Number+2000});
+			Number < 100, Date#date.year == undefined ->
+			    parse_date(Rest, Date#date{year=Number+1900});
+			Number > 1900, Date#date.year == undefined ->
+			    parse_date(Rest, Date#date{year=Number});
+			true ->
+			    parse_date(Rest, Date)
+		    end;
+		{Hours, Minutes, Seconds, Rest} ->
+		    parse_date(Rest, Date#date{hours=Hours,
+					       minutes=Minutes,
+					       seconds=Seconds})
+	    end;
+	_ ->
+	    parse_date(Ds, Date)
+    end.
+		      
+is_month("jan"++Rest) -> {true, 1, Rest};
+is_month("feb"++Rest) -> {true, 2, Rest};
+is_month("mar"++Rest) -> {true, 3, Rest};
+is_month("apr"++Rest) -> {true, 4, Rest};
+is_month("may"++Rest) -> {true, 5, Rest};
+is_month("jun"++Rest) -> {true, 6, Rest};
+is_month("jul"++Rest) -> {true, 7, Rest};
+is_month("aug"++Rest) -> {true, 8, Rest};
+is_month("sep"++Rest) -> {true, 9, Rest};
+is_month("oct"++Rest) -> {true, 10, Rest};
+is_month("nov"++Rest) -> {true, 11, Rest};
+is_month("dec"++Rest) -> {true, 12, Rest};
+is_month(_) -> false.
+
+enc_month(1) -> "Jan";
+enc_month(2) -> "Feb";
+enc_month(3) -> "Mar";
+enc_month(4) -> "Apr";
+enc_month(5) -> "May";
+enc_month(6) -> "Jun";
+enc_month(7) -> "Jul";
+enc_month(8) -> "Aug";
+enc_month(9) -> "Sep";
+enc_month(10) -> "Oct";
+enc_month(11) -> "Nov";
+enc_month(12) -> "Dec".
+
+char_type(D) when D>=$a, D=<$z -> alpha;
+char_type(D) when D>=$A, D=<$Z -> alpha;
+char_type(D) when D>=$0, D=<$9 -> digit;
+char_type($\ ) -> space;
+char_type($\n) -> space;
+char_type($\t) -> space;
+char_type($\v) -> space;
+char_type(_) -> unknown.
+
+get_number([D|Ds], N) when D>=$0, D=<$9 ->
+    get_number(Ds, N*10+(D-$0));
+get_number(Rest, N) -> {N, Rest}.
+
+parse_time(Time) ->
+    F = fun() ->
+		{Hour,[$:|R1]}    = get_number(Time, 0),
+		{Minutes,[$:|R2]} = get_number(R1, 0),
+		{Seconds,R3}      = get_number(R2, 0),
+		{Hour, Minutes, Seconds, R3}
+	end,
+    case catch F() of
+	{Hour, Minutes, Seconds, Rest} when integer(Hour),
+				      integer(Minutes),
+				      integer(Seconds) ->
+	    {Hour, Minutes, Seconds, Rest};
+	_ -> error
+    end.
+		
+format_date({{Year,Month,Day},{Hour,Minutes,Seconds}}) ->
+    M = enc_month(Month),
+    io_lib:format("~2..0w ~s ~4..0w ~2..0w:~2..0w:~2..0w",
+		  [Day, M, Year, Hour, Minutes, Seconds]);
+format_date(Seconds) when integer(Seconds) ->
+    Zero = calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}}),
+    Time = Zero + Seconds,
+    Date = calendar:gregorian_seconds_to_datetime(Time),
+    format_date(Date);
+format_date([]) -> [];
+format_date(error) -> [].
+
