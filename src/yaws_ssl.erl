@@ -8,7 +8,7 @@
 -module(yaws_ssl).
 -author('klacke@hyber.org').
 
--compile(export_all).
+-export([ssl_get_headers/2]).
 
 
 -include_lib("yaws/include/yaws.hrl").
@@ -18,21 +18,10 @@
 -include_lib("kernel/include/file.hrl").
 
 
-
-
 %% Boring code, we need to parse HTTP here since 
 %% the standard ssl mode in erlang doesn't have tonys
 %% funcky http mode parsing .... and I dont have the 
 %% energy to add it there :-(
-
-contains(XS, YS) ->
-    case lists:prefix(YS, XS) of
-	true -> true;
-	false -> case XS of
-		     [] -> false;
-		     [X|T] -> contains(T, YS)
-		 end
-    end.
 
 
 %% FIXME:  Stupid code...
@@ -46,26 +35,38 @@ contains(XS, YS) ->
 %%
 %% cschultz
 
+
+contains_rnrn([]) ->
+    false;
+contains_rnrn("\r\n\r\n" ++ _) ->
+    true;
+contains_rnrn([X|XS]) ->
+    contains_rnrn(XS).
+
+
+recv(CliSock, Num, GC) ->    
+    recv(CliSock, Num, GC, []).
+
 recv(CliSock, 0, GC, D) -> {ok, D};
 recv(CliSock, Num, GC, D) -> 
     case yaws_server:cli_recv(CliSock, Num, GC, ssl) of
 	{ok, Data} ->
 	    ?Debug("GOT chunk of size ~p.~n", [size(Data)]),
 	    D2 = D ++ binary_to_list(Data),
-	    case contains(D2, "\r\n\r\n") of 
+	    case contains_rnrn(D2) of
 		true -> {ok, D2};
 		false ->
 		    recv(CliSock, Num - size(Data), GC, D2)
 	    end;
 	{error, closed} -> 
-	    ?Debug("No more chunk to get.~n", []),  % ???
+	    ?Debug("No more chunk to get.~n", []),
 	    {ok, D};
 	E -> E
     end.
     
 
 ssl_get_headers(CliSock, GC) ->
-    case recv(CliSock, 1024, GC, []) of
+    case recv(CliSock, 2048, GC) of
 	{ok, []} ->
 	    closed;
 	{ok, Data} ->
@@ -75,7 +76,12 @@ ssl_get_headers(CliSock, GC) ->
             case R of
 		bad_request ->
 		    {#http_request{method=bad_request, version={0,9}},
-		     #headers{}, <<>>};
+		     #headers{},
+						% Returning <<>> here
+						% is wrong if we got
+						% data after
+						% "\r\n\r\n".
+		     <<>>};
 		_ ->
 		    {H,Trail2} = get_headers(CliSock, GC,  #headers{}, Trail),
 		    {R, H, list_to_binary(Trail2)}
@@ -169,9 +175,6 @@ get_headers(CliSock, GC, H, Tail) ->
 
 parse_line("Connection:" ++ Con, H) ->
     H#headers{connection = space_strip(Con)};
-parse_line("Date:" ++ _Con, H) ->
-    %%H#headers{date = Con};
-    H;
 parse_line("Host:" ++ Con, H) ->
     H#headers{host = space_strip(Con)};
 parse_line("Accept:" ++ Con, H) ->
@@ -192,56 +195,34 @@ parse_line("User-Agent:" ++ Con, H) ->
     H#headers{user_agent = space_strip(Con)};
 parse_line("Accept-Ranges:" ++ Con, H) ->
     H#headers{accept_ranges = space_strip(Con)};
-parse_line("Authorization: " ++ Con, H) ->
-    A = yaws_server:parse_auth(Con),
+parse_line("Authorization:" ++ Con, H) ->
+    A = yaws_server:parse_auth(space_strip(Con)),
     H#headers{authorization = A};
 parse_line("Keep-Alive:" ++ Con, H) ->
     H#headers{keep_alive = space_strip(Con)};
-parse_line("Referer: " ++ Con, H) ->
+parse_line("Referer:" ++ Con, H) ->
     H#headers{referer = space_strip(Con)};
-parse_line("Content-type: "++Con, H) ->
+parse_line("Content-type:"++Con, H) ->
     H#headers{content_type = space_strip(Con)};
-parse_line("Content-Type: "++Con, H) ->
+parse_line("Content-Type:"++Con, H) ->
     H#headers{content_type = space_strip(Con)};
-parse_line("Content-Length: "++Con, H) ->
+parse_line("Content-Length:"++Con, H) ->
     H#headers{content_length = space_strip(Con)};
-parse_line("Content-length: "++Con, H) ->
+parse_line("Content-length:"++Con, H) ->
     H#headers{content_length = space_strip(Con)};
-parse_line("Cookie: "++Con, H) ->
+parse_line("Cookie:"++Con, H) ->
     H#headers{cookie = [space_strip(Con)|H#headers.cookie]};
-parse_line(_, H) ->
-    H.
-
-
-%% strip all space from a string
-space_strip(L) ->
-    space_strip(L, head).
-space_strip([H|T], Mode) ->
-    case yaws:is_space(H) of
-	true when Mode == head ->
-	    space_strip(T, Mode);
-	true when Mode == tail ->
-	    [];
-	false -> 
-	[H| space_strip(T, Mode)]
-    end;
-space_strip([], _) ->
-    [].
-
-
-
-spacesplit(Line, 0, Ack, _Cur) ->
-    {lists:reverse(Ack), skip_space(Line)};
-spacesplit([H|T], Num, Ack, Cur) ->
-    case yaws:is_space(H) of
-	true when Cur == [] ->
-	    spacesplit(T, Num, Ack, Cur);
-	true ->
-	    spacesplit(T, Num-1, [lists:reverse(Cur) | Ack], []);
-	false ->
-	    spacesplit(T, Num, Ack, [H|Cur])
+parse_line(S, H) ->
+    case lists:splitwith(fun(C)->C /= $: end, S) of
+	{Name, [$:|Val]} ->
+	    Other = H#headers.other,
+	    H#headers{other=[{http_header, undefined, Name, undefined, 
+			      space_strip(Val)}
+			     |Other]};
+	_ -> H
     end.
 
 
-skip_space(L) ->
-    lists:dropwhile(fun(X) -> yaws:is_space(X) end, L).
+
+space_strip(S) ->
+    yaws:strip_spaces(S, both).
