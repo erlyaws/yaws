@@ -1,3 +1,14 @@
+Mon Feb 14 2005, Version 1.52 released
+Minor feature release
+error condition bug in revproxy, found by tobbe. Revproxy is still not production quality. Experimental.
+embedded bugfix by Michael Arnoldus
+connection close bug found by Lennart Ostman
+made errorlog actually go out when conf is brokbroke e + daemon (klacke)
+Yaws is now RSS capable, see doc/README.rss (tobbe)
+Added a new example look and feel for the wiki (jb)
+Webmail, Fixed problem 	with login with empty fields in FireFox. (jb)
+wiki, Fixed minor unzip problem triggered when uploading zip archives with names containing spaces. (jb)
+
 Wed Dec 15 2004 Version 1.51 released
 Major feature release.
 Added support for config changes without stopping the running systems, virt servers can be added, removed and changed without affecting traffic. (klacke)

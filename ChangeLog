@@ -1,3 +1,115 @@
+2005-02-14 11:29  klacke
+
+	* vsn.mk: ver 1.52 prepare
+
+2005-02-14 11:28  klacke
+
+	* src/yaws_config.erl: ""
+
+2005-02-14 11:27  klacke
+
+	* src/: yaws.erl, yaws_api.erl, yaws_config.erl, yaws_ctl.erl,
+	yaws_debug.erl, yaws_server.erl: erlang:faultify
+
+2005-02-07 14:29  klacke
+
+	* src/yaws_revproxy.erl: error condition bug in revproxy, found by
+	Tobbe
+
+2005-02-02 15:12  klacke
+
+	* src/yaws_api.erl, src/yaws_config.erl, www/TAB.inc,
+	www/internals.yaws: embedded bugfix by Michael Arnoldus
+
+2005-01-26 16:20  klacke
+
+	* src/yaws.erl: connection close bug found by Lennart Ostman
+
+2005-01-25 20:56  klacke
+
+	* src/yaws_server.erl: ""
+
+2005-01-25 20:54  klacke
+
+	* src/yaws_server.erl: made errorlog actually go out when conf is
+	broke + daemon
+
+2005-01-21 00:27  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed decode problem.
+
+2005-01-15 16:12  cschultz
+
+	* src/yaws_cgi.erl: Allow to pass additional environment variables.
+
+2004-12-29 20:25  klacke
+
+	* src/: Makefile, mime_type_c.erl, yaws_server.erl: solaris make
+	trouble reported by Petter Larsson
+
+2004-12-21 11:05  klacke
+
+	* www/stil.css: ""
+
+2004-12-20 12:18  etnt
+
+	* doc/README.rss, src/yaws_config.erl, src/yaws_rss.erl,
+	src/yaws_sup.erl: Yaws is now RSS capable, see doc/README.rss
+
+2004-12-20 00:39  etnt
+
+	* doc/README.rss, src/yaws_config.erl, src/yaws_rss.erl: Added RSS
+	config parameters ro config parser and some more documentation.
+
+2004-12-18 00:29  klacke
+
+	* www/stream.yaws: ""
+
+2004-12-17 09:43  jbevemyr
+
+	* applications/wiki/README: Updated the documentation some.
+
+2004-12-17 09:40  jbevemyr
+
+	* applications/wiki/wiki/WikiPreferences.files/: template2.html,
+	template_info2.html: Added a new example look and feel for the
+	wiki.
+
+2004-12-16 22:12  jbevemyr
+
+	* src/yaws_server.erl: Fixed problem with rel_path ssi, missing /.
+
+2004-12-16 21:54  jbevemyr
+
+	* applications/mail/: mail/login.yaws, src/mail.erl: Fixed problem
+	with login with empty fields in FireFox.
+
+2004-12-16 21:52  jbevemyr
+
+	* applications/wiki/src/wiki.erl: Fixed minor unzip problem
+	triggered when uploading zip archives with names containing spaces.
+
+2004-12-16 16:13  etnt
+
+	* doc/README.rss, src/Makefile, src/yaws_rss.erl: Added RSS
+	store/interface.
+
+2004-12-16 00:08  klacke
+
+	* www/news: ""
+
+2004-12-15 22:47  klacke
+
+	* src/yaws_server.erl: ""
+
+2004-12-15 22:25  klacke
+
+	* www/news: ""
+
+2004-12-15 22:23  klacke
+
+	* ChangeLog, vsn.mk, www/news: preparing for 1.51
+
 2004-12-15 22:17  klacke
 
 	* man/yaws.conf.5, www/code.yaws: ""
