@@ -2352,6 +2352,8 @@ ehtml_expand(Bin) when binary(Bin) ->
     yaws_api:htmlize(Bin);
 ehtml_expand({Tag}) ->
     ehtml_expand({Tag,[]});
+ehtml_expand({pre_html, Attrs}) ->
+    Attrs;
 ehtml_expand({Tag, Attrs}) ->
     io_lib:format("<~s~s>~n", [Tag, ehtml_attrs(Attrs)]);
 ehtml_expand({Tag, Attrs, Body}) ->
