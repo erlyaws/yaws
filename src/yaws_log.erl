@@ -30,6 +30,7 @@
 	  now,
 	  ack,
 	  tracefd,
+	  tty_trace = false,
 	  alogs =  []}).
 		
 
@@ -163,13 +164,23 @@ handle_call({errlog, F, A}, _From, State) when State#state.running == false ->
     {reply, ok, State#state{ack = [{err, F, A} | State#state.ack]}};
 
 handle_call({open_trace, What}, _From, State) ->
+    case State#state.tracefd of
+	undefined ->
+	    ok;
+	Fd0 ->
+	    file:close(Fd0)
+    end,
     F = lists:concat(["trace.", What]),
     case file:open(filename:join([State#state.dir, F]),[write, raw]) of
 	{ok, Fd} ->
 	    {reply, ok, State#state{tracefd = Fd}};
 	Err ->
 	    {reply,  Err, State}
-    end.
+    end;
+
+handle_call({trace_tty, What}, _From, State) ->
+    {reply, ok, State#state{tty_trace = What}}.
+
 
 
 
@@ -208,10 +219,14 @@ handle_cast({access, ServerName, Ip, Req, Status, Length}, State) ->
 					 State#state.ack]}}
     end;
 handle_cast({trace, from_server, Data}, State) ->
-    file:write(State#state.tracefd, ["*** SRV -> CLI *** ", Data]),
+    Str = ["*** SRV -> CLI *** ", Data],
+    file:write(State#state.tracefd, Str),
+    tty_trace(Str, State),
     {noreply, State};
 handle_cast({trace, from_client, Data}, State) ->
-    file:write(State#state.tracefd, ["*** CLI -> SRV *** ", Data]),
+    Str = ["*** CLI -> SRV *** ", Data],
+    file:write(State#state.tracefd, Str),
+    tty_trace(Str, State),
     {noreply, State}.
 
 
@@ -220,11 +235,20 @@ do_alog(ServerName, Ip, Req, Status, Length, State) ->
     case lists:keysearch(ServerName, 1, State#state.alogs) of
 	{value, {_, FD, _}} ->
 	    I = fmt_alog(State#state.now, Ip, Req, Status,  Length),
-	    file:write(FD, I);
+	    file:write(FD, I),
+	    tty_trace(I, State);
 	_ ->
 	    false
     end.
 
+
+tty_trace(Str, State) ->
+    case State#state.tty_trace of
+	false ->
+	    ok;
+	true ->
+	    io:format("~s", [binary_to_list(list_to_binary([Str]))])
+    end.
 
 %%----------------------------------------------------------------------
 %% Func: handle_info/2

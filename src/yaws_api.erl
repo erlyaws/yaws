@@ -33,7 +33,12 @@
 	 cookieval_to_opaque/1,
 	 print_cookie_sessions/0,
 	 replace_cookie_session/2, delete_cookie_session/1]).
--export([setconf/2, set_status_code/1, reformat_header/1]).
+-export([getconf/0, setconf/2, set_status_code/1, reformat_header/1]).
+
+-export([set_trace/1,
+	 set_tty_trace/1,
+	 set_access_log/1]).
+
 
 %% these are a bunch of function that are useful inside
 %% yaws scripts
@@ -78,7 +83,6 @@ parse_post_data(Arg) ->
 %% parse the command line query data
 parse_query(Arg) ->
     D = Arg#arg.querydata,
-    Req = Arg#arg.req,
     if
 	D == [] ->
 	    yaws_log:errlog("Tried to parse_query with "
@@ -768,10 +772,64 @@ delete_cookie_session(Cookie) ->
 setconf(GC, Groups) ->
     case gen_server:call(yaws_server, {setconf, GC, Groups}) of
 	ok ->
-	    yaws_log:setdir(GC#gconf.logdir, Groups);
+	    yaws_log:setdir(GC#gconf.logdir, Groups),
+	    case GC#gconf.trace of
+		undefined ->
+		    ok;
+		{true, What} ->
+		     yaws_log:open_trace(What)
+	    end;
 	E ->
 	    E
     end.
+
+%% return {ok, GC, Groups}.
+getconf() ->
+    gen_server:call(yaws_server, getconf).
+
+
+lmap(F, [H|T]) ->
+    [lists:map(F, H) | lmap(F, T)];
+lmap(_, []) ->
+    [].
+
+
+%% interactively turn on|off tracing
+set_trace(Val) ->
+    case lists:member(Val, [traffic, http, false]) of
+	true ->
+	    {ok, GC, Groups} = getconf(),
+	    Tval = case Val of
+		       http ->
+			   {true, http};
+		       traffic ->
+			   {true, traffic};
+		       false ->
+			   false
+		   end,
+	    setconf(GC#gconf{trace = Tval}, Groups);
+	_ ->
+	    io:format(
+	      "Usage: set_trace(true | false, traffic | http | access)",[])
+    end.
+
+
+
+set_access_log(Bool) ->
+    {ok, GC, Groups} = getconf(),
+    Groups2 = lmap(fun(SC) ->
+			   SC#sconf{access_log = Bool}
+		   end, Groups),
+    setconf(GC, Groups2).
+
+
+
+
+%% interactively turn on|off tracing to the tty (as well)
+%% typically useful in embedded mode
+set_tty_trace(Bool) ->
+    gen_server:call(yaws_log, {trace_tty, Bool}).
+
 
 
 set_status_code(Code) ->

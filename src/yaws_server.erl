@@ -264,7 +264,13 @@ handle_call({setconf, GC, Groups}, _From, State) ->
 	    {reply, ok, State2};
 	Err ->
 	    {reply, Err, {GC, [], 0}}
-    end.
+    end;
+
+handle_call(getconf, _From, State) ->
+    {GC, Pairs, _} = State,
+    Groups = lists:map(fun({_Pid, SCs}) -> SCs end, Pairs),
+    {reply, {ok, GC, Groups}, State}.
+			       
 			      
 
 
