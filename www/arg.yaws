@@ -59,6 +59,14 @@ out(A) ->
 <erl>
 
 out(A) ->
+
+    Peer = if
+	       tuple(A#arg.clisock),
+	       element(1, A#arg.clisock) == sslsocket ->
+		   ssl:peername(A#arg.clisock);
+	       true ->
+		   inet:peername(A#arg.clisock)
+	   end,
     Req = A#arg.req,
     H = yaws_api:reformat_header(A#arg.headers),
     {ehtml,
@@ -75,7 +83,7 @@ out(A) ->
       {hr,[],[]},
       {h5, [], "Other items"},
       {ul,[],
-       [{li, [], f("clisock from: ~p", [inet:peername(A#arg.clisock)])},
+       [{li, [], f("clisock from: ~p", [Peer])},
 	{li,[], f("docroot: ~s", [A#arg.docroot])},
 	{li,[], f("fullpath: ~s", [A#arg.fullpath])}]},
       {hr,[],[]},
