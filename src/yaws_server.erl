@@ -83,8 +83,8 @@ get_app_args() ->
     Debug = case application:get_env(yaws, debug) of
 		undefined ->
 		    lists:member({yaws, ["debug"]}, AS);
-		_ ->
-		    true
+		{ok, Val}  ->
+		    Val
 	    end,
     Trace = case application:get_env(yaws, trace) of
 		undefined ->
@@ -119,8 +119,8 @@ get_app_args() ->
     Embed = case application:get_env(yaws, embedded) of
 		undefined ->
 		    false;
-		Val ->
-		    Val
+		{ok, Val0} ->
+		    Val0
 	    end,
     {Debug, Trace, Conf, RunMod, Embed}.
 
@@ -366,8 +366,8 @@ gserv(GC, Group0) ->
 			    Files0;
 			{error, Reason} ->
 			    error_logger:format("Failed to list ~p probably"
-						"due to permission errs",
-						[Tdir]),
+						"due to permission errs: ~p",
+						[Tdir, Reason]),
 			    proc_lib:init_ack({error, "Can't list dir " 
 					       ++ Tdir}),
 			    exit(normal)
