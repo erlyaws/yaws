@@ -633,35 +633,58 @@ toks([$#|_T], Mode, Ack, Tack) ->
 
 toks([H|T], free, Ack, Tack) -> 
     %?Debug("Char=~p", [H]),
-    case {is_string_char(H), is_special(H), is_space(H)} of
-	{_, _, true} ->
+    case {is_quote(H), is_string_char(H), is_special(H), is_space(H)} of
+	{_,_, _, true} ->
 	    toks(T, free, Ack, Tack);
-	{_, true, _} ->
+	{_,_, true, _} ->
 	    toks(T, free, [], [list_to_atom([H]) | Tack]);
-	{true, _,_} ->
+	{_,true, _,_} ->
 	    toks(T, string, [H], Tack);
-	{false, false, false} ->
+	{true,_, _,_} ->
+	    toks(T, quote, [], Tack);
+	{false, false, false, false} ->
 	    %% weird char, let's ignore it
 	    toks(T, free, Ack, Tack)
     end;
 toks([C|T], string, Ack, Tack) -> 
     %?Debug("Char=~p", [C]),
-    case {is_string_char(C), is_special(C), is_space(C)} of
-	{true, _,_} ->
+    case {is_backquote(C), is_quote(C), is_string_char(C), is_special(C), is_space(C)} of
+	{true, _, _, _,_} ->
+	    toks(T, [backquote,string], Ack, Tack);
+	{_, _, true, _,_} ->
 	    toks(T, string, [C|Ack], Tack);
-	{_, true, _} ->
+	{_, _, _, true, _} ->
 	    toks(T, free, [], [list_to_atom([C]), lists:reverse(Ack)|Tack]);
-	{_, _, true} ->
+	{_, true, _, _, _} ->
+	    toks(T, quote, [], [lists:reverse(Ack)|Tack]);
+	{_, _, _, _, true} ->
 	    toks(T, free, [], [lists:reverse(Ack)|Tack]);
-	{false, false, false} ->
+	{false, false, false, false, false} ->
 	    %% weird char, let's ignore it
 	    toks(T, free, Ack, Tack)
-
     end;
+toks([C|T], quote, Ack, Tack) -> 
+    %?Debug("Char=~p", [C]),
+    case {is_quote(C), is_backquote(C)} of
+	{true, _} ->
+	    toks(T, free, [], [lists:reverse(Ack)|Tack]);
+	{_, true} ->
+            toks(T, [backquote,quote], [C|Ack], Tack);
+	{false, false} ->
+            toks(T, quote, [C|Ack], Tack)
+    end;
+toks([C|T], [backquote,Mode], Ack, Tack) ->
+    toks(T, Mode, [C|Ack], Tack);
 toks([], string, Ack, Tack) ->
     lists:reverse([lists:reverse(Ack) | Tack]);
 toks([], free, _,Tack) ->
     lists:reverse(Tack).
+
+is_quote($") -> true ; 
+is_quote(_)  -> false.
+
+is_backquote($\\) -> true ; 
+is_backquote(_)  -> false.
 
 is_string_char(C) ->
     if
