@@ -1,3 +1,93 @@
+2004-06-07 17:59  klacke
+
+	* www/upload.yaws: security vulnerability in upload.yaws founf by
+	mbj emacs upload.yaws &emacs upload.yaws &
+
+2004-06-07 17:50  klacke
+
+	* src/yaws_server.erl: Patch from Jocke Grebeno which handles ssi
+	support for ehtml code, not just ascii. We can now return {ssi,
+	"@@", file.html, [{"FOO", "bar"}, {"BAZ", {ehtml, {p, [],
+	"saab"}}}]} and it returns the expected
+
+2004-06-07 09:15  jbevemyr
+
+	* applications/: mail/src/mail.erl, wiki/src/wiki.erl: Fixed
+	potential security problem in file upload code.
+
+2004-06-06 23:40  jbevemyr
+
+	* applications/mail/src/mail.erl: [no log message]
+
+2004-06-04 15:15  klacke
+
+	* include.mk.in, scripts/Install, scripts/Makefile, src/yaws.erl,
+	src/yaws_revproxy.erl, src/yaws_server.erl, src/yaws_sup.erl: patch
+	from  Fredrik Linder to make it easier to integrate yaws into apps
+	that don't use the otp application framework at all
+
+2004-06-01 11:26  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed POP server interop problem.
+
+2004-05-28 15:56  klacke
+
+	* man/yaws_api.5, src/yaws_api.erl, src/yaws_session_server.erl:
+	yaws_session_server ttl patch from Rob.Schmersel
+
+2004-05-28 15:24  klacke
+
+	* man/yaws_api.5, src/yaws_server.erl: New feature yssi, yaws
+	include
+
+2004-05-28 13:38  klacke
+
+	* include/yaws.hrl, src/yaws.erl, src/yaws_config.erl,
+	src/yaws_server.erl: MOved phpexe config variable from the sconf to
+	the gconf, it doesn't make sence to have different phpexe paths for
+	different virt servers
+
+2004-05-28 12:55  klacke
+
+	* src/: yaws.erl, yaws_api.erl: make appmods into tuples when
+	loaded as list of strings in setconf, the {pathelem, mod} thing
+	actually broke old code that loadedconf with yaws_api:setconf/2 and
+	using appmods
+
+2004-05-27 15:17  klacke
+
+	* src/: yaws.erl, yaws_api.erl, yaws_ctl.erl, yaws_server.erl: Bug
+	in yaws_api:request_url/1 with explicit portnums in URLs found by
+	Einar Karttunen
+
+2004-05-27 14:40  klacke
+
+	* ChangeLog, vsn.mk, www/news: 1.47
+
+2004-05-27 14:36  klacke
+
+	* src/yaws_server.erl: ""
+
+2004-05-26 23:26  klacke
+
+	* www/: appmods.yaws, bindings.yaws, news, todo.yaws: ""
+
+2004-05-26 23:21  klacke
+
+	* src/: Makefile, yaws_log.erl: ""
+
+2004-05-26 23:00  klacke
+
+	* src/yaws_config.erl: ""
+
+2004-05-26 22:49  klacke
+
+	* scripts/Makefile: ""
+
+2004-05-26 22:45  klacke
+
+	* scripts/Makefile: ""
+
 2004-05-26 13:26  klacke
 
 	* src/yaws_ctl.erl: ""
