@@ -1,0 +1,33 @@
+<erl>
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]).
+</erl>
+
+
+
+<h1>Persistant Cookies</h1>
+<p>
+We saw in the first <a href="cookies.yaws">cookie</a> example, how we
+assigned a special erlang process to handle each session. 
+The cookie has an expiry date, and the correct thing would be to let the
+handling process live as long as the cookie is valid. This is not a good option.
+A better option is to store cookie in a persistant storage. This can be an
+ets table or a dets table. If we choose an ets table, the cookies will disappear
+when the yaws server is restarded, whereas if we choose a dets table, 
+the cookies will survive daemon restarts. What to choose depends on the 
+type of cookie information we have.
+
+<p>
+The yaws code in 
+<a href="setpcookie.yaws">setpcookie.yaws</a> sets the cookie in the browser.
+
+<p>And the yaws code in <a href="readpcookie.yaws">readpcookie.yaws</a> 
+will read the cookie
+
+<p>
+Let's show some code. To set the cookie we we have:
+
+
+
+
+</html>
+

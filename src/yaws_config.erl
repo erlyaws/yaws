@@ -16,7 +16,7 @@
 
 %% where to look for yaws.conf 
 paths() ->
-    ["/etc", os:getenv("HOME"), "."].
+    [os:getenv("HOME"), ".", "/etc"].
 
 
 %% load the config
@@ -112,12 +112,11 @@ arrange([C1|Tail], {in, C0}, A, B) ->
 
 
 
-
 make_default_gconf() ->
     Y = yaws_dir(),
     #gconf{yaws_dir = Y,
-	   ebin_dir = filename:join([Y, "examples/ebin"]),
-	   include_dir = filename:join([Y, "examples/include"]),
+	   ebin_dir = [filename:join([Y, "examples/ebin"])],
+	   include_dir = [filename:join([Y, "examples/include"])],
 	   logdir = ".",
 	   yaws = "Yaws 0.2"}.
 
@@ -168,7 +167,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 	["ebin_dir", '=', Dir] ->
 	    case is_dir(Dir) of
 		true ->
-		    fload(FD, globals, GC#gconf{ebin_dir = Dir},
+		    fload(FD, globals, GC#gconf{ebin_dir = [Dir|GC#gconf.ebin_dir]},
 			  C, Cs, Lno+1, Next);
 		false ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}
@@ -177,7 +176,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 	["include_dir", '=', Dir] ->
 	    case is_dir(Dir) of
 		true ->
-		    fload(FD, globals, GC#gconf{include_dir = Dir},
+		    fload(FD, globals, GC#gconf{include_dir=[Dir|GC#gconf.include_dir]},
 			  C, Cs, Lno+1, Next);
 		false ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}

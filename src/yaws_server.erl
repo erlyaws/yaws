@@ -283,6 +283,7 @@ aloop(CliSock, GS, Num) ->
 	    Sconf = pick_sconf(H, GS#gs.group),
 	    ?Debug("Sconf: ~p", [?format_record(Sconf, sconf)]),
 	    ?TC([{record, Sconf, sconf}]),
+	    ?Debug("Headers = ~p~n", [?format_record(H, headers)]),
 	    Res = apply(yaws_server, Req#http_request.method, 
 			[CliSock, GS#gs.gconf, Sconf, Req, H]),
 	    maybe_access_log(CliSock, Sconf, Req),
@@ -443,7 +444,7 @@ get_headers(CliSock, Req, GC, H) ->
 make_arg(CliSock, Head, Req, GC, SC) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     #arg{clisock = CliSock,
-	 h = Head,
+	 headers = Head,
 	 req = Req,
 	 docroot = SC#sconf.docroot}.
 
@@ -507,7 +508,7 @@ do_yaws(CliSock, GC, SC, Req, H, ARG, UT) ->
 	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG,UT);
 	Other  ->
 	    del_old_files(Other),
-	    {ok, Spec} = compile_file(UT#urltype.fullpath, GC, SC),
+	    {ok, Spec} = yaws_compile:compile_file(UT#urltype.fullpath, GC, SC),
 	    ?Debug("Spec for file ~s is:~n~p~n",[UT#urltype.fullpath, Spec]),
 	    ets:insert(SC#sconf.ets, {FileAtom, Mtime, Spec}),
 	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG, UT)
@@ -543,7 +544,7 @@ get_client_data(CliSock, all, eof) ->
     <<>>.
 
 
-do_dyn_headers(CliSock, GC, SC, Req, Head, [H|T], ARG) ->
+do_dyn_headers(CliSock, GC, SC, Bin, Fd, Req, Head, [H|T], ARG) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     {DoClose, Chunked} = case Req#http_request.version of
 			     {1, 0} -> {true, []};
@@ -553,36 +554,38 @@ do_dyn_headers(CliSock, GC, SC, Req, Head, [H|T], ARG) ->
 	{mod, LineNo, YawsFile, SkipChars, Mod, some_headers} ->
 	    MimeType = "text/html",
 	    OutH = make_dyn_headers(DoClose, MimeType),
+	    {_, Bin2} = skip_data(Bin, Fd, SkipChars),
 	    case (catch apply(Mod, some_headers, [ARG])) of
 		{ok, Out} ->
-		    {[make_200(),OutH, Chunked, Out, crnl()], T, DoClose};
+		    {[make_200(),OutH, Chunked, Out, crnl()], T, DoClose, Bin2};
 		close ->
 		    exit(normal);
 		Err ->
 		    {[make_200(), OutH, crnl(),
-		      ?F("<p> yaws code ~w:~w(~p) crashed:"
-			 " ~n~p~n", 
-			 [Mod, some_headers, [Head], Err])], T, DoClose}
+		      ?F("<p> ~n<xmp>yaws code ~w:~w(~p) crashed:"
+			 " ~n~p~n</xmp>~n", 
+			 [Mod, some_headers, [Head], Err])], T, DoClose, Bin2}
 	    end;
 	{mod, LineNo, YawsFile, SkipChars, Mod, all_headers} ->
+	    {_, Bin2} = skip_data(Bin, Fd, SkipChars),
 	    case (catch apply(Mod, all_headers, [ARG])) of
 		{ok, StatusCode, Out} when integer(StatusCode) ->
 		    put(status_code, StatusCode),
-		    {[Out, crnl()], T, DoClose};
+		    {[Out, crnl()], T, DoClose, Bin2};
 		close ->
 		    exit(normal);
 		Err ->
 		    MimeType = "text/html",
 		    OutH = make_dyn_headers(DoClose, MimeType),
 		    {[make_200(), OutH, crnl(),
-		      ?F("<p> yaws code ~w:~w(~p) crashed:"
+		      ?F("<p> yaws code ~w:~w(~p) crashed or returned bad value:"
 			 " ~n~p~n", 
-			 [Mod, all_headers, [Head], Err])], T,  DoClose}
+			 [Mod, all_headers, [Head], Err])], T,  DoClose, Bin2}
 	    end;
 	_ ->
 	    MimeType = "text/html",
 	    OutH = make_dyn_headers(DoClose, MimeType),
-	    {[make_200(),OutH, Chunked, crnl()], [H|T], DoClose}
+	    {[make_200(),OutH, Chunked, crnl()], [H|T], DoClose, Bin}
     end.
 
 
@@ -593,10 +596,11 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     Fd = ut_open(UT),
     Bin = ut_read(Fd),
-    {S2, Tail, DoClose} = do_dyn_headers(CliSock,GC, SC,Req,Head,Specs,ARG),
+    {S2, Tail, DoClose, Bin2} = do_dyn_headers(CliSock,GC, SC,Bin,Fd,
+					       Req,Head,Specs,ARG),
+    ?Debug("TAIL =~p~n", [Tail]),
     safe_send(true, CliSock, S2),
-    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT,
-		     DoClose, Bin, Fd, Specs, ARG).
+    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DoClose, Bin2, Fd, Tail, ARG).
 
 
 
@@ -1075,241 +1079,14 @@ flush(Sock, Sz) ->
 
 			
 
-%%  tada !!
-%% returns a CodeSpec which is:
-%% a list  {data, NumChars} | 
-%%         {mod, LineNo, YawsFile, NumSkipChars,  Mod, Func} | 
-%%         {error, NumSkipChars, E}}
-
-% each erlang fragment inside <erl> .... </erl> is compiled into
-% its own module
-
-
--record(comp, {
-	  gc,     %% global conf
-	  sc,     %% server conf
-	  startline = 0,
-	  modnum = 1,
-	  infile,
-	  infd,
-	  outfile,
-	  outfd}).
-
-
-comp_opts(GC) ->
-    I = lists:map(fun(Dir) -> {i, Dir} end, GC#gconf.include_dir),
-    YawsDir = {i, "/home/klacke/yaws/include"},
-    I2 = [YawsDir | I],
-    Opts = [binary, report_errors | I2],
-    ?Debug("Compile opts = ~p~n", [Opts]),
-    Opts.
-
-
-compile_file(File, GC, SC) ->
-    case file:open(File, [read]) of
-	{ok, Fd} ->
-	    Spec = compile_file(#comp{infile = File, 
-				      infd = Fd, gc = GC, sc = SC}, 
-				1,  
-				io:get_line(Fd, ''), html, 0, []);
-	Err ->
-	    yaws:elog("can't open ~s~n", [File]),
-	    exit(normal)
-    end.
-
-compile_file(C, LineNo, eof, Mode, NumChars, Ack) ->
-    file:close(C#comp.infd),
-    {ok, lists:reverse([{data, NumChars} |Ack])};
-
-compile_file(C, LineNo,  Chars = "<erl>" ++ Tail, html,  NumChars, Ack) ->
-    ?Debug("start erl:~p",[LineNo]),
-    C2 = new_out_file(LineNo, C, C#comp.gc),
-    C3 = C2#comp{startline = LineNo},
-    L = length(Chars),
-    if
-	NumChars > 0 ->
-	    compile_file(C3, LineNo+1, line(C) , erl,L, 
-			 [{data, NumChars} | Ack]);
-	true -> %% just ignore zero byte data segments
-	    compile_file(C3, LineNo+1, line(C) , erl, L, Ack)
-    end;
-
-compile_file(C, LineNo,  Chars = "</erl>" ++ Tail, erl, NumChars, Ack) ->
-    ?Debug("stop erl:~p",[LineNo]),
-    file:close(C#comp.outfd),
-    NumChars2 = NumChars + length(Chars),
-    case compile:file(C#comp.outfile, comp_opts(C#comp.gc)) of
-	{ok, ModuleName, Binary} ->
-	    case code:load_binary(ModuleName, C#comp.outfile, Binary) of
-		{module, ModuleName} ->
-		    C2 = C#comp{modnum = C#comp.modnum+1},
-		    L2 = check_exported(C2, LineNo,NumChars2, ModuleName),
-		    compile_file(C, LineNo+1, line(C),html,0,L2++Ack);
-		Err ->
-		    A2 = gen_err(C, LineNo, NumChars2,
-				 ?F("Cannot load module ~p: ~p", 
-				    [ModuleName, Err])),
-		    compile_file(C, LineNo+1, line(C),
-				 html, 0, [A2|Ack])
-	    end;
-	{error, Errors, Warnings} ->
-	    %% FIXME remove outfile here ... keep while debuging
-	    A2 = comp_err(C, LineNo, NumChars2, Errors),
-	    compile_file(C, LineNo+1, line(C), html, 0, [A2|Ack]);
-	error ->  
-	    %% this is boring but does actually happen
-	    %% in order to get proper user errors here we need to catch i/o
-	    %% or hack compiler/parser
-	    yaws:elog("Dynamic compile error in file ~s, line~w",
-		      [C#comp.infile, LineNo]),
-	    A2 = {error, NumChars2, ?F("<xmp> Dynamic compile error in file "
-				       " ~s line ~w </xmp>", 
-				       [C#comp.infile, LineNo])},
-	    compile_file(C, LineNo+1, line(C), html, 0, [A2|Ack])
-    end;
-
-compile_file(C, LineNo,  Chars = "<xmp>" ++ Tail, html,  NumChars, Ack) ->
-    ?Debug("start xmp:~p",[LineNo]),
-    compile_file(C, LineNo+1, line(C) , xmp, NumChars + length(Chars), Ack);
-
-compile_file(C, LineNo,  Chars = "</xmp>" ++ Tail, xmp,  NumChars, Ack) ->
-    ?Debug("stop xmp:~p",[LineNo]),
-    compile_file(C, LineNo+1, line(C) , html, NumChars + length(Chars), Ack);
-
-compile_file(C, LineNo,  Chars, erl, NumChars, Ack) ->
-    io:format(C#comp.outfd, "~s", [Chars]),
-    compile_file(C, LineNo+1, line(C), erl, NumChars + length(Chars), Ack);
-
-compile_file(C, LineNo,  Chars, html, NumChars, Ack) ->
-    compile_file(C, LineNo+1, line(C), html, NumChars + length(Chars), Ack);
-
-compile_file(C, LineNo,  Chars, xmp, NumChars, Ack) ->
-    compile_file(C, LineNo+1, line(C), xmp, NumChars + length(Chars), Ack).
-
-
-
-
-
-check_exported(C, LineNo, NumChars, Mod) when C#comp.modnum == 1->
-    case {is_exported(some_headers, 1, Mod),
-	  is_exported(all_headers, 1, Mod),
-	  is_exported(all_out, 1, Mod)} of
-	{true, true, _} ->
-	    [gen_err(C, LineNo, NumChars,
-		     ?F("Cannot have both some and the all "
-			"headers",[]))];
-	
-	%% someheaders
-	{true, false, true} ->
-	    [{mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,some_headers},
-	     {mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,out}];
-	{true, false, false} ->
-	    [{mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,some_headers}];
-	
-	%% allheaders
-	{false, true, true} ->
-	    [{mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,all_headers},
-	     {mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,out}];
-	
-	{false, true, false} ->
-	    [{mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,all_headers}];
-	
-	{false, false, true} ->
-	    [{mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,out}]
-    
-    
-    end;
-check_exported(C, LineNo, NumChars, Mod) ->
-    case is_exported(out, 1, Mod) of
-	true ->
-	    [{mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,out}];
-	false ->
-	    [gen_err(C, LineNo, NumChars,
-		     "out/1 is not defined ")]
-    end.
-
-
-
-
-line(C) ->
-    io:get_line(C#comp.infd, '').
-
-is_exported(Fun, A, Mod) ->
-    case (catch Mod:module_info()) of
-	List when list(List) ->
-	    case lists:keysearch(exports, 1, List) of
-		{value, {exports, Exp}} ->
-		    lists:member({Fun, A}, Exp);
-		_ ->
-		    false
-	    end;
-	_ ->
-	    false
-    end.
-
-	     
-%% this will generate 9 lines
-new_out_file(Line, C, GC) ->
-    Mnum = gen_server:call(?MODULE, mnum),
-    Module = [$m | integer_to_list(Mnum)],
-    OutFile = "/tmp/yaws/" ++ Module ++ ".erl",
-    ?Debug("Writing outout file~s~n", [OutFile]),
-    {ok, Out} = file:open(OutFile, [write]),
-    ok = io:format(Out, "-module(~s).~n-compile(export_all).~n~n", [Module]),
-    io:format(Out, "%%~n%% code at line ~w from file ~s~n%%~n",
-	      [Line, C#comp.infile]),
-
-    io:format(Out, "-import(yaws_api, [f/2, fl/1, parse_post_data/2]). ~n~n", []),
-    io:format(Out, '-include("~s/include/yaws_api.hrl").~n', 
-	      [GC#gconf.yaws_dir]),
-    C#comp{outfd = Out,
-	   outfile = OutFile}.
+tcp_send(S, Data) ->
+    ?Debug("SEND: ~s", [binary_to_list(to_binary(Data))]),
+    ok = gen_tcp:send(S, Data).
 
 
 
 mtime(F) ->
     F#file_info.mtime.
-
-gen_err(C, LineNo, NumChars, Err) ->
-    S = io_lib:format("<p> Error in File ~s Erlang code beginning "
-		      "at line ~w~n"
-		      "Error is: ~p~n", [C#comp.infile, C#comp.startline, 
-					 Err]),
-    yaws:elog("~s~n", [S]),
-    {error, NumChars, S}.
-
-
-comp_err(C, LineNo, NumChars, Err) ->
-    case Err of
-	[{FileName, [ErrInfo|_]} |_] ->
-	    {Line0, Mod, E}=ErrInfo,
-	    Line = Line0 + C#comp.startline - 9,
-	    ?Debug("XX ~p~n", [{LineNo, Line0}]),
-	    Str = io_lib:format("~s:~w: ~s\n", 
-				[C#comp.infile, Line,
-				 apply(Mod, format_error, [E])]),
-	    HtmlStr = ?F("~n<pre>~nDynamic compile error: ~s~n</pre>~n", 
-			[Str]),
-	    yaws:elog("Dynamic compiler err ~s", [Str]),
-	    {error, NumChars,  HtmlStr};
-	Other ->
-	    yaws:elog("Dynamic compile error", []),
-	    {error, NumChars, ?F("<pre> Compile error - "
-				 "Other err ~p</pre>~n", [Err])}
-    end.
-
-tcp_send(S, Data) ->
-    ?Debug("SEND: ~s", [binary_to_list(to_binary(Data))]),
-    ok = gen_tcp:send(S, Data).
-
 
 
 

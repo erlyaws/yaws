@@ -176,6 +176,16 @@ ssi(DocRoot, Files) ->
     {ok, L}.
 
 
+%% include pre
+pre_ssi_files(DocRoot, Files) ->
+    {ok, L} = ssi(DocRoot, Files),
+    pre_ssi_string(L).
+
+pre_ssi_string(Str) ->
+    {ok, << "<br><br>\n<div class=\"box\"> \n <pre>\n", 
+         (htmlize(list_to_binary(Str)))/binary, 
+          "\n</pre>\n</div>\n<br>\n\n">>}.
+    
     
 %% convenience
 
@@ -190,8 +200,7 @@ fl([]) ->
 
 
 
-%% htmlize  ( <xmp> doesn't seem to work with opera )
-%% FIXME add all the html weirdo chars here
+%% htmlize  
 htmlize(<<Char, Tail/binary>>) ->
     case htmlize_char(Char) of
 	Char ->
@@ -206,8 +215,8 @@ htmlize_char($>) ->
     <<"&gt;">>;
 htmlize_char($<) ->
     <<"&lt;">>;
-htmlize_char($\n) ->
-    <<"<br>">>;
+htmlize_char($&) ->
+    <<"&amp;">>;
 htmlize_char(X) ->
     X.
 
@@ -218,16 +227,69 @@ secs() ->
     (MS * 1000000) + S.
 
 
-setcookie(Name) ->
-    setcookie(Name, "/",  secs() + 3600, [], []).
-setcookie(Name, Path) ->
-    setcookie(Name, Path,  secs() + 3600, [], []).
-setcookie(Name, Path, Expire) ->
-    setcookie(Name, Path,  Expire, [], []).
-setcookie(Name, Path, Expire, Domain) ->
-    setcookie(Name, Path, Expire, Domain,[]).
-setcookie(Name, Path, Expire, Domain, Secure) ->
+
+
+
+setcookie(Name, Value) ->
+    {ok, f("Set-Cookie: ~s=~s;\r\n", [Name, Value])}.
+
+setcookie(Name, Value, Path) ->
+     {ok, f("Set-Cookie: ~s=~s; path=~s\r\n", [Name, Value, Path])}.
+
+setcookie(Name, Value, Path, Expire) ->
+    setcookie(Name, Value, Path,  Expire, [], []).
+
+setcookie(Name, Value, Path, Expire, Domain) ->
+    setcookie(Name, Value, Path, Expire, Domain,[]).
+
+setcookie(Name, Value, Path, Expire, Domain, Secure) ->
     exit(nyi).
 
 		    
 	    
+
+
+%% This function can be passed the cookie we get in the Arg#arg.cookies
+%% to search for a specific cookie 
+%% return [] if not found
+%%        Str if found
+%% if serveral cookies with the same name are passed fron the browser,
+%% only the first match is returned
+
+
+find_cookie_val(Cookie, []) ->
+    [];
+find_cookie_val(Cookie, [FullCookie | FullCookieList]) ->
+    case find_cookie_val2(Cookie, FullCookie) of
+	[] ->
+	    find_cookie_val(Cookie, FullCookieList);
+	Val ->
+	    Val
+    end.
+
+find_cookie_val2(Cookie, FullCookie) ->    
+    case lists:prefix(Cookie, FullCookie) of
+	false when FullCookie == [] ->
+	    [];
+	false ->
+	    find_cookie_val2(Cookie, tl(FullCookie));
+	true ->
+	    case lists:dropwhile(fun(X) -> X /= $= end, FullCookie) of
+		[] ->
+		    [];
+		List ->
+		    find_cookie_val3(tl(List),[])
+	    end
+    end.
+
+
+find_cookie_val3([], Ack) ->
+    lists:reverse(Ack);
+find_cookie_val3([$;|_], Ack) ->
+    lists:reverse(Ack);
+find_cookie_val3([H|T], Ack) ->
+    find_cookie_val3(T, [H|Ack]).
+
+
+
+

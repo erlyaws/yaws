@@ -1,6 +1,10 @@
 <erl>
-out(A) -> file:read_file([A#arg.docroot, "/EXHEAD"]).
+
+out(A) -> 
+    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]).
+
 </erl>
+
 
 <h2>Hello world</h2>
 
@@ -13,10 +17,7 @@ HTML code.
 <br>
 
 <erl>
-out(A) -> 
-  {ok, B} = file:read_file([A#arg.docroot, "/simple_ex1.yaws"]),
-  B2 = yaws_api:htmlize(B),
-  {ok, ["<pre> \n", B2, "</pre>\n"]}.
+out(A) -> yaws_api:pre_ssi_files(A#arg.docroot, ["/simple_ex1.yaws"]).
 </erl>
 
 <br>
@@ -29,13 +30,11 @@ the data from the file will be delivered untouched.
 
 The file <a href="simple_ex2.yaws">simple_ex2.yaws</a> contains the following
 HTML code.
-<br>
+
 <erl>
-out(A) -> 
-  {ok, B} = file:read_file([A#arg.docroot, "/simple_ex2.yaws"]),
-  B2 = yaws_api:htmlize(B),
-  {ok, ["<pre> \n", B2, "</pre>\n"]}.
+out(A) -> yaws_api:pre_ssi_files(A#arg.docroot, ["/simple_ex2.yaws"]).
 </erl>
+
 
 The file has one very simple function which just returns a tuple
 <tt>{ok, String} </tt>

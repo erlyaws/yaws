@@ -1,0 +1,111 @@
+
+<erl>
+
+out(A) -> 
+    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
+
+</erl>
+
+<H1>Yaws API</H2>
+
+Here we describe the API avalable to Yaws applications. 
+First and foremost, the entire regular erlang API is available, this
+include mnesia ans all other erlang applications that are part of the
+regular erlang system.
+<p>
+Here we describe the functions available in the module 
+<code>yaws_api</code>. We divide the API functions into four  distinct
+groups. 
+<ol>
+<li> Functions that are only callable from the <code>all_headers/1</code>
+function. The all_headers/1 function is must generate all HTTP headers as well
+as the HTTP status code line. For example, a function which does a HTTP 
+redirect is such a function.
+<li> Functions that are only callable inside the <code>some_headers/1</code>
+function. 
+<li>Functions that are only callable inside the <code>out/1</code> function.
+<li> Functions that are callable evrywhere.
+</ol>
+
+
+<h2>Functions callable from all_headers/1</h2>
+<hr><h3> <code>redirect(Location)</code></h3>
+Issue a HTTP redirect to <code>Location</code>
+
+
+<h2>Functions callable from some_headers/1</h2>
+<hr><h3> <code>setcookie(Name, Value, [Path, [Expire, [Domain, Secure]]])</code></h3>
+Sets a cookie. Usage examples avilable in <a href="cookie.yaws">cookie.yaws</a>
+
+
+
+
+<h2>Functions callable from out/1</h2>
+<hr>
+<h3> <code>pre_ssi_files(DocRoot, Files)</code></h3>
+This function will perform a server side include on the files in
+<code>Files</code>. The data will be transformed so that all
+&lt;, &gt;, &amp; cahracters are htmlized. This useful for including
+code snippets in the yaws code.
+
+
+<hr>
+<hr><h3> <code>pre_ssi_string(String)</code></h3>
+Same as above, but for an explicit string
+
+
+
+
+<h2>Functions callable from anywhere </h2>
+
+<hr><h3><code>htmlize(Binary)</code></h3>
+Transform data so that all
+&lt;, &gt;, &amp; characters and line breaks are htmlized.
+
+<hr><h3><code>f(Fmt, Args)</code></h3>
+This function is automatically included in all yaws code. It is just
+a shortcut for: <code>io_lib:format(Fmt, Args)
+
+
+<hr><h3><code>f([Fmt, Args .......])</code></h3>
+This function is automatically included in all yaws code. It will
+apply io_lib:format to a conscutive list of Fmt and Args arguments.
+
+
+<hr><h3><code>ssi([File1, File2 ...])</code></h3>
+Server side include, the files will be included as is into the
+document.
+
+
+
+<hr>
+<h3> <tt> parse_post_data(Bin, Spec) </tt> </h2>
+
+<p>
+When data is POSTed to a yaws page, 
+this function can be used to parse the 
+data in a convenient way. Data which is posted from a form is naturally 
+arranged as a list of {key,value} pairs. 
+<p> Similarly, when data is fed to a yaws page in the URL as a query part,
+the query can be parsed by this function.
+
+<p>We can see examples of the usage of this function in the files
+<a href="form.yaws">form.yaws</a> which feeds the POST data to the file
+<a href="post.yaws">post.yaws</a>. The file post.yaws will call this function 
+to parse the data POSTed from the previous page.
+
+
+
+
+<hr>
+<h3><code> code_to_phrase(Code) </code></h2>
+<p>Makes a mapping from HTTP status codes to HTTP status code phrases. 
+
+
+
+
+
+
+<erl>
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+</erl>

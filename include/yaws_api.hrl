@@ -10,15 +10,13 @@
 
 -record(arg, {
 	  clisock,        %% the socket leading to the peer client
-	  h,              %% headers
+	  headers,        %% headers
 	  req,            %% request
 	  clidata,        %% The client data (as a binary in POST requests)
 	  querydata,      %% Was the URL on the form of ....?query (GET reqs)
 	  docroot         %% where's the data
 
 	 }).              
-
-		
 
 
 -record(http_request, {method,

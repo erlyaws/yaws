@@ -11,6 +11,11 @@ out(A) ->
 
 <table border="2">
 
+
+<tr><td> Feb 26, 2002 Cought I/O from the erlang compiler when compiling.
+The compiler will (wrongly) produce some errors plainly to the tty.
+The RightThing would be to fix that, but .....
+<tr><td> Feb 22, 2002 yaws_api:set_cookie + examples    </td></tr>
 <tr><td> Feb 14, 2002 redid HTML tables for top docs    </td></tr>
 <tr><td> Feb 13, 2002 released first version to the net 0.20    </td></tr>
 <tr><td> Feb 12, 2002 cached pages in RAM (ets tables)    </td></tr>

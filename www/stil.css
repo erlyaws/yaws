@@ -1,6 +1,6 @@
 
-<STYLE TYPE="text/css">
-  BODY {
+<style TYPE="text/css">
+  body {
     background: #C6C6B5;
       font-family: Verdana, Arial, Helvetica, sans-serif;
     color: black;
@@ -14,7 +14,12 @@
     background: green;
   }
 
-  H1, H2, H3, H4, H5 {
+  div.box { border: solid; border-width: thin; width: 100%; 
+            background: rgb(235, 245, 230)  }
+
+
+
+  H1, H2,  H4, H5 {
       text-decoration: none;
       font-family: Verdana, Arial, Helvetica, sans-serif;
       font-weight: bold; 
@@ -35,4 +40,4 @@
   A:active { color: lime }        /* active links */
   A:hover { background: #edb }
 
-</STYLE>
+</style>

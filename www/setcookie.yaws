@@ -1,3 +1,4 @@
+
 <erl>
 
 session(A, Visits) ->
@@ -6,17 +7,52 @@ session(A, Visits) ->
 	    N = calendar:local_time(),
 	    From ! {self(), [N|Visits]},
 	    session(A, [N|Visits])
-    after 30000 ->    %% keep state for 30 secs only
+    after 60000 ->    %% keep state for 60 secs only
 	    exit(normal)
     end.
 
-someheaders(A) ->
-    H=A#arg.headers,
-    case H#headers.cookie of
-        undefined ->
+
+some_headers(A) ->
+    H = A#arg.headers,
+    C = H#headers.cookie,
+    case C of
+	[Cookie|_] ->
+	    case string:tokens(Cookie, [$=]) of
+		["foobar", PidStr] ->
+		    Pid = list_to_pid(PidStr),
+		    case process_info(Pid, messages) of
+			undefined ->
+			    Now = calendar:local_time(),
+			    P = spawn(fun() -> session(A, [Now]) end),
+			    yaws_api:setcookie("foobar", pid_to_list(P), "/");
+			_ ->
+			    ok
+		    end;
+		_ ->
+		    ignore
+	    end;
+        [] ->
 	    Now = calendar:local_time(),
 	    P = spawn(fun() -> session(A, [Now]) end),
-	    yaws_api:setcookie(pid_to_list(P), "/");
-	PidStr ->
-	    
+	    yaws_api:setcookie("foobar", pid_to_list(P), "/")
+    end.
+
+</erl>
+
+<html>
+
+
+<h2> set cookie </h2>
+
+<p>This is the page that set the cookie in the browser.
+<a href="/readcookie.yaws">readcookie.yaws</a> will read the cookie and
+report persitant information as long as the browser session exists.
+
+<p> it will set the cookie <tt>foobar = &lt;x,y,z&gt;; </tt> where the
+x,y,z  string is the textual representation of an actual erlang pid
+which will be responsible for this session.
+
+</html>
+
+
 			       

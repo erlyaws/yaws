@@ -13,14 +13,14 @@
 -record(gconf,{file,
 	       yaws_dir,
 	       logdir,
-	       ebin_dir,
+	       ebin_dir = [],
 	       keepalive_timeout = 15000,
 	       max_num_cached_files = 400,
 	       max_num_cached_bytes = 1000000,  %% 1 MEG
 	       max_size_cached_file = 8000,
 	       default_type = "text/html",
 	       timeout = 2000,
-	       include_dir,
+	       include_dir = [],
 	       yaws   %% FIXME add version here 
 	         }).  %% a list of lists of #confs
                       %% one list of #conf's per listen ip

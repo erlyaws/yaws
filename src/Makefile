@@ -16,7 +16,8 @@ MODULES=yaws \
 	yaws_api \
 	yaws_log \
 	yaws_ls \
-	yaws_debug
+	yaws_debug \
+	yaws_compile
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app
 

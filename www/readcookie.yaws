@@ -1,0 +1,63 @@
+<html>
+
+<h2> Read cookie </h2>
+
+<erl>
+out(A) ->
+    H=A#arg.headers,
+    C = H#headers.cookie,
+    io:format("Cookie =~p~n", [C]),
+    L=case C of
+	  [] ->
+	      f("<p> No cookie set from the browser, need to "
+		"visit <a href=\"/setcookie.yaws\">setcookie.yaws</a> "
+		"to set the cookie first ~n", []);
+	  [Cookie| Cs] ->
+	      case string:tokens(Cookie, [$=]) of
+		  ["foobar", PidStr] ->
+		      Pid = list_to_pid(PidStr),
+		      Pid ! {self(), tick},
+		      receive
+			  {Pid, VisitList} ->
+			      f("<p> Yes, I read your cookie "
+				"You have vistited this page ~w times "
+				"they were ~n<ol> ~n~s </ol>~n "
+
+				"Reloading this page will show the session state ",
+
+				[length(VisitList),
+				 lists:map(fun(D) ->
+						   Ds = yaws:time_to_string(D, "GMT"),
+						   f("<li> ~s~n", [Ds])  end, 
+					   VisitList)
+				])
+		      after 500 ->
+			      f("<p> You had a cookie, but the pid handling your sess "
+				"timedout ...",[])
+		      end;
+		  Other ->
+		      f("<p> Noooo weirdo cookie here ~p~n", [C])
+	      end
+      end,
+    {ok, L}.
+
+</erl>
+
+
+<p>
+The code to read the cookie, is simple, we get the cookie passed to the yaws
+code in the #arg structure which is the argument supplied to the out/1 function.
+The code is:
+<erl>
+out(A) ->
+    yaws_api:pre_ssi_files(A#arg.docroot, ["readcookie.yaws"]).
+</erl>
+
+ 
+ 
+		  
+</html>
+		  
+							 
+
+		

@@ -11,25 +11,31 @@ out(A) ->
 
 Yaws have verry nice support for generating dynamic content on the fly.
 We use embedded erlang code to generate the content. The Erlang code
-is separated from the HTML code by <pre><erl></pre> and <tt></erl></tt>
+is separated from the HTML code by <tt> &lt;erl> </tt> and <tt> &lt;/erl> </tt>
 markers. For example:
 
-<xmp>
-
-<html>
-<h1>Foobar</h1>
-
 <erl>
+out(A) ->
 
-out(Arg) ->
-   {ok, "Funky Shit"}.
+L = "
+ <html>
+ <h1>Foobar</h1>
 
+ <erl>
+
+ out(Arg) ->
+    {ok, \"Funky Shit\"}.
+
+ </erl>
+
+ <h1>Baz</h1>
+ </html>
+
+",
+
+yaws_api:pre_ssi_string(L).
 </erl>
 
-<h1>Baz</h1>
-</html>
-
-</xmp>
 
 
 
@@ -51,13 +57,12 @@ The <tt>out/1</tt> function is supplied with a record argument. The
 definition of that record is automatically included in the embedded erlang code
 and the record definition is:
 
-
-<xmp>
-
+<erl>
+out(A) -> yaws_api:pre_ssi_string("
 -record(arg, {
 	  clisock,        %% the socket leading to the peer client
-	  h,              %% headers
-	  req,            %% request
+	  headers,        %% #headers{} record
+	  req,            %% #http_request{} record
 	  clidata,        %% The client data (as a binary in POST requests)
 	  querydata,      %% Was the URL on the form of ....?query (GET reqs)
 	  docroot         %% where's the data
@@ -87,7 +92,8 @@ and the record definition is:
 	  keep_alive,
 	  content_length}).
 
-</xmp>
+").
+</erl>
 
 
 
@@ -106,47 +112,6 @@ do for example HTTP redirections.
 
 The usage of these functions is better 
 described in the <a href="examples.yaws">Examples</a> section.
-
-
-
-<h2>The yaws_api module</h2>
-
-The yaws_api module contains a number of utility functions which
-is available to the erlang code embedded in the HTML documents.
-Naturally, all the normal functions in the erlang libraries are available,
-but the yaws_api module, contains functions that ease the development of
-code that generates dynamic HTML content.
-We have:
-
-<br>
-
-<ul>
-<li> <tt> parse_post_data(Bin, Spec) </tt> <br>
-When data is POSTed to a yaws page, this function can be used to parse the 
-data in a convenient way. Data which is posted from a form is naturally 
-arranged as a list of key,value pairs. 
-<p> Similarly, when data is fed to a yaws page in the URL as a query part,
-the query can be parsed by this function. <br>
-
-
-<li> <tt> code_to_phrase(Code) </tt> <br>
-Makes a mapping from HTTP status codes to HTTP status code phrases. <br>
-
-
-<li> <tt> ssi(DocRoot, FileList) </tt>
-Server side include. <br>
-
-
-<li> <tt> redirect(Url) </tt> <br>
-This function must be called in the first chunk of erlang coe in a yaws file.
-Furthermore, it must be called from the <tt>all_headers/1</tt> function.
-It will generate a redirect responce to the client.
-<br>
-
-
-
-</ul>
-
 
 
 <erl>

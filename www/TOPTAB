@@ -16,6 +16,7 @@
     <td> <A HREF="todo.yaws">TODO list </a> </td>
     <td> <A HREF="motivation.yaws">Motivation </a> </td>
     <td> <A HREF="download">Download </a> </td>
+    <td> <A HREF="api.yaws">Yaws API </a> </td>
 </tr>
 
 </table>

@@ -1,0 +1,55 @@
+<html>
+
+<h2> Read persitant cookie </h2>
+
+<erl>
+
+to_integer(S) ->
+    list_to_integer(string:strip(S, both)).
+
+out(A) ->
+    H=A#arg.headers,
+    C = H#headers.cookie,
+    io:format("Cookie =~p~n", [C]),
+    L=case C of
+	  [] ->
+	      f("<p> No cookie set from the browser, need to "
+		"visit <a href=\"/setpcookie.yaws\">setpcookie.yaws</a> "
+		"to set the cookie first ~n", []);
+	  [Cookie| Cs] ->
+	      case string:tokens(Cookie, [$=]) of
+		  ["pfoobar", Num] ->
+		      case ets:lookup(pcookies, {cookie,to_integer(Num)}) of
+			  [{{cookie, Num}, Data}] ->
+			      f("<p> Yes, I read your cookie "
+				"Your persistant info is ~p: ~n", [Data]);
+			  [] ->
+			      f("<p> You had a cookie,but the data is gone",[])
+		      end;
+		  Other ->
+		      f("<p> Noooo weirdo cookie here ~p~n", [C])
+	      end
+      end,
+    {ok, L}.
+
+</erl>
+
+
+<p>
+The code to read the cookie, is simple, we get the cookie passed to the yaws
+code in the #arg structure which is the argument supplied to the out/1 function.
+The code is:
+<erl>
+out(A) ->
+    yaws_api:pre_ssi_files(A#arg.docroot, ["readpcookie.yaws"]).
+</erl>
+
+ 
+</html>
+
+ 
+		  
+		  
+							 
+
+		

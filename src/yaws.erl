@@ -313,6 +313,8 @@ mk_list([X|Rest]) ->
 universal_time_as_string() ->
     time_to_string(calendar:universal_time(), "GMT").
 
+
+
 time_to_string( {{Year, Month, Day}, {Hour, Min, Sec}}, Zone) ->
     io_lib:format("~s, ~s ~s ~w ~s:~s:~s ~s",
 		  [day(Year, Month, Day),

@@ -26,5 +26,12 @@ touch:
 release:
 	. vsn.mk; \
 	CVS_RSH=ssh; \
-	cvs tag yaws-$$(YAWS_VSN) . ;\
-	
+	Y=`echo $$(YAWS_VSN) | sed 's/./-/g'` ;\
+	cvs tag yaws-$$(Y) . ;\
+	[ -d tmp ] && rm -rf tmp ; \
+	(cd ..; cvs export -d tmp .; cd tmp; mv yaws yaws-$$(YAWS_VSN); \
+	 tar cfz  yaws-$$(YAWS_VSN).tar.gz  yaws-$$(YAWS_VSN)  \;
+	mv yaws-$$(YAWS_VSN) .. )
+
+
+
