@@ -5,6 +5,7 @@ out(A) ->
 </erl>
 
 
+<h2> Bindings </h2>
 <p>
 Bindings are the opposite of <a href="ssi.yaws"> Server Side Includes (SSI)</a>.
 SSI is used when entire pages are written largely in EHTML and

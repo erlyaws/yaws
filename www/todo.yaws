@@ -11,6 +11,10 @@ out(A) ->
 
 <ul>
 
+
+<li> Test suites !!!
+<li> Http client code/lib
+<li> Load and unload configs without disturbing existing sessions.
 <li> respect client side Cache-Control: no-cache
 <li> clusters, it would be fairly straightforward
 to build support for webfarms into yaws. Now it works

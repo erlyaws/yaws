@@ -35,7 +35,7 @@ out(A) ->
 	port = 8001
 	listen = 0.0.0.0
 	docroot = /home/klacke/yaws/yaws/scripts/../www
-	appmods = <pathelem, mymod>
+	appmods = <pathelem, myappmod>
 </server>"),
 
 
