@@ -2180,6 +2180,13 @@ flush(SC, Sock, Sz) ->
     end.
 
 	    
+strip_list_to_integer(L) ->
+    case catch list_to_integer(L) of
+	{'EXIT', _} ->
+	    list_to_integer(string:strip(L, both));
+	Int ->
+	    Int
+    end.
 
 
 tcp_flush(_Sock, undefined) ->
@@ -2187,7 +2194,7 @@ tcp_flush(_Sock, undefined) ->
 tcp_flush(_Sock, 0) ->
     ok;
 tcp_flush(Sock, Sz) when list(Sz) ->
-    tcp_flush(Sock, list_to_integer(Sz));
+    tcp_flush(Sock, strip_list_to_integer(Sz));
 tcp_flush(Sock, Sz) ->
     gen_tcp:recv(Sock, Sz, 1000).
 
