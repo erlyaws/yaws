@@ -889,7 +889,7 @@ setconf(GC, Groups0) when record(GC, gconf) ->
 					  SC#sconf.appmods)}
 		       end, Groups0),
 					  
-	    case gen_server:call(yaws_server, {setconf, GC, Groups}) of
+	    case gen_server:call(yaws_server,{setconf, GC, Groups},infinity) of
 		ok ->
 		    yaws_log:setdir(GC, Groups),
 		    case GC#gconf.trace of
