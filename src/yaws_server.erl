@@ -1075,8 +1075,14 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin, Fd, [H|T],ARG,N) ->
     case H of
 	{mod, LineNo, YawsFile, NumChars, Mod, out} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
-	    yaws_call(DCC, LineNo, YawsFile, Mod, out, [ARG], GC, SC, N),
-	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin2,Fd,T,ARG,0);
+	    case yaws_call(DCC, LineNo, YawsFile, Mod, out, [ARG], GC,SC, N) of
+		break ->
+		    deliver_dyn_file(CliSock, GC, SC, Req, Head, 
+				     UT, DCC, Bin, Fd, [],ARG,N) ;
+		_ ->
+		    deliver_dyn_file(CliSock, GC, SC, Req, Head, 
+				     UT, DCC, Bin2,Fd,T,ARG,0)
+	    end;
 	{data, 0} ->
 	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT,DCC, Bin, Fd,T,ARG,N);
 	{data, NumChars} ->
@@ -1208,6 +1214,9 @@ handle_out_reply({status, Code}, _DCC,_LineNo,_YawsFile, _SC) when integer(Code)
 handle_out_reply({'EXIT', normal}, _DCC, _LineNo, _YawsFile, _SC) ->
     exit(normal);
 
+handle_out_reply(break, _DCC, _LineNo, _YawsFile, _SC) ->
+    break;
+
 handle_out_reply({redirect_local, Path}, DCC, _LineNo, _YawsFile, SC) ->
     erase(acc_headers),
     Scheme = case SC#sconf.ssl of
@@ -1270,6 +1279,8 @@ handle_out_reply_l([Reply|T], DCC, LineNo, YawsFile, SC, Res) ->
     case handle_out_reply(Reply, DCC, LineNo, YawsFile, SC) of
 	{get_more, Cont, State} ->
 	    handle_out_reply_l(T, DCC, LineNo, YawsFile, SC, {get_more, Cont, State});
+	break ->
+	    break;
 	_ ->
 	    handle_out_reply_l(T, DCC, LineNo, YawsFile, SC, Res)
     end;
