@@ -792,7 +792,7 @@ is_special(C) ->
 
 
 parse_appmods(['<', PathElem, ',' , AppMod, '>' | Tail], Ack) ->
-    parse_appmods(Tail, [{PathElem, AppMod} |Ack]);
+    parse_appmods(Tail, [{PathElem, list_to_atom(AppMod)} |Ack]);
 parse_appmods([AppMod | Tail], Ack) ->
     case AppMod of
 	[Char] ->
@@ -800,10 +800,10 @@ parse_appmods([AppMod | Tail], Ack) ->
 		true ->
 		    {error, "Bad appmod syntax"};
 		false ->
-		    parse_appmods(Tail, [{AppMod, AppMod}  | Ack])
+		    parse_appmods(Tail, [{AppMod, list_to_atom(AppMod)} | Ack])
 	    end;
 	_ ->
-	    parse_appmods(Tail,  [{AppMod, AppMod} |Ack])
+	    parse_appmods(Tail,  [{AppMod, list_to_atom(AppMod)} |Ack])
     end;
 parse_appmods([], Ack) ->
     {ok, Ack};
