@@ -506,8 +506,6 @@ merge_body(undefined, Data) ->
 merge_body(Acc, New) ->
     Acc ++ New.
 
-
-
 addFileChunk([{part_body, Data}|Res], State) ->
     addFileChunk([{body, Data}|Res], State);
 
@@ -569,7 +567,7 @@ addFileChunk([{body, Data}|Res], State) when State#addfile.param == text ->
 addFileChunk([{head, {attached, Opts}}|Res], State) ->
     Page     = State#addfile.node,
     Password = State#addfile.password,
-    FilePath = getopt("filename", Opts),
+    FilePath = getopt(filename, Opts),
     FileName = basename(FilePath),
     Root     = State#addfile.root,
     Prefix   = State#addfile.prefix,
@@ -617,9 +615,9 @@ check_filename(FileName) ->
 updateFilesInit(Params, Root, Prefix) ->
     Page = getopt("node", Params),
 
-    Descriptions = [{lists:nthtail(4,atom_to_list(N)),S} ||
+    Descriptions = [{lists:nthtail(4,N),S} ||
 		       {N,S,_} <- Params,
-		       lists:prefix("cbt_",atom_to_list(N))],
+		       lists:prefix("cbt_",N)],
 
     {File,FileDir} = page2filename(Page, Root),
     {ok, Bin} = file:read_file(File),
@@ -659,9 +657,9 @@ deleteFilesInit(Params, Root, Prefix) ->
     Page        = getopt("node", Params),
     Password    = getopt("password", Params),
 
-    CheckedFiles = [lists:nthtail(3,atom_to_list(N)) ||
+    CheckedFiles = [lists:nthtail(3,N) ||
 		       {N,_,_} <- Params,
-		       lists:prefix("cb_",atom_to_list(N))],
+		       lists:prefix("cb_",N)],
 
     {File,FileDir} = page2filename(Page, Root),
     {ok, Bin} = file:read_file(File),
@@ -722,9 +720,9 @@ deleteFiles(Params, Root, Prefix) ->
 deleteFiles1(Params, Root, Prefix) ->
     Page        = getopt("node", Params),
 
-    CheckedFiles = [lists:nthtail(4,atom_to_list(N)) ||
+    CheckedFiles = [lists:nthtail(4,N) ||
 		       {N,_,_} <- Params,
-		       lists:prefix("del_",atom_to_list(N))],
+		       lists:prefix("del_",N)],
 
     {File,FileDir} = page2filename(Page, Root),
     {ok, Bin} = file:read_file(File),
@@ -767,9 +765,9 @@ copyFilesInit(Params, Root, Prefix) ->
     Page        = getopt("node", Params),
     Password    = getopt("password", Params),
 
-    CheckedFiles = [lists:nthtail(3,atom_to_list(N)) ||
+    CheckedFiles = [lists:nthtail(3,N) ||
 		       {N,_,_} <- Params,
-		       lists:prefix("cb_",atom_to_list(N))],
+		       lists:prefix("cb_",N)],
 
     {File,FileDir} = page2filename(Page, Root),
     {ok, Bin} = file:read_file(File),
@@ -871,9 +869,9 @@ copyFiles3(Params, Root, Prefix) ->
     {SrcWobFile, SrcFileDir} = page2filename(Page, Root),
     {DstWobFile, DstFileDir} = page2filename(Dest, Root),
     
-    SrcFileNames = [lists:nthtail(3,atom_to_list(N)) ||
+    SrcFileNames = [lists:nthtail(3,N) ||
 		       {N,S,_} <- Params,
-		       lists:prefix("cp_",atom_to_list(N))],
+		       lists:prefix("cp_",N)],
 
     SrcDir = Root ++ "/" ++ SrcFileDir ++ "/",
     DstDir = Root ++ "/" ++ DstFileDir ++ "/",
@@ -1113,9 +1111,9 @@ finalDeletePage1(Params, Root, Prefix) ->
 
 
 getPassword(Page, Root, Prefix, Target, Values) ->
-    Vs = [{target, atom_to_list(Target), []}|
-	  lists:keydelete(password, 1, Values)],
-    Hidden = [[input("hidden", atom_to_list(Name), Value),"\n"] ||
+    Vs = [{"target", atom_to_list(Target), []}|
+	  lists:keydelete("password", 1, Values)],
+    Hidden = [[input("hidden", Name, Value),"\n"] ||
 		 {Name, Value, _} <- Vs],
     template("Password", "",
 	     [h1(Page),
@@ -2316,8 +2314,8 @@ check_precon([F|Fs], Args) ->
 getopt(Key, KeyList) ->
     getopt(Key, KeyList, undefined).
 
-getopt(Key, KeyList, Default) when atom (Key) ->
-    getopt(atom_to_list(Key), KeyList, Default);
+% getopt(Key, KeyList, Default) when atom (Key) ->
+%     getopt(atom_to_list(Key), KeyList, Default);
 getopt(Key, KeyList, Default)  ->
     case lists:keysearch(Key, 1, KeyList) of
 	false ->
@@ -2331,7 +2329,7 @@ getopt(Key, KeyList, Default)  ->
     end.
 
 getopt_options(Key, KeyList) when atom(Key) ->
-    getopt_options(atom_to_list(Key), KeyList)
+    getopt_options(atom_to_list(Key), KeyList);
 getopt_options(Key, KeyList) ->
     case lists:keysearch(Key, 1, KeyList) of
 	{value, Tuple} when size(Tuple) >= 3 ->

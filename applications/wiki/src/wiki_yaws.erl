@@ -39,13 +39,18 @@ parse_multipost(Arg) ->
 
 parse_post([], Acc) -> Acc;
 parse_post([{head, {Name, Opts}}|Rest], Acc) ->
-    parse_post(Rest, [{Name, "", Opts}|Acc]);
+    parse_post(Rest, [{to_string(Name), "", Opts}|Acc]);
 parse_post([{body, Data}|Rest], [{Name, Value, Opts}|Acc]) ->
-    parse_post(Rest, [{Name, Value++Data, Opts}|Acc]);
+    parse_post(Rest, [{to_string(Name), Value++Data, Opts}|Acc]);
 parse_post([{part_body, Data}|Rest], [{Name, Value, Opts}|Acc]) ->
-    parse_post(Rest, [{Name, Value++Data, Opts}|Acc]);
+    parse_post(Rest, [{to_string(Name), Value++Data, Opts}|Acc]);
 parse_post([{Name, Value}|Rest], Acc) ->
-    parse_post(Rest, [{Name, Value, []}|Acc]).
+    parse_post(Rest, [{to_string(Name), Value, []}|Acc]).
+
+to_string(Atom) when atom(Atom) ->
+    atom_to_list(Atom);
+to_string(String) ->
+    String.
 
 call_with_multi(M, F, Arg) ->
     case parse_multipost(Arg) of
