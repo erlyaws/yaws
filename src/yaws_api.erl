@@ -265,15 +265,15 @@ parse_arg_value([C|Line], Key, Value, Quote, _) ->
 %
 
 make_parse_line_reply(Key, Value, Rest) ->
-    {{list_to_atom(httpd_util:to_lower(lists:reverse(Key))),
-      lists:reverse(Value)}, Rest}.
+     {{list_to_atom(yaws:funreverse(Key, {yaws, to_lower})),
+       lists:reverse(Value)}, Rest}.
 
 
 %
 
 isolate_arg(Str) -> isolate_arg(Str, []).
 
-isolate_arg([$:,$ |T], L) -> {httpd_util:to_lower(lists:reverse(L)), T};
+isolate_arg([$:,$ |T], L) -> {yaws:funreverse(L, {yaws, to_lower}), T};
 isolate_arg([H|T], L)     -> isolate_arg(T, [H|L]).
 
 

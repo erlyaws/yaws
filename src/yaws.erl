@@ -634,3 +634,22 @@ printversion() ->
 %% our default arg rewriteer does's of cource nothing
 arg_rewrite(A) ->
     A.
+
+
+
+to_lower([C|Cs]) when C >= $A, C =< $Z ->
+    [C+($a-$A)|to_lower(Cs)];
+to_lower([C|Cs]) ->
+    [C|to_lower(Cs)];
+to_lower([]) ->
+    [].
+
+
+
+funreverse(List, Fun) ->
+    funreverse(List, Fun, []).
+
+funreverse([H|T], Fun, Ack) ->
+    funreverse(T, Fun, [Fun(H)|Ack]);
+funreverse([], _Fun, Ack) ->
+    Ack.

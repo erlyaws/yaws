@@ -587,7 +587,7 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == nossl ->
 		    aloop(CliSock, GS, Num+1);
 		done ->
 		    {ok, Num+1};
-		{page, Page} ->
+		{page, _Page} ->
 		    nyi
 	    end
     end;
