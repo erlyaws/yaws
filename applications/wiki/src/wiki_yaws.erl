@@ -24,7 +24,8 @@ parse_post_data(Arg) ->
     case yaws_api:parse_post_data(Arg) of
 	{result, PostList} ->
 	    parse_post(PostList);
-	Post -> Post
+	Post ->
+	    [{N,V,[]} || {N,V} <- Post]
     end.
 
 parse_post([]) -> [];

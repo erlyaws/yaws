@@ -5,14 +5,18 @@
 %%         : Johan Bevemyr, minor modifications (jb@bevemyr.com)
 %% Purpose : Convert wiki page tree to HTML
 
--export([format_wiki/3, format_link/2, format_wiki_files/4]).
+-export([format_wiki/3, format_link/2, format_wiki_files/4,
+	format_wiki_files/5]).
 
 -import(lists, [member/2, map/2]).
 
 format_wiki_files(Page, FileDir, [], Root) -> [];
 format_wiki_files(Page, FileDir, Files, Root) ->
+    format_wiki_files(Page, FileDir, Files, Root, "Attached files:").
+
+format_wiki_files(Page, FileDir, Files, Root, Heading) ->
     LinkFun = fun(I) -> format_link(I, FileDir, Page, Root) end,
-    ("<hr><b><p>Attached files: </b><br>\n" 
+    ("<hr><b><p>" ++ Heading ++ "</b><br>\n" 
      "<table cellspacing=10 width = \"100%\">\n" 
      ++ lists:map(LinkFun, lists:keysort(2,Files)) ++
      "</table></p>\n").

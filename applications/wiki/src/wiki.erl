@@ -26,10 +26,10 @@
 -export([showPage/3, createNewPage/3, showHistory/3, allPages/3,
 	 lastEdited/3, wikiZombies/3, editPage/3, editFiles/3,
 	 previewNewPage/3, allRefsToMe/3, deletePage/3, deletePage/4,
-	 editTag/3, finalDeletePage/3, storePage/3,
-	 storeNewPage/3, previewPage/3, previewTagged/3,
-	 storeTagged/3, fixupFiles/3,
-	 sendMeThePassword/3, storeFiles/3, showOldPage/3]).
+	 editTag/3, finalDeletePage/3, storePage/3, putPassword/3,
+	 storeNewPage/3, previewPage/3, previewTagged/3, copyFiles/3,
+	 deleteFiles/3, addFile/3, storeTagged/3, fixupFiles/3, moveFiles/3,
+	 moveAttached/3, sendMeThePassword/3, storeFiles/3, showOldPage/3]).
 
 -export([show/1, ls/1, h1/1, read_page/2, background/1, p/1,
 	 str2urlencoded/1]).
@@ -58,7 +58,7 @@ showPage(Params, Root, Prefix) ->
 		    wiki_templates:template(Page, body_pic(Pwd),
 					    banner(Page, Pwd),
 					    [top_header(Page),DeepStr,
-					     DeepFiles, footer(Page,Pwd)]);
+					     DeepFiles]);
 		_ ->
 		    createNewPage([{node, Page}], Root, Prefix)
 	    end
@@ -67,44 +67,41 @@ showPage(Params, Root, Prefix) ->
 
 fixupFiles(Params, Root, Prefix) ->
     Page = getopt(node, Params),
-    if 
+    if
 	Page == undefined ->
 	    error(invalid_request);
 	true ->
-	    {WobFile, FileDir} = page2filename(Page, Root),
-	    case file:read_file(WobFile) of
-		{ok, Bin} ->
-		    {wik002, Pwd,Email,Time,Who,TxtStr,Files,Patches} =
-			bin_to_wik002(Root,FileDir,Bin),
+	    importFiles(Page, Root, Prefix)
+    end.
 
-		    io:format("OldFiles = ~P\n", [Files, 5]),
-		    
-		    CurFiles = files(Root++"/"++FileDir, "*"),
-		    
-		    CurFileNames = [basename(CF) || CF <- CurFiles],
+importFiles(Page, Root, Prefix) ->
+    {WobFile, FileDir} = page2filename(Page, Root),
+    case file:read_file(WobFile) of
+	{ok, Bin} ->
+	    {wik002, Pwd,Email,Time,Who,TxtStr,Files,Patches} =
+		bin_to_wik002(Root,FileDir,Bin),
 
-		    io:format("CurFiles = ~P\n", [CurFileNames, 5]),
-		    
-		    F = fun(Fn) ->
-				case lists:keysearch(Fn,2,Files) of
-				    {value, File} ->
-					File;
-				    false ->
-					{file, Fn, "", []}
-				end
-			end,
-		    
-		    NewFiles = [F(X) || X <- CurFileNames],
+	    CurFiles = files(Root++"/"++FileDir, "*"),
 
-		    io:format("NewFiles = ~P\n", [NewFiles, 5]),
+	    CurFileNames = [basename(CF) || CF <- CurFiles],
 
-		    Ds = {wik002, Pwd,Email,Time,Who,TxtStr,NewFiles,Patches},
-		    B = term_to_binary(Ds),
-		    file:write_file(WobFile, B),
-		    redirect({node, Page}, Prefix);
-		_ ->
-		    createNewPage([{node, Page}], Root, Prefix)
-	    end
+	    F = fun(Fn) ->
+			case lists:keysearch(Fn,2,Files) of
+			    {value, File} ->
+				File;
+			    false ->
+				{file, Fn, "", []}
+			end
+		end,
+
+	    NewFiles = [F(X) || X <- CurFileNames],
+
+	    Ds = {wik002, Pwd,Email,Time,Who,TxtStr,NewFiles,Patches},
+	    B = term_to_binary(Ds),
+	    file:write_file(WobFile, B),
+	    redirect({node, Page}, Prefix);
+	_ ->
+	    createNewPage([{node, Page}], Root, Prefix)
     end.
 
 
@@ -125,14 +122,16 @@ createNewPage(Params, Root, Prefix) ->
        form("POST", "previewNewPage.yaws",
 	    [input("submit", "review", "Preview"),
 	     input("hidden", "node", Page),
-	     "Password1:",
-	     password_entry("password1", 8),
-	     "Password2:",
-	     password_entry("password2", 8),p(),
+	     hr(),
+	     "Password:", password_entry("password1", 8), br(),
+	     "Reconfirm password:", password_entry("password2", 8),
+	     p(),
 	     "Email:",
 	     input("text","email",""),
 	     p(),
-	     textarea("text", 25, 72,initial_page_content())])]).
+	     textarea("text", 25, 72,initial_page_content()),
+	     hr()
+	    ])]).
 
 
 
@@ -211,79 +210,362 @@ storeTagged(Params, Root, Prefix) ->
 
 storeFiles(Params, Root, Prefix) ->
 
+    Page     = getopt(node, Params),
+    Password = getopt(password, Params),
+    Add      = getopt(add, Params),
+    Update   = getopt(update, Params),
+    Delete   = getopt(delete, Params),
+    Copy     = getopt(copy, Params),
+    Cancel   = getopt(cancel, Params),
+
+    case checkPassword(Page, Password, Root, Prefix) of
+	true ->
+	    if
+		Add /= undefined ->
+		    addFileInit(Params, Root, Prefix);
+		Update /= undefined ->
+		    updateFilesInit(Params, Root, Prefix);
+		Delete /= undefined ->
+		    deleteFilesInit(Params, Root, Prefix);
+		Copy /= undefined ->
+		    copyFilesInit(Params, Root, Prefix);
+		Cancel /= undefined ->
+		    redirect({node, Page}, Prefix);
+		true ->
+		    show({no_such_page, Page})
+	    end;
+	false ->
+	    getPassword(Page, Root, Prefix, storeFiles, Params);
+	error ->
+	    show({no_such_page,Page})
+    end.
+
+addFileInit(Params, Root, Prefix) ->
     Page        = getopt(node, Params),
     Password    = getopt(password, Params),
-    Cancel      = getopt(cancel, Params),
-    ContentL    = getopt(attached, Params),
-    Description = getopt(text, Params),
-    FileOpts    = getopt_options(attached, Params),
-
-    FilePath    = getopt(filename, FileOpts, ""),
-    Filename = basename(FilePath),
+    template("Add File", bgcolor("white"), "",
+	     [h1(Page), 
+	      form("POST", "addFile.yaws", 
+		   [
+		    "<table width=\"100%\"><tr>",
+		    "<th align=left>Attach new file: ",
+		    "<td align=left>",
+		    input("file","attached","30"),"\n",
+		    "<tr><th colspan=2 align=left>",
+		    "Description: ","\n",
+		    "<tr><td colspan=2 align=left>",
+		    textarea("text", 10, 72,""),"\n",
+		    "</table>",
+		    input("submit", "add", "Add"),
+		    input("submit", "cancel", "Cancel"),
+		    input("hidden", "node", Page),
+		    input("hidden", "password", Password)])
+	     ]).
+    
+addFile(Params, Root, Prefix) ->
+    Password = getopt(password, Params, ""),
+    Page     = getopt(node, Params), 
+    Cancel   = getopt(cancel, Params),
 
     if
 	Cancel /= undefined ->
 	    redirect({node, Page}, Prefix);
 	true ->
-	    Checkboxes = [{lists:nthtail(3,atom_to_list(N)),S} ||
-			     {N,S,_} <- Params,
-			     lists:prefix("cb_",atom_to_list(N))],
-	    Descriptions = [{lists:nthtail(4,atom_to_list(N)),S} ||
-			       {N,S,_} <- Params,
-			       lists:prefix("cbt_",atom_to_list(N))],
-	    Content = list_to_binary(ContentL),
-	    {File,FileDir} = page2filename(Page, Root),
-	    case file:read_file(File) of
-		{ok, Bin} ->
-		    Wik = {wik002,Pwd,_Email,_Time,
-			   _Who,_Txt,OldFiles,_Patches} = bin_to_wik002(Bin),
-
-		    %% Update description field of file entry
-		    UpdateDesc =
-			fun({file, Fname, OldDesc, []}) ->
-				case lists:keysearch(Fname, 1, Descriptions) of
-				    {value, {_,NewDesc}} ->
-					{file, Fname, NewDesc, []};
-				    _ ->
-					{file, Fname, OldDesc, []}
-				end
-			end,
-
-		    %% Make list of files to keep and update desc while at it
-		    KeepFiles = [UpdateDesc({file, Fname, Fdesc, []}) ||
-				    {file, Fname, Fdesc, _} <- OldFiles,
-				    lists:keymember(Fname, 1, Checkboxes)],
-
-		    %% List of files to delete
-		    DelFiles =
-			[F || F = {file, Fname, Fdesc, Fcont} <- OldFiles,
-			      not lists:keymember(Fname, 1, Checkboxes)],
-
-		    NewFiles =
-			case {Filename,Content} of
-			    {[],<<>>} -> KeepFiles;
-			    _ ->
-				NewFile = {file, Filename, Description, []},
-				KeptOld =
-				    lists:keydelete(Filename, 2, KeepFiles),
-				[NewFile|KeptOld]
-			end,
-		    case Pwd of
-			"" ->
-			    store_files_ok(Page, Root, Prefix, NewFiles, Wik,
-					   Filename, Content, DelFiles);
-			Password ->
-			    store_files_ok(Page, Root, Prefix, NewFiles, Wik,
-					   Filename, Content, DelFiles);
-			_ ->
-			    show({invalid_password, shouldbe,
-				  Pwd, was, Password})
-		    end;
-		_ ->
+	    case checkPassword(Page, Password, Root, Prefix) of
+		true ->
+		    addFile1(Params, Root, Prefix);
+		false ->
+		    show({bad_password, Page});
+		error ->
 		    show({no_such_page,Page})
 	    end
     end.
 
+addFile1(Params, Root, Prefix) ->
+    Page        = getopt(node, Params),
+    ContentL    = getopt(attached, Params),
+    Description = getopt(text, Params),
+    FileOpts    = getopt_options(attached, Params),
+    FilePath    = getopt(filename, FileOpts, ""),
+
+    FileName = basename(FilePath),
+
+    Content = list_to_binary(ContentL),
+    {File,FileDir} = page2filename(Page, Root),
+
+    {ok, Bin} = file:read_file(File),
+    Wik = {wik002,Pwd,Email,_Time, _Who,Txt,OldFiles,Patches} =
+	bin_to_wik002(Bin),
+
+    NewFiles =
+	case {FileName,Content} of
+	    {[],<<>>} -> OldFiles;
+	    _ ->
+		NewFile = {file, FileName, Description, []},
+		KeptOld = lists:keydelete(FileName, 2, OldFiles),
+		[NewFile|KeptOld]
+	end,
+
+    Time = {date(), time()},
+    Who = "unknown",
+    Ds = {wik002,Pwd, Email,Time,Who,Txt,NewFiles,Patches},
+    B = term_to_binary(Ds),
+    file:write_file(Root++"/"++FileDir++"/"++FileName, Content),
+    file:write_file(File, B),
+    redirect({node, Page}, Prefix).
+
+
+updateFilesInit(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+
+    Descriptions = [{lists:nthtail(4,atom_to_list(N)),S} ||
+		       {N,S,_} <- Params,
+		       lists:prefix("cbt_",atom_to_list(N))],
+
+    {File,FileDir} = page2filename(Page, Root),
+    {ok, Bin} = file:read_file(File),
+    Wik = bin_to_wik002(Bin),
+    {wik002,Pwd,Email,_Time, _Who,Txt,OldFiles,Patches} = Wik,
+
+    %% Update description field of file entry
+    UpdateDesc =
+	fun({file, Fname, OldDesc, []}) ->
+		case lists:keysearch(Fname, 1, Descriptions) of
+		    {value, {_,NewDesc}} ->
+			{file, Fname, NewDesc, []};
+		    _ ->
+			{file, Fname, OldDesc, []}
+		end
+	end,
+
+    NewFiles = [UpdateDesc(F) || F <- OldFiles],
+    
+    Time = {date(), time()},
+    Who = "unknown",
+    Ds = {wik002,Pwd, Email,Time,Who,Txt,NewFiles,Patches},
+    B = term_to_binary(Ds),
+    file:write_file(File, B),
+    redirect({node, Page}, Prefix).
+
+
+deleteFilesInit(Params, Root, Prefix) ->
+
+    Page        = getopt(node, Params),
+    Password    = getopt(password, Params),
+
+    CheckedFiles = [lists:nthtail(3,atom_to_list(N)) ||
+		       {N,_,_} <- Params,
+		       lists:prefix("cb_",atom_to_list(N))],
+
+    {File,FileDir} = page2filename(Page, Root),
+    {ok, Bin} = file:read_file(File),
+    Wik = {wik002,Pwd,_Email,_Time, _Who,_Txt,Files,_Patches}
+	= bin_to_wik002(Bin),
+    
+    Extend = fun({file, Name, Desc, _}) ->
+		     {file, Name, Desc, []};
+		({file, Name, _}) ->
+		     {file, Name, "", []}
+	     end,
+
+    OldFiles = [ Extend(F) || F <- Files],
+
+    DelFiles = [ {file, Name, Desc, []} || {file, Name, Desc, _} <- OldFiles,
+					   lists:member(Name, CheckedFiles)],
+
+    List =
+	wiki_to_html:format_wiki_files(Page, FileDir,
+				       lists:keysort(2,DelFiles), Root,
+				       "The following files will be deleted "
+				       "from " ++ Page ++ "."),
+
+    DelList = [input("hidden", "del_"++Name, Name) ||
+		  {file, Name, _, _} <- DelFiles],
+
+    template("Confirm", bgcolor("white"), "",
+	     [h1(Page),
+	      List,
+	      form("POST", "deleteFiles.yaws", 
+		   [DelList,
+		    input("submit", "delete", "Delete"),
+		    input("submit", "cancel", "Cancel"),
+		    input("hidden", "node", Page),
+		    input("hidden", "password", Password)])
+	     ]).
+    
+deleteFiles(Params, Root, Prefix) ->
+    Password = getopt(password, Params, ""),
+    Page     = getopt(node, Params), 
+    Cancel   = getopt(cancel, Params),
+    
+    if 
+	Cancel /= undefined ->
+	    redirect({node, Page}, Prefix);
+	true  ->
+	    case checkPassword(Page, Password, Root, Prefix) of
+		true ->
+		    deleteFiles1(Params, Root, Prefix);
+		false ->
+		    show({bad_password, Page});
+		error ->
+		    show({no_such_page,Page})
+	    end
+    end.
+
+deleteFiles1(Params, Root, Prefix) ->
+    Page        = getopt(node, Params),
+
+    CheckedFiles = [lists:nthtail(4,atom_to_list(N)) ||
+		       {N,_,_} <- Params,
+		       lists:prefix("del_",atom_to_list(N))],
+
+    {File,FileDir} = page2filename(Page, Root),
+    {ok, Bin} = file:read_file(File),
+    Wik = {wik002,Pwd,Email,_Time, _Who,Txt,Files,Patches}
+	= bin_to_wik002(Bin),
+    
+    Extend = fun({file, Name, Desc, _}) ->
+		     {file, Name, Desc, []};
+		({file, Name, _}) ->
+		     {file, Name, "", []}
+	     end,
+
+    OldFiles = [ Extend(F) || F <- Files],
+
+    DelFiles = [ {file, Name, Desc, []} || {file, Name, Desc, _} <- OldFiles,
+					   lists:member(Name, CheckedFiles)],
+    NewFiles = [ {file, Name, Desc, []} ||
+		   {file, Name, Desc, _} <- OldFiles,
+		   not lists:member(Name, CheckedFiles)],
+
+    Time = {date(), time()},
+    Who = "unknown",
+    Ds = {wik002,Pwd, Email,Time,Who,Txt,NewFiles,Patches},
+    B = term_to_binary(Ds),
+    lists:foreach(fun({file,F,_,_}) ->
+			  file:delete(Root++"/"++FileDir++"/"++F)
+		  end, DelFiles),
+    file:write_file(File, B),
+    redirect({node, Page}, Prefix).
+
+
+copyFilesInit(Params, Root, Prefix) ->
+
+    Page        = getopt(node, Params),
+    Password    = getopt(password, Params),
+
+    CheckedFiles = [lists:nthtail(3,atom_to_list(N)) ||
+		       {N,_,_} <- Params,
+		       lists:prefix("cb_",atom_to_list(N))],
+
+    {File,FileDir} = page2filename(Page, Root),
+    {ok, Bin} = file:read_file(File),
+    Wik = {wik002,Pwd,_Email,_Time, _Who,_Txt,Files,Patches}
+	= bin_to_wik002(Bin),
+    
+    Extend = fun({file, Name, Desc, _}) ->
+		     {file, Name, Desc, []};
+		({file, Name, _}) ->
+		     {file, Name, "", []}
+	     end,
+
+    OldFiles = [ Extend(F) || F <- Files],
+
+    CpFiles = [ {file, Name, Desc, []} || {file, Name, Desc, _} <- OldFiles,
+					  lists:member(Name, CheckedFiles)],
+    List =
+	wiki_to_html:format_wiki_files(Page, FileDir,
+				       lists:keysort(2,CpFiles), Root,
+				       "The following files will be copied "
+				       "from " ++ Page ++ "."),
+
+    CpList = [input("hidden", "cp_"++Name, Name) ||
+		 {file, Name, _, _} <- CpFiles],
+
+    PageFiles = sort(files(Root, "*.wob")),
+    Pages = [filename:basename(P,".wob") || P <- PageFiles, P /= File],
+    
+    if
+	length(CheckedFiles) == 0 ->
+	    editFiles(Params, Root, Prefix);
+	true ->
+	    template("Confirm", bgcolor("white"), "",
+		     [h1(Page),
+		      List,
+		      form("POST", "copyFiles.yaws", 
+			   [CpList,
+			    "Destination: ",
+			    input("select","destination",Pages),
+			    input("submit", "copy", "Copy"),
+			    input("submit", "cancel", "Cancel"),
+			    input("hidden", "node", Page),
+			    input("hidden", "password", Password)])
+		     ])
+    end.
+
+    
+copyFiles(Params, Root, Prefix) ->
+    Password = getopt(password, Params, ""),
+    Page     = getopt(node, Params),
+    Cancel   = getopt(cancel, Params),
+
+    if
+	Cancel /= undefined ->
+	    redirect({node, Page}, Prefix);
+	true ->
+	    case checkPassword(Page, Password, Root, Prefix) of
+		true ->
+		    copyFiles1(Params, Root, Prefix);
+		false ->
+		    show({bad_password, Page});
+		error ->
+		    show({no_such_page,Page})
+	    end
+    end.
+
+copyFiles1(Params, Root, Prefix) ->
+    Page     = getopt(node, Params), 
+    Dest     = getopt(destination, Params), 
+
+    case checkPassword(Dest, "", Root, Prefix) of
+	true ->
+	    copyFiles3(Params, Root, Prefix);
+	false ->
+	    getPassword(Dest, Root, Prefix, copyFiles2, Params);
+	error ->
+	    show({no_such_page,Page})
+    end.
+
+copyFiles2(Params, Root, Prefix) ->
+    Page     = getopt(node, Params), 
+    Dest     = getopt(destination, Params), 
+    Password = getopt(password, Params, ""),
+
+    case checkPassword(Dest, Password, Root, Prefix) of
+	true ->
+	    copyFiles3(Params, Root, Prefix);
+	false ->
+	    show({bad_password, Page});
+	error ->
+	    show({no_such_page,Page})
+    end.
+
+copyFiles3(Params, Root, Prefix) ->
+    Page     = getopt(node, Params), 
+    Dest     = getopt(destination, Params), 
+    
+    {SrcWobFile, SrcFileDir} = page2filename(Page, Root),
+    {DstWobFile, DstFileDir} = page2filename(Dest, Root),
+    
+    SrcFileNames = [lists:nthtail(3,atom_to_list(N)) ||
+		       {N,S,_} <- Params,
+		       lists:prefix("cp_",atom_to_list(N))],
+
+    SrcDir = Root ++ "/" ++ SrcFileDir ++ "/",
+    DstDir = Root ++ "/" ++ DstFileDir ++ "/",
+
+    [os:cmd("cp '"++SrcDir++F++"' '"++DstDir++"'") || F <- SrcFileNames],
+    importFiles(Dest, Root, Prefix).
 
 store_ok(Page, Root, Prefix, OldTxt,
 	 {wik002,Pwd,Email,Time,Who,OldTxt,Files,Patches}) ->
@@ -297,21 +579,6 @@ store_ok(Page, Root, Prefix, NewTxt,
     Ds = {wik002,Pwd, Email,Time,Who,NewTxt,Files,Patches1},
     B = term_to_binary(Ds),
     {File,FileDir} = page2filename(Page, Root),
-    file:write_file(File, B),
-    redirect({node, Page}, Prefix).
-
-store_files_ok(Page, Root, Prefix, NewFiles,
-	       {wik002,Pwd,Email,_Time,_Who,Txt,Files,Patches},
-	       FileName, Content, DelFiles) ->
-    Time = {date(), time()},
-    Who = "unknown",
-    Ds = {wik002,Pwd, Email,Time,Who,Txt,NewFiles,Patches},
-    B = term_to_binary(Ds),
-    {File,FileDir} = page2filename(Page, Root),
-    lists:foreach(fun({file,F,_,_}) ->
-			  file:delete(Root++"/"++FileDir++"/"++F)
-		  end, DelFiles),
-    file:write_file(Root++"/"++FileDir++"/"++FileName, Content),
     file:write_file(File, B),
     redirect({node, Page}, Prefix).
 
@@ -429,18 +696,11 @@ take(N, [{P,_,_}|T]) -> [P|take(N-1, T)].
 
 deletePage(Params,  Root, Prefix) ->
     Delete = getopt(delete, Params),
-    N = getopt(node, Params),
-    P = getopt(password, Params),
-
-    if 
-	Delete == undefined ->
-	    deletePage(N, "", Root, Prefix);
-	true ->
-	    deletePage(N, P, Root, Prefix)
-    end.
+    N      = getopt(node, Params),
+    P      = getopt(password, Params, ""),
+    deletePage(N, P, Root, Prefix).
 
 deletePage(Page, Password, Root, Prefix) ->
-
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
@@ -473,26 +733,71 @@ deletePage(Page, Password, Root, Prefix) ->
 	    show({no_such_page,Page})
     end.
 
+getPassword(Page, Root, Prefix, Target, Values) ->
+    Vs = [{target, atom_to_list(Target), []}|
+	  lists:keydelete(password, 1, Values)],
+    Hidden = [[input("hidden", atom_to_list(Name), Value),"\n"] ||
+		 {Name, Value, _} <- Vs],
+    template("Password", background("info"), "",
+	     [h1(Page),
+	      p("This page is password protected - provide a password"
+		"and hit the 'Continue' button."),
+	      form("POST", "putPassword.yaws",
+		   (Hidden ++
+		    [input("hidden", "target", atom_to_list(Target)),
+		     "Password: ",
+		     password_entry("password",8),
+		     input("submit","continue","Continue"),
+		     input("submit","cancel","Cancel")
+		     ]
+		   )
+		  )
+	     ]).
+
+putPassword(Params, Root, Prefix) ->
+    Target = getopt(target, Params, "error"),
+    Cancel = getopt(cancel, Params),
+    Page   = getopt(node, Params),
+
+    if
+	Cancel /= undefined ->
+	    redirect({node, Page}, Prefix);
+	true ->
+	    case Target of
+		"error" ->
+		    show({no_such_target, Target});
+		_ ->
+		    apply(?MODULE,list_to_atom(Target),[Params, Root, Prefix])
+	    end
+    end.
+
 delete1(Page, Password, Content) ->
     Txt = quote_lt(Content),
     template("Delete", background("info"), "",
-	 [h1(Page),
-	  p("Reconfirm deleting this page - hit the 'Delete' "
-	    "button to permanently remove the page."),
-	  form("POST", "finalDeletePage.yaws",
-	       [input("submit", "finaldelete", "Delete"),
-		input("hidden", "node", Page),
-		input("hidden", "password", Password),
-		p(),
-		textarea("text", 25, 75, Txt),
-		p(),
-		hr()])]).
+	     [h1(Page),
+	      p("Reconfirm deleting this page - hit the 'Delete' "
+		"button to permanently remove the page."),
+	      form("POST", "finalDeletePage.yaws",
+		   [input("submit", "finaldelete", "Delete"),
+		    input("hidden", "node", Page),
+		    input("hidden", "password", Password),
+		    p(),
+		    textarea("text", 25, 75, Txt),
+		    p(),
+		    hr()])]).
 
 editPage(Params, Root, Prefix) ->
-    Passwd = getopt(password, Params, ""),
-    Node = getopt(node, Params), 
+    Password = getopt(password, Params, ""),
+    Page     = getopt(node, Params), 
 
-    editPage(Node, Passwd, Root, Prefix).
+    case checkPassword(Page, Password, Root, Prefix) of
+	true ->
+	    editPage(Page, Password, Root, Prefix);
+	false ->
+	    getPassword(Page, Root, Prefix, editPage, Params);
+	error ->
+	    show({no_such_page,Page})
+    end.
 
 editPage(Page, Password, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
@@ -500,30 +805,7 @@ editPage(Page, Password, Root, Prefix) ->
 	{ok, Bin} ->
 	    {wik002, Pwd,_Email,_Time,_Who,TxtStr,Files,_Patches} =
 		bin_to_wik002(Bin),
-	    case Pwd of 
-		"" ->
-		    edit1(Page, Password, TxtStr);
-		Password ->
-		    edit1(Page, Password, TxtStr);
-		_ ->
-		    template("Error", bgcolor("white"), "",
-			     [
-			      h1("Incorrect password"),
-			      p("You have supplied an incorrect "
-				"password"),
-			      p("To find out the the password fill "
-				"in your email address and click on "
-				"<i>Show password</i>. If you are "
-				"the registered owner of this page "
-				"then I will tell you the password."),
-			      form("POST", "sendMeThePassword.yaws",
-				   [input("hidden", "node", Page),
-				    "email address:",
-				    input("text", "email", ""),
-				    input("submit", "send",
-					  "Show password")])
-			     ])
-	    end;
+	    edit1(Page, Password, TxtStr);
 	_ ->
 	    show({no_such_page,Page})
     end.
@@ -580,46 +862,101 @@ sendMeThePassword(Params, Root, Prefix) ->
     end.
 
 
+moveFiles(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+    Password = getopt(password, Params, ""),
+    case checkPassword(Page, Password, Root, Prefix) of
+	true ->
+	    moveFiles1(Page, Password, Root, Prefix);
+	false ->
+	    show({bad_password, Page});
+	error ->
+	    show({no_such_page,Page})
+    end.
 
-editFiles(Params, Root, Prefix) ->
-    N = getopt(node, Params),
-    P = getopt(password, Params, ""),
-    editFiles(N, P, Root, Prefix).
+moveFiles1(Page, Password, Root, Prefix) ->
+    Files = sort(files(Root, "*.wob")),
+    Pages = [filename:basename(P,".wob") || P <- Files, P /= Page],
+    template("Move", bgcolor("white"), "",
+	     [h1(Page),
+	      p(),
+	      "Move all the files attached to this page to another page.",
+	      p(),
+	      form("POST", "moveAttached.yaws",
+		   [input("hidden","node",Page),
+		    input("hidden","password",Password),
+		    hr(),
+		    "Select the destination page: ",
+		    input("select","destination",Pages),
+		    input("submit","move","Move")
+   		   ])
+	     ]
+	    ).
 
-editFiles(Page, Password, Root, Prefix) ->
+moveAttached(Params, Root, Prefix) ->
+    Page     = getopt(node, Params),
+    Password = getopt(password, Params, ""),
+    Dest     = getopt(destination, Params),
+    case checkPassword(Page, Password, Root, Prefix) of
+	true ->
+	    moveAttached1(Page, Dest, Password, Root, Prefix);
+	false ->
+	    show({bad_password, Page});
+	error ->
+	    show({no_such_page,Page})
+    end.
+
+moveAttached1(Page, Dest, Password, Root, Prefix) ->
+    {SrcWobFile, SrcFileDir} = page2filename(Page, Root),
+    {DstWobFile, DstFileDir} = page2filename(Dest, Root),
+    
+    SrcFiles = files(Root++"/"++SrcFileDir, "*"),
+    SrcFileNames = [basename(CF) || CF <- SrcFiles],
+
+    SrcDir = Root ++ "/" ++ SrcFileDir ++ "/",
+    DstDir = Root ++ "/" ++ DstFileDir ++ "/",
+
+    case file:read_file(SrcWobFile) of
+	{ok, Bin} ->
+	    {wik002, Pwd,Email,Time,Who,TxtStr,_,Patches} = bin_to_wik002(Bin),
+	    Ds = {wik002, Pwd,Email,Time,Who,TxtStr,[],Patches},
+	    B = term_to_binary(Ds),
+	    file:write_file(SrcWobFile, B),
+
+	    [file:rename(SrcDir++F,DstDir++F) || F <- SrcFileNames],
+	    file:del_dir(SrcDir),
+
+	    importFiles(Dest, Root, Prefix);
+	_  ->
+	    createNewPage([{node, Page}], Root, Prefix)
+    end.
+
+checkPassword(Page, Password, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
 	    {wik002, Pwd,_Email,_Time,_Who,_TxtStr,Files,_Patches} =
 		bin_to_wik002(Bin),
 	    case Pwd of 
-		"" ->
-		    editFiles1(Page, Password, Root, Prefix);
-		Password ->
-		    editFiles1(Page, Password, Root, Prefix);
-		_ ->
-		    template("Error", bgcolor("white"), "",
-			     [
-			      h1("Incorrect password"),
-			      p("You have supplied an incorrect "
-				"password"),
-			      p("To find out the the password fill "
-				"in your email address and click on "
-				"<i>Show password</i>. If you are "
-				"the registered owner of this page "
-				"then I will tell you the password."),
-			      form("POST", "sendMeThePassword.yaws",
-				   [input("hidden", "node", Page),
-				    "email address:",
-				    input("text", "email", ""),
-				    input("submit", "send",
-					  "Show password")])
-			     ])
+		""       -> true;
+		Password -> true;
+		_        -> false
 	    end;
 	_ ->
-	    show({no_such_page,Page})
+	    error
     end.
 
+editFiles(Params, Root, Prefix) ->
+    Page     = getopt(node, Params),
+    Password = getopt(password, Params, ""),
+    case checkPassword(Page, Password, Root, Prefix) of
+	true ->
+	    editFiles1(Page, Password, Root, Prefix);
+	false ->
+	    getPassword(Page, Root, Prefix, editFiles, Params);
+	error ->
+	    show({no_such_page,Page})
+    end.
 
 editFiles1(Page, Password, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
@@ -630,51 +967,45 @@ editFiles1(Page, Password, Root, Prefix) ->
 	    CheckBoxes =
 		lists:map(fun({file,Name,Description,_Content}) ->
 				  ["<tr><td align=left valign=top>",
-				   input("checkbox","cb_"++Name,"on"),
+				   input("checkbox","cb_"++Name,"on", ""),
 				   Name, 
-				   "</td><td width='70%' align=left valign=top>",
+				   "</td><td width='70%' align=left "
+				   "valign=top>",
 				   textarea("cbt_"++Name, 2, 20, Description),
 				   "</td></tr>\n"];
 			     ({file,Name,_Content})  ->
 				  ["<tr><td align=left valign=top>",
-				   input("checkbox","cb_"++Name,"on"),
+				   input("checkbox","cb_"++Name,"on", ""),
 				   Name,
-				   "</td><td width='70%' align=left valign=top>",
+				   "</td><td width='70%' align=left "
+				   "valign=top>",
 				   textarea("cbt_"++Name, 2, 20, ""),
 				   "</td></tr>\n"]
 			  end, lists:keysort(2,Files)),
+	    Check = ["Check files that you want to operate on:",
+		     p(),
+		     "<table cellspacing=10 width = \"100%\">\n",
+		     CheckBoxes,
+		     "</table>\n",
+		     p(),
+		     hr()],
 	    wiki_templates:template("Edit", bgcolor("white"),"",
 		     [h1(Page),
-		      p("Edit this page - when you have finished hit the "
-			"'Store' button to check your results."),
 		      form("POST", "storeFiles.yaws",
-			   [input("submit", "store", "Store"),
+			   [Check,
+			    input("submit", "add", "Add"),
+			    input("submit", "update", "Update"),
+			    input("submit", "delete", "Delete"),
+			    input("submit", "copy", "Copy"),
 			    input("submit", "cancel", "Cancel"),
 			    input("hidden", "node", Page),
-			    input("hidden", "password", Password),
-			    hr(),
-			    "<table width=\"100%\"><tr>",
-			    "<th align=left>Attach new file: ",
-			    "<td align=left>",
-			    input("file","attached","30"),"\n",
-			    "<tr><th colspan=2 align=left>",
-			    "Description: ","\n",
-			    "<tr><td colspan=2 align=left>",
-			    textarea("text", 10, 72,""),"\n",
-			    "</table>",
-			    p(),
-			    hr(),
-			    "Check files that you want to keep:",
-			    p(),
-			    "<table cellspacing=10 width = \"100%\">\n",
-			    CheckBoxes,
-			    "</table>\n",
-			    p(),
-			    hr()
+			    input("hidden", "password", Password)
 			   ])]);
 	Error ->
 	    show({no_such_page, Page})
     end.
+
+
 
 editTag(Params, Root, Prefix) ->
     Page = getopt(node, Params),
@@ -929,16 +1260,6 @@ table(Color, X) ->
 mk_image_link(X, Img) ->
     ["<a href=\"", X, "\"><img border=0 src='",Img, "'></a>&nbsp;&nbsp;\n"].
 
-banner_edit_link(File, "") ->
-    mk_image_link("editPage.yaws?node=" ++ File, "editme.gif");
-banner_edit_link(File, _) ->
-    "".
-
-banner_edit_files(File, "") ->
-    mk_image_link("editFiles.yaws?node=" ++ File, "editfiles.gif");
-banner_edit_files(File, _) ->
-    "".
-
 body_pic("") -> background("normal");
 body_pic(_)  -> background("locked").
 
@@ -950,25 +1271,9 @@ banner(File, Password) ->
 	    mk_image_link("allPages.yaws", "allpages.gif"),
 	    mk_image_link("lastEdited.yaws", "lastedited.gif"),
 	    mk_image_link("wikiZombies.yaws", "zombies.gif"),
-	    banner_edit_link(File, Password),
-	    banner_edit_files(File, Password)])].
-
-footer(File, "") ->
-    "";
-footer(File, _) ->
-    [p(),hr(),
-     p("This page is password protected. To edit the page enter "
-       "the password and click on edit."),
-     form("POST", "editPage.yaws",
-	  [input("hidden", "node",File),
-	   "Password:",
-	   password_entry("password", 8),
-	   input("submit", "submit", "Edit")]),
-     form("POST", "editFiles.yaws",
-	  [input("hidden", "node",File),
-	   "Password:",
-	   password_entry("password", 8),
-	   input("submit", "submit", "Edit Files")])].
+	    mk_image_link("editPage.yaws?node=" ++ File, "editme.gif"),
+	    mk_image_link("editFiles.yaws?node=" ++ File, "editfiles.gif")
+	   ])].
 
 password_entry(Name, Size) ->
     ["<INPUT TYPE=password name=", Name,"  SIZE=", i2s(Size),">\n"].
@@ -976,10 +1281,18 @@ password_entry(Name, Size) ->
 input(Type="file", Name, Size) ->
     ["<INPUT TYPE=",Type,"  Name=\"",Name,"\" Size=\"", Size, "\">\n"];
 input(Type="checkbox", Name, Value) ->
-    ["<INPUT TYPE=",Type,"  Name=\"",Name,"\" Value=\"", Value, "\" checked>\n"];
+    ["<INPUT TYPE=",Type,"  Name=\"",Name,"\" Value=\"", Value,
+     "\" checked>\n"];
+input("select", Name, Values) ->
+    Options = ["<option> " ++ Option || Option <- Values],
+    ["<select Name=\"",Name,"\">\n", Options,
+     "</select>\n"];
 input(Type, Name, Value) ->
     ["<INPUT TYPE=",Type,"  Name=\"",Name,"\" Value=\"", Value, "\">\n"].
 
+input(Type="checkbox", Name, Value, State) ->
+    ["<INPUT TYPE=",Type,"  Name=\"",Name,"\" Value=\"", Value,
+     "\" " ++ State ++ ">\n"];
 input(Type, Name, Value, Size) ->
     ["<INPUT TYPE=",Type,"  Name=\"",Name,"\" Value=\"", Value,"\"",
      "Size=\"",Size, "\">\n"].
@@ -1049,6 +1362,23 @@ little_letter($å) -> true;
 little_letter($ä) -> true;
 little_letter($ö) -> true;
 little_letter(_)  -> false.
+
+show({bad_password, Page}) ->
+    template("Error", bgcolor("white"), "",
+	     [h1("Incorrect password"),
+	      p("You have supplied an incorrect password"),
+	      p("To find out the the password fill "
+		"in your email address and click on "
+		"<i>Show password</i>. If you are "
+		"the registered owner of this page "
+		"then I will tell you the password."),
+	      form("POST", "sendMeThePassword.yaws",
+		   [input("hidden", "node", Page),
+		    "email address:",
+		    input("text", "email", ""),
+		    input("submit", "send",
+			  "Show password")])
+	     ]);
 
 show(X) ->
     {html, [body("white"),"<pre>",
