@@ -958,7 +958,7 @@ inet_setopts(_,_,_) ->
     flush(SC, CliSock, Head#headers.content_length),
     ARG = make_arg(CliSock, Head, Req, GC, SC),
     ARG2 = apply(SC#sconf.arg_rewrite_mod, arg_rewrite, [ARG]),
-    handle_request(CliSock, GC, SC, Req, Head, ARG2, 0).
+    handle_request(CliSock, GC, SC, ARG2, 0).
 
 
 'POST'(CliSock, GC, SC, Req, Head) ->
@@ -1003,7 +1003,7 @@ inet_setopts(_,_,_) ->
     ARG = make_arg(CliSock, Head, Req, GC, SC),
     ARG2 = ARG#arg{clidata = Bin},
     ARG3 = apply(SC#sconf.arg_rewrite_mod, arg_rewrite, [ARG2]),
-    handle_request(CliSock, GC, SC, Req, Head, ARG3, size(un_partial(Bin))).
+    handle_request(CliSock, GC, SC, ARG3, size(un_partial(Bin))).
 
 
 is_ssl(undefined) ->
@@ -1040,8 +1040,10 @@ make_arg(CliSock, Head, Req, _GC, SC) ->
 	 pid = self(),
 	 docroot = SC#sconf.docroot}.
 
-handle_request(CliSock, GC, SC, Req, H, ARG, N) ->
+handle_request(CliSock, GC, SC, ARG, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
     case (catch decode_path(Req#http_request.path)) of
 	{'EXIT', _} ->   %% weird broken cracker requests
 	    deliver_403(CliSock, Req, GC, SC);
