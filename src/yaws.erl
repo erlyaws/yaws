@@ -2076,8 +2076,7 @@ deepmap(_Fun, []) ->
     
 sconf_to_srvstr(SC) ->
     redirect_scheme(SC) ++
-	redirect_host(SC,undefined) ++
-	redirect_port(SC).
+	redirect_host(SC,undefined).
 
 redirect_scheme(SC) ->
     case {SC#sconf.ssl,SC#sconf.rmethod} of
