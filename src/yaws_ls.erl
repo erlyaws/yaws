@@ -26,33 +26,29 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
 		  FI = file:read_file_info(File),
 		  file_entry(FI, DirName, F)
 	  end, [".." | List]),
-    Body = [ doc_head(element(2,Req#http_request.path)),       % doc_head(DirName),  
-	    list_head(), 
-	    L,
-	    "\n</pre><pre>",
-	    inline_readme(SC,DirName,List),
-	    "</pre>\n<hr>\n",
-	    yaws:address(GC, SC),
-	    "</body>\n</html>\n"],
+    Body = [ doc_head(element(2,Req#http_request.path)), % doc_head(DirName),  
+	     list_head(), 
+	     L,
+	     "\n</pre><pre>",
+	     inline_readme(SC,DirName,List),
+	     "</pre>\n<hr>\n",
+	     yaws:address(GC, SC),
+	     "</body>\n</html>\n"],
     B = list_to_binary(Body),
-    
-    yaws_server:close_if_HEAD(
-      Req, 
-      fun() -> 
-	      yaws_server:deliver_accumulated(CliSock, GC, SC),
-	      yaws_server:do_tcp_close(CliSock, SC),
-	      throw({ok, 1})
-      end),
+
     yaws_server:accumulate_chunk(B),
-    Ret = case yaws:outh_get_chunked() of
-	      true ->
-		  yaws_server:accumulate_content(["\r\n", "0", "\r\n\r\n"]),
-		  continue;
-	      false ->
-		  done
-	  end,
-    yaws_server:deliver_accumulated(CliSock, GC, SC),
-    Ret.
+    case yaws:outh_get_chunked() of
+	true ->
+	    yaws_server:accumulate_content(["\r\n", "0", "\r\n\r\n"]),
+	    yaws_server:deliver_accumulated(CliSock, GC, SC),
+	    continue;
+	false ->
+	    case yaws_server:deliver_accumulated(CliSock, GC, SC) of
+		discard -> yaws_server:done_or_continue();
+		_ -> done
+	    end
+    end.
+
 
 inline_readme(SC,DirName,L) ->
     F = fun("README", _Acc) ->

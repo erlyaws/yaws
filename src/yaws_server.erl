@@ -657,21 +657,30 @@ acceptor0(GS, Top) ->
 aloop(CliSock, GS, Num) ->
     SSL = GS#gs.ssl,
     ?TC([{record, GS, gs}]),
-    {Req, H} = http_get_headers(CliSock, GS#gs.gconf, SSL),
-    SC = pick_sconf(GS#gs.gconf, H, GS#gs.group, SSL),
-    ?Debug("SC: ~p", [?format_record(SC, sconf)]),
-    ?TC([{record, SC, sconf}]),
-    ?Debug("Headers = ~p~n", [?format_record(H, headers)]),
-    ?Debug("Request = ~p~n", [?format_record(Req, http_request)]),
-    IP = case SC#sconf.access_log of
-	     true ->
-		 {ok, {Ip, _Port}} = peername(CliSock, SSL),
-		 Ip;
-	     _ ->
-		 undefined
-	 end,
-    put(outh, #outh{}),
-    Res=call_method(Req#http_request.method, CliSock, GS#gs.gconf, SC, Req, H),
+    case  http_get_headers(CliSock, GS#gs.gconf, SSL) of
+	{Req, H} ->
+	    SC = pick_sconf(GS#gs.gconf, H, GS#gs.group, SSL),
+	    ?Debug("SC: ~p", [?format_record(SC, sconf)]),
+	    ?TC([{record, SC, sconf}]),
+	    ?Debug("Headers = ~p~n", [?format_record(H, headers)]),
+	    ?Debug("Request = ~p~n", [?format_record(Req, http_request)]),
+	    IP = case SC#sconf.access_log of
+		     true ->
+			 {ok, {Ip, _Port}} = peername(CliSock, SSL),
+			 Ip;
+		     _ ->
+			 undefined
+		 end,
+	    put(outh, #outh{}),
+	    handle_method_result(
+	      call_method(Req#http_request.method, CliSock, 
+			  GS#gs.gconf, SC, Req, H),
+	      CliSock, IP, GS, SC, Req, H, Num);
+	closed -> {ok, Num}
+    end.
+
+
+handle_method_result(Res, CliSock, IP, GS, SC, Req, H, Num) ->
     case Res of
 	continue ->
 	    maybe_access_log(IP, SC, Req, H),
@@ -679,16 +688,18 @@ aloop(CliSock, GS, Num) ->
 	done ->
 	    maybe_access_log(IP, SC, Req, H),
 	    {ok, Num+1};
-	{page, Page} ->
+	{page, Page} ->		    
 	    put(outh, #outh{}),
 						% Should we set the
 						% Content-Location
 						% header here?
-	    call_method(Req#http_request.method, 
+	    handle_method_result(
+	      call_method(Req#http_request.method, 
 			CliSock, GS#gs.gconf, SC#sconf{appmods=[]}, 
 			Req#http_request{path = {abs_path, Page}}, H),
-	    maybe_access_log(IP, SC, Req, H)
+	      CliSock, IP, GS, SC, Req, H, Num)
     end.
+
 
 
 peername(CliSock, ssl) ->
@@ -735,13 +746,16 @@ maybe_access_log(Ip, SC, Req, H) ->
 			 undefined -> "-";
 			 I -> integer_to_list(I)
 		     end,
-	    Len = case yaws:outh_get_contlen() of
-		      undefined ->
-			  case yaws:outh_get_act_contlen() of
-			      undefined -> "-";
-			      Actlen -> integer_to_list(Actlen)
-			  end;
-		      I2 -> integer_to_list(I2)
+	    Len = case Req#http_request.method of
+		      'HEAD' -> "-";  % ???
+		      _ -> case yaws:outh_get_contlen() of
+			       undefined ->
+				   case yaws:outh_get_act_contlen() of
+				       undefined -> "-";
+				       Actlen -> integer_to_list(Actlen)
+				   end;
+			       I2 -> integer_to_list(I2)
+			   end
 		  end,
 	    Ver = case Req#http_request.version of
 		      {1,0} ->
@@ -870,9 +884,12 @@ strip(Data) ->
 http_get_headers(CliSock, GC, SSL) ->
     case SSL of
 	ssl ->
-	    {Req, H, Trail} = yaws_ssl:ssl_get_headers(CliSock, GC),
-	    put(ssltrail, Trail),  %% hack hack hack
-	    {Req, H};
+	    case yaws_ssl:ssl_get_headers(CliSock, GC) of
+		{Req, H, Trail} ->
+		    put(ssltrail, Trail),  %% hack hack hack
+		    {Req, H};
+		R -> R
+	    end;
 	nossl ->
 	    http_get_headers(CliSock, GC)
     end.
@@ -885,6 +902,7 @@ http_get_headers(CliSock, GC) ->
 	bad_request ->
 	    {#http_request{method=bad_request, version={0,9}},
 	     #headers{}};
+	closed -> closed;
 	R -> 
 	    H = http_get_headers(CliSock, R, GC, #headers{}),
 	    {R, H}
@@ -901,6 +919,8 @@ http_recv_request(CliSock, GC) ->
 	    http_recv_request(CliSock, GC);
 	{error, {http_error, _}} ->
 	    bad_request;
+	{error, closed} -> closed;
+	{error, timeout} -> closed;
 	_Other ->
 	    ?Debug("Got ~p~n", [_Other]),
 	    exit(normal)
@@ -1046,8 +1066,9 @@ call_method(Method, CliSock, GC, SC, Req, H) ->
 	    handle_extension_method(L, CliSock, GC, SC, Req, H)
     end.
 
-%% will throw
+
 'HEAD'(CliSock, GC, SC, Req, Head) ->
+    put(acc_content, discard),
     'GET'(CliSock, GC, SC, Req, Head).
 
 not_implemented(CliSock, GC, SC, Req, Head) ->
@@ -1248,10 +1269,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 				true ->
 				    yaws:outh_set_304_headers(Req, UT, H),
 				    deliver_accumulated(CliSock, GC, SC),
-				    case yaws:outh_get_doclose() of
-					true  -> done;
-					false -> continue
-				    end;
+				    done_or_continue();
 				false ->
 				    yaws:outh_set_static_headers
 				      (Req, UT, H, Range),
@@ -1272,15 +1290,10 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    deliver_302(CliSock, Req, GC, SC, ARG);
 	appmod ->
 	    yaws:outh_set_dyn_headers(Req, H),
-	    close_if_HEAD(Req, 
-			  fun() ->
-				  deliver_accumulated(CliSock, GC,SC),
-				  throw({ok, 1}) 
-			  end),
-	    {Mod, PathData} = UT#urltype.data,
-	    A2 = ARG#arg{appmoddata = PathData,
-			 querydata = UT#urltype.q,
-			 appmod_prepath = UT#urltype.path},
+ 	    {Mod, PathData} = UT#urltype.data,
+ 	    A2 = ARG#arg{appmoddata = PathData,
+ 			 querydata = UT#urltype.q,
+ 			 appmod_prepath = UT#urltype.path},
 	    deliver_dyn_part(CliSock, GC, SC, 
 			     0, "appmod",
 			     N,
@@ -1333,6 +1346,14 @@ parse_auth(_) ->
     undefined.
 
 
+
+
+done_or_continue() ->
+    case yaws:outh_get_doclose() of
+	true -> done;
+	false -> continue
+    end.
+	    
 
 
 %% we may have content, 
@@ -1610,38 +1631,40 @@ deliver_dyn_part(CliSock, GC, SC,          % essential params
 	{streamcontent, MimeType, FirstChunk} ->
 	    yaws:outh_set_content_type(MimeType),
 	    accumulate_chunk(FirstChunk),
-	    deliver_accumulated(CliSock, GC, SC),
-	    stream_loop(CliSock, GC, SC),
-	    case yaws:outh_get_chunked() of
-		true ->
-		    gen_tcp_send(CliSock, [crnl(), "0", 
-					   crnl2()], SC, GC),
-		    continue;
-		false ->
-		    done
+	    case deliver_accumulated(CliSock, GC, SC) of
+		discard ->
+		    stream_loop_discard(CliSock, GC, SC);
+		_ -> 
+		    stream_loop_send(CliSock, GC, SC)
 	    end;
 	{streamcontent_with_size, Sz, MimeType, FirstChunk} ->
 	    yaws:outh_set_content_type(MimeType),
 	    yaws:outh_set_transfer_encoding_off(),
 	    yaws:outh_set_content_length(Sz),
 	    accumulate_chunk(FirstChunk),
-	    deliver_accumulated(CliSock, GC, SC),
-	    stream_loop(CliSock, GC, SC),
+	    case deliver_accumulated(CliSock, GC, SC) of
+		discard ->
+		    stream_loop_discard(CliSock, GC, SC);
+		_ -> 
+		    stream_loop_send(CliSock, GC, SC)
+	    end,
 	    done;
 	_ ->
 	    DeliverCont()
     end.
 
 finish_up_dyn_file(CliSock, GC, SC) ->
-    Ret = case yaws:outh_get_chunked() of
-	      true ->
-		  accumulate_content([crnl(), "0", crnl2()]),
-		  continue;
-	      false ->
-		  done
-	  end,
-    deliver_accumulated(CliSock, GC, SC),
-    Ret.
+    case yaws:outh_get_chunked() of
+	true ->
+	    accumulate_content([crnl(), "0", crnl2()]),
+	    deliver_accumulated(CliSock, GC, SC),
+	    continue;
+	false ->
+	    case deliver_accumulated(CliSock, GC, SC) of
+		discard -> done_or_continue();
+		_ -> done
+	    end
+    end.
 
 
 
@@ -1650,11 +1673,6 @@ deliver_dyn_file(CliSock, GC, SC, Req, Specs, ARG, UT, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     Fd = ut_open(UT),
     Bin = ut_read(Fd),
-    close_if_HEAD(Req, fun() ->
-			       deliver_accumulated(CliSock,GC,SC),
-			       do_tcp_close(CliSock, SC), 
-			       throw({ok, 1}) 
-		       end),
     deliver_dyn_file(CliSock, GC, SC, Req, UT, Bin, Fd, Specs, ARG, N).
 
 
@@ -1696,18 +1714,24 @@ deliver_dyn_file(CliSock, GC, SC, _Req, _UT, _Bin, _Fd, [], _ARG,_N) ->
     finish_up_dyn_file(CliSock, GC, SC).
 
 
-
-stream_loop(CliSock, GC, SC) ->
+stream_loop_send(CliSock, GC, SC) ->
     receive
 	{streamcontent, Cont} ->
 	    send_streamcontent_chunk(CliSock, GC, SC, Cont),
-	    stream_loop(CliSock, GC, SC) ;
+	    stream_loop_send(CliSock, GC, SC) ;
 	{streamcontent_with_ack, From, Cont} ->	% acknowledge after send
 	    send_streamcontent_chunk(CliSock, GC, SC, Cont),
 	    From ! {self(), streamcontent_ack},
-	    stream_loop(CliSock, GC, SC) ;
+	    stream_loop_send(CliSock, GC, SC) ;
 	endofstreamcontent ->
-	    ok
+	    case yaws:outh_get_chunked() of
+		true ->
+		    gen_tcp_send(CliSock, [crnl(), "0", 
+					   crnl2()], SC, GC),
+		    continue;
+		false ->
+		    done
+	    end
     after 30000 ->
 	    exit(normal)
     end.
@@ -1723,6 +1747,23 @@ send_streamcontent_chunk(CliSock, GC, SC, Chunk) ->
 	[size(list_to_binary(Data)), CliSock]),
     gen_tcp_send(CliSock, Data, SC, GC).
     
+
+stream_loop_discard(CliSock, GC, SC) ->
+						% Eat up everything,
+						% who knows, where it
+						% might end up if we
+						% don't!
+    receive
+	{streamcontent, Cont} ->
+	    stream_loop_discard(CliSock, GC, SC) ;
+	{streamcontent_with_ack, From, Cont} ->	% acknowledge after send
+	    From ! {self(), streamcontent_ack},
+	    stream_loop_discard(CliSock, GC, SC) ;
+	endofstreamcontent ->
+	    done_or_continue()
+    after 30000 ->
+	    exit(normal)
+    end.
 
 %% what about trailers ??
 
@@ -1784,6 +1825,8 @@ accumulate_content(Data) ->
     case get(acc_content) of
 	undefined ->
 	    put(acc_content, [Data]);
+	discard ->
+	    discard;
 	List ->
 	    put(acc_content, [List, Data])
     end.
@@ -1964,16 +2007,24 @@ deliver_accumulated(Sock, GC, SC) ->
 	       Cont2 ->
 		   Cont2
 	   end,
-    
-    {StatusLine, Headers} = yaws:outh_serialize(),
-    ?Debug("deliver accumulated size=~p~n", [size(list_to_binary([Cont]))]),
-    CRNL = case Chunked of
-	       true ->
-		   [];
-	       false ->
-		   crnl()
-	   end,
-    All = [StatusLine, Headers, CRNL, Cont],
+
+    case Cont of
+	discard ->
+	    yaws:outh_set_transfer_encoding_off(),
+	    {StatusLine, Headers} = yaws:outh_serialize(),
+	    ?Debug("discard accumulated~n", []),
+	    All = [StatusLine, Headers, crnl()];
+	_ ->
+	    {StatusLine, Headers} = yaws:outh_serialize(),
+	    ?Debug("deliver accumulated size=~p~n", [binary_size(Cont)]),
+	    CRNL = case Chunked of
+		       true ->
+			   [];
+		       false ->
+			   crnl()
+		   end,
+	    All = [StatusLine, Headers, CRNL, Cont]
+    end,
     gen_tcp_send(Sock, All, SC, GC),
     if
 	GC#gconf.trace == false ->
@@ -1982,7 +2033,8 @@ deliver_accumulated(Sock, GC, SC) ->
 	    yaws_log:trace_traffic(from_server, [StatusLine, Headers]);
 	GC#gconf.trace == {true, traffic} ->
 	    yaws_log:trace_traffic(from_server, All)
-    end.
+    end,
+    Cont.
 
 		
 
@@ -2132,35 +2184,20 @@ deliver_small_file(CliSock, GC, SC, Req, UT, Range) ->
 	    Length = To - From + 1,
 	    <<_:From/binary, Bin:Length/binary, _/binary>> = ut_read(Fd)
     end,
-    close_if_HEAD(Req, fun() ->
-			       deliver_accumulated(CliSock, GC,SC),
-			       ut_close(Fd), throw({ok, 1}) 
-		       end),
     accumulate_content(Bin),
     ut_close(Fd),
     deliver_accumulated(CliSock, GC, SC),
-    case yaws:outh_get_doclose() of
-	true ->
-	    done;
-	false ->
-	    continue
-    end.
+    done_or_continue().
     
 deliver_large_file(CliSock, GC, SC, Req, UT, Range) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT, urltype}]),
-    close_if_HEAD(Req, fun() ->
-			       deliver_accumulated(CliSock, GC,SC),
-			       throw({ok, 1}) 
-		       end),
-    deliver_accumulated(CliSock, GC, SC),
-    {ok,Fd} = file:open(UT#urltype.fullpath, [raw, binary, read]),
-    send_file(CliSock, Fd, SC, GC, Range),
-    case yaws:outh_get_doclose() of
-	true ->
-	    done;
-	false ->
-	    continue
-    end.
+    case deliver_accumulated(CliSock, GC, SC) of
+	discard -> ok;
+	_ ->
+	    {ok,Fd} = file:open(UT#urltype.fullpath, [raw, binary, read]),
+	    send_file(CliSock, Fd, SC, GC, Range)
+    end,
+    done_or_continue().
 
 
 send_file(CliSock, Fd, SC, GC, all) ->
@@ -2180,9 +2217,9 @@ send_file(CliSock, Fd, SC, GC) ->
 	    case yaws:outh_get_chunked() of
 		true ->
 		    gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
-		    done;
+		    done_or_continue();
 		false ->
-		    done
+		    done_or_continue()
 	    end
     end.
 
@@ -2200,9 +2237,9 @@ send_file_range(CliSock, Fd, SC, GC, 0) ->
     case yaws:outh_get_chunked() of
 	true ->
 	    gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
-	    done;
+	    done_or_continue();
 	false ->
-	    done
+	    done_or_continue()
     end.
     
 
@@ -2216,14 +2253,6 @@ send_file_chunk(Bin, CliSock, SC, GC) ->
 	     gen_tcp_send(CliSock, Bin, SC, GC)
      end.
 
-
-close_if_HEAD(Req, F) ->
-    if
-	Req#http_request.method == 'HEAD' ->
-	    F();
-	true ->
-	    ok
-    end.
 
 
 crnl() ->
@@ -2308,7 +2337,7 @@ cache_file(GC, SC, Path, UT) when
 	    ?Debug("Check file size\n",[]),
 	    if
 		FI#file_info.size > GC#gconf.max_size_cached_file ->
-		    ?Debug("To large\n",[]),
+		    ?Debug("Too large\n",[]),
 		    UT;
 		true ->
 		    ?Debug("File fits\n",[]),
