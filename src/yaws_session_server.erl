@@ -137,7 +137,7 @@ seed() ->
 
 
 
-handle_call({new_session, Opaque}, _From, State) ->
+handle_call({new_session, Opaque}, _From, _State) ->
     Now = gnow(),
     N = random:uniform(16#ffffffffffffffff), %% 64 bits
     TS = calendar:local_time(),
@@ -145,7 +145,7 @@ handle_call({new_session, Opaque}, _From, State) ->
     NS = #ysession{cookie = C,
 		   starttime = TS,
 		   opaque = Opaque,
-		   to = gnow() + ?TTL},
+		   to = Now + ?TTL},
     ets:insert(?MODULE, NS),
     {reply, C, undefined, to()};
 
@@ -173,7 +173,7 @@ handle_cast(_Msg, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-handle_info(timeout, State) ->
+handle_info(timeout, _State) ->
     trav_ets(),
     {noreply, undefined, to()}.
 
@@ -194,7 +194,7 @@ trav_ets() ->
     N = gnow(),
     trav_ets(N, ets:first(?MODULE)).
 
-trav_ets(N, '$end_of_table') ->
+trav_ets(_N, '$end_of_table') ->
     ok;
 trav_ets(N, Key) ->
     case ets:lookup(?MODULE, Key) of

@@ -60,7 +60,8 @@
 	 authdirs = [],
 	 partial_post_size = nolimit,
 	 appmods = [],                %% list of modules for this app
-	 tilde_expand = true          %% allow public_html user dirs
+	 tilde_expand = true,         %% allow public_html user dirs
+	 opaque                       %% useful in embedded mode
 	}).
 
 

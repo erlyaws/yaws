@@ -895,6 +895,7 @@ make_arg(CliSock, Head, Req, _GC, SC) ->
     #arg{clisock = CliSock,
 	 headers = Head,
 	 req = Req,
+	 opaque = SC#sconf.opaque,
 	 pid = self(),
 	 docroot = SC#sconf.docroot}.
 

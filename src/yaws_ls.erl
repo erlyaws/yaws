@@ -71,7 +71,7 @@ list_head() ->
     "<hr> \n".
 
 
-file_entry({ok, FI}, DirName, Name) ->
+file_entry({ok, FI}, _DirName, Name) ->
     ?Debug("file_entry(~p) ", [Name]),
     Ext = filename:extension(Name),
     {Gif, Alt} = list_gif(FI#file_info.type, Ext),

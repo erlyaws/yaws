@@ -123,14 +123,14 @@ handle_call({setdir, Dir, Sconfs}, _From, State)
 %% We can't ever change logdir, we can however
 %% change logging opts for various servers
 
-handle_call({setdir, DirIgnore, Sconfs}, _From, State) 
+handle_call({setdir, _DirIgnore, Sconfs}, _From, State) 
   when State#state.running == true ->
 
     Dir = State#state.dir,
     
     %% close all files
     lists:map(
-      fun({Sname, FD, Filename}) ->
+      fun({_Sname, FD, _Filename}) ->
 	      file:close(FD)
       end, State#state.alogs),
     SCs = lists:flatten(Sconfs),

@@ -83,7 +83,7 @@ f(Fmt, As) ->
 
 a_status(Sock) ->
     {UpTime, L} = yaws_server:stats(),
-    {Days, {Hours, Minutes, Secs}} = UpTime,
+    {Days, {Hours, Minutes, _Secs}} = UpTime,
     H = f("~n Uptime: ~w Days, ~w Hours, ~w Minutes  ~n",
            [Days, Hours, Minutes]),
     
