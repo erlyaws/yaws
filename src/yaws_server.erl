@@ -1170,6 +1170,7 @@ handle_ut(CliSock, GC, SC, ARG, UT, N) ->
 		    end
 	    end;
 	yaws ->
+	    %io:format("~p~n", [?format_record(UT, urltype)]),
 	    yaws:outh_set_dyn_headers(Req, H),
 	    do_yaws(CliSock, GC, SC, ARG, UT, N);
 	forbidden ->

@@ -16,7 +16,7 @@
 	  clidata,        %% The client data (as a binary in POST requests)
 	  server_path,    %% The normalized server path
 	  querydata,      %% Was the URL on the form of ...?query (GET reqs)
-	  appmoddata,     %% the remainder of the path leading up to the querey
+	  appmoddata,     %% the remainder of the path leading up to the query
 	  docroot,        %% where's the data
 	  fullpath,       %% full path to yaws file
 	  cont,		  %% Continuation for chunked multipart uploads

@@ -20,12 +20,13 @@ out(A) ->
 	       {a, [{href, "http://www.erlang.org"}],  "Erlang"},
 	       " furthermore it is a multithreaded webserver where one "
 	       "Erlang light weight process is used to handle each client."]},
-       {p,[], "As matter of fact, the "
-	"ad-hockery of php was one of major reasons "
-	"I started the Yaws project."},
-       {p,[],"Furthermore, Yaws has excellent performance and is able to"
-	" ship several thousands of dynamically generated pages per second."},
-
+       {p,[], "The main advantages of yaws compared to other Web technologies"
+	" are performance and elegance. The performance comes from the "
+	" underlying Erlang system and its ability to handle concurrent "
+	" processes in an efficent way. Its elegance comes from Erlang as "
+	"well. Web applications dont have to be written in ugly adhoc "
+	"languages."}
+       
        {h2,[], "yaws.hyber.org"},
 
        {p,[], ["The www page for Yaws is ",
