@@ -128,7 +128,7 @@ init({Debug, Trace, TraceOut, Conf, RunMod, Embedded}) ->
 		    end;
 		EXIT ->
 		    error_logger:format("FATAL ~p~n", [EXIT]),
-		    exit(badconf)
+		    erlang:fault(badconf)
 	    end;
 	true ->
 	    {ok, #state{gc = undefined,
@@ -179,7 +179,7 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
 		  GC#gconf{uid = NewUid};
 	      Other ->
 		  error_logger:error_msg("Failed to set user:~n~p", [Other]),
-		  exit(Other)
+		  erlang:fault(Other)
 	  end,
     foreach(fun({Pid, _}) -> Pid ! {newuid, GC2#gconf.uid} end, L2),
     {ok, #state{gc = GC2,
@@ -342,7 +342,7 @@ handle_info({'EXIT', Pid, Reason},  State) ->
 	{value, _} ->
 	    %% one of our gservs died 
 	    error_logger:format("yaws: FATAL gserv died ~p~n", [Reason]),
-	    exit(restartme);
+	    erlang:fault(restartme);
 	false ->
 	    ignore
     end,
@@ -451,7 +451,7 @@ setup_dirs(GC) ->
 	    error_logger:format("Failed to list ~p probably "
 				"due to permission errs: ~p",
 				[TD1, RSN]),
-	    exit(RSN)
+	    erlang:fault(RSN)
     end.
 
 
@@ -1697,7 +1697,7 @@ stream_loop_send(Priv, CliSock, FlushStatus) ->
     after TimeOut ->
 	    case FlushStatus of
 		flushed ->
-		    exit(stream_timeout);
+		    erlang:fault(stream_timeout);
 		unflushed ->
 		    P = sync_streamcontent(Priv, CliSock),
 		    stream_loop_send(P, CliSock, flushed)
@@ -2116,7 +2116,7 @@ expand_parts([{var, V} |T] , Bs, Ack) ->
 		{ok, Val} ->
 		    expand_parts(T, Bs, [Val|Ack]);
 		{error, ErrStr} ->
-		    exit(ErrStr)
+		    erlang:fault(ErrStr)
 	    end;
 	{value, {_, Val}} ->
 	    expand_parts(T, Bs, [Val|Ack]);

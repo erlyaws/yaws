@@ -23,7 +23,7 @@ typecheck([{int, Int} |Tail], File, Line) when integer(Int) ->
 typecheck([Err|_], File, Line) ->
     io:format(user, "TC ERROR ~s:~w:~n~p",
 	      [File, Line, Err]),
-    exit(tcerr);
+    erlang:fault(tcerr);
 typecheck([], _,_) ->
     ok.
 
@@ -86,7 +86,7 @@ assert(_,_,_,Failure) ->
 fail({assert,File,Line,Message}) ->
     io:format(user, "Assertion FAILED ~p:~p, pid ~w exiting: ~p~n",
 	      [File, Line, self(), Message]),
-    exit(assertion_failed);
+    erlang:fault(assertion_failed);
 fail({alert,File,Line,Message}) ->
     io:format(user, "Assert WARNING ~p:~p, pid ~w: ~p~n",
 	      [File, Line, self(), Message]),
@@ -261,8 +261,8 @@ bad_other(L) ->
 nobin(X) ->
     case catch xnobin(X) of
 	{'EXIT', Reason} ->
-	    io:format("~p~n~p~n", [X, Reason]),
-	    exit(Reason);
+	    error_logger:format("~p~n~p~n", [X, Reason]),
+	    erlang:fault(Reason);
 	Res ->
 	    Res
     end.

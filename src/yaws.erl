@@ -125,7 +125,7 @@ date_and_time_to_string(DAT) ->
 	true ->
 	    dat2str(DAT);
 	false ->
-	    exit({badarg, {?MODULE, date_and_time_to_string, [DAT]}})
+	    erlang:fault({badarg, {?MODULE, date_and_time_to_string, [DAT]}})
     end.
 
 universal_time_to_string(UTC) ->
@@ -1717,7 +1717,7 @@ gen_tcp_send(S, Data) ->
 		ok ->
 		    ok;
 		Err ->
-		    exit(Err)
+		    erlang:fault(Err)
 	    end;
 	true ->
 	    case Res of
@@ -1730,7 +1730,7 @@ gen_tcp_send(S, Data) ->
 				      "on socket ~p: ~p~n~p~n",
 				      [Size, B2, S, Err,
 				       yaws_debug:nobin(Data)]),
-		    exit(Err)
+		    erlang:fault(Err)
 	    end
     end.
 
@@ -1994,13 +1994,13 @@ uid_change_files(GC, Dir, Files) ->
 				      error_logger:format("Failed to chown "
 							  "~p: ~p",
 							  [F, Rsn]),
-				      exit(Rsn)
+				      erlang:fault(Rsn)
 			      end
 		      end, Files);
 		Err ->
 		    error_logger:format("Bad username ~p cannot get "
 					"numeric uid~n", [Uname]),
-		    exit(Err)
+		    erlang:fault(Err)
 	    end
     end.
 

@@ -984,7 +984,7 @@ search_sconf(NewSC, Pairs) ->
 	 _Other ->
 	     error_logger:format("Fatal error, no two sconfs should "
 				 " ever be considered equal ..",[]),
-	     exit(fatal_conf)
+	     erlang:fault(fatal_conf)
      end.
 
 %% find the group a new SC would belong to
@@ -1113,7 +1113,7 @@ hard_setconf(GC, Groups) ->
 		    yaws_log:open_trace(What)
 	    end;
 	E ->
-	    exit(E)
+	    erlang:fault(E)
     end.
 
 
@@ -1246,7 +1246,7 @@ verify_upgrade_args(GC, Groups0) when record(GC, gconf) ->
 		       end, Groups0),
 	    {GC, Groups};
 	_ ->
-	    exit(badgroups)
+	    erlang:fault(badgroups)
     end.
 
 

@@ -452,7 +452,7 @@ coerce_type(checkbox, "no") ->
 coerce_type(checkbox, _Str) ->
     off;
 coerce_type(ip, _Str) ->
-    exit(nyi_ip);
+    erlang:fault(nyi_ip);
 coerce_type(binary, Str) ->
     list_to_binary(lists:reverse(Str)).
 
@@ -1376,7 +1376,7 @@ ehtml_apply(Expander, Env) -> [ehtml_eval(X, Env) || X <- Expander].
 ehtml_eval(Bin, _Env) when binary(Bin) -> Bin;
 ehtml_eval({Type, Var}, Env) ->
     case lists:keysearch(Var, 1, Env) of
-	false -> exit({ehtml_unbound, Var});
+	false -> erlang:fault({ehtml_unbound, Var});
 	{value, {Var, Val}} ->
 	    case Type of
 		ehtml -> ehtml_expand(Val);
@@ -1390,7 +1390,7 @@ ehtml_eval({Type, Var}, Env) ->
 ehtml_var_name(A) when atom(A) ->
     case ehtml_var_p(A) of
 	true -> list_to_atom(tl(atom_to_list(A)));
-	false -> exit({bad_ehtml_var_name, A})
+	false -> erlang:fault({bad_ehtml_var_name, A})
     end.
 
 %% Is X a variable reference? Variable references are atoms starting with $.
@@ -1639,7 +1639,7 @@ postvar(ARG, Key) ->
 
 binding(Key) ->
     case get({binding, Key}) of
-	undefined -> exit({unknown_binding, Key});
+	undefined -> erlang:fault({unknown_binding, Key});
 	Value -> Value
     end.
 

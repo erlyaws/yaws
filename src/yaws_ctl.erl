@@ -30,7 +30,7 @@ start(GC, true) ->
 	    ok;
 	{error, RSN} ->
 	    error_logger:format("~s~n",[RSN]),
-	    exit(RSN)
+	    erlang:fault(RSN)
     end.
 
 
