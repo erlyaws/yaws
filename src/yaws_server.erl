@@ -780,7 +780,7 @@ aloop(CliSock, GS, Num) ->
 				     {ok, HE} ->
 					 HE#hostent.h_name;
 				     _ ->
-					 undefined
+					 Ip
 				 end;
 			     false ->
 				 Ip
