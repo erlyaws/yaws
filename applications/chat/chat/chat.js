@@ -43,10 +43,60 @@ function sendmsg() {
    debug("sendmsg: sending "+message);
    xml_sender.abort();
    xml_sender.open("POST", "chat_write.yaws", false);
+   message = expandSmilies(message);
    xml_sender.send(message);
    debug("sendmsg: sent "+message);
    document.getElementById("msg").value = "";
 }
+
+
+var smilies = new Array();
+smilies[":-)~"] = "tongue.png";
+smilies["O :-)"] = "angel.png";
+smilies[":-)"] = "smile.png";
+smilies[":-("] = "sad.png";
+smilies[":-D"] = "bigsmile.png";
+smilies[":-I"] = "burp.png";
+smilies["8-)"] = "cool.png";
+smilies[":-X"] = "crossedlips.png";
+smilies[":,-("] = "cry.png";
+smilies[":-6"] = "farted.png";
+smilies[":*"] = "kiss.png";
+smilies[":-$"] = "moneymouth.png";
+smilies["0-)"] = "oneeye.png";
+smilies[":-@"] = "scream.png";
+smilies[":-/"] = "think.png";
+smilies[",-)"] = "wink.png";
+smilies[":O"] = "yell.png";
+
+function smilies_toolbar() {
+  var tool="";
+  var smile;
+
+  for (smile in smilies) {
+    tool += ("<img src='"+smilies[smile]+"' onmousedown='return addText(\""+
+	     smile+"\")'></img> ");
+  }
+
+  return tool;
+}
+
+function expandSmilies(message) {
+  var smile;
+
+  for (smile in smilies) {
+    var i = 0;
+    i = message.indexOf(smile,i);
+    while(i >= 0) {
+      message = message.substring(0,i)+"<img src='"+smilies[smile]+"'>"+
+	        message.substring(i+smile.length);
+      i = message.indexOf(smile,i);
+    }
+  }
+
+  return message;
+}
+
 
 function create_xmlhttp() {
   var xmlhttp;
