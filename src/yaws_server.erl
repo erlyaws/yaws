@@ -2237,13 +2237,11 @@ send_file(CliSock, Fd, SC, GC, all) ->
 	identity ->
 	    send_file(CliSock, Fd, SC, GC);
 	deflate ->
-	    Z = zlib:open(),
-	    ok = zlib:deflateInit(Z, default),
-	    case catch send_file_deflated(CliSock, Fd, Z, SC, GC) of
+	    {Z, ZPriv} = yaws_zlib:gzipOpenInit(),
+	    case catch send_file_deflated(CliSock, Fd, Z, ZPriv, SC, GC) of
 						% Is this necessary?
 		Ret ->
-		    zlib:deflateEnd(Z),
-		    zlib:close(Z),
+		    yaws_zlib:gzipEndClose(Z),
 		    case Ret of
 			{'EXIT', Err} -> throw(Ret);
 			_ -> Ret
@@ -2271,17 +2269,17 @@ send_file(CliSock, Fd, SC, GC) ->
 	    end
     end.
 
-send_file_deflated(CliSock, Fd, Z, SC, GC) ->
+send_file_deflated(CliSock, Fd, Z, ZPriv, SC, GC) ->
     ?Debug("send_file_deflated(~p,~p,~p,...)~n", 
 	[CliSock, Fd, Z]),
     case file:read(Fd, GC#gconf.large_file_chunk_size) of
 	{ok, Bin} ->
-	    {ok, DD} = zlib:deflate(Z, Bin, none),
+	    {ok, ZPriv1, DD} = yaws_zlib:gzipDeflate(Z, ZPriv, Bin, none),
 	    send_file_chunk(DD, CliSock, SC, GC),
-	    send_file_deflated(CliSock, Fd, Z, SC, GC);
+	    send_file_deflated(CliSock, Fd, Z, ZPriv1, SC, GC);
 	eof ->
 	    file:close(Fd),
-	    {ok, DD} = zlib:deflate(Z, <<>>, finish),
+	    {ok, _, DD} = yaws_zlib:gzipDeflate(Z, ZPriv, <<>>, finish),
 	    send_file_chunk(DD, CliSock, SC, GC),
 	    case yaws:outh_get_chunked() of
 		true ->
@@ -2449,7 +2447,7 @@ cache_file(GC, SC, Path, UT) when
 			case SC#sconf.deflate 
 			    and (UT#urltype.type==regular) of
 			    true ->
-				case zlib:compress(Bin) of
+				case yaws_zlib:gzip(Bin) of
 				    {ok, DB} when binary(DB), 
 						  size(DB)*10<size(Bin)*9 ->
 					?Debug("storing deflated version "
@@ -2725,6 +2723,8 @@ compressible_mime_type("application/msword") ->
 compressible_mime_type("application/postscript") ->
     true;
 compressible_mime_type("application/pdf") ->
+    true;
+compressible_mime_type("application/vnd"++_) ->
     true;
 compressible_mime_type(_) ->
     false.

@@ -800,33 +800,6 @@ parse_qvalue(_) ->
 three_digits_to_integer(D1, D2, D3) ->
     100*(D1-$0)+10*(D2-$0)+D3-$0.
 
-accepts_deflate(H, Mime) ->
-    case [Val || {_,_,'Accept-Encoding',_,Val}<- H#headers.other] of
-	[] ->
-	    false;
-	[AcceptEncoding] ->
-	    EncodingList = [parse_qval(X) || 
-			       X <- split_sep(AcceptEncoding, $,)],
-	    case [Q || {"deflate", Q} <- EncodingList] 
-		++ [Q || {"*", Q} <- EncodingList] of
-		[] ->
-		    false;
-		[Q|_] -> (Q > 100)  % just for fun
-			     and not has_buggy_deflate(
-				       H#headers.user_agent, Mime)
-	    end;
-	_ ->
-	    false
-    end.
-
-%has_buggy_deflate(UserAgent, "application/pdf") ->
-						% Several browsers are
-						% known to incorrectly
-						% interact with Adobe's
-						% plugins, when it
-						% comes to compressed
-						% documents.
-%    true;
 has_buggy_deflate(UserAgent, Mime) ->
     UA = parse_ua(UserAgent),
     in_ua(
@@ -867,7 +840,74 @@ has_buggy_deflate(UserAgent, Mime) ->
 	      false
       end,
       UA).
-    
+
+%% Gzip encoding
+
+accepts_gzip(H, Mime) ->
+    case [Val || {_,_,'Accept-Encoding',_,Val}<- H#headers.other] of
+	[] ->
+	    false;
+	[AcceptEncoding] ->
+	    EncodingList = [parse_qval(X) || 
+			       X <- split_sep(AcceptEncoding, $,)],
+	    case [Q || {"gzip", Q} <- EncodingList] 
+		++ [Q || {"*", Q} <- EncodingList] of
+		[] ->
+		    false;
+		[Q|_] -> (Q > 100)  % just for fun
+			     and not has_buggy_gzip(
+				       H#headers.user_agent, Mime)
+	    end;
+	_ ->
+	    false
+    end.
+
+%%% Advice partly taken from Apache's documentation of `mod_deflate'.
+
+						% Only Netscape
+						% 4.06-4.08 is really
+						% broken.
+has_buggy_gzip("Mozilla/4.06"++_, _) ->
+    true;
+has_buggy_gzip("Mozilla/4.07"++_, _) ->
+    true;
+has_buggy_gzip("Mozilla/4.08"++_, _) ->
+    true;
+						% Everything else
+						% handles at least
+						% HTML.
+has_buggy_gzip(_, "text/html") ->
+    false;
+has_buggy_gzip(UserAgent, Mime) ->
+    UA = parse_ua(UserAgent),
+    in_ua(fun("Mozilla/4"++_) ->
+						% Netscape 4.x may
+						% choke on anything
+						% not HTML.
+		  case Mime of
+						% IE doesn't, but some
+						% versions are said to
+						% have issues with
+						% plugins.
+		      "application/pdf" ->
+			  true;
+		      _ -> not in_comment(
+				 fun("MSIE"++_) ->
+					 true;
+				    (_) -> false
+				 end,
+				 UA)
+		  end;
+	     ("w3m"++_) ->
+						% W3m does not
+						% decompress when
+						% saving.
+		  true;
+	     (_) ->
+		  false
+	  end,
+	  UA).
+		  
 
 %%% Parsing of User-Agent header.
 %%% Yes, this looks a bit like overkill.
@@ -1010,13 +1050,13 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
 	      all ->
 		  case UT#urltype.deflate of
 		      DB when binary(DB) -> % cached
-			  case accepts_deflate(Headers, UT#urltype.mime) of
+			  case accepts_gzip(Headers, UT#urltype.mime) of
 			      true -> {true, size(DB)};
 			      false -> {false, FIL}
 			  end;
 		      undefined -> {false, FIL};
 		      dynamic ->
-			  case accepts_deflate(Headers, UT#urltype.mime) of
+			  case accepts_gzip(Headers, UT#urltype.mime) of
 			      true ->
 				  {true, undefined};
 			      false ->
@@ -1240,7 +1280,7 @@ make_content_length_header(_) ->
 make_content_encoding_header(identity) ->
     undefined;
 make_content_encoding_header(deflate) ->
-    "Content-Encoding: deflate\r\n".
+    "Content-Encoding: gzip\r\n".
 
 make_connection_close_header(true) ->
     "Connection: close\r\n";

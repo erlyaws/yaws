@@ -21,6 +21,7 @@ MODULES=yaws \
 	yaws_compile \
 	yaws_ctl \
 	yaws_cgi \
+	yaws_zlib \
 	yaws_ssl \
 	yaws_vsn \
 	mime_type_c \
