@@ -496,6 +496,13 @@ updateFilesInit(Params, Root, Prefix) ->
 			{file, Fname, NewDesc, []};
 		    _ ->
 			{file, Fname, OldDesc, []}
+		end;
+	   ({file, Fname, _}) ->
+		case lists:keysearch(Fname, 1, Descriptions) of
+		    {value, {_,NewDesc}} ->
+			{file, Fname, NewDesc, []};
+		    _ ->
+			{file, Fname, [], []}
 		end
 	end,
 
