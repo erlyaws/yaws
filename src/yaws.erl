@@ -743,7 +743,7 @@ outh_set_static_headers(Req, UT, Headers) ->
 	       },
     put(outh, H2).
 
- outh_set_304_headers(Req, UT, Headers) ->
+outh_set_304_headers(Req, UT, Headers) ->
      H = get(outh),
      {DoClose, _Chunked} = dcc(Req, Headers),
      H2 = H#outh{
@@ -783,6 +783,13 @@ outh_set_connection_close(Bool) ->
 		doclose = Bool},
     put(outh, H2),
     ok.
+
+
+outh_set_content_length(Int) ->
+    H = get(outh),
+    H2 = H#outh{content_length = make_content_length_header(Int)},
+    put(outh, H2).
+
 
 
 outh_set_dcc(Req, Headers) ->

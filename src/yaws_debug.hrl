@@ -20,6 +20,15 @@
 	yaws_debug:format_record(Rec, Name, record_info(fields, Name))).
 	       
 
+
+-define(Trace(What, Fmt, Args), if Trace == false ->
+					ok;
+				   _ ->
+					yaws_debug:dtrace(What,Fmt,Args)
+				end).
+
+
+
 -ifdef(debug).
 
 
@@ -40,6 +49,7 @@
 
 -define(Debug(F, A),
 	yaws_debug:assert([],0,0,{{debug,"DEBUG"}, ?FILE,?LINE,F, A})).
+
 
 %% ease of use, just do ?Dvar(Variable)
 -define(Dvar(Var), ?Debug("Var = ~p~n", [Var])).

@@ -241,6 +241,7 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 
     %% and now finally, we've opened the ctl socket and are
     %% listening to all sockets we can possibly change username
+ 
 
     GC2 = case (catch yaws:setuser(Gconf#gconf.username)) of
 	      ignore ->
@@ -322,6 +323,18 @@ handle_cast(_Msg, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
+handle_info({'EXIT', Pid, Reason},  State) ->
+    L = lists:map(fun(X) ->element(1, X) end, element(2, State)),
+    case lists:member(Pid, L) of
+	true ->
+	    %% one of our gservs died
+	    error_logger:format("yaws: FATAL gserv died ~p~n", [Reason]),
+	    exit(restartme);
+	false ->
+	    ignore
+    end,
+    {noreply, State};
+
 
 handle_info(_Msg, State) ->
     ?Debug("GOT ~p~n", [_Msg]),
@@ -1712,15 +1725,22 @@ handle_crash(A, L, SC) ->
 
 
 deliver_accumulated(Sock, GC, SC) ->
-    {StatusLine, Headers} = yaws:outh_serialize(),
+    Chunked = yaws:outh_get_chunked(),
     Cont = case erase(acc_content) of
+	       undefined  when Chunked == false ->
+		   yaws:outh_set_content_length(0),
+		   [];
 	       undefined ->
+		   error_logger:info_msg("deliver accumulated Chunked with "
+					 "no content",[]),
 		   [];
 	       Content ->
 		   Content
 	   end,
+    
+    {StatusLine, Headers} = yaws:outh_serialize(),
     ?Debug("deliver accumulated size=~p~n", [size(list_to_binary([Cont]))]),
-    CRNL = case yaws:outh_get_chunked() of
+    CRNL = case Chunked of
 	       true ->
 		   [];
 	       false ->
