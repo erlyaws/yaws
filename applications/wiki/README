@@ -1,0 +1,19 @@
+This is a straightforward port of Joe Armstongs Wiki code (14.0) with
+some minor extensions for having file attached to a page.
+
+The pico-11.0 http server has been replaced 
+
+
+To Install
+----------
+
+Edit include.mk then 
+
+make
+make install
+
+
+It is possible to have several Wiki instances on the same server. 
+Just install the www/* files in the directory where you want a 
+Wiki instance.
+

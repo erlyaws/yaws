@@ -1,0 +1,9 @@
+<erl>
+
+out(Arg) ->
+    {abs_path, P} = (Arg#arg.req)#http_request.path,
+    Path = yaws_api:url_decode(P),
+    Prefix = wiki_yaws:get_path_prefix(Path),
+    {redirect_local, Prefix ++ "showPage.yaws?node=home"}.
+
+</erl>
