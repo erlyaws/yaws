@@ -50,49 +50,59 @@
 format(Str, F) ->
     Env = {F, false, false, false, 0, false},
     Str1 = case Str of [$\n|_] -> Str; _ -> [$\n|Str] end,
-    format_txt(Str1, Env, []).
+    format_txt(Str1, Env, [], Str1).
 
 blank_line(S=[$\n|_]) -> {yes, S};
 blank_line([$\t|T])   -> blank_line(T);
 blank_line([$  |T])   -> blank_line(T);
 blank_line(_)         -> no.
 
-format_txt([$\n|T], Env, L) ->
+format_txt([$\n|T], Env, L, Doc) ->
     case blank_line(T) of
 	{yes, T1} ->
 	    {Env1, L1} = clear_line(Env, reverse("<p>\n", L)),
-	    format_txt(T1, Env1, L1);
+	    format_txt(T1, Env1, L1, Doc);
 	no ->
-	    after_nl(T, Env, [$\n|L])
+	    after_nl(T, Env, [$\n|L], Doc)
     end;
-format_txt([$\\,H|T], Env, L) ->
-    format_txt(T, Env, [H|L]);
-format_txt([$*|T], Env, L) ->
+format_txt([$\\,H|T], Env, L, Doc) ->
+    format_txt(T, Env, [H|L], Doc);
+format_txt([$*|T], Env, L, Doc) ->
     {Env1, L1} = char_style(b, Env, L),
-    format_txt(T, Env1, L1);
-format_txt([${,${|T], Env, L) ->
-    emb(T,Env,L);
-format_txt("'''" ++ T, Env, L) ->
+    format_txt(T, Env1, L1, Doc);
+format_txt([${,${|T], Env, L, Doc) ->
+    emb(T,Env,L, Doc);
+format_txt("'''" ++ T, Env, L, Doc) ->
     {Env1, L1} = char_style(tt, Env, L),
-    format_txt(T, Env1, L1);
-format_txt("''" ++ T, Env, L) ->
+    format_txt(T, Env1, L1, Doc);
+format_txt("''" ++ T, Env, L, Doc) ->
     {Env1, L1} = char_style(i, Env, L),
-    format_txt(T, Env1, L1);
-format_txt("~" ++ T, Env, L) ->
+    format_txt(T, Env1, L1, Doc);
+format_txt("~" ++ T, Env, L, Doc) ->
     {Word, T1} = collect_wiki_link(T),
     Link = format_wiki_word(Word, Env),
-    format_txt(T1, Env, reverse(Link, L));
-format_txt("http://" ++ T, Env, L) ->
+    format_txt(T1, Env, reverse(Link, L), Doc);
+format_txt("http://" ++ T, Env, L, Doc) ->
     {Url, T1} = collect_url(T, []),
     Txt = format_external_url(Url),
-    format_txt(T1, Env, reverse(Txt, L));
-format_txt("mailto:" ++ T, Env, L) ->
+    format_txt(T1, Env, reverse(Txt, L), Doc);
+format_txt("mailto:" ++ T, Env, L, Doc) ->
     {X, T1} = collect_mail(T, []),
     Txt = "<a href='mailto:" ++ X ++ "'>" ++ X ++ "</a>",
-    format_txt(T1, Env, reverse(Txt, L));
-format_txt([H|T], Env, L) ->
-    format_txt(T, Env, [H|L]);
-format_txt([], Env, L) ->
+    format_txt(T1, Env, reverse(Txt, L), Doc);
+format_txt("mailtoall:" ++ T, Env, L, Doc) ->
+    {Name, T1} = collect_url(T, []),
+    case get_mailto(Doc, []) of
+	[] ->
+	    format_txt(T1, Env, T, Doc);
+	[F|Rs] ->
+	    Recipients = [F | [[$,|R] || R <- Rs]],
+	    Txt = "<a href='mailto:" ++ Recipients ++ "'>" ++ Name ++ "</a>",
+	    format_txt(T1, Env, reverse(Txt, L), Doc)
+    end;
+format_txt([H|T], Env, L, Doc) ->
+    format_txt(T, Env, [H|L], Doc);
+format_txt([], Env, L, Doc) ->
     {_, L1} = clear_line(Env, L),
     reverse(L1).
 
@@ -120,6 +130,16 @@ collect_mail(S=[$\n|_], L)     -> {reverse(L), S};
 collect_mail([H|T], L)         -> collect_mail(T, [H|L]);
 collect_mail([], L)            -> {reverse(L), []}.  
 
+get_mailto([$\\,C|T], L) ->
+    get_mailto(T, L);
+get_mailto("mailto:"++T, L) ->
+    {Link, T1} = collect_mail(T, []),
+    get_mailto(T1, [Link|L]);
+get_mailto([_|T], L) ->
+    get_mailto(T, L);
+get_mailto([], L) ->
+    L.
+
 format_url(Url, {_,_,_,F}) ->  F(Url).
 
 format_external_url(F) ->
@@ -134,54 +154,60 @@ format_external_url(F) ->
 is_graphic(F) ->
     member(filename:extension(F), [".gif", ".GIF", ".jpg", ".JPG"]).
 
-after_nl([${,$\n|T], Env, L)  -> pre(T, Env, L);
-after_nl([${,${|T], Env, L)   -> emb(T, Env, L);
-after_nl([${|T], Env, L)      -> pre(T, Env, L);
-after_nl([$[|T], Env, L)      -> note(T, Env, L);
-after_nl("____" ++ T, Env, L) -> hr(T, Env, L);
-after_nl(S=[$-|T], Env, L)    -> mk_list(S, Env, L);
-after_nl(T, Env, L)           -> format_txt(T, Env, L).
+after_nl([${,$\n|T], Env, L, Doc)  -> pre(T, Env, L, Doc);
+after_nl([${,${|T], Env, L, Doc)   -> emb(T, Env, L, Doc);
+after_nl([${|T], Env, L, Doc)      -> pre(T, Env, L, Doc);
+after_nl([$[|T], Env, L, Doc)      -> note(T, Env, L, Doc);
+after_nl("____" ++ T, Env, L, Doc) -> hr(T, Env, L, Doc);
+after_nl(S=[$-|T], Env, L, Doc)    -> mk_list(S, Env, L, Doc);
+after_nl(T, Env, L, Doc)           -> format_txt(T, Env, L, Doc).
 
-hr(T, Env, L) ->
+hr(T, Env, L, Doc) ->
     {Env1, L1} = clear_line(Env, L),
     L2 = reverse("<hr>\n", L1),
-    format_txt(T, Env1, L2).
+    format_txt(T, Env1, L2, Doc).
 
-pre(T, Env, L) ->
+pre(T, Env, L, Doc) ->
     {Env1, L1} = clear_line(Env, L),
     L2 = reverse("<pre>\n", L1),
-    pre1(T, Env1, L2).
+    pre1(T, Env1, L2, Doc).
 
-pre1([$\r,$}|T], Env, L) ->
+pre1([$\r,$}|T], Env, L, Doc) ->
     L1 = reverse("\n</pre>\n", L),
-    format_txt(T, Env, L1);
-pre1([$\n,$}|T], Env, L) ->
+    format_txt(T, Env, L1, Doc);
+pre1([$\n,$}|T], Env, L, Doc) ->
     L1 = reverse("\n</pre>\n", L),
-    format_txt(T, Env, L1);
-pre1([H|T], Env, L) ->
-    pre1(T, Env, [H|L]);
-pre1([], Env, L) ->
-    pre1([$\n,$}], Env, L).
+    format_txt(T, Env, L1, Doc);
+pre1([$<|T], Env, L, Doc) ->
+    L1 = reverse("&lt;", L),
+    pre1(T, Env, L1, Doc);
+pre1([$>|T], Env, L, Doc) ->
+    L1 = reverse("&gt;", L),
+    pre1(T, Env, L1, Doc);
+pre1([H|T], Env, L, Doc) ->
+    pre1(T, Env, [H|L], Doc);
+pre1([], Env, L, Doc) ->
+    pre1([$\n,$}], Env, L, Doc).
 
-emb([$},$}|T], Env, L) ->
-    format_txt(T, Env, L);
-emb([H|T], Env, L) ->
-    emb(T, Env, [H|L]);
-emb([], Env, L) ->
-    emb([$},$}], Env, L).
+emb([$},$}|T], Env, L, Doc) ->
+    format_txt(T, Env, L, Doc);
+emb([H|T], Env, L, Doc) ->
+    emb(T, Env, [H|L], Doc);
+emb([], Env, L, Doc) ->
+    emb([$},$}], Env, L, Doc).
 
-note(T, Env, L) ->
+note(T, Env, L, Doc) ->
     {Env1, L1} = clear_line(Env, L),
     L2 = reverse(note_start(), L1),
-    note1(T, Env1, L2).
+    note1(T, Env1, L2, Doc).
 
-note1([$\n,$]|T], Env, L) ->
+note1([$\n,$]|T], Env, L, Doc) ->
     L1 = reverse(note_end(), L),
-    format_txt(T, Env, L1);
-note1([H|T], Env, L) ->
-    note1(T, Env, [H|L]);
-note1([], Env, L) ->
-    note1([$\n,$]], Env, L).
+    format_txt(T, Env, L1, Doc);
+note1([H|T], Env, L, Doc) ->
+    note1(T, Env, [H|L], Doc);
+note1([], Env, L, Doc) ->
+    note1([$\n,$]], Env, L, Doc).
 
 note_start() ->
     "<p><table cellpadding=20>
@@ -190,18 +216,18 @@ note_start() ->
 
 note_end() -> "</font></td></tr></table><p>\n".
 	      
-mk_list(T, Env, L) ->
+mk_list(T, Env, L, Doc) ->
     {Lev, T1} = count_indent_levels(T, 0),
     {Env1, L1} = adjust_indents(Env, Lev, L),
     T2 = skip_blanks(T1),
     case T2 of
 	[$*|T3] ->
-	    format_txt(T3,Env1,reverse("<li>", L1));
+	    format_txt(T3,Env1,reverse("<li>", L1), Doc);
 	[$[|T4] ->
 	    {Env2, L2} = open_dl(Env1, L1),
-            add_dl(T4, Env2, reverse("<dt>", L2));
+            add_dl(T4, Env2, reverse("<dt>", L2), Doc);
 	_ ->
-	   format_txt(T2,Env1,L1)
+	   format_txt(T2,Env1,L1, Doc)
     end.
 
 skip_blanks([$ |T])  -> skip_blanks(T);
@@ -212,10 +238,14 @@ skip_blanks(X)       -> X.
 open_dl({F,F1,F2,F3,N,false}, L) -> {{F,F1,F2,F3,N,true}, reverse("<dl>", L)};
 open_dl(Env, L)                  -> {Env, L}.
 
-add_dl([$]|T], Env, L)  -> format_txt(T, Env, reverse("</dt><dd>", L));
-add_dl([$\n|T], Env, L) -> format_txt(T, Env, reverse("</dt><dd>", L));
-add_dl([H|T], Env, L)   -> add_dl(T, Env, [H|L]);
-add_dl([], Env, L)      -> format_txt([], Env, reverse("</dt>", L)).
+add_dl([$]|T], Env, L, Doc) ->
+    format_txt(T, Env, reverse("</dt><dd>", L), Doc);
+add_dl([$\n|T], Env, L, Doc) ->
+    format_txt(T, Env, reverse("</dt><dd>", L), Doc);
+add_dl([H|T], Env, L, Doc) ->
+    add_dl(T, Env, [H|L], Doc);
+add_dl([], Env, L, Doc) ->
+    format_txt([], Env, reverse("</dt>", L), Doc).
     
 count_indent_levels([$-|T], N) -> count_indent_levels(T, N+1);
 count_indent_levels(T, N)      -> {N, T}.

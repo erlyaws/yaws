@@ -432,7 +432,11 @@ addFileChunk([{head, {attached, Opts}}|Res], State) ->
     Root     = State#addfile.root,
     Prefix   = State#addfile.prefix,
     {_,FileDir} = page2filename(Page, Root),
+    Valid = check_filename(lists:reverse(FileName)),
     if
+	Valid /= ok ->
+	    {error, Reason} = Valid,
+	    {done, show({illegal_filename, FileName, Reason})};
 	FileName == "" ->
 	    {done, show({empty_content, Page})};
 	true ->
@@ -454,6 +458,19 @@ addFileChunk([{body, Data}|Res], State) when State#addfile.param == attached ->
 
 
 
+check_filename("sway."++_) ->
+    {error, "Files ending with .yaws files are not allowed."};
+check_filename(FileName) ->
+    case lists:any(fun(C) -> lists:member(C, FileName) end,
+		   "$\\!%^&*[]~\"'`<>|/") of
+	true ->
+	    {error,
+	     "Illegal character in file. "
+	     "Please remove all of the following characters "
+	     "$\\!%^&*[]~\"'`<>|/ from the filename."};
+	false ->
+	    ok
+    end.
 
 updateFilesInit(Params, Root, Prefix) ->
     Page = getopt(node, Params),
@@ -1766,6 +1783,12 @@ show({bad_password, Page}) ->
 		    input("submit", "send",
 			  "Show password")])
 	     ]);
+
+show({illegal_filename, FileName, Reason}) ->
+    template("Error", "",
+	     [h1("Illegal filename"),
+	      p("You have supplied an illegal filename: " ++ FileName ++ "."),
+	      p(Reason)]);
 
 show(X) ->
     {html, [body("white"),"<pre>",
