@@ -1,0 +1,31 @@
+<erl>
+
+out(A) ->
+    case mail:check_session(A) of
+	{ok, Session} ->
+	    L = yaws_api:parse_post(A),
+	    To = mail:get_val(to, L, ""),
+	    Cc = mail:get_val(cc, L, ""),
+	    Bcc = mail:get_val(bcc, L, ""),
+	    Subject = mail:get_val(subject, L, ""),
+	    Text = mail:get_val(text, L, ""),
+	    mail:send(Session,To,Cc,Bcc,Subject,Text);
+	Error ->
+	    Error
+    end.
+
+</erl>	    
+	 
+
+
+
+
+
+
+
+
+
+
+
+
+

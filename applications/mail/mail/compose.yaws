@@ -1,0 +1,11 @@
+<erl>
+
+out(A) ->
+    case mail:check_session(A) of
+	{ok, Session} ->
+	    mail:compose(Session);
+	Error ->
+	    Error
+    end.
+
+</erl>

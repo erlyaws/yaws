@@ -1,0 +1,29 @@
+
+
+This is a very basic WebMail application which is completely 
+stateless, by design. I didn't want any SQL databases etc 
+for storing the emails.
+
+The reason for building it was that I needed a local WebMail
+and I didn't want to install an Apache with python or PHP,
+and besides all those relied on some local store (mbox, MySQL
+etc) which I didn't want. Also, Klacke told me that he never
+finished the other webmail app so I started from scratch.
+
+A few important things are still missing. The most notable is the
+ability to handle attached files and email on multipart format...
+
+To install
+----------
+
+- Modify mail/defs.hrl to fit your local configuration. 
+- Modify include.mk for your local paths
+
+Run 'make' and 'make install' and update your /etc/yaws.conf
+to include the ebin directory, e.g. at the top
+
+   ebin_dir = /var/yaws/ebin
+
+Feel free to hack it!!
+
+/Johan Bevemyr

@@ -1,0 +1,9 @@
+-module(mail_vsn).
+-author('jb@bevemyr.com').
+
+-compile(export_all).
+
+version() -> "%VSN%".
+
+    
+

@@ -1,0 +1,36 @@
+<erl>
+
+out(A) ->
+    case mail:check_session(A) of
+	{ok, Session} ->
+	    L = yaws_api:parse_post(A),
+	    From = mail:get_val(from, L, ""),
+	    Subject = mail:get_val(subject, L, ""),
+	    To = mail:get_val(to, L, ""),
+	    Cc = mail:get_val(cc, L, ""),
+	    Bcc = mail:get_val(bcc, L, ""),
+	    NewCc =
+		if To == [] -> Cc;
+		   Cc == [] -> To;
+		   true -> To ++ ", " ++ Cc
+		end,
+	    mail:compose(Session,"",From,NewCc,Bcc,"RE: "++Subject,"");
+	Error ->
+	    Error
+    end.
+
+</erl>	    
+	 
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,4 @@
+<erl>
+out(A) ->
+    {redirect_local, {rel_path, "mail.yaws"}}.
+</erl>
