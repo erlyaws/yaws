@@ -875,10 +875,6 @@ http_get_headers(CliSock, GC) ->
 	{ok, R} when element(1, R) == http_request ->
 	    H = http_get_headers(CliSock, R, GC, #headers{}),
 	    {R, H};
-	{error, timeout} ->
-	    done;
-	{error, closed} ->
-	    done;
 	_Err ->
 	    ?Debug("Got ~p~n", [_Err]),
 	    exit(normal)
@@ -891,6 +887,8 @@ http_get_headers(CliSock, Req, GC, H) ->
 	    http_get_headers(CliSock, Req, GC, H#headers{host = Host});
 	{ok, {http_header, _Num, 'Connection', _, Conn}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{connection = Conn});
+	{ok, http_eoh} ->
+	    H;
 	{ok, {http_header, _Num, 'Accept', _, Accept}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{accept = Accept});
 	{ok, {http_header, _Num, 'If-Modified-Since', _, X}} ->
@@ -925,8 +923,6 @@ http_get_headers(CliSock, Req, GC, H) ->
 	{ok, {http_header, _Num, 'Authorization', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, 
 			H#headers{authorization = parse_auth(X)});
-	{ok, http_eoh} ->
-	    H;
 	{ok, X} ->
 	    ?Debug("OTHER header ~p~n", [X]),
 	    http_get_headers(CliSock, Req, GC, 
