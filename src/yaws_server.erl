@@ -52,9 +52,14 @@ start_link(A) ->
 
 status() ->
     gen_server:call(?MODULE, status).
-
-
-
+gs_status() ->
+    [_|Pids] = gen_server:call(?MODULE, pids),
+    lists:map(
+      fun(P) ->
+	      P ! {self(), status},
+	      receive {P, Stat} -> Stat end
+      end, Pids).
+		    
 stats() -> 
     {S, Time} = status(),
     Diff = calendar:time_difference(Time, calendar:local_time()),
@@ -91,7 +96,7 @@ init({Debug, Trace, TraceOut, Conf, RunMod, Embedded}) ->
     put(start_time, calendar:local_time()),  %% for uptime
     case Embedded of 
 	false ->
-	    Config = yaws_config:load(Conf, Trace, TraceOut, Debug),
+	    Config = (catch yaws_config:load(Conf, Trace, TraceOut, Debug)),
 	    ?Debug("Config= ~p~n", [Config]),
 	    case Config of
 		{ok, Gconf, Sconfs} ->
@@ -118,7 +123,10 @@ init({Debug, Trace, TraceOut, Conf, RunMod, Embedded}) ->
 			    error_logger:error_msg("Yaws: bad conf: ~s~n",[E]),
 			    init:stop(),
 			    {stop, E}
-		    end
+		    end;
+		EXIT ->
+		    error_logger:format("FATAL ~p~n", [EXIT]),
+		    exit(badconf)
 	    end;
 	true ->
 	    {ok, #state{gc = undefined,
@@ -150,24 +158,11 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
     end,
 
     runmod(RunMod, GC),
+   
+    L2 = lists:zf(
+	   fun(Group) -> start_group(GC, Group) end,
+	   Sconfs),
 
-    %% start the individual gserv server processes
-    L = map(
-	  fun(Group) ->
-		  proc_lib:start_link(?MODULE, gserv, [GC, Group])
-	  end, Sconfs),
-    L2 = lists:zf(fun({error, F, A}) ->	
-			  error_logger:error_msg(F, A),
-			  false;
-		     ({error, Reason}) ->
-			  error_logger:error_msg("FATAL: ~p~n", [Reason]),
-			  false;
-		     ({_Pid, _SCs}) ->
-			  true;
-		     (none) ->
-			  false
-		  end, L),
-    ?Debug("L=~p~n", [yaws_debug:nobin(L)]),
     yaws_log:uid_change(GC),
     
 
@@ -192,6 +187,23 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
 
 
 
+start_group(GC, Group) ->
+    case proc_lib:start_link(?MODULE, gserv, [GC, Group]) of
+	{error, F, A} ->
+	    error_logger:error_msg(F, A),
+	    false;
+	{error, Reason} ->
+	    error_logger:error_msg("FATAL: ~p~n", [Reason]),
+	    false;
+	{Pid, SCs} ->
+	    {true, {Pid, SCs}};
+	none ->
+	    false
+    end.
+
+
+
+
 %%----------------------------------------------------------------------
 %% Func: handle_call/3
 %% Returns: {reply, Reply, State}          |
@@ -204,8 +216,10 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
 handle_call(status, _From, State) ->
     Reply = {State, get(start_time)},
     {reply, Reply, State};
+
 handle_call(id, _From, State) ->
     {reply, (State#state.gc)#gconf.id, State};
+
 handle_call(pids, _From, State) ->  %% for gprof
     L = map(fun(X) ->element(1, X) end, State#state.pairs),
     {reply, [self() | L], State};
@@ -214,15 +228,14 @@ handle_call(mnum, _From, State) ->
     Mnum = State#state.mnum +1,
     {reply, Mnum, State#state{mnum = Mnum}};
 
+
+
+%% This is a brutal restart of everything
 handle_call({setconf, GC, Groups}, _From, State) ->
     %% First off, terminate all currently running processes
     Curr = map(fun(X) ->element(1, X) end, State#state.pairs),
     foreach(fun(Pid) ->
-		    Pid ! {self(), stop},
-		    receive
-			{Pid, ok} ->
-			    ok
-		    end
+		    gserv_stop(Pid)
 	    end, Curr),
     case init2(GC, Groups, undef, State#state.embedded, false) of
 	{ok, State2} ->
@@ -233,7 +246,75 @@ handle_call({setconf, GC, Groups}, _From, State) ->
 
 handle_call(getconf, _From, State) ->
     Groups = map(fun({_Pid, SCs}) -> SCs end, State#state.pairs),
-    {reply, {ok, State#state.gc, Groups}, State}.
+    {reply, {ok, State#state.gc, Groups}, State};
+
+
+handle_call({update_sconf, NewSc}, From, State) ->
+    case yaws_config:search_sconf(NewSc, State#state.pairs) of
+	{Pid, OldSc, _Group} ->
+	    case yaws_config:eq_sconfs(OldSc,NewSc) of
+		true ->
+		    error_logger:info_msg("Keeping conf for ~s intact\n",
+					  [yaws:sconf_to_srvstr(OldSc)]),
+		    {reply, ok, State};
+		false ->
+		    Pid ! {update_sconf, NewSc, OldSc, From},
+		    P2 = yaws_config:update_sconf(NewSc, State#state.pairs),
+		    {noreply, State#state{pairs = P2}}
+	    end;
+	false ->
+	    {reply, {error, "No matching group"}, State}
+    end;
+
+
+handle_call({delete_sconf, SC}, From, State) ->
+    case yaws_config:search_sconf(SC, State#state.pairs) of
+	{Pid, OldSc, Group} when length(Group) == 1 ->
+	    error_logger:info_msg("Terminate whole ~s virt server group \n", 
+				  [yaws:sconf_to_srvstr(OldSc)]),
+	    gserv_stop(Pid),
+	    NewPairs = lists:keydelete(Pid, 1, State#state.pairs),
+	    {reply, ok, State#state{pairs = NewPairs}};
+	{Pid, OldSc, _Group} ->
+	    Pid ! {delete_sconf, OldSc, From},
+	    P2 = yaws_config:delete_sconf(OldSc, State#state.pairs),
+	    {noreply, State#state{pairs = P2}};
+	false ->
+	    {reply, {error, "No matching group"}, State}
+    end;
+
+handle_call({add_sconf, SC}, From, State) ->
+    case yaws_config:search_group(SC, State#state.pairs) of
+	[{Pid, Group}] ->
+	    Pid ! {add_sconf, From, SC},
+	    P2 = lists:keyreplace(Pid, 1, State#state.pairs,
+				  {Pid, [SC|Group]}),
+	    {noreply, State#state{pairs = P2}};
+	[] ->
+	    %% Need to create a new group
+	    error_logger:info_msg("Creating new virt server ~s\n",
+				 [yaws:sconf_to_srvstr(SC)]),
+	    GC = State#state.gc,
+	    case start_group(GC, [SC]) of
+		false ->
+		    {reply, ok, State};
+		{true, Pair} ->
+		    Pid = element(1, Pair),
+		    Pid ! {newuid, GC#gconf.uid},
+		    P2 = [Pair | State#state.pairs],
+		    {reply, ok, State#state{pairs = P2}}
+	    end
+    end;
+
+handle_call({update_gconf, GC}, _From, State) ->
+    lists:foreach(fun({Pid, _Group}) ->
+			  Pid ! {update_gconf, GC}
+		  end, State#state.pairs),
+    %% no need to tell yaws_log, new vals must be compatible
+    put(gc, GC),
+    {reply, ok, State#state{gc = GC}}.
+
+
 
 
 
@@ -278,38 +359,6 @@ handle_info(_Msg, State) ->
 terminate(_Reason, _State) ->
     ok.
 
-
-
-
-
-
-%% we search and setup www authenticate for each directory
-%% specified as an auth directory. These are merged with server conf.
-
-setup_auth(SC) ->
-    %?Debug("setup_auth(~p)", [yaws_debug:nobin(SC)]),
-    ?f(map(fun(Auth) ->
-	add_yaws_auth(Auth#auth.dir, Auth)
-	end, SC#sconf.authdirs)).
-
-add_yaws_auth(Dirs, A) ->
-    map(
-      fun(Dir) ->
-	  case file:consult([Dir, [$/|".yaws_auth"]]) of
-	      {ok, [{realm, Realm} |TermList]} ->
-		  {Dir, A#auth{realm = Realm,
-			       users = TermList++A#auth.users}};
-	      {ok, TermList} ->
-		  {Dir, A#auth{users = TermList++A#auth.users}};
-	      {error, enoent} ->
-		  {Dir, A};
-	      _Err ->
-		  error_logger:format("Bad .yaws_auth file in dir ~p~n", [Dir]),
-		  {Dir, A}
-	  end
-      end, Dirs).
-
-
 do_listen(SC) ->
     case SC#sconf.ssl of
 	undefined ->
@@ -342,13 +391,8 @@ gserv(_, []) ->
 gserv(GC, Group0) ->
     process_flag(trap_exit, true),
     ?TC([{record, GC, gconf}]),
-    Group = map(fun(SC) -> 
-			E = ets:new(yaws_code, [public, set]),
-			ets:insert(E, {num_files, 0}),
-			ets:insert(E, {num_bytes, 0}),
-			Auth = setup_auth(SC),
-			SC#sconf{ets = E,
-				 authdirs = Auth}
+    put(gc, GC),
+    Group = map(fun(SC) -> setup_ets(SC)
 		end, Group0),
     SC = hd(Group),
     case do_listen(SC) of
@@ -358,15 +402,12 @@ gserv(GC, Group0) ->
 	      "Yaws: Listening to ~s:~w for servers~s~n",
 	      [yaws:fmt_ip(SC#sconf.listen),
 	       SC#sconf.port,
-	       catch map(fun(S) ->  
-				 io_lib:format("~n - ~s://~s under ~s",
-					       [if SC#sconf.ssl == undefined -> 
-							"http";
-						   true -> "https"
-						end,
-						S#sconf.servername,
-						S#sconf.docroot])
-			 end, Group)
+	       catch map(
+		       fun(S) ->  
+			       io_lib:format("~n - ~s under ~s",
+					     [yaws:sconf_to_srvstr(S),
+					      S#sconf.docroot])
+		       end, Group)
 	      ]),
 	    proc_lib:init_ack({self(), Group}),
 	    N = receive
@@ -377,8 +418,8 @@ gserv(GC, Group0) ->
 		     group = Group,
 		     ssl = SSLBOOL,
 		     l = Listen},
-	    initial_acceptor(GS),
-	    gserv_loop(GS, [], 0);
+	    Last = initial_acceptor(GS),
+	    gserv_loop(GS, [], 0, Last);
 	{_,Err} ->
 	    error_logger:format("Yaws: Failed to listen ~s:~w  : ~p~n",
 				[yaws:fmt_ip(SC#sconf.listen),
@@ -412,43 +453,131 @@ setup_dirs(GC) ->
     end.
 
 
+setup_ets(SC) ->
+    E = ets:new(yaws_code, [public, set]),
+    ets:insert(E, {num_files, 0}),
+    ets:insert(E, {num_bytes, 0}),
+    SC#sconf{ets = E}.
 
-gserv_loop(GS, Ready, Rnum) ->
+gserv_loop(GS, Ready, Rnum, Last) ->
     receive
 	{From , status} ->
 	    From ! {self(), GS},
-	    gserv_loop(GS, Ready, Rnum);
+	    gserv_loop(GS, Ready, Rnum, Last);
 	{_From, next} when Ready == [] ->
-	    acceptor(GS),
-	    gserv_loop(GS, Ready, Rnum);
+	    New = acceptor(GS),
+	    gserv_loop(GS, Ready, Rnum, New);
 	{_From, next} ->
 	    [R|RS] = Ready,
 	    R ! {self(), accept},
-	    gserv_loop(GS, RS, Rnum-1);
+	    gserv_loop(GS, RS, Rnum-1, R);
 	{From, done_client, Int} ->
 	    GS2 = if
 		      Int == 0 -> GS;
 		      Int > 0 -> GS#gs{sessions = GS#gs.sessions + 1,
 				       reqs = GS#gs.reqs + Int}
 		  end,
-    if
+	    if
 		Rnum == 8 ->
 		    From ! {self(), stop},
-		    gserv_loop(GS2, Ready, Rnum);
+		    gserv_loop(GS2, Ready, Rnum, Last);
 		Rnum < 8 ->
-		    gserv_loop(GS2, [From | Ready], Rnum+1)
+		    gserv_loop(GS2, [From | Ready], Rnum+1, Last)
 	    end;
 	{'EXIT', _Pid, _} ->
-	    gserv_loop(GS, Ready, Rnum);
+	    gserv_loop(GS, Ready, Rnum, Last);
+
 	{From, stop} ->   
 	    unlink(From),
 	    {links, Ls} = process_info(self(), links),
-	    foreach(fun(X) -> unlink(X), exit(X, kill) end, Ls),
+	    foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
 	    From ! {self(), ok},
-	    exit(normal)
+	    exit(normal);
+
+
+	%% This code will shutdown all ready procs as well as the
+	%% acceptor() 
+	{update_sconf, NewSc, OldSc, From} ->
+	    case lists:member(OldSc, GS#gs.group) of
+		false ->
+		    error_logger:error_msg("gserv: No found SC ~p/~p~n",
+					   [OldSc, GS#gs.group]),
+		    erlang:fault(nosc);
+		true ->
+		    stop_ready(Ready, Last),
+		    ets:delete(OldSc#sconf.ets),
+		    GS2 = GS#gs{group = [setup_ets(NewSc) | 
+					 lists:delete(OldSc,GS#gs.group)]},
+		    Ready2 = [],
+		    gen_server:reply(From, ok),
+		    error_logger:info_msg("Updating sconf for server ~s~n",
+					  [yaws:sconf_to_srvstr(NewSc)]),
+		    New = acceptor(GS2),
+		    gserv_loop(GS2, Ready2, 0, New)
+	    end;
+
+	{delete_sconf, OldSc, From} ->
+	    
+	    case lists:member(OldSc, GS#gs.group) of
+		false ->
+		    error_logger:error_msg("gserv: No found SC ~n",[]),
+		    erlang:fault(nosc);
+		true ->
+		    stop_ready(Ready, Last),
+		    GS2 = GS#gs{group =  lists:delete(OldSc,GS#gs.group)},
+		    Ready2 = [],
+		    ets:delete(OldSc#sconf.ets),
+		    gen_server:reply(From, ok),
+		    error_logger:info_msg("Deleting sconf for server ~s~n",
+					  [yaws:sconf_to_srvstr(OldSc)]),
+		    New = acceptor(GS2),
+		    gserv_loop(GS2, Ready2, 0, New)
+	    end;
+
+	{add_sconf, From, SC} ->
+	    stop_ready(Ready, Last),
+	    GS2 = GS#gs{group =  [setup_ets(SC) |GS#gs.group]},
+	    Ready2 = [],
+	    gen_server:reply(From, ok),
+	    error_logger:info_msg("Adding sconf for server ~s~n",
+				  [yaws:sconf_to_srvstr(SC)]),
+	    New = acceptor(GS2),
+	    gserv_loop(GS2, Ready2, 0, New);
+
+	{update_gconf, GC} ->
+	    stop_ready(Ready, Last),
+	    GS2 = GS#gs{gconf = GC},
+	    Ready2 = [],
+	    put(gc, GC),
+	    error_logger:info_msg("Updating gconf \n",[]),
+	    New = acceptor(GS2),
+	    gserv_loop(GS2, Ready2, 0, New)
+
     end.
 	    
- 
+
+stop_ready(Ready, Last) ->
+    unlink(Last),
+    exit(Last, shutdown),
+    
+    lists:foreach(
+      fun(Pid) -> 
+	      Pid ! {self(), stop}
+      end, Ready).
+
+
+
+
+
+
+gserv_stop(Gpid) ->
+    Gpid ! {self(), stop},
+    receive
+	{Gpid, ok} ->
+	    ok
+    end.
+
+
 call_start_mod(SC) ->
     case SC#sconf.start_mod of
 	undefined ->
@@ -1267,10 +1396,10 @@ deliver_302(CliSock, _Req, Arg, Path) ->
     ?Debug("in redir 302 ",[]),
     H = get(outh),
     SC=get(sc),
-    Scheme = redirect_scheme(SC),
+    Scheme = yaws:redirect_scheme(SC),
     Headers = Arg#arg.headers,
     DecPath = yaws_api:url_decode(Path),
-    RedirHost = redirect_host(SC, Headers#headers.host),
+    RedirHost = yaws:redirect_host(SC, Headers#headers.host),
     Loc = case string:tokens(DecPath, "?") of
 	      [P] ->
 		  ["Location: ", Scheme,
@@ -1284,54 +1413,6 @@ deliver_302(CliSock, _Req, Arg, Path) ->
     deliver_accumulated(CliSock),
     done_or_continue().
 
-
-redirect_scheme(SC) ->
-    case {SC#sconf.ssl,SC#sconf.rmethod} of
-	{_, Method} when list(Method) ->
-	    Method++"://";
-	{undefined,_} ->
-	    "http://";
-	{_SSl,_} ->
-	    "https://"
-    end.    
-
-redirect_host(SC, HostHdr) ->
-    case SC#sconf.rhost of
-	undefined ->
-	    if HostHdr == undefined ->
-		    servername_sans_port(SC#sconf.servername)++redirect_port(SC);
-	       true ->
-		    HostHdr
-	    end;
-	_ ->
-	    SC#sconf.rhost
-    end.
-
-redirect_port(SC) ->
-    case {SC#sconf.rmethod, SC#sconf.ssl, SC#sconf.port} of
-	{"https", _, 443} -> "";
-	{"http", _, 80} -> "";
-	{_, undefined, 80} -> "";
-	{_, undefined, Port} -> 
-               [$:|integer_to_list(Port)];
-	{_, _SSL, 443} ->
-               "";
-	{_, _SSL, Port} -> 
-               [$:|integer_to_list(Port)]
-    end.    
-
-redirect_scheme_port(SC) ->
-    Scheme = redirect_scheme(SC),
-    PortPart = redirect_port(SC),
-    {Scheme, PortPart}.
-
-servername_sans_port(Servername) ->
-    case string:chr(Servername, $:) of
-	0 ->
-	    Servername;
-	N ->
-	    lists:sublist(Servername, N-1)
-    end.
 
 deliver_options(CliSock, _Req) ->
     H = #outh{status = 200,
@@ -1920,9 +2001,9 @@ handle_out_reply({redirect_local, Path0, Status}, _LineNo, _YawsFile, _UT,A) ->
 	       P ->
 		   P
 	   end,
-    Scheme = redirect_scheme(SC),
+    Scheme = yaws:redirect_scheme(SC),
     Headers = Arg#arg.headers,
-    HostPort = redirect_host(SC, Headers#headers.host),
+    HostPort = yaws:redirect_host(SC, Headers#headers.host),
     Loc = ["Location: ", Scheme, HostPort, Path, "\r\n"],
     new_redir_h(get(outh), Loc, Status),
     ok;
@@ -2766,7 +2847,7 @@ maybe_return_dir(DR, GetPath) ->
 			{ok, List} ->
 			    #urltype{type = directory,
 				     dir = [DR , GetPath],
-				     data = List};
+				     data = List -- [".yaws_auth"]};
 			_Err ->
 			    #urltype{type=error}
 		    end

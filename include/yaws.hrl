@@ -150,6 +150,9 @@
 	 revproxy = []
 	}).
 
+%% we cannot compare sconfs directly due to the ets
+%% field in #sconf{} use yaws_config:eq_sconfs/2
+
 
 % Auth conf - from server conf and .yaws_auth
 -record(auth,

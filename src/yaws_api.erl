@@ -39,7 +39,11 @@
 	 cookieval_to_opaque/1, request_url/1,
 	 print_cookie_sessions/0,
 	 replace_cookie_session/2, delete_cookie_session/1]).
--export([getconf/0, setconf/2, set_status_code/1, reformat_header/1,
+
+-export([getconf/0, 
+	 setconf/2]).
+
+-export([set_status_code/1, reformat_header/1,
 	reformat_request/1, reformat_response/1, reformat_url/1]).
 
 -export([set_trace/1,
@@ -868,71 +872,6 @@ delete_cookie_session(Cookie) ->
     yaws_session_server:delete_session(Cookie).
 
 
-%% to be used in embedded mode, make it possible
-%% to pass a config to yaws from another data source
-%% than /etc/yaws.conf, for example from a database
-
-setconf(GC, Groups0) when record(GC, gconf) ->
-    case is_groups(Groups0) of
-	true ->
-	    %% embeded code may give appmods as a list of strings
-	    %% So the above is for backwards compatibility
-	    %% appmods should be {StringPathElem, ModAtom} tuples
-	    Groups = yaws:deepmap(
-		       fun(SC) ->
-			       SC#sconf{appmods =
-					lists:map(
-					  fun({PE, Mod}) ->
-						  {PE, Mod};
-					     (AM) when list(AM) ->
-						  {AM,list_to_atom(AM)};
-					     (AM) when atom(AM) ->
-						  {atom_to_list(AM), AM}
-					  end,
-					  SC#sconf.appmods)}
-		       end, Groups0),
-					  
-	    case gen_server:call(yaws_server,{setconf, GC, Groups},infinity) of
-		ok ->
-		    yaws_log:setdir(GC, Groups),
-		    case GC#gconf.trace of
-			false ->
-			    ok;
-			{true, What} ->
-			    yaws_log:open_trace(What)
-		    end;
-		E ->
-		    E
-	    end;
-	false ->
-	    exit({badarg, {badgroups, Groups0}})
-    end.
-
-%% verify args to setconf
-is_groups([H|T]) ->
-    case is_list_of_scs(H) of
-	true ->
-	    is_groups(T);
-	false ->
-	    false
-    end;
-is_groups([]) ->
-    true.
-
-is_list_of_scs([H|T]) when record(H, sconf) ->
-    is_list_of_scs(T);
-is_list_of_scs([]) ->
-    true;
-is_list_of_scs(_) ->
-    false.
-
-    
-
-%% return {ok, GC, Groups}.
-getconf() ->
-    gen_server:call(yaws_server, getconf).
-
-
 lmap(F, [H|T]) ->
     [lists:map(F, H) | lmap(F, T)];
 lmap(_, []) ->
@@ -1742,15 +1681,12 @@ request_url(ARG) ->
 
 
 
-			    
-
-
 %% remove sick characters
 
 sanitize_file_name(".." ++ T) ->
     sanitize_file_name([$.|T]);
 sanitize_file_name([H|T]) ->
-    case lists:member(H,  " &;'!\\?<>\"()$") of
+    case lists:member(H,  " &;'`{}!\\?<>\"()$") of
 	true ->
 	    sanitize_file_name(T);
 	false ->
@@ -1758,3 +1694,30 @@ sanitize_file_name([H|T]) ->
     end;
 sanitize_file_name([]) ->
     [].
+
+
+
+%% to be used in embedded mode, make it possible
+%% to pass a config to yaws from another data source
+%% than /etc/yaws.conf, for example from a database
+%% this code is also called by the server -h hup code
+setconf(GC0, Groups0) ->
+    {GC, Groups} = yaws_config:verify_upgrade_args(GC0, Groups0),
+    {ok, OLDGC, OldGroups} = yaws_api:getconf(),
+    case {yaws_config:can_hard_gc(GC, OLDGC),
+	  yaws_config:can_soft_setconf(GC, Groups, OLDGC, OldGroups)} of
+	{true, true} ->
+	    yaws_config:soft_setconf(GC, Groups, OLDGC, OldGroups);
+	{true, false} when OLDGC#gconf.username == undefined ->
+	    yaws_config:hard_setconf(GC, Groups);
+	_ ->
+	    {error, need_restart}
+    end.
+
+
+
+
+%% return {ok, GC, Groups}.
+getconf() ->
+    gen_server:call(yaws_server, getconf, infinity).
+

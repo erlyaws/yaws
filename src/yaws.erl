@@ -34,7 +34,6 @@ hup(Sock) ->
 	  end).
 
 dohup(Sock) ->
-    io:format("in dohup~n", []),
     {Debug, Trace, TraceOut, Conf, _RunMod, _Embed} = 
 	yaws_sup:get_app_args(),
     Res = (catch case yaws_config:load(Conf, Trace, TraceOut, Debug) of
@@ -2075,3 +2074,56 @@ deepmap(_Fun, []) ->
     [].
 
     
+sconf_to_srvstr(SC) ->
+    redirect_scheme(SC) ++
+	redirect_host(SC,undefined) ++
+	redirect_port(SC).
+
+redirect_scheme(SC) ->
+    case {SC#sconf.ssl,SC#sconf.rmethod} of
+	{_, Method} when list(Method) ->
+	    Method++"://";
+	{undefined,_} ->
+	    "http://";
+	{_SSl,_} ->
+	    "https://"
+    end.    
+
+redirect_host(SC, HostHdr) ->
+    case SC#sconf.rhost of
+	undefined ->
+	    if HostHdr == undefined ->
+		    ServerName = SC#sconf.servername,
+		    SnameNoPort = 
+			case string:chr(ServerName, $:) of
+			    0 ->
+				ServerName;
+			    N ->
+				lists:sublist(ServerName, N-1)
+			end,
+		    SnameNoPort ++ redirect_port(SC);
+	       true ->
+		    HostHdr
+	    end;
+	_ ->
+	    SC#sconf.rhost
+    end.
+
+redirect_port(SC) ->
+    case {SC#sconf.rmethod, SC#sconf.ssl, SC#sconf.port} of
+	{"https", _, 443} -> "";
+	{"http", _, 80} -> "";
+	{_, undefined, 80} -> "";
+	{_, undefined, Port} -> 
+               [$:|integer_to_list(Port)];
+	{_, _SSL, 443} ->
+               "";
+	{_, _SSL, Port} -> 
+               [$:|integer_to_list(Port)]
+    end.    
+
+redirect_scheme_port(SC) ->
+    Scheme = redirect_scheme(SC),
+    PortPart = redirect_port(SC),
+    {Scheme, PortPart}.
+

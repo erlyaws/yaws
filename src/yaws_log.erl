@@ -213,21 +213,8 @@ handle_call({setdir, GC, Sconfs}, _From, State)
     SCs = lists:flatten(Sconfs),
     
     %% reopen logfiles
-    L = lists:zf(
-	  fun(SC) when ?sc_has_access_log(SC) ->
-		  A = filename:join([Dir, SC#sconf.servername ++ ".access"]),
-		  case file:open(A, [write, raw, append]) of
-		      {ok, Fd} ->
-			  {true, #alog{servername = SC#sconf.servername,
-				       fd = Fd,
-				       filename = A}};
-		      _Err ->
-			  error_logger:format("Cannot open ~p",[A]),
-			  false
-		  end;
-	     (_) ->
-		  false
-	  end, SCs),
+    L = lists:zf(fun(SC) -> open_alog(Dir, SC) end,
+		 SCs),
     S2 = State#state{running = true,
 		     dir  = Dir,
 		     now = fmtnow(),
@@ -235,6 +222,27 @@ handle_call({setdir, GC, Sconfs}, _From, State)
 		     alogs = L},
     
     {reply, ok, S2};
+
+
+%% a virt server has been added
+handle_call({soft_add_sc, SC}, _From, State) ->
+    case open_alog(State#state.dir, SC) of
+	{true, A} ->
+	    {reply, ok, State#state{alogs = [A|State#state.alogs]}};
+	false ->
+	    {reply, ok, State}
+    end;
+
+%% a virt server has been deleted
+handle_call({soft_del_sc, SC}, _From, State) ->
+    case lists:keysearch(SC#sconf.servername, #alog.servername,
+			 State#state.alogs) of
+	{value, A} ->
+	    file:close(A#alog.fd),
+	    {reply,ok, State#state{alogs = State#state.alogs -- [A]}};
+	false ->
+	    {reply,ok,State}
+    end;
 
 
 handle_call({open_trace, What}, _From, State) ->
@@ -295,6 +303,22 @@ handle_cast({trace, from_client, Data}, State) ->
     file:write(State#state.tracefd, Str),
     tty_trace(Str, State),
     {noreply, State}.
+
+
+open_alog(Dir, SC) when ?sc_has_access_log(SC) ->
+    A = filename:join([Dir, SC#sconf.servername ++ ".access"]),
+    case file:open(A, [write, raw, append]) of
+	{ok, Fd} ->
+	    {true, #alog{servername = SC#sconf.servername,
+			 fd = Fd,
+			 filename = A}};
+	_Err ->
+	    error_logger:format("Cannot open ~p",[A]),
+	    false
+    end;
+open_alog(_,_) ->
+    false.
+
 
 
 do_alog(ServerName, Ip, User, Req, Status, Length, Referrer,

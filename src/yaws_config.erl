@@ -65,7 +65,8 @@ load({file, File}, Trace, TraceOutput, Debug) ->
 	    ?Debug("FLOAD: ~p", [R]),
 	    case R of
 		{ok, GC5, Cs} ->
-		    validate_cs(GC5, Cs);
+		    Cs2 = add_yaws_auth(Cs),
+		    validate_cs(GC5, Cs2);
 		Err ->
 		    Err
 	    end;
@@ -74,7 +75,47 @@ load({file, File}, Trace, TraceOutput, Debug) ->
     end.
 
 
+add_yaws_auth(SCs) ->
+    lists:map(
+      fun(SC) ->
+	      SC#sconf{authdirs = setup_auth(SC)}
+      end, SCs).
 
+
+%% we search and setup www authenticate for each directory
+%% specified as an auth directory. These are merged with server conf.
+
+setup_auth(SC) ->
+    lists:flatten(
+      lists:map(fun(Auth) ->
+			add_yaws_auth(SC, Auth#auth.dir, Auth)
+		end, SC#sconf.authdirs)).
+
+add_yaws_auth(SC, Dirs, A) ->
+    lists:map(
+      fun(Dir) ->
+	      FN=[SC#sconf.docroot , [$/|Dir], [$/|".yaws_auth"]],
+	      case file:consult(FN) of
+	      {ok, [{realm, Realm} |TermList]} ->
+		  error_logger:info_msg("Reading .yaws_auth ~s~n",[FN]),
+		  {Dir, A#auth{realm = Realm,
+			       users = TermList++A#auth.users}};
+	      {ok, TermList} ->
+		  error_logger:info_msg("Reading .yaws_auth ~s~n",[FN]),
+		  {Dir, A#auth{users = TermList++A#auth.users}};
+	      {error, enoent} ->
+		  {Dir, A};
+	      _Err ->
+		  error_logger:format("Bad .yaws_auth file in dir ~p~n", 
+				      [Dir]),
+		  {Dir, A}
+	  end
+      end, Dirs).
+
+
+
+%% This is the function that arranges sconfs into
+%% different server groups
 validate_cs(GC, Cs) ->
     L = lists:map(fun(SC) -> {{SC#sconf.listen, SC#sconf.port}, SC} end, Cs),
     L2 = lists:map(fun(X) -> element(2, X) end, lists:keysort(1,L)),
@@ -108,7 +149,18 @@ validate_group(List) ->
 	_ ->
 	    ok
     end,
+    %% second all servernames in a group must be unique
+    SN = lists:sort([X#sconf.servername || X <- List]),
+    no_two_same(SN).
+
+no_two_same([H,H|_]) ->
+    throw({error, 
+	   ?F("To servers in the same group cannot have same name ~p",[H])});
+no_two_same([_H|T]) ->
+    no_two_same(T);
+no_two_same([]) ->
     ok.
+               
     
 
 arrange([C|Tail], start, [], B) ->
@@ -702,6 +754,10 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
 	    A2 = Auth#auth{realm = Realm},
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
 	["user", '=', User] ->
+	    error_logger:info_msg("Warning usage of deprecated auth "
+				  " users inside"
+				  " config file\n use .yaws_auth file "
+				  " instead ",[]),
 	    case string:tokens(User, ":") of
 		[Name, Passwd] ->
 		    A2 = Auth#auth{users = [{Name, Passwd}|Auth#auth.users]},
@@ -854,6 +910,8 @@ ssl_start() ->
     case catch ssl:start() of
 	ok ->
 	    ok;
+	{error,{already_started,ssl}} ->
+	    ok;
 	Err ->
 	    error_logger:format("Failed to start ssl: ~p~n", [Err])
     end.
@@ -865,13 +923,13 @@ ssl_start() ->
 %% Pairs is the pairs in yaws_server #state{}
 search_sconf(NewSC, Pairs) ->
      case lists:zf(
-	    fun({Pid, [SC|ScList]}) ->
-		    case eq_prop(NewSC, SC) of
+	    fun({Pid, Scs = [SC|_]}) ->
+		    case same_virt_srv(NewSC, SC) of
 			true ->
-			    case lists:key_search(NewSC#sconf.servername,
-						  #sconf.servername, ScList) of
+			    case lists:keysearch(NewSC#sconf.servername,
+						 #sconf.servername, Scs) of
 				{value, Found} ->
-				    {true, {Pid, Found}};
+				    {true, {Pid, Found, Scs}};
 				false ->
 				    false
 			    end;
@@ -881,14 +939,306 @@ search_sconf(NewSC, Pairs) ->
 	    end, Pairs) of
 	 [] ->
 	     false;
-	 [{Pid, Found}] ->
-	     {Pid, Found}
+	 [{Pid, Found, Scs}] ->
+	     {Pid, Found, Scs};
+	 _Other ->
+	     error_logger:format("Fatal error, no two sconfs should "
+				 " ever be considered equal ..",[]),
+	     exit(fatal_conf)
      end.
 
+%% find the group a new SC would belong to
+search_group(SC, Pairs) ->
+    Fun =  fun({Pid, [S|Ss]}) ->
+		   case same_virt_srv(S, SC) of
+		       true ->
+			   {true, {Pid, [S|Ss]}};
+		       false ->
+			   false
+		   end
+	   end,
 
-eq_prop(S, NewSc) ->
-    (S#sconf.listen == NewSc#sconf.listen) 
-	and
-	  (S#sconf.port == NewSc#sconf.port) and 
-             (S#sconf.ssl == NewSc#sconf.ssl).
+    lists:zf(Fun, Pairs).
 
+
+%% Return a new Pairs list with one SC updated
+update_sconf(NewSC, Pairs) ->
+    lists:map(
+      fun({Pid, Scs}) ->
+	      {Pid, 
+	       lists:map(fun(SC) ->
+				 case same_sconf(SC, NewSC) of
+				     true ->
+					 NewSC;
+				     false ->
+					 SC
+				 end
+			 end, Scs)
+	      }
+      end, Pairs).
+
+
+%% return a new pairs list with SC removed
+delete_sconf(OldSc, Pairs) ->
+    lists:zf(
+      fun({Pid, Scs}) ->
+	      case same_virt_srv(hd(Scs), OldSc) of
+		  true ->
+		      L2 = lists:keydelete(OldSc#sconf.servername,
+					   #sconf.servername, Scs),
+		      {true, {Pid, L2}};
+		  false ->
+		      {true, {Pid, Scs}}
+	      end
+      
+      end, Pairs).
+
+
+
+same_virt_srv(S, NewSc) when
+  S#sconf.listen == NewSc#sconf.listen,
+  S#sconf.port == NewSc#sconf.port,
+  S#sconf.ssl == NewSc#sconf.ssl ->
+    true;
+same_virt_srv(_,_) ->
+    false.
+
+
+same_sconf(S, NewSc) ->
+    same_virt_srv(S, NewSc) andalso
+      S#sconf.servername == NewSc#sconf.servername.
+
+
+
+
+
+eq_sconfs(S1,S2) ->
+    (S1#sconf.port == S2#sconf.port andalso
+     S1#sconf.flags == S2#sconf.flags andalso
+     S1#sconf.rhost == S2#sconf.rhost andalso
+     S1#sconf.rmethod == S2#sconf.rmethod andalso
+     S1#sconf.docroot == S2#sconf.docroot andalso
+     S1#sconf.listen == S2#sconf.listen andalso
+     S1#sconf.servername == S2#sconf.servername andalso
+     S1#sconf.ssl == S2#sconf.ssl andalso
+     S1#sconf.authdirs == S2#sconf.authdirs andalso
+     S1#sconf.appmods == S2#sconf.appmods andalso
+     S1#sconf.partial_post_size == S2#sconf.partial_post_size andalso
+     S1#sconf.errormod_404 == S2#sconf.errormod_404 andalso
+     S1#sconf.errormod_crash == S2#sconf.errormod_crash andalso
+     S1#sconf.arg_rewrite_mod == S2#sconf.arg_rewrite_mod andalso
+     S1#sconf.opaque == S2#sconf.opaque andalso
+     S1#sconf.start_mod == S2#sconf.start_mod andalso
+     S1#sconf.allowed_scripts == S2#sconf.allowed_scripts andalso
+     S1#sconf.revproxy == S2#sconf.revproxy).
+
+		      
+
+
+%% This the version of setconf that perform a 
+%% soft reconfig, it requires the args to be checked.
+soft_setconf(GC, Groups, OLDGC, OldGroups) ->
+    if
+	GC /= OLDGC ->
+	    update_gconf(GC);
+	true ->
+	    ok
+    end,
+    Rems = remove_old_scs(lists:flatten(OldGroups), Groups),
+    Adds = soft_setconf_scs(lists:flatten(Groups), OldGroups),
+    case lists:keysearch(add_sconf,1,Adds) of
+	{value, _} when OLDGC#gconf.username /= undefined ->
+	    {error, need_restart};
+	_ ->
+	    lists:foreach(
+	      fun({delete_sconf, SC}) ->
+		      delete_sconf(SC);
+		 ({add_sconf, SC}) ->
+		      add_sconf(SC);
+		 ({update_sconf, SC}) ->
+		      update_sconf(SC)
+	      end, Rems ++ Adds)
+    end.
+    
+
+
+hard_setconf(GC, Groups) ->
+    case gen_server:call(yaws_server,{setconf, GC, Groups},infinity) of
+	ok ->
+	    yaws_log:setdir(GC, Groups),
+	    case GC#gconf.trace of
+		false ->
+		    ok;
+		{true, What} ->
+		    yaws_log:open_trace(What)
+	    end;
+	E ->
+	    exit(E)
+    end.
+
+
+
+remove_old_scs([Sc|Scs], NewGroups) ->
+    case find_group(Sc, NewGroups) of
+	false ->
+	    [{delete_sconf, Sc} |remove_old_scs(Scs, NewGroups)];
+	{true, G} ->
+	    case find_sc(Sc, G) of
+		false ->
+		    [{delete_sconf, Sc} | remove_old_scs(Scs, NewGroups)];
+		_ ->
+		    remove_old_scs(Scs, NewGroups) 
+	    end
+    end;
+remove_old_scs([],_) ->
+    [].
+
+soft_setconf_scs([Sc|Scs], OldGroups) ->
+    case find_group(Sc, OldGroups) of
+	 false ->
+	    [{add_sconf,Sc} | soft_setconf_scs(Scs, OldGroups)];
+	{true, G} ->
+	    case find_sc(Sc, G) of
+		false ->
+		    [{add_sconf, Sc} | soft_setconf_scs(Scs, OldGroups)];
+		{true, _OldSc} ->
+		    [{update_sconf,Sc} | soft_setconf_scs(Scs, OldGroups)]
+	    end
+    end;
+soft_setconf_scs([],_) ->
+    [].
+
+
+%% checking code
+
+can_hard_gc(New, Old) ->
+    if
+	New#gconf.yaws_dir == Old#gconf.yaws_dir,
+	New#gconf.runmods == Old#gconf.runmods,
+	New#gconf.username == Old#gconf.username,
+	New#gconf.logdir == Old#gconf.logdir ->
+	    true;
+	true ->
+	    false
+    end.
+
+
+
+can_soft_setconf(NEWGC, NewGroups, OLDGC, OldGroups) ->
+    can_soft_gc(NEWGC, OLDGC) andalso
+      can_soft_sconf(lists:flatten(NewGroups), OldGroups).
+
+can_soft_gc(G1, G2) ->
+    if 
+	G1#gconf.trace == G2#gconf.trace,
+	G1#gconf.flags == G2#gconf.flags,
+	G1#gconf.logdir == G2#gconf.logdir,
+	G1#gconf.log_wrap_size == G2#gconf.log_wrap_size,
+	G1#gconf.username == G2#gconf.username,
+	G1#gconf.id == G2#gconf.id ->
+	    true;
+	true ->
+	    false
+    end.
+
+
+can_soft_sconf([Sc|Scs], OldGroups) ->
+    case find_group(Sc, OldGroups) of
+	false ->
+	    can_soft_sconf(Scs, OldGroups);
+	{true, G} ->
+	    case find_sc(Sc, G) of
+		false ->
+		    can_soft_sconf(Scs, OldGroups);
+		{true, Old} when Old#sconf.start_mod /= Sc#sconf.start_mod ->
+		    false;
+		{true, _Old} ->
+		    can_soft_sconf(Scs, OldGroups)
+	    end
+    end;
+can_soft_sconf([], _) ->
+    true.
+
+
+find_group(SC, [G|Gs]) ->
+    case same_virt_srv(SC, hd(G)) of
+	true ->
+	    {true, G};
+	false ->
+	    find_group(SC, Gs)
+    end;
+find_group(_,[]) ->
+    false.
+
+find_sc(SC, [S|Ss]) ->
+    if SC#sconf.servername  == S#sconf.servername  ->
+	    {true, S};
+       true ->
+	    find_sc(SC, Ss)
+    end;
+find_sc(_SC,[]) ->
+    false.
+
+
+
+
+
+verify_upgrade_args(GC, Groups0) when record(GC, gconf) ->
+    case is_groups(Groups0) of
+	true ->
+	    %% embeded code may give appmods as a list of strings
+	    %% So the above is for backwards compatibility
+	    %% appmods should be {StringPathElem, ModAtom} tuples
+	    Groups = yaws:deepmap(
+		       fun(SC) ->
+			       SC#sconf{appmods =
+					lists:map(
+					  fun({PE, Mod}) ->
+						  {PE, Mod};
+					     (AM) when list(AM) ->
+						  {AM,list_to_atom(AM)};
+					     (AM) when atom(AM) ->
+						  {atom_to_list(AM), AM}
+					  end,
+					  SC#sconf.appmods)}
+		       end, Groups0),
+	    {GC, Groups};
+	_ ->
+	    exit(badgroups)
+    end.
+
+
+%% verify args to setconf
+is_groups([H|T]) ->
+    case is_list_of_scs(H) of
+	true ->
+	    is_groups(T);
+	false ->
+	    false
+    end;
+is_groups([]) ->
+    true.
+
+is_list_of_scs([H|T]) when record(H, sconf) ->
+    is_list_of_scs(T);
+is_list_of_scs([]) ->
+    true;
+is_list_of_scs(_) ->
+    false.
+
+    
+
+
+add_sconf(SC) ->
+    ok= gen_server:call(yaws_server, {add_sconf, SC}, infinity),
+    ok = gen_server:call(yaws_log, {soft_add_sc, SC}).
+
+update_sconf(SC) ->
+    ok = gen_server:call(yaws_server, {update_sconf, SC}, infinity).
+
+delete_sconf(SC) ->
+    ok = gen_server:call(yaws_server, {delete_sconf, SC}, infinity),
+    ok = gen_server:call(yaws_log, {soft_del_sc, SC}).
+
+update_gconf(GC) ->
+    ok = gen_server:call(yaws_server, {update_gconf, GC}, infinity).
