@@ -1207,7 +1207,9 @@ handle_request(CliSock, GC, SC, ARG, N) ->
 						% sconf.
 	    deliver_501(CliSock, Req, GC, SC);
 	{scheme, Scheme, RequestString} ->
-	    deliver_501(CliSock, Req, GC, SC)
+	    deliver_501(CliSock, Req, GC, SC);
+	_ ->                                    % for completeness
+	    deliver_403(CliSock, Req, GC, SC)
     end.
 
 
@@ -1311,7 +1313,7 @@ handle_ut(CliSock, GC, SC, ARG, UT, N) ->
 	    end;
 	yaws ->
 	    yaws:outh_set_dyn_headers(Req, H),
-	    do_yaws(CliSock, GC, SC, Req, ARG, UT, N);
+	    do_yaws(CliSock, GC, SC, ARG, UT, N);
 	forbidden ->
 	    yaws:outh_set_dyn_headers(Req, H),
 	    deliver_403(CliSock, Req, GC, SC);
@@ -1549,21 +1551,21 @@ deliver_501(CliSock, Req, GC, SC) ->
     
 
 
-do_yaws(CliSock, GC, SC, Req, ARG, UT, N) ->
+do_yaws(CliSock, GC, SC, ARG, UT, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     FileAtom = list_to_atom(UT#urltype.fullpath),
     Mtime = mtime(UT#urltype.finfo),
     case ets:lookup(SC#sconf.ets, FileAtom) of
 	[{FileAtom, spec, Mtime1, Spec, Es}] when Mtime1 == Mtime,
 						  Es == 0 ->
-	    deliver_dyn_file(CliSock, GC, SC, Req, Spec, ARG, UT, N);
+	    deliver_dyn_file(CliSock, GC, SC, Spec, ARG, UT, N);
 	Other  ->
 	    del_old_files(Other),
 	    {ok, [{errors, Errs}| Spec]} = 
 		yaws_compile:compile_file(UT#urltype.fullpath, GC, SC),
 	    ?Debug("Spec for file ~s is:~n~p~n",[UT#urltype.fullpath, Spec]),
 	    ets:insert(SC#sconf.ets, {FileAtom, spec, Mtime, Spec, Errs}),
-	    deliver_dyn_file(CliSock, GC, SC, Req, Spec, ARG, UT, N)
+	    deliver_dyn_file(CliSock, GC, SC, Spec, ARG, UT, N)
     end.
 
 
@@ -1696,17 +1698,16 @@ finish_up_dyn_file(CliSock, GC, SC) ->
 
 
 %% do the header and continue
-deliver_dyn_file(CliSock, GC, SC, Req, Specs, ARG, UT, N) ->
+deliver_dyn_file(CliSock, GC, SC, Specs, ARG, UT, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     Fd = ut_open(UT),
     Bin = ut_read(Fd),
-    deliver_dyn_file(CliSock, GC, SC, Req, UT, Bin, Fd, Specs, ARG, N).
+    deliver_dyn_file(CliSock, GC, SC, Bin, Fd, Specs, ARG, N).
 
 
 
-deliver_dyn_file(CliSock, GC, SC, Req, UT, Bin, Fd, [H|T],Arg,N) ->
-    ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT,urltype},
-       {record, Arg, arg}]),
+deliver_dyn_file(CliSock, GC, SC, Bin, Fd, [H|T],Arg,N) ->
+    ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, Arg, arg}]),
     ?Debug("deliver_dyn_file: ~p~n", [H]),
     case H of
 	{mod, LineNo, YawsFile, NumChars, Mod, out} ->
@@ -1715,27 +1716,27 @@ deliver_dyn_file(CliSock, GC, SC, Req, UT, Bin, Fd, [H|T],Arg,N) ->
 			     N, Arg, 
 			     fun(A)->Mod:out(A) end,
 			     fun()->deliver_dyn_file(
-				      CliSock, GC, SC, Req, 
-				      UT, Bin2,Fd,T,Arg,0)
+				      CliSock, GC, SC, 
+				      Bin2,Fd,T,Arg,0)
 			     end);
 	{data, 0} ->
-	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin, Fd,T,Arg,N);
+	    deliver_dyn_file(CliSock, GC, SC, Bin, Fd,T,Arg,N);
 	{data, NumChars} ->
 	    {Send, Bin2} = skip_data(Bin, Fd, NumChars),
 	    accumulate_chunk(Send),
-	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin2, Fd, T,Arg,N);
+	    deliver_dyn_file(CliSock, GC, SC, Bin2, Fd, T,Arg,N);
 	{skip, 0} ->
-	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin, Fd,T,Arg,N);
+	    deliver_dyn_file(CliSock, GC, SC, Bin, Fd,T,Arg,N);
 	{skip, NumChars} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
-	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin2, Fd, T,Arg,N);
+	    deliver_dyn_file(CliSock, GC, SC, Bin2, Fd, T,Arg,N);
 	{error, NumChars, Str} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
 	    accumulate_chunk(Str),
-	    deliver_dyn_file(CliSock, GC, SC, Req, UT, Bin2, Fd, T,Arg,N)
+	    deliver_dyn_file(CliSock, GC, SC, Bin2, Fd, T,Arg,N)
     end;
 
-deliver_dyn_file(CliSock, GC, SC, _Req, _UT, _Bin, _Fd, [], _ARG,_N) ->
+deliver_dyn_file(CliSock, GC, SC, _Bin, _Fd, [], _ARG,_N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     ?Debug("deliver_dyn: done~n", []),
     finish_up_dyn_file(CliSock, GC, SC).
@@ -1762,8 +1763,6 @@ stream_loop_send(CliSock, GC, SC) ->
     after 30000 ->
 	    exit(normal)
     end.
-
-
 
 
 
