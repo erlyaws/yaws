@@ -151,16 +151,16 @@ parse_line("Referer: " ++ Con, H) ->
     H#headers{referer = space_strip(Con)};
 parse_line("Content-type: "++Con, H) ->
     H#headers{content_type = space_strip(Con)};
+parse_line("Content-Type: "++Con, H) ->
+    H#headers{content_type = space_strip(Con)};
 parse_line("Content-Length: "++Con, H) ->
+    H#headers{content_length = space_strip(Con)};
+parse_line("Content-length: "++Con, H) ->
     H#headers{content_length = space_strip(Con)};
 parse_line("Cookie: "++Con, H) ->
     H#headers{cookie = [space_strip(Con)|H#headers.cookie]};
 parse_line(_, H) ->
     H.
-
-
-
-%% FIXME many more needed here .....
 
 
 %% strip all space from a string
