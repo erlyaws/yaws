@@ -69,8 +69,8 @@
 	 errormod_404 = yaws_404,     %% the default 404 error module 
 	 errormod_crash = yaws_404,   %% use the same module for crashes
 	 arg_rewrite_mod = yaws,
-	 tilde_expand = true,         %% allow public_html user dirs
-	 dir_listings = true,         %% allow dir listings
+	 tilde_expand = false,        %% allow public_html user dirs
+	 dir_listings = false,        %% allow dir listings
 	 opaque = [],                 %% useful in embedded mode
 	 start_mod,                   %% user provided module to be started
 	 allowed_scripts = [yaws]
