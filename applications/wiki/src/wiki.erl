@@ -441,20 +441,25 @@ addFileInit(Params, Root, Prefix) ->
 		   [
 		    input("hidden", "node", Page),
 		    input("hidden", "password", Password),
-		    "<table width=\"100%\"><tr>",
-		    "<th align=left>Attach new file: ",
-		    "<td align=left>",
-		    input("file","attached","30"),"\n",
-		    "<tr><th colspan=2 align=left>",
-		    "Description: ","\n",
+		    "<table width=\"100%\">",
+		    "<tr><th align=left>Attach new file: </th>",
+		    "<th align=left>",
+		    input("file","attached","30"),"</th></tr>",
 		    "<tr><td colspan=2 align=left>",
-		    textarea("text", 10, 72,""),"\n",
+		    input("checkbox","unzip","on",""),
+		    "Upload multiple files using zip archive</th></tr>"
+		    "<tr><th colspan=2 align=left>",
+		    "Description: ","</th></tr>",
+		    "<tr><td colspan=2 align=left>",
+		    textarea("text", 10, 72,""),"</td></tr>",
 		    "</table>",
 		    input("submit", "add", "Add"),
 		    input("button", "Cancel",
 			  "parent.location='editFiles.yaws?node="++
 			  str2urlencoded(Page)++"&password="++
-			  str2urlencoded(Password)++"'")])
+			  str2urlencoded(Password)++"'")]),
+	      "To upload multiple files at one time place them in a zip archive and upload "
+	      "the zip file and check the 'unzip' checkbox above."
 	     ],
 	    false).
     
@@ -468,7 +473,8 @@ addFileInit(Params, Root, Prefix) ->
 	  cancel,
 	  fd,
 	  last,
-	  filename
+	  filename,
+	  unzip
 	  }).
 
 
@@ -511,6 +517,23 @@ addFileChunk([{part_body, Data}|Res], State) ->
 
 addFileChunk([], State) when State#addfile.last==true,
 			     State#addfile.filename /= undefined,
+			     State#addfile.unzip == "on",
+			     State#addfile.fd /= undefined ->
+    file:close(State#addfile.fd),
+    Page        = State#addfile.node,
+    {File,FileDir} = page2filename(Page, State#addfile.root),
+    FileName    = State#addfile.filename,
+    case lists:reverse(FileName) of
+	"piz."++_ ->
+	    UnZipCmd = "cd "++State#addfile.root++"/"++FileDir++
+		"; unzip -j -o -qq " ++ FileName ++"; rm -f " ++ FileName,
+	    os:cmd(UnZipCmd);
+	_ ->
+	    done
+    end,
+    {done, {redirect_local, {rel_path, "importFiles.yaws?node="++str2urlencoded(Page)}}};
+addFileChunk([], State) when State#addfile.last==true,
+			     State#addfile.filename /= undefined,
 			     State#addfile.fd /= undefined ->
     Page        = State#addfile.node,
     {File,FileDir} = page2filename(Page, State#addfile.root),
@@ -546,6 +569,13 @@ addFileChunk([{body, Data}|Res], State) when State#addfile.param == node ->
     Node = State#addfile.node,
     NewNode = merge_body(Node, Data),
     addFileChunk(Res, State#addfile{node = NewNode});
+
+addFileChunk([{head, {unzip, _Opts}}|Res], State ) ->
+    addFileChunk(Res, State#addfile{param = unzip});
+addFileChunk([{body, Data}|Res], State) when State#addfile.param == unzip ->
+    Unzip = State#addfile.unzip,
+    NewUnzip = merge_body(Unzip, Data),
+    addFileChunk(Res, State#addfile{unzip = NewUnzip});
 
 addFileChunk([{head, {password, _Opts}}|Res], State) ->
     addFileChunk(Res, State#addfile{param = password});
@@ -914,6 +944,7 @@ redirect_files(Page, Password, Prefix) ->
     {redirect_local,
      Prefix++"editFiles.yaws?node="++str2urlencoded(Page)++
      "&password="++str2urlencoded(Password)}.
+
 
 redirect_edit(Page, Sid, Password, Prefix) ->
     UrlSid = str2urlencoded(Sid),
