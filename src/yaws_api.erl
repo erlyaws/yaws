@@ -1231,6 +1231,8 @@ ehtml_expand([]) -> [].
 ehtml_attrs([]) -> [];
 ehtml_attrs([Attribute|Tail]) when atom(Attribute) ->
     [[$ |atom_to_list(Attribute)]|ehtml_attrs(Tail)];
+ehtml_attrs([Attribute|Tail]) when list(Attribute) ->
+     [" ", Attribute|ehtml_attrs(Tail)];
 ehtml_attrs([{Name, Value} | Tail]) ->
     ValueString = if atom(Value) -> [$",atom_to_list(Value),$"];
 		     list(Value) -> [$",Value,$"];
