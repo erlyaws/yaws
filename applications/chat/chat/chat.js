@@ -117,7 +117,7 @@ function reader_init() {
 	if (members.length > 0)
 	  memb.innerHTML = members;
 
-	// move_to_end(msgs);
+	move_to_end(msgs);
 	setTimeout("reader_init()", 0);
       }
       else if (reply.substring(0,7) == "timeout") {
