@@ -1,7 +1,7 @@
 #!/bin/sh
 
 
-yawsdir=/home/share/klacke/yaws/yaws/scripts/..
+yawsdir=/home/klacke/yaws/yaws/scripts/..
 erl=erl
 
 
@@ -25,13 +25,10 @@ do
 	   -i)
 		daemon="";;
 	   -d)
-	        set -x 
-		debug=" -boot start_sasl -yaws debug "
-		break;;
+		debug=" -boot start_sasl -yaws debug ";;
            -c)
 		conf=$1
-		shift
-		break;;
+		shift;;
 	    *)
 		help
        esac

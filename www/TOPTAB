@@ -2,7 +2,7 @@
 
 <table border="0" cellpadding="5" cellspacing="0" height="100%">
 <tr>
-  <td valign=top width=15% BGCOLOR="#B6B6A5">
+  <td valign=top width=25% BGCOLOR="#B6B6A5">
     <IMG SRC="spacer.gif" width=1 height=74 ALT=""><p></p>
     <A HREF="index.yaws">- Top Page</a><br><hr>
     <A HREF="configuration.yaws">-Configuring and Building Yaws</a><br><hr>

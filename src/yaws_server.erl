@@ -732,8 +732,8 @@ ut_open(UT) ->
 ut_read(Bin = {bin, B}) ->
     Bin;
 ut_read(Fd) ->
-    {ok, B} = file:read(Fd, 4000),
-    B.
+    file:read(Fd, 4000).
+
 
 ut_close({bin, _}) ->
     ok;
@@ -752,7 +752,7 @@ deliver_file(CliSock, GC, SC, Req, InH, UT) ->
     case Bin of
 	{bin, Binary} ->
 	    tcp_send(CliSock, [make_200(), OutH, crnl(), Binary]);
-	Binary ->
+	{ok, Binary} ->
 	    send_loop(CliSock, [make_200(), OutH, crnl(), Binary], Fd)
     end,
     ut_close(Fd),
@@ -1059,8 +1059,10 @@ suffix_type("gpj." ++ _) ->
     {regular, "image/jpeg"};
 suffix_type("fig." ++ _) ->
     {regular, "image/gif"};
+suffix_type("zg.rat" ++ _) ->
+    {regular, "application/x-gzip"};
 suffix_type(_) ->
-    {regular, "*/*"}.
+    {regular, "application/octet-stream"}.
 
 
 flush(Sock, undefined) ->
