@@ -764,12 +764,18 @@ maybe_access_log(Ip, SC, Req) ->
 		  "-";
 	      I2 -> integer_to_list(I2)
 	  end,
+    Ver = case Req#http_request.version of
+	      {1,0} ->
+		  "HTTP/1.0";
+	      {1,1} ->
+		  "HTTP/1.1"
+	  end,
     case SC#sconf.access_log of
 	true ->
 	    Path = safe_decode_path(Req#http_request.path),
 	    Meth = atom_to_list(Req#http_request.method),
 	    yaws_log:accesslog(SC#sconf.servername, Ip, 
-			       [Meth, $\s, Path] , Status, Len);
+			       [Meth, $\s, Path, $\s, Ver] , Status, Len);
 	false ->
 	    ignore
     end.
