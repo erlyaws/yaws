@@ -12,7 +12,7 @@
 
 . /etc/rc.d/init.d/functions
 
-yaws=%prefix%bin/yaws
+yaws=%prefix%/bin/yaws
 prog=yaws
 
 start() {
