@@ -1,5 +1,5 @@
 
-RSS Feed Interface
+RSS FEED INTERFACE
 ------------------
 
 RSS is very cool! To see it in action look no further than Firebird 1.0.
@@ -13,7 +13,8 @@ The module yaws_rss.erl provides an RSS store/interface so that
 you can RSS enable your application. More documentation can be 
 found in the yaws_rss.erl file (edoc).
 
-To setup an RSS feed
+
+TO CREATE AN RSS FEED
 --------------------
 
 Make sure your top page has the corresponding link information
@@ -52,7 +53,7 @@ rss.yaws
 <erl>
 
 out(A) ->
-    case yaws_rss:retrieve(xml) of
+    case yaws_rss:retrieve(test, xml) of
 	{ok, Xml} ->
 	    {html, [Xml]};
 	_ ->
@@ -69,15 +70,45 @@ To insert RSS items into the feed from your application, you
 can write code like:
 
 ....
-yaws_rss:insert(xml,"Yaws now support RSS feeds.",
+yaws_rss:insert(test, xml, "Yaws now support RSS feeds.",
 	            "http://www.blaha.org/latest_news.html",
 	            "Yaws has now been extended to support....",
                     "Bill Smith").
 ....
 
-First comes a tag (which was used in rss.yaws when we retrieved
-the RSS content). Then follows a Title,Link,Description and Creator.
+First comes the application (RSSid) then a tag (these were used in 
+rss.yaws when we retrieved the RSS content). Then follows the
+Title, Link, Description and Creator.
 
+The idea is that several independent application should be able
+to use the yaws_rss.erl API without affecting each other. Also,
+one application may have several RSS feeds (hence the Tag).
+
+
+
+HOW TO CONFIGURE RSS
+--------------------
+
+Inside a <server> block you specify the application you want
+to produce RSS content as:
+
+<rss>
+  rss_id = <application>
+</rss>
+
+This corresponds to the 'App' argument above and must be
+defined by the application in question. So, for example,
+the wikie application is using 'wiki' as rss_id.
+
+Other, non-mandatory, configuration parameters are (with
+explanation and default values):
+
+<rss>
+  rss_file    =  <filename>     # filename of dets-DB (<yaws-dir>/yaws_rss.dets)
+  rss_expire  =  false | days   # expire items, or not (false)
+  rss_rm_exp  =  <bool>         # remove expired items (false)
+  rss_max     =  <integer>      # max no.of items stored (infinite)
+</rss>
 
 Good luck !
 

@@ -583,6 +583,11 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    C2 = C#sconf{start_mod = list_to_atom(Module)},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
+	['<', "rss", '>'] ->
+	    erase(rss_id),
+	    put(rss, []),
+	    fload(FD, rss, GC, C, Cs, Lno+1, Next);
+
 	["allowed_scripts", '=' | Suffixes] ->
 	    C2 = C#sconf{allowed_scripts = 
 			 lists:map(fun(X)->element(1,mime_types:t(X)) end,
@@ -707,6 +712,42 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end;
 
+fload(FD, rss, _GC, _C, _Cs, Lno, eof) ->
+    file:close(FD),
+    {error, ?F("Unexpected end of file at line ~w", [Lno])};
+
+fload(FD, rss, GC, C, Cs, Lno, Chars) ->
+    %?Debug("Chars: ~s", [Chars]),
+    Next = io:get_line(FD, ''),
+    case toks(Chars) of
+	[] ->
+	    fload(FD, rss, GC, C, Cs, Lno+1, Next);
+	['<', "/rss", '>'] ->
+	    case get(rss_id) of
+		undefined -> 
+		    {error, ?F("No rss_id specified at line ~w", [Lno])};
+		RSSid ->
+		    yaws_rss:open(RSSid, get(rss)),
+		    fload(FD, server, GC, C, Cs, Lno+1, Next)
+	    end;
+	["rss_file", '=', Value] ->
+	    put(rss, [{db_file, Value} | get(rss)]),
+	    fload(FD, rss, GC, C, Cs, Lno+1, Next);
+	["rss_expire", '=', Value] ->
+	    put(rss, [{expire, Value} | get(rss)]),
+	    fload(FD, rss, GC, C, Cs, Lno+1, Next);
+	["rss_days", '=', Value] ->
+	    put(rss, [{days, Value} | get(rss)]),
+	    fload(FD, rss, GC, C, Cs, Lno+1, Next);
+	["rss_rm_exp", '=', Value] ->
+	    put(rss, [{rm_exp, Value} | get(rss)]),
+	    fload(FD, rss, GC, C, Cs, Lno+1, Next);
+	["rss_max", '=', Value] ->
+	    put(rss, [{rm_max, Value} | get(rss)]),
+	    fload(FD, rss, GC, C, Cs, Lno+1, Next);
+	[H|T] ->
+	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
+    end;
 
 fload(FD, opaque, _GC, _C, _Cs, Lno, eof) ->
     file:close(FD),
@@ -726,7 +767,6 @@ fload(FD, opaque, GC, C, Cs, Lno, Chars) ->
 	[H|T] ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end.
-
 
 
 fload(FD, server_auth, _GC, _C, _Cs, Lno, eof, _Auth) ->
