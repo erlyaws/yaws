@@ -162,9 +162,15 @@ gserv(GC, Group0) ->
 			ets:insert(E, {num_bytes, 0}),
 			SC#sconf{ets = E}
 		end, Group0),
-    C = hd(Group),
-    case gen_tcp:listen(C#sconf.port, opts(C)) of
+    SC = hd(Group),
+    case gen_tcp:listen(SC#sconf.port, opts(SC)) of
 	{ok, Listen} ->
+	    ?Debug("XX",[]),
+	    error_logger:info_msg("Listening to ~s:~w for servers ~p~n",
+			      [yaws:fmt_ip(SC#sconf.listen),
+			       SC#sconf.port,
+			       catch map(fun(S) -> S#sconf.servername end, Group)]),
+	    ?Debug("XX",[]),
 	    file:make_dir("/tmp/yaws"),
 	    {ok, Files} = file:list_dir("/tmp/yaws"),
 	    lists:foreach(
@@ -176,7 +182,9 @@ gserv(GC, Group0) ->
 	    acceptor(GS),
 	    gserv(GS, [], 0);
 	Err ->
-	    yaws_log:errlog("Can't listen to socket: ~p ",[Err]),
+	    error_logger:format("Failed to listen ~s:~w  : ~p~n",
+				[yaws:format_ip(SC#sconf.listen),
+				 SC#sconf.port, Err]),
 	    proc_lib:init_ack({error, "Can't listen to socket: ~p ",[Err]}),
 	    exit(normal)
     end.

@@ -14,7 +14,7 @@ help()
 }
      
 
-debug=false
+debug=""
 daemon=" -daemon "
 
 while [ $# -gt 0 ] 
@@ -23,19 +23,16 @@ do
       shift;
       case $arg in
 	   -i)
-		daemon=""
-		break;;
+		daemon="";;
 	   -d)
-		debug=true
-		break;;
+		debug=" -boot start_sasl -yaws debug ";;
            -c)
 		conf=$1
-		shift
-		break;;
+		shift;;
 	    *)
 		help
        esac
 done
 
-exec $erl $daemon -pa ${yawsdir}/ebin -s yaws -yaws conf xx$conf debug xx$debug
+exec $erl $daemon ${debug} -pa ${yawsdir}/ebin -s yaws -yaws conf xx${conf}
 

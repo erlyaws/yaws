@@ -14,7 +14,10 @@
     <A HREF="contacts.yaws">-Contacts </a><br><hr>
   </td>
 
-  <td valign=top><IMG SRC="/icons/yaws_head.gif" width=800 ALT="YAWS">
+  <td valign=top><IMG SRC="/icons/yaws_head.gif"  ALT="YAWS">
   <p></p>
+</td>
 
 
+ </tr>
+ </table>

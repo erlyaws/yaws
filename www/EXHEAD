@@ -65,6 +65,9 @@
     <A HREF="mnesiacluster.yaws">-Using Mnesia DBMS to keep cookie state in a cluster </a><br><hr>
   </td>
 
-  <td valign=top><IMG SRC="/icons/yaws_head.gif" width=800 ALT="Hyber">
+  <td valign=top><IMG SRC="/icons/yaws_head.gif"  ALT="Yaws">
   <p></p>
 
+ </td>
+ </tr>
+ </table>

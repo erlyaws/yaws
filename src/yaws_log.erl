@@ -69,7 +69,7 @@ init([]) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
 handle_call({setdir, Dir}, From, State) when State#state.running == false ->
-    ?Debug("setdei ~s~n~p", [Dir, State#state.ack]),
+    ?Debug("setdir ~s~n~p", [Dir, State#state.ack]),
     error_logger:logfile({open,filename:join([Dir, "error.log"])}),
     Alog = filename:join([Dir, "access"]),
     case file:open(Alog, [write, raw, append]) of  %% FIXME wrap log

@@ -2,7 +2,9 @@ include ../include.mk
 
 
 all:	yaws.ss
-	sh ./mangle `pwd`/../ebin $(ERL) yaws.ss ../bin/yaws
+	sh ./mangle `pwd`/.. $(ERL) yaws.ss ../bin/yaws
+	chmod +x ../bin/yaws
+	sh ./mangle `pwd`/.. $(ERL) yaws.conf.template.local ${HOME}/yaws.conf
 
 clean:
 	rm -f ../bin/yaws

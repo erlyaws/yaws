@@ -39,6 +39,7 @@ and pass them down to the yaws code in the arg structure  (done Feb 6)
 <li> authenticated pages
 <li> HTTP trailer support
 <li> a cool statistics yaws page that talks to the server
+<li> man pages for yaws as well as yaws.conf
 </ul>
 
 
