@@ -366,8 +366,11 @@ lls(Dir) ->
 			      "running";
 			  {error, timeout} ->
 			      "hanging??";
-			  _ ->
-			      "crashed"
+			  {error, eacces} ->
+			      "unknown";
+			  Err ->
+			      io:format("Err ~p~n", [Err]),
+			      "stopped"
 		      end,
 	    io:format("~-15s~-10s~-10s~n",
 		      [Dir, Running, User]);
