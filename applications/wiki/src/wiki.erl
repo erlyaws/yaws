@@ -526,7 +526,8 @@ addFileChunk([], State) when State#addfile.last==true,
     case lists:reverse(FileName) of
 	"piz."++_ ->
 	    UnZipCmd = "cd "++State#addfile.root++"/"++FileDir++
-		"; unzip -j -o -qq " ++ FileName ++"; rm -f " ++ FileName,
+		"; unzip -j -o -qq '" ++ FileName ++"'; rm -f '" ++
+		FileName ++ "'",
 	    os:cmd(UnZipCmd);
 	_ ->
 	    done
