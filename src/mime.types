@@ -477,4 +477,4 @@ video/vnd.vivo
 video/x-msvideo			avi
 video/x-sgi-movie		movie
 x-conference/x-cooltalk		ice
-text/html			html htm
+text/html			shtml html htm
