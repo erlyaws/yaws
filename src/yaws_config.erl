@@ -601,14 +601,8 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
 	[] ->
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, Auth);
 	["dir", '=', Authdir] ->
-	    Dir = filename:absname(Authdir),
-    	    case is_dir(Dir) of
-		true ->
-		    A2 = Auth#auth{dir = [Dir|Auth#auth.dir]},
-		    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
-		false ->
-		    {error, ?F("Expect directory at line ~w", [Lno])}
-	    end;
+	    A2 = Auth#auth{dir = [Dir|Auth#auth.dir]},
+	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
 	["realm", '=', Realm] ->
 	    A2 = Auth#auth{realm = Realm},
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
