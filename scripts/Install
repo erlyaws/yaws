@@ -6,8 +6,10 @@ prefix=$1
 erl=$2
 
 . ../vsn.mk
+y=yaws-${YAWS_VSN}
 
-sh ./mangle ${prefix}/lib/yaws-${YAWS_VSN} ${erl} yaws.ss ${prefix}/bin/yaws
+
+sh ./mangle ${prefix}/lib/yaws ${erl} yaws.ss ${prefix}/bin/yaws
 install -d ${prefix}/lib/yaws/examples/ebin
 install -d ${prefix}/lib/yaws/examples/include
 chmod +x ${prefix}/bin/yaws
@@ -17,5 +19,5 @@ else
    t=/etc/yaws.conf
 fi
 
-sh ./mangle ${prefix}/lib/yaws-${YAWS_VSN} ${erl} yaws.conf.template ${t}
+sh ./mangle ${prefix}/lib/yaws ${erl} yaws.conf.template ${t}
 

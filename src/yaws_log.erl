@@ -40,6 +40,8 @@ accesslog(Ip, Req, Status, Length) ->
     gen_server:cast(?MODULE, {access, Ip, Req, Status, Length}).
 errlog(F, A) ->     
     gen_server:cast(?MODULE, {errlog, F, A}).
+infolog(F, A) ->     
+    gen_server:cast(?MODULE, {infolog, F, A}).
 sync_errlog(F, A) ->     
     gen_server:call(?MODULE, {errlog, F, A}).
 setdir(Dir) ->
@@ -77,12 +79,14 @@ init([]) ->
 %%----------------------------------------------------------------------
 handle_call({setdir, Dir}, From, State) when State#state.running == false ->
     ?Debug("setdir ~s~n~p", [Dir, State#state.ack]),
-    error_logger:logfile({open,filename:join([Dir, "error.log"])}),
+    error_logger:logfile({open,filename:join([Dir, "log"])}),
     Alog = filename:join([Dir, "access"]),
     case file:open(Alog, [write, raw, append]) of  %% FIXME wrap log
 	{ok, Fd} ->
 	    lists:foreach(fun({err, F, A}) ->
 				  error_logger:format(F, A);
+			     ({info, F, A}) ->
+				  error_logger:info_msg(F,A);
 			     ({access, Ip, Req, Status, Length}) ->
 				  I = fmt_alog(State#state.now,
 					       Ip, Req, Status, 
@@ -129,6 +133,16 @@ handle_cast({errlog, F, A}, State) when State#state.running == true ->
     {noreply, State};
 handle_cast({errlog, F, A}, State) when State#state.running == false ->
     {noreply, State#state{ack = [{err, F, A} | State#state.ack]}};
+
+
+handle_cast({infolog, F, A}, State) when State#state.running == true ->
+    error_logger:info_report(F, A),
+    {noreply, State};
+handle_cast({infolog, F, A}, State) when State#state.running == false ->
+    {noreply, State#state{ack = [{info, F, A} | State#state.ack]}};
+
+
+
 handle_cast({access, Ip, Req, Status, Length}, State) ->
     case State#state.running of 
 	true ->

@@ -16,9 +16,16 @@
 
 %% where to look for yaws.conf 
 paths() ->
-    [filename:join([os:getenv("HOME"), "yaws.conf"]),
-     "./yaws.conf", 
-     "/etc/yaws.conf"].
+    case os:cmd("id -u") of
+	[$0 |_] -> %% root 
+	    ["./yaws.conf", 
+	     "/etc/yaws.conf"];
+	_ -> %% developer
+	    [filename:join([os:getenv("HOME"), "yaws.conf"]),
+	     "./yaws.conf", 
+	     "/etc/yaws.conf"]
+    end.
+
 
 
 %% load the config
@@ -31,6 +38,7 @@ load(false, Trace, Debug) ->
 	    load({file, File}, Trace, Debug)
     end;
 load({file, File}, Trace, Debug) ->
+    yaws_log:infolog("Using config file ~s", [File]),
     case file:open(File, [read]) of
 	{ok, FD} ->
 	    GC = make_default_gconf(),
