@@ -15,7 +15,7 @@ mkdir tmp
 cvs export -d tmp -r yaws-$Y .
 cd tmp
 mv yaws yaws-${YAWS_VSN}
-ln -s yaws-{YAWS_VSN} yaws
+ln -s yaws-${YAWS_VSN} yaws
 tar cfz  yaws-${YAWS_VSN}.tar.gz yaws  yaws-${YAWS_VSN}
 mv yaws-${YAWS_VSN}.tar.gz ..
 
