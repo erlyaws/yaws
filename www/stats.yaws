@@ -1,7 +1,4 @@
-
-
 <erl>
-
 out(A) -> 
     yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
 </erl>
@@ -20,12 +17,12 @@ out(A) ->
 		       [Host,IP]),
 		 T = "<table border=\"2\" > \n"
                      "<TR> <TH>URL</TH> <TH>Number of hits</TH> </TR>",
-		 L2=lists:map(
-		      fun({Url, Hits}) ->
-			      f("<TR> <TD>~s</TD> <TD>~w</TD> </TR>~n",
-				[Url, Hits])
-		      end, Hits),
-		 END = "</table>",
+		 {L2, Total}=lists:mapfoldl(
+		      fun({Url, Hits}, Sum) ->
+			      {f("<TR> <TD>~s</TD> <TD>~w</TD> </TR>~n",
+				[Url, Hits]), Sum + Hits}
+		      end, 0, Hits),
+		 END = f("<TR><TH>Total</TH><TH>~w</TH><TR></table>", [Total]),
 		 [L1, T, L2, END]
 	 end, L),
     {html, [H, T]}.
