@@ -258,7 +258,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		     {error, ?F("Expect integer at line ~w", [Lno])}
 	     end;
 
-	["timeout", '=', Val] ->
+	["read_timeout", '=', Val] ->
 	    case (catch list_to_integer(Val)) of
 		 I when integer(I) ->
 		    fload(FD, globals, GC#gconf{timeout = I},

@@ -23,7 +23,7 @@
 	       large_file_chunk_size = 10240,
 	       cache_refresh_secs = 30,  % seconds
 	       default_type = "text/html",
-	       timeout = 2000,
+	       timeout = 30000,
 	       include_dir = [],
 	       yaws,
 	       uid                  %% unix uid of user running yaws
