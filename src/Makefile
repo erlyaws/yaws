@@ -54,7 +54,7 @@ charset.def:
 	echo -n $(DEFAULT_CHARSET) > charset.def
 
 mime_types.erl:	mime.types mime_type_c.erl charset.def
-	erl -noshell  -pa ../ebin -s mime_type_c  compile
+	$(ERL) -noshell  -pa ../ebin -s mime_type_c  compile
 
 debug:
 	$(MAKE) TYPE=debug
