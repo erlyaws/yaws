@@ -32,7 +32,7 @@
 	 addFile/3, storeTagged/3, fixupFiles/3,
 	 sendMeThePassword/3, storeFiles/3, showOldPage/3,
 	 changePassword/3, changePassword2/3, getThumb/3,
-	 getMidSize/3, thumbIndex/3]).
+	 getMidSize/3, thumbIndex/3, searchPages/3]).
 
 -export([slideShow/3]).
 
@@ -2431,3 +2431,79 @@ wobfile_to_filedir(Wob) ->
     string:substr(WobFile, 1, length(WobFile)-3)++"files".
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+forms(Method, Action, Args) ->
+    ["<FORM METHOD=", Method,
+     " ACTION=\"", Action, "\">",
+     Args, "</form>\n"].
+
+searchPara([Para|Paralist]) ->
+    case Para of
+	{"search", undefined, []} ->
+	    [];
+	{"search", Search, []} ->
+	    case regexp:parse(Search) of
+		{ok, RE} ->
+		    Search;
+		{error, Error} ->
+		    {error, Error}
+	    end;
+	_Other ->
+	    searchPara(Paralist)
+    end;
+searchPara([]) ->
+    [].
+
+searchPages(SearchPost, Root, Prefix) ->
+    case searchPara(SearchPost) of
+	[] ->
+	    S0 = [forms("POST", "searchPage.yaws",
+			[input("submit", "searchstart", "Search"),
+			 input("text", "search", "")])],
+	    template2(Root,"Search", "Wiki page search",
+		      [S0, "<hr>", 
+		       h1("Nothing to find")], 
+		      false);
+	{error, Error} ->
+	    S0 = [forms("POST", "searchPage.yaws",
+			[input("submit", "searchstart", "Search"),
+			 input("text", "search", "")])],
+	    template2(Root,"Search", "Wiki page search",
+		      [S0, "<hr>", 
+		       h1(io_lib:format("Error in the regular "
+					"expression \"~p\"", 
+			  [Error]))], 
+		      false);	    
+	Search ->
+	    Files = sort(files(Root, "*.wob")),
+	    {Sres, _S} = lists:mapfoldl(fun(F, S) -> 
+						{searchPage(F, S), S} end, 
+					Search, Files),
+	    Sres_sort = reverse(sort(Sres)),
+	    S1 = lists:map(fun({Matches, Fx}) ->
+				   [p(),i2s(Matches),"  ", 
+				    wiki_to_html:format_link(
+				      filename:basename(Fx, ".wob"), Root),
+				    "</p>"]
+			   end, Sres_sort),
+	    S0 = [forms("POST", "searchPage.yaws",
+			[input("submit", "searchstart", "Search"),
+			 input("text", "search", Search)])],
+	    template2(Root,"Search", "Wiki page search",
+		      [S0, "<hr>", 
+		       h1("Number of matches found per page"), S1], 
+		      false)
+    end.
+
+searchPage(File, Search) ->
+    case file:read_file(File) of
+	{ok, Bin} ->
+	    {wik002,_Pwd,_Email,_Time,_Who,Txt,_Files,_Patches} =
+		bin_to_wik002(Bin),
+	    {match, Matches} = regexp:matches(Txt, Search),
+	    {length(Matches), File};
+	_ ->
+	    io:format("Error - failed to open ~s\n", File),
+	    {-1, File}
+    end.

@@ -1,0 +1,19 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<erl>
+
+out(Arg) ->
+    F = searchPages,
+    if 
+	Arg#arg.clidata /= undefined ->
+	    %% io:format("post~n"),
+	    wiki_yaws:call_with_post(wiki, F, Arg);
+	length(Arg#arg.querydata) > 0 ->
+	    %% io:format("query~n"),
+	    wiki_yaws:call_with_query(wiki, F, Arg);
+	true ->
+	    wiki_yaws:call_wiki(wiki, F, Arg)
+    end.
+
+</erl>
+</html>
