@@ -19,10 +19,10 @@
 -export([find_cookie_val/2, secs/0, url_decode/1]).
 -export([get_line/1, mime_type/1]).
 -export([stream_chunk_deliver/2, stream_chunk_end/1]).
--export([new_cookie_session/3,
-	 cookieval_to_session/1,
+-export([new_cookie_session/1,
+	 cookieval_to_opaque/1,
 	 print_cookie_sessions/0,
-	 replace_cookie_session/2]).
+	 replace_cookie_session/2, delete_cookie_session/1]).
 -export([setconf/2]).
 
 %% these are a bunch of function that are useful inside
@@ -617,21 +617,22 @@ stream_chunk_end(YawsPid) ->
 
 
 
-
-new_cookie_session(User, Passwd, Opaque) ->
-    yaws_session_server:new_session(User, Passwd, Opaque).
+%% Return new cookie string
+new_cookie_session(Opaque) ->
+    yaws_session_server:new_session(Opaque).
 
 %% as returned in #ysession.cookie
-cookieval_to_session(CookieVal) ->
-    yaws_session_server:cookieval_to_session(CookieVal).
+cookieval_to_opaque(CookieVal) ->
+    yaws_session_server:cookieval_to_opaque(CookieVal).
 
 print_cookie_sessions() ->
     yaws_session_server:print_sessions().
 
-replace_cookie_session(Session, User) ->
-    yaws_session_server:replace_session(Session, User).
+replace_cookie_session(Cookie, NewOpaque) ->
+    yaws_session_server:replace_session(Cookie, NewOpaque).
 
-
+delete_cookie_session(Cookie) ->
+    yaws_session_server:delete_session(Cookie).
 
 
 %% to be used in embedded mode, make it possible

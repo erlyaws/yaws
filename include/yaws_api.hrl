@@ -50,16 +50,3 @@
 
 
 
-
-%% portal server has a queue of these
--record(ysession,
-	{cookie,       %% the cookie assigned to the session
-	 auth,         %% the #auth structure as returned from portal_auth
-	 to,           %% greg secs untill timeout death
-	 user,         %% The user name 
-	 passwd,       %% And the passwd of that user
-	 starttime,    %% When calendar:local_time() did sess start
-	 opaque        %% any data the user supplies
-	}).
-	 
-

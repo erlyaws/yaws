@@ -1,0 +1,11 @@
+<erl>
+
+out(A) -> 
+    case shopcart:top(A) of
+	ok ->
+	    shopcart:buy(A);
+	X ->
+	    X
+    end.
+
+</erl>

@@ -249,18 +249,24 @@ Example usage could be:
 
 
 .TP
-\fBnew_cookie_session(User, Passwd, Opaque)\fR
+\fBnew_cookie_session(Opaque)\fR
 Create a new cookie based session, the yaws system will set the
-cookie. 
+cookie. The new randomgenerated cookie is returned from this
+function. The Opaque argument will typically contain user data
+such as username and password
 
 .TP 
-\fBcookieval_to_session(CookieVal)\fR
+\fBcookieval_to_opaque(CookieVal)\fR
 
 .TP
 \fBprint_cookie_sessions() \fR
 
+
 .TP
-\fBreplace_cookie_session(Session, User)\fR
+\fBreplace_cookie_session(Cookie, NewOpaque)\fR
+
+.TP
+\fBdelete_cookie_session(Cookie)\fR
 
 
 .TP

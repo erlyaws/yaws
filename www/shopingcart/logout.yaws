@@ -1,0 +1,12 @@
+<erl>
+
+
+out(A) -> 
+    case shopcart:top(A) of
+	ok ->
+	    shopcart:logout(A);
+	X ->
+	    X
+    end.
+
+</erl>

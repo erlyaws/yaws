@@ -21,10 +21,16 @@
 -include("../include/yaws_api.hrl").
 
 
--record(state, 
-	{ss,       %% time queue of sessions
-	 ttl =    (1000 * 60 * 30)  %% 30 minutes
+-define(TTL, (30 * 60)).  % 30 minutes
+
+-record(ysession,
+	{cookie,       %% the cookie assigned to the session
+	 to,           %% greg secs untill timeout death
+	 starttime,    %% When calendar:local_time() did sess start
+	 opaque        %% any data the user supplies
 	}).
+	 
+
 
 
 
@@ -42,16 +48,26 @@ stop() ->
     gen_server:call(?MODULE, stop).
 
 
-new_session(User, Passwd, Opaque) ->
-    gen_server:call(?MODULE, {new_session, User, Passwd, Opaque}).
-cookieval_to_session(C) ->
-    gen_server:call(?MODULE, {cookieval_to_session, C}).
+%% will return a new cookie as a string
+new_session(Opaque) ->
+    gen_server:call(?MODULE, {new_session, Opaque}).
+
+cookieval_to_opaque(CookieString) ->
+    case ets:lookup(?MODULE, CookieString) of
+	[Y] ->
+	    Y2 = Y#ysession{to = gnow() + ?TTL},
+	    ets:insert(?MODULE, Y2),
+	    {ok, Y#ysession.opaque};
+	[] ->
+	    {error, no_session}
+    end.
+
+
 print_sessions() ->
-    Ss = qto_list(gen_server:call(?MODULE, sessions)),
-    io:format("** ~p users logged in ~n~n", [length(Ss)]),
+    Ss = ets:tab2list(?MODULE),
+    io:format("** ~p sessions active ~n~n", [length(Ss)]),
     N = gnow(),
     lists:foreach(fun(S) ->
-			  io:format("User     ~p ~n", [S#ysession.user]),
 			  io:format("Cookie   ~p ~n", [S#ysession.cookie]),
 			  io:format("Start    ~p ~n", [S#ysession.starttime]),
 			  io:format("TTL      ~p secs~n", [S#ysession.to - N]),
@@ -60,9 +76,19 @@ print_sessions() ->
 		  end, Ss).
 
 
-replace_session(Session, User) ->
-    gen_server:call(?MODULE, {replace_session, Session, User}).
+replace_session(Cookie, NewOpaque) ->
+    case ets:lookup(?MODULE, Cookie) of
+	[Y] ->
+	    Y2 = Y#ysession{to = gnow() + ?TTL},
+	    ets:insert(?MODULE, Y2),
+	    ets:insert(?MODULE, Y#ysession{opaque = NewOpaque});
+	[] ->
+	    error
+    end.
 
+
+delete_session(CookieVal) ->
+    ets:delete(?MODULE, CookieVal).
 
 
 %%%----------------------------------------------------------------------
@@ -79,14 +105,18 @@ replace_session(Session, User) ->
 init([]) ->
     {X,Y,Z} = seed(),
     random:seed(X, Y, Z),
-    {ok, #state{ss = qnew()}}.
+    ets:new(?MODULE, [set, named_table, public, {keypos, 2}]),
+    {ok, undefined, to()}.
 
+
+to() ->
+    2 * 60 * 1000.  
 
 
 %% pretty good seed, but non portable
 seed() ->
     case (catch list_to_binary(
-	   os:cmd("dd if=/dev/random ibs=12 count=1 2>/dev/null"))) of
+	   os:cmd("dd if=/dev/urandom ibs=12 count=1 2>/dev/null"))) of
 	<<X:32, Y:32, Z:32>> ->
 	    {X, Y, Z};
 	_ ->
@@ -107,87 +137,25 @@ seed() ->
 
 
 
-handle_call({new_session, User, Passwd, Opaque}, _From, State) ->
-    Ss = State#state.ss,
+handle_call({new_session, Opaque}, _From, State) ->
     Now = gnow(),
-    case qkeysearch(User, #ysession.user, Ss) of
-	{value, S} ->
-	    tret({error, {has_session, S}}, Now, State);
-	false ->
-	    N = random:uniform(16#ffffffffffffffff), %% 64 bits
-	    TS = calendar:local_time(),
-	    C = atom_to_list(node()) ++ [$-|integer_to_list(N)],
-	    NS = #ysession{cookie = C,
-			  user = User,
-			  passwd = Passwd,
-			  starttime = TS,
-			  opaque = Opaque,
-			  to = gnow() + State#state.ttl},
-	    tret({ok, NS}, Now, State#state{ss = qin(NS, Ss)})
-    end;
+    N = random:uniform(16#ffffffffffffffff), %% 64 bits
+    TS = calendar:local_time(),
+    C = atom_to_list(node()) ++ [$-|integer_to_list(N)],
+    NS = #ysession{cookie = C,
+		   starttime = TS,
+		   opaque = Opaque,
+		   to = gnow() + ?TTL},
+    ets:insert(?MODULE, NS),
+    {reply, C, undefined, to()};
 
-
-handle_call({cookieval_to_session, C}, _From, State) ->
-    Q = State#state.ss,
-    Now = gnow(),
-    case qkey_delete(C, #ysession.cookie, Q) of
-	{value, Session, Q2} ->
-	    Q3 = qin(Session#ysession{to = Now + State#state.ttl}, Q2),
-	    tret({ok, Session}, Now, State#state{ss = Q3});
-	false ->
-	    tret({error,no_session}, Now, State)
-    end;
-
-handle_call({replace_session, S, User}, From, State) ->
-    Q = State#state.ss,
-    Now = gnow(),
-    case qkey_delete(User, #ysession.user, Q) of
-	{value, Session, Q2} ->
-	    Q3 = qin(S#ysession{to = Now + State#state.ttl}, Q2),
-	    tret(ok, Now, State#state{ss = Q3});
-	false ->
-	    tret({error,no_session}, Now, State)
-    end;
-
-
-handle_call(sessions, _From, State) ->
-    tret(State#state.ss, gnow(), State);
 handle_call(stop, _From, State) ->
     {stop, stopped, State}.
 
 
 
-%% a timeout return value based on the oldest session in
-%% the queue
-
-tret(Val, Now, State) ->
-    {S2, TO} = state_to_timeout(State, Now),
-    {reply, Val, S2, TO}.
-
-
-
-state_to_timeout(State, Now) ->
-    Q = State#state.ss,
-    case qfirst(Q) of
-	{{value, OldestSession}, Q2} ->
-	    TO = OldestSession#ysession.to,
-	    if
-		 TO > Now ->
-		    {State#state{ss = Q2},  (TO - Now) * 1000};
-		true ->
-		    %% oldest item has timed out
-		    %% we need to remove it
-		    {{value, O}, Q3} = qout(Q2),
-		    report_timedout_sess(O),
-		    state_to_timeout(State#state{ss = Q3}, Now)
-	    end;
-	{empty, _} ->
-	    {State, infinity}
-    end.
-
-
 report_timedout_sess(S) ->
-    error_logger:info_msg("Session for user ~p timedout ", [S#ysession.user]).
+    error_logger:info_msg("Session timedout: ~p ", [S#ysession.opaque]).
 
 
 %%----------------------------------------------------------------------
@@ -206,15 +174,8 @@ handle_cast(_Msg, State) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
 handle_info(timeout, State) ->
-    Q = State#state.ss,
-    case qout(Q) of
-	{{value, S}, Q2} ->
-	    report_timedout_sess(S),
-	    {S2, TO} = state_to_timeout(State#state{ss = Q2}, gnow()),
-	    {noreply, S2, TO};
-	{empty, _} ->
-	    {noreply, State}
-    end.
+    trav_ets(),
+    {noreply, undefined, to()}.
 
 
 %%----------------------------------------------------------------------
@@ -229,85 +190,30 @@ terminate(_Reason, _State) ->
 %%% Internal functions
 %%%----------------------------------------------------------------------
 
+trav_ets() ->
+    N = gnow(),
+    trav_ets(N, ets:first(?MODULE)).
 
+trav_ets(N, '$end_of_table') ->
+    ok;
+trav_ets(N, Key) ->
+    case ets:lookup(?MODULE, Key) of
+	[Y] ->
+	    if
+		Y#ysession.to > N ->
+		    trav_ets(N, ets:next(?MODULE, Key));
+		true ->
+		    report_timedout_sess(Y),
+		    Next = ets:next(?MODULE, Key),
+		    ets:delete(?MODULE, Key),
+		    trav_ets(N, Next)
+		    
+	    end;
+	[] ->
+	   trav_ets(N, ets:next(?MODULE, Key))
+    end.
 
 gnow() ->
     calendar:datetime_to_gregorian_seconds(
       calendar:local_time()).
-
-
-
-
-%% queue ops
-
-qnew() -> {[], []}.
-
-qin(X, {In, Out}) -> {[X|In], Out}.
-
-
-qout({In, [H|Out]}) ->
-        {{value, H}, {In, Out}};
-qout({[], []}) ->
-        {empty, {[],[]}};
-qout({In, _}) ->
-        qout({[], lists:reverse(In)}).
-
-
-
-qfirst({In, [H|Out]}) ->
-        {{value, H}, {In, [H|Out]}};
-qfirst({[], []}) ->
-        {empty, {[],[]}};
-qfirst({In, _}) ->
-        qfirst({[], lists:reverse(In)}).
-
-
-
-
-qto_list({In, Out}) ->
-    lists:append(Out, lists:reverse(In)).
-
-
-qkey_delete(Key, Pos, {Head, Tail}) ->
-    case qkey_search_delete(Key, Pos, Head, []) of
-	false ->
-	    case qkey_search_delete(Key,Pos, Tail, []) of
-		false ->
-		    false;
-		{value, Val, L2} ->
-		    {value, Val, {Head, L2}}
-	    end;
-	{value, Val, L3} ->
-	    {value, Val, {L3, Tail}}
-    end.
-
-	
-
-qkeysearch(Key, Pos, {Head, Tail}) ->
-    case lists:keysearch(Key, Pos, Head) of
-	{value, Val} ->
-	    {value, Val};
-	false ->
-	    lists:keysearch(Key,Pos, Tail)
-    end.
-
-
-
-qkeyreplace(Key, Pos, Item, {Head, Tail}) ->
-    {lists:keyreplace(Key,Pos,Head,Item),
-     lists:keyreplace(Key,Pos,Tail,Item)}.
-
-
-
-%% internal functions
-
-qkey_search_delete(_Key, _Pos, [], _Ack) ->
-    false;
-qkey_search_delete(Key,Pos, [H|T], Ack) ->
-    if
-	element(Pos, H) == Key ->
-	    {value, H, lists:reverse(Ack) ++ T};
-	true ->
-	    qkey_search_delete(Key,Pos, T, [H|Ack])
-    end.
 
