@@ -979,8 +979,12 @@ accumulate_header({cache_control, What}) ->
     put(outh, (get(outh))#outh{cache_control = ["Cache-Control: " , What, "\r\n"]});
 
 accumulate_header({set_cookie, What}) ->
-    put(outh, (get(outh))#outh{set_cookie = ["Set-Cookie: " , What, "\r\n"]});
-
+    O = get(outh),
+    Old = case O#outh.set_cookie of
+	      undefined -> "";
+	      X -> X
+	  end,
+    put(outh, O#outh{set_cookie = ["Set-Cookie: " , What, "\r\n"|Old]});
 
 accumulate_header({content_type, What}) ->
     put(outh, (get(outh))#outh{content_type = ["Content-Type: " , What, "\r\n"]});
