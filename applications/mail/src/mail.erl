@@ -178,11 +178,13 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 	 "A:link    { color: 0;text-decoration: none}\n"
 	 "A:visited { color: 0;text-decoration: none}\n"
 	 "A:active  { color: 0;text-decoration: none}\n"
-	 "DIV.msg-body { background: white; }\n"},
+	 "DIV.tag-body { background: white; }\n"},
 	{body,[{bgcolor,silver},{marginheight,0},{link,"#000000"},
 	       {topmargin,0},{leftmargin,0},{rightmargin,0},
 	       {marginwidth,0}, {onload, "document.compose.to.focus();"}],
-	 [{form, [{name,compose},{action,"send.yaws"},{method,post}],
+	 [{form, [{name,compose},{action,"send.yaws"},{method,post}
+%		 ,{enctype,"multipart/form-data"}
+		 ],
 	   [{table, [{border,0},{bgcolor,"c0c0c0"},{cellspacing,0},
 		     {width,"100%"}],
 	     {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
@@ -190,10 +192,6 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 		      "Yaws WebMail at "++maildomain()}}}},
 	    build_toolbar([{"tool-send.gif",
 			    "javascript:setComposeCmd('send');","Send"},
-			   {"","javascript:setCompActive();",
-			    "<div id='att-button' style='display: block;'>Attachments</div>"
-			    "<div id='msg-button' style='display: none;' >Message</div>"
-			   },
 			   {"", "mail.yaws", "Close"}]),
 	    {table, [{width,645},{border,0},{bgcolor,silver},{cellspacing,0},
 		     {cellpadding,0}],
@@ -240,23 +238,30 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 			       {check,value,quote(Subject)}]}}]}
 	     ]
 	    },
-	    {'div', [{id, "compose-msg"},{style,"display: block;"}],
-	     {table, [{bgcolor,silver},{border,0},{cellspacing,0},
-		      {cellpadding,0}],
-	      {tr,[],
-	       {td,[{align,left},{valign,top}],
-		{textarea, [{wrap,virtual},{name,text},{cols,78},{rows,21}],
-		 Msg}}
+	    {table,[{width,645},{border,0},{cellspacing,0},{cellpadding,0}],
+	     {tr,[],
+	      [
+	       build_tabs(["Message","Attachments"]),
+	       {'div', [{id, "tab-body:0"},{style,"display: block;"}],
+		{table, [{bgcolor,silver},{border,0},{cellspacing,0},
+			 {cellpadding,0}],
+		 {tr,[],
+		  {td,[{align,left},{valign,top}],
+		   {textarea, [{wrap,virtual},{name,text},{cols,78},{rows,21}],
+		    Msg}}
+		 }
+		}
+	       },
+	       {'div', [{id, "tab-body:1"},{style,"display: none;"}],
+		["Attached files:",
+		 {table,[],
+		  file_attachements(5)
+		 }
+		]
+	       }
+	      ]
 	      }
-	     }
-	    },
-	    {'div', [{id, "compose-att"},{style,"display: none;"}],
-	     ["Attached files:",
-	      {table,[],
-	       file_attachements(5)
-	      }
-	     ]
-	    },
+	     },
 	    {input,[{type,hidden},{name,cmd},{value,""}],[]}
 	   ]
 	  }
@@ -285,7 +290,43 @@ file_attachement(N) ->
      ]
     }.
     
-    
+
+build_tabs(Tabs) ->
+    [{'div',
+      [{align,"left"}],
+      {table,[{border,"0"},
+	      {cellspacing,"0"},
+	      {cellpadding,"0"}],
+       {tr,[],
+	build_tab(Tabs,0)}}},
+     {'div',[{align,"left"}],
+      {table,[{width,645},{border,0},{cellspacing,0},{cellpadding,0}],
+       {tr,[],{td,[{height,8},{background,"tab-hr.gif"}],[]}}}}
+     ].
+
+build_tab([],_) -> [];
+build_tab([T|Ts], N=0) ->
+    I = integer_to_list(N),
+    [{td,[{width,6}],
+      {img,[{src,"tab-left_active.gif"}, {border,0}, {id,"tab-left:"++I}],[]}},
+     {td,[{align,"center"},
+	  {style,"cursor: pointer; background: url(tab-bg_active.gif)"},
+	  {onClick,"changeActiveTab("++I++")"},
+	  {id,"tab-bg:"++I}], T},
+     {td, [{width,6}],
+      {img,[{src,"tab-right_active.gif"}, {border,0}, {id,"tab-right:"++I}],[]}}|
+     build_tab(Ts,N+1)];
+build_tab([T|Ts], N) ->
+    I = integer_to_list(N),
+    [{td,[{width,6}],
+      {img,[{src,"tab-left_inactive.gif"}, {border,0}, {id,"tab-left:"++I}],[]}},
+     {td,[{align,"center"},
+	  {style,"cursor: pointer; background: url(tab-bg_inactive.gif)"},
+	  {onClick,"changeActiveTab("++I++")"},
+	  {id,"tab-bg:"++I}], T},
+     {td, [{width,6}],
+      {img,[{src,"tab-right_inactive.gif"}, {border,0}, {id,"tab-right:"++I}],[]}}|
+     build_tab(Ts,N+1)].
 
 showmail(Session, MailNr) ->
     showmail(Session, MailNr, ?RETRYCOUNT).
