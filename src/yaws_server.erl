@@ -1209,22 +1209,10 @@ parse_auth(_) ->
 %% we may have content, 
 
 new_redir_h(OH, Loc) ->
-    Cont = get(acc_content),
-    Chunked = OH#outh.chunked,
-    NewChunked =  true,
-    NewContentType = case Cont of
-			 undefined ->
-			     undefined;
-			 _ ->
-			     OH#outh.content_type
-		     end,
     OH2 = OH#outh{status = 302,
-		  chunked = NewChunked,
-		  content_type = NewContentType,
-		  transfer_encoding = 
-		      yaws:make_transfer_encoding_chunked_header(NewChunked),
 		  location = Loc},
     put(outh, OH2).
+
 
 
 % we must deliver a 302 if the browser asks for a dir
@@ -1247,9 +1235,19 @@ deliver_302(CliSock, Req, GC, SC, Arg) ->
 		  ["Location: ", Scheme,
 		   Headers#headers.host, P, "/", Q, "\r\n"]
 	  end,
+    
+    Ret = case yaws:outh_get_chunked() of
+	      true ->
+		  accumulate_content([crnl(), "0", crnl2()]),
+		  continue;
+	      false ->
+		  done
+	  end,
+
     new_redir_h(H, Loc),
     deliver_accumulated(CliSock, GC, SC),
-    done.
+    Ret.
+
 
 redirect_scheme(SC) ->
     case {SC#sconf.ssl,SC#sconf.rmethod} of
@@ -1720,15 +1718,10 @@ handle_crash(A, L, SC) ->
 deliver_accumulated(Sock, GC, SC) ->
     Chunked = yaws:outh_get_chunked(),
     Cont = case erase(acc_content) of
-	       undefined  when Chunked == false ->
-		   yaws:outh_set_content_length(0),
-		   [];
 	       undefined ->
-		   error_logger:info_msg("deliver accumulated Chunked with "
-					 "no content",[]),
 		   [];
-	       Content ->
-		   Content
+	       Cont2 ->
+		   Cont2
 	   end,
     
     {StatusLine, Headers} = yaws:outh_serialize(),
