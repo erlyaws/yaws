@@ -403,7 +403,7 @@ month_str_to_int("May") ->
 month_str_to_int("Aug") ->
     8;
 month_str_to_int("Sep") ->
-    7;
+    9;
 month_str_to_int("Oct") ->
     10;
 month_str_to_int("Nov") ->
