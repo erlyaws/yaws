@@ -24,6 +24,14 @@ function handleEnter(event) {
    }
 }
 
+function addSmiley(ref) {
+   var text = document.getElementById("msg");
+
+   text.value = text.value+"<img src='"+ref+"'>";
+
+   text.focus()
+}
+
 </script>
 
 <style>
@@ -77,5 +85,25 @@ h1 {
 <textarea id="msg" rows="3"  value=""
           onKeyPress="return handleEnter(event)">
 </textarea>
+<br>
+
+<img src='smile.png' onmousedown="addSmiley('smile.png')"></img>
+<img src='angel.png' onmousedown="addSmiley('angel.png')"></img>
+<img src='bigsmile.png' onmousedown="addSmiley('bigsmile.png')"></img>
+<img src='burp.png' onmousedown="addSmiley('burp.png')"></img>
+<img src='cool.png' onmousedown="addSmiley('cool.png')"></img>
+<img src='crossedlips.png' onmousedown="addSmiley('crossedlips.png')"></img>
+<img src='cry.png' onmousedown="addSmiley('cry.png')"></img>
+<img src='embarrassed.png' onmousedown="addSmiley('embarrassed.png')"></img>
+<img src='farted.png' onmousedown="addSmiley('farted.png')"></img>
+<img src='kiss.png' onmousedown="addSmiley('kiss.png')"></img>
+<img src='moneymouth.png' onmousedown="addSmiley('moneymouth.png')"></img>
+<img src='oneeye.png' onmousedown="addSmiley('oneeye.png')"></img>
+<img src='sad.png' onmousedown="addSmiley('sad.png')"></img>
+<img src='scream.png' onmousedown="addSmiley('scream.png')"></img>
+<img src='think.png' onmousedown="addSmiley('think.png')"></img>
+<img src='tongue.png' onmousedown="addSmiley('tongue.png')"></img>
+<img src='wink.png' onmousedown="addSmiley('wink.png')"></img>
+<img src='yell.png' onmousedown="addSmiley('yell.png')"></img>
 
 </html>
