@@ -180,7 +180,7 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 	 "A:active  { color: 0;text-decoration: none}\n"},
 	{body,[{bgcolor,silver},{marginheight,0},{link,"#000000"},
 	       {topmargin,0},{leftmargin,0},{rightmargin,0},
-	       {marginwidth,0}],
+	       {marginwidth,0}, {onload, "document.compose.to.focus();"}],
 	 [{form, [{name,compose},{action,"send.yaws"},{method,post}],
 	   [{table, [{border,0},{bgcolor,"c0c0c0"},{cellspacing,0},
 		     {width,"100%"}],
@@ -1396,7 +1396,7 @@ format_message(Message, MailNr) ->
 		 {tr,[],
 		  {td,[{width,"100%"},{height,300},{valign,top},
 		       {bgcolor,white}],
-		   {p,[],{font,[{size,3}], Formated }}}
+		   {p,[],{font,[{size,3}], Formated}}}
 		 }
 		}
 	       ]
@@ -1421,6 +1421,23 @@ format_message(Message, MailNr) ->
      ]
     }].
 
+select_alt_body([], [First|_]) -> First;
+select_alt_body([Prefered|Rest], Bodies) ->
+    case [Body || Body <- Bodies, has_body_type(Prefered,Body)] of
+	[] ->
+	    select_alt_body(Rest, Bodies);
+	[First|_] ->
+	    First
+    end.
+		  
+has_body_type(Type, {H,B}) ->
+    case H#mail.content_type of
+	{CT, _Ops} ->
+	    CTL = lowercase(CT),
+	    CTL == Type;
+	_ -> false
+    end.
+
 format_body(H,Msg) ->
     ContentType =
 	case H#mail.content_type of
@@ -1433,7 +1450,7 @@ format_body(H,Msg) ->
 	    {pre_html, Decoded};
 	{{"text/plain",_}, Encoding} ->
 	    Decoded = decode_message(Encoding, Msg),
-	    {pre, [], Decoded};
+	    {pre, [], wrap_text(Decoded, 80)};
 	{{"multipart/mixed",Opts}, Encoding} ->
 	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
 	    [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
@@ -1444,12 +1461,18 @@ format_body(H,Msg) ->
 	    format_body(PartHeaders, Body);
 	{{"multipart/alternative",Opts}, Encoding} ->
 	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
-	    [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
-	    PartHeaders =
-		lists:foldl(fun({K,V},MH) ->
-				    add_header(K,V,MH)
-			    end, #mail{}, Headers),
-	    format_body(PartHeaders, Body);
+	    Parts = parse_multipart(Msg, Boundary),
+	    HParts =
+		lists:map(
+		  fun({Head,Body}) ->
+			  NewHead =
+			      lists:foldl(fun({K,V},MH) ->
+						  add_header(K,V,MH)
+					  end, #mail{}, Head),
+			  {NewHead, Body}
+		  end, Parts),
+	    {H1,B1} = select_alt_body(["text/html","text/plain"],HParts),
+	    format_body(H1,B1);
 	{{"multipart/signed",Opts}, Encoding} ->
 	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
 	    [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
@@ -1462,7 +1485,7 @@ format_body(H,Msg) ->
 	    Decoded = decode_message(Encoding, Msg),
 	    format_message(Decoded, -1);
 	{_,_} ->
-	    {pre, [], Msg}
+	    {pre, [], wrap_text(Msg,80)}
     end.
 
 decode_message("7bit"++_, Msg) -> Msg;
@@ -1533,3 +1556,67 @@ process_parts([{body,B}|Ps], Head, Body, Res) ->
     process_parts(Ps, [], [], [{Head, lists:reverse([B|Body])}|Res]);
 process_parts([{part_body,B}|Ps], Head, Body, Res) ->
     process_parts(Ps, Head, [B|Body], Res).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% The text to wrap may be arbitrarily nested. We deal with this
+% without flattening the whole thing.
+%
+
+wrap_text(Text, Max) ->
+    wrap_text(Text, [], [], 0, Max).
+
+wrap_text([], [], Unwrapped, Col, Max) ->
+    if
+	Col < Max ->
+	    lists:reverse(Unwrapped);
+	true ->
+	    [$\n|lists:reverse(Unwrapped)]
+    end;
+
+wrap_text([], Cont, Unwrapped, Col, Max) ->
+    wrap_text(Cont, [], Unwrapped, Col, Max);
+
+wrap_text([L|Rest], [], Unwrapped, Col, Max) when list(L) ->
+    wrap_text(L, Rest, Unwrapped, Col, Max);
+
+wrap_text([L|Rest], Cont, Unwrapped, Col, Max) when list(L) ->
+    wrap_text(L, [Rest|Cont], Unwrapped, Col, Max);
+
+wrap_text([C|Rest], Cont, Unwrapped, Col, Max) when Col < Max ->
+    case char_class(C) of
+	space ->
+	    [lists:reverse(Unwrapped),
+	     [C|wrap_text(Rest, Cont, [], Col+1, Max)]];
+	tab ->
+	    [lists:reverse(Unwrapped),
+	     [C|wrap_text(Rest, Cont, [], Col+8, Max)]];
+	nl ->
+	    [lists:reverse(Unwrapped),
+	     [C|wrap_text(Rest, Cont, [], 0, Max)]];
+	text ->
+	    wrap_text(Rest, Cont, [C|Unwrapped], Col+1, Max)
+    end;
+wrap_text([C|Rest], Cont, Unwrapped, Col, Max) when Col >= Max ->
+    case char_class(C) of
+	space ->
+	    [[$\n|lists:reverse(Unwrapped)], [C],
+	     wrap_text(Rest, Cont, [], length(Unwrapped), Max)];
+	tab ->
+	    [[$\n|lists:reverse(Unwrapped)], [C],
+	     wrap_text(Rest, Cont, [], length(Unwrapped), Max)];
+	nl ->
+	    [[$\n|lists:reverse(Unwrapped)], [C],
+	     wrap_text(Rest, Cont, [], length(Unwrapped), Max)];
+	text ->
+	    wrap_text(Rest, Cont, [C|Unwrapped], Col+1, Max)
+    end.
+
+char_class($\n) -> nl;
+char_class($\r) -> nl;
+char_class($ )  -> space;
+char_class($\t) -> tab;
+char_class(O)   -> text.
+    
+	
+	
