@@ -774,7 +774,7 @@ setconf(GC, Groups) ->
 	ok ->
 	    yaws_log:setdir(GC#gconf.logdir, Groups),
 	    case GC#gconf.trace of
-		undefined ->
+		false ->
 		    ok;
 		{true, What} ->
 		     yaws_log:open_trace(What)

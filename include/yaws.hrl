@@ -11,6 +11,7 @@
 %% global conf
 -record(gconf,{file,
 	       yaws_dir,
+	       tty_trace = false,
 	       trace,
 	       debug,
 	       logdir,
