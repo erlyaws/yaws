@@ -2262,6 +2262,8 @@ hex2dec($f) -> 15.
 
 %% 
 
+%% MR: Is this really necessary ?
+%%     We can now use filelib:fold_files/5
 files(Dir, Re) -> 
     Re1 = regexp:sh_to_awk(Re),
     find_files(Dir, Re1, []).

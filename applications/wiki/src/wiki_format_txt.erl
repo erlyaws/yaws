@@ -560,5 +560,5 @@ exec_plugin(Name, Page, [], ArgsList) ->
        Result -> Result
    end;
 exec_plugin(Name, Page, [ArgString|ArgStrings], Acc) ->
-   [Key|Val] = string:tokens(ArgString, "="),
+   [Key,Val] = string:tokens(ArgString, "="),
    exec_plugin(Name, Page, ArgStrings, [{Key,Val}|Acc]).
