@@ -18,6 +18,7 @@
 	 htmlize/1, htmlize_char/1, f/2, fl/1]).
 -export([find_cookie_val/2, secs/0, url_decode/1]).
 -export([get_line/1, mime_type/1]).
+-export([stream_chunk_deliver/2, stream_chunk_end/1]).
 
 %% these are a bunch of function that are useful inside
 %% yaws scripts
@@ -601,4 +602,12 @@ mime_type(FileName) ->
     MT.
 
 
+
+
+
+stream_chunk_deliver(YawsPid, Data) ->
+    YawsPid  ! {streamcontent, Data}.
+
+stream_chunk_end(YawsPid) ->
+    YawsPid ! endofstreamcontent.
 

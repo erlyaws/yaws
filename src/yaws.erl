@@ -614,11 +614,3 @@ printversion() ->
     io:format("Yaws ~s~n", [yaws_vsn:version()]),
     init:stop().
 
-
-
-stream_chunk_deliver(Arg, Data) ->
-    Arg#arg.pid ! {streamcontent, Data}.
-
-stream_chunk_end(Arg) ->
-    Arg#arg.pid ! endofstreamcontent.
-
