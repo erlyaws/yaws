@@ -1936,14 +1936,22 @@ handle_out_reply(break, _LineNo, _YawsFile, _SC, _A) ->
     break;
 
 handle_out_reply({redirect_local, Path0}, _LineNo, _YawsFile, SC, A) ->
+    Arg = hd(A),
     Path = case Path0 of
 	       {abs_path, P} ->
 		   P;
+	       {rel_path, P} ->
+		   {abs_path, RP} = (Arg#arg.req)#http_request.path,
+		   case string:rchr(RP, $/) of
+		       0 ->
+			   [$/|P];
+		       N ->
+			   [lists:sublist(RP, N),P]
+		   end;
 	       P ->
 		   P
 	   end,
     Scheme = redirect_scheme(SC),
-    Arg = hd(A),
     Headers = Arg#arg.headers,
     HostPort = redirect_host(SC, Headers#headers.host),
     Loc = ["Location: ", Scheme, HostPort, Path, "\r\n"],
