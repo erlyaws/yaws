@@ -1200,10 +1200,15 @@ deliver_302(CliSock, Req, GC, SC, Arg) ->
 
     Scheme = redirect_scheme(SC),
     Headers = Arg#arg.headers,
-    Loc = ["Location: ", Scheme,
-	   Headers#headers.host, 
-	   decode_path(Req#http_request.path), "/\r\n"],
-    
+    DecPath = decode_path(Req#http_request.path),
+    Loc = case string:tokens(DecPath, "?") of
+	      [P] ->
+		  ["Location: ", Scheme,
+		   Headers#headers.host, P, "/\r\n"];
+	      [P, Q] ->
+		  ["Location: ", Scheme,
+		   Headers#headers.host, P, "/", Q, "\r\n"]
+	  end,
     new_redir_h(H, Loc),
     deliver_accumulated(CliSock, GC, SC),
     done.
@@ -1671,13 +1676,6 @@ handle_crash(A, L, SC) ->
 
 deliver_accumulated(Sock, GC, SC) ->
     {StatusLine, Headers} = yaws:outh_serialize(),
-    if
-	GC#gconf.debug == trueeeeeeeeeeeeeee ->
-	    yaws_debug:check_headers(get(outh));
-	true ->
-	    ok
-    end,
-
     Cont = case erase(acc_content) of
 	       undefined ->
 		   [];
