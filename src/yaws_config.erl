@@ -305,7 +305,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    case (catch list_to_integer(Val)) of
 		I when integer(I) ->
 		    C2 = C#sconf{port = I},
-		    fload(FD, server, GC, C2, Cs, Lno, Next);
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		_ ->
 		    {error, ?F("Expect integer at line ~w", [Lno])}
 	    end;
@@ -315,27 +315,21 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		    {error, ?F("Expect IP address at line ~w:", [Lno])};
 		Addr ->
 		    C2 = C#sconf{listen = Addr},
-		    fload(FD, server, GC, C2, Cs, Lno, Next)
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next)
 	    end;
 	["docroot", '=', Root] ->
 	    case is_dir(Root) of
 		true ->
 		    C2 = C#sconf{docroot = Root},
-		    fload(FD, server, GC, C2, Cs, Lno, Next);
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		false ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}
 	    end;
-	["authdir", '=', Dir] ->
-	    case is_dir(Dir) of
-		true ->
-		    C2 = C#sconf{authdirs = [Dir | C#sconf.authdirs]},
-		    fload(FD, server, GC, C2, Cs, Lno, Next);
-		false ->
-		    {error, ?F("Expect directory at line ~w", [Lno])}
-	    end;
+	['<', "auth", '>'] ->
+	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, #auth{});
 
 	["default_server_on_this_ip", '=', Bool] ->
-	    fload(FD, server, GC, C, Cs, Lno, Next);
+	    fload(FD, server, GC, C, Cs, Lno+1, Next);
 
 	%% A bunch of ssl options
 
@@ -344,7 +338,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		{true, Val} ->
 		    ssl:start(),
 		    C2 = C#sconf{ssl = #ssl{}},
-		    fload(FD, server, GC, C2, Cs, Lno, Next);
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}
 	    end;
@@ -352,7 +346,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    case is_file(Val) of
 		true when  record(C#sconf.ssl, ssl) ->
 		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{keyfile = Val}},
-		    fload(FD, server, GC, C2, Cs, Lno, Next);
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		true ->
 		    {error, ?F("Need to set option ssl to true before line ~w",
 			       [Lno])};
@@ -363,7 +357,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    case is_file(Val) of
 		true when  record(C#sconf.ssl, ssl) ->
 		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{certfile = Val}},
-		    fload(FD, server, GC, C2, Cs, Lno, Next);
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		true ->
 		    {error, ?F("Need to set option ssl to true before line ~w",
 			       [Lno])};
@@ -374,7 +368,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    case is_file(Val) of
 		true when  record(C#sconf.ssl, ssl) ->
 		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{cacertfile = Val}},
-		    fload(FD, server, GC, C2, Cs, Lno, Next);
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		true ->
 		    {error, ?F("Need to set option ssl to true before line ~w",
 			       [Lno])};
@@ -385,7 +379,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    case lists:member(Val, [1,2,3]) of
 		true when  record(C#sconf.ssl, ssl) ->
 		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{verify = Val}},
-		    fload(FD, server, GC, C2, Cs, Lno, Next);
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		true ->
 		    {error, ?F("Need to set option ssl to true before line ~w",
 			       [Lno])};
@@ -396,7 +390,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    case lists:member(Val, [1,2,3,4,5,6,7]) of
 		true when  record(C#sconf.ssl, ssl) ->
 		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{depth = Val}},
-		    fload(FD, server, GC, C2, Cs, Lno, Next);
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		true ->
 		    {error, ?F("Need to set option ssl to true before line ~w",
 			       [Lno])};
@@ -427,7 +421,37 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end.
 
-
+fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
+    %?Debug("Chars: ~s", [Chars]),
+    Next = io:get_line(FD, ''),
+    case toks(Chars) of
+	[] ->
+	    fload(FD, server, GC, C, Cs, Lno+1, Next);
+	["dir", '=', Dir] ->
+    	    case is_dir(Dir) of
+		true ->
+		    A2 = Auth#auth{dir = [Dir|Auth#auth.dir]},
+		    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
+		false ->
+		    {error, ?F("Expect directory at line ~w", [Lno])}
+	    end;
+	["realm", '=', Realm] ->
+	    A2 = Auth#auth{realm = Realm},
+	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
+	["user", '=', User] ->
+	    case string:tokens(User, ":") of
+		[Name, Passwd] ->
+		    A2 = Auth#auth{users = [{Name, Passwd}|Auth#auth.users]},
+		    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
+		false ->
+		    {error, ?F("Invalid user at line ~w", [Lno])}
+	    end;
+	['<', "/auth", '>'] ->
+	    C2 = C#sconf{auth = [Auth|C#sconf.auth]},
+	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+	[H|T] ->
+	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
+    end.
 	    
 
 is_bool("true") ->

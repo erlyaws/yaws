@@ -53,6 +53,13 @@
 	 authdirs = []
 	}).
 
+% Auth conf - from server conf and .yaws_auth
+-record(auth,
+	{dir = [],
+	 realm = "",
+	 type = "Basic",
+	 users = []
+	}).
 
 
 -record(dcc, {

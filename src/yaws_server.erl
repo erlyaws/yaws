@@ -33,8 +33,6 @@
 	     reqs = 0}).    %% number of HTTP requests
 
 
-
-
 -record(urltype, {type,   %% error | yaws | regular | directory | dotdot
 		  finfo,
 		  path,
@@ -46,9 +44,6 @@
 		  q,       %% query for GET requests
 		  wwwauth = undefined  %% or #auth{}
 		 }).
-
-
-
 
 
 %%%----------------------------------------------------------------------
@@ -266,10 +261,29 @@ terminate(_Reason, _State) ->
 
 
 %% we search and setup www authenticate for each directory
-%% specified as an auth directory
+%% specified as an auth directory. These are merged with server conf.
 
-setup_auth(_SC, _E) ->
-    ok. %nyi
+setup_auth(SC) ->
+    ?f(lists:map(fun(Auth) ->
+		      add_yaws_auth(Auth#auth.dir, Auth)
+	      end, SC#sconf.authdirs)).
+
+add_yaws_auth(Dirs, A) ->
+    lists:map(
+      fun(Dir) ->
+	  case file:consult([Dir, [$/|".yaws_auth"]]) of
+	      {ok, [{realm, Realm} |TermList]} ->
+		  {Dir, A#auth{realm = Realm,
+			       users = TermList++A#auth.users}};
+	      {ok, TermList} ->
+		  {Dir, A#auth{users = TermList++A#auth.users}};
+	      {error, enoent} ->
+		  {Dir, A};
+	      Err ->
+		  error_logger:format("Bad .yaws_auth file in dir ~p~n", [Dir]),
+		  {Dir, A}
+	  end
+      end, Dirs).
 
 
 do_listen(SC) ->
@@ -288,8 +302,9 @@ gserv(GC, Group0) ->
 			E = ets:new(yaws_code, [public, set]),
 			ets:insert(E, {num_files, 0}),
 			ets:insert(E, {num_bytes, 0}),
-			setup_auth(SC, E),
-			SC#sconf{ets = E}
+			Auth = setup_auth(SC),
+			SC#sconf{ets = E,
+				  authdirs = Auth}
 		end, Group0),
     SC = hd(Group),
     case do_listen(SC) of
@@ -697,6 +712,7 @@ http_get_headers(CliSock, Req, GC, H) ->
 	{ok, {http_header, _Num, 'Content-Length', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{content_length = X});
 	{ok, {http_header, _Num, 'Authorization', _, X}} ->
+	    %io:format("Auth:~p",[X]),
 	    http_get_headers(CliSock, Req, GC, 
 			H#headers{authorization = parse_auth(X)});
 	{ok, http_eoh} ->
@@ -720,7 +736,7 @@ inet_setopts(_,_,_) ->
 %% ret:  continue | done
 'GET'(CliSock, GC, SC, Req, Head) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
-    ?Debug("GET ~p", [Req#http_request.path]),
+    ?Debug("GET ~p", [?format_record(Req, http_request)]),
     ok = inet_setopts(SC, CliSock, [{packet, raw}, binary]),
     flush(SC, CliSock, Head#headers.content_length),
     ARG = make_arg(CliSock, Head, Req, GC, SC),
@@ -782,29 +798,53 @@ handle_request(CliSock, GC, SC, Req, H, ARG) ->
 	_Adirs ->
 	    %% we have authentication enabled, check auth
 	    UT2 = unflat(UT),
-	    case lists:member(UT2#urltype.dir, SC#sconf.authdirs) of
-		false ->
-		    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT2);
+	    case is_authenticated(SC, UT2, Req, H) of
 		true ->
-		    case is_authenticated(SC, UT2, Req, H) of
-			true ->
-			    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT2);
-			{false, Realm} ->
-			    deliver_401(CliSock, Req, GC, Realm, SC)
-		    end
+		    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT2);
+		{false, Realm} ->
+		    deliver_401(CliSock, Req, GC, Realm, SC)
 	    end
     end.
 
 
 unflat(U) ->
-    U2 = case U#urltype.dir of
+    U2 = case U#urltype.path of
 	     {noflat, F} ->
-		 U#urltype{dir = lists:flatten(F)};
+		 U#urltype{path = lists:flatten(F)};
 	     _ ->
 		 U
 	 end,
     U2.
 
+is_authdir(Req_dir, [{Auth_dir, Auth}|T]) ->
+    case lists:prefix(Auth_dir, Req_dir) of
+	true ->
+	    {true, Auth};
+	false ->
+	    is_authdir(Req_dir, T)
+    end;
+is_authdir(_, []) ->
+    false.
+
+is_authenticated(SC, UT, _Req, H) ->
+    %io:format("Path:~p~n",[UT#urltype.path]),
+    case is_authdir(UT#urltype.path, SC#sconf.authdirs) of
+	{true, #auth{dir = Dir, realm = Realm, users = Users}} ->
+	    case H#headers.authorization of
+		undefined ->
+		    {false, Realm};
+		{User, Password} ->
+		    %io:format("User: ~p~n, Passwd: ~p~n",[User, Password]),
+		    case lists:member({User, Password}, Users) of
+			true ->
+			    true;
+			false ->
+			    {false, Realm}
+		    end
+	    end;
+	false ->
+	    true
+    end.
 
 
 handle_ut(CliSock, GC, SC, Req, H, ARG, UT) ->
@@ -826,48 +866,25 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT) ->
     end.
 
 	
-
--record(auth,
-	{dir,
-	 realm = "",
-	 type = "Basic",
-	 users
-	}).
-
-
-parse_auth(Dir) ->
-    case file:consult([Dir, [$/|".yaws_auth"]]) of
-	{ok, [{realm, Realm} |TermList]} ->
-	    {ok, #auth{dir = Dir,
-		       realm = Realm,
-		       users = TermList}};
-	{ok, TermList} ->
-	    {ok, #auth{dir = Dir,
-		       users = TermList}};
-	Err ->
-	    error_logger:format("Bad .yaws_auth file in dir ~p~n", [Dir]),
-	    Err
-    end.
-
-
-
-is_authenticated(_SC, UT, _Req, H) ->
-    case ets:info(auth_tab, size) of
-	undefined ->
-	    ets:new(auth_tab, [public, set, named_table]);
-	_ ->
-	    ok
-    end,
-    N = now_secs(),
-    case ets:lookup(auth_tab, UT#urltype.dir) of
-	[{_Dir, Auth, Then}] when Then+200 < N ->
-	    case H#headers.authorization of
-		undefined ->
-		    {false, Auth#auth.realm};
-		{_User, _Password} ->
-		    uhhhhh
+parse_auth("Basic " ++ Auth64) ->
+    case decode_base64(Auth64) of
+	{error, _Err} ->
+	    undefined;
+	Auth ->
+	    case string:tokens(Auth, ":") of
+		[User, Pass] ->
+		    {User, Pass};
+		_ ->
+		    undefined
 	    end
-    end.
+    end;
+parse_auth(_) ->
+    undefined.
+
+
+
+
+
 
 
 % we must deliver a 303 if the browser asks for a dir
@@ -1519,7 +1536,7 @@ pack_ints2([H|T]) ->
 	 end,
     [V2 |pack_ints2([H bsr 5|T])];
 pack_ints2([]) ->
-    [$"].
+    [$"]. %"
 
 now_secs() ->
     {M,S,_}=now(),
@@ -1640,26 +1657,29 @@ do_url_type(Droot, Path) ->
 
 
 maybe_return_dir(DR, FlatPath) ->
-    ?Debug("maybe_return_dir(~p, ~p)", [DR, FlatPath]),
+    ?Debug("maybe_return_dir(~p,, ~p)", [DR, FlatPath]),
     case prim_file:read_file_info([DR, FlatPath, "/index.yaws"]) of
 	{ok, FI} ->
 	    #urltype{type = yaws,
 		     finfo = FI,
+		     path = {noflat, [DR, FlatPath]},
 		     mime = "text/html",
 		     dir = FlatPath,
-		     fullpath = ?f([DR, FlatPath,"/index.yaws"])};
+		     fullpath = ?f([DR, "/index.yaws"])};
 	_ ->
 	    case prim_file:read_file_info([DR, FlatPath, "/index.html"]) of
 		{ok, FI} ->
 		    #urltype{type = regular,
 			     finfo = FI,
+			     path = {noflat, [DR, FlatPath]},
 			     mime = "text/html",
 			     dir = FlatPath,
-			     fullpath =?f([DR,FlatPath,"/index.html"])};
+			     fullpath = ?f([DR, FlatPath, "/index.html"])};
 		_ ->
 		    case file:list_dir([DR, FlatPath]) of
 			{ok, List} ->
-			    #urltype{type = directory, 
+			    #urltype{type = directory,
+				     path = {noflat, [DR, FlatPath]},
 				     dir = FlatPath,
 				     data=List};
 			_Err ->
@@ -1741,6 +1761,7 @@ ret_reg_split(DR, Comps, RevFile, Query) ->
 	    {X, Mime} = suffix_type(RevFile),
 	    #urltype{type=X, 
 		     finfo=FI,
+		     path = {noflat, [DR, Dir]},
 		     dir = FlatDir,
 		     fullpath = lists:flatten(L),
 		     mime=Mime, q=Query};
@@ -1760,6 +1781,7 @@ ret_reg_split(DR, Comps, RevFile, Query) ->
 		    {X, Mime} = suffix_type(RevFile),
 		    #urltype{type=X, 
 			     finfo=FI,
+			     path = {noflat, [DR, Dir2]},
 			     dir = Dir2,
 			     fullpath = lists:flatten(L2),
 			     mime=Mime, q=Query};
@@ -1855,3 +1877,41 @@ load_and_run(Mod) ->
 	    yaws_log:errlog("Loading '~w' failed, reason ~p~n",[Mod,Error])
     end.
 
+decode_base64([]) ->
+  [];
+decode_base64([Sextet1,Sextet2,$=,$=|Rest]) ->
+  Bits2x6=
+    (d(Sextet1) bsl 18) bor
+    (d(Sextet2) bsl 12),
+  Octet1=Bits2x6 bsr 16,
+  [Octet1|decode_base64(Rest)];
+decode_base64([Sextet1,Sextet2,Sextet3,$=|Rest]) ->
+  Bits3x6=
+    (d(Sextet1) bsl 18) bor
+    (d(Sextet2) bsl 12) bor
+    (d(Sextet3) bsl 6),
+  Octet1=Bits3x6 bsr 16,
+  Octet2=(Bits3x6 bsr 8) band 16#ff,
+  [Octet1,Octet2|decode_base64(Rest)];
+decode_base64([Sextet1,Sextet2,Sextet3,Sextet4|Rest]) ->
+  Bits4x6=
+    (d(Sextet1) bsl 18) bor
+    (d(Sextet2) bsl 12) bor
+    (d(Sextet3) bsl 6) bor
+    d(Sextet4),
+  Octet1=Bits4x6 bsr 16,
+  Octet2=(Bits4x6 bsr 8) band 16#ff,
+  Octet3=Bits4x6 band 16#ff,
+  [Octet1,Octet2,Octet3|decode_base64(Rest)];
+decode_base64(CatchAll) ->
+  {error, bad_base64}.
+
+d(X) when X >= $A, X =<$Z ->
+    X-65;
+d(X) when X >= $a, X =<$z ->
+    X-71;
+d(X) when X >= $0, X =<$9 ->
+    X+4;
+d($+) -> 62;
+d($/) -> 63;
+d(_) -> 63.
