@@ -672,17 +672,22 @@ aloop(CliSock, GS, Num) ->
 	 end,
     put(outh, #outh{}),
     Res=call_method(Req#http_request.method, CliSock, GS#gs.gconf, SC, Req, H),
-    maybe_access_log(IP, SC, Req, H),
     case Res of
 	continue ->
+	    maybe_access_log(IP, SC, Req, H),
 	    aloop(CliSock, GS, Num+1);
 	done ->
+	    maybe_access_log(IP, SC, Req, H),
 	    {ok, Num+1};
 	{page, Page} ->
 	    put(outh, #outh{}),
+						% Should we set the
+						% Content-Location
+						% header here?
 	    call_method(Req#http_request.method, 
 			CliSock, GS#gs.gconf, SC#sconf{appmods=[]}, 
-			Req#http_request{path = {abs_path, Page}}, H)
+			Req#http_request{path = {abs_path, Page}}, H),
+	    maybe_access_log(IP, SC, Req, H)
     end.
 
 
