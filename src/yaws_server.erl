@@ -2237,11 +2237,13 @@ send_file(CliSock, Fd, SC, GC, all) ->
 	identity ->
 	    send_file(CliSock, Fd, SC, GC);
 	deflate ->
-	    {Z, ZPriv} = yaws_zlib:gzipOpenInit(),
+	    Z = zlib:open(),
+	    ZPriv = yaws_zlib:gzipInit(Z),
 	    case catch send_file_deflated(CliSock, Fd, Z, ZPriv, SC, GC) of
 						% Is this necessary?
 		Ret ->
-		    yaws_zlib:gzipEndClose(Z),
+		    yaws_zlib:gzipEnd(Z),
+		    zlib:close(Z),
 		    case Ret of
 			{'EXIT', Err} -> throw(Ret);
 			_ -> Ret
@@ -2447,7 +2449,7 @@ cache_file(GC, SC, Path, UT) when
 			case SC#sconf.deflate 
 			    and (UT#urltype.type==regular) of
 			    true ->
-				case yaws_zlib:gzip(Bin) of
+				case zlib:gzip(Bin) of
 				    {ok, DB} when binary(DB), 
 						  size(DB)*10<size(Bin)*9 ->
 					?Debug("storing deflated version "
