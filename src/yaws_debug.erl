@@ -240,12 +240,21 @@ check_headers([], _) ->
 
 
 
-
-nobin(B) when binary(B) ->
-    lists:flatten(io_lib:format("#Bin(~w)", [size(B)]));
-nobin(L) when list(L) ->
-    lists:map( fun nobin/1, L);
-nobin(T) when tuple(T) ->
-    list_to_tuple(nobin(tuple_to_list(T)));
 nobin(X) ->
+    case catch xnobin(X) of
+	{'EXIT', Reason} ->
+	    io:format("~p~n~p~n", [X, Reason]),
+	    exit(Reason);
+	Res ->
+	    Res
+    end.
+
+
+xnobin(B) when binary(B) ->
+    lists:flatten(io_lib:format("#Bin(~w)", [size(B)]));
+xnobin(L) when list(L) ->
+    lists:map(fun(X) -> xnobin(X) end, L);
+xnobin(T) when tuple(T) ->
+    list_to_tuple(xnobin(tuple_to_list(T)));
+xnobin(X) ->
     X.

@@ -85,3 +85,54 @@
 -record(dcc, {
 	  doclose = true,
 	  chunked = false}).
+
+
+
+
+%% this internal record is used and returned by the URL path parser
+
+-record(urltype, {type,   %% error | yaws | regular | directory | 
+                          %% forbidden | appmod
+		  finfo,
+		  path,
+		  fullpath,
+		  dir,     %% relative dir where the path leads to
+		           %% flat | unflat need flat for authentication
+		  data,    %% Binary | FileDescriptor | DirListing | undefined
+		  mime = "text/html",    %% MIME type
+		  q,       %% query for GET requests
+		  wwwauth = undefined  %% or #auth{}
+		 }).
+
+
+
+
+%% this record is constructed as we build up
+%% the outgoing headers
+
+-record(outh, {
+	  status,        %% int status code
+
+	  doclose,       %% bool
+	  chunked,       %% bool
+	  contlen,       %% integer
+
+
+                         %% and the total set of out headers we can have
+                         %% as actual strings
+	  connection,
+	  server,
+	  location,
+	  cache_control,
+	  date,
+	  allow,
+	  last_modified,
+	  etag,
+	  set_cookie,
+	  content_length,
+	  content_type,
+	  transfer_encoding,
+	  www_authenticate}).
+
+
+	  

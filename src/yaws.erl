@@ -692,3 +692,253 @@ is_prefix(_,_) ->
     false.
 
     
+
+
+
+
+%% out header management
+
+outh_set_status_code(Code) ->
+    put(outh, (get(outh))#outh{status = Code}).
+
+outh_set_non_cacheable(_Version) ->
+    put(outh, (get(outh))#outh{cache_control = "Cache-Control: no-cache\r\n"}).
+
+outh_set_content_type(Mime) ->
+    put(outh, (get(outh))#outh{content_type = 
+			       make_content_type_header(Mime)}).
+
+outh_set_cookie(C) ->
+    put(outh, (get(outh))#outh{set_cookie = ["Set-Cookie: " , C, "\r\n"]}).
+
+
+
+outh_set_static_headers(Req, UT, Headers) ->
+    H = get(outh),
+    {DoClose, Chunked} = dcc(Req, Headers),
+    H2 = H#outh{
+	   status = 200,
+	   chunked = false,
+	   date = make_date_header(),
+	   server = make_server_header(),
+	   last_modified = make_last_modified_header(UT#urltype.finfo),
+	   etag = make_etag_header(UT#urltype.finfo),
+	   content_length = make_content_length_header(UT#urltype.finfo),
+	   content_type = make_content_type_header(UT#urltype.mime),
+	   connection  = make_connection_close_header(DoClose),
+	   doclose = DoClose,
+	   contlen = (UT#urltype.finfo)#file_info.size
+	       },
+    put(outh, H2).
+
+
+outh_set_dyn_headers(Req, Headers) ->
+    H = get(outh),
+    {DoClose, Chunked} = dcc(Req, Headers),
+    H2 = H#outh{
+	   status = 200,
+	   date = make_date_header(),
+	   server = make_server_header(),
+	   connection = make_connection_close_header(DoClose),
+	   doclose = DoClose,
+	   chunked = Chunked,
+	   transfer_encoding = 
+	   make_transfer_encoding_chunked_header(Chunked)},
+    
+    put(outh, H2).
+
+
+outh_set_connection_close(Bool) ->
+    H = get(outh),
+    H2 = H#outh{connection = make_connection_close_header(Bool),
+		doclose = Bool},
+    put(outh, H2).
+
+
+outh_set_dcc(Req, Headers) ->
+    H = get(outh),
+    {DoClose, Chunked} = dcc(Req, Headers),
+    H2 = H#outh{connection = make_connection_close_header(DoClose),
+		doclose = DoClose,
+		chunked = Chunked,
+		transfer_encoding = 
+		make_transfer_encoding_chunked_header(Chunked)},
+    put(outh, H2).
+
+
+
+dcc(Req, Headers) ->
+    DoClose = case Req#http_request.version of
+		  {1, 0} -> 
+		      case Headers#headers.keep_alive of
+			  undefined ->
+			      true;
+			  _ ->
+			      false
+		      end;
+		  {1, 1} ->
+		      false
+	      end,
+    Chunked = case Req#http_request.version of
+		  {1, 0} ->
+		      false;
+		  {1,1} ->
+		      true
+	      end,
+    {DoClose, Chunked}.
+
+
+		  
+
+
+%%
+%% The following all make_ function return an actual header string
+%%
+
+make_allow_header() ->
+    "Allow: GET, POST, PUT, OPTIONS, HEAD\r\n".
+make_server_header() ->
+    ["Server: Yaws/", yaws_vsn:version(), " Yet Another Web Server\r\n"].
+
+
+
+make_last_modified_header(FI) ->
+    N = element(2, now()),
+    Inode = FI#file_info.inode,  %% unix only
+    case get({last_modified, Inode}) of
+	{Str, Secs} when N < (Secs+10) ->
+	    Str;
+	_ ->
+	    S = do_make_last_modified(FI),
+	    put({last_modified, Inode}, {S, N}),
+	    S
+    end.
+
+do_make_last_modified(FI) ->
+    Then = FI#file_info.mtime,
+    ["Last-Modified: ", yaws:local_time_as_gmt_string(Then), "\r\n"].
+
+
+
+make_location_header(Where) ->
+    ["Location: ", Where, "\r\n"].
+
+
+make_etag_header(FI) ->
+    {{_Y,M,D}, {H,Min, S}}  = FI#file_info.mtime,
+    Inode = FI#file_info.inode,
+    ["Etag: ", pack_ints([M, D, H, Min, S, Inode]), "\r\n"].
+
+
+pack_ints(L) ->
+    [$" | pack_ints2(L) ].
+
+
+pack_ints2([0|T]) ->
+    pack_ints2(T);
+pack_ints2([H|T]) ->
+    X = H band 2#11111,
+    Val = X + $A,
+    V2 = if 
+	     Val > $Z, Val < $a ->
+		 Val + ($a-$Z);
+	     true ->
+		 Val
+	 end,
+    [V2 |pack_ints2([H bsr 5|T])];
+pack_ints2([]) ->
+    [$"]. %"
+
+
+make_content_type_header(no_content_type) ->
+    undefined;
+make_content_type_header(MimeType) ->
+    ["Content-Type: ", MimeType, "\r\n"].
+
+
+make_content_length_header(Size) when integer(Size) ->
+    ["Content-Length: ", integer_to_list(Size), "\r\n"];
+make_content_length_header(FI) ->
+    Size = FI#file_info.size,
+    ["Content-Length: ", integer_to_list(Size), "\r\n"].
+
+
+make_connection_close_header(true) ->
+    "Connection: close\r\n";
+make_connection_close_header(false) ->
+    undefined.
+
+
+make_transfer_encoding_chunked_header(true) ->
+    "Transfer-Encoding: chunked\r\n";
+make_transfer_encoding_chunked_header(false) ->
+    undefined.
+
+make_www_authenticate_header(Realm) ->
+    ["WWW-Authenticate: Basic realm=\"", Realm, ["\"\r\n"]].
+
+
+make_date_header() ->
+    N = element(2, now()),
+    Head=case get(date_header) of
+	     {Str, Secs} when (Secs+10) > N ->
+		 H = ["Date: ", yaws:universal_time_as_string(), "\r\n"],
+		 put(date_header, {H, N}),
+		 H;
+	     {Str, Secs} ->
+		 Str;
+	     undefined ->
+		 H = ["Date: ", yaws:universal_time_as_string(), "\r\n"],
+		 put(date_header, {H, N}),
+		 H
+	 end.
+
+
+
+%% access functions into the outh record
+
+outh_get_status_code() ->
+    (get(outh))#outh.status.
+
+outh_get_contlen() ->
+    (get(outh))#outh.contlen.
+
+outh_get_doclose() ->
+    (get(outh))#outh.doclose.
+
+outh_get_chunked() ->
+    (get(outh))#outh.chunked.
+
+
+
+outh_serialize() ->
+    H = get(outh),
+    Code = case H#outh.status of
+	       undefined -> 200;
+	       Int -> Int
+	   end,
+    StatusLine = ["HTTP/1.1 ", integer_to_list(Code), " ",
+		  yaws_api:code_to_phrase(Code), "\r\n"],
+    Headers = [noundef(H#outh.connection),
+	       noundef(H#outh.server),
+	       noundef(H#outh.location),
+	       noundef(H#outh.cache_control),
+	       noundef(H#outh.date),
+	       noundef(H#outh.allow),
+	       noundef(H#outh.last_modified),
+	       noundef(H#outh.etag),
+	       noundef(H#outh.content_length),
+	       noundef(H#outh.content_type),
+	       noundef(H#outh.set_cookie),
+	       noundef(H#outh.transfer_encoding),
+	       noundef(H#outh.www_authenticate)],
+    {StatusLine, Headers}.
+    
+	       
+noundef(undefined) ->
+    [];
+noundef(Str) ->
+    Str.
+
+	
+
