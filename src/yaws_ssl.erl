@@ -67,7 +67,7 @@ recv(CliSock, Num, GC, D) ->
 ssl_get_headers(CliSock, GC) ->
     case recv(CliSock, 1024, GC, []) of
 	{ok, []} ->
-	    exit(normal);
+	    closed;
 	{ok, Data} ->
 	    ?Debug("GOT ssl data ~p~n", [Data]),
 	    {R, Trail} = get_req(Data),
