@@ -450,7 +450,7 @@ coerce_type(string, Str) ->
     lists:reverse(Str);
 coerce_type(checkbox, "no") ->
     on;
-coerce_type(checkbox, Str) ->
+coerce_type(checkbox, _Str) ->
     off;
 coerce_type(ip, _Str) ->
     exit(nyi_ip);
@@ -1043,7 +1043,7 @@ reformat_header(H) ->
 	      if H#headers.authorization == undefined ->
 		      undefined;
 		 true ->
-		      {"Authorization", H#headers.authorization}
+		      {"Authorization", element(3, H#headers.authorization)}
 	      end,
 	      if H#headers.transfer_encoding == undefined ->
 		      undefined;

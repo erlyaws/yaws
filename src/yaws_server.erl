@@ -1037,7 +1037,7 @@ is_auth(Req_dir, H, [{Auth_dir, #auth{realm=Realm, users=Users}} | T ] ) ->
 	    case H#headers.authorization of
 		undefined ->
 		    {false, Realm};
-		{User, Password} ->
+		{User, Password, _OrigString} ->
 		    case lists:member({User, Password}, Users) of
 			true ->
 			    true;
@@ -1925,7 +1925,7 @@ expand_parts([], _,Ack) ->
 
 	    
 
-delim_split_file([], Data, _, Ack) ->
+delim_split_file([], Data, _, _Ack) ->
     [{data, Data}];
 delim_split_file(Del, Data, State, Ack) ->
     case delim_split(Del, Del, Data, []) of

@@ -1577,14 +1577,14 @@ http_get_headers(CliSock, Req, GC, H) ->
 
 
 	
-parse_auth("Basic " ++ Auth64) ->
+parse_auth(Orig = "Basic " ++ Auth64) ->
     case decode_base64(Auth64) of
 	{error, _Err} ->
 	    undefined;
 	Auth ->
 	    case string:tokens(Auth, ":") of
 		[User, Pass] ->
-		    {User, Pass};
+		    {User, Pass, Orig};
 		_ ->
 		    undefined
 	    end
