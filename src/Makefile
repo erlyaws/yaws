@@ -34,6 +34,7 @@ ERLC_FLAGS+=-W +debug_info $(DEBUG_FLAGS) -pa ../../yaws
 #
 
 
+$(EBIN_FILES) : ../include/yaws.hrl ../include/yaws_api.hrl
 
 all: yaws_vsn.erl $(EBIN_FILES) 
 
