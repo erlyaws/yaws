@@ -815,7 +815,7 @@ do_recv(Sock, Num, _TO, ssl) ->
 	undefined ->
 	    split_recv(ssl:recv(Sock, 0), Num);   %% ignore Num val ??? TO ??
 	Bin ->
-	    {ok, Bin}
+	    split_recv({ok, Bin}, Num)
     end.
 
 %% weird ... ssl module doesn't respect Num arg for binary socks
@@ -1385,8 +1385,22 @@ get_client_data(CliSock, Len, GC, SSlBool) ->
     case cli_recv(CliSock, Len, GC, SSlBool) of
 	{ok, B} when size(B) == Len ->
 	    B;
+	{ok, B} when size(B) < Len ->
+	    get_client_data_acc(CliSock, Len-size(B), B, GC, SSlBool);
 	_Other ->
 	    ?Debug("get_client_data: ~p~n", [_Other]),
+	    exit(normal)
+    end.
+
+get_client_data_acc(CliSock, Len, B0, GC, SSlBool) ->
+    case cli_recv(CliSock, Len, GC, SSlBool) of
+	{ok, B} when size(B) == Len ->
+	    <<B0/binary,B/binary>>;
+	{ok, B} when size(B) < Len ->
+	    get_client_data_acc(CliSock, Len-size(B), 
+			    <<B0/binary,B/binary>>, GC, SSlBool);
+	_Other ->
+	    ?Debug("get_client_data_acc: ~p~n", [_Other]),
 	    exit(normal)
     end.
 
