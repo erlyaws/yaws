@@ -525,7 +525,7 @@ is_space($\r) ->
     true;
 is_space($\n) ->
     true;
-is_space($\r) ->
+is_space($\t) ->
     true;
 is_space(_) ->
     false.
