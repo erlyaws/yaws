@@ -81,14 +81,14 @@ parse_query(Arg) ->
 	'GET' ->
 	    if
 		D == [] ->
-		    yawslog:errlog("Tried to parse_query with "
+		    yaws_log:errlog("Tried to parse_query with "
 				   "no query data ",[]),
 		    [];
 		true ->
 		    parse_post_data_urlencoded(D)
 	    end;
 	Other ->
-	    yawslogg:errlog("Can't parse url query if we get a ~p",[Other]),
+	    yaws_log:errlog("Can't parse url query if we get a ~p",[Other]),
 	    []
     end.
 
@@ -100,14 +100,14 @@ parse_post(Arg) ->
 	'POST' ->
 	    if
 		D == [] ->
-		    yawslog:errlog("Tried to parse_post with "
+		    yaws_log:errlog("Tried to parse_post with "
 				   "no POST data ",[]),
 		    [];
 		true ->
 		    parse_post_data_urlencoded(D)
 	    end;
 	Other ->
-	    yawslogg:errlog("Can't parse post body if get a ~p",[Other]),
+	    yaws_log:errlog("Can't parse post body if get a ~p",[Other]),
 	    []
     end.
 
@@ -177,7 +177,7 @@ parse_multipart_post(Arg) ->
 	'POST' ->
 	    case CT of
 		undefined ->
-		    yawslog:errlog("Can't parse multipart if we "
+		    yaws_log:errlog("Can't parse multipart if we "
 				   "have no Content-Type header",[]),
 		    [];
 		"multipart/form-data"++Line ->
@@ -195,12 +195,12 @@ parse_multipart_post(Arg) ->
 			      Boundary)
 		    end;
 		Other ->
-		    yawslog:errlog("Can't parse multipart if we "
+		    yaws_log:errlog("Can't parse multipart if we "
 				   "find no multipart/form-data",[]),
 		    []
 	    end;
 	Other ->
-	    yawslogg:errlog("Can't parse multipart if get a ~p",[Other]),
+	    yaws_log:errlog("Can't parse multipart if get a ~p",[Other]),
 	    []
     end.
 
