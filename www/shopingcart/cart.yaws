@@ -30,7 +30,7 @@ setcookie(A) ->
     yaws_api:setcookie("cart", integer_to_list(Num), "/").
 
 
-some_headers(A) ->
+out(A) ->
     ensure_cart_server(),
     H = A#arg.headers,
     C = H#headers.cookie,
@@ -57,7 +57,7 @@ some_headers(A) ->
 <title Cart </title>
 </head>
 
-<IMG SRC="/shopcart/junk.jpg" WIDTH="400" ALT="cart">
+<IMG SRC="/shopingcart/junk.jpg" WIDTH="400" ALT="cart">
 
 <h1> Shopcart example </h1>
 

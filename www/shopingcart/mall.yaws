@@ -1,8 +1,11 @@
-<IMG SRC="/shopcart/junk.jpg" WIDTH="400" ALT="cart">
+<IMG SRC="/shopingcart/junk.jpg" WIDTH="400" ALT="cart">
 
 <h1> The Mall </h1>
 
 <erl>
+
+
+
 out(A) ->
     H = A#arg.headers,
     C = H#headers.cookie,

@@ -880,6 +880,7 @@ deliver_403(CliSock, _Req, GC, SC) ->
     make_connection_close(true),
     make_content_length(size(B)),
     make_content_type(),
+    accumulate_content(B),
     deliver_accumulated(#dcc{}, CliSock, GC, SC),
     done.
 
@@ -892,6 +893,7 @@ deliver_404(CliSock, GC, SC,  Req, SC) ->
     make_connection_close(true),
     make_content_length(size(B)),
     make_content_type(),
+    accumulate_content(B),
     deliver_accumulated(#dcc{}, CliSock, GC, SC),
     done.
 

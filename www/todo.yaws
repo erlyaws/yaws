@@ -13,20 +13,17 @@ out(A) ->
 
 <li> clusters 
 <li> handle the If-..... headers 
-<li> generate Etag for static content
 <li> handle Range header
 <li> TRACE, PUT, OPTIONS ......
-<li> optimize with some precalculated headers
-<li> documentation in the www directory
-<li> more functions in yaws_api   redirect(), push() ....
+<li> more documentation in the www directory
+<li> more functions in yaws_api  push() ....
 <li> lots of examples
 <li> maybe do .htaccess
 <li> do something cool, maybe a streaming audio app
 <li> shell access into the daemon .... no bad idea
 <li> authenticated pages
 <li> HTTP trailer support
-<li> man pages for yaws as well as yaws.conf
-<li> make sure yaws vsn gets inserted correctly in http output
+<li> <erl> substitution in ssi pages as well as regular pages
 </ul>
 
 

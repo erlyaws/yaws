@@ -41,7 +41,7 @@ debug:
 	$(MAKE) TYPE=debug
 
 clean:
-	rm -f $(EBIN_FILES) 
+	rm -f $(EBIN_FILES) yaws_vsn.erl
 
 install: all
 	install -d $(INSTALLPREFIX)/lib/yaws/examples/ebin

@@ -9,7 +9,7 @@
     <td> <A HREF="redirect.yaws">Redirect</a> </td>
     <td> <A HREF="cookies.yaws">Cookies</a> </td>
     <td> <A HREF="pcookie.yaws">Persistant Cookies</a> </td>
-    <td> <A HREF="shopcart/cart.yaws">Tiny shoping cart</a> </td>
+    <td> <A HREF="shopingcart/cart.yaws">Tiny shoping cart</a> </td>
 </tr>
 </table>
 <hr>
