@@ -16,6 +16,7 @@ out(A) ->
 <tr><td>    </td></tr>
 
 
+<tr><td> Hun 17, fixed yet another chunked encoding bug   </td></tr>
 <tr><td> Jun 16, wrote a proper /etc/init.d start/stop/reload/status script, new flag cmdline -S which query the daemon status   </td></tr>
 
 

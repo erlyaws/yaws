@@ -521,17 +521,20 @@ pick_host(_Host, [], Group) ->
     pick_default(Group).
 
 
+inet_peername(Sock, SC) ->
+    case SC#sconf.ssl of
+	undefined ->
+	    inet:peername(Sock);
+	_SSL ->
+	    ssl:peername(Sock)
+    end.
+	    
+
 maybe_access_log(CliSock, SC, Req) ->
     ?TC([{record, SC, sconf}]),
     case SC#sconf.access_log of
 	true ->
-	    {ok, {Ip, _Port}} = case SC#sconf.ssl of
-				   undefined ->
-				       inet:peername(CliSock);
-				   _SSL ->
-				       ssl:peername(CliSock)
-			       end,
-	    
+	    {ok, {Ip, _Port}} = inet_peername(CliSock, SC),
 	    Status = case erase(status_code) of
 			 undefined -> "-";
 			 I -> integer_to_list(I)
@@ -1058,7 +1061,8 @@ accumulate_chunk(DCC, Data) ->
 	DCC#dcc.chunked == true ->
 	    B = to_binary(Data),
 	    Len = size(B),
-	    Data2 = [crnl(), yaws:integer_to_hex(Len) , crnl(), B], 
+	    CRNL = crnl(),
+	    Data2 = [CRNL, yaws:integer_to_hex(Len) , crnl(), B], 
 	    accumulate_content(Data2)
     end.
 
@@ -1133,6 +1137,7 @@ deliver_accumulated(DCC, Sock, GC, SC) ->
 		   crnl()
 	   end,
     All = [StatusLine, Headers, CRNL, Cont],
+    io:format("ALL: ~p~n", [All]),
     gen_tcp_send(Sock, All, SC, GC),
     if
 	GC#gconf.trace == false ->

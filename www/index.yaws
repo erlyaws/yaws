@@ -54,6 +54,9 @@ powered by Yaws.
 <div class="box"> 
 
 <ul>
+<li> Jun 16, version 0.50 released. A bug in setcookie fixed, a proper
+/etc/rc/init.t script written. New flag, yaws -S which query status of
+the daemon. bug in cache reload fixed.
 
 <li> Jun 13, version 0.48 released. It contains a complete rewrite
 of the API to generate dynamic content which makes it much easier 

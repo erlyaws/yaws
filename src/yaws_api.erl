@@ -235,10 +235,10 @@ secs() ->
 
 
 setcookie(Name, Value) ->
-    {header, f("Set-Cookie: ~s=~s;\r\n", [Name, Value])}.
+    {header, f("Set-Cookie: ~s=~s;", [Name, Value])}.
 
 setcookie(Name, Value, Path) ->
-     {header, f("Set-Cookie: ~s=~s; path=~s\r\n", [Name, Value, Path])}.
+     {header, f("Set-Cookie: ~s=~s; path=~s", [Name, Value, Path])}.
 
 setcookie(Name, Value, Path, Expire) ->
     setcookie(Name, Value, Path,  Expire, [], []).

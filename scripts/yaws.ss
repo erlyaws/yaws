@@ -38,6 +38,7 @@ do
       case $arg in
 	   -i)
                 interactive="true";
+		debug=" -yaws debug ";
 		daemon="";;
            -D)
     	        daemon=" -detached ";;
