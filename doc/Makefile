@@ -6,9 +6,11 @@ all debug:	yaws.ps yaws.pdf
 
 yaws.ps:	yaws.dvi
 	-dvips -o yaws.ps yaws.dvi
+	-cp yaws.ps ../www
 
 yaws.pdf:	yaws.dvi
 	-dvipdf yaws.dvi
+	cp yaws.pdf ../www
 
 yaws.dvi:	yaws.tex
 	-latex yaws.tex
