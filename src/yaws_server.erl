@@ -956,7 +956,7 @@ do_yaws(CliSock, GC, SC, Req, H, ARG, UT) ->
 
 del_old_files([]) ->
     ok;
-del_old_files([{_FileAtom, _Mtime1, Spec}]) ->
+del_old_files([{_FileAtom, spec, _Mtime1, Spec}]) ->
     lists:foreach(
       fun({mod, _, _, _,  Mod, _Func}) ->
 	      F="/tmp/yaws/" ++ yaws:to_list(Mod) ++ ".erl",
@@ -1137,6 +1137,7 @@ handle_out_reply({html, Html}, DCC, _LineNo, _YawsFile) ->
 
 handle_out_reply({content, MimeType, Cont}, DCC, _LineNo, _YawsFile) ->
     put(content_type, MimeType),
+    io:format("Content-Type ~p\n", [MimeType]),
     accumulate_chunk(DCC, Cont);
 
 handle_out_reply({header, H}, _DCC, _LineNo, _YawsFile) ->
