@@ -29,7 +29,7 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <div class="%%configuration%%"> <a href="configuration.yaws" id="configuration">Build Config and Run</a></div>
 <div class="%%dynamic%%"> <a href="dynamic.yaws" id="dynamic" >Dynamic content</a> </div>
 <div class="%%contribs%%"> <a href="contribs.yaws" id="contribs">Contribs/Apps</a> </div>
-<div class="%%download%%"> <a href="download" id="download">Download </a> </div>
+<div class="%%download%%"> <a href="http://yaws.hyber.org/download/" id="download">Download </a> </div>
 <div class="%%contact%%"> <a href="contact.yaws" id="contact">Contact </a> </div>
 <div class="%%doc%%"> <a href="doc.yaws" id="doc">Documentation</a>  </div>
 <h4> Examples </h4>
