@@ -500,6 +500,7 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == nossl ->
 	    ?Debug("Sconf: ~p", [?format_record(Sconf, sconf)]),
 	    ?TC([{record, Sconf, sconf}]),
 	    ?Debug("Headers = ~p~n", [?format_record(H, headers)]),
+	    ?Debug("Request = ~p~n", [?format_record(Req, http_request)]),
 	    Res = apply(yaws_server, Req#http_request.method, 
 			[CliSock, GS#gs.gconf, Sconf, Req, H]),
 	    maybe_access_log(CliSock, Sconf, Req),
@@ -551,7 +552,6 @@ pick_host(GC, Host, [], Group) ->
     yaws_debug:derror(GC, "Got Host: header ~p which didn't match any host "
 		      "field in config, picking the first one ",[Host]),
     hd(Group).
-
 
 inet_peername(Sock, SC) ->
     case SC#sconf.ssl of
@@ -638,25 +638,20 @@ cli_recv(S, Num, GC, SslBool) ->
 
 
 
-
-
 gen_tcp_send(S, Data, SC, GC) ->
     Res = case SC#sconf.ssl of
-	undefined ->
-	    gen_tcp:send(S, Data);
-	_SSL ->
-	    ssl:send(S, Data)
-    end,
+	      undefined ->
+		  gen_tcp:send(S, Data);
+	      _SSL ->
+		  ssl:send(S, Data)
+	  end,
     case Res of
 	ok ->
 	    ok;
 	Err ->
 	    yaws_debug:derror(GC, "Failed to send ~p on socket ~p: ~p~n",
 			      [Data, S, Err])
-	    
     end.
-    
-
 
 
 http_get_headers(CliSock, GC) ->
@@ -794,6 +789,14 @@ un_partial(Bin) ->
 
 'TRACE'(_CliSock, _GC, _SC, _Req, _Head) ->
     nyi.
+
+'OPTIONS'(CliSock, GC, SC, Req, Head) ->
+    ?Debug("OPTIONS", []),
+    ok = inet_setopts(SC, CliSock, [{packet, raw}, binary]),
+    flush(SC, CliSock, Head#headers.content_length),
+    ARG = make_arg(CliSock, Head, Req, GC, SC),
+    ?Debug("OPTIONS delivering", []),
+    deliver_options(CliSock, Req, GC, SC).
 
 make_arg(CliSock, Head, Req, _GC, SC) ->
     ?TC([{record, _GC, gconf}, {record, SC, sconf}]),
@@ -939,6 +942,17 @@ servername_sans_port(Servername) ->
 	N ->
 	    lists:sublist(Servername, N-1)
     end.
+
+deliver_options(CliSock, _Req, GC, SC) ->
+    set_status_code(200),
+    make_date_and_server_headers(),
+    make_allow_header(),
+    B = list_to_binary(""),
+    make_content_length(size(B)),
+    accumulate_content(B),
+    make_content_type(),
+    deliver_accumulated(#dcc{}, CliSock, GC, SC),
+    continue.
 
 deliver_401(CliSock, _Req, GC, Realm, SC) ->
     set_status_code(401),
@@ -1399,9 +1413,13 @@ do_tcp_close(Sock, SC) ->
 
 
 ut_open(UT) ->
+    ?Debug("ut_open() UT.fullpath = ~p~n", [UT#urltype.fullpath]),
     case UT#urltype.data of
 	undefined ->
+	    
+	    ?Debug("ut_open reading\n",[]),
 	    {ok, Bin} = file:read_file(UT#urltype.fullpath),
+	    ?Debug("ut_open read ~p\n",[size(Bin)]),
 	    {bin, Bin};
 	B when binary(B) ->
 	    {bin, B}
@@ -1524,6 +1542,9 @@ make_date_header() ->
     end,
     accumulate_header(Head).
 
+
+make_allow_header() ->
+    accumulate_header(["Allow: GET, POST, PUT, OPTIONS, HEAD"]).
 
 make_server_header() ->
     accumulate_header(["Server: Yaws/", yaws_vsn:version(), 
@@ -1890,6 +1911,8 @@ tcp_flush(_Sock, undefined) ->
     ok;
 tcp_flush(_Sock, 0) ->
     ok;
+tcp_flush(Sock, Sz) when list(Sz) ->
+    tcp_flush(Sock, list_to_integer(Sz));
 tcp_flush(Sock, Sz) ->
     gen_tcp:recv(Sock, Sz, 1000).
 
