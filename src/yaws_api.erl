@@ -688,20 +688,20 @@ url_decode([]) ->
 
 url_encode([H|T]) ->
     if
-	H =< $a, $z =< H ->
-	    [H|url_decode(T)];
-	H =< $A, $Z =< H ->
-	    [H|url_decode(T)];
-	H =< $1, $9 =< H ->
-	    [H|url_decode(T)];
-	H == $_ ->
-	    [H|url_decode(T)];
+	H >= $a, $z =< H ->
+	    [H|url_encode(T)];
+	H >= $A, $Z =< H ->
+	    [H|url_encode(T)];
+	H >= $0, $9 =< H ->
+	    [H|url_encode(T)];
+	H == $_; H == $.; H == $-; H == $/; H == $: -> % FIXME: more..
+	    [H|url_encode(T)];
 	true ->
 	    case yaws:integer_to_hex(H) of
 		[X, Y] ->
-		    [$%, X, Y | url_decode(T)];
+		    [$%, X, Y | url_encode(T)];
 		[X] ->
-		    [$%, 0, X | url_decode(T)]
+		    [$%, 0, X | url_encode(T)]
 	    end
     end;
 
