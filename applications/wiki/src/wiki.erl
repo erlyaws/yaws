@@ -1554,7 +1554,7 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
-	    {wik002, Pwd,_Email,_Time,_Who,TxtStr,Files,_Patches} =
+	    {wik002, Pwd,_Email,Time,_Who,TxtStr,Files,_Patches} =
 		bin_to_wik002(Bin),
 	    case get_img(Index, Direction, lists:keysort(2,Files)) of
 		false ->
@@ -1610,9 +1610,12 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
 			["<a href='showPage.yaws?node=",
 			 str2urlencoded(Page),
 			 "'>",F1,"</a>\n"],
+		    Locked = Pwd /= "",
 		    Link = 
-			template2(Root, Page, TopHeader,
-				  [DeepStr, Auto], false)
+			wiki_templates:template(Page, Root,
+						[DeepStr, Auto],
+						utils:time_to_string(Time),
+						Locked)
 	    end;
 	_ ->
 	    show({no_such_page,Page}, Root)
@@ -1623,7 +1626,7 @@ thumbIndex(Params, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
-	    {wik002, Pwd,_Email,_Time,_Who,TxtStr,Files,_Patches} =
+	    {wik002, Pwd,_Email,Time,_Who,TxtStr,Files,_Patches} =
 		bin_to_wik002(Bin),
 	    {NumFiles,_} = lists:mapfoldl(
 			     fun(F,N) -> {{element(2,F),N}, N+1} end,
@@ -1638,8 +1641,11 @@ thumbIndex(Params, Root, Prefix) ->
 	    TopHeader = 
 		["<a href='showPage.yaws?node=",Node,"'>",
 		 F1,"</a>\n"],
+	    Locked = Pwd /= "",
 	    Link = 
-		template2(Root, Page, TopHeader, DeepStr, false);
+		wiki_templates:template(Page, Root, DeepStr,
+					utils:time_to_string(Time),
+					Locked);
 	_ ->
 	    show({no_such_page,Page}, Root)
     end.
