@@ -269,7 +269,7 @@ terminate(_Reason, _State) ->
 %% specified as an auth directory
 
 setup_auth(_SC, _E) ->
-    ok.
+    ok. %nyi
 
 
 do_listen(SC) ->
@@ -481,7 +481,7 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == nossl ->
 	done ->
 	    {ok, Num};
 	{Req, H} ->
-	    Sconf = pick_sconf(H, GS#gs.group),
+	    Sconf = pick_sconf(GS#gs.gconf, H, GS#gs.group),
 	    ?Debug("Sconf: ~p", [?format_record(Sconf, sconf)]),
 	    ?TC([{record, Sconf, sconf}]),
 	    ?Debug("Headers = ~p~n", [?format_record(H, headers)]),
@@ -519,29 +519,23 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == ssl ->
 
 
 
-pick_sconf(H, Group) ->
+pick_sconf(GS, H, Group) ->
     case H#headers.host of
 	undefined ->
-	    pick_default(Group);
+	    hd(Group);
 	Host ->
-	    pick_host(Host, Group, Group)
+	    pick_host(GS, Host, Group, Group)
     end.
 
-pick_default([]) ->
-    yaws_log:errlog("No default host found in server group ",[]),
-    exit(normal);
-pick_default([H|_T]) when H#sconf.default_server_on_this_ip == true ->
-    H;
-pick_default([_|T]) ->
-    pick_default(T).
 
-
-pick_host(Host, [H|_T], _Group) when H#sconf.servername == Host ->
+pick_host(_GC, Host, [H|_T], _Group) when H#sconf.servername == Host ->
     H;
-pick_host(Host, [_|T], Group) ->
-    pick_host(Host, T, Group);
-pick_host(_Host, [], Group) ->
-    pick_default(Group).
+pick_host(GC, Host, [_|T], Group) ->
+    pick_host(GC, Host, T, Group);
+pick_host(GC, Host, [], Group) ->
+    yaws_debug:derror(GC, "Got Host: header ~p which didn't match any host "
+		      "filed in config, picking the first one ",[Host]),
+    hd(Group).
 
 
 inet_peername(Sock, SC) ->
@@ -1170,6 +1164,43 @@ handle_out_reply(Reply, DCC, LineNo, YawsFile) ->
 
 			  
 
+check_headers(L) ->
+    Hs = string:tokens(lists:flatten(L), "\r\n"),
+    io:format("XX ~p~n", [Hs]),
+    lists:foreach(
+      fun(H) ->
+	  case lists:reverse(H) of
+	      [_,_,$\r|_] ->
+		  yaws_log:errlog("Bad header ~p, it contains"
+					      " '\\r' or '\\n' at end ", 
+					      [lists:flatten(H)]),
+		  exit(normal);
+	      [_,_,$\n|_] ->
+		  yaws_log:errlog("Bad header ~p, it contains"
+					      " '\\r' or '\\n' at end ", 
+					      [lists:flatten(H)]),
+		  exit(normal);
+	      _ ->
+		  ok
+	  end
+      end, Hs).
+
+
+check_headers([$\r, $\n |Tail], Last) when Tail /= [] ->
+    case lists:member(hd(Tail), [$\r, $\n]) of
+	true ->
+	     yaws_log:errlog("Bad header ~p, it contains"
+			     " '\\r' or '\\n' at end ", [lists:reverse(Last)]),
+	    exit(normal);
+	_ ->
+	    check_headers(Tail, [])
+    end;
+
+check_headers([H|T], Last) ->
+    check_headers(T, [H|Last]);
+check_headers([], _) ->
+    ok.
+
 
 deliver_accumulated(DCC, Sock, GC, SC) ->
     Code = case get(status_code) of
@@ -1179,6 +1210,14 @@ deliver_accumulated(DCC, Sock, GC, SC) ->
     StatusLine = ["HTTP/1.1 ", integer_to_list(Code), " ",
 		  yaws_api:code_to_phrase(Code), crnl()],
     Headers = erase(acc_headers),
+
+    if
+	GC#gconf.debug == true ->
+	    check_headers(lists:flatten(Headers), []);
+	true ->
+	    ok
+    end,
+
     Cont = case erase(acc_content) of
 	       undefined ->
 		   [];

@@ -18,7 +18,18 @@ out(A) ->
 <tr><td> <p>Jun 18, return status 303 when browser asks for a dir URL
 without a trailing / in the http request. I've always wondered why apache
 does this. Now I know ... otherwise the relative URLs in /dir/index.html
-will be wrong when the browser tries to get them.   </td></tr>
+will be wrong when the browser tries to get them.   Utilize this feature
+when listing dirs now, generate relative urls instead of absolute.
+
+
+<p>Removed the default_server_on_this_ip option, the first virthosted server 
+in the config will be default if no Host: header is present
+<p> Made the Host: check to check for Host: host:port instead of just host
+when a server is run on a non-standar port. The browsers seem to
+set the Host: filed to host:port then Dunno if this is HTTP compliant ...
+
+
+</td></tr>
 
 
 <tr><td> <p>Jun 17, fixed yet another chunked encoding bug   </td></tr>

@@ -72,12 +72,9 @@ exists(F) ->
 
 
 validate_cs(GC, Cs) ->
-    ?Debug("Cs ~p~n", [Cs]),
     L = lists:map(fun(SC) -> {{SC#sconf.listen, SC#sconf.port}, SC} end,Cs),
     L2 = lists:map(fun(X) -> element(2, X) end, lists:sort(L)),
-    ?Debug("L2 ~p~n", [L2]),
     L3 = arrange(L2, start, [], []),
-    ?Debug("Arrange: ~p", [L3]),
     case validate_groups(L3) of
 	ok ->
 	    {ok, GC, L3};
@@ -101,7 +98,7 @@ validate_group(List) ->
     io:format("List = ~p~n", [List]),
 
     case lists:filter(fun(C) ->
-			      C#sconf.ssl == on
+			      C#sconf.ssl /= undefined 
 		      end, List) of
 	L when length(L) > 1 ->
 	    throw({error, ?F("Max one ssl server per IP: ~p", 
@@ -109,23 +106,11 @@ validate_group(List) ->
 	_ ->
 	    ok
     end,
-
-    %% if we have multiple servers on the same IP, one must be default
-    case lists:filter(fun(C) ->
-			      C#sconf.default_server_on_this_ip
-		      end, List) of  
-	L2 when length(List) /= 1, length(L2) > 1 ->
-	    throw({error, ?F("Need exactly ONE server which is "
-			     "default_server_on_this_ip in server group "
-			     "containing ~p", [(hd(List))#sconf.servername])});
-	_ ->
-	    ok
-    end,
     ok.
     
 
 arrange([C|Tail], start, [], B) ->
-    arrange(Tail, {in, C}, [C], B);
+    arrange(Tail, {in, C}, [set_server(C)], B);
 arrange([], _, [], B) ->
     B;
 arrange([], _, A, B) ->
@@ -134,11 +119,38 @@ arrange([C1|Tail], {in, C0}, A, B) ->
     if
 	C1#sconf.listen == C0#sconf.listen,
 	C1#sconf.port == C0#sconf.port ->
-	    arrange(Tail, {in, C0}, [C1|A], B);
+	    arrange(Tail, {in, C0}, [set_server(C1)|A], B);
 	true ->
-	    arrange(Tail, {in, C1}, [C1], [A|B])
+	    arrange(Tail, {in, C1}, [set_server(C1)], [A|B])
     end.
 
+
+set_server(C) ->
+    case {C#sconf.ssl, C#sconf.port} of
+	{undefined, 80} ->
+	    C;
+	{undefined, Port} ->
+	    add_port(C, Port);
+	{_SSL, 443} ->
+	    C;
+	{_SSL, Port} ->
+	    add_port(C, Port)
+    end.
+
+
+add_port(C, Port) ->
+    case string:tokens(C#sconf.servername, ":") of
+	[Srv, Prt] ->
+	    case (catch list_to_integer(Prt)) of
+		{'EXIT', _} ->
+		    C#sconf{servername = 
+			    Srv ++ [$:|integer_to_list(Port)]};
+		_Int ->
+		    C
+	    end;
+	[Srv] ->
+	  C#sconf{servername =   Srv ++ [$:|integer_to_list(Port)]}
+    end.
 
 
 make_default_gconf() ->
@@ -323,14 +335,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    end;
 
 	["default_server_on_this_ip", '=', Bool] ->
-	    case is_bool(Bool) of
-		{true, Val} ->
-		    C2 = C#sconf{default_server_on_this_ip = Val},
-		    fload(FD, server, GC, C2, Cs, Lno, Next);
-		false ->
-		    {error, ?F("Expect true|false at line ~w", [Lno])}
-	    end;
-
+	    fload(FD, server, GC, C, Cs, Lno, Next);
 
 	%% A bunch of ssl options
 

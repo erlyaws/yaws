@@ -74,14 +74,12 @@ This makes the server listen on Port
 .TP
 \fB listen = IpAddress\fR
 This makes the server listen on IpAddress
+When virthosting several servers on the same ip/port address, if the
+browser doesn't sebd a Host: field, yaws will pick the \fIfirst\fR
+server specified in the config file
 .TP
 \fB docroot = Directory\fR
 This makes the server serve all its content from Directory
-.TP
-\fB default_server_on_this_ip = true | false\fR
-When virthosting several servers on the same ip address, this option
-is mandatory. When client requests arrive at the ip address whithout the 
-HTTP Host: header present, we must know which server is the default.
 .TP
 \fB ssl = true \fR
 This enables ssl for this server

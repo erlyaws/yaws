@@ -75,7 +75,7 @@ file_entry({ok, FI}, DirName, Name) ->
     Entry = ?F("<img SRC=~p  ALT=~p> <a HREF=~p>~s</a> ~s~s          ~s~n",
 	       ["/icons/" ++ Gif,
 		Alt,
-		DirName ++ [$/|Name], 
+		Name, 
 		Trim,
 		lists:duplicate(20 - length(Trim), $\s),
 		datestr(FI), 

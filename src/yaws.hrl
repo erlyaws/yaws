@@ -48,7 +48,6 @@
 	 access_log = true,
 	 listen = {127,0,0,1},
 	 servername = "localhost",
-	 default_server_on_this_ip = true,
 	 ets,
 	 ssl,
 	 authdirs = []
