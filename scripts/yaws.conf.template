@@ -41,6 +41,12 @@ trace = false
 # runmod = mymodule
 
 
+# By default yaws will copy the erlang error_log and
+# end write it to a wrap log called report.log (in the logdir)
+# this feature can be turned off. This would typically
+# be the case when yaws runs within another larger app
+
+copy_error_log = true
 
 
 # If yaws is started as root, it can, once it has opened
@@ -60,7 +66,7 @@ auth_log = true
 # host, we need to give each yaws system an individual
 # name. Yaws will write a number of runtime files under
 # /tmp/yaws/${id}
-# 
+# The default value is "default"
 
 
 # id = myname

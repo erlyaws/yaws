@@ -116,13 +116,15 @@ get_app_args() ->
 		 {ok,Mod} ->
 		     {ok,Mod}
 	     end,
-    Embed = case application:get_env(yaws, embedded) of
-		undefined ->
-		    false;
-		{ok, Val0} ->
-		    Val0
-	    end,
-    {Debug, Trace, TraceOutput, Conf, RunMod, Embed}.
+    {Debug, Trace, TraceOutput, Conf, RunMod}.
+
+get_app_args_embedded() ->
+    case application:get_env(yaws, embedded) of
+	undefined ->
+	    false;
+	{ok, Val0} ->
+	    Val0
+    end.
 
 find_c([{conf, [File]} |_]) ->
     {file, File};
@@ -154,8 +156,8 @@ l2a(A) when atom(A) -> A.
 init([]) ->
     process_flag(trap_exit, true),
     put(start_time, calendar:local_time()),  %% for uptime
-    {Debug, Trace, TraceOut, Conf, RunMod, Embed} = get_app_args(),
-    case Embed of 
+    {Debug, Trace, TraceOut, Conf, RunMod} = get_app_args(),
+    case get_app_args_embedded() of 
 	false ->
 	    Config = yaws_config:load(Conf, Trace, TraceOut, Debug),
 	    ?Debug("Config= ~p~n", [Config]),
@@ -187,7 +189,9 @@ init([]) ->
 		    end
 	    end;
 	true ->
-	    init2(yaws_config:make_default_gconf(Debug), [], undef, true)
+	    {ok, #state{gc = undefined,
+			pairs = [],
+			mnum = 0}}
     end.
 
 
@@ -202,8 +206,16 @@ init2(GC, Sconfs, RunMod, FirstTime) ->
 		      "Running with debug checks turned on (slower server) ~n"
 		      "Logging to directory ~p~n",
 		      [GC#gconf.id, GC#gconf.logdir]),
+
     setup_dirs(GC),
-    yaws_ctl:start(GC, FirstTime),
+
+    case get_app_args_embedded() of
+	false ->
+	    yaws_ctl:start(GC, FirstTime);
+        true -> 
+	    ok
+    end,
+
     runmod(RunMod, GC),
 
     %% start the individual gserv server processes
