@@ -1045,10 +1045,16 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
 	if
 	    DoClose0 == true ->
 		true;
+	    ((Length == undefined) and not Chunked) ->
+						% We cannot keep the
+						% connection alive,
+						% because the client
+						% has no way of
+						% knowing the end of
+						% the content data.
+		true;
 	    DoClose0 == keep_alive ->
 		keep_alive;
-	    ((Length == undefined) and not Chunked) ->
-		true;
 	    true ->
 		DoClose0
 	end,
