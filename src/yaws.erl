@@ -883,10 +883,33 @@ make_etag_header(FI) ->
     ["Etag: ", ETag, "\r\n"].
 
 make_etag(FI) ->
-    {{_Y,M,D}, {H,Min, S}}  = FI#file_info.mtime,
+    {{Y,M,D}, {H,Min, S}}  = FI#file_info.mtime,
     Inode = FI#file_info.inode,
-    pack_ints([M, D, H, Min, S, Inode]).
+    %% pack_ints([M, D, H, Min, S, Inode]).
+    pack_bin( <<0:6,(Y band 2#11111111):8,M:4,D:5,H:5,Min:6,S:6,Inode:32>> ).
 
+pack_bin(<<_:6,A:6,B:6,C:6,D:6,E:6,F:6,G:6,H:6,I:6,J:6,K:6>>) ->
+    [$",
+     pc(A),pc(B),pc(C),pc(D),pc(E),pc(F),pc(G),pc(H),pc(I),pc(J),pc(K),
+     $"].
+
+%% Like Base64 for no particular reason.
+pc(X) when X >= 0, X < 26 -> 
+    X + $A;
+pc(X) when X >= 26, X < 52 -> 
+    X - 26 + $a;
+pc(X) when X >= 52, X < 62 ->
+    X - 52 + $0;
+pc(62) ->
+    $+;
+pc(63) ->
+    $/.
+
+%% This function seems not to be injective. 
+%% If the original author agrees to change it to the above,
+%% please remove.
+%%
+%% cschultz
 pack_ints(L) ->
     [$" | pack_ints2(L) ].
 
