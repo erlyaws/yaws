@@ -8,6 +8,7 @@ install:	all
 
 clean:
 	$(RM) shopcart.beam
+	$(RM) ../../examples/ebin/shopcart.beam
 
 shopcart.beam:	shopcart.erl
 	erlc shopcart.erl
