@@ -637,6 +637,7 @@ acceptor0(GS, Top) ->
 		    %% hopeless cracker request
 		    %% don't crash log
 		    exit(normal);
+		    %% Should we send 400 instead?
 		{'EXIT', Reason} ->
 		    error_logger:error_msg("Yaws process died: ~p~n", [Reason]),
 		    exit(normal)
