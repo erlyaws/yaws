@@ -1,4 +1,4 @@
-SUBDIRS	=	src scripts man www/shopingcart doc
+SUBDIRS	=	c_src src scripts man www/shopingcart doc
 APPS = webmail
 include ./include.mk
 

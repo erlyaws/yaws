@@ -23,7 +23,7 @@ ctl_file(Id) ->
     io_lib:format("/tmp/yaws.ctl.~s",[Id]).
 
 
-start(_Top, Id) ->
+start(Top, Id) ->
     case gen_tcp:listen(0, [{packet, 2},
 			    {active, false},
 			    binary,
@@ -37,13 +37,17 @@ start(_Top, Id) ->
 		    {ok, FI} = file:read_file_info(F),
 		    M = FI#file_info.mode,
 		    M2 = M bor (8#00222),
-		    file:write_file_info(F, FI#file_info{mode = M2}), %% ign ret
+		    file:write_file_info(F, FI#file_info{mode = M2}), %%ign ret
+		    Top ! {self(), ok},
 		    aloop(L);
-		_Err ->
-		    error_logger:format("Cannot get sockname for ctlsock",[])
+		Err ->
+		    error_logger:format("Cannot get sockname for ctlsock",[]),
+		    Top ! {self(), {error, Err}}
 	    end;
-	_Err ->
-	    error_logger:format("Cannot listen on ctl socket ",[])
+	Err ->
+	    error_logger:format("Cannot listen on ctl socket ",[]),
+	    Top ! {self(), {error, Err}}
+
     end.
 
 

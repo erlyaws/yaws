@@ -323,6 +323,9 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		     {error, ?F("Expect 0 or positive integer at line ~w", [Lno])}
 	     end;
 
+	["username", '=' , Uname] ->
+	    fload(FD, globals, GC#gconf{username = Uname},
+		  C, Cs, Lno+1, Next);
 
 	['<', "server", Server, '>'] ->  %% first server 
 	    fload(FD, server, GC, #sconf{servername = Server},

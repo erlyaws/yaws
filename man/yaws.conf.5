@@ -62,6 +62,18 @@ to the yaws start script, this value is automatically set to 0.
 \fB trace  = traffic | http\fR
 This enables traffic or http tracing. Tracing is also possible to enable with
 a command line flag to yaws.
+
+
+
+.TP
+\fB username = Username \fR
+When running a Yaws server in production, it may feel safe
+to run yaws as a different user than root. Set this value to a 
+non priviliged username on the system, such as "nobody".
+Yaws will initially have to run a root in order to properly
+listen to priviliged ports 
+
+
 .SH SERVER PART
 Yaws can virthost several webservers on the same ip address as well
 as several webservers on different ip addresses. The on limitation here is

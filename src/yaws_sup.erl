@@ -40,4 +40,4 @@ init([]) ->
     YawsServ = {yaws_server, {yaws_server, start_link, []},
 	       permanent, 5000, worker, [yaws_server]},
 
-    {ok,{{one_for_all,4,30}, [YawsLog, YawsServ, Sess]}}.
+    {ok,{{one_for_all,0,300}, [YawsLog, YawsServ, Sess]}}.

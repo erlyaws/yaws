@@ -27,7 +27,8 @@
 	       timeout = 30000,
 	       include_dir = [],
 	       yaws,                %% server string
-	       uid                  %% unix uid of user running yaws
+	       username,            %% maybe run as a different user than root
+	       uid                  %% unix uid of user that started yaws
 	      }).  
 
 

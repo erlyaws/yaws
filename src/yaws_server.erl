@@ -199,9 +199,9 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 	  fun(Group) ->
 		  proc_lib:start_link(?MODULE, gserv, [Gconf, Group])
 	  end, Sconfs),
-    L2 = lists:zf(fun({error, F, A}) ->
-			  yaws_log:sync_errlog(F, A),
-			  false;
+    L2 = lists:zf(fun({error, F, A}) ->	
+		  yaws_log:sync_errlog(F, A),
+			  exit(nostart);
 		     ({_Pid, _SCs}) ->
 			  true;
 		     (none) ->
@@ -210,14 +210,64 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
     ?Debug("L=~p~n", [yaws_debug:nobin(L)]),
     if
 	FirstTime == true ->
-	    proc_lib:spawn_link(yaws_ctl, start, 
-				[self(), Gconf#gconf.uid]);
+	    CTL = proc_lib:spawn_link(yaws_ctl, start, 
+				      [self(), Gconf#gconf.uid]),
+	    receive
+		{CTL, ok} ->
+		    ok;
+		{CTL, {error, R}} ->
+		    exit(R)
+	    end;
+		
 	true ->
 	    ok
     end,
-    {ok, {Gconf, L2, 0}}.
 
-		     
+    file:make_dir("/tmp/yaws"),
+    set_writeable("/tmp/yaws"),
+
+    case yaws_log:uid_change(Gconf#gconf.username) of
+	ok ->
+	    ok;
+	{error, Reason} ->
+	    error_logger:error_msg("Failed to change uid on logfiles"),
+	    exit(Reason)
+    end,
+
+    %% and now finally, we've opened the ctl socket and are
+    %% listening to all sockets we can possibly change username
+
+    GC2 = case (catch setuser(Gconf#gconf.username)) of
+	      {ok, NewUid} ->
+		  Gconf#gconf{uid = NewUid};
+	      Other ->
+		  error_logger:error_msg("Failed to set user:~n", [Other]),
+		  exit(Other)
+	  end,
+    case setup_tdir(GC2) of
+	{error, RR} ->
+	    exit(RR);
+	ok ->
+	    ok
+    end,
+    lists:foreach(fun({Pid, _}) -> Pid ! {newuid, GC2#gconf.uid} end, L2),
+    {ok, {GC2, L2, 0}}.
+
+	
+setuser(undefined) ->	     
+    "ok";
+setuser(User) ->	     
+    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
+			 "/../priv/", "setuid_drv"),
+    P = open_port({spawn, "setuid_drv " ++ User}, []),
+    unlink(P),
+    receive
+	{P, {data, "ok " ++ IntList}} ->
+	    {ok, IntList};
+	{'EXIT', P, _} ->
+	    error
+    end.
+
 
 %%----------------------------------------------------------------------
 %% Func: handle_call/3
@@ -328,8 +378,10 @@ do_listen(SC) ->
     end.
 
 set_writeable(Dir) ->
+    set_dir_mode(Dir, 8#777).
+
+set_dir_mode(Dir, Mode) ->
     {ok, FI} = file:read_file_info(Dir),
-    Mode = 8#777,
     file:write_file_info(Dir, FI#file_info{mode = Mode}).
 
 
@@ -357,25 +409,12 @@ gserv(GC, Group0) ->
 			       SC#sconf.port,
 			       catch map(fun(S) ->  S#sconf.servername end, 
 					 Group)]),
-	    file:make_dir("/tmp/yaws"),
-	    set_writeable("/tmp/yaws"),
-	    Tdir = "/tmp/yaws/" ++ GC#gconf.uid,
-	    file:make_dir(Tdir),
-	    Files = case file:list_dir(Tdir) of
-			{ok, Files0} ->
-			    Files0;
-			{error, Reason} ->
-			    error_logger:format("Failed to list ~p probably "
-						"due to permission errs: ~p",
-						[Tdir, Reason]),
-			    proc_lib:init_ack({error, "Can't list dir " 
-					       ++ Tdir}),
-			    exit(normal)
-		    end,
-	    lists:foreach(
-	      fun(F) -> file:delete(Tdir ++ "/" ++ F) end, Files),
 	    proc_lib:init_ack({self(), Group}),
-	    GS = #gs{gconf = GC,
+	    N = receive
+		    {newuid, UID} ->
+			UID
+		end,
+	    GS = #gs{gconf = GC#gconf{uid = N},
 		     group = Group,
 		     ssl = SSLBOOL,
 		     l = Listen},
@@ -389,6 +428,38 @@ gserv(GC, Group0) ->
 	    exit(normal)
     end.
 			
+
+setup_tdir(GC) ->
+    Tdir = "/tmp/yaws/" ++ GC#gconf.uid,
+    file:make_dir(Tdir),
+    set_dir_mode(Tdir, 8#700),
+    case file:list_dir(Tdir) of
+	{ok, Files0} ->
+	    case lists:zf(
+		   fun(F) -> 
+			   Fname = Tdir ++ "/" ++ F,
+			   case file:delete(Fname) of
+			       ok ->
+				   false;
+			       {error, Reason} ->
+				   {true, {Fname, Reason}}
+			   end
+		   end, Files0) of
+		[] ->
+		    ok;
+		[{FF, RR}|_] ->
+		    error_logger:format("Failed to delete ~p~n~p", [FF, RR]),
+		    {error, RR}
+	    end;
+	{error, Reason} ->
+	    error_logger:format("Failed to list ~p probably "
+				"due to permission errs: ~p",
+				[Tdir, Reason]),
+	    {error, Reason}
+    end.
+
+
+
 
 gserv(GS, Ready, Rnum) ->
     receive

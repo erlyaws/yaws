@@ -1,14 +1,52 @@
 ###-*-makefile-*-   ; force emacs to enter makefile-mode
 
+INSTALLPREFIX      = @prefix@
 
-# these the items can be edited
+ERL=@ERL@
+ERLC=@ERLC@
+EMULATOR=beam
 
-INSTALLPREFIX=/usr/local
-ERL=$(shell which erl)
-ERLC=$(shell which erlc)
+ifdef debug
+  ERLC_FLAGS+=-Ddebug
+endif
+
+ifdef trace
+  ERLC_FLAGS=+trace
+endif
+
+ifdef export_all
+  ERLC_FLAGS+=-Dexport_all
+endif
+
+CC=@CC@
+CFLAGS=@CFLAGS@
+LINKER=@LINKER@
+LDFLAGS=@LDFLAGS@
+WIN32=@WIN32@
+BSDI=@BSDI@
+EXE=@EXE@
+DLL=@DLL@
+OBJ=@OBJ@
+OUT=@OUT@
+FPIC=@FPIC@
+STRIP=@STRIP@
+LIBS=@LIBS@
 
 
-## don't edit below here
+
+ERLDIR=@ERLDIR@
+ERL_INTERFACE_LIB=@ERL_INTERFACE_LIB@
+ERL_INTERFACE_LIBS=@ERL_INTERFACE_LIBS@
+ERL_INTERFACE_INCLUDE=@ERL_INTERFACE_INCLUDE@
+
+LD_SHARED=@LD_SHARED@
+
+LDFLAGS +=-L$(ERL_INTERFACE_LIB)
+
+INSTALL=@INSTALL@
+INSTALL_DATA=@INSTALL_DATA@
+
+
 
 EMULATOR=beam
 ifdef debug

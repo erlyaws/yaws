@@ -23,7 +23,7 @@
 
 
 start() ->
-    application:start(yaws).
+    application:start(yaws, permanent).
 stop() ->
     application:stop(yaws).
 

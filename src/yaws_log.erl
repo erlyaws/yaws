@@ -14,7 +14,7 @@
 -behaviour(gen_server).
 
 %% External exports
--export([start_link/0]).
+-export([start_link/0, uid_change/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
@@ -56,6 +56,15 @@ open_trace(What) ->
     gen_server:call(?MODULE, {open_trace, What}).
 trace_traffic(ServerOrClient , Data) ->
     gen_server:cast(?MODULE, {trace, ServerOrClient, Data}).
+
+
+uid_change(undefined) ->
+    ok;
+uid_change(Uname) ->
+    Int = list_to_integer(os:cmd("uname -u " ++ Uname) -- [10]),
+    gen_server:call(?MODULE, {uid_change, Int}).
+
+
 
 
 %%%----------------------------------------------------------------------
@@ -180,7 +189,6 @@ handle_call({open_trace, What}, _From, State) ->
 
 handle_call({trace_tty, What}, _From, State) ->
     {reply, ok, State#state{tty_trace = What}}.
-
 
 
 
