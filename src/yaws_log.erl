@@ -329,13 +329,14 @@ fmtnow() ->
 		  [Date,yaws:month(Month),Year, Hour, Min, Sec, zone()]).
 
 zone() ->
-    {_, {U, _,_}} = erlang:universaltime(),
-    {_, {L, _,_}} = erlang:localtime(),
-    zone((U-L)*100).
+    Time = erlang:universaltime(),
+    LocalTime = calendar:universal_time_to_local_time(Time),
+    DiffSecs = calendar:datetime_to_gregorian_seconds(LocalTime) - calendar:datetime_to_gregorian_seconds(Time),
+    zone((DiffSecs/3600)*100).
 
 %% Ugly reformatting code to get times like +0000 and -1300
 
 zone(Val) when Val < 0 ->
-    io_lib:format("-~4..0w", [abs(Val)]);
+    io_lib:format("-~4..0w", [trunc(abs(Val))]);
 zone(Val) when Val >= 0 ->
-    io_lib:format("+~4..0w", [abs(Val)]).
+    io_lib:format("+~4..0w", [trunc(abs(Val))]).
