@@ -28,7 +28,7 @@ out(A) ->
 		 END = "</table>",
 		 [L1, T, L2, END]
 	 end, L),
-    {ok, [H, T]}.
+    {html, [H, T]}.
 </erl>
 
 
