@@ -8,6 +8,7 @@ out(A) ->
 
 <H1>Yaws API</H1>
 
+<p>
 Here we describe the API avalable to Yaws applications. 
 First and foremost, the entire regular erlang API is available, this
 include mnesia ans all other erlang applications that are part of the
@@ -59,15 +60,16 @@ document.
 
 
 <hr>
-<h3> <tt> parse_post_data(Bin, Spec) </tt> </h2>
+<h3> <tt> parse_post_data(Bin) </tt> </h2>
 
 <p>
-When data is POSTed to a yaws page, 
+When data is POST ed to a yaws page, 
 this function can be used to parse the 
 data in a convenient way. Data which is posted from a form is naturally 
 arranged as a list of {key,value} pairs. 
 <p> Similarly, when data is fed to a yaws page in the URL as a query part,
-the query can be parsed by this function.
+the query can be parsed by this function. More info on this at
+<a href="query.yaws">query.yaws</a>
 
 <p>We can see examples of the usage of this function in the files
 <a href="form.yaws">form.yaws</a> which feeds the POST data to the file

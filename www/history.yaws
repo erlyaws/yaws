@@ -13,66 +13,73 @@ out(A) ->
 
 
 
-<tr><td>    </td></tr>
+<tr><td> <p>    </td></tr>
+
+<tr><td> <p>Jun 18, return status 303 when browser asks for a dir URL
+without a trailing / in the http request. I've always wondered why apache
+does this. Now I know ... otherwise the relative URLs in /dir/index.html
+will be wrong when the browser tries to get them.   </td></tr>
 
 
-<tr><td> Hun 17, fixed yet another chunked encoding bug   </td></tr>
-<tr><td> Jun 16, wrote a proper /etc/init.d start/stop/reload/status script, new flag cmdline -S which query the daemon status   </td></tr>
+<tr><td> <p>Jun 17, fixed yet another chunked encoding bug   </td></tr>
 
 
-<tr><td> Jun 15, fixed abug in the cache load machanism, pages were cached indefinitely. A bug in the new code in 0.48 didn't ship any content on 401 's   </td></tr>
+<tr><td> <p>Jun 16, wrote a proper /etc/init.d start/stop/reload/status script, new flag cmdline -S which query the daemon status   </td></tr>
 
 
-<tr><td>Jun 12 Redid the out/1 structure completely removed some/all headers and made
+<tr><td> <p>Jun 15, fixed abug in the cache load machanism, pages were cached indefinitely. A bug in the new code in 0.48 didn't ship any content on 401 's   </td></tr>
+
+
+<tr><td><p>Jun 12 Redid the out/1 structure completely removed some/all headers and made
 it possible to return headers as well as new status code inside any out/1 function. This makes it much easier to write apps in yaws.   Also accumulated output into larger write chunks. Performnce enhancer.</td></tr>
 
 
-<tr><td> Jun 11, fixed Etag: and Last-Modified: headers for static content.
+<tr><td> <p>Jun 11, fixed Etag: and Last-Modified: headers for static content.
 Fixed the Cache-Contol: headers for generated content.
 The <erl> tag must
 no longer be first on each line   </td></tr>
 
-<tr><td> Jun 10, use prim_file: instead of file: calls, fix a bug
+<tr><td> <p>Jun 10, use prim_file: instead of file: calls, fix a bug
 with iso 8859 chars in urls, virthost bug with multiple IP addresses  </td></tr>
 
 
-<tr><td> May 26, added SSL support  0.40 </td> </tr>
+<tr><td> <p>May 26, added SSL support  0.40 </td> </tr>
 
- <tr><td> Mar 29, fixed a bug in the log wrapping which restarted the server</td></tr>
-<tr><td> Mar 26, released 0.32 </tr>
-<tr> <td> Mar 26, 2002. Fixed a bug where chunked encodings were
+ <tr><td> <p>Mar 29, fixed a bug in the log wrapping which restarted the server</td></tr>
+<tr><td> <p>Mar 26, released 0.32 </tr>
+<tr> <td> <p>Mar 26, 2002. Fixed a bug where chunked encodings were
 missing a CRNL which made all yaws pages not render in IE </td> </tr>
 
-<tr> <td> Mar 25 2002 Fixed a bug with empty initial lines in yaws files.
+<tr> <td> <p>Mar 25 2002 Fixed a bug with empty initial lines in yaws files.
 <br>Made access log files per virt host.
 <br>Made the access log as well as the info/err log a wrap log, wraps at 50k.
 
-<tr><td> Mar 17 2002, buxfix in cache + added -T flag to yaws, which is
+<tr><td> <p>Mar 17 2002, buxfix in cache + added -T flag to yaws, which is
 http protocol trace in log file
 
-<tr><td> Mar4 4   2002 made release 0.30 <td><tr>
+<tr><td> <p>Mar4 4   2002 made release 0.30 <td><tr>
 
-<tr><td> Feb 28, 2002 Added traffic trace -t flag and ~/public_html support.
+<tr><td> <p>Feb 28, 2002 Added traffic trace -t flag and ~/public_html support.
 
-<tr><td> Feb 26, 2002 Cought I/O from the erlang compiler when compiling.
+<tr><td> <p>Feb 26, 2002 Cought I/O from the erlang compiler when compiling.
 The compiler will (wrongly) produce some errors plainly to the tty.
 The RightThing would be to fix that, but .....
 
-<tr><td> Feb 22, 2002 yaws_api:set_cookie + examples    </td></tr>
+<tr><td> <p>Feb 22, 2002 yaws_api:set_cookie + examples    </td></tr>
 
-<tr><td> Feb 14, 2002 redid HTML tables for top docs    </td></tr>
+<tr><td> <p>Feb 14, 2002 redid HTML tables for top docs    </td></tr>
 
-<tr><td> Feb 13, 2002 released first version to the net 0.20    </td></tr>
+<tr><td> <p>Feb 13, 2002 released first version to the net 0.20    </td></tr>
 
-<tr><td> Feb 12, 2002 cached pages in RAM (ets tables)    </td></tr>
+<tr><td> <p>Feb 12, 2002 cached pages in RAM (ets tables)    </td></tr>
 
-<tr><td> Feb 7, 2002 added virtual hosting capabilities    </td></tr>
+<tr><td> <p>Feb 7, 2002 added virtual hosting capabilities    </td></tr>
 
-<tr><td> Feb 6, added query strings in URLs passed in #arg{}    </td></tr>
+<tr><td> <p>Feb 6, added query strings in URLs passed in #arg{}    </td></tr>
 
-<tr><td> Feb 5, 2002 added directory listings    </td></tr>
+<tr><td> <p>Feb 5, 2002 added directory listings    </td></tr>
 
-<tr><td> Jan 15, 2002. Started to hack the thing </td></tr>
+<tr><td> <p>Jan 15, 2002. Started to hack the thing </td></tr>
 </table>
 
 <erl>

@@ -4,7 +4,7 @@
 
 session(A, Visits) ->
     receive
-        {From, tick} ->
+	{From, tick} ->
 	    N = calendar:local_time(),
 	    From ! {self(), [N|Visits]},
 	    session(A, [N|Visits])
@@ -20,14 +20,18 @@ out(A) ->
 	[] ->
             Now = calendar:local_time(),
 	    P = spawn(fun() -> session(A, [Now]) end),
-	    yaws_api:setcookie("foobar", pid_to_list(P), "/");
+	    yaws_api:setcookie("foobar", 
+			       pid_to_list(P), "/");
 	PidStr ->
 	    Pid = list_to_pid(PidStr),
 	    case process_info(Pid, messages) of
 		undefined ->
 		    Now = calendar:local_time(),
-		    P = spawn(fun() -> session(A, [Now]) end),
-		    yaws_api:setcookie("foobar", pid_to_list(P), "/");
+		    P = spawn(fun() -> 
+				      session(A, [Now]) 
+			      end),
+		    yaws_api:setcookie("foobar", 
+				       pid_to_list(P), "/");
 		_ ->
 		    ok
 	    end
@@ -41,12 +45,15 @@ out(A) ->
 <h2> set cookie </h2>
 
 <p>This is the page that set the cookie in the browser.
-<a href="/readcookie.yaws">readcookie.yaws</a> will read the cookie and
-report persitant information as long as the browser session exists.
+<a href="/readcookie.yaws">readcookie.yaws</a> will 
+read the cookie and report persitant information as 
+long as the browser session exists.
 
-<p> it will set the cookie <tt>foobar = &lt;x,y,z&gt;; </tt> where the
-x,y,z  string is the textual representation of an actual erlang pid
-which will be responsible for this session.
+<p> it will set the cookie 
+<tt>foobar = &lt;x,y,z&gt;; </tt> where the
+x,y,z  string is the textual representation of an 
+actual erlang pid which will be responsible for 
+this session.
 
 </html>
 

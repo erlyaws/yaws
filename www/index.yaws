@@ -13,21 +13,26 @@ out(A) ->
 <H2>Yaws</H2>
 
 
+<p>
 Yaws is a HTTP high perfomance 1.1 webserver.
 Two separate modes of operations are supported.
 <br>
 <ul>
-<li> Standalone mode where yaws runs as a regular webserver daemon. This is the default mode.
-<li> Embedded mode wher Yaws runs as an embedded webserver in an
+<li> 
+<p>Standalone mode where yaws runs as a regular webserver daemon. This is the default mode.
+<li> 
+<p>Embedded mode wher Yaws runs as an embedded webserver in an
 another erlang application. 
 </ul>
 
 <br>
+<p>
 Yaws is entirely written in <a href="http:www.erlang.org">Erlang</a>, 
 futhermore it is a multithreaded webserver where one Erlang light weight 
 process is used to handle each client.
 <br>
 
+<p>
 Yaws has excellent capabilies to generate dynamic content. Erlang code
 can be embedded into the HTML code in manner similar 
 to <a href="http://www.php.net">php</a>. As matter of fact, the 
@@ -40,7 +45,7 @@ ship several thousands of dynamically generated pages per second.
 <p>
 <h2>yaws.hyber.org</h2>
 
-The homepage of Yaws is <a href="http://yaws.hyber.org">yaws.hyber.org</a>.
+<p>The homepage of Yaws is <a href="http://yaws.hyber.org">yaws.hyber.org</a>.
 Statistics for that site is obtained by a yaws page that directly interacts 
 with the server producing <a href="http://yaws.hyber.org/stats.yaws">stats</a>.
 <p>
@@ -53,23 +58,30 @@ powered by Yaws.
 
 <div class="box"> 
 
+<p>
 <ul>
-<li> Jun 16, version 0.50 released. A bug in setcookie fixed, a proper
+<li> 
+<p>Jun 16, version 0.50 released. A bug in setcookie fixed, a proper
 /etc/rc/init.d script written. New flag, yaws -S which query status of
 the daemon. bug in cache reload fixed.
 
-<li> Jun 13, version 0.48 released. It contains a complete rewrite
+<li> 
+<p>Jun 13, version 0.48 released. It contains a complete rewrite
 of the API to generate dynamic content which makes it much easier 
 to use. 
+
 <p>Furthermore this version accumulates output into larger chunks which makes
 it much faster the earlier versions. We can now serve 2500 dynamically
 generated HTML pages per second on a 2GhZ machine.
+
 <p>A bug with  iso 8859 chars in urls has been fixed.
+
 <p>Etag header for static content and Cache-Control header for dynamic.
+
 <p>Additional docs in the form of man pages.
 
 
-<li> Version 0.40 released. Contains bugfixes and full SSL support
+<li> <p>Version 0.40 released. Contains bugfixes and full SSL support
 as well as an embryo to WWW-Authenticate support.
 </ul>
 

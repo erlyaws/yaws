@@ -8,6 +8,7 @@ out(A) ->
 
 <h2>Motivation</h2>
 
+<p>
 I wrote Yaws for the
 simple reason that I needed to build a website for the first time in my life
 and I didn't realize the amount of horrible ad-hockery which currently

@@ -8,10 +8,12 @@ out(A) ->
 
 <h2>Hello world</h2>
 
+<p>
 The absoluteley most simple example is a HTML file which doesn't contain
 any embedded erlang code at all. 
 
 <br>
+<p>
 The file <a href="simple_ex1.yaws">simple_ex1.yaws</a> contains the following
 HTML code.
 <br>
@@ -21,6 +23,7 @@ out(A) -> yaws_api:pre_ssi_files(A#arg.docroot, ["/simple_ex1.yaws"]).
 </erl>
 
 <br>
+<p>
 Since the file has the suffix <tt>.yaws</tt>, the file will be processed
 by the Yaws dynamic compiler, but since no embeddded erlang code is found,
 the data from the file will be delivered untouched.
@@ -28,6 +31,7 @@ the data from the file will be delivered untouched.
 
 <h2> Hello world again </h2>
 
+<p>
 The file <a href="simple_ex2.yaws">simple_ex2.yaws</a> contains the following
 HTML code.
 
@@ -37,6 +41,7 @@ out(A) -> yaws_api:pre_ssi_files(A#arg.docroot, ["/simple_ex2.yaws"]).
 
 
 
+<p>
 The file has one very simple function which just returns a tuple
 <tt>{ok, String} </tt>
 <br>
@@ -58,11 +63,15 @@ out(A) -> yaws_api:pre_ssi_files(A#arg.docroot, ["/simple_ex3.yaws"]).
 
 <ul>
 
-<li>The function <tt>f/1</tt> which is available in the <tt>yaws_api</tt>
+<li>
+<p>
+The function <tt>f/1</tt> which is available in the <tt>yaws_api</tt>
 module. It's just a shortcut convenience to <tt>io_lib:format/2</tt>. The 
 <tt>yaws_api</tt> module contains many convenience functiond for yaws coders.
 
-<li>The second point is a printout of the #arg record which is passed
+<li>
+<p>
+The second point is a printout of the #arg record which is passed
 to the <tt>out/1</tt> function.
 </ul>
 

@@ -10,6 +10,7 @@ out(A) ->
 
 <h2>Build and install</h2>
 
+<p>
 Yaws is hosted by the excellent source code site SourceForge <a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=45637&type=1" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>. 
 The Yaws SourceForge www page is <a href="http://sourceforge.net/projects/erlyaws/">http://sourceforge.net/projects/erlyaws</a>
 
@@ -29,9 +30,12 @@ out(A) -> yaws_api:pre_ssi_string("
 
 </erl>
 
+<p>
 The above commands will 
 checkout the bleeding edge source, build it and install it at
 127.0.0.1:80 with the docroot set to the local documentation.
+
+<p>Give return as password.
 
 <p>Just <tt>make</tt> (without install) 
 will build the yaws system and do a local
@@ -58,18 +62,19 @@ include.mk file in the the toplevel directory.
 <p>The yaws executable is a shell script which invokes the 
 erlang system and instructs it to start yaws.
 The command line flags for yaws are documented in 
-<a href="man.yaws?page=yaws.conf"> man page for <tt>yaws (1)</tt> </a>
+<a href="man.yaws?page=yaws"> man page for <tt>yaws (1)</tt> </a>
 
 <p>When developing yaws code, the interactive mode is ideal. Typically
 yaws is then started as: 
 <br>
 <pre>
-# yaws -i -d
+# yaws -i 
 </pre>
 
 
 <H2>Configuring Yaws</h2>
 
+<p>
 Web server configuration can be supplied to yaws 
 in either of two ways depending
 on wheter we run yaws as a standalone daemon or if we run yaws as an
@@ -77,6 +82,7 @@ embedded application inside another Erlang program.
 
 <h3>Daemon mode</h3>
 
+<p>
 The yaws configuration is described in 
 <a href="man.yaws?page=yaws.conf"> man page for <tt>yaws.conf (5)</tt> </a>
 
@@ -84,6 +90,7 @@ The yaws configuration is described in
 
 <h3>Embedded mode</h3>
 
+<p>
 Not documented.
 
 

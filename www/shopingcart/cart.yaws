@@ -61,7 +61,7 @@ out(A) ->
 
 <h1> Shopcart example </h1>
 
-<p>This is a tiny shop cart persitance example. It is possible
+<p>This is a tiny (not yet working !!!) shop cart persitance example. It is possible
 to select random stuff from a series of forms. The yaws server will
 continously remember what has been selected. Try the cart
 at: <a href="mall.yaws">The Shopping Mall :-)</a>

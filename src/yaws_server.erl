@@ -822,7 +822,9 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT) ->
 	    do_yaws(CliSock, GC, SC, Req, H, 
 		    ARG#arg{querydata = UT#urltype.q}, UT);
 	dotdot ->
-	    deliver_403(CliSock, Req, GC, SC)
+	    deliver_403(CliSock, Req, GC, SC);
+	redir_dir ->
+	     deliver_303(CliSock, Req, GC, SC)
     end.
 
 	
@@ -870,6 +872,36 @@ is_authenticated(_SC, UT, _Req, H) ->
     end.
 
 
+% we must deliver a 303 if the browser asks for a dir
+% without a trailing / in the HTTP req
+% otherwise the relative urls in /dir/index.html will be broken.
+
+deliver_303(CliSock, Req, GC, SC) ->
+    Scheme = case SC#sconf.ssl of
+		 undefined ->
+		     "http://";
+		 _SSl ->
+		     "https://"
+	     end,
+    PortPart = case {SC#sconf.ssl, SC#sconf.port} of
+		   {undefined, 80} ->
+		       "";
+		   {undefined, Port} ->
+		       io_lib:format(":~w",[Port]);
+		   {_SSL, 443} ->
+		       "";
+		   {_SSL, Port} ->
+		       io_lib:format(":~w",[Port])
+	       end,
+
+    set_status_code(303),
+    make_connection_close(true),
+    make_content_length(0),
+    accumulate_header(["Location: ", Scheme, SC#sconf.servername, 
+		       PortPart, get_path(Req#http_request.path), "/"]),
+    
+    deliver_accumulated(#dcc{}, CliSock, GC, SC),
+    done.
 
 deliver_401(CliSock, _Req, GC, Realm, SC) ->
     set_status_code(401),
@@ -1160,7 +1192,6 @@ deliver_accumulated(DCC, Sock, GC, SC) ->
 		   crnl()
 	   end,
     All = [StatusLine, Headers, CRNL, Cont],
-    io:format("ALL: ~p~n", [All]),
     gen_tcp_send(Sock, All, SC, GC),
     if
 	GC#gconf.trace == false ->
@@ -1440,8 +1471,10 @@ update_total(E, Path) ->
     end.
 
 
-cache_file(GC, SC, Path, UT) when UT#urltype.type == regular ;
-				  UT#urltype.type == yaws ->
+cache_file(GC, SC, Path, UT) when 
+  UT#urltype.type == regular ;
+  UT#urltype.type == yaws  ->
+
     E = SC#sconf.ets,
     [{num_files, N}] = ets:lookup(E, num_files),
     [{num_bytes, B}] = ets:lookup(E, num_bytes),
@@ -1490,6 +1523,9 @@ do_url_type(Droot, Path) ->
 	    maybe_return_dir(Droot, lists:flatten(Path));
 	dotdot ->  %% generate 403 forbidden
 	    #urltype{type=dotdot};
+	redir_dir ->
+	    #urltype{type = redir_dir,
+		     dir = [Path, $/]};
 	OK ->
 	    OK
     end.
@@ -1593,8 +1629,10 @@ ret_reg_split(DR, Comps, RevFile, Query) ->
 		     dir = FlatDir,
 		     fullpath = lists:flatten(L),
 		     mime=Mime, q=Query};
-	{ok, FI} when FI#file_info.type == directory ->
+	{ok, FI} when FI#file_info.type == directory, hd(RevFile) == $/ ->
 	    maybe_return_dir(DR, lists:flatten(Dir) ++ File);
+	{ok, FI} when FI#file_info.type == directory, hd(RevFile) /= $/ ->
+	    redir_dir;
 	{error, enoent} ->
 	    %% kind of hackish, defer url decode 
 	    Dir2 = lists:flatmap(fun(X) -> yaws_api:url_decode(X) end, Dir),
