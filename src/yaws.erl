@@ -882,6 +882,14 @@ has_buggy_gzip(UserAgent, Mime) ->
 						% decompress when
 						% saving.
 		  true;
+	     ("Opera") ->
+						% Opera 6 does not
+						% uncompress downloads.
+		  in_ua(fun("6."++_) -> true;
+			   (_) -> false
+			end, UA);
+	     ("Opera/6."++_) -> 
+		  true;
 	     (_) ->
 		  false
 	  end,
