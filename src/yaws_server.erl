@@ -1424,8 +1424,10 @@ url_type(GC, SC, Path) ->
 	[{_, When, UT}] ->
 	    N = now_secs(),
 	    FI = UT#urltype.finfo,
-	    if
-		When + 30 > N ->
+	    Refresh = GC#gconf.cache_refresh_secs,
+	    if 
+		((N-When) > Refresh) ->
+		    ?Debug("Timed out entry for ~s ~p~n", [Path, {When, N}]),
 		    %% more than 30 secs old entry
 		    ets:delete(E, {url, Path}),
 		    ets:delete(E, {urlc, Path}),
@@ -1433,6 +1435,7 @@ url_type(GC, SC, Path) ->
 		    ets:update_counter(E, num_bytes, -FI#file_info.size),
 		    url_type(GC, SC, Path);
 		true ->
+		    ?Debug("Serve page from cache ~p", [{When , N, N-When}]),
 		    ets:update_counter(E, {urlc, Path}, 1),
 		    UT
 	    end

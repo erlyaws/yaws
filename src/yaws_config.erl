@@ -265,6 +265,14 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		     {error, ?F("Expect integer at line ~w", [Lno])}
 	     end;
 
+	["cache_refresh_secs", '=', Val] ->
+	    case (catch list_to_integer(Val)) of
+		 I when integer(I), I >= 0 ->
+		    fload(FD, globals, GC#gconf{cache_refresh_secs = I},
+			  C, Cs, Lno+1, Next);
+		_ ->
+		     {error, ?F("Expect 0 or positive integer at line ~w", [Lno])}
+	     end;
 
 
 	['<', "server", Server, '>'] ->  %% first server 

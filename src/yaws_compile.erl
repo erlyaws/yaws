@@ -36,6 +36,7 @@
 
 
 comp_opts(GC) ->
+    ?Debug("I=~p~n", [GC#gconf.include_dir]),
     I = lists:map(fun(Dir) -> {i, Dir} end, GC#gconf.include_dir),
     YawsDir = {i, "/home/klacke/yaws/include"},
     I2 = [YawsDir | I],

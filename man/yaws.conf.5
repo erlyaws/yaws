@@ -49,6 +49,12 @@ used for cached RAM files. The default value is 1000000, 1 megabyte.
 This directive sets a maximum size on the files that are RAM cached by yaws.
 The default value i 8000, 8 kBytes.
 .TP
+\fB cache_refresh_secs = Integer\fR
+The RAM cache is used to serve pages that sit in the cache. An entry sits in
+cache at most cache_refresh_secs number of seconds. The default is 30. This means that when the content is updated under the docroot, that change doesn't show
+until 30 seconds have passed. While developing a yaws site, 
+it may be convinient to set this value to 0.
+.TP
 \fB trace  = traffic | http\fR
 This enables traffic or http tracing. Tracing is also possible to enable with
 a command line flag to yaws.
