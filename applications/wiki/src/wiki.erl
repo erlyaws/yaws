@@ -1032,8 +1032,8 @@ lastEdited(_, Root, Prefix) ->
 				  [J,"<br>"] end, Fx),
 		      "</ul>"]
 	     end, Groups),
-    template2(Root,"Last Edited", "Last Edited",
-	     [p("These are the last edited files."),S1], false).
+    template2(Root,"Last Edited", "These are the last edited files",
+	      S1, false).
 
 group_by_day([]) ->
     [];
