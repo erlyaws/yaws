@@ -119,7 +119,7 @@ fail({format, File,Line,Fmt,Args}) ->
 format(F, A)  ->
     case ?gc_has_debug((get(gc))) of
 	true ->
-	    io:format(F, A);
+	    io:format("yaws:" ++ F, A);
 	false ->
 	    ok
     end.
@@ -127,7 +127,7 @@ format(F, A)  ->
 derror(F, A) ->
     case ?gc_has_debug((get(gc))) of
 	true ->
-	    error_logger:error_msg(F, A);
+	    error_logger:error_msg("yaws:" ++ F, A);
 	false ->
 	    ok
     end.
@@ -135,7 +135,7 @@ derror(F, A) ->
 dinfo(F, A) ->
     case ?gc_has_debug((get(gc))) of
 	true ->
-	    error_logger:info_msg(F, A);
+	    error_logger:info_msg("yaws:" ++ F, A);
 	false ->
 	    ok
     end.
