@@ -53,7 +53,7 @@ stats() ->
 			L = ets:match(E, {{urlc_total, '$1'}, '$2'}),
 			{SC#sconf.servername,  
 			 flatten(yaws:fmt_ip(SC#sconf.listen)),
-			 map(fun(P) -> list_to_tuple(P) end, L)}
+			 lists:keysort(2,map(fun(P) -> list_to_tuple(P) end, L))}
 		end, SCS)
       end, Srvs).
 
