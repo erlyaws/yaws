@@ -1081,6 +1081,8 @@ ehtml_expand({Tag}) ->
     ehtml_expand({Tag,[]});
 ehtml_expand({pre_html, X}) ->
     X;
+ehtml_expand({pre, Attrs}) ->
+    ["<pre", ehtml_attrs(Attrs), ">"];
 ehtml_expand({Tag, Attrs}) ->
     ["<", atom_to_list(Tag), ehtml_attrs(Attrs), ">\n"];
 ehtml_expand({Tag, Attrs, Body}) when atom(Tag) ->
