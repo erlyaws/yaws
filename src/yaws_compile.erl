@@ -210,7 +210,12 @@ is_exported(Fun, A, Mod) ->
 	     
 %% this will generate 9 lines
 new_out_file(Line, C, GC) ->
-    Mnum = gen_server:call(yaws_server, mnum),
+    Mnum = case catch gen_server:call(yaws_server, mnum) of
+	       {'EXIT', _} ->
+		   1;
+	       Other ->
+		   Other
+	   end,
     Module = [$m | integer_to_list(Mnum)],
     OutFile = lists:flatten(
 		io_lib:format(

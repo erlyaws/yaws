@@ -13,6 +13,10 @@
 
 -compile(export_all).
 -include_lib("kernel/include/file.hrl").
+-include_lib("yaws/include/yaws.hrl").
+-include_lib("yaws/include/yaws_api.hrl").
+
+
 
 -define(F, "/tmp/yaws.ctl").
 
@@ -155,6 +159,23 @@ stop() ->
 status() ->
     actl(status, uid()).
 
+check([File| IncludeDirs]) ->
+    GC = yaws_config:make_default_gconf(false),
+    GC2 = GC#gconf{include_dir = lists:map(fun(X) -> atom_to_list(X) end, 
+					   IncludeDirs)},
+    SC = #sconf{},
+    case yaws_compile:compile_file(atom_to_list(File), GC2, SC) of
+	{ok, [{errors, 0}| Spec]} ->
+	    io:format("ok~n",[]),
+	    init:stop();
+	Other ->
+	    io:format("Other = ~p~n", [Other]),
+	    io:format("Errors in ~p~n", [File]),
+	    init:stop()
+    end.
+
+
+    
 
 
 

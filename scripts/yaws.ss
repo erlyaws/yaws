@@ -82,6 +82,13 @@ do
 		shift;;
            -heart)
 		heart=" -heart ";;
+           -check)
+                out=`exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl check $1`
+		if [ "$out" = "ok" ]; then
+		    exit 0
+		fi
+		echo $out
+		exit 1;;
 	    *)
 		help
        esac
