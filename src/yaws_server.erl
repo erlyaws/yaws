@@ -2018,7 +2018,7 @@ expand_parts([], _,Ack) ->
 delim_split_file([], Data, _, _Ack) ->
     [{data, Data}];
 delim_split_file(Del, Data, State, Ack) ->
-    case delim_split(Del, Del, Data, []) of
+    case delim_split(Del, Del, Data, [], []) of
 	{H, []} when State == data ->
 	    %% Ok, last chunk
 	    lists:reverse([{data, H} | Ack]);
@@ -2031,14 +2031,18 @@ delim_split_file(Del, Data, State, Ack) ->
     end.
 
 
-delim_split([H|T], Odel, [H|T1], Ack) ->
-    delim_split(T,Odel,T1,Ack);
-delim_split([], _Odel, T, Ack) ->
+delim_split([H|T], Odel, [H|T1], Ack, DAcc) ->
+    delim_split(T,Odel,T1,Ack, [H|DAcc]);
+delim_split([], _Odel, T, Ack, _DAcc) ->
     {lists:reverse(Ack),T};
-delim_split([H|_T],Odel, [H1|T1], Ack) when H /= H1 ->
-    delim_split(Odel, Odel, T1, [H1|Ack]);
-delim_split(_,_,[],Ack) ->
-    {lists:reverse(Ack),[]}.
+delim_split([H|_T],Odel, [H1|T1], Ack, []) when H /= H1 ->
+    delim_split(Odel, Odel, T1, [H1|Ack], []);
+delim_split([H|_T],Odel, [H1|T1], Ack, DAcc) when H /= H1 ->
+    delim_split(Odel, Odel, T1, [H1|DAcc++Ack], []);
+delim_split(_,_,[],Ack,[]) ->
+    {lists:reverse(Ack),[]};
+delim_split(_,_,[],Ack,DAcc) ->
+    {lists:reverse(DAcc++Ack),[]}.
 
 
 
