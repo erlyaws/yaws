@@ -2596,7 +2596,7 @@ ret_user_dir([], "/", Upath)  ->
 		    end;
 		{redir_dir, User} ->
 		    #urltype {type = redir,
-			      path = ["~", User, "/"]}
+			      path = ["/~", User, "/"]}
 	    end;
        true ->
 	    #urltype{type=error}
