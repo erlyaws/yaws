@@ -2645,6 +2645,7 @@ send_attachment_plain(Session, Number) ->
 	{session_manager, error} ->
 	    none;
 	{session_manager, A} ->
+	    io:format("Send attachement plain\n"),
 	    {content, "text/plain", A#satt.data}
     after 15000 ->
 	    exit(normal)

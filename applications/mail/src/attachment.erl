@@ -15,7 +15,7 @@ out(A) ->
 		{{ok, Nr},{ok,"text"}} ->
 		    mail:send_attachment_plain(Session, yaws:to_integer(Nr));
 		{{ok, Nr},_} ->
-		    mail:send_attachment_plain(Session, yaws:to_integer(Nr));
+		    mail:send_attachment(Session, yaws:to_integer(Nr));
 		_ ->
 		    err()
 	    end;
