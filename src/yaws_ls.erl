@@ -29,7 +29,9 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
     Body = [doc_head(DirName), 
 	    list_head(), 
 	    L,
-	    "\n</pre>\n<hr>\n",
+	    "\n</pre><pre>",
+	    inline_readme(SC,DirName,List),
+	    "</pre>\n<hr>\n",
 	    yaws:address(GC, SC),
 	    "</body>\n</html>\n"],
     B = list_to_binary(Body),
@@ -50,7 +52,15 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
     yaws_server:deliver_accumulated(#dcc{}, CliSock, GC, SC),
     done.
 
-
+inline_readme(SC,DirName,L) ->
+    F = fun("README", _Acc) ->
+		File = SC#sconf.docroot ++ DirName ++ [$/ | "README"],
+		{ok,Bin} = file:read_file(File),
+		binary_to_list(Bin);
+	   (_, Acc) ->
+		Acc
+	end,
+    lists:foldl(F,[],L).
 
 
 doc_head(DirName) ->
@@ -65,8 +75,8 @@ doc_head(DirName) ->
 list_head() ->
     "    <pre><img SRC=\"/icons/blank.gif\" ALT=\"     \"> "
     "<a HREF=\"?N=D\">Name</a>                   "
-    "<a HREF=\"?M=A\">Last modified</a>                     "
-    " <a HREF=\"?S=A\">Size</a>             "
+    "<a HREF=\"?M=A\">Last modified</a>                 "
+    " <a HREF=\"?S=A\">Size</a>   "
     "<a HREF=\"?D=A\">Description</a> \n"
     "<hr> \n".
 
@@ -75,13 +85,14 @@ file_entry({ok, FI}, _DirName, Name) ->
     ?Debug("file_entry(~p) ", [Name]),
     Ext = filename:extension(Name),
     {Gif, Alt} = list_gif(FI#file_info.type, Ext),
-    Trim = trim(Name, 20),
-    Entry = ?F("<img SRC=~p  ALT=~p> <a HREF=~p>~s</a> ~s~s          ~s~n",
+    {Trim,TrimLen} = trim(Name, 22),
+    Entry = ?F("<img SRC=~p  ALT=~p> <a HREF=~p title=\"~w bytes\">~s</a> ~s~s ~8.s~n",
 	       ["/icons/" ++ Gif,
-		Alt,
+	        Alt,
 		Name, 
+	        FI#file_info.size,
 		Trim,
-		lists:duplicate(20 - length(Trim), $\s),
+		lists:duplicate(22 - TrimLen, $\s),
 		datestr(FI), 
 		sizestr(FI)]),
     ?Debug("Entry:~p", [Entry]),
@@ -91,24 +102,30 @@ file_entry(_Err, _, _Name) ->
     false.
 
 
+%%% Compensate for '&gt' which really is just one character.
+trim(L,N) ->
+    case trim(L,N,[]) of
+	{truncated,R} -> {R,length(R)-2};
+	R -> {R,length(R)}
+    end.
 
-
-trim([_H|_T], 5) ->
-    "..&gt";
-trim([H|T], I) ->
-    [H|trim(T,I-1)];
-trim([], _) ->
-    [].
+trim([_H|_T], 4, Acc) ->
+    {truncated,lists:reverse(Acc) ++ "...&gt"};
+trim([H|T], I, Acc) ->
+    trim(T, I-1, [H|Acc]);
+trim([], _, Acc) ->
+    lists:reverse(Acc).
 
 
 datestr(FI) ->
     yaws:time_to_string(FI#file_info.mtime, []).
+
 sizestr(FI) when FI#file_info.size > 1000000 ->
-    ?F("~.1f M", [FI#file_info.size / 1000000]);
+    ?F("~.1fM", [FI#file_info.size / 1000000]);
 sizestr(FI) when FI#file_info.size > 1000 ->
-    ?F("~w k", [trunc(FI#file_info.size / 1000)]);
+    ?F("~wk", [trunc(FI#file_info.size / 1000)]);
 sizestr(FI) ->
-    ?F("~w ", [FI#file_info.size]).
+    ?F("1k", []). % As apache does it...
 
 
 list_gif(directory, ".") ->
