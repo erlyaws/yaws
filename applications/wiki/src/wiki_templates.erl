@@ -37,7 +37,7 @@ Data,"
 </td> 
   
 <!-- the right hand image --> 
-<td width=10 align='right' valign='top'><img src='icon.gif' alt=' '></td> 
+<td width=10 align='right' valign='top'><img src='WikiPreferences.files/icon.gif' alt=' '></td> 
 </tr> 
 </table> 
 </body>
