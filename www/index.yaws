@@ -26,7 +26,7 @@ out(A) ->
 	 " processes in an efficent way. Its elegance comes from Erlang as "
 	 "well. Web applications dont have to be written in ugly adhoc "
 	 "languages. A Yaws web server can handle high load in a way that an apache/php server"
-	 "isn't even close to match."
+	 " isn't even close to match."
 	},
 	
 	{h2,[], "yaws.hyber.org"},
