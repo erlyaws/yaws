@@ -5,6 +5,9 @@ yawsdir=%yawsdir%
 erl=%erl%
 
 
+ENV_PGM=`which env`
+
+
 help()
 {
 	echo "usage: server modes ... "
@@ -16,6 +19,9 @@ help()
 	echo "       yaws -t         -- trace all traffic"
 	echo "       yaws -T         -- trace http traffic"
 	echo "       yaws -v         -- print version"
+	echo ""
+	echo "       yaws -heart     -- auto restart yaws if it crashes"
+	echo "                          (requires the -D switch)"
 	echo ""
 	echo ""
 	echo "ctl functions ... "
@@ -33,6 +39,7 @@ trace="";
 conf="";
 runmod="";
 sname="";
+heart="";
 
 while [ $# -gt 0 ] 
 do
@@ -73,6 +80,8 @@ do
            -sname)
 		sname=" -sname $1 "
 		shift;;
+           -heart)
+		heart=" -heart ";;
 	    *)
 		help
        esac
@@ -80,6 +89,14 @@ done
 
 [ -z "$daemon" ] && [ -z "$interactive" ] && help
 
-exec $erl ${daemon} -pa ${yawsdir}/ebin  ${sname} ${debug} -s yaws $trace $conf $runmod
+if [ -z "$heart" ] !! [ -z "$daemon" ]; then
+    HEART_COMMAND="";
+else
+    ## ............................this line
+    export HEART_COMMAND="${ENV_PGM} HEART=true $erl ${daemon} ${heart} -pa ${yawsdir}/ebin  ${sname} ${debug} -s yaws $trace $conf $runmod";
+fi
+
+## keep this line in sync with ....^
+exec $erl ${daemon} ${heart} -pa ${yawsdir}/ebin  ${sname} ${debug} -s yaws $trace $conf $runmod
 
 
