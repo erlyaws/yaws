@@ -29,7 +29,9 @@ function addSmiley(ref) {
 
    text.value = text.value+"<img src='"+ref+"'>";
 
-   text.focus()
+   text.focus();
+
+   return false;
 }
 
 </script>
@@ -87,23 +89,23 @@ h1 {
 </textarea>
 <br>
 
-<img src='smile.png' onmousedown="addSmiley('smile.png')"></img>
-<img src='angel.png' onmousedown="addSmiley('angel.png')"></img>
-<img src='bigsmile.png' onmousedown="addSmiley('bigsmile.png')"></img>
-<img src='burp.png' onmousedown="addSmiley('burp.png')"></img>
-<img src='cool.png' onmousedown="addSmiley('cool.png')"></img>
-<img src='crossedlips.png' onmousedown="addSmiley('crossedlips.png')"></img>
-<img src='cry.png' onmousedown="addSmiley('cry.png')"></img>
-<img src='embarrassed.png' onmousedown="addSmiley('embarrassed.png')"></img>
-<img src='farted.png' onmousedown="addSmiley('farted.png')"></img>
-<img src='kiss.png' onmousedown="addSmiley('kiss.png')"></img>
-<img src='moneymouth.png' onmousedown="addSmiley('moneymouth.png')"></img>
-<img src='oneeye.png' onmousedown="addSmiley('oneeye.png')"></img>
-<img src='sad.png' onmousedown="addSmiley('sad.png')"></img>
-<img src='scream.png' onmousedown="addSmiley('scream.png')"></img>
-<img src='think.png' onmousedown="addSmiley('think.png')"></img>
-<img src='tongue.png' onmousedown="addSmiley('tongue.png')"></img>
-<img src='wink.png' onmousedown="addSmiley('wink.png')"></img>
-<img src='yell.png' onmousedown="addSmiley('yell.png')"></img>
+<img src='smile.png' onmousedown="return addSmiley('smile.png')"></img>
+<img src='angel.png' onmousedown="return addSmiley('angel.png')"></img>
+<img src='bigsmile.png' onmousedown="return addSmiley('bigsmile.png')"></img>
+<img src='burp.png' onmousedown="return addSmiley('burp.png')"></img>
+<img src='cool.png' onmousedown="return addSmiley('cool.png')"></img>
+<img src='crossedlips.png' onmousedown="return addSmiley('crossedlips.png')"></img>
+<img src='cry.png' onmousedown="return addSmiley('cry.png')"></img>
+<img src='embarrassed.png' onmousedown="return addSmiley('embarrassed.png')"></img>
+<img src='farted.png' onmousedown="return addSmiley('farted.png')"></img>
+<img src='kiss.png' onmousedown="return addSmiley('kiss.png')"></img>
+<img src='moneymouth.png' onmousedown="return addSmiley('moneymouth.png')"></img>
+<img src='oneeye.png' onmousedown="return addSmiley('oneeye.png')"></img>
+<img src='sad.png' onmousedown="return addSmiley('sad.png')"></img>
+<img src='scream.png' onmousedown="return addSmiley('scream.png')"></img>
+<img src='think.png' onmousedown="return addSmiley('think.png')"></img>
+<img src='tongue.png' onmousedown="return addSmiley('tongue.png')"></img>
+<img src='wink.png' onmousedown="return addSmiley('wink.png')"></img>
+<img src='yell.png' onmousedown="return addSmiley('yell.png')"></img>
 
 </html>
