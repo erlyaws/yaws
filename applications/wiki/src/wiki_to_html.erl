@@ -38,11 +38,13 @@ format_link({editTag, Tag}, Page, Root) ->
      "<img border=0 src='edit.gif'></a> "].
 
 format_link({file, FileName, _}, FileDir, Page, Root) ->
-    ["<tr><td valign=top align=left><a href=\"", FileDir, "/", FileName,"\">",
+    ["<tr><td valign=top align=left><a href=\"", wiki:str2urlencoded(FileDir),
+     "/", wiki:str2urlencoded(FileName),"\">",
      FileName, "</a> </td><td valign=top align=left>",  "</td></tr>\n"];
 
 format_link({file, FileName, Description, _}, FileDir, Page, Root) ->
-    ["<tr><td valign=top align=left><a href=\"", FileDir, "/", FileName,"\">",
+    ["<tr><td valign=top align=left><a href=\"", wiki:str2urlencoded(FileDir),
+     "/", wiki:str2urlencoded(FileName),"\">",
      FileName, "</a></td><td align=left valign=top>",
      Description, "</td></tr>\n"].
 

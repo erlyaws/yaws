@@ -31,7 +31,8 @@
 	 storeTagged/3,
 	 sendMeThePassword/3, storeFiles/3, showOldPage/3]).
 
--export([show/1, ls/1, h1/1, read_page/2, background/1, p/1]).
+-export([show/1, ls/1, h1/1, read_page/2, background/1, p/1,
+	 str2urlencoded/1]).
 
 -import(lists, [reverse/1, map/2, sort/1]).
 
@@ -641,7 +642,7 @@ previewPage(Opts, Root, Prefix) ->
 		   [input("submit", "store", "Store"),
 		    input("hidden", "node", Page),
 		    input("hidden", "password", Password),
-		    input("hidden", "txt", str2urlencoded(Txt))]),
+		    input("hidden", "txt", str2formencoded(Txt))]),
 	      p(),hr(),h1(Page), 
 	      wiki_to_html:format_wiki(Page, Wik, Root)]).
 
@@ -679,7 +680,7 @@ previewTagged([_,{node,Page},{tag,Tag},{text, Txt0}], Root, Prefix) ->
 			   [input("submit", "store", "Store"),
 			    input("hidden", "node", Page),
 			    input("hidden", "tag", Tag),
-			    input("hidden", "txt", str2urlencoded(Txt))]),
+			    input("hidden", "txt", str2formencoded(Txt))]),
 		      p(),hr(), 
 		      wiki_to_html:format_wiki(Page,{txt,10000,Txt},Root)]);
 	false ->
@@ -712,8 +713,8 @@ previewNewPage([_,{node, Page},
 		   [input("submit", "store", "Store"),
 		    input("hidden", "node", Page),
 		    input("hidden", "password", Password),
-		    input("hidden", "email", str2urlencoded(Email)),
-		    input("hidden", "txt", str2urlencoded(Txt))]),
+		    input("hidden", "email", str2formencoded(Email)),
+		    input("hidden", "txt", str2formencoded(Txt))]),
 	      wiki_to_html:format_wiki(Page, Wik, Root)]);
 previewNewPage([_,{node,Page},{password1,P1},{password2,P2}|_],
 	       Root, Prefix) ->
@@ -984,8 +985,6 @@ quote_lt([])     -> [].
 %%      encoded data, but hidden fields with VALUE attributes present should.
 %% 
 
-str2urlencoded([$ |T]) ->
-    [$+|str2urlencoded(T)];
 str2urlencoded([$\n|T]) ->
     "%0D%0A" ++ str2urlencoded(T);
 str2urlencoded([H|T]) ->
@@ -997,6 +996,20 @@ str2urlencoded([H|T]) ->
 	    [$%,Hi,Lo|str2urlencoded(T)]
     end;
 str2urlencoded([]) -> [].
+
+str2formencoded([$ |T]) ->
+    [$+|str2formencoded(T)];
+str2formencoded([$\n|T]) ->
+    "%0D%0A" ++ str2formencoded(T);
+str2formencoded([H|T]) ->
+    case is_alphanum(H) of
+	true ->
+	    [H|str2formencoded(T)];
+	false ->
+	    {Hi,Lo} = byte2hex(H),
+	    [$%,Hi,Lo|str2formencoded(T)]
+    end;
+str2formencoded([]) -> [].
 
 byte2hex(X) ->
     {nibble2hex(X bsr 4), nibble2hex(X band 15)}.

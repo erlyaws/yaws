@@ -10,8 +10,6 @@ EBININSTALLDIR=$(INSTALLPREFIX)/ebin
 
 ERL=$(shell which erl)
 ERLC=$(shell which erlc)
-# ERL=/opt/bin/erl
-# ERLC=/opt/bin/erlc
 
 
 ## don't edit below here
