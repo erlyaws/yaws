@@ -1098,29 +1098,29 @@ deliver_303(CliSock, Req, GC, SC) ->
     deliver_accumulated(#dcc{}, CliSock, GC, SC),
     done.
 
+redirect_scheme(SC) ->
+    case {SC#sconf.ssl,SC#sconf.rmethod} of
+	{_, Method} when list(Method) ->
+	    Method++"://";
+	{undefined,_} ->
+	    "http://";
+	{_SSl,_} ->
+	    "https://"
+    end.    
+
+redirect_port(SC) ->
+    case {SC#sconf.ssl, SC#sconf.port, SC#sconf.rport} of
+	{_,_,ForcePort} when integer(ForcePort) -> [$:|ForcePort];
+	{undefined, 80, _}                      -> "";
+	{undefined, Port, _}                    -> [$:|Port];
+	{_SSL, 443, _}                          -> "";
+	{_SSL, Port, _}                         -> [$:|Port]
+    end.    
+
 redirect_scheme_port(SC) ->
-    Scheme = case {SC#sconf.ssl,SC#sconf.rmethod} of
-		 {_, Method} when list(Method) ->
-		     Method++"://";
-		 {undefined,_} ->
-		     "http://";
-		 {_SSl,_} ->
-		     "https://"
-	     end,
-    PortPart = case {SC#sconf.ssl, SC#sconf.port, SC#sconf.rport} of
-		   {_,_,ForcePort} when integer(ForcePort) ->
-		       io_lib:format(":~w",[ForcePort]);
-		   {undefined, 80, _} ->
-		       "";
-		   {undefined, Port, _} ->
-		       io_lib:format(":~w",[Port]);
-		   {_SSL, 443, _} ->
-		       "";
-		   {_SSL, Port, _} ->
-		       io_lib:format(":~w",[Port])
-	       end,
+    Scheme = redirect_scheme(SC),
+    PortPart = redirect_port(SC),
     {Scheme, PortPart}.
-    
 
 servername_sans_port(Servername) ->
     case string:chr(Servername, $:) of
@@ -1475,11 +1475,18 @@ handle_out_reply({redirect_local, Path0}, _DCC, _LineNo, _YawsFile, SC, A) ->
 	       P ->
 		   P
 	   end,
-    {Scheme, PortPart} = redirect_scheme_port(SC),
+    Scheme = redirect_scheme(SC),
+    Arg = hd(A),
+    Headers = Arg#arg.headers,
     set_status_code(redirect_code(A)),
-    accumulate_header(["Location: ", Scheme,
-		       servername_sans_port(SC#sconf.servername), 
-		       PortPart, Path]),
+    if 
+	SC#sconf.rport /= undefined ->
+	    Port = redirect_port(SC),
+	    accumulate_header(["Location: ", Scheme,
+			       servername_sans_port(Headers#headers.host), Port, Path]);
+	true ->
+	    accumulate_header(["Location: ", Scheme, Headers#headers.host, Path])
+    end,
     ok;
 
 handle_out_reply({redirect, URL}, _DCC, _LineNo, _YawsFile, _SC, A) ->

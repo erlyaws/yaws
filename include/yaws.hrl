@@ -52,7 +52,7 @@
 
 %% server conf
 -record(sconf,
-	{port = 8000,                %% which port is this server lsitenintg to
+	{port = 8000,                %% which port is this server listening to
 	 rport,                      %% forced redirect port
 	 rmethod,                    %% forced redirect method
 	 docroot,                    %% path to the docs
