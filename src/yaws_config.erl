@@ -383,13 +383,22 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}
 	    end;
-	["dir_listings", '=', Bool] ->
-	    case is_bool(Bool) of
-		{true, Val} ->
-		    C2 = ?sc_set_dir_listings(C, Val),
+	["dir_listings", '=', StrVal] ->
+	    case StrVal of
+		"true" ->
+		    C2 = ?sc_set_dir_listings(C, true),
+		    C3 = ?sc_set_dir_all_zip(C2, true),
+		    AllAppMod = {"all.zip", yaws_ls},
+		    C4 = C3#sconf{appmods = [AllAppMod | C3#sconf.appmods]},
+		    fload(FD, server, GC, C4, Cs, Lno+1, Next);
+		"true_nozip" ->
+		    C2 = ?sc_set_dir_listings(C, true),
 		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-		false ->
-		    {error, ?F("Expect true|false at line ~w", [Lno])}
+		"false" ->
+		    C2 = ?sc_set_dir_listings(C, false),
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+		_ ->
+		    {error, ?F("Expect true|true_nozip|false at line ~w",[Lno])}
 	    end;
 	["deflate", '=', Bool] ->
 	    case is_bool(Bool) of

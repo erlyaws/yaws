@@ -17,7 +17,7 @@
 
 -include_lib("kernel/include/file.hrl").
 
-list_directory(Arg, CliSock, List, DirName, Req) ->
+list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
     {abs_path, Path} = Req#http_request.path,
     {DirStr, Pos, Direction, Qry} = parse_query(Path),
     ?Debug("List=~p Dirname~p~n", [List, DirName]), 
@@ -31,10 +31,16 @@ list_directory(Arg, CliSock, List, DirName, Req) ->
     L2 = if Direction == normal -> L1;
 	    Direction == reverse -> lists:reverse(L1)
 	 end,
-    L = [Html || {_, _, _, Html} <- [Up | L2]],
+    [UpHtml | L3] = [Html || {_, _, _, Html} <- [Up | L2]],
+    L4 = case DoAllZip of
+	     true ->
+		 [UpHtml, all(DirName) | L3];
+	     false ->
+		 [UpHtml | L3]
+	 end,
     Body = [ doc_head(DirStr),
 	     list_head(Direction), 
-	     L,
+	     L4,
 	     list_tail(),
 	     "\n<pre>",
 	     inline_readme(DirName,List),
@@ -115,22 +121,76 @@ list_head(Direction) ->
 list_tail() ->
     "</table>".
 
+%% FIXME: would be nice with a good size approx.  but it would require
+%% a deep scan of possibly the entire docroot, (and also some knowledge
+%% about zip's compression ratio in advance...)
+all(DirName) ->
+    {Gif, Alt} = list_gif(zip, ""),
+    {ok, FI} = file:read_file_info(DirName),
+    ?F("<tr>\n"
+       "<td><a href=~p title=\"all.zip\"><img src=~p alt=~p/>~s</a></td>\n"
+       "<td>~s</td>\n"
+       "<td>0k</td>\n"
+       "</tr>\n",
+       [yaws_api:url_encode(lists:flatten(DirName)) ++ "all.zip",
+	"/icons/" ++ Gif,
+	Alt,
+	"all.zip",
+	datestr(FI)]).
+    
+out(A) ->
+    Dir = A#arg.appmod_prepath,
+    case Dir of
+	"/home/www/media/" ++ _ ->
+	    YPid = self(),
+	    spawn_link(fun() -> zip(YPid, Dir) end),
+	    {streamcontent, "application/zip", ""};
+	_ ->
+	    {html, "not found"}
+    end.
+
+zip(YPid, Dir) ->
+    process_flag(trap_exit, true),
+    P = open_port({spawn, "zip -q -1 -r - '" ++ Dir ++ "'"},
+		  [use_stdio, binary, exit_status]),
+    zip_loop(YPid, P).
+
+zip_loop(YPid, P) ->
+    receive
+	{P, {data, Data}} ->
+	    yaws_api:stream_chunk_deliver_blocking(YPid, Data),
+	    zip_loop(YPid, P);
+	{P, {exit_status, _}} ->
+	    yaws_api:stream_chunk_end(YPid);
+	{'EXIT', YPid, Status} ->
+	    exit(Status);
+	Else ->
+	    error_logger:error_msg("Could not deliver zip file: ~p\n", [Else])
+    end.
+
+
 %% Removed code that appendended  Qry  to the file name.
 %% It might still be a good idea in case  type==directory.
 %% Was that the intention?
 %% Carsten
+%%
+%% yes, that was the intention.  fixed now (mbj)
+%% ... and maybe we should just remove this conversation in the next checkin :)
 
-file_entry({ok, FI}, _DirName, Name, _Qry) ->
+file_entry({ok, FI}, _DirName, Name, Qry) ->
     ?Debug("file_entry(~p) ", [Name]),
     Ext = filename:extension(Name),
     {Gif, Alt} = list_gif(FI#file_info.type, Ext),
+    QryStr = if FI#file_info.type == directory -> Qry;
+		true -> ""
+	     end,
     Entry = 
 	?F("<tr>\n"
 	   "<td><a href=~p title=\"~w bytes\"><img src=~p alt=~p/>~s</a></td>\n"
 	   "<td>~s</td>\n"
 	   "<td>~s</td>\n"
 	   "</tr>\n",
-	   [yaws_api:url_encode(Name),
+	   [yaws_api:url_encode(Name) ++ QryStr,
 	    FI#file_info.size,
 	    "/icons/" ++ Gif,
 	    Alt,
@@ -166,6 +226,8 @@ sizestr(FI) when FI#file_info.size > 1000000 ->
     ?F("~.1fM", [FI#file_info.size / 1000000]);
 sizestr(FI) when FI#file_info.size > 1000 ->
     ?F("~wk", [trunc(FI#file_info.size / 1000)]);
+sizestr(FI) when FI#file_info.size == 0 ->
+    ?F("0k", []);
 sizestr(_FI) ->
     ?F("1k", []). % As apache does it...
 
@@ -184,6 +246,8 @@ list_gif(regular, _) ->
     {"layout.gif", "[&nbsp;&nbsp;&nbsp;]"};
 list_gif(directory, _) ->
     {"dir.gif", "[DIR]"};
+list_gif(zip, _) ->
+    {"compressed.gif", "[DIR]"};
 list_gif(_, _) ->
     {"unknown.gif", "[OTH]"}.
 

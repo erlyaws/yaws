@@ -1124,7 +1124,8 @@ handle_ut(CliSock, ARG, UT, N) ->
 	directory when ?sc_has_dir_listings(SC) ->
 	    P = UT#urltype.dir,
 	    yaws:outh_set_dyn_headers(Req, H, UT),
-	    yaws_ls:list_directory(ARG, CliSock, UT#urltype.data, P, Req);
+	    yaws_ls:list_directory(ARG, CliSock, UT#urltype.data, P, Req,
+				   ?sc_has_dir_all_zip(SC));
 	directory ->
 	    handle_ut(CliSock, ARG, #urltype{type = error}, N);
 	regular ->

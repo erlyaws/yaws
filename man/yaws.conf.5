@@ -169,9 +169,10 @@ Setting this directive to false turns of traffic logging for this
 virtual server. The default value is true. 
 
 .TP
-\fBdir_listings = true | false\fR
+\fBdir_listings = true | true_nozip | false\fR
 Setting this directive to false disallows the automatic
 dir listing feature of Yaws. A status code 403 Forbidden will be sent.
+Set to true_nozip to avoid the auto-generated all.zip entries.
 
 .TP
 \fB docroot = Directory\fR

@@ -84,6 +84,7 @@
 -define(SC_TILDE_EXPAND, 8).
 -define(SC_DIR_LISTINGS, 16).
 -define(SC_DEFLATE,      32).
+-define(SC_DIR_ALL_ZIP,  64).
 
 
 -define(SC_DEF, ?SC_ACCESS_LOG bor ?SC_ADD_PORT).
@@ -98,6 +99,8 @@
 	((SC#sconf.flags band ?SC_DIR_LISTINGS) /= 0)).
 -define(sc_has_deflate(SC), 
 	((SC#sconf.flags band ?SC_DEFLATE) /= 0)).
+-define(sc_has_dir_all_zip(SC),
+	((SC#sconf.flags band ?SC_DIR_ALL_ZIP) /= 0)).
 
 
 -define(sc_set_access_log(SC, Bool), 
@@ -112,6 +115,8 @@
 	SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_DIR_LISTINGS, Bool)}).
 -define(sc_set_deflate(SC, Bool), 
 	SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_DEFLATE, Bool)}).
+-define(sc_set_dir_all_zip(SC, Bool), 
+	SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_DIR_ALL_ZIP, Bool)}).
 
 
 
