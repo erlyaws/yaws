@@ -478,3 +478,5 @@ video/x-msvideo			avi
 video/x-sgi-movie		movie
 x-conference/x-cooltalk		ice
 text/html			shtml html htm
+application/xhtml+xml		xhtml
+image/svg+xml			svg
