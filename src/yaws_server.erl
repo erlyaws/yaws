@@ -533,10 +533,10 @@ acceptor0(GS, Top) ->
 		{ok, Int} when integer(Int) ->
 		    Top ! {self(), done_client, Int};
 		{'EXIT', normal} ->
-		    Top ! {self(), done_client, 0};
+		    exit(normal);
 		{'EXIT', Reason} ->
 		    yaws_log:errlog("~p~n", [Reason]),
-		    Top ! {self(), done_client, 0}
+		    exit(normal)
 	    end,
 	    %% we cache processes
 	    receive
