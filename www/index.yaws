@@ -26,7 +26,7 @@ out(A) ->
        {p,[],"Furthermore, Yaws has excellent performance and is able to"
 	" ship several thousands of dynamically generated pages per second."},
 
-       {h2,[], "yaws,hyber.org"},
+       {h2,[], "yaws.hyber.org"},
 
        {p,[], ["The www page for Yaws is ",
 	       {a ,[{href,"http://yaws.hyber.org"}], "yaws.hyber.org"},

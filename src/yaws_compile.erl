@@ -61,6 +61,9 @@ compile_file(File, GC, SC) ->
 						infd = Fd, gc = GC, sc = SC}, 
 					  1,   
 					  get_line(), init, 0, [], 0),
+				 erase(yfile),
+				 erase(yfile_data),
+				 erase(yfile_data_orig),
 				 Spec;
 			     _Err ->
 				 yaws:elog("can't open ~s~n", [File]),

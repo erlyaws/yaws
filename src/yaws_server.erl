@@ -660,6 +660,7 @@ acceptor0(GS, Top) ->
 		    error_logger:error_msg("Yaws process died: ~p~n", [Reason]),
 		    exit(normal)
 	    end,
+
 	    %% we cache processes
 	    receive
 		{Top, stop} ->
@@ -708,6 +709,9 @@ handle_method_result(Res, CliSock, IP, GS, SC, Req, H, Num) ->
     case Res of
 	continue ->
 	    maybe_access_log(IP, SC, Req, H),
+	    erase(post_parse),
+	    erase(query_parse),
+	    erase(outh),
 	    aloop(CliSock, GS, Num+1);
 	done ->
 	    maybe_access_log(IP, SC, Req, H),
@@ -1366,6 +1370,7 @@ deliver_501(CliSock, Req, GC, SC) ->
 do_yaws(CliSock, GC, SC, ARG, UT, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     FileAtom = list_to_atom(UT#urltype.fullpath),
+    io:format("FileAtom = ~p~nUT=~p~n",[FileAtom, UT]),
     Mtime = mtime(UT#urltype.finfo),
     case ets:lookup(SC#sconf.ets, FileAtom) of
 	[{FileAtom, spec, Mtime1, Spec, Es}] when Mtime1 == Mtime,
@@ -1829,20 +1834,31 @@ ssi(File, Delimiter, Bindings) ->
     ssi(File, Delimiter, Bindings, get(sc)).
 ssi(File, Delimiter, Bindings, SC) ->
     Key = {ssi, File, Delimiter},
+    FullPath = [SC#sconf.docroot, [$/|File]],
+    Mtime = path_to_mtime(FullPath),
     case ets:lookup(SC#sconf.ets, Key) of
-	[] ->
-	    case file:read_file(
-		   filename:join([SC#sconf.docroot, File])) of
+	[{_, Parts, Mtime}] ->
+	    expand_parts(Parts, Bindings, []);
+	_ ->
+	    case prim_file:read_file(FullPath) of
 		{ok, Bin} ->
 		    D =delim_split_file(Delimiter,binary_to_list(Bin),data,[]),
-		    ets:insert(SC#sconf.ets,{Key,D}),
+		    ets:insert(SC#sconf.ets,{Key,D, Mtime}),
 		    ssi(File, Delimiter, Bindings, SC);
 		{error, Rsn} ->
 		    {error,Rsn}
-	    end;
-	[{_, Parts}] ->
-	    expand_parts(Parts, Bindings, [])
+	    end
     end.
+
+path_to_mtime(FullPath) ->
+    case prim_file:read_file_info(FullPath) of
+	{ok, FI} ->
+	    mtime(FI);
+	Err ->
+	    Err
+    end.
+
+		     
 
 
 expand_parts([{data, D} |T], Bs, Ack) ->	    

@@ -1589,18 +1589,34 @@ skip_space(T) -> T.
 
 
 queryvar(ARG,Key) ->
-    case lists:keysearch(Key,1,yaws_api:parse_query(ARG)) of
+    Parse = case get(query_parse) of
+		undefined ->
+		    Pval = yaws_api:parse_query(ARG),
+		    put(query_parse, Pval),
+		    Pval;
+		Val0 ->
+		    Val0
+	    end,
+    case lists:keysearch(Key,1,Parse) of
 	{value,{_,undefined}} -> undefined;
 	{value,{_,Val}} -> {ok, Val};
 	false -> undefined
     end.
 
 postvar(ARG, Key) ->
-	case lists:keysearch(Key,1,yaws_api:parse_post(ARG)) of
-            {value, {_,undefined}} -> undefined;
-	    {value,{_,Val}} -> {ok, Val};
-	    false -> undefined
-	end.
+    Parse = case get(post_parse) of
+		undefined ->
+		    Pval = yaws_api:parse_post(ARG),
+		    put(post_parse, Pval),
+		    Pval;
+		Val0 ->
+		    Val0
+	    end,
+    case lists:keysearch(Key,1,Parse) of
+	{value, {_,undefined}} -> undefined;
+	{value,{_,Val}} -> {ok, Val};
+	false -> undefined
+    end.
 
 
 
