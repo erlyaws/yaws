@@ -52,6 +52,9 @@
 	      f1 = false,
 	      f2 = false,
 	      f3 = false,
+	      h1 = false,
+	      h2 = false,
+	      h3 = false,
 	      n = 0, 
 	      dl = false
 	     }).
@@ -78,6 +81,15 @@ format_txt([$\\,H|T], Env, L, Doc) ->
     format_txt(T, Env, [H|L], Doc);
 format_txt([$*|T], Env, L, Doc) ->
     {Env1, L1} = char_style(b, Env, L),
+    format_txt(T, Env1, L1, Doc);
+format_txt([$=,$=,$=|T], Env, L, Doc) ->
+    {Env1, L1} = char_style(h1, Env, L),
+    format_txt(T, Env1, L1, Doc);
+format_txt([$=,$=|T], Env, L, Doc) ->
+    {Env1, L1} = char_style(h2, Env, L),
+    format_txt(T, Env1, L1, Doc);
+format_txt([$=|T], Env, L, Doc) ->
+    {Env1, L1} = char_style(h3, Env, L),
     format_txt(T, Env1, L1, Doc);
 format_txt([${,${|T], Env, L, Doc) ->
     emb(T,Env,L, Doc);
@@ -300,7 +312,19 @@ char_style(i, Env, L) when Env#env.f2 == true ->
 char_style(tt, Env, L) when Env#env.f3==false ->
     {Env#env{f3=true},reverse("<tt>", L)};
 char_style(tt, Env, L) when Env#env.f3==true ->
-    {Env#env{f3=false},reverse("</tt>", L)}.
+    {Env#env{f3=false},reverse("</tt>", L)};
+char_style(h1, Env, L) when Env#env.h1==true ->
+    {Env#env{h1=false},reverse("</h1>", L)};
+char_style(h2, Env, L) when Env#env.h2==true ->
+    {Env#env{h2=false},reverse("</h2>", L)};
+char_style(h3, Env, L) when Env#env.h3==true ->
+    {Env#env{h3=false},reverse("</h3>", L)};
+char_style(h1, Env, L) when Env#env.h1==false ->
+    {Env#env{h1=true},reverse("<h1>", L)};
+char_style(h2, Env, L) when Env#env.h2==false ->
+    {Env#env{h2=true},reverse("<h2>", L)};
+char_style(h3, Env, L) when Env#env.h3==false ->
+    {Env#env{h3=true},reverse("<h3>", L)}.
 
 collect_wiki_link([$"|X]) ->
     collect_wiki_link(X, [], true);

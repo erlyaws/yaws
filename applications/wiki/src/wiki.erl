@@ -1363,11 +1363,14 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
 			 "&next=",integer_to_list(NewIndex+1),"\">Next</a><br>"
 			 "</td></tr></table>"
 			 "<p><b>",Comment,"</b></p><p>",
+			 "<a href=\"",
+			 wiki:str2urlencoded(FileDir), "/",
+			 wiki:str2urlencoded(FileName),"\" target=\"pict\">",
 			 "<img src=\"",
 			 wiki:str2urlencoded(FileDir), "/",
 			 wiki:str2urlencoded(FileName),
 			 "\" alt='",FileName,
-			 "'></p>"],
+			 "'></a></p>"],
 		    F1 = add_blanks_nicely(Page),
 		    TopHeader = 
 			["<h1><a href='showPage.yaws?node=",
