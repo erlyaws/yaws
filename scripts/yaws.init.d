@@ -3,10 +3,8 @@
 # Startup script for the Yaws Web Server
 #
 # config: /etc/yaws.conf
-#
-# chkconfig: 2345 65 35
 # description: yaws - Erlang enabled http server
-# use "/sbin/chkconfig --add yaws" to install
+
 
 # Source function library.
 
@@ -17,7 +15,7 @@ prog=yaws
 
 start() {
         echo -n $"Starting $prog: "
-        daemon $yaws -D 
+        daemon $yaws -D -heart
         RETVAL=$?
         echo
         [ $RETVAL = 0 ] && touch /var/lock/subsys/yaws
