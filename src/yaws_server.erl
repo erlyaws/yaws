@@ -2291,12 +2291,12 @@ ret_reg_split(SC, Comps, RevFile, Query) ->
 	{ok, FI} when FI#file_info.type == regular ->
 	    case suffix_type(SC, RevFile) of
 		{forbidden, _} -> 
-		    #urltype{type=error, data=undefined};
+		    #urltype{type=forbidden};
 						% Forbidden script
-						% types are treated as
-						% non-existing.  We
-						% could also treat
-						% them as plain files.
+						% type.  
+						%
+						% We could also treat
+						% it as a plain file.
 		{X, Mime} -> 
 		    #urltype{type=X, 
 			     finfo=FI,
