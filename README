@@ -15,7 +15,9 @@ To build and install
      This will create a webserver at http://127.0.0.1:8000
 
 5. make install
-6. Start as /usr/local/bin/yaws
+6. Start as /usr/local/bin/yaws -i 
+   (this starts an interactive system)
+
 7. This will create a webserver at http://127.0.0.1
 8. Edit /etc/yaws.conf 
 9. Create content in /var/yaws

@@ -179,6 +179,7 @@ init2(Gconf, Sconfs) ->
 		  end, L),
     if
 	length(L) == length(L2) ->
+	    proc_lib:spawn_link(yaws_ctl, start, [self()]),
 	    {ok, {Gconf, L2, 0}};
 	true ->
 	    {stop, "failed to start server "}
@@ -200,7 +201,6 @@ handle_call(status, From, State) ->
     {reply, Reply, State};
 handle_call(mnum, From, {GC, Group, Mnum}) ->
     {reply, Mnum+1,   {GC, Group, Mnum+1}}.
-
 
 
 
@@ -325,7 +325,8 @@ acceptor0(GS, Top) ->
 	    case (GS#gs.gconf)#gconf.trace of  %% traffic trace
 		{true, _} ->
 		    {ok, {IP, Port}} = inet:peername(Client),
-		    Str = ?F("New connection from ~s:~w~n", [yaws:fmt_ip(IP),Port]),
+		    Str = ?F("New connection from ~s:~w~n", 
+			     [yaws:fmt_ip(IP),Port]),
 		    yaws_log:trace_traffic(from_client, Str);
 		_ ->
 		    ok
@@ -528,9 +529,9 @@ get_headers(CliSock, Req, GC, H) ->
 			H#headers{authorization = parse_auth(X)});
 	{ok, http_eoh} ->
 	    H;
-	{ok, Other} ->
-	    ?Debug("OTHER header ~p~n", [Other]),
-	    get_headers(CliSock, Req, GC, H#headers{other=[X|H#header.other]});
+	{ok, X} ->
+	    ?Debug("OTHER header ~p~n", [X]),
+	    get_headers(CliSock, Req, GC, H#headers{other=[X|H#headers.other]});
 	Err ->
 	    exit(normal)
     
@@ -567,7 +568,13 @@ get_headers(CliSock, Req, GC, H) ->
     ARG = make_arg(CliSock, Head, Req, GC, SC),
     ARG2 = ARG#arg{clidata = Bin},
     handle_request(CliSock, GC, SC, Req, Head, ARG2).
-    
+
+%% will throw
+'HEAD'(CliSock, GC, SC, Req, Head) ->
+    'GET'(CliSock, GC, SC, Req, Head).
+
+'TRACE'(CliSock, GC, SC, Req, Head) ->
+    nyi.
 
 make_arg(CliSock, Head, Req, GC, SC) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
@@ -576,13 +583,12 @@ make_arg(CliSock, Head, Req, GC, SC) ->
 	 req = Req,
 	 docroot = SC#sconf.docroot}.
 
-
-
 handle_request(CliSock, GC, SC, Req, H, ARG) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     UT =  url_type(GC, SC,P=get_path(Req#http_request.path)),
-    if
-	SC#sconf.authdirs == [] ->
+    ?Debug("UT: ~p", [?format_record(UT, urltype)]),
+    case SC#sconf.authdirs of
+	[] ->
 	    handle_ut(CliSock, GC, SC, Req, H, ARG, UT);
 	Adirs ->
 	    %% we have authentication enabled, check auth
@@ -607,7 +613,8 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT) ->
 	error ->
 	    deliver_404(CliSock, GC, SC, Req);
 	directory ->
-	    yaws_ls:list_directory(CliSock, UT#urltype.data, P, GC, SC);
+	    P = UT#urltype.dir,
+	    yaws_ls:list_directory(CliSock, UT#urltype.data, P, Req, GC, SC);
 	regular -> 
 	    deliver_file(CliSock, GC, SC, Req, H, UT);
 	yaws ->
@@ -631,7 +638,7 @@ parse_auth(Dir) ->
     case file:consult([Dir, [$/|".yaws_access"]]) of
 	{ok, [{realm, Realm} |TermList]} ->
 	    {ok, #auth{dir = Dir,
-		       realm Realm,
+		       realm = Realm,
 		       users = TermList}};
 	{ok, TermList} ->
 	    {ok, #auth{dir = Dir,
@@ -642,7 +649,7 @@ parse_auth(Dir) ->
 
 
 
-is_authenticated(UT, Req, H) ->
+is_authenticated(SC, UT, Req, H) ->
     case ets:info(auth_tab, size) of
 	undefined ->
 	    ets:new(auth_tab, [public, set, named_table]);
@@ -652,29 +659,13 @@ is_authenticated(UT, Req, H) ->
     N = now_secs(),
     case ets:lookup(auth_tab, UT#urltype.dir) of
 	[{Dir, Auth, Then}] when Then+200 < N ->
-	    case H#header.authorization of
+	    case H#headers.authorization of
 		undefined ->
 		    {false, Auth#auth.realm};
 		{User, Password} ->
-		    
-
-
-
-
-		    
-
-
-
-
-
-
-	    
-
-
-    
-
-
-
+		    uhhhhh
+	    end
+    end.
 
 
 
@@ -828,6 +819,7 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT) ->
 	do_dyn_headers(CliSock,GC, SC,Bin,Fd,  Req,Head,Specs,ARG),
     ?Debug("TAIL =~p~n", [Tail]),
     send_headers(CliSock, S2, GC),
+    close_if_head(Req, fun() -> gen_tcp:close(CliSock), throw({ok, 1}) end),
     if
 	Content /= [] ->
 	    safe_send(true, CliSock, Content, GC);
@@ -867,7 +859,6 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC, Bin, Fd, [],ARG) ->
 	true ->
 	    done;
 	false ->
-	    %gen_tcp:send(CliSock, crnl()),
 	    tcp_send(CliSock, [crnl(), "0", crnl()], GC),
 	    continue
     end.
@@ -1015,6 +1006,7 @@ deliver_file(CliSock, GC, SC, Req, InH, UT) ->
     Fd = ut_open(UT),
     Bin = ut_read(Fd),
     send_headers(CliSock, [make_200(), OutH, crnl()], GC),
+    close_if_head(Req, fun() -> ut_close(Fd), throw({ok, 1}) end),
     case Bin of
 	{bin, Binary} ->
 	    tcp_send(CliSock, Binary, GC);
@@ -1027,6 +1019,14 @@ deliver_file(CliSock, GC, SC, Req, InH, UT) ->
 	    done;
 	DoClose == false ->
 	    continue
+    end.
+
+close_if_head(Req, F) ->
+    if
+	Req#http_request.method == 'HEAD' ->
+	    F();
+	true ->
+	    ok
     end.
 
 
@@ -1270,23 +1270,23 @@ do_url_type(Droot, Path) ->
 
 
 maybe_return_dir(DR, FlatPath) ->
-    case file:read_file_info([Droot, Path, "/index.yaws"]) of
+    case file:read_file_info([DR, FlatPath, "/index.yaws"]) of
 	{ok, FI} ->
 	    #urltype{type = yaws,
 		     finfo = FI,
 		     mime = "text/html",
 		     dir = FlatPath,
-		     fullpath = ?f([Droot, Path,"/index.yaws"])};
+		     fullpath = ?f([DR, FlatPath,"/index.yaws"])};
 	_ ->
-	    case file:read_file_info([Droot, Path, "/index.html"]) of
+	    case file:read_file_info([DR, FlatPath, "/index.html"]) of
 		{ok, FI} ->
 		    #urltype{type = regular,
 			     finfo = FI,
 			     mime = "text/html",
 			     dir = FlatPath,
-			     fullpath =?f([Droot,Path,"/index.html"])};
+			     fullpath =?f([DR,FlatPath,"/index.html"])};
 		_ ->
-		    case file:list_dir([Droot, Path]) of
+		    case file:list_dir([DR, FlatPath]) of
 			{ok, List} ->
 			    #urltype{type = directory, 
 				     dir = FlatPath,
@@ -1347,11 +1347,12 @@ parse_user_path(DR, [H|T], User) ->
 
 
 
-ret_reg_split(DR, Comps, File, Query) ->
-    ?Debug("ret_reg_split(~p)", [[DR, Comps, File]]),
+ret_reg_split(DR, Comps, RevFile, Query) ->
+    ?Debug("ret_reg_split(~p)", [[DR, Comps, RevFile]]),
     Dir = lists:reverse(Comps),
     FlatDir = lists:flatten(Dir),
-    L = [DR, Dir, lists:reverse(File)],
+    File = lists:reverse(RevFile),
+    L = [DR, Dir, File],
     case file:read_file_info(L) of
 	{ok, FI} when FI#file_info.type == regular ->
 	    {X, Mime} = suffix_type(File),
@@ -1361,7 +1362,7 @@ ret_reg_split(DR, Comps, File, Query) ->
 		     fullpath = lists:flatten(L),
 		     mime=Mime, q=Query};
 	{ok, FI} when FI#file_info.type == directory ->
-	    maybe_return_dir(DR, FlatDir);
+	    maybe_return_dir(DR, FlatDir ++ File);
 	Err ->
 	    #urltype{type=error, data=Err}
     end.
@@ -1416,4 +1417,8 @@ not_found_body(Url, GC, SC) ->
 	],
     list_to_binary(L).
 
+
+
+
+    
 

@@ -19,6 +19,15 @@ start() ->
 stop() ->
     application:stop(yaws).
 
+hup() ->
+    spawn(fun() ->
+		  group_leader(whereis(user), self()),
+		  stop(),
+		  start()
+	  end).
+
+
+%% use from cli only
 restart() ->
     stop(),
     load(),

@@ -14,7 +14,7 @@
 
 
 
-list_directory(CliSock, List, DirName, GC, SC) ->
+list_directory(CliSock, List, DirName, Req, GC, SC) ->
     ?Debug("List=~p", [List]), 
     L = lists:zf(
 	  fun(F) ->
@@ -31,8 +31,12 @@ list_directory(CliSock, List, DirName, GC, SC) ->
     Bin = list_to_binary(Body),
     D = [yaws_server:make_200(), 
 	 yaws_server:make_dyn_headers(true, "text/html"),
-	 "\r\n", Bin],
+	 "\r\n"],
     yaws_server:safe_send(true, CliSock, D, GC),
+    yaws_server:close_if_head(Req, fun() -> gen_tcp:close(CliSock),
+					    throw({ok, 1})
+				   end),
+    yaws_server:safe_send(true, CliSock, Bin, GC),
     done.
 
 
@@ -83,7 +87,7 @@ file_entry(Err, _, Name) ->
 
 
 
-trim([H|T], 0) ->
+trim([H|T], 5) ->
     "..&gt";
 trim([H|T], I) ->
     [H|trim(T,I-1)];
