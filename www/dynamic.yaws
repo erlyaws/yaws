@@ -117,4 +117,3 @@ described in the <a href="examples.yaws">Examples</a> section.
 <erl>
 out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
 </erl>
-

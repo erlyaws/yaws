@@ -739,6 +739,8 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC, Bin, Fd, [H|T],ARG) ->
 	    safe_call(DC, LineNo, YawsFile, CliSock, Mod, out, [ARG], GC),
 	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC,
 			     Bin2,Fd,T,ARG);
+	{data, 0} ->
+	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT,DC, Bin, Fd,T,ARG);
 	{data, NumChars} ->
 	    {Send, Bin2} = skip_data(Bin, Fd, NumChars),
 	    safe_send(DC, CliSock, Send, GC),
@@ -758,7 +760,7 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC, Bin, Fd, [],ARG) ->
 	    done;
 	false ->
 	    %gen_tcp:send(CliSock, crnl()),
-	    %tcp_send(CliSock, ["0", crnl(),crnl()], GC),
+	    tcp_send(CliSock, [crnl(), "0", crnl()], GC),
 	    continue
     end.
 
