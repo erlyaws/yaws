@@ -48,8 +48,9 @@ comp_opts(GC) ->
 
 
 compile_file(File, GC, SC) ->
-    %% broken erlang comppiler isn't
-    %% reentrant, can only have one erlanf compiler at a time running 
+    put(yfile,yaws:to_list(File)),
+    %% broken erlang compiler isn't
+    %% reentrant, can only have one erlang compiler at a time running 
     global:trans({yaws, self()},
 		 fun() ->
 			 ?Debug("Compile ~s~n", [File]),
@@ -236,7 +237,7 @@ is_exported(Fun, A, Mod) ->
     end.
 
 	     
-%% this will generate 9 lines
+%% this will generate 10 lines
 new_out_file(Line, C, GC) ->
     Mnum = case catch gen_server:call(yaws_server, mnum) of
 	       {'EXIT', _} ->
@@ -254,6 +255,8 @@ new_out_file(Line, C, GC) ->
     ?Debug("Writing outout file~s~n", [OutFile]),
     {ok, Out} = file:open(OutFile, [write]),
     ok = io:format(Out, "-module(~s).~n-compile(export_all).~n~n", [Module]),
+    ok = io:format(Out, "-yawsfile('" ++ get(yfile) ++ "').~n",[]),
+
     io:format(Out, "%%~n%% code at line ~w from file ~s~n%%~n",
 	      [Line, C#comp.infile]),
 
@@ -276,7 +279,7 @@ gen_err(C, _LineNo, NumChars, Err) ->
 comp_err(C, _LineNo, NumChars, Err) ->
     case Err of
 	[{_FileName, [ {Line0, Mod, E} |_]} |_] when integer(Line0) ->
-	    Line = Line0 + C#comp.startline - 9,
+	    Line = Line0 + C#comp.startline - 10,
 	    ?Debug("XX ~p~n", [{_LineNo, Line0}]),
 	    Str = io_lib:format("~s:~w:~n ~s\n", 
 				[C#comp.infile, Line,
