@@ -545,6 +545,12 @@ All bindings can then be used in the rest of yaws code
 In HTML source %%Key%% is expanded to Value and within erl 
 tags yaws_api:get_binding(Key) can be used to extract Value.
 
+
+.TP
+\fB{yssi, YawsFile}\fR
+Include a yaws file. Compile it and expand as if it had
+occured inline.
+
 .TP
 \fB[ListOfValues]\fR
 It is possible to return a deep list of the above defined

@@ -1131,7 +1131,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 	    deliver_dyn_part(CliSock, 
 			     0, "404",
 			     N,
-			     ARG,
+			     ARG,UT,
 			     fun(A)->(SC#sconf.errormod_404):
 					 out404(A,GC,SC) 
 			     end,
@@ -1209,7 +1209,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 	    deliver_dyn_part(CliSock, 
 			     0, "appmod",
 			     N,
-			     A2,
+			     A2,UT,
 			     fun(A)->Mod:out(A) end,
 			     fun(A)->finish_up_dyn_file(CliSock)
 			     end
@@ -1219,7 +1219,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 	    deliver_dyn_part(CliSock, 
 			     0, "cgi",
 			     N,
-			     ARG,
+			     ARG,UT,
 			     fun(A)->yaws_cgi:call_cgi(
 				       A,flatten(UT#urltype.fullpath))
 			     end,
@@ -1231,7 +1231,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 	    deliver_dyn_part(CliSock, 
 			     0, "php",
 			     N,
-			     ARG,
+			     ARG,UT,
 			     fun(A)->yaws_cgi:call_cgi(
 				       A,
 				       GC#gconf.phpexe,
@@ -1495,13 +1495,13 @@ get_client_data_all(CliSock, Bs, SSlBool) ->
 deliver_dyn_part(CliSock,                  % essential params
 		 LineNo, YawsFile,         % for diagnostic output
 		 CliDataPos,               % for `get_more'
-		 Arg,
+		 Arg,UT,
 		 YawsFun,                  % call YawsFun(Arg)
 		 DeliverCont               % call DeliverCont(Arg)
 						% to continue normally
 		) ->
     Res = (catch YawsFun(Arg)),
-    case handle_out_reply(Res, LineNo, YawsFile, [Arg]) of
+    case handle_out_reply(Res, LineNo, YawsFile, UT, [Arg]) of
 	{get_more, Cont, State} when 
 	      element(1, Arg#arg.clidata) == partial  ->
 	    More = get_more_post_data(CliDataPos, Arg),
@@ -1513,7 +1513,7 @@ deliver_dyn_part(CliSock,                  % essential params
 		    deliver_dyn_part(
 		      CliSock, LineNo, YawsFile, 
 		      CliDataPos+size(un_partial(More)), 
-		      A2, YawsFun, DeliverCont
+		      A2, UT, YawsFun, DeliverCont
 		     );
 		Err ->
 		    A2 = Arg#arg{clidata = Err,
@@ -1583,32 +1583,32 @@ discard_deliver_accumulated(CliSock) ->
 deliver_dyn_file(CliSock, Specs, ARG, UT, N) ->
     Fd = ut_open(UT),
     Bin = ut_read(Fd),
-    deliver_dyn_file(CliSock, Bin, Fd, Specs, ARG, N).
+    deliver_dyn_file(CliSock, Bin, Fd, Specs, ARG, UT, N).
 
 
 
-deliver_dyn_file(CliSock, Bin, Fd, [H|T],Arg,N) ->
+deliver_dyn_file(CliSock, Bin, Fd, [H|T],Arg, UT, N) ->
     ?Debug("deliver_dyn_file: ~p~n", [H]),
     case H of
 	{mod, LineNo, YawsFile, NumChars, Mod, out} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
 	    deliver_dyn_part(CliSock, LineNo, YawsFile,
-			     N, Arg, 
+			     N, Arg, UT,
 			     fun(A)->Mod:out(A) end,
 			     fun(A)->deliver_dyn_file(
-				       CliSock,Bin2,Fd,T,A,0)
+				       CliSock,Bin2,Fd,T,A,UT,0)
 			     end);
 	{data, 0} ->
-	    deliver_dyn_file(CliSock, Bin, Fd,T,Arg,N);
+	    deliver_dyn_file(CliSock, Bin, Fd,T,Arg,UT,N);
 	{data, NumChars} ->
 	    {Send, Bin2} = skip_data(Bin, Fd, NumChars),
 	    accumulate_chunk(Send),
-	    deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,N);
+	    deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT,N);
 	{skip, 0} ->
-	    deliver_dyn_file(CliSock, Bin, Fd,T,Arg,N);
+	    deliver_dyn_file(CliSock, Bin, Fd,T,Arg,UT,N);
 	{skip, NumChars} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
-	    deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,N);
+	    deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT,N);
 	{binding, NumChars} ->
 	    {Send, Bin2} = skip_data(Bin, Fd, NumChars),
 	    "%%"++Key = binary_to_list(Send),
@@ -1618,14 +1618,17 @@ deliver_dyn_file(CliSock, Bin, Fd, [H|T],Arg,N) ->
 		    Value -> Value
 		end,
 	    accumulate_chunk(Chunk),
-	    deliver_dyn_file(CliSock, Bin2, Fd, T, Arg, N);
+	    deliver_dyn_file(CliSock, Bin2, Fd, T, Arg, UT, N);
 	{error, NumChars, Str} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
 	    accumulate_chunk(Str),
-	    deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,N)
+	    deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT, N);
+	yssi ->
+	    ok
     end;
 
-deliver_dyn_file(CliSock, _Bin, _Fd, [], _ARG,_N) ->
+
+deliver_dyn_file(CliSock, _Bin, _Fd, [], _ARG,_UT,_N) ->
     ?Debug("deliver_dyn: done~n", []),
     finish_up_dyn_file(CliSock).
 
@@ -1770,13 +1773,45 @@ accumulate_chunk(Data) ->
 %% `streamcontent', `get_more_data' etc, which are not handled here
 %% completely but returned, have to be the last element of the list.
 
-handle_out_reply(L, LineNo, YawsFile, A) when list (L) ->
-    handle_out_reply_l(L, LineNo, YawsFile, A, undefined);
+handle_out_reply(L, LineNo, YawsFile, UT, A) when list (L) ->
+    handle_out_reply_l(L, LineNo, YawsFile, UT, A, undefined);
 
-handle_out_reply({html, Html}, _LineNo, _YawsFile,  _A) ->
+
+
+
+%% yssi, yaws include
+handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, [ARG]) ->
+    SC = get(sc),
+    UT2 = url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile]),
+    case UT2#urltype.type of
+	yaws ->
+	    Mtime = mtime(UT2#urltype.finfo),
+	    Key = UT2#urltype.getpath,
+	    CliSock = ARG#arg.clisock,
+	    N = 0,
+	    case ets:lookup(SC#sconf.ets, Key) of
+		[{_Key, spec, Mtime1, Spec, Es}] when Mtime1 == Mtime,
+						      Es == 0 ->
+		    deliver_dyn_file(CliSock, Spec ++ [yssi], ARG, UT2, N);
+		Other  ->
+		    del_old_files(Other),
+		    {ok, [{errors, Errs}| Spec]} = 
+			yaws_compile:compile_file(UT2#urltype.fullpath),
+		    ?Debug("Spec for file ~s is:~n~p~n",
+			   [UT2#urltype.fullpath, Spec]),
+		    ets:insert(SC#sconf.ets, {Key, spec, Mtime, Spec, Errs}),
+		    deliver_dyn_file(CliSock, Spec ++ [yssi], ARG, UT2, N)
+	    end;
+	_ ->
+	    error_logger:format("Failed to yssi ~p~n", [Yfile]),
+	    ok
+    end;
+
+
+handle_out_reply({html, Html}, _LineNo, _YawsFile,  _UT, _A) ->
     accumulate_chunk(Html);
 
-handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  A) ->
+handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  _UT, A) ->
     case safe_ehtml_expand(E) of
 	{ok, Val} ->
 	    accumulate_chunk(Val);
@@ -1784,38 +1819,38 @@ handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  A) ->
 	    handle_crash(A,ErrStr)
     end;
 
-handle_out_reply({content, MimeType, Cont}, _LineNo,_YawsFile, _A) ->
+handle_out_reply({content, MimeType, Cont}, _LineNo,_YawsFile, _UT, _A) ->
     yaws:outh_set_content_type(MimeType),
     accumulate_chunk(Cont);
 
 handle_out_reply({streamcontent, MimeType, First}, 
-		 _LineNo,_YawsFile, _A) ->
+		 _LineNo,_YawsFile, _UT, _A) ->
     yaws:outh_set_content_type(MimeType),
     {streamcontent, MimeType, First};
 
 handle_out_reply(Res = {page, Page},
-		 _LineNo,_YawsFile, _A) ->
+		 _LineNo,_YawsFile, _UT, _A) ->
     Res;
 
 handle_out_reply({streamcontent_with_size, Sz, MimeType, First}, 
-		 _LineNo,_YawsFile, _A) ->
+		 _LineNo,_YawsFile, _UT, _A) ->
     yaws:outh_set_content_type(MimeType),
     {streamcontent_with_size, Sz, MimeType, First};
 
-handle_out_reply({header, H},  _LineNo, _YawsFile, _A) ->
+handle_out_reply({header, H},  _LineNo, _YawsFile, UT, _A) ->
     yaws:accumulate_header(H);
 
-handle_out_reply({allheaders, Hs}, _LineNo, _YawsFile, _A) ->
+handle_out_reply({allheaders, Hs}, _LineNo, _YawsFile, _UT, _A) ->
     yaws:outh_clear_headers(),
     foreach(fun({header, Head}) -> yaws:accumulate_header(Head) end, Hs);
 
-handle_out_reply({status, Code},_LineNo,_YawsFile,_A) when integer(Code) ->
+handle_out_reply({status, Code},_LineNo,_YawsFile,_UT,_A) when integer(Code) ->
     yaws:outh_set_status_code(Code);
 
-handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _A) ->
+handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _UT, _A) ->
     exit(normal);
 
-handle_out_reply({ssi, File,Delimiter,Bindings}, LineNo, YawsFile, A) ->
+handle_out_reply({ssi, File,Delimiter,Bindings}, LineNo, YawsFile, _UT,A) ->
     case ssi(File, Delimiter, Bindings) of
 	{error, Rsn} ->
 	    L = ?F("yaws code at~s:~p had the following err:~n~p",
@@ -1826,11 +1861,11 @@ handle_out_reply({ssi, File,Delimiter,Bindings}, LineNo, YawsFile, A) ->
     end;
 
 
-handle_out_reply(break, _LineNo, _YawsFile, _A) ->
+handle_out_reply(break, _LineNo, _YawsFile, _UT, _A) ->
     break;
 
-handle_out_reply({redirect_local, Path}, LN, YF, A) ->
-    handle_out_reply({redirect_local, Path, 302}, LN, YF, A);
+handle_out_reply({redirect_local, Path}, LN, YF, UT, A) ->
+    handle_out_reply({redirect_local, Path, 302}, LN, YF, UT,A);
 
 %% What about:
 %%
@@ -1843,7 +1878,7 @@ handle_out_reply({redirect_local, Path}, LN, YF, A) ->
 %% but might be desirable.
 
 handle_out_reply({redirect_local, {any_path, URL}, Status}, LineNo,
-		 YawsFile, A) ->
+		 YawsFile, _UT, A) ->
     PathType = 
 	case yaws_api:is_absolute_URI(URL) of
 	    true -> net_path;
@@ -1853,15 +1888,15 @@ handle_out_reply({redirect_local, {any_path, URL}, Status}, LineNo,
 		     end
 	end,
     handle_out_reply({redirect_local, {PathType, URL}, Status}, LineNo,
-		     YawsFile, A);
+		     YawsFile, _UT, A);
 
 handle_out_reply({redirect_local, {net_path, URL}, Status}, _LineNo,
-		  _YawsFile,  _A) ->
+		  _YawsFile,  _UT, _A) ->
     Loc = ["Location: ", URL, "\r\n"],
     new_redir_h(get(outh), Loc, Status),
     ok;
 
-handle_out_reply({redirect_local, Path0, Status}, _LineNo, _YawsFile, A) ->
+handle_out_reply({redirect_local, Path0, Status}, _LineNo, _YawsFile, _UT,A) ->
     Arg = hd(A),
     SC=get(sc),
     Path = case Path0 of
@@ -1885,22 +1920,22 @@ handle_out_reply({redirect_local, Path0, Status}, _LineNo, _YawsFile, A) ->
     new_redir_h(get(outh), Loc, Status),
     ok;
 
-handle_out_reply({redirect, URL}, LN, YF, A) ->
-    handle_out_reply({redirect, URL, 302}, LN, YF, A);
+handle_out_reply({redirect, URL}, LN, YF, UT,A) ->
+    handle_out_reply({redirect, URL, 302}, LN, YF, UT, A);
 
-handle_out_reply({redirect, URL, Status}, _LineNo, _YawsFile, _A) ->
+handle_out_reply({redirect, URL, Status}, _LineNo, _YawsFile, _UT, _A) ->
     Loc = ["Location: ", URL, "\r\n"],
     new_redir_h(get(outh), Loc, Status),
     ok;
 
-handle_out_reply({bindings, L}, _LineNo, _YawsFile, _A) ->
+handle_out_reply({bindings, L}, _LineNo, _YawsFile, _UT,_A) ->
     foreach(fun({Key, Value}) -> put({binding, Key}, Value) end, L),
     ok;
 
-handle_out_reply(ok, _LineNo, _YawsFile, _A) ->
+handle_out_reply(ok, _LineNo, _YawsFile, _UT,_A) ->
     ok;
 
-handle_out_reply({'EXIT', Err}, LineNo, YawsFile, ArgL) ->
+handle_out_reply({'EXIT', Err}, LineNo, YawsFile, _UT,ArgL) ->
     A = hd(ArgL),
     L = ?F("~n~nERROR erlang  code  crashed:~n "
 	   "File: ~s:~w~n"
@@ -1908,13 +1943,13 @@ handle_out_reply({'EXIT', Err}, LineNo, YawsFile, ArgL) ->
 	   [YawsFile, LineNo, Err, A#arg.req]),
     handle_crash(A, L);
 
-handle_out_reply({get_more, Cont, State}, _LineNo, _YawsFile, _A) ->
+handle_out_reply({get_more, Cont, State}, _LineNo, _YawsFile, _UT,_A) ->
     {get_more, Cont, State};
 
-handle_out_reply(Arg = #arg{},  _LineNo, _YawsFile, _A) ->
+handle_out_reply(Arg = #arg{},  _LineNo, _YawsFile, _UT, _A) ->
     Arg;
 
-handle_out_reply(Reply, LineNo, YawsFile, ArgL) ->
+handle_out_reply(Reply, LineNo, YawsFile, _UT, ArgL) ->
     A = hd(ArgL),
     L =  ?F("yaws code at ~s:~p crashed or "
 	    "ret bad val:~p ~nReq: ~p",
@@ -1923,17 +1958,19 @@ handle_out_reply(Reply, LineNo, YawsFile, ArgL) ->
 
     
 
-handle_out_reply_l([Reply|T], LineNo, YawsFile, A, _Res) ->		  
-    case handle_out_reply(Reply, LineNo, YawsFile, A) of
+handle_out_reply_l([Reply|T], LineNo, YawsFile, UT, A, _Res) ->		  
+    case handle_out_reply(Reply, LineNo, YawsFile, UT, A) of
 	break ->
 	    break;
 	{page, Page} ->
 	    {page, Page};
 	RetVal ->
-	    handle_out_reply_l(T, LineNo, YawsFile, A, RetVal)
+	    handle_out_reply_l(T, LineNo, YawsFile, UT, A, RetVal)
     end;
-handle_out_reply_l([], _LineNo, _YawsFile, _A, Res) ->
+handle_out_reply_l([], _LineNo, _YawsFile, _UT, _A, Res) ->
     Res.
+
+
 
 
 %% fast server side include with macrolike variable bindings expansion
