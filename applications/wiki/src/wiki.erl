@@ -1516,16 +1516,18 @@ thumbIndex(Params, Root, Prefix) ->
 	{ok, Bin} ->
 	    {wik002, Pwd,_Email,_Time,_Who,TxtStr,Files,_Patches} =
 		bin_to_wik002(Bin),
-	    Pics = [element(2,P) || P <- lists:keysort(2,Files),
-				    pict_suffix(P)],
+	    {NumFiles,_} = lists:mapfoldl(
+			     fun(F,N) -> {{element(2,F),N}, N+1} end,
+			     1, lists:keysort(2,Files)),
+	    Pics = [{F,N} || {F,N} <- NumFiles, pict_suffix(F)],
 	    DeepStr = 
-	    ["<table><tr><td colspan=5>",
-	     build_slide_list(Page, 0, length(Files)),
-	     "</td></tr>",
-	     build_thumb_table(Pics,
-			       str2urlencoded(Page),
-			       str2urlencoded(FileDir)),
-	     "</table>"],
+		["<table><tr><td colspan=5>",
+		 build_slide_list(Page, 0, length(Files)),
+		 "</td></tr>",
+		 build_thumb_table(Pics,
+				   str2urlencoded(Page),
+				   str2urlencoded(FileDir)),
+		 "</table>"],
 	    F1 = add_blanks_nicely(Page),
 	    TopHeader = 
 		["<h1><a href='showPage.yaws?node=",
@@ -1546,12 +1548,11 @@ build_thumb_rows([], _Node, _FileDir, _, _, Acc) ->
     lists:reverse(["</tr>"|Acc]);
 build_thumb_rows(Pics, Node, FileDir, X, X, Acc) ->
     build_thumb_rows(Pics, Node, FileDir, 0, X, ["</tr>\n<tr>"|Acc]);
-build_thumb_rows([P|Pics], Node, FileDir, N, X, Acc) ->
+build_thumb_rows([{P,Num}|Pics], Node, FileDir, N, X, Acc) ->
     build_thumb_rows(Pics, Node, FileDir, N+1, X,
-		     [lists:append(["<td align=\"center\"><a href=\"",
-				    FileDir, "/",
-				    wiki:str2urlencoded(P),
-				    "\" target=\"pict\">",
+		     [lists:append(["<td align=\"center\">"
+				    "<a href=\"slideShow.yaws?node=", Node,
+				    "&next=",integer_to_list(Num),"\">"
 				    "<img src='getThumb.yaws?node=", Node,
 				    "&pict=", str2urlencoded(P),
 				    "'></a></td>\n"])|Acc]).
@@ -1577,7 +1578,7 @@ lowercase(C) when C>=$A, C=<$Z -> C+32;
 lowercase(C) -> C.
 
 pict_suffix(File) ->
-    lists:member(lowercase(filename:extension(element(2, File))),
+    lists:member(lowercase(filename:extension(File)),
 		 [".gif", ".jpeg", ".jpe", ".jpg"]).
 
 get_img(Index, Direction, Files) ->
