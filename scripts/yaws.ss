@@ -18,6 +18,7 @@ help()
 	echo "       yaws -r mod     -- call mod:start/0 at startup"
 	echo "       yaws -t         -- trace all traffic"
 	echo "       yaws -T         -- trace http traffic"
+       	echo "       yaws -x         -- trace output to stdout"
 	echo "       yaws -v         -- print version"
 	echo ""
 	echo "       yaws -heart     -- auto restart yaws if it crashes"
@@ -60,6 +61,8 @@ do
 	        trace=" -yaws trace traffic ";;
 	   -T)
 	        trace=" -yaws trace http ";;
+	   -x)
+	        traceoutput=" -yaws traceoutput ";;
            -c)
 		conf=" -conf $1 "
 		shift;;
@@ -101,6 +104,8 @@ do
 		help
        esac
 done
+
+trace="${trace} ${traceoutput}"
 
 [ -z "$daemon" ] && [ -z "$interactive" ] && help
 

@@ -234,9 +234,9 @@ handle_cast({trace, from_client, Data}, State) ->
 do_alog(ServerName, Ip, Req, Status, Length, Referrer, UserAgent, State) ->
     case lists:keysearch(ServerName, #alog.servername, State#state.alogs) of
 	{value, AL} ->
-	    I = fmt_alog(State#state.now, Ip, Req, Status,  Length, Referrer, UserAgent),
-	    file:write(AL#alog.fd, I),
-	    tty_trace(I, State);
+	    I = fmt_alog(State#state.now, Ip, Req, Status,  Length, 
+			 Referrer, UserAgent),
+	    file:write(AL#alog.fd, I);
 	_ ->
 	    false
     end.

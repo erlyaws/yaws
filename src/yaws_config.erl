@@ -21,7 +21,7 @@
 -compile(export_all).
 %%-export([Function/Arity, ...]).
 
--export([load/3,
+-export([load/4,
 	 make_default_gconf/1]).
 	 
 
@@ -40,20 +40,27 @@ paths() ->
 
 %% load the config
 
-load(false, Trace, Debug) ->
+load(false, Trace, TraceOutput, Debug) ->
     case yaws:first(fun(F) -> exists(F) end, paths()) of
 	false ->
 	    {error, "Can't find no config file "};
 	{ok, _, File} ->
-	    load({file, File}, Trace, Debug)
+	    load({file, File}, Trace, TraceOutput, Debug)
     end;
-load({file, File}, Trace, Debug) ->
+load({file, File}, Trace, TraceOutput, Debug) ->
     error_logger:info_msg("Yaws: Using config file ~s~n", [File]),
     case file:open(File, [read]) of
 	{ok, FD} ->
 	    GC = make_default_gconf(Debug),
 	    R = (catch fload(FD, globals, GC#gconf{file = File,
 						   trace = Trace,
+						   tty_trace = 
+						   if
+						       TraceOutput==undefined->
+							   false;
+						       true ->
+							   true
+						   end,
 						   debug = Debug
 						  }, 
 			     undefined, 

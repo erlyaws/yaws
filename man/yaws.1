@@ -47,6 +47,12 @@ in the log directory.
 \fB\-T\fR
 HTTP trace mode. All HTTP messages will be written to a trace file called trace.http
 in the log directory.
+
+.TP
+\fB\-x\fR
+When yaws is put into trace mode using either -T or -t, traces are written to files. If we provide the -x flag, the trace will also be written to stdout. 
+
+
 .TP
 \fB\-h\fR
 HUP the daemon. This forces the daemon to reread the configuration file. It also makes

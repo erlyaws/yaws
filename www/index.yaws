@@ -56,14 +56,56 @@ powered by Yaws.
 <p>A mailing list exists at: <a href="https://lists.sourceforge.net/lists/listinfo/erlyaws-list">https://lists.sourceforge.net/lists/listinfo/erlyaws-list</a>
 
 
+
 <p> <h2> News </h2>
 
 <div class="man"> 
 
-<h3> Jun 1, 2003.  Version 1.22 released  </h3>
+<h3> Aug  25, 2003.  Version 1.30 released  </h3>
 
 <ul>
 
+
+<li><p> This is major feature release with many new features by in particular 
+Carsten Schultz and Leon Smith plus the normal set of regular bugfixes.
+<li><p> Setuid code had broken  (klacke)
+<li><p> Setcookie problem with lynx (Johan Bevemyr)
+<li><p> Wiki: Thumbnail index to slideshow (Johan Bevemyr)
+<li><p> Fixed Cross-Site Scripting vunerability (Leon Smith)
+<li><p> url parsing rewritten in order to normalize the URL path in a
+more secure way (Leon Smith)
+<li><p> Log file size for dynamic content also (Carsten Schultz)
+<li><p> Full CGI and PHP support (Carsten Schultz)
+<li><p> Added support for Content-Range, If-Range, If-Match (Carsten Schultz)
+<li><p> HEAD handling rewritten (Carsten Schultz)
+<li> <p> Darwin MacOs X support (Eric Baur)
+<li> <p> Docs updated describing cgi and php support (Carsten Schultz)
+<li> <p> tty trace directly from command line for enhanced debugging
+
+</ul>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+<h2> Old News </h2>
+<div class="box">
+
+
+
+
+
+<ul>
+<li>Jun 1, 2003.  Version 1.22 released  </h3>
+<ul>
 
 <li><p> This is bugfix release. 
 <li><p> cosmetic changes in ehtml output
@@ -77,16 +119,10 @@ powered by Yaws.
 <li><p> cosmetic updates to the latex docs
 
 </ul>
-
-
-</div>
-
+</ul>
 
 
 
-
-<h2> Old News </h2>
-<div class="box">
 
 
 <ul>

@@ -90,8 +90,11 @@ This makes the server listen on Port
 \fBlisten = IpAddress\fR
 This makes the server listen on IpAddress
 When virthosting several servers on the same ip/port address, if the
-browser doesn't sebd a Host: field, yaws will pick the \fIfirst\fR
-server specified in the config file
+browser doesn't send a Host: field, yaws will pick the \fIfirst\fR
+server specified in the config file.
+If the specified ip address is 0.0.0.0 yaws will listn on all ip
+addresses on the specified port.
+
 .TP
 \fBrhost = Host[:Port] \fR
 This forces all local redirects issued by the server to go to Host.

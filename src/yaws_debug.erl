@@ -125,7 +125,7 @@ fail({format, File,Line,Fmt,Args}) ->
 
 
 
-format(GC, F, A) ->
+format(GC, F, A)  ->
     if
 	GC#gconf.debug == true ->
 	    io:format(F, A);

@@ -35,8 +35,9 @@ hup(Sock) ->
 
 dohup(Sock) ->
     io:format("in dohup~n", []),
-    {Debug, Trace, Conf, _RunMod, _Embed} = yaws_server:get_app_args(),
-    Res = (catch case yaws_config:load(Conf, Trace, Debug) of
+    {Debug, Trace, TraceOut, Conf, _RunMod, _Embed} = 
+	yaws_server:get_app_args(),
+    Res = (catch case yaws_config:load(Conf, Trace, TraceOut, Debug) of
 		     {ok, Gconf, Sconfs} ->
 			 yaws_api:setconf(Gconf, Sconfs);
 		     Err ->

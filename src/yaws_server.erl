@@ -96,6 +96,12 @@ get_app_args() ->
 		_ ->
 		    false
 	    end,
+    TraceOutput = case application:get_env(yaws, traceoutput) of
+		undefined ->
+		    lists:member({yaws, ["tracedebug"]}, AS);
+		{ok, Val3}  ->
+		    Val3
+	    end,
     Conf = case application:get_env(yaws, conf) of
 	       undefined ->
 		   find_c(AS);
@@ -114,7 +120,7 @@ get_app_args() ->
 		{ok, Val0} ->
 		    Val0
 	    end,
-    {Debug, Trace, Conf, RunMod, Embed}.
+    {Debug, Trace, TraceOutput, Conf, RunMod, Embed}.
 
 find_c([{conf, [File]} |_]) ->
     {file, File};
@@ -145,17 +151,18 @@ l2a(A) when atom(A) -> A.
 init([]) ->
     process_flag(trap_exit, true),
     put(start_time, calendar:local_time()),  %% for uptime
-    {Debug, Trace, Conf, RunMod, Embed} = get_app_args(),
+    {Debug, Trace, TraceOut, Conf, RunMod, Embed} = get_app_args(),
     case Embed of 
 	false ->
-	    case yaws_config:load(Conf, Trace, Debug) of
+	    case yaws_config:load(Conf, Trace, TraceOut, Debug) of
 		{ok, Gconf, Sconfs} ->
 		    erase(logdir),
 		    ?Debug("Conf = ~p~n", [?format_record(Gconf, gconf)]),
 		    yaws_log:setdir(Gconf#gconf.logdir, Sconfs),
 		    case Gconf#gconf.trace of
 			{true, What} ->
-			    yaws_log:open_trace(What);
+			    yaws_log:open_trace(What),
+			    yaws_api:set_tty_trace(Gconf#gconf.tty_trace);
 			_ ->
 			    ok
 		    end,
@@ -644,7 +651,8 @@ acceptor0(GS, Top) ->
 		{Top, accept} ->
 		    acceptor0(GS, Top)
 	    end;
-	_ ->
+	ERR ->
+	    yaws_debug:derror(GS#gs.gconf, "Failed to accept: ~p~n", [ERR]),
 	    exit(normal)
     end.
      
