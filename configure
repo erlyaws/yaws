@@ -711,10 +711,16 @@ fi
 
 
 
+
+
+
+
+
+
 case "$target_os" in
 	*cygwin*)
 	  ERLDIR=`echo ${ERL} | sed 's/\/erts.*//'`
-          ERL_DLL_LIB=`ntpath.sh ${ERLDIR}/usr/lib/erl_dll.lib`
+          ERL_DLL_LIB=`./scripts/ntpath.sh ${ERLDIR}/usr/lib/erl_dll.lib`
           
 	;;
 	*)	
@@ -728,10 +734,31 @@ fi
 
 
 
+    echo $ac_n "checking erl_interface version""... $ac_c" 1>&6
+echo "configure:739: checking erl_interface version" >&5
+    if eval "test \"`echo '$''{'bt_cv_erl_interface_vsn'+set}'`\" = set"; then
+  echo $ac_n "(cached) $ac_c" 1>&6
+else
+  bt_cv_erl_interface_vsn="`ls ${ERLDIR} ${ERLDIR}/lib | \
+                   awk -F- '/^erl_interface-/ { if ($2 > v) v=$2; }
+                            END    { print v; }'`"
+     case "$bt_cv_erl_interface_vsn" in
+         "")
+             { echo "configure: error: "Could not figure out version Erlang library: erl_interface"" 1>&2; exit 1; }
+             ;;
+         *)
+             ;;
+     esac
+fi
+
+    ERL_INTERFACE_VSN=$bt_cv_erl_interface_vsn
+        echo "$ac_t""$bt_cv_erl_interface_vsn" 1>&6
+	
+
 ERL_INTERFACE_LIB=${ERLDIR}/lib/erl_interface-${ERL_INTERFACE_VSN}/lib
     case $target_os in
        *cygwin*)
-          ERL_INTERFACE_LIBS=`./ntpath.sh "$ERL_INTERFACE_LIB/erl_interface.lib $ERL_INTERFACE_LIB/ei.lib"`;;
+          ERL_INTERFACE_LIBS=`./scripts/ntpath.sh "$ERL_INTERFACE_LIB/erl_interface.lib $ERL_INTERFACE_LIB/ei.lib"`;;
 	*)
 	  ERL_INTERFACE_LIBS="-lerl_interface -lei ";;
     esac
@@ -774,7 +801,7 @@ EOF
 	# Extract the first word of "gcc", so it can be a program name with args.
 set dummy gcc; ac_word=$2
 echo $ac_n "checking for $ac_word""... $ac_c" 1>&6
-echo "configure:778: checking for $ac_word" >&5
+echo "configure:805: checking for $ac_word" >&5
 if eval "test \"`echo '$''{'ac_cv_prog_CC'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -804,7 +831,7 @@ if test -z "$CC"; then
   # Extract the first word of "cc", so it can be a program name with args.
 set dummy cc; ac_word=$2
 echo $ac_n "checking for $ac_word""... $ac_c" 1>&6
-echo "configure:808: checking for $ac_word" >&5
+echo "configure:835: checking for $ac_word" >&5
 if eval "test \"`echo '$''{'ac_cv_prog_CC'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -855,7 +882,7 @@ fi
       # Extract the first word of "cl", so it can be a program name with args.
 set dummy cl; ac_word=$2
 echo $ac_n "checking for $ac_word""... $ac_c" 1>&6
-echo "configure:859: checking for $ac_word" >&5
+echo "configure:886: checking for $ac_word" >&5
 if eval "test \"`echo '$''{'ac_cv_prog_CC'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -887,7 +914,7 @@ fi
 fi
 
 echo $ac_n "checking whether the C compiler ($CC $CFLAGS $LDFLAGS) works""... $ac_c" 1>&6
-echo "configure:891: checking whether the C compiler ($CC $CFLAGS $LDFLAGS) works" >&5
+echo "configure:918: checking whether the C compiler ($CC $CFLAGS $LDFLAGS) works" >&5
 
 ac_ext=c
 # CFLAGS is not in ac_cpp because -g, -O, etc. are not valid cpp options.
@@ -898,12 +925,12 @@ cross_compiling=$ac_cv_prog_cc_cross
 
 cat > conftest.$ac_ext << EOF
 
-#line 902 "configure"
+#line 929 "configure"
 #include "confdefs.h"
 
 main(){return(0);}
 EOF
-if { (eval echo configure:907: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:934: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   ac_cv_prog_cc_works=yes
   # If we can't run a trivial program, we are probably using a cross compiler.
   if (./conftest; exit) 2>/dev/null; then
@@ -929,12 +956,12 @@ if test $ac_cv_prog_cc_works = no; then
   { echo "configure: error: installation or configuration problem: C compiler cannot create executables." 1>&2; exit 1; }
 fi
 echo $ac_n "checking whether the C compiler ($CC $CFLAGS $LDFLAGS) is a cross-compiler""... $ac_c" 1>&6
-echo "configure:933: checking whether the C compiler ($CC $CFLAGS $LDFLAGS) is a cross-compiler" >&5
+echo "configure:960: checking whether the C compiler ($CC $CFLAGS $LDFLAGS) is a cross-compiler" >&5
 echo "$ac_t""$ac_cv_prog_cc_cross" 1>&6
 cross_compiling=$ac_cv_prog_cc_cross
 
 echo $ac_n "checking whether we are using GNU C""... $ac_c" 1>&6
-echo "configure:938: checking whether we are using GNU C" >&5
+echo "configure:965: checking whether we are using GNU C" >&5
 if eval "test \"`echo '$''{'ac_cv_prog_gcc'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -943,7 +970,7 @@ else
   yes;
 #endif
 EOF
-if { ac_try='${CC-cc} -E conftest.c'; { (eval echo configure:947: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }; } | egrep yes >/dev/null 2>&1; then
+if { ac_try='${CC-cc} -E conftest.c'; { (eval echo configure:974: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }; } | egrep yes >/dev/null 2>&1; then
   ac_cv_prog_gcc=yes
 else
   ac_cv_prog_gcc=no
@@ -962,7 +989,7 @@ ac_test_CFLAGS="${CFLAGS+set}"
 ac_save_CFLAGS="$CFLAGS"
 CFLAGS=
 echo $ac_n "checking whether ${CC-cc} accepts -g""... $ac_c" 1>&6
-echo "configure:966: checking whether ${CC-cc} accepts -g" >&5
+echo "configure:993: checking whether ${CC-cc} accepts -g" >&5
 if eval "test \"`echo '$''{'ac_cv_prog_cc_g'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -994,7 +1021,7 @@ else
 fi
 
 	echo $ac_n "checking how to run the C preprocessor""... $ac_c" 1>&6
-echo "configure:998: checking how to run the C preprocessor" >&5
+echo "configure:1025: checking how to run the C preprocessor" >&5
 # On Suns, sometimes $CPP names a directory.
 if test -n "$CPP" && test -d "$CPP"; then
   CPP=
@@ -1009,13 +1036,13 @@ else
   # On the NeXT, cc -E runs the code through the compiler's parser,
   # not just through cpp.
   cat > conftest.$ac_ext <<EOF
-#line 1013 "configure"
+#line 1040 "configure"
 #include "confdefs.h"
 #include <assert.h>
 Syntax Error
 EOF
 ac_try="$ac_cpp conftest.$ac_ext >/dev/null 2>conftest.out"
-{ (eval echo configure:1019: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
+{ (eval echo configure:1046: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
 ac_err=`grep -v '^ *+' conftest.out | grep -v "^conftest.${ac_ext}\$"`
 if test -z "$ac_err"; then
   :
@@ -1026,13 +1053,13 @@ else
   rm -rf conftest*
   CPP="${CC-cc} -E -traditional-cpp"
   cat > conftest.$ac_ext <<EOF
-#line 1030 "configure"
+#line 1057 "configure"
 #include "confdefs.h"
 #include <assert.h>
 Syntax Error
 EOF
 ac_try="$ac_cpp conftest.$ac_ext >/dev/null 2>conftest.out"
-{ (eval echo configure:1036: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
+{ (eval echo configure:1063: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
 ac_err=`grep -v '^ *+' conftest.out | grep -v "^conftest.${ac_ext}\$"`
 if test -z "$ac_err"; then
   :
@@ -1043,13 +1070,13 @@ else
   rm -rf conftest*
   CPP="${CC-cc} -nologo -E"
   cat > conftest.$ac_ext <<EOF
-#line 1047 "configure"
+#line 1074 "configure"
 #include "confdefs.h"
 #include <assert.h>
 Syntax Error
 EOF
 ac_try="$ac_cpp conftest.$ac_ext >/dev/null 2>conftest.out"
-{ (eval echo configure:1053: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
+{ (eval echo configure:1080: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
 ac_err=`grep -v '^ *+' conftest.out | grep -v "^conftest.${ac_ext}\$"`
 if test -z "$ac_err"; then
   :
@@ -1075,13 +1102,13 @@ echo "$ac_t""$CPP" 1>&6
 
 if test $ac_cv_prog_gcc = yes; then
     echo $ac_n "checking whether ${CC-cc} needs -traditional""... $ac_c" 1>&6
-echo "configure:1079: checking whether ${CC-cc} needs -traditional" >&5
+echo "configure:1106: checking whether ${CC-cc} needs -traditional" >&5
 if eval "test \"`echo '$''{'ac_cv_prog_gcc_traditional'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
     ac_pattern="Autoconf.*'x'"
   cat > conftest.$ac_ext <<EOF
-#line 1085 "configure"
+#line 1112 "configure"
 #include "confdefs.h"
 #include <sgtty.h>
 Autoconf TIOCGETP
@@ -1099,7 +1126,7 @@ rm -f conftest*
 
   if test $ac_cv_prog_gcc_traditional = no; then
     cat > conftest.$ac_ext <<EOF
-#line 1103 "configure"
+#line 1130 "configure"
 #include "confdefs.h"
 #include <termio.h>
 Autoconf TCGETA
@@ -1148,7 +1175,7 @@ fi
 esac
 
 echo $ac_n "checking whether ${MAKE-make} sets \${MAKE}""... $ac_c" 1>&6
-echo "configure:1152: checking whether ${MAKE-make} sets \${MAKE}" >&5
+echo "configure:1179: checking whether ${MAKE-make} sets \${MAKE}" >&5
 set dummy ${MAKE-make}; ac_make=`echo "$2" | sed 'y%./+-%__p_%'`
 if eval "test \"`echo '$''{'ac_cv_prog_make_${ac_make}_set'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
@@ -1186,7 +1213,7 @@ fi
 # SVR4 /usr/ucb/install, which tries to use the nonexistent group "staff"
 # ./install, which can be erroneously created by make from ./install.sh.
 echo $ac_n "checking for a BSD compatible install""... $ac_c" 1>&6
-echo "configure:1190: checking for a BSD compatible install" >&5
+echo "configure:1217: checking for a BSD compatible install" >&5
 if test -z "$INSTALL"; then
 if eval "test \"`echo '$''{'ac_cv_path_install'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
@@ -1453,6 +1480,7 @@ s%@ERL@%$ERL%g
 s%@ERLC@%$ERLC%g
 s%@ERL_DLL_LIB@%$ERL_DLL_LIB%g
 s%@ERLDIR@%$ERLDIR%g
+s%@ERL_INTERFACE_VSN@%$ERL_INTERFACE_VSN%g
 s%@ERL_INTERFACE_LIB@%$ERL_INTERFACE_LIB%g
 s%@ERL_INTERFACE_LIBS@%$ERL_INTERFACE_LIBS%g
 s%@ERL_INTERFACE_INCLUDE@%$ERL_INTERFACE_INCLUDE%g

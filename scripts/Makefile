@@ -19,8 +19,10 @@ local_install:	../bin/yaws
 clean:
 	rm -f ../bin/yaws
 
-install:	all
-	sh ./Install $(PREFIX) $(INSTALLPREFIX) $(ERL) $(ETCDIR)
+install:	all .foo
+
+.foo:
+	sh -x ./Install $(PREFIX) $(INSTALLPREFIX) $(ERL) $(ETCDIR)
 
 
 

@@ -1,4 +1,4 @@
-dnl define([AC_CACHE_LOAD], )dnl
+DNA define([AC_CACHE_LOAD], )dnl
 dnl define([AC_CACHE_SAVE], )dnl
 
 AC_INIT(Makefile)
@@ -14,11 +14,40 @@ AC_SUBST(ERL)
 AC_SUBST(ERLC)
 
 
+dnl ----------------------------------------------------------------------
+dnl
+dnl BT_ERL_LIB_VSN figures out version of an erlang application
+dnl and substitutes it as "APPNAME"_VSN
+dnl
+
+AC_DEFUN(BT_ERL_LIB_VSN,
+[
+    AC_MSG_CHECKING([$1 version])
+    AC_CACHE_VAL(bt_cv_$1_vsn,
+    [bt_cv_$1_vsn="`ls ${ERLDIR} ${ERLDIR}/lib | \
+                   awk -F- '/^$1-/ { if ([$]2 > v) v=[$]2; }
+                            END    { print v; }'`"
+     case "$bt_cv_$1_vsn" in
+         "")
+             AC_MSG_ERROR("Could not figure out version Erlang library: $1")
+             ;;
+         *)
+             ;;
+     esac])
+    translit($1, [a-z], [A-Z])_VSN=$bt_cv_$1_vsn
+    AC_SUBST(translit($1, [a-z], [A-Z])_VSN)dnl
+    AC_MSG_RESULT($bt_cv_$1_vsn)
+])dnl
+
+
+
+
+
 
 case "$target_os" in
 	*cygwin*)
 	  ERLDIR=`echo ${ERL} | sed 's/\/erts.*//'`
-          ERL_DLL_LIB=`ntpath.sh ${ERLDIR}/usr/lib/erl_dll.lib`
+          ERL_DLL_LIB=`./scripts/ntpath.sh ${ERLDIR}/usr/lib/erl_dll.lib`
           AC_SUBST(ERL_DLL_LIB)
 	;;
 	*)	
@@ -31,11 +60,12 @@ fi
 AC_SUBST(ERLDIR)
 
 
+BT_ERL_LIB_VSN(erl_interface)	
 
 ERL_INTERFACE_LIB=${ERLDIR}/lib/erl_interface-${ERL_INTERFACE_VSN}/lib
     case $target_os in
        *cygwin*)
-          ERL_INTERFACE_LIBS=`./ntpath.sh "$ERL_INTERFACE_LIB/erl_interface.lib $ERL_INTERFACE_LIB/ei.lib"`;;
+          ERL_INTERFACE_LIBS=`./scripts/ntpath.sh "$ERL_INTERFACE_LIB/erl_interface.lib $ERL_INTERFACE_LIB/ei.lib"`;;
 	*)
 	  ERL_INTERFACE_LIBS="-lerl_interface -lei ";;
     esac

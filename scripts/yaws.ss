@@ -54,7 +54,6 @@ do
            -D)
     	        daemon=" -detached ";;
 	   -d)
-                set -x
 		debug=" -boot start_sasl -yaws debug ";;
 	   -t)
 	        trace=" -yaws trace traffic ";;

@@ -423,7 +423,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 
 	[ '<', "ssl", '>'] ->
 	    ssl:start(),
-	    fload(FD, ssl, GC, C, Cs, Lno+1, Next);
+	    fload(FD, ssl, GC, C#sconf{ssl = #ssl{}}, Cs, Lno+1, Next);
 	
 	["appmods", '=' | Modules] ->
 	    C2 = C#sconf{appmods = Modules},

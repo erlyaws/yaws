@@ -1,44 +1,11 @@
 #! /bin/sh
-# Copyright (c) 1995-2002 SuSE Linux AG, Nuernberg, Germany.
-# All rights reserved.
-#
-# Author: Kurt Garloff <feedback@suse.de>
-#
-# /etc/init.d/FOO
-#
-#   and symbolic its link
-#
-# /(usr/)sbin/rcFOO
-#
-# LSB compliant service control script; see http://www.linuxbase.org/spec/
-# 
-# System startup script for some example service or daemon FOO (template)
-#
-### BEGIN INIT INFO
-# Provides: FOO
-# Required-Start: $remote_fs $syslog
-# Required-Stop:  $remote_fs $syslog
-# Default-Start:  3 5
-# Default-Stop:   0 1 2 6
-# Description:    Start FOO to allow XY and provide YZ
-#	continued on second line by '#<TAB>'
-### END INIT INFO
-# 
-# Note on Required-Start: It does specify the init script ordering,
-# not real dependencies. Depencies have to be handled by admin
-# resp. the configuration tools (s)he uses.
 
-# Source SuSE config (if still necessary, most info has been moved)
-test -r /etc/rc.config && . /etc/rc.config
 
-# Check for missing binaries (stale symlinks should not happen)
-FOO_BIN=/usr/sbin/FOO
-test -x $FOO_BIN || exit 5
+YAWS_BIN=%prefix%bin/yaws
 
-# Check for existence of needed config file and read it
-FOO_CONFIG=/etc/sysconfig/FOO
-test -r $FOO_CONFIG || exit 6
-. $FOO_CONFIG
+test -x $YAWS_BIN || exit 5
+
+
 
 # Shell functions sourced from /etc/rc.status:
 #      rc_check         check and set local and overall rc status
@@ -72,23 +39,23 @@ rc_reset
 
 case "$1" in
     start)
-	echo -n "Starting FOO"
+	echo -n "Starting YAWS"
 	## Start daemon with startproc(8). If this fails
 	## the echo return value is set appropriate.
 
 	# NOTE: startproc returns 0, even if service is 
 	# already running to match LSB spec.
-	startproc $FOO_BIN
+	startproc $YAWS_BIN -D -heart
 
 	# Remember status and be verbose
 	rc_status -v
 	;;
     stop)
-	echo -n "Shutting down FOO"
+	echo -n "Shutting down YAWS"
 	## Stop daemon with killproc(8) and if this fails
 	## set echo the echo return value.
 
-	killproc -TERM $FOO_BIN
+	startproc $YAWS_BIN -s 
 
 	# Remember status and be verbose
 	rc_status -v
@@ -116,29 +83,21 @@ case "$1" in
 	## do this on signal 1 (SIGHUP).
 	## If it does not support it, restart.
 
-	echo -n "Reload service FOO"
+	echo -n "Force Reload service YAWS"
 	## if it supports it:
-	killproc -HUP $FOO_BIN
-	#touch /var/run/FOO.pid
+	$0 restart
 	rc_status -v
 
-	## Otherwise:
-	#$0 stop  &&  $0 start
-	#rc_status
 	;;
     reload)
 	## Like force-reload, but if daemon does not support
 	## signalling, do nothing (!)
 
 	# If it supports signalling:
-	echo -n "Reload service FOO"
-	killproc -HUP $FOO_BIN
-	#touch /var/run/FOO.pid
+
+	startproc $YAWS_BIN -h
 	rc_status -v
 	
-	## Otherwise if it does not support reload:
-	#rc_failed 3
-	#rc_status -v
 	;;
     status)
 	echo -n "Checking for service FOO: "
@@ -152,7 +111,7 @@ case "$1" in
 	# 3 - service not running
 
 	# NOTE: checkproc returns LSB compliant status values.
-	checkproc $FOO_BIN
+	checkproc $YAWS_BIN -S
 	rc_status -v
 	;;
     probe)

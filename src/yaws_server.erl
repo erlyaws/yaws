@@ -601,6 +601,7 @@ acceptor(GS) ->
 acceptor0(GS, Top) ->
     ?TC([{record, GS, gs}]),
     X = do_accept(GS),
+    ?Debug("do_accept ret: ~p~n", [X]),
     Top ! {self(), next},
     case X of
 	{ok, Client} ->
@@ -704,7 +705,7 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == ssl ->
 	    SC = hd(GS#gs.group),
 	    IP = case SC#sconf.access_log of
 		     true ->
-			 {ok, {Ip, _Port}} = ssl:peername(CliSock, SC),
+			 {ok, {Ip, _Port}} = ssl:peername(CliSock),
 			 Ip;
 		     _ ->
 			 undefined
