@@ -800,7 +800,7 @@ parse_qvalue(_) ->
 three_digits_to_integer(D1, D2, D3) ->
     100*(D1-$0)+10*(D2-$0)+D3-$0.
 
-accepts_deflate(H) ->
+accepts_deflate(H, Mime) ->
     case [Val || {_,_,'Accept-Encoding',_,Val}<- H#headers.other] of
 	[] ->
 	    false;
@@ -812,13 +812,14 @@ accepts_deflate(H) ->
 		[] ->
 		    false;
 		[Q|_] -> (Q > 100)  % just for fun
-			     and not has_buggy_deflate(H#headers.user_agent)
+			     and not has_buggy_deflate(
+				       H#headers.user_agent, Mime)
 	    end;
 	_ ->
 	    false
     end.
 
-has_buggy_deflate(UserAgent) ->
+has_buggy_deflate(UserAgent, Mime) ->
     UA = parse_ua(UserAgent),
     case in_comment(
 	   fun(C) ->
@@ -840,6 +841,9 @@ has_buggy_deflate(UserAgent) ->
 			      true;
 			  "Galeon"++_ ->
 			      true;
+			  "w3m"++_ ->
+						% Problems when saving.
+			      Mime /= "text/html"; 
 			  _  ->
 			      false
 		      end
@@ -989,13 +993,13 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
 	      all ->
 		  case UT#urltype.deflate of
 		      DB when binary(DB) -> % cached
-			  case accepts_deflate(Headers) of
+			  case accepts_deflate(Headers, UT#urltype.mime) of
 			      true -> {true, size(DB)};
 			      false -> {false, FIL}
 			  end;
 		      undefined -> {false, FIL};
 		      dynamic ->
-			  case accepts_deflate(Headers) of
+			  case accepts_deflate(Headers, UT#urltype.mime) of
 			      true ->
 				  {true, undefined};
 			      false ->
