@@ -1395,10 +1395,6 @@ accumulate_chunk(Data) ->
     end.
 
 
-set_status_code(Code) ->
-    put(status_code, Code).
-
-
 
 handle_out_reply(L, LineNo, YawsFile, SC, A) when list (L) ->
     handle_out_reply_l(L, LineNo, YawsFile, SC, A, undefined);
