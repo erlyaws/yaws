@@ -149,10 +149,15 @@ drop_prefix(_, _) ->
 cgi_env(Arg, Scriptfilename, Pathinfo) ->
     H = Arg#arg.headers,
     R = Arg#arg.req,
+    case R#http_request.path of
+	{abs_path, RequestURI} -> ok;
+	_ -> RequestURI = undefined
+    end,
     {Maj,Min} = R#http_request.version,
     {Hostname, Hosttail}=lists:splitwith(fun(X)->X /= $: end, 
 					 checkdef(H#headers.host)),
     Hostport = case Hosttail of
+
 		   [$: | P] -> P;
 		   [] -> "80"
 	       end,
@@ -167,6 +172,7 @@ cgi_env(Arg, Scriptfilename, Pathinfo) ->
 	  ["HTTP/",integer_to_list(Maj),".",integer_to_list(Min)])},
 	{"SERVER_PORT", Hostport},
 	{"REQUEST_METHOD", yaws:to_list(R#http_request.method)},
+	{"REQUEST_URI", RequestURI},
 	{"PATH_INFO", checkdef(Pathinfo)},
 	% {"SCRIPT_FILENAME", ??? }
 	{"PATH_TRANSLATED", Scriptfilename},    % This seems not to
@@ -264,7 +270,7 @@ get_resp(Hs, Worker) ->
  	    ?Debug("~p~n", [{Worker, all_data, Data}]),
 	    {Hs, {all_data, Data}};
 	{Worker, partial_data, Data} ->
- 	    ?Debug("~p~n", [{Worker, partial_data, Data}]),
+ 	    ?Debug("~p~n", [{Worker, partial_data, binary_to_list(Data)}]),
 	    {Hs, {partial_data, Data}};
 	{Worker, failure, _} ->
 	    {[], undef};
@@ -275,8 +281,10 @@ get_resp(Hs, Worker) ->
 
 
 cgi_worker(Parent, Arg, Exefilename, Scriptfilename, Pathinfo) ->
+    Env = cgi_env(Arg, Scriptfilename, Pathinfo),
+    ?Debug("~p~n", [Env]),
     CGIPort = open_port({spawn, Exefilename},
-			[{env, cgi_env(Arg, Scriptfilename, Pathinfo)}, 
+			[{env, Env}, 
 			 {cd, pathof(Scriptfilename)},
 			 exit_status,
 			 binary]),
@@ -333,6 +341,7 @@ header_loop(Parent, Arg, S) ->
 data_loop(Pid, Port) ->
     receive
 	{Port, {data,Data}} ->
+ 	    ?Debug("~p~n", [{data, binary_to_list(Data)}]),
 	    yaws_api:stream_chunk_deliver_blocking(Pid, Data),
 	    data_loop(Pid, Port);
 	{Port, {exit_status, Status}} ->
