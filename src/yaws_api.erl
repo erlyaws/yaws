@@ -448,7 +448,6 @@ coerce_type(string, Str) ->
 coerce_type(checkbox, "no") ->
     on;
 coerce_type(checkbox, Str) ->
-    io:format("XX ~s~n", [Str]),
     off;
 coerce_type(ip, _Str) ->
     exit(nyi_ip);

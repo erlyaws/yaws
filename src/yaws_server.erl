@@ -1828,14 +1828,12 @@ ssi(File, Delimiter, Bindings) ->
     ssi(File, Delimiter, Bindings, get(sc)).
 ssi(File, Delimiter, Bindings, SC) ->
     Key = {ssi, File, Delimiter},
-    io:format("Key:~p~n", [Key]),
     case ets:lookup(SC#sconf.ets, Key) of
 	[] ->
 	    case file:read_file(
 		   filename:join([SC#sconf.docroot, File])) of
 		{ok, Bin} ->
 		    D =delim_split_file(Delimiter,binary_to_list(Bin),data,[]),
-		    io:format("delim: ~p~n",[D]),
 		    ets:insert(SC#sconf.ets,{Key,D}),
 		    ssi(File, Delimiter, Bindings, SC);
 		{error, Rsn} ->

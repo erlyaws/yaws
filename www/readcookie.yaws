@@ -6,7 +6,6 @@
 out(A) ->
     H=A#arg.headers,
     C = H#headers.cookie,
-    io:format("Cookie =~p~n", [C]),
     
     L=case yaws_api:find_cookie_val("foobar", C) of
 	  [] ->

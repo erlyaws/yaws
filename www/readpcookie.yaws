@@ -10,7 +10,6 @@ to_integer(S) ->
 out(A) ->
     H=A#arg.headers,
     C = H#headers.cookie,
-    io:format("Cookie =~p~n", [C]),
     L=case yaws_api:find_cookie_val("pfoobar", C) of
 	  [] ->
 	      f("<p> No cookie set from the browser, need to "

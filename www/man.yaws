@@ -24,11 +24,6 @@ out(A) ->
 		    true ->
 			os:cmd("man " ++ Page ++ " | col -b");
 		    false ->
-		        io:format("XX ~s~n",[Page]),
-
-
-
-
 			"illegal character detected in query arg"
 		end;
 	    false ->
