@@ -46,6 +46,8 @@ function updateDir () {
 	fi
 	install -b -S $suffix $wikisrc/WikiPreferences.files/*.css \
 	    $udir/WikiPreferences.files
+	install -b -S $suffix $wikisrc/WikiPreferences.files/*.html \
+	    $udir/WikiPreferences.files
 	if [ $updategifs = 1 ]; then
 	    install -b -S $suffix $wikisrc/WikiPreferences.files/*.gif \
 		$udir/WikiPreferences.files
