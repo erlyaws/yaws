@@ -24,9 +24,10 @@
 	       default_type = "text/html",
 	       timeout = 2000,
 	       include_dir = [],
-	       yaws   %% FIXME add version here 
-	         }).  %% a list of lists of #sconfs
-                      %% one list of #sconf's per listen ip
+	       yaws,
+	       uid                  %% unix uid of user running yaws
+	      }).  
+
 
 
 -record(ssl, 
@@ -39,6 +40,12 @@
 	 cacertfile,
 	 ciphers,
 	 cachetimeout}).
+
+
+
+
+%% a list of lists of #sconfs
+%% one list of #sconf's per listen ip
 
 
 %% server conf
@@ -61,6 +68,7 @@
           type = "Basic",
           users = []
          }).
+
 
 -record(dcc, {
 	  doclose = true,

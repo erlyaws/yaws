@@ -13,10 +13,14 @@
 
 -compile(export_all).
 -include_lib("kernel/include/file.hrl").
+
 -define(F, "/tmp/yaws.ctl").
 
 
-start(_Top) ->
+ctl_file(Id) ->
+    io_lib:format("/tmp/yaws.ctl.~s",[Id]).
+
+start(_Top, Id) ->
     case gen_tcp:listen(0, [{packet, 2},
 			    {active, false},
 			    binary,
@@ -25,7 +29,7 @@ start(_Top) ->
 	{ok,  L} ->
 	    case inet:sockname(L) of
 		{ok, {_, Port}} ->
-		    F = ?F,
+		    F = ctl_file(Id),
 		    file:write_file(F, io_lib:format("~w", [Port])),
 		    {ok, FI} = file:read_file_info(F),
 		    M = FI#file_info.mode,
@@ -97,8 +101,10 @@ a_status(Sock) ->
     gen_tcp:send(Sock, [H, T]).
 
 
-actl(Term) ->
-    case file:read_file(?F) of
+
+actl(Term, Uid) ->
+    CtlFile = ctl_file(Uid),
+    case file:read_file(CtlFile) of
 	{ok, B} ->
 	    L = binary_to_list(B),
 	    I = list_to_integer(L),
@@ -114,31 +120,36 @@ actl(Term) ->
 			{ok, Bin} ->
 			    io:format("~s~n", [binary_to_list(Bin)]);
 			Err ->
-			    io:format("yaws server not responding ~n",[])
+			    io:format("yaws server for uid ~s not responding ~n",[Uid])
 		    end,
 		    gen_tcp:close(Fd),
 		    Res;
 		Err ->
-		    io:format("yaws server not running \n"),
+		    io:format("yaws server under uid  ~s not running \n", [Uid]),
 		    Err
 	    end;
 	Err ->
-	    io:format("yaws: Cannot open runfile ~s ... server not running ?? ~n",
-		      [?F])
+	    io:format("yaws: Cannot open runfile ~s ... server under uid ~s "
+		      "not running ?? ~n",
+		      [CtlFile, Uid])
     end,
     init:stop().
+
+uid() ->
+    os:cmd("id -u") -- [10].
 
 
 %% send a hup (kindof) to the yaws server to make it
 %% reload its configuration and clear its caches
 
 hup() ->
-    actl(hup).
+    actl(hup, uid()).
 
 stop() ->	
-    actl(stop).
+    actl(stop, uid()).
+
 status() ->
-    actl(status).
+    actl(status, uid()).
 
 
 

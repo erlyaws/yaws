@@ -208,7 +208,12 @@ is_exported(Fun, A, Mod) ->
 new_out_file(Line, C, GC) ->
     Mnum = gen_server:call(yaws_server, mnum),
     Module = [$m | integer_to_list(Mnum)],
-    OutFile = "/tmp/yaws/" ++ Module ++ ".erl",
+    OutFile = lists:flatten(
+		io_lib:format(
+		  "/tmp/yaws/~s/~s.erl",[GC#gconf.uid, Module])),
+
+    %% "/tmp/yaws/" ++ Module ++ ".erl",
+
     ?Debug("Writing outout file~s~n", [OutFile]),
     {ok, Out} = file:open(OutFile, [write]),
     ok = io:format(Out, "-module(~s).~n-compile(export_all).~n~n", [Module]),

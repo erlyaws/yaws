@@ -159,6 +159,7 @@ make_default_gconf() ->
 	   ebin_dir = [filename:join([Y, "examples/ebin"])],
 	   include_dir = [filename:join([Y, "examples/include"])],
 	   logdir = ".",
+	   uid = os:cmd("id -u") -- [10],
 	   yaws = "Yaws " ++ yaws_vsn:version()}.
 
 

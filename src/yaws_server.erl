@@ -202,7 +202,7 @@ init2(Gconf, Sconfs, RunMod) ->
 		  end, L),
     if
 	length(L) == length(L2) ->
-	    proc_lib:spawn_link(yaws_ctl, start, [self()]),
+	    proc_lib:spawn_link(yaws_ctl, start, [self(), Gconf#gconf.uid]),
 	    {ok, {Gconf, L2, 0}};
 	true ->
 	    {stop, "failed to start server "}
@@ -278,7 +278,7 @@ add_yaws_auth(Dirs, A) ->
 		  {Dir, A#auth{users = TermList++A#auth.users}};
 	      {error, enoent} ->
 		  {Dir, A};
-	      Err ->
+	      _Err ->
 		  error_logger:format("Bad .yaws_auth file in dir ~p~n", [Dir]),
 		  {Dir, A}
 	  end
@@ -296,6 +296,7 @@ do_listen(SC) ->
 
 %% One server per IP we listen to
 gserv(GC, Group0) ->
+    process_flag(trap_exit, true),
     ?TC([{record, GC, gconf}]),
     Group = map(fun(SC) -> 
 			E = ets:new(yaws_code, [public, set]),
@@ -314,9 +315,11 @@ gserv(GC, Group0) ->
 			       catch map(fun(S) ->  S#sconf.servername end, 
 					 Group)]),
 	    file:make_dir("/tmp/yaws"),
-	    {ok, Files} = file:list_dir("/tmp/yaws"),
+	    Tdir = "/tmp/yaws/" ++ GC#gconf.uid,
+	    file:make_dir(Tdir),
+	    {ok, Files} = file:list_dir(Tdir),
 	    lists:foreach(
-	      fun(F) -> file:delete("/tmp/yaws/" ++ F) end, Files),
+	      fun(F) -> file:delete(Tdir ++ "/" ++ F) end, Files),
 	    proc_lib:init_ack({self(), Group}),
 	    GS = #gs{gconf = GC,
 		     group = Group,
@@ -354,7 +357,9 @@ gserv(GS, Ready, Rnum) ->
 		    gserv(GS2, Ready, Rnum);
 		Rnum < 8 ->
 		    gserv(GS2, [From | Ready], Rnum+1)
-	    end
+	    end;
+	{'EXIT', Pid, _} ->
+	    gserv(GS, Ready, Rnum)
     end.
 	    
 
@@ -848,7 +853,7 @@ is_authdir(_, []) ->
 
 is_authenticated(SC, UT, _Req, H) ->
     case is_authdir(UT#urltype.path, SC#sconf.authdirs) of
-	{true, #auth{dir = Dir, realm = Realm, users = Users}} ->
+	{true, #auth{dir = _Dir, realm = Realm, users = Users}} ->
 	    case H#headers.authorization of
 		undefined ->
 		    {false, Realm};
@@ -1204,7 +1209,7 @@ handle_out_reply({html, Html}, DCC, _LineNo, _YawsFile, _SC, _A) ->
     accumulate_chunk(DCC, Html);
 
 handle_out_reply({ehtml, E}, DCC, _LineNo, _YawsFile, _SC, _A) ->
-    accumulate_chunk(DCC, ehtml_expand(E));
+    accumulate_chunk(DCC, safe_ehtml_expand(E));
 
 handle_out_reply({content, MimeType, Cont}, DCC, _LineNo, _YawsFile, _SC, _A) ->
     put(content_type, MimeType),
@@ -1227,7 +1232,7 @@ handle_out_reply({'EXIT', normal}, _DCC, _LineNo, _YawsFile, _SC, _A) ->
 handle_out_reply(break, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     break;
 
-handle_out_reply({redirect_local, Path}, DCC, _LineNo, _YawsFile, SC, A) ->
+handle_out_reply({redirect_local, Path}, _DCC, _LineNo, _YawsFile, SC, A) ->
     erase(acc_headers),
     Scheme = case SC#sconf.ssl of
 		 undefined ->
@@ -1253,7 +1258,7 @@ handle_out_reply({redirect_local, Path}, DCC, _LineNo, _YawsFile, SC, A) ->
 		       PortPart, Path]),
     ok;
 
-handle_out_reply({redirect, URL}, DCC, _LineNo, _YawsFile, SC, A) ->
+handle_out_reply({redirect, URL}, _DCC, _LineNo, _YawsFile, _SC, A) ->
     erase(acc_headers),
     set_status_code(redirect_code(A)),
     make_content_length(0),
@@ -1273,7 +1278,7 @@ handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile, _SC, _A) ->
 	      "Reason: ~p", [YawsFile, LineNo, Err]),
     accumulate_chunk(DCC, L);
 
-handle_out_reply({get_more, Cont, State}, DCC, LineNo, YawsFile, _SC, _A) ->
+handle_out_reply({get_more, Cont, State}, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     {get_more, Cont, State};
 
 handle_out_reply(Reply, DCC, LineNo, YawsFile, _SC, _A) ->
@@ -1294,7 +1299,7 @@ handle_out_reply_l([Reply|T], DCC, LineNo, YawsFile, SC, A, Res) ->
 	_ ->
 	    handle_out_reply_l(T, DCC, LineNo, YawsFile, SC, A, Res)
     end;
-handle_out_reply_l([], DCC, LineNo, YawsFile, SC, A, Res) ->
+handle_out_reply_l([], _DCC, _LineNo, _YawsFile, _SC, _A, Res) ->
     Res.
 
 %% Get redirect reply code.
@@ -2034,7 +2039,7 @@ decode_base64([Sextet1,Sextet2,Sextet3,Sextet4|Rest]) ->
   Octet2=(Bits4x6 bsr 8) band 16#ff,
   Octet3=Bits4x6 band 16#ff,
   [Octet1,Octet2,Octet3|decode_base64(Rest)];
-decode_base64(CatchAll) ->
+decode_base64(_CatchAll) ->
   {error, bad_base64}.
 
 d(X) when X >= $A, X =<$Z ->
@@ -2047,11 +2052,22 @@ d($+) -> 62;
 d($/) -> 63;
 d(_) -> 63.
 
+
+
+safe_ehtml_expand(X) ->
+    case (catch ehtml_expand(X)) of
+	{'EXIT', R} ->
+	    io_lib:format("<pre> ~n~p~n </pre>~n", [R]);
+	Val ->
+	    Val
+    end.
+
+
 %% simple erlang term representation of HTML:
 %% EHTML = [EHTML] | {Tag, Attrs, Body} | {Tag, Attrs} | {Tag} |
 %%         binary() | character()
 %% Tag 	 = atom()
-%% Attrs = [{Key, Value}]
+%% Attrs = [{Key, Value}]  or {EventTag, {jscall, FunName, [Args]}}
 %% Key 	 = atom()
 %% Value = string()
 %% Body  = EHTML
@@ -2070,6 +2086,41 @@ ehtml_expand({Tag, Attrs, Body}) ->
 ehtml_expand(L) when list(L) ->
     map(fun ehtml_expand/1, L).
 
-ehtml_attrs(Attrs) ->
-    [io_lib:format(" ~s=\"~s\"", [Name, Value]) || {Name, Value} <- Attrs].
+
+
+
+
+ehtml_attrs([]) ->
+    [];
+ehtml_attrs([{Attr, JsCall} |Tail]) when element(1, JsCall) == jscall ->
+    [io_lib:format(" ~s=~s", [Attr, jscall(JsCall)]) | ehtml_attrs(Tail)];
+ehtml_attrs([{Name, Value} | Tail]) ->
+    [io_lib:format(" ~s=\"~s\"", [Name, Value]) | ehtml_attrs(Tail)].
+
+
+
+%% javascript calls
+%% example: {onClick, {jscall, xyz, [f2,bala2]}}
+%% which expands to: onClick="xyz('f2' , 'bala2')"
+
+
+jscall({jscall, Fname, ArgList}) ->
+    io_lib:format("\"~s(~s)\"; ", [Fname, jscall_args(ArgList)]).
+
+jscall_args([H]) ->
+    jscall_arg(H);
+jscall_args([H|T]) ->
+    [jscall_arg(H), " , " | jscall_args(T)];
+jscall_args([]) ->
+    [].
+
+
+jscall_arg(Arg) when integer(Arg) ->
+    Arg;
+jscall_arg(Arg) when list(Arg) ->
+    io_lib:format("\'~s\'", [Arg]);
+jscall_arg(Arg) when atom(Arg) ->
+    io_lib:format("\'~s\'", [Arg]).
+
+
 
