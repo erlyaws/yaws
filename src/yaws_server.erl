@@ -2675,11 +2675,11 @@ no_slash_eq(_,_) ->
 maybe_return_dir(DR, GetPath) ->
     ?Debug("maybe_return_dir(~p, ~p)", [DR, GetPath]),
     case prim_file:read_file_info([DR, GetPath, "index.yaws"]) of
-	{ok, _FI} ->
+	{ok, FI} when FI#file_info.type == regular ->
 	    do_url_type(get(sc), GetPath ++ "index.yaws");
 	_ ->
 	    case prim_file:read_file_info([DR, GetPath, "index.html"]) of
-		{ok, _FI} ->
+		{ok, FI} when FI#file_info.type == regular ->
 		    do_url_type(get(sc), GetPath ++ "index.html");
 		_ ->
 		    case file:list_dir([DR, GetPath]) of
@@ -2700,6 +2700,24 @@ maybe_return_dir(DR, GetPath) ->
 
 % neither is this entirely correct since the /c/d/ files may exists
 % and in that case we'll deliver em :-(
+
+% Comment from Carsten:
+%
+% Theses urls may be a matter of taste, but since they are mentioned in
+% cgi doc it seemed good to implement them.  Besides, I find them handy.
+%
+% If the current behaviour is correct is hard to tell without first
+% writing a specification :-) To treat foo.yaws as a directory if it
+% is one, was intentional.  I find it nice to be able to change the
+% implementation from a script to a real directory and did not want to
+% break anyones site, just because they might have a directory called
+% `examples.yaws'.  There is one inconsistency though:
+%
+%   http://www.x.com/a/foo.yaws/b/bar.yaws/c/d
+%
+% will not work, if a/foo.yaws is a directory and
+% /a/foo.yaws/b/bar.yaws a script.  Possibly, this used to be
+% different and may again be changed in the future.
 
 maybe_return_path_info(SC, Comps, RevFile) ->
     case path_info_split(Comps,[]) of
@@ -2734,14 +2752,14 @@ maybe_return_path_info(SC, Comps, RevFile) ->
 
 
 path_info_split([H|T], Ack) ->
-    case drop_till_dot(H) of
-	[] ->
+    [$/|RevPath] = lists:reverse(H),
+    case suffix_from_rev(RevPath) of
+	[] ->   % shortcut clause, not necessary
 	    path_info_split(T, [H|Ack]);
 	Suff ->
-	    [$/|Tail] = lists:reverse(Suff),
-	    {Type, Mime} = mime_types:revt(Tail),
+	    {Type, Mime} = mime_types:t(Suff),
 	    case Type of
-		regular -> %% maybe they have dirnames with dots
+		regular ->
 		    path_info_split(T, [H|Ack]);
 		forbidden ->
 		    {false, forbidden};
@@ -2753,20 +2771,16 @@ path_info_split([], _Ack) ->
     {false, error}.
 
 
+suffix_from_rev(R) ->
+    suffix_from_rev(R, []).
 
-drop_till_dot([$. |Tail]) ->
-    Tail;
-drop_till_dot([]) ->
-    [];
-drop_till_dot([H|T]) when integer(H) ->
-    drop_till_dot(T);
-drop_till_dot([H|T]) when list(H) ->
-    case drop_till_dot(H) of
-	[] ->
-	    drop_till_dot(T);
-	List ->
-	    [List, T]
-    end.
+suffix_from_rev([$.|_], A) ->
+    A;
+suffix_from_rev([C|T], A) ->
+    suffix_from_rev(T, [C|A]);
+suffix_from_rev([], _A) ->
+    [].
+
 
 
 conc_path([]) ->
