@@ -1,0 +1,414 @@
+\documentclass[11pt,oneside,english]{book}
+\usepackage[T1]{fontenc}
+\usepackage[latin1]{inputenc}
+\usepackage{geometry}
+\geometry{verbose,letterpaper,tmargin=1in,bmargin=1in,lmargin=1in,rmargin=1in}
+\usepackage{babel}
+\setcounter{secnumdepth}{3}
+\setlength\parskip{\medskipamount}
+\setlength\parindent{0pt}
+\usepackage{url}
+
+\makeatletter
+
+\usepackage[T1]{fontenc}
+\usepackage{xspace}
+\usepackage{html}
+
+\makeatother
+\begin{document}
+
+
+
+\title{Yaws - Yet Another Web Server}
+
+
+\author{Claes Wikstrom\\
+klacke@hyber.org}
+
+\maketitle
+\tableofcontents{}
+
+
+\chapter{Introduction}
+
+Yaws is an Erlang web server. It's written entirely in Erlang and it uses
+Erlang as its embedded language similar to PHP in Apache or Java in Tomcat.
+
+The advantages of Erlang as an embedded webpage language as opposed to
+Java or PHP are many.
+\begin{itemize}
+
+\item{Speed - Using Erlang for both implementing the webserver itself as well
+as embedded script language gives excellent dynamic page generation
+performance.}
+
+\item{Beauty - Well this is subjective}
+
+\item{Scalability - due to the light weight processes of Erlang, Yaws
+is able to handle a very large number of concurrent connections}
+
+\end{itemize}
+
+Yaws has a wide feature set, it supports:
+
+\begin{enumerate}
+\item HTTP 1.0 and HTTP 1.1 
+\item Static content page delivery
+\item Dynamic content generation using embedded erlang code in the
+HTML pages
+\item Common Log Format traffic logs
+\item Virtual hosting with several servers on the same IP address
+\item Multiple servers on multiple IP addresses.
+\item HTTP tracing for debugging
+\item An interactive interpreter environment in the Web server while
+developing and debugging the web site.
+\item RAM caching of commonly accessed pages.
+\item Full streaming capabilities of both up and down load of dynamically
+generated pages.
+\item SSL 
+\item Support for WWW-Authenticated pages.
+\item Application Modules where virtual directory hierarchies can
+be made.
+\item Embedded mode
+\end{enumerate}
+
+
+
+\section{A tiny example}
+
+We introduce yaws by help of a tiny example. 
+ The webserver yaws serves  and delivers
+static content pages similar to any old webserver. It's the dynamic pages
+that makes yaws interesting. Any page with the suffix ``.yaws'' is considered
+a dynamic yaws page. A yaws page can contain embedded Erlang snippets that
+are executed while the page is being delivered to the WWW browser.
+
+Example 1.1 is the HTML code for a small yaws page.
+
+
+\begin{figure}[h]
+\begin{verbatim}
+<html>
+
+<p> First paragraph
+
+<erl>
+out(Arg) ->
+    {html, "<p>This string get's inserted into HTML document dynamically"}.
+</erl>
+
+</html>
+\end{verbatim}
+\caption{Example 1.1}
+\end{figure}
+
+It illustrates the basic idea behing yaws. The HTML code
+can contain <erl> and </erl> tags and inside these tags an erlang function
+called out/1 gets called and the output of that function is inserted
+into the HTML document, dynamically. 
+
+It is possible to have several chunks of HTML code together with several 
+chunks of Erlang code in the same yaws page.
+
+The \verb+Arg+ argument supplied to the automatically invoked \verb+out/1+
+function is an Erlang record that contains various data which interesting 
+when generating dynamic pages. For example the HTTP headers which were sent
+from the WWW client, the actual TCP/IP socket leading to the WWW client.
+This will be elaborated on throughly in later chapters. 
+
+The \verb+out/1+ function returned the tuple \verb+{html, String}+ and 
+\verb+String+ would be inserted into the HTML output. There are number
+of different return values that can be returned from the \verb+out/1+ function
+in order to control the behaviour and output from the Yaws web server.
+
+
+
+\chapter{Compile, Install, Config and Run}
+
+This chapter is more of a ``Getting started'' character than a full
+description of the Yaws configuration. 
+Yaws is hosted on Sourceforge at 
+\textit { http://sourceforge.net/projects/erlyaws/ }. This is where the source code
+resides in a CVS repository and the latest unreleased version is
+available through anonymous CVS through the following commands:
+
+\begin{verbatim}
+
+# export CVS_RSH=ssh 
+# export CVSROOT=:pserver:anonymous@cvs.erlyaws.sourceforge.net:/cvsroot/erlyaws
+# cvs  login
+# cvs -z3 co .
+
+\end{verbatim}
+
+
+Released version of Yaws are available either at the Soureforge site or
+at \textit{http://yaws.hyber.org/download}. 
+
+
+
+\subsection{Compile and Install}
+
+To compile and install a Yaws release
+one of the prerequisites is a properly installed Erlang system. Yaws
+runs on Erlang releases OTP R8 and later. Get Erlang from
+\textit{http://www.erlang.org}
+
+Compile and install is straight forward:
+\begin{verbatim}
+# cd /usr/local/src
+# tar xfz yaws-X.XX.tar.gz
+# cd yaws
+# make 
+# make install
+\end{verbatim}
+
+There is no configure script (yet) since there are no items
+to configure. 
+
+The make command will compile the Yaws web server with the \verb+erlc+
+compiler found in \$PATH.
+
+make install - will install the executable - called yaws in
+/usr/local/bin/ and a working configuration file in \textit{ /etc/yaws.conf}
+
+make local\_install will install the executable in \$HOME/bin and a
+working configuration file in \$HOME
+
+While developing a Yaws site, it's typically the most convenient to
+use the local\_install and run Yaws as a non priviliged user.
+
+
+\subsection{Configure}
+Let's take a look at the config file that get's written to \$HOME after
+a local\_install.
+
+
+\begin{figure}[h]
+\begin{verbatim}
+
+# first we have a set of globals
+
+logdir = .
+ebin_dir = /home/klacke/yaws/yaws/examples/ebin
+include_dir = /home/klacke/yaws/yaws/examples/include
+
+#end then a set of servers
+
+<server localhost>
+	port = 8000
+	listen = 127.0.0.1
+	docroot = /home/klacke/yaws/yaws/scripts/../www
+</server>
+
+
+\end{verbatim}
+\caption{Minimal Local Configuration}
+\end{figure}
+
+The configuration consists of an initial set of global
+variables that are valid for all servers defined.
+
+The only one we need to care about for now is the logdir
+directive. Yaws will produce a number of logfiles and they will -
+using the Configuration from Figure 2.1 - end up in the current 
+working directory.
+We start yaws as 
+\begin{verbatim}
+# ~/bin/yaws -i
+Erlang (BEAM) emulator version 5.1.2.b2 [source]
+
+Eshell V5.1.2.b2  (abort with ^G)
+1> 
+=INFO REPORT==== 30-Oct-2002::01:38:22 ===
+Using config file /home/klacke/yaws.conf
+=INFO REPORT==== 30-Oct-2002::01:38:22 ===
+Listening to 127.0.0.1:8000 for servers ["localhost:8000"]
+
+1> 
+\end{verbatim}
+
+By starting yaws in interactive mode (using the command switch \textit{-i}
+we get a regular erlang prompt. This is most convenient when developing
+web pages. For example we can/get:
+\begin{itemize}
+\item{Dynamically compile and load optional helper modules we need.}
+\item{We Get all the crash and error reports written directly to the
+terminal.}
+\end{itemize}
+
+The configuration in picture 2.1 defined one HTTP server on
+address 127.0.0.1:8000 called "localhost".
+It is important to understand the difference between the name and
+the address of a server. The name is the expected value in the
+client Host: header. That is typically the same as the fully qualified
+DNS name of the server whereas the address is IP address of the server.
+
+Since Yaws support virtual hosting with several servers on the same
+IP address, this matters.
+
+Nevertheless, our server listens to \textit{127.0.0.1:8000} and 
+has the name "localhost", thus the correct URL for this server
+is \textit{http://localhost:8000}.
+
+The document root (docroot) for the server is set to the www directory in the
+Yaws source code distribution. This directory contains a bunch of
+examples and we should be able to run all those example now on the
+URL  \textit{http://localhost:8000}.
+
+Instead of editing and adding files in the yaws www directory, we 
+create yet another server on the same IP address but a different port
+number - and in particular a different document root where we can add
+our own files.
+
+\begin{verbatim}
+# mkdir ~/test
+# mkdir ~/test/logs
+\end{verbatim}
+
+Now change the config so it looks like this:
+
+\begin{verbatim}
+
+logdir = /home/klacke/test/logs
+ebin_dir = /home/klacke/test
+include_dir = /home/klacke/test
+
+<server localhost>
+	port = 8000
+	listen = 127.0.0.1
+	docroot = /home/klacke/yaws/yaws/www
+</server>
+
+<server localhost>
+	port = 8001
+	listen = 127.0.0.1
+	docroot = /home/klacke/test
+</server>
+
+
+\end{verbatim}
+
+We define two servers, one being the original default
+and a new pointing to a document root in our home directory.
+
+We can now start to add static content in the form of
+HTML pages, dynamic content in the form of .yaws pages or
+erlang/beam code that can be used to generate the dynamic content.
+
+The load path will be set so that beam code in the directory ~/test
+will be automatically loaded when referenced.
+
+It is best to run yaws interactively while developing the site.
+In order to start the yaws as a daemon, we give the flags:
+\begin{verbatim}
+# yaws -D -heart
+\end{verbatim}
+
+The \textit{-D} flags instructs yaws to run as a daemon and the 
+\textit{-heart} flags will start a heartbeat program called heart
+which restarts the daemon if it should crash or if it stops responding to
+a regular heartbeat.
+
+Once started in daemon mode, we have very limited ways of interacting
+with the daemon. It is possible to query the daemon using:
+\begin{verbatim}
+# yaws -S
+\end{verbatim}
+
+This command produces a simple printout of Uptime and number of hits
+for each configured server.
+
+If we change the configuration, we can HUP the daemon using the
+command:
+\begin{verbatim}
+# yaws -h
+\end{verbatim}
+
+This will force the daemon to reread the configuration file.
+
+
+
+\chapter{Static content}
+
+Yaws acts very much like any regular web server while delivering
+static pages. By default yaws will cache static content in RAM.
+The caching behaviour is controlled by a number of global
+configuration directives. Since the RAM caching occupies memory, 
+it may be interesting to tweak the default values for the caching directives
+or even to turn it off completeley.
+
+The following configuration directives control the caching behavior
+\begin{itemize}
+\item \textit{max\_num\_cached\_files = Integer}
+Yaws  will  cache  small  files  such  as  commonly
+              accessed  GIF images in RAM.  This directive sets a
+              maximum number on the number of cached files.   The
+              default value is 400.
+
+\item\textit{max\_num\_cached\_bytes = Integer}
+ This  directive  controls  the  total amount of RAM
+             which can maximally be used for cached  RAM  files.
+              The default value is 1000000, 1 megabyte.
+
+
+\item\textit{max\_size\_cached\_file = Integer}
+
+ This  directive  sets  a  maximum size on the files
+              that are RAM cached by yaws.  The default  value  i
+              8000, 8 batters.
+
+
+
+\end{itemize}
+
+It may be considered to be confusing, but the numbers specified 
+in the above mentioned cache directives are local to each
+server. Thus if we have specified \verb+max_num_cached_bytes = 1000000+
+and have defined 3 servers, we may actually use $3 * 1000000$ bytes.
+
+
+
+
+\chapter{Dynamic content}
+
+Dynamic content is what yaws is about. Most web servers are designed
+with HTTP and static content in mind whereas Yaws is designed 
+for dynamic pages from the start.
+Most large sites on the Web today make heavy use of dynamic pages.
+
+
+\section{Introduction}
+\section{EHTML}
+
+
+\chapter{Mode of operation}
+
+
+\chapter{SSL}
+
+\chapter{Security}
+
+\chapter{Example Applications}
+
+\section{Login scenarios}
+
+
+\chapter{Debugging and Development}
+
+
+\chapter {Embedded mode}
+
+
+
+
+\begin{figure}[h]
+\begin{verbatim}
+
+
+\end{verbatim}
+\caption{foo}
+\end{figure}
+
+\end{document}
