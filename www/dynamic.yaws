@@ -80,6 +80,16 @@ default 200 code.
 <p>
 <tt>ok</tt> Do nothing.
 
+
+<li>
+<p>
+<tt>{content, MimeType, Content} </tt> Sets the mime type, that is
+the Content-Type: header to be <tt>MimeType</tt>
+The default value is ofcource "text/html", but applications that 
+generate i.e wml or pdf, must set the Content-Type.
+A pdf generating application can for example return the
+tuple <tt> {content, "application/pdf", PdfContentData} </tt>
+
 <li>
 <p>
 <tt>{'EXIT', normal}</tt> which will make terminate the 

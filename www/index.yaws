@@ -60,6 +60,9 @@ powered by Yaws.
 
 <p>
 <ul>
+
+
+
 <li> 
 <p>Jun 16, version 0.50 released. A bug in setcookie fixed, a proper
 /etc/rc/init.d script written. New flag, yaws -S which query status of

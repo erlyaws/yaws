@@ -95,7 +95,7 @@ validate_groups([H|T]) ->
 validate_group(List) ->
     
     %% first, max one ssl per group
-    io:format("List = ~p~n", [List]),
+    ?Debug("List = ~p~n", [List]),
 
     case lists:filter(fun(C) ->
 			      C#sconf.ssl /= undefined 

@@ -28,9 +28,13 @@ in the config will be default if no Host: header is present
 when a server is run on a non-standar port. The browsers seem to
 set the Host: filed to host:port then Dunno if this is HTTP compliant ...
 
+
+<p>Tobbe added the -r flag to the startscript.
+
 <p>Changed yaws_api:parse_post_data/1 so that it takes an arg struct
 as argument instead of querydata and added support for multipart
 form data in the process.
+
 
 </td></tr>
 

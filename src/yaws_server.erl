@@ -534,7 +534,7 @@ pick_host(GC, Host, [_|T], Group) ->
     pick_host(GC, Host, T, Group);
 pick_host(GC, Host, [], Group) ->
     yaws_debug:derror(GC, "Got Host: header ~p which didn't match any host "
-		      "filed in config, picking the first one ",[Host]),
+		      "field in config, picking the first one ",[Host]),
     hd(Group).
 
 
@@ -943,13 +943,13 @@ do_yaws(CliSock, GC, SC, Req, H, ARG, UT) ->
     FileAtom = list_to_atom(UT#urltype.fullpath),
     Mtime = mtime(UT#urltype.finfo),
     case ets:lookup(SC#sconf.ets, FileAtom) of
-	[{FileAtom, Mtime1, Spec}] when Mtime1 == Mtime ->
+	[{FileAtom, spec, Mtime1, Spec}] when Mtime1 == Mtime ->
 	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG,UT);
 	Other  ->
 	    del_old_files(Other),
 	    {ok, Spec} = yaws_compile:compile_file(UT#urltype.fullpath, GC, SC),
 	    ?Debug("Spec for file ~s is:~n~p~n",[UT#urltype.fullpath, Spec]),
-	    ets:insert(SC#sconf.ets, {FileAtom, Mtime, Spec}),
+	    ets:insert(SC#sconf.ets, {FileAtom, spec, Mtime, Spec}),
 	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG, UT)
     end.
 
@@ -1003,8 +1003,7 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT) ->
     DCC = #dcc{doclose = DoClose,
 	       chunked = Chunked},
     
-    MimeType = "text/html",
-    make_dyn_headers(DCC, Req, MimeType),
+    make_dyn_headers(DCC, Req),
     close_if_HEAD(Req, fun() ->
 			       deliver_accumulated(DCC, CliSock,GC,SC),
 			       do_tcp_close(CliSock, SC), 
@@ -1050,6 +1049,13 @@ deliver_dyn_file(CliSock, GC, SC, _Req, _Head,_UT, DCC, _Bin, _Fd, [], _ARG) ->
 		  accumulate_header("Connection: close"),
 		  done
 	  end,
+    case erase(content_type) of
+	undefined ->
+	    make_content_type("text/html");
+	Other ->
+	    make_content_type(Other)
+    end,
+    
     deliver_accumulated(DCC, CliSock, GC, SC),
     Ret.
 
@@ -1128,6 +1134,10 @@ handle_out_reply(L, DCC, LineNo, YawsFile) when list (L) ->
 
 handle_out_reply({html, Html}, DCC, _LineNo, _YawsFile) ->
     accumulate_chunk(DCC, Html);
+
+handle_out_reply({content, MimeType, Cont}, DCC, _LineNo, _YawsFile) ->
+    put(content_type, MimeType),
+    accumulate_chunk(DCC, Cont);
 
 handle_out_reply({header, H}, _DCC, _LineNo, _YawsFile) ->
     accumulate_header(H);
@@ -1333,10 +1343,9 @@ static_do_close(Req, H) ->
 	 chunked = false}.
 
 
-make_dyn_headers(DCC, Req, MimeType) ->
+make_dyn_headers(DCC, Req) ->
     make_date_header(),
     make_server_header(),
-    make_content_type(MimeType),
     make_connection_close(DCC#dcc.doclose),
     make_non_cache_able(Req#http_request.version).
 
@@ -1375,7 +1384,6 @@ crnl2() ->
 
 
 
-%% FIXME optimize the goddamn date generations
 make_date_header() ->
     N = element(2, now()),
     Head=case get(date_header) of
@@ -1549,13 +1557,26 @@ cache_file(_GC, _SC, _Path, UT) ->
     UT.
 
 
-cleanup_cache(_E, size) ->
-    %% remove the largest files with the least hit count  (urlc)
-    uhhh;
-cleanup_cache(_E, num) ->
-    %% remove all files with a low hit count
-    uhhh.
 
+%% FIXME, should not wipe entire ets table this way
+cleanup_cache(E, size) ->
+    %% remove the largest files with the least hit count  (urlc)
+    yaws_log:infolog("Clearing yaws internal content cache, size overflow",[]),
+    clear_ets(E);
+
+cleanup_cache(E, num) ->
+    yaws_log:infolog("Clearing yaws internal content cache, num overflow",[]),
+    clear_ets(E).
+
+
+
+clear_ets(E) ->
+    ets:match_delete(E, {'_', spec, '_', '_'}),
+    ets:match_delete(E, {{url, '_'}, '_', '_'}),
+    ets:match_delete(E, {{urlc, '_'}, '_', '_'}),
+    ets:insert(E, {num_files, 0}),
+    ets:insert(E, {num_bytes, 0}).
+    
 
 %% return #urltype{}
 do_url_type(Droot, Path) ->
@@ -1628,27 +1649,34 @@ split_path(DR, [H|T], Comps, Part) ->
 %% http:/a.b.c/~user URLs
 ret_user_dir(DR, [], "/", Upath) ->
     ?Debug("UserPart = ~p~n", [Upath]),
-    {User, Path} = parse_user_path(DR, Upath, []),
+    case parse_user_path(DR, Upath, []) of
+	{ok, User, Path} ->
     
-    ?Debug("User=~p Path = ~p~n", [User, Path]),
+	    ?Debug("User=~p Path = ~p~n", [User, Path]),
+	    
+	    %% FIXME doesn't work if passwd contains :: 
+	    %% also this is unix only
+	    %% and it ain't the fastest code around.
+	    OS = os:cmd(["grep ", User, " /etc/passwd "]),
+	    case (catch lists:nth(6, string:tokens(OS, [$:]))) of
+		{'EXIT', _} ->
+		    #urltype{type=error};
+		Home ->
+		    DR2 = [Home ++ "/public_html/"],
+		    do_url_type(DR2, Path) %% recurse
+	    end;
+	redir_dir ->
+	    redir_dir
+    end.
 
-    %% FIXME doesn't work if passwd contains :: 
-    %% also this is unix only
-    %% and it ain't the fastest code around.
-
-    Home = lists:nth(6, string:tokens(
-			  os:cmd(["grep ", User, " /etc/passwd "]),[$:])),
-    DR2 = [Home ++ "/public_html/"],
-    do_url_type(DR2, Path). %% recurse
 
 
-
-parse_user_path(_DR, [], User) ->
-    {lists:reverse(User), []};
+parse_user_path(_DR, [], _User) ->
+    redir_dir;
 parse_user_path(_DR, [$/], User) ->
-    {lists:reverse(User), []};
+    {ok, lists:reverse(User), []};
 parse_user_path(_DR, [$/|Tail], User) ->
-    {lists:reverse(User), Tail};
+    {ok, lists:reverse(User), Tail};
 parse_user_path(DR, [H|T], User) ->
     parse_user_path(DR, T, [H|User]).
 
