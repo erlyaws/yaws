@@ -196,7 +196,7 @@ gserv(GC, Group0) ->
 	    gserv(GS, [], 0);
 	Err ->
 	    error_logger:format("Failed to listen ~s:~w  : ~p~n",
-				[yaws:format_ip(SC#sconf.listen),
+				[yaws:fmt_ip(SC#sconf.listen),
 				 SC#sconf.port, Err]),
 	    proc_lib:init_ack({error, "Can't listen to socket: ~p ",[Err]}),
 	    exit(normal)
