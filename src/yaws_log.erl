@@ -32,7 +32,12 @@
 	  tracefd,
 	  tty_trace = false,
 	  alogs =  []}).
-		
+
+
+-record(alog, {fd,
+	       servername,
+	       filename}).
+
 
 %%%----------------------------------------------------------------------
 %%% API
@@ -123,9 +128,11 @@ handle_call({setdir, Dir, Sconfs}, _From, State)
 		  A = filename:join([Dir, SC#sconf.servername ++ ".access"]),
 		  case file:open(A, [write, raw, append]) of
 		      {ok, Fd} ->
-			  {true, {SC#sconf.servername, Fd, A}};
+			  {true, #alog{servername = SC#sconf.servername,
+				       fd = Fd,
+				       filename = A}};
 		      _Err ->
-			  error_logger:format("Cannot open ~p",[A]),
+			  error_logger:format("Cannot open ~p~n",[A]),
 			  false
 		  end
 	  end, SCs),
@@ -145,7 +152,7 @@ handle_call({setdir, Dir, Sconfs}, _From, State)
 		     alogs = L},
 
     yaws:ticker(3000, secs3),
-    yaws:ticker(60 * 1000, minute),
+    yaws:ticker(10 * 60 * 1000, minute10),
 
     {reply, ok, S2};
 
@@ -172,7 +179,9 @@ handle_call({setdir, _DirIgnore, Sconfs}, _From, State)
 		  A = filename:join([Dir, SC#sconf.servername ++ ".access"]),
 		  case file:open(A, [write, raw, append]) of
 		      {ok, Fd} ->
-			  {true, {SC#sconf.servername, Fd, A}};
+			  {true, #alog{servername = SC#sconf.servername,
+				       fd = Fd,
+				       filename = A}};
 		      _Err ->
 			  error_logger:format("Cannot open ~p",[A]),
 			  false
@@ -264,10 +273,10 @@ handle_cast({trace, from_client, Data}, State) ->
 
 
 do_alog(ServerName, Ip, Req, Status, Length, State) ->
-    case lists:keysearch(ServerName, 1, State#state.alogs) of
-	{value, {_, FD, _}} ->
+    case lists:keysearch(ServerName, #alog.servername, State#state.alogs) of
+	{value, AL} ->
 	    I = fmt_alog(State#state.now, Ip, Req, Status,  Length),
-	    file:write(FD, I),
+	    file:write(AL#alog.fd, I),
 	    tty_trace(I, State);
 	_ ->
 	    false
@@ -288,25 +297,23 @@ tty_trace(Str, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
+
+-define(WRAP_LOG_SIZE, 400000).
+
 handle_info(secs3, State) ->
     {noreply, State#state{now = fmtnow()}};
 
-%% once a minute, check log sizes
-handle_info(minute, State) ->
+
+%% once every 10  minute, check log sizes
+handle_info(minute10, State) ->
     L = lists:map(
-	  fun({Sname, FD, Filename}) ->
-		  {ok, FI} = file:read_file_info(Filename),
+	  fun(AL) ->
+		  {ok, FI} = file:read_file_info(AL#alog.filename),
 		  if
-		      FI#file_info.size > 200000 ->
-			  file:close(FD),
-			  B = filename:basename(Filename, ".access"),
-			  Old = B ++ ".old",
-			  file:delete(Old),
-			  file:rename(Filename, Old),
-			  {ok, Fd2} = file:open(Filename, [write, raw]),
-			  {Fd2, Sname, Filename};
+		      FI#file_info.size > ?WRAP_LOG_SIZE ->
+			  wrap(AL);
 		      true ->
-			  {FD, Sname, Filename}
+			  AL
 		  end
 	  end, State#state.alogs),
     
@@ -314,10 +321,9 @@ handle_info(minute, State) ->
     E = filename:join([Dir, "report.log"]),
     {ok, FI} = file:read_file_info(E),
     if
-	FI#file_info.size > 50000 ->
-	    B = filename:basename(E, ".log"),
+	FI#file_info.size > ?WRAP_LOG_SIZE ->
 	    error_logger:logfile(close),
-	    Old = B ++ ".old",
+	    Old = [E, ".old"],
 	    file:delete(Old),
 	    file:rename(E, Old),
 	    error_logger:logfile({open, E});
@@ -328,8 +334,14 @@ handle_info(minute, State) ->
 
     
 
-		  
 
+wrap(AL) ->
+    file:close(AL#alog.fd),
+    Old = [AL#alog.filename, ".old"],
+    file:delete(Old),
+    file:rename(AL#alog.filename, Old),
+    {ok, Fd2} = file:open(AL#alog.filename, [write, raw]),
+    AL#alog{fd = Fd2}.
 
 
 
