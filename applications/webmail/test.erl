@@ -16,7 +16,7 @@ pop() ->
 pop(N) ->
     {ok, S} = pop3lib_cli:connect([{user, "klacke"},
 			 {addr, {127,0,0,1}},
-			 {passwd, "ulMer9"}]),
+			 {passwd, "XXX"}]),
     
     Stat = pop3lib_cli:stat(S),
     Scan = pop3lib_cli:scan(S),
@@ -28,13 +28,13 @@ pop(N) ->
 s() ->
    {ok, S} = pop3lib_cli:connect([{user, "klacke"},
 			 {addr, {127,0,0,1}},
-			 {passwd, "ulMer9"}]),
+			 {passwd, "XXX"}]),
     S.
 
 s2() ->
    {ok, S} = pop3lib_cli:connect([{user, "klacke"},
 			 {addr, {213,67,177,217}},
-			 {passwd, "ulMer9"}]),
+			 {passwd, "XXX"}]),
     S.
     
 
