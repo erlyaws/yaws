@@ -1,0 +1,129 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta http-equiv="content-type"
+ content="text/html; charset=ISO-8859-1">
+  <style type="text/css">
+<!--
+@import url("WikiPreferences.files/custom.css");
+
+td.enable {
+  border: 0px;
+  color: black;
+  background: #ccffff;
+}
+td.disable {
+  border: 0px;
+  color: black;
+  background: #66cccc;
+}
+-->
+  </style>
+</head>
+<body style="background-color: teal;">
+<table cellpadding="2" cellspacing="10" border="0"
+ style="width: 100%; text-align: left;">
+  <tbody>
+    <tr>
+      <td style="vertical-align: middle; text-align: left;">
+      <table cellpadding="2" cellspacing="2" border="0"
+ style="width: 100%; text-align: left;">
+        <tbody>
+          <tr>
+            <td style="vertical-align: top;"><img src="WikiPreferences.files/yaws_pb.gif" title="" alt=""></td>
+            <td style="vertical-align: bottom; color: rgb(255, 255, 255);"></td>
+          </tr>
+        </tbody>
+      </table>
+      </td>
+      <td style="vertical-align: top; text-align: right; width: 100px;">
+      <br>
+      </td>
+    </tr>
+    <tr>
+      <td
+ style="border-style: solid; border-color: white; border-width: 1px 3px 3px 1px; background-color: rgb(204, 255, 255); vertical-align: top;">
+      <script>
+  if ("@@NODE@@" != "home") {
+      document.write("<h1><a href='allRefsToMe.yaws?node=@@NODE@@'>@@NODE@@</a></h1>");
+  } else {
+      document.write("<h1></h1>");
+  }
+      </script>
+
+<!-- the generated page -->
+@@DATA@@ </td>
+      <td style="vertical-align: top; text-align: right;">
+      <table
+ style="width: 80px; height: 98px; background-color: rgb(102, 204, 204);"
+ border="0" cellspacing="0" cellpadding="1">
+        <tbody>
+          <tr style="font-family: helvetica,arial,sans-serif;">
+            <td onmouseover="this.className='enable'"
+ onmouseout="this.className='disable'"
+ onclick="document.location='@@HOME@@'"
+ style="border-top: 1px solid white; border-left: 1px solid white; border-right: 3px solid white;"><small><small>&nbsp;Home</small></small></td>
+          </tr>
+          <tr style="font-family: helvetica,arial,sans-serif;">
+            <td onmouseover="this.className='enable'"
+ onmouseout="this.className='disable'"
+ onclick="document.location='@@EDITPAGE@@'"
+ style="border-left: 1px solid white; border-right: 3px solid white;"><small><small>&nbsp;Edit
+Me</small></small></td>
+          </tr>
+          <tr style="font-family: helvetica,arial,sans-serif;">
+            <td onmouseover="this.className='enable'"
+ onmouseout="this.className='disable'"
+ onclick="document.location='@@EDITFILES@@'"
+ style="border-left: 1px solid white; border-right: 3px solid white;"><small><small>&nbsp;Edit
+Files</small></small></td>
+          </tr>
+          <tr style="font-family: helvetica,arial,sans-serif;">
+            <td onmouseover="this.className='enable'"
+ onmouseout="this.className='disable'"
+ onclick="document.location='@@ALL@@'"
+ style="border-left: 1px solid white; border-right: 3px solid white;"><small><small>&nbsp;All
+Pages</small></small></td>
+          </tr>
+          <tr style="font-family: helvetica,arial,sans-serif;">
+            <td onmouseover="this.className='enable'"
+ onmouseout="this.className='disable'"
+ onclick="document.location='@@LAST@@'"
+ style="border-left: 1px solid white; border-right: 3px solid white;"><small><small>&nbsp;Last
+Edit</small></small></td>
+          </tr>
+          <tr style="font-family: helvetica,arial,sans-serif;">
+            <td onmouseover="this.className='enable'"
+ onmouseout="this.className='disable'"
+ onclick="document.location='@@HISTORY@@'"
+ style="border-left: 1px solid white; border-right: 3px solid white;"><small><small>&nbsp;History</small></small></td>
+          </tr>
+          <tr style="font-family: helvetica,arial,sans-serif;">
+            <td onmouseover="this.className='enable'"
+ onmouseout="this.className='disable'"
+ onclick="document.location='@@ZOMBIES@@'"
+ style="border-left: 1px solid white; border-right: 3px solid white;"><small><small>&nbsp;Zombies</small></small></td>
+          </tr>
+          <tr style="font-family: helvetica,arial,sans-serif;">
+            <td onmouseover="this.className='enable'"
+ onmouseout="this.className='disable'"
+ onclick="document.location='showPage.yaws?node=Hjälp'"
+ style="border-left: 1px solid white; border-right: 3px solid white; border-bottom: 3px solid white;"><small><small>&nbsp;Help</small></small></td>
+          </tr>
+        </tbody>
+      </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">
+      <hr>
+      <p>Last Modified: @@MODIFIED@@ </p>
+      </td>
+      <td style="vertical-align: top;"><br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+</body>
+</html>
