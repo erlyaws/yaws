@@ -6,7 +6,7 @@
 %%%----------------------------------------------------------------------
 
 -author('klacke@hyber.org').
--include_lib("yaws/include/yaws_api.hrl").
+-include_lib("yaws_api.hrl").
 -include("yaws_debug.hrl").
 
 %% global conf
@@ -50,17 +50,17 @@
 	 servername = "localhost",
 	 ets,
 	 ssl,
-	 authdirs = []
+	 authdirs = [],
+	 partial_post_size = nolimit
 	}).
 
 % Auth conf - from server conf and .yaws_auth
 -record(auth,
-	{dir = [],
-	 realm = "",
-	 type = "Basic",
-	 users = []
-	}).
-
+         {dir = [],
+          realm = "",
+          type = "Basic",
+          users = []
+         }).
 
 -record(dcc, {
 	  doclose = true,

@@ -8,8 +8,13 @@
 -module(yaws_api).
 -author('klacke@hyber.org').
 
--compile(export_all).
+%% -compile(export_all).
 -include("yaws.hrl").
+
+-export([parse_post_data/1, code_to_phrase/1, ssi/2, redirect/1]).
+-export([setcookie/2, setcookie/3, setcookie/4, setcookie/5]).
+-export([pre_ssi_files/2,  pre_ssi_string/1, htmlize/1, f/2, fl/1]).
+-export([find_cookie_val/2, secs/0, url_decode/1]).
 
 %% these are a bunch of function that are useful inside
 %% yaws scripts
@@ -19,15 +24,34 @@
 
 parse_post_data(Arg) ->
     Headers = Arg#arg.headers,
+    Req = Arg#arg.req,
     case lists:keysearch('Content-Type', 3, Headers#headers.other) of
 	{value, {_,_,_,_,"multipart/form-data"++Line}} ->
-	    LineArgs = parse_arg_line(Line),
-	    {value, {_, Boundary}} = lists:keysearch(boundary, 1, LineArgs),
-	    parse_multipart(Boundary, binary_to_list(Arg#arg.clidata));
+	    case Arg#arg.cont of
+		{cont, Cont} ->
+		    parse_multipart(binary_to_list(
+				      un_partial(Arg#arg.clidata)), {cont, Cont});
+		undefined ->
+		    LineArgs = parse_arg_line(Line),
+		    {value, {_, Boundary}} =
+			lists:keysearch(boundary, 1, LineArgs),
+		    parse_multipart(binary_to_list(un_partial(Arg#arg.clidata)),
+				    Boundary)
+	    end;
 	_ ->
-	    parse_post_data_urlencoded(Arg#arg.querydata)
+	    case Req#http_request.method of
+		'POST' ->
+		    parse_post_data_urlencoded(un_partial(Arg#arg.clidata));
+		_ ->
+		    parse_post_data_urlencoded(Arg#arg.querydata)
+	    end
     end.
 	    
+un_partial({partial, Bin}) ->
+    Bin;
+un_partial(Bin) ->
+    Bin.
+
 %
 
 parse_arg_line(Line) ->
@@ -93,57 +117,86 @@ isolate_arg([H|T], L)     -> isolate_arg(T, [H|L]).
 
 
 %
+%% Stateful parser of multipart data - allows easy re-entry
+% States are header|body|boundary|is_end
 
-parse_multipart(Boundary, Args) ->
-    Parts = split_boundary(Boundary, [$\r,$\n|Args]),
-    Parsed = parse_parts(Parts),
-    F = fun({Header,Body}) ->
-		{value, {_,"form-data"++Line}} =
-		    lists:keysearch("content-disposition", 1, Header),
-		Parameters = parse_arg_line(Line),
-		{value, {_,Name}} = lists:keysearch(name, 1, Parameters),
-		%% Parameters added by jb since the filename of an uploaded
-		%% is hidden there. This breaks the compatibility with non-
-		%% multipart arguments, which is bad. Don't really know what
-		%% to do about these. Always have three args?
-		{list_to_atom(Name), Body, Parameters}
-	end,
-    lists:map(F, Parsed).
+parse_multipart(Data, St) ->
+    case parse_multi(Data, St) of
+	{cont, St2, Res} ->
+	    {cont, {cont, St2}, lists:reverse(Res)};
+	{result, Res} ->
+	    {result, lists:reverse(Res)}
+    end.
 
-parse_parts([]) ->   [];
-parse_parts([[]|Ps]) ->
-    parse_parts(Ps);
-parse_parts([P|Ps]) ->
-    {Head, Body} = split_head_body(P, []),
+% Re-entry
+parse_multi(Data, {cont, {State, Start_data, Boundary, Acc, Tmp}}) ->
+    parse_multi(State, Start_data++Data, Boundary, Acc, [], Tmp);
+
+% Initial entry point
+parse_multi(Data, Boundary) ->
+    B1 = "\r\n--"++Boundary,
+    D1 = "\r\n"++Data,
+    parse_multi(boundary, D1, B1, start, [], {D1, B1}).
+
+parse_multi(header, "\r\n\r\n"++Body, Boundary, Acc, Res, Tmp) ->
+    Header = do_header(lists:reverse(Acc)),
+    parse_multi(body, Body, Boundary, [], [{head, Header}|Res], Tmp);
+parse_multi(header, "\r\n\r", Boundary, Acc, Res, Tmp) ->
+    {cont, {header, "\r\n\r", Boundary, Acc, Tmp}, Res};
+parse_multi(header, "\r\n", Boundary, Acc, Res, Tmp) ->
+    {cont, {header, "\r\n", Boundary, Acc, Tmp}, Res};
+parse_multi(header, "\r", Boundary, Acc, Res, Tmp) ->
+    {cont, {header, "\r", Boundary, Acc, Tmp}, Res};
+parse_multi(header, [H|T], Boundary, Acc, Res, Tmp) ->
+    parse_multi(header, T, Boundary, [H|Acc], Res, Tmp);
+parse_multi(header, [], Boundary, Acc, Res, Tmp) ->
+    {cont, {header, [], Boundary, Acc, Tmp}, Res};
+
+parse_multi(body, [B|T], [B|T1], Acc, Res, Tmp) ->
+    parse_multi(boundary, T, T1, Acc, Res, {[B|T], [B|T1]}); % store in case no match
+parse_multi(body, [H|T], Boundary, Acc, Res, Tmp) ->
+    parse_multi(body, T, Boundary, [H|Acc], Res, Tmp);
+parse_multi(body, [], Boundary, [], Res, Tmp) ->  % would be empty partial body result
+    {cont, {body, [], Boundary, [], Tmp}, Res};
+parse_multi(body, [], Boundary, Acc, Res, Tmp) ->	% make a partial body result
+    {cont, {body, [], Boundary, [], Tmp}, [{part_body, lists:reverse(Acc)}|Res]};
+
+parse_multi(boundary, [B|T], [B|T1], Acc, Res, Tmp) ->
+    parse_multi(boundary, T, T1, Acc, Res, Tmp);
+parse_multi(boundary, [H|T], [B|T1], start, Res, {[D|T2], Bound}) -> % false alarm
+    parse_multi(body, T2, Bound, [D], Res, []);
+parse_multi(boundary, [H|T], [B|T1], Acc, Res, {[D|T2], Bound}) -> % false alarm
+    parse_multi(body, T2, Bound, [D|Acc], Res, []);
+parse_multi(boundary, [], [B|T1], Acc, Res, Tmp) -> % run out of body
+    {cont, {boundary, [], [B|T1], Acc, Tmp}, Res};
+parse_multi(boundary, [], [], start, Res, {_, Bound}) ->
+    {cont, {is_end, [], Bound, [], []}, Res};
+parse_multi(boundary, [], [], Acc, Res, {_, Bound}) ->
+    {cont, {is_end, [], Bound, [], []}, [{body, lists:reverse(Acc)}|Res]};
+parse_multi(boundary, [H|T], [], start, Res, {_, Bound}) -> % matched whole boundary!
+    parse_multi(is_end, [H|T], Bound, [], Res, []);
+parse_multi(boundary, [H|T], [], Acc, Res, {_, Bound}) -> % matched whole boundary!
+    parse_multi(is_end, [H|T], Bound, [], [{body, lists:reverse(Acc)}|Res], []);
+
+parse_multi(is_end, "--"++_, Boundary, Acc, Res, Tmp) ->
+    {result, Res};
+parse_multi(is_end, "-", Boundary, Acc, Res, Tmp) ->
+    {cont, {is_end, "-", Boundary, Acc, Tmp}, Res};
+parse_multi(is_end, "\r\n"++Next, Boundary, Acc, Res, Tmp) ->
+    parse_multi(header, Next, Boundary, [], Res, []);
+parse_multi(is_end, "\r", Boundary, Acc, Res, Tmp) ->
+    {cont, {is_end, "\r", Boundary, Acc, Tmp}, Res}.
+
+
+do_header(Head) ->
     {ok, Fields} = regexp:split(Head, "\r\n"),
     Header = lists:map(fun isolate_arg/1, Fields),
-    [{Header, Body} | parse_parts(Ps)].
+    {value, {_,"form-data"++Line}} =
+	lists:keysearch("content-disposition", 1, Header),
+    Parameters = parse_arg_line(Line),
+    {value, {_,Name}} = lists:keysearch(name, 1, Parameters),
+    {list_to_atom(Name), Parameters}.
 
-
-split_head_body([], Acc) ->
-    {lists:reverse(Acc), []};
-split_head_body("\r\n\r\n"++Body, Acc) ->
-    {lists:reverse(Acc), Body};
-split_head_body([C|P], Acc) ->
-    split_head_body(P, [C|Acc]).
-
-
-%
-
-split_boundary(Boundary, Line) ->    
-    case string:str(Line, "\r\n--"++Boundary) of
- 	0 ->
- 	    [Line];
- 	N ->
- 	    Entry = string:substr(Line, 1, N-1),
- 	    Rest = string:substr(Line, N+4+length(Boundary)),
- 	    case Rest of
- 		"--"++_ ->
- 		    [Entry];  
- 		"\r\n"++Next ->
- 		    [Entry|split_boundary(Boundary,Next)]
- 	    end
-     end.
 
 
 %% parse POST data when ENCTYPE is unset or

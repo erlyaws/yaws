@@ -712,7 +712,6 @@ http_get_headers(CliSock, Req, GC, H) ->
 	{ok, {http_header, _Num, 'Content-Length', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{content_length = X});
 	{ok, {http_header, _Num, 'Authorization', _, X}} ->
-	    %io:format("Auth:~p",[X]),
 	    http_get_headers(CliSock, Req, GC, 
 			H#headers{authorization = parse_auth(X)});
 	{ok, http_eoh} ->
@@ -740,7 +739,7 @@ inet_setopts(_,_,_) ->
     ok = inet_setopts(SC, CliSock, [{packet, raw}, binary]),
     flush(SC, CliSock, Head#headers.content_length),
     ARG = make_arg(CliSock, Head, Req, GC, SC),
-    handle_request(CliSock, GC, SC, Req, Head, ARG).
+    handle_request(CliSock, GC, SC, Req, Head, ARG, 0).
 
 
 'POST'(CliSock, GC, SC, Req, Head) ->
@@ -748,23 +747,30 @@ inet_setopts(_,_,_) ->
     ?Debug("POST Req=~p H=~p~n", [?format_record(Req, http_request),
 				  ?format_record(Head, headers)]),
     ok = inet_setopts(SC, CliSock, [{packet, raw}, binary]),
+    PPS = SC#sconf.partial_post_size,
     Bin = case Head#headers.content_length of
-	undefined ->
-	    case Head#headers.connection of
-		"close" ->
-		    get_client_data(CliSock, all, GC, is_ssl(SC#sconf.ssl));
-		_ ->
-		    ?Debug("No content length header ",[]),
-		    exit(normal)
-	    end;
-	Len ->
-	    get_client_data(CliSock, list_to_integer(Len), GC, 
-			    is_ssl(SC#sconf.ssl))
-    end,
-    ?Debug("POST data = ~s~n", [binary_to_list(Bin)]),
+	      undefined ->
+		  case Head#headers.connection of
+		      "close" ->
+			  get_client_data(CliSock, all, GC, is_ssl(SC#sconf.ssl));
+		      _ ->
+			  ?Debug("No content length header ",[]),
+			  exit(normal)
+		  end;
+	      Len when integer(PPS) ->
+		  Int_len = list_to_integer(Len),
+		  if PPS < Int_len ->
+			  {partial, get_client_data(CliSock, PPS, GC,
+						    is_ssl(SC#sconf.ssl))};
+		     true ->
+			  get_client_data(CliSock, list_to_integer(Len), GC, 
+					  is_ssl(SC#sconf.ssl))
+		  end
+	  end,
+    ?Debug("POST data = ~s~n", [binary_to_list(un_partial(Bin))]),
     ARG = make_arg(CliSock, Head, Req, GC, SC),
     ARG2 = ARG#arg{clidata = Bin},
-    handle_request(CliSock, GC, SC, Req, Head, ARG2).
+    handle_request(CliSock, GC, SC, Req, Head, ARG2, size(un_partial(Bin))).
 
 
 is_ssl(undefined) ->
@@ -772,6 +778,10 @@ is_ssl(undefined) ->
 is_ssl(R) when record(R, ssl) ->
     ssl.
 
+un_partial({partial, Bin}) ->
+    Bin;
+un_partial(Bin) ->
+    Bin.
 
 %% will throw
 'HEAD'(CliSock, GC, SC, Req, Head) ->
@@ -787,20 +797,20 @@ make_arg(CliSock, Head, Req, _GC, SC) ->
 	 req = Req,
 	 docroot = SC#sconf.docroot}.
 
-handle_request(CliSock, GC, SC, Req, H, ARG) ->
+handle_request(CliSock, GC, SC, Req, H, ARG, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     UT =  url_type(GC, SC, get_path(Req#http_request.path)),
     ?Debug("UT: ~p", [?format_record(UT, urltype)]),
     ARG2 = ARG#arg{fullpath=UT#urltype.fullpath},
     case SC#sconf.authdirs of
 	[] ->
-	    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT);
+	    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT, N);
 	_Adirs ->
 	    %% we have authentication enabled, check auth
 	    UT2 = unflat(UT),
 	    case is_authenticated(SC, UT2, Req, H) of
 		true ->
-		    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT2);
+		    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT2, N);
 		{false, Realm} ->
 		    deliver_401(CliSock, Req, GC, Realm, SC)
 	    end
@@ -827,19 +837,17 @@ is_authdir(_, []) ->
     false.
 
 is_authenticated(SC, UT, _Req, H) ->
-    %io:format("Path:~p~n",[UT#urltype.path]),
     case is_authdir(UT#urltype.path, SC#sconf.authdirs) of
 	{true, #auth{dir = Dir, realm = Realm, users = Users}} ->
 	    case H#headers.authorization of
 		undefined ->
 		    {false, Realm};
 		{User, Password} ->
-		    %io:format("User: ~p~n, Passwd: ~p~n",[User, Password]),
 		    case lists:member({User, Password}, Users) of
 			true ->
 			    true;
 			false ->
-			    {false, Realm}
+			    {false, "Got username"}
 		    end
 	    end;
 	false ->
@@ -847,7 +855,7 @@ is_authenticated(SC, UT, _Req, H) ->
     end.
 
 
-handle_ut(CliSock, GC, SC, Req, H, ARG, UT) ->
+handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
     case UT#urltype.type of
 	error ->
 	    deliver_404(CliSock, GC, SC, Req, SC);
@@ -858,7 +866,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT) ->
 	    deliver_file(CliSock, GC, SC, Req, H, UT);
 	yaws ->
 	    do_yaws(CliSock, GC, SC, Req, H, 
-		    ARG#arg{querydata = UT#urltype.q}, UT);
+		    ARG#arg{querydata = UT#urltype.q}, UT, N);
 	dotdot ->
 	    deliver_403(CliSock, Req, GC, SC);
 	redir_dir ->
@@ -968,19 +976,19 @@ deliver_404(CliSock, GC, SC,  Req, SC) ->
     done.
 
 
-do_yaws(CliSock, GC, SC, Req, H, ARG, UT) ->
+do_yaws(CliSock, GC, SC, Req, H, ARG, UT, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     FileAtom = list_to_atom(UT#urltype.fullpath),
     Mtime = mtime(UT#urltype.finfo),
     case ets:lookup(SC#sconf.ets, FileAtom) of
 	[{FileAtom, spec, Mtime1, Spec}] when Mtime1 == Mtime ->
-	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG, UT);
+	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG, UT, N);
 	Other  ->
 	    del_old_files(Other),
 	    {ok, Spec} = yaws_compile:compile_file(UT#urltype.fullpath, GC, SC),
 	    ?Debug("Spec for file ~s is:~n~p~n",[UT#urltype.fullpath, Spec]),
 	    ets:insert(SC#sconf.ets, {FileAtom, spec, Mtime, Spec}),
-	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG, UT)
+	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG, UT, N)
     end.
 
 
@@ -1021,7 +1029,7 @@ get_client_data(_CliSock, all, eof, _GC, _) ->
 	   
 
 %% do the header and continue
-deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT) ->
+deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     Fd = ut_open(UT),
     Bin = ut_read(Fd),
@@ -1039,31 +1047,31 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT) ->
 			       do_tcp_close(CliSock, SC), 
 			       throw({ok, 1}) 
 		       end),
-    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin, Fd, Specs, ARG).
+    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin, Fd, Specs, ARG, N).
 
 
 
-deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin, Fd, [H|T],ARG) ->
+deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin, Fd, [H|T],ARG,N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT,urltype}]),
     ?Debug("deliver_dyn_file: ~p~n", [H]),
     case H of
 	{mod, LineNo, YawsFile, NumChars, Mod, out} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
-	    yaws_call(DCC, LineNo, YawsFile, Mod, out, [ARG], GC, SC),
-	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin2,Fd,T,ARG);
+	    yaws_call(DCC, LineNo, YawsFile, Mod, out, [ARG], GC, SC, N),
+	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin2,Fd,T,ARG,0);
 	{data, 0} ->
-	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT,DCC, Bin, Fd,T,ARG);
+	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT,DCC, Bin, Fd,T,ARG,N);
 	{data, NumChars} ->
 	    {Send, Bin2} = skip_data(Bin, Fd, NumChars),
 	    accumulate_chunk(DCC, Send),
-	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2, UT, DCC, Bin2, Fd, T,ARG);
+	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2, UT, DCC, Bin2, Fd, T,ARG,N);
 	{error, NumChars, Str} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
 	    accumulate_chunk(DCC, Str),
-	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2, UT, DCC, Bin2, Fd, T,ARG)
+	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2, UT, DCC, Bin2, Fd, T,ARG,N)
     end;
 
-deliver_dyn_file(CliSock, GC, SC, _Req, _Head,_UT, DCC, _Bin, _Fd, [], _ARG) ->
+deliver_dyn_file(CliSock, GC, SC, _Req, _Head,_UT, DCC, _Bin, _Fd, [], _ARG,_N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     ?Debug("deliver_dyn: done~n", []),
     Ret = case {DCC#dcc.chunked, get(status_code)} of
@@ -1158,9 +1166,8 @@ set_status_code(Code) ->
 
 
 
-handle_out_reply(L, DCC, LineNo, YawsFile, _SC) when list (L) ->
-    lists:foreach(
-      fun(Item) -> handle_out_reply(Item, DCC, LineNo, YawsFile, _SC) end, L);
+handle_out_reply(L, DCC, LineNo, YawsFile, SC) when list (L) ->
+    handle_out_reply_l(L, DCC, LineNo, YawsFile, SC, undefined);
 
 handle_out_reply({html, Html}, DCC, _LineNo, _YawsFile, _SC) ->
     accumulate_chunk(DCC, Html);
@@ -1229,6 +1236,8 @@ handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile, _SC) ->
 	      "Reason: ~p", [YawsFile, LineNo, Err]),
     accumulate_chunk(DCC, L);
 
+handle_out_reply({get_more, Cont, State}, DCC, LineNo, YawsFile, _SC) ->
+    {get_more, Cont, State};
 
 handle_out_reply(Reply, DCC, LineNo, YawsFile, _SC) ->
     yaws_log:sync_errlog("Bad return code from yaws function: ~p~n", [Reply]),
@@ -1237,7 +1246,17 @@ handle_out_reply(Reply, DCC, LineNo, YawsFile, _SC) ->
 	    [YawsFile, LineNo, Reply]),
     accumulate_chunk(DCC, L).
 
-			  
+    
+
+handle_out_reply_l([Reply|T], DCC, LineNo, YawsFile, SC, Res) ->		  
+    case handle_out_reply(Reply, DCC, LineNo, YawsFile, SC) of
+	{get_more, Cont, State} ->
+	    handle_out_reply_l(T, DCC, LineNo, YawsFile, SC, {get_more, Cont, State});
+	_ ->
+	    handle_out_reply_l(T, DCC, LineNo, YawsFile, SC, Res)
+    end;
+handle_out_reply_l([], DCC, LineNo, YawsFile, SC, Res) ->
+    Res.
 
 check_headers(L) ->
     Hs = string:tokens(lists:flatten(L), "\r\n"),
@@ -1319,13 +1338,50 @@ deliver_accumulated(DCC, Sock, GC, SC) ->
 		
 
 		    
-yaws_call(DCC, LineNo, YawsFile, M, F, A, _GC, SC) ->
+yaws_call(DCC, LineNo, YawsFile, M, F, A, GC, SC, N) ->
     ?Debug("safe_call ~w:~w(~p)~n", 
 	   [M, F, ?format_record(hd(A), arg)]),
     Res = (catch apply(M,F,A)),
-    handle_out_reply(Res, DCC, LineNo, YawsFile, SC).
+    A1 = hd(A),
+    case handle_out_reply(Res, DCC, LineNo, YawsFile, SC) of
+	{get_more, Cont, State} when element(1, A1#arg.clidata) == partial  ->
+	    More = get_more_post_data(SC#sconf.partial_post_size, N, SC, GC, A1),
+	    case un_partial(More) of
+		Bin when binary(Bin) ->
+		    A2 = A1#arg{clidata = More,
+				cont = Cont,
+				state = State},
+		    yaws_call(DCC, LineNo, YawsFile, M, F,
+			      [A2], GC, SC, N+size(un_partial(More)));
+		Err ->
+		    A2 = A1#arg{clidata = Err,
+				cont = undefined,
+				state = State},
+		    catch apply(M,F,[A2]),
+		    exit(normal)
+	    end;
+	Else ->
+	    Else
+    end.
 
-
+get_more_post_data(PPS, N, SC, GC, ARG) ->
+    Len = list_to_integer((ARG#arg.headers)#headers.content_length),
+    if N + PPS < Len ->
+	    case cli_recv(ARG#arg.clisock, PPS, GC, is_ssl(SC#sconf.ssl)) of
+		{ok, Bin} ->
+		    {partial, Bin};
+		Else ->
+		    {error, Else}
+	    end;
+       true ->
+	    case cli_recv(ARG#arg.clisock, Len - N, GC, is_ssl(SC#sconf.ssl)) of
+		{ok, Bin} ->
+		    Bin;
+		Else ->
+		    {error, Else}
+	    end
+    end.
+    
 
 do_tcp_close(Sock, SC) ->
     case SC#sconf.ssl of

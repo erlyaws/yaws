@@ -325,6 +325,20 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		false ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}
 	    end;
+	["partial_post_size",'=',Size] ->
+	    case Size of
+		nolimit ->
+		    C2 = C#sconf{partial_post_size = nolimit},
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+		Val ->
+		    case (catch list_to_integer(Val)) of
+			I when integer(I) ->
+			    C2 = C#sconf{partial_post_size = I},
+			    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+			_ ->
+			    {error, ?F("Expect integer or 'nolimit' at line ~w", [Lno])}
+		    end
+	    end;
 	['<', "auth", '>'] ->
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, #auth{});
 
