@@ -1037,11 +1037,12 @@ handle_request(CliSock, GC, SC, ARG, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     Req = ARG#arg.req,
     H = ARG#arg.headers,
-    case (catch decode_path(Req#http_request.path)) of
+    {abs_path, RawPath} = Req#http_request.path,
+    case (catch yaws_api:url_decode_q_split(RawPath)) of
 	{'EXIT', _} ->   %% weird broken cracker requests
 	    deliver_403(CliSock, Req, GC, SC);
-	DecPath ->
-	    UT =  url_type(GC, SC, DecPath),
+	{DecPath, QueryPart} ->
+	    UT =  url_type(GC, SC, DecPath, QueryPart),
 	    ARG2 = ARG#arg{fullpath=UT#urltype.fullpath},
 	    case SC#sconf.authdirs of
 		[] ->
@@ -1878,13 +1879,13 @@ now_secs() ->
 
 
 %% a file cache,
-url_type(GC, SC, Path) ->
+url_type(GC, SC, Path, QueryPart) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     E = SC#sconf.ets,
     update_total(E, Path),
     case ets:lookup(E, {url, Path}) of
 	[] ->
-	    UT = do_url_type(SC, Path),
+	    UT = do_url_type(SC, Path, QueryPart),
 	    ?TC([{record, UT, urltype}]),
 	    ?Debug("UT=~p\n", [UT]),
 	    CF = cache_file(GC, SC, Path, UT),
@@ -1902,7 +1903,7 @@ url_type(GC, SC, Path) ->
 		    ets:delete(E, {urlc, Path}),
 		    ets:update_counter(E, num_files, -1),
 		    ets:update_counter(E, num_bytes, -FI#file_info.size),
-		    url_type(GC, SC, Path);
+		    url_type(GC, SC, Path, QueryPart);
 		true ->
 		    ?Debug("Serve page from cache ~p", [{When , N, N-When}]),
 		    ets:update_counter(E, {urlc, Path}, 1),
@@ -1994,8 +1995,8 @@ clear_ets(E) ->
     
 
 %% return #urltype{}
-do_url_type(SC, Path) ->
-    case split_path(SC, Path, [], []) of
+do_url_type(SC, Path, QueryPart) ->
+    case split_path(SC, Path, QueryPart, [], []) of
 	slash ->
 	    maybe_return_dir(SC#sconf.docroot, lists:flatten(Path));
 	forbidden ->  %% generate 403 forbidden
@@ -2041,18 +2042,16 @@ maybe_return_dir(DR, FlatPath) ->
     end.
 
 
-split_path(_SC, [$/], _Comps, []) ->
+split_path(_SC, [$/], Q, _Comps, []) ->
     %% its a URL that ends with /
     slash;
-split_path(SC, [$/, $/ |Tail], Comps, Part) ->  %% security clause
-    split_path(SC, [$/|Tail], Comps, Part);
-split_path(_SC, [$/, $., $., $/ |_], _, _) ->  %% security clause
+split_path(SC, [$/, $/ |Tail], Q, Comps, Part) ->  %% security clause
+    split_path(SC, [$/|Tail], Q, Comps, Part);
+split_path(_SC, [$/, $., $., $/ |_], _, _, _) ->  %% security clause
     forbidden;
-split_path(SC, [], Comps, Part) ->
-    ret_reg_split(SC, Comps, Part, []);
-split_path(SC, [$?|Tail], Comps, Part) ->
-    ret_reg_split(SC, Comps, Part, Tail);
-split_path(SC, [$/|Tail], Comps, Part)  when Part /= [] ->
+split_path(SC, [], Query, Comps, Part) ->
+    ret_reg_split(SC, Comps, Part, Query);
+split_path(SC, [$/|Tail], Query, Comps, Part)  when Part /= [] ->
     ?Debug("Tail=~s Part=~s", [Tail,Part]),
     Component = lists:reverse(Part),
     CName = tl(Component),
@@ -2060,14 +2059,14 @@ split_path(SC, [$/|Tail], Comps, Part)  when Part /= [] ->
 	true  ->
 	    %% we've found an appmod
 	    PrePath = conc_path(Comps),
-	    ret_app_mod(SC, [$/|Tail], list_to_atom(CName), PrePath);
+	    ret_app_mod(SC, [$/|Tail], Query, list_to_atom(CName), PrePath);
 	_ ->
-	    split_path(SC, [$/|Tail], [lists:reverse(Part) | Comps], [])
+	    split_path(SC, [$/|Tail], Query, [lists:reverse(Part) | Comps], [])
 	end;
-split_path(SC, [$~|Tail], Comps, Part) ->  %% user dir
-    ret_user_dir(SC, Comps, Part, Tail);
-split_path(SC, [H|T], Comps, Part) ->
-    split_path(SC, T, Comps, [H|Part]).
+split_path(SC, [$~|Tail], Query, Comps, Part) ->  %% user dir
+    ret_user_dir(SC, Comps, Query, Part, Tail);
+split_path(SC, [H|T], Query, Comps, Part) ->
+    split_path(SC, T, Query, Comps, [H|Part]).
 
 
 
@@ -2078,30 +2077,16 @@ conc_path([H|T]) ->
     H ++ conc_path(T).
 
 
-ret_app_mod(_SC, Path, Mod, PrePath) ->
-    {PathData, Query} = q_splitpath(Path, []),
+ret_app_mod(_SC, Path, Query, Mod, PrePath) ->
     #urltype{type = appmod,
-	     data = {Mod, PathData},
+	     data = {Mod, Path},
 	     path = PrePath,   %% need to set for WWW-Autenticate to work
 	     q = Query}.
 
 
 
-q_splitpath([$?|T], Ack) ->
-    {lists:reverse(Ack), if T == [] -> undefined; true -> T end};
-    
-q_splitpath([], Ack) ->
-     {lists:reverse(Ack), undefined};
-
-q_splitpath([H|T], Ack) ->
-    q_splitpath(T, [H|Ack]).
-     
-	     
-	
-
-
 %% http://a.b.c/~user URLs
-ret_user_dir(SC, [], "/", Upath) when SC#sconf.tilde_expand == true ->
+ret_user_dir(SC, [], Query, "/", Upath) when SC#sconf.tilde_expand == true ->
     ?Debug("UserPart = ~p~n", [Upath]),
     case parse_user_path(SC#sconf.docroot, Upath, []) of
 	{ok, User, Path} ->
@@ -2116,12 +2101,12 @@ ret_user_dir(SC, [], "/", Upath) when SC#sconf.tilde_expand == true ->
 		    #urltype{type=error};
 		Home ->
 		    DR2 = Home ++ "/public_html/",
-		    do_url_type(SC#sconf{docroot=DR2}, Path) %% recurse
+		    do_url_type(SC#sconf{docroot=DR2}, Path, Query) %% recurse
 	    end;
 	redir_dir ->
 	    redir_dir
     end;
-ret_user_dir(_SC, _, _, _Upath)  ->
+ret_user_dir(_SC, _, _, _, _Upath)  ->
     forbidden.
 
 
@@ -2153,7 +2138,8 @@ ret_reg_split(SC, Comps, RevFile, Query) ->
 		     path = {noflat, [DR, Dir]},
 		     dir = FlatDir,
 		     fullpath = lists:flatten(L),
-		     mime=Mime, q=Query};
+		     mime=Mime, 
+		     q=Query};
 	{ok, FI} when FI#file_info.type == directory, hd(RevFile) == $/ ->
 	    maybe_return_dir(DR, lists:flatten(Dir) ++ File);
 	{ok, FI} when FI#file_info.type == directory, hd(RevFile) /= $/ ->

@@ -26,7 +26,7 @@
 	 set_content_type/1,
 	 htmlize/1, htmlize_char/1, f/2, fl/1]).
 -export([find_cookie_val/2, secs/0, 
-	 url_decode/1, 
+	 url_decode/1, url_decode_q_split/1,
 	 url_encode/1, parse_url/1, parse_url/2, format_url/1]).
 -export([get_line/1, mime_type/1]).
 -export([stream_chunk_deliver/2, stream_chunk_deliver_blocking/2,
@@ -695,6 +695,32 @@ url_decode([H|T]) ->
     [H |url_decode(T)];
 url_decode([]) ->
     [].
+
+
+%% url decode the path and return {Path, QueryPart}
+
+url_decode_q_split(Path) ->
+    url_decode_q_split(Path, []).
+
+url_decode_q_split([$%, $C, $2, $%, Hi, Lo | Tail], Ack) ->
+    Hex = yaws:hex_to_integer([Hi, Lo]),
+    url_decode_q_split(Tail, [Hex|Ack]);
+url_decode_q_split([$%, $C, $3, $%, Hi, Lo | Tail], Ack) when Hi > $9 ->
+    Hex = yaws:hex_to_integer([Hi+4, Lo]),
+    url_decode_q_split(Tail, [Hex|Ack]);
+url_decode_q_split([$%, $C, $3, $%, Hi, Lo | Tail], Ack) when Hi < $A ->
+    Hex = yaws:hex_to_integer([Hi+4+7, Lo]),
+    url_decode_q_split(Tail, [Hex|Ack]);
+url_decode_q_split([$%, Hi, Lo | Tail], Ack) ->
+    Hex = yaws:hex_to_integer([Hi, Lo]),
+    url_decode_q_split(Tail, [Hex|Ack]);
+url_decode_q_split([$?|T], Ack) ->
+    %% Don't decode the query string here, that is parsed separately.
+    {lists:reverse(Ack), T};
+url_decode_q_split([H|T], Ack) ->
+    url_decode_q_split(T, [H|Ack]);
+url_decode_q_split([], Ack) ->
+    {lists:reverse(Ack), []}.
 
 
 

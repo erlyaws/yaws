@@ -48,6 +48,7 @@ comp_opts(GC) ->
 
 
 compile_file(File, GC, SC) ->
+    ?Debug("Compile ~s~n", [File]),
     case file_open(File) of
 	{ok, Fd} ->
 	    Spec = compile_file(#comp{infile = File, 
