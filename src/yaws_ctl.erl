@@ -359,8 +359,8 @@ check([File| IncludeDirs]) ->
     GC = yaws_config:make_default_gconf(false),
     GC2 = GC#gconf{include_dir = lists:map(fun(X) -> atom_to_list(X) end, 
 					   IncludeDirs)},
-    SC = #sconf{},
-
+    put(sc, #sconf{}),
+    put(gc, GC2),
     case yaws_compile:compile_file(atom_to_list(File)) of
 	{ok, [{errors, 0}| _Spec]} ->
 	    io:format("ok~n",[]),
