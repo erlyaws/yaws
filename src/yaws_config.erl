@@ -13,6 +13,9 @@
 -compile(export_all).
 %%-export([Function/Arity, ...]).
 
+-export([load/3,
+	 make_default_gconf/1]).
+	 
 
 %% where to look for yaws.conf 
 paths() ->

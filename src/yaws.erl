@@ -21,13 +21,25 @@ start() ->
 stop() ->
     application:stop(yaws).
 
-hup() ->
+hup(Sock) ->
     spawn(fun() ->
 		  group_leader(whereis(user), self()),
-		  stop(),
-		  start()
+		  dohup(Sock)
 	  end).
 
+dohup(Sock) ->
+    io:format("in dohup~n", []),
+    {Debug, Trace, Conf, RunMod, Embed} = yaws_server:get_app_args(),
+    Res = (catch case yaws_config:load(Conf, Trace, Debug) of
+	{ok, Gconf, Sconfs} ->
+	    io:format("Call setconf ~n", []),	  
+	    gen_server:call(yaws_server, {setconf, Gconf, Sconfs});
+	Err ->
+	    Err
+    end),
+    gen_tcp:send(Sock, io_lib:format("hupped: ~p~n", [Res])),
+    gen_tcp:close(Sock).
+    
 
 %% use from cli only
 restart() ->

@@ -263,6 +263,18 @@ cookie.
 \fBreplace_cookie_session(Session, User)\fR
 
 
+.TP
+\fBsetconf(Gconf, Groups)\fR
+This function is intended for embedded mode in yaws. It makes it possible
+to load a yaws configuration from another data source than /etc/yaws.conf, such
+as a database. 
+If yaws is started with the environment \fI{embedded, true}\fR, yaws will
+start with an empty default configuration, and wait for some other
+program to execute a \fIsetconf/2\fR
+The Gconf is a \fI#gconf{}\fR record and the Group variable is
+a list of lists of \fI#sconf{}\fR records. Each sublist must 
+contain \fI#sconf{}\fR records with the same IP/Port listen address.
+
 
 .SH RETURN VALUES from out/1
 .PP

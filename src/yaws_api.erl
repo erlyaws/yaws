@@ -632,4 +632,10 @@ replace_cookie_session(Session, User) ->
 
 
 
-    
+
+%% to be used in embedded mode, make it possible
+%% to pass a config to yaws from another data source
+%% than /etc/yaws.conf, for example from a database
+
+setconf(GC, Groups) ->
+    gen_server:call(yaws_server, {setconf, GC, Groups}).

@@ -31,6 +31,13 @@ s() ->
 			 {passwd, "ulMer9"}]),
     S.
 
+s2() ->
+   {ok, S} = pop3lib_cli:connect([{user, "klacke"},
+			 {addr, {213,67,177,217}},
+			 {passwd, "ulMer9"}]),
+    S.
+    
+
 pop2() ->
     webmail:get_mails(s()).
 

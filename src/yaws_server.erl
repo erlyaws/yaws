@@ -55,6 +55,8 @@ start_link() ->
 status() ->
     gen_server:call(?MODULE, status).
 
+
+
 stats() -> 
     {S, Time} = status(),
     {_GC, Srvs, _} = S,
@@ -114,7 +116,13 @@ get_app_args() ->
 		 {ok,Mod} ->
 		     {ok,Mod}
 	     end,
-    {Debug, Trace, Conf, RunMod}.
+    Embed = case application:get_env(yaws, embedded) of
+		undefined ->
+		    false;
+		Val ->
+		    Val
+	    end,
+    {Debug, Trace, Conf, RunMod, Embed}.
 
 find_c([{conf, [File]} |_]) ->
     {file, File};
@@ -144,36 +152,40 @@ l2a(A) when atom(A) -> A.
 %%----------------------------------------------------------------------
 init([]) ->
     put(start_time, calendar:local_time()),  %% for uptime
-    {Debug, Trace, Conf, RunMod} = get_app_args(),
-
-    case yaws_config:load(Conf, Trace, Debug) of
-	{ok, Gconf, Sconfs} ->
-	    erase(logdir),
-	    ?Debug("Conf = ~p~n", [?format_record(Gconf, gconf)]),
-	    yaws_log:setdir(Gconf#gconf.logdir, Sconfs),
-	    case Gconf#gconf.trace of
-		{true, What} ->
-		    yaws_log:open_trace(What);
-		_ ->
-		    ok
-	    end,
-	    init2(Gconf, Sconfs, RunMod);
-	{error, E} ->
-	    case erase(logdir) of
-		undefined ->
-		    error_logger:format("Bad conf: ~p~n", [E]),
-		    init:stop(),
-		    {stop, E};
-		Dir ->
-		    yaws_log:setdir(Dir, []),
-		    yaws_log:sync_errlog("bad conf: ~s~n",[E]),
-		    init:stop(),
-		    {stop, E}
-		end
+    {Debug, Trace, Conf, RunMod, Embed} = get_app_args(),
+    case Embed of 
+	false ->
+	    case yaws_config:load(Conf, Trace, Debug) of
+		{ok, Gconf, Sconfs} ->
+		    erase(logdir),
+		    ?Debug("Conf = ~p~n", [?format_record(Gconf, gconf)]),
+		    yaws_log:setdir(Gconf#gconf.logdir, Sconfs),
+		    case Gconf#gconf.trace of
+			{true, What} ->
+			    yaws_log:open_trace(What);
+			_ ->
+			    ok
+		    end,
+		    init2(Gconf, Sconfs, RunMod, true);
+		{error, E} ->
+		    case erase(logdir) of
+			undefined ->
+			    error_logger:format("Bad conf: ~p~n", [E]),
+			    init:stop(),
+			    {stop, E};
+			Dir ->
+			    yaws_log:setdir(Dir, []),
+			    yaws_log:sync_errlog("bad conf: ~s~n",[E]),
+			    init:stop(),
+			    {stop, E}
+		    end
+	    end;
+	true ->
+	    init2(yaws_config:make_default_gconf(Debug), [], undef, true)
     end.
 
 
-init2(Gconf, Sconfs, RunMod) ->
+init2(Gconf, Sconfs, RunMod, FirstTime) ->
     lists:foreach(
       fun(D) ->
 	      code:add_pathz(D)
@@ -203,7 +215,13 @@ init2(Gconf, Sconfs, RunMod) ->
     io:format("L=~p~n", [L]),
     if
 	length(L) == length(L2) ->
-	    proc_lib:spawn_link(yaws_ctl, start, [self(), Gconf#gconf.uid]),
+	    if
+		FirstTime == true ->
+		    proc_lib:spawn_link(yaws_ctl, start, 
+					[self(), Gconf#gconf.uid]);
+		true ->
+		    ok
+	    end,
 	    {ok, {Gconf, L2, 0}};
 	true ->
 	    {stop, "failed to start server "}
@@ -226,8 +244,27 @@ handle_call(status, _From, State) ->
 handle_call(pids, _From, State) ->  %% for gprof
     L = lists:map(fun(X) ->element(1, X) end, element(2, State)),
     {reply, [self() | L], State};
+
 handle_call(mnum, _From, {GC, Group, Mnum}) ->
-    {reply, Mnum+1,   {GC, Group, Mnum+1}}.
+    {reply, Mnum+1,   {GC, Group, Mnum+1}};
+
+handle_call({setconf, GC, Groups}, From, State) ->
+    %% First off, terminate all currently running processes
+    Curr = lists:map(fun(X) ->element(1, X) end, element(2, State)),
+    lists:foreach(fun(Pid) ->
+			  Pid ! {self(), stop},
+			  receive
+			      {Pid, ok} ->
+				  ok
+			  end
+		  end, Curr),
+    case init2(GC, Groups, undef, false) of
+	{ok, State2} ->
+	    {reply, ok, State2};
+	Err ->
+	    {reply, Err, {GC, [], 0}}
+    end.
+			      
 
 
 
@@ -360,9 +397,16 @@ gserv(GS, Ready, Rnum) ->
 		    gserv(GS2, [From | Ready], Rnum+1)
 	    end;
 	{'EXIT', _Pid, _} ->
-	    gserv(GS, Ready, Rnum)
+	    gserv(GS, Ready, Rnum);
+	{From, stop} ->   
+	    unlink(From),
+	    {links, Ls} = process_info(self(), links),
+	    lists:foreach(fun(X) -> unlink(X), exit(X, kill) end, Ls),
+	    From ! {self(), ok},
+	    exit(normal)
     end.
 	    
+
 
 
 opts(SC) ->
@@ -441,7 +485,6 @@ acceptor(GS) ->
     proc_lib:spawn_link(yaws_server, acceptor0, [GS, self()]).
 acceptor0(GS, Top) ->
     ?TC([{record, GS, gs}]),
-    %%L = GS#gs.l,
     X = do_accept(GS),
     Top ! {self(), next},
     case X of

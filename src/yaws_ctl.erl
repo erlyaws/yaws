@@ -56,19 +56,22 @@ aloop(L) ->
 handle_a(A) ->
     case gen_tcp:recv(A, 0) of
 	{ok, Data} ->
+	    io:format("got ~p~n", [Data]),
 	    case binary_to_term(Data) of
 		hup ->
-		    yaws:hup(),
-		    gen_tcp:send(A, "hupped\n");
+		    Res = yaws:dohup(A),
+		    Res;
 		stop ->
 		    gen_tcp:send(A, "stopping\n"),
 		    init:stop();
 		status ->
-		    a_status(A);
-		_Other ->
-		    ignore
-	    end,
-	    gen_tcp:close(A);
+		    a_status(A),
+		    gen_tcp:close(A);
+		Other ->
+		    gen_tcp:send(A, io_lib:format("Other: ~p~n", [Other])),
+		    gen_tcp:close(A)
+	    
+	    end;
 	_Err ->
 	    ignore
     end.
@@ -122,7 +125,7 @@ actl(Term, Uid) ->
 			{ok, Bin} ->
 			    io:format("~s~n", [binary_to_list(Bin)]);
 			Err ->
-			    io:format("yaws server for uid ~s not responding ~n",[Uid])
+			    io:format("yaws server for uid ~s not responding: ~p ~n",[Uid, Err])
 		    end,
 		    gen_tcp:close(Fd),
 		    Res;
