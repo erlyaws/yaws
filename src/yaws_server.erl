@@ -26,6 +26,7 @@
 
 -record(gs, {gconf,
 	     group,         %% list of #sconf{} s
+	     ssl,           %% ssl | nossl
 	     l,             %% listen socket
 	     mnum = 0,      %% dyn compiled erl module  number
 	     sessions = 0,  %% number of HTTP sessions
@@ -146,9 +147,9 @@ init([]) ->
 
 	    init2(Gconf, Sconfs);
 	{error, E} ->
+	    error_logger:format("Bad conf: ~p", [E]),
 	    case erase(logdir) of
 		undefined ->
-		    error_logger:format("Bad conf: ~p", [E]),
 		    {stop, E};
 		Dir ->
 		    yaws_log:setdir(Dir),
@@ -199,6 +200,9 @@ init2(Gconf, Sconfs) ->
 handle_call(status, From, State) ->
     Reply = {State, get(start_time)},
     {reply, Reply, State};
+handle_call(pids, From, State) ->  %% for gprof
+    L = lists:map(fun(X) ->element(1, X) end, element(2, State)),
+    {reply, [self() | L], State};
 handle_call(mnum, From, {GC, Group, Mnum}) ->
     {reply, Mnum+1,   {GC, Group, Mnum+1}}.
 
@@ -240,6 +244,15 @@ setup_auth(SC, E) ->
     ok.
 
 
+do_listen(SC) ->
+    case SC#sconf.ssl of
+	undefined ->
+	    {nossl, gen_tcp:listen(SC#sconf.port, opts(SC))};
+	SSL ->
+	    {ssl, ssl:listen(SC#sconf.port, ssl_opts(SC, SSL))}
+    end.
+
+
 %% One server per IP we listen to
 gserv(GC, Group0) ->
     ?TC([{record, GC, gconf}]),
@@ -251,8 +264,8 @@ gserv(GC, Group0) ->
 			SC#sconf{ets = E}
 		end, Group0),
     SC = hd(Group),
-    case gen_tcp:listen(SC#sconf.port, opts(SC)) of
-	{ok, Listen} ->
+    case do_listen(SC) of
+	{SSLBOOL, {ok, Listen}} ->
 	    error_logger:info_msg("Listening to ~s:~w for servers ~p~n",
 			      [yaws:fmt_ip(SC#sconf.listen),
 			       SC#sconf.port,
@@ -265,10 +278,11 @@ gserv(GC, Group0) ->
 	    proc_lib:init_ack({self(), Group}),
 	    GS = #gs{gconf = GC,
 		     group = Group,
+		     ssl = SSLBOOL,
 		     l = Listen},
 	    acceptor(GS),
 	    gserv(GS, [], 0);
-	Err ->
+	{_,Err} ->
 	    error_logger:format("Failed to listen ~s:~w  : ~p~n",
 				[yaws:fmt_ip(SC#sconf.listen),
 				 SC#sconf.port, Err]),
@@ -311,30 +325,99 @@ opts(SC) ->
      {active, false}
     ].
 
+
+
+ssl_opts(SC, SSL) ->
+    Opts = [
+	    binary,
+	    {ip, SC#sconf.listen},
+	    {packet, 0},
+	    {active, false} | ssl_opts(SSL)],
+    ?Debug("SSL opts  ~p~n", [Opts]),
+    Opts.
+
+
+
+
+ssl_opts(SSL) ->
+    L = [if SSL#ssl.keyfile /= undefined ->
+		 {keyfile, SSL#ssl.keyfile};
+	    true ->
+		 false
+	 end,
+	 
+	 if SSL#ssl.certfile /= undefined ->
+		 {certfile, SSL#ssl.certfile};
+	    true ->
+		 false
+	 end,
+
+	 if SSL#ssl.cacertfile /= undefined ->
+		 {cacertfile, SSL#ssl.cacertfile};
+	    true ->
+		 false
+	 end,
+	 
+	 if SSL#ssl.verify /= undefined ->
+		 {verify, SSL#ssl.verify};
+	    true ->
+		 false
+	 end,
+	 
+	 if SSL#ssl.password /= undefined ->
+		 {password, SSL#ssl.password};
+	    true ->
+		 false
+	 end,
+	 if SSL#ssl.ciphers /= undefined ->
+		 {ciphers, SSL#ssl.ciphers};
+	    true ->
+		 false
+	 end
+	],
+    [X || X <-L, X /= false].
+
+	   
+	 
+do_accept(GS) when GS#gs.ssl == nossl ->
+    gen_tcp:accept(GS#gs.l);
+do_accept(GS) when GS#gs.ssl == ssl ->
+    ssl:accept(GS#gs.l).
+
+
 acceptor(GS) ->
     proc_lib:spawn_link(yaws_server, acceptor0, [GS, self()]).
 acceptor0(GS, Top) ->
     ?TC([{record, GS, gs}]),
     L = GS#gs.l,
-    X = gen_tcp:accept(L),
-    ?Debug("Accept ret:~p L=~p~n", [X,L]),
-	    
+    X = do_accept(GS),
     Top ! {self(), next},
     case X of
 	{ok, Client} ->
 	    case (GS#gs.gconf)#gconf.trace of  %% traffic trace
 		{true, _} ->
-		    {ok, {IP, Port}} = inet:peername(Client),
-		    Str = ?F("New connection from ~s:~w~n", 
-			     [yaws:fmt_ip(IP),Port]),
+		    {ok, {IP, Port}} = case GS#gs.ssl of
+					   ssl ->
+					       ssl:peername(Client);
+					   nossl ->
+					       inet:peername(Client)
+				       end,
+		    Str = ?F("New (~p) connection from ~s:~w~n", 
+			     [GS#gs.ssl, yaws:fmt_ip(IP),Port]),
 		    yaws_log:trace_traffic(from_client, Str);
 		_ ->
 		    ok
 	    end,
 
 	    Res = (catch aloop(Client, GS,  0)),
-	    gen_tcp:close(Client),
 	    ?Debug("RES = ~p~n", [Res]),
+	    if
+		GS#gs.ssl == nossl ->
+		    gen_tcp:close(Client);
+		GS#gs.ssl == ssl ->
+		    ssl:close(Client)
+	    end,
+
 	    case  (GS#gs.gconf)#gconf.debug of
 		true  ->
 		    io:format("DIE: ~p~n", [Res]);
@@ -367,9 +450,9 @@ acceptor0(GS, Top) ->
 %%% Internal functions
 %%%----------------------------------------------------------------------
 
-aloop(CliSock, GS, Num) ->
+aloop(CliSock, GS, Num) when GS#gs.ssl == nossl ->
     ?TC([{record, GS, gs}]),
-    case get_headers(CliSock, GS#gs.gconf) of
+    case http_get_headers(CliSock, GS#gs.gconf) of
 	done ->
 	    {ok, Num};
 	{Req, H} ->
@@ -386,7 +469,29 @@ aloop(CliSock, GS, Num) ->
 		done ->
 		    {ok, Num+1}
 	    end
+    end;
+
+
+
+aloop(CliSock, GS, Num) when GS#gs.ssl == ssl ->
+    ?TC([{record, GS, gs}]),
+    case yaws_ssl:ssl_get_headers(CliSock, GS#gs.gconf) of
+	done ->
+	    {ok, Num};
+	{ok, Req, H, Trail} ->
+	    put(ssltrail, Trail),  %% hack hack hack
+	    Sconf = hd(GS#gs.group),
+	    Res = apply(yaws_server, Req#http_request.method, 
+			[CliSock, GS#gs.gconf, Sconf, Req, H]),
+	    maybe_access_log(CliSock, Sconf, Req),
+	    case Res of
+		continue ->
+		    aloop(CliSock, GS, Num+1);
+		done ->
+		    {ok, Num+1}
+	    end
     end.
+
 
 
 pick_sconf(H, Group) ->
@@ -418,7 +523,13 @@ maybe_access_log(CliSock, SC, Req) ->
     ?TC([{record, SC, sconf}]),
     case SC#sconf.access_log of
 	true ->
-	    {ok, {Ip, Port}} = inet:peername(CliSock),
+	    {ok, {Ip, Port}} = case SC#sconf.ssl of
+				   undefined ->
+				       inet:peername(CliSock);
+				   SSL ->
+				       ssl:peername(CliSock)
+			       end,
+	    
 	    Status = case erase(status_code) of
 			 undefined -> "-";
 			 I -> integer_to_list(I)
@@ -440,10 +551,37 @@ maybe_access_log(CliSock, SC, Req) ->
 get_path({abs_path, Path}) ->
     Path.
 
-cli_recv(S, Num, GC) when GC#gconf.trace == false ->
-    gen_tcp:recv(S, Num, GC#gconf.timeout);
-cli_recv(S, Num, GC) ->
-    Res = gen_tcp:recv(S, Num, GC#gconf.timeout),
+
+do_recv(Sock, Num, TO, nossl) ->
+    gen_tcp:recv(Sock, Num, TO);
+do_recv(Sock, Num, TO, ssl) ->
+    case erase(ssltrail) of %% hack from above ...
+	undefined ->
+	    split_recv(ssl:recv(Sock, 0), Num);   %% ignore Num val 
+	Bin ->
+	    {ok, Bin}
+    end.
+
+%% weird ... ssl module doesn't respect Num arg for binary socks
+split_recv({ok, B}, Num) when integer(Num) ->
+    case B of
+	<<Bin:Num/binary , Tail/binary>> ->
+	    put(ssltrail, Tail),
+	    {ok, Bin};
+	_ ->
+	    {ok, B}
+    end;
+split_recv(E, _) ->
+    E.
+
+
+	
+	 
+
+cli_recv(S, Num, GC, SslBool) when GC#gconf.trace == false ->
+    do_recv(S, Num, GC#gconf.timeout, SslBool);
+cli_recv(S, Num, GC, SslBool) ->
+    Res = do_recv(S, Num, GC#gconf.timeout, SslBool),
     case Res of
 	{ok, Val} when tuple(Val) ->
 	    yaws_log:trace_traffic(from_client, ?F("~p~n", [Val]));
@@ -460,27 +598,37 @@ cli_recv(S, Num, GC) ->
 
 
 
-cli_write(S, Data, GC) when GC#gconf.trace /= {true, traffic} ->
-    gen_tcp:send(S, Data);
-cli_write(S, Data, GC) ->
+cli_write(S, Data, GC, SC) when GC#gconf.trace /= {true, traffic} ->
+    gen_tcp_send(S, Data, SC);
+cli_write(S, Data, GC, SC) ->
     yaws_log:trace_traffic(from_server, Data),
-    gen_tcp:send(S, Data).
+    gen_tcp_send(S, Data, SC).
 
 
-cli_write_headers(S, Data, GC) when GC#gconf.trace == false ->
-    gen_tcp:send(S, Data);
-cli_write_headers(S, Data, GC) ->
+cli_write_headers(S, Data, GC, SC) when GC#gconf.trace == false ->
+    gen_tcp_send(S, Data, SC);
+cli_write_headers(S, Data, GC, SC) ->
     yaws_log:trace_traffic(from_server, Data),
-    gen_tcp:send(S, Data).
+    gen_tcp_send(S, Data, SC).
+
+
+gen_tcp_send(S, Data, SC) ->
+    case SC#sconf.ssl of
+	undefined ->
+	    gen_tcp:send(S, Data);
+	SSL ->
+	    ssl:send(S, Data)
+    end.
 
 
 
-get_headers(CliSock, GC) ->
+
+http_get_headers(CliSock, GC) ->
     ?TC([{record, GC, gconf}]),
     inet:setopts(CliSock, [{packet, http}]),
-    case cli_recv(CliSock, 0, GC) of
+    case cli_recv(CliSock, 0, GC, nossl) of
 	{ok, R} when element(1, R) == http_request ->
-	    H = get_headers(CliSock, R, GC, #headers{}),
+	    H = http_get_headers(CliSock, R, GC, #headers{}),
 	    {R, H};
 	{error, timeout} ->
 	    done;
@@ -491,61 +639,69 @@ get_headers(CliSock, GC) ->
 	    exit(normal)
     end.
 
-get_headers(CliSock, Req, GC, H) ->
+http_get_headers(CliSock, Req, GC, H) ->
     ?TC([{record, GC, gconf}]),
-    case cli_recv(CliSock, 0, GC) of
+    case cli_recv(CliSock, 0, GC, nossl) of
 	{ok, {http_header,  Num, 'Host', _, Host}} ->
-	    get_headers(CliSock, Req, GC, H#headers{host = Host});
+	    http_get_headers(CliSock, Req, GC, H#headers{host = Host});
 	{ok, {http_header, Num, 'Connection', _, Conn}} ->
-	    get_headers(CliSock, Req, GC, H#headers{connection = Conn});
+	    http_get_headers(CliSock, Req, GC, H#headers{connection = Conn});
 	{ok, {http_header, Num, 'Accept', _, Accept}} ->
-	    get_headers(CliSock, Req, GC, H#headers{accept = Accept});
+	    http_get_headers(CliSock, Req, GC, H#headers{accept = Accept});
 	{ok, {http_header, Num, 'If-Modified-Since', _, X}} ->
-	    get_headers(CliSock, Req, GC, H#headers{if_modified_since = X});
+	    http_get_headers(CliSock, Req, GC, 
+			     H#headers{if_modified_since = X});
 	{ok, {http_header, Num, 'If-Match', _, X}} ->
-	    get_headers(CliSock, Req, GC, H#headers{if_match = X});
+	    http_get_headers(CliSock, Req, GC, H#headers{if_match = X});
 	{ok, {http_header, Num, 'If-None-Match', _, X}} ->
-	    get_headers(CliSock, Req, GC, H#headers{if_none_match = X});
+	    http_get_headers(CliSock, Req, GC, H#headers{if_none_match = X});
 	{ok, {http_header, Num, 'If-Range', _, X}} ->
-	    get_headers(CliSock, Req, GC, H#headers{if_range = X});
+	    http_get_headers(CliSock, Req, GC, H#headers{if_range = X});
 	{ok, {http_header, Num, 'If-Unmodified-Since', _, X}} ->
-	    get_headers(CliSock, Req, GC, 
+	    http_get_headers(CliSock, Req, GC, 
 			H#headers{if_unmodified_since = X});
 	{ok, {http_header, Num, 'Range', _, X}} ->
-	    get_headers(CliSock, Req, GC, H#headers{range = X});
+	    http_get_headers(CliSock, Req, GC, H#headers{range = X});
 	{ok, {http_header, Num, 'Referer',_, X}} ->
-	    get_headers(CliSock, Req, GC, H#headers{referer = X});
+	    http_get_headers(CliSock, Req, GC, H#headers{referer = X});
 	{ok, {http_header, Num, 'User-Agent', _, X}} ->
-	    get_headers(CliSock, Req, GC, H#headers{user_agent = X});
+	    http_get_headers(CliSock, Req, GC, H#headers{user_agent = X});
 	{ok, {http_header, Num, 'Accept-Ranges', _, X}} ->
-	    get_headers(CliSock, Req, GC, H#headers{accept_ranges = X});
+	    http_get_headers(CliSock, Req, GC, H#headers{accept_ranges = X});
 	{ok, {http_header, Num, 'Cookie', _, X}} ->
-	    get_headers(CliSock, Req, GC, 
+	    http_get_headers(CliSock, Req, GC, 
 			H#headers{cookie = [X|H#headers.cookie]});
 	{ok, {http_header, Num, 'Keep-Alive', _, X}} ->
-	    get_headers(CliSock, Req, GC, H#headers{keep_alive = X});
+	    http_get_headers(CliSock, Req, GC, H#headers{keep_alive = X});
 	{ok, {http_header, Num, 'Content-Length', _, X}} ->
-	    get_headers(CliSock, Req, GC, H#headers{content_length = X});
+	    http_get_headers(CliSock, Req, GC, H#headers{content_length = X});
 	{ok, {http_header, Num, 'Authorization', _, X}} ->
-	    get_headers(CliSock, Req, GC, 
+	    http_get_headers(CliSock, Req, GC, 
 			H#headers{authorization = parse_auth(X)});
 	{ok, http_eoh} ->
 	    H;
 	{ok, X} ->
 	    ?Debug("OTHER header ~p~n", [X]),
-	    get_headers(CliSock, Req, GC, H#headers{other=[X|H#headers.other]});
+	    http_get_headers(CliSock, Req, GC, 
+			     H#headers{other=[X|H#headers.other]});
 	Err ->
 	    exit(normal)
     
     end.
 
 
+inet_setopts(SC, S, Opts) when SC#sconf.ssl == nossl ->
+    inet:setopts(S, Opts);
+inet_setopts(_,_,_) ->
+    ok.  %% noop for ssl
+
+
 %% ret:  continue | done
 'GET'(CliSock, GC, SC, Req, Head) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     ?Debug("GET ~p", [Req#http_request.path]),
-    ok = inet:setopts(CliSock, [{packet, raw}, binary]),
-    flush(CliSock, Head#headers.content_length),
+    ok = inet_setopts(SC, CliSock, [{packet, raw}, binary]),
+    flush(SC, CliSock, Head#headers.content_length),
     ARG = make_arg(CliSock, Head, Req, GC, SC),
     handle_request(CliSock, GC, SC, Req, Head, ARG).
 
@@ -554,17 +710,17 @@ get_headers(CliSock, Req, GC, H) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     ?Debug("POST Req=~p H=~p~n", [?format_record(Req, http_request),
 				  ?format_record(Head, headers)]),
-    ok = inet:setopts(CliSock, [{packet, raw}, binary]),
+    ok = inet_setopts(SC, CliSock, [{packet, raw}, binary]),
     Bin = case Head#headers.content_length of
 	undefined ->
 	    case Head#headers.connection of
 		"close" ->
-		    get_client_data(CliSock, all, GC);
+		    get_client_data(CliSock, all, GC, SC#sconf.ssl);
 		_ ->
 		    exit(normal)
 	    end;
 	Len ->
-	    get_client_data(CliSock, list_to_integer(Len), GC)
+	    get_client_data(CliSock, list_to_integer(Len), GC, SC#sconf.ssl)
     end,
     ?Debug("POST data = ~s~n", [binary_to_list(Bin)]),
     ARG = make_arg(CliSock, Head, Req, GC, SC),
@@ -594,26 +750,36 @@ handle_request(CliSock, GC, SC, Req, H, ARG) ->
 	    handle_ut(CliSock, GC, SC, Req, H, ARG, UT);
 	Adirs ->
 	    %% we have authentication enabled, check auth
-	    case lists:member(UT#urltype.dir, SC#sconf.authdirs) of
+	    UT2 = unflat(UT),
+	    case lists:member(UT2#urltype.dir, SC#sconf.authdirs) of
 		false ->
-		    handle_ut(CliSock, GC, SC, Req, H, ARG, UT);
+		    handle_ut(CliSock, GC, SC, Req, H, ARG, UT2);
 		true ->
-		    case is_authenticated(SC, UT, Req, H) of
+		    case is_authenticated(SC, UT2, Req, H) of
 			true ->
-			    handle_ut(CliSock, GC, SC, Req, H, ARG, UT);
+			    handle_ut(CliSock, GC, SC, Req, H, ARG, UT2);
 			{false, Realm} ->
-			    deliver_401(CliSock, Req, GC, Realm)
+			    deliver_401(CliSock, Req, GC, Realm, SC)
 		    end
 	    end
     end.
 
+
+unflat(U) ->
+    U2 = case U#urltype.dir of
+	     {noflat, F} ->
+		 U#urltype{dir = lists:flatten(F)};
+	     _ ->
+		 U
+	 end,
+    U2.
 
 
 
 handle_ut(CliSock, GC, SC, Req, H, ARG, UT) ->
     case UT#urltype.type of
 	error ->
-	    deliver_404(CliSock, GC, SC, Req);
+	    deliver_404(CliSock, GC, SC, Req, SC);
 	directory ->
 	    P = UT#urltype.dir,
 	    yaws_ls:list_directory(CliSock, UT#urltype.data, P, Req, GC, SC);
@@ -623,7 +789,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT) ->
 	    do_yaws(CliSock, GC, SC, Req, H, 
 		    ARG#arg{querydata = UT#urltype.q}, UT);
 	dotdot ->
-	    deliver_403(CliSock, Req, GC)
+	    deliver_403(CliSock, Req, GC, SC)
     end.
 
 	
@@ -671,7 +837,7 @@ is_authenticated(SC, UT, Req, H) ->
 
 
 
-deliver_401(CliSock, Req, GC, Realm) ->
+deliver_401(CliSock, Req, GC, Realm, SC) ->
     H = make_date_and_server_headers(),
     B = list_to_binary("<html> <h1> 401 authentication needed  "
 		       "</h1></html>"),
@@ -679,29 +845,29 @@ deliver_401(CliSock, Req, GC, Realm) ->
 	 make_connection_close(true),
 	 make_www_authenticate(Realm),
 	 make_content_length(size(B)), crnl()],
-    send_headers_and_data(true, CliSock, D, B, GC),
+    send_headers_and_data(true, CliSock, D, B, GC, SC),
     done.
     
 
 
-deliver_403(CliSock, Req, GC) ->
+deliver_403(CliSock, Req, GC, SC) ->
     H = make_date_and_server_headers(),
     B = list_to_binary("<html> <h1> 403 Forbidden, no .. paths "
 		       "allowed  </h1></html>"),
     D = [make_400(403), H, make_connection_close(true),
 	 make_content_length(size(B)), crnl()],
-    send_headers_and_data(true, CliSock, D, B, GC),
+    send_headers_and_data(true, CliSock, D, B, GC, SC),
     done.
 
 
 
-deliver_404(CliSock, GC, SC,  Req) ->
+deliver_404(CliSock, GC, SC,  Req, SC) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     H = make_date_and_server_headers(),
     B = not_found_body(get_path(Req#http_request.path), GC, SC),
     D = [make_400(404), H, make_connection_close(true),
 	 make_content_length(size(B)), crnl()],
-    send_headers_and_data(true, CliSock, D, B, GC),
+    send_headers_and_data(true, CliSock, D, B, GC, SC),
     done.
 
 
@@ -733,20 +899,23 @@ del_old_files([{FileAtom, Mtime1, Spec}]) ->
       end, Spec).
 		     
 
-get_client_data(CliSock, all, GC) ->
-    get_client_data(CliSock, all, cli_recv(CliSock, 4000, GC), GC);
-get_client_data(CliSock, Len, GC) ->
-    case cli_recv(CliSock, Len, GC) of
+get_client_data(CliSock, all, GC, SSlBool) ->
+    get_client_data(CliSock, all, cli_recv(CliSock, 4000, GC, SSlBool), 
+		    GC, SSlBool);
+
+get_client_data(CliSock, Len, GC, SSlBool) ->
+    case cli_recv(CliSock, Len, GC, SSlBool) of
 	{ok, B} when size(B) == Len ->
 	    B;
 	_ ->
 	    exit(normal)
     end.
 
-get_client_data(CliSock, all, {ok, B}, GC) ->
-    B2 = get_client_data(CliSock, all, cli_recv(CliSock, 4000, GC)),
+get_client_data(CliSock, all, {ok, B}, GC, SSlBool) ->
+    B2 = get_client_data(CliSock, all, 
+			 cli_recv(CliSock, 4000, GC, SSlBool), SSlBool),
     <<B/binary, B2/binary>>;
-get_client_data(CliSock, all, eof, GC) ->
+get_client_data(CliSock, all, eof, GC, _) ->
     <<>>.
 
 
@@ -820,11 +989,11 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT) ->
     {S2, Content, Tail, DoClose, Bin2} = 
 	do_dyn_headers(CliSock,GC, SC,Bin,Fd,  Req,Head,Specs,ARG),
     ?Debug("TAIL =~p~n", [Tail]),
-    send_headers(CliSock, S2, GC),
-    close_if_head(Req, fun() -> gen_tcp:close(CliSock), throw({ok, 1}) end),
+    send_headers(CliSock, S2, GC, SC),
+    close_if_HEAD(Req, fun() -> do_tcp_close(CliSock, SC), throw({ok, 1}) end),
     if
 	Content /= [] ->
-	    safe_send(true, CliSock, Content, GC);
+	    safe_send(true, CliSock, Content, GC, SC);
 	true ->
 	    ok
     end,
@@ -838,19 +1007,19 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC, Bin, Fd, [H|T],ARG) ->
     case H of
 	{mod, LineNo, YawsFile, NumChars, Mod, out} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
-	    safe_call(DC, LineNo, YawsFile, CliSock, Mod, out, [ARG], GC),
+	    safe_call(DC, LineNo, YawsFile, CliSock, Mod, out, [ARG], GC, SC),
 	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC,
 			     Bin2,Fd,T,ARG);
 	{data, 0} ->
 	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT,DC, Bin, Fd,T,ARG);
 	{data, NumChars} ->
 	    {Send, Bin2} = skip_data(Bin, Fd, NumChars),
-	    safe_send(DC, CliSock, Send, GC),
+	    safe_send(DC, CliSock, Send, GC, SC),
 	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2,
 			     UT, DC, Bin2, Fd, T,ARG);
 	{error, NumChars, Str} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
-	    safe_send(DC, CliSock, Str, GC),
+	    safe_send(DC, CliSock, Str, GC, SC),
 	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2,
 			     UT, DC, Bin2, Fd, T,ARG)
     end;
@@ -861,7 +1030,7 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC, Bin, Fd, [],ARG) ->
 	true ->
 	    done;
 	false ->
-	    tcp_send(CliSock, [crnl(), "0", crnl()], GC),
+	    cli_write(CliSock, [crnl(), "0", crnl2()], GC, SC),
 	    continue
     end.
 
@@ -897,13 +1066,13 @@ to_binary(L) when list(L) ->
     list_to_binary(L).
 
 
-send_headers_and_data(DC, Sock, Headers, Data, GC) ->
-    send_headers(Sock, Headers, GC),
-    safe_send(DC, Sock, Data, GC).
+send_headers_and_data(DC, Sock, Headers, Data, GC, SC) ->
+    send_headers(Sock, Headers, GC, SC),
+    safe_send(DC, Sock, Data, GC, SC).
 
 
-send_headers(Sock, Data, GC) ->
-    case cli_write_headers(Sock, Data, GC) of
+send_headers(Sock, Data, GC, SC) ->
+    case cli_write_headers(Sock, Data, GC, SC) of
 	ok ->
 	    ok;
 	Err ->
@@ -914,10 +1083,10 @@ send_headers(Sock, Data, GC) ->
     end.
 
 
-safe_send(DoClose, Sock, Data, GC) ->
+safe_send(DoClose, Sock, Data, GC, SC) ->
     if
 	DoClose == true  ->
-	    case tcp_send(Sock, Data, GC) of
+	    case cli_write(Sock, Data, GC, SC) of
 		ok ->
 		    ok;
 		Err ->
@@ -930,7 +1099,7 @@ safe_send(DoClose, Sock, Data, GC) ->
 	    B = to_binary(Data),
 	    Len = size(B),
 	    Data2 = [crnl(), yaws:integer_to_hex(Len) , crnl(), B],
-	    case tcp_send(Sock, Data2, GC) of
+	    case cli_write(Sock, Data2, GC, SC) of
 		ok ->
 		    ok;
 
@@ -944,7 +1113,7 @@ safe_send(DoClose, Sock, Data, GC) ->
     end.
 
 		    
-safe_call(DoClose, LineNo, YawsFile, CliSock, M, F, A, GC) ->
+safe_call(DoClose, LineNo, YawsFile, CliSock, M, F, A, GC, SC) ->
     ?Debug("safe_call ~w:~w(~p)~n", 
 	   [M, F, ?format_record(hd(A), arg)]),
     case (catch apply(M,F,A)) of
@@ -953,26 +1122,35 @@ safe_call(DoClose, LineNo, YawsFile, CliSock, M, F, A, GC) ->
 		      ?F("~n<pre> ~nERROR erl ~w/1 code  crashed:~n "
 			 "File: ~s:~w~n"
 			 "Reason: ~p~n</pre>~n",
-			 [F, YawsFile, LineNo, Err]), GC),
+			 [F, YawsFile, LineNo, Err]), GC, SC),
 	    yaws:elog("erl code  ~w/1 crashed: ~n"
 		      "File: ~s:~w~n"
 		      "Reason: ~p", [F, YawsFile, LineNo, Err]);
 	
 	{ok, Out} ->
-	    safe_send(DoClose, CliSock, Out, GC);
+	    safe_send(DoClose, CliSock, Out, GC, SC);
 	Other ->
 	    safe_send(DoClose, CliSock, 
 		      ?F("~n<pre>~nERROR erl code ~w/1 returned bad value: ~n "
 			 "File: ~s:~w~n"
 			 "Value: ~p~n</pre>~n",
-			 [F, YawsFile, LineNo, Other]), GC),
+			 [F, YawsFile, LineNo, Other]), GC, SC),
 	    yaws:elog("erl code  ~w/1 returned bad value: ~n"
 		      "File: ~s:~w~n"
 		      "Value: ~p", [F, YawsFile, LineNo, Other]);
 
 	close ->
-	    gen_tcp:close(CliSock),
+	    do_tcp_close(CliSock, SC),
 	    exit(normal)
+    end.
+
+
+do_tcp_close(Sock, SC) ->
+    case SC#sconf.ssl of
+	nossl ->
+	    gen_tcp:close(Sock);
+	ssl ->
+	    ssl:close(Sock)
     end.
 
 
@@ -1007,13 +1185,13 @@ deliver_file(CliSock, GC, SC, Req, InH, UT) ->
     OutH = make_static_headers(Req, UT, DoClose),
     Fd = ut_open(UT),
     Bin = ut_read(Fd),
-    send_headers(CliSock, [make_200(), OutH, crnl()], GC),
-    close_if_head(Req, fun() -> ut_close(Fd), throw({ok, 1}) end),
+    send_headers(CliSock, [make_200(), OutH, crnl()], GC, SC),
+    close_if_HEAD(Req, fun() -> ut_close(Fd), throw({ok, 1}) end),
     case Bin of
 	{bin, Binary} ->
-	    tcp_send(CliSock, Binary, GC);
+	    cli_write(CliSock, Binary, GC, SC);
 	{ok, Binary} ->
-	    send_loop(CliSock, Binary, Fd, GC)
+	    send_loop(CliSock, Binary, Fd, GC, SC)
     end,
     ut_close(Fd),
     if
@@ -1023,7 +1201,7 @@ deliver_file(CliSock, GC, SC, Req, InH, UT) ->
 	    continue
     end.
 
-close_if_head(Req, F) ->
+close_if_HEAD(Req, F) ->
     if
 	Req#http_request.method == 'HEAD' ->
 	    F();
@@ -1046,12 +1224,12 @@ do_close(Req, H) ->
     end.
 
 
-send_loop(CliSock, Data, Fd, GC) ->
-    case tcp_send(CliSock, Data, GC) of
+send_loop(CliSock, Data, Fd, GC, SC) ->
+    case cli_write(CliSock, Data, GC, SC) of
 	ok ->
 	    case ut_read(Fd) of
 		{ok, Data2} ->
-		    send_loop(CliSock, Data2, Fd, GC);
+		    send_loop(CliSock, Data2, Fd, GC, SC);
 		eof ->
 		    ok
 	    end;
@@ -1107,7 +1285,8 @@ make_400(Code) ->
 
 crnl() ->
     "\r\n".
-
+crnl2() ->
+    "\r\n\r\n".
 
 
 %% FIXME optimize the goddamn date generations
@@ -1325,15 +1504,18 @@ split_path(DR, [H|T], Comps, Part) ->
 
 %% http:/a.b.c/~user URLs
 ret_user_dir(DR, [], "/", Upath) ->
-    ?Debug("User = ~p~n", [Upath]),
+    ?Debug("UserPart = ~p~n", [Upath]),
     {User, Path} = parse_user_path(DR, Upath, []),
+    
+    ?Debug("User=~p Path = ~p~n", [User, Path]),
 
     %% FIXME doesn't work if passwd contains :: 
     %% also this is unix only
+    %% and it ain't the fastest code around.
 
     Home = lists:nth(6, string:tokens(
 			  os:cmd(["grep ", User, " /etc/passwd "]),[$:])),
-    DR2 = [Home, "/public_html"],
+    DR2 = [Home ++ "/public_html/"],
     do_url_type(DR2, Path). %% recurse
 
 
@@ -1352,9 +1534,11 @@ parse_user_path(DR, [H|T], User) ->
 ret_reg_split(DR, Comps, RevFile, Query) ->
     ?Debug("ret_reg_split(~p)", [[DR, Comps, RevFile]]),
     Dir = lists:reverse(Comps),
-    FlatDir = lists:flatten(Dir),
+    %%FlatDir = lists:flatten(Dir),
+    FlatDir = {noflat, Dir},
     File = lists:reverse(RevFile),
     L = [DR, Dir, File],
+    ?Debug("ret_reg_split: L =~p~n",[L]),
     case file:read_file_info(L) of
 	{ok, FI} when FI#file_info.type == regular ->
 	    {X, Mime} = suffix_type(RevFile),
@@ -1364,7 +1548,7 @@ ret_reg_split(DR, Comps, RevFile, Query) ->
 		     fullpath = lists:flatten(L),
 		     mime=Mime, q=Query};
 	{ok, FI} when FI#file_info.type == directory ->
-	    maybe_return_dir(DR, FlatDir ++ File);
+	    maybe_return_dir(DR, lists:flatten(Dir) ++ File);
 	Err ->
 	    #urltype{type=error, data=Err}
     end.
@@ -1388,18 +1572,35 @@ suffix_type(_) ->
     {regular, "application/octet-stream"}.
 
 
-flush(Sock, undefined) ->
+
+flush(SC, Sock, Sz) ->
+    case SC#sconf.ssl of
+	undefined ->
+	    tcp_flush(Sock, Sz);
+	_ ->
+	    ssl_flush(Sock, Sz)
+    end.
+
+	    
+
+
+tcp_flush(Sock, undefined) ->
     ok;
-flush(Sock, 0) ->
+tcp_flush(Sock, 0) ->
     ok;
-flush(Sock, Sz) ->
+tcp_flush(Sock, Sz) ->
     gen_tcp:recv(Sock, Sz, 1000).
 
+
+ssl_flush(Sock, undefined) ->
+    ok;
+ssl_flush(Sock, 0) ->
+    ok;
+ssl_flush(Sock, Sz) ->
+    split_recv(ssl:recv(Sock, Sz, 1000), Sz).
+
+
 			
-
-tcp_send(S, Data, GC) ->
-    ok = cli_write(S, Data, GC).
-
 
 
 mtime(F) ->

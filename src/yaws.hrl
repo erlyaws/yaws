@@ -28,17 +28,28 @@
                       %% one list of #sconf's per listen ip
 
 
+-record(ssl, 
+	{
+	 keyfile,
+	 certfile,
+	 verify = 0,
+	 depth = 1,
+	 password,
+	 cacertfile,
+	 ciphers,
+	 cachetimeout}).
+
+
 %% server conf
 -record(sconf,
 	{port = 8000,
-	 ssl = off,
-	 ssl_port = 443,
 	 docroot,
 	 access_log = true,
 	 listen = {127,0,0,1},
 	 servername = "localhost",
 	 default_server_on_this_ip = true,
 	 ets,
+	 ssl,
 	 authdirs = []
 	}).
 

@@ -11,7 +11,6 @@ out(A) ->
 
 <ul>
 
-<li> different log files for different virt hosts
 <li> ssl 
 <li> handle the If-..... headers 
 <li> generate Etag for static content
@@ -21,15 +20,12 @@ out(A) ->
 <li> documentation in the www directory
 <li> more functions in yaws_api   redirect(), push() ....
 <li> lots of examples
-<li> make stop and control functions to ctl and HUP the daemon
 <li> maybe do .htaccess
 <li> do something cool, maybe a streaming audio app
-<li> shell access into the daemon
-<li> make one access log per virtual server
+<li> shell access into the daemon .... no bad idea
 <li> authenticated pages
 <li> HTTP trailer support
 <li> man pages for yaws as well as yaws.conf
-<li> #fragments in URLs
 <li> make sure yaws vsn gets inserted correctly in http output
 </ul>
 
