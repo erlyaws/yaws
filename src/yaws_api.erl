@@ -48,6 +48,8 @@
 -export([ehtml_expand/1, ehtml_expander/1, ehtml_apply/2,
 	ehtml_expander_test/0]).
 
+-export([parse_set_cookie/1, format_set_cookie/1]).
+
 -import(lists, [map/2, flatten/1, reverse/1]).
 
 %% these are a bunch of function that are useful inside
@@ -1407,3 +1409,146 @@ deepmember(C,[L|Cs]) when list(L) ->
     end;
 deepmember(C,[N|Cs]) when C /= N ->
     deepmember(C, Cs).
+
+
+%  Parse a Set-Cookie header. 
+% 
+%  RFC (2109) ports are from RFC 2965
+% 
+%  "Cookie:" cookie-version 1*((";" | ",") cookie-value)
+%  "Set-Cookie:"  cookies
+%  "Set-Cookie2:" cookies
+%  cookie-value    =       NAME "=" VALUE [";" path] [";" domain] [";" port]
+%  cookie          =       NAME "=" VALUE *( ";" cookie-av )
+%  cookie-version  =       "$Version" "=" value
+%  NAME            =       attr
+%  VALUE           =       value
+%  path            =       "$Path" "=" value
+%  domain          =       "$Domain" "=" value
+%  port            =       "$Port" "=" <"> value <">
+% 
+%  cookie-av       = "Comment" "=" value
+%                  | "CommentURL" "=" <"> http_URL <">
+%                  | "Discard"
+%                  | "Domain" "=" value
+%                  | "Max-Age" "=" value
+%                  | "Path" "=" value
+%                  | "Port" [ "=" <"> portlist <"> ]
+%                  | "Secure"
+%                  | "Version" "=" 1*DIGIT
+% 
+
+parse_set_cookie(Str) ->
+        parse_set_cookie(Str, #setcookie{}).
+
+parse_set_cookie([], Cookie) ->
+        Cookie;
+parse_set_cookie(Str, Cookie) ->
+    Rest00 = skip_space(Str),
+    {Key,Rest0} = parse_set_cookie_key(Rest00, []),
+    Rest1 = skip_space(Rest0),
+    case Rest1 of
+	[$=|Rest2] ->
+	    {Value,Quoted,Rest3} = parse_set_cookie_value(Rest2),
+	    NewC=add_set_cookie(misc:lowercase(Cookie),Key,Value,Quoted),
+	    parse_set_cookie(Rest3,NewC);
+	[$;|Rest2] ->
+	    NewC =add_set_cookie(misc:lowercase(Cookie),Key,undefined,false),
+	    parse_set_cookie(Rest2,NewC);
+	_ ->
+	    Cookie
+    end.
+    
+%
+
+parse_set_cookie_key([], Acc) ->
+    {lists:reverse(Acc), []};
+parse_set_cookie_key(T=[$=|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_set_cookie_key(T=[$;|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_set_cookie_key([C|T], Acc) ->
+    parse_set_cookie_key(T, [C|Acc]).
+
+%
+
+parse_set_cookie_value([$"|T]) ->
+    parse_quoted(T,[]);
+parse_set_cookie_value(T) ->
+    parse_set_cookie_value(T,[]).
+
+parse_set_cookie_value([],Acc) ->
+    {lists:reverse(Acc), false, []};
+parse_set_cookie_value(T=[$;|_], Acc) ->
+    {lists:reverse(Acc), false, T};
+parse_set_cookie_value([C|T], Acc) ->
+    parse_set_cookie_value(T, [C|Acc]).
+
+parse_quoted([], Acc) ->
+    {lists:reverse(Acc), true, []};
+parse_quoted([$"|T], Acc) ->
+    {lists:reverse(Acc), true, T};
+parse_quoted([$\\,C|T], Acc) ->    
+    parse_quoted(T,[C,$\\|Acc]);
+parse_quoted([C|T], Acc) ->
+    parse_quoted(T,[C|Acc]).
+
+%
+
+add_set_cookie(C, Key, Value, Quoted) when C#setcookie.key==undefined ->
+    C#setcookie{key=Key,value=Value,quoted=Quoted};
+add_set_cookie(C, "comment", Value, _Quoted) ->
+    C#setcookie{comment=Value};
+add_set_cookie(C, "commenturl", Value, _Quoted) ->
+    C#setcookie{comment_url=Value};
+add_set_cookie(C, "discard", Value, _Quoted) ->
+    C#setcookie{discard=Value};
+add_set_cookie(C, "domain", Value, _Quoted) ->
+    C#setcookie{domain=Value};
+add_set_cookie(C, "max-age", Value, _Quoted) ->
+    C#setcookie{max_age=Value};
+add_set_cookie(C, "path", Value, _Quoted) ->
+    C#setcookie{path=Value};
+add_set_cookie(C, "port", Value, _Quoted) ->
+    C#setcookie{port=Value};
+add_set_cookie(C, "secure", Value, _Quoted) ->
+    C#setcookie{secure=Value};
+add_set_cookie(C, "version", Value, _Quoted) ->
+    C#setcookie{version=Value};
+add_set_cookie(C, _Key, _Value, _Quoted) ->
+    C.
+
+%
+
+format_set_cookie(C) when C#setcookie.value == undefined ->
+    [C#setcookie.key|format_set_cookie_opts(C)];
+format_set_cookie(C) when C#setcookie.quoted ->
+    [C#setcookie.key,$=,$",C#setcookie.value,$"|
+     format_set_cookie_opts(C)];
+format_set_cookie(C) ->
+    [C#setcookie.key,$=,C#setcookie.value|
+     format_set_cookie_opts(C)].
+
+add_opt(_Key,undefined) -> [];
+add_opt(Key,Opt) -> [$;,Key,$=,Opt].
+
+format_set_cookie_opts(C) ->
+    [add_opt("Path",C#setcookie.path),
+     add_opt("Port",C#setcookie.port),
+     add_opt("Domain",C#setcookie.domain),
+     add_opt("Secure",C#setcookie.secure),
+     add_opt("Expires",C#setcookie.expires),
+     add_opt("Max-Age",C#setcookie.max_age),
+     add_opt("Discard",C#setcookie.discard),
+     add_opt("Comment",C#setcookie.comment),
+     add_opt("CommentURL",C#setcookie.comment_url),
+     add_opt("version",C#setcookie.version)].
+
+%
+
+skip_space([]) -> [];
+skip_space([$ |T]) -> skip_space(T);
+skip_space([$\t|T]) -> skip_space(T);
+skip_space(T) -> T.
+
+%

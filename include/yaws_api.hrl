@@ -63,3 +63,20 @@
 	 port,            %% undefined means not set
 	 path = [],
 	 querypart = []}).
+
+
+-record(setcookie,{
+	    key,           
+	    value,         
+	    quoted,        
+	    comment,
+	    comment_url,
+	    discard,
+	    domain,
+	    max_age,
+	    expires,
+	    path,
+	    port,
+	    secure,
+	    version}).
+

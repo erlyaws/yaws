@@ -52,7 +52,7 @@ parse([{end_tag,T,[],L}|Tokens], {T,A,_}, [{CTag,CAcc}|Stack], Acc) ->
     parse(Tokens, CTag, Stack, [E|CAcc]);
 
 parse([{end_tag,T1,[],L1}|Tokens], CTag = {T2,A,L2}, Stack, Acc) ->
-    case tag_type(T) of
+    case tag_type(T1) of
 	leaf -> % ignore
 	    parse(Tokens, CTag, Stack, Acc);
 	node ->
