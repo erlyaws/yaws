@@ -215,7 +215,7 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 			{pre_html,"&nbsp;To:&nbsp;"}}},
 		      {td,[{height,35},{align,left},{valign,top}],
 		       {input,[{name,to},{type,text},{size,66},
-			       {check,value,To}]}}]},
+			       {check,value,quote(To)}]}}]},
 	      {tr,[],[{td,[{height,0},{align,left},{valign,top}],[]},
 		      {td,[{height,0},{align,left},{valign,top}],[]}]},
 	      {tr,[],[{td,[{height,35},{align,left},{valign,top}],
@@ -223,7 +223,7 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 			{pre_html,"&nbsp;Cc:&nbsp;"}}},
 		      {td,[{height,35},{align,left},{valign,top}],
 		       {input,[{name,cc},{type,text},{size,66},
-			       {check,value,Cc}]}}]},
+			       {check,value,quote(Cc)}]}}]},
 	      {tr,[],[{td,[{height,0},{align,left},{valign,top}],[]},
 		      {td,[{height,0},{align,left},{valign,top}],[]}]},
 	      {tr,[],[{td,[{height,35},{align,left},{valign,top}],
@@ -231,14 +231,14 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 			{pre_html,"&nbsp;Bcc:&nbsp;"}}},
 		      {td,[{height,35},{align,left},{valign,top}],
 		       {input,[{name,bcc},{type,text},{size,66},
-			       {check,value,Bcc}]}}
+			       {check,value,quote(Bcc)}]}}
 		     ]},
 	      {tr,[],[{td,[{height,35},{align,left},{valign,top},nowrap],
 		       {font,[{color,"#000000"},{size,2}],
 			{pre_html,"&nbsp;Subject:&nbsp;"}}},
 		      {td,[{colspan,3},{align,left},{valign,top}],
 		       {input,[{name,subject},{type,text},{size,66},
-			       {check,value,Subject}]}}]}
+			       {check,value,quote(Subject)}]}}]}
 	     ]
 	    },
 	    {table, [{bgcolor,silver},{border,0},{cellspacing,0},
@@ -651,6 +651,13 @@ decode_b64([C|Rest], Acc) ->
 unquote([]) -> [];
 unquote([$"|R]) -> unquote(R);
 unquote([C|R]) -> [C|unquote(R)].
+
+quote([]) ->
+    [];
+quote([$"|Cs]) ->
+    ["&quot;"|quote(Cs)];
+quote([C|Cs]) ->
+    [C|quote(Cs)].
 
 display_login(A, Status) ->
     (dynamic_headers() ++
