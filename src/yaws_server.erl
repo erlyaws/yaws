@@ -659,9 +659,12 @@ do_dyn_headers(CliSock, GC, SC, Bin, Fd, Req, Head, [H|T], ARG) ->
 	    {_, Bin2} = skip_data(Bin, Fd, SkipChars),
 	    case (catch apply(Mod, some_headers, [ARG])) of
 		{ok, Out} ->
-		    {[make_200(),OutH, Chunked, Out, crnl()], [],T, DoClose, Bin2};
+		    {[make_200(),OutH, Chunked, Out, 
+		      crnl_if_not_chunked(DoClose)], 
+		     [],T, DoClose, Bin2};
 		ok ->
-		    {[make_200(),OutH, Chunked, crnl()], [], T, DoClose, Bin2};
+		    {[make_200(),OutH, Chunked, 
+		      crnl_if_not_chunked(DoClose)], [], T, DoClose, Bin2};
 		close ->
 		    exit(normal);
 		Err ->
@@ -676,7 +679,8 @@ do_dyn_headers(CliSock, GC, SC, Bin, Fd, Req, Head, [H|T], ARG) ->
 	    case (catch apply(Mod, all_headers, [ARG])) of
 		{ok, StatusCode, Out} when integer(StatusCode) ->
 		    put(status_code, StatusCode),
-		    {[Out, crnl()], [], T, DoClose, Bin2};
+		    {[Out, crnl_if_not_chunked(DoClose)], 
+		     [], T, DoClose, Bin2};
 		close ->
 		    exit(normal);
 		Err ->
@@ -690,8 +694,16 @@ do_dyn_headers(CliSock, GC, SC, Bin, Fd, Req, Head, [H|T], ARG) ->
 	_ ->
 	    MimeType = "text/html",
 	    OutH = make_dyn_headers(DoClose, MimeType),
-	    {[make_200(),OutH, Chunked, crnl()], [], [H|T], DoClose, Bin}
+	    {[make_200(),OutH, Chunked, crnl_if_not_chunked(DoClose)], 
+	     [], [H|T], DoClose, Bin}
     end.
+
+
+
+crnl_if_not_chunked(false) ->
+    [];
+crnl_if_not_chunked(true) ->
+    crnl().
 
 
 	   
@@ -742,7 +754,8 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC, Bin, Fd, [],ARG) ->
 	true ->
 	    done;
 	false ->
-	    tcp_send(CliSock, ["0", crnl(), crnl()], GC),
+	    %gen_tcp:send(CliSock, crnl()),
+	    %tcp_send(CliSock, ["0", crnl(),crnl()], GC),
 	    continue
     end.
 
@@ -810,7 +823,7 @@ safe_send(DoClose, Sock, Data, GC) ->
 	DoClose == false ->
 	    B = to_binary(Data),
 	    Len = size(B),
-	    Data2 = [yaws:integer_to_hex(Len) , crnl(), B],
+	    Data2 = [crnl(), yaws:integer_to_hex(Len) , crnl(), B],
 	    case tcp_send(Sock, Data2, GC) of
 		ok ->
 		    ok;
@@ -940,6 +953,10 @@ make_dyn_headers(DoClose, MimeType) ->
      make_connection_close(DoClose),
      make_non_cache_able()
     ].
+
+
+make_x_pad() ->
+    "X-Pad: avoid browser bug\r\n".
 
 
 make_non_cache_able() ->
