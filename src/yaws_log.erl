@@ -73,7 +73,7 @@ uid_change(GC) ->
 	Uname ->
 	    %% let's change the owner of logdir
 	    %% as well as all the files in that directory
-	    case (catch list_to_integer(yaws:idu(Uname))) of
+	    case (catch list_to_integer(element(2,yaws:idu(Uname)))) of
 		Int when integer(Int) ->
 		    S = gen_server:call(?MODULE, state),
 		    {ok, Files} = file:list_dir(S#state.dir),
