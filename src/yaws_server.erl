@@ -478,10 +478,10 @@ gserv(GS, Ready, Rnum) ->
 	{From , status} ->
 	    From ! {self(), GS},
 	    gserv(GS, Ready, Rnum);
-	{From, next} when Ready == [] ->
+	{_From, next} when Ready == [] ->
 	    acceptor(GS),
 	    gserv(GS, Ready, Rnum);
-	{From, next} ->
+	{_From, next} ->
 	    [R|RS] = Ready,
 	    R ! {self(), accept},
 	    gserv(GS, RS, Rnum-1);
@@ -1698,10 +1698,8 @@ handle_out_reply(Reply, LineNo, YawsFile, SC, ArgL) ->
 
     
 
-handle_out_reply_l([Reply|T], LineNo, YawsFile, SC, A, Res) ->		  
+handle_out_reply_l([Reply|T], LineNo, YawsFile, SC, A, _Res) ->		  
     case handle_out_reply(Reply, LineNo, YawsFile, SC, A) of
-	{get_more, Cont, State} ->
-	    handle_out_reply_l(T, LineNo, YawsFile, SC, A, {get_more, Cont, State});
 	break ->
 	    break;
 	{page, Page} ->
@@ -2118,7 +2116,7 @@ maybe_return_dir(DR, FlatPath) ->
     end.
 
 
-split_path(_SC, [$/], Q, _Comps, []) ->
+split_path(_SC, [$/], _Q, _Comps, []) ->
     %% its a URL that ends with /
     slash;
 split_path(SC, [$/, $/ |Tail], Q, Comps, Part) ->  %% security clause
