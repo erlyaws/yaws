@@ -2474,13 +2474,13 @@ cache_file(SC, GC, Path, UT) when
 	    error_logger:info_msg("Max NUM cached files reached for server "
 				  "~p", [SC#sconf.servername]),
 	    cleanup_cache(E, num),
-	    cache_file(GC, SC, Path, UT);
+	    cache_file(SC, GC, Path, UT);
 	FI#file_info.size < GC#gconf.max_size_cached_file,
 	B + FI#file_info.size > GC#gconf.max_num_cached_bytes ->
 	    error_logger:info_msg("Max size cached bytes reached for server "
 				  "~p", [SC#sconf.servername]),
 	    cleanup_cache(E, size),
-	    cache_file(GC, SC, Path, UT);
+	    cache_file(SC, GC, Path, UT);
 	true ->
 	    ?Debug("Check file size\n",[]),
 	    if
@@ -2516,7 +2516,7 @@ cache_file(SC, GC, Path, UT) when
 		    UT2
 	    end
     end;
-cache_file(_GC, _SC, _Path, UT) ->
+cache_file(_SC, _GC, _Path, UT) ->
     UT.
 
 
