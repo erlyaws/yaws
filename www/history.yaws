@@ -14,9 +14,10 @@ out(A) ->
 
 
 <tr><td>    </td></tr>
+<tr><td>    </td></tr>
 
 <tr><td>Jun 12 Redid the out/1 structure completely removed some/all headers and made
-it possible to return headers as well as new status code inside any out/1 function. This makes it much easier to write apps in yaws.   </td></tr>
+it possible to return headers as well as new status code inside any out/1 function. This makes it much easier to write apps in yaws.   Also accumulated output into larger write chunks. Performnce enhancer.</td></tr>
 
 
 <tr><td> Jun 11, fixed Etag: and Last-Modified: headers for static content.

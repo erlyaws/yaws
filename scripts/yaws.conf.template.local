@@ -7,7 +7,6 @@
 logdir = .
 ebin_dir = %yawsdir%/examples/ebin
 include_dir = %yawsdir%/examples/include
-keepalive_timeout = 15000
 
 
 

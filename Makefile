@@ -1,4 +1,4 @@
-SUBDIRS	=	src scripts
+SUBDIRS	=	src scripts man
 
 
 all debug clean install:

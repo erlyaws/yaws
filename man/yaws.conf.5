@@ -1,0 +1,182 @@
+.TH YAWS.CONF "5" "" "" "User Commands"
+.SH NAME
+/etc/yaws.conf \- Configuration file for the yaws webserver
+.SH DESCRIPTION
+.\" Add any additional description here
+.PP
+Yaws is fast lightweight webserver. It reads a configuration file called
+yaws.conf to control its operations. The configuration contains two distinct
+parts a global part which affects all the virtual hosts and a server part
+where options for each virtual host is supplied.
+
+.SH GLOBAL PART
+.TP
+\fB\logdir = Directory\fR
+All yaws logs will be written to files in this directory. There are several
+different log files written by yaws.
+
+.br
+\fBreport.log\fR - this is a text file that contains all error logger 
+printouts from yaws. 
+.br
+\fBHost.access\fR - for each virtual host served by yaws, a file Host.access
+will be written which contains an access log in Common Log Format.
+.br
+\fBtrace.http\fR - this file contains the HTTP trace if that is enabled
+.br
+\fBtrace.traffic\fR - this file contains the traffic trace if that is enabled
+
+.TP
+\fB ebin_dir = Directory\fR
+This directive adds Directory to the erlang search path. It is possible to
+have several of these command in the configuration file.
+.TP
+\fB include_dir = Directory\fR
+This directive adds Directory to the path of directories where the erlang
+compiler seraches for include files. We need to use this if we want to 
+include .hrl files in our yaws erlang code.
+.TP
+\fB max_num_cached_files = Integer\fR
+Yaws will cache small files such as commonly accessed GIF images in RAM.
+This directive sets a maximum number on the number of cached files.
+The default value is 400.
+.TP 
+\fB max_num_cached_bytes = Integer\fR
+This directive controls the total amount of RAM which can maximally be
+used for cached RAM files. The default value is 1000000, 1 megabyte.
+.TP
+\fB max_size_cached_file = Integer\fR
+This directive sets a maximum size on the files that are RAM cached by yaws.
+The default value i 8000, 8 kBytes.
+.TP
+\fB trace  = traffic | http\fR
+This enables traffic or http tracing. Tracing is also possible to enable with
+a command line flag to yaws.
+.SH SERVER PART
+Yaws can virthost several webservers on the same ip address as well
+as several webservers on different ip addresses. The on limitation here is
+that there can be only one server with ssl enabled per each individual ip address.
+.pp
+Each virttual host is defined within a matching pair of \fB<server ServerName>\fR
+and \fB</server>\fR. The ServerName will be the name of the webserver.
+
+.pp
+The following directives are allowed inside a server definition.
+.TP
+\fBport = Port \fR
+This makes the server listen on Port
+.TP
+\fB listen = IpAddress\fR
+This makes the server listen on IpAddress
+.TP
+\fB docroot = Directory\fR
+This makes the server serve all its content from Directory
+.TP
+\fB default_server_on_this_ip = true | false\fR
+When virthosting several servers on the same ip address, this option
+is mandatory. When client requests arrive at the ip address whithout the 
+HTTP Host: header present, we must know which server is the default.
+.TP
+\fB ssl = true \fR
+This enables ssl for this server
+.TP
+\fB ssl_keyfile = File\fR
+Specifies which file contains the private key for the certificate.
+.TP
+\fB ssl_certfile = File\fR
+Specifies which file contains the certificate for the server.
+.TP
+\fB ssl_cacertfile = File\fR
+File If the server is setup to require client certificates. This file needs to contain all the certificates of the acceptable signers for the client certs.
+.TP
+\fB ssl_verify = 1 | 2 | 3\fR
+Specifies the level of verification the server does on clinet certs. 1 means nothing, 2 means the the server will ask the client for a cert but not fail if the client doesn't supply a client cert, 3 means that the server requires the client to supply a client cert.
+.TP
+\fB ssl_depth = Int\fR
+Specifies the depth of certificate chains the server is prepared to follow when verifying client certs.
+.TP
+\fB ssl_password = String\fR
+String If the private key is encrypted on disc, this password is the 3des key to decrypt it.
+
+.TP
+\fB ssl_ciphers = String\fR
+* This string specifies the ssl cipher string. The syntax of the ssl cipher string is a little horrible sublanguage of its own. It is documented in the ssl man page for "ciphers". 
+.SH EXAMPLES
+
+The following example defines a single server on port 80.
+.nf
+
+logdir = /var/log/yaws
+<server www.mydomain.org>
+        port = 80
+        listen = 192.168.128.31
+        docroot = /var/yaws/www
+</server>
+.fi
+
+.pp
+And this example shows a similar setup but two webservers on the same ip address
+
+.nf
+
+logdir = /var/log/yaws
+<server www.mydomain.org>
+        port = 80
+        default_server_on_this_ip = true
+        listen = 192.168.128.31
+        docroot = /var/yaws/www
+</server>
+
+<server www.funky.org>
+        port = 80
+        listen = 192.168.128.31
+        docroot = /var/yaws/www_funky_org
+</server>
+
+
+.fi
+
+And finally a sligthly more complex example
+with two servers on the same ip, and one ssl server on a
+different ip.
+
+.nf
+
+logdir = /var/log/yaws
+max_num_cached_files = 8000
+max_num_cached_bytes = 6000000
+
+<server www.mydomain.org>
+        port = 80
+        default_server_on_this_ip = true
+        listen = 192.168.128.31
+        docroot = /var/yaws/www
+</server>
+
+
+
+<server www.funky.org>
+        port = 80
+        listen = 192.168.128.31
+        docroot = /var/yaws/www_funky_org
+</server>
+
+<server www.funky.org>
+        port = 443
+        listen = 192.168.128.32
+        docroot = /var/yaws/www_funky_org
+        ssl = true
+        ssl_keyfile = /etc/funky.key
+        ssl_cerfile = /etc/funky.cert
+        ssl_password = gazonk
+</server>
+
+
+.fi
+
+.SH AUTHOR
+Written by Claes Wikstrom
+.SH "SEE ALSO"
+.BR yaws (1)
+.BR erl (1)
+

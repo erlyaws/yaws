@@ -75,6 +75,24 @@ client connection in an uncontrolled way.
 
 </ul> 
 
+<p>The embedded erlang code can also return a list of the
+above values. For example the following value
+<pre>
+[{status, 303},
+ {allheaders,
+     [{header, ["Location: ","http://www.funky.org/"]},
+      {header, ["Set-Cookie: ","namn=ruler;"]}
+     ]},
+ {html,"<html> Redirected to funky.org </html>"}
+]
+
+</pre>
+
+<p>
+Can be returned if we want to issue a redirect and set a cookie
+at the same time.
+
+
 
 <h2>The argument</h2>
 The <tt>out/1</tt> function is supplied with a record argument. The 

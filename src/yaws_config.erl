@@ -18,7 +18,7 @@
 paths() ->
     case os:cmd("id -u") of
 	[$0 |_] -> %% root 
-	    ["./yaws.conf", 
+	    [
 	     "/etc/yaws.conf"];
 	_ -> %% developer
 	    [filename:join([os:getenv("HOME"), "yaws.conf"]),
@@ -187,11 +187,11 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 
 	["trace", '=', Bstr] ->
 	    case Bstr of
-		"true" ->
-		    fload(FD, globals, GC#gconf{trace = true},
+		"traffic" ->
+		    fload(FD, globals, GC#gconf{trace = {true, traffic}},
 			  C, Cs, Lno+1, Next);
-		"false" ->
-		    fload(FD, globals, GC#gconf{trace = undefined},
+		"http" ->
+		    fload(FD, globals, GC#gconf{trace = {true, http}},
 			  C, Cs, Lno+1, Next);
 		_ ->
 		    {error, ?F("Expect bool at line ~w",[Lno])}
@@ -224,6 +224,9 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		false ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}
 	    end;
+
+
+	%% keep this bugger for backward compat for a while
 	["keepalive_timeout", '=', Val] ->
 	    case (catch list_to_integer(Val)) of
 		 I when integer(I) ->

@@ -14,6 +14,7 @@ help()
 	echo "       yaws -c file    -- set config file"
 	echo "       yaws -t         -- trace all traffic"
 	echo "       yaws -T         -- trace http traffic"
+	echo "       yaws -v         -- print version"
 	echo ""
 	echo ""
 	echo "ctl functions ... "
@@ -54,6 +55,9 @@ do
 		exit normal;;
 	   -s)
 	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl stop;
+		exit normal;;
+	   -v) 
+	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws printversion;
 		exit normal;;
 	    *)
 		help

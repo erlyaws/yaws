@@ -1,0 +1,57 @@
+.TH YAWS "1" "" "" "User Commands"
+.SH NAME
+yaws \- yet another webserver
+.SH SYNOPSIS
+.B yaws
+[\fIOPTIONS\fR] 
+.SH DESCRIPTION
+.\" Add any additional description here
+.PP
+Yaws is fast lightweight webserver. It can run as daemon or
+in interactive mode where it is possible to directly interact 
+with the webserver. Yaws is particularly good at generating
+dynamic content. See the user docs for more information on that topic.
+
+.TP
+\fB\-i\fR
+Interactive mode. This will start yaws in interactive mode with an erlang
+prompt. All error_logger messages will be written to the tty as well in this
+mode. Use this when developing yaws code.
+.TP
+\fB\-D\fR
+Daemon mode. This will start yaws as a daemon.
+.TP
+\fB\-d\fR
+Debug mode. This will produce some auxilliary error output for some
+error conditions.
+.TP
+\fB\-c file\fR
+Use a different configuration file than the default. The default configuration file
+when running as root is /etc/yaws.conf. When running as a non priviliged user, yaws
+will search for its configuration file in the following order. First in
+$HOME/yaws.conf, then in ./yaws.conf and finally in /etc/yaws.conf
+.TP
+\fB\-t\fR
+Traffic trace mode. All traffic will be written to a trace file called trace.traffic
+in the log directory.
+.TP
+\fB\-T\fR
+HTTP trace mode. All HTTP messages will be written to a trace file called trace.http
+in the log directory.
+.TP
+\fB\-h\fR
+HUP the daemon. This forces the daemon to reread the configuration file. It also makes
+the daemon epty all its internal content caches. Hence when updating the doc root,
+HUPing the daemon is the fastest way to see the content updates. 
+.TP
+\fB\-s\fR
+Stop the daemon.
+.TP
+\fB\-v\fR
+output version information and exit
+.SH AUTHOR
+Written by Claes Wikstrom
+.SH "SEE ALSO"
+.BR yaws.conf (5)
+.BR erl (1)
+

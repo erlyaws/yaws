@@ -607,3 +607,9 @@ oct_to_dig(O) -> oct_to_dig(O, 0).
 
 oct_to_dig([], D)    -> D;
 oct_to_dig([H|T], D) -> oct_to_dig(T, D*8 + H - $0).
+
+
+
+printversion() ->
+    io:format("Yaws ~s~n", [yaws_vsn:version()]),
+    init:stop().
