@@ -960,6 +960,8 @@ del_old_files([{_FileAtom, _Mtime1, Spec}]) ->
     lists:foreach(
       fun({mod, _, _, _,  Mod, _Func}) ->
 	      F="/tmp/yaws/" ++ yaws:to_list(Mod) ++ ".erl",
+	      code:purge(Mod),
+	      code:purge(Mod),
 	      file:delete(F);
 	 (_) ->
 	      ok
