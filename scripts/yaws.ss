@@ -68,16 +68,16 @@ do
 		shift;;
 	   -h)
 	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl hup;
-		exit normal;;
+		exit 0;;
 	   -s)
 	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl stop;
-		exit normal;;
+		exit 0;;
 	   -S)
 	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl status;
-		exit normal;;
+		exit 0;;
 	   -v) 
 	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws printversion;
-		exit normal;;
+		exit 0;;
            -sname)
 		sname=" -sname $1 "
 		shift;;
