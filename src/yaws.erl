@@ -525,11 +525,15 @@ parse_ip(Val) ->
 
 
 address(GConf, Sconf) ->
-     ?F("<address> ~s Server at ~s:~w </address>",
+%     ?F("<address> ~s Server at ~s:~w </address>",
+%       [
+%	GConf#gconf.yaws,
+%	yaws:fmt_ip(Sconf#sconf.listen),
+%	Sconf#sconf.port]).
+     ?F("<address> ~s Server at ~s </address>",
        [
 	GConf#gconf.yaws,
-	yaws:fmt_ip(Sconf#sconf.listen),
-	Sconf#sconf.port]).
+	Sconf#sconf.servername]).
 
 
 

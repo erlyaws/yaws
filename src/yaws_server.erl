@@ -1106,11 +1106,16 @@ redirect_scheme(SC) ->
 
 redirect_port(SC) ->
     case {SC#sconf.ssl, SC#sconf.port, SC#sconf.rport} of
-	{_,_,ForcePort} when integer(ForcePort) -> [$:|ForcePort];
-	{undefined, 80, _}                      -> "";
-	{undefined, Port, _}                    -> [$:|Port];
-	{_SSL, 443, _}                          -> "";
-	{_SSL, Port, _}                         -> [$:|Port]
+	{_,_,ForcePort} when integer(ForcePort) ->
+               [$:|integer_to_list(ForcePort)];
+	{undefined, 80, _}                      ->
+               "";
+	{undefined, Port, _}                    -> 
+               [$:|integer_to_list(Port)];
+	{_SSL, 443, _}                          ->
+               "";
+	{_SSL, Port, _}                         -> 
+               [$:|integer_to_list(Port)]
     end.    
 
 redirect_scheme_port(SC) ->
