@@ -3,6 +3,7 @@
 %%% Author  : Claes Wikstrom <klacke@hyber.org>
 %%% Purpose : 
 %%% Created :  5 Feb 2002 by Claes Wikstrom <klacke@hyber.org>
+%%% Modified: 13 Jan 2004 by Martin Bjorklund <mbj@bluetail.com>
 %%%----------------------------------------------------------------------
 
 -module(yaws_ls).
@@ -16,20 +17,26 @@
 
 -include_lib("kernel/include/file.hrl").
 
-
-
 list_directory(CliSock, List, DirName, Req, GC, SC) ->
+    {abs_path, Path} = Req#http_request.path,
+    {DirStr, Pos, Direction} = parse_query(Path),
     ?Debug("List=~p Dirname~p~n", [List, DirName]), 
-    L = lists:zf(
-	  fun(F) ->
-		  File = DirName ++ [$/|F],
-		  FI = file:read_file_info(File),
-		  file_entry(FI, DirName, F)
-	  end, [".." | List]),
-    Body = [ doc_head(element(2,Req#http_request.path)), % doc_head(DirName),  
-	     list_head(), 
+    [Up | L0] = lists:zf(
+		  fun(F) ->
+			  File = DirName ++ [$/|F],
+			  FI = file:read_file_info(File),
+			  file_entry(FI, DirName, F)
+		  end, [".." | List]),
+    L1 = lists:keysort(Pos, L0),
+    L2 = if Direction == normal -> L1;
+	    Direction == reverse -> lists:reverse(L1)
+	 end,
+    L = [Html || {_, _, _, Html} <- [Up | L2]],
+    Body = [ doc_head(DirStr),
+	     list_head(Direction), 
 	     L,
-	     "\n</pre><pre>",
+	     list_tail(),
+	     "\n<pre>",
 	     inline_readme(SC,DirName,List),
 	     "</pre>\n<hr>\n",
 	     yaws:address(GC, SC),
@@ -49,8 +56,26 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
 	    end
     end.
 
+parse_query(Path) ->
+    case string:tokens(Path, [$?]) of
+	[DirStr, [PosC, $=, DirC]] ->
+	    Pos = case PosC of
+		      $D -> 2; % date
+		      $S -> 3; % size
+		      _  -> 1  % name
+		  end,
+	    Dir = case DirC of
+		      $r -> reverse;
+		      _  -> normal
+		  end,
+	    {DirStr, Pos, Dir};
+	_ ->
+	    {Path, 1, normal}
+    end.
+    
 
-inline_readme(SC,DirName,L) ->
+
+inline_readme(_SC,DirName,L) ->
     F = fun("README", _Acc) ->
 		File = DirName ++ [$/ | "README"],
 		{ok,Bin} = file:read_file(File),
@@ -65,36 +90,56 @@ doc_head(DirName) ->
     ?F("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\"> \n"
        "<html> \n"
        "  <head> \n"
-       "    <title>Index of ~s </title> \n"
+       "    <title>Index of ~s</title> \n"
+       "    <style type=\"text/css\">\n"
+       "    img { border: 0; padding: 0 2px; vertical-align: text-bottom; }\n"
+       "    td  { font-family: monospace; padding: 2px 3px;  text-align: left"
+       "          vertical-align: bottom; white-space: pre; }\n"
+       "    td:first-child { text-align: left; padding: 2px 10px 2px 3px; }\n"
+       "    table { border: 0; }\n"
+%       "    a.symlink { font-style: italic; }\n"
+       "    </style>\n"
        "  </head> \n"
        "  <body>\n"
-       "    <h1>Index of ~s </h1>\n", [DirName, DirName]).
+       "    <h1>Index of ~s</h1>\n"
+       "    <hr/>\n",
+       [DirName, DirName]).
 
-list_head() ->
-    "    <pre><img SRC=\"/icons/blank.gif\" ALT=\"     \"> "
-    "<a HREF=\"?N=D\">Name</a>                   "
-    "<a HREF=\"?M=A\">Last modified</a>                 "
-    " <a HREF=\"?S=A\">Size</a>   "
-    "<a HREF=\"?D=A\">Description</a> \n"
-    "<hr> \n".
+list_head(Direction) ->
+    NextDirection = if Direction == normal  -> "r";
+		       Direction == reverse -> "n"
+		    end,
+    "<table>\n"
+    "<tr>\n"
+    "  <td><img src=\"/icons/blank.gif\"/><a href=\"?N="++NextDirection++
+	"\">Name</a></td>\n"
+    "  <td><a href=\"?D="++NextDirection++"\">Last Modified</a></td>\n"
+    "  <td><a href=\"?S="++NextDirection++"\">Size</a></td>\n"
+    "</tr>\n"
+    "<tr><td colspan=\"3\"><img src=\"/icons/blank.gif\"/></td></tr>\n".
 
+list_tail() ->
+    "</table>".
 
 file_entry({ok, FI}, _DirName, Name) ->
     ?Debug("file_entry(~p) ", [Name]),
     Ext = filename:extension(Name),
     {Gif, Alt} = list_gif(FI#file_info.type, Ext),
-    {Trim,TrimLen} = trim(Name, 22),
-    Entry = ?F("<img SRC=~p  ALT=~p> <a HREF=~p title=\"~w bytes\">~s</a> ~s~s ~8.s~n",
-	       ["/icons/" ++ Gif,
-	        Alt,
-		yaws_api:url_encode(Name), 
-	        FI#file_info.size,
-		Trim,
-		lists:duplicate(22 - TrimLen, $\s),
-		datestr(FI), 
-		sizestr(FI)]),
+    Entry = 
+	?F("<tr>\n"
+	   "<td><a href=~p title=\"~w bytes\"><img src=~p alt=~p/>~s</a></td>\n"
+	   "<td>~s</td>\n"
+	   "<td>~s</td>\n"
+	   "</tr>\n",
+	   [yaws_api:url_encode(Name),
+	    FI#file_info.size,
+	    "/icons/" ++ Gif,
+	    Alt,
+	    Name,
+	    datestr(FI), 
+	    sizestr(FI)]),
     ?Debug("Entry:~p", [Entry]),
-    {true, Entry};
+    {true, {Name, FI#file_info.mtime, FI#file_info.size, Entry}};
 file_entry(_Err, _, _Name) ->
     ?Debug("no entry for ~p: ~p", [_Name, _Err]),
     false.
