@@ -1,0 +1,116 @@
+
+<erl>
+
+out(A) -> 
+    {ok, B1} = file:read_file([A#arg.docroot, "/HEAD"]),
+    {ok, B2} = file:read_file([A#arg.docroot, "/TOPTAB"]),
+    {ok, [B1, B2]}.
+	    
+</erl>
+
+<h1>Generating Dynamic Content</h1>
+
+Yaws have verry nice support for generating dynamic content on the fly.
+We use embedded erlang code to generate the content. The Erlang code
+is separated from the HTML code by <pre><erl></pre> and <tt></erl></tt>
+markers. For example:
+
+<xmp>
+
+<html>
+<h1>Foobar</h1>
+
+<erl>
+
+out(Arg) ->
+   {ok, "Funky Shit"}.
+
+</erl>
+
+<h1>Baz</h1>
+</html>
+
+</xmp>
+
+
+
+Is a very small example where we have a HTML document with embedded 
+erlang code. A file which contains embedded erlang code must have the file 
+suffix <tt>.yaws</tt>
+<br>
+
+The embedded erlang code can return the following values:
+<ul>
+<li><tt>{ok, DeepCharOrBinaryList}</tt> which will make the value of
+<tt>DeepCharOrBinaryList</tt> be substituted into the HTML document.
+<li><tt>close</tt> which will make terminate the client connection in
+an uncontrolled way.
+</ul> 
+
+<h2>The argument</h2>
+The <tt>/out/1</tt> function is supplied with a record argument. The 
+definition of that record is automatically included in the embedded erlang code
+and the record definition is:
+
+
+<xmp>
+-record(arg, {
+	  clisock,        %% the socket leading to the peer client
+	  method,         %% HTTP method, GET, POST ...
+	  urlpath,        %% path in the request
+	  version,        %% HTTP client version {1,0} or {1,1} ....
+	  accept,         %% HTTP Accept header
+	  host,           %% HTTP Host header in client req
+	  referer,        %% HTTP Referer header
+	  user_agent,     %% HTTP User-Agent header
+	  cookie,         %% HTTP Cookie: header
+	  clidata,        %% The client data (as a binary in HTTP requests)
+                          %% Typically POST requests
+	  docroot
+
+	 }).              
+
+		
+</xmp>
+
+
+
+<h2>Generating headers</h2>
+The very first chunk of erlang code in the HTML document can optionally
+have either of two other functions except <tt>out/1</tt> defined.
+We have:
+<ul>
+<li><tt>some_headers(Arg)</tt> which can be used to generate optional
+headers such as Set-Cookie.
+<li><tt>all_headers(Arg)</tt> whhich can be used to generate both the
+HTTP status line as well as all the HTTP headers. This can be used to 
+do for example HTTP redirections.
+
+</ul>
+
+The usage of these functions is better 
+described in the <a href="examples.yaws">Examples</a> section.
+
+
+
+<h2>The yaws_api module</h2>
+
+The yaws_api module contains a number of utility functions which
+is available to the erlang code embedded in the HTML documents.
+Naturally, all the normal functions in the erlang libraries are available,
+but the yaws_api module, contains functions that ease the development of
+code that generates dynamic HTML content.
+We have:
+
+<br>
+
+<ul>
+<li> <tt>parse_post_dataBin, Spec)</tt> <br>
+When data is POSTed to a yaws page, this function can be used to parse the 
+data in a convenient way. Data which is posted from a form is naturally 
+arranged as a list of key,value pairs. 
+</ul>
+
+
+
+</html>

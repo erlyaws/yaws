@@ -1,0 +1,10 @@
+
+# conf for yaws
+
+# YAWSDIR = /usr/local/lib/yaws
+
+port = 80
+listen = 127.0.0.1
+logdir = /var/log/yaws
+docroot = $(YAWSDIR)/www
+

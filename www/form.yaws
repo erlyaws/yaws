@@ -1,0 +1,40 @@
+
+
+<html>
+<head>
+<title>This is a practice form.</title>
+</head>
+
+<body>
+
+<form METHOD=POST
+	ACTION="http://localhost:8080/post.yaws"
+
+Please help us to improve the World Wide Web by filling in 
+the following questionaire:
+
+   <p>Your organization? <input NAME="org" TYPE=text SIZE="48">
+
+<p>Commercial? <input NAME="commerce" TYPE=checkbox>
+
+How many users? <input NAME="users" TYPE=int>
+
+<p>Which browsers do you use?
+
+   <ol>
+<li>Cello <input NAME="browsers" TYPE=checkbox VALUE="cello">
+<li>Lynx <input NAME="browsers" TYPE=checkbox VALUE="lynx">
+<li>X Mosaic <input NAME="browsers" TYPE=checkbox VALUE="mosaic">
+<li>Others <input NAME="others" SIZE=40>q
+</ol>
+
+A contact point for your site: <input NAME="contact" SIZE="42">
+
+<p>Many thanks on behalf of the WWW central support team.
+
+    <p><input TYPE=submit> <input TYPE=reset>
+
+</form>
+</body>
+</html>
+

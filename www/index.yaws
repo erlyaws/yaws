@@ -1,0 +1,41 @@
+
+
+
+<erl>
+
+out(A) -> 
+    {ok, B1} = file:read_file([A#arg.docroot, "/HEAD"]),
+    {ok, B2} = file:read_file([A#arg.docroot, "/TOPTAB"]),
+    {ok,     [B1, B2]}.	     
+</erl>
+
+
+<H2>Yaws - Yet Another Webserver</H2>
+
+This is the root documentation for the Yaws webserver.  Yaws is a HTTP 1.1
+webserver currently under rapid development. 
+The aim is to support two separate modes
+of operation.
+<br>
+<ul>
+<li> Standalone mode where yaws runs as a regular webserver daemon.
+<li> Embedded mode wher Yaws runs as an embedded webserver in an
+another erlang application. This mode is ideal when we want to build a web UI
+to control an erlang application
+</ul>
+
+<br>
+Yaws is entirely written in <a href="http:www.erlang.org">Erlang</a>, 
+futhermore it is a multithreaded webserver where one Erlang light weight 
+processis used to handle each client.
+<br>
+
+Yaws has excellent capabilies to generate dynamic content. Erlang code
+can be embedded into the HTML code in manner similar 
+to <a href="http://www.php.net">php</a>. As matter of fact, the 
+ad-hockery of php was one of major reasons I started the Yaws project.
+
+
+  <td valign=top><IMG SRC="yaws_pb.gif" >
+
+</html>

@@ -1,0 +1,24 @@
+
+<erl>
+
+out(A) -> 
+    {ok, B1} = file:read_file([A#arg.docroot, "/HEAD"]),
+    {ok, B2} = file:read_file([A#arg.docroot, "/TOPTAB"]),
+    {ok, [B1, B2]}.
+	    
+</erl>
+
+<h2>Motivation</h2>
+
+I wrote Yaws for the
+simple reason that I needed to build a website for the first time in my life
+and I didn't realize the amount of horrible ad-hockery which currently
+needs to be applied in order to build a website. In particular, I thought
+that <a href="http://www.php.net"> php </a> was designed in such a horrible 
+way that I simply refused to use it. 
+
+
+</html>
+
+
+

@@ -1,0 +1,62 @@
+
+<erl>
+
+out(A) -> 
+    {ok, B1} = file:read_file([A#arg.docroot, "/HEAD"]),
+    {ok, B2} = file:read_file([A#arg.docroot, "/TOPTAB"]),
+    {ok, [B1, B2]}.
+	    
+</erl>
+
+
+<H2>Configuring Yaws</h2>
+
+Web server configuration can be supplied to yaws 
+in either of two ways depending
+on wheter we run yaws as a standalone daemon or if we run yaws as an
+embedded application inside another Erlang program.
+
+<br>
+This will change once we implement virtual hosting ....
+
+<br>
+
+<h3>Daemon mode</h3>
+
+The default location where yaws look for it's configuration file is
+<tt>/etc/yaws.conf</tt>.
+
+All fields in yaws.conf have reasonable default values, so just
+running yaws with no config file at all, will still make a 
+webserver run on localhost:80  
+
+<h3>Embedded mode</h3>
+ ....
+
+
+
+
+<h2>Building yaws</h2>
+
+Before even trying to install yaws, we must have an installed 
+erlang system on the host. Get that at 
+<a href="http:www.erlang.org">www.erlang.org</a>.
+
+<br>
+At the top level in the yaws source distribuition, there is no 
+configure script, we don't need that. (Well almost not)
+<br>
+
+<ul>
+<li><tt> make </tt> will build and locally install a yaws web server. After
+a local install, the command ./bin/yaws, will start a daemon which listens
+to port 8000 on localhost. The document root will be set to the yaws 
+documentation.
+
+<li> <tt> make install </tt> will install a yaws system in /usr/local.
+That system will have its configuration in /etc/yaws.conf, log files
+in /var/logs and docroot in /var/yaws. If /var/yaws doesn't exist, the yaws
+documentaion will also be copied there.
+
+
+</ul>

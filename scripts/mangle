@@ -1,0 +1,8 @@
+#!/bin/sh
+
+d=$1
+e=$2
+t=$3
+
+sed -e "s;%yawsdir%;$d;" -e "s;%erl%;$e;" yaws.ss > $t
+chmod +x $3

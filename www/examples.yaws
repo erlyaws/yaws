@@ -1,0 +1,18 @@
+<erl>
+out(A) -> file:read_file([A#arg.docroot, "/EXHEAD"]).
+</erl>
+
+
+<h1>Yaws Examples</h1>
+<br>
+Here we try to show the power of yaws by means of a series of examples.
+Many of the pages inside this documentation, use embedded erlang code
+merely as a means to include files into the HTML documentation. Yaws can 
+be used to do much more which is shown by the examples.
+
+<br>
+It can be used to generate any dynamic content, and also, combining Yaws with
+the Erlang DBMS Mnesia, we can easily connect persitant data to a Cookie.
+
+
+</html>
