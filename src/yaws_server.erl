@@ -614,6 +614,19 @@ pick_sconf(GS, H, Group) ->
 
 pick_host(_GC, Host, [H|_T], _Group) when H#sconf.servername == Host ->
     H;
+pick_host(GC, Host, [H|T], Group) when integer(H#sconf.rport) ->
+    % check if Host matches servername : rport
+    Name = servername_sans_port(H#sconf.servername),
+    ServerName =
+	case H#sconf.rport of
+	    80  -> Name;
+	    443 -> Name;
+	    _   -> Name++[$:|integer_to_list(H#sconf.rport)]
+	end,
+    if
+	Host == ServerName ->  H;
+	Host /= ServerName -> pick_host(GC, Host, T, Group)
+    end;
 pick_host(GC, Host, [_|T], Group) ->
     pick_host(GC, Host, T, Group);
 pick_host(GC, Host, [], Group) ->
