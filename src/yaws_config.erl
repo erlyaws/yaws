@@ -219,7 +219,6 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
     case toks(Chars) of
 	[] ->
 	    fload(FD, globals, GC, C, Cs, Lno+1, Next);
-
 	["trace", '=', Bstr] ->
 	    case Bstr of
 		"traffic" ->

@@ -618,6 +618,10 @@ acceptor0(GS, Top) ->
 		    Top ! {self(), done_client, Int};
 		{'EXIT', normal} ->
 		    exit(normal);
+		{'EXIT', {badarg, [{erlang, apply, _} |_]}} ->
+		    %% hopeless cracker request
+		    %% don't crash log
+		    exit(normal);
 		{'EXIT', Reason} ->
 		    error_logger:error_msg("Yaws process died: ~p~n", [Reason]),
 		    exit(normal)

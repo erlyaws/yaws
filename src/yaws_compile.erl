@@ -39,7 +39,6 @@
 	  outfd}).
 
 
-
 comp_opts(GC) ->
     ?Debug("I=~p~n", [GC#gconf.include_dir]),
     I = lists:map(fun(Dir) -> {i, Dir} end, GC#gconf.include_dir),
@@ -49,12 +48,12 @@ comp_opts(GC) ->
 
 
 compile_file(File, GC, SC) ->
-    case file:open(File, [read]) of
+    case file:open(File, [read, raw]) of
 	{ok, Fd} ->
 	    Spec = compile_file(#comp{infile = File, 
 				      infd = Fd, gc = GC, sc = SC}, 
 				1,   
-				io:get_line(Fd, ''), init, 0, [], 0),
+				get_line(Fd), init, 0, [], 0),
 	    Spec;
 	_Err ->
 	    yaws:elog("can't open ~s~n", [File]),
@@ -79,7 +78,7 @@ compile_file(C, LineNo,  Chars, init, NumChars, Ack, Errs) ->
 	    %% first chunk is html, keep whitespace
 	    Fd=C#comp.infd,
 	    file:position(Fd, bof),
-	    compile_file(C,1,io:get_line(Fd,''),html,0,[], Errs)
+	    compile_file(C,1,line(C),html,0,[], Errs)
     end;
 
 compile_file(C, LineNo,  Chars = "<erl>" ++ _Tail, html,  NumChars, Ack,Es) ->
@@ -192,7 +191,7 @@ check_exported(C, LineNo, NumChars, Mod) ->
     end.
 
 line(C) ->
-    io:get_line(C#comp.infd, '').
+    get_line(C#comp.infd).
 
 is_exported(Fun, A, Mod) ->
     case (catch Mod:module_info()) of
@@ -299,8 +298,53 @@ get_compiler_data(P, Ack) ->
 
 					    
 
+%% This code is so that we get the \r in the line
+%% when we're parsing msdos files.
 
-	    
+get_line_init(Fd) ->
+    case file:read(Fd, 1024) of
+	{ok, Chars} ->
+	    put(file_data, Chars),
+	    get_line(Fd);
+	eof ->
+	    eof
+    end.
+
+file_open(Fname) ->
+    file:open(Fname, [read, raw]).
+get_line(Fd) ->
+    case get (file_data) of
+	undefined ->
+	    get_line_init(Fd);
+	[] ->
+	    get_line_init(Fd);
+	Chars ->
+	    case get_line_from_chars(Chars, []) of
+		{ok, Line, Tail} ->
+		    put (file_data, Tail),
+		    Line;
+		need_more ->
+		    case file:read(Fd, 1024) of
+			eof ->
+			    erase(file_data),
+			    Chars;
+			{ok, Chars2} ->
+			    put(file_data, Chars ++ Chars2),
+			    get_line(Fd)
+		    end
+	    end
+    end.
+
+get_line_from_chars([$\r, $\n | Tail], Line) ->
+    {ok, lists:reverse([$\n, $\r|Line]), Tail};
+
+get_line_from_chars([$\n | Tail], Line) ->
+    {ok, lists:reverse([$\n|Line]), Tail};
+
+get_line_from_chars([], _) ->
+    need_more;
+get_line_from_chars([H|T], Line) ->
+    get_line_from_chars(T, [H|Line]).
 
 
 
