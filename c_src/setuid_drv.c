@@ -17,9 +17,6 @@
 #include <pwd.h>
 
 #include "erl_driver.h"
-#ifndef ERL_DRV_NIL
-#include "erl_driver_compat.h"
-#endif
 
 
 
