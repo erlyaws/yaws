@@ -1,24 +1,21 @@
-This is a straightforward port of Joe Armstongs Wiki code (14.0) with
-some minor extensions for having file attached to a page.
-
-The pico-11.0 http server has been replaced 
-
+This Wiki was originally based on Joe Armstrongs wiki implementation. 
+It has been ported to yaws and hacked quite a bit in general.
 
 To Install
 ----------
 
-Edit include.mk then 
+Edit include.mk (change the WIKIINSTALLDIR and EBININSTALLDIR) then 
 
 make
 make install
 
 
 Edit your /etc/yaws.conf and include /var/yaws/ebin in the
-ebin path
+ebin path ($EBININSTALLDIR), for example
 	
     ebin_dir = /var/yaws/ebin
 
 It is possible to have several Wiki instances on the same server. 
-Just install the www/* files in the directory where you want a 
+Just install the wiki/* files in the directory where you want a 
 Wiki instance.
 

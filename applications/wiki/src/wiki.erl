@@ -62,7 +62,8 @@ showPage(Params, Root, Prefix) ->
 					    [top_header(Page),DeepStr,
 					     DeepFiles]);
 		_ ->
-		    createNewPage([{node, Page}], Root, Prefix)
+		    NewSid = session_new(initial_page_content()),
+		    redirect_create(Page, NewSid, Prefix)
 	    end
     end.
 
@@ -103,13 +104,28 @@ importFiles(Page, Root, Prefix) ->
 	    file:write_file(WobFile, B),
 	    redirect({node, Page}, Prefix);
 	_ ->
-	    createNewPage([{node, Page}], Root, Prefix)
+	    NewSid = session_new(initial_page_content()),
+	    redirect_create(Page, NewSid, Prefix)
     end.
 
 
 createNewPage(Params, Root, Prefix) ->
     Page = getopt(node, Params),
+    Sid  = getopt(sid, Params),
 
+
+    if 
+	Sid /= undefined ->
+	    {Txt,Passwd,Email} =
+		session_get_all(Sid, initial_page_content(), "", ""),
+	    createNewPage1(Page, Sid, Prefix, Txt, Passwd, Email);
+	Sid == undefined ->
+	    NewSid = session_new(initial_page_content()),
+	    redirect_create(Page, NewSid, Prefix)
+    end.
+
+createNewPage1(Page, Sid, Prefix, Content, Passwd, Email) ->
+    Txt = quote_lt(Content),
     wiki_templates:template(
       "New Page",bgcolor("white"),"",
       [h1(Page),
@@ -121,25 +137,26 @@ createNewPage(Params, Root, Prefix) ->
 	 "then the system can mail you back the password of the page if "
 	 "you forget it."),
        p("Click on 'Preview' when you are ready to store the page."),
-       form("POST", "previewNewPage.yaws",
+       form("POST", "previewNewPage.yaws?sid="++str2urlencoded(Sid),
 	    [input("submit", "review", "Preview"),
 	     input("hidden", "node", Page),
 	     hr(),
 	     "<table>\n"
 	     "<tr> <td align=left>Password: </td>",
-	     "<td align=left> ", password_entry("password1", 8),"</td></tr>\n",
+	     "<td align=left> ", password_entry("password1", 8, Passwd),
+	     "</td></tr>\n",
 	     "<tr> <td align=left>Reconfirm password: </td>",
-	     "<td align=left> ",password_entry("password2", 8),"</td></tr>\n",
+	     "<td align=left> ",password_entry("password2", 8, Passwd),
+	     "</td></tr>\n",
 	     "<tr> <td align=left>Email: </td>",
 	     "<td align=left> ",
-	     input("text","email",""),
+	     input("text","email",Email),
 	     "</td></tr>\n",
 	     "</table>\n",
 	     p(),
-	     textarea("text", 25, 72,initial_page_content()),
+	     textarea("text", 25, 72,Txt),
 	     hr()
 	    ])]).
-
 
 
 storePage(Params, Root, Prefix) ->
@@ -161,7 +178,7 @@ storePage(Params, Root, Prefix) ->
 			    Txt0 = getopt(txt, Params),
 			    Txt = zap_cr(urlencoded2str(Txt0)),
 			    session_set_text(Sid, Txt),
-			    redirect_edit(Page, Sid, Prefix);
+			    redirect_edit(Page, Sid, Password, Prefix);
 			true ->
 			    storePage1(Params, Root, Prefix)
 		    end;
@@ -205,8 +222,12 @@ storeNewPage(Params, Root, Prefix) ->
     Time = {date(),time()},
     Who = "unknown",
     B = term_to_binary({wik002,Password,Email,Time,Who,Txt,[],[]}),
-    file:write_file(File, B),
-    redirect({node, Page}, Prefix).
+    case file:write_file(File, B) of
+	ok ->redirect({node, Page}, Prefix);
+	{error, Reason} ->
+	    show({failed_to_create_page,file:format_error(Reason)})
+    end.
+
 
 storeTagged(Params, Root, Prefix) ->
 
@@ -716,9 +737,16 @@ showHistory(Params, Root, Prefix) ->
 redirect({node, Page}, Prefix) ->
     {redirect_local, Prefix++"showPage.yaws?node="++Page}.
 
-redirect_edit(Page, Sid, Prefix) ->
+redirect_edit(Page, Sid, Password, Prefix) ->
     UrlSid = str2urlencoded(Sid),
-    {redirect_local, Prefix++"editPage.yaws?node="++Page++"&sid="++UrlSid}.
+    UrlPW = str2urlencoded(Password),
+    {redirect_local, Prefix++"editPage.yaws?node="++Page++
+     "&sid="++UrlSid++"&password="++UrlPW}.
+
+redirect_create(Page, Sid, Prefix) ->
+    UrlSid = str2urlencoded(Sid),
+    {redirect_local, Prefix++"createNewPage.yaws?node="++Page++
+     "&sid="++UrlSid}.    
 
 mk_history_links([{C,Time,Who}|T], Page, N) ->
     [["<li>",i2s(N)," modified on <a href='showOldPage.yaws?node=",Page,
@@ -953,6 +981,9 @@ editPage(Params, Root, Prefix) ->
 %% Session manager
 %%
 
+-record(sid, {text="", password="", email=""}).
+
+
 session_server_ensure_started() ->
     case whereis(wiki_session_manager) of
 	undefined ->
@@ -980,42 +1011,58 @@ session_manager(N,Sessions) ->
 		_  -> do_nothing
 	    end,
 	    session_manager(N,NewS);
-	{new_sid, From, Txt} ->
+	{new_sid, From, Txt, Passwd, Email} ->
 	    Sid = integer_to_list(N),
-	    Pid = spawn_link(?MODULE, session_proc, [Sid,Txt]),
+	    Pid = spawn_link(?MODULE, session_proc,
+			     [Sid,#sid{text=Txt,
+				       password=Passwd,
+				       email=Email}]),
 	    From ! {session_id, Sid},
 	    session_manager(N+1, [{Pid, Sid}|Sessions]);
-	{new_sid, Sid, From, Txt} ->
+	{new_sid, Sid, From, Txt, Passwd, Email} ->
 	    case lists:keysearch(Sid, 2, Sessions) of
 		{value, _} ->
 		    From ! {session_id, Sid};
 		_ ->
-		    Pid = spawn_link(?MODULE, session_proc, [Sid,Txt]),
+		    Pid = spawn_link(?MODULE, session_proc,
+				     [Sid,#sid{text=Txt,
+					       password=Passwd,
+					       email=Email}]),
 		    From ! {session_id, Sid},
 		    session_manager(N, [{Pid, Sid}|Sessions])
 	    end,
 	    session_manager(N, Sessions);
-	{to_sid, Sid, Msg} ->
+	{to_sid, From, Sid, Msg} ->
 	    case lists:keysearch(Sid, 2, Sessions) of
 		{value, {Pid, Sid}} ->
 		    Pid ! Msg;
-		_ -> do_nothing
+		_ ->
+		    From ! {unknown_sid, Sid}
 	    end,
 	    session_manager(N, Sessions);
 	Unknown ->
 	    session_manager(N, Sessions)
     end.
 				    
-session_proc(Sid,Txt) ->
+session_proc(Sid,State) ->
     receive
 	stop ->
 	    exit(done);
 	{set_text, From, NewTxt} ->
 	    From ! set,
-	    session_proc(Sid,NewTxt);
+	    session_proc(Sid,State#sid{text=NewTxt});
 	{get_text, From} ->
-	    From ! {text, Txt},
-	    session_proc(Sid,Txt)
+	    From ! {text, State#sid.text},
+	    session_proc(Sid,State);
+	{set_all, From, NewTxt, NewPW, NewEmail} ->
+	    From ! set,
+	    session_proc(Sid,State#sid{text=NewTxt,
+				       password=NewPW,
+				       email=NewEmail});
+	{get_all, From} ->
+	    From ! {all, State#sid.text,
+		    State#sid.password, State#sid.email},
+	    session_proc(Sid,State)
     after
 	3600000 ->   %% one hour
 	    exit(timeout)
@@ -1026,25 +1073,34 @@ to_sm(Msg) ->
     wiki_session_manager ! Msg.
 
 session_end(undefined) -> done;
-session_end(Sid) -> to_sm({to_sid, Sid, stop}).
+session_end(Sid) -> to_sm({to_sid, self(), Sid, stop}).
     
 session_new(Txt) ->
-    to_sm({new_sid, self(), Txt}),
+    session_new(Txt, "", "").
+
+session_new(Sid, Txt) ->
+    session_new(Sid, Txt, "", "").
+
+session_new(Txt, Passwd, Email) ->
+    to_sm({new_sid, self(), Txt,Passwd,Email}),
     receive
 	{session_id, Sid} -> Sid
     end.
-session_new(Sid, Txt) ->
-    to_sm({new_sid, Sid, self(), Txt}),
+session_new(Sid, Txt, Passwd, Email) ->
+    to_sm({new_sid, Sid, self(), Txt, Passwd, Email}),
     receive
 	{session_id, Sid} -> Sid
     end.
     
 session_get_text(undefined, OldTxt) -> OldTxt;
 session_get_text(Sid, OldTxt) ->
-    to_sm({to_sid, Sid, {get_text, self()}}),
+    to_sm({to_sid, self(), Sid, {get_text, self()}}),
     receive
 	{text, Txt} ->
-	    Txt
+	    Txt;
+	{unknown_sid, Sid} ->
+	    session_new(Sid, OldTxt),
+	    OldTxt
     after
 	1000 ->
 	    session_new(Sid, OldTxt),
@@ -1053,11 +1109,38 @@ session_get_text(Sid, OldTxt) ->
 
 session_set_text(undefined, _) -> done;
 session_set_text(Sid, Txt) ->
-    to_sm({to_sid,Sid, {set_text, self(), Txt}}),
+    to_sm({to_sid, self(), Sid, {set_text, self(), Txt}}),
     receive
 	set -> done
     after
 	1000 -> session_new(Sid, Txt)
+    end.
+
+session_get_all(undefined, Txt, Passwd, Email) -> {Txt,Passwd,Email};
+session_get_all(Sid, Txt, Passwd, Email) ->
+    to_sm({to_sid, self(), Sid, {get_all, self()}}),
+    receive
+	{all, OldTxt, OldPasswd, OldEmail} ->
+	    {OldTxt, OldPasswd, OldEmail};
+	{unknown_sid, Sid} ->
+	    session_new(Sid, Txt, Passwd, Email),
+	    {Txt, Passwd, Email}
+    after
+	1000 ->
+	    session_new(Sid, Txt, Passwd, Email),
+	    {Txt, Passwd, Email}
+    end.
+
+session_set_all(undefined, _,_,_) -> done;
+session_set_all(Sid, Txt, Passwd, Email) ->
+    to_sm({to_sid, self(), Sid, {set_all, self(), Txt, Passwd, Email}}),
+    receive
+	set -> done;
+	{unknown_sid, Sid} ->
+	    session_new(Sid, Txt, Passwd, Email)
+    after
+	1000 ->
+	    session_new(Sid, Txt, Passwd, Email)
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1074,7 +1157,7 @@ editPage(Page, Password, Root, Prefix, Sid) ->
 		    edit1(Page, Password, OldTxt, Sid);
 		true ->
 		    NewSid = session_new(TxtStr),
-		    redirect_edit(Page, NewSid, Prefix)
+		    redirect_edit(Page, NewSid, Password, Prefix)
 	    end;
 	_ ->
 	    show({no_such_page,Page})
@@ -1277,7 +1360,7 @@ previewPage1(Params, Root, Prefix) ->
 		    input("hidden", "password", Password),
 		    input("hidden", "txt", str2formencoded(Txt))]),
 	      p(),hr(),h1(Page), 
-	      wiki_to_html:format_wiki(Page, Wik, Root)]).
+	      wiki_to_html:format_wiki(Page, Wik, Root, preview)]).
 
 %% Preview Tagged
 %% Tagged stuff is inside comment and append regions
@@ -1325,11 +1408,14 @@ previewNewPage(Params, Root, Prefix) ->
     P2    = getopt(password2, Params),
     Email = getopt(email, Params),
     Txt0  = getopt(text, Params),
+    Sid   = getopt(sid, Params),
 
+    Txt = zap_cr(Txt0),
+    Wik = wiki_split:str2wiki(Txt),
+    session_set_text(Sid, Txt),
     if 
 	P1 == P2 ->
-	    Txt = zap_cr(Txt0),
-	    Wik = wiki_split:str2wiki(Txt),
+	    session_set_all(Sid,Txt,P1,Email),
 	    template("Preview", bgcolor("white"),"",
 		     [p("If this page is ok hit the \"Store\" button "
 			"otherwise return to the editing phase by clicking "
@@ -1496,6 +1582,10 @@ banner(File, Password) ->
 
 password_entry(Name, Size) ->
     ["<INPUT TYPE=password name=", Name,"  SIZE=", i2s(Size),">\n"].
+
+password_entry(Name, Size, Value) ->
+    ["<INPUT TYPE=password name=", Name,"  SIZE=", i2s(Size),
+     " Value=\"", Value, "\">\n"].
 
 input(Type="button", Name, OnClick) ->
     ["<INPUT TYPE=",Type,"  Value=\"",Name,"\" onClick=\"", OnClick, "\">\n"];

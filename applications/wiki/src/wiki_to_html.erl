@@ -5,7 +5,7 @@
 %%         : Johan Bevemyr, minor modifications (jb@bevemyr.com)
 %% Purpose : Convert wiki page tree to HTML
 
--export([format_wiki/3, format_link/2, format_wiki_files/4,
+-export([format_wiki/3,format_wiki/4, format_link/2, format_wiki_files/4,
 	format_wiki_files/5]).
 
 -include_lib("kernel/include/file.hrl").
@@ -17,20 +17,24 @@ format_wiki_files(Page, FileDir, Files, Root) ->
     format_wiki_files(Page, FileDir, Files, Root, "Attached files:").
 
 format_wiki_files(Page, FileDir, Files, Root, Heading) ->
-    LinkFun = fun(I) -> format_link(I, FileDir, Page, Root) end,
+    LinkFun = fun(I) -> format_link(I, FileDir, Page, Root, show) end,
     ("<hr><b><p>" ++ Heading ++ "</b><br>\n" 
      "<table cellspacing=10 width = \"100%\">\n" 
      ++ lists:map(LinkFun, lists:keysort(2,Files)) ++
      "</table></p>\n").
 
 format_wiki(Page, Wik, Root) ->
-    LinkFun = fun(I) -> format_link(I, Page, Root) end,
+    LinkFun = fun(I) -> format_link(I, Page, Root, show) end,
+    pp(Wik, LinkFun).
+
+format_wiki(Page, Wik, Root, preview) ->
+    LinkFun = fun(I) -> format_link(I, Page, Root, preview) end,
     pp(Wik, LinkFun).
 
 format_link(Page, Root) ->
-    format_link({wikiLink, Page}, [], Root).
+    format_link({wikiLink, Page}, [], Root, show).
 
-format_link({wikiLink, Page}, _, Root) ->
+format_link({wikiLink, Page}, _, Root, _Mode) ->
     FullName = Root ++ "/" ++ Page ++ ".wob",
     %% io:format("Testing:~p~n",[FullName]),
     case is_file(FullName) of
@@ -39,14 +43,16 @@ format_link({wikiLink, Page}, _, Root) ->
 	false ->
 	    [" ",Page,"<a href=\"createNewPage.yaws?node=",Page,"\">???</a>"]
     end;
-format_link({editTag, Tag}, Page, Root) ->
+format_link({editTag, Tag}, Page, Root, show) ->
     ["<a href=\"editTag.yaws?node=",Page,"&tag=",i2s(Tag),"\">",
-     "<img border=0 src='edit.gif'></a> "].
+     "<img border=0 src='edit.gif'></a> "];
+format_link({editTag, Tag}, Page, Root, preview) ->
+    ["<img border=0 src='edit.gif'>"].
 
-format_link({file, FileName, C}, FileDir, Page, Root) ->
-    format_link({file, FileName, "", C}, FileDir, Page, Root);
+format_link({file, FileName, C}, FileDir, Page, Root, Mode) ->
+    format_link({file, FileName, "", C}, FileDir, Page, Root, Mode);
 
-format_link({file, FileName, Description, _}, FileDir, Page, Root) ->
+format_link({file, FileName, Description, _}, FileDir, Page, Root,_) ->
     Size = get_filesize(filename:join([Root,FileDir,FileName])),
     ["<tr><td valign=top align=left><a href=\"",
      wiki:str2urlencoded(FileDir),

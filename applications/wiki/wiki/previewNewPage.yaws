@@ -4,7 +4,7 @@
 
 out(Arg) ->
     F = previewNewPage,
-    wiki_yaws:call_with_multi(wiki, F, Arg).
+    wiki_yaws:call_with_multiquery(wiki, F, Arg).
 
 </erl>
 </html>
