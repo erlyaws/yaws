@@ -1718,7 +1718,7 @@ changePassword(Params, Root, Prefix) ->
 	     "</td></tr>\n"
 	     "</table>",
 	     input("submit", "change", "Change"),
-	     script("document.f.password.focud();")
+	     script("document.f.password.focus();")
 	    ]
 	   )
       ], false).
