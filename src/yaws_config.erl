@@ -411,7 +411,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
 	["errormod_404", '=' , Module] ->
-	     C2 = C#sconf{errormod_404 = Module},
+	     C2 = C#sconf{errormod_404 = list_to_atom(Module)},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
 	["tilde_expand", '=', Bool] ->
