@@ -285,22 +285,47 @@ lowercase_string(String) ->
 
 %% integer_to_hex
 
-integer_to_hex(I) when I<10 ->
+
+integer_to_hex(I) ->
+    case catch erlang:integer_to_hex(I, 16) of
+	{'EXIT', _} ->
+	    old_integer_to_hex(I);
+	Int ->
+	    Int
+    end.
+
+
+old_integer_to_hex(I) when I<10 ->
     integer_to_list(I);
-integer_to_hex(I) when I<16 ->
+old_integer_to_hex(I) when I<16 ->
     [I-10+$A];
-integer_to_hex(I) when I>=16 ->
+old_integer_to_hex(I) when I>=16 ->
     N = trunc(I/16),
-    integer_to_hex(N) ++ integer_to_hex(I rem 16).
+    old_integer_to_hex(N) ++ old_integer_to_hex(I rem 16).
+
+
+
 
 %% hex_to_integer
 
+
 hex_to_integer(Hex) ->
+    case catch erlang:list_to_integer(Hex, 16) of
+	{'EXIT', _} ->
+	    old_hex_to_integer(Hex);
+	X ->
+	    X
+    end.
+
+
+old_hex_to_integer(Hex) ->
     DEHEX = fun (H) when H >= $a, H =< $f -> H - $a + 10;
 		(H) when H >= $A, H =< $F -> H - $A + 10;
 		(H) when H >= $0, H =< $9 -> H - $0
 	    end,
     lists:foldl(fun(E, Acc) -> Acc*16+DEHEX(E) end, 0, Hex).
+
+
 
 %% string_to_hex
 
