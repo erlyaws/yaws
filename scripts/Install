@@ -4,6 +4,7 @@ set -x
 
 prefix=$1
 erl=$2
+etcdir=$3
 
 . ../vsn.mk
 y=yaws-${YAWS_VSN}
