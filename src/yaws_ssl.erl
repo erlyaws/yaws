@@ -66,58 +66,104 @@ recv(CliSock, Num, GC, D) ->
 
 ssl_get_headers(CliSock, GC) ->
     case recv(CliSock, 1024, GC, []) of
+	{ok, []} ->
+	    exit(normal);
 	{ok, Data} ->
 	    ?Debug("GOT ssl data ~p~n", [Data]),
-	    case get_req(Data) of
-		{ok, R, Trail} ->
-		    case get_headers(CliSock, GC,  #headers{}, Trail) of
-			{ok, H, Trail2} ->
-			    {ok, R, H, list_to_binary(Trail2)};
-			Err ->
-			    Err
-		    end;
-		Err ->
-		    Err
+	    {R, Trail} = get_req(Data),
+	    ?Debug("Parsed request ~p~n", [R]),
+            case R of
+		bad_request ->
+		    {#http_request{method=bad_request, version={0,9}},
+		     #headers{}, <<>>};
+		_ ->
+		    {H,Trail2} = get_headers(CliSock, GC,  #headers{}, Trail),
+		    {R, H, list_to_binary(Trail2)}
 	    end;
 	_Err ->
 	    ?Debug("cli recv ret ~p~n", [_Err]),
-	    done
+	    exit(normal)
     end.
 
+get_req("\r\n\r\n" ++ _) ->
+    bad_request;
+get_req("\r\n" ++ Data) ->
+    get_req(Data);
+get_req(Data) ->
+    {FirstLine, Trail} = lists:splitwith(fun not_eol/1, Data),
+    R = parse_req(FirstLine),
+    {R, Trail}.
+	    
 
-get_req("GET " ++ Tail) ->
-    get_req(skip_space(Tail), #http_request{method = 'GET'});
-
-get_req("POST " ++ Tail) ->
-    get_req(skip_space(Tail), #http_request{method = 'POST'});
-
-get_req("HEAD " ++ Tail) ->
-    get_req(skip_space(Tail), #http_request{method = 'HEAD'});
-
-get_req("TRACE " ++ Tail) ->
-    get_req(skip_space(Tail), #http_request{method = 'TRACE'});
-
-get_req("OPTIONS " ++ Tail) ->
-    get_req(skip_space(Tail), #http_request{method = 'OPTIONS'});
-
-get_req(_) ->
-    done.
+not_eol($\r)->
+    false;
+not_eol($\n) ->
+    false;
+not_eol(_) ->
+    true.
 
 
-get_req(Line, R) ->
-    ?Debug("Line = ~p~n", [Line]),
-    {[Url, Vers], Trail} = spacesplit(Line, 2,  [], []),
-    R2 = R#http_request{path = {abs_path, Url},
-			version = parse_version(Vers)},
-    {ok, R2, Trail}.
+get_word(Line)->
+    {Word, T} = lists:splitwith(fun(X)-> X /= $\  end, Line),
+    {Word, lists:dropwhile(fun(X) -> X == $\  end, T)}.
 
 
+parse_req(Line) ->
+    {MethodStr, L1} = get_word(Line),
+    ?Debug("Method: ~p~n", [MethodStr]),
+    case L1 of
+	[] ->
+	    bad_request;
+	_ ->
+	    {URI, L2} = get_word(L1),
+	    {VersionStr, L3} = get_word(L2),
+	    ?Debug("URI: ~p~nVersion: ~p~nL3: ~p~n",
+		[URI, VersionStr, L3]),
+	    case L3 of
+		[] ->
+		    R = #http_request{method=case MethodStr of
+						 "GET" -> 'GET';
+						 "POST" -> 'POST';
+						 "HEAD" -> 'HEAD';
+						 "OPTIONS" -> 'OPTIONS';
+						 "TRACE" -> 'TRACE';
+						 "PUT" -> 'PUT';
+						 "DELETE" -> 'DELETE';
+						 S -> S
+					     end,
+				      path = case URI of
+						 "*" ->
+						% Is this correct?
+						     "*";
+						 P ->
+						% FIXME: Handle
+						% absolute URIs
+						     {abs_path, P}
+					     end
+				     },
+		    case VersionStr of
+			[] -> R#http_request{version={0,9}};
+			"HTTP/1.0" ->
+			    R#http_request{version={1,0}};
+			"HTTP/1.1" ->
+			    R#http_request{version={1,1}};
+			_ ->
+			    bad_request
+		    end;
+		_ ->
+		    bad_request
+	    end
+    end.
+			    
+					
+				       
+				    
 get_headers(CliSock, GC, H, Tail) ->
     case yaws_api:get_line(Tail) of
 	{line, Line, Tail2} ->
 	    get_headers(CliSock, GC, parse_line(Line, H), Tail2);
 	{lastline, Line, Tail2} ->
-	    {ok, parse_line(Line, H), Tail2}
+	    {parse_line(Line, H), Tail2}
     end.
 
 
@@ -182,14 +228,6 @@ space_strip([H|T], Mode) ->
 space_strip([], _) ->
     [].
 
-
-
-
-
-parse_version("HTTP/1.1") ->
-    {1,1};
-parse_version("HTTP/1.0") ->
-    {1,0}.
 
 
 spacesplit(Line, 0, Ack, _Cur) ->

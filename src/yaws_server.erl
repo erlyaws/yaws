@@ -633,11 +633,6 @@ acceptor0(GS, Top) ->
 		    Top ! {self(), done_client, Int};
 		{'EXIT', normal} ->
 		    exit(normal);
-		{'EXIT', {badarg, [{erlang, apply, _} |_]}} ->
-		    %% hopeless cracker request
-		    %% don't crash log
-		    exit(normal);
-		    %% Should we send 400 instead?
 		{'EXIT', Reason} ->
 		    error_logger:error_msg("Yaws process died: ~p~n", [Reason]),
 		    exit(normal)
@@ -659,78 +654,56 @@ acceptor0(GS, Top) ->
 %%% Internal functions
 %%%----------------------------------------------------------------------
 
-aloop(CliSock, GS, Num) when GS#gs.ssl == nossl ->
+aloop(CliSock, GS, Num) ->
+    SSL = GS#gs.ssl,
     ?TC([{record, GS, gs}]),
-    case http_get_headers(CliSock, GS#gs.gconf) of
+    {Req, H} = http_get_headers(CliSock, GS#gs.gconf, SSL),
+    SC = pick_sconf(GS#gs.gconf, H, GS#gs.group, SSL),
+    ?Debug("SC: ~p", [?format_record(SC, sconf)]),
+    ?TC([{record, SC, sconf}]),
+    ?Debug("Headers = ~p~n", [?format_record(H, headers)]),
+    ?Debug("Request = ~p~n", [?format_record(Req, http_request)]),
+    IP = case SC#sconf.access_log of
+	     true ->
+		 {ok, {Ip, _Port}} = peername(CliSock, SSL),
+		 Ip;
+	     _ ->
+		 undefined
+	 end,
+    put(outh, #outh{}),
+    Res = case Req#http_request.method of
+	      F when atom(F) -> 
+		  apply(yaws_server, F, 
+			[CliSock, GS#gs.gconf, SC, Req, H]);
+	      L when list(L) ->
+		  handle_extension_method(L, CliSock, 
+					  GS#gs.gconf, SC, Req, H)
+	  end,
+    maybe_access_log(IP, SC, Req, H),
+    case Res of
+	continue ->
+	    aloop(CliSock, GS, Num+1);
 	done ->
-	    {ok, Num};
-	{Req, H} ->
-	    SC = pick_sconf(GS#gs.gconf, H, GS#gs.group),
-	    ?Debug("SC: ~p", [?format_record(SC, sconf)]),
-	    ?TC([{record, SC, sconf}]),
-	    ?Debug("Headers = ~p~n", [?format_record(H, headers)]),
-	    ?Debug("Request = ~p~n", [?format_record(Req, http_request)]),
-	    IP = case SC#sconf.access_log of
-		     true ->
-			 {ok, {Ip, _Port}} = inet:peername(CliSock),
-			 Ip;
-		     _ ->
-			 undefined
-		 end,
+	    {ok, Num+1};
+	{page, Page} ->
 	    put(outh, #outh{}),
-	    Res = apply(yaws_server, Req#http_request.method, 
-			[CliSock, GS#gs.gconf, SC, Req, H]),
-	    maybe_access_log(IP, SC, Req, H),
-	    case Res of
-		continue ->
-		    aloop(CliSock, GS, Num+1);
-		done ->
-		    {ok, Num+1};
-		{page, Page} ->
-		    put(outh, #outh{}),
-		    apply(yaws_server, Req#http_request.method, 
-			  [CliSock, GS#gs.gconf, SC#sconf{appmods=[]}, 
-			   Req#http_request{path = {abs_path, Page}}, H])
-	    end
-    end;
-
-
-
-aloop(CliSock, GS, Num) when GS#gs.ssl == ssl ->
-    ?TC([{record, GS, gs}]),
-    case yaws_ssl:ssl_get_headers(CliSock, GS#gs.gconf) of
-	done ->
-	    {ok, Num};
-	{ok, Req, H, Trail} ->
-	    put(ssltrail, Trail),  %% hack hack hack
-	    SC = hd(GS#gs.group),
-	    IP = case SC#sconf.access_log of
-		     true ->
-			 {ok, {Ip, _Port}} = ssl:peername(CliSock),
-			 Ip;
-		     _ ->
-			 undefined
-		 end,
-	    put(outh, #outh{}),
-	    Res = apply(yaws_server, Req#http_request.method, 
-			[CliSock, GS#gs.gconf, SC, Req, H]),
-	    maybe_access_log(IP, SC, Req, H),
-	    case Res of
-		continue ->
-		    aloop(CliSock, GS, Num+1);
-		done ->
-		    {ok, Num+1};
-		{page, Page} ->
-		    put(outh, #outh{}),
-		    apply(yaws_server, Req#http_request.method, 
-			  [CliSock, GS#gs.gconf, SC#sconf{appmods = []}, 
-			   Req#http_request{path = {abs_path, Page}}, H])
-	    end
+	    apply(yaws_server, Req#http_request.method, 
+		  [CliSock, GS#gs.gconf, SC#sconf{appmods=[]}, 
+		   Req#http_request{path = {abs_path, Page}}, H])
     end.
 
 
+peername(CliSock, ssl) ->
+    ssl:peername(CliSock);
+peername(CliSock, nossl) ->
+    inet:peername(CliSock).
 
-pick_sconf(GS, H, Group) ->
+
+
+pick_sconf(GS, H, Group, ssl) ->
+    hd(Group);
+
+pick_sconf(GS, H, Group, nossl) ->
     case H#headers.host of
 	undefined ->
 	    hd(Group);
@@ -758,35 +731,35 @@ inet_peername(Sock, SC) ->
 
 maybe_access_log(Ip, SC, Req, H) ->
     ?TC([{record, SC, sconf}]),
-    Status = case yaws:outh_get_status_code() of
-		 undefined -> "-";
-		 I -> integer_to_list(I)
-	     end,
-    Len = case yaws:outh_get_contlen() of
-	      undefined ->
-		  case yaws:outh_get_act_contlen() of
-		      undefined -> "-";
-		      Actlen -> integer_to_list(Actlen)
-		  end;
-	      I2 -> integer_to_list(I2)
-	  end,
-    Ver = case Req#http_request.version of
-	      {1,0} ->
-		  "HTTP/1.0";
-	      {1,1} ->
-		  "HTTP/1.1";
-	      {0,9} ->
-		  "HTTP/0.9" 
-	  end,
     case SC#sconf.access_log of
 	true ->
+	    Status = case yaws:outh_get_status_code() of
+			 undefined -> "-";
+			 I -> integer_to_list(I)
+		     end,
+	    Len = case yaws:outh_get_contlen() of
+		      undefined ->
+			  case yaws:outh_get_act_contlen() of
+			      undefined -> "-";
+			      Actlen -> integer_to_list(Actlen)
+			  end;
+		      I2 -> integer_to_list(I2)
+		  end,
+	    Ver = case Req#http_request.version of
+		      {1,0} ->
+			  "HTTP/1.0";
+		      {1,1} ->
+			  "HTTP/1.1";
+		      {0,9} ->
+			  "HTTP/0.9" 
+		  end,
 	    Path = safe_decode_path(Req#http_request.path),
-	    Meth = atom_to_list(Req#http_request.method),
+	    Meth = yaws:to_list(Req#http_request.method),
 	    Referrer = optional_header(H#headers.referer),
 	    UserAgent = optional_header(H#headers.user_agent),
 	    yaws_log:accesslog(SC#sconf.servername, Ip, 
 			       [Meth, $\s, Path, $\s, Ver], 
-			       Status, Len, Referrer, UserAgent);
+			       Status, Len, Referrer, UserAgent);	
 	false ->
 	    ignore
     end.
@@ -896,12 +869,28 @@ strip(Data) ->
 	 
 
 
+http_get_headers(CliSock, GC, SSL) ->
+    case SSL of
+	ssl ->
+	    {Req, H, Trail} = yaws_ssl:ssl_get_headers(CliSock, GC),
+	    put(ssltrail, Trail),  %% hack hack hack
+	    {Req, H};
+	nossl ->
+	    http_get_headers(CliSock, GC)
+    end.
+
+
 http_get_headers(CliSock, GC) ->
     ?TC([{record, GC, gconf}]),
     inet:setopts(CliSock, [{packet, http}]),
-    R = http_recv_request(CliSock, GC),
-    H = http_get_headers(CliSock, R, GC, #headers{}),
-    {R, H}.
+    case http_recv_request(CliSock, GC) of
+	bad_request ->
+	    {#http_request{method=bad_request, version={0,9}},
+	     #headers{}};
+	R -> 
+	    H = http_get_headers(CliSock, R, GC, #headers{}),
+	    {R, H}
+    end.
 
 
 http_recv_request(CliSock, GC) ->
@@ -912,6 +901,8 @@ http_recv_request(CliSock, GC) ->
 	    http_recv_request(CliSock, GC);
 	{error, {http_error, "\n"}} ->
 	    http_recv_request(CliSock, GC);
+	{error, {http_error, _}} ->
+	    bad_request;
 	_Other ->
 	    ?Debug("Got ~p~n", [_Other]),
 	    exit(normal)
@@ -1052,8 +1043,23 @@ un_partial(Bin) ->
 'HEAD'(CliSock, GC, SC, Req, Head) ->
     'GET'(CliSock, GC, SC, Req, Head).
 
-'TRACE'(_CliSock, _GC, _SC, _Req, _Head) ->
-    nyi.
+not_implemented(CliSock, GC, SC, Req, Head) ->
+    ok = inet_setopts(SC, CliSock, [{packet, raw}, binary]),
+    flush(SC, CliSock, Head#headers.content_length),
+    deliver_501(CliSock, Req, GC, SC).
+    
+
+'TRACE'(CliSock, GC, SC, Req, Head) ->
+    ?TC([{record, GC, gconf}, {record, SC, sconf}]),
+    not_implemented(CliSock, GC, SC, Req, Head).
+
+'PUT'(CliSock, GC, SC, Req, Head) ->
+    ?TC([{record, GC, gconf}, {record, SC, sconf}]),
+    not_implemented(CliSock, GC, SC, Req, Head).
+
+'DELETE'(CliSock, GC, SC, Req, Head) ->
+    ?TC([{record, GC, gconf}, {record, SC, sconf}]),
+    not_implemented(CliSock, GC, SC, Req, Head).
 
 'OPTIONS'(CliSock, GC, SC, Req, Head) ->
     ?Debug("OPTIONS", []),
@@ -1072,6 +1078,16 @@ make_arg(CliSock, Head, Req, _GC, SC) ->
 	 pid = self(),
 	 docroot = SC#sconf.docroot}.
 
+bad_request(CliSock, GC, SC, Req, Head) ->
+    ?TC([{record, GC, gconf}, {record, SC, sconf}]),
+    ok = inet_setopts(SC, CliSock, [{packet, raw}, binary]),
+    flush(SC, CliSock, Head#headers.content_length),
+    deliver_400(CliSock, Req, GC, SC).
+
+handle_extension_method(Method, CliSock, GC, SC, Req, Head) ->
+    ?TC([{record, GC, gconf}, {record, SC, sconf}]),
+    not_implemented(CliSock, GC, SC, Req, Head).
+
 
 %% Return values:
 %% continue, done, {page, Page}
@@ -1080,27 +1096,43 @@ handle_request(CliSock, GC, SC, ARG, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     Req = ARG#arg.req,
     H = ARG#arg.headers,
-    {abs_path, RawPath} = Req#http_request.path,
-    case (catch yaws_api:url_decode_q_split(RawPath)) of
-	{'EXIT', _} ->   %% weird broken cracker requests
-	    deliver_403(CliSock, Req, GC, SC);
-	{DecPath, QueryPart} ->
-	    UT =  url_type(GC, SC, DecPath, QueryPart),
-	    ARG2 = ARG#arg{fullpath=UT#urltype.fullpath,
-			   pathinfo=UT#urltype.pathinfo},
-	    case SC#sconf.authdirs of
-		[] ->
-		    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT, N);
-		_Adirs ->
-		    %% we have authentication enabled, check auth
-		    UT2 = unflat(UT),
-		    case is_authenticated(SC, UT2, Req, H) of
-			true ->
-			    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT2, N);
-			{false, Realm} ->
-			    deliver_401(CliSock, Req, GC, Realm, SC)
+    case Req#http_request.path of
+	{abs_path, RawPath} ->
+	    case (catch yaws_api:url_decode_q_split(RawPath)) of
+		{'EXIT', _} ->   %% weird broken cracker requests
+		    deliver_403(CliSock, Req, GC, SC);
+		{DecPath, QueryPart} ->
+		    UT =  url_type(GC, SC, DecPath, QueryPart),
+		    ARG2 = ARG#arg{fullpath=UT#urltype.fullpath,
+				   pathinfo=UT#urltype.pathinfo},
+		    case SC#sconf.authdirs of
+			[] ->
+			    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT, N);
+			_Adirs ->
+			    %% we have authentication enabled, check auth
+			    UT2 = unflat(UT),
+			    case is_authenticated(SC, UT2, Req, H) of
+				true ->
+				    handle_ut(CliSock, GC, SC, 
+					      Req, H, ARG2, UT2, N);
+				{false, Realm} ->
+				    deliver_401(CliSock, Req, GC, Realm, SC)
+			    end
 		    end
-	    end
+	    end;
+	{absoluteURI, Scheme, Host, Port, RawPath} ->
+						% FIXME:
+						% 
+						% We MUST accept this.
+						% We cannot fix it at
+						% this point alone
+						% however, because we
+						% may already have
+						% picked the wrong
+						% sconf.
+	    deliver_501(CliSock, Req, GC, SC);
+	{scheme, Scheme, RequestString} ->
+	    deliver_501(CliSock, Req, GC, SC)
     end.
 
 
@@ -1355,6 +1387,28 @@ deliver_options(CliSock, _Req, GC, SC) ->
     deliver_accumulated(CliSock, GC, SC),
     continue.
 
+deliver_xxx(CliSock, _Req, GC, SC, Code) ->
+    B = list_to_binary(["<html><h1>",
+			integer_to_list(Code), $\ ,
+			yaws_api:code_to_phrase(Code),
+			"</h1></html>"]),
+    H = #outh{status = Code,
+	      doclose = true,
+	      chunked = false,
+	      server = yaws:make_server_header(),
+	      connection = yaws:make_connection_close_header(true),
+	      content_length = yaws:make_content_length_header(size(B)),
+	      contlen = size(B),
+	      content_type = yaws:make_content_type_header("text/html")},
+    put(outh, H),
+    accumulate_content(B),
+    deliver_accumulated(CliSock, GC, SC),
+    done.
+
+deliver_400(CliSock, Req, GC, SC) ->  
+						% Bad Request
+    deliver_xxx(CliSock, Req, GC, SC, 400).
+
 deliver_401(CliSock, _Req, GC, Realm, SC) ->
     B = list_to_binary("<html> <h1> 401 authentication needed  "
 		       "</h1></html>"),
@@ -1372,26 +1426,14 @@ deliver_401(CliSock, _Req, GC, Realm, SC) ->
     deliver_accumulated(CliSock, GC, SC),
     done.
     
-
-
-
-
-deliver_403(CliSock, _Req, GC, SC) ->
-    B = list_to_binary("<html> <h1> 403 Forbidden</h1> </html>"),
-    H = #outh{status = 403,
-	      doclose = true,
-	      chunked = false,
-	      server = yaws:make_server_header(),
-	      connection = yaws:make_connection_close_header(true),
-	      content_length = yaws:make_content_length_header(size(B)),
-	      contlen = size(B),
-	      content_type = yaws:make_content_type_header("text/html")},
-    put(outh, H),
-    accumulate_content(B),
-    deliver_accumulated(CliSock, GC, SC),
-    done.
+deliver_403(CliSock, Req, GC, SC) ->
+						% Forbidden
+    deliver_xxx(CliSock, Req, GC, SC, 403).
     
-
+deliver_501(CliSock, Req, GC, SC) ->
+						% Not implemented
+    deliver_xxx(CliSock, Req, GC, SC, 501).
+    
 
 
 do_yaws(CliSock, GC, SC, Req, ARG, UT, N) ->
