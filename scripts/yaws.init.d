@@ -3,8 +3,10 @@
 # Startup script for the Yaws Web Server
 #
 # config: /etc/yaws.conf
+#
+# chkconfig: 2345 65 35
 # description: yaws - Erlang enabled http server
-
+# use "/sbin/chkconfig --add yaws" to install
 
 # Source function library.
 
