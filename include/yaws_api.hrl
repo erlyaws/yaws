@@ -13,6 +13,7 @@
 	  headers,        %% headers
 	  req,            %% request
 	  clidata,        %% The client data (as a binary in POST requests)
+	  server_path,    %% The normalized server path
 	  querydata,      %% Was the URL on the form of ...?query (GET reqs)
 	  appmoddata,     %% the remainder of the path leading up to the querey
 	  docroot,        %% where's the data
