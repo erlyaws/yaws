@@ -313,6 +313,9 @@ parse_multi(Data, Boundary) ->
 parse_multi(header, "\r\n\r\n"++Body, Boundary, Acc, Res, Tmp) ->
     Header = do_header(lists:reverse(Acc)),
     parse_multi(body, Body, Boundary, [], [{head, Header}|Res], Tmp);
+parse_multi(header, "\r\n"++Body, Boundary, [], Res, Tmp) ->
+    Header = do_header([]),
+    parse_multi(body, Body, Boundary, [], [{head, Header}|Res], Tmp);
 parse_multi(header, "\r\n\r", Boundary, Acc, Res, Tmp) ->
     {cont, {header, "\r\n\r", Boundary, Acc, Tmp}, Res};
 parse_multi(header, "\r\n", Boundary, Acc, Res, Tmp) ->
@@ -360,6 +363,7 @@ parse_multi(is_end, "\r", Boundary, Acc, Res, Tmp) ->
     {cont, {is_end, "\r", Boundary, Acc, Tmp}, Res}.
 
 
+do_header([]) -> {[]};
 do_header(Head) ->
     {ok, Fields} = regexp:split(Head, "\r\n"),
     MFields = merge_lines_822(Fields),
