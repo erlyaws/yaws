@@ -176,48 +176,6 @@ has_tag([H|T], Tag, Num) ->
 has_tag(_,_,_) ->
     false.
 
-check_exported(C, LineNo, NumChars, Mod) when C#comp.modnum == 1->
-    case {is_exported(some_headers, 1, Mod),
-	  is_exported(all_headers, 1, Mod),
-	  is_exported(out, 1, Mod)} of
-	{true, true, _} ->
-	    [gen_err(C, LineNo, NumChars,
-		     ?F("Cannot have both some and the all "
-			"headers",[]))];
-	
-	%% someheaders
-	{true, false, true} ->
-	    [{mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,some_headers},
-	     {mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,out}];
-	{true, false, false} ->
-	    [{mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,some_headers}];
-	
-	%% allheaders
-	{false, true, true} ->
-	    [{mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,all_headers},
-	     {mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,out}];
-	
-	{false, true, false} ->
-	    [{mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,all_headers}];
-	
-	{false, false, true} ->
-	    [{mod, C#comp.startline, C#comp.infile, 
-	      NumChars,Mod,out}];
-	{false, false, false} ->
-	    ?Debug("XX ~p~n", [C]), 
-	    [gen_err(C, LineNo, NumChars,
-		     "compile error out/1 "
-		     "is not defined ")]
-    
-    
-    end;
-
 check_exported(C, LineNo, NumChars, Mod) ->
     case is_exported(out, 1, Mod) of
 	true ->
