@@ -514,6 +514,7 @@ opts(SC) ->
     [binary, 
      {ip, SC#sconf.listen},
      {packet, http},
+     {recbuf, 8192},
      {reuseaddr, true},
      {active, false}
     ].

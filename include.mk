@@ -2,8 +2,8 @@
 
 INSTALLPREFIX      = /usr/local
 
-ERL=/usr/local/bin/erl
-ERLC=/usr/local/bin/erlc
+ERL=/opt/otp/R8B_continue/bin/erl
+ERLC=/opt/otp/R8B_continue/bin/erlc
 EMULATOR=beam
 
 ifdef debug
@@ -34,10 +34,10 @@ LIBS=
 
 
 
-ERLDIR=/usr/local/lib/erlang
-ERL_INTERFACE_LIB=/usr/local/lib/erlang/lib/erl_interface-/lib
+ERLDIR=/opt/otp/R8B_continue/lib/erlang
+ERL_INTERFACE_LIB=/opt/otp/R8B_continue/lib/erlang/lib/erl_interface-/lib
 ERL_INTERFACE_LIBS=-lerl_interface -lei 
-ERL_INTERFACE_INCLUDE=/usr/local/lib/erlang/lib/erl_interface-/include
+ERL_INTERFACE_INCLUDE=/opt/otp/R8B_continue/lib/erlang/lib/erl_interface-/include
 
 LD_SHARED=ld -shared
 
