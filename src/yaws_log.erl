@@ -298,7 +298,7 @@ fmt_alog(Time, Ip, Req, Status,  Length) ->
 
 fmtnow() ->
     {{Year, Month, Date}, {Hour, Min, Sec}} = calendar:universal_time(),
-    io_lib:format("[~w/~s/~w:~w:~w:~w GMT]",
+    io_lib:format("[~w/~s/~w:~2..0w:~2..0w:~2..0w GMT]",
 		  [Date,yaws:month(Month),Year, Hour, Min, Sec]).
 
 zone() ->
