@@ -129,13 +129,15 @@ send(Session, To, Cc, Bcc, Subject, Msg) ->
     RCc = string:tokens(Cc,","),
     RBcc = string:tokens(Bcc,","),
     Recipients = RTo ++ RCc ++ RBcc,
-    Date = yaws:date_and_time_to_string(yaws:date_and_time()),
+    Date = date_and_time_to_string(yaws:date_and_time()),
     Headers =
 	(mail_header("To: ", To) ++
 	 mail_header("From: ", Session#session.user++"@"++?MAILDOMAIN) ++
 	 mail_header("Cc: ", Cc) ++
 	 mail_header("Bcc: ", Bcc) ++
-	 mail_header("Subject: ", Subject)),
+	 mail_header("Subject: ", Subject) ++
+	 mail_header("Content-Type: ", "text/plain") ++
+	 mail_header("Content-Transfer-Encoding: ", "8bit")),
     Message = io_lib:format("~sDate: ~s\r\n\r\n~s\r\n.\r\n",
 			    [Headers, Date, Msg]),
     case smtp_send(?SMTPSERVER, Session, Recipients, Message) of
@@ -253,11 +255,7 @@ showmail(Session, MailNr) ->
     {H,Msg} = retr(?POPSERVER, Session#session.user,
 		   Session#session.passwd, MailNr),
 
-    ContentType = 
-	if 
-	    H#mhead.content_type == undefined -> undefined;
-	    true -> element(1,H#mhead.content_type)
-	end,
+    Formated = format_message(H, Msg),
 
     (dynamic_headers() ++
      [{ehtml,
@@ -343,13 +341,7 @@ showmail(Session, MailNr) ->
 		      {tr,[],
 		       {td,[{width,"100%"},{height,300},{valign,top},
 			    {bgcolor,white}],
-			{p,[],{font,[{size,3}], 
-			       if ContentType == "text/html" ->
-				       {pre_html,Msg};
-				  true ->
-				       {pre,[],Msg}
-			       end
-			      }}}
+			{p,[],{font,[{size,3}], Formated }}}
 		      }
 		     }
 		    ]
@@ -923,17 +915,32 @@ parse_headers([Line|Lines], Headers) ->
 
 parse_header_value(Header) ->
     [Key|Options] = string:tokens(Header, ";"),
-    Opts = [string:tokens(O,"=") || O <- Options],
+    Opts = [parse_key_value(O) || O <- Options],
     {Key,Opts}.
+
+
+parse_key_value(O) ->
+    parse_key_value(O, []).
+
+parse_key_value([], Acc) ->
+    {lists:reverse(Acc), []};
+parse_key_value([$=|Rest], Acc) ->
+    Value = unquote(string:strip(Rest)),
+    Key = string:strip(lists:reverse(Acc)),
+    {Key, Value};
+parse_key_value([C|Cs], Acc) ->
+    parse_key_value(Cs, [C|Acc]).
+
 
 lowercase(Str) ->
     [lowercase_ch(S) || S <- Str].
+
 
 lowercase_ch(C) when C>=$A, C=<$Z -> C + 32;
 lowercase_ch(C) -> C.
 
 add_header("content-transfer-encoding", Value, H) ->
-    H#mhead{transfer_encoding = Value};
+    H#mhead{transfer_encoding = lowercase(Value)};
 add_header("content-type", Value, H) ->
     H#mhead{content_type = parse_header_value(Value)};
 add_header("from", Value, H) ->    H#mhead{from = Value};
@@ -1327,3 +1334,175 @@ d(X) when X >= $0, X =<$9 ->  X - $0 + 52;
 d($+)                     -> 62;
 d($/)                     -> 63;
 d(_)                      -> no.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+date_and_time_to_string(DAT) ->
+    case validate_date_and_time(DAT) of
+	true ->
+	    dat2str(DAT);
+	false ->
+	    exit({badarg, {?MODULE, date_and_time_to_string, [DAT]}})
+    end.
+
+dat2str([Y1,Y2, Mo, D, H, M, S | Diff]) ->
+    lists:flatten(
+      io_lib:format("~s, ~2.2.0w ~s ~w ~2.2.0w:~2.2.0w:~2.2.0w",
+		    [weekday(Y1,Y2,Mo,D), D, int_to_mt(Mo),
+		     y(Y1,Y2),H,M,S]) ++
+      case Diff of
+	  [Sign,Hd,Md] ->
+	      io_lib:format("~c~2.2.0w~2.2.0w",
+			    [Sign,Hd,Md]);
+	  _ -> []
+      end).
+
+y(Y1, Y2) -> 256 * Y1 + Y2.
+
+weekday(Y1,Y2,Mo,D) ->
+    int_to_wd(calendar:day_of_the_week(Y1*256+Y2,Mo,D)).
+
+int_to_wd(1) -> "Mon";
+int_to_wd(2) -> "Tue";
+int_to_wd(3) -> "Wed";
+int_to_wd(4) -> "Thu";
+int_to_wd(5) -> "Fri";
+int_to_wd(6) -> "Sat";
+int_to_wd(7) -> "Sun".
+
+int_to_mt(1)  -> "Jan";
+int_to_mt(2)  -> "Feb";
+int_to_mt(3)  -> "Mar";
+int_to_mt(4)  -> "Apr";
+int_to_mt(5)  -> "May";
+int_to_mt(6)  -> "Jun";
+int_to_mt(7)  -> "Jul";
+int_to_mt(8)  -> "Aug";
+int_to_mt(9)  -> "Sep";
+int_to_mt(10) -> "Oct";
+int_to_mt(11) -> "Nov";
+int_to_mt(12) -> "Dec".
+
+validate_date_and_time([Y1,Y2, Mo, D, H, M, S | Diff]) 
+  when 0 =< Y1, 0 =< Y2, 0 < Mo, Mo < 13, 0 < D, D < 32, 0 =< H,
+       H < 24, 0 =< M, M < 60, 0 =< S, S < 61  ->
+    case check_diff(Diff) of
+	true ->
+	    calendar:valid_date(y(Y1,Y2), Mo, D);
+	false ->
+	    false
+    end;
+validate_date_and_time(_) -> false.
+
+check_diff([]) -> true;
+check_diff([$+, H, M]) when 0 =< H, H < 12, 0 =< M, M < 60 -> true;
+check_diff([$-, H, M]) when 0 =< H, H < 12, 0 =< M, M < 60 -> true;
+check_diff(_) -> false.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+format_message(H, Msg) ->
+    case {H#mhead.content_type,H#mhead.transfer_encoding} of
+	{{"text/html",_}, Encoding} ->
+	    Decoded = decode_message(Encoding, Msg),
+	    {pre_html, Decoded};
+	{{"text/plain",_}, Encoding} ->
+	    Decoded = decode_message(Encoding, Msg),
+	    {pre, [], Decoded};
+	{{"multipart/mixed",Opts}, Encoding} ->
+	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
+	    [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
+	    PartHeaders =
+		lists:foldl(fun({K,V},MH) ->
+				    add_header(K,V,MH)
+			    end, #mhead{}, Headers),
+	    format_message(PartHeaders, Body);
+	{{"multipart/alternative",Opts}, Encoding} ->
+	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
+	    [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
+	    PartHeaders =
+		lists:foldl(fun({K,V},MH) ->
+				    add_header(K,V,MH)
+			    end, #mhead{}, Headers),
+	    format_message(PartHeaders, Body);
+	{{"multipart/signed",Opts}, Encoding} ->
+	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
+	    [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
+	    PartHeaders =
+		lists:foldl(fun({K,V},MH) ->
+				    add_header(K,V,MH)
+			    end, #mhead{}, Headers),
+	    format_message(PartHeaders, Body);
+	{_,_} ->
+	    {pre, [], Msg}
+    end.
+
+decode_message("7bit"++_, Msg) -> Msg;
+decode_message("8bit"++_, Msg) -> Msg;
+decode_message("base64"++_, Msg) ->
+    case catch base64_2_str(lists:flatten(Msg)) of
+	{'EXIT', _} -> Msg;
+	Decoded -> Decoded
+    end;
+decode_message("quoted-printable"++_, Msg) ->
+    case catch quoted_2_str(lists:flatten(Msg)) of
+	{'EXIT', Reason} -> 
+	    io:format("failed to decode quoted-printable ~p\n", [Reason]),
+	    Msg;
+	Decoded -> Decoded
+    end;
+decode_message(_, Msg) -> Msg.
+    
+	    
+quoted_2_str(Msg) ->
+    quoted_2_str(Msg, []).
+
+quoted_2_str([], Acc) ->
+    lists:reverse(Acc);
+quoted_2_str([$=,$\r,$\n|Rest], Acc) ->
+    quoted_2_str_scan(Rest,Acc);
+quoted_2_str([$=,H1,H2|Rest], Acc) ->
+    quoted_2_str(Rest, [yaws:hex_to_integer([H1,H2])|Acc]);
+quoted_2_str([$\r,$\n|Rest], Acc) ->
+    quoted_2_str_scan(Rest, [$\n|Acc]);
+quoted_2_str([C|Cs], Acc) ->
+    quoted_2_str(Cs, [C|Acc]).
+
+quoted_2_str_scan([$ |Rest], Acc) ->
+    quoted_2_str_scan(Rest, Acc);
+quoted_2_str_scan([$\t|Rest], Acc) ->
+    quoted_2_str_scan(Rest, Acc);
+quoted_2_str_scan([$\v|Rest], Acc) ->
+    quoted_2_str_scan(Rest, Acc);
+quoted_2_str_scan(Rest, Acc) ->
+    quoted_2_str(Rest, Acc).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+
+
+parse_multipart(Data, Boundary) ->
+    Res = parse_multipart(Data, Boundary, []),
+    process_parts(Res, [], [], []).
+
+parse_multipart([], _State, Res) ->
+    Res;
+parse_multipart([D|Ds], State, Res) ->
+    case yaws_api:parse_multipart(D, State) of
+	{cont, Cont, NewRes} ->
+	    parse_multipart(Ds, Cont, Res++NewRes);
+	{result, NewRes} ->
+	    Res++NewRes
+    end.
+
+process_parts([], [], [], Res) ->
+    lists:reverse(Res);
+process_parts([{head,{Headers}}|Ps], [], [], Res) ->
+    process_parts(Ps, Headers, [], Res);
+process_parts([{body,B}|Ps], [], Body, Res) ->  % ignore headless body
+    process_parts(Ps, [], [], Res);
+process_parts([{body,B}|Ps], Head, Body, Res) ->
+    process_parts(Ps, [], [], [{Head, lists:reverse([B|Body])}|Res]);
+process_parts([{part_body,B}|Ps], Head, Body, Res) ->
+    process_parts(Ps, Head, [B|Body], Res).
