@@ -577,6 +577,10 @@ list_msg(Session, Refresh, Count) ->
 	    set_listing(Session#session.cookie, H),
 	    {redirect_local, {rel_path, "mail.yaws"}};
 	H ->
+	    if H /= OldList ->
+		    set_listing(Session#session.cookie, H);
+	       true -> ok
+	    end,
 	    (%% dynamic_headers()++
 	     [{ehtml,
 	       [{script,[],
