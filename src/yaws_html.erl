@@ -51,10 +51,16 @@ parse([{end_tag,T,[],L}|Tokens], {T,A,_}, [{CTag,CAcc}|Stack], Acc) ->
 	end,
     parse(Tokens, CTag, Stack, [E|CAcc]);
 
-parse([{end_tag,T1,[],L1}|Tokens], {T2,A,L2}, Stack, Acc) ->
-    Msg = lists:flatten(io_lib:format("expected '</~p>'  on line ~p, start "
-				      "tag at line: ~p", [T2,L1,L2])),
-    {error, Msg};
+parse([{end_tag,T1,[],L1}|Tokens], CTag = {T2,A,L2}, Stack, Acc) ->
+    case tag_type(T) of
+	leaf -> % ignore
+	    parse(Tokens, CTag, Stack, Acc);
+	node ->
+	    Msg = lists:flatten(io_lib:format(
+				  "expected '</~p>'  on line ~p, start "
+				  "tag at line: ~p", [T2,L1,L2])),
+	    {error, Msg}
+    end;
 
 parse([{data, Data, Line}|Tokens], CTag, Stack, Acc) ->
     case skip_space(Data, 0) of
@@ -65,6 +71,9 @@ parse([{data, Data, Line}|Tokens], CTag, Stack, Acc) ->
     end.
 %
 
+tag_type(p)          -> leaf; 
+tag_type(hr)         -> leaf; 
+tag_type(input)      -> leaf; 
 tag_type(base)       -> leaf;
 tag_type(img)        -> leaf;
 tag_type('!doctype') -> leaf;
