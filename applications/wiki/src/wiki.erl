@@ -30,7 +30,8 @@
 	 storeNewPage/3, previewPage/3, previewTagged/3, copyFiles/3,
 	 deleteFiles/3, addFile/3, storeTagged/3, fixupFiles/3,
 	 sendMeThePassword/3, storeFiles/3, showOldPage/3,
-	 changePassword/3, changePassword2/3]).
+	 changePassword/3, changePassword2/3, getThumb/3,
+	 getMidSize/3, thumbIndex/3]).
 
 -export([slideShow/3]).
 
@@ -45,6 +46,7 @@
 -import(wiki_templates, [template/4]).
 
 -include("../../../include/yaws_api.hrl").
+-include_lib("kernel/include/file.hrl").
 
 % This should be -include:ed instead
 
@@ -75,6 +77,65 @@ showPage(Params, Root, Prefix) ->
 	    end
     end.
 
+getThumb(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+    Pict = getopt(pict, Params),
+    if 
+	Page == undefined ->
+	    error(invalid_request);
+	true ->
+	    {WobFile, FileDir} = page2filename(Page, Root),
+	    Extension = filename:extension(Pict),
+	    ThumbName = (filename:basename(Pict, Extension)++
+			 "_wiki_thb"++Extension),
+	    SrcPath = Root ++ "/" ++ FileDir ++ "/" ++ Pict,
+	    DstPath = Root ++ "/" ++ FileDir ++ "/" ++ ThumbName,
+	    DstAge = get_age(DstPath),
+	    SrcAge = get_age(SrcPath),
+	    if DstAge > SrcAge -> false;
+	       true -> 
+		    os:cmd("convert -size 90x90 -scale 90x90 "++
+			   SrcPath++" "++DstPath)
+	    end,
+	    {redirect_local, Prefix++FileDir++"/"++ThumbName}
+    end.
+
+getMidSize(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+    Pict = getopt(pict, Params),
+    if 
+	Page == undefined ->
+	    error(invalid_request);
+	true ->
+	    {WobFile, FileDir} = page2filename(Page, Root),
+	    Extension = filename:extension(Pict),
+	    MidName = (filename:basename(Pict, Extension)++
+			 "_wiki_mid"++Extension),
+	    SrcPath = Root ++ "/" ++ FileDir ++ "/" ++ Pict,
+	    DstPath = Root ++ "/" ++ FileDir ++ "/" ++ MidName,
+	    DstAge = get_age(DstPath),
+	    SrcAge = get_age(SrcPath),
+	    if DstAge > SrcAge -> false;
+	       true -> 
+		    os:cmd("convert -size 400x400 -scale 400x400 "++
+			   SrcPath++" "++DstPath)
+	    end,
+	    case file:read_file_info(DstPath) of
+		{error,_} ->
+		    {redirect_local, Prefix++FileDir++"/"++Pict};
+		_ ->
+		    {redirect_local, Prefix++FileDir++"/"++MidName}
+	    end
+    end.
+
+get_age(Path) ->
+    case file:read_file_info(Path) of
+	{error, _} ->
+	    {{0,0,0},{0,0,0}};
+	{ok, FileInfo} ->
+	    FileInfo#file_info.mtime
+    end.
+
 
 fixupFiles(Params, Root, Prefix) ->
     Page = getopt(node, Params),
@@ -94,7 +155,9 @@ importFiles(Page, Root, Prefix) ->
 
 	    CurFiles = files(Root++"/"++FileDir, "*"),
 
-	    CurFileNames = [basename(CF) || CF <- CurFiles],
+	    CurFileNames = [basename(CF) || CF <- CurFiles,
+					    string:str(CF,"_wiki_thb")==0,
+					    string:str(CF,"_wiki_mid")==0],
 
 	    F = fun(Fn) ->
 			case lists:keysearch(Fn,2,Files) of
@@ -657,6 +720,12 @@ deleteFiles1(Params, Root, Prefix) ->
     Ds = {wik002,Pwd, Email,Time,Who,Txt,NewFiles,Patches},
     B = term_to_binary(Ds),
     lists:foreach(fun({file,F,_,_}) ->
+			  Extension = filename:extension(F),
+			  BaseName = filename:basename(F, Extension),
+			  ThumbName = (BaseName++"_wiki_thb"++Extension),
+			  MidName = (BaseName++"_wiki_mid"++Extension),
+			  file:delete(Root++"/"++FileDir++"/"++ThumbName),
+			  file:delete(Root++"/"++FileDir++"/"++MidName),
 			  file:delete(Root++"/"++FileDir++"/"++F)
 		  end, DelFiles),
     file:write_file(File, B),
@@ -1416,14 +1485,14 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
 			 build_slide_list(Page, NewIndex, length(Files)),
 			 "<a href=\"slideShow.yaws?node=",Page,"&next=",
 			 integer_to_list(NewIndex+1),"\">next</a> "
+			 "<a href=\"thumbIndex.yaws?node=",Page,"\">index</a> "
 			 "</td></tr></table>"
 			 "<p><b>",integer_to_list(NewIndex)," - ",
 			 Comment,"</b></p><p>",
 			 "<a href=\"",
 			 wiki:str2urlencoded(FileDir), "/",
 			 wiki:str2urlencoded(FileName),"\" target=\"pict\">",
-			 "<img src=\"",
-			 wiki:str2urlencoded(FileDir), "/",
+			 "<img src=\"getMidSize.yaws?node=", Page,"&pict=",
 			 wiki:str2urlencoded(FileName),
 			 "\" alt='",FileName,
 			 "'></a></p>"],
@@ -1439,6 +1508,53 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
 	_ ->
 	    show({no_such_page,Page})
     end.
+
+thumbIndex(Params, Root, Prefix) ->
+    Page     = getopt(node, Params),
+    {File,FileDir} = page2filename(Page, Root),
+    case file:read_file(File) of
+	{ok, Bin} ->
+	    {wik002, Pwd,_Email,_Time,_Who,TxtStr,Files,_Patches} =
+		bin_to_wik002(Bin),
+	    Pics = [element(2,P) || P <- lists:keysort(2,Files),
+				    pict_suffix(P)],
+	    DeepStr = 
+	    ["<table><tr><td colspan=5>",
+	     build_slide_list(Page, 0, length(Files)),
+	     "</td></tr>",
+	     build_thumb_table(Pics,
+			       str2urlencoded(Page),
+			       str2urlencoded(FileDir)),
+	     "</table>"],
+	    F1 = add_blanks_nicely(Page),
+	    TopHeader = 
+		["<h1><a href='showPage.yaws?node=",
+		 str2urlencoded(Page),
+		 "'>",F1,"</a></h1>\n"],
+	    Link = 
+		template(Page, banner(Page, Pwd/=""),
+			 [TopHeader, DeepStr], false);
+	_ ->
+	    show({no_such_page,Page})
+    end.
+    
+build_thumb_table([], _Node, _FileDir) -> [];
+build_thumb_table(Pics, Node, FileDir) ->
+    build_thumb_rows(Pics, Node, FileDir, 0, 5, ["<tr>"]).
+
+build_thumb_rows([], _Node, _FileDir, _, _, Acc) ->
+    lists:reverse(["</tr>"|Acc]);
+build_thumb_rows(Pics, Node, FileDir, X, X, Acc) ->
+    build_thumb_rows(Pics, Node, FileDir, 0, X, ["</tr>\n<tr>"|Acc]);
+build_thumb_rows([P|Pics], Node, FileDir, N, X, Acc) ->
+    build_thumb_rows(Pics, Node, FileDir, N+1, X,
+		     [lists:append(["<td align=\"center\"><a href=\"",
+				    FileDir, "/",
+				    wiki:str2urlencoded(P),
+				    "\" target=\"pict\">",
+				    "<img src='getThumb.yaws?node=", Node,
+				    "&pict=", str2urlencoded(P),
+				    "'></a></td>\n"])|Acc]).
 
 build_slide_list(Page, Index, Nr) when Nr =< 10 ->
     Interval = 1,
@@ -1459,6 +1575,10 @@ build_slide_list(Page, Index, Nr) ->
 lowercase([C|S]) -> [lowercase(C)|lowercase(S)];
 lowercase(C) when C>=$A, C=<$Z -> C+32;
 lowercase(C) -> C.
+
+pict_suffix(File) ->
+    lists:member(lowercase(filename:extension(element(2, File))),
+		 [".gif", ".jpeg", ".jpe", ".jpg"]).
 
 get_img(Index, Direction, Files) ->
     case catch lists:nth(Index, Files) of
