@@ -589,7 +589,10 @@ get_path({abs_path, Path}) ->
 %    P = yaws_api:url_decode(Path),
 %    io:format("P = ~p\n", [P]),
 %    P.
-    yaws_api:url_decode(Path).
+%     yaws_api:url_decode(Path).
+    %% It is too early url_decode here, it has to wait 'til after the
+    %% query string parsed, incase it has escaped &'s. -luke
+    Path.
 
 do_recv(Sock, Num, TO, nossl) ->
     gen_tcp:recv(Sock, Num, TO);
@@ -1179,10 +1182,14 @@ accumulate_chunk(DCC, Data) ->
 	    accumulate_content(Data);
 	DCC#dcc.chunked == true ->
 	    B = to_binary(Data),
-	    Len = size(B),
-	    CRNL = crnl(),
-	    Data2 = [CRNL, yaws:integer_to_hex(Len) , crnl(), B], 
-	    accumulate_content(Data2)
+	    case size(B) of
+		0 ->
+		    skip;
+		Len ->
+		    CRNL = crnl(),
+		    Data2 = [CRNL, yaws:integer_to_hex(Len) , crnl(), B], 
+		    accumulate_content(Data2)
+	    end
     end.
 
 set_status_code(Code) ->
@@ -1190,34 +1197,37 @@ set_status_code(Code) ->
 
 
 
-handle_out_reply(L, DCC, LineNo, YawsFile, SC) when list (L) ->
-    handle_out_reply_l(L, DCC, LineNo, YawsFile, SC, undefined);
+handle_out_reply(L, DCC, LineNo, YawsFile, SC, A) when list (L) ->
+    handle_out_reply_l(L, DCC, LineNo, YawsFile, SC, A, undefined);
 
-handle_out_reply({html, Html}, DCC, _LineNo, _YawsFile, _SC) ->
+handle_out_reply({html, Html}, DCC, _LineNo, _YawsFile, _SC, _A) ->
     accumulate_chunk(DCC, Html);
 
-handle_out_reply({content, MimeType, Cont}, DCC, _LineNo, _YawsFile, _SC) ->
+handle_out_reply({ehtml, E}, DCC, _LineNo, _YawsFile, _SC, _A) ->
+    accumulate_chunk(DCC, ehtml_expand(E));
+
+handle_out_reply({content, MimeType, Cont}, DCC, _LineNo, _YawsFile, _SC, _A) ->
     put(content_type, MimeType),
     accumulate_chunk(DCC, Cont);
 
-handle_out_reply({header, H}, _DCC, _LineNo, _YawsFile, _SC) ->
+handle_out_reply({header, H}, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     accumulate_header(H);
 
 
-handle_out_reply({allheaders, Hs}, _DCC, _LineNo, _YawsFile, _SC) ->
+handle_out_reply({allheaders, Hs}, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     erase(acc_headers),
     lists:foreach(fun({header, Head}) -> accumulate_header(Head) end, Hs);
 
-handle_out_reply({status, Code}, _DCC,_LineNo,_YawsFile, _SC) when integer(Code) ->
+handle_out_reply({status, Code}, _DCC,_LineNo,_YawsFile, _SC, _A) when integer(Code) ->
     set_status_code(Code);
 
-handle_out_reply({'EXIT', normal}, _DCC, _LineNo, _YawsFile, _SC) ->
+handle_out_reply({'EXIT', normal}, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     exit(normal);
 
-handle_out_reply(break, _DCC, _LineNo, _YawsFile, _SC) ->
+handle_out_reply(break, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     break;
 
-handle_out_reply({redirect_local, Path}, DCC, _LineNo, _YawsFile, SC) ->
+handle_out_reply({redirect_local, Path}, DCC, _LineNo, _YawsFile, SC, A) ->
     erase(acc_headers),
     Scheme = case SC#sconf.ssl of
 		 undefined ->
@@ -1236,24 +1246,24 @@ handle_out_reply({redirect_local, Path}, DCC, _LineNo, _YawsFile, SC) ->
 		       io_lib:format(":~w",[Port])
 	       end,
 
-    set_status_code(303),
+    set_status_code(redirect_code(A)),
     make_content_length(0),
     accumulate_header(["Location: ", Scheme,
 		       servername_sans_port(SC#sconf.servername), 
 		       PortPart, Path]),
     ok;
 
-handle_out_reply({redirect, URL}, DCC, _LineNo, _YawsFile, SC) ->
+handle_out_reply({redirect, URL}, DCC, _LineNo, _YawsFile, SC, A) ->
     erase(acc_headers),
-    set_status_code(303),
+    set_status_code(redirect_code(A)),
     make_content_length(0),
     accumulate_header(["Location: ", URL]),
     ok;
 
-handle_out_reply(ok, _DCC, _LineNo, _YawsFile, _SC) ->
+handle_out_reply(ok, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     ok;
 
-handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile, _SC) ->
+handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile, _SC, _A) ->
     L = ?F("~n<pre> ~nERROR erl  code  crashed:~n "
 	   "File: ~s:~w~n"
 	   "Reason: ~p~n</pre>~n",
@@ -1263,10 +1273,10 @@ handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile, _SC) ->
 	      "Reason: ~p", [YawsFile, LineNo, Err]),
     accumulate_chunk(DCC, L);
 
-handle_out_reply({get_more, Cont, State}, DCC, LineNo, YawsFile, _SC) ->
+handle_out_reply({get_more, Cont, State}, DCC, LineNo, YawsFile, _SC, _A) ->
     {get_more, Cont, State};
 
-handle_out_reply(Reply, DCC, LineNo, YawsFile, _SC) ->
+handle_out_reply(Reply, DCC, LineNo, YawsFile, _SC, _A) ->
     yaws_log:sync_errlog("Bad return code from yaws function: ~p~n", [Reply]),
     L =  ?F("<p><br> <pre>yaws code at ~s:~p crashed or "
 	    "ret bad val:~p ~n</pre>",
@@ -1275,17 +1285,29 @@ handle_out_reply(Reply, DCC, LineNo, YawsFile, _SC) ->
 
     
 
-handle_out_reply_l([Reply|T], DCC, LineNo, YawsFile, SC, Res) ->		  
-    case handle_out_reply(Reply, DCC, LineNo, YawsFile, SC) of
+handle_out_reply_l([Reply|T], DCC, LineNo, YawsFile, SC, A, Res) ->		  
+    case handle_out_reply(Reply, DCC, LineNo, YawsFile, SC, A) of
 	{get_more, Cont, State} ->
-	    handle_out_reply_l(T, DCC, LineNo, YawsFile, SC, {get_more, Cont, State});
+	    handle_out_reply_l(T, DCC, LineNo, YawsFile, SC, A, {get_more, Cont, State});
 	break ->
 	    break;
 	_ ->
-	    handle_out_reply_l(T, DCC, LineNo, YawsFile, SC, Res)
+	    handle_out_reply_l(T, DCC, LineNo, YawsFile, SC, A, Res)
     end;
-handle_out_reply_l([], DCC, LineNo, YawsFile, SC, Res) ->
+handle_out_reply_l([], DCC, LineNo, YawsFile, SC, A, Res) ->
     Res.
+
+%% Get redirect reply code.
+%% HTTP/1.0 clients (e.g. Netscape 4, aka The Last Simple Browser)
+%% don't understand 303, so we send them 302. This is suggested by
+%% the HTTP 1.1 RFC (2616, page 62). -luke
+redirect_code(A) ->
+    #arg{req=Req} = hd(A),
+    io:format("Req = ~p~n", [Req]),
+    case Req#http_request.version of
+	{1,0} -> 302;
+	_     -> 303
+    end.
 
 check_headers(L) ->
     Hs = string:tokens(lists:flatten(L), "\r\n"),
@@ -1372,7 +1394,7 @@ yaws_call(DCC, LineNo, YawsFile, M, F, A, GC, SC, N) ->
 	   [M, F, ?format_record(hd(A), arg)]),
     Res = (catch apply(M,F,A)),
     A1 = hd(A),
-    case handle_out_reply(Res, DCC, LineNo, YawsFile, SC) of
+    case handle_out_reply(Res, DCC, LineNo, YawsFile, SC, A) of
 	{get_more, Cont, State} when element(1, A1#arg.clidata) == partial  ->
 	    More = get_more_post_data(SC#sconf.partial_post_size, N, SC, GC, A1),
 	    case un_partial(More) of
@@ -2024,3 +2046,30 @@ d(X) when X >= $0, X =<$9 ->
 d($+) -> 62;
 d($/) -> 63;
 d(_) -> 63.
+
+%% simple erlang term representation of HTML:
+%% EHTML = [EHTML] | {Tag, Attrs, Body} | {Tag, Attrs} | {Tag} |
+%%         binary() | character()
+%% Tag 	 = atom()
+%% Attrs = [{Key, Value}]
+%% Key 	 = atom()
+%% Value = string()
+%% Body  = EHTML
+ehtml_expand(Ch) when Ch >= 0, Ch =< 255 ->
+    yaws_api:htmlize_char(Ch);
+ehtml_expand(Bin) when binary(Bin) ->
+    yaws_api:htmlize(Bin);
+ehtml_expand({Tag}) ->
+    ehtml_expand({Tag,[]});
+ehtml_expand({Tag, Attrs}) ->
+    io_lib:format("<~s~s>~n", [Tag, ehtml_attrs(Attrs)]);
+ehtml_expand({Tag, Attrs, Body}) ->
+    [io_lib:format("<~s~s>~n", [Tag, ehtml_attrs(Attrs)]),
+     ehtml_expand(Body),
+     io_lib:format("</~s>~n", [Tag])];
+ehtml_expand(L) when list(L) ->
+    map(fun ehtml_expand/1, L).
+
+ehtml_attrs(Attrs) ->
+    [io_lib:format(" ~s=\"~s\"", [Name, Value]) || {Name, Value} <- Attrs].
+
