@@ -23,32 +23,26 @@
 		prefix, %% The prefix to strip and add
 		url,    %% The url we're proxying to
 		type,   %% client | server
+		r_req,  %% if'we're server, what req method are we processing
 		state}).%% various depending on mode, ......
 
 
 
 
 init(CliSock, GC, SC, ARG, DecPath, QueryPart, {Prefix, URL}) ->
-    Port = if
-	       URL#url.port == undefined -> 80;
-	       true -> URL#url.port
-	   end,
-
-    case gen_tcp:connect(URL#url.host, Port, [{active, false},
-					      {packet, http}]) of
+    case connect_url(URL) of
 	{ok, Ssock} ->
-	    ?Debug("Connected to proxy host ok ~p~n",[URL]),
 	    Headers0 = ARG#arg.headers,
-	    Cli = sockmode(Headers0, #psock{s = CliSock, prefix = Prefix,
-					    url = URL, type = client}),
+	    Cli = sockmode(Headers0, ARG#arg.req,
+			   #psock{s = CliSock, prefix = Prefix,
+				  url = URL, type = client}),
 	    Headers = rewrite_headers(Cli, Headers0),
 	    ReqStr = yaws_api:reformat_request(
 		       rewrite_path(ARG#arg.req, Prefix)),
-	    Hstr = lists:map(
-		     fun(H) -> [H, "\r\n"] end,
-		     yaws_api:reformat_header(Headers)),
+	    Hstr = headers_to_str(Headers),
 	    yaws:gen_tcp_send(Ssock, [ReqStr, "\r\n", Hstr, "\r\n"], SC,GC),
 	    Srv = #psock{s = Ssock, prefix = Prefix, url = URL,
+			 r_req = (ARG#arg.req)#http_request.method,
 			 mode = expectheaders, type = server},
 	    
 	    %% Now we _must_ spawn a process here, casuse we
@@ -74,6 +68,21 @@ init(CliSock, GC, SC, ARG, DecPath, QueryPart, {Prefix, URL}) ->
 
 
 
+headers_to_str(Headers) ->
+    lists:map(
+      fun(H) -> [H, "\r\n"] end,
+      yaws_api:reformat_header(Headers)).
+
+
+connect_url(URL) ->
+    Port = if
+	       URL#url.port == undefined -> 80;
+	       true -> URL#url.port
+	   end,
+    gen_tcp:connect(URL#url.host, Port, [{active, false},
+					 {packet, http}]).
+
+
 
 rewrite_path(Req, Pref) ->
     {abs_path, P} = Req#http_request.path,
@@ -89,19 +98,48 @@ strip_prefix([H|T1],[H|T2]) ->
     strip_prefix(T1,T2).
 
 
+
+
 %% Once we have read the headers, what comes after
 %% the headers, 
 %% This is applicable both for cli and srv sockets
 
+sockmode(H,Req,Psock) ->
+    case Psock#psock.type of
+	server ->
+	    s_sockmode(H, Req, Psock);
+	client ->
+	    cont_len_check(H,Psock)
+    end.
 
-sockmode(H,Psock) ->
+s_sockmode(H,Resp,Psock) ->
+    if Psock#psock.r_req == 'HEAD' ->
+	    %% we're replying to a HEAD
+	    %% no body
+	    Psock#psock{mode = expectheaders, state = undefined};
+	
+	true ->
+	    case lists:member(Resp#http_response.status, 
+			      [100,204,205,304,406]) of
+		true ->
+		    %% no body, illegal
+		    Psock#psock{mode = expectheaders, state = undefined};
+		false ->
+		    cont_len_check(H, Psock)
+	    end
+    end.
+
+
+cont_len_check(H,Psock) ->
     case H#headers.content_length of
 	undefined ->
 	    case H#headers.transfer_encoding of
 		"chunked" ->
 		    Psock#psock{mode = expectchunked, state = init};
-		undefined ->
-		    Psock#psock{mode = expectheaders, state = undefined}
+		undefined when Psock#psock.type == client ->
+		    Psock#psock{mode = expectheaders, state = undefined};
+		undefined when Psock#psock.type == server ->
+		    Psock#psock{mode = undefined, state = undefined}
 	    end;
 	Int when integer(Int) ->
 	    Psock#psock{mode = len,
@@ -111,6 +149,8 @@ sockmode(H,Psock) ->
 			state = list_to_integer(List)}
     
     end.
+
+
 
 set_sock_mode(PS) ->
     S = PS#psock.s,
@@ -161,7 +201,14 @@ get_chunk(Fd, N, Asz) ->
 
 
 
-ploop(From, To, GC, SC) ->
+
+ploop(From0, To, GC, SC) ->
+    From = receive
+	       {r_req, Method} ->
+		   From0#psock{r_req = Method}
+	   after 0 ->
+		   From0
+	   end,
     set_sock_mode(From),
     TS = To#psock.s,
     case From#psock.mode of
@@ -169,23 +216,20 @@ ploop(From, To, GC, SC) ->
 	    SSL = nossl,
 	    case yaws:http_get_headers(From#psock.s, GC, SSL) of
 		{R, H0} ->
-		    ?Debug("GOT proxy hdrs: ~p~n", [H0]),
 		    RStr = 
 			if
 			    %% FIXME handle bad_request here
 			    record(R, http_response) ->
 				yaws_api:reformat_response(R);
 			    record(R, http_request) ->
+				To ! {r_req, R#http_request.method},
 				yaws_api:reformat_request(
 				  rewrite_path(R, From#psock.prefix))
 			end,
-		    H = rewrite_headers(From, H0),
-		    Hstr = lists:map(
-			     fun(Hh) -> [Hh, "\r\n"] end,
-			     yaws_api:reformat_header(H)),
+		    Hstr = headers_to_str(H = rewrite_headers(From, H0)),
 		    yaws:gen_tcp_send(TS, [RStr, "\r\n", Hstr, "\r\n"] ,
 				      SC,GC),
-		    From2 = sockmode(H, From),
+		    From2 = sockmode(H, R, From),
 		    ploop(From2, To, GC,SC);
 		closed ->
 		    done
@@ -242,10 +286,10 @@ ploop(From, To, GC, SC) ->
     end.
 
 
+%% On the way from the client to the server, we need
+%% rewrite the Host header
 
 rewrite_headers(PS, H) when PS#psock.type == client ->
-    %% On the way from the client to the server, we need
-    %% rewrite the Host header
     Host =
 	if H#headers.host == undefined ->
 		undefined;
@@ -259,13 +303,18 @@ rewrite_headers(PS, H) when PS#psock.type == client ->
 			 [$: | integer_to_list(U#url.port)]
 		 end]
 	end,
-    %% FIXME, do cookies
+
     ?Debug("New Host hdr: ~p~n", [Host]),
     H#headers{host = Host};
 
 
+
+%% And on the way from the server to the client we 
+%% need to rewrite the Location header, and the
+%% Set-Cookie header
+
 rewrite_headers(PS, H) when PS#psock.type == server ->
-    ?Debug("HHH ~p~n", [H#headers.location]),
+    ?Debug("Location header to rewrite:  ~p~n", [H#headers.location]),
     Loc = if
 	      H#headers.location == undefined ->
 		  undefined;
@@ -281,11 +330,15 @@ rewrite_headers(PS, H) when PS#psock.type == server ->
 			  ?Debug("New Loc = ~p~n", [P]),
 			  yaws_api:reformat_url(LocUrl#url{path=P});
 		      true ->
-			  ?Debug("Not rew ~p~n~p~n", [LocUrl, ProxyUrl]),
+			  ?Debug("Not rew ~p~n~p~n", 
+			      [LocUrl, ProxyUrl]),
 			  H#headers.location
 		  end
 	  end,
+
+    %% WE should try to handle broken relative Location: paths 
     %% And we also should do cookies here ... FIXME
+
     H#headers{location = Loc}.
 
 

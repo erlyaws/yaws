@@ -469,10 +469,21 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
 	["revproxy", '=', Prefix, Url] ->
-	    {error, "NYI"};
-	    
-
-
+	    case (catch yaws_api:parse_url(Url)) of
+		{'EXIT', _} ->
+		    {error, ?F("Bad url at line ~p",[Lno])};
+		URL when URL#url.path == "/" ->
+		    P = case lists:reverse(Prefix) of
+			    [$/|Tail] ->
+				Prefix;
+			     Other ->
+				lists:reverse([$/|Other])
+			end,
+		    C2 = C#sconf{revproxy = [{P, URL} | C#sconf.revproxy]},
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+		URL ->
+		    {error, "Can't revproxy to an URL with a path "}
+	    end;
 	[H|T] ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end;
