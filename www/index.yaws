@@ -45,7 +45,7 @@ ship several thousands of dynamically generated pages per second.
 <p>
 <h2>yaws.hyber.org</h2>
 
-<p>The homepage of Yaws is <a href="http://yaws.hyber.org">yaws.hyber.org</a>.
+<p>The www page for Yaws is <a href="http://yaws.hyber.org">yaws.hyber.org</a>.
 Statistics for that site is obtained by a yaws page that directly interacts 
 with the server producing <a href="http://yaws.hyber.org/stats.yaws">stats</a>.
 <p>
@@ -59,6 +59,32 @@ powered by Yaws.
 <p> <h2> News </h2>
 
 <div class="box"> 
+
+
+
+<p>
+<ul>
+
+<li> Nov 25, 2002.  Version 0.59 released 
+<ul>
+<li><p> Lots of fixes and new features in this release. This release of
+Yaws is fast, it delivers 3000 static/dynamic pages/sec on my 2Ghz home box.
+
+
+<li><p> Many fixes in the wiki, 
+<li><p> ~username expansion now works
+<li><p> embedded mode is now fully implemented and functional
+<li><p> many new configuration directives
+<li><p> some backwards incompatible changes such as ssl config and
+yaws_api:parse_post_data/1. See the docs for details.
+<li><p> Arg rewrite, customized errors etc.
+<li><p> Lots of new documentation
+<li><p> Optimized ehtml generation
+
+</ul>
+
+
+
 
 <p>
 <ul>
