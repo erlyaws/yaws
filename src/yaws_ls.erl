@@ -32,11 +32,13 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
     D = [yaws_server:make_200(), 
 	 yaws_server:make_dyn_headers(true, "text/html"),
 	 "\r\n"],
-    yaws_server:safe_send(true, CliSock, D, GC),
-    yaws_server:close_if_head(Req, fun() -> gen_tcp:close(CliSock),
-					    throw({ok, 1})
-				   end),
-    yaws_server:safe_send(true, CliSock, Bin, GC),
+    yaws_server:safe_send(true, CliSock, D, GC, SC),
+    yaws_server:close_if_HEAD(Req, 
+			      fun() -> 
+				      yaws_server:do_tcp_close(CliSock, SC),
+				      throw({ok, 1})
+			      end),
+    yaws_server:safe_send(true, CliSock, Bin, GC, SC),
     done.
 
 

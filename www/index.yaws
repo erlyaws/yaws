@@ -41,7 +41,7 @@ ad-hockery of php was one of major reasons I started the Yaws project.
 
 The homepage of Yaws is <a href="http://yaws.hyber.org">yaws.hyber.org</a>.
 Statistics for that site is obtained by a yaws page that directly interacts 
-with the server producing <a href="http://www.hyber.org/stats.yaws">stats</a>.
+with the server producing <a href="http://yaws.hyber.org/stats.yaws">stats</a>.
 <p>
 The documentation, examples as well as releases can be found there, and 
 of cource, <a href="http://yaws.hyber.org">yaws.hyber.org</a> is itself
