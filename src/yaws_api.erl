@@ -576,7 +576,7 @@ htmlize_char($<) ->
 htmlize_char($&) ->
     <<"&amp;">>;
 htmlize_char($") ->
-    <<"&quote;">>;
+    <<"&quot;">>;
 htmlize_char(X) ->
     X.
 
@@ -593,7 +593,7 @@ htmlize_l([$<|Tail], Acc) ->
 htmlize_l([$&|Tail], Acc) ->
     htmlize_l(Tail, [$;,$p,$m,$a,$&|Acc]);
 htmlize_l([$"|Tail], Acc) ->
-    htmlize_l(Tail, [$; ,$e,  $t, $o,  $u,  $q  ,$&|Acc]);
+    htmlize_l(Tail, [$; , $t, $o,  $u,  $q  ,$&|Acc]);
 htmlize_l([X|Tail], Acc) when integer(X) ->
     htmlize_l(Tail, [X|Acc]);
 htmlize_l([X|Tail], Acc) when binary(X) ->
