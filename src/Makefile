@@ -49,14 +49,18 @@ yaws_vsn.erl:	yaws_vsn.template ../vsn.mk
 	. ../vsn.mk; \
 	sed "s/%VSN%/${YAWS_VSN}/" < yaws_vsn.template > yaws_vsn.erl
 
-mime_types.erl:	mime.types mime_type_c.erl
+
+charset.def:	
+	echo -n $(DEFAULT_CHARSET) > charset.def
+
+mime_types.erl:	mime.types mime_type_c.erl charset.def
 	erl -noshell  -pa ../ebin -s mime_type_c  compile
 
 debug:
 	$(MAKE) TYPE=debug
 
 clean:
-	rm -f $(EBIN_FILES) yaws_vsn.erl
+	rm -f $(EBIN_FILES) yaws_vsn.erl charset.def mime_types.erl
 
 install: all docsinstall
 	install -d $(INSTALLPREFIX)/lib/yaws/examples/ebin

@@ -56,7 +56,6 @@
 	       max_size_cached_file = 8000,
 	       large_file_chunk_size = 10240,
 	       cache_refresh_secs = 30,  % seconds  (auto zero when debug)
-	       default_type = "text/html",
 	       include_dir = [],
 	       phpexe = "php",
 	       yaws,                %% server string

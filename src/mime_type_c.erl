@@ -9,6 +9,7 @@
 -author('klacke@hyber.org').
 -compile(export_all).
 
+
 %% this module reads the mime.types file and creates
 %% the mod mime_types.erl
 %% default type is text/plain
@@ -22,6 +23,13 @@ compile() ->
 c() ->
     {ok, F} = file:open("mime.types", [read]),
     io:format("Compiling mime.types ... > mime_types.erl ~n", []),
+    {ok, B} = file:read_file("charset.def"),
+    case string:strip(binary_to_list(B)) of
+	[] ->
+	    put(charset, []);
+	CharSet ->
+	    put(charset, ";charset=" ++ CharSet)
+    end,
     T = ets:new(aa, [set, public]),
     c(F, T, io:get_line(F, '')).
 
@@ -73,12 +81,12 @@ nonl([H|T]) ->
 
 special(Fd, Ext, Type) ->
     io:format(Fd, "t(~p) -> {~p, ~p};~n", 
-	      [Ext, Type, "text/html"]).
+	      [Ext, Type, "text/html" ++ get(charset)]).
     
 
 revspecial(Fd, Ext, Type) ->
     io:format(Fd, "revt(~p) -> {~p, ~p};~n", 
-	      [lists:reverse(Ext), Type, "text/html"]).
+	      [lists:reverse(Ext), Type, "text/html" ++ get(charset)]).
     
 
 gen(T) ->
@@ -94,10 +102,17 @@ gen(T) ->
     special(Fd, "PHP", php),
     special(Fd, "CGI", cgi),
     lists:foreach(
-      fun({Ext, MT}) ->
+      fun({Ext, MT0}) ->
+	      MT = case MT0 of
+		       "text/" ++ _ ->
+			   MT0 ++ get(charset);
+		       _ ->
+			   MT0
+		   end,
 	      io:format(Fd, "t(~p) -> {regular, ~p};~n", [nonl(Ext), MT])
       end, L),
-    io:format(Fd, "t(_) -> {regular, \"text/plain\"}.~n~n~n", []),
+    io:format(Fd, "t(_) -> {regular, \"text/plain" ++ get(charset) 
+	      ++ "\"}.~n~n~n", []),
 
 
 
@@ -107,12 +122,19 @@ gen(T) ->
     revspecial(Fd, "PHP", php),
     revspecial(Fd, "CGI", cgi),
     lists:foreach(
-      fun({Ext, MT}) ->
+      fun({Ext, MT0}) ->
+	      MT = case MT0 of
+		       "text/" ++ _ ->
+			   MT0 ++ get(charset);
+		       _ ->
+			   MT0
+		   end,
 	      io:format(Fd, "revt(~p) -> {regular, ~p};~n", 
 			[nonl(lists:reverse(Ext)), MT])
       end, L),
     io:format(Fd, "revt(_) -> {regular, 
-                               \"text/plain\"}.~n~n~n", []).
+                               \"text/plain" ++ get(charset) ++
+	      "\"}.~n~n~n", []).
 
     
 		  

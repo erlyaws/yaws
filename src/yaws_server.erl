@@ -1060,7 +1060,7 @@ handle_ut(CliSock, ARG, UT, N) ->
     SC=get(sc),GC=get(gc),
     case UT#urltype.type of
 	error ->
-	    yaws:outh_set_dyn_headers(Req, H),
+	    yaws:outh_set_dyn_headers(Req, H, UT),
 	    deliver_dyn_part(CliSock, 
 			     0, "404",
 			     N,
@@ -1073,7 +1073,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 			    );
 	directory when ?sc_has_dir_listings(SC) ->
 	    P = UT#urltype.dir,
-	    yaws:outh_set_dyn_headers(Req, H),
+	    yaws:outh_set_dyn_headers(Req, H, UT),
 	    yaws_ls:list_directory(ARG, CliSock, UT#urltype.data, P, Req);
 	directory ->
 	    handle_ut(CliSock, ARG, #urltype{type = error}, N);
@@ -1126,16 +1126,16 @@ handle_ut(CliSock, ARG, UT, N) ->
 	    end;
 	yaws ->
 	    ?Debug("~p~n", [?format_record(UT, urltype)]),
-	    yaws:outh_set_dyn_headers(Req, H),
+	    yaws:outh_set_dyn_headers(Req, H, UT),
 	    do_yaws(CliSock, ARG, UT, N);
 	forbidden ->
-	    yaws:outh_set_dyn_headers(Req, H),
+	    yaws:outh_set_dyn_headers(Req, H, UT),
 	    deliver_403(CliSock, Req);
 	redir ->
-	    yaws:outh_set_dyn_headers(Req, H),
+	    yaws:outh_set_dyn_headers(Req, H, UT),
 	    deliver_302(CliSock, Req, ARG, UT#urltype.path);
 	appmod ->
-	    yaws:outh_set_dyn_headers(Req, H),
+	    yaws:outh_set_dyn_headers(Req, H, UT),
  	    {Mod, PathData} = UT#urltype.data,
  	    A2 = ARG#arg{appmoddata = PathData,  % trail
  			 appmod_prepath = UT#urltype.path}, % head
@@ -1148,7 +1148,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     end
 			    );
 	cgi ->
-	    yaws:outh_set_dyn_headers(Req, H),
+	    yaws:outh_set_dyn_headers(Req, H, UT),
 	    deliver_dyn_part(CliSock, 
 			     0, "cgi",
 			     N,
@@ -1160,7 +1160,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     end
 			    );
 	php ->
-	    yaws:outh_set_dyn_headers(Req, H),
+	    yaws:outh_set_dyn_headers(Req, H, UT),
 	    deliver_dyn_part(CliSock, 
 			     0, "php",
 			     N,

@@ -1120,7 +1120,7 @@ outh_set_304_headers(Req, UT, Headers) ->
               },
      put(outh, H2).
 
-outh_set_dyn_headers(Req, Headers) ->
+outh_set_dyn_headers(Req, Headers, UT) ->
     H = get(outh),
     {DoClose, Chunked} = dcc(Req, Headers),
     H2 = H#outh{
@@ -1128,7 +1128,7 @@ outh_set_dyn_headers(Req, Headers) ->
 	   date = make_date_header(),
 	   server = make_server_header(),
 	   connection = make_connection_close_header(DoClose),
-	   content_type = make_content_type_header("text/html"),
+	   content_type = make_content_type_header(UT#urltype.mime),
 	   doclose = DoClose,
 	   chunked = Chunked,
 	   transfer_encoding = 

@@ -64,7 +64,8 @@ init(CliSock, ARG, DecPath, QueryPart, {Prefix, URL}, N) ->
 	    ?Debug("Client=~p, Srv=~p", [P1, self()]),
 	    ploop(Srv, Cli, GC, SC);
 	ERR ->
-	    yaws:outh_set_dyn_headers(ARG#arg.req, ARG#arg.headers),
+	    yaws:outh_set_dyn_headers(ARG#arg.req, ARG#arg.headers,
+				      #urltype{}),
 	    yaws_server:deliver_dyn_part(
 	      CliSock,  
 	      0, "404",
