@@ -13,8 +13,10 @@
 
 -export([parse_post_data/1, code_to_phrase/1, ssi/2, redirect/1]).
 -export([setcookie/2, setcookie/3, setcookie/4, setcookie/5]).
--export([pre_ssi_files/2,  pre_ssi_string/1, htmlize/1, f/2, fl/1]).
+-export([pre_ssi_files/2,  pre_ssi_string/1, pre_ssi_string/2,
+	 htmlize/1, f/2, fl/1]).
 -export([find_cookie_val/2, secs/0, url_decode/1]).
+-export([get_line/1, mime_type/1]).
 
 %% these are a bunch of function that are useful inside
 %% yaws scripts
@@ -413,9 +415,9 @@ pre_ssi_string(Str) ->
     pre_ssi_string(Str, "box").
 
 pre_ssi_string(Str, Class) ->
-    {html, ["<br><br>\n<div class=\"", Class, "\"> <pre>", 
+    {html, ["<br><br>\n<div class=\"", Class, "\"> <pre>\n", 
 	    htmlize_l(Str),
-	    "</pre></div>\n<br>\n\n"]}.
+	    "\n</pre></div>\n<br>\n\n"]}.
     
     
 %% convenience
@@ -463,8 +465,15 @@ htmlize_l([$<|Tail], Acc) ->
     htmlize_l(Tail, [$;,$t,$l,$&|Acc]);
 htmlize_l([$&|Tail], Acc) ->
     htmlize_l(Tail, [$;,$p,$m,$a,$&|Acc]);
-htmlize_l([X|Tail], Acc) ->
-    htmlize_l(Tail, [X|Acc]).
+htmlize_l([X|Tail], Acc) when integer(X) ->
+    htmlize_l(Tail, [X|Acc]);
+htmlize_l([X|Tail], Acc) when binary(X) ->
+    X2 = htmlize_l(binary_to_list(X)),
+    htmlize_l(Tail, [X2|Acc]);
+htmlize_l([X|Tail], Ack) when list(X) ->
+    X2 = htmlize_l(X),
+    htmlize_l(Tail, [X2|Ack]).
+
 
 
 secs() ->

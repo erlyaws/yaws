@@ -1,6 +1,6 @@
 <html>
 
-<h2> Read persitant cookie </h2>
+<h2> Read persistant cookie </h2>
 
 <erl>
 
@@ -36,6 +36,7 @@ out(A) ->
 The code to read the cookie, is simple, we get the cookie passed to the yaws
 code in the #arg structure which is the argument supplied to the out/1 function.
 The code is:
+
 <erl>
 out(A) ->
     yaws_api:pre_ssi_files(A#arg.docroot, ["readpcookie.yaws"]).
