@@ -619,7 +619,7 @@ setcookie(Name, Value, Path, Expire) ->
 setcookie(Name, Value, Path, Expire, Domain) ->
     setcookie(Name, Value, Path, Expire, Domain,[]).
 
-setcookie(Name, Value, Path, Expire, Domain, _Secure) ->
+setcookie(Name, Value, Path, Expire, Domain, Secure) ->
     SetDomain = if Domain == [] -> "";
 	           true -> " Domain="++Domain++";"
 	        end,
@@ -629,8 +629,11 @@ setcookie(Name, Value, Path, Expire, Domain, _Secure) ->
     SetPath = if Path == [] -> "/";
                  true -> Path
               end,
-    {header, {set_cookie, f("~s=~s;~s~s Path=~s",
-			    [Name,Value,SetDomain,SetExpire,SetPath])}}.
+    SetSecure = if Secure == on -> " secure;";
+		   true -> ""
+    {header, {set_cookie, f("~s=~s;~s~s~s Path=~s",
+			    [Name,Value,SetDomain,SetExpire,
+			     SetSecure, SetPath])}}.
 
 
 %% This function can be passed the cookie we get in the Arg#arg.headers.cookies
