@@ -190,9 +190,13 @@ part of the URL. This only works with GET requests.
 
 
 .TP
-\fBparse_post_data(Arg)\fR
+\fBparse_post(Arg)\fR
 This function will parse the POST data as supplied from the browser.
 It will return a {Key, Value} list of the items set by the browser.
+
+
+.TP
+\fBparse_multipart_post(Arg)\fR
 
 If the browser has set the Content-Type header to the value
 "multipart/form-data", which is the case when the browser 
@@ -220,7 +224,7 @@ Example usage could be:
  <erl>
  
  out(A) ->
-        case yaws_api:parse_post_data(A) of
+        case yaws_api:parse_multipart_post(A) of
              {cont, Cont, Res} ->
                     St = handle_res(A, Res),
                     {get_more, Cont, St};
