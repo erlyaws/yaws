@@ -591,6 +591,7 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == nossl ->
 			[CliSock, GS#gs.gconf, SC, Req, H]),
 
 	    maybe_access_log(IP, SC, Req),
+	    erase(),
 	    case Res of
 		continue ->
 		    aloop(CliSock, GS, Num+1);
@@ -623,6 +624,7 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == ssl ->
 	    Res = apply(yaws_server, Req#http_request.method, 
 			[CliSock, GS#gs.gconf, SC, Req, H]),
 	    maybe_access_log(IP, SC, Req),
+	    erase(),
 	    case Res of
 		continue ->
 		    aloop(CliSock, GS, Num+1);
@@ -652,7 +654,12 @@ pick_host(GC, Host, [_|T], Group) ->
     pick_host(GC, Host, T, Group);
 pick_host(GC, Host, [], Group) ->
     % none matched try with servername:rport
-    pick_host_rport(GC, Host, Group, Group).
+    %% pick_host_rport(GC, Host, Group, Group).
+
+    %% that was a bit too cpu intensive for my taste -- klacke
+    hd(Group).
+
+
 
 pick_host_rport(GC, Host, [H|T], Group) when integer(H#sconf.rport) ->
     % check if Host matches servername : rport
@@ -670,12 +677,7 @@ pick_host_rport(GC, Host, [H|T], Group) when integer(H#sconf.rport) ->
 pick_host_rport(GC, Host, [_|T], Group) ->
     pick_host_rport(GC, Host, T, Group);
 pick_host_rport(GC, Host, [], Group) ->
-    H = hd(Group),
-    yaws_debug:dinfo(GC, "Got Host: header ~p which didn't match any host "
-		     "field in config, ~npicking the first one : ~p~n ",
-		     [Host, H#sconf.servername]),
-    H.
-
+    hd(Group).
 
 
 inet_peername(Sock, SC) ->
@@ -700,7 +702,7 @@ maybe_access_log(Ip, SC, Req) ->
 	  end,
     case SC#sconf.access_log of
 	true ->
-	    Path = get_path(Req#http_request.path),
+	    Path = decode_path(Req#http_request.path),
 	    Meth = atom_to_list(Req#http_request.method),
 	    yaws_log:accesslog(SC#sconf.servername, Ip, 
 			       [Meth, $\s, Path] , Status, Len);
@@ -709,12 +711,9 @@ maybe_access_log(Ip, SC, Req) ->
     end.
 
 
-get_path({abs_path, Path}) ->
-%    io:format("Path = ~p\n", [Path]),
-%    P = yaws_api:url_decode(Path),
-%    io:format("P = ~p\n", [P]),
-%    P.
+decode_path({abs_path, Path}) ->
     yaws_api:url_decode(Path).
+
 
 do_recv(Sock, Num, TO, nossl) ->
     gen_tcp:recv(Sock, Num, TO);
@@ -970,7 +969,7 @@ make_arg(CliSock, Head, Req, _GC, SC) ->
 
 handle_request(CliSock, GC, SC, Req, H, ARG, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
-    UT =  url_type(GC, SC, get_path(Req#http_request.path)),
+    UT =  url_type(GC, SC, decode_path(Req#http_request.path)),
     ARG2 = ARG#arg{fullpath=UT#urltype.fullpath},
     case SC#sconf.authdirs of
 	[] ->
@@ -1093,7 +1092,7 @@ deliver_303(CliSock, Req, GC, SC) ->
     set_status_code(303),
     accumulate_header(["Location: ", Scheme,
 		       servername_sans_port(SC#sconf.servername), 
-		       PortPart, get_path(Req#http_request.path), "/"]),
+		       PortPart, decode_path(Req#http_request.path), "/"]),
     
     deliver_accumulated(#dcc{}, CliSock, GC, SC),
     done.
@@ -1580,6 +1579,7 @@ deliver_accumulated(DCC, Sock, GC, SC) ->
 
     case erase(content_type) of
 	undefined ->
+	    error_logger:info_msg("yaws: No content type set  ???",[]),
 	    accumulate_header("Content-Type: text/html");
 	MimeType ->
 	    accumulate_header(["Content-Type: ", MimeType])
