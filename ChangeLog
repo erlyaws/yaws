@@ -1,3 +1,205 @@
+2004-09-02 21:53  klacke
+
+	* vsn.mk: preparing for version 1.49
+
+2004-09-02 10:31  klacke
+
+	* src/: yaws_cgi.erl, yaws_server.erl: patch from  Paul Mahon to
+	add PEER_ADDR to cgi env
+
+2004-09-02 00:37  jbevemyr
+
+	* applications/wiki/scripts/updateWiki.src: [no log message]
+
+2004-09-02 00:27  jbevemyr
+
+	* applications/wiki/: src/wiki.erl, src/wiki_templates.erl,
+	src/wiki_utils.erl, wiki/WikiPreferences.files/template.html,
+	wiki/WikiPreferences.files/template_info.html: Made layout of wiki
+	much more configurable using templates and ssi. You must run the
+	script/updateWiki script after updating to this release.
+
+2004-09-02 00:25  jbevemyr
+
+	* src/yaws_server.erl: Fixed bug in ssi code. Multichar delims were
+	not handled properly. When a char of the delim string was found in
+	the text it was deleted.
+
+2004-08-29 22:46  mikl
+
+	* src/yaws_api.erl: Fix htmlize bug (&quote; was used instead of
+	&quot;)
+
+2004-08-19 15:27  klacke
+
+	* src/yaws_server.erl: ""
+
+2004-08-16 20:57  klacke
+
+	* src/yaws_api.erl: quote doubletick in htmlize
+
+2004-08-14 19:40  cschultz
+
+	* src/yaws_server.erl: Rewrite requests with absolute URI to look
+	like requests with a Host header.
+
+2004-08-02 20:02  klacke
+
+	* www/testdir/xxåäöxx.jpg: [no log message]
+
+2004-08-02 19:44  klacke
+
+	* src/yaws.erl: bad mount number for september
+
+2004-07-12 12:25  jbevemyr
+
+	* src/yaws_api.erl: Security option for setcookie.
+
+2004-07-12 12:07  jbevemyr
+
+	* src/yaws_api.erl: Added secure option to cookie.
+
+2004-07-11 16:44  cschultz
+
+	* src/yaws_server.erl: Made process exit with stream_timeout in
+	case of a timeout while streaming, so that these are logged.
+
+2004-07-11 16:10  cschultz
+
+	* src/yaws_server.erl: Have several processes wait for SSL
+	connections, so that one SSL negotiation in progress does not
+	prevent other connections.  Also, for the similar reasons, have use
+	a timeout with SSL accepts.
+	
+	The values for the number of processes and the duration of the
+	timeout are quite arbitrary.  They are ok for my low traffic site.
+
+2004-07-09 17:14  klacke
+
+	* src/mime.types: added mime types for svg and xhtml
+
+2004-06-23 13:38  klacke
+
+	* configure.in: [no log message]
+
+2004-06-21 10:46  jbevemyr
+
+	* applications/mail/mail/mail.js: [no log message]
+
+2004-06-21 01:36  cschultz
+
+	* src/yaws_server.erl: Do not cache a yaws file once for each value
+	of pathinfo.  Current solution:  Do not use cache at all if
+	pathinfo /= undefined.
+
+2004-06-21 00:20  jbevemyr
+
+	* applications/mail/: mail/reply.yaws, src/mail.erl,
+	src/mail_html.erl: Added original message as quoted in reply.
+
+2004-06-21 00:11  cschultz
+
+	* src/yaws_server.erl: Bugfix:	Simple typo, let a process crash
+	after clearing the cache.
+
+2004-06-20 16:20  cschultz
+
+	* src/yaws_server.erl: fixed silly bug with content-range
+
+2004-06-19 23:42  jbevemyr
+
+	* applications/mail/src/: mail_html.erl, mail.erl: [no log message]
+
+2004-06-19 23:38  jbevemyr
+
+	* applications/mail/: mail/mail.js, mail/reply.yaws, src/Makefile,
+	src/mail.erl: Fixed delete email bug.
+
+2004-06-18 20:22  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed 'mailbox already locked'
+	bug
+
+2004-06-18 15:35  cschultz
+
+	* src/yaws_server.erl: Bugfix:	Multiple dots in yaws file name
+	caused trouble with pathinfo.
+
+2004-06-18 13:42  klacke
+
+	* src/yaws_revproxy.erl: ""
+
+2004-06-17 21:05  klacke
+
+	* configure, configure.in, include.mk.in, include/yaws.hrl,
+	src/Makefile, src/mime_type_c.erl, src/yaws.erl,
+	src/yaws_revproxy.erl, src/yaws_server.erl: addded configure option
+	-with-defaultcharset
+
+2004-06-17 09:25  klacke
+
+	* src/yaws_server.erl: small embedded fix by Jimmy Olgeni
+
+2004-06-16 02:28  cschultz
+
+	* src/: yaws.erl, yaws_server.erl: more deflate logic
+
+2004-06-16 01:46  cschultz
+
+	* www/news: Fixed spelling of my name :-)
+
+2004-06-16 01:03  cschultz
+
+	* src/: yaws.erl, yaws_ls.erl, yaws_server.erl, yaws_zlib.erl:
+	Deflate rehaul:  Now works with dynamic pages.
+
+2004-06-14 23:39  jbevemyr
+
+	* applications/mail/src/: attachment.erl, mail.erl: [no log
+	message]
+
+2004-06-12 10:27  jbevemyr
+
+	* applications/mail/src/: attachment.erl, mail.erl: Improved
+	attachement handling with proper parsing of attached emails.
+
+2004-06-11 14:33  klacke
+
+	* two-mode-mode.el, scripts/ntpath.sh: 
+	two-mode.el contributed by David Welton
+
+2004-06-10 22:23  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed 'Mailbox already locked.'
+	problem.
+
+2004-06-09 14:10  klacke
+
+	* src/yaws_api.erl: David Welton discovered that url on the form
+	http://www.x.com?foo had yaws_api:queryval/2 return {nokey, "foo"}
+	which is clearly wrong. New correct val is {"foo", undefined}.
+
+2004-06-08 17:54  klacke
+
+	* scripts/make-upload: ""
+
+2004-06-08 17:35  klacke
+
+	* src/Makefile: ""
+
+2004-06-08 00:35  klacke
+
+	* doc/yaws.pdf: ""
+
+2004-06-08 00:20  klacke
+
+	* vsn.mk, doc/yaws.pdf, src/yaws_server.erl, www/news,
+	www/ssi.yaws: gearing up to 1.48 release
+
+2004-06-08 00:12  klacke
+
+	* ChangeLog: [no log message]
+
 2004-06-07 17:59  klacke
 
 	* www/upload.yaws: security vulnerability in upload.yaws founf by
