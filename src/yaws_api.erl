@@ -39,7 +39,7 @@
 % yaws_api:parse_post_data/1 will return either:
 % 
 % {cont, Cont, Res} where Res is new result(s) from this segment. This
-% indicates that there is more data to co me and the out/1 function
+% indicates that there is more data to come and the out/1 function
 % should return {get_more, Cont, User_state} where User_state might
 % usefully be a File Descriptor.
 %
