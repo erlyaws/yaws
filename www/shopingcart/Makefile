@@ -1,6 +1,6 @@
 
 all:	shopcart.beam
-
+	cp shopcart.beam ../../examples/ebin
 debug:
 
 install:	all

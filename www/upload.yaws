@@ -1,0 +1,119 @@
+<html>
+
+<h2> File upload </h2>
+
+<p>This page shows how to upload a file to the webserver
+
+
+<erl>
+
+
+
+
+-record(upload, {
+	  fd,
+	  filename,
+	  last}).
+
+
+
+
+out(A) when A#arg.state == undefined ->
+    State = #upload{},
+    multipart(A, State);
+out(A) ->
+    multipart(A, A#arg.state).
+
+
+
+err() ->
+    {ehtml,
+     {p, [], "error"}}.
+
+multipart(A, State) ->
+    case yaws_api:parse_multipart_post(A) of
+	{cont, Cont, Res} ->
+	    case addFileChunk(A, Res, State) of
+		{done, Result} ->
+		    Result;
+		{cont, NewState} ->
+		    {get_more, Cont, NewState}
+	    end;
+	{result, Res} ->
+	    case addFileChunk(A, Res, State#upload{last=true}) of
+		{done, Result} ->
+		    Result;
+		{cont, _} ->
+		    err()
+	    end
+    end.
+
+
+
+addFileChunk(A, [{part_body, Data}|Res], State) ->
+    addFileChunk(A, [{body, Data}|Res], State);
+
+addFileChunk(_A, [], State) when State#upload.last==true,
+				 State#upload.filename /= undefined,
+				 State#upload.fd /= undefined ->
+
+    file:close(State#upload.fd),
+    Res = {ehtml, 
+	   {p,[], "File upload done"}},
+    {done, Res};
+
+addFileChunk(A, [], State) when State#upload.last==true ->
+    {done, err()};
+
+addFileChunk(_A, [], State) ->
+    {cont, State};
+
+addFileChunk(A, [{head, {foo, Opts}}|Res], State ) ->
+    case lists:keysearch(filename, 1, Opts) of
+	{value, {_, Fname0}} ->
+	    Fname = basename(Fname0),
+	    case file:open(Fname ,[write]) of
+		{ok, Fd} ->
+		    S2 = State#upload{filename = Fname,
+				      fd = Fd},
+		    addFileChunk(A, Res, S2);
+		Err ->
+		    {done, err()}
+	    end;
+	false ->
+	    {done, err()}
+    end;
+
+addFileChunk(A, [{body, Data}|Res], State) 
+  when State#upload.filename /= undefined ->
+    case file:write(State#upload.fd, Data) of
+	ok ->
+	    addFileChunk(A, Res, State);
+	Err ->
+	    {done, err()}
+    end.
+
+
+basename(FilePath) ->
+    case string:rchr(FilePath, $\\) of
+	0 ->
+	    %% probably not a DOS name
+	    filename:basename(FilePath);
+	N ->
+	    %% probably a DOS name, remove everything after last \
+	    string:substr(FilePath, N+1)
+    end.
+
+
+
+
+</erl>
+
+
+
+</html>
+
+
+	
+	
+				

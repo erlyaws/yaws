@@ -5,6 +5,7 @@
 <p>This page displays the Arg #argument structure
 supplied to the out/1 function.
 
+
 <erl>
 
 out(A) ->

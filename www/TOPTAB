@@ -4,17 +4,17 @@
 <table bgcolor="#B6b6a5" border="2" cellpadding="5" cellspacing="0" width="100%">
 
 <tr border="2">
-    <td> <A HREF="index.yaws">Top Page</a> </td>
-    <td> <A HREF="configuration.yaws">Build Config & Run</a></td>
-    <td> <A HREF="dynamic.yaws">Dynamic content</a> </td>
-    <td> <A HREF="examples.yaws">Examples</a> </td>
+    <td> <A HREF="/index.yaws">Top Page</a> </td>
+    <td> <A HREF="/configuration.yaws">Build Config & Run</a></td>
+    <td> <A HREF="/dynamic.yaws">Dynamic content</a> </td>
+    <td> <A HREF="/examples.yaws">Examples</a> </td>
 </tr>
 
 <tr border="1">
-    <td> <A HREF="todo.yaws">TODO list </a> </td>
-    <td> <A HREF="download">Download </a> </td>
-    <td> <A HREF="contact.yaws">Contact </a> </td>
-    <td> <A HREF="doc.yaws">Documentation</a> </td>
+    <td> <A HREF="/todo.yaws">TODO list </a> </td>
+    <td> <A HREF="/download">Download </a> </td>
+    <td> <A HREF="/contact.yaws">Contact </a> </td>
+    <td> <A HREF="/doc.yaws">Documentation</a> </td>
 
 </tr>
 

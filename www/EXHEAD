@@ -3,14 +3,16 @@
 
 <table bgcolor="#B6b6a5" border="2" cellpadding="5" cellspacing="0" width="100%">
 <tr border="2">
-    <td> <A HREF="index.yaws">Top Page</a> </td>
-    <td> <A HREF="simple.yaws">Simple</a></td>
-    <td> <A HREF="query.yaws">Query part of url</a> </td>
-    <td> <A HREF="form.yaws">Forms</a> </td>
-    <td> <A HREF="redirect.yaws">Redirect</a> </td>
-    <td> <A HREF="cookies.yaws">Cookies</a> </td>
-    <td> <A HREF="pcookie.yaws">Persistant Cookies</a> </td>
-    <td> <A HREF="shopingcart/index.yaws">Tiny shoping cart</a> </td>
+    <td> <A HREF="/index.yaws">Top Page</a> </td>
+    <td> <A HREF="/simple.yaws">Simple</a></td>
+    <td> <A HREF="/query.yaws">Query part of url</a> </td>
+    <td> <A HREF="/form.yaws">Forms</a> </td>
+    <td> <A HREF="/redirect.yaws">Redirect</a> </td>
+    <td> <A HREF="/arg.yaws">Arg</a> </td>
+    <td> <A HREF="/upload0.yaws">File upload</a> </td>
+    <td> <A HREF="/cookies.yaws">Cookies</a> </td>
+    <td> <A HREF="/pcookie.yaws">Persistant Cookies</a> </td>
+    <td> <A HREF="/shopingcart/index.yaws">Tiny shoping cart</a> </td>
 </tr>
 </table>
 <hr>

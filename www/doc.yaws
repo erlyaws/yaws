@@ -1,0 +1,42 @@
+
+<erl>
+
+out(A) -> 
+    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
+	    
+</erl>
+
+
+<H2>Documentation</h2>
+
+
+<h3> User manual </h3>
+
+<ul>
+<li> <a href="yaws.pdf"> yaws.pdf</a>
+<li> <a href="yaws.ps"> yaws.ps</a>
+</ul>
+
+
+<h3> Man pages </h3>
+
+<ul>
+<li>
+<a href="man.yaws?page=yaws_api"> man page for yaws_api (5) </a>
+
+<li>
+<a href="man.yaws?page=yaws.conf"> man page for Yaws config file </a>
+
+
+<li>
+<a href="man.yaws?page=yaws"> man page for yaws</a>
+
+</ul>
+
+
+
+
+<erl>
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+</erl>
+
