@@ -8,9 +8,13 @@
 -module(yaws_404).
 -author('klacke@hyber.org').
 
--compile(export_all).
+
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
+
+-export([out404/3,
+	 crashmsg/3]).
+
 
 %% The default error 404 error delivery module
 %% This function can be used to generate
@@ -43,3 +47,17 @@ not_found_body(Path, GC, SC) ->
 
 
 
+
+%% possibility to customize crash messages, 
+
+% while developing
+%% it's extremely convenient to get the crash messages in the browser,
+%% however not in production :-)
+
+crashmsg(A, SC, L) ->
+    {ehtml,
+     [{h2, [], "Internal error, yaws code crashed"},
+      {br},
+      {hr},
+      {pre, [], L},
+      {hr}]}.

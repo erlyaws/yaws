@@ -62,7 +62,8 @@
 	 authdirs = [],
 	 partial_post_size = nolimit,
 	 appmods = [],                %% list of modules for this app
-	 errormod_404 = yaws_404,     %% the default error module 
+	 errormod_404 = yaws_404,     %% the default 404 error module 
+	 errormod_crash = yaws_404,   %% use the same module for crashes
 	 tilde_expand = true,         %% allow public_html user dirs
 	 opaque                       %% useful in embedded mode
 	}).

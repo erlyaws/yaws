@@ -369,7 +369,7 @@ gserv(GC, Group0) ->
 			{ok, Files0} ->
 			    Files0;
 			{error, Reason} ->
-			    error_logger:format("Failed to list ~p probably"
+			    error_logger:format("Failed to list ~p probably "
 						"due to permission errs: ~p",
 						[Tdir, Reason]),
 			    proc_lib:init_ack({error, "Can't list dir " 
@@ -1423,25 +1423,21 @@ handle_out_reply({redirect, URL}, _DCC, _LineNo, _YawsFile, _SC, A) ->
 handle_out_reply(ok, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     ok;
 
-handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile, _SC, _A) ->
-    L = ?F("~n<pre> ~nERROR erl  code  crashed:~n "
+handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile, SC, A) ->
+    L = ?F("~n~nERROR erlang  code  crashed:~n "
 	   "File: ~s:~w~n"
-	   "Reason: ~p~n</pre>~n",
+	   "Reason: ~p~n~n",
 	   [YawsFile, LineNo, Err]),
-    yaws:elog("erl code crashed: ~n"
-	      "File: ~s:~w~n"
-	      "Reason: ~p", [YawsFile, LineNo, Err]),
-    accumulate_chunk(DCC, L);
+    handle_crash(A, DCC, L, SC);
 
 handle_out_reply({get_more, Cont, State}, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     {get_more, Cont, State};
 
-handle_out_reply(Reply, DCC, LineNo, YawsFile, _SC, _A) ->
-    yaws_log:sync_errlog("Bad return code from yaws function: ~p~n", [Reply]),
-    L =  ?F("<p><br> <pre>yaws code at ~s:~p crashed or "
-	    "ret bad val:~p ~n</pre>",
+handle_out_reply(Reply, DCC, LineNo, YawsFile, SC, A) ->
+    L =  ?F("yaws code at ~s:~p crashed or "
+	    "ret bad val:~p ~n",
 	    [YawsFile, LineNo, Reply]),
-    accumulate_chunk(DCC, L).
+    handle_crash(A, DCC, L, SC).
 
     
 
@@ -1456,6 +1452,40 @@ handle_out_reply_l([Reply|T], DCC, LineNo, YawsFile, SC, A, Res) ->
     end;
 handle_out_reply_l([], _DCC, _LineNo, _YawsFile, _SC, _A, Res) ->
     Res.
+
+
+
+%% Erlang yaws code crashed, display either the
+%% actual crash or a custimized error message 
+
+handle_crash(A, DCC, L, SC) ->
+    yaws:elog("~s", [L]),
+    case catch apply(SC#sconf.errormod_crash, crashmsg, [A, SC, L]) of
+	{html, Str} ->
+	    accumulate_chunk(DCC, Str),
+	    break;
+	{ehtml, Term} ->
+	    case catch safe_ehtml_expand(Term) of
+		{'EXIT', Reason} ->
+		    yaws:elog("~p", [Reason]),
+		    %% Aghhh, yet another user crash :-(
+		    T2 = [{h2, "Internal error"}, {hr},
+			  {p, "Customized crash display code crashed !!!"}],
+		    accumulate_chunk(DCC, safe_ehtml_expand(T2)),
+		    break;
+		Out ->
+		    accumulate_chunk(DCC, Out),
+		    break
+	    end;
+	Other ->
+	    yaws:elog("Bad return value from errmod_crash ~n~p~n",[Other]),
+	    T2 = [{h2, [], "Internal error"}, {hr},
+		  {p, [], "Customized crash display code returned bad val"}],
+	    accumulate_chunk(DCC, safe_ehtml_expand(T2)),
+	    break
+	
+    end.
+
 
 %% Get redirect reply code.
 %% HTTP/1.0 clients (e.g. Netscape 4, aka The Last Simple Browser)
@@ -2117,7 +2147,7 @@ ret_user_dir(SC, [], "/", Upath) when SC#sconf.tilde_expand == true ->
 	redir_dir ->
 	    redir_dir
     end;
-ret_user_dir(_SC, [], "/", Upath)  ->
+ret_user_dir(_SC, _, _, _Upath)  ->
     forbidden.
 
 

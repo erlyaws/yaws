@@ -407,11 +407,15 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    fload(FD, ssl, GC, C, Cs, Lno+1, Next);
 	
 	["appmods", '=' | Modules] ->
-	     C2 = C#sconf{appmods = Modules},
+	    C2 = C#sconf{appmods = Modules},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
 	["errormod_404", '=' , Module] ->
-	     C2 = C#sconf{errormod_404 = list_to_atom(Module)},
+	    C2 = C#sconf{errormod_404 = list_to_atom(Module)},
+	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+
+	["errormod_crash", '=', Module] ->
+	    C2 = C#sconf{errormod_crash = list_to_atom(Module)},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
 	["tilde_expand", '=', Bool] ->
@@ -525,7 +529,7 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
 
 
 
-fload(FD, server_auth, GC, C, Cs, Lno, eof, Auth) ->
+fload(FD, server_auth, _GC, _C, _Cs, Lno, eof, _Auth) ->
     file:close(FD),
     {error, ?F("Unexpected end of file at line ~w", [Lno])};
 
