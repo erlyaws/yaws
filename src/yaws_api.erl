@@ -455,7 +455,14 @@ coerce_type(binary, Str) ->
     list_to_binary(lists:reverse(Str)).
 
 mkkey(S) ->
-    list_to_atom(lists:reverse(S)).
+    GC=get(gc),
+    if
+	?gc_has_backwards_compat_parse(GC) ->
+	    list_to_atom(lists:reverse(S));
+	true ->
+	    lists:reverse(S)
+    end.
+
 
 
 
@@ -690,10 +697,14 @@ url_decode([$%, Hi, Lo | Tail]) ->
 url_decode([$?|T]) ->
     %% Don't decode the query string here, that is parsed separately.
     [$?|T];
-url_decode([H|T]) ->
+url_decode([H|T]) when integer(H) ->
     [H |url_decode(T)];
 url_decode([]) ->
-    [].
+    [];
+%% deep lists
+url_decode([H|T]) when list(H) ->
+    [url_decode(H) | url_decode(T)].
+
 
 path_norm(Path) ->
     path_norm_reverse(lists:reverse(Path)).
@@ -1515,10 +1526,10 @@ parse_set_cookie(Str, Cookie) ->
     case Rest1 of
 	[$=|Rest2] ->
 	    {Value,Quoted,Rest3} = parse_set_cookie_value(Rest2),
-	    NewC=add_set_cookie(misc:lowercase(Cookie),Key,Value,Quoted),
+	    NewC=add_set_cookie(yaws:lowercase(Cookie),Key,Value,Quoted),
 	    parse_set_cookie(Rest3,NewC);
 	[$;|Rest2] ->
-	    NewC =add_set_cookie(misc:lowercase(Cookie),Key,undefined,false),
+	    NewC =add_set_cookie(yaws:lowercase(Cookie),Key,undefined,false),
 	    parse_set_cookie(Rest2,NewC);
 	_ ->
 	    Cookie
@@ -1660,7 +1671,7 @@ binding(Key) ->
 
 %% Return the parse url the client requested.
 request_url(ARG) ->
-    SC = ARG#arg.sc,
+    SC = get(sc),
     Headers = ARG#arg.headers,
     {abs_path, Path} = (ARG#arg.req)#http_request.path,
     DecPath = url_decode(Path),

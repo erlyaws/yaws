@@ -116,20 +116,29 @@ fail({format, File,Line,Fmt,Args}) ->
     end.
 
 
-format(GC, F, A)  when ?gc_has_debug(GC) ->
-    io:format(F, A);
-format(_,_,_) ->
-    ok.
+format(F, A)  ->
+    case ?gc_has_debug((get(gc))) of
+	true ->
+	    io:format(F, A);
+	false ->
+	    ok
+    end.
 
-derror(GC, F, A) when ?gc_has_debug(GC) ->
-    error_logger:error_msg(F, A);
-derror(_,_,_) ->
-    ok.
+derror(F, A) ->
+    case ?gc_has_debug((get(gc))) of
+	true ->
+	    error_logger:error_msg(F, A);
+	false ->
+	    ok
+    end.
 
-dinfo(GC, F, A) when ?gc_has_debug(GC) ->
-    error_logger:info_msg(F, A);
-dinfo(_,_,_) ->
-    ok.
+dinfo(F, A) ->
+    case ?gc_has_debug((get(gc))) of
+	true ->
+	    error_logger:info_msg(F, A);
+	false ->
+	    ok
+    end.
 
 
 mktags() ->

@@ -30,7 +30,8 @@
 
 
 
-init(CliSock, GC, SC, ARG, DecPath, QueryPart, {Prefix, URL}, N) ->
+init(CliSock, ARG, DecPath, QueryPart, {Prefix, URL}, N) ->
+    GC=get(gc), SC=get(sc),
     case connect_url(URL) of
 	{ok, Ssock} ->
 	    Headers0 = ARG#arg.headers,
@@ -38,14 +39,14 @@ init(CliSock, GC, SC, ARG, DecPath, QueryPart, {Prefix, URL}, N) ->
 			   #psock{s = CliSock, prefix = Prefix,
 				  url = URL, type = client}),
 	    ?Debug("CLI: ~p~n",[?format_record(Cli, psock)]),
-	    Headers = rewrite_headers(SC, Cli, Headers0),
+	    Headers = rewrite_headers(Cli, Headers0),
 	    ReqStr = yaws_api:reformat_request(
 		       rewrite_path(ARG#arg.req, Prefix)),
 	    Hstr = headers_to_str(Headers),
-	    yaws:gen_tcp_send(Ssock, [ReqStr, "\r\n", Hstr, "\r\n"], SC,GC),
+	    yaws:gen_tcp_send(Ssock, [ReqStr, "\r\n", Hstr, "\r\n"]),
 	    if
 		N /= 0 ->
-		    yaws:gen_tcp_send(Ssock,ARG#arg.clidata, SC, GC);
+		    yaws:gen_tcp_send(Ssock,ARG#arg.clidata);
 		true ->
 		    ok
 	    end,
@@ -59,20 +60,19 @@ init(CliSock, GC, SC, ARG, DecPath, QueryPart, {Prefix, URL}, N) ->
 	    %% Now we _must_ spawn a process here, because we
 	    %% can't use {active, once} due to the inefficencies
 	    %% that would occur with chunked encodings
-	    
 	    P1 = proc_lib:spawn_link(?MODULE, ploop, [Cli, Srv, GC, SC]),
 	    ?Debug("Client=~p, Srv=~p", [P1, self()]),
 	    ploop(Srv, Cli, GC, SC);
 	ERR ->
 	    yaws:outh_set_dyn_headers(ARG#arg.req, ARG#arg.headers),
 	    yaws_server:deliver_dyn_part(
-	      CliSock, GC, SC, 
+	      CliSock,  
 	      0, "404",
 	      0,
 	      ARG,
-	      fun(A)->(SC#sconf.errormod_404):out404(A,GC,SC) 
+	      fun(A)->(SC#sconf.errormod_404):out404(A,get(gc),get(sc)) 
 	      end,
-	      fun()->yaws_server:finish_up_dyn_file(CliSock, GC, SC)
+	      fun()->yaws_server:finish_up_dyn_file(CliSock)
 	      end
 	     )
     end.
@@ -213,6 +213,12 @@ get_chunk(Fd, N, Asz) ->
 
 
 ploop(From0, To, GC, SC) ->
+    put(sc, SC),
+    put(gc, GC),
+    ploop(From0, To).
+
+
+ploop(From0, To) ->
     From = receive
 	       {cli2srv, Method, Host} ->
 		   From0#psock{r_req = Method,
@@ -225,7 +231,7 @@ ploop(From0, To, GC, SC) ->
     case From#psock.mode of
 	expectheaders ->
 	    SSL = nossl,
-	    case yaws:http_get_headers(From#psock.s, GC, SSL) of
+	    case yaws:http_get_headers(From#psock.s, SSL) of
 		{R, H0} ->
 		    ?Debug("R = ~p~n",[R]),
 		    RStr = 
@@ -239,17 +245,16 @@ ploop(From0, To, GC, SC) ->
 				yaws_api:reformat_request(
 				  rewrite_path(R, From#psock.prefix))
 			end,
-		    Hstr = headers_to_str(H = rewrite_headers(SC, From, H0)),
-		    yaws:gen_tcp_send(TS, [RStr, "\r\n", Hstr] ,
-				      SC,GC),
+		    Hstr = headers_to_str(H = rewrite_headers(From, H0)),
+		    yaws:gen_tcp_send(TS, [RStr, "\r\n", Hstr]),
 		    From2 = sockmode(H, R, From),
 		    if
 			From2#psock.mode == expectchunked ->
 			    true;
 			true ->
-			    yaws:gen_tcp_send(TS,"\r\n",SC,GC)
+			    yaws:gen_tcp_send(TS,"\r\n")
 		    end,
-		    ploop(From2, To, GC,SC);
+		    ploop(From2, To);
 		closed ->
 		    done
 	    end;
@@ -258,51 +263,50 @@ ploop(From0, To, GC, SC) ->
 	    N = get_chunk_num(From#psock.s),
 	    if N == 0 ->
 		    ok=eat_crnl(From#psock.s),
-		    yaws:gen_tcp_send(TS,["\r\n0\r\n\r\n"], SC,GC),
+		    yaws:gen_tcp_send(TS,["\r\n0\r\n\r\n"]),
 		    ?Debug("SEND final 0 ",[]),
 		    ploop(From#psock{mode = expectheaders, 
-				     state = undefined},To, GC, SC);
+				     state = undefined},To);
 	       true ->
 		    ploop(From#psock{mode = chunk, 
-				    state = N},To, GC, SC)
+				    state = N},To)
 	    end;
 	chunk ->
 	    CG = get_chunk(From#psock.s,From#psock.state, 0),
 	    SZ = From#psock.state,
-	    Data2 = ["\r\n", yaws:integer_to_hex(SZ) , 
-		     "\r\n", CG],
-	    yaws:gen_tcp_send(TS, Data2, SC, GC),
+	    Data2 = ["\r\n", yaws:integer_to_hex(SZ),"\r\n", CG],
+	    yaws:gen_tcp_send(TS, Data2),
 	    ploop(From#psock{mode = expect_nl_before_chunked,
-			     state = undefined}, To, GC,SC);
+			     state = undefined}, To);
 	expect_nl_before_chunked ->
 	    case gen_tcp:recv(From#psock.s, 0, 20000) of
 		{ok, <<13,10>>} ->
-		    yaws:gen_tcp_send(TS,<<13,10>>,SC, GC),
+		    yaws:gen_tcp_send(TS,<<13,10>>),
 		    ploop(From#psock{mode = expectchunked,
-				     state = undefined}, To, GC,SC);
+				     state = undefined}, To);
 		Other ->
 		    exit(normal)
 	    end;
 	len when From#psock.state == 0 ->
 	    ploop(From#psock{mode = expectheaders,
-			     state = undefined},To, GC,SC);
+			     state = undefined},To);
 	len ->
-	    case gen_tcp:recv(From#psock.s, From#psock.state, 20000) of
+	    case gen_tcp:recv(From#psock.s, From#psock.state, ?READ_TIMEOUT) of
 		{ok, Bin} ->
 		    SZ = size(Bin),
                     ?Debug("Read ~p bytes~n", [SZ]),
-		    yaws:gen_tcp_send(TS, Bin, SC, GC),
+		    yaws:gen_tcp_send(TS, Bin),
 		    ploop(From#psock{state = From#psock.state - SZ},
-			  To, GC,SC);
+			  To);
 		Rsn ->
                     ?Debug("Failed to read :~p~n", [Rsn]),  
 		    exit(normal)
 	    end;
 	undefined ->
-	    case gen_tcp:recv(From#psock.s, From#psock.state, 20000) of
+	    case gen_tcp:recv(From#psock.s, From#psock.state, ?READ_TIMEOUT) of
 		{ok, Bin} ->
-		    yaws:gen_tcp_send(TS, Bin, SC, GC),
-		    ploop(From, To, GC,SC);
+		    yaws:gen_tcp_send(TS, Bin),
+		    ploop(From, To);
 		_ ->
 		    exit(normal)
 	    end
@@ -312,7 +316,7 @@ ploop(From0, To, GC, SC) ->
 %% On the way from the client to the server, we need
 %% rewrite the Host header
 
-rewrite_headers(SC, PS, H) when PS#psock.type == client ->
+rewrite_headers(PS, H) when PS#psock.type == client ->
     Host =
 	if H#headers.host == undefined ->
 		undefined;
@@ -336,7 +340,7 @@ rewrite_headers(SC, PS, H) when PS#psock.type == client ->
 %% need to rewrite the Location header, and the
 %% Set-Cookie header
 
-rewrite_headers(SC, PS, H) when PS#psock.type == server ->
+rewrite_headers(PS, H) when PS#psock.type == server ->
     ?Debug("Location header to rewrite:  ~p~n", [H#headers.location]),
     Loc = if
 	      H#headers.location == undefined ->
@@ -349,10 +353,10 @@ rewrite_headers(SC, PS, H) when PS#psock.type == server ->
 		      LocUrl#url.host == ProxyUrl#url.host,
 		      LocUrl#url.port == ProxyUrl#url.port,
 		      LocUrl#url.scheme == ProxyUrl#url.scheme ->
-			  rewrite_loc_url(SC, LocUrl, PS);
+			  rewrite_loc_url(LocUrl, PS);
 		      
 		      element(1, LocUrl) == 'EXIT' ->
-			  rewrite_loc_rel(SC, PS, H#headers.location);
+			  rewrite_loc_rel(PS, H#headers.location);
 		      true ->
 			  ?Debug("Not rew ~p~n~p~n", 
 			      [LocUrl, ProxyUrl]),
@@ -367,7 +371,8 @@ rewrite_headers(SC, PS, H) when PS#psock.type == server ->
 
 
 %% Rewrite a properly formatted location redir
-rewrite_loc_url(SC, LocUrl, PS) ->
+rewrite_loc_url(LocUrl, PS) ->
+    SC=get(sc),
     Scheme = yaws_server:redirect_scheme(SC),
     RedirHost = yaws_server:redirect_host(SC, PS#psock.r_host),
     RealPath = LocUrl#url.path,
@@ -378,17 +383,17 @@ rewrite_loc_url(SC, LocUrl, PS) ->
 %% Location: /path
 %% or even worse, Location: path
 
-rewrite_loc_rel(SC, PS, Loc) ->
+rewrite_loc_rel(PS, Loc) ->
+    SC=get(sc),
     Scheme = yaws_server:redirect_scheme(SC),
     RedirHost = yaws_server:redirect_host(SC, PS#psock.r_host),
     [Scheme, RedirHost,Loc].
 
 
 
-
 eat_crnl(Fd) ->
     inet:setopts(Fd, [{packet, line}]),
-    case gen_tcp:recv(Fd,0, 20000) of
+    case gen_tcp:recv(Fd,0, ?READ_TIMEOUT) of
 	{ok, <<13,10>>} ->
 	    ok;
 	{ok, [13,10]} ->

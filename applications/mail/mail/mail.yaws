@@ -10,7 +10,7 @@ out(A) ->
 	             _          -> false
 	        end,
 	    Sort =
-		case lists:keysearch(sort,1,L) of
+		case lists:keysearch("sort",1,L) of
 	             {value, {_,SortStr}} -> list_to_atom(SortStr);
 	             _                -> undefined
 	        end,

@@ -7,8 +7,8 @@ out(A) ->
 	    'POST' ->
 		yaws_api:parse_post(A)
 	end,
-    case {lists:keysearch(user, 1, L),
-	  lists:keysearch(password, 1, L)} of
+    case {lists:keysearch("user", 1, L),
+	  lists:keysearch("password", 1, L)} of
 	{{value, {_, User}}, {value, {_,Passwd}}} ->
 	    case mail:login(User, Passwd) of
 		{ok, Cookie} ->

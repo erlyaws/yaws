@@ -510,11 +510,11 @@ parse_ip(Val) ->
 
 
 
-address(GConf, Sconf) ->
+address() ->
     ?F("<address> ~s Server at ~s </address>",
 	[
-	GConf#gconf.yaws,
-	Sconf#sconf.servername]).
+	(get(gc))#gconf.yaws,
+	(get(sc))#sconf.servername]).
 
 
 
@@ -1518,8 +1518,6 @@ tmp_dir_fstr() ->
 		[],
 		tmp_dir()).
 
- 
-
 exists(F) ->
     case file:open(F, [read, raw]) of
 	{ok, Fd} ->
@@ -1530,8 +1528,6 @@ exists(F) ->
     end.
 
 
-
-
 %%
 %%
 %% http/tcp send receive functions
@@ -1539,9 +1535,9 @@ exists(F) ->
 %%
 
 
-do_recv(Sock, Num, TO, nossl) ->
-    gen_tcp:recv(Sock, Num, TO);
-do_recv(Sock, Num, _TO, ssl) ->
+do_recv(Sock, Num, nossl) ->
+    gen_tcp:recv(Sock, Num, ?READ_TIMEOUT);
+do_recv(Sock, Num, ssl) ->
     case erase(ssltrail) of %% hack from above ...
 	undefined ->
 	    split_recv(ssl:recv(Sock, 0), Num);   %% ignore Num val ??? TO ??
@@ -1563,12 +1559,14 @@ split_recv(E, _) ->
 
 
 	
-	 
+cli_recv(S, Num, SslBool) ->
+    Res = do_recv(S, Num, SslBool),
+    io:format("Res: ~p~n", [Res]),
+    cli_recv_trace((get(gc))#gconf.trace, Res),
+    Res.
 
-cli_recv(S, Num, GC, SslBool) when GC#gconf.trace == false ->
-    do_recv(S, Num, GC#gconf.timeout, SslBool);
-cli_recv(S, Num, GC, SslBool) ->
-    Res = do_recv(S, Num, GC#gconf.timeout, SslBool),
+cli_recv_trace(false, _) -> ok;
+cli_recv_trace(Trace, Res) ->
     case Res of
 	{ok, Val} when tuple(Val) ->
 	    yaws_log:trace_traffic(from_client, ?F("~p~n", [Val]));
@@ -1576,23 +1574,22 @@ cli_recv(S, Num, GC, SslBool) ->
 	    yaws_log:trace_traffic(from_client, ?F("~n~p~n", [What]));
 	{ok, http_eoh} ->
 	    ok;
-	{ok, Val} when GC#gconf.trace == {true, traffic} ->
+	{ok, Val} when Trace == {true, traffic} ->
 	    yaws_log:trace_traffic(from_client, Val);
-	{ok, Val} ->
-	    {ok, Val}
-    end,
-    Res.
+	_ ->
+	    ok
+    end.
 
 
 
-gen_tcp_send(S, Data, SC, GC) ->
-    Res = case SC#sconf.ssl of
+gen_tcp_send(S, Data) ->
+    Res = case (get(sc))#sconf.ssl of
 	      undefined ->
 		  gen_tcp:send(S, Data);
 	      _SSL ->
 		  ssl:send(S, Data)
 	  end,
-    case ?gc_has_debug(GC) of
+    case ?gc_has_debug((get(gc))) of
 	false ->
 	    case Res of
 		ok ->
@@ -1607,7 +1604,7 @@ gen_tcp_send(S, Data, SC, GC) ->
 		    ok;
 		Err ->
 		    {B2, Size} = strip(Data),
-		    yaws_debug:derror(GC, "Failed to send ~w bytes:~n~p "
+		    yaws_debug:derror("Failed to send ~w bytes:~n~p "
 				      "on socket ~p: ~p~n",
 				      [Size, B2, S, Err]),
 		    exit(Err)
@@ -1626,10 +1623,10 @@ strip(Data) ->
 	 
 
 
-http_get_headers(CliSock, GC, SSL) ->
+http_get_headers(CliSock, SSL) ->
     case SSL of
 	ssl ->
-	    case yaws_ssl:ssl_get_headers(CliSock, GC) of
+	    case yaws_ssl:ssl_get_headers(CliSock) of
 		{Req, H, Trail} ->
 		    case get(ssltrail) of   %% hack hack hack
 			undefined ->
@@ -1641,36 +1638,36 @@ http_get_headers(CliSock, GC, SSL) ->
 		R -> R
 	    end;
 	nossl ->
-	    H = http_get_headers(CliSock, GC),
+	    H = http_get_headers(CliSock),
 	    ?Debug("Headers = ~p~n", [H]),
 	    H
     end.
 
 
-http_get_headers(CliSock, GC) ->
+http_get_headers(CliSock) ->
     inet:setopts(CliSock, [{packet, http}]),
-    case http_recv_request(CliSock, GC) of
+    case http_recv_request(CliSock) of
 	bad_request ->
 	    {#http_request{method=bad_request, version={0,9}},
 	     #headers{}};
 	closed -> 
 	    closed;
 	R -> 
-	    H = http_get_headers(CliSock, R, GC, #headers{}),
+	    H = http_get_headers(CliSock, R,  #headers{}),
 	    {R, H}
     end.
 
 
-http_recv_request(CliSock, GC) ->
-    case cli_recv(CliSock, 0, GC, nossl) of
+http_recv_request(CliSock) ->
+    case cli_recv(CliSock, 0,  nossl) of
 	{ok, R} when record(R, http_request) ->
 	    R;
 	{ok, R} when record(R, http_response) ->
 	    R;
 	{error, {http_error, "\r\n"}} ->
-	    http_recv_request(CliSock, GC);
+	    http_recv_request(CliSock);
 	{error, {http_error, "\n"}} ->
-	    http_recv_request(CliSock, GC);
+	    http_recv_request(CliSock);
 	{error, {http_error, _}} ->
 	    bad_request;
 	{error, closed} -> closed;
@@ -1682,61 +1679,61 @@ http_recv_request(CliSock, GC) ->
 
 
 		  
-http_get_headers(CliSock, Req, GC, H) ->
-    ?TC([{record, GC, gconf}]),
-    case cli_recv(CliSock, 0, GC, nossl) of
+http_get_headers(CliSock, Req, H) ->
+    io:format("http_get_headers/3~n",[]),
+    case cli_recv(CliSock, 0, nossl) of
 	{ok, {http_header,  _Num, 'Host', _, Host}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{host = Host});
+	    http_get_headers(CliSock, Req, H#headers{host = Host});
 	{ok, {http_header, _Num, 'Connection', _, Conn}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{connection = Conn});
+	    http_get_headers(CliSock, Req, H#headers{connection = Conn});
 	{ok, {http_header, _Num, 'Accept', _, Accept}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{accept = Accept});
+	    http_get_headers(CliSock, Req, H#headers{accept = Accept});
 	{ok, {http_header, _Num, 'If-Modified-Since', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, 
+	    http_get_headers(CliSock, Req,  
 			     H#headers{if_modified_since = X});
 	{ok, {http_header, _Num, 'If-Match', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{if_match = X});
+	    http_get_headers(CliSock, Req, H#headers{if_match = X});
 	{ok, {http_header, _Num, 'If-None-Match', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{if_none_match = X});
+	    http_get_headers(CliSock, Req, H#headers{if_none_match = X});
 	{ok, {http_header, _Num, 'If-Range', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{if_range = X});
+	    http_get_headers(CliSock, Req, H#headers{if_range = X});
 	{ok, {http_header, _Num, 'If-Unmodified-Since', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, 
+	    http_get_headers(CliSock, Req,  
 			H#headers{if_unmodified_since = X});
 	{ok, {http_header, _Num, 'Range', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{range = X});
+	    http_get_headers(CliSock, Req, H#headers{range = X});
 	{ok, {http_header, _Num, 'Referer',_, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{referer = X});
+	    http_get_headers(CliSock, Req, H#headers{referer = X});
 	{ok, {http_header, _Num, 'User-Agent', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{user_agent = X});
+	    http_get_headers(CliSock, Req, H#headers{user_agent = X});
 	{ok, {http_header, _Num, 'Accept-Ranges', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{accept_ranges = X});
+	    http_get_headers(CliSock, Req, H#headers{accept_ranges = X});
 	{ok, {http_header, _Num, 'Cookie', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, 
+	    http_get_headers(CliSock, Req,  
 			H#headers{cookie = [X|H#headers.cookie]});
 	{ok, {http_header, _Num, 'Keep-Alive', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{keep_alive = X});
+	    http_get_headers(CliSock, Req, H#headers{keep_alive = X});
 	{ok, {http_header, _Num, 'Content-Length', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{content_length = X});
+	    http_get_headers(CliSock, Req, H#headers{content_length = X});
 	{ok, {http_header, _Num, 'Content-Type', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{content_type = X});
+	    http_get_headers(CliSock, Req, H#headers{content_type = X});
 	{ok, {http_header, _Num, 'Transfer-Encoding', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{transfer_encoding=X});
+	    http_get_headers(CliSock, Req, H#headers{transfer_encoding=X});
 	{ok, {http_header, _Num, 'Location', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{location=X});
+	    http_get_headers(CliSock, Req, H#headers{location=X});
 	{ok, {http_header, _Num, 'Authorization', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, 
+	    http_get_headers(CliSock, Req,  
 			H#headers{authorization = parse_auth(X)});
 
 	{ok, http_eoh} ->
 	    H;
 	{error, {http_error, "\r\n"}} ->
-	     http_get_headers(CliSock, Req, GC, H);
+	     http_get_headers(CliSock, Req, H);
 	{error, {http_error, "\n"}} ->
-	     http_get_headers(CliSock, Req, GC, H);
+	     http_get_headers(CliSock, Req, H);
 	{ok, X} ->
 	    ?Debug("OTHER header ~p~n", [X]),
-	    http_get_headers(CliSock, Req, GC, 
+	    http_get_headers(CliSock, Req,  
 			     H#headers{other=[X|H#headers.other]});
 	_Err ->
 	    exit(normal)

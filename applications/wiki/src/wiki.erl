@@ -51,7 +51,7 @@
 % This should be -include:ed instead
 
 showPage(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
+    Page = getopt("node", Params),
     if 
 	Page == undefined ->
 	    error(invalid_request);
@@ -102,8 +102,8 @@ create_thumb(SrcPath, DstPath) ->
 	   shell_quote(DstPath)++"'").
 
 getThumb(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
-    Pict = getopt(pict, Params),
+    Page = getopt("node", Params),
+    Pict = getopt("pict", Params),
     if 
 	Page == undefined ->
 	    error(invalid_request);
@@ -122,8 +122,8 @@ getThumb(Params, Root, Prefix) ->
     end.
 
 getMidSize(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
-    Pict = getopt(pict, Params),
+    Page = getopt("node", Params),
+    Pict = getopt("pict", Params),
     if 
 	Page == undefined ->
 	    error(invalid_request);
@@ -168,7 +168,7 @@ get_age(Path) ->
 
 
 fixupFiles(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
+    Page = getopt("node", Params),
     if
 	Page == undefined ->
 	    error(invalid_request);
@@ -249,8 +249,8 @@ importFiles([WobFile]) ->
 
 
 createNewPage(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
-    Sid  = getopt(sid, Params),
+    Page = getopt("node", Params),
+    Sid  = getopt("sid", Params),
 
 
     if 
@@ -300,11 +300,11 @@ createNewPage1(Page, Sid, Prefix, Content, Passwd, Email) ->
 
 
 storePage(Params, Root, Prefix) ->
-    Password = getopt(password, Params, ""),
-    Page     = getopt(node, Params), 
-    Cancel   = getopt(cancel, Params),
-    Edit     = getopt(edit, Params),
-    Sid      = getopt(sid, Params),
+    Password = getopt("password", Params, ""),
+    Page     = getopt("node", Params), 
+    Cancel   = getopt("cancel", Params),
+    Edit     = getopt("edit", Params),
+    Sid      = getopt("sid", Params),
     
     if 
 	Cancel /= undefined ->
@@ -315,7 +315,7 @@ storePage(Params, Root, Prefix) ->
 		true ->
 		    if
 			Edit /= undefined ->
-			    Txt0 = getopt(txt, Params),
+			    Txt0 = getopt("txt", Params),
 			    Txt = zap_cr(urlencoded2str(Txt0)),
 			    session_set_text(Sid, Txt),
 			    redirect_edit(Page, Sid, Password, Prefix);
@@ -331,9 +331,9 @@ storePage(Params, Root, Prefix) ->
     
 
 storePage1(Params, Root, Prefix) ->
-    Page     = getopt(node,Params),
-    Txt0     = getopt(txt, Params),
-    Sid      = getopt(sid, Params),
+    Page     = getopt("node",Params),
+    Txt0     = getopt("txt", Params),
+    Sid      = getopt("sid", Params),
 
     Txt = zap_cr(urlencoded2str(Txt0)),
 
@@ -350,10 +350,10 @@ storePage1(Params, Root, Prefix) ->
 
 storeNewPage(Params, Root, Prefix) ->
     
-    Page     = getopt(node, Params),
-    Password = getopt(password, Params),
-    Email0   = getopt(email, Params),
-    Txt0     = getopt(txt, Params),
+    Page     = getopt("node", Params),
+    Password = getopt("password", Params),
+    Email0   = getopt("email", Params),
+    Txt0     = getopt("txt", Params),
     
     Txt = zap_cr(urlencoded2str(Txt0)),
     Email = urlencoded2str(Email0),
@@ -371,9 +371,9 @@ storeNewPage(Params, Root, Prefix) ->
 
 storeTagged(Params, Root, Prefix) ->
 
-    Page = getopt(node, Params),
-    Tag  = getopt(tag, Params),
-    Txt0 = getopt(txt, Params),
+    Page = getopt("node", Params),
+    Tag  = getopt("tag", Params),
+    Txt0 = getopt("txt", Params),
 
     Txt = zap_cr(urlencoded2str(Txt0)),
     {File,FileDir} = page2filename(Page, Root),
@@ -402,13 +402,13 @@ storeTagged(Params, Root, Prefix) ->
 
 storeFiles(Params, Root, Prefix) ->
 
-    Page     = getopt(node, Params),
-    Password = getopt(password, Params),
-    Add      = getopt(add, Params),
-    Update   = getopt(update, Params),
-    Delete   = getopt(delete, Params),
-    Copy     = getopt(copy, Params),
-    Cancel   = getopt(cancel, Params),
+    Page     = getopt("node", Params),
+    Password = getopt("password", Params),
+    Add      = getopt("add", Params),
+    Update   = getopt("update", Params),
+    Delete   = getopt("delete", Params),
+    Copy     = getopt("copy", Params),
+    Cancel   = getopt("cancel", Params),
 
     case checkPassword(Page, Password, Root, Prefix) of
 	true ->
@@ -433,8 +433,8 @@ storeFiles(Params, Root, Prefix) ->
     end.
 
 addFileInit(Params, Root, Prefix) ->
-    Page        = getopt(node, Params),
-    Password    = getopt(password, Params),
+    Page        = getopt("node", Params),
+    Password    = getopt("password", Params),
     template("Add File", "",
 	     [h1(Page), 
 	      form("POST", "addFile.yaws", 
@@ -569,7 +569,7 @@ addFileChunk([{body, Data}|Res], State) when State#addfile.param == text ->
 addFileChunk([{head, {attached, Opts}}|Res], State) ->
     Page     = State#addfile.node,
     Password = State#addfile.password,
-    FilePath = getopt(filename, Opts),
+    FilePath = getopt("filename", Opts),
     FileName = basename(FilePath),
     Root     = State#addfile.root,
     Prefix   = State#addfile.prefix,
@@ -615,7 +615,7 @@ check_filename(FileName) ->
     end.
 
 updateFilesInit(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
+    Page = getopt("node", Params),
 
     Descriptions = [{lists:nthtail(4,atom_to_list(N)),S} ||
 		       {N,S,_} <- Params,
@@ -656,8 +656,8 @@ updateFilesInit(Params, Root, Prefix) ->
 
 deleteFilesInit(Params, Root, Prefix) ->
 
-    Page        = getopt(node, Params),
-    Password    = getopt(password, Params),
+    Page        = getopt("node", Params),
+    Password    = getopt("password", Params),
 
     CheckedFiles = [lists:nthtail(3,atom_to_list(N)) ||
 		       {N,_,_} <- Params,
@@ -701,9 +701,9 @@ deleteFilesInit(Params, Root, Prefix) ->
 	    false).
     
 deleteFiles(Params, Root, Prefix) ->
-    Password = getopt(password, Params, ""),
-    Page     = getopt(node, Params), 
-    Cancel   = getopt(cancel, Params),
+    Password = getopt("password", Params, ""),
+    Page     = getopt("node", Params), 
+    Cancel   = getopt("cancel", Params),
     
     if 
 	Cancel /= undefined ->
@@ -720,7 +720,7 @@ deleteFiles(Params, Root, Prefix) ->
     end.
 
 deleteFiles1(Params, Root, Prefix) ->
-    Page        = getopt(node, Params),
+    Page        = getopt("node", Params),
 
     CheckedFiles = [lists:nthtail(4,atom_to_list(N)) ||
 		       {N,_,_} <- Params,
@@ -764,8 +764,8 @@ deleteFiles1(Params, Root, Prefix) ->
 
 copyFilesInit(Params, Root, Prefix) ->
 
-    Page        = getopt(node, Params),
-    Password    = getopt(password, Params),
+    Page        = getopt("node", Params),
+    Password    = getopt("password", Params),
 
     CheckedFiles = [lists:nthtail(3,atom_to_list(N)) ||
 		       {N,_,_} <- Params,
@@ -819,9 +819,9 @@ copyFilesInit(Params, Root, Prefix) ->
 
     
 copyFiles(Params, Root, Prefix) ->
-    Password = getopt(password, Params, ""),
-    Page     = getopt(node, Params),
-    Cancel   = getopt(cancel, Params),
+    Password = getopt("password", Params, ""),
+    Page     = getopt("node", Params),
+    Cancel   = getopt("cancel", Params),
 
     if
 	Cancel /= undefined ->
@@ -838,8 +838,8 @@ copyFiles(Params, Root, Prefix) ->
     end.
 
 copyFiles1(Params, Root, Prefix) ->
-    Page     = getopt(node, Params), 
-    Dest     = getopt(destination, Params), 
+    Page     = getopt("node", Params), 
+    Dest     = getopt("destination", Params), 
 
     case checkPassword(Dest, "", Root, Prefix) of
 	true ->
@@ -851,9 +851,9 @@ copyFiles1(Params, Root, Prefix) ->
     end.
 
 copyFiles2(Params, Root, Prefix) ->
-    Page     = getopt(node, Params), 
-    Dest     = getopt(destination, Params), 
-    Password = getopt(password, Params, ""),
+    Page     = getopt("node", Params), 
+    Dest     = getopt("destination", Params), 
+    Password = getopt("password", Params, ""),
 
     case checkPassword(Dest, Password, Root, Prefix) of
 	true ->
@@ -865,8 +865,8 @@ copyFiles2(Params, Root, Prefix) ->
     end.
 
 copyFiles3(Params, Root, Prefix) ->
-    Page     = getopt(node, Params), 
-    Dest     = getopt(destination, Params), 
+    Page     = getopt("node", Params), 
+    Dest     = getopt("destination", Params), 
     
     {SrcWobFile, SrcFileDir} = page2filename(Page, Root),
     {DstWobFile, DstFileDir} = page2filename(Dest, Root),
@@ -897,7 +897,7 @@ store_ok(Page, Root, Prefix, NewTxt,
     redirect({node, Page}, Prefix).
 
 showHistory(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
+    Page = getopt("node", Params),
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
@@ -1001,8 +1001,8 @@ last_edited_time(File) ->
     end.
 	
 showOldPage(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
-    Nt = getopt(index, Params),
+    Page = getopt("node", Params),
+    Nt = getopt("index", Params),
 
     Index = list_to_integer(Nt),
     {File,FileDir} = page2filename(Page, Root),
@@ -1032,8 +1032,8 @@ take(0, _) -> [];
 take(N, [{P,_,_}|T]) -> [P|take(N-1, T)].
 
 deletePage(Params,  Root, Prefix) ->
-    Page     = getopt(node, Params),
-    Password = getopt(password, Params, ""),
+    Page     = getopt("node", Params),
+    Password = getopt("password", Params, ""),
 
     case checkPassword(Page, Password, Root, Prefix) of
 	true ->
@@ -1045,8 +1045,8 @@ deletePage(Params,  Root, Prefix) ->
     end.
 
 deletePage1(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
-    Password = getopt(password, Params),
+    Page = getopt("node", Params),
+    Password = getopt("password", Params),
     
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
@@ -1074,9 +1074,9 @@ deletePage1(Params, Root, Prefix) ->
     end.
 
 finalDeletePage(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
-    Password = getopt(password, Params, ""),
-    Cancel   = getopt(cancel, Params),
+    Page = getopt("node", Params),
+    Password = getopt("password", Params, ""),
+    Cancel   = getopt("cancel", Params),
 
     if
 	Cancel /= undefined ->
@@ -1093,8 +1093,8 @@ finalDeletePage(Params, Root, Prefix) ->
     end.
 
 finalDeletePage1(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
-    Txt0 = getopt(text, Params),
+    Page = getopt("node", Params),
+    Txt0 = getopt("text", Params),
     
     {File,FileDir} = page2filename(Page, Root),
     case file:delete(File) of
@@ -1135,9 +1135,9 @@ getPassword(Page, Root, Prefix, Target, Values) ->
 	     ], false).
 
 putPassword(Params, Root, Prefix) ->
-    Target = getopt(target, Params, "error"),
-    Cancel = getopt(cancel, Params),
-    Page   = getopt(node, Params),
+    Target = getopt("target", Params, "error"),
+    Cancel = getopt("cancel", Params),
+    Page   = getopt("node", Params),
 
     if
 	Cancel /= undefined ->
@@ -1152,9 +1152,9 @@ putPassword(Params, Root, Prefix) ->
     end.
 
 editPage(Params, Root, Prefix) ->
-    Password = getopt(password, Params, ""),
-    Page     = getopt(node, Params),
-    Sid      = getopt(sid, Params),
+    Password = getopt("password", Params, ""),
+    Page     = getopt("node", Params),
+    Sid      = getopt("sid", Params),
 
     case checkPassword(Page, Password, Root, Prefix) of
 	true ->
@@ -1362,8 +1362,8 @@ edit1(Page, Password, Content, Sid) ->
 	  ], false).
 
 sendMeThePassword(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
-    Email = getopt(email, Params),
+    Page = getopt("node", Params),
+    Email = getopt("email", Params),
 
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
@@ -1412,8 +1412,8 @@ checkPassword(Page, Password, Root, Prefix) ->
     end.
 
 editFiles(Params, Root, Prefix) ->
-    Page     = getopt(node, Params),
-    Password = getopt(password, Params, ""),
+    Page     = getopt("node", Params),
+    Password = getopt("password", Params, ""),
 
     case checkPassword(Page, Password, Root, Prefix) of
 	true ->
@@ -1474,10 +1474,10 @@ editFiles1(Page, Password, Root, Prefix) ->
 
 
 slideShow(Params, Root, Prefix) ->
-    Page     = getopt(node, Params),
-    NextArg = getopt(next, Params, undefined),
-    PrevArg = getopt(prev, Params, undefined),
-    AutoArg = getopt(auto, Params, undefined),
+    Page     = getopt("node", Params),
+    NextArg = getopt("next", Params, undefined),
+    PrevArg = getopt("prev", Params, undefined),
+    AutoArg = getopt("auto", Params, undefined),
     case {NextArg, PrevArg, AutoArg} of
 	{undefined, undefined, undefined} ->
 	    nextSlide(1, next, Page, Root, Prefix);
@@ -1570,7 +1570,7 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
     end.
 
 thumbIndex(Params, Root, Prefix) ->
-    Page     = getopt(node, Params),
+    Page     = getopt("node", Params),
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
@@ -1668,8 +1668,8 @@ get_img(Index, Direction, Files) ->
 	    
 
 editTag(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
-    Tag = getopt(tag, Params),
+    Page = getopt("node", Params),
+    Tag = getopt("tag", Params),
 
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
@@ -1699,7 +1699,7 @@ editTag(Params, Root, Prefix) ->
     end.
 
 changePassword(Params, Root, Prefix) ->
-    Page     = getopt(node, Params),
+    Page     = getopt("node", Params),
 
     wiki_templates:template(
       "Edit", "",
@@ -1727,10 +1727,10 @@ changePassword(Params, Root, Prefix) ->
 
 
 changePassword2(Params, Root, Prefix) ->
-    Page     = getopt(node, Params),
-    OldPw    = getopt(password, Params),
-    Pw1      = getopt(password1, Params),
-    Pw2      = getopt(password2, Params),
+    Page     = getopt("node", Params),
+    OldPw    = getopt("password", Params),
+    Pw1      = getopt("password1", Params),
+    Pw2      = getopt("password2", Params),
 
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
@@ -1756,11 +1756,11 @@ changePassword2(Params, Root, Prefix) ->
     end.
 
 previewPage(Params, Root, Prefix) ->
-    Page     = getopt(node, Params),
-    Cancel   = getopt(cancel, Params),
-    Delete   = getopt(delete, Params),
-    Change   = getopt(chpasswd, Params),
-    Sid      = getopt(sid, Params),
+    Page     = getopt("node", Params),
+    Cancel   = getopt("cancel", Params),
+    Delete   = getopt("delete", Params),
+    Change   = getopt("chpasswd", Params),
+    Sid      = getopt("sid", Params),
 
     if
 	Cancel /= undefined ->
@@ -1777,10 +1777,10 @@ previewPage(Params, Root, Prefix) ->
     end.
 
 previewPage1(Params, Root, Prefix) ->
-    Page     = getopt(node, Params),
-    Password = getopt(password, Params),
-    Txt0     = getopt(text, Params),
-    Sid      = getopt(sid, Params,"undefined"),
+    Page     = getopt("node", Params),
+    Password = getopt("password", Params),
+    Txt0     = getopt("text", Params),
+    Sid      = getopt("sid", Params,"undefined"),
     
     Txt = zap_cr(Txt0),
     Wik = wiki_split:str2wiki(Txt),
@@ -1805,9 +1805,9 @@ previewPage1(Params, Root, Prefix) ->
 %% We *dont* want any structure here
 
 previewTagged(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
-    Tag = getopt(tag, Params),
-    Txt0 = getopt(text, Params),
+    Page = getopt("node", Params),
+    Tag = getopt("tag", Params),
+    Txt0 = getopt("text", Params),
 
     Txt = zap_cr(Txt0),
     %% we want this stuff to *only* be txt
@@ -1842,12 +1842,12 @@ legal_flat_text1([_|T])      -> legal_flat_text1(T);
 legal_flat_text1([])         -> true.
     
 previewNewPage(Params, Root, Prefix) ->
-    Page  = getopt(node, Params),
-    P1    = getopt(password1, Params),
-    P2    = getopt(password2, Params),
-    Email = getopt(email, Params),
-    Txt0  = getopt(text, Params),
-    Sid   = getopt(sid, Params),
+    Page  = getopt("node", Params),
+    P1    = getopt("password1", Params),
+    P2    = getopt("password2", Params),
+    Email = getopt("email", Params),
+    Txt0  = getopt("text", Params),
+    Sid   = getopt("sid", Params),
 
     Txt = zap_cr(Txt0),
     Wik = wiki_split:str2wiki(Txt),
@@ -1878,7 +1878,7 @@ wikiZombies(_, Root, Prefix) ->
     wiki_utils:zombies(Root).
 
 allRefsToMe(Params, Root, Prefix) ->
-    Page = getopt(node, Params),
+    Page = getopt("node", Params),
 
     wiki_utils:findallrefsto(Page, Root).
 
@@ -2316,7 +2316,9 @@ check_precon([F|Fs], Args) ->
 getopt(Key, KeyList) ->
     getopt(Key, KeyList, undefined).
 
-getopt(Key, KeyList, Default) ->
+getopt(Key, KeyList, Default) when atom (Key) ->
+    getopt(atom_to_list(Key), KeyList, Default);
+getopt(Key, KeyList, Default)  ->
     case lists:keysearch(Key, 1, KeyList) of
 	false ->
 	    Default;
@@ -2328,6 +2330,8 @@ getopt(Key, KeyList, Default) ->
 	    end
     end.
 
+getopt_options(Key, KeyList) when atom(Key) ->
+    getopt_options(atom_to_list(Key), KeyList)
 getopt_options(Key, KeyList) ->
     case lists:keysearch(Key, 1, KeyList) of
 	{value, Tuple} when size(Tuple) >= 3 ->

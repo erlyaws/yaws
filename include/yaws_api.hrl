@@ -12,13 +12,12 @@
 	  clisock,        %% the socket leading to the peer client
 	  headers,        %% headers
 	  req,            %% request
-	  sc,             %% The sconf for this request
 	  clidata,        %% The client data (as a binary in POST requests)
 	  server_path,    %% The normalized server path
 	  querydata,      %% Was the URL on the form of ...?query (GET reqs)
 	  appmoddata,     %% the remainder of the path leading up to the query
 	  docroot,        %% where's the data
-	  fullpath,       %% full path to yaws file
+	  fullpath,       %% full deep path to yaws file
 	  cont,		  %% Continuation for chunked multipart uploads
 	  state,          %% State for use by users of the out/1 callback
 	  pid,            %% pid of the yaws worker process

@@ -47,7 +47,8 @@ comp_opts(GC) ->
     Opts.
 
 
-compile_file(File, GC, SC) ->
+compile_file(File) ->
+    GC=get(gc), SC=get(sc),
     put(yfile,yaws:to_list(File)),
     %% broken erlang compiler isn't
     %% reentrant, can only have one erlang compiler at a time running 

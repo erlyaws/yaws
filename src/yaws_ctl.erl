@@ -361,7 +361,7 @@ check([File| IncludeDirs]) ->
 					   IncludeDirs)},
     SC = #sconf{},
 
-    case yaws_compile:compile_file(atom_to_list(File), GC2, SC) of
+    case yaws_compile:compile_file(atom_to_list(File)) of
 	{ok, [{errors, 0}| _Spec]} ->
 	    io:format("ok~n",[]),
 	    init:stop();

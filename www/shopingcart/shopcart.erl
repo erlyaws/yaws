@@ -178,13 +178,13 @@ logout(A) ->
 %% to the original URL.
 
 loginpost(A) ->
-    L =  yaws_api:parse_query(A),
-    case {lists:keysearch(user, 1, L),
-          lists:keysearch(url, 1, L),
-          lists:keysearch(password, 1, L)} of
-        {{value, {_, User}},
-         {value, {_, Url}},
-         {value, {_, Pwd}}} ->
+    case {yaws_api:query_var(A, "user"),
+	  yaws_api:query_var(A, "url"),
+	  yaws_api:query_var(A, "password")} of
+
+	{{ok, User},
+	 {ok, Url},
+	 {ok, Pwd}} ->
 	    
 	    %% here's the place to validate the user
 	    %% we allow all users,
@@ -208,13 +208,7 @@ formupdate(A) ->
     {ok, Sess, Cookie} = check_cookie(A),
     J = junk(),
     Items = Sess#sess.items,
-    L0 = yaws_api:parse_post(A),
-
-    %% One of the oddities of parse_post is that
-    %% it will make the first elem an atom, we don't want that
-    %% it is nice and convenient most of the time though
-    L = lists:map(fun({Name, Val}) -> {atom_to_list(Name), Val} end, L0),
-    io:format("L = ~p~n", [L]),
+    L = yaws_api:parse_post(A),
     I2 = handle_l(L, Items),
     Sess2 = Sess#sess{items = I2},
     yaws_api:replace_cookie_session(Cookie, Sess2),

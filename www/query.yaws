@@ -53,7 +53,7 @@ The above example again:
 out(A) ->
 L=" 
     out(A) ->
-        {ok,Page} = queryvar(A,page),
+        {ok,Page} = queryvar(A,\"page\"),
         L = os:cmd(\"man \" ++ Page ++ \" | col -b\"),
         yaws_api:pre_ssi_string(L, \"man\").
 ",

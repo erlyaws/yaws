@@ -13,6 +13,7 @@
 -include("../include/yaws_api.hrl").
 
 -export([out404/3,
+	 out404/1,
 	 crashmsg/3]).
 
 
@@ -21,6 +22,10 @@
 %% a special page on 404's (it doesn't even have to be a 404)
 
 
+
+
+out404(Arg) ->
+    out404(Arg, get(gc), get(sc)).
 out404(Arg, GC, SC) ->
     Req = Arg#arg.req,
     {abs_path, Path} = Req#http_request.path,
@@ -42,7 +47,7 @@ not_found_body(Path, GC, SC) ->
 	 yaws_api:htmlize(Path), 
 	 " was not found on this server.<P>"
 	 "<HR>",
-	 yaws:address(GC, SC),
+	 yaws:address(),
 	 "  </BODY></HTML>"
 	],
     list_to_binary(L).

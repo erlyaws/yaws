@@ -8,7 +8,7 @@
 -module(yaws_ssl).
 -author('klacke@hyber.org').
 
--export([ssl_get_headers/2]).
+-export([ssl_get_headers/1]).
 
 
 -include_lib("yaws/include/yaws.hrl").
@@ -44,19 +44,19 @@ contains_rnrn([X|XS]) ->
     contains_rnrn(XS).
 
 
-recv(CliSock, Num, GC) ->    
-    recv(CliSock, Num, GC, []).
+recv(CliSock, Num) ->    
+    recv(CliSock, Num, []).
 
-recv(CliSock, 0, GC, D) -> {ok, D};
-recv(CliSock, Num, GC, D) -> 
-    case yaws:cli_recv(CliSock, Num, GC, ssl) of
+recv(CliSock, 0, D) -> {ok, D};
+recv(CliSock, Num, D) -> 
+    case yaws:cli_recv(CliSock, Num, ssl) of
 	{ok, Data} ->
 	    ?Debug("GOT chunk of size ~p.~n", [size(Data)]),
 	    D2 = D ++ binary_to_list(Data),
 	    case contains_rnrn(D2) of
 		true -> {ok, D2};
 		false ->
-		    recv(CliSock, Num - size(Data), GC, D2)
+		    recv(CliSock, Num - size(Data), D2)
 	    end;
 	{error, closed} -> 
 	    ?Debug("No more chunk to get.~n", []),
@@ -65,8 +65,8 @@ recv(CliSock, Num, GC, D) ->
     end.
     
 
-ssl_get_headers(CliSock, GC) ->
-    case recv(CliSock, 2048, GC) of
+ssl_get_headers(CliSock) ->
+    case recv(CliSock, 2048) of
 	{ok, []} ->
 	    closed;
 	{ok, Data} ->
@@ -83,7 +83,7 @@ ssl_get_headers(CliSock, GC) ->
 						% "\r\n\r\n".
 		     <<>>};
 		_ ->
-		    {H,Trail2} = get_headers(CliSock, GC,  #headers{}, Trail),
+		    {H,Trail2} = get_headers(CliSock, #headers{}, Trail),
 		    {R, H, list_to_binary(Trail2)}
 	    end;
 	_Err ->
@@ -164,10 +164,10 @@ parse_req(Line) ->
 					
 				       
 				    
-get_headers(CliSock, GC, H, Tail) ->
+get_headers(CliSock, H, Tail) ->
     case yaws_api:get_line(Tail) of
 	{line, Line, Tail2} ->
-	    get_headers(CliSock, GC, parse_line(Line, H), Tail2);
+	    get_headers(CliSock, parse_line(Line, H), Tail2);
 	{lastline, Line, Tail2} ->
 	    {parse_line(Line, H), Tail2}
     end.

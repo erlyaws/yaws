@@ -6,7 +6,7 @@ box(Str) ->
      {pre,[],Str}}.
 
 fpostvar(A, Key) ->
-    case postvar(A,lang) of
+    case postvar(A,"lang") of
 	undefined -> "None";
 	{ok, Val} -> 
 	    Val
@@ -45,7 +45,7 @@ out(A) ->
 out(A) ->
     {ehtml,
       {p,[], [\"The favourite programming language is \",
-              case postvar(A,lang) of
+              case postvar(A,\"lang\") of
                   undefined -> \"None\";
                   {ok, Val} -> Val
               end]}}.
@@ -55,7 +55,7 @@ out(A) ->
         {hr},
         {'div',[{class,"box"}],
           {p,[], ["The favourite programming language is ", 
-                  fpostvar(A,lang)]}}
+                  postvar(A,"lang")]}}
 
          ]},
         {ssi, "END",[],[]}].

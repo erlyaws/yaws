@@ -17,7 +17,7 @@
 
 -include_lib("kernel/include/file.hrl").
 
-list_directory(CliSock, List, DirName, Req, GC, SC) ->
+list_directory(CliSock, List, DirName, Req) ->
     {abs_path, Path} = Req#http_request.path,
     {DirStr, Pos, Direction} = parse_query(Path),
     ?Debug("List=~p Dirname~p~n", [List, DirName]), 
@@ -37,9 +37,9 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
 	     L,
 	     list_tail(),
 	     "\n<pre>",
-	     inline_readme(SC,DirName,List),
+	     inline_readme(DirName,List),
 	     "</pre>\n<hr>\n",
-	     yaws:address(GC, SC),
+	     yaws:address(),
 	     "</body>\n</html>\n"],
     B = list_to_binary(Body),
 
@@ -47,10 +47,10 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
     case yaws:outh_get_chunked() of
 	true ->
 	    yaws_server:accumulate_content(["\r\n", "0", "\r\n\r\n"]),
-	    yaws_server:deliver_accumulated(CliSock, GC, SC),
+	    yaws_server:deliver_accumulated(CliSock),
 	    continue;
 	false ->
-	    case yaws_server:deliver_accumulated(CliSock, GC, SC) of
+	    case yaws_server:deliver_accumulated(CliSock) of
 		discard -> yaws_server:done_or_continue();
 		_ -> done
 	    end
@@ -75,7 +75,7 @@ parse_query(Path) ->
     
 
 
-inline_readme(_SC,DirName,L) ->
+inline_readme(DirName,L) ->
     F = fun("README", _Acc) ->
 		File = DirName ++ [$/ | "README"],
 		{ok,Bin} = file:read_file(File),

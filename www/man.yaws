@@ -4,7 +4,7 @@
 out(A) -> 
     H = yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]),
 
-    L = case queryvar(A,page) of
+    L = case queryvar(A,"page") of
             {ok, Page} ->
 		%% only allow regular chars in Page
 		case lists:all(fun(C) ->
@@ -22,7 +22,7 @@ out(A) ->
 				       end
 			       end, Page) of
 		    true ->
-                        os:cmd("man -Thtml " ++ Page ++ " | lynx -stdin -dump -hiddenlinks=ignore -nolist");
+		        os:cmd("man  " ++ Page ++ "  | col -b -p -x");
 		    false ->
 			"illegal character detected in query arg"
 		end;

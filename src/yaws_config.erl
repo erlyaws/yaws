@@ -272,14 +272,10 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		     {error, ?F("Expect integer at line ~w", [Lno])}
 	     end;
 
+
+	%% depracted, don't use
 	["read_timeout", '=', Val] ->
-	    case (catch list_to_integer(Val)) of
-		 I when integer(I) ->
-		    fload(FD, globals, GC#gconf{timeout = I},
-			  C, Cs, Lno+1, Next);
-		_ ->
-		     {error, ?F("Expect integer at line ~w", [Lno])}
-	     end;
+	    fload(FD, globals, GC, C, Cs, Lno+1, Next);
 
 	["max_num_cached_files", '=', Val] ->
 	    case (catch list_to_integer(Val)) of
@@ -332,6 +328,15 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 	    case is_bool(Bool) of
 		{true, Val} ->
 		    fload(FD, globals, ?gc_set_copy_errlog(GC, Val),
+			  C, Cs, Lno+1, Next);
+		false ->
+		    {error, ?F("Expect true|false at line ~w", [Lno])}
+	    end;
+
+	["backwards_compat_parse", '=', Bool] ->
+	    case is_bool(Bool) of
+		{true, Val} ->
+		    fload(FD, globals, ?gc_set_backwards_compat_parse(GC, Val),
 			  C, Cs, Lno+1, Next);
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}

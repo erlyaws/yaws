@@ -25,7 +25,7 @@ out(A) ->
 	" underlying Erlang system and its ability to handle concurrent "
 	" processes in an efficent way. Its elegance comes from Erlang as "
 	"well. Web applications dont have to be written in ugly adhoc "
-	"languages."}
+	"languages."},
        
        {h2,[], "yaws.hyber.org"},
 

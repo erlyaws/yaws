@@ -14,7 +14,7 @@
 -define(GC_DEBUG,       2).
 -define(GC_AUTH_LOG,    4).
 -define(GC_COPY_ERRLOG, 8).
-
+-define(GC_BACKWARDS_COMPAT_PARSE, 16).
 
 -define(GC_DEF, ?GC_AUTH_LOG).
 
@@ -26,6 +26,8 @@
 	((GC#gconf.flags band ?GC_AUTH_LOG) /= 0)).
 -define(gc_has_copy_errlog(GC), 
 	((GC#gconf.flags band ?GC_COPY_ERRLOG) /= 0)).
+-define(gc_has_backwards_compat_parse(GC), 
+	((GC#gconf.flags band ?GC_BACKWARDS_COMPAT_PARSE) /= 0)).
 
 -define(gc_set_tty_trace(GC, Bool), 
 	GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_TTY_TRACE, Bool)}).
@@ -35,6 +37,9 @@
 	GC#gconf{flags = yaws:flag(GC#gconf.flags, ?GC_AUTH_LOG, Bool)}).
 -define(gc_set_copy_errlog(GC, Bool), 
 	GC#gconf{flags = yaws:flag(GC#gconf.flags, ?GC_COPY_ERRLOG, Bool)}).
+-define(gc_set_backwards_compat_parse(GC, Bool), 
+	GC#gconf{flags = yaws:flag(GC#gconf.flags, 
+				   ?GC_BACKWARDS_COMPAT_PARSE, Bool)}).
 
 
 
@@ -52,7 +57,6 @@
 	       large_file_chunk_size = 10240,
 	       cache_refresh_secs = 30,  % seconds  (auto zero when debug)
 	       default_type = "text/html",
-	       timeout = 30000,
 	       include_dir = [],
 	       yaws,                %% server string
 	       username,            %% maybe run as a different user than root
@@ -152,12 +156,13 @@
                           %% forbidden | appmod
 		  finfo,
 		  path,
-		  fullpath,
-		  dir,     %% relative dir where the path leads to
-		           %% flat | unflat need flat for authentication
-		  data,    %% Binary | FileDescriptor | DirListing | undefined
-		  deflate, %% undefined | Binary | dynamic
+		  fullpath, %% deep list
+		  dir,      %% relative dir where the path leads to
+		            %% flat | unflat need flat for authentication
+		  data,     %% Binary | FileDescriptor | DirListing | undefined
+		  deflate,  %% undefined | Binary | dynamic
 		  mime = "text/html",    %% MIME type
+		  getpath,  %% as GET'ed by client
 		  pathinfo
 		 }).
 
@@ -200,3 +205,5 @@
 
 
 	  
+-define(READ_TIMEOUT, 30000).
+
