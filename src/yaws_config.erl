@@ -436,6 +436,10 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	['<', "opaque", '>'] ->
 	    fload(FD, opaque, GC, C, Cs, Lno+1, Next);
 
+	["start_mod", '=' , Module] ->
+	    C2 = C#sconf{start_mod = list_to_atom(Module)},
+	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+
 	[H|T] ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end;
@@ -549,11 +553,6 @@ fload(FD, opaque, GC, C, Cs, Lno, Chars) ->
 	[H|T] ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end.
-
-
-
-
-
 
 
 
