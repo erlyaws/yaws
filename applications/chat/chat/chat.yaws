@@ -34,6 +34,16 @@ function addSmiley(ref) {
    return false;
 }
 
+function addText(ref) {
+   var text = document.getElementById("msg");
+
+   text.value = text.value+ref;
+
+   text.focus();
+
+   return false;
+}
+
 </script>
 
 <style>
