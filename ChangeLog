@@ -1,3 +1,22 @@
+2002-09-12  Luke Gorrie  <luke@bluetail.com>
+
+	* src/yaws_server.erl: Removed url_decode in get_path/1 - it is
+	too early, causes problems if it unescapes &'s in the query
+	string. Has to wait until the query is parsed (and it looks like
+	yaws_api:do_parse_spec does the unescaping for us already)
+	
+	For redirects, using 302 for HTTP 1.0 browsers because they don't
+	understand 303. This change is small but noisy since I had to pass
+	another arg to handle_out_reply (many clauses).
+
+	Added an {ehtml, ...} return type for out/1 functions. It does
+	very basic tuple->HTML expansions.
+
+	Chunked encoding: skip accumulating 0-length chunks, e.g. when
+	out/1 returns {html,""}, because they look like terminators.
+
+	* src/yaws_api.erl: Exported htmlize_char/1.
+
 2002-09-02 22:26  klacke
 
 	* src/yaws_api.erl, www/readpcookie.yaws: ""
