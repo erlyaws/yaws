@@ -26,6 +26,7 @@ will be written which contains an access log in Common Log Format.
 .br
 \fBtrace.traffic\fR - this file contains the traffic trace if that is enabled
 
+
 .TP
 \fB ebin_dir = Directory\fR
 This directive adds Directory to the erlang search path. It is possible to
@@ -53,7 +54,9 @@ The default value i 8000, 8 kBytes.
 The RAM cache is used to serve pages that sit in the cache. An entry sits in
 cache at most cache_refresh_secs number of seconds. The default is 30. This means that when the content is updated under the docroot, that change doesn't show
 until 30 seconds have passed. While developing a yaws site, 
-it may be convinient to set this value to 0.
+it may be convenient to set this value to 0. If the debug flag (-d) is apssed
+to the yaws start script, this value is automatically set to 0.
+
 .TP
 \fB trace  = traffic | http\fR
 This enables traffic or http tracing. Tracing is also possible to enable with
@@ -78,8 +81,21 @@ When virthosting several servers on the same ip/port address, if the
 browser doesn't sebd a Host: field, yaws will pick the \fIfirst\fR
 server specified in the config file
 .TP
+.TP
+\fBaccess_log = true | false\fR
+Setting this directive to false turns of traffic logging for this
+virtual server. The default value is true. 
+
 \fB docroot = Directory\fR
 This makes the server serve all its content from Directory
+
+.TP
+\fBpartial_post_size = Integer\fR
+When a yaws file receives large POSTs, the amount of data received
+in each chunk is determined by the this parameter.
+The deafult value is 10240.
+
+
 .TP
 \fB ssl = true \fR
 This enables ssl for this server
@@ -105,6 +121,34 @@ String If the private key is encrypted on disc, this password is the 3des key to
 .TP
 \fB ssl_ciphers = String\fR
 * This string specifies the ssl cipher string. The syntax of the ssl cipher string is a little horrible sublanguage of its own. It is documented in the ssl man page for "ciphers". 
+
+
+.TP
+\fB<auth> ... </auth>\fR
+Defines an auth structure. The following items are allowed
+within a matching pair of <auth> and </auth> delimiters.
+
+.TP
+\fBdir = Dir\fR
+Makes Dir to be controlled bu WWW-authenticate headers. In order for
+a user to have access to WWW-Authenticate controled directory, the user
+must supply a password.
+
+.TP
+\fBrealm = Realm\fR
+In the directory defined here, the WWW-Authenticate Realm is set to
+this value. 
+
+.TP
+\fBuser = User:Password\fR
+Inside this directory, the user User has access if the user supplies
+the password Password in the popup dialogue presented by the browser.
+We can obviouslu have several of these value inside a single <auth> </auth>
+pair.
+
+
+
+
 .SH EXAMPLES
 
 The following example defines a single server on port 80.
@@ -139,6 +183,33 @@ logdir = /var/log/yaws
 
 
 .fi
+
+
+.nf
+An example with www-authenticate and no access logging at all.
+
+logdir = /var/log/yaws
+<server www.mydomain.org>
+        port = 80
+        listen = 192.168.128.31
+        docroot = /var/yaws/www
+        access_log = false
+        <auth>
+            dir = /var/yaws/www/secret
+            realm = foobar
+            user = jonny:verysecretpwd
+            user = benny:thequestion
+            user = ronny:havinganamethatendswithy
+       </auth>
+
+</server>
+
+
+
+
+
+.fi
+
 
 And finally a sligthly more complex example
 with two servers on the same ip, and one ssl server on a
