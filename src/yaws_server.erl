@@ -2345,13 +2345,16 @@ ehtml_expand({Tag}) ->
 ehtml_expand({pre_html, Attrs}) ->
     Attrs;
 ehtml_expand({Tag, Attrs}) ->
-    io_lib:format("<~s~s>~n", [Tag, ehtml_attrs(Attrs)]);
+    ["<", atom_to_list(Tag), ehtml_attrs(Attrs), ">\n"];
 ehtml_expand({Tag, Attrs, Body}) ->
-    [io_lib:format("<~s~s>~n", [Tag, ehtml_attrs(Attrs)]),
+    Ts = atom_to_list(Tag),
+    ["<",Ts, ehtml_attrs(Attrs),">",
      ehtml_expand(Body),
-     io_lib:format("</~s>~n", [Tag])];
-ehtml_expand(L) when list(L) ->
-    map(fun ehtml_expand/1, L).
+     "</", Ts, ">\n"];
+ehtml_expand([H|T]) ->
+    [ehtml_expand(H) | ehtml_expand(T)];
+ehtml_expand([]) ->
+    [].
 
 
 
@@ -2359,35 +2362,9 @@ ehtml_expand(L) when list(L) ->
 
 ehtml_attrs([]) ->
     [];
-ehtml_attrs([{Attr, JsCall} |Tail]) when element(1, JsCall) == jscall ->
-    [io_lib:format(" ~s=~s", [Attr, jscall(JsCall)]) | ehtml_attrs(Tail)];
 ehtml_attrs([{Name, Value} | Tail]) ->
-    [io_lib:format(" ~s=\"~s\"", [Name, Value]) | ehtml_attrs(Tail)].
-
-
-
-%% javascript calls
-%% example: {onClick, {jscall, xyz, [f2,bala2]}}
-%% which expands to: onClick="xyz('f2' , 'bala2')"
-
-
-jscall({jscall, Fname, ArgList}) ->
-    io_lib:format("\"~s(~s)\"; ", [Fname, jscall_args(ArgList)]).
-
-jscall_args([H]) ->
-    jscall_arg(H);
-jscall_args([H|T]) ->
-    [jscall_arg(H), " , " | jscall_args(T)];
-jscall_args([]) ->
-    [].
-
-
-jscall_arg(Arg) when integer(Arg) ->
-    Arg;
-jscall_arg(Arg) when list(Arg) ->
-    io_lib:format("\'~s\'", [Arg]);
-jscall_arg(Arg) when atom(Arg) ->
-    io_lib:format("\'~s\'", [Arg]).
-
-
+    ValueString = if atom(Value) -> atom_to_list(Value);
+		     list(Value) -> Value
+		  end,
+    [[$ |atom_to_list(Name)], [$=|ValueString] | ehtml_attrs(Tail)].
 
