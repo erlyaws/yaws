@@ -91,10 +91,10 @@ format_txt("mailto:" ++ T, Env, L, Doc) ->
     Txt = "<a href='mailto:" ++ X ++ "'>" ++ X ++ "</a>",
     format_txt(T1, Env, reverse(Txt, L), Doc);
 format_txt("mailtoall:" ++ T, Env, L, Doc) ->
-    {Name, T1} = collect_url(T, []),
+    {Name, T1} = collect_wiki_link(T),
     case get_mailto(Doc, []) of
 	[] ->
-	    format_txt(T1, Env, T, Doc);
+	    format_txt(T, Env, L, Doc);
 	[F|Rs] ->
 	    Recipients = [F | [[$,|R] || R <- Rs]],
 	    Txt = "<a href='mailto:" ++ Recipients ++ "'>" ++ Name ++ "</a>",

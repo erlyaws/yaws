@@ -1072,18 +1072,19 @@ session_proc(Sid,State) ->
 	stop ->
 	    exit(done);
 	{set_text, From, NewTxt} ->
-	    From ! set,
+	    From ! {set, Sid},
 	    session_proc(Sid,State#sid{text=NewTxt});
 	{get_text, From} ->
-	    From ! {text, State#sid.text},
+	    From ! {text, Sid, State#sid.text},
 	    session_proc(Sid,State);
 	{set_all, From, NewTxt, NewPW, NewEmail} ->
-	    From ! set,
+	    From ! {set, Sid},
 	    session_proc(Sid,State#sid{text=NewTxt,
 				       password=NewPW,
 				       email=NewEmail});
 	{get_all, From} ->
-	    From ! {all, State#sid.text,
+	    From ! {all, Sid,
+		    State#sid.text,
 		    State#sid.password, State#sid.email},
 	    session_proc(Sid,State)
     after
@@ -1105,7 +1106,7 @@ session_new(Sid, Txt) ->
     session_new(Sid, Txt, "", "").
 
 session_new(Txt, Passwd, Email) ->
-    to_sm({new_sid, self(), Txt,Passwd,Email}),
+    to_sm({new_sid, self(), Txt, Passwd, Email}),
     receive
 	{session_id, Sid} -> Sid
     end.
@@ -1119,13 +1120,9 @@ session_get_text(undefined, OldTxt) -> OldTxt;
 session_get_text(Sid, OldTxt) ->
     to_sm({to_sid, self(), Sid, {get_text, self()}}),
     receive
-	{text, Txt} ->
+	{text, Sid, Txt} ->
 	    Txt;
 	{unknown_sid, Sid} ->
-	    session_new(Sid, OldTxt),
-	    OldTxt
-    after
-	1000 ->
 	    session_new(Sid, OldTxt),
 	    OldTxt
     end.
@@ -1134,22 +1131,18 @@ session_set_text(undefined, _) -> done;
 session_set_text(Sid, Txt) ->
     to_sm({to_sid, self(), Sid, {set_text, self(), Txt}}),
     receive
-	set -> done
-    after
-	1000 -> session_new(Sid, Txt)
+	{set, Sid} -> done;
+	{unknown_sid, Sid} ->
+	    session_new(Sid, Txt)
     end.
 
 session_get_all(undefined, Txt, Passwd, Email) -> {Txt,Passwd,Email};
 session_get_all(Sid, Txt, Passwd, Email) ->
     to_sm({to_sid, self(), Sid, {get_all, self()}}),
     receive
-	{all, OldTxt, OldPasswd, OldEmail} ->
+	{all, Sid, OldTxt, OldPasswd, OldEmail} ->
 	    {OldTxt, OldPasswd, OldEmail};
 	{unknown_sid, Sid} ->
-	    session_new(Sid, Txt, Passwd, Email),
-	    {Txt, Passwd, Email}
-    after
-	1000 ->
 	    session_new(Sid, Txt, Passwd, Email),
 	    {Txt, Passwd, Email}
     end.
@@ -1158,11 +1151,8 @@ session_set_all(undefined, _,_,_) -> done;
 session_set_all(Sid, Txt, Passwd, Email) ->
     to_sm({to_sid, self(), Sid, {set_all, self(), Txt, Passwd, Email}}),
     receive
-	set -> done;
+	{set, Sid} -> done;
 	{unknown_sid, Sid} ->
-	    session_new(Sid, Txt, Passwd, Email)
-    after
-	1000 ->
 	    session_new(Sid, Txt, Passwd, Email)
     end.
 
