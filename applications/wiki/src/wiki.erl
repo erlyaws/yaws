@@ -28,7 +28,7 @@
 	 previewNewPage/3, allRefsToMe/3, deletePage/3, deletePage/4,
 	 editTag/3, finalDeletePage/3, storePage/3,
 	 storeNewPage/3, previewPage/3, previewTagged/3,
-	 storeTagged/3,
+	 storeTagged/3, fixupFiles/3,
 	 sendMeThePassword/3, storeFiles/3, showOldPage/3]).
 
 -export([show/1, ls/1, h1/1, read_page/2, background/1, p/1,
@@ -59,6 +59,49 @@ showPage(Params, Root, Prefix) ->
 					    banner(Page, Pwd),
 					    [top_header(Page),DeepStr,
 					     DeepFiles, footer(Page,Pwd)]);
+		_ ->
+		    createNewPage([{node, Page}], Root, Prefix)
+	    end
+    end.
+
+
+fixupFiles(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+    if 
+	Page == undefined ->
+	    error(invalid_request);
+	true ->
+	    {WobFile, FileDir} = page2filename(Page, Root),
+	    case file:read_file(WobFile) of
+		{ok, Bin} ->
+		    {wik002, Pwd,Email,Time,Who,TxtStr,Files,Patches} =
+			bin_to_wik002(Root,FileDir,Bin),
+
+		    io:format("OldFiles = ~P\n", [Files, 5]),
+		    
+		    CurFiles = files(Root++"/"++FileDir, "*"),
+		    
+		    CurFileNames = [basename(CF) || CF <- CurFiles],
+
+		    io:format("CurFiles = ~P\n", [CurFileNames, 5]),
+		    
+		    F = fun(Fn) ->
+				case lists:keysearch(Fn,2,Files) of
+				    {value, File} ->
+					File;
+				    false ->
+					{file, Fn, "", []}
+				end
+			end,
+		    
+		    NewFiles = [F(X) || X <- CurFileNames],
+
+		    io:format("NewFiles = ~P\n", [NewFiles, 5]),
+
+		    Ds = {wik002, Pwd,Email,Time,Who,TxtStr,NewFiles,Patches},
+		    B = term_to_binary(Ds),
+		    file:write_file(WobFile, B),
+		    redirect({node, Page}, Prefix);
 		_ ->
 		    createNewPage([{node, Page}], Root, Prefix)
 	    end
@@ -185,23 +228,42 @@ storeFiles(Params, Root, Prefix) ->
 	    Checkboxes = [{lists:nthtail(3,atom_to_list(N)),S} ||
 			     {N,S,_} <- Params,
 			     lists:prefix("cb_",atom_to_list(N))],
+	    Descriptions = [{lists:nthtail(4,atom_to_list(N)),S} ||
+			       {N,S,_} <- Params,
+			       lists:prefix("cbt_",atom_to_list(N))],
 	    Content = list_to_binary(ContentL),
 	    {File,FileDir} = page2filename(Page, Root),
 	    case file:read_file(File) of
 		{ok, Bin} ->
 		    Wik = {wik002,Pwd,_Email,_Time,
 			   _Who,_Txt,OldFiles,_Patches} = bin_to_wik002(Bin),
-		    KeepFiles = [{file, Fname, Fdesc, []} ||
-				    F = {file, Fname, Fdesc, _} <- OldFiles,
+
+		    %% Update description field of file entry
+		    UpdateDesc =
+			fun({file, Fname, OldDesc, []}) ->
+				case lists:keysearch(Fname, 1, Descriptions) of
+				    {value, {_,NewDesc}} ->
+					{file, Fname, NewDesc, []};
+				    _ ->
+					{file, Fname, OldDesc, []}
+				end
+			end,
+
+		    %% Make list of files to keep and update desc while at it
+		    KeepFiles = [UpdateDesc({file, Fname, Fdesc, []}) ||
+				    {file, Fname, Fdesc, _} <- OldFiles,
 				    lists:keymember(Fname, 1, Checkboxes)],
+
+		    %% List of files to delete
 		    DelFiles =
 			[F || F = {file, Fname, Fdesc, Fcont} <- OldFiles,
 			      not lists:keymember(Fname, 1, Checkboxes)],
-		    NewFile = {file, Filename, Description, []},
+
 		    NewFiles =
 			case {Filename,Content} of
 			    {[],<<>>} -> KeepFiles;
 			    _ ->
+				NewFile = {file, Filename, Description, []},
 				KeptOld =
 				    lists:keydelete(Filename, 2, KeepFiles),
 				[NewFile|KeptOld]
@@ -567,16 +629,19 @@ editFiles1(Page, Password, Root, Prefix) ->
 		bin_to_wik002(Bin),
 	    CheckBoxes =
 		lists:map(fun({file,Name,Description,_Content}) ->
-				  ["<tr><td align=left valign=top "
-				   "width=\"20%\">",
-				   input("checkbox","cb_"++Name,"on"), Name,
-				   "</td><td align=left valign=top>",
-				   Description,
+				  ["<tr><td align=left valign=top>",
+				   input("checkbox","cb_"++Name,"on"),
+				   Name, 
+				   "</td><td width='70%' align=left valign=top>",
+				   textarea("cbt_"++Name, 2, 20, Description),
 				   "</td></tr>\n"];
 			     ({file,Name,_Content})  ->
 				  ["<tr><td align=left valign=top>",
-				   input("checkbox","cb_"++Name,"on"),Name,
-				   "</td><td></td></tr>\n"]
+				   input("checkbox","cb_"++Name,"on"),
+				   Name,
+				   "</td><td width='70%' align=left valign=top>",
+				   textarea("cbt_"++Name, 2, 20, ""),
+				   "</td></tr>\n"]
 			  end, lists:keysort(2,Files)),
 	    wiki_templates:template("Edit", bgcolor("white"),"",
 		     [h1(Page),
@@ -927,8 +992,12 @@ form(Method, Action, Args) ->
      Args, "</form>\n"].
 
 
+textarea(Name, Row, Txt) ->
+     ["<textarea name=\"", Name, "\" rows=", i2s(Row),
+      " wrap=virtual>", Txt, "</textarea>\n"].
+
 textarea(Name, Row, Cols, Txt) ->
-     ["<textarea name=", Name, " rows=", i2s(Row),
+     ["<textarea name=\"", Name, "\" rows=", i2s(Row),
       " cols=", i2s(Cols), " wrap=virtual>",
       Txt, "</textarea>\n"].
 
@@ -1016,8 +1085,31 @@ quote_lt([])     -> [].
 %%      encoded data, but hidden fields with VALUE attributes present should.
 %% 
 
+
+str2fileencoded([$_|T]) ->
+    [$_|str2fileencoded(T)];
+str2fileencoded([$ |T]) ->
+    [$ |str2fileencoded(T)];
+str2fileencoded([$.|T]) ->
+    [$.|str2fileencoded(T)];
+str2fileencoded([H|T]) ->
+    case is_alphanum(H) of
+	true ->
+	    [H|str2fileencoded(T)];
+	false ->
+	    {Hi,Lo} = byte2hex(H),
+	    [$%,Hi,Lo|str2fileencoded(T)]
+    end;
+str2fileencoded([]) -> [].
+
+fileencoded2str(Str) ->
+    urlencoded2str(Str).
+
+
 str2urlencoded([$\n|T]) ->
     "%0D%0A" ++ str2urlencoded(T);
+str2urlencoded([$.|T]) ->
+    "." ++ str2urlencoded(T);
 str2urlencoded([H|T]) ->
     case is_alphanum(H) of
 	true ->
@@ -1030,6 +1122,8 @@ str2urlencoded([]) -> [].
 
 str2formencoded([$ |T]) ->
     [$+|str2formencoded(T)];
+str2formencoded([$.|T]) ->
+    [$.|str2formencoded(T)];
 str2formencoded([$\n|T]) ->
     "%0D%0A" ++ str2formencoded(T);
 str2formencoded([H|T]) ->

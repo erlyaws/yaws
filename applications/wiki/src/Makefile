@@ -41,8 +41,8 @@ clean:
 install: all
 	install -d $(WIKIINSTALLDIR)
 	install -d $(EBININSTALLDIR)
-	(cd ../ebin; find . -name '*' -print | xargs tar cz  ) | (cd $(EBININSTALLDIR); tar xz -- )
-	(cd ../wiki; find . -name '*' -print | xargs tar cz  ) | (cd $(WIKIINSTALLDIR); tar xz -- )
+	(cd ../ebin; find . -name '*' -print | xargs tar c  ) | (cd $(EBININSTALLDIR); tar x -- )
+	(cd ../wiki; find . -name '*' -print | xargs tar c  ) | (cd $(WIKIINSTALLDIR); tar x -- )
 
 
 

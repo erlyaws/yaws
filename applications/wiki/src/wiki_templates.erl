@@ -8,13 +8,20 @@ template(Title,Background,Menu,Data) ->
 <HTML> 
 <HEAD> 
 <TITLE>", Title, "</TITLE>
+<style type=\"text/css\">
+<!--
+TEXTAREA{
+  width : 100%;
+}
+-->
+</style>
 ", Background, "
 <table width='100%'>
 <tr> 
 <!-- first gutter to allow space for the bgimage --> 
-<td width=80><pre>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre></td>
+<td ><pre>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</pre></td>
 <td> 
-<table> 
+<table width='100%'> 
 <tr> 
 <!-- the menu --> 
 <td bgcolor='#FFFFFF' valign='top' width='90%'>\n",
@@ -34,7 +41,7 @@ Data,"
 </td> 
   
 <!-- the right hand image --> 
-<td align='right' valign='top'><img src='icon.gif'></td> 
+<td width=10 align='right' valign='top'><img src='icon.gif'></td> 
 </tr> 
 </table> 
 </body>
