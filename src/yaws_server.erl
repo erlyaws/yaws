@@ -40,7 +40,7 @@
 		  fullpath,
 		  dir,     %% relative dir where the path leads to
 		  data,    %% Binary | FileDescriptor | DirListing | undefined
-		  mime,    %% MIME type
+		  mime = "text/html",    %% MIME type
 		  q,       %% query for GET requests
 		  wwwauth = undefined  %% or #auth{}
 		 }).
@@ -1355,7 +1355,7 @@ ret_reg_split(DR, Comps, RevFile, Query) ->
     L = [DR, Dir, File],
     case file:read_file_info(L) of
 	{ok, FI} when FI#file_info.type == regular ->
-	    {X, Mime} = suffix_type(File),
+	    {X, Mime} = suffix_type(RevFile),
 	    #urltype{type=X, 
 		     finfo=FI,
 		     dir = FlatDir,
@@ -1374,8 +1374,12 @@ suffix_type("lmth." ++ _) ->
     {regular, "text/html"};
 suffix_type("gpj." ++ _) ->
     {regular, "image/jpeg"};
+suffix_type("gnp." ++ _) ->
+    {regular, "image/png"};
 suffix_type("fig." ++ _) ->
     {regular, "image/gif"};
+suffix_type("3pm." ++ _) ->
+    {regular, "audio/mpeg"};
 suffix_type("zg." ++ _) ->
     {regular, "application/x-gzip"};
 suffix_type(_) ->
