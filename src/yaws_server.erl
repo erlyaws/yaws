@@ -1408,13 +1408,14 @@ deliver_302(CliSock, Req, GC, SC, Arg) ->
     Scheme = redirect_scheme(SC),
     Headers = Arg#arg.headers,
     DecPath = decode_path(Req#http_request.path),
+    RedirHost = redirect_host(SC, Headers#headers.host),
     Loc = case string:tokens(DecPath, "?") of
 	      [P] ->
 		  ["Location: ", Scheme,
-		   Headers#headers.host, P, "/\r\n"];
+		   RedirHost, P, "/\r\n"];
 	      [P, Q] ->
 		  ["Location: ", Scheme,
-		   Headers#headers.host, P, "/", Q, "\r\n"]
+		   RedirHost, P, "/", Q, "\r\n"]
 	  end,
     
     Ret = case yaws:outh_get_chunked() of
@@ -1443,20 +1444,25 @@ redirect_scheme(SC) ->
 redirect_host(SC, HostHdr) ->
     case SC#sconf.rhost of
 	undefined ->
-	    HostHdr;
+	    if HostHdr == undefined ->
+		    servername_sans_port(SC#sconf.servername)++redirect_port(SC);
+	       true ->
+		    HostHdr
+	    end;
 	_ ->
 	    SC#sconf.rhost
     end.
 
 redirect_port(SC) ->
-    case {SC#sconf.ssl, SC#sconf.port} of
-	{undefined, 80} ->
-               "";
-	{undefined, Port} -> 
+    case {SC#sconf.rmethod, SC#sconf.ssl, SC#sconf.port} of
+	{"https", _, 443} -> "";
+	{"http", _, 80} -> "";
+	{_, undefined, 80} -> "";
+	{_, undefined, Port} -> 
                [$:|integer_to_list(Port)];
-	{_SSL, 443} ->
+	{_, _SSL, 443} ->
                "";
-	{_SSL, Port} -> 
+	{_, _SSL, Port} -> 
                [$:|integer_to_list(Port)]
     end.    
 
