@@ -744,15 +744,19 @@ rest_dir (N, Path, [  _H | T ] ) -> rest_dir (N    ,        Path  , T).
 url_decode_q_split(Path) ->
     url_decode_q_split(Path, []).
 
-url_decode_q_split([$%, $C, $2, $%, Hi, Lo | Tail], Ack) ->
-    Hex = yaws:hex_to_integer([Hi, Lo]),
-    url_decode_q_split(Tail, [Hex|Ack]);
-url_decode_q_split([$%, $C, $3, $%, Hi, Lo | Tail], Ack) when Hi > $9 ->
-    Hex = yaws:hex_to_integer([Hi+4, Lo]),
-    url_decode_q_split(Tail, [Hex|Ack]);
-url_decode_q_split([$%, $C, $3, $%, Hi, Lo | Tail], Ack) when Hi < $A ->
-    Hex = yaws:hex_to_integer([Hi+4+7, Lo]),
-    url_decode_q_split(Tail, [Hex|Ack]);
+% url_decode_q_split([$%, $C, $2, $%, Hi, Lo | Tail], Ack) ->
+%     Hex = yaws:hex_to_integer([Hi, Lo]),
+%     url_decode_q_split(Tail, [Hex|Ack]);
+% url_decode_q_split([$%, $C, $3, $%, Hi, Lo | Tail], Ack) when Hi > $9 ->
+%     Hex = yaws:hex_to_integer([Hi+4, Lo]),
+%     url_decode_q_split(Tail, [Hex|Ack]);
+% url_decode_q_split([$%, $C, $3, $%, Hi, Lo | Tail], Ack) when Hi < $A ->
+%     Hex = yaws:hex_to_integer([Hi+4+7, Lo]),
+%    url_decode_q_split(Tail, [Hex|Ack]);
+
+
+%% Removed the above hackery, (klacke)
+
 url_decode_q_split([$%, Hi, Lo | Tail], Ack) ->
     Hex = yaws:hex_to_integer([Hi, Lo]),
     url_decode_q_split(Tail, [Hex|Ack]);
