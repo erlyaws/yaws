@@ -1056,7 +1056,8 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 			  end),
 	    {Mod, PathData} = UT#urltype.data,
 	    A2 = ARG#arg{appmoddata = PathData,
-			 querydata = UT#urltype.q},
+			 querydata = UT#urltype.q,
+			 appmod_prepath = lists:reverse(UT#urltype.path)},
 	    do_appmod(Mod, out, CliSock, GC, SC, Req, H, [A2], UT, N)
     end.
 

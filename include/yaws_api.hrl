@@ -20,7 +20,8 @@
 	  cont,		  %% Continuation for chunked multipart uploads
 	  state,          %% State for use by users of the out/1 callback
 	  pid,            %% pid of the yaws worker process
-	  opaque          %% useful to pass static data
+	  opaque,         %% useful to pass static data
+	  appmod_prepath  %% path in front of: <appmod><appmoddata>
 	 }).              
 
 
