@@ -87,7 +87,7 @@ format_txt("http://" ++ T, Env, L) ->
     Txt = format_external_url(Url),
     format_txt(T1, Env, reverse(Txt, L));
 format_txt("mailto:" ++ T, Env, L) ->
-    {X, T1} = collect_url(T, []),
+    {X, T1} = collect_mail(T, []),
     Txt = "<a href='mailto:" ++ X ++ "'>" ++ X ++ "</a>",
     format_txt(T1, Env, reverse(Txt, L));
 format_txt([H|T], Env, L) ->
@@ -109,6 +109,16 @@ collect_url(S=[$.,$\t|_], L)  -> {reverse(L), S};
 collect_url(S=[$\n|_], L)     -> {reverse(L), S};
 collect_url([H|T], L)         -> collect_url(T, [H|L]);
 collect_url([], L)            -> {reverse(L), []}.  
+
+collect_mail(S=[$ |_], L)      -> {reverse(L), S};
+collect_mail(S=[$)|_], L)      -> {reverse(L), S};
+collect_mail(S=[$.,$ |_], L)   -> {reverse(L), S};
+collect_mail(S=[$.,$\n|_], L)  -> {reverse(L), S};
+collect_mail(S=[$.,$\r|_], L)  -> {reverse(L), S};
+collect_mail(S=[$.,$\t|_], L)  -> {reverse(L), S};
+collect_mail(S=[$\n|_], L)     -> {reverse(L), S};
+collect_mail([H|T], L)         -> collect_mail(T, [H|L]);
+collect_mail([], L)            -> {reverse(L), []}.  
 
 format_url(Url, {_,_,_,F}) ->  F(Url).
 
