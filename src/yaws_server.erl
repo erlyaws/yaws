@@ -1517,7 +1517,7 @@ deliver_file(CliSock, GC, SC, Req, InH, UT) ->
 	    deliver_small_file(CliSock, GC, SC, Req, InH, UT);
 	true ->
 	    case (UT#urltype.finfo)#file_info.size of
-		N when N < 10240 ->
+		N when N < GC#gconf.large_file_chunk_size ->
 		    deliver_small_file(CliSock, GC, SC, Req, InH, UT);
 		_ ->
 		    deliver_large_file(CliSock, GC, SC, Req, InH, UT)
@@ -1565,11 +1565,12 @@ deliver_large_file(CliSock, GC, SC, Req, InH, UT) ->
     end.
 
 send_file(CliSock, Fd, DCC, SC, GC) ->
-    case file:read(Fd, 1024*10) of
+    case file:read(Fd, GC#gconf.large_file_chunk_size) of
 	{ok, Bin} ->
 	    send_file_chunk(Bin, CliSock, Fd, DCC, SC, GC),
 	    send_file(CliSock, Fd, DCC, SC, GC);
 	eof ->
+	    file:close(Fd),
 	    if
 		DCC#dcc.chunked == true ->
 		    gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),

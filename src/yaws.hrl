@@ -20,6 +20,7 @@
 	       max_num_cached_files = 400,
 	       max_num_cached_bytes = 1000000,  %% 1 MEG
 	       max_size_cached_file = 8000,
+	       large_file_chunk_size = 10240,
 	       cache_refresh_secs = 30,  % seconds
 	       default_type = "text/html",
 	       timeout = 2000,
