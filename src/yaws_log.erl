@@ -192,7 +192,7 @@ handle_info(secs3, State) ->
 %% once a minute, check log sizes
 handle_info(minute, State) ->
     L = lists:map(
-	  fun({FD, Sname, Filename}) ->
+	  fun({Sname, FD, Filename}) ->
 		  {ok, FI} = file:read_file_info(Filename),
 		  if
 		      FI#file_info.size > 50000 ->

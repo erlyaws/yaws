@@ -11,13 +11,14 @@ out(A) ->
 
 <table border="2">
 
-
+ <tr><td> Mar 29, fixed a bug in the log wrapping which restarted the server</td></tr>
+<tr><td> Mar 26, released 0.32 </tr>
 <tr> <td> Mar 26, 2002. Fixed a bug where chunked encodings were
 missing a CRNL which made all yaws pages not render in IE </td> </tr>
 
 <tr> <td> Mar 25 2002 Fixed a bug with empty initial lines in yaws files.
-<p>Made access log files per virt host.
-<p>Made the access log as well as the info/err log a wrap log, wraps at 50k.
+<br>Made access log files per virt host.
+<br>Made the access log as well as the info/err log a wrap log, wraps at 50k.
 
 <tr><td> Mar 17 2002, buxfix in cache + added -T flag to yaws, which is
 http protocol trace in log file
