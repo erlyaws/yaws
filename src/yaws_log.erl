@@ -49,10 +49,13 @@ start_link() ->
     gen_server:start_link({local, yaws_log}, yaws_log, [], []).
 
 accesslog(ServerName, Ip, Req, Status, Length) ->
-    accesslog(ServerName, Ip, Req, Status, Length, "-", "-").
+    accesslog(ServerName, Ip, "-", Req, Status, Length, "-", "-").
 
 accesslog(ServerName, Ip, Req, Status, Length, Referrer, UserAgent) ->
-    gen_server:cast(?MODULE, {access, ServerName, Ip, Req, 
+    accesslog(ServerName, Ip, "-", Req, Status, Length, Referrer, UserAgent).
+
+accesslog(ServerName, Ip, User, Req, Status, Length, Referrer, UserAgent) ->
+    gen_server:cast(?MODULE, {access, ServerName, Ip, User, Req, 
 			      Status, Length, Referrer, UserAgent}).
 setdir(GC, Sconfs) ->
     gen_server:call(?MODULE, {setdir, GC, Sconfs}).
@@ -253,11 +256,11 @@ handle_call(state, _From, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-handle_cast({access, ServerName, Ip, Req, Status, 
+handle_cast({access, ServerName, Ip, User, Req, Status, 
 	     Length, Referrer, UserAgent}, State) ->
     case State#state.running of 
 	true ->
-	    do_alog(ServerName, Ip, Req, Status, Length, 
+	    do_alog(ServerName, Ip, User, Req, Status, Length, 
 		    Referrer, UserAgent, State),
 	    {noreply, State};
 	false ->
@@ -285,10 +288,11 @@ handle_cast({trace, from_client, Data}, State) ->
     {noreply, State}.
 
 
-do_alog(ServerName, Ip, Req, Status, Length, Referrer, UserAgent, State) ->
+do_alog(ServerName, Ip, User, Req, Status, Length, Referrer,
+	UserAgent, State) ->
     case lists:keysearch(ServerName, #alog.servername, State#state.alogs) of
 	{value, AL} ->
-	    I = fmt_alog(State#state.now, Ip, Req, Status,  Length, 
+	    I = fmt_alog(State#state.now, Ip, User, Req, Status,  Length, 
 			 Referrer, UserAgent),
 	    file:write(AL#alog.fd, I);
 	_ ->
@@ -397,8 +401,8 @@ terminate(_Reason, _State) ->
 %%%----------------------------------------------------------------------
 
 
-fmt_alog(Time, Ip, Req, Status,  Length, Referrer, UserAgent) ->
-    [yaws:fmt_ip(Ip), " - - ", Time, [$\s, $"], Req, [$",$\s], 
+fmt_alog(Time, Ip, User, Req, Status,  Length, Referrer, UserAgent) ->
+    [yaws:fmt_ip(Ip), " - ", User, [$\s], Time, [$\s, $"], Req, [$",$\s], 
      Status, [$\s], Length, [$\s,$"], Referrer, [$",$\s,$"], UserAgent, [$",$\n]].
 
 fmtnow() ->

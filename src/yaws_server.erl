@@ -840,7 +840,13 @@ maybe_access_log(Ip, Req, H) ->
 	    Meth = yaws:to_list(Req#http_request.method),
 	    Referrer = optional_header(H#headers.referer),
 	    UserAgent = optional_header(H#headers.user_agent),
-	    yaws_log:accesslog(SC#sconf.servername, Ip, 
+	    User = case H#headers.authorization of
+		       {User0, _Pass, _OrigString} ->
+			   User0;
+		       _ ->
+			   "-"
+		   end,
+	    yaws_log:accesslog(SC#sconf.servername, Ip, User,
 			       [Meth, $\s, Path, $\s, Ver], 
 			       Status, Len, Referrer, UserAgent);	
 	false ->
