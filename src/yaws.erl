@@ -939,7 +939,7 @@ parse_ua1([], Acc) ->
     {{ua,lists:reverse(Acc)}, []};
 parse_ua1([popen|T], Acc) ->
     {{ua, lists:reverse(Acc)}, [popen|T]};
-parse_ua1([pclose|T], Acc) ->
+parse_ua1([pclose|T], _Acc) ->
     {error, T};
 parse_ua1([$ |T], Acc) ->
     {{ua, lists:reverse(Acc)}, T};
@@ -956,7 +956,7 @@ in_ua(Pred, L) ->
 	      end
       end, L).
 
-in_comment(Pred, []) ->
+in_comment(_Pred, []) ->
     false;
 in_comment(Pred, [{comment, Cs}|T]) ->
     case in_comment_l(Pred, Cs) of
@@ -1281,11 +1281,11 @@ make_www_authenticate_header(Realm) ->
 make_date_header() ->
     N = element(2, now()),
     case get(date_header) of
-	{Str, Secs} when (Secs+10) < N ->
+	{_Str, Secs} when (Secs+10) < N ->
 	    H = ["Date: ", yaws:universal_time_as_string(), "\r\n"],
 	    put(date_header, {H, N}),
 	    H;
-	{Str, Secs} ->
+	{Str, _Secs} ->
 	    Str;
 	undefined ->
 	    H = ["Date: ", yaws:universal_time_as_string(), "\r\n"],
@@ -1633,28 +1633,56 @@ strip(Data) ->
 	 
 
 
+%% This is the api function
+%% return {Req, Headers}
+%%     or closed
+
 http_get_headers(CliSock, SSL) ->
-    case SSL of
-	ssl ->
-	    case yaws_ssl:ssl_get_headers(CliSock) of
-		{Req, H, Trail} ->
-		    case get(ssltrail) of   %% hack hack hack
-			undefined ->
-			    put(ssltrail, Trail);
-			B ->
-			    put(ssltrail, <<Trail/binary,B/binary>>)
-		    end,
-		    {Req, H};
-		R -> R
-	    end;
-	nossl ->
-	    H = http_get_headers(CliSock),
-	    ?Debug("Headers = ~p~n", [H]),
-	    H
+    Res = 
+	case SSL of
+	    ssl ->
+		case yaws_ssl:ssl_get_headers(CliSock) of
+		    {Req, H, Trail} ->
+			case get(ssltrail) of   %% hack hack hack
+			    undefined ->
+				put(ssltrail, Trail);
+			    B ->
+				put(ssltrail, <<Trail/binary,B/binary>>)
+			end,
+			{Req, H};
+		    R -> 
+			R
+		end;
+	    nossl ->
+		nossl_http_get_headers(CliSock)
+	end,
+    GC = get(gc),
+    if
+	GC#gconf.trace == false ->
+	    Res;
+	tuple(Res) ->
+	    {Request, Headers} = Res,
+	    ReqStr = yaws_api:reformat_request(Request),
+	    HStr = lists:map(
+		     fun(H) -> [H, "\r\n"] end,
+		     yaws_api:reformat_header(Headers)),
+	    yaws_log:trace_traffic(from_client, 
+				   ?F("~n~s~n~s~n",[ReqStr, HStr])),
+	    Res;
+	Res == closed ->
+	    yaws_log:trace_traffic(from_client, "closed\n"),
+	    closed
     end.
 
 
-http_get_headers(CliSock) ->
+headers_to_str(Headers) ->
+    lists:map(
+      fun(H) -> [H, "\r\n"] end,
+      yaws_api:reformat_header(Headers)).
+	
+
+
+nossl_http_get_headers(CliSock) ->
     inet:setopts(CliSock, [{packet, http}]),
     case http_recv_request(CliSock) of
 	bad_request ->
@@ -1669,7 +1697,7 @@ http_get_headers(CliSock) ->
 
 
 http_recv_request(CliSock) ->
-    case cli_recv(CliSock, 0,  nossl) of
+    case do_recv(CliSock, 0,  nossl) of
 	{ok, R} when record(R, http_request) ->
 	    R;
 	{ok, R} when record(R, http_response) ->
@@ -1690,7 +1718,7 @@ http_recv_request(CliSock) ->
 
 		  
 http_get_headers(CliSock, Req, H) ->
-    case cli_recv(CliSock, 0, nossl) of
+    case do_recv(CliSock, 0, nossl) of
 	{ok, {http_header,  _Num, 'Host', _, Host}} ->
 	    http_get_headers(CliSock, Req, H#headers{host = Host});
 	{ok, {http_header, _Num, 'Connection', _, Conn}} ->
@@ -1736,10 +1764,16 @@ http_get_headers(CliSock, Req, H) ->
 
 	{ok, http_eoh} ->
 	    H;
+
+	%% these are here to be a little forgiving to
+	%% bad (typically test script) clients
+
 	{error, {http_error, "\r\n"}} ->
 	     http_get_headers(CliSock, Req, H);
 	{error, {http_error, "\n"}} ->
 	     http_get_headers(CliSock, Req, H);
+
+	%% auxilliary headers we don't have builtin support for
 	{ok, X} ->
 	    ?Debug("OTHER header ~p~n", [X]),
 	    http_get_headers(CliSock, Req,  

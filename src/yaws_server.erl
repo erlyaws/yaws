@@ -408,8 +408,11 @@ gserv(GC, Group0) ->
 	      [yaws:fmt_ip(SC#sconf.listen),
 	       SC#sconf.port,
 	       catch map(fun(S) ->  
-				 io_lib:format("~n - ~s under ~s",
-					       [S#sconf.servername,
+				 io_lib:format("~n - ~s://~s under ~s",
+					       [if SSLBOOL -> "https";
+						   true -> "http"
+						end,
+						S#sconf.servername,
 						S#sconf.docroot])
 			 end, Group)
 	      ]),
@@ -870,7 +873,7 @@ inet_setopts(_,_) ->
 %% so let's log a small entry. I see no good reason to 
 %% play nice and reply to this ...
 
-bad_request(CliSock, Req, _Head) ->
+bad_request(CliSock, _Req, _Head) ->
     From = if
 	       port(CliSock) ->
 		   case inet:peername(CliSock) of
@@ -1036,7 +1039,7 @@ handle_request(CliSock, ARG, N) ->
 			    deliver_401(CliSock, Req, Realm)
 		    end
 	    end;
-	{absoluteURI, Scheme, Host, Port, RawPath} ->
+	{absoluteURI, _Scheme, _Host, _Port, _RawPath} ->
 						% FIXME:
 						% 
 						% We MUST accept this.
@@ -2046,9 +2049,9 @@ deliver_accumulated(Sock) ->
 	GC#gconf.trace == false ->
 	    ok;
 	GC#gconf.trace == {true, http} ->
-	    yaws_log:trace_traffic(from_server, [StatusLine, Headers]);
+	    yaws_log:trace_traffic(from_server, ["\n",StatusLine, Headers]);
 	GC#gconf.trace == {true, traffic} ->
-	    yaws_log:trace_traffic(from_server, All)
+	    yaws_log:trace_traffic(from_server, ["\n",All])
     end,
     Cont.
 
