@@ -596,8 +596,10 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == nossl ->
 		    aloop(CliSock, GS, Num+1);
 		done ->
 		    {ok, Num+1};
-		{page, _Page} ->
-		    nyi
+		{page, Page} ->
+		    apply(yaws_server, Req#http_request.method, 
+			  [CliSock, GS#gs.gconf, SC#sconf{appmods=[]}, 
+			   Req#http_request{path = {abs_path, Page}}, H])
 	    end
     end;
 
@@ -625,7 +627,11 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == ssl ->
 		continue ->
 		    aloop(CliSock, GS, Num+1);
 		done ->
-		    {ok, Num+1}
+		    {ok, Num+1};
+		{page, Page} ->
+		    apply(yaws_server, Req#http_request.method, 
+			  [CliSock, GS#gs.gconf, SC#sconf{appmods = []}, 
+			   Req#http_request{path = {abs_path, Page}}, H])
 	    end
     end.
 
@@ -1266,7 +1272,8 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin, Fd, [H|T],ARG,N) ->
 		break ->
 		    deliver_dyn_file(CliSock, GC, SC, Req, Head, 
 				     UT, DCC, Bin, Fd, [],ARG,N) ;
-
+		{page, Page} ->
+		    {page, Page};
 		{streamcontent, MimeType, FirstChunk} ->
 		    put(content_type, MimeType),
 		    accumulate_chunk(DCC, FirstChunk),
@@ -1330,6 +1337,8 @@ stream_loop(DCC, CliSock, GC, SC) ->
 	    stream_loop(DCC, CliSock, GC, SC) ;
 	endofstreamcontent ->
 	    ok
+    after 30000 ->
+	    exit(normal)
     end.
 
 
@@ -1487,6 +1496,8 @@ handle_out_reply_l([Reply|T], DCC, LineNo, YawsFile, SC, A, Res) ->
 	    handle_out_reply_l(T, DCC, LineNo, YawsFile, SC, A, {get_more, Cont, State});
 	break ->
 	    break;
+	{page, Page} ->
+	    {page, Page};
 	_ ->
 	    handle_out_reply_l(T, DCC, LineNo, YawsFile, SC, A, Res)
     end;
@@ -2084,13 +2095,13 @@ split_path(SC, [$/|Tail], Comps, Part)  when Part /= [] ->
     Component = lists:reverse(Part),
     CName = tl(Component),
     case lists:member(CName, SC#sconf.appmods) of
-	false ->
-	    split_path(SC, [$/|Tail], [lists:reverse(Part) | Comps], []);
-	true ->
+	true  ->
 	    %% we've found an appmod
 	    PrePath = conc_path(Comps),
-	    ret_app_mod(SC, [$/|Tail], list_to_atom(CName), PrePath)
-    end;
+	    ret_app_mod(SC, [$/|Tail], list_to_atom(CName), PrePath);
+	_ ->
+	    split_path(SC, [$/|Tail], [lists:reverse(Part) | Comps], [])
+	end;
 split_path(SC, [$~|Tail], Comps, Part) ->  %% user dir
     ret_user_dir(SC, Comps, Part, Tail);
 split_path(SC, [H|T], Comps, Part) ->
