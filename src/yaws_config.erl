@@ -137,15 +137,17 @@ arrange([C1|Tail], {in, C0}, A, B) ->
 
 
 set_server(C) ->
-    case {C#sconf.ssl, C#sconf.port} of
-	{undefined, 80} ->
+    case {C#sconf.ssl, C#sconf.port, C#sconf.add_port} of
+	{undefined, 80, _} ->
 	    C;
-	{undefined, Port} ->
+	{undefined, Port, true} ->
 	    add_port(C, Port);
-	{_SSL, 443} ->
+	{_SSL, 443, _} ->
 	    C;
-	{_SSL, Port} ->
-	    add_port(C, Port)
+	{_SSL, Port, true} ->
+	    add_port(C, Port);
+	{_,_,_} ->
+            C
     end.
 
 
@@ -379,6 +381,9 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		    C2 = C#sconf{listen = Addr},
 		    fload(FD, server, GC, C2, Cs, Lno+1, Next)
 	    end;
+	["servername", '=', Name] ->
+	    C2 = C#sconf{servername = Name, add_port=false},
+	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 	["docroot", '=', Root] ->
 	    case is_dir(Root) of
 		true ->

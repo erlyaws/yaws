@@ -59,6 +59,7 @@
 	 access_log = true,          %% log acces 
 	 listen = {127,0,0,1},       %% bind to this IP, {0,0,0,0} is possible
 	 servername = "localhost",   %% servername is what Host: header is
+         add_port = true,            %% add port after reading config
 	 ets,                        %% local store for this server
 	 ssl,
 	 authdirs = [],

@@ -653,10 +653,6 @@ pick_host(_GC, Host, [H|_T], _Group) when H#sconf.servername == Host ->
 pick_host(GC, Host, [_|T], Group) ->
     pick_host(GC, Host, T, Group);
 pick_host(GC, Host, [], Group) ->
-    % none matched try with servername:rport
-    %% pick_host_rport(GC, Host, Group, Group).
-
-    %% that was a bit too cpu intensive for my taste -- klacke
     hd(Group).
 
 
