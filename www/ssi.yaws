@@ -31,9 +31,9 @@ out(A) ->
        {p, [], "In particular the case with dynamically generated javascript "
 	"can get syntactically ugly. So instead of generating strings in "
 	"the erlang code for the javascripts and returning them as "
-	"{pre_html, Data} tuples, it is more beautifult to keep the "
-	"javascript functions in separate files and include them whith "
-	"the {ssi ... return value."},
+	"{pre_html, Data} tuples, it is more beautiful to keep the "
+	"javascript functions in separate files and include them with "
+	"the {ssi ...} return value."},
 
        {p, [], "The format of the ssi statement is:"},
        {br},
@@ -64,7 +64,7 @@ out(A) ->
        {p,[], "So this is the way to do when we want to embed dynamic content"
 	" deep inside an ehtml structure, but the content isn't representable"
 	" as ehtml. This is typically the case for dynamically generated "
-	" javascript as well as dynamically generated java applets "}
+	" javascript as well as dynamically generated java applets."}
 
       ]}].
     

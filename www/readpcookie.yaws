@@ -1,6 +1,6 @@
 <html>
 
-<h2> Read persistant cookie </h2>
+<h2> Read persistent cookie </h2>
 
 <erl>
 
@@ -20,7 +20,7 @@ out(A) ->
 	      case ets:lookup(pcookies, {cookie,Num}) of
 		  [{{cookie, Num}, Data}] ->
 		      f("<p> Yes, I read your cookie:it is ~p~n "
-			"Your persistant info is ~n"
+			"Your persistent info is ~n"
 			"<pre>~n~p~n</pre>~n", [NumStr, Data]);
 		  [] ->
 		      f("<p> You had a cookie,but the data is gone",[])

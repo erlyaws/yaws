@@ -4,7 +4,7 @@ out(A) -> yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]).
 
 
 
-<h1>Persistant Cookies</h1>
+<h1>Persistent Cookies</h1>
 <p>
 We saw in the first <a href="cookies.yaws">cookie</a> example, how we
 assigned a special erlang process to handle each session. 

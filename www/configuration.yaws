@@ -18,7 +18,7 @@ out(A) ->
 		       {height,"31"}, 
 		       {border,"0"}, 
 		       {alt,"SourceForge.net Logo"}]}},
-	       "The Yaws SourceForge www page is ",
+	       " The Yaws SourceForge www page is ",
 	       {a ,[{href,"http://sourceforge.net/projects/erlyaws/"}], 
 		"http://sourceforge.net/projects/erlyaws"}
 	       ]},
@@ -35,14 +35,14 @@ out(A) ->
        
        {p,[], "The above commands will "
 	"checkout the bleeding edge source, build it and install it at "
-	"127.0.0.1:80 with the docroot set to the local documentation"},
+	"127.0.0.1:80 with the docroot set to the local documentation."},
        {p,[], "Give return as password."},
        {p,[], "Run ./configure"},
 
        {p, [], [{tt, [], "make"} ,
 		"(without install) will build the yaws system and ",
 		{tt, [], "make local_install"},
-		"does a local install at http://127.0.0.1:8000. This is the typical mode of operation"
+		" does a local install at http://127.0.0.1:8000. This is the typical mode of operation"
 		" while either just trying out yaws, or hacking yaws. This will install "
 		" a template configuration file yaws.conf in $HOME. "
 		"If $HOME/yaws.conf exists, the old file will not be overwritten. "]},
@@ -100,10 +100,10 @@ out(A) ->
 
        {p,[], ["The function ",
 	       {tt, [], "yaws_api:setconf(Gconf, Groups)"}, 
-	       "can be used by an other erlang process to explicitly set a yaws configuration at runtime.."
-	       "To execute Yaws in embedded mode, it must be started with the environment ",
+	       "can be used by an other erlang process to explicitly set a yaws configuration at runtime."
+	       " To execute Yaws in embedded mode, it must be started with the environment ",
 	       {tt, [], "{embedded, true}"},
-	       "The embedded mode is fully described at ",
+	       " The embedded mode is fully described at ",
 	       {a, [{url, "embed.yaws"}], "embed.yaws"}]}
        ]},
      {ssi, "END",[],[]}

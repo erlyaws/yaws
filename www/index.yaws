@@ -10,10 +10,10 @@ out(A) ->
 	"Two separate modes of operations are supported."},
        {ul,[],
 	[{li,[],
-	  {p,[],"Standalone mode where yaws runs as a regular webserver " 
+	  {p,[],"Standalone mode where Yaws runs as a regular webserver " 
 	   "daemon. This is the default mode."}},
 	 {li,[],
-	  {p,[], "Embedded mode where Yaws runs as an embedded webserver in an"
+	  {p,[], "Embedded mode where Yaws runs as an embedded webserver in "
 	   "another erlang application."}}
 	]},
        {p,[], ["Yaws is entirely written in ",
@@ -31,9 +31,9 @@ out(A) ->
        {p,[], ["The www page for Yaws is ",
 	       {a ,[{href,"http://yaws.hyber.org"}], "yaws.hyber.org"},
 	       " The documentation, examples as well as releases can be "
-	       "found there, and of cource, ",
+	       "found there, and of course, ",
 	       {a ,[{href,"http://yaws.hyber.org"}],"yaws.hyber.org"},
-	       " is itself powered by Yaws"]},
+	       " is itself powered by Yaws."]},
 
        {p,[], ["A mailing list exists at: ",
 	       {a,[{href,"https://lists.sourceforge.net/lists/listinfo/""erlyaws-list"}],

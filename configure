@@ -1237,6 +1237,16 @@ EOF
 	   
 	   ;;
 
+        *qnx*)
+           cat >> condefs.h <<\EOF
+#define QNX 1
+EOF
+           LD_SHARED="qcc -shared"
+
+           LIBS="$LIBS -lsocket"
+
+           ;;
+
 	*solaris*)
 	   cat >> confdefs.h <<\EOF
 #define SOLARIS 1

@@ -46,7 +46,7 @@ out(A) ->
 
 <p>This is the page that set the cookie in the browser.
 <a href="readcookie.yaws">readcookie.yaws</a> will 
-read the cookie and report persitant information as 
+read the cookie and report persistent information as 
 long as the browser session exists.
 
 <p> it will set the cookie 

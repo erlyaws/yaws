@@ -117,7 +117,7 @@ Multiple users by uid can now run yaws simultaneously.
 Support for streamed large content from yaws code
 Never cache yaws files that disn't compile properly.
 Much more documentation, man page for yaws_api
-added a cookie_session-server for persistant cookie sessions
+added a cookie_session-server for persistent cookie sessions
 full argument chunking support in Wiki
 Install properly on FreeBSD.
 Support for embedded mode (finally)

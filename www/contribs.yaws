@@ -16,28 +16,29 @@ Yaws applications.
 <ul>
 
 <li> <h4>The Yaws wiki </h4>
-<p>This applictaion is part of the Yaws source code distribution. It's
-a fullblown wiki web.
 
+<p>This application is part of the Yaws source code distribution. It's
+a fullblown wiki web.
+<p>
 
 <li><h4> cvstat </h4>
 
 <p> CVS realtime statistics through Web interface at
 <a href=http://downloads.erlang-fr.org> http://downloads.erlang-fr.org </a>
-
+<p>
 
 <li><h4> The ticket tracker </h4>
 <p>An error reporting system at
 <a href=http://btt.sourceforge.net> http://btt.sourceforge.net/ </a>
-
+<p>
 
 <li><h4>Nortel SSL-VPN  </h4>
+
 <p>An SSL based VPN appliance at: <a href=http://www.nortelnetworks.com/products/01/alteon/sslvpn/>  http://www.nortelnetworks.com/products/01/alteon/sslvpn/ </a>
-
-
-
+<p>
 
 <li><h4>Yaws webmail  </h4>
+
 <p>An excellent little stateless webmail server. No db, no nothing is needed except the address
 of a popserver and the address of an smtp server. Part of the Yaws source code distro. Extremely
 easy to configure and run.

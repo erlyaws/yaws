@@ -6,12 +6,12 @@ out(A) ->
 
 
 <p>
-Bindings is the opposite of <a href="ssi.yaws"> SSI, Server Side Includes</a>,
-SSI is primarily used when basicaly the entire pages are written in EHTML and
-snippets of HTML, or more typical, javascript code is inserted into the EHTML 
+Bindings are the opposite of <a href="ssi.yaws"> Server Side Includes (SSI)</a>.
+SSI is used when entire pages are written largely in EHTML and
+snippets of HTML, or more typically javascript code is inserted into the EHTML 
 code.
 
-<p> Bindings are used the other way around, basically the entire 
+<p> Bindings are used the other way around. Essentially entire 
 pages are written in regular HTML but parts of the HTML needs to be 
 dynamically generated.
 
@@ -28,7 +28,7 @@ dynamically generated.
 within erl tags). In HTML source %%Key%% is expanded to Value and
 within erl tags yaws_api:get_binding(Key) can be used to extract Value.
 
-<p>With the binding feature it is easier to write transparant yaws code making
+<p>With the binding feature it is easier to write transparent yaws code making
 it easier to to work together with Web people knowing little or
 nothing about Erlang.
 

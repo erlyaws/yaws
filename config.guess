@@ -150,6 +150,17 @@ EOF
     *Macintosh:Darwin:*:*)
         echo powerpc-apple-darwin
 	exit 0 ;;
+    *:procnto*:*:* | *:QNX:[0123456789]*:*)
+        UNAME_PROCESSOR=`uname -p`
+        if test "$UNAME_PROCESSOR" = "x86"; then
+                UNAME_PROCESSOR=i386
+                UNAME_MACHINE=pc
+        fi
+        echo ${UNAME_PROCESSOR}-${UNAME_MACHINE}-nto-qnx${UNAME_RELEASE}
+        exit 0 ;;
+    *:QNX:*:4*)
+        echo i386-pc-qnx
+        exit 0 ;;
     NILE:*:*:dcosx)
 	echo pyramid-pyramid-svr4
 	exit 0 ;;

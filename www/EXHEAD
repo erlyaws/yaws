@@ -18,9 +18,9 @@
     <td> <A HREF="/arg.yaws">Arg</a> </td>
     <td> <A HREF="/upload0.yaws">File upload</a> </td>
     <td> <A HREF="/cookies.yaws">Cookies</a> </td>
-    <td> <A HREF="/pcookie.yaws">Persistant Cookies</a> </td>
+    <td> <A HREF="/pcookie.yaws">Persistent Cookies</a> </td>
     <td> <A HREF="/session.yaws">Cookie sessions</a> </td>
-    <td> <A HREF="/shopingcart/index.yaws">Tiny shoping cart</a> </td>
+    <td> <A HREF="/shopingcart/index.yaws">Tiny shopping cart</a> </td>
     <td> <A HREF="/embed.yaws">Embedding Yaws</a> </td>
 
 </tr>

@@ -13,12 +13,12 @@ be used to do much more which is shown by the examples.
 <p>
 It can be used to generate any dynamic content, 
 and also, combining Yaws with
-the Erlang DBMS Mnesia, we can easily connect persitant data to a Cookie.
+the Erlang DBMS Mnesia, we can easily connect persistent data to a Cookie.
 
 <p>
 In all of the examples we will utilize the yaws api functions defined in the
 module <tt>yaws_api</tt>. The documentation for the API module is
-<a href="api.yaws">here</a>
+<a href="/api.yaws">here</a>.
 
 
 <erl>

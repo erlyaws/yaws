@@ -68,7 +68,7 @@ esac
 # Here we must recognize all the valid KERNEL-OS combinations.
 maybe_os=`echo $1 | sed 's/^\(.*\)-\([^-]*-[^-]*\)$/\2/'`
 case $maybe_os in
-  linux-gnu*)
+  nto-qnx* | linux-gnu*)
     os=-$maybe_os
     basic_machine=`echo $1 | sed 's/^\(.*\)-\([^-]*-[^-]*\)$/\1/'`
     ;;
@@ -717,6 +717,20 @@ case $os in
 	      | -mingw32* | -linux-gnu* | -uxpv* | *darwin*)
 	# Remember, each alternative MUST END IN *, to match a version number.
 		;;
+        -qnx*)
+                case $basic_machine in
+                    x86-* | i*86-*)
+                        ;;
+                    *)
+                        os=-nto$os
+                        ;;
+                esac
+                ;;
+        -nto-qnx*)
+                ;;
+        -nto*)
+                os=`echo $os | sed -e 's|nto|nto-qnx|'`
+                ;;
 	-linux*)
 		os=`echo $os | sed -e 's|linux|linux-gnu|'`
 		;;

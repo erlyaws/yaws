@@ -21,7 +21,7 @@
 
 <erl>
 
-out(_) -> 1 yaws_api:pre_ssi_string(
+out(_) -> yaws_api:pre_ssi_string(
 "
      out(_) ->
           yaws_api:redirect(

@@ -22,7 +22,7 @@ out(A) ->
 				       end
 			       end, Page) of
 		    true ->
-			os:cmd("man  " ++ Page ++ "  | col -b -p -x");
+                        os:cmd("man -Thtml " ++ Page ++ " | lynx -stdin -dump -hiddenlinks=ignore -nolist");
 		    false ->
 			"illegal character detected in query arg"
 		end;
