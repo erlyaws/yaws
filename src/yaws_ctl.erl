@@ -58,7 +58,7 @@ aloop(L) ->
 	_Err ->
 	    ignore
     end,
-    aloop(L).
+    ?MODULE:aloop(L).
 
 handle_a(A) ->
     case gen_tcp:recv(A, 0) of
@@ -72,6 +72,9 @@ handle_a(A) ->
 		    init:stop();
 		status ->
 		    a_status(A),
+		    gen_tcp:close(A);
+		{load, Mods} ->
+		    a_load(A, Mods),
 		    gen_tcp:close(A);
 		Other ->
 		    gen_tcp:send(A, io_lib:format("Other: ~p~n", [Other])),
@@ -111,6 +114,36 @@ a_status(Sock) ->
     
     %% Now lets' figure out the status of loaded modules
     ok.
+
+a_load(A, Mods) ->
+    case purge(Mods) of
+	ok ->
+	    gen_tcp:send(A, f("~p~n", [loadm(Mods)]));
+	Err ->
+	    gen_tcp:send(A, f("~p~n", [Err]))
+    end.
+
+loadm([]) ->
+    [];
+loadm([M|Ms]) ->
+    [code:load_file(M)|loadm(Ms)].
+
+purge(Ms) ->
+    case purge(Ms, []) of 
+	[] -> ok;
+	L -> {cannot_purge, L}
+    end.
+
+purge([], Ack) ->
+    Ack;
+purge([M|Ms], Ack) ->
+    case code:soft_purge(M) of
+	true ->
+	    purge(Ms, Ack);
+	false ->
+	    purge(Ms, [M|Ack])
+    end.
+
 
 
 actl(Term, Uid) ->
@@ -161,6 +194,9 @@ stop() ->
 
 status() ->
     actl(status, uid()).
+
+load(Modules) ->
+    actl({load, Modules}, uid()).
 
 check([File| IncludeDirs]) ->
     GC = yaws_config:make_default_gconf(false),

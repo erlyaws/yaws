@@ -25,9 +25,10 @@ help()
 	echo ""
 	echo ""
 	echo "ctl functions ... "
-	echo "        yaws -h         -- hup the daemon  "
-	echo "        yaws -s         -- stop the daemon "
-	echo "        yaws -S         -- query the daemon status "
+	echo "        yaws -h             -- hup the daemon  "
+	echo "        yaws -s             -- stop the daemon "
+	echo "        yaws -S             -- query the daemon status "
+	echo "        yaws -load Modules  -- load modules "
 	echo "        yaws -check YawsFile [IncDirs] -- test compile File "
 	exit 1
 }
@@ -73,6 +74,9 @@ do
 		exit 0;;
 	   -S)
 	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl status;
+		exit 0;;
+	   -load)
+	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl load $*;
 		exit 0;;
 	   -v) 
 	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws printversion;
