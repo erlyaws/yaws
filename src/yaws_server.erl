@@ -248,7 +248,7 @@ handle_call(pids, _From, State) ->  %% for gprof
 handle_call(mnum, _From, {GC, Group, Mnum}) ->
     {reply, Mnum+1,   {GC, Group, Mnum+1}};
 
-handle_call({setconf, GC, Groups}, From, State) ->
+handle_call({setconf, GC, Groups}, _From, State) ->
     %% First off, terminate all currently running processes
     Curr = lists:map(fun(X) ->element(1, X) end, element(2, State)),
     lists:foreach(fun(Pid) ->
@@ -818,17 +818,25 @@ inet_setopts(_,_,_) ->
 		  end;
 	      Len when integer(PPS) ->
 		  Int_len = list_to_integer(Len),
-		  if PPS < Int_len ->
+		  if 
+		      Int_len == 0 ->
+			  <<>>;
+		      PPS < Int_len ->
 			  {partial, get_client_data(CliSock, PPS, GC,
 						    is_ssl(SC#sconf.ssl))};
-		     true ->
-			  get_client_data(CliSock, list_to_integer(Len), GC, 
+		      true ->
+			  get_client_data(CliSock, Int_len, GC, 
 					  is_ssl(SC#sconf.ssl))
 		  end;
 	      Len when PPS == nolimit ->
 		  Int_len = list_to_integer(Len),
-		  get_client_data(CliSock, list_to_integer(Len), GC, 
-				  is_ssl(SC#sconf.ssl))
+		  if
+		      Int_len == 0 ->
+			  <<>>;
+		      true ->
+			  get_client_data(CliSock, Int_len, GC, 
+					  is_ssl(SC#sconf.ssl))
+		  end
 	  end,
     ?Debug("POST data = ~s~n", [binary_to_list(un_partial(Bin))]),
     ARG = make_arg(CliSock, Head, Req, GC, SC),
