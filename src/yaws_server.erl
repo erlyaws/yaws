@@ -747,7 +747,6 @@ handle_method_result(Res, CliSock, IP, GS, SC, Req, H, Num) ->
     end.
 
 
-
 peername(CliSock, ssl) ->
     ssl:peername(CliSock);
 peername(CliSock, nossl) ->
@@ -968,12 +967,6 @@ make_arg(CliSock, Head, Req, _GC, SC, Bin) ->
 	       clidata = Bin},
     apply(SC#sconf.arg_rewrite_mod, arg_rewrite, [ARG]).
 
-bad_request(CliSock, GC, SC, Req, Head) ->
-    ?TC([{record, GC, gconf}, {record, SC, sconf}]),
-    ok = inet_setopts(SC, CliSock, [{packet, raw}, binary]),
-    flush(SC, CliSock, Head#headers.content_length),
-    deliver_400(CliSock, Req, GC, SC).
-
 handle_extension_method(_Method, CliSock, GC, SC, Req, Head) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     not_implemented(CliSock, GC, SC, Req, Head).
@@ -990,7 +983,7 @@ handle_request(CliSock, GC, SC, ARG, N) ->
 	{abs_path, RawPath} ->
 	    case (catch yaws_api:url_decode_q_split(RawPath)) of
 		{'EXIT', _} ->   %% weird broken cracker requests
-		    deliver_403(CliSock, Req, GC, SC);
+		    deliver_400(CliSock, Req, GC, SC);
 		{DecPath, QueryPart} ->
 		    ?Debug("Test revproxy: ~p and ~p~n", [DecPath, 
 			                                  SC#sconf.revproxy]),
@@ -1024,7 +1017,7 @@ handle_request(CliSock, GC, SC, ARG, N) ->
 	{scheme, _Scheme, _RequestString} ->
 	    deliver_501(CliSock, Req, GC, SC);
 	_ ->                                    % for completeness
-	    deliver_403(CliSock, Req, GC, SC)
+	    deliver_400(CliSock, Req, GC, SC)
     end.
 
 
@@ -1059,8 +1052,6 @@ is_revproxy(Path, [{Prefix, URL} | Tail]) ->
     end.
 
 
-
-
 %% Return values:
 %% continue, done, {page, Page}
 
@@ -1077,7 +1068,7 @@ handle_ut(CliSock, GC, SC, ARG, UT, N) ->
 			     fun(A)->(SC#sconf.errormod_404):
 					 out404(A,GC,SC) 
 			     end,
-			     fun()->finish_up_dyn_file(CliSock, GC, SC)
+			     fun(A)->finish_up_dyn_file(CliSock, GC, SC)
 			     end
 			    );
 	directory when SC#sconf.dir_listings == true ->
@@ -1156,7 +1147,7 @@ handle_ut(CliSock, GC, SC, ARG, UT, N) ->
 			     N,
 			     A2,
 			     fun(A)->Mod:out(A) end,
-			     fun()->finish_up_dyn_file(CliSock, GC, SC)
+			     fun(A)->finish_up_dyn_file(CliSock, GC, SC)
 			     end
 			    );
 	cgi ->
@@ -1168,7 +1159,7 @@ handle_ut(CliSock, GC, SC, ARG, UT, N) ->
 			     fun(A)->yaws_cgi:call_cgi(A,
 						       UT#urltype.fullpath)
 			     end,
-			     fun()->finish_up_dyn_file(CliSock, GC, SC)
+			     fun(A)->finish_up_dyn_file(CliSock, GC, SC)
 			     end
 			    );
 	php ->
@@ -1181,7 +1172,7 @@ handle_ut(CliSock, GC, SC, ARG, UT, N) ->
 						       "php",
 						       UT#urltype.fullpath)
 			     end,
-			     fun()->finish_up_dyn_file(CliSock, GC, SC)
+			     fun(A)->finish_up_dyn_file(CliSock, GC, SC)
 			     end
 			    )
     end.
@@ -1224,7 +1215,7 @@ deliver_302(CliSock, Req, GC, SC, Arg) ->
 		   RedirHost, P, "/\r\n"];
 	      [P, Q] ->
 		  ["Location: ", Scheme,
-		   RedirHost, P, "/", Q, "\r\n"]
+		   RedirHost, P, "/?", Q, "\r\n"]
 	  end,
     
     Ret = case yaws:outh_get_chunked() of
@@ -1369,7 +1360,7 @@ deliver_501(CliSock, Req, GC, SC) ->
 do_yaws(CliSock, GC, SC, ARG, UT, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     FileAtom = list_to_atom(UT#urltype.fullpath),
-    io:format("FileAtom = ~p~nUT=~p~n",[FileAtom, UT]),
+    ?Debug("FileAtom = ~p~nUT=~p~n",[FileAtom, UT]),
     Mtime = mtime(UT#urltype.finfo),
     case ets:lookup(SC#sconf.ets, FileAtom) of
 	[{FileAtom, spec, Mtime1, Spec, Es}] when Mtime1 == Mtime,
@@ -1440,7 +1431,7 @@ deliver_dyn_part(CliSock, GC, SC,          % essential params
 		 CliDataPos,               % for `get_more'
 		 Arg,
 		 YawsFun,                  % call YawsFun(Arg)
-		 DeliverCont               % call DeliverCont()
+		 DeliverCont               % call DeliverCont(Arg)
 						% to continue normally
 		) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf},{record, Arg, arg}]),
@@ -1471,6 +1462,8 @@ deliver_dyn_part(CliSock, GC, SC,          % essential params
 	    finish_up_dyn_file(CliSock, GC, SC);
 	{page, Page} ->
 	    {page, Page};
+        Arg2 = #arg{} ->
+	    DeliverCont(Arg2);
 	{streamcontent, MimeType, FirstChunk} ->
 	    yaws:outh_set_content_type(MimeType),
 	    accumulate_chunk(FirstChunk),
@@ -1493,7 +1486,7 @@ deliver_dyn_part(CliSock, GC, SC,          % essential params
 	    end,
 	    done;
 	_ ->
-	    DeliverCont()
+	    DeliverCont(Arg)
     end.
 
 finish_up_dyn_file(CliSock, GC, SC) ->
@@ -1529,9 +1522,9 @@ deliver_dyn_file(CliSock, GC, SC, Bin, Fd, [H|T],Arg,N) ->
 	    deliver_dyn_part(CliSock, GC, SC, LineNo, YawsFile,
 			     N, Arg, 
 			     fun(A)->Mod:out(A) end,
-			     fun()->deliver_dyn_file(
+			     fun(A)->deliver_dyn_file(
 				      CliSock, GC, SC, 
-				      Bin2,Fd,T,Arg,0)
+				      Bin2,Fd,T,A,0)
 			     end);
 	{data, 0} ->
 	    deliver_dyn_file(CliSock, GC, SC, Bin, Fd,T,Arg,N);
@@ -1806,6 +1799,9 @@ handle_out_reply({'EXIT', Err}, LineNo, YawsFile, SC, ArgL) ->
 handle_out_reply({get_more, Cont, State}, _LineNo, _YawsFile, _SC, _A) ->
     {get_more, Cont, State};
 
+handle_out_reply(Arg = #arg{},  _LineNo, _YawsFile, _SC, _A) ->
+    Arg;
+
 handle_out_reply(Reply, LineNo, YawsFile, SC, ArgL) ->
     A = hd(ArgL),
     L =  ?F("yaws code at ~s:~p crashed or "
@@ -1971,7 +1967,6 @@ deliver_accumulated(Sock, GC, SC) ->
     end,
     Cont.
 
-		
 
 get_more_post_data(PPS, N, SC, GC, ARG) ->
     Len = list_to_integer((ARG#arg.headers)#headers.content_length),
@@ -1992,7 +1987,7 @@ get_more_post_data(PPS, N, SC, GC, ARG) ->
 		    {error, Else}
 	    end
     end.
-    
+
 
 do_tcp_close(Sock, SC) ->
     case SC#sconf.ssl of
@@ -2001,7 +1996,6 @@ do_tcp_close(Sock, SC) ->
 	_SSL ->
 	    ssl:close(Sock)
     end.
-
 
 
 ut_open(UT) ->
@@ -2028,8 +2022,6 @@ ut_close({bin, _}) ->
     ok;
 ut_close(Fd) ->
     file:close(Fd).
-
-
 
 
 parse_range(L, Tot) ->
@@ -2317,8 +2309,6 @@ do_url_type(SC, Path) ->
     case split_path(SC, Path, [], []) of
 	slash ->
 	    maybe_return_dir(SC#sconf.docroot, lists:flatten(Path));
-	forbidden ->  %% generate 403 forbidden
-	    #urltype{type=forbidden};
 	redir_dir ->
 	    #urltype{type = redir_dir,
 		     dir = [Path, $/]};
