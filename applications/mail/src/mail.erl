@@ -2,7 +2,11 @@
 %    File:	mail.erl  (~jb/mail.erl)
 %    Author:	Johan Bevemyr
 %    Created:	Sat Oct 25 10:59:24 2003
-						%    Purpose:   
+%    Purpose:   
+
+% RFC 822
+% RFC 1939
+% RFC 2048 
 
 -module('mail').
 -author('jb@trut.bluetail.com').
@@ -58,11 +62,11 @@
 	  cookie
 	 }).
 
+-define(RETRYTIMEOUT, 300).
+-define(RETRYCOUNT, 5).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 						%
-						%
-
 build_toolbar(Entries) ->
     {table, [{bgcolor,"c0c0c0"},{cellpadding,0},{cellspacing,0},{border,0}],
      [{tr,[],{td, [{colspan,20},{height,1},{bgcolor,white}],
@@ -211,7 +215,7 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 			{pre_html,"&nbsp;To:&nbsp;"}}},
 		      {td,[{height,35},{align,left},{valign,top}],
 		       {input,[{name,to},{type,text},{size,66},
-			       {value,To}]}}]},
+			       {check,value,To}]}}]},
 	      {tr,[],[{td,[{height,0},{align,left},{valign,top}],[]},
 		      {td,[{height,0},{align,left},{valign,top}],[]}]},
 	      {tr,[],[{td,[{height,35},{align,left},{valign,top}],
@@ -219,7 +223,7 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 			{pre_html,"&nbsp;Cc:&nbsp;"}}},
 		      {td,[{height,35},{align,left},{valign,top}],
 		       {input,[{name,cc},{type,text},{size,66},
-			       {value,Cc}]}}]},
+			       {check,value,Cc}]}}]},
 	      {tr,[],[{td,[{height,0},{align,left},{valign,top}],[]},
 		      {td,[{height,0},{align,left},{valign,top}],[]}]},
 	      {tr,[],[{td,[{height,35},{align,left},{valign,top}],
@@ -227,14 +231,14 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 			{pre_html,"&nbsp;Bcc:&nbsp;"}}},
 		      {td,[{height,35},{align,left},{valign,top}],
 		       {input,[{name,bcc},{type,text},{size,66},
-			       {value,Bcc}]}}
+			       {check,value,Bcc}]}}
 		     ]},
 	      {tr,[],[{td,[{height,35},{align,left},{valign,top},nowrap],
 		       {font,[{color,"#000000"},{size,2}],
 			{pre_html,"&nbsp;Subject:&nbsp;"}}},
 		      {td,[{colspan,3},{align,left},{valign,top}],
 		       {input,[{name,subject},{type,text},{size,66},
-			       {value,Subject}]}}]}
+			       {check,value,Subject}]}}]}
 	     ]
 	    },
 	    {table, [{bgcolor,silver},{border,0},{cellspacing,0},
@@ -255,6 +259,11 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 
 
 showmail(Session, MailNr) ->
+    showmail(Session, MailNr, ?RETRYCOUNT).
+
+showmail(Session, MailNr, 0) ->
+    format_error("Mailbox locked by other mail session.");
+showmail(Session, MailNr, Count) ->
     MailStr = integer_to_list(MailNr),
     tick_session(Session#session.cookie),
 
@@ -262,7 +271,13 @@ showmail(Session, MailNr) ->
 	case retr(popserver(), Session#session.user,
 		  Session#session.passwd, MailNr) of
 	    {error, Reason} ->
-		format_error(Reason);
+		case string:str(lowercase(Reason), "lock") of
+		    0 ->
+			format_error(Reason);
+		    N ->
+			sleep(?RETRYTIMEOUT),
+			showmail(Session, MailNr, Count-1)
+		end;
 	    Message ->
 		format_message(Message, MailNr)
 	end,
@@ -297,10 +312,27 @@ showmail(Session, MailNr) ->
        ]}]).
 
 showheaders(Session, MailNr) ->
-    tick_session(Session#session.cookie),
-    {H,Msg} = rtop(popserver(), Session#session.user,
-		   Session#session.passwd, MailNr),
+    showheaders(Session, MailNr, ?RETRYCOUNT).
 
+showheaders(Session, MailNr, 0) ->
+    format_error("Mailbox loxed by other mail process.");
+showheaders(Session, MailNr, Count) ->
+    tick_session(Session#session.cookie),
+    case rtop(popserver(), Session#session.user,
+	      Session#session.passwd, MailNr) of
+	{error, Reason} ->
+	    case string:str(lowercase(Reason), "lock") of
+		0 ->
+		    format_error(Reason);
+		N ->
+		    sleep(?RETRYTIMEOUT),
+		    showheaders(Session, MailNr, Count-1)
+	    end;
+	{H,Msg} ->
+	    format_headers(Session, MailNr, H, Msg)
+    end.
+
+format_headers(Session, MailNr, H, Msg) ->
     ContentType = undefined,
 
     (dynamic_headers() ++
@@ -341,7 +373,8 @@ showheaders(Session, MailNr) ->
 		   {cellspacing,0},{callpadding,0}],
 	    {tr,[],{td,[{valign,top},{height,"1%"}],
 		    [{table,
-		      [{border,0},{cellspacing,0},{cellpadding,0},{width,"100%"},
+		      [{border,0},{cellspacing,0},{cellpadding,0},
+		       {width,"100%"},
 		       {bgcolor,silver}],
 		      [{tr,[],
 			[{td,[{valign,middle},{align,left},{width,"15%"},
@@ -421,59 +454,79 @@ showheaders(Session, MailNr) ->
        ]}]).
 
 list(Session) ->
+    list(Session, ?RETRYCOUNT).
+
+list(Session, 0) ->
+    format_error("Mailbox locked by other mail process.");
+list(Session, Count) ->
     tick_session(Session#session.cookie),
-    H = list(popserver(), Session#session.user, Session#session.passwd),
-    (dynamic_headers()++
-     [{ehtml,
-       [{script,[],
-	 "function setCmd(val) { \n"
-	 "   if (val == 'delete') {\n"
-	 "      var res = confirm('Are you sure you want to delete the selected emails?');\n" 
-	 "      if (res) { \n"
-	 "           document.list.cmd.value=val;\n"
-	 "           document.list.submit();\n"
-	 "      } else { \n"
-	 "           return;\n"
-	 "      }\n"
-	 "   }\n"
-	 "   document.list.cmd.value=val;\n"
-	 "   document.list.submit();\n"
-	 "}"
-	},
-	{style,[{type,"text/css"}],
-	 "A:link    { color: black; text-decoration: none}\n"
-	 "A:visited { color: black; text-decoration: none}\n"
-	 "A:active  { color: black; text-decoration: none}\n"
-	 ".AList    { color: black; text-decoration: none}\n"
-	 ".Head     { border-right:1px solid white}"},
-	{form, [{name,list},{action,"listop.yaws"},{method,post}],
-	 [{table, [{border,0},{bgcolor,"c0c0c0"},
-		   {cellspacing,0},{width,"100%"}],
-	   {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
-		   {font, [{size,6},{color,black}],
-		    "WebMail at "++maildomain()}}}},
-	  build_toolbar([{"tool-newmail.gif","compose.yaws","New Message"},
-			 {"tool-delete.gif","javascript:setCmd('delete')",
-			  "Delete"},
-			 {"","logout.yaws","Logout"}]),
-	  {table, [{border,0},{bgcolor,"666666"},{cellspacing,0},
-		   {width,"100%"}],
-	   {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
-		   {font, [{size,2},{color,"#ffffff"}],
-		    "Inbox for "++Session#session.user}}}},
-	  {table, [{border,0},{cellspacing,0},{cellpadding,1},{width,"100%"}],
-	   [{tr, [{bgcolor,"c0c0c0"},{valign,middle}],
-	     [{th,[{class,head}],
-	       {img,[{src,"view-mark.gif"},{width,13},{height,13}],[]}},
-	      {th,[{align,left},{valign,middle},{class,head}],
-	       {font,[{size,2},{color,black}],"From"}},
-	      {th,[{align,left},{valign,middle},{class,head}],
-	       {font,[{size,2},{color,black}],"Subject"}},
-	      {th,[{align,left},{valign,middle},{class,head}],
-	       {font,[{size,2},{color,black}],"Size"}}]}] ++
-	   format_summary(H)},
-	  {input,[{type,hidden},{name,cmd},{value,""}],[]}
-	 ]}]}]).
+    case list(popserver(), Session#session.user, Session#session.passwd) of
+	{error, Reason} ->
+	    case string:str(lowercase(Reason), "lock") of
+		0 ->
+		    format_error(Reason);
+		N ->
+		    sleep(?RETRYTIMEOUT),
+		    list(Session, Count-1)
+	    end;
+	H ->
+	    (dynamic_headers()++
+	     [{ehtml,
+	       [{script,[],
+		 "function setCmd(val) { \n"
+		 "   if (val == 'delete') {\n"
+		 "      var res = confirm('Are you sure you want"
+		 " to delete the selected emails?');\n" 
+		 "      if (res) { \n"
+		 "           document.list.cmd.value=val;\n"
+		 "           document.list.submit();\n"
+		 "      } else { \n"
+		 "           return;\n"
+		 "      }\n"
+		 "   }\n"
+		 "   document.list.cmd.value=val;\n"
+		 "   document.list.submit();\n"
+		 "}"
+		},
+		{style,[{type,"text/css"}],
+		 "A:link    { color: black; text-decoration: none}\n"
+		 "A:visited { color: black; text-decoration: none}\n"
+		 "A:active  { color: black; text-decoration: none}\n"
+		 ".AList    { color: black; text-decoration: none}\n"
+		 ".Head     { border-right:1px solid white}"},
+		{form, [{name,list},{action,"listop.yaws"},{method,post}],
+		 [{table, [{border,0},{bgcolor,"c0c0c0"},
+			   {cellspacing,0},{width,"100%"}],
+		   {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
+			   {font, [{size,6},{color,black}],
+			    "WebMail at "++maildomain()}}}},
+		  build_toolbar([{"tool-newmail.gif","compose.yaws",
+				  "New Message"},
+				 {"tool-delete.gif",
+				  "javascript:setCmd('delete')",
+				  "Delete"},
+				 {"","logout.yaws","Logout"}]),
+		  {table, [{border,0},{bgcolor,"666666"},{cellspacing,0},
+			   {width,"100%"}],
+		   {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
+			   {font, [{size,2},{color,"#ffffff"}],
+			    "Inbox for "++Session#session.user}}}},
+		  {table, [{border,0},{cellspacing,0},{cellpadding,1},
+			   {width,"100%"}],
+		   [{tr, [{bgcolor,"c0c0c0"},{valign,middle}],
+		     [{th,[{class,head}],
+		       {img,[{src,"view-mark.gif"},{width,13},
+			     {height,13}],[]}},
+		      {th,[{align,left},{valign,middle},{class,head}],
+		       {font,[{size,2},{color,black}],"From"}},
+		      {th,[{align,left},{valign,middle},{class,head}],
+		       {font,[{size,2},{color,black}],"Subject"}},
+		      {th,[{align,left},{valign,middle},{class,head}],
+		       {font,[{size,2},{color,black}],"Size"}}]}] ++
+		   format_summary(H)},
+		  {input,[{type,hidden},{name,cmd},{value,""}],[]}
+		 ]}]}])
+    end.
 
 format_summary(Hs) ->
     [format_summary_line(H) || H <- Hs].
@@ -660,9 +713,9 @@ dynamic_headers() ->
      {header, "Expires: -1"}].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-						%
-						% session server
-						%
+%%
+%% session server
+%%
 
 tick_session(Cookie) ->
     session_server(),
@@ -694,7 +747,7 @@ logout_cookie(Cookie) ->
 session_server() ->
     case whereis(mail_session_manager) of
 	undefined ->
-	    Pid = spawn(?MODULE, session_manager_init, []),
+	    Pid = proc_lib:spawn(?MODULE, session_manager_init, []),
 	    register(mail_session_manager, Pid);
 	_ ->
 	    done
@@ -723,8 +776,9 @@ session_manager(C, Cfg) ->
 	{tick_session, Cookie} ->
 	    case lists:keysearch(Cookie, 1, C) of
 		{value, {Cookie,Session,_}} ->
-		    session_manager(lists:keyreplace(Cookie,1,C,
-						     {Cookie,Session,now()}), Cfg);
+		    session_manager(
+		      lists:keyreplace(Cookie,1,C,
+				       {Cookie,Session,now()}), Cfg);
 		false ->
 		    session_manager(C, Cfg)
 	    end;
@@ -762,8 +816,6 @@ sm_reply(maildomain, From, Cfg) ->
 sm_reply(sendtimeout, From, Cfg) ->
     From ! {session_manager, Cfg#cfg.sendtimeout}.
 
-    
-
 
 req(Req) ->
     session_server(),
@@ -780,13 +832,9 @@ smtpserver() ->  req(smtpserver).
 maildomain() ->  req(maildomain).
 sendtimeout() -> req(sendtimeout).
 
-    
-    
-    
-    
-    
 
-
+    
+    
 diff({M1,S1,_}, {M2,S2,_}) ->
     (M2-M1)*1000000+(S2-S1).
 
@@ -824,7 +872,7 @@ split_head_body(Msg, Acc) ->
     end.
 
 get_next_line(Data) ->
-						% io:format("Data = ~p\n", [Data]),
+    %% io:format("Data = ~p\n", [Data]),
     get_next_line(Data,[]).
 
 get_next_line([D|Ds], Acc) ->
@@ -981,119 +1029,94 @@ ploop(Command, Server, User, Password, From) ->
 ploop(init, State) ->
     case receive_reply(State) of
 	{ok, Reply, State2} ->
-						% io:format("INIT got +OK ~s\n", [Reply]),
 	    psend("USER " ++ State#pstate.user, State#pstate.port),
 	    ploop(user, State2);
 	{error, Reason, State2} ->
-						% io:format("INIT got -ERR ~s\n", [Reason]),
 	    State#pstate.from ! {pop_response, {error, Reason}},
 	    gen_tcp:close(State#pstate.port);
 	{more, State2} ->
-						% io:format("INIT got more\n", []),
 	    ploop(init, State2)
     end;
 
 ploop(user, State) ->
     case receive_reply(State) of
 	{ok, Reply, State2} ->
-						% io:format("USER got +OK ~s\n", [Reply]),
 	    psend("PASS " ++ State#pstate.pass, State#pstate.port),
 	    ploop(pass, State2);
 	{error, Reason, State2} ->
-						% io:format("USER got -ERR ~s\n", [Reason]),
 	    State#pstate.from ! {pop_response, {error, Reason}},
 	    gen_tcp:close(State#pstate.port);
 	{more, State2} ->
-						% io:format("USER got more\n", []),
 	    ploop(user, State2)
     end;
 ploop(pass, State) ->
     case receive_reply(State) of
 	{ok, Reply, State2} ->
-						% io:format("PASS got +OK ~s\n", [Reply]),
 	    next_cmd(State);
 	{error, Reason, State2} ->
-						% io:format("PASS got -ERR ~s\n", [Reason]),
 	    State#pstate.from ! {pop_response, {error, Reason}},
 	    gen_tcp:close(State#pstate.port);
 	{more, State2} ->
-						% io:format("PASS got more\n", []),
 	    ploop(pass, State2)
     end;
 ploop(sl, State) ->
     case receive_reply(State) of
 	{ok, Reply, State2} ->
-						% io:format("SL got +OK ~s\n", [Reply]),
 	    next_cmd(State2#pstate{reply=[{ok,Reply}|State2#pstate.reply]});
 	{error, Reason, State2} ->
-						% io:format("SL got -ERR ~s\n", [Reason]),
 	    next_cmd(State2#pstate{reply=[{error,Reason}|
 					  State2#pstate.reply]});
 	{more, State2} ->
-						% io:format("SL got more\n", []),
 	    ploop(sl, State2)
     end;
 ploop(sized, State) ->
     case receive_reply(State) of
 	{ok, Reply, State2} ->
 	    Size = to_int(Reply),
-						% io:format("MLINE got +OK size=~p\n", [Size]),
 	    ploop(sized_cont, State2#pstate{remain=Size,lines=[]});
 	{error, Reason, State2} ->
-						% io:format("MLINE got -ERR ~s\n", [Reason]),
 	    next_cmd(State2#pstate{reply=[{error,Reason}|
 					  State2#pstate.reply]});
 	{more, State2} ->
-						% io:format("MLINE got more\n", []),
 	    ploop(ml, State2)
     end;
 ploop(sized_cont, State) ->
     case receive_data(State) of
 	{error, Reason, State2} ->
-						% io:format("SCONT got -ERR ~s\n", [Reason]),
 	    next_cmd(State2#pstate{reply=[{error,Reason}|
 					  State2#pstate.reply]});
 	{more, State2} ->
-						% io:format("SCONT got more\n", []),
 	    ploop(sized_cont, State2);
 	{done, State2} ->
-						% io:format("SCONT got done\n", []),
 	    Data = lists:reverse(State2#pstate.lines),
 	    next_cmd(State2#pstate{reply=[{ok, Data}|State2#pstate.reply]})
     end;
 ploop(ml, State) ->
     case receive_reply(State) of
 	{ok, Reply, State2} ->
-						% io:format("MLINE got +OK ~s\n", [Reply]),
 	    ploop(ml_cont, State2#pstate{lines=[]});
 	{error, Reason, State2} ->
-						% io:format("MLINE got -ERR ~s\n", [Reason]),
 	    next_cmd(State2#pstate{reply=[{error,Reason}|
 					  State2#pstate.reply]});
 	{more, State2} ->
-						% io:format("MLINE got more\n", []),
 	    ploop(ml, State2)
     end;
 ploop(ml_cont, State) ->
     case receive_reply(State) of
 	{line, Line, State2} ->
-						% io:format("MCONT got +OK ~s\n", [Line]),
 	    Lines = State2#pstate.lines,
 	    ploop(ml_cont, State2#pstate{lines=[Line|Lines]});
 	{error, Reason, State2} ->
-						% io:format("MCONT got -ERR ~s\n", [Reason]),
 	    next_cmd(State2#pstate{reply=[{error,Reason}|
 					  State2#pstate.reply]});
 	{more, State2} ->
-						% io:format("MCONT got more\n", []),
 	    ploop(ml_cont, State2);
 	{done, State2} ->
-						% io:format("MCONT got done\n", []),
 	    Lines = lists:reverse(State2#pstate.lines),
 	    next_cmd(State2#pstate{reply=[{ok, Lines}|State2#pstate.reply]})
     end.
 
-						%
+%%
 
 next_cmd(State=#pstate{cmd=Cmd,reply=Reply}) when Cmd==[]->
     State#pstate.from ! {pop_response, lists:reverse(Reply)},
@@ -1103,12 +1126,12 @@ next_cmd(State=#pstate{cmd=[Cmd|Cmds]}) ->
     psend(C, State#pstate.port),
     ploop(S, State#pstate{cmd=Cmds}).
 
-						%
+%%
 
 psend(Str, Port) ->
     gen_tcp:send(Port, Str++"\r\n").
 
-						%
+%%
 
 receive_reply(State=#pstate{port=Port,acc=Acc,more=false}) ->
     check_reply(State#pstate.acc, State);
@@ -1116,7 +1139,6 @@ receive_reply(State=#pstate{port=Port,acc=Acc,more=true}) ->
     Res = gen_tcp:recv(Port, 0),
     case Res of
 	{ok, Bin} ->
-						% io:format("got ~s~n", [binary_to_list(Bin)]),
 	    NAcc = Acc++binary_to_list(Bin),
 	    check_reply(NAcc, State);
 	Err ->
@@ -1124,10 +1146,9 @@ receive_reply(State=#pstate{port=Port,acc=Acc,more=true}) ->
     end.
 
 
-						%
+%%
 
 receive_data(State=#pstate{port=Port,acc=Acc,more=false,remain=Remain}) ->
-						% io:format("Remain = ~p, more=false, Acc=~p\n", [Remain,length(Acc)]),
     if
 	Remain =< length(Acc) ->
 	    {Lines, NAcc} = split_at(Acc, Remain),
@@ -1144,10 +1165,8 @@ receive_data(State=#pstate{port=Port,acc=Acc,more=true}) when length(Acc)>0 ->
     receive_data(State#pstate{more=false});
 receive_data(State=#pstate{port=Port,acc=[],more=true,remain=Remain}) ->
     Res = gen_tcp:recv(Port, 0),
-						% io:format("Remain = ~p\n", [Remain]),
     case Res of
 	{ok, Bin} ->
-						% io:format("got ~s~n", [binary_to_list(Bin)]),
 	    Acc = binary_to_list(Bin),
 	    if
 		Remain =< length(Acc) ->
@@ -1265,7 +1284,6 @@ smtp_expect(Code, Port, Acc, ErrorMsg) ->
     Res = gen_tcp:recv(Port, 0, sendtimeout()),
     case Res of
 	{ok, Bin} ->
-						% io:format("got ~s~n", [binary_to_list(Bin)]),
 	    NAcc = Acc++binary_to_list(Bin),
 	    case string:chr(NAcc, $\n) of
 		0 ->
@@ -1488,15 +1506,15 @@ format_message(Message, MailNr) ->
 	     [{input,[{type,hidden},{name,nr}, {value,MailNr}],[]}]
      end++
      [{input,[{type,hidden},{name,from},
-	      {value,yaws_api:url_encode(From)}],[]},
+	      {check,value,yaws_api:url_encode(From)}],[]},
       {input,[{type,hidden},{name,to},
-	      {value,yaws_api:url_encode(To)}],[]},
+	      {check,value,yaws_api:url_encode(To)}],[]},
       {input,[{type,hidden},{name,cc},
-	      {value,yaws_api:url_encode(CC)}],[]},
+	      {check,value,yaws_api:url_encode(CC)}],[]},
       {input,[{type,hidden},{name,bcc},
-	      {value,yaws_api:url_encode(decode(H#mail.bcc))}],[]},
+	      {check,value,yaws_api:url_encode(decode(H#mail.bcc))}],[]},
       {input,[{type,hidden},{name,subject},
-	      {value,yaws_api:url_encode(Subject)}],[]},
+	      {check,value,yaws_api:url_encode(Subject)}],[]},
       {input,[{type,hidden},{name,cmd},{value,""}],[]}
      ]
     }].
@@ -1698,12 +1716,19 @@ char_class($ )  -> space;
 char_class($\t) -> tab;
 char_class(O)   -> text.
     
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+sleep(X) ->
+    receive
+	xxxxxxx ->  ok
+    after
+	X -> ok
+    end.
 
 	
 %%%%%%%%%%%%%%%%%%%%%% read cfg file %%%%%%%%%%%%%%%%%%
 %% def for root is: /etc/mail/yaws-webmail.conf
 
-	
 read_config() ->
     Paths = case yaws:getuid() of
 		{ok, "0"} ->
@@ -1715,7 +1740,8 @@ read_config() ->
 	    end,
     case yaws:first(fun(F) -> yaws:exists(F) end, Paths) of
 	false ->
-	    error_logger:info_msg("yaws webmail: Can't find no config file .. using defaults",[]),
+	    error_logger:info_msg("yaws webmail: Can't find no config file .. "
+				  "using defaults",[]),
 	    #cfg{};
 	{ok, _, File} ->
 	    read_config(File)
@@ -1727,7 +1753,8 @@ read_config(File) ->
 	{ok, FD} ->
 	    read_config(FD, #cfg{}, 1, io:get_line(FD, ''));
 	Err ->
-	    error_logger:info_msg("Yaws webmail: Can't open config file ... using defaults",[]),
+	    error_logger:info_msg("Yaws webmail: Can't open config file ... "
+				  "using defaults",[]),
 	    #cfg{}
     end.
 
@@ -1742,7 +1769,8 @@ read_config(FD, Cfg, Lno, Chars) ->
 	["ttl", '=', IntList] ->
 	    case (catch list_to_integer(IntList)) of
 		{'EXIT', _} ->
-		    error_logger:info_msg("Yaws webmail:  expect integer at line ~p", [Lno]),
+		    error_logger:info_msg("Yaws webmail:  expect integer at "
+					  "line ~p", [Lno]),
 		    read_config(FD, Cfg, Lno+1, Next);
 		Int ->
 		    read_config(FD, Cfg#cfg{ttl = Int}, Lno+1, Next)
@@ -1757,14 +1785,15 @@ read_config(FD, Cfg, Lno, Chars) ->
 	["sendtimeout", '=', IntList] ->
 	    case (catch list_to_integer(IntList)) of
 		{'EXIT', _} ->
-		    error_logger:info_msg("Yaws webmail:  expect integer at line ~p", [Lno]),
+		    error_logger:info_msg("Yaws webmail:  expect integer at "
+					  "line ~p", [Lno]),
 		    read_config(FD, Cfg, Lno+1, Next);
 		Int ->
 		    read_config(FD, Cfg#cfg{sendtimeout = Int}, Lno+1, Next)
 	    end;
 	[H|_] ->
-	    error_logger:info_msg("Yaws webmail: Unexpected tokens ~p at line ~w", [H, Lno]),
+	    error_logger:info_msg("Yaws webmail: Unexpected tokens ~p at "
+				  "line ~w", [H, Lno]),
 	    read_config(FD, Cfg, Lno+1, Next)
     end.
-
 	
