@@ -816,7 +816,6 @@ make_arg(CliSock, Head, Req, _GC, SC) ->
 handle_request(CliSock, GC, SC, Req, H, ARG, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     UT =  url_type(GC, SC, get_path(Req#http_request.path)),
-    ?Debug("UT: ~p", [?format_record(UT, urltype)]),
     ARG2 = ARG#arg{fullpath=UT#urltype.fullpath},
     case SC#sconf.authdirs of
 	[] ->
@@ -1512,9 +1511,25 @@ ut_close(Fd) ->
 
 
 deliver_file(CliSock, GC, SC, Req, InH, UT) ->
+    if
+	binary(UT#urltype.data) ->
+	    %% cached
+	    deliver_small_file(CliSock, GC, SC, Req, InH, UT);
+	true ->
+	    case (UT#urltype.finfo)#file_info.size of
+		N when N < 10240 ->
+		    deliver_small_file(CliSock, GC, SC, Req, InH, UT);
+		_ ->
+		    deliver_large_file(CliSock, GC, SC, Req, InH, UT)
+	    end
+    end.
+
+deliver_small_file(CliSock, GC, SC, Req, InH, UT) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT, urltype}]),
     DCC = static_do_close(Req, InH),
     make_static_headers(Req, UT, DCC),
+
+
     Fd = ut_open(UT),
     Bin = ut_read(Fd),
     close_if_HEAD(Req, fun() ->
@@ -1530,6 +1545,50 @@ deliver_file(CliSock, GC, SC, Req, InH, UT) ->
 	DCC#dcc.doclose == false ->
 	    continue
     end.
+
+deliver_large_file(CliSock, GC, SC, Req, InH, UT) ->
+    ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT, urltype}]),
+    DCC = static_do_close(Req, InH),
+    make_static_headers(Req, UT, DCC),
+    close_if_HEAD(Req, fun() ->
+			       deliver_accumulated(DCC, CliSock, GC,SC),
+			       throw({ok, 1}) 
+		       end),
+    deliver_accumulated(DCC, CliSock, GC, SC),
+    {ok,Fd} = file:open(UT#urltype.fullpath, [raw, read]),
+    send_file(CliSock, Fd, DCC, SC, GC),
+    if
+	DCC#dcc.doclose == true ->
+	    done;
+	DCC#dcc.doclose == false ->
+	    continue
+    end.
+
+send_file(CliSock, Fd, DCC, SC, GC) ->
+    case file:read(Fd, 1024*10) of
+	{ok, Bin} ->
+	    send_file_chunk(Bin, CliSock, Fd, DCC, SC, GC),
+	    send_file(CliSock, Fd, DCC, SC, GC);
+	eof ->
+	    if
+		DCC#dcc.chunked == true ->
+		    gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
+		    done;
+		true ->
+		    done
+	    end
+    end.
+
+send_file_chunk(Bin, CliSock, Fd, DCC, SC, GC) ->
+    if
+	DCC#dcc.chunked == false ->
+	    gen_tcp_send(CliSock, Bin, SC, GC);
+	DCC#dcc.chunked == true ->
+	    CRNL = crnl(),
+	    Data2 = [CRNL, yaws:integer_to_hex(size(Bin)) , crnl(), Bin],
+	    gen_tcp_send(CliSock, Bin, SC, GC)
+    end.
+
 
 close_if_HEAD(Req, F) ->
     if
@@ -1705,7 +1764,10 @@ url_type(GC, SC, Path) ->
 	[] ->
 	    UT = do_url_type(SC#sconf.docroot, Path),
 	    ?TC([{record, UT, urltype}]),
-	    cache_file(GC, SC, Path, UT);
+	    ?Debug("UT=~p\n", [UT]),
+	    CF = cache_file(GC, SC, Path, UT),
+	    ?Debug("CF=~p\n", [CF]),
+	    CF;
 	[{_, When, UT}] ->
 	    N = now_secs(),
 	    FI = UT#urltype.finfo,
@@ -1744,22 +1806,27 @@ cache_file(GC, SC, Path, UT) when
     [{num_files, N}] = ets:lookup(E, num_files),
     [{num_bytes, B}] = ets:lookup(E, num_bytes),
     FI = UT#urltype.finfo,
+    ?Debug("FI=~p\n", [FI]),
     if
 	N + 1 > GC#gconf.max_num_cached_files ->
 	    error_logger:info_msg("Max NUM cached files reached for server "
 			      "~p", [SC#sconf.servername]),
 	    cleanup_cache(E, num),
 	    cache_file(GC, SC, Path, UT);
+	FI#file_info.size < GC#gconf.max_size_cached_file,
 	B + FI#file_info.size > GC#gconf.max_num_cached_bytes ->
 	    error_logger:info_msg("Max size cached bytes reached for server "
-			      "~p", [SC#sconf.servername]),
+				  "~p", [SC#sconf.servername]),
 	    cleanup_cache(E, size),
 	    cache_file(GC, SC, Path, UT);
 	true ->
+	    ?Debug("Check file size\n",[]),
 	    if
 		FI#file_info.size > GC#gconf.max_size_cached_file ->
+		    ?Debug("To large\n",[]),
 		    UT;
 		true ->
+		    ?Debug("File fits\n",[]),
 		    {ok, Bin} = prim_file:read_file(UT#urltype.fullpath),
 		    UT2 = UT#urltype{data = Bin},
 		    ets:insert(E, {{url, Path}, now_secs(), UT2}),
