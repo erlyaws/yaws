@@ -53,6 +53,7 @@ gen_news(A) ->
     end.
 
 gen_news(Fd, eof) ->
+    file:close(Fd),
     [];
 gen_news(Fd, Line) ->
     Items = gen_items(Fd, io:get_line(Fd, '')),

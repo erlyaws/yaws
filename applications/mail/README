@@ -13,17 +13,48 @@ finished the other webmail app so I started from scratch.
 A few important things are still missing. The most notable is the
 ability to handle attached files and email on multipart format...
 
+
 To install
 ----------
 
-- Edit/Create /etc/mail/yaws-webmail.conf
 - Modify include.mk for your local paths
 
-Run 'make' and 'make install' and update your /etc/yaws.conf
-to include the ebin directory, e.g. at the top
+Run 'make' and 'make install' 
+
+
+
+- Edit/Create /etc/mail/yaws-webmail.conf
+
+(Make install will create a good template for the conf
+ file in /etc/mail)
+
+
+
+Two things need to be edited in /etc/yaws.conf
+
+1. yaws must find the beam code for mail.beam, 
+   By default (include.mk) that gets installed in
+   /var/yaws/ebin
+
+   This path must be added to /etc/yaws conf as in:
 
    ebin_dir = /var/yaws/ebin
 
-Feel free to hack it!!
+
+
+2. The virtual server that is supposed to run the webmail
+   must have an appmod called 'attachment' installed.
+
+   Here is an example:
+
+   <server flinta>
+         port = 80
+         appmods = attachment
+         listen = 0.0.0.0
+         docroot =  /var/yaws/mail
+   </server>
+
+
+
 
 /Johan Bevemyr

@@ -15,7 +15,7 @@
 	 session_manager_init/0, check_cookie/1, check_session/1, 
 	 login/2, display_login/2, stat/3, showmail/2, compose/1, compose/7,
 	 send/6, get_val/3, logout/1, base64_2_str/1, retr/4, 
-	 showheaders/2, delete/2]).
+	 showheaders/2, delete/2, send_attachment/2]).
 
 -include("../../../include/yaws_api.hrl").
 -include("defs.hrl").
@@ -38,6 +38,7 @@
 	  date="",
 	  content_type,
 	  transfer_encoding,
+	  content_disposition,
 	  other = []
 	 }).
 
@@ -55,11 +56,18 @@
 	  remain
 	 }).
 
+-record(satt, {
+	  num,
+	  filename,
+	  ctype,
+	  data}).
+
 -record(session,
 	{
 	  user,
 	  passwd,
-	  cookie
+	  cookie,
+	  attachments = []   %% list of #satt{} records
 	 }).
 
 -define(RETRYTIMEOUT, 300).
@@ -192,9 +200,10 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 		     {width,"100%"}],
 	     {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
 		     {font, [{size,6},{color,black}],
-		      "WebMail at "++maildomain()}}}},
+		      "Yaws WebMail at "++maildomain()}}}},
 	    build_toolbar([{"tool-send.gif",
 			    "javascript:setCmd('send');","Send"},
+			   {"", "att.yaws", "Attach file"},
 			   {"", "mail.yaws", "Close"}]),
 	    {table, [{width,645},{border,0},{bgcolor,silver},{cellspacing,0},
 		     {cellpadding,0}],
@@ -279,7 +288,7 @@ showmail(Session, MailNr, Count) ->
 			showmail(Session, MailNr, Count-1)
 		end;
 	    Message ->
-		format_message(Message, MailNr, "1")
+		format_message(Session, Message, MailNr, "1")
 	end,
 
     (dynamic_headers() ++
@@ -815,14 +824,60 @@ session_manager(C0, LastGC0, Cfg) ->
 	    session_manager(C3, LastGC, Cfg);
 	{From, cfg , Req} ->
 	    sm_reply(Req, From, Cfg),
+	    session_manager(C, LastGC, Cfg);
+	{session_set_attach_data, From, Cookie, Fname, Ctype, Data} ->
+	    case lists:keysearch(Cookie, 1, C) of
+		{value, {_,Session,_}} ->
+		    Atts = Session#session.attachments,
+		    [A|As] = add_att(Fname, Ctype, Data, Atts),
+		    From ! {session_manager, A#satt.num},
+		    S2 = Session#session{attachments = [A|As]},
+		    session_manager(lists:keyreplace(
+				      Cookie,1,C,
+				      {Cookie,S2,now()}), LastGC, Cfg);
+		false ->
+		    session_manager(C, LastGC, Cfg)
+	    end;
+	{session_get_attach_data, From, Cookie, Num} ->
+	    case lists:keysearch(Cookie, 1, C) of
+		{value, {_,Session,_}} ->
+		    Atts = Session#session.attachments,
+		    case lists:keysearch(Num, #satt.num, Atts) of
+			false ->
+			    From ! {session_manager, error};
+			{value, A} ->
+			    From ! {session_manager, A}
+		    end;
+		false ->
+		    ignore
+	    end,
 	    session_manager(C, LastGC, Cfg)
-
     after
 	5000 ->
 	    %% garbage collect sessions
 	    C3 = session_manager_gc(C, Cfg),
 	    session_manager(C3, now(), Cfg)
     end.
+
+
+add_att(Fname, Ctype, Data, Atts) ->
+    case lists:keysearch(Fname, #satt.filename, Atts) of
+	false ->
+	    [#satt{num = length(Atts) + 1,
+		   filename = Fname,
+		   ctype = Ctype,
+		   data = Data} | Atts];
+
+	{value, A} when A#satt.data == Data ->
+	    [A | lists:keydelete(A#satt.num, #satt.num, Atts)];
+	{value, A} ->
+	    [#satt{num = length(Atts) + 1,
+		   filename = Fname,
+		   ctype = Ctype,
+		   data = Data} | Atts]
+    end.
+		
+
 
 
 session_manager_gc(C, Cfg) ->
@@ -1028,6 +1083,8 @@ add_header("content-transfer-encoding", Value, H) ->
     H#mail{transfer_encoding = lowercase(Value)};
 add_header("content-type", Value, H) ->
     H#mail{content_type = parse_header_value(Value)};
+add_header("content-disposition", Value, H) ->
+    H#mail{content_disposition = parse_header_value(Value)};
 add_header("from", Value, H) ->    H#mail{from = Value};
 add_header("to", Value, H) ->      H#mail{to = Value};
 add_header("cc", Value, H) ->      H#mail{cc = Value};
@@ -1461,10 +1518,10 @@ format_error(Reason) ->
     [build_toolbar([{"","mail.yaws","Close"}]),
      {p, [], {font, [{size,4},{color,red}],["Error: ", Reason]}}].
 
-format_message(Message, MailNr, Depth) ->
+format_message(Session, Message, MailNr, Depth) ->
     {Headers,Msg} = parse_message(Message),
     H = parse_headers(Headers),
-    Formated = format_body(H,Msg, Depth),
+    Formated = format_body(Session, H,Msg, Depth),
     MailStr = integer_to_list(MailNr),
     To = lists:flatten(decode(H#mail.to)),
     From = lists:flatten(decode(H#mail.from)),
@@ -1580,7 +1637,7 @@ has_body_type(Type, {H,B}) ->
 	_ -> false
     end.
 
-format_body(H,Msg,Depth) ->
+format_body(Session, H,Msg,Depth) ->
     ContentType =
 	case H#mail.content_type of
 	    {CT,Ops} -> {lowercase(CT), Ops};
@@ -1600,8 +1657,8 @@ format_body(H,Msg,Depth) ->
 		lists:foldl(fun({K,V},MH) ->
 				    add_header(K,V,MH)
 			    end, #mail{}, Headers),
-	    [format_body(PartHeaders, Body, Depth++".1"),
-	     format_attachements(Parts, Depth)];
+	    [format_body(Session, PartHeaders, Body, Depth++".1"),
+	     format_attachements(Session, Parts, Depth)];
 	{{"multipart/alternative",Opts}, Encoding} ->
 	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
 	    Parts = parse_multipart(Msg, Boundary),
@@ -1615,7 +1672,7 @@ format_body(H,Msg,Depth) ->
 			  {NewHead, Body}
 		  end, Parts),
 	    {H1,B1} = select_alt_body(["text/html","text/plain"],HParts),
-	    format_body(H1,B1,Depth++".1");
+	    format_body(Session, H1,B1,Depth++".1");
 	{{"multipart/signed",Opts}, Encoding} ->
 	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
 	    [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
@@ -1623,24 +1680,64 @@ format_body(H,Msg,Depth) ->
 		lists:foldl(fun({K,V},MH) ->
 				    add_header(K,V,MH)
 			    end, #mail{}, Headers),
-	    format_body(PartHeaders, Body, Depth++".1");
+	    format_body(Session, PartHeaders, Body, Depth++".1");
 	{{"message/rfc822",Opts}, Encoding} ->
 	    Decoded = decode_message(Encoding, Msg),
-	    format_message(Decoded, -1, Depth);
+	    format_message(Session, Decoded, -1, Depth);
 	{_,_} ->
 	    {pre, [], wrap_text(Msg,80)}
     end.
 
-format_attachements([], _Depth) -> [];
-format_attachements(Bs, Depth) ->
-    {table, [], format_attach(Bs, Depth)}.
+format_attachements(S, [], _Depth) -> [];
+format_attachements(S, Bs, Depth) ->
+    [{table,[{bgcolor, "lightgrey"}],
+      [
+       {tr,[], {td, [], {h5,[], "Attachments:"}}},
+       {tr, [], {td, [], {table, [], format_attach(S, Bs, Depth)}}}]}].
 
-format_attach([], Depth) ->
+format_attach(_S, [], Depth) ->
     [];
-format_attach([{Headers,B}|Bs], Depth) ->
+format_attach(S, [{Headers,B0}|Bs], Depth) ->
+    B = 
+	if list(B0) -> list_to_binary(B0);
+	   true -> B0
+	end,
     H = lists:foldl(fun({K,V},MH) -> add_header(K,V,MH) end, #mail{}, Headers),
-    [{tr,[],{td,[],io_lib:format("~p", [H#mail.content_type])}}|
-     format_attach(Bs, Depth)].
+    Cookie = S#session.cookie,
+    FileName = extraxt_h_info(H),
+    HttpCtype = yaws_api:mime_type(FileName),
+    mail_session_manager ! {session_set_attach_data, self(), Cookie,
+			    FileName,HttpCtype,B},
+    receive
+	{session_manager, Num} ->
+	    [{tr,[],{td,[],
+		     {a, [{href,io_lib:format("attachment/~s?nr=~w",
+					      [FileName,Num])}],
+		      FileName}}} |
+	     format_attach(S, Bs, Depth)]
+    after 10000 ->
+	    format_attach(S, Bs, Depth)
+    end.
+
+
+extraxt_h_info(H) ->
+    L = case {H#mail.content_type, H#mail.content_disposition} of
+	    {undefined, undefined} ->
+		[];
+	    {undefined, {_, LL}} ->
+		LL;
+	    {{_,LL}, undefined} ->
+		LL;
+	    {{_,L1}, {_,L2}} ->
+		L1 ++ L2
+	end,
+    case lists:keysearch("filename", 1, L) of
+	false ->
+	    "attachment.txt";
+	{value, {_, FN}} ->
+	    FN
+    end.
+
 
 decode_message("7bit"++_, Msg) -> Msg;
 decode_message("8bit"++_, Msg) -> Msg;
@@ -1973,4 +2070,21 @@ format_date(Seconds) when integer(Seconds) ->
     format_date(Date);
 format_date([]) -> [];
 format_date(error) -> [].
+
+
+
+
+
+send_attachment(Session, Number) ->
+    mail_session_manager ! {session_get_attach_data, self(), 
+			    Session#session.cookie, Number},
+    receive
+	{session_manager, error} ->
+	    none;
+	{session_manager, A} ->
+	    {content, A#satt.ctype, A#satt.data}
+    after 15000 ->
+	    exit(normal)
+    end.
+
 
