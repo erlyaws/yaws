@@ -1288,11 +1288,13 @@ table(Color, X) ->
     ["<table width=\"100%\"><tr><td bgcolor=\"", Color, "\">\n",
      X,"</td></tr></table>\n"].
 
-mk_image_link(X, Img) ->
-    ["<a href=\"", X, "\"><img border=0 src='",Img, "'></a>&nbsp;&nbsp;\n"].
+mk_image_link(X, Img, Alt) ->
+    ["<a href=\"", X, "\"><img border=0 src='",Img, "' alt='",Alt,"'>"
+     "</a>&nbsp;&nbsp;\n"].
 
-mk_image_link(X, Img, Title) ->
+mk_image_link(X, Img, Alt, Title) ->
     ["<a href=\"", X, "\"><img border=0 src='",Img, "' ",
+     "alt='", Alt, "' "
      "title='", Title,"'></a>&nbsp;&nbsp;\n"].
 
 body_pic("") -> background("normal");
@@ -1301,19 +1303,25 @@ body_pic(_)  -> background("locked").
 banner(File, Password) ->			    
     [table("#FFFFFF",
 	   [
-	    mk_image_link("showPage.yaws?node=home", "home.gif",
+	    mk_image_link("showPage.yaws?node=home", "home.gif", "Home",
 			  "Go to initial page"),
 	    mk_image_link("showHistory.yaws?node=" ++ File, "history.gif",
+			  "History",
 			  "History of page evolution"),
 	    mk_image_link("allPages.yaws", "allpages.gif",
+			  "All Pages",
 			  "Lists all pages on this site"),
 	    mk_image_link("lastEdited.yaws", "lastedited.gif",
+			  "Last Edited",
 			  "Site editing history"),
 	    mk_image_link("wikiZombies.yaws", "zombies.gif",
+			  "Zombies",
 			  "Unreachable pages"),
 	    mk_image_link("editPage.yaws?node=" ++ File, "editme.gif",
+			  "Edit Me",
 			  "Edit this page"),
 	    mk_image_link("editFiles.yaws?node=" ++ File, "editfiles.gif",
+			  "Edit Files",
 			  "Edit attached files")
 	   ])].
 

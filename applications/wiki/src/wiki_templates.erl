@@ -4,9 +4,9 @@
 
 %% B = normal | locked | old
 template(Title,Background,Menu,Data) ->
-    {html,["<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">
-<HEAD> 
-<TITLE>", Title, "</TITLE>
+    {html,["
+<head> 
+<title>", Title, "</title>
 <style type=\"text/css\">
 <!--
 TEXTAREA{
@@ -14,6 +14,8 @@ TEXTAREA{
 }
 -->
 </style>
+</head>
+<body>
 <table width='100%'>
 <tr> 
 <td> 
@@ -37,7 +39,7 @@ Data,"
 </td> 
   
 <!-- the right hand image --> 
-<td width=10 align='right' valign='top'><img src='icon.gif'></td> 
+<td width=10 align='right' valign='top'><img src='icon.gif' alt=' '></td> 
 </tr> 
 </table> 
 </body>
