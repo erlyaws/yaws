@@ -377,16 +377,16 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 	 "A:active  { color: 0;text-decoration: none}\n"
 	 "textarea { background-color: #fff; border: 1px solid 00f; }\n"
 	 "DIV.tag-body { background: white; }\n"},
-	{script, [{type,"text/javascript"}],
-	 "_editor_url='/htmlarea/';\n"
-	 "_editor_lagn='se';\n"},
-	{script, [{type,"text/javascript"},{src,"/htmlarea/htmlarea.js"}],""},
-	{script, [{type,"text/javascript"}],
-	 "var editor = null;\n"
-	 "function initEditor() {\n"
-	 "editor = new HTMLArea('html_message');\n"
-	 "editor.generate();\n"
-	 "return false;\n}"},
+% 	{script, [{type,"text/javascript"}],
+% 	 "_editor_url='/htmlarea/';\n"
+% 	 "_editor_lagn='se';\n"},
+% 	{script, [{type,"text/javascript"},{src,"/htmlarea/htmlarea.js"}],""},
+% 	{script, [{type,"text/javascript"}],
+% 	 "var editor = null;\n"
+% 	 "function initEditor() {\n"
+% 	 "editor = new HTMLArea('html_message');\n"
+% 	 "editor.generate();\n"
+% 	 "return false;\n}"},
 %	{script,[{type,"text/javascript"},{defer,"1"}],
 %%	 "HTMLArea.replace('html_message');\n"},
 %	 "HTMLArea.replaceAll();\n"},
