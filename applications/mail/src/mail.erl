@@ -2126,14 +2126,12 @@ format_attachements(S, Bs, Depth) ->
 format_attach(_S, [], Depth) ->
     [];
 format_attach(S, [{Headers,B0}|Bs], Depth) ->
-    B = 
-	if list(B0) -> list_to_binary(B0);
-	   true -> B0
-	end,
     H = lists:foldl(fun({K,V},MH) -> add_header(K,V,MH) end, #mail{}, Headers),
     Cookie = S#session.cookie,
     FileName = extraxt_h_info(H),
     HttpCtype = yaws_api:mime_type(FileName),
+    B1 = decode_message(H#mail.transfer_encoding, B0),
+    B = list_to_binary(B1),
     mail_session_manager ! {session_set_attach_data, self(), Cookie,
 			    FileName,HttpCtype,B},
     receive
@@ -2146,7 +2144,6 @@ format_attach(S, [{Headers,B0}|Bs], Depth) ->
     after 10000 ->
 	    format_attach(S, Bs, Depth)
     end.
-
 
 extraxt_h_info(H) ->
     L = case {H#mail.content_type, H#mail.content_disposition} of
