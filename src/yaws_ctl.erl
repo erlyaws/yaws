@@ -293,7 +293,7 @@ connect_file(CtlFile) ->
 			    [{active, false},
 			     {reuseaddr, true},
 			     binary,
-			     {packet, 2}]);
+			     {packet, 2}], 2000);
 	Err ->
 	    Err
     end.
@@ -336,23 +336,59 @@ s_cmd(Fd, SID, Term) ->
     Res.
 
 
-ls() ->
+%% List existing yaws nodes on this machine
+ls(_) ->
     case file:list_dir("/tmp/yaws") of
 	{ok, List} ->
+	    io:format("~-15s~-10s~-10s~n",
+		      ["Id", "Status", "Owner"]),
+	    io:format("-------------------------------------~n",[]),
 	    lists:foreach(
 	      fun(D) ->
-		      ls(D)
+		      lls(D)
 	      end, List);
 	_ ->
 	    ok
-    end.
+    
+    end,
+    init:stop().
 
 
-ls(Dir) ->
+lls(Dir) ->
     Ctl = ctl_file(Dir),
-    case file:read_file_info(Ctl) of
-	{ok, FI} ->
-	    ok
+    case {file:read_file_info(Ctl),
+	  file:read_file_info(filename:join("/tmp/yaws/", Dir))} of
+	{{ok, FI}, {ok, DI}} ->
+	    User = yaws:uid_to_name(DI#file_info.uid),
+	    Running = case connect(Dir) of
+			  {ok, Sock} ->
+			      gen_tcp:close(Sock),
+			      "running";
+			  {error, timeout} ->
+			      "hanging??";
+			  _ ->
+			      "crashed"
+		      end,
+	    io:format("~-15s~-10s~-10s~n",
+		      [Dir, Running, User]);
+
+
+	
+	{{ok, FI}, {error, _}} ->
+	    %% sick case,
+	    ignore;
+
+	{{error, _}, {ok, DI}} ->
+	    %% nicely terminated system
+	    User = yaws:uid_to_name(DI#file_info.uid),
+	    io:format("~-15s~-10s~-10s~n",
+		      [Dir, "stopped", User]);
+
+
+	_Err ->
+	    io:format("~-15s~-10s~-10s~n",
+		      [Dir, "unknown", "unknown"])
+		
     end.
 
 	      

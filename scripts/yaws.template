@@ -113,6 +113,8 @@ do
 	        ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl hup";;
 	   -s)
 	        ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl stop";;
+	   -ls)
+	        ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl ls";;
 	   -S)
 	        ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl status";;
 	   -load)
