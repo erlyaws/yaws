@@ -237,13 +237,13 @@ to_list(A) when atom(A) ->
     atom_to_list(A).
 
 
-lowercase([C|S]) -> [lowercase(C)|S];
+lowercase([C|S]) -> [lowercase(C)|lowercase(S)];
 lowercase(C) when C>=$A, C=<$Z -> C+32;
 lowercase(C) -> C.
 
 %%
 
-uppercase([C|S]) -> [uppercase(C)|S];
+uppercase([C|S]) -> [uppercase(C)|uppercase(S)];
 uppercase(C) when C>=$a, C=<$z -> C-32;
 uppercase(C) -> C.
 
