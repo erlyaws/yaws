@@ -358,7 +358,7 @@ gserv(GS, Ready, Rnum) ->
 		Rnum < 8 ->
 		    gserv(GS2, [From | Ready], Rnum+1)
 	    end;
-	{'EXIT', Pid, _} ->
+	{'EXIT', _Pid, _} ->
 	    gserv(GS, Ready, Rnum)
     end.
 	    
@@ -810,6 +810,7 @@ make_arg(CliSock, Head, Req, _GC, SC) ->
     #arg{clisock = CliSock,
 	 headers = Head,
 	 req = Req,
+	 pid = self(),
 	 docroot = SC#sconf.docroot}.
 
 handle_request(CliSock, GC, SC, Req, H, ARG, N) ->
@@ -1087,6 +1088,22 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin, Fd, [H|T],ARG,N) ->
 		break ->
 		    deliver_dyn_file(CliSock, GC, SC, Req, Head, 
 				     UT, DCC, Bin, Fd, [],ARG,N) ;
+
+		{streamcontent, MimeType, FirstChunk} ->
+		    put(content_type, MimeType),
+		    accumulate_chunk(DCC, FirstChunk),
+		    set_status_code(200),
+		    deliver_accumulated(DCC, CliSock, GC, SC),
+		    put(stream, true),
+		    stream_loop(DCC, CliSock, GC, SC),
+		    case DCC#dcc.chunked of
+			true ->
+			    gen_tcp_send(CliSock, [crnl(), "0", crnl2()], GC,SC),
+			    continue;
+			false ->
+			    done
+		    end;
+		    
 		_ ->
 		    deliver_dyn_file(CliSock, GC, SC, Req, Head, 
 				     UT, DCC, Bin2,Fd,T,ARG,0)
@@ -1128,6 +1145,19 @@ deliver_dyn_file(CliSock, GC, SC, _Req, _Head,_UT, DCC, _Bin, _Fd, [], _ARG,_N) 
     
     deliver_accumulated(DCC, CliSock, GC, SC),
     Ret.
+
+
+
+stream_loop(DCC, CliSock, GC, SC) ->
+    receive
+	{streamcontent, Cont} ->
+	    accumulate_chunk(DCC, Cont),
+	    gen_tcp_send(CliSock, erase(acc_content), SC, GC),
+	    stream_loop(DCC, CliSock, GC, SC) ;
+	endofstreamcontent ->
+	    ok
+    end.
+
 
 
 %% what about trailers ??
@@ -1211,13 +1241,17 @@ handle_out_reply({html, Html}, DCC, _LineNo, _YawsFile, _SC, _A) ->
 handle_out_reply({ehtml, E}, DCC, _LineNo, _YawsFile, _SC, _A) ->
     accumulate_chunk(DCC, safe_ehtml_expand(E));
 
-handle_out_reply({content, MimeType, Cont}, DCC, _LineNo, _YawsFile, _SC, _A) ->
+handle_out_reply({content, MimeType, Cont}, DCC, _LineNo,_YawsFile, _SC, _A) ->
     put(content_type, MimeType),
     accumulate_chunk(DCC, Cont);
 
+handle_out_reply({streamcontent, MimeType, First}, 
+		 _DCC, _LineNo,_YawsFile, _SC, _A) ->
+    {streamcontent, MimeType, First};
+
+
 handle_out_reply({header, H}, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     accumulate_header(H);
-
 
 handle_out_reply({allheaders, Hs}, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     erase(acc_headers),
