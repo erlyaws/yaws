@@ -26,7 +26,7 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
 		  FI = file:read_file_info(File),
 		  file_entry(FI, DirName, F)
 	  end, [".." | List]),
-    Body = [doc_head(DirName),  
+    Body = [ doc_head(element(2,Req#http_request.path)),       % doc_head(DirName),  
 	    list_head(), 
 	    L,
 	    "\n</pre><pre>",
