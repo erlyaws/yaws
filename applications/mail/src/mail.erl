@@ -15,7 +15,7 @@
 	 session_manager_init/0, check_cookie/1, check_session/1, 
 	 login/2, display_login/2, stat/3, showmail/2, compose/1, compose/7,
 	 send/6, send/2, get_val/3, logout/1, base64_2_str/1, retr/4, 
-	 delete/2, send_attachment/2]).
+	 delete/2, send_attachment/2, send_attachment_plain/2]).
 
 -include("../../../include/yaws_api.hrl").
 -include("defs.hrl").
@@ -1970,7 +1970,6 @@ format_message(Session, Message, MailNr, Depth) ->
     H = parse_headers(HeadersList),
     Headers = [[Head,$\n] || Head <- HeadersList],
     Formated = format_body(Session, H, Msg, Depth),
-    MailStr = integer_to_list(MailNr),
     To = lists:flatten(decode(H#mail.to)),
     From = lists:flatten(decode(H#mail.from)),
     Subject = lists:flatten(decode(H#mail.subject)),
@@ -1979,17 +1978,30 @@ format_message(Session, Message, MailNr, Depth) ->
 	if 
 	    MailNr == -1 ->
 		[{"tool-newmail.gif", "javascript:setCmd('reply');", "Reply"}];
+	    MailNr == attachment ->
+		[{"../tool-newmail.gif", "javascript:setCmd('reply');",
+		  "Reply"}];
 	    true ->
 		[{"tool-newmail.gif","compose.yaws","New"},
 		 {"tool-newmail.gif", "javascript:setCmd('reply');", "Reply"},
 		 {"","javascript:changeActive("++Depth++");",
-		  "<div id='msg-button:"++Depth++"' style='display: block;'>Headers</div>"
-		  "<div id='hdr-button:"++Depth++"' style='display: none;' >Message</div>"
+		  "<div id='msg-button:"++Depth++
+		  "' style='display: block;'>Headers</div>"
+		  "<div id='hdr-button:"++Depth++
+		  "' style='display: none;' >Message</div>"
 		 },
 		 {"tool-delete.gif","javascript:setCmd('delete');", "Delete"},
 		 {"","mail.yaws","Close"}]
 	end,
-    [{form, [{name,compose},{action,"reply.yaws"},{method,post}],
+    Action =
+	if
+	    MailNr == attachment ->
+		"../reply.yaws";
+	    true ->
+		"reply.yaws"
+	end,
+
+    [{form, [{name,compose},{action,Action},{method,post}],
      [build_toolbar(ToolBar),
       {table,[{width,645},{height,"100%"},{border,0},{bgcolor,silver},
 	      {cellspacing,0},{callpadding,0}],
@@ -2150,6 +2162,32 @@ format_body(Session, H,Msg,Depth) ->
 	{{"message/rfc822",Opts}, Encoding} ->
 	    Decoded = decode_message(Encoding, Msg),
 	    format_message(Session, Decoded, -1, Depth);
+	{{ContT="application/"++_,Opts},Encoding} ->
+	    B1 = decode_message(Encoding, Msg),
+	    B = list_to_binary(B1),
+	    FileName = decode(extraxt_h_info(H)),
+	    Cookie = Session#session.cookie,
+	    mail_session_manager ! {session_set_attach_data,
+				    self(), Cookie, FileName, ContT, B},
+	    
+	    receive
+		{session_manager, Num} ->
+		    [{table,[{bgcolor, "lightgrey"}],
+		      [
+		       {tr,[], {td, [], {h5,[], "Attachments:"}}},
+		       {tr, [],
+			{td, [],
+			 {table, [],
+			  [{tr,[],
+			    {td,[],
+			     {a, [{href,io_lib:format(
+					  "attachment/~s?nr=~w",
+					  [yaws_api:url_encode(FileName),
+					   Num])}],
+			      FileName}}}]}}}]}]
+	    after 10000 ->
+		    []
+	    end;
 	{_,_} ->
 	    {pre, [], wrap_text(Msg,80)}
     end.
@@ -2167,18 +2205,39 @@ format_attach(S, [{Headers,B0}|Bs], Depth) ->
     H = lists:foldl(fun({K,V},MH) -> add_header(K,V,MH) end, #mail{}, Headers),
     Cookie = S#session.cookie,
     FileName = decode(extraxt_h_info(H)),
-    HttpCtype = yaws_api:mime_type(FileName),
+    HttpCtype =
+	case H#mail.content_type of
+	    undefined ->
+		yaws_api:mime_type(FileName);
+	    {ContType,Opts} ->
+		case lowercase(ContType) of
+		    "text/"++_ ->
+			yaws_api:mime_type(FileName);
+		    "application/octet-stream" ->
+			yaws_api:mime_type(FileName);
+		    CT ->
+			CT
+		end;
+	    _ ->
+		yaws_api:mime_type(FileName)
+	end,
     B1 = decode_message(H#mail.transfer_encoding, B0),
     B = list_to_binary(B1),
     mail_session_manager ! {session_set_attach_data, self(), Cookie,
-			    FileName,HttpCtype,B},
+			    FileName, HttpCtype, B},
     receive
 	{session_manager, Num} ->
 	    [{tr,[],{td,[],
-		     {a, [{href,io_lib:format("attachment/~s?nr=~w",
-					      [yaws_api:url_encode(FileName),
-					       Num])}],
-		      FileName}}} |
+		     [{a, [{href,io_lib:format("attachment/~s?nr=~w",
+					       [yaws_api:url_encode(FileName),
+						Num])}],
+		       FileName},
+		      " (",
+		      {a, [{href,io_lib:format("attachment/~s?form=text&"
+					       "nr=~w",
+					       [yaws_api:url_encode(FileName),
+						Num])}],"text"},
+		      ")"]}} |
 	     format_attach(S, Bs, Depth)]
     after 10000 ->
 	    format_attach(S, Bs, Depth)
@@ -2535,10 +2594,6 @@ format_date(Seconds) when integer(Seconds) ->
 format_date([]) -> [];
 format_date(error) -> [].
 
-
-
-
-
 send_attachment(Session, Number) ->
     mail_session_manager ! {session_get_attach_data, self(), 
 			    Session#session.cookie, Number},
@@ -2546,7 +2601,51 @@ send_attachment(Session, Number) ->
 	{session_manager, error} ->
 	    none;
 	{session_manager, A} ->
-	    {content, A#satt.ctype, A#satt.data}
+	    case A#satt.ctype of
+		"message/rfc822" ->
+		    Message = binary_to_list(A#satt.data),
+		    Formated = format_message(Session, [Message],
+					      attachment, "1"),
+		    (dynamic_headers() ++
+		     [{ehtml,
+		       [{script,[{src,"../mail.js"}], []},
+			{style, [{type,"text/css"}],
+			 ".conts    { visibility:hidden }\n"
+			 "A:link    { color: 0;text-decoration: none}\n"
+			 "A:visited { color: 0;text-decoration: none}\n"
+			 "A:active  { color: 0;text-decoration: none}\n"
+			 "DIV.msg-body { background: white; }\n"
+			},
+			{body,[{bgcolor,silver},
+			       {marginheight,0},{topmargin,0},{leftmargin,0},
+			       {rightmargin,0},{marginwidth,0}],
+			 [{table, [{border,0},{bgcolor,"c0c000"},
+				   {cellspacing,0},
+				   {width,"100%"}],
+			   {tr,[],{td,[{nowrap,true},{align,left},
+				       {valign,middle}],
+				   {font, [{size,6},{color,black}],
+				    "Attachment"}}}}] ++
+			 Formated
+			}
+		       ]}]);
+		_ ->
+		    {content, A#satt.ctype, A#satt.data}
+	    end
+    after 15000 ->
+	    exit(normal)
+    end.
+
+%
+
+send_attachment_plain(Session, Number) ->
+    mail_session_manager ! {session_get_attach_data, self(), 
+			    Session#session.cookie, Number},
+    receive
+	{session_manager, error} ->
+	    none;
+	{session_manager, A} ->
+	    {content, "text/plain", A#satt.data}
     after 15000 ->
 	    exit(normal)
     end.
