@@ -521,7 +521,7 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
 	    if 
 		record(C#sconf.ssl, ssl) ->
 		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{password = Val}},
-		    fload(FD, ssk, GC, C2, Cs, Lno+1, Next);
+		    fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
 		true ->
 		    {error, ?F("Need to set option ssl to true before line ~w",
 			       [Lno])}
