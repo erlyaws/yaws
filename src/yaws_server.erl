@@ -758,7 +758,7 @@ maybe_access_log(Ip, SC, Req) ->
 	      {1,1} ->
 		  "HTTP/1.1";
 	      {0,9} ->
-		  "HTTP/0.9"
+		  "HTTP/0.9" 
 	  end,
     case SC#sconf.access_log of
 	true ->
@@ -874,15 +874,26 @@ strip(Data) ->
 http_get_headers(CliSock, GC) ->
     ?TC([{record, GC, gconf}]),
     inet:setopts(CliSock, [{packet, http}]),
+    R = http_recv_request(CliSock, GC),
+    H = http_get_headers(CliSock, R, GC, #headers{}),
+    {R, H}.
+
+
+http_recv_request(CliSock, GC) ->
     case cli_recv(CliSock, 0, GC, nossl) of
 	{ok, R} when element(1, R) == http_request ->
-	    H = http_get_headers(CliSock, R, GC, #headers{}),
-	    {R, H};
-	_Err ->
-	    ?Debug("Got ~p~n", [_Err]),
+	    R;
+	{error, {http_error, "\r\n"}} ->
+	    http_recv_request(CliSock, GC);
+	{error, {http_error, "\n"}} ->
+	    http_recv_request(CliSock, GC);
+	_Other ->
+	    ?Debug("Got ~p~n", [_Other]),
 	    exit(normal)
     end.
 
+
+		  
 http_get_headers(CliSock, Req, GC, H) ->
     ?TC([{record, GC, gconf}]),
     case cli_recv(CliSock, 0, GC, nossl) of
@@ -890,8 +901,6 @@ http_get_headers(CliSock, Req, GC, H) ->
 	    http_get_headers(CliSock, Req, GC, H#headers{host = Host});
 	{ok, {http_header, _Num, 'Connection', _, Conn}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{connection = Conn});
-	{ok, http_eoh} ->
-	    H;
 	{ok, {http_header, _Num, 'Accept', _, Accept}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{accept = Accept});
 	{ok, {http_header, _Num, 'If-Modified-Since', _, X}} ->
@@ -926,6 +935,12 @@ http_get_headers(CliSock, Req, GC, H) ->
 	{ok, {http_header, _Num, 'Authorization', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, 
 			H#headers{authorization = parse_auth(X)});
+	{ok, http_eoh} ->
+	    H;
+	{error, {http_error, "\r\n"}} ->
+	     http_get_headers(CliSock, Req, GC, H);
+	{error, {http_error, "\n"}} ->
+	     http_get_headers(CliSock, Req, GC, H);
 	{ok, X} ->
 	    ?Debug("OTHER header ~p~n", [X]),
 	    http_get_headers(CliSock, Req, GC, 
@@ -1103,7 +1118,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    A2 = ARG#arg{querydata = UT#urltype.q},
 	    yaws:outh_set_dyn_headers(Req, H),
 	    do_appmod(SC#sconf.errormod_404, out404, CliSock, GC, SC, 
-		      Req, H, [A2, GC, SC], UT, N);
+		      Req, [A2, GC, SC], UT, N);
 	directory when SC#sconf.dir_listings == true ->
 	    P = UT#urltype.dir,
 	    yaws:outh_set_dyn_headers(Req, H),
@@ -1130,7 +1145,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    end;
 	yaws ->
 	    yaws:outh_set_dyn_headers(Req, H),
-	    do_yaws(CliSock, GC, SC, Req, H, 
+	    do_yaws(CliSock, GC, SC, Req,  
 		    [ARG#arg{querydata = UT#urltype.q}], UT, N);
 	forbidden ->
 	    yaws:outh_set_dyn_headers(Req, H),
@@ -1149,7 +1164,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    A2 = ARG#arg{appmoddata = PathData,
 			 querydata = UT#urltype.q,
 			 appmod_prepath = UT#urltype.path},
-	    do_appmod(Mod, out, CliSock, GC, SC, Req, H, [A2], UT, N)
+	    do_appmod(Mod, out, CliSock, GC, SC, Req,  [A2], UT, N)
     end.
 
 	
@@ -1307,21 +1322,21 @@ deliver_403(CliSock, _Req, GC, SC) ->
 
 
 
-do_yaws(CliSock, GC, SC, Req, H, ARG, UT, N) ->
+do_yaws(CliSock, GC, SC, Req, ARG, UT, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     FileAtom = list_to_atom(UT#urltype.fullpath),
     Mtime = mtime(UT#urltype.finfo),
     case ets:lookup(SC#sconf.ets, FileAtom) of
 	[{FileAtom, spec, Mtime1, Spec, Es}] when Mtime1 == Mtime,
 						  Es == 0 ->
-	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG, UT, N);
+	    deliver_dyn_file(CliSock, GC, SC, Req, Spec, ARG, UT, N);
 	Other  ->
 	    del_old_files(Other),
 	    {ok, [{errors, Errs}| Spec]} = 
 		yaws_compile:compile_file(UT#urltype.fullpath, GC, SC),
 	    ?Debug("Spec for file ~s is:~n~p~n",[UT#urltype.fullpath, Spec]),
 	    ets:insert(SC#sconf.ets, {FileAtom, spec, Mtime, Spec, Errs}),
-	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG, UT, N)
+	    deliver_dyn_file(CliSock, GC, SC, Req, Spec, ARG, UT, N)
     end.
 
 
@@ -1361,7 +1376,7 @@ get_client_data(_CliSock, all, eof, _GC, _) ->
 
 
 
-do_appmod(Mod, FunName, CliSock, GC, SC, Req, H, ARG, UT, N) ->
+do_appmod(Mod, FunName, CliSock, GC, SC, Req, ARG, UT, N) ->
     case yaws_call(0, "appmod", Mod, FunName, ARG, GC,SC, N) of
 	{streamcontent, MimeType, FirstChunk} ->
 	    yaws:outh_set_content_type(MimeType),
@@ -1377,14 +1392,14 @@ do_appmod(Mod, FunName, CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    end;
 	_ ->
 	    %% finish up
-	    deliver_dyn_file(CliSock, GC,SC,Req, H,UT, [], [], [], ARG,N)
+	    deliver_dyn_file(CliSock, GC,SC,Req, UT, [], [], [], ARG,N)
     end.
 
 
 
 
 %% do the header and continue
-deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT, N) ->
+deliver_dyn_file(CliSock, GC, SC, Req, Specs, ARG, UT, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     Fd = ut_open(UT),
     Bin = ut_read(Fd),
@@ -1393,11 +1408,11 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT, N) ->
 			       do_tcp_close(CliSock, SC), 
 			       throw({ok, 1}) 
 		       end),
-    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, Bin, Fd, Specs, ARG, N).
+    deliver_dyn_file(CliSock, GC, SC, Req, UT, Bin, Fd, Specs, ARG, N).
 
 
 
-deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, Bin, Fd, [H|T],ARG,N) ->
+deliver_dyn_file(CliSock, GC, SC, Req, UT, Bin, Fd, [H|T],ARG,N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT,urltype}]),
     ?Debug("deliver_dyn_file: ~p~n", [H]),
     case H of
@@ -1405,7 +1420,7 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, Bin, Fd, [H|T],ARG,N) ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
 	    case yaws_call(LineNo, YawsFile, Mod, out, ARG, GC,SC, N) of
 		break ->
-		    deliver_dyn_file(CliSock, GC, SC, Req, Head, 
+		    deliver_dyn_file(CliSock, GC, SC, Req,  
 				     UT, Bin, Fd, [],ARG,N) ;
 		{page, Page} ->
 		    {page, Page};
@@ -1424,22 +1439,27 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, Bin, Fd, [H|T],ARG,N) ->
 		    end;
 		    
 		_ ->
-		    deliver_dyn_file(CliSock, GC, SC, Req, Head, 
+		    deliver_dyn_file(CliSock, GC, SC, Req, 
 				     UT, Bin2,Fd,T,ARG,0)
 	    end;
 	{data, 0} ->
-	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT,Bin, Fd,T,ARG,N);
+	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin, Fd,T,ARG,N);
 	{data, NumChars} ->
 	    {Send, Bin2} = skip_data(Bin, Fd, NumChars),
 	    accumulate_chunk(Send),
-	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2, UT, Bin2, Fd, T,ARG,N);
+	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin2, Fd, T,ARG,N);
+	{skip, 0} ->
+	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin, Fd,T,ARG,N);
+	{skip, NumChars} ->
+	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
+	    deliver_dyn_file(CliSock, GC, SC, Req, UT,Bin2, Fd, T,ARG,N);
 	{error, NumChars, Str} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
 	    accumulate_chunk(Str),
-	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2, UT, Bin2, Fd, T,ARG,N)
+	    deliver_dyn_file(CliSock, GC, SC, Req, UT, Bin2, Fd, T,ARG,N)
     end;
 
-deliver_dyn_file(CliSock, GC, SC, _Req, _Head,_UT, _Bin, _Fd, [], _ARG,_N) ->
+deliver_dyn_file(CliSock, GC, SC, _Req, _UT, _Bin, _Fd, [], _ARG,_N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     ?Debug("deliver_dyn: done~n", []),
     Ret = case yaws:outh_get_chunked() of

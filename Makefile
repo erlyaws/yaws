@@ -3,13 +3,16 @@ APPS = webmail
 include ./include.mk
 
 
-all debug clean install:
+all debug clean install:	
 	@set -e ; \
 	  for d in $(SUBDIRS) ; do \
 	    if [ -f $$d/Makefile ]; then ( cd $$d && $(MAKE) $@ ) || exit 1 ; fi ; \
 	  done
 
 
+
+conf_clean:
+	-rm include.mk config.cache config.status config.log 2> /dev/null
 
 local_install: all
 	(cd scripts && $(MAKE) local_install)

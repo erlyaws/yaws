@@ -54,13 +54,16 @@ compile_file(File, GC, SC) ->
 	    Spec = compile_file(#comp{infile = File, 
 				      infd = Fd, gc = GC, sc = SC}, 
 				1,   
-				get_line(Fd), init, 0, [], 0),
+				get_line(), init, 0, [], 0),
 	    Spec;
 	_Err ->
 	    yaws:elog("can't open ~s~n", [File]),
 	    exit(normal)
     end.
 
+compile_file(C,  _LineNo, eof, aftererl, NumChars, Ack, Errors) ->
+    file_close(C#comp.infd),
+    {ok, [{errors, Errors} |lists:reverse([{skip, NumChars} |Ack])]};
 compile_file(C,  _LineNo, eof, _Mode, NumChars, Ack, Errors) ->
     file_close(C#comp.infd),
     {ok, [{errors, Errors} |lists:reverse([{data, NumChars} |Ack])]};
@@ -72,15 +75,30 @@ compile_file(C, LineNo,  Chars, init, NumChars, Ack, Errs) ->
 	[] ->
 	    ?Debug("SKIP ~p~n", [Chars]),
 	    L=length(Chars),
-	    compile_file(C, LineNo+1, line(C), init, NumChars-L, Ack, Errs);
+	    compile_file(C, LineNo+1, line(), init, NumChars-L, Ack, Errs);
 	"<erl>" ++ _ ->  %% first chunk is erl, skip whistespace
 	    compile_file(C, LineNo,  Chars, html, NumChars, Ack, Errs);
 	_ ->
 	    %% first chunk is html, keep whitespace
-	    Fd=C#comp.infd,
 	    file_position_bof(),
-	    compile_file(C,1,line(C),html,0,[], Errs)
+	    compile_file(C,1,line(),html,0,[], Errs)
     end;
+
+
+%% skip initial space if first thing is <erl> otherwise not
+compile_file(C, LineNo,  Chars, aftererl, NumChars, Ack, Errs) ->
+    case Chars -- [$\s, $\t, $\n, $\r] of
+	[] ->
+	    ?Debug("ASKIP ~p~n", [Chars]),
+	    L=length(Chars),
+	    compile_file(C, LineNo+1, line(),aftererl, NumChars+L, Ack, Errs);
+	_ when NumChars == 0 ->
+	    compile_file(C, LineNo,  Chars, html, NumChars, Ack, Errs);
+	_ ->
+	    A = {skip, NumChars},
+	    compile_file(C, LineNo,  Chars, html, 0, [A|Ack], Errs)
+    end;
+
 
 compile_file(C, LineNo,  Chars = "<erl>" ++ _Tail, html,  NumChars, Ack,Es) ->
     ?Debug("start erl:~p",[LineNo]),
@@ -89,10 +107,10 @@ compile_file(C, LineNo,  Chars = "<erl>" ++ _Tail, html,  NumChars, Ack,Es) ->
     L = length(Chars),
     if
 	NumChars > 0 ->
-	    compile_file(C3, LineNo+1, line(C) , erl,L, 
+	    compile_file(C3, LineNo+1, line() , erl,L, 
 			 [{data, NumChars} | Ack], Es);
 	true -> %% just ignore zero byte data segments
-	    compile_file(C3, LineNo+1, line(C) , erl, L + (-NumChars), 
+	    compile_file(C3, LineNo+1, line() , erl, L + (-NumChars), 
 			 Ack, Es) %hack
     end;
 
@@ -106,18 +124,18 @@ compile_file(C, LineNo,  Chars = "</erl>" ++ _Tail, erl, NumChars, Ack, Es) ->
 		{module, ModuleName} ->
 		    C2 = C#comp{modnum = C#comp.modnum+1},
 		    L2 = check_exported(C, LineNo,NumChars2, ModuleName),
-		    compile_file(C2, LineNo+1, line(C),html,0,L2++Ack, Es);
+		    compile_file(C2, LineNo+1, line(),aftererl,0,L2++Ack, Es);
 		Err ->
 		    A2 = gen_err(C, LineNo, NumChars2,
 				 ?F("Cannot load module ~p: ~p", 
 				    [ModuleName, Err])),
-		    compile_file(C, LineNo+1, line(C),
-				 html, 0, [A2|Ack], Es+1)
+		    compile_file(C, LineNo+1, line(),
+				 aftererl, 0, [A2|Ack], Es+1)
 	    end;
 	{error, Errors, _Warnings} ->
 	    %% FIXME remove outfile here ... keep while debuging
 	    A2 = comp_err(C, LineNo, NumChars2, Errors),
-	    compile_file(C, LineNo+1, line(C), html, 0, [A2|Ack], Es+1);
+	    compile_file(C, LineNo+1, line(), aftererl, 0, [A2|Ack], Es+1);
 	{error, Str} ->  
 	    %% this is boring but does actually happen
 	    %% in order to get proper user errors here we need to catch i/o
@@ -127,16 +145,16 @@ compile_file(C, LineNo,  Chars = "</erl>" ++ _Tail, erl, NumChars, Ack, Es) ->
 	    A2 = {error, NumChars2, ?F("<pre> Dynamic compile error in file "
 				       " ~s line ~w~n~s </pre>", 
 				       [C#comp.infile, LineNo, Str])},
-	    compile_file(C, LineNo+1, line(C), html, 0, [A2|Ack], Es+1)
+	    compile_file(C, LineNo+1, line(), aftererl, 0, [A2|Ack], Es+1)
     end;
 
 compile_file(C, LineNo,  Chars = "<pre>" ++ _Tail, html,  NumChars, Ack, Es) ->
     ?Debug("start pre:~p",[LineNo]),
-    compile_file(C, LineNo+1, line(C) , pre, NumChars + length(Chars), Ack,Es);
+    compile_file(C, LineNo+1, line() , pre, NumChars + length(Chars), Ack,Es);
 
 compile_file(C, LineNo,  Chars = "</pre>" ++ _Tail, pre,  NumChars, Ack,Es) ->
     ?Debug("stop pre:~p",[LineNo]),
-    compile_file(C, LineNo+1, line(C) , html, NumChars + length(Chars), Ack,Es);
+    compile_file(C, LineNo+1, line() , html, NumChars + length(Chars), Ack,Es);
 
 compile_file(C, LineNo,  Chars, erl, NumChars, Ack,Es) ->
     case has_tag(Chars, "</erl>") of
@@ -145,7 +163,7 @@ compile_file(C, LineNo,  Chars, erl, NumChars, Ack,Es) ->
 	false ->
 	    ?Debug("Gen: ~s", [Chars]),
 	    io:format(C#comp.outfd, "~s", [Chars]),
-	    compile_file(C, LineNo+1, line(C), erl, NumChars + 
+	    compile_file(C, LineNo+1, line(), erl, NumChars + 
 			 length(Chars), Ack,Es)
     end;
 
@@ -155,12 +173,12 @@ compile_file(C, LineNo,  Chars, html, NumChars, Ack,Es) ->
 	{ok, Skipped, Chars2} ->
 	    compile_file(C, LineNo,  Chars2, html, NumChars+Skipped, Ack,Es);
 	false ->
-	    compile_file(C, LineNo+1, line(C), html, NumChars + 
+	    compile_file(C, LineNo+1, line(), html, NumChars + 
 			 length(Chars), Ack,Es)
     end;
 
 compile_file(C, LineNo,  Chars, pre, NumChars, Ack,Es) ->
-    compile_file(C, LineNo+1, line(C), pre, NumChars + length(Chars), Ack,Es).
+    compile_file(C, LineNo+1, line(), pre, NumChars + length(Chars), Ack,Es).
 
 
 
@@ -192,8 +210,8 @@ check_exported(C, LineNo, NumChars, Mod) ->
 		     "out/1 is not defined ")]
     end.
 
-line(C) ->
-    get_line(C#comp.infd).
+line() ->
+    get_line().
 
 is_exported(Fun, A, Mod) ->
     case (catch Mod:module_info()) of
@@ -319,7 +337,7 @@ file_close(Key) ->
 file_position_bof() ->
     put(yfile_data, binary_to_list(get(yfile_data_orig))).
 
-get_line(Fd) ->
+get_line() ->
     case get (yfile_data) of
 	[] ->
 	    eof;
@@ -340,7 +358,7 @@ get_line_from_chars([$\r, $\n | Tail], Line) ->
 get_line_from_chars([$\n | Tail], Line) ->
     {ok, lists:reverse([$\n|Line]), Tail};
 
-get_line_from_chars([], Line) ->
+get_line_from_chars([], _Line) ->
     need_more;
 get_line_from_chars([H|T], Line) ->
     get_line_from_chars(T, [H|Line]).
@@ -349,14 +367,14 @@ get_line_from_chars([H|T], Line) ->
 
 
 gg() ->
-    {ok, Fd} = file_open("arg.yaws"),
-    gg(Fd).
+    {ok, _Fd} = file_open("arg.yaws"),
+    ggg().
 
-gg(Fd) ->
-    case get_line(Fd) of
+ggg() ->
+    case get_line() of
 	eof ->
 	    eof;
 	X ->
 	    io:format("~s", [X]),
-	    gg(Fd)
+	    ggg()
     end.
