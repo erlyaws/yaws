@@ -14,7 +14,7 @@
 -export([parse_post_data/1, code_to_phrase/1, ssi/2, redirect/1]).
 -export([setcookie/2, setcookie/3, setcookie/4, setcookie/5]).
 -export([pre_ssi_files/2,  pre_ssi_string/1, pre_ssi_string/2,
-	 htmlize/1, f/2, fl/1]).
+	 htmlize/1, htmlize_char/1, f/2, fl/1]).
 -export([find_cookie_val/2, secs/0, url_decode/1]).
 -export([get_line/1, mime_type/1]).
 
