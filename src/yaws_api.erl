@@ -54,7 +54,7 @@ do_parse_spec(<<$%, Hi:8, Lo:8, Tail/binary>>, Spec, Last, Cur, State) ->
     Hex = yaws:hex_to_integer([Hi, Lo]),
     do_parse_spec(Tail, Spec, Last, [ Hex | Cur],  State);
 
-do_parse_spec(<<$&, Tail/binary>>, Spec, Last , Cur,  key) ->
+do_parse_spec(<<$&, Tail/binary>>, Spec, _Last , Cur,  key) ->
     [{mkkey(Cur), undefined} |
      do_parse_spec(Tail, Spec, nokey, [], key)];  %% cont keymode
 
@@ -66,13 +66,13 @@ do_parse_spec(<<$&, Tail/binary>>, Spec, Last, Cur, value) ->
 do_parse_spec(<<$+, Tail/binary>>, Spec, Last, Cur,  State) ->
     do_parse_spec(Tail, Spec, Last, [$\s|Cur], State);
 
-do_parse_spec(<<$=, Tail/binary>>, Spec, Last, Cur, key) ->
+do_parse_spec(<<$=, Tail/binary>>, Spec, _Last, Cur, key) ->
     do_parse_spec(Tail, Spec, mkkey(Cur), [], value); %% change mode
 
 do_parse_spec(<<H:8, Tail/binary>>, Spec, Last, Cur, State) ->
     do_parse_spec(Tail, Spec, Last, [H|Cur], State);
-do_parse_spec(<<>>, Spec, Last, Cur, State) ->
-    [S|Ss] = tail_spec(Spec),
+do_parse_spec(<<>>, Spec, Last, Cur, _State) ->
+    [S|_Ss] = tail_spec(Spec),
     [{Last, coerce_type(S, Cur)}];
 do_parse_spec(undefined,_,_,_,_) ->
     [];
@@ -100,7 +100,7 @@ coerce_type(checkbox, "no") ->
 coerce_type(checkbox, Str) ->
     io:format("XX ~s~n", [Str]),
     off;
-coerce_type(ip, Str) ->
+coerce_type(ip, _Str) ->
     exit(nyi_ip);
 coerce_type(binary, Str) ->
     list_to_binary(lists:reverse(Str)).
@@ -170,7 +170,8 @@ ssi(DocRoot, Files) ->
 			      {ok, Bin} ->
 				  Bin;
 			      {error, Reason} ->
-				  io_lib:format("Cannot include file ~p", [F])
+				  io_lib:format("Cannot include file ~p: ~p", 
+						[F, Reason])
 			  end
 		  end, Files),
     {ok, L}.
@@ -242,7 +243,7 @@ setcookie(Name, Value, Path, Expire) ->
 setcookie(Name, Value, Path, Expire, Domain) ->
     setcookie(Name, Value, Path, Expire, Domain,[]).
 
-setcookie(Name, Value, Path, Expire, Domain, Secure) ->
+setcookie(_Name, _Value, _Path, _Expire, _Domain, _Secure) ->
     exit(nyi).
 
 		    
@@ -257,7 +258,7 @@ setcookie(Name, Value, Path, Expire, Domain, Secure) ->
 %% only the first match is returned
 
 
-find_cookie_val(Cookie, []) ->
+find_cookie_val(_Cookie, []) ->
     [];
 find_cookie_val(Cookie, [FullCookie | FullCookieList]) ->
     case find_cookie_val2(Cookie, FullCookie) of

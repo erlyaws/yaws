@@ -33,8 +33,8 @@ format_record(Record, Name, Fields) ->
     case tuple_to_list(Record) of
 	[Name | Rest] ->
 	    {record, Name, format_record(Rest, Fields)};
-	X ->
-	    ?Debug("Bad record ~p is not ~p~n", [X, Name]),
+	_X ->
+	    ?Debug("Bad record ~p is not ~p~n", [_X, Name]),
 	    "badrecord"
     end.
 
@@ -74,7 +74,7 @@ assert(interval,X,{Min,Max},_) when integer(X), integer(Min),
 assert('fun', Fun, _, Failure) ->
     case catch Fun() of
 	true -> ok;
-	Other -> fail(Failure)
+	_Other -> fail(Failure)
     end;
 
 assert(in,X,L,Failure) when list(L) ->

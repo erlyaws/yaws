@@ -59,12 +59,12 @@ status() ->
 
 stats() -> 
     {S, Time} = status(),
-    {GC, Srvs, _} = S,
+    {_GC, Srvs, _} = S,
     Diff = calendar:time_difference(Time, calendar:local_time()),
     G = fun(L) -> lists:reverse(lists:keysort(2, L)) end,
     
     R= flatmap(
-      fun({Pid, SCS}) ->
+      fun({_Pid, SCS}) ->
 	      map(
 		fun(SC) ->
 			
@@ -175,7 +175,7 @@ init2(Gconf, Sconfs) ->
     L2 = lists:zf(fun({error, F, A}) ->
 			  yaws_log:sync_errlog(F, A),
 			  false;
-		     ({Pid, SCs}) ->
+		     ({_Pid, _SCs}) ->
 			  true
 		  end, L),
     if
@@ -197,13 +197,13 @@ init2(Gconf, Sconfs) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-handle_call(status, From, State) ->
+handle_call(status, _From, State) ->
     Reply = {State, get(start_time)},
     {reply, Reply, State};
-handle_call(pids, From, State) ->  %% for gprof
+handle_call(pids, _From, State) ->  %% for gprof
     L = lists:map(fun(X) ->element(1, X) end, element(2, State)),
     {reply, [self() | L], State};
-handle_call(mnum, From, {GC, Group, Mnum}) ->
+handle_call(mnum, _From, {GC, Group, Mnum}) ->
     {reply, Mnum+1,   {GC, Group, Mnum+1}}.
 
 
@@ -214,7 +214,7 @@ handle_call(mnum, From, {GC, Group, Mnum}) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-handle_cast(Msg, State) ->
+handle_cast(_Msg, State) ->
     {noreply, State}.
 
 %%----------------------------------------------------------------------
@@ -224,8 +224,8 @@ handle_cast(Msg, State) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
 
-handle_info(Msg, State) ->
-    ?Debug("GOT ~p~n", [Msg]),
+handle_info(_Msg, State) ->
+    ?Debug("GOT ~p~n", [_Msg]),
     {noreply, State}.
 
 %%----------------------------------------------------------------------
@@ -233,14 +233,14 @@ handle_info(Msg, State) ->
 %% Purpose: Shutdown the server
 %% Returns: any (ignored by gen_server)
 %%----------------------------------------------------------------------
-terminate(Reason, State) ->
+terminate(_Reason, _State) ->
     ok.
 
 
 %% we search and setup www authenticate for each directory
 %% specified as an auth directory
 
-setup_auth(SC, E) ->
+setup_auth(_SC, _E) ->
     ok.
 
 
@@ -375,7 +375,11 @@ ssl_opts(SSL) ->
 		 false
 	 end
 	],
-    [X || X <-L, X /= false].
+    filter_false(L).
+
+
+filter_false(L) ->
+    [X || X <- L, X /= false].
 
 	   
 	 
@@ -389,7 +393,7 @@ acceptor(GS) ->
     proc_lib:spawn_link(yaws_server, acceptor0, [GS, self()]).
 acceptor0(GS, Top) ->
     ?TC([{record, GS, gs}]),
-    L = GS#gs.l,
+    %%L = GS#gs.l,
     X = do_accept(GS),
     Top ! {self(), next},
     case X of
@@ -505,17 +509,17 @@ pick_sconf(H, Group) ->
 pick_default([]) ->
     yaws_log:errlog("No default host found in server group ",[]),
     exit(normal);
-pick_default([H|T]) when H#sconf.default_server_on_this_ip == true ->
+pick_default([H|_T]) when H#sconf.default_server_on_this_ip == true ->
     H;
 pick_default([_|T]) ->
     pick_default(T).
 
 
-pick_host(Host, [H|T], Group) when H#sconf.servername == Host ->
+pick_host(Host, [H|_T], _Group) when H#sconf.servername == Host ->
     H;
 pick_host(Host, [_|T], Group) ->
     pick_host(Host, T, Group);
-pick_host(Host, [], Group) ->
+pick_host(_Host, [], Group) ->
     pick_default(Group).
 
 
@@ -523,10 +527,10 @@ maybe_access_log(CliSock, SC, Req) ->
     ?TC([{record, SC, sconf}]),
     case SC#sconf.access_log of
 	true ->
-	    {ok, {Ip, Port}} = case SC#sconf.ssl of
+	    {ok, {Ip, _Port}} = case SC#sconf.ssl of
 				   undefined ->
 				       inet:peername(CliSock);
-				   SSL ->
+				   _SSL ->
 				       ssl:peername(CliSock)
 			       end,
 	    
@@ -554,7 +558,7 @@ get_path({abs_path, Path}) ->
 
 do_recv(Sock, Num, TO, nossl) ->
     gen_tcp:recv(Sock, Num, TO);
-do_recv(Sock, Num, TO, ssl) ->
+do_recv(Sock, Num, _TO, ssl) ->
     case erase(ssltrail) of %% hack from above ...
 	undefined ->
 	    split_recv(ssl:recv(Sock, 0), Num);   %% ignore Num val ??? TO ??
@@ -600,14 +604,14 @@ cli_recv(S, Num, GC, SslBool) ->
 
 cli_write(S, Data, GC, SC) when GC#gconf.trace /= {true, traffic} ->
     gen_tcp_send(S, Data, SC);
-cli_write(S, Data, GC, SC) ->
+cli_write(S, Data, _GC, SC) ->
     yaws_log:trace_traffic(from_server, Data),
     gen_tcp_send(S, Data, SC).
 
 
 cli_write_headers(S, Data, GC, SC) when GC#gconf.trace == false ->
     gen_tcp_send(S, Data, SC);
-cli_write_headers(S, Data, GC, SC) ->
+cli_write_headers(S, Data, _GC, SC) ->
     yaws_log:trace_traffic(from_server, Data),
     gen_tcp_send(S, Data, SC).
 
@@ -616,7 +620,7 @@ gen_tcp_send(S, Data, SC) ->
     case SC#sconf.ssl of
 	undefined ->
 	    gen_tcp:send(S, Data);
-	SSL ->
+	_SSL ->
 	    ssl:send(S, Data)
     end.
 
@@ -634,48 +638,48 @@ http_get_headers(CliSock, GC) ->
 	    done;
 	{error, closed} ->
 	    done;
-	Err ->
-	    ?Debug("Got ~p~n", [Err]),
+	_Err ->
+	    ?Debug("Got ~p~n", [_Err]),
 	    exit(normal)
     end.
 
 http_get_headers(CliSock, Req, GC, H) ->
     ?TC([{record, GC, gconf}]),
     case cli_recv(CliSock, 0, GC, nossl) of
-	{ok, {http_header,  Num, 'Host', _, Host}} ->
+	{ok, {http_header,  _Num, 'Host', _, Host}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{host = Host});
-	{ok, {http_header, Num, 'Connection', _, Conn}} ->
+	{ok, {http_header, _Num, 'Connection', _, Conn}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{connection = Conn});
-	{ok, {http_header, Num, 'Accept', _, Accept}} ->
+	{ok, {http_header, _Num, 'Accept', _, Accept}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{accept = Accept});
-	{ok, {http_header, Num, 'If-Modified-Since', _, X}} ->
+	{ok, {http_header, _Num, 'If-Modified-Since', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, 
 			     H#headers{if_modified_since = X});
-	{ok, {http_header, Num, 'If-Match', _, X}} ->
+	{ok, {http_header, _Num, 'If-Match', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{if_match = X});
-	{ok, {http_header, Num, 'If-None-Match', _, X}} ->
+	{ok, {http_header, _Num, 'If-None-Match', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{if_none_match = X});
-	{ok, {http_header, Num, 'If-Range', _, X}} ->
+	{ok, {http_header, _Num, 'If-Range', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{if_range = X});
-	{ok, {http_header, Num, 'If-Unmodified-Since', _, X}} ->
+	{ok, {http_header, _Num, 'If-Unmodified-Since', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, 
 			H#headers{if_unmodified_since = X});
-	{ok, {http_header, Num, 'Range', _, X}} ->
+	{ok, {http_header, _Num, 'Range', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{range = X});
-	{ok, {http_header, Num, 'Referer',_, X}} ->
+	{ok, {http_header, _Num, 'Referer',_, X}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{referer = X});
-	{ok, {http_header, Num, 'User-Agent', _, X}} ->
+	{ok, {http_header, _Num, 'User-Agent', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{user_agent = X});
-	{ok, {http_header, Num, 'Accept-Ranges', _, X}} ->
+	{ok, {http_header, _Num, 'Accept-Ranges', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{accept_ranges = X});
-	{ok, {http_header, Num, 'Cookie', _, X}} ->
+	{ok, {http_header, _Num, 'Cookie', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, 
 			H#headers{cookie = [X|H#headers.cookie]});
-	{ok, {http_header, Num, 'Keep-Alive', _, X}} ->
+	{ok, {http_header, _Num, 'Keep-Alive', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{keep_alive = X});
-	{ok, {http_header, Num, 'Content-Length', _, X}} ->
+	{ok, {http_header, _Num, 'Content-Length', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, H#headers{content_length = X});
-	{ok, {http_header, Num, 'Authorization', _, X}} ->
+	{ok, {http_header, _Num, 'Authorization', _, X}} ->
 	    http_get_headers(CliSock, Req, GC, 
 			H#headers{authorization = parse_auth(X)});
 	{ok, http_eoh} ->
@@ -684,7 +688,7 @@ http_get_headers(CliSock, Req, GC, H) ->
 	    ?Debug("OTHER header ~p~n", [X]),
 	    http_get_headers(CliSock, Req, GC, 
 			     H#headers{other=[X|H#headers.other]});
-	Err ->
+	_Err ->
 	    exit(normal)
     
     end.
@@ -731,11 +735,11 @@ inet_setopts(_,_,_) ->
 'HEAD'(CliSock, GC, SC, Req, Head) ->
     'GET'(CliSock, GC, SC, Req, Head).
 
-'TRACE'(CliSock, GC, SC, Req, Head) ->
+'TRACE'(_CliSock, _GC, _SC, _Req, _Head) ->
     nyi.
 
-make_arg(CliSock, Head, Req, GC, SC) ->
-    ?TC([{record, GC, gconf}, {record, SC, sconf}]),
+make_arg(CliSock, Head, Req, _GC, SC) ->
+    ?TC([{record, _GC, gconf}, {record, SC, sconf}]),
     #arg{clisock = CliSock,
 	 headers = Head,
 	 req = Req,
@@ -743,12 +747,12 @@ make_arg(CliSock, Head, Req, GC, SC) ->
 
 handle_request(CliSock, GC, SC, Req, H, ARG) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
-    UT =  url_type(GC, SC,P=get_path(Req#http_request.path)),
+    UT =  url_type(GC, SC, get_path(Req#http_request.path)),
     ?Debug("UT: ~p", [?format_record(UT, urltype)]),
     case SC#sconf.authdirs of
 	[] ->
 	    handle_ut(CliSock, GC, SC, Req, H, ARG, UT);
-	Adirs ->
+	_Adirs ->
 	    %% we have authentication enabled, check auth
 	    UT2 = unflat(UT),
 	    case lists:member(UT2#urltype.dir, SC#sconf.authdirs) of
@@ -817,7 +821,7 @@ parse_auth(Dir) ->
 
 
 
-is_authenticated(SC, UT, Req, H) ->
+is_authenticated(_SC, UT, _Req, H) ->
     case ets:info(auth_tab, size) of
 	undefined ->
 	    ets:new(auth_tab, [public, set, named_table]);
@@ -826,18 +830,18 @@ is_authenticated(SC, UT, Req, H) ->
     end,
     N = now_secs(),
     case ets:lookup(auth_tab, UT#urltype.dir) of
-	[{Dir, Auth, Then}] when Then+200 < N ->
+	[{_Dir, Auth, Then}] when Then+200 < N ->
 	    case H#headers.authorization of
 		undefined ->
 		    {false, Auth#auth.realm};
-		{User, Password} ->
+		{_User, _Password} ->
 		    uhhhhh
 	    end
     end.
 
 
 
-deliver_401(CliSock, Req, GC, Realm, SC) ->
+deliver_401(CliSock, _Req, GC, Realm, SC) ->
     H = make_date_and_server_headers(),
     B = list_to_binary("<html> <h1> 401 authentication needed  "
 		       "</h1></html>"),
@@ -850,7 +854,7 @@ deliver_401(CliSock, Req, GC, Realm, SC) ->
     
 
 
-deliver_403(CliSock, Req, GC, SC) ->
+deliver_403(CliSock, _Req, GC, SC) ->
     H = make_date_and_server_headers(),
     B = list_to_binary("<html> <h1> 403 Forbidden, no .. paths "
 		       "allowed  </h1></html>"),
@@ -889,9 +893,9 @@ do_yaws(CliSock, GC, SC, Req, H, ARG, UT) ->
 
 del_old_files([]) ->
     ok;
-del_old_files([{FileAtom, Mtime1, Spec}]) ->
+del_old_files([{_FileAtom, _Mtime1, Spec}]) ->
     lists:foreach(
-      fun({mod, _, _, _,  Mod, Func}) ->
+      fun({mod, _, _, _,  Mod, _Func}) ->
 	      F="/tmp/yaws/" ++ yaws:to_list(Mod) ++ ".erl",
 	      file:delete(F);
 	 (_) ->
@@ -915,18 +919,18 @@ get_client_data(CliSock, all, {ok, B}, GC, SSlBool) ->
     B2 = get_client_data(CliSock, all, 
 			 cli_recv(CliSock, 4000, GC, SSlBool), SSlBool),
     <<B/binary, B2/binary>>;
-get_client_data(CliSock, all, eof, GC, _) ->
+get_client_data(_CliSock, all, eof, _GC, _) ->
     <<>>.
 
 
-do_dyn_headers(CliSock, GC, SC, Bin, Fd, Req, Head, [H|T], ARG) ->
-    ?TC([{record, GC, gconf}, {record, SC, sconf}]),
+do_dyn_headers(_CliSock, _GC, _SC, Bin, Fd, Req, Head, [H|T], ARG) ->
+    ?TC([{record, _GC, gconf}, {record, _SC, sconf}]),
     {DoClose, Chunked} = case Req#http_request.version of
 			     {1, 0} -> {true, []};
 			     {1, 1} -> {false, make_chunked()}
 			 end,
     case H of
-	{mod, LineNo, YawsFile, SkipChars, Mod, some_headers} ->
+	{mod, _LineNo, _YawsFile, SkipChars, Mod, some_headers} ->
 	    MimeType = "text/html",
 	    OutH = make_dyn_headers(DoClose, MimeType),
 	    {_, Bin2} = skip_data(Bin, Fd, SkipChars),
@@ -947,7 +951,7 @@ do_dyn_headers(CliSock, GC, SC, Bin, Fd, Req, Head, [H|T], ARG) ->
 			[Mod, some_headers, [Head], Err]),
 		     T, true, Bin2}
 	    end;
-	{mod, LineNo, YawsFile, SkipChars, Mod, all_headers} ->
+	{mod, _LineNo, _YawsFile, SkipChars, Mod, all_headers} ->
 	    {_, Bin2} = skip_data(Bin, Fd, SkipChars),
 	    case (catch apply(Mod, all_headers, [ARG])) of
 		{ok, StatusCode, Out} when integer(StatusCode) ->
@@ -1023,7 +1027,7 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC, Bin, Fd, [H|T],ARG) ->
 	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2,
 			     UT, DC, Bin2, Fd, T,ARG)
     end;
-deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC, Bin, Fd, [],ARG) ->
+deliver_dyn_file(CliSock, GC, SC, _Req, _Head,_UT,DC, _Bin, _Fd, [], _ARG) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     ?Debug("deliver_dyn: done~n", []),
     case DC of
@@ -1049,7 +1053,7 @@ skip_data(Bin, Fd, Sz) when binary(Bin) ->
 		 {ok, Bin2} -> 
 		     Bin3 = <<Bin/binary, Bin2/binary>>,
 		     skip_data(Bin3, Fd, Sz);
-		 Err ->
+		 _Err ->
 		     ?Debug("EXIT in skip_data: ~p  ~p~n", [Bin, Sz]),
 		     exit(normal)
 	     end
@@ -1165,8 +1169,8 @@ ut_open(UT) ->
     end.
 
 
-ut_read(Bin = {bin, B}) ->
-    Bin;
+ut_read({bin, B}) ->
+    B;
 ut_read(Fd) ->
     file:read(Fd, 4000).
 
@@ -1191,7 +1195,9 @@ deliver_file(CliSock, GC, SC, Req, InH, UT) ->
 	{bin, Binary} ->
 	    cli_write(CliSock, Binary, GC, SC);
 	{ok, Binary} ->
-	    send_loop(CliSock, Binary, Fd, GC, SC)
+	    send_loop(CliSock, Binary, Fd, GC, SC);
+	Binary2 when binary(Binary2) ->
+	    cli_write(CliSock, Binary2, GC, SC)
     end,
     ut_close(Fd),
     if
@@ -1260,7 +1266,7 @@ make_date_and_server_headers() ->
      make_server_header()
     ].
 
-make_static_headers(Req, UT, DoClose) ->    
+make_static_headers(_Req, UT, DoClose) ->    
     [make_date_and_server_headers(),
      make_last_modified(UT#urltype.finfo),
      make_etag(UT#urltype.finfo),
@@ -1327,7 +1333,7 @@ do_make_last_modified(FI) ->
     Local = calendar:universal_time_to_local_time(UTC),
     Str = yaws:date_and_time(Local, UTC),
     ["Last-Modified: ", yaws:date_and_time_to_string(Str), crnl()].
-make_etag(File) ->
+make_etag(_File) ->
     [].
 make_accept_ranges() ->
     "Accept-Ranges: bytes\r\n".
@@ -1426,14 +1432,14 @@ cache_file(GC, SC, Path, UT) when UT#urltype.type == regular ;
 		    UT2
 	    end
     end;
-cache_file(GC, SC, Path, UT) ->
+cache_file(_GC, _SC, _Path, UT) ->
     UT.
 
 
-cleanup_cache(E, size) ->
+cleanup_cache(_E, size) ->
     %% remove the largest files with the least hit count  (urlc)
     uhhh;
-cleanup_cache(E, num) ->
+cleanup_cache(_E, num) ->
     %% remove all files with a low hit count
     uhhh.
 
@@ -1472,21 +1478,21 @@ maybe_return_dir(DR, FlatPath) ->
 			    #urltype{type = directory, 
 				     dir = FlatPath,
 				     data=List};
-			Err ->
+			_Err ->
 			    #urltype{type=error}
 		    end
 	    end
     end.
 
 
-split_path(DR, [$/], Comps, []) ->
+split_path(_DR, [$/], _Comps, []) ->
     %% its a URL that ends with /
     slash;
 split_path(DR, [$/, $/ |Tail], Comps, Part) ->  %% security clause
     split_path(DR, [$/|Tail], Comps, Part);
-split_path(DR, [$/, $., $., $/ |Tail], _, [H|T]) ->  %% security clause
+split_path(DR, [$/, $., $., $/ |Tail], _, [_H|T]) ->  %% security clause
     split_path(DR, Tail, [], T);
-split_path(DR, [$/, $., $., $/ |Tail], _, []) -> %% security clause
+split_path(_DR, [$/, $., $., $/ |_Tail], _, []) -> %% security clause
     dotdot;
 split_path(DR, [], Comps, Part) ->
     ret_reg_split(DR, Comps, Part, []);
@@ -1520,11 +1526,11 @@ ret_user_dir(DR, [], "/", Upath) ->
 
 
 
-parse_user_path(DR, [], User) ->
+parse_user_path(_DR, [], User) ->
     {lists:reverse(User), []};
-parse_user_path(DR, [$/], User) ->
+parse_user_path(_DR, [$/], User) ->
     {lists:reverse(User), []};
-parse_user_path(DR, [$/|Tail], User) ->
+parse_user_path(_DR, [$/|Tail], User) ->
     {lists:reverse(User), Tail};
 parse_user_path(DR, [H|T], User) ->
     parse_user_path(DR, T, [H|User]).
@@ -1584,17 +1590,17 @@ flush(SC, Sock, Sz) ->
 	    
 
 
-tcp_flush(Sock, undefined) ->
+tcp_flush(_Sock, undefined) ->
     ok;
-tcp_flush(Sock, 0) ->
+tcp_flush(_Sock, 0) ->
     ok;
 tcp_flush(Sock, Sz) ->
     gen_tcp:recv(Sock, Sz, 1000).
 
 
-ssl_flush(Sock, undefined) ->
+ssl_flush(_Sock, undefined) ->
     ok;
-ssl_flush(Sock, 0) ->
+ssl_flush(_Sock, 0) ->
     ok;
 ssl_flush(Sock, Sz) ->
     split_recv(ssl:recv(Sock, Sz, 1000), Sz).

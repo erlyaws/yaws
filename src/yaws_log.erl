@@ -77,7 +77,7 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-handle_call({setdir, Dir, Sconfs}, From, State) 
+handle_call({setdir, Dir, Sconfs}, _From, State) 
   when State#state.running == false ->
     ?Debug("setdir ~s~n~p", [Dir, State#state.ack]),
 
@@ -90,7 +90,7 @@ handle_call({setdir, Dir, Sconfs}, From, State)
 		  case file:open(A, [write, raw, append]) of
 		      {ok, Fd} ->
 			  {true, {SC#sconf.servername, Fd, A}};
-		      Err ->
+		      _Err ->
 			  error_logger:format("Cannot open ~p",[A]),
 			  false
 		  end
@@ -110,13 +110,13 @@ handle_call({setdir, Dir, Sconfs}, From, State)
     {reply, ok, S2};
 
 
-handle_call({errlog, F, A}, From, State) when State#state.running == true ->
+handle_call({errlog, F, A}, _From, State) when State#state.running == true ->
     error_logger:format(F, A),
     {reply, ok, State};
-handle_call({errlog, F, A}, From, State) when State#state.running == false ->
+handle_call({errlog, F, A}, _From, State) when State#state.running == false ->
     {reply, ok, State#state{ack = [{err, F, A} | State#state.ack]}};
 
-handle_call({open_trace, What}, From, State) ->
+handle_call({open_trace, What}, _From, State) ->
     F = lists:concat(["trace.", What]),
     case file:open(filename:join([State#state.dir, F]),[write, raw]) of
 	{ok, Fd} ->
@@ -238,7 +238,7 @@ handle_info(minute, State) ->
 %% Purpose: Shutdown the server
 %% Returns: any (ignored by gen_server)
 %%----------------------------------------------------------------------
-terminate(Reason, State) ->
+terminate(_Reason, _State) ->
     ok.
 
 %%%----------------------------------------------------------------------
@@ -256,7 +256,7 @@ fmtnow() ->
 		  [Date,yaws:month(Month),Year, Hour, Min, Sec]).
 
 zone() ->
-    {_, {U, _,_}} = erlang:universaltime(),
-    {_, {L, _,_}} = erlang:localtimetime(),
+    {_, {_U, _,_}} = erlang:universaltime(),
+    {_, {_L, _,_}} = erlang:localtimetime(),
     uhhh.
 

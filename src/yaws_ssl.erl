@@ -29,15 +29,16 @@ ssl_get_headers(CliSock, GC) ->
 		{ok, R, Trail} ->
 		    case get_headers(CliSock, GC,  #headers{}, Trail) of
 			{ok, H, Trail2} ->
-			    {ok, R, H, list_to_binary(Trail)};
+			    {ok, R, H, list_to_binary(Trail2)};
 			Err ->
 			    Err
 		    end;
 		Err ->
 		    Err
 	    end;
-	Err ->
-	    Err
+	_Err ->
+	    ?Debug("cli recv ret ~p~n", [_Err]),
+	    done
     end.
 
 
@@ -51,8 +52,9 @@ get_req("HEAD " ++ Tail) ->
     get_req(skip_space(Tail), #http_request{method = 'HEAD'});
 
 get_req("TRACE " ++ Tail) ->
-    get_req(skip_space(Tail), #http_request{method = 'TRACE'}).
-
+    get_req(skip_space(Tail), #http_request{method = 'TRACE'});
+get_req([]) ->
+    done.
 
 
 get_req(Line, R) ->
@@ -74,7 +76,7 @@ get_headers(CliSock, GC, H, Tail) ->
 
 parse_line("Connection:" ++ Con, H) ->
     H#headers{connection = space_strip(Con)};
-parse_line("Date:" ++ Con, H) ->
+parse_line("Date:" ++ _Con, H) ->
     %%H#headers{date = Con};
     H;
 parse_line("Host:" ++ Con, H) ->
@@ -125,7 +127,7 @@ parse_version("HTTP/1.0") ->
     {1,0}.
 
 
-spacesplit(Line, 0, Ack, Cur) ->
+spacesplit(Line, 0, Ack, _Cur) ->
     {lists:reverse(Ack), skip_space(Line)};
 spacesplit([H|T], Num, Ack, Cur) ->
     case is_space(H) of

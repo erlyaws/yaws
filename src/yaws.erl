@@ -59,7 +59,7 @@ load(M) ->
 		  end, M).
 
 %%% misc funcs
-first(F, []) ->
+first(_F, []) ->
     false;
 first(F, [H|T]) ->
     case F(H) of
@@ -89,11 +89,11 @@ filesize(Fname) ->
 %% 
 upto(0, []) ->
     [];
-upto(I, []) ->
+upto(_I, []) ->
     [];
 upto(0, _) ->
     " ....";
-upto(I, [0|_]) ->
+upto(_I, [0|_]) ->
     " ....";
 upto(I,[H|T]) ->
     [H|upto(I-1, T)].
@@ -416,7 +416,7 @@ day_str_to_int("Sun") ->
 
 stringdate_to_datetime([$ |T]) ->
     stringdate_to_datetime(T);
-stringdate_to_datetime([D1, D2, D3, $\,, $ |Tail]) ->
+stringdate_to_datetime([_D1, _D2, _D3, $\,, $ |Tail]) ->
     stringdate_to_datetime1(Tail).
 
 stringdate_to_datetime1([A, B, $\s |T]) ->
@@ -479,7 +479,7 @@ fmt_ip({A,B,C,D}) ->
 
 parse_ip(Val) ->
     case string:tokens(Val, [$.]) of
-	Nums = [X1, X2, X3,X4] ->
+	Nums = [_X1, _X2, _X3,_X4] ->
 	    L = lists:map(
 		  fun(S) -> (catch list_to_integer(S)) end, 
 		  Nums),

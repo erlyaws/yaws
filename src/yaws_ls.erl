@@ -42,23 +42,21 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
 
 
 doc_head(DirName) ->
-    DocHead = 
-	?F("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\"> \n"
-	   "<html> \n"
-	   "  <head> \n"
-	   "    <title>Index of ~s </title> \n"
-	   "  </head> \n"
-	   "  <body>\n"
-	   "    <h1>Index of ~s </h1>\n", [DirName, DirName]).
+    ?F("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\"> \n"
+       "<html> \n"
+       "  <head> \n"
+       "    <title>Index of ~s </title> \n"
+       "  </head> \n"
+       "  <body>\n"
+       "    <h1>Index of ~s </h1>\n", [DirName, DirName]).
 
 list_head() ->
-    ListHead =
-	"    <pre><img SRC=\"/icons/blank.gif\" ALT=\"     \"> "
-	"<a HREF=\"?N=D\">Name</a>                   "
-	"<a HREF=\"?M=A\">Last modified</a>                     "
-	" <a HREF=\"?S=A\">Size</a>             "
-	"<a HREF=\"?D=A\">Description</a> \n"
-	"<hr> \n".
+    "    <pre><img SRC=\"/icons/blank.gif\" ALT=\"     \"> "
+    "<a HREF=\"?N=D\">Name</a>                   "
+    "<a HREF=\"?M=A\">Last modified</a>                     "
+    " <a HREF=\"?S=A\">Size</a>             "
+    "<a HREF=\"?D=A\">Description</a> \n"
+    "<hr> \n".
 
 
 % produce a string like
@@ -80,14 +78,14 @@ file_entry({ok, FI}, DirName, Name) ->
 		sizestr(FI)]),
     ?Debug("Entry:~p", [Entry]),
     {true, Entry};
-file_entry(Err, _, Name) ->
-    ?Debug("no entry for ~p: ~p", [Name, Err]),
+file_entry(_Err, _, _Name) ->
+    ?Debug("no entry for ~p: ~p", [_Name, _Err]),
     false.
 
 
 
 
-trim([H|T], 5) ->
+trim([_H|_T], 5) ->
     "..&gt";
 trim([H|T], I) ->
     [H|trim(T,I-1)];

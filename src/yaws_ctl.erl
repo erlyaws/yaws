@@ -16,7 +16,7 @@
 -define(F, "/tmp/yaws.ctl").
 
 
-start(Top) ->
+start(_Top) ->
     case gen_tcp:listen(0, [{packet, 2},
 			    {active, false},
 			    binary,
@@ -32,10 +32,10 @@ start(Top) ->
 		    M2 = M bor (8#00222),
 		    file:write_file_info(F, FI#file_info{mode = M2}), %% ign ret
 		    aloop(L);
-		Err ->
+		_Err ->
 		    error_logger:format("Cannot get sockname for ctlsock",[])
 	    end;
-	Err ->
+	_Err ->
 	    error_logger:format("Cannot listen on ctl socket ",[])
     end.
 
@@ -44,7 +44,7 @@ aloop(L) ->
     case gen_tcp:accept(L) of
 	{ok, A} ->
 	    handle_a(A);
-	Err ->
+	_Err ->
 	    ignore
     end,
     aloop(L).
@@ -57,11 +57,11 @@ handle_a(A) ->
 		    yaws:hup();
 		stop ->
 		    init:stop();
-		Other ->
+		_Other ->
 		    ignore
 	    end,
 	    gen_tcp:close(A);
-	Err ->
+	_Err ->
 	    ignore
     end.
 

@@ -14,10 +14,10 @@
 
 %% start
 
-start(Type, StartArgs) ->
+start(_Type, _StartArgs) ->
   yaws_sup:start_link().
 
 %% stop
 
-stop(State) ->
+stop(_State) ->
   ok.

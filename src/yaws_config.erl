@@ -159,9 +159,9 @@ yaws_dir() ->
     filename:join(P1).
 
 
-del_tail([H, ".." |Tail]) ->
+del_tail([_H, ".." |Tail]) ->
     del_tail(Tail);
-del_tail([X, Y]) ->
+del_tail([_X, _Y]) ->
     [];
 del_tail([H|T]) ->
     [H|del_tail(T)].
@@ -169,10 +169,11 @@ del_tail([H|T]) ->
 
 
 %% two states, global, server
-fload(FD, globals, GC, C, Cs, Lno, eof) ->
+fload(FD, globals, GC, _C, Cs, _Lno, eof) ->
     file:close(FD),
     {ok, GC, Cs};
-fload(FD, _,  GC, C, Cs, Lno, eof) ->
+fload(FD, _,  _GC, _C, _Cs, Lno, eof) ->
+    file:close(FD),
     {error, ?F("Unexpected end of file at line ~w", [Lno])};
  
 fload(FD, globals, GC, C, Cs, Lno, Chars) -> 
@@ -441,7 +442,7 @@ is_file(Val) ->
 toks(Chars) ->
     toks(Chars, free, [], []). % two accumulators
 
-toks([$#|T], Mode, Ack, Tack) ->
+toks([$#|_T], Mode, Ack, Tack) ->
     toks([], Mode, Ack, Tack);
 
 toks([H|T], free, Ack, Tack) -> 

@@ -50,13 +50,14 @@ compile_file(File, GC, SC) ->
 	    Spec = compile_file(#comp{infile = File, 
 				      infd = Fd, gc = GC, sc = SC}, 
 				1,  
-				io:get_line(Fd, ''), init, 0, []);
-	Err ->
+				io:get_line(Fd, ''), init, 0, []),
+	    Spec;
+	_Err ->
 	    yaws:elog("can't open ~s~n", [File]),
 	    exit(normal)
     end.
 
-compile_file(C, LineNo, eof, Mode, NumChars, Ack) ->
+compile_file(C, _LineNo, eof, _Mode, NumChars, Ack) ->
     file:close(C#comp.infd),
     {ok, lists:reverse([{data, NumChars} |Ack])};
 
@@ -77,7 +78,7 @@ compile_file(C, LineNo,  Chars, init, NumChars, Ack) ->
 	    compile_file(C,1,io:get_line(Fd,''),html,0,[])
     end;
 
-compile_file(C, LineNo,  Chars = "<erl>" ++ Tail, html,  NumChars, Ack) ->
+compile_file(C, LineNo,  Chars = "<erl>" ++ _Tail, html,  NumChars, Ack) ->
     ?Debug("start erl:~p",[LineNo]),
     C2 = new_out_file(LineNo, C, C#comp.gc),
     C3 = C2#comp{startline = LineNo},
@@ -90,7 +91,7 @@ compile_file(C, LineNo,  Chars = "<erl>" ++ Tail, html,  NumChars, Ack) ->
 	    compile_file(C3, LineNo+1, line(C) , erl, L + (-NumChars), Ack) %hack
     end;
 
-compile_file(C, LineNo,  Chars = "</erl>" ++ Tail, erl, NumChars, Ack) ->
+compile_file(C, LineNo,  Chars = "</erl>" ++ _Tail, erl, NumChars, Ack) ->
     ?Debug("stop erl:~p",[LineNo]),
     file:close(C#comp.outfd),
     NumChars2 = NumChars + length(Chars),
@@ -108,7 +109,7 @@ compile_file(C, LineNo,  Chars = "</erl>" ++ Tail, erl, NumChars, Ack) ->
 		    compile_file(C, LineNo+1, line(C),
 				 html, 0, [A2|Ack])
 	    end;
-	{error, Errors, Warnings} ->
+	{error, Errors, _Warnings} ->
 	    %% FIXME remove outfile here ... keep while debuging
 	    A2 = comp_err(C, LineNo, NumChars2, Errors),
 	    compile_file(C, LineNo+1, line(C), html, 0, [A2|Ack]);
@@ -124,11 +125,11 @@ compile_file(C, LineNo,  Chars = "</erl>" ++ Tail, erl, NumChars, Ack) ->
 	    compile_file(C, LineNo+1, line(C), html, 0, [A2|Ack])
     end;
 
-compile_file(C, LineNo,  Chars = "<pre>" ++ Tail, html,  NumChars, Ack) ->
+compile_file(C, LineNo,  Chars = "<pre>" ++ _Tail, html,  NumChars, Ack) ->
     ?Debug("start pre:~p",[LineNo]),
     compile_file(C, LineNo+1, line(C) , pre, NumChars + length(Chars), Ack);
 
-compile_file(C, LineNo,  Chars = "</pre>" ++ Tail, pre,  NumChars, Ack) ->
+compile_file(C, LineNo,  Chars = "</pre>" ++ _Tail, pre,  NumChars, Ack) ->
     ?Debug("stop pre:~p",[LineNo]),
     compile_file(C, LineNo+1, line(C) , html, NumChars + length(Chars), Ack);
 
@@ -234,7 +235,7 @@ new_out_file(Line, C, GC) ->
 	   outfile = OutFile}.
 
 
-gen_err(C, LineNo, NumChars, Err) ->
+gen_err(C, _LineNo, NumChars, Err) ->
     S = io_lib:format("<p> Error in File ~s Erlang code beginning "
 		      "at line ~w~n"
 		      "Error is: ~p~n", [C#comp.infile, C#comp.startline, 
@@ -243,12 +244,12 @@ gen_err(C, LineNo, NumChars, Err) ->
     {error, NumChars, S}.
 
 
-comp_err(C, LineNo, NumChars, Err) ->
+comp_err(C, _LineNo, NumChars, Err) ->
     case Err of
-	[{FileName, [ErrInfo|_]} |_] ->
+	[{_FileName, [ErrInfo|_]} |_] ->
 	    {Line0, Mod, E}=ErrInfo,
 	    Line = Line0 + C#comp.startline - 9,
-	    ?Debug("XX ~p~n", [{LineNo, Line0}]),
+	    ?Debug("XX ~p~n", [{_LineNo, Line0}]),
 	    Str = io_lib:format("~s:~w: ~s\n", 
 				[C#comp.infile, Line,
 				 apply(Mod, format_error, [E])]),
@@ -256,7 +257,7 @@ comp_err(C, LineNo, NumChars, Err) ->
 			[Str]),
 	    yaws:elog("Dynamic compiler err ~s", [Str]),
 	    {error, NumChars,  HtmlStr};
-	Other ->
+	_Other ->
 	    yaws:elog("Dynamic compile error", []),
 	    {error, NumChars, ?F("<pre> Compile error - "
 				 "Other err ~p</pre>~n", [Err])}
