@@ -10,6 +10,7 @@ include ../vsn.mk
 VSN=$(YAWS_VSN)
 MODULES=yaws \
 	yaws_app \
+	yaws_ticker \
 	yaws_config \
 	yaws_server \
 	yaws_sup \
@@ -19,6 +20,7 @@ MODULES=yaws \
 	yaws_debug \
 	yaws_compile \
 	yaws_ctl \
+	yaws_cgi \
 	yaws_ssl \
 	yaws_vsn \
 	mime_type_c \

@@ -22,7 +22,8 @@
 	  state,          %% State for use by users of the out/1 callback
 	  pid,            %% pid of the yaws worker process
 	  opaque,         %% useful to pass static data
-	  appmod_prepath  %% path in front of: <appmod><appmoddata>
+	  appmod_prepath, %% path in front of: <appmod><appmoddata>
+	  pathinfo
 	 }).              
 
 

@@ -1,4 +1,4 @@
-%%----------------------------------------------------------------------
+%%%----------------------------------------------------------------------
 %%% File    : yaws_server.erl
 %%% Author  : Claes Wikstrom <klacke@hyber.org>
 %%% Purpose : 
@@ -1085,7 +1085,8 @@ handle_request(CliSock, GC, SC, ARG, N) ->
 	    deliver_403(CliSock, Req, GC, SC);
 	{DecPath, QueryPart} ->
 	    UT =  url_type(GC, SC, DecPath, QueryPart),
-	    ARG2 = ARG#arg{fullpath=UT#urltype.fullpath},
+	    ARG2 = ARG#arg{fullpath=UT#urltype.fullpath,
+			   pathinfo=UT#urltype.pathinfo},
 	    case SC#sconf.authdirs of
 		[] ->
 		    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT, N);
@@ -1208,6 +1209,31 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 			     N,
 			     A2,
 			     fun(A)->Mod:out(A) end,
+			     fun()->finish_up_dyn_file(CliSock, GC, SC)
+			     end
+			    );
+	cgi ->
+	    yaws:outh_set_dyn_headers(Req, H),
+	    deliver_dyn_part(CliSock, GC, SC, 
+			     0, "cgi",
+			     N,
+			     ARG#arg{querydata = UT#urltype.q},
+			     fun(A)->yaws_cgi:call_cgi(A,
+						       UT#urltype.fullpath)
+			     end,
+			     fun()->finish_up_dyn_file(CliSock, GC, SC)
+			     end
+			    );
+	php ->
+	    yaws:outh_set_dyn_headers(Req, H),
+	    deliver_dyn_part(CliSock, GC, SC, 
+			     0, "php",
+			     N,
+			     ARG#arg{querydata = UT#urltype.q},
+			     fun(A)->yaws_cgi:call_cgi(A,
+						       "php",
+						       UT#urltype.fullpath)
+			     end,
 			     fun()->finish_up_dyn_file(CliSock, GC, SC)
 			     end
 			    )
@@ -2187,8 +2213,13 @@ split_path(SC, [$/|Tail], Query, Comps, Part)  when Part /= [] ->
 	    PrePath = conc_path(Comps),
 	    ret_app_mod(SC, [$/|Tail], Query, list_to_atom(CName), PrePath);
 	_ ->
-	    split_path(SC, [$/|Tail], Query, [lists:reverse(Part) | Comps], [])
-	end;
+	    case ret_script(SC, Comps, Part, Query) of
+		false -> 
+		    split_path(SC, [$/|Tail], Query, 
+			       [lists:reverse(Part) | Comps], []);
+		UT -> UT#urltype{pathinfo=[$/|Tail]}
+	    end
+    end;
 split_path(SC, [$~|Tail], Query, Comps, Part) ->  %% user dir
     ret_user_dir(SC, Comps, Query, Part, Tail);
 split_path(SC, [H|T], Query, Comps, Part) ->
@@ -2273,6 +2304,32 @@ ret_reg_split(SC, Comps, RevFile, Query) ->
 	Err ->
 	    #urltype{type=error, data=Err}
     end.
+
+
+ret_script(SC, Comps, RevFile, Query) ->
+    ?Debug("ret_script(~p)", [[SC#sconf.docroot, Comps, RevFile, Query]]),
+    case suffix_type(RevFile) of
+	{regular, _} -> false;
+	{X, Mime} -> 
+	    Dir = lists:reverse(Comps),
+	    FlatDir = {noflat, Dir},
+	    DR = SC#sconf.docroot,
+	    File = lists:reverse(RevFile),
+	    L = [DR, Dir, File],
+	    ?Debug("ret_script: L =~p~n",[L]),
+	    case prim_file:read_file_info(L) of
+		{ok, FI} when FI#file_info.type == regular ->
+		    #urltype{type=X, 
+			     finfo=FI,
+			     path = {noflat, [DR, Dir]},
+			     dir = FlatDir,
+			     fullpath = lists:flatten(L),
+			     mime=Mime, 
+			     q=Query};
+		_ -> false
+	    end
+    end.
+
 
 
 suffix_type(L) ->

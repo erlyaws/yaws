@@ -68,6 +68,15 @@ nonl([$\n|T]) ->
 nonl([H|T]) ->
     [H|nonl(T)].
 
+special(Fd, Ext, Type) ->
+    io:format(Fd, "t(~p) -> {~p, ~p};~n", 
+	      [Ext, Type, "text/html"]).
+    
+
+revspecial(Fd, Ext, Type) ->
+    io:format(Fd, "revt(~p) -> {~p, ~p};~n", 
+	      [lists:reverse(Ext), Type, "text/html"]).
+    
 
 gen(T) ->
     {ok, Fd} = file:open("mime_types.erl", [write]),
@@ -76,7 +85,11 @@ gen(T) ->
 	      "-compile(export_all). ~n", []),
    
     L = lists:sort(ets:tab2list(T)),
-    io:format(Fd, "t(\"yaws\") -> {yaws, ~p};~n", ["text/html"]),
+    special(Fd, "yaws", yaws),
+    special(Fd, "php", php),
+    special(Fd, "cgi", cgi),
+    special(Fd, "PHP", php),
+    special(Fd, "CGI", cgi),
     lists:foreach(
       fun({Ext, MT}) ->
 	      io:format(Fd, "t(~p) -> {regular, ~p};~n", [nonl(Ext), MT])
@@ -85,7 +98,11 @@ gen(T) ->
 
 
 
-    io:format(Fd, "revt(\"sway\") -> {yaws, ~p};~n", ["text/html"]),
+    revspecial(Fd, "yaws", yaws),
+    revspecial(Fd, "php", php),
+    revspecial(Fd, "cgi", cgi),
+    revspecial(Fd, "PHP", php),
+    revspecial(Fd, "CGI", cgi),
     lists:foreach(
       fun({Ext, MT}) ->
 	      io:format(Fd, "revt(~p) -> {regular, ~p};~n", 
