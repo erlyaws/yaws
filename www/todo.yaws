@@ -19,12 +19,11 @@ out(A) ->
 <li> more documentation in the www directory
 <li> more functions in yaws_api  push() ....
 <li> lots of examples
-<li> maybe do .htaccess
 <li> do something cool, maybe a streaming audio app
 <li> shell access into the daemon .... no bad idea
-<li> authenticated pages
 <li> HTTP trailer support
-<li> <erl> substitution in ssi pages as well as regular pages
+<li> substitution in ssi pages as well as regular pages
+<li> a CGI interface
 </ul>
 
 
