@@ -166,6 +166,11 @@ chat_server(Users0) ->
 	    NewUsers1 = send_to_all(members,
 				    fmt_members(NewUsers0), NewUsers0),
 	    chat_server(NewUsers1);
+	{members, User} ->
+	    NewUsers1 = send_to_one(members,
+				    fmt_members(Users),
+				    Users, User),
+	    chat_server(NewUsers1);
 	{left_message, User} ->
 	    NewUsers0 = send_to_all(msg,fmt_left(User), Users),
 	    NewUsers1 = send_to_all(members,
@@ -282,6 +287,11 @@ chat_read(A) ->
     case check_session(A) of
 	{ok, Session} ->
 	    chat_server ! {read, Session, self()},
+	    if length(A#arg.querydata) > 0 ->
+		    chat_server ! {members, Session};
+	       true ->
+		    ok
+	    end,
 	    receive
 		{msgs, Messages} ->
 		    M = [fmt_type(Type,L) || {Type, L} <- Messages],

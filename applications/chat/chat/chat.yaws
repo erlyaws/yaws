@@ -44,6 +44,7 @@ h1 {
        background-color: #f5f5ff;
        overflow: auto;
        float: left;
+       padding: 2px;
 }
 
 #members {
@@ -52,10 +53,12 @@ h1 {
        width: 100px;
        background-color: #f5f5ff;
        overflow: auto;
+       margin: 2px;
+       padding: 2px;
 }
 
 #msg {
-	width: 604px;
+	width: 614px;
 	clear: both;
 }
 
@@ -63,7 +66,8 @@ h1 {
 
 <script src="chat.js"></script>
 
-<body onload="setTimeout('reader_init()', 0);" onunload="stop_all()">
+<body onload="setTimeout('reader_init0()', 0);" onunload="stop_all()">
+
 
 <H1> Welcome to the chat room </h1>
 

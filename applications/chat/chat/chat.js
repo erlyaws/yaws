@@ -70,6 +70,14 @@ function create_xmlhttp() {
 var xml_sender = create_xmlhttp();
 var xml_reader = create_xmlhttp();
 
+var intialized = false;
+
+function reader_init0() {
+  initialized = false;
+  reader_init();
+}
+
+
 function reader_init() {
   var h = function() {
     debug("reader_init(): got " + xml_reader.readyState);
@@ -102,7 +110,7 @@ function reader_init() {
 
 	  switch(op) {
 	  case "m":
-	    messages += body.replace(/\n/g,"<br>");
+	    messages += body.replace(/\n/g,"<br>")+"<br>";
 	    break;
 	  case "e":
 	    members = body;
@@ -112,7 +120,7 @@ function reader_init() {
 	}
 
 	if (messages.length > 0)
-	  msgs.innerHTML = msgs.innerHTML + "<br>" + messages;
+	  msgs.innerHTML = msgs.innerHTML + messages;
 
 	if (members.length > 0)
 	  memb.innerHTML = members;
@@ -131,7 +139,12 @@ function reader_init() {
 
   debug("reader_init(): waiting");
 
-  xml_reader.open("GET", "chat_read.yaws", true);
+  if (initialized)  {
+    xml_reader.open("GET", "chat_read.yaws", true);
+  } else {
+    xml_reader.open("GET", "chat_read.yaws?init=true", true);
+    initialized = true;
+  }
 
   if (window.XMLHttpRequest) {
     xml_reader.onload=h;
