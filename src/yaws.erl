@@ -811,12 +811,142 @@ accepts_deflate(H) ->
 		++ [Q || {"*", Q} <- EncodingList] of
 		[] ->
 		    false;
-		[Q|_] -> Q > 100  % just for fun
+		[Q|_] -> (Q > 100)  % just for fun
+			     and not has_buggy_deflate(H#headers.user_agent)
 	    end;
 	_ ->
 	    false
     end.
 
+has_buggy_deflate(UserAgent) ->
+    UA = parse_ua(UserAgent),
+    case in_comment(
+	   fun(C) ->
+		   case C of
+		       "Konqueror"++_ ->
+			   true;
+		       _ ->
+			   false
+		   end
+	   end,
+	   UA) of
+	true ->
+	    true;
+	false ->
+	    in_ua(
+	      fun(U) ->
+		      case U of
+			  "AppleWebKit"++_ ->
+			      true;
+			  "Galeon"++_ ->
+			      true;
+			  _  ->
+			      false
+		      end
+	      end,
+	      UA)
+    end.
+    
+
+%%% Parsing of User-Agent header.
+%%% Yes, this looks a bit like overkill.
+
+tokenize_ua([], Acc) ->
+    lists:reverse(Acc);
+tokenize_ua([$\\ , C|T], Acc) ->
+    tokenize_ua(T, [C|Acc]);
+tokenize_ua([$(|T], Acc) ->
+    tokenize_ua(T, [popen | Acc]);
+tokenize_ua([$)|T], Acc) ->
+    tokenize_ua(T, [pclose | Acc]);
+tokenize_ua([C|T], Acc) ->
+    tokenize_ua(T, [C|Acc]).
+
+parse_ua(Line) ->
+    case catch parse_ua_l(tokenize_ua(Line, [])) of
+	{'EXIT', _} -> [];
+	Res -> Res
+    end.
+
+parse_ua_l(Line) ->
+    case drop_spaces(Line) of
+	[] ->
+	    [];
+	[popen|T] ->
+	    {Comment, Tail} = parse_comment(T),
+	    [Comment | parse_ua_l(Tail)];
+	[pclose|T] ->
+						% Error, ignore
+	    parse_ua_l(T);
+	L ->
+	    {UA, Tail} = parse_ua1(L),
+	    [UA | parse_ua_l(Tail)]
+    end.
+
+parse_comment(L) ->	    
+    parse_comment(L, [], []).
+
+parse_comment([], _, _) ->
+						% Error
+    {error, []};
+parse_comment([pclose|T], CAcc, CsAcc) ->
+    {{comment, lists:reverse([lists:reverse(CAcc)|CsAcc])}, T};
+parse_comment([popen|T], CAcc, CsAcc) ->
+    {Comment, Tail} = parse_comment(T),
+    parse_comment(drop_spaces(Tail), 
+		  [], [Comment, lists:reverse(CAcc) | CsAcc]);
+parse_comment([$;|T], CAcc, CsAcc) ->
+    parse_comment(drop_spaces(T), [], [lists:reverse(CAcc)|CsAcc]);
+parse_comment([C|T], CAcc, CsAcc) ->
+    parse_comment(T, [C|CAcc], CsAcc).
+
+
+parse_ua1(L) ->
+    parse_ua1(L, []).
+
+parse_ua1([], Acc) ->
+    {{ua,lists:reverse(Acc)}, []};
+parse_ua1([popen|T], Acc) ->
+    {{ua, lists:reverse(Acc)}, [popen|T]};
+parse_ua1([pclose|T], Acc) ->
+    {error, T};
+parse_ua1([$ |T], Acc) ->
+    {{ua, lists:reverse(Acc)}, T};
+parse_ua1([C|T], Acc) ->
+    parse_ua1(T, [C|Acc]).
+
+
+in_ua(Pred, L) -> 
+    lists:any(
+      fun(X) -> 
+	      case X of
+		  {ua, UA} -> Pred(UA);
+		  _ -> false
+	      end
+      end, L).
+
+in_comment(Pred, []) ->
+    false;
+in_comment(Pred, [{comment, Cs}|T]) ->
+    case in_comment_l(Pred, Cs) of
+	true ->
+	    true;
+	false ->
+	    in_comment(Pred, T)
+    end;
+in_comment(Pred, [_|T]) ->
+    in_comment(Pred, T).
+
+
+in_comment_l(Pred, Cs) ->
+    lists:any(fun(X) ->
+		      case X of
+			  {comment, Cs1} ->
+			      in_comment_l(Pred, Cs1);
+			  error -> false;
+			  L -> Pred(L)
+		      end
+	      end, Cs).
 
 %% imperative out header management
 
