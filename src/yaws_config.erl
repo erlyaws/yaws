@@ -447,7 +447,7 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
 		    {error, ?F("Invalid user at line ~w", [Lno])}
 	    end;
 	['<', "/auth", '>'] ->
-	    C2 = C#sconf{auth = [Auth|C#sconf.auth]},
+	    C2 = C#sconf{authdirs = [Auth|C#sconf.authdirs]},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 	[H|T] ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
