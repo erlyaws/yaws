@@ -28,6 +28,7 @@
 -export([find_cookie_val/2, secs/0, 
 	 url_decode/1, url_decode_q_split/1,
 	 url_encode/1, parse_url/1, parse_url/2, format_url/1]).
+-export([path_norm/1, path_norm_reverse/1]).
 -export([get_line/1, mime_type/1]).
 -export([stream_chunk_deliver/2, stream_chunk_deliver_blocking/2,
 	 stream_chunk_end/1]).
@@ -696,6 +697,26 @@ url_decode([H|T]) ->
 url_decode([]) ->
     [].
 
+path_norm(Path) ->
+    path_norm_reverse(lists:reverse(Path)).
+
+path_norm_reverse("/" ++ T) -> start_dir(0, "/", T);
+path_norm_reverse(       T) -> start_dir(0,  "", T).
+
+start_dir(N, Path, ".."       ) -> rest_dir(N, Path, "");
+start_dir(N, Path, "/"   ++ T ) -> start_dir(N    , Path, T);
+start_dir(N, Path, "./"  ++ T ) -> start_dir(N    , Path, T);
+start_dir(N, Path, "../" ++ T ) -> start_dir(N + 1, Path, T);
+start_dir(N, Path,          T ) -> rest_dir (N    , Path, T).
+
+rest_dir (N, Path, []         ) -> case Path of 
+				       [] -> "/";
+				       _  -> Path
+				   end;
+rest_dir (0, Path, [ $/ | T ] ) -> start_dir(0    , [ $/ | Path ], T);
+rest_dir (N, Path, [ $/ | T ] ) -> start_dir(N - 1,        Path  , T);
+rest_dir (0, Path, [  H | T ] ) -> rest_dir (0    , [  H | Path ], T);
+rest_dir (N, Path, [  H | T ] ) -> rest_dir (N    ,        Path  , T).
 
 %% url decode the path and return {Path, QueryPart}
 
@@ -716,11 +737,11 @@ url_decode_q_split([$%, Hi, Lo | Tail], Ack) ->
     url_decode_q_split(Tail, [Hex|Ack]);
 url_decode_q_split([$?|T], Ack) ->
     %% Don't decode the query string here, that is parsed separately.
-    {lists:reverse(Ack), T};
+    {path_norm_reverse(Ack), T};
 url_decode_q_split([H|T], Ack) ->
     url_decode_q_split(T, [H|Ack]);
 url_decode_q_split([], Ack) ->
-    {lists:reverse(Ack), []}.
+    {path_norm_reverse(Ack), []}.
 
 
 
