@@ -54,6 +54,7 @@ conf="";
 runmod="";
 sname="";
 heart="";
+xpath="";
 mnesia="";
 
 while [ $# -gt 0 ] 
@@ -86,6 +87,9 @@ do
            -c)
 		conf=" -conf $1 "
 		shift;;
+          -pa)
+	        xpath=" ${xpath} -pa $1 "
+                shift;;
            -r)
 		runmod=" -runmod $1 "
 		shift;;
@@ -113,7 +117,7 @@ do
                 ID=`id -u`
 		mkdir /tmp/yaws 2> /dev/null
 	        mkdir /tmp/yaws/${ID} 2> /dev/null
-                out=`exec $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl check $*`
+                out=`exec $erl -noshell -pa ${yawsdir}${delim}ebin ${xpath} -s yaws_ctl check $*`
 		if [ "$out" = "ok" ]; then
                     echo "$1" ok
 		    exit 0
