@@ -1,3 +1,206 @@
+2004-12-10 13:30  klacke
+
+	* src/yaws_compile.erl, src/yaws_server.erl, www/bindings.yaws,
+	www/embed.yaws, www/index.yaws, www/redirect.yaws: added <verbatim>
+	tag for .yaws files, It works as the pre (or the code) tag really
+	should work, i.e. verbatim
+
+2004-12-10 00:24  klacke
+
+	* www/TAB.inc: ""
+
+2004-12-10 00:21  klacke
+
+	* www/: index.yaws, index.yaws: ""
+
+2004-12-10 00:05  klacke
+
+	* www/: arg.yaws, bindings.yaws, cookies.yaws, embed.yaws,
+	form.yaws, pcookie.yaws, query.yaws, readpcookie.yaws,
+	redirect.yaws, session.yaws, ssi.yaws, upload.yaws, upload0.yaws:
+	more w3c compliance
+
+2004-12-09 23:35  klacke
+
+	* www/redirect4.yaws: ""
+
+2004-12-09 01:17  klacke
+
+	* www/: END, END2, TAB.inc, appmods.yaws, arg.yaws,
+	configuration.yaws, contact.yaws, contribs.yaws, doc.yaws,
+	dynamic.yaws, index.yaws, post.yaws, simple.yaws, ssi.yaws,
+	stats.yaws, stil.css, upload0.yaws: ""
+
+2004-12-02 16:13  klacke
+
+	* doc/yaws.pdf, src/yaws_server.erl, www/END2, www/TAB.inc,
+	www/appmods.yaws, www/arg.yaws, www/bindings.yaws,
+	www/configuration.yaws, www/contact.yaws, www/contribs.yaws,
+	www/cookies.yaws, www/doc.yaws, www/dynamic.yaws, www/embed.yaws,
+	www/form.yaws, www/index.yaws, www/pcookie.yaws, www/query.yaws,
+	www/redirect.yaws, www/session.yaws, www/simple.yaws, www/ssi.yaws,
+	www/stil.css, www/stream.yaws, www/upload0.yaws: more css hackery
+
+2004-11-26 22:33  klacke
+
+	* src/yaws_server.erl, www/arg.yaws, www/configuration.yaws,
+	www/session1.yaws, www/stil.css: ""
+
+2004-11-26 21:16  klacke
+
+	* www/: TAB.inc, END2: ""
+
+2004-11-26 21:12  klacke
+
+	* src/Makefile: ""
+
+2004-11-19 22:58  klacke
+
+	* vsn.mk, include/yaws.hrl, man/yaws.conf.5,
+	scripts/yaws.conf.template, src/yaws_api.erl, src/yaws_config.erl,
+	src/yaws_log.erl, src/yaws_server.erl, www/EXHEAD, www/TOPTAB,
+	www/api.yaws, www/appmods.yaws, www/arg.yaws, www/bindings.yaws,
+	www/code.yaws, www/configuration.yaws, www/contact.yaws,
+	www/contribs.yaws, www/cookies.yaws, www/doc.yaws,
+	www/dynamic.yaws, www/embed.yaws, www/form.yaws, www/index.yaws,
+	www/man.yaws, www/pcookie.yaws, www/post.yaws, www/query.yaws,
+	www/readpcookie.yaws, www/redirect.yaws, www/redirect2.yaws,
+	www/redirect3.yaws, www/session.yaws, www/setpcookie.yaws,
+	www/simple.yaws, www/simple_ex3.yaws, www/simple_ex4.yaws,
+	www/ssi.yaws, www/stil.css, www/stream.yaws, www/upload.yaws,
+	www/upload0.yaws, www/yman.yaws: added log_wrap_size, configurable
+	wrap size for all logs, fixed a bug introduced by jb for ssi, major
+	doics overhaul again, redid yaws docs using CSS only,
+
+2004-11-09 22:24  jbevemyr
+
+	* applications/mail/mail/mail.js: Fixed problem with attached files
+
+2004-11-09 16:53  mikl
+
+	* src/yaws_api.erl: Bugfix: Form post parameter was still always
+	managed as atoms.
+
+2004-11-08 21:38  klacke
+
+	* doc/yaws.tex, man/yaws.conf.5, src/yaws_api.erl: minor docs
+	corrections
+
+2004-11-03 10:52  mbj
+
+	* src/yaws_ls.erl: Fixed bad checkin
+
+2004-11-02 21:46  mbj
+
+	* src/Makefile: revert bad checkin
+
+2004-11-02 21:45  mbj
+
+	* include/yaws.hrl, man/yaws.conf.5, src/Makefile,
+	src/yaws_config.erl, src/yaws_ls.erl, src/yaws_server.erl: Added
+	auto-generate all.zip to dir listings.	It needs the zip command in
+	the current path to function properly. To turn off, use
+	dir_listsings = true_nozip
+
+2004-11-02 16:57  klacke
+
+	* src/yaws_api.erl: infinity timeout in setconf
+
+2004-10-12 15:30  cschultz
+
+	* src/yaws.erl: typo in is_space/1.
+
+2004-10-12 15:21  cschultz
+
+	* src/yaws_ls.erl: Removed `/?N=n' etc from links for files.
+
+2004-10-06 21:44  jbevemyr
+
+	* applications/wiki/src/wiki_templates.erl: Fixed problem for
+	non-root wikies.
+
+2004-10-06 21:42  jbevemyr
+
+	* src/yaws_server.erl: Added relative path to ssi, ie {ssi,
+	{rel_path, File}, ...} is now possible.
+
+2004-09-23 23:08  jbevemyr
+
+	* src/: yaws_api.erl, yaws_server.erl: Fixed problem with large
+	urlencoded posts and partial post size.
+
+2004-09-23 23:00  jbevemyr
+
+	* applications/mail/: mail/listop.yaws, mail/mail.yaws,
+	src/mail.erl: Fixed refresh bug.
+
+2004-09-14 12:10  klacke
+
+	* src/yaws_api.erl: ""
+
+2004-09-14 00:02  klacke
+
+	* man/yaws_api.5, www/EXHEAD, www/stream.yaws, www/urandom.yaws:
+	added example docs on how to stream data
+
+2004-09-13 21:37  klacke
+
+	* src/yaws_api.erl: modded patch by sebastian strollo to let
+	request_url/1 and reformat_url/1 be proper inverses of each other
+
+2004-09-10 21:49  jbevemyr
+
+	* applications/wiki/src/wiki.erl: [no log message]
+
+2004-09-09 23:40  jbevemyr
+
+	* applications/wiki/src/wiki.erl: Updated template.html
+
+2004-09-09 23:34  jbevemyr
+
+	* applications/wiki/src/wiki_utils.erl: Updated template.html
+
+2004-09-09 23:31  jbevemyr
+
+	* applications/wiki/: src/wiki.erl, src/wiki_templates.erl,
+	wiki/WikiPreferences.files/template_info.html, src/wiki_utils.erl:
+	Updated template.html
+
+2004-09-09 23:17  jbevemyr
+
+	* applications/wiki/: src/wiki.erl, src/wiki_templates.erl,
+	wiki/WikiPreferences.files/template.html: Updated template.html
+
+2004-09-08 00:46  jbevemyr
+
+	* applications/wiki/src/wiki_utils.erl: [no log message]
+
+2004-09-08 00:43  jbevemyr
+
+	* applications/wiki/: scripts/Makefile, scripts/addFile.src,
+	src/wiki.erl, src/wiki_templates.erl, src/wiki_to_html.erl,
+	wiki/WikiPreferences.wob, wiki/WikiPreferences.files/template.html,
+	wiki/WikiPreferences.files/template_info.html: Made upgrading to
+	new style Wiki templates smooth. If no template.html file exists in
+	the WikiPreferences.files directory, then one is created. The same
+	goes for template_info.html.
+
+2004-09-03 15:07  cschultz
+
+	* www/news: s/cshultz/cschultz/  :-)
+
+2004-09-03 10:02  klacke
+
+	* src/yaws_server.erl: ""
+
+2004-09-02 22:28  klacke
+
+	* www/news, src/yaws_debug.erl: ""
+
+2004-09-02 22:00  klacke
+
+	* ChangeLog: ""
+
 2004-09-02 21:56  klacke
 
 	* ChangeLog: [no log message]

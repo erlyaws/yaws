@@ -1,3 +1,16 @@
+Sat Dec 11  2004
+Bugfix and docs release
+<verbatim> tag added, this tag pretty much works as <pre> _should_ have worked. Nothing needs to be escaped,  and code containing <, >, & etc can be entered freely.  Writing code examples were driving me crazy. Inside both <pre> and <code> tags all HTML special chars have to be quoted, sucks. (klacke)
+Rewamped all docs with CSS and XHTML 1.0, beautiful and nice (klacke)
+Attach file problem in wiki (jb)
+Form post parameter was still always managed as atoms (mikl)
+Added auto-generate all.zip to dir listings.  It needs the zip command in  the current path to function properly. To turn off, use    dir_listsings = true_nozip. This is a feature for all of us that like to share copyrighthed material to friends that can't muster wget -r (mbj)
+Added relative path to ssi, ie {ssi,  {rel_path, File}, ...} is now possible. (jb)
+mail app, Fixed refresh bug. (jb)
+Added example docs on how to stream data (klacke)
+modded patch by sebastian strollo to let  request_url/1 and reformat_url/1 be proper inverses of each other (klacke)
+ Made upgrading to   new style Wiki templates smooth. If no template.html file exists in  the WikiPreferences.files directory, then one is created. The same   goes for template_info.html. (jb)
+
 Thu Sep  2, 2004 Version 1.49 released
 Bugfixrelease.
 Webmail fixes by jb, Add original message quoted in reply, Delete email bug fixed, Mailbox already locked bug, Improved attachment handling.
