@@ -95,7 +95,7 @@ compile_file(C, LineNo,  Chars, init, NumChars, Ack, Errs) ->
 	    ?Debug("SKIP ~p~n", [Chars]),
 	    L=length(Chars),
 	    compile_file(C, LineNo+1, line(), init, NumChars-L, Ack, Errs);
-	"<erl>" ++ _ ->  %% first chunk is erl, skip whistespace
+	"<erl" ++ _ ->  %% first chunk is erl, skip whistespace
 	    compile_file(C, LineNo,  Chars, html, NumChars, Ack, Errs);
 	_ ->
 	    %% first chunk is html, keep whitespace
@@ -103,9 +103,9 @@ compile_file(C, LineNo,  Chars, init, NumChars, Ack, Errs) ->
 	    compile_file(C,1,line(),html,0,[], Errs)
     end;
 
-compile_file(C, LineNo,  Chars = "<erl>" ++ _Tail, html,  NumChars, Ack,Es) ->
+compile_file(C, LineNo,  Chars = "<erl" ++ Tail, html,  NumChars, Ack,Es) ->
     ?Debug("start erl:~p",[LineNo]),
-    C2 = new_out_file(LineNo, C, C#comp.gc),
+    C2 = new_out_file(LineNo, C, Tail, C#comp.gc),
     C3 = C2#comp{startline = LineNo},
     L = length(Chars),
     if
@@ -188,8 +188,8 @@ compile_file(C, LineNo, [], html, NumChars, Ack, Es) ->
     compile_file(C, LineNo+1, line(), html, NumChars, Ack, Es);
 
 compile_file(C, LineNo,  Chars, html, NumChars, Ack,Es) ->
-    case has_str(Chars, ["<erl>", "%%", "<verbatim>"]) of
-	{ok, Skipped, "<erl>"++_ = Chars2} ->
+    case has_str(Chars, ["<erl", "%%", "<verbatim>"]) of
+	{ok, Skipped, "<erl"++_ = Chars2} ->
 	    compile_file(C, LineNo, Chars2, html, NumChars+Skipped, Ack, Es);
 	{ok, Skipped, "<verbatim>"++_ = Chars2} ->
 	    compile_file(C, LineNo, Chars2, html, NumChars+Skipped, Ack, Es);
@@ -251,15 +251,28 @@ is_exported(Fun, A, Mod) ->
     end.
 
 	     
+new_out_file_name(Tail) ->
+    case Tail of
+	">" ++ _ ->
+	    Mnum = case catch gen_server:call(yaws_server, mnum) of
+		       {'EXIT', _} ->
+			   1;
+		       Other ->
+			   Other
+		   end,
+	    [$m | integer_to_list(Mnum)];
+	_ ->
+	    case string:tokens(Tail, " =>\r\n\"") of
+		["module", Module] ->
+		    Module
+	    end
+    end.
+	    
+
+
 %% this will generate 10 lines
-new_out_file(Line, C, GC) ->
-    Mnum = case catch gen_server:call(yaws_server, mnum) of
-	       {'EXIT', _} ->
-		   1;
-	       Other ->
-		   Other
-	   end,
-    Module = [$m | integer_to_list(Mnum)],
+new_out_file(Line, C, Tail, GC) ->
+    Module = new_out_file_name(Tail),
     OutFile = filename:join([yaws:tmp_dir(), "yaws", GC#gconf.id, Module ++ ".erl"]),
     ?Debug("Writing outout file~s~n", [OutFile]),
     {ok, Out} = file:open(OutFile, [write]),

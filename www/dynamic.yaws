@@ -4,7 +4,7 @@
 
 box(Str) ->
     {'div',[{class,"box"}],
-     {pre,[],Str}}.
+     {pre, [], yaws_api:htmlize(Str)}}.
 
 tbox(T) ->
     box(lists:flatten(io_lib:format("~p",[T]))).
@@ -215,7 +215,24 @@ out(A) ->
 	 ssi("ssi/dynamic.2"),
 	 
 	 {p,[], "And some of the refered records are defined as:"},
-	 ssi("ssi/dynamic.3")]}]}].
+	 ssi("ssi/dynamic.3"),
+
+	 {p, [], "Each chunk of erlang code will be compiled into a separate module. "
+	 "The module names are automatically generated. If we have functions inside the "
+	 "erlang chunks that we want to call from other chunks or modules, it is possible "
+	 " to explicitly name the modue that will be used as in: "},
+
+	 box("
+   \<erl module=foobar>
+      out(A) ->
+         io:format('This is the foobar module',[]).
+
+      func() ->
+         i_am_exported_from_foobar.
+    \</erl>")
+ 
+
+	 ]}]}].
 
 
 

@@ -3,7 +3,7 @@
 
 box(Str) ->
     {'div',[{class,"box"}],
-     {pre,[],Str}}.
+     {pre,[], yaws_api:htmlize(Str)}}.
 
 
 out(A) -> 

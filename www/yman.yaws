@@ -3,7 +3,7 @@
 
 prebox(Str) ->
     {'div',[{class,"man"}],
-     {pre,[], Str}}.
+     {pre,[], yaws_api:htmlize(Str)}}.
 
 
 out(A) -> 

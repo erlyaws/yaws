@@ -4,7 +4,7 @@
 
 box(Str) ->
     {'div',[{class,"box"}],
-     {pre,[],Str}}.
+     {pre,[],yaws_api:htmlize(Str)}}.
 
 tbox(T) ->
     box(lists:flatten(io_lib:format("~p",[T]))).
