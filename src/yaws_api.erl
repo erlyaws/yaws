@@ -1186,6 +1186,13 @@ ehtml_attrs([Attribute|Tail]) when atom(Attribute) ->
     [[$ |atom_to_list(Attribute)]|ehtml_attrs(Tail)];
 ehtml_attrs([{Name, Value} | Tail]) ->
     ValueString = if atom(Value) -> [$",atom_to_list(Value),$"];
+		     list(Value) -> [$",Value,$"];
+		     integer(Value) -> [$",integer_to_list(Value),$"];
+		     float(Value) -> [$",float_to_list(Value),$"]
+		  end,
+    [[$ |atom_to_list(Name)], [$=|ValueString]|ehtml_attrs(Tail)];
+ehtml_attrs([{check, Name, Value} | Tail]) ->
+    ValueString = if atom(Value) -> [$",atom_to_list(Value),$"];
 		     list(Value) ->
 			  Q = case deepmember($", Value) of
 				  true -> $';
