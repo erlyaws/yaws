@@ -182,9 +182,9 @@ pre_ssi_files(DocRoot, Files) ->
     pre_ssi_string(L).
 
 pre_ssi_string(Str) ->
-    {ok, << "<br><br>\n<div class=\"box\"> \n <pre>\n", 
+    {ok, << "<br><br>\n<div class=\"box\"> <pre>", 
          (htmlize(list_to_binary(Str)))/binary, 
-          "\n</pre>\n</div>\n<br>\n\n">>}.
+          "</pre></div>\n<br>\n\n">>}.
     
     
 %% convenience

@@ -16,19 +16,29 @@
 
 %% where to look for yaws.conf 
 paths() ->
-    [os:getenv("HOME"), ".", "/etc"].
+    [filename:join([os:getenv("HOME"), "yaws.conf"]),
+     "./yaws.conf", 
+     "/etc/yaws.conf"].
 
 
 %% load the config
-load() ->
-    case yaws:first(
-	   fun(Dir) ->
-		   F = filename:join([Dir, "yaws.conf"]),
-		   file:open(filename:join([Dir, "yaws.conf"]), read)
-	   end, paths()) of
-	{ok, FD, Dir} ->
+
+load(false, Trace, Debug) ->
+    case yaws:first(fun(F) -> exists(F) end, paths()) of
+	false ->
+	    {error, "Can't find no config file "};
+	{ok, _, File} ->
+	    load({file, File}, Trace, Debug)
+    end;
+load({file, File}, Trace, Debug) ->
+    case file:open(File, [read]) of
+	{ok, FD} ->
 	    GC = make_default_gconf(),
-	    R = (catch fload(FD, globals, GC#gconf{file = Dir}, undefined, 
+	    R = (catch fload(FD, globals, GC#gconf{file = File,
+						   trace = Trace,
+						   debug = Debug
+						  }, 
+			     undefined, 
 			     [], 1, io:get_line(FD, ''))),
 	    ?Debug("FLOAD: ~p", [R]),
 	    case R of
@@ -39,8 +49,19 @@ load() ->
 		    Err
 	    end;
 	_ ->
-	    {error, "Can't open config file yaws.conf "}
+	    {error, "Can't open config file" ++ File}
     end.
+
+
+exists(F) ->
+    case file:open(F, [read, raw]) of
+	{ok, Fd} ->
+	    file:close(Fd),
+	    ok;
+	_ ->
+	    false
+    end.
+
 
 
 validate_cs(GC, Cs) ->
@@ -154,6 +175,19 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
     case toks(Chars) of
 	[] ->
 	    fload(FD, globals, GC, C, Cs, Lno+1, Next);
+
+	["trace", '=', Bstr] ->
+	    case Bstr of
+		"true" ->
+		    fload(FD, globals, GC#gconf{trace = true},
+			  C, Cs, Lno+1, Next);
+		"false" ->
+		    fload(FD, globals, GC#gconf{trace = undefined},
+			  C, Cs, Lno+1, Next);
+		_ ->
+		    {error, ?F("Expect bool at line ~w",[Lno])}
+	    end;
+	
 	["logdir", '=', Dir] ->
 	    case is_dir(Dir) of
 		true ->
@@ -189,6 +223,36 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		_ ->
 		     {error, ?F("Expect integer at line ~w", [Lno])}
 	     end;
+
+	["max_num_cached_files", '=', Val] ->
+	    case (catch list_to_integer(Val)) of
+		 I when integer(I) ->
+		    fload(FD, globals, GC#gconf{max_num_cached_files = I},
+			  C, Cs, Lno+1, Next);
+		_ ->
+		     {error, ?F("Expect integer at line ~w", [Lno])}
+	     end;
+
+
+	["max_num_cached_bytes", '=', Val] ->
+	    case (catch list_to_integer(Val)) of
+		 I when integer(I) ->
+		    fload(FD, globals, GC#gconf{max_num_cached_bytes = I},
+			  C, Cs, Lno+1, Next);
+		_ ->
+		     {error, ?F("Expect integer at line ~w", [Lno])}
+	     end;
+
+
+	["max_size_cached_file", '=', Val] ->
+	    case (catch list_to_integer(Val)) of
+		 I when integer(I) ->
+		    fload(FD, globals, GC#gconf{max_size_cached_file = I},
+			  C, Cs, Lno+1, Next);
+		_ ->
+		     {error, ?F("Expect integer at line ~w", [Lno])}
+	     end;
+
 
 
 	['<', "server", Server, '>'] ->  %% first server 

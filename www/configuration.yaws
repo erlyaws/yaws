@@ -8,6 +8,74 @@ out(A) ->
 </erl>
 
 
+<h2>Build and install</h2>
+
+Yaws is hosted by the excellent source code site SourceForge <a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=45637&type=1" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>. 
+The Yaws SourceForge www page is <a href="http://sourceforge.net/projects/erlyaws/">http://sourceforge.net/projects/erlyaws</a>
+
+
+<p>To cvs check out the latest source first install 
+an <a href="http://www.erlang.org">Erlang</a> system, then do:
+
+
+<erl>
+out(A) -> yaws_api:pre_ssi_string("
+# export CVS_RSH=ssh 
+# export CVSROOT=:pserver:anonymous@cvs.erlyaws.sourceforge.net:/cvsroot/erlyaws
+# cvs  login
+# cvs -z3 co .
+# cd yaws; make; make install
+").
+
+</erl>
+
+The above commands will 
+checkout the bleeding edge source, build it and install it at
+127.0.0.1:80 with the docroot set to the local documentation.
+
+<p>Just <tt>make</tt> (withou install) 
+will build the yaws system and do a local
+install at http://127.0.0.1:8000. This is the typical mode of operation
+while either just trying out yaws, or hacking yaws. This will install
+a template configuration file <tt>yaws.conf</tt> in $HOME.
+If $HOME/yaws.conf exists, the old file will not be overwritten.
+<p>A yaws executable will be written into the yaws bin directory.
+
+<p>To run a locally installed system, we run the yaws script found in the
+bin directory in the source code tree.
+
+<p>
+<tt> make install</tt> will also build the yaws system and also 
+install it in /usr/local. A configuration file /etc/yaws.conf will
+also be installed unless the file already exists. The default config
+file will set up the system to listen on http://127.0.0.1:80
+
+<p>Yaws currently doesn't come with a configure script. (it's not
+neecessary). To install someplace else than in /usr/local, edit the
+include.mk file in the the toplevel directory.
+
+<h2>Running yaws </h2>
+<p>The yaws executable is a shell script which invokes the 
+erlang system and instructs it to start yaws.
+<p>The following command line flags are availiable:
+<ul>
+<li> <tt>-d </tt> <br>
+Debug mode.
+<li> <tt>-i </tt> <br>
+Interactive mode, this starts the yaws webserver with an erlang 
+shell. If this flag is not given, yaws will run as a daemon.
+<li> <tt>-c File </tt><br>
+Use an explicit yaws.conf file
+<li> <tt>-t </tt><br>
+Trace mode, write a trace of all traffic to a file called 'trace'
+in the log directory.
+</ul>
+
+<h3>HUP the server </h3>
+ <p> NYI
+
+
+
 <H2>Configuring Yaws</h2>
 
 Web server configuration can be supplied to yaws 
@@ -15,50 +83,116 @@ in either of two ways depending
 on wheter we run yaws as a standalone daemon or if we run yaws as an
 embedded application inside another Erlang program.
 
-<br>
-This will change once we implement virtual hosting ....
-
-<br>
-
 <h3>Daemon mode</h3>
 
-The default location where yaws look for it's configuration file is
-<tt>/etc/yaws.conf</tt>.
+ Yaws look for its configuration file in the following locations:
+<ol>
+<li>$HOME/yaws.config
+<li>./yaws.config
+<li>/etc/yaws.config
+</ol>
 
-All fields in yaws.conf have reasonable default values, so just
-running yaws with no config file at all, will still make a 
-webserver run on localhost:80  
+<p>The configuration file has a global part and then specific
+parts for each virtual host that is defined. A very simple 
+example config could look like:
 
-<h3>Embedded mode</h3>
- ....
+<erl>
+out(A) -> yaws_api:pre_ssi_string("
+
+logdir = /var/log/yaws
+ebin_dir = /usr/local/myapp/ebin
+include_dir = /usr/local/myapp/include
+keepalive_timeout = 15000
 
 
+# enter  hostname and IP here
+<server www.mydomain.org>
+	port = 80
+	listen = 201.6.7.8
+	docroot = /var/yaws/www
+</server>
 
+").
+</erl>
 
-<h2>Building yaws</h2>
-
-Before even trying to install yaws, we must have an installed 
-erlang system on the host. Get that at 
-<a href="http:www.erlang.org">www.erlang.org</a>.
-
-<br>
-At the top level in the yaws source distribuition, there is no 
-configure script, we don't need that. (Well almost not)
-<br>
-
+We have the following possible configuration directives available in
+the yaws.conf file:
+<h3>Global part</h3>
 <ul>
-<li><tt> make </tt> will build and locally install a yaws web server. After
-a local install, the command ./bin/yaws, will start a daemon which listens
-to port 8000 on localhost. The document root will be set to the yaws 
-documentation.
+<li> <tt>trace = true|false </tt><br>
+If set to true, it will make the yaws web server write a full 
+traffic trace to a file called 'trace' in tn the logdir. The default value
+is ofcource false, since this is a highly cpu and disk intensive option.
+<P>It is also possible to invoke the trace functionality by means of the
+'-t' flag to the yaws executable itself.
 
-<li> <tt> make install </tt> will install a yaws system in /usr/local.
-That system will have its configuration in /etc/yaws.conf, log files
-in /var/logs and docroot in /var/yaws. If /var/yaws doesn't exist, the yaws
-documentaion will also be copied there.
+<li> <tt>debug = true|false </tt><br>
+If set to true, some more error printouts are done.
 
+<li> <tt>logdir = Dir </tt><br>
+Directory where all logfiles and the trace file are written to.
+
+<li> <tt>ebin_dir = Dir </tt><br>
+This directive can occur multiple times in the global section
+of the configuration file. It will set the code load path to include
+the direcrory Dir. This is the way to include your application code
+into the yaws web server.
+
+<li> <tt>keepalive_timeout = MilliSecs </tt><br>
+The default is 15000 (15 seconds). It instructs the yaws server 
+how long it shall keep an idle client connection open.
+
+<li> <tt>max_num_cached_files = Num </tt><br>
+The yaws server cache files in ram memory so that it
+doesn't have to read the files from disc every time the 
+files are requested. This directive instrucs the yaws server of the
+maximum number of cached files. The default is 400.
+
+<li> <tt>max_num_cached_bytes = Num </tt><br>
+When caching files, how much size in total do we want to cache.
+The default is 1000000. (1 Meg).
+
+<li> <tt>max_size_cached_file = Num </tt><br>
+When caching files, what is the maximum size of the files we want
+to cache. The default is 8000.
+
+<li> <tt>timeout = MilliSecs </tt><br>
+When reading or writing data from a socket, how long time do we 
+want to wait until we get it. The default is 2000. (2 secs).
 
 </ul>
+
+<h3>Server specific part</h3>
+<p>Yaws supports virtual hosting. To let yaws run more than one virtual
+webserver we define more than one server entry in the configuration file.
+A server entry looks like:
+<erl>
+out(A) -> yaws_api:pre_ssi_string("
+<server www.mydomain.org>
+	port = 80
+	listen = 201.6.7.8
+	docroot = /var/yaws/www
+</server>
+").
+</erl>
+The possible configuration directives availible inside a server
+entry are:
+<ul>
+<li> <tt> port = PortNum </tt> <br>
+Let the server listen to port number PortNum
+<li> <tt> listen = IpAddr </tt> <br>
+Let the server listen to the address IpAddr.
+<li> <tt> docroot = Directory </tt> <br>
+Let the server serv its content from the directory Dir.
+<li> <tt>ssl = true | false </tt><br>
+NYI
+</ul>
+
+
+
+<h3>Embedded mode</h3>
+
+NYI
 
 
 <erl>

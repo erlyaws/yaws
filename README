@@ -1,0 +1,22 @@
+
+This is yaws, a webserver for dynamic content written in erlang.
+
+
+To build and install
+
+1. Get and install an erlang system (http://www.erlang.org)
+2. Optionally edit include.mk
+3. make
+     This will build the system, and perform something we call a
+     local install. It will create an executable script in the bin directory
+     and a config file in $HOME/yaws.conf
+
+4.   Start as bin/yaws -i 
+     This will create a webserver at http://127.0.0.1:8000
+
+5. make install
+6. Start as /usr/local/bin/yaws
+7. This will create a webserver at http://127.0.0.1
+8. Edit /etc/yaws.conf 
+9. Create content in /var/yaws
+

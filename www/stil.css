@@ -2,7 +2,8 @@
 <style TYPE="text/css">
   body {
     background: #C6C6B5;
-      font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-family: Verdana, Arial, Helvetica, sans-serif;
+    font-size : 9pt;
     color: black;
   }
 
@@ -15,7 +16,9 @@
   }
 
   div.box { border: solid; border-width: thin; width: 100%; 
-            background: rgb(235, 245, 230)  }
+            font-size : 9pt;
+            margin : 4;
+            background: rgb(211, 211, 211)  }
 
 
 
@@ -25,19 +28,22 @@
       font-weight: bold; 
       font-variant: small-caps
   }
-  I {      font-family: Times, Verdana, Arial, Helvetica, sans-serif;}
+  I {       font-size : 9pt; 
+            font-family: Times, Verdana, Arial, Helvetica, sans-serif;}
   P { text-decoration: none;
       font-family: Verdana, Arial, Helvetica, sans-serif;
+      font-size : 9pt;
       font-weight: normal; 
   }
 
   A { text-decoration: none;
+      font-size : 9pt;
       font-family: Verdana, Arial, Helvetica, sans-serif;
       font-weight: normal; 
   }
   A:visited { font-style: oblique; color: #600000;}
   A:link { color: #0000f0 }          /* unvisited link */
   A:active { color: lime }        /* active links */
-  A:hover { background: #edb }
+  A:hover { background: rgb(189,183,107) }
 
 </style>

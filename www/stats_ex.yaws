@@ -1,0 +1,53 @@
+<erl>
+out(A) -> file:read_file([A#arg.docroot, "/EXHEAD"]).
+</erl>
+
+<h2>Talking to the server</h2>
+
+Since we are running in the same process as the webserver itself, it is
+easy for us to interact with the webserver itself from a yaws script.
+The following is an example which produces a statistics report 
+from the webserver. We call the server 
+
+The absoluteley most simple example is a HTML file which doesn't contain
+any embedded erlang code at all. 
+
+
+<erl>
+out(A) -> 
+  {ok, B} = file:read_file([A#arg.docroot, "/stats_ex1.yaws"]),
+  {ok, ["<xmp> \n", B, "</xmp\n>"]}.
+</erl>
+
+<br>
+Since the file has the suffix <tt>.yaws</tt>, the file will be processed
+by the Yaws dynamic compiler, but since no embeddded erlang code is found,
+the data from the file will be delivered untouched.
+<br>
+
+<h2> Hello world again </h2>
+
+The file <a href="simple_ex2.yaws">simple_ex2.yaws</a> contains the following
+HTML code.
+<br>
+<erl>
+out(A) -> 
+  {ok, B} = file:read_file([A#arg.docroot, "/simple_ex2.yaws"]),
+  {ok, ["<xmp> \n", B, "</xmp\n>"]}.
+</erl>
+
+The file has one very simple function which just returns a tuple
+<tt>{ok, String} </tt>
+<br>
+The String will be substituted into the delivered HTML data instead of the
+Erlang code.
+
+
+
+
+
+
+
+
+
+</html>

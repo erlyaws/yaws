@@ -11,23 +11,20 @@ out(A) ->
     H=A#arg.headers,
     C = H#headers.cookie,
     io:format("Cookie =~p~n", [C]),
-    L=case C of
+    L=case yaws_api:find_cookie_val("pfoobar", C) of
 	  [] ->
 	      f("<p> No cookie set from the browser, need to "
 		"visit <a href=\"/setpcookie.yaws\">setpcookie.yaws</a> "
 		"to set the cookie first ~n", []);
-	  [Cookie| Cs] ->
-	      case string:tokens(Cookie, [$=]) of
-		  ["pfoobar", Num] ->
-		      case ets:lookup(pcookies, {cookie,to_integer(Num)}) of
-			  [{{cookie, Num}, Data}] ->
-			      f("<p> Yes, I read your cookie "
-				"Your persistant info is ~p: ~n", [Data]);
-			  [] ->
-			      f("<p> You had a cookie,but the data is gone",[])
-		      end;
-		  Other ->
-		      f("<p> Noooo weirdo cookie here ~p~n", [C])
+	  NumStr ->
+	      Num = to_integer(NumStr),
+	      case ets:lookup(pcookies, {cookie,Num}) of
+		  [{{cookie, Num}, Data}] ->
+		      f("<p> Yes, I read your cookie:it is ~p~n "
+			"Your persistant info is ~n"
+			"<pre>~n~p~n</pre>~n", [NumStr, Data]);
+		  [] ->
+		      f("<p> You had a cookie,but the data is gone",[])
 	      end
       end,
     {ok, L}.

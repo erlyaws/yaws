@@ -26,6 +26,17 @@ will read the cookie
 <p>
 Let's show some code. To set the cookie we we have:
 
+<erl>
+out(A) -> yaws_api:pre_ssi_files(A#arg.docroot, ["setpcookie.yaws"]).
+</erl>
+
+<p>
+And to read the cookie, we have the following code:
+
+<erl>
+out(A) -> yaws_api:pre_ssi_files(A#arg.docroot, ["readpcookie.yaws"]).
+</erl>
+
 
 
 

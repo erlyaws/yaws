@@ -6,7 +6,7 @@ out(A) ->
 
 </erl>
 
-<H1>Yaws API</H2>
+<H1>Yaws API</H1>
 
 Here we describe the API avalable to Yaws applications. 
 First and foremost, the entire regular erlang API is available, this
@@ -16,7 +16,7 @@ regular erlang system.
 Here we describe the functions available in the module 
 <code>yaws_api</code>. We divide the API functions into four  distinct
 groups. 
-<ol>
+<ul>
 <li> Functions that are only callable from the <code>all_headers/1</code>
 function. The all_headers/1 function is must generate all HTTP headers as well
 as the HTTP status code line. For example, a function which does a HTTP 
@@ -24,8 +24,8 @@ redirect is such a function.
 <li> Functions that are only callable inside the <code>some_headers/1</code>
 function. 
 <li>Functions that are only callable inside the <code>out/1</code> function.
-<li> Functions that are callable evrywhere.
-</ol>
+<li> Functions that are callable everywhere.
+</ul>
 
 
 <h2>Functions callable from all_headers/1</h2>
@@ -35,7 +35,7 @@ Issue a HTTP redirect to <code>Location</code>
 
 <h2>Functions callable from some_headers/1</h2>
 <hr><h3> <code>setcookie(Name, Value, [Path, [Expire, [Domain, Secure]]])</code></h3>
-Sets a cookie. Usage examples avilable in <a href="cookie.yaws">cookie.yaws</a>
+Sets a cookie. Usage examples avilable in <a href="cookies.yaws">cookies.yaws</a>
 
 
 
@@ -67,9 +67,9 @@ This function is automatically included in all yaws code. It is just
 a shortcut for: <code>io_lib:format(Fmt, Args)
 
 
-<hr><h3><code>f([Fmt, Args .......])</code></h3>
+<hr><h3><code>fl([Fmt, Args .......])</code></h3>
 This function is automatically included in all yaws code. It will
-apply io_lib:format to a conscutive list of Fmt and Args arguments.
+apply io_lib:format to a consecutive list of Fmt and Args arguments.
 
 
 <hr><h3><code>ssi([File1, File2 ...])</code></h3>

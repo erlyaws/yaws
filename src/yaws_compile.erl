@@ -61,16 +61,16 @@ compile_file(C, LineNo, eof, Mode, NumChars, Ack) ->
     {ok, lists:reverse([{data, NumChars} |Ack])};
 
 
-%% skip initial space
+%% skip initial space 
 compile_file(C, LineNo,  Chars, init, NumChars, Ack) ->
     case Chars -- [$\s, $\t, $\n, $\r] of
 	[] ->
-	    compile_file(C, LineNo+1, line(C), init, NumChars, Ack);
+	    ?Debug("SKIP ~p~n", [Chars]),
+	    L=length(Chars),
+	    compile_file(C, LineNo+1, line(C), init, NumChars-L, Ack);
 	_ ->
 	    compile_file(C, LineNo,  Chars, html, NumChars, Ack)
     end;
-
-
 
 compile_file(C, LineNo,  Chars = "<erl>" ++ Tail, html,  NumChars, Ack) ->
     ?Debug("start erl:~p",[LineNo]),
@@ -82,7 +82,7 @@ compile_file(C, LineNo,  Chars = "<erl>" ++ Tail, html,  NumChars, Ack) ->
 	    compile_file(C3, LineNo+1, line(C) , erl,L, 
 			 [{data, NumChars} | Ack]);
 	true -> %% just ignore zero byte data segments
-	    compile_file(C3, LineNo+1, line(C) , erl, L, Ack)
+	    compile_file(C3, LineNo+1, line(C) , erl, L + (-NumChars), Ack) %hack
     end;
 
 compile_file(C, LineNo,  Chars = "</erl>" ++ Tail, erl, NumChars, Ack) ->
@@ -193,9 +193,6 @@ check_exported(C, LineNo, NumChars, Mod) ->
 	    [gen_err(C, LineNo, NumChars,
 		     "out/1 is not defined ")]
     end.
-
-
-
 
 line(C) ->
     io:get_line(C#comp.infd, '').

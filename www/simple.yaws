@@ -36,11 +36,36 @@ out(A) -> yaws_api:pre_ssi_files(A#arg.docroot, ["/simple_ex2.yaws"]).
 </erl>
 
 
+
 The file has one very simple function which just returns a tuple
 <tt>{ok, String} </tt>
 <br>
 The String will be substituted into the delivered HTML data instead of the
 Erlang code.
+
+<h2>Print the #arg record</h2>
+<p> When writing yaws code, all classic erlang libraries are available,
+however, the module <tt>yaws_api</tt> which is included in the load path
+for yaws modules contains an number of usefule functions, here is a small
+example in <a href="simple_ex3.yaws">simple_ex3.yaws</a>
+
+
+<erl>
+out(A) -> yaws_api:pre_ssi_files(A#arg.docroot, ["/simple_ex3.yaws"]).
+</erl>
+
+<p>The above code illustrates two points:
+
+<ul>
+
+<li>The function <tt>f/1</tt> which is available in the <tt>yaws_api</tt>
+module. It's just a shortcut convenience to <tt>io_lib:format/2</tt>. The 
+<tt>yaws_api</tt> module contains many convenience functiond for yaws coders.
+
+<li>The second point is a printout of the #arg record which is passed
+to the <tt>out/1</tt> function.
+</ul>
+
 
 
 </html>

@@ -55,10 +55,17 @@ some_headers(A) ->
 	_ ->
 	    setcookie(A)
     end.
+</erl>
+
+
+<erl>
+
+
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]).
+
 
 </erl>
 
-<html>
 
 
 <h2> Set persistant cookie </h2>

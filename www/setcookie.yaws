@@ -1,4 +1,5 @@
 
+
 <erl>
 
 session(A, Visits) ->
@@ -15,26 +16,21 @@ session(A, Visits) ->
 some_headers(A) ->
     H = A#arg.headers,
     C = H#headers.cookie,
-    case C of
-	[Cookie|_] ->
-	    case string:tokens(Cookie, [$=]) of
-		["foobar", PidStr] ->
-		    Pid = list_to_pid(PidStr),
-		    case process_info(Pid, messages) of
-			undefined ->
-			    Now = calendar:local_time(),
-			    P = spawn(fun() -> session(A, [Now]) end),
-			    yaws_api:setcookie("foobar", pid_to_list(P), "/");
-			_ ->
-			    ok
-		    end;
-		_ ->
-		    ignore
-	    end;
-        [] ->
-	    Now = calendar:local_time(),
+    case yaws_api:find_cookie_val("foobar", C) of
+	[] ->
+	     Now = calendar:local_time(),
 	    P = spawn(fun() -> session(A, [Now]) end),
-	    yaws_api:setcookie("foobar", pid_to_list(P), "/")
+	    yaws_api:setcookie("foobar", pid_to_list(P), "/");
+	PidStr ->
+	    Pid = list_to_pid(PidStr),
+	    case process_info(Pid, messages) of
+		undefined ->
+		    Now = calendar:local_time(),
+		    P = spawn(fun() -> session(A, [Now]) end),
+		    yaws_api:setcookie("foobar", pid_to_list(P), "/");
+		_ ->
+		    ok
+	    end
     end.
 
 </erl>

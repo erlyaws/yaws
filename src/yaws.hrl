@@ -12,6 +12,8 @@
 %% global conf
 -record(gconf,{file,
 	       yaws_dir,
+	       trace,
+	       debug,
 	       logdir,
 	       ebin_dir = [],
 	       keepalive_timeout = 15000,
@@ -22,8 +24,8 @@
 	       timeout = 2000,
 	       include_dir = [],
 	       yaws   %% FIXME add version here 
-	         }).  %% a list of lists of #confs
-                      %% one list of #conf's per listen ip
+	         }).  %% a list of lists of #sconfs
+                      %% one list of #sconf's per listen ip
 
 
 %% server conf

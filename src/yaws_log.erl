@@ -21,8 +21,10 @@
 -include("yaws.hrl").
 -record(state, {
 	  running,
+	  dir,
 	  now,
 	  ack,
+	  tracefd,
 	  accesslog,
 	  afd}).
 
@@ -42,6 +44,11 @@ sync_errlog(F, A) ->
     gen_server:call(?MODULE, {errlog, F, A}).
 setdir(Dir) ->
     gen_server:call(?MODULE, {setdir, Dir}).
+
+open_trace() ->
+    gen_server:call(?MODULE, open_trace).
+trace_traffic(ServerOrClient , Data) ->
+    gen_server:cast(?MODULE, {trace, ServerOrClient, Data}).
 
 
 %%%----------------------------------------------------------------------
@@ -84,6 +91,7 @@ handle_call({setdir, Dir}, From, State) when State#state.running == false ->
 			  end, State#state.ack),
 	    S2 = State#state{running = true,
 			     ack = [],
+			     dir  = Dir,
 			     accesslog = Alog,
 			     afd = Fd},
 	    {reply, ok, S2};
@@ -95,7 +103,17 @@ handle_call({errlog, F, A}, From, State) when State#state.running == true ->
     error_logger:format(F, A),
     {reply, ok, State};
 handle_call({errlog, F, A}, From, State) when State#state.running == false ->
-    {reply, ok, State#state{ack = [{err, F, A} | State#state.ack]}}.
+    {reply, ok, State#state{ack = [{err, F, A} | State#state.ack]}};
+
+handle_call(open_trace, From, State) ->
+    case file:open(filename:join([State#state.dir, "trace"]),[write, raw]) of
+	{ok, Fd} ->
+	    {reply, ok, State#state{tracefd = Fd}};
+	Err ->
+	    {reply,  Err, State}
+    end.
+
+
 
 
 
@@ -120,7 +138,15 @@ handle_cast({access, Ip, Req, Status, Length}, State) ->
 	false ->
 	    {noreply, State#state{ack = [{access, Ip, Req, Status,  Length} |
 					 State#state.ack]}}
-    end.
+    end;
+handle_cast({trace, from_server, Data}, State) ->
+    file:write(State#state.tracefd, ["*** SRV -> CLI *** ", Data]),
+    {noreply, State};
+handle_cast({trace, from_client, Data}, State) ->
+    file:write(State#state.tracefd, ["*** CLI -> SRV *** ", Data]),
+    {noreply, State}.
+
+
 
 
 

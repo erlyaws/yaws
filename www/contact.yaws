@@ -1,0 +1,20 @@
+
+<erl>
+
+out(A) -> 
+    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
+
+</erl>
+
+
+
+<H2>Contact</H2>
+
+<pre> 
+klacke@hyber.org
+Cell: +46 0702097763
+</pre>
+
+<erl>
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+</erl>

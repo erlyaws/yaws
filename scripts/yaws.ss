@@ -10,12 +10,15 @@ help()
 	echo "usage: yaws -i         -- interactive (no daemon) mode"
 	echo "       yaws -d         -- debug mode"
 	echo "       yaws -c file    -- set config file"
+	echo "       yaws -t         -- trace all traffic"
 	exit 1
 }
      
 
 debug=""
-daemon=" -daemon "
+daemon=" -detached "
+trace=""
+conf=""
 
 while [ $# -gt 0 ] 
 do
@@ -26,13 +29,15 @@ do
 		daemon="";;
 	   -d)
 		debug=" -boot start_sasl -yaws debug ";;
+	   -t)
+	        trace=" -yaws trace ";;
            -c)
-		conf=$1
+		conf=" -conf $1 "
 		shift;;
 	    *)
 		help
        esac
 done
 
-exec $erl $daemon ${debug} -pa ${yawsdir}/ebin -s yaws -yaws conf xx${conf}
+exec $erl $daemon ${debug} -pa ${yawsdir}/ebin -s yaws $trace $conf
 

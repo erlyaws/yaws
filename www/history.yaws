@@ -12,6 +12,7 @@ out(A) ->
 <table border="2">
 
 
+<tr><td> Feb 28, 2002 Added traffic trace -t flag and ~/public_html support.
 <tr><td> Feb 26, 2002 Cought I/O from the erlang compiler when compiling.
 The compiler will (wrongly) produce some errors plainly to the tty.
 The RightThing would be to fix that, but .....

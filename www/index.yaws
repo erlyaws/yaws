@@ -49,36 +49,6 @@ powered by Yaws.
 
 
 
-<h2>Build and install</h2>
-
-Yaws is hosted by the excellent source code site SourceForge <a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=45637&type=1" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>. 
-The SourceForge www page is <a href="http://sourceforge.net/projects/erlyaws/">http://sourceforge.net/projects/erlyaws</a>
-
-
-
-
-<p>To cvs check out the latest source first install 
-an <a href="http://www.erlang.org">Erlang</a> system, then do:
-
-<erl>
-out(A) -> pre_ssi_string("
-# export CVS_RSH=ssh 
-# export CVSROOT=:pserver:anonymous@cvs.erlyaws.sourceforge.net:/cvsroot/erlyaws
-# cvs  login
-# cvs -z3 co .
-# cd yaws; make; make install
-"
-</erl>
-
-
-Will checkout the bleeding edge source, build it and install it at
-127.0.0.1:80 with the docroot set to the local documentation.
-
-<p>
-Just make, will create a server which listens to localhost:8000.
-<br>
-
-
 <erl>
 out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
 </erl>

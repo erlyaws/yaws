@@ -1,0 +1,70 @@
+<erl>
+
+ensure_cart_server() ->
+    case whereis(cart_server) of
+	undefined ->
+	    proc_lib:start(?MODULE, pserv, []);
+	_ ->
+	    ok
+    end.
+
+pserv() ->
+    catch begin
+	      register(cart_server, self()),
+	      T = ets:new(carts, [set, public, named_table]),
+	      ets:insert(T, {counter, 0})
+	  end,
+    proc_lib:init_ack(ok),
+    pserv_loop().
+
+pserv_loop() ->
+    receive
+	X ->
+	    pserv_loop()
+    end.
+
+setcookie(A) ->
+    Num = ets:update_counter(carts, counter, 1),
+    Data = [],
+    ets:insert(carts, {{c, Num}, Data}),
+    yaws_api:setcookie("cart", integer_to_list(Num), "/").
+
+
+some_headers(A) ->
+    ensure_cart_server(),
+    H = A#arg.headers,
+    C = H#headers.cookie,
+    case yaws_api:find_cookie_val("cart", C) of
+	[] ->
+	    setcookie(A);
+	NumStr ->
+	    Num = list_to_integer(NumStr),
+	    %% cookie allready set
+	    case ets:lookup(carts, {c, Num}) of
+		[{{c, Num}, Data}] ->
+		    ok;  %% cookie already set
+		[] ->
+		    setcookie(A)
+	    end	    
+    end.    
+
+</erl>
+
+
+<html>
+
+<head>
+<title Cart </title>
+</head>
+
+<IMG SRC="/shopcart/junk.jpg" WIDTH="400" ALT="cart">
+
+<h1> Shopcart example </h1>
+
+<p>This is a tiny shop cart persitance example. It is possible
+to select random stuff from a series of forms. The yaws server will
+continously remember what has been selected. Try the cart
+at: <a href="mall.yaws">The Shopping Mall :-)</a>
+
+</html>
+

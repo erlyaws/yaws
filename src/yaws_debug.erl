@@ -118,3 +118,13 @@ fail({format, File,Line,Fmt,Args}) ->
 	    ok
     end.
 
+
+
+
+format(GC, F, A) ->
+    if
+	GC#gconf.debug == true ->
+	    io:format(F, A);
+	true ->
+	    ok
+    end.

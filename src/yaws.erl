@@ -56,6 +56,8 @@ first(F, [H|T]) ->
     case F(H) of
 	{ok, Val} ->
 	    {ok, Val, H};
+	ok ->
+	    {ok, ok, H};
 	_ ->
 	    first(F, T)
     end.

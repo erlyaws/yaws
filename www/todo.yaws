@@ -11,6 +11,7 @@ out(A) ->
 
 <ul>
 
+<li> different log files for different virt hosts
 <li> ssl 
 <li> handle the If-..... headers 
 <li> generate Etag for static content
@@ -18,7 +19,6 @@ out(A) ->
 <li> TRACE, PUT, OPTIONS ......
 <li> optimize with some precalculated headers
 <li> documentation in the www directory
-<li> error codes
 <li> more functions in yaws_api   redirect(), push() ....
 <li> lots of examples
 <li> make stop and control functions to ctl and HUP the daemon
@@ -28,9 +28,7 @@ out(A) ->
 <li> make one access log per virtual server
 <li> authenticated pages
 <li> HTTP trailer support
-<li> a cool statistics yaws page that talks to the server
 <li> man pages for yaws as well as yaws.conf
-<li> ~user public_html syntax
 <li> #fragments in URLs
 </ul>
 

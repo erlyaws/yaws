@@ -62,6 +62,37 @@ stats() ->
     {Diff, R}.
 
 			      
+get_app_args() ->
+    AS=init:get_arguments(),
+    Debug = case application:get_env(yaws, debug) of
+		undefined ->
+		    lists:member({yaws, ["debug"]}, AS);
+		_ ->
+		    true
+	    end,
+    Trace = case application:get_env(yaws, trace) of
+		undefined ->
+		    lists:member({yaws, ["trace"]}, AS);
+		_ ->
+		    true
+	    end,
+    Conf = case application:get_env(yaws, conf) of
+		undefined ->
+		   find_c(AS);
+		{ok, File} ->
+		    {file, File}
+	    end,
+    {Debug, Trace, Conf}.
+
+find_c([{conf, [File]} |_]) ->
+    {file, File};
+find_c([_|T]) ->
+    find_c(T);
+find_c([]) ->
+    false.
+
+
+
 
 %%----------------------------------------------------------------------
 %% Func: init/1
@@ -72,12 +103,20 @@ stats() ->
 %%----------------------------------------------------------------------
 init([]) ->
     put(start_time, calendar:local_time()),  %% for uptime
-    case yaws_config:load() of
+    {Debug, Trace, Conf} = get_app_args(),
+
+    case yaws_config:load(Conf, Trace, Debug) of
 	{ok, Gconf, Sconfs} ->
 	    erase(logdir),
 	    ?Debug("Conf = ~p~n", [?format_record(Gconf, gconf)]),
-	    
 	    yaws_log:setdir(Gconf#gconf.logdir),
+	    case Gconf#gconf.trace of
+		true ->
+		    yaws_log:open_trace();
+		_ ->
+		    ok
+	    end,
+
 	    init2(Gconf, Sconfs);
 	{error, E} ->
 	    case erase(logdir) of
@@ -179,12 +218,11 @@ gserv(GC, Group0) ->
     SC = hd(Group),
     case gen_tcp:listen(SC#sconf.port, opts(SC)) of
 	{ok, Listen} ->
-	    ?Debug("XX",[]),
 	    error_logger:info_msg("Listening to ~s:~w for servers ~p~n",
 			      [yaws:fmt_ip(SC#sconf.listen),
 			       SC#sconf.port,
-			       catch map(fun(S) -> S#sconf.servername end, Group)]),
-	    ?Debug("XX",[]),
+			       catch map(fun(S) ->  S#sconf.servername end, 
+					 Group)]),
 	    file:make_dir("/tmp/yaws"),
 	    {ok, Files} = file:list_dir("/tmp/yaws"),
 	    lists:foreach(
@@ -245,12 +283,28 @@ acceptor0(GS, Top) ->
     L = GS#gs.l,
     X = gen_tcp:accept(L),
     ?Debug("Accept ret:~p L=~p~n", [X,L]),
+	    
     Top ! {self(), next},
     case X of
 	{ok, Client} ->
+	    case (GS#gs.gconf)#gconf.trace of  %% traffic trace
+		true ->
+		    {ok, {IP, Port}} = inet:peername(Client),
+		    Str = ?F("New connection from ~s:~w~n", [yaws:fmt_ip(IP),Port]),
+		    yaws_log:trace_traffic(from_client, Str);
+		_ ->
+		    ok
+	    end,
+
 	    Res = (catch aloop(Client, GS,  0)),
 	    gen_tcp:close(Client),
 	    ?Debug("RES = ~p~n", [Res]),
+	    case  (GS#gs.gconf)#gconf.debug of
+		true  ->
+		    io:format("DIE: ~p~n", [Res]);
+		_ ->
+		    ok
+	    end,
 	    case Res of
 		{ok, Int} when integer(Int) ->
 		    Top ! {self(), done_client, Int};
@@ -321,10 +375,6 @@ pick_host(Host, [], Group) ->
     pick_default(Group).
 
 
-
-
-
-
 maybe_access_log(CliSock, SC, Req) ->
     ?TC([{record, SC, sconf}]),
     case SC#sconf.access_log of
@@ -350,14 +400,41 @@ maybe_access_log(CliSock, SC, Req) ->
 get_path({abs_path, Path}) ->
     Path.
 
+cli_recv(S, Num, GC) when GC#gconf.trace == false ->
+    gen_tcp:recv(S, Num, GC#gconf.timeout);
+cli_recv(S, Num, GC) ->
+    Res = gen_tcp:recv(S, Num, GC#gconf.timeout),
+    case Res of
+	{ok, Val} when tuple(Val) ->
+	    yaws_log:trace_traffic(from_client, ?F("~p~n", [Val]));
+	{error, What} ->
+	    yaws_log:trace_traffic(from_client, ?F("~n~p~n", [What]));
+	{ok, http_eoh} ->
+	    ok;
+	{ok, Val} ->
+	    yaws_log:trace_traffic(from_client, Val)
+    end,
+    Res.
+
+
+
+cli_write(S, Data, GC) when GC#gconf.trace == false ->
+    gen_tcp:send(S, Data);
+cli_write(S, Data, GC) ->
+    yaws_log:trace_traffic(from_server, Data),
+    gen_tcp:send(S, Data).
+
+
 get_headers(CliSock, GC) ->
     ?TC([{record, GC, gconf}]),
     inet:setopts(CliSock, [{packet, http}]),
-    case gen_tcp:recv(CliSock, 0, GC#gconf.keepalive_timeout) of
+    case cli_recv(CliSock, 0, GC) of
 	{ok, R} when element(1, R) == http_request ->
 	    H = get_headers(CliSock, R, GC, #headers{}),
 	    {R, H};
 	{error, timeout} ->
+	    done;
+	{error, closed} ->
 	    done;
 	Err ->
 	    ?Debug("Got ~p~n", [Err]),
@@ -366,7 +443,7 @@ get_headers(CliSock, GC) ->
 
 get_headers(CliSock, Req, GC, H) ->
     ?TC([{record, GC, gconf}]),
-    case gen_tcp:recv(CliSock, 0, GC#gconf.timeout) of
+    case cli_recv(CliSock, 0, GC) of
 	{ok, {http_header,  Num, 'Host', _, Host}} ->
 	    get_headers(CliSock, Req, GC, H#headers{host = Host});
 	{ok, {http_header, Num, 'Connection', _, Conn}} ->
@@ -401,7 +478,8 @@ get_headers(CliSock, Req, GC, H) ->
 	    get_headers(CliSock, Req, GC, H#headers{content_length = X});
 	{ok, http_eoh} ->
 	    H;
-	{ok, _} ->
+	{ok, Other} ->
+	    ?Debug("OTHER header ~p~n", [Other]),
 	    get_headers(CliSock, Req, GC, H);
 	Err ->
 	    exit(normal)
@@ -428,12 +506,12 @@ get_headers(CliSock, Req, GC, H) ->
 	undefined ->
 	    case Head#headers.connection of
 		"close" ->
-		    get_client_data(CliSock, all);
+		    get_client_data(CliSock, all, GC);
 		_ ->
 		    exit(normal)
 	    end;
 	Len ->
-	    get_client_data(CliSock, list_to_integer(Len))
+	    get_client_data(CliSock, list_to_integer(Len), GC)
     end,
     ?Debug("POST data = ~s~n", [binary_to_list(Bin)]),
     ARG = make_arg(CliSock, Head, Req, GC, SC),
@@ -474,19 +552,19 @@ handle_request(CliSock, GC, SC, Req, H, ARG) ->
 	    do_yaws(CliSock, GC, SC, Req, H, 
 		    ARG#arg{querydata = UT#urltype.q}, UT);
 	dotdot ->
-	    deliver_403(CliSock, Req)
+	    deliver_403(CliSock, Req, GC)
     end.
 
 	
 
 
-deliver_403(CliSock, Req) ->
+deliver_403(CliSock, Req, GC) ->
     H = make_date_and_server_headers(),
     B = list_to_binary("<html> <h1> 403 Forbidden, no .. paths "
 		       "allowed  </h1></html>"),
     D = [make_400(403), H, make_connection_close(true),
 	 make_content_length(size(B)), crnl(), B],
-    safe_send(true, CliSock, D),
+    safe_send(true, CliSock, D, GC),
     done.
 
 deliver_404(CliSock, GC, SC,  Req) ->
@@ -495,7 +573,7 @@ deliver_404(CliSock, GC, SC,  Req) ->
     B = not_found_body(get_path(Req#http_request.path), GC, SC),
     D = [make_400(404), H, make_connection_close(true),
 	 make_content_length(size(B)), crnl(), B],
-    safe_send(true, CliSock, D),
+    safe_send(true, CliSock, D, GC),
     done.
 
 
@@ -527,20 +605,20 @@ del_old_files([{FileAtom, Mtime1, Spec}]) ->
       end, Spec).
 		     
 
-get_client_data(CliSock, all) ->
-    get_client_data(CliSock, all, gen_tcp:recv(CliSock, 4000));
-get_client_data(CliSock, Len) ->
-    case gen_tcp:recv(CliSock, Len) of
+get_client_data(CliSock, all, GC) ->
+    get_client_data(CliSock, all, cli_recv(CliSock, 4000, GC), GC);
+get_client_data(CliSock, Len, GC) ->
+    case cli_recv(CliSock, Len, GC) of
 	{ok, B} when size(B) == Len ->
 	    B;
 	_ ->
 	    exit(normal)
     end.
 
-get_client_data(CliSock, all, {ok, B}) ->
-    B2 = get_client_data(CliSock, all, gen_tcp:recv(CliSock, 4000)),
+get_client_data(CliSock, all, {ok, B}, GC) ->
+    B2 = get_client_data(CliSock, all, cli_recv(CliSock, 4000, GC)),
     <<B/binary, B2/binary>>;
-get_client_data(CliSock, all, eof) ->
+get_client_data(CliSock, all, eof, GC) ->
     <<>>.
 
 
@@ -558,11 +636,13 @@ do_dyn_headers(CliSock, GC, SC, Bin, Fd, Req, Head, [H|T], ARG) ->
 	    case (catch apply(Mod, some_headers, [ARG])) of
 		{ok, Out} ->
 		    {[make_200(),OutH, Chunked, Out, crnl()], T, DoClose, Bin2};
+		ok ->
+		    {[make_200(),OutH, Chunked, crnl()], T, DoClose, Bin2};
 		close ->
 		    exit(normal);
 		Err ->
 		    {[make_200(), OutH, crnl(),
-		      ?F("<p> ~n<xmp>yaws code ~w:~w(~p) crashed:"
+		      ?F("<p> ~n<xmp>yaws code ~w:~w(~p) crashed or ret bad val:"
 			 " ~n~p~n</xmp>~n", 
 			 [Mod, some_headers, [Head], Err])], T, DoClose, Bin2}
 	    end;
@@ -599,7 +679,7 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT) ->
     {S2, Tail, DoClose, Bin2} = do_dyn_headers(CliSock,GC, SC,Bin,Fd,
 					       Req,Head,Specs,ARG),
     ?Debug("TAIL =~p~n", [Tail]),
-    safe_send(true, CliSock, S2),
+    safe_send(true, CliSock, S2, GC),
     deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DoClose, Bin2, Fd, Tail, ARG).
 
 
@@ -610,17 +690,17 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC, Bin, Fd, [H|T],ARG) ->
     case H of
 	{mod, LineNo, YawsFile, NumChars, Mod, out} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
-	    safe_call(DC, LineNo, YawsFile, CliSock, Mod, out, [ARG]),
+	    safe_call(DC, LineNo, YawsFile, CliSock, Mod, out, [ARG], GC),
 	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC,
 			     Bin2,Fd,T,ARG);
 	{data, NumChars} ->
 	    {Send, Bin2} = skip_data(Bin, Fd, NumChars),
-	    safe_send(DC, CliSock, Send),
+	    safe_send(DC, CliSock, Send, GC),
 	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2,
 			     UT, DC, Bin2, Fd, T,ARG);
 	{error, NumChars, Str} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
-	    safe_send(DC, CliSock, Str),
+	    safe_send(DC, CliSock, Str, GC),
 	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2,
 			     UT, DC, Bin2, Fd, T,ARG)
     end;
@@ -631,7 +711,7 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC, Bin, Fd, [],ARG) ->
 	true ->
 	    done;
 	false ->
-	    tcp_send(CliSock, ["0", crnl(), crnl()]),
+	    tcp_send(CliSock, ["0", crnl(), crnl()], GC),
 	    continue
     end.
 
@@ -666,32 +746,37 @@ to_binary(B) when binary(B) ->
 to_binary(L) when list(L) ->
     list_to_binary(L).
 
-safe_send(DoClose, Sock, Data) ->
-    ?Debug("safe send ~p bytes ", [size(to_binary([Data]))]),
+safe_send(DoClose, Sock, Data, GC) ->
     if
 	DoClose == true  ->
-	    case tcp_send(Sock, Data) of
+	    case tcp_send(Sock, Data, GC) of
 		ok ->
 		    ok;
 		Err ->
-		    ?Debug("fail to send: ~p~n", [Err]),
+		    yaws_debug:format(GC, 
+				      "Failed to send ~p on socket: ~p~n",
+				      [Data, Err]),
 		    exit(normal)
 	    end;
 	DoClose == false ->
 	    B = to_binary(Data),
 	    Len = size(B),
 	    Data2 = [yaws:integer_to_hex(Len) , crnl(), B],
-	    case tcp_send(Sock, Data2) of
+	    case tcp_send(Sock, Data2, GC) of
 		ok ->
 		    ok;
+
 		Err ->
-		    ?Debug("fail to send: ~p~n", [Err]),
+		    yaws_debug:format(GC, 
+				      "Failed to send ~p on socket: ~p~n",
+				      [Data, Err]),
+
 		    exit(normal)
 	    end
     end.
 
 		    
-safe_call(DoClose, LineNo, YawsFile, CliSock, M, F, A) ->
+safe_call(DoClose, LineNo, YawsFile, CliSock, M, F, A, GC) ->
     ?Debug("safe_call ~w:~w(~p)~n", 
 	   [M, F, ?format_record(hd(A), arg)]),
     case (catch apply(M,F,A)) of
@@ -700,19 +785,19 @@ safe_call(DoClose, LineNo, YawsFile, CliSock, M, F, A) ->
 		      ?F("~n<pre> ~nERROR erl ~w/1 code  crashed:~n "
 			 "File: ~s:~w~n"
 			 "Reason: ~p~n</pre>~n",
-			 [F, YawsFile, LineNo, Err])),
+			 [F, YawsFile, LineNo, Err]), GC),
 	    yaws:elog("erl code  ~w/1 crashed: ~n"
 		      "File: ~s:~w~n"
 		      "Reason: ~p", [F, YawsFile, LineNo, Err]);
 	
 	{ok, Out} ->
-	    safe_send(DoClose, CliSock, Out);
+	    safe_send(DoClose, CliSock, Out, GC);
 	Other ->
 	    safe_send(DoClose, CliSock, 
 		      ?F("~n<pre>~nERROR erl code ~w/1 returned bad value: ~n "
 			 "File: ~s:~w~n"
 			 "Value: ~p~n</pre>~n",
-			 [F, YawsFile, LineNo, Other])),
+			 [F, YawsFile, LineNo, Other]), GC),
 	    yaws:elog("erl code  ~w/1 returned bad value: ~n"
 		      "File: ~s:~w~n"
 		      "Value: ~p", [F, YawsFile, LineNo, Other]);
@@ -756,9 +841,9 @@ deliver_file(CliSock, GC, SC, Req, InH, UT) ->
     Bin = ut_read(Fd),
     case Bin of
 	{bin, Binary} ->
-	    tcp_send(CliSock, [make_200(), OutH, crnl(), Binary]);
+	    tcp_send(CliSock, [make_200(), OutH, crnl(), Binary], GC);
 	{ok, Binary} ->
-	    send_loop(CliSock, [make_200(), OutH, crnl(), Binary], Fd)
+	    send_loop(CliSock, [make_200(), OutH, crnl(), Binary], Fd, GC)
     end,
     ut_close(Fd),
     if
@@ -783,12 +868,12 @@ do_close(Req, H) ->
     end.
 
 
-send_loop(CliSock, Data, Fd) ->
-    case tcp_send(CliSock, Data) of
+send_loop(CliSock, Data, Fd, GC) ->
+    case tcp_send(CliSock, Data, GC) of
 	ok ->
 	    case ut_read(Fd) of
 		{ok, Data2} ->
-		    send_loop(CliSock, Data2, Fd);
+		    send_loop(CliSock, Data2, Fd, GC);
 		eof ->
 		    ok
 	    end;
@@ -1032,8 +1117,27 @@ split_path(DR, [$?|Tail], Comps, Part) ->
 split_path(DR, [$/|Tail], Comps, Part)  when Part /= [] ->
     ?Debug("Tail=~s Part=~s", [Tail,Part]),
     split_path(DR, [$/|Tail], [lists:reverse(Part) | Comps], []);
+split_path(DR, [$#|Tail], Comps, Part) ->  %% fragment
+    ret_reg_split(DR, Comps, Part, []);
+split_path(DR, [$~|Tail], Comps, Part) ->  %% fragment
+    ret_user_dir(DR, Comps, Part, Tail);
 split_path(DR, [H|T], Comps, Part) ->
     split_path(DR, T, Comps, [H|Part]).
+
+ %% http:/a.b.c/~user URLs
+ret_user_dir(DR, [], "/", User) ->
+    ?Debug("User = ~p~n", [User]),
+    Home = lists:nth(6, string:tokens(os:cmd(["grep ", User, " /etc/passwd "]),[$:])),
+    L = [Home, "/public_html/index.html"],
+    case file:read_file_info(L) of
+	{ok, FI} -> 
+	    #urltype{mime = "text/html",
+		     finfo = FI,
+		     type = regular,
+		     fullpath = lists:flatten(L)};
+	Err ->
+	    #urltype{type=error, data=Err}
+    end.
 
 
 ret_reg_split(DR, Comms, File, Query) ->
@@ -1056,6 +1160,7 @@ ret_reg_split(DR, Comms, File, Query) ->
 	    #urltype{type=error, data=Err}
     end.
 
+%% FIXME add all mime types here
 suffix_type("sway." ++ _) ->
     {yaws, "text/html"};
 suffix_type("lmth." ++ _) ->
@@ -1064,7 +1169,7 @@ suffix_type("gpj." ++ _) ->
     {regular, "image/jpeg"};
 suffix_type("fig." ++ _) ->
     {regular, "image/gif"};
-suffix_type("zg.rat" ++ _) ->
+suffix_type("zg." ++ _) ->
     {regular, "application/x-gzip"};
 suffix_type(_) ->
     {regular, "application/octet-stream"}.
@@ -1079,9 +1184,8 @@ flush(Sock, Sz) ->
 
 			
 
-tcp_send(S, Data) ->
-    ?Debug("SEND: ~s", [binary_to_list(to_binary(Data))]),
-    ok = gen_tcp:send(S, Data).
+tcp_send(S, Data, GC) ->
+    ok = cli_write(S, Data, GC).
 
 
 
