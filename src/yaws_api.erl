@@ -615,15 +615,15 @@ setcookie(Name, Value, Path, Expire, Domain) ->
 
 setcookie(Name, Value, Path, Expire, Domain, _Secure) ->
     SetDomain = if Domain == [] -> "";
-	           true -> "Domain="++Domain++";"
+	           true -> " Domain="++Domain++";"
 	        end,
     SetExpire = if Expire == [] -> "";
-	           true -> "Expires=\""++Expire++"\";"
+	           true -> " Expires=\""++Expire++"\";"
                 end,
     SetPath = if Path == [] -> "/";
                  true -> Path
               end,
-    {header, {set_cookie, f("~s=~s; Version=\"1\";~s~sPath=~s",
+    {header, {set_cookie, f("~s=~s; Version=\"1\";~s~s Path=~s",
 			    [Name,Value,SetDomain,SetExpire,SetPath])}}.
 
 
