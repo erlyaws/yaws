@@ -1220,6 +1220,7 @@ is_abs_URI1(_) ->
 %% Key 	 = atom()
 %% Value = string()
 %% Body  = EHTML
+
 ehtml_expand(Ch) when Ch >= 0, Ch =< 255 -> yaws_api:htmlize_char(Ch);
 ehtml_expand(Bin) when binary(Bin) -> yaws_api:htmlize(Bin);
 
@@ -1309,7 +1310,7 @@ ehtml_nl(button) -> [];
 ehtml_nl(object) -> [];
 ehtml_nl(_) -> "\n".
 
-    
+
 
 
 %% ------------------------------------------------------------

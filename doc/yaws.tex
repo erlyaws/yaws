@@ -1829,12 +1829,12 @@ The
 \item       \verb+tilde_expand = true|false+ -
               If  this  value  is  set  to false \Yaws\  will
               never do tilde  expansion.  The  default  is
-              true.   tilde\_expansion   is  the  mechanism
+              false.   tilde\_expansion   is  the  mechanism
               whereby    a     URL     on     the     form
               http://www.foo.com/~username is changed into
               a request where the docroot for that particular  
            request is set to the directory 
-              \verb+~user­name/public_html/+ The default value is true.
+              \verb+~user­name/public_html/+ The default value is false.
 
 \item       \verb+allowed_scripts = [ListOfSuffixes]+ -
               The allowed script types for this server.  Recognized
