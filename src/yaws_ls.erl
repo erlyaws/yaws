@@ -109,14 +109,16 @@ list_head(Direction) ->
     NextDirection = if Direction == normal  -> "r";
 		       Direction == reverse -> "n"
 		    end,
-    "<table>\n"
-    "<tr>\n"
-    "  <td><img src=\"/icons/blank.gif\"/><a href=\"?N="++NextDirection++
-	"\">Name</a></td>\n"
-    "  <td><a href=\"?D="++NextDirection++"\">Last Modified</a></td>\n"
-    "  <td><a href=\"?S="++NextDirection++"\">Size</a></td>\n"
-    "</tr>\n"
-    "<tr><td colspan=\"3\"><img src=\"/icons/blank.gif\"/></td></tr>\n".
+    ["<table>\n"
+     "<tr>\n"
+     "  <td><img src=\"/icons/blank.gif\"/"
+     " alt=\"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\"><a href=\"?N=",
+     NextDirection,"\">Name</a></td>\n"
+     "  <td><a href=\"?D=",NextDirection,"\">Last Modified</a></td>\n"
+     "  <td><a href=\"?S=",NextDirection,"\">Size</a></td>\n"
+     "</tr>\n"
+     "<tr><td colspan=\"3\"><img src=\"/icons/blank.gif\""
+     "alt=\"&nbsp;\"/></td></tr>\n"].
 
 list_tail() ->
     "</table>".
@@ -176,13 +178,13 @@ list_gif(directory, ".") ->
 list_gif(regular, ".txt") -> 
     {"text.gif", "[TXT]"};
 list_gif(regular, ".c") ->
-    {"c.gif", "[   ]"};
+    {"c.gif", "[&nbsp;&nbsp;&nbsp;]"};
 list_gif(regular, ".dvi") ->
-    {"dvi.gif", "[   ]"};
+    {"dvi.gif", "[&nbsp;&nbsp;&nbsp;]"};
 list_gif(regular, ".pdf") ->
-    {"pdf.gif", "[   ]"};
+    {"pdf.gif", "[&nbsp;&nbsp;&nbsp;]"};
 list_gif(regular, _) ->
-    {"layout.gif", "[   ]"};
+    {"layout.gif", "[&nbsp;&nbsp;&nbsp;]"};
 list_gif(directory, _) ->
     {"dir.gif", "[DIR]"};
 list_gif(_, _) ->
