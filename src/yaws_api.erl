@@ -19,7 +19,8 @@
 -export([parse_post_data/1]).
 
 
--export([parse_query/1, parse_post/1, parse_multipart_post/1]).
+-export([parse_query/1, parse_post/1, parse_multipart_post/1,
+	 parse_multipart/2]).
 -export([code_to_phrase/1, ssi/2, redirect/1]).
 -export([setcookie/2, setcookie/3, setcookie/4, setcookie/5]).
 -export([pre_ssi_files/2,  pre_ssi_string/1, pre_ssi_string/2,
@@ -361,13 +362,30 @@ parse_multi(is_end, "\r", Boundary, Acc, Res, Tmp) ->
 
 do_header(Head) ->
     {ok, Fields} = regexp:split(Head, "\r\n"),
-    Header = lists:map(fun isolate_arg/1, Fields),
-    {value, {_,"form-data"++Line}} =
-	lists:keysearch("content-disposition", 1, Header),
-    Parameters = parse_arg_line(Line),
-    {value, {_,Name}} = lists:keysearch(name, 1, Parameters),
-    {list_to_atom(Name), Parameters}.
+    MFields = merge_lines_822(Fields),
+    Header = lists:map(fun isolate_arg/1, MFields),
+    case lists:keysearch("content-disposition", 1, Header) of
+	{value, {_,"form-data"++Line}} ->
+	    Parameters = parse_arg_line(Line),
+	    {value, {_,Name}} = lists:keysearch(name, 1, Parameters),
+	    {list_to_atom(Name), Parameters};
+	_ ->
+	    {Header}
+    end.
 
+merge_lines_822(Lines) ->
+    merge_lines_822(Lines, []).
+
+merge_lines_822([], Acc) ->
+    lists:reverse(Acc);
+merge_lines_822([Line=" "++_|Lines], []) ->
+    merge_lines_822(Lines, [Line]);
+merge_lines_822([Line=" "++_|Lines], [Prev|Acc]) ->
+    merge_lines_822(Lines, [Prev++Line|Acc]);
+merge_lines_822(["\t"++Line|Lines], [Prev|Acc]) ->
+    merge_lines_822(Lines, [Prev++[$ |Line]|Acc]);
+merge_lines_822([Line|Lines], Acc) ->
+    merge_lines_822(Lines, [Line|Acc]).
 
 
 %% parse POST data when ENCTYPE is unset or
