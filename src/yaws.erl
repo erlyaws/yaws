@@ -971,13 +971,13 @@ accumulate_header({location, What}) ->
     put(outh, (get(outh))#outh{location = ["Location: " , What, "\r\n"]});
 
 accumulate_header({cache_control, What}) ->
-    put(outh, (get(outh))#outh{location = ["Cache-Control: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{cache_control = ["Cache-Control: " , What, "\r\n"]});
 
 accumulate_header({set_cookie, What}) ->
-    put(outh, (get(outh))#outh{location = ["Set-Cookie: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{set_cookie = ["Set-Cookie: " , What, "\r\n"]});
 
 accumulate_header({content_type, What}) ->
-    put(outh, (get(outh))#outh{location = ["Content-Type: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{content_type = ["Content-Type: " , What, "\r\n"]});
 
 
 %% backwards compatible clause

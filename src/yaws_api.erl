@@ -46,42 +46,6 @@
 %% yaws scripts
 
 
-parse_post_data(Arg) ->
-
-    yaws_log:infolog("Warning Warning !!!! function "
-		    "yaws_api:parse_post_data will be removed ", []),
-
-    
-    Headers = Arg#arg.headers,
-    Req = Arg#arg.req,
-    case lists:keysearch('Content-Type', 3, Headers#headers.other) of
-	{value, {_,_,_,_,"multipart/form-data"++Line}} ->
-	    case Arg#arg.cont of
-		{cont, Cont} ->
-		    parse_multipart(
-		      binary_to_list(un_partial(Arg#arg.clidata)),
-		      {cont, Cont});
-		undefined ->
-		    LineArgs = parse_arg_line(Line),
-		    {value, {_, Boundary}} =
-			lists:keysearch(boundary, 1, LineArgs),
-		    parse_multipart(
-		      binary_to_list(un_partial(Arg#arg.clidata)), Boundary)
-	    end;
-	_ ->
-	    case Req#http_request.method of
-		'POST' ->
-		    parse_post_data_urlencoded(un_partial(Arg#arg.clidata));
-		_ ->
-		    %% kinda weird default bahaviour here
-		    parse_post_data_urlencoded(Arg#arg.querydata)
-	    end
-    end.
-	    
-
-
-
-
 %% parse the command line query data
 parse_query(Arg) ->
     D = Arg#arg.querydata,
@@ -720,7 +684,7 @@ url_encode([]) ->
 
 
 
-redirect(Url) -> [{redirect, Url}].
+redirect(Url) -> {redirect, Url}.
 
 is_nb_space(X) ->
     lists:member(X, [$\s, $\t]).
@@ -1057,5 +1021,41 @@ format_url(Url) when record(Url, url) ->
 
 
 
+
+
+
+
+parse_post_data(Arg) ->
+
+    yaws_log:infolog("Warning Warning !!!! function "
+		    "yaws_api:parse_post_data will be removed ", []),
+
+    
+    Headers = Arg#arg.headers,
+    Req = Arg#arg.req,
+    case lists:keysearch('Content-Type', 3, Headers#headers.other) of
+	{value, {_,_,_,_,"multipart/form-data"++Line}} ->
+	    case Arg#arg.cont of
+		{cont, Cont} ->
+		    parse_multipart(
+		      binary_to_list(un_partial(Arg#arg.clidata)),
+		      {cont, Cont});
+		undefined ->
+		    LineArgs = parse_arg_line(Line),
+		    {value, {_, Boundary}} =
+			lists:keysearch(boundary, 1, LineArgs),
+		    parse_multipart(
+		      binary_to_list(un_partial(Arg#arg.clidata)), Boundary)
+	    end;
+	_ ->
+	    case Req#http_request.method of
+		'POST' ->
+		    parse_post_data_urlencoded(un_partial(Arg#arg.clidata));
+		_ ->
+		    %% kinda weird default bahaviour here
+		    parse_post_data_urlencoded(Arg#arg.querydata)
+	    end
+    end.
+	    
 
 
