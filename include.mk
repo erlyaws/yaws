@@ -1,6 +1,8 @@
 ###-*-makefile-*-   ; force emacs to enter makefile-mode
 
 
+# these the items can be edited
+
 INSTALLPREFIX=/usr/local
 ERL=erl
 ERLC=erlc

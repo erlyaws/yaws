@@ -17,7 +17,7 @@
 	       keepalive_timeout = 15000,
 	       max_num_cached_files = 400,
 	       max_num_cached_bytes = 1000000,  %% 1 MEG
-	       max_size_cached_file = 10000,
+	       max_size_cached_file = 8000,
 	       default_type = "text/html",
 	       timeout = 2000,
 	       include_dir,

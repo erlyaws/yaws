@@ -37,10 +37,13 @@ clean:
 	rm -f $(EBIN_FILES) 
 
 install: all
-	install -d $(INSTALLPREFIX)/lib/yaws
+	install -d $(INSTALLPREFIX)/lib/yaws/examples/ebin
+	install -d $(INSTALLPREFIX)/lib/yaws/examples/include
+	install -d $(INSTALLPREFIX)/lib/yaws/ebin
 	install -d /var/log/yaws
 	install -d /var/yaws/www
 	install -d /val/yaws/ebin
 	(cd ..; tar cz  ebin  --) | (cd $(INSTALLPREFIX)/lib/yaws; tar xz -- )
+	(cd ..; tar cz  include  --) | (cd $(INSTALLPREFIX)/lib/yaws; tar xz -- )
 	(cd ..; tar cz  www  --) | (cd /var/yaws; tar xz -- )
-	(cd ../examples; tar cz  ebin  --) | 	(cd /var/yaws; tar xz -- )
+

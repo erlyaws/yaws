@@ -1,0 +1,109 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+<HEAD>
+ <meta name="keywords" content="Yaws">
+
+
+ <TITLE>Yaws</TITLE>
+
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+<STYLE TYPE="text/css">
+  BODY {
+    background: #C6C6B5;
+      font-family: Verdana, Arial, Helvetica, sans-serif;
+    color: black;
+  }
+
+#menu {
+  background: #B6B6A5;
+}
+
+  div.links {
+    background: green;
+  }
+
+  H1, H2, H3, H4, H5 {
+      text-decoration: none;
+      font-family: Verdana, Arial, Helvetica, sans-serif;
+      font-weight: bold; 
+      font-variant: small-caps
+  }
+  I {      font-family: Times, Verdana, Arial, Helvetica, sans-serif;}
+  P { text-decoration: none;
+      font-family: Verdana, Arial, Helvetica, sans-serif;
+      font-weight: normal; 
+  }
+  UL { margin-left: -2em }
+
+  A { text-decoration: none;
+      font-family: Verdana, Arial, Helvetica, sans-serif;
+      font-weight: normal; 
+  }
+  A:visited { font-style: oblique; color: #600000;}
+  A:link { color: #0000f0 }          /* unvisited link */
+  A:active { color: lime }        /* active links */
+
+</STYLE>
+
+</HEAD>
+
+
+<BODY BGCOLOR="#C6C6B5" text="#333333">
+
+<td valign=top><IMG SRC="yaws_head3.gif" width=800 ALT="YAWS">
+<p></p>
+
+<H2>Yaws</H2>
+
+
+Yaws is a HTTP 1.1
+webserver currently under rapid development. 
+Two separate modes of operations are supported.
+<br>
+<ul>
+<li> Standalone mode where yaws runs as a regular webserver daemon. This is the default mode.
+<li> Embedded mode wher Yaws runs as an embedded webserver in an
+another erlang application. This mode is ideal when we want to build a web UI
+to control an erlang application
+</ul>
+
+<br>
+Yaws is entirely written in <a href="http:www.erlang.org">Erlang</a>, 
+futhermore it is a multithreaded webserver where one Erlang light weight 
+processis used to handle each client.
+<br>
+
+Yaws has excellent capabilies to generate dynamic content. Erlang code
+can be embedded into the HTML code in manner similar 
+to <a href="http://www.php.net">php</a>. As matter of fact, the 
+ad-hockery of php was one of major reasons I started the Yaws project.
+
+
+<p>
+<h2>yaws.hyber.org</h2>
+
+The homepage of Yaws is <a href="http://yaws.hyber.org">yaws.hyber.org</a>
+
+The documentation, examples as well as releases can be found there, and 
+of cource, <a href="http://yaws.hyber.org">yaws.hyber.org</a> is:
+<IMG SRC="yaws_pb2.gif" width=100>
+
+
+<h2>Build and install</h2>
+
+Yaws is hosted by <a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=45637&type=1" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>. To check out the latest source first install 
+an <a href="http://www.erlang.org">Erlang</a> system, then do:
+
+
+<pre>
+
+# export CVS_RSH=ssh 
+# cvs -d:pserver:anonymous@cvs.erlyaws.sourceforge.net:/cvsroot/erlyaws login
+# cvs -z3 -d:pserver:anonymous@cvs.erlyaws.sourceforge.net:/cvsroot/erlyaws co .
+# cd yaws; make; make install
+</pre>
+
+Will checkout the bleeding edge source, build it and install it.
+
+</html>

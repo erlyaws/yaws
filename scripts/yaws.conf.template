@@ -1,10 +1,27 @@
 
 # conf for yaws
 
-# YAWSDIR = /usr/local/lib/yaws
 
-port = 80
-listen = 127.0.0.1
-logdir = /var/log/yaws
-docroot = $(YAWSDIR)/www
+# first we have a set of globals
+
+logdir = /var/yaws/www
+ebin_dir = %yawsdir%/examples/ebin
+include_dir = %yawsdir%/examples/include
+keepalive_timeout = 15000
+
+
+
+#end then a set of servers
+
+
+
+# enter  hostname and IP here
+<server localhost>
+	port = 80
+	listen = 127.0.0.1
+	docroot = /var/yaws/www
+</server>
+
+
+
 

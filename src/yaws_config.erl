@@ -165,7 +165,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}
 	    end;
 
-	["ebindir", '=', Dir] ->
+	["ebin_dir", '=', Dir] ->
 	    case is_dir(Dir) of
 		true ->
 		    fload(FD, globals, GC#gconf{ebin_dir = Dir},
@@ -182,11 +182,21 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		false ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}
 	    end;
+	["keepalive_timeout", '=', Val] ->
+	    case (catch list_to_integer(Val)) of
+		 I when integer(I) ->
+		    fload(FD, globals, GC#gconf{keepalive_timeout = I},
+			  C, Cs, Lno+1, Next);
+		_ ->
+		     {error, ?F("Expect integer at line ~w", [Lno])}
+	     end;
+
+
 	['<', "server", Server, '>'] ->  %% first server 
 	    fload(FD, server, GC, #sconf{servername = Server},
 		  Cs, Lno+1, Next);
-	Other ->
-	    {error, ?F("Unexpected tokens at line ~w", [Lno])}
+	[H|_] ->
+	    {error, ?F("Unexpected tokens ~p at line ~w", [H, Lno])}
     end;
 
 	
@@ -202,7 +212,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		     C2 = C#sconf{port = I},
 		     fload(FD, server, GC, C2, Cs, Lno, Next);
 		 _ ->
-		     {error, ?F("Expect integer at lien ~w", [Lno])}
+		     {error, ?F("Expect integer at line ~w", [Lno])}
 	     end;
 	 ["listen", '=', IP] ->
 	     case yaws:parse_ip(IP) of
@@ -222,8 +232,8 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	     end;
 	 ['<', "/server", '>'] ->
 	      fload(FD, globals, GC, undefined, [C|Cs], Lno+1, Next);
-	 Other ->
-	     {error, ?F("Unexpected input at line ~w", [Lno])}
+	 [H|_] ->
+	     {error, ?F("Unexpected input ~p at line ~w", [H, Lno])}
      end.
 
 	    
@@ -253,7 +263,10 @@ toks([H|T], free, Ack, Tack) ->
 	{_, true, _} ->
 	    toks(T, free, [], [list_to_atom([H]) | Tack]);
 	{true, _,_} ->
-	    toks(T, string, [H], Tack)
+	    toks(T, string, [H], Tack);
+	{false, false, false} ->
+	    %% weird char, let's ignore it
+	    toks(T, free, Ack, Tack)
     end;
 toks([C|T], string, Ack, Tack) -> 
     %?Debug("Char=~p", [C]),
@@ -263,7 +276,11 @@ toks([C|T], string, Ack, Tack) ->
 	{_, true, _} ->
 	    toks(T, free, [], [list_to_atom([C]), lists:reverse(Ack)|Tack]);
 	{_, _, true} ->
-	    toks(T, free, [], [lists:reverse(Ack)|Tack])
+	    toks(T, free, [], [lists:reverse(Ack)|Tack]);
+	{false, false, false} ->
+	    %% weird char, let's ignore it
+	    toks(T, free, Ack, Tack)
+
     end;
 toks([], string, Ack, Tack) ->
     lists:reverse([lists:reverse(Ack) | Tack]);
@@ -279,7 +296,7 @@ is_string_char(C) ->
 	$0 =< C, C =< $9 ->
 	    true;
 	true ->
-	    lists:member(C, [$., $/, $:])
+	    lists:member(C, [$., $/, $:, $_, $-])
     end.
 
 is_space(C) ->

@@ -15,6 +15,6 @@ clean:
 
 install:
 	@for d in $(SUBDIRS) ; do \
-	  if [ -f $$d/Makefile ]; then ( cd $$d && $(MAKE) clean ) fi ; \
+	  if [ -f $$d/Makefile ]; then ( cd $$d && $(MAKE) install ) fi ; \
 	done	
 

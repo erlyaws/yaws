@@ -10,15 +10,16 @@ out(A) ->
 </erl>
 
 
-<H2>Yaws - Yet Another Webserver</H2>
 
-This is the root documentation for the Yaws webserver.  Yaws is a HTTP 1.1
+<H2>Yaws</H2>
+
+
+Yaws is a HTTP 1.1
 webserver currently under rapid development. 
-The aim is to support two separate modes
-of operation.
+Two separate modes of operations are supported.
 <br>
 <ul>
-<li> Standalone mode where yaws runs as a regular webserver daemon.
+<li> Standalone mode where yaws runs as a regular webserver daemon. This is the default mode.
 <li> Embedded mode wher Yaws runs as an embedded webserver in an
 another erlang application. This mode is ideal when we want to build a web UI
 to control an erlang application
@@ -36,6 +37,37 @@ to <a href="http://www.php.net">php</a>. As matter of fact, the
 ad-hockery of php was one of major reasons I started the Yaws project.
 
 
-  <td valign=top><IMG SRC="yaws_pb.gif" >
+
+<p>
+<h2>yaws.hyber.org</h2>
+
+The homepage of Yaws is <a href="http://yaws.hyber.org">yaws.hyber.org</a>
+
+The documentation, examples as well as releases can be found there, and 
+of cource, <a href="http://yaws.hyber.org">yaws.hyber.org</a> is itself
+powered by Yaws.
+
+
+
+<h2>Build and install</h2>
+
+Yaws is hosted by the excellent source code base SourceForge <a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=45637&type=1" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>. To cvs check out the latest source first install 
+an <a href="http://www.erlang.org">Erlang</a> system, then do:
+
+
+<pre>
+
+# export CVS_RSH=ssh 
+# cvs -d:pserver:anonymous@cvs.erlyaws.sourceforge.net:/cvsroot/erlyaws login
+# cvs -z3 -d:pserver:anonymous@cvs.erlyaws.sourceforge.net:/cvsroot/erlyaws co .
+# cd yaws; make; make install
+</pre>
+
+Will checkout the bleeding edge source, build it and install it at
+127.0.0.1:80 with the docroot set to the local documentation.
+
+<br>
+
+<IMG SRC="/icons/yaws_pb.gif" >
 
 </html>

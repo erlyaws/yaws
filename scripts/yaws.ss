@@ -37,5 +37,5 @@ do
        esac
 done
 
-exec $erl $daemon -pa $yawsdir -s yaws -yaws conf xx$conf debug xx$debug
+exec $erl $daemon -pa ${yawsdir}/ebin -s yaws -yaws conf xx$conf debug xx$debug
 

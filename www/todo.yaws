@@ -36,7 +36,9 @@ and pass them down to the yaws code in the arg structure  (done Feb 6)
 <li> do something cool, maybe a streaming audio app
 <li> shell access into the daemon
 <li> make one access log per virtual server
-
+<li> authenticated pages
+<li> HTTP trailer support
+<li> a cool statistics yaws page that talks to the server
 </ul>
 
 

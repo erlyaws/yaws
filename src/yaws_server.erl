@@ -157,7 +157,10 @@ terminate(Reason, State) ->
 gserv(GC, Group0) ->
     ?TC([{record, GC, gconf}]),
     Group = map(fun(SC) -> 
-			SC#sconf{ets = ets:new(yaws_code, [public, set])}
+			E = ets:new(yaws_code, [public, set]),
+			ets:insert(E, {num_files, 0}),
+			ets:insert(E, {num_bytes, 0}),
+			SC#sconf{ets = E}
 		end, Group0),
     C = hd(Group),
     case gen_tcp:listen(C#sconf.port, opts(C)) of
@@ -426,8 +429,9 @@ make_arg(CliSock, Head, Req, GC, SC) ->
 
 -record(urltype, {type,   %% error | yaws | regular | directory | dotdot
 		  finfo,
+		  path,
 		  fullpath,
-		  data,    %% Binary | FileDescriptor | DirListing
+		  data,    %% Binary | FileDescriptor | DirListing | undefined
 		  mime,    %% MIME type
 		  q        %% query for GET requests
 		 }).
@@ -435,23 +439,17 @@ make_arg(CliSock, Head, Req, GC, SC) ->
 
 handle_request(CliSock, GC, SC, Req, H, ARG) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
-    UrlType = url_type(GC, SC,
-		       SC#sconf.docroot, 
-		       P=get_path(Req#http_request.path)),
-    ?Dvar(UrlType),
-
-    case UrlType of
+    UT =  url_type(GC, SC,P=get_path(Req#http_request.path)),
+    case UT#urltype.type of
 	error ->
 	    deliver_404(CliSock, GC, SC, Req);
-	{directory, List} ->
-	    yaws_ls:list_directory(CliSock, List, P, GC, SC);
-	{regular, FI, Mime, File, _Query} ->
-	    deliver_file(CliSock, GC, SC, Req, H, File, Mime, FI);
-	{yaws, FI, Mime, File, Query} when Query /= [] ->
-	    do_yaws(CliSock, GC, SC, Req, H, ARG#arg{querydata = Query}, 
-		    File, FI);
-	{yaws, FI, Mime, File, []} ->
-	    do_yaws(CliSock, GC, SC, Req, H, ARG, File, FI);
+	directory ->
+	    yaws_ls:list_directory(CliSock, UT#urltype.data, P, GC, SC);
+	regular -> 
+	    deliver_file(CliSock, GC, SC, Req, H, UT);
+	yaws ->
+	    do_yaws(CliSock, GC, SC, Req, H, 
+		    ARG#arg{querydata = UT#urltype.q}, UT);
 	dotdot ->
 	    deliver_403(CliSock, Req)
     end.
@@ -478,19 +476,19 @@ deliver_404(CliSock, GC, SC,  Req) ->
     done.
 
 
-do_yaws(CliSock, GC, SC, Req, H, ARG, File, FI) ->
+do_yaws(CliSock, GC, SC, Req, H, ARG, UT) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
-    FileAtom = list_to_atom(File),
-    Mtime = mtime(File, FI),
+    FileAtom = list_to_atom(UT#urltype.fullpath),
+    Mtime = mtime(UT#urltype.finfo),
     case ets:lookup(SC#sconf.ets, FileAtom) of
 	[{FileAtom, Mtime1, Spec}] when Mtime1 == Mtime ->
-	    deliver_dyn_file(CliSock, GC, SC, Req, H, File, Spec, ARG,FI);
+	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG,UT);
 	Other  ->
 	    del_old_files(Other),
-	    {ok, Spec} = compile_file(File, GC, SC),
-	    ?Debug("Spec for file ~s is:~n~p~n",[File, Spec]),
+	    {ok, Spec} = compile_file(UT#urltype.fullpath, GC, SC),
+	    ?Debug("Spec for file ~s is:~n~p~n",[UT#urltype.fullpath, Spec]),
 	    ets:insert(SC#sconf.ets, {FileAtom, Mtime, Spec}),
-	    deliver_dyn_file(CliSock, GC, SC, Req, H, File, Spec, ARG, FI)
+	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG, UT)
     end.
 
 
@@ -523,7 +521,7 @@ get_client_data(CliSock, all, eof) ->
     <<>>.
 
 
-do_dyn_headers(CliSock, GC, SC, File, Req, Head, [H|T], ARG, FI) ->
+do_dyn_headers(CliSock, GC, SC, Req, Head, [H|T], ARG) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     {DoClose, Chunked} = case Req#http_request.version of
 			     {1, 0} -> {true, []};
@@ -569,43 +567,38 @@ do_dyn_headers(CliSock, GC, SC, File, Req, Head, [H|T], ARG, FI) ->
 	   
 
 %% do the header and continue
-deliver_dyn_file(CliSock, GC, SC, Req, Head, File, Specs, ARG, FI) ->
+deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
-    {ok, Fd} = file:open(File, [read, binary]),
-    case file:read(Fd, 4000) of
-	{ok, Bin} ->
-	    {S2, Tail, DoClose} = 
-		do_dyn_headers(CliSock,GC, SC,File,Req,Head,Specs,ARG,FI),
-	    safe_send(true, CliSock, S2),
-	    deliver_dyn_file(CliSock, GC, SC, Req, Head, File, 
-			     FI, DoClose, Bin, Fd, Specs, ARG);
-	Err ->
-	    deliver_404(CliSock, GC, SC, Req)
-    end.
+    Fd = ut_open(UT),
+    Bin = ut_read(Fd),
+    {S2, Tail, DoClose} = do_dyn_headers(CliSock,GC, SC,Req,Head,Specs,ARG),
+    safe_send(true, CliSock, S2),
+    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT,
+		     DoClose, Bin, Fd, Specs, ARG).
 
 
 
-deliver_dyn_file(CliSock, GC, SC, Req, Head, File, FI, DC, Bin, Fd, [H|T],ARG) ->
-    ?TC([{record, GC, gconf}, {record, SC, sconf}]),
+deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC, Bin, Fd, [H|T],ARG) ->
+    ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT,urltype}]),
     ?Debug("deliver_dyn_file: ~p~n", [H]),
     case H of
 	{mod, LineNo, YawsFile, NumChars, Mod, out} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
 	    safe_call(DC, LineNo, YawsFile, CliSock, Mod, out, [ARG]),
-	    deliver_dyn_file(CliSock, GC, SC, Req, Head, File, FI, DC,
+	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC,
 			     Bin2,Fd,T,ARG);
 	{data, NumChars} ->
 	    {Send, Bin2} = skip_data(Bin, Fd, NumChars),
 	    safe_send(DC, CliSock, Send),
 	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2,
-			     File, FI, DC, Bin2, Fd, T,ARG);
+			     UT, DC, Bin2, Fd, T,ARG);
 	{error, NumChars, Str} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
 	    safe_send(DC, CliSock, Str),
 	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2,
-			     File, FI, DC, Bin2, Fd, T,ARG)
+			     UT, DC, Bin2, Fd, T,ARG)
     end;
-deliver_dyn_file(CliSock, GC, SC, Req, Head, File, FI, DC, Bin, Fd, [],ARG) ->
+deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC, Bin, Fd, [],ARG) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     ?Debug("deliver_dyn: done~n", []),
     case DC of
@@ -616,9 +609,8 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, File, FI, DC, Bin, Fd, [],ARG) ->
 	    continue
     end.
 
-%% what about trailers ??
 
-    
+%% what about trailers ??
 
 skip_data(List, Fd, Sz) when list(List) ->
     skip_data(list_to_binary(List), Fd, Sz);
@@ -636,7 +628,11 @@ skip_data(Bin, Fd, Sz) when binary(Bin) ->
 		     ?Debug("EXIT in skip_data: ~p  ~p~n", [Bin, Sz]),
 		     exit(normal)
 	     end
-     end.
+     end;
+skip_data({bin, Bin}, _, Sz) ->
+    <<Head:Sz/binary ,Tail/binary>> = Bin,
+    {Head, {bin, Tail}}.
+
 
 
 to_binary(B) when binary(B) ->
@@ -702,20 +698,50 @@ safe_call(DoClose, LineNo, YawsFile, CliSock, M, F, A) ->
 
 
 
-deliver_file(CliSock, GC, SC, Req, InH, File, MimeType, FI) ->
-    ?TC([{record, GC, gconf}, {record, SC, sconf}]),
+ut_open(UT) ->
+    case UT#urltype.data of
+	undefined ->
+	    {ok, Fd} = file:open(UT#urltype.fullpath, [read, raw]),
+	    Fd;
+	B when binary(B) ->
+	    {bin, B}
+    end.
+
+
+ut_read(Bin = {bin, B}) ->
+    Bin;
+ut_read(Fd) ->
+    {ok, B} = file:read(Fd, 4000),
+    B.
+
+ut_close({bin, _}) ->
+    ok;
+ut_close(Fd) ->
+    file:close(Fd).
+
+	
+
+
+deliver_file(CliSock, GC, SC, Req, InH, UT) ->
+    ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT, urltype}]),
     DoClose = do_close(Req, InH),
-    OutH = make_static_headers(Req, FI, MimeType, DoClose),
-    {ok, Fd} = file:open(File, [read, raw]),
-    {ok, Bin} = file:read(Fd, 4000),
-    Result = send_loop(CliSock, [make_200(), OutH, crnl(), Bin], Fd),
-    file:close(Fd),
+    OutH = make_static_headers(Req, UT, DoClose),
+    Fd = ut_open(UT),
+    Bin = ut_read(Fd),
+    case Bin of
+	{bin, Binary} ->
+	    tcp_send(CliSock, [make_200(), OutH, crnl(), Binary]);
+	Binary ->
+	    send_loop(CliSock, [make_200(), OutH, crnl(), Binary], Fd)
+    end,
+    ut_close(Fd),
     if
 	DoClose == true ->
 	    done;
 	DoClose == false ->
 	    continue
     end.
+
 
 do_close(Req, H) ->
     case Req#http_request.version of
@@ -734,7 +760,7 @@ do_close(Req, H) ->
 send_loop(CliSock, Data, Fd) ->
     case tcp_send(CliSock, Data) of
 	ok ->
-	    case file:read(Fd, 4000) of
+	    case ut_read(Fd) of
 		{ok, Data2} ->
 		    send_loop(CliSock, Data2, Fd);
 		eof ->
@@ -743,6 +769,7 @@ send_loop(CliSock, Data, Fd) ->
 	Err ->
 	    Err
     end.
+	     
 
 
 make_dyn_headers(DoClose, MimeType) ->
@@ -762,13 +789,13 @@ make_date_and_server_headers() ->
      make_server_header()
     ].
 
-make_static_headers(Req, FI, MimeType, DoClose) ->    
+make_static_headers(Req, UT, DoClose) ->    
     [make_date_and_server_headers(),
-     make_last_modified(FI),
-     make_etag(FI),
+     make_last_modified(UT#urltype.finfo),
+     make_etag(UT#urltype.finfo),
      make_accept_ranges(),
-     make_content_length(FI),
-     make_content_type(MimeType),
+     make_content_length(UT#urltype.finfo),
+     make_content_type(UT#urltype.mime),
      make_connection_close(DoClose)
     ].
 
@@ -852,23 +879,17 @@ make_chunked() ->
 
 
 %% a file cache,
-url_type(Droot, GC, SC, Path) ->
+url_type(GC, SC, Path) ->
+    ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     E = SC#sconf.ets,
     case ets:lookup(E, {url, Path}) of
 	[] ->
-	    T = do_url_type(Droot, Path),
-	    case T of
-		{regular, FI, FullPath} ->
-		    cache_file(GC, SC, FI, Path, FullPath, T),
-		    T;
-		{yaws, FI, FullPath, []} ->
-		    cache_file(GC, SC, FI, Path, FullPath, T),
-		    T;
-		Other ->
-		    T
-	    end;
-	[{_, When, UrlType, FI, Bin}] ->
+	    UT = do_url_type(SC#sconf.docroot, Path),
+	    ?TC([{record, UT, urltype}]),
+	    cache_file(GC, SC, Path, UT);
+	[{_, When, UT}] ->
 	    N = now(),
+	    FI = UT#urltype.finfo,
 	    if
 		When + 30 > N ->
 		    %% more than 30 secs old entry
@@ -876,74 +897,84 @@ url_type(Droot, GC, SC, Path) ->
 		    ets:delete(E, {urlc, Path}),
 		    ets:update_counter(E, num_files, -1),
 		    ets:update_counter(E, num_bytes, -FI#file_info.size),
-		    url_type(Droot, GC, SC, Path);
+		    url_type(GC, SC, Path);
 		true ->
 		    ets:update_counter(E, {urlc, Path}, 1),
-		    UrlType
+		    UT
 	    end
     end.
 
-cache_file(GC, SC, FI, Path, FullPath, UrlType) ->
+cache_file(GC, SC, Path, UT) when UT#urltype.type == regular ;
+				  UT#urltype.type == yaws ->
     E = SC#sconf.ets,
     [{num_files, N}] = ets:lookup(E, num_files),
     [{num_bytes, B}] = ets:lookup(E, num_bytes),
+    FI = UT#urltype.finfo,
     if
 	N + 1 > GC#gconf.max_num_cached_files ->
 	    error_logger:info("Max NUM cached files reached for server "
 			      "~p", [SC#sconf.servername]),
 	    cleanup_cache(E, num),
-	    cache_file(GC, SC, FI, Path, FullPath, UrlType);
-	B+FI#file_info.size > GC#gconf.max_num_cached_bytes ->
+	    cache_file(GC, SC, Path, UT);
+	B + FI#file_info.size > GC#gconf.max_num_cached_bytes ->
 	    error_logger:info("Max size cached bytes reached for server "
 			      "~p", [SC#sconf.servername]),
 	    cleanup_cache(E, size),
-	    cache_file(GC, SC, FI, Path, FullPath, UrlType);
+	    cache_file(GC, SC, Path, UT);
 	true ->
 	    if
 		FI#file_info.size > GC#gconf.max_size_cached_file ->
-		    nocache;
+		    UT;
 		true ->
-		    {ok, B} = file:read_file(FullPath),
-		    ets:insert(E, {{url, Path}, now(), UrlType, FI, B}),
+		    {ok, Bin} = file:read_file(UT#urltype.fullpath),
+		    UT2 = UT#urltype{data = Bin},
+		    ets:insert(E, {{url, Path}, now(), UT2}),
 		    ets:insert(E, {{urlc, Path}, 1}),
 		    ets:update_counter(E, num_files, 1),
 		    ets:update_counter(E, num_bytes, FI#file_info.size),
-		    cached
+		    UT2
 	    end
-    end.
+    end;
+cache_file(GC, SC, Path, UT) ->
+    UT.
 
 
 cleanup_cache(E, size) ->
-    %% remove the largest files with the least hit count
+    %% remove the largest files with the least hit count  (urlc)
     uhhh;
 cleanup_cache(E, num) ->
     %% remove all files with a low hit count
     uhhh.
 
 
+%% return #urltype{}
 do_url_type(Droot, Path) ->
     case split_path(Droot, Path, [], []) of
 	slash ->
 	    case file:read_file_info([Droot, Path, "/index.yaws"]) of
 		{ok, FI} ->
-		    {yaws, FI,"text/html",?f([Droot, Path,"/index.yaws"]), []};
+		    #urltype{type = yaws,
+			     finfo = FI,
+			     mime = "text/html",
+			     fullpath = ?f([Droot, Path,"/index.yaws"])};
 		_ ->
 		    case file:read_file_info([Droot, Path, "/index.html"]) of
 			{ok, FI} ->
-			    {regular, FI, [Droot, Path, "/index.html"]};
+			    #urltype{type = regular,
+				     finfo = FI,
+				     mime = "text/html",
+				     fullpath =?f([Droot,Path,"/index.html"])};
 			_ ->
 			    case file:list_dir([Droot, Path]) of
 				{ok, List} ->
-				    {directory, List};
+				    #urltype{type = directory, data=List};
 				Err ->
-				    error
+				    #urltype{type=error}
 			    end
 		    end
 	    end;
 	dotdot ->  %% generate 403 forbidden
-	    dotdot;
-	error ->  %% generate 404
-	    error;
+	    #urltype{type=dotdot};
 	Other ->
 	    Other
     end.
@@ -975,16 +1006,18 @@ ret_reg_split(DR, Comms, File, Query) ->
     case file:read_file_info(L) of
 	{ok, FI} when FI#file_info.type == regular ->
 	    {X, Mime} = suffix_type(File),
-	    {X, FI, Mime, lists:flatten(L), Query};
+	    #urltype{type=X, finfo=FI,
+		     fullpath = lists:flatten(L),
+		     mime=Mime, q=Query};
 	{ok, FI} when FI#file_info.type == directory ->
 	    case file:list_dir(L) of
 		{ok, List} ->
-		    {directory, List};
+		    #urltype{type=directory, data=List};
 		Err ->
-		    error
+		    #urltype{type=error, data=Err}
 	    end;
 	Err ->
-	    error
+	    #urltype{type=error, data=Err}
     end.
 
 suffix_type("sway." ++ _) ->
@@ -1208,7 +1241,7 @@ new_out_file(Line, C, GC) ->
 
 
 
-mtime(File, F) ->
+mtime(F) ->
     F#file_info.mtime.
 
 gen_err(C, LineNo, NumChars, Err) ->
