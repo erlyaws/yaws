@@ -1,423 +1,74 @@
-
-
-
 <erl>
 
-out(A) -> 
-    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
+
+out(A) ->
+    [{ssi, "HEAD",[],[]},
+     {ssi, "TOPTAB", [],[]},
+     {ehtml,
+      [{h2,[],"Yaws"},
+       {p,[],"Yaws is a HTTP high perfomance 1.1 webserver."
+	"Two separate modes of operations are supported."},
+       {ul,[],
+	[{li,[],
+	  {p,[],"Standalone mode where yaws runs as a regular webserver " 
+	   "daemon. This is the default mode."}},
+	 {li,[],
+	  {p,[], "Embedded mode where Yaws runs as an embedded webserver in an"
+	   "another erlang application."}}
+	]},
+       {p,[], ["Yaws is entirely written in ",
+	       {a, [{href, "http://www.erlang.org"}],  "Erlang"},
+	       " furthermore it is a multithreaded webserver where one "
+	       "Erlang light weight process is used to handle each client."]},
+       {p,[], "As matter of fact, the "
+	"ad-hockery of php was one of major reasons "
+	"I started the Yaws project."},
+       {p,[],"Furthermore, Yaws has excellent performance and is able to"
+	" ship several thousands of dynamically generated pages per second."},
+
+       {h2,[], "yaws,hyber.org"},
+
+       {p,[], ["The www page for Yaws is ",
+	       {a ,[{href,"http://yaws.hyber.org"}], "yaws.hyber.org"},
+	       "The documentation, examples as well as releases can be "
+	       "found there, and of cource, ",
+	       {a ,[{href,"http://yaws.hyber.org"}],"yaws.hyber.org"},
+	       " is itself powered by Yaws"]},
+
+       {p,[], ["A mailing list exists at: ",
+	       {a,[{href,"https://lists.sourceforge.net/lists/listinfo/""erlyaws-list"}],
+		"https://lists.sourceforge.net/lists/listinfo/erlyaws-list"}]},
+       {hr},
+       gen_news(A),
+       {ssi, "END",[],[]}
+      ]}].
+
+
+gen_news(A) ->
+    {ok, Fd} = file:open(A#arg.docroot ++ "/news",[read]),
+    gen_news(Fd, io:get_line(Fd,'')).
+
+gen_news(Fd, eof) ->
+    [];
+gen_news(Fd, Line) ->
+    Items = gen_items(Fd, io:get_line(Fd, '')),
+    X = [{'div', [{class, "box"}],
+	  [{h3, [], Line},
+	   {ul, [], Items}]},
+	 {br}, {hr}],
+	  
+    [X | gen_news(Fd, io:get_line(Fd,''))].
+
+gen_items(Fd, [10]) ->
+    [];
+gen_items(Fd,eof) ->
+    [];
+gen_items(Fd,Line) ->
+    [{li, [], {p, [], Line}} |gen_items(Fd, io:get_line(Fd, ''))].
+
+
 
 </erl>
 
 
 
-<H2>Yaws</H2>
-
-
-<p>
-Yaws is a HTTP high perfomance 1.1 webserver.
-Two separate modes of operations are supported.
-<br>
-<ul>
-<li> 
-<p>Standalone mode where yaws runs as a regular webserver daemon. 
-This is the default mode.
-<li> 
-<p>Embedded mode where Yaws runs as an embedded webserver in an
-another erlang application. 
-</ul>
-
-<br>
-<p>
-Yaws is entirely written in <a href="http://www.erlang.org">Erlang</a>, 
-futhermore it is a multithreaded webserver where one Erlang light weight 
-process is used to handle each client.
-<br>
-
-<p>
-Yaws has excellent capabilies to generate dynamic content. Erlang code
-can be embedded into the HTML code in manner similar 
-to <a href="http://www.php.net">php</a>. As matter of fact, the 
-ad-hockery of php was one of major reasons I started the Yaws project.
-
-<p>Furthermore, Yaws has excellent performance and is able to
-ship several thousands of dynamically generated pages per second.
-
-
-<p>
-<h2>yaws.hyber.org</h2>
-
-<p>The www page for Yaws is <a href="http://yaws.hyber.org">yaws.hyber.org</a>.
-
-<p>
-The documentation, examples as well as releases can be found there, and 
-of cource, <a href="http://yaws.hyber.org">yaws.hyber.org</a> is itself
-powered by Yaws.
-
-<p>A mailing list exists at: <a href="https://lists.sourceforge.net/lists/listinfo/erlyaws-list">https://lists.sourceforge.net/lists/listinfo/erlyaws-list</a>
-
-
-
-<p> <h2> News </h2>
-
-<div class="man"> 
-
-<h3> Oct 4, 2003.  Version 1.31 released  </h3>
-
-<ul>
-
-
-<li><p> This is minor bugfix release
-<li><p> Even more redir bugs fuxed by Johan Bevemyr
-<li><p> Runs on old erlangs (R7)  (klacke)
-<li><p> Compiles and runs nicely under win32 cygwin using native win32 erlang (klacke)
-<li><p> Cosmetic fixes, docs update and return 403 on bad GETs by Leon Smith
-
-</ul>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-
-<h2> Old News </h2>
-<div class="box">
-
-
-
-
-<ul>
-Aug  25, 2003.  Version 1.30 released  </h3>
-</ul>
-
-<ul>
-
-
-<li><p> This is major feature release with many new features by in particular 
-Carsten Schultz and Leon Smith plus the normal set of regular bugfixes.
-<li><p> Setuid code had broken  (klacke)
-<li><p> Setcookie problem with lynx (Johan Bevemyr)
-<li><p> Wiki: Thumbnail index to slideshow (Johan Bevemyr)
-<li><p> Fixed Cross-Site Scripting vunerability (Leon Smith)
-<li><p> url parsing rewritten in order to normalize the URL path in a
-more secure way (Leon Smith)
-<li><p> Log file size for dynamic content also (Carsten Schultz)
-<li><p> Full CGI and PHP support (Carsten Schultz)
-<li><p> Added support for Content-Range, If-Range, If-Match (Carsten Schultz)
-<li><p> HEAD handling rewritten (Carsten Schultz)
-<li> <p> Darwin MacOs X support (Eric Baur)
-<li> <p> Docs updated describing cgi and php support (Carsten Schultz)
-<li> <p> tty trace directly from command line for enhanced debugging
-
-</ul>
-</ul>
-
-
-
-
-<ul>
-<li>Jun 1, 2003.  Version 1.22 released  
-<ul>
-
-<li><p> This is bugfix release. 
-<li><p> cosmetic changes in ehtml output
-<li><p> wiki install problems
-<li><p> many fixes to the wiki
-<li><p> ssl config was broken
-<li><p> /etc/rc scripts for redhat/gentoo/suse linux
-<li><p> a redir bug fixed.
-<li><p> ebuild for gentoo added
-<li><p> slideshow support added to the wiki
-<li><p> cosmetic updates to the latex docs
-
-</ul>
-</ul>
-
-
-
-
-
-<ul>
-<li> Mar 6, 2003.  Version 1.2 released  
-
-<ul>
-
-
-<li><p> This is bugfix release. 
-<li><p> log fixes by  brucefitzsimons
-<li><p> cache bugs for URLs with a query part
-<li><p> erlang compiler bug workaround, The erlang compiler
-        isn't reentrant !!!!!
-
-<li><p> Makefile cleanup my mikl
-<li><p> Bugs in listdir
-
-
-</ul>
-</ul>
-
-
-
-
-<ul>
-<li> May 3, 2003.  Version 1.01 released 
-
-<ul>
-
-
-
-
-<li><p> This is bugfix release. 
-<li><p> Bug in ssl config passord parse found by Eric Pearson
-<li><p> Bug in arg rewrite handling found and fixed by Taavi Talvik
-<li><p> Bug with redir for missing trailing slash
-        together with a query part of the url fixed, found by Erik Pearson
-<li><p> Added the option of
-        disabling dir_listings
-
-<li><p>  Added http version to access log messages
-<li><p> Did away
-        with the idiotic calls to id -u as well as the the broken grep in
-        /etc/passwd. Also ensured that .yaws files with a query part don't
-        end up in the cache. They need to be reparsed every time
-
-<li><p>Fixed probles with paths that had a query part ending
-        up in the cache
-<li><p> Added proper support for
-        'if-none-match' with etag matching by Johan Bevemyr
-<li><p> Skip empty
-        space after an erl chunk in a .yaws file
-<li><p> Handle http_error which is generated by
-        the inet_drv.c code. This assumes a patch to the inet_drv.c that
-        actually generates a http_error in this case. Default erl hangs
-        there. Here is the inet_drv.c diff
-<pre>
-*** 1914,1920 ****
-      int c;
-      /* start-line = Request-Line | Status-Line */
-      if (n == 0)
-!       return 0;
-      h = 0;
-      meth_ptr = ptr;
-      while (n && !is_tspecial((unsigned char)*ptr)) {
---- 1914,1920 ----
-      int c;
-      /* start-line = Request-Line | Status-Line */
-      if (n == 0)
-! 	return -1;
-      h = 0;
-      meth_ptr = ptr;
-      while (n && !is_tspecial((unsigned char)*ptr)) {
-***************
-</pre>
-
-
-
-
-</ul>
-
-</ul>
-
-
-
-
-
-
-
-<ul>
-<li> Jan 23, 2003.  Version 1.0 released 
-<ul>
-<li><p> This is major release. Yaws is now in production quality.
-
-<li><p> Some minor fixes to yaws_api.
-<li><p> security bug found by jcortner@cvol.net
-<li><p> can compile yaws file produced on win32, that is
-files with \r\n terminaded lines.
-
-
-</ul>
-</ul>
-
-
-
-
-<ul>
-<li>  Dec 1, 2002.  Version 0.60 released 
-<ul>
-
-
-<li><p> This is minor maintenance release.
-
-<li><p> Support to run Yaws first as root, then under a 
-a non privileged user
-
-<li><p> A bug in listdir together with ~username expansion fixed
-
-<li><p> Bugs in wraplog fixed
-
-</ul>
-</ul>
-
-
-
-<ul>
-<li> Nov 25, 2002.  Version 0.59 released  
-
-<ul>
-<li><p> Lots of fixes and new features in this release. This release of
-Yaws is fast, it delivers 3000 static/dynamic pages/sec on my 2Ghz home box.
-
-
-<li><p> Many fixes in the wiki, 
-<li><p> ~username expansion now works
-<li><p> embedded mode is now fully implemented and functional
-<li><p> many new configuration directives
-<li><p> some backwards incompatible changes such as ssl config and
-yaws_api:parse_post_data/1. See the docs for details.
-<li><p> Arg rewrite, customized errors etc.
-<li><p> Lots of new documentation and new examples
-<li><p> Optimized ehtml generation
-
-</ul>
-</ul>
-
-
-
-
-
-
-<ul>
-<li>
-<p> Oct 7, version 0.56 released. 
-<ul>
-<li><p>Improved file editing if in the wiki
-<li><p>New returnvalue from out/1 <tt>break</tt>
-<li><p>The wiki returns w3c compliant code
-<li><p>New return value from out/1 <tt>{ehtml, ErlangTermStructure}</tt>
-<li><p>Multiple users by uid can now run yaws simultaneously.
-<li><p>Support for streamed large content from yaws code
-<li><p>Never cache yaws files that disn't compile properly.
-<li><p>Much more documentation, man page for yaws_api
-<li><p>added a cookie_session-server for
-        persistant cookie sessions
-
-<li><p>full argument chunking support in Wiki
-<li><p>Install properly on FreeBSD.
-<li><p>Support for embedded mode (finally)
-
-<li><p> bugfix for empty POST
-<li><p> The shopingcart example is now fully implemented.
-
-
-</ul>
-</ul>
-
-
-
-<ul>
-
-<li>Sep 2, version 0.54 released.
-
-<ul>
-<li>
-<p> Many fixes in the wikiweb by Johan Bevemyr, I'm now running
-a wikiweb at http://wiki.hyber.org
-
-<li><p>
-Support for HTTP Basic authentication by Sean Hinde
-
-<li><p>
-Better support for HTTP file upload by Johan and Sean
-
-<li><p>
-Support for many more MIME types by compiling a mime.types file by klacke
-
-<li><p>
-Support for OPTIONS http request by Johan Bevemyr
-
-<li><p>
-Lots of non ready code for a webmail app by klacke.
-</ul>
-</ul>
-
-
-
-
-
-<ul>
-<li>
-<p>
-July 1, version 0.52 released.
-It contains a complete wiki web written by Johan Bevemyr with original code
-by Joe Armstrong. It also contains a series of minor and major  bugfixes.
-
-</ul>
-
-
-
-<ul>
-<li>
-<p>
-Jun 19, version 0.51 released. Lot's of fixes.
-    <ul>
-	<li><p>return status 303 when browser asks for a dir URL
-without a trailing / in the http request. I've always wondered why apache
-does this. Now I know ... otherwise the relative URLs in /dir/index.html
-will be wrong when the browser tries to get them.   Utilize this feature
-when listing dirs now, generate relative urls instead of absolute.
-
-	 <li><p>Removed the default_server_on_this_ip option, the first virthosted server 
-in the config will be default if no Host: header is present
-<p> Made the Host: check to check for Host: host:port instead of just host
-when a server is run on a non-standard port. The browsers seem to
-set the Host: field to host:port
-
-        <li><p>Tobbe added the -r flag to the startscript
-
-        <li><p>Changed yaws_api:parse_post_data/1 so that it takes an arg struct
-as argument instead of querydata and added support for multipart
-form data in the process.
-     </ul>
-</li>
-</ul>
-		    
-
-<ul>
-<li> 
-<p>Jun 16, version 0.50 released. A bug in setcookie fixed, a proper
-/etc/rc/init.d script written. New flag, yaws -S which query status of
-the daemon. bug in cache reload fixed.
-
-<li> 
-<p>Jun 13, version 0.48 released. It contains a complete rewrite
-of the API to generate dynamic content which makes it much easier 
-to use. 
-
-<p>Furthermore this version accumulates output into larger chunks which makes
-it much faster the earlier versions. We can now serve 2500 dynamically
-generated HTML pages per second on a 2GhZ machine.
-
-<p>A bug with  iso 8859 chars in urls has been fixed.
-
-<p>Etag header for static content and Cache-Control header for dynamic.
-
-<p>Additional docs in the form of man pages.
-
-
-<li> <p>Version 0.40 released. Contains bugfixes and full SSL support
-as well as an embryo to WWW-Authenticate support.
-</ul>
-
-</div>
-
-
-
-<erl>
-out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
-</erl>

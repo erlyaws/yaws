@@ -85,3 +85,31 @@
 	    secure,
 	    version}).
 
+
+%% Search a var, find it or crash
+
+-define(VAR(__ARG, __Key),
+	if (__ARG#arg.req)#http_request.method == 'GET' ->
+		{value,{_,__Val}}=lists:keysearch(__Key,1,yaws_api:parse_query(__ARG)), __Val;
+	   (__ARG#arg.req)#http_request.method == 'POST' ->
+		{value,{_,__Val}}=lists:keysearch(__Key,1,yaws_api:parse_post_data(__ARG)), __Val
+	end).
+
+
+%% Search a var: return {ok, Val} | false
+-define(SVAR(__ARG, __Key),
+	if (__ARG#arg.req)#http_request.method == 'GET' ->
+		case lists:keysearch(__Key,1,yaws_api:parse_query(__ARG)) of
+		    {value,{_,__Val}} -> {ok, __Val};
+		    false -> false
+		end;
+	   (__ARG#arg.req)#http_request.method == 'POST' ->
+		case lists:keysearch(__Key,1,yaws_api:parse_post_data(__ARG)) of
+		    {value,{_,__Val}} ->
+			{ok, __Val};
+		    false ->
+			false
+		end
+	end).
+
+	   

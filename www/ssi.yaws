@@ -25,7 +25,7 @@ out(A) ->
        {p, [],
 	"This feature is useful when we are writing applications where "
 	"basically the entire page is dynamically generated but we also "
-	"want to include snippets of either html or, even mory typically,"
+	"want to include snippets of either html or, even more typically,"
 	" javascript which is almost static, but not quite."},
 
        {p, [], "In particular the case with dynamically generated javascript "
@@ -63,7 +63,7 @@ out(A) ->
        box("out(A) -> [{ssi, \"ssi_ex1\", \"%\", [{\"a\", \"Godzilla\"}]}]."),
        {p,[], "So this is the way to do when we want to embed dynamic content"
 	" deep inside an ehtml structure, but the content isn't representable"
-	" as ehtml. This is typiucally the case for dynamically generated "
+	" as ehtml. This is typically the case for dynamically generated "
 	" javascript"}
 
       ]}].

@@ -1,0 +1,15 @@
+-record(arg, {
+	  clisock,        %% the socket leading to the peer client
+	  headers,        %% #headers{} record
+	  req,            %% #http_request{} record
+	  clidata,        %% The client data (as a binary in POST requests)
+	  querydata,      %% Was the URL on the form of ....?query (GET reqs)
+	  docroot,        %% where is the data
+          fullpath,       %% absolute path to requested yaws file
+	  server_path,    %% The normalized server path
+	  pid,            %% pid of the yaws worker process
+	  opaque          %% useful to pass static data
+
+	 }).              
+
+

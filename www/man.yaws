@@ -3,11 +3,9 @@
 
 out(A) -> 
     H = yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]),
-    Q = A#arg.querydata,
-    P = yaws_api:parse_query(A),
-    io:format("P = ~p~n", [P]),
-    L = case lists:keysearch(page, 1, P) of
-	    {value, {page, Page}} ->
+
+    L = case ?SVAR(A,page) of
+            {ok, Page} ->
 		%% only allow regular chars in Page
 		case lists:all(fun(C) ->
 				       if
