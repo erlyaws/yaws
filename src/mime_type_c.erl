@@ -27,7 +27,8 @@ c() ->
     case string:strip(binary_to_list(B)) of
 	[] ->
 	    put(charset, []);
-	CharSet ->
+	CharSet0 ->
+	    CharSet = string:strip(CharSet0, both, 10),
 	    put(charset, ";charset=" ++ CharSet)
     end,
     T = ets:new(aa, [set, public]),

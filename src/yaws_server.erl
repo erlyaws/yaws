@@ -1535,7 +1535,7 @@ get_client_data_len(_CliSock, 0, Bs, _SSlBool) ->
 get_client_data_len(CliSock, Len, Bs, SSlBool) ->
     case yaws:cli_recv(CliSock, Len, SSlBool) of
 	{ok, B} ->
-	    get_client_data_len(CliSock, Len-size(B), [Bs|B], SSlBool);
+	    get_client_data_len(CliSock, Len-size(B), [Bs,B], SSlBool);
 	_Other ->
 	    ?Debug("get_client_data_len: ~p~n", [_Other]),
 	    exit(normal)
@@ -2922,8 +2922,6 @@ path_info_split([H|T], Ack) ->
 	    case Type of
 		regular ->
 		    path_info_split(T, [H|Ack]);
-		forbidden ->
-		    {false, forbidden};
 		X ->
 		    {ok, lists:reverse(Ack), yaws:delall($/, H), T, X, Mime}
 	    end

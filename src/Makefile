@@ -52,7 +52,7 @@ yaws_vsn.erl:	yaws_vsn.template ../vsn.mk
 
 
 charset.def:	
-	echo -n $(DEFAULT_CHARSET) > charset.def
+	echo  $(DEFAULT_CHARSET) > charset.def
 
 mime_types.erl:	mime.types mime_type_c.erl charset.def
 	$(ERL) -noshell  -pa ../ebin -s mime_type_c  compile
