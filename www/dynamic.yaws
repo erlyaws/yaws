@@ -92,6 +92,18 @@ tuple <tt> {content, "application/pdf", PdfContentData} </tt>
 
 <li>
 <p>
+<tt>{redirect, URL} </tt> a redirect is issued to the location
+in <tt> URL </tt>.
+
+
+<li>
+<p>
+<tt>{redirect_local, Path} </tt> a redirect is issued to the local
+server using the same method (http or https) as the incoming request
+and the path part of the location header to the value in <tt> Path </tt>.
+
+<li>
+<p>
 <tt>{'EXIT', normal}</tt> which will make terminate the 
 client connection in an uncontrolled way.
 
@@ -133,7 +145,8 @@ out(A) -> yaws_api:pre_ssi_string("
 	  req,            %% #http_request{} record
 	  clidata,        %% The client data (as a binary in POST requests)
 	  querydata,      %% Was the URL on the form of ....?query (GET reqs)
-	  docroot         %% where's the data
+	  docroot,        %% where's the data
+          fullpath        %% absolute path to requested yaws file
 
 	 }).              
 

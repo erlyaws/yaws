@@ -15,6 +15,31 @@ out(A) ->
 
 <tr><td> <p>    </td></tr>
 
+<tr><td> <p>Jun 28 by Johan, added support for generating server local redirect
+by returning {redirect_local, Path}. I also added {redirect, Url}
+for consistency.
+
+<p>Fixed problem with url decoding of paths. get_path/1 now performs
+yaws_api:url_decode/1 for all paths. I'm not completely sure this is
+the right place to do this but it appears to work. Without this fix
+yaws could not handle filenames with spaces (and I'm pretty sure other
+things were broken as well).
+
+<p>It looks like IE and Netscape has different formats for the 
+<tt> Host </tt>  header. IE sends <tt> Host: hostname:port </tt>
+when port != 80, while Netscape always sends <tt> Host: hostname </tt>.
+This caused the 303 redirect code to break. Now fixed. I suspect
+that there are other instances of this problem.
+
+<p>Added <tt> fullpath </tt> to the arg record. It contains the
+absolute file path of the requested file.
+
+<p>I've added my ported and modified version of Joe's Wiki code to the
+applications directory.
+
+</td></tr>
+
+
 <tr><td> <p>Jun 18, return status 303 when browser asks for a dir URL
 without a trailing / in the http request. I've always wondered why apache
 does this. Now I know ... otherwise the relative URLs in /dir/index.html
