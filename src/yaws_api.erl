@@ -861,9 +861,26 @@ delete_cookie_session(Cookie) ->
 %% to pass a config to yaws from another data source
 %% than /etc/yaws.conf, for example from a database
 
-setconf(GC, Groups) when record(GC, gconf) ->
-    case is_groups(Groups) of
+setconf(GC, Groups0) when record(GC, gconf) ->
+    case is_groups(Groups0) of
 	true ->
+	    %% embeded code may give appmods as a list of strings
+	    %% So the above is for backwards compatibility
+	    %% appmods should be {StringPathElem, ModAtom} tuples
+	    Groups = yaws:deepmap(
+		       fun(SC) ->
+			       SC#sconf{appmods =
+					lists:map(
+					  fun({PE, Mod}) ->
+						  {PE, Mod};
+					     (AM) when list(AM) ->
+						  {AM,list_to_atom(AM)};
+					     (AM) when atom(AM) ->
+						  {atom_to_list(AM), AM}
+					  end,
+					  SC#sconf.appmods)}
+		       end, Groups0),
+					  
 	    case gen_server:call(yaws_server, {setconf, GC, Groups}) of
 		ok ->
 		    yaws_log:setdir(GC, Groups),
@@ -877,7 +894,7 @@ setconf(GC, Groups) when record(GC, gconf) ->
 		    E
 	    end;
 	false ->
-	    exit({badarg, {badgroups, Groups}})
+	    exit({badarg, {badgroups, Groups0}})
     end.
 
 %% verify args to setconf

@@ -1977,3 +1977,16 @@ upto_char(Char, [H|T]) when list(H) ->
 	    [H, upto_char(Char, T)]
     end.
 
+
+
+%% map over deep list and maintain
+%% list structure as is
+
+deepmap(Fun, [H|T]) when list(H) ->
+    [deepmap(Fun, H) | deepmap(Fun, T)];
+deepmap(Fun, [H|T]) ->
+    [Fun(H) | deepmap(Fun,T)];
+deepmap(Fun, []) ->
+    [].
+
+    
