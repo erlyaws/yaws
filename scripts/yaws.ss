@@ -84,6 +84,9 @@ do
            -heart)
 		heart=" -heart ";;
            -check)
+                ID=`id -u`
+		mkdir /tmp/yaws 2> /dev/null
+	        mkdir /tmp/yaws/${ID} 2> /dev/null
                 out=`exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl check $*`
 		if [ "$out" = "ok" ]; then
                     echo "$1" ok
