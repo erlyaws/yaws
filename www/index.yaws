@@ -30,7 +30,7 @@ out(A) ->
 
        {p,[], ["The www page for Yaws is ",
 	       {a ,[{href,"http://yaws.hyber.org"}], "yaws.hyber.org"},
-	       "The documentation, examples as well as releases can be "
+	       " The documentation, examples as well as releases can be "
 	       "found there, and of cource, ",
 	       {a ,[{href,"http://yaws.hyber.org"}],"yaws.hyber.org"},
 	       " is itself powered by Yaws"]},

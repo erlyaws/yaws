@@ -1,3 +1,18 @@
+Dec 18, 2003  Version 1.40 released
+This is a major feature release.
+Experimental reverse proxy implementation <klacke@hyber.org>
+New feature, server side includes inside ehtml structure with variable expansion <klacke@hyber.org>
+yaws_html an HTML parser which produce ehtml output. The ideal tool for all of us who flunked artclass in highscool. Makes it very easy to rip page design from other sites (designed by those who went to the art classes) <jb@bevemyr.com>)
+A HTTP cookie parser <jb@bevemyr.com)
+A full blown easy to configure web mail application. It keeps no state, thus only requires the IP of the pop3/smtp servers to run. <jb@bevemyr.com)
+Some problems with ehtml expansion fixed <jb@bevemyr.com)
+Major overhaul of the docs, written description of embedded mode yaws <klacke@hyber.org)
+Don't fail fatal when we can't bind()  <klacke@hyber.org)
+Time zone fix <magnus@nortelnetworks.com>
+Mime type fix <Rob Schmersel>
+tilde expansion and dir listings turned off by default, not on <jb@bevemyr.com>
+Many small fixes to the wiki by <jb@bevemyr.com> and <mikl>
+
 Oct 4, 2003.  Version 1.31 released
 This is minor bugfix release
 Even more redir bugs fixed by Johan Bevemyr

@@ -209,6 +209,21 @@ application to syncronize the startup with the yaws server
 as well as getting hold of user specific configuration data,
 see the explanation for the <opaque> context.
 
+
+
+.TP
+\fBrevproxy = Prefix Url\fR
+Make yaws a reverse proxy. The Prefix is a path inside our own docroot
+and the Url argument is an rli pointing to a website we want to "mount"
+under the path which is Prefix.
+
+Example: revproxy = /tmp/foo http://yaws.hyber.org
+
+Makes the hyber website appear under /tmp/foo
+
+It is possible to have multiple reverse proxies inside the same server.
+
+
 .TP
 \fB <ssl>  .... </ssl> \fR
 This begins and ends an SSL configuration for this server.

@@ -981,7 +981,7 @@ handle_extension_method(_Method, CliSock, GC, SC, Req, Head) ->
 handle_request(CliSock, GC, SC, ARG, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     Req = ARG#arg.req,
-    io:format("SrvReq=~p~n",[Req]),
+    ?Debug("SrvReq=~p~n",[Req]),
     case Req#http_request.path of
 	{abs_path, RawPath} ->
 	    case (catch yaws_api:url_decode_q_split(RawPath)) of

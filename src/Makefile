@@ -27,9 +27,8 @@ MODULES=yaws \
 	mime_types \
 	yaws_session_server \
 	yaws_404 \
-	yaws_revproxy
-
-#	yaws_html \
+	yaws_revproxy \
+	yaws_html 
 
 
 

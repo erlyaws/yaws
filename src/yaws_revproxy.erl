@@ -24,6 +24,7 @@
 		url,    %% The url we're proxying to
 		type,   %% client | server
 		r_req,  %% if'we're server, what req method are we processing
+		r_host, %% and value of Host: for the cli request
 		state}).%% various depending on mode, ......
 
 
@@ -36,13 +37,16 @@ init(CliSock, GC, SC, ARG, DecPath, QueryPart, {Prefix, URL}) ->
 	    Cli = sockmode(Headers0, ARG#arg.req,
 			   #psock{s = CliSock, prefix = Prefix,
 				  url = URL, type = client}),
-	    Headers = rewrite_headers(Cli, Headers0),
+	    Headers = rewrite_headers(SC, Cli, Headers0),
 	    ReqStr = yaws_api:reformat_request(
 		       rewrite_path(ARG#arg.req, Prefix)),
 	    Hstr = headers_to_str(Headers),
 	    yaws:gen_tcp_send(Ssock, [ReqStr, "\r\n", Hstr, "\r\n"], SC,GC),
-	    Srv = #psock{s = Ssock, prefix = Prefix, url = URL,
+	    Srv = #psock{s = Ssock, 
+			 prefix = Prefix, 
+			 url = URL,
 			 r_req = (ARG#arg.req)#http_request.method,
+			 r_host = (ARG#arg.headers)#headers.host,
 			 mode = expectheaders, type = server},
 	    
 	    %% Now we _must_ spawn a process here, casuse we
@@ -91,9 +95,9 @@ rewrite_path(Req, Pref) ->
     New.
 
 
-strip_prefix(P,[]) -> P;
-strip_prefix("/","/") ->
-    "/";
+
+strip_prefix(P,"/") ->
+    P;
 strip_prefix([H|T1],[H|T2]) ->
     strip_prefix(T1,T2).
 
@@ -204,8 +208,9 @@ get_chunk(Fd, N, Asz) ->
 
 ploop(From0, To, GC, SC) ->
     From = receive
-	       {r_req, Method} ->
-		   From0#psock{r_req = Method}
+	       {cli2srv, Method, Host} ->
+		   From0#psock{r_req = Method,
+			       r_host = Host}
 	   after 0 ->
 		   From0
 	   end,
@@ -216,17 +221,19 @@ ploop(From0, To, GC, SC) ->
 	    SSL = nossl,
 	    case yaws:http_get_headers(From#psock.s, GC, SSL) of
 		{R, H0} ->
+		    ?Debug("R = ~p~n",[R]),
 		    RStr = 
 			if
 			    %% FIXME handle bad_request here
 			    record(R, http_response) ->
 				yaws_api:reformat_response(R);
 			    record(R, http_request) ->
-				To ! {r_req, R#http_request.method},
+				To ! {cli2srv, R#http_request.method, 
+				      H0#headers.host},
 				yaws_api:reformat_request(
 				  rewrite_path(R, From#psock.prefix))
 			end,
-		    Hstr = headers_to_str(H = rewrite_headers(From, H0)),
+		    Hstr = headers_to_str(H = rewrite_headers(SC, From, H0)),
 		    yaws:gen_tcp_send(TS, [RStr, "\r\n", Hstr, "\r\n"] ,
 				      SC,GC),
 		    From2 = sockmode(H, R, From),
@@ -239,6 +246,8 @@ ploop(From0, To, GC, SC) ->
 	    N = get_chunk_num(From#psock.s),
 	    if N == 0 ->
 		    ok=eat_crnl(From#psock.s),
+		    yaws:gen_tcp_send(TS,["\r\n0\r\n\r\n"], SC,GC),
+		    ?Debug("SEND final 0 ",[]),
 		    ploop(From#psock{mode = expectheaders, 
 				     state = undefined},To, GC, SC);
 	       true ->
@@ -289,7 +298,7 @@ ploop(From0, To, GC, SC) ->
 %% On the way from the client to the server, we need
 %% rewrite the Host header
 
-rewrite_headers(PS, H) when PS#psock.type == client ->
+rewrite_headers(SC, PS, H) when PS#psock.type == client ->
     Host =
 	if H#headers.host == undefined ->
 		undefined;
@@ -313,33 +322,53 @@ rewrite_headers(PS, H) when PS#psock.type == client ->
 %% need to rewrite the Location header, and the
 %% Set-Cookie header
 
-rewrite_headers(PS, H) when PS#psock.type == server ->
+rewrite_headers(SC, PS, H) when PS#psock.type == server ->
     ?Debug("Location header to rewrite:  ~p~n", [H#headers.location]),
     Loc = if
 	      H#headers.location == undefined ->
 		  undefined;
 	      true ->
 		  ?Debug("parse_url(~p)~n", [H#headers.location]),
-		  LocUrl = yaws_api:parse_url(H#headers.location),
+		  LocUrl = (catch yaws_api:parse_url(H#headers.location)),
 		  ProxyUrl = PS#psock.url,
 		  if
 		      LocUrl#url.host == ProxyUrl#url.host,
 		      LocUrl#url.port == ProxyUrl#url.port,
 		      LocUrl#url.scheme == ProxyUrl#url.scheme ->
-			  P = PS#psock.prefix ++  LocUrl#url.path,
-			  ?Debug("New Loc = ~p~n", [P]),
-			  yaws_api:reformat_url(LocUrl#url{path=P});
+			  rewrite_loc_url(SC, LocUrl, PS);
+		      
+		      element(1, LocUrl) == 'EXIT' ->
+			  rewrite_loc_rel(SC, PS, H#headers.location);
 		      true ->
 			  ?Debug("Not rew ~p~n~p~n", 
 			      [LocUrl, ProxyUrl]),
 			  H#headers.location
 		  end
 	  end,
+    ?Debug("New loc=~p~n", [Loc]),
 
-    %% WE should try to handle broken relative Location: paths 
     %% And we also should do cookies here ... FIXME
 
     H#headers{location = Loc}.
+
+
+%% Rewrite a properly formatted location redir
+rewrite_loc_url(SC, LocUrl, PS) ->
+    Scheme = yaws_server:redirect_scheme(SC),
+    RedirHost = yaws_server:redirect_host(SC, PS#psock.r_host),
+    RealPath = LocUrl#url.path,
+    [Scheme, RedirHost, PS#psock.prefix ++  LocUrl#url.path].
+
+
+%% This is the case for broken webservers that reply with
+%% Location: /path
+%% or even worse, Location: path
+
+rewrite_loc_rel(SC, PS, Loc) ->
+    Scheme = yaws_server:redirect_scheme(SC),
+    RedirHost = yaws_server:redirect_host(SC, PS#psock.r_host),
+    [Scheme, RedirHost,Loc].
+
 
 
 
