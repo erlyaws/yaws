@@ -140,14 +140,9 @@ all(DirName) ->
     
 out(A) ->
     Dir = A#arg.appmod_prepath,
-    case Dir of
-	"/home/www/media/" ++ _ ->
-	    YPid = self(),
-	    spawn_link(fun() -> zip(YPid, Dir) end),
-	    {streamcontent, "application/zip", ""};
-	_ ->
-	    {html, "not found"}
-    end.
+    YPid = self(),
+    spawn_link(fun() -> zip(YPid, Dir) end),
+    {streamcontent, "application/zip", ""}.
 
 zip(YPid, Dir) ->
     process_flag(trap_exit, true),
