@@ -275,8 +275,7 @@ gen_err(C, _LineNo, NumChars, Err) ->
 
 comp_err(C, _LineNo, NumChars, Err) ->
     case Err of
-	[{_FileName, [ErrInfo|_]} |_] ->
-	    {Line0, Mod, E}=ErrInfo,
+	[{_FileName, [ {Line0, Mod, E} |_]} |_] when integer(Line0) ->
 	    Line = Line0 + C#comp.startline - 9,
 	    ?Debug("XX ~p~n", [{_LineNo, Line0}]),
 	    Str = io_lib:format("~s:~w:~n ~s\n", 
@@ -287,7 +286,7 @@ comp_err(C, _LineNo, NumChars, Err) ->
 	    yaws:elog("Dynamic compiler err ~s", [Str]),
 	    {error, NumChars,  HtmlStr};
 	_Other ->
-	    yaws:elog("Dynamic compile error", []),
+	    yaws:elog("Dynamic compile error ~p", [Err]),
 	    {error, NumChars, ?F("<pre> Compile error - "
 				 "Other err ~p</pre>~n", [Err])}
     end.
