@@ -4,16 +4,25 @@
 out(A) -> 
     H = yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]),
     Q = A#arg.querydata,
-    P = yaws_api:parse_post_data(A),
+    P = yaws_api:parse_query(A),
     io:format("P = ~p~n", [P]),
     L = case lists:keysearch(page, 1, P) of
-	    {value, {page, Page0}} ->
-		case lists:any(fun(C) -> lists:member(C, Page) end,
-			       "\n$$\\!#%^&*()[]~\"'`<>|") of
-		    true -> 
-			"illegal character detected in query arg";
+	    {value, {page, Page}} ->
+		%% only allow regular chars in Page
+		case lists:all(fun(C) ->
+				       if
+					   $a =< C, C =< $z ->
+					       true;
+					   $A =< C, C =< $Z ->
+					       true;
+					   true ->
+					       false
+				       end
+			       end, Page) of
+		    true ->
+			os:cmd("man " ++ Page ++ " | col -b");
 		    false ->
-			os:cmd("man " ++ Page ++ " | col -b")
+			"illegal character detected in query arg"
 		end;
 	    false ->
 		"no man page found in query arg "
