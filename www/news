@@ -1,5 +1,6 @@
 Fri Apr 16, 2004 Version 1.45 released
 Minor bugfix release fixing up the some odd bugs introduced in the 1.43 rewite.
+
 Mar 18, 2004 Version 1.43 released
 This is a major release. Not so much for added functionality as for internal rewrites of the code. The release contains the following:
 Compression support using zlib. Still experimental. (cshultz)
