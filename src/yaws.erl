@@ -684,8 +684,38 @@ is_prefix(_,_) ->
     false.
 
     
+%% Split a string of words seperated by Sep into a list of words and
+%% strip off white space.
+%%
+%% HTML semantics are used, such that empty words are omitted.
 
 
+split_sep(undefined, _Sep) ->
+    [];
+split_sep(L, Sep) ->
+    case lists:dropwhile(fun is_space/1, L) of
+	[] -> [];
+	[Sep|T] -> split_sep(T, Sep);
+	[C|T]   -> split_sep(T, Sep, [C], [])
+    end.
+
+split_sep([], _Sep, AccL) ->
+    lists:reverse(AccL);
+split_sep([Sep|T], Sep, AccL) ->
+    split_sep(T, Sep, AccL);
+split_sep([C|T], Sep, AccL) ->
+    split_sep(T, Sep, [C], AccL).
+
+split_sep([], _Sep, AccW, AccL) ->
+    lists:reverse([lists:reverse(lists:dropwhile(fun is_space/1, AccW))|AccL]);
+split_sep([Sep|Tail], Sep, AccW, AccL) ->
+    split_sep(lists:dropwhile(fun is_space/1, Tail), 
+	      Sep, 
+	      [lists:reverse(lists:dropwhile(fun is_space/1, AccW))|AccL]);
+split_sep([C|Tail], Sep, AccW, AccL) ->
+    split_sep(Tail, Sep, [C|AccW], AccL).
+		      
+		    
 
 
 %% imperative out header management
@@ -718,6 +748,9 @@ outh_clear_headers() ->
 
 
 outh_set_static_headers(Req, UT, Headers) ->
+    outh_set_static_headers(Req, UT, Headers, all).
+
+outh_set_static_headers(Req, UT, Headers, Range) ->
     H = get(outh),
     {DoClose, _Chunked} = dcc(Req, Headers),
     H2 = H#outh{
@@ -727,12 +760,20 @@ outh_set_static_headers(Req, UT, Headers) ->
 	   server = make_server_header(),
 	   last_modified = make_last_modified_header(UT#urltype.finfo),
 	   etag = make_etag_header(UT#urltype.finfo),
-	   content_length = make_content_length_header(UT#urltype.finfo),
+	   content_range = make_content_range_header(Range),
+	   content_length = make_content_length_header(
+			      case Range of
+				  all ->
+				      UT#urltype.finfo;
+				  {fromto, From, To, _Tot} ->
+				      To - From + 1
+			      end
+			     ),
 	   content_type = make_content_type_header(UT#urltype.mime),
 	   connection  = make_connection_close_header(DoClose),
 	   doclose = DoClose,
 	   contlen = (UT#urltype.finfo)#file_info.size
-	       },
+	  },
     put(outh, H2).
 
 outh_set_304_headers(Req, UT, Headers) ->
@@ -928,6 +969,13 @@ make_content_type_header(MimeType) ->
     ["Content-Type: ", MimeType, "\r\n"].
 
 
+make_content_range_header(all) ->
+    undefined;
+make_content_range_header({fromto, From, To, Tot}) ->
+    ["Content-Range: bytes ", 
+     integer_to_list(From), $-, integer_to_list(To),
+     $/, integer_to_list(Tot), $\r, $\n].
+
 make_content_length_header(Size) when integer(Size) ->
     ["Content-Length: ", integer_to_list(Size), "\r\n"];
 make_content_length_header(FI) ->
@@ -1011,6 +1059,7 @@ outh_serialize() ->
 	       noundef(H#outh.allow),
 	       noundef(H#outh.last_modified),
 	       noundef(H#outh.etag),
+	       noundef(H#outh.content_range),
 	       noundef(H#outh.content_length),
 	       noundef(H#outh.content_type),
 	       noundef(H#outh.set_cookie),

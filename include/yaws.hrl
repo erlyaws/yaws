@@ -129,6 +129,7 @@
 	  last_modified,
 	  etag,
 	  set_cookie,
+	  content_range,
 	  content_length,
 	  content_type,
 	  transfer_encoding,

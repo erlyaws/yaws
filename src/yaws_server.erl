@@ -1203,20 +1203,57 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    deliver_403(CliSock, Req, GC, SC);
 	regular ->
 	    ETag = yaws:make_etag(UT#urltype.finfo),
-	    case H#headers.if_none_match of
-		undefined ->
-		    yaws:outh_set_static_headers(Req, UT, H),
-		    deliver_file(CliSock, GC, SC, Req, UT);
-		ETag ->
-		    yaws:outh_set_304_headers(Req, UT, H),
-		    deliver_accumulated(CliSock, GC, SC),
-		    case yaws:outh_get_doclose() of
-			true  -> done;
-			false -> continue
-		    end;
+	    Range = case H#headers.if_range of
+			Range_etag = [$"|_] when Range_etag /= ETag ->
+			    all;
+			_ ->
+			    requested_range(H#headers.range, 
+					    (UT#urltype.finfo)#file_info.size)
+		    end,
+	    case Range of
+		error -> deliver_416(CliSock, Req, GC, SC,
+				     (UT#urltype.finfo)#file_info.size);
 		_ ->
-		    yaws:outh_set_static_headers(Req, UT, H),
-		    deliver_file(CliSock, GC, SC, Req, UT)
+		    case H#headers.if_none_match of
+			undefined ->
+			    case H#headers.if_match of
+				undefined -> 				    
+				    yaws:outh_set_static_headers
+				      (Req, UT, H, Range),
+				    deliver_file
+				      (CliSock, GC, SC, Req, UT, Range);
+
+				Line -> 
+				    case lists:member(ETag,
+						      yaws:split_sep(
+							Line, $,)) of
+					true -> 
+					    yaws:outh_set_static_headers
+					      (Req, UT, H, Range),
+					    deliver_file(CliSock, GC, SC, 
+							 Req, UT, Range);
+					false ->
+					    deliver_xxx(CliSock, Req, GC, SC, 
+							412)
+				    end
+			    end;
+			Line ->
+			    case lists:member(ETag,
+					      yaws:split_sep(Line, $,)) of
+				true ->
+				    yaws:outh_set_304_headers(Req, UT, H),
+				    deliver_accumulated(CliSock, GC, SC),
+				    case yaws:outh_get_doclose() of
+					true  -> done;
+					false -> continue
+				    end;
+				false ->
+				    yaws:outh_set_static_headers
+				      (Req, UT, H, Range),
+				    deliver_file(CliSock, GC, SC, Req, 
+						 UT, Range)
+			    end
+		    end
 	    end;
 	yaws ->
 	    yaws:outh_set_dyn_headers(Req, H),
@@ -1432,6 +1469,25 @@ deliver_403(CliSock, Req, GC, SC) ->
 						% Forbidden
     deliver_xxx(CliSock, Req, GC, SC, 403).
     
+deliver_416(CliSock, _Req, GC, SC, Tot) ->
+    B = list_to_binary(["<html><h1>416 ",
+			yaws_api:code_to_phrase(416),
+			"</h1></html>"]),
+    H = #outh{status = 416,
+	      doclose = true,
+	      chunked = false,
+	      server = yaws:make_server_header(),
+	      connection = yaws:make_connection_close_header(true),
+	      content_range = ["Content-Range: */", 
+			       integer_to_list(Tot), $\r, $\n],
+	      content_length = yaws:make_content_length_header(size(B)),
+	      contlen = size(B),
+	      content_type = yaws:make_content_type_header("text/html")},
+    put(outh, H),
+    accumulate_content(B),
+    deliver_accumulated(CliSock, GC, SC),
+    done.
+
 deliver_501(CliSock, Req, GC, SC) ->
 						% Not implemented
     deliver_xxx(CliSock, Req, GC, SC, 501).
@@ -1979,27 +2035,98 @@ ut_close({bin, _}) ->
 ut_close(Fd) ->
     file:close(Fd).
 
-	
 
 
-deliver_file(CliSock, GC, SC, Req, UT) ->
-    if
-	binary(UT#urltype.data) ->
-	    %% cached
-	    deliver_small_file(CliSock, GC, SC, Req, UT);
-	true ->
-	    case (UT#urltype.finfo)#file_info.size of
-		N when N < GC#gconf.large_file_chunk_size ->
-		    deliver_small_file(CliSock, GC, SC, Req, UT);
-		_ ->
-		    deliver_large_file(CliSock, GC, SC, Req, UT)
+
+parse_range(L, Tot) ->
+    case catch parse_range_throw(L, Tot) of
+	{'EXIT', _} ->
+						% error
+	    error;
+	R -> R
+    end.
+
+parse_range_throw(L, Tot) ->
+    case lists:splitwith(fun(C)->C /= $- end, L) of
+	{FromS, [$-|ToS]} -> 
+	    case FromS of
+		[] -> case list_to_integer(ToS) of
+			  I when Tot >= I, I>0 ->
+			      {fromto, Tot-I, Tot-1, Tot}
+		      end;
+		_ -> case list_to_integer(FromS) of
+			 From when From>=0, From < Tot ->
+			     case ToS of
+				 [] -> {fromto, From, Tot-1, Tot};
+				 _ -> case list_to_integer(ToS) of
+					  To when To<Tot ->
+					      {fromto, From, To, Tot};
+					  _ ->
+					      {fromto, From, Tot-1, Tot}
+				      end
+			     end
+		     end
 	    end
     end.
 
-deliver_small_file(CliSock, GC, SC, Req, UT) ->
+			    
+%% This is not exactly what the RFC describes, but we do not want to
+%% deal with multipart/byteranges.
+unite_ranges(all, _) ->
+    all;
+unite_ranges(error, R) ->
+    R;
+unite_ranges(_, all) ->
+    all;
+unite_ranges(R, error) ->
+    R;
+unite_ranges({fromto, F0, T0, Tot},{fromto,F1,T1, Tot}) ->
+    {fromto, 
+     if F0 >= F1 -> F1;
+	true -> F0
+     end,
+     if T0 >= T1 -> T0;
+	true -> T1
+     end,
+     Tot
+    }.
+	 
+	     	
+%% ret:  all | error | {fromto, From, To, Tot}
+requested_range(RangeHeader, TotalSize) ->
+    case yaws:split_sep(RangeHeader, $,) of
+	["bytes="++H|T] ->
+	    lists:foldl(fun(L, R)->
+				unite_ranges(parse_range(L, TotalSize), R)
+			end, parse_range(H, TotalSize), T);
+	_ -> all
+    end.
+
+
+deliver_file(CliSock, GC, SC, Req, UT, Range) ->
+    if
+	binary(UT#urltype.data) ->
+	    %% cached
+	    deliver_small_file(CliSock, GC, SC, Req, UT, Range);
+	true ->
+	    case (UT#urltype.finfo)#file_info.size of
+		N when N < GC#gconf.large_file_chunk_size ->
+		    deliver_small_file(CliSock, GC, SC, Req, UT, Range);
+		_ ->
+		    deliver_large_file(CliSock, GC, SC, Req, UT, Range)
+	    end
+    end.
+
+deliver_small_file(CliSock, GC, SC, Req, UT, Range) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT, urltype}]),
     Fd = ut_open(UT),
-    Bin = ut_read(Fd),
+    case Range of
+	all ->
+	    Bin = ut_read(Fd);
+	{fromto, From, To, Tot} ->
+	    Length = To - From + 1,
+	    <<_:From/binary, Bin:Length/binary, _/binary>> = ut_read(Fd)
+    end,
     close_if_HEAD(Req, fun() ->
 			       deliver_accumulated(CliSock, GC,SC),
 			       ut_close(Fd), throw({ok, 1}) 
@@ -2014,7 +2141,7 @@ deliver_small_file(CliSock, GC, SC, Req, UT) ->
 	    continue
     end.
     
-deliver_large_file(CliSock, GC, SC, Req, UT) ->
+deliver_large_file(CliSock, GC, SC, Req, UT, Range) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT, urltype}]),
     close_if_HEAD(Req, fun() ->
 			       deliver_accumulated(CliSock, GC,SC),
@@ -2022,13 +2149,20 @@ deliver_large_file(CliSock, GC, SC, Req, UT) ->
 		       end),
     deliver_accumulated(CliSock, GC, SC),
     {ok,Fd} = file:open(UT#urltype.fullpath, [raw, binary, read]),
-    send_file(CliSock, Fd, SC, GC),
+    send_file(CliSock, Fd, SC, GC, Range),
     case yaws:outh_get_doclose() of
 	true ->
 	    done;
 	false ->
 	    continue
     end.
+
+
+send_file(CliSock, Fd, SC, GC, all) ->
+    send_file(CliSock, Fd, SC, GC);
+send_file(CliSock, Fd, SC, GC, {fromto, From, To, _Tot}) ->
+    file:position(Fd, {bof, From}),
+    send_file_range(CliSock, Fd, SC, GC, To - From + 1).
 
 
 send_file(CliSock, Fd, SC, GC) ->
@@ -2046,6 +2180,26 @@ send_file(CliSock, Fd, SC, GC) ->
 		    done
 	    end
     end.
+
+send_file_range(CliSock, Fd, SC, GC, Len) when Len > 0 ->
+    {ok, Bin} = file:read(Fd, 
+			  case GC#gconf.large_file_chunk_size of
+			      S when S < Len -> S;
+			      _ -> Len
+			  end
+			 ),
+    send_file_chunk(Bin, CliSock, SC, GC),
+    send_file_range(CliSock, Fd, SC, GC, Len - size(Bin));
+send_file_range(CliSock, Fd, SC, GC, 0) ->
+    file:close(Fd),
+    case yaws:outh_get_chunked() of
+	true ->
+	    gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
+	    done;
+	false ->
+	    done
+    end.
+    
 
 send_file_chunk(Bin, CliSock, SC, GC) ->
      case yaws:outh_get_chunked() of
