@@ -190,15 +190,27 @@ the HTTP transaction.
 
 .TP
 \fBparse_query(Arg)\fR
-This function will parse the query part of the URL which the client GETs
+This function will parse the query part of the URL.
 It will return a {Key, Value} list of the items supplied in the query
-part of the URL. This only works with GET requests.
+part of the URL.
+
+.TP
+\fBqueryvar(Arg, VarName)\fR
+This function is automatically included from yaws_api in all
+ .yaws pages. It is used to search for a variable in the 
+querypart of the url. Returns {ok, Val} or undefined.
 
 
 .TP
 \fBparse_post(Arg)\fR
 This function will parse the POST data as supplied from the browser.
 It will return a {Key, Value} list of the items set by the browser.
+
+.TP
+\fBpostvar(Arg, VarName)\fR
+This function is automatically included from yaws_api in all
+ .yaws pages. It is used to search for a variable in the 
+POSTed data from the client. Returns {ok, Val} or undefined.
 
 
 .TP
@@ -436,9 +448,6 @@ Location header. Set the status code.
 Does a redirect to the same Scheme://Host:Port/Path as we
 currently are executing in.
 
-
-
-
 .TP
 \fB{get_more, Cont, State}\fR
 When we are receiving large POSTs we can return this value
@@ -456,6 +465,27 @@ requested.
 Like the above, but supplying an additional deep list of options.  For
 now, the only type of option is \fI{header, H}\fR with the effect of
 accumulating the HTTP header \fIH\fR for page \fIPage\fR.
+
+
+.TP
+\fB{ssi, File, Delimiter, Bindings}\fR
+Server side include File and  macro expansion in File.
+Each occurence of a string, say "xyz", inside File which
+is inside Delimters is replaced with the corresponsing
+value in Bindings. 
+
+Example:
+Delimiter = %%
+
+File contains the string .... %%xyz%%  .....
+
+Bindings contain the tuple {"xyz", "Dingbat"}
+
+The occurence of %%xyz%% in File will be replaced with "Dingbat"
+in the Server side included output.
+
+The {ssi, File, Delimiter, Bindings} statement can also
+occur inside a deep ehtml structure. 
 
 
 .TP

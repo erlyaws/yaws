@@ -260,7 +260,7 @@ new_out_file(Line, C, GC) ->
     io:format(Out, "%%~n%% code at line ~w from file ~s~n%%~n",
 	      [Line, C#comp.infile]),
 
-    io:format(Out, "-import(yaws_api, [f/2, fl/1, parse_post_data/2]). ~n~n", []),
+    io:format(Out, "-import(yaws_api, [f/2, fl/1, postvar/2, queryvar/2]). ~n~n", []),
     io:format(Out, '-include("~s/include/yaws_api.hrl").~n', 
 	      [GC#gconf.yaws_dir]),
     C#comp{outfd = Out,

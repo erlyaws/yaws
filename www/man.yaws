@@ -4,7 +4,7 @@
 out(A) -> 
     H = yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]),
 
-    L = case ?SVAR(A,page) of
+    L = case queryvar(A,page) of
             {ok, Page} ->
 		%% only allow regular chars in Page
 		case lists:all(fun(C) ->

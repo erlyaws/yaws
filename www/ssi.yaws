@@ -64,7 +64,7 @@ out(A) ->
        {p,[], "So this is the way to do when we want to embed dynamic content"
 	" deep inside an ehtml structure, but the content isn't representable"
 	" as ehtml. This is typically the case for dynamically generated "
-	" javascript"}
+	" javascript as well as dynamically generated java applets "}
 
       ]}].
     

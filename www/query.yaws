@@ -45,7 +45,7 @@ pair in the query part of the URL.
 <p> This fairly awkward way of getting at the query (or POST)
 data in the Arg structure was only illustrated for the sake of
 explaining the Arg structure and its fields. It is much easier
-to access query data through the <tt>?VAR(ARG,Key)</tt> macro.
+to access query data through the <tt>queryvar(ARG,Key)</tt> function.
 The above example again:
 
 
@@ -53,7 +53,7 @@ The above example again:
 out(A) ->
 L=" 
     out(A) ->
-        Page = ?VAR(A,page),
+        {ok,Page} = queryvar(A,page),
         L = os:cmd(\"man \" ++ Page ++ \" | col -b\"),
         yaws_api:pre_ssi_string(L, \"man\").
 ",
@@ -63,12 +63,9 @@ yaws_api:pre_ssi_string(L).
 </erl>
 
 
-<p>The <tt>?VAR(ARG,Key)</tt> macro returns the value of the
-variable if it is found in the page. If the varaible is not found
-the <tt>?VAR(ARG,Key)</tt> macro crashes. There is a safe version of
-macro called :<tt>?SVAR(ARG,Key)</tt> which returns either :
-<tt{ok, Value}</tt> or <tt>false</tt>
-
+<p>The <tt>queryvar(ARG,Key)</tt> function returns the value of the
+variable if it is found in the query part of the request. If the variable is not found
+or if the variable is unset, the <tt>queryvar(ARG,Key)</tt> function returns <tt>undefined</tt>. 
 
 
 

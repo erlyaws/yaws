@@ -45,8 +45,12 @@ out(A) ->
 
 
 gen_news(A) ->
-    {ok, Fd} = file:open(A#arg.docroot ++ "/news",[read]),
-    gen_news(Fd, io:get_line(Fd,'')).
+    case file:open(A#arg.docroot ++ "/news",[read]) of
+	{ok, Fd} ->
+	    gen_news(Fd, io:get_line(Fd,''));
+	Err ->
+	    {p,[], f("No news: ~p",[Err])}
+    end.
 
 gen_news(Fd, eof) ->
     [];

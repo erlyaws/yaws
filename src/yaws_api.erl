@@ -16,7 +16,7 @@
 -include("yaws_debug.hrl").
 
 
--export([parse_post_data/1]).
+
 
 
 -export([parse_query/1, parse_post/1, parse_multipart_post/1,
@@ -49,47 +49,17 @@
 -export([ehtml_expand/1, ehtml_expander/1, ehtml_apply/2,
 	ehtml_expander_test/0]).
 
--export([parse_set_cookie/1, format_set_cookie/1]).
+-export([parse_set_cookie/1, format_set_cookie/1, 
+	 postvar/2, queryvar/2]).
+
+%% remove entirely
+-export([parse_post_data/1]).
+
 
 -import(lists, [map/2, flatten/1, reverse/1]).
 
 %% these are a bunch of function that are useful inside
 %% yaws scripts
-
-
-parse_post_data(Arg) ->
-
-    error_logger:info_msg("Warning Warning !!!! function "
-			  "yaws_api:parse_post_data will be removed ", []),
-
-    
-    Headers = Arg#arg.headers,
-    Req = Arg#arg.req,
-    case lists:keysearch('Content-Type', 3, Headers#headers.other) of
-	{value, {_,_,_,_,"multipart/form-data"++Line}} ->
-	    case Arg#arg.cont of
-		{cont, Cont} ->
-		    parse_multipart(
-		      binary_to_list(un_partial(Arg#arg.clidata)),
-		      {cont, Cont});
-		undefined ->
-		    LineArgs = parse_arg_line(Line),
-		    {value, {_, Boundary}} =
-			lists:keysearch(boundary, 1, LineArgs),
-		    parse_multipart(
-		      binary_to_list(un_partial(Arg#arg.clidata)), Boundary)
-	    end;
-	_ ->
-	    case Req#http_request.method of
-		'POST' ->
-		    parse_post_data_urlencoded(un_partial(Arg#arg.clidata));
-		_ ->
-		    %% kinda weird default bahaviour here
-		    parse_post_data_urlencoded(Arg#arg.querydata)
-	    end
-    end.
-	    
-
 
 
 
@@ -1607,3 +1577,29 @@ skip_space([$\t|T]) -> skip_space(T);
 skip_space(T) -> T.
 
 %
+
+
+queryvar(ARG,Key) ->
+    case lists:keysearch(Key,1,yaws_api:parse_query(ARG)) of
+	{value,{_,undefined}} -> undefined;
+	{value,{_,Val}} -> {ok, Val};
+	false -> undefined
+    end.
+
+postvar(ARG, Key) ->
+	case lists:keysearch(Key,1,yaws_api:parse_post(ARG)) of
+            {value, {_,undefined}} -> undefined;
+	    {value,{_,Val}} -> {ok, Val};
+	    false -> undefined
+	end.
+
+
+
+
+parse_post_data(_Arg) ->
+
+    error_logger:info_msg("Error  !!!! function "
+			  "yaws_api:parse_post_data has been removed ", []),
+    exit(removed).
+
+

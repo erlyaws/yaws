@@ -1,47 +1,65 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<HTML>
-<HEAD>
- <meta name="keywords" content="post">
-
-
- <TITLE>Top EE page</TITLE>
-
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-
-</HEAD>
-<BODY BGCOLOR="#C6C6B5" text="#333333">
-
-
-<HTML>
-
-<H1> post.yaws </H1>
-
-<p> This is the <tt>post.yaws</tt>. This yaws file gets invoked with client data.
-This is the data that is submitted from the forms page <a href="form.yaws">form.yaws</a>.
-<p>POST data is naturally organized as a <tt>{Key, Value}</tt> list. A call to
-the function <tt>yaws_api:parse_post_data(A)</tt> will parse the
-POSTed data. 
-
-<pre>
-out(A) -> 
-   L = f("&lt;pre>~n clidata: ~p~n &lt;/pre>", 
-         [yaws_api:parse_post_data(A)]),
-   {html,L}.
-</pre>
-
-<p>Will produce the following output:
-
 <erl>
 
-out(A) -> 
- L = f("<pre>~n clidata: ~p~n </pre>", 
-         [yaws_api:parse_post_data(A)]),
-   {html,L}.
+
+box(Str) ->
+    {'div',[{class,"box"}],
+     {pre,[],Str}}.
+
+fpostvar(A, Key) ->
+    case postvar(A,lang) of
+	undefined -> "None";
+	{ok, Val} -> 
+	    Val
+    end.
+    
+
+out(A) ->
+     [{ssi, "HEAD", [],[]},
+     {ssi, "EXHEAD", [],[]},
+     {ehtml,
+      [{h2, [],"post.yaws"},
+       {p,[],[ "This is the ", {tt, [], "post.yaws"}, " file ",
+	       "This yaws file gets invoked with client data. "
+	       "This is the data that is submitted from the forms page ",
+	       {a, [{href, "form.yaws"}], " form.yaws "}]},
+       
+       {p, [], ["POST data is naturally organized as a ", 
+		{tt, [], "{Key, Value} "}, " list. A call to "
+		"the function ", {tt, [], "yaws_api:parse_post(A) "},
+		" will parse the POSTed data. and return a key/value list "]},
+       box("
+out(A) ->
+    {ehtml, 
+     {pre, [], 
+      io_lib:format('~p', [yaws_api:parse_post(A)])}}.
+"),
+       
+       {p, [], "Produces the following output"},
+
+       box(io_lib:format('~p', [yaws_api:parse_post(A)])),
+       {p, [], ["The natural way to extract the \"Variables\" from "
+                " the posted data is to use the  function (defined in yaws_api.erl) "
+                " called ", {tt,[], "postvar(Arg,Key) "}]},
+       {p, [], "Thus the following erlang code: "},
+       box("
+out(A) ->
+    {ehtml,
+      {p,[], [\"The favourite programming language is \",
+              case postvar(A,lang) of
+                  undefined -> \"None\";
+                  {ok, Val} -> Val
+              end]}}.
+"),
+
+        {p,[], "Produces the following output:"},
+        {hr},
+        {'div',[{class,"box"}],
+          {p,[], ["The favourite programming language is ", 
+                  fpostvar(A,lang)]}}
+
+         ]},
+        {ssi, "END",[],[]}].
+
+
 </erl>
-
-<p> It is up to the yaws programmer to parse this
-structure and extract the data from it.
-
-
-</HTML>
 

@@ -14,7 +14,7 @@
 
 <HTML>
 
-<H1> post.yaws </H1>
+<H1> redirect.yaws </H1>
 
 <p> This a redirection example, the following <a href="redirect2.yaws">redirection url</a> contains the following code in its first <erl> group.
 
