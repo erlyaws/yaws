@@ -21,7 +21,7 @@ template(Node,Root,Data,Modified,Locked) ->
     end,
 
     {ssi,
-     "WikiPreferences.files/template.html", "@@",
+     {rel_path,"WikiPreferences.files/template.html"}, "@@",
      [{"NODE", Node},
       {"ALLREFS", "allRefsToMe.yaws?node="++Node},
       {"HOME", "showPage.yaws?node=home"},
@@ -53,7 +53,7 @@ template2(Root,Title,Header,Data,Locked) ->
     end,
 
     {ssi,
-     "WikiPreferences.files/template_info.html", "@@",
+     {rel_path,"WikiPreferences.files/template_info.html"}, "@@",
      [{"TITLE", Title},
       {"HEADER", Header},
       {"DATA", Data},
