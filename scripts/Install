@@ -27,7 +27,8 @@ if [ -f /etc/gentoo-release ]; then
     install -d ${etcdir}/conf.d/
     cp gentoo/init.d.yaws  ${etcdir}/init.d/yaws
     chmod +x ${etcdir}/init.d/yaws
-    cp gentoo/conf.d.yaws  ${etcdir}/conf.d/yaws
+    cp gentoo/conf.d.yaws ${etcdir}/conf.d/yaws
+
 elif [ -f /etc/redhat-release ]; then
     install -d ${etcdir}/init.d
     cp yaws.init.d ${etcdir}/init.d/yaws
