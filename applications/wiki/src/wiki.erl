@@ -120,10 +120,10 @@ storePage(Params, Root, Prefix) ->
 
 storeNewPage(Params, Root, Prefix) ->
     
-    Page = getopt(node, Params),
+    Page     = getopt(node, Params),
     Password = getopt(password, Params),
-    Email0 = getopt(email, Params),
-    Txt0 = getopt(txt, Params),
+    Email0   = getopt(email, Params),
+    Txt0     = getopt(txt, Params),
     
     Txt = zap_cr(urlencoded2str(Txt0)),
     Email = urlencoded2str(Email0),
@@ -138,7 +138,7 @@ storeNewPage(Params, Root, Prefix) ->
 storeTagged(Params, Root, Prefix) ->
 
     Page = getopt(node, Params),
-    Tag = getopt(tag, Params),
+    Tag  = getopt(tag, Params),
     Txt0 = getopt(txt, Params),
 
     Txt = zap_cr(urlencoded2str(Txt0)),

@@ -5,6 +5,6 @@ out(Arg) ->
     {abs_path, P} = (Arg#arg.req)#http_request.path,
     Path = yaws_api:url_decode(P),
     Prefix = wiki_yaws:get_path_prefix(Path),
-    wiki:getFile(yaws_api:parse_post_data(Arg), WikiRoot, Prefix).
+    wiki:getFile(wiki_yaws:parse_post_data(Arg), WikiRoot, Prefix).
 
 </erl>
