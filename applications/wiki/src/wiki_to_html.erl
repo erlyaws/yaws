@@ -8,6 +8,8 @@
 -export([format_wiki/3, format_link/2, format_wiki_files/4,
 	format_wiki_files/5]).
 
+-include_lib("kernel/include/file.hrl").
+
 -import(lists, [member/2, map/2]).
 
 format_wiki_files(Page, FileDir, [], Root) -> [];
@@ -41,22 +43,26 @@ format_link({editTag, Tag}, Page, Root) ->
     ["<a href=\"editTag.yaws?node=",Page,"&tag=",i2s(Tag),"\">",
      "<img border=0 src='edit.gif'></a> "].
 
-format_link({file, FileName, _}, FileDir, Page, Root) ->
-    ["<tr><td valign=top align=left><a href=\"",
-     wiki:str2urlencoded(FileDir),
-     "/", wiki:str2urlencoded(FileName),"\">",
-%     wiki:fileencoded2str(FileName),
-     FileName,
-     "</a> </td><td valign=top align=left>",  "</td></tr>\n"];
+format_link({file, FileName, C}, FileDir, Page, Root) ->
+    format_link({file, FileName, "", C}, FileDir, Page, Root);
 
 format_link({file, FileName, Description, _}, FileDir, Page, Root) ->
+    Size = get_filesize(filename:join([Root,FileDir,FileName])),
     ["<tr><td valign=top align=left><a href=\"",
      wiki:str2urlencoded(FileDir),
-     "/", wiki:str2urlencoded(FileName),"\">",
-%     wiki:fileencoded2str(FileName),
-     FileName,
+     "/", wiki:str2urlencoded(FileName),"\" title='",Size,"'>",
+     FileName, 
      "</a></td><td align=left valign=top>",
      Description, "</td></tr>\n"].
+
+get_filesize(File) ->
+    case file:read_file_info(File) of
+	{ok, FileInfo} ->
+	    Size = FileInfo#file_info.size/1024,
+	    io_lib:format("~.1fKB",[Size]);
+	_ -> "unknown"
+    end.
+    
 
 i2s(X) ->
     integer_to_list(X).
@@ -80,7 +86,7 @@ open(Color, Args, F, Stuff) ->
     wiki:show({bad_open_tag,Args}).
 
 is_file(File) ->
-    case file:file_info(File) of
+    case file:read_file_info(File) of
         {ok, _} ->
             true;
         _ ->

@@ -299,7 +299,7 @@ addFileInit(Params, Root, Prefix) ->
 
 addFile(Arg, Root, Prefix) ->
     State = prepare_addFile_state(Arg#arg.state, Root, Prefix),
-    case yaws_api:parse_post_data(Arg) of
+    case yaws_api:parse_multipart_post(Arg) of
 	{cont, Cont, Res} ->
 	    case addFileChunk(Res, State) of
 		{done, Result} ->
