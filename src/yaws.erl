@@ -685,6 +685,11 @@ to_lower([]) ->
     [].
 
 
+to_integer(I) when list(I) ->
+    list_to_integer(I);
+to_integer(I) when integer(I) ->
+    I.
+
 
 funreverse(List, Fun) ->
     funreverse(List, Fun, []).

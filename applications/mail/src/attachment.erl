@@ -11,12 +11,23 @@
 out(A) ->
     case mail:check_session(A) of
 	{ok, Session} ->
-	    L = yaws_api:parse_query(A),
-	    {value, {_,Nr}} = lists:keysearch(nr,1,L),
-	    mail:send_attachment(Session, list_to_integer(Nr));
+	    case yaws_api:queryvar(A, nr) of
+		{ok, Nr} ->
+		    mail:send_attachment(Session, yaws:to_integer(Nr));
+		_ ->
+		    err()
+	    end;
 	Error ->
-	    Error
+	    err()
     end.
 
+
+err() ->
+    [{status, 404},
+     {header, {connection, "close"}}].
+
+     
+     
+     
 
 
