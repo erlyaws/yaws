@@ -173,7 +173,8 @@ send(Session, A) ->
 		    {get_more, Cont, NewState};
 		{error, Reason} ->
 		    {ehtml,
-		     format_error("Failed to send email. Reason: "++Reason)}
+		     format_error("Failed to send email. Reason: "++
+				  to_string(Reason))}
 	    end;
 	{result, Res} ->
 	    case catch sendChunk(Res, State#send{last=true}) of
@@ -183,7 +184,8 @@ send(Session, A) ->
 		    {ehtml,format_error("Failed to send email.")};
 		{error, Reason} ->
 		    {ehtml,
-		     format_error("Failed to send email. Reason: "++Reason)}
+		     format_error("Failed to send email. Reason: "++
+				  to_string(Reason))}
 	    end
     end.
 
@@ -530,7 +532,7 @@ showmail(Session, MailNr, Count) ->
 	    {error, Reason} ->
 		case string:str(lowercase(Reason), "lock") of
 		    0 ->
-			format_error(Reason);
+			format_error(to_string(Reason));
 		    N ->
 			sleep(?RETRYTIMEOUT),
 			showmail(Session, MailNr, Count-1)
@@ -588,7 +590,7 @@ list_msg(Session, Refresh, Sort, Count) ->
 	{error, Reason} ->
 	    case string:str(lowercase(Reason), "lock") of
 		0 ->
-		    {ehtml,format_error(Reason)};
+		    {ehtml,format_error(to_string(Reason))};
 		N ->
 		    sleep(?RETRYTIMEOUT),
 		    list_msg(Session, Refresh, Sort, Count-1)
@@ -1941,6 +1943,12 @@ check_diff(_) -> false.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+to_string(Atom) when atom(Atom) ->
+    atom_to_list(Atom);
+to_string(Integer) when integer(Integer) ->
+    integer_to_list(Integer);
+to_string(List) -> List.
 
 format_error(Reason) ->
     [build_toolbar([{"","mail.yaws","Close"}]),
