@@ -54,6 +54,7 @@
 %% server conf
 -record(sconf,
 	{port = 8000,                %% which port is this server listening to
+	 rhost,                      %% forced redirect host (+ optional port)
 	 rmethod,                    %% forced redirect method
 	 docroot,                    %% path to the docs
 	 access_log = true,          %% log acces 

@@ -1259,6 +1259,14 @@ redirect_scheme(SC) ->
 	    "https://"
     end.    
 
+redirect_host(SC, HostHdr) ->
+    case SC#sconf.rhost of
+	undefined ->
+	    HostHdr;
+	_ ->
+	    SC#sconf.rhost
+    end.
+
 redirect_port(SC) ->
     case {SC#sconf.ssl, SC#sconf.port} of
 	{undefined, 80} ->
@@ -1630,7 +1638,8 @@ handle_out_reply({redirect_local, Path0}, _LineNo, _YawsFile, SC, A) ->
     Scheme = redirect_scheme(SC),
     Arg = hd(A),
     Headers = Arg#arg.headers,
-    Loc = ["Location: ", Scheme, Headers#headers.host, Path, "\r\n"],
+    HostPort = redirect_host(SC, Headers#headers.host),
+    Loc = ["Location: ", Scheme, HostPort, Path, "\r\n"],
     OH = get(outh),
     new_redir_h(OH, Loc),
     ok;

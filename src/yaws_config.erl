@@ -378,6 +378,9 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		_ ->
 		    {error, ?F("Expect http or https at line ~w", [Lno])}
 	    end;
+	["rhost", '=', Val] ->
+	    C2 = C#sconf{rhost = Val},
+	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 	["listen", '=', IP] ->
 	    case yaws:parse_ip(IP) of
 		error ->
