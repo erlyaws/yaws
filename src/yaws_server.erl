@@ -1269,6 +1269,7 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT, N) ->
     Bin = ut_read(Fd),
     DCC = req_to_dcc(Req),
     make_dyn_headers(DCC, Req),
+    make_non_cache_able(Req#http_request.version),
     close_if_HEAD(Req, fun() ->
 			       deliver_accumulated(DCC, CliSock,GC,SC),
 			       do_tcp_close(CliSock, SC), 
@@ -1820,8 +1821,9 @@ static_do_close(Req, H) ->
 make_dyn_headers(DCC, Req) ->
     make_date_header(),
     make_server_header(),
-    make_connection_close(DCC#dcc.doclose),
-    make_non_cache_able(Req#http_request.version).
+    make_connection_close(DCC#dcc.doclose).
+
+
 
 
 make_x_pad() ->
