@@ -23,7 +23,7 @@ out(A) ->
 <li> TRACE, PUT, OPTIONS ......
 <li> optimize with some precalculated headers
 <li> documentation in the www directory
-<li> cache pages in memory, cache filedescriptors 
+<li> cache pages in memory, cache filedescriptors  (done Feb 12, didn't help much)
 <li> cache headers ... (done Feb 7)
 <li> remove all filename:join .... calls, they suck (done Feb 6)
 <li> error codes
