@@ -1571,6 +1571,24 @@ ret_reg_split(DR, Comps, RevFile, Query) ->
 		     mime=Mime, q=Query};
 	{ok, FI} when FI#file_info.type == directory ->
 	    maybe_return_dir(DR, lists:flatten(Dir) ++ File);
+	{error, enoent} ->
+	    %% kind of hackish, defer url decode 
+	    Dir2 = lists:flatmap(fun(X) -> yaws_api:url_decode(X) end, Dir),
+	    File2 = yaws_api:url_decode(File),
+	    L2 = [DR, Dir2, File2],
+	    case prim_file:read_file_info(L) of
+		{ok, FI} when  FI#file_info.type == regular ->
+		    {X, Mime} = suffix_type(RevFile),
+		    #urltype{type=X, 
+			     finfo=FI,
+			     dir = Dir2,
+			     fullpath = lists:flatten(L2),
+			     mime=Mime, q=Query};
+		{ok, FI} when FI#file_info.type == directory ->
+		    maybe_return_dir(DR, lists:flatten(Dir2) ++ File2);
+		Err ->
+		    #urltype{type=error, data=Err}
+	    end;
 	Err ->
 	    #urltype{type=error, data=Err}
     end.

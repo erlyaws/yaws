@@ -61,10 +61,6 @@ list_head() ->
     "<hr> \n".
 
 
-% produce a string like
-%     <img SRC="/icons/layout.gif" ALT="[   ]"> <a HREF="iSD_SSL_3.0.1_beta1_Application_Guide_011206.pdf">iSD_SSL_3.0.1_beta1_..&gt;</a> 17-Dec-2001 19:06   1.3M  
-
-
 file_entry({ok, FI}, DirName, Name) ->
     ?Debug("file_entry(~p) ", [Name]),
     Ext = filename:extension(Name),

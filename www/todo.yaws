@@ -11,6 +11,7 @@ out(A) ->
 
 <ul>
 
+<li> clusters 
 <li> handle the If-..... headers 
 <li> generate Etag for static content
 <li> handle Range header

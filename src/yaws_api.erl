@@ -293,4 +293,11 @@ find_cookie_val3([H|T], Ack) ->
 
 
 
+url_decode([$%, Hi, Lo | Tail]) ->
+    Hex = yaws:hex_to_integer([Hi, Lo]),
+    [Hex | url_decode(Tail)];
+url_decode([H|T]) ->
+    [H |url_decode(T)];
+url_decode([]) ->
+    [].
 

@@ -39,52 +39,8 @@ out(A) ->
    {ok,L}.
 </erl>
 
-<p>Above, we got all the <tt>Value</tt> arguments as strings, however
-it is also possible to let the parser coerce data types of the posted data.
-
-<p>In this specific case we know the expected type of the arguments posted from
-the form. If <a href="form.yaws">back</a> back to the forms page, we can see that
-the arguments are
-<ol>
-<li> string    (the "lang" field)
-<li> checkbox  (the "imperative" field)
-<li> integer   (the "tabs" field)
-<li> checkbox  (the "os1" field)
-<li> checkbox  (the "os2" field)
-<li> checkbox  (the "os3" field)
-<li> string    (the "other" field)
-<li> string    (the "contact" field)
-</ol>
-
-<p>Since we know the types we expect in the form, we can indicate that to
-the <tt>parse_post_data/2</tt> function as in the following code:
-
-
-<pre>
-out(A) -> 
-   Spec = [string, checkbox, integer,
-           checkbox, checkbox, checkbox,
-           string, string],
-   L = f("&lt;pre>~n clidata: ~p~n &lt;/pre>", 
-         [yaws_api:parse_post_data(A#arg.clidata, Spec)]),
-   {ok,L}.
-</pre>
-
-<p>
-
-
-This will produce the following output:
-
-<erl>
-out(A) -> 
-   Spec = [string, checkbox, int,
-           checkbox, checkbox, checkbox,
-           string, string],
-   L = f("~n<pre>~n clidata: ~p~n </pre>", 
-         [yaws_api:parse_post_data(A#arg.clidata, Spec)]),
-   {ok,L}.
-</erl>
-
+<p> It is up to the yaws programmer to parse this
+structure and extract the data from it.
 
 
 </HTML>

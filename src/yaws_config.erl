@@ -72,8 +72,10 @@ exists(F) ->
 
 
 validate_cs(GC, Cs) ->
+    ?Debug("Cs ~p~n", [Cs]),
     L = lists:map(fun(SC) -> {{SC#sconf.listen, SC#sconf.port}, SC} end,Cs),
     L2 = lists:map(fun(X) -> element(2, X) end, lists:sort(L)),
+    ?Debug("L2 ~p~n", [L2]),
     L3 = arrange(L2, start, [], []),
     ?Debug("Arrange: ~p", [L3]),
     case validate_groups(L3) of
@@ -127,14 +129,14 @@ arrange([C|Tail], start, [], B) ->
 arrange([], _, [], B) ->
     B;
 arrange([], _, A, B) ->
-    [A|B];
+    [A | B];
 arrange([C1|Tail], {in, C0}, A, B) ->
     if
 	C1#sconf.listen == C0#sconf.listen,
 	C1#sconf.port == C0#sconf.port ->
 	    arrange(Tail, {in, C0}, [C1|A], B);
 	true ->
-	    arrange(Tail, {in, C1}, [], [A|B])
+	    arrange(Tail, {in, C1}, [C1], [A|B])
     end.
 
 
@@ -145,7 +147,7 @@ make_default_gconf() ->
 	   ebin_dir = [filename:join([Y, "examples/ebin"])],
 	   include_dir = [filename:join([Y, "examples/include"])],
 	   logdir = ".",
-	   yaws = "Yaws 0.2"}.
+	   yaws = "Yaws " ++ yaws_vsn:version()}.
 
 
 make_default_sconf() ->

@@ -12,6 +12,9 @@ out(A) ->
 <table border="2">
 
 
+<tr><td> Jun 10, use prim_file instead of file: calls, fix a bug
+with iso 8859 chars in urls, virthost bug </td></tr>
+
 <tr><td> May 26, added SSL support  0.40 </td> </tr>
 
  <tr><td> Mar 29, fixed a bug in the log wrapping which restarted the server</td></tr>
