@@ -4,9 +4,9 @@
 -include_lib("yaws/include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
--export([call_cgi/4, call_cgi/3, call_cgi/2]).
+-export([call_cgi/5, call_cgi/4, call_cgi/3, call_cgi/2]).
 
--export([cgi_worker/5]).
+-export([cgi_worker/6]).
 
 
 % TO DO:  Handle failure and timeouts.
@@ -23,12 +23,15 @@
 % Note however, that they usually generate stream content.
 
 call_cgi(Arg, Scriptfilename) ->				     
-    call_cgi(Arg, undefined, Scriptfilename, undefined).
+    call_cgi(Arg, undefined, Scriptfilename, undefined, []).
 
 call_cgi(Arg, Exefilename, Scriptfilename) ->
-    call_cgi(Arg, Exefilename, Scriptfilename, undefined).
+    call_cgi(Arg, Exefilename, Scriptfilename, undefined, []).
 
 call_cgi(Arg, Exefilename, Scriptfilename, Pathinfo) ->
+    call_cgi(Arg, Exefilename, Scriptfilename, Pathinfo, []).
+
+call_cgi(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv) ->
     case Arg#arg.state of
 	{cgistate, Worker} ->
 	    case Arg#arg.cont of
@@ -41,7 +44,8 @@ call_cgi(Arg, Exefilename, Scriptfilename, Pathinfo) ->
 		    exit(normal)
 	    end;
 	_ ->
-	    Worker = start_worker(Arg, Exefilename, Scriptfilename, Pathinfo),
+	    Worker = start_worker(Arg, Exefilename, Scriptfilename, 
+				  Pathinfo, ExtraEnv),
 	    handle_clidata(Arg, Worker)
     end.
 
@@ -68,7 +72,7 @@ send_clidata(Worker, Data) ->
     end.
 
 
-start_worker(Arg, Exefilename, Scriptfilename, Pathinfo) ->
+start_worker(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv) ->
     ExeFN = case Exefilename of 
 		undefined -> Scriptfilename;
 		"" -> Scriptfilename;
@@ -79,7 +83,7 @@ start_worker(Arg, Exefilename, Scriptfilename, Pathinfo) ->
 	     OK -> OK
 	 end,
     Worker = spawn(?MODULE, cgi_worker, 
-		   [self(), Arg, ExeFN, Scriptfilename, PI]),
+		   [self(), Arg, ExeFN, Scriptfilename, PI, ExtraEnv]),
     Worker.
 
 
@@ -162,7 +166,7 @@ get_socket_peername(Socket) ->
     yaws:fmt_ip(IP).
 
 
-cgi_env(Arg, Scriptfilename, Pathinfo) ->
+cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv) ->
     H = Arg#arg.headers,
     R = Arg#arg.req,
     case R#http_request.path of
@@ -179,39 +183,42 @@ cgi_env(Arg, Scriptfilename, Pathinfo) ->
 	       end,
     PeerAddr = get_socket_peername(Arg#arg.clisock),
     Scriptname = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
-    lists:filter(fun(X)->case X of {_,L} when list(L)->true;_->false end end,
-      ([
-       {"SERVER_SOFTWARE", "Yaws/"++yaws_vsn:version()},
-       {"SERVER_NAME", Hostname},
-       {"GATEWAY_INTERFACE", "CGI/1.1"},
-       {"SERVER_PROTOCOL", 
-	lists:flatten(
-	  ["HTTP/",integer_to_list(Maj),".",integer_to_list(Min)])},
-	{"SERVER_PORT", Hostport},
-	{"REQUEST_METHOD", yaws:to_list(R#http_request.method)},
-	{"REQUEST_URI", RequestURI},
-	{"PATH_INFO", checkdef(Pathinfo)},
-	% {"SCRIPT_FILENAME", ??? }
-	{"PATH_TRANSLATED", Scriptfilename},    % This seems not to
+    ExtraEnv ++
+	lists:filter(
+	  fun(X)->case X of {_,L} when list(L)->true;_->false end 
+	  end,
+	  ([
+	    {"SERVER_SOFTWARE", "Yaws/"++yaws_vsn:version()},
+	    {"SERVER_NAME", Hostname},
+	    {"GATEWAY_INTERFACE", "CGI/1.1"},
+	    {"SERVER_PROTOCOL", 
+	     lists:flatten(
+	       ["HTTP/",integer_to_list(Maj),".",integer_to_list(Min)])},
+	    {"SERVER_PORT", Hostport},
+	    {"REQUEST_METHOD", yaws:to_list(R#http_request.method)},
+	    {"REQUEST_URI", RequestURI},
+	    {"PATH_INFO", checkdef(Pathinfo)},
+						% {"SCRIPT_FILENAME", ??? }
+	    {"PATH_TRANSLATED", Scriptfilename},    % This seems not to
 						% correspond to the
 						% documentation I have
 						% read, but it works
 						% with PHP.
-	{"SCRIPT_NAME", Scriptname},
-       %{"REMOTE_HOST", ""},  We SHOULD send this
-	{"REMOTE_ADDR", PeerAddr},
-       %{"AUTH_TYPE", ""},    Fixme:  We MUST send this, but I don't
-				% understand it.
-	%{"REMOTE_USER", ""},
-	{"QUERY_STRING", checkdef(Arg#arg.querydata)},
-	{"CONTENT_TYPE", H#headers.content_type},
-	{"CONTENT_LENGTH", H#headers.content_length},
-	{"HTTP_ACCEPT", H#headers.accept},
-	{"HTTP_USER_AGENT", H#headers.user_agent},
-	{"HTTP_COOKIE", flatten_val(make_cookie_val(H#headers.cookie))}
-       ]++lists:map(fun({http_header,_,Var,_,Val})->{tohttp(Var),Val} end,
-		    H#headers.other)
-      )).
+	    {"SCRIPT_NAME", Scriptname},
+						%{"REMOTE_HOST", ""},  We SHOULD send this
+	    {"REMOTE_ADDR", PeerAddr},
+						%{"AUTH_TYPE", ""},    Fixme:  We MUST send this, but I don't
+						% understand it.
+						%{"REMOTE_USER", ""},
+	    {"QUERY_STRING", checkdef(Arg#arg.querydata)},
+	    {"CONTENT_TYPE", H#headers.content_type},
+	    {"CONTENT_LENGTH", H#headers.content_length},
+	    {"HTTP_ACCEPT", H#headers.accept},
+	    {"HTTP_USER_AGENT", H#headers.user_agent},
+	    {"HTTP_COOKIE", flatten_val(make_cookie_val(H#headers.cookie))}
+	   ]++lists:map(fun({http_header,_,Var,_,Val})->{tohttp(Var),Val} end,
+			H#headers.other)
+	  )).
 
 tohttp(X) ->
     "HTTP_"++lists:map(fun tohttp_c/1, yaws:to_list(X)).
@@ -297,8 +304,8 @@ get_resp(Hs, Worker) ->
     end.
 
 
-cgi_worker(Parent, Arg, Exefilename, Scriptfilename, Pathinfo) ->
-    Env = cgi_env(Arg, Scriptfilename, Pathinfo),
+cgi_worker(Parent, Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv) ->
+    Env = cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv),
     ?Debug("~p~n", [Env]),
     CGIPort = open_port({spawn, Exefilename},
 			[{env, Env}, 
