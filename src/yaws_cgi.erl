@@ -110,7 +110,7 @@ get_from_worker(Arg, Worker) ->
 filter2(Pred, Xs) ->
     filter2(Pred, Xs, [], []).
 
-filter2(Pred, [], Ts, Fs) ->
+filter2(_Pred, [], Ts, Fs) ->
     {lists:reverse(Ts), lists:reverse(Fs)};
 filter2(Pred, [X|Xs], Ts, Fs) ->
     case Pred(X) of
@@ -140,12 +140,26 @@ checkdef(undefined) ->
 checkdef(L) ->
     L.
 
-drop_prefix([], L) ->
+
+
+deep_drop_prefix([], L) ->
     L;
-drop_prefix([X|Xs], [X|Ys]) ->
-    drop_prefix(Xs, Ys);
-drop_prefix(_, _) ->
+deep_drop_prefix([X|Xs], [X|Ys]) when integer(X) ->
+    deep_drop_prefix(Xs, Ys);
+deep_drop_prefix([X|Xs], Ys) when list(X) ->
+    deep_drop_prefix(X++Xs, Ys);
+deep_drop_prefix(Xs, [Y|Ys]) when list(Y) ->
+    deep_drop_prefix(Xs, Y++Ys);
+deep_drop_prefix(_, _) ->
     false.
+
+
+get_socket_peername(Socket={sslsocket,_,_}) ->
+    {ok, {IP, _Port}}=ssl:peername(Socket),
+    yaws:fmt_ip(IP);
+get_socket_peername(Socket) ->
+    {ok, {IP, _Port}}=inet:peername(Socket),
+    yaws:fmt_ip(IP).
 
 
 cgi_env(Arg, Scriptfilename, Pathinfo) ->
@@ -163,7 +177,8 @@ cgi_env(Arg, Scriptfilename, Pathinfo) ->
 		   [$: | P] -> P;
 		   [] -> "80"
 	       end,
-    Scriptname = drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
+    PeerAddr = get_socket_peername(Arg#arg.clisock),
+    Scriptname = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
     lists:filter(fun(X)->case X of {_,L} when list(L)->true;_->false end end,
       ([
        {"SERVER_SOFTWARE", "Yaws/"++yaws_vsn:version()},
@@ -184,10 +199,10 @@ cgi_env(Arg, Scriptfilename, Pathinfo) ->
 						% with PHP.
 	{"SCRIPT_NAME", Scriptname},
        %{"REMOTE_HOST", ""},  We SHOULD send this
-       %{"REMOTE_ADDR", ""},  Fixme:  We MUST send this, but don't have it
+	{"REMOTE_ADDR", PeerAddr},
        %{"AUTH_TYPE", ""},    Fixme:  We MUST send this, but I don't
-						% understand it.
-       %{"REMOTE_USER", ""},
+				% understand it.
+	%{"REMOTE_USER", ""},
 	{"QUERY_STRING", checkdef(Arg#arg.querydata)},
 	{"CONTENT_TYPE", H#headers.content_type},
 	{"CONTENT_LENGTH", H#headers.content_length},
@@ -243,19 +258,19 @@ pathof(F) ->
 % We almost always generate stream content.
 % Actually, we could do away with `content' altogether.
 
-do_header(Arg, "Content-type: "++CT, {partial_data, Data}) ->
+do_header(_Arg, "Content-type: "++CT, {partial_data, Data}) ->
     {streamcontent, CT, Data};
-do_header(Arg, "Content-type: "++CT, {all_data, Data}) ->
+do_header(_Arg, "Content-type: "++CT, {all_data, Data}) ->
     {content, CT, Data};
-do_header(Arg, "Content-Type: "++CT, {partial_data, Data}) ->
+do_header(_Arg, "Content-Type: "++CT, {partial_data, Data}) ->
     {streamcontent, CT, Data};
-do_header(Arg, "Content-Type: "++CT, {all_data, Data}) ->
+do_header(_Arg, "Content-Type: "++CT, {all_data, Data}) ->
     {content, CT, Data};
-do_header(Arg, "Location: "++Loc, _) ->
+do_header(_Arg, "Location: "++Loc, _) ->
     {redirect_local, {any_path, Loc}};
-do_header(Arg, "Status: "++[N1,N2,N3|_], _) ->
+do_header(_Arg, "Status: "++[N1,N2,N3|_], _) ->
     {status, list_to_integer([N1,N2,N3])};
-do_header(Arg, Line, _) ->
+do_header(_Arg, Line, _) ->
     {header, Line}.    % Is this correct?
 
 
@@ -276,8 +291,8 @@ get_resp(Hs, Worker) ->
 	    {Hs, {partial_data, Data}};
 	{Worker, failure, _} ->
 	    {[], undef};
-        Other ->
- 	    ?Debug("~p~n", [Other]),
+        _Other ->
+ 	    ?Debug("~p~n", [_Other]),
 	    get_resp(Hs, Worker)
     end.
 
@@ -346,11 +361,11 @@ data_loop(Pid, Port) ->
  	    ?Debug("~p~n", [{data, binary_to_list(Data)}]),
 	    yaws_api:stream_chunk_deliver_blocking(Pid, Data),
 	    data_loop(Pid, Port);
-	{Port, {exit_status, Status}} ->
- 	    ?Debug("~p~n", [{exit_status, Status}]),	    
+	{Port, {exit_status, _Status}} ->
+ 	    ?Debug("~p~n", [{exit_status, _Status}]),	    
 	    yaws_api:stream_chunk_end(Pid);
-        Other ->
- 	    ?Debug("~p~n", [Other]),
+        _Other ->
+ 	    ?Debug("~p~n", [_Other]),
 	    data_loop(Pid, Port)
     end.
     
@@ -366,8 +381,8 @@ get_line({start, Port}) ->
 	{Port, {exit_status, Status}} when Status /=0 ->
  	    ?Debug("~p~n", [{exit_status, Status}]),
 	    {failure, {exit_status, Status}};
-        Other ->
- 	    ?Debug("~p~n", [Other]),	    
+        _Other ->
+ 	    ?Debug("~p~n", [_Other]),	    
 	    get_line({start, Port})
     end;
 get_line(State) ->
@@ -392,11 +407,11 @@ add_cgi_resp(Bin, Port) ->
     receive
 	{Port, {data,Data}} ->
 	    {middle, <<Bin/binary, Data/binary>>, Port};
-	{Port, {exit_status, Status}} ->
- 	    ?Debug("~p~n", [{exit_status, Status}]),	    
+	{Port, {exit_status, _Status}} ->
+ 	    ?Debug("~p~n", [{exit_status, _Status}]),	    
 	    {ending, Bin, Port};
-        Other ->
- 	    ?Debug("~p~n", [Other]),
+        _Other ->
+ 	    ?Debug("~p~n", [_Other]),
 	    add_cgi_resp(Bin, Port)
     end.
 

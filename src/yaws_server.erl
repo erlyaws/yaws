@@ -545,7 +545,7 @@ initial_acceptor(GS=#gs{ssl=nossl})->
 initial_acceptor(GS=#gs{ssl=ssl}) ->
     initial_acceptor(GS, 5).
 
-initial_acceptor(GS, 0) ->
+initial_acceptor(_GS, 0) ->
     ok;
 initial_acceptor(GS, 1) ->
     acceptor(GS);
@@ -732,7 +732,7 @@ deepforeach(F, X) ->
 
 fix_abs_uri(Req, H) ->
     case Req#http_request.path of
-	{absoluteURI, Scheme, Host0, Port, RawPath} ->
+	{absoluteURI, _Scheme, Host0, Port, RawPath} ->
 	    Host = case Port of
 		       P when integer(P) ->
 			   Host0 ++ [$: | integer_to_list(P)];
@@ -1655,9 +1655,9 @@ send_streamcontent_chunk({Z, Priv}, CliSock, Data) ->
     {Z, P}.
 
 
-sync_streamcontent(discard, CliSock) ->
+sync_streamcontent(discard, _CliSock) ->
     discard;
-sync_streamcontent(undeflated, CliSock) ->
+sync_streamcontent(undeflated, _CliSock) ->
     undeflated;
 sync_streamcontent({Z, Priv}, CliSock) ->
     ?Debug("syncing~n", []),
@@ -1680,7 +1680,7 @@ end_streaming(undeflated, CliSock) ->
     done_or_continue();
 end_streaming({Z, Priv}, CliSock) ->
     ?Debug("end_streaming~n", []),
-    {ok, P, Data} = yaws_zlib:gzipDeflate(Z, Priv, <<>>, finish),
+    {ok, _P, Data} = yaws_zlib:gzipDeflate(Z, Priv, <<>>, finish),
     {Size, Chunk} = make_final_chunk(Data),
     yaws:outh_inc_act_contlen(Size),
     yaws:gen_tcp_send(CliSock, Chunk),
@@ -1763,7 +1763,7 @@ handle_out_reply(L, LineNo, YawsFile, UT, A) when list (L) ->
 
 
 %% yssi, yaws include
-handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, [ARG]) ->
+handle_out_reply({yssi, Yfile}, _LineNo, YawsFile, UT, [ARG]) ->
     SC = get(sc),
     UT2 = url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile]),
     case UT2#urltype.type of
@@ -1811,7 +1811,7 @@ handle_out_reply({streamcontent, MimeType, First},
     yaws:outh_set_content_type(MimeType),
     {streamcontent, MimeType, First};
 
-handle_out_reply(Res = {page, Page},
+handle_out_reply(Res = {page, _Page},
 		 _LineNo,_YawsFile, _UT, _A) ->
     Res;
 
@@ -2699,7 +2699,7 @@ check_comps([Pair |Tail], Comps) ->
 				      
 split_at(_, [], _Ack) ->
     false;
-split_at(AM={PE, Mod}, [PEslash|Tail], Ack) ->
+split_at(AM={PE, _Mod}, [PEslash|Tail], Ack) ->
     case no_slash_eq(PE, PEslash) of
 	true ->
 	    {ok, lists:reverse(Ack), AM, Tail};
