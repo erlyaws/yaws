@@ -1,3 +1,331 @@
+2003-08-25 12:06  cschultz
+
+	* doc/yaws.tex, man/yaws_api.5, src/yaws_api.erl: 
+	Make call_cgi available in yaws_api.
+
+2003-08-25 11:31  cschultz
+
+	* src/yaws_server.erl: [no log message]
+
+2003-08-25 11:29  cschultz
+
+	* include/yaws_api.hrl: 
+	comment to arg record field `pathinfo'
+
+2003-08-24 22:09  cschultz
+
+	* doc/Makefile: Call LaTeX twice.
+
+2003-08-24 22:08  cschultz
+
+	* doc/yaws.tex: arg record out value `page' configuration variable
+	`allowed_scripts' CGI chapter
+
+2003-08-24 17:56  cschultz
+
+	* man/yaws.1: -S, -load, -check
+
+2003-08-24 17:55  cschultz
+
+	* man/yaws_api.5: Changes to arg record, {page, {Options, Page}},
+	comment on returning a list of values.
+
+2003-08-24 17:53  cschultz
+
+	* man/yaws.conf.5: option allowed_scripts
+
+2003-08-23 22:52  cschultz
+
+	* src/yaws.erl: Minor optimization in split_sep.
+
+2003-08-23 17:07  cschultz
+
+	* src/yaws_cgi.erl: Correctly(?) combine several Cookie headers.
+
+2003-08-23 16:38  cschultz
+
+	* src/yaws_ssl.erl: Better header parsing (again), plus a small
+	optimization.
+
+2003-08-23 16:33  cschultz
+
+	* src/yaws.erl: Added function strip_spaces to go with is_space.
+
+2003-08-21 21:39  jbevemyr
+
+	* applications/wiki/scripts/Makefile: Fixed make install problem
+	for wiki
+
+2003-08-19 16:07  klacke
+
+	* scripts/: Install, darwin/README, darwin/Yaws.StartupItem,
+	darwin/Yaws.plist: Darwin /etc scripts support supplied by Eric
+	Baur
+
+2003-08-16 11:42  klacke
+
+	* config.guess, config.sub, configure, configure.in: darwin support
+	in configure scripts
+
+2003-08-16 11:41  klacke
+
+	* src/mime_type_c.erl: recursion bug
+
+2003-08-11 16:57  cschultz
+
+	* src/yaws_cgi.erl: 
+	
+	Now works with partial_post_size set.
+
+2003-08-11 16:54  cschultz
+
+	* src/yaws_server.erl: 
+	
+	Minor changes to get_client_data.
+
+2003-08-07 01:53  cschultz
+
+	* src/yaws_server.erl: 
+	
+	Fixed yet another ssl related bug.
+
+2003-08-06 20:03  cschultz
+
+	* src/yaws_cgi.erl: 
+	
+	Added variable HTTP_COOKIE.
+
+2003-08-05 22:27  cschultz
+
+	* src/yaws_ssl.erl: Report connection closure istead of `exit'ing.
+
+2003-08-03 18:54  cschultz
+
+	* src/yaws_server.erl: 
+	
+	Yaws files and appmods can return {page, {Options, Page}} instead
+	of {page, Page}.  Options is (an option or) a deep list of options.
+	 At the moment an option is {header, Header}.  I thought this might
+	be useful for Vary or Content-Location headers.
+
+2003-08-01 17:04  cschultz
+
+	* src/: yaws_ls.erl, yaws_server.erl: Mainly new HEAD request
+	handling.
+
+2003-08-01 17:01  cschultz
+
+	* src/yaws.erl: [no log message]
+
+2003-08-01 16:57  cschultz
+
+	* src/yaws_cgi.erl: Bug fix:  Don't assume headers.host is defined.
+
+2003-07-30 23:13  cschultz
+
+	* src/yaws.erl: 
+	Bug fix regarding my last ci: When sending partial content, set
+	status code to 206 accordingly.
+
+2003-07-30 22:55  cschultz
+
+	* src/yaws_server.erl: 
+	More faithful access logs in connection with {page, ...}.
+
+2003-07-30 22:11  cschultz
+
+	* include/yaws.hrl, src/yaws.erl, src/yaws_server.erl: 
+	For GETs on regular files:
+	
+	Added support for Content-Range, If-Range, If-Match, expanded
+	support for If-None-Match.
+
+2003-07-29 14:05  cschultz
+
+	* src/yaws_server.erl: [no log message]
+
+2003-07-26 00:14  cschultz
+
+	* src/: yaws_server.erl, yaws_ssl.erl: 
+	
+	Answer bad requests.
+
+2003-07-23 22:59  cschultz
+
+	* src/yaws_ssl.erl: 
+	Do not let SSL process die on unrecognized request.
+
+2003-07-23 22:58  cschultz
+
+	* src/yaws_server.erl: [no log message]
+
+2003-07-23 22:48  cschultz
+
+	* src/yaws_server.erl: 
+	For forbidden script types return 403, not 404.
+
+2003-07-22 11:49  cschultz
+
+	* include/yaws.hrl, src/yaws_config.erl, src/yaws_server.erl: 
+	
+	Made allowed script types (yaws, php, cgi) configurable.
+
+2003-07-21 18:24  cschultz
+
+	* src/yaws_cgi.erl: Return more headers
+
+2003-07-19 14:51  cschultz
+
+	* src/yaws_cgi.erl: Accept different capitalizations of
+	`Content-type'.
+
+2003-07-17 01:16  cschultz
+
+	* include/yaws.hrl, include/yaws_api.hrl, src/Makefile,
+	src/mime_type_c.erl, src/yaws_cgi.erl, src/yaws_server.erl: 
+	
+	Added CGI and PHP support.  Also for a request like	
+	/a/b/c.xxx/d/e with xxx being one of `yaws', `cgi' or `php' and
+	c.xxx being a plain file, /a/b/c.xxx is called with
+	Arg#arg.pathinfo, respectively the environment variable PATH_INFO,
+	set to `/d/e'.
+
+2003-07-17 01:09  cschultz
+
+	* src/yaws_ls.erl: 
+	Do not show full path.
+
+2003-07-17 01:06  cschultz
+
+	* scripts/yaws.ss, src/yaws_ctl.erl: 
+	Added command `-load' to yaws script.
+
+2003-07-17 01:04  cschultz
+
+	* src/: yaws.erl, yaws_ticker.erl: 
+	
+	Moved ticker function to separate module to ease purging of module
+	`yaws'.
+
+2003-07-16 17:16  cschultz
+
+	* src/yaws_server.erl: Some code clean-up.
+
+2003-07-15 03:33  cschultz
+
+	* src/yaws_ssl.erl: Made header parsing more robust with respect to
+	capitalizations.
+
+2003-07-15 00:14  cschultz
+
+	* src/yaws_server.erl: Fixed bug with SSL and post data
+
+2003-07-14 00:46  jbevemyr
+
+	* applications/wiki/src/wiki.erl: Improved speed of thumbs in
+	slideshow
+
+2003-07-13 01:31  cschultz
+
+	* include/yaws.hrl, src/yaws.erl, src/yaws_server.erl: 
+	Log file size for dynamic pages.
+
+2003-07-13 01:17  cschultz
+
+	* src/yaws_ssl.erl: Make sure the whole header is received.  Added
+	more header parsing.
+
+2003-07-13 01:12  cschultz
+
+	* src/yaws.erl: Changed etag function.
+
+2003-07-13 00:13  lpsmith
+
+	* include/yaws_api.hrl: Added the field server_path, which will
+	store the parsed and normalized path of the request string.  This
+	is in preparation for some significant clean-ups of the
+	yaws_server.erl code.
+
+2003-07-12 05:25  lpsmith
+
+	* src/yaws_api.erl: Improved path handling:  path_norm/1 removes
+	all occurences of double slashes and the directories "." and "..". 
+	url_decode_q_split now calls this function on the path that it
+	returns.
+	
+	This is to fix a variety of www-authenticate related security bugs.
+	 Previously,  it was possible to access any www-auth protected
+	directory by inserting a "/./" before the directory, i.e. by
+	requesting "/./confidential/file.html".
+
+2003-07-12 01:40  lpsmith
+
+	* src/yaws_404.erl: 
+	Fixed Cross-Site Scripting vunerability by html-quoting the path
+	displayed in the error message.
+
+2003-07-09 22:25  jbevemyr
+
+	* applications/wiki/src/: wiki.erl, wiki_format_txt.erl: Added auto
+	viewing of slides.
+
+2003-07-09 21:33  jbevemyr
+
+	* applications/wiki/src/wiki.erl: Minor slide show enhancement.
+
+2003-07-09 20:00  jbevemyr
+
+	* applications/wiki/scripts/updateWiki.src: [no log message]
+
+2003-07-09 19:57  jbevemyr
+
+	* applications/wiki/: src/wiki.erl, wiki/getMidSize.yaws,
+	wiki/getThumb.yaws, wiki/thumbIndex.yaws: Added thumbnail index to
+	slideshow and scaling of images in slideshow using convert
+
+2003-07-03 03:03  jbevemyr
+
+	* src/yaws_log.erl: Log format fix
+
+2003-06-27 15:16  jbevemyr
+
+	* src/yaws_config.erl: Fixed server sorting bug
+
+2003-06-25 17:07  jbevemyr
+
+	* src/yaws_api.erl: Fixed set cookie problem with lynx
+
+2003-06-23 17:26  klacke
+
+	* src/yaws_server.erl: ""
+
+2003-06-23 16:07  klacke
+
+	* src/yaws_server.erl: return last value of the list returned from
+	out/1
+
+2003-06-23 12:19  klacke
+
+	* src/: yaws_config.erl, yaws_log.erl: missing integer_conversion
+	in ssl conf depth and verify
+
+2003-06-23 12:15  klacke
+
+	* src/yaws_log.erl: setuid code had broken
+
+2003-06-17 12:57  klacke
+
+	* src/: yaws.erl, yaws_server.erl: possibility to turn off
+	transfer-encoding: chunked and explicitly set content length
+
+2003-06-01 21:25  klacke
+
+	* www/index.yaws: ""
+
+2003-06-01 21:25  klacke
+
+	* ChangeLog: 1.22 checkin
+
 2003-06-01 20:35  klacke
 
 	* doc/yaws.pdf: ""
@@ -12,8 +340,9 @@
 
 	* configure, configure.in, vsn.mk, scripts/Install,
 	scripts/Makefile, scripts/ntpath.sh, scripts/yaws.init.d,
-	scripts/yaws.ss, scripts/suse/yaws.init.d, src/yaws_config.erl,
-	src/yaws_server.erl: cvs fixes + install scripts gentoo/suse/redhat
+	scripts/yaws.ss, scripts/redhat/yaws.init.d,
+	scripts/suse/yaws.init.d, src/yaws_config.erl, src/yaws_server.erl:
+	cvs fixes + install scripts gentoo/suse/redhat
 
 2003-05-24 15:36  jbevemyr
 
