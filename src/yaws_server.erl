@@ -656,26 +656,6 @@ pick_host(GC, Host, [], Group) ->
     hd(Group).
 
 
-
-pick_host_rport(GC, Host, [H|T], Group) when integer(H#sconf.rport) ->
-    % check if Host matches servername : rport
-    Name = servername_sans_port(H#sconf.servername),
-    ServerName =
-	case H#sconf.rport of
-	    80  -> Name;
-	    443 -> Name;
-	    _   -> Name++[$:|integer_to_list(H#sconf.rport)]
-	end,
-    if
-	Host == ServerName ->  H;
-	Host /= ServerName -> pick_host_rport(GC, Host, T, Group)
-    end;
-pick_host_rport(GC, Host, [_|T], Group) ->
-    pick_host_rport(GC, Host, T, Group);
-pick_host_rport(GC, Host, [], Group) ->
-    hd(Group).
-
-
 inet_peername(Sock, SC) ->
     case SC#sconf.ssl of
 	undefined ->
@@ -1041,7 +1021,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	forbidden ->
 	    deliver_403(CliSock, Req, GC, SC);
 	redir_dir ->
-	     deliver_303(CliSock, Req, GC, SC);
+	     deliver_303(CliSock, Req, GC, SC, ARG);
 	appmod ->
 	    DCC = req_to_dcc(Req),
 	    make_dyn_headers(DCC, Req),
@@ -1084,12 +1064,13 @@ parse_auth(_) ->
 % otherwise the relative urls in /dir/index.html will be broken.
 
 
-deliver_303(CliSock, Req, GC, SC) ->
-    {Scheme, PortPart} = redirect_scheme_port(SC),
+deliver_303(CliSock, Req, GC, SC, Arg) ->
     set_status_code(303),
+    Scheme = redirect_scheme(SC),
+    Headers = Arg#arg.headers,
     accumulate_header(["Location: ", Scheme,
-		       servername_sans_port(SC#sconf.servername), 
-		       PortPart, decode_path(Req#http_request.path), "/"]),
+		       Headers#headers.host, 
+		       decode_path(Req#http_request.path), "/"]),
     
     deliver_accumulated(#dcc{}, CliSock, GC, SC),
     done.
@@ -1105,16 +1086,14 @@ redirect_scheme(SC) ->
     end.    
 
 redirect_port(SC) ->
-    case {SC#sconf.ssl, SC#sconf.port, SC#sconf.rport} of
-	{_,_,ForcePort} when integer(ForcePort) ->
-               [$:|integer_to_list(ForcePort)];
-	{undefined, 80, _}                      ->
+    case {SC#sconf.ssl, SC#sconf.port} of
+	{undefined, 80} ->
                "";
-	{undefined, Port, _}                    -> 
+	{undefined, Port} -> 
                [$:|integer_to_list(Port)];
-	{_SSL, 443, _}                          ->
+	{_SSL, 443} ->
                "";
-	{_SSL, Port, _}                         -> 
+	{_SSL, Port} -> 
                [$:|integer_to_list(Port)]
     end.    
 
@@ -1480,14 +1459,7 @@ handle_out_reply({redirect_local, Path0}, _DCC, _LineNo, _YawsFile, SC, A) ->
     Arg = hd(A),
     Headers = Arg#arg.headers,
     set_status_code(redirect_code(A)),
-    if 
-	SC#sconf.rport /= undefined ->
-	    Port = redirect_port(SC),
-	    accumulate_header(["Location: ", Scheme,
-			       servername_sans_port(Headers#headers.host), Port, Path]);
-	true ->
-	    accumulate_header(["Location: ", Scheme, Headers#headers.host, Path])
-    end,
+    accumulate_header(["Location: ", Scheme, Headers#headers.host, Path]),
     ok;
 
 handle_out_reply({redirect, URL}, _DCC, _LineNo, _YawsFile, _SC, A) ->
