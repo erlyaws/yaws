@@ -616,7 +616,7 @@ setcookie(Name, Value, Path, Expire, Domain, _Secure) ->
 	           true -> " Domain="++Domain++";"
 	        end,
     SetExpire = if Expire == [] -> "";
-	           true -> " Expires=\""++Expire++"\";"
+	           true -> " Expires="++Expire++";"
                 end,
     SetPath = if Path == [] -> "/";
                  true -> Path
