@@ -13,8 +13,7 @@
 start() ->
     application:start(yaws),
     GC = yaws_config:make_default_gconf(false),
-    SC = #sconf{access_log = true,
-		port = 8888,
+    SC = #sconf{port = 8888,
 		servername = "foobar",
 		listen = {0,0,0,0},
 		docroot = "/tmp"},
