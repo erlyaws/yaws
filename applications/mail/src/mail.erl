@@ -31,11 +31,15 @@
 -record(mail,
 	{
 	  from="",
+	  from_fmt="",
 	  to="",
 	  cc="",
 	  bcc="",
 	  subject="",
+	  subject_fmt="",
 	  date="",
+	  date_pst=date(),
+	  date_fmt="",
 	  content_type,
 	  transfer_encoding,
 	  content_disposition,
@@ -68,6 +72,7 @@
 	  passwd,
 	  cookie,
 	  listing,
+	  sorting=rev_nr,
 	  attachments = []   %% list of #satt{} records
 	 }).
 
@@ -548,12 +553,12 @@ showmail(Session, MailNr, Count) ->
 	}
        ]}]).
 
-list(Session, Refresh) ->
-    list_msg(Session, Refresh, ?RETRYCOUNT).
+list(Session, {Refresh,Sort}) ->
+    list_msg(Session, Refresh, Sort, ?RETRYCOUNT).
 
-list_msg(Session, Refresh, 0) ->
+list_msg(Session, Refresh, Sort, 0) ->
     format_error("Mailbox locked by other mail process.");
-list_msg(Session, Refresh, Count) ->
+list_msg(Session, Refresh, Sort, Count) ->
     tick_session(Session#session.cookie),
     OldList = Session#session.listing,
     Listing =
@@ -564,6 +569,14 @@ list_msg(Session, Refresh, Count) ->
 	   true ->
 		OldList
 	end,
+    Sorting =
+	case Sort of
+	    undefined ->
+		Session#session.sorting;
+	    _ ->
+		set_sorting(Session#session.cookie, Sort),
+		Sort
+	end,
     case Listing of
 	{error, Reason} ->
 	    case string:str(lowercase(Reason), "lock") of
@@ -571,7 +584,7 @@ list_msg(Session, Refresh, Count) ->
 		    format_error(Reason);
 		N ->
 		    sleep(?RETRYTIMEOUT),
-		    list_msg(Session, Refresh, Count-1)
+		    list_msg(Session, Refresh, Sort, Count-1)
 	    end;
 	H when Refresh == true ->
 	    set_listing(Session#session.cookie, H),
@@ -627,25 +640,118 @@ list_msg(Session, Refresh, Count) ->
 			   {width,"100%"}],
 		   [{tr, [{bgcolor,"c0c0c0"},{valign,middle}],
 		     [{th,[{align,left},{valign,middle},{class,head}],
-		       {font,[{size,2},{color,black}],"Nr"}},
+		       {font,[{size,2},{color,black}],
+			sort_href("nr",Sorting,"Nr")}},
 		      {th,[{class,head}],
 		       {img,[{src,"view-mark.gif"},{width,13},
 			     {height,13}],[]}},
 		      {th,[{align,left},{valign,middle},{class,head}],
-		       {font,[{size,2},{color,black}],"From"}},
+		       {font,[{size,2},{color,black}],
+			sort_href("from",Sorting,"From")}},
 		      {th,[{align,left},{valign,middle},{class,head}],
-		       {font,[{size,2},{color,black}],"Subject"}},
+		       {font,[{size,2},{color,black}],
+			sort_href("subject",Sorting,"Subject")}},
 		      {th,[{align,left},{valign,middle},{class,head}],
-		       {font,[{size,2},{color,black}],"Date"}},
+		       {font,[{size,2},{color,black}],
+			sort_href("date",Sorting,"Date")}},
 		      {th,[{align,left},{valign,middle},{class,head}],
-		       {font,[{size,2},{color,black}],"Size"}}]}] ++
-		   format_summary(H)},
+		       {font,[{size,2},{color,black}],
+			sort_href("size",Sorting,"Size")}}]}] ++
+		   format_summary(H,Sorting)},
 		  {input,[{type,hidden},{name,cmd},{value,""}],[]}
 		 ]}]}])
     end.
 
-format_summary(Hs) ->
-    [format_summary_line(H) || H <- Hs].
+
+sort_href(Sort, Cur, Text) when atom(Cur) ->
+    sort_href(Sort, atom_to_list(Cur), Text);
+sort_href(Sort, Sort, Text) ->
+    [{a, [{href,"mail.yaws?sort=rev_"++Sort}], Text},
+     {img, [{src,"up.gif"}]}];
+sort_href(Sort, "rev_"++Sort, Text) ->
+    [{a, [{href,"mail.yaws?sort="++Sort}], Text},
+     {img, [{src,"down.gif"}]}];
+sort_href(Sort, Cur, Text) ->
+    {a, [{href,"mail.yaws?sort="++Sort}], Text}.
+
+
+sort_href(Sort, Cur) when atom(Cur) ->
+    sort_href(Sort, atom_to_list(Cur));
+sort_href(Sort, "rev_"++Cur) ->
+    "mail.yaws?sort="++Sort;
+sort_href(Sort, Sort) ->
+    "mail.yaws?sort=rev_"++Sort;
+sort_href(Sort, Cur) ->
+    "mail.yaws?sort="++Sort.
+
+format_summary(Hs,Sorting) ->
+    SHs = sort_summary(Hs, Sorting),
+    [format_summary_line(H) || H <- SHs].
+
+sort_summary(Hs, Sorting) ->
+    lists:sort(fun(A,B) ->
+		       summary_compare(A,B,Sorting)
+	       end, Hs).
+
+summary_compare(A, B, rev_from) ->
+    not(summary_compare(A, B, from));
+
+summary_compare(A, B, rev_date) ->
+    not(summary_compare(A, B, date));
+
+summary_compare(A, B, rev_subject) ->
+    not(summary_compare(A, B, subject));
+
+summary_compare(A, B, rev_nr) ->
+    not(summary_compare(A, B, nr));
+
+summary_compare(A, B, rev_size) ->
+    not(summary_compare(A, B, size));
+
+summary_compare(A,B,size) ->
+    Sa = A#info.size,
+    Sb = B#info.size,
+    if Sa < Sb -> true;
+       Sa > Sb -> false;
+       true -> summary_compare(A,B,date)
+    end;
+summary_compare(A,B,from) ->
+    Ha = A#info.headers,
+    Hb = B#info.headers,
+    if Ha#mail.from_fmt < Hb#mail.from_fmt ->
+	    true;
+       Ha#mail.from_fmt == Hb#mail.from_fmt ->
+	    summary_compare(A,B,date);
+       true -> false
+    end;
+summary_compare(A,B,subject) ->
+    Ha = A#info.headers,
+    Hb = B#info.headers,
+    case summary_compare_subject(Ha#mail.subject_fmt,
+				 Hb#mail.subject_fmt) of
+	true  ->  true;
+	eq    ->  summary_compare(A,B,date);
+	false ->  false
+    end;
+summary_compare(A,B,date) ->
+    Ha = A#info.headers,
+    Hb = B#info.headers,
+    Ha#mail.date_pst < Hb#mail.date_pst;
+summary_compare(A,B,_Nr) ->
+    A#info.nr < B#info.nr.
+
+summary_compare_subject(A,B) ->
+    PrefA = lowercase(string:substr(A,1,3)),
+    PrefB = lowercase(string:substr(B,1,3)),
+    if PrefA == "re:" ->
+	    summary_compare_subject(string:strip(string:substr(A,4)), B);
+       PrefB == "re:" ->
+	    summary_compare_subject(A,string:strip(string:substr(B,4)));
+       A == B ->
+	    eq;
+       true ->
+	    A < B
+    end.
 
 format_summary_line(I) ->
     H = I#info.headers,
@@ -657,14 +763,14 @@ format_summary_line(I) ->
        {input, [{type,checkbox},{name,I#info.nr},{value,yes}],[]}},
       {td, [{nowrap,true},{align,left},{valign,top},{class,"List"}],
        {a, [{href,"showmail.yaws?nr="++integer_to_list(I#info.nr)}],
-	{font,[{size,2},{color,black}],{b,[],format_from(H#mail.from)}}}},
+	{font,[{size,2},{color,black}],{b,[],H#mail.from_fmt}}}},
       {td, [{nowrap,true},{align,left},{valign,top},{class,"List"}],
        {a, [{href,"showmail.yaws?nr="++integer_to_list(I#info.nr)}],
-	{font,[{size,2},{color,black}],{b,[],decode(H#mail.subject)}}}},
+	{font,[{size,2},{color,black}],{b,[],H#mail.subject_fmt}}}},
       {td, [{nowrap,true},{align,left},{valign,top},{class,"List"}],
        {a, [{href,"showmail.yaws?nr="++integer_to_list(I#info.nr)}],
 	{font,[{size,2},{color,black}],
-	 {b,[],format_date(parse_date(H#mail.date))}}}},
+	 {b,[],H#mail.date_fmt}}}},
       {td, [{nowrap,true},{align,left},{valign,top},{class,"List"}],
        {a, [{href,"showmail.yaws?nr="++integer_to_list(I#info.nr)}],
 	{font,[{size,2},{color,black}],{b,[],integer_to_list(I#info.size)}}}}
@@ -880,6 +986,16 @@ set_listing(Cookie, Listing) ->
 	    error
     end.
 
+set_sorting(Cookie, Sorting) ->
+    session_server(),
+    mail_session_manager ! {set_sorting, Cookie, self(), Sorting},
+    receive
+	{session_manager, sorting_added} ->
+	    ok;
+	{session_manager, error} ->
+	    error
+    end.
+
 logout_cookie(Cookie) ->
     session_server(),
     mail_session_manager ! {del_session, Cookie}.
@@ -943,6 +1059,19 @@ session_manager(C0, LastGC0, Cfg) ->
 		{value, {_,Session,_}} ->
 		    S2 = Session#session{listing=Listing},
 		    From ! {session_manager, listing_added},
+		    session_manager(lists:keyreplace(
+				      Cookie, 1, C, {Cookie, S2, now()}),
+				    LastGC, Cfg);
+		false ->
+		    io:format("Error, no session found! ~p\n", [Cookie]),
+		    From ! {session_manager, error},
+		    session_manager(C, LastGC, Cfg)
+	    end;
+	{set_sorting, Cookie, From, Sorting} ->
+	    case lists:keysearch(Cookie, 1, C) of
+		{value, {_,Session,_}} ->
+		    S2 = Session#session{sorting=Sorting},
+		    From ! {session_manager, sorting_added},
 		    session_manager(lists:keyreplace(
 				      Cookie, 1, C, {Cookie, S2, now()}),
 				    LastGC, Cfg);
@@ -1208,12 +1337,18 @@ add_header("content-type", Value, H) ->
     H#mail{content_type = parse_header_value(Value)};
 add_header("content-disposition", Value, H) ->
     H#mail{content_disposition = parse_header_value(Value)};
-add_header("from", Value, H) ->    H#mail{from = Value};
+add_header("from", Value, H) ->    H#mail{from = Value,
+					  from_fmt = format_from(Value)};
 add_header("to", Value, H) ->      H#mail{to = Value};
 add_header("cc", Value, H) ->      H#mail{cc = Value};
 add_header("bcc", Value, H) ->     H#mail{bcc = Value};
-add_header("subject", Value, H) -> H#mail{subject = Value};
-add_header("date", Value, H) ->    H#mail{date = Value};
+add_header("subject", Value, H) -> H#mail{subject = Value,
+					  subject_fmt =
+					  lists:flatten(decode(Value))};
+add_header("date", Value, H) ->    H#mail{date = Value,
+					  date_pst = parse_date(Value),
+					  date_fmt =
+					  format_date(parse_date(Value))};
 add_header(Other, Value, H) ->     H#mail{other = [{Other,Value}|
 						   H#mail.other]}.
 

@@ -9,7 +9,12 @@ out(A) ->
 	             {value, _} -> true;
 	             _          -> false
 	        end,
-	    mail:list(Session, Refresh);
+	    Sort =
+		case lists:keysearch(sort,1,L) of
+	             {value, {_,SortStr}} -> list_to_atom(SortStr);
+	             _                -> undefined
+	        end,
+	    mail:list(Session, {Refresh, Sort});
 	Error ->
 	    Error
     end.

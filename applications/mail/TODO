@@ -1,7 +1,6 @@
 Things to do
 
 	- handle attachments in received emails
-	- handle attachments when sending emails
 	- optionally include old text as quoted text in reply. We
 	  need to select the text part for the quote if the email
 	  is of type multipart/alternative. We select text/html
@@ -13,5 +12,10 @@ Things to do
 	- code outgoing emails as quoted-printable (must limit max
 	  line length to 74 according to RFC ???)
 
+	- Sort by 'From', 'Subject' and 'Nr'
+	- Implement mail forwarding
+	- Support imap mail backend system.
+	- Properly decode encoded attachments.
 
-	  
+	
+
