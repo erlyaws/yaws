@@ -47,8 +47,8 @@ sync_errlog(F, A) ->
 setdir(Dir) ->
     gen_server:call(?MODULE, {setdir, Dir}).
 
-open_trace() ->
-    gen_server:call(?MODULE, open_trace).
+open_trace(What) ->
+    gen_server:call(?MODULE, {open_trace, What}).
 trace_traffic(ServerOrClient , Data) ->
     gen_server:cast(?MODULE, {trace, ServerOrClient, Data}).
 
@@ -109,8 +109,9 @@ handle_call({errlog, F, A}, From, State) when State#state.running == true ->
 handle_call({errlog, F, A}, From, State) when State#state.running == false ->
     {reply, ok, State#state{ack = [{err, F, A} | State#state.ack]}};
 
-handle_call(open_trace, From, State) ->
-    case file:open(filename:join([State#state.dir, "trace"]),[write, raw]) of
+handle_call({open_trace, What}, From, State) ->
+    F = lists:concat(["trace.", What]),
+    case file:open(filename:join([State#state.dir, F]),[write, raw]) of
 	{ok, Fd} ->
 	    {reply, ok, State#state{tracefd = Fd}};
 	Err ->

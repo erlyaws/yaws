@@ -11,6 +11,7 @@ help()
 	echo "       yaws -d         -- debug mode"
 	echo "       yaws -c file    -- set config file"
 	echo "       yaws -t         -- trace all traffic"
+	echo "       yaws -T         -- trace http traffic"
 	exit 1
 }
      
@@ -30,7 +31,9 @@ do
 	   -d)
 		debug=" -boot start_sasl -yaws debug ";;
 	   -t)
-	        trace=" -yaws trace ";;
+	        trace=" -yaws trace traffic ";;
+	   -T)
+	        trace=" -yaws trace http ";;
            -c)
 		conf=" -conf $1 "
 		shift;;
