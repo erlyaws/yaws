@@ -77,20 +77,15 @@ parse_post_data(Arg) ->
 parse_query(Arg) ->
     D = Arg#arg.querydata,
     Req = Arg#arg.req,
-    case Req#http_request.method of
-	'GET' ->
-	    if
-		D == [] ->
-		    yaws_log:errlog("Tried to parse_query with "
-				   "no query data ",[]),
-		    [];
-		true ->
-		    parse_post_data_urlencoded(D)
-	    end;
-	Other ->
-	    yaws_log:errlog("Can't parse url query if we get a ~p",[Other]),
-	    []
+    if
+	D == [] ->
+	    yaws_log:errlog("Tried to parse_query with "
+			    "no query data ",[]),
+	    [];
+	true ->
+	    parse_post_data_urlencoded(D)
     end.
+
 
 %% parse url encoded POST data
 parse_post(Arg) ->
