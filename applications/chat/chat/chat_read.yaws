@@ -1,0 +1,4 @@
+<erl>
+out(A) ->
+	chat:chat_read(A).
+</erl>

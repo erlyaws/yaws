@@ -1,0 +1,23 @@
+<erl>
+out(A) ->
+     case chat:check_session(A) of
+        {ok, Session} ->
+	     chat:dynamic_headers();
+	Error ->
+	     Error++[break]
+     end.
+</erl>
+
+<html>
+
+<script src="chat.js"></script>
+
+<body onload="setTimeout('reader_init()', 0);" onunload="stop_all()">
+<H1> Welcome to the chat room </h1>
+<form action="javascript:sendmsg()">
+<textarea id="msgs" name="msgs" cols=80 rows=25>
+</textarea><br>
+<input id="msg" name="msg" type="text" size="80" value=""
+style='font-family:courier'>
+</form>
+</html>

@@ -1,0 +1,10 @@
+<erl>
+out(A) ->
+ 	case chat:check_session(A) of
+ 	   Session ->
+		chat:chat_write(A);
+ 	   Error ->
+ 	        Error
+         end.
+ 
+</erl>
