@@ -63,6 +63,36 @@ powered by Yaws.
 
 <li>
 <p>
+Sep 2, version 0.54 released.
+
+<ul>
+<li>
+<p> Many fixes in the wikiweb by Johan Bevemyr, I'm now running
+a wikiweb at http://wiki.hyber.org
+
+<li><p>
+Support for HTTP Basic authentication by Sean Hinde
+
+<li><p>
+Better support for HTTP file upload by Johan and Sean
+
+<li><p>
+Support for many more MIME types by compiling a mime.types file by klacke
+
+<li><p>
+Support for OPTIONS http request by Johan Bevemyr
+
+<li><p>
+Lots of non ready code for a webmail app by klacke.
+</ul>
+
+
+
+
+
+
+<li>
+<p>
 July 1, version 0.52 released.
 It contains a complete wiki web written by Johan Bevemyr with original code
 by Joe Armstrong. It also contains a series of minor and major  bugfixes.
