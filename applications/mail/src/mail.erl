@@ -1387,7 +1387,7 @@ ploop(init, State) ->
 	    ploop(user, State2);
 	{error, Reason, State2} ->
 	    State#pstate.from ! {pop_response, {error, Reason}},
-	    gen_tcp:close(State#pstate.port);
+	    pop_close(State#pstate.port);
 	{more, State2} ->
 	    ploop(init, State2)
     end;
@@ -1399,7 +1399,7 @@ ploop(user, State) ->
 	    ploop(pass, State2);
 	{error, Reason, State2} ->
 	    State#pstate.from ! {pop_response, {error, Reason}},
-	    gen_tcp:close(State#pstate.port);
+	    pop_close(State#pstate.port);
 	{more, State2} ->
 	    ploop(user, State2)
     end;
@@ -1409,7 +1409,7 @@ ploop(pass, State) ->
 	    next_cmd(State);
 	{error, Reason, State2} ->
 	    State#pstate.from ! {pop_response, {error, Reason}},
-	    gen_tcp:close(State#pstate.port);
+	    pop_close(State#pstate.port);
 	{more, State2} ->
 	    ploop(pass, State2)
     end;
@@ -1422,6 +1422,15 @@ ploop(sl, State) ->
 					  State2#pstate.reply]});
 	{more, State2} ->
 	    ploop(sl, State2)
+    end;
+ploop(sl_flush, State) ->
+    case receive_reply(State) of
+	{ok, Reply, State2} ->
+	    next_cmd(State2);
+	{error, Reason, State2} ->
+	    next_cmd(State2);
+	{more, State2} ->
+	    ploop(sl_flush, State2)
     end;
 ploop(sized, State) ->
     case receive_reply(State) of
@@ -1477,13 +1486,22 @@ ploop(ml_cont, State) ->
 
 %%
 
-next_cmd(State=#pstate{cmd=Cmd,reply=Reply}) when Cmd==[]->
+next_cmd(State=#pstate{cmd=Cmd,reply=Reply}) when Cmd==quit->
     State#pstate.from ! {pop_response, lists:reverse(Reply)},
     gen_tcp:close(State#pstate.port);
+next_cmd(State=#pstate{cmd=Cmd}) when Cmd==[]->
+    psend("QUIT", State#pstate.port),
+    ploop(sl_flush, State#pstate{cmd=quit});
 next_cmd(State=#pstate{cmd=[Cmd|Cmds]}) ->
     {C,S} = Cmd,
     psend(C, State#pstate.port),
     ploop(S, State#pstate{cmd=Cmds}).
+
+%%
+
+pop_close(Port) ->
+    psend("quit", Port),
+    gen_tcp:close(Port).
 
 %%
 
