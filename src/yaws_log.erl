@@ -69,8 +69,6 @@ trace_traffic(ServerOrClient , Data) ->
 %%          {stop, Reason}
 %%----------------------------------------------------------------------
 init([]) ->
-    yaws:ticker(3000, secs3),
-    yaws:ticker(60 * 1000, minute),
     {ok, #state{running = false, now = fmtnow(), ack = []}}.
 
 %%----------------------------------------------------------------------
@@ -108,10 +106,53 @@ handle_call({setdir, Dir, Sconfs}, _From, State)
 		     ({access, ServerName, Ip, Req, Status, Length}) ->
 			  do_alog(ServerName, Ip, Req, Status, Length, State)
 		  end, State#state.ack),
+
     S2 = State#state{running = true,
 		     ack = [],
 		     dir  = Dir,
+		     now = fmtnow(),
 		     alogs = L},
+
+    yaws:ticker(3000, secs3),
+    yaws:ticker(60 * 1000, minute),
+
+    {reply, ok, S2};
+
+
+
+%% We can't ever change logdir, we can however
+%% change logging opts for various servers
+
+handle_call({setdir, DirIgnore, Sconfs}, _From, State) 
+  when State#state.running == true ->
+
+    Dir = State#state.dir,
+    
+    %% close all files
+    lists:map(
+      fun({Sname, FD, Filename}) ->
+	      file:close(FD)
+      end, State#state.alogs),
+    SCs = lists:flatten(Sconfs),
+    
+    %% reopen logfiles
+    L = lists:zf(
+	  fun(SC) ->
+		  A = filename:join([Dir, SC#sconf.servername ++ ".access"]),
+		  case file:open(A, [write, raw, append]) of
+		      {ok, Fd} ->
+			  {true, {SC#sconf.servername, Fd, A}};
+		      _Err ->
+			  error_logger:format("Cannot open ~p",[A]),
+			  false
+		  end
+	  end, SCs),
+    S2 = State#state{running = true,
+		     ack = [],
+		     dir  = Dir,
+		     now = fmtnow(),
+		     alogs = L},
+    
     {reply, ok, S2};
 
 

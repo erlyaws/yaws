@@ -653,4 +653,9 @@ delete_cookie_session(Cookie) ->
 %% than /etc/yaws.conf, for example from a database
 
 setconf(GC, Groups) ->
-    gen_server:call(yaws_server, {setconf, GC, Groups}).
+    case gen_server:call(yaws_server, {setconf, GC, Groups}) of
+	ok ->
+	    yaws_log:setdir(GC#gconf.logdir, Groups);
+	E ->
+	    E
+    end.

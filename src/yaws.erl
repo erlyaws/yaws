@@ -37,12 +37,11 @@ dohup(Sock) ->
     io:format("in dohup~n", []),
     {Debug, Trace, Conf, RunMod, Embed} = yaws_server:get_app_args(),
     Res = (catch case yaws_config:load(Conf, Trace, Debug) of
-	{ok, Gconf, Sconfs} ->
-	    io:format("Call setconf ~n", []),	  
-	    gen_server:call(yaws_server, {setconf, Gconf, Sconfs});
-	Err ->
-	    Err
-    end),
+		     {ok, Gconf, Sconfs} ->
+			 yaws_api:setconf(Gconf, Sconfs);
+		     Err ->
+			 Err
+		 end),
     gen_tcp:send(Sock, io_lib:format("hupped: ~p~n", [Res])),
     gen_tcp:close(Sock).
     
