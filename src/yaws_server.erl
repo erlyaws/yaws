@@ -494,7 +494,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 		Rnum < 8 ->
 		    gserv_loop(GS2, [From | Ready], Rnum+1, Last)
 	    end;
-	{'EXIT', _Pid, _} ->
+	{'EXIT', Pid, _} ->
 	    case get(top) of
 		Pid -> 
 		    error_logger:format("Top proc died, terminate gserv",[]),
@@ -1041,7 +1041,7 @@ inet_setopts(_,_) ->
 %% so let's log a small entry. I see no good reason to 
 %% play nice and reply to this ...
 
-bad_request(CliSock, _Req, _Head) ->
+bad_request(CliSock, Req, _Head) ->
     From = if
 	       port(CliSock) ->
 		   case inet:peername(CliSock) of
@@ -1058,8 +1058,8 @@ bad_request(CliSock, _Req, _Head) ->
 			   "unknown"
 		   end
 	   end,
-    error_logger:info_msg("Bad req from ~s~n", [From]),
-    exit(normal).
+    error_logger:info_msg("Bad req: ~p from ~s~n", [Req, From]),
+    done.
 
 
 %% ret:  continue | done
