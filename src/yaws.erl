@@ -1041,7 +1041,18 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
 			  false -> identity
 		      end,
     Chunked = Chunked0 and (Length == undefined),
-    DoClose = DoClose0 or ((Length == undefined) and not Chunked),
+    DoClose =
+	if
+	    DoClose0 == true ->
+		true;
+	    DoClose0 == keep_alive ->
+		keep_alive;
+	    ((Length == undefined) and not Chunked) ->
+		true;
+	    true ->
+		DoClose0
+	end,
+
     H2 = H#outh{
 	   status = case Range of
 			all -> 200;
@@ -1098,10 +1109,10 @@ outh_set_dyn_headers(Req, Headers) ->
     put(outh, H2).
 
 
-outh_set_connection_close(Bool) ->
+outh_set_connection(What) ->
     H = get(outh),
-    H2 = H#outh{connection = make_connection_close_header(Bool),
-		doclose = Bool},
+    H2 = H#outh{connection = make_connection_close_header(What),
+		doclose = What},
     put(outh, H2),
     ok.
 
@@ -1140,12 +1151,11 @@ outh_set_transfer_encoding_off() ->
 dcc(Req, Headers) ->
     DoClose = case Req#http_request.version of
 		  {1, 0} -> 
-		      case Headers#headers.keep_alive of
-			  undefined ->
-			      true;
-			  _ ->
-			      false
-		      end;
+		      case Headers#headers.connection of
+			  "close" -> true;
+			  "Keep-Alive" -> keep_alive;
+			  _ -> true                                          
+		      end;              
 		  {1, 1} ->
 		      false;
 		  {0,9} ->
@@ -1255,8 +1265,9 @@ make_content_encoding_header(deflate) ->
 make_connection_close_header(true) ->
     "Connection: close\r\n";
 make_connection_close_header(false) ->
-    undefined.
-
+    undefined;
+make_connection_close_header(keep_alive) ->
+    "Connection: Keep-Alive\r\n".
 
 make_transfer_encoding_chunked_header(true) ->
     "Transfer-Encoding: chunked\r\n";
@@ -1561,7 +1572,6 @@ split_recv(E, _) ->
 	
 cli_recv(S, Num, SslBool) ->
     Res = do_recv(S, Num, SslBool),
-    io:format("Res: ~p~n", [Res]),
     cli_recv_trace((get(gc))#gconf.trace, Res),
     Res.
 
@@ -1680,7 +1690,6 @@ http_recv_request(CliSock) ->
 
 		  
 http_get_headers(CliSock, Req, H) ->
-    io:format("http_get_headers/3~n",[]),
     case cli_recv(CliSock, 0, nossl) of
 	{ok, {http_header,  _Num, 'Host', _, Host}} ->
 	    http_get_headers(CliSock, Req, H#headers{host = Host});

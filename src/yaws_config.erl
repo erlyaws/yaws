@@ -274,7 +274,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 
 
 	%% depracted, don't use
-	["read_timeout", '=', Val] ->
+	["read_timeout", '=', _Val] ->
 	    fload(FD, globals, GC, C, Cs, Lno+1, Next);
 
 	["max_num_cached_files", '=', Val] ->
@@ -507,14 +507,14 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		    {error, ?F("Bad url at line ~p",[Lno])};
 		URL when URL#url.path == "/" ->
 		    P = case lists:reverse(Prefix) of
-			    [$/|Tail] ->
+			    [$/|_Tail] ->
 				Prefix;
 			     Other ->
 				lists:reverse([$/|Other])
 			end,
 		    C2 = C#sconf{revproxy = [{P, URL} | C#sconf.revproxy]},
 		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-		URL ->
+		_URL ->
 		    {error, "Can't revproxy to an URL with a path "}
 	    end;
 	[H|T] ->

@@ -604,7 +604,6 @@ acceptor0(GS, Top) ->
 		_ ->
 		    ok
 	    end,
-	    io:format("aloop~n",[]),
 	    Res = (catch aloop(Client, GS,  0)),
 	    if
 		GS#gs.ssl == nossl ->
@@ -642,7 +641,6 @@ acceptor0(GS, Top) ->
 
 aloop(CliSock, GS, Num) ->
     SSL = GS#gs.ssl,
-    io:format("http_get_headers ~n",[]),
     case  yaws:http_get_headers(CliSock, SSL) of
 	{Req, H} ->
 	    SC = pick_sconf(GS#gs.gconf, H, GS#gs.group, SSL),
@@ -872,7 +870,7 @@ inet_setopts(_,_) ->
 %% so let's log a small entry. I see no good reason to 
 %% play nice and reply to this ...
 
-bad_request(CliSock, Req, Head) ->
+bad_request(CliSock, Req, _Head) ->
     From = if
 	       port(CliSock) ->
 		   case inet:peername(CliSock) of
@@ -1167,7 +1165,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 		    end
 	    end;
 	yaws ->
-	    io:format("~p~n", [?format_record(UT, urltype)]),
+	    ?Debug("~p~n", [?format_record(UT, urltype)]),
 	    yaws:outh_set_dyn_headers(Req, H),
 	    do_yaws(CliSock, ARG, UT, N);
 	forbidden ->
@@ -1533,11 +1531,22 @@ finish_up_dyn_file(CliSock) ->
 	    deliver_accumulated(CliSock),
 	    continue;
 	false ->
-	    case deliver_accumulated(CliSock) of
-		discard -> done_or_continue();
-		_ -> done
-	    end
+	     case yaws:outh_get_doclose() of                                 
+                keep_alive -> 
+		     Len = yaws:outh_get_act_contlen(),
+		     yaws:outh_set_content_length(Len),
+		     discard_deliver_accumulated(CliSock);
+		 _ ->
+		     discard_deliver_accumulated(CliSock)
+	     end
     end.
+
+discard_deliver_accumulated(CliSock) ->
+    case deliver_accumulated(CliSock) of
+	discard -> done_or_continue();
+	_ -> done
+    end.
+
 
 
 
