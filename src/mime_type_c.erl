@@ -11,6 +11,7 @@
 
 %% this module reads the mime.types file and creates
 %% the mod mime_types.erl
+%% default type is text/plain
 
 compile() ->
     R = (catch c()),
@@ -80,7 +81,7 @@ gen(T) ->
       fun({Ext, MT}) ->
 	      io:format(Fd, "t(~p) -> {regular, ~p};~n", [nonl(Ext), MT])
       end, L),
-    io:format(Fd, "t(_) -> {regular, \"application/octet-stream\"}.~n~n~n", []),
+    io:format(Fd, "t(_) -> {regular, \"text/plain\"}.~n~n~n", []),
 
 
 
@@ -91,7 +92,7 @@ gen(T) ->
 			[nonl(lists:reverse(Ext)), MT])
       end, L),
     io:format(Fd, "revt(_) -> {regular, 
-                               \"application/octet-stream\"}.~n~n~n", []).
+                               \"text/plain\"}.~n~n~n", []).
 
     
 		  
