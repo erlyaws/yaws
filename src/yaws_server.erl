@@ -37,7 +37,7 @@
 	     reqs = 0}).    %% number of HTTP requests
 
 
--record(urltype, {type,   %% error | yaws | regular | directory | dotdot|appmod
+-record(urltype, {type,   %% error | yaws | regular | directory | forbidden|appmod
 		  finfo,
 		  path,
 		  fullpath,
@@ -968,7 +968,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	yaws ->
 	    do_yaws(CliSock, GC, SC, Req, H, 
 		    ARG#arg{querydata = UT#urltype.q}, UT, N);
-	dotdot ->
+	forbidden ->
 	    deliver_403(CliSock, Req, GC, SC);
 	redir_dir ->
 	     deliver_303(CliSock, Req, GC, SC);
@@ -1070,8 +1070,7 @@ deliver_401(CliSock, _Req, GC, Realm, SC) ->
 deliver_403(CliSock, _Req, GC, SC) ->
     set_status_code(403),
     make_date_and_server_headers(),
-    B = list_to_binary("<html> <h1> 403 Forbidden, no .. paths "
-		       "allowed  </h1></html>"),
+    B = list_to_binary("<html> <h1> 403 Forbidden</h1></html>"),
     make_connection_close(true),
     make_content_length(size(B)),
     make_content_type(),
@@ -1988,8 +1987,8 @@ do_url_type(SC, Path) ->
     case split_path(SC, Path, [], []) of
 	slash ->
 	    maybe_return_dir(SC#sconf.docroot, lists:flatten(Path));
-	dotdot ->  %% generate 403 forbidden
-	    #urltype{type=dotdot};
+	forbidden ->  %% generate 403 forbidden
+	    #urltype{type=forbidden};
 	redir_dir ->
 	    #urltype{type = redir_dir,
 		     dir = [Path, $/]};
@@ -2036,10 +2035,8 @@ split_path(_SC, [$/], _Comps, []) ->
     slash;
 split_path(SC, [$/, $/ |Tail], Comps, Part) ->  %% security clause
     split_path(SC, [$/|Tail], Comps, Part);
-split_path(SC, [$/, $., $., $/ |Tail], _, [_H|T]) ->  %% security clause
-    split_path(SC, Tail, [], T);
-split_path(_SC, [$/, $., $., $/ |_Tail], _, []) -> %% security clause
-    dotdot;
+split_path(SC, [$/, $., $., $/ |_], _, _) ->  %% security clause
+    forbidden;
 split_path(SC, [], Comps, Part) ->
     ret_reg_split(SC, Comps, Part, []);
 split_path(SC, [$?|Tail], Comps, Part) ->
@@ -2093,7 +2090,7 @@ q_splitpath([H|T], Ack) ->
 
 
 %% http://a.b.c/~user URLs
-ret_user_dir(SC, [], "/", Upath) ->
+ret_user_dir(SC, [], "/", Upath) when SC#sconf.tilde_expand == true ->
     ?Debug("UserPart = ~p~n", [Upath]),
     case parse_user_path(SC#sconf.docroot, Upath, []) of
 	{ok, User, Path} ->
@@ -2113,7 +2110,9 @@ ret_user_dir(SC, [], "/", Upath) ->
 	    end;
 	redir_dir ->
 	    redir_dir
-    end.
+    end;
+ret_user_dir(SC, [], "/", Upath)  ->
+    forbidden.
 
 
 
