@@ -23,7 +23,8 @@
 	  pid,            %% pid of the yaws worker process
 	  opaque,         %% useful to pass static data
 	  appmod_prepath, %% path in front of: <appmod><appmoddata>
-	  pathinfo
+	  pathinfo        %% Set to 'd/e' when calling c.yaws for the request
+                          %% http://some.host/a/b/c.yaws/d/e
 	 }).              
 
 
