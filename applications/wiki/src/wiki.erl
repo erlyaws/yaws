@@ -1231,6 +1231,7 @@ checkPassword(Page, Password, Root, Prefix) ->
 editFiles(Params, Root, Prefix) ->
     Page     = getopt(node, Params),
     Password = getopt(password, Params, ""),
+
     case checkPassword(Page, Password, Root, Prefix) of
 	true ->
 	    editFiles1(Page, Password, Root, Prefix);
@@ -1919,7 +1920,11 @@ getopt(Key, KeyList, Default) ->
 	false ->
 	    Default;
 	{value, Tuple} ->
-	    element(2,Tuple)
+	    Val = element(2,Tuple),
+	    if 
+		Val == undefined -> Default;
+		true -> Val
+	    end
     end.
 
 getopt_options(Key, KeyList) ->
