@@ -15,11 +15,13 @@ EOF
 }
 
 wikisrc=%%wikisrcdir%%
+suffix="."`date -I`
 
 updategifs=
 while [ x$updategifs = x ]; do
    echo
-   echo "Do you want to replace the gifs in WikiPreferences.files? [yes or no] "
+   echo -n "Do you want to replace the gifs in WikiPreferences.files?"\
+	   "[yes or no] "
    read reply leftover
    case $reply in
       y* | Y*)
@@ -33,7 +35,6 @@ done
 
 function updateDir () {
     if test -d $udir ; then
-	suffix="."`date -I`
 	echo "updating  $udir"
 	install -C -b -S $suffix $wikisrc/*.yaws $udir
 	install -C -b -S $suffix $wikisrc/*.wob $udir
