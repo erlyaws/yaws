@@ -240,12 +240,13 @@ validate_date_and_time([Y1,Y2, Mo, D, H, M, S | Diff])
     end;
 validate_date_and_time(_) -> false.
 
+
+
 check_diff([]) -> true;
-check_diff([$+, H, M]) when 0 =< H, H < 12, 0 =< M, M < 60 -> true;
-check_diff([$-, H, M]) when 0 =< H, H < 12, 0 =< M, M < 60 -> true;
+check_diff([$+, H, M]) when 0 =< H, H < 24, 0 =< M, M < 60 -> true;
+check_diff([$-, H, M]) when 0 =< H, H < 24, 0 =< M, M < 60 -> true;
 check_diff(_) -> false.
-
-
+  
 
 %% to_string
 

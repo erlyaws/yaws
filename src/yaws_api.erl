@@ -202,7 +202,7 @@ parse_multipart_post(Arg) ->
 			      binary_to_list(un_partial(Arg#arg.clidata)), 
 			      Boundary)
 		    end;
-		Other ->
+		_Other ->
 		    error_logger:error_msg("Can't parse multipart if we "
 				   "find no multipart/form-data",[]),
 		    []
@@ -735,14 +735,14 @@ start_dir(N, Path, "./"  ++ T ) -> start_dir(N    , Path, T);
 start_dir(N, Path, "../" ++ T ) -> start_dir(N + 1, Path, T);
 start_dir(N, Path,          T ) -> rest_dir (N    , Path, T).
 
-rest_dir (N, Path, []         ) -> case Path of 
+rest_dir (_N, Path, []         ) -> case Path of 
 				       [] -> "/";
 				       _  -> Path
 				   end;
 rest_dir (0, Path, [ $/ | T ] ) -> start_dir(0    , [ $/ | Path ], T);
 rest_dir (N, Path, [ $/ | T ] ) -> start_dir(N - 1,        Path  , T);
 rest_dir (0, Path, [  H | T ] ) -> rest_dir (0    , [  H | Path ], T);
-rest_dir (N, Path, [  H | T ] ) -> rest_dir (N    ,        Path  , T).
+rest_dir (N, Path, [  _H | T ] ) -> rest_dir (N    ,        Path  , T).
 
 %% url decode the path and return {Path, QueryPart}
 
@@ -820,7 +820,7 @@ get_line([H|T], Cur) ->
 
 
 mime_type(FileName) ->
-    case filename:extension(FileName)
+    case filename:extension(FileName) of
 	[_|T] ->
 	    element(2, mime_types:t(T));
 	[] ->
@@ -1320,7 +1320,7 @@ ehtml_expander_compress([H|T], Acc) when integer(H) ->
 %% term.
 ehtml_apply(Expander, Env) -> [ehtml_eval(X, Env) || X <- Expander].
 
-ehtml_eval(Bin, Env) when binary(Bin) -> Bin;
+ehtml_eval(Bin, _Env) when binary(Bin) -> Bin;
 ehtml_eval({Type, Var}, Env) ->
     case lists:keysearch(Var, 1, Env) of
 	false -> exit({ehtml_unbound, Var});
@@ -1392,9 +1392,9 @@ call_cgi(Arg, Exefilename, Scriptfilename) ->
 
 %%
 
-deepmember(C,[]) ->
+deepmember(_C,[]) ->
     false;
-deepmember(C,[C|Cs]) ->
+deepmember(C,[C|_Cs]) ->
     true;
 deepmember(C,[L|Cs]) when list(L) ->
     case deepmember(C,L) of
