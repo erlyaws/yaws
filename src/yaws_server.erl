@@ -121,6 +121,7 @@ init({Debug, Trace, TraceOut, Conf, RunMod, Embedded}) ->
 	    end;
 	true ->
 	    {ok, #state{gc = undefined,
+			embedded = Embedded,
 			pairs = [],
 			mnum = 0}}
     end.
