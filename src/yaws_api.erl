@@ -575,6 +575,8 @@ htmlize_char($<) ->
     <<"&lt;">>;
 htmlize_char($&) ->
     <<"&amp;">>;
+htmlize_char($") ->
+    <<"&quote;">>;
 htmlize_char(X) ->
     X.
 
@@ -590,6 +592,8 @@ htmlize_l([$<|Tail], Acc) ->
     htmlize_l(Tail, [$;,$t,$l,$&|Acc]);
 htmlize_l([$&|Tail], Acc) ->
     htmlize_l(Tail, [$;,$p,$m,$a,$&|Acc]);
+htmlize_l([$"|Tail], Acc) ->
+    htmlize_l(Tail, [$; ,$e,  $t, $o,  $u,  $q  ,$&|Acc]);
 htmlize_l([X|Tail], Acc) when integer(X) ->
     htmlize_l(Tail, [X|Acc]);
 htmlize_l([X|Tail], Acc) when binary(X) ->
@@ -631,6 +635,7 @@ setcookie(Name, Value, Path, Expire, Domain, Secure) ->
               end,
     SetSecure = if Secure == on -> " secure;";
 		   true -> ""
+		end,
     {header, {set_cookie, f("~s=~s;~s~s~s Path=~s",
 			    [Name,Value,SetDomain,SetExpire,
 			     SetSecure, SetPath])}}.
