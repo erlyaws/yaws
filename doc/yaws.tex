@@ -1899,6 +1899,15 @@ The
               used to do various things such as checking a
               cookie, rewriting paths etc.
 
+\item        \verb+is_default = true|false+ -
+              Sets the virtual host defined in this server part to be
+              the default.  This means that if there are several
+              virtual hosts defined for the same IP number and port,
+              and an HTTP request arrives with a Host field that does
+              not match any defined virtual host, then the one with
+              \verb+is_default+ set to true is chosen. Do not set
+              \verb+is_default+ to true in more than one server part.
+
 \item        \verb+<ssl>  .... </ssl>+
               This begins and ends  an  SSL  configuration
               for this server.
@@ -2045,6 +2054,11 @@ The
        two servers on the same IP, and one ssl server on a
        different IP.
 
+       The \verb+is_default+ is used to select the funky server if
+       someone types in for example http://192.168.128.31/ in his/her
+       browser.
+              
+
 \begin{verbatim}
        logdir = /var/log/yaws
        max_num_cached_files = 8000
@@ -2058,6 +2072,7 @@ The
 
        <server www.funky.org>
                port = 80
+               is_default = true
                listen = 192.168.128.31
                docroot = /var/yaws/www_funky_org
        </server>

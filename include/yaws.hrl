@@ -77,7 +77,8 @@
 	 start_mod,                   %% user provided module to be started
 	 allowed_scripts = [yaws],
 	 phpexe = "php",
-	 revproxy = []
+	 revproxy = [],
+	 is_default = false
 	}).
 
 

@@ -1217,14 +1217,13 @@ ehtml_expand({ssi,File, Del, Bs}) ->
 
 ehtml_expand({Tag}) -> ehtml_expand({Tag, []});
 ehtml_expand({pre_html, X}) -> X;
-ehtml_expand({img, Attrs}) -> ["<img", ehtml_attrs(Attrs), ">"];
-ehtml_expand({br, Attrs}) -> ["<br", ehtml_attrs(Attrs), ">"];
-	    
 ehtml_expand({Tag, Attrs}) ->
-    ["\n<", atom_to_list(Tag), ehtml_attrs(Attrs), ">"];
+    NL = ehtml_nl(Tag),
+    [NL, "<", atom_to_list(Tag), ehtml_attrs(Attrs), ">"];
 ehtml_expand({Tag, Attrs, Body}) when atom(Tag) ->
     Ts = atom_to_list(Tag),
-    ["\n<", Ts, ehtml_attrs(Attrs), ">", ehtml_expand(Body), "</", Ts, ">"];
+    NL = ehtml_nl(Tag),
+    [NL, "<", Ts, ehtml_attrs(Attrs), ">", ehtml_expand(Body), "</", Ts, ">"];
 ehtml_expand([H|T]) -> [ehtml_expand(H)|ehtml_expand(T)];
 ehtml_expand([]) -> [].
 
@@ -1252,6 +1251,48 @@ ehtml_attrs([{check, Name, Value} | Tail]) ->
 		     float(Value) -> [$",float_to_list(Value),$"]
 		  end,
     [[$ |atom_to_list(Name)], [$=|ValueString]|ehtml_attrs(Tail)].
+
+
+
+    %% Tags for which we must not add extra white space.
+    %% FIXME: should there be anything more in this list?
+
+ehtml_nl(a) -> [];
+ehtml_nl(br) -> [];
+ehtml_nl(span) -> [];
+ehtml_nl(em) -> [];
+ehtml_nl(strong) -> [];
+ehtml_nl(dfn) -> [];
+ehtml_nl(code) -> [];
+ehtml_nl(samp) -> [];
+ehtml_nl(kbd) -> [];
+ehtml_nl(var) -> [];
+ehtml_nl(cite) -> [];
+ehtml_nl(abbr) -> [];
+ehtml_nl(acronym) -> [];
+ehtml_nl(q) -> [];
+ehtml_nl(sub) -> [];
+ehtml_nl(sup) -> [];
+ehtml_nl(ins) -> [];
+ehtml_nl(del) -> [];
+ehtml_nl(img) -> [];
+ehtml_nl(tt) -> [];
+ehtml_nl(i) -> [];
+ehtml_nl(b) -> [];
+ehtml_nl(big) -> [];
+ehtml_nl(small) -> [];
+ehtml_nl(strike) -> [];
+ehtml_nl(s) -> [];
+ehtml_nl(u) -> [];
+ehtml_nl(font) -> [];
+ehtml_nl(basefont) -> [];
+ehtml_nl(input) -> [];
+ehtml_nl(button) -> [];
+ehtml_nl(object) -> [];
+ehtml_nl(_) -> "\n".
+
+    
+
 
 %% ------------------------------------------------------------
 %% ehtml_expander/1: an EHTML optimizer
@@ -1308,18 +1349,9 @@ ehtml_expander({pre_html, X}, Before, After) ->
 %% Tags
 ehtml_expander({Tag}, Before, After) ->
     ehtml_expander({Tag, []}, Before, After);
-ehtml_expander({img, Attrs}, Before, After) ->
-    ehtml_expander_done(["<img",
-			 ehtml_attrs_expander(Attrs),">"],
-			Before,
-			After);
-ehtml_expander({br, Attrs}, Before, After) ->
-    ehtml_expander_done(["<br",
-			 ehtml_attrs_expander(Attrs),">"],
-			Before,
-			After);
 ehtml_expander({Tag, Attrs}, Before, After) ->
-    ehtml_expander_done(["\n<", atom_to_list(Tag),
+    NL = ehtml_nl(Tag),
+    ehtml_expander_done([NL, "<", atom_to_list(Tag),
 			 ehtml_attrs_expander(Attrs), ">"],
 			Before,
 			After);
