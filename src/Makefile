@@ -1,7 +1,7 @@
 include ../include.mk
 
 ifeq ($(TYPE),debug)
-DEBUG_FLAGS = -Ddebug
+DEBUG_FLAGS = -Ddebug +debug_info
 else
 DEBUG_FLAGS =
 endif
@@ -27,8 +27,7 @@ MODULES=yaws \
 	yaws_404
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app
-
-ERLC_FLAGS+=-W +debug_info $(DEBUG_FLAGS) -pa ../../yaws
+ERLC_FLAGS+=-W $(DEBUG_FLAGS) -pa ../../yaws
 
 #
 # Targets
