@@ -34,7 +34,7 @@ format_link({wikiLink, Page}, _, Root) ->
 	    [" ",Page,"<a href=\"createNewPage.yaws?node=",Page,"\">???</a>"]
     end;
 format_link({editTag, Tag}, Page, Root) ->
-    ["<a href=\"/wiki/editTag?node=",Page,"&tag=",i2s(Tag),"\">",
+    ["<a href=\"/wiki/editTag.yaws?node=",Page,"&tag=",i2s(Tag),"\">",
      "<img border=0 src='edit.gif'></a> "].
 
 format_link({file, FileName, _}, FileDir, Page, Root) ->
