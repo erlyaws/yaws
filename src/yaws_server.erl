@@ -1,4 +1,4 @@
-%%----------------------------------------------------------------------
+%%%----------------------------------------------------------------------
 %%% File    : yaws_server.erl
 %%% Author  : Claes Wikstrom <klacke@hyber.org>
 %%% Purpose : 
@@ -1085,8 +1085,7 @@ handle_ut(CliSock, GC, SC, ARG, UT, N) ->
 	    yaws:outh_set_dyn_headers(Req, H),
 	    yaws_ls:list_directory(CliSock, UT#urltype.data, P, Req, GC, SC);
 	directory ->
-	    yaws:outh_set_dyn_headers(Req, H),
-	    deliver_403(CliSock, Req, GC, SC);
+	    handle_ut(CliSock, GC, SC, ARG, #urltype{type = error}, N);
 	regular ->
 	    ETag = yaws:make_etag(UT#urltype.finfo),
 	    Range = case H#headers.if_range of
@@ -2364,10 +2363,6 @@ maybe_return_dir(DR, FlatPath) ->
 split_path(_SC, [$/], _Comps, []) ->
     %% its a URL that ends with /
     slash;
-split_path(SC, [$/, $/ |Tail], Comps, Part) ->  %% security clause
-    split_path(SC, [$/|Tail], Comps, Part);
-split_path(_SC, "/../" ++ _ , _, _) ->  %% security clause
-    forbidden;
 split_path(SC, [], Comps, Part) ->
     ret_reg_split(SC, Comps, Part);
 split_path(SC, [$/|Tail], Comps, Part)  when Part /= [] ->
@@ -2430,7 +2425,7 @@ ret_user_dir(SC, [], "/", Upath) when SC#sconf.tilde_expand == true ->
 	    redir_dir
     end;
 ret_user_dir(_SC, _, _, _Upath)  ->
-    forbidden.
+    #urltype{type=error}.
 
 
 
