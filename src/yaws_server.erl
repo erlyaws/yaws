@@ -37,7 +37,7 @@
 	     reqs = 0}).    %% number of HTTP requests
 
 
--record(urltype, {type,   %% error | yaws | regular | directory | dotdot
+-record(urltype, {type,   %% error | yaws | regular | directory | dotdot|appmod
 		  finfo,
 		  path,
 		  fullpath,
@@ -966,7 +966,12 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	dotdot ->
 	    deliver_403(CliSock, Req, GC, SC);
 	redir_dir ->
-	     deliver_303(CliSock, Req, GC, SC)
+	     deliver_303(CliSock, Req, GC, SC);
+	appmod ->
+	    {Mod, PathData} = UT#urltype.data,
+	    A2 = ARG#arg{appmoddata = PathData,
+			 querydata = UT#urltype.q},
+	    do_appmod(Mod, CliSock, GC, SC, Req, H, A2, UT, N)
     end.
 
 	
@@ -1135,21 +1140,46 @@ get_client_data(CliSock, all, {ok, B}, GC, SSlBool) ->
 get_client_data(_CliSock, all, eof, _GC, _) ->
     <<>>.
 
-	   
 
-%% do the header and continue
-deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT, N) ->
-    ?TC([{record, GC, gconf}, {record, SC, sconf}]),
-    Fd = ut_open(UT),
-    Bin = ut_read(Fd),
+
+do_appmod(Mod, CliSock, GC, SC, Req, H, ARG, UT, N) ->
+    DCC = req_to_dcc(Req),
+    case yaws_call(DCC, 0, "appmod", Mod, out, [ARG], GC,SC, N) of
+	{streamcontent, MimeType, FirstChunk} ->
+	    put(content_type, MimeType),
+	    accumulate_chunk(DCC, FirstChunk),
+	    set_status_code(200),
+	    deliver_accumulated(DCC, CliSock, GC, SC),
+	    stream_loop(DCC, CliSock, GC, SC),
+	    case DCC#dcc.chunked of
+		true ->
+		    gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
+		    continue;
+		false ->
+		    done
+	    end;
+	_ ->
+	    %% finish up
+	    deliver_dyn_file(CliSock, GC,SC,Req, H,UT,DCC, [], [], [], ARG,N)
+    end.
+
+
+
+req_to_dcc(Req) ->
     {DoClose, Chunked} = case Req#http_request.version of
 			     {1, 0} -> {true, false};
 			     {1, 1} -> make_chunked(), 
 				       {false, true}
 			 end,
     DCC = #dcc{doclose = DoClose,
-	       chunked = Chunked},
-    
+	       chunked = Chunked}.
+
+%% do the header and continue
+deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT, N) ->
+    ?TC([{record, GC, gconf}, {record, SC, sconf}]),
+    Fd = ut_open(UT),
+    Bin = ut_read(Fd),
+    DCC = req_to_dcc(Req),
     make_dyn_headers(DCC, Req),
     close_if_HEAD(Req, fun() ->
 			       deliver_accumulated(DCC, CliSock,GC,SC),
@@ -1176,7 +1206,6 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin, Fd, [H|T],ARG,N) ->
 		    accumulate_chunk(DCC, FirstChunk),
 		    set_status_code(200),
 		    deliver_accumulated(DCC, CliSock, GC, SC),
-		    put(stream, true),
 		    stream_loop(DCC, CliSock, GC, SC),
 		    case DCC#dcc.chunked of
 			true ->
@@ -1227,6 +1256,9 @@ deliver_dyn_file(CliSock, GC, SC, _Req, _Head,_UT, DCC, _Bin, _Fd, [], _ARG,_N) 
     
     deliver_accumulated(DCC, CliSock, GC, SC),
     Ret.
+
+
+
 
 
 
@@ -1847,7 +1879,7 @@ url_type(GC, SC, Path) ->
     update_total(E, Path),
     case ets:lookup(E, {url, Path}) of
 	[] ->
-	    UT = do_url_type(SC#sconf.docroot, Path),
+	    UT = do_url_type(SC, Path),
 	    ?TC([{record, UT, urltype}]),
 	    ?Debug("UT=~p\n", [UT]),
 	    CF = cache_file(GC, SC, Path, UT),
@@ -1947,10 +1979,10 @@ clear_ets(E) ->
     
 
 %% return #urltype{}
-do_url_type(Droot, Path) ->
-    case split_path(Droot, Path, [], []) of
+do_url_type(SC, Path) ->
+    case split_path(SC, Path, [], []) of
 	slash ->
-	    maybe_return_dir(Droot, lists:flatten(Path));
+	    maybe_return_dir(SC#sconf.docroot, lists:flatten(Path));
 	dotdot ->  %% generate 403 forbidden
 	    #urltype{type=dotdot};
 	redir_dir ->
@@ -1994,33 +2026,87 @@ maybe_return_dir(DR, FlatPath) ->
     end.
 
 
-split_path(_DR, [$/], _Comps, []) ->
+split_path(_SC, [$/], _Comps, []) ->
     %% its a URL that ends with /
     slash;
-split_path(DR, [$/, $/ |Tail], Comps, Part) ->  %% security clause
-    split_path(DR, [$/|Tail], Comps, Part);
-split_path(DR, [$/, $., $., $/ |Tail], _, [_H|T]) ->  %% security clause
-    split_path(DR, Tail, [], T);
-split_path(_DR, [$/, $., $., $/ |_Tail], _, []) -> %% security clause
+split_path(SC, [$/, $/ |Tail], Comps, Part) ->  %% security clause
+    split_path(SC, [$/|Tail], Comps, Part);
+split_path(SC, [$/, $., $., $/ |Tail], _, [_H|T]) ->  %% security clause
+    split_path(SC, Tail, [], T);
+split_path(_SC, [$/, $., $., $/ |_Tail], _, []) -> %% security clause
     dotdot;
-split_path(DR, [], Comps, Part) ->
-    ret_reg_split(DR, Comps, Part, []);
-split_path(DR, [$?|Tail], Comps, Part) ->
-    ret_reg_split(DR, Comps, Part, Tail);
-split_path(DR, [$/|Tail], Comps, Part)  when Part /= [] ->
+split_path(SC, [], Comps, Part) ->
+    ret_reg_split(SC, Comps, Part, []);
+split_path(SC, [$?|Tail], Comps, Part) ->
+    ret_reg_split(SC, Comps, Part, Tail);
+split_path(SC, [$/|Tail], Comps, Part)  when Part /= [] ->
     ?Debug("Tail=~s Part=~s", [Tail,Part]),
-    split_path(DR, [$/|Tail], [lists:reverse(Part) | Comps], []);
-split_path(DR, [$~|Tail], Comps, Part) ->  %% user dir
-    ret_user_dir(DR, Comps, Part, Tail);
-split_path(DR, [H|T], Comps, Part) ->
-    split_path(DR, T, Comps, [H|Part]).
+    Component = lists:reverse(Part),
+    CName = tl(Component),
+    case lists:member(CName, SC#sconf.appmods) of
+	false ->
+	    split_path(SC, [$/|Tail], [lists:reverse(Part) | Comps], []);
+	true ->
+	    %% we've found an appmod
+	    PrePath = conc_path(Comps),
+	    ret_app_mod(SC, [$/|Tail], list_to_atom(CName), PrePath)
+    end;
+split_path(SC, [$~|Tail], Comps, Part) ->  %% user dir
+    ret_user_dir(SC, Comps, Part, Tail);
+split_path(SC, [H|T], Comps, Part) ->
+    split_path(SC, T, Comps, [H|Part]).
 
+
+
+
+conc_path([]) ->
+    [];
+conc_path([H|T]) ->
+    H ++ conc_path(T).
+
+
+ret_app_mod(SC, Path, Mod, PrePath) ->
+    {PathData, Query} = q_splitpath(Path, [], []),
+    #urltype{type = appmod,
+	     data = {Mod, PathData},
+	     path = PrePath,   %% need to set for WWW-Autenticate to work
+	     q = Query}.
+
+
+
+q_splitpath([$?|T], Comps, Part) ->
+    if
+	Part == [] ->
+	    {lists:reverse(Comps), 
+	     if T == [] -> undefined; true -> T end};
+	true ->
+	    {lists:reverse([lists:reverse(Part)|Comps]), 
+	     if T == [] -> undefined; true -> T end}
+    end;
+q_splitpath([], Comps, Part) ->
+    if
+	Part == [] ->
+	    {lists:reverse(Comps), undefined};
+	true ->
+	    {lists:reverse([lists:reverse(Part)|Comps]), undefined}
+    end;
+q_splitpath([$/|Tail], Comps, Part) when Part /= [] ->
+    q_splitpath(Tail, [lists:reverse(Part)|Comps], []);
+q_splitpath([$/|Tail], Comps, Part) ->
+    q_splitpath(Tail, Comps, Part);
+q_splitpath([H|T], Comps, Part) ->
+    q_splitpath(T, Comps, [H|Part]).
+		   
+
+     
+	     
+	
 
 
 %% http:/a.b.c/~user URLs
-ret_user_dir(DR, [], "/", Upath) ->
+ret_user_dir(SC, [], "/", Upath) ->
     ?Debug("UserPart = ~p~n", [Upath]),
-    case parse_user_path(DR, Upath, []) of
+    case parse_user_path(SC#sconf.docroot, Upath, []) of
 	{ok, User, Path} ->
     
 	    ?Debug("User=~p Path = ~p~n", [User, Path]),
@@ -2033,8 +2119,8 @@ ret_user_dir(DR, [], "/", Upath) ->
 		{'EXIT', _} ->
 		    #urltype{type=error};
 		Home ->
-		    DR2 = [Home ++ "/public_html/"],
-		    do_url_type(DR2, Path) %% recurse
+		    DR2 = Home ++ "/public_html/",
+		    do_url_type(SC#sconf{docroot=DR2}, Path) %% recurse
 	    end;
 	redir_dir ->
 	    redir_dir
@@ -2045,19 +2131,20 @@ ret_user_dir(DR, [], "/", Upath) ->
 parse_user_path(_DR, [], _User) ->
     redir_dir;
 parse_user_path(_DR, [$/], User) ->
-    {ok, lists:reverse(User), []};
+    {ok, lists:reverse(User), [$/]};
 parse_user_path(_DR, [$/|Tail], User) ->
-    {ok, lists:reverse(User), Tail};
+    {ok, lists:reverse(User), [$/|Tail]};
 parse_user_path(DR, [H|T], User) ->
     parse_user_path(DR, T, [H|User]).
 
 
 
-ret_reg_split(DR, Comps, RevFile, Query) ->
-    ?Debug("ret_reg_split(~p)", [[DR, Comps, RevFile, Query]]),
+ret_reg_split(SC, Comps, RevFile, Query) ->
+    ?Debug("ret_reg_split(~p)", [[SC#sconf.docroot, Comps, RevFile, Query]]),
     Dir = lists:reverse(Comps),
     %%FlatDir = lists:flatten(Dir),
     FlatDir = {noflat, Dir},
+    DR = SC#sconf.docroot,
     File = lists:reverse(RevFile),
     L = [DR, Dir, File],
     ?Debug("ret_reg_split: L =~p~n",[L]),

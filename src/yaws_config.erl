@@ -450,7 +450,8 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	["ssl_password", '=', Val] ->
 	    if 
 		record(C#sconf.ssl, ssl) ->
-		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{password = Val}};
+		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{password = Val}},
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		true ->
 		    {error, ?F("Need to set option ssl to true before line ~w",
 			       [Lno])}
@@ -458,13 +459,23 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	["ssl_ciphers", '=', Val] ->
 	    if 
 		record(C#sconf.ssl, ssl) ->
-		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{ciphers = Val}};
+		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{ciphers = Val}},
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		true ->
 		    {error, ?F("Need to set option ssl to true before line ~w",
 			       [Lno])}
 	    end;
-	
-
+	["appmods", '=' | Modules] ->
+	     C2 = C#sconf{appmods = Modules},
+	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+	["tilde_expand", '=', Bool] ->
+	    case is_bool(Bool) of
+		{true, Val} ->
+		    C2 = C#sconf{tilde_expand = Val},
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+		false ->
+		    {error, ?F("Expect true|false at line ~w", [Lno])}
+	    end;
 	['<', "/server", '>'] ->
 	    fload(FD, globals, GC, undefined, [C|Cs], Lno+1, Next);
 	[H|T] ->

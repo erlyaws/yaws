@@ -97,6 +97,32 @@ The deafult value is 10240.
 
 
 .TP
+\fBtilde_expand = true|false \fR
+If this value is set to false yaws will never
+do tilde expansion. The default is true. tilde_expansion is the
+mechanism whereby a URL ob the form http://www.foo.com/~username
+is changed into a request where the docroot for that
+particular request is set to the directory ~username/public_html/
+The default value is true.
+
+.TP
+\fBappmods = [ListOfModuleNames]\fR
+If any the names in ListOfModuleNames appear as components in the
+path for a request, the path request parsing will terminate and
+that module will be called.
+
+Assume for example that we have
+the URL http://www.hyber.org/myapp/foo/bar/baz?user=joe 
+while we have the module foo defined as an appmod, the 
+function foo:out(Arg) will be invoked
+instead of searching the filesystems below the point foo.
+
+The Arg argument will have the missing path part supplied in its
+appmoddata field. 
+
+
+
+.TP
 \fB ssl = true \fR
 This enables ssl for this server
 .TP

@@ -50,16 +50,19 @@
 
 %% server conf
 -record(sconf,
-	{port = 8000,
-	 docroot,
-	 access_log = true,
-	 listen = {127,0,0,1},
-	 servername = "localhost",
-	 ets,
+	{port = 8000,                %% which port is this server lsitenintg to
+	 docroot,                    %% path to the docs
+	 access_log = true,          %% log acces 
+	 listen = {127,0,0,1},       %% bind to this IP, {0,0,0,0} is possible
+	 servername = "localhost",   %% servername is what Host: header is
+	 ets,                        %% local store for this server
 	 ssl,
 	 authdirs = [],
-	 partial_post_size = nolimit
+	 partial_post_size = nolimit,
+	 appmods = [],                %% list of modules for this app
+	 tilde_expand = true          %% allow public_html user dirs
 	}).
+
 
 % Auth conf - from server conf and .yaws_auth
 -record(auth,
