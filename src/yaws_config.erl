@@ -606,7 +606,8 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
 	[] ->
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, Auth);
 	["dir", '=', Authdir] ->
-	    A2 = Auth#auth{dir = [Dir|Auth#auth.dir]},
+	    Dir = yaws_api:path_norm(Authdir),
+	    A2 = Auth#auth{dir = [Dir | Auth#auth.dir]},
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
 	["realm", '=', Realm] ->
 	    A2 = Auth#auth{realm = Realm},
@@ -724,7 +725,7 @@ is_string_char(C) ->
 	$0 =< C, C =< $9 ->
 	    true;
 	true ->
-	    lists:member(C, [$., $/, $:, $_, $-])
+	    lists:member(C, [$., $/, $:, $_, $-, $~])
     end.
 
 is_space(C) ->
