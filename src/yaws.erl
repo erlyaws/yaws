@@ -637,6 +637,11 @@ arg_rewrite(A) ->
 
 
 
+to_lowerchar(C) when C >= $A, C =< $Z ->
+    C+($a-$A);
+to_lowerchar(C) ->
+    C.
+
 to_lower([C|Cs]) when C >= $A, C =< $Z ->
     [C+($a-$A)|to_lower(Cs)];
 to_lower([C|Cs]) ->

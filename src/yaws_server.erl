@@ -1454,7 +1454,13 @@ handle_out_reply({'EXIT', normal}, _DCC, _LineNo, _YawsFile, _SC, _A) ->
 handle_out_reply(break, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     break;
 
-handle_out_reply({redirect_local, Path}, _DCC, _LineNo, _YawsFile, SC, A) ->
+handle_out_reply({redirect_local, Path0}, _DCC, _LineNo, _YawsFile, SC, A) ->
+    Path = case Path0 of
+	       {abs_path, P} ->
+		   P;
+	       P ->
+		   P
+	   end,
     {Scheme, PortPart} = redirect_scheme_port(SC),
     set_status_code(redirect_code(A)),
     accumulate_header(["Location: ", Scheme,

@@ -265,7 +265,7 @@ parse_arg_value([C|Line], Key, Value, Quote, _) ->
 %
 
 make_parse_line_reply(Key, Value, Rest) ->
-     {{list_to_atom(yaws:funreverse(Key, {yaws, to_lower})),
+     {{list_to_atom(yaws:funreverse(Key, {yaws, to_lowerchar})),
        lists:reverse(Value)}, Rest}.
 
 
@@ -273,7 +273,7 @@ make_parse_line_reply(Key, Value, Rest) ->
 
 isolate_arg(Str) -> isolate_arg(Str, []).
 
-isolate_arg([$:,$ |T], L) -> {yaws:funreverse(L, {yaws, to_lower}), T};
+isolate_arg([$:,$ |T], L) -> {yaws:funreverse(L, {yaws, to_lowerchar}), T};
 isolate_arg([H|T], L)     -> isolate_arg(T, [H|L]).
 
 
