@@ -763,7 +763,10 @@ maybe_access_log(Ip, SC, Req, H) ->
 	     end,
     Len = case yaws:outh_get_contlen() of
 	      undefined ->
-		  "-";
+		  case yaws:outh_get_act_contlen() of
+		      undefined -> "-";
+		      Actlen -> integer_to_list(Actlen)
+		  end;
 	      I2 -> integer_to_list(I2)
 	  end,
     Ver = case Req#http_request.version of
@@ -1572,6 +1575,19 @@ to_binary(L) when list(L) ->
     list_to_binary(L).
 
 
+%% binary_size(X) -> size(to_binary(X)).
+
+binary_size(X) -> binary_size(0,X).
+
+binary_size(I, []) ->
+    I;
+binary_size(I, [H|T]) ->
+    J = binary_size(I, H),
+    binary_size(J, T);
+binary_size(I, B) when binary(B) ->
+    I + size(B);
+binary_size(I, _Int) when integer(_Int) ->
+    I+1.
 
 accumulate_header(Data) ->
     case get(acc_headers) of
@@ -1592,9 +1608,11 @@ accumulate_content(Data) ->
 accumulate_chunk(Data) ->
     case yaws:outh_get_chunked() of
 	false ->
+	    yaws:outh_inc_act_contlen(binary_size(Data)),
 	    accumulate_content(Data);
 	true ->
 	    B = to_binary(Data),
+	    yaws:outh_inc_act_contlen(size(B)),
 	    case size(B) of
 		0 ->
 		    skip;

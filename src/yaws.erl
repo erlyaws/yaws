@@ -983,6 +983,18 @@ outh_get_status_code() ->
 outh_get_contlen() ->
     (get(outh))#outh.contlen.
 
+outh_get_act_contlen() ->
+    (get(outh))#outh.act_contlen.
+
+outh_inc_act_contlen(Int) ->
+    O = get(outh),
+    case O#outh.act_contlen of
+	undefined ->
+	    put(outh, O#outh{act_contlen = Int});
+	Len ->    
+	    put(outh, O#outh{act_contlen = Len + Int})
+    end.
+
 outh_get_doclose() ->
     (get(outh))#outh.doclose.
 

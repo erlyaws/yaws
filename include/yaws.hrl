@@ -113,6 +113,7 @@
 	  doclose,       %% bool
 	  chunked,       %% bool
 	  contlen,       %% integer
+	  act_contlen,   %% actual content length for dynamic pages
 
 
                          %% and the total set of out headers we can have
