@@ -607,16 +607,18 @@ setcookie(Name, Value, Path, Expire) ->
 setcookie(Name, Value, Path, Expire, Domain) ->
     setcookie(Name, Value, Path, Expire, Domain,[]).
 
-setcookie(Name, Value, [], [], Domain, []) when list(Domain) ->
-    {header, f("Set-Cookie: ~s=~s; Domain=~s;", [Name,Value,Domain])};
-
-setcookie(_Name, _Value, _Path, _Expire, _Domain, _Secure) ->
-    exit(nyi).
-
-	
-
-	    
-
+setcookie(Name, Value, Path, Expire, Domain, _Secure) ->
+    SetDomain = if Domain == [] -> "";
+	           true -> "Domain="++Domain++";"
+	        end,
+    SetExpire = if Expire == [] -> "";
+	           true -> "Expires=\""++Expire++"\";"
+                end,
+    SetPath = if Path == [] -> "/";
+                 true -> Path
+              end,
+    {header, f("Set-Cookie: ~s=~s; Version=\"1\";~s~sPath=~s",
+	[Name,Value,SetDomain,SetExpire,SetPath])}.
 
 %% This function can be passed the cookie we get in the Arg#arg.headers.cookies
 %% to search for a specific cookie 
