@@ -574,14 +574,23 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == nossl ->
 	done ->
 	    {ok, Num};
 	{Req, H} ->
-	    Sconf = pick_sconf(GS#gs.gconf, H, GS#gs.group),
-	    ?Debug("Sconf: ~p", [?format_record(Sconf, sconf)]),
-	    ?TC([{record, Sconf, sconf}]),
+	    SC = pick_sconf(GS#gs.gconf, H, GS#gs.group),
+	    ?Debug("SC: ~p", [?format_record(SC, sconf)]),
+	    ?TC([{record, SC, sconf}]),
 	    ?Debug("Headers = ~p~n", [?format_record(H, headers)]),
 	    ?Debug("Request = ~p~n", [?format_record(Req, http_request)]),
+	    IP = case SC#sconf.access_log of
+		     true ->
+			 {ok, {Ip, _Port}} = inet:peername(CliSock),
+			 Ip;
+		     _ ->
+			 undefined
+		 end,
+
 	    Res = apply(yaws_server, Req#http_request.method, 
-			[CliSock, GS#gs.gconf, Sconf, Req, H]),
-	    maybe_access_log(CliSock, Sconf, Req),
+			[CliSock, GS#gs.gconf, SC, Req, H]),
+
+	    maybe_access_log(IP, SC, Req),
 	    case Res of
 		continue ->
 		    aloop(CliSock, GS, Num+1);
@@ -601,10 +610,17 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == ssl ->
 	    {ok, Num};
 	{ok, Req, H, Trail} ->
 	    put(ssltrail, Trail),  %% hack hack hack
-	    Sconf = hd(GS#gs.group),
+	    SC = hd(GS#gs.group),
+	    IP = case SC#sconf.access_log of
+		     true ->
+			 {ok, {Ip, _Port}} = ssl:peername(CliSock, SC),
+			 Ip;
+		     _ ->
+			 undefined
+		 end,
 	    Res = apply(yaws_server, Req#http_request.method, 
-			[CliSock, GS#gs.gconf, Sconf, Req, H]),
-	    maybe_access_log(CliSock, Sconf, Req),
+			[CliSock, GS#gs.gconf, SC, Req, H]),
+	    maybe_access_log(IP, SC, Req),
 	    case Res of
 		continue ->
 		    aloop(CliSock, GS, Num+1);
@@ -665,7 +681,7 @@ inet_peername(Sock, SC) ->
     end.
 	    
 
-maybe_access_log(CliSock, SC, Req) ->
+maybe_access_log(Ip, SC, Req) ->
     ?TC([{record, SC, sconf}]),
     Status = case erase(status_code) of
 		 undefined -> "-";
@@ -678,7 +694,6 @@ maybe_access_log(CliSock, SC, Req) ->
 	  end,
     case SC#sconf.access_log of
 	true ->
-	    {ok, {Ip, _Port}} = inet_peername(CliSock, SC),
 	    Path = get_path(Req#http_request.path),
 	    Meth = atom_to_list(Req#http_request.method),
 	    yaws_log:accesslog(SC#sconf.servername, Ip, 
@@ -751,9 +766,13 @@ gen_tcp_send(S, Data, SC, GC) ->
     case Res of
 	ok ->
 	    ok;
+	Err when GC#gconf.debug == true ->
+	    {B2, Size} = strip(Data),
+	    yaws_debug:derror(GC, "Failed to send ~w bytes:~n~p "
+			      "on socket ~p: ~p~n",
+			      [Size, B2, S, Err]),
+	    exit(normal);
 	Err ->
-	    yaws_debug:derror(GC, "Failed to send ~p on socket ~p: ~p~n",
-			      [strip(Data), S, Err]),
 	    exit(normal)
     end.
 
@@ -762,9 +781,9 @@ strip(Data) ->
     L = list_to_binary([Data]),
     case L of
 	<<Head:50/binary, _/binary>> ->
-	    <<Head/binary, ".....">>;
+	    {<<Head/binary, ".....">>, size(L)};
 	_ ->
-	    L
+	    {L, size(L)}
     end.
 	 
 
