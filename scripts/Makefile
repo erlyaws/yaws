@@ -10,6 +10,8 @@ all debug:	../bin/yaws
            then echo "$$HOME/yaws.conf already exists ";  \
         else \
 	   sh ./mangle `pwd`/.. $(ERL) yaws.conf.template.local ${HOME}/yaws.conf; echo "installed yaws.conf in $$HOME "; fi
+	install -d $$HOME/bin
+	cp ../bin/yaws $$HOME/bin/yaws
 
 
 clean:

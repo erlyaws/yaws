@@ -1746,10 +1746,12 @@ ret_reg_split(DR, Comps, RevFile, Query) ->
 	{ok, FI} when FI#file_info.type == directory, hd(RevFile) /= $/ ->
 	    redir_dir;
 	{error, enoent} ->
+	    ?Debug("Try url_decode of ~p",[lists:flatten([Dir,File])]),
 	    %% kind of hackish, defer url decode 
 	    Dir2 = lists:flatmap(fun(X) -> yaws_api:url_decode(X) end, Dir),
 	    File2 = yaws_api:url_decode(File),
 	    L2 = [DR, Dir2, File2],
+	    ?Debug("Try open ~w~n", [File2]),
 	    case prim_file:read_file_info(L) of
 		{ok, FI} when  FI#file_info.type == regular ->
 		    {X, Mime} = suffix_type(RevFile),

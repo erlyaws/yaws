@@ -1,0 +1,31 @@
+
+<table bgcolor="#B6b6a5" border="2" cellpadding="5" cellspacing="0" width="100%">
+
+<tr border="2">
+    <td> <A HREF="index.yaws">Top Page</a> </td>
+    <td> <A HREF="webmail_login.yaws">Login</a></td>
+    <td> <A HREF="rmail.yaws">Read Mail</a> </td>
+    <td> <A HREF="smail.yaws">Compose New mail </a> </td>
+    <td> <A HREF="logout.yaws">Logout</a> </td>
+</tr>
+ 
+
+</table>
+
+
+<tr border="1">
+    <td>
+
+<erl> 
+            out(A) -> webmail:login_status(A).
+</erl>
+
+    </td>
+
+
+</tr>
+
+</table>
+
+<hr>
+<img src="blurulr3.gif">

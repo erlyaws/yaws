@@ -8,8 +8,10 @@ endif
 
 include ../../vsn.mk
 VSN=$(YAWS_VSN)
+
 MODULES=pop3lib_cli \
-	smtp_client 
+	smtp_client \
+	webmail
 
 
 EBIN_FILES=$(MODULES:%=%.$(EMULATOR)) 
@@ -30,6 +32,8 @@ clean:
 	rm -f $(EBIN_FILES) 
 
 install: all
-	install -d $(INSTALLPREFIX)/lib/yaws/applications
-	(tar cz  *.beam  --) | (cd $(INSTALLPREFIX)/lib/yaws/applications; tar xz -- )
+	install -d $(INSTALLPREFIX)/lib/yaws/applications/webmail/ebin
+	install -d $(INSTALLPREFIX)/lib/yaws/applications/webmail/www
+	(tar czv  *.beam  --) | (cd $(INSTALLPREFIX)/lib/yaws/applications/webmail/ebin; tar xz -- )
+	(tar czv  *.gif *.yaws *.css  --) | (cd $(INSTALLPREFIX)/lib/yaws/applications/webmail/www; tar xz -- )
 

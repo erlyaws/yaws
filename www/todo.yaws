@@ -11,6 +11,7 @@ out(A) ->
 
 <ul>
 
+<li> respect client side Cache-Control: no-cache
 <li> clusters 
 <li> handle the If-..... headers 
 <li> handle Range header

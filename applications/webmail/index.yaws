@@ -1,0 +1,25 @@
+
+<erl>
+
+out(A) -> 
+    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOP"]).
+
+</erl>
+
+<table>
+<tr border="1">
+    <td>
+
+<erl> 
+            out(A) -> webmail:login_status(A).
+</erl>
+
+    </td>
+
+
+</tr>
+
+</table>
+
+<hr>
+<img src="blurulr3.gif">

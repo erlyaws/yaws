@@ -1,0 +1,34 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+
+<head>
+ <meta name="keywords" content="Yaws webmail login">
+ <title>Yaws webmail login</title>
+ <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+ <link rel="stylesheet" type="text/css" href="mstil.css">
+</head>
+
+<body>
+
+<img src="bluerulr3.gif">
+<h2> Yaws webmail login " </h2>
+
+
+
+<erl>
+out(A) ->
+   
+
+
+<form METHOD=POST
+      ACTION="webmail_login_post.yaws"
+
+<p> Username: <input NAME="user" TYPE="text" SIZE="48">
+<p> Password: <input NAME="password" TYPE="password" SIZE="48">
+<p>
+<p> <input TYPE=submit>
+
+</form>
+
+</body>
+</html>
