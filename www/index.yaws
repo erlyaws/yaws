@@ -21,13 +21,13 @@ Two separate modes of operations are supported.
 <li> 
 <p>Standalone mode where yaws runs as a regular webserver daemon. This is the default mode.
 <li> 
-<p>Embedded mode wher Yaws runs as an embedded webserver in an
+<p>Embedded mode where Yaws runs as an embedded webserver in an
 another erlang application. 
 </ul>
 
 <br>
 <p>
-Yaws is entirely written in <a href="http:www.erlang.org">Erlang</a>, 
+Yaws is entirely written in <a href="http://www.erlang.org">Erlang</a>, 
 futhermore it is a multithreaded webserver where one Erlang light weight 
 process is used to handle each client.
 <br>
@@ -52,6 +52,8 @@ with the server producing <a href="http://yaws.hyber.org/stats.yaws">stats</a>.
 The documentation, examples as well as releases can be found there, and 
 of cource, <a href="http://yaws.hyber.org">yaws.hyber.org</a> is itself
 powered by Yaws.
+
+<p>A mailing list exists at: <a href="https://lists.sourceforge.net/lists/listinfo/erlyaws-list">https://lists.sourceforge.net/lists/listinfo/erlyaws-list</a>
 
 
 <p> <h2> News </h2>
