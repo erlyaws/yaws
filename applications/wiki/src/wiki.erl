@@ -94,8 +94,9 @@ getThumb(Params, Root, Prefix) ->
 	    SrcAge = get_age(SrcPath),
 	    if DstAge > SrcAge -> false;
 	       true -> 
-		    os:cmd("convert -size 90x90 -scale 90x90 "++
-			   SrcPath++" "++DstPath)
+		    os:cmd("convert -size 90x90 -scale 90x90 '"++
+			   shell_quote(SrcPath)++"' '"++
+			   shell_quote(DstPath)++"'")
 	    end,
 	    {redirect_local, Prefix++FileDir++"/"++ThumbName}
     end.
@@ -117,8 +118,9 @@ getMidSize(Params, Root, Prefix) ->
 	    SrcAge = get_age(SrcPath),
 	    if DstAge > SrcAge -> false;
 	       true -> 
-		    os:cmd("convert -size 400x400 -scale 400x400 "++
-			   SrcPath++" "++DstPath)
+		    os:cmd("convert -size 400x400 -scale 400x400 '"++
+			   shell_quote(SrcPath)++"' '"++
+			   shell_quote(DstPath)++"'")
 	    end,
 	    case file:read_file_info(DstPath) of
 		{error,_} ->
@@ -127,6 +129,14 @@ getMidSize(Params, Root, Prefix) ->
 		    {redirect_local, Prefix++FileDir++"/"++MidName}
 	    end
     end.
+
+shell_quote([]) ->
+    [];
+shell_quote([$'|R]) ->
+    [$\\, $'| shell_quote(R)];
+shell_quote([C|R]) ->
+    [C|shell_quote(R)].
+     
 
 get_age(Path) ->
     case file:read_file_info(Path) of
@@ -1447,16 +1457,23 @@ slideShow(Params, Root, Prefix) ->
     Page     = getopt(node, Params),
     NextArg = getopt(next, Params, undefined),
     PrevArg = getopt(prev, Params, undefined),
-    case {NextArg, PrevArg} of
-	{undefined, undefined} ->
+    AutoArg = getopt(auto, Params, undefined),
+    case {NextArg, PrevArg, AutoArg} of
+	{undefined, undefined, undefined} ->
 	    nextSlide(1, next, Page, Root, Prefix);
-	{undefined, _} ->
+	{undefined, undefined, _} ->
+	    Index = case catch list_to_integer(AutoArg) of
+			{'EXIT', Reason} -> 1;
+			Num when integer(Num) -> Num
+		    end,
+	    nextSlide(Index, auto, Page, Root, Prefix);
+	{undefined, _, undefined} ->
 	    Index = case catch list_to_integer(PrevArg) of
 			{'EXIT', Reason} -> 1;
 			Num when integer(Num) -> Num
 		    end,
 	    nextSlide(Index, prev, Page, Root, Prefix);
-	{_, undefined} ->
+	{_, undefined, undefined} ->
 	    Index = case catch list_to_integer(NextArg) of
 			{'EXIT', Reason} -> 1;
 			Num when integer(Num) -> Num
@@ -1477,25 +1494,36 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
 		{ok, NewIndex, PictFile} ->
 		    FileName = element(2, PictFile),
 		    Comment  = element(3, PictFile),
+		    Node = str2urlencoded(Page),
 		    DeepStr =
 			["<table width='100%'>"
 			 "<tr><td>"
-			 "<a href=\"slideShow.yaws?node=", Page,"&prev=",
+			 "<a href=\"slideShow.yaws?node=", Node,"&prev=",
 			 integer_to_list(NewIndex-1),"\">prev</a> ",
-			 build_slide_list(Page, NewIndex, length(Files)),
-			 "<a href=\"slideShow.yaws?node=",Page,"&next=",
+			 build_slide_list(Node, NewIndex, length(Files)),
+			 "<a href=\"slideShow.yaws?node=",Node,"&next=",
 			 integer_to_list(NewIndex+1),"\">next</a> "
-			 "<a href=\"thumbIndex.yaws?node=",Page,"\">index</a> "
+			 "<a href=\"slideShow.yaws?node=",Node,"&auto=",
+			 integer_to_list(NewIndex+1),"\">auto</a> "
+			 "<a href=\"thumbIndex.yaws?node=",Node,"\">index</a> "
 			 "</td></tr></table>"
 			 "<p><b>",integer_to_list(NewIndex)," - ",
 			 Comment,"</b></p><p>",
 			 "<a href=\"",
 			 wiki:str2urlencoded(FileDir), "/",
 			 wiki:str2urlencoded(FileName),"\" target=\"pict\">",
-			 "<img src=\"getMidSize.yaws?node=", Page,"&pict=",
+			 "<img src=\"getMidSize.yaws?node=", Node,"&pict=",
 			 wiki:str2urlencoded(FileName),
 			 "\" alt='",FileName,
 			 "'></a></p>"],
+		    Auto =
+			if Direction==auto ->
+				["<META HTTP-EQUIV=\"REFRESH\" "
+				 "CONTENT=\"10; URL=slideShow.yaws?node=",
+				 Node,"&auto=",integer_to_list(NewIndex+1),
+				 "\">"];
+			   true -> []
+			end,
 		    F1 = add_blanks_nicely(Page),
 		    TopHeader = 
 			["<h1><a href='showPage.yaws?node=",
@@ -1503,7 +1531,7 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
 			 "'>",F1,"</a></h1>\n"],
 		    Link = 
 			template(Page, banner(Page, Pwd/=""),
-				 [TopHeader, DeepStr], false)
+				 [TopHeader, DeepStr, Auto], false)
 	    end;
 	_ ->
 	    show({no_such_page,Page})
@@ -1520,19 +1548,15 @@ thumbIndex(Params, Root, Prefix) ->
 			     fun(F,N) -> {{element(2,F),N}, N+1} end,
 			     1, lists:keysort(2,Files)),
 	    Pics = [{F,N} || {F,N} <- NumFiles, pict_suffix(F)],
+	    Node = str2urlencoded(Page),
 	    DeepStr = 
-		["<table><tr><td colspan=5>",
-		 build_slide_list(Page, 0, length(Files)),
-		 "</td></tr>",
-		 build_thumb_table(Pics,
-				   str2urlencoded(Page),
-				   str2urlencoded(FileDir)),
+		["<table>",
+		 build_thumb_table(Pics, Node, str2urlencoded(FileDir)),
 		 "</table>"],
 	    F1 = add_blanks_nicely(Page),
 	    TopHeader = 
-		["<h1><a href='showPage.yaws?node=",
-		 str2urlencoded(Page),
-		 "'>",F1,"</a></h1>\n"],
+		["<h1><a href='showPage.yaws?node=",Node,"'>",
+		 F1,"</a></h1>\n"],
 	    Link = 
 		template(Page, banner(Page, Pwd/=""),
 			 [TopHeader, DeepStr], false);
@@ -1589,16 +1613,15 @@ get_img(Index, Direction, Files) ->
 	    FileName = element(2, PictFile),
 	    case lowercase(lists:reverse(FileName)) of
 		"fig."++_ ->
-		    io:format("~p\n", [PictFile]),
 		    {ok, Index, PictFile};
 		"gepj."++_ ->
-		    io:format("~p\n", [PictFile]),
 		    {ok, Index, PictFile};
 		"gpj."++_ ->
-		    io:format("~p\n", [PictFile]),
 		    {ok, Index, PictFile};
 		Any ->
 		    if Direction == next ->
+			    get_img(Index+1, Direction, Files);
+		       Direction == auto ->
 			    get_img(Index+1, Direction, Files);
 		       true  ->
 			    get_img(Index-1, Direction, Files)
