@@ -557,7 +557,7 @@ do_recv(Sock, Num, TO, nossl) ->
 do_recv(Sock, Num, TO, ssl) ->
     case erase(ssltrail) of %% hack from above ...
 	undefined ->
-	    split_recv(ssl:recv(Sock, 0), Num);   %% ignore Num val 
+	    split_recv(ssl:recv(Sock, 0), Num);   %% ignore Num val ??? TO ??
 	Bin ->
 	    {ok, Bin}
     end.
