@@ -17,6 +17,8 @@ out(A) ->
 					       true;
                                            C == $_ ->
                                                true;
+                                           C == $. ->
+                                               true;
 					   true ->
 					       false
 				       end
