@@ -20,6 +20,9 @@
 %%                      {              Preformatted
 %%                        ...
 %%                      }
+%%                      {{             Embedded HTML
+%%                        ...
+%%                      }}
 %%                      <              Writable region within a 
 %%                        ...          locked page
 %%                      >
@@ -67,6 +70,8 @@ format_txt([$\\,H|T], Env, L) ->
 format_txt([$*|T], Env, L) ->
     {Env1, L1} = char_style(b, Env, L),
     format_txt(T, Env1, L1);
+format_txt([${,${|T], Env, L) ->
+    emb(T,Env,L);
 format_txt("'''" ++ T, Env, L) ->
     {Env1, L1} = char_style(tt, Env, L),
     format_txt(T, Env1, L1);
@@ -120,6 +125,7 @@ is_graphic(F) ->
     member(filename:extension(F), [".gif", ".GIF", ".jpg", ".JPG"]).
 
 after_nl([${,$\n|T], Env, L)  -> pre(T, Env, L);
+after_nl([${,${|T], Env, L)   -> emb(T, Env, L);
 after_nl([${|T], Env, L)      -> pre(T, Env, L);
 after_nl([$[|T], Env, L)      -> note(T, Env, L);
 after_nl("____" ++ T, Env, L) -> hr(T, Env, L);
@@ -136,6 +142,9 @@ pre(T, Env, L) ->
     L2 = reverse("<pre>\n", L1),
     pre1(T, Env1, L2).
 
+pre1([$\r,$}|T], Env, L) ->
+    L1 = reverse("\n</pre>\n", L),
+    format_txt(T, Env, L1);
 pre1([$\n,$}|T], Env, L) ->
     L1 = reverse("\n</pre>\n", L),
     format_txt(T, Env, L1);
@@ -143,6 +152,13 @@ pre1([H|T], Env, L) ->
     pre1(T, Env, [H|L]);
 pre1([], Env, L) ->
     pre1([$\n,$}], Env, L).
+
+emb([$},$}|T], Env, L) ->
+    format_txt(T, Env, L);
+emb([H|T], Env, L) ->
+    emb(T, Env, [H|L]);
+emb([], Env, L) ->
+    emb([$},$}], Env, L).
 
 note(T, Env, L) ->
     {Env1, L1} = clear_line(Env, L),
