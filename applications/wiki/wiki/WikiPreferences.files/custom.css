@@ -18,6 +18,12 @@ TEXTAREA{
 #menu{
   background: #BFEE90;
 }
+#lockedmenu{
+  background: #EF0000;
+}
+#lockedmenuframe {
+  background: #FF1010;
+}
 #menuframe {
   background: #90EE91;
 }

@@ -39,7 +39,7 @@
 
 -import(lists, [reverse/1, map/2, sort/1]).
 
--import(wiki_templates, [template/3]).
+-import(wiki_templates, [template/4]).
 
 -include("../../../include/yaws_api.hrl").
 
@@ -60,10 +60,12 @@ showPage(Params, Root, Prefix) ->
 		    DeepStr = wiki_to_html:format_wiki(Page, Wik, Root),
 		    DeepFiles = wiki_to_html:format_wiki_files(
 				  Page, FileDir, Files, Root),
+		    Locked = Pwd /= "",
 		    wiki_templates:template(Page, 
-					    banner(Page, Pwd),
+					    banner(Page, Locked),
 					    [top_header(Page),DeepStr,
-					     DeepFiles]);
+					     DeepFiles],
+					    Locked);
 		_ ->
 		    NewSid = session_new(initial_page_content()),
 		    redirect_create(Page, NewSid, Prefix)
@@ -159,7 +161,8 @@ createNewPage1(Page, Sid, Prefix, Content, Passwd, Email) ->
 	     p(),
 	     textarea("text", 25, 72,Txt),
 	     hr()
-	    ])]).
+	    ])],
+      false).
 
 
 storePage(Params, Root, Prefix) ->
@@ -318,7 +321,8 @@ addFileInit(Params, Root, Prefix) ->
 			  "parent.location='editFiles.yaws?node="++
 			  str2urlencoded(Page)++"&password="++
 			  str2urlencoded(Password)++"'")])
-	     ]).
+	     ],
+	    false).
     
 -record(addfile, {
 	  root,
@@ -559,7 +563,8 @@ deleteFilesInit(Params, Root, Prefix) ->
 		    input("submit", "cancel", "Cancel"),
 		    input("hidden", "node", Page),
 		    input("hidden", "password", Password)])
-	     ]).
+	     ],
+	    false).
     
 deleteFiles(Params, Root, Prefix) ->
     Password = getopt(password, Params, ""),
@@ -668,7 +673,8 @@ copyFilesInit(Params, Root, Prefix) ->
 			    input("submit", "cancel", "Cancel"),
 			    input("hidden", "node", Page),
 			    input("hidden", "password", Password)])
-		     ])
+		     ],
+		    false)
     end.
 
     
@@ -758,7 +764,7 @@ showHistory(Params, Root, Prefix) ->
 	    {wik002,Pwd,Email,_Time,_Who,OldTxt,_Files,Patches} = 
 		bin_to_wik002(Bin),
 	    Links = reverse(mk_history_links(reverse(Patches), Page, 1)),
-	    template("History", "", Links);
+	    template("History", "", Links, false);
 	_ ->
 	    show({no_such_page, Page})
     end.
@@ -809,7 +815,7 @@ allPages(_, Root, Prefix) ->
 				[wiki_to_html:format_link(F, Root),
 				 "<br>"]
 			end, 
-			Files)]).
+			Files)], false).
 
 lastEdited(_, Root, Prefix) ->
     Files = sort(files(Root, "*.wob")),
@@ -830,7 +836,7 @@ lastEdited(_, Root, Prefix) ->
 	     end, Groups),
     template("Last Edited", "", 
 	     [h1("Last Edited"),
-	      p("These are the last edited files."),S1]).
+	      p("These are the last edited files."),S1], false).
 
 group_by_day([]) ->
     [];
@@ -875,7 +881,9 @@ showOldPage(Params, Root, Prefix) ->
 	    Form = form("POST", "noop.yaws",
 			[textarea("text", 25, 75, TxtStr)]),
 	    wiki_templates:template(Page, "",
-				    [h1(Page),DeepStr,DeepFiles,"<hr>",Form]);
+				    [h1(Page),DeepStr,DeepFiles,"<hr>",
+				     Form],
+				   false);
 	_ ->
 	    show({no_such_page, Page})
     end.
@@ -919,7 +927,8 @@ deletePage1(Params, Root, Prefix) ->
 			    p(),
 			    textarea("text", 25, 75, Txt),
 			    p(),
-			    hr()])]);
+			    hr()])],
+		     false);
 	_ ->
 	    show({no_such_page,Page})
     end.
@@ -958,7 +967,8 @@ finalDeletePage1(Params, Root, Prefix) ->
 	    wiki_templates:template("Error","",
 		     [h1(Page),
 		      p("Failed to delete page."),
-		      hr()])
+		      hr()],
+				    false)
     end.
 
 
@@ -982,7 +992,7 @@ getPassword(Page, Root, Prefix, Target, Values) ->
 		     ]
 		   )
 		  )
-	     ]).
+	     ], false).
 
 putPassword(Params, Root, Prefix) ->
     Target = getopt(target, Params, "error"),
@@ -1209,7 +1219,7 @@ edit1(Page, Password, Content, Sid) ->
 		input("hidden", "node", Page),
 		input("hidden", "password", Password),
 		hr()])
-	  ]).
+	  ], false).
 
 sendMeThePassword(Params, Root, Prefix) ->
     Page = getopt(node, Params),
@@ -1224,19 +1234,22 @@ sendMeThePassword(Params, Root, Prefix) ->
 	    case Email of
 		"" ->
 		    template("Error", "",
-			 [h1("Failure"),
-			  p("This page has no associated email address")]);
+			     [h1("Failure"),
+			      p("This page has no associated email address")],
+			     false);
 		EmailOwner ->
 		    mail(Page, Email, Pwd),
 		    template("Ok", "",
-			 [h1("Success"),
-			  p("The password has been mailed to "),
-			  Email,
-			  p("Have a nice day")]);
+			     [h1("Success"),
+			      p("The password has been mailed to "),
+			      Email,
+			      p("Have a nice day")],
+			     false);
 		Other ->
 		    template("Error", "",
-			 [h1("Failure"),
-			  p("Incorrect email address")])
+			     [h1("Failure"),
+			      p("Incorrect email address")],
+			     false)
 	    end;
 	_ ->
 	    show({no_such_file,Page})
@@ -1303,7 +1316,7 @@ editFiles1(Page, Password, Root, Prefix) ->
 		     p(),
 		     hr()],
 	    wiki_templates:template("Edit", "",
-		     [h1(Page),
+		      [h1(Page),
 		      form("POST", "storeFiles.yaws",
 			   [Check,
 			    input("submit", "add", "Add"),
@@ -1313,7 +1326,7 @@ editFiles1(Page, Password, Root, Prefix) ->
 			    input("submit", "cancel", "Done"),
 			    input("hidden", "node", Page),
 			    input("hidden", "password", Password)
-			   ])]);
+			   ])], false);
 	Error ->
 	    show({no_such_page, Page})
     end.
@@ -1377,8 +1390,8 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
 			 str2urlencoded(Page),
 			 "'>",F1,"</a></h1>\n"],
 		    Link = 
-			template(Page, banner(Page, Pwd),
-				 [TopHeader, DeepStr])
+			template(Page, banner(Page, Pwd/=""),
+				 [TopHeader, DeepStr], false)
 	    end;
 	_ ->
 	    show({no_such_page,Page})
@@ -1440,7 +1453,7 @@ editTag(Params, Root, Prefix) ->
 			    p(),
 			    textarea("text", 25, 75, Str1),
 			    p(),
-			    hr()])]);
+			    hr()])], false);
 	Error ->
 	    show({no_such_page, Page})
     end.
@@ -1470,7 +1483,7 @@ changePassword(Params, Root, Prefix) ->
 	     script("document.f.password.focud();")
 	    ]
 	   )
-      ]).
+      ], false).
 
 
 changePassword2(Params, Root, Prefix) ->
@@ -1545,7 +1558,7 @@ previewPage1(Params, Root, Prefix) ->
 		    input("hidden", "password", Password),
 		    input("hidden", "txt", str2formencoded(Txt))]),
 	      p(),hr(),h1(Page), 
-	      wiki_to_html:format_wiki(Page, Wik, Root, preview)]).
+	      wiki_to_html:format_wiki(Page, Wik, Root, preview)], false).
 
 %% Preview Tagged
 %% Tagged stuff is inside comment and append regions
@@ -1571,7 +1584,8 @@ previewTagged(Params, Root, Prefix) ->
 			    input("hidden", "tag", Tag),
 			    input("hidden", "txt", str2formencoded(Txt))]),
 		      p(),hr(), 
-		      wiki_to_html:format_wiki(Page,{txt,10000,Txt},Root)]);
+		      wiki_to_html:format_wiki(Page,{txt,10000,Txt},Root)],
+		      false);
 	false ->
 	    show({text_contains,'< or >', in_col_1_which_is_illegal})
     end.
@@ -1611,7 +1625,7 @@ previewNewPage(Params, Root, Prefix) ->
 			    input("hidden", "password", P1),
 			    input("hidden", "email", str2formencoded(Email)),
 			    input("hidden", "txt", str2formencoded(Txt))]),
-		      wiki_to_html:format_wiki(Page, Wik, Root)]);
+		      wiki_to_html:format_wiki(Page, Wik, Root)], false);
 	true ->
 	    show({passwords_differ,P1,P2})
     end.
@@ -1732,8 +1746,11 @@ mk_image_link(X, Img, Alt, Title) ->
      "alt='", Alt, "' "
      "title='", Title,"'></a>&nbsp;&nbsp;\n"].
 
-banner(File, Password) ->			    
-    [table("menu",
+banner(File, Locked) ->			    
+    MenuId = if Locked == false -> "menu";
+		true -> "lockedmenu"
+	     end,
+    [table(MenuId,
 	   [
 	    mk_image_link("showPage.yaws?node=home",
 			  "WikiPreferences.files/home.gif", "Home",
@@ -1882,13 +1899,14 @@ show({bad_password, Page}) ->
 		    input("text", "email", ""),
 		    input("submit", "send",
 			  "Show password")])
-	     ]);
+	     ], false);
 
 show({illegal_filename, FileName, Reason}) ->
     template("Error", "",
 	     [h1("Illegal filename"),
 	      p("You have supplied an illegal filename: " ++ FileName ++ "."),
-	      p(Reason)]);
+	      p(Reason)],
+	     false);
 
 show(X) ->
     {html, [body("white"),"<pre>",

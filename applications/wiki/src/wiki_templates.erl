@@ -1,9 +1,9 @@
 -module(wiki_templates).
 
--export([template/3]).
+-export([template/4]).
 
 %% B = normal | locked | old
-template(Title,Menu,Data) ->
+template(Title,Menu,Data,Locked) ->
     {html,["
 <head> 
 <title>", Title, "</title>
@@ -20,7 +20,9 @@ template(Title,Menu,Data) ->
 <table width='100%' border=0> 
 <tr> 
 <!-- the menu --> 
-<td id=menuframe valign='top' width='90%'>\n",
+<td id=",
+if Locked == true -> "lockedmenuframe" ; true -> "menuframe" end,
+" valign='top' width='90%'>\n",
 Menu,
 "
 </td>

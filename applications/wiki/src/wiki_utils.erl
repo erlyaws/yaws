@@ -11,7 +11,7 @@
 
 -import(lists,  [filter/2, member/2, reverse/1, sort/1, map/2]).
 -import(wiki, [p/1, h1/1, show/1]).
--import(wiki_templates, [template/3]).
+-import(wiki_templates, [template/4]).
 
 findallrefsto(Page, Root) ->
     All = wiki:ls(Root),
@@ -32,7 +32,7 @@ findallrefsto(Page, Root) ->
 	  map(fun(F) -> 
 		      [wiki_to_html:format_link(F, Root),"<br>"] end, 
 	      Spages),
-	  "</ul>"]). 
+	  "</ul>"], false). 
 
 zombies(Root) -> 
     All = wiki:ls(Root),
@@ -47,7 +47,7 @@ zombies(Root) ->
 	  map(fun(F) -> 
 		      [wiki_to_html:format_link(F, Root),"<br>"] end, 
 	      NotReached),
-	  "</ul>"]).
+	  "</ul>"], false).
 
     
 gc([H|T], Visited, Missing, Root) ->
