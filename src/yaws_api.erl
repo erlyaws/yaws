@@ -421,8 +421,10 @@ do_parse_spec(<<$=, Tail/binary>>, Spec, _Last, Cur, key) ->
 
 do_parse_spec(<<H:8, Tail/binary>>, Spec, Last, Cur, State) ->
     do_parse_spec(Tail, Spec, Last, [H|Cur], State);
+do_parse_spec(<<>>, _Spec, nokey, Cur, _State) ->
+    [{mkkey(Cur), undefined}];
 do_parse_spec(<<>>, Spec, Last, Cur, _State) ->
-    [S|_Ss] = tail_spec(Spec),
+   [S|_Ss] = tail_spec(Spec),
     [{Last, coerce_type(S, Cur)}];
 do_parse_spec(undefined,_,_,_,_) ->
     [];
