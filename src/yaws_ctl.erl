@@ -15,15 +15,25 @@
 -include_lib("kernel/include/file.hrl").
 -include_lib("yaws/include/yaws.hrl").
 -include_lib("yaws/include/yaws_api.hrl").
-
+-include("yaws_debug.hrl").
 
 ctl_file("0") ->
     "/var/run/yaws.ctl";
 ctl_file(Id) ->
-    io_lib:format("/tmp/yaws.ctl.~s",[Id]).
+    Tmp = yaws:tmp_dir_fstr(),
+    io_lib:format(Tmp ++ "/yaws.ctl.~s",[Id]).
 
 
 start(Top, Id) ->
+    case catch start0(Top, Id) of
+	{'EXIT', Reason} ->
+	    error_logger:format("Faild to start ctl : ~p~n", [Reason]),
+	    Top ! {self(), {error, Reason}};
+	Other ->
+	    Other
+    end.
+
+start0(Top, Id) ->
     case gen_tcp:listen(0, [{packet, 2},
 			    {active, false},
 			    binary,
@@ -33,6 +43,7 @@ start(Top, Id) ->
 	    case inet:sockname(L) of
 		{ok, {_, Port}} ->
 		    F = ctl_file(Id),
+		    ?Debug("Ctlfile : ~s~n", [F]),
 		    file:write_file(F, io_lib:format("~w", [Port])),
 		    {ok, FI} = file:read_file_info(F),
 		    M = FI#file_info.mode,

@@ -123,7 +123,16 @@ handle_call({setdir, Dir, Sconfs}, _From, State)
     
     L = lists:zf(
 	  fun(SC) ->
-		  A = filename:join([Dir, SC#sconf.servername ++ ".access"]),
+		  FileName = case os:type() of
+				 {win32,_ } ->
+				     lists:map(fun($:) -> $.;
+						  (C ) -> C
+					       end,
+					       SC#sconf.servername);
+				 _ ->
+				     SC#sconf.servername
+			     end,
+		  A = filename:join([Dir, FileName ++ ".access"]),
 		  case file:open(A, [write, raw, append]) of
 		      {ok, Fd} ->
 			  {true, #alog{servername = SC#sconf.servername,

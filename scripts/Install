@@ -4,7 +4,8 @@
 prefix=$1
 installprefix=$2
 erl=$3
-etcdir=$4
+werl=$4
+etcdir=$5
 
 . ../vsn.mk
 y=yaws-${YAWS_VSN}
@@ -16,16 +17,17 @@ mangle ()
 {
     d=$1
     e=$2
-    from=$3
-    to=$4
+    w=$3
+    from=$4
+    to=$5
 
     install -d `dirname $to`
-    sed -e "s;%yawsdir%;$d;g" -e "s;%erl%;$e;" $from > $to
+    sed -e "s;%yawsdir%;$d;g" -e "s;%erl%;$e;" -e  "s;%werl%;$w;"  $from > $to
 }
 
 
 
-mangle ${prefix}/lib/yaws ${erl} yaws.ss ${installprefix}/bin/yaws
+mangle ${prefix}/lib/yaws "${erl}" "${werl}" yaws.ss ${installprefix}/bin/yaws
 install -d ${installprefix}/lib/yaws/examples/ebin
 install -d ${installprefix}/lib/yaws/examples/include
 chmod +x ${installprefix}/bin/yaws
@@ -35,7 +37,7 @@ else
    t=${etcdir}/yaws.conf
 fi
 
-mangle ${prefix}/lib/yaws ${erl} yaws.conf.template ${t}
+mangle ${prefix}/lib/yaws "${erl}" "${werl}" yaws.conf.template ${t}
 
 
 if [ -f /etc/gentoo-release ]; then

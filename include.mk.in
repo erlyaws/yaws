@@ -7,6 +7,7 @@ VARDIR             = $(DESTDIR)@localstatedir@
 INSTALLPREFIX      = $(DESTDIR)$(PREFIX)
 
 ERL=@ERL@
+WERL=@WERL@
 ERLC=@ERLC@
 EMULATOR=beam
 
@@ -33,19 +34,13 @@ DLL=@DLL@
 OBJ=@OBJ@
 OUT=@OUT@
 FPIC=@FPIC@
-STRIP=@STRIP@
 LIBS=@LIBS@
 
 
 
 ERLDIR=@ERLDIR@
-ERL_INTERFACE_LIB=@ERL_INTERFACE_LIB@
-ERL_INTERFACE_LIBS=@ERL_INTERFACE_LIBS@
-ERL_INTERFACE_INCLUDE=@ERL_INTERFACE_INCLUDE@
 
 LD_SHARED=@LD_SHARED@
-
-LDFLAGS +=-L$(ERL_INTERFACE_LIB)
 
 INSTALL=@INSTALL@
 INSTALL_DATA=@INSTALL_DATA@
@@ -82,10 +77,10 @@ APPSCRIPT = '$$vsn=shift; $$mods=""; while(@ARGV){ $$_=shift; s/^([A-Z].*)$$/\'\
 	cp $< $@
 
 ../ebin/%.$(EMULATOR): %.erl
-	$(ERLC) $(ERLC_FLAGS) -o ../ebin $<
+	"$(ERLC)" $(ERLC_FLAGS) -o ../ebin $<
 
 %.$(EMULATOR): %.erl
-	$(ERLC) $(ERLC_FLAGS) $<
+	"$(ERLC)" $(ERLC_FLAGS) $<
 
 
 

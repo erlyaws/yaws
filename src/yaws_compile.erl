@@ -245,11 +245,11 @@ new_out_file(Line, C, GC) ->
 		   Other
 	   end,
     Module = [$m | integer_to_list(Mnum)],
-    OutFile = lists:flatten(
-		io_lib:format(
-		  "/tmp/yaws/~s/~s.erl",[GC#gconf.uid, Module])),
-
-    %% "/tmp/yaws/" ++ Module ++ ".erl",
+    OutFile =
+	lists:flatten(
+	  io_lib:format(
+	    "~s/yaws/~s/~s.erl",[yaws:tmp_dir(), GC#gconf.uid, Module])),
+    
 
     ?Debug("Writing outout file~s~n", [OutFile]),
     {ok, Out} = file:open(OutFile, [write]),

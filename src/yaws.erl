@@ -1175,13 +1175,19 @@ setuser(User) ->
     end.
 
 getuid() ->
-    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
-			 "/../priv/", "setuid_drv"),
-    P = open_port({spawn, "setuid_drv g"},[]),
-    receive
-	{P, {data, "ok " ++ IntList}} ->
-	    {ok, IntList}
+    case os:type() of
+	{win32, _} ->
+	    {ok, "XXX"};
+	_ ->
+	    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
+				 "/../priv/", "setuid_drv"),
+	    P = open_port({spawn, "setuid_drv g"},[]),
+	    receive
+		{P, {data, "ok " ++ IntList}} ->
+		    {ok, IntList}
+	    end
     end.
+
 
 idu(User) ->
     erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
@@ -1200,3 +1206,60 @@ user_to_home(User) ->
 	{P, {data, "ok " ++ Home}} ->
 	    Home
     end.
+
+
+tmp_dir() ->
+    case os:type() of
+	{win32,_} ->
+	    "c:/winnt/temp";
+	_ -> 
+	    "/tmp"
+    end.
+
+
+% Try to create a tmp directory in the current directory.
+% In case of any problem terminate yaws.
+%
+create_tmp_dir() ->
+    ErrorMessage = "TEMP, and TMP variables undefined. ",
+    Dir = case file:get_cwd() of
+	      {ok, CurDir} ->
+		  CurDir ++ "/tmp";
+	      Err ->
+		  io:format(
+		    ErrorMessage++"Canont access current directory; error: ~p~n",
+		    [Err]),
+		  init:stop()
+	  end,
+    case file:make_dir(Dir) of
+	ok -> Dir;
+	{error, eexist} ->
+	    case file:read_file_info("tmp") of
+		{ok, FI} when FI#file_info.type==directory ->
+		    Dir;
+		_ ->
+		    io:format(
+		      ErrorMessage++"Canont access directory ~p~n",
+		      [Dir]),
+		    init:stop()
+	    end;
+	Error ->
+	    io:format(
+	      ErrorMessage++"Canont create directory ~p, Error: ~p~n",
+	      [Dir,Error]),
+	    init:stop()
+    end.
+
+%
+% String represeting temporary directory that
+% can be used for format functions (io,io_lib).
+% WIN32 path can contain $~, so they are doubled.
+%
+tmp_dir_fstr() ->
+    lists:foldr(fun($~, Str) -> [$~, $~ | Str];
+		   (C , Str) -> [C | Str]
+		end,
+		[],
+		tmp_dir()).
+
+ 

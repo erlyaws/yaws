@@ -333,8 +333,13 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 	     end;
 
 	["username", '=' , Uname] ->
-	    fload(FD, globals, GC#gconf{username = Uname},
-		  C, Cs, Lno+1, Next);
+	    case os:type() of
+		{win32, _} ->
+		    {error, "username feature not supported on win32"};
+		_ ->
+		    fload(FD, globals, GC#gconf{username = Uname},
+			  C, Cs, Lno+1, Next)
+	    end;
 
 	['<', "server", Server, '>'] ->  %% first server 
 	    fload(FD, server, GC, #sconf{servername = Server},

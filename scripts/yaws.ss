@@ -1,8 +1,16 @@
 #!/bin/sh
 
 
-yawsdir=%yawsdir%
-erl=%erl%
+yawsdir="%yawsdir%"
+erl="%erl%"
+case `uname` in
+    CYGWIN*)
+	yawsdir=`cygpath --windows $yawsdir`
+	werl="%werl%"
+	delim=\\;;
+    *)
+        delim=/
+esac
 
 
 ENV_PGM=`which env`
@@ -12,6 +20,7 @@ help()
 {
 	echo "usage: server modes ... "
 	echo "       yaws -i         -- interactive (no daemon) mode"
+        echo "       yaws -w         -- cygwin interactive (werl) "
 	echo "       yaws -D         -- daemon mode"
 	echo "       yaws -d         -- debug mode"
 	echo "       yaws -c file    -- set config file"
@@ -56,6 +65,11 @@ do
                 interactive="true";
 		debug=" -yaws debug ";
 		daemon="";;
+           -w)
+                interactive="true";
+		debug=" -yaws debug ";
+		daemon="";
+                erl=$werl;;
            -D)
     	        daemon=" -detached ";;
 	   -d)
@@ -76,19 +90,19 @@ do
 		runmod=" -runmod $1 "
 		shift;;
 	   -h)
-	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl hup;
+	        exec $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl hup;
 		exit 0;;
 	   -s)
-	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl stop;
+	        exec $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl stop;
 		exit 0;;
 	   -S)
-	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl status;
+	        exec $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl status;
 		exit 0;;
 	   -load)
-	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl load $*;
+	        exec $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl load $*;
 		exit 0;;
 	   -v) 
-	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws printversion;
+	        exec $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws printversion;
 		exit 0;;
            -sname)
 		sname=" -sname $1 "
@@ -99,7 +113,7 @@ do
                 ID=`id -u`
 		mkdir /tmp/yaws 2> /dev/null
 	        mkdir /tmp/yaws/${ID} 2> /dev/null
-                out=`exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl check $*`
+                out=`exec $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl check $*`
 		if [ "$out" = "ok" ]; then
                     echo "$1" ok
 		    exit 0
@@ -119,10 +133,10 @@ if [ -z "$heart" ] || [ -z "$daemon" ]; then
     HEART_COMMAND="";
 else
     ## ............................this line
-    export HEART_COMMAND="${ENV_PGM} HEART=true $erl ${daemon} ${heart} -pa ${yawsdir}/ebin  ${sname} ${debug} -s yaws $trace $conf $runmod $mnesia";
+    export HEART_COMMAND="${ENV_PGM} HEART=true \"$erl\" ${daemon} ${heart} -pa ${yawsdir}${delim}ebin  ${sname} ${debug} -s yaws $trace $conf $runmod $mnesia";
 fi
 
 ## keep this line in sync with ....^
-exec $erl ${daemon} ${heart} -pa ${yawsdir}/ebin  ${sname} ${debug} -s yaws $trace $conf $runmod $mnesia
+exec "$erl" ${daemon} ${heart} -pa ${yawsdir}${delim}ebin  ${sname} ${debug} -s yaws $trace $conf $runmod $mnesia
 
 

@@ -229,14 +229,20 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 		{CTL, ok} ->
 		    ok;
 		{CTL, {error, R}} ->
+		    error_logger:format("CTL failed ~p~n", [R]),
 		    exit(R)
 	    end;
 
 	true ->
 	    ok
     end,
-    file:make_dir("/tmp/yaws"),
-    set_writeable("/tmp/yaws"),
+    Tdir0 = yaws:tmp_dir()++"/yaws/" ,
+    file:make_dir(Tdir0),
+    set_writeable(Tdir0),
+    Tdir = Tdir0 ++ Gconf#gconf.uid,
+    file:make_dir(Tdir0),
+    set_writeable(Tdir0),
+
     case (catch yaws_log:uid_change(Gconf)) of
 	ok ->
 	    ok;
@@ -386,17 +392,26 @@ add_yaws_auth(Dirs, A) ->
 do_listen(SC) ->
     case SC#sconf.ssl of
 	undefined ->
-	    {nossl, gen_tcp:listen(SC#sconf.port, opts(SC))};
+	    {nossl, gen_tcp_listen(SC#sconf.port, opts(SC))};
 	SSL ->
 	    {ssl, ssl:listen(SC#sconf.port, ssl_opts(SC, SSL))}
     end.
+
+gen_tcp_listen(Port, Opts) ->
+    ?Debug("Listen ~p:~p~n", [Port, Opts]),
+    gen_tcp:listen(Port, Opts).
+
 
 set_writeable(Dir) ->
     set_dir_mode(Dir, 8#777).
 
 set_dir_mode(Dir, Mode) ->
-    {ok, FI} = file:read_file_info(Dir),
-    file:write_file_info(Dir, FI#file_info{mode = Mode}).
+    case file:read_file_info(Dir) of
+	{ok, FI} ->
+	    file:write_file_info(Dir, FI#file_info{mode = Mode});
+	Err ->
+	    error_logger:format("Failed to read_file_info(~s)~n", [Dir])
+    end.
 
 
 gserv(_, []) ->
@@ -449,7 +464,7 @@ gserv(GC, Group0) ->
 			
 
 setup_tdir(GC) ->
-    Tdir = "/tmp/yaws/" ++ GC#gconf.uid,
+    Tdir = yaws:tmp_dir()++"/yaws/" ++ GC#gconf.uid,
     file:make_dir(Tdir),
     set_dir_mode(Tdir, 8#700),
     case file:list_dir(Tdir) of
@@ -598,6 +613,7 @@ filter_false(L) ->
 	   
 	 
 do_accept(GS) when GS#gs.ssl == nossl ->
+    ?Debug("wait in accept ... ~n",[]),
     gen_tcp:accept(GS#gs.l);
 do_accept(GS) when GS#gs.ssl == ssl ->
     ssl:accept(GS#gs.l).
@@ -1565,7 +1581,8 @@ del_old_files([]) ->
 del_old_files([{_FileAtom, spec, _Mtime1, Spec, _}]) ->
     lists:foreach(
       fun({mod, _, _, _,  Mod, _Func}) ->
-	      F="/tmp/yaws/" ++ yaws:to_list(Mod) ++ ".erl",
+
+	      F=yaws:tmp_dir()++"/yaws/" ++ yaws:to_list(Mod) ++ ".erl",
 	      code:purge(Mod),
 	      code:purge(Mod),
 	      file:delete(F);
