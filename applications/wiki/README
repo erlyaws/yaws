@@ -13,6 +13,11 @@ make
 make install
 
 
+Edit your /etc/yaws.conf and include /var/yaws/ebin in the
+ebin path
+	
+    ebin_dir = /var/yaws/ebin
+
 It is possible to have several Wiki instances on the same server. 
 Just install the www/* files in the directory where you want a 
 Wiki instance.

@@ -26,7 +26,7 @@
 -export([showPage/3, createNewPage/3, showHistory/3, allPages/3,
 	 lastEdited/3, wikiZombies/3, editPage/3, editFiles/3,
 	 previewNewPage/3, allRefsToMe/3, deletePage/3, deletePage/4,
-	 editTag/3, finalDeletePage/3, getFile/3, storePage/3,
+	 editTag/3, finalDeletePage/3, storePage/3,
 	 storeNewPage/3, previewPage/3, previewTagged/3,
 	 storeTagged/3,
 	 sendMeThePassword/3, storeFiles/3, showOldPage/3]).
@@ -40,28 +40,34 @@
 
 % This should be -include:ed instead
 
-showPage([{node,Page}], Root, Prefix) ->
-    {WobFile, FileDir} = page2filename(Page, Root),
-    case file:read_file(WobFile) of
-	{ok, Bin} ->
-	    {wik002, Pwd,_Email,_Time,_Who,TxtStr,Files,_Patches} =
-		bin_to_wik002(Root,FileDir,Bin),
-	    Wik = wiki_split:str2wiki(TxtStr),
-	    DeepStr = wiki_to_html:format_wiki(Page, Wik, Root),
-	    DeepFiles = wiki_to_html:format_wiki_files(
-			  Page, FileDir, Files, Root),
-	    wiki_templates:template(Page, body_pic(Pwd),banner(Page, Pwd),
-				   [top_header(Page),DeepStr,DeepFiles,
-				    footer(Page,Pwd)]);
-	_ ->
-	    createNewPage([{node, Page}], Root, Prefix)
-    end;
-    
-showPage(_, _, _) ->
-    error(invalid_request).
+showPage(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+    if 
+	Page == undefined ->
+	    error(invalid_request);
+	true ->
+	    {WobFile, FileDir} = page2filename(Page, Root),
+	    case file:read_file(WobFile) of
+		{ok, Bin} ->
+		    {wik002, Pwd,_Email,_Time,_Who,TxtStr,Files,_Patches} =
+			bin_to_wik002(Root,FileDir,Bin),
+		    Wik = wiki_split:str2wiki(TxtStr),
+		    DeepStr = wiki_to_html:format_wiki(Page, Wik, Root),
+		    DeepFiles = wiki_to_html:format_wiki_files(
+				  Page, FileDir, Files, Root),
+		    wiki_templates:template(Page, body_pic(Pwd),
+					    banner(Page, Pwd),
+					    [top_header(Page),DeepStr,
+					     DeepFiles, footer(Page,Pwd)]);
+		_ ->
+		    createNewPage([{node, Page}], Root, Prefix)
+	    end
+    end.
 
 
-createNewPage([{node,Page}], Root, Prefix) ->
+createNewPage(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+
     wiki_templates:template(
       "New Page",bgcolor("white"),"",
       [h1(Page),
@@ -87,7 +93,12 @@ createNewPage([{node,Page}], Root, Prefix) ->
 
 
 
-storePage([_,{node,Page},{password, Password},{txt, Txt0}], Root, Prefix) ->
+storePage(Params, Root, Prefix) ->
+
+    Page     = getopt(node,Params),
+    Password = getopt(password, Params),
+    Txt0     = getopt(txt, Params),
+
     Txt = zap_cr(urlencoded2str(Txt0)),
     %% Check the password
     {File,FileDir} = page2filename(Page, Root),
@@ -107,8 +118,13 @@ storePage([_,{node,Page},{password, Password},{txt, Txt0}], Root, Prefix) ->
 	    show({no_such_page,Page})
    end.
 
-storeNewPage([_,{node,Page},{password, Password},
-	      {email, Email0}, {txt, Txt0}], Root, Prefix) ->
+storeNewPage(Params, Root, Prefix) ->
+    
+    Page = getopt(node, Params),
+    Password = getopt(password, Params),
+    Email0 = getopt(email, Params),
+    Txt0 = getopt(txt, Params),
+    
     Txt = zap_cr(urlencoded2str(Txt0)),
     Email = urlencoded2str(Email0),
     %% Check the password
@@ -119,7 +135,12 @@ storeNewPage([_,{node,Page},{password, Password},
     file:write_file(File, B),
     redirect({node, Page}, Prefix).
 
-storeTagged([_,{node,Page},{tag, Tag},{txt, Txt0}], Root, Prefix) ->
+storeTagged(Params, Root, Prefix) ->
+
+    Page = getopt(node, Params),
+    Tag = getopt(tag, Params),
+    Txt0 = getopt(txt, Params),
+
     Txt = zap_cr(urlencoded2str(Txt0)),
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
@@ -144,52 +165,62 @@ storeTagged([_,{node,Page},{tag, Tag},{txt, Txt0}], Root, Prefix) ->
 	    show({no_such_page,Page})
    end.
 
-storeFiles([_,{node,Page},{password,Password},{filename,""},
-	      {attached,[_|_]}|Checkboxes], Root, Prefix) ->
-    show_error("You must supply a filename.");
-storeFiles([_,{node,Page},{password,Password},{filename,[_|_]},
-	      {attached,""}|Checkboxes], Root, Prefix) ->
-    show_error("No content specified.");
-storeFiles([{cancel,_},{node,Page}|_], Root, Prefix) ->
-    redirect({node, Page}, Prefix);
-storeFiles([{store,_},{node,Page},{password,Password},
-	    {filename,FileName},
-	    {attached,ContentList},
-	    {text, Description}|CheckB], Root, Prefix) ->
-    Checkboxes = [{atom_to_list(N),S} || {N,S} <- CheckB],
-    Content = list_to_binary(ContentList),
-    {File,FileDir} = page2filename(Page, Root),
-    case file:read_file(File) of
-	{ok, Bin} ->
-	    Wik = {wik002,Pwd,_Email,_Time,_Who,_Txt,OldFiles,_Patches} = 
-		bin_to_wik002(Bin),
-	    KeepFiles = [{file, Fname, Fdesc, []} ||
-			    F = {file, Fname, Fdesc, _} <- OldFiles,
-			    lists:keymember(Fname, 1, Checkboxes)],
-	    DelFiles = [F || F = {file, Fname, Fdesc, Fcont} <- OldFiles,
-			     not lists:keymember(Fname, 1, Checkboxes)],
-	    NewFile = {file, FileName, Description, []},
-	    NewFiles =
-		case {FileName,Content} of
-		    {[],<<>>} -> KeepFiles;
-		    _ ->
-			KeptOld = lists:keydelete(FileName, 2, KeepFiles),
-			[NewFile|KeptOld]
-		end,
-	    case Pwd of
-		"" ->
-		    store_files_ok(Page, Root, Prefix, NewFiles, Wik,
-				   FileName, Content, DelFiles);
-		Password ->
-		    store_files_ok(Page, Root, Prefix, NewFiles, Wik,
-				   FileName, Content, DelFiles);
+
+storeFiles(Params, Root, Prefix) ->
+
+    Page        = getopt(node, Params),
+    Password    = getopt(password, Params),
+    Cancel      = getopt(cancel, Params),
+    ContentL    = getopt(attached, Params),
+    Description = getopt(text, Params),
+    FileOpts    = getopt_options(attached, Params),
+
+    FilePath    = getopt(filename, FileOpts, ""),
+    Filename = basename(FilePath),
+
+    if
+	Cancel /= undefined ->
+	    redirect({node, Page}, Prefix);
+	true ->
+	    Checkboxes = [{lists:nthtail(3,atom_to_list(N)),S} ||
+			     {N,S,_} <- Params,
+			     lists:prefix("cb_",atom_to_list(N))],
+	    Content = list_to_binary(ContentL),
+	    {File,FileDir} = page2filename(Page, Root),
+	    case file:read_file(File) of
+		{ok, Bin} ->
+		    Wik = {wik002,Pwd,_Email,_Time,
+			   _Who,_Txt,OldFiles,_Patches} = bin_to_wik002(Bin),
+		    KeepFiles = [{file, Fname, Fdesc, []} ||
+				    F = {file, Fname, Fdesc, _} <- OldFiles,
+				    lists:keymember(Fname, 1, Checkboxes)],
+		    DelFiles =
+			[F || F = {file, Fname, Fdesc, Fcont} <- OldFiles,
+			      not lists:keymember(Fname, 1, Checkboxes)],
+		    NewFile = {file, Filename, Description, []},
+		    NewFiles =
+			case {Filename,Content} of
+			    {[],<<>>} -> KeepFiles;
+			    _ ->
+				KeptOld =
+				    lists:keydelete(Filename, 2, KeepFiles),
+				[NewFile|KeptOld]
+			end,
+		    case Pwd of
+			"" ->
+			    store_files_ok(Page, Root, Prefix, NewFiles, Wik,
+					   Filename, Content, DelFiles);
+			Password ->
+			    store_files_ok(Page, Root, Prefix, NewFiles, Wik,
+					   Filename, Content, DelFiles);
+			_ ->
+			    show({invalid_password, shouldbe,
+				  Pwd, was, Password})
+		    end;
 		_ ->
-		    show({invalid_password, shouldbe, Pwd, was, Password})
-	    end;
-	_ ->
-	    show({no_such_page,Page})
-   end.
-    
+		    show({no_such_page,Page})
+	    end
+    end.
 
 
 store_ok(Page, Root, Prefix, OldTxt,
@@ -221,9 +252,9 @@ store_files_ok(Page, Root, Prefix, NewFiles,
     file:write_file(Root++"/"++FileDir++"/"++FileName, Content),
     file:write_file(File, B),
     redirect({node, Page}, Prefix).
-%    showPage([{node, Page}], Root).
 
-showHistory([{node, Page}], Root, Prefix) ->
+showHistory(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
@@ -305,7 +336,10 @@ last_edited_time(File) ->
 	    error
     end.
 	
-showOldPage([{node,Page},{index, Nt}], Root, Prefix) ->
+showOldPage(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+    Nt = getopt(index, Params),
+
     Index = list_to_integer(Nt),
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
@@ -331,12 +365,20 @@ showOldPage([{node,Page},{index, Nt}], Root, Prefix) ->
 take(0, _) -> [];
 take(N, [{P,_,_}|T]) -> [P|take(N-1, T)].
 
-deletePage([{delete,"delete"},{node,N},{password,P}|_], Root, Prefix) ->
-    deletePage(N, P, Root, Prefix);
-deletePage([{node,N}], Root, Prefix) ->
-    deletePage(N, "", Root, Prefix).
+deletePage(Params,  Root, Prefix) ->
+    Delete = getopt(delete, Params),
+    N = getopt(node, Params),
+    P = getopt(password, Params),
+
+    if 
+	Delete == undefined ->
+	    deletePage(N, "", Root, Prefix);
+	true ->
+	    deletePage(N, P, Root, Prefix)
+    end.
 
 deletePage(Page, Password, Root, Prefix) ->
+
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
@@ -384,34 +426,10 @@ delete1(Page, Password, Content) ->
 		p(),
 		hr()])]).
 
-getFile([{node, Page}, {file,FileName}|_], Root, Prefix) ->
-    {File,FileDir} = page2filename(Page, Root),
-    case file:read_file(File) of
-	{ok, Bin} ->
-	    case binary_to_term(Bin) of
-		{wik002, Pwd,_Email,_Time,_Who,TxtStr,Files,_Patches} ->
-		    case lists:keysearch(FileName, 2, Files) of
-			{value,{file, FileName, FileDesc, FileContent}} ->
-			    {content,
-			     mime_type(FileName),
-			     FileContent};
-			false ->
-			    show({no_such_file, Page})
-		    end;
-		_ ->
-		    show({no_such_file,Page})
-	    end;
-	_ ->
-	    show({no_such_file,Page})
-    end.
+editPage(Params, Root, Prefix) ->
+    Passwd = getopt(password, Params, ""),
+    Node = getopt(node, Params), 
 
-%% mikl: Fixed a function clause error when the number of parameter is not 1 or 3
-editPage(ArgsList, Root, Prefix) ->
-    Passwd = case lists:keysearch(password, 1, ArgsList) of
-                  {value, {password, Password}} -> Password;
-		  false -> ""
-	       end,
-    {value, {node, Node}} = lists:keysearch(node, 1, ArgsList),
     editPage(Node, Passwd, Root, Prefix).
 
 editPage(Page, Password, Root, Prefix) ->
@@ -448,7 +466,6 @@ editPage(Page, Password, Root, Prefix) ->
 	    show({no_such_page,Page})
     end.
 
-
 edit1(Page, Password, Content) ->
     Txt = quote_lt(Content),
     template("Edit", background("info"), "",
@@ -469,7 +486,10 @@ edit1(Page, Password, Content) ->
 		hr()])
 	 ]).
 
-sendMeThePassword([{node,Page},{email,Email}|_], Root, Prefix) ->
+sendMeThePassword(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+    Email = getopt(email, Params),
+
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
@@ -499,11 +519,10 @@ sendMeThePassword([{node,Page},{email,Email}|_], Root, Prefix) ->
 
 
 
-editFiles([{node,N},{password,P},_], Root, Prefix) ->
-    editFiles(N, P, Root, Prefix);
-editFiles([{node,N}], Root, Prefix) ->
-    editFiles(N, "", Root, Prefix).
-
+editFiles(Params, Root, Prefix) ->
+    N = getopt(node, Params),
+    P = getopt(password, Params, ""),
+    editFiles(N, P, Root, Prefix).
 
 editFiles(Page, Password, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
@@ -550,13 +569,13 @@ editFiles1(Page, Password, Root, Prefix) ->
 		lists:map(fun({file,Name,Description,_Content}) ->
 				  ["<tr><td align=left valign=top "
 				   "width=\"20%\">",
-				   input("checkbox",Name,"on"), Name,
+				   input("checkbox","cb_"++Name,"on"), Name,
 				   "</td><td align=left valign=top>",
 				   Description,
 				   "</td></tr>\n"];
 			     ({file,Name,_Content})  ->
 				  ["<tr><td align=left valign=top>",
-				   input("checkbox",Name,"on"),Name,
+				   input("checkbox","cb_"++Name,"on"),Name,
 				   "</td><td></td></tr>\n"]
 			  end, lists:keysort(2,Files)),
 	    wiki_templates:template("Edit", bgcolor("white"),"",
@@ -570,13 +589,7 @@ editFiles1(Page, Password, Root, Prefix) ->
 			    input("hidden", "password", Password),
 			    hr(),
 			    "<table width=\"100%\"><tr>",
-			    "<b> Attach new file </b>",
-			    p(),
-			    "<th align=left>Name on site: ",
-			    "<td align=left>",
-			    input("text","filename","","30"),"\n",
-			    "<tr>",
-			    "<th align=left>Name on your computer: ",
+			    "<th align=left>Attach new file: ",
 			    "<td align=left>",
 			    input("file","attached","30"),"\n",
 			    "<tr><th colspan=2 align=left>",
@@ -598,7 +611,10 @@ editFiles1(Page, Password, Root, Prefix) ->
 	    show({no_such_page, Page})
     end.
 
-editTag([{node,Page},{tag,Tag}], Root, Prefix) ->
+editTag(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+    Tag = getopt(tag, Params),
+
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
@@ -627,10 +643,11 @@ editTag([{node,Page},{tag,Tag}], Root, Prefix) ->
     end.
 
 
-previewPage(Opts, Root, Prefix) ->
-    Page = get_opt(node, Opts),
-    Password = get_opt(password, Opts),
-    Txt0 = get_opt(text, Opts),
+previewPage(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+    Password = getopt(password, Params),
+    Txt0 = getopt(text, Params),
+
     Txt = zap_cr(Txt0),
     Wik = wiki_split:str2wiki(Txt),
     template("Preview",background("info"),"",
@@ -646,7 +663,11 @@ previewPage(Opts, Root, Prefix) ->
 	      p(),hr(),h1(Page), 
 	      wiki_to_html:format_wiki(Page, Wik, Root)]).
 
-finalDeletePage([_,{node,Page},{password,Password},{text, Txt0}], Root, Prefix) ->
+finalDeletePage(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+    Password = getopt(password, Params, ""),
+    Txt0 = getopt(text, Params),
+    
     {File,FileDir} = page2filename(Page, Root),
     case file:delete(File) of
 	ok ->
@@ -666,7 +687,11 @@ finalDeletePage([_,{node,Page},{password,Password},{text, Txt0}], Root, Prefix) 
 %% Tagged stuff is inside comment and append regions
 %% We *dont* want any structure here
 
-previewTagged([_,{node,Page},{tag,Tag},{text, Txt0}], Root, Prefix) ->
+previewTagged(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+    Tag = getopt(tag, Params),
+    Txt0 = getopt(text, Params),
+
     Txt = zap_cr(Txt0),
     %% we want this stuff to *only* be txt
     %% io:format("Here previewTagged:~p~n",[Txt]),
@@ -698,27 +723,31 @@ legal_flat_text1("\n>" ++ _) -> false;
 legal_flat_text1([_|T])      -> legal_flat_text1(T);
 legal_flat_text1([])         -> true.
     
-previewNewPage([_,{node, Page},
-		{password1,Password},
-		{password2,Password},
-		{email, Email},
-		{text, Txt0}], Root, Prefix) ->
-    Txt = zap_cr(Txt0),
-    Wik = wiki_split:str2wiki(Txt),
-    template("Preview", bgcolor("white"),"",
-	     [p("If this page is ok hit the \"Store\" button otherwise return "
-		"to the editing phase by clicking the back button in your "
-		"browser."),
-	      form("POST", "storeNewPage.yaws",
-		   [input("submit", "store", "Store"),
-		    input("hidden", "node", Page),
-		    input("hidden", "password", Password),
-		    input("hidden", "email", str2formencoded(Email)),
-		    input("hidden", "txt", str2formencoded(Txt))]),
-	      wiki_to_html:format_wiki(Page, Wik, Root)]);
-previewNewPage([_,{node,Page},{password1,P1},{password2,P2}|_],
-	       Root, Prefix) ->
-    show({passwords_differ,P1,P2}).
+previewNewPage(Params, Root, Prefix) ->
+    Page  = getopt(node, Params),
+    P1    = getopt(password1, Params),
+    P2    = getopt(password2, Params),
+    Email = getopt(email, Params),
+    Txt0  = getopt(text, Params),
+
+    if 
+	P1 == P2 ->
+	    Txt = zap_cr(Txt0),
+	    Wik = wiki_split:str2wiki(Txt),
+	    template("Preview", bgcolor("white"),"",
+		     [p("If this page is ok hit the \"Store\" button "
+			"otherwise return to the editing phase by clicking "
+			"the back button in your browser."),
+		      form("POST", "storeNewPage.yaws",
+			   [input("submit", "store", "Store"),
+			    input("hidden", "node", Page),
+			    input("hidden", "password", P1),
+			    input("hidden", "email", str2formencoded(Email)),
+			    input("hidden", "txt", str2formencoded(Txt))]),
+		      wiki_to_html:format_wiki(Page, Wik, Root)]);
+	true ->
+	    show({passwords_differ,P1,P2})
+    end.
 
 zap_cr([$\r,$\n|T]) -> [$\n|zap_cr(T)];
 zap_cr([H|T])       -> [H|zap_cr(T)];
@@ -727,7 +756,9 @@ zap_cr([])          -> [].
 wikiZombies(_, Root, Prefix) ->
     wiki_utils:zombies(Root).
 
-allRefsToMe([{node,Page}], Root, Prefix) ->
+allRefsToMe(Params, Root, Prefix) ->
+    Page = getopt(node, Params),
+
     wiki_utils:findallrefsto(Page, Root).
 
 
@@ -1123,16 +1154,6 @@ mime_type(Name)  ->
 
 %%
 
-get_opt(Opt, Opts) ->
-    case lists:keysearch(Opt, 1, Opts) of
-	false ->
-	    undefined;
-	{value, {_,V}} ->
-	    V
-    end.
-
-%%
-
 %% Applies the Funs in the list to the Args. Return the value of the
 %% first Fun that returns a non-ok value, otherwise ok.
 
@@ -1146,3 +1167,35 @@ check_precon([F|Fs], Args) ->
     end.
     
 %%
+
+getopt(Key, KeyList) ->
+    getopt(Key, KeyList, undefined).
+
+getopt(Key, KeyList, Default) ->
+    case lists:keysearch(Key, 1, KeyList) of
+	false ->
+	    Default;
+	{value, Tuple} ->
+	    element(2,Tuple)
+    end.
+
+getopt_options(Key, KeyList) ->
+    case lists:keysearch(Key, 1, KeyList) of
+	{value, Tuple} when size(Tuple) >= 3 ->
+	    element(3,Tuple);
+	_ ->
+	    undefined
+    end.
+
+%
+
+basename(FilePath) ->
+    case string:rchr(FilePath, $\\) of
+	0 ->
+	    %% probably not a DOS name
+	    filename:basename(FilePath);
+	N ->
+	    %% probably a DOS name, remove everything after last \
+	    string:substr(FilePath, N+1)
+    end.
+
