@@ -1,3 +1,38 @@
+2005-02-18 21:02  klacke
+
+	* vsn.mk: prepare for 1.53
+
+2005-02-18 20:57  klacke
+
+	* src/yaws_server.erl:	fatso bug found by Fredrik Linder where
+	yaws completely crash on bad URLs that for example contain space
+	chars in the uri
+
+2005-02-17 13:56  jbevemyr
+
+	* applications/wiki/src/wiki_to_html.erl: Added urlencoding to some
+	urls that didn't have that.
+
+2005-02-17 13:54  klacke
+
+	* src/yaws_api.erl: removed urldecode utf hackery
+
+2005-02-16 10:18  jbevemyr
+
+	* applications/chat/: Makefile, include.mk, chat/chat.js,
+	chat/chat.yaws, chat/chat_read.yaws, chat/chat_write.yaws,
+	chat/index.yaws, chat/login.yaws, src/Makefile, src/chat.erl: Added
+	example chat program.
+
+2005-02-15 20:55  klacke
+
+	* include/yaws.hrl, man/yaws.conf.5, scripts/yaws.conf.template,
+	src/yaws_config.erl, src/yaws_server.erl: ""
+
+2005-02-14 11:35  klacke
+
+	* ChangeLog, www/news: ""
+
 2005-02-14 11:29  klacke
 
 	* vsn.mk: ver 1.52 prepare
