@@ -886,13 +886,14 @@ getPassword(Page, Root, Prefix, Target, Values) ->
 	     [h1(Page),
 	      p("This page is password protected - provide a password"
 		"and hit the 'Continue' button."),
-	      form("POST", "putPassword.yaws",
+	      form("POST", "putPassword.yaws","f",
 		   (Hidden ++
 		    [input("hidden", "target", atom_to_list(Target)),
 		     "Password: ",
 		     password_entry("password",8),
 		     input("submit","continue","Continue"),
-		     input("submit","cancel","Cancel")
+		     input("submit","cancel","Cancel"),
+		     script("document.f.password.focus();")
 		     ]
 		   )
 		  )
@@ -1374,8 +1375,8 @@ old_pic() -> background("old").
 background(F) ->
     ["<body background='", F, ".gif'>\n"].
 
-table(Color, X) ->
-    ["<table width=\"100%\"><tr><td bgcolor=\"", Color, "\">\n",
+table(Id, X) ->
+    ["<table width=\"100%\"><tr><td id=\"", Id, "\">\n",
      X,"</td></tr></table>\n"].
 
 mk_image_link(X, Img, Alt) ->
@@ -1391,7 +1392,7 @@ body_pic("") -> background("normal");
 body_pic(_)  -> background("locked").
 
 banner(File, Password) ->			    
-    [table("#FFFFFF",
+    [table("menu",
 	   [
 	    mk_image_link("showPage.yaws?node=home", "home.gif", "Home",
 			  "Go to initial page"),
@@ -1439,11 +1440,19 @@ input(Type, Name, Value, Size) ->
     ["<INPUT TYPE=",Type,"  Name=\"",Name,"\" Value=\"", Value,"\"",
      "Size=\"",Size, "\">\n"].
 
+script(Script) ->
+    ["<script>\n", Script, "\n</script>\n"].
 
 form(Method, Action, Args) ->
     ["<FORM METHOD=", Method,
      " ENCTYPE=\"multipart/form-data\"",
      " ACTION=\"", Action, "\">",
+     Args, "</form>\n"].
+
+form(Method, Action, Name, Args) ->
+    ["<FORM METHOD=", Method,
+     " ENCTYPE=\"multipart/form-data\"",
+     " ACTION=\"", Action, "\" NAME=\"", Name, "\">",
      Args, "</form>\n"].
 
 

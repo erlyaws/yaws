@@ -1,0 +1,24 @@
+body, td {
+	font-family : Verdana, Arial, sans-serif ;
+	font-size : 9pt;
+}
+/* links without underline */
+a {
+	text-decoration: none;
+}
+/* visual link effect */
+a:hover {
+	text-decoration: underline;
+}
+
+TEXTAREA{
+  width : 100%;
+}
+
+#menu{
+  background: #BFEE90;
+}
+#menuframe {
+  background: #90EE91;
+}
+	

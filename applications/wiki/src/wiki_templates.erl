@@ -9,20 +9,18 @@ template(Title,Background,Menu,Data) ->
 <title>", Title, "</title>
 <style type=\"text/css\">
 <!--
-TEXTAREA{
-  width : 100%;
-}
+   @import url(custom.css);
 -->
 </style>
 </head>
 <body>
-<table width='100%'>
+<table width='100%' border=0>
 <tr> 
 <td> 
-<table width='100%'> 
+<table width='100%' border=0> 
 <tr> 
 <!-- the menu --> 
-<td bgcolor='#FFFFFF' valign='top' width='90%'>\n",
+<td id=menuframe valign='top' width='90%'>\n",
 Menu,
 "
 </td>
