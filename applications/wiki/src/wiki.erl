@@ -2379,7 +2379,7 @@ basename(FilePath) ->
 	    filename:basename(FilePath);
 	N ->
 	    %% probably a DOS name, remove everything after last \
-	    string:substr(FilePath, N+1)
+	    basename(string:substr(FilePath, N+1))
     end.
 
 
