@@ -27,7 +27,7 @@
 	 htmlize/1, htmlize_char/1, f/2, fl/1]).
 -export([find_cookie_val/2, secs/0, 
 	 url_decode/1, 
-	 url_encode/1]).
+	 url_encode/1, parse_url/1, parse_url/2, format_url/1]).
 -export([get_line/1, mime_type/1]).
 -export([stream_chunk_deliver/2, stream_chunk_end/1]).
 -export([new_cookie_session/1,
@@ -954,4 +954,81 @@ reformat_header(H) ->
 
 set_content_type(MimeType) ->
     yaws_server:make_content_type(MimeType).
+
+
+%% returns a #url{} record
+parse_url(Str) ->
+    parse_url(Str, strict).
+
+parse_url(Str, Strict) ->
+    case Str of
+	"http://" ++ Rest ->
+	    parse_url(host, Strict, #url{scheme = http}, Rest, []);
+	"https://" ++ Rest ->
+	    parse_url(host, Strict, #url{scheme = https}, Rest, []);	
+	"ftp://" ++ Rest ->
+	    parse_url(host, Strict, #url{scheme = ftp}, Rest, []);
+	"file://" ++ Rest ->
+	    parse_url(host, Strict, #url{scheme = file}, Rest, []);
+	_ when Strict == sloppy ->
+	    parse_url(host, Strict, #url{scheme = http}, Str, [])
+    end.
+
+
+parse_url(host, Strict, U, Str, Ack) ->
+    case Str of
+	[] ->
+	    U#url{host = lists:reverse(Ack), 
+		  path = "/"
+		 };
+	[$/|Tail] ->
+	    U2 = U#url{host = lists:reverse(Ack)},
+	    parse_url(path, Strict, U2, Tail,"/");
+	[$:|T] ->
+	    U2 = U#url{host = lists:reverse(Ack)},
+	    parse_url(port, Strict, U2, T,[]);
+	[H|T] ->
+	    parse_url(host, Strict, U, T, [H|Ack])
+    end;
+parse_url(port, Strict, U, Str, Ack) ->
+    case Str of
+	[] ->
+	    U#url{port = list_to_integer(lists:reverse(Ack)),
+		  path = "/"};
+	[$/|T] ->
+	    U2 = U#url{port = list_to_integer(lists:reverse(Ack))},
+	    parse_url(path, Strict, U2, T,"/");
+	[H|T] ->
+	    parse_url(port, Strict, U,T,[H|Ack])
+    end;
+parse_url(path, Strict, U, Str, Ack) ->
+    case Str of
+	[] ->
+	    U#url{path = lists:reverse(Ack)};
+	[$?|T] ->
+	    U#url{path = lists:reverse(Ack),
+		  querypart = T};
+	[H|T] ->
+	    parse_url(path, Strict, U, T, [H|Ack])
+    end.
+
+		
+format_url(Url) when record(Url, url) ->
+    [
+     atom_to_list(Url#url.scheme), "://",
+     Url#url.host,
+     if
+	 Url#url.port == undefined ->
+	     [];
+	 true  ->
+	     [$: | integer_to_list(Url#url.port)]
+     end,
+     Url#url.path,
+     if
+	 Url#url.querypart == [] ->
+	     [];
+	 true ->
+	     [$?|Url#url.querypart]
+     end
+    ].
 

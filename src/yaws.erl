@@ -662,3 +662,33 @@ funreverse([H|T], Fun, Ack) ->
     funreverse(T, Fun, [Fun(H)|Ack]);
 funreverse([], _Fun, Ack) ->
     Ack.
+
+
+%% splits Str in two parts
+%% First part leading Upto SubStr and remaining part after
+split_at(Str, Substr) ->
+    split_at(Str, Substr,[]).
+
+split_at(Str, Substr, Ack) ->
+    case is_prefix(Substr, Str) of
+	{true, Tail} ->
+	    {lists:reverse(Ack), Tail};
+	false ->
+	    case Str of
+		[] ->
+		    {lists:reverse(Ack), []};
+		[H|T] ->
+		    split_at(T, Substr, [H|Ack])
+	    end
+    end.
+
+
+%% is arg1 a prefix of arg2
+is_prefix([H|T1], [H|T2]) ->
+    is_prefix(T1, T2);
+is_prefix([], T) ->
+    {true, T};
+is_prefix(_,_) ->
+    false.
+
+    

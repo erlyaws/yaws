@@ -54,3 +54,9 @@
 
 
 
+-record(url,
+	{scheme,
+	 host, 
+	 port,            %% undefined means not set
+	 path = [],
+	 querypart = []}).
