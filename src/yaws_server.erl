@@ -1649,7 +1649,7 @@ deliver_dyn_part(CliSock, GC, SC,          % essential params
 		    deliver_dyn_part(
 		      CliSock, GC, SC, LineNo, YawsFile, 
 		      CliDataPos+size(un_partial(More)), 
-		      A2, YawsFun, Cont
+		      A2, YawsFun, DeliverCont
 		     );
 		Err ->
 		    A2 = Arg#arg{clidata = Err,
