@@ -1300,7 +1300,7 @@ make_www_authenticate_header(Realm) ->
 make_date_header() ->
     N = element(2, now()),
     case get(date_header) of
-	{Str, Secs} when (Secs+10) > N ->
+	{Str, Secs} when (Secs+10) < N ->
 	    H = ["Date: ", yaws:universal_time_as_string(), "\r\n"],
 	    put(date_header, {H, N}),
 	    H;
