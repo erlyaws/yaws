@@ -361,6 +361,7 @@ check([Id, File| IncludeDirs]) ->
 					   IncludeDirs),
 		   id = atom_to_list(Id)
 		  },
+    yaws_server:setup_dirs(GC2),
     put(sc, #sconf{}),
     put(gc, GC2),
     case yaws_compile:compile_file(atom_to_list(File)) of
