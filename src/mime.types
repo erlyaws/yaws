@@ -49,7 +49,7 @@ application/news-message-id
 application/news-transmission
 application/ocsp-request
 application/ocsp-response
-application/octet-stream	bin dms lha lzh exe class so dll
+application/octet-stream	bin dms lha lzh exe class so dll jar cab
 application/oda			oda
 application/parityfec
 application/pdf			pdf
