@@ -14,7 +14,7 @@
 
 -import(lists,  [filter/2, member/2, reverse/1, sort/1, map/2]).
 -import(wiki, [p/1, h1/1, show/1]).
--import(wiki_templates, [template2/4]).
+-import(wiki_templates, [template2/5]).
 
 %% HTML structure of the backlink list
 findallrefsto(Page, Root) ->
