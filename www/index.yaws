@@ -19,7 +19,8 @@ Two separate modes of operations are supported.
 <br>
 <ul>
 <li> 
-<p>Standalone mode where yaws runs as a regular webserver daemon. This is the default mode.
+<p>Standalone mode where yaws runs as a regular webserver daemon. 
+This is the default mode.
 <li> 
 <p>Embedded mode where Yaws runs as an embedded webserver in an
 another erlang application. 
@@ -59,19 +60,18 @@ powered by Yaws.
 
 <div class="man"> 
 
-<h3> Dec 1, 2002.  Version 0.60 released  </h3>
+<h3> Jan 23, 2003.  Version 1.0 released  </h3>
 
 <ul>
 
 
-<li><p> This is minor maintenance release.
+<li><p> This is major release. Yaws is now in production quality.
 
-<li><p> Support to run Yaws first as root, then under a 
-a non privileged user
+<li><p> Some minor fixes to yaws_api.
+<li><p> security bug found by jcortner@cvol.net
+<li><p> can compile yaws file produced on win32, that is
+files with \r\n terminaded lines.
 
-<li><p> A bug in listdir together with ~username expansion fixed
-
-<li><p> Bugs in wraplog fixed
 
 </ul>
 </div>
@@ -89,7 +89,20 @@ a non privileged user
 
 <ul>
 
+<li>  Dec 1, 2002.  Version 0.60 released 
+<ul>
 
+
+<li><p> This is minor maintenance release.
+
+<li><p> Support to run Yaws first as root, then under a 
+a non privileged user
+
+<li><p> A bug in listdir together with ~username expansion fixed
+
+<li><p> Bugs in wraplog fixed
+
+</ul>
 
 
 <li> Nov 25, 2002.  Version 0.59 released  
