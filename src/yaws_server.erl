@@ -571,8 +571,11 @@ maybe_access_log(CliSock, SC, Req) ->
 
 
 get_path({abs_path, Path}) ->
+%    io:format("Path = ~p\n", [Path]),
+%    P = yaws_api:url_decode(Path),
+%    io:format("P = ~p\n", [P]),
+%    P.
     yaws_api:url_decode(Path).
-
 
 do_recv(Sock, Num, TO, nossl) ->
     gen_tcp:recv(Sock, Num, TO);

@@ -434,7 +434,20 @@ find_cookie_val3([H|T], Ack) ->
     find_cookie_val3(T, [H|Ack]).
 
 
+%% This one needs to deal with Microsoft style encoding.
+%% 
+%% FIXME: This scheme is derived from what MSIE generates. I've
+%% not tried to find the proper RFC.
 
+url_decode([$%, $C, $2, $%, Hi, Lo | Tail]) ->
+    Hex = yaws:hex_to_integer([Hi, Lo]),
+    [Hex | url_decode(Tail)];
+url_decode([$%, $C, $3, $%, Hi, Lo | Tail]) when Hi > $9 ->
+    Hex = yaws:hex_to_integer([Hi+4, Lo]),
+    [Hex | url_decode(Tail)];
+url_decode([$%, $C, $3, $%, Hi, Lo | Tail]) when Hi < $A ->
+    Hex = yaws:hex_to_integer([Hi+4+7, Lo]),
+    [Hex | url_decode(Tail)];
 url_decode([$%, Hi, Lo | Tail]) ->
     Hex = yaws:hex_to_integer([Hi, Lo]),
     [Hex | url_decode(Tail)];
