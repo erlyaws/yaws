@@ -1265,7 +1265,7 @@ make_dyn_headers(DoClose, MimeType) ->
      make_server_header(),
      make_content_type(MimeType),
      make_connection_close(DoClose),
-     make_non_cache_able()
+     make_non_cache_able(DoClose)
     ].
 
 
@@ -1273,8 +1273,10 @@ make_x_pad() ->
     "X-Pad: avoid browser bug\r\n".
 
 
-make_non_cache_able() -> 
-    "Cache-Control: no-cache \r\nPragma: no-cache\r\n".
+make_non_cache_able(true) -> 
+    "Cache-Control: no-cache \r\nPragma: no-cache\r\n";
+make_non_cache_able(false) -> 
+    "Cache-Control: no-cache \r\n".
 
 
 make_date_and_server_headers() ->
