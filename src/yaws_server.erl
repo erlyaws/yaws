@@ -908,7 +908,8 @@ cache_file(GC, SC, FI, Path, FullPath, UrlType) ->
 		    ets:insert(E, {{urlc, Path}, 1}),
 		    ets:update_counter(E, num_files, 1),
 		    ets:update_counter(E, num_bytes, FI#file_info.size),
-		    cached;
+		    cached
+	    end
     end.
 
 
