@@ -478,16 +478,8 @@ ticker(Time, Msg) ->
     spawn_link(yaws, ticker, [Time, S, Msg]).
 ticker(Time, To, Msg) ->
     process_flag(trap_exit, true),
-    ticker2(Time, To, Msg).
+    yaws_ticker:ticker(Time, To, Msg).
 
-ticker2(Time, To, Msg) ->
-    receive
-	{'EXIT', _} ->
-	    exit(normal)
-    after Time ->
-	    To ! Msg
-    end,
-    ticker2(Time, To, Msg).
 
 fmt_ip({A,B,C,D}) ->
     [integer_to_list(A), $.,
