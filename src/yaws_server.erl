@@ -921,6 +921,11 @@ bad_request(CliSock, _Req, _Head) ->
     ok = inet_setopts(CliSock, [{packet, raw}, binary]),
     SC=get(sc),
     PPS = SC#sconf.partial_post_size,
+    CT = 
+	case yaws:lowercase(Head#headers.content_type) of
+	    "multipart/form-data"++_ -> multipart;
+	    _ -> urlencoded
+	end,
     Bin = case Head#headers.content_length of
 	      undefined ->
 		  case Head#headers.connection of
@@ -935,7 +940,7 @@ bad_request(CliSock, _Req, _Head) ->
 		  if 
 		      Int_len == 0 ->
 			  <<>>;
-		      PPS < Int_len ->
+		      PPS < Int_len, CT == multipart ->
 			  {partial, get_client_data(CliSock, PPS,
 						    is_ssl(SC#sconf.ssl))};
 		      true ->

@@ -73,26 +73,23 @@ parse_query(Arg) ->
 	    parse_post_data_urlencoded(D)
     end.
 
-
 %% parse url encoded POST data
 parse_post(Arg) ->
     D = Arg#arg.clidata,
     Req = Arg#arg.req,
     case Req#http_request.method of
 	'POST' ->
-	    if
-		D == [] ->
-		    [];
-		true ->
+	    case D of
+		[] -> [];
+		_ ->
 		    parse_post_data_urlencoded(D)
 	    end;
 	Other ->
-	    error_logger:error_msg("ERROR: Can't parse post body for ~p requests",
-				   [Other]),
+	    error_logger:error_msg(
+	      "ERROR: Can't parse post body for ~p requests",
+	      [Other]),
 	    []
     end.
-
-	    
 
 
 %
@@ -147,8 +144,6 @@ parse_post(Arg) ->
 %      io:format("End_res~n").
 % 
 % </erl>
-
-
 
 parse_multipart_post(Arg) ->
     H = Arg#arg.headers,
