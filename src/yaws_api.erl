@@ -87,7 +87,7 @@ parse_post(Arg) ->
 		    parse_post_data_urlencoded(D)
 	    end;
 	Other ->
-	    error_logger:error_msg("Can't parse post body if get a ~p",
+	    error_logger:error_msg("ERROR: Can't parse post body for ~p requests",
 				   [Other]),
 	    []
     end.
@@ -1274,6 +1274,16 @@ ehtml_expander(Ch, Before, After) when Ch >= 0, Ch =< 255 ->
     ehtml_expander_done(yaws_api:htmlize_char(Ch), Before, After);
 ehtml_expander(Bin, Before, After) when binary(Bin) ->
     ehtml_expander_done(yaws_api:htmlize(Bin), Before, After);
+
+ehtml_expander({ssi,File, Del, Bs}, Before, After) ->
+    Str = case yaws_server:ssi(File, Del, Bs) of
+	      {error, Rsn} ->
+		  io_lib:format("ERROR: ~p~n",[Rsn]);
+	      X ->
+		  X
+	  end,
+    ehtml_expander_done(Str, Before, After);
+
 ehtml_expander({pre_html, X}, Before, After) ->
     ehtml_expander_done(X, Before, After);
 %% Tags
