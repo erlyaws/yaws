@@ -17,6 +17,9 @@
 %%                      [              Note
 %%                        ...
 %%                      ]
+%%                      [expires:Date  expire tagged region
+%%                        ...
+%%                      ]
 %%                      {              Preformatted
 %%                        ...
 %%                      }
@@ -63,7 +66,8 @@
 format(Str, F, Node) ->
     Env = #env{node=Node,f=F},
     Str1 = case Str of [$\n|_] -> Str; _ -> [$\n|Str] end,
-    format_txt(Str1, Env, [], Str1).
+    {Env1, Txt} = format_txt(Str1, Env, [], Str1),
+    Txt.
 
 blank_line(S=[$\n|_]) -> {yes, S};
 blank_line([$\t|T])   -> blank_line(T);
@@ -134,7 +138,7 @@ format_txt([H|T], Env, L, Doc) ->
     format_txt(T, Env, [H|L], Doc);
 format_txt([], Env, L, Doc) ->
     {_, L1} = clear_line(Env, L),
-    reverse(L1).
+    {Env, reverse(L1)}.
 
 format_wiki_word(Str, Env) ->
     F = Env#env.f,
@@ -190,6 +194,7 @@ is_graphic(F) ->
 after_nl([${,$\n|T], Env, L, Doc)  -> pre(T, Env, L, Doc);
 after_nl([${,${|T], Env, L, Doc)   -> emb(T, Env, L, Doc);
 after_nl([${|T], Env, L, Doc)      -> pre(T, Env, L, Doc);
+after_nl("[expires:"++T, Env, L, Doc) -> eregion(T, Env, L, Doc);
 after_nl([$[|T], Env, L, Doc)      -> note(T, Env, L, Doc);
 after_nl("____" ++ T, Env, L, Doc) -> hr(T, Env, L, Doc);
 after_nl(S=[$-|T], Env, L, Doc)    -> mk_list(S, Env, L, Doc);
@@ -228,6 +233,169 @@ emb([H|T], Env, L, Doc) ->
     emb(T, Env, [H|L], Doc);
 emb([], Env, L, Doc) ->
     emb([$},$}], Env, L, Doc).
+
+eregion(T0, Env, L, Doc) ->
+    {DateStr,T1} = collect_wiki_link(T0),
+    Date = parse_date(DateStr),
+    Expired = date_less(Date, {date(),time()}),
+    {Region, T2} = collect_region($], T1, []),
+    case Expired of
+	error ->
+	    L1 = reverse("ERROR: bad expires date entry - "++DateStr++". "
+			 "The date should be on the form \"3 Jan 2003 "
+			 "00:00:00\".", L),
+	    format_txt(T2, Env, L1, Doc);
+	true ->
+	    format_txt(T2, Env, L, Doc);
+	false ->
+	    {Env1, RTxt} = format_txt(Region, Env, [], Doc),
+	    L1 = reverse(RTxt, L),
+	    format_txt(T2, Env1, L1, Doc)
+    end.
+
+collect_region(_, [], Acc) ->
+    {lists:reverse(Acc), []};
+collect_region(End, [$\n,End|T], Acc) ->
+    {lists:reverse(Acc), T};
+collect_region(End, [C|T], Acc) ->
+    collect_region(End, T, [C|Acc]).
+
+date_less(error,_) -> error;
+date_less(_,error) -> error;
+date_less(D1,D2) ->
+    Ds1 = calendar:datetime_to_gregorian_seconds(D1),
+    Ds2 = calendar:datetime_to_gregorian_seconds(D2),
+    Ds1 < Ds2.
+
+-record(date,
+	{
+	  year,
+	  month,
+	  day,
+	  hours, 
+	  minutes,
+	  seconds
+	  }).
+
+parse_date(Date) ->
+    parse_date(Date, #date{}).
+
+parse_date([], D) ->
+    Entries = tl(tuple_to_list(D)),
+    AllDone = lists:all(fun(X) -> if integer(X) -> true;
+				     true -> false
+				  end
+			end, Entries),
+    if
+	AllDone ->
+	    {{D#date.year,D#date.month,D#date.day},
+	     {D#date.hours,D#date.minutes,D#date.seconds}};
+	true ->
+	    error
+    end;
+parse_date([D|Ds], Date) ->
+    case char_type(D) of
+	space -> parse_date(Ds, Date);
+	alpha when Date#date.month == undefined ->
+	    case is_month(lowercase([D|Ds])) of
+		false ->
+		    parse_date(Ds, Date);
+		{true, M, Rest} ->
+		    parse_date(Rest, Date#date{month=M})
+	    end;
+	alpha ->
+	    parse_date(Ds, Date);
+	digit ->
+	    case parse_time([D|Ds]) of
+		error ->
+		    {Number,Rest} = get_number([D|Ds], 0),
+		    if
+			Number < 32, Date#date.day == undefined ->
+			    parse_date(Rest, Date#date{day=Number});
+			Number < 50, Date#date.year == undefined ->
+			    parse_date(Rest, Date#date{year=Number+2000});
+			Number < 100, Date#date.year == undefined ->
+			    parse_date(Rest, Date#date{year=Number+1900});
+			Number > 1900, Date#date.year == undefined ->
+			    parse_date(Rest, Date#date{year=Number});
+			true ->
+			    parse_date(Rest, Date)
+		    end;
+		{Hours, Minutes, Seconds, Rest} ->
+		    parse_date(Rest, Date#date{hours=Hours,
+					       minutes=Minutes,
+					       seconds=Seconds})
+	    end;
+	_ ->
+	    parse_date(Ds, Date)
+    end.
+
+lowercase([C|S]) -> [lowercase(C)|lowercase(S)];
+lowercase(C) when C>=$A, C=<$Z -> C+32;
+lowercase(C) -> C.
+
+is_month("jan"++Rest) -> {true, 1, Rest};
+is_month("feb"++Rest) -> {true, 2, Rest};
+is_month("mar"++Rest) -> {true, 3, Rest};
+is_month("apr"++Rest) -> {true, 4, Rest};
+is_month("may"++Rest) -> {true, 5, Rest};
+is_month("jun"++Rest) -> {true, 6, Rest};
+is_month("jul"++Rest) -> {true, 7, Rest};
+is_month("aug"++Rest) -> {true, 8, Rest};
+is_month("sep"++Rest) -> {true, 9, Rest};
+is_month("oct"++Rest) -> {true, 10, Rest};
+is_month("nov"++Rest) -> {true, 11, Rest};
+is_month("dec"++Rest) -> {true, 12, Rest};
+is_month(_) -> false.
+
+enc_month(1) -> "Jan";
+enc_month(2) -> "Feb";
+enc_month(3) -> "Mar";
+enc_month(4) -> "Apr";
+enc_month(5) -> "May";
+enc_month(6) -> "Jun";
+enc_month(7) -> "Jul";
+enc_month(8) -> "Aug";
+enc_month(9) -> "Sep";
+enc_month(10) -> "Oct";
+enc_month(11) -> "Nov";
+enc_month(12) -> "Dec".
+
+enc_day(1) -> "Mon";
+enc_day(2) -> "Tue";
+enc_day(3) -> "Wed";
+enc_day(4) -> "Thu";
+enc_day(5) -> "Fri";
+enc_day(6) -> "Sat";
+enc_day(7) -> "Sun".
+
+char_type(D) when D>=$a, D=<$z -> alpha;
+char_type(D) when D>=$A, D=<$Z -> alpha;
+char_type(D) when D>=$0, D=<$9 -> digit;
+char_type($\ ) -> space;
+char_type($\n) -> space;
+char_type($\t) -> space;
+char_type($\v) -> space;
+char_type(_) -> unknown.
+
+get_number([D|Ds], N) when D>=$0, D=<$9 ->
+    get_number(Ds, N*10+(D-$0));
+get_number(Rest, N) -> {N, Rest}.
+
+parse_time(Time) ->
+    F = fun() ->
+		{Hour,[$:|R1]}    = get_number(Time, 0),
+		{Minutes,[$:|R2]} = get_number(R1, 0),
+		{Seconds,R3}      = get_number(R2, 0),
+		{Hour, Minutes, Seconds, R3}
+	end,
+    case catch F() of
+	{Hour, Minutes, Seconds, Rest} when integer(Hour),
+				      integer(Minutes),
+				      integer(Seconds) ->
+	    {Hour, Minutes, Seconds, Rest};
+	_ -> error
+    end.
 
 note(T, Env, L, Doc) ->
     {Env1, L1} = clear_line(Env, L),
