@@ -28,11 +28,11 @@ format_wiki_files(Page, FileDir, Files, Root, Heading) ->
 
 format_wiki(Page, Wik, Root) ->
     LinkFun = fun(I) -> format_link(I, Page, Root, show) end,
-    pp(Wik, LinkFun, Page).
+    pp(Wik, LinkFun, Page, Root).
 
 format_wiki(Page, Wik, Root, preview) ->
     LinkFun = fun(I) -> format_link(I, Page, Root, preview) end,
-    pp(Wik, LinkFun, Page).
+    pp(Wik, LinkFun, Page, Root).
 
 format_link(Page, Root) ->
     format_link({wikiLink, Page}, [], Root, show).
@@ -94,23 +94,21 @@ get_filesize(File) ->
 i2s(X) ->
     integer_to_list(X).
 
-pp({wik,L}, F, Node) ->
-    map(fun(I) -> pp(I, F, Node) end, L);
-pp({txt,_,Str}, F, Node) ->
+pp({wik,L}, F, Node, Root) ->
+    map(fun(I) -> pp(I, F, Node, Root) end, L);
+pp({txt,_,Str}, F, Node, Root) ->
     wiki_format_txt:format(Str, F, Node);
-pp({open,Tag,Str}, F, Node) -> 
-    open("#CCFFCC",Tag,F,pp({txt,9999,Str}, F, Node));
-pp({write_append,Tag,Str}, F, Node) -> 
-    open("#99FFFF",Tag,F,pp({txt,8888,Str}, F, Node));
-pp(Other, F, Node) ->
-    wiki:show({cannot,format,Other}).
+pp({open,Tag,Str}, F, Node, Root) -> 
+    open("#CCFFCC",Tag,F,pp({txt,9999,Str}, F, Node, Root));
+pp({write_append,Tag,Str}, F, Node, Root) -> 
+    open("#99FFFF",Tag,F,pp({txt,8888,Str}, F, Node, Root));
+pp(Other, F, Node, Root) ->
+    wiki:show({cannot,format,Other}, Root).
 
 open(Color, Tag, F, Stuff) ->
     ["\n<table width=\"90%\" cellpadding=20>\n<tr><td bgcolor=\"",
      Color, "\">\n", Stuff,
-     "<p>",F({editTag,Tag}),"</td></tr></table><p>\n"];
-open(Color, Args, F, Stuff) ->
-    wiki:show({bad_open_tag,Args}).
+     "<p>",F({editTag,Tag}),"</td></tr></table><p>\n"].
 
 is_file(File) ->
     case file:read_file_info(File) of
