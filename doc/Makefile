@@ -1,5 +1,6 @@
 
 include ../include.mk
+include ../vsn.mk
 
 IMG_EPS = $(wildcard *.eps)
 IMG_PDF = $(IMG_EPS:.eps=.pdf)
@@ -27,6 +28,6 @@ clean:
 	-rm *~ *.ps *.dvi *.log *.aux *.pdf *.toc *.beam 2> /dev/null
 
 install:
-	-install -d $(INSTALLPREFIX)/share/doc/yaws
-	-cp yaws.pdf $(INSTALLPREFIX)/share/doc/yaws
+	-install -d $(INSTALLPREFIX)/share/doc/yaws-$(YAWS_VSN)
+	-cp yaws.pdf $(INSTALLPREFIX)/share/doc/yaws-$(YAWS_VSN)
  
