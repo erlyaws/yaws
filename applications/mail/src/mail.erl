@@ -2,7 +2,7 @@
 %    File:	mail.erl  (~jb/mail.erl)
 %    Author:	Johan Bevemyr
 %    Created:	Sat Oct 25 10:59:24 2003
-%    Purpose:   
+						%    Purpose:   
 
 -module('mail').
 -author('jb@trut.bluetail.com').
@@ -23,7 +23,7 @@
 	  headers
 	 }).
 
--record(mhead,
+-record(mail,
 	{
 	  from="",
 	  to="",
@@ -59,8 +59,8 @@
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%
+						%
+						%
 
 build_toolbar(Entries) ->
     {table, [{bgcolor,"c0c0c0"},{cellpadding,0},{cellspacing,0},{border,0}],
@@ -98,23 +98,23 @@ build_toolbar([{Gif,Url,Cmd}|Rest], Used) ->
 	      {img, [{src,"tool-div.gif"},{width,2},{height,16},
 		     {alt,""},{border,0},{hspace,2}]}}]
     end ++
-    [{td, [nowrap,{width,"2%"},{valign,middle},{align,left}],
-      {a, [{class,nolink},
-	   {href,Url}],
-       [{img, [{src,Gif},{vspace,2},{width,20},
-	       {height,20},{alt,Cmd},{border,0}],[]}]}
+	[{td, [nowrap,{width,"2%"},{valign,middle},{align,left}],
+	  {a, [{class,nolink},
+	       {href,Url}],
+	   [{img, [{src,Gif},{vspace,2},{width,20},
+		   {height,20},{alt,Cmd},{border,0}],[]}]}
 
-     },
-     {td, [nowrap,{width,"2%"},{valign,middle},{align,left}],
-      [{a, [{class,nolink},
-	    {href,Url}],
-	{font, [{size,2},{color,"#000000"},{title,Cmd}], Cmd}}]} |
-     build_toolbar(Rest, Used+4)].
+	 },
+	 {td, [nowrap,{width,"2%"},{valign,middle},{align,left}],
+	  [{a, [{class,nolink},
+		{href,Url}],
+	    {font, [{size,2},{color,"#000000"},{title,Cmd}], Cmd}}]} |
+	 build_toolbar(Rest, Used+4)].
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%
+						%
+						%
 
 delete(Session, ToDelete) ->
     tick_session(Session#session.cookie),
@@ -237,7 +237,7 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 	     {tr,[],
 	      {td,[{align,left},{valign,top}],
 	       {textarea, [{wrap,virtual},{name,text},{cols,78},{rows,21}],
-	       Msg}}
+		Msg}}
 	     }
 	    },
 	    {input,[{type,hidden},{name,cmd},{value,""}],[]}
@@ -252,10 +252,10 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 showmail(Session, MailNr) ->
     MailStr = integer_to_list(MailNr),
     tick_session(Session#session.cookie),
-    {H,Msg} = retr(?POPSERVER, Session#session.user,
+    Message = retr(?POPSERVER, Session#session.user,
 		   Session#session.passwd, MailNr),
 
-    Formated = format_message(H, Msg),
+    Formated = format_message(Message, MailNr),
 
     (dynamic_headers() ++
      [{ehtml,
@@ -276,91 +276,12 @@ showmail(Session, MailNr) ->
 	 "A:active  { color: 0;text-decoration: none}\n"},
 	{body,[{bgcolor,silver},{marginheight,0},{topmargin,0},{leftmargin,0},
 	       {rightmargin,0},{marginwidth,0}],
-	 {form, [{name,compose},{action,"reply.yaws"},{method,post}],
-	  [{table, [{border,0},{bgcolor,"c0c0c0"},{cellspacing,0},
-		    {width,"100%"}],
-	    {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
-		    {font, [{size,6},{color,black}],
-		     "WebMail at "++?MAILDOMAIN}}}},
-	   build_toolbar([{"tool-newmail.gif", "javascript:setCmd('reply');",
-			   "Reply"},
-			  {"","headers.yaws?nr="++MailStr,"Headers"},
-			  {"tool-delete.gif","javascript:setCmd('delete');",
-			   "Delete"},
-			  {"","mail.yaws","Close"}]),
-	   {table,[{width,645},{height,"100%"},{border,0},{bgcolor,silver},
-		   {cellspacing,0},{callpadding,0}],
-	    {tr,[],{td,[{valign,top},{height,"1%"}],
-		    [{table,
-		      [{border,0},{cellspacing,0},{cellpadding,0},{width,"100%"},
-		       {bgcolor,silver}],
-		      [{tr,[],
-			[{td,[{valign,middle},{align,left},{width,"15%"},
-			      {height,25}],
-			  {font, [{color,"#000000"},{size,2}],
-			   {nobr,[],{pre_html,"&nbsp;From:&nbsp;"}}}},
-			 {td, [{valign,middle},{align,left}],
-			  {font, [{color,"#000000"},{size,2}],
-			   [{pre_html,"&nbsp;"},
-			    unquote(decode(H#mhead.from))]}},
-			 {td,[{valign,middle},{align,right},{height,"25"}],
-			  {font, [{color,"#000000"},{size,2}],
-			   {nobr,[],{pre_html,"&nbsp;Sent:&nbsp;"}}}},
-			 {td, [nowrap,{valign,middle},{align,right},
-			       {width,"30%"}],
-			  {font, [{color,"#000000"},{size,2}],
-			   {pre_html,"&nbsp;"++H#mhead.date}}}]},
-		       {tr,[],
-			[{td,[{valign,top},{align,left},{width,"15%"},
-			      {height,25}],
-			  {font, [{color,"#000000"},{size,2}],
-			   {nobr,[],{pre_html,"&nbsp;To:&nbsp;"}}}},
-			 {td, [{valign,top},{align,left},{width,"100%"}],
-			  {font, [{color,"#000000"},{size,2}],
-			   [{pre_html,"&nbsp;"},
-			    unquote(decode(H#mhead.to))]}}]},
-		       {tr,[],
-			[{td,[{valign,middle},{align,left},{width,"15%"},
-			      {height,25}],
-			  {font, [{color,"#000000"},{size,2}],
-			   {nobr,[],{pre_html,"&nbsp;Cc:&nbsp;"}}}},
-			 {td, [{valign,middle},{align,left},{width,"100%"}],
-			  {font, [{color,"#000000"},{size,2}],
-			   [{pre_html,"&nbsp;"},H#mhead.cc]}}]},
-		       {tr,[],
-			[{td,[{valign,middle},{align,left},{width,"15%"},
-			      {height,25}],
-			  {font, [{color,"#000000"},{size,2}],
-			   {nobr,[],{pre_html,"&nbsp;Subject:&nbsp;"}}}},
-			 {td, [{valign,middle},{align,left},{width,"100%"}],
-			  {font, [{color,"#000000"},{size,2}],
-			   [{pre_html,"&nbsp;"},decode(H#mhead.subject)]}}]}
-		      ]},
-		     {table, [{width,"100%"},{border,1},{cellpadding,6},
-			      {class,msgbody}],
-		      {tr,[],
-		       {td,[{width,"100%"},{height,300},{valign,top},
-			    {bgcolor,white}],
-			{p,[],{font,[{size,3}], Formated }}}
-		      }
-		     }
-		    ]
-		   }
-	    }
-	   },
-	   {input,[{type,hidden},{name,nr}, {value,MailNr}],[]},
-	   {input,[{type,hidden},{name,from},
-		   {value,retr_from(H#mhead.from)}],[]},
-	   {input,[{type,hidden},{name,to},
-		   {value,retr_from(H#mhead.to)}],[]},
-	   {input,[{type,hidden},{name,cc},
-		   {value,retr_from(H#mhead.cc)}],[]},
-	   {input,[{type,hidden},{name,bcc},
-		   {value,retr_from(H#mhead.bcc)}],[]},
-	   {input,[{type,hidden},{name,subject},{value,H#mhead.subject}],[]},
-	   {input,[{type,hidden},{name,cmd},{value,""}],[]}
-	  ]
-	 }
+	 [{table, [{border,0},{bgcolor,"c0c0c0"},{cellspacing,0},
+		  {width,"100%"}],
+	  {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
+		  {font, [{size,6},{color,black}],
+		   "WebMail at "++?MAILDOMAIN}}}}] ++
+      	 Formated
 	}
        ]}]).
 
@@ -396,7 +317,8 @@ showheaders(Session, MailNr) ->
 	    {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
 		    {font, [{size,6},{color,black}],
 		     "WebMail at "++?MAILDOMAIN}}}},
-	   build_toolbar([{"tool-newmail.gif", "javascript:setCmd('send');",
+	   build_toolbar([{"tool-newmail.gif","compose.yaws","New"},
+			  {"tool-newmail.gif", "javascript:setCmd('send');",
 			   "Reply"},
 			  {"","showmail.yaws?nr="++integer_to_list(MailNr),
 			   "Message"},
@@ -417,14 +339,14 @@ showheaders(Session, MailNr) ->
 			 {td, [{valign,middle},{align,left}],
 			  {font, [{color,"#000000"},{size,2}],
 			   [{pre_html,"&nbsp;"},
-			    unquote(decode(H#mhead.from))]}},
+			    unquote(decode(H#mail.from))]}},
 			 {td,[{valign,middle},{align,right},{height,"25"}],
 			  {font, [{color,"#000000"},{size,2}],
 			   {nobr,[],{pre_html,"&nbsp;Sent:&nbsp;"}}}},
 			 {td, [nowrap,{valign,middle},{align,right},
 			       {width,"30%"}],
 			  {font, [{color,"#000000"},{size,2}],
-			   {pre_html,"&nbsp;"++H#mhead.date}}}]},
+			   {pre_html,"&nbsp;"++H#mail.date}}}]},
 		       {tr,[],
 			[{td,[{valign,top},{align,left},{width,"15%"},
 			      {height,25}],
@@ -433,7 +355,7 @@ showheaders(Session, MailNr) ->
 			 {td, [{valign,top},{align,left},{width,"100%"}],
 			  {font, [{color,"#000000"},{size,2}],
 			   [{pre_html,"&nbsp;"},
-			    unquote(decode(H#mhead.to))]}}]},
+			    unquote(decode(H#mail.to))]}}]},
 		       {tr,[],
 			[{td,[{valign,middle},{align,left},{width,"15%"},
 			      {height,25}],
@@ -441,7 +363,7 @@ showheaders(Session, MailNr) ->
 			   {nobr,[],{pre_html,"&nbsp;Cc:&nbsp;"}}}},
 			 {td, [{valign,middle},{align,left},{width,"100%"}],
 			  {font, [{color,"#000000"},{size,2}],
-			   [{pre_html,"&nbsp;"},H#mhead.cc]}}]},
+			   [{pre_html,"&nbsp;"},H#mail.cc]}}]},
 		       {tr,[],
 			[{td,[{valign,middle},{align,left},{width,"15%"},
 			      {height,25}],
@@ -449,7 +371,7 @@ showheaders(Session, MailNr) ->
 			   {nobr,[],{pre_html,"&nbsp;Subject:&nbsp;"}}}},
 			 {td, [{valign,middle},{align,left},{width,"100%"}],
 			  {font, [{color,"#000000"},{size,2}],
-			   [{pre_html,"&nbsp;"},decode(H#mhead.subject)]}}]}
+			   [{pre_html,"&nbsp;"},decode(H#mail.subject)]}}]}
 		      ]},
 		     {table, [{width,"100%"},{border,1},{cellpadding,6},
 			      {class,msgbody}],
@@ -471,14 +393,14 @@ showheaders(Session, MailNr) ->
 	   },
 	   {input,[{type,hidden},{name,nr}, {value,MailNr}],[]},
 	   {input,[{type,hidden},{name,from},
-		   {value,retr_from(H#mhead.from)}],[]},
+		   {value,retr_from(H#mail.from)}],[]},
 	   {input,[{type,hidden},{name,to},
-		   {value,retr_from(H#mhead.to)}],[]},
+		   {value,retr_from(H#mail.to)}],[]},
 	   {input,[{type,hidden},{name,cc},
-		   {value,retr_from(H#mhead.cc)}],[]},
+		   {value,retr_from(H#mail.cc)}],[]},
 	   {input,[{type,hidden},{name,bcc},
-		   {value,retr_from(H#mhead.bcc)}],[]},
-	   {input,[{type,hidden},{name,subject},{value,H#mhead.subject}],[]},
+		   {value,retr_from(H#mail.bcc)}],[]},
+	   {input,[{type,hidden},{name,subject},{value,H#mail.subject}],[]},
 	   {input,[{type,hidden},{name,cmd},{value,""}],[]}
 	  ]
 	 }
@@ -537,7 +459,7 @@ list(Session) ->
 	      {th,[{align,left},{valign,middle},{class,head}],
 	       {font,[{size,2},{color,black}],"Size"}}]}] ++
 	   format_summary(H)},
-	   {input,[{type,hidden},{name,cmd},{value,""}],[]}
+	  {input,[{type,hidden},{name,cmd},{value,""}],[]}
 	 ]}]}]).
 
 format_summary(Hs) ->
@@ -550,10 +472,10 @@ format_summary_line(I) ->
        {input, [{type,checkbox},{name,I#info.nr},{value,yes}],[]}},
       {td, [{align,left},{valign,top},{class,"List"}],
        {a, [{href,"showmail.yaws?nr="++integer_to_list(I#info.nr)}],
-	{font,[{size,2},{color,black}],{b,[],format_from(H#mhead.from)}}}},
+	{font,[{size,2},{color,black}],{b,[],format_from(H#mail.from)}}}},
       {td, [{align,left},{valign,top},{class,"List"}],
        {a, [{href,"showmail.yaws?nr="++integer_to_list(I#info.nr)}],
-	{font,[{size,2},{color,black}],{b,[],decode(H#mhead.subject)}}}},
+	{font,[{size,2},{color,black}],{b,[],decode(H#mail.subject)}}}},
       {td, [{align,left},{valign,top},{class,"List"}],
        {a, [{href,"showmail.yaws?nr="++integer_to_list(I#info.nr)}],
 	{font,[{size,2},{color,black}],{b,[],integer_to_list(I#info.size)}}}}
@@ -595,7 +517,7 @@ decode([$=,$?|Rest]) ->
     decode_scan(Rest);
 decode([C|Cs]) ->
     [C | decode(Cs)].
-     
+
 decode_scan([]) -> [];
 decode_scan([$?,$b,$?|Rest]) ->
     decode_b64(Rest,[]);
@@ -633,7 +555,7 @@ decode_b64([$?,$=|Rest],Acc) ->
     end;
 decode_b64([C|Rest], Acc) ->
     decode_b64(Rest,[C|Acc]).
-	    
+
 
 unquote([]) -> [];
 unquote([$"|R]) -> unquote(R);
@@ -711,9 +633,9 @@ dynamic_headers() ->
      {header, "Expires: -1"}].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% session server
-%
+						%
+						% session server
+						%
 
 tick_session(Cookie) ->
     session_server(),
@@ -741,7 +663,7 @@ check_cookie(Cookie) ->
 logout_cookie(Cookie) ->
     session_server(),
     mail_session_manager ! {del_session, Cookie}.
-    
+
 session_server() ->
     case whereis(mail_session_manager) of
 	undefined ->
@@ -801,7 +723,7 @@ diff({M1,S1,_}, {M2,S2,_}) ->
 
 seed() ->
     case (catch list_to_binary(
-	   os:cmd("dd if=/dev/urandom ibs=12 count=1 2>/dev/null"))) of
+		  os:cmd("dd if=/dev/urandom ibs=12 count=1 2>/dev/null"))) of
 	<<X:32, Y:32, Z:32>> ->
 	    {X, Y, Z};
 	_ ->
@@ -813,6 +735,9 @@ seed() ->
 retr(Server, User, Password, Nr) ->
     Req = [ret(Nr)],
     [{ok,Msg}] = pop_request(Req, Server, User, Password),
+    Msg.
+
+parse_message(Msg) ->
     {Ls,M}=split_head_body(Msg),
     H = parse_headers(Ls),
     {H,M}.
@@ -831,7 +756,7 @@ split_head_body(Msg, Acc) ->
     end.
 
 get_next_line(Data) ->
-    % io:format("Data = ~p\n", [Data]),
+						% io:format("Data = ~p\n", [Data]),
     get_next_line(Data,[]).
 
 get_next_line([D|Ds], Acc) ->
@@ -851,7 +776,7 @@ stat(Server, User, Password) ->
 	{error, Reason} ->
 	    {error, Reason}
     end.
-    
+
 
 rtop(Server, User, Password, Nr) ->
     Req = [top(Nr)],
@@ -882,7 +807,7 @@ top(I) -> {"TOP "++integer_to_list(I)++" 0", ml}.
 ret(I) -> {"RETR "++integer_to_list(I), sized}.
 
 del(I) -> {"DELE "++atom_to_list(I), sl}.
-    
+
 
 to_int(Str) ->
     to_int(Str, 0).
@@ -894,7 +819,7 @@ to_int(_, Acc) -> Acc.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 parse_headers(Lines) ->
-    parse_headers(Lines, #mhead{}).
+    parse_headers(Lines, #mail{}).
 
 parse_headers([], Headers) ->
     Headers;
@@ -940,18 +865,18 @@ lowercase_ch(C) when C>=$A, C=<$Z -> C + 32;
 lowercase_ch(C) -> C.
 
 add_header("content-transfer-encoding", Value, H) ->
-    H#mhead{transfer_encoding = lowercase(Value)};
+    H#mail{transfer_encoding = lowercase(Value)};
 add_header("content-type", Value, H) ->
-    H#mhead{content_type = parse_header_value(Value)};
-add_header("from", Value, H) ->    H#mhead{from = Value};
-add_header("to", Value, H) ->      H#mhead{to = Value};
-add_header("cc", Value, H) ->      H#mhead{cc = Value};
-add_header("bcc", Value, H) ->     H#mhead{bcc = Value};
-add_header("subject", Value, H) -> H#mhead{subject = Value};
-add_header("date", Value, H) ->    H#mhead{date = Value};
-add_header(Other, Value, H) ->     H#mhead{other = [{Other,Value}|
-						      H#mhead.other]}.
-    
+    H#mail{content_type = parse_header_value(Value)};
+add_header("from", Value, H) ->    H#mail{from = Value};
+add_header("to", Value, H) ->      H#mail{to = Value};
+add_header("cc", Value, H) ->      H#mail{cc = Value};
+add_header("bcc", Value, H) ->     H#mail{bcc = Value};
+add_header("subject", Value, H) -> H#mail{subject = Value};
+add_header("date", Value, H) ->    H#mail{date = Value};
+add_header(Other, Value, H) ->     H#mail{other = [{Other,Value}|
+						   H#mail.other]}.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 pop_request(Command, Server, User, Password) ->
@@ -968,8 +893,8 @@ pop_request(Command, Server, User, Password) ->
 
 ploop(Command, Server, User, Password, From) ->
     case gen_tcp:connect(Server, 110, [{active, false},
-					       {reuseaddr,true},
-					       binary]) of
+				       {reuseaddr,true},
+				       binary]) of
 	{ok, Port} ->
 	    State = #pstate{port=Port,
 			    user=User,
@@ -981,126 +906,126 @@ ploop(Command, Server, User, Password, From) ->
 	    {error, "Failed to contact mail server."}
     end.
 
-%
+						%
 
 
 
 ploop(init, State) ->
     case receive_reply(State) of
 	{ok, Reply, State2} ->
-	    % io:format("INIT got +OK ~s\n", [Reply]),
+						% io:format("INIT got +OK ~s\n", [Reply]),
 	    psend("USER " ++ State#pstate.user, State#pstate.port),
 	    ploop(user, State2);
 	{error, Reason, State2} ->
-	    % io:format("INIT got -ERR ~s\n", [Reason]),
+						% io:format("INIT got -ERR ~s\n", [Reason]),
 	    State#pstate.from ! {pop_response, {error, Reason}},
 	    gen_tcp:close(State#pstate.port);
 	{more, State2} ->
-	    % io:format("INIT got more\n", []),
+						% io:format("INIT got more\n", []),
 	    ploop(init, State2)
     end;
 
 ploop(user, State) ->
     case receive_reply(State) of
 	{ok, Reply, State2} ->
-	    % io:format("USER got +OK ~s\n", [Reply]),
+						% io:format("USER got +OK ~s\n", [Reply]),
 	    psend("PASS " ++ State#pstate.pass, State#pstate.port),
 	    ploop(pass, State2);
 	{error, Reason, State2} ->
-	    % io:format("USER got -ERR ~s\n", [Reason]),
+						% io:format("USER got -ERR ~s\n", [Reason]),
 	    State#pstate.from ! {pop_response, {error, Reason}},
 	    gen_tcp:close(State#pstate.port);
 	{more, State2} ->
-	    % io:format("USER got more\n", []),
+						% io:format("USER got more\n", []),
 	    ploop(user, State2)
     end;
 ploop(pass, State) ->
     case receive_reply(State) of
 	{ok, Reply, State2} ->
-	    % io:format("PASS got +OK ~s\n", [Reply]),
+						% io:format("PASS got +OK ~s\n", [Reply]),
 	    next_cmd(State);
 	{error, Reason, State2} ->
-	    % io:format("PASS got -ERR ~s\n", [Reason]),
+						% io:format("PASS got -ERR ~s\n", [Reason]),
 	    State#pstate.from ! {pop_response, {error, Reason}},
 	    gen_tcp:close(State#pstate.port);
 	{more, State2} ->
-	    % io:format("PASS got more\n", []),
+						% io:format("PASS got more\n", []),
 	    ploop(pass, State2)
     end;
 ploop(sl, State) ->
     case receive_reply(State) of
 	{ok, Reply, State2} ->
-	    % io:format("SL got +OK ~s\n", [Reply]),
+						% io:format("SL got +OK ~s\n", [Reply]),
 	    next_cmd(State2#pstate{reply=[{ok,Reply}|State2#pstate.reply]});
 	{error, Reason, State2} ->
-	    % io:format("SL got -ERR ~s\n", [Reason]),
+						% io:format("SL got -ERR ~s\n", [Reason]),
 	    next_cmd(State2#pstate{reply=[{error,Reason}|
 					  State2#pstate.reply]});
 	{more, State2} ->
-	    % io:format("SL got more\n", []),
+						% io:format("SL got more\n", []),
 	    ploop(sl, State2)
     end;
 ploop(sized, State) ->
     case receive_reply(State) of
 	{ok, Reply, State2} ->
 	    Size = to_int(Reply),
-	    % io:format("MLINE got +OK size=~p\n", [Size]),
+						% io:format("MLINE got +OK size=~p\n", [Size]),
 	    ploop(sized_cont, State2#pstate{remain=Size,lines=[]});
 	{error, Reason, State2} ->
-	    % io:format("MLINE got -ERR ~s\n", [Reason]),
+						% io:format("MLINE got -ERR ~s\n", [Reason]),
 	    next_cmd(State2#pstate{reply=[{error,Reason}|
 					  State2#pstate.reply]});
 	{more, State2} ->
-	    % io:format("MLINE got more\n", []),
+						% io:format("MLINE got more\n", []),
 	    ploop(ml, State2)
     end;
 ploop(sized_cont, State) ->
     case receive_data(State) of
 	{error, Reason, State2} ->
-	    % io:format("SCONT got -ERR ~s\n", [Reason]),
+						% io:format("SCONT got -ERR ~s\n", [Reason]),
 	    next_cmd(State2#pstate{reply=[{error,Reason}|
 					  State2#pstate.reply]});
 	{more, State2} ->
-	    % io:format("SCONT got more\n", []),
+						% io:format("SCONT got more\n", []),
 	    ploop(sized_cont, State2);
 	{done, State2} ->
-	    % io:format("SCONT got done\n", []),
+						% io:format("SCONT got done\n", []),
 	    Data = lists:reverse(State2#pstate.lines),
 	    next_cmd(State2#pstate{reply=[{ok, Data}|State2#pstate.reply]})
     end;
 ploop(ml, State) ->
     case receive_reply(State) of
 	{ok, Reply, State2} ->
-	    % io:format("MLINE got +OK ~s\n", [Reply]),
+						% io:format("MLINE got +OK ~s\n", [Reply]),
 	    ploop(ml_cont, State2#pstate{lines=[]});
 	{error, Reason, State2} ->
-	    % io:format("MLINE got -ERR ~s\n", [Reason]),
+						% io:format("MLINE got -ERR ~s\n", [Reason]),
 	    next_cmd(State2#pstate{reply=[{error,Reason}|
 					  State2#pstate.reply]});
 	{more, State2} ->
-	    % io:format("MLINE got more\n", []),
+						% io:format("MLINE got more\n", []),
 	    ploop(ml, State2)
     end;
 ploop(ml_cont, State) ->
     case receive_reply(State) of
 	{line, Line, State2} ->
-	    % io:format("MCONT got +OK ~s\n", [Line]),
+						% io:format("MCONT got +OK ~s\n", [Line]),
 	    Lines = State2#pstate.lines,
 	    ploop(ml_cont, State2#pstate{lines=[Line|Lines]});
 	{error, Reason, State2} ->
-	    % io:format("MCONT got -ERR ~s\n", [Reason]),
+						% io:format("MCONT got -ERR ~s\n", [Reason]),
 	    next_cmd(State2#pstate{reply=[{error,Reason}|
 					  State2#pstate.reply]});
 	{more, State2} ->
-	    % io:format("MCONT got more\n", []),
+						% io:format("MCONT got more\n", []),
 	    ploop(ml_cont, State2);
 	{done, State2} ->
-	    % io:format("MCONT got done\n", []),
+						% io:format("MCONT got done\n", []),
 	    Lines = lists:reverse(State2#pstate.lines),
 	    next_cmd(State2#pstate{reply=[{ok, Lines}|State2#pstate.reply]})
     end.
 
-%
+						%
 
 next_cmd(State=#pstate{cmd=Cmd,reply=Reply}) when Cmd==[]->
     State#pstate.from ! {pop_response, lists:reverse(Reply)},
@@ -1110,12 +1035,12 @@ next_cmd(State=#pstate{cmd=[Cmd|Cmds]}) ->
     psend(C, State#pstate.port),
     ploop(S, State#pstate{cmd=Cmds}).
 
-%
+						%
 
 psend(Str, Port) ->
     gen_tcp:send(Port, Str++"\r\n").
 
-%
+						%
 
 receive_reply(State=#pstate{port=Port,acc=Acc,more=false}) ->
     check_reply(State#pstate.acc, State);
@@ -1123,7 +1048,7 @@ receive_reply(State=#pstate{port=Port,acc=Acc,more=true}) ->
     Res = gen_tcp:recv(Port, 0),
     case Res of
 	{ok, Bin} ->
-	    % io:format("got ~s~n", [binary_to_list(Bin)]),
+						% io:format("got ~s~n", [binary_to_list(Bin)]),
 	    NAcc = Acc++binary_to_list(Bin),
 	    check_reply(NAcc, State);
 	Err ->
@@ -1131,10 +1056,10 @@ receive_reply(State=#pstate{port=Port,acc=Acc,more=true}) ->
     end.
 
 
-%
+						%
 
 receive_data(State=#pstate{port=Port,acc=Acc,more=false,remain=Remain}) ->
-    % io:format("Remain = ~p, more=false, Acc=~p\n", [Remain,length(Acc)]),
+						% io:format("Remain = ~p, more=false, Acc=~p\n", [Remain,length(Acc)]),
     if
 	Remain =< length(Acc) ->
 	    {Lines, NAcc} = split_at(Acc, Remain),
@@ -1151,10 +1076,10 @@ receive_data(State=#pstate{port=Port,acc=Acc,more=true}) when length(Acc)>0 ->
     receive_data(State#pstate{more=false});
 receive_data(State=#pstate{port=Port,acc=[],more=true,remain=Remain}) ->
     Res = gen_tcp:recv(Port, 0),
-    % io:format("Remain = ~p\n", [Remain]),
+						% io:format("Remain = ~p\n", [Remain]),
     case Res of
 	{ok, Bin} ->
-	    % io:format("got ~s~n", [binary_to_list(Bin)]),
+						% io:format("got ~s~n", [binary_to_list(Bin)]),
 	    Acc = binary_to_list(Bin),
 	    if
 		Remain =< length(Acc) ->
@@ -1174,7 +1099,7 @@ receive_data(State=#pstate{port=Port,acc=[],more=true,remain=Remain}) ->
 	    {error, Err, State}
     end.
 
-%
+						%
 
 check_reply(Str, State) ->
     case split_reply(Str, []) of
@@ -1197,7 +1122,7 @@ check_reply(Str, State) ->
 	    {more, State#pstate{acc=Str, more=true}}
     end.
 
-%
+						%
 
 split_reply("\r\n"++Rest, Pre) ->
     {lists:reverse(Pre), Rest};
@@ -1205,8 +1130,8 @@ split_reply([H|T], Pre) ->
     split_reply(T, [H|Pre]);
 split_reply("", Pre) ->
     more.
-	    
-%
+
+						%
 
 split_at(L,N) ->
     split_at(L,N,[]).
@@ -1272,7 +1197,7 @@ smtp_expect(Code, Port, Acc, ErrorMsg) ->
     Res = gen_tcp:recv(Port, 0, ?SENDTIMEOUT),
     case Res of
 	{ok, Bin} ->
-	    % io:format("got ~s~n", [binary_to_list(Bin)]),
+						% io:format("got ~s~n", [binary_to_list(Bin)]),
 	    NAcc = Acc++binary_to_list(Bin),
 	    case string:chr(NAcc, $\n) of
 		0 ->
@@ -1287,8 +1212,8 @@ smtp_expect(Code, Port, Acc, ErrorMsg) ->
 	Err ->
 	    throw({error, Err})
     end.
-    
-    
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 base64_2_str(Str) ->
@@ -1402,8 +1327,107 @@ check_diff(_) -> false.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-format_message(H, Msg) ->
-    case {H#mhead.content_type,H#mhead.transfer_encoding} of
+format_message(Message, MailNr) ->
+    {H,Msg} = parse_message(Message),
+    Formated = format_body(H,Msg),
+    MailStr = integer_to_list(MailNr),
+    [{form, [{name,compose},{action,"reply.yaws"},{method,post}],
+     [build_toolbar([{"tool-newmail.gif","compose.yaws","New"},
+		     {"tool-newmail.gif", "javascript:setCmd('reply');",
+		      "Reply"}]++
+		    if 
+			MailNr == -1 -> [];
+			true -> 
+			    [{"","headers.yaws?nr="++MailStr,"Headers"},
+			     {"tool-delete.gif","javascript:setCmd('delete');",
+			      "Delete"}]
+		    end ++
+		    [{"","mail.yaws","Close"}]),
+      {table,[{width,645},{height,"100%"},{border,0},{bgcolor,silver},
+	      {cellspacing,0},{callpadding,0}],
+       {tr,[],{td,[{valign,top},{height,"1%"}],
+	       [{table,
+		 [{border,0},{cellspacing,0},{cellpadding,0},{width,"100%"},
+		  {bgcolor,silver}],
+		 [{tr,[],
+		   [{td,[{valign,middle},{align,left},{width,"15%"},
+			 {height,25}],
+		     {font, [{color,"#000000"},{size,2}],
+		      {nobr,[],{pre_html,"&nbsp;From:&nbsp;"}}}},
+		    {td, [{valign,middle},{align,left}],
+		     {font, [{color,"#000000"},{size,2}],
+		      [{pre_html,"&nbsp;"},
+		       unquote(decode(H#mail.from))]}},
+		    {td,[{valign,middle},{align,right},{height,"25"}],
+		     {font, [{color,"#000000"},{size,2}],
+		      {nobr,[],{pre_html,"&nbsp;Sent:&nbsp;"}}}},
+		    {td, [nowrap,{valign,middle},{align,right},
+			  {width,"30%"}],
+		     {font, [{color,"#000000"},{size,2}],
+		      {pre_html,"&nbsp;"++H#mail.date}}}]},
+		  {tr,[],
+		   [{td,[{valign,top},{align,left},{width,"15%"},
+			 {height,25}],
+		     {font, [{color,"#000000"},{size,2}],
+		      {nobr,[],{pre_html,"&nbsp;To:&nbsp;"}}}},
+		    {td, [{valign,top},{align,left},{width,"100%"}],
+		     {font, [{color,"#000000"},{size,2}],
+		      [{pre_html,"&nbsp;"},
+		       unquote(decode(H#mail.to))]}}]},
+		  {tr,[],
+		   [{td,[{valign,middle},{align,left},{width,"15%"},
+			 {height,25}],
+		     {font, [{color,"#000000"},{size,2}],
+		      {nobr,[],{pre_html,"&nbsp;Cc:&nbsp;"}}}},
+		    {td, [{valign,middle},{align,left},{width,"100%"}],
+		     {font, [{color,"#000000"},{size,2}],
+		      [{pre_html,"&nbsp;"},H#mail.cc]}}]},
+		  {tr,[],
+		   [{td,[{valign,middle},{align,left},{width,"15%"},
+			 {height,25}],
+		     {font, [{color,"#000000"},{size,2}],
+		      {nobr,[],{pre_html,"&nbsp;Subject:&nbsp;"}}}},
+		    {td, [{valign,middle},{align,left},{width,"100%"}],
+		     {font, [{color,"#000000"},{size,2}],
+		      [{pre_html,"&nbsp;"},decode(H#mail.subject)]}}]}
+		 ]},
+		{table, [{width,"100%"},{border,1},{cellpadding,6},
+			 {class,msgbody}],
+		 {tr,[],
+		  {td,[{width,"100%"},{height,300},{valign,top},
+		       {bgcolor,white}],
+		   {p,[],{font,[{size,3}], Formated }}}
+		 }
+		}
+	       ]
+	      }
+       }
+      }] ++
+     if
+	 MailNr == -1 -> [];
+	 true ->
+	     [{input,[{type,hidden},{name,nr}, {value,MailNr}],[]}]
+     end++
+     [{input,[{type,hidden},{name,from},
+	      {value,retr_from(H#mail.from)}],[]},
+      {input,[{type,hidden},{name,to},
+	      {value,retr_from(H#mail.to)}],[]},
+      {input,[{type,hidden},{name,cc},
+	      {value,retr_from(H#mail.cc)}],[]},
+      {input,[{type,hidden},{name,bcc},
+	      {value,retr_from(H#mail.bcc)}],[]},
+      {input,[{type,hidden},{name,subject},{value,H#mail.subject}],[]},
+      {input,[{type,hidden},{name,cmd},{value,""}],[]}
+     ]
+    }].
+
+format_body(H,Msg) ->
+    ContentType =
+	case H#mail.content_type of
+	    {CT,Ops} -> {lowercase(CT), Ops};
+	    Other -> Other
+	end,
+    case {ContentType,H#mail.transfer_encoding} of
 	{{"text/html",_}, Encoding} ->
 	    Decoded = decode_message(Encoding, Msg),
 	    {pre_html, Decoded};
@@ -1416,24 +1440,27 @@ format_message(H, Msg) ->
 	    PartHeaders =
 		lists:foldl(fun({K,V},MH) ->
 				    add_header(K,V,MH)
-			    end, #mhead{}, Headers),
-	    format_message(PartHeaders, Body);
+			    end, #mail{}, Headers),
+	    format_body(PartHeaders, Body);
 	{{"multipart/alternative",Opts}, Encoding} ->
 	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
 	    [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
 	    PartHeaders =
 		lists:foldl(fun({K,V},MH) ->
 				    add_header(K,V,MH)
-			    end, #mhead{}, Headers),
-	    format_message(PartHeaders, Body);
+			    end, #mail{}, Headers),
+	    format_body(PartHeaders, Body);
 	{{"multipart/signed",Opts}, Encoding} ->
 	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
 	    [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
 	    PartHeaders =
 		lists:foldl(fun({K,V},MH) ->
 				    add_header(K,V,MH)
-			    end, #mhead{}, Headers),
-	    format_message(PartHeaders, Body);
+			    end, #mail{}, Headers),
+	    format_body(PartHeaders, Body);
+	{{"message/rfc822",Opts}, Encoding} ->
+	    Decoded = decode_message(Encoding, Msg),
+	    format_message(Decoded, -1);
 	{_,_} ->
 	    {pre, [], Msg}
     end.
