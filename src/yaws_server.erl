@@ -2363,8 +2363,8 @@ ehtml_expand([]) ->
 ehtml_attrs([]) ->
     [];
 ehtml_attrs([{Name, Value} | Tail]) ->
-    ValueString = if atom(Value) -> atom_to_list(Value);
-		     list(Value) -> Value
+    ValueString = if atom(Value) -> [$",atom_to_list(Value),$"];
+		     list(Value) -> [$",Value,$"]
 		  end,
     [[$ |atom_to_list(Name)], [$=|ValueString] | ehtml_attrs(Tail)].
 
