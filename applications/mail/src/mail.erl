@@ -150,7 +150,8 @@ delete(Session, ToDelete) ->
 	       message="",
 	       attached="",
 	       port,
-	       session
+	       session,
+	       line_start=true
 	      }).
 
 
@@ -305,8 +306,8 @@ sendChunk([{body, Data}|Rest], S) ->
 	attached ->
 	    sendChunk(Rest, S#send{attached=S#send.attached++Data});
 	message ->
-	    smtp_send_part(S, Data),
-	    sendChunk(Rest, S);
+	    NewS = smtp_send_part_message(S, Data),
+	    sendChunk(Rest, NewS);
 	ignore ->
 	    sendChunk(Rest, S);
 	file ->
@@ -1023,7 +1024,7 @@ retr(Server, User, Password, Nr) ->
     Req = [ret(Nr)],
     case pop_request(Req, Server, User, Password) of
 	[{ok,Msg}] ->
-	    Msg;
+	    dot_unescape(Msg);
 	[{error, Reason}] ->
 	    {error, Reason}
     end.
@@ -1446,6 +1447,46 @@ smtp_close(State) ->
 
 smtp_send_part(State, Data) ->
     gen_tcp:send(State#send.port, Data).
+
+smtp_send_part_message(State, Data) ->
+    {LastNL, Escaped} = dot_escape(Data, State#send.line_start),
+    gen_tcp:send(State#send.port, Escaped),
+    State#send{line_start=LastNL}.
+
+
+%% Add an . at all lines starting with a dot.
+
+dot_escape(Data, NL) ->
+    dot_escape(Data, NL, []).
+
+dot_escape([], NL, Acc) ->
+    {NL, lists:reverse(Acc)};
+dot_escape([$.|Rest], true, Acc) ->
+    dot_escape(Rest, false, [$.,$.|Acc]);
+dot_escape([$\n|Rest], _, Acc) ->
+    dot_escape(Rest, true, [$\n|Acc]);
+dot_escape([C|Rest], _, Acc) ->    
+    dot_escape(Rest, false, [C|Acc]).
+
+%%
+
+dot_unescape(Data) ->
+    {_,Dt} = dot_unescape(Data, true, []),
+    Dt.
+
+dot_unescape([], NL, Acc) ->
+    {NL, lists:reverse(Acc)};
+dot_unescape([$.|Rest], true, Acc) ->
+    dot_unescape(Rest, false, Acc);
+dot_unescape([$\n|Rest], _, Acc) ->
+    dot_unescape(Rest, true, [$\n|Acc]);
+dot_unescape([L|Rest], NL, Acc) when list(L) ->
+    {NL2, L2} = dot_unescape(L, NL, []),
+    dot_unescape(Rest, NL2, [L2|Acc]);
+dot_unescape([C|Rest], _, Acc) ->
+    dot_unescape(Rest, false, [C|Acc]).
+
+%%
 
 smtp_send_b64(State, Data0) ->
     Data = State#send.estate++Data0,
