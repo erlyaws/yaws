@@ -45,7 +45,16 @@ function setComposeCmd(val) {
    try {
      document.compose.message.value = editor.getHTML();
    } catch (e) {
-     document.compose.message.value = document.compose.html_message.value;
+     var rExp;
+     var text=document.compose.html_message.value;
+
+     rExp=/&aring;/gi;
+     text.replace(rExp, "å");
+
+     rExp=/&aring;/gi;
+     text.replace(rExp, "Å");
+
+     document.compose.message.value = text;
    }
 
    // alert(editor.getHTML());
@@ -66,6 +75,16 @@ function setComposeCmd(val) {
    } else if (document.compose.file4.value.length > 0) {
      document.compose.attached.value="yes";
    } else if (document.compose.file5.value.length > 0) {
+     document.compose.attached.value="yes";
+   } else if (document.compose.file6.value.length > 0) {
+     document.compose.attached.value="yes";
+   } else if (document.compose.file7.value.length > 0) {
+     document.compose.attached.value="yes";
+   } else if (document.compose.file8.value.length > 0) {
+     document.compose.attached.value="yes";
+   } else if (document.compose.file9.value.length > 0) {
+     document.compose.attached.value="yes";
+   } else if (document.compose.file10.value.length > 0) {
      document.compose.attached.value="yes";
    }
       
