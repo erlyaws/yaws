@@ -16,7 +16,15 @@ test(1) ->
 	 "licence_server@bluetail.com", 
 	 "joe@bluetail.com",
 	 "BMR 1.1 licence",
-	 "Hello joe\n").
+	 "Hello joe\n");
+
+
+test(2) ->
+    send_mail("gnejs.hyber.org", 25,
+	      "bogus@nowhere.org",
+	      "klacke@bluetail.com",
+	      "test", "babalkalalalalala\n").
+
 
 send_mail(Host, Port, From, To, Subject, Str) ->
     send_mail1(Host, Port, From, To, Subject, "\n\n" ++ Str).
