@@ -122,7 +122,9 @@ format_txt("slideshow:" ++ T, Env, L, Doc) ->
     format_txt(T1, Env, reverse(Txt, L), Doc);
 format_txt("mailto:" ++ T, Env, L, Doc) ->
     {X, T1} = collect_mail(T, []),
-    Txt = "<a href='mailto:" ++ X ++ "'>" ++ X ++ "</a>",
+    Txt = "<a href='mailto:" ++ X ++ "'>" ++ 
+	"<img border=0 src='WikiPreferences.files/mailto.png'>"
+	++ X ++ "</a>",
     format_txt(T1, Env, reverse(Txt, L), Doc);
 format_txt("mailtoall:" ++ T, Env, L, Doc) ->
     {Name, T1} = collect_wiki_link(T),
@@ -185,7 +187,9 @@ format_external_url(F) ->
 	true ->
 	    "<img src=\"" ++  F1 ++ "\">";
 	false ->
-	    "<a href=\"" ++  F1 ++ "\">" ++ F1 ++ "</a> "
+	    "<a href=\"" ++  F1 ++ "\">" ++ 
+	    "<img border=0 src='WikiPreferences.files/http.png'>"
+	    ++ F1 ++ "</a> "
     end.
 
 is_graphic(F) ->
