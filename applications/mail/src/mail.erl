@@ -16,7 +16,7 @@
 	 login/2, display_login/2, stat/3, showmail/2, compose/1, compose/7,
 	 send/6, send/2, get_val/3, logout/1, base64_2_str/1, retr/4, 
 	 delete/2, send_attachment/2, send_attachment_plain/2,
-	 wrap_text/2, getopt/3]).
+	 wrap_text/2, getopt/3, decode/1]).
 
 -include("../../../include/yaws_api.hrl").
 -include("defs.hrl").
@@ -880,11 +880,16 @@ decode_scan([_|Rest], Acc) ->
     decode_scan(Rest, Acc).
 
 decode_q([], Acc) ->
-    lists:revers(Acc);
+    lists:reverse(Acc);
 decode_q([$?,$=|Rest], Acc) ->
     decode(Rest, Acc);
 decode_q([$=,H1,H2|Rest], Acc) ->
-    decode_q(Rest, [yaws:hex_to_integer([H1,H2])|Acc]);
+    case catch yaws:hex_to_integer([H1,H2]) of
+	{'EXIT',_} ->
+	    decode_q(Rest, [H2,H1,$=|Acc]);
+	C ->
+	    decode_q(Rest, [C|Acc])
+    end;
 decode_q([C|Cs], Acc) ->
     decode_q(Cs, [C|Acc]).
 
@@ -2432,7 +2437,12 @@ quoted_2_str([], Acc) ->
 quoted_2_str([$=,$\r,$\n|Rest], Acc) ->
     quoted_2_str_scan(Rest,Acc);
 quoted_2_str([$=,H1,H2|Rest], Acc) ->
-    quoted_2_str(Rest, [yaws:hex_to_integer([H1,H2])|Acc]);
+    case catch yaws:hex_to_integer([H1,H2]) of
+	{'EXIT', _} ->
+	    quoted_2_str(Rest, [H2,H1,$=|Acc]);
+	C ->
+	    quoted_2_str(Rest, [C|Acc])
+    end;
 quoted_2_str([$\r,$\n|Rest], Acc) ->
     quoted_2_str_scan(Rest, [$\n|Acc]);
 quoted_2_str([C|Cs], Acc) ->
