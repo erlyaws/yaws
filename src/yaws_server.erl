@@ -25,7 +25,8 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 -import(filename, [join/1]).
--import(lists, [foreach/2, map/2, flatten/1, flatmap/2, reverse/1]).
+-import(lists, [member/2, foreach/2, map/2, 
+		flatten/1, flatmap/2, reverse/1]).
 
 -import(yaws_api, [ehtml_expand/1]).
 
@@ -55,7 +56,7 @@ status() ->
 stats() -> 
     {S, Time} = status(),
     Diff = calendar:time_difference(Time, calendar:local_time()),
-    G = fun(L) -> lists:reverse(lists:keysort(2, L)) end,
+    G = fun(L) -> reverse(lists:keysort(2, L)) end,
     R= flatmap(
 	 fun({_Pid, SCS}) ->
 		 map(
@@ -75,14 +76,14 @@ get_app_args() ->
     AS=init:get_arguments(),
     Debug = case application:get_env(yaws, debug) of
 		undefined ->
-		    lists:member({yaws, ["debug"]}, AS);
+		    member({yaws, ["debug"]}, AS);
 		{ok, Val}  ->
 		    Val
 	    end,
     Trace = case application:get_env(yaws, trace) of
 		undefined ->
-		    case {lists:member({yaws, ["trace", "http"]}, AS),
-			  lists:member({yaws, ["trace", "traffic"]}, AS)} of
+		    case {member({yaws, ["trace", "http"]}, AS),
+			  member({yaws, ["trace", "traffic"]}, AS)} of
 			{true, _} ->
 			    {true, http};
 			{_, true} ->
@@ -99,7 +100,7 @@ get_app_args() ->
 	    end,
     TraceOutput = case application:get_env(yaws, traceoutput) of
 		undefined ->
-		    lists:member({yaws, ["tracedebug"]}, AS);
+		    member({yaws, ["tracedebug"]}, AS);
 		{ok, Val3}  ->
 		    Val3
 	    end,
@@ -190,7 +191,7 @@ init([]) ->
 
 init2(GC, Sconfs, RunMod, FirstTime) ->
     put(gc, GC),
-    lists:foreach(
+    foreach(
       fun(D) ->
 	      yaws_debug:format("Add path ~p~n", [D]),
 	      code:add_pathz(D)
@@ -204,7 +205,7 @@ init2(GC, Sconfs, RunMod, FirstTime) ->
     runmod(RunMod, GC),
 
     %% start the individual gserv server processes
-    L = lists:map(
+    L = map(
 	  fun(Group) ->
 		  proc_lib:start_link(?MODULE, gserv, [GC, Group])
 	  end, Sconfs),
@@ -236,7 +237,7 @@ init2(GC, Sconfs, RunMod, FirstTime) ->
 		  error_logger:error_msg("Failed to set user:~n~p", [Other]),
 		  exit(Other)
 	  end,
-    lists:foreach(fun({Pid, _}) -> Pid ! {newuid, GC2#gconf.uid} end, L2),
+    foreach(fun({Pid, _}) -> Pid ! {newuid, GC2#gconf.uid} end, L2),
     {ok, #state{gc = GC2,
 		pairs = L2,
 		mnum = 0}}.
@@ -258,7 +259,7 @@ handle_call(status, _From, State) ->
 handle_call(id, _From, State) ->
     {reply, (State#state.gc)#gconf.id, State};
 handle_call(pids, _From, State) ->  %% for gprof
-    L = lists:map(fun(X) ->element(1, X) end, State#state.pairs),
+    L = map(fun(X) ->element(1, X) end, State#state.pairs),
     {reply, [self() | L], State};
 
 handle_call(mnum, _From, State) ->
@@ -267,14 +268,14 @@ handle_call(mnum, _From, State) ->
 
 handle_call({setconf, GC, Groups}, _From, State) ->
     %% First off, terminate all currently running processes
-    Curr = lists:map(fun(X) ->element(1, X) end, State#state.pairs),
-    lists:foreach(fun(Pid) ->
-			  Pid ! {self(), stop},
-			  receive
-			      {Pid, ok} ->
-				  ok
-			  end
-		  end, Curr),
+    Curr = map(fun(X) ->element(1, X) end, State#state.pairs),
+    foreach(fun(Pid) ->
+		    Pid ! {self(), stop},
+		    receive
+			{Pid, ok} ->
+			    ok
+		    end
+	    end, Curr),
     case init2(GC, Groups, undef, false) of
 	{ok, State2} ->
 	    {reply, ok, State2};
@@ -283,7 +284,7 @@ handle_call({setconf, GC, Groups}, _From, State) ->
     end;
 
 handle_call(getconf, _From, State) ->
-    Groups = lists:map(fun({_Pid, SCs}) -> SCs end, State#state.pairs),
+    Groups = map(fun({_Pid, SCs}) -> SCs end, State#state.pairs),
     {reply, {ok, State#state.gc, Groups}, State}.
 
 
@@ -341,12 +342,12 @@ terminate(_Reason, _State) ->
 
 setup_auth(SC) ->
     %?Debug("setup_auth(~p)", [yaws_debug:nobin(SC)]),
-    ?f(lists:map(fun(Auth) ->
+    ?f(map(fun(Auth) ->
 	add_yaws_auth(Auth#auth.dir, Auth)
 	end, SC#sconf.authdirs)).
 
 add_yaws_auth(Dirs, A) ->
-    lists:map(
+    map(
       fun(Dir) ->
 	  case file:consult([Dir, [$/|".yaws_auth"]]) of
 	      {ok, [{realm, Realm} |TermList]} ->
@@ -453,7 +454,7 @@ setup_dirs(GC) ->
 
     case file:list_dir(TD1) of
 	{ok, LL} ->
-	    lists:foreach(
+	    foreach(
 	      fun(F) ->
 		      file:delete(filename:join([TD1, F]))
 	      end, LL -- ["ctl"]);
@@ -493,7 +494,7 @@ gserv_loop(GS, Ready, Rnum) ->
 	{From, stop} ->   
 	    unlink(From),
 	    {links, Ls} = process_info(self(), links),
-	    lists:foreach(fun(X) -> unlink(X), exit(X, kill) end, Ls),
+	    foreach(fun(X) -> unlink(X), exit(X, kill) end, Ls),
 	    From ! {self(), ok},
 	    exit(normal)
     end.
@@ -677,14 +678,14 @@ erase_transients() ->
     erase(query_parse),
     erase(outh),
     erase(sc),
-    lists:foreach(fun(X) ->
-			  case X of
-			      {binding, _} ->
-				  erase(X);
-			      _ ->
-					  ok
-			  end
-		  end, get()).
+    foreach(fun(X) ->
+		    case X of
+			{binding, _} ->
+			    erase(X);
+			_ ->
+			    ok
+		    end
+	    end, get()).
     
 
 handle_method_result(Res, CliSock, IP, GS, Req, H, Num) ->
@@ -1072,7 +1073,7 @@ is_auth(ARG, Req_dir,H,[{Auth_dir, #auth{realm=Realm, users=Users}}|T] ) ->
 		    maybe_auth_log({401, Realm}, ARG),
 		    {false, Realm};
 		{User, Password, _OrigString} ->
-		    case lists:member({User, Password}, Users) of
+		    case member({User, Password}, Users) of
 			true ->
 			    maybe_auth_log({ok, User}, ARG),
 			    true;
@@ -1146,9 +1147,8 @@ handle_ut(CliSock, ARG, UT, N) ->
 				      (CliSock, Req, UT, Range);
 
 				Line -> 
-				    case lists:member(ETag,
-						      yaws:split_sep(
-							Line, $,)) of
+				    case member(ETag,
+						yaws:split_sep(Line, $,)) of
 					true -> 
 					    yaws:outh_set_static_headers
 					      (Req, UT, H, Range),
@@ -1159,8 +1159,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 				    end
 			    end;
 			Line ->
-			    case lists:member(ETag,
-					      yaws:split_sep(Line, $,)) of
+			    case member(ETag,yaws:split_sep(Line, $,)) of
 				true ->
 				    yaws:outh_set_304_headers(Req, UT, H),
 				    deliver_accumulated(CliSock),
@@ -1202,8 +1201,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     N,
 			     ARG,
 			     fun(A)->yaws_cgi:call_cgi(
-				       A,
-				       lists:flatten(UT#urltype.fullpath))
+				       A,flatten(UT#urltype.fullpath))
 			     end,
 			     fun(A)->finish_up_dyn_file(CliSock)
 			     end
@@ -1217,7 +1215,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     fun(A)->yaws_cgi:call_cgi(
 				       A,
 				       SC#sconf.phpexe,
-				       lists:flatten(UT#urltype.fullpath))
+				       flatten(UT#urltype.fullpath))
 			     end,
 			     fun(A)->finish_up_dyn_file(CliSock)
 			     end
@@ -1427,7 +1425,7 @@ do_yaws(CliSock, ARG, UT, N) ->
 del_old_files([]) ->
     ok;
 del_old_files([{_FileAtom, spec, _Mtime1, Spec, _}]) ->
-    lists:foreach(
+    foreach(
       fun({mod, _, _, _,  Mod, _Func}) ->
 
 	      F=yaws:tmp_dir()++"/yaws/" ++ yaws:to_list(Mod) ++ ".erl",
@@ -1789,7 +1787,7 @@ handle_out_reply({header, H},  _LineNo, _YawsFile, _A) ->
 
 handle_out_reply({allheaders, Hs}, _LineNo, _YawsFile, _A) ->
     yaws:outh_clear_headers(),
-    lists:foreach(fun({header, Head}) -> yaws:accumulate_header(Head) end, Hs);
+    foreach(fun({header, Head}) -> yaws:accumulate_header(Head) end, Hs);
 
 handle_out_reply({status, Code},_LineNo,_YawsFile,_A) when integer(Code) ->
     yaws:outh_set_status_code(Code);
@@ -1875,7 +1873,7 @@ handle_out_reply({redirect, URL, Status}, _LineNo, _YawsFile, _A) ->
     ok;
 
 handle_out_reply({bindings, L}, _LineNo, _YawsFile, _A) ->
-    lists:foreach(fun({Key, Value}) -> put({binding, Key}, Value) end, L),
+    foreach(fun({Key, Value}) -> put({binding, Key}, Value) end, L),
     ok;
 
 handle_out_reply(ok, _LineNo, _YawsFile, _A) ->
@@ -2547,7 +2545,7 @@ split_path([$/|Tail], Comps, Part)  when Part /= [] ->
     ?Debug("Tail=~s Part=~s", [Tail,Part]),
     Component = lists:reverse(Part),
     CName = tl(Component),
-    case lists:member(CName, (get(sc))#sconf.appmods) of
+    case member(CName, (get(sc))#sconf.appmods) of
 	true  ->
 	    %% we've found an appmod
 	    PrePath = conc_path(Comps),
@@ -2609,9 +2607,9 @@ ret_user_dir([], "/", Upath)  ->
 parse_user_path(_DR, [], _User) ->
     redir_dir;
 parse_user_path(_DR, [$/], User) ->
-    {ok, lists:reverse(User), [$/]};
+    {ok, reverse(User), [$/]};
 parse_user_path(_DR, [$/|Tail], User) ->
-    {ok, lists:reverse(User), [$/|Tail]};
+    {ok, reverse(User), [$/|Tail]};
 parse_user_path(DR, [H|T], User) ->
     parse_user_path(DR, T, [H|User]).
 
@@ -2626,9 +2624,9 @@ deflate_q(_, _, _) ->
 
 ret_reg_split(Comps, RevFile) ->
     SC = get(sc),
-    Dir = lists:reverse(Comps),
+    Dir = reverse(Comps),
     DR = SC#sconf.docroot,
-    File = lists:reverse(RevFile),
+    File = reverse(RevFile),
     L = [DR, Dir, File],
     case prim_file:read_file_info(L) of
 	{ok, FI} when FI#file_info.type == regular ->
@@ -2664,9 +2662,9 @@ ret_script(Comps, RevFile) ->
 	{regular, _} -> false;
 	{forbidden, _} -> false;
 	{X, Mime} -> 
-	    Dir = lists:reverse(Comps),
+	    Dir = reverse(Comps),
 	    DR = (get(sc))#sconf.docroot,
-	    File = lists:reverse(RevFile),
+	    File = reverse(RevFile),
 	    L = [DR, Dir, File],
 	    case prim_file:read_file_info(L) of
 		{ok, FI} when FI#file_info.type == regular ->
@@ -2688,7 +2686,7 @@ suffix_type(SC, L) ->
 	{regular, _} ->
 	    R;
 	{X, _Mime} -> 
-	    case lists:member(X, SC#sconf.allowed_scripts) of
+	    case member(X, SC#sconf.allowed_scripts) of
 		true -> R;
 		false -> {forbidden, []}
 	    end
@@ -2775,10 +2773,10 @@ runmod(_, GC) ->
     runmod2(GC, GC#gconf.runmods).
 
 runmod2(GC, Mods) ->
-    lists:foreach(fun(M) -> 
-			  proc_lib:spawn(?MODULE, load_and_run, 
-					 [M, ?gc_has_debug(GC)])
-		  end, Mods).
+    foreach(fun(M) -> 
+		    proc_lib:spawn(?MODULE, load_and_run, 
+				   [M, ?gc_has_debug(GC)])
+	    end, Mods).
 
 
 
