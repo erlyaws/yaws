@@ -75,7 +75,6 @@ install: all docsinstall
 
 docsinstall:
 	install -d $(VARDIR)/yaws/www
-	cp -r ../www/* $(VARDIR)/yaws
 	(cd ..; tar cf - www ) | (cd $(VARDIR)/yaws; tar xf - )
 
 
