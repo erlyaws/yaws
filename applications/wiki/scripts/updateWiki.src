@@ -49,6 +49,8 @@ function updateDir () {
 	if [ $updategifs = 1 ]; then
 	    install -b -S $suffix $wikisrc/WikiPreferences.files/*.gif \
 		$udir/WikiPreferences.files
+	    install -b -S $suffix $wikisrc/WikiPreferences.files/*.png \
+		$udir/WikiPreferences.files
 	fi
     else
 	echo "$progname: $udir is not a directory"
