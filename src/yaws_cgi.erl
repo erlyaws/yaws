@@ -185,7 +185,7 @@ cgi_env(Arg, Scriptfilename, Pathinfo) ->
 	{"CONTENT_LENGTH", H#headers.content_length},
 	{"HTTP_ACCEPT", H#headers.accept},
 	{"HTTP_USER_AGENT", H#headers.user_agent},
-	{"HTTP_COOKIE", H#headers.cookie}
+	{"HTTP_COOKIE", flatten_val(make_cookie_val(H#headers.cookie))}
        ]++lists:map(fun({http_header,_,Var,_,Val})->{tohttp(Var),Val} end,
 		    H#headers.other)
       )).
@@ -199,6 +199,23 @@ tohttp_c(C) when C >= $a , C =< $z ->
     C - $a + $A;
 tohttp_c(C) ->
     C.
+
+
+make_cookie_val([]) ->
+    undefined;
+make_cookie_val([C]) ->
+    C;
+make_cookie_val([C|CS]) ->
+    [make_cookie_val(CS), $; | C].
+
+
+%% Seems not to be necessary, but open_port documentation says that
+%% value has to be a string.
+
+flatten_val(L) when list(L) ->
+    lists:flatten(L);
+flatten_val(X) ->
+    X.
 
 
 notslash($/) ->
