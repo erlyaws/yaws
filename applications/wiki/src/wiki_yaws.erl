@@ -40,7 +40,7 @@ parse_post([{head, {Name, Opts}}|Rest], Acc) ->
     parse_post(Rest, [{Name, "", Opts}|Acc]);
 parse_post([{body, Value}|Rest], [{Name, _, Opts}|Acc]) ->
     parse_post(Rest, [{Name, Value, Opts}|Acc]);
-parse_post([{body_part, Data}|Rest], [{Name, Value, Opts}|Acc]) ->
+parse_post([{part_body, Data}|Rest], [{Name, Value, Opts}|Acc]) ->
     parse_post(Rest, [{Name, Value++Data, Opts}|Acc]);
 parse_post([{Name, Value}|Rest], Acc) ->
     parse_post(Rest, [{Name, Value, []}|Acc]).

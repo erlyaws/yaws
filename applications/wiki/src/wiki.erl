@@ -350,7 +350,7 @@ addFileChunk([], State) when State#addfile.last==true,
     Ds          = {wik002,Pwd, Email,Time,Who,Txt,NewFiles,Patches},
     B           = term_to_binary(Ds),
     file:write_file(File, B),
-    file:close(State#addfile.fd),
+    Res = file:close(State#addfile.fd),
     {done, redirect({node, Page}, State#addfile.prefix)};
 addFileChunk([], State) when State#addfile.last==true ->
     Page        = State#addfile.node,
@@ -373,7 +373,7 @@ addFileChunk([{body, Data}|Res], State) when State#addfile.param == node ->
 addFileChunk([{head, {password, _Opts}}|Res], State) ->
     addFileChunk(Res, State#addfile{param = password});
 addFileChunk([{body, Data}|Res], State) when State#addfile.param == password ->
-    Password = State#addfile.node,
+    Password = State#addfile.password,
     NewPW = merge_body(Password, Data),
     addFileChunk(Res, State#addfile{password = NewPW});
 
@@ -388,8 +388,7 @@ addFileChunk([{body, Data}|Res], State) when State#addfile.param == text ->
     addFileChunk(Res, State#addfile{text = NewText});
 
 addFileChunk([{head, {attached, Opts}}|Res], State) ->
-    addFileChunk(Res, State#addfile{param = attached}),
-    Page = State#addfile.node,
+    Page     = State#addfile.node,
     Password = State#addfile.password,
     FilePath = getopt(filename, Opts),
     FileName = basename(FilePath),
