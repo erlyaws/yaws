@@ -58,7 +58,8 @@
 	  lines,
 	  reply=[],
 	  more=true,
-	  remain
+	  remain,
+	  dotstate=0
 	 }).
 
 -record(satt, {
@@ -1449,8 +1450,13 @@ ploop(sl, State) ->
 ploop(sized, State) ->
     case receive_reply(State) of
 	{ok, Reply, State2} ->
-	    Size = to_int(Reply),
-	    ploop(sized_cont, State2#pstate{remain=Size,lines=[]});
+	    case to_int(Reply) of
+		0 ->
+		    ploop(sized_cont, State2#pstate{remain=dot,dotstate=0,
+						    lines=[]});
+		Size ->
+		    ploop(sized_cont, State2#pstate{remain=Size,lines=[]})
+	    end;
 	{error, Reason, State2} ->
 	    next_cmd(State2#pstate{reply=[{error,Reason}|
 					  State2#pstate.reply]});
@@ -1527,6 +1533,22 @@ receive_reply(State=#pstate{port=Port,acc=Acc,more=true}) ->
 
 receive_data(State=#pstate{port=Port,acc=Acc,more=false,remain=Remain}) ->
     if
+	Remain == dot ->
+	    %% look for .\r\n
+	    case find_dot(Acc, State#pstate.dotstate) of
+		{more, DotState} ->
+		    State2 = State#pstate{acc=[],
+					  dotstate=DotState,
+					  lines=[Acc|State#pstate.lines],
+					  more=true},
+		    {more, State2};
+		{ok, DotState, Lines, NAcc} ->
+		    State2 = State#pstate{acc=NAcc,
+					  dotstate=DotState,
+					  lines=[Lines|State#pstate.lines],
+					  more=false},
+		    {done, State2}
+	    end;
 	Remain =< length(Acc) ->
 	    {Lines, NAcc} = split_at(Acc, Remain),
 	    State2 = State#pstate{acc=NAcc,lines=[Lines|State#pstate.lines],
@@ -1546,6 +1568,22 @@ receive_data(State=#pstate{port=Port,acc=[],more=true,remain=Remain}) ->
 	{ok, Bin} ->
 	    Acc = binary_to_list(Bin),
 	    if
+		Remain == dot ->
+		    case find_dot(Acc, State#pstate.dotstate) of
+			{more, DotState} ->
+			    State2 = State#pstate{acc=[],
+						  dotstate=DotState,
+						  lines=[Acc|State#pstate.lines],
+						  more=true},
+			    {more, State2};
+			{ok, DotState, Lines, NAcc} ->
+			    
+			    State2 = State#pstate{acc=NAcc,
+						  dotstate=DotState,
+						  lines=[Lines|State#pstate.lines],
+						  more=false},
+			    {done, State2}
+		    end;
 		Remain =< length(Acc) ->
 		    {Lines, NAcc} = split_at(Acc, Remain),
 		    State2 = State#pstate{acc=NAcc,
@@ -1567,10 +1605,10 @@ receive_data(State=#pstate{port=Port,acc=[],more=true,remain=Remain}) ->
 
 check_reply(Str, State) ->
     case split_reply(Str, []) of
-	{"+OK " ++ Res, Rest} ->
+	{"+OK" ++ Res, Rest} ->
 	    NewS = State#pstate{acc=Rest,more=false},
 	    {ok, Res, NewS};
-	{"-ERR " ++ Res, Rest} ->
+	{"-ERR" ++ Res, Rest} ->
 	    NewS = State#pstate{acc=Rest,more=false},
 	    {error, Res, NewS};
 	{".", Rest} ->
@@ -2586,4 +2624,37 @@ content_type(FileName) ->
     end.
 
 %%
+
+%% State = 
+
+find_dot(Data, State) ->
+    find_dot(State, Data, []).
+
+find_dot(State, [], Acc) ->
+    {more, State};
+
+find_dot(0, [$\r|R], Acc) ->
+    find_dot(1, R, [$\r|Acc]);
+find_dot(0, [C|R], Acc) ->
+    find_dot(1, R, [C|Acc]);
+
+find_dot(1, [$\n|R], Acc) ->
+    find_dot(2, R, [$\n|Acc]);
+find_dot(1, R, Acc) ->
+    find_dot(0, R, Acc);
+
+find_dot(2, [$.|R], Acc) ->
+    find_dot(3, R, [$\.|Acc]);
+find_dot(2, R, Acc) ->
+    find_dot(0, R, Acc);
+
+find_dot(3, [$\r|R], Acc) ->
+    find_dot(4, R, [$\r|Acc]);
+find_dot(3, R, Acc) ->
+    find_dot(0, R, Acc);
+
+find_dot(4, [$\n|R], Acc) ->
+    {ok, 0, lists:reverse(Acc), R};
+find_dot(4, R, Acc) ->
+    find_dot(0, R, Acc).
 
