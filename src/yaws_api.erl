@@ -779,25 +779,28 @@ redirect(Url) -> [{redirect, Url}].
 
 is_nb_space(X) ->
     lists:member(X, [$\s, $\t]).
-    
 
-% ret: {line, Line, Trail} | {lastline, Line, Trail}
+% ret: {line, Line, Trail} | {lastline, Line, Trail} | need_more
 
 get_line(L) ->    
     get_line(L, []).
 get_line("\r\n\r\n" ++ Tail, Cur) ->
     {lastline, lists:reverse(Cur), Tail};
-get_line("\r\n" ++ Tail, Cur) ->
+get_line("\r\n" ++ Tail, Cur) when Tail /= []  ->
     case is_nb_space(hd(Tail)) of
-	true ->  %% multiline ... continue 
-	    get_line(Tail, [$\n, $\r | Cur]);
-	false ->
-	    {line, lists:reverse(Cur), Tail}
+        true ->  %% multiline ... continue 
+            get_line(Tail, [$\n, $\r | Cur]);
+        false ->
+            {line, lists:reverse(Cur), Tail}
     end;
+get_line("\r\n", Cur)   ->
+     {line, lists:reverse(Cur), []};
 get_line([H|T], Cur) ->
-    get_line(T, [H|Cur]).
-
-
+    get_line(T, [H|Cur]);
+get_line([], _) ->
+    need_more.
+                
+                     
 
 mime_type(FileName) ->
     case filename:extension(FileName) of

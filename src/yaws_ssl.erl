@@ -64,12 +64,15 @@ recv(CliSock, Num, D) ->
 	E -> E
     end.
     
-
 ssl_get_headers(CliSock) ->
+    ssl_get_headers(CliSock,[]).
+
+ssl_get_headers(CliSock, Prev) ->
     case recv(CliSock, 2048) of
 	{ok, []} ->
 	    closed;
-	{ok, Data} ->
+	{ok, Data0} ->
+	    Data = Prev ++ Data0,
 	    ?Debug("GOT ssl data ~p~n", [Data]),
 	    {R, Trail} = get_req(Data),
 	    ?Debug("Parsed request ~p~n", [R]),
@@ -83,8 +86,12 @@ ssl_get_headers(CliSock) ->
 						% "\r\n\r\n".
 		     <<>>};
 		_ ->
-		    {H,Trail2} = get_headers(CliSock, #headers{}, Trail),
-		    {R, H, list_to_binary(Trail2)}
+		    case get_headers(CliSock, #headers{}, Trail) of
+			need_more ->
+			    ssl_get_headers(CliSock, Data);
+			{H,Trail2} ->
+			    {R, H, list_to_binary(Trail2)}
+		    end
 	    end;
 	_Err ->
 	    ?Debug("cli recv ret ~p~n", [_Err]),
@@ -169,7 +176,9 @@ get_headers(CliSock, H, Tail) ->
 	{line, Line, Tail2} ->
 	    get_headers(CliSock, parse_line(Line, H), Tail2);
 	{lastline, Line, Tail2} ->
-	    {parse_line(Line, H), Tail2}
+	    {parse_line(Line, H), Tail2};
+	need_more ->
+	    need_more
     end.
 
 
