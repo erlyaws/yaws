@@ -14,7 +14,7 @@ out(A) ->
 
 
 <tr><td>    </td></tr>
-<tr><td>    </td></tr>
+<tr><td> Jun 15, fixed abug in the cache load machanism, pages were cached indefinitely. A bug in the new code in 0.48 didn't ship any content on 401 's   </td></tr>
 
 <tr><td>Jun 12 Redid the out/1 structure completely removed some/all headers and made
 it possible to return headers as well as new status code inside any out/1 function. This makes it much easier to write apps in yaws.   Also accumulated output into larger write chunks. Performnce enhancer.</td></tr>
