@@ -61,26 +61,16 @@ powered by Yaws.
 
 <div class="man"> 
 
-<h3> Aug  25, 2003.  Version 1.30 released  </h3>
+<h3> Oct 4, 2003.  Version 1.31 released  </h3>
 
 <ul>
 
 
-<li><p> This is major feature release with many new features by in particular 
-Carsten Schultz and Leon Smith plus the normal set of regular bugfixes.
-<li><p> Setuid code had broken  (klacke)
-<li><p> Setcookie problem with lynx (Johan Bevemyr)
-<li><p> Wiki: Thumbnail index to slideshow (Johan Bevemyr)
-<li><p> Fixed Cross-Site Scripting vunerability (Leon Smith)
-<li><p> url parsing rewritten in order to normalize the URL path in a
-more secure way (Leon Smith)
-<li><p> Log file size for dynamic content also (Carsten Schultz)
-<li><p> Full CGI and PHP support (Carsten Schultz)
-<li><p> Added support for Content-Range, If-Range, If-Match (Carsten Schultz)
-<li><p> HEAD handling rewritten (Carsten Schultz)
-<li> <p> Darwin MacOs X support (Eric Baur)
-<li> <p> Docs updated describing cgi and php support (Carsten Schultz)
-<li> <p> tty trace directly from command line for enhanced debugging
+<li><p> This is minor bugfix release
+<li><p> Even more redir bugs fuxed by Johan Bevemyr
+<li><p> Runs on old erlangs (R7)  (klacke)
+<li><p> Compiles and runs nicely under win32 cygwin using native win32 erlang (klacke)
+<li><p> Cosmetic fixes, docs update and return 403 on bad GETs by Leon Smith
 
 </ul>
 
@@ -102,9 +92,37 @@ more secure way (Leon Smith)
 
 
 
+<ul>
+Aug  25, 2003.  Version 1.30 released  </h3>
+</ul>
 
 <ul>
-<li>Jun 1, 2003.  Version 1.22 released  </h3>
+
+
+<li><p> This is major feature release with many new features by in particular 
+Carsten Schultz and Leon Smith plus the normal set of regular bugfixes.
+<li><p> Setuid code had broken  (klacke)
+<li><p> Setcookie problem with lynx (Johan Bevemyr)
+<li><p> Wiki: Thumbnail index to slideshow (Johan Bevemyr)
+<li><p> Fixed Cross-Site Scripting vunerability (Leon Smith)
+<li><p> url parsing rewritten in order to normalize the URL path in a
+more secure way (Leon Smith)
+<li><p> Log file size for dynamic content also (Carsten Schultz)
+<li><p> Full CGI and PHP support (Carsten Schultz)
+<li><p> Added support for Content-Range, If-Range, If-Match (Carsten Schultz)
+<li><p> HEAD handling rewritten (Carsten Schultz)
+<li> <p> Darwin MacOs X support (Eric Baur)
+<li> <p> Docs updated describing cgi and php support (Carsten Schultz)
+<li> <p> tty trace directly from command line for enhanced debugging
+
+</ul>
+</ul>
+
+
+
+
+<ul>
+<li>Jun 1, 2003.  Version 1.22 released  
 <ul>
 
 <li><p> This is bugfix release. 
