@@ -1,59 +1,56 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
 
-<head>
- <meta name="keywords" content="Yaws webmail login">
- <title>Yaws webmail login</title>
- <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
- <link rel="stylesheet" type="text/css" href="mstil.css">
-</head>
+<erl>
+out(A) -> 
+    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOP"]).
+</erl>
 
-<body>
+<table>
+<tr border="1">
+    <td>
+
+<erl> 
+            out(A) -> 
+	    {S, _, _}  = webmail:login_status(A),
+	    {html, S}.
+</erl>
+
+    </td>
 
 
-<img src="bluerulr3.gif">
+</tr>
+
+</table>
+
+<hr>
+<h2> Login result </h2>
 
 <erl>
 
 out(A) ->
-    L =  yaws_api:parse_post_data(A),
-    C = case {lists:keysearch(user, 1, L), 
-	      lists:keysearch(password, 1, L)} of
-	    {{value, {_, User}},
-	     {value, {_, Pwd}}} ->
-		
-		case webmail:newsession(User, Password) of
-		    {ok, Cookie} ->
-			yaws_api:setcookie("webmail", Cookie, "/");
-		    Err ->
-			Err
-		end;
-	    _ ->
-		{error, "Bad post data"}
-	end,
-    Res = case C of
-	      {error, Reason} ->
-		  f("Login failed: ~p", [Reason]);
-	      _ ->
-		  f("User ~p logged in ", [User])
-	  end,
-    
-	  	  	  
-		  
+    case webmail:login_status(A) of
+	{_, ok, Usr} ->
+	    {html, f("<p> User ~p already logged in ", [Usr])};
+	_ ->
+	    L =  yaws_api:parse_post_data(A),
+	    case {lists:keysearch(user, 1, L), 
+		  lists:keysearch(password, 1, L)} of
+		{{value, {_, User}},
+		 {value, {_, Pwd}}} ->
+		    case webmail:newsession(User, Pwd) of
+			{ok, Cookie, _} ->
+			    [{html, f("<p> User ~p logged in ", [User])},
+			     yaws_api:setcookie("ymail",Cookie, "/")];
+			{error, Reason} ->
+			    {html, f("<p> Login of ~p failed: ~p", 
+				     [User,Reason])}
+		    end;
+		_ ->
+		    {html, "<p> Login failed: bad user or passwd "}
+	    end
+    end.
 
 </erl>
 
-
-
-<h2> Yaws webmail login " </h2>
-
-<form METHOD=POST
-      ACTION="webmail_login_post.yaws"
-
-<p> Username: <input NAME="user" TYPE="text" SIZE="48">
-<p> Password: <input NAME="password" TYPE="text" SIZE="48">
-
-</form>
 
 </body>
 </html>

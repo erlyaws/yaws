@@ -1,0 +1,26 @@
+<erl>
+
+-include("webmail.hrl").
+
+out(A) ->
+    case webmail:login_status(A) of
+	{_, ok, User} ->
+	    L =  yaws_api:parse_post_data(A),
+	    case lists:keysearch(file,1,L) of
+		{value, {file, F}} ->
+		    case file:read_file("/tmp/webmail/" ++ F) of
+			{ok, B} ->
+			    MT = yaws_api:mime_type(F),
+			    {content, MT, B};
+			_ ->
+			    {html, "No attachment found ... sorry "}
+		    end;
+		false ->
+		    {html, "Hey, what kinda url is this "}
+	    end;
+	_ ->
+	    {html, "sorry buddy, need to login "}
+    end.
+					
+
+</erl>

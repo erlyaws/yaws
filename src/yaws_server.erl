@@ -157,7 +157,6 @@ init([]) ->
 		_ ->
 		    ok
 	    end,
-
 	    init2(Gconf, Sconfs, RunMod);
 	{error, E} ->
 	    case erase(logdir) of
@@ -1831,7 +1830,7 @@ parse_user_path(DR, [H|T], User) ->
 
 
 ret_reg_split(DR, Comps, RevFile, Query) ->
-    ?Debug("ret_reg_split(~p)", [[DR, Comps, RevFile]]),
+    ?Debug("ret_reg_split(~p)", [[DR, Comps, RevFile, Query]]),
     Dir = lists:reverse(Comps),
     %%FlatDir = lists:flatten(Dir),
     FlatDir = {noflat, Dir},
@@ -1857,7 +1856,7 @@ ret_reg_split(DR, Comps, RevFile, Query) ->
 	    Dir2 = lists:flatmap(fun(X) -> yaws_api:url_decode(X) end, Dir),
 	    File2 = yaws_api:url_decode(File),
 	    L2 = [DR, Dir2, File2],
-	    ?Debug("Try open ~w~n", [File2]),
+	    ?Debug("Try open ~p~n", [lists:flatten(File2)]),
 	    case prim_file:read_file_info(L) of
 		{ok, FI} when  FI#file_info.type == regular ->
 		    {X, Mime} = suffix_type(RevFile),
@@ -1876,23 +1875,38 @@ ret_reg_split(DR, Comps, RevFile, Query) ->
 	    #urltype{type=error, data=Err}
     end.
 
-%% FIXME add all mime types here
-suffix_type("sway." ++ _) ->
-    {yaws, "text/html"};
-suffix_type("lmth." ++ _) ->
-    {regular, "text/html"};
-suffix_type("gpj." ++ _) ->
-    {regular, "image/jpeg"};
-suffix_type("gnp." ++ _) ->
-    {regular, "image/png"};
-suffix_type("fig." ++ _) ->
-    {regular, "image/gif"};
-suffix_type("3pm." ++ _) ->
-    {regular, "audio/mpeg"};
-suffix_type("zg." ++ _) ->
-    {regular, "application/x-gzip"};
-suffix_type(_) ->
-    {regular, "application/octet-stream"}.
+
+suffix_type(L) ->
+    L2 = drop_till_dot(L),
+    mime_types:revt(L2).
+
+drop_till_dot([$.|_]) ->
+    [];
+drop_till_dot([H|T]) ->
+    [H|drop_till_dot(T)];
+drop_till_dot([]) ->
+    [].
+
+
+
+
+% %% FIXME add all mime types here
+% suffix_type("sway." ++ _) ->
+%     {yaws, "text/html"};
+% suffix_type("lmth." ++ _) ->
+%     {regular, "text/html"};
+% suffix_type("gpj." ++ _) ->
+%     {regular, "image/jpeg"};
+% suffix_type("gnp." ++ _) ->
+%     {regular, "image/png"};
+% suffix_type("fig." ++ _) ->
+%     {regular, "image/gif"};
+% suffix_type("3pm." ++ _) ->
+%     {regular, "audio/mpeg"};
+% suffix_type("zg." ++ _) ->
+%     {regular, "application/x-gzip"};
+% suffix_type(_) ->
+%     {regular, "application/octet-stream"}.
 
 
 
@@ -1951,7 +1965,7 @@ not_found_body(Url, GC, SC) ->
 
 
 runmod(Mod) ->
-    spawn(fun() -> load_and_run(Mod) end).
+    proc_lib:spawn(?MODULE, load_and_run, [Mod]).
 
 load_and_run(Mod) ->
     case code:ensure_loaded(Mod) of

@@ -103,7 +103,7 @@ un_partial({partial, Bin}) ->
 un_partial(Bin) ->
     Bin.
 
-%
+
 
 parse_arg_line(Line) ->
     parse_arg_line(Line, []).
@@ -558,4 +558,30 @@ url_decode([]) ->
     [].
 
 redirect(Url) -> [{redirect, Url}].
+
+is_nb_space(X) ->
+    lists:member(X, [$\s, $\t]).
+    
+
+% ret: {line, Line, Trail} | {lastline, Line, Trail}
+
+get_line(L) ->    
+    get_line(L, []).
+get_line("\r\n\r\n" ++ Tail, Cur) ->
+    {lastline, lists:reverse(Cur), Tail};
+get_line("\r\n" ++ Tail, Cur) ->
+    case is_nb_space(hd(Tail)) of
+	true ->  %% multiline ... continue 
+	    get_line(Tail, [$\n, $\r | Cur]);
+	false ->
+	    {line, lists:reverse(Cur), Tail}
+    end;
+get_line([H|T], Cur) ->
+    get_line(T, [H|Cur]).
+
+mime_type(FileName) ->
+    {_, MT} = mime_types:t(filename:extension(FileName)),
+    MT.
+
+
 

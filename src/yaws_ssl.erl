@@ -66,7 +66,7 @@ get_req(Line, R) ->
 
 
 get_headers(CliSock, GC, H, Tail) ->
-    case get_line(Tail) of
+    case yaws_api:get_line(Tail) of
 	{line, Line, Tail2} ->
 	    get_headers(CliSock, GC, parse_line(Line, H), Tail2);
 	{lastline, Line, Tail2} ->
@@ -106,17 +106,6 @@ space_strip([H|T], Mode) ->
 space_strip([], _) ->
     [].
 
-
-% ret: {line, Line, Trail} | {lastline, Line, Trail}
-
-get_line(L) ->    
-    get_line(L, []).
-get_line("\r\n\r\n" ++ Tail, Cur) ->
-    {lastline, lists:reverse(Cur), Tail};
-get_line("\r\n" ++ Tail, Cur) ->
-    {line, lists:reverse(Cur), Tail};
-get_line([H|T], Cur) ->
-    get_line(T, [H|Cur]).
 
 
 

@@ -15,3 +15,20 @@
 	    idletimer}).
 
 
+-record(mail, {popnum,
+	       size,
+	       return_path,
+	       received,
+	       date,
+	       from,
+	       to,
+	       cc,
+	       subject = "none",
+	       message_id,
+	       mime_version,
+	       content_type,
+	       content_disposition,
+	       user_agent,
+	       content_transfer_encoding,
+	       other_h = [],
+	       content}).

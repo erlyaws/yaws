@@ -1,0 +1,56 @@
+
+<erl>
+
+out(A) -> 
+    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOP"]).
+
+</erl>
+
+<table>
+<tr border="1">
+    <td>
+
+<erl> 
+            out(A) -> 
+	    {S, _, _}  = webmail:login_status(A),
+	    {html, S}.
+</erl>
+
+    </td>
+
+
+</tr>
+
+</table>
+
+<hr>
+
+<erl>
+
+-include("webmail.hrl").
+
+out(A) ->
+    case webmail:login_status(A) of
+	{_, ok, User} ->
+	     L =  yaws_api:parse_post_data(A),
+	    case lists:keysearch(num,1,L) of
+		{value, {num, Num0}} ->
+		    Num = list_to_integer(Num0),
+		    case webmail:get_mail(User, Num) of
+			{ok, Mail} ->
+			    webmail:render_mail(Mail);
+			{error, Reason} ->
+			    {html, f("<p>Error: ~p",[Reason])}
+		    end;
+		false ->
+		    {html, "Error: Mail num doesn't exist "}
+	    end;
+	_ ->
+	    {html, "<p> Need to login before retrieve mails "}
+    end.
+
+
+</erl>
+    
+
+

@@ -20,7 +20,9 @@ MODULES=yaws \
 	yaws_compile \
 	yaws_ctl \
 	yaws_ssl \
-	yaws_vsn
+	yaws_vsn \
+	mime_type_c \
+	mime_types
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app
 
@@ -36,6 +38,9 @@ all: yaws_vsn.erl $(EBIN_FILES)
 
 yaws_vsn.erl:	yaws_vsn.template
 	. ../vsn.mk; sed "s/%VSN%/${YAWS_VSN}/" < yaws_vsn.template > yaws_vsn.erl
+
+mime_types.erl:	mime.types mime_type_c.erl
+	erl -noshell  -pa ../ebin -s mime_type_c  compile
 
 debug:
 	$(MAKE) TYPE=debug
