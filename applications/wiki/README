@@ -18,13 +18,23 @@ ebin path ($EBININSTALLDIR), for example
 
 It is possible to have several Wiki instances on the same server. 
 Just install the wiki/* files in the directory where you want a 
-Wiki instance.
+Wiki instance. This is easily done by running the updateWiki script
+and give a new directory as argument.
 
-To edit the wiki preferences to to the wiki page WikiPreferences
+To edit the wiki preferences go to the wiki page WikiPreferences
 (for example by clicking on the "All Pages" or "Zombies" icon)
 and replace the gifs with our own favorites.
 
 The password to the WikiPreferences page is ForgetMe.
+
+Look and feel
+-------------
+
+The layout of the Wiki pages is to a large extent controlled by 
+two templates in WikiPreferences.files called template.html 
+and template_info.html. There is an alternative look and feel
+bundled, just copy template2.html to template.html and 
+template_info2.html  to template_info.html.
 
 To maintain
 -----------
