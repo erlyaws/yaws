@@ -1381,8 +1381,13 @@ handle_out_reply(L, DCC, LineNo, YawsFile, SC, A) when list (L) ->
 handle_out_reply({html, Html}, DCC, _LineNo, _YawsFile, _SC, _A) ->
     accumulate_chunk(DCC, Html);
 
-handle_out_reply({ehtml, E}, DCC, _LineNo, _YawsFile, _SC, _A) ->
-    accumulate_chunk(DCC, safe_ehtml_expand(E));
+handle_out_reply({ehtml, E}, DCC, _LineNo, _YawsFile, SC, A) ->
+    case safe_ehtml_expand(E) of
+	{ok, Val} ->
+	    accumulate_chunk(DCC, Val);
+	{error, ErrStr} ->
+	    handle_crash(A,DCC,ErrStr,SC)
+    end;
 
 handle_out_reply({content, MimeType, Cont}, DCC, _LineNo,_YawsFile, _SC, _A) ->
     put(content_type, MimeType),
@@ -1425,7 +1430,8 @@ handle_out_reply({redirect, URL}, _DCC, _LineNo, _YawsFile, _SC, A) ->
 handle_out_reply(ok, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     ok;
 
-handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile, SC, A) ->
+handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile, SC, ArgL) ->
+    A = hd(ArgL),
     L = ?F("~n~nERROR erlang  code  crashed:~n "
 	   "File: ~s:~w~n"
 	   "Reason: ~p~nReq: ~p~n",
@@ -1435,7 +1441,8 @@ handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile, SC, A) ->
 handle_out_reply({get_more, Cont, State}, _DCC, _LineNo, _YawsFile, _SC, _A) ->
     {get_more, Cont, State};
 
-handle_out_reply(Reply, DCC, LineNo, YawsFile, SC, A) ->
+handle_out_reply(Reply, DCC, LineNo, YawsFile, SC, ArgL) ->
+    A = hd(ArgL),
     L =  ?F("yaws code at ~s:~p crashed or "
 	    "ret bad val:~p ~nReq: ~p",
 	    [YawsFile, LineNo, Reply, A#arg.req]),
@@ -1461,21 +1468,22 @@ handle_out_reply_l([], _DCC, _LineNo, _YawsFile, _SC, _A, Res) ->
 %% actual crash or a custimized error message 
 
 handle_crash(A, DCC, L, SC) ->
+    ?Debug("handle_crash(~p)~n", [L]),
     yaws:elog("~s", [L]),
     case catch apply(SC#sconf.errormod_crash, crashmsg, [A, SC, L]) of
 	{html, Str} ->
 	    accumulate_chunk(DCC, Str),
 	    break;
 	{ehtml, Term} ->
-	    case catch safe_ehtml_expand(Term) of
-		{'EXIT', Reason} ->
-		    yaws:elog("~p", [Reason]),
+	    case safe_ehtml_expand(Term) of
+		{error, Reason} ->
+		    yaws:elog("~s", [Reason]),
 		    %% Aghhh, yet another user crash :-(
-		    T2 = [{h2, "Internal error"}, {hr},
-			  {p, "Customized crash display code crashed !!!"}],
-		    accumulate_chunk(DCC, safe_ehtml_expand(T2)),
+		    T2 = [{h2, [], "Internal error"}, {hr},
+			  {p, [], "Customized crash display code crashed !!!"}],
+		    accumulate_chunk(DCC, ehtml_expand(T2)),
 		    break;
-		Out ->
+		{ok, Out} ->
 		    accumulate_chunk(DCC, Out),
 		    break
 	    end;
@@ -1483,7 +1491,7 @@ handle_crash(A, DCC, L, SC) ->
 	    yaws:elog("Bad return value from errmod_crash ~n~p~n",[Other]),
 	    T2 = [{h2, [], "Internal error"}, {hr},
 		  {p, [], "Customized crash display code returned bad val"}],
-	    accumulate_chunk(DCC, safe_ehtml_expand(T2)),
+	    accumulate_chunk(DCC, ehtml_expand(T2)),
 	    break
 	
     end.
@@ -2311,9 +2319,9 @@ d(_) -> 63.
 safe_ehtml_expand(X) ->
     case (catch ehtml_expand(X)) of
 	{'EXIT', R} ->
-	    io_lib:format("<pre> ~n~p~n </pre>~n", [R]);
+	    {error, io_lib:format("<pre> ~n~p~n </pre>~n", [R])};
 	Val ->
-	    Val
+	    {ok, Val}
     end.
 
 

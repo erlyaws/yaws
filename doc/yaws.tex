@@ -73,6 +73,12 @@ be made.
 \item Embedded mode
 \end{enumerate}
 
+\section{Prerequisites}
+This document requires that the reader:
+\begin{itemize}
+\item Is well acquainted with the Erlang programming language
+\item Understands basic Web technologies.
+\end{itemize}
 
 
 \section{A tiny example}
@@ -379,8 +385,113 @@ for dynamic pages from the start.
 Most large sites on the Web today make heavy use of dynamic pages.
 
 
+
 \section{Introduction}
+
+When the client GETs a a page that has a .yaws suffix. The yaws server
+will read that page from the hard disk and divide it in parts
+that consist of HTML code and Erlang code. Each chunk of erlang code
+will be compiled into a module. The chunk of Erlang code must contain
+a function \verb+out/1+. If it doesn't the yaws server will insert a
+proper error message into the generated HTML output.
+
+When the Yaws server ships a .yaws page it will ship chunk by chunk
+through the .yaws file. If it is HTML code, the server will ship that
+as is whereas if it is Erlang code, the yaws server will invoke the
+\verb+out/1+ function in that code and insert the output into the stream
+of HTML that is being shipped to the client.
+
+Yaws will (of cource) cache the result of the compilation
+and the next time a client requests the same .yaws page Yaws will
+be able to invoke the already compiled modules directly.
+
+
 \section{EHTML}
+
+There are two ways to make the \verb+out/1+ function generate HTML
+output. The first and most easy to understand is by returning a tuple
+\verb+{html, String}+ where \verb+String+ then is regular HTML data
+(possibly as a deep list of strings and/or binaries) which will simply
+be inserted into the output stream.
+An example:
+
+\begin{verbatim}
+<html>
+<h1> Example 1 </h1>
+
+<erl>
+out(A) ->
+    Headers = A#arg.headers,
+    {html, io_lib:format("You say that you're running ~p",
+                         [Headers#headers.user_agent])}.
+
+</erl>
+
+</html>
+
+\end{verbatim}
+
+
+The second way to generate output is by returning a tuple
+\verb+{ehtml, EHTML}+. The term \verb+EHTML+ must adhere to the 
+following structure:
+
+$EHTML = [EHTML] | {HTMLTAG, Attrs, Body} | {HTMLTAG, Attrs} | {HTMLTAG} |
+        binary() | character()$
+
+$HTMLTAG 	 = atom()$
+
+$Attrs = [{HtmlAttribute, Value}]$
+
+$HtmlAttribute 	 = atom()$
+
+$Value = string() | atom()$
+
+$Body  = EHTML$
+
+We give an example to show what we mean:
+The tuple 
+\begin{verbatim}
+{ehtml, {table, [{bgcolor, grey}],
+	 [
+	  {tr, [], 
+	   [
+	    {td, [], "1"},
+	    {td, [], "2"},
+	    {td, [], "3"}
+	   ],
+	   {tr, [],
+	    [{td, [{colspan, "3"}], "444"}]}}]}}.
+\end{verbatim}
+
+Would be expanded into the following HTML code
+\begin{verbatim}
+<table bgcolor="grey">
+  <tr>
+    <td> 1 </td
+    <td> 2 </td>
+    <td> 3 </td>
+  </tr>
+  <tr>
+    <td colspan="3"> 444 </td>
+  </tr>
+</table>
+
+\end{verbatim}
+
+At a first glance it may appears if the HTML code is more
+beautiful than the Erlang tuple. That may very well be the
+case from a purely aesthetic point of view. However the
+Erlang code has the advantage of being perfectly indented by editors
+that have syntax support for Erlang (read Emacs). Furthermore, the erlang
+code is easier to manipulate from an Erlang program.
+
+As an example of some more interesting ehtml we could have
+an \verb+out/1+ function that prints some of the HTTP headers
+We have:
+
+    
+
 
 
 \chapter{Mode of operation}

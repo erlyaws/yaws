@@ -33,7 +33,7 @@
 	 cookieval_to_opaque/1,
 	 print_cookie_sessions/0,
 	 replace_cookie_session/2, delete_cookie_session/1]).
--export([setconf/2, set_status_code/1]).
+-export([setconf/2, set_status_code/1, reformat_header/1]).
 
 %% these are a bunch of function that are useful inside
 %% yaws scripts
@@ -777,3 +777,108 @@ setconf(GC, Groups) ->
 set_status_code(Code) ->
     put(status_code, Code).
 
+
+
+%% returns [ Header1, Header2 .....]
+reformat_header(H) ->
+    lists:zf(fun({Hname, Str}) ->
+		     I =  lists:flatten(io_lib:format("~s: ~s",[Hname, Str])),
+		     {true, I};
+		(undefined) ->
+		     false
+	     end, 
+	     [
+	      if H#headers.connection == undefined ->
+		      undefined;
+		 true ->
+		      {"Connection", H#headers.connection}
+	      end,
+	      
+	      if H#headers.accept == undefined ->
+		      undefined;
+		 true ->
+		      {"Accept", H#headers.accept}
+	      end,
+	      if H#headers.host == undefined ->
+		      undefined;
+		 true ->
+		      {"Host", H#headers.host}
+	      end,
+	      if H#headers.if_modified_since == undefined ->
+		      undefined;
+		 true ->
+		      {"If-Modified-Since", H#headers.if_modified_since}
+	      end,
+	      if H#headers.if_match == undefined ->
+		      undefined;
+		 true ->
+		      {"If-Match", H#headers.if_match}
+	      end,
+	      if H#headers.if_none_match == undefined ->
+		      undefined;
+		 true ->
+		      {"If-None-Match", H#headers.if_none_match}
+	      end,
+	      
+	      
+	      if H#headers.if_range == undefined ->
+		      undefined;
+		 true ->
+		      {"If-Range", H#headers.if_range}
+	      end,
+	      if H#headers.if_unmodified_since == undefined ->
+		      undefined;
+		 true ->
+		      {"If-Unmodified-Since", H#headers.if_unmodified_since}
+	      end,
+	      if H#headers.range == undefined ->
+		      undefined;
+		 true ->
+		      {"Range", H#headers.range}
+	      end,
+	      if H#headers.referer == undefined ->
+		      undefined;
+		 true ->
+		      {"Referer", H#headers.referer}
+	      end,
+	      if H#headers.user_agent == undefined ->
+		      undefined;
+		 true ->
+		      {"User-Agent", H#headers.user_agent}
+	      end,
+	      if H#headers.accept_ranges == undefined ->
+		      undefined;
+		 true ->
+		      {"Accept-Ranges", H#headers.accept_ranges}
+	      end,
+	      if H#headers.cookie == undefined ->
+		      undefined;
+		 true ->
+		      {"Cookie", H#headers.cookie}
+	      end,
+	      if H#headers.keep_alive == undefined ->
+		      undefined;
+		 true ->
+		      {"Keep-Alive", H#headers.keep_alive}
+	      end,
+	      if H#headers.content_length == undefined ->
+		      undefined;
+		 true ->
+		      {"Content-Length", H#headers.content_length}
+	      end,
+	      if H#headers.content_type == undefined ->
+		      undefined;
+		 true ->
+		      {"Content-Type", H#headers.content_type}
+	      end,
+	      
+	      if H#headers.authorization == undefined ->
+		      undefined;
+		 true ->
+		      {"Authorization", H#headers.authorization}
+	      end]
+	     ) ++
+     lists:map(
+       fun({http_header,_,K,_,V}) ->
+	       lists:flatten(io_lib:format("~s: ~s",[K,V]))
+       end, H#headers.other).

@@ -19,8 +19,8 @@
 	  fullpath,       %% full path to yaws file
 	  cont,		  %% Continuation for chunked multipart uploads
 	  state,          %% State for use by users of the out/1 callback
-	  pid,            %% pid of the yaws process
-	  opaque          %% useful for embedded mode to pass static data
+	  pid,            %% pid of the yaws worker process
+	  opaque          %% useful to pass static data
 	 }).              
 
 
