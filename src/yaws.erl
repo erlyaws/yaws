@@ -807,13 +807,18 @@ dcc(Req, Headers) ->
 			      false
 		      end;
 		  {1, 1} ->
-		      false
+		      false;
+		  {0,9} ->
+		      true
+	      
 	      end,
     Chunked = case Req#http_request.version of
 		  {1, 0} ->
 		      false;
 		  {1,1} ->
-		      true
+		      true;
+		  {0,9} ->
+		      false
 	      end,
     {DoClose, Chunked}.
 
