@@ -378,7 +378,7 @@ gserv(GC, Group0) ->
 		     group = Group,
 		     ssl = SSLBOOL,
 		     l = Listen},
-	    acceptor(GS),
+	    initial_acceptor(GS),
 	    gserv_loop(GS, [], 0);
 	{_,Err} ->
 	    error_logger:format("Yaws: Failed to listen ~s:~w  : ~p~n",
@@ -427,9 +427,12 @@ gserv_loop(GS, Ready, Rnum) ->
 	    R ! {self(), accept},
 	    gserv_loop(GS, RS, Rnum-1);
 	{From, done_client, Int} ->
-	    GS2 = GS#gs{sessions = GS#gs.sessions + 1,
-			reqs = GS#gs.reqs + Int},
-	    if
+	    GS2 = if
+		      Int == 0 -> GS;
+		      Int > 0 -> GS#gs{sessions = GS#gs.sessions + 1,
+				       reqs = GS#gs.reqs + Int}
+		  end,
+    if
 		Rnum == 8 ->
 		    From ! {self(), stop},
 		    gserv_loop(GS2, Ready, Rnum);
@@ -534,7 +537,28 @@ do_accept(GS) when GS#gs.ssl == nossl ->
     ?Debug("wait in accept ... ~n",[]),
     gen_tcp:accept(GS#gs.l);
 do_accept(GS) when GS#gs.ssl == ssl ->
-    ssl:accept(GS#gs.l).
+    ssl:accept(GS#gs.l,10000).
+
+
+initial_acceptor(GS=#gs{ssl=nossl})->
+    acceptor(GS);
+initial_acceptor(GS=#gs{ssl=ssl}) ->
+    initial_acceptor(GS, 5).
+
+initial_acceptor(GS, 0) ->
+    ok;
+initial_acceptor(GS, 1) ->
+    acceptor(GS);
+initial_acceptor(GS, N) when N>1 ->
+    Self = self(),
+    proc_lib:spawn_link(fun() ->
+				receive
+				after (N-1)*2000 ->
+					acceptor0(GS, Self)
+				end
+			end),
+    initial_acceptor(GS, N-1).
+
 
 
 acceptor(GS) ->
@@ -555,7 +579,7 @@ acceptor0(GS, Top) ->
 					       inet:peername(Client)
 				       end,
 		    Str = ?F("New (~p) connection from ~s:~w~n", 
-			     [GS#gs.ssl, yaws:fmt_ip(IP),Port]),
+			[GS#gs.ssl, yaws:fmt_ip(IP),Port]),
 		    yaws_log:trace_traffic(from_client, Str);
 		_ ->
 		    ok
@@ -576,8 +600,17 @@ acceptor0(GS, Top) ->
 		    error_logger:error_msg("Yaws process died: ~p~n", [Reason]),
 		    exit(normal)
 	    end,
-
+	    
 	    %% we cache processes
+	    receive
+		{Top, stop} ->
+		    exit(normal);
+		{Top, accept} ->
+		    acceptor0(GS, Top)
+	    end;
+	{error, timeout} ->
+	    ?Debug("SSL timeout~n", []),
+	    Top ! {self(), done_client, 0},
 	    receive
 		{Top, stop} ->
 		    exit(normal);
@@ -588,7 +621,7 @@ acceptor0(GS, Top) ->
 	    yaws_debug:derror("Failed to accept: ~p~n", [ERR]),
 	    exit(normal)
     end.
-     
+
 
 
 %%%----------------------------------------------------------------------
