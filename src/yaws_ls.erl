@@ -87,6 +87,7 @@ inline_readme(DirName,L) ->
 
 
 doc_head(DirName) ->
+    HtmlDirName = yaws_api:htmlize(yaws_api:url_decode(DirName)),
     ?F("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\"> \n"
        "<html> \n"
        "  <head> \n"
@@ -103,7 +104,7 @@ doc_head(DirName) ->
        "  <body>\n"
        "    <h1>Index of ~s</h1>\n"
        "    <hr/>\n",
-       [DirName, DirName]).
+       [HtmlDirName, HtmlDirName]).
 
 list_head(Direction) ->
     NextDirection = if Direction == normal  -> "r";
