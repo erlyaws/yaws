@@ -64,9 +64,39 @@ out(A) ->
        {p,[], "So this is the way to do when we want to embed dynamic content"
 	" deep inside an ehtml structure, but the content isn't representable"
 	" as ehtml. This is typically the case for dynamically generated "
-	" javascript as well as dynamically generated java applets."}
+	" javascript as well as dynamically generated java applets."},
+       
+       {p, [], "In the above example, \"a\" can be seen as the Variable "
+	"name whereas \"Godzilla\" can be vievwe upon as the value "
+	"of variable \"a\". It is also possible to have the variable "
+	" value be a complete ehtml structure, not just plain ascii "
+	"strings. Here is an example"},
 
-      ]}].
+       box("out(A) -> 
+              E = {ehtml, {h1, [], \"Godzillas baby\"}},
+              [{ssi, \"ssi_ex1\", \"%\", [{\"a\", E}]}]."),
+
+
+
+       {h1, [], "yssi, Yaws Server Side Includes"},
+
+       {p, [], "We have a special version of server side includes that we "
+	" call yssi, yaws server side includes. The syntax for this is: "},
+       box("{yssi, YawsFile}"),
+       {p, [], "Yssi can only be used as a return value from the out/1 "
+	" function, never nested into a deep ehtml structure."
+	" Yssi, will perform full yaws expansion on the file named "
+	"YawsFile, i.e (possibly on the fly) compile it, execute it and"
+	" subsequently inject the generated output from the YawsFile."
+	" yssi statements can be arbitrarily deeply recursively nested, that "
+	" is a .yaws file which has been included through an 'yssi' "
+	" statement, may itself contain 'yssi' return values in its "
+	" out/1 function(s) "}
+
+      ]
+      
+     }
+    ].
     
     
 

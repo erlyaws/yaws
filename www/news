@@ -1,3 +1,15 @@
+Mon Jun 7, 2004 Version 1.48 released
+This release contains both bugfixes as well as som minor new features. There was also a fairly ugly security hole in the example code which describes file uploads found and fixed.
+A Bug in yaws_api:request_url/1 was found by Einar Karttunen. The function didn't handle well the case with explicit port numbers in the URI. (klacke)
+Fixed the appmod code so that users of yaws_api:setconf/1 doesn't have to bother with the cahnge in internal representation of appmods. (klacke)
+Moved phpexe config variable from the sconf to the gconf, it doesn't make sence to have different phpexe paths for different virt servers. Users with old configs will get a warning when tying to specify a phpexe inside a virt server instead of inside the global config area. (klacke)
+New feature called "yssi". Yaws server side include. It's now possible to let the out/1 function return a tuple {yssi, PathToYawsFile.yaws"}.  The new yaws file will be fully expanded, compiled and in general handled as a yaws file. This feature can probably be used to build all kinds of different cool stuff. (klacke)
+yaws_session_server ttl patch from Rob.Schmersel
+Patch from  Fredrik Linder to make it easier to integrate yaws into apps that don't use the otp application framework at all. 
+As usual updates both to the wiki and the webmail app by (jb)
+Patch from Jocke Grebeno which handles ssi support for ehtml code, not just ascii. We can now return  {ssi, "@@", file.html, [{"FOO", "bar"}, {"BAZ", {ehtml, {p, [], "saab"}}}]}  and it returns the expected. Documented is ssi.yaws.
+Security vulnerability in upload.yaws found by (mbj) 
+
 Thu May 27, 2004 Version 1.47 released
 Appmods were slightly broken in 1.46
 

@@ -1067,7 +1067,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     fun(A)->(SC#sconf.errormod_404):
 					 out404(A,GC,SC) 
 			     end,
-			     fun(A)->finish_up_dyn_file(CliSock)
+			     fun(_A)->finish_up_dyn_file(CliSock)
 			     end
 			    );
 	directory when ?sc_has_dir_listings(SC) ->
@@ -1143,7 +1143,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     N,
 			     A2,UT,
 			     fun(A)->Mod:out(A) end,
-			     fun(A)->finish_up_dyn_file(CliSock)
+			     fun(_A)->finish_up_dyn_file(CliSock)
 			     end
 			    );
 	cgi ->
@@ -1155,7 +1155,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     fun(A)->yaws_cgi:call_cgi(
 				       A,flatten(UT#urltype.fullpath))
 			     end,
-			     fun(A)->finish_up_dyn_file(CliSock)
+			     fun(_A)->finish_up_dyn_file(CliSock)
 			     end
 			    );
 	php ->
@@ -1169,7 +1169,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 				       GC#gconf.phpexe,
 				       flatten(UT#urltype.fullpath))
 			     end,
-			     fun(A)->finish_up_dyn_file(CliSock)
+			     fun(_A)->finish_up_dyn_file(CliSock)
 			     end
 			    )
     end.
@@ -1202,7 +1202,7 @@ new_redir_h(OH, Loc, Status) ->
 % otherwise the relative urls in /dir/index.html will be broken.
 
 
-deliver_302(CliSock, Req, Arg, Path) ->
+deliver_302(CliSock, _Req, Arg, Path) ->
     ?Debug("in redir 302 ",[]),
     H = get(outh),
     SC=get(sc),
@@ -1769,7 +1769,7 @@ handle_out_reply({streamcontent_with_size, Sz, MimeType, First},
     yaws:outh_set_content_type(MimeType),
     {streamcontent_with_size, Sz, MimeType, First};
 
-handle_out_reply({header, H},  _LineNo, _YawsFile, UT, _A) ->
+handle_out_reply({header, H},  _LineNo, _YawsFile, _UT, _A) ->
     yaws:accumulate_header(H);
 
 handle_out_reply({allheaders, Hs}, _LineNo, _YawsFile, _UT, _A) ->
@@ -1783,7 +1783,7 @@ handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _UT, _A) ->
     exit(normal);
 
 handle_out_reply({ssi, File,Delimiter,Bindings}, LineNo, YawsFile, _UT,A) ->
-    case ssi(A, File, Delimiter, Bindings) of
+    case ssi(File, Delimiter, Bindings) of
 	{error, Rsn} ->
 	    L = ?F("yaws code at~s:~p had the following err:~n~p",
 		   [YawsFile, LineNo, Rsn]),
@@ -1906,21 +1906,26 @@ handle_out_reply_l([], _LineNo, _YawsFile, _UT, _A, Res) ->
 
 
 %% fast server side include with macrolike variable bindings expansion
-ssi(A, File, Delimiter, Bindings) ->
-    ssi(A, File, Delimiter, Bindings, get(sc)).
-ssi(A, File, Delimiter, Bindings, SC) ->
+ssi(File, Delimiter, Bindings) ->
+    ssi(File, Delimiter, Bindings, get(sc)).
+ssi(File, Delimiter, Bindings, SC) ->
     Key = {ssi, File, Delimiter},
     FullPath = [SC#sconf.docroot, [$/|File]],
     Mtime = path_to_mtime(FullPath),
     case ets:lookup(SC#sconf.ets, Key) of
 	[{_, Parts, Mtime}] ->
-	    expand_parts(A, Parts, Bindings, []);
+	    case (catch expand_parts(Parts, Bindings, [])) of
+		{'EXIT', ErrStr} ->
+		    {error, ErrStr};
+		Value ->
+		    Value
+	    end;
 	_ ->
 	    case prim_file:read_file(FullPath) of
 		{ok, Bin} ->
 		    D =delim_split_file(Delimiter,binary_to_list(Bin),data,[]),
 		    ets:insert(SC#sconf.ets,{Key,D, Mtime}),
-		    ssi(A, File, Delimiter, Bindings, SC);
+		    ssi(File, Delimiter, Bindings, SC);
 		{error, Rsn} ->
 		    {error,Rsn}
 	    end
@@ -1938,23 +1943,23 @@ path_to_mtime(FullPath) ->
 		     
 
 
-expand_parts(A, [{data, D} |T], Bs, Ack) ->	    
-    expand_parts(A, T, Bs, [D|Ack]);
-expand_parts(A, [{var, V} |T] , Bs, Ack) ->
+expand_parts([{data, D} |T], Bs, Ack) ->	    
+    expand_parts(T, Bs, [D|Ack]);
+expand_parts([{var, V} |T] , Bs, Ack) ->
     case lists:keysearch(V, 1, Bs) of
 	{value, {_, {ehtml, E}}} ->
 	    case safe_ehtml_expand(E) of
 		{ok, Val} ->
-		    expand_parts(A, T, Bs, [Val|Ack]);
+		    expand_parts(T, Bs, [Val|Ack]);
 		{error, ErrStr} ->
-		    handle_crash(A,ErrStr)
+		    exit(ErrStr)
 	    end;
 	{value, {_, Val}} ->
-	    expand_parts(A, T, Bs, [Val|Ack]);
+	    expand_parts(T, Bs, [Val|Ack]);
 	false ->
 	    {error, ?F("No variable binding found for ~p", [V])}
     end;
-expand_parts(A, [], _,Ack) ->
+expand_parts([], _,Ack) ->
     lists:reverse(Ack).
 
 	    
@@ -2348,7 +2353,6 @@ url_type(GetPath) ->
 	    CF;
 	[{_, When, UT}] ->
 	    N = now_secs(),
-	    FI = UT#urltype.finfo,
 	    Refresh = GC#gconf.cache_refresh_secs,
 	    if 
 		((N-When) >= Refresh) ->
@@ -2395,7 +2399,7 @@ cache_size(UT) when binary(UT#urltype.deflate),
     size(UT#urltype.deflate) + size(UT#urltype.data);
 cache_size(UT) when binary(UT#urltype.data) ->
     size(UT#urltype.data);
-cache_size(UT) ->
+cache_size(_UT) ->
     0.
 
 
@@ -2501,7 +2505,6 @@ do_url_type(SC, GetPath) ->
 	_ ->
 	    {Comps, RevFile} = split(GetPath, [], []),
 	    ?Debug("Comps = ~p RevFile = ~p~n",[Comps, RevFile]),
-	    AppMods = SC#sconf.appmods,
 	    case check_appmods(SC#sconf.appmods, Comps, RevFile) of
 		false ->
 		    DR = SC#sconf.docroot,
@@ -2533,7 +2536,7 @@ do_url_type(SC, GetPath) ->
 				    #urltype{type = redir,
 					     path = [GetPath, "/"]}
 			    end;
-			Err ->
+			_Err ->
 			    %% non-optimal, on purpose
 			    maybe_return_path_info(SC, Comps, RevFile)
 		    end;
@@ -2597,7 +2600,7 @@ check_comps([Pair |Tail], Comps) ->
     end.
     
 				      
-split_at(_, [], Ack) ->
+split_at(_, [], _Ack) ->
     false;
 split_at(AM={PE, Mod}, [PEslash|Tail], Ack) ->
     case no_slash_eq(PE, PEslash) of
@@ -2623,11 +2626,11 @@ no_slash_eq(_,_) ->
 maybe_return_dir(DR, GetPath) ->
     ?Debug("maybe_return_dir(~p, ~p)", [DR, GetPath]),
     case prim_file:read_file_info([DR, GetPath, "index.yaws"]) of
-	{ok, FI} ->
+	{ok, _FI} ->
 	    do_url_type(get(sc), GetPath ++ "index.yaws");
 	_ ->
 	    case prim_file:read_file_info([DR, GetPath, "index.html"]) of
-		{ok, FI} ->
+		{ok, _FI} ->
 		    do_url_type(get(sc), GetPath ++ "index.html");
 		_ ->
 		    case file:list_dir([DR, GetPath]) of
@@ -2697,7 +2700,7 @@ path_info_split([H|T], Ack) ->
 		    {ok, lists:reverse(Ack), yaws:delall($/, H), T, X, Mime}
 	    end
     end;
-path_info_split([], Ack) ->
+path_info_split([], _Ack) ->
     {false, error}.
 
 
@@ -2892,7 +2895,10 @@ load_and_run(Mod, Debug) ->
 safe_ehtml_expand(X) ->
     case (catch ehtml_expand(X)) of
 	{'EXIT', R} ->
-	    {error, io_lib:format("<pre> ~n~p~n </pre>~n", [R])};
+	    {error, err_pre(R)};
 	Val ->
 	    {ok, Val}
     end.
+
+err_pre(R) ->
+    io_lib:format("<pre> ~n~p~n </pre>~n", [R]).
