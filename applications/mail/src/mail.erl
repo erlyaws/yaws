@@ -2155,7 +2155,7 @@ format_attach(_S, [], Depth) ->
 format_attach(S, [{Headers,B0}|Bs], Depth) ->
     H = lists:foldl(fun({K,V},MH) -> add_header(K,V,MH) end, #mail{}, Headers),
     Cookie = S#session.cookie,
-    FileName = extraxt_h_info(H),
+    FileName = decode(extraxt_h_info(H)),
     HttpCtype = yaws_api:mime_type(FileName),
     B1 = decode_message(H#mail.transfer_encoding, B0),
     B = list_to_binary(B1),
@@ -2165,7 +2165,8 @@ format_attach(S, [{Headers,B0}|Bs], Depth) ->
 	{session_manager, Num} ->
 	    [{tr,[],{td,[],
 		     {a, [{href,io_lib:format("attachment/~s?nr=~w",
-					      [FileName,Num])}],
+					      [yaws_api:url_encode(FileName),
+					       Num])}],
 		      FileName}}} |
 	     format_attach(S, Bs, Depth)]
     after 10000 ->
