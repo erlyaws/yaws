@@ -5,7 +5,9 @@ out(A) ->
     {Code, F} = case queryvar(A, "file") of
 		    {ok, Fname} ->
 			io:format(" ~p ~p~n", [Fname, undot(Fname)]),
-			case file:read_file(A#arg.docroot ++ undot(Fname)) of
+			case file:read_file(
+			       A#arg.docroot ++ 
+			       yaws_api:sanitize_file_name(Fname)) of
 			    {ok, B} ->
 				C = {'div', 
 				     [],
@@ -22,20 +24,6 @@ out(A) ->
 	      [],
 	      [{h2, [], F}, 
 	       Code]}}}.
-
-
-%% remove sick characters
-undot(".." ++ T) ->
-    undot([$.|T]);
-undot([H|T]) ->
-    case lists:member(H,  " &;'!\\?<>\"()$") of
-	true ->
-	    undot(T);
-	false ->
-	    [H|undot(T)]
-    end;
-undot([]) ->
-    [].
 
 
 </erl>

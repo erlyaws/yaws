@@ -126,7 +126,6 @@ compile_file(C, LineNo,  Chars = "<verbatim>" ++ _Tail, html,  NumChars, Ack,Es)
 compile_file(C, LineNo,  Chars = "</verbatim>" ++ Tail, verbatim, NumChars, Ack, Es) ->
     Data = list_to_binary(lists:reverse(["</pre>\n" | C#comp.outfile])),
     Len = length(Chars),
-    io:format("Data = ~p~n", [Data]),
     compile_file(C#comp{outfile = undefined}, LineNo, line(), html, 0, 
 		 [{verbatim, NumChars+Len, Data} |Ack], Es);
 
@@ -135,7 +134,6 @@ compile_file(C, LineNo,  Chars, verbatim, NumChars, Ack,Es) ->
 	{ok, Skipped, Chars2} ->
 	    compile_file(C, LineNo,  Chars2, verbatim, NumChars + Skipped, Ack,Es);
 	false ->
-	    io:format("Ack ~p~n",[Chars]),
 	    C2 = C#comp{outfile = [yaws_api:htmlize(Chars) | C#comp.outfile]},
 	    compile_file(C2, LineNo+1, line(), verbatim, NumChars + 
 			 length(Chars), Ack,Es)

@@ -1,9 +1,10 @@
-Sat Dec 11  2004
+Sat Dec 11  2004 Version 1.50 released
 Bugfix and docs release
+Running the wiki at the yaws site. Use it !!. No passwords.... 
 <verbatim> tag added, this tag pretty much works as <pre> _should_ have worked. Nothing needs to be escaped,  and code containing <, >, & etc can be entered freely.  Writing code examples were driving me crazy. Inside both <pre> and <code> tags all HTML special chars have to be quoted, sucks. (klacke)
 Rewamped all docs with CSS and XHTML 1.0, beautiful and nice (klacke)
 Attach file problem in wiki (jb)
-Form post parameter was still always managed as atoms (mikl)
+Form post parameter was still always managed as atoms. This is a backwards incompatible change. It broke the wiki aswell as the upload example in the Yaws docs.However, the change is sound since it was easy to DOS a yaws server by sending file upload posts with new atoms. Eventually the atom table would overflow. However it does break code !!!  (mikl)
 Added auto-generate all.zip to dir listings.  It needs the zip command in  the current path to function properly. To turn off, use    dir_listsings = true_nozip. This is a feature for all of us that like to share copyrighthed material to friends that can't muster wget -r (mbj)
 Added relative path to ssi, ie {ssi,  {rel_path, File}, ...} is now possible. (jb)
 mail app, Fixed refresh bug. (jb)

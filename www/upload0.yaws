@@ -15,7 +15,7 @@ out(A) ->
 		{action, "/upload.yaws"}
 	       ], 
 	 [{input, [{type, submit}, {value, "Upload"}] ,[]},
-	  {input, [{type,file}, {width, "50"}, {name, foo}], []}
+	  {input, [{type,file}, {width, "50"}, {name, "foo"}], []}
 	 ]}]}}},
      {ssi, "END2",[],[]}].
 

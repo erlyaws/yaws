@@ -60,6 +60,7 @@ addFileChunk(_A, [], State) when State#upload.last==true,
 				 State#upload.fd /= undefined ->
 
     file:close(State#upload.fd),
+    file:delete(["/tmp/",State#upload.filename]),
     Res = {ehtml, 
 	   {p,[], "File upload done"}},
     {done, Res};
@@ -70,10 +71,10 @@ addFileChunk(A, [], State) when State#upload.last==true ->
 addFileChunk(_A, [], State) ->
     {cont, State};
 
-addFileChunk(A, [{head, {foo, Opts}}|Res], State ) ->
+addFileChunk(A, [{head, {"foo", Opts}}|Res], State ) ->
     case lists:keysearch(filename, 1, Opts) of
 	{value, {_, Fname0}} ->
-	    Fname = basename(Fname0),
+	    Fname = yaws_api:sanitize_file_name(basename(Fname0)),
 
 	    %% we must not put the file in the
 	    %% docroot, it may execute uploade code if the

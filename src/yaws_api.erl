@@ -30,7 +30,8 @@
 	 url_decode/1, url_decode_q_split/1,
 	 url_encode/1, parse_url/1, parse_url/2, format_url/1]).
 -export([is_absolute_URI/1]).
--export([path_norm/1, path_norm_reverse/1]).
+-export([path_norm/1, path_norm_reverse/1,
+	sanitize_file_name/1]).
 -export([get_line/1, mime_type/1]).
 -export([stream_chunk_deliver/2, stream_chunk_deliver_blocking/2,
 	 stream_chunk_end/1]).
@@ -1742,3 +1743,18 @@ request_url(ARG) ->
 
 
 			    
+
+
+%% remove sick characters
+
+sanitize_file_name(".." ++ T) ->
+    sanitize_file_name([$.|T]);
+sanitize_file_name([H|T]) ->
+    case lists:member(H,  " &;'!\\?<>\"()$") of
+	true ->
+	    sanitize_file_name(T);
+	false ->
+	    [H|sanitize_file_name(T)]
+    end;
+sanitize_file_name([]) ->
+    [].
