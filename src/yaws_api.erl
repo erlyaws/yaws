@@ -443,8 +443,5 @@ url_decode([H|T]) ->
 url_decode([]) ->
     [].
 
+redirect(Url) -> [{redirect, Url}].
 
-
-redirect(Url) ->
-    [{status, 303},
-     {allheaders, [{header, ["Location: ",Url]}]}].

@@ -571,7 +571,7 @@ maybe_access_log(CliSock, SC, Req) ->
 
 
 get_path({abs_path, Path}) ->
-    Path.
+    yaws_api:url_decode(Path).
 
 
 do_recv(Sock, Num, TO, nossl) ->
@@ -772,19 +772,20 @@ handle_request(CliSock, GC, SC, Req, H, ARG) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     UT =  url_type(GC, SC, get_path(Req#http_request.path)),
     ?Debug("UT: ~p", [?format_record(UT, urltype)]),
+    ARG2 = ARG#arg{fullpath=UT#urltype.fullpath},
     case SC#sconf.authdirs of
 	[] ->
-	    handle_ut(CliSock, GC, SC, Req, H, ARG, UT);
+	    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT);
 	_Adirs ->
 	    %% we have authentication enabled, check auth
 	    UT2 = unflat(UT),
 	    case lists:member(UT2#urltype.dir, SC#sconf.authdirs) of
 		false ->
-		    handle_ut(CliSock, GC, SC, Req, H, ARG, UT2);
+		    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT2);
 		true ->
 		    case is_authenticated(SC, UT2, Req, H) of
 			true ->
-			    handle_ut(CliSock, GC, SC, Req, H, ARG, UT2);
+			    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT2);
 			{false, Realm} ->
 			    deliver_401(CliSock, Req, GC, Realm, SC)
 		    end
@@ -891,11 +892,20 @@ deliver_303(CliSock, Req, GC, SC) ->
     set_status_code(303),
     make_connection_close(true),
     make_content_length(0),
-    accumulate_header(["Location: ", Scheme, SC#sconf.servername, 
+    accumulate_header(["Location: ", Scheme,
+		       servername_sans_port(SC#sconf.servername), 
 		       PortPart, get_path(Req#http_request.path), "/"]),
     
     deliver_accumulated(#dcc{}, CliSock, GC, SC),
     done.
+
+servername_sans_port(Servername) ->
+    case string:chr(Servername, $:) of
+	0 ->
+	    Servername;
+	N ->
+	    lists:sublist(Servername, N-1)
+    end.
 
 deliver_401(CliSock, _Req, GC, Realm, SC) ->
     set_status_code(401),
@@ -944,7 +954,7 @@ do_yaws(CliSock, GC, SC, Req, H, ARG, UT) ->
     Mtime = mtime(UT#urltype.finfo),
     case ets:lookup(SC#sconf.ets, FileAtom) of
 	[{FileAtom, spec, Mtime1, Spec}] when Mtime1 == Mtime ->
-	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG,UT);
+	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG, UT);
 	Other  ->
 	    del_old_files(Other),
 	    {ok, Spec} = yaws_compile:compile_file(UT#urltype.fullpath, GC, SC),
@@ -1128,36 +1138,68 @@ set_status_code(Code) ->
 
 
 
-handle_out_reply(L, DCC, LineNo, YawsFile) when list (L) ->
+handle_out_reply(L, DCC, LineNo, YawsFile, _SC) when list (L) ->
     lists:foreach(
-      fun(Item) -> handle_out_reply(Item, DCC, LineNo, YawsFile) end, L);
+      fun(Item) -> handle_out_reply(Item, DCC, LineNo, YawsFile, _SC) end, L);
 
-handle_out_reply({html, Html}, DCC, _LineNo, _YawsFile) ->
+handle_out_reply({html, Html}, DCC, _LineNo, _YawsFile, _SC) ->
     accumulate_chunk(DCC, Html);
 
-handle_out_reply({content, MimeType, Cont}, DCC, _LineNo, _YawsFile) ->
+handle_out_reply({content, MimeType, Cont}, DCC, _LineNo, _YawsFile, _SC) ->
     put(content_type, MimeType),
-    io:format("Content-Type ~p\n", [MimeType]),
     accumulate_chunk(DCC, Cont);
 
-handle_out_reply({header, H}, _DCC, _LineNo, _YawsFile) ->
+handle_out_reply({header, H}, _DCC, _LineNo, _YawsFile, _SC) ->
     accumulate_header(H);
 
 
-handle_out_reply({allheaders, Hs}, _DCC, _LineNo, _YawsFile) ->
+handle_out_reply({allheaders, Hs}, _DCC, _LineNo, _YawsFile, _SC) ->
     erase(acc_headers),
     lists:foreach(fun({header, Head}) -> accumulate_header(Head) end, Hs);
 
-handle_out_reply({status, Code}, _DCC,_LineNo,_YawsFile) when integer(Code) ->
+handle_out_reply({status, Code}, _DCC,_LineNo,_YawsFile, _SC) when integer(Code) ->
     set_status_code(Code);
 
-handle_out_reply({'EXIT', normal}, _DCC, _LineNo, _YawsFile) ->
+handle_out_reply({'EXIT', normal}, _DCC, _LineNo, _YawsFile, _SC) ->
     exit(normal);
 
-handle_out_reply(ok, _DCC, _LineNo, _YawsFile) ->
+handle_out_reply({redirect_local, Path}, DCC, _LineNo, _YawsFile, SC) ->
+    erase(acc_headers),
+    Scheme = case SC#sconf.ssl of
+		 undefined ->
+		     "http://";
+		 _SSl ->
+		     "https://"
+	     end,
+    PortPart = case {SC#sconf.ssl, SC#sconf.port} of
+		   {undefined, 80} ->
+		       "";
+		   {undefined, Port} ->
+		       io_lib:format(":~w",[Port]);
+		   {_SSL, 443} ->
+		       "";
+		   {_SSL, Port} ->
+		       io_lib:format(":~w",[Port])
+	       end,
+
+    set_status_code(303),
+    make_content_length(0),
+    accumulate_header(["Location: ", Scheme,
+		       servername_sans_port(SC#sconf.servername), 
+		       PortPart, Path]),
     ok;
 
-handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile) ->
+handle_out_reply({redirect, URL}, DCC, _LineNo, _YawsFile, SC) ->
+    erase(acc_headers),
+    set_status_code(303),
+    make_content_length(0),
+    accumulate_header(["Location: ", URL]),
+    ok;
+
+handle_out_reply(ok, _DCC, _LineNo, _YawsFile, _SC) ->
+    ok;
+
+handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile, _SC) ->
     L = ?F("~n<pre> ~nERROR erl  code  crashed:~n "
 	   "File: ~s:~w~n"
 	   "Reason: ~p~n</pre>~n",
@@ -1168,7 +1210,7 @@ handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile) ->
     accumulate_chunk(DCC, L);
 
 
-handle_out_reply(Reply, DCC, LineNo, YawsFile) ->
+handle_out_reply(Reply, DCC, LineNo, YawsFile, _SC) ->
     yaws_log:sync_errlog("Bad return code from yaws function: ~p~n", [Reply]),
     L =  ?F("<p><br> <pre>yaws code at ~s:~p crashed or "
 	    "ret bad val:~p ~n</pre>",
@@ -1257,11 +1299,11 @@ deliver_accumulated(DCC, Sock, GC, SC) ->
 		
 
 		    
-yaws_call(DCC, LineNo, YawsFile, M, F, A, _GC, _SC) ->
+yaws_call(DCC, LineNo, YawsFile, M, F, A, _GC, SC) ->
     ?Debug("safe_call ~w:~w(~p)~n", 
 	   [M, F, ?format_record(hd(A), arg)]),
     Res = (catch apply(M,F,A)),
-    handle_out_reply(Res, DCC, LineNo, YawsFile).
+    handle_out_reply(Res, DCC, LineNo, YawsFile, SC).
 
 
 
