@@ -1137,7 +1137,8 @@ parse_auth(_) ->
 
 
 
-%% hmmm why do I set close here ?? 
+%% we may have content, 
+
 new_redir_h(OH, Loc) ->
     Cont = get(acc_content),
     Chunked = OH#outh.chunked,
@@ -1156,9 +1157,7 @@ new_redir_h(OH, Loc) ->
 			     OH#outh.content_type
 		     end,
     OH2 = OH#outh{status = 302,
-		  doclose = true,
 		  chunked = NewChunked,
-		  connection = yaws:make_connection_close_header(true),
 		  content_type = NewContentType,
 		  transfer_encoding = 
 		      yaws:make_transfer_encoding_chunked_header(NewChunked),
@@ -1181,7 +1180,7 @@ deliver_302(CliSock, Req, GC, SC, Arg) ->
 	   Headers#headers.host, 
 	   decode_path(Req#http_request.path), "/\r\n"],
     
-    H2 = new_redir_h(H, Loc),
+    new_redir_h(H, Loc),
     deliver_accumulated(CliSock, GC, SC),
     done.
 
