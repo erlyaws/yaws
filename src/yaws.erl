@@ -819,14 +819,14 @@ accepts_deflate(H, Mime) ->
 	    false
     end.
 
-has_buggy_deflate(UserAgent, "application/pdf") ->
+%has_buggy_deflate(UserAgent, "application/pdf") ->
 						% Several browsers are
 						% known to incorrectly
 						% interact with Adobe's
 						% plugins, when it
 						% comes to compressed
 						% documents.
-    true;
+%    true;
 has_buggy_deflate(UserAgent, Mime) ->
     UA = parse_ua(UserAgent),
     in_ua(
@@ -835,6 +835,22 @@ has_buggy_deflate(UserAgent, Mime) ->
 		fun("rv:0."++_) ->
 			true;
 		   ("Konqueror"++_) ->
+			true;
+		   (_) ->
+			false
+		end,
+		UA);
+	 ("Mozilla/4.0") ->
+	      in_comment(
+		fun("MSIE"++_) ->
+						% The fact that IE is
+						% broken does of
+						% course mean that we
+						% will have to abondon
+						% `deflate' (in favor
+						% of `gzip')
+						% altogether.  To
+						% do...
 			true;
 		   (_) ->
 			false
