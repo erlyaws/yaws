@@ -2366,7 +2366,7 @@ send_file_range(CliSock, Fd, Len) when Len > 0 ->
 			      _ -> Len
 			  end
 			 ),
-    send_streamcontent_chunk(undeflated, Bin, CliSock),
+    send_streamcontent_chunk(undeflated, CliSock, Bin),
     send_file_range(CliSock, Fd, Len - size(Bin));
 send_file_range(CliSock, Fd, 0) ->
     file:close(Fd),
