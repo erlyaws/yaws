@@ -258,6 +258,15 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		     {error, ?F("Expect integer at line ~w", [Lno])}
 	     end;
 
+	["timeout", '=', Val] ->
+	    case (catch list_to_integer(Val)) of
+		 I when integer(I) ->
+		    fload(FD, globals, GC#gconf{timeout = I},
+			  C, Cs, Lno+1, Next);
+		_ ->
+		     {error, ?F("Expect integer at line ~w", [Lno])}
+	     end;
+
 	["max_num_cached_files", '=', Val] ->
 	    case (catch list_to_integer(Val)) of
 		 I when integer(I) ->

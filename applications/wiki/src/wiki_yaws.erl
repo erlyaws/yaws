@@ -25,8 +25,11 @@ get_path_prefix(UrlPath) ->
  
 parse_post_data(Arg) ->
     case yaws_api:parse_post_data(Arg) of
-	{result, PostList} ->
+	{result, PostList} when Arg#arg.state == undefined->
 	    {done, parse_post(PostList,[])};
+	{result, PostList} ->
+	    Params = Arg#arg.state++PostList,
+	    {done, parse_post(Params,[])};
 	{cont, Cont, Res} when Arg#arg.state == undefined ->
 	    {get_more, Cont, Res};
 	{cont, Cont, Res} ->
@@ -38,8 +41,8 @@ parse_post_data(Arg) ->
 parse_post([], Acc) -> Acc;
 parse_post([{head, {Name, Opts}}|Rest], Acc) ->
     parse_post(Rest, [{Name, "", Opts}|Acc]);
-parse_post([{body, Value}|Rest], [{Name, _, Opts}|Acc]) ->
-    parse_post(Rest, [{Name, Value, Opts}|Acc]);
+parse_post([{body, Data}|Rest], [{Name, Value, Opts}|Acc]) ->
+    parse_post(Rest, [{Name, Value++Data, Opts}|Acc]);
 parse_post([{part_body, Data}|Rest], [{Name, Value, Opts}|Acc]) ->
     parse_post(Rest, [{Name, Value++Data, Opts}|Acc]);
 parse_post([{Name, Value}|Rest], Acc) ->
@@ -54,6 +57,6 @@ call_with_data(M, F, Arg) ->
 	    Path          = yaws_api:url_decode(P),
 	    Prefix        = wiki_yaws:get_path_prefix(Path),
 	    M:F(Params, WikiRoot, Prefix);
-	{more, Return} ->
-	    Return
+	{get_more, Cont, State} ->
+	    {get_more, Cont, State}
     end.

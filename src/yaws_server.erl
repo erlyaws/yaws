@@ -1493,9 +1493,11 @@ deliver_accumulated(DCC, Sock, GC, SC) ->
 
 		    
 yaws_call(DCC, LineNo, YawsFile, M, F, A, GC, SC, N) ->
-    ?Debug("safe_call ~w:~w(~p)~n", 
-	   [M, F, ?format_record(hd(A), arg)]),
+%    ?Debug("safe_call ~w:~w(~p)~n", 
+%	   [M, F, ?format_record(hd(A), arg)]),
+    ?Debug("safe_call ~w:~w~n",[M,F]),
     Res = (catch apply(M,F,A)),
+    ?Debug("safe_call result = ~p~n",[Res]),
     A1 = hd(A),
     case handle_out_reply(Res, DCC, LineNo, YawsFile, SC, A) of
 	{get_more, Cont, State} when element(1, A1#arg.clidata) == partial  ->
