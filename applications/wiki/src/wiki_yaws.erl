@@ -9,7 +9,7 @@
 
 -export([get_path_prefix/1, parse_multipost/1, parse_post/2,
 	 call_with_multi/3, call_with_query/3, call_with_post/3,
-	 call_wiki/3]).
+	 call_wiki/3, call_with_multiquery/3]).
 
 -include("../../../include/yaws_api.hrl").
 
@@ -55,6 +55,20 @@ call_with_multi(M, F, Arg) ->
 	    Path          = yaws_api:url_decode(P),
 	    Prefix        = wiki_yaws:get_path_prefix(Path),
 	    M:F(Params, WikiRoot, Prefix);
+	{get_more, Cont, State} ->
+	    {get_more, Cont, State}
+    end.
+
+call_with_multiquery(M, F, Arg) ->
+    case parse_multipost(Arg) of
+	{done, Params} ->
+	    WikiRoot      = filename:dirname(Arg#arg.fullpath),
+	    {abs_path, P} = (Arg#arg.req)#http_request.path,
+	    Path          = yaws_api:url_decode(P),
+	    Prefix        = wiki_yaws:get_path_prefix(Path),
+	    QueryArgs     = yaws_api:parse_query(Arg),
+	    QParams       = [{N,V,[]} || {N,V} <- QueryArgs],
+	    M:F(QParams++Params, WikiRoot, Prefix);
 	{get_more, Cont, State} ->
 	    {get_more, Cont, State}
     end.

@@ -32,7 +32,7 @@
 	 sendMeThePassword/3, storeFiles/3, showOldPage/3]).
 
 -export([show/1, ls/1, h1/1, read_page/2, background/1, p/1,
-	 str2urlencoded/1]).
+	 str2urlencoded/1, session_manager_init/2]).
 
 -import(lists, [reverse/1, map/2, sort/1]).
 
@@ -131,7 +131,9 @@ createNewPage(Params, Root, Prefix) ->
 	     "<tr> <td align=left>Reconfirm password: </td>",
 	     "<td align=left> ",password_entry("password2", 8),"</td></tr>\n",
 	     "<tr> <td align=left>Email: </td>",
-	     "<td align=left> ",input("text","email",""),"</td></tr>\n",
+	     "<td align=left> ",
+	     input("text","email",""),
+	     "</td></tr>\n",
 	     "</table>\n",
 	     p(),
 	     textarea("text", 25, 72,initial_page_content()),
@@ -144,14 +146,25 @@ storePage(Params, Root, Prefix) ->
     Password = getopt(password, Params, ""),
     Page     = getopt(node, Params), 
     Cancel   = getopt(cancel, Params),
+    Edit     = getopt(edit, Params),
+    Sid      = getopt(sid, Params),
     
     if 
 	Cancel /= undefined ->
+	    session_end(Sid),
 	    redirect({node, Page}, Prefix);
 	true  ->
 	    case checkPassword(Page, Password, Root, Prefix) of
 		true ->
-		    storePage1(Params, Root, Prefix);
+		    if
+			Edit /= undefined ->
+			    Txt0 = getopt(txt, Params),
+			    Txt = zap_cr(urlencoded2str(Txt0)),
+			    session_set_text(Sid, Txt),
+			    redirect_edit(Page, Sid, Prefix);
+			true ->
+			    storePage1(Params, Root, Prefix)
+		    end;
 		false ->
 		    show({bad_password, Page});
 		error ->
@@ -163,9 +176,11 @@ storePage(Params, Root, Prefix) ->
 storePage1(Params, Root, Prefix) ->
     Page     = getopt(node,Params),
     Txt0     = getopt(txt, Params),
+    Sid      = getopt(sid, Params),
 
     Txt = zap_cr(urlencoded2str(Txt0)),
 
+    session_end(Sid),
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
@@ -701,6 +716,10 @@ showHistory(Params, Root, Prefix) ->
 redirect({node, Page}, Prefix) ->
     {redirect_local, Prefix++"showPage.yaws?node="++Page}.
 
+redirect_edit(Page, Sid, Prefix) ->
+    UrlSid = str2urlencoded(Sid),
+    {redirect_local, Prefix++"editPage.yaws?node="++Page++"&sid="++UrlSid}.
+
 mk_history_links([{C,Time,Who}|T], Page, N) ->
     [["<li>",i2s(N)," modified on <a href='showOldPage.yaws?node=",Page,
       "&index=",i2s(N),
@@ -917,35 +936,158 @@ putPassword(Params, Root, Prefix) ->
 
 editPage(Params, Root, Prefix) ->
     Password = getopt(password, Params, ""),
-    Page     = getopt(node, Params), 
+    Page     = getopt(node, Params),
+    Sid      = getopt(sid, Params),
 
     case checkPassword(Page, Password, Root, Prefix) of
 	true ->
-	    editPage(Page, Password, Root, Prefix);
+	    editPage(Page, Password, Root, Prefix, Sid);
 	false ->
 	    getPassword(Page, Root, Prefix, editPage, Params);
 	error ->
 	    show({no_such_page,Page})
     end.
 
-editPage(Page, Password, Root, Prefix) ->
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Session manager
+%%
+
+session_server_ensure_started() ->
+    case whereis(wiki_session_manager) of
+	undefined ->
+	    Pid = spawn(?MODULE, session_manager_init, [0,[]]),
+	    register(wiki_session_manager, Pid);
+	_ ->
+	    done
+    end.
+
+session_manager_init(N,Sessions) ->
+    process_flag(trap_exit, true),
+    session_manager(N,Sessions).
+
+% Sessions = [{Pid, Sid}]
+session_manager(N,Sessions) ->
+    receive 
+	{'EXIT', Pid, _} ->
+	    NewS = lists:keydelete(Pid, 1, Sessions),
+	    session_manager(N, NewS);
+	{Sid, stop} ->
+	    NewS = lists:keydelete(Sid, 2, Sessions),
+	    case lists:keysearch(Sid, 2, Sessions) of
+		{value, {Pid, Sid}} ->
+		    Pid ! done;
+		_  -> do_nothing
+	    end,
+	    session_manager(N,NewS);
+	{new_sid, From, Txt} ->
+	    Sid = integer_to_list(N),
+	    Pid = spawn_link(?MODULE, session_proc, [Sid,Txt]),
+	    From ! {session_id, Sid},
+	    session_manager(N+1, [{Pid, Sid}|Sessions]);
+	{new_sid, Sid, From, Txt} ->
+	    case lists:keysearch(Sid, 2, Sessions) of
+		{value, _} ->
+		    From ! {session_id, Sid};
+		_ ->
+		    Pid = spawn_link(?MODULE, session_proc, [Sid,Txt]),
+		    From ! {session_id, Sid},
+		    session_manager(N, [{Pid, Sid}|Sessions])
+	    end,
+	    session_manager(N, Sessions);
+	{to_sid, Sid, Msg} ->
+	    case lists:keysearch(Sid, 2, Sessions) of
+		{value, {Pid, Sid}} ->
+		    Pid ! Msg;
+		_ -> do_nothing
+	    end,
+	    session_manager(N, Sessions);
+	Unknown ->
+	    session_manager(N, Sessions)
+    end.
+				    
+session_proc(Sid,Txt) ->
+    receive
+	stop ->
+	    exit(done);
+	{set_text, From, NewTxt} ->
+	    From ! set,
+	    session_proc(Sid,NewTxt);
+	{get_text, From} ->
+	    From ! {text, Txt},
+	    session_proc(Sid,Txt)
+    after
+	3600000 ->   %% one hour
+	    exit(timeout)
+    end.
+
+to_sm(Msg) ->
+    session_server_ensure_started(),
+    wiki_session_manager ! Msg.
+
+session_end(undefined) -> done;
+session_end(Sid) -> to_sm({to_sid, Sid, stop}).
+    
+session_new(Txt) ->
+    to_sm({new_sid, self(), Txt}),
+    receive
+	{session_id, Sid} -> Sid
+    end.
+session_new(Sid, Txt) ->
+    to_sm({new_sid, Sid, self(), Txt}),
+    receive
+	{session_id, Sid} -> Sid
+    end.
+    
+session_get_text(undefined, OldTxt) -> OldTxt;
+session_get_text(Sid, OldTxt) ->
+    to_sm({to_sid, Sid, {get_text, self()}}),
+    receive
+	{text, Txt} ->
+	    Txt
+    after
+	1000 ->
+	    session_new(Sid, OldTxt),
+	    OldTxt
+    end.
+
+session_set_text(undefined, _) -> done;
+session_set_text(Sid, Txt) ->
+    to_sm({to_sid,Sid, {set_text, self(), Txt}}),
+    receive
+	set -> done
+    after
+	1000 -> session_new(Sid, Txt)
+    end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+editPage(Page, Password, Root, Prefix, Sid) ->
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
 	{ok, Bin} ->
 	    {wik002, Pwd,_Email,_Time,_Who,TxtStr,Files,_Patches} =
 		bin_to_wik002(Bin),
-	    edit1(Page, Password, TxtStr);
+	    if
+		Sid /= undefined ->
+		    OldTxt = session_get_text(Sid, TxtStr),
+		    edit1(Page, Password, OldTxt, Sid);
+		true ->
+		    NewSid = session_new(TxtStr),
+		    redirect_edit(Page, NewSid, Prefix)
+	    end;
 	_ ->
 	    show({no_such_page,Page})
     end.
 
-edit1(Page, Password, Content) ->
+edit1(Page, Password, Content, Sid) ->
     Txt = quote_lt(Content),
     template("Edit", background("info"), "",
 	 [h1(Page),
 	  p("Edit this page - when you have finished hit the 'Preview' "
 	    "button to check your results."),
-	  form("POST", "previewPage.yaws",
+	  form("POST", "previewPage.yaws?sid="++str2urlencoded(Sid),
+	       "f1",
 	       [textarea("text", 25, 75, Txt),
 		p(),
 		input("submit", "preview", "preview"),
@@ -954,7 +1096,7 @@ edit1(Page, Password, Content) ->
 		input("hidden", "node", Page),
 		input("hidden", "password", Password),
 		hr()])
-	 ]).
+	  ]).
 
 sendMeThePassword(Params, Root, Prefix) ->
     Page = getopt(node, Params),
@@ -1100,11 +1242,14 @@ previewPage(Params, Root, Prefix) ->
     Page     = getopt(node, Params),
     Cancel   = getopt(cancel, Params),
     Delete   = getopt(delete, Params),
+    Sid      = getopt(sid, Params),
 
     if
 	Cancel /= undefined ->
+	    session_end(Sid),
 	    redirect({node, Page}, Prefix);
 	Delete /= undefined ->
+	    session_end(Sid),
 	    deletePage(Params, Root, Prefix);
 	true ->
 	    previewPage1(Params, Root, Prefix)
@@ -1114,17 +1259,20 @@ previewPage1(Params, Root, Prefix) ->
     Page     = getopt(node, Params),
     Password = getopt(password, Params),
     Txt0     = getopt(text, Params),
+    Sid      = getopt(sid, Params,"undefined"),
     
     Txt = zap_cr(Txt0),
     Wik = wiki_split:str2wiki(Txt),
+    session_set_text(Sid, Txt),
     template("Preview",background("info"),"",
 	     [h1(Page),
 	      p("If this page is ok hit the \"Store\" button "
-		"otherwise return to the editing phase by clicking the back "
-		"button in your browser."),
-	      form("POST", "storePage.yaws",
+		"otherwise return to the editing phase by clicking the edit "
+		"button."),
+	      form("POST", "storePage.yaws?sid="++str2urlencoded(Sid),
 		   [input("submit", "store", "Store"),
 		    input("submit", "cancel", "Cancel"),
+		    input("submit", "edit", "Edit"),
 		    input("hidden", "node", Page),
 		    input("hidden", "password", Password),
 		    input("hidden", "txt", str2formencoded(Txt))]),
