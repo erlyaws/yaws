@@ -23,6 +23,7 @@ printouts from yaws.
 will be written which contains an access log in Common Log Format.
 .br
 \fBtrace.http\fR - this file contains the HTTP trace if that is enabled
+
 .br
 \fBtrace.traffic\fR - this file contains the traffic trace if that is enabled
 
@@ -172,9 +173,15 @@ Arg #arg{} records at an early stage in the yaws server.
 This can be used to do various things such as checking a cookie,
 rewriting paths etc.
 
-
-
-
+.TP
+\fBstart_mod = Module\fR
+Defines a user provided callback module.
+At startup of the server, Module:start/1 will be called.
+The #sconf{} record (defined in yaws.hrl) will be used
+as the input argument. This makes it possible for a user
+application to syncronize the startup with the yaws server
+as well as getting hold of user specific configuration data,
+see the explanation for the <opaque> context.
 
 .TP
 \fB <ssl>  .... </ssl> \fR
@@ -233,6 +240,17 @@ pair.
 .TP
 \fB</auth>\fR
 Ends an auth definition
+
+.TP
+\fB <opaque>  .... </opaque> \fR
+This begins and ends an opaque configuration context for this server,
+where 'Key = Value' directives can be specified. These directives is
+ignored by yaws (hence the name opaque), but can be accessed as a list
+of tuples \fI{Key,Value}\fR stored in the #sconf.opaque record entry. See also
+the description of the \fIstart_mod\fR directive. 
+
+.TP
+\fB keyfile = File\fR
 
 
 .SH EXAMPLES
@@ -294,6 +312,25 @@ logdir = /var/log/yaws
 
 
 .fi
+
+.nf
+An example specifying  a user defined module to be called
+at startup, as well as some user specific configuration.
+ 
+<server www.funky.org>
+        port = 80
+        listen = 192.168.128.31
+        docroot = /var/yaws/www_funky_org
+	start_mod = btt
+	<opaque>
+		dbdir = /tmp
+		logdir = /tmp/log
+	</opaque>
+</server>
+
+
+.fi
+
 
 
 And finally a sligthly more complex example
