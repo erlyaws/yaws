@@ -11,6 +11,7 @@ where options for each virtual host is supplied.
 
 .SH GLOBAL PART
 .TP
+
 \fBlogdir = Directory\fR
 All yaws logs will be written to files in this directory. There are several
 different log files written by yaws.
@@ -18,15 +19,22 @@ different log files written by yaws.
 .br
 \fBreport.log\fR - this is a text file that contains all error logger 
 printouts from yaws. 
+
 .br
 \fBHost.access\fR - for each virtual host served by yaws, a file Host.access
 will be written which contains an access log in Common Log Format.
+
 .br
 \fBtrace.http\fR - this file contains the HTTP trace if that is enabled
+
+.br 
+\fBauth.log\fR - If configured, all http auth related messages
+goes here.
 
 .br
 \fBtrace.traffic\fR - this file contains the traffic trace if that is enabled
 
+The default value for logdir is "."
 
 .TP
 \fB ebin_dir = Directory\fR
