@@ -958,6 +958,9 @@ noundef(Str) ->
 
 	
 
+accumulate_header({X, erase}) when atom(X) ->
+    erase_header(X);
+
 accumulate_header({connection, What}) ->
     DC = case What of
 	     "close" ->
@@ -968,6 +971,7 @@ accumulate_header({connection, What}) ->
     H = get(outh),
     put(outh, (H#outh{connection = ["Connection: ", What, "\r\n"],
 		      doclose = DC}));
+
 accumulate_header({location, What}) ->
     put(outh, (get(outh))#outh{location = ["Location: " , What, "\r\n"]});
 
@@ -976,6 +980,7 @@ accumulate_header({cache_control, What}) ->
 
 accumulate_header({set_cookie, What}) ->
     put(outh, (get(outh))#outh{set_cookie = ["Set-Cookie: " , What, "\r\n"]});
+
 
 accumulate_header({content_type, What}) ->
     put(outh, (get(outh))#outh{content_type = ["Content-Type: " , What, "\r\n"]});
@@ -992,3 +997,17 @@ accumulate_header(Str) when list(Str) ->
 	  end,
     H2 = H#outh{other = [Str, "\r\n", Old]},
     put(outh, H2).
+
+
+
+erase_header(connection) ->
+    put(outh, (get(outh))#outh{connection = undefined});
+erase_header(cache_control) ->
+    put(outh, (get(outh))#outh{cache_control = undefined});
+erase_header(set_cookie) ->
+    put(outh, (get(outh))#outh{set_cookie = undefined});
+erase_header(content_type) ->
+    put(outh, (get(outh))#outh{content_type = undefined});
+erase_header(location) ->
+    put(outh, (get(outh))#outh{location = undefined}).
+
