@@ -1803,7 +1803,7 @@ deliver_large_file(CliSock, GC, SC, Req, UT) ->
 			       throw({ok, 1}) 
 		       end),
     deliver_accumulated(CliSock, GC, SC),
-    {ok,Fd} = file:open(UT#urltype.fullpath, [raw, read]),
+    {ok,Fd} = file:open(UT#urltype.fullpath, [raw, binary, read]),
     send_file(CliSock, Fd, SC, GC),
     case yaws:outh_get_doclose() of
 	true ->
