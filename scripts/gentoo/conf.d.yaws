@@ -7,7 +7,7 @@
 YAWS_APP=yaws
 
 # Path to yaws executable
-YAWS_EXEC=yaws
+YAWS_EXEC=%prefix%/bin/yaws
 
 # NB: It is recomended that you don't run Yaws as root
 YAWS_UID=root

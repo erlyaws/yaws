@@ -13,17 +13,13 @@ DEPEND=">=dev-lang/erlang-r8
 	ssl?	( >=dev-libs/openssl-0.9.6d )"
 
 
- src_compile() {
 
-    ./configure                    \
-        --prefix=${D}/usr/         \
-	--sysconfdir=${D}/etc/     \
-	--localstatedir=${D}/var   || die
-    
+ src_compile() {
+    ./configure --prefix=/usr || die
     make || die
 }
 
 src_install() {
-    make install || die
+    make DESTDIR=${D} install || die
 }
 

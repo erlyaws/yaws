@@ -2,17 +2,18 @@
 
 
 prefix=$1
-erl=$2
-etcdir=$3
+installprefix=$2
+erl=$3
+etcdir=$4
 
 . ../vsn.mk
 y=yaws-${YAWS_VSN}
+p=${prefix}
 
-
-sh ./mangle ${prefix}/lib/yaws ${erl} yaws.ss ${prefix}/bin/yaws
-install -d ${prefix}/lib/yaws/examples/ebin
-install -d ${prefix}/lib/yaws/examples/include
-chmod +x ${prefix}/bin/yaws
+sh ./mangle ${prefix}/lib/yaws ${erl} yaws.ss ${installprefix}/bin/yaws
+install -d ${installprefix}/lib/yaws/examples/ebin
+install -d ${installprefix}/lib/yaws/examples/include
+chmod +x ${installprefix}/bin/yaws
 if [ -f ${etcdir}/yaws.conf ]; then
    t=${etcdir}/yaws.conf.template
 else
@@ -27,11 +28,11 @@ if [ -f /etc/gentoo-release ]; then
     install -d ${etcdir}/conf.d/
     cp gentoo/init.d.yaws  ${etcdir}/init.d/yaws
     chmod +x ${etcdir}/init.d/yaws
-    cp gentoo/conf.d.yaws ${etcdir}/conf.d/yaws
+    sed -e "s;%prefix%;$p;g" gentoo/conf.d.yaws > ${etcdir}/conf.d/yaws
 
 elif [ -f /etc/redhat-release ]; then
     install -d ${etcdir}/init.d
-    cp yaws.init.d ${etcdir}/init.d/yaws
+    sed -e "s;%prefix%;$p;g" yaws.init.d  > ${etcdir}/init.d/yaws
     chmod +x ${etcdir}/init.d/yaws
 else
     echo "Don't know how to make /etc/init scrips for this system"

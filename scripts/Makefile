@@ -20,7 +20,7 @@ clean:
 	rm -f ../bin/yaws
 
 install:	all
-	sh ./Install $(INSTALLPREFIX) $(ERL) $(ETCDIR)
+	sh ./Install $(PREFIX) $(INSTALLPREFIX) $(ERL) $(ETCDIR)
 
 
 
