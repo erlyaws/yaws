@@ -177,6 +177,7 @@ make_default_gconf(Debug) ->
 				    true ->
 					30
 				end,
+	   debug = Debug,
 	   trace = false,
 	   uid = element(2, yaws:getuid()),
 	   yaws = "Yaws " ++ yaws_vsn:version()}.
