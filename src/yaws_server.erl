@@ -719,17 +719,25 @@ inet_setopts(_,_,_) ->
 	undefined ->
 	    case Head#headers.connection of
 		"close" ->
-		    get_client_data(CliSock, all, GC, SC#sconf.ssl);
+		    get_client_data(CliSock, all, GC, is_ssl(SC#sconf.ssl));
 		_ ->
 		    exit(normal)
 	    end;
 	Len ->
-	    get_client_data(CliSock, list_to_integer(Len), GC, SC#sconf.ssl)
+	    get_client_data(CliSock, list_to_integer(Len), GC, 
+			    is_ssl(SC#sconf.ssl))
     end,
     ?Debug("POST data = ~s~n", [binary_to_list(Bin)]),
     ARG = make_arg(CliSock, Head, Req, GC, SC),
     ARG2 = ARG#arg{clidata = Bin},
     handle_request(CliSock, GC, SC, Req, Head, ARG2).
+
+
+is_ssl(undefined) ->
+    nossl;
+is_ssl(R) when record(R, ssl) ->
+    ssl.
+
 
 %% will throw
 'HEAD'(CliSock, GC, SC, Req, Head) ->

@@ -1,8 +1,11 @@
 #!/bin/sh
 
-set -x
+#set -x
 
 . ../vsn.mk
+
+echo tagging and packing release ${YAWS_VSN} 
+
 CVS_RSH=ssh
 Y=`echo ${YAWS_VSN} | sed 's/\./-/g'`
 cd ../..
@@ -17,9 +20,11 @@ cd tmp
 mv yaws yaws-${YAWS_VSN}
 ln -s yaws-${YAWS_VSN} yaws
 tar cfz  yaws-${YAWS_VSN}.tar.gz yaws  yaws-${YAWS_VSN}
-mv yaws-${YAWS_VSN}.tar.gz ..
-cd ..
-echo release `pwd`/yaws-${YAWS_VSN}.tar.gz 
+
+#mv yaws-${YAWS_VSN}.tar.gz ..
+#cd ..
+
+echo release resides in `pwd`/yaws-${YAWS_VSN}.tar.gz 
 
 
 
