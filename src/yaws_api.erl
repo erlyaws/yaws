@@ -621,7 +621,7 @@ setcookie(Name, Value, Path, Expire, Domain, _Secure) ->
     SetPath = if Path == [] -> "/";
                  true -> Path
               end,
-    {header, {set_cookie, f("~s=~s; Version=\"1\";~s~s Path=~s",
+    {header, {set_cookie, f("~s=~s;~s~s Path=~s",
 			    [Name,Value,SetDomain,SetExpire,SetPath])}}.
 
 
