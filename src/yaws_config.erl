@@ -232,7 +232,8 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		    {error, ?F("Expect bool at line ~w",[Lno])}
 	    end;
 	
-	["logdir", '=', Dir] ->
+	["logdir", '=', Logdir] ->
+	    Dir = filename:absname(Logdir),
 	    case is_dir(Dir) of
 		true ->
 		    put(logdir, Dir),
@@ -242,7 +243,8 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}
 	    end;
 
-	["ebin_dir", '=', Dir] ->
+	["ebin_dir", '=', Ebindir] ->
+	    Dir = filename:absname(Ebindir),
 	    case is_dir(Dir) of
 		true ->
 		    fload(FD, globals, GC#gconf{ebin_dir = [Dir|GC#gconf.ebin_dir]},
@@ -256,7 +258,8 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 	    fload(FD, globals, GC#gconf{runmods = [Mod|GC#gconf.runmods]},
 		  C, Cs, Lno+1, Next);
 
-	["include_dir", '=', Dir] ->
+	["include_dir", '=', Incdir] ->
+	    Dir = filename:absname(Incdir),
 	    case is_dir(Dir) of
 		true ->
 		    fload(FD, globals, GC#gconf{include_dir=[Dir|GC#gconf.include_dir]},
@@ -379,7 +382,8 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	["servername", '=', Name] ->
 	    C2 = C#sconf{servername = Name, add_port=false},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-	["docroot", '=', Root] ->
+	["docroot", '=', Rootdir] ->
+	    Root = filename:absname(Rootdir),
 	    case is_dir(Root) of
 		true ->
 		    C2 = C#sconf{docroot = Root},
@@ -571,7 +575,8 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
     case toks(Chars) of
 	[] ->
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, Auth);
-	["dir", '=', Dir] ->
+	["dir", '=', Authdir] ->
+	    Dir = filename:absname(Authdir),
     	    case is_dir(Dir) of
 		true ->
 		    A2 = Auth#auth{dir = [Dir|Auth#auth.dir]},
