@@ -43,7 +43,7 @@
 
 -import(lists, [reverse/1, map/2, sort/1]).
 
--import(wiki_templates, [template/4, actionbar/2]).
+-import(wiki_templates, [template/3, template/4]).
 
 -include("../../../include/yaws_api.hrl").
 -include_lib("kernel/include/file.hrl").
@@ -66,12 +66,10 @@ showPage(Params, Root, Prefix) ->
 		    DeepFiles = wiki_to_html:format_wiki_files(
 				  Page, FileDir, Files, Root),
 		    Locked = Pwd /= "",
-		    wiki_templates:template(Page, 
-					    actionbar(Page, Locked),
+		    wiki_templates:template(Page,
 					    [top_header(Page), DeepStr,
-					     DeepFiles,
-					     "<hr><p>Last Modified: ",
-					     utils:time_to_string(Time)],
+					     DeepFiles],
+					    utils:time_to_string(Time),
 					    Locked);
 		_ ->
 		    NewSid = session_new(initial_page_content()),
@@ -266,7 +264,7 @@ createNewPage(Params, Root, Prefix) ->
 createNewPage1(Page, Sid, Prefix, Content, Passwd, Email) ->
     Txt = quote_lt(Content),
     wiki_templates:template(
-      "New Page","",
+      "New Page",
       [h1(Page),
        p("Creating a new page. "
 	 "If you want a password protected page "
@@ -435,7 +433,7 @@ storeFiles(Params, Root, Prefix) ->
 addFileInit(Params, Root, Prefix) ->
     Page        = getopt("node", Params),
     Password    = getopt("password", Params),
-    template("Add File", "",
+    template("Add File",
 	     [h1(Page), 
 	      form("POST", "addFile.yaws", 
 		   [
@@ -717,7 +715,7 @@ deleteFilesInit(Params, Root, Prefix) ->
     DelList = [input("hidden", "del_"++Name, Name) ||
 		  {file, Name, _, _} <- DelFiles],
 
-    template("Confirm", "",
+    template("Confirm",
 	     [h1(Page),
 	      List,
 	      form("POST", "deleteFiles.yaws", 
@@ -831,7 +829,7 @@ copyFilesInit(Params, Root, Prefix) ->
 	length(CheckedFiles) == 0 ->
 	    editFiles(Params, Root, Prefix);
 	true ->
-	    template("Confirm", "",
+	    template("Confirm",
 		     [h1(Page),
 		      List,
 		      form("POST", "copyFiles.yaws", 
@@ -933,7 +931,7 @@ showHistory(Params, Root, Prefix) ->
 	    {wik002,Pwd,Email,_Time,_Who,OldTxt,_Files,Patches} = 
 		bin_to_wik002(Bin),
 	    Links = reverse(mk_history_links(reverse(Patches), Page, 1)),
-	    template("History", "", Links, false);
+	    template("History", Links, false);
 	_ ->
 	    show({no_such_page, Page})
     end.
@@ -977,7 +975,7 @@ format_time({{Year,Month,Day},{Hour,Min,Sec}}) ->
 
 allPages(_, Root, Prefix) ->
     Files = sort(files(Root, "*.wob")),
-    template("All Pages", "",
+    template("All Pages",
 	     [h1("All Pages"),
 	      p("This is a list of all pages known to the system."),
 	      lists:map(fun(I) ->
@@ -1004,7 +1002,7 @@ lastEdited(_, Root, Prefix) ->
 				  [J,"<br>"] end, Fx),
 		      "</ul>"]
 	     end, Groups),
-    template("Last Edited", "", 
+    template("Last Edited",
 	     [h1("Last Edited"),
 	      p("These are the last edited files."),S1], false).
 
@@ -1050,7 +1048,7 @@ showOldPage(Params, Root, Prefix) ->
 			  Page, FileDir,Files, Root),
 	    Form = form("POST", "noop.yaws",
 			[textarea("text", 25, 75, TxtStr)]),
-	    wiki_templates:template(Page, "",
+	    wiki_templates:template(Page,
 				    [h1(Page),DeepStr,DeepFiles,"<hr>",
 				     Form],
 				   false);
@@ -1085,7 +1083,7 @@ deletePage1(Params, Root, Prefix) ->
 		bin_to_wik002(Bin),
     
 	    Txt = quote_lt(Content),
-	    template("Delete", "",
+	    template("Delete",
 		     [h1(Page),
 		      p("Reconfirm deleting this page - hit the 'Delete' "
 			"button to permanently remove the page."),
@@ -1134,7 +1132,7 @@ finalDeletePage1(Params, Root, Prefix) ->
 	    file:del_dir(Root++"/"++FileDir),
 	    redirect({node, "home"}, Prefix);
 	_ ->
-	    wiki_templates:template("Error","",
+	    wiki_templates:template("Error",
 		     [h1(Page),
 		      p("Failed to delete page."),
 		      hr()],
@@ -1147,7 +1145,7 @@ getPassword(Page, Root, Prefix, Target, Values) ->
 	  lists:keydelete("password", 1, Values)],
     Hidden = [[input("hidden", Name, Value),"\n"] ||
 		 {Name, Value, _} <- Vs],
-    template("Password", "",
+    template("Password", 
 	     [h1(Page),
 	      p("This page is password protected - provide a password"
 		"and hit the 'Continue' button."),
@@ -1374,7 +1372,7 @@ editPage(Page, Password, Root, Prefix, Sid) ->
 
 edit1(Page, Password, Content, Sid) ->
     Txt = quote_lt(Content),
-    template("Edit", "",
+    template("Edit",
 	 [h1(Page),
 	  p("Edit this page - when you have finished hit the 'Preview' "
 	    "button to check your results."),
@@ -1403,20 +1401,20 @@ sendMeThePassword(Params, Root, Prefix) ->
 	    %% io:format("Here Email=~p EMailOwner=~p~n",[Email,EmailOwner]),
 	    case Email of
 		"" ->
-		    template("Error", "",
+		    template("Error",
 			     [h1("Failure"),
 			      p("This page has no associated email address")],
 			     false);
 		EmailOwner ->
 		    mail(Page, Email, Pwd),
-		    template("Ok", "",
+		    template("Ok",
 			     [h1("Success"),
 			      p("The password has been mailed to "),
 			      Email,
 			      p("Have a nice day")],
 			     false);
 		Other ->
-		    template("Error", "",
+		    template("Error",
 			     [h1("Failure"),
 			      p("Incorrect email address")],
 			     false)
@@ -1485,7 +1483,7 @@ editFiles1(Page, Password, Root, Prefix) ->
 		     "</table>\n",
 		     p(),
 		     hr()],
-	    wiki_templates:template("Edit", "",
+	    wiki_templates:template("Edit",
 		      [h1(Page),
 		      form("POST", "storeFiles.yaws",
 			   [Check,
@@ -1592,8 +1590,7 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
 			 str2urlencoded(Page),
 			 "'>",F1,"</a></h1>\n"],
 		    Link = 
-			template(Page, actionbar(Page, Pwd/=""),
-				 [TopHeader, DeepStr, Auto], false)
+			template(Page, [TopHeader, DeepStr, Auto], false)
 	    end;
 	_ ->
 	    show({no_such_page,Page})
@@ -1620,8 +1617,7 @@ thumbIndex(Params, Root, Prefix) ->
 		["<h1><a href='showPage.yaws?node=",Node,"'>",
 		 F1,"</a></h1>\n"],
 	    Link = 
-		template(Page, actionbar(Page, Pwd/=""),
-			 [TopHeader, DeepStr], false);
+		template(Page, [TopHeader, DeepStr], false);
 	_ ->
 	    show({no_such_page,Page})
     end.
@@ -1712,7 +1708,7 @@ editTag(Params, Root, Prefix) ->
 		       open -> quote_lt(Str);
 		       write_append -> ""
 		   end,
-	    wiki_templates:template("Edit", "",
+	    wiki_templates:template("Edit",
 		     [h1(Page),
 		      p("Edit this page - when you have finished hit the "
 			"'Preview' button to check your results."),
@@ -1732,7 +1728,7 @@ changePassword(Params, Root, Prefix) ->
     Page     = getopt("node", Params),
 
     wiki_templates:template(
-      "Edit", "",
+      "Edit",
       [h1(Page),
        p("Change password setting for page - to remove a password leave "
 	 "the new passwords blank."),
@@ -1815,7 +1811,7 @@ previewPage1(Params, Root, Prefix) ->
     Txt = zap_cr(Txt0),
     Wik = wiki_split:str2wiki(Txt),
     session_set_text(Sid, Txt),
-    template("Preview","",
+    template("Preview",
 	     [h1(Page),
 	      p("If this page is ok hit the \"Store\" button "
 		"otherwise return to the editing phase by clicking the edit "
@@ -1844,7 +1840,7 @@ previewTagged(Params, Root, Prefix) ->
     %% io:format("Here previewTagged:~p~n",[Txt]),
     case legal_flat_text(Txt) of
 	true ->
-	    wiki_templates:template("Preview","",
+	    wiki_templates:template("Preview",
 		     [p("If this region is ok hit the <i>Store</i> button "
 			"otherwise return to the editing phase by clicking "
 			"the back button in your browser."),
@@ -1885,7 +1881,7 @@ previewNewPage(Params, Root, Prefix) ->
     if 
 	P1 == P2 ->
 	    session_set_all(Sid,Txt,P1,Email),
-	    template("Preview", "",
+	    template("Preview",
 		     [p("If this page is ok hit the \"Store\" button "
 			"otherwise return to the editing phase by clicking "
 			"the back button in your browser."),
@@ -2106,7 +2102,7 @@ little_letter($ö) -> true;
 little_letter(_)  -> false.
 
 show({bad_password, Page}) ->
-    template("Error", "",
+    template("Error",
 	     [h1("Incorrect password"),
 	      p("You have supplied an incorrect password"),
 	      p("To find out the the password fill "
@@ -2123,7 +2119,7 @@ show({bad_password, Page}) ->
 	     ], false);
 
 show({illegal_filename, FileName, Reason}) ->
-    template("Error", "",
+    template("Error",
 	     [h1("Illegal filename"),
 	      p("You have supplied an illegal filename: " ++ FileName ++ "."),
 	      p(Reason)],

@@ -14,12 +14,12 @@
 
 -import(lists,  [filter/2, member/2, reverse/1, sort/1, map/2]).
 -import(wiki, [p/1, h1/1, show/1]).
--import(wiki_templates, [template/4]).
+-import(wiki_templates, [template/3]).
 
 %% HTML structure of the backlink list
 findallrefsto(Page, Root) ->
     Pages = getallrefs(Page, Root),
-    template("References", "",
+    template("References", 
 	 ["<p>The following pages contain references to ",
 	  wiki_to_html:format_link(Page, Root),".",
 	  "<ul>",
@@ -48,7 +48,7 @@ zombies(Root) ->
     %% Missing = Pages refered to but do not exists at all
     %% This is not an error
     NotReached = sort(All -- Reached),
-    template("Zombies", "", 
+    template("Zombies",
 	 [h1("Zombies"),
 	  p("These pages have no links to them."),
 	  "<ul>",
