@@ -20,6 +20,8 @@ help()
 	echo "       yaws -T         -- trace http traffic"
        	echo "       yaws -x         -- trace output to stdout"
 	echo "       yaws -v         -- print version"
+        echo "       yaws -M dir     -- start Mnesia in dir"
+        echo "       yaws -sname xxx -- start with sname xxx"
 	echo ""
 	echo "       yaws -heart     -- auto restart yaws if it crashes"
 	echo "                          (requires the -D switch)"
@@ -43,6 +45,7 @@ conf="";
 runmod="";
 sname="";
 heart="";
+mnesia="";
 
 while [ $# -gt 0 ] 
 do
@@ -63,6 +66,9 @@ do
 	        trace=" -yaws trace http ";;
 	   -x)
 	        traceoutput=" -yaws traceoutput ";;
+           -M)
+               mnesia=" -mnesia dir '"$1"' -run mnesia start"
+               shift;;
            -c)
 		conf=" -conf $1 "
 		shift;;
@@ -113,10 +119,10 @@ if [ -z "$heart" ] || [ -z "$daemon" ]; then
     HEART_COMMAND="";
 else
     ## ............................this line
-    export HEART_COMMAND="${ENV_PGM} HEART=true $erl ${daemon} ${heart} -pa ${yawsdir}/ebin  ${sname} ${debug} -s yaws $trace $conf $runmod";
+    export HEART_COMMAND="${ENV_PGM} HEART=true $erl ${daemon} ${heart} -pa ${yawsdir}/ebin  ${sname} ${debug} -s yaws $trace $conf $runmod $mnesia";
 fi
 
 ## keep this line in sync with ....^
-exec $erl ${daemon} ${heart} -pa ${yawsdir}/ebin  ${sname} ${debug} -s yaws $trace $conf $runmod
+exec $erl ${daemon} ${heart} -pa ${yawsdir}/ebin  ${sname} ${debug} -s yaws $trace $conf $runmod $mnesia
 
 
