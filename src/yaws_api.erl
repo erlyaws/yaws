@@ -316,7 +316,7 @@ parse_multi(header, [H|T], Boundary, Acc, Res, Tmp) ->
 parse_multi(header, [], Boundary, Acc, Res, Tmp) ->
     {cont, {header, [], Boundary, Acc, Tmp}, Res};
 
-parse_multi(body, [B|T], [B|T1], Acc, Res, Tmp) ->
+parse_multi(body, [B|T], [B|T1], Acc, Res, _Tmp) ->
     parse_multi(boundary, T, T1, Acc, Res, {[B|T], [B|T1]}); % store in case no match
 parse_multi(body, [H|T], Boundary, Acc, Res, Tmp) ->
     parse_multi(body, T, Boundary, [H|Acc], Res, Tmp);
@@ -327,9 +327,9 @@ parse_multi(body, [], Boundary, Acc, Res, Tmp) ->	% make a partial body result
 
 parse_multi(boundary, [B|T], [B|T1], Acc, Res, Tmp) ->
     parse_multi(boundary, T, T1, Acc, Res, Tmp);
-parse_multi(boundary, [H|T], [B|T1], start, Res, {[D|T2], Bound}) -> % false alarm
+parse_multi(boundary, [_H|_T], [_B|_T1], start, Res, {[D|T2], Bound}) -> % false alarm
     parse_multi(body, T2, Bound, [D], Res, []);
-parse_multi(boundary, [H|T], [B|T1], Acc, Res, {[D|T2], Bound}) -> % false alarm
+parse_multi(boundary, [_H|_T], [_B|_T1], Acc, Res, {[D|T2], Bound}) -> % false alarm
     parse_multi(body, T2, Bound, [D|Acc], Res, []);
 parse_multi(boundary, [], [B|T1], Acc, Res, Tmp) -> % run out of body
     {cont, {boundary, [], [B|T1], Acc, Tmp}, Res};
@@ -342,11 +342,11 @@ parse_multi(boundary, [H|T], [], start, Res, {_, Bound}) -> % matched whole boun
 parse_multi(boundary, [H|T], [], Acc, Res, {_, Bound}) -> % matched whole boundary!
     parse_multi(is_end, [H|T], Bound, [], [{body, lists:reverse(Acc)}|Res], []);
 
-parse_multi(is_end, "--"++_, Boundary, Acc, Res, Tmp) ->
+parse_multi(is_end, "--"++_, _Boundary, _Acc, Res, _Tmp) ->
     {result, Res};
 parse_multi(is_end, "-", Boundary, Acc, Res, Tmp) ->
     {cont, {is_end, "-", Boundary, Acc, Tmp}, Res};
-parse_multi(is_end, "\r\n"++Next, Boundary, Acc, Res, Tmp) ->
+parse_multi(is_end, "\r\n"++Next, Boundary, _Acc, Res, _Tmp) ->
     parse_multi(header, Next, Boundary, [], Res, []);
 parse_multi(is_end, "\r", Boundary, Acc, Res, Tmp) ->
     {cont, {is_end, "\r", Boundary, Acc, Tmp}, Res}.

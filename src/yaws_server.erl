@@ -1314,13 +1314,6 @@ deliver_dyn_file(CliSock, GC, SC, _Req, _Head,_UT, DCC, _Bin, _Fd, [], _ARG,_N) 
 		  accumulate_content([crnl(), "0", crnl2()]),
 		  continue
 	  end,
-    case erase(content_type) of
-	undefined ->
-	    make_content_type("text/html");
-	Other ->
-	    make_content_type(Other)
-    end,
-    
     deliver_accumulated(DCC, CliSock, GC, SC),
     Ret.
 
@@ -1435,6 +1428,7 @@ handle_out_reply({content, MimeType, Cont}, DCC, _LineNo,_YawsFile, _SC, _A) ->
 
 handle_out_reply({streamcontent, MimeType, First}, 
 		 _DCC, _LineNo,_YawsFile, _SC, _A) ->
+    put(content_type, MimeType),
     {streamcontent, MimeType, First};
 
 
@@ -1562,6 +1556,14 @@ deliver_accumulated(DCC, Sock, GC, SC) ->
 	   end,
     StatusLine = ["HTTP/1.1 ", integer_to_list(Code), " ",
 		  yaws_api:code_to_phrase(Code), crnl()],
+
+    case erase(content_type) of
+	undefined ->
+	    accumulate_header("Content-Type: text/html");
+	MimeType ->
+	    accumulate_header(["Content-Type: ", MimeType])
+    end,
+
     Headers = erase(acc_headers),
 
     if
@@ -1886,12 +1888,14 @@ make_content_length(FI) ->
     Size = FI#file_info.size,
     put(content_length, Size),
     accumulate_header(["Content-Length: ", integer_to_list(Size)]).
+
 make_content_type() ->
     make_content_type("text/html").
 make_content_type(no_content_type) ->
     ok;
 make_content_type(MimeType) ->
-    accumulate_header(["Content-Type: ", MimeType]).
+    put(content_type, MimeType).
+
 
 
 make_connection_close(true) ->
@@ -2372,5 +2376,4 @@ ehtml_attrs([{Name, Value} | Tail]) ->
     ValueString = if atom(Value) -> [$",atom_to_list(Value),$"];
 		     list(Value) -> [$",Value,$"]
 		  end,
-    [[$ |atom_to_list(Name)], [$=,$"|ValueString], $" | ehtml_attrs(Tail)].
-
+    [[$ |atom_to_list(Name)], [$=|ValueString]| ehtml_attrs(Tail)].
