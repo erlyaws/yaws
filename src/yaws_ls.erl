@@ -93,7 +93,7 @@ doc_head(DirName) ->
        "    <title>Index of ~s</title> \n"
        "    <style type=\"text/css\">\n"
        "    img { border: 0; padding: 0 2px; vertical-align: text-bottom; }\n"
-       "    td  { font-family: monospace; padding: 2px 3px;  text-align: left"
+       "    td  { font-family: monospace; padding: 2px 3px; text-align:left;\n"
        "          vertical-align: bottom; white-space: pre; }\n"
        "    td:first-child { text-align: left; padding: 2px 10px 2px 3px; }\n"
        "    table { border: 0; }\n"
