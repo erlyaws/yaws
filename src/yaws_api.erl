@@ -17,6 +17,130 @@
 
 
 
+parse_post(Arg) ->
+    Headers = Arg#arg.headers,
+    case lists:keysearch('Content-Type', 3, Headers#headers.other) of
+	{value, {_,_,_,_,"multipart/form-data"++Line}} ->
+	    LineArgs = parse_arg_line(Line),
+	    {value, {_, Boundary}} = lists:keysearch(boundary, 1, LineArgs),
+	    parse_multipart(Boundary, binary_to_list(Arg#arg.clidata));
+	_ ->
+	    parse_post_data(Arg#arg.querydata)
+    end.
+	    
+	    
+parse_arg_line(Line) ->
+    parse_arg_line(Line, []).
+
+parse_arg_line([],Acc) -> Acc;
+parse_arg_line([$ |Line], Acc) ->
+    parse_arg_line(Line, Acc);
+parse_arg_line([$;|Line], Acc) ->
+    {KV,Rest} = parse_arg_key(Line, [], []),
+    parse_arg_line(Rest, [KV|Acc]).
+
+%
+
+parse_arg_key([], Key, Value) ->
+    make_parse_line_reply(Key, Value, []);
+parse_arg_key([$;|Line], Key, Value) ->
+    make_parse_line_reply(Key, Value, [$;|Line]);
+parse_arg_key([$ |Line], Key, Value) ->
+    parse_arg_key(Line, Key, Value);
+parse_arg_key([$=|Line], Key, Value) ->
+    parse_arg_value(Line, Key, Value, false, false);
+parse_arg_key([C|Line], Key, Value) ->
+    parse_arg_key(Line, [C|Key], Value).
+    
+%
+% We need to deal with quotes and initial spaces here.
+% parse_arg_value(String, Key, ValueAcc, InQuoteBool, InValueBool)
+%
+
+parse_arg_value([], Key, Value, _, _) ->
+    make_parse_line_reply(Key, Value, []);
+parse_arg_value([$\\,$"|Line], Key, Value, Quote, Begun) ->
+    parse_arg_value(Line, Key, [$"|Value], Quote, Begun);
+parse_arg_value([$"|Line], Key, Value, false, _) ->
+    parse_arg_value(Line, Key, Value, true, true);
+parse_arg_value([$"|Line], Key, Value, true, _) ->
+    make_parse_line_reply(Key, Value, Line);
+parse_arg_value([$;|Line], Key, Value, false, _) ->
+    make_parse_line_reply(Key, Value, [$;|Line]);
+parse_arg_value([$ |Line], Key, Value, false, true) ->
+    make_parse_line_reply(Key, Value, Line);
+parse_arg_value([$ |Line], Key, Value, false, false) ->
+    parse_arg_value(Line, Key, Value, false, false);
+parse_arg_value([C|Line], Key, Value, Quote, _) ->
+    parse_arg_value(Line, Key, [C|Value], Quote, true).
+
+
+%
+
+make_parse_line_reply(Key, Value, Rest) ->
+    {{list_to_atom(httpd_util:to_lower(lists:reverse(Key))),
+      lists:reverse(Value)}, Rest}.
+
+
+%
+
+isolate_arg(Str) -> isolate_arg(Str, []).
+
+isolate_arg([$:,$ |T], L) -> {httpd_util:to_lower(lists:reverse(L)), T};
+isolate_arg([H|T], L)     -> isolate_arg(T, [H|L]).
+
+
+
+%
+
+parse_multipart(Boundary, Args) ->
+    Parts = split_boundary(Boundary, [$\r,$\n|Args]),
+    Parsed = parse_parts(Parts),
+    F = fun({Header,Body}) ->
+		{value, {_,"form-data"++Line}} =
+		    lists:keysearch("content-disposition", 1, Header),
+		Parameters = parse_arg_line(Line),
+		{value, {_,Name}} = lists:keysearch(name, 1, Parameters),
+		{list_to_atom(Name), Body}
+	end,
+    lists:map(F, Parsed).
+
+parse_parts([]) ->   [];
+parse_parts([[]|Ps]) ->
+    parse_parts(Ps);
+parse_parts([P|Ps]) ->
+    {Head, Body} = split_head_body(P, []),
+    {ok, Fields} = regexp:split(Head, "\r\n"),
+    Header = lists:map(fun isolate_arg/1, Fields),
+    [{Header, Body} | parse_parts(Ps)].
+
+
+split_head_body([], Acc) ->
+    {lists:reverse(Acc), []};
+split_head_body("\r\n\r\n"++Body, Acc) ->
+    {lists:reverse(Acc), Body};
+split_head_body([C|P], Acc) ->
+    split_head_body(P, [C|Acc]).
+
+
+%
+
+split_boundary(Boundary, Line) ->    
+    case string:str(Line, "\r\n--"++Boundary) of
+ 	0 ->
+ 	    [Line];
+ 	N ->
+ 	    Entry = string:substr(Line, 1, N-1),
+ 	    Rest = string:substr(Line, N+4+length(Boundary)),
+ 	    case Rest of
+ 		"--"++_ ->
+ 		    [Entry];  
+ 		"\r\n"++Next ->
+ 		    [Entry|split_boundary(Boundary,Next)]
+ 	    end
+     end.
+
+
 %% parse POST data when ENCTYPE is unset or
 %% Content-type: application/x-www-form-urlencoded
 %% Bin is the content of ARG#arg.clidata
