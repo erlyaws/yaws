@@ -1192,8 +1192,8 @@ handle_ut(CliSock, ARG, UT, N) ->
 	appmod ->
 	    yaws:outh_set_dyn_headers(Req, H),
  	    {Mod, PathData} = UT#urltype.data,
- 	    A2 = ARG#arg{appmoddata = PathData,
- 			 appmod_prepath = UT#urltype.path},
+ 	    A2 = ARG#arg{appmoddata = PathData,  % trail
+ 			 appmod_prepath = UT#urltype.path}, % head
 	    deliver_dyn_part(CliSock, 
 			     0, "appmod",
 			     N,
@@ -2504,25 +2504,130 @@ clear_ets(E) ->
 %% return #urltype{}
 do_url_type(SC, GetPath) ->
     ?Debug("do_url_type ~p~n~p~n", [SC, GetPath]),
-    case split_path(GetPath, [], []) of
-	slash ->
+    case GetPath of
+	"/" -> %% special case 
 	    maybe_return_dir(SC#sconf.docroot, GetPath);
-	UT ->
-	    UT#urltype{getpath = GetPath}
+	[$/, $~ |Tail] ->
+	    ret_user_dir(Tail);
+	_ ->
+	    {Comps, RevFile} = split(GetPath, [], []),
+	    ?Debug("Comps = ~p RevFile = ~p~n",[Comps, RevFile]),
+	    AppMods = SC#sconf.appmods,
+	    case check_appmods(SC#sconf.appmods, Comps, RevFile) of
+		false ->
+		    DR = SC#sconf.docroot,
+		    FullPath = [DR, GetPath],
+		    ?Debug("FullPath = ~p~n", [FullPath]),
+		    case prim_file:read_file_info(FullPath) of
+			{ok, FI} when FI#file_info.type == regular ->
+			    case suffix_type(SC, RevFile) of
+				{forbidden, _} -> 
+				    #urltype{type=forbidden};
+				{X, Mime} ->
+				    #urltype
+				  {type=X, 
+				   finfo=FI,
+				   deflate=deflate_q(?sc_has_deflate(SC), X, 
+						     Mime),
+				   dir = Comps,
+				   path = GetPath,
+				   getpath = GetPath,
+				   fullpath = FullPath,
+				   mime=Mime}
+			    end;
+			{ok, FI} when FI#file_info.type == directory ->
+			    case RevFile of
+				[] ->
+				    %% dir urls without trailing /
+				    maybe_return_dir(DR, GetPath);
+				_ ->
+				    #urltype{type = redir,
+					     path = [GetPath, "/"]}
+			    end;
+			Err ->
+			    %% non-optimal, on purpose
+			    maybe_return_path_info(SC, Comps, RevFile)
+		    end;
+		{ok, Head, {PathElem, Mod}, Trail} ->
+		    #urltype{type = appmod, 
+			     data = {Mod, conc_path(Head)},
+			     path = conc_path(Trail)}
+	    
+	    end
     end.
+			    
+
+split([$/|Tail], Comps, Part) when Part /= [] ->
+    NewComp = lists:reverse([$/|Part]),
+    split(Tail,  [NewComp | Comps], []);
+split([H|T], Comps, Part)  ->
+    split(T, Comps, [H|Part]);
+split([], Comps, Part) ->
+    {lists:reverse(Comps), Part}.
+
+
+check_appmods([], _, _) ->
+    false;
+check_appmods(AppMods, Comps, RevFile) ->
+    case check_comps(AppMods, Comps) of
+	false ->
+	    %% check last elem last
+	    File = lists:reverse(RevFile),
+	    case check_comps(AppMods, [File]) of
+		false ->
+		    false;
+		{ok, _, AM, _} ->
+		    {ok, Comps, AM,[]}
+	    end;
+	RET ->
+	    RET
+    end.
+			      
+
+
+check_comps([], _) ->
+    false;
+check_comps([Pair |Tail], Comps) ->
+    case split_at(Pair, Comps,[]) of
+	false ->
+	    check_comps(Tail, Comps);
+	RET ->
+	    RET
+    end.
+    
+				      
+split_at(_, [], Ack) ->
+    false;
+split_at(AM={PE, Mod}, [PEslash|Tail], Ack) ->
+    case no_slash_eq(PE, PEslash) of
+	true ->
+	    {ok, lists:reverse(Ack), AM, Tail};
+	false ->
+	    split_at(AM, Tail, [PE|Ack])
+    end.
+
+
+%% ignore slashes in the comparision
+no_slash_eq([H1|T1], [H1|T2]) ->
+    no_slash_eq(T1, T2);
+no_slash_eq(X, [$/|T]) ->
+    no_slash_eq(X,T);
+no_slash_eq([],[]) ->
+    true;
+no_slash_eq(_,_) ->
+    false.
+
 
 
 maybe_return_dir(DR, GetPath) ->
     ?Debug("maybe_return_dir(~p, ~p)", [DR, GetPath]),
     case prim_file:read_file_info([DR, GetPath, "index.yaws"]) of
 	{ok, FI} ->
-	    #urltype{type = redir,
-		     path = [GetPath, "index.yaws"]};
+	    do_url_type(get(sc), GetPath ++ "index.yaws");
 	_ ->
 	    case prim_file:read_file_info([DR, GetPath, "index.html"]) of
 		{ok, FI} ->
-		    #urltype{type = redir,
-			     path = [GetPath, "index.html"]};
+		    do_url_type(get(sc), GetPath ++ "index.html");
 		_ ->
 		    case file:list_dir([DR, GetPath]) of
 			{ok, List} ->
@@ -2536,33 +2641,79 @@ maybe_return_dir(DR, GetPath) ->
     end.
 
 
-split_path([$/], _Comps, []) ->
-    %% its a URL that ends with /
-    slash;
-split_path([], Comps, Part) ->
-    ret_reg_split(Comps, Part);
-split_path([$/|Tail], Comps, Part)  when Part /= [] ->
-    ?Debug("Tail=~s Part=~s", [Tail,Part]),
-    Component = lists:reverse(Part),
-    CName = tl(Component),
-    case lists:keysearch(CName, 1, (get(sc))#sconf.appmods) of
-	{value, {_, Mod}}  ->
-	    %% we've found an appmod
-	    PrePath = conc_path(Comps),
-	    ret_app_mod([$/|Tail], Mod, PrePath);
-	false ->
-	    case ret_script(Comps, Part) of
-		false -> 
-		    split_path([$/|Tail],[lists:reverse(Part) | Comps], []);
-		UT -> 
-		    UT#urltype{pathinfo=[$/|Tail]}
+
+% sick apache style urls http://www.x.com/a/foo.yaws/c/d/
+% where /c/d/ ends up in pathinfo
+
+% neither is this entirely correct since the /c/d/ files may exists
+% and in that case we'll deliver em :-(
+
+maybe_return_path_info(SC, Comps, RevFile) ->
+    case path_info_split(Comps,[]) of
+	{false, Type} ->
+	     #urltype{type=Type};
+	{ok, HeadComps, File, TrailComps, Type, Mime} ->
+	    DR = SC#sconf.docroot,
+	    case member(Type, SC#sconf.allowed_scripts) of
+		true ->
+		    FullPath = [DR, HeadComps, $/, File],
+		    ?Debug("FullPath = ~p~n", [FullPath]),
+		    case prim_file:read_file_info(FullPath) of
+			{ok, FI} when FI#file_info.type == regular ->
+			    Trail = [$/ | conc_path(TrailComps ++ 
+						    [lists:reverse(RevFile)])],
+			    #urltype{type = Type,
+				     finfo=FI,
+				     deflate=deflate_q(?sc_has_deflate(SC), 
+						       Type, Mime),
+				     dir = HeadComps,
+				     path = [HeadComps, $/, File],
+				     fullpath = FullPath,
+				     pathinfo = Trail,
+				     mime = Mime};
+			_ ->
+			    #urltype{type = error}
+		    end;
+		false ->
+		    #urltype{type = forbidden}
+	    end
+    end.
+
+
+path_info_split([H|T], Ack) ->
+    case drop_till_dot(H) of
+	[] ->
+	    path_info_split(T, [H|Ack]);
+	Suff ->
+	    [$/|Tail] = lists:reverse(Suff),
+	    {Type, Mime} = mime_types:revt(Tail),
+	    case Type of
+		regular -> %% maybe they have dirnames with dots
+		    path_info_split(T, [H|Ack]);
+		forbidden ->
+		    {false, forbidden};
+		X ->
+		    {ok, lists:reverse(Ack), yaws:delall($/, H), T, X, Mime}
 	    end
     end;
-split_path([$~|Tail], Comps, Part) ->  %% user dir
-    ret_user_dir(Comps, Part, Tail);
-split_path([H|T], Comps, Part) ->
-    split_path(T, Comps, [H|Part]).
+path_info_split([], Ack) ->
+    {false, error}.
 
+
+
+drop_till_dot([$. |Tail]) ->
+    Tail;
+drop_till_dot([]) ->
+    [];
+drop_till_dot([H|T]) when integer(H) ->
+    drop_till_dot(T);
+drop_till_dot([H|T]) when list(H) ->
+    case drop_till_dot(H) of
+	[] ->
+	    drop_till_dot(T);
+	List ->
+	    [List, T]
+    end.
 
 
 conc_path([]) ->
@@ -2580,7 +2731,7 @@ ret_app_mod(Path, Mod, PrePath) ->
 
 
 %% http://a.b.c/~user URLs
-ret_user_dir([], "/", Upath)  ->
+ret_user_dir(Upath)  ->
     ?Debug("ret_user_dir ~p~n", [Upath]),
     SC = get(sc),
     if ?sc_has_tilde_expand(SC) ->
@@ -2638,64 +2789,6 @@ deflate_q(true, regular, Mime) ->
 deflate_q(_, _, _) ->
     undefined.
 
-ret_reg_split(Comps, RevFile) ->
-    SC = get(sc),
-    Dir = reverse(Comps),
-    DR = SC#sconf.docroot,
-    File = reverse(RevFile),
-    L = [DR, Dir, File],
-    case prim_file:read_file_info(L) of
-	{ok, FI} when FI#file_info.type == regular ->
-	    case suffix_type(SC, RevFile) of
-		{forbidden, _} -> 
-		    #urltype{type=forbidden};
-						% Forbidden script
-						% type.  
-						%
-						% We could also treat
-						% it as a plain file.
-		{X, Mime} ->
-		    #urltype{type=X, 
-			     finfo=FI,
-			     deflate=deflate_q(?sc_has_deflate(SC), X, Mime),
-			     path = [DR, Dir],
-			     dir = Dir,
-			     fullpath = L,
-			     mime=Mime}
-	    end;
-	{ok, FI} when FI#file_info.type == directory, hd(RevFile) == $/ ->
-	    maybe_return_dir(DR, [Dir, File]);
-	{ok, FI} when FI#file_info.type == directory, hd(RevFile) /= $/ ->
-	    #urltype{type = redir,
-		     path = [Dir, File, "/"]};
-	Err ->
-	    #urltype{type=error, data=Err}
-    end.
-
-
-ret_script(Comps, RevFile) ->
-    ?Debug("ret_script(~p)", [[(get(sc))#sconf.docroot, Comps, RevFile]]),
-    case suffix_type(get(sc), RevFile) of
-	{regular, _} -> false;
-	{forbidden, _} -> false;
-	{X, Mime} -> 
-	    Dir = reverse(Comps),
-	    DR = (get(sc))#sconf.docroot,
-	    File = reverse(RevFile),
-	    L = [DR, Dir, File],
-	    case prim_file:read_file_info(L) of
-		{ok, FI} when FI#file_info.type == regular ->
-		    #urltype{type=X, 
-			     finfo=FI,
-			     path = [DR, Dir],
-			     dir = Dir,
-			     fullpath = L,
-			     mime=Mime};
-		_ -> 
-		    false
-	    end
-    end.
-
 
 suffix_type(SC, L) ->
     R=suffix_type(L),
@@ -2710,23 +2803,24 @@ suffix_type(SC, L) ->
     end.
 
 suffix_type(L) ->
-    L2 = drop_till_dot(L),
+    L2 = upto_dot(L),
     mime_types:revt(L2).
 
-drop_till_dot([$.|_]) ->
+upto_dot([$.|_]) ->
     [];
-drop_till_dot([H|T]) when integer(H) ->
-    [H|drop_till_dot(T)];
-drop_till_dot([]) ->
+upto_dot([H|T]) when integer(H) ->
+    [H|upto_dot(T)];
+upto_dot([]) ->
     [];
 %% deep lists
-drop_till_dot([H|T]) when list(H) ->
-    case drop_till_dot(H) of
-	[] ->
-	    drop_till_dot(T);
-	L ->
-	    [L|T]
+upto_dot([H|T]) when list(H) ->
+    case lists:member($. ,H) of
+	true ->
+	    upto_dot(H);
+	false ->
+	    [H, upto_dot(T)]
     end.
+
 
 		     
 

@@ -642,6 +642,15 @@ arg_rewrite(A) ->
 
 
 
+delall(H, [H|T]) ->
+    delall(H,T);
+delall(H,[H1|T]) ->
+    [H1 | delall(H, T)];
+delall(_,[]) ->
+    [].
+
+
+
 to_lowerchar(C) when C >= $A, C =< $Z ->
     C+($a-$A);
 to_lowerchar(C) ->

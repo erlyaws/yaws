@@ -464,7 +464,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	["appmods", '=' | AppMods] ->
 	    case parse_appmods(AppMods, []) of
 		{ok, L} ->
-		    C2 = C#sconf{appmods = L},
+		    C2 = C#sconf{appmods = L ++ C#sconf.appmods},
 		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		{error, Str} ->
 		    {error, ?F("~s at line ~w", [Str, Lno])}
@@ -792,23 +792,27 @@ is_special(C) ->
 
 
 parse_appmods(['<', PathElem, ',' , AppMod, '>' | Tail], Ack) ->
-    parse_appmods(Tail, [{PathElem, list_to_atom(AppMod)} |Ack]);
+    S = {PathElem , list_to_atom(AppMod)},
+    parse_appmods(Tail, [S |Ack]);
+
 parse_appmods([AppMod | Tail], Ack) ->
+    %% just some simpleminded test to catch syntax errors in the config
     case AppMod of
 	[Char] ->
 	    case is_special(Char) of
 		true ->
 		    {error, "Bad appmod syntax"};
 		false ->
-		    parse_appmods(Tail, [{AppMod, list_to_atom(AppMod)} | Ack])
+		    S = {AppMod, list_to_atom(AppMod)},
+		    parse_appmods(Tail, [S | Ack])
 	    end;
 	_ ->
-	    parse_appmods(Tail,  [{AppMod, list_to_atom(AppMod)} |Ack])
+	    S = {AppMod, list_to_atom(AppMod)},
+	    parse_appmods(Tail, [S | Ack])
     end;
+
 parse_appmods([], Ack) ->
-    {ok, Ack};
-parse_appmods(_, _) ->
-    {error, "Wrong appmod spec"}.
+    {ok, Ack}.
 
 
 

@@ -207,3 +207,10 @@
 	  
 -define(READ_TIMEOUT, 30000).
 
+
+
+
+-record(appmodspec, {
+	  type,  %% atom, pair or absolute
+	  data}).
+
