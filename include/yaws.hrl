@@ -8,12 +8,40 @@
 -author('klacke@hyber.org').
 
 
+
+%% flags for gconfs 
+-define(GC_TTY_TRACE,   1).
+-define(GC_DEBUG,       2).
+-define(GC_AUTH_LOG,    4).
+-define(GC_COPY_ERRLOG, 8).
+
+
+-define(GC_DEF, ?GC_AUTH_LOG).
+
+-define(gc_has_tty_trace(GC), 
+	((GC#gconf.flags band ?GC_TTY_TRACE) /= 0)).
+-define(gc_has_debug(GC), 
+	((GC#gconf.flags band ?GC_DEBUG) /= 0)).
+-define(gc_has_auth_log(GC), 
+	((GC#gconf.flags band ?GC_AUTH_LOG) /= 0)).
+-define(gc_has_copy_errlog(GC), 
+	((GC#gconf.flags band ?GC_COPY_ERRLOG) /= 0)).
+
+-define(gc_set_tty_trace(GC, Bool), 
+	GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_TTY_TRACE, Bool)}).
+-define(gc_set_debug(GC, Bool), 
+	GC#gconf{flags = yaws:flag(GC#gconf.flags, ?GC_DEBUG, Bool)}).
+-define(gc_set_auth_log(GC, Bool), 
+	GC#gconf{flags = yaws:flag(GC#gconf.flags, ?GC_AUTH_LOG, Bool)}).
+-define(gc_set_copy_errlog(GC, Bool), 
+	GC#gconf{flags = yaws:flag(GC#gconf.flags, ?GC_COPY_ERRLOG, Bool)}).
+
+
+
 %% global conf
--record(gconf,{file,
-	       yaws_dir,
-	       tty_trace = false,
+-record(gconf,{yaws_dir,
 	       trace,
-	       debug,
+	       flags = ?GC_DEF,
 	       logdir,
 	       ebin_dir = [],
 	       runmods = [],
@@ -24,7 +52,6 @@
 	       large_file_chunk_size = 10240,
 	       cache_refresh_secs = 30,  % seconds  (auto zero when debug)
 	       default_type = "text/html",
-	       auth_log = true,            %% log 401's and also good auths
 	       timeout = 30000,
 	       include_dir = [],
 	       yaws,                %% server string
@@ -47,22 +74,52 @@
 	 cachetimeout}).
 
 
+%% flags for sconfs
+-define(SC_ACCESS_LOG,   1).
+-define(SC_ADD_PORT,     2).
+-define(SC_TILDE_EXPAND, 8).
+-define(SC_DIR_LISTINGS, 16).
+-define(SC_DEFLATE,      32).
 
 
-%% a list of lists of #sconfs
-%% one list of #sconf's per listen ip
+-define(SC_DEF, ?SC_ACCESS_LOG bor ?SC_ADD_PORT).
+
+-define(sc_has_access_log(SC), 
+	((SC#sconf.flags band ?SC_ACCESS_LOG) /= 0)).
+-define(sc_has_add_port(SC), 
+	((SC#sconf.flags band ?SC_ADD_PORT) /= 0)).
+-define(sc_has_tilde_expand(SC),
+	((SC#sconf.flags band ?SC_TILDE_EXPAND) /= 0)).
+-define(sc_has_dir_listings(SC),
+	((SC#sconf.flags band ?SC_DIR_LISTINGS) /= 0)).
+-define(sc_has_deflate(SC), 
+	((SC#sconf.flags band ?SC_DEFLATE) /= 0)).
+
+
+-define(sc_set_access_log(SC, Bool), 
+	SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_ACCESS_LOG, Bool)}).
+-define(sc_set_add_port(SC, Bool), 
+	SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_ADD_PORT, Bool)}).
+-define(sc_set_ssl(SC, Bool), 
+	SC#sconf{flags = yaws:flag(SC#sconf.flags , ?SC_SSL, Bool)}).
+-define(sc_set_tilde_expand(SC, Bool), 
+	SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_TILDE_EXPAND, Bool)}).
+-define(sc_set_dir_listings(SC, Bool), 
+	SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_DIR_LISTINGS, Bool)}).
+-define(sc_set_deflate(SC, Bool), 
+	SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_DEFLATE, Bool)}).
+
 
 
 %% server conf
 -record(sconf,
 	{port = 8000,                %% which port is this server listening to
+	 flags = ?SC_DEF,
 	 rhost,                      %% forced redirect host (+ optional port)
 	 rmethod,                    %% forced redirect method
 	 docroot,                    %% path to the docs
-	 access_log = true,          %% log access 
 	 listen = {127,0,0,1},       %% bind to this IP, {0,0,0,0} is possible
 	 servername = "localhost",   %% servername is what Host: header is
-         add_port = true,            %% add port after reading config
 	 ets,                        %% local store for this server
 	 ssl,
 	 authdirs = [],
@@ -71,9 +128,6 @@
 	 errormod_404 = yaws_404,     %% the default 404 error module 
 	 errormod_crash = yaws_404,   %% use the same module for crashes
 	 arg_rewrite_mod = yaws,
-	 tilde_expand = false,        %% allow public_html user dirs
-	 dir_listings = false,        %% allow dir listings
-	 deflate = false,             %% support deflate encoding (needs zlib)
 	 opaque = [],                 %% useful in embedded mode
 	 start_mod,                   %% user provided module to be started
 	 allowed_scripts = [yaws],

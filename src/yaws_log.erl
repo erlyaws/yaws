@@ -32,6 +32,7 @@
 	  now,
 	  tracefd,
 	  tty_trace = false,
+	  copy_errlog,
 	  auth_log,
 	  alogs =  []}).
 
@@ -111,13 +112,13 @@ handle_call({setdir, GC, Sconfs}, _From, State)
     Dir = GC#gconf.logdir,
     ?Debug("setdir ~s~n", [Dir]),
     ElogFile = filename:join([Dir, "report.log"]),
-    case error_logger:logfile({open,ElogFile}) of
-	ok ->
-	    ok;
-	{error, Reason} ->
-	    error_logger:format("Failed to open ~s~n", [ElogFile])
-    end,
-    
+    Copy = if ?gc_has_copy_errlog(GC) ->
+		   gen_event:add_handler(error_logger, yaws_log_file_h, 
+					 ElogFile),
+		   true;
+	      true ->
+		   false
+	   end,
     SCs = lists:flatten(Sconfs),
     L = lists:zf(
 	  fun(SC) ->
@@ -144,7 +145,7 @@ handle_call({setdir, GC, Sconfs}, _From, State)
 
     AuthLogFileName = filename:join([Dir, "auth.log"]),
     AuthLog = 
-	if GC#gconf.auth_log == true ->
+	if ?gc_has_auth_log(GC) ->
 		case file:open(AuthLogFileName, [write, raw, append]) of
 		    {ok, AFd} ->
 			#alog{fd = AFd,
@@ -161,6 +162,7 @@ handle_call({setdir, GC, Sconfs}, _From, State)
     S2 = State#state{running = true,
 		     dir  = Dir,
 		     now = fmtnow(),
+		     copy_errlog = Copy,
 		     auth_log = AuthLog,
 		     alogs = L},
 
@@ -178,6 +180,20 @@ handle_call({setdir, GC, Sconfs}, _From, State)
   when State#state.running == true ->
 
     Dir = State#state.dir,
+    ElogFile = filename:join([Dir, "report.log"]),
+    Copy = if ?gc_has_copy_errlog(GC), State#state.copy_errlog == false->
+		   gen_event:add_handler(error_logger, yaws_log_file_h, 
+					 ElogFile),
+		   true;
+	      ?gc_has_copy_errlog(GC) ->
+		   true;
+	      State#state.copy_errlog == true ->
+		   gen_event:delete_handler(error_logger, yaws_log_file_h, 
+					    normal),
+		   false;
+	      true ->
+		   false
+	   end,
     
     %% close all files
     lists:map(
@@ -203,6 +219,7 @@ handle_call({setdir, GC, Sconfs}, _From, State)
     S2 = State#state{running = true,
 		     dir  = Dir,
 		     now = fmtnow(),
+		     copy_errlog = Copy,
 		     alogs = L},
     
     {reply, ok, S2};
@@ -327,12 +344,8 @@ handle_info(minute10, State) ->
     E = filename:join([Dir, "report.log"]),
     {ok, FI} = file:read_file_info(E),
     if
-	FI#file_info.size > ?WRAP_LOG_SIZE ->
-	    error_logger:logfile(close),
-	    Old = [E, ".old"],
-	    file:delete(Old),
-	    file:rename(E, Old),
-	    error_logger:logfile({open, E});
+	FI#file_info.size > ?WRAP_LOG_SIZE, State#state.copy_errlog == true ->
+	    gen_event:call(error_logger, yaws_log_file_h, wrap);
 	true ->
 	    ok
     end,

@@ -97,6 +97,15 @@ Enable or disable the auth log. Default is true.
 
 
 .TP
+\fB copy_error_log  = true | false\fR
+Enable or disable copying of the error log. When we run in
+embedded mode, that may very well be some other systems process
+that is responsible for writing the errorlog to a file whereas
+when we run in normal standalone mode, we typicall ywant the
+erlang errorlog written to a report.log file.
+Default value is true.
+
+.TP
 \fB username = Username \fR
 When running a Yaws server in production, it may feel safe
 to run yaws as a different user than root. Set this value to a 

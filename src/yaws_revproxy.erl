@@ -240,9 +240,15 @@ ploop(From0, To, GC, SC) ->
 				  rewrite_path(R, From#psock.prefix))
 			end,
 		    Hstr = headers_to_str(H = rewrite_headers(SC, From, H0)),
-		    yaws:gen_tcp_send(TS, [RStr, "\r\n", Hstr, "\r\n"] ,
+		    yaws:gen_tcp_send(TS, [RStr, "\r\n", Hstr] ,
 				      SC,GC),
 		    From2 = sockmode(H, R, From),
+		    if
+			From2#psock.mode == expectchunked ->
+			    true;
+			true ->
+			    yaws:gen_tcp_send(TS,"\r\n",SC,GC)
+		    end,
 		    ploop(From2, To, GC,SC);
 		closed ->
 		    done

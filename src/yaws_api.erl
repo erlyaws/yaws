@@ -909,7 +909,7 @@ set_trace(Val) ->
 set_access_log(Bool) ->
     {ok, GC, Groups} = getconf(),
     Groups2 = lmap(fun(SC) ->
-			   SC#sconf{access_log = Bool}
+			   ?sc_set_access_log(SC, Bool)
 		   end, Groups),
     setconf(GC, Groups2).
 

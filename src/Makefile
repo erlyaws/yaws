@@ -29,7 +29,8 @@ MODULES=yaws \
 	yaws_session_server \
 	yaws_404 \
 	yaws_revproxy \
-	yaws_html 
+	yaws_html  \
+	yaws_log_file_h
 
 
 

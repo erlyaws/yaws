@@ -159,12 +159,13 @@ init([]) ->
 	    case yaws_config:load(Conf, Trace, TraceOut, Debug) of
 		{ok, Gconf, Sconfs} ->
 		    erase(logdir),
-		    ?Debug("Conf = ~p~n", [?format_record(Gconf, gconf)]),
+		    %?Debug("GC = ~p~n", [?format_record(Gconf, gconf)]),
+		    %?Debug("SCS: ~p~n", [Sconfs]),
 		    yaws_log:setdir(Gconf, Sconfs),
 		    case Gconf#gconf.trace of
 			{true, What} ->
 			    yaws_log:open_trace(What),
-			    yaws_api:set_tty_trace(Gconf#gconf.tty_trace);
+			    yaws_api:set_tty_trace(?gc_has_tty_trace(Gconf));
 			_ ->
 			    ok
 		    end,
@@ -336,10 +337,10 @@ terminate(_Reason, _State) ->
 %% specified as an auth directory. These are merged with server conf.
 
 setup_auth(SC) ->
-    ?Debug("setup_auth(~p)", [yaws_debug:nobin(SC)]),
+    %?Debug("setup_auth(~p)", [yaws_debug:nobin(SC)]),
     ?f(lists:map(fun(Auth) ->
 	add_yaws_auth(Auth#auth.dir, Auth)
-end, SC#sconf.authdirs)).
+	end, SC#sconf.authdirs)).
 
 add_yaws_auth(Dirs, A) ->
     lists:map(
@@ -423,7 +424,7 @@ gserv(GC, Group0) ->
 		     ssl = SSLBOOL,
 		     l = Listen},
 	    acceptor(GS),
-	    gserv(GS, [], 0);
+	    gserv_loop(GS, [], 0);
 	{_,Err} ->
 	    error_logger:format("Yaws: Failed to listen ~s:~w  : ~p~n",
 				[yaws:fmt_ip(SC#sconf.listen),
@@ -458,30 +459,30 @@ setup_dirs(GC) ->
 
 
 
-gserv(GS, Ready, Rnum) ->
+gserv_loop(GS, Ready, Rnum) ->
     receive
 	{From , status} ->
 	    From ! {self(), GS},
-	    gserv(GS, Ready, Rnum);
+	    gserv_loop(GS, Ready, Rnum);
 	{_From, next} when Ready == [] ->
 	    acceptor(GS),
-	    gserv(GS, Ready, Rnum);
+	    gserv_loop(GS, Ready, Rnum);
 	{_From, next} ->
 	    [R|RS] = Ready,
 	    R ! {self(), accept},
-	    gserv(GS, RS, Rnum-1);
+	    gserv_loop(GS, RS, Rnum-1);
 	{From, done_client, Int} ->
 	    GS2 = GS#gs{sessions = GS#gs.sessions + 1,
 			reqs = GS#gs.reqs + Int},
 	    if
 		Rnum == 8 ->
 		    From ! {self(), stop},
-		    gserv(GS2, Ready, Rnum);
+		    gserv_loop(GS2, Ready, Rnum);
 		Rnum < 8 ->
-		    gserv(GS2, [From | Ready], Rnum+1)
+		    gserv_loop(GS2, [From | Ready], Rnum+1)
 	    end;
 	{'EXIT', _Pid, _} ->
-	    gserv(GS, Ready, Rnum);
+	    gserv_loop(GS, Ready, Rnum);
 	{From, stop} ->   
 	    unlink(From),
 	    {links, Ls} = process_info(self(), links),
@@ -525,7 +526,6 @@ ssl_opts(SC, SSL) ->
 	    {ip, SC#sconf.listen},
 	    {packet, 0},
 	    {active, false} | ssl_opts(SSL)],
-    ?Debug("SSL opts  ~p~n", [Opts]),
     Opts.
 
 
@@ -587,7 +587,6 @@ acceptor(GS) ->
 acceptor0(GS, Top) ->
     ?TC([{record, GS, gs}]),
     X = do_accept(GS),
-    ?Debug("do_accept ret: ~p~n", [X]),
     Top ! {self(), next},
     case X of
 	{ok, Client} ->
@@ -607,7 +606,6 @@ acceptor0(GS, Top) ->
 	    end,
 
 	    Res = (catch aloop(Client, GS,  0)),
-	    ?Debug("RES = ~p~n", [Res]),
 	    if
 		GS#gs.ssl == nossl ->
 		    gen_tcp:close(Client);
@@ -652,7 +650,7 @@ aloop(CliSock, GS, Num) ->
 	    ?TC([{record, SC, sconf}]),
 	    ?Debug("Headers = ~p~n", [?format_record(H, headers)]),
 	    ?Debug("Request = ~p~n", [?format_record(Req, http_request)]),
-	    IP = case SC#sconf.access_log of
+	    IP = case ?sc_has_access_log(SC) of
 		     true ->
 			 {ok, {Ip, _Port}} = peername(CliSock, SSL),
 			 Ip;
@@ -668,7 +666,7 @@ aloop(CliSock, GS, Num) ->
     end.
 
 
-handle_method_result(Res, CliSock, IP, GS, SC, Req, H, Num) ->
+erase_transients() ->
     erase(post_parse),
     erase(query_parse),
     erase(outh),
@@ -679,15 +677,22 @@ handle_method_result(Res, CliSock, IP, GS, SC, Req, H, Num) ->
 			      _ ->
 					  ok
 			  end
-		  end, get()),
+		  end, get()).
+    
+
+handle_method_result(Res, CliSock, IP, GS, SC, Req, H, Num) ->
     case Res of
 	continue ->
 	    maybe_access_log(IP, SC, Req, H),
+	    erase_transients(),
 	    aloop(CliSock, GS, Num+1);
 	done ->
 	    maybe_access_log(IP, SC, Req, H),
+	    erase_transients(),
 	    {ok, Num+1};
 	{page, P} ->		    
+	    erase(post_parse),
+	    erase(query_parse),
 	    put(outh, #outh{}),
 	    case P of
 		{Options, Page} ->
@@ -764,7 +769,7 @@ inet_peername(Sock, SC) ->
 
 
 maybe_auth_log(GC, SC, Item, ARG) ->
-    case GC#gconf.auth_log of
+    case ?gc_has_auth_log(GC) of
 	false ->
 	    ok;
 	true ->
@@ -794,7 +799,7 @@ maybe_auth_log(GC, SC, Item, ARG) ->
 
 maybe_access_log(Ip, SC, Req, H) ->
     ?TC([{record, SC, sconf}]),
-    case SC#sconf.access_log of
+    case ?sc_has_access_log(SC) of
 	true ->
 	    Status = case yaws:outh_get_status_code() of
 			 undefined -> "-";
@@ -886,7 +891,6 @@ bad_request(CliSock, GC, SC, Req, Head) ->
 %% ret:  continue | done
 'GET'(CliSock, GC, SC, Req, Head) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
-    ?Debug("GET ~p", [?format_record(Req, http_request)]),
     ok = inet_setopts(SC, CliSock, [{packet, raw}, binary]),
     flush(SC, CliSock, Head#headers.content_length),
     ARG = make_arg(CliSock, Head, Req, GC, SC, undefined),
@@ -1108,7 +1112,7 @@ handle_ut(CliSock, GC, SC, ARG, UT, N) ->
 			     fun(A)->finish_up_dyn_file(CliSock, GC, SC)
 			     end
 			    );
-	directory when SC#sconf.dir_listings == true ->
+	directory when ?sc_has_dir_listings(SC) ->
 	    P = UT#urltype.dir,
 	    yaws:outh_set_dyn_headers(Req, H),
 	    yaws_ls:list_directory(CliSock, UT#urltype.data, P, Req, GC, SC);
@@ -2438,7 +2442,7 @@ cache_file(GC, SC, Path, UT) when
 		    {ok, Bin} = prim_file:read_file(
 				  UT#urltype.fullpath),
 		    Deflated = 
-			case SC#sconf.deflate 
+			case ?sc_has_deflate(SC)
 			    and (UT#urltype.type==regular) of
 			    true ->
 				case zlib:gzip(Bin) of
@@ -2579,7 +2583,7 @@ ret_app_mod(_SC, Path, Mod, PrePath) ->
 
 
 %% http://a.b.c/~user URLs
-ret_user_dir(SC, [], "/", Upath) when SC#sconf.tilde_expand == true ->
+ret_user_dir(SC, [], "/", Upath) when ?sc_has_tilde_expand(SC) ->
     ?Debug("UserPart = ~p~n", [Upath]),
     case parse_user_path(SC#sconf.docroot, Upath, []) of
 	{ok, User, Path} ->
@@ -2643,7 +2647,7 @@ ret_reg_split(SC, Comps, RevFile) ->
 		{X, Mime} ->
 		    #urltype{type=X, 
 			     finfo=FI,
-			     deflate=deflate_q(SC#sconf.deflate, X, Mime),
+			     deflate=deflate_q(?sc_has_deflate(SC), X, Mime),
 			     path = {noflat, [DR, Dir]},
 			     dir = FlatDir,
 			     fullpath = lists:flatten(L),
@@ -2768,7 +2772,7 @@ runmod(_, GC) ->
 runmod2(GC, Mods) ->
     lists:foreach(fun(M) -> 
 			  proc_lib:spawn(?MODULE, load_and_run, 
-					 [M, GC#gconf.debug])
+					 [M, ?gc_has_debug(GC)])
 		  end, Mods).
 
 

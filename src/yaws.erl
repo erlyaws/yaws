@@ -1592,7 +1592,7 @@ gen_tcp_send(S, Data, SC, GC) ->
 	      _SSL ->
 		  ssl:send(S, Data)
 	  end,
-    case GC#gconf.debug of
+    case ?gc_has_debug(GC) of
 	false ->
 	    case Res of
 		ok ->
@@ -1852,6 +1852,11 @@ uid_change_files(GC, Dir, Files) ->
     end.
 
 
+
+flag(CurFlag, Bit, true) ->
+    CurFlag bor Bit;
+flag(CurFlag, Bit, false) ->
+    CurFlag band (bnot Bit).
 
 
 

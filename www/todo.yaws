@@ -12,18 +12,21 @@ out(A) ->
 <ul>
 
 <li> respect client side Cache-Control: no-cache
-<li> clusters 
-<li> handle the If-..... headers 
-<li> handle Range header
+<li> clusters, it would be fairly straightforward
+to build support for webfarms into yaws. Now it works
+ofcource with a normal loadbalancer and mnesia across a set
+of nodes, but we could migrate IPs and stuff as well. 
 <li> TRACE, PUT, OPTIONS ......
 <li> more documentation in the www directory
-<li> more functions in yaws_api  push() ....
-<li> lots of examples
+<li> redo the docs completely, docbook ??
+<li> more functions in yaws_api  
+<li> lots of examples, mnesia examples.
 <li> do something cool, maybe a streaming audio app
-<li> shell access into the daemon .... no bad idea
-<li> HTTP trailer support
-<li> substitution in ssi pages as well as regular pages
-<li> a CGI interface
+<li> shell access into the daemon .... no bad idea .. ?? Maybe using
+distributed erlang to do that. 
+<li> HTTP trailer support (why ??)
+<li> webdav, lots of work.
+<li> content negotiation / language support
 </ul>
 
 

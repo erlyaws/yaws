@@ -53,23 +53,19 @@ load({file, File}, Trace, TraceOutput, Debug) ->
     case file:open(File, [read]) of
 	{ok, FD} ->
 	    GC = make_default_gconf(Debug),
-	    R = (catch fload(FD, globals, GC#gconf{file = File,
-						   trace = Trace,
-						   tty_trace = 
-						   if
-						       TraceOutput==undefined->
-							   false;
-						       true ->
-							   true
-						   end,
-						   debug = Debug
-						  }, 
-			     undefined, 
+	    GC2 = if TraceOutput == undefined ->
+			  GC;
+		     true ->
+			  ?gc_set_tty_trace(GC,true)
+		  end,
+	    GC3 =  ?gc_set_debug(GC2, Debug),
+	    GC4 = GC3#gconf{trace = Trace},
+	    R = (catch fload(FD, globals, GC4, undefined, 
 			     [], 1, io:get_line(FD, ''))),
 	    ?Debug("FLOAD: ~p", [R]),
 	    case R of
-		{ok, GC2, Cs} ->
-		    validate_cs(GC2, Cs);
+		{ok, GC5, Cs} ->
+		    validate_cs(GC5, Cs);
 		Err ->
 		    Err
 	    end;
@@ -102,16 +98,13 @@ validate_groups([H|T]) ->
     end.
 
 validate_group(List) ->
-    
     %% first, max one ssl per group
-    ?Debug("List = ~p~n", [List]),
-
-    case lists:filter(fun(C) ->
-			      C#sconf.ssl /= undefined 
+    case lists:filter(fun(SC) -> 
+			      SC#sconf.ssl /= undefined 
 		      end, List) of
 	L when length(L) > 1 ->
 	    throw({error, ?F("Max one ssl server per IP: ~p", 
-			     [(hd(L))#sconf.servername])});
+		   [(hd(L))#sconf.servername])});
 	_ ->
 	    ok
     end,
@@ -134,33 +127,33 @@ arrange([C1|Tail], {in, C0}, A, B) ->
     end.
 
 
-set_server(C) ->
-    case {C#sconf.ssl, C#sconf.port, C#sconf.add_port} of
+set_server(SC) ->
+    case {SC#sconf.ssl, SC#sconf.port, ?sc_has_add_port(SC)} of
 	{undefined, 80, _} ->
-	    C;
+	    SC;
 	{undefined, Port, true} ->
-	    add_port(C, Port);
+	    add_port(SC, Port);
 	{_SSL, 443, _} ->
-	    C;
+	    SC;
 	{_SSL, Port, true} ->
-	    add_port(C, Port);
+	    add_port(SC, Port);
 	{_,_,_} ->
-            C
+            SC
     end.
 
 
-add_port(C, Port) ->
-    case string:tokens(C#sconf.servername, ":") of
+add_port(SC, Port) ->
+    case string:tokens(SC#sconf.servername, ":") of
 	[Srv, Prt] ->
 	    case (catch list_to_integer(Prt)) of
 		{'EXIT', _} ->
-		    C#sconf{servername = 
-			    Srv ++ [$:|integer_to_list(Port)]};
+		    SC#sconf{servername = 
+			     Srv ++ [$:|integer_to_list(Port)]};
 		_Int ->
-		    C
+		    SC
 	    end;
 	[Srv] ->
-	  C#sconf{servername =   Srv ++ [$:|integer_to_list(Port)]}
+	    SC#sconf{servername =   Srv ++ [$:|integer_to_list(Port)]}
     end.
 
 
@@ -176,8 +169,11 @@ make_default_gconf(Debug) ->
 				    true ->
 					30
 				end,
-	   debug = Debug,
-	   trace = false,
+	   flags = if Debug ->
+			   ?GC_DEBUG bor ?GC_AUTH_LOG bor ?GC_COPY_ERRLOG;
+		      true ->
+			   ?GC_AUTH_LOG bor ?GC_COPY_ERRLOG
+		   end,
 	   uid = element(2, yaws:getuid()),
 	   yaws = "Yaws " ++ yaws_vsn:version()}.
 
@@ -266,7 +262,6 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}
 	    end;
 
-
 	%% keep this bugger for backward compat for a while
 	["keepalive_timeout", '=', Val] ->
 	    case (catch list_to_integer(Val)) of
@@ -333,10 +328,19 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 			  C, Cs, Lno+1, Next)
 	    end;
 
+	["copy_error_log", '=', Bool] ->
+	    case is_bool(Bool) of
+		{true, Val} ->
+		    fload(FD, globals, ?gc_set_copy_errlog(GC, Val),
+			  C, Cs, Lno+1, Next);
+		false ->
+		    {error, ?F("Expect true|false at line ~w", [Lno])}
+	    end;
+
 	["auth_log", '=', Bool] ->
 	    case is_bool(Bool) of
 		{true, Val} ->
-		    fload(FD, globals, GC#gconf{auth_log = Bool},
+		    fload(FD, globals, ?gc_set_auth_log(GC, Val),
 			  C, Cs, Lno+1, Next);
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}
@@ -361,7 +365,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	["access_log", '=', Bool] ->
 	    case is_bool(Bool) of
 		{true, Val} ->
-		    C2 = C#sconf{access_log = Val},
+		    C2 = ?sc_set_access_log(C, Val),
 		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}
@@ -369,7 +373,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	["dir_listings", '=', Bool] ->
 	    case is_bool(Bool) of
 		{true, Val} ->
-		    C2 = C#sconf{dir_listings = Val},
+		    C2 = ?sc_set_dir_listings(C, Val),
 		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}
@@ -377,7 +381,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	["deflate", '=', Bool] ->
 	    case is_bool(Bool) of
 		{true, Val} ->
-		    C2 = C#sconf{deflate = Val},
+		    C2 = ?sc_set_deflate(C, Val),
 		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}
@@ -413,7 +417,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		    fload(FD, server, GC, C2, Cs, Lno+1, Next)
 	    end;
 	["servername", '=', Name] ->
-	    C2 = C#sconf{servername = Name, add_port=false},
+	    C2 = ?sc_set_add_port((C#sconf{servername = Name}),false),
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 	["docroot", '=', Rootdir] ->
 	    Root = filename:absname(Rootdir),
@@ -467,7 +471,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	["tilde_expand", '=', Bool] ->
 	    case is_bool(Bool) of
 		{true, Val} ->
-		    C2 = C#sconf{tilde_expand = Val},
+		    C2 = ?sc_set_tilde_expand(C,Val),
 		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}

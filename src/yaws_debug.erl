@@ -28,10 +28,6 @@ typecheck([], _,_) ->
     ok.
 
 
-
-
-
-
 %% returns {record, RecName, [Field1, Val1} .....]
 format_record(Record, Name, Fields) ->
     case tuple_to_list(Record) of
@@ -47,9 +43,6 @@ format_record([], []) ->
 format_record([Val|Vals], [F|Fs]) ->
     [{F, ?F("~p", [nobin(Val)])} |
      format_record(Vals, Fs)].
-
-
-
 
 
 
@@ -123,35 +116,20 @@ fail({format, File,Line,Fmt,Args}) ->
     end.
 
 
+format(GC, F, A)  when ?gc_has_debug(GC) ->
+    io:format(F, A);
+format(_,_,_) ->
+    ok.
 
+derror(GC, F, A) when ?gc_has_debug(GC) ->
+    error_logger:error_msg(F, A);
+derror(_,_,_) ->
+    ok.
 
-format(GC, F, A)  ->
-    if
-	GC#gconf.debug == true ->
-	    io:format(F, A);
-	true ->
-	    ok
-    end.
-
-
-derror(GC, F, A) ->
-    if
-	GC#gconf.debug == true ->
-	    error_logger:error_msg(F, A);
-	true ->
-	    ok
-    end.
-
-
-dinfo(GC, F, A) ->
-    if
-	GC#gconf.debug == true ->
-	    error_logger:info_msg(F, A);
-	true ->
-	    ok
-    end.
-
-
+dinfo(GC, F, A) when ?gc_has_debug(GC) ->
+    error_logger:info_msg(F, A);
+dinfo(_,_,_) ->
+    ok.
 
 
 mktags() ->
@@ -196,7 +174,6 @@ eprof() ->
     eprof:start(),
     eprof:profile(pids()),
     io:format("Ok run some traffic \n", []).
-			  
 			  
 
 
