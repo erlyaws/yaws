@@ -6,6 +6,8 @@ all debug:	../bin/yaws
 ../bin/yaws:	yaws.ss
 	@sh ./mangle `pwd`/.. $(ERL) yaws.ss ../bin/yaws
 	@chmod +x ../bin/yaws
+
+local_install:	../bin/yaws
 	@if [ -f $$HOME/yaws.conf ]; \
            then echo "$$HOME/yaws.conf already exists ";  \
         else \

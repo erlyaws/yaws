@@ -10,6 +10,10 @@ all debug clean install:
 	  done
 
 
+
+local_install: all
+	(cd scripts && $(MAKE) local_install)
+
 apps:
 	for a in $(APPS) ; do
 		if [ -f applications/$$a/Makefile ]; then \

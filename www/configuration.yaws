@@ -38,7 +38,10 @@ checkout the bleeding edge source, build it and install it at
 <p>Give return as password.
 
 <p>Just <tt>make</tt> (without install) 
-will build the yaws system and do a local
+will build the yaws system and 
+
+<tt>make local_install</tt>
+does a local
 install at http://127.0.0.1:8000. This is the typical mode of operation
 while either just trying out yaws, or hacking yaws. This will install
 a template configuration file <tt>yaws.conf</tt> in $HOME.
