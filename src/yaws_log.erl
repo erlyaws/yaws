@@ -325,7 +325,7 @@ fmt_alog(Time, Ip, Req, Status,  Length, Referrer, UserAgent) ->
 
 fmtnow() ->
     {{Year, Month, Date}, {Hour, Min, Sec}} = calendar:local_time(),
-    io_lib:format("[~w/~s/~w:~2..0w:~2..0w:~2..0w ~s]",
+    io_lib:format("[~2..0w/~s/~4..0w:~2..0w:~2..0w:~2..0w ~s]",
 		  [Date,yaws:month(Month),Year, Hour, Min, Sec, zone()]).
 
 zone() ->
