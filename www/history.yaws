@@ -1,0 +1,26 @@
+
+<erl>
+
+out(A) -> 
+    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
+	    
+</erl>
+
+
+<H2>History</h2>
+
+<table border="2">
+
+<tr><td> Feb 14, 2002 redid HTML tables for top docs    </td></tr>
+<tr><td> Feb 13, 2002 released first version to the net 0.20    </td></tr>
+<tr><td> Feb 12, 2002 cached pages in RAM (ets tables)    </td></tr>
+<tr><td> Feb 7, 2002 added virtual hosting capabilities    </td></tr>
+<tr><td> Feb 6, added query strings in URLs passed in #arg{}    </td></tr>
+<tr><td> Feb 5, 2002 added directory listings    </td></tr>
+<tr><td> Jan 15, 2002. Started to hack the thing </td></tr>
+</table>
+
+<erl>
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+</erl>
+
