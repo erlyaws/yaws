@@ -72,7 +72,12 @@ addFileChunk(A, [{head, {foo, Opts}}|Res], State ) ->
     case lists:keysearch(filename, 1, Opts) of
 	{value, {_, Fname0}} ->
 	    Fname = basename(Fname0),
-	    case file:open(Fname ,[write]) of
+
+	    %% we must not put the file in the
+	    %% docroot, it may execute uploade code if the
+	    %% file is a .yaws file !!!!!
+
+	    case file:open(["/tmp/", Fname] ,[write]) of
 		{ok, Fd} ->
 		    S2 = State#upload{filename = Fname,
 				      fd = Fd},
