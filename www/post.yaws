@@ -55,8 +55,10 @@ out(A) ->
         {hr},
         {'div',[{class,"box"}],
           {p,[], ["The favourite programming language is ", 
-                  postvar(A,"lang")]}}
-
+              case postvar(A,"lang") of
+                  undefined -> "None";
+                  {ok, Val} -> Val
+              end]}}
          ]},
         {ssi, "END",[],[]}].
 

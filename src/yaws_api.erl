@@ -1218,6 +1218,8 @@ ehtml_expand({Tag, Attrs, Body}) when atom(Tag) ->
 ehtml_expand([H|T]) -> [ehtml_expand(H)|ehtml_expand(T)];
 ehtml_expand([]) -> [].
 
+
+
 ehtml_attrs([]) -> [];
 ehtml_attrs([Attribute|Tail]) when atom(Attribute) ->
     [[$ |atom_to_list(Attribute)]|ehtml_attrs(Tail)];

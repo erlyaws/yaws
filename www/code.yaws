@@ -3,17 +3,15 @@
 
 out(A) -> 
     Head = yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]),
-    
-    L = yaws_api:parse_query(A),
-    {Code, F} = case lists:keysearch(file, 1, L) of
-		    {value, {_, Fname}} ->
+    {Code, F} = case queryvar(A, "file") of
+		    {ok, Fname} ->
 			case file:read_file(A#arg.docroot ++ undot(Fname)) of
 			    {ok, B} ->
 				{yaws_api:pre_ssi_string(binary_to_list(B),"box"), Fname};
 			    _ ->
 				{[], "Can't read " ++ Fname }
 			end;
-		    false ->
+		    undefined ->
 			{[], "Bad request"}
 		end,
     Trail = yaws_api:ssi(A#arg.docroot, ["/END"]),

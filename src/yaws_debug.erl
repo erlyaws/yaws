@@ -186,43 +186,75 @@ eprof() ->
 			  
 
 
-%% not used
-check_headers(L) ->
-    Hs = string:tokens(lists:flatten(L), "\r\n"),
-    io:format("XX ~p~n", [Hs]),
-    lists:foreach(
-      fun(H) ->
-	  case lists:reverse(H) of
-	      [_,_,$\r|_] ->
-		  error_logger:error_msg("Bad header ~p, it contains"
-					      " '\\r' or '\\n' at end ", 
-					      [lists:flatten(H)]),
-		  exit(normal);
-	      [_,_,$\n|_] ->
-		  error_logger:error_msg("Bad header ~p, it contains"
-					      " '\\r' or '\\n' at end ", 
-					      [lists:flatten(H)]),
-		  exit(normal);
-	      _ ->
-		  ok
-	  end
-      end, Hs).
+-define(h_check(H, Field),
+	f_check(H#outh.Field, Field)).
+
+f_check(undefined, _Field) ->
+    ok;
+f_check(Str, Field) ->
+    case lists:reverse(lists:flatten(Str)) of
+	[$\n, $\r , H | _Tail] ->
+	    case lists:member(H, [$\n, $\r]) of
+		true ->
+		    error_logger:format("Bad <~p> header:~n"
+					"  ~p~nToo many newlines",
+					[Field, Str]),
+		    exit(normal);
+		false ->
+		    ok
+	    end;
+	Other ->
+	    error_logger:format("Bad <~p> header:~n"
+				"~p~nNot ending with CRNL~n",
+				[Field, Str]),
+	    exit(normal)
+    end.
+
+check_headers(H) ->
+    ?h_check(H, connection),
+    ?h_check(H, server),
+    ?h_check(H, location),
+    ?h_check(H, cache_control),
+    ?h_check(H, date),
+    ?h_check(H, allow),
+    ?h_check(H, last_modified),
+    ?h_check(H, etag),
+    ?h_check(H, content_range),
+    ?h_check(H, content_length),
+    ?h_check(H, content_encoding),
+    ?h_check(H, set_cookie),
+    ?h_check(H, transfer_encoding),
+    ?h_check(H, www_authenticate),
+    check_other(H#outh.other).
 
 
-check_headers([$\r, $\n |Tail], Last) when Tail /= [] ->
-    case lists:member(hd(Tail), [$\r, $\n]) of
-	true ->
-	     error_logger:error_msg("Bad header ~p, it contains"
-			     " '\\r' or '\\n' at end ", [lists:reverse(Last)]),
-	    exit(normal);
-	_ ->
-	    check_headers(Tail, [])
-    end;
+check_other(undefined) ->
+    ok;
+check_other(L0) ->
+    L = lists:flatten(L0),
+    case lists:dropwhile(fun(X) -> not lists:member(X, ["\r\n"]) end, L) of
+	[] ->
+	    ok;
+	[$\r, $\n, H | _Tail] ->
+	     case lists:member(H, [$\n, $\r]) of
+		true ->
+		     bad_other(L);
+		 false ->
+		     ok
+	     end;
+	_Other ->
+	    bad_other(L)
+    end.
 
-check_headers([H|T], Last) ->
-    check_headers(T, [H|Last]);
-check_headers([], _) ->
-    ok.
+
+bad_other(L) ->
+     Bad = lists:takewhile(
+	     fun(X) -> not lists:member(X, ["\r\n"]) end, L),
+    error_logger:format("Bad header:~p~n"
+			"Too many newlines",
+			[Bad]),
+    exit(normal).
+
 
 
 

@@ -1333,6 +1333,12 @@ outh_serialize() ->
 	   end,
     StatusLine = ["HTTP/1.1 ", integer_to_list(Code), " ",
 		  yaws_api:code_to_phrase(Code), "\r\n"],
+    GC=get(gc),
+    if ?gc_has_debug(GC) ->
+	    yaws_debug:check_headers(H);
+       true ->
+	    ok
+    end,
     Headers = [noundef(H#outh.connection),
 	       noundef(H#outh.server),
 	       noundef(H#outh.location),

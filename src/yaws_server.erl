@@ -149,6 +149,7 @@ l2a(A) when atom(A) -> A.
 %%          ignore               |
 %%          {stop, Reason}
 %%----------------------------------------------------------------------
+
 init([]) ->
     process_flag(trap_exit, true),
     put(start_time, calendar:local_time()),  %% for uptime
@@ -187,22 +188,25 @@ init([]) ->
     end.
 
 
-init2(Gconf, Sconfs, RunMod, FirstTime) ->
-    put(gc, Gconf),
+init2(GC, Sconfs, RunMod, FirstTime) ->
+    put(gc, GC),
     lists:foreach(
       fun(D) ->
 	      yaws_debug:format("Add path ~p~n", [D]),
 	      code:add_pathz(D)
-      end, Gconf#gconf.ebin_dir),
-    yaws_debug:format("Running with id=~p~n", [Gconf#gconf.id]),
-    setup_dirs(Gconf),
-    yaws_ctl:start(Gconf, FirstTime),
-    runmod(RunMod, Gconf),
+      end, GC#gconf.ebin_dir),
+    yaws_debug:format("Running with id=~p~n"
+		      "Running with debug checks turned on (slower server) ~n"
+		      "Logging to directory ~p~n",
+		      [GC#gconf.id, GC#gconf.logdir]),
+    setup_dirs(GC),
+    yaws_ctl:start(GC, FirstTime),
+    runmod(RunMod, GC),
 
     %% start the individual gserv server processes
     L = lists:map(
 	  fun(Group) ->
-		  proc_lib:start_link(?MODULE, gserv, [Gconf, Group])
+		  proc_lib:start_link(?MODULE, gserv, [GC, Group])
 	  end, Sconfs),
     L2 = lists:zf(fun({error, F, A}) ->	
 			  error_logger:error_msg(F, A),
@@ -216,18 +220,18 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 			  false
 		  end, L),
     ?Debug("L=~p~n", [yaws_debug:nobin(L)]),
-    yaws_log:uid_change(Gconf),
+    yaws_log:uid_change(GC),
     
 
     %% and now finally, we've opened the ctl socket and are
     %% listening to all sockets we can possibly change uid
 
-    GC2 = case (catch yaws:setuser(Gconf#gconf.username)) of
+    GC2 = case (catch yaws:setuser(GC#gconf.username)) of
 	      ignore ->
-		  Gconf;
+		  GC;
 	      {ok, NewUid} ->
 		  error_logger:info_msg("Changed uid to ~s~n", [NewUid]),
-		  Gconf#gconf{uid = NewUid};
+		  GC#gconf{uid = NewUid};
 	      Other ->
 		  error_logger:error_msg("Failed to set user:~n~p", [Other]),
 		  exit(Other)

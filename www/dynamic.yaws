@@ -197,13 +197,13 @@ out(A) ->
 	 {li,[],
 	  [{p,[], 
 	    [{a, [{href, "index.yaws"}], "The top page, index.yaws"},
-	     " and then the",
+	     " and then the ",
 	     {a, [{href, "code.yaws?file=/index.yaws"}], "corresponding source"}]}]},
 	 
 	 {li,[],
 	  [{p,[], 
 	    [{a, [{href, "dynamic.yaws"}], "This page, dynamic.yaws"},
-	     " and then the",
+	     " and then the ",
 	     {a, [{href, "code.yaws?file=/dynamic.yaws"}], "corresponding source"}]}]}
 	 ]},
        

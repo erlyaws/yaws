@@ -39,7 +39,8 @@ How many tabs to you indent? <input NAME="tabs" TYPE=int>
 
 Your email <input NAME="contact" SIZE="42">
 
-<p>Many thanks on behalf of the Windows central support team.
+<p>Submit this POST to get an explanation of how to process the
+POSTed data.
 
     <p><input TYPE=submit> <input TYPE=reset>
 
