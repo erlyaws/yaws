@@ -4,8 +4,8 @@
 # these the items can be edited
 
 INSTALLPREFIX=/usr/local
-ERL=/opt/bin/erl
-ERLC=/opt/bin/erlc
+ERL=$(shell which erl)
+ERLC=$(shell which erlc)
 
 
 ## don't edit below here
