@@ -494,13 +494,17 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 		Rnum < 8 ->
 		    gserv_loop(GS2, [From | Ready], Rnum+1, Last)
 	    end;
-	{'EXIT', Pid, _} ->
+	{'EXIT', Pid, Reason} ->
 	    case get(top) of
-		Pid -> 
+		Pid when Reason /= shutdown -> 
 		    error_logger:format("Top proc died, terminate gserv",[]),
 		    {links, Ls} = process_info(self(), links),
 		    foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
 		    exit(noserver);
+		Pid ->
+		    {links, Ls} = process_info(self(), links),
+		    foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
+		    exit(normal);
 		_ ->
 		    gserv_loop(GS, Ready, Rnum, Last)
 	    end;
