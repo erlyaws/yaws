@@ -137,13 +137,13 @@ send(Session, To, Cc, Bcc, Subject, Msg) ->
     Date = date_and_time_to_string(yaws:date_and_time()),
     MailDomain = maildomain(),
     Headers =
-	(mail_header("To: ", To) ++
-	 mail_header("From: ", Session#session.user++"@"++MailDomain) ++
-	 mail_header("Cc: ", Cc) ++
-	 mail_header("Bcc: ", Bcc) ++
-	 mail_header("Subject: ", Subject) ++
-	 mail_header("Content-Type: ", "text/plain") ++
-	 mail_header("Content-Transfer-Encoding: ", "8bit")),
+	[mail_header("To: ", To),
+	 mail_header("From: ", Session#session.user++"@"++MailDomain),
+	 mail_header("Cc: ", Cc),
+	 mail_header("Bcc: ", Bcc),
+	 mail_header("Subject: ", Subject),
+	 mail_header("Content-Type: ", "text/plain"),
+	 mail_header("Content-Transfer-Encoding: ", "8bit")],
     Message = io_lib:format("~sDate: ~s\r\n\r\n~s\r\n.\r\n",
 			    [Headers, Date, Msg]),
     case smtp_send(smtpserver(), Session, Recipients, Message) of
@@ -774,9 +774,19 @@ session_server() ->
 session_manager_init() ->
     {X,Y,Z} = seed(),
     random:seed(X, Y, Z),
-    session_manager([], read_config()).
+    session_manager([], now(), read_config()).
 
-session_manager(C, Cfg) ->
+session_manager(C0, LastGC0, Cfg) ->
+    %% Check GC first to avoid GC starvation.
+    GCDiff = diff(LastGC0,now()),
+    {LastGC, C} =
+	if GCDiff > 5000 ->
+		C2 = session_manager_gc(C0, Cfg),
+		{now(), C2};
+	   true ->
+		{LastGC0, C0}
+	end,
+
     receive
 	{get_session, Cookie, From} ->
 	    case lists:keysearch(Cookie, 1, C) of
@@ -785,43 +795,46 @@ session_manager(C, Cfg) ->
 		false ->
 		    From ! {session_manager, error}
 	    end,
-	    session_manager(C, Cfg);
+	    session_manager(C, LastGC, Cfg);
 	{new_session, Session, From} ->
 	    Cookie = integer_to_list(random:uniform(1 bsl 50)),
 	    From ! {session_manager, Cookie},
 	    session_manager([{Cookie, Session#session{cookie=Cookie},
-			      now()}|C], Cfg);
+			      now()}|C], LastGC, Cfg);
 	{tick_session, Cookie} ->
 	    case lists:keysearch(Cookie, 1, C) of
 		{value, {Cookie,Session,_}} ->
 		    session_manager(
 		      lists:keyreplace(Cookie,1,C,
-				       {Cookie,Session,now()}), Cfg);
+				       {Cookie,Session,now()}), LastGC, Cfg);
 		false ->
-		    session_manager(C, Cfg)
+		    session_manager(C, LastGC, Cfg)
 	    end;
 	{del_session, Cookie} ->
-	    C2 = lists:keydelete(Cookie, 1, C),
-	    session_manager(C2, Cfg);
+	    C3 = lists:keydelete(Cookie, 1, C),
+	    session_manager(C3, LastGC, Cfg);
 	{From, cfg , Req} ->
 	    sm_reply(Req, From, Cfg),
-	    session_manager(C, Cfg)
+	    session_manager(C, LastGC, Cfg)
 
     after
 	5000 ->
 	    %% garbage collect sessions
-	    C2 = lists:zf(fun(Entry={Cookie,Session,Time}) ->
-				  Diff = diff(Time,now()),
-				  TTL = Cfg#cfg.ttl,
-				  if Diff > TTL ->
-					  false;
-				     true ->
-					  {true, Entry}
-				  end
-			  end, C),
-	    session_manager(C2, Cfg)
+	    C3 = session_manager_gc(C, Cfg),
+	    session_manager(C3, now(), Cfg)
     end.
 
+
+session_manager_gc(C, Cfg) ->
+    lists:zf(fun(Entry={Cookie,Session,Time}) ->
+		     Diff = diff(Time,now()),
+		     TTL = Cfg#cfg.ttl,
+		     if Diff > TTL ->
+			     false;
+			true ->
+			     {true, Entry}
+		     end
+	     end, C).    
 
 sm_reply(ttl, From, Cfg) -> 
     From ! {session_manager, Cfg#cfg.ttl};
