@@ -1740,6 +1740,13 @@ handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _SC, _A) ->
 handle_out_reply(break, _LineNo, _YawsFile, _SC, _A) ->
     break;
 
+handle_out_reply({redirect_local, {net_path, URL}}, _LineNo,
+		  _YawsFile, _SC, _A) ->
+    Loc = ["Location: ", URL, "\r\n"],
+    OH = get(outh),
+    new_redir_h(OH, Loc),
+    ok;
+
 handle_out_reply({redirect_local, Path0}, _LineNo, _YawsFile, SC, A) ->
     Arg = hd(A),
     Path = case Path0 of
