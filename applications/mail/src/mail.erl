@@ -20,7 +20,6 @@
 -include("../../../include/yaws_api.hrl").
 -include("defs.hrl").
 
-
 -record(info,
 	{
 	  nr,
@@ -32,11 +31,13 @@
 	{
 	  from="",
 	  from_fmt="",
+	  from_fmt_lc="",
 	  to="",
 	  cc="",
 	  bcc="",
 	  subject="",
 	  subject_fmt="",
+	  subject_fmt_lc="",
 	  date="",
 	  date_pst=date(),
 	  date_fmt="",
@@ -718,17 +719,17 @@ summary_compare(A,B,size) ->
 summary_compare(A,B,from) ->
     Ha = A#info.headers,
     Hb = B#info.headers,
-    if Ha#mail.from_fmt < Hb#mail.from_fmt ->
+    if Ha#mail.from_fmt_lc < Hb#mail.from_fmt_lc ->
 	    true;
-       Ha#mail.from_fmt == Hb#mail.from_fmt ->
+       Ha#mail.from_fmt_lc == Hb#mail.from_fmt_lc ->
 	    summary_compare(A,B,date);
        true -> false
     end;
 summary_compare(A,B,subject) ->
     Ha = A#info.headers,
     Hb = B#info.headers,
-    case summary_compare_subject(Ha#mail.subject_fmt,
-				 Hb#mail.subject_fmt) of
+    case summary_compare_subject(Ha#mail.subject_fmt_lc,
+				 Hb#mail.subject_fmt_lc) of
 	true  ->  true;
 	eq    ->  summary_compare(A,B,date);
 	false ->  false
@@ -776,10 +777,11 @@ format_summary_line(I) ->
 	{font,[{size,2},{color,black}],{b,[],integer_to_list(I#info.size)}}}}
      ]}.
 
-format_from(From) ->
+format_from(From0) ->
+    From = lists:flatten(From0),
     case string:chr(From,$<) of
 	0 ->
-	    From;
+	    string:strip(From);
 	N ->
 	    NewF=string:strip(unquote(decode(string:substr(From,1,N-1)))),
 	    if 
@@ -822,30 +824,33 @@ format_list([E]) -> E;
 format_list([E|Es]) ->
     E++","++format_list(Es).
 
-decode([]) -> [];
-decode([$=,$?|Rest]) ->
-    decode_scan(Rest);
-decode([C|Cs]) ->
-    [C | decode(Cs)].
+decode(Text) ->
+    decode(Text, []).
 
-decode_scan([]) -> [];
-decode_scan([$?,$b,$?|Rest]) ->
-    decode_b64(Rest,[]);
-decode_scan([$?,$B,$?|Rest]) ->
-    decode_b64(Rest,[]);
-decode_scan([$?,$q,$?|Rest]) ->
-    decode_q(Rest,[]);
-decode_scan([$?,$Q,$?|Rest]) ->
-    decode_q(Rest,[]);
-decode_scan([$?,_,$?|Rest]) ->
-    decode(Rest);
-decode_scan([_|Rest]) ->
-    decode_scan(Rest).
+decode([], Acc) -> lists:reverse(Acc);
+decode([$=,$?|Rest], Acc) ->
+    decode_scan(Rest, Acc);
+decode([C|Cs], Acc) ->
+    decode(Cs, [C|Acc]).
+
+decode_scan([], Acc) -> lists:reverse(Acc);
+decode_scan([$?,$b,$?|Rest], Acc) ->
+    decode_b64(Rest,Acc);
+decode_scan([$?,$B,$?|Rest], Acc) ->
+    decode_b64(Rest,Acc);
+decode_scan([$?,$q,$?|Rest], Acc) ->
+    decode_q(Rest,Acc);
+decode_scan([$?,$Q,$?|Rest], Acc) ->
+    decode_q(Rest, Acc);
+decode_scan([$?,_,$?|Rest], Acc) ->
+    decode(Rest, Acc);
+decode_scan([_|Rest], Acc) ->
+    decode_scan(Rest, Acc).
 
 decode_q([], Acc) ->
     lists:revers(Acc);
 decode_q([$?,$=|Rest], Acc) ->
-    [lists:reverse(Acc)|decode(Rest)];
+    decode(Rest, Acc);
 decode_q([$=,H1,H2|Rest], Acc) ->
     decode_q(Rest, [yaws:hex_to_integer([H1,H2])|Acc]);
 decode_q([C|Cs], Acc) ->
@@ -860,8 +865,8 @@ decode_b64([],Acc) ->
 decode_b64([$?,$=|Rest],Acc) ->
     Str = lists:reverse(Acc),
     case catch base64_2_str(Str) of
-	{'EXIT',_} -> [Str|decode(Rest)];
-	Dec -> [Dec|decode(Rest)]
+	{'EXIT',_} -> Str++decode(Rest);
+	Dec -> Dec ++ decode(Rest)
     end;
 decode_b64([C|Rest], Acc) ->
     decode_b64(Rest,[C|Acc]).
@@ -1337,20 +1342,30 @@ add_header("content-type", Value, H) ->
     H#mail{content_type = parse_header_value(Value)};
 add_header("content-disposition", Value, H) ->
     H#mail{content_disposition = parse_header_value(Value)};
-add_header("from", Value, H) ->    H#mail{from = Value,
-					  from_fmt = format_from(Value)};
-add_header("to", Value, H) ->      H#mail{to = Value};
-add_header("cc", Value, H) ->      H#mail{cc = Value};
-add_header("bcc", Value, H) ->     H#mail{bcc = Value};
-add_header("subject", Value, H) -> H#mail{subject = Value,
-					  subject_fmt =
-					  lists:flatten(decode(Value))};
-add_header("date", Value, H) ->    H#mail{date = Value,
-					  date_pst = parse_date(Value),
-					  date_fmt =
-					  format_date(parse_date(Value))};
-add_header(Other, Value, H) ->     H#mail{other = [{Other,Value}|
-						   H#mail.other]}.
+add_header("from", Value, H) ->
+    FromFmt = format_from(Value),
+    H#mail{from = Value,
+	   from_fmt = FromFmt,
+	   from_fmt_lc = lowercase(FromFmt)};
+add_header("to", Value, H) ->
+    H#mail{to = Value};
+add_header("cc", Value, H) ->
+    H#mail{cc = Value};
+add_header("bcc", Value, H) ->
+    H#mail{bcc = Value};
+add_header("subject", Value, H) -> 
+    SubjectFmt = lists:flatten(decode(Value)),
+    H#mail{subject = Value,
+	   subject_fmt = SubjectFmt,
+	   subject_fmt_lc = lowercase(SubjectFmt)};
+add_header("date", Value, H) ->
+    DatePst = parse_date(Value),
+    H#mail{date = Value,
+	   date_pst = DatePst,
+	   date_fmt = format_date(DatePst)};
+add_header(Other, Value, H) ->
+    H#mail{other = [{Other,Value}|
+		    H#mail.other]}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
