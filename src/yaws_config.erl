@@ -794,10 +794,6 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
 	    A2 = Auth#auth{realm = Realm},
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
 	["user", '=', User] ->
-	    error_logger:info_msg("Warning usage of deprecated auth "
-				  " users inside"
-				  " config file\n use .yaws_auth file "
-				  " instead ",[]),
 	    case string:tokens(User, ":") of
 		[Name, Passwd] ->
 		    A2 = Auth#auth{users = [{Name, Passwd}|Auth#auth.users]},
