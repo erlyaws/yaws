@@ -147,7 +147,7 @@ actl(Term, Uid) ->
     init:stop().
 
 uid() ->
-    os:cmd("id -u") -- [10].
+    {ok, Id} = yaws:getuid(), Id.
 
 
 %% send a hup (kindof) to the yaws server to make it

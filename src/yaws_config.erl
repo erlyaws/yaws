@@ -27,10 +27,9 @@
 
 %% where to look for yaws.conf 
 paths() ->
-    case os:cmd("id -u") of
-	[$0 |_] -> %% root 
-	    [
-	     "/etc/yaws.conf"];
+    case yaws:getuid() of
+	{ok, "0"} ->    %% root 
+	    ["/etc/yaws.conf"];
 	_ -> %% developer
 	    [filename:join([os:getenv("HOME"), "yaws.conf"]),
 	     "./yaws.conf", 
@@ -179,7 +178,7 @@ make_default_gconf(Debug) ->
 					30
 				end,
 	   trace = false,
-	   uid = os:cmd("id -u") -- [10],
+	   uid = element(2, yaws:getuid()),
 	   yaws = "Yaws " ++ yaws_vsn:version()}.
 
 

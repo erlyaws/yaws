@@ -242,7 +242,7 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
     %% and now finally, we've opened the ctl socket and are
     %% listening to all sockets we can possibly change username
 
-    GC2 = case (catch setuser(Gconf#gconf.username)) of
+    GC2 = case (catch yaws:setuser(Gconf#gconf.username)) of
 	      ignore ->
 		  Gconf;
 	      {ok, NewUid} ->
@@ -260,20 +260,6 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
     end,
     lists:foreach(fun({Pid, _}) -> Pid ! {newuid, GC2#gconf.uid} end, L2),
     {ok, {GC2, L2, 0}}.
-
-	
-setuser(undefined) ->	     
-    ignore;
-setuser(User) ->	     
-    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
-			 "/../priv/", "setuid_drv"),
-    P = open_port({spawn, "setuid_drv " ++ User}, []),
-    receive
-	{P, {data, "ok " ++ IntList}} ->
-	    {ok, IntList};
-	{'EXIT', P, _} ->
-	    error
-    end.
 
 
 %%----------------------------------------------------------------------
@@ -517,7 +503,8 @@ call_start_mod(SC) ->
 		{module, Mod} ->
 		    spawn(Mod, start, [SC]);
 		Err ->
-		    error_logger:format("Cannot load module ~p~n", [Mod])
+		    error_logger:format("Cannot load module ~p: ~p~n", 
+					[Mod,Err])
 	    end
     end.
 
@@ -1961,14 +1948,22 @@ cache_file(GC, SC, Path, UT) when
 		    ?Debug("To large\n",[]),
 		    UT;
 		true ->
-		    ?Debug("File fits\n",[]),
-		    {ok, Bin} = prim_file:read_file(UT#urltype.fullpath),
-		    UT2 = UT#urltype{data = Bin},
-		    ets:insert(E, {{url, Path}, now_secs(), UT2}),
-		    ets:insert(E, {{urlc, Path}, 1}),
-		    ets:update_counter(E, num_files, 1),
-		    ets:update_counter(E, num_bytes, FI#file_info.size),
-		    UT2
+		    %% don't cache yaws files with a query part
+		    case {UT#urltype.type, UT#urltype.q} of
+			{yaws, Q} when Q /= [] ->
+			    UT;
+			_ ->
+			    ?Debug("File fits\n",[]),
+			    {ok, Bin} = prim_file:read_file(
+					  UT#urltype.fullpath),
+			    UT2 = UT#urltype{data = Bin},
+			    ets:insert(E, {{url, Path}, now_secs(), UT2}),
+			    ets:insert(E, {{urlc, Path}, 1}),
+			    ets:update_counter(E, num_files, 1),
+			    ets:update_counter(E, num_bytes, 
+					       FI#file_info.size),
+			    UT2
+		    end
 	    end
     end;
 cache_file(_GC, _SC, _Path, UT) ->
@@ -1979,13 +1974,13 @@ cache_file(_GC, _SC, _Path, UT) ->
 %% FIXME, should not wipe entire ets table this way
 cleanup_cache(E, size) ->
     %% remove the largest files with the least hit count  (urlc)
-    error_logger:info_msg("Clearing yaws internal content "
-			  "cache, size overflow",[]),
+    ?Debug("Clearing yaws internal content "
+	   "cache, size overflow",[]),
     clear_ets(E);
 
 cleanup_cache(E, num) ->
-    error_logger:info_msg("Clearing yaws internal content "
-			  "cache, num overflow",[]),
+    ?Debug("Clearing yaws internal content "
+	   "cache, num overflow",[]),
     clear_ets(E).
 
 
@@ -2116,8 +2111,7 @@ ret_user_dir(SC, [], "/", Upath) when SC#sconf.tilde_expand == true ->
 	    %% FIXME doesn't work if passwd contains :: 
 	    %% also this is unix only
 	    %% and it ain't the fastest code around.
-	    OS = os:cmd(["grep ", User, " /etc/passwd "]),
-	    case (catch lists:nth(6, string:tokens(OS, [$:]))) of
+	    case catch yaws:user_to_home(User) of
 		{'EXIT', _} ->
 		    #urltype{type=error};
 		Home ->

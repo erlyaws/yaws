@@ -1015,3 +1015,46 @@ erase_header(content_type) ->
 erase_header(location) ->
     put(outh, (get(outh))#outh{location = undefined}).
 
+
+
+
+
+
+	
+setuser(undefined) ->	     
+    ignore;
+setuser(User) ->	     
+    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
+			 "/../priv/", "setuid_drv"),
+    P = open_port({spawn, "setuid_drv " ++ [$s|User]}, []),
+    receive
+	{P, {data, "ok " ++ IntList}} ->
+	    {ok, IntList}
+    end.
+
+getuid() ->
+    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
+			 "/../priv/", "setuid_drv"),
+    P = open_port({spawn, "setuid_drv g"},[]),
+    receive
+	{P, {data, "ok " ++ IntList}} ->
+	    {ok, IntList}
+    end.
+
+idu(User) ->
+    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
+			 "/../priv/", "setuid_drv"),
+    P = open_port({spawn, "setuid_drv " ++ [$u|User]}, []),
+    receive
+	{P, {data, "ok " ++ IntList}} ->
+	    {ok, IntList}
+    end.
+
+user_to_home(User) ->
+    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
+			 "/../priv/", "setuid_drv"),
+    P = open_port({spawn, "setuid_drv " ++ [$h|User]}, []),
+    receive
+	{P, {data, "ok " ++ Home}} ->
+	    Home
+    end.
