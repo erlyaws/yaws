@@ -1,3 +1,19 @@
+Feb 6, 2004 Version1.41 released
+Bugfixes and feature release.
+Minor bugfixes to the reverse proxy implementation (klacke)
+SSI for the ehtml expander as well as for normal usage. (klacke)
+Timestamp checks on SSI files (klacke)
+Wiki fixes (Johan Bevemyr)
+Return 404 instead of 403 when dir listings are disabled (Leon Smith)
+Added CGI variable REQUEST_URI (cshultz)
+Better dir listings with support for sort methods (Martin Bjorklund)
+Redir, bugs (one would thing we'd be able to do correct redirs by now .. ehh) (Leon Smithh)
+Support for 301,303, and 307 redirs (Johan Bevemyr)
+php executable is configurable (cshultz)
+Major feature enhancement, Support for a new concept called bindings, documented at http://yaws.hyber.org as well as in the man pages. (Joakim grebeno)
+More redir cleanup as well as introduction of redirect_local, {any_path, URI}} and made yaws_cgi use it. (cshultz)
+Made the webmail app able to render attachments (klacke)
+
 Dec 18, 2003  Version 1.40 released
 This is a major feature release.
 Experimental reverse proxy implementation <klacke@hyber.org>
