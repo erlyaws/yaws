@@ -590,43 +590,43 @@ addFileChunk([], State) when State#addfile.last==true ->
 addFileChunk([], State) ->
     {cont, State};
 
-addFileChunk([{head, {add, _Opts}}|Res], State ) ->
+addFileChunk([{head, {"add", _Opts}}|Res], State ) ->
     addFileChunk(Res, State#addfile{param = add});
 addFileChunk([{body, Data}|Res], State) when State#addfile.param == add ->
     addFileChunk(Res, State);
 
-addFileChunk([{head, {node, _Opts}}|Res], State ) ->
+addFileChunk([{head, {"node", _Opts}}|Res], State ) ->
     addFileChunk(Res, State#addfile{param = node});
 addFileChunk([{body, Data}|Res], State) when State#addfile.param == node ->
     Node = State#addfile.node,
     NewNode = merge_body(Node, Data),
     addFileChunk(Res, State#addfile{node = NewNode});
 
-addFileChunk([{head, {unzip, _Opts}}|Res], State ) ->
+addFileChunk([{head, {"unzip", _Opts}}|Res], State ) ->
     addFileChunk(Res, State#addfile{param = unzip});
 addFileChunk([{body, Data}|Res], State) when State#addfile.param == unzip ->
     Unzip = State#addfile.unzip,
     NewUnzip = merge_body(Unzip, Data),
     addFileChunk(Res, State#addfile{unzip = NewUnzip});
 
-addFileChunk([{head, {password, _Opts}}|Res], State) ->
+addFileChunk([{head, {"password", _Opts}}|Res], State) ->
     addFileChunk(Res, State#addfile{param = password});
 addFileChunk([{body, Data}|Res], State) when State#addfile.param == password ->
     Password = State#addfile.password,
     NewPW = merge_body(Password, Data),
     addFileChunk(Res, State#addfile{password = NewPW});
 
-addFileChunk([{head, {cancel, _Opts}}|Res], State) ->
+addFileChunk([{head, {"cancel", _Opts}}|Res], State) ->
     {done, redirect({node, State#addfile.node}, State#addfile.prefix)};
 
-addFileChunk([{head, {text, _Opts}}|Res], State) ->
+addFileChunk([{head, {"text", _Opts}}|Res], State) ->
     addFileChunk(Res, State#addfile{param = text});
 addFileChunk([{body, Data}|Res], State) when State#addfile.param == text ->
     Text = State#addfile.text,
     NewText = merge_body(Text, Data),
     addFileChunk(Res, State#addfile{text = NewText});
 
-addFileChunk([{head, {attached, Opts}}|Res], State) ->
+addFileChunk([{head, {"attached", Opts}}|Res], State) ->
     Page     = State#addfile.node,
     Password = State#addfile.password,
     FilePath = getopt(filename, Opts),
