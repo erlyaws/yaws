@@ -1131,12 +1131,12 @@ ehtml_expand({pre_html, X}) ->
 ehtml_expand({pre, Attrs}) ->
     ["<pre", ehtml_attrs(Attrs), ">"];
 ehtml_expand({Tag, Attrs}) ->
-    ["<", atom_to_list(Tag), ehtml_attrs(Attrs), ">\n"];
+    ["<", atom_to_list(Tag), ehtml_attrs(Attrs), ">"];
 ehtml_expand({Tag, Attrs, Body}) when atom(Tag) ->
     Ts = atom_to_list(Tag),
     ["<",Ts, ehtml_attrs(Attrs),">",
      ehtml_expand(Body),
-     "</", Ts, ">\n"];
+     "</", Ts, ">"];
 ehtml_expand([H|T]) ->
     [ehtml_expand(H) | ehtml_expand(T)];
 ehtml_expand([]) ->
@@ -1206,14 +1206,14 @@ ehtml_expander({pre, Attrs}, Before, After) ->
 			After);
 ehtml_expander({Tag, Attrs}, Before, After) ->
     ehtml_expander_done(["<",atom_to_list(Tag),
-			 ehtml_attrs_expander(Attrs),">\n"],
+			 ehtml_attrs_expander(Attrs),">"],
 			Before,
 			After);
 ehtml_expander({Tag, Attrs, Body}, Before, After) ->
     ehtml_expander(Body,
 		   [["<",atom_to_list(Tag), ehtml_attrs_expander(Attrs), ">"] |
 		    Before],
-		   ["</",atom_to_list(Tag),">\n" | After]);
+		   ["</",atom_to_list(Tag),">" | After]);
 %% Variable references
 ehtml_expander(Var, Before, After) when atom(Var) ->
     [reverse(Before), {ehtml, ehtml_var_name(Var)}, After];
@@ -1243,6 +1243,8 @@ ehtml_attr_part_expander(A) when atom(A) ->
 	true  -> {preformatted, ehtml_var_name(A)};
 	false -> atom_to_list(A)
     end;
+ehtml_attr_part_expander(I) when integer(I) ->
+    integer_to_list(I);
 ehtml_attr_part_expander(S) when list(S) ->
     S.
 
