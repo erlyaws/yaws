@@ -18,8 +18,8 @@ Bugfix release. Several fixes to different parts of the web server. No new featu
 Debian  support (David Welton)
 Embedded mode fixes (Jimmy Olgeni)
 Don't create no logs at all when logging is turned off bugfix (Jimmy Olgeni)
-SSL and large POSTs fix (cshultz)
-Compression and keep alive fix (cshultz)
+SSL and large POSTs fix (cschultz)
+Compression and keep alive fix (cschultz)
 As usual, several fixes to the wiki and the webmail app (jbevemyr)
 An XSS vulnerability (lpsmith)
 Rewrote the url spliting (again) and also backed off from the redir when we get http://www.a.com/ and index.html exists. It's better to ship the file directly instead of sending a redir. (klacke)
@@ -31,11 +31,11 @@ Minor bugfix release fixing up the some odd bugs introduced in the 1.43 rewite.
 
 Mar 18, 2004 Version 1.43 released
 This is a major release. Not so much for added functionality as for internal rewrites of the code. The release contains the following:
-Compression support using zlib. Still experimental. (cshultz)
+Compression support using zlib. Still experimental. (cschultz)
 Minor bugfixes in the reverse proxy. This code is still not ready (klacke)
 Added a specific auth log which logs good and bad HTTP auth requests.
 QNX port (cschatz@networkadvantage.biz)
-Beautification of dir listings (cshultz)
+Beautification of dir listings (cschultz)
 Never let ehtml generate extra spaces where it is not entirely correct (patch from tomas abrahamsson)
 Webmail app, Completed support for attachments, proper esacping, faster listing of large mboxes. Added sorting of mails (jb)
 Date header bug (chandru)
@@ -60,13 +60,13 @@ SSI for the ehtml expander as well as for normal usage. (klacke)
 Timestamp checks on SSI files (klacke)
 Wiki fixes (Johan Bevemyr)
 Return 404 instead of 403 when dir listings are disabled (Leon Smith)
-Added CGI variable REQUEST_URI (cshultz)
+Added CGI variable REQUEST_URI (cschultz)
 Better dir listings with support for sort methods (Martin Bjorklund)
 Redir, bugs (one would thing we'd be able to do correct redirs by now .. ehh) (Leon Smithh)
 Support for 301,303, and 307 redirs (Johan Bevemyr)
-php executable is configurable (cshultz)
+php executable is configurable (cschultz)
 Major feature enhancement, Support for a new concept called bindings, documented at http://yaws.hyber.org as well as in the man pages. (Joakim grebeno)
-More redir cleanup as well as introduction of redirect_local, {any_path, URI}} and made yaws_cgi use it. (cshultz)
+More redir cleanup as well as introduction of redirect_local, {any_path, URI}} and made yaws_cgi use it. (cschultz)
 Made the webmail app able to render attachments (klacke)
 
 Dec 18, 2003  Version 1.40 released
