@@ -32,6 +32,7 @@ klacke@hyber.org}
 
 \chapter{Introduction}
 
+
 Yaws is an Erlang web server. It's written entirely in Erlang and it uses
 Erlang as its embedded language similar to PHP in Apache or Java in Tomcat.
 
@@ -85,7 +86,8 @@ This document requires that the reader:
 
 We introduce yaws by help of a tiny example. 
  The webserver yaws serves  and delivers
-static content pages similar to any old webserver. It's the dynamic pages
+static content pages similar to any old webserver, except that Yaws does this 
+much faster than most web servers. It's the dynamic pages
 that makes yaws interesting. Any page with the suffix ``.yaws'' is considered
 a dynamic yaws page. A yaws page can contain embedded Erlang snippets that
 are executed while the page is being delivered to the WWW browser.
@@ -104,6 +106,8 @@ out(Arg) ->
     {html, "<p>This string get's inserted into HTML document dynamically"}.
 </erl>
 
+<p> And here is some more HTML code
+
 </html>
 \end{verbatim}
 \caption{Example 1.1}
@@ -118,7 +122,7 @@ It is possible to have several chunks of HTML code together with several
 chunks of Erlang code in the same yaws page.
 
 The \verb+Arg+ argument supplied to the automatically invoked \verb+out/1+
-function is an Erlang record that contains various data which interesting 
+function is an Erlang record that contains various data which is interesting 
 when generating dynamic pages. For example the HTTP headers which were sent
 from the WWW client, the actual TCP/IP socket leading to the WWW client.
 This will be elaborated on throughly in later chapters. 
@@ -180,9 +184,9 @@ make install - will install the executable - called yaws in
 /usr/local/bin/ and a working configuration file in \textit{ /etc/yaws.conf}
 
 make local\_install will install the executable in \$HOME/bin and a
-working configuration file in \$HOME
+working configuration file in \$HOME/yaws.conf
 
-While developing a Yaws site, it's typically the most convenient to
+While developing a Yaws site, it's typically most convenient to
 use the local\_install and run Yaws as a non priviliged user.
 
 
@@ -220,7 +224,7 @@ The only one we need to care about for now is the logdir
 directive. Yaws will produce a number of logfiles and they will -
 using the Configuration from Figure 2.1 - end up in the current 
 working directory.
-We start yaws as 
+We start yaws interactively as 
 \begin{verbatim}
 # ~/bin/yaws -i
 Erlang (BEAM) emulator version 5.1.2.b2 [source]
@@ -436,12 +440,13 @@ The second way to generate output is by returning a tuple
 \verb+{ehtml, EHTML}+. The term \verb+EHTML+ must adhere to the 
 following structure:
 
-$EHTML = [EHTML] | {HTMLTAG, Attrs, Body} | {HTMLTAG, Attrs} | {HTMLTAG} |
+$EHTML = [EHTML] | \{HTMLTAG, Attrs, Body\} | 
+                   \{HTMLTAG, Attrs\} | \{HTMLTAG\} |
         binary() | character()$
 
 $HTMLTAG 	 = atom()$
 
-$Attrs = [{HtmlAttribute, Value}]$
+$Attrs = [\{HtmlAttribute, Value\}]$
 
 $HtmlAttribute 	 = atom()$
 
@@ -479,7 +484,7 @@ Would be expanded into the following HTML code
 
 \end{verbatim}
 
-At a first glance it may appears if the HTML code is more
+At a first glance it may appears as if the HTML code is more
 beautiful than the Erlang tuple. That may very well be the
 case from a purely aesthetic point of view. However the
 Erlang code has the advantage of being perfectly indented by editors
@@ -488,14 +493,210 @@ code is easier to manipulate from an Erlang program.
 
 As an example of some more interesting ehtml we could have
 an \verb+out/1+ function that prints some of the HTTP headers
-We have:
+In the www directory of the Yaws source code distribution we have
+a file called \verb+arg.yaws+. The file demonstrates the Arg \#arg record
+parameter which is passed to the \verb+out/1+ function.
 
-    
+
+But before we discuss that code, we describe the Arg record  
+in detail.
+
+Here is the \verb+yaws_api.hrl+ file which is in included by default
+in all yaws files. The \#arg{} record contains many fields that are
+useful when processing HTTP request dynamically.
+We have access to basically all the information which associated to the
+client request such as:
+\begin{itemize}
+
+\item The actual socket leading back to the HTTP client
+\item All the HTTP headers - parsed into a \#headers record.
+\item The HTTP request - parsed into a \#http\_request record
+\item clidata - Data which is POSTed by the client
+\item querydata - This is the remainder of the URL following the first 
+occurance of a ? character - if any.
+\item docroot - The absolute path to the docroot of the virtual server
+that is processing the request.
+\end{itemize}
+
+
+
+\begin{verbatim}
+
+
+
+%%%----------------------------------------------------------------------
+%%% File    : yaws_api.hrl
+%%% Author  : Claes Wikstrom <klacke@hyber.org>
+%%% Purpose : 
+%%% Created : 24 Jan 2002 by Claes Wikstrom <klacke@hyber.org>
+%%%----------------------------------------------------------------------
+
+-author('klacke@hyber.org').
+
+
+-record(arg, {
+	  clisock,        %% the socket leading to the peer client
+	  headers,        %% headers
+	  req,            %% request
+	  clidata,        %% The client data (as a binary in POST requests)
+	  querydata,      %% Was the URL on the form of ...?query (GET reqs)
+	  appmoddata,     %% the remainder of the path leading up to the querey
+	  docroot,        %% where's the data
+	  fullpath,       %% full path to yaws file
+	  cont,           %% Continuation for chunked multipart uploads
+	  state,          %% State for use by users of the out/1 callback
+	  pid,            %% pid of the yaws worker process
+	  opaque          %% useful to pass static data
+	 }).              
+
+
+-record(http_request, {method,
+                       path,
+                       version}).
+
+            
+-record(headers, {
+          connection,
+          accept,
+          host,
+          if_modified_since,
+          if_match,
+          if_none_match,
+          if_range,
+          if_unmodified_since,
+          range,
+          referer,
+          user_agent,
+          accept_ranges,
+          cookie = [],
+          keep_alive,
+          content_length,
+          content_type,
+          authorization,
+          other = []   %% misc other headers
+         }).
+
+\end{verbatim}
+
+
+There are a number of \textit{advanced} fields in the \#arg record
+such as \verb+appmod+, \verb+opaque+ that will be discussed in later chapters.
+
+Now, we show some code which displays the content of the Arg \#arg record.
+The code is avaiable in yaws/www/arg.yaws and after a a \verb+local_install+
+a request to \textit{http://localhost:8000/arg.yaws} will run the code.
+
+\begin{verbatim}
+
+<html>
+
+<h2> The Arg </h2>
+
+<p>This page displays the Arg #argument structure
+supplied to the out/1 function.
+
+<erl>
+
+
+out(A) ->
+    Req = A#arg.req,
+    H = yaws_api:reformat_header(A#arg.headers),
+    io:format("H: ~p~n",[H]),
+    {ehtml,
+     [{h4,[], "The headers passed to us were:"},
+      {hr},
+      {ol, [],lists:map(fun(S) -> {li,[], {p,[],S}} end,H)},
+
+      {h4, [], "The request"},
+      {ul,[],
+       [{li,[], f("method: ~s",  [Req#http_request.method])},
+        {li,[], f("path: ~p",    [Req#http_request.path])},
+        {li,[], f("version: ~p", [Req#http_request.version])}]},
+
+      {hr},
+      {h4, [], "Other items"},
+      {ul,[],
+       [{li,[], f("clisock from: ~p", [inet:peername(A#arg.clisock)])},
+        {li,[], f("docroot: ~s",      [A#arg.docroot])},
+        {li,[], f("fullpath: ~s",     [A#arg.fullpath])}]},
+      {hr},
+      {h4, [], "Parsed query data"},
+      {pre,[], f("~p", [yaws_api:parse_query(A)])},
+      {hr},
+      {h4,[], "Parsed POST data "},
+      {pre,[],  f("~p", [yaws_api:parse_post(A)])}]}.
+
+</erl>
+
+</html>
+
+\end{verbatim}
+
+
+The code utilizes 4 functions from the \verb+yaws_api+ module.
+\verb+yaws_api+ is a general purpose www api module that contains various
+functions that are handy while developing yaws code. We will see many 
+more of those functions during the examples in the following chapters.
+
+The functions used are:
+\begin{itemize}
+\item \verb+yaws_api:f/2+ alias for io\_lib:format/2. The \verb+f/1+ function
+is automatically \verb+-include+ed in all Yaws code.
+\item \verb+yaws_api:reformat_header/1+ - This function takes the \#headers record
+and unparses it, that is reproduces regular text.
+\item \verb+yaws_api:parse_query/1+ - The topic of next section.
+\item \verb+yaws_api:parse_post/1+ -- Ditto.
+\end{itemize}
+
+
+\section{POSTs}
+
+\subsection{Queries}
+
+The user can suppy data to the server in many ways. The most
+common is to give the data in the actual URL.
+If we invoke: 
+
+verb+GET http://localhost:8000/arg.yaws?kalle=duck\&goofy=unknown+
+
+we pass two parameters to the \textit{arg.yaws} page.
+That data is url-encoded by the browser and the server can retrieve the
+data by looking at the remainder of the URL following the ? character.
+If we invoke the \verb+arg.yaws+ page with the above mentioned URL we get
+as the result of \verb+yaws_parse_query/1+:
+
+$kalle = duck$
+
+$goofy = unknown$
+
+In Erlang terminology, the call \verb+yaws_api:parse_query(Arg)+ returns
+the list: 
+\begin{verbatim}
+[{kalle, "duck"}, {goofy, "unknown"}]
+\end{verbatim}
+
+Note that the first element is transformed into an atom, whereas the value
+is still a string.
+
+hence, a webpage can contain URLs with a query and thus pass data to the
+webserver. This scheme works both with GET and POST requests.
+It is the easiest way to pass data to the Web server since no FORM is required
+in the web page.
+
+
+\subsection{Forms}
+
+In order to POST data a FORM is required, say that we have a page called
+\verb+form.yaws+ That contain the following code:
+
+
+
+
+
 
 
 
 \chapter{Mode of operation}
-
 
 \chapter{SSL}
 
@@ -504,7 +705,6 @@ We have:
 \chapter{Example Applications}
 
 \section{Login scenarios}
-
 
 \chapter{Debugging and Development}
 
