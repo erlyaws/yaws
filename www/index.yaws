@@ -62,6 +62,32 @@ powered by Yaws.
 <ul>
 
 
+<li>
+<p>
+Jun 19, version 0.51 released. Lot's of fixes.
+    <ul>
+	<li><p>return status 303 when browser asks for a dir URL
+without a trailing / in the http request. I've always wondered why apache
+does this. Now I know ... otherwise the relative URLs in /dir/index.html
+will be wrong when the browser tries to get them.   Utilize this feature
+when listing dirs now, generate relative urls instead of absolute.
+
+	 <li><p>Removed the default_server_on_this_ip option, the first virthosted server 
+in the config will be default if no Host: header is present
+<p> Made the Host: check to check for Host: host:port instead of just host
+when a server is run on a non-standard port. The browsers seem to
+set the Host: field to host:port
+
+        <li><p>Tobbe added the -r flag to the startscript
+
+        <li><p>Changed yaws_api:parse_post_data/1 so that it takes an arg struct
+as argument instead of querydata and added support for multipart
+form data in the process.
+     </ul>
+</li>
+
+		    
+
 
 <li> 
 <p>Jun 16, version 0.50 released. A bug in setcookie fixed, a proper
