@@ -28,7 +28,6 @@ parse_post_data(Arg) ->
 	    parse_post_data_urlencoded(Arg#arg.querydata)
     end.
 	    
-	    
 %
 
 parse_arg_line(Line) ->
@@ -103,7 +102,11 @@ parse_multipart(Boundary, Args) ->
 		    lists:keysearch("content-disposition", 1, Header),
 		Parameters = parse_arg_line(Line),
 		{value, {_,Name}} = lists:keysearch(name, 1, Parameters),
-		{list_to_atom(Name), Body}
+		%% Parameters added by jb since the filename of an uploaded
+		%% is hidden there. This breaks the compatibility with non-
+		%% multipart arguments, which is bad. Don't really know what
+		%% to do about these. Always have three args?
+		{list_to_atom(Name), Body, Parameters}
 	end,
     lists:map(F, Parsed).
 
