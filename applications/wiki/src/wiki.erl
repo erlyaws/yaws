@@ -77,6 +77,28 @@ showPage(Params, Root, Prefix) ->
 	    end
     end.
 
+thumb_name(File) ->
+    Extension = filename:extension(File),
+    (filename:basename(File, Extension)++"_wiki_thb"++Extension).
+
+create_thumb_if_needed(SrcPath, DstPath) ->
+    case thumb_up2date(SrcPath, DstPath) of
+	true ->
+	    ok;
+	false ->
+	    create_thumb(SrcPath, DstPath)
+    end.
+
+thumb_up2date(Src,Thumb) ->
+    DstAge = get_age(Thumb),
+    SrcAge = get_age(Src),
+    DstAge > SrcAge.
+
+create_thumb(SrcPath, DstPath) ->
+    os:cmd("convert -size 90x90 -scale 90x90 '"++
+	   shell_quote(SrcPath)++"' '"++
+	   shell_quote(DstPath)++"'").
+
 getThumb(Params, Root, Prefix) ->
     Page = getopt(node, Params),
     Pict = getopt(pict, Params),
@@ -85,18 +107,14 @@ getThumb(Params, Root, Prefix) ->
 	    error(invalid_request);
 	true ->
 	    {WobFile, FileDir} = page2filename(Page, Root),
-	    Extension = filename:extension(Pict),
-	    ThumbName = (filename:basename(Pict, Extension)++
-			 "_wiki_thb"++Extension),
+	    ThumbName = thumb_name(Pict),
 	    SrcPath = Root ++ "/" ++ FileDir ++ "/" ++ Pict,
 	    DstPath = Root ++ "/" ++ FileDir ++ "/" ++ ThumbName,
-	    DstAge = get_age(DstPath),
-	    SrcAge = get_age(SrcPath),
-	    if DstAge > SrcAge -> false;
+	    UpToDate = thumb_up2date(SrcPath, DstPath),
+	    if UpToDate ->
+		    done;
 	       true -> 
-		    os:cmd("convert -size 90x90 -scale 90x90 '"++
-			   shell_quote(SrcPath)++"' '"++
-			   shell_quote(DstPath)++"'")
+		    create_thumb(SrcPath, DstPath)
 	    end,
 	    {redirect_local, Prefix++FileDir++"/"++ThumbName}
     end.
@@ -1551,7 +1569,7 @@ thumbIndex(Params, Root, Prefix) ->
 	    Node = str2urlencoded(Page),
 	    DeepStr = 
 		["<table>",
-		 build_thumb_table(Pics, Node, str2urlencoded(FileDir)),
+		 build_thumb_table(Pics, Node, Prefix, Root, FileDir),
 		 "</table>"],
 	    F1 = add_blanks_nicely(Page),
 	    TopHeader = 
@@ -1564,21 +1582,26 @@ thumbIndex(Params, Root, Prefix) ->
 	    show({no_such_page,Page})
     end.
     
-build_thumb_table([], _Node, _FileDir) -> [];
-build_thumb_table(Pics, Node, FileDir) ->
-    build_thumb_rows(Pics, Node, FileDir, 0, 5, ["<tr>"]).
+build_thumb_table([], _Node, _Prefix, _Root, _FileDir) -> [];
+build_thumb_table(Pics, Node, Prefix, Root, FileDir) ->
+    build_thumb_rows(Pics, Node, Prefix, Root, FileDir, 0, 5, ["<tr>"]).
 
-build_thumb_rows([], _Node, _FileDir, _, _, Acc) ->
+build_thumb_rows([], _Node, _Prefix, _Root, _FileDir, _, _, Acc) ->
     lists:reverse(["</tr>"|Acc]);
-build_thumb_rows(Pics, Node, FileDir, X, X, Acc) ->
-    build_thumb_rows(Pics, Node, FileDir, 0, X, ["</tr>\n<tr>"|Acc]);
-build_thumb_rows([{P,Num}|Pics], Node, FileDir, N, X, Acc) ->
-    build_thumb_rows(Pics, Node, FileDir, N+1, X,
+build_thumb_rows(Pics, Node, Prefix, Root, FileDir, X, X, Acc) ->
+    build_thumb_rows(Pics, Node, Prefix, Root, FileDir, 0, X,
+		     ["</tr>\n<tr>"|Acc]);
+build_thumb_rows([{P,Num}|Pics], Node, Prefix, Root, FileDir, N, X, Acc) ->
+    ThumbName = thumb_name(P),
+    SrcPath = Root++"/"++FileDir++"/"++P,
+    DstPath = Root++"/"++FileDir++"/"++ThumbName,
+    create_thumb_if_needed(SrcPath, DstPath),
+    Img = Prefix++str2urlencoded(FileDir)++"/"++str2urlencoded(ThumbName),
+    build_thumb_rows(Pics, Node, Prefix, Root, FileDir, N+1, X,
 		     [lists:append(["<td align=\"center\">"
 				    "<a href=\"slideShow.yaws?node=", Node,
 				    "&next=",integer_to_list(Num),"\">"
-				    "<img src='getThumb.yaws?node=", Node,
-				    "&pict=", str2urlencoded(P),
+				    "<img src='",Img,
 				    "'></a></td>\n"])|Acc]).
 
 build_slide_list(Page, Index, Nr) when Nr =< 10 ->
