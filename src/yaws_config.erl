@@ -82,8 +82,8 @@ exists(F) ->
 
 
 validate_cs(GC, Cs) ->
-    L = lists:map(fun(SC) -> {{SC#sconf.listen, SC#sconf.port}, SC} end,Cs),
-    L2 = lists:map(fun(X) -> element(2, X) end, lists:sort(L)),
+    L = lists:map(fun(SC) -> {{SC#sconf.listen, SC#sconf.port}, SC} end, Cs),
+    L2 = lists:map(fun(X) -> element(2, X) end, lists:keysort(1,L)),
     L3 = arrange(L2, start, [], []),
     case validate_groups(L3) of
 	ok ->
