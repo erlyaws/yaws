@@ -316,9 +316,20 @@ record. The return list is suitable for retransmit.
 Parse URL in a string, returns a #url record
 
 .TP
-\fVformat_url(UrlRecord)\fR
+\fBformat_url(UrlRecord)\fR
 Takes a #url record a formats the Url as a string
 
+.TP
+\fBcall_cgi(Arg, Scriptfilename)\fR 
+Calls an executable CGI script,
+given by its full path.  Used to make `.yaws' wrappers for CGI
+programs.  This function usually returns \fIstreamcontent\fR.
+
+.TP
+\fBcall_cgi(Arg, Exefilename, Scriptfilename)\fR 
+Like before, but
+calls \fIExefilename\fR to handle the script.  The file name of the
+script is handed to the executable via a CGI meta variable.
 
 
 .SH RETURN VALUES from out/1

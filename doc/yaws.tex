@@ -1556,6 +1556,11 @@ of the Yaws server, you can enable Php support by adding \verb+php+ to
 then result in Yaws executing \verb+php+ and passing the name of the
 corresponding file to it via the appropriate environment variable.
 
+These ways of calling CGI scripts are also available to \verb+.yaws+
+scripts and appmods via the functions \verb+yaws_api:call_cgi/2+ and
+\verb+yaws_api:call_cgi/3+.  This makes it possible to write wrappers
+for CGI programs, irrespective of the value of \verb+allowed_scripts+.
+
 This is a new feature in Yaws.  It is used by its author for self
 written CGI programs as well as for using a standard CGI package, so
 it is working.  You should not be surprised however, should some

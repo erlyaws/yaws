@@ -42,6 +42,8 @@
 	 set_tty_trace/1,
 	 set_access_log/1]).
 
+-export([call_cgi/2, call_cgi/3]).
+
 -export([ehtml_expand/1, ehtml_expander/1, ehtml_apply/2,
 	ehtml_expander_test/0]).
 
@@ -1329,4 +1331,22 @@ ehtml_expander_test() ->
     {binary_to_list(list_to_binary(Page1)),
      binary_to_list(list_to_binary(Page2)),
      Expand}.
+
+
+% call_cgi calls the script `Scriptfilename' (full path).  If
+% `Exefilename' is given, it is the executable to handle this,
+% otherwise `Scriptfilame' is assumed to be executable itself.
+% 
+% Note however, that these functions usually generate stream content.
+% (If you have good use for a version generating {content, _, _}
+% instead, contact carsten@codimi.de)
+%
+% Also note, that they may return `get_more' and expect to be called
+% again.
+
+call_cgi(Arg, Scriptfilename) ->				     
+    yaws_cgi:call_cgi(Arg, Scriptfilename).
+
+call_cgi(Arg, Exefilename, Scriptfilename) -> 
+    yaws_cgi:call_cgi(Arg, Exefilename, Scriptfilename).
 
