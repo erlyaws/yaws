@@ -7,37 +7,43 @@ out(A) ->
 <div id="entry">
 
 
-<h1>Running yaws embedded in another larger application</h1>
-<p>
-Yaws is ideal to embed inside another larger erlang application.
-Many typical erlang applications are control applications 
-in need of a webgui specific for the actual application.
+  <h1>Running yaws embedded in another larger application</h1>
+  <p>
+    Yaws is ideal to embed inside another larger erlang application.
+    Many typical erlang applications are control applications 
+    in need of a webgui specific for the actual application.
+  </p>
 
-<p>In order to run Yaws inside another application, we need to
-perform  the following steps.
+  <p>In order to run Yaws inside another application, we need to
+    perform  the following steps.
+  </p>
 
-<ol>
-<li> <p>Either integrate yaws into the build system of the
-larger application or specifically provide the ebin path to
-yaws for the larger application. 
+  <ol>
+    <li> <p>Either integrate yaws into the build system of the
+      larger application or specifically provide the ebin path to
+      yaws for the larger application. </p>
+    </li>
 
-<li><p> Provide the application environment {embedded, true}
-to Yaws.
+    <li><p> Provide the application environment {embedded, true}
+      to Yaws.</p>
+    </li>
+  </ol>
 
-<li><p> The large application typically has it's configuration
-data fed from internal databases, anyway it's usually not feasible
-to let Yaws read it's configuration data from /etc/yaws.conf.
+  <p> The large application typically has it's configuration
+    data fed from internal databases, anyway it's usually not feasible
+    to let Yaws read it's configuration data from /etc/yaws.conf.</p>
 
-<p>To solve this, when Yaws is started in embedded mode, it doesn't
-read it's config from /etc, rather it expects the larger application
-to feed it the Yaws configuration through the function call
-yaws_api:set_conf(GC, Groups)
+  <p>To solve this, when Yaws is started in embedded mode, it doesn't
+    read it's config from /etc, rather it expects the larger application
+    to feed it the Yaws configuration through the function call
+    yaws_api:set_conf(GC, Groups)
+  </p>
 
-<p> The two arguments here are
-<ol>
-<li><p>GC is a #gconf{} record. The definition of the
-record is:
-<pre>
+  <p> The two arguments here are</p>
+  <ol>
+    <li><p>GC is a #gconf{} record. The definition of the
+      record is:</p>
+      <pre>
 %% global conf
 -record(gconf,{file,
 	       yaws_dir,
@@ -60,21 +66,24 @@ record is:
 	       username,            %% maybe run as a different user than root
 	       uid                  %% unix uid of user that started yaws
 	      }).  
-</pre>
+      </pre>
 
-<p>The easiest way to figure out what the individual record
-fields mean is to have a look in the source file yaws_config.erl
+      <p>The easiest way to figure out what the individual record
+        fields mean is to have a look in the source file yaws_config.erl</p>
+    </li>
 
-<li><p>Groups, is a list of lists of #sconf records.
-Yaws is capable of listening on several IP address and also 
-do Virtual Hosting on each IP address.
 
-<p>Each #sconf{} record describes one web server, whereas a list of
-#sconf{} records describe a web server Virt Hosting several different
-servers.
-
-The sconf record is defined as:
-<pre>
+    <li><p>Groups, is a list of lists of #sconf records.
+      Yaws is capable of listening on several IP address and also 
+      do Virtual Hosting on each IP address.
+      </p>
+      <p>Each #sconf{} record describes one web server, whereas a list of
+        #sconf{} records describe a web server Virt Hosting several different
+        servers.
+      </p>
+      <p>
+        The sconf record is defined as:</p>
+      <pre>
 
 -record(ssl, 
 	{
@@ -119,33 +128,35 @@ The sconf record is defined as:
 	 allowed_scripts = [yaws]
 	}).
 
-</pre>
+      </pre>
+    </li>
+  </ol>
 
-</ol>
-</ol>
 
+  <h2> A very small actual example </h2>
+  <p>We provide a minimal example which "embeds" yaws in
+    a normal Erlang shell.
+  </p>
+  <p>We start Erlang as:
+  </p>
 
-<h2> A very small actual example </h2>
-<p>We provide a minimal example which "embeds" yaws in
-a normal Erlang shell.
-
-<p>We start Erlang as:
-
-<pre>
+  <pre>
 # erl -pa /usr/local/lib/yaws/ebin -yaws embedded true -s ybed
-</pre>
+  </pre>
 
-<p>The ybed module is very small and is named 
-<a href="code.yaws?file=/ybed.erl">ybed.erl</a>
+  <p>The ybed module is very small and is named 
+    <a href="code.yaws?file=/ybed.erl">ybed.erl</a>
+  </p>
 
-<p>The above "erl" command line gives:
+  <p>The above "erl" command line gives:
+  </p>
 
-<pre>
+  <pre>
 #  erl -pa /usr/local/lib/yaws/ebin -yaws embedded true -s ybed
 Erlang (BEAM) emulator version 5.3.b1 [source] [hipe]
 
 Eshell V5.3.b1  (abort with ^G)
-1> 
+1&gt; 
 =INFO REPORT==== 25-Nov-2003::00:27:18 ===
 Yaws: Listening to 0.0.0.0:8888 for servers
  - foobar under /tmp
@@ -160,24 +171,29 @@ harder than it might seem at a first glance. The configuration of the
 web server was programmatically fed into Yaws from the surrounding application, 
 in this case, the Erlang shell + the module 
 <a href="code.yaws?file=/ybed.erl">ybed.erl</a>
+</p>
 
 
 <h2>The opaque field in the sconf structure </h2>
 
 <p>The sconf structure (which is constructed by the program that 
 starts and configures Yaws), contains a field, SC#sconf.opaque
+</p>
+
 
 <p> This field is passed on into the #arg{} record, so that any application
 specific configuration data which is needed by the .yaws pages that
 make up the web GUI application, is easily available there.
+</p>
 
-<p>In essence, if we construct the #sconf as
+
+<p>In essence, if we construct the #sconf as</p>
 <pre>
 SC#sconf{opaque = {mystruct, foobar},
          .....
 </pre>
 
-<p>A .yaws web page, can do:
+<p>A .yaws web page, can do:</p>
 <pre>
 out(Arg) ->
    MyStruct = Arg#arg.opaque
@@ -186,7 +202,7 @@ out(Arg) ->
 </pre>
 
 <p>Thus passing data from the surrounding applications configuration routines
-down to each .yaws web page.
+  down to each .yaws web page.</p>
 
 
 

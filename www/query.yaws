@@ -10,35 +10,37 @@ out(A) ->
 
 <h2>The query part of the url</h2>
 
-<p>
-A url can have an optional query part. This part is passed in
-the A#arg.querydata which is passed as an argument to the
-out/1 function.
+  <p>
+    A url can have an optional query part. This part is passed in
+    the A#arg.querydata which is passed as an argument to the
+    out/1 function.
+  </p>
 
-<p>We show how to work with the query part of the url through
-an example, if we have a URL on the form of
-<a href="man.yaws?page=cat">http://yaws.hyber.org/man.yaws?page=cat</a>
-a key/value pair is passed to the page.
-In the above example, we have key=page and its value "cat".
-The code in the page man.yaws, will read these key/value pairs
-in the A#arg.querydata and display the man page.
+  <p>We show how to work with the query part of the url through
+    an example, if we have a URL on the form of
+    <a href="man.yaws?page=cat">http://yaws.hyber.org/man.yaws?page=cat</a>
+    a key/value pair is passed to the page.
+    In the above example, we have key=page and its value "cat".
+    The code in the page man.yaws, will read these key/value pairs
+    in the A#arg.querydata and display the man page.</p>
 
-Assuming a predifined CSS class called box, defined as:
+  <p>
+    Assuming a predifined CSS class called box, defined as:</p>
 
-<div class="box"
-<pre>
-div.box { border: solid; border-width: thin; width: 90%; 
-          background: rgb(211, 211, 211)  }
-</pre>
-</div>
+  <div class="box">
+    <pre>
+      div.box { border: solid; border-width: thin; width: 90%; 
+      background: rgb(211, 211, 211)  }
+    </pre>
+  </div>
 
-<p>
-The following code:
+  <p>
+    The following code:</p>
 
-<erl>
+  <erl>
 
-out(A) ->
-       {ehtml,ssi("man.yaws")}.
+    out(A) ->
+{ehtml,ssi("man.yaws")}.
 
 ssi(File) ->
     {'div',[{class,"box"}],
@@ -49,29 +51,29 @@ ssi(File) ->
 
 
 <p> will display a man page if invoked with a proper key/value
-pair in the query part of the URL.
+  pair in the query part of the URL.</p>
 
 <p> This fairly convenient way of getting at the query (or POST)
-is equivalent of the code:
+  is equivalent of the code:</p>
 
 <div class="box">
-<pre>
-P = yaws_api:parse_query_data(A),
-L = case lists:keysearch(page, 1, P) of
-           {value, {page, Page}} ->
-               .....
+  <pre>
+    P = yaws_api:parse_query_data(A),
+    L = case lists:keysearch(page, 1, P) of
+              {value, {page, Page}} ->
+                   .....
 </pre>
 </div>
 
 <p>The querypart of the URL is part as field in the Arg structure.
-The function <tt>parse_query/1</tt> parses the raw data into 
-a key/value list. 
+  The function <tt>parse_query/1</tt> parses the raw data into 
+  a key/value list. </p>
 
 
 <p>The <tt>queryvar(ARG,Key)</tt> function returns the value of the
 variable if it is found in the query part of the request. If the variable is not found
 or if the variable is unset, the <tt>queryvar(ARG,Key)</tt> function returns <tt>undefined</tt>. 
-
+</p>
 
 
 </div>

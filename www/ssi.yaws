@@ -98,17 +98,14 @@ out(A) ->
       }
      }
     ].
-    
-    
-
-
-
 
 </erl>
 
 
-</html>
 
 
+<erl>
+out(A) -> {ssi, "END2",[],[]}.
+</erl>
 
 

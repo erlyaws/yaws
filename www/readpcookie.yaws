@@ -14,16 +14,16 @@ out(A) ->
 	  [] ->
 	      f("<p> No cookie set from the browser, need to "
 		"visit <a href=\"setpcookie.yaws\">setpcookie.yaws</a> "
-		"to set the cookie first ~n", []);
+		"to set the cookie first </p>~n", []);
 	  NumStr ->
 	      Num = to_integer(NumStr),
 	      case ets:lookup(pcookies, {cookie,Num}) of
 		  [{{cookie, Num}, Data}] ->
 		      f("<p> Yes, I read your cookie:it is ~p~n "
 			"Your persistent info is ~n"
-			"<pre>~n~p~n</pre>~n", [NumStr, Data]);
+			"<pre>~n~p~n</pre> </p>~n", [NumStr, Data]);
 		  [] ->
-		      f("<p> You had a cookie,but the data is gone",[])
+		      f("<p> You had a cookie,but the data is gone </p>",[])
 	      end
       end,
     {html, L}.
@@ -34,7 +34,7 @@ out(A) ->
 <p>
 The code to read the cookie, is simple, we get the cookie passed to the yaws
 code in the #arg structure which is the argument supplied to the out/1 function.
-The code is:
+The code is:</p>
 
 <erl>
 out(A) ->

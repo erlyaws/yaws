@@ -6,38 +6,42 @@ out(A) ->
 
 <div id="entry">
 <h2> Bindings </h2>
-<p>
-Bindings are the opposite of <a href="ssi.yaws"> Server Side Includes (SSI)</a>.
-SSI is used when entire pages are written largely in EHTML and
-snippets of HTML, or more typically javascript code is inserted into the EHTML 
-code.
+  <p>
+    Bindings are the opposite of 
+    <a href="ssi.yaws"> Server Side Includes (SSI)</a>.
+    SSI is used when entire pages are written largely in EHTML and
+    snippets of HTML, or more typically javascript code is 
+    inserted into the EHTML 
+    code.
+  </p>
 
-<p> Bindings are used the other way around. Essentially entire 
-pages are written in regular HTML but parts of the HTML needs to be 
-dynamically generated.
-
-<p>The yaws callback out/1 can return 
-
-<div class="box"> 
-<pre>
-{bindings, [{Key1, Value2}, {Key2, Value2} .....]}. 
-</pre>
-</div>
-
-
-<p>All bindings can then be used in the rest of yaws code (in HTML source and
-within erl tags). In HTML source %%Key%% is expanded to Value and
-within erl tags yaws_api:get_binding(Key) can be used to extract Value.
-
-<p>With the binding feature it is easier to write transparent yaws code making
-it easier to to work together with Web people knowing little or
-nothing about Erlang.
-
-An example:
+  <p> Bindings are used the other way around. Essentially entire 
+    pages are written in regular HTML but parts of the HTML needs to be 
+    dynamically generated.
+  </p>
+  <p>The yaws callback out/1 can return 
+  </p>
+  <div class="box"> 
+    <pre>
+      {bindings, [{Key1, Value2}, {Key2, Value2} .....]}. 
+    </pre>
+  </div>
 
 
-<div class="box"> 
-<pre>
+  <p>All bindings can then be used in the rest of yaws code (in HTML source and
+    within erl tags). In HTML source %%Key%% is expanded to Value and
+    within erl tags yaws_api:get_binding(Key) can be used to extract Value.</p>
+  
+  <p>With the binding feature it is easier to write transparent yaws code making
+    it easier to to work together with Web people knowing little or
+    nothing about Erlang.</p>
+
+  <p>
+    An example:
+  </p>
+
+  <div class="box"> 
+    <pre>
 
 &lt;erl&gt;
 out(A) -&gt; {bindings, [{"A", "foo"}, {"B", "baz"}]}.
@@ -62,15 +66,15 @@ out(A) -&gt;
 %%A%% = %%A%% (hit me)
 &lt;/body&gt;
 &lt;/html&gt;
-</pre>
-</div>
+    </pre>
+  </div>
 
 
 <p>
-Which expands to:
+  Which expands to:</p>
 
-<div class="box"> 
-<pre>
+  <div class="box"> 
+    <pre>
 
 
 
@@ -88,23 +92,24 @@ foo = foo (hit me)
 
 
 
-</pre>
-</div>
+    </pre>
+  </div>
 
 
-<p> And is rendered as:
+  <p> And is rendered as:</p>
 
-<div class="box"> 
-<p>foo</p>
-<p><font size="4">foo != baz</font></p>
-<p>An enormous amount of plain html source here.</p>
+  <div class="box"> 
+    <p>foo</p>
+    <p><font size="4">foo != baz</font></p>
+    <p>An enormous amount of plain html source here.</p>
 
-<ul>
-<li>foo</li>
-<li>gazonk</li></ul>
+    <ul>
+      <li>foo</li>
+      <li>gazonk</li>
+    </ul>
 
-foo = foo (hit me)
-</div>
+    foo = foo (hit me)
+  </div>
 
 
 

@@ -8,45 +8,51 @@ out(A) ->
 
 
 <div id="entry">
-<h2>POST example </h2>
+  <h2>POST example </h2>
 
-<p>This is a simple example where we get to fill in 
-a series of fields and POST the data by hitting the Submit button
-at the end.
-<p>
-The action is set to the yaws file <tt>/post.yaws </tt> which
-gets POSTed data in its <tt>ARG#arg.clidata</tt> field.
+  <p>This is a simple example where we get to fill in 
+    a series of fields and POST the data by hitting the Submit button
+    at the end.
+  </p>
+  <p>
+    The action is set to the yaws file <tt>/post.yaws </tt> which
+    gets POSTed data in its <tt>ARG#arg.clidata</tt> field.
+  </p>
 
+  <form method="post"
+	action="/post.yaws">
 
-<form METHOD=POST
-	ACTION="/post.yaws"
+    This is a serious poll.
 
-This is a serious poll.
-
-   <p>Your favourite programming language? <input NAME="lang" TYPE=text SIZE="48">
-
-<p>Imperative ? <input NAME="imperative" TYPE=checkbox>
-
-How many tabs to you indent? <input NAME="tabs" TYPE=int>
-
-<p>Which OS do you use?
-
-   <ol>
-<li>Windows 95 pro ultra <input NAME="os1" TYPE=checkbox VALUE="w95">
-<li>Windows XP beta cracked <input NAME="os2" TYPE=checkbox VALUE="xpbeta">
-<li>Windows <input NAME="os3" TYPE=checkbox VALUE="windows">
-<li>Other<input NAME="other" SIZE=40>
-</ol>
-
-Your email <input NAME="contact" SIZE="42">
-
-<p>Submit this POST to get an explanation of how to process the
-POSTed data.
-
-    <p><input TYPE=submit> <input TYPE=reset>
-
-</form>
-
+    <p>Your favourite programming language? </p>
+    <input name="lang" type="text" size="48" />
+      
+    <p>Imperative ? <input name="imperative" type="checkbox"/></p>
+        
+    <p>How many tabs to you indent? <input name="tabs" type="text" /></p>
+        
+    <p>Which OS do you use?</p>
+        
+    <ol>
+      <li>Windows 95 pro ultra 
+        <input name="os1" type="checkbox" value="w95"/></li>
+      
+      <li>Windows XP beta cracked 
+        <input name="os2" type="checkbox" value="xpbeta" /></li>
+      <li>Windows 
+        <input name="os3" type="checkbox" value="windows"/></li>
+      <li>Other<input name="other" size="40" /></li>
+    </ol>
+        
+    <p>Your email <input name="contact" size="42" /></p>
+        
+    <p>Submit this POST to get an explanation of how to process the
+      POSTed data.</p>
+        
+    <p><input type="submit" /> <input type="reset" /></p>
+    
+  </form>
+  
 </div>
 
 

@@ -10,18 +10,18 @@ out(A) ->
 
 <h2> The Arg </h2>
 
-<p>This page displays the Arg #arg structure
-supplied to the out/1 function.
-
-<p> The #arg structure is a very important datastructure for the 
-yaws programmer. It is the main mechanism whereby the server can pass 
-data to the web application. There are several data items 
-which are of interest to the webapplication, such as which headers
-were sent from the client, etc.
-The #arg recored is defined in <tt>yaws_api.hrl</tt> and is defined as:
-
-<div class="box">
-<pre>
+  <p>This page displays the Arg #arg structure
+    supplied to the out/1 function.
+  </p>
+  <p> The #arg structure is a very important datastructure for the 
+    yaws programmer. It is the main mechanism whereby the server can pass 
+    data to the web application. There are several data items 
+    which are of interest to the webapplication, such as which headers
+    were sent from the client, etc.
+    The #arg recored is defined in <tt>yaws_api.hrl</tt> and is defined as:
+  </p>
+  <div class="box">
+    <pre>
 
 
 -record(arg, {
@@ -38,22 +38,23 @@ The #arg recored is defined in <tt>yaws_api.hrl</tt> and is defined as:
 	  state,          %% State for use by users of the out/1 callback
 	  pid,            %% pid of the yaws worker process
 	  opaque,         %% useful to pass static data
-	  appmod_prepath, %% path in front of: <appmod><appmoddata>
-
+	  appmod_prepath, %% path in front of: &lt;appmod&gt;&lt;appmoddata&gt;
 	  pathinfo        %% Set to 'd/e' when calling c.yaws for the request
                           %% http://some.host/a/b/c.yaws/d/e
 	 }).              
-</pre>
-</div>
 
-<p> As we have seen is several previous examples, the <tt> out/1</tt> function
-defined in .yaws files, gets invoked with a single argument which is
-a #arg{} record, fitting the specific HTTP request being served.
+    </pre>
+  </div>
 
+  <p> As we have seen is several previous examples, 
+    the <tt> out/1</tt> function
+    defined in .yaws files, gets invoked with a single argument which is
+    a #arg{} record, fitting the specific HTTP request being served.
+  </p>
 
-<p> The code to display the #arg{} record
-is in defined in file <a href="code.yaws?file=/arg.yaws">arg.yaws</a>
-
+  <p> The code to display the #arg{} record
+    is in defined in file <a href="code.yaws?file=/arg.yaws">arg.yaws</a>
+  </p>
 
 <erl>
 
