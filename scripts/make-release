@@ -7,7 +7,7 @@ CVS_RSH=ssh
 Y=`echo ${YAWS_VSN} | sed 's/\./-/g'`
 cd ../..
 
-cvs tag yaws-${Y}
+cvs tag -F yaws-${Y}
 
 rm -rf tmp 2> /dev/null
 mkdir tmp

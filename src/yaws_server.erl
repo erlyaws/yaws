@@ -558,7 +558,7 @@ make_arg(CliSock, Head, Req, GC, SC) ->
 		  fullpath,
 		  data,    %% Binary | FileDescriptor | DirListing | undefined
 		  mime,    %% MIME type
-		  q        %% query for GET requests
+		  q,       %% query for GET requests
 		  wwwauth = false  %% or #auth{}
 		 }).
 
