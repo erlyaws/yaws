@@ -138,29 +138,29 @@ appmoddata field.
 
 
 .TP
-\fB ssl = true \fR
-This enables ssl for this server
+\fB <ssl>  .... </ssl> \fR
+This begins and ends an SSL configuration for this server.
 .TP
-\fB ssl_keyfile = File\fR
+\fB keyfile = File\fR
 Specifies which file contains the private key for the certificate.
 .TP
-\fB ssl_certfile = File\fR
+\fB certfile = File\fR
 Specifies which file contains the certificate for the server.
 .TP
-\fB ssl_cacertfile = File\fR
+\fB cacertfile = File\fR
 File If the server is setup to require client certificates. This file needs to contain all the certificates of the acceptable signers for the client certs.
 .TP
-\fB ssl_verify = 1 | 2 | 3\fR
+\fB verify = 1 | 2 | 3\fR
 Specifies the level of verification the server does on clinet certs. 1 means nothing, 2 means the the server will ask the client for a cert but not fail if the client doesn't supply a client cert, 3 means that the server requires the client to supply a client cert.
 .TP
-\fB ssl_depth = Int\fR
+\fB depth = Int\fR
 Specifies the depth of certificate chains the server is prepared to follow when verifying client certs.
 .TP
-\fB ssl_password = String\fR
+\fB password = String\fR
 String If the private key is encrypted on disc, this password is the 3des key to decrypt it.
 
 .TP
-\fB ssl_ciphers = String\fR
+\fB ciphers = String\fR
 * This string specifies the ssl cipher string. The syntax of the ssl cipher string is a little horrible sublanguage of its own. It is documented in the ssl man page for "ciphers". 
 
 
@@ -281,10 +281,11 @@ max_num_cached_bytes = 6000000
         port = 443
         listen = 192.168.128.32
         docroot = /var/yaws/www_funky_org
-        ssl = true
-        ssl_keyfile = /etc/funky.key
-        ssl_cerfile = /etc/funky.cert
-        ssl_password = gazonk
+        <ssl>
+           keyfile = /etc/funky.key
+           certfile = /etc/funky.cert
+           password = gazonk
+        </ssl>
 </server>
 
 
