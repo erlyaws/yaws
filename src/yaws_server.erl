@@ -2069,7 +2069,7 @@ get_more_post_data(PPS, ARG) ->
     if N + PPS < Len ->
 	    case get_client_data(ARG#arg.clisock, N, 
 			       is_ssl(SC#sconf.ssl)) of
-		{ok, Bin} ->
+		Bin when binary(Bin) ->
 		    io:format("Got ~p\n", [size(Bin)]),
 		    {partial, Bin};
 		Else ->
@@ -2079,7 +2079,7 @@ get_more_post_data(PPS, ARG) ->
        true ->
 	    case get_client_data(ARG#arg.clisock, Len - PPS, 
 			       is_ssl(SC#sconf.ssl)) of
-		{ok, Bin} ->
+		Bin when binary(Bin) ->
 		    io:format("Got tail ~p\n", [size(Bin)]),
 		    Bin;
 		Else ->
