@@ -21,7 +21,7 @@ updategifs=
 while [ x$updategifs = x ]; do
    echo
    echo -n "Do you want to replace the gifs in WikiPreferences.files?"\
-	   "[yes or no] "
+	   "(yes or no) [no] "
    read reply leftover
    case $reply in
       y* | Y*)
@@ -31,6 +31,9 @@ while [ x$updategifs = x ]; do
          updategifs=0
 	 ;;
    esac
+   if [ x$reply = x ] ; then
+      updategifs=0
+   fi
 done
 
 function updateDir () {
