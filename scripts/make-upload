@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# This is make it a wee bit more convenient for
+# me to publish the tar balls
+set -x
+
+if [ $# != 1 ]; then
+   echo 'usage: make-upload <tarball>'
+   exit 1
+fi
+
+
+echo "cd incoming " >  /tmp/cmds.$$
+echo "put $1 " >> /tmp/cmds.$$
+ncftp -u anonymous -p klacke@hyber.org upload.sourceforge.net < /tmp/cmds.$$
+rm /tmp/cmds.$$
+scp $1 klacke@gnejs.hyber.org:/var/yaws/www/download
+
+
+echo "Now login at sourceforge at go the page"
+echo "http://sourceforge.net/project/admin/editpackages.php?group_id=45637"
+echo "and create the new package ... "
+
+
+
