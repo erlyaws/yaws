@@ -1,0 +1,32 @@
+
+<erl>
+
+out(A) -> 
+    Head = yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]),
+    
+    L = yaws_api:parse_query(A),
+    {Code, F} = case lists:keysearch(file, 1, L) of
+		    {value, {_, Fname}} ->
+			case file:read_file(A#arg.docroot ++ undot(Fname)) of
+			    {ok, B} ->
+				{yaws_api:pre_ssi_string(binary_to_list(B),"box"), Fname};
+			    _ ->
+				{[], "Can't read " ++ Fname }
+			end;
+		    false ->
+			{[], "Bad request"}
+		end,
+    Trail = yaws_api:ssi(A#arg.docroot, ["/END"]),
+    [Head, {ehtml, {h2, [], F}}, Code, Trail].
+
+
+
+undot([$., $. |T]) ->
+    undot(T);
+undot([H|T]) ->
+    [H|undot(T)];
+undot([]) ->
+    [].
+
+
+</erl>

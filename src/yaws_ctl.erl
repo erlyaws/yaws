@@ -17,12 +17,8 @@
 -include_lib("yaws/include/yaws_api.hrl").
 
 
-
--define(F, "/tmp/yaws.ctl").
-
-
 ctl_file("0") ->
-    io_lib:format("/var/run/yaws.ctl");
+    "/var/run/yaws.ctl";
 ctl_file(Id) ->
     io_lib:format("/tmp/yaws.ctl.~s",[Id]).
 

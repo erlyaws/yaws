@@ -4,12 +4,16 @@ out(A) ->
     {ehtml,
      {html, [],
       [{h1, [], "Upload a file to the webserver"},
-        {form, [{enctype, "multipart/form-data"},
-		{method, post},
-		{action, "/upload.yaws"}
-	       ], 
-	 [{input, [{type, submit}, {value, "Upload"}]},
-	  {input, [{type,file}, {width, "50"}, {name, foo}]}
-	 ]}]}}.
+       {p, [], "The code that parses the multipart form data resides in"},
+       {a, [{href, "/code.yaws?file=/upload.yaws"}], "upload.yaws"},
+       {br},
+       {hr},
+       {form, [{enctype, "multipart/form-data"},	
+	       {method, post},
+	       {action, "/upload.yaws"}
+	      ], 
+	[{input, [{type, submit}, {value, "Upload"}]},
+	 {input, [{type,file}, {width, "50"}, {name, foo}]}
+	]}]}}.
 
 </erl>

@@ -58,14 +58,10 @@ powered by Yaws.
 
 <p> <h2> News </h2>
 
-<div class="box"> 
+<div class="man"> 
 
+<h3> Nov 25, 2002.  Version 0.59 released  </h3>
 
-
-<p>
-<ul>
-
-<li> Nov 25, 2002.  Version 0.59 released 
 <ul>
 <li><p> Lots of fixes and new features in this release. This release of
 Yaws is fast, it delivers 3000 static/dynamic pages/sec on my 2Ghz home box.
@@ -82,11 +78,15 @@ yaws_api:parse_post_data/1. See the docs for details.
 <li><p> Optimized ehtml generation
 
 </ul>
+</div>
 
 
 
 
-<p>
+
+<h2> Old News </h2>
+<div class="box">
+
 <ul>
 
 <li>

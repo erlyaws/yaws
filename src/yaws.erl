@@ -752,10 +752,11 @@ outh_set_dyn_headers(Req, Headers) ->
 	   date = make_date_header(),
 	   server = make_server_header(),
 	   connection = make_connection_close_header(DoClose),
+	   content_type = make_content_type_header("text/html"),
 	   doclose = DoClose,
 	   chunked = Chunked,
 	   transfer_encoding = 
-	   make_transfer_encoding_chunked_header(Chunked)},
+	       make_transfer_encoding_chunked_header(Chunked)},
     
     put(outh, H2).
 
