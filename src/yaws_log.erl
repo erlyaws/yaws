@@ -248,7 +248,7 @@ handle_cast({trace, from_server, Data}, State) ->
     Str = ["*** SRV -> CLI *** ", Data],
     file:write(State#state.tracefd, Str),
     tty_trace(Str, State),
-    {noreply, State};
+    {noreply,  State};
 handle_cast({trace, from_client, Data}, State) ->
     Str = ["*** CLI -> SRV *** ", Data],
     file:write(State#state.tracefd, Str),
