@@ -1514,3 +1514,17 @@ d($+) -> 62;
 d($/) -> 63;
 d(_) -> 63.
 
+
+
+
+slash_append("/", [$/|T]) ->
+    [$/|T];
+slash_append("/", T) ->
+    [$/|T];
+slash_append([], [$/|T]) ->
+    [$/|T];
+slash_append([], T) ->
+    [$/|T];
+slash_append([H|T], X) ->
+    [H | slash_append(T,X)].
+

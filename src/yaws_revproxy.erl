@@ -357,7 +357,7 @@ rewrite_loc_url(SC, LocUrl, PS) ->
     Scheme = yaws_server:redirect_scheme(SC),
     RedirHost = yaws_server:redirect_host(SC, PS#psock.r_host),
     RealPath = LocUrl#url.path,
-    [Scheme, RedirHost, PS#psock.prefix ++  LocUrl#url.path].
+    [Scheme, RedirHost, yaws:slash_append(PS#psock.prefix, LocUrl#url.path)].
 
 
 %% This is the case for broken webservers that reply with
