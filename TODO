@@ -3,17 +3,32 @@
 
 
 respect client side Cache-Control: no-cache
+
 clusters 
+
 handle the If-..... headers 
-handle Range header
+
 implement TRACE, PUT
+
 more documentation in the www directory (never ending story)
+
 more functions in yaws_api 
+
 lots of examples
+
 do something cool, maybe a streaming audio app
+
 shell access into the daemon .... no bad idea
+
 HTTP trailer support
+
 substitution in ssi pages as well as regular pages
-CGI interface
+
+Content Negotiation  (langauages)
+
+gzip from the server if the client can handle it
+
+be a HTTP proxy
+
 
 
