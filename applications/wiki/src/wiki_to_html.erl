@@ -35,16 +35,15 @@ format_wiki(Page, Wik, Root, preview) ->
     pp(Wik, LinkFun, Page).
 
 format_link(Page, Root) ->
-    format_link({wikiLink, Page}, Page, Root, show).
+    format_link({wikiLink, Page}, [], Root, show).
 
-format_link({wikiLink, Name}, Page, Root, _Mode) ->
-    FullName = Root ++ "/" ++ Page ++ ".wob",
-    case is_file(FullName) of
-	true ->
-	    ["<a href=\"showPage.yaws?node=",Page,"\">",Name,"</a> "];
-	false ->
-	    [" ",Page,"<a href=\"createNewPage.yaws?node=",Page,"\">???</a>"]
-    end;
+
+%% TODO: Refactor that: The use of the page is ugly:
+%% Most of the time the Page is in the second parameter,
+%% but in the wikiLink it is the second element of the first parameter tuple
+format_link({wikiLink, Page}, _, Root, _Mode) ->
+    %% MR: I first need to extract the code here into a separate function:
+    wiki_link(Page, Page, Root);
 format_link({editTag, Tag}, Page, Root, show) ->
     ["<a href=\"editTag.yaws?node=",Page,"&tag=",i2s(Tag),"\">",
      "<img border=0 src='WikiPreferences.files/edit.gif'></a> "];
@@ -63,6 +62,15 @@ format_link({file, FileName, Description, _}, FileDir, Page, Root,_) ->
      "</a></td><td align=left valign=top>",
      Description, "</td></tr>\n"].
 
+wiki_link(LinkName, Page, Root) ->
+    FullName = Root ++ "/" ++ Page ++ ".wob",
+    case is_file(FullName) of
+	true ->
+	    ["<a href=\"showPage.yaws?node=",Page,"\">",LinkName,"</a> "];
+	false ->
+	    [" ",Page,"<a href=\"createNewPage.yaws?node=",Page,"\">???</a>"]
+    end.
+
 %% Same as format_link, but drop the prefix
 %% This is used to create the Wiki menu
 format_menu_link(Prefix, Page, Root) ->
@@ -71,7 +79,7 @@ format_menu_link(Prefix, Page, Root) ->
 		   true  -> string:substr(Page, Prefix_length + 1);
 		   false -> Page
 	       end,
-    format_link({wikiLink, LinkName}, Page, Root, show).
+    wiki_link(LinkName, Page, Root).
 
 
 get_filesize(File) ->
