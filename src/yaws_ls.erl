@@ -115,7 +115,12 @@ list_head(Direction) ->
 list_tail() ->
     "</table>".
 
-file_entry({ok, FI}, _DirName, Name, Qry) ->
+%% Removed code that appendended  Qry  to the file name.
+%% It might still be a good idea in case  type==directory.
+%% Was that the intention?
+%% Carsten
+
+file_entry({ok, FI}, _DirName, Name, _Qry) ->
     ?Debug("file_entry(~p) ", [Name]),
     Ext = filename:extension(Name),
     {Gif, Alt} = list_gif(FI#file_info.type, Ext),
@@ -125,7 +130,7 @@ file_entry({ok, FI}, _DirName, Name, Qry) ->
 	   "<td>~s</td>\n"
 	   "<td>~s</td>\n"
 	   "</tr>\n",
-	   [yaws_api:url_encode(Name)++Qry,
+	   [yaws_api:url_encode(Name),
 	    FI#file_info.size,
 	    "/icons/" ++ Gif,
 	    Alt,
