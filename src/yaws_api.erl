@@ -23,6 +23,7 @@
 	 cookieval_to_session/1,
 	 print_cookie_sessions/0,
 	 replace_cookie_session/2]).
+-export([setconf/2]).
 
 %% these are a bunch of function that are useful inside
 %% yaws scripts
