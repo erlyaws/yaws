@@ -104,8 +104,8 @@ Other, non-mandatory, configuration parameters are (with
 explanation and default values):
 
 <rss>
-  rss_file    =  <filename>     # filename of dets-DB (<yaws-dir>/yaws_rss.dets)
   rss_expire  =  false | days   # expire items, or not (false)
+  rss_days    =  <integer>      # days until expired
   rss_rm_exp  =  <bool>         # remove expired items (false)
   rss_max     =  <integer>      # max no.of items stored (infinite)
 </rss>

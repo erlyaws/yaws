@@ -730,8 +730,8 @@ fload(FD, rss, GC, C, Cs, Lno, Chars) ->
 		    yaws_rss:open(RSSid, get(rss)),
 		    fload(FD, server, GC, C, Cs, Lno+1, Next)
 	    end;
-	["rss_file", '=', Value] ->
-	    put(rss, [{db_file, Value} | get(rss)]),
+	["rss_id", '=', Value] ->   % mandatory !!
+	    put(rss_id, list_to_atom(Value)),
 	    fload(FD, rss, GC, C, Cs, Lno+1, Next);
 	["rss_expire", '=', Value] ->
 	    put(rss, [{expire, Value} | get(rss)]),

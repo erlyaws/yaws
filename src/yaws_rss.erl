@@ -28,7 +28,7 @@
 	  rm_exp = false,    % remove expired items
 	  max=infinite,      % maximum number of elements in DB
 	  days=7,            % maximum number of days in DB
-	  counter=0}).       % item counter
+	  counter}).         % item counter
 
 -define(SERVER, ?MODULE).
 -define(DB, ?MODULE).
@@ -78,9 +78,6 @@ open(App) ->
 %%%      XML will thus be done. Also, the whole <em>Opts</em> will be
 %%%      passed un-interpreted to the other DB module.</dd>
 %%%
-%%%      <dt>{db_file, File}</dt>
-%%%      <dd>Specifies the full path pointing to the dets-file to be opened.</dd>
-%%%      
 %%%      <dt>{expire, Expire}</dt>
 %%%      <dd>Specifies what method to use to expire items. Possible values
 %%%      are: <em>false</em>, <em>days</em>, meaning
@@ -270,8 +267,7 @@ terminate(_Reason, _State) ->
 do_open_dir(State, App, Opts) -> 
     case get_db_mod(Opts, dets) of
 	dets -> 
-	    DefFile = yaws_config:yaws_dir() ++ "/" ++ a2l(?DB) ++ ".dets",
-	    File = get_db_file(Opts, DefFile),
+	    File = yaws_config:yaws_dir() ++ "/" ++ a2l(?DB) ++ ".dets",
 	    Expire = get_expire(Opts, #s.expire), 
 	    Max = get_max(Opts, #s.max), 
 	    Days = get_days(Opts, #s.days), 
@@ -281,13 +277,14 @@ do_open_dir(State, App, Opts) ->
 		    {State, {error, "not a proper dets file"}};
 		_     ->
 		    case catch dets:open_file(?DB, [{file, File}]) of
-			{ok,_DB} = Res   -> 
+			{ok,DB} = Res   -> 
 			    {State#s{
 			       open_apps = u_insert(App, State#s.open_apps),
 			       expire = Expire, 
 			       days = Days,
 			       rm_exp = RmExp,
-			       max = Max}, 
+			       max = Max,
+			       counter = init_counter(DB)}, 
 			     Res};
 			{error, _Reason} -> 
 			    {State, {error, "open dets file"}}
@@ -297,6 +294,14 @@ do_open_dir(State, App, Opts) ->
 	    {State, catch apply(DBmod, open, Opts)}
     end.
 
+init_counter(DB) ->
+    case dets:lookup(DB, counter) of
+	[]            -> dets:insert(DB, {counter, 0}), 0;
+	[{counter,N}] -> N
+    end.
+
+set_counter(DB, N) ->
+    dets:insert(DB, {counter, N}).
 
 do_insert(State, {App, {DbMod,Tag}, Title, Link, Desc, Creator, GregSecs}) ->
     {State, catch apply(DbMod, insert, [App, Tag,Title,Link,Desc,Creator,GregSecs])};
@@ -310,6 +315,8 @@ do_insert(State, {App, Tag, Title, Link, Desc, Creator, GregSecs}) ->
 		      end,
 	    Item = {Title, Link, Desc, Creator, GregSecs},
 	    Res = dets:insert(?DB, ?ITEM(App, Tag, Counter, Item)),
+	    io:format("Inserted item ~p~n",[Counter]),
+	    set_counter(?DB, Counter),
 	    {State#s{counter = Counter}, Res};
 	false ->
 	    {State, {error, "no open DB"}}
@@ -327,6 +334,7 @@ do_retrieve(State, App, Tag) ->
 			Acc
 		end,
 	    Items = sort_items(expired(State, dets:foldl(F, [], ?DB))),
+	    io:format("Retrieve ~p items for App=~p~n",[length(Items),App]),
 	    Xml = to_xml(Items),
 	    {State, {ok, Xml}};
 	false ->
@@ -379,7 +387,6 @@ to_xml([]) ->
 
 
 get_db_mod(Opts, Def)  -> lkup(db_mod, Opts, Def).
-get_db_file(Opts, Def) -> lkup(db_file, Opts, Def).
 get_expire(Opts, Def)  -> lkup(expire, Opts, Def).
 get_max(Opts, Def)     -> lkup(max, Opts, Def).
 get_days(Opts, Def)    -> lkup(days, Opts, Def). 
@@ -407,7 +414,7 @@ a2l(L) when list(L) -> L.
     
  
 t_setup() ->
-    open([{db_file, "yaws_rss.dets"}, {max,7}]),
+    %%open([{db_file, "yaws_rss.dets"}, {max,7}]),
     insert(test,xml,"Normalizing XML, Part 2",
 	   "http://www.xml.com/pub/a/2002/12/04/normalizing.html",
 	   "In this second and final look at applying relational "

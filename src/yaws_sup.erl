@@ -44,7 +44,10 @@ init([]) ->
     YawsServ = {yaws_server, {yaws_server, start_link, YawsServArgs},
 	       permanent, 5000, worker, [yaws_server]},
 
-    {ok,{{one_for_all,0,300}, [YawsLog, YawsServ, Sess]}}.
+    YawsRSS = {yaws_rss, {yaws_rss, start_link, []},
+	       permanent, 5000, worker, [yaws_rss]},
+
+    {ok,{{one_for_all,0,300}, [YawsLog, YawsRSS, YawsServ, Sess]}}.
 
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------
