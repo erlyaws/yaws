@@ -19,13 +19,13 @@
 <p> This is the <tt>post.yaws</tt>. This yaws file gets invoked with client data.
 This is the data that is submitted from the forms page <a href="/form.yaws">form.yaws</a>.
 <p>POST data is naturally organized as a <tt>{Key, Value}</tt> list. A call to
-the function <tt>yaws_api:parse_post_data(A#arg.clidata)</tt> will parse the
+the function <tt>yaws_api:parse_post_data(A)</tt> will parse the
 POSTed data. 
 
 <pre>
 out(A) -> 
    L = f("&lt;pre>~n clidata: ~p~n &lt;/pre>", 
-         [yaws_api:parse_post_data(A#arg.clidata)]),
+         [yaws_api:parse_post_data(A)]),
    {html,L}.
 </pre>
 
@@ -35,7 +35,7 @@ out(A) ->
 
 out(A) -> 
  L = f("<pre>~n clidata: ~p~n </pre>", 
-         [yaws_api:parse_post_data(A#arg.clidata)]),
+         [yaws_api:parse_post_data(A)]),
    {html,L}.
 </erl>
 

@@ -60,7 +60,7 @@ document.
 
 
 <hr>
-<h3> <tt> parse_post_data(Bin) </tt> </h2>
+<h3> <tt> parse_post_data(Arg) </tt> </h2>
 
 <p>
 When data is POST ed to a yaws page, 

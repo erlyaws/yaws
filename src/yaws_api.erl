@@ -17,7 +17,7 @@
 
 
 
-parse_post(Arg) ->
+parse_post_data(Arg) ->
     Headers = Arg#arg.headers,
     case lists:keysearch('Content-Type', 3, Headers#headers.other) of
 	{value, {_,_,_,_,"multipart/form-data"++Line}} ->
@@ -25,10 +25,12 @@ parse_post(Arg) ->
 	    {value, {_, Boundary}} = lists:keysearch(boundary, 1, LineArgs),
 	    parse_multipart(Boundary, binary_to_list(Arg#arg.clidata));
 	_ ->
-	    parse_post_data(Arg#arg.querydata)
+	    parse_post_data_urlencoded(Arg#arg.querydata)
     end.
 	    
 	    
+%
+
 parse_arg_line(Line) ->
     parse_arg_line(Line, []).
 
@@ -148,10 +150,10 @@ split_boundary(Boundary, Line) ->
 %% Content-type: multipart/form-data; boundary=-------------------7cd1d6371ec
 %% which is used for file upload
 
-parse_post_data(Bin) ->
-    parse_post_data(Bin, ['ALLSTRINGS']).
+parse_post_data_urlencoded(Bin) ->
+    parse_post_data_urlencoded(Bin, ['ALLSTRINGS']).
 
-parse_post_data(Bin, Spec) ->
+parse_post_data_urlencoded(Bin, Spec) ->
     do_parse_spec(Bin, Spec, nokey, [], key).
 
 %% Spec is a typelist of the types we expect

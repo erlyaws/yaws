@@ -25,8 +25,7 @@ The following code:
 out(A) ->
 L=" 
     out(A) ->
-       Q = A#arg.querydata,
-        P = yaws_api:parse_post_data(Q),
+        P = yaws_api:parse_post_data(A),
         L = case lists:keysearch(page, 1, P) of
            {value, {page, Page}} ->
               os:cmd(\"man \" ++ Page ++ \" | col -b\");
