@@ -665,7 +665,7 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == nossl ->
 	    put(outh, #outh{}),
 	    Res = apply(yaws_server, Req#http_request.method, 
 			[CliSock, GS#gs.gconf, SC, Req, H]),
-	    maybe_access_log(IP, SC, Req),
+	    maybe_access_log(IP, SC, Req, H),
 	    case Res of
 		continue ->
 		    aloop(CliSock, GS, Num+1);
@@ -699,7 +699,7 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == ssl ->
 	    put(outh, #outh{}),
 	    Res = apply(yaws_server, Req#http_request.method, 
 			[CliSock, GS#gs.gconf, SC, Req, H]),
-	    maybe_access_log(IP, SC, Req),
+	    maybe_access_log(IP, SC, Req, H),
 	    case Res of
 		continue ->
 		    aloop(CliSock, GS, Num+1);
@@ -741,7 +741,7 @@ inet_peername(Sock, SC) ->
     end.
 	    
 
-maybe_access_log(Ip, SC, Req) ->
+maybe_access_log(Ip, SC, Req, H) ->
     ?TC([{record, SC, sconf}]),
     Status = case yaws:outh_get_status_code() of
 		 undefined -> "-";
@@ -764,8 +764,11 @@ maybe_access_log(Ip, SC, Req) ->
 	true ->
 	    Path = safe_decode_path(Req#http_request.path),
 	    Meth = atom_to_list(Req#http_request.method),
+	    Referrer = optional_header(H#headers.referer),
+	    UserAgent = optional_header(H#headers.user_agent),
 	    yaws_log:accesslog(SC#sconf.servername, Ip, 
-			       [Meth, $\s, Path, $\s, Ver] , Status, Len);
+			       [Meth, $\s, Path, $\s, Ver], 
+			       Status, Len, Referrer, UserAgent);
 	false ->
 	    ignore
     end.
@@ -779,10 +782,14 @@ safe_decode_path(Path) ->
     end.
 
 
-
 decode_path({abs_path, Path}) ->
     yaws_api:url_decode(Path).
 
+optional_header(Item) ->
+    case Item of
+	undefined -> "-";
+	Item -> Item
+    end.
 
 do_recv(Sock, Num, TO, nossl) ->
     gen_tcp:recv(Sock, Num, TO);

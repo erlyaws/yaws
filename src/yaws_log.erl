@@ -47,8 +47,11 @@ start_link() ->
     gen_server:start_link({local, yaws_log}, yaws_log, [], []).
 
 accesslog(ServerName, Ip, Req, Status, Length) ->
+    accesslog(ServerName, Ip, Req, Status, Length, "-", "-").
+
+accesslog(ServerName, Ip, Req, Status, Length, Referrer, UserAgent) ->
     gen_server:cast(?MODULE, {access, ServerName, Ip, Req, 
-			      Status, Length}).
+			      Status, Length, Referrer, UserAgent}).
 setdir(Dir, Sconfs) ->
     gen_server:call(?MODULE, {setdir, Dir, Sconfs}).
 
@@ -201,22 +204,16 @@ handle_call(state, _From, State) ->
     {reply, State, State}.
 
 
-
-
-
-
-
 %%----------------------------------------------------------------------
 %% Func: handle_cast/2
 %% Returns: {noreply, State}          |
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-
-handle_cast({access, ServerName, Ip, Req, Status, Length}, State) ->
+handle_cast({access, ServerName, Ip, Req, Status, Length, Referrer, UserAgent}, State) ->
     case State#state.running of 
 	true ->
-	    do_alog(ServerName, Ip, Req, Status, Length, State),
+	    do_alog(ServerName, Ip, Req, Status, Length, Referrer, UserAgent, State),
 	    {noreply, State};
 	false ->
 	    {noreply, State}
@@ -234,10 +231,10 @@ handle_cast({trace, from_client, Data}, State) ->
 
 
 
-do_alog(ServerName, Ip, Req, Status, Length, State) ->
+do_alog(ServerName, Ip, Req, Status, Length, Referrer, UserAgent, State) ->
     case lists:keysearch(ServerName, #alog.servername, State#state.alogs) of
 	{value, AL} ->
-	    I = fmt_alog(State#state.now, Ip, Req, Status,  Length),
+	    I = fmt_alog(State#state.now, Ip, Req, Status,  Length, Referrer, UserAgent),
 	    file:write(AL#alog.fd, I),
 	    tty_trace(I, State);
 	_ ->
@@ -322,17 +319,23 @@ terminate(_Reason, _State) ->
 %%%----------------------------------------------------------------------
 
 
-fmt_alog(Time, Ip, Req, Status,  Length) ->
+fmt_alog(Time, Ip, Req, Status,  Length, Referrer, UserAgent) ->
     [yaws:fmt_ip(Ip), " - - ", Time, [$\s, $"], Req, [$",$\s], 
-     Status, [$\s], Length, " - -\n"].
+     Status, [$\s], Length, [$\s,$"], Referrer, [$",$\s,$"], UserAgent, [$",$\n]].
 
 fmtnow() ->
-    {{Year, Month, Date}, {Hour, Min, Sec}} = calendar:universal_time(),
-    io_lib:format("[~w/~s/~w:~2..0w:~2..0w:~2..0w GMT]",
-		  [Date,yaws:month(Month),Year, Hour, Min, Sec]).
+    {{Year, Month, Date}, {Hour, Min, Sec}} = calendar:local_time(),
+    io_lib:format("[~w/~s/~w:~2..0w:~2..0w:~2..0w ~s]",
+		  [Date,yaws:month(Month),Year, Hour, Min, Sec, zone()]).
 
 zone() ->
-    {_, {_U, _,_}} = erlang:universaltime(),
-    {_, {_L, _,_}} = erlang:localtimetime(),
-    uhhh.
+    {_, {U, _,_}} = erlang:universaltime(),
+    {_, {L, _,_}} = erlang:localtime(),
+    zone((U-L)*100).
 
+%% Ugly reformatting code to get times like +0000 and -1300
+
+zone(Val) when Val < 0 ->
+    io_lib:format("-~4..0w", [abs(Val)]);
+zone(Val) when Val >= 0 ->
+    io_lib:format("+~4..0w", [abs(Val)]).
