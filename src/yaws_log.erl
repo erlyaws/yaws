@@ -58,13 +58,28 @@ trace_traffic(ServerOrClient , Data) ->
     gen_server:cast(?MODULE, {trace, ServerOrClient, Data}).
 
 
-uid_change(undefined) ->
-    ok;
-uid_change(Uname) ->
-    Int = list_to_integer(os:cmd("uname -u " ++ Uname) -- [10]),
-    gen_server:call(?MODULE, {uid_change, Int}).
 
-
+uid_change(GC) ->
+    case GC#gconf.username of
+	undefined ->  
+	    %% uid change feature not used
+	    ok;
+	Uname when GC#gconf.uid /= "0" ->
+	    %% we're not root and can't do anything about the sitiation
+	    ok;
+	Uname ->
+	    %% let's change the owner of logdir
+	    %% as well as all the files in that directory
+	    Int = list_to_integer(os:cmd("uname -u " ++ Uname) -- [10]),
+	    S = gen_server:call(?MODULE, state),
+	    {ok, Files} = file:list_dir(S#state.dir),
+	    ok = file:change_owner(S#state.dir, Int),
+	    lists:foreach(
+	      fun(F) ->
+		      NF = S#state.dir ++ [$/ | F],
+		      ok = file:change_owner(NF, Int)
+	      end, Files)
+    end.
 
 
 %%%----------------------------------------------------------------------
@@ -188,7 +203,10 @@ handle_call({open_trace, What}, _From, State) ->
     end;
 
 handle_call({trace_tty, What}, _From, State) ->
-    {reply, ok, State#state{tty_trace = What}}.
+    {reply, ok, State#state{tty_trace = What}};
+handle_call(state, _From, State) ->
+    {reply, State, State}.
+
 
 
 

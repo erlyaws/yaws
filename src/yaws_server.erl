@@ -1,4 +1,4 @@
-%%%----------------------------------------------------------------------
+%%----------------------------------------------------------------------
 %%% File    : yaws_server.erl
 %%% Author  : Claes Wikstrom <klacke@hyber.org>
 %%% Purpose : 
@@ -226,7 +226,7 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
     file:make_dir("/tmp/yaws"),
     set_writeable("/tmp/yaws"),
 
-    case yaws_log:uid_change(Gconf#gconf.username) of
+    case yaws_log:uid_change(Gconf) of
 	ok ->
 	    ok;
 	{error, Reason} ->
@@ -711,7 +711,7 @@ pick_host(_GC, Host, [H|_T], _Group) when H#sconf.servername == Host ->
     H;
 pick_host(GC, Host, [_|T], Group) ->
     pick_host(GC, Host, T, Group);
-pick_host(GC, Host, [], Group) ->
+pick_host(_GC, _Host, [], Group) ->
     hd(Group).
 
 
@@ -1072,7 +1072,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    yaws_ls:list_directory(CliSock, UT#urltype.data, P, Req, GC, SC);
 	regular -> 
 	    yaws:outh_set_static_headers(Req, UT, H),
-	    deliver_file(CliSock, GC, SC, Req, H, UT);
+	    deliver_file(CliSock, GC, SC, Req, UT);
 	yaws ->
 	    yaws:outh_set_dyn_headers(Req, H),
 	    do_yaws(CliSock, GC, SC, Req, H, 
@@ -1774,21 +1774,21 @@ ut_close(Fd) ->
 	
 
 
-deliver_file(CliSock, GC, SC, Req, InH, UT) ->
+deliver_file(CliSock, GC, SC, Req, UT) ->
     if
 	binary(UT#urltype.data) ->
 	    %% cached
-	    deliver_small_file(CliSock, GC, SC, Req, InH, UT);
+	    deliver_small_file(CliSock, GC, SC, Req, UT);
 	true ->
 	    case (UT#urltype.finfo)#file_info.size of
 		N when N < GC#gconf.large_file_chunk_size ->
-		    deliver_small_file(CliSock, GC, SC, Req, InH, UT);
+		    deliver_small_file(CliSock, GC, SC, Req, UT);
 		_ ->
-		    deliver_large_file(CliSock, GC, SC, Req, InH, UT)
+		    deliver_large_file(CliSock, GC, SC, Req, UT)
 	    end
     end.
 
-deliver_small_file(CliSock, GC, SC, Req, InH, UT) ->
+deliver_small_file(CliSock, GC, SC, Req, UT) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT, urltype}]),
     Fd = ut_open(UT),
     Bin = ut_read(Fd),
@@ -1806,7 +1806,7 @@ deliver_small_file(CliSock, GC, SC, Req, InH, UT) ->
 	    continue
     end.
     
-deliver_large_file(CliSock, GC, SC, Req, InH, UT) ->
+deliver_large_file(CliSock, GC, SC, Req, UT) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT, urltype}]),
     close_if_HEAD(Req, fun() ->
 			       deliver_accumulated(CliSock, GC,SC),
