@@ -23,6 +23,8 @@ sh ./mangle ${prefix}/lib/yaws ${erl} yaws.conf.template ${t}
 
 
 if [ -f /etc/gentoo-release ]; then
+    install -d  ${etcdir}/init.d/yaws
+    install -d ${etcdir}/conf.d/yaws
     cp gentoo/init.d.yaws  ${etcdir}/init.d/yaws
     cp gentoo/conf.d.yaws  ${etcdir}/conf.d/yaws
 elif [ -f /etc/redhat-release ]; then
