@@ -11,6 +11,9 @@ out(A) ->
 
 <table border="2">
 
+
+<tr><td> May 26, added SSL support  0.40 </td> </tr>
+
  <tr><td> Mar 29, fixed a bug in the log wrapping which restarted the server</td></tr>
 <tr><td> Mar 26, released 0.32 </tr>
 <tr> <td> Mar 26, 2002. Fixed a bug where chunked encodings were

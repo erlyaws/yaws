@@ -48,6 +48,18 @@ of cource, <a href="http://yaws.hyber.org">yaws.hyber.org</a> is itself
 powered by Yaws.
 
 
+<p> <h2> News </h2>
+
+<div class="box"> 
+
+<ul>
+<li> Version 0.40 released. Contains bugfixes and full SSL support
+as well as an embryo to WWW-Authenticate support.
+</ul>
+
+</div>
+
+
 
 <erl>
 out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).

@@ -33,7 +33,7 @@ The above commands will
 checkout the bleeding edge source, build it and install it at
 127.0.0.1:80 with the docroot set to the local documentation.
 
-<p>Just <tt>make</tt> (withou install) 
+<p>Just <tt>make</tt> (without install) 
 will build the yaws system and do a local
 install at http://127.0.0.1:8000. This is the typical mode of operation
 while either just trying out yaws, or hacking yaws. This will install
@@ -59,21 +59,44 @@ include.mk file in the the toplevel directory.
 erlang system and instructs it to start yaws.
 <p>The following command line flags are availiable:
 <ul>
+
 <li> <tt>-d </tt> <br>
 Debug mode.
+
 <li> <tt>-i </tt> <br>
 Interactive mode, this starts the yaws webserver with an erlang 
 shell. If this flag is not given, yaws will run as a daemon.
+
 <li> <tt>-c File </tt><br>
 Use an explicit yaws.conf file
+
 <li> <tt>-t </tt><br>
 Trace mode, write a trace of all traffic to a file called 'trace'
 in the log directory.
+
+<li> <tt>-T </tt><br>
+Trace mode, write a trace of all http traffic to a file called 'trace'
+in the log directory.
+
+
+<li> <tt>-D </tt><br>
+Daemon mode.
+
+
+<li> <tt>-h </tt><br>
+HUP the daemon, make it read a new config file and clear its 
+internal content caches. When updating the content on the site 
+it's always a good idea to HUP the yaws daemon.
+
+
+
+<li> <tt>-s </tt><br>
+Stop the daaemon. 
+
+
+
+
 </ul>
-
-<h3>HUP the server </h3>
- <p> NYI
-
 
 
 <H2>Configuring Yaws</h2>
@@ -106,6 +129,8 @@ embedded application inside another Erlang program.
 <p>The configuration file has a global part and then specific
 parts for each virtual host that is defined. A very simple 
 example config could look like:
+
+
 
 <erl>
 out(A) -> yaws_api:pre_ssi_string("
@@ -195,8 +220,6 @@ Let the server listen to port number PortNum
 Let the server listen to the address IpAddr.
 <li> <tt> docroot = Directory </tt> <br>
 Let the server serv its content from the directory Dir.
-<li> <tt>ssl = true | false </tt><br>
-NYI
 <li> <tt> default_server_on_this_ip = true|false </tt>
 When virthosting more than one server on the same IP address, we must
 indicate to the yaws server which one of the virtual servers is the default 
@@ -231,10 +254,81 @@ out(A) -> yaws_api:pre_ssi_string("
 </erl>
 
 
+<h3> SSL </h3>
+
+Yaws has full SSL support. When we are running SSL it is not
+possible to combine that with virtual hosting on the same IP address.
+The reason for that is ofcource that the webserver needs to choose
+a certificate before it reads the Host: header. 
+
+<p>The following config options are possible for an SSL server.
+<p>
+<ul>
+<li> <tt> ssl = true | false </tt>
+Turns on SSL processing for a server
+
+
+<li> <tt> ssl_keyfile = File </tt>
+Specifies which file contains the private key for the certificate.
+
+<li> <tt> ssl_certfile = CertFile </tt>
+Specifies which file contains the certificate for the server.
+
+<li> <tt> ssl_caceretfile = CaCertFile </tt>
+If the server is setup to require client certificates. This file needs to
+contain all the certificates of the acceptable signers for the client certs.
+
+
+<li> <tt> ssl_verify = [1 | 2 | 3]</tt>
+Specifies the level of verification the server does on clinet certs.
+1 means nothing, 2 means the the server will ask the client for 
+a cert but not fail if the client doesn't supply a client cert, 3 means that
+the server requires the client to supply a client cert.
+
+
+<li> <tt> ssl_depth = Int </tt>
+Specifies the depth of certificate chains the server is prepared to
+follow when verifying client certs.
+
+
+<li> <tt> ssl_password = String </tt>
+If the private key is encrypted on disc, this password is the 3des key
+to decrypt it.
+
+<li> <tt> ssl_ciphers = String </tt>
+This string specifies the ssl cipher string. The syntax of the ssl cipher
+string is a littele horrible sublanguage of its own.
+It is  documented in the ssl man page for "ciphers".
+
+
+</ul>
+
+<p> In the yaws distribution, an example (self generated) certificate
+and key is included in the $YAWSSRC/ssl directory.
+
+<p>Extending one of the example from above for SSL usage, it could look 
+like:
+
+
+<erl>
+out(A) -> yaws_api:pre_ssi_string("
+<server www.mydomain.org>
+	port = 443
+	listen = 201.6.7.8
+	docroot = /var/yaws/www
+	ssl = true
+	ssl_keyfile = /etc/yaws.key
+	ssl_certfile = /etc/yaws.cert
+</server>
+
+").
+
+</erl>
+
 
 <h3>Embedded mode</h3>
 
-NYI
+Not documented.
 
 
 <erl>

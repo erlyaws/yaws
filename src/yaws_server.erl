@@ -1044,23 +1044,26 @@ deliver_dyn_file(CliSock, GC, SC, _Req, _Head,_UT,DC, _Bin, _Fd, [], _ARG) ->
 skip_data(List, Fd, Sz) when list(List) ->
     skip_data(list_to_binary(List), Fd, Sz);
 skip_data(Bin, Fd, Sz) when binary(Bin) ->
-    ?Debug("Skip data ~p bytes ", [Sz]),
+    ?Debug("Skip data ~p bytes from", [Sz]),
      case  Bin of
 	 <<Head:Sz/binary ,Tail/binary>> ->
 	     {Head, Tail};
 	 _ ->
-	     case file:read(Fd, 4000) of
-		 {ok, Bin2} -> 
+	     case (catch file:read(Fd, 4000)) of
+		 {ok, Bin2} when binary(Bin2) -> 
 		     Bin3 = <<Bin/binary, Bin2/binary>>,
 		     skip_data(Bin3, Fd, Sz);
 		 _Err ->
-		     ?Debug("EXIT in skip_data: ~p  ~p~n", [Bin, Sz]),
+		     ?Debug("EXIT in skip_data: ~p  ~p ~p~n", [Bin, Sz, _Err]),
 		     exit(normal)
 	     end
      end;
 skip_data({bin, Bin}, _, Sz) ->
+    ?Debug("Skip bin data ~p bytes ", [Sz]),
     <<Head:Sz/binary ,Tail/binary>> = Bin,
-    {Head, {bin, Tail}}.
+    {Head, {bin, Tail}};
+skip_data({ok, X}, Fd, Sz) ->
+    skip_data(X, Fd, Sz).
 
 
 
@@ -1162,7 +1165,7 @@ do_tcp_close(Sock, SC) ->
 ut_open(UT) ->
     case UT#urltype.data of
 	undefined ->
-	    {ok, Fd} = file:open(UT#urltype.fullpath, [read, raw]),
+	    {ok, Fd} = file:open(UT#urltype.fullpath, [read, raw, binary]),
 	    Fd;
 	B when binary(B) ->
 	    {bin, B}
