@@ -1,0 +1,7 @@
+{
+  Description     = "Yaws web server";
+  Provides        = ("Yaws");
+  Requires        = ("DirectoryServices");
+  Uses            = ("Disks", "NFS", "Network Time");
+  OrderPreference = "None";
+}

@@ -1,0 +1,29 @@
+Yaws startup on MacOS X / Darwin
+
+Doing `make install' as root will create a `Yaws' StartupItem in
+/Library/StartupItems.
+
+By default, yaws startup is disabled. To enable it, edit (as root)
+/etc/hostconfig and add the line
+
+    YAWS=-YES-
+
+Yaws startup can be disabled by changing the line to
+
+    YAWS=-NO-
+
+Yaws will start automatically on reboot. You can manually test the
+startup without rebooting by issuing the command (as root) in a
+terminal window
+
+    $ SystemStarter start Yaws
+
+
+Stop the server by issuing:
+
+    $ SystemStarter stop Yaws
+
+Reload the server with the command
+
+    $ SystemStarter restart Yaws
+

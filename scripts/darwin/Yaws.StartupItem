@@ -1,0 +1,39 @@
+#!/bin/sh
+
+##
+# Yaws HTTP Server
+##
+
+. /etc/rc.common
+
+yaws=%prefix%/bin/yaws
+lockdir=/var/spool/lock
+
+StartService ()
+{
+    if [ "${YAWS:=-NO-}" = "-YES-" ]; then
+	ConsoleMessage "Starting yaws http daemon"
+	HOME=/tmp $yaws -D -heart
+	RETVAL=$?
+	[ $RETVAL = 0 ] && touch ${lockdir}/yaws
+    fi
+}
+
+StopService ()
+{
+    ConsoleMessage "Stopping yaws http daemon"
+    HOME=/tmp $yaws -s
+    rm -f ${lockdir}/yaws /var/run/yaws.pid
+}
+
+RestartService ()
+{
+    if [ "${YAWS:=-NO-}" = "-YES-" ]; then
+	ConsoleMessage "Restarting yaws http daemon"
+	HOME=/tmp $yaws -h
+    else
+	StopService
+    fi
+}
+
+RunService "$1"
