@@ -219,22 +219,22 @@ sendChunk([], State) when State#send.last==true,
     smtp_send_part(State, ["\r\n.\r\n"]),
     {done, {redirect_local, {rel_path, "mail.yaws"}}};
 
-sendChunk([{head, {to, _Opts}}|Rest], State) ->
+sendChunk([{head, {"to", _Opts}}|Rest], State) ->
     sendChunk(Rest, State#send{param=to});
 
-sendChunk([{head, {cc, _Opts}}|Rest], State) ->
+sendChunk([{head, {"cc", _Opts}}|Rest], State) ->
     sendChunk(Rest, State#send{param=cc});
 
-sendChunk([{head, {bcc, _Opts}}|Rest], State) ->
+sendChunk([{head, {"bcc", _Opts}}|Rest], State) ->
     sendChunk(Rest, State#send{param=bcc});
 
-sendChunk([{head, {subject, _Opts}}|Rest], State) ->
+sendChunk([{head, {"subject", _Opts}}|Rest], State) ->
     sendChunk(Rest, State#send{param=subject});
 
-sendChunk([{head, {html_subject, _Opts}}|Rest], State) ->
+sendChunk([{head, {"html_subject", _Opts}}|Rest], State) ->
     sendChunk(Rest, State#send{param=ignore});
 
-sendChunk([{head, {message, _Opts}}|Rest], S) ->
+sendChunk([{head, {"message", _Opts}}|Rest], S) ->
     RTo = parse_addr(S#send.to),
     RCc = parse_addr(S#send.cc),
     RBcc = parse_addr(S#send.bcc),
@@ -280,7 +280,7 @@ sendChunk([{head, {message, _Opts}}|Rest], S) ->
     end,
     sendChunk(Rest, S3#send{param=message});
 
-sendChunk([{head, {attached, _Opts}}|Rest], State) ->
+sendChunk([{head, {"attached", _Opts}}|Rest], State) ->
     sendChunk(Rest, State#send{param=attached});
 
 sendChunk([{head, {File, _Opts}}|Rest], S) when S#send.attached=="no" ->
