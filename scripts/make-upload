@@ -2,7 +2,7 @@
 
 # This is make it a wee bit more convenient for
 # me to publish the tar balls
-set -x
+# set -x
 
 if [ $# != 1 ]; then
    echo 'usage: make-upload <tarball>'
@@ -14,43 +14,10 @@ echo "cd incoming " >  /tmp/cmds.$$
 echo "put $1 " >> /tmp/cmds.$$
 ncftp -u anonymous -p klacke@hyber.org upload.sourceforge.net < /tmp/cmds.$$
 rm /tmp/cmds.$$
-scp $1 klacke@gnejs.hyber.org:/var/yaws/www/download
+#scp $1 klacke@gnejs.hyber.org:/var/yaws/www/download
 
 
 echo "Now login at sourceforge at go the page"
 echo "http://sourceforge.net/project/admin/editpackages.php?group_id=45637"
 echo "and create the new package ... "
-
-# or
-
-
-
-cat << HERE
-
-
-
-To upload/download the web-page at sourceforge:
- 
-  scp 'etnt@btt.sourceforge.net:/home/groups/b/bt/btt/htdocs/*' .
- 
-etc...
-To upload the tar ball:
- 
- 
-                        ftp upload.sourceforge.net
-                        user: ftp
-                        password: me@myself.org
-                        cd incoming
-                        bin
-                        put foo-2.0.tar.gz
- 
- 
-To release the tar-ball:
- 
- 1. Press the Admin icon.
- 2. Click on Edit/Release files.
- 3. Click on the quick release.
-
-
-HERE
 
