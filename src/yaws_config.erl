@@ -418,7 +418,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	['<', "auth", '>'] ->
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, #auth{});
 
-	["default_server_on_this_ip", '=', Bool] ->
+	["default_server_on_this_ip", '=', _Bool] ->
 	    fload(FD, server, GC, C, Cs, Lno+1, Next);
 
 	[ '<', "ssl", '>'] ->
@@ -506,7 +506,8 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
 		_ ->
 		    {error, ?F("Expect existing file at line ~w", [Lno])}
 	    end;
-	["verify", '=', Val] ->
+	["verify", '=', Val0] ->
+	    Val = (catch list_to_integer(Val0)),
 	    case lists:member(Val, [1,2,3]) of
 		true when  record(C#sconf.ssl, ssl) ->
 		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{verify = Val}},
@@ -517,7 +518,8 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
 		_ ->
 		    {error, ?F("Expect integer at line ~w", [Lno])}
 	    end;
-	["depth", '=', Val] ->
+	["depth", '=', Val0] ->
+	    Val = (catch list_to_integer(Val0)),
 	    case lists:member(Val, [1,2,3,4,5,6,7]) of
 		true when  record(C#sconf.ssl, ssl) ->
 		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{depth = Val}},

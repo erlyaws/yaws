@@ -67,7 +67,7 @@ uid_change(GC) ->
 	undefined ->  
 	    %% uid change feature not used
 	    ok;
-	Uname when GC#gconf.uid /= "0" ->
+	_Uname when GC#gconf.uid /= "0" ->
 	    %% we're not root and can't do anything about the sitiation
 	    ok;
 	Uname ->
