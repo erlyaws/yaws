@@ -20,6 +20,7 @@ yaws.pdf:	yaws.tex $(IMG_PDF)
 
 yaws.dvi:	yaws.tex  $(IMG_EPS)
 	-latex yaws.tex
+	-latex yaws.tex
 
 %.pdf:	%.eps
 	-epstopdf $<
