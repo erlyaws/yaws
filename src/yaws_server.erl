@@ -337,7 +337,7 @@ do_listen(SC) ->
 
 set_writeable(Dir) ->
     {ok, FI} = file:read_file_info(Dir),
-    Mode = 777,
+    Mode = 8#777,
     file:write_file_info(Dir, FI#file_info{mode = Mode}).
 
 
