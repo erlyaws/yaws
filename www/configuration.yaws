@@ -37,7 +37,9 @@ checkout the bleeding edge source, build it and install it at
 
 <p>Give return as password.
 
-<p>Just <tt>make</tt> (without install) 
+<p>Run ./configure
+
+<p><tt>make</tt> (without install) 
 will build the yaws system and 
 
 <tt>make local_install</tt>
@@ -46,10 +48,11 @@ install at http://127.0.0.1:8000. This is the typical mode of operation
 while either just trying out yaws, or hacking yaws. This will install
 a template configuration file <tt>yaws.conf</tt> in $HOME.
 If $HOME/yaws.conf exists, the old file will not be overwritten.
-<p>A yaws executable will be written into the yaws bin directory.
+<p>A yaws executable (shell script) will be written into 
+the $HOME/bin directory.
 
 <p>To run a locally installed system, we run the yaws script found in the
-bin directory in the source code tree.
+bin directory in the source code tree or $HOME/bin/yaws
 
 <p>
 <tt> make install</tt> will also build the yaws system and also 
@@ -57,9 +60,6 @@ install it in /usr/local. A configuration file /etc/yaws.conf will
 also be installed unless the file already exists. The default config
 file will set up the system to listen on http://127.0.0.1:80
 
-<p>Yaws currently doesn't come with a configure script. (it's not
-neecessary). To install someplace else than in /usr/local, edit the
-include.mk file in the the toplevel directory.
 
 <h2>Running yaws </h2>
 <p>The yaws executable is a shell script which invokes the 
@@ -75,6 +75,15 @@ yaws is then started as:
 </pre>
 
 
+<p>Run yaws as a daemon as
+
+<pre>
+# yaws -D
+</pre>
+
+All command line flags to yaws are described in the
+man page for yaws. 
+
 
 <H2>Configuring Yaws</h2>
 
@@ -84,7 +93,6 @@ in either of two ways depending
 on wheter we run yaws as a standalone daemon or if we run yaws as an
 embedded application inside another Erlang program.
 
-<h3>Daemon mode</h3>
 
 <p>
 The yaws configuration is described in 

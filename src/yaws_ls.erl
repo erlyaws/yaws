@@ -19,10 +19,10 @@
 
 
 list_directory(CliSock, List, DirName, Req, GC, SC) ->
-    ?Debug("List=~p", [List]), 
+    ?Debug("List=~p Dirname~p~n", [List, DirName]), 
     L = lists:zf(
 	  fun(F) ->
-		  File = SC#sconf.docroot ++ DirName ++ [$/|F],
+		  File = DirName ++ [$/|F],
 		  FI = file:read_file_info(File),
 		  file_entry(FI, DirName, F)
 	  end, [".." | List]),
@@ -49,7 +49,7 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
 
 inline_readme(SC,DirName,L) ->
     F = fun("README", _Acc) ->
-		File = SC#sconf.docroot ++ DirName ++ [$/ | "README"],
+		File = DirName ++ [$/ | "README"],
 		{ok,Bin} = file:read_file(File),
 		binary_to_list(Bin);
 	   (_, Acc) ->

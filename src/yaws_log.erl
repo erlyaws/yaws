@@ -70,16 +70,22 @@ uid_change(GC) ->
 	Uname ->
 	    %% let's change the owner of logdir
 	    %% as well as all the files in that directory
-	    Int = list_to_integer(os:cmd("uname -u " ++ Uname) -- [10]),
-	    S = gen_server:call(?MODULE, state),
-	    {ok, Files} = file:list_dir(S#state.dir),
-	    ok = file:change_owner(S#state.dir, Int),
-	    lists:foreach(
-	      fun(F) ->
-		      NF = S#state.dir ++ [$/ | F],
-		      ok = file:change_owner(NF, Int)
-	      end, Files)
+	    case (catch list_to_integer(os:cmd("id -u " ++ Uname) -- [10])) of
+		Int when integer(Int) ->
+		    S = gen_server:call(?MODULE, state),
+		    {ok, Files} = file:list_dir(S#state.dir),
+		    ok = file:change_owner(S#state.dir, Int),
+		    lists:foreach(
+		      fun(F) ->
+			      NF = S#state.dir ++ [$/ | F],
+			      ok = file:change_owner(NF, Int)
+		      end, Files);
+		Err ->
+		    {error, "Bad user " ++ Uname}
+	    end
     end.
+	
+	
 
 
 %%%----------------------------------------------------------------------
@@ -291,7 +297,7 @@ handle_info(minute, State) ->
 	  fun({Sname, FD, Filename}) ->
 		  {ok, FI} = file:read_file_info(Filename),
 		  if
-		      FI#file_info.size > 50000 ->
+		      FI#file_info.size > 200000 ->
 			  file:close(FD),
 			  B = filename:basename(Filename, ".access"),
 			  Old = B ++ ".old",

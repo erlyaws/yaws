@@ -143,6 +143,7 @@ l2a(A) when atom(A) -> A.
 %%          {stop, Reason}
 %%----------------------------------------------------------------------
 init([]) ->
+    process_flag(trap_exit, true),
     put(start_time, calendar:local_time()),  %% for uptime
     {Debug, Trace, Conf, RunMod, Embed} = get_app_args(),
     case Embed of 
@@ -183,7 +184,6 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 	      code:add_pathz(D)
       end, Gconf#gconf.ebin_dir),
 
-    process_flag(trap_exit, true),
 
     %% start user provided application
     case RunMod of
@@ -200,7 +200,7 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 		  proc_lib:start_link(?MODULE, gserv, [Gconf, Group])
 	  end, Sconfs),
     L2 = lists:zf(fun({error, F, A}) ->	
-		  yaws_log:sync_errlog(F, A),
+		  error_logger:error_msg(F, A),
 			  exit(nostart);
 		     ({_Pid, _SCs}) ->
 			  true;
@@ -222,17 +222,15 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 	true ->
 	    ok
     end,
-
     file:make_dir("/tmp/yaws"),
     set_writeable("/tmp/yaws"),
-
     case (catch yaws_log:uid_change(Gconf)) of
 	ok ->
 	    ok;
-	{error, Reason} ->
+	ERR ->
 	    error_logger:error_msg("Failed to change uid on logfiles:~n~p",
-				   [Reason]),
-	    exit(Reason)
+				   [ERR]),
+	    exit(error)
     end,
 
     %% and now finally, we've opened the ctl socket and are
@@ -242,16 +240,17 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 	      ignore ->
 		  Gconf;
 	      {ok, NewUid} ->
+		  error_logger:info_msg("Changed uid to ~s~n", [NewUid]),
 		  Gconf#gconf{uid = NewUid};
 	      Other ->
 		  error_logger:error_msg("Failed to set user:~n~p", [Other]),
 		  exit(Other)
 	  end,
-    case setup_tdir(GC2) of
-	{error, RR} ->
-	    exit(RR);
+    case (catch setup_tdir(GC2)) of
 	ok ->
-	    ok
+	    ok;
+	Error ->
+	    exit(error)
     end,
     lists:foreach(fun({Pid, _}) -> Pid ! {newuid, GC2#gconf.uid} end, L2),
     {ok, {GC2, L2, 0}}.
@@ -263,7 +262,6 @@ setuser(User) ->
     erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
 			 "/../priv/", "setuid_drv"),
     P = open_port({spawn, "setuid_drv " ++ User}, []),
-    unlink(P),
     receive
 	{P, {data, "ok " ++ IntList}} ->
 	    {ok, IntList};
@@ -1007,19 +1005,24 @@ make_arg(CliSock, Head, Req, _GC, SC) ->
 
 handle_request(CliSock, GC, SC, Req, H, ARG, N) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
-    UT =  url_type(GC, SC, decode_path(Req#http_request.path)),
-    ARG2 = ARG#arg{fullpath=UT#urltype.fullpath},
-    case SC#sconf.authdirs of
-	[] ->
-	    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT, N);
-	_Adirs ->
-	    %% we have authentication enabled, check auth
-	    UT2 = unflat(UT),
-	    case is_authenticated(SC, UT2, Req, H) of
-		true ->
-		    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT2, N);
-		{false, Realm} ->
-		    deliver_401(CliSock, Req, GC, Realm, SC)
+    case (catch decode_path(Req#http_request.path)) of
+	{'EXIT', _} ->   %% weird broken cracker requests
+	    deliver_403(CliSock, Req, GC, SC);
+	DecPath ->
+	    UT =  url_type(GC, SC, DecPath),
+	    ARG2 = ARG#arg{fullpath=UT#urltype.fullpath},
+	    case SC#sconf.authdirs of
+		[] ->
+		    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT, N);
+		_Adirs ->
+		    %% we have authentication enabled, check auth
+		    UT2 = unflat(UT),
+		    case is_authenticated(SC, UT2, Req, H) of
+			true ->
+			    handle_ut(CliSock, GC, SC, Req, H, ARG2, UT2, N);
+			{false, Realm} ->
+			    deliver_401(CliSock, Req, GC, Realm, SC)
+		    end
 	    end
     end.
 
@@ -1215,12 +1218,12 @@ deliver_401(CliSock, _Req, GC, Realm, SC) ->
 
 
 deliver_403(CliSock, _Req, GC, SC) ->
-    B = list_to_binary("<html> <h1> 403 Forbidden</h1></html>"),
+    B = list_to_binary("<html> <h1> 403 Forbidden</h1> </html>"),
     H = #outh{status = 403,
 	      doclose = true,
 	      chunked = false,
 	      server = yaws:make_server_header(),
-	      connection = yaws:make_connection_header(true),
+	      connection = yaws:make_connection_close_header(true),
 	      content_length = yaws:make_content_length_header(size(B)),
 	      contlen = size(B),
 	      content_type = yaws:make_content_type_header("text/html")},
@@ -2017,7 +2020,7 @@ maybe_return_dir(DR, FlatPath) ->
 			{ok, List} ->
 			    #urltype{type = directory,
 				     path = {noflat, [DR, FlatPath]},
-				     dir = FlatPath,
+				     dir = DR ++ [$/|FlatPath],
 				     data=List};
 			_Err ->
 			    #urltype{type=error}
@@ -2126,7 +2129,6 @@ parse_user_path(DR, [H|T], User) ->
 ret_reg_split(SC, Comps, RevFile, Query) ->
     ?Debug("ret_reg_split(~p)", [[SC#sconf.docroot, Comps, RevFile, Query]]),
     Dir = lists:reverse(Comps),
-    %%FlatDir = lists:flatten(Dir),
     FlatDir = {noflat, Dir},
     DR = SC#sconf.docroot,
     File = lists:reverse(RevFile),
@@ -2145,27 +2147,6 @@ ret_reg_split(SC, Comps, RevFile, Query) ->
 	    maybe_return_dir(DR, lists:flatten(Dir) ++ File);
 	{ok, FI} when FI#file_info.type == directory, hd(RevFile) /= $/ ->
 	    redir_dir;
-	{error, enoent} ->
-	    ?Debug("Try url_decode of ~p",[lists:flatten([Dir,File])]),
-	    %% kind of hackish, defer url decode 
-	    Dir2 = lists:flatmap(fun(X) -> yaws_api:url_decode(X) end, Dir),
-	    File2 = yaws_api:url_decode(File),
-	    L2 = [DR, Dir2, File2],
-	    ?Debug("Try open ~p~n", [lists:flatten(File2)]),
-	    case prim_file:read_file_info(L2) of
-		{ok, FI} when  FI#file_info.type == regular ->
-		    {X, Mime} = suffix_type(RevFile),
-		    #urltype{type=X, 
-			     finfo=FI,
-			     path = {noflat, [DR, Dir2]},
-			     dir = Dir2,
-			     fullpath = lists:flatten(L2),
-			     mime=Mime, q=Query};
-		{ok, FI} when FI#file_info.type == directory ->
-		    maybe_return_dir(DR, lists:flatten(Dir2) ++ File2);
-		Err ->
-		    #urltype{type=error, data=Err}
-	    end;
 	Err ->
 	    #urltype{type=error, data=Err}
     end.
