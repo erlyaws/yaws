@@ -514,11 +514,13 @@ address(GConf, Sconf) ->
 
 
 
-mktags() ->
-    tags:dirs(["."]),
-    init:stop().
-
-
-pids() ->
-    gen_server:call(yaws_server, pids).
-
+is_space($\s) ->
+    true;
+is_space($\r) ->
+    true;
+is_space($\n) ->
+    true;
+is_space($\r) ->
+    true;
+is_space(_) ->
+    false.

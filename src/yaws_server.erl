@@ -153,7 +153,7 @@ init([]) ->
 		undefined ->
 		    {stop, E};
 		Dir ->
-		    yaws_log:setdir(Dir),
+		    yaws_log:setdir(Dir, []),
 		    yaws_log:sync_errlog("bad conf: ~s",[E]),
 		    {stop, E}
 	    end
@@ -1424,12 +1424,12 @@ cache_file(GC, SC, Path, UT) when UT#urltype.type == regular ;
     FI = UT#urltype.finfo,
     if
 	N + 1 > GC#gconf.max_num_cached_files ->
-	    error_logger:info("Max NUM cached files reached for server "
+	    error_logger:info_msg("Max NUM cached files reached for server "
 			      "~p", [SC#sconf.servername]),
 	    cleanup_cache(E, num),
 	    cache_file(GC, SC, Path, UT);
 	B + FI#file_info.size > GC#gconf.max_num_cached_bytes ->
-	    error_logger:info("Max size cached bytes reached for server "
+	    error_logger:info_msg("Max size cached bytes reached for server "
 			      "~p", [SC#sconf.servername]),
 	    cleanup_cache(E, size),
 	    cache_file(GC, SC, Path, UT);

@@ -95,7 +95,7 @@ parse_line(_, H) ->
 space_strip(L) ->
     space_strip(L, head).
 space_strip([H|T], Mode) ->
-    case is_space(H) of
+    case yaws:is_space(H) of
 	true when Mode == head ->
 	    space_strip(T, Mode);
 	true when Mode == tail ->
@@ -130,7 +130,7 @@ parse_version("HTTP/1.0") ->
 spacesplit(Line, 0, Ack, _Cur) ->
     {lists:reverse(Ack), skip_space(Line)};
 spacesplit([H|T], Num, Ack, Cur) ->
-    case is_space(H) of
+    case yaws:is_space(H) of
 	true when Cur == [] ->
 	    spacesplit(T, Num, Ack, Cur);
 	true ->
@@ -141,15 +141,4 @@ spacesplit([H|T], Num, Ack, Cur) ->
 
 
 skip_space(L) ->
-    lists:dropwhile(fun(X) -> is_space(X) end, L).
-
-is_space($\s) ->
-    true;
-is_space($\r) ->
-    true;
-is_space($\n) ->
-    true;
-is_space($\r) ->
-    true;
-is_space(_) ->
-    false.
+    lists:dropwhile(fun(X) -> yaws:is_space(X) end, L).

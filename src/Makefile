@@ -57,4 +57,8 @@ install: all
 
 
 tags:
-	erl  -noshell -pa ../ebin -s yaws mktags
+	erl  -noshell -pa ../ebin -s yaws_debug mktags
+
+xref:
+	erl -noshell -pa ../ebin -s yaws_debug xref ../ebin
+

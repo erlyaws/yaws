@@ -134,18 +134,46 @@ compile_file(C, LineNo,  Chars = "</pre>" ++ _Tail, pre,  NumChars, Ack) ->
     compile_file(C, LineNo+1, line(C) , html, NumChars + length(Chars), Ack);
 
 compile_file(C, LineNo,  Chars, erl, NumChars, Ack) ->
-    io:format(C#comp.outfd, "~s", [Chars]),
-    compile_file(C, LineNo+1, line(C), erl, NumChars + length(Chars), Ack);
+    case has_tag(Chars, "</erl>") of
+	{ok, Skipped, Chars2} ->
+	    compile_file(C, LineNo,  Chars2, erl, NumChars + Skipped, Ack);
+	false ->
+	    io:format(C#comp.outfd, "~s", [Chars]),
+	    compile_file(C, LineNo+1, line(C), erl, NumChars + 
+			 length(Chars), Ack)
+    end;
+
 
 compile_file(C, LineNo,  Chars, html, NumChars, Ack) ->
-    compile_file(C, LineNo+1, line(C), html, NumChars + length(Chars), Ack);
+    case has_tag(Chars, "<erl>") of
+	{ok, Skipped, Chars2} ->
+	    compile_file(C, LineNo,  Chars2, html, NumChars+Skipped, Ack);
+	false ->
+	    compile_file(C, LineNo+1, line(C), html, NumChars + 
+			 length(Chars), Ack)
+    end;
 
 compile_file(C, LineNo,  Chars, pre, NumChars, Ack) ->
     compile_file(C, LineNo+1, line(C), pre, NumChars + length(Chars), Ack).
 
 
 
-
+has_tag(L, Str) ->
+    has_tag(L, Str, 0).
+has_tag([H|T], Tag, Num) ->
+    case yaws:is_space(H) of
+	true ->
+	    has_tag(T, Tag, Num+1);
+	false ->
+	    case lists:prefix(Tag, [H|T]) of
+		true ->
+		    {ok, Num, [H|T]};
+		false ->
+		    false
+	    end
+    end;
+has_tag(_,_,_) ->
+    false.
 
 check_exported(C, LineNo, NumChars, Mod) when C#comp.modnum == 1->
     case {is_exported(some_headers, 1, Mod),

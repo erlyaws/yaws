@@ -128,3 +128,51 @@ format(GC, F, A) ->
 	true ->
 	    ok
     end.
+
+
+
+mktags() ->
+    tags:dirs(["."]),
+    init:stop().
+
+
+
+xref([Dir]) ->
+    io:format("~p~n", [xref:d(Dir)]),
+    init:stop().
+
+
+pids() ->
+    lists:zf(
+      fun(P) ->
+	      case process_info(P) of
+		  L when list(L) ->
+		      {value, {_, {M1, _,_}}} = 
+			  lists:keysearch(current_function, 1, L),
+		      {value, {_, {M2, _,_}}} = 
+			  lists:keysearch(initial_call, 1, L),
+		      S1= atom_to_list(M1),
+		      S2 = atom_to_list(M2),
+		      case {S1, S2} of
+			  {"yaws" ++ _, _} ->
+			      {true, P};
+			  {_, "yaws"++_} ->
+			      {true, P};
+			  _ ->
+			      false
+		      end;
+		  _ ->
+		      false
+	      end
+      end,
+      processes()).
+
+	      
+
+eprof() ->
+    eprof:start(),
+    eprof:profile(pids()),
+    io:format("Ok run some traffic \n", []).
+			  
+			  
+
