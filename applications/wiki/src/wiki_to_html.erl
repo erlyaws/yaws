@@ -3,10 +3,13 @@
 %% File    : wiki_to_html.erl
 %% Author  : Joe Armstrong (joe@bluetail.com)
 %%         : Johan Bevemyr, minor modifications (jb@bevemyr.com)
+%%         : Mickael Remond (mickael.remond@erlang-fr.org)
 %% Purpose : Convert wiki page tree to HTML
+%%
+%% $Id$
 
 -export([format_wiki/3,format_wiki/4, format_link/2, format_wiki_files/4,
-	format_wiki_files/5]).
+	format_wiki_files/5, format_menu_link/3]).
 
 -include_lib("kernel/include/file.hrl").
 
@@ -32,21 +35,20 @@ format_wiki(Page, Wik, Root, preview) ->
     pp(Wik, LinkFun, Page).
 
 format_link(Page, Root) ->
-    format_link({wikiLink, Page}, [], Root, show).
+    format_link({wikiLink, Page}, Page, Root, show).
 
-format_link({wikiLink, Page}, _, Root, _Mode) ->
+format_link({wikiLink, Name}, Page, Root, _Mode) ->
     FullName = Root ++ "/" ++ Page ++ ".wob",
-    %% io:format("Testing:~p~n",[FullName]),
     case is_file(FullName) of
 	true ->
-	    ["<a href=\"showPage.yaws?node=",Page,"\">",Page,"</a> "];
+	    ["<a href=\"showPage.yaws?node=",Page,"\">",Name,"</a> "];
 	false ->
 	    [" ",Page,"<a href=\"createNewPage.yaws?node=",Page,"\">???</a>"]
     end;
 format_link({editTag, Tag}, Page, Root, show) ->
     ["<a href=\"editTag.yaws?node=",Page,"&tag=",i2s(Tag),"\">",
      "<img border=0 src='WikiPreferences.files/edit.gif'></a> "];
-format_link({editTag, Tag}, Page, Root, preview) ->
+format_link({editTag, Tag}, _Page, _Root, preview) ->
     ["<img border=0 src='WikiPreferences.files/edit.gif'>"].
 
 format_link({file, FileName, C}, FileDir, Page, Root, Mode) ->
@@ -60,6 +62,17 @@ format_link({file, FileName, Description, _}, FileDir, Page, Root,_) ->
      FileName, 
      "</a></td><td align=left valign=top>",
      Description, "</td></tr>\n"].
+
+%% Same as format_link, but drop the prefix
+%% This is used to create the Wiki menu
+format_menu_link(Prefix, Page, Root) ->
+    Prefix_length = length(Prefix),
+    LinkName = case Prefix_length < length(Page) of
+		   true  -> string:substr(Page, Prefix_length + 1);
+		   false -> Page
+	       end,
+    format_link({wikiLink, LinkName}, Page, Root, show).
+
 
 get_filesize(File) ->
     case file:read_file_info(File) of
@@ -98,15 +111,3 @@ is_file(File) ->
         _ ->
             false
     end.
-
-
-
-
-
-
-
-
-
-
-
-
