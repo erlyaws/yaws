@@ -60,9 +60,43 @@ powered by Yaws.
 
 <div class="man"> 
 
-<h3> Mar 6, 2003.  Version 1.01 released  </h3>
+<h3> Mar 6, 2003.  Version 1.2 released  </h3>
 
 <ul>
+
+
+<li><p> This is bugfix release. 
+<li><p> log fixes by  brucefitzsimons
+<li><p> cache bugs for URLs with a query part
+<li><p> erlang compiler bug workaround, The erlang compiler
+        isn't reentrant !!!!!
+
+<li><p> Makefile cleanup my mikl
+<li><p> Bugs in listdir
+
+
+
+
+
+</ul>
+</div>
+
+
+
+
+
+<h2> Old News </h2>
+<div class="box">
+
+
+
+
+<ul>
+<li> May 3, 2003.  Version 1.01 released 
+
+<ul>
+
+
 
 
 <li><p> This is bugfix release. 
@@ -113,14 +147,11 @@ powered by Yaws.
 
 
 </ul>
-</div>
+
+</ul>
 
 
 
-
-
-<h2> Old News </h2>
-<div class="box">
 
 
 
@@ -157,8 +188,11 @@ a non privileged user
 <li><p> Bugs in wraplog fixed
 
 </ul>
+</ul>
 
 
+
+<ul>
 <li> Nov 25, 2002.  Version 0.59 released  
 
 <ul>
@@ -177,13 +211,14 @@ yaws_api:parse_post_data/1. See the docs for details.
 <li><p> Optimized ehtml generation
 
 </ul>
+</ul>
 
 
 
 
 
 
-
+<ul>
 <li>
 <p> Oct 7, version 0.56 released. 
 <ul>
@@ -207,12 +242,13 @@ yaws_api:parse_post_data/1. See the docs for details.
 
 
 </ul>
+</ul>
 
 
 
-<li>
-<p>
-Sep 2, version 0.54 released.
+<ul>
+
+<li>Sep 2, version 0.54 released.
 
 <ul>
 <li>
@@ -234,18 +270,24 @@ Support for OPTIONS http request by Johan Bevemyr
 <li><p>
 Lots of non ready code for a webmail app by klacke.
 </ul>
+</ul>
 
 
 
 
 
-
+<ul>
 <li>
 <p>
 July 1, version 0.52 released.
 It contains a complete wiki web written by Johan Bevemyr with original code
 by Joe Armstrong. It also contains a series of minor and major  bugfixes.
 
+</ul>
+
+
+
+<ul>
 <li>
 <p>
 Jun 19, version 0.51 released. Lot's of fixes.
@@ -269,10 +311,10 @@ as argument instead of querydata and added support for multipart
 form data in the process.
      </ul>
 </li>
-
+</ul>
 		    
 
-
+<ul>
 <li> 
 <p>Jun 16, version 0.50 released. A bug in setcookie fixed, a proper
 /etc/rc/init.d script written. New flag, yaws -S which query status of
