@@ -48,7 +48,7 @@ comp_opts(GC) ->
 
 
 compile_file(File, GC, SC) ->
-    case file:open(File, [read, raw]) of
+    case file_open(File) of
 	{ok, Fd} ->
 	    Spec = compile_file(#comp{infile = File, 
 				      infd = Fd, gc = GC, sc = SC}, 
@@ -142,6 +142,7 @@ compile_file(C, LineNo,  Chars, erl, NumChars, Ack,Es) ->
 	{ok, Skipped, Chars2} ->
 	    compile_file(C, LineNo,  Chars2, erl, NumChars + Skipped, Ack,Es);
 	false ->
+	    ?Debug("Gen: ~s", [Chars]),
 	    io:format(C#comp.outfd, "~s", [Chars]),
 	    compile_file(C, LineNo+1, line(C), erl, NumChars + 
 			 length(Chars), Ack,Es)
@@ -301,37 +302,33 @@ get_compiler_data(P, Ack) ->
 %% This code is so that we get the \r in the line
 %% when we're parsing msdos files.
 
-get_line_init(Fd) ->
-    case file:read(Fd, 1024) of
-	{ok, Chars} ->
-	    put(file_data, Chars),
-	    get_line(Fd);
-	eof ->
-	    eof
+file_open(Fname) ->
+    case file:read_file(Fname) of
+	{ok, Bin} ->
+	    put(yfile_data, binary_to_list(Bin)),
+	    {ok, xxx};
+	Err ->
+	    Err
     end.
 
-file_open(Fname) ->
-    file:open(Fname, [read, raw]).
+
 get_line(Fd) ->
-    case get (file_data) of
-	undefined ->
-	    get_line_init(Fd);
+    L = get_line0(Fd),
+    io:format("LINE ~s~n", [L]),
+    L.
+
+get_line0(Fd) ->
+    case get (yfile_data) of
 	[] ->
-	    get_line_init(Fd);
+	    eof;
 	Chars ->
 	    case get_line_from_chars(Chars, []) of
 		{ok, Line, Tail} ->
-		    put (file_data, Tail),
+		    put (yfile_data, Tail),
 		    Line;
 		need_more ->
-		    case file:read(Fd, 1024) of
-			eof ->
-			    erase(file_data),
-			    Chars;
-			{ok, Chars2} ->
-			    put(file_data, Chars ++ Chars2),
-			    get_line(Fd)
-		    end
+		    put(yfile_data, []),
+		    Chars
 	    end
     end.
 
@@ -341,7 +338,7 @@ get_line_from_chars([$\r, $\n | Tail], Line) ->
 get_line_from_chars([$\n | Tail], Line) ->
     {ok, lists:reverse([$\n|Line]), Tail};
 
-get_line_from_chars([], _) ->
+get_line_from_chars([], Line) ->
     need_more;
 get_line_from_chars([H|T], Line) ->
     get_line_from_chars(T, [H|Line]).
@@ -349,3 +346,15 @@ get_line_from_chars([H|T], Line) ->
 
 
 
+gg() ->
+    {ok, Fd} = file_open("arg.yaws"),
+    gg(Fd).
+
+gg(Fd) ->
+    case get_line(Fd) of
+	eof ->
+	    eof;
+	X ->
+	    io:format("~s", [X]),
+	    gg(Fd)
+    end.
