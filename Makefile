@@ -3,11 +3,27 @@ SUBDIRS	=	c_src src man www/shopingcart www/code doc scripts
 include ./include.mk
 
 
-all debug clean install:	
+all debug clean:	
 	@set -e ; \
 	  for d in $(SUBDIRS) ; do \
 	    if [ -f $$d/Makefile ]; then ( cd $$d && $(MAKE) $@ ) || exit 1 ; fi ; \
 	  done
+
+
+install:	all
+	@yrun=`yaws -S 2> /dev/null`; \
+	case $$yrun in \
+		*Uptime*) \
+			echo "ERROR Can't install while a yaws system is already running, would wreak havoc with /tmp/yaws"; \
+			exit;; \
+		*) \
+			true;; \
+	esac; \
+	set -e ; \
+	  for d in $(SUBDIRS) ; do \
+	    if [ -f $$d/Makefile ]; then ( cd $$d && $(MAKE) $@ ) || exit 1 ; fi ; \
+	  done
+
 
 
 docs:
