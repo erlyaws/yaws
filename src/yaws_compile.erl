@@ -61,15 +61,20 @@ compile_file(C, LineNo, eof, Mode, NumChars, Ack) ->
     {ok, lists:reverse([{data, NumChars} |Ack])};
 
 
-%% skip initial space 
+%% skip initial space if first thing is <erl> otherwise not
 compile_file(C, LineNo,  Chars, init, NumChars, Ack) ->
     case Chars -- [$\s, $\t, $\n, $\r] of
 	[] ->
 	    ?Debug("SKIP ~p~n", [Chars]),
 	    L=length(Chars),
 	    compile_file(C, LineNo+1, line(C), init, NumChars-L, Ack);
+	"<erl>" ++ _ ->  %% first chunk is erl, skip whistespace
+	    compile_file(C, LineNo,  Chars, html, NumChars, Ack);
 	_ ->
-	    compile_file(C, LineNo,  Chars, html, NumChars, Ack)
+	    %% first chunk is html, keep whitespace
+	    Fd=C#comp.infd,
+	    file:position(Fd, bof),
+	    compile_file(C,1,io:get_line(Fd,''),html,0,[])
     end;
 
 compile_file(C, LineNo,  Chars = "<erl>" ++ Tail, html,  NumChars, Ack) ->
