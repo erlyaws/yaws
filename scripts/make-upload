@@ -21,5 +21,36 @@ echo "Now login at sourceforge at go the page"
 echo "http://sourceforge.net/project/admin/editpackages.php?group_id=45637"
 echo "and create the new package ... "
 
+# or
 
+
+
+cat << HERE
+
+
+
+To upload/download the web-page at sourceforge:
+ 
+  scp 'etnt@btt.sourceforge.net:/home/groups/b/bt/btt/htdocs/*' .
+ 
+etc...
+To upload the tar ball:
+ 
+ 
+                        ftp upload.sourceforge.net
+                        user: ftp
+                        password: me@myself.org
+                        cd incoming
+                        bin
+                        put foo-2.0.tar.gz
+ 
+ 
+To release the tar-ball:
+ 
+ 1. Press the Admin icon.
+ 2. Click on Edit/Release files.
+ 3. Click on the quick release.
+
+
+HERE
 
