@@ -214,22 +214,19 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 			  yaws_log:sync_errlog(F, A),
 			  false;
 		     ({_Pid, _SCs}) ->
-			  true
+			  true;
+		     (none) ->
+			  false
 		  end, L),
-    io:format("L=~p~n", [L]),
+    ?Debug("L=~p~n", [L]),
     if
-	length(L) == length(L2) ->
-	    if
-		FirstTime == true ->
-		    proc_lib:spawn_link(yaws_ctl, start, 
-					[self(), Gconf#gconf.uid]);
-		true ->
-		    ok
-	    end,
-	    {ok, {Gconf, L2, 0}};
+	FirstTime == true ->
+	    proc_lib:spawn_link(yaws_ctl, start, 
+				[self(), Gconf#gconf.uid]);
 	true ->
-	    {stop, "failed to start server "}
-    end.
+	    ok
+    end,
+    {ok, {Gconf, L2, 0}}.
 
 		     
 
@@ -340,6 +337,9 @@ set_writeable(Dir) ->
     Mode = 8#777,
     file:write_file_info(Dir, FI#file_info{mode = Mode}).
 
+
+gserv(_, []) ->
+    proc_lib:init_ack(none);
 
 %% One server per IP we listen to
 gserv(GC, Group0) ->
@@ -2027,7 +2027,7 @@ split_path(_SC, [$/], _Comps, []) ->
     slash;
 split_path(SC, [$/, $/ |Tail], Comps, Part) ->  %% security clause
     split_path(SC, [$/|Tail], Comps, Part);
-split_path(SC, [$/, $., $., $/ |_], _, _) ->  %% security clause
+split_path(_SC, [$/, $., $., $/ |_], _, _) ->  %% security clause
     forbidden;
 split_path(SC, [], Comps, Part) ->
     ret_reg_split(SC, Comps, Part, []);
@@ -2103,7 +2103,7 @@ ret_user_dir(SC, [], "/", Upath) when SC#sconf.tilde_expand == true ->
 	redir_dir ->
 	    redir_dir
     end;
-ret_user_dir(SC, [], "/", Upath)  ->
+ret_user_dir(_SC, [], "/", Upath)  ->
     forbidden.
 
 
