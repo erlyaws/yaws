@@ -205,6 +205,8 @@ del_tail([H|T]) ->
 fload(FD, globals, GC, _C, Cs, _Lno, eof) ->
     file:close(FD),
     {ok, GC, Cs};
+
+
 fload(FD, _,  _GC, _C, _Cs, Lno, eof) ->
     file:close(FD),
     {error, ?F("Unexpected end of file at line ~w", [Lno])};
@@ -324,7 +326,6 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 
 	
 fload(FD, server, GC, C, Cs, Lno, Chars) ->
-    %?Debug("Chars: ~s", [Chars]),
     Next = io:get_line(FD, ''),
     case toks(Chars) of
 	[] ->
@@ -401,90 +402,10 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	["default_server_on_this_ip", '=', Bool] ->
 	    fload(FD, server, GC, C, Cs, Lno+1, Next);
 
-	%% A bunch of ssl options
-
-	["ssl", '=', Bool] ->
-	    case is_bool(Bool) of
-		{true, Val} ->
-		    ssl:start(),
-		    C2 = C#sconf{ssl = #ssl{}},
-		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-		false ->
-		    {error, ?F("Expect true|false at line ~w", [Lno])}
-	    end;
-	["ssl_keyfile", '=', Val] ->
-	    case is_file(Val) of
-		true when  record(C#sconf.ssl, ssl) ->
-		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{keyfile = Val}},
-		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-		true ->
-		    {error, ?F("Need to set option ssl to true before line ~w",
-			       [Lno])};
-		_ ->
-		    {error, ?F("Expect existing file at line ~w", [Lno])}
-	    end;
-	["ssl_certfile", '=', Val] ->
-	    case is_file(Val) of
-		true when  record(C#sconf.ssl, ssl) ->
-		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{certfile = Val}},
-		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-		true ->
-		    {error, ?F("Need to set option ssl to true before line ~w",
-			       [Lno])};
-		_ ->
-		    {error, ?F("Expect existing file at line ~w", [Lno])}
-	    end;
-	["ssl_cacertfile", '=', Val] ->
-	    case is_file(Val) of
-		true when  record(C#sconf.ssl, ssl) ->
-		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{cacertfile = Val}},
-		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-		true ->
-		    {error, ?F("Need to set option ssl to true before line ~w",
-			       [Lno])};
-		_ ->
-		    {error, ?F("Expect existing file at line ~w", [Lno])}
-	    end;
-	["ssl_verify", '=', Val] ->
-	    case lists:member(Val, [1,2,3]) of
-		true when  record(C#sconf.ssl, ssl) ->
-		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{verify = Val}},
-		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-		true ->
-		    {error, ?F("Need to set option ssl to true before line ~w",
-			       [Lno])};
-		_ ->
-		    {error, ?F("Expect integer at line ~w", [Lno])}
-	    end;
-	["ssl_depth", '=', Val] ->
-	    case lists:member(Val, [1,2,3,4,5,6,7]) of
-		true when  record(C#sconf.ssl, ssl) ->
-		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{depth = Val}},
-		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-		true ->
-		    {error, ?F("Need to set option ssl to true before line ~w",
-			       [Lno])};
-		_ ->
-		    {error, ?F("Expect reasonable integer at line ~w", [Lno])}
-	    end;
-	["ssl_password", '=', Val] ->
-	    if 
-		record(C#sconf.ssl, ssl) ->
-		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{password = Val}},
-		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-		true ->
-		    {error, ?F("Need to set option ssl to true before line ~w",
-			       [Lno])}
-	    end;
-	["ssl_ciphers", '=', Val] ->
-	    if 
-		record(C#sconf.ssl, ssl) ->
-		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{ciphers = Val}},
-		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-		true ->
-		    {error, ?F("Need to set option ssl to true before line ~w",
-			       [Lno])}
-	    end;
+	[ '<', "ssl", '>'] ->
+	    ssl:start(),
+	    fload(FD, ssl, GC, C, Cs, Lno+1, Next);
+	
 	["appmods", '=' | Modules] ->
 	     C2 = C#sconf{appmods = Modules},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
@@ -505,14 +426,115 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    fload(FD, globals, GC, undefined, [C|Cs], Lno+1, Next);
 	[H|T] ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
+    end;
+
+	
+
+fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
+    Next = io:get_line(FD, ''),
+    case toks(Chars) of
+	[] ->
+	    fload(FD, ssl, GC, C, Cs, Lno+1, Next);
+
+	%% A bunch of ssl options
+
+	["keyfile", '=', Val] ->
+	    case is_file(Val) of
+		true when  record(C#sconf.ssl, ssl) ->
+		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{keyfile = Val}},
+		    fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
+		true ->
+		    {error, ?F("Need to set option ssl to true before line ~w",
+			       [Lno])};
+		_ ->
+		    {error, ?F("Expect existing file at line ~w", [Lno])}
+	    end;
+	["certfile", '=', Val] ->
+	    case is_file(Val) of
+		true when  record(C#sconf.ssl, ssl) ->
+		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{certfile = Val}},
+		    fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
+		true ->
+		    {error, ?F("Need to set option ssl to true before line ~w",
+			       [Lno])};
+		_ ->
+		    {error, ?F("Expect existing file at line ~w", [Lno])}
+	    end;
+	["cacertfile", '=', Val] ->
+	    case is_file(Val) of
+		true when  record(C#sconf.ssl, ssl) ->
+		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{cacertfile = Val}},
+		    fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
+		true ->
+		    {error, ?F("Need to set option ssl to true before line ~w",
+			       [Lno])};
+		_ ->
+		    {error, ?F("Expect existing file at line ~w", [Lno])}
+	    end;
+	["verify", '=', Val] ->
+	    case lists:member(Val, [1,2,3]) of
+		true when  record(C#sconf.ssl, ssl) ->
+		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{verify = Val}},
+		    fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
+		true ->
+		    {error, ?F("Need to set option ssl to true before line ~w",
+			       [Lno])};
+		_ ->
+		    {error, ?F("Expect integer at line ~w", [Lno])}
+	    end;
+	["depth", '=', Val] ->
+	    case lists:member(Val, [1,2,3,4,5,6,7]) of
+		true when  record(C#sconf.ssl, ssl) ->
+		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{depth = Val}},
+		    fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
+		true ->
+		    {error, ?F("Need to set option ssl to true before line ~w",
+			       [Lno])};
+		_ ->
+		    {error, ?F("Expect reasonable integer at line ~w", [Lno])}
+	    end;
+	["password", '=', Val] ->
+	    if 
+		record(C#sconf.ssl, ssl) ->
+		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{password = Val}},
+		    fload(FD, ssk, GC, C2, Cs, Lno+1, Next);
+		true ->
+		    {error, ?F("Need to set option ssl to true before line ~w",
+			       [Lno])}
+	    end;
+	["ciphers", '=', Val] ->
+	    if 
+		record(C#sconf.ssl, ssl) ->
+		    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{ciphers = Val}},
+		    fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
+		true ->
+		    {error, ?F("Need to set option ssl to true before line ~w",
+			       [Lno])}
+	    end;
+	['<', "/ssl", '>'] ->
+	    fload(FD, server, GC, C, Cs, Lno+1, Next);
+	
+	[H|T] ->
+	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end.
+
+
+
+
+
+
+
+
+fload(FD, server_auth, GC, C, Cs, Lno, eof, Auth) ->
+    file:close(FD),
+    {error, ?F("Unexpected end of file at line ~w", [Lno])};
 
 fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
     %?Debug("Chars: ~s", [Chars]),
     Next = io:get_line(FD, ''),
     case toks(Chars) of
 	[] ->
-	    fload(FD, server, GC, C, Cs, Lno+1, Next);
+	    fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth);
 	["dir", '=', Dir] ->
     	    case is_dir(Dir) of
 		true ->
@@ -538,7 +560,7 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
 	[H|T] ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end.
-	    
+
 
 is_bool("true") ->
     {true, true};
