@@ -452,13 +452,15 @@ cli_recv(S, Num, GC) ->
 	{ok, http_eoh} ->
 	    ok;
 	{ok, Val} when GC#gconf.trace == {true, traffic} ->
-	    yaws_log:trace_traffic(from_client, Val)
+	    yaws_log:trace_traffic(from_client, Val);
+	{ok, Val} ->
+	    {ok, Val}
     end,
     Res.
 
 
 
-cli_write(S, Data, GC) when GC#gconf.trace /= {trace, traffic} ->
+cli_write(S, Data, GC) when GC#gconf.trace /= {true, traffic} ->
     gen_tcp:send(S, Data);
 cli_write(S, Data, GC) ->
     yaws_log:trace_traffic(from_server, Data),

@@ -18,4 +18,8 @@ mv yaws yaws-${YAWS_VSN}
 ln -s yaws-${YAWS_VSN} yaws
 tar cfz  yaws-${YAWS_VSN}.tar.gz yaws  yaws-${YAWS_VSN}
 mv yaws-${YAWS_VSN}.tar.gz ..
+cd ..
+echo release `pwd`/yaws-${YAWS_VSN}.tar.gz 
+
+
 
