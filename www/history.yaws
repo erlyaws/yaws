@@ -12,8 +12,16 @@ out(A) ->
 <table border="2">
 
 
-<tr><td> Jun 10, use prim_file instead of file: calls, fix a bug
-with iso 8859 chars in urls, virthost bug </td></tr>
+<tr><td>    </td></tr>
+
+<tr><td> Jun 11, fixed Etag: and Last-Modified: headers for static content.
+Fixed the Cache-Contol: headers for generated content.
+<erl> tag must
+no longer be first on each line   </td></tr>
+
+<tr><td> Jun 10, use prim_file: instead of file: calls, fix a bug
+with iso 8859 chars in urls, virthost bug with multiple IP addresses  </td></tr>
+
 
 <tr><td> May 26, added SSL support  0.40 </td> </tr>
 

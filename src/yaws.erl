@@ -11,6 +11,8 @@
 -include_lib("kernel/include/file.hrl").
 
 -compile(export_all).
+-import(lists, [reverse/1, reverse/2]).
+
 %%-export([Function/Arity, ...]).
 
 
@@ -323,7 +325,8 @@ mk_list([X|Rest]) ->
 
 universal_time_as_string() ->
     time_to_string(calendar:universal_time(), "GMT").
-
+local_time_as_gmt_string(LocalTime) ->
+    time_to_string(calendar:local_time_to_universal_time(LocalTime),"GMT").
 
 
 time_to_string( {{Year, Month, Day}, {Hour, Min, Sec}}, Zone) ->
@@ -524,3 +527,83 @@ is_space($\r) ->
     true;
 is_space(_) ->
     false.
+
+
+
+%%% basic uuencode and decode functionality    
+
+list_to_uue(L) -> list_to_uue(L, []).
+
+list_to_uue([], Out) ->
+    reverse([$\n,enc(0)|Out]);
+list_to_uue(L, Out) ->
+    {L45, L1} = get_45(L),
+    Encoded = encode_line(L45),
+    list_to_uue(L1, reverse(Encoded, Out)).
+
+uue_to_list(L) -> 
+    uue_to_list(L, []).
+
+uue_to_list([], Out) ->
+    reverse(Out);
+uue_to_list(L, Out) ->
+    {Decoded, L1} = decode_line(L),
+    uue_to_list(L1, reverse(Decoded, Out)).
+
+encode_line(L) ->
+    [enc(length(L))|encode_line1(L)].
+
+encode_line1([C0, C1, C2|T]) ->
+    Char1 = enc(C0 bsr 2),
+    Char2 = enc((C0 bsl 4) band 8#60 bor (C1 bsr 4) band 8#17),
+    Char3 = enc((C1 bsl 2) band 8#74 bor (C2 bsr 6) band 8#3),
+    Char4 = enc(C2 band 8#77),
+    [Char1,Char2,Char3,Char4|encode_line1(T)];
+encode_line1([C1, C2]) -> encode_line1([C1, C2, 0]);
+encode_line1([C])      -> encode_line1([C,0,0]);
+encode_line1([])       -> [$\n].
+
+decode_line([H|T]) ->
+    case dec(H) of 
+        0   -> {[], []};
+        Len -> decode_line(T, Len, [])
+    end.
+
+decode_line([P0,P1,P2,P3|T], N, Out) when N >= 3->
+    Char1 = 16#FF band ((dec(P0) bsl 2) bor (dec(P1) bsr 4)),
+    Char2 = 16#FF band ((dec(P1) bsl 4) bor (dec(P2) bsr 2)),
+    Char3 = 16#FF band ((dec(P2) bsl 6) bor dec(P3)),
+    decode_line(T, N-3, [Char3,Char2,Char1|Out]);
+decode_line([P0,P1,P2,_|T], 2, Out) ->
+    Char1  = 16#FF band ((dec(P0) bsl 2) bor (dec(P1) bsr 4)),
+    Char2  = 16#FF band ((dec(P1) bsl 4) bor (dec(P2) bsr 2)),
+    {reverse([Char2,Char1|Out]), tl(T)};
+decode_line([P0,P1,_,_|T], 1, Out) ->
+    Char1  = 16#FF band ((dec(P0) bsl 2) bor (dec(P1) bsr 4)),
+    {reverse([Char1|Out]), tl(T)};
+decode_line(T, 0, Out) ->
+    {reverse(Out), tl(T)}.
+
+get_45(L) -> get_45(L, 45, []).
+
+get_45(L, 0, F)     -> {reverse(F), L};
+get_45([H|T], N, L) -> get_45(T, N-1, [H|L]);
+get_45([], _N, L)    -> {reverse(L), []}.
+
+%% enc/1 is the basic 1 character encoding function to make a char printing
+%% dec/1 is the inverse
+
+enc(0) -> $`;
+enc(C) -> (C band 8#77) + $ .
+
+dec(Char) -> (Char - $ ) band 8#77.
+
+to_octal(I) -> reverse(to_octal1(I)).
+
+to_octal1(0) ->  [];
+to_octal1(I) ->  [$0 + I band 7|to_octal1(I bsr 3)].
+
+oct_to_dig(O) -> oct_to_dig(O, 0).
+
+oct_to_dig([], D)    -> D;
+oct_to_dig([H|T], D) -> oct_to_dig(T, D*8 + H - $0).

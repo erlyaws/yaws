@@ -148,15 +148,17 @@ init([]) ->
 
 	    init2(Gconf, Sconfs);
 	{error, E} ->
-	    error_logger:format("Bad conf: ~p", [E]),
 	    case erase(logdir) of
 		undefined ->
+		    error_logger:format("Bad conf: ~p~n", [E]),
+		    init:stop(),
 		    {stop, E};
 		Dir ->
 		    yaws_log:setdir(Dir, []),
-		    yaws_log:sync_errlog("bad conf: ~s",[E]),
+		    yaws_log:sync_errlog("bad conf: ~s~n",[E]),
+		    init:stop(),
 		    {stop, E}
-	    end
+		end
     end.
 
 
@@ -1331,8 +1333,7 @@ make_date_header() ->
 %% FIXME read vsn from conf at compile time
 make_server_header() ->
     ["Server: Yaws/", yaws_vsn:version(), " Yet Another Web Server", crnl()].
-make_last_modified(_) ->
-    [];
+
 make_last_modified(FI) ->
     N = element(2, now()),
     Inode = FI#file_info.inode,  %% unix only
@@ -1347,12 +1348,14 @@ make_last_modified(FI) ->
 
 do_make_last_modified(FI) ->
     Then = FI#file_info.mtime,
-    UTC = calendar:now_to_universal_time(Then),
-    Local = calendar:universal_time_to_local_time(UTC),
-    Str = yaws:date_and_time(Local, UTC),
-    ["Last-Modified: ", yaws:date_and_time_to_string(Str), crnl()].
-make_etag(_File) ->
-    [].
+    ["Last-Modified: ", yaws:local_time_as_gmt_string(Then), crnl()].
+
+make_etag(FI) ->
+    {{_Y,M,D}, {H,Min, S}}  = FI#file_info.mtime,
+    Inode = FI#file_info.inode,
+    ["Etag: ", pack_ints([M, D, H, Min, S, Inode]), crnl()].
+
+
 make_accept_ranges() ->
     "Accept-Ranges: bytes\r\n".
 make_content_length(Size) when integer(Size) ->
@@ -1376,6 +1379,26 @@ make_www_authenticate(Realm) ->
     ["WWW-Authenticate: Basic realm=\"", Realm, [$"|crnl()]].
 
 
+
+pack_ints(L) ->
+    [$" | pack_ints2(L) ].
+
+
+pack_ints2([0|T]) ->
+    pack_ints2(T);
+pack_ints2([H|T]) ->
+    X = H band 2#11111,
+    Val = X + $A,
+    V2 = if 
+	     Val > $Z, Val < $a ->
+		 Val + ($a-$Z);
+	     true ->
+		 Val
+	 end,
+    io:format("~p generates ~s~n", [H, [V2]]),
+    [V2 |pack_ints2([H bsr 5|T])];
+pack_ints2([]) ->
+    [$"].
 
 now_secs() ->
     {M,S,_}=now(),
