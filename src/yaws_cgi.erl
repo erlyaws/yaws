@@ -1,5 +1,5 @@
 -module(yaws_cgi).
--author('cschultz@math.fu-berlin.de').
+-author('carsten@codimi.de').
 
 -include_lib("yaws/include/yaws_api.hrl").
 -include("yaws_debug.hrl").
