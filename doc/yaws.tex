@@ -563,23 +563,23 @@ that is processing the request.
 
 
 -record(arg, {
-	  clisock,        %% the socket leading to the peer client
-	  headers,        %% headers
-	  req,            %% request
-	  clidata,        %% The client data (as a binary in POST requests)
-	  server_path,    %% The normalized server path
-	  querydata,      %% Was the URL on the form of ...?query (GET reqs)
-	  appmoddata,     %% the remainder of the path leading up to the querey
-	  docroot,        %% where's the data
-	  fullpath,       %% full path to yaws file
-	  cont,		  %% Continuation for chunked multipart uploads
-	  state,          %% State for use by users of the out/1 callback
-	  pid,            %% pid of the yaws worker process
-	  opaque,         %% useful to pass static data
-	  appmod_prepath, %% path in front of: <appmod><appmoddata>
-	  pathinfo        %% Set to 'd/e' when calling c.yaws for the request
+          clisock,        %% the socket leading to the peer client
+          headers,        %% headers
+          req,            %% request
+          clidata,        %% The client data (as a binary in POST requests)
+          server_path,    %% The normalized server path
+          querydata,      %% Was the URL on the form of ...?query (GET reqs)
+          appmoddata,     %% the remainder of the path leading up to the querey
+          docroot,        %% where's the data
+          fullpath,       %% full path to yaws file
+          cont,           %% Continuation for chunked multipart uploads
+          state,          %% State for use by users of the out/1 callback
+          pid,            %% pid of the yaws worker process
+          opaque,         %% useful to pass static data
+          appmod_prepath, %% path in front of: <appmod><appmoddata>
+          pathinfo        %% Set to 'd/e' when calling c.yaws for the request
                           %% http://some.host/a/b/c.yaws/d/e
-	 }).              
+         }).              
 
 
 -record(http_request, {method,
@@ -1597,38 +1597,44 @@ which takes the client out from the docroot. This should not be
 possible - and the impossibility relies on the correctness of the URL
 parsing code in \Yaws\ . 
 
-\section{WWW Authenticate}
-\Yaws\  has support for WWW authenticate protected directories.
-The access rights to different directories is controlled by directives
-in the \textit{yaws.conf} file.
+\section{WWW-Authenticate}
+\Yaws\  has support for WWW-Authentication.   WWW-Authenticate is a 
+standard HTTP scheme for the basic protection of files with a username
+and password.  When a client browser wants a protected file, it must send a
+``Authenticate: username:password'' header in the request.  Note that
+this is plain text.   If there is no such header or the username and
+password is invalid the server will respond with status code 401 and
+the realm.  Browsers will then tell the user that a username and
+password is needed for ``realm'',  and will resend the request after
+the user enters the information.
 
-We can specify several auth groups in a server configuration.
-If we have the following in the \textit{yaws.conf} file:
-
+WWW-Authentication is configured in the \textit{yaws.conf} file, in as
+many \textit{<auth>} directives as you desire:
 
 \begin{verbatim}
-
 <server foo>
+  docroot = /var/yaws/www/
+
 ..
 ..
 
   <auth>
     realm = secretpage
-    dir = /var/yaws/www/protected
-    user klacke:gazonk
-    user jonny:xyz
-    user ronny:12r8uyp09jksfdge4
+    dir   = /protected
+    dir   = /anotherdir
+    user  = klacke:gazonk
+    user  = jonny:xyz
+    user  = ronny:12r8uyp09jksfdge4
   </auth>
 </server>
 \end{verbatim}
 
 
-
-\Yaws\  will protect all files in the specified directory by means
-of WWW-Authenticate  access. If a user requests a page in the
-directory, and doesn't have the correct WWW-Authenticate header, \Yaws\ 
-will reply with a proper status code that makes the browser pop up a
-login window.
+\Yaws\  will require one of the given username:password pairs for all
+files in the \textit{/protected} and \textit{/anotherdir} directories.
+Note that these directories are specified as a server path,  that is,
+the filesystem path that is actually protected here is
+\textit{/var/yaws/www/protected}
 
 
 \chapter {Embedded mode}
@@ -1735,7 +1741,7 @@ The
 \item        \verb+username  = User+ -
              When Yaws is run as root, it can be configured to 
              change userid once it has created the necessary
-	     listen sockets on privilged ports.
+             listen sockets on privilged ports.
 
 
 \end{itemize}
@@ -1815,7 +1821,7 @@ The
 \item       \verb+allowed_scripts = [ListOfSuffixes]+ -
               The allowed script types for this server.  Recognized
               are `yaws', `cgi', `php'.  Default is 
-	      \verb+allowed_scripts = yaws+.
+              \verb+allowed_scripts = yaws+.
 
 \item       \verb+appmods = [ListOfModuleNames]+ -
               If any the names in ListOfModuleNames appear
