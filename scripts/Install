@@ -1,43 +1,46 @@
 #!/bin/sh
 
-
 prefix=$1
 installprefix=$2
 erl=$3
 werl=$4
 etcdir=$5
+vardir=$6
 
 . ../vsn.mk
 y=yaws-${YAWS_VSN}
 p=${prefix}
 
 
-# sed mangler
-mangle ()
-{
-    d=$1
-    e=$2
-    w=$3
-    from=$4
-    to=$5
+cat yaws.template | \
+    ./Subst %yawsdir% ${prefix}/lib/yaws | \
+    ./Subst %erl% "${erl}" | \
+    ./Subst %werl% "${werl}" > ${installprefix}/bin/yaws
 
-    install -d `dirname $to`
-    sed -e "s;%yawsdir%;$d;g" -e "s;%erl%;$e;" -e  "s;%werl%;$w;"  $from > $to
-}
+chmod +x ${installprefix}/bin/yaws
 
 
 
-mangle ${prefix}/lib/yaws "${erl}" "${werl}" yaws.ss ${installprefix}/bin/yaws
+
 install -d ${installprefix}/lib/yaws/examples/ebin
 install -d ${installprefix}/lib/yaws/examples/include
-chmod +x ${installprefix}/bin/yaws
-if [ -f ${etcdir}/yaws.conf ]; then
-   t=${etcdir}/yaws.conf.template
-else
-   t=${etcdir}/yaws.conf
-fi
 
-mangle ${prefix}/lib/yaws "${erl}" "${werl}" yaws.conf.template ${t}
+if [ -f ${etcdir}/yaws.conf ]; then
+   target=${etcdir}/yaws.conf.template
+else
+   target=${etcdir}/yaws.conf
+fi
+echo "--- Writing config file to ${target}"
+
+
+cat yaws.conf.template | \
+    ./Subst %yawsdir% ${prefix}/lib/yaws | \
+    ./Subst %logdir% /var/log/yaws | \
+    ./Subst %host% `hostname` | \
+    ./Subst %port% 80 | \
+    ./Subst %docroot% ${vardir}/yaws/www | \
+    ./Subst %certdir% ${etcdir} | \
+    ./Subst %sslport% 443 > ${target}
 
 
 if [ -f /etc/gentoo-release ]; then
@@ -66,6 +69,8 @@ else
     echo "Don't know how to make /etc/init scrips for this system"
     echo "possibly add $1/bin/yaws -D -heart to your /etc/rc.local manually"
 fi
+
+
 
 
 

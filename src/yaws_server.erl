@@ -413,8 +413,9 @@ gserv(GC, Group0) ->
 	       SC#sconf.port,
 	       catch map(fun(S) ->  
 				 io_lib:format("~n - ~s://~s under ~s",
-					       [if SSLBOOL -> "https";
-						   true -> "http"
+					       [if SSLBOOL == undefined -> 
+							"http";
+						   true -> "https"
 						end,
 						S#sconf.servername,
 						S#sconf.docroot])

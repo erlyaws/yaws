@@ -46,7 +46,8 @@ all: yaws_vsn.erl $(EBIN_FILES)
 $(EBIN_FILES) : ../include/yaws.hrl ../include/yaws_api.hrl
 
 yaws_vsn.erl:	yaws_vsn.template
-	. ../vsn.mk; sed "s/%VSN%/${YAWS_VSN}/" < yaws_vsn.template > yaws_vsn.erl
+	. ../vsn.mk; \
+	sed "s/%VSN%/${YAWS_VSN}/" < yaws_vsn.template > yaws_vsn.erl
 
 mime_types.erl:	mime.types mime_type_c.erl
 	erl -noshell  -pa ../ebin -s mime_type_c  compile

@@ -222,8 +222,11 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		"http" ->
 		    fload(FD, globals, GC#gconf{trace = {true, http}},
 			  C, Cs, Lno+1, Next);
+		"false" ->
+		    fload(FD, globals, GC#gconf{trace = false},
+			  C, Cs, Lno+1, Next);
 		_ ->
-		    {error, ?F("Expect bool at line ~w",[Lno])}
+		    {error, ?F("Expect false|http|traffic at line ~w",[Lno])}
 	    end;
 	
 	["logdir", '=', Logdir] ->
@@ -273,7 +276,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 	     end;
 
 
-	%% depracted, don't use
+	%% deprected, don't use
 	["read_timeout", '=', _Val] ->
 	    fload(FD, globals, GC, C, Cs, Lno+1, Next);
 
@@ -780,3 +783,5 @@ is_space(C) ->
 
 is_special(C) ->
     lists:member(C, [$=, $<, $>]).
+
+

@@ -9,13 +9,14 @@ To build and install
 
 2. ./configure --prefix=/usr/local
 
-Note: If can also change the target directory for etc and var directories by using:
+Note: If can also change the target directory for etc and var 
+      directories by using:
   --localstatedir=DIR for files that should go in /var
   --sysconfdir=DIR for files that should go in /etc
 This way you can precisely control where you install the software (This is
-usefull for computers where you do not have right access to the standard system
-dirs). It is now possible to install everything in a single directory
-and use Stow to create symlinks to /usr/local
+usefull for computers where you do not have right access to the 
+standard systemdirs). It is now possible to install everything in a 
+single directory and use Stow to create symlinks to /usr/local
 For example:
 ./configure --prefix=/home/install/yaws-1.01 --localstatedir=/home/install/yaws-1.01/var --sysconfdir=/home/install/yaws-1.01/etc
 
@@ -29,24 +30,26 @@ For example:
 
   make local_install
      and perform something we call a
-     local install. It will create an executable script in the bin directory
-     and a config file in $HOME/yaws.conf
+     local install. It will create an executable script in the $HOMe/bin 
+     directory and a config file in $HOME/yaws.conf
 
 4.   Start as bin/yaws -i 
-     This will create a webserver at http://127.0.0.1:8000
+     This will create a webserver at http://0.0.0.0:8000
 
 5. as root make install
 
 6. as root Start as /usr/local/bin/yaws -i 
    (this starts an interactive system)
 
-7. This will create a webserver at http://127.0.0.1
+7. This will create a webserver at http://${host} and one at https://${host}
 
 8. as root Edit /etc/yaws.conf 
 
 9. Create content in /var/yaws
 
-10.Start as /usr/local/bin/yaws -D -heart
-   This will start a daemon (-D) which will be autorestarted when/if
-   it crashes or hangs (-heart)
+10a. Start as /usr/local/bin/yaws -D -heart
+     This will start a daemon (-D) which will be autorestarted when/if
+     it crashes or hangs (-heart)
+
+10b. Or start interactive system as /usr/local/bin/yaws -i
 

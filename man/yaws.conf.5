@@ -321,7 +321,7 @@ within a matching pair of <auth> and </auth> delimiters.
 \fBdir = Dir\fR
 Makes Dir to be controlled bu WWW-authenticate headers. In order for
 a user to have access to WWW-Authenticate controled directory, the user
-must supply a password.
+must supply a password. The Dir must be specified relative to the docroot.
 
 .TP
 \fBrealm = Realm\fR
@@ -397,7 +397,7 @@ logdir = /var/log/yaws
         docroot = /var/yaws/www
         access_log = false
         <auth>
-            dir = /var/yaws/www/secret
+            dir = secret/dir1
             realm = foobar
             user = jonny:verysecretpwd
             user = benny:thequestion
@@ -422,8 +422,8 @@ at startup, as well as some user specific configuration.
         docroot = /var/yaws/www_funky_org
 	start_mod = btt
 	<opaque>
-		dbdir = /tmp
-		logdir = /tmp/log
+		mydbdir = /tmp
+		mylogdir = /tmp/log
 	</opaque>
 </server>
 
