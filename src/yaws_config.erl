@@ -97,15 +97,14 @@ validate_groups([H|T]) ->
 validate_group(List) ->
     
     %% first, max one ssl per group
+    io:format("List = ~p~n", [List]),
+
     case lists:filter(fun(C) ->
 			      C#sconf.ssl == on
 		      end, List) of
 	L when length(L) > 1 ->
 	    throw({error, ?F("Max one ssl server per IP: ~p", 
 			     [(hd(L))#sconf.servername])});
-	_ when length(List) > 1 ->
-	    throw({error, ?F("Max one server in an ssl group: ~p", 
-			     [(hd(List))#sconf.servername])});
 	_ ->
 	    ok
     end,
@@ -115,9 +114,9 @@ validate_group(List) ->
 			      C#sconf.default_server_on_this_ip
 		      end, List) of  
 	L2 when length(List) /= 1, length(L2) > 1 ->
-	    throw({error, ?F("Need at at least on server which is "
+	    throw({error, ?F("Need exactly ONE server which is "
 			     "default_server_on_this_ip in server group "
-			     "containing ~w", [(hd(List))#sconf.servername])});
+			     "containing ~p", [(hd(List))#sconf.servername])});
 	_ ->
 	    ok
     end,
@@ -299,7 +298,15 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		     C2 = C#sconf{docroot = Root},
 		     fload(FD, server, GC, C2, Cs, Lno, Next);
 		 false ->
-		     {error, ?F("Expect diectory at line ~w", [Lno])}
+		     {error, ?F("Expect directory at line ~w", [Lno])}
+	     end;
+	 ["default_server_on_this_ip", '=', Bool] ->
+	     case is_bool(Bool) of
+		 {true, Val} ->
+		     C2 = C#sconf{default_server_on_this_ip = Val},
+		     fload(FD, server, GC, C2, Cs, Lno, Next);
+		 false ->
+		     {error, ?F("Expect true|false at line ~w", [Lno])}
 	     end;
 	 ['<', "/server", '>'] ->
 	      fload(FD, globals, GC, undefined, [C|Cs], Lno+1, Next);
@@ -308,6 +315,13 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
      end.
 
 	    
+
+is_bool("true") ->
+    {true, true};
+is_bool("false") ->
+    {true, false};
+is_bool(_) ->
+    false.
 
 
 is_dir(Val) ->
