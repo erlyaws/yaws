@@ -200,6 +200,7 @@ init2(Gconf, Sconfs, RunMod) ->
 		     ({_Pid, _SCs}) ->
 			  true
 		  end, L),
+    io:format("L=~p~n", [L]),
     if
 	length(L) == length(L2) ->
 	    proc_lib:spawn_link(yaws_ctl, start, [self(), Gconf#gconf.uid]),
@@ -1007,20 +1008,22 @@ do_yaws(CliSock, GC, SC, Req, H, ARG, UT, N) ->
     FileAtom = list_to_atom(UT#urltype.fullpath),
     Mtime = mtime(UT#urltype.finfo),
     case ets:lookup(SC#sconf.ets, FileAtom) of
-	[{FileAtom, spec, Mtime1, Spec}] when Mtime1 == Mtime ->
+	[{FileAtom, spec, Mtime1, Spec, Es}] when Mtime1 == Mtime,
+						  Es == 0 ->
 	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG, UT, N);
 	Other  ->
 	    del_old_files(Other),
-	    {ok, Spec} = yaws_compile:compile_file(UT#urltype.fullpath, GC, SC),
+	    {ok, [{errors, Errs}| Spec]} = 
+		yaws_compile:compile_file(UT#urltype.fullpath, GC, SC),
 	    ?Debug("Spec for file ~s is:~n~p~n",[UT#urltype.fullpath, Spec]),
-	    ets:insert(SC#sconf.ets, {FileAtom, spec, Mtime, Spec}),
+	    ets:insert(SC#sconf.ets, {FileAtom, spec, Mtime, Spec, Errs}),
 	    deliver_dyn_file(CliSock, GC, SC, Req, H, Spec, ARG, UT, N)
     end.
 
 
 del_old_files([]) ->
     ok;
-del_old_files([{_FileAtom, spec, _Mtime1, Spec}]) ->
+del_old_files([{_FileAtom, spec, _Mtime1, Spec, _}]) ->
     lists:foreach(
       fun({mod, _, _, _,  Mod, _Func}) ->
 	      F="/tmp/yaws/" ++ yaws:to_list(Mod) ++ ".erl",
@@ -1855,7 +1858,7 @@ cleanup_cache(E, num) ->
 
 
 clear_ets(E) ->
-    ets:match_delete(E, {'_', spec, '_', '_'}),
+    ets:match_delete(E, {'_', spec, '_', '_', '_'}),
     ets:match_delete(E, {{url, '_'}, '_', '_'}),
     ets:match_delete(E, {{urlc, '_'}, '_', '_'}),
     ets:insert(E, {num_files, 0}),

@@ -98,8 +98,10 @@ a_status(Sock) ->
 		 END = "\n",
 		 [L1, T, L2, END]
 	 end, L),
-    gen_tcp:send(Sock, [H, T]).
-
+    gen_tcp:send(Sock, [H, T]),
+    
+    %% Now lets' figure out the status of loaded modules
+    ok.
 
 
 actl(Term, Uid) ->
