@@ -708,6 +708,3 @@ is_space(C) ->
 
 is_special(C) ->
     lists:member(C, [$=, $<, $>]).
-
-    
-
