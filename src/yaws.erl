@@ -819,37 +819,38 @@ accepts_deflate(H, Mime) ->
 	    false
     end.
 
+has_buggy_deflate(UserAgent, "application/pdf") ->
+						% Several browsers are
+						% known to incorrectly
+						% interact with Adobe's
+						% plugins, when it
+						% comes to compressed
+						% documents.
+    true;
 has_buggy_deflate(UserAgent, Mime) ->
     UA = parse_ua(UserAgent),
-    case in_comment(
-	   fun(C) ->
-		   case C of
-		       "Konqueror"++_ ->
-			   true;
-		       _ ->
-			   false
-		   end
-	   end,
-	   UA) of
-	true ->
-	    true;
-	false ->
-	    in_ua(
-	      fun(U) ->
-		      case U of
-			  "AppleWebKit"++_ ->
-			      true;
-			  "Galeon"++_ ->
-			      true;
-			  "w3m"++_ ->
+    in_ua(
+      fun("Mozilla/5.0") ->
+	      in_comment(
+		fun("rv:0."++_) ->
+			true;
+		   ("Konqueror"++_) ->
+			true;
+		   (_) ->
+			false
+		end,
+		UA);
+	 ("AppleWebKit"++_) ->
+	      true;
+	 ("Galeon"++_) ->
+	      true;
+	 ("w3m"++_) ->
 						% Problems when saving.
-			      Mime /= "text/html"; 
-			  _  ->
-			      false
-		      end
-	      end,
-	      UA)
-    end.
+	      Mime /= "text/html"; 
+	 (_)  ->
+	      false
+      end,
+      UA).
     
 
 %%% Parsing of User-Agent header.
