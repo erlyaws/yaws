@@ -77,7 +77,7 @@ compile_file(C, LineNo,  Chars, init, NumChars, Ack, Errs) ->
 	_ ->
 	    %% first chunk is html, keep whitespace
 	    Fd=C#comp.infd,
-	    file:position(Fd, bof),
+	    file_position_bof(),
 	    compile_file(C,1,line(C),html,0,[], Errs)
     end;
 
@@ -306,6 +306,7 @@ file_open(Fname) ->
     case file:read_file(Fname) of
 	{ok, Bin} ->
 	    put(yfile_data, binary_to_list(Bin)),
+	    put(yfile_data_orig, Bin),
 	    {ok, yfile_data};
 	Err ->
 	    Err
@@ -314,6 +315,8 @@ file_open(Fname) ->
 file_close(Key) ->
     erase(Key).
 
+file_position_bof() ->
+    put(yfile_data, binary_to_list(get(yfile_data_orig))).
 
 get_line(Fd) ->
     case get (yfile_data) of
