@@ -248,6 +248,7 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 
 
 showmail(Session, MailNr) ->
+    MailStr = integer_to_list(MailNr),
     tick_session(Session#session.cookie),
     {H,Msg} = retr(?POPSERVER, Session#session.user,
 		   Session#session.passwd, MailNr),
@@ -262,6 +263,11 @@ showmail(Session, MailNr) ->
      [{ehtml,
        [{script,[],
 	 "function setCmd(val) { \n"
+	 "   if (val == 'delete') {\n"
+	 "      var msg = 'Are you sure you want to delete this message?';\n"
+	 "      if (!confirm(msg))\n"
+	 "          return;\n"
+	 "   }\n"
 	 "   document.compose.cmd.value=val;\n"
 	 "   document.compose.submit();\n"
 	 "}"
@@ -278,10 +284,11 @@ showmail(Session, MailNr) ->
 	    {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
 		    {font, [{size,6},{color,black}],
 		     "WebMail at "++?MAILDOMAIN}}}},
-	   build_toolbar([{"tool-newmail.gif", "javascript:setCmd('send');",
+	   build_toolbar([{"tool-newmail.gif", "javascript:setCmd('reply');",
 			   "Reply"},
-			  {"","headers.yaws?nr="++integer_to_list(MailNr),
-			   "Headers"},
+			  {"","headers.yaws?nr="++MailStr,"Headers"},
+			  {"tool-delete.gif","javascript:setCmd('delete');",
+			   "Delete"},
 			  {"","mail.yaws","Close"}]),
 	   {table,[{width,645},{height,"100%"},{border,0},{bgcolor,silver},
 		   {cellspacing,0},{callpadding,0}],
@@ -349,6 +356,7 @@ showmail(Session, MailNr) ->
 		   }
 	    }
 	   },
+	   {input,[{type,hidden},{name,nr}, {value,MailNr}],[]},
 	   {input,[{type,hidden},{name,from},
 		   {value,retr_from(H#mhead.from)}],[]},
 	   {input,[{type,hidden},{name,to},
@@ -375,6 +383,11 @@ showheaders(Session, MailNr) ->
      [{ehtml,
        [{script,[],
 	 "function setCmd(val) { \n"
+	 "   if (val == 'delete') {\n"
+	 "      var msg = 'Are you sure you want to delete this message?';\n"
+	 "      if (!confirm(msg))\n"
+	 "          return;\n"
+	 "   }\n"
 	 "   document.compose.cmd.value=val;\n"
 	 "   document.compose.submit();\n"
 	 "}"
@@ -395,6 +408,8 @@ showheaders(Session, MailNr) ->
 			   "Reply"},
 			  {"","showmail.yaws?nr="++integer_to_list(MailNr),
 			   "Message"},
+			  {"tool-delete.gif","javascript:setCmd('delete');",
+			   "Delete"},
 			  {"","mail.yaws","Close"}]),
 	   {table,[{width,645},{height,"100%"},{border,0},{bgcolor,silver},
 		   {cellspacing,0},{callpadding,0}],
@@ -462,6 +477,7 @@ showheaders(Session, MailNr) ->
 		   }
 	    }
 	   },
+	   {input,[{type,hidden},{name,nr}, {value,MailNr}],[]},
 	   {input,[{type,hidden},{name,from},
 		   {value,retr_from(H#mhead.from)}],[]},
 	   {input,[{type,hidden},{name,to},
