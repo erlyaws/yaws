@@ -162,6 +162,7 @@ make_default_gconf(Debug) ->
     #gconf{yaws_dir = Y,
 	   ebin_dir = [filename:join([Y, "examples/ebin"])],
 	   include_dir = [filename:join([Y, "examples/include"])],
+	   trace = false,
 	   logdir = ".",
 	   cache_refresh_secs = if
 				    Debug == true ->
