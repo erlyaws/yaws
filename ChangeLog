@@ -1,3 +1,57 @@
+2004-12-15 22:17  klacke
+
+	* man/yaws.conf.5, www/code.yaws: ""
+
+2004-12-15 17:03  jbevemyr
+
+	* applications/wiki/: src/wiki.erl, wiki/searchPage.yaws: Added
+	search code from Jouni Ryno
+
+2004-12-15 14:46  klacke
+
+	* include/yaws.hrl, src/yaws.erl, src/yaws_api.erl,
+	src/yaws_config.erl, src/yaws_log.erl, src/yaws_server.erl,
+	www/contact.yaws: added support for config changes without stopping
+	the running systems, virt servers can be added, removed anc changed
+	without conflicting with traffic
+
+2004-12-13 23:46  klacke
+
+	* include/yaws.hrl, man/yaws.conf.5, scripts/yaws.conf.template,
+	src/yaws_config.erl, src/yaws_log.erl, src/yaws_server.erl: added
+	client IP resolv for access log files
+
+2004-12-13 22:47  klacke
+
+	* Makefile: safer make install
+
+2004-12-11 17:32  klacke
+
+	* www/code.yaws: ""
+
+2004-12-11 17:24  klacke
+
+	* src/yaws_api.erl, src/yaws_compile.erl, www/TAB.inc,
+	www/code.yaws, www/news, www/upload.yaws, www/upload0.yaws: ""
+
+2004-12-11 02:35  jbevemyr
+
+	* applications/mail/src/mail.erl: Updated mail according to changed
+	APIs for parse_multipart.
+
+2004-12-11 02:29  jbevemyr
+
+	* applications/wiki/src/wiki.erl: Updated wiki according to changed
+	APIs for parse_multipart.
+
+2004-12-11 01:48  klacke
+
+	* src/Makefile: ""
+
+2004-12-11 01:25  klacke
+
+	* ChangeLog, www/index.yaws, www/news:	preparing for 1.50
+
 2004-12-10 13:30  klacke
 
 	* src/yaws_compile.erl, src/yaws_server.erl, www/bindings.yaws,

@@ -1,3 +1,10 @@
+Wed Dec 15 2004 Version 1.51 released
+Major feature release.
+added support for config changes without stopping the running systems, virt servers can be added, removed anc changed without affecting traffic. 
+added	client IP resolv for access log files (klacke)
+safer make install target. Can't install if yaws is running (klacke)
+Updated both mail and wiki according to changed	APIs for parse_multipart. (jb)
+
 Sat Dec 11  2004 Version 1.50 released
 Bugfix and docs release
 Running the wiki at the yaws site. Use it !!. No passwords.... 
