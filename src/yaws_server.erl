@@ -2069,19 +2069,23 @@ get_more_post_data(PPS, ARG) ->
     N = SC#sconf.partial_post_size,
     Len = list_to_integer((ARG#arg.headers)#headers.content_length),
     if N + PPS < Len ->
-	    case yaws:cli_recv(ARG#arg.clisock, PPS, 
+	    case yaws:cli_recv(ARG#arg.clisock, N, 
 			       is_ssl(SC#sconf.ssl)) of
 		{ok, Bin} ->
+		    io:format("Got ~p\n", [size(Bin)]),
 		    {partial, Bin};
 		Else ->
+		    io:format("Got error ~p\n", [Else]),
 		    {error, Else}
 	    end;
        true ->
 	    case yaws:cli_recv(ARG#arg.clisock, Len - PPS, 
 			       is_ssl(SC#sconf.ssl)) of
 		{ok, Bin} ->
+		    io:format("Got tail ~p\n", [size(Bin)]),
 		    Bin;
 		Else ->
+		    io:format("Got tail error ~p\n", [Else]),
 		    {error, Else}
 	    end
     end.
