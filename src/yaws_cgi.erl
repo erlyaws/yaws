@@ -29,6 +29,46 @@ call_cgi(Arg, Exefilename, Scriptfilename) ->
     call_cgi(Arg, Exefilename, Scriptfilename, undefined).
 
 call_cgi(Arg, Exefilename, Scriptfilename, Pathinfo) ->
+    case Arg#arg.state of
+	{cgistate, Worker} ->
+	    case Arg#arg.cont of
+		cgicont -> 
+		    handle_clidata(Arg, Worker);
+		undefined ->
+		    ?Debug("Error while reading clidata: ~p~n", 
+			[Arg#arg.clidata]),
+						% Error, what to do?
+		    exit(normal)
+	    end;
+	_ ->
+	    Worker = start_worker(Arg, Exefilename, Scriptfilename, Pathinfo),
+	    handle_clidata(Arg, Worker)
+    end.
+
+handle_clidata(Arg, Worker) ->
+    case Arg#arg.clidata of
+	undefined ->
+	    end_of_clidata(Arg, Worker);
+	{partial, Data} ->
+	    send_clidata(Worker, Data),
+	    {get_more, cgicont, {cgistate, Worker}};
+	Data when binary(Data) ->
+	    send_clidata(Worker, Data),
+	    end_of_clidata(Arg, Worker)
+    end.
+
+end_of_clidata(Arg, Worker) ->
+    Worker ! {self(), end_of_clidata},
+    get_from_worker(Arg, Worker).
+
+send_clidata(Worker, Data) ->
+    Worker ! {self(), clidata, Data},
+    receive
+	{Worker, clidata_receipt} -> ok
+    end.
+
+
+start_worker(Arg, Exefilename, Scriptfilename, Pathinfo) ->
     ExeFN = case Exefilename of 
 		undefined -> Scriptfilename;
 		"" -> Scriptfilename;
@@ -40,6 +80,10 @@ call_cgi(Arg, Exefilename, Scriptfilename, Pathinfo) ->
 	 end,
     Worker = spawn(?MODULE, cgi_worker, 
 		   [self(), Arg, ExeFN, Scriptfilename, PI]),
+    Worker.
+
+
+get_from_worker(Arg, Worker) ->
     {Headers, Data} = get_resp(Worker),
     AllResps = lists:map(fun(X)->do_header(Arg, X, Data) end, Headers),
     {ContentResps, Others} = filter2(fun iscontent/1, AllResps),
@@ -219,13 +263,22 @@ cgi_worker(Parent, Arg, Exefilename, Scriptfilename, Pathinfo) ->
 			 {cd, pathof(Scriptfilename)},
 			 exit_status,
 			 binary]),
-    case Arg#arg.clidata of
-	undefined->
-	    ok;
-	Clidata -> 
-	    CGIPort ! {self(), {command, Clidata}}
-    end,
+    pass_through_clidata(Parent, CGIPort),
     do_work(Parent, Arg, CGIPort).
+
+
+
+pass_through_clidata(Parent, CGIPort) ->
+    receive
+	{Parent, clidata, Clidata} ->
+	    ?Debug("Got clidata ~p~n", [binary_to_list(Clidata)]),
+	    Parent ! {self(), clidata_receipt},
+	    CGIPort ! {self(), {command, Clidata}},
+	    pass_through_clidata(Parent, CGIPort);
+	{Parent, end_of_clidata} ->
+	    ?Debug("End of clidata~n", []),
+	    ok
+    end.
 
     
 do_work(Parent, Arg, Port) ->
