@@ -37,7 +37,8 @@
 	 cookieval_to_opaque/1,
 	 print_cookie_sessions/0,
 	 replace_cookie_session/2, delete_cookie_session/1]).
--export([getconf/0, setconf/2, set_status_code/1, reformat_header/1]).
+-export([getconf/0, setconf/2, set_status_code/1, reformat_header/1,
+	reformat_request/1, reformat_response/1, reformat_url/1]).
 
 -export([set_trace/1,
 	 set_tty_trace/1,
@@ -1071,13 +1072,57 @@ reformat_header(H) ->
 		      undefined;
 		 true ->
 		      {"Authorization", H#headers.authorization}
-	      end]
+	      end,
+	      if H#headers.transfer_encoding == undefined ->
+		      undefined;
+		 true ->
+		      {"Transfer-Encoding", H#headers.transfer_encoding}
+	      end,
+	      if H#headers.location == undefined ->
+		      undefined;
+		 true ->
+		      {"Location", H#headers.location}
+	      end
+
+	     ]
 	     ) ++
      lists:map(
        fun({http_header,_,K,_,V}) ->
 	       lists:flatten(io_lib:format("~s: ~s",[K,V]))
        end, H#headers.other).
 
+
+
+
+reformat_request(Req) ->
+    {abs_path, Path} = Req#http_request.path,
+    {Maj,Min} = Req#http_request.version,
+    [yaws:to_list(Req#http_request.method), " ", Path," HTTP/",
+     integer_to_list(Maj),".", integer_to_list(Min)].
+
+
+reformat_response(Resp) ->
+    {Maj,Min} = Resp#http_response.version,
+    ["HTTP/",integer_to_list(Maj),".", integer_to_list(Min),
+     " ", integer_to_list(Resp#http_response.status),
+     " ", Resp#http_response.phrase].
+
+
+
+%% stringify the scheme://host[:port] part of a #url
+reformat_url(U) ->
+    [atom_to_list(U#url.scheme),
+     "://",
+     U#url.host,
+     if
+	 U#url.port == undefined ->
+	     [];
+	 true ->
+	     [$: | integer_to_list(U#url.port)]
+     end].
+
+	 
+		  
 
 
 

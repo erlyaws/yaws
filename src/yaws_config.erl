@@ -468,6 +468,11 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 				   Suffixes)},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
+	["revproxy", '=', Prefix, Url] ->
+	    {error, "NYI"};
+	    
+
+
 	[H|T] ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end;

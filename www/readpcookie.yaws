@@ -14,7 +14,7 @@ out(A) ->
     L=case yaws_api:find_cookie_val("pfoobar", C) of
 	  [] ->
 	      f("<p> No cookie set from the browser, need to "
-		"visit <a href=\"/setpcookie.yaws\">setpcookie.yaws</a> "
+		"visit <a href=\"setpcookie.yaws\">setpcookie.yaws</a> "
 		"to set the cookie first ~n", []);
 	  NumStr ->
 	      Num = to_integer(NumStr),

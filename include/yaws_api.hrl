@@ -32,7 +32,10 @@
 		       path,
 		       version}).
 
-	    
+-record(http_response, {version,
+			status,
+			phrase}).
+
 -record(headers, {
 	  connection,
 	  accept,
@@ -48,9 +51,11 @@
 	  accept_ranges,
 	  cookie = [],
 	  keep_alive,
+	  location,
 	  content_length,
 	  content_type,
 	  authorization,
+	  transfer_encoding,
 	  other = []   %% misc other headers
 	 }).
 

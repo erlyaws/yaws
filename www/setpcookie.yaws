@@ -74,7 +74,7 @@ out(A) -> yaws_api:ssi(A#arg.docroot, ["/HEAD", "/EXHEAD"]).
 
 <p>This is the page that set a persistant cookie in 
 the browser. 
-<a href="/readpcookie.yaws">readpcookie.yaws</a> will 
+<a href="readpcookie.yaws">readpcookie.yaws</a> will 
 read the cookie and report persitant information.
 
 </html>

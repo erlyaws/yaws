@@ -1,4 +1,4 @@
-%%%----------------------------------------------------------------------
+%%----------------------------------------------------------------------
 %%% File    : yaws_server.erl
 %%% Author  : Claes Wikstrom <klacke@hyber.org>
 %%% Purpose : 
@@ -681,7 +681,7 @@ acceptor0(GS, Top) ->
 aloop(CliSock, GS, Num) ->
     SSL = GS#gs.ssl,
     ?TC([{record, GS, gs}]),
-    case  http_get_headers(CliSock, GS#gs.gconf, SSL) of
+    case  yaws:http_get_headers(CliSock, GS#gs.gconf, SSL) of
 	{Req, H} ->
 	    SC = pick_sconf(GS#gs.gconf, H, GS#gs.group, SSL),
 	    ?Debug("SC: ~p", [?format_record(SC, sconf)]),
@@ -844,202 +844,6 @@ optional_header(Item) ->
 	Item -> Item
     end.
 
-do_recv(Sock, Num, TO, nossl) ->
-    gen_tcp:recv(Sock, Num, TO);
-do_recv(Sock, Num, _TO, ssl) ->
-    case erase(ssltrail) of %% hack from above ...
-	undefined ->
-	    split_recv(ssl:recv(Sock, 0), Num);   %% ignore Num val ??? TO ??
-	Bin ->
-	    split_recv({ok, Bin}, Num)
-    end.
-
-%% weird ... ssl module doesn't respect Num arg for binary socks
-split_recv({ok, B}, Num) when integer(Num) ->
-    case B of
-	<<Bin:Num/binary , Tail/binary>> ->
-	    put(ssltrail, Tail),
-	    {ok, Bin};
-	_ ->
-	    {ok, B}
-    end;
-split_recv(E, _) ->
-    E.
-
-
-	
-	 
-
-cli_recv(S, Num, GC, SslBool) when GC#gconf.trace == false ->
-    do_recv(S, Num, GC#gconf.timeout, SslBool);
-cli_recv(S, Num, GC, SslBool) ->
-    Res = do_recv(S, Num, GC#gconf.timeout, SslBool),
-    case Res of
-	{ok, Val} when tuple(Val) ->
-	    yaws_log:trace_traffic(from_client, ?F("~p~n", [Val]));
-	{error, What} ->
-	    yaws_log:trace_traffic(from_client, ?F("~n~p~n", [What]));
-	{ok, http_eoh} ->
-	    ok;
-	{ok, Val} when GC#gconf.trace == {true, traffic} ->
-	    yaws_log:trace_traffic(from_client, Val);
-	{ok, Val} ->
-	    {ok, Val}
-    end,
-    Res.
-
-
-
-gen_tcp_send(S, Data, SC, GC) ->
-    Res = case SC#sconf.ssl of
-	      undefined ->
-		  gen_tcp:send(S, Data);
-	      _SSL ->
-		  ssl:send(S, Data)
-	  end,
-    case GC#gconf.debug of
-	false ->
-	    case Res of
-		ok ->
-		    ok;
-		Err ->
-		    exit(Err)
-	    end;
-	true ->
-	    case Res of
-		ok ->
-		    ?Debug("Sent ~p~n", [yaws_debug:nobin(Data)]),
-		    ok;
-		Err ->
-		    {B2, Size} = strip(Data),
-		    yaws_debug:derror(GC, "Failed to send ~w bytes:~n~p "
-				      "on socket ~p: ~p~n",
-				      [Size, B2, S, Err]),
-		    exit(Err)
-	    end
-    end.
-
-
-strip(Data) ->
-    L = list_to_binary([Data]),
-    case L of
-	<<Head:50/binary, _/binary>> ->
-	    {binary_to_list(<<Head/binary, ".....">>), size(L)};
-	_ ->
-	    {binary_to_list(L), size(L)}
-    end.
-	 
-
-
-http_get_headers(CliSock, GC, SSL) ->
-    case SSL of
-	ssl ->
-	    case yaws_ssl:ssl_get_headers(CliSock, GC) of
-		{Req, H, Trail} ->
-		    case get(ssltrail) of   %% hack hack hack
-			undefined ->
-			    put(ssltrail, Trail);
-			B ->
-			    put(ssltrail, <<Trail/binary,B/binary>>)
-		    end,
-		    {Req, H};
-		R -> R
-	    end;
-	nossl ->
-	    http_get_headers(CliSock, GC)
-    end.
-
-
-http_get_headers(CliSock, GC) ->
-    ?TC([{record, GC, gconf}]),
-    inet:setopts(CliSock, [{packet, http}]),
-    case http_recv_request(CliSock, GC) of
-	bad_request ->
-	    {#http_request{method=bad_request, version={0,9}},
-	     #headers{}};
-	closed -> closed;
-	R -> 
-	    H = http_get_headers(CliSock, R, GC, #headers{}),
-	    {R, H}
-    end.
-
-
-http_recv_request(CliSock, GC) ->
-    case cli_recv(CliSock, 0, GC, nossl) of
-	{ok, R} when element(1, R) == http_request ->
-	    R;
-	{error, {http_error, "\r\n"}} ->
-	    http_recv_request(CliSock, GC);
-	{error, {http_error, "\n"}} ->
-	    http_recv_request(CliSock, GC);
-	{error, {http_error, _}} ->
-	    bad_request;
-	{error, closed} -> closed;
-	{error, timeout} -> closed;
-	_Other ->
-	    ?Debug("Got ~p~n", [_Other]),
-	    exit(normal)
-    end.
-
-
-		  
-http_get_headers(CliSock, Req, GC, H) ->
-    ?TC([{record, GC, gconf}]),
-    case cli_recv(CliSock, 0, GC, nossl) of
-	{ok, {http_header,  _Num, 'Host', _, Host}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{host = Host});
-	{ok, {http_header, _Num, 'Connection', _, Conn}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{connection = Conn});
-	{ok, {http_header, _Num, 'Accept', _, Accept}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{accept = Accept});
-	{ok, {http_header, _Num, 'If-Modified-Since', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, 
-			     H#headers{if_modified_since = X});
-	{ok, {http_header, _Num, 'If-Match', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{if_match = X});
-	{ok, {http_header, _Num, 'If-None-Match', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{if_none_match = X});
-	{ok, {http_header, _Num, 'If-Range', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{if_range = X});
-	{ok, {http_header, _Num, 'If-Unmodified-Since', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, 
-			H#headers{if_unmodified_since = X});
-	{ok, {http_header, _Num, 'Range', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{range = X});
-	{ok, {http_header, _Num, 'Referer',_, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{referer = X});
-	{ok, {http_header, _Num, 'User-Agent', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{user_agent = X});
-	{ok, {http_header, _Num, 'Accept-Ranges', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{accept_ranges = X});
-	{ok, {http_header, _Num, 'Cookie', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, 
-			H#headers{cookie = [X|H#headers.cookie]});
-	{ok, {http_header, _Num, 'Keep-Alive', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{keep_alive = X});
-	{ok, {http_header, _Num, 'Content-Length', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{content_length = X});
-	{ok, {http_header, _Num, 'Content-Type', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, H#headers{content_type = X});
-	{ok, {http_header, _Num, 'Authorization', _, X}} ->
-	    http_get_headers(CliSock, Req, GC, 
-			H#headers{authorization = parse_auth(X)});
-	{ok, http_eoh} ->
-	    H;
-	{error, {http_error, "\r\n"}} ->
-	     http_get_headers(CliSock, Req, GC, H);
-	{error, {http_error, "\n"}} ->
-	     http_get_headers(CliSock, Req, GC, H);
-	{ok, X} ->
-	    ?Debug("OTHER header ~p~n", [X]),
-	    http_get_headers(CliSock, Req, GC, 
-			     H#headers{other=[X|H#headers.other]});
-	_Err ->
-	    exit(normal)
-    
-    end.
-
-
 inet_setopts(SC, S, Opts) when SC#sconf.ssl == undefined ->
     inet:setopts(S, Opts);
 inet_setopts(_,_,_) ->
@@ -1183,15 +987,21 @@ handle_request(CliSock, GC, SC, ARG, N) ->
 		{'EXIT', _} ->   %% weird broken cracker requests
 		    deliver_403(CliSock, Req, GC, SC);
 		{DecPath, QueryPart} ->
-		    case is_auth(DecPath, ARG#arg.headers, SC#sconf.authdirs) of
-			true ->
+		    ?Debug("Test revproxy: ~p and ~p~n", [DecPath, 
+			                                  SC#sconf.revproxy]),
+		    case {is_auth(DecPath,ARG#arg.headers,SC#sconf.authdirs),
+			  is_revproxy(DecPath, SC#sconf.revproxy)} of
+			{true, false} ->
 			    UT   = url_type(GC, SC, DecPath),
 			    ARG2 = ARG#arg{server_path = DecPath,
 					   querydata= QueryPart,
 					   fullpath=UT#urltype.fullpath,
 					   pathinfo=UT#urltype.pathinfo},
 			    handle_ut(CliSock, GC, SC, ARG2, UT, N);
-			{false, Realm} ->
+			{true, {true, PP}} ->
+			    yaws_revproxy:init(CliSock, GC,SC,ARG,
+					       DecPath,QueryPart,PP);
+			{{false, Realm}, _} ->
 			    deliver_401(CliSock, Req, GC, Realm, SC)
 		    end
 	    end;
@@ -1231,6 +1041,18 @@ is_auth(Req_dir, H, [{Auth_dir, #auth{realm=Realm, users=Users}} | T ] ) ->
 	false ->
 	    is_auth(Req_dir, H, T)
     end.
+
+
+is_revproxy(_,[]) ->
+    false;
+is_revproxy(Path, [{Prefix, URL} | Tail]) ->
+    case yaws:is_prefix(Prefix, Path) of
+	{true,_} ->
+	    {true, {Prefix,URL}};
+	false ->
+	    is_revproxy(Path, Tail)
+    end.
+
 
 
 
@@ -1359,23 +1181,6 @@ handle_ut(CliSock, GC, SC, ARG, UT, N) ->
 			     end
 			    )
     end.
-
-	
-parse_auth("Basic " ++ Auth64) ->
-    case decode_base64(Auth64) of
-	{error, _Err} ->
-	    undefined;
-	Auth ->
-	    case string:tokens(Auth, ":") of
-		[User, Pass] ->
-		    {User, Pass};
-		_ ->
-		    undefined
-	    end
-    end;
-parse_auth(_) ->
-    undefined.
-
 
 
 
@@ -1600,7 +1405,7 @@ get_client_data(CliSock, Len, GC, SSlBool) ->
 get_client_data_len(_CliSock, 0, Bs, _GC, _SSlBool) ->
     list_to_binary(Bs);
 get_client_data_len(CliSock, Len, Bs, GC, SSlBool) ->
-    case cli_recv(CliSock, Len, GC, SSlBool) of
+    case yaws:cli_recv(CliSock, Len, GC, SSlBool) of
 	{ok, B} ->
 	    get_client_data_len(CliSock, Len-size(B), [Bs|B], GC, SSlBool);
 	_Other ->
@@ -1609,7 +1414,7 @@ get_client_data_len(CliSock, Len, Bs, GC, SSlBool) ->
     end.
 
 get_client_data_all(CliSock, Bs, GC, SSlBool) ->
-    case cli_recv(CliSock, 4000, GC, SSlBool) of
+    case yaws:cli_recv(CliSock, 4000, GC, SSlBool) of
 	{ok, B} ->
 	    get_client_data_all(CliSock, [Bs|B] , GC, SSlBool);
 	eof ->
@@ -1758,8 +1563,8 @@ stream_loop_send(CliSock, GC, SC) ->
 	endofstreamcontent ->
 	    case yaws:outh_get_chunked() of
 		true ->
-		    gen_tcp_send(CliSock, [crnl(), "0", 
-					   crnl2()], SC, GC),
+		    yaws:gen_tcp_send(CliSock, [crnl(), "0", 
+						crnl2()], SC, GC),
 		    continue;
 		false ->
 		    done
@@ -1775,7 +1580,7 @@ send_streamcontent_chunk(CliSock, GC, SC, Chunk) ->
     Data = erase(acc_content),
     ?Debug("send ~p bytes to ~p ~n", 
 	[size(list_to_binary(Data)), CliSock]),
-    gen_tcp_send(CliSock, Data, SC, GC).
+    yaws:gen_tcp_send(CliSock, Data, SC, GC).
     
 
 stream_loop_discard(CliSock, GC, SC) ->
@@ -2061,7 +1866,7 @@ deliver_accumulated(Sock, GC, SC) ->
 		   end,
 	    All = [StatusLine, Headers, CRNL, Cont]
     end,
-    gen_tcp_send(Sock, All, SC, GC),
+    yaws:gen_tcp_send(Sock, All, SC, GC),
     if
 	GC#gconf.trace == false ->
 	    ok;
@@ -2077,14 +1882,16 @@ deliver_accumulated(Sock, GC, SC) ->
 get_more_post_data(PPS, N, SC, GC, ARG) ->
     Len = list_to_integer((ARG#arg.headers)#headers.content_length),
     if N + PPS < Len ->
-	    case cli_recv(ARG#arg.clisock, PPS, GC, is_ssl(SC#sconf.ssl)) of
+	    case yaws:cli_recv(ARG#arg.clisock, PPS, GC, 
+			       is_ssl(SC#sconf.ssl)) of
 		{ok, Bin} ->
 		    {partial, Bin};
 		Else ->
 		    {error, Else}
 	    end;
        true ->
-	    case cli_recv(ARG#arg.clisock, Len - N, GC, is_ssl(SC#sconf.ssl)) of
+	    case yaws:cli_recv(ARG#arg.clisock, Len - N, GC, 
+			       is_ssl(SC#sconf.ssl)) of
 		{ok, Bin} ->
 		    Bin;
 		Else ->
@@ -2252,7 +2059,7 @@ send_file(CliSock, Fd, SC, GC) ->
 	    file:close(Fd),
 	    case yaws:outh_get_chunked() of
 		true ->
-		    gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
+		    yaws:gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
 		    done_or_continue();
 		false ->
 		    done_or_continue()
@@ -2272,7 +2079,7 @@ send_file_range(CliSock, Fd, SC, GC, 0) ->
     file:close(Fd),
     case yaws:outh_get_chunked() of
 	true ->
-	    gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
+	    yaws:gen_tcp_send(CliSock, [crnl(), "0", crnl2()], SC, GC),
 	    done_or_continue();
 	false ->
 	    done_or_continue()
@@ -2284,9 +2091,9 @@ send_file_chunk(Bin, CliSock, SC, GC) ->
 	 true ->
 	     CRNL = crnl(),
 	     Data2 = [CRNL, yaws:integer_to_hex(size(Bin)) , crnl(), Bin],
-	     gen_tcp_send(CliSock, Data2, SC, GC);
+	     yaws:gen_tcp_send(CliSock, Data2, SC, GC);
 	 false ->
-	     gen_tcp_send(CliSock, Bin, SC, GC)
+	     yaws:gen_tcp_send(CliSock, Bin, SC, GC)
      end.
 
 
@@ -2660,7 +2467,7 @@ ssl_flush(_Sock, undefined) ->
 ssl_flush(_Sock, 0) ->
     ok;
 ssl_flush(Sock, Sz) ->
-    split_recv(ssl:recv(Sock, Sz, 1000), Sz).
+    yaws:split_recv(ssl:recv(Sock, Sz, 1000), Sz).
 
 mtime(F) ->
     F#file_info.mtime.
@@ -2676,46 +2483,6 @@ load_and_run(Mod) ->
 	    error_logger:error_msg("Loading '~w' failed, reason ~p~n",
 				   [Mod,Error])
     end.
-
-decode_base64([]) ->
-  [];
-decode_base64([Sextet1,Sextet2,$=,$=|Rest]) ->
-  Bits2x6=
-    (d(Sextet1) bsl 18) bor
-    (d(Sextet2) bsl 12),
-  Octet1=Bits2x6 bsr 16,
-  [Octet1|decode_base64(Rest)];
-decode_base64([Sextet1,Sextet2,Sextet3,$=|Rest]) ->
-  Bits3x6=
-    (d(Sextet1) bsl 18) bor
-    (d(Sextet2) bsl 12) bor
-    (d(Sextet3) bsl 6),
-  Octet1=Bits3x6 bsr 16,
-  Octet2=(Bits3x6 bsr 8) band 16#ff,
-  [Octet1,Octet2|decode_base64(Rest)];
-decode_base64([Sextet1,Sextet2,Sextet3,Sextet4|Rest]) ->
-  Bits4x6=
-    (d(Sextet1) bsl 18) bor
-    (d(Sextet2) bsl 12) bor
-    (d(Sextet3) bsl 6) bor
-    d(Sextet4),
-  Octet1=Bits4x6 bsr 16,
-  Octet2=(Bits4x6 bsr 8) band 16#ff,
-  Octet3=Bits4x6 band 16#ff,
-  [Octet1,Octet2,Octet3|decode_base64(Rest)];
-decode_base64(_CatchAll) ->
-  {error, bad_base64}.
-
-d(X) when X >= $A, X =<$Z ->
-    X-65;
-d(X) when X >= $a, X =<$z ->
-    X-71;
-d(X) when X >= $0, X =<$9 ->
-    X+4;
-d($+) -> 62;
-d($/) -> 63;
-d(_) -> 63.
-
 
 
 safe_ehtml_expand(X) ->

@@ -73,7 +73,8 @@
 	 dir_listings = false,        %% allow dir listings
 	 opaque = [],                 %% useful in embedded mode
 	 start_mod,                   %% user provided module to be started
-	 allowed_scripts = [yaws]
+	 allowed_scripts = [yaws],
+	 revproxy = [{"/tmp/", yaws_api:parse_url("http://localhost/")}]
 	}).
 
 

@@ -27,7 +27,11 @@ MODULES=yaws \
 	mime_types \
 	yaws_session_server \
 	yaws_404 \
-	yaws_html
+	yaws_revproxy
+
+#	yaws_html \
+
+
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app
 ERLC_FLAGS+=-W $(DEBUG_FLAGS) -pa ../../yaws

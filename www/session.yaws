@@ -10,9 +10,9 @@ The Yaws session server is ideal (and recommended)
 for maintaining cookie state 
 in a server side application.
 
-The code in <a href="/code.yaws?file=/session1.yaws">session1.yaws</a>
+The code in <a href="code.yaws?file=/session1.yaws">session1.yaws</a>
 shows a minimalistic way to handle sessions.
-To run it click <a href="/session1.yaws">here</a>
+To run it click <a href="session1.yaws">here</a>
 
 
 

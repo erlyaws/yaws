@@ -49,7 +49,7 @@ recv(CliSock, Num, GC) ->
 
 recv(CliSock, 0, GC, D) -> {ok, D};
 recv(CliSock, Num, GC, D) -> 
-    case yaws_server:cli_recv(CliSock, Num, GC, ssl) of
+    case yaws:cli_recv(CliSock, Num, GC, ssl) of
 	{ok, Data} ->
 	    ?Debug("GOT chunk of size ~p.~n", [size(Data)]),
 	    D2 = D ++ binary_to_list(Data),
@@ -196,7 +196,7 @@ parse_line("User-Agent:" ++ Con, H) ->
 parse_line("Accept-Ranges:" ++ Con, H) ->
     H#headers{accept_ranges = space_strip(Con)};
 parse_line("Authorization:" ++ Con, H) ->
-    A = yaws_server:parse_auth(space_strip(Con)),
+    A = yaws:parse_auth(space_strip(Con)),
     H#headers{authorization = A};
 parse_line("Keep-Alive:" ++ Con, H) ->
     H#headers{keep_alive = space_strip(Con)};

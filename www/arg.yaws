@@ -4,7 +4,7 @@
 
 <p>This page displays the Arg #argument structure
 supplied to the out/1 function.
-<p> The code is in file <a href="/code.yaws?file=/arg.yaws">arg.yaws</a>
+<p> The code is in file <a href="code.yaws?file=/arg.yaws">arg.yaws</a>
 
 <erl>
 

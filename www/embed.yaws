@@ -132,7 +132,7 @@ a normal Erlang shell.
 </pre>
 
 <p>The ybed module is very small and is named 
-<a href="/code.yaws?file=/ybed.erl">ybed.erl</a>
+<a href="code.yaws?file=/ybed.erl">ybed.erl</a>
 
 <p>The above "erl" command line gives:
 
@@ -155,7 +155,7 @@ and  _all_ that remain is to design a decent web GUI. This is
 harder than it might seem at a first glance. The configuration of the
 web server was programmatically fed into Yaws from the surrounding application, 
 in this case, the Erlang shell + the module 
-<a href="/code.yaws?file=/ybed.erl">ybed.erl</a>
+<a href="code.yaws?file=/ybed.erl">ybed.erl</a>
 
 
 <h2>The opaque field in the sconf structure </h2>

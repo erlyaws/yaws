@@ -11,7 +11,7 @@ out(A) ->
     L=case yaws_api:find_cookie_val("foobar", C) of
 	  [] ->
 	      f("<p> No cookie set from the browser, need to "
-		"visit <a href=\"/setcookie.yaws\">setcookie.yaws</a> "
+		"visit <a href=\"setcookie.yaws\">setcookie.yaws</a> "
 		"to set the cookie first ~n", []);
 	  PidStr ->
 	      Pid = list_to_pid(PidStr),

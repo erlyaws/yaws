@@ -14,7 +14,7 @@ out(A) ->
 	    Data = {ehtml,
 		    {html,[],
 		     ["I just set yout cookie to ", Cookie, "Click ",
-		      {a, [{href,"/session1.yaws"}], "here"},
+		      {a, [{href,"session1.yaws"}], "here"},
 		      "to revisit"]}},
 	    CO = yaws_api:setcookie("baz",Cookie,"/"),
 	    [Data, CO];
@@ -26,7 +26,7 @@ out(A) ->
 		    {html,[],
 		     [
 		      "Click ",
-		      {a, [{href,"/session1.yaws"}], "here"},
+		      {a, [{href,"session1.yaws"}], "here"},
 		      "to revisit",
 		      {p, [], f("You have been here ~p times", [OP2#myopaque.times])},
 		      {p, [], f("Your cookie is ~s", [Cookie])}]}},
