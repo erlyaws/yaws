@@ -153,8 +153,8 @@ handle_call({setdir, _DirIgnore, Sconfs}, _From, State)
     
     %% close all files
     lists:map(
-      fun({_Sname, FD, _Filename}) ->
-	      file:close(FD)
+      fun(AL) ->
+	      file:close(AL#alog.fd)
       end, State#state.alogs),
     SCs = lists:flatten(Sconfs),
     

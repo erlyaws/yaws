@@ -614,7 +614,7 @@ acceptor0(GS, Top) ->
 		{'EXIT', normal} ->
 		    exit(normal);
 		{'EXIT', Reason} ->
-		    error_logger:error_msg("~p~n", [Reason]),
+		    error_logger:error_msg("Yaws process died: ~p~n", [Reason]),
 		    exit(normal)
 	    end,
 	    %% we cache processes
@@ -744,13 +744,22 @@ maybe_access_log(Ip, SC, Req) ->
 	  end,
     case SC#sconf.access_log of
 	true ->
-	    Path = decode_path(Req#http_request.path),
+	    Path = safe_decode_path(Req#http_request.path),
 	    Meth = atom_to_list(Req#http_request.method),
 	    yaws_log:accesslog(SC#sconf.servername, Ip, 
 			       [Meth, $\s, Path] , Status, Len);
 	false ->
 	    ignore
     end.
+
+safe_decode_path(Path) ->
+    case (catch decode_path(Path)) of
+	{'EXIT', _} ->
+	    "/undecodable_path";
+	Val ->
+	    Val 
+    end.
+
 
 
 decode_path({abs_path, Path}) ->
@@ -1128,7 +1137,33 @@ parse_auth(_) ->
 
 
 
-
+%% hmmm why do I set close here ?? 
+new_redir_h(OH, Loc) ->
+    Cont = get(acc_content),
+    Chunked = OH#outh.chunked,
+    NewChunked = case Chunked of
+		     false ->
+			 false;
+		     true when Cont == undefined ->
+			 false;
+		     true ->
+			 true
+		 end,
+    NewContentType = case Cont of
+			 undefined ->
+			     undefined;
+			 _ ->
+			     OH#outh.content_type
+		     end,
+    OH2 = OH#outh{status = 302,
+		  doclose = true,
+		  chunked = NewChunked,
+		  connection = yaws:make_connection_close_header(true),
+		  content_type = NewContentType,
+		  transfer_encoding = 
+		      yaws:make_transfer_encoding_chunked_header(NewChunked),
+		  location = Loc},
+    put(outh, OH2).
 
 
 % we must deliver a 302 if the browser asks for a dir
@@ -1146,14 +1181,7 @@ deliver_302(CliSock, Req, GC, SC, Arg) ->
 	   Headers#headers.host, 
 	   decode_path(Req#http_request.path), "/\r\n"],
     
-
-    H2 = H#outh{status = 302,
-		doclose = true,
-		content_type = undefined,
-		server = yaws:make_server_header(),
-		location = Loc,
-		connection = yaws:make_connection_close_header(true)},
-    put(outh, H2),
+    H2 = new_redir_h(H, Loc),
     deliver_accumulated(CliSock, GC, SC),
     done.
 
@@ -1530,58 +1558,20 @@ handle_out_reply({redirect_local, Path0}, _LineNo, _YawsFile, SC, A) ->
 	       P ->
 		   P
 	   end,
-
-
     Scheme = redirect_scheme(SC),
     Arg = hd(A),
     Headers = Arg#arg.headers,
     Loc = ["Location: ", Scheme, Headers#headers.host, Path, "\r\n"],
     OH = get(outh),
-
-    Cont = get(acc_content),
-    Chunked = OH#outh.chunked,
-    NewChunked = case Chunked of
-		     false ->
-			 false;
-		     true when Cont == undefined ->
-			 false;
-		     true ->
-			 true
-		 end,
-
-    OH2 = OH#outh{status = 302,
-		  doclose = true,
-		  chunked = NewChunked,
-		  connection = yaws:make_connection_close_header(true),
-		  transfer_encoding = 
-		     yaws:make_transfer_encoding_chunked_header(NewChunked),
-		  location = Loc},
-    put(outh, OH2),
+    new_redir_h(OH, Loc),
     ok;
+
 
 
 handle_out_reply({redirect, URL}, _LineNo, _YawsFile, _SC, _A) ->
     Loc = ["Location: ", URL, "\r\n"],
     OH = get(outh),
-    Cont = get(acc_content),
-    Chunked = OH#outh.chunked,
-    NewChunked = case Chunked of
-		     false ->
-			 false;
-		     true when Cont == undefined ->
-			 false;
-		     true ->
-			 true
-		 end,
-
-    OH2 = OH#outh{status = 302,
-		  doclose = true,
-		  chunked = NewChunked,
-		  connection = yaws:make_connection_close_header(true),
-		  transfer_encoding = 
-		     yaws:make_transfer_encoding_chunked_header(NewChunked),
-		  location = Loc},
-    put(outh, OH2),
+    new_redir_h(OH, Loc),
     ok;
 
 handle_out_reply(ok, _LineNo, _YawsFile, _SC, _A) ->
