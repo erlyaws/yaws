@@ -32,8 +32,15 @@ local_install:	../bin/yaws
 	echo "--- Installed  $$HOME/bin/yaws"
 
 yaws.conf:
-	echo PREFIX is $(PREFIX)
-	cat yaws.conf.template | ./Subst %yawsdir% $(PREFIX)/lib/yaws | ./Subst %logdir% /var/log/yaws | ./Subst %host% `hostname` | ./Subst %port% 80 | ./Subst %docroot% $(VARDIR)/yaws/www | ./Subst %certdir% $(ETCDIR) | ./Subst %sslport% 443 > yaws.conf
+	@echo PREFIX is $(PREFIX)
+	cat yaws.conf.template | \
+		./Subst %yawsdir% $(PREFIX)/lib/yaws | \
+		./Subst %logdir% /var/log/yaws | \
+		./Subst %host% `hostname` | \
+		./Subst %port% 80 | \
+		./Subst %docroot% $(VARDIR)/yaws/www | \
+		./Subst %certdir% $(ETCDIR) | \
+		./Subst %sslport% 443 > yaws.conf
 
 clean:
 	rm -f ../bin/yaws
