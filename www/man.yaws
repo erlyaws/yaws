@@ -8,11 +8,17 @@ out(A) ->
     P = yaws_api:parse_post_data(A),
     io:format("P = ~p~n", [P]),
     L = case lists:keysearch(page, 1, P) of
-       {value, {page, Page}} ->
-           os:cmd("man " ++ Page ++ " | col -b");
-       false ->
-          "no man page foundin query arg "
-    end,
+	    {value, {page, Page}} ->
+		case lists:any(fun(C) -> lists:member(C, Page) end,
+			       "$$\\!#%^&*()[]~\"'`<>|") of
+		    true -> 
+			"illegal character detected in query arg";
+		    false ->
+			os:cmd("man " ++ Page ++ " | col -b")
+		end;
+	    false ->
+		"no man page found in query arg "
+	end,
     Man = yaws_api:pre_ssi_string(L,"man"),
     Trail = yaws_api:ssi(A#arg.docroot, ["/END"]),
     [H, Man, Trail].
