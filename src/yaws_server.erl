@@ -25,8 +25,9 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 -import(filename, [join/1]).
--import(lists, [foreach/2, map/2, flatten/1, flatmap/2]).
+-import(lists, [foreach/2, map/2, flatten/1, flatmap/2, reverse/1]).
 
+-import(yaws_api, [ehtml_expand/1]).
 
 -record(gs, {gconf,
 	     group,         %% list of #sconf{} s
@@ -576,7 +577,6 @@ aloop(CliSock, GS, Num) when GS#gs.ssl == nossl ->
 	    put(outh, #outh{}),
 	    Res = apply(yaws_server, Req#http_request.method, 
 			[CliSock, GS#gs.gconf, SC, Req, H]),
-
 	    maybe_access_log(IP, SC, Req),
 	    case Res of
 		continue ->
@@ -2196,43 +2196,3 @@ safe_ehtml_expand(X) ->
 	    {ok, Val}
     end.
 
-
-%% simple erlang term representation of HTML:
-%% EHTML = [EHTML] | {Tag, Attrs, Body} | {Tag, Attrs} | {Tag} |
-%%         binary() | character()
-%% Tag 	 = atom()
-%% Attrs = [{Key, Value}]  or {EventTag, {jscall, FunName, [Args]}}
-%% Key 	 = atom()
-%% Value = string()
-%% Body  = EHTML
-ehtml_expand(Ch) when Ch >= 0, Ch =< 255 ->
-    yaws_api:htmlize_char(Ch);
-ehtml_expand(Bin) when binary(Bin) ->
-    yaws_api:htmlize(Bin);
-ehtml_expand({Tag}) ->
-    ehtml_expand({Tag,[]});
-ehtml_expand({pre_html, Attrs}) ->
-    Attrs;
-ehtml_expand({Tag, Attrs}) ->
-    ["<", atom_to_list(Tag), ehtml_attrs(Attrs), ">\n"];
-ehtml_expand({Tag, Attrs, Body}) ->
-    Ts = atom_to_list(Tag),
-    ["<",Ts, ehtml_attrs(Attrs),">",
-     ehtml_expand(Body),
-     "</", Ts, ">\n"];
-ehtml_expand([H|T]) ->
-    [ehtml_expand(H) | ehtml_expand(T)];
-ehtml_expand([]) ->
-    [].
-
-
-
-
-
-ehtml_attrs([]) ->
-    [];
-ehtml_attrs([{Name, Value} | Tail]) ->
-    ValueString = if atom(Value) -> [$",atom_to_list(Value),$"];
-		     list(Value) -> [$",Value,$"]
-		  end,
-    [[$ |atom_to_list(Name)], [$=|ValueString]| ehtml_attrs(Tail)].
