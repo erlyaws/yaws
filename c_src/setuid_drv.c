@@ -15,6 +15,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <pwd.h>
+#include <stdlib.h>
 
 #include "erl_driver.h"
 
@@ -52,6 +53,20 @@ static ErlDrvData setuid_start(ErlDrvPort port, char *buf)
 	}
 	endpwent();
 	return (ErlDrvData) -1;
+    case 'n': {
+	int uid = atoi(t);
+	while ((pe = getpwent())) {
+	    if (pe->pw_uid == uid) {
+		sprintf(xbuf, "ok %s", pe->pw_name);
+		endpwent();
+		driver_output(port,xbuf, strlen(xbuf));
+		return (ErlDrvData) port;
+	    }
+	}
+	endpwent();
+	driver_output(port, "ok -", 4);
+	return (ErlDrvData) port;
+    }
     case 'g':   /* getuid */
 	sprintf(xbuf, "ok %d", getuid());
 	driver_output(port,xbuf, strlen(xbuf));

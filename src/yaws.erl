@@ -1495,6 +1495,14 @@ user_to_home(User) ->
 	    Home
     end.
 
+uid_to_name(Uid) ->
+    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
+			 "/../priv/", "setuid_drv"),
+    P = open_port({spawn, "setuid_drv " ++ [$n|integer_to_list(Uid)]}, []),
+    receive
+	{P, {data, "ok " ++ Name}} ->
+	    Name
+    end.
 
 tmp_dir() ->
     case os:type() of

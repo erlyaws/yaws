@@ -22,7 +22,7 @@
 %% assumes the appropriate file structures 
 %% are already created with the right perms
 
-start(GC, FirstTime) when FirstTime == false ->
+start(_GC, FirstTime) when FirstTime == false ->
     ok;
 start(GC, true) ->
     case proc_lib:start_link(?MODULE, run, [GC]) of
@@ -335,6 +335,27 @@ s_cmd(Fd, SID, Term) ->
     gen_tcp:close(Fd),
     Res.
 
+
+ls() ->
+    case file:list_dir("/tmp/yaws") of
+	{ok, List} ->
+	    lists:foreach(
+	      fun(D) ->
+		      ls(D)
+	      end, List);
+	_ ->
+	    ok
+    end.
+
+
+ls(Dir) ->
+    Ctl = ctl_file(Dir),
+    case file:read_file_info(Ctl) of
+	{ok, FI} ->
+	    ok
+    end.
+
+	      
 
 %% send a hup (kindof) to the yaws server to make it
 %% reload its configuration and clear its caches
