@@ -34,6 +34,6 @@ clean:
 install: all
 	install -d $(INSTALLPREFIX)/lib/yaws/applications/webmail/ebin
 	install -d $(INSTALLPREFIX)/lib/yaws/applications/webmail/www
-	(tar czv  *.beam  --) | (cd $(INSTALLPREFIX)/lib/yaws/applications/webmail/ebin; tar xz -- )
-	(tar czv  *.gif *.yaws *.css  --) | (cd $(INSTALLPREFIX)/lib/yaws/applications/webmail/www; tar xz -- )
+	(tar cv  *.beam  --) | (cd $(INSTALLPREFIX)/lib/yaws/applications/webmail/ebin; tar x -- )
+	(tar cv  *.gif *.yaws *.css  --) | (cd $(INSTALLPREFIX)/lib/yaws/applications/webmail/www; tar x -- )
 
