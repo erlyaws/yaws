@@ -108,12 +108,18 @@ get_app_args() ->
 		    false
 	    end,
     Conf = case application:get_env(yaws, conf) of
-		undefined ->
+	       undefined ->
 		   find_c(AS);
-		{ok, File} ->
-		    {file, File}
-	    end,
-    {Debug, Trace, Conf}.
+	       {ok, File} ->
+		   {file, File}
+	   end,
+    RunMod = case application:get_env(yaws, runmod) of
+		 undefined ->
+		     find_runmod(AS);
+		 {ok,Mod} ->
+		     {ok,Mod}
+	     end,
+    {Debug, Trace, Conf, RunMod}.
 
 find_c([{conf, [File]} |_]) ->
     {file, File};
@@ -122,6 +128,15 @@ find_c([_|T]) ->
 find_c([]) ->
     false.
 
+find_runmod([{runmod, [Mod]} |_]) ->
+    {ok,l2a(Mod)};
+find_runmod([_|T]) ->
+    find_runmod(T);
+find_runmod([]) ->
+    false.
+
+l2a(L) when list(L) -> list_to_atom(L);
+l2a(A) when atom(A) -> A.
 
 
 
@@ -134,7 +149,7 @@ find_c([]) ->
 %%----------------------------------------------------------------------
 init([]) ->
     put(start_time, calendar:local_time()),  %% for uptime
-    {Debug, Trace, Conf} = get_app_args(),
+    {Debug, Trace, Conf, RunMod} = get_app_args(),
 
     case yaws_config:load(Conf, Trace, Debug) of
 	{ok, Gconf, Sconfs} ->
@@ -148,7 +163,7 @@ init([]) ->
 		    ok
 	    end,
 
-	    init2(Gconf, Sconfs);
+	    init2(Gconf, Sconfs, RunMod);
 	{error, E} ->
 	    case erase(logdir) of
 		undefined ->
@@ -164,13 +179,21 @@ init([]) ->
     end.
 
 
-init2(Gconf, Sconfs) ->
+init2(Gconf, Sconfs, RunMod) ->
     lists:foreach(
       fun(D) ->
 	      code:add_pathz(D)
       end, Gconf#gconf.ebin_dir),
 
     process_flag(trap_exit, true),
+
+    %% start user provided application
+    case RunMod of
+	{ok,Mod} -> 
+	    runmod(Mod);
+	_ -> 
+	    false
+    end,
 
     %% start the individual server processes
     L = lists:map(
@@ -1666,7 +1689,14 @@ not_found_body(Url, GC, SC) ->
     list_to_binary(L).
 
 
+runmod(Mod) ->
+    spawn(fun() -> load_and_run(Mod) end).
 
-
-    
+load_and_run(Mod) ->
+    case code:ensure_loaded(Mod) of
+	{module,Mod} ->
+	    Mod:start();
+	Error ->
+	    yaws_log:errlog("Loading '~w' failed, reason ~p~n",[Mod,Error])
+    end.
 

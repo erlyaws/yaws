@@ -12,6 +12,7 @@ help()
 	echo "       yaws -D         -- daemon mode"
 	echo "       yaws -d         -- debug mode"
 	echo "       yaws -c file    -- set config file"
+	echo "       yaws -r mod     -- call mod:start/0 at startup"
 	echo "       yaws -t         -- trace all traffic"
 	echo "       yaws -T         -- trace http traffic"
 	echo "       yaws -v         -- print version"
@@ -25,11 +26,12 @@ help()
 }
      
 
-debug=""
+debug="";
 daemon="";
 interactive="";
-trace=""
-conf=""
+trace="";
+conf="";
+runmod="";
 
 while [ $# -gt 0 ] 
 do
@@ -52,6 +54,9 @@ do
            -c)
 		conf=" -conf $1 "
 		shift;;
+           -r)
+		runmod=" -runmod $1 "
+		shift;;
 	   -h)
 	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl hup;
 		exit normal;;
@@ -71,5 +76,6 @@ done
 
 [ -z "$daemon" ] && [ -z "$interactive" ] && help
 
-exec $erl ${daemon} -pa ${yawsdir}/ebin  ${debug} -s yaws $trace $conf
+exec $erl ${daemon} -pa ${yawsdir}/ebin  ${debug} -s yaws $trace $conf $runmod
+
 
