@@ -1,0 +1,34 @@
+#
+# Config file for yaws Gentoo start-script.  
+# Should be stored as: /etc/conf.d/yaws
+#
+
+# Application name
+YAWS_APP=yaws
+
+# Path to yaws executable
+YAWS_EXEC=/usr/local/bin/yaws
+
+# NB: It is recomended that you don't run Yaws as root
+YAWS_UID=root
+
+# The Yaws config file
+YAWS_CONF_FILE=/etc/yaws.conf
+
+# The start options
+YAWS_START_OPTS="-D -heart -c ${YAWS_CONF_FILE}"   
+
+# The stop options
+YAWS_STOP_OPTS="-s -c ${YAWS_CONF_FILE}"
+
+# The reload options
+YAWS_RELOAD_OPTS="-h -c ${YAWS_CONF_FILE}"
+
+# The query options
+YAWS_QUERY_OPTS="-S -c ${YAWS_CONF_FILE}"
+
+# The debug options
+YAWS_DEBUG_OPTS="-i -c ${YAWS_CONF_FILE}"
+
+
+

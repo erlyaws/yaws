@@ -29,4 +29,4 @@ clean:
 install:
 	-install -d $(INSTALLPREFIX)/share/doc/yaws
 	-cp yaws.pdf $(INSTALLPREFIX)/share/doc/yaws
-	-cp yaws.ps $(INSTALLPREFIX)/share/doc/yaws
+ 

@@ -1,0 +1,57 @@
+#!/sbin/runscript
+#
+# Startup script for the Yaws Web Server (for Gentoo Linux)
+#
+# config: /etc/conf.d/yaws
+#
+# description: yaws - Erlang enabled http server
+#
+# use: rc-update add yaws default
+#
+
+opts="start stop reload restart query debug"  
+
+depend() {
+       need net
+}
+
+
+start() {
+       ebegin "Starting ${YAWS_APP} "
+       start-stop-daemon --start --verbose --chuid ${YAWS_UID} \
+           --exec  ${YAWS_EXEC} -- ${YAWS_START_OPTS}   
+       eend $?
+}
+
+
+stop() {
+       ebegin "Stopping ${YAWS_APP} "
+       start-stop-daemon --start --quiet --chuid ${YAWS_UID} \
+           --exec ${YAWS_EXEC} -- ${YAWS_STOP_OPTS}
+       eend $?
+}
+
+
+reload() {
+       ebegin "Reloading ${YAWS_APP} "
+       start-stop-daemon --start --quiet --chuid ${YAWS_UID} \
+           --exec ${YAWS_EXEC} -- ${YAWS_RELOAD_OPTS}
+       eend $?
+}
+
+query() {
+       ebegin "Querying ${YAWS_APP} "
+       start-stop-daemon --start --quiet --chuid ${YAWS_UID} \
+           --exec ${YAWS_EXEC} -- ${YAWS_QUERY_OPTS}
+       eend $?
+}
+
+debug() {
+       ebegin "Debug ${YAWS_APP} "
+       start-stop-daemon --start --quiet --chuid ${YAWS_UID} \
+           --exec ${YAWS_EXEC} -- ${YAWS_DEBUG_OPTS}
+       eend $?
+}
+
+
+

@@ -1,3 +1,4 @@
+
 SUBDIRS	=	c_src src scripts man www/shopingcart doc
 APPS = webmail
 include ./include.mk
@@ -9,7 +10,7 @@ all debug clean install:
 	    if [ -f $$d/Makefile ]; then ( cd $$d && $(MAKE) $@ ) || exit 1 ; fi ; \
 	  done
 
-# mremond: The build of the doc is better optionnal (latex is not always installed on servers)
+
 docs:
 	( cd doc && $(MAKE) docs )
 

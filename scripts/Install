@@ -1,6 +1,5 @@
 #!/bin/sh
 
-set -x
 
 prefix=$1
 erl=$2
@@ -21,9 +20,18 @@ else
 fi
 
 sh ./mangle ${prefix}/lib/yaws ${erl} yaws.conf.template ${t}
-if [ `uname` = Linux ]; then
-    install -d ${etcdir}/init.d
-    cp yaws.init.d ${etcdir}/init.d/yaws
-    chmod +x ${etcdir}/init.d/yaws
+
+
+if [ -d /etc/init.d ]; then
+    # sysV init scripts
+    if [ -f /etc/gentoo-release ]; then
+	cp gentoo/init.d.yaws  ${etcdir}/init.d/yaws
+	cp gentoo/conf.d.yaws  ${etcdir}/conf.d/yaws
+    elif [ `uname` = Linux ]; then
+	install -d ${etcdir}/init.d
+	cp yaws.init.d ${etcdir}/init.d/yaws
+	chmod +x ${etcdir}/init.d/yaws
+    fi
 fi
+
 
