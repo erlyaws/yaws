@@ -36,15 +36,15 @@ done
 function updateDir () {
     if test -d $udir ; then
 	echo "updating  $udir"
-	install -C -b -S $suffix $wikisrc/*.yaws $udir
-	install -C -b -S $suffix $wikisrc/*.wob $udir
+	install -b -S $suffix $wikisrc/*.yaws $udir
+	install -b -S $suffix $wikisrc/*.wob $udir
 	if test '!' -d $udir/WikiPreferences.files ; then
 	    mkdir $udir/WikiPreferences.files
 	fi
-	install -C -b -S $suffix $wikisrc/WikiPreferences.files/*.css \
+	install -b -S $suffix $wikisrc/WikiPreferences.files/*.css \
 	    $udir/WikiPreferences.files
 	if [ $updategifs = 1 ]; then
-	    install -C -b -S $suffix $wikisrc/WikiPreferences.files/*.gif \
+	    install -b -S $suffix $wikisrc/WikiPreferences.files/*.gif \
 		$udir/WikiPreferences.files
 	fi
     else
