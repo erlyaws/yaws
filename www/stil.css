@@ -14,9 +14,16 @@
     background: green;
   }
 
-  div.box { border: solid; border-width: thin; width: 100%; 
+  div.box { border: solid; border-width: thin; width: 90%; 
             margin : 4;
             background: rgb(211, 211, 211)  }
+
+
+
+  div.man { border: solid; border-width: thin; width: 80%; 
+            font-size: 70%
+            margin : 4;
+            background: rgb(240, 230, 140)  }
 
 
 

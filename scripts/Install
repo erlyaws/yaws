@@ -20,4 +20,8 @@ else
 fi
 
 sh ./mangle ${prefix}/lib/yaws ${erl} yaws.conf.template ${t}
+if [ `uname` = Linux ]; then
+    cp yaws.init.d /etc/init.d/yaws
+    chmod +x /etc/init.d/yaws
+fi
 

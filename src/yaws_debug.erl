@@ -130,6 +130,14 @@ format(GC, F, A) ->
     end.
 
 
+derror(GC, F, A) ->
+    if
+	GC#gconf.debug == true ->
+	    yaws_log:errlog(F, A);
+	true ->
+	    ok
+    end.
+
 
 mktags() ->
     tags:dirs(["."]),

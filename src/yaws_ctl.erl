@@ -54,9 +54,13 @@ handle_a(A) ->
 	{ok, Data} ->
 	    case binary_to_term(Data) of
 		hup ->
-		    yaws:hup();
+		    yaws:hup(),
+		    gen_tcp:send(A, "hupped\n");
 		stop ->
+		    gen_tcp:send(A, "stopping\n"),
 		    init:stop();
+		status ->
+		    a_status(A);
 		_Other ->
 		    ignore
 	    end,
@@ -64,6 +68,34 @@ handle_a(A) ->
 	_Err ->
 	    ignore
     end.
+
+
+
+f(Fmt, As) ->
+    io_lib:format(Fmt, As).
+
+a_status(Sock) ->
+    {UpTime, L} = yaws_server:stats(),
+    {Days, {Hours, Minutes, Secs}} = UpTime,
+    H = f("~n Uptime: ~w Days, ~w Hours, ~w Minutes  ~n",
+           [Days, Hours, Minutes]),
+    
+    T =lists:map(
+	 fun({Host,IP,Hits}) ->
+		 L1= f("stats for ~p at ~p  ~n",
+		       [Host,IP]),
+		 T = "\n"
+                     "URL                  Number of hits\n",
+		 L2=lists:map(
+		      fun({Url, Hits2}) ->
+			      f("~-30s ~-7w ~n",
+				[Url, Hits2])
+		      end, Hits),
+		 END = "\n",
+		 [L1, T, L2, END]
+	 end, L),
+    gen_tcp:send(Sock, [H, T]).
+
 
 actl(Term) ->
     case file:read_file(?F) of
@@ -77,8 +109,17 @@ actl(Term) ->
 				  {packet, 2}]) of
 		{ok, Fd} ->
 		    gen_tcp:send(Fd, term_to_binary(Term)),
-		    gen_tcp:close(Fd);
+		    Res = gen_tcp:recv(Fd, 0),
+		    case Res of
+			{ok, Bin} ->
+			    io:format("~s~n", [binary_to_list(Bin)]);
+			Err ->
+			    io:format("yaws server not responding ~n",[])
+		    end,
+		    gen_tcp:close(Fd),
+		    Res;
 		Err ->
+		    io:format("yaws server not running \n"),
 		    Err
 	    end;
 	Err ->
@@ -96,6 +137,8 @@ hup() ->
 
 stop() ->	
     actl(stop).
+status() ->
+    actl(status).
 
 
 

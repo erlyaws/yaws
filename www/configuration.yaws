@@ -57,13 +57,15 @@ include.mk file in the the toplevel directory.
 <h2>Running yaws </h2>
 <p>The yaws executable is a shell script which invokes the 
 erlang system and instructs it to start yaws.
-The command line flags for yaws are documented in the man page for
-yaws(1).
-<erl>
-out(_) ->
-       L = os:cmd("man yaws | col -b"),
-       yaws_api:pre_ssi_string(L).
-</erl>
+The command line flags for yaws are documented in 
+<a href="man.yaws?page=yaws.conf"> man page for <tt>yaws (1)</tt> </a>
+
+<p>When developing yaws code, the interactive mode is ideal. Typically
+yaws is then started as: 
+<br>
+<pre>
+# yaws -i -d
+</pre>
 
 
 <H2>Configuring Yaws</h2>
@@ -75,13 +77,9 @@ embedded application inside another Erlang program.
 
 <h3>Daemon mode</h3>
 
-The yaws configuration is described in the man page for <tt>yaws.conf (5)</tt>
+The yaws configuration is described in 
+<a href="man.yaws?page=yaws.conf"> man page for <tt>yaws.conf (5)</tt> </a>
 
-<erl>
-out(_) ->
-       L = os:cmd("man yaws.conf | col -b"),
-       yaws_api:pre_ssi_string(L).
-</erl>
 
 
 <h3>Embedded mode</h3>

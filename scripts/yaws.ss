@@ -20,6 +20,7 @@ help()
 	echo "ctl functions ... "
 	echo "        yaws -h         -- hup the daemon  "
 	echo "        yaws -s         -- stop the daemon "
+	echo "        yaws -S         -- query the daemon status "
 	exit 1
 }
      
@@ -56,6 +57,9 @@ do
 	   -s)
 	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl stop;
 		exit normal;;
+	   -S)
+	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws_ctl status;
+		exit normal;;
 	   -v) 
 	        exec $erl -noshell -pa ${yawsdir}/ebin -s yaws printversion;
 		exit normal;;
@@ -66,5 +70,5 @@ done
 
 [ -z "$daemon" ] && [ -z "$interactive" ] && help
 
-exec $erl $daemon ${debug} -pa ${yawsdir}/ebin -s yaws $trace $conf
+exec $erl ${daemon} -pa ${yawsdir}/ebin  ${debug} -s yaws $trace $conf
 

@@ -1,0 +1,20 @@
+
+<erl>
+
+out(A) -> 
+    H = yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]),
+    Q = A#arg.querydata,
+    io:format("querydata = ~p~n",[Q]),
+    P = yaws_api:parse_post_data(Q),
+    io:format("P = ~p~n", [P]),
+    L = case lists:keysearch(page, 1, P) of
+       {value, {page, Page}} ->
+           os:cmd("man " ++ Page ++ " | col -b");
+       false ->
+          "no man page foundin query arg "
+    end,
+    Man = yaws_api:pre_ssi_string(L,"man"),
+    Trail = yaws_api:ssi(A#arg.docroot, ["/END"]),
+    [H, Man, Trail].
+
+</erl>

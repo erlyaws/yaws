@@ -426,20 +426,13 @@ acceptor0(GS, Top) ->
 		GS#gs.ssl == ssl ->
 		    ssl:close(Client)
 	    end,
-
-	    case  (GS#gs.gconf)#gconf.debug of
-		true  ->
-		    io:format("DIE: ~p~n", [Res]);
-		_ ->
-		    ok
-	    end,
 	    case Res of
 		{ok, Int} when integer(Int) ->
 		    Top ! {self(), done_client, Int};
 		{'EXIT', normal} ->
 		    Top ! {self(), done_client, 0};
 		{'EXIT', Reason} ->
-		    error_logger:format("~p~n", [Reason]),
+		    yaws_log:errlog("~p~n", [Reason]),
 		    Top ! {self(), done_client, 0}
 	    end,
 	    %% we cache processes
@@ -562,7 +555,6 @@ get_path({abs_path, Path}) ->
 
 
 do_recv(Sock, Num, TO, nossl) ->
-    ?Debug("XXX ~p", [{Sock, Num, TO}]),
     gen_tcp:recv(Sock, Num, TO);
 do_recv(Sock, Num, _TO, ssl) ->
     case erase(ssltrail) of %% hack from above ...
@@ -608,28 +600,24 @@ cli_recv(S, Num, GC, SslBool) ->
 
 
 
-cli_write(S, Data, GC, SC) when GC#gconf.trace /= {true, traffic} ->
-    gen_tcp_send(S, Data, SC);
-cli_write(S, Data, _GC, SC) ->
-    yaws_log:trace_traffic(from_server, Data),
-    gen_tcp_send(S, Data, SC).
 
 
-cli_write_headers(S, Data, GC, SC) when GC#gconf.trace == false ->
-    gen_tcp_send(S, Data, SC);
-cli_write_headers(S, Data, _GC, SC) ->
-    yaws_log:trace_traffic(from_server, Data),
-    gen_tcp_send(S, Data, SC).
-
-
-gen_tcp_send(S, Data, SC) ->
-    case SC#sconf.ssl of
+gen_tcp_send(S, Data, SC, GC) ->
+    Res = case SC#sconf.ssl of
 	undefined ->
 	    gen_tcp:send(S, Data);
 	_SSL ->
 	    ssl:send(S, Data)
+    end,
+    case Res of
+	ok ->
+	    ok;
+	Err ->
+	    yaws_debug:derror(GC, "Failed to send ~p on socket ~p: ~p~n",
+			      [Data, S, Err])
+	    
     end.
-
+    
 
 
 
@@ -1145,43 +1133,17 @@ deliver_accumulated(DCC, Sock, GC, SC) ->
 		   crnl()
 	   end,
     All = [StatusLine, Headers, CRNL, Cont],
+    gen_tcp_send(Sock, All, SC, GC),
     if
 	GC#gconf.trace == false ->
-	    case SC#sconf.ssl of
-		undefined ->
-		    gen_tcp_send(Sock, All);
-		_SSL ->
-		    ssl:send(Sock, All)
-	    end;
+	    ok;
 	GC#gconf.trace == {true, http} ->
-	    yaws_log:trace_traffic(from_server, [StatusLine, Headers]),
-	    case SC#sconf.ssl of
-		undefined ->
-		    gen_tcp_send(Sock, All);
-		_SSL ->
-		    ssl:send(Sock, All)
-	    end;
+	    yaws_log:trace_traffic(from_server, [StatusLine, Headers]);
 	GC#gconf.trace == {true, traffic} ->
-	    yaws_log:trace_traffic(from_server, All),
-	    case SC#sconf.ssl of
-		undefined ->
-		    gen_tcp_send(Sock, All);
-		_SSL ->
-		    ssl:send(Sock, All)
-	    end
+	    yaws_log:trace_traffic(from_server, All)
     end.
 
 		
-gen_tcp_send(S, Data) ->
-    Res = gen_tcp:send(S, Data),
-    case Res of
-	ok ->
-	    ok;
-	Err ->
-	    ?Debug("Failed to send ~p on socket ~p: ~p~n",
-		   [Data, S, Err]),
-	    exit(normal)
-    end.
 
 		    
 yaws_call(DCC, LineNo, YawsFile, M, F, A, _GC, _SC) ->
@@ -1401,7 +1363,6 @@ pack_ints2([H|T]) ->
 	     true ->
 		 Val
 	 end,
-    io:format("~p generates ~s~n", [H, [V2]]),
     [V2 |pack_ints2([H bsr 5|T])];
 pack_ints2([]) ->
     [$"].
