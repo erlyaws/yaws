@@ -9,7 +9,7 @@ out(A) ->
 <h2>Hello world</h2>
 
 <p>
-The absoluteley most simple example is a HTML file which doesn't contain
+The absolutely most simple example is a HTML file which doesn't contain
 any embedded erlang code at all. 
 
 <br>

@@ -141,7 +141,10 @@ list_gif(regular, ".pdf") ->
 list_gif(regular, _) ->
     {"layout.gif", "[   ]"};
 list_gif(directory, _) ->
-    {"dir.gif", "[DIR]"}.
+    {"dir.gif", "[DIR]"};
+list_gif(_, _) ->
+    {"unknown.gif", "[OTH]"}.
+
     
 
 

@@ -79,7 +79,7 @@ compile_file(C, LineNo,  Chars, init, NumChars, Ack, Errs) ->
 	    %% first chunk is html, keep whitespace
 	    Fd=C#comp.infd,
 	    file:position(Fd, bof),
-	    compile_file(C,noline,io:get_line(Fd,''),html,0,[], Errs)
+	    compile_file(C,1,io:get_line(Fd,''),html,0,[], Errs)
     end;
 
 compile_file(C, LineNo,  Chars = "<erl>" ++ _Tail, html,  NumChars, Ack,Es) ->
