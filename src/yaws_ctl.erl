@@ -25,7 +25,7 @@ start(_Top, Id) ->
 			    {active, false},
 			    binary,
 			    {ip, {127,0,0,1}},
-			    {reuseaddr, true}]) of
+			    {reuseaddr, true}]) of 
 	{ok,  L} ->
 	    case inet:sockname(L) of
 		{ok, {_, Port}} ->
