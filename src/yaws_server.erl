@@ -1211,14 +1211,7 @@ parse_auth(_) ->
 new_redir_h(OH, Loc) ->
     Cont = get(acc_content),
     Chunked = OH#outh.chunked,
-    NewChunked = case Chunked of
-		     false ->
-			 false;
-		     true when Cont == undefined ->
-			 false;
-		     true ->
-			 true
-		 end,
+    NewChunked =  true,
     NewContentType = case Cont of
 			 undefined ->
 			     undefined;
