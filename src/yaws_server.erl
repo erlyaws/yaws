@@ -632,18 +632,18 @@ inet_peername(Sock, SC) ->
 
 maybe_access_log(CliSock, SC, Req) ->
     ?TC([{record, SC, sconf}]),
+    Status = case erase(status_code) of
+		 undefined -> "-";
+		 I -> integer_to_list(I)
+	     end,
+    Len = case erase(content_length) of
+	      undefined ->
+		  "-";
+	      I2 -> integer_to_list(I2)
+	  end,
     case SC#sconf.access_log of
 	true ->
 	    {ok, {Ip, _Port}} = inet_peername(CliSock, SC),
-	    Status = case erase(status_code) of
-			 undefined -> "-";
-			 I -> integer_to_list(I)
-		     end,
-	    Len = case erase(content_length) of
-		      undefined ->
-			  "-";
-		      I2 -> integer_to_list(I2)
-		  end,
 	    Path = get_path(Req#http_request.path),
 	    Meth = atom_to_list(Req#http_request.method),
 	    yaws_log:accesslog(SC#sconf.servername, Ip, 
