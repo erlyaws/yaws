@@ -8,12 +8,26 @@
 %%         : Find all references to a given page
 
 -export([findallrefsto/2, zombies/1]).
+-export([getallrefs/2]).
 
 -import(lists,  [filter/2, member/2, reverse/1, sort/1, map/2]).
 -import(wiki, [p/1, h1/1, show/1]).
 -import(wiki_templates, [template/4]).
 
+%% HTML structure of the backlink list
 findallrefsto(Page, Root) ->
+    Pages = getallrefs(Page, Root),
+    template("References", "",
+	 ["<p>The following pages contain references to ",
+	  wiki_to_html:format_link(Page, Root),".",
+	  "<ul>",
+	  map(fun(F) -> 
+		      [wiki_to_html:format_link(F, Root),"<br>"] end, 
+	      Pages),
+	  "</ul>"], false). 
+
+%% Backlinks list
+getallrefs(Page, Root) ->
     All = wiki:ls(Root),
     Pages = filter(fun(I) ->
 			   case wiki:read_page(I, Root) of
@@ -24,15 +38,7 @@ findallrefsto(Page, Root) ->
 				   false
 			   end
 		   end, All),
-    Spages = sort(Pages),
-    template("References", "",
-	 ["<p>The following pages contain references to ",
-	  wiki_to_html:format_link(Page, Root),".",
-	  "<ul>",
-	  map(fun(F) -> 
-		      [wiki_to_html:format_link(F, Root),"<br>"] end, 
-	      Spages),
-	  "</ul>"], false). 
+    sort(Pages).
 
 zombies(Root) -> 
     All = wiki:ls(Root),

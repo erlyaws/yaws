@@ -136,6 +136,10 @@ format_txt("mailtoall:" ++ T, Env, L, Doc) ->
 	    Txt = "<a href='mailto:" ++ Recipients ++ "'>" ++ Name ++ "</a>",
 	    format_txt(T1, Env, reverse(Txt, L), Doc)
     end;
+format_txt("<?plugin " ++ T, Env, L, Doc) ->
+    Page = Env#env.node,
+    {Txt, T1} = plugin(T, Page),
+    format_txt(T1, Env, reverse(Txt, L), Doc);
 format_txt([H|T], Env, L, Doc) ->
     format_txt(T, Env, [H|L], Doc);
 format_txt([], Env, L, Doc) ->
@@ -531,5 +535,30 @@ collect_wiki_link(S=[H|T], L, Quoted) ->
 collect_wiki_link(T, L, Quoted) ->
     {reverse(L), T}.
 
+%% Plugin implementation.
+%% The plugin is a special syntaxe in Wiki pages:
+%% <?plugin name arg1=Value1 ... ?>
+%% When such a syntax is used, the following function is called:
+%% wiki_plugin_name:run([{arg1, Value1}, ...]).
+plugin(Data, Page) ->
+   case string:str(Data, "?>") of
+       0 -> %% Broken plugin syntax
+           {"", "<?plugin " ++ Data};
+       EndPluginIndex ->
+	   PluginData = string:sub_string(Data, 1, EndPluginIndex -1),
+	   [PluginName| ArgStrings] = string:tokens(PluginData, " "),
+	   Result  = exec_plugin(PluginName, Page, ArgStrings),
+	   Rest    = string:sub_string(Data, EndPluginIndex + 2),
+	   {Result, Rest}
+   end.
 
-
+exec_plugin(Name, Page, ArgStrings) ->
+   exec_plugin(Name, Page, ArgStrings, []).
+exec_plugin(Name, Page, [], ArgsList) ->
+   case catch apply(list_to_atom("wiki_plugin_" ++ Name),run, [Page, ArgsList]) of
+       {'EXIT', Reason} -> io_lib:format("Plugin error: ~p", [Reason]);
+       Result -> Result
+   end;
+exec_plugin(Name, Page, [ArgString|ArgStrings], Acc) ->
+   [Key|Val] = string:tokens(ArgString, "="),
+   exec_plugin(Name, Page, ArgStrings, [{Key,Val}|Acc]).

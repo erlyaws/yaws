@@ -15,11 +15,13 @@ MODULES=wiki \
 	wiki_format_txt \
 	wiki_utils \
 	wiki_diff \
-	wiki_yaws
+	wiki_yaws \
+	wiki_plugin_dummy \
+	wiki_plugin_backlinks
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) 
 
-ERLC_FLAGS+=-W +debug_info $(DEBUG_FLAGS)  -pa ../../wiki
+ERLC_FLAGS+=-W +debug_info $(DEBUG_FLAGS) -I../../../include -pa ../../wiki
 
 #
 # Targets
