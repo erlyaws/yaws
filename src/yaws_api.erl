@@ -1708,7 +1708,8 @@ setconf(GC0, Groups0) ->
 	  yaws_config:can_soft_setconf(GC, Groups, OLDGC, OldGroups)} of
 	{true, true} ->
 	    yaws_config:soft_setconf(GC, Groups, OLDGC, OldGroups);
-	{true, false} when OLDGC#gconf.username == undefined ->
+	{true, false} when OLDGC == undefined; 
+	                   OLDGC#gconf.username == undefined ->
 	    yaws_config:hard_setconf(GC, Groups);
 	_ ->
 	    {error, need_restart}

@@ -1,0 +1,43 @@
+<erl>
+out(A) -> 
+       {ssi, "TAB.inc", "%%",[{"internals", "choosen"}]}.
+</erl>
+
+
+<div id="entry">
+  
+  <h1>Internals</h1>
+  
+  <p>I'll try to describe some of the internal workings of Yaws in this page.
+  The page is thus mostly interesting for people intereted in either hacking Yaws
+  or simply wanting to get a better understanding.
+  </p>
+  
+  <p>
+    When the client GETs a a page that has a .yaws suffix. The Yaws  server
+    will read that page from the hard disk and divide it in parts
+    that consist of HTML code and Erlang  code. Each chunk of Erlang  code
+    will be compiled into a module. The chunk of Erlang  code must contain
+    a function <tt>out/1</tt> If it doesn't the Yaws  server will insert a
+    proper error message into the generated HTML output.
+
+  </p>
+  <p>When the \Yaws\  server ships a .yaws page it will process it chunk by chunk
+  through the .yaws file. If it is HTML code, the server will ship that
+  as is, whereas if it is \Erlang\  code, the \Yaws\  server will invoke the
+  \verb+out/1+ function in that code and insert the output of that \verb+out/1+ 
+  function into the stream
+  of HTML that is being shipped to the client.
+  </p>
+  
+  <p>\Yaws\  will (of course) cache the result of the compilation
+  and the next time a client requests the same .yaws page \Yaws\  will
+  be able to invoke the already compiled modules directly.
+  </p>
+</div>
+
+
+<erl>
+out(A) -> {ssi, "END2",[],[]}.
+</erl>
+

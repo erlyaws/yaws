@@ -1153,6 +1153,8 @@ soft_setconf_scs([],_) ->
 
 can_hard_gc(New, Old) ->
     if
+	Old == undefined ->
+	    true;
 	New#gconf.yaws_dir == Old#gconf.yaws_dir,
 	New#gconf.runmods == Old#gconf.runmods,
 	New#gconf.username == Old#gconf.username,
