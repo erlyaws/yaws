@@ -1239,3 +1239,13 @@ tmp_dir_fstr() ->
 		tmp_dir()).
 
  
+
+exists(F) ->
+    case file:open(F, [read, raw]) of
+	{ok, Fd} ->
+	    file:close(Fd),
+	    ok;
+	_ ->
+	    false
+    end.
+

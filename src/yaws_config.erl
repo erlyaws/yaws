@@ -22,6 +22,7 @@
 %%-export([Function/Arity, ...]).
 
 -export([load/4,
+	 toks/1,
 	 make_default_gconf/1]).
 	 
 
@@ -41,7 +42,7 @@ paths() ->
 %% load the config
 
 load(false, Trace, TraceOutput, Debug) ->
-    case yaws:first(fun(F) -> exists(F) end, paths()) of
+    case yaws:first(fun(F) -> yaws:exists(F) end, paths()) of
 	false ->
 	    {error, "Can't find no config file "};
 	{ok, _, File} ->
@@ -74,16 +75,6 @@ load({file, File}, Trace, TraceOutput, Debug) ->
 	    end;
 	_ ->
 	    {error, "Can't open config file" ++ File}
-    end.
-
-
-exists(F) ->
-    case file:open(F, [read, raw]) of
-	{ok, Fd} ->
-	    file:close(Fd),
-	    ok;
-	_ ->
-	    false
     end.
 
 

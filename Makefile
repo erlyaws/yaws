@@ -1,6 +1,5 @@
 
 SUBDIRS	=	c_src src scripts man www/shopingcart doc
-APPS = webmail
 include ./include.mk
 
 
@@ -19,13 +18,6 @@ conf_clean:
 
 local_install: all
 	(cd scripts && $(MAKE) local_install)
-
-apps:
-	for a in $(APPS) ; do
-		if [ -f applications/$$a/Makefile ]; then \
-			(cd applications/$$a && $(MAKE) ) || exit 1; fi ; \
-	done
-
 
 
 touch:

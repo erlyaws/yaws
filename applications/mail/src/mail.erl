@@ -16,6 +16,7 @@
 -include("../../../include/yaws_api.hrl").
 -include("defs.hrl").
 
+
 -record(info,
 	{
 	  nr,
@@ -119,7 +120,7 @@ build_toolbar([{Gif,Url,Cmd}|Rest], Used) ->
 delete(Session, ToDelete) ->
     tick_session(Session#session.cookie),
     Req = [del(M) || M <- ToDelete],
-    pop_request(Req++[{"QUIT",sl}], ?POPSERVER,
+    pop_request(Req++[{"QUIT",sl}], popserver(),
 		Session#session.user, Session#session.passwd),
     {redirect_local, {rel_path, "mail.yaws"}}.
 
@@ -130,9 +131,10 @@ send(Session, To, Cc, Bcc, Subject, Msg) ->
     RBcc = parse_addr(Bcc),
     Recipients = RTo ++ RCc ++ RBcc,
     Date = date_and_time_to_string(yaws:date_and_time()),
+    MailDomain = maildomain(),
     Headers =
 	(mail_header("To: ", To) ++
-	 mail_header("From: ", Session#session.user++"@"++?MAILDOMAIN) ++
+	 mail_header("From: ", Session#session.user++"@"++MailDomain) ++
 	 mail_header("Cc: ", Cc) ++
 	 mail_header("Bcc: ", Bcc) ++
 	 mail_header("Subject: ", Subject) ++
@@ -140,7 +142,7 @@ send(Session, To, Cc, Bcc, Subject, Msg) ->
 	 mail_header("Content-Transfer-Encoding: ", "8bit")),
     Message = io_lib:format("~sDate: ~s\r\n\r\n~s\r\n.\r\n",
 			    [Headers, Date, Msg]),
-    case smtp_send(?SMTPSERVER, Session, Recipients, Message) of
+    case smtp_send(smtpserver(), Session, Recipients, Message) of
 	ok ->
 	    {redirect_local, {rel_path,"mail.yaws"}};
 	{error, Reason} ->
@@ -186,7 +188,7 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 		     {width,"100%"}],
 	     {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
 		     {font, [{size,6},{color,black}],
-		      "WebMail at "++?MAILDOMAIN}}}},
+		      "WebMail at "++maildomain()}}}},
 	    build_toolbar([{"tool-send.gif",
 			    "javascript:setCmd('send');","Send"},
 			   {"", "mail.yaws", "Close"}]),
@@ -257,7 +259,7 @@ showmail(Session, MailNr) ->
     tick_session(Session#session.cookie),
 
     Formated = 
-	case retr(?POPSERVER, Session#session.user,
+	case retr(popserver(), Session#session.user,
 		  Session#session.passwd, MailNr) of
 	    {error, Reason} ->
 		format_error(Reason);
@@ -289,14 +291,14 @@ showmail(Session, MailNr) ->
 		  {width,"100%"}],
 	  {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
 		  {font, [{size,6},{color,black}],
-		   "WebMail at "++?MAILDOMAIN}}}}] ++
+		   "WebMail at "++maildomain()}}}}] ++
       	 Formated
 	}
        ]}]).
 
 showheaders(Session, MailNr) ->
     tick_session(Session#session.cookie),
-    {H,Msg} = rtop(?POPSERVER, Session#session.user,
+    {H,Msg} = rtop(popserver(), Session#session.user,
 		   Session#session.passwd, MailNr),
 
     ContentType = undefined,
@@ -326,7 +328,7 @@ showheaders(Session, MailNr) ->
 		    {width,"100%"}],
 	    {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
 		    {font, [{size,6},{color,black}],
-		     "WebMail at "++?MAILDOMAIN}}}},
+		     "WebMail at "++maildomain()}}}},
 	   build_toolbar([{"tool-newmail.gif","compose.yaws","New"},
 			  {"tool-newmail.gif", "javascript:setCmd('send');",
 			   "Reply"},
@@ -420,7 +422,7 @@ showheaders(Session, MailNr) ->
 
 list(Session) ->
     tick_session(Session#session.cookie),
-    H = list(?POPSERVER, Session#session.user, Session#session.passwd),
+    H = list(popserver(), Session#session.user, Session#session.passwd),
     (dynamic_headers()++
      [{ehtml,
        [{script,[],
@@ -449,7 +451,7 @@ list(Session) ->
 		   {cellspacing,0},{width,"100%"}],
 	   {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
 		   {font, [{size,6},{color,black}],
-		    "WebMail at "++?MAILDOMAIN}}}},
+		    "WebMail at "++maildomain()}}}},
 	  build_toolbar([{"tool-newmail.gif","compose.yaws","New Message"},
 			 {"tool-delete.gif","javascript:setCmd('delete')",
 			  "Delete"},
@@ -594,7 +596,7 @@ display_login(A, Status) ->
 		   {width,"100%"}],
 	   {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
 		   {font, [{size,6},{color,black}],
-		    "WebMail at "++?MAILDOMAIN}}}},
+		    "WebMail at "++maildomain()}}}},
 	  {pre_html, io_lib:format("<p>Your login status is: ~s</p>",
 				   [Status])},
 	  {form,
@@ -628,7 +630,7 @@ logout(Session) ->
      [{redirect_local, {rel_path,"mail.yaws"}}]).
 
 login(User, Password) ->
-    case stat(?POPSERVER, strip(User), strip(Password)) of
+    case stat(popserver(), strip(User), strip(Password)) of
 	{ok, _} ->
 	    {ok, new_session(User, Password)};
 	{error, Reason} ->
@@ -701,9 +703,9 @@ session_server() ->
 session_manager_init() ->
     {X,Y,Z} = seed(),
     random:seed(X, Y, Z),
-    session_manager([]).
+    session_manager([], read_config()).
 
-session_manager(C) ->
+session_manager(C, Cfg) ->
     receive
 	{get_session, Cookie, From} ->
 	    case lists:keysearch(Cookie, 1, C) of
@@ -712,36 +714,78 @@ session_manager(C) ->
 		false ->
 		    From ! {session_manager, error}
 	    end,
-	    session_manager(C);
+	    session_manager(C, Cfg);
 	{new_session, Session, From} ->
 	    Cookie = integer_to_list(random:uniform(1 bsl 50)),
 	    From ! {session_manager, Cookie},
 	    session_manager([{Cookie, Session#session{cookie=Cookie},
-			      now()}|C]);
+			      now()}|C], Cfg);
 	{tick_session, Cookie} ->
 	    case lists:keysearch(Cookie, 1, C) of
 		{value, {Cookie,Session,_}} ->
 		    session_manager(lists:keyreplace(Cookie,1,C,
-						     {Cookie,Session,now()}));
+						     {Cookie,Session,now()}), Cfg);
 		false ->
-		    session_manager(C)
+		    session_manager(C, Cfg)
 	    end;
 	{del_session, Cookie} ->
 	    C2 = lists:keydelete(Cookie, 1, C),
-	    session_manager(C2)
+	    session_manager(C2, Cfg);
+	{From, cfg , Req} ->
+	    sm_reply(Req, From, Cfg),
+	    session_manager(C, Cfg)
+
     after
 	5000 ->
 	    %% garbage collect sessions
 	    C2 = lists:zf(fun(Entry={Cookie,Session,Time}) ->
 				  Diff = diff(Time,now()),
-				  if Diff > ?TTL ->
+				  TTL = Cfg#cfg.ttl,
+				  if Diff > TTL ->
 					  false;
 				     true ->
 					  {true, Entry}
 				  end
 			  end, C),
-	    session_manager(C2)
+	    session_manager(C2, Cfg)
     end.
+
+
+sm_reply(ttl, From, Cfg) -> 
+    From ! {session_manager, Cfg#cfg.ttl};
+sm_reply(popserver, From, Cfg) ->
+    From ! {session_manager, Cfg#cfg.popserver};
+sm_reply(smtpserver, From, Cfg) ->
+    From ! {session_manager, Cfg#cfg.smtpserver};
+sm_reply(maildomain, From, Cfg) ->
+    From ! {session_manager, Cfg#cfg.maildomain};
+sm_reply(sendtimeout, From, Cfg) ->
+    From ! {session_manager, Cfg#cfg.sendtimeout}.
+
+    
+
+
+req(Req) ->
+    session_server(),
+    mail_session_manager ! {self(), cfg, Req},
+    receive {session_manager, Reply} ->
+	    Reply
+    after 10000 ->
+	    exit("No reply from session manager")
+    end.
+
+ttl() ->         req(ttl).
+popserver() ->   req(popserver).
+smtpserver() ->  req(smtpserver).
+maildomain() ->  req(maildomain).
+sendtimeout() -> req(sendtimeout).
+
+    
+    
+    
+    
+    
+
 
 diff({M1,S1,_}, {M2,S2,_}) ->
     (M2-M1)*1000000+(S2-S1).
@@ -1193,7 +1237,7 @@ smtp_send2(Server, Session, Recipients, Message) ->
 					      {reuseaddr,true},
 					      binary]),
     smtp_expect(220, Port, "SMTP server does not respond"),
-    smtp_put("MAIL FROM: " ++ Session#session.user++"@"++?MAILDOMAIN, Port),
+    smtp_put("MAIL FROM: " ++ Session#session.user++"@"++maildomain(), Port),
     smtp_expect(250, Port, "Sender not accepted by mail server"),
     send_recipients(Recipients,Port),
     smtp_put("DATA", Port),
@@ -1218,7 +1262,7 @@ smtp_expect(Code, Port, ErrorMsg) ->
     smtp_expect(Code, Port, [], ErrorMsg).
 
 smtp_expect(Code, Port, Acc, ErrorMsg) ->
-    Res = gen_tcp:recv(Port, 0, ?SENDTIMEOUT),
+    Res = gen_tcp:recv(Port, 0, sendtimeout()),
     case Res of
 	{ok, Bin} ->
 						% io:format("got ~s~n", [binary_to_list(Bin)]),
@@ -1654,5 +1698,73 @@ char_class($ )  -> space;
 char_class($\t) -> tab;
 char_class(O)   -> text.
     
+
 	
+%%%%%%%%%%%%%%%%%%%%%% read cfg file %%%%%%%%%%%%%%%%%%
+%% def for root is: /etc/mail/yaws-webmail.conf
+
+	
+read_config() ->
+    Paths = case yaws:getuid() of
+		{ok, "0"} ->
+		    ["/etc/mail/yaws-webmail.conf"];
+		_ ->
+		    [filename:join([os:getenv("HOME"),"yaws-webmail.conf"]),
+		     "./yaws-webmail.conf",
+		     "/etc/mail/yaws-webmail.conf"]
+	    end,
+    case yaws:first(fun(F) -> yaws:exists(F) end, Paths) of
+	false ->
+	    error_logger:info_msg("yaws webmail: Can't find no config file .. using defaults",[]),
+	    #cfg{};
+	{ok, _, File} ->
+	    read_config(File)
+    end.
+
+read_config(File) ->
+    error_logger:info_msg("Yaws webmail: Using config file ~s~n", [File]),
+    case file:open(File, [read]) of
+	{ok, FD} ->
+	    read_config(FD, #cfg{}, 1, io:get_line(FD, ''));
+	Err ->
+	    error_logger:info_msg("Yaws webmail: Can't open config file ... using defaults",[]),
+	    #cfg{}
+    end.
+
+read_config(FD, Cfg, Lno, eof) ->
+    file:close(FD),
+    Cfg;
+read_config(FD, Cfg, Lno, Chars) ->
+    Next = io:get_line(FD, ''),
+    case yaws_config:toks(Chars) of
+	[] ->
+	    read_config(FD, Cfg, Lno+1, Next);
+	["ttl", '=', IntList] ->
+	    case (catch list_to_integer(IntList)) of
+		{'EXIT', _} ->
+		    error_logger:info_msg("Yaws webmail:  expect integer at line ~p", [Lno]),
+		    read_config(FD, Cfg, Lno+1, Next);
+		Int ->
+		    read_config(FD, Cfg#cfg{ttl = Int}, Lno+1, Next)
+	    end;
+	["popserver", '=', Server] ->
+	    read_config(FD, Cfg#cfg{popserver = Server}, Lno+1, Next);
+	
+	["smtpserver", '=', Domain] ->
+	    read_config(FD, Cfg#cfg{smtpserver = Domain}, Lno+1, Next);
+	["maildomain", '=', Domain] ->
+	    read_config(FD, Cfg#cfg{maildomain = Domain}, Lno+1, Next);
+	["sendtimeout", '=', IntList] ->
+	    case (catch list_to_integer(IntList)) of
+		{'EXIT', _} ->
+		    error_logger:info_msg("Yaws webmail:  expect integer at line ~p", [Lno]),
+		    read_config(FD, Cfg, Lno+1, Next);
+		Int ->
+		    read_config(FD, Cfg#cfg{sendtimeout = Int}, Lno+1, Next)
+	    end;
+	[H|_] ->
+	    error_logger:info_msg("Yaws webmail: Unexpected tokens ~p at line ~w", [H, Lno]),
+	    read_config(FD, Cfg, Lno+1, Next)
+    end.
+
 	

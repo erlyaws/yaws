@@ -37,6 +37,16 @@ a fullblown wiki web.
 
 
 
+<li><h4>Yaws webmail  </h4>
+<p>An excellent little stateless webmail server. No db, no nothing is needed except the address
+of a popserver and the address of an smtp server. Part of the Yaws source code distro. Extremely
+easy to configure and run.
+
+
+
+
+
+
 </ul>
 
 

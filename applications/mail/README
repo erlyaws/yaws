@@ -16,7 +16,7 @@ ability to handle attached files and email on multipart format...
 To install
 ----------
 
-- Modify mail/defs.hrl to fit your local configuration. 
+- Edit/Create /etc/mail/yaws-webmail.conf
 - Modify include.mk for your local paths
 
 Run 'make' and 'make install' and update your /etc/yaws.conf

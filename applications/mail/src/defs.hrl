@@ -7,10 +7,14 @@
 -ifndef(DEFS_HRL).
 -define(DEFS_HRL, true).
 
--define(TTL, 1800). % 30 minuter TTL
--define(POPSERVER, "192.168.0.59").
--define(MAILDOMAIN, "bevemyr.com").
--define(SMTPSERVER, "192.168.0.59").
--define(SENDTIMEOUT, 3000).
+
+%% Create config file in /etc/mail/yaws-webmail.conf
+
+-record(cfg, {ttl = 1800, % 30 minuter TTL
+	      popserver = "localhost",
+	      maildomain = "foo.bar",
+	      smtpserver = "localhost",
+	      sendtimeout = 3000}).
+
 
 -endif.
