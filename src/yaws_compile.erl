@@ -211,8 +211,8 @@ check_exported(C, LineNo, NumChars, Mod) when C#comp.modnum == 1->
 	{false, false, false} ->
 	    ?Debug("XX ~p~n", [C]), 
 	    [gen_err(C, LineNo, NumChars,
-		     "neither out/1 , some_headers/1 nor "
-		     "all_headers/1  is defined ")]
+		     "compile error out/1 "
+		     "is not defined ")]
     
     
     end;

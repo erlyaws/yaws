@@ -49,6 +49,8 @@
 
 
 
+
+
 %%%----------------------------------------------------------------------
 %%% API
 %%%----------------------------------------------------------------------
@@ -820,7 +822,7 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT) ->
 
 
 parse_auth(Dir) ->
-    case file:consult([Dir, [$/|".yaws_access"]]) of
+    case file:consult([Dir, [$/|".yaws_auth"]]) of
 	{ok, [{realm, Realm} |TermList]} ->
 	    {ok, #auth{dir = Dir,
 		       realm = Realm,
@@ -829,6 +831,7 @@ parse_auth(Dir) ->
 	    {ok, #auth{dir = Dir,
 		       users = TermList}};
 	Err ->
+	    error_logger:format("Bad .yaws_auth file in dir ~p~n", [Dir]),
 	    Err
     end.
 
@@ -855,36 +858,41 @@ is_authenticated(_SC, UT, _Req, H) ->
 
 
 deliver_401(CliSock, _Req, GC, Realm, SC) ->
-    H = make_date_and_server_headers(),
+    set_status_code(401),
+    make_date_and_server_headers(),
     B = list_to_binary("<html> <h1> 401 authentication needed  "
 		       "</h1></html>"),
-    D = [make_400(401), H, 
-	 make_connection_close(true),
-	 make_www_authenticate(Realm),
-	 make_content_length(size(B)), crnl()],
-    send_headers_and_data(true, CliSock, D, B, GC, SC),
+    make_connection_close(true),
+    make_www_authenticate(Realm),
+    make_content_length(size(B)),
+    accumulate_content(B),
+    make_content_type(),
+    deliver_accumulated(#dcc{}, CliSock, GC, SC),
     done.
     
 
 
 deliver_403(CliSock, _Req, GC, SC) ->
-    H = make_date_and_server_headers(),
+    set_status_code(403),
+    make_date_and_server_headers(),
     B = list_to_binary("<html> <h1> 403 Forbidden, no .. paths "
 		       "allowed  </h1></html>"),
-    D = [make_400(403), H, make_connection_close(true),
-	 make_content_length(size(B)), crnl()],
-    send_headers_and_data(true, CliSock, D, B, GC, SC),
+    make_connection_close(true),
+    make_content_length(size(B)),
+    make_content_type(),
+    deliver_accumulated(#dcc{}, CliSock, GC, SC),
     done.
-
 
 
 deliver_404(CliSock, GC, SC,  Req, SC) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
-    H = make_date_and_server_headers(),
+    set_status_code(404),
+    make_date_and_server_headers(),
     B = not_found_body(get_path(Req#http_request.path), GC, SC),
-    D = [make_400(404), H, make_connection_close(true),
-	 make_content_length(size(B)), crnl()],
-    send_headers_and_data(true, CliSock, D, B, GC, SC),
+    make_connection_close(true),
+    make_content_length(size(B)),
+    make_content_type(),
+    deliver_accumulated(#dcc{}, CliSock, GC, SC),
     done.
 
 
@@ -936,67 +944,6 @@ get_client_data(CliSock, all, {ok, B}, GC, SSlBool) ->
 get_client_data(_CliSock, all, eof, _GC, _) ->
     <<>>.
 
-
-do_dyn_headers(_CliSock, _GC, _SC, Bin, Fd, Req, Head, [H|T], ARG) ->
-    ?TC([{record, _GC, gconf}, {record, _SC, sconf}]),
-    {DoClose, Chunked} = case Req#http_request.version of
-			     {1, 0} -> {true, []};
-			     {1, 1} -> {false, make_chunked()}
-			 end,
-    case H of
-	{mod, _LineNo, _YawsFile, SkipChars, Mod, some_headers} ->
-	    MimeType = "text/html",
-	    OutH = make_dyn_headers(DoClose, MimeType),
-	    {_, Bin2} = skip_data(Bin, Fd, SkipChars),
-	    case (catch apply(Mod, some_headers, [ARG])) of
-		{ok, Out} ->
-		    {[make_200(),OutH, Chunked, Out, 
-		      crnl_if_not_chunked(DoClose)], 
-		     [],T, DoClose, Bin2};
-		ok ->
-		    {[make_200(),OutH, Chunked, 
-		      crnl_if_not_chunked(DoClose)], [], T, DoClose, Bin2};
-		close ->
-		    exit(normal);
-		Err ->
-		    {[make_200(), OutH, crnl()],
-		     ?F("<p><br> <pre>yaws code ~w:~w(~p) crashed or ret bad val:"
-			" ~n~p~n</pre><br>~n", 
-			[Mod, some_headers, [Head], Err]),
-		     T, true, Bin2}
-	    end;
-	{mod, _LineNo, _YawsFile, SkipChars, Mod, all_headers} ->
-	    {_, Bin2} = skip_data(Bin, Fd, SkipChars),
-	    case (catch apply(Mod, all_headers, [ARG])) of
-		{ok, StatusCode, Out} when integer(StatusCode) ->
-		    put(status_code, StatusCode),
-		    {[Out, crnl_if_not_chunked(DoClose)], 
-		     [], T, DoClose, Bin2};
-		close ->
-		    exit(normal);
-		Err ->
-		    MimeType = "text/html",
-		    OutH = make_dyn_headers(DoClose, MimeType),
-		    {[make_200(), OutH, crnl()],
-		      ?F("<p> yaws code ~w:~w(~p) crashed or returned bad value:"
-			 " ~n~p~n", 
-			 [Mod, all_headers, [Head], Err]), T,  true, Bin2}
-	    end;
-	_ ->
-	    MimeType = "text/html",
-	    OutH = make_dyn_headers(DoClose, MimeType),
-	    {[make_200(),OutH, Chunked, crnl_if_not_chunked(DoClose)], 
-	     [], [H|T], DoClose, Bin}
-    end.
-
-
-
-crnl_if_not_chunked(false) ->
-    [];
-crnl_if_not_chunked(true) ->
-    crnl().
-
-
 	   
 
 %% do the header and continue
@@ -1004,53 +951,63 @@ deliver_dyn_file(CliSock, GC, SC, Req, Head, Specs, ARG, UT) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     Fd = ut_open(UT),
     Bin = ut_read(Fd),
-    {S2, Content, Tail, DoClose, Bin2} = 
-	do_dyn_headers(CliSock,GC, SC,Bin,Fd,  Req,Head,Specs,ARG),
-    ?Debug("TAIL =~p~n", [Tail]),
-    send_headers(CliSock, S2, GC, SC),
-    close_if_HEAD(Req, fun() -> do_tcp_close(CliSock, SC), throw({ok, 1}) end),
-    if
-	Content /= [] ->
-	    safe_send(true, CliSock, Content, GC, SC);
-	true ->
-	    ok
-    end,
-    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DoClose, Bin2, Fd, Tail, ARG).
+    {DoClose, Chunked} = case Req#http_request.version of
+			     {1, 0} -> {true, false};
+			     {1, 1} -> make_chunked(), 
+				       {false, true}
+			 end,
+    DCC = #dcc{doclose = DoClose,
+	       chunked = Chunked},
+    
+    MimeType = "text/html",
+    make_dyn_headers(DCC, Req, MimeType),
+    close_if_HEAD(Req, fun() ->
+			       deliver_accumulated(DCC, CliSock,GC,SC),
+			       do_tcp_close(CliSock, SC), 
+			       throw({ok, 1}) 
+		       end),
+    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin, Fd, Specs, ARG).
 
 
 
-deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC, Bin, Fd, [H|T],ARG) ->
+deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin, Fd, [H|T],ARG) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT,urltype}]),
     ?Debug("deliver_dyn_file: ~p~n", [H]),
     case H of
 	{mod, LineNo, YawsFile, NumChars, Mod, out} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
-	    safe_call(DC, LineNo, YawsFile, CliSock, Mod, out, [ARG], GC, SC),
-	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DC,
-			     Bin2,Fd,T,ARG);
+	    yaws_call(DCC, LineNo, YawsFile, Mod, out, [ARG], GC, SC),
+	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT, DCC, Bin2,Fd,T,ARG);
 	{data, 0} ->
-	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT,DC, Bin, Fd,T,ARG);
+	    deliver_dyn_file(CliSock, GC, SC, Req, Head, UT,DCC, Bin, Fd,T,ARG);
 	{data, NumChars} ->
 	    {Send, Bin2} = skip_data(Bin, Fd, NumChars),
-	    safe_send(DC, CliSock, Send, GC, SC),
-	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2,
-			     UT, DC, Bin2, Fd, T,ARG);
+	    accumulate_chunk(DCC, Send),
+	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2, UT, DCC, Bin2, Fd, T,ARG);
 	{error, NumChars, Str} ->
 	    {_, Bin2} = skip_data(Bin, Fd, NumChars),
-	    safe_send(DC, CliSock, Str, GC, SC),
-	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2,
-			     UT, DC, Bin2, Fd, T,ARG)
+	    accumulate_chunk(DCC, Str),
+	    deliver_dyn_file(CliSock, GC, SC, Req, Bin2, UT, DCC, Bin2, Fd, T,ARG)
     end;
-deliver_dyn_file(CliSock, GC, SC, _Req, _Head,_UT,DC, _Bin, _Fd, [], _ARG) ->
+
+deliver_dyn_file(CliSock, GC, SC, _Req, _Head,_UT, DCC, _Bin, _Fd, [], _ARG) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}]),
     ?Debug("deliver_dyn: done~n", []),
-    case DC of
-	true ->
-	    done;
-	false ->
-	    cli_write(CliSock, [crnl(), "0", crnl2()], GC, SC),
-	    continue
-    end.
+    Ret = case {DCC#dcc.chunked, get(status_code)} of
+	      {false, _} ->
+		  done;
+	      {true, undefined} ->
+		  accumulate_content([crnl(), "0", crnl2()]),
+		  continue;
+	      {true, 200} ->
+		  accumulate_content([crnl(), "0", crnl2()]),
+		  continue;
+	      {true, _} ->
+		  accumulate_header("Connection: close"),
+		  done
+	  end,
+    deliver_accumulated(DCC, CliSock, GC, SC),
+    Ret.
 
 
 %% what about trailers ??
@@ -1087,83 +1044,150 @@ to_binary(L) when list(L) ->
     list_to_binary(L).
 
 
-send_headers_and_data(DC, Sock, Headers, Data, GC, SC) ->
-    send_headers(Sock, Headers, GC, SC),
-    safe_send(DC, Sock, Data, GC, SC).
 
-
-send_headers(Sock, Data, GC, SC) ->
-    case cli_write_headers(Sock, Data, GC, SC) of
-	ok ->
-	    ok;
-	Err ->
-	    yaws_debug:format(GC, 
-			      "Failed to send ~p on socket: ~p~n",
-			      [Data, Err]),
-	    exit(normal)
+accumulate_header(Data) ->
+    case get(acc_headers) of
+	undefined ->
+	    put(acc_headers, [Data, crnl()]);
+	List ->
+	    put(acc_headers, [List, Data, crnl()])
     end.
 
+accumulate_content(Data) ->
+    case get(acc_content) of
+	undefined ->
+	    put(acc_content, [Data]);
+	List ->
+	    put(acc_content, [List, Data])
+    end.
 
-safe_send(DoClose, Sock, Data, GC, SC) ->
-    if
-	DoClose == true  ->
-	    case cli_write(Sock, Data, GC, SC) of
-		ok ->
-		    ok;
-		Err ->
-		    yaws_debug:format(GC, 
-				      "Failed to send ~p on socket: ~p~n",
-				      [Data, Err]),
-		    exit(normal)
-	    end;
-	DoClose == false ->
+accumulate_chunk(DCC, Data) ->
+    if 
+	DCC#dcc.chunked == false ->
+	    accumulate_content(Data);
+	DCC#dcc.chunked == true ->
 	    B = to_binary(Data),
 	    Len = size(B),
-	    Data2 = [crnl(), yaws:integer_to_hex(Len) , crnl(), B],
-	    case cli_write(Sock, Data2, GC, SC) of
-		ok ->
-		    ok;
+	    Data2 = [crnl(), yaws:integer_to_hex(Len) , crnl(), B], 
+	    accumulate_content(Data2)
+    end.
 
-		Err ->
-		    yaws_debug:format(GC, 
-				      "Failed to send ~p on socket: ~p~n",
-				      [Data, Err]),
+set_status_code(Code) ->
+    put(status_code, Code).
 
-		    exit(normal)
+
+
+handle_out_reply(L, DCC, LineNo, YawsFile) when list (L) ->
+    lists:foreach(
+      fun(Item) -> handle_out_reply(Item, DCC, LineNo, YawsFile) end, L);
+
+handle_out_reply({html, Html}, DCC, _LineNo, _YawsFile) ->
+    accumulate_chunk(DCC, Html);
+
+handle_out_reply({header, H}, _DCC, _LineNo, _YawsFile) ->
+    accumulate_header(H);
+
+
+handle_out_reply({allheaders, Hs}, _DCC, _LineNo, _YawsFile) ->
+    erase(acc_headers),
+    lists:foreach(fun({header, Head}) -> accumulate_header(Head) end, Hs);
+
+handle_out_reply({status, Code}, _DCC,_LineNo,_YawsFile) when integer(Code) ->
+    set_status_code(Code);
+
+handle_out_reply({'EXIT', normal}, _DCC, _LineNo, _YawsFile) ->
+    exit(normal);
+
+handle_out_reply(ok, _DCC, _LineNo, _YawsFile) ->
+    ok;
+
+handle_out_reply({'EXIT', Err}, DCC, LineNo, YawsFile) ->
+    L = ?F("~n<pre> ~nERROR erl  code  crashed:~n "
+	   "File: ~s:~w~n"
+	   "Reason: ~p~n</pre>~n",
+	   [YawsFile, LineNo, Err]),
+    yaws:elog("erl code crashed: ~n"
+	      "File: ~s:~w~n"
+	      "Reason: ~p", [YawsFile, LineNo, Err]),
+    accumulate_chunk(DCC, L);
+
+
+handle_out_reply(Reply, DCC, LineNo, YawsFile) ->
+    yaws_log:sync_errlog("Bad return code from yaws function: ~p~n", [Reply]),
+    L =  ?F("<p><br> <pre>yaws code at ~s:~p crashed or "
+	    "ret bad val:~p ~n</pre>",
+	    [YawsFile, LineNo, Reply]),
+    accumulate_chunk(DCC, L).
+
+			  
+
+
+deliver_accumulated(DCC, Sock, GC, SC) ->
+    Code = case get(status_code) of
+	       undefined -> 200;
+	       Int -> Int
+	   end,
+    StatusLine = ["HTTP/1.1 ", integer_to_list(Code), " ",
+		  yaws_api:code_to_phrase(Code), crnl()],
+    Headers = erase(acc_headers),
+    Cont = case erase(acc_content) of
+	       undefined ->
+		   [];
+	       Content ->
+		   Content
+	   end,
+    CRNL = if
+	       DCC#dcc.chunked == true ->
+		   [];
+	       DCC#dcc.chunked == false ->
+		   crnl()
+	   end,
+    All = [StatusLine, Headers, CRNL, Cont],
+    if
+	GC#gconf.trace == false ->
+	    case SC#sconf.ssl of
+		undefined ->
+		    gen_tcp_send(Sock, All);
+		_SSL ->
+		    ssl:send(Sock, All)
+	    end;
+	GC#gconf.trace == {true, http} ->
+	    yaws_log:trace_traffic(from_server, [StatusLine, Headers]),
+	    case SC#sconf.ssl of
+		undefined ->
+		    gen_tcp_send(Sock, All);
+		_SSL ->
+		    ssl:send(Sock, All)
+	    end;
+	GC#gconf.trace == {true, traffic} ->
+	    yaws_log:trace_traffic(from_server, All),
+	    case SC#sconf.ssl of
+		undefined ->
+		    gen_tcp_send(Sock, All);
+		_SSL ->
+		    ssl:send(Sock, All)
 	    end
     end.
 
-		    
-safe_call(DoClose, LineNo, YawsFile, CliSock, M, F, A, GC, SC) ->
-    ?Debug("safe_call ~w:~w(~p)~n", 
-	   [M, F, ?format_record(hd(A), arg)]),
-    case (catch apply(M,F,A)) of
-	{'EXIT', Err} ->
-	    safe_send(DoClose, CliSock, 
-		      ?F("~n<pre> ~nERROR erl ~w/1 code  crashed:~n "
-			 "File: ~s:~w~n"
-			 "Reason: ~p~n</pre>~n",
-			 [F, YawsFile, LineNo, Err]), GC, SC),
-	    yaws:elog("erl code  ~w/1 crashed: ~n"
-		      "File: ~s:~w~n"
-		      "Reason: ~p", [F, YawsFile, LineNo, Err]);
-	
-	{ok, Out} ->
-	    safe_send(DoClose, CliSock, Out, GC, SC);
-	Other ->
-	    safe_send(DoClose, CliSock, 
-		      ?F("~n<pre>~nERROR erl code ~w/1 returned bad value: ~n "
-			 "File: ~s:~w~n"
-			 "Value: ~p~n</pre>~n",
-			 [F, YawsFile, LineNo, Other]), GC, SC),
-	    yaws:elog("erl code  ~w/1 returned bad value: ~n"
-		      "File: ~s:~w~n"
-		      "Value: ~p", [F, YawsFile, LineNo, Other]);
-
-	close ->
-	    do_tcp_close(CliSock, SC),
+		
+gen_tcp_send(S, Data) ->
+    Res = gen_tcp:send(S, Data),
+    case Res of
+	ok ->
+	    ok;
+	Err ->
+	    ?Debug("Failed to send ~p on socket ~p: ~p~n",
+		   [Data, S, Err]),
 	    exit(normal)
     end.
+
+		    
+yaws_call(DCC, LineNo, YawsFile, M, F, A, _GC, _SC) ->
+    ?Debug("safe_call ~w:~w(~p)~n", 
+	   [M, F, ?format_record(hd(A), arg)]),
+    Res = (catch apply(M,F,A)),
+    handle_out_reply(Res, DCC, LineNo, YawsFile).
+
 
 
 do_tcp_close(Sock, SC) ->
@@ -1179,8 +1203,8 @@ do_tcp_close(Sock, SC) ->
 ut_open(UT) ->
     case UT#urltype.data of
 	undefined ->
-	    {ok, Fd} = file:open(UT#urltype.fullpath, [read, raw, binary]),
-	    Fd;
+	    {ok, Bin} = file:read_file(UT#urltype.fullpath),
+	    {bin, Bin};
 	B when binary(B) ->
 	    {bin, B}
     end.
@@ -1202,25 +1226,21 @@ ut_close(Fd) ->
 
 deliver_file(CliSock, GC, SC, Req, InH, UT) ->
     ?TC([{record, GC, gconf}, {record, SC, sconf}, {record, UT, urltype}]),
-    DoClose = do_close(Req, InH),
-    OutH = make_static_headers(Req, UT, DoClose),
+    DCC = static_do_close(Req, InH),
+    make_static_headers(Req, UT, DCC),
     Fd = ut_open(UT),
     Bin = ut_read(Fd),
-    send_headers(CliSock, [make_200(), OutH, crnl()], GC, SC),
-    close_if_HEAD(Req, fun() -> ut_close(Fd), throw({ok, 1}) end),
-    case Bin of
-	{bin, Binary} ->
-	    cli_write(CliSock, Binary, GC, SC);
-	{ok, Binary} ->
-	    send_loop(CliSock, Binary, Fd, GC, SC);
-	Binary2 when binary(Binary2) ->
-	    cli_write(CliSock, Binary2, GC, SC)
-    end,
+    close_if_HEAD(Req, fun() ->
+			       deliver_accumulated(DCC, CliSock, GC,SC),
+			       ut_close(Fd), throw({ok, 1}) 
+		       end),
+    accumulate_content(Bin),
     ut_close(Fd),
+    deliver_accumulated(DCC, CliSock, GC, SC),
     if
-	DoClose == true ->
+	DCC#dcc.doclose == true ->
 	    done;
-	DoClose == false ->
+	DCC#dcc.doclose == false ->
 	    continue
     end.
 
@@ -1233,79 +1253,54 @@ close_if_HEAD(Req, F) ->
     end.
 
 
-do_close(Req, H) ->
-    case Req#http_request.version of
-	{1, 0} ->
-	     case H#headers.keep_alive of
-		 undefined ->
-		     true;
-		 _ ->
-		     false
-	     end;
-	_ ->
-	    false
-    end.
+static_do_close(Req, H) ->
+    Close = case Req#http_request.version of
+		{1, 0} ->
+		    case H#headers.keep_alive of
+			undefined ->
+			    true;
+			_ ->
+			    false
+		    end;
+		_ ->
+		    false
+	    end,
+    #dcc{doclose = Close,
+	 chunked = false}.
 
 
-send_loop(CliSock, Data, Fd, GC, SC) ->
-    case cli_write(CliSock, Data, GC, SC) of
-	ok ->
-	    case ut_read(Fd) of
-		{ok, Data2} ->
-		    send_loop(CliSock, Data2, Fd, GC, SC);
-		eof ->
-		    ok
-	    end;
-	Err ->
-	    Err
-    end.
-	     
-
-
-make_dyn_headers(DoClose, MimeType) ->
-    [make_date_header(),
-     make_server_header(),
-     make_content_type(MimeType),
-     make_connection_close(DoClose),
-     make_non_cache_able(DoClose)
-    ].
+make_dyn_headers(DCC, Req, MimeType) ->
+    make_date_header(),
+    make_server_header(),
+    make_content_type(MimeType),
+    make_connection_close(DCC#dcc.doclose),
+    make_non_cache_able(Req#http_request.version).
 
 
 make_x_pad() ->
-    "X-Pad: avoid browser bug\r\n".
+    accumulate_header("X-Pad: avoid browser bug").
 
 
-make_non_cache_able(true) -> 
-    "Cache-Control: no-cache \r\nPragma: no-cache\r\n";
-make_non_cache_able(false) -> 
-    "Cache-Control: no-cache \r\n".
+make_non_cache_able({1, 0}) -> 
+    accumulate_header("Cache-Control: no-cache"),
+    accumulate_header("Pragma: no-cache");
+make_non_cache_able({1,1}) -> 
+    accumulate_header("Cache-Control: no-cache").
 
 
 make_date_and_server_headers() ->
-    [make_date_header(),
-     make_server_header()
-    ].
-
-make_static_headers(_Req, UT, DoClose) ->    
-    [make_date_and_server_headers(),
-     make_last_modified(UT#urltype.finfo),
-     make_etag(UT#urltype.finfo),
-     make_accept_ranges(),
-     make_content_length(UT#urltype.finfo),
-     make_content_type(UT#urltype.mime),
-     make_connection_close(DoClose)
-    ].
+    make_date_header(),
+    make_server_header().
 
 
-
-make_200() ->
-    put(status_code, 200),
-    "HTTP/1.1 200 OK\r\n".
-
-make_400(Code) ->
-    put(status_code, Code),
-    ["HTTP/1.1 ", integer_to_list(Code), " ",
-     yaws_api:code_to_phrase(Code), crnl()].
+make_static_headers(_Req, UT, DCC) ->    
+    make_date_and_server_headers(),
+    make_last_modified(UT#urltype.finfo),
+    make_etag(UT#urltype.finfo),
+    make_accept_ranges(),
+    make_content_length(UT#urltype.finfo),
+    make_content_type(UT#urltype.mime),
+    make_connection_close(DCC#dcc.doclose).
 
 
 
@@ -1315,68 +1310,77 @@ crnl2() ->
     "\r\n\r\n".
 
 
+
 %% FIXME optimize the goddamn date generations
 make_date_header() ->
     N = element(2, now()),
-    case get(date_header) of
+    Head=case get(date_header) of
 	{Str, Secs} when (Secs+10) > N ->
-	    H = ["Date: ", yaws:universal_time_as_string(), crnl()],
+	    H = ["Date: ", yaws:universal_time_as_string()],
 	    put(date_header, {H, N}),
 	    H;
 	{Str, Secs} ->
 	    Str;
 	undefined ->
-	    H = ["Date: ", yaws:universal_time_as_string(), crnl()],
+	    H = ["Date: ", yaws:universal_time_as_string()],
 	    put(date_header, {H, N}),
 	    H
-    end.
-%% FIXME read vsn from conf at compile time
+    end,
+    accumulate_header(Head).
+
+
 make_server_header() ->
-    ["Server: Yaws/", yaws_vsn:version(), " Yet Another Web Server", crnl()].
+    accumulate_header(["Server: Yaws/", yaws_vsn:version(), 
+		       " Yet Another Web Server"]).
 
 make_last_modified(FI) ->
     N = element(2, now()),
     Inode = FI#file_info.inode,  %% unix only
-    case get({last_modified, Inode}) of
+    H=case get({last_modified, Inode}) of
 	{Str, Secs} when N < (Secs+10) ->
 	    Str;
 	_ ->
 	    S = do_make_last_modified(FI),
 	    put({last_modified, Inode}, {S, N}),
 	    S
-    end.
+    end,
+    accumulate_header(H).
 
 do_make_last_modified(FI) ->
     Then = FI#file_info.mtime,
-    ["Last-Modified: ", yaws:local_time_as_gmt_string(Then), crnl()].
+    ["Last-Modified: ", yaws:local_time_as_gmt_string(Then)].
 
 make_etag(FI) ->
     {{_Y,M,D}, {H,Min, S}}  = FI#file_info.mtime,
     Inode = FI#file_info.inode,
-    ["Etag: ", pack_ints([M, D, H, Min, S, Inode]), crnl()].
+    accumulate_header(["Etag: ", pack_ints([M, D, H, Min, S, Inode])]).
 
 
 make_accept_ranges() ->
-    "Accept-Ranges: bytes\r\n".
+    accumulate_header("Accept-Ranges: bytes").
 make_content_length(Size) when integer(Size) ->
     put(content_length, Size),
-    ["Content-Length: ", integer_to_list(Size), crnl()];
+    accumulate_header(["Content-Length: ", integer_to_list(Size)]);
 make_content_length(FI) ->
     Size = FI#file_info.size,
     put(content_length, Size),
-    ["Content-Length: ", integer_to_list(Size), crnl()].
+    accumulate_header(["Content-Length: ", integer_to_list(Size)]).
+make_content_type() ->
+    make_content_type("text/html").
 make_content_type(MimeType) ->
-    ["Content-Type: ", MimeType, crnl()].
+    accumulate_header(["Content-Type: ", MimeType]).
+
 
 make_connection_close(true) ->
-    "Connection: close\r\n";
+    accumulate_header("Connection: close");
 make_connection_close(false) ->
-    [].
+    ok.
+
 make_chunked() ->
-    ["Transfer-Encoding: chunked",  crnl()].
+    accumulate_header("Transfer-Encoding: chunked").
 
 make_www_authenticate(Realm) ->
-    ["WWW-Authenticate: Basic realm=\"", Realm, [$"|crnl()]].
+    accumulate_header(["WWW-Authenticate: Basic realm=\"", Realm, $"]).
 
 
 

@@ -14,49 +14,29 @@ include mnesia ans all other erlang applications that are part of the
 regular erlang system.
 <p>
 Here we describe the functions available in the module 
-<code>yaws_api</code>. We divide the API functions into four  distinct
-groups. 
-<ul>
-<li> Functions that are only callable from the <code>all_headers/1</code>
-function. The all_headers/1 function is must generate all HTTP headers as well
-as the HTTP status code line. For example, a function which does a HTTP 
-redirect is such a function.
-<li> Functions that are only callable inside the <code>some_headers/1</code>
-function. 
-<li>Functions that are only callable inside the <code>out/1</code> function.
-<li> Functions that are callable everywhere.
-</ul>
+<code>yaws_api</code>. 
 
 
-<h2>Functions callable from all_headers/1</h2>
 <hr><h3> <code>redirect(Location)</code></h3>
 Issue a HTTP redirect to <code>Location</code>
 
 
-<h2>Functions callable from some_headers/1</h2>
 <hr><h3> <code>setcookie(Name, Value, [Path, [Expire, [Domain, Secure]]])</code></h3>
 Sets a cookie. Usage examples avilable in <a href="cookies.yaws">cookies.yaws</a>
 
 
 
-
-<h2>Functions callable from out/1</h2>
-<hr>
-<h3> <code>pre_ssi_files(DocRoot, Files)</code></h3>
+<hr><h3> <code>pre_ssi_files(DocRoot, Files)</code></h3>
 This function will perform a server side include on the files in
 <code>Files</code>. The data will be transformed so that all
 &lt;, &gt;, &amp; cahracters are htmlized. This useful for including
 code snippets in the yaws code.
 
 
-<hr>
 <hr><h3> <code>pre_ssi_string(String)</code></h3>
 Same as above, but for an explicit string
 
 
-
-
-<h2>Functions callable from anywhere </h2>
 
 <hr><h3><code>htmlize(Binary)</code></h3>
 Transform data so that all

@@ -28,18 +28,24 @@ list_directory(CliSock, List, DirName, Req, GC, SC) ->
 	    "\n</pre>\n<hr>\n",
 	    yaws:address(GC, SC),
 	    "</body>\n</html>\n"],
-    Bin = list_to_binary(Body),
-    D = [yaws_server:make_200(), 
-	 yaws_server:make_dyn_headers(true, "text/html"),
-	 "\r\n"],
-    yaws_server:safe_send(true, CliSock, D, GC, SC),
-    yaws_server:close_if_HEAD(Req, 
-			      fun() -> 
-				      yaws_server:do_tcp_close(CliSock, SC),
-				      throw({ok, 1})
-			      end),
-    yaws_server:safe_send(true, CliSock, Bin, GC, SC),
+    B = list_to_binary(Body),
+    
+    yaws_server:make_date_and_server_headers(),
+    yaws_server:make_connection_close(true),
+    yaws_server:make_content_length(size(B)),
+    yaws_server:make_content_type("text/html"),
+
+    yaws_server:close_if_HEAD(
+      Req, 
+      fun() -> 
+	      yaws_server:deliver_accumulated(#dcc{}, CliSock, GC, SC),
+	      yaws_server:do_tcp_close(CliSock, SC),
+	      throw({ok, 1})
+      end),
+    yaws_server:accumulate_content(B),
+    yaws_server:deliver_accumulated(#dcc{}, CliSock, GC, SC),
     done.
+
 
 
 

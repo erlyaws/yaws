@@ -55,9 +55,6 @@
 
 
 
-
-
-
-
-
-
+-record(dcc, {
+	  doclose = true,
+	  chunked = false}).

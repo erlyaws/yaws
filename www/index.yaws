@@ -13,8 +13,7 @@ out(A) ->
 <H2>Yaws</H2>
 
 
-Yaws is a HTTP 1.1
-webserver currently under rapid development. 
+Yaws is a HTTP high perfomance 1.1 webserver.
 Two separate modes of operations are supported.
 <br>
 <ul>
@@ -34,6 +33,8 @@ can be embedded into the HTML code in manner similar
 to <a href="http://www.php.net">php</a>. As matter of fact, the 
 ad-hockery of php was one of major reasons I started the Yaws project.
 
+<p>Furthermore, Yaws has excellent performance and is able to
+ship several thousands of dynamically generated pages per second.
 
 
 <p>

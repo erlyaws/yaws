@@ -174,16 +174,16 @@ ssi(DocRoot, Files) ->
 						[F, Reason])
 			  end
 		  end, Files),
-    {ok, L}.
+    {html, L}.
 
 
 %% include pre
 pre_ssi_files(DocRoot, Files) ->
-    {ok, L} = ssi(DocRoot, Files),
+    {html, L} = ssi(DocRoot, Files),
     pre_ssi_string(L).
 
 pre_ssi_string(Str) ->
-    {ok, << "<br><br>\n<div class=\"box\"> <pre>", 
+    {html, << "<br><br>\n<div class=\"box\"> <pre>", 
          (htmlize(list_to_binary(Str)))/binary, 
           "</pre></div>\n<br>\n\n">>}.
     
@@ -232,10 +232,10 @@ secs() ->
 
 
 setcookie(Name, Value) ->
-    {ok, f("Set-Cookie: ~s=~s;\r\n", [Name, Value])}.
+    {header, f("Set-Cookie: ~s=~s;\r\n", [Name, Value])}.
 
 setcookie(Name, Value, Path) ->
-     {ok, f("Set-Cookie: ~s=~s; path=~s\r\n", [Name, Value, Path])}.
+     {header, f("Set-Cookie: ~s=~s; path=~s\r\n", [Name, Value, Path])}.
 
 setcookie(Name, Value, Path, Expire) ->
     setcookie(Name, Value, Path,  Expire, [], []).
@@ -301,3 +301,8 @@ url_decode([H|T]) ->
 url_decode([]) ->
     [].
 
+
+
+redirect(Url) ->
+    [{status, 303},
+     {allheaders, [{header, ["Location: ",Url]}]}].

@@ -27,7 +27,7 @@ out(A) ->
 		      f("<p> You had a cookie,but the data is gone",[])
 	      end
       end,
-    {ok, L}.
+    {html, L}.
 
 </erl>
 

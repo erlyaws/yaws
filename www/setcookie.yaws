@@ -13,12 +13,12 @@ session(A, Visits) ->
     end.
 
 
-some_headers(A) ->
+out(A) ->
     H = A#arg.headers,
     C = H#headers.cookie,
     case yaws_api:find_cookie_val("foobar", C) of
 	[] ->
-	     Now = calendar:local_time(),
+            Now = calendar:local_time(),
 	    P = spawn(fun() -> session(A, [Now]) end),
 	    yaws_api:setcookie("foobar", pid_to_list(P), "/");
 	PidStr ->

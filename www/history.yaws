@@ -12,11 +12,16 @@ out(A) ->
 <table border="2">
 
 
+
 <tr><td>    </td></tr>
+
+<tr><td>Jun 12 Redid the out/1 structure completely removed some/all headers and made
+it possible to return headers as well as new status code inside any out/1 function. This makes it much easier to write apps in yaws.   </td></tr>
+
 
 <tr><td> Jun 11, fixed Etag: and Last-Modified: headers for static content.
 Fixed the Cache-Contol: headers for generated content.
-<erl> tag must
+The <erl> tag must
 no longer be first on each line   </td></tr>
 
 <tr><td> Jun 10, use prim_file: instead of file: calls, fix a bug

@@ -4,7 +4,7 @@
 <h1> Yesssssss </h1>
 
 <erl>
-out(Arg) -> {ok, "<h2> Hello again </h2>"}.
+out(Arg) -> {html, "<h2> Hello again </h2>"}.
 </erl>
 
 

@@ -26,7 +26,7 @@ POSTed data.
 out(A) -> 
    L = f("&lt;pre>~n clidata: ~p~n &lt;/pre>", 
          [yaws_api:parse_post_data(A#arg.clidata)]),
-   {ok,L}.
+   {html,L}.
 </pre>
 
 <p>Will produce the following output:
@@ -36,7 +36,7 @@ out(A) ->
 out(A) -> 
  L = f("<pre>~n clidata: ~p~n </pre>", 
          [yaws_api:parse_post_data(A#arg.clidata)]),
-   {ok,L}.
+   {html,L}.
 </erl>
 
 <p> It is up to the yaws programmer to parse this

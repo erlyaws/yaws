@@ -33,7 +33,7 @@ setcookie(A) ->
 
 
 
-some_headers(A) ->
+out(A) ->
     ensure_pcookie_server(),
     H = A#arg.headers,
     C = H#headers.cookie,

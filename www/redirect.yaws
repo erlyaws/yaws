@@ -1,0 +1,39 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML>
+<HEAD>
+ <meta name="keywords" content="post">
+
+
+<TITLE>Top EE page</TITLE>
+
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+</HEAD>
+<BODY BGCOLOR="#C6C6B5" text="#333333">
+
+
+<HTML>
+
+<H1> post.yaws </H1>
+
+<p> This a redirection example, the following <a href="redirect2.yaws">redirection url</a> contains the following code in its first <erl> group.
+
+
+<erl>
+
+out(_) -> yaws_api:pre_ssi_string(
+"
+     out(_) ->
+          yaws_api:redirect(
+              \"http://www.google.com/search?num=20&hl=en&lr=lang_en%7Clang_sv&q=yaws\").
+").
+
+</erl>
+
+<p>The redirection code in the yaws_api module returns a new status code
+as well as a Location header.
+
+
+
+</HTML>
+

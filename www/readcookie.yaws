@@ -35,7 +35,7 @@ out(A) ->
 			"timedout ...",[])
 	      end
       end,
-    {ok, L}.
+    {html, L}.
 
 </erl>
 
