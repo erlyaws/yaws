@@ -22,12 +22,13 @@
 
 
 out404(Arg, GC, SC) ->
-    yaws_api:set_status_code(404),
-    yaws_api:set_content_type("text/html"),
     Req = Arg#arg.req,
     {abs_path, Path} = Req#http_request.path,
     B = not_found_body(Path, GC, SC),
-    {html, B}.
+    [{status, 404},
+     {header, {content_type, "text/html"}},
+     {header, {connection, "close"}},
+     {html, B}].
 
 
 
@@ -55,8 +56,7 @@ not_found_body(Path, GC, SC) ->
 %% it's extremely convenient to get the crash messages in the browser,
 %% however not in production :-)
 
-crashmsg(A, SC, L) ->
-    yaws_api:set_content_type("text/html"),
+crashmsg(_Arg, _SC, L) ->
     {ehtml,
      [{h2, [], "Internal error, yaws code crashed"},
       {br},
