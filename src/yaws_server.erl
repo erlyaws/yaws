@@ -2067,7 +2067,7 @@ get_more_post_data(PPS, ARG) ->
     N = SC#sconf.partial_post_size,
     Len = list_to_integer((ARG#arg.headers)#headers.content_length),
     if N + PPS < Len ->
-	    case yaws:cli_recv(ARG#arg.clisock, N, 
+	    case get_client_data(ARG#arg.clisock, N, 
 			       is_ssl(SC#sconf.ssl)) of
 		{ok, Bin} ->
 		    io:format("Got ~p\n", [size(Bin)]),
@@ -2077,7 +2077,7 @@ get_more_post_data(PPS, ARG) ->
 		    {error, Else}
 	    end;
        true ->
-	    case yaws:cli_recv(ARG#arg.clisock, Len - PPS, 
+	    case get_client_data(ARG#arg.clisock, Len - PPS, 
 			       is_ssl(SC#sconf.ssl)) of
 		{ok, Bin} ->
 		    io:format("Got tail ~p\n", [size(Bin)]),
@@ -2240,16 +2240,10 @@ send_file(CliSock, Fd, all) ->
 	deflate ->
 	    Z = zlib:open(),
 	    ZPriv = yaws_zlib:gzipInit(Z),
-	    case catch send_file_deflated(CliSock, Fd, Z, ZPriv) of
-						% Is this necessary?
-		Ret ->
-		    yaws_zlib:gzipEnd(Z),
-		    zlib:close(Z),
-		    case Ret of
-			{'EXIT', Err} -> throw(Ret);
-			_ -> Ret
-		    end
-	    end
+	    Ret=send_file_deflated(CliSock, Fd, Z, ZPriv),
+	    yaws_zlib:gzipEnd(Z),
+	    zlib:close(Z),
+	    Ret
     end;
 send_file(CliSock, Fd,  {fromto, From, To, _Tot}) ->
     file:position(Fd, {bof, From}),
