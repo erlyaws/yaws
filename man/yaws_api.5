@@ -1,0 +1,392 @@
+.TH YAWS_API "1" "" "" "User API"
+.SH NAME
+yaws_api \- api available to yaws web server programmers
+.SH SYNOPSIS
+.B yaws_api:Function(...)
+
+.SH DESCRIPTION
+.\" Add any additional description here
+.PP
+This is the api available to yaws web server programmers. The erlang
+module yaws_api contains a wide variety of functions that can
+be used inside yaws pages.
+
+.PP
+Each chunk of yaws code is executed while the yaws page is
+being delivered from the server. We give a very simple example here 
+to show the basic idea. Imagine the following html code:
+
+\fI
+.nf
+<html>
+<body>
+
+<h1> Header 1</h1>
+
+<erl>
+out(Arg) ->
+    {html, "<p> Insert this text into the document"}.
+</erl>
+
+</body>
+</html>
+
+.fi
+\fR
+
+
+.PP
+The \fBout(Arg)\fR function is supplied one argument, an #arg{} structure.
+We have the following relevant record definitions:
+
+\fI
+.nf
+
+-record(arg, {
+	  clisock,        %% the socket leading to the peer client
+	  headers,        %% headers
+	  req,            %% request
+	  clidata,        %% The client data (as a binary in POST requests)
+	  querydata,      %% Was the URL on the form of ...?query (GET reqs)
+	  docroot,        %% where's the data
+	  fullpath,       %% full path to yaws file
+          cont,		  %% Continuation for chunked multipart uploads
+	  state,          %% State for use by users of the out/1 callback
+	  pid             %% pid of the yaws process
+	 }).              
+.fi
+\fR
+
+The headers argument is also a record:
+\fI
+.nf
+	    
+-record(headers, {
+	  connection,
+	  accept,
+	  host,
+	  if_modified_since,
+	  if_match,
+	  if_none_match,
+	  if_range,
+	  if_unmodified_since,
+	  range,
+	  referer,
+	  user_agent,
+	  accept_ranges,
+	  cookie = [],
+	  keep_alive,
+	  content_length,
+	  authorization,
+	  other = []   %% misc other headers
+	 }).
+
+.fi
+\fR
+
+.PP The \fBout/1\fR function can use the Arg to generate any content
+it likes. We have the following functions to aid that generation.
+
+
+.SH API
+
+.TP
+\fBssi(DocRoot, ListOfFiles)\fR
+Server side include. Just include the files as is in the document. The files
+will \fBnot\fR be parsed and searched for <erl> tags.
+
+
+.TP
+\fBpre_ssi_files(DocRoot, ListOfFiles) ->
+Server side include of pre indented code.  The data in Files
+will be included but contained in a <pre> tag. The data will be
+htmlized. 
+
+.TP
+\fBpre_ssi_string(String)\fR
+Include htmlized content from String.
+
+
+.TP
+\fBf(Fmt, Args)\fR
+The equivalent of io_lib:format/2. This function is automatically
+-included in all erlang code which is a part of a yaws page.
+
+.TP
+\fBhtmlize(Binary)\fR
+Htmlize a binary object.
+
+.TP
+\fBhtmlize_l(DeepList)\fR
+Htmlize any deep list of chars and binaries.
+
+.TP
+\fBsetcookie(Name, Value, [Path, [ Expire, [Domain , [Secure]]]])\fR
+Sets a cookie to the browser.
+
+.TP
+\fBfind_cookie_val(Cookie, Header)\fR
+This function can be used to search for a cookie that was previously
+set by \fBsetcookie/2-6\fR. For example if we set a cookie
+as \fByaws_api:setcookie("sid",SomeRandomSid) \fR, then on subsequent requests
+from the browser we can call: 
+\fBfind_cookie("sid",(Arg#arg.headers)#headers.cookie)\fR
+
+The function returns [] if no cookie was found, otherwise the actual cookie
+is returned as a string.
+
+
+.TP
+\fBredirect(Url\fR
+This function generates a redirect to the browser.
+It will clear any previously set headers. So to generate 
+a redirect \fBand\fR set a cookie, we need to set the cookie after 
+the redirect as in:
+\fI
+.nf
+out(Arg) ->
+  ... do some stuff
+
+  Ret = [{redirect, "http://www.somewhere.com"},
+          setcookie("sid", Random)
+        ].
+
+.fi
+\fR
+
+
+.TP
+\fBget_line(String)\fR
+This function is convenient when getting \r\n terminated lines
+from a stream of data. It returns:
+
+\fB{line, Line, Tail}\fR or \fB{lastline, Line, Tail}\fR
+
+The function handles multilines as defined in e.g. SMTP or HTTP
+
+.TP
+\fBmime_type(FileName)\fR
+Returns the mime type as defined by the extension of FileName
+
+.TP
+\fBstream_chunk_deliver(YawsPid, Data)\fR
+When a yaws function needs to deliver chunks of data which it gets 
+from a process. The other process can call this function to deliver
+these chunks. It requires the \fBout/1\fR function to return the
+value \fB{streamcontent, MimeType, FirstChunk}\fR to work.
+
+
+.TP
+\fBstream_chunk_end(YawsPid)\fR
+When the process discussed above is done delivering data, it must call
+this function to let the yaws content delivering process finish up
+the HTTP transaction.
+
+.TP
+\fBparse_query(Arg)\fR
+This function will parse the query part of the URL which the client GETs
+It will return a {Key, Value} list of the items supplied in the query
+part of the URL. This only works with GET requests.
+
+
+.TP
+\fBparse_post_data(Arg)\fR
+This function will parse the POST data as supplied from the browser.
+It will return a {Key, Value} list of the items set by the browser.
+
+If the browser has set the Content-Type header to the value
+"multipart/form-data", which is the case when the browser 
+wants to upload a file to the server the following happens:
+
+
+If the function returns \fB{result, Res}\fR no more data
+will come from the browser.
+
+If the function returns \fB{cont, Cont, Res}\fR the browser
+will supply more data. (The file was to big to come in one read)
+
+This indicates that there is more data to come and the out/1 function
+should return {get_more, Cont, User_state} where User_state might
+usefully be a File Descriptor.
+
+
+The Res value is a list of either: 
+\fB{header, Header}\fR | \fB{part_body, Binary}\fR | \fB{body, Binary}\fR
+
+
+Example usage could be:
+\fI
+.nf
+ <erl>
+ 
+ out(A) ->
+        case yaws_api:parse_post_data(A) of
+             {cont, Cont, Res} ->
+                    St = handle_res(A, Res),
+                    {get_more, Cont, St};
+             {result, Res} ->
+                    handle_res(A, Res),
+                    {html, f("<pre>Done </pre>",[])}
+        end.
+ 
+ handle_res(A, [{head, Name}|T]) ->
+      io:format("head:~p~n",[Name]),
+      handle_res(A, T);
+ handle_res(A, [{part_body, Data}|T]) ->
+      io:format("part_body:~p~n",[Data]),
+      handle_res(A, T);
+ handle_res(A, [{body, Data}|T]) ->
+      io:format("body:~p~n",[Data]),
+      handle_res(A, T);
+ handle_res(A, []) ->
+      io:format("End_res~n").
+ 
+ </erl>
+.fi
+\fR
+
+
+
+
+.TP
+\fBnew_cookie_session(User, Passwd, Opaque)\fR
+Create a new cookie based session, the yaws system will set the
+cookie. 
+
+.TP 
+\fBcookieval_to_session(CookieVal)\fR
+
+.TP
+\fBprint_cookie_sessions() \fR
+
+.TP
+\fBreplace_cookie_session(Session, User)\fR
+
+
+
+.SH RETURN VALUES from out/1
+.PP
+The out/1 function can return different values to control the behavior
+of the server.
+
+.TP
+\fB{html, DeepList}\fB
+This assumes that DeepList is formatted HTML code. 
+The code will be inserted in the page.
+
+.TP
+\fB{ehtml, Term}\fR
+This will transform the erlang term Term into a 
+stream of HTML content. The basic syntax of Term
+is
+
+\fI
+.nf
+EHTML = [EHTML] | {Tag, Attrs, Body} | {Tag, Attrs} | {Tag} |
+        binary() | character()
+Tag 	 = atom()
+Attrs = [{Key, Value}]  or {EventTag, {jscall, FunName, [Args]}}
+Key 	 = atom()
+Value = string()
+Body  = EHTML
+.fi
+\fR
+
+
+For example, \fI{p, [], "Howdy"}\fR expand into
+"<p>Howdy</p> and 
+
+\fI
+.nf
+{form, [{action, "a.yaws"}], 
+   {input, [{type,text}]}}
+
+.fi
+\fR 
+
+expands into
+
+\fI
+.nf
+<form action="a.yaws"
+  <input type="text">>
+.fi
+\fR
+
+It may be more convenient to generate erlang tuples 
+than plain html code.
+
+.TP
+\fB{content, MimeType, Content}\fR
+This function will make the web server generate 
+different content than HTML. This return value is only allowed
+in a yaws file which has only one <erl> </erl> part and no
+html parts at all.
+
+
+.TP
+\fB{streamcontent, MimeType, FirstChunk}\fR
+This return value plays the same role as the \fIcontent\fR return
+value above. 
+However it makes it possible to stream data to the client
+if the yaws code doesn't have access to all the data in one go. (Typically
+if a file is very large or if data arrives from back end servers on the network.
+
+.TP
+\fB{header, H}\fR
+Accumulates a HTTP header. Used by for example the \fBsetcookie/2-6\fR
+function.
+
+.TP
+\fB{allheaders, HeaderList}\fB
+Will clear all previously accumulated headers and replace them.
+
+
+.TP
+\fB{status, Code}\fR
+Will set another HTTP status code than 200.
+
+
+.TP
+\fBbreak\fR
+Will stop processing of any consecutive chunks of erl or html code
+in the yaws file.
+
+.TP
+\fBok\fR
+Do nothing.
+
+
+.TP
+\fB{redirect, Url}\fR
+Erase all previous headers and accumulate a single
+Location header. Set the status code.
+
+.TP
+\fB{redirect_local, Path}\fR
+Does a redirect to the same Scheme://Host:Port/Path as we
+currently are executing in.
+
+
+
+
+.TP
+\fB{get_more, Cont, State}\fR
+When we are receiving large POSTs we can return this value
+and be invoked again when more Data arrives.
+
+
+.TP
+\fB[ListOfValues]\fR
+It is possible to return a list of the above defined
+return values.
+
+
+
+
+.SH AUTHOR
+Written by Claes Wikstrom
+.SH "SEE ALSO"
+.BR yaws.conf (5)
+.BR erl (1)
+
