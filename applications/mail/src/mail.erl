@@ -728,11 +728,11 @@ summary_compare(A,B,from) ->
 summary_compare(A,B,subject) ->
     Ha = A#info.headers,
     Hb = B#info.headers,
-    case summary_compare_subject(Ha#mail.subject_fmt_lc,
-				 Hb#mail.subject_fmt_lc) of
-	true  ->  true;
-	eq    ->  summary_compare(A,B,date);
-	false ->  false
+    Sa = Ha#mail.subject_fmt_lc,
+    Sb = Hb#mail.subject_fmt_lc,
+    if Sa < Sb -> true;
+       Sa > Sb -> false;
+       true -> summary_compare(A,B,date)
     end;
 summary_compare(A,B,date) ->
     Ha = A#info.headers,
@@ -741,18 +741,16 @@ summary_compare(A,B,date) ->
 summary_compare(A,B,_Nr) ->
     A#info.nr < B#info.nr.
 
-summary_compare_subject(A,B) ->
-    PrefA = lowercase(string:substr(A,1,3)),
-    PrefB = lowercase(string:substr(B,1,3)),
-    if PrefA == "re:" ->
-	    summary_compare_subject(string:strip(string:substr(A,4)), B);
-       PrefB == "re:" ->
-	    summary_compare_subject(A,string:strip(string:substr(B,4)));
-       A == B ->
-	    eq;
-       true ->
-	    A < B
-    end.
+strip_re(" "++Subject) ->
+    strip_re(Subject);
+strip_re("re:"++Subject) ->
+    strip_re(Subject);
+strip_re("aw:"++Subject) ->
+    strip_re(Subject);
+strip_re("ang."++Subject) ->
+    strip_re(Subject);
+strip_re(Subject) ->
+    Subject.
 
 format_summary_line(I) ->
     H = I#info.headers,
@@ -1278,7 +1276,7 @@ info(Str) ->
 top(I) -> {"TOP "++integer_to_list(I)++" 0", ml}.
 ret(I) -> {"RETR "++integer_to_list(I), sized}.
 
-del(I) -> {"DELE "++atom_to_list(I), sl}.
+del(I) -> {"DELE "++I, sl}.
 
 
 to_int(Str) ->
@@ -1357,7 +1355,7 @@ add_header("subject", Value, H) ->
     SubjectFmt = lists:flatten(decode(Value)),
     H#mail{subject = Value,
 	   subject_fmt = SubjectFmt,
-	   subject_fmt_lc = lowercase(SubjectFmt)};
+	   subject_fmt_lc = strip_re(lowercase(SubjectFmt))};
 add_header("date", Value, H) ->
     DatePst = parse_date(Value),
     H#mail{date = Value,
