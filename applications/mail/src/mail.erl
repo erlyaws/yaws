@@ -143,7 +143,7 @@ delete(Session, ToDelete) ->
     Req = [del(M) || M <- ToDelete],
     pop_request(Req, popserver(),
 		Session#session.user, Session#session.passwd),
-    {redirect_local, {rel_path, "mail.yaws?refresh"}}.
+    {redirect_local, {rel_path, "mail.yaws?refresh=true"}}.
 
 -record(send, {param,
 	       last = false,
@@ -485,7 +485,7 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 		  {td,[{align,left},{valign,top}],
 		   ["Attached files:",
 		    {table,[],
-		     file_attachements(5)
+		     file_attachements(10)
 		    }
 		   ]
 		  }
@@ -648,7 +648,7 @@ list_msg(Session, Refresh, Sort, Count) ->
 		    set_listing(Session#session.cookie, H);
 	       true -> ok
 	    end,
-	    (%% dynamic_headers()++
+	    (dynamic_headers()++
 	     [{ehtml,
 	       [{script,[],
 		 "function setCmd(val) { \n"
@@ -680,7 +680,7 @@ list_msg(Session, Refresh, Sort, Count) ->
 				 {"tool-delete.gif",
 				  "javascript:setCmd('delete')",
 				  "Delete"},
-				 {"","mail.yaws?refresh","Refresh"},
+				 {"","mail.yaws?refresh=true","Refresh"},
 				 {"","logout.yaws","Logout"}]),
 		  {table, [{border,0},{bgcolor,"666666"},{cellspacing,0},
 			   {width,"100%"}],

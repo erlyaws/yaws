@@ -5,7 +5,7 @@ out(A) ->
 	{ok, Session} ->
 	    L = yaws_api:parse_query(A),
 	    Refresh =
-		case lists:keysearch("refresh",2,L) of
+		case lists:keysearch("refresh",1,L) of
 	             {value, _} -> true;
 	             _          -> false
 	        end,
