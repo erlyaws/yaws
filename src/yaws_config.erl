@@ -351,6 +351,14 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}
 	    end;
+	["dir_listings", '=', Bool] ->
+	    case is_bool(Bool) of
+		{true, Val} ->
+		    C2 = C#sconf{dir_listings = Val},
+		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+		false ->
+		    {error, ?F("Expect true|false at line ~w", [Lno])}
+	    end;
 	["port", '=', Val] ->
 	    case (catch list_to_integer(Val)) of
 		I when integer(I) ->

@@ -200,7 +200,7 @@ eprof() ->
 			  
 
 
-
+%% not used
 check_headers(L) ->
     Hs = string:tokens(lists:flatten(L), "\r\n"),
     io:format("XX ~p~n", [Hs]),

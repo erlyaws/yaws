@@ -1111,10 +1111,13 @@ handle_ut(CliSock, GC, SC, Req, H, ARG, UT, N) ->
 	    yaws:outh_set_dyn_headers(Req, H),
 	    do_appmod(SC#sconf.errormod_404, out404, CliSock, GC, SC, 
 		      Req, H, [A2, GC, SC], UT, N);
-	directory ->
+	directory when SC#sconf.dir_listings == true ->
 	    P = UT#urltype.dir,
 	    yaws:outh_set_dyn_headers(Req, H),
 	    yaws_ls:list_directory(CliSock, UT#urltype.data, P, Req, GC, SC);
+	directory ->
+	    yaws:outh_set_dyn_headers(Req, H),
+	    deliver_403(CliSock, Req, GC, SC);
 	regular -> 
 	    yaws:outh_set_static_headers(Req, UT, H),
 	    deliver_file(CliSock, GC, SC, Req, UT);

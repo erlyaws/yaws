@@ -108,11 +108,18 @@ This forces all local redirects issued by the server to use this
 method. This is useful when an SSL off-loader, or stunnel, is used in 
 front of yaws.
 .TP
-.TP
+
+
 \fBaccess_log = true | false\fR
 Setting this directive to false turns of traffic logging for this
 virtual server. The default value is true. 
 
+.TP
+\fBdir_listings = true | false\fR
+Setting this directive to false disallows the automatic
+dir listing feature of Yaws. A status code 403 Forbidden will be sent.
+
+.TP
 \fB docroot = Directory\fR
 This makes the server serve all its content from Directory
 
