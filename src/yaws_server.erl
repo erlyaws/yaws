@@ -347,7 +347,7 @@ gserv(GC, Group0) ->
 			ets:insert(E, {num_bytes, 0}),
 			Auth = setup_auth(SC),
 			SC#sconf{ets = E,
-				  authdirs = Auth}
+				 authdirs = Auth}
 		end, Group0),
     SC = hd(Group),
     case do_listen(SC) of
@@ -361,7 +361,17 @@ gserv(GC, Group0) ->
 	    set_writeable("/tmp/yaws"),
 	    Tdir = "/tmp/yaws/" ++ GC#gconf.uid,
 	    file:make_dir(Tdir),
-	    {ok, Files} = file:list_dir(Tdir),
+	    Files = case file:list_dir(Tdir) of
+			{ok, Files0} ->
+			    Files0;
+			{error, Reason} ->
+			    error_logger:format("Failed to list ~p probably"
+						"due to permission errs",
+						[Tdir]),
+			    proc_lib:init_ack({error, "Can't list dir " 
+					       ++ Tdir}),
+			    exit(normal)
+		    end,
 	    lists:foreach(
 	      fun(F) -> file:delete(Tdir ++ "/" ++ F) end, Files),
 	    proc_lib:init_ack({self(), Group}),
