@@ -101,6 +101,12 @@ The logs written by yaws are all wrap logs, the default value at the
 size where they wrap around and the original gets renamed to File.old
 is 1000000, 1 M. This value can changed.
 
+
+.TP
+\B log_resolve_hostname = Boll\fR
+By default the client host IP is not resolved in the access logs.
+
+
 .TP
 \fB copy_error_log  = true | false\fR
 Enable or disable copying of the error log. When we run in

@@ -265,6 +265,16 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		     {error, ?F("Expect integer at line ~w", [Lno])}
 	     end;
 
+	["log_resolve_hostname", '=',  Bool] ->
+	    case is_bool(Bool) of
+		{true, Val} ->
+		    fload(FD, globals, ?gc_log_set_resolve_hostname(GC, Val),
+			  C, Cs, Lno+1, Next);
+		false ->
+		    {error, ?F("Expect true|false at line ~w", [Lno])}
+	    end;
+
+
 	["include_dir", '=', Incdir] ->
 	    Dir = filename:absname(Incdir),
 	    case is_dir(Dir) of

@@ -10,11 +10,12 @@
 
 
 %% flags for gconfs 
--define(GC_TTY_TRACE,   1).
--define(GC_DEBUG,       2).
--define(GC_AUTH_LOG,    4).
--define(GC_COPY_ERRLOG, 8).
+-define(GC_TTY_TRACE,               1).
+-define(GC_DEBUG,                   2).
+-define(GC_AUTH_LOG,                4).
+-define(GC_COPY_ERRLOG,             8).
 -define(GC_BACKWARDS_COMPAT_PARSE, 16).
+-define(GC_LOG_RESOLVE_HOSTNAME,       32).
 
 -define(GC_DEF, ?GC_AUTH_LOG).
 
@@ -28,6 +29,9 @@
 	((GC#gconf.flags band ?GC_COPY_ERRLOG) /= 0)).
 -define(gc_has_backwards_compat_parse(GC), 
 	((GC#gconf.flags band ?GC_BACKWARDS_COMPAT_PARSE) /= 0)).
+-define(gc_log_has_resolve_hostname(GC), 
+	((GC#gconf.flags band ?GC_LOG_RESOLVE_HOSTNAME) /= 0)).
+
 
 -define(gc_set_tty_trace(GC, Bool), 
 	GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_TTY_TRACE, Bool)}).
@@ -40,6 +44,8 @@
 -define(gc_set_backwards_compat_parse(GC, Bool), 
 	GC#gconf{flags = yaws:flag(GC#gconf.flags, 
 				   ?GC_BACKWARDS_COMPAT_PARSE, Bool)}).
+-define(gc_log_set_resolve_hostname(GC, Bool), 
+	GC#gconf{flags = yaws:flag(GC#gconf.flags, ?GC_LOG_RESOLVE_HOSTNAME, Bool)}).
 
 
 

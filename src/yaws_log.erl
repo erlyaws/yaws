@@ -414,8 +414,17 @@ terminate(_Reason, _State) ->
 
 
 fmt_alog(Time, Ip, User, Req, Status,  Length, Referrer, UserAgent) ->
-    [yaws:fmt_ip(Ip), " - ", User, [$\s], Time, [$\s, $"], Req, [$",$\s], 
+    [fmt_ip(Ip), " - ", User, [$\s], Time, [$\s, $"], Req, [$",$\s], 
      Status, [$\s], Length, [$\s,$"], Referrer, [$",$\s,$"], UserAgent, [$",$\n]].
+
+
+fmt_ip(IP) when tuple(IP) ->
+    yaws:fmt_ip(IP);
+fmt_ip(undefined) ->
+    "0.0.0.0";
+fmt_ip(HostName) ->
+    HostName.
+
 
 fmtnow() ->
     {{Year, Month, Date}, {Hour, Min, Sec}} = calendar:local_time(),

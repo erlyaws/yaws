@@ -18,6 +18,7 @@
 -include("yaws_debug.hrl").
 
 -include_lib("kernel/include/file.hrl").
+-include_lib("kernel/include/inet.hrl").
 
 %% External exports
 -export([start_link/1]).
@@ -643,7 +644,18 @@ aloop(CliSock, GS, Num) ->
 	    IP = case ?sc_has_access_log(SC) of
 		     true ->
 			 {ok, {Ip, _Port}} = peername(CliSock, SSL),
-			 Ip;
+			 Ip,
+			 case ?gc_log_has_resolve_hostname((GS#gs.gconf)) of
+			     true ->
+				 case inet:gethostbyaddr(Ip) of
+				     {ok, HE} ->
+					 HE#hostent.h_name;
+				     _ ->
+					 undefined
+				 end;
+			     false ->
+				 Ip
+			 end;
 		     _ ->
 			 undefined
 		 end,
