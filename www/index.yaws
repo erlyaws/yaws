@@ -4,9 +4,8 @@
 <erl>
 
 out(A) -> 
-    {ok, B1} = file:read_file([A#arg.docroot, "/HEAD"]),
-    {ok, B2} = file:read_file([A#arg.docroot, "/TOPTAB"]),
-    {ok,     [B1, B2]}.	     
+    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
+
 </erl>
 
 
@@ -51,7 +50,13 @@ powered by Yaws.
 
 <h2>Build and install</h2>
 
-Yaws is hosted by the excellent source code base SourceForge <a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=45637&type=1" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>. To cvs check out the latest source first install 
+Yaws is hosted by the excellent source code site SourceForge <a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=45637&type=1" width="88" height="31" border="0" alt="SourceForge.net Logo"></a>. 
+The SourceForge www page is <a href="http://sourceforge.net/projects/erlyaws/">http://sourceforge.net/projects/erlyaws</a>
+
+
+
+
+<p>To cvs check out the latest source first install 
 an <a href="http://www.erlang.org">Erlang</a> system, then do:
 
 
@@ -66,9 +71,11 @@ an <a href="http://www.erlang.org">Erlang</a> system, then do:
 Will checkout the bleeding edge source, build it and install it at
 127.0.0.1:80 with the docroot set to the local documentation.
 
+<p>
+Just make, will create a server which listens to localhost:8000.
 <br>
 
-<hr>
-<IMG SRC="/icons/yaws_pb.gif" >
 
-</html>
+<erl>
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+</erl>

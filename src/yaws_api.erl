@@ -9,6 +9,7 @@
 -author('klacke@hyber.org').
 
 -compile(export_all).
+-include("yaws.hrl").
 
 %% these are a bunch of function that are useful inside
 %% yaws scripts
@@ -71,7 +72,11 @@ do_parse_spec(<<>>, Spec, Last, Cur, State) ->
     [S|Ss] = tail_spec(Spec),
     [{Last, coerce_type(S, Cur)}];
 do_parse_spec(undefined,_,_,_,_) ->
-    [].
+    [];
+do_parse_spec(QueryList, Spec, Last, Cur, State) when list(QueryList) ->
+    do_parse_spec(list_to_binary(QueryList), Spec, Last, Cur, State).
+
+
 
 
 tail_spec(['ALLSTRINGS']) ->
@@ -147,3 +152,22 @@ code_to_phrase(503) -> "Service Unavailable";
 code_to_phrase(504) -> "Gateway Timeout";
 code_to_phrase(505) -> "HTTP Version Not Supported".
 
+
+
+%%
+%% server side include
+%%
+
+ssi(DocRoot, Files) ->
+    L = lists:map(fun(F) ->
+			  case file:read_file([DocRoot ++ [$/|F]]) of
+			      {ok, Bin} ->
+				  Bin;
+			      {error, Reason} ->
+				  io_lib:format("Cannot include file ~p", [F])
+			  end
+		  end, Files),
+    {ok, L}.
+
+
+    

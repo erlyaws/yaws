@@ -49,7 +49,7 @@
 </HEAD>
 <BODY BGCOLOR="#C6C6B5" text="#333333">
 
-
+<IMG SRC="/icons/yaws_head.gif"   width=600 ALT="YAWS">
 
 <table border="0" cellpadding="5" cellspacing="0" height="100%">
 <tr>
@@ -65,9 +65,4 @@
     <A HREF="mnesiacluster.yaws">-Using Mnesia DBMS to keep cookie state in a cluster </a><br><hr>
   </td>
 
-  <td valign=top><IMG SRC="/icons/yaws_head.gif"  ALT="Yaws">
-  <p></p>
-
- </td>
- </tr>
- </table>
+  <td valign=right width=75%>

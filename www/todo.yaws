@@ -2,9 +2,7 @@
 <erl>
 
 out(A) -> 
-    {ok, B1} = file:read_file([A#arg.docroot, "/HEAD"]),
-    {ok, B2} = file:read_file([A#arg.docroot, "/TOPTAB"]),
-    {ok, [B1, B2]}.
+    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
 	    
 </erl>
 
@@ -44,6 +42,7 @@ and pass them down to the yaws code in the arg structure  (done Feb 6)
 
 
 
-
-</html>
+<erl>
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+</erl>
 

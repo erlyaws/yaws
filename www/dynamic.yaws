@@ -2,9 +2,8 @@
 <erl>
 
 out(A) -> 
-    {ok, B1} = file:read_file([A#arg.docroot, "/HEAD"]),
-    {ok, B2} = file:read_file([A#arg.docroot, "/TOPTAB"]),
-    {ok, [B1, B2]}.
+    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
+
 	    
 </erl>
 
@@ -48,29 +47,46 @@ an uncontrolled way.
 </ul> 
 
 <h2>The argument</h2>
-The <tt>/out/1</tt> function is supplied with a record argument. The 
+The <tt>out/1</tt> function is supplied with a record argument. The 
 definition of that record is automatically included in the embedded erlang code
 and the record definition is:
 
 
 <xmp>
+
 -record(arg, {
 	  clisock,        %% the socket leading to the peer client
-	  method,         %% HTTP method, GET, POST ...
-	  urlpath,        %% path in the request
-	  version,        %% HTTP client version {1,0} or {1,1} ....
-	  accept,         %% HTTP Accept header
-	  host,           %% HTTP Host header in client req
-	  referer,        %% HTTP Referer header
-	  user_agent,     %% HTTP User-Agent header
-	  cookie,         %% HTTP Cookie: header
-	  clidata,        %% The client data (as a binary in HTTP requests)
-                          %% Typically POST requests
-	  docroot
+	  h,              %% headers
+	  req,            %% request
+	  clidata,        %% The client data (as a binary in POST requests)
+	  querydata,      %% Was the URL on the form of ....?query (GET reqs)
+	  docroot         %% where's the data
 
 	 }).              
 
-		
+
+-record(http_request, {method,
+		       path,
+		       version}).
+
+	    
+-record(headers, {
+	  connection,
+	  accept,
+	  host,
+	  if_modified_since,
+	  if_match,
+	  if_none_match,
+	  if_range,
+	  if_unmodified_since,
+	  range,
+	  referer,
+	  user_agent,
+	  accept_ranges,
+	  cookie = [],
+	  keep_alive,
+	  content_length}).
+
 </xmp>
 
 
@@ -82,7 +98,7 @@ We have:
 <ul>
 <li><tt>some_headers(Arg)</tt> which can be used to generate optional
 headers such as Set-Cookie.
-<li><tt>all_headers(Arg)</tt> whhich can be used to generate both the
+<li><tt>all_headers(Arg)</tt> which can be used to generate both the
 HTTP status line as well as all the HTTP headers. This can be used to 
 do for example HTTP redirections.
 
@@ -105,12 +121,35 @@ We have:
 <br>
 
 <ul>
-<li> <tt>parse_post_dataBin, Spec)</tt> <br>
+<li> <tt> parse_post_data(Bin, Spec) </tt> <br>
 When data is POSTed to a yaws page, this function can be used to parse the 
 data in a convenient way. Data which is posted from a form is naturally 
 arranged as a list of key,value pairs. 
+<p> Similarly, when data is fed to a yaws page in the URL as a query part,
+the query can be parsed by this function. <br>
+
+
+<li> <tt> code_to_phrase(Code) </tt> <br>
+Makes a mapping from HTTP status codes to HTTP status code phrases. <br>
+
+
+<li> <tt> ssi(DocRoot, FileList) </tt>
+Server side include. <br>
+
+
+<li> <tt> redirect(Url) </tt> <br>
+This function must be called in the first chunk of erlang coe in a yaws file.
+Furthermore, it must be called from the <tt>all_headers/1</tt> function.
+It will generate a redirect responce to the client.
+<br>
+
+
+
 </ul>
 
 
 
-</html>
+<erl>
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+</erl>
+

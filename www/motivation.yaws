@@ -2,9 +2,7 @@
 <erl>
 
 out(A) -> 
-    {ok, B1} = file:read_file([A#arg.docroot, "/HEAD"]),
-    {ok, B2} = file:read_file([A#arg.docroot, "/TOPTAB"]),
-    {ok, [B1, B2]}.
+    yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
 	    
 </erl>
 
@@ -18,7 +16,9 @@ that <a href="http://www.php.net"> php </a> was designed in such a horrible
 way that I simply refused to use it. 
 
 
-</html>
 
 
+<erl>
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+</erl>
 

@@ -1,7 +1,8 @@
+<IMG SRC="/icons/yaws_head.gif"   width=600 ALT="YAWS">
 
 <table border="0" cellpadding="5" cellspacing="0" height="100%">
 <tr>
-  <td valign=top BGCOLOR="#B6B6A5">
+  <td valign=top width=15% BGCOLOR="#B6B6A5">
     <IMG SRC="spacer.gif" width=1 height=74 ALT=""><p></p>
     <A HREF="index.yaws">- Top Page</a><br><hr>
     <A HREF="configuration.yaws">-Configuring and Building Yaws</a><br><hr>
@@ -14,10 +15,5 @@
     <A HREF="contacts.yaws">-Contacts </a><br><hr>
   </td>
 
-  <td valign=top><IMG SRC="/icons/yaws_head.gif"  ALT="YAWS">
-  <p></p>
-</td>
 
-
- </tr>
- </table>
+ <td valign=right width=75%>

@@ -15,4 +15,6 @@ It can be used to generate any dynamic content, and also, combining Yaws with
 the Erlang DBMS Mnesia, we can easily connect persitant data to a Cookie.
 
 
-</html>
+<erl>
+out(A) -> yaws_api:ssi(A#arg.docroot, ["/END"]).
+</erl>
