@@ -47,36 +47,6 @@ dohup(Sock) ->
     gen_tcp:close(Sock).
     
 
-%% use from cli only
-restart() ->
-    stop(),
-    load(),
-    start().
-
-
-modules() ->
-    application:load(yaws),
-    M = case application:get_all_key(yaws) of
-	    {ok, L} ->
-		case lists:keysearch(modules, 1, L) of
-		    {value, {modules, Mods}} ->
-			Mods;
-		    _ ->
-			[]
-		end;
-	    _ ->
-		[]
-	end,
-    M.
-
-
-load() ->
-    load(modules()).
-load(M) ->
-    lists:foreach(fun(Mod) ->
-			  ?Debug("Load ~p~n", [Mod]),
-			  c:l(Mod)
-		  end, M).
 
 %%% misc funcs
 first(_F, []) ->
@@ -1838,4 +1808,74 @@ slash_append([], T) ->
     [$/|T];
 slash_append([H|T], X) ->
     [H | slash_append(T,X)].
+
+
+
+
+%% aux help function
+uid_change_files(GC, Dir, Files) ->
+    case GC#gconf.username of
+	undefined ->  
+	    %% uid change feature not used
+	    ok;
+	_Uname when GC#gconf.uid /= "0" ->
+	    %% we're not root and can't do anything about the sitiation
+	    ok;
+	Uname ->
+	    case (catch list_to_integer(element(2,yaws:idu(Uname)))) of
+		Int when integer(Int) ->
+		    file:change_owner(Dir, Int),
+		    lists:foreach(
+		      fun(F) ->
+			      F=filename:join([Dir,F]),
+			      case file:change_owner(F, Int) of
+				  ok -> ok;
+				  {error, Rsn} ->
+				      error_logger:format("Failed to chown "
+							  "~p: ~p",
+							  [F, Rsn]),
+				      exit(Rsn)
+			      end
+		      end, Files);
+		Err ->
+		    error_logger:format("Bad username ~p cannot get "
+					"numeric uid~n", [Uname]),
+		    exit(Err)
+	    end
+    end.
+
+
+
+
+
+%% misc debug funcs .... use from cli only
+restart() ->
+    stop(),
+    load(),
+    start().
+
+
+modules() ->
+    application:load(yaws),
+    M = case application:get_all_key(yaws) of
+	    {ok, L} ->
+		case lists:keysearch(modules, 1, L) of
+		    {value, {modules, Mods}} ->
+			Mods;
+		    _ ->
+			[]
+		end;
+	    _ ->
+		[]
+	end,
+    M.
+
+
+load() ->
+    load(modules()).
+load(M) ->
+    lists:foreach(fun(Mod) ->
+			  ?Debug("Load ~p~n", [Mod]),
+			  c:l(Mod)
+		  end, M).
 

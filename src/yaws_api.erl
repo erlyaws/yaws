@@ -35,7 +35,7 @@
 -export([stream_chunk_deliver/2, stream_chunk_deliver_blocking/2,
 	 stream_chunk_end/1]).
 -export([new_cookie_session/1,
-	 cookieval_to_opaque/1,
+	 cookieval_to_opaque/1, request_url/1,
 	 print_cookie_sessions/0,
 	 replace_cookie_session/2, delete_cookie_session/1]).
 -export([getconf/0, setconf/2, set_status_code/1, reformat_header/1,
@@ -54,9 +54,6 @@
 	 postvar/2, queryvar/2]).
 
 -export([binding/1]).
-
-%% remove entirely
--export([parse_post_data/1]).
 
 
 -import(lists, [map/2, flatten/1, reverse/1]).
@@ -858,7 +855,7 @@ setconf(GC, Groups) when record(GC, gconf) ->
 	true ->
 	    case gen_server:call(yaws_server, {setconf, GC, Groups}) of
 		ok ->
-		    yaws_log:setdir(GC#gconf.logdir, Groups),
+		    yaws_log:setdir(GC, Groups),
 		    case GC#gconf.trace of
 			false ->
 			    ok;
@@ -1671,16 +1668,52 @@ postvar(ARG, Key) ->
 
 
 
-
-parse_post_data(_Arg) ->
-
-    error_logger:info_msg("Error  !!!! function "
-			  "yaws_api:parse_post_data has been removed ", []),
-    exit(removed).
-
-
 binding(Key) ->
     case get({binding, Key}) of
 	undefined -> exit({unknown_binding, Key});
 	Value -> Value
     end.
+
+
+%% Return the parse url the client requested.
+request_url(ARG) ->
+    SC = ARG#arg.sc,
+    Headers = ARG#arg.headers,
+    {abs_path, Path} = (ARG#arg.req)#http_request.path,
+    DecPath = url_decode(Path),
+    {P,Q} = case string:tokens(DecPath, "?") of
+		[P0] ->
+		    {P0, []};
+		[P0,Q0] ->
+		    {P0,Q0}
+	    end,
+    #url{scheme = case SC#sconf.ssl of
+		      undefined ->
+			  "http";
+		      _ ->
+			  "https"
+		  end,
+	 host = case Headers#headers.host of
+		    undefined ->
+			Sname = SC#sconf.servername,
+			case string:chr(Sname, $:) of
+			    0 ->
+				Sname;
+			    N ->
+				lists:sublist(Sname, N-1)
+			end;
+		    HostHdr ->
+			HostHdr
+		end,
+	 port = case {SC#sconf.ssl, SC#sconf.port} of
+		    {_, 80} ->
+			"";
+		    {_, 443} ->
+			"";
+		    {_, Port} ->
+			Port
+		end,
+	 path = P,
+	 querypart = Q}.
+
+			    

@@ -227,21 +227,15 @@ new_out_file(Line, C, GC) ->
 		   Other
 	   end,
     Module = [$m | integer_to_list(Mnum)],
-    OutFile =
-	lists:flatten(
-	  io_lib:format(
-	    "~s/yaws/~s/~s.erl",[yaws:tmp_dir(), GC#gconf.uid, Module])),
-    
-
+    OutFile = filename:join([yaws:tmp_dir(), "yaws", GC#gconf.id, Module ++ ".erl"]),
     ?Debug("Writing outout file~s~n", [OutFile]),
     {ok, Out} = file:open(OutFile, [write]),
     ok = io:format(Out, "-module(~s).~n-compile(export_all).~n~n", [Module]),
     ok = io:format(Out, "-yawsfile('" ++ get(yfile) ++ "').~n",[]),
-
     io:format(Out, "%%~n%% code at line ~w from file ~s~n%%~n",
 	      [Line, C#comp.infile]),
-
-    io:format(Out, "-import(yaws_api, [f/2, fl/1, postvar/2, queryvar/2]). ~n~n", []),
+    io:format(Out, "-import(yaws_api, [f/2, fl/1, postvar/2, queryvar/2])."
+	      " ~n~n", []),
     io:format(Out, '-include("~s/include/yaws_api.hrl").~n', 
 	      [GC#gconf.yaws_dir]),
     C#comp{outfd = Out,

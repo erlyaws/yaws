@@ -341,7 +341,8 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}
 	    end;
-
+	["id", '=', String] ->
+	    fload(FD, globals, GC#gconf{id=String},C, Cs, Lno+1, Next);
 
 	['<', "server", Server, '>'] ->  %% first server 
 	    fload(FD, server, GC, #sconf{servername = Server},
@@ -636,6 +637,13 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
 	[] ->
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, Auth);
 	["dir", '=', Authdir] ->
+	    case file:list_dir(Authdir) of
+		{ok,_} ->
+		    error_logger:info_msg("Warning, authdir must be set "
+					  "relative docroot ",[]);
+		_ ->
+		    ok
+	    end,
 	    Dir = yaws_api:path_norm(Authdir),
 	    A2 = Auth#auth{dir = [Dir | Auth#auth.dir]},
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);

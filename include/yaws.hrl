@@ -29,7 +29,8 @@
 	       include_dir = [],
 	       yaws,                %% server string
 	       username,            %% maybe run as a different user than root
-	       uid                  %% unix uid of user that started yaws
+	       uid,                 %% unix uid of user that started yaws
+	       id = "default"       %% string identifying this instance of yaws
 	      }).  
 
 

@@ -20,6 +20,7 @@ clean:
 	rm -f ../bin/yaws
 
 install:	all .foo
+	-rm -rf /tmp/yaws 2> /dev/null
 
 .foo:
 	sh -x ./Install $(PREFIX) $(INSTALLPREFIX) "$(ERL)" "$(WERL)" $(ETCDIR)

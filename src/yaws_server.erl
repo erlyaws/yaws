@@ -29,18 +29,21 @@
 
 -import(yaws_api, [ehtml_expand/1]).
 
--record(gs, {gconf,
+-record(gs, {gconf,         
 	     group,         %% list of #sconf{} s
 	     ssl,           %% ssl | nossl
 	     l,             %% listen socket
-	     mnum = 0,      %% dyn compiled erl module  number
+	     mnum = 0,      
 	     sessions = 0,  %% number of HTTP sessions
 	     reqs = 0}).    %% number of HTTP requests
 
 
-%%%----------------------------------------------------------------------
-%%% API
-%%%----------------------------------------------------------------------
+-record(state, {gc,         %% Global conf #gc{} record
+		pairs,      %% [{GservPid, ScList}] 
+		mnum = 0    %% dyn compiled erl module  number
+	       }).
+
+
 start_link() ->
     gen_server:start_link({local, yaws_server}, yaws_server, [], []).
 
@@ -51,7 +54,6 @@ status() ->
 
 stats() -> 
     {S, Time} = status(),
-    {_GC, Srvs, _} = S,
     Diff = calendar:time_difference(Time, calendar:local_time()),
     G = fun(L) -> lists:reverse(lists:keysort(2, L)) end,
 
@@ -66,7 +68,7 @@ stats() ->
 			    flatten(yaws:fmt_ip(SC#sconf.listen)),
 			    G(map(fun(P) -> list_to_tuple(P) end, L))}
 		   end, SCS)
-	 end, Srvs),
+	 end, S#state.pairs),
     {Diff, R}.
 
 
@@ -158,7 +160,7 @@ init([]) ->
 		{ok, Gconf, Sconfs} ->
 		    erase(logdir),
 		    ?Debug("Conf = ~p~n", [?format_record(Gconf, gconf)]),
-		    yaws_log:setdir(Gconf#gconf.logdir, Sconfs),
+		    yaws_log:setdir(Gconf, Sconfs),
 		    case Gconf#gconf.trace of
 			{true, What} ->
 			    yaws_log:open_trace(What),
@@ -170,12 +172,11 @@ init([]) ->
 		{error, E} ->
 		    case erase(logdir) of
 			undefined ->
-			    error_logger:error_msg("Yaws: Bad conf: ~p~n", 
-						   [E]),
+			    error_logger:error_msg("Yaws: Bad conf: ~p~n",[E]),
 			    init:stop(),
 			    {stop, E};
 			Dir ->
-			    yaws_log:setdir(Dir, []),
+			    yaws_log:setdir(#gconf{logdir = Dir}, []),
 			    error_logger:error_msg("Yaws: bad conf: ~s~n",[E]),
 			    init:stop(),
 			    {stop, E}
@@ -193,18 +194,12 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 	      yaws_debug:format(Gconf, "Add path ~p~n", [D]),
 	      code:add_pathz(D)
       end, Gconf#gconf.ebin_dir),
+    yaws_debug:format(Gconf, "Running with id=~p~n", [Gconf#gconf.id]),
+    setup_dirs(Gconf),
+    yaws_ctl:start(Gconf, FirstTime),
+    runmod(RunMod, Gconf),
 
-
-    %% start user provided application
-    case RunMod of
-	{ok,Mod} -> 
-	    runmod(Mod);
-	_ -> 
-	    false
-    end,
-    lists:foreach(fun(M) -> runmod(M) end, Gconf#gconf.runmods),
-
-    %% start the individual server processes
+    %% start the individual gserv server processes
     L = lists:map(
 	  fun(Group) ->
 		  proc_lib:start_link(?MODULE, gserv, [Gconf, Group])
@@ -221,40 +216,11 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 			  false
 		  end, L),
     ?Debug("L=~p~n", [yaws_debug:nobin(L)]),
-    if
-	FirstTime == true ->
-	    CTL = proc_lib:spawn_link(yaws_ctl, start, 
-				      [self(), Gconf#gconf.uid]),
-	    receive
-		{CTL, ok} ->
-		    ok;
-		{CTL, {error, R}} ->
-		    error_logger:format("CTL failed ~p~n", [R]),
-		    exit(R)
-	    end;
-
-	true ->
-	    ok
-    end,
-    Tdir0 = yaws:tmp_dir()++"/yaws/" ,
-    file:make_dir(Tdir0),
-    set_writeable(Tdir0),
-    Tdir = Tdir0 ++ Gconf#gconf.uid,
-    file:make_dir(Tdir),
-    set_writeable(Tdir),
-
-    case (catch yaws_log:uid_change(Gconf)) of
-	ok ->
-	    ok;
-	ERR ->
-	    error_logger:error_msg("Failed to change uid on logfiles:~n~p",
-				   [ERR]),
-	    exit(error)
-    end,
+    yaws_log:uid_change(Gconf),
+    
 
     %% and now finally, we've opened the ctl socket and are
-    %% listening to all sockets we can possibly change username
-
+    %% listening to all sockets we can possibly change uid
 
     GC2 = case (catch yaws:setuser(Gconf#gconf.username)) of
 	      ignore ->
@@ -266,14 +232,11 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 		  error_logger:error_msg("Failed to set user:~n~p", [Other]),
 		  exit(Other)
 	  end,
-    case (catch setup_tdir(GC2)) of
-	ok ->
-	    ok;
-	_Error ->
-	    exit(error)
-    end,
     lists:foreach(fun({Pid, _}) -> Pid ! {newuid, GC2#gconf.uid} end, L2),
-    {ok, {GC2, L2, 0}}.
+    {ok, #state{gc = GC2,
+		pairs = L2,
+		mnum = 0}}.
+
 
 
 %%----------------------------------------------------------------------
@@ -288,16 +251,19 @@ init2(Gconf, Sconfs, RunMod, FirstTime) ->
 handle_call(status, _From, State) ->
     Reply = {State, get(start_time)},
     {reply, Reply, State};
+handle_call(id, _From, State) ->
+    {reply, (State#state.gc)#gconf.id, State};
 handle_call(pids, _From, State) ->  %% for gprof
-    L = lists:map(fun(X) ->element(1, X) end, element(2, State)),
+    L = lists:map(fun(X) ->element(1, X) end, State#state.pairs),
     {reply, [self() | L], State};
 
-handle_call(mnum, _From, {GC, Group, Mnum}) ->
-    {reply, Mnum+1,   {GC, Group, Mnum+1}};
+handle_call(mnum, _From, State) ->
+    Mnum = State#state.mnum +1,
+    {reply, Mnum, State#state{mnum = Mnum}};
 
 handle_call({setconf, GC, Groups}, _From, State) ->
     %% First off, terminate all currently running processes
-    Curr = lists:map(fun(X) ->element(1, X) end, element(2, State)),
+    Curr = lists:map(fun(X) ->element(1, X) end, State#state.pairs),
     lists:foreach(fun(Pid) ->
 			  Pid ! {self(), stop},
 			  receive
@@ -309,13 +275,12 @@ handle_call({setconf, GC, Groups}, _From, State) ->
 	{ok, State2} ->
 	    {reply, ok, State2};
 	Err ->
-	    {reply, Err, {GC, [], 0}}
+	    {reply, Err, #state{gc=GC, pairs=[], mnum=0}}
     end;
 
 handle_call(getconf, _From, State) ->
-    {GC, Pairs, _} = State,
-    Groups = lists:map(fun({_Pid, SCs}) -> SCs end, Pairs),
-    {reply, {ok, GC, Groups}, State}.
+    Groups = lists:map(fun({_Pid, SCs}) -> SCs end, State#state.pairs),
+    {reply, {ok, State#state.gc, Groups}, State}.
 
 
 
@@ -337,10 +302,11 @@ handle_cast(_Msg, State) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
 handle_info({'EXIT', Pid, Reason},  State) ->
-    L = lists:map(fun(X) ->element(1, X) end, element(2, State)),
-    case lists:member(Pid, L) of
-	true ->
-	    %% one of our gservs died
+    ?Debug("got EXIT Pid = ~p~n"
+           " pairs = ~p~n", [Pid, State#state.pairs]),
+    case lists:keysearch(Pid, 1, State#state.pairs) of
+	{value, _} ->
+	    %% one of our gservs died 
 	    error_logger:format("yaws: FATAL gserv died ~p~n", [Reason]),
 	    exit(restartme);
 	false ->
@@ -360,6 +326,10 @@ handle_info(_Msg, State) ->
 %%----------------------------------------------------------------------
 terminate(_Reason, _State) ->
     ok.
+
+
+
+
 
 
 %% we search and setup www authenticate for each directory
@@ -463,35 +433,28 @@ gserv(GC, Group0) ->
     end.
 			
 
-setup_tdir(GC) ->
-    Tdir = yaws:tmp_dir()++"/yaws/" ++ GC#gconf.uid,
-    file:make_dir(Tdir),
-    set_dir_mode(Tdir, 8#700),
-    case file:list_dir(Tdir) of
-	{ok, Files0} ->
-	    case lists:zf(
-		   fun(F) -> 
-			   Fname = Tdir ++ "/" ++ F,
-			   case file:delete(Fname) of
-			       ok ->
-				   false;
-			       {error, Reason} ->
-				   {true, {Fname, Reason}}
-			   end
-		   end, Files0) of
-		[] ->
-		    ok;
-		[{FF, RR}|_] ->
-		    error_logger:format("Failed to delete ~p~n~p", [FF, RR]),
-		    {error, RR}
-	    end;
-	{error, Reason} ->
+setup_dirs(GC) ->
+    TD0 = filename:join([yaws:tmp_dir(),"yaws"]),
+    file:make_dir(TD0),
+    set_dir_mode(TD0, 8#777),
+
+    TD1 = filename:join([TD0, GC#gconf.id]),
+    file:make_dir(TD1),
+    set_dir_mode(TD1, 8#755),
+    yaws:uid_change_files(GC, TD1, []),
+
+    case file:list_dir(TD1) of
+	{ok, LL} ->
+	    lists:foreach(
+	      fun(F) ->
+		      file:delete(filename:join([TD1, F]))
+	      end, LL -- ["ctl"]);
+	{error, RSN} ->
 	    error_logger:format("Failed to list ~p probably "
 				"due to permission errs: ~p",
-				[Tdir, Reason]),
-	    {error, Reason}
+				[TD1, RSN]),
+	    exit(RSN)
     end.
-
 
 
 
@@ -706,21 +669,20 @@ aloop(CliSock, GS, Num) ->
 
 
 handle_method_result(Res, CliSock, IP, GS, SC, Req, H, Num) ->
+    erase(post_parse),
+    erase(query_parse),
+    erase(outh),
+    lists:foreach(fun(X) ->
+			  case X of
+			      {binding, _} ->
+				  erase(X);
+			      _ ->
+					  ok
+			  end
+		  end, get()),
     case Res of
 	continue ->
 	    maybe_access_log(IP, SC, Req, H),
-	    erase(post_parse),
-	    erase(query_parse),
-	    erase(outh),
-	    lists:foreach(fun(X) ->
-				  case X of
-				      {binding, _} ->
-					  erase(X);
-				      _ ->
-					  ok
-				  end
-			  end, get()),
-				      
 	    aloop(CliSock, GS, Num+1);
 	done ->
 	    maybe_access_log(IP, SC, Req, H),
@@ -1030,6 +992,7 @@ make_arg(CliSock, Head, Req, _GC, SC, Bin) ->
 	       headers = Head,
 	       req = Req,
 	       opaque = SC#sconf.opaque,
+	       sc = SC,
 	       pid = self(),
 	       docroot = SC#sconf.docroot,
 	       clidata = Bin},
@@ -2797,12 +2760,25 @@ ssl_flush(Sock, Sz) ->
 mtime(F) ->
     F#file_info.mtime.
 
-runmod(Mod) ->
-    proc_lib:spawn(?MODULE, load_and_run, [Mod]).
+runmod({ok, Mod}, GC) ->
+    runmod2(GC, [Mod | GC#gconf.runmods]);
+runmod(_, GC) ->
+    runmod2(GC, GC#gconf.runmods).
 
-load_and_run(Mod) ->
+runmod2(GC, Mods) ->
+    lists:foreach(fun(M) -> 
+			  proc_lib:spawn(?MODULE, load_and_run, 
+					 [M, GC#gconf.debug])
+		  end, Mods).
+
+
+
+load_and_run(Mod, Debug) ->
     case code:ensure_loaded(Mod) of
-	{module,Mod} ->
+	{module,Mod} when Debug == false ->
+	    Mod:start();
+	{module,Mod} when Debug == true  ->
+	    error_logger:info_msg("sync call ~p:start ~n",[Mod]),
 	    Mod:start();
 	Error ->
 	    error_logger:error_msg("Loading '~w' failed, reason ~p~n",

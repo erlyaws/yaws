@@ -12,6 +12,9 @@ in interactive mode where it is possible to directly interact
 with the webserver. Yaws is particularly good at generating
 dynamic content. See the user docs for more information on that topic.
 
+.SH DEAMON/SERVER options
+
+
 .TP
 \fB\-i\fR
 Interactive mode. This will start yaws in interactive mode with an erlang
@@ -28,7 +31,9 @@ switch to be present.
 .TP
 \fB\-d\fR
 Debug mode. This will produce some auxilliary error output for some
-error conditions. The interactive option \fI-i\rR implies debug mode.
+error conditions. It will also start the otp sasl lib for additional
+error printouts.
+
 .TP
 \fB\-c file\fR
 Use a different configuration file than the default. The default configuration file
@@ -39,10 +44,16 @@ $HOME/yaws.conf, then in ./yaws.conf and finally in /etc/yaws.conf
 \fB\-r module\fR
 Tells yaws to call \fImodule:start/0\fR at startup. This makes it possible
 to startup user specific applications together with yaws.
+
+.TP
+\fB\-pa path\fR
+Add path to the yaws system search path
+
 .TP
 \fB\-t\fR
 Traffic trace mode. All traffic will be written to a trace file called trace.traffic
 in the log directory.
+
 .TP
 \fB\-T\fR
 HTTP trace mode. All HTTP messages will be written to a trace file called trace.http
@@ -60,21 +71,47 @@ Start Mnesia in directory <dir>
 \fB\-sname xxx\fR
 Start yaws as a distributed erlang node with name <xxx>
 
+
+
+.SH CONTROL OPTIONS
+.PP
+The following list of options are are used to control the daemon
+from the "outside" while it is running.
+
 .TP
-\fB\-h\fR
-HUP the daemon. This forces the daemon to reread the configuration file. It also makes
-the daemon empty all its internal content caches. Hence when updating the doc root,
+\fB\-I id\fR
+Only useful with the control commands, -h, -s and -S, -j and -load. It interacts 
+with the yaws server named "id" (as specified in the conf file for
+that yaws server)
+
+
+.TP
+\fB\-h [-I id]\fR
+HUP the daemon. This forces the daemon to reread the configuration file. 
+It also makes
+the daemon empty all its internal content caches. 
+Hence when updating the doc root,
 HUPing the daemon is the fastest way to see the content updates. 
 .TP
-\fB\-s\fR
-Stop the daemon.
+\fB\-s [-I id]\fR
+Stop the daemon (called id)
 .TP
-\fB-S\fR
+\fB-S [-I id]\fR
 Query a running yaws daemon for its status, and print it.
 .TP
-\fB-load Modules\fR 
+\fB-load Modules [-I id]\fR 
 Try to (re)load erlang modules into a running daemon.  This is useful
 after modifying appmods or modules used by scripts.
+
+.TP
+\fB-j [-I id] http | traffic | off\fR
+Control the trace capabilities of a running yaws daemon. If the
+http or traffic option is given, the daemon will write a log
+for debug purposes into the logdir.
+
+
+.SH MISC OPTIONS
+
 .TP
 \fB-check YawsFile [IncDirs]\fR
 Test compile a `.yaws' file.

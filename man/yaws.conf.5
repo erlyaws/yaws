@@ -40,6 +40,25 @@ The default value for logdir is "."
 \fB ebin_dir = Directory\fR
 This directive adds Directory to the erlang search path. It is possible to
 have several of these command in the configuration file.
+
+
+.TP
+\fB id = String\fR
+It is possible run multiple yaws servers on the same machine. We use the
+id of a yaws server to control it using the different ctl commands such
+as:
+.nf
+
+# /usr/local/bin/yaws -I foobar -s
+
+.fi
+To stop the Yaws server with id "foobar". Only the user that started
+the server called foobar is allowd to stop and control it. This is achieved
+through file permissions on the control file which will reside in
+"/tmp/yaws/foobar/ctl"
+
+There can never be two yaws servers on the same machine with identical ids.
+
 .TP
 \fB include_dir = Directory\fR
 This directive adds Directory to the path of directories where the erlang

@@ -322,6 +322,11 @@ Url-encodes a string. All URLs in HTML documents must be URL encoded.
 Returns a list of reformated header values from a #header{}
 record. The return list is suitable for retransmit.
 
+.TP
+\fBrequest_url(ARG)\fR
+Return the url as requested by the client. Return value
+is a #url{} record as defined in yaws_api.hrl
+
 
 .TP
 \fBparse_url(Str)\fR

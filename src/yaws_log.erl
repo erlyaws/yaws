@@ -53,8 +53,8 @@ accesslog(ServerName, Ip, Req, Status, Length) ->
 accesslog(ServerName, Ip, Req, Status, Length, Referrer, UserAgent) ->
     gen_server:cast(?MODULE, {access, ServerName, Ip, Req, 
 			      Status, Length, Referrer, UserAgent}).
-setdir(Dir, Sconfs) ->
-    gen_server:call(?MODULE, {setdir, Dir, Sconfs}).
+setdir(GC, Sconfs) ->
+    gen_server:call(?MODULE, {setdir, GC, Sconfs}).
 
 open_trace(What) ->
     gen_server:call(?MODULE, {open_trace, What}).
@@ -64,34 +64,23 @@ trace_traffic(ServerOrClient , Data) ->
 authlog(ServerName, IP, Path, Item) ->
     gen_server:cast(?MODULE, {auth, ServerName, IP, Path, Item}).
 
+%% from external ctl prog
+actl_trace(What) ->
+    gen_server:call(?MODULE, {actl_trace, What}).
 
+
+
+%% change owner of logfiles and logdir
+%% only called when we lower rights after socket(s) are opened
 uid_change(GC) ->
-    case GC#gconf.username of
-	undefined ->  
-	    %% uid change feature not used
-	    ok;
-	_Uname when GC#gconf.uid /= "0" ->
-	    %% we're not root and can't do anything about the sitiation
-	    ok;
-	Uname ->
-	    %% let's change the owner of logdir
-	    %% as well as all the files in that directory
-	    case (catch list_to_integer(element(2,yaws:idu(Uname)))) of
-		Int when integer(Int) ->
-		    S = gen_server:call(?MODULE, state),
-		    {ok, Files} = file:list_dir(S#state.dir),
-		    ok = file:change_owner(S#state.dir, Int),
-		    lists:foreach(
-		      fun(F) ->
-			      NF = S#state.dir ++ [$/ | F],
-			      ok = file:change_owner(NF, Int)
-		      end, Files);
-		_Err ->
-		    {error, "Bad user " ++ Uname}
-	    end
+    case file:list_dir(GC#gconf.logdir) of
+	{ok, L} ->
+	    yaws:uid_change_files(GC, GC#gconf.logdir,L);
+	{error, Rsn} ->
+	    error_logger:format("Failed to listdir ~p : ~p",
+				[GC#gconf.logdir, Rsn])
     end.
-	
-	
+
 
 
 %%%----------------------------------------------------------------------
@@ -117,13 +106,19 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-handle_call({setdir, Dir, Sconfs}, _From, State) 
+handle_call({setdir, GC, Sconfs}, _From, State) 
   when State#state.running == false ->
+    Dir = GC#gconf.logdir,
     ?Debug("setdir ~s~n", [Dir]),
-
-    error_logger:logfile({open,filename:join([Dir, "report.log"])}),
-    SCs = lists:flatten(Sconfs),
+    ElogFile = filename:join([Dir, "report.log"]),
+    case error_logger:logfile({open,ElogFile}) of
+	ok ->
+	    ok;
+	{error, Reason} ->
+	    error_logger:format("Failed to open ~s~n", [ElogFile])
+    end,
     
+    SCs = lists:flatten(Sconfs),
     L = lists:zf(
 	  fun(SC) ->
 		  FileName = case os:type() of
@@ -146,21 +141,27 @@ handle_call({setdir, Dir, Sconfs}, _From, State)
 			  false
 		  end
 	  end, SCs),
+
     AuthLogFileName = filename:join([Dir, "auth.log"]),
-    AuthLog = case file:open(AuthLogFileName, [write, raw, append]) of
-		  {ok, AFd} ->
-		      AFd;
-		  _Err ->
-		      error_logger:format("Cannot open ~s~n", 
-					  [AuthLogFileName]),
-		      false
-	      end,
+    AuthLog = 
+	if GC#gconf.auth_log == true ->
+		case file:open(AuthLogFileName, [write, raw, append]) of
+		    {ok, AFd} ->
+			#alog{fd = AFd,
+			      servername = undefined,
+			      filename = AuthLogFileName};
+		    _Err ->
+			error_logger:format("Cannot open ~s~n", 
+					    [AuthLogFileName]),
+			undefined
+		end;
+	   true ->
+		undefined
+	end,
     S2 = State#state{running = true,
 		     dir  = Dir,
 		     now = fmtnow(),
-		     auth_log = #alog{fd = AuthLog,
-				      servername = undefined,
-				      filename = AuthLogFileName},
+		     auth_log = AuthLog,
 		     alogs = L},
 
     yaws:ticker(3000, secs3),
@@ -173,7 +174,7 @@ handle_call({setdir, Dir, Sconfs}, _From, State)
 %% We can't ever change logdir, we can however
 %% change logging opts for various servers
 
-handle_call({setdir, _DirIgnore, Sconfs}, _From, State) 
+handle_call({setdir, GC, Sconfs}, _From, State) 
   when State#state.running == true ->
 
     Dir = State#state.dir,
@@ -222,6 +223,7 @@ handle_call({open_trace, What}, _From, State) ->
 	    {reply,  Err, State}
     end;
 
+
 handle_call({trace_tty, What}, _From, State) ->
     {reply, ok, State#state{tty_trace = What}};
 handle_call(state, _From, State) ->
@@ -234,10 +236,12 @@ handle_call(state, _From, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-handle_cast({access, ServerName, Ip, Req, Status, Length, Referrer, UserAgent}, State) ->
+handle_cast({access, ServerName, Ip, Req, Status, 
+	     Length, Referrer, UserAgent}, State) ->
     case State#state.running of 
 	true ->
-	    do_alog(ServerName, Ip, Req, Status, Length, Referrer, UserAgent, State),
+	    do_alog(ServerName, Ip, Req, Status, Length, 
+		    Referrer, UserAgent, State),
 	    {noreply, State};
 	false ->
 	    {noreply, State}
@@ -245,15 +249,13 @@ handle_cast({access, ServerName, Ip, Req, Status, Length, Referrer, UserAgent}, 
 
 handle_cast({auth, ServerName, IP, Path, Item}, State) ->
     case State#state.running of 
-	true ->
+	true when State#state.auth_log /= undefined ->
 	    do_auth_log(ServerName, IP, Path, Item, State),
 	    {noreply, State};
 	false ->
 	    {noreply,State}
     end;
 	    
-	
-
 handle_cast({trace, from_server, Data}, State) ->
     Str = ["*** SRV -> CLI *** ", Data],
     file:write(State#state.tracefd, Str),
@@ -264,7 +266,6 @@ handle_cast({trace, from_client, Data}, State) ->
     file:write(State#state.tracefd, Str),
     tty_trace(Str, State),
     {noreply, State}.
-
 
 
 do_alog(ServerName, Ip, Req, Status, Length, Referrer, UserAgent, State) ->

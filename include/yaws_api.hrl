@@ -12,6 +12,7 @@
 	  clisock,        %% the socket leading to the peer client
 	  headers,        %% headers
 	  req,            %% request
+	  sc,             %% The sconf for this request
 	  clidata,        %% The client data (as a binary in POST requests)
 	  server_path,    %% The normalized server path
 	  querydata,      %% Was the URL on the form of ...?query (GET reqs)

@@ -17,61 +17,130 @@
 -include_lib("yaws/include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
-ctl_file("0") ->
-    "/var/run/yaws.ctl";
-ctl_file(Id) ->
-    Tmp = yaws:tmp_dir_fstr(),
-    io_lib:format(Tmp ++ "/yaws.ctl.~s",[Id]).
 
 
-start(Top, Id) ->
-    case catch start0(Top, Id) of
-	{'EXIT', Reason} ->
-	    error_logger:format("Faild to start ctl : ~p~n", [Reason]),
-	    Top ! {self(), {error, Reason}};
-	Other ->
-	    Other
+%% assumes the appropriate file structures 
+%% are already created with the right perms
+
+start(GC, FirstTime) when FirstTime == false ->
+    ok;
+start(GC, true) ->
+    case proc_lib:start_link(?MODULE, run, [GC]) of
+	ok ->
+	    ok;
+	{error, RSN} ->
+	    error_logger:format("~s~n",[RSN]),
+	    exit(RSN)
     end.
 
-start0(Top, Id) ->
-    case gen_tcp:listen(0, [{packet, 2},
-			    {active, false},
-			    binary,
-			    {ip, {127,0,0,1}},
-			    {reuseaddr, true}]) of 
+
+%% syncronous start, 
+%% If we're later supposed
+%% to change uid, we're still root here.
+
+run(GC) ->
+    %% First check if there is already a Yaws system running
+    %% with the same sid.
+
+    case connect(GC#gconf.id) of
+	{ok, Sock} ->
+
+	    %% Not good, let's get some sys info
+	    %% from that system so we can produce a good error
+	    %% message
+	    gen_tcp:close(Sock),
+	    e("There is already a yaws system running with the same ~n"
+	      " id <~p> on this computer, ~n"
+	      " set another id in the yaws conf file ~n", 
+	      [GC#gconf.id]);
+	{error, eaccess} ->
+	    %% We're not allowed to open the ctl file
+	    e("Error reading ~s, you are probably (sometimes) running ~n"
+	      " yaws as another userid, but with the same yaws id <~p> ~n"
+	      " set another id in the yaws conf file ~n", 
+	      [ctl_file(GC#gconf.id), GC#gconf.id]);
+	{error, _} ->
+	    %% Fine, this should be the case
+	    run_listen(GC)
+    end.
+
+
+ctl_args() ->
+     [{packet, 2},
+      {active, false},
+      binary,
+      {ip, {127,0,0,1}},
+      {reuseaddr, true}].
+
+run_listen(GC) ->
+    case gen_tcp:listen(0, ctl_args()) of
 	{ok,  L} ->
 	    case inet:sockname(L) of
 		{ok, {_, Port}} ->
-		    F = ctl_file(Id),
-		    ?Debug("Ctlfile : ~s~n", [F]),
-		    file:write_file(F, io_lib:format("~w", [Port])),
-		    {ok, FI} = file:read_file_info(F),
-		    M = FI#file_info.mode,
-		    M2 = M bor (8#00222),
-		    file:write_file_info(F, FI#file_info{mode = M2}), %%ign ret
-		    Top ! {self(), ok},
-		    aloop(L);
+		    case w_ctl_file(GC#gconf.id,Port) of
+			ok ->
+			    proc_lib:init_ack(ok),
+			    aloop(L, GC);
+			error ->
+			    e("Failed to create/manipulate the ctlfile ~n"
+			      "called ~s~n"
+			      "either problems with permissions or "
+			      " earlier runs of yaws ~nwith the same id "
+			      " <~p> as this, check /tmp/yaws/* for perms~n",
+			      [ctl_file(GC#gconf.id), GC#gconf.id])
+		    end;
 		Err ->
-		    error_logger:format("Cannot get sockname for ctlsock",[]),
-		    Top ! {self(), {error, Err}}
+		    e("Cannot get sockname for ctlsock: ~p",[Err] )
 	    end;
 	Err ->
-	    error_logger:format("Cannot listen on ctl socket ",[]),
-	    Top ! {self(), {error, Err}}
-
+	    e("Cannot listen on ctl socket, fatal: ~p", [Err])
     end.
 
 
-aloop(L) ->
+e(Fmt, Args) ->
+    proc_lib:init_ack({error, io_lib:format(Fmt, Args)}),
+    exit(normal).
+
+
+
+%% write the control file, set perms of the file
+%% so that only this user can read the file
+%% That way we're making sure different users
+%% cannot manipulate eachothers webservers
+w_ctl_file(Sid, Port) ->
+    case catch 
+	begin
+	    F = ctl_file(Sid),
+	    ?Debug("Ctlfile : ~s~n", [F]),
+	    file:write_file(F, io_lib:format("~w", [Port])),
+	    {ok, FI} = file:read_file_info(F),
+	    ok = file:write_file_info(F, FI#file_info{mode = 8#00600})
+	end of
+	{'EXIT', _} ->
+	    error;
+	_ ->
+	    ok
+    end.
+
+
+ctl_file(Sid) ->
+    filename:join([yaws:tmp_dir(),
+		   "yaws",
+		   Sid,
+		   "ctl"]).
+
+
+
+aloop(L, GC) ->
     case gen_tcp:accept(L) of
 	{ok, A} ->
-	    handle_a(A);
+	    handle_a(A, GC);
 	_Err ->
 	    ignore
     end,
-    ?MODULE:aloop(L).
+    ?MODULE:aloop(L, GC).
 
-handle_a(A) ->
+handle_a(A, GC) ->
     case gen_tcp:recv(A, 0) of
 	{ok, Data} ->
 	    case binary_to_term(Data) of
@@ -80,12 +149,20 @@ handle_a(A) ->
 		    Res;
 		stop ->
 		    gen_tcp:send(A, "stopping\n"),
+		    file:delete(ctl_file(GC#gconf.id)),
 		    init:stop();
+		{trace, What} ->
+		    Res = actl_trace(What),
+		    gen_tcp:send(A, Res),
+		    gen_tcp:close(A);
 		status ->
 		    a_status(A),
 		    gen_tcp:close(A);
 		{load, Mods} ->
 		    a_load(A, Mods),
+		    gen_tcp:close(A);
+		id ->
+		    a_id(A),
 		    gen_tcp:close(A);
 		Other ->
 		    gen_tcp:send(A, io_lib:format("Other: ~p~n", [Other])),
@@ -97,9 +174,52 @@ handle_a(A) ->
     end.
 
 
+%% We implement this by reloading a patched config
+actl_trace(What) ->
+    case lists:member(What, [traffic, http, off]) of
+	true ->
+	    {ok, GC, SCs} = yaws_api:getconf(),
+	    case GC#gconf.trace of
+		false when What /= off->
+		    yaws_api:setconf(GC#gconf{trace = {true, What}},SCs),
+		    io_lib:format(
+		      "Turning on trace of ~p to file ~s~n",
+		      [What, 
+		       filename:join([GC#gconf.logdir, 
+				      "trace." ++ atom_to_list(What)])]);
+		false when What == off ->
+		    io_lib:format("Tracing is already turned off ~n",[]);
+		{true, _} when What == off ->
+		    yaws_api:setconf(GC#gconf{trace = false},SCs),
+		    "Turning trace off \n";
+		{true, What} ->
+		      io_lib:format("Trace of ~p is already turned on, ose 'off' "
+				    "to turn off~n", [What]);
+		{true, Other} ->
+		    yaws_api:setconf(GC#gconf{trace = {true, What}},SCs),
+		    io_lib:format(
+		      "Turning on trace of ~p to file ~s~n",
+		      [What, 
+		       filename:join([GC#gconf.logdir, 
+				      "trace." ++ atom_to_list(What)])])
+	    
+	    
+	    end;
+	false ->
+	    "Need either http | traffic | off  as argument\n"
+    end.
+
+
 
 f(Fmt, As) ->
     io_lib:format(Fmt, As).
+
+
+a_id(Sock) ->
+    ID = gen_server:call(yaws_server, id, []),
+    gen_tcp:send(Sock, ID),
+    ok.
+
 
 a_status(Sock) ->
     {UpTime, L} = yaws_server:stats(),
@@ -157,57 +277,83 @@ purge([M|Ms], Ack) ->
 
 
 
-actl(Term, Uid) ->
-    CtlFile = ctl_file(Uid),
+connect(Sid) ->
+    connect_file(ctl_file(Sid)).
+
+
+%% The ctl file contains the port number the yaws server
+%% is listening at.
+
+connect_file(CtlFile) ->
     case file:read_file(CtlFile) of
-	{ok, B} ->
-	    L = binary_to_list(B),
+	{ok, Bin} ->
+	    L = binary_to_list(Bin),
 	    I = list_to_integer(L),
-	    case gen_tcp:connect({127,0,0,1}, I,
-				 [{active, false},
-				  {reuseaddr, true},
-				  binary,
-				  {packet, 2}]) of
-		{ok, Fd} ->
-		    gen_tcp:send(Fd, term_to_binary(Term)),
-		    Res = gen_tcp:recv(Fd, 0),
-		    case Res of
-			{ok, Bin} ->
-			    io:format("~s~n", [binary_to_list(Bin)]);
-			Err ->
-			    io:format("yaws server for uid ~s not responding: ~p ~n",[Uid, Err])
-		    end,
-		    gen_tcp:close(Fd),
-		    Res;
-		Err ->
-		    io:format("yaws server under uid  ~s not running \n", [Uid]),
-		    Err
-	    end;
+	    gen_tcp:connect({127,0,0,1}, I,
+			    [{active, false},
+			     {reuseaddr, true},
+			     binary,
+			     {packet, 2}]);
 	Err ->
-	    io:format("yaws: Cannot open runfile ~s ... server under uid ~s "
-		      "not running ?? ~n",
-		      [CtlFile, Uid])
+	    Err
+    end.
+
+
+
+actl(SID, Term) ->
+    case connect(SID) of
+	{error, eaccess} ->
+	    io:format("Another user is using the yaws sid <~p>, ~n"
+		      "You are not allowd to read the file <~s>, ~n"
+		      "specify by <-I id> which yaws system you want "
+		      " to control~n",
+		      [SID, ctl_file(SID)]);
+	{error, econnrefused} ->
+	    io:format("No yaws system responds~n",[]);
+	{error, Reason} ->
+	    io:format("You failed to read the ctlfile ~s~n"
+		      "error was: <~p>~n"
+		      "specify by <-I id> which yaws system you want "
+		      " to control~n",
+		      [ctl_file(SID), Reason]);
+	{ok, Socket} ->
+	    Str = s_cmd(Socket, SID, Term),
+	    io:format("~s", [Str])
     end,
     init:stop().
 
-uid() ->
-    {ok, Id} = yaws:getuid(), Id.
+
+s_cmd(Fd, SID, Term) ->	    
+    gen_tcp:send(Fd, term_to_binary(Term)),
+    Res = case gen_tcp:recv(Fd, 0) of
+	      {ok, Bin} ->
+		  binary_to_list(Bin);
+	      Err ->
+		  io_lib:format("yaws server for yaws id <~p> not "
+				"responding: ~p ~n", [SID, Err])
+	  end,
+    gen_tcp:close(Fd),
+    Res.
 
 
 %% send a hup (kindof) to the yaws server to make it
 %% reload its configuration and clear its caches
 
-hup() ->
-    actl(hup, uid()).
+hup([SID]) ->
+    actl(SID, hup).
 
-stop() ->	
-    actl(stop, uid()).
 
-status() ->
-    actl(status, uid()).
+%% stop a daemon
+stop([SID]) ->	
+    actl(SID, stop).
 
-load(Modules) ->
-    actl({load, Modules}, uid()).
+%% query a daemon for status/stats
+status([SID]) ->
+    actl(SID, status).
+
+load(X) ->
+    [SID | Modules] = lists:reverse(X),
+    actl(SID, {load, Modules}).
 
 check([File| IncludeDirs]) ->
     GC = yaws_config:make_default_gconf(false),
@@ -223,6 +369,10 @@ check([File| IncludeDirs]) ->
 	    io:format("~nErrors in ~p~n", [File]),
 	    init:stop()
     end.
+
+%% control a daemon http/traffic tracer
+trace([What, SID]) ->
+    actl(SID, {trace, What}).
 
 
     
