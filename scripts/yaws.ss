@@ -89,7 +89,7 @@ done
 
 [ -z "$daemon" ] && [ -z "$interactive" ] && help
 
-if [ -z "$heart" ] !! [ -z "$daemon" ]; then
+if [ -z "$heart" ] || [ -z "$daemon" ]; then
     HEART_COMMAND="";
 else
     ## ............................this line
