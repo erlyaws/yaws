@@ -17,7 +17,8 @@ MODULES=wiki \
 	wiki_diff \
 	wiki_yaws \
 	wiki_plugin_dummy \
-	wiki_plugin_backlinks
+	wiki_plugin_backlinks \
+	utils
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) 
 

@@ -59,7 +59,7 @@ showPage(Params, Root, Prefix) ->
 	    {WobFile, FileDir} = page2filename(Page, Root),
 	    case file:read_file(WobFile) of
 		{ok, Bin} ->
-		    {wik002, Pwd,_Email,_Time,_Who,TxtStr,Files,_Patches} =
+		    {wik002, Pwd,_Email,Time,_Who,TxtStr,Files,_Patches} =
 			bin_to_wik002(Root,FileDir,Bin),
 		    Wik = wiki_split:str2wiki(TxtStr),
 		    DeepStr = wiki_to_html:format_wiki(Page, Wik, Root),
@@ -68,8 +68,10 @@ showPage(Params, Root, Prefix) ->
 		    Locked = Pwd /= "",
 		    wiki_templates:template(Page, 
 					    banner(Page, Locked),
-					    [top_header(Page),DeepStr,
-					     DeepFiles],
+					    [top_header(Page), DeepStr,
+					     DeepFiles,
+					     "<hr><p>Last Modified: ",
+					     utils:time_to_string(Time)],
 					    Locked);
 		_ ->
 		    NewSid = session_new(initial_page_content()),

@@ -3,6 +3,7 @@
 %% File    : wiki_utils.erl
 %% Author  : Joe Armstrong (joe@bluetail.com)
 %%         : Johan Bevemyr (jb@bluetail.com)
+%%         : Mickael Remond (mickael.remond@erlang-fr.org)
 %% Purpose : Wiki web utilities
 %%         : Find zombie pages
 %%         : Find all references to a given page
