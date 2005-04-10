@@ -12,12 +12,11 @@
 -include_lib("yaws/include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
-
 %% reverse proxy implementation.
 
+%% TODO: Activate proxy keep-alive with a new option ?
 
-
-	
+%% Proxy socket definition
 -record(psock, {s,      %% the socket
 		mode,   %% chunked,len,undefined,expectheaders,expectchunked
 		prefix, %% The prefix to strip and add
@@ -25,16 +24,22 @@
 		type,   %% client | server
 		r_req,  %% if'we're server, what req method are we processing
 		r_host, %% and value of Host: for the cli request
+		httpconnection="keep-alive", %% Do we need to keep the connection open ("keep-alive" | "close")  
 		state}).%% various depending on mode, ......
 
-
-
+%% MREMOND: TODO: Check if redirection works properly (this is
+%% fundamental as most of the time cookie based authentication works
+%% with redirection).
+%% I did not yet check that.
 
 init(CliSock, ARG, DecPath, QueryPart, {Prefix, URL}, N) ->
     GC=get(gc), SC=get(sc),
+    %% Connect to the backend server
     case connect_url(URL) of
 	{ok, Ssock} ->
 	    Headers0 = ARG#arg.headers,
+            KeepAlive = Headers0#headers.connection,
+	    ?Debug("Keep-alive: ~p~n",[KeepAlive]),
 	    Cli = sockmode(Headers0, ARG#arg.req,
 			   #psock{s = CliSock, prefix = Prefix,
 				  url = URL, type = client}),
@@ -43,26 +48,45 @@ init(CliSock, ARG, DecPath, QueryPart, {Prefix, URL}, N) ->
 	    ReqStr = yaws_api:reformat_request(
 		       rewrite_path(ARG#arg.req, Prefix)),
 	    Hstr = headers_to_str(Headers),
+
+	    %% Sending received data from the client to the proxied server:
+	    %%  MREMOND: TODO: Refactor.
 	    yaws:gen_tcp_send(Ssock, [ReqStr, "\r\n", Hstr, "\r\n"]),
-	    if
-		N /= 0 ->
-		    yaws:gen_tcp_send(Ssock,ARG#arg.clidata);
-		true ->
-		    ok
-	    end,
+	    RemainingData = if
+		       N /= 0 ->
+			   %% Send data to the server:
+			   ClientData=ARG#arg.clidata,
+			   yaws:gen_tcp_send(Ssock,ClientData),
+				    N - size(ClientData);
+		       true ->
+			   %% MREMOND: Check this (If N == 0, it might
+			   %% be because, we do not know the size of
+			   %% the data to receive. For now we will get
+			   %% back in http mode, expecting headers
+			   %% (new request)
+			   0
+		   end,
+
+	    Cli2 = case RemainingData of
+		       0      -> 
+			   %% Sockmode will be changed in the ploop function
+			   Cli#psock{mode = expectheaders, state = undefined};
+		       _Other -> Cli
+		   end,
+	    
 	    Srv = #psock{s = Ssock, 
 			 prefix = Prefix, 
 			 url = URL,
 			 r_req = (ARG#arg.req)#http_request.method,
 			 r_host = (ARG#arg.headers)#headers.host,
-			 mode = expectheaders, type = server},
-	    
-	    %% Now we _must_ spawn a process here, because we
+			 mode = expectheaders, type = server,
+			 httpconnection=httpd_util:to_lower(KeepAlive)},     %% Need to check if we could close the connection after server answer
+	    	    %% Now we _must_ spawn a process here, because we
 	    %% can't use {active, once} due to the inefficencies
 	    %% that would occur with chunked encodings
-	    P1 = proc_lib:spawn_link(?MODULE, ploop, [Cli, Srv, GC, SC]),
+	    P1 = proc_lib:spawn_link(?MODULE, ploop, [Cli2, Srv, GC, SC, self()]),
 	    ?Debug("Client=~p, Srv=~p", [P1, self()]),
-	    ploop(Srv, Cli, GC, SC);
+	    ploop(Srv, Cli2, GC, SC, P1);
 	ERR ->
 	    yaws:outh_set_dyn_headers(ARG#arg.req, ARG#arg.headers,
 				      #urltype{}),
@@ -213,13 +237,13 @@ get_chunk(Fd, N, Asz) ->
 
 
 
-ploop(From0, To, GC, SC) ->
+ploop(From0, To, GC, SC, Pid) ->
     put(sc, SC),
     put(gc, GC),
-    ploop(From0, To).
+    ploop(From0, To, Pid).
 
 
-ploop(From0, To) ->
+ploop(From0, To, Pid) ->
     From = receive
 	       {cli2srv, Method, Host} ->
 		   From0#psock{r_req = Method,
@@ -241,8 +265,8 @@ ploop(From0, To) ->
 			    record(R, http_response) ->
 				yaws_api:reformat_response(R);
 			    record(R, http_request) ->
-				To ! {cli2srv, R#http_request.method, 
-				      H0#headers.host},
+				Pid ! {cli2srv, R#http_request.method, 
+				       H0#headers.host},
 				yaws_api:reformat_request(
 				  rewrite_path(R, From#psock.prefix))
 			end,
@@ -255,7 +279,7 @@ ploop(From0, To) ->
 			true ->
 			    yaws:gen_tcp_send(TS,"\r\n")
 		    end,
-		    ploop(From2, To);
+		    ploop(From2, To, Pid);
 		closed ->
 		    done
 	    end;
@@ -266,11 +290,11 @@ ploop(From0, To) ->
 		    ok=eat_crnl(From#psock.s),
 		    yaws:gen_tcp_send(TS,["\r\n0\r\n\r\n"]),
 		    ?Debug("SEND final 0 ",[]),
-		    ploop(From#psock{mode = expectheaders, 
-				     state = undefined},To);
+		    ploop_keepalive(From#psock{mode = expectheaders, 
+				     state = undefined},To, Pid);
 	       true ->
 		    ploop(From#psock{mode = chunk, 
-				    state = N},To)
+				    state = N},To, Pid)
 	    end;
 	chunk ->
 	    CG = get_chunk(From#psock.s,From#psock.state, 0),
@@ -278,19 +302,19 @@ ploop(From0, To) ->
 	    Data2 = ["\r\n", yaws:integer_to_hex(SZ),"\r\n", CG],
 	    yaws:gen_tcp_send(TS, Data2),
 	    ploop(From#psock{mode = expect_nl_before_chunked,
-			     state = undefined}, To);
+			     state = undefined}, To, Pid);
 	expect_nl_before_chunked ->
 	    case gen_tcp:recv(From#psock.s, 0, 20000) of
 		{ok, <<13,10>>} ->
 		    yaws:gen_tcp_send(TS,<<13,10>>),
 		    ploop(From#psock{mode = expectchunked,
-				     state = undefined}, To);
+				     state = undefined}, To, Pid);
 		Other ->
 		    exit(normal)
 	    end;
 	len when From#psock.state == 0 ->
-	    ploop(From#psock{mode = expectheaders,
-			     state = undefined},To);
+	    ploop_keepalive(From#psock{mode = expectheaders,
+			     state = undefined},To, Pid);
 	len ->
 	    case gen_tcp:recv(From#psock.s, From#psock.state, ?READ_TIMEOUT) of
 		{ok, Bin} ->
@@ -298,7 +322,7 @@ ploop(From0, To) ->
                     ?Debug("Read ~p bytes~n", [SZ]),
 		    yaws:gen_tcp_send(TS, Bin),
 		    ploop(From#psock{state = From#psock.state - SZ},
-			  To);
+			  To, Pid);
 		Rsn ->
                     ?Debug("Failed to read :~p~n", [Rsn]),  
 		    exit(normal)
@@ -307,12 +331,20 @@ ploop(From0, To) ->
 	    case gen_tcp:recv(From#psock.s, From#psock.state, ?READ_TIMEOUT) of
 		{ok, Bin} ->
 		    yaws:gen_tcp_send(TS, Bin),
-		    ploop(From, To);
+		    ploop(From, To, Pid);
 		_ ->
 		    exit(normal)
 	    end
     end.
 
+%% Before reentering the ploop in expect_header mode (new request/reply),
+%% We must check the if we need to keep the connection alive
+%% or if we must close it.
+ploop_keepalive(From = #psock{httpconnection="close"}, To, Pid) ->
+    ?Debug("Connection closed by proxy: No keep-alive~n",[]),
+    done;    %%  Close the connection
+ploop_keepalive(From, To, Pid) ->
+    ploop(From, To, Pid).
 
 %% On the way from the client to the server, we need
 %% rewrite the Host header

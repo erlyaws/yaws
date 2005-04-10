@@ -965,7 +965,7 @@ reformat_header(H) ->
 		 true ->
 		      {"Accept-Ranges", H#headers.accept_ranges}
 	      end,
-	      if H#headers.cookie == undefined ->
+	      if H#headers.cookie == [] ->
 		      undefined;
 		 true ->
 		      {"Cookie", H#headers.cookie}
