@@ -15,6 +15,7 @@
 %% reverse proxy implementation.
 
 %% TODO: Activate proxy keep-alive with a new option ?
+-define(proxy_keepalive, false).
 
 %% Proxy socket definition
 -record(psock, {s,      %% the socket
@@ -344,7 +345,18 @@ ploop_keepalive(From = #psock{httpconnection="close"}, To, Pid) ->
     ?Debug("Connection closed by proxy: No keep-alive~n",[]),
     done;    %%  Close the connection
 ploop_keepalive(From, To, Pid) ->
-    ploop(From, To, Pid).
+    %% Check server reverse proxy keep-alive setting
+    %% TODO: We should get this value from the config file
+    case check_server_keepalive() of
+	false -> done; %% Close the connection: Server config do not
+                       %%  allow proxy keep-alive
+	true -> ploop(From, To, Pid) %% Try keeping the connection
+                                     %% alive => Wait for headers
+    end.
+
+%% TODO: Get proxy keepalive value in SC record
+check_server_keepalive() ->
+    ?proxy_keepalive.
 
 %% On the way from the client to the server, we need
 %% rewrite the Host header
