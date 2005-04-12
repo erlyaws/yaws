@@ -1,3 +1,15 @@
+Tue Apr 12 2005, Version 1.54 released. Bugfix release.
+Bug in SSL fixed, Bad line parsing in SSL mode, crashed when client sent headers splitup in a certain way. (klacke)
+Removed the automatic htmlize on strings in  ehtml, it was wrong ... to have it there. It's better for users that want it to explicitly add yaws_api:htmlize() to their strings This breaks code and is non backwards compatible.  Be aware !!  Also made {Tag, Attr} generate xhtml compliant code. (klacke)
+Cleaner shutdown (klacke)
+Many improvements to the chat server. (jb)
+When clearing the cache, yaws modules would remain loaded but be forgotten, resulting in a memory leak. (cschultz)
+Added possibility to name the module in a .yaws file using a syntax of < erl module="foobar"> .... < /erl> to always get a .yaws file named to a special fixed modulename instead of the increasing m1,m2 .. modulenames. This is useful if we want to keep API functions in certain .yaws files and call these functions from other .yaws files. (klacke)
+Many reverse proxy bugs fixed. Maybe the reverse proxy is actually working now. It was never especially good. Try it. (mikl)
+Bug fixed with bindings that        got propagated over to other later requests.Yet another put/get bug. Maybe it's time for an acronym there. YAPGB ??? (klacke)
+Better looking debug printouts.  + dont overwrite trace_to_tty (-x commandline) if set on the        commandline and also in the config file.  Commandline should have        precedense over config file directives. (klacke)
+Wrote an internals document. Available at <a href="http://yaws.hyber.org/internals.yaws"> http://yaws.hyber.org/internals.yaws</a> (klacke)
+
 Fri Feb 18, 2005 Bugfix release
 Fatso bug found by Fredrik Linder where	yaws completely crash on bad URLs that for example contain space chars in the uri. This is the bug which provoked this imideate followup release. (klacke)
 Removed old broken URL decode code which was wrong. This code was added befor we actually understood how URLs are en/de coded (klacke, jb)

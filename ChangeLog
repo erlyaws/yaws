@@ -1,3 +1,128 @@
+2005-04-12 14:49  klacke
+
+	* vsn.mk: prepare for 1.54
+
+2005-04-12 14:48  klacke
+
+	* src/: yaws_config.erl, yaws_debug.erl, yaws_revproxy.erl,
+	yaws_server.erl, yaws_sup.erl: better looking debug printouts +
+	dont overwrite trace_to_tty (-x commandline) if set on the
+	commandline and ind the config file, commandline should have
+	precedense
+
+2005-04-12 13:30  klacke
+
+	* doc/yaws.pdf, include/yaws.hrl, src/yaws_server.erl,
+	www/internals.yaws, www/redirect.yaws: Bug fixed with bindings that
+	got propagated over redirects. Good ol get/put bug
+
+2005-04-12 09:35  klacke
+
+	* src/yaws_content_negotiation.erl: ""
+
+2005-04-11 15:59  klacke
+
+	* www/: TAB.inc, compile_layout.dia, compile_layout.png,
+	internals.yaws, process_tree.dia, process_tree.png: ""
+
+2005-04-10 18:34  mikl
+
+	* src/yaws_revproxy.erl: By default proxy is not keep-alived
+
+2005-04-10 14:42  mikl
+
+	* src/: yaws_api.erl, yaws_revproxy.erl: Fixed yaws_proxy bugs
+	(client request was sent twice, Cookie header was always added,
+	tuple use as PID). I still need to do some refactoring
+
+2005-03-29 22:52  klacke
+
+	* src/yaws.erl: buggy printout of server URI during startup
+
+2005-03-23 21:04  klacke
+
+	* src/yaws.erl: ""
+
+2005-03-22 00:56  klacke
+
+	* src/yaws_compile.erl, www/appmods.yaws, www/configuration.yaws,
+	www/dynamic.yaws, www/post.yaws, www/ssi.yaws, www/stream.yaws,
+	www/yman.yaws: added possibility to name the module in a .yaws file
+
+2005-03-15 00:32  cschultz
+
+	* src/yaws_server.erl: Two bug fixes, one of them serious:  When
+	clearing the cache, yaws modules would remain loaded but be
+	forgotten, resulting in a memory leak.
+
+2005-03-06 21:23  klacke
+
+	* www/arg.yaws: ""
+
+2005-03-04 00:59  jbevemyr
+
+	* applications/chat/chat/chat.js: Fixed smilie situation in chat.
+
+2005-03-04 00:54  jbevemyr
+
+	* applications/chat/chat/: chat.js, chat.yaws: Fixed smilie
+	situation in chat.
+
+2005-03-03 17:00  jbevemyr
+
+	* applications/chat/chat/chat.yaws: Added smileys.
+
+2005-03-03 16:51  jbevemyr
+
+	* applications/chat/chat/chat.yaws: Added smileys.
+
+2005-03-03 16:24  jbevemyr
+
+	* applications/chat/chat/: angel.png, bigsmile.png, burp.png,
+	chat.yaws, cool.png, crossedlips.png, cry.png, embarrassed.png,
+	farted.png, kiss.png, moneymouth.png, oneeye.png, sad.png,
+	scream.png, smile.png, think.png, tongue.png, wink.png, yell.png:
+	Added smileys.
+
+2005-02-28 16:56  jbevemyr
+
+	* applications/chat/: chat/chat.js, chat/chat.yaws, src/chat.erl:
+	Improved chat server some.
+
+2005-02-28 16:32  jbevemyr
+
+	* applications/chat/: chat/chat.js, chat/chat.yaws, src/chat.erl,
+	chat/chat.js: Improved chat server some.
+
+2005-02-27 13:59  klacke
+
+	* src/yaws_server.erl: cleaner shutdown
+
+2005-02-25 16:32  klacke
+
+	* src/yaws_api.erl: removed the automatic htmlize on strings in
+	ehtml, it was wrong ... (I think cvslsdiff .to have it there, it's
+	better for users that want it to explicitly add htmlize() to their
+	strings, this breaks code and is non backwards compat  Be aware.
+	Also made {Tag, Attr} generate xhtml compliant code
+
+2005-02-25 16:22  klacke
+
+	* src/: yaws_api.erl, yaws_ssl.erl: bad line parsing in ssl mode,
+	crashed when client sent headers splitup in a certain way
+
+2005-02-23 22:28  klacke
+
+	* src/yaws_session_server.erl: ""
+
+2005-02-21 10:28  klacke
+
+	* src/yaws_api.erl: one more url_decode bug
+
+2005-02-18 21:15  klacke
+
+	* ChangeLog, www/news: ""
+
 2005-02-18 21:02  klacke
 
 	* vsn.mk: prepare for 1.53

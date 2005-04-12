@@ -49,7 +49,7 @@ We have the following relevant record definitions:
 	  clidata,        %% The client data (as a binary in POST requests)
 	  server_path,    %% The normalized server path
 	  querydata,      %% Was the URL on the form of ...?query (GET reqs)
-	  appmoddata,     %% the remainder of the path leading up to the querey
+	  appmoddata,     %% the remainder of the path up to the query
 	  docroot,        %% where's the data
 	  fullpath,       %% full path to yaws file
 	  cont,		  %% Continuation for chunked multipart uploads
@@ -181,12 +181,14 @@ from a process. The other process can call this function to deliver
 these chunks. It requires the \fBout/1\fR function to return the
 value \fB{streamcontent, MimeType, FirstChunk}\fR to work.
 YawsPid is the process identifier of the yaws process delivering the original
-.yaws file. That is self() in the yaws code. The Pid must typically be passed (somehow) to the producer of the stream.
+.yaws file. That is self() in the yaws code. 
+The Pid must typically be passed (somehow) to the producer of the stream.
 
 .TP
 \fBstream_chunk_deliver_blocking(YawsPid, Data)\fR
 A syncronous verion of the above function. This syncronous version must always
-be used when the producer of the stream is faster than the consumer. This is usually the case since the client is the WWW browser.
+be used when the producer of the stream is faster than the consumer. 
+This is usually the case since the client is the WWW browser.
 
 .TP
 \fBstream_chunk_end(YawsPid)\fR
@@ -389,7 +391,7 @@ Body  = EHTML
 \fR
 
 
-For example, \fI{p, [], "Howdy"}\fR expand into
+For example, \fI{p, [], "Howdy"}\fR expands into
 "<p>Howdy</p> and 
 
 \fI
@@ -433,7 +435,7 @@ if a file is very large or if data arrives from back end servers on the network.
 .TP
 \fB{header, H}\fR
 Accumulates a HTTP header. The trailing CRNL which is supposed
-to end all HTTp headers must not be added. It is added by the server.
+to end all HTTP headers must NOT be added. It is added by the server.
 The following list of headers are given special treatment.
 
 \fI{connection, What}\fR  

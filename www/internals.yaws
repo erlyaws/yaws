@@ -37,7 +37,7 @@ out(A) ->
 
   <p>When the Yaws server ships a .yaws page it will process it chunk by chunk
   through the .yaws file. If it is HTML code, the server will ship that
-  as is, whereas if it is \Erlang\  code, the \Yaws\  server will invoke the
+  as is, whereas if it is Erlang  code, the Yaws  server will invoke the
   <tt>out/1</tt> function in that code and insert the output of that <tt>out/1</tt>
   function into the stream
   of HTML that is being shipped to the client.
