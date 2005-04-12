@@ -32,7 +32,8 @@ typecheck([], _,_) ->
 format_record(Record, Name, Fields) ->
     case tuple_to_list(Record) of
 	[Name | Rest] ->
-	    {record, Name, format_record(Rest, Fields)};
+	    io_lib:format("record ~w\n~s", [Name,
+					    format_record(Rest, Fields)]);
 	_X ->
 	    ?Debug("Bad record ~p is not ~p~n", [_X, Name]),
 	    "badrecord"
@@ -40,10 +41,32 @@ format_record(Record, Name, Fields) ->
 
 format_record([], []) ->
     [];
+format_record([Val|Vals], [F|Fs]) when is_integer(Val); 
+				       Val == []; 
+				       atom(Val);
+				       is_float(Val)->
+    [io_lib:format("     ~w = ~w\n", [F,Val]),
+     format_record(Vals, Fs)];
 format_record([Val|Vals], [F|Fs]) ->
-    [{F, ?F("~p", [nobin(Val)])} |
-     format_record(Vals, Fs)].
+    case is_string(Val) of
+	true ->
+	    [io_lib:format("     ~w = ~s\n", [F,Val]),
+	     format_record(Vals, Fs)];
+	false ->
+	    [io_lib:format("     ~w = ~p~n", [F, nobin(Val)]),
+	     format_record(Vals, Fs)]
+    end.
 
+is_string(L) when list(L) ->
+    lists:filter(fun(X) when integer(X),
+			     $A < X, X < $z ->
+			 false;
+		    (_) ->
+			 true
+		 end,L) == [];
+is_string(_) ->
+    false.
+						    
 
 
 assert(equal,X,Y,_) when X==Y ->

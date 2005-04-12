@@ -79,7 +79,7 @@ get_app_args() ->
 	    end,
     TraceOutput = case application:get_env(yaws, traceoutput) of
 		undefined ->
-		    member({yaws, ["tracedebug"]}, AS);
+		    member({yaws, ["traceoutput"]}, AS);
 		{ok, Val3}  ->
 		    Val3
 	    end,

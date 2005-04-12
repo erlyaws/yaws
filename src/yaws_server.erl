@@ -97,12 +97,18 @@ init({Debug, Trace, TraceOut, Conf, RunMod, Embedded}) ->
     case Embedded of 
 	false ->
 	    Config = (catch yaws_config:load(Conf, Trace, TraceOut, Debug)),
-	    ?Debug("Config= ~p~n", [Config]),
 	    case Config of
 		{ok, Gconf, Sconfs} ->
 		    erase(logdir),
-		    ?Debug("GC = ~p~n", [?format_record(Gconf, gconf)]),
-		    ?Debug("SCS: ~p~n", [Sconfs]),
+		    ?Debug("GC = ~s~n", [?format_record(Gconf, gconf)]),
+		    lists:foreach(
+		      fun(Group) ->
+			      lists:foreach(
+				fun(SC) ->
+					?Debug("SC = ~s~n",
+					       [?format_record(SC, sconf)])
+				end, Group)
+		      end, Sconfs),
 		    yaws_log:setdir(Gconf, Sconfs),
 		    case Gconf#gconf.trace of
 			{true, What} ->
@@ -788,10 +794,10 @@ aloop(CliSock, GS, Num) ->
 	{Req0, H0} ->
 	    {Req, H} = fix_abs_uri(Req0, H0),
 	    SC = pick_sconf(GS#gs.gconf, H, GS#gs.group, SSL),
-	    ?Debug("SC: ~p", [?format_record(SC, sconf)]),
+	    ?Debug("SC: ~s", [?format_record(SC, sconf)]),
 	    ?TC([{record, SC, sconf}]),
-	    ?Debug("Headers = ~p~n", [?format_record(H, headers)]),
-	    ?Debug("Request = ~p~n", [?format_record(Req, http_request)]),
+	    ?Debug("Headers = ~s~n", [?format_record(H, headers)]),
+	    ?Debug("Request = ~s~n", [?format_record(Req, http_request)]),
 	    IP = case ?sc_has_access_log(SC) of
 		     true ->
 			 {ok, {Ip, _Port}} = peername(CliSock, SSL),
@@ -1067,8 +1073,8 @@ bad_request(CliSock, Req, _Head) ->
 
 
 'POST'(CliSock, Req, Head) ->
-    ?Debug("POST Req=~p H=~p~n", [?format_record(Req, http_request),
-				  ?format_record(Head, headers)]),
+    ?Debug("POST Req=~s~n H=~s~n", [?format_record(Req, http_request),
+				    ?format_record(Head, headers)]),
     ok = inet_setopts(CliSock, [{packet, raw}, binary]),
     SC=get(sc),
     PPS = SC#sconf.partial_post_size,
@@ -1180,7 +1186,7 @@ handle_extension_method(_Method, CliSock, Req, Head) ->
 
 handle_request(CliSock, ARG, N) ->
     Req = ARG#arg.req,
-    ?Debug("SrvReq=~p~n",[Req]),
+    ?Debug("SrvReq=~s~n",[?format_record(Req, http_request)]),
     case Req#http_request.path of
 	{abs_path, RawPath} ->
 	    case (catch yaws_api:url_decode_q_split(RawPath)) of
@@ -1327,7 +1333,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 		    end
 	    end;
 	yaws ->
-	    ?Debug("~p~n", [?format_record(UT, urltype)]),
+	    ?Debug("UT = ~s~n", [?format_record(UT, urltype)]),
 	    yaws:outh_set_dyn_headers(Req, H, UT),
 	    do_yaws(CliSock, ARG, UT, N);
 	forbidden ->
@@ -2568,9 +2574,9 @@ url_type(GetPath) ->
 	[] ->
 	    UT = do_url_type(SC, GetPath),
 	    ?TC([{record, UT, urltype}]),
-	    ?Debug("UT=~p\n", [UT]),
+	    ?Debug("UT=~s\n", [?format_record(UT, urltype)]),
 	    CF = cache_file(SC, GC, GetPath, UT),
-	    ?Debug("CF=~p\n", [yaws_debug:nobin(CF)]),
+	    ?Debug("CF=~s\n", [?format_record(CF, urltype)]),
 	    CF;
 	[{_, When, UT}] ->
 	    N = now_secs(),
@@ -2641,7 +2647,7 @@ cache_file(SC, GC, Path, UT) when
     [{num_files, N}] = ets:lookup(E, num_files),
     [{num_bytes, B}] = ets:lookup(E, num_bytes),
     FI = UT#urltype.finfo,
-    ?Debug("FI=~p\n", [FI]),
+    ?Debug("FI=~s\n", [?format_record(FI, file_info)]),
     if
 	N + 1 > GC#gconf.max_num_cached_files ->
 	    error_logger:info_msg("Max NUM cached files reached for server "
@@ -2719,7 +2725,8 @@ clear_ets(E) ->
 
 %% return #urltype{}
 do_url_type(SC, GetPath) ->
-    ?Debug("do_url_type ~p~n~p~n", [SC, GetPath]),
+    ?Debug("do_url_type SC=~s~nGetPath=~p~n", 
+	   [?format_record(SC,sconf), GetPath]),
     case GetPath of
 	"/" -> %% special case 
 	    maybe_return_dir(SC#sconf.docroot, GetPath);

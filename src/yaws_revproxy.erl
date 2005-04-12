@@ -44,7 +44,7 @@ init(CliSock, ARG, DecPath, QueryPart, {Prefix, URL}, N) ->
 	    Cli = sockmode(Headers0, ARG#arg.req,
 			   #psock{s = CliSock, prefix = Prefix,
 				  url = URL, type = client}),
-	    ?Debug("CLI: ~p~n",[?format_record(Cli, psock)]),
+	    ?Debug("CLI: ~s~n",[?format_record(Cli, psock)]),
 	    Headers = rewrite_headers(Cli, Headers0),
 	    ReqStr = yaws_api:reformat_request(
 		       rewrite_path(ARG#arg.req, Prefix)),

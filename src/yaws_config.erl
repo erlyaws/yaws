@@ -49,6 +49,7 @@ load(false, Trace, TraceOutput, Debug) ->
 	    load({file, File}, Trace, TraceOutput, Debug)
     end;
 load({file, File}, Trace, TraceOutput, Debug) ->
+    io:format("KKKKK Trace = ~p~n", [Trace]),
     error_logger:info_msg("Yaws: Using config file ~s~n", [File]),
     case file:open(File, [read]) of
 	{ok, FD} ->
@@ -269,7 +270,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
     case toks(Chars) of
 	[] ->
 	    fload(FD, globals, GC, C, Cs, Lno+1, Next);
-	["trace", '=', Bstr] ->
+	["trace", '=', Bstr] when GC#gconf.trace == false ->
 	    case Bstr of
 		"traffic" ->
 		    fload(FD, globals, GC#gconf{trace = {true, traffic}},
@@ -283,6 +284,10 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		_ ->
 		    {error, ?F("Expect false|http|traffic at line ~w",[Lno])}
 	    end;
+	["trace", '=', _Bstr] ->
+	    %% don't overwrite setting from commandline
+	    fload(FD, globals, GC, C, Cs, Lno+1, Next);
+    
 	
 	["logdir", '=', Logdir] ->
 	    Dir = filename:absname(Logdir),
