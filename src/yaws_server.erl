@@ -393,7 +393,7 @@ set_dir_mode(Dir, Mode) ->
     end.
 
 
-gserv(Top, _, []) ->
+gserv(_Top, _, []) ->
     proc_lib:init_ack(none);
 
 %% One server per IP we listen to
@@ -782,6 +782,7 @@ acceptor0(GS, Top) ->
 %%%----------------------------------------------------------------------
 
 aloop(CliSock, GS, Num) ->
+    put(init_db, get()),
     SSL = GS#gs.ssl,
     case  yaws:http_get_headers(CliSock, SSL) of
 	{Req0, H0} ->
@@ -819,19 +820,10 @@ aloop(CliSock, GS, Num) ->
 
 
 erase_transients() ->
-    erase(post_parse),
-    erase(query_parse),
-    erase(outh),
-    erase(sc),
-    foreach(fun(X) ->
-		    case X of
-			{binding, _} ->
-			    erase(X);
-			_ ->
-			    ok
-		    end
-	    end, get()).
-    
+    I = get(init_db),
+    erase(),
+    lists:foreach(fun({K,V}) -> put(K,V) end, I).
+
 
 handle_method_result(Res, CliSock, IP, GS, Req, H, Num) ->
     case Res of
@@ -844,7 +836,7 @@ handle_method_result(Res, CliSock, IP, GS, Req, H, Num) ->
 	    erase_transients(),
 	    {ok, Num+1};
 	{page, P} ->		    
-	    erase(post_parse),
+	    %% keep post_parse
 	    erase(query_parse),
 	    put(outh, #outh{}),
 	    case P of
@@ -1886,7 +1878,7 @@ handle_out_reply(L, LineNo, YawsFile, UT, A) when list (L) ->
 
 
 %% yssi, yaws include
-handle_out_reply({yssi, Yfile}, _LineNo, YawsFile, UT, [ARG]) ->
+handle_out_reply({yssi, Yfile}, _LineNo, _YawsFile, UT, [ARG]) ->
     SC = get(sc),
     UT2 = url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile]),
     case UT2#urltype.type of

@@ -10,16 +10,16 @@ out(A) ->
 
 <h2>Redirects</h2>
 
-  <p> Redirs are a powerful tool in the webapp programmer toolbox. The 
-    Webserver returns a specific status code (302) and adds a 
-    "Location:" header
-    to the responce headers to the Browser. The Browser then displays the new
-    page as indicated in the "Location" header.</p>
+<p> Redirs are a powerful tool in the webapp programmer toolbox. The 
+Webserver returns a specific status code (302) and adds a 
+"Location:" header
+to the responce headers to the Browser. The Browser then displays the new
+page as indicated in the "Location" header.</p>
 
-  <p> Yaws supports a number of different forms of redirect return values
-    from the out/1 function.</p>
-  <p>
-    The code:</p>
+<p> Yaws supports a number of different forms of redirect return values
+from the out/1 function.</p>
+<p>
+The code:</p>
 
 <erl>
 out(_A) ->
@@ -30,7 +30,8 @@ out(_A) ->
 </erl>
 
 <p> Clickable <a href="redirect2.yaws"> On this link </a> executes the
-  above redirect code.</p>
+  above redirect code.
+</p>
 
 <p> The code above redirects to an external URL. The HTTP RFC mandates
   that the Loaction header must contain complete URLs, including the 
@@ -55,21 +56,22 @@ out(_A) ->
   redirects, once again, to google. Double redirects.
 </p>
 
-<p>While working with redirects, the tool <a href="http://curl.haxx.se/"> 
-  curl </a> is an excellent way to troubleshoot the behaviour of your 
-  redirects.
-  For example:</p>
+<p>While working with redirects, the tool <a href="http://curl.haxx.se/"> curl </a> 
+is an excellent way to troubleshoot the behaviour of your 
+redirects.For example:</p>
 
 <div class="box">
-<verbatim>
-# curl -I http://rubin.hyber.org:8000/redirect3.yaws
-HTTP/1.1 302 Found
-Server: Yaws/1.49 Yet Another Web Server
-Location: http://rubin.hyber.org:8000/redirect2.yaws
-Date: Tue, 16 Nov 2004 20:16:01 GMT
-Content-Type: text/html
+  <verbatim>
 
-<verbatim>
+    # curl -I http://rubin.hyber.org:8000/redirect3.yaws
+
+    HTTP/1.1 302 Found
+    Server: Yaws/1.49 Yet Another Web Server
+    Location: http://rubin.hyber.org:8000/redirect2.yaws
+    Date: Tue, 16 Nov 2004 20:16:01 GMT
+    Content-Type: text/html
+
+  </verbatim>
 </div>
 
   <p>Where <tt> http://rubin.hyber.org:8000</tt> is where I am currently

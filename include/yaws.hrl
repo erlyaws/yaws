@@ -56,12 +56,12 @@
 
 
 %% global conf
--record(gconf,{yaws_dir,
-	       trace,
-	       flags = ?GC_DEF,
-	       logdir,
+-record(gconf,{yaws_dir,           %% topdir of Yaws installation
+	       trace,              %% false | {true,http}|{true,traffic}
+	       flags = ?GC_DEF,    %% boolean flags
+	       logdir,          
 	       ebin_dir = [],
-	       runmods = [],
+	       runmods = [],       %% runmods for entire server
 	       keepalive_timeout = 15000,
 	       max_num_cached_files = 400,
 	       max_num_cached_bytes = 1000000,  %% 1 MEG
@@ -69,8 +69,8 @@
 	       large_file_chunk_size = 10240,
 	       log_wrap_size = 1000000,  % wrap logs after 1M
 	       cache_refresh_secs = 30,  % seconds  (auto zero when debug)
-	       include_dir = [],
-	       phpexe = "php",
+	       include_dir = [],    %% list of inc dirs for .yaws files 
+	       phpexe = "php",      %% cgi capable php executable
 	       yaws,                %% server string
 	       username,            %% maybe run as a different user than root
 	       uid,                 %% unix uid of user that started yaws
