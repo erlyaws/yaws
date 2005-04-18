@@ -110,8 +110,7 @@ build_toolbar([{[],Url,Cmd}|Rest], Used) ->
     end ++
 	[{td, [nowrap,{width,"2%"},{valign,middle},{align,left}],
 	  [{a, [{class,nolink}, {href,Url}],
-	    {font, [{size,2},{color,"#000000"},{title,Cmd}],
-	     {pre_html,Cmd}}}]} |
+	    {font, [{size,2},{color,"#000000"},{title,Cmd}],Cmd}}]} |
 	 build_toolbar(Rest, Used+3)];    
 build_toolbar([{Gif,Url,Cmd}|Rest], Used) ->
     (if Used == -1 ->
@@ -288,6 +287,7 @@ sendChunk([{head, {File, _Opts}}|Rest], S) when S#send.attached=="no" ->
     sendChunk(Rest, S#send{param=ignore});
 
 sendChunk([{head, {File, Opts}}|Rest], S0) when S0#send.attached=="yes" ->
+    % io:format("attachment head\n"),
     if S0#send.estate /= "" ->
 	    smtp_send_b64_final(S0);
        true ->
@@ -331,6 +331,7 @@ sendChunk([{body, Data}|Rest], S) ->
 	ignore ->
 	    sendChunk(Rest, S);
 	file ->
+	    %io:format("sending body chunk\n"),
 	    NewS = smtp_send_b64(S, Data),
 	    sendChunk(Rest, NewS)
     end.
@@ -424,7 +425,7 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 		      {td,[{height,0},{align,left},{valign,top}],[]}]},
 	      {tr,[],[{td,[{height,35},{align,left},{valign,top}],
 		       {font,[{color,"#000000"},{size,2},nowrap],
-			{pre_html,"&nbsp;To:&nbsp;"}}},
+			"&nbsp;To:&nbsp;"}},
 		      {td,[{height,35},{align,left},{valign,top}],
 		       {input,[{name,to},{type,text},{size,66},
 			       {check,value,quote(To)}]}}]},
@@ -432,7 +433,7 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 		      {td,[{height,0},{align,left},{valign,top}],[]}]},
 	      {tr,[],[{td,[{height,35},{align,left},{valign,top}],
 		       {font,[{color,"#000000"},{size,2},nowrap],
-			{pre_html,"&nbsp;Cc:&nbsp;"}}},
+			"&nbsp;Cc:&nbsp;"}},
 		      {td,[{height,35},{align,left},{valign,top}],
 		       {input,[{name,cc},{type,text},{size,66},
 			       {check,value,quote(Cc)}]}}]},
@@ -440,14 +441,14 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
 		      {td,[{height,0},{align,left},{valign,top}],[]}]},
 	      {tr,[],[{td,[{height,35},{align,left},{valign,top}],
 		       {font,[{color,"#000000"},{size,2},nowrap],
-			{pre_html,"&nbsp;Bcc:&nbsp;"}}},
+			"&nbsp;Bcc:&nbsp;"}},
 		      {td,[{height,35},{align,left},{valign,top}],
 		       {input,[{name,bcc},{type,text},{size,66},
 			       {check,value,quote(Bcc)}]}}
 		     ]},
 	      {tr,[],[{td,[{height,35},{align,left},{valign,top},nowrap],
 		       {font,[{color,"#000000"},{size,2}],
-			{pre_html,"&nbsp;Subject:&nbsp;"}}},
+			"&nbsp;Subject:&nbsp;"}},
 		      {td,[{colspan,3},{align,left},{valign,top}],
 		       {input,[{name,subject},{type,text},{size,66},
 			       {check,value,quote(Subject)}]}}]}
@@ -928,8 +929,8 @@ display_login(A, Status) ->
 	   {tr,[],{td,[{nowrap,true},{align,left},{valign,middle}],
 		   {font, [{size,6},{color,black}],
 		    "WebMail at "++maildomain()}}}},
-	  {pre_html, io_lib:format("<p>Your login status is: ~s</p>",
-				   [Status])},
+	  io_lib:format("<p>Your login status is: ~s</p>",
+			[Status]),
 	  {form,
 	   [{method,post},
 	    {name,f},
@@ -1332,7 +1333,7 @@ parse_headers([Line|Lines], Headers) ->
 	    Key = lowercase(string:strip(string:sub_string(Line, 1, N-1))),
 	    Value = 
 		if length(Line) > N+1 ->
-			string:sub_string(Line, N+2);
+			string:strip(string:sub_string(Line, N+2));
 		   true ->
 			[]
 		end,
@@ -1350,10 +1351,10 @@ parse_key_value(O) ->
     parse_key_value(O, []).
 
 parse_key_value([], Acc) ->
-    {lists:reverse(Acc), []};
+    {string:strip(lists:reverse(Acc)), []};
 parse_key_value([$=|Rest], Acc) ->
     Value = unquote(string:strip(Rest)),
-    Key = string:strip(lists:reverse(Acc)),
+    Key = lowercase(string:strip(lists:reverse(Acc))),
     {Key, Value};
 parse_key_value([C|Cs], Acc) ->
     parse_key_value(Cs, [C|Acc]).
@@ -2084,43 +2085,43 @@ format_message(Session, Message, MailNr, Depth) ->
 		   [{td,[{valign,middle},{align,left},{width,"15%"},
 			 {height,25}],
 		     {font, [{color,"#000000"},{size,2}],
-		      {nobr,[],{pre_html,"&nbsp;From:&nbsp;"}}}},
+		      {nobr,[],"&nbsp;From:&nbsp;"}}},
 		    {td, [{valign,middle},{align,left}],
 		     {font, [{color,"#000000"},{size,2}],
-		      [{pre_html,"&nbsp;"},
+		      ["&nbsp;",
 		       unquote(From)]}},
 		    {td,[{valign,middle},{align,right},{height,"25"}],
 		     {font, [{color,"#000000"},{size,2}],
-		      {nobr,[],{pre_html,"&nbsp;Sent:&nbsp;"}}}},
+		      {nobr,[],"&nbsp;Sent:&nbsp;"}}},
 		    {td, [nowrap,{valign,middle},{align,right},
 			  {width,"30%"}],
 		     {font, [{color,"#000000"},{size,2}],
-		      {pre_html,"&nbsp;"++H#mail.date}}}]},
+		      "&nbsp;"++H#mail.date}}]},
 		  {tr,[],
 		   [{td,[{valign,top},{align,left},{width,"15%"},
 			 {height,25}],
 		     {font, [{color,"#000000"},{size,2}],
-		      {nobr,[],{pre_html,"&nbsp;To:&nbsp;"}}}},
+		      {nobr,[],"&nbsp;To:&nbsp;"}}},
 		    {td, [{valign,top},{align,left},{width,"100%"}],
 		     {font, [{color,"#000000"},{size,2}],
-		      [{pre_html,"&nbsp;"},
+		      ["&nbsp;",
 		       unquote(To)]}}]},
 		  {tr,[],
 		   [{td,[{valign,middle},{align,left},{width,"15%"},
 			 {height,25}],
 		     {font, [{color,"#000000"},{size,2}],
-		      {nobr,[],{pre_html,"&nbsp;Cc:&nbsp;"}}}},
+		      {nobr,[],"&nbsp;Cc:&nbsp;"}}},
 		    {td, [{valign,middle},{align,left},{width,"100%"}],
 		     {font, [{color,"#000000"},{size,2}],
-		      [{pre_html,"&nbsp;"},CC]}}]},
+		      ["&nbsp;",CC]}}]},
 		  {tr,[],
 		   [{td,[{valign,middle},{align,left},{width,"15%"},
 			 {height,25}],
 		     {font, [{color,"#000000"},{size,2}],
-		      {nobr,[],{pre_html,"&nbsp;Subject:&nbsp;"}}}},
+		      {nobr,[],"&nbsp;Subject:&nbsp;"}}},
 		    {td, [{valign,middle},{align,left},{width,"100%"}],
 		     {font, [{color,"#000000"},{size,2}],
-		      [{pre_html,"&nbsp;"},Subject]}}]}
+		      ["&nbsp;",Subject]}}]}
 		 ]},
 		{table, [{width,"100%"},{border,1},{cellpadding,6},
 			 {class,msgbody}],
@@ -2188,7 +2189,7 @@ has_body_type(Type, {H,B}) ->
 	_ -> false
     end.
 
-format_body(Session, H,Msg,Depth) ->
+format_body(Session, H, Msg, Depth) ->
     ContentType =
 	case H#mail.content_type of
 	    {CT,Ops} -> {lowercase(CT), Ops};
@@ -2197,10 +2198,10 @@ format_body(Session, H,Msg,Depth) ->
     case {ContentType,H#mail.transfer_encoding} of
 	{{"text/html",_}, Encoding} ->
 	    Decoded = decode_message(Encoding, Msg),
-	    {pre_html, Decoded};
+	    Decoded;
 	{{"text/plain",_}, Encoding} ->
 	    Decoded = decode_message(Encoding, Msg),
-	    {pre, [], wrap_text(Decoded, 80)};
+	    {pre, [], yaws_api:htmlize(wrap_text(Decoded, 80))};
 	{{"multipart/mixed",Opts}, Encoding} ->
 	    {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
 	    [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
@@ -2262,7 +2263,7 @@ format_body(Session, H,Msg,Depth) ->
 		    []
 	    end;
 	{_,_} ->
-	    {pre, [], wrap_text(Msg, 80)}
+	    {pre, [], yaws_api:htmlize(wrap_text(Msg, 80))}
     end.
 
 quote_format(Session, H, Msg) ->
