@@ -1199,18 +1199,21 @@ handle_request(CliSock, ARG, N) ->
 
 		    case {is_auth(ARG, DecPath,
 				  ARG#arg.headers,SC#sconf.authdirs),
-			  is_revproxy(DecPath, SC#sconf.revproxy)} of
-			{true, false} ->
+			  is_revproxy(DecPath, SC#sconf.revproxy),
+			  is_redirect_map(DecPath, SC#sconf.redirect_map)} of
+			{_, _, {true, MethodHostPort}} ->
+			    deliver_302_map(CliSock, Req, ARG, MethodHostPort);
+			{true, false, _} ->
 			    UT   = url_type(DecPath),
 			    ARG2 = ARG#arg{server_path = DecPath,
 					   querydata= QueryPart,
 					   fullpath=UT#urltype.fullpath,
 					   pathinfo=UT#urltype.pathinfo},
 			    handle_ut(CliSock, ARG2, UT, N);
-			{true, {true, PP}} ->
+			{true, {true, PP}, _} ->
 			    yaws_revproxy:init(CliSock, ARG,
 					       DecPath,QueryPart,PP, N);
-			{{false, Realm}, _} ->
+			{{false, Realm}, _, _} ->
 			    deliver_401(CliSock, Req, Realm)
 		    end
 	    end;
@@ -1257,6 +1260,22 @@ is_revproxy(Path, [{Prefix, URL} | Tail]) ->
 	    is_revproxy(Path, Tail)
     end.
 
+is_redirect_map(_, []) ->
+    false;
+is_redirect_map(Path, [E={Prefix, _}|Tail]) ->
+    case yaws:is_prefix(Prefix, Path) of
+	{true, _} ->
+	    {true, E};
+	false ->
+	    is_redirect_map(Path, Tail)
+    end;
+is_redirect_map(Path, [E={Prefix,_,_}|Tail]) ->
+    case yaws:is_prefix(Prefix, Path) of
+	{true, _} ->
+	    {true, E};
+	false ->
+	    is_redirect_map(Path, Tail)
+    end.
 
 %% Return values:
 %% continue, done, {page, Page}
@@ -1432,6 +1451,43 @@ deliver_302(CliSock, _Req, Arg, Path) ->
     deliver_accumulated(CliSock),
     done_or_continue().
 
+
+deliver_302_map(CliSock, Req, Arg, MethodHostPort) ->
+    ?Debug("in redir 302 ",[]),
+    H = get(outh),
+    SC=get(sc),
+    DecPath = safe_decode_path(Req#http_request.path),
+    {Scheme, RedirHost} =
+	case MethodHostPort of
+	    {_,Method,HostPort} ->
+		{Method, HostPort};
+	    {_,HostPort} ->
+		{yaws:redirect_scheme(SC), HostPort}
+	end,
+    Loc = case string:tokens(DecPath, "?") of
+	      [P] ->
+		  ["Location: ", Scheme,
+		   RedirHost, P, "\r\n"];
+	      [P, Q] ->
+		  ["Location: ", Scheme,
+		   RedirHost, P, "?", Q, "\r\n"]
+	  end,
+
+
+    Headers = Arg#arg.headers,
+
+    {DoClose, _Chunked} = yaws:dcc(Req, Headers),
+
+    new_redir_h(H#outh{
+		  connection  = yaws:make_connection_close_header(DoClose),
+		  doclose = DoClose,
+		  server = yaws:make_server_header(),
+		  chunked = false,
+		  date = yaws:make_date_header()
+		 }, Loc),
+
+    deliver_accumulated(CliSock),
+    done_or_continue.
 
 deliver_options(CliSock, _Req) ->
     H = #outh{status = 200,

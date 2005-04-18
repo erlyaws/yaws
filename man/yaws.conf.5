@@ -336,6 +336,18 @@ Ends an SSL definition
 
  
 .TP
+\fB<redirect> ... </redirect>\fR
+Defines an redirect mapping. The following items are allowed
+within a matching pair of <redirect> and </redirect> delimiters.
+
+.TP
+\fBPath = [Scheme://]Host[:Port]\fR
+All accesses to Path will be redirected to [Scheme://]Host[:Port]Path.
+Scheme and Port is optional. The default is to use the servers scheme
+and port, rsheme and rport will be used if defined. To redirect
+all references to a site use "/" as Path.
+
+.TP
 \fB<auth> ... </auth>\fR
 Defines an auth structure. The following items are allowed
 within a matching pair of <auth> and </auth> delimiters.

@@ -137,6 +137,7 @@
 -record(sconf,
 	{port = 8000,                %% which port is this server listening to
 	 flags = ?SC_DEF,
+	 redirect_map=[],            %% redirect all requests to HostPort
 	 rhost,                      %% forced redirect host (+ optional port)
 	 rmethod,                    %% forced redirect method
 	 docroot,                    %% path to the docs

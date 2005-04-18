@@ -554,6 +554,9 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	['<', "auth", '>'] ->
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, #auth{});
 
+	['<', "redirect", '>'] ->
+	    fload(FD, server_redirect, GC, C, Cs, Lno+1, Next, []);
+
 	["default_server_on_this_ip", '=', _Bool] ->
 	    fload(FD, server, GC, C, Cs, Lno+1, Next);
 
@@ -819,6 +822,34 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
 	    end;
 	['<', "/auth", '>'] ->
 	    C2 = C#sconf{authdirs = [Auth|C#sconf.authdirs]},
+	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+	[H|T] ->
+	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
+    end;
+
+fload(FD, server_redirect, _GC, _C, _Cs, Lno, eof, _RedirMap) ->
+    file:close(FD),
+    {error, ?F("Unexpected end of file at line ~w", [Lno])};
+
+fload(FD, server_redirect, GC, C, Cs, Lno, Chars, RedirMap) ->
+    %?Debug("Chars: ~s", [Chars]),
+    Next = io:get_line(FD, ''),
+    case toks(Chars) of
+	[] ->
+	    fload(FD, server_redirect, GC, C, Cs, Lno+1, Next, RedirMap);
+	[Path, '=', MethodHostPort] ->
+	    Entry  = case MethodHostPort of
+			 "http://"++HostPort ->
+			     {Path, "http", HostPort};
+			 "https://"++HostPort ->
+			     {Path, "https", HostPort};
+			 HostPort ->
+			     {Path, HostPort}
+		     end,
+	    fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
+		  [Entry|RedirMap]);
+	['<', "/redirect", '>'] ->
+	    C2 = C#sconf{redirect_map = lists:reverse(RedirMap)},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 	[H|T] ->
 	    {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
