@@ -1484,7 +1484,7 @@ deliver_302_map(CliSock, Req, Arg, MethodHostPort) ->
 		 }, Loc),
 
     deliver_accumulated(CliSock),
-    done_or_continue.
+    done_or_continue().
 
 deliver_options(CliSock, _Req) ->
     H = #outh{status = 200,

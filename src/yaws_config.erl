@@ -840,9 +840,9 @@ fload(FD, server_redirect, GC, C, Cs, Lno, Chars, RedirMap) ->
 	[Path, '=', MethodHostPort] ->
 	    Entry  = case MethodHostPort of
 			 "http://"++HostPort ->
-			     {Path, "http", HostPort};
+			     {Path, "http://", HostPort};
 			 "https://"++HostPort ->
-			     {Path, "https", HostPort};
+			     {Path, "https://", HostPort};
 			 HostPort ->
 			     {Path, HostPort}
 		     end,
