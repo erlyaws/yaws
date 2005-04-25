@@ -1355,9 +1355,6 @@ handle_ut(CliSock, ARG, UT, N) ->
 	    ?Debug("UT = ~s~n", [?format_record(UT, urltype)]),
 	    yaws:outh_set_dyn_headers(Req, H, UT),
 	    do_yaws(CliSock, ARG, UT, N);
-	forbidden ->
-	    yaws:outh_set_dyn_headers(Req, H, UT),
-	    deliver_403(CliSock, Req);
 	redir ->
 	    yaws:outh_set_dyn_headers(Req, H, UT),
 	    deliver_302(CliSock, Req, ARG, UT#urltype.path);
@@ -2798,21 +2795,16 @@ do_url_type(SC, GetPath) ->
 		    ?Debug("FullPath = ~p~n", [FullPath]),
 		    case prim_file:read_file_info(FullPath) of
 			{ok, FI} when FI#file_info.type == regular ->
-			    case suffix_type(SC, RevFile) of
-				{forbidden, _} -> 
-				    #urltype{type=forbidden};
-				{X, Mime} ->
-				    #urltype
-				  {type=X, 
-				   finfo=FI,
-				   deflate=deflate_q(?sc_has_deflate(SC), X, 
-						     Mime),
-				   dir = Comps,
-				   path = GetPath,
-				   getpath = GetPath,
-				   fullpath = FullPath,
-				   mime=Mime}
-			    end;
+			    {Type, Mime} = suffix_type(SC, RevFile),
+			    #urltype{type=Type, 
+				     finfo=FI,
+				     deflate=deflate_q(?sc_has_deflate(SC), 
+						       Type, Mime),
+				     dir = Comps,
+				     path = GetPath,
+				     getpath = GetPath,
+				     fullpath = FullPath,
+				     mime=Mime};
 			{ok, FI} when FI#file_info.type == directory ->
 			    case RevFile of
 				[] ->
@@ -2963,34 +2955,37 @@ maybe_return_path_info(SC, Comps, RevFile) ->
 	     #urltype{type=Type};
 	{ok, HeadComps, File, TrailComps, Type, Mime} ->
 	    DR = SC#sconf.docroot,
-	    case member(Type, SC#sconf.allowed_scripts) of
-		true ->
-		    FullPath = [DR, HeadComps, $/, File],
-		    ?Debug("FullPath = ~p~n", [FullPath]),
-		    case prim_file:read_file_info(FullPath) of
-			{ok, FI} when FI#file_info.type == regular ->
-			    Trail = [$/ | conc_path(TrailComps ++ 
-						    [lists:reverse(RevFile)])],
-			    #urltype{type = Type,
-				     finfo=FI,
-				     deflate=deflate_q(?sc_has_deflate(SC), 
-						       Type, Mime),
-				     dir = HeadComps,
-				     path = [HeadComps, $/, File],
-				     fullpath = FullPath,
-				     pathinfo = Trail,
-				     getpath = case HeadComps of
-						   [] -> [$/|File];
-						   [_|_] ->
-						       conc_path(
-							 HeadComps++[File])
-					       end,
-				     mime = Mime};
-			_ ->
-			    #urltype{type = error}
-		    end;
-		false ->
-		    #urltype{type = forbidden}
+	    {Type2, Mime2} = 
+		case member(Type, SC#sconf.allowed_scripts) of
+		    true ->
+			{Type, Mime};
+		    false ->
+			{regular, "text/plain"}
+		end,
+
+	    FullPath = [DR, HeadComps, $/, File],
+	    ?Debug("FullPath = ~p~n", [FullPath]),
+	    case prim_file:read_file_info(FullPath) of
+		{ok, FI} when FI#file_info.type == regular ->
+		    Trail = [$/ | conc_path(TrailComps ++ 
+					    [lists:reverse(RevFile)])],
+		    #urltype{type = Type2,
+			     finfo=FI,
+			     deflate=deflate_q(?sc_has_deflate(SC), 
+					       Type, Mime),
+			     dir = HeadComps,
+			     path = [HeadComps, $/, File],
+			     fullpath = FullPath,
+			     pathinfo = Trail,
+			     getpath = case HeadComps of
+					   [] -> [$/|File];
+					   [_|_] ->
+					       conc_path(
+						 HeadComps++[File])
+				       end,
+			     mime = Mime2};
+		_ ->
+		    #urltype{type = error}
 	    end
     end.
 
@@ -3107,7 +3102,7 @@ suffix_type(SC, L) ->
 	{X, _Mime} -> 
 	    case member(X, SC#sconf.allowed_scripts) of
 		true -> R;
-		false -> {forbidden, []}
+		false -> {regular, "text/plain"}
 	    end
     end.
 
