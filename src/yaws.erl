@@ -1588,11 +1588,18 @@ uid_to_name(Uid) ->
     end.
 
 tmp_dir() ->
-    case os:type() of
-	{win32,_} ->
-	    "c:/winnt/temp";
-	_ -> 
-	    "/tmp"
+    case os:getenv("TMP") of   
+ 	false ->
+	    %% If environment variable for temp dir is not set,
+	    %% use a default value, depending on the OS.
+	    case os:type() of
+		{win32,_} ->
+		    "c:/windows/temp";
+		_ -> 
+		    "/tmp"
+	    end;
+	TempDir ->
+	    TempDir
     end.
 
 
