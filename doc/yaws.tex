@@ -430,7 +430,7 @@ Most large sites on the Web today make heavy use of dynamic pages.
 
 \section{Introduction}
 
-When the client GETs a a page that has a .yaws suffix. The \Yaws\  server
+When the client GETs a page that has a .yaws suffix, the \Yaws\  server
 will read that page from the hard disk and divide it in parts
 that consist of HTML code and \Erlang\  code. Each chunk of \Erlang\  code
 will be compiled into a module. The chunk of \Erlang\  code must contain
@@ -671,7 +671,7 @@ more of those functions during the examples in the following chapters.
 
 The functions used are:
 \begin{itemize}
-\item \verb+yaws_api:f/2+ alias for io\_lib:format/2. The \verb+f/1+ function
+\item \verb+yaws_api:f/2+ alias for io\_lib:format/2. The \verb+f/2+ function
 is automatically \verb+-includeed+ in all \Yaws\  code.
 \item \verb+yaws_api:reformat_header/1+ - This function takes the \#headers record
 and unparses it, that is reproduces regular text.
@@ -1476,7 +1476,7 @@ must be called to indicate the end of the stream.
               Erase  all previous headers and accumulate a single
               Location header. Set the status code.
 
-\item       \verb+{redirect, Url}+
+\item       \verb+{redirect, Url, Status}+
               Same as redirect above with the additional 
 	      option of supplying the status code. The default
 	      for a redirect is 302 but 301, 303 and 307 are also
@@ -1696,7 +1696,7 @@ The
 \begin{itemize}
 
 
-\item       \verb+dir = Directory+ -
+\item       \verb+logdir = Directory+ -
               All \Yaws\  logs will be  written  to  files  in  this
               directory.  There  are  several different log files
               written by \Yaws\ .

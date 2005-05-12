@@ -12,4 +12,4 @@ clean:
 	$(RM) ../../examples/ebin/myappmod.beam
 
 myappmod.beam:	myappmod.erl
-	erlc myappmod.erl
+	$(ERLC) myappmod.erl

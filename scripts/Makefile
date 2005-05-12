@@ -55,6 +55,6 @@ install:
 		then echo "Keeping old config file "; \
 		cp yaws.conf $(ETCDIR)/yaws.conf.template; \
 	else \
-		echo "Installing $(prefix)/etc/yaws.conf"; \
+		echo "Installing $(ETCDIR)/yaws.conf"; \
 		cp yaws.conf $(ETCDIR)/yaws.conf; \
 	fi

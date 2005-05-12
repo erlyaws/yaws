@@ -12,4 +12,4 @@ clean:
 	$(RM) ../../examples/ebin/shopcart.beam
 
 shopcart.beam:	shopcart.erl
-	erlc shopcart.erl
+	$(ERLC) shopcart.erl
