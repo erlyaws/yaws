@@ -1171,7 +1171,7 @@ not_implemented(CliSock, Req, Head) ->
 
 
 %%%
-%%% WebDav specifics: PROPFIND, ...
+%%% WebDav specifics: PROPFIND, MKCOL,....
 %%% 
 'PROPFIND'(CliSock, Req, Head) ->
     %%?elog("PROPFIND Req=~p H=~p~n", 
@@ -1214,6 +1214,12 @@ not_implemented(CliSock, Req, Head) ->
     ARG = make_arg(CliSock, Head, Req, Bin),
     handle_request(CliSock, ARG, size(un_partial(Bin))).
 
+'MKCOL'(CliSock, Req, Head) ->
+    ok = inet_setopts(CliSock, [{packet, raw}, binary]),
+    flush(CliSock, Head#headers.content_length),
+    ARG = make_arg(CliSock, Head, Req, undefined),
+    handle_request(CliSock, ARG, 0).
+
 
 
 make_arg(CliSock, Head, Req, Bin) ->
@@ -1230,6 +1236,8 @@ make_arg(CliSock, Head, Req, Bin) ->
 
 handle_extension_method("PROPFIND", CliSock, Req, Head) ->
     'PROPFIND'(CliSock, Req, Head);   
+handle_extension_method("MKCOL", CliSock, Req, Head) ->                      
+    'MKCOL'(CliSock, Req, Head);                                             
 handle_extension_method(_Method, CliSock, Req, Head) ->
     not_implemented(CliSock, Req, Head).
 
