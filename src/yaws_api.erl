@@ -479,6 +479,7 @@ code_to_phrase(203) -> "Non-Authoritative Information";
 code_to_phrase(204) -> "No Content";
 code_to_phrase(205) -> "Reset Content";
 code_to_phrase(206) -> "Partial Content";
+code_to_phrase(207) -> "Multi Status";
 code_to_phrase(300) -> "Multiple Choices";
 code_to_phrase(301) -> "Moved Permanently";
 code_to_phrase(302) -> "Found";
