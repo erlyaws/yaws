@@ -3,17 +3,21 @@
 %%% Created : 15 May 2005 by Tobbet <tobbe@tornkvist.org>
 %%% Desc.   : WebDav specifics.
 %%%-------------------------------------------------------------------
--export([parse_xml/1, xml_expand/1]).
+-export([parse_xml/1, xml_expand/1, xml_expand/2]).
 
--include_lib("yaws/include/yaws_dav.hrl").
--include_lib("xmerl/include/xmerl.hrl").
+-include("yaws_dav.hrl").
+-include("xmerl.hrl").
+
 
 -define(elog(X,Y), error_logger:info_msg("*elog ~p:~p: " X,
 					[?MODULE, ?LINE | Y])).
 
 
 xml_expand(L) ->
-    Prolog = ["<?xml version=\"1.0\" encoding=\"utf-8\" ?>"],
+    xml_expand(L, "utf-8").
+
+xml_expand(L, Cset) ->
+    Prolog = ["<?xml version=\"1.0\" encoding=\""++Cset++"\" ?>"],
     xmerl:export_simple(L,xmerl_xml,[{prolog,Prolog}]).
 
 
@@ -23,6 +27,7 @@ parse_xml(L) when list(L) ->
 	{X,_} when record(X, xmlElement) ->
 	    parse_dav(X);
 	_Z ->
+	    ?elog("to_xml: error ~p~n", [_Z]),
 	    {error, "xml scanner failed"}
     end.
 
