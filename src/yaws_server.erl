@@ -47,6 +47,10 @@
 	       }).
 
 
+-define(elog(X,Y), error_logger:info_msg("*elog ~p:~p: " X,
+					 [?MODULE, ?LINE | Y])).
+
+
 start_link(A) ->
     gen_server:start_link({local, yaws_server}, yaws_server, A, []).
 
@@ -1166,6 +1170,52 @@ not_implemented(CliSock, Req, Head) ->
     deliver_options(CliSock, Req).
 
 
+%%%
+%%% WebDav specifics: PROPFIND, ...
+%%% 
+'PROPFIND'(CliSock, Req, Head) ->
+    %%?elog("PROPFIND Req=~p H=~p~n", 
+    %%                   [?format_record(Req, http_request),
+    %%                    ?format_record(Head, headers)]),
+    ok = inet_setopts(CliSock, [{packet, raw}, binary]),
+    SC=get(sc),
+    PPS = SC#sconf.partial_post_size,
+    Bin = case Head#headers.content_length of
+             undefined ->
+                 case Head#headers.connection of
+                     "close" ->
+                         get_client_data(CliSock, all, is_ssl(SC#sconf.ssl));
+                     _ ->
+                         ?Debug("No content length header ",[]),
+                         exit(normal)
+                 end;
+             Len when integer(PPS) ->
+                 Int_len = list_to_integer(Len),
+                 if 
+                     Int_len == 0 ->
+                         <<>>;
+                     PPS < Int_len ->
+                         {partial, get_client_data(CliSock, PPS,
+                                                   is_ssl(SC#sconf.ssl))};
+                     true ->
+                         get_client_data(CliSock, Int_len,  
+                                         is_ssl(SC#sconf.ssl))
+                 end;
+             Len when PPS == nolimit ->
+                 Int_len = list_to_integer(Len),
+                 if
+                     Int_len == 0 ->
+                         <<>>;
+                     true ->
+                         get_client_data(CliSock, Int_len, 
+                                         is_ssl(SC#sconf.ssl))
+                 end
+         end,
+    ARG = make_arg(CliSock, Head, Req, Bin),
+    handle_request(CliSock, ARG, size(un_partial(Bin))).
+
+
+
 make_arg(CliSock, Head, Req, Bin) ->
     SC = get(sc),
     ARG = #arg{clisock = CliSock,
@@ -1177,6 +1227,9 @@ make_arg(CliSock, Head, Req, Bin) ->
 	       clidata = Bin},
     apply(SC#sconf.arg_rewrite_mod, arg_rewrite, [ARG]).
 
+
+handle_extension_method("PROPFIND", CliSock, Req, Head) ->
+    'PROPFIND'(CliSock, Req, Head);   
 handle_extension_method(_Method, CliSock, Req, Head) ->
     not_implemented(CliSock, Req, Head).
 

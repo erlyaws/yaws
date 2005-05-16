@@ -44,6 +44,9 @@ ERLC_FLAGS+=-W $(DEBUG_FLAGS) -pa ../../yaws
 
 all: yaws_vsn.erl $(EBIN_FILES) 
 
+dav:
+	$(MAKE) MODULES="$(MODULES) yaws_dav"
+
 $(EBIN_FILES) : ../include/yaws.hrl ../include/yaws_api.hrl
 
 yaws_vsn.erl:	yaws_vsn.template ../vsn.mk

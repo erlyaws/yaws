@@ -1217,9 +1217,10 @@ dcc(Req, Headers) ->
 %%
 
 make_allow_header() ->
-    "Allow: GET, POST, PUT, OPTIONS, HEAD\r\n".
+    "Allow: GET, POST, PUT, OPTIONS, HEAD, PROPFIND\r\n".
 make_server_header() ->
-    ["Server: Yaws/", yaws_vsn:version(), " Yet Another Web Server\r\n"].
+    ["Server: Yaws/", yaws_vsn:version(), " Yet Another Web Server\r\n",
+     "DAV: 1\r\n"].
 
 
 
