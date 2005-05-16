@@ -1163,7 +1163,8 @@ ehtml_expand({ssi,File, Del, Bs}) ->
 	    X
     end;
 
-ehtml_expand({Tag}) -> ehtml_expand({Tag, []});
+ehtml_expand({Tag}) -> 
+    ["<", atom_to_list(Tag), " />"];
 ehtml_expand({pre_html, X}) -> X;
 ehtml_expand({Tag, Attrs}) ->
     NL = ehtml_nl(Tag),
@@ -1299,7 +1300,7 @@ ehtml_expander({pre_html, X}, Before, After) ->
     ehtml_expander_done(X, Before, After);
 %% Tags
 ehtml_expander({Tag}, Before, After) ->
-    ehtml_expander({Tag, []}, Before, After);
+    ehtml_expander_done(["<", atom_to_list(Tag), " />"], Before, After);
 ehtml_expander({Tag, Attrs}, Before, After) ->
     NL = ehtml_nl(Tag),
     ehtml_expander_done([NL, "<", atom_to_list(Tag), ehtml_attrs(Attrs), "></",
