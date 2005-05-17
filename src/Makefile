@@ -31,7 +31,8 @@ MODULES=yaws \
 	yaws_revproxy \
 	yaws_html  \
 	yaws_log_file_h \
-	yaws_rss
+	yaws_rss \
+	dav
 
 
 
