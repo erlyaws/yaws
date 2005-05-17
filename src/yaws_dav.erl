@@ -5,8 +5,8 @@
 %%%-------------------------------------------------------------------
 -export([parse_xml/1, xml_expand/1, xml_expand/2]).
 
--include("yaws_dav.hrl").
--include("xmerl.hrl").
+-include("../include/yaws_dav.hrl").
+-include_lib("xmerl/include/xmerl.hrl").
 
 
 -define(elog(X,Y), error_logger:info_msg("*elog ~p:~p: " X,
