@@ -13,9 +13,12 @@
 
 -include("../include/yaws_api.hrl").
 -include("../include/yaws_dav.hrl").
+-include_lib("kernel/include/file.hrl").
+
 
 -define(elog(X,Y), error_logger:info_msg("*elog ~p:~p: " X,
 					[?MODULE, ?LINE | Y])).
+
 
 -define(IS_PROPFIND(A), (A#arg.req)#http_request.method == "PROPFIND").
 -define(IS_MKCOL(A), (A#arg.req)#http_request.method == "MKCOL").
@@ -25,7 +28,7 @@ out(A) when ?IS_PROPFIND(A) ->
     propfind(A);
 out(A) when ?IS_MKCOL(A) ->
     create_directory(A);
-out(A) ->
+out(_A) ->
     out403().
 
 propfind(A) ->
@@ -37,75 +40,105 @@ propfind(A) ->
     case depth(A) of
 	0 ->
 	    ?elog("propfind: Depth=0~n", []),
-	    B = depth_zero(A),
+	    Response = depth_zero(A),
+	    MultiStatus = [{multistatus, [{'xmlns',"DAV:"}], Response}],
+	    B = yaws_dav:xml_expand(MultiStatus),
 	    out207(B);
 	1 ->
 	    %% FIXME should get root dir from yaws.conf
-	    L = string:tokens(os:cmd("ls /home/tobbe/docroot"), "\n"), 
-	    ?elog("propfind: Depth=1 , L=~p~n", [L]),
+	    Entries = get_entries(A),
+	    ?elog("propfind: Depth=1 , length(Entries)=~p~n", [length(Entries)]),
 	    Url = "http://struts/dav/",                                % FIXME
-	    F = fun(File) -> response_entry(File, Url) end,
-	    Responses = lists:map(F, L),
+	    F = fun(Finfo) -> response_entry(Finfo, Url) end,
+	    Responses = lists:map(F, Entries),
 	    MultiStatus = [{multistatus, [{'xmlns',"DAV:"}], Responses}],
 	    B = yaws_dav:xml_expand(MultiStatus),
 	    out207(B)
     end.
 
+date_string({{Y,M,D}, {Hr,Min,Sec}}) ->
+    lists:concat([D, " ", month(M), " ", Y, " ", Hr, ":", Min, ":", Sec]).
+
+
+
+get_entries(A) ->
+    Path = A#arg.docroot ++ A#arg.appmoddata,
+    ?elog("propfind: Path=~p~n", [Path]),
+    case file:read_file_info(Path) of
+	Dir when Dir#file_info.type == directory ->
+	    {ok, L} = file:list_dir(Path),
+	    [{Name,Entry} || Name <- L,
+			     {ok, Entry} = file:read_file_info(Path++"/"++Name)];
+	Else ->
+	    [Else]
+    end.
+
 %%% FIXME should get a proper file_info entry here
-response_entry(F, Url) ->  % File
+%%
+response_entry({Name, F}, Url) when F#file_info.type == directoy  -> % Dir
     {response, [],
-     [{href, [], [Url ++ F]},
+     [{href, [], [Url]},
       {propstat, [], 
        [{prop, [],
-	 [{name, [], [F]},
-	  %%{creationdate, [], [(F#file.date)#date.string]},    % FIXME
-	  %%{getlastmodified, [], [(F#file.date)#date.string]}, % FIXME
-	  {getcontentlength, [], ["123"]},
+	 [{name, [], [Name]},
+	  {creationdate, [], [date_string(F#file_info.ctime)]}, 
+	  {getlastmodified, [], [date_string(F#file_info.mtime)]},
+	  {getcontentlength, [], [integer_to_list(F#file_info.size)]},
+	  {resourcetype, [], 
+	   [{collection, [], []}]}
+	  %%{ishidden, [], [bool2lnum(F#file.is_hidden)]}]},
+	  ]},
+	{status, [],    % Status 1
+	 ["HTTP/1.1 200 OK"]}]}]};
+%%
+response_entry({Name, F}, Url) when F#file_info.type == regular ->  % File
+    {response, [],
+     [{href, [], [Url]},
+      {propstat, [], 
+       [{prop, [],
+	 [{name, [], [Name]},
+	  {creationdate, [], [date_string(F#file_info.ctime)]}, 
+	  {getlastmodified, [], [date_string(F#file_info.mtime)]},
+	  {getcontentlength, [], [integer_to_list(F#file_info.size)]},
 	  {resourcetype, [], []}
 	  %%{ishidden, [], [bool2lnum(F#file.is_hidden)]}]},
 	  ]},
 	{status, [],    % Status 1
 	 ["HTTP/1.1 200 OK"]}]}]};
 %%
-response_entry(F, Url)  -> % Dir
-    {response, [],
-     [{href, [], [Url ++ F ++ "/"]},
-      {propstat, [], 
-       [{prop, [],
-	 [{name, [], [F]},
-	  %%{creationdate, [], [(F#file.date)#date.string]},    % FIXME
-	  %%{getlastmodified, [], [(F#file.date)#date.string]}, % FIXME
-	  {resourcetype, [], 
-	   [{collection, [], []}]}
-	  %%{ishidden, [], [bool2lnum(F#file.is_hidden)]}]},
-	  ]},
-	{status, [],    % Status 1
-	 ["HTTP/1.1 200 OK"]}]}]}.
+response_entry(F, _Url) ->
+    ?elog("ignoring file: ~p~n", [F]),
+    [].
 
+
+parse_name(L) ->
+    [Rname|_] = string:tokens(lists:reverse(L), "/"),
+    lists:reverse(Rname).
 
 create_directory(A) ->
     tbd.
 
 
 depth_zero(A) ->
+    Path = A#arg.docroot ++ A#arg.appmoddata,
     Url = "http://struts/dav" ++ A#arg.appmoddata,
-    ["<?xml version=\"1.0\" encoding=\"utf-8\" ?>",
-     "  <D:multistatus xmlns:D=\"DAV:\">",
-     "    <D:response>",
-     "      <D:href>", Url, "</D:href>",
-     "        <D:propstat>",
-     "          <D:prop>",
-     "            <D:getcontentlength>0</D:getcontentlength>",
-     "            <D:getlastmodified>17 May 2005</D:getlastmodified>",
-     "            <D:resourcetype>",
-     "              <D:collection/>",
-     "            </D:resourcetype>",
-     "          </D:prop>",
-     "          <D:status>HTTP/1.1 200 MultiStatus</D:status>",
-     "        </D:propstat>",
-     "    </D:response>",
-     "  </D:multistatus>"].
-
+    Name = parse_name(Path),
+    {ok, F} =  file:read_file_info(Path),
+    ?elog("server_parh=~p~n", [A#arg.server_path]),
+    [{response, [],
+      [{href, [], [Url]},
+       {propstat, [], 
+	[{prop, [],
+	  [{name, [], [Name]},
+	   {creationdate, [], [date_string(F#file_info.ctime)]}, 
+	   {getlastmodified, [], [date_string(F#file_info.mtime)]},
+	   {getcontentlength, [], [integer_to_list(F#file_info.size)]},
+	   {resourcetype, [], 
+	    [{collection, [], []}]}
+	   %%{ishidden, [], [bool2lnum(F#file.is_hidden)]}]},
+	  ]},
+	 {status, [],   
+	  ["HTTP/1.1 200 OK"]}]}]}].
 
 
 depth(A) ->
@@ -140,3 +173,17 @@ outXXX(XXX, L) ->
     
 out403() ->
     [{status, 403}].
+
+
+month(1)  -> "Jan";
+month(2)  -> "Feb";
+month(3)  -> "Mar";
+month(4)  -> "Apr";
+month(5)  -> "May";
+month(6)  -> "Jun";
+month(7)  -> "Jul";
+month(8)  -> "Aug";
+month(9)  -> "Sep";
+month(10) -> "Oct";
+month(11) -> "Nov";
+month(12) -> "Dec".
