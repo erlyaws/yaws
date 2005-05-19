@@ -22,14 +22,19 @@
 
 -define(IS_PROPFIND(A), (A#arg.req)#http_request.method == "PROPFIND").
 -define(IS_MKCOL(A), (A#arg.req)#http_request.method == "MKCOL").
+-define(IS_GET(A), (A#arg.req)#http_request.method == "GET").
 
 
 out(A) when ?IS_PROPFIND(A) ->
     propfind(A);
+out(A) when ?IS_GET(A) ->
+    "/dav"++Path = A#arg.appmoddata,
+    [{redirect_local, Path}];
 out(A) when ?IS_MKCOL(A) ->
     create_directory(A);
 out(_A) ->
     out403().
+
 
 propfind(A) ->
     ?elog("propfind: appmoddata=~p~n", [A#arg.appmoddata]),
@@ -63,21 +68,19 @@ date_string({{Y,M,D}, {Hr,Min,Sec}}) ->
 
 get_entries(A) ->
     Path = A#arg.docroot ++ A#arg.appmoddata,
-    ?elog("propfind: Path=~p~n", [Path]),
     case file:read_file_info(Path) of
-	Dir when Dir#file_info.type == directory ->
+	{ok, Dir} when Dir#file_info.type == directory ->
 	    {ok, L} = file:list_dir(Path),
-	    [{Name,Entry} || Name <- L,
-			     {ok, Entry} = file:read_file_info(Path++"/"++Name)];
-	Else ->
-	    [Else]
+	    [{Name,element(2,file:read_file_info(Path++"/"++Name))} || Name <- L];
+	{ok, Else} ->
+	    [{get_name(Path),Else}]
     end.
 
 %%% FIXME should get a proper file_info entry here
 %%
-response_entry({Name, F}, Url) when F#file_info.type == directoy  -> % Dir
+response_entry({Name, F}, Url) when F#file_info.type == directory  -> % Dir
     {response, [],
-     [{href, [], [Url]},
+     [{href, [], [Url ++ Name]},
       {propstat, [], 
        [{prop, [],
 	 [{name, [], [Name]},
@@ -93,7 +96,7 @@ response_entry({Name, F}, Url) when F#file_info.type == directoy  -> % Dir
 %%
 response_entry({Name, F}, Url) when F#file_info.type == regular ->  % File
     {response, [],
-     [{href, [], [Url]},
+     [{href, [], [Url ++ Name]},
       {propstat, [], 
        [{prop, [],
 	 [{name, [], [Name]},
@@ -111,7 +114,15 @@ response_entry(F, _Url) ->
     [].
 
 
-parse_name(L) ->
+get_name("/") -> "/";
+get_name("")  -> "/";
+get_name(L) ->
+    [Rname|_] = string:tokens(lists:reverse(L), "/"),
+    lists:reverse(Rname).
+
+file_name("/") -> ".";
+file_name("")  -> ".";
+file_name(L) ->
     [Rname|_] = string:tokens(lists:reverse(L), "/"),
     lists:reverse(Rname).
 
@@ -122,7 +133,7 @@ create_directory(A) ->
 depth_zero(A) ->
     Path = A#arg.docroot ++ A#arg.appmoddata,
     Url = "http://struts/dav" ++ A#arg.appmoddata,
-    Name = parse_name(Path),
+    Name = file_name(Path),
     {ok, F} =  file:read_file_info(Path),
     ?elog("server_parh=~p~n", [A#arg.server_path]),
     [{response, [],
