@@ -20,20 +20,67 @@
 					[?MODULE, ?LINE | Y])).
 
 
--define(IS_PROPFIND(A), (A#arg.req)#http_request.method == "PROPFIND").
+-define(IS_PROPFIND(A), (A#arg.req)#http_request.method == "PROPFIND"). % FIXME why lists ?
 -define(IS_MKCOL(A), (A#arg.req)#http_request.method == "MKCOL").
--define(IS_GET(A), (A#arg.req)#http_request.method == "GET").
+-define(IS_GET(A), (A#arg.req)#http_request.method == 'GET').
+-define(IS_PUT(A), (A#arg.req)#http_request.method == 'PUT').
+-define(IS_DELETE(A), (A#arg.req)#http_request.method == 'DELETE').
 
 
 out(A) when ?IS_PROPFIND(A) ->
     propfind(A);
-out(A) when ?IS_GET(A) ->
-    "/dav"++Path = A#arg.appmoddata,
-    [{redirect_local, Path}];
 out(A) when ?IS_MKCOL(A) ->
     create_directory(A);
-out(_A) ->
+out(A) when ?IS_GET(A) ->
+    do_get(A);
+out(A) when ?IS_PUT(A) ->
+    do_put(A);
+out(A) when ?IS_DELETE(A) ->
+    do_delete(A);
+out(A) ->
+    ?elog("Got Method=~p~n", [(A#arg.req)#http_request.method]),
     out403().
+
+
+do_delete(A) ->
+    Path = A#arg.docroot ++ rm_dav(A#arg.server_path),
+    ?elog("DELETE Path=~p~n", [Path]),
+    case file:read_file_info(Path) of
+	{ok, F} when F#file_info.type == directory ->
+	    case file:delete_dir(Path) of
+		ok -> out200();
+		_  -> out403()  % FIXME , should do recursive delete !!
+	    end;
+	_ ->
+	    case file:delete(Path) of
+		ok -> out200();
+		_  -> out403() 
+	    end
+    end.
+
+do_get(A) ->
+    Path = A#arg.docroot ++ rm_dav(A#arg.server_path),
+    {ok, B} = file:read_file(Path),
+    out200(B).
+
+do_put(A) ->
+    Path = A#arg.docroot ++ rm_dav(A#arg.server_path),
+    ?elog("PUT Path=~p~n", [Path]),
+    Data = A#arg.clidata,
+    case file:write_file(Path, Data) of
+	ok -> out200();
+	_  -> out409()
+    end.
+
+create_directory(A) ->
+    Path = A#arg.docroot ++ rm_dav(A#arg.server_path),
+    case file:make_dir(Path) of
+	ok ->
+	    out201();
+	{error, Reason} ->
+	    ?elog("failed to create dir: ~p , reason: ~p~n", [Path, Reason]),
+	    out403()
+    end.
 
 
 propfind(A) ->
@@ -64,6 +111,9 @@ propfind(A) ->
 date_string({{Y,M,D}, {Hr,Min,Sec}}) ->
     lists:concat([D, " ", month(M), " ", Y, " ", Hr, ":", Min, ":", Sec]).
 
+rm_dav("/dav"++L) -> L;
+rm_dav([H|T])     -> [H|rm_dav(T)];
+rm_dav([]   )     -> [].
 
 
 get_entries(A) ->
@@ -126,16 +176,14 @@ file_name(L) ->
     [Rname|_] = string:tokens(lists:reverse(L), "/"),
     lists:reverse(Rname).
 
-create_directory(A) ->
-    tbd.
 
 
 depth_zero(A) ->
     Path = A#arg.docroot ++ A#arg.appmoddata,
-    Url = "http://struts/dav" ++ A#arg.appmoddata,
+    Url = "http://struts/dav" ++ A#arg.appmoddata,   % FIXME 
     Name = file_name(Path),
-    {ok, F} =  file:read_file_info(Path),
-    ?elog("server_parh=~p~n", [A#arg.server_path]),
+    {ok, F} =  file:read_file_info(Path),            % FIXME
+    ?elog("server_path=~p~n", [A#arg.server_path]),
     [{response, [],
       [{href, [], [Url]},
        {propstat, [], 
@@ -145,11 +193,16 @@ depth_zero(A) ->
 	   {getlastmodified, [], [date_string(F#file_info.mtime)]},
 	   {getcontentlength, [], [integer_to_list(F#file_info.size)]},
 	   {resourcetype, [], 
-	    [{collection, [], []}]}
+	    is_collection(F)}
 	   %%{ishidden, [], [bool2lnum(F#file.is_hidden)]}]},
 	  ]},
 	 {status, [],   
 	  ["HTTP/1.1 200 OK"]}]}]}].
+
+is_collection(F) when F#file_info.type == directory ->
+     [{collection, [], []}];
+is_collection(_) ->
+    [].
 
 
 depth(A) ->
@@ -181,9 +234,23 @@ outXXX(XXX, L) ->
      {header, {content_type, "text/xml; charset=\"utf-8\""}},
      {html, L}].
 
+out200(L) ->
+    [{status, 200},
+     {header, {content_type, "text/html"}},
+     {html, L}].
+
     
+out200() ->
+    [{status, 200}].
+
+out201() ->
+    [{status, 201}].
+
 out403() ->
     [{status, 403}].
+
+out409() ->
+    [{status, 409}].
 
 
 month(1)  -> "Jan";

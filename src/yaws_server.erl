@@ -1156,18 +1156,18 @@ not_implemented(CliSock, Req, Head) ->
 'TRACE'(CliSock, Req, Head) ->
     not_implemented(CliSock, Req, Head).
 
-'PUT'(CliSock, Req, Head) ->
-    not_implemented(CliSock, Req, Head).
-
-'DELETE'(CliSock, Req, Head) ->
-    not_implemented(CliSock, Req, Head).
-
 'OPTIONS'(CliSock, Req, Head) ->
     ?Debug("OPTIONS", []),
     ok = inet_setopts(CliSock, [{packet, raw}, binary]),
     flush(CliSock, Head#headers.content_length),
     ?Debug("OPTIONS delivering", []),
     deliver_options(CliSock, Req).
+
+'PUT'(CliSock, Req, Head) ->
+    body_method(CliSock, Req, Head).
+
+'DELETE'(CliSock, Req, Head) ->
+    no_body_method(CliSock, Req, Head).
 
 
 %%%
@@ -1177,6 +1177,10 @@ not_implemented(CliSock, Req, Head) ->
     %%?elog("PROPFIND Req=~p H=~p~n", 
     %%                   [?format_record(Req, http_request),
     %%                    ?format_record(Head, headers)]),
+    body_method(CliSock, Req, Head).
+
+
+body_method(CliSock, Req, Head) ->
     ok = inet_setopts(CliSock, [{packet, raw}, binary]),
     SC=get(sc),
     PPS = SC#sconf.partial_post_size,
@@ -1214,12 +1218,15 @@ not_implemented(CliSock, Req, Head) ->
     ARG = make_arg(CliSock, Head, Req, Bin),
     handle_request(CliSock, ARG, size(un_partial(Bin))).
 
+
 'MKCOL'(CliSock, Req, Head) ->
+    no_body_method(CliSock, Req, Head).
+
+no_body_method(CliSock, Req, Head) ->
     ok = inet_setopts(CliSock, [{packet, raw}, binary]),
     flush(CliSock, Head#headers.content_length),
     ARG = make_arg(CliSock, Head, Req, undefined),
     handle_request(CliSock, ARG, 0).
-
 
 
 make_arg(CliSock, Head, Req, Bin) ->
