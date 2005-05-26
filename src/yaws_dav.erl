@@ -40,6 +40,19 @@ parse_xml(L) when list(L) ->
 -define(IS_HREF(X), #xmlElement{expanded_name = {'DAV:',href}} = X).
 -define(IS_ISHIDDEN(X), #xmlElement{expanded_name = {'DAV:',ishidden}} = X).
 -define(IS_ISCOLLECTION(X), #xmlElement{expanded_name = {'DAV:',iscollection}} = X).
+-define(IS_ISREADONLY(X), #xmlElement{expanded_name = {'DAV:',isreadonly}} = X).
+-define(IS_GETCONTENTTYPE(X), #xmlElement{expanded_name = {'DAV:',getcontenttype}} = X).
+-define(IS_CONTENTCLASS(X), #xmlElement{expanded_name = {'DAV:',contentclass}} = X).
+-define(IS_GETCONTENTLANGUAGE(X), #xmlElement{expanded_name = {'DAV:',getcontentlanguage}} = X).
+-define(IS_CREATIONDATE(X), #xmlElement{expanded_name = {'DAV:',creationdate}} = X).
+-define(IS_LASTACCESSED(X), #xmlElement{expanded_name = {'DAV:',lastaccessed}} = X).
+-define(IS_GETLASTMODIFIED(X), #xmlElement{expanded_name = {'DAV:',getlastmodified}} = X).
+-define(IS_GETCONTENTLENGTH(X), #xmlElement{expanded_name = {'DAV:',getcontentlength}} = X).
+-define(IS_RESOURCETYPE(X), #xmlElement{expanded_name = {'DAV:',resourcetype}} = X).
+-define(IS_ISSTRUCTUREDDOCUMENT(X), #xmlElement{expanded_name = {'DAV:',isstructureddocument}} = X).
+-define(IS_DEFAULTDOCUMENT(X), #xmlElement{expanded_name = {'DAV:',defaultdocument}} = X).
+-define(IS_DISPLAYNAME(X), #xmlElement{expanded_name = {'DAV:',displayname}} = X).
+-define(IS_ISROOT(X), #xmlElement{expanded_name = {'DAV:',isroot}} = X).
 
 
 parse_dav(?IS_PROPFIND(X)) ->
@@ -71,8 +84,34 @@ parse_prop([?IS_ISHIDDEN(_H)|T], L) ->
     parse_prop(T, [ishidden | L]);
 parse_prop([?IS_ISCOLLECTION(_H)|T], L) ->
     parse_prop(T, [iscollection | L]);
+parse_prop([?IS_ISREADONLY(_H)|T], L) ->
+    parse_prop(T, [isreadonly | L]);
+parse_prop([?IS_GETCONTENTTYPE(_H)|T], L) ->
+    parse_prop(T, [getcontenttype | L]);
+parse_prop([?IS_CONTENTCLASS(_H)|T], L) ->
+    parse_prop(T, [contentclass | L]);
+parse_prop([?IS_GETCONTENTLANGUAGE(_H)|T], L) ->
+    parse_prop(T, [getcontentlanguage | L]);
+parse_prop([?IS_CREATIONDATE(_H)|T], L) ->
+    parse_prop(T, [creationdate | L]);
+parse_prop([?IS_LASTACCESSED(_H)|T], L) ->
+    parse_prop(T, [lastaccessed | L]);
+parse_prop([?IS_GETLASTMODIFIED(_H)|T], L) ->
+    parse_prop(T, [getlastmodified | L]);
+parse_prop([?IS_GETCONTENTLENGTH(_H)|T], L) ->
+    parse_prop(T, [getcontentlength | L]);
+parse_prop([?IS_RESOURCETYPE(_H)|T], L) ->
+    parse_prop(T, [resourcetype | L]);
+parse_prop([?IS_ISSTRUCTUREDDOCUMENT(_H)|T], L) ->
+    parse_prop(T, [isstructureddocument | L]);
+parse_prop([?IS_DEFAULTDOCUMENT(_H)|T], L) ->
+    parse_prop(T, [defaultdocument | L]);
+parse_prop([?IS_DISPLAYNAME(_H)|T], L) ->
+    parse_prop(T, [displayname | L]);
+parse_prop([?IS_ISROOT(_H)|T], L) ->
+    parse_prop(T, [isroot | L]);
 parse_prop([H|T], L) ->
-    %%?elog("parse_propfind: ~p~n",[H]),  % FIXME , webdav
+    ?elog("parse_propfind: NYI ~p~n",[H]),  % FIXME , webdav
     parse_prop(T, L);
 parse_prop([], L) ->
     lists:reverse(L).  % preserve order!
