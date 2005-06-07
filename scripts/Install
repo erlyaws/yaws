@@ -47,6 +47,7 @@ elif [ "`uname -s`" = "Darwin" ]; then
      chmod +x ${startupdir}/Yaws
      cp darwin/Yaws.plist ${startupdir}/StartupParameters.plist
 else
+    install -d ${etcdir} 
     echo "Don't know how to make /etc/init scrips for this system"
     echo "possibly add $1/bin/yaws -D -heart to your /etc/rc.local manually"
 fi
