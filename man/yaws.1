@@ -71,6 +71,14 @@ Start Mnesia in directory <dir>
 \fB\-sname xxx\fR
 Start yaws as a distributed erlang node with name <xxx>
 
+.TP
+\fB\-proto_dist Mod\fR
+Use module Mod for erlang distribution. This is typically only used
+when we want to run erlang distribution over SSL.
+
+.TP
+\fB\-erlarg STRING\fR
+Pass STRING as an additional argument to the "erl" program.
 
 
 .SH CONTROL OPTIONS

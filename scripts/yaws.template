@@ -40,11 +40,12 @@ help()
         echo "            -v         --  print version"
         echo "            -pa path   --  add path"
         echo "            -M dir     --  start Mnesia in dir"
-        echo "            -proto_dist Mod     --  use Mod for distrib
+        echo "            -proto_dist Mod     --  use Mod for distrib"
         echo "            -sname xxx --  start with sname xxx"
         echo "            -name xxx --  start with name xxx"
         echo "            -r mod     --  call mod:start/0 at startup"
         echo "            -heart     --  auto restart yaws if it crashes"
+        echo "            -erlarg X  --  pass argument X to $erl"
 
         echo ""
 
@@ -72,6 +73,7 @@ xpath="";
 mnesia="";
 id="default";
 pdist=""
+erlarg=""
 
 while [ $# -gt 0 ] 
 do
@@ -140,6 +142,9 @@ do
            -proto_dist)
                 pdist=" -proto_dist $1 "
                 shift;;
+	   -erlarg)
+	        erlarg="$erlarg $1 "
+		shift;;
            -check)
 		mkdir /tmp/yaws 2> /dev/null
 	        mkdir /tmp/yaws/${ID} 2> /dev/null
@@ -170,10 +175,10 @@ if [ -z "$heart" ] || [ -z "$daemon" ]; then
     HEART_COMMAND="";
 else
     ## ............................this line
-    export HEART_COMMAND="${ENV_PGM} HEART=true \"$erl\" ${daemon} ${heart} -pa ${yawsdir}${delim}ebin ${xpath} ${sname} ${pdist} ${debug} -s yaws $trace $conf $runmod $mnesia";
+    export HEART_COMMAND="${ENV_PGM} HEART=true \"$erl\" ${daemon} ${heart} -pa ${yawsdir}${delim}ebin ${xpath} ${sname} ${pdist} ${erlarg} ${debug} -s yaws $trace $conf $runmod $mnesia";
 fi
 
 ## keep this line in sync with ....^
-exec "$erl" ${daemon} ${heart} -pa ${yawsdir}${delim}ebin  ${xpath} ${sname} ${pdist} ${debug} -s yaws $trace $conf $runmod $mnesia
+exec "$erl" ${daemon} ${heart} -pa ${yawsdir}${delim}ebin  ${xpath} ${sname} ${pdist} ${erlarg} ${debug} -s yaws $trace $conf $runmod $mnesia
 
 
