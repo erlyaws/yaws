@@ -1353,7 +1353,7 @@ handle_ut(CliSock, ARG, UT, N) ->
     H = ARG#arg.headers,
     SC=get(sc),GC=get(gc),
     case UT#urltype.type of
-	error ->
+	error when SC#sconf.xtra_docroots == [] ->
 	    yaws:outh_set_dyn_headers(Req, H, UT),
 	    deliver_dyn_part(CliSock, 
 			     0, "404",
@@ -1365,6 +1365,12 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     fun(A)->finish_up_dyn_file(A, CliSock)
 			     end
 			    );
+	error ->
+	    SC2 = SC#sconf{docroot = hd(SC#sconf.xtra_docroots),
+			   xtra_docroots = tl(SC#sconf.xtra_docroots)},
+	    put(sc, SC2),
+	    ARG2 = ARG#arg{docroot = SC2#sconf.docroot},
+	    handle_request(CliSock, ARG2, N);
 	directory when ?sc_has_dir_listings(SC) ->
 	    P = UT#urltype.dir,
 	    yaws:outh_set_dyn_headers(Req, H, UT),
@@ -2005,7 +2011,7 @@ handle_out_reply(L, LineNo, YawsFile, UT, A) when list (L) ->
 
 
 %% yssi, yaws include
-handle_out_reply({yssi, Yfile}, _LineNo, _YawsFile, UT, [ARG]) ->
+handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, [ARG]) ->
     SC = get(sc),
     UT2 = url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile]),
     case UT2#urltype.type of
@@ -2027,6 +2033,13 @@ handle_out_reply({yssi, Yfile}, _LineNo, _YawsFile, UT, [ARG]) ->
 		    ets:insert(SC#sconf.ets, {Key, spec, Mtime, Spec, Errs}),
 		    deliver_dyn_file(CliSock, Spec ++ [yssi], ARG, UT2, N)
 	    end;
+	error when SC#sconf.xtra_docroots /= [] ->
+	    SC2 = SC#sconf{docroot = hd(SC#sconf.xtra_docroots),
+				   xtra_docroots = tl(SC#sconf.xtra_docroots)},
+	    put(sc, SC2), ARG2 = ARG#arg{docroot = SC2#sconf.docroot},
+	    Ret = handle_out_reply({yssi, Yfile}, LineNo, YawsFile,UT, [ARG2]),
+	    put(sc, SC),
+	    Ret;
 	_ ->
 	    error_logger:format("Failed to yssi ~p~n", [Yfile]),
 	    ok
@@ -2230,8 +2243,13 @@ ssi(File, Delimiter, Bindings, Dir, SC) ->
 		    D =delim_split_file(Delimiter,binary_to_list(Bin),data,[]),
 		    ets:insert(SC#sconf.ets,{Key,D, Mtime}),
 		    ssi(File, Delimiter, Bindings, Dir, SC);
+		{error, _} when SC#sconf.xtra_docroots /= [] ->
+		    SC2 = SC#sconf{docroot = hd(SC#sconf.xtra_docroots),
+				   xtra_docroots = tl(SC#sconf.xtra_docroots)},
+		    ssi(File, Delimiter, Bindings, Dir, SC2);
 		{error, Rsn} ->
-		    error_logger:format("Failed to read/ssi file ~p~n", [FullPath]),
+		    error_logger:format("Failed to read/ssi file ~p~n", 
+					[FullPath]),
 		    {error,Rsn}
 	    end
     end.

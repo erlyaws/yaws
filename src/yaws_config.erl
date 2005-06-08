@@ -49,7 +49,6 @@ load(false, Trace, TraceOutput, Debug) ->
 	    load({file, File}, Trace, TraceOutput, Debug)
     end;
 load({file, File}, Trace, TraceOutput, Debug) ->
-    io:format("KKKKK Trace = ~p~n", [Trace]),
     error_logger:info_msg("Yaws: Using config file ~s~n", [File]),
     case file:open(File, [read]) of
 	{ok, FD} ->
@@ -528,15 +527,21 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	["servername", '=', Name] ->
 	    C2 = ?sc_set_add_port((C#sconf{servername = Name}),false),
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-	["docroot", '=', Rootdir] ->
-	    Root = filename:absname(Rootdir),
-	    case is_dir(Root) of
-		true ->
-		    C2 = C#sconf{docroot = Root},
+
+	["docroot", '=', Rootdir | XtraDirs] ->
+	    RootDirs = lists:map(
+			 fun(R) -> filename:absname(R)
+			 end, [Rootdir | XtraDirs]),
+	    case lists:filter(
+		   fun(R) -> not is_dir(R) end, RootDirs) of
+		[] ->
+		    C2 = C#sconf{docroot = hd(RootDirs),
+				 xtra_docroots = tl(RootDirs)},
 		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 		false ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}
 	    end;
+
 	["partial_post_size",'=',Size] ->
 	    case Size of
 		nolimit ->

@@ -82,7 +82,7 @@ The default value i 8000, 8 kBytes.
 The RAM cache is used to serve pages that sit in the cache. An entry sits in
 cache at most cache_refresh_secs number of seconds. The default is 30. This means that when the content is updated under the docroot, that change doesn't show
 until 30 seconds have passed. While developing a yaws site, 
-it may be convenient to set this value to 0. If the debug flag (-d) is apssed
+it may be convenient to set this value to 0. If the debug flag (-d) is passed
 to the yaws start script, this value is automatically set to 0.
 
 .TP
@@ -96,19 +96,19 @@ a command line flag to yaws.
 Enable or disable the auth log. Default is true.
 
 .TP
-\B log_wrap_size = Integer\fR
+\fB log_wrap_size = Integer\fR
 The logs written by yaws are all wrap logs, the default value at the
 size where they wrap around and the original gets renamed to File.old
 is 1000000, 1 M. This value can changed.
 
 
 .TP
-\B log_resolve_hostname = Bool\fR
+\fB log_resolve_hostname = Bool\fR
 By default the client host IP is not resolved in the access logs.
 
 
 .TP
-\B fail_on_bind_err = Bool\fR
+\fB fail_on_bind_err = Bool\fR
 Fail completely or not if yaws fails to bind a listen socket
 Default is true.
 
@@ -116,9 +116,9 @@ Default is true.
 .TP
 \fB copy_error_log  = true | false\fR
 Enable or disable copying of the error log. When we run in
-embedded mode, that may very well be some other systems process
+embedded mode, there may very well be some other systems process
 that is responsible for writing the errorlog to a file whereas
-when we run in normal standalone mode, we typicall ywant the
+when we run in normal standalone mode, we typically want the
 erlang errorlog written to a report.log file.
 Default value is true.
 
@@ -192,8 +192,15 @@ dir listing feature of Yaws. A status code 403 Forbidden will be sent.
 Set to true_nozip to avoid the auto-generated all.zip entries.
 
 .TP
-\fB docroot = Directory\fR
-This makes the server serve all its content from Directory
+\fB docroot = Directory ...\fR
+This makes the server serve all its content from Directory.
+
+It is possible to pass a space separated list of directories as 
+docroot. If this is the case, the various directories will be searched in
+order for the requested file. This also works with the ssi
+and yssi constructs where the full list of directories will be searched
+for files to ssi/yssi include.
+
 
 .TP
 \fBpartial_post_size = Integer\fR
@@ -294,7 +301,7 @@ see the explanation for the <opaque> context.
 .TP
 \fBrevproxy = Prefix Url\fR
 Make yaws a reverse proxy. The Prefix is a path inside our own docroot
-and the Url argument is an rli pointing to a website we want to "mount"
+and the Url argument is an url pointing to a website we want to "mount"
 under the path which is Prefix.
 
 Example: revproxy = /tmp/foo http://yaws.hyber.org
@@ -303,6 +310,7 @@ Makes the hyber website appear under /tmp/foo
 
 It is possible to have multiple reverse proxies inside the same server.
 
+WARNING, this feature is yet not in production quality.
 
 .TP
 \fB <ssl>  .... </ssl> \fR
@@ -395,11 +403,13 @@ Ends an auth definition
 .TP
 \fB <opaque>  .... </opaque> \fR
 This begins and ends an opaque configuration context for this server,
-where 'Key = Value' directives can be specified. These directives is
+where 'Key = Value' directives can be specified. These directives are
 ignored by yaws (hence the name opaque), but can be accessed as a list
 of tuples \fI{Key,Value}\fR stored in the #sconf.opaque record entry. See also
 the description of the \fIstart_mod\fR directive. 
 
+This mechanism can be used to pass data from a surrounding application
+into the individual .yaws pages.
 
 .TP
 \fB keyfile = File\fR

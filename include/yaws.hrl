@@ -141,6 +141,7 @@
 	 rhost,                      %% forced redirect host (+ optional port)
 	 rmethod,                    %% forced redirect method
 	 docroot,                    %% path to the docs
+	 xtra_docroots = [],         %% if we have additional pseudo docroots
 	 listen = {127,0,0,1},       %% bind to this IP, {0,0,0,0} is possible
 	 servername = "localhost",   %% servername is what Host: header is
 	 ets,                        %% local store for this server
