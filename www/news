@@ -1,3 +1,9 @@
+Fri Jun 10 16:09:58 CEST 2005, Version 1.55 released. Feature release.
+Concept of redirect maps added. See documentation in yaws.conf man page. This makes it possible to redir entire parts of the docroot to another site (jb)
+Removed the forbidden code, the right thing	to do when a scripttype is forbidden and we shall not run an	interpreter on the script is to ship the script, but as text/plain	instead of actually refusing to ship the data. Otherwise it's not	possible to publish .php files at all on the website. (klacke)
+Initial support for WebDAV added. This is as of yet undocumented. (tobbe)
+Added the possibilty to have multiple	docroots, where a page is searched in the list of docroots (klacke)
+
 Tue Apr 12 2005, Version 1.54 released. Bugfix release.
 Bug in SSL fixed, Bad line parsing in SSL mode, crashed when client sent headers splitup in a certain way. (klacke)
 Removed the automatic htmlize on strings in  ehtml, it was wrong ... to have it there. It's better for users that want it to explicitly add yaws_api:htmlize() to their strings This breaks code and is non backwards compatible.  Be aware !!  Also made {Tag, Attr} generate xhtml compliant code. (klacke)

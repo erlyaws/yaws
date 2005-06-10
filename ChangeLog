@@ -1,3 +1,120 @@
+2005-06-10 16:08  klacke
+
+	* vsn.mk: preparing for release 1.55
+
+2005-06-08 14:58  klacke
+
+	* include/yaws.hrl, man/yaws.conf.5, src/yaws_config.erl,
+	src/yaws_server.erl: added the possibilty to have multiple
+	docroots, where a page is searched in the list of docroots
+
+2005-06-07 20:08  klacke
+
+	* scripts/Install: ""
+
+2005-06-07 13:13  klacke
+
+	* man/yaws.1, scripts/yaws.template: -erlarg patch by Fredrik
+	Thulin
+
+2005-05-26 22:54  etnt
+
+	* src/yaws_dav.erl: [no log message]
+
+2005-05-23 19:14  klacke
+
+	* man/yaws_api.5: ""
+
+2005-05-20 00:47  etnt
+
+	* src/: dav.erl, yaws_server.erl: Adding support for PUT and
+	DELETE.
+
+2005-05-19 20:21  etnt
+
+	* src/dav.erl: [no log message]
+
+2005-05-19 00:36  etnt
+
+	* src/dav.erl: [no log message]
+
+2005-05-18 16:42  klacke
+
+	* scripts/yaws.template: ""
+
+2005-05-18 00:12  etnt
+
+	* src/: Makefile, dav.erl: Begun work with providing a filsystem
+	dav appmod.
+
+2005-05-17 10:37  etnt
+
+	* src/yaws_dav.erl: Fixed include file references.
+
+2005-05-16 23:24  etnt
+
+	* src/: yaws.erl, yaws_server.erl: Adding the MKCOL method
+	(webdav).
+
+2005-05-16 23:12  etnt
+
+	* src/yaws_api.erl: Added return code 207, Multi Status
+
+2005-05-16 14:56  etnt
+
+	* src/yaws_dav.erl: [no log message]
+
+2005-05-16 13:58  etnt
+
+	* include/yaws_dav.hrl, src/Makefile, src/yaws.erl,
+	src/yaws_dav.erl, src/yaws_server.erl: Adding the beginning of
+	WebDav support. The PROPFIND method has been added. The intention
+	is to let appmods take care of the WebDav specfics.
+
+2005-05-16 13:01  klacke
+
+	* src/yaws_api.erl: ""
+
+2005-05-12 15:12  klacke
+
+	* doc/yaws.tex, scripts/Makefile, www/code/Makefile,
+	www/shopingcart/Makefile: ""
+
+2005-04-29 14:28  mikl
+
+	* src/yaws.erl: temp directory is now taken from TMP environment
+	variable, and a default is used if the environment variable is not
+	set
+
+2005-04-25 15:48  klacke
+
+	* src/: yaws_config.erl, yaws_server.erl: new feature called
+	redirect maps whereby its possible to redir entire parts of the
+	docroot to another site
+
+2005-04-25 13:54  klacke
+
+	* src/yaws_server.erl: Removed the forbidden code, the right thing
+	to do when a scripttype is forbidden and we shall not run an
+	interpreter on the script is to ship the script, but as text/plain
+	instead of actually refusing to ship the data. Otherwise it's not
+	possible to publish .php files at all on the website.
+
+2005-04-18 22:55  jbevemyr
+
+	* include/yaws.hrl, man/yaws.conf.5, src/yaws_config.erl,
+	src/yaws_server.erl: Added redirect map
+
+2005-04-18 22:33  jbevemyr
+
+	* applications/mail/src/mail.erl: Fixed various bugs and removed
+	pre_html.
+
+2005-04-12 15:44  klacke
+
+	* ChangeLog, man/yaws_api.5, www/internals.yaws, www/news,
+	www/stil.css: 1.54
+
 2005-04-12 14:49  klacke
 
 	* vsn.mk: prepare for 1.54
