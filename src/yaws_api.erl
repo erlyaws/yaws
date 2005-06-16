@@ -748,7 +748,7 @@ url_decode_q_split([$%, Hi, Lo | Tail], Ack) ->
 url_decode_q_split([$?|T], Ack) ->
     %% Don't decode the query string here, that is parsed separately.
     {path_norm_reverse(Ack), T};
-url_decode_q_split([H|T], Ack) ->
+url_decode_q_split([H|T], Ack) when H /= 0 -> 
     url_decode_q_split(T, [H|Ack]);
 url_decode_q_split([], Ack) ->
     {path_norm_reverse(Ack), []}.
