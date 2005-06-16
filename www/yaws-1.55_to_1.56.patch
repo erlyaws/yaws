@@ -1,0 +1,26 @@
+
+Index: yaws_api.erl
+===================================================================
+RCS file: /cvsroot/erlyaws/yaws/src/yaws_api.erl,v
+retrieving revision 1.126
+retrieving revision 1.128
+diff -u -b -r1.126 -r1.128
+--- yaws_api.erl        16 May 2005 21:12:03 -0000      1.126
++++ yaws_api.erl        16 Jun 2005 11:36:57 -0000      1.128
+@@ -741,11 +741,14 @@
+ 
+ url_decode_q_split([$%, Hi, Lo | Tail], Ack) ->
+     Hex = yaws:hex_to_integer([Hi, Lo]),
++    if Hex  == 0 -> exit(badurl);
++       true -> ok
++    end,
+     url_decode_q_split(Tail, [Hex|Ack]);
+ url_decode_q_split([$?|T], Ack) ->
+     %% Don't decode the query string here, that is parsed separately.
+     {path_norm_reverse(Ack), T};
+-url_decode_q_split([H|T], Ack) ->
++url_decode_q_split([H|T], Ack) when H /= 0 -> 
+     url_decode_q_split(T, [H|Ack]);
+ url_decode_q_split([], Ack) ->
+     {path_norm_reverse(Ack), []}.
+

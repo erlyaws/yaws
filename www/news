@@ -1,32 +1,6 @@
 Thu Jun 16 13:42:50 CEST 2005, Security update release.
 A bug was found by Daniel Fabian, SEC-Consult Unternehmensberatung GmbH whereby: If a null byte is appended to the filename of a yaws script (.yaws), the yaws webserver returns a page containing the source code of the  according script. This flaw allows a malicious attacker to analyse the source code of the entire web application, which might result in the attacker gaining sensitiv information like passwords. All versions of yaws older than 1.56 are vulnerable.
-For users running old yaws web servers, the following patch can be applied:
-
-Index: yaws_api.erl
-===================================================================
-RCS file: /cvsroot/erlyaws/yaws/src/yaws_api.erl,v
-retrieving revision 1.126
-retrieving revision 1.128
-diff -u -b -r1.126 -r1.128
---- yaws_api.erl        16 May 2005 21:12:03 -0000      1.126
-+++ yaws_api.erl        16 Jun 2005 11:36:57 -0000      1.128
-@@ -741,11 +741,14 @@
- 
- url_decode_q_split([$%, Hi, Lo | Tail], Ack) ->
-     Hex = yaws:hex_to_integer([Hi, Lo]),
-+    if Hex  == 0 -> exit(badurl);
-+       true -> ok
-+    end,
-     url_decode_q_split(Tail, [Hex|Ack]);
- url_decode_q_split([$?|T], Ack) ->
-     %% Don't decode the query string here, that is parsed separately.
-     {path_norm_reverse(Ack), T};
--url_decode_q_split([H|T], Ack) ->
-+url_decode_q_split([H|T], Ack) when H /= 0 -> 
-     url_decode_q_split(T, [H|Ack]);
- url_decode_q_split([], Ack) ->
-     {path_norm_reverse(Ack), []}.
-
+For users running old yaws web servers, the following <a href="yaws-1.55_to_1.56.patch"> patch </a> can be applied. The is small and can easily be backported to older yaws releases.
 
 Fri Jun 10 16:09:58 CEST 2005, Version 1.55 released. Feature release.
 Concept of redirect maps added. See documentation in yaws.conf man page. This makes it possible to redir entire parts of the docroot to another site (jb)
