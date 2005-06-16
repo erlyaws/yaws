@@ -741,6 +741,9 @@ url_decode_q_split(Path) ->
 
 url_decode_q_split([$%, Hi, Lo | Tail], Ack) ->
     Hex = yaws:hex_to_integer([Hi, Lo]),
+    if Hex  == 0 -> exit(badurl);
+       true -> ok
+    end,
     url_decode_q_split(Tail, [Hex|Ack]);
 url_decode_q_split([$?|T], Ack) ->
     %% Don't decode the query string here, that is parsed separately.
