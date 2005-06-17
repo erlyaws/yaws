@@ -23,10 +23,10 @@ out(A) ->
 	 {h1, [],"Generating Dynamic Content"},
 	 {p,[], ["Yaws has very nice support for generating dynamic content on the fly. "
 		 "We use embedded erlang code to generate the content. The Erlang code "
-		 "is separated from the HTML code by ",
-		 {tt, [], "<erl>"}, 
+		 "is separated from the HTML code by  ",
+		 {tt, [], "&lt;erl&gt;"}, 
 		 " and ",
-		 {tt, [], "</erl>"},
+		 {tt, [], "\&lt;/erl&gt;"},
 		 " markers. For example: "]},
 	 
 	 box("

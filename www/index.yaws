@@ -8,8 +8,8 @@ out(A) ->
 	[{h1,[],"Yaws"},
 
 
-	{p,[],"Yaws is a HTTP high perfomance 1.1 webserver."
-	 "Two separate modes of operations are supported."},
+	{p,[],"Yaws is a HTTP high perfomance 1.1 webserver particularly"
+	 " well suited for dynamic-content webapplications. Two separate modes of operations are supported."},
 	{ul,[],
 	 [{li,[],
 	   {p,[],"Standalone mode where Yaws runs as a regular webserver " 
