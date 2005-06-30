@@ -214,6 +214,7 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv) ->
 	    {"CONTENT_TYPE", H#headers.content_type},
 	    {"CONTENT_LENGTH", H#headers.content_length},
 	    {"HTTP_ACCEPT", H#headers.accept},
+            {"HTTP_HOST", H#headers.host},
 	    {"HTTP_USER_AGENT", H#headers.user_agent},
 	    {"HTTP_COOKIE", flatten_val(make_cookie_val(H#headers.cookie))}
 	   ]++lists:map(fun({http_header,_,Var,_,Val})->{tohttp(Var),Val} end,

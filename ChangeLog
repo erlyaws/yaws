@@ -2,6 +2,7 @@
 
 	* Added compile option to generate debug information in the Erlang beam
 	file. 
+        * Added HTTP_HOST env variable for CGI scripts (was required by sphpblog).
 
 2005-06-10 16:08  klacke
 
