@@ -24,6 +24,10 @@ ifdef export_all
   ERLC_FLAGS+=-Dexport_all
 endif
 
+ifdef debug_info
+  ERLC_FLAGS+=+debug_info
+endif
+
 CC=@CC@
 CFLAGS=@CFLAGS@
 LINKER=@LINKER@

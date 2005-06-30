@@ -1,3 +1,8 @@
+2005-06-29 21:30  mikl
+
+	* Added compile option to generate debug information in the Erlang beam
+	file. 
+
 2005-06-10 16:08  klacke
 
 	* vsn.mk: preparing for release 1.55
