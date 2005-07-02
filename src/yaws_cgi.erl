@@ -3,10 +3,11 @@
 
 -include_lib("yaws/include/yaws_api.hrl").
 -include("yaws_debug.hrl").
+-include_lib("yaws/include/yaws.hrl").
 
 -export([call_cgi/5, call_cgi/4, call_cgi/3, call_cgi/2]).
 
--export([cgi_worker/6]).
+-export([cgi_worker/7]).
 
 
 % TO DO:  Handle failure and timeouts.
@@ -45,7 +46,7 @@ call_cgi(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv) ->
 	    end;
 	_ ->
 	    Worker = start_worker(Arg, Exefilename, Scriptfilename, 
-				  Pathinfo, ExtraEnv),
+				  Pathinfo, ExtraEnv, get(sc)),
 	    handle_clidata(Arg, Worker)
     end.
 
@@ -72,7 +73,7 @@ send_clidata(Worker, Data) ->
     end.
 
 
-start_worker(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv) ->
+start_worker(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
     ExeFN = case Exefilename of 
 		undefined -> Scriptfilename;
 		"" -> Scriptfilename;
@@ -83,7 +84,7 @@ start_worker(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv) ->
 	     OK -> OK
 	 end,
     Worker = spawn(?MODULE, cgi_worker, 
-		   [self(), Arg, ExeFN, Scriptfilename, PI, ExtraEnv]),
+		   [self(), Arg, ExeFN, Scriptfilename, PI, ExtraEnv, SC]),
     Worker.
 
 
@@ -166,7 +167,7 @@ get_socket_peername(Socket) ->
     yaws:fmt_ip(IP).
 
 
-cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv) ->
+cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
     H = Arg#arg.headers,
     R = Arg#arg.req,
     case R#http_request.path of
@@ -179,7 +180,7 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv) ->
     Hostport = case Hosttail of
 
 		   [$: | P] -> P;
-		   [] -> "80"
+		   [] -> integer_to_list(SC#sconf.port)
 	       end,
     PeerAddr = get_socket_peername(Arg#arg.clisock),
     Scriptname = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
@@ -313,8 +314,8 @@ get_resp(Hs, Worker) ->
     end.
 
 
-cgi_worker(Parent, Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv) ->
-    Env = cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv),
+cgi_worker(Parent, Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv,SC) ->
+    Env = cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv,SC),
     ?Debug("~p~n", [Env]),
     CGIPort = open_port({spawn, Exefilename},
 			[{env, Env}, 
