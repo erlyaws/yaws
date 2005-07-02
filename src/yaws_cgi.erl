@@ -214,7 +214,7 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv) ->
 	    {"CONTENT_TYPE", H#headers.content_type},
 	    {"CONTENT_LENGTH", H#headers.content_length},
 	    {"HTTP_ACCEPT", H#headers.accept},
-            {"HTTP_HOST", H#headers.host},
+            {"HTTP_HOST", host(H#headers.host)},
 	    {"HTTP_USER_AGENT", H#headers.user_agent},
 	    {"HTTP_COOKIE", flatten_val(make_cookie_val(H#headers.cookie))}
 	   ]++lists:map(fun({http_header,_,Var,_,Val})->{tohttp(Var),Val} end,
@@ -230,6 +230,14 @@ tohttp_c(C) when C >= $a , C =< $z ->
     C - $a + $A;
 tohttp_c(C) ->
     C.
+
+%% Get Host part from a host string that can contain host or host:port
+host(Host) ->
+   case string:tokens(Host, ":") of
+       [Hostname, Port] -> Hostname;
+       [Hostname]       -> Hostname;
+       _Other           -> Host
+   end.
 
 
 make_cookie_val([]) ->

@@ -1,3 +1,8 @@
+2005-07-02 16:16  mikl
+
+	* yaws_cgi.erl: Do not send the server port along with the host name in
+	the CGI HTTP_HOST environment variable.
+
 2005-06-29 21:30  mikl
 
 	* Added compile option to generate debug information in the Erlang beam
