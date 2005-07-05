@@ -1659,8 +1659,8 @@ del_old_files([]) ->
 del_old_files([{_FileAtom, spec, _Mtime1, Spec, _}]) ->
     foreach(
       fun({mod, _, _, _,  Mod, _Func}) ->
-
-	      F=yaws:tmp_dir()++"/yaws/" ++ yaws:to_list(Mod) ++ ".erl",
+	      F=filename:join([yaws:tmp_dir(), "yaws", 
+			       yaws:to_list(Mod) ++ ".erl"]),
 	      code:purge(Mod),
 	      code:purge(Mod),
 	      file:delete(F);

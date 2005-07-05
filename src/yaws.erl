@@ -1588,66 +1588,35 @@ uid_to_name(Uid) ->
 	    Name
     end.
 
+
+
 tmp_dir() ->
-    case os:getenv("TMP") of   
- 	false ->
-	    %% If environment variable for temp dir is not set,
-	    %% use a default value, depending on the OS.
-	    case os:type() of
-		{win32,_} ->
-		    "c:/windows/temp";
-		_ -> 
-		    "/tmp"
+    case os:type() of
+ 	{win32,_} ->
+	    case os:getenv("TEMP") of
+		false ->
+		    case os:getenv("TMP") of
+			%%
+			%% No temporary path set?
+			%% Then try standard paths.
+			%%
+			false ->
+			    case file:read_file_info("C:/WINNT/Temp") of
+				{error, _} ->
+				    "C:/WINDOWS/Temp";
+				{ok, _} ->
+				    "C:/WINNT/Temp"
+			    end;
+			PathTMP ->
+			    PathTMP
+		    end;
+		PathTEMP ->
+		    PathTEMP
 	    end;
-	TempDir ->
-	    TempDir
+	_ ->
+	    "/tmp"
     end.
 
-
-% Try to create a tmp directory in the current directory.
-% In case of any problem terminate yaws.
-%
-create_tmp_dir() ->
-    ErrorMessage = "TEMP, and TMP variables undefined. ",
-    Dir = case file:get_cwd() of
-	      {ok, CurDir} ->
-		  CurDir ++ "/tmp";
-	      Err ->
-		  io:format(
-		    ErrorMessage++"Canont access current directory; error: ~p~n",
-		    [Err]),
-		  init:stop()
-	  end,
-    case file:make_dir(Dir) of
-	ok -> Dir;
-	{error, eexist} ->
-	    case file:read_file_info("tmp") of
-		{ok, FI} when FI#file_info.type==directory ->
-		    Dir;
-		_ ->
-		    io:format(
-		      ErrorMessage++"Canont access directory ~p~n",
-		      [Dir]),
-		    init:stop()
-	    end;
-	Error ->
-	    io:format(
-	      ErrorMessage++"Canont create directory ~p, Error: ~p~n",
-	      [Dir,Error]),
-	    init:stop()
-    end.
-
-%
-% String represeting temporary directory that
-% can be used for format functions (io,io_lib).
-% WIN32 path can contain $~, so they are doubled.
-%
-tmp_dir_fstr() ->
-    lists:foldr(fun($~, Str) -> [$~, $~ | Str];
-		   (C , Str) -> [C | Str]
-		end,
-		[],
-		tmp_dir()).
 
 exists(F) ->
     case file:open(F, [read, raw]) of
