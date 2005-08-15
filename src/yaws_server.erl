@@ -1089,12 +1089,13 @@ bad_request(CliSock, Req, _Head) ->
 	end,
     Bin = case Head#headers.content_length of
 	      undefined ->
+		  Chunked = Head#headers.transfer_encoding == "chunked",
 		  case Head#headers.connection of
-		      "close" ->
+		      "close" when Chunked == false->
 			  get_client_data(CliSock, all, is_ssl(SC#sconf.ssl));
-		      _ ->
-			  ?Debug("No content length header ",[]),
-			  exit(normal)
+		      _ when Chunked == true ->
+			  get_chunked_client_data(CliSock,[],
+						  is_ssl(SC#sconf.ssl))
 		  end;
 	      Len when integer(PPS) ->
 		  Int_len = list_to_integer(Len),
@@ -1674,6 +1675,24 @@ get_client_data(CliSock, all, SSlBool) ->
 
 get_client_data(CliSock, Len, SSlBool) ->
     get_client_data_len(CliSock, Len, [], SSlBool).
+
+
+%% not nice to support this for ssl sockets
+get_chunked_client_data(CliSock,Bs,nossl) ->
+    inet:setopts(CliSock, [binary, {packet, line}]),
+    N = yaws_revproxy:get_chunk_num(CliSock),
+    inet:setopts(CliSock, [binary, {packet, raw}]),
+    if
+	N == 0 ->
+	    Tmp=gen_tcp:recv(CliSock, 2, 5000),%% flush last crnl
+	    list_to_binary(Bs);
+	true ->
+	    B = yaws_revproxy:get_chunk(CliSock, N, 0),
+	    yaws_revproxy:eat_crnl(CliSock),
+	    get_chunked_client_data(CliSock, [Bs,B], nossl)
+    end;
+get_chunked_client_data(CliSock,Bs,ssl) ->
+    yaws_ssl:get_chunked_client_data(CliSock).
 
 
 get_client_data_len(_CliSock, 0, Bs, _SSlBool) ->

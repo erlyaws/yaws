@@ -8,7 +8,7 @@
 -module(yaws_ssl).
 -author('klacke@hyber.org').
 
--export([ssl_get_headers/1]).
+-export([ssl_get_headers/1, get_chunked_client_data/1]).
 
 
 -include_lib("yaws/include/yaws.hrl").
@@ -240,3 +240,8 @@ parse_line(S, H) ->
 
 space_strip(S) ->
     yaws:strip_spaces(S, both).
+
+
+get_chunked_client_data(Sock) ->
+    exit(nyi).
+

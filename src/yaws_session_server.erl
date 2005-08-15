@@ -26,7 +26,7 @@
 -record(ysession,
 	{cookie,       %% the cookie assigned to the session
 	 to,           %% greg secs untill timeout death
-     ttl,          %% default time to live
+	 ttl,          %% default time to live
 	 starttime,    %% When calendar:local_time() did sess start
 	 opaque        %% any data the user supplies
 	}).
