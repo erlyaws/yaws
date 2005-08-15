@@ -36,7 +36,7 @@
 init(CliSock, ARG, DecPath, QueryPart, {Prefix, URL}, N) ->
     GC=get(gc), SC=get(sc),
     %% Connect to the backend server
-    case connect_url(URL) of
+    case connect_url(URL, SC) of
 	{ok, Ssock} ->
 	    Headers0 = ARG#arg.headers,
             KeepAlive = Headers0#headers.connection,
@@ -111,11 +111,13 @@ headers_to_str(Headers) ->
       yaws_api:reformat_header(Headers)).
 
 
-connect_url(URL) ->
+connect_url(URL, _SC) ->
     Port = if
 	       URL#url.port == undefined -> 80;
 	       true -> URL#url.port
 	   end,
+    %% FIXME, do ssl:connect here if is_ssl(SC)
+    %% as it is now, SSL doesn't work at all here
     gen_tcp:connect(URL#url.host, Port, [{active, false},
 					 {packet, http}]).
 
@@ -204,7 +206,7 @@ set_sock_mode(PS) ->
 
 
 get_chunk_num(Fd) ->
-    get_chunk_num(Fd,noosl).
+    get_chunk_num(Fd,nossl).
 get_chunk_num(Fd,SSL) ->
     case yaws:do_recv(Fd, 0, SSL) of
 	{ok, Line} ->
@@ -243,6 +245,10 @@ get_chunk(Fd, N, Asz,SSL) ->
 ploop(From0, To, GC, SC, Pid) ->
     put(sc, SC),
     put(gc, GC),
+    put(ssl, case SC#sconf.ssl of
+		 undefined -> nossl;
+		 true -> ssl
+	     end),
     ploop(From0, To, Pid).
 
 
@@ -258,8 +264,7 @@ ploop(From0, To, Pid) ->
     TS = To#psock.s,
     case From#psock.mode of
 	expectheaders ->
-	    SSL = nossl,
-	    case yaws:http_get_headers(From#psock.s, SSL) of
+	    case yaws:http_get_headers(From#psock.s, get(ssl)) of
 		{R, H0} ->
 		    ?Debug("R = ~p~n",[R]),
 		    RStr = 
@@ -288,9 +293,9 @@ ploop(From0, To, Pid) ->
 	    end;
 	expectchunked ->
 	    %% read the chunk number, we're in line mode
-	    N = get_chunk_num(From#psock.s),
+	    N = get_chunk_num(From#psock.s, get(ssl)),
 	    if N == 0 ->
-		    ok=eat_crnl(From#psock.s),
+		    ok=eat_crnl(From#psock.s, get(ssl)),
 		    yaws:gen_tcp_send(TS,["\r\n0\r\n\r\n"]),
 		    ?Debug("SEND final 0 ",[]),
 		    ploop_keepalive(From#psock{mode = expectheaders, 
@@ -300,14 +305,14 @@ ploop(From0, To, Pid) ->
 				    state = N},To, Pid)
 	    end;
 	chunk ->
-	    CG = get_chunk(From#psock.s,From#psock.state, 0,nossl),
+	    CG = get_chunk(From#psock.s,From#psock.state, 0, get(ssl)),
 	    SZ = From#psock.state,
 	    Data2 = ["\r\n", yaws:integer_to_hex(SZ),"\r\n", CG],
 	    yaws:gen_tcp_send(TS, Data2),
 	    ploop(From#psock{mode = expect_nl_before_chunked,
 			     state = undefined}, To, Pid);
 	expect_nl_before_chunked ->
-	    case gen_tcp:recv(From#psock.s, 0, 20000) of
+	    case yaws:do_recv(From#psock.s, 0, get(ssl)) of
 		{ok, <<13,10>>} ->
 		    yaws:gen_tcp_send(TS,<<13,10>>),
 		    ploop(From#psock{mode = expectchunked,
@@ -319,7 +324,7 @@ ploop(From0, To, Pid) ->
 	    ploop_keepalive(From#psock{mode = expectheaders,
 			     state = undefined},To, Pid);
 	len ->
-	    case gen_tcp:recv(From#psock.s, From#psock.state, ?READ_TIMEOUT) of
+	    case yaws:do_recv(From#psock.s, From#psock.state, get(ssl)) of
 		{ok, Bin} ->
 		    SZ = size(Bin),
                     ?Debug("Read ~p bytes~n", [SZ]),
@@ -331,7 +336,7 @@ ploop(From0, To, Pid) ->
 		    exit(normal)
 	    end;
 	undefined ->
-	    case gen_tcp:recv(From#psock.s, From#psock.state, ?READ_TIMEOUT) of
+	    case yaws:do_recv(From#psock.s, From#psock.state, get(ssl)) of
 		{ok, Bin} ->
 		    yaws:gen_tcp_send(TS, Bin),
 		    ploop(From, To, Pid);

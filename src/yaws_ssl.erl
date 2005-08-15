@@ -11,7 +11,7 @@
 %-export([ssl_get_headers/1, get_chunked_client_data/1]).
 
 %% module isn't used any more
-
+%% replaced by builtin support for http in OTP ssl module
 
 -include_lib("yaws/include/yaws.hrl").
 -include_lib("yaws/include/yaws_api.hrl").
