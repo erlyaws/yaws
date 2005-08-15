@@ -226,7 +226,7 @@ f_check(Str, Field) ->
 		false ->
 		    ok
 	    end;
-	Other ->
+	_Other ->
 	    error_logger:format("Bad <~p> header:~n"
 				"~p~nNot ending with CRNL~n",
 				[Field, Str]),

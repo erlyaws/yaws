@@ -148,7 +148,9 @@ handle_a(A, GC) ->
 		    Res = yaws:dohup(A),
 		    Res;
 		stop ->
-		    gen_tcp:send(A, "stopping\n"),
+		    gen_tcp:send(A, io_lib:format(
+				      "stopping yaws with id=~p\n",
+				      [GC#gconf.id])),
 		    file:delete(ctl_file(GC#gconf.id)),
 		    init:stop();
 		{trace, What} ->

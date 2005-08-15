@@ -204,7 +204,9 @@ set_sock_mode(PS) ->
 
 
 get_chunk_num(Fd) ->
-    case gen_tcp:recv(Fd, 0) of
+    get_chunk_num(Fd,noosl).
+get_chunk_num(Fd,SSL) ->
+    case yaws:do_recv(Fd, 0, SSL) of
 	{ok, Line} ->
 	    ?Debug("Get chunk num from line ~p~n",[Line]),
 	    erlang:list_to_integer(nonl(Line),16);
@@ -225,13 +227,13 @@ nonl([]) ->
 	    
 
 
-get_chunk(Fd, N, N) ->
+get_chunk(Fd, N, N,_) ->
     [];
-get_chunk(Fd, N, Asz) ->
-    case gen_tcp:recv(Fd, N, 20000) of
+get_chunk(Fd, N, Asz,SSL) ->
+    case yaws:do_recv(Fd, N, 20000,SSL) of
 	{ok, Bin} ->
 	    SZ = size(Bin),
-	    [Bin|get_chunk(Fd, N, SZ+Asz)];
+	    [Bin|get_chunk(Fd, N, SZ+Asz,SSL)];
 	_ ->
 	    exit(normal)
     end.
@@ -298,7 +300,7 @@ ploop(From0, To, Pid) ->
 				    state = N},To, Pid)
 	    end;
 	chunk ->
-	    CG = get_chunk(From#psock.s,From#psock.state, 0),
+	    CG = get_chunk(From#psock.s,From#psock.state, 0,nossl),
 	    SZ = From#psock.state,
 	    Data2 = ["\r\n", yaws:integer_to_hex(SZ),"\r\n", CG],
 	    yaws:gen_tcp_send(TS, Data2),
@@ -437,8 +439,10 @@ rewrite_loc_rel(PS, Loc) ->
 
 
 eat_crnl(Fd) ->
-    inet:setopts(Fd, [{packet, line}]),
-    case gen_tcp:recv(Fd,0, ?READ_TIMEOUT) of
+    eat_crnl(Fd,nossl).
+eat_crnl(Fd,SSL) ->
+    yaws:setopts(Fd, [{packet, line}],SSL),
+    case yaws:do_recv(Fd,0, ?READ_TIMEOUT,SSL) of
 	{ok, <<13,10>>} ->
 	    ok;
 	{ok, [13,10]} ->

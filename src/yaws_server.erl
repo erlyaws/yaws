@@ -108,9 +108,9 @@ init({Debug, Trace, TraceOut, Conf, RunMod, Embedded}) ->
 		    lists:foreach(
 		      fun(Group) ->
 			      lists:foreach(
-				fun(SC) ->
+				fun(_SC) ->
 					?Debug("SC = ~s~n",
-					       [?format_record(SC, sconf)])
+					       [?format_record(_SC, sconf)])
 				end, Group)
 		      end, Sconfs),
 		    yaws_log:setdir(Gconf, Sconfs),
@@ -641,7 +641,7 @@ ssl_opts(SC, SSL) ->
     Opts = [
 	    binary,
 	    {ip, SC#sconf.listen},
-	    {packet, 0},
+	    {packet, http},
 	    {active, false} | ssl_opts(SSL)],
     Opts.
 
@@ -1033,12 +1033,6 @@ optional_header(Item) ->
 
 
 
-inet_setopts(S, Opts) when port(S) ->
-    inet:setopts(S, Opts);
-inet_setopts(_,_) ->
-    ok.  %% noop for ssl
-
-
 
 %% This is a request that is completely
 %% broken, it can either be evil, but the most
@@ -1070,7 +1064,8 @@ bad_request(CliSock, Req, _Head) ->
 
 %% ret:  continue | done
 'GET'(CliSock, Req, Head) ->
-    ok = inet_setopts(CliSock, [{packet, raw}, binary]),
+    SC=get(sc),
+    ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
     flush(CliSock, Head#headers.content_length),
     ARG = make_arg(CliSock, Head, Req, undefined),
     handle_request(CliSock, ARG, 0).
@@ -1079,8 +1074,8 @@ bad_request(CliSock, Req, _Head) ->
 'POST'(CliSock, Req, Head) ->
     ?Debug("POST Req=~s~n H=~s~n", [?format_record(Req, http_request),
 				    ?format_record(Head, headers)]),
-    ok = inet_setopts(CliSock, [{packet, raw}, binary]),
     SC=get(sc),
+    ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
     PPS = SC#sconf.partial_post_size,
     CT = 
 	case yaws:lowercase(Head#headers.content_type) of
@@ -1149,7 +1144,8 @@ call_method(Method, CliSock, Req, H) ->
     'GET'(CliSock, Req, Head).
 
 not_implemented(CliSock, Req, Head) ->
-    ok = inet_setopts(CliSock, [{packet, raw}, binary]),
+    SC=get(sc),
+    ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
     flush(CliSock, Head#headers.content_length),
     deliver_501(CliSock, Req).
     
@@ -1159,7 +1155,8 @@ not_implemented(CliSock, Req, Head) ->
 
 'OPTIONS'(CliSock, Req, Head) ->
     ?Debug("OPTIONS", []),
-    ok = inet_setopts(CliSock, [{packet, raw}, binary]),
+    SC=get(sc),
+    ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
     flush(CliSock, Head#headers.content_length),
     ?Debug("OPTIONS delivering", []),
     deliver_options(CliSock, Req).
@@ -1182,8 +1179,8 @@ not_implemented(CliSock, Req, Head) ->
 
 
 body_method(CliSock, Req, Head) ->
-    ok = inet_setopts(CliSock, [{packet, raw}, binary]),
     SC=get(sc),
+    ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
     PPS = SC#sconf.partial_post_size,
     Bin = case Head#headers.content_length of
              undefined ->
@@ -1224,7 +1221,8 @@ body_method(CliSock, Req, Head) ->
     no_body_method(CliSock, Req, Head).
 
 no_body_method(CliSock, Req, Head) ->
-    ok = inet_setopts(CliSock, [{packet, raw}, binary]),
+    SC=get(sc),
+    ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
     flush(CliSock, Head#headers.content_length),
     ARG = make_arg(CliSock, Head, Req, undefined),
     handle_request(CliSock, ARG, 0).
@@ -1678,21 +1676,19 @@ get_client_data(CliSock, Len, SSlBool) ->
 
 
 %% not nice to support this for ssl sockets
-get_chunked_client_data(CliSock,Bs,nossl) ->
-    inet:setopts(CliSock, [binary, {packet, line}]),
-    N = yaws_revproxy:get_chunk_num(CliSock),
-    inet:setopts(CliSock, [binary, {packet, raw}]),
+get_chunked_client_data(CliSock,Bs,SSL) ->
+    yaws:setopts(CliSock, [binary, {packet, line}],SSL),
+    N = yaws_revproxy:get_chunk_num(CliSock,SSL),
+    yaws:setopts(CliSock, [binary, {packet, raw}],SSL),
     if
 	N == 0 ->
-	    Tmp=gen_tcp:recv(CliSock, 2, 5000),%% flush last crnl
+	    _Tmp=yaws:do_recv(CliSock, 2, 5000,SSL),%% flush last crnl
 	    list_to_binary(Bs);
 	true ->
-	    B = yaws_revproxy:get_chunk(CliSock, N, 0),
-	    yaws_revproxy:eat_crnl(CliSock),
-	    get_chunked_client_data(CliSock, [Bs,B], nossl)
-    end;
-get_chunked_client_data(CliSock,Bs,ssl) ->
-    yaws_ssl:get_chunked_client_data(CliSock).
+	    B = yaws_revproxy:get_chunk(CliSock, N, 0,SSL),
+	    yaws_revproxy:eat_crnl(CliSock,SSL),
+	    get_chunked_client_data(CliSock, [Bs,B], SSL)
+    end.
 
 
 get_client_data_len(_CliSock, 0, Bs, _SSlBool) ->

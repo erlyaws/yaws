@@ -8,7 +8,9 @@
 -module(yaws_ssl).
 -author('klacke@hyber.org').
 
--export([ssl_get_headers/1, get_chunked_client_data/1]).
+%-export([ssl_get_headers/1, get_chunked_client_data/1]).
+
+%% module isn't used any more
 
 
 -include_lib("yaws/include/yaws.hrl").

@@ -19,8 +19,6 @@
 -compile(export_all).
 -import(lists, [reverse/1, reverse/2]).
 
-%%-export([Function/Arity, ...]).
-
 
 start() ->
     application:start(yaws, permanent).
@@ -1638,25 +1636,7 @@ exists(F) ->
 do_recv(Sock, Num, nossl) ->
     gen_tcp:recv(Sock, Num, ?READ_TIMEOUT);
 do_recv(Sock, Num, ssl) ->
-    case erase(ssltrail) of %% hack from above ...
-	undefined ->
-	    split_recv(ssl:recv(Sock, 0), Num);   %% ignore Num val ??? TO ??
-	Bin ->
-	    split_recv({ok, Bin}, Num)
-    end.
-
-%% weird ... ssl module doesn't respect Num arg for binary socks
-split_recv({ok, B}, Num) when integer(Num) ->
-    case B of
-	<<Bin:Num/binary , Tail/binary>> ->
-	    put(ssltrail, Tail),
-	    {ok, Bin};
-	_ ->
-	    {ok, B}
-    end;
-split_recv(E, _) ->
-    E.
-
+    ssl:recv(Sock, Num, ?READ_TIMEOUT).
 
 	
 cli_recv(S, Num, SslBool) ->
@@ -1728,24 +1708,7 @@ strip(Data) ->
 %%     or closed
 
 http_get_headers(CliSock, SSL) ->
-    Res = 
-	case SSL of
-	    ssl ->
-		case yaws_ssl:ssl_get_headers(CliSock) of
-		    {Req, H, Trail} ->
-			case get(ssltrail) of   %% hack hack hack
-			    undefined ->
-				put(ssltrail, Trail);
-			    B ->
-				put(ssltrail, <<Trail/binary,B/binary>>)
-			end,
-			{Req, H};
-		    R -> 
-			R
-		end;
-	    nossl ->
-		nossl_http_get_headers(CliSock)
-	end,
+    Res = do_http_get_headers(CliSock, SSL),
     GC = get(gc),
     if
 	GC#gconf.trace == false ->
@@ -1771,31 +1734,35 @@ headers_to_str(Headers) ->
       yaws_api:reformat_header(Headers)).
 	
 
+setopts(Sock, Opts, nossl) ->
+    ok = inet:setopts(Sock, Opts);
+setopts(Sock, Opts, ssl) ->
+    ok = ssl:setopts(Sock, Opts).
 
-nossl_http_get_headers(CliSock) ->
-    inet:setopts(CliSock, [{packet, http}]),
-    case http_recv_request(CliSock) of
+do_http_get_headers(CliSock, SSL) ->
+    setopts(CliSock, [{packet, http}], SSL),
+    case http_recv_request(CliSock,SSL) of
 	bad_request ->
 	    {#http_request{method=bad_request, version={0,9}},
 	     #headers{}};
 	closed -> 
 	    closed;
 	R -> 
-	    H = http_get_headers(CliSock, R,  #headers{}),
+	    H = http_collect_headers(CliSock, R,  #headers{}, SSL),
 	    {R, H}
     end.
 
 
-http_recv_request(CliSock) ->
-    case do_recv(CliSock, 0,  nossl) of
+http_recv_request(CliSock, SSL) ->
+    case do_recv(CliSock, 0,  SSL) of
 	{ok, R} when record(R, http_request) ->
 	    R;
 	{ok, R} when record(R, http_response) ->
 	    R;
 	{error, {http_error, "\r\n"}} ->
-	    http_recv_request(CliSock);
+	    http_recv_request(CliSock, SSL);
 	{error, {http_error, "\n"}} ->
-	    http_recv_request(CliSock);
+	    http_recv_request(CliSock,SSL);
 	{error, {http_error, _}} ->
 	    bad_request;
 	{error, closed} -> closed;
@@ -1807,50 +1774,56 @@ http_recv_request(CliSock) ->
 
 
 		  
-http_get_headers(CliSock, Req, H) ->
-    case do_recv(CliSock, 0, nossl) of
+http_collect_headers(CliSock, Req, H, SSL) ->
+    case do_recv(CliSock, 0, SSL) of
 	{ok, {http_header,  _Num, 'Host', _, Host}} ->
-	    http_get_headers(CliSock, Req, H#headers{host = Host});
+	    http_collect_headers(CliSock, Req, H#headers{host = Host},SSL);
 	{ok, {http_header, _Num, 'Connection', _, Conn}} ->
-	    http_get_headers(CliSock, Req, H#headers{connection = Conn});
+	    http_collect_headers(CliSock, Req, 
+				 H#headers{connection = Conn},SSL);
 	{ok, {http_header, _Num, 'Accept', _, Accept}} ->
-	    http_get_headers(CliSock, Req, H#headers{accept = Accept});
+	    http_collect_headers(CliSock, Req, H#headers{accept = Accept},SSL);
 	{ok, {http_header, _Num, 'If-Modified-Since', _, X}} ->
-	    http_get_headers(CliSock, Req,  
-			     H#headers{if_modified_since = X});
+	    http_collect_headers(CliSock, Req,  
+			     H#headers{if_modified_since = X},SSL);
 	{ok, {http_header, _Num, 'If-Match', _, X}} ->
-	    http_get_headers(CliSock, Req, H#headers{if_match = X});
+	    http_collect_headers(CliSock, Req, H#headers{if_match = X},SSL);
 	{ok, {http_header, _Num, 'If-None-Match', _, X}} ->
-	    http_get_headers(CliSock, Req, H#headers{if_none_match = X});
+	    http_collect_headers(CliSock, Req, 
+				 H#headers{if_none_match = X},SSL);
 	{ok, {http_header, _Num, 'If-Range', _, X}} ->
-	    http_get_headers(CliSock, Req, H#headers{if_range = X});
+	    http_collect_headers(CliSock, Req, H#headers{if_range = X},SSL);
 	{ok, {http_header, _Num, 'If-Unmodified-Since', _, X}} ->
-	    http_get_headers(CliSock, Req,  
-			H#headers{if_unmodified_since = X});
+	    http_collect_headers(CliSock, Req,  
+			H#headers{if_unmodified_since = X},SSL);
 	{ok, {http_header, _Num, 'Range', _, X}} ->
-	    http_get_headers(CliSock, Req, H#headers{range = X});
+	    http_collect_headers(CliSock, Req, H#headers{range = X},SSL);
 	{ok, {http_header, _Num, 'Referer',_, X}} ->
-	    http_get_headers(CliSock, Req, H#headers{referer = X});
+	    http_collect_headers(CliSock, Req, H#headers{referer = X},SSL);
 	{ok, {http_header, _Num, 'User-Agent', _, X}} ->
-	    http_get_headers(CliSock, Req, H#headers{user_agent = X});
+	    http_collect_headers(CliSock, Req, H#headers{user_agent = X},SSL);
 	{ok, {http_header, _Num, 'Accept-Ranges', _, X}} ->
-	    http_get_headers(CliSock, Req, H#headers{accept_ranges = X});
+	    http_collect_headers(CliSock, Req, 
+				 H#headers{accept_ranges = X},SSL);
 	{ok, {http_header, _Num, 'Cookie', _, X}} ->
-	    http_get_headers(CliSock, Req,  
-			H#headers{cookie = [X|H#headers.cookie]});
+	    http_collect_headers(CliSock, Req,  
+			H#headers{cookie = [X|H#headers.cookie]},SSL);
 	{ok, {http_header, _Num, 'Keep-Alive', _, X}} ->
-	    http_get_headers(CliSock, Req, H#headers{keep_alive = X});
+	    http_collect_headers(CliSock, Req, H#headers{keep_alive = X},SSL);
 	{ok, {http_header, _Num, 'Content-Length', _, X}} ->
-	    http_get_headers(CliSock, Req, H#headers{content_length = X});
+	    http_collect_headers(CliSock, Req, 
+				 H#headers{content_length = X},SSL);
 	{ok, {http_header, _Num, 'Content-Type', _, X}} ->
-	    http_get_headers(CliSock, Req, H#headers{content_type = X});
+	    http_collect_headers(CliSock, Req, 
+				 H#headers{content_type = X},SSL);
 	{ok, {http_header, _Num, 'Transfer-Encoding', _, X}} ->
-	    http_get_headers(CliSock, Req, H#headers{transfer_encoding=X});
+	    http_collect_headers(CliSock, Req, 
+				 H#headers{transfer_encoding=X},SSL);
 	{ok, {http_header, _Num, 'Location', _, X}} ->
-	    http_get_headers(CliSock, Req, H#headers{location=X});
+	    http_collect_headers(CliSock, Req, H#headers{location=X},SSL);
 	{ok, {http_header, _Num, 'Authorization', _, X}} ->
-	    http_get_headers(CliSock, Req,  
-			H#headers{authorization = parse_auth(X)});
+	    http_collect_headers(CliSock, Req,  
+			H#headers{authorization = parse_auth(X)},SSL);
 
 	{ok, http_eoh} ->
 	    H;
@@ -1859,15 +1832,15 @@ http_get_headers(CliSock, Req, H) ->
 	%% bad (typically test script) clients
 
 	{error, {http_error, "\r\n"}} ->
-	     http_get_headers(CliSock, Req, H);
+	     http_collect_headers(CliSock, Req, H,SSL);
 	{error, {http_error, "\n"}} ->
-	     http_get_headers(CliSock, Req, H);
+	     http_collect_headers(CliSock, Req, H,SSL);
 
 	%% auxilliary headers we don't have builtin support for
 	{ok, X} ->
 	    ?Debug("OTHER header ~p~n", [X]),
-	    http_get_headers(CliSock, Req,  
-			     H#headers{other=[X|H#headers.other]});
+	    http_collect_headers(CliSock, Req,  
+			     H#headers{other=[X|H#headers.other]},SSL);
 	_Err ->
 	    exit(normal)
     
