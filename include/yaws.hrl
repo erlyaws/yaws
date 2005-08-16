@@ -177,11 +177,11 @@
 -record(urltype, {type,   %% error | yaws | regular | directory | 
                           %% forbidden | appmod
 		  finfo,
-		  path,
-		  fullpath, %% deep list
-		  dir,      %% relative dir where the path leads to
-		            %% flat | unflat need flat for authentication
-		  data,     %% Binary | FileDescriptor | DirListing | undefined
+		  path = [],
+		  fullpath = [], %% deep list
+		  dir = [],      %% relative dir where the path leads to
+		                 %% flat | unflat need flat for authentication
+		  data,  %% Binary | FileDescriptor | DirListing | undefined
 		  deflate,  %% undefined | Binary | dynamic
 		  mime = "text/html",    %% MIME type
 		  getpath,  %% as GET'ed by client
