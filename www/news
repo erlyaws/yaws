@@ -1,3 +1,12 @@
+Wed Aug 17 14:54:06 CEST 2005 Version 1.57
+rel/abs path patch by Rob Schmersel which fixed	a problem in the wiki
+Rewrote yaws SSL code to use the packet http and packet line modes that are now supported in the OTP	ssl module. Earlier this was all manual (and slow) code in yaws.	Thus yaws/SSL servers are now considerably faster. The old yaws_ssl modules is no longer used. (klacke)
+Support clients that POST data with Transfer-Encoding chunked. This is used by some models of cellphones. Bug found by ermine@ermine.pp.ru (Klacke)
+Tmp dir patch by Karel Ostrovsky to better support tmp dir on Windows
+cgi port patch by joe_e_e
+Do not send the server	port along with the host name in the CGI HTTP_HOST environment	variable. Added HTTP_HOST env variable for CGI 	scripts (was required by sphpblog). (mikl)
+
+
 Thu Jun 16 13:42:50 CEST 2005, Version 1.56, Security update release.
 A bug was found by Daniel Fabian, SEC-Consult Unternehmensberatung GmbH whereby: If a null byte is appended to the filename of a yaws script (.yaws), the yaws webserver returns a page containing the source code of the  according script. This flaw allows a malicious attacker to analyse the source code of the entire web application, which might result in the attacker gaining sensitiv information like passwords. All versions of yaws older than 1.56 are vulnerable.
 For users running old yaws web servers, the following <a href="yaws-1.55_to_1.56.patch"> patch </a> can be applied. The patch is small and can easily be backported to older yaws releases.

@@ -1,13 +1,76 @@
-2005-07-02 16:16  mikl
+2005-08-17 15:01  klacke
 
-	* yaws_cgi.erl: Do not send the server port along with the host name in
-	the CGI HTTP_HOST environment variable.
+	* vsn.mk: preparing for 1.57
 
-2005-06-29 21:30  mikl
+2005-08-17 01:01  klacke
 
-	* Added compile option to generate debug information in the Erlang beam
-	file. 
-        * Added HTTP_HOST env variable for CGI scripts (was required by sphpblog).
+	* include/yaws.hrl: rel/abs path patch by Rob Schmersel which fixed
+	a problem in the wiki
+
+2005-08-15 20:26  klacke
+
+	* src/: yaws_revproxy.erl, yaws_ssl.erl: ""
+
+2005-08-15 17:45  klacke
+
+	* src/: yaws.erl, yaws_ctl.erl, yaws_debug.erl, yaws_revproxy.erl,
+	yaws_server.erl, yaws_ssl.erl: rewrote yaws SSL code to use the
+	packet http and packet line modes that are now supported in the OTP
+	ssl module. Earlier this was all manual (and slow) code in yaws.
+	Thus yaws/SSL servers are now considerably faster
+
+2005-08-15 13:01  klacke
+
+	* src/: yaws_server.erl, yaws_session_server.erl, yaws_ssl.erl:
+	support chunked data from the client
+
+2005-07-05 11:08  klacke
+
+	* src/: yaws.erl, yaws_server.erl: tmp patch by Karel Ostrovsky
+
+2005-07-02 16:30  klacke
+
+	* src/yaws_cgi.erl: cgi port patch by joe_e_e
+
+2005-07-02 16:17  mikl
+
+	* ChangeLog, src/yaws_cgi.erl: yaws_cgi.erl: Do not send the server
+	port along with the host name in the CGI HTTP_HOST environment
+	variable.
+
+2005-06-30 15:40  mikl
+
+	* ChangeLog, src/yaws_cgi.erl: Added HTTP_HOST env variable for CGI
+	scripts (was required by sphpblog).
+
+2005-06-30 15:37  mikl
+
+	* ChangeLog, include.mk.in: Added compile option to generate debug
+	information in the Erlang beam file
+
+2005-06-17 12:58  klacke
+
+	* www/: dynamic.yaws, index.yaws, news: ""
+
+2005-06-16 13:59  klacke
+
+	* www/news, www/yaws-1.55_to_1.56.patch, vsn.mk: ""
+
+2005-06-16 13:47  klacke
+
+	* www/news: ""
+
+2005-06-16 13:36  klacke
+
+	* src/yaws_api.erl: ""
+
+2005-06-16 13:33  klacke
+
+	* src/yaws_api.erl: ""
+
+2005-06-10 16:17  klacke
+
+	* ChangeLog, www/news: ""
 
 2005-06-10 16:08  klacke
 

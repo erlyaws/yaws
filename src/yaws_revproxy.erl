@@ -88,7 +88,7 @@ init(CliSock, ARG, DecPath, QueryPart, {Prefix, URL}, N) ->
 	    P1 = proc_lib:spawn_link(?MODULE, ploop, [Cli2, Srv, GC, SC, self()]),
 	    ?Debug("Client=~p, Srv=~p", [P1, self()]),
 	    ploop(Srv, Cli2, GC, SC, P1);
-	ERR ->
+	_ERR ->
 	    yaws:outh_set_dyn_headers(ARG#arg.req, ARG#arg.headers,
 				      #urltype{}),
 	    yaws_server:deliver_dyn_part(
@@ -212,7 +212,7 @@ get_chunk_num(Fd,SSL) ->
 	{ok, Line} ->
 	    ?Debug("Get chunk num from line ~p~n",[Line]),
 	    erlang:list_to_integer(nonl(Line),16);
-	{error, Rsn} ->
+	{error, _Rsn} ->
 	    exit(normal)
     end.
 
@@ -229,10 +229,10 @@ nonl([]) ->
 	    
 
 
-get_chunk(Fd, N, N,_) ->
+get_chunk(Fd, _N, N,_) ->
     [];
 get_chunk(Fd, N, Asz,SSL) ->
-    case yaws:do_recv(Fd, N, 20000,SSL) of
+    case yaws:do_recv(Fd, N, SSL) of
 	{ok, Bin} ->
 	    SZ = size(Bin),
 	    [Bin|get_chunk(Fd, N, SZ+Asz,SSL)];
@@ -317,7 +317,7 @@ ploop(From0, To, Pid) ->
 		    yaws:gen_tcp_send(TS,<<13,10>>),
 		    ploop(From#psock{mode = expectchunked,
 				     state = undefined}, To, Pid);
-		Other ->
+		_Other ->
 		    exit(normal)
 	    end;
 	len when From#psock.state == 0 ->
@@ -331,8 +331,8 @@ ploop(From0, To, Pid) ->
 		    yaws:gen_tcp_send(TS, Bin),
 		    ploop(From#psock{state = From#psock.state - SZ},
 			  To, Pid);
-		Rsn ->
-                    ?Debug("Failed to read :~p~n", [Rsn]),  
+		_Rsn ->
+                    ?Debug("Failed to read :~p~n", [_Rsn]),  
 		    exit(normal)
 	    end;
 	undefined ->
@@ -348,7 +348,7 @@ ploop(From0, To, Pid) ->
 %% Before reentering the ploop in expect_header mode (new request/reply),
 %% We must check the if we need to keep the connection alive
 %% or if we must close it.
-ploop_keepalive(From = #psock{httpconnection="close"}, To, Pid) ->
+ploop_keepalive(_From = #psock{httpconnection="close"}, To, Pid) ->
     ?Debug("Connection closed by proxy: No keep-alive~n",[]),
     done;    %%  Close the connection
 ploop_keepalive(From, To, Pid) ->
@@ -427,7 +427,7 @@ rewrite_loc_url(LocUrl, PS) ->
     SC=get(sc),
     Scheme = yaws_server:redirect_scheme(SC),
     RedirHost = yaws_server:redirect_host(SC, PS#psock.r_host),
-    RealPath = LocUrl#url.path,
+    _RealPath = LocUrl#url.path,
     [Scheme, RedirHost, yaws:slash_append(PS#psock.prefix, LocUrl#url.path)].
 
 
@@ -447,7 +447,7 @@ eat_crnl(Fd) ->
     eat_crnl(Fd,nossl).
 eat_crnl(Fd,SSL) ->
     yaws:setopts(Fd, [{packet, line}],SSL),
-    case yaws:do_recv(Fd,0, ?READ_TIMEOUT,SSL) of
+    case yaws:do_recv(Fd,0, SSL) of
 	{ok, <<13,10>>} ->
 	    ok;
 	{ok, [13,10]} ->
