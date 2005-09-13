@@ -480,3 +480,4 @@ x-conference/x-cooltalk		ice
 text/html			shtml html htm
 application/xhtml+xml		xhtml
 image/svg+xml			svg
+application/ogg			ogg
