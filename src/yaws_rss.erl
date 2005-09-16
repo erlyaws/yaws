@@ -373,7 +373,7 @@ sort_items(Is) ->
 
 to_xml([{Title, Link, Desc, Creator, GregSecs}|Tail]) ->
     {{Y,M,D},_} = calendar:gregorian_seconds_to_datetime(GregSecs),
-    Date = i2l(Y) ++ "-" ++ i2l(M) ++ "-" ++ i2l(D),
+    Date = i2l(Y) ++ "-" ++ two(i2l(M)) ++ "-" ++ two(i2l(D)),
     [["<item>\n",
       "<title>", Title, "</title>\n",
       "<link>", Link, "</link>\n",
@@ -385,6 +385,8 @@ to_xml([{Title, Link, Desc, Creator, GregSecs}|Tail]) ->
 to_xml([]) -> 
     [].
 
+two([X]) -> [$0,X];
+two(L)   -> L.
 
 get_db_mod(Opts, Def)  -> lkup(db_mod, Opts, Def).
 get_expire(Opts, Def)  -> lkup(expire, Opts, Def).
