@@ -41,29 +41,32 @@ could look something like this:
 
 rss.yaws
 ========
-<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
-  <channel>
-    <title>Exampel RSS feed</title>
-    <link>http://www.blaha.org/</link>
-    <description>
-     Bla bal....
-    </description>
-    <language>iso8859-1</language>
-
 <erl>
 
 out(A) ->
     case yaws_rss:retrieve(test, xml) of
 	{ok, Xml} ->
-	    {html, [Xml]};
+	    {content, "text/xml", head()++Xml++tail()};
 	_ ->
-	    {html, ""}
+	    {content, "text/xml", ""}
     end.
+
+head() ->
+"<rss version=\"2.0\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\">
+  <channel>
+    <title>Exampel RSS feed</title>
+    <link>http://www.blaha.org/</link>
+    <description>
+     Bla bla....
+    </description>
+    <language>iso8859-1</language>".
+
+tail() ->
+"  </channel>
+</rss>".
 
 </erl>
 
-  </channel>
-</rss>
 ========
 
 To insert RSS items into the feed from your application, you
