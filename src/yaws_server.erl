@@ -63,7 +63,9 @@ gs_status() ->
 	      P ! {self(), status},
 	      receive {P, Stat} -> Stat end
       end, Pids).
-		    
+getconf() ->		    
+     gen_server:call(?MODULE,getconf).
+
 stats() -> 
     {S, Time} = status(),
     Diff = calendar:time_difference(Time, calendar:local_time()),
@@ -908,24 +910,55 @@ fix_abs_uri(Req, H) ->
 	_ -> {Req, H}
     end.
 
-pick_sconf(_GS, _H, Group, ssl) ->
-    hd(Group);
 
-pick_sconf(GS, H, Group, nossl) ->
+%% compare servername and ignore any optional
+%% :Port postfix
+comp_sname([$:|_], _) -> true;
+comp_sname(_, [$:|_]) -> true;
+comp_sname([H|T], [H|T1]) -> comp_sname(T,T1);
+comp_sname([],[])-> true;
+comp_sname(_,_)-> false.
+   
+    
+
+
+pick_sconf(GC, H, [SC|Group], ssl) ->
+    case comp_sname(H#headers.host, SC#sconf.servername) of
+	true -> 
+	    SC;
+	false when ?gc_pick_first_virthost_on_nomatch(GC)  ->
+	    SC;
+	false ->
+	    yaws_debug:format("Drop req since ~p =/ ~p \n", 
+			      [H#headers.host, SC#sconf.servername]),
+	    exit(normal)
+    end;
+
+
+pick_sconf(GC, H, Group, nossl) ->
     case H#headers.host of
-	undefined ->
+	undefined when ?gc_pick_first_virthost_on_nomatch(GC) ->
 	    hd(Group);
 	Host ->
-	    pick_host(GS, Host, Group, Group)
+	    pick_host(GC, Host, Group, Group)
     end.
 
 
-pick_host(_GC, Host, [H|_T], _Group) when H#sconf.servername == Host ->
-    H;
-pick_host(GC, Host, [_|T], Group) ->
-    pick_host(GC, Host, T, Group);
-pick_host(_GC, _Host, [], Group) ->
-    hd(Group).
+pick_host(GC, Host, [SC|T], Group) ->
+    case comp_sname(Host, SC#sconf.servername) of
+	true -> SC;
+	false -> pick_host(GC, Host, T, Group)
+    end;
+pick_host(GC, Host, [], Group) ->
+    if ?gc_pick_first_virthost_on_nomatch(GC) ->
+	    hd(Group);
+       true ->
+	    yaws_debug:format("Drop req since ~p doesn't match any servername \n", 
+			      [Host]),
+	    exit(normal)
+    end.
+
+
 
 
 inet_peername(Sock, SC) ->

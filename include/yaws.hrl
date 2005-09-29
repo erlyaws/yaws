@@ -10,13 +10,15 @@
 
 
 %% flags for gconfs 
--define(GC_TTY_TRACE,               1).
--define(GC_DEBUG,                   2).
--define(GC_AUTH_LOG,                4).
--define(GC_COPY_ERRLOG,             8).
--define(GC_BACKWARDS_COMPAT_PARSE, 16).
--define(GC_LOG_RESOLVE_HOSTNAME,       32).
--define(GC_FAIL_ON_BIND_ERR,           64).
+-define(GC_TTY_TRACE,                        1).
+-define(GC_DEBUG,                            2).
+-define(GC_AUTH_LOG,                         4).
+-define(GC_COPY_ERRLOG,                      8).
+-define(GC_BACKWARDS_COMPAT_PARSE,          16).
+-define(GC_LOG_RESOLVE_HOSTNAME,            32).
+-define(GC_FAIL_ON_BIND_ERR,                64).
+-define(GC_PICK_FIRST_VIRTHOST_ON_NOMATCH, 128).
+ 
 
 -define(GC_DEF, (?GC_AUTH_LOG bor ?GC_FAIL_ON_BIND_ERR)).
 
@@ -34,7 +36,8 @@
 	((GC#gconf.flags band ?GC_LOG_RESOLVE_HOSTNAME) /= 0)).
 -define(gc_fail_on_bind_err(GC), 
 	((GC#gconf.flags band ?GC_FAIL_ON_BIND_ERR) /= 0)).
-
+-define(gc_pick_first_virthost_on_nomatch(GC),
+	((GC#gconf.flags band ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH) /= 0)).
 
 -define(gc_set_tty_trace(GC, Bool), 
 	GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_TTY_TRACE, Bool)}).
@@ -48,11 +51,13 @@
 	GC#gconf{flags = yaws:flag(GC#gconf.flags, 
 				   ?GC_BACKWARDS_COMPAT_PARSE, Bool)}).
 -define(gc_log_set_resolve_hostname(GC, Bool), 
-	GC#gconf{flags = yaws:flag(GC#gconf.flags, ?GC_LOG_RESOLVE_HOSTNAME, Bool)}).
-
+	GC#gconf{flags = yaws:flag(GC#gconf.flags, 
+				   ?GC_LOG_RESOLVE_HOSTNAME, Bool)}).
 -define(gc_set_fail_on_bind_err(GC, Bool), 
 	GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_FAIL_ON_BIND_ERR,Bool)}).
-
+-define(gc_set_pick_first_virthost_on_nomatch(GC, Bool), 
+	GC#gconf{flags = yaws:flag(GC#gconf.flags,
+				   ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,Bool)}).
 
 
 %% global conf

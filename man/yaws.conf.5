@@ -323,6 +323,15 @@ It is possible to have multiple reverse proxies inside the same server.
 
 WARNING, this feature is yet not in production quality.
 
+
+.TP
+\fBservername = Name\fR
+If we're virthosting everal servers and want to force a server
+to match specific Host: headers we can do this with the "servername"
+directive. This name doesn't necessarily have to be the same as the
+the name inside <server Name> in certain NAT scenarios. Rarely used feature.
+
+
 .TP
 \fB <ssl>  .... </ssl> \fR
 This begins and ends an SSL configuration for this server.

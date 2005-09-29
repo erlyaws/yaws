@@ -447,9 +447,21 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 	["id", '=', String] ->
 	    fload(FD, globals, GC#gconf{id=String},C, Cs, Lno+1, Next);
 
+	["pick_first_virthost_on_nomatch", '=',  Bool] ->
+	    case is_bool(Bool) of
+		{true, Val} ->
+		    fload(FD, globals, 
+			  ?gc_set_pick_first_virthost_on_nomatch(GC,Val),
+			  C, Cs, Lno+1, Next);
+		false ->
+		    {error, ?F("Expect true|false at line ~w", [Lno])}
+	    end;
+
+
 	['<', "server", Server, '>'] ->  %% first server 
-	    fload(FD, server, GC, #sconf{servername = Server},
-		  Cs, Lno+1, Next);
+            fload(FD, server, GC, #sconf{servername = Server},
+                  Cs, Lno+1, Next);
+
 	[H|_] ->
 	    {error, ?F("Unexpected tokens ~p at line ~w", [H, Lno])}
     end;
@@ -562,6 +574,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	['<', "redirect", '>'] ->
 	    fload(FD, server_redirect, GC, C, Cs, Lno+1, Next, []);
 
+	%% noop
 	["default_server_on_this_ip", '=', _Bool] ->
 	    fload(FD, server, GC, C, Cs, Lno+1, Next);
 

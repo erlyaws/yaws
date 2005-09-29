@@ -94,8 +94,13 @@ auth_log = true
 # id = myname
 
 
+# earlier versions of Yaws picked the first virtual host
+# in a list of hosts with the same IP/PORT when the Host:
+# header doesn't match any name on any Host
+# This is often nice in testing environments but not
+# acceptable in real live hosting scenarios
 
-
+pick_first_virthost_on_nomatch = true
 
 
 
