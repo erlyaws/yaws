@@ -798,7 +798,6 @@ acceptor0(GS, Top) ->
 		{Top, stop} ->
 		    exit(normal);
 		{Top, accept} ->
-		    erase_transients(),
 		    acceptor0(GS, Top)
 	    end;
 	ERR ->
