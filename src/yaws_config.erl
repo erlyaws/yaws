@@ -224,10 +224,13 @@ make_default_gconf(Debug) ->
 				end,
 	   flags = if Debug ->
 			   ?GC_DEBUG bor ?GC_AUTH_LOG bor 
-			       ?GC_COPY_ERRLOG bor ?GC_FAIL_ON_BIND_ERR;
+			       ?GC_COPY_ERRLOG bor ?GC_FAIL_ON_BIND_ERR bor
+			       ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH;
+		   
 		      true ->
 			   ?GC_AUTH_LOG bor ?GC_COPY_ERRLOG bor 
-			       ?GC_FAIL_ON_BIND_ERR
+			       ?GC_FAIL_ON_BIND_ERR bor
+			       ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH
 		   end,
 	   uid = element(2, yaws:getuid()),
 	   yaws = "Yaws " ++ yaws_vsn:version()}.

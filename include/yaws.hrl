@@ -18,7 +18,6 @@
 -define(GC_LOG_RESOLVE_HOSTNAME,            32).
 -define(GC_FAIL_ON_BIND_ERR,                64).
 -define(GC_PICK_FIRST_VIRTHOST_ON_NOMATCH, 128).
- 
 
 -define(GC_DEF, (?GC_AUTH_LOG bor ?GC_FAIL_ON_BIND_ERR)).
 
@@ -58,7 +57,6 @@
 -define(gc_set_pick_first_virthost_on_nomatch(GC, Bool), 
 	GC#gconf{flags = yaws:flag(GC#gconf.flags,
 				   ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,Bool)}).
-
 
 %% global conf
 -record(gconf,{yaws_dir,           %% topdir of Yaws installation

@@ -490,7 +490,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 	    New = acceptor(GS),
 	    gserv_loop(GS, Ready, Rnum, New);
 	{_From, next} ->
-	    [R|RS] = Ready,
+	    [{_Then, R}|RS] = Ready,
 	    R ! {self(), accept},
 	    gserv_loop(GS, RS, Rnum-1, R);
 	{From, done_client, Int} ->
@@ -504,7 +504,8 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 		    From ! {self(), stop},
 		    gserv_loop(GS2, Ready, Rnum, Last);
 		Rnum < 8 ->
-		    gserv_loop(GS2, [From | Ready], Rnum+1, Last)
+		    %% cache this process for 10 secs
+		    gserv_loop(GS2, [{now(), From} | Ready], Rnum+1, Last)
 	    end;
 	{'EXIT', Pid, Reason} ->
 	    case get(top) of
@@ -585,16 +586,29 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 	    error_logger:info_msg("Updating gconf \n",[]),
 	    New = acceptor(GS2),
 	    gserv_loop(GS2, Ready2, 0, New)
-
+    after (10 * 1000) ->
+	    %% collect old procs, to save memory
+	    {NowMega, NowSecs, _} = now(),
+	    R2 = lists:filter(fun({{ThenMega, ThenSecs, _}, Pid}) ->
+				      if
+					  NowMega > ThenMega;
+					  (NowSecs > (ThenSecs + 8)) ->
+					      Pid ! {self(), stop},
+					      false;
+					  true ->
+					      true
+				      end
+			      end, Ready),
+	    gserv_loop(GS, R2, Rnum, Last)
     end.
-	    
+
 
 stop_ready(Ready, Last) ->
     unlink(Last),
     exit(Last, shutdown),
     
     lists:foreach(
-      fun(Pid) -> 
+      fun({_,Pid}) -> 
 	      Pid ! {self(), stop}
       end, Ready).
 
@@ -692,8 +706,6 @@ ssl_opts(SSL) ->
 filter_false(L) ->
     [X || X <- L, X /= false].
 
-	   
-	 
 do_accept(GS) when GS#gs.ssl == nossl ->
     ?Debug("wait in accept ... ~n",[]),
     gen_tcp:accept(GS#gs.l);
@@ -701,10 +713,15 @@ do_accept(GS) when GS#gs.ssl == ssl ->
     ssl:accept(GS#gs.l,10000).
 
 
-initial_acceptor(GS=#gs{ssl=nossl})->
-    acceptor(GS);
-initial_acceptor(GS=#gs{ssl=ssl}) ->
-    initial_acceptor(GS, 5).
+
+initial_acceptor(GS) ->
+    GC = GS#gs.gconf,
+    if
+	GS#gs.ssl == nossl ->
+	    acceptor(GS);
+	GS#gs.ssl == ssl ->
+	    initial_acceptor(GS, 5)
+    end.
 
 initial_acceptor(_GS, 0) ->
     ok;
@@ -726,7 +743,7 @@ acceptor(GS) ->
     proc_lib:spawn_link(yaws_server, acceptor0, [GS, self()]).
 acceptor0(GS, Top) ->
     ?TC([{record, GS, gs}]),
-    put(gc, GS#gs.gconf),
+    put(gc, GC=GS#gs.gconf),
     X = do_accept(GS),
     Top ! {self(), next},
     case X of
@@ -772,6 +789,7 @@ acceptor0(GS, Top) ->
 		{Top, stop} ->
 		    exit(normal);
 		{Top, accept} ->
+		    erase_transients(),
 		    acceptor0(GS, Top)
 	    end;
 	{error, timeout} ->
@@ -780,6 +798,7 @@ acceptor0(GS, Top) ->
 		{Top, stop} ->
 		    exit(normal);
 		{Top, accept} ->
+		    erase_transients(),
 		    acceptor0(GS, Top)
 	    end;
 	ERR ->
