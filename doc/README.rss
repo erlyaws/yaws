@@ -59,7 +59,7 @@ head() ->
     <description>
      Bla bla....
     </description>
-    <language>iso8859-1</language>".
+    <language>en</language>".
 
 tail() ->
 "  </channel>

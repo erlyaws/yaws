@@ -372,8 +372,7 @@ sort_items(Is) ->
 
 
 to_xml([{Title, Link, Desc, Creator, GregSecs}|Tail]) ->
-    {{Y,M,D},_} = calendar:gregorian_seconds_to_datetime(GregSecs),
-    Date = i2l(Y) ++ "-" ++ two(i2l(M)) ++ "-" ++ two(i2l(D)),
+    Date = w3cdtf(GregSecs),
     [["<item>\n",
       "<title>", Title, "</title>\n",
       "<link>", Link, "</link>\n",
@@ -385,8 +384,32 @@ to_xml([{Title, Link, Desc, Creator, GregSecs}|Tail]) ->
 to_xml([]) -> 
     [].
 
-two([X]) -> [$0,X];
-two(L)   -> L.
+w3cdtf(GregSecs) ->
+    Date = calendar:gregorian_seconds_to_datetime(GregSecs),
+    {{Y,Mo,D},{H, Mi, S}} = Date,
+    UDate = calendar:local_time_to_universal_time_dst(Date),
+    [{{_,_,_},{UH,UMi,_}}] = UDate,
+    {DifH,DifMi}={H-UH,Mi-UMi},
+    if
+        DifH>0 ->
+            i2l(Y) ++ "-" ++ add_zero(i2l(Mo)) ++ "-"  ++ add_zero(i2l(D)) ++ 
+		"T" ++ add_zero(i2l(H)) ++ ":" ++ add_zero(i2l(Mi)) ++ ":"  ++ 
+		add_zero(i2l(S)) ++ "+" ++ add_zero(i2l(abs(DifH))) ++ ":"  ++ 
+		add_zero(i2l(abs(DifMi)));
+        DifH<0 -> 
+            i2l(Y) ++ "-" ++ add_zero(i2l(Mo)) ++ "-"  ++ add_zero(i2l(D)) ++ 
+		"T" ++ add_zero(i2l(H)) ++ ":" ++ add_zero(i2l(Mi)) ++ ":"  ++ 
+		add_zero(i2l(S)) ++ "-" ++ add_zero(i2l(abs(DifH))) ++ ":"  ++ 
+		add_zero(i2l(abs(DifMi)));
+        DifH==0 -> 
+            i2l(Y) ++ "-" ++ add_zero(i2l(Mo)) ++ "-"  ++ add_zero(i2l(D)) ++ 
+		"T" ++ add_zero(i2l(H)) ++ ":" ++ add_zero(i2l(Mi)) ++ ":"  ++ 
+		add_zero(i2l(S)) ++ "Z"
+    end.
+
+add_zero([A]) -> [$0,A];
+add_zero(L)   -> L.
+
 
 get_db_mod(Opts, Def)  -> lkup(db_mod, Opts, Def).
 get_expire(Opts, Def)  -> lkup(expire, Opts, Def).
