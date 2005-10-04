@@ -384,42 +384,49 @@ to_xml([{Title, Link, Desc, Creator, GregSecs}|Tail]) ->
 to_xml([]) -> 
     [].
 
+%%%
+%%% Create W3CDTF (http://www.w3.org/TR/NOTE-datetime) formatted date
+%%% w3cdtf(GregSecs) -> "YYYY-MM-DDThh:mm:ssTZD"
+%%%
+w3cdtf(GregSecs) ->    Date = calendar:gregorian_seconds_to_datetime(GregSecs),
+    {{Y, Mo, D},{H, Mi, S}} = Date,
+    [UDate|_] = calendar:local_time_to_universal_time_dst(Date),
+    {DiffD,{DiffH,DiffMi,_}}=calendar:time_difference(UDate,Date),
+    w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi). 
 
-w3cdtf(GregSecs)->      Date = calendar:gregorian_seconds_to_datetime(GregSecs),
-      {{Y,Mo,D},{H, Mi, S}} = Date,
-      [UDate|_] = calendar:local_time_to_universal_time_dst(Date),
-      {DiffD,{DiffH,DiffMi,_}}=calendar:time_difference(UDate,Date),
-      if
-         DiffH<12 -> 
-	      i2l(Y) ++ "-" ++ add_zero(i2l(Mo)) ++ "-"
-		  ++ add_zero(i2l(D)) ++ "T" ++ add_zero(i2l(H)) ++
-		  ":" ++ add_zero(i2l(Mi)) ++ ":"
-		  ++ add_zero(i2l(S)) ++
-		  "+" ++ add_zero(i2l(DiffH)) ++ ":"
-		  ++ add_zero(i2l(DiffMi));
-         DiffH>12,DiffD==0 -> 
-	      i2l(Y) ++ "-" ++ add_zero(i2l(Mo)) ++ "-"
-		  ++ add_zero(i2l(D)) ++ "T" ++ add_zero(i2l(H)) ++
-		  ":" ++ add_zero(i2l(Mi)) ++ ":"
-		  ++ add_zero(i2l(S)) ++
-		  "+" ++ add_zero(i2l(DiffH)) ++ ":"
-		  ++ add_zero(i2l(DiffMi));
-         DiffH>12,DiffD/=0 -> 
-	      i2l(Y) ++ "-" ++ add_zero(i2l(Mo)) ++ "-"
-		  ++ add_zero(i2l(D)) ++ "T" ++ add_zero(i2l(H)) ++
-		  ":" ++ add_zero(i2l(Mi)) ++ ":"
-		  ++ add_zero(i2l(S)) ++
-		  "-" ++ add_zero(i2l(24-DiffH)) ++ ":"
-		  ++ add_zero(i2l(if DiffMi==0 -> DiffMi;DiffMi/=0 ->60-DiffMi end));
-         DiffH==0 -> 
-	      i2l(Y) ++ "-" ++ add_zero(i2l(Mo)) ++ "-"
-		  ++ add_zero(i2l(D)) ++ "T" ++ add_zero(i2l(H)) ++
-		  ":" ++ add_zero(i2l(Mi)) ++ ":"
-		  ++ add_zero(i2l(S)) ++ "Z"
-      end. 
+%%%  w3cdtf's helper function
+w3cdtf_diff(Y, Mo, D, H, Mi, S, _DiffD, DiffH, DiffMi) when DiffH < 12,  DiffH /= 0 ->
+    i2l(Y) ++ "-" ++ add_zero(Mo) ++ "-" ++ add_zero(D) ++ "T" ++
+        add_zero(H) ++ ":" ++ add_zero(Mi) ++ ":"  ++
+        add_zero(S) ++ "+" ++ add_zero(DiffH) ++ ":"  ++ add_zero(DiffMi);
 
-add_zero([A]) -> [$0,A];
-add_zero(L)   -> L.
+w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi) when DiffH > 12,  DiffD == 0 ->
+    i2l(Y) ++ "-" ++ add_zero(Mo) ++ "-" ++ add_zero(D) ++ "T" ++
+        add_zero(H) ++ ":" ++ add_zero(Mi) ++ ":"  ++
+        add_zero(S) ++ "+" ++ add_zero(DiffH) ++ ":"  ++
+        add_zero(DiffMi);
+
+w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi) when DiffH > 12,  DiffD /= 0, DiffMi /= 0 ->
+    i2l(Y) ++ "-" ++ add_zero(Mo) ++ "-" ++ add_zero(D) ++ "T" ++
+        add_zero(H) ++ ":" ++ add_zero(Mi) ++ ":"  ++
+        add_zero(S) ++ "-" ++ add_zero(23-DiffH) ++
+        ":" ++ add_zero(60-DiffMi);
+
+w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi) when DiffH > 12,  DiffD /= 0, DiffMi == 0 ->
+   i2l(Y) ++ "-" ++ add_zero(Mo) ++ "-" ++ add_zero(D) ++ "T" ++
+        add_zero(H) ++ ":" ++ add_zero(Mi) ++ ":"  ++
+        add_zero(S) ++ "-" ++ add_zero(24-DiffH) ++
+        ":" ++ add_zero(DiffMi); 
+
+w3cdtf_diff(Y, Mo, D, H, Mi, S, _DiffD, DiffH, _DiffMi) when DiffH == 0 ->
+    i2l(Y) ++ "-" ++ add_zero(Mo) ++ "-" ++ add_zero(D) ++ "T" ++
+        add_zero(H) ++ ":" ++ add_zero(Mi) ++ ":"  ++
+        add_zero(S) ++ "Z".
+
+add_zero(I) when integer(I) -> add_zero(i2l(I));
+add_zero([A])               -> [$0,A];
+add_zero(L) when list(L)    -> L. 
+
 
 
 get_db_mod(Opts, Def)  -> lkup(db_mod, Opts, Def).
