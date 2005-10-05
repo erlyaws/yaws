@@ -852,7 +852,11 @@ aloop(CliSock, GS, Num) ->
 erase_transients() ->
     I = get(init_db),
     erase(),
-    lists:foreach(fun({K,V}) -> put(K,V) end, I).
+    if I == undefined ->
+	    ok;
+       list(I) ->
+	    lists:foreach(fun({K,V}) -> put(K,V) end, I)
+    end.
 
 
 handle_method_result(Res, CliSock, IP, GS, Req, H, Num) ->
