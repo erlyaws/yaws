@@ -24,12 +24,15 @@ c() ->
     {ok, F} = file:open("mime.types", [read]),
     io:format("Compiling mime.types ... > mime_types.erl ~n", []),
     {ok, B} = file:read_file("charset.def"),
-    case string:strip(binary_to_list(B)) of
+    case string:tokens(binary_to_list(B)," \r\n\t") of
 	[] ->
 	    put(charset, []);
-	CharSet0 ->
+	[CharSet0] ->
 	    CharSet = string:strip(CharSet0, both, 10),
-	    put(charset, ";charset=" ++ CharSet)
+	    put(charset, ";charset=" ++ CharSet);
+	_ ->
+	    error_logger:format("Ignoring bad charset.def\n"),
+	    put(charset, [])
     end,
     T = ets:new(aa, [set, public]),
     c(F, T, io:get_line(F, '')).
