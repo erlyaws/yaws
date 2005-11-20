@@ -13,8 +13,8 @@
 
 -behaviour(gen_server).
 
--include_lib("yaws/include/yaws.hrl").
--include_lib("yaws/include/yaws_api.hrl").
+-include("../include/yaws.hrl").
+-include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
 -include_lib("kernel/include/file.hrl").
@@ -715,13 +715,20 @@ do_accept(GS) when GS#gs.ssl == ssl ->
 
 
 initial_acceptor(GS) ->
-    GC = GS#gs.gconf,
     if
 	GS#gs.ssl == nossl ->
 	    acceptor(GS);
 	GS#gs.ssl == ssl ->
 	    initial_acceptor(GS, 5)
     end.
+
+
+% an SSL connection might include user interaction.
+% So while one person has a dialog box on the screen asking him to review
+% the server's certificate, no other person is able to establish a new
+% connnection to the server.
+% unless we run multiple SSL acceptor processes
+% Therefore, the code below!
 
 initial_acceptor(_GS, 0) ->
     ok;
@@ -743,7 +750,7 @@ acceptor(GS) ->
     proc_lib:spawn_link(yaws_server, acceptor0, [GS, self()]).
 acceptor0(GS, Top) ->
     ?TC([{record, GS, gs}]),
-    put(gc, GC=GS#gs.gconf),
+    put(gc, GS#gs.gconf),
     X = do_accept(GS),
     Top ! {self(), next},
     case X of

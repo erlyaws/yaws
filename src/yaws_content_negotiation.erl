@@ -1,7 +1,7 @@
 -module(yaws_content_negotiation).
 -export([compute_rsva/2, parse_accept_field/1, match_media_type/2]).
 
--include_lib("yaws/include/yaws_api.hrl").
+-include("../include/yaws_api.hrl").
 
 %% TODO:  analyze impact of spaces in headers; when/where to strip?
 

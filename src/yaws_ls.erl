@@ -11,8 +11,8 @@
 
 -compile(export_all).
 
--include_lib("yaws/include/yaws.hrl").
--include_lib("yaws/include/yaws_api.hrl").
+-include("../include/yaws.hrl").
+-include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
 -include_lib("kernel/include/file.hrl").

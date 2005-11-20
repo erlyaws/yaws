@@ -21,8 +21,8 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 
--include_lib("yaws/include/yaws.hrl").
--include_lib("yaws/include/yaws_api.hrl").
+-include("../include/yaws.hrl").
+-include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
 %% 1 meg log we wrap

@@ -1,9 +1,9 @@
 -module(yaws_cgi).
 -author('carsten@codimi.de').
 
--include_lib("yaws/include/yaws_api.hrl").
+-include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
--include_lib("yaws/include/yaws.hrl").
+-include("../include/yaws.hrl").
 
 -export([call_cgi/5, call_cgi/4, call_cgi/3, call_cgi/2]).
 

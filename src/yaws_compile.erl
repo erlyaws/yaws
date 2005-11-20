@@ -12,8 +12,8 @@
 
 
 
--include_lib("yaws/include/yaws.hrl").
--include_lib("yaws/include/yaws_api.hrl").
+-include("../include/yaws.hrl").
+-include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
 
