@@ -1219,7 +1219,7 @@ make_allow_header() ->
     ["Allow: GET, POST, OPTIONS, HEAD",
      if HasDav == true ->
 	     ", PUT, PROPFIND, MKCOL, MOVE, COPY\r\n";
-	false ->
+	true ->
 	     "\r\n"
      end].
 make_server_header() ->
