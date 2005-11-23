@@ -31,8 +31,7 @@ MODULES=yaws \
 	yaws_html  \
 	yaws_log_file_h \
 	yaws_rss \
-	dav
-
+	yaws_dav
 
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app

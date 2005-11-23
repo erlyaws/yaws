@@ -1224,7 +1224,19 @@ not_implemented(CliSock, Req, Head) ->
     deliver_options(CliSock, Req).
 
 'PUT'(CliSock, Req, Head) ->
-    body_method(CliSock, Req, Head).
+    ?Debug("PUT Req=~p~n H=~p~n", [?format_record(Req, http_request),
+				   ?format_record(Head, headers)]),
+    SC=get(sc),
+    ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
+    PPS = SC#sconf.partial_post_size,
+    CT = 
+	case yaws:lowercase(Head#headers.content_type) of
+	    "multipart/form-data"++_ -> multipart;
+	    _ -> urlencoded
+	end,
+    ARG = make_arg(CliSock, Head, Req, undefined),
+    handle_request(CliSock, ARG, p).
+    
 
 'DELETE'(CliSock, Req, Head) ->
     no_body_method(CliSock, Req, Head).
@@ -1238,6 +1250,12 @@ not_implemented(CliSock, Req, Head) ->
     %%                   [?format_record(Req, http_request),
     %%                    ?format_record(Head, headers)]),
     body_method(CliSock, Req, Head).
+
+'MOVE'(CliSock, Req, Head) ->
+    no_body_method(CliSock, Req, Head).
+
+'COPY'(CliSock, Req, Head) ->
+    no_body_method(CliSock, Req, Head).
 
 
 body_method(CliSock, Req, Head) ->
@@ -1306,6 +1324,10 @@ handle_extension_method("PROPFIND", CliSock, Req, Head) ->
     'PROPFIND'(CliSock, Req, Head);   
 handle_extension_method("MKCOL", CliSock, Req, Head) ->                      
     'MKCOL'(CliSock, Req, Head);                                             
+handle_extension_method("MOVE", CliSock, Req, Head) ->                      
+    'MOVE'(CliSock, Req, Head);                                             
+handle_extension_method("COPY", CliSock, Req, Head) ->                      
+    'COPY'(CliSock, Req, Head);                                             
 handle_extension_method(_Method, CliSock, Req, Head) ->
     not_implemented(CliSock, Req, Head).
 
@@ -1442,8 +1464,9 @@ handle_ut(CliSock, ARG, UT, N) ->
 	regular ->
 	    ETag = yaws:make_etag(UT#urltype.finfo),
 	    Range = case H#headers.if_range of
-			Range_etag = [$"|_] when Range_etag /= ETag ->
-			    all;
+%			[$"|_] = Range_etag when Range_etag /= ETag -> 
+			[34|_] = Range_etag when Range_etag /= ETag -> 
+			    all; 
 			_ ->
 			    requested_range(H#headers.range, 
 					    (UT#urltype.finfo)#file_info.size)
@@ -1531,10 +1554,50 @@ handle_ut(CliSock, ARG, UT, N) ->
 			     end,
 			     fun(A)->finish_up_dyn_file(A, CliSock)
 			     end
-			    )
+			    );
+	dav ->
+	    Next =
+		if
+		    Req#http_request.method == 'PUT' ->
+			fun(A) -> yaws_dav:put(SC, A) end;
+		    Req#http_request.method == 'DELETE' ->
+			fun(A) -> yaws_dav:delete(A) end;
+		    Req#http_request.method == "PROPFIND" ->
+			fun(A)-> yaws_dav:propfind(A) end;
+		    Req#http_request.method == "MOVE" ->
+			fun(A)-> yaws_dav:move(A) end;
+		    Req#http_request.method == "COPY" ->
+			fun(A)-> yaws_dav:copy(A) end;
+		    Req#http_request.method == "MKCOL" ->
+			fun(A)-> yaws_dav:mkcol(A) end;
+		    Req#http_request.method == 'GET';
+		    Req#http_request.method == 'HEAD' ->
+			case prim_file:read_file_info(UT#urltype.fullpath) of
+			    {ok, FI} when FI#file_info.type == regular ->
+				{regular, FI};
+			    _ ->
+				error
+			end;
+		    true ->
+			error
+		end,
+	    case Next of
+		error ->
+		    handle_ut(CliSock, ARG, #urltype{type = error}, N);
+		{regular, Finfo} ->
+		    handle_ut(CliSock, ARG, UT#urltype{type = regular,
+						       finfo = Finfo}, N);
+		_ ->
+		    yaws:outh_set_dyn_headers(Req, H, UT),
+		    deliver_dyn_part(CliSock, 
+				     0, "dav",
+				     N,
+				     ARG,UT,
+				     Next,
+				     fun(A)->finish_up_dyn_file(A, CliSock)  end
+				    )
+	    end
     end.
-
-
 
 done_or_continue() ->
     case yaws:outh_get_doclose() of
@@ -2944,6 +3007,17 @@ do_url_type(SC, GetPath) ->
     ?Debug("do_url_type SC=~s~nGetPath=~p~n", 
 	   [?format_record(SC,sconf), GetPath]),
     case GetPath of
+	_ when ?sc_has_dav(SC) ->
+	    {Comps, RevFile} = split(GetPath, [], []),
+	    {_Type, Mime} = suffix_type(RevFile),
+	    DR = SC#sconf.docroot,
+	    FullPath = [DR, GetPath],
+	    #urltype{type = dav, 
+		     dir = Comps,
+		     getpath = GetPath,
+		     path = GetPath,
+		     fullpath = FullPath,
+		     mime = Mime};
 	"/" -> %% special case 
 	    maybe_return_dir(SC#sconf.docroot, GetPath);
 	[$/, $~ |Tail] ->
@@ -3325,6 +3399,8 @@ ssl_flush(_Sock, undefined) ->
     ok;
 ssl_flush(_Sock, 0) ->
     ok;
+ssl_flush(Sock, Sz) when list(Sz) ->
+    ssl_flush(Sock, strip_list_to_integer(Sz));
 ssl_flush(Sock, Sz) ->
     yaws:split_recv(ssl:recv(Sock, Sz, 1000), Sz).
 

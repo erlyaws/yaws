@@ -1215,12 +1215,21 @@ dcc(Req, Headers) ->
 %%
 
 make_allow_header() ->
-    "Allow: GET, POST, PUT, OPTIONS, HEAD, PROPFIND, MKCOL\r\n".
+    HasDav = ?sc_has_dav(get(sc)),
+    ["Allow: GET, POST, OPTIONS, HEAD",
+     if HasDav == true ->
+	     ", PUT, PROPFIND, MKCOL, MOVE, COPY\r\n";
+	false ->
+	     "\r\n"
+     end].
 make_server_header() ->
-    ["Server: Yaws/", yaws_vsn:version(), " Yet Another Web Server\r\n",
-     "DAV: 1\r\n"].
-
-
+    HasDav = ?sc_has_dav(get(sc)),
+    ["Server: Yaws/", yaws_vsn:version(), " Yet Another Web Server\r\n" |
+     if HasDav == true ->
+	     ["DAV: 1\r\n"];
+	true ->
+	     []
+     end].
 
 make_last_modified_header(FI) ->
     N = element(2, now()),
