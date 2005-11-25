@@ -56,10 +56,10 @@ open(App) ->
     open(App, []).
 
 %%%
-%%% @spec open(App::atom(), Dir::string(), Opts::list()) -> 
+%%% @spec open(App::atom(), Opts::list()) -> 
 %%%         {ok, DB::db()} | {error, string()}
 %%%
-%%% @doc Open a RSS database, located at <em>Dir</em>.
+%%% @doc Open a RSS database.
 %%%      Per default <em>dets</em> is used as database,
 %%%      but by using the <em>db_mod</em> option it is
 %%%      possible to use your own database.</br>
@@ -78,6 +78,10 @@ open(App) ->
 %%%      XML will thus be done. Also, the whole <em>Opts</em> will be
 %%%      passed un-interpreted to the other DB module.</dd>
 %%%
+%%%      <dt>{db_dir, Dir}</dt>
+%%%      <dd>Specifies the directory where the database will be created.
+%%%      Default is: /tmp</dd>
+%%%      
 %%%      <dt>{expire, Expire}</dt>
 %%%      <dd>Specifies what method to use to expire items. Possible values
 %%%      are: <em>false</em>, <em>days</em>, meaning
@@ -267,7 +271,7 @@ terminate(_Reason, _State) ->
 do_open_dir(State, App, Opts) -> 
     case get_db_mod(Opts, dets) of
 	dets -> 
-	    File = yaws_config:yaws_dir() ++ "/" ++ a2l(?DB) ++ ".dets",
+	    File = get_db_file(Opts),
 	    Expire = get_expire(Opts, #s.expire), 
 	    Max = get_max(Opts, #s.max), 
 	    Days = get_days(Opts, #s.days), 
@@ -293,6 +297,10 @@ do_open_dir(State, App, Opts) ->
 	DBmod ->
 	    {State, catch apply(DBmod, open, Opts)}
     end.
+
+get_db_file(Opts) ->
+    Dir = get_db_dir(Opts, "/tmp"),
+    Dir ++ "/" ++ a2l(?DB) ++ ".dets".
 
 init_counter(DB) ->
     case dets:lookup(DB, counter) of
@@ -430,6 +438,7 @@ add_zero(L) when list(L)    -> L.
 
 
 get_db_mod(Opts, Def)  -> lkup(db_mod, Opts, Def).
+get_db_dir(Opts, Def)  -> lkup(db_dir, Opts, Def).
 get_expire(Opts, Def)  -> lkup(expire, Opts, Def).
 get_max(Opts, Def)     -> lkup(max, Opts, Def).
 get_days(Opts, Def)    -> lkup(days, Opts, Def). 

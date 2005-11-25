@@ -781,6 +781,9 @@ fload(FD, rss, GC, C, Cs, Lno, Chars) ->
 	["rss_id", '=', Value] ->   % mandatory !!
 	    put(rss_id, list_to_atom(Value)),
 	    fload(FD, rss, GC, C, Cs, Lno+1, Next);
+	["rss_dir", '=', Value] ->   % mandatory !!
+	    put(rss, [{db_dir, Value} | get(rss)]),
+	    fload(FD, rss, GC, C, Cs, Lno+1, Next);
 	["rss_expire", '=', Value] ->
 	    put(rss, [{expire, Value} | get(rss)]),
 	    fload(FD, rss, GC, C, Cs, Lno+1, Next);
