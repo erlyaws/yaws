@@ -380,8 +380,18 @@ handle_info(_Msg, State) ->
 terminate(_Reason, _State) ->
     ok.
 
-do_listen(SC) ->
+do_listen(GC, SC) ->
     case SC#sconf.ssl of
+	undefined when ?gc_use_fdsrv(GC) ->
+	    %% Use fdsrv kit from jungerl, requires fdsrv
+	    %% to be properly installed
+	    fdsrv:start(),
+	    case fdsrv:bind_socket(tcp, SC#sconf.port) of
+		{ok, Fd} ->
+		    {nossl, gen_tcp_listen(SC#sconf.port,[{fd, Fd}|opts(SC)])};
+		Err ->
+		    {nossl, Err}
+	    end;
 	undefined ->
 	    {nossl, gen_tcp_listen(SC#sconf.port, opts(SC))};
 	SSL ->
@@ -417,7 +427,7 @@ gserv(Top, GC, Group0) ->
     Group = map(fun(SC) -> setup_ets(SC)
 		end, Group0),
     SC = hd(Group),
-    case do_listen(SC) of
+    case do_listen(GC, SC) of
 	{SSLBOOL, {ok, Listen}} ->
 	    call_start_mod(SC),
 	    error_logger:info_msg(

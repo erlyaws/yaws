@@ -151,6 +151,12 @@ first (as difined in the yaws.conf file) if no name match or not.
 In real live hosting scenarios we typically want this to be false
 whereas in testing/development scenarios we want 
 
+.TP
+\fB use_fdsrv = true | false \fR
+This feature makes it possible to bind to ports < 1024 even when
+we're not running as root. It requires the Jungerl package called fd_server
+to be properly installed.. The feature doen't (yet) work with SSL.
+
 
 .SH SERVER PART
 Yaws can virthost several webservers on the same ip address as well
@@ -219,6 +225,9 @@ When a yaws file receives large POSTs, the amount of data received
 in each chunk is determined by the this parameter.
 The deafult value is 10240.
 
+.TP
+\fB dav = true | false\fR
+Turns on the DAV protocol for this server.
 
 .TP
 \fBtilde_expand = true|false \fR

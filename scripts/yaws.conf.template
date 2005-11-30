@@ -103,6 +103,17 @@ auth_log = true
 pick_first_virthost_on_nomatch = true
 
 
+# All unices are broken since it's not possible to bind to
+# a privileged port (< 1024) unless uid==0
+# There is a contrib in jungerl which makes it possible by means 
+# of an external setuid root programm called fdsrv to listen to
+# to privileged port.
+# If we use this feature, it requires fdsrv to be properly installed.
+# Doesn't yet work with SSL.
+
+use_fdsrv = false
+
+
 
 
 # end then a set of virtual servers
@@ -120,6 +131,7 @@ pick_first_virthost_on_nomatch = true
 	listen = 0.0.0.0
 	docroot = /tmp
 	dir_listings = true
+	dav = true
 	<auth>
 		realm = foobar
 		dir = /
