@@ -1365,7 +1365,7 @@ handle_request(CliSock, ARG, N) ->
 			{_, _, {true, MethodHostPort}} ->
 			    deliver_302_map(CliSock, Req, ARG, MethodHostPort);
 			{true, false, _} ->
-			    UT   = url_type(DecPath),
+			    UT   = url_type(DecPath, ARG#arg.docroot),
 			    ARG2 = ARG#arg{server_path = DecPath,
 					   querydata= QueryPart,
 					   fullpath=UT#urltype.fullpath,
@@ -2163,7 +2163,7 @@ handle_out_reply(L, LineNo, YawsFile, UT, A) when list (L) ->
 %% yssi, yaws include
 handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, [ARG]) ->
     SC = get(sc),
-    UT2 = url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile]),
+    UT2 = url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile], ARG#arg.docroot),
     case UT2#urltype.type of
 	yaws ->
 	    Mtime = mtime(UT2#urltype.finfo),
@@ -2854,14 +2854,14 @@ now_secs() ->
 
 
 %% a file cache,
-url_type(GetPath) ->
+url_type(GetPath, ArgDocroot) ->
     SC=get(sc),
     GC=get(gc),
     E = SC#sconf.ets,
     update_total(E, GetPath),
     case ets:lookup(E, {url, GetPath}) of
 	[] ->
-	    UT = do_url_type(SC, GetPath),
+	    UT = do_url_type(SC, GetPath, ArgDocroot),
 	    ?TC([{record, UT, urltype}]),
 	    ?Debug("UT=~s\n", [?format_record(UT, urltype)]),
 	    CF = cache_file(SC, GC, GetPath, UT),
@@ -2875,7 +2875,7 @@ url_type(GetPath) ->
 		    ?Debug("Timed out entry for ~s ~p~n", 
 			[GetPath, {When, N}]),
 		    %% more than 30 secs old entry
-		    UT2 = do_url_type(SC, GetPath),
+		    UT2 = do_url_type(SC, GetPath, ArgDocroot),
 		    case file_changed(UT, UT2) of
 			true ->
 			    ?Debug("Recaching~n", []),
@@ -3013,14 +3013,14 @@ clear_ets(E) ->
     
 
 %% return #urltype{}
-do_url_type(SC, GetPath) ->
+do_url_type(SC, GetPath, ArgDocroot) ->
     ?Debug("do_url_type SC=~s~nGetPath=~p~n", 
 	   [?format_record(SC,sconf), GetPath]),
     case GetPath of
 	_ when ?sc_has_dav(SC) ->
 	    {Comps, RevFile} = split(GetPath, [], []),
 	    {_Type, Mime} = suffix_type(RevFile),
-	    DR = SC#sconf.docroot,
+	    DR = ArgDocroot,
 	    FullPath = [DR, GetPath],
 	    #urltype{type = dav, 
 		     dir = Comps,
@@ -3029,7 +3029,7 @@ do_url_type(SC, GetPath) ->
 		     fullpath = FullPath,
 		     mime = Mime};
 	"/" -> %% special case 
-	    maybe_return_dir(SC#sconf.docroot, GetPath);
+	    maybe_return_dir(ArgDocroot, GetPath);
 	[$/, $~ |Tail] ->
 	    ret_user_dir(Tail);
 	_ ->
@@ -3037,7 +3037,7 @@ do_url_type(SC, GetPath) ->
 	    ?Debug("Comps = ~p RevFile = ~p~n",[Comps, RevFile]),
 	    case check_appmods(SC#sconf.appmods, Comps, RevFile) of
 		false ->
-		    DR = SC#sconf.docroot,
+		    DR = ArgDocroot,
 		    FullPath = [DR, GetPath],
 		    ?Debug("FullPath = ~p~n", [FullPath]),
 		    case prim_file:read_file_info(FullPath) of
@@ -3153,11 +3153,11 @@ maybe_return_dir(DR, GetPath) ->
     ?Debug("maybe_return_dir(~p, ~p)", [DR, GetPath]), 
     case prim_file:read_file_info([DR, GetPath, "index.yaws"]) of
 	{ok, FI} when FI#file_info.type == regular ->
-	    do_url_type(get(sc), GetPath ++ "index.yaws");
+	    do_url_type(get(sc), GetPath ++ "index.yaws", DR);
 	_ ->
 	    case prim_file:read_file_info([DR, GetPath, "index.html"]) of
 		{ok, FI} when FI#file_info.type == regular ->
-		    do_url_type(get(sc), GetPath ++ "index.html");
+		    do_url_type(get(sc), GetPath ++ "index.html", DR);
 		_ ->
 		    case file:list_dir([DR, GetPath]) of
 			{ok, List} ->
@@ -3300,7 +3300,7 @@ ret_user_dir(Upath)  ->
 				    allowed_scripts = [],
 				    docroot=DR2},
 			    put(sc, SC2),
-			    redir_user(do_url_type(SC2, Path), User)%% recurse
+			    redir_user(do_url_type(SC2, Path, DR2), User)%% recurse
 		    end;
 		{redir_dir, User} ->
 		    #urltype {type = redir,
