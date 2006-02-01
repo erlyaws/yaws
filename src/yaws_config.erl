@@ -860,6 +860,9 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
 		false ->
 		    {error, ?F("Invalid user at line ~w", [Lno])}
 	    end;
+	["pam"] ->
+	    A2 = Auth#auth{pam = true},
+	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
 	['<', "/auth", '>'] ->
 	    C2 = C#sconf{authdirs = [Auth|C#sconf.authdirs]},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
@@ -1367,3 +1370,4 @@ delete_sconf(SC) ->
 
 update_gconf(GC) ->
     ok = gen_server:call(yaws_server, {update_gconf, GC}, infinity).
+

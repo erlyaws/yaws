@@ -31,7 +31,8 @@ MODULES=yaws \
 	yaws_html  \
 	yaws_log_file_h \
 	yaws_rss \
-	yaws_dav
+	yaws_dav \
+	yaws_pam
 
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app
@@ -71,7 +72,6 @@ install: all docsinstall
 	install -d $(INSTALLPREFIX)/lib/yaws/ebin
 	install -d $(VARDIR)/log/yaws
 	install -d $(VARDIR)/yaws/ebin
-	cp -r ../ebin/* $(INSTALLPREFIX)/lib/yaws/
 	cp -r ../include/* $(INSTALLPREFIX)/lib/yaws/
 	(cd ..; tar cf - ebin ) | (cd $(INSTALLPREFIX)/lib/yaws; tar xf - )
 	(cd ..; tar cf - include ) | (cd $(INSTALLPREFIX)/lib/yaws; tar xf - )

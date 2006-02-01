@@ -119,12 +119,8 @@ The equivalent of io_lib:format/2. This function is automatically
 -included in all erlang code which is a part of a yaws page.
 
 .TP
-\fBhtmlize(Binary)\fR
-Htmlize a binary object.
-
-.TP
-\fBhtmlize_l(DeepList)\fR
-Htmlize any deep list of chars and binaries.
+\fBhtmlize(Binary | List | Char)\fR
+Htmlize an IO list object.
 
 .TP
 \fBsetcookie(Name, Value, [Path, [ Expire, [Domain , [Secure]]]])\fR

@@ -1389,7 +1389,8 @@ handle_request(CliSock, ARG, N) ->
 
 is_auth(_ARG, _Req_dir, _H, [] ) -> 
     true;
-is_auth(ARG, Req_dir,H,[{Auth_dir, #auth{realm=Realm, users=Users}}|T] ) ->
+is_auth(ARG, Req_dir,H,[{Auth_dir, 
+			 #auth{realm=Realm, users=Users, pam=Pam}}|T] ) ->
     case lists:prefix(Auth_dir, Req_dir) of
 	true ->
 	    case H#headers.authorization of
@@ -1401,9 +1402,18 @@ is_auth(ARG, Req_dir,H,[{Auth_dir, #auth{realm=Realm, users=Users}}|T] ) ->
 			true ->
 			    maybe_auth_log({ok, User}, ARG),
 			    true;
-			false ->
+			false when Pam == false ->
 			    maybe_auth_log({401, User, Password}, ARG),
-			    {false, Realm}
+			    {false, Realm};
+			false when Pam == true ->
+			    case yaws_pam:auth(User, password) of
+				{yes, _} ->
+				    maybe_auth_log({ok, User}, ARG),
+				    true;
+				{no, Rsn} ->
+				    maybe_auth_log({401, User, Password}, ARG),
+				    {false, Realm}
+			    end
 		    end
 	    end;
 	false ->

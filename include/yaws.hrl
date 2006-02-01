@@ -179,7 +179,8 @@
          {dir = [],
           realm = "",
           type = "Basic",
-          users = []
+          users = [],
+	  pam = false   % should we use pam to auth a user
          }).
 
 

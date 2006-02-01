@@ -7,7 +7,7 @@ include ../include.mk
 ifdef WIN32
 	PRIV_FILES=../priv/.foo
 else
-	PRIV_FILES= ../priv/setuid_drv.$(DLL) 
+	PRIV_FILES= ../priv/setuid_drv.$(DLL)  ../priv/epam
 endif
 
 
@@ -25,6 +25,10 @@ clean:
 install:
 	install -d $(INSTALLPREFIX)/lib/yaws/priv
 	install $(PRIV_FILES) $(INSTALLPREFIX)/lib/yaws/priv
+ifndef WIN32
+	chown root $(INSTALLPREFIX)/lib/yaws/priv/epam
+	chmod a+s $(INSTALLPREFIX)/lib/yaws/priv/epam
+endif
 
 
 ../priv/setuid_drv.$(DLL): setuid_drv.$(OBJ)
@@ -35,5 +39,5 @@ setuid_drv.$(OBJ):	setuid_drv.c
 ../priv/.foo:
 	touch ../priv/.foo	
 
-
-
+../priv/epam: epam.o
+	$(CC) -o $@ epam.o -lpam
