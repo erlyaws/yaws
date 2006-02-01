@@ -39,5 +39,7 @@ setuid_drv.$(OBJ):	setuid_drv.c
 ../priv/.foo:
 	touch ../priv/.foo	
 
+epam.o:	epam.c
+	$(CC) -c $(CFLAGS) epam.c
 ../priv/epam: epam.o
 	$(CC) -o $@ epam.o -lpam
