@@ -1,3 +1,12 @@
+Wed Feb  1 23:28:42 CET 2006 Version 1.58
+RSS updates, more docs, Made month and days in RSS output to consist of	two figures instead of just one. Fixed the RSS date format, as	suggested by Daniel Kaminski. (Tobbe)
+Wiki, Fixed path to the application directory where yaws files are stored. (mikl)
+Added feature to not pick first sconf when virthosting. This is essential if we want explicit control over the virt hostnames. A commercial site called http://www.serious.com don't wan't http://fuckme.serious.com to ship the pages of the serious site :-) (klacke)
+DAV - reworked the DAV support a bit - don't use an appmod, instead yaws	has built-in support for DAV methods.  Added support for missing	DAV methods (COPY etc). (mbj)
+Added support for the erlmerge/jungerl package 'fdsrv' which makes it possible to bind to priviliged ports < 1024 even when we're not running as root. (klacke)
+changed so that an arg_rewrite_mod may	temporarily change the docroot by changing the Arg#arg.docroot	attribute (mikl)
+Added "pam" support for HTTP auth. (klacke)
+
 Wed Aug 17 14:54:06 CEST 2005 Version 1.57
 rel/abs path patch by Rob Schmersel which fixed	a problem in the wiki
 Rewrote yaws SSL code to use the packet http and packet line modes that are now supported in the OTP	ssl module. Earlier this was all manual (and slow) code in yaws.	Thus yaws/SSL servers are now considerably faster. The old yaws_ssl modules is no longer used. (klacke)

@@ -1,3 +1,109 @@
+2006-02-01 23:27  klacke
+
+	* vsn.mk, c_src/Makefile, doc/yaws.pdf, include/yaws.hrl,
+	man/yaws.conf.5, man/yaws_api.5, src/Makefile, src/yaws_config.erl,
+	src/yaws_pam.erl, src/yaws_server.erl, src/yaws_sup.erl: added pam
+	support + prepare for 1.58
+
+2005-12-10 19:21  mikaelka
+
+	* src/yaws_server.erl: changed so that an arg_rewrite_mod may
+	temporarily change the docroot by changing the Arg#arg.docroot
+	attribute
+
+2005-11-30 21:10  klacke
+
+	* include/yaws.hrl, man/yaws.conf.5, scripts/yaws.conf.template,
+	src/yaws_config.erl, src/yaws_server.erl: added support for fdsrv
+
+2005-11-25 20:49  etnt
+
+	* src/: yaws_config.erl, yaws_rss.erl: Fixing the yaws-rss
+	functionality. Adding configure parameter rss_dir, defining the
+	directory where to store the RSS database.
+
+2005-11-23 23:52  mbj
+
+	* src/yaws.erl: fixed allow_header for non-DAV case
+
+2005-11-23 23:45  mbj
+
+	* include/yaws.hrl, src/Makefile, src/dav.erl, src/yaws.erl,
+	src/yaws_config.erl, src/yaws_dav.erl, src/yaws_server.erl:
+	reworked the DAV support a bit - don't use an appmod, instead yaws
+	has built-in support for DAV methods.  Added support for missing
+	DAV methods (COPY etc).
+
+2005-11-20 23:30  klacke
+
+	* src/: yaws.erl, yaws_api.erl, yaws_cgi.erl, yaws_compile.erl,
+	yaws_config.erl, yaws_content_negotiation.erl, yaws_ctl.erl,
+	yaws_debug.erl, yaws_log.erl, yaws_ls.erl, yaws_revproxy.erl,
+	yaws_server.erl, yaws_ssl.erl: ""
+
+2005-10-11 14:12  klacke
+
+	* src/mime_type_c.erl: bad charset header genererated
+
+2005-10-05 13:24  klacke
+
+	* src/yaws_server.erl: ""
+
+2005-10-04 22:21  etnt
+
+	* src/yaws_rss.erl: Cleaned up w3cdtf-date function by Daniel
+	Kaminski.
+
+2005-10-03 09:41  etnt
+
+	* src/yaws_rss.erl: Updated the RSS date format, as suggested by
+	Daniel Kaminski.
+
+2005-10-03 09:34  etnt
+
+	* doc/README.rss, src/yaws_rss.erl: Fixed the RSS date format, as
+	suggested by Daniel Kaminski.
+
+2005-09-30 11:16  klacke
+
+	* src/yaws_server.erl: [no log message]
+
+2005-09-30 11:04  klacke
+
+	* include/yaws.hrl, src/yaws_config.erl, src/yaws_server.erl: ""
+
+2005-09-29 10:03  klacke
+
+	* include/yaws.hrl, man/yaws.conf.5, scripts/yaws.conf.template,
+	src/yaws_config.erl, src/yaws_server.erl: added feature to not pick
+	first sconf when virthosting
+
+2005-09-28 17:31  klacke
+
+	* man/yaws.conf.5: ""
+
+2005-09-25 16:51  mikl
+
+	* applications/wiki/wiki.conf: Fixed path to the application
+	directory where yaws files are stored.
+
+2005-09-16 14:45  etnt
+
+	* doc/README.rss: Updated RSS documentation.
+
+2005-09-16 14:41  etnt
+
+	* src/yaws_rss.erl: Made month and days in RSS output to consist of
+	two figures instead of just one.
+
+2005-09-13 16:11  klacke
+
+	* src/mime.types: ""
+
+2005-08-17 15:08  klacke
+
+	* ChangeLog, src/Makefile, src/yaws_revproxy.erl, www/news: ""
+
 2005-08-17 15:01  klacke
 
 	* vsn.mk: preparing for 1.57
