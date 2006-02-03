@@ -36,6 +36,10 @@ static ErlDrvData setuid_start(ErlDrvPort port, char *buf)
 
     if ((t = strchr(buf, ' ')) == NULL)
 	return (ErlDrvData) -1;
+
+    /* Rewind pw mapping */
+    setpwent();
+
     t++;
     switch (*t++) {
     case 's':  /* setuid */
