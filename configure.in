@@ -145,6 +145,12 @@ AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 
 
+dnl Sigh, pam headers do not seem to have a standard place. On FreeBSD and
+dnl Linuces I've seen they are in /usr/include/security, but MacOS has them
+dnl in /usr/include/pam... I'm to sick of M4 at this very moment to write
+dnl a test that searches for the files, so hard coded for now...
+CFLAGS="$CFLAGS -I/usr/include/security"
+
 case "$target_os" in
 	*linux*)
 	   AC_DEFINE(LINUX)
@@ -179,6 +185,7 @@ case "$target_os" in
 	   AC_SUBST(FPIC)
 	   ;;
 	 *darwin*)
+	   CFLAGS="$CFLAGS -I/usr/include/pam"
 	   LD_SHARED="gcc -bundle -fPIC -flat_namespace -undefined suppress"
    	   AC_SUBST(LD_SHARED)
 	   FPIC=-fPIC

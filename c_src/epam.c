@@ -1,10 +1,11 @@
-#include <security/pam_appl.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <security/pam_misc.h>
+
+#include <pam_appl.h>
+#include <pam_misc.h>
 
 
 #define get_int16(s) ((((unsigned char*)  (s))[0] << 8) | \
