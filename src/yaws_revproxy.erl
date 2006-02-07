@@ -81,8 +81,14 @@ init(CliSock, ARG, DecPath, QueryPart, {Prefix, URL}, N) ->
 			 r_req = (ARG#arg.req)#http_request.method,
 			 r_host = (ARG#arg.headers)#headers.host,
 			 mode = expectheaders, type = server,
-			 httpconnection=httpd_util:to_lower(KeepAlive)},     %% Need to check if we could close the connection after server answer
-	    	    %% Now we _must_ spawn a process here, because we
+			 httpconnection= if KeepAlive == undefined ->
+						 "keep-alive";
+					    true ->
+						 yaws:lowercase(KeepAlive)
+					 end
+			},     
+	    %% Need to check if we could close the connection after server answer
+	    %% Now we _must_ spawn a process here, because we
 	    %% can't use {active, once} due to the inefficencies
 	    %% that would occur with chunked encodings
 	    P1 = proc_lib:spawn_link(?MODULE, ploop, [Cli2, Srv, GC, SC, self()]),
@@ -130,12 +136,10 @@ rewrite_path(Req, Pref) ->
     New.
 
 
-
 strip_prefix(P,"/") ->
     P;
 strip_prefix([H|T1],[H|T2]) ->
     strip_prefix(T1,T2).
-
 
 
 
