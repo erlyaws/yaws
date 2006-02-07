@@ -1,4 +1,4 @@
-.TH YAWS.CONF "5" "" "" "User Commands"
+TH YAWS.CONF "5" "" "" "User Commands"
 .SH NAME
 /etc/yaws.conf \- Configuration file for the yaws webserver
 .SH DESCRIPTION
@@ -207,6 +207,10 @@ virtual server. The default value is true.
 Setting this directive to false disallows the automatic
 dir listing feature of Yaws. A status code 403 Forbidden will be sent.
 Set to true_nozip to avoid the auto-generated all.zip entries.
+
+.TP
+\fBdeflate = true | false\fR
+Turns on or off deflate compression for a server
 
 .TP
 \fB docroot = Directory ...\fR
