@@ -491,6 +491,13 @@ setup_ets(SC) ->
     ets:insert(E, {num_bytes, 0}),
     SC#sconf{ets = E}.
 
+clear_ets_complete(SC) ->
+    E = SC#sconf.ets,
+    ets:match_delete(E,'_'),
+    ets:insert(E, {num_files, 0}),
+    ets:insert(E, {num_bytes, 0}),
+    SC.
+
 gserv_loop(GS, Ready, Rnum, Last) ->
     receive
 	{From , status} ->
@@ -549,8 +556,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 		    erlang:fault(nosc);
 		true ->
 		    stop_ready(Ready, Last),
-		    ets:delete(OldSc#sconf.ets),
-		    GS2 = GS#gs{group = [setup_ets(NewSc) | 
+		    GS2 = GS#gs{group = [clear_ets_complete(NewSc) | 
 					 lists:delete(OldSc,GS#gs.group)]},
 		    Ready2 = [],
 		    gen_server:reply(From, ok),
