@@ -1,3 +1,50 @@
+2006-02-14 21:10  klacke
+
+	* c_src/Makefile: ""
+
+2006-02-14 20:56  klacke
+
+	* c_src/epam.c, include/yaws.hrl, src/Makefile,
+	src/mime_type_c.erl, src/yaws_config.erl, src/yaws_ctl.erl,
+	src/yaws_ls.erl, src/yaws_server.erl, src/yaws_sup.erl: pam
+	cleanup, add env record, yaws_ls enhancements by
+	doccarcass@gmail.com
+
+2006-02-12 16:59  mikaelka
+
+	* src/yaws_server.erl: Clearold ets table instead of deleting and
+	making a new one when updating sconf line 559
+
+2006-02-07 20:25  klacke
+
+	* src/yaws_revproxy.erl: broken revproxy
+
+2006-02-07 12:14  klacke
+
+	* man/yaws.conf.5: [no log message]
+
+2006-02-03 15:01  sstrollo
+
+	* configure, configure.in, c_src/epam.c: Handle pam include files
+	in different location...
+
+2006-02-03 14:47  sstrollo
+
+	* c_src/setuid_drv.c: Call setpwent() in setuid_drv (which wasn't
+	working without it on FreeBSD)
+
+2006-02-01 23:43  klacke
+
+	* c_src/epam.c: [no log message]
+
+2006-02-01 23:41  klacke
+
+	* c_src/Makefile: ""
+
+2006-02-01 23:36  klacke
+
+	* ChangeLog, www/news: [no log message]
+
 2006-02-01 23:27  klacke
 
 	* vsn.mk, c_src/Makefile, doc/yaws.pdf, include/yaws.hrl,

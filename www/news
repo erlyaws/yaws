@@ -1,4 +1,6 @@
 Wed Feb  1 23:28:42 CET 2006 Version 1.58
+pam and setuid_drv fixes for BSD by sstrollo
+yaws_ls (dir listing) enhancements by doccarcass@gmail.com
 RSS updates, more docs, Made month and days in RSS output to consist of	two figures instead of just one. Fixed the RSS date format, as	suggested by Daniel Kaminski. (Tobbe)
 Wiki, Fixed path to the application directory where yaws files are stored. (mikl)
 Added feature to not pick first sconf when virthosting. This is essential if we want explicit control over the virt hostnames. A commercial site called http://www.serious.com don't wan't http://fuckme.serious.com to ship the pages of the serious site :-) (klacke)
