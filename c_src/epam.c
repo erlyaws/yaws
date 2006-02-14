@@ -17,7 +17,8 @@
                         ((unsigned char*)(s))[1] = (i)         & 0xff;}
 
 #ifndef D
-#define D(str) fprintf(stderr, (str))
+/*#define D(str) fprintf(stderr, (str)) */
+#define D(str)
 #endif
 
 static int read_fill(int fd, unsigned char *buf, int len)
@@ -318,7 +319,7 @@ static void do_auth(char *service, char*user, char*pwd, char* mode, int sid)
 	    werr(pamh, sid, retval, "accounting");
 	    return;
 	}
-	fprintf(stderr, "did ok acct \n\r");
+	/*fprintf(stderr, "did ok acct \n\r");*/
     }
     if (mode[1] == 'S') {
 	retval = pam_open_session(pamh, 0);
@@ -326,7 +327,7 @@ static void do_auth(char *service, char*user, char*pwd, char* mode, int sid)
 	    werr(pamh, sid, retval, "session");
 	    return;
 	}
-	fprintf(stderr, "did ok open sess \n\r");
+	/*fprintf(stderr, "did ok open sess \n\r"); */
     }
     if ((sessp = malloc(sizeof(struct session))) == NULL) {
 	werr(pamh, sid, -1, "malloc");
@@ -384,12 +385,12 @@ int main(int argc, char *argv[])
 	    // close session
 	    sid = atoi((char *)&buf[1]);
 	    if ((sessp = del_session(&sessions, sid)) == NULL) {
-		fprintf(stderr, "Couldn't find session %d\r\n", sid);
+		fprintf(stderr, "Couldn't find session %d\r\n", sid); 
 		break;
 	    }
 	    if (sessp->session_mode == 1) {
 		pam_close_session(sessp->pamh, 0);
-		fprintf(stderr, "did ok close sess \n\r");
+		/*fprintf(stderr, "did ok close sess \n\r");*/
 	    }
 	    pam_end(sessp->pamh, PAM_SUCCESS); 
 	    free(sessp);

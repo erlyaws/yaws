@@ -429,11 +429,14 @@ any subdirectories to Dir are not automatically also protected.
 The .yaws_auth file is never visible in a dir listing
 
 .TP
-\fBpam\fR
-If the single item \fBpam\fR is part of the auth structure, 
-Yaws will also try to authenticate the user using "pam". The
-pam service that will be used is "system-auth". The service is (yet)
-not configurable.
+\fBpam service = \fIpam-service\fR \fR
+If the item \fBpam\fR is part of the auth structure, 
+Yaws will also try to authenticate the user using "pam" using
+the pam \fIservice\fR indicated. Usual services are typically found
+under /etc/pam.d. Usual values are "system-auth" etc.
+
+pam authentication is performed by an Erlang port program which is
+typically installed as suid root by the yaws install script.
 
 .TP
 \fB</auth>\fR

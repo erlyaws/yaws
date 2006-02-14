@@ -1363,9 +1363,9 @@ handle_request(CliSock, ARG, N) ->
 		    SC=get(sc),
 		    ?Debug("Test revproxy: ~p and ~p~n", 
 			[DecPath, SC#sconf.revproxy]),
-
-		    case {is_auth(ARG, DecPath,
-				  ARG#arg.headers,SC#sconf.authdirs),
+		    IsAuth = is_auth(ARG, DecPath,ARG#arg.headers,
+				     SC#sconf.authdirs),
+		    case {IsAuth, 
 			  is_revproxy(DecPath, SC#sconf.revproxy),
 			  is_redirect_map(DecPath, SC#sconf.redirect_map)} of
 			{_, _, {true, MethodHostPort}} ->
@@ -1411,8 +1411,8 @@ is_auth(ARG, Req_dir,H,[{Auth_dir,
 			false when Pam == false ->
 			    maybe_auth_log({401, User, Password}, ARG),
 			    {false, Realm};
-			false when Pam == true ->
-			    case yaws_pam:auth(User, password) of
+			false when Pam /= false ->
+			    case yaws_pam:auth(User, Password) of
 				{yes, _} ->
 				    maybe_auth_log({ok, User}, ARG),
 				    true;

@@ -93,6 +93,22 @@ setup_auth(SC) ->
 		end, SC#sconf.authdirs)).
 
 add_yaws_auth(SC, Dirs, A) ->
+    PamStarted = whereis(yaws_pam) /= undefined,
+    if
+	A#auth.pam == false ->
+	    ok;
+	PamStarted == false ->
+	    Spec = {yaws_pam, {yaws_pam, start_link, 
+			       [yaws:to_list(A#auth.pam),undefined,undefined]},
+		    permanent, 5000, worker, [yaws_pam]},
+	    spawn(fun() ->
+			  supervisor:start_child(yaws_sup, Spec)
+		  end);
+	true ->
+	    ok
+    end,
+
+    io:format("AAAA A = ~p~n", [A]),
     lists:map(
       fun(Dir) ->
 	      FN=[SC#sconf.docroot , [$/|Dir], [$/|".yaws_auth"]],
@@ -863,8 +879,8 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
 		false ->
 		    {error, ?F("Invalid user at line ~w", [Lno])}
 	    end;
-	["pam"] ->
-	    A2 = Auth#auth{pam = true},
+	["pam", "service", '=', Serv] ->
+	    A2 = Auth#auth{pam=Serv},
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
 	['<', "/auth", '>'] ->
 	    C2 = C#sconf{authdirs = [Auth|C#sconf.authdirs]},
