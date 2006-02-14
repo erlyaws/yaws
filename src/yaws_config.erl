@@ -21,7 +21,7 @@
 -compile(export_all).
 %%-export([Function/Arity, ...]).
 
--export([load/4,
+-export([load/1,
 	 toks/1,
 	 make_default_gconf/1]).
 	 
@@ -41,25 +41,26 @@ paths() ->
 
 %% load the config
 
-load(false, Trace, TraceOutput, Debug) ->
+load(E = #env{conf = false}) ->
     case yaws:first(fun(F) -> yaws:exists(F) end, paths()) of
 	false ->
 	    {error, "Can't find no config file "};
 	{ok, _, File} ->
-	    load({file, File}, Trace, TraceOutput, Debug)
+	    load(E#env{conf = {file, File}})
     end;
-load({file, File}, Trace, TraceOutput, Debug) ->
+load(E) ->
+    {file, File} = E#env.conf,
     error_logger:info_msg("Yaws: Using config file ~s~n", [File]),
     case file:open(File, [read]) of
 	{ok, FD} ->
-	    GC = make_default_gconf(Debug),
-	    GC2 = if TraceOutput == undefined ->
+	    GC = make_default_gconf(E#env.debug),
+	    GC2 = if E#env.traceoutput == undefined ->
 			  GC;
 		     true ->
 			  ?gc_set_tty_trace(GC,true)
 		  end,
-	    GC3 =  ?gc_set_debug(GC2, Debug),
-	    GC4 = GC3#gconf{trace = Trace},
+	    GC3 =  ?gc_set_debug(GC2, E#env.debug),
+	    GC4 = GC3#gconf{trace = E#env.trace},
 	    R = (catch fload(FD, globals, GC4, undefined, 
 			     [], 1, io:get_line(FD, ''))),
 	    ?Debug("FLOAD: ~p", [R]),
@@ -497,8 +498,10 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		"true" ->
 		    C2 = ?sc_set_dir_listings(C, true),
 		    C3 = ?sc_set_dir_all_zip(C2, true),
-		    AllAppMod = {"all.zip", yaws_ls},
-		    C4 = C3#sconf{appmods = [AllAppMod | C3#sconf.appmods]},
+		    C4 = C3#sconf{appmods = [ {"all.zip", yaws_ls},
+					      {"all.tgz", yaws_ls},
+					      {"all.tbz2", yaws_ls}| 
+					      C3#sconf.appmods]},
 		    fload(FD, server, GC, C4, Cs, Lno+1, Next);
 		"true_nozip" ->
 		    C2 = ?sc_set_dir_listings(C, true),

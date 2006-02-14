@@ -1,11 +1,12 @@
+
+#include <pam_appl.h>
 #include <stdio.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <pam_appl.h>
-#include <pam_misc.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 
 #define get_int16(s) ((((unsigned char*)  (s))[0] << 8) | \
@@ -15,10 +16,11 @@
 #define put_int16(i, s) {((unsigned char*)(s))[0] = ((i) >> 8) & 0xff; \
                         ((unsigned char*)(s))[1] = (i)         & 0xff;}
 
+#ifndef D
+#define D(str) fprintf(stderr, (str))
+#endif
 
-static int interactive = 0;
-
-static int read_fill(int fd, char *buf, int len)
+static int read_fill(int fd, unsigned char *buf, int len)
 {
     int i, got = 0;
 
@@ -52,7 +54,7 @@ static int write_fill(int fd, char *buf, int len)
 }
 
 
-
+#if 0
 /*
  * These functions are for binary prompt manipulation.
  * The manner in which a binary prompt is processed is application
@@ -70,6 +72,7 @@ static void pam_misc_conv_delete_binary(void *appdata,
 int (*pam_binary_handler_fn)(void *appdata, pamc_bp_t *prompt_p) = NULL;
 void (*pam_binary_handler_free)(void *appdata, pamc_bp_t *prompt_p)
       = pam_misc_conv_delete_binary;
+#endif
 
 /*
  * This conversation function is supposed to be a generic PAM one.
@@ -106,7 +109,6 @@ int misc_conv(int num_msg, const struct pam_message **msgm,
 
     for (count=0; count < num_msg; ++count) {
 	char *string=NULL;
-	int nc;
 
 	switch (msgm[count]->msg_style) {
 	case PAM_PROMPT_ECHO_OFF:
@@ -125,6 +127,7 @@ int misc_conv(int num_msg, const struct pam_message **msgm,
 		goto failed_conversation;
 	    }
 	    break;
+#if 0
 	case PAM_BINARY_PROMPT:
 	{
 	    pamc_bp_t binary_prompt = NULL;
@@ -149,6 +152,7 @@ int misc_conv(int num_msg, const struct pam_message **msgm,
 
 	    break;
 	}
+#endif
 	default:
 	    fprintf(stderr, "erroneous conversation (%d)\n"
 		    ,msgm[count]->msg_style);
@@ -181,13 +185,17 @@ failed_conversation:
 	    switch (msgm[count]->msg_style) {
 	    case PAM_PROMPT_ECHO_ON:
 	    case PAM_PROMPT_ECHO_OFF:
+#if 0
 		_pam_overwrite(reply[count].resp);
+#endif
 		free(reply[count].resp);
 		break;
+#if 0
 	    case PAM_BINARY_PROMPT:
 		pam_binary_handler_free(appdata_ptr,
 					(pamc_bp_t *) &reply[count].resp);
 		break;
+#endif
 	    case PAM_ERROR_MSG:
 	    case PAM_TEXT_INFO:
 		/* should not actually be able to get here... */
@@ -340,9 +348,8 @@ static void do_auth(char *service, char*user, char*pwd, char* mode, int sid)
 int main(int argc, char *argv[])
 {
     pam_handle_t *pamh=NULL;
-    int retval;
     unsigned char lb[2];
-    char buf[BUFSIZ];
+    unsigned char buf[BUFSIZ];
     char *user;
     char *pwd;
     char *mode;
@@ -366,7 +373,7 @@ int main(int argc, char *argv[])
 	case 'a': 
 	    // auth a user
 	    pamh = NULL;
-	    user = &buf[1];
+	    user = (char *)&buf[1];
 	    pwd = user + strlen(user) + 1;
 	    mode= pwd + strlen(pwd) + 1;
 	    sid = atoi(mode + strlen(mode) + 1);
@@ -375,7 +382,7 @@ int main(int argc, char *argv[])
 	    break;
 	case 'c': 
 	    // close session
-	    sid = atoi(&buf[1]);
+	    sid = atoi((char *)&buf[1]);
 	    if ((sessp = del_session(&sessions, sid)) == NULL) {
 		fprintf(stderr, "Couldn't find session %d\r\n", sid);
 		break;

@@ -34,10 +34,6 @@ start(GC, true) ->
     end.
 
 
-%% syncronous start, 
-%% If we're later supposed
-%% to change uid, we're still root here.
-
 run(GC) ->
     %% First check if there is already a Yaws system running
     %% with the same sid.

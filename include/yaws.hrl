@@ -249,3 +249,12 @@
 	  type,  %% atom, pair or absolute
 	  data}).
 
+
+%% as read by application:get_env()
+-record(env, {debug,  
+	      trace,
+	      traceoutput,
+	      conf,
+	      runmod,
+	      embedded}).
+

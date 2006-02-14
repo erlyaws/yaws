@@ -55,7 +55,9 @@ yaws_vsn.erl:	yaws_vsn.template ../vsn.mk
 
 
 charset.def:	
-	echo  $(DEFAULT_CHARSET) > charset.def
+	if [ ! -z "$(DEFAULT_CHARSET)" ]; then \
+           echo  $(DEFAULT_CHARSET) > charset.def; \
+	else rm charset.def; touch charset.def; fi
 
 mime_types.erl:	mime.types mime_type_c.erl charset.def
 	$(ERL) -noshell  -pa ../ebin -s mime_type_c  compile

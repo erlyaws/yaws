@@ -97,12 +97,12 @@ l2a(A) when atom(A) -> A.
 %%          {stop, Reason}
 %%----------------------------------------------------------------------
 
-init({Debug, Trace, TraceOut, Conf, RunMod, Embedded}) ->
+init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded}) ->
     process_flag(trap_exit, true),
     put(start_time, calendar:local_time()),  %% for uptime
-    case Embedded of 
+    case Env#env.embedded of 
 	false ->
-	    Config = (catch yaws_config:load(Conf, Trace, TraceOut, Debug)),
+	    Config = (catch yaws_config:load(Env)),
 	    case Config of
 		{ok, Gconf, Sconfs} ->
 		    erase(logdir),
@@ -123,7 +123,7 @@ init({Debug, Trace, TraceOut, Conf, RunMod, Embedded}) ->
 			_ ->
 			    ok
 		    end,
-		    init2(Gconf, Sconfs, RunMod, Embedded, true);
+		    init2(Gconf, Sconfs, Env#env.runmod, Env#env.embedded, true);
 		{error, E} ->
 		    case erase(logdir) of
 			undefined ->
@@ -144,7 +144,7 @@ init({Debug, Trace, TraceOut, Conf, RunMod, Embedded}) ->
 	    end;
 	true ->
 	    {ok, #state{gc = undefined,
-			embedded = Embedded,
+			embedded = Env#env.embedded,
 			pairs = [],
 			mnum = 0}}
     end.

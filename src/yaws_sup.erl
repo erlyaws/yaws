@@ -7,7 +7,7 @@
 
 -module(yaws_sup).
 -author('klacke@bluetail.com').
-
+-include("../include/yaws.hrl").
 
 -behaviour(supervisor).
 
@@ -103,7 +103,9 @@ get_app_args() ->
 		   {ok, Emb} ->
 		       Emb
 	       end,
-    {Debug, Trace, TraceOutput, Conf, RunMod, Embedded}.
+    #env{debug = Debug, trace = Trace, 
+	 traceoutput = TraceOutput, conf = Conf, 
+	 runmod = RunMod, embedded = Embedded}.
 
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------
