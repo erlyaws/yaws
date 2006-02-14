@@ -13,6 +13,9 @@ endif
 
 CFLAGS += -I"${ERLDIR}/usr/include"
 
+# and for MacOs + possibly others ...
+CFLAGS += /usr/include/pam/
+
 #
 # Targets
 #
