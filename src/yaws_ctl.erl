@@ -131,7 +131,10 @@ aloop(L, GC) ->
     case gen_tcp:accept(L) of
 	{ok, A} ->
 	    handle_a(A, GC);
-	_Err ->
+	Err ->
+	    error_logger:format("yaws_ctl failed to accept: ~p~n",
+				[Err]),
+	    timer:sleep(2000),
 	    ignore
     end,
     ?MODULE:aloop(L, GC).
