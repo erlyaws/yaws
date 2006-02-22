@@ -170,6 +170,8 @@ handle_a(A, GC) ->
 		    gen_tcp:close(A)
 	    
 	    end;
+	{error, _} ->
+	    gen_tcp:close(A);
 	_Err ->
 	    ignore
     end.
