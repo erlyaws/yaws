@@ -115,6 +115,14 @@ format_txt("http://" ++ T, Env, L, Doc) ->
     {Url, T1} = collect_url(T, []),
     Txt = format_external_url(Url),
     format_txt(T1, Env, reverse(Txt, L), Doc);
+format_txt("https://" ++ T, Env, L, Doc) ->
+    {Url, T1} = collect_url(T, []),
+    Txt = format_external_url(Url, "https://"),
+    format_txt(T1, Env, reverse(Txt, L), Doc);
+format_txt("ftp://" ++ T, Env, L, Doc) ->
+    {Url, T1} = collect_url(T, []),
+    Txt = format_external_url(Url, "ftp://"),
+    format_txt(T1, Env, reverse(Txt, L), Doc);
 format_txt("slideshow:" ++ T, Env, L, Doc) ->
     {X, T1} = collect_wiki_link(T),
     Txt = "<a href='slideShow.yaws?node="++wiki:str2urlencoded(Env#env.node)++
@@ -186,7 +194,9 @@ get_mailto([], L) ->
 format_url(Url, {_,_,_,F}) ->  F(Url).
 
 format_external_url(F) ->
-    F1 = "http://" ++ F,
+    format_external_url(F, "http://").
+format_external_url(F, Scheme) ->
+    F1 = Scheme ++ F,
     case is_graphic(F) of
 	true ->
 	    "<img src=\"" ++  F1 ++ "\">";

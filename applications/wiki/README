@@ -27,6 +27,19 @@ and replace the gifs with our own favorites.
 
 The password to the WikiPreferences page is ForgetMe.
 
+Getting started
+---------------
+WIKIINSTALLDIR is where the wiki is located.  It must be part of your
+docroot.  After installation, browse to the wiki directory. You will be
+asked to create a 'home' page, which will be the first wiki page. To find out
+about the special wiki formatting rules, go to WikiFormattingRules (e.g.
+from "All Pages"). To create a new page, just create a link to it by clicking
+EditMe on the home page (use the ~ character:  "my new page ~TestPage"), and
+save the home page. The new link will show up as: "my new page TestPage???".
+The question marks means that the node TestPage doens't exist. Click on the
+question marks to create the the page.
+
+
 Look and feel
 -------------
 

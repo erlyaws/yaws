@@ -2413,7 +2413,7 @@ getPassword([File]) ->
 	    io:format("Password is: '~s'\n", [Pwd]),
 	    halt();
 	_ ->
-	    io:format("Error - failed to open ~s\n", File),
+	    io:format("Error - failed to open ~s\n", [File]),
 	    halt()
     end.
 
@@ -2504,6 +2504,6 @@ searchPage(File, Search) ->
 	    {match, Matches} = regexp:matches(Txt, Search),
 	    {length(Matches), File};
 	_ ->
-	    io:format("Error - failed to open ~s\n", File),
+	    io:format("Error - failed to open ~s\n", [File]),
 	    {-1, File}
     end.
