@@ -26,11 +26,13 @@ clean:
 	-rm -f $(PRIV_FILES) setuid_drv.$(OBJ) 
 
 install:
-	install -d $(INSTALLPREFIX)/lib/yaws/priv
-	install $(PRIV_FILES) $(INSTALLPREFIX)/lib/yaws/priv
+	$(INSTALL) -d $(INSTALLPREFIX)/lib/yaws/priv
+	$(INSTALL) $(PRIV_FILES) $(INSTALLPREFIX)/lib/yaws/priv
 ifndef WIN32
-	chown root $(INSTALLPREFIX)/lib/yaws/priv/epam
-	chmod a+s $(INSTALLPREFIX)/lib/yaws/priv/epam
+	if [ `id -u` = "0" ]; then \
+		chown root $(INSTALLPREFIX)/lib/yaws/priv/epam; \
+		chmod a+s $(INSTALLPREFIX)/lib/yaws/priv/epam; \
+	fi
 endif
 
 
