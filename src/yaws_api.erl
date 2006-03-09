@@ -726,19 +726,6 @@ rest_dir (N, Path, [  _H | T ] ) -> rest_dir (N    ,        Path  , T).
 url_decode_q_split(Path) ->
     url_decode_q_split(Path, []).
 
-% url_decode_q_split([$%, $C, $2, $%, Hi, Lo | Tail], Ack) ->
-%     Hex = yaws:hex_to_integer([Hi, Lo]),
-%     url_decode_q_split(Tail, [Hex|Ack]);
-% url_decode_q_split([$%, $C, $3, $%, Hi, Lo | Tail], Ack) when Hi > $9 ->
-%     Hex = yaws:hex_to_integer([Hi+4, Lo]),
-%     url_decode_q_split(Tail, [Hex|Ack]);
-% url_decode_q_split([$%, $C, $3, $%, Hi, Lo | Tail], Ack) when Hi < $A ->
-%     Hex = yaws:hex_to_integer([Hi+4+7, Lo]),
-%    url_decode_q_split(Tail, [Hex|Ack]);
-
-
-%% Removed the above hackery, (klacke)
-
 url_decode_q_split([$%, Hi, Lo | Tail], Ack) ->
     Hex = yaws:hex_to_integer([Hi, Lo]),
     if Hex  == 0 -> exit(badurl);
@@ -1702,8 +1689,7 @@ setconf(GC0, Groups0) ->
 	  yaws_config:can_soft_setconf(GC, Groups, OLDGC, OldGroups)} of
 	{true, true} ->
 	    yaws_config:soft_setconf(GC, Groups, OLDGC, OldGroups);
-	{true, false} when OLDGC == undefined; 
-	                   OLDGC#gconf.username == undefined ->
+	{true, false} when OLDGC == undefined -> 
 	    yaws_config:hard_setconf(GC, Groups);
 	_ ->
 	    {error, need_restart}

@@ -75,14 +75,15 @@
 	       max_num_cached_bytes = 1000000,  %% 1 MEG
 	       max_size_cached_file = 8000,
 	       large_file_chunk_size = 10240,
-	       log_wrap_size = 1000000,  % wrap logs after 1M
+	       log_wrap_size = 10000000,  % wrap logs after 10M
 	       cache_refresh_secs = 30,  % seconds  (auto zero when debug)
 	       include_dir = [],    %% list of inc dirs for .yaws files 
 	       phpexe = "php",      %% cgi capable php executable
 	       yaws,                %% server string
-	       username,            %% maybe run as a different user than root
-	       uid,                 %% unix uid of user that started yaws
-	       id = "default"       %% string identifying this instance of yaws
+	       %username,           %% maybe run as a different user than root
+	       %uid,                %% unix uid of user that started yaws
+	       id = "default",      %% string identifying this instance of yaws
+	       tmpdir
 	      }).  
 
 
@@ -256,5 +257,7 @@
 	      traceoutput,
 	      conf,
 	      runmod,
-	      embedded}).
+	      embedded,
+	      id
+	     }).
 

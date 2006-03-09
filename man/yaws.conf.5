@@ -49,15 +49,14 @@ id of a yaws server to control it using the different ctl commands such
 as:
 .nf
 
-# /usr/local/bin/yaws -I foobar -s
+# /usr/local/bin/yaws --id foobar --stop
 
 .fi
-To stop the Yaws server with id "foobar". Only the user that started
-the server called foobar is allowd to stop and control it. This is achieved
-through file permissions on the control file which will reside in
-"/tmp/yaws/foobar/ctl"
-
-There can never be two yaws servers on the same machine with identical ids.
+To stop the Yaws server with id "foobar". Each Yaws server will write
+its internals data into a file called $HOME/.yaws/yaws/ID where ID the
+identity of the server. In particular it will write a file called
+$HOME/.yaws/yaws/ID/ctl which contain the portnumber where the server is
+listening for control commands.
 
 .TP
 \fB include_dir = Directory\fR

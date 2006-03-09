@@ -82,8 +82,8 @@ run_listen(GC) ->
 			      "called ~s~n"
 			      "either problems with permissions or "
 			      " earlier runs of yaws ~nwith the same id "
-			      " <~p> as this, check /tmp/yaws/* for perms~n",
-			      [ctl_file(GC#gconf.id), GC#gconf.id])
+			      " <~p> as this, check ~p for perms~n",
+			      [ctl_file(GC#gconf.id), GC#gconf.id, sys_dir()])
 		    end;
 		Err ->
 		    e("Cannot get sockname for ctlsock: ~p",[Err] )
@@ -120,10 +120,13 @@ w_ctl_file(Sid, Port) ->
 
 
 ctl_file(Sid) ->
-    filename:join([yaws:tmp_dir(),
+    filename:join([yaws_config:tmp_dir(),
 		   "yaws",
 		   Sid,
 		   "ctl"]).
+sys_dir() ->
+     filename:join([yaws_config:tmp_dir(),
+		    "yaws"]).
 
 
 
@@ -205,8 +208,6 @@ actl_trace(What) ->
 		      [What, 
 		       filename:join([GC#gconf.logdir, 
 				      "trace." ++ atom_to_list(What)])])
-	    
-	    
 	    end;
 	false ->
 	    "Need either http | traffic | off  as argument\n"
@@ -341,7 +342,7 @@ s_cmd(Fd, SID, Term) ->
 
 %% List existing yaws nodes on this machine
 ls(_) ->
-    case file:list_dir("/tmp/yaws") of
+    case file:list_dir(sys_dir()) of
 	{ok, List} ->
 	    io:format("~-15s~-10s~-10s~n",
 		      ["Id", "Status", "Owner"]),
@@ -360,8 +361,8 @@ ls(_) ->
 lls(Dir) ->
     Ctl = ctl_file(Dir),
     case {file:read_file_info(Ctl),
-	  file:read_file_info(filename:join("/tmp/yaws/", Dir))} of
-	{{ok, FI}, {ok, DI}} ->
+	  file:read_file_info(filename:join([sys_dir(), Dir]))} of
+	{{ok, _FI}, {ok, DI}} ->
 	    User = yaws:uid_to_name(DI#file_info.uid),
 	    Running = case connect(Dir) of
 			  {ok, Sock} ->
@@ -371,15 +372,13 @@ lls(Dir) ->
 			      "hanging??";
 			  {error, eacces} ->
 			      "unknown";
-			  Err ->
+			  _Err ->
 			      "stopped"
 		      end,
 	    io:format("~-15s~-10s~-10s~n",
 		      [Dir, Running, User]);
 
-
-	
-	{{ok, FI}, {error, _}} ->
+	{{ok, _FI}, {error, _}} ->
 	    %% sick case,
 	    ignore;
 
@@ -388,7 +387,6 @@ lls(Dir) ->
 	    User = yaws:uid_to_name(DI#file_info.uid),
 	    io:format("~-15s~-10s~-10s~n",
 		      [Dir, "stopped", User]);
-
 
 	_Err ->
 	    io:format("~-15s~-10s~-10s~n",
@@ -418,7 +416,7 @@ load(X) ->
     actl(SID, {load, Modules}).
 
 check([Id, File| IncludeDirs]) ->
-    GC = yaws_config:make_default_gconf(false),
+    GC = yaws_config:make_default_gconf(false, undefined),
     GC2 = GC#gconf{include_dir = lists:map(fun(X) -> atom_to_list(X) end, 
 					   IncludeDirs),
 		   id = atom_to_list(Id)

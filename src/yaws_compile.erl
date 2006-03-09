@@ -123,7 +123,7 @@ compile_file(C, LineNo,  Chars = "<verbatim>" ++ _Tail, html,  NumChars, Ack,Es)
     C2 = C#comp{outfile = ["<pre>\n"]},  %% use as accumulator
     compile_file(C2,  LineNo+1, line() , verbatim , Len, [{data, NumChars} | Ack], Es);
 
-compile_file(C, LineNo,  Chars = "</verbatim>" ++ Tail, verbatim, NumChars, Ack, Es) ->
+compile_file(C, LineNo,  Chars = "</verbatim>" ++ _Tail, verbatim, NumChars, Ack, Es) ->
     Data = list_to_binary(lists:reverse(["</pre>\n" | C#comp.outfile])),
     Len = length(Chars),
     compile_file(C#comp{outfile = undefined}, LineNo, line(), html, 0, 
@@ -139,7 +139,7 @@ compile_file(C, LineNo,  Chars, verbatim, NumChars, Ack,Es) ->
 			 length(Chars), Ack,Es)
     end;
 
-compile_file(C, LineNo,  Chars = "</erl>" ++ Tail, erl, NumChars, Ack, Es) ->
+compile_file(C, LineNo,  _Chars = "</erl>" ++ Tail, erl, NumChars, Ack, Es) ->
     ?Debug("stop erl:~p",[LineNo]),
     file:close(C#comp.outfd),
     case proc_compile_file(C#comp.outfile, comp_opts(C#comp.gc)) of
@@ -206,7 +206,7 @@ compile_file(C, LineNo, [], binding, NumChars, Ack, Es) ->
 compile_file(C, LineNo, "%%"++Chars, binding, NumChars, Ack, Es) ->
     compile_file(C, LineNo, Chars, html, 0, [{binding, NumChars+2}|Ack], Es);
 
-compile_file(C, LineNo, [H|T], binding, NumChars, Ack, Es) ->
+compile_file(C, LineNo, [_H|T], binding, NumChars, Ack, Es) ->
     compile_file(C, LineNo, T, binding, NumChars+1, Ack, Es).
 
 
@@ -273,7 +273,7 @@ new_out_file_name(Tail) ->
 %% this will generate 10 lines
 new_out_file(Line, C, Tail, GC) ->
     Module = new_out_file_name(Tail),
-    OutFile = filename:join([yaws:tmp_dir(), "yaws", GC#gconf.id, Module ++ ".erl"]),
+    OutFile = filename:join([GC#gconf.tmpdir, "yaws", GC#gconf.id, Module ++ ".erl"]),
     ?Debug("Writing outout file~s~n", [OutFile]),
     {ok, Out} = file:open(OutFile, [write]),
     ok = io:format(Out, "-module(~s).~n-compile(export_all).~n~n", [Module]),

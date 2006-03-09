@@ -161,10 +161,10 @@ deep_drop_prefix(_, _) ->
 
 get_socket_peername(Socket={sslsocket,_,_}) ->
     {ok, {IP, _Port}}=ssl:peername(Socket),
-    yaws:fmt_ip(IP);
+    inet_parse:ntoa(IP);
 get_socket_peername(Socket) ->
     {ok, {IP, _Port}}=inet:peername(Socket),
-    yaws:fmt_ip(IP).
+    inet_parse:ntoa(IP).
 
 
 cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
@@ -235,7 +235,7 @@ tohttp_c(C) ->
 %% Get Host part from a host string that can contain host or host:port
 host(Host) ->
    case string:tokens(Host, ":") of
-       [Hostname, Port] -> Hostname;
+       [Hostname, _Port] -> Hostname;
        [Hostname]       -> Hostname;
        _Other           -> Host
    end.

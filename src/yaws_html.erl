@@ -29,7 +29,7 @@ h2e(Input) ->
 
 % parse(Tokens, Stack, Acc)
 
-parse([], {T,A,L}, [], Acc) ->
+parse([], {T,A,_L}, [], Acc) ->
     {T, A, lists:reverse(Acc)};
 parse([], {T,A,L}, [{CTag,CAcc}|Stack], Acc) ->
     io:format("Unterminated tag '~p' at line ~p\n", [T,L]),
@@ -42,7 +42,7 @@ parse([{begin_tag,T,A,L}|Tokens], CTag, Stack, Acc) ->
 	    parse(Tokens, {T,A,L}, [{CTag,Acc}|Stack],[])
     end;
 
-parse([{end_tag,T,[],L}|Tokens], {T,A,_}, [{CTag,CAcc}|Stack], Acc) ->
+parse([{end_tag,T,[],_L}|Tokens], {T,A,_}, [{CTag,CAcc}|Stack], Acc) ->
     E = case Acc of
 	    [Single] ->
 		{T,A,Single};
@@ -51,7 +51,7 @@ parse([{end_tag,T,[],L}|Tokens], {T,A,_}, [{CTag,CAcc}|Stack], Acc) ->
 	end,
     parse(Tokens, CTag, Stack, [E|CAcc]);
 
-parse([{end_tag,T1,[],L1}|Tokens], CTag = {T2,A,L2}, Stack, Acc) ->
+parse([{end_tag,T1,[],L1}|Tokens], CTag = {T2,_A,L2}, Stack, Acc) ->
     case tag_type(T1) of
 	leaf -> % ignore
 	    parse(Tokens, CTag, Stack, Acc);
@@ -62,7 +62,7 @@ parse([{end_tag,T1,[],L1}|Tokens], CTag = {T2,A,L2}, Stack, Acc) ->
 	    {error, Msg}
     end;
 
-parse([{data, Data, Line}|Tokens], CTag, Stack, Acc) ->
+parse([{data, Data, _Line}|Tokens], CTag, Stack, Acc) ->
     case skip_space(Data, 0) of
 	{[], _} ->
 	    parse(Tokens, CTag, Stack, Acc);
@@ -121,13 +121,13 @@ next_token(_Tag, R, Tokens, L) ->
 %% '<' <id> <sp>+ [<id><sp>*['='<val>]]* ['/'] '>'
 
 scan_tag([$/|I], L) ->
-    {R0,L0} = skip_space(I, L),
+    {_R0,L0} = skip_space(I, L),
     {Name,R1,L1} = scan_tag_name(I, L0),
     {R2,L2} = skip_space(R1, L1),
     {Args,R3,L3} = scan_tag_args(R2, L2),
     {{end_tag,list_to_atom(lowercase(Name)),Args,L0}, R3, L3};
 scan_tag(I, L) ->
-    {R0,L0} = skip_space(I, L),
+    {_R0,L0} = skip_space(I, L),
     {Name,R1,L1} = scan_tag_name(I, L0),
     {R2,L2} = skip_space(R1, L1),
     {Args,R3,L3} = scan_tag_args(R2, L2),
@@ -249,7 +249,7 @@ char_class($\t) -> space;
 char_class(C) when C >= $a, C =< $z -> alpha;
 char_class(C) when C >= $A, C =< $Z -> alpha;
 char_class(C) when C >= $0, C =< $9 -> digit;
-char_class(C)   -> other.
+char_class(_C)   -> other.
 
 %
 
@@ -271,7 +271,7 @@ skip_comment([], L) ->          {[], L};
 skip_comment([$-,$-,$>|R],L) -> {R,L};
 skip_comment([$\n|R],L) ->      skip_comment(R,L+1);
 skip_comment([$\r|R],L) ->      skip_comment(R,L+1);
-skip_comment([C|R],L) ->        skip_comment(R,L).
+skip_comment([_C|R],L) ->        skip_comment(R,L).
 
 %
 

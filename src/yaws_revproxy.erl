@@ -33,7 +33,7 @@
 %% with redirection).
 %% I did not yet check that.
 
-init(CliSock, ARG, DecPath, QueryPart, {Prefix, URL}, N) ->
+init(CliSock, ARG, _DecPath, _QueryPart, {Prefix, URL}, N) ->
     GC=get(gc), SC=get(sc),
     %% Connect to the backend server
     case connect_url(URL, SC) of
@@ -233,7 +233,7 @@ nonl([]) ->
 	    
 
 
-get_chunk(Fd, _N, N,_) ->
+get_chunk(_Fd, N, N, _) ->
     [];
 get_chunk(Fd, N, Asz,SSL) ->
     case yaws:do_recv(Fd, N, SSL) of
@@ -352,7 +352,7 @@ ploop(From0, To, Pid) ->
 %% Before reentering the ploop in expect_header mode (new request/reply),
 %% We must check the if we need to keep the connection alive
 %% or if we must close it.
-ploop_keepalive(_From = #psock{httpconnection="close"}, To, Pid) ->
+ploop_keepalive(_From = #psock{httpconnection="close"}, _To, _Pid) ->
     ?Debug("Connection closed by proxy: No keep-alive~n",[]),
     done;    %%  Close the connection
 ploop_keepalive(From, To, Pid) ->

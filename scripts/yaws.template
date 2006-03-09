@@ -22,40 +22,40 @@ help()
         echo "usage:  "
         echo ""
         echo 
-        echo "       yaws -i         -- interactive (no daemon) mode"
-        echo "       yaws -w         -- cygwin interactive (werl) "
-        echo "       yaws -D         -- daemon mode"
+        echo "       yaws -i | --interactive         -- interactive (no daemon) mode"
+        echo "       yaws -w | --winteractive        -- cygwin interactive (werl) "
+        echo "       yaws --daemon                   -- daemon mode"
 
         echo ""
 
         echo ""
         echo "       Auxilliary flags for the daemon: "
-        echo "            -I Id      --  Set system id"
-        echo "            -d         --  debug mode "
-        echo "            -c File    --  set config file"
-        echo "            -r mod     --  call mod:start/0 at startup"
-        echo "            -t         --  trace all traffic"
-        echo "            -T         --  trace http traffic"
-        echo "            -x         --  trace output to stdout"
-        echo "            -v         --  print version"
-        echo "            -pa path   --  add path"
-        echo "            -M dir     --  start Mnesia in dir"
-        echo "            -proto_dist Mod     --  use Mod for distrib"
-        echo "            -sname xxx --  start with sname xxx"
-        echo "            -name xxx --  start with name xxx"
-        echo "            -r mod     --  call mod:start/0 at startup"
-        echo "            -heart     --  auto restart yaws if it crashes"
-        echo "            -erlarg X  --  pass argument X to $erl"
+        echo "            --id Id          --  Set system id"
+        echo "            --debug          --  debug mode "
+        echo "            --conf File      --  set config file"
+        echo "            --tracetraf      --  trace traffic"
+        echo "            --tracehttp      --  trace http traffic"
+        echo "            --traceout       --  trace output to stdout"
+        echo "            --version        --  print version"
+        echo "            --pa path        --  add load path"
+        echo "            --mnesiadir dir  --  start Mnesia in dir"
+        echo "            --proto_dist Mod     --  use Mod for distrib"
+        echo "            --sname xxx      --  start with sname xxx"
+        echo "            --name xxx       --  start with name xxx"
+        echo "            --runmod mod     --  call mod:start/0 at startup"
+        echo "            --heart          --  auto restart yaws if it crashes"
+        echo "            --erlarg X       --  pass argument X to $erl"
 
         echo ""
 
         echo "ctl functions ... "
-        echo "        yaws -h [-I id]       -- hup the daemon  "
-        echo "        yaws -s [-I id]       -- stop the daemon "
-        echo "        yaws -S [-I id]       -- query the daemon status "
-        echo "        yaws -load Modules    -- load modules "
-	echo "        yaws -j traffic|http  -- toggle trace of running daemon"
-        echo "        yaws -check YawsFile [IncDirs] -- test compile File "
+        echo "        yaws --hup [-id ID]        -- hup the daemon, reload conf
+        echo "        yaws --stops [--id ID]     -- stop the daemon "
+        echo "        yaws --status [--id ID]    -- query the daemon status "
+        echo "        yaws --load Modules        -- load modules "
+        echo "        yaws --ls                  -- list Yaws nodes and their status
+	echo "        yaws --ctltrace traffic|http    -- toggle trace of running daemon"
+        echo "        yaws --check YawsFile [IncDirs] -- test compile File "
         exit 1
 }
 
@@ -80,72 +80,75 @@ do
       arg=$1
       shift;
       case $arg in
-	   -i)
+	   -i|--interactive)
                 interactive="true";
 		debug=" -yaws debug ";
 		daemon="";;
-           -w)
+           -w|--winteractive)
                 interactive="true";
 		debug=" -yaws debug ";
 		daemon="";
                 erl=$werl;;
-           -D)
+           -D|--daemon)
     	        daemon=" -detached ";;
-	   -d)
+	   -d|--debug)
 		debug=" -boot start_sasl -yaws debug ";;
-	   -t)
+	   -t|--tracetraf)
 	        trace=" -yaws trace traffic ";;
-	   -T)
+	   -T|--tracehttp)
 	        trace=" -yaws trace http ";;
-	   -I)
+	   -I|--id)
                 id=$1
 		shift;;
-	   -x)
+	   -x|--traceout)
 	        traceoutput=" -yaws traceoutput ";;
-           -M)
+           --trace)
+                traceoutput=" -yaws traceoutput ";
+		trace=" -yaws trace traffic ";;
+           -M|--mnesiadir)
                mnesia=" -mnesia dir '"$1"' -run mnesia start"
                shift;;
-           -c)
+           -c|--conf)
 		conf=" -conf $1 "
 		shift;;
-          -pa)
+          -pa|--pa)
 	        xpath=" ${xpath} -pa $1 "
                 shift;;
-           -r)
+           -r|--runmod)
 		runmod=" -runmod $1 "
 		shift;;
-	   -h)
+	   -h|--hup)
 	        ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl hup";;
-	   -s)
+	   -s|--stop)
 	        ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl stop";;
-	   -ls)
+	   -ls|--ls)
 	        ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl ls";;
-	   -S)
+	   -S|--status)
 	        ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl status";;
-	   -load)
+	   -load|--load)
 	        $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl load ${id} $*
 		exit 0;;
-	   -j)
+	   -j|--ctltrace)
 	        ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl trace $1"
 		shift;;
-	   -v) 
+	   -v|--version) 
 	        exec $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws printversion;
 		exit 0;;
-           -sname)
+           --sname|-sname)
 		sname=" -sname $1 "
 		shift;;
-           -name)
+           -name|--name)
 		sname=" -name $1 "
 		shift;;
-           -heart)
+           -heart|--heart)
 		heart=" -heart ";;
-           -proto_dist)
+           -proto_dist|--proto_dist)
                 pdist=" -proto_dist $1 "
                 shift;;
-	   -erlarg)
+	   -erlarg|--erlarg)
 	        erlarg="$erlarg $1 "
 		shift;;
-           -check)
+           -check|--check)
 		mkdir /tmp/yaws 2> /dev/null
 	        mkdir /tmp/yaws/${ID} 2> /dev/null
                 out=`exec $erl -noshell -pa ${yawsdir}${delim}ebin ${xpath} -s yaws_ctl check ${id} $*`
@@ -166,6 +169,9 @@ if [ ! -z "${ex}" ]; then
     exit 0
 fi
 
+if [ ! -z "${id}" ]; then
+    id="-yaws id ${id}"
+fi
 
 trace="${trace} ${traceoutput}"
 
@@ -175,10 +181,10 @@ if [ -z "$heart" ] || [ -z "$daemon" ]; then
     HEART_COMMAND="";
 else
     ## ............................this line
-    export HEART_COMMAND="${ENV_PGM} HEART=true \"$erl\" ${daemon} ${heart} -pa ${yawsdir}${delim}ebin ${xpath} ${sname} ${pdist} ${erlarg} ${debug} -s yaws $trace $conf $runmod $mnesia";
+    export HEART_COMMAND="${ENV_PGM} HEART=true \"$erl\" ${daemon} ${heart} -pa ${yawsdir}${delim}ebin ${xpath} ${sname} ${pdist} ${erlarg} ${debug} -s yaws ${trace} ${conf} ${runmod} ${mnesia} ${id}";
 fi
 
 ## keep this line in sync with ....^
-exec "$erl" ${daemon} ${heart} -pa ${yawsdir}${delim}ebin  ${xpath} ${sname} ${pdist} ${erlarg} ${debug} -s yaws $trace $conf $runmod $mnesia
+exec "$erl" ${daemon} ${heart} -pa ${yawsdir}${delim}ebin  ${xpath} ${sname} ${pdist} ${erlarg} ${debug} -s yaws ${trace} ${conf} ${runmod} ${mnesia} ${id}
 
 

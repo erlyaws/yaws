@@ -23,7 +23,8 @@
 
 -export([load/1,
 	 toks/1,
-	 make_default_gconf/1]).
+	 tmp_dir/0,
+	 make_default_gconf/2]).
 	 
 
 %% where to look for yaws.conf 
@@ -53,7 +54,7 @@ load(E) ->
     error_logger:info_msg("Yaws: Using config file ~s~n", [File]),
     case file:open(File, [read]) of
 	{ok, FD} ->
-	    GC = make_default_gconf(E#env.debug),
+	    GC = make_default_gconf(E#env.debug, E#env.id),
 	    GC2 = if E#env.traceoutput == undefined ->
 			  GC;
 		     true ->
@@ -66,6 +67,7 @@ load(E) ->
 	    ?Debug("FLOAD: ~p", [R]),
 	    case R of
 		{ok, GC5, Cs} ->
+		    yaws:mkdir(GC#gconf.tmpdir),
 		    Cs2 = add_yaws_auth(Cs),
 		    validate_cs(GC5, Cs2);
 		Err ->
@@ -108,7 +110,6 @@ add_yaws_auth(SC, Dirs, A) ->
 	    ok
     end,
 
-    io:format("AAAA A = ~p~n", [A]),
     lists:map(
       fun(Dir) ->
 	      FN=[SC#sconf.docroot , [$/|Dir], [$/|".yaws_auth"]],
@@ -226,7 +227,7 @@ add_port(SC, Port) ->
     end.
 
 
-make_default_gconf(Debug) ->
+make_default_gconf(Debug, Id) ->
     Y = yaws_dir(),
     #gconf{yaws_dir = Y,
 	   ebin_dir = [filename:join([Y, "examples/ebin"])],
@@ -249,9 +250,40 @@ make_default_gconf(Debug) ->
 			       ?GC_FAIL_ON_BIND_ERR bor
 			       ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH
 		   end,
-	   uid = element(2, yaws:getuid()),
-	   yaws = "Yaws " ++ yaws_vsn:version()}.
+	   %uid = element(2, yaws:getuid()),
+	   tmpdir = tmp_dir(),
+	   yaws = "Yaws " ++ yaws_vsn:version(),
+	   id = Id
+	  }.
 
+
+
+tmp_dir() ->
+    case os:type() of
+ 	{win32,_} ->
+	    case os:getenv("TEMP") of
+		false ->
+		    case os:getenv("TMP") of
+			%%
+			%% No temporary path set?
+			%% Then try standard paths.
+			%%
+			false ->
+			    case file:read_file_info("C:/WINNT/Temp") of
+				{error, _} ->
+				    "C:/WINDOWS/Temp";
+				{ok, _} ->
+				    "C:/WINNT/Temp"
+			    end;
+			PathTMP ->
+			    PathTMP
+		    end;
+		PathTEMP ->
+		    PathTEMP
+	    end;
+	_ ->
+	    filename:join([os:getenv("HOME"), ".yaws"])
+    end.
 
 make_default_sconf() ->
     Y = yaws_dir(),
@@ -372,6 +404,16 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}
 	    end;
 
+	["tmpdir", '=', Dir] ->
+	     Dir = filename:absname(Dir),
+	    case is_dir(Dir) of
+		true ->
+		    fload(FD, globals, GC#gconf{tmpdir=[Dir|GC#gconf.include_dir]},
+			  C, Cs, Lno+1, Next);
+		false ->
+		    {error, ?F("Expect directory at line ~w", [Lno])}
+	    end;
+
 	%% keep this bugger for backward compat for a while
 	["keepalive_timeout", '=', Val] ->
 	    case (catch list_to_integer(Val)) of
@@ -429,14 +471,8 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		     {error, ?F("Expect 0 or positive integer at line ~w", [Lno])}
 	     end;
 
-	["username", '=' , Uname] ->
-	    case os:type() of
-		{win32, _} ->
-		    {error, "username feature not supported on win32"};
-		_ ->
-		    fload(FD, globals, GC#gconf{username = Uname},
-			  C, Cs, Lno+1, Next)
-	    end;
+ 	["username", '=' , _Uname] ->
+	    {error, "username feature not supported anymore - use fdsrv"};
 
 	["copy_error_log", '=', Bool] ->
 	    case is_bool(Bool) of
@@ -464,9 +500,11 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}
 	    end;
-	["id", '=', String] ->
+	["id", '=', String] when GC#gconf.id == undefined ->
 	    fload(FD, globals, GC#gconf{id=String},C, Cs, Lno+1, Next);
-
+	["id", '=', String]  ->
+	    error_logger:format("Ignoring 'id = ~p' setting at line ~p~n", [String,Lno]),
+	    fload(FD, globals, GC, C, Cs, Lno+1, Next);
 	["pick_first_virthost_on_nomatch", '=',  Bool] ->
 	    case is_bool(Bool) of
 		{true, Val} ->
@@ -485,6 +523,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}
 	    end;
+	
 
 	['<', "server", Server, '>'] ->  %% first server 
             fload(FD, server, GC, #sconf{servername = Server},
@@ -567,10 +606,10 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 	    C2 = C#sconf{rhost = Val},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 	["listen", '=', IP] ->
-	    case yaws:parse_ip(IP) of
-		error ->
+	    case inet_parse:address(IP) of
+		{error, _} ->
 		    {error, ?F("Expect IP address at line ~w:", [Lno])};
-		Addr ->
+		{ok,Addr} ->
 		    C2 = C#sconf{listen = Addr},
 		    fload(FD, server, GC, C2, Cs, Lno+1, Next)
 	    end;
@@ -1191,19 +1230,14 @@ soft_setconf(GC, Groups, OLDGC, OldGroups) ->
     end,
     Rems = remove_old_scs(lists:flatten(OldGroups), Groups),
     Adds = soft_setconf_scs(lists:flatten(Groups), OldGroups),
-    case lists:keysearch(add_sconf,1,Adds) of
-	{value, _} when OLDGC#gconf.username /= undefined ->
-	    {error, need_restart};
-	_ ->
-	    lists:foreach(
-	      fun({delete_sconf, SC}) ->
-		      delete_sconf(SC);
-		 ({add_sconf, SC}) ->
-		      add_sconf(SC);
-		 ({update_sconf, SC}) ->
-		      update_sconf(SC)
-	      end, Rems ++ Adds)
-    end.
+    lists:foreach(
+      fun({delete_sconf, SC}) ->
+	      delete_sconf(SC);
+	 ({add_sconf, SC}) ->
+	      add_sconf(SC);
+	 ({update_sconf, SC}) ->
+	      update_sconf(SC)
+      end, Rems ++ Adds).
     
 
 
@@ -1262,7 +1296,6 @@ can_hard_gc(New, Old) ->
 	    true;
 	New#gconf.yaws_dir == Old#gconf.yaws_dir,
 	New#gconf.runmods == Old#gconf.runmods,
-	New#gconf.username == Old#gconf.username,
 	New#gconf.logdir == Old#gconf.logdir ->
 	    true;
 	true ->
@@ -1281,7 +1314,6 @@ can_soft_gc(G1, G2) ->
 	G1#gconf.flags == G2#gconf.flags,
 	G1#gconf.logdir == G2#gconf.logdir,
 	G1#gconf.log_wrap_size == G2#gconf.log_wrap_size,
-	G1#gconf.username == G2#gconf.username,
 	G1#gconf.id == G2#gconf.id ->
 	    true;
 	true ->

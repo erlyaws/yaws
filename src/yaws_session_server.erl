@@ -158,7 +158,7 @@ handle_call(stop, _From, State) ->
 
 
 
-report_timedout_sess(S) ->
+report_timedout_sess(_S) ->
     %%error_logger:info_msg("Session timedout: ~p ", [S#ysession.opaque]).
     silence.
 

@@ -78,7 +78,7 @@ stats() ->
 			   E = SC#sconf.ets,
 			   L = ets:match(E, {{urlc_total, '$1'}, '$2'}),
 			   {SC#sconf.servername,  
-			    flatten(yaws:fmt_ip(SC#sconf.listen)),
+			    flatten(inet_parse:ntoa(SC#sconf.listen)),
 			    G(map(fun(P) -> list_to_tuple(P) end, L))}
 		   end, SCS)
 	 end, S#state.pairs),
@@ -97,7 +97,7 @@ l2a(A) when atom(A) -> A.
 %%          {stop, Reason}
 %%----------------------------------------------------------------------
 
-init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded}) ->
+init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded, Id}) ->
     process_flag(trap_exit, true),
     put(start_time, calendar:local_time()),  %% for uptime
     case Env#env.embedded of 
@@ -131,7 +131,7 @@ init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded}) ->
 			    init:stop(),
 			    {stop, E};
 			Dir ->
-			    GC = yaws_config:make_default_gconf(true),
+			    GC = yaws_config:make_default_gconf(true, Env#env.id),
 			    yaws_log:setdir(GC#gconf{logdir = Dir}, []),
 			    error_logger:error_msg("Yaws: bad conf: ~s "
 						   "terminating~n",[E]),
@@ -176,25 +176,7 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
     L2 = lists:zf(
 	   fun(Group) -> start_group(GC, Group) end,
 	   Sconfs),
-
-    yaws_log:uid_change(GC),
-    
-
-    %% and now finally, we've opened the ctl socket and are
-    %% listening to all sockets we can possibly change uid
-
-    GC2 = case (catch yaws:setuser(GC#gconf.username)) of
-	      ignore ->
-		  GC;
-	      {ok, NewUid} ->
-		  error_logger:info_msg("Changed uid to ~s~n", [NewUid]),
-		  GC#gconf{uid = NewUid};
-	      Other ->
-		  error_logger:error_msg("Failed to set user:~n~p", [Other]),
-		  erlang:fault(Other)
-	  end,
-    foreach(fun({Pid, _}) -> Pid ! {newuid, GC2#gconf.uid} end, L2),
-    {ok, #state{gc = GC2,
+    {ok, #state{gc = GC,
 		pairs = L2,
 		mnum = 0,
 		embedded = Embedded}}.
@@ -320,8 +302,8 @@ handle_call({add_sconf, SC}, From, State) ->
 		false ->
 		    {reply, ok, State};
 		{true, Pair} ->
-		    Pid = element(1, Pair),
-		    Pid ! {newuid, GC#gconf.uid},
+		    %Pid = element(1, Pair),
+		    %Pid ! {newuid, GC#gconf.uid},
 		    P2 = [Pair | State#state.pairs],
 		    {reply, ok, State#state{pairs = P2}}
 	    end
@@ -403,18 +385,6 @@ gen_tcp_listen(Port, Opts) ->
     gen_tcp:listen(Port, Opts).
 
 
-set_writeable(Dir) ->
-    set_dir_mode(Dir, 8#777).
-
-set_dir_mode(Dir, Mode) ->
-    case file:read_file_info(Dir) of
-	{ok, FI} ->
-	    file:write_file_info(Dir, FI#file_info{mode = Mode});
-	_Err ->
-	    error_logger:format("Failed to read_file_info(~s)~n", [Dir])
-    end.
-
-
 gserv(_Top, _, []) ->
     proc_lib:init_ack(none);
 
@@ -432,7 +402,7 @@ gserv(Top, GC, Group0) ->
 	    call_start_mod(SC),
 	    error_logger:info_msg(
 	      "Yaws: Listening to ~s:~w for servers~s~n",
-	      [yaws:fmt_ip(SC#sconf.listen),
+	      [inet_parse:ntoa(SC#sconf.listen),
 	       SC#sconf.port,
 	       catch map(
 		       fun(S) ->  
@@ -442,11 +412,7 @@ gserv(Top, GC, Group0) ->
 		       end, Group)
 	      ]),
 	    proc_lib:init_ack({self(), Group}),
-	    N = receive
-		    {newuid, UID} ->
-			UID
-		end,
-	    GS = #gs{gconf = GC#gconf{uid = N},
+	    GS = #gs{gconf = GC,
 		     group = Group,
 		     ssl = SSLBOOL,
 		     l = Listen},
@@ -454,7 +420,7 @@ gserv(Top, GC, Group0) ->
 	    gserv_loop(GS, [], 0, Last);
 	{_,Err} ->
 	    error_logger:format("Yaws: Failed to listen ~s:~w  : ~p~n",
-				[yaws:fmt_ip(SC#sconf.listen),
+				[inet_parse:ntoa(SC#sconf.listen),
 				 SC#sconf.port, Err]),
 	    proc_lib:init_ack({error, "Can't listen to socket: ~p ",[Err]}),
 	    exit(normal)
@@ -462,15 +428,10 @@ gserv(Top, GC, Group0) ->
 			
 
 setup_dirs(GC) ->
-    TD0 = filename:join([yaws:tmp_dir(),"yaws"]),
+    TD0 = filename:join([GC#gconf.tmpdir,"yaws"]),
     file:make_dir(TD0),
-    set_dir_mode(TD0, 8#777),
-
     TD1 = filename:join([TD0, GC#gconf.id]),
     file:make_dir(TD1),
-    set_dir_mode(TD1, 8#755),
-    yaws:uid_change_files(GC, TD1, []),
-
     case file:list_dir(TD1) of
 	{ok, LL} ->
 	    foreach(
@@ -780,7 +741,7 @@ acceptor0(GS, Top) ->
 					       inet:peername(Client)
 				       end,
 		    Str = ?F("New (~p) connection from ~s:~w~n", 
-			[GS#gs.ssl, yaws:fmt_ip(IP),Port]),
+			[GS#gs.ssl, inet_parse:ntoa(IP),Port]),
 		    yaws_log:trace_traffic(from_client, Str);
 		_ ->
 		    ok
@@ -967,7 +928,7 @@ comp_sname(_,_)-> false.
     
 
 
-pick_sconf(GC, H, [SC|Group], ssl) ->
+pick_sconf(GC, H, [SC|_Group], ssl) ->
     case comp_sname(H#headers.host, SC#sconf.servername) of
 	true -> 
 	    SC;
@@ -1124,14 +1085,14 @@ bad_request(CliSock, Req, _Head) ->
 	       port(CliSock) ->
 		   case inet:peername(CliSock) of
 		       {ok, {IP, _Port}} ->
-			   yaws:fmt_ip(IP);
+			   inet_parse:ntoa(IP);
 		       _ ->
 			   "unknown"
 		   end;
 	       true ->
 		   case ssl:peername(CliSock) of
 		       {ok, {IP, _Port}} ->
-			   yaws:fmt_ip(IP);
+			   inet_parse:ntoa(IP);
 		       _ ->
 			   "unknown"
 		   end
@@ -1416,7 +1377,7 @@ is_auth(ARG, Req_dir,H,[{Auth_dir,
 				{yes, _} ->
 				    maybe_auth_log({ok, User}, ARG),
 				    true;
-				{no, Rsn} ->
+				{no, _Rsn} ->
 				    maybe_auth_log({401, User, Password}, ARG),
 				    {false, Realm}
 			    end
@@ -1795,7 +1756,7 @@ do_yaws(CliSock, ARG, UT, N) ->
 					      Es == 0 ->
 	    deliver_dyn_file(CliSock, Spec, ARG, UT, N);
 	Other  ->
-	    del_old_files(Other),
+	    del_old_files(get(gc),Other),
 	    {ok, [{errors, Errs}| Spec]} = 
 		yaws_compile:compile_file(UT#urltype.fullpath),
 	    ?Debug("Spec for file ~s is:~n~p~n",[UT#urltype.fullpath, Spec]),
@@ -1804,12 +1765,12 @@ do_yaws(CliSock, ARG, UT, N) ->
     end.
 
 
-del_old_files([]) ->
+del_old_files(_, []) ->
     ok;
-del_old_files([{_FileAtom, spec, _Mtime1, Spec, _}]) ->
+del_old_files(GC, [{_FileAtom, spec, _Mtime1, Spec, _}]) ->
     foreach(
       fun({mod, _, _, _,  Mod, _Func}) ->
-	      F=filename:join([yaws:tmp_dir(), "yaws", 
+	      F=filename:join([GC#gconf.tmpdir, "yaws", 
 			       yaws:to_list(Mod) ++ ".erl"]),
 	      code:purge(Mod),
 	      code:purge(Mod),
@@ -1863,9 +1824,6 @@ get_client_data_all(CliSock, Bs, SSlBool) ->
 	    ?Debug("get_client_data_all: ~p~n", [_Other]),
 	    exit(normal)
     end.
-
-
-
 
 %% Return values:
 %% continue, done, {page, Page}
@@ -2103,8 +2061,6 @@ end_streaming({Z, Priv}, CliSock) ->
     done_or_continue().
 
     
-
-
 %% what about trailers ??
 
 skip_data(List, Fd, Sz) when list(List) ->
@@ -2191,7 +2147,7 @@ handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, [ARG]) ->
 						      Es == 0 ->
 		    deliver_dyn_file(CliSock, Spec ++ [yssi], ARG, UT2, N);
 		Other  ->
-		    del_old_files(Other),
+		    del_old_files(get(gc), Other),
 		    {ok, [{errors, Errs}| Spec]} = 
 			yaws_compile:compile_file(UT2#urltype.fullpath),
 		    ?Debug("Spec for file ~s is:~n~p~n",
@@ -2651,20 +2607,16 @@ get_more_post_data(PPS, ARG) ->
 	    case get_client_data(ARG#arg.clisock, N, 
 			       is_ssl(SC#sconf.ssl)) of
 		Bin when binary(Bin) ->
-%		    io:format("Got ~p\n", [size(Bin)]),
 		    {partial, Bin};
 		Else ->
-%		    io:format("Got error ~p\n", [Else]),
 		    {error, Else}
 	    end;
        true ->
 	    case get_client_data(ARG#arg.clisock, Len - PPS, 
 			       is_ssl(SC#sconf.ssl)) of
 		Bin when binary(Bin) ->
-%		    io:format("Got tail ~p\n", [size(Bin)]),
 		    Bin;
 		Else ->
-%		    io:format("Got tail error ~p\n", [Else]),
 		    {error, Else}
 	    end
     end.

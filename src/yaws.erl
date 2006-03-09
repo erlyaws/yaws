@@ -271,10 +271,7 @@ old_integer_to_hex(I) when I>=16 ->
     old_integer_to_hex(N) ++ old_integer_to_hex(I rem 16).
 
 
-
-
 %% hex_to_integer
-
 
 hex_to_integer(Hex) ->
     case catch erlang:list_to_integer(Hex, 16) of
@@ -465,8 +462,6 @@ is_modified_p(FI, UTC_string) ->
     end.
 
 
-
-
 ticker(Time, Msg) ->
     S = self(),
     spawn_link(yaws, ticker, [Time, S, Msg]).
@@ -475,44 +470,11 @@ ticker(Time, To, Msg) ->
     yaws_ticker:ticker(Time, To, Msg).
 
 
-fmt_ip({A,B,C,D}) ->
-    [integer_to_list(A), $.,
-     integer_to_list(B), $.,
-     integer_to_list(C), $.,
-     integer_to_list(D)].
-
-
-
-parse_ip(Val) ->
-    case string:tokens(Val, [$.]) of
-	Nums = [_X1, _X2, _X3,_X4] ->
-	    L = lists:map(
-		  fun(S) -> (catch list_to_integer(S)) end, 
-		  Nums),
-	    case lists:zf(fun(I) when integer(I),
-				      0 =< I,
-				      I =< 255 ->
-				  true;
-			     (_) ->
-				  false
-			  end, L) of
-		L2 when length(L2) == 4 ->
-		    list_to_tuple(L2);
-		_ ->
-		    error
-	    end;
-	_ ->
-	    error
-    end.
-
-
-
 address() ->
     ?F("<address> ~s Server at ~s </address>",
 	[
 	(get(gc))#gconf.yaws,
 	(get(sc))#sconf.servername]).
-
 
 
 
@@ -1537,44 +1499,39 @@ erase_header(location) ->
     put(outh, (get(outh))#outh{location = undefined}).
 
 
-
-
-
-
-	
-setuser(undefined) ->	     
-    ignore;
-setuser(User) ->	     
-    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
-			 "/../priv/", "setuid_drv"),
-    P = open_port({spawn, "setuid_drv " ++ [$s|User]}, []),
-    receive
-	{P, {data, "ok " ++ IntList}} ->
-	    {ok, IntList}
-    end.
+% setuser(undefined) ->	     
+%     ignore;
+% setuser(User) ->	     
+%     erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
+% 			 "/../priv/", "setuid_drv"),
+%     P = open_port({spawn, "setuid_drv " ++ [$s|User]}, []),
+%     receive
+% 	{P, {data, "ok " ++ IntList}} ->
+% 	    {ok, IntList}
+%     end.
 
 getuid() ->
     case os:type() of
-	{win32, _} ->
-	    {ok, "XXX"};
-	_ ->
-	    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
-				 "/../priv/", "setuid_drv"),
-	    P = open_port({spawn, "setuid_drv g"},[]),
-	    receive
-		{P, {data, "ok " ++ IntList}} ->
-		    {ok, IntList}
-	    end
+ 	{win32, _} ->
+ 	    {ok, "XXX"};
+ 	_ ->
+ 	    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
+ 				 "/../priv/", "setuid_drv"),
+ 	    P = open_port({spawn, "setuid_drv g"},[]),
+ 	    receive
+ 		{P, {data, "ok " ++ IntList}} ->
+ 		    {ok, IntList}
+ 	    end
     end.
 
 
 idu(User) ->
     erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
-			 "/../priv/", "setuid_drv"),
+ 			 "/../priv/", "setuid_drv"),
     P = open_port({spawn, "setuid_drv " ++ [$u|User]}, []),
     receive
-	{P, {data, "ok " ++ IntList}} ->
-	    {ok, IntList}
+ 	{P, {data, "ok " ++ IntList}} ->
+ 	    {ok, IntList}
     end.
 
 user_to_home(User) ->
@@ -1586,42 +1543,15 @@ user_to_home(User) ->
 	    Home
     end.
 
+
+
 uid_to_name(Uid) ->
     erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
-			 "/../priv/", "setuid_drv"),
+ 			 "/../priv/", "setuid_drv"),
     P = open_port({spawn, "setuid_drv " ++ [$n|integer_to_list(Uid)]}, []),
     receive
-	{P, {data, "ok " ++ Name}} ->
-	    Name
-    end.
-
-
-
-tmp_dir() ->
-    case os:type() of
- 	{win32,_} ->
-	    case os:getenv("TEMP") of
-		false ->
-		    case os:getenv("TMP") of
-			%%
-			%% No temporary path set?
-			%% Then try standard paths.
-			%%
-			false ->
-			    case file:read_file_info("C:/WINNT/Temp") of
-				{error, _} ->
-				    "C:/WINDOWS/Temp";
-				{ok, _} ->
-				    "C:/WINNT/Temp"
-			    end;
-			PathTMP ->
-			    PathTMP
-		    end;
-		PathTEMP ->
-		    PathTEMP
-	    end;
-	_ ->
-	    "/tmp"
+ 	{P, {data, "ok " ++ Name}} ->
+ 	    Name
     end.
 
 
@@ -1632,6 +1562,27 @@ exists(F) ->
 	    ok;
 	_ ->
 	    false
+    end.
+
+
+mkdir(Path) ->
+    [Hd|Parts] = filename:split(Path),
+    mkdir([Hd], Parts).
+mkdir(Ack, []) ->
+    ensure_exist(filename:join(Ack));
+mkdir(Ack, [H|T]) ->
+    ensure_exist(filename:join(Ack ++ [H])),
+    mkdir(Ack ++ [H], T).
+
+ensure_exist(Path) ->
+    case file:read_file_info(Path) of
+	{ok, _} -> ok;
+	_ -> case file:make_dir(Path) of
+		 ok -> ok;
+		 ERR ->
+		     error_logger:format("Failed to mkdir ~p: ~p~n",
+					 [Path, ERR])
+	     end
     end.
 
 
@@ -1927,43 +1878,6 @@ slash_append([], T) ->
     [$/|T];
 slash_append([H|T], X) ->
     [H | slash_append(T,X)].
-
-
-
-
-%% aux help function
-uid_change_files(GC, Dir, Files) ->
-    case GC#gconf.username of
-	undefined ->  
-	    %% uid change feature not used
-	    ok;
-	_Uname when GC#gconf.uid /= "0" ->
-	    %% we're not root and can't do anything about the sitiation
-	    ok;
-	Uname ->
-	    case (catch list_to_integer(element(2,yaws:idu(Uname)))) of
-		Int when integer(Int) ->
-		    file:change_owner(Dir, Int),
-		    lists:foreach(
-		      fun(FN) ->
-			      F=filename:join([Dir,FN]),
-			      case file:change_owner(F, Int) of
-				  ok -> ok;
-				  {error, Rsn} ->
-				      error_logger:format("Failed to chown "
-							  "~p: ~p",
-							  [F, Rsn]),
-				      erlang:fault(Rsn)
-			      end
-		      end, Files);
-		Err ->
-		    error_logger:format("Bad username ~p cannot get "
-					"numeric uid~n", [Uname]),
-		    erlang:fault(Err)
-	    end
-    end.
-
-
 
 flag(CurFlag, Bit, true) ->
     CurFlag bor Bit;

@@ -101,9 +101,16 @@ get_app_args() ->
 		   {ok, Emb} ->
 		       Emb
 	       end,
+    Id = case application:get_env(yaws, id) of
+		   undefined ->
+		       undefined;
+		   {ok, Id0} ->
+		       Id0
+	       end,
+
     #env{debug = Debug, trace = Trace, 
 	 traceoutput = TraceOutput, conf = Conf, 
-	 runmod = RunMod, embedded = Embedded}.
+	 runmod = RunMod, embedded = Embedded, id = Id}.
 
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------

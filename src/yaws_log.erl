@@ -16,7 +16,7 @@
 -behaviour(gen_server).
 
 %% External exports
--export([start_link/0, uid_change/1]).
+-export([start_link/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
@@ -80,14 +80,14 @@ actl_trace(What) ->
 
 %% change owner of logfiles and logdir
 %% only called when we lower rights after socket(s) are opened
-uid_change(GC) ->
-    case file:list_dir(GC#gconf.logdir) of
-	{ok, L} ->
-	    yaws:uid_change_files(GC, GC#gconf.logdir,L);
-	{error, Rsn} ->
-	    error_logger:format("Failed to listdir ~p : ~p",
-				[GC#gconf.logdir, Rsn])
-    end.
+% uid_change(GC) ->
+%     case file:list_dir(GC#gconf.logdir) of
+% 	{ok, L} ->
+% 	    yaws:uid_change_files(GC, GC#gconf.logdir,L);
+% 	{error, Rsn} ->
+% 	    error_logger:format("Failed to listdir ~p : ~p",
+% 				[GC#gconf.logdir, Rsn])
+%     end.
 
 
 
@@ -334,7 +334,7 @@ do_alog(ServerName, Ip, User, Req, Status, Length, Referrer,
 
 do_auth_log(ServerName, IP, Path, Item, State) ->
     AL = State#state.auth_log,
-    I = [yaws:fmt_ip(IP), 
+    I = [inet_parse:ntoa(IP), 
 	 " ", State#state.now,
 	 " ", ServerName, " " ,"\"", Path,"\"",
 	 case Item of
@@ -438,12 +438,12 @@ terminate(_Reason, _State) ->
 
 
 fmt_alog(Time, Ip, User, Req, Status,  Length, Referrer, UserAgent) ->
-    [fmt_ip(Ip), " - ", User, [$\s], Time, [$\s, $"], Req, [$",$\s], 
+    [inet_parse:ntoa(Ip), " - ", User, [$\s], Time, [$\s, $"], Req, [$",$\s], 
      Status, [$\s], Length, [$\s,$"], Referrer, [$",$\s,$"], UserAgent, [$",$\n]].
 
 
 fmt_ip(IP) when tuple(IP) ->
-    yaws:fmt_ip(IP);
+    inet_parse:ntoa(IP);
 fmt_ip(undefined) ->
     "0.0.0.0";
 fmt_ip(HostName) ->

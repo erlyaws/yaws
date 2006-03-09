@@ -44,7 +44,11 @@ list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
 	     dir_header(DirName,DirStr),
 	     table_head(Direction),	     
 	     parent_dir(),
-	     if DoAllZip == true -> allzip() end,
+	     if DoAllZip == true -> 
+		     allzip();
+		true ->
+		     []
+	     end,
 	     
 %% 	     if DoAllGZip == true -> alltgz() end,
 %% 	     if DoAllBZip2 == true -> alltbz2() end,
@@ -212,8 +216,10 @@ is_user_dir(SP) ->
     case SP of
 	[$/,$~ | T] -> User = string:sub_word(T,1,$/),
 		       case catch yaws:user_to_home(User) of
-			   Home -> {true,Home};
-			   _ -> false
+			   {'EXIT', _} ->
+			       false;
+			   Home -> 
+			       {true,Home}
 		       end;	
 	_ -> false
     end.
