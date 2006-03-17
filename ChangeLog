@@ -1,3 +1,61 @@
+2006-03-17 23:46  klacke
+
+	* vsn.mk: prearing for 1.60
+
+2006-03-14 21:59  klacke
+
+	* include.mk.in: [no log message]
+
+2006-03-09 22:58  klacke
+
+	* include/yaws.hrl, man/yaws.1, man/yaws.conf.5,
+	scripts/yaws.template, src/Makefile, src/yaws.erl,
+	src/yaws_404.erl, src/yaws_api.erl, src/yaws_cgi.erl,
+	src/yaws_compile.erl, src/yaws_config.erl, src/yaws_ctl.erl,
+	src/yaws_html.erl, src/yaws_log.erl, src/yaws_ls.erl,
+	src/yaws_revproxy.erl, src/yaws_server.erl,
+	src/yaws_session_server.erl, src/yaws_ssl.erl, src/yaws_sup.erl:
+	removed the ability change userid, also stopped writing to
+	/tmp/yaws and started to write to /home/klacke/.yaws instead. This
+	is much better since we cannot now ever get into the situations
+	where file ownership and umask stop us from controlling a daemon.
+	Also cleaned up the start flags to the yaws script, all old flags
+	are still there for backward scompatibilty.
+
+2006-03-09 18:25  klacke
+
+	* c_src/Makefile: [no log message]
+
+2006-03-06 17:22  klacke
+
+	* man/yaws.conf.5: [no log message]
+
+2006-02-26 14:38  mbj
+
+	* applications/wiki/: README, src/wiki.erl,
+	src/wiki_format_txt.erl: Fixed error printouts; handle https and
+	ftp links; updated READE
+
+2006-02-22 14:40  klacke
+
+	* src/yaws_ctl.erl: file descriptor leak bug found by Mats
+	Cronqvist where each call to 'yaws -ls' left an unclosed dscriptor
+	in the server
+
+2006-02-21 14:08  klacke
+
+	* src/yaws_ctl.erl: [no log message]
+
+2006-02-14 23:22  klacke
+
+	* c_src/Makefile, c_src/epam.c, man/yaws.conf.5,
+	src/yaws_config.erl, src/yaws_server.erl, src/yaws_sup.erl: [no log
+	message]
+
+2006-02-14 22:00  klacke
+
+	* ChangeLog, www/news: ""
+
 2006-02-14 21:10  klacke
 
 	* c_src/Makefile: ""

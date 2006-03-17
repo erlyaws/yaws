@@ -1,3 +1,11 @@
+Fri Mar 17 23:48:01 CET 2006 Version 1.60
+Removed the ability change userid, also stopped writing to /tmp/yaws and started to write to /home/${HOME}/.yaws instead. This is much better since we cannot now ever get into the situations where file ownership and umask stop us from controlling a daemon. Note, this is a backwards incompatible change, all users that used this feature need to start using fdsrv instead.  (klacke)
+Cleaned up the start flags to the yaws script, all old flags are still there for backward scompatibilty. Updated docs and and help output from the yaws script to reflect all new flags. 
+Wiki fixes.  Fixed error printouts; handle https and        ftp links; updated READE (mbj)
+file descriptor leak bug found by Mats Cronqvist where each call to 'yaws -ls' left an unclosed dscriptor in the server (klacke)
+Source code cleanup - added and #env record for environment passed to yaws. (klacke)
+yaws_ls enhancements by        doccarcass@gmail.com
+
 Wed Feb  1 23:28:42 CET 2006 Version 1.58
 pam and setuid_drv fixes for BSD by sstrollo
 yaws_ls (dir listing) enhancements by doccarcass@gmail.com
