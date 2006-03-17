@@ -14,10 +14,11 @@
 
 yaws=%prefix%/bin/yaws
 prog=yaws
+yawsid=myserverid
 
 start() {
         echo -n $"Starting $prog: "
-        daemon $yaws -D -heart
+        daemon $yaws --id ${myserverid} --daemon --heart
         RETVAL=$?
         echo
         [ $RETVAL = 0 ] && touch /var/lock/subsys/yaws
@@ -26,7 +27,7 @@ start() {
 
 stop() {
 	echo -n $"Stopping $prog: "
-	str=`$yaws -s`
+	str=`$yaws --id ${yawsid} --stop`
 	if [ "$str" = "stopping" ]; then
 	    echo_success
 	    RETVAL=0
@@ -41,7 +42,7 @@ stop() {
 
 reload() {
 	echo -n $"Reloading $prog: "
-	r=`$yaws -h` 
+	r=`$yaws --id ${yawsid} --hup` 
 	RETVAL=$?
 	echo $r
 }

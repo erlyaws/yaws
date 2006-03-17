@@ -8,12 +8,13 @@
 
 yaws=%prefix%/bin/yaws
 lockdir=/var/spool/lock
+yawsid=myserverid
 
 StartService ()
 {
     if [ "${YAWS:=-NO-}" = "-YES-" ]; then
 	ConsoleMessage "Starting yaws http daemon"
-	HOME=/tmp $yaws -D -heart
+	HOME=/tmp $yaws --i d${yawsid} --daemon --heart
 	RETVAL=$?
 	[ $RETVAL = 0 ] && touch ${lockdir}/yaws
     fi
@@ -22,15 +23,15 @@ StartService ()
 StopService ()
 {
     ConsoleMessage "Stopping yaws http daemon"
-    HOME=/tmp $yaws -s
-    rm -f ${lockdir}/yaws /var/run/yaws.pid
+    HOME=/tmp $yaws --id ${yawsid} --stop
+    rm -f ${lockdir}/yaws -/var/run/yaws.pid
 }
 
 RestartService ()
 {
     if [ "${YAWS:=-NO-}" = "-YES-" ]; then
 	ConsoleMessage "Restarting yaws http daemon"
-	HOME=/tmp $yaws -h
+	HOME=/tmp $yaws --id ${yawsid} --hup
     else
 	StopService
     fi

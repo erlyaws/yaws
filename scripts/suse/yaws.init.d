@@ -2,6 +2,7 @@
 
 
 YAWS_BIN=%prefix%bin/yaws
+YAWS_ID=myserverid
 
 test -x $YAWS_BIN || exit 5
 
@@ -45,7 +46,7 @@ case "$1" in
 
 	# NOTE: startproc returns 0, even if service is 
 	# already running to match LSB spec.
-	startproc $YAWS_BIN -D -heart
+	startproc $YAWS_BIN --daemon --heart --id ${YAWS_ID}
 
 	# Remember status and be verbose
 	rc_status -v
@@ -55,7 +56,7 @@ case "$1" in
 	## Stop daemon with killproc(8) and if this fails
 	## set echo the echo return value.
 
-	startproc $YAWS_BIN -s 
+	startproc $YAWS_BIN --stop --id ${YAWS_ID}
 
 	# Remember status and be verbose
 	rc_status -v
@@ -85,7 +86,7 @@ case "$1" in
 
 	echo -n "Force Reload service YAWS"
 	## if it supports it:
-	$0 restart
+	$YAWS_BIN --id ${YAWS_ID} --hup
 	rc_status -v
 
 	;;
@@ -95,7 +96,7 @@ case "$1" in
 
 	# If it supports signalling:
 
-	startproc $YAWS_BIN -h
+	startproc $YAWS_BIN --id ${YAWS_ID} --hup
 	rc_status -v
 	
 	;;
@@ -111,7 +112,7 @@ case "$1" in
 	# 3 - service not running
 
 	# NOTE: checkproc returns LSB compliant status values.
-	checkproc $YAWS_BIN -S
+	checkproc $YAWS_BIN --id ${YAWS_ID} --status
 	rc_status -v
 	;;
     probe)

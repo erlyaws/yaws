@@ -6,29 +6,31 @@
 # Application name
 YAWS_APP=yaws
 
+# set specific ID on /etc server
+# change this string to your liking
+YAWS_ID=myserverid
+
 # Path to yaws executable
 YAWS_EXEC=%prefix%/bin/yaws
 
-# NB: It is recomended that you don't run Yaws as root
-YAWS_UID=root
 
 # The Yaws config file
 YAWS_CONF_FILE=/etc/yaws.conf
 
 # The start options
-YAWS_START_OPTS="-D -heart -c ${YAWS_CONF_FILE}"   
+YAWS_START_OPTS="--daemon --heart --id ${YAWS_ID} --conf ${YAWS_CONF_FILE}"   
 
 # The stop options
-YAWS_STOP_OPTS="-s -c ${YAWS_CONF_FILE}"
+YAWS_STOP_OPTS="--stop --id ${YAWS_ID}
 
 # The reload options
-YAWS_RELOAD_OPTS="-h -c ${YAWS_CONF_FILE}"
+YAWS_RELOAD_OPTS="--hup --id ${YAWS_ID}
 
 # The query options
-YAWS_QUERY_OPTS="-S -c ${YAWS_CONF_FILE}"
+YAWS_QUERY_OPTS="--status --id ${YAWS_ID}
 
 # The debug options
-YAWS_DEBUG_OPTS="-i -c ${YAWS_CONF_FILE}"
+YAWS_DEBUG_OPTS="-i --conf ${YAWS_CONF_FILE}"
 
 
 
