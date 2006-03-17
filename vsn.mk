@@ -1,2 +1,3 @@
-YAWS_VSN=1.58
+YAWS_VSN=1.60
+
 
