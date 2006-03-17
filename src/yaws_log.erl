@@ -438,7 +438,7 @@ terminate(_Reason, _State) ->
 
 
 fmt_alog(Time, Ip, User, Req, Status,  Length, Referrer, UserAgent) ->
-    [inet_parse:ntoa(Ip), " - ", User, [$\s], Time, [$\s, $"], Req, [$",$\s], 
+    [fmt_ip(Ip), " - ", User, [$\s], Time, [$\s, $"], Req, [$",$\s], 
      Status, [$\s], Length, [$\s,$"], Referrer, [$",$\s,$"], UserAgent, [$",$\n]].
 
 
