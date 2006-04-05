@@ -44,8 +44,11 @@ list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
 	     dir_header(DirName,DirStr),
 	     table_head(Direction),	     
 	     parent_dir(),
-	     if DoAllZip == true -> 
+	     if 
+		 DoAllZip == true -> 
 		     allzip();
+		 DoAllZip == true_nozip ->
+		     [];
 		true ->
 		     []
 	     end,
