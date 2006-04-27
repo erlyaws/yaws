@@ -18,7 +18,7 @@ depend() {
 
 start() {
        ebegin "Starting ${YAWS_APP} "
-       start-stop-daemon --start --verbose --chuid ${YAWS_UID} \
+       start-stop-daemon --start --verbose  \
            --exec  ${YAWS_EXEC} -- ${YAWS_START_OPTS}   
        eend $?
 }
@@ -26,7 +26,7 @@ start() {
 
 stop() {
        ebegin "Stopping ${YAWS_APP} "
-       start-stop-daemon --start --quiet --chuid ${YAWS_UID} \
+       start-stop-daemon --start --quiet  \
            --exec ${YAWS_EXEC} -- ${YAWS_STOP_OPTS}
        eend $?
 }

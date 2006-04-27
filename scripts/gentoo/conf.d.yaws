@@ -21,13 +21,13 @@ YAWS_CONF_FILE=/etc/yaws.conf
 YAWS_START_OPTS="--daemon --heart --id ${YAWS_ID} --conf ${YAWS_CONF_FILE}"   
 
 # The stop options
-YAWS_STOP_OPTS="--stop --id ${YAWS_ID}
+YAWS_STOP_OPTS="--stop --id ${YAWS_ID}"
 
 # The reload options
-YAWS_RELOAD_OPTS="--hup --id ${YAWS_ID}
+YAWS_RELOAD_OPTS="--hup --id ${YAWS_ID}"
 
 # The query options
-YAWS_QUERY_OPTS="--status --id ${YAWS_ID}
+YAWS_QUERY_OPTS="--status --id ${YAWS_ID}"
 
 # The debug options
 YAWS_DEBUG_OPTS="-i --conf ${YAWS_CONF_FILE}"
