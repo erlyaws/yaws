@@ -126,11 +126,6 @@ w_ctl_file(Sid, Port) ->
 ctl_file(Sid) ->
     filename:join([yaws_generated:ctldir(), "ctl-" ++ yaws:to_list(Sid)]).
 
-sys_dir() ->
-     filename:join([yaws_config:tmp_dir(),
-		    "yaws"]).
-
-
 
 aloop(L, GC) ->
     case gen_tcp:accept(L) of
@@ -389,43 +384,6 @@ lls(CtlFile0 = "ctl-" ++ Id) ->
     end;
 lls(_) ->
     ok.
-
-
-
-%     case {file:read_file_info(Ctl),
-% 	  file:read_file_info(filename:join([sys_dir(), Dir]))} of
-% 	{{ok, _FI}, {ok, DI}} ->
-% 	    User = yaws:uid_to_name(DI#file_info.uid),
-% 	    Running = case connect(Dir) of
-% 			  {ok, Sock} ->
-% 			      gen_tcp:close(Sock),
-% 			      "running";
-% 			  {error, timeout} ->
-% 			      "hanging??";
-% 			  {error, eacces} ->
-% 			      "unknown";
-% 			  _Err ->
-% 			      io:format("_Err = ~p~n", [_Err]),
-% 			      "stopped"
-% 		      end,
-% 	    io:format("~-15s~-10s~-10s~n",
-% 		      [Dir, Running, User]);
-
-% 	{{ok, _FI}, {error, _}} ->
-% 	    %% sick case,
-% 	    ignore;
-
-% 	{{error, _}, {ok, DI}} ->
-% 	    %% nicely terminated system
-% 	    User = yaws:uid_to_name(DI#file_info.uid),
-% 	    io:format("~-15s~-10s~-10s~n",
-% 		      [Dir, "stopped", User]);
-
-% 	_Err ->
-% 	    io:format("~-15s~-10s~-10s~n",
-% 		      [Dir, "unknown", "unknown"])
-		
-%     end.
 
 	      
 

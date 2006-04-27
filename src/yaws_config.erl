@@ -23,7 +23,6 @@
 
 -export([load/1,
 	 toks/1,
-	 tmp_dir/0,
 	 make_default_gconf/2]).
 	 
 
@@ -251,14 +250,14 @@ make_default_gconf(Debug, Id) ->
 			       ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH
 		   end,
 	   %uid = element(2, yaws:getuid()),
-	   tmpdir = tmp_dir(),
+	   tmpdir = default_tmp_dir(),
 	   yaws = "Yaws " ++ yaws_generated:version(),
 	   id = Id
 	  }.
 
 
 
-tmp_dir() ->
+default_tmp_dir() ->
     case os:type() of
  	{win32,_} ->
 	    case os:getenv("TEMP") of

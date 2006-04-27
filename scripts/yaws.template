@@ -49,7 +49,7 @@ help()
         echo ""
 
         echo "ctl functions ... "
-        echo "        yaws --hup [-id ID]        -- hup the daemon, reload conf
+        echo "        yaws --hup [--id ID]       -- hup the daemon, reload conf
         echo "        yaws --stops [--id ID]     -- stop the daemon "
         echo "        yaws --status [--id ID]    -- query the daemon status "
         echo "        yaws --load Modules        -- load modules "
