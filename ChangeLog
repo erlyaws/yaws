@@ -1,3 +1,44 @@
+2006-04-27 21:38  klacke
+
+	* scripts/yaws.template, src/yaws_config.erl, src/yaws_ctl.erl: [no
+	log message]
+
+2006-04-27 21:25  klacke
+
+	* Makefile, README, configure, configure.in, include.mk.in, vsn.mk,
+	c_src/Makefile, man/Makefile, man/yaws.1, man/yaws.conf.5,
+	man/yaws_api.5, scripts/Install, scripts/Makefile,
+	scripts/yaws.template, src/Makefile, src/yaws.erl,
+	src/yaws_api.erl, src/yaws_cgi.erl, src/yaws_config.erl,
+	src/yaws_ctl.erl, src/yaws_generated.template,
+	src/yaws_vsn.template, www/code/Makefile, www/shopingcart/Makefile:
+	added support for 2 additional configure flags, --disable-pam and
+	--with-extrainclude=DIR
+	
+	Worked the Makefiles to properly support DESTDIR. This is useful
+	for packagers (deb, rpm ...)
+
+2006-04-05 09:53  klacke
+
+	* src/yaws_ls.erl: [no log message]
+
+2006-04-05 09:53  klacke
+
+	* LICENSE: changed licens to proper BSD
+
+2006-03-18 00:32  klacke
+
+	* scripts/: darwin/Yaws.StartupItem, gentoo/conf.d.yaws,
+	redhat/yaws.init.d, suse/yaws.init.d: [no log message]
+
+2006-03-18 00:17  klacke
+
+	* src/yaws_log.erl: [no log message]
+
+2006-03-17 23:57  klacke
+
+	* ChangeLog, www/news: ""
+
 2006-03-17 23:46  klacke
 
 	* vsn.mk: prearing for 1.60

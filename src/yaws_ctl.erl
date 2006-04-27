@@ -373,7 +373,6 @@ lls(CtlFile0 = "ctl-" ++ Id) ->
 			  {error, eacces} ->
 			      "unknown";
 			  _Err ->
-			      io:format("_Err = ~p~n", [_Err]),
 			      "stopped"
 		      end,
 	    User = yaws:uid_to_name(FI#file_info.uid),

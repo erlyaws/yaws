@@ -1,5 +1,8 @@
-Fri Mar 17 23:48:01 CET 2006 Version 1.60
-Removed the ability change userid, also stopped writing to /tmp/yaws and started to write to /home/${HOME}/.yaws instead. This is much better since we cannot now ever get into the situations where file ownership and umask stop us from controlling a daemon. Note, this is a backwards incompatible change, all users that used this feature need to start using fdsrv instead.  (klacke)
+Thu Apr 27 21:40:01 CEST 2006 Version 1.61
+Started to write the ctl file, the file which contains the portnumber where the daemon is listening for ctl command, to /var/run/yaws/ctl-${ID}. The location is contralable through configure. Install scripts will make the /var/run/yaws dir writeable to the world, each individul daemon which creates the ctl file will explicitly set the permissions on the ctl file to 600 - thus making it impossible for unauthorized users to control someone elses daemon. Root can control all daemons.
+changed Yaws license to proper BSD (klacke)
+Worked the Makefiles to properly support DESTDIR. This is useful for packagers (deb, rpm ...)  (klacke)
+Removed the ability change userid, also stopped writing to /tmp/yaws and started to write to /home/${HOME}/.yaws instead. This is much better since we cannot now ever get into the situations where file ownership and umask stop us from controlling a daemon. Note, this is a backwards incompatible change, all users that used this feature need to start using fdsrv instead. There is also a configurable in yaws.conf which makes it possible to write the tmp files to some other directory  (klacke)
 Cleaned up the start flags to the yaws script, all old flags are still there for backward scompatibilty. Updated docs and and help output from the yaws script to reflect all new flags. 
 Wiki fixes.  Fixed error printouts; handle https and        ftp links; updated READE (mbj)
 file descriptor leak bug found by Mats Cronqvist where each call to 'yaws -ls' left an unclosed dscriptor in the server (klacke)
