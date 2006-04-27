@@ -22,7 +22,7 @@ MODULES=yaws \
 	yaws_ctl \
 	yaws_cgi \
 	yaws_zlib \
-	yaws_vsn \
+	yaws_generated \
 	mime_type_c \
 	mime_types \
 	yaws_session_server \
@@ -42,16 +42,18 @@ ERLC_FLAGS+=-W $(DEBUG_FLAGS) -pa ../../yaws
 # Targets
 #
 
-all: yaws_vsn.erl $(EBIN_FILES) 
+all: yaws_generated.erl $(EBIN_FILES) 
 
 dav:
 	$(MAKE) MODULES="$(MODULES) yaws_dav"
 
 $(EBIN_FILES) : ../include/yaws.hrl ../include/yaws_api.hrl
 
-yaws_vsn.erl:	yaws_vsn.template ../vsn.mk
+
+yaws_generated.erl:	yaws_generated.template ../vsn.mk
 	. ../vsn.mk; \
-	sed "s/%VSN%/${YAWS_VSN}/" < yaws_vsn.template > yaws_vsn.erl
+	sed -e "s/%VSN%/${YAWS_VSN}/" -e "s;%VARDIR%;${VARDIR};g" < yaws_generated.template > yaws_generated.erl
+
 
 
 charset.def:	
@@ -66,21 +68,21 @@ debug:
 	$(MAKE) TYPE=debug
 
 clean:
-	rm -f $(EBIN_FILES) yaws_vsn.erl charset.def mime_types.erl
+	rm -f $(EBIN_FILES) yaws_generated.erl charset.def mime_types.erl
 
 install: all docsinstall
-	install -d $(INSTALLPREFIX)/lib/yaws/examples/ebin
-	install -d $(INSTALLPREFIX)/lib/yaws/examples/include
-	install -d $(INSTALLPREFIX)/lib/yaws/ebin
-	install -d $(VARDIR)/log/yaws
-	install -d $(VARDIR)/yaws/ebin
-	cp -r ../include/* $(INSTALLPREFIX)/lib/yaws/
-	(cd ..; tar cf - ebin ) | (cd $(INSTALLPREFIX)/lib/yaws; tar xf - )
-	(cd ..; tar cf - include ) | (cd $(INSTALLPREFIX)/lib/yaws; tar xf - )
+	install -d $(DESTDIR)/$(PREFIX)/lib/yaws/examples/ebin
+	install -d $(DESTDIR)/$(PREFIX)/lib/yaws/examples/include
+	install -d $(DESTDIR)/$(PREFIX)/lib/yaws/ebin
+	install -d $(DESTDIR)/$(VARDIR)/log/yaws
+	install -d $(DESTDIR)/$(VARDIR)/yaws/ebin
+	cp -r ../include/* $(DESTDIR)/$(PREFIX)/lib/yaws/
+	(cd ..; tar cf - ebin ) | (cd $(DESTDIR)/$(PREFIX)/lib/yaws; tar xf - )
+	(cd ..; tar cf - include ) | (cd $(DESTDIR)/$(PREFIX)/lib/yaws; tar xf - )
 
 docsinstall:
-	install -d $(VARDIR)/yaws/www
-	(cd ..; tar cf - www ) | (cd $(VARDIR)/yaws; tar xf - )
+	install -d $(DESTDIR)/$(VARDIR)/yaws/www
+	(cd ..; tar cf - www ) | (cd $(DESTDIR)/$(VARDIR)/yaws; tar xf - )
 
 
 

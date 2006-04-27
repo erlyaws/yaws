@@ -47,14 +47,14 @@ clean:
 
 install:
 	-rm -rf /tmp/yaws 2> /dev/null
-	sh ./Install $(PREFIX) $(INSTALLPREFIX) "$(ERL)" \
+	sh ./Install $(PREFIX) $(DESTDIR) "$(ERL)" \
 		"$(WERL)" $(ETCDIR)/ $(VARDIR)/
-	@cp ../ssl/yaws-cert.pem $(ETCDIR)
-	@cp ../ssl/yaws-key.pem $(ETCDIR)
-	@if [ -f $(ETCDIR)/yaws.conf ]; \
+	@cp ../ssl/yaws-cert.pem $(DESTDIR)/$(ETCDIR)
+	@cp ../ssl/yaws-key.pem $(DESTDIR)/$(ETCDIR)
+	@if [ -f $(DESTDIR)/$(ETCDIR)/yaws.conf ]; \
 		then echo "Keeping old config file "; \
-		cp yaws.conf $(ETCDIR)/yaws.conf.template; \
+		cp yaws.conf $(DESTDIR)/$(ETCDIR)/yaws.conf.template; \
 	else \
-		echo "Installing $(ETCDIR)/yaws.conf"; \
-		cp yaws.conf $(ETCDIR)/yaws.conf; \
+		echo "Installing $(DESTDIR)/$(ETCDIR)/yaws.conf"; \
+		cp yaws.conf $(DESTDIR)/$(ETCDIR)/yaws.conf; \
 	fi

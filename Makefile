@@ -11,10 +11,10 @@ all debug clean:
 
 
 install:	all
-	@yrun=`yaws -S 2> /dev/null`; \
+	@yrun=`yaws --status 2> /dev/null`; \
 	case $$yrun in \
 		*Uptime*) \
-			echo "ERROR Can't install while a yaws system is already running, would wreak havoc with /tmp/yaws"; \
+			echo "ERROR Can't install while a yaws system is already running"; \
 			exit;; \
 		*) \
 			true;; \

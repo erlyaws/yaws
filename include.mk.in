@@ -2,15 +2,24 @@
 
 
 PREFIX             = @prefix@
-ETCDIR             = $(DESTDIR)@sysconfdir@
-VARDIR             = $(DESTDIR)@localstatedir@
-INSTALLPREFIX      = $(DESTDIR)$(PREFIX)
+ETCDIR             = @sysconfdir@
+VARDIR             = @localstatedir@
+
+ifeq ($(DESTDIR),)
+ DESTDIR=/
+endif
+
+## DESTDIR is handled separately in the individual Makefiles
 
 ERL=@ERL@
 WERL=@WERL@
 ERLC=@ERLC@
 EMULATOR=beam
 DEFAULT_CHARSET=@DEFAULT_CHARSET@
+EPAM = @EPAM@
+EXTRAINCLUDE = @EXTRAINCLUDE@
+
+
 
 ifdef debug
   ERLC_FLAGS+=-Ddebug

@@ -32,9 +32,8 @@ hup(Sock) ->
 	  end).
 
 dohup(Sock) ->
-    {Debug, Trace, TraceOut, Conf, _RunMod, _Embed} = 
-	yaws_sup:get_app_args(),
-    Res = (catch case yaws_config:load(Conf, Trace, TraceOut, Debug) of
+    Env = yaws_sup:get_app_args(),
+    Res = (catch case yaws_config:load(Env) of
 		     {ok, Gconf, Sconfs} ->
 			 yaws_api:setconf(Gconf, Sconfs);
 		     Err ->
@@ -592,7 +591,7 @@ oct_to_dig([H|T], D) -> oct_to_dig(T, D*8 + H - $0).
 
 
 printversion() ->
-    io:format("Yaws ~s~n", [yaws_vsn:version()]),
+    io:format("Yaws ~s~n", [yaws_generated:version()]),
     init:stop().
 
 %% our default arg rewriteer does's of cource nothing
@@ -1186,7 +1185,7 @@ make_allow_header() ->
      end].
 make_server_header() ->
     HasDav = ?sc_has_dav(get(sc)),
-    ["Server: Yaws/", yaws_vsn:version(), " Yet Another Web Server\r\n" |
+    ["Server: Yaws/", yaws_generated:version(), " Yet Another Web Server\r\n" |
      if HasDav == true ->
 	     ["DAV: 1\r\n"];
 	true ->

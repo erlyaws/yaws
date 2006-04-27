@@ -56,7 +56,7 @@
 	ehtml_expander_test/0]).
 
 -export([parse_set_cookie/1, format_set_cookie/1, 
-	 postvar/2, queryvar/2]).
+	 postvar/2, queryvar/2, getvar/2]).
 
 -export([binding/1]).
 
@@ -1580,6 +1580,16 @@ skip_space([$\t|T]) -> skip_space(T);
 skip_space(T) -> T.
 
 %
+
+
+getvar(ARG,Key) when atom(Key) ->
+    getvar(ARG, atom_to_list(Key));
+getvar(ARG,Key) ->
+    case (ARG#arg.req)#http_request.method of
+        'POST' -> postvar(ARG, Key);
+        'GET' -> queryvar(ARG, Key);
+        _ -> undefined
+    end.
 
 
 queryvar(ARG,Key) when atom(Key) ->

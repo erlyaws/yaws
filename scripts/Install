@@ -1,7 +1,9 @@
 #!/bin/sh
 
+set -x
+
 prefix=$1
-installprefix=$2
+destdir=$2
 erl=$3
 werl=$4
 etcdir=$5
@@ -10,34 +12,41 @@ vardir=$6
 . ../vsn.mk
 y=yaws-${YAWS_VSN}
 p=${prefix}
+e=${etcdir}
+v=${vardir}
 
-
-install -d ${installprefix}/bin
+install -d ${destdir}/${prefix}/bin
 
 cat yaws.template | \
     ./Subst %yawsdir% ${prefix}/lib/yaws | \
     ./Subst %erl% "${erl}" | \
-    ./Subst %werl% "${werl}" > ${installprefix}/bin/yaws
+    ./Subst %werl% "${werl}" > ${destdir}/${prefix}/bin/yaws
 
-chmod +x ${installprefix}/bin/yaws
+chmod +x ${destdir}/${prefix}/bin/yaws
 
-install -d ${installprefix}/lib/yaws/examples/ebin
-install -d ${installprefix}/lib/yaws/examples/include
+install -d ${destdir}/${prefix}/lib/yaws/examples/ebin
+install -d ${destdir}/${prefix}/lib/yaws/examples/include
 
 if [ -f /etc/gentoo-release ]; then
-    install -d  ${etcdir}/init.d/
-    install -d ${etcdir}/conf.d/
-    cp gentoo/init.d.yaws  ${etcdir}/init.d/yaws
-    chmod +x ${etcdir}/init.d/yaws
-    sed -e "s;%prefix%;$p;g" gentoo/conf.d.yaws > ${etcdir}/conf.d/yaws
+    install -d ${destdir}/${etcdir}/init.d/
+    install -d ${destdir}/${etcdir}/conf.d/
+    install -d ${destdir}/${vardir}/run/yaws
+    chmod a+rwx ${destdir}/${vardir}/run/yaws
+    cp gentoo/init.d.yaws  ${destdir}/${etcdir}/init.d/yaws
+    chmod +x ${destdir}/${etcdir}/init.d/yaws
+    sed -e "s;%prefix%;$p;g" gentoo/conf.d.yaws > ${destdir}/${etcdir}/conf.d/yaws
 elif [ -f /etc/redhat-release ]; then
-    install -d ${etcdir}/init.d
-    sed -e "s;%prefix%;$p;g" redhat/yaws.init.d  > ${etcdir}/init.d/yaws
-    chmod +x ${etcdir}/init.d/yaws
+    install -d ${destdir}/${etcdir}/init.d
+    sed -e "s;%prefix%;$p;g" redhat/yaws.init.d  > ${destdir}/${etcdir}/init.d/yaws
+    chmod +x ${destdir}/${etcdir}/init.d/yaws
+    install -d ${destdir}/${vardir}/run/yaws
+    chmod a+rwx ${destdir}/${vardir}/run/yaws
 elif [ -f /etc/suseservers ]; then
-    install -d ${etcdir}/init.d
-    sed -e "s;%prefix%;$p;g" suse/yaws.init.d  > ${etcdir}/init.d/yaws
-    chmod +x ${etcdir}/init.d/yaws
+    install -d ${destdir}/${etcdir}/init.d
+    sed -e "s;%prefix%;$p;g" suse/yaws.init.d  > ${destdir}/${etcdir}/init.d/yaws
+    chmod +x ${destdir}/${etcdir}/init.d/yaws
+    install -d ${destdir}/${vardir}/run/yaws
+    chmod a+rwx ${destdir}/${vardir}/run/yaws
 elif [ "`uname -s`" = "Darwin" ]; then
      startupdir="/Library/StartupItems/Yaws"
      if [ ! -d ${startupdir} ]; then
@@ -46,10 +55,12 @@ elif [ "`uname -s`" = "Darwin" ]; then
      sed -e "s;%prefix%;$p;g" darwin/Yaws.StartupItem > ${startupdir}/Yaws
      chmod +x ${startupdir}/Yaws
      cp darwin/Yaws.plist ${startupdir}/StartupParameters.plist
+elif [ "`uname -s`" = "FreeBSD" ]; then
+    sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" freebsd/yaws.sh > ${destdir}/${etcdir}/rc.d/yaws.sh
 else
-    install -d ${etcdir} 
+    install -d ${destdir}/${etcdir} 
     echo "Don't know how to make /etc/init scrips for this system"
-    echo "possibly add $1/bin/yaws -D -heart to your /etc/rc.local manually"
+    echo "possibly add ${prefix}/bin/yaws --daemon --heart to your /etc/rc.local manually"
 fi
 
 

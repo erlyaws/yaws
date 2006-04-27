@@ -98,13 +98,15 @@ Pass STRING as an additional argument to the "erl" program.
 This flag sets the id. If we're starting a daemon (or an interactive 
 system) it gives the Yaws server the identity ID. This means that the 
 server will write all internal files into the directory
-$HOME/.yaws/ID. In particular it will write a file called 
-$HOME/.yaws/ID/ctl which contains the portnumber the daemon
+$HOME/.yaws/ID. 
+
+Yaws also creates a file called 
+${VARDIR}/run/yaws/ctl-${ID} which contains the portnumber the daemon
 is listening on for control request by the control command such
 as "yaws --hup" etc.
 
 If we're invoking a control command which should perform some
-control function on the daemon, we mau have to give the --id flag also
+control function on the daemon, we may have to give the --id flag also
 to the control command. If we don't do this the control command 
 may interact with the wrong daemon due to finding the wrong "ctl" file.
 

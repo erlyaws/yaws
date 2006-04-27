@@ -216,6 +216,12 @@ This function is automatically included from yaws_api in all
  .yaws pages. It is used to search for a variable in the 
 POSTed data from the client. Returns {ok, Val} or undefined.
 
+.TP
+\fBgetvar(Arg, VarName)\fR
+This function  looks at the HTTP request method from the
+client and invokes postvar/2 if it is a POST from the client
+and queryvar/2 if it is a GET request from the client.
+
 
 .TP
 \fBparse_multipart_post(Arg)\fR

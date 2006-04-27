@@ -78,13 +78,17 @@ run_listen(GC) ->
 			    proc_lib:init_ack(ok),
 			    aloop(L, GC);
 			error ->
-			    e("Failed to create/manipulate the ctlfile ~n"
+			    error_logger:format(
+			      "Failed to create/manipulate the ctlfile ~n"
 			      "called ~s~n"
-			      "either problems with permissions or "
+			      "Either problems with permissions or "
 			      " earlier runs of yaws ~nwith the same id "
-			      " <~p> as this, check ~p for perms~n",
-			      [ctl_file(GC#gconf.id), GC#gconf.id, sys_dir()])
-		    end;
+			      " <~p> as this, check dir for perms~n"
+			      "None of Yaws ctl functions will work~n",
+			      [ctl_file(GC#gconf.id), GC#gconf.id]),
+			    proc_lib:init_ack(ok),
+			    aloop(L, GC)
+			end;
 		Err ->
 		    e("Cannot get sockname for ctlsock: ~p",[Err] )
 	    end;
@@ -120,10 +124,8 @@ w_ctl_file(Sid, Port) ->
 
 
 ctl_file(Sid) ->
-    filename:join([yaws_config:tmp_dir(),
-		   "yaws",
-		   Sid,
-		   "ctl"]).
+    filename:join([yaws_generated:ctldir(), "ctl-" ++ yaws:to_list(Sid)]).
+
 sys_dir() ->
      filename:join([yaws_config:tmp_dir(),
 		    "yaws"]).
@@ -342,14 +344,14 @@ s_cmd(Fd, SID, Term) ->
 
 %% List existing yaws nodes on this machine
 ls(_) ->
-    case file:list_dir(sys_dir()) of
+    case file:list_dir(yaws_generated:ctldir()) of
 	{ok, List} ->
 	    io:format("~-15s~-10s~-10s~n",
 		      ["Id", "Status", "Owner"]),
 	    io:format("-------------------------------------~n",[]),
 	    lists:foreach(
-	      fun(D) ->
-		      lls(D)
+	      fun(CtlFile) ->
+		      lls(CtlFile)
 	      end, List);
 	_ ->
 	    ok
@@ -358,13 +360,16 @@ ls(_) ->
     init:stop().
 
 
-lls(Dir) ->
-    Ctl = ctl_file(Dir),
-    case {file:read_file_info(Ctl),
-	  file:read_file_info(filename:join([sys_dir(), Dir]))} of
-	{{ok, _FI}, {ok, DI}} ->
-	    User = yaws:uid_to_name(DI#file_info.uid),
-	    Running = case connect(Dir) of
+lls(CtlFile0 = "ctl-" ++ Id) ->
+    CtlFile = filename:join([yaws_generated:ctldir(), CtlFile0]),
+    case {file:read_file_info(CtlFile),
+	  file:read_file(CtlFile)} of
+	{{ok, FI}, {error, eaccess}} ->
+	    User = yaws:uid_to_name(FI#file_info.uid),
+	    io:format("~-15s~-10s~-10s~n",
+		      [Id, "unknown", User]);
+	{{ok, FI}, {ok, _Bin}} ->
+	    Running = case connect(Id) of
 			  {ok, Sock} ->
 			      gen_tcp:close(Sock),
 			      "running";
@@ -373,26 +378,54 @@ lls(Dir) ->
 			  {error, eacces} ->
 			      "unknown";
 			  _Err ->
+			      io:format("_Err = ~p~n", [_Err]),
 			      "stopped"
 		      end,
+	    User = yaws:uid_to_name(FI#file_info.uid),
 	    io:format("~-15s~-10s~-10s~n",
-		      [Dir, Running, User]);
+		      [Id, Running, User]);
+	_ ->
+	    ok
+    end;
+lls(_) ->
+    ok.
 
-	{{ok, _FI}, {error, _}} ->
-	    %% sick case,
-	    ignore;
 
-	{{error, _}, {ok, DI}} ->
-	    %% nicely terminated system
-	    User = yaws:uid_to_name(DI#file_info.uid),
-	    io:format("~-15s~-10s~-10s~n",
-		      [Dir, "stopped", User]);
 
-	_Err ->
-	    io:format("~-15s~-10s~-10s~n",
-		      [Dir, "unknown", "unknown"])
+%     case {file:read_file_info(Ctl),
+% 	  file:read_file_info(filename:join([sys_dir(), Dir]))} of
+% 	{{ok, _FI}, {ok, DI}} ->
+% 	    User = yaws:uid_to_name(DI#file_info.uid),
+% 	    Running = case connect(Dir) of
+% 			  {ok, Sock} ->
+% 			      gen_tcp:close(Sock),
+% 			      "running";
+% 			  {error, timeout} ->
+% 			      "hanging??";
+% 			  {error, eacces} ->
+% 			      "unknown";
+% 			  _Err ->
+% 			      io:format("_Err = ~p~n", [_Err]),
+% 			      "stopped"
+% 		      end,
+% 	    io:format("~-15s~-10s~-10s~n",
+% 		      [Dir, Running, User]);
+
+% 	{{ok, _FI}, {error, _}} ->
+% 	    %% sick case,
+% 	    ignore;
+
+% 	{{error, _}, {ok, DI}} ->
+% 	    %% nicely terminated system
+% 	    User = yaws:uid_to_name(DI#file_info.uid),
+% 	    io:format("~-15s~-10s~-10s~n",
+% 		      [Dir, "stopped", User]);
+
+% 	_Err ->
+% 	    io:format("~-15s~-10s~-10s~n",
+% 		      [Dir, "unknown", "unknown"])
 		
-    end.
+%     end.
 
 	      
 

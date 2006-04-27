@@ -189,7 +189,7 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
 	  fun(X)->case X of {_,L} when list(L)->true;_->false end 
 	  end,
 	  ([
-	    {"SERVER_SOFTWARE", "Yaws/"++yaws_vsn:version()},
+	    {"SERVER_SOFTWARE", "Yaws/"++yaws_generated:version()},
 	    {"SERVER_NAME", Hostname},
 	    {"GATEWAY_INTERFACE", "CGI/1.1"},
 	    {"SERVER_PROTOCOL", 

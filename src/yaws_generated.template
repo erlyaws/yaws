@@ -1,0 +1,23 @@
+%%%----------------------------------------------------------------------
+%%% File    : yaws_generated.template
+%%% Author  : Klacke <klacke@bluetail.com>
+%%% Purpose : 
+%%% Created : 10 Jun 2002 by Klacke <klacke@bluetail.com>
+%%%----------------------------------------------------------------------
+
+%% generated code from some environment variables
+%% especially VARDIR is important since it controls
+%% where the --hup and friends
+
+-module(yaws_generated).
+-author('klacke@bluetail.com').
+
+-compile(export_all).
+
+version() -> "%VSN%".
+
+vardir() ->  "%VARDIR%".
+
+ctldir() -> "%VARDIR%/run/yaws".
+
+	  

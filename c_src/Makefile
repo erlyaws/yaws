@@ -2,19 +2,21 @@ include ../include.mk
 
 
 # don't c-compile anything on win32 (yet)
-# I don't know how to make linked in driver using gcc
+# I don't know how to make a linked in driver using gcc, or any
+# other compiler there, and have no intentions of finding out
 
 ifdef WIN32
 	PRIV_FILES=../priv/.foo
 else
-	PRIV_FILES= ../priv/setuid_drv.$(DLL)  ../priv/epam
+# don't make pam if configured out with --disable-pam
+	PRIV_FILES= ../priv/setuid_drv.$(DLL)  $(EPAM)
 endif
 
 
 CFLAGS += -I"${ERLDIR}/usr/include"
 
 # and for MacOs + possibly others ...
-CFLAGS += -I/usr/include/pam/
+CFLAGS += -I/usr/include/pam/ $(EXTRAINCLUDE)
 
 #
 # Targets
@@ -25,13 +27,13 @@ all: $(PRIV_FILES)
 clean:
 	-rm -f $(PRIV_FILES) setuid_drv.$(OBJ) 
 
-install:
-	$(INSTALL) -d $(INSTALLPREFIX)/lib/yaws/priv
-	$(INSTALL) $(PRIV_FILES) $(INSTALLPREFIX)/lib/yaws/priv
+install:	$(PRIV_FILES)
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/yaws/priv
+	$(INSTALL) $(PRIV_FILES) $(DESTDIR)$(PREFIX)/lib/yaws/priv
 ifndef WIN32
 	if [ `id -u` = "0" ]; then \
-		chown root $(INSTALLPREFIX)/lib/yaws/priv/epam; \
-		chmod a+s $(INSTALLPREFIX)/lib/yaws/priv/epam; \
+		chown root $(DESTDIR)$(PREFIX)/lib/yaws/priv/epam; \
+		chmod a+s $(DESTDIR)$(PREFIX)/lib/yaws/priv/epam; \
 	fi
 endif
 

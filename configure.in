@@ -28,6 +28,27 @@ fi
 
 AC_SUBST(DEFAULT_CHARSET)
 
+
+
+AC_ARG_WITH(extrainclude,
+[  --with-extrainclude= dir to include if e.g. pam is installed in some odd place ])
+
+
+if test "x$with_extrainclude" = "x" ; then
+   EXTRAINCLUDE=
+else
+   EXTRAINCLUDE=-I${with_extrainclude}
+fi
+
+AC_SUBST(EXTRAINCLUDE)
+
+
+
+AC_ARG_ENABLE(pam, [--disable-pam disables pam auth], EPAM=, EPAM=../priv/epam)
+AC_SUBST(EPAM)
+
+
+
 dnl ----------------------------------------------------------------------
 dnl
 dnl BT_ERL_LIB_VSN figures out version of an erlang application
@@ -103,8 +124,6 @@ EOF
 	    DLL_LIBS="-lc \"$ERL_DLL_LIB\""
 	
 
-	AC_SUBST(MATHLIB)
-
 	EXE=.exe
 	AC_SUBST(EXE)
 
@@ -125,12 +144,8 @@ EOF
 	OUT="-o "
 	AC_SUBST(OUT)
 
-	MATHLIB=-lm
-	AC_SUBST(MATHLIB)
-
 	DLL=so
 	AC_SUBST(DLL)
-
 	OBJ=o
 	AC_SUBST(OBJ)
 
@@ -149,6 +164,7 @@ dnl Sigh, pam headers do not seem to have a standard place. On FreeBSD and
 dnl Linuces I've seen they are in /usr/include/security, but MacOS has them
 dnl in /usr/include/pam... I'm to sick of M4 at this very moment to write
 dnl a test that searches for the files, so hard coded for now...
+dnl or use --with-extrainclude=....
 CFLAGS="$CFLAGS -I/usr/include/security"
 
 case "$target_os" in

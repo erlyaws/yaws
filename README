@@ -8,17 +8,42 @@ To build and install
 1. Get and install an erlang system (http://www.erlang.org)
 
 2. ./configure --prefix=/usr/local
+   This will install everything under /usr/local including var files
+   in /usr/local/var/run/yaws and etc files in
+   /usr/local/etc/yaws.*
 
-Note: If can also change the target directory for etc and var 
+  A plain ./configure will install executables under 
+  /usr/local/bin and libs in /usr/local/lib/yaws. /etc and
+  /var files will end up under /etc and /var
+
+
+Note: We can also change the target directory for etc and var 
       directories by using:
+
   --localstatedir=DIR for files that should go in /var
   --sysconfdir=DIR for files that should go in /etc
-This way you can precisely control where you install the software (This is
+  --disable-pam  If we for some reason do not want pam support
+  --with-extrainclude=DIR Will add DIR to the include path
+                      May be useful if e.g. pam is installed
+		      somewhere where its usually not found
+  --with-defaultcharset=String  Will set the default charset used
+                        in generated page headers. Usually never needed.
+                        
+This way you can precisely control where you install Yaws (This is
 usefull for computers where you do not have right access to the 
-standard systemdirs). It is now possible to install everything in a 
-single directory and use Stow to create symlinks to /usr/local
+standard systemdirs). 
+
 For example:
 ./configure --prefix=/home/install/yaws-1.01 --localstatedir=/home/install/yaws-1.01/var --sysconfdir=/home/install/yaws-1.01/etc
+
+
+2b. Note to packagers (rpm, deb ...) All install targets support the 
+    DESTDIR variable.
+    Thus, if we do ./configure --prefix=/usr; make
+    we can subsequently do:
+    DESTDIR=/foo/bar make install
+    All yaws files will be installed under DESTDIR, but all 
+    code will assume yaws should be installed under /usr
 
 
 3. make
@@ -47,9 +72,9 @@ For example:
 
 9. Create content in /var/yaws
 
-10a. Start as /usr/local/bin/yaws -D -heart
-     This will start a daemon (-D) which will be autorestarted when/if
-     it crashes or hangs (-heart)
+10a. Start as /usr/local/bin/yaws --daemon --heart
+     This will start a daemon (--daemon) which will be autorestarted when/if
+     it crashes or hangs (--heart)
 
 10b. Or start interactive system as /usr/local/bin/yaws -i
 

@@ -54,8 +54,8 @@ as:
 .fi
 To stop the Yaws server with id "foobar". Each Yaws server will write
 its internals data into a file called $HOME/.yaws/yaws/ID where ID the
-identity of the server. In particular it will write a file called
-$HOME/.yaws/yaws/ID/ctl which contain the portnumber where the server is
+identity of the server. Yaws also creates a file called
+${VARDIR}/run/yaws/ctl-${ID} which contain the portnumber where the server is
 listening for control commands.
 
 .TP
@@ -99,6 +99,12 @@ Enable or disable the auth log. Default is true.
 The logs written by yaws are all wrap logs, the default value at the
 size where they wrap around and the original gets renamed to File.old
 is 1000000, 1 M. This value can changed.
+
+.TP
+\fB tmpdir = Dir\fR
+Yaws generates files when generating dynamic content, i.e. when
+processing .yaws pages. These files end up in tmpdir. Default
+is $HOME/.yaws
 
 
 .TP

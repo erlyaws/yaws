@@ -252,7 +252,7 @@ make_default_gconf(Debug, Id) ->
 		   end,
 	   %uid = element(2, yaws:getuid()),
 	   tmpdir = tmp_dir(),
-	   yaws = "Yaws " ++ yaws_vsn:version(),
+	   yaws = "Yaws " ++ yaws_generated:version(),
 	   id = Id
 	  }.
 
