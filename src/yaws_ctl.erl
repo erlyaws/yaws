@@ -359,10 +359,10 @@ lls(CtlFile0 = "ctl-" ++ Id) ->
     CtlFile = filename:join([yaws_generated:ctldir(), CtlFile0]),
     case {file:read_file_info(CtlFile),
 	  file:read_file(CtlFile)} of
-	{{ok, FI}, {error, eaccess}} ->
+	{{ok, FI}, {error, eacces}} ->
 	    User = yaws:uid_to_name(FI#file_info.uid),
 	    io:format("~-15s~-10s~-10s~n",
-		      [Id, "unknown", User]);
+		      [Id, "noaccess", User]);
 	{{ok, FI}, {ok, _Bin}} ->
 	    Running = case connect(Id) of
 			  {ok, Sock} ->
