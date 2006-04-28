@@ -15,7 +15,7 @@ gzipEnd(Z) ->
 
 
 gzipDeflate(Z, undefined, Bin, Flush) ->
-    {ok, Crc32} = zlib:crc32(Z),
+    Crc32 = zlib:crc32(Z),
     Head = <<
 						% ID
 	    16#1f, 16#8b,

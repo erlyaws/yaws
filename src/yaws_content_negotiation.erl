@@ -105,7 +105,7 @@ match_media_type_only(Type, AcceptRanges) ->
 	end.
 
 match_charset(Charset, AcceptCharset) ->
-	case lists:keysearch(Charset, AcceptCharset) of
+	case lists:keysearch(Charset, 1, AcceptCharset) of
 		{ok, {_, Q}} -> {Q, 0};
 		false -> {0, 0}
 	end.
@@ -114,13 +114,13 @@ match_language(Languages, AcceptLanguage) ->
 	match_language(Languages, AcceptLanguage, 0).
 
 match_language([Language|T], AcceptLanguage, Qacc) ->
-	Qacc1 = case lists:keysearch(Language, AcceptLanguage) of
+	Qacc1 = case lists:keysearch(Language, 1, AcceptLanguage) of
 		{ok, {_, Q1}} when Q1 > Qacc -> Q1;
 		_ -> Qacc
 	end,
 	Qacc2 = case yaws:split_sep(Language, $-) of
 		[H|T] when length(T) > 0 ->
-			case lists:keysearch(H, AcceptLanguage) of
+			case lists:keysearch(H, 1, AcceptLanguage) of
 				{ok, {_, Q2}} when Q2 > Qacc1 -> Q2;
 				_ -> Qacc1
 			end;
@@ -128,7 +128,7 @@ match_language([Language|T], AcceptLanguage, Qacc) ->
 	end,
 	match_language(T, AcceptLanguage, Qacc2);
 match_language([], AcceptLanguage, Qacc) ->
-	case lists:keysearch("*", AcceptLanguage) of
+	case lists:keysearch("*", 1, AcceptLanguage) of
 		{ok, {_, Q}} when Q > Qacc -> {Q, 1};
 		_ -> {Qacc, 0}
 	end.

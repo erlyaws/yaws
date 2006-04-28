@@ -2931,7 +2931,7 @@ cache_file(SC, GC, Path, UT) when
 			case ?sc_has_deflate(SC)
 			    and (UT#urltype.type==regular) of
 			    true ->
-				case zlib:gzip(Bin) of
+				case yaws_zlib:gzip(Bin) of
 				    {ok, DB} when binary(DB), 
 						  size(DB)*10<size(Bin)*9 ->
 					?Debug("storing deflated version "
