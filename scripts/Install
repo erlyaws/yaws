@@ -8,7 +8,9 @@ erl=$3
 werl=$4
 etcdir=$5
 vardir=$6
-bindir=`dirname $erl` ; bindir=`dirname $bindir`/lib/erlang/bin
+bindir=$7
+
+#bindir=`dirname $erl` ; bindir=`dirname $bindir`/lib/erlang/bin
 
 . ../vsn.mk
 y=yaws-${YAWS_VSN}

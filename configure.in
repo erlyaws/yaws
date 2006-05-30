@@ -10,11 +10,12 @@ AC_DEFINE_UNQUOTED(CPU_VENDOR_OS, "$target")
 
 AC_PATH_PROG(ERL, erl)
 AC_PATH_PROG(ERLC, erlc)
-
+ERLBINDIR=`dirname $ERL` ; ERLBINDIR=`dirname $ERLBINDIR`/lib/erlang/bin
 
 AC_SUBST(ERL)
 AC_SUBST(ERLC)
 
+AC_SUBST(ERLBINDIR)
 
 AC_ARG_WITH(default-charset,
 [  --with-defaultcharset=String   specify default charset, i.e UTF-8 ])

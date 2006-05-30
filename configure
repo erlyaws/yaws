@@ -272,7 +272,7 @@ PACKAGE_STRING=
 PACKAGE_BUGREPORT=
 
 ac_unique_file="Makefile"
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os ERL ERLC DEFAULT_CHARSET EXTRAINCLUDE EPAM ERL_DLL_LIB ERLDIR CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP MATHLIB EXE DLL OBJ LINKER OUT DLL_LIBS SET_MAKE INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LD_SHARED FPIC BSDI WERL WIN32 LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os ERL ERLC ERLBINDIR DEFAULT_CHARSET EXTRAINCLUDE EPAM ERL_DLL_LIB ERLDIR CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CPP EGREP EXE DLL OBJ LINKER OUT DLL_LIBS SET_MAKE INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LD_SHARED FPIC BSDI WERL WIN32 LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -1439,6 +1439,7 @@ else
 echo "${ECHO_T}no" >&6
 fi
 
+ERLBINDIR=`dirname $ERL` ; ERLBINDIR=`dirname $ERLBINDIR`/lib/erlang/bin
 
 
 
@@ -2765,8 +2766,6 @@ EOF
 	    DLL_LIBS="-lc \"$ERL_DLL_LIB\""
 
 
-
-
 	EXE=.exe
 
 
@@ -2787,11 +2786,7 @@ EOF
 	OUT="-o "
 
 
-	MATHLIB=-lm
-
-
 	DLL=so
-
 
 	OBJ=o
 
@@ -3677,6 +3672,7 @@ s,@target_vendor@,$target_vendor,;t t
 s,@target_os@,$target_os,;t t
 s,@ERL@,$ERL,;t t
 s,@ERLC@,$ERLC,;t t
+s,@ERLBINDIR@,$ERLBINDIR,;t t
 s,@DEFAULT_CHARSET@,$DEFAULT_CHARSET,;t t
 s,@EXTRAINCLUDE@,$EXTRAINCLUDE,;t t
 s,@EPAM@,$EPAM,;t t
@@ -3691,7 +3687,6 @@ s,@EXEEXT@,$EXEEXT,;t t
 s,@OBJEXT@,$OBJEXT,;t t
 s,@CPP@,$CPP,;t t
 s,@EGREP@,$EGREP,;t t
-s,@MATHLIB@,$MATHLIB,;t t
 s,@EXE@,$EXE,;t t
 s,@DLL@,$DLL,;t t
 s,@OBJ@,$OBJ,;t t

@@ -6,6 +6,9 @@ all debug:	../bin/yaws yaws.conf
 ../bin/yaws:	yaws.template
 	cat yaws.template | \
 		./Subst %yawsdir% `pwd`/..  | \
+		./Subst %vardir% $(VARDIR) | \
+		./Subst %run_erl% "$(ERLBINDIR)/run_erl" | \
+		./Subst %to_erl% "$(ERLBINDIR)/to_erl" | \
 		./Subst %erl% "$(ERL)" | \
 		./Subst %werl% "$(WERL)" > ../bin/yaws
 	chmod +x ../bin/yaws
@@ -48,7 +51,7 @@ clean:
 install:
 	-rm -rf /tmp/yaws 2> /dev/null
 	sh ./Install $(PREFIX) $(DESTDIR) "$(ERL)" \
-		"$(WERL)" $(ETCDIR)/ $(VARDIR)/
+		"$(WERL)" $(ETCDIR)/ $(VARDIR)/ $(ERLBINDIR)/
 	@cp ../ssl/yaws-cert.pem $(DESTDIR)/$(ETCDIR)
 	@cp ../ssl/yaws-key.pem $(DESTDIR)/$(ETCDIR)
 	@if [ -f $(DESTDIR)/$(ETCDIR)/yaws.conf ]; \
