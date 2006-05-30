@@ -50,6 +50,7 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <div class="%%stream%%"> <a href="/stream.yaws">Streaming data</a> </div>
 <a href="/shopingcart/index.yaws">Tiny shopping cart</a>
 <div class="%%embed%%"> <a href="/embed.yaws">Embedding Yaws</a></div>
+<div class="%%json_intro%%"> <a href="/json_intro.yaws">AJAX/Json RPC</a></div>
 <h4> Misc </h4>
 <div class="%%internals%%"> <a href="/internals.yaws">Internals</a> </div>
 
