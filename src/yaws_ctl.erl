@@ -124,7 +124,9 @@ w_ctl_file(Sid, Port) ->
 
 
 ctl_file(Sid) ->
-    filename:join([yaws_generated:ctldir(), "ctl-" ++ yaws:to_list(Sid)]).
+    FN = filename:join([yaws_generated:ctldir(), "ctl-" ++ yaws:to_list(Sid)]),
+    filelib:ensure_dir(FN),
+    FN.
 
 
 aloop(L, GC) ->

@@ -29,6 +29,6 @@ clean:
 	-rm *~ *.ps *.dvi *.log *.aux *.pdf *.toc *.beam 2> /dev/null
 
 install:
-	-install -d $(INSTALLPREFIX)/share/doc/yaws-$(YAWS_VSN)
-	-cp yaws.pdf $(INSTALLPREFIX)/share/doc/yaws-$(YAWS_VSN)
+	-install -d $(DESTDIR)/$(PREFIX)/share/doc/yaws-$(YAWS_VSN)
+	-cp yaws.pdf $(DESTDIR)/$(PREFIX)/share/doc/yaws-$(YAWS_VSN)
  

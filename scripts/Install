@@ -8,6 +8,7 @@ erl=$3
 werl=$4
 etcdir=$5
 vardir=$6
+bindir=`dirname $erl` ; bindir=`dirname $bindir`/lib/erlang/bin
 
 . ../vsn.mk
 y=yaws-${YAWS_VSN}
@@ -19,7 +20,10 @@ install -d ${destdir}/${prefix}/bin
 
 cat yaws.template | \
     ./Subst %yawsdir% ${prefix}/lib/yaws | \
+    ./Subst %vardir% ${vardir} | \
     ./Subst %erl% "${erl}" | \
+    ./Subst %run_erl% "${bindir}/run_erl" | \
+    ./Subst %to_erl% "${bindir}/to_erl" | \
     ./Subst %werl% "${werl}" > ${destdir}/${prefix}/bin/yaws
 
 chmod +x ${destdir}/${prefix}/bin/yaws
