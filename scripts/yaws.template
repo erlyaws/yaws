@@ -169,8 +169,6 @@ while [ $# -gt 0 ]
 	  shift;;
       --run_erl)
 	  RUN_ERL=yes
-	  RUN_ERL_LOG_GENERATIONS=8 ; export RUN_ERL_LOG_GENERATIONS
-	  RUN_ERL_LOG_MAXSIZE=1000000 ; export RUN_ERL_LOG_MAXSIZE
 	  daemon=""
 	  PIPE_DIR="${vardir}/run/yaws/pipe/$1"
 	  LOG_DIR="${vardir}/log/yaws/erlang-log/$1"
