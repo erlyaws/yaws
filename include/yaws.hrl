@@ -78,7 +78,7 @@
 	       log_wrap_size = 10000000,  % wrap logs after 10M
 	       cache_refresh_secs = 30,  % seconds  (auto zero when debug)
 	       include_dir = [],    %% list of inc dirs for .yaws files 
-	       phpexe = "php",      %% cgi capable php executable
+	       phpexe = "php-cgi",  %% cgi capable php executable
 	       yaws,                %% server string
 	       %username,           %% maybe run as a different user than root
 	       %uid,                %% unix uid of user that started yaws
