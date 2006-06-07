@@ -20,4 +20,5 @@ vardir() ->  "%VARDIR%".
 
 ctldir() -> "%VARDIR%/run/yaws".
 
+etcdir() -> "%ETCDIR%".
 	  

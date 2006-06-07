@@ -53,7 +53,10 @@ $(EBIN_FILES) : ../include/yaws.hrl ../include/yaws_api.hrl
 
 yaws_generated.erl:	yaws_generated.template ../vsn.mk
 	. ../vsn.mk; \
-	sed -e "s/%VSN%/${YAWS_VSN}/" -e "s;%VARDIR%;${VARDIR};g" < yaws_generated.template > yaws_generated.erl
+	sed -e "s/%VSN%/${YAWS_VSN}/" -e \
+	       "s;%VARDIR%;${VARDIR};g"  -e  \
+	       "s;%ETCDIR%;${ETCDIR};g"   \
+	< yaws_generated.template > yaws_generated.erl
 
 
 

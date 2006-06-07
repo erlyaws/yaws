@@ -43,3 +43,8 @@ touch:
 
 
 
+foo:
+	echo "etc files will go into ${ETCDIR}"	
+	echo "executables will go into ${prefix}/bin"		
+	echo "library file will go into ${prefix}/lib/yaws"
+	echo "var files will go into ${VARDIR}"
