@@ -261,9 +261,14 @@ handle_call({update_sconf, NewSc}, From, State) ->
 					  [yaws:sconf_to_srvstr(OldSc)]),
 		    {reply, ok, State};
 		false ->
-		    Pid ! {update_sconf, NewSc, OldSc, From},
-		    P2 = yaws_config:update_sconf(NewSc, State#state.pairs),
-		    {noreply, State#state{pairs = P2}}
+		    Pid ! {update_sconf, NewSc, OldSc, From, self()},
+		    receive
+			{updated_sconf, NewSc2} ->			
+			    P2 = yaws_config:update_sconf(NewSc2, State#state.pairs),
+			    {noreply, State#state{pairs = P2}}
+		    after 1000 ->
+			    {reply, {error, "Failed to update new conf"}, State}
+		    end
 	    end;
 	false ->
 	    {reply, {error, "No matching group"}, State}
@@ -453,11 +458,16 @@ setup_ets(SC) ->
     SC#sconf{ets = E}.
 
 clear_ets_complete(SC) ->
-    E = SC#sconf.ets,
-    ets:match_delete(E,'_'),
-    ets:insert(E, {num_files, 0}),
-    ets:insert(E, {num_bytes, 0}),
-    SC.
+    case SC#sconf.ets of
+	undefined ->
+ 	    setup_ets(SC);
+ 	E ->
+ 	    ets:match_delete(E,'_'),
+ 	    ets:insert(E, {num_files, 0}),
+ 	    ets:insert(E, {num_bytes, 0}),
+ 	    SC
+     end.
+
 
 gserv_loop(GS, Ready, Rnum, Last) ->
     receive
@@ -509,7 +519,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 
 	%% This code will shutdown all ready procs as well as the
 	%% acceptor() 
-	{update_sconf, NewSc, OldSc, From} ->
+	{update_sconf, NewSc, OldSc, From, Updater} ->
 	    case lists:member(OldSc, GS#gs.group) of
 		false ->
 		    error_logger:error_msg("gserv: No found SC ~p/~p~n",
@@ -517,12 +527,14 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 		    erlang:fault(nosc);
 		true ->
 		    stop_ready(Ready, Last),
-		    GS2 = GS#gs{group = [clear_ets_complete(NewSc) | 
+		    NewSc2 = clear_ets_complete(NewSc),
+		    GS2 = GS#gs{group = [ NewSc2 | 
 					 lists:delete(OldSc,GS#gs.group)]},
 		    Ready2 = [],
+		    Updater ! {updated_sconf, NewSc2},
 		    gen_server:reply(From, ok),
 		    error_logger:info_msg("Updating sconf for server ~s~n",
-					  [yaws:sconf_to_srvstr(NewSc)]),
+					  [yaws:sconf_to_srvstr(NewSc2)]),
 		    New = acceptor(GS2),
 		    gserv_loop(GS2, Ready2, 0, New)
 	    end;
@@ -554,7 +566,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 				  [yaws:sconf_to_srvstr(SC)]),
 	    New = acceptor(GS2),
 	    gserv_loop(GS2, Ready2, 0, New);
-
+ 
 	{update_gconf, GC} ->
 	    stop_ready(Ready, Last),
 	    GS2 = GS#gs{gconf = GC},

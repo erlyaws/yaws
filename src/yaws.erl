@@ -39,6 +39,7 @@ dohup(Sock) ->
 		     Err ->
 			 Err
 		 end),
+    gen_event:notify(yaws_event_manager, {yaws_hupped, Res}),
     gen_tcp:send(Sock, io_lib:format("hupped: ~p~n", [Res])),
     gen_tcp:close(Sock).
     

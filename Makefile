@@ -11,14 +11,6 @@ all debug clean:
 
 
 install:	all
-	@yrun=`yaws --status 2> /dev/null`; \
-	case $$yrun in \
-		*Uptime*) \
-			echo "ERROR Can't install while a yaws system is already running"; \
-			exit;; \
-		*) \
-			true;; \
-	esac; \
 	set -e ; \
 	  for d in $(SUBDIRS) ; do \
 	    if [ -f $$d/Makefile ]; then ( cd $$d && $(MAKE) $@ ) || exit 1 ; fi ; \

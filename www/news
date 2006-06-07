@@ -1,18 +1,19 @@
 Wed Jun  7 22:10:44 CEST 2006
-JSON ajax code from Gaspar Chilingarov, I added docs describing an example. (klacke)
+JSON Ajax code from Gaspar Chilingarov, I added docs describing an example. (klacke)
 run_erl and to_erl support patch from Mats Cronquist. 
 yaws_zlib.erl: some bugs in non used code found by dialyzer.
-small fixes in the start scrit code (klacke)
+small fixes in the start script code (klacke)
+Fixes from Mikael Karlsson adding an event manager to Yaws whereby it is possible to add user defined gen_event handlers handling different "events" from Yaws. The only event sofar is config changes. This is needed for mikls "yapp" project which is a way to write yaws packages that can be "dropped" into an existing server. (No docs or anything released yet)
 
 Thu Apr 27 21:40:01 CEST 2006 Version 1.61
-Started to write the ctl file, the file which contains the portnumber where the daemon is listening for ctl command to /var/run/yaws/ctl-${ID}. The location is contralable through configure. Install scripts will make the /var/run/yaws dir writeable to the world, each individul daemon which creates the ctl file will explicitly set the permissions on the ctl file to 600 - thus making it impossible for unauthorized users to control someone elses daemon. Root can control all daemons.
+Started to write the ctl file, the file which contains the portnumber where the daemon is listening for ctl command to - /var/run/yaws/ctl-${ID}. The location is controllable through configure. Install scripts will make the /var/run/yaws dir writable to the world, each individual daemon which creates the ctl file will explicitly set the permissions on the ctl file to 600 - thus making it impossible for unauthorized users to control someone elses daemon. Root can control all daemons.
 changed Yaws license to proper BSD (klacke)
 Added startup script for FreeBSD
 Worked the Makefiles to properly support DESTDIR. This is useful for packagers creating deb, rpm, portage ... packages  (klacke)
 Removed the ability to change userid. Also stopped writing to /tmp/yaws and started to write to ${HOME}/.yaws instead. This is much better since we cannot now ever get into the situations where file ownership and umask stop us from controlling a daemon. Note, this is a backwards incompatible change, all users that used the feature of letting Yaws change uid need to start using fdsrv instead. There is also a configurable in yaws.conf which makes it possible to write the tmp files to some other directory  (klacke)
-Cleaned up the start flags to the yaws script, all old flags are still there for backward scompatibilty. Updated docs and and help output from the yaws script to reflect all new flags. 
+Cleaned up the start flags to the yaws script, all old flags are still there for backward compatibility. Updated docs and and help output from the yaws script to reflect all new flags. 
 Wiki fixes.  Fixed error printouts; handle https and        ftp links; updated READE (mbj)
-file descriptor leak bug found by Mats Cronqvist where each call to 'yaws -ls' left an unclosed dscriptor in the server (klacke)
+file descriptor leak bug found by Mats Cronqvist where each call to 'yaws -ls' left an unclosed descriptor in the server (klacke)
 Source code cleanup - added and #env record for environment passed to yaws. (klacke)
 yaws_ls enhancements by        doccarcass@gmail.com
 
@@ -21,9 +22,9 @@ pam and setuid_drv fixes for BSD by sstrollo
 yaws_ls (dir listing) enhancements by doccarcass@gmail.com
 RSS updates, more docs, Made month and days in RSS output to consist of	two figures instead of just one. Fixed the RSS date format, as	suggested by Daniel Kaminski. (Tobbe)
 Wiki, Fixed path to the application directory where yaws files are stored. (mikl)
-Added feature to not pick first sconf when virthosting. This is essential if we want explicit control over the virt hostnames. A commercial site called http://www.serious.com don't wan't http://fuckme.serious.com to ship the pages of the serious site :-) (klacke)
+Added feature to not pick first sconf when virthosting. This is essential if we want explicit control over the virt hostnames. A commercial site called http://www.serious.com don't want http://fuckme.serious.com to ship the pages of the serious site :-) (klacke)
 DAV - reworked the DAV support a bit - don't use an appmod, instead yaws	has built-in support for DAV methods.  Added support for missing	DAV methods (COPY etc). (mbj)
-Added support for the erlmerge/jungerl package 'fdsrv' which makes it possible to bind to priviliged ports < 1024 even when we're not running as root. (klacke)
+Added support for the erlmerge/jungerl package 'fdsrv' which makes it possible to bind to privileged ports < 1024 even when we're not running as root. (klacke)
 changed so that an arg_rewrite_mod may	temporarily change the docroot by changing the Arg#arg.docroot	attribute (mikl)
 Added "pam" support for HTTP auth. (klacke)
 
@@ -37,22 +38,22 @@ Do not send the server	port along with the host name in the CGI HTTP_HOST enviro
 
 
 Thu Jun 16 13:42:50 CEST 2005, Version 1.56, Security update release.
-A bug was found by Daniel Fabian, SEC-Consult Unternehmensberatung GmbH whereby: If a null byte is appended to the filename of a yaws script (.yaws), the yaws webserver returns a page containing the source code of the  according script. This flaw allows a malicious attacker to analyse the source code of the entire web application, which might result in the attacker gaining sensitiv information like passwords. All versions of yaws older than 1.56 are vulnerable.
-For users running old yaws web servers, the following <a href="yaws-1.55_to_1.56.patch"> patch </a> can be applied. The patch is small and can easily be backported to older yaws releases.
+A bug was found by Daniel Fabian, SEC-Consult Unternehmensberatung GmbH whereby: If a null byte is appended to the filename of a yaws script (.yaws), the yaws webserver returns a page containing the source code of the  according script. This flaw allows a malicious attacker to analyse the source code of the entire web application, which might result in the attacker gaining sensitive information like passwords. All versions of yaws older than 1.56 are vulnerable.
+For users running old yaws web servers, the following <a href="yaws-1.55_to_1.56.patch"> patch </a> can be applied. The patch is small and can easily be back ported to older yaws releases.
 
 Fri Jun 10 16:09:58 CEST 2005, Version 1.55 released. Feature release.
 Concept of redirect maps added. See documentation in yaws.conf man page. This makes it possible to redir entire parts of the docroot to another site (jb)
-Removed the forbidden code, the right thing	to do when a scripttype is forbidden and we shall not run an	interpreter on the script is to ship the script, but as text/plain	instead of actually refusing to ship the data. Otherwise it's not	possible to publish .php files at all on the website. (klacke)
-Initial support for WebDAV added. This is as of yet undocumented. (tobbe)
-Added the possibilty to have multiple	docroots, where a page is searched in the list of docroots (klacke)
+Removed the forbidden code, the right thing	to do when a script type is forbidden and we shall not run an	interpreter on the script is to ship the script, but as text/plain	instead of actually refusing to ship the data. Otherwise it's not	possible to publish .php files at all on the web site. (klacke)
+Initial support for Web DAV added. This is as of yet undocumented. (tobbe)
+Added the possibility to have multiple	docroots, where a page is searched in the list of docroots (klacke)
 
 Tue Apr 12 2005, Version 1.54 released. Bugfix release.
-Bug in SSL fixed, Bad line parsing in SSL mode, crashed when client sent headers splitup in a certain way. (klacke)
+Bug in SSL fixed, Bad line parsing in SSL mode, crashed when client sent headers split up in a certain way. (klacke)
 Removed the automatic htmlize on strings in  ehtml, it was wrong ... to have it there. It's better for users that want it to explicitly add yaws_api:htmlize() to their strings This breaks code and is non backwards compatible.  Be aware !!  Also made {Tag, Attr} generate xhtml compliant code. (klacke)
 Cleaner shutdown (klacke)
 Many improvements to the chat server. (jb)
 When clearing the cache, yaws modules would remain loaded but be forgotten, resulting in a memory leak. (cschultz)
-Added possibility to name the module in a .yaws file using a syntax of < erl module="foobar"> .... < /erl> to always get a .yaws file named to a special fixed modulename instead of the increasing m1,m2 .. modulenames. This is useful if we want to keep API functions in certain .yaws files and call these functions from other .yaws files. (klacke)
+Added possibility to name the module in a .yaws file using a syntax of < erl module="foobar"> .... < /erl> to always get a .yaws file named to a special fixed module name instead of the increasing m1,m2 .. modulenames. This is useful if we want to keep API functions in certain .yaws files and call these functions from other .yaws files. (klacke)
 Many reverse proxy bugs fixed. Maybe the reverse proxy is actually working now. It was never especially good. Try it. (mikl)
 Bug fixed with bindings that        got propagated over to other later requests.Yet another put/get bug. Maybe it's time for an acronym there. YAPGB ??? (klacke)
 Better looking debug printouts.  + dont overwrite trace_to_tty (-x commandline) if set on the        commandline and also in the config file.  Commandline should have        precedense over config file directives. (klacke)
