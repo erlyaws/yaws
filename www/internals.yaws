@@ -11,7 +11,7 @@ out(A) ->
   <h2>Introduction</h2>
   
   <p>I'll try to describe some of the internal workings of Yaws in this page.
-  The page is thus mostly interesting for people intereted in either hacking Yaws
+  The page is thus mostly interesting for people interested in either hacking Yaws
   or simply wanting to get a better understanding.
   </p>
   

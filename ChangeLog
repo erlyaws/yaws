@@ -1,3 +1,57 @@
+2006-06-07 22:07  klacke
+
+	* Makefile, configure, configure.in, vsn.mk, src/Makefile,
+	src/yaws_config.erl, src/yaws_generated.template: preparing for
+	1.62
+
+2006-06-01 09:15  klacke
+
+	* include/yaws.hrl, man/yaws.conf.5: changed default php exe to
+	php-cgi
+
+2006-05-31 15:09  klacke
+
+	* scripts/yaws.template: [no log message]
+
+2006-05-31 00:11  klacke
+
+	* configure, configure.in, include.mk.in, scripts/Install,
+	scripts/Makefile: [no log message]
+
+2006-05-30 23:31  klacke
+
+	* src/Makefile, src/json.erl, src/jsonrpc.erl,
+	src/yaws_jsonrpc.erl, src/yaws_xmlrpc.erl, www/TAB.inc,
+	www/json_intro.yaws, www/json_sample.html, www/json_sample.yaws,
+	www/jsolait/jsolait.js, www/jsolait/lib/jsonrpc.js,
+	www/jsolait/lib/urllib.js: JSON ajax code from Gaspar Chilingarov,
+	I added docs describing an example
+
+2006-05-30 17:20  klacke
+
+	* include.mk.in, doc/Makefile, scripts/Install,
+	scripts/yaws.template, src/yaws_config.erl, src/yaws_ctl.erl:
+	run_erl to_erl support patch from Mats Cronquist
+
+2006-04-28 17:42  klacke
+
+	* src/yaws_ctl.erl: [no log message]
+
+2006-04-28 17:35  klacke
+
+	* src/: yaws_content_negotiation.erl, yaws_server.erl,
+	yaws_zlib.erl: some bugs in non used code found by dialyzer
+
+2006-04-27 22:02  klacke
+
+	* scripts/gentoo/conf.d.yaws, scripts/gentoo/init.d.yaws, www/news,
+	doc/yaws.pdf: [no log message]
+
+2006-04-27 21:47  klacke
+
+	* ChangeLog, scripts/freebsd/yaws.sh, src/yaws_ctl.erl, www/news:
+	preparing for 1.61
+
 2006-04-27 21:38  klacke
 
 	* scripts/yaws.template, src/yaws_config.erl, src/yaws_ctl.erl: [no
@@ -10,10 +64,9 @@
 	man/yaws_api.5, scripts/Install, scripts/Makefile,
 	scripts/yaws.template, src/Makefile, src/yaws.erl,
 	src/yaws_api.erl, src/yaws_cgi.erl, src/yaws_config.erl,
-	src/yaws_ctl.erl, src/yaws_generated.template,
-	src/yaws_vsn.template, www/code/Makefile, www/shopingcart/Makefile:
-	added support for 2 additional configure flags, --disable-pam and
-	--with-extrainclude=DIR
+	src/yaws_ctl.erl, src/yaws_generated.template, www/code/Makefile,
+	www/shopingcart/Makefile: added support for 2 additional configure
+	flags, --disable-pam and --with-extrainclude=DIR
 	
 	Worked the Makefiles to properly support DESTDIR. This is useful
 	for packagers (deb, rpm ...)

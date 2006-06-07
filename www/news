@@ -1,3 +1,9 @@
+Wed Jun  7 22:10:44 CEST 2006
+JSON ajax code from Gaspar Chilingarov, I added docs describing an example. (klacke)
+run_erl and to_erl support patch from Mats Cronquist. 
+yaws_zlib.erl: some bugs in non used code found by dialyzer.
+small fixes in the start scrit code (klacke)
+
 Thu Apr 27 21:40:01 CEST 2006 Version 1.61
 Started to write the ctl file, the file which contains the portnumber where the daemon is listening for ctl command to /var/run/yaws/ctl-${ID}. The location is contralable through configure. Install scripts will make the /var/run/yaws dir writeable to the world, each individul daemon which creates the ctl file will explicitly set the permissions on the ctl file to 600 - thus making it impossible for unauthorized users to control someone elses daemon. Root can control all daemons.
 changed Yaws license to proper BSD (klacke)
