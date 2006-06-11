@@ -1,4 +1,7 @@
-Wed Jun  7 22:10:44 CEST 2006
+Sun Jun 11 16:49:13 CEST 2006 version 1.63
+Odd fix for MacOsX make behaviour. make install did not work.
+
+Wed Jun  7 22:10:44 CEST 2006 version 1.62
 JSON Ajax code from Gaspar Chilingarov, I added docs describing an example. (klacke)
 run_erl and to_erl support patch from Mats Cronquist. 
 yaws_zlib.erl: some bugs in non used code found by dialyzer.
