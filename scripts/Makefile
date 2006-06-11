@@ -48,7 +48,9 @@ yaws.conf:
 clean:
 	rm -f ../bin/yaws
 
-install:
+install:	.install
+
+.install:
 	-rm -rf /tmp/yaws 2> /dev/null
 	sh ./Install $(PREFIX) $(DESTDIR) "$(ERL)" \
 		"$(WERL)" $(ETCDIR)/ $(VARDIR)/ $(ERLBINDIR)/

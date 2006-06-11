@@ -53,9 +53,9 @@ elif [ -f /etc/suseservers ]; then
     chmod +x ${destdir}/${etcdir}/init.d/yaws
     install -d ${destdir}/${vardir}/run/yaws
     chmod a+rwx ${destdir}/${vardir}/run/yaws
-elif [ "`uname -s`" = "Darwin" ]; then
+elif [ "`uname -s`" = "Darwin" && `id -u` = 0 ]; then
      startupdir="/Library/StartupItems/Yaws"
-     if [ ! -d ${startupdir} ]; then
+     if [ ! -d ${startupdir} && ]; then
        mkdir ${startupdir};
      fi
      sed -e "s;%prefix%;$p;g" darwin/Yaws.StartupItem > ${startupdir}/Yaws
