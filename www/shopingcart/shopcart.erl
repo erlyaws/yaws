@@ -218,7 +218,7 @@ handle_l([], Items) ->
     Items;
 handle_l([{Str, Num} | Tail], Items) ->
     case catch list_to_integer(Num) of
-	Int ->
+	Int when integer(Int) ->
 	    handle_l(Tail, [{Str, Int} | lists:keydelete(Str,1, Items)]);
 	_ ->
 	    handle_l(Tail, Items)
