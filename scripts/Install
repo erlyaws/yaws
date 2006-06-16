@@ -53,6 +53,13 @@ elif [ -f /etc/suseservers ]; then
     chmod +x ${destdir}/${etcdir}/init.d/yaws
     install -d ${destdir}/${vardir}/run/yaws
     chmod a+rwx ${destdir}/${vardir}/run/yaws
+elif [ -f /etc/debian_version ]; then
+    install -d ${destdir}/${etcdir}/init.d
+    sed -e "s;%prefix%;$p;g" debian/yaws.init.d  > ${destdir}/${etcdir}/init.d/yaws
+    chmod +x ${destdir}/${etcdir}/init.d/yaws
+    install -d ${destdir}/${vardir}/run/yaws
+    chmod a+rwx ${destdir}/${vardir}/run/yaws
+
 elif [ "`uname -s`" = "Darwin" && `id -u` = 0 ]; then
      startupdir="/Library/StartupItems/Yaws"
      if [ ! -d ${startupdir} && ]; then
