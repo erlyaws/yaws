@@ -18,23 +18,31 @@ test -x $yaws || exit 1
 case "$1" in
     start)
 	echo -n "Starting $prog: "
-	start-stop-daemon --start --quiet --exec $yaws -- --id ${yawsid} --daemon --heart
+	$yaws  --id ${yawsid} --daemon --heart
 	echo "."
     ;;
     stop)
 	echo -n "Stopping $prog: "
-	start-stop-daemon --stop --quiet --exec $yaws --id ${yawsid} --stop
+	$yaws  --id ${yawsid} --stop
 	echo "."
 	;;
     reload)
 	echo -n "Reloading $prog: "
-	start-stop-daemon  --exec $yaws --id ${yawsid} --hup
+	$yaws  --id ${yawsid} --hup
 	echo "."
 	;;
     status)
-	start-stop-daemon  --exec $yaws --id ${yawsid} --status
+	$yaws  --id ${yawsid} --status
 	echo "."
 	;;
+    restart)
+	echo -n "Stopping $prog: "
+        $yaws  --id ${yawsid} --stop
+	echo -n "Starting $prog: "
+        $yaws  --id ${yawsid} --daemon --heart
+	echo "."
+        ;;
+
     *)
 	echo $"Usage: $prog {start|stop|restart|reload|status}"
 	exit 1
