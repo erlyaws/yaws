@@ -13,8 +13,8 @@ To build and install
    /usr/local/etc/yaws.*
 
   A plain ./configure will install executables under 
-  /usr/local/bin and libs in /usr/local/lib/yaws. /etc and
-  /var files will end up under /etc and /var
+  /usr/local/bin and libs in /usr/local/lib/yaws etc and
+  var files will end up under /usr/local/etc and /usr/local/var
 
 
 Note: We can also change the target directory for etc and var 
@@ -34,7 +34,7 @@ usefull for computers where you do not have right access to the
 standard systemdirs). 
 
 For example:
-./configure --prefix=/home/install/yaws-1.01 --localstatedir=/home/install/yaws-1.01/var --sysconfdir=/home/install/yaws-1.01/etc
+./configure --prefix=/home/install/yaws --localstatedir=/home/install/yaws/var --sysconfdir=/home/install/etc
 
 
 2b. Note to packagers (rpm, deb ...) All install targets support the 
@@ -56,10 +56,12 @@ For example:
   make local_install
      and perform something we call a
      local install. It will create an executable script in the $HOMe/bin 
-     directory and a config file in $HOME/yaws.conf
+     directory and a config file in $HOME/yaws.conf. This is for developers
+     only
 
-4.   Start as bin/yaws -i 
-     This will create a webserver at http://0.0.0.0:8000
+4.   To test the build, Start as bin/yaws -i 
+     This will start a webserver at http://0.0.0.0:8000
+     Terminate through ^C or > init:stop()
 
 5. as root make install
 

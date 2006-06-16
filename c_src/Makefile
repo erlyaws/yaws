@@ -31,7 +31,7 @@ install:	$(PRIV_FILES)
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/yaws/priv
 	$(INSTALL) $(PRIV_FILES) $(DESTDIR)$(PREFIX)/lib/yaws/priv
 ifndef WIN32
-	if [ `id -u` = "0" ]; then \
+	if [ `id -u` = "0" -a -d $(DESTDIR)$(PREFIX)/lib/yaws/priv/epam ]; then \
 		chown root $(DESTDIR)$(PREFIX)/lib/yaws/priv/epam; \
 		chmod a+s $(DESTDIR)$(PREFIX)/lib/yaws/priv/epam; \
 	fi
