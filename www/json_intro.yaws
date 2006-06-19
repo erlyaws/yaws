@@ -73,7 +73,49 @@ out(A) ->
 	"called \"test1\", this information will be passed to the "
 	"serviceURL. The code looks like:"},
        ss(A, "json_sample.yaws"),
+
+       {p,[], "The two important lines on the server side are"},
+       {ol,[],
+	[
+	 {li,[],
+	  {pre,[],"yaws_jsonrpc:handler_session(A2, {sample_mod, counter})."}},
+	 {li,[],
+	  {pre,[],"counter([{ip, IP}] = _State, {call, test1, Value} = _Request, Session)"}}]},
+
+       {p,[], 
+	"The first line tells Yaws to forward all JSON-RPC methods to the "
+	" \"counter\" function in the \"sample_mod\" module. "
+	"The second line says, "
+	" basically, - this is the counter function that will be called when "
+	" the client invokes a method called 'test1'. We would duplicate "
+	" this line with a different name than 'test1' for each RPC function "
+	"we wish to implement."},
        
+       {p,[],"On the client side we have"},
+
+       box("
+var methods = [ \"test1\" ];
+var jsonrpc = imprt(\"jsonrpc\");
+var service = new jsonrpc.ServiceProxy(serviceURL, methods);
+"),
+
+      {p,[],"Which registers the Yaws page with the JSON-RPC handler and "
+            "gives it a list of methods that the Yaws page can satisfy. "
+            "In this case, it is only the method called 'test1'."},
+       
+      {p, [], 
+"When we wish to return structured data - we simply let "
+"the user defined RPC function return JSON structures such as "},
+
+box(" {struct, [{field1, \"foo\"}, {field2, \"bar\"}]} "),
+{p, [], " for a structure and "},
+box("{array, [\"foo\", \"bar\"]}"),
+{p, [],"for an array. We can nest arrays and structs in each other "},
+
+			 
+
+
+
        {p, [],
 	"Finally, we must stress that this example is extremely simple. "
 	"In order to build a proper AJAX application in Yaws, a lot of "
