@@ -3128,10 +3128,8 @@ no_slash_eq(_,_) ->
     false.
 
 
-
-maybe_return_dir(DR, GetPath) ->
-    ?Debug("maybe_return_dir(~p, ~p)", [DR, GetPath]), 
-    case prim_file:read_file_info([DR, GetPath, "index.yaws"]) of
+try_index_file(DR, GetPath) ->
+     case prim_file:read_file_info([DR, GetPath, "index.yaws"]) of
 	{ok, FI} when FI#file_info.type == regular ->
 	    do_url_type(get(sc), GetPath ++ "index.yaws", DR);
 	_ ->
@@ -3139,16 +3137,31 @@ maybe_return_dir(DR, GetPath) ->
 		{ok, FI} when FI#file_info.type == regular ->
 		    do_url_type(get(sc), GetPath ++ "index.html", DR);
 		_ ->
-		    case file:list_dir([DR, GetPath]) of
-			{ok, List} ->
-			    #urltype{type = directory,
-				     dir = [DR , GetPath],
-				     data = List -- [".yaws_auth"]};
-			_Err ->
-			    #urltype{type=error}
+		    case prim_file:read_file_info([DR, GetPath,"index.php"]) of
+			{ok, FI} when FI#file_info.type == regular ->
+			    do_url_type(get(sc), GetPath ++ "index.php", DR);
+			_ ->
+			    noindex
 		    end
 	    end
+     end.
+		
+
+maybe_return_dir(DR, GetPath) ->
+    case try_index_file(DR, GetPath) of
+	noindex ->
+	    case file:list_dir([DR, GetPath]) of
+		{ok, List} ->
+		    #urltype{type = directory,
+			     dir = [DR , GetPath],
+			     data = List -- [".yaws_auth"]};
+		_Err ->
+		    #urltype{type=error}
+	    end;
+	UT ->
+	    UT
     end.
+
 
 
 
