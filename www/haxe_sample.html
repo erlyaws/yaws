@@ -1,0 +1,17 @@
+class Application {
+
+  public static function main():Void {
+    var URL = "http://localhost:8000/haxe_sample.yaws";
+    var cnx = haxe.remoting.AsyncConnection.urlConnect(URL);
+    cnx.onError = function(err) {
+      trace("Exception : " + Std.string(err));
+    };
+    var a = {a:"foo", b:"bar", c:[1,2,3]};
+    var b = "hello, Erlang!";
+    cnx.echo.call([a, b], display);
+  }
+
+  static function display(v) {
+    trace(v);
+  }
+}

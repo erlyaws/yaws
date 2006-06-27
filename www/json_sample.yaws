@@ -11,7 +11,7 @@ out(A) ->
     
     {ok,{IP,_}} = Peer,
     A2=A#arg{state = [{ip, IP}]},
-    yaws_jsonrpc:handler_session(A2, {sample_mod, counter}).
+    yaws_rpc:handler_session(A2, {sample_mod, counter}).
 
 
 

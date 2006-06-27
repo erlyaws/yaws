@@ -51,6 +51,7 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <a href="/shopingcart/index.yaws">Tiny shopping cart</a>
 <div class="%%embed%%"> <a href="/embed.yaws">Embedding Yaws</a></div>
 <div class="%%json_intro%%"> <a href="/json_intro.yaws">AJAX/Json RPC</a></div>
+<div class="%%haxe_intro%%"> <a href="/haxe_intro.yaws">haXe remoting</a></div>
 <h4> Misc </h4>
 <div class="%%internals%%"> <a href="/internals.yaws">Internals</a> </div>
 

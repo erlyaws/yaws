@@ -33,7 +33,8 @@ MODULES=yaws \
 	yaws_rss \
 	yaws_dav \
 	yaws_pam \
-	json jsonrpc yaws_jsonrpc yaws_xmlrpc
+	json jsonrpc yaws_jsonrpc yaws_xmlrpc\
+	haxe yaws_rpc
 
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app
