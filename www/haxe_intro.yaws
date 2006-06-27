@@ -35,7 +35,7 @@ out(A) ->
 	 "RPC requests from a client written in ",
 	 {a, [{href, "http://www.haxe.org"}], "haXe"},
 	  ". haXe is a versatile open source language that compiles to "
-	  "Flash, Javascript and NekoVM. With haXe, You can use "
+	  "Flash, Javascript and NekoVM. With haXe, you can "
 	  "write advanced clients for your Yaws backend without "
 	  "suffering with Javascript and/or Actionscript. "
 	  "For more information on haXe, visit ",
