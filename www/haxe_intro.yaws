@@ -95,7 +95,7 @@ out(A) ->
 	"wish to implement, replacing 'echo' with the method's name."},
        {p, [],
 	"yaws_rpc optionally handles sessions for both JSON RPC and "
-	"haXe remoting. To use sessions, invoke yaws_rpc:handler_seesion "
+	"haXe remoting. To use sessions, invoke yaws_rpc:handler_session "
 	"as shown in the JSON RPC documentation page."},
       
        {p, [],
