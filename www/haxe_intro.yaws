@@ -90,7 +90,7 @@ out(A) ->
 	{p, [],
 	"The second line tells Yaws to invoke this 'respond' function "
 	"when the client requests the method 'echo', while passing "
-	"the new state variable as the first argument to 'respond'."
+	"the new state variable as the first argument to 'respond'. "
 	"You should duplicate this line for every RPC method you "
 	"wish to implement, replacing 'echo' with the method's name."},
        {p, [],
@@ -99,7 +99,7 @@ out(A) ->
 	"as shown in the JSON RPC documentation page."},
       
        {p, [],
-	  "If the response is in the form of {expression, Obj}, "
+	  "If the response is in the form of {exception, Obj}, "
 	  "where Obj is any valid haXe remoting type, then the haXe client "
 	  "will invoke the 'onError' handler, with Obj passed as the "
 	  "parameter."},
