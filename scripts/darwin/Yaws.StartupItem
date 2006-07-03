@@ -14,9 +14,9 @@ StartService ()
 {
     if [ "${YAWS:=-NO-}" = "-YES-" ]; then
 	ConsoleMessage "Starting yaws http daemon"
-	HOME=/tmp $yaws --i d${yawsid} --daemon --heart
+	HOME=/tmp $yaws --id ${yawsid} --daemon --heart
 	RETVAL=$?
-	[ $RETVAL = 0 ] && touch ${lockdir}/yaws
+	[ $RETVAL = 0 ]
     fi
 }
 
@@ -24,7 +24,6 @@ StopService ()
 {
     ConsoleMessage "Stopping yaws http daemon"
     HOME=/tmp $yaws --id ${yawsid} --stop
-    rm -f ${lockdir}/yaws -/var/run/yaws.pid
 }
 
 RestartService ()

@@ -60,14 +60,19 @@ elif [ -f /etc/debian_version ]; then
     install -d ${destdir}/${vardir}/run/yaws
     chmod a+rwx ${destdir}/${vardir}/run/yaws
 
-elif [ "`uname -s`" = "Darwin" && `id -u` = 0 ]; then
+elif [ "`uname -s`" = "Darwin" -a `id -u` = 0 ]; then
      startupdir="/Library/StartupItems/Yaws"
-     if [ ! -d ${startupdir} && ]; then
+     if [ ! -e ${startupdir} && ]; then
        mkdir ${startupdir};
+     elif [ ! -d ${startupdir} ]; then
+	 echo "${startupdir} exists but is not a directory, bailing out ..."
+	 exit 1
      fi
      sed -e "s;%prefix%;$p;g" darwin/Yaws.StartupItem > ${startupdir}/Yaws
      chmod +x ${startupdir}/Yaws
      cp darwin/Yaws.plist ${startupdir}/StartupParameters.plist
+      # MacOS is particular about the ownership of startup items.
+     chown -R root:wheel ${startupdir}
 elif [ "`uname -s`" = "FreeBSD" ]; then
     sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" freebsd/yaws.sh > ${destdir}/${etcdir}/rc.d/yaws.sh
 else
