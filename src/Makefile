@@ -81,7 +81,7 @@ install: all docsinstall
 	install -d $(DESTDIR)/$(PREFIX)/lib/yaws/ebin
 	install -d $(DESTDIR)/$(VARDIR)/log/yaws
 	install -d $(DESTDIR)/$(VARDIR)/yaws/ebin
-	cp -r ../include/* $(DESTDIR)/$(PREFIX)/lib/yaws/
+#	cp -r ../include/* $(DESTDIR)/$(PREFIX)/lib/yaws/
 	(cd ..; tar cf - ebin ) | (cd $(DESTDIR)/$(PREFIX)/lib/yaws; tar xf - )
 	(cd ..; tar cf - include ) | (cd $(DESTDIR)/$(PREFIX)/lib/yaws; tar xf - )
 

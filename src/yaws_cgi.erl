@@ -199,12 +199,17 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
 	    {"REQUEST_METHOD", yaws:to_list(R#http_request.method)},
 	    {"REQUEST_URI", RequestURI},
 	    {"PATH_INFO", checkdef(Pathinfo)},
-						% {"SCRIPT_FILENAME", ??? }
+	    {"SCRIPT_FILENAME", Scriptfilename},    % For PHP 4.3.2 and higher
+						    % see http://bugs.php.net/bug.php?id=28227
+						    % (Sergei Golovan).
 	    {"PATH_TRANSLATED", Scriptfilename},    % This seems not to
 						% correspond to the
 						% documentation I have
 						% read, but it works
 						% with PHP.
+						%
+						% (Not with PHP 4.3.10-16) from
+						% Debian sarge (Sergei Golovan).
 	    {"SCRIPT_NAME", Scriptname},
 						%{"REMOTE_HOST", ""},  We SHOULD send this
 	    {"REMOTE_ADDR", PeerAddr},

@@ -39,7 +39,7 @@ run(GC) ->
     %% with the same sid.
 
     case connect(GC#gconf.id) of
-	{ok, Sock} ->
+	{ok, Sock, _Key} ->
 
 	    %% Not good, let's get some sys info
 	    %% from that system so we can produce a good error
@@ -73,10 +73,13 @@ run_listen(GC) ->
 	{ok,  L} ->
 	    case inet:sockname(L) of
 		{ok, {_, Port}} ->
-		    case w_ctl_file(GC#gconf.id,Port) of
+		    {A1, A2, A3}=now(),
+		    random:seed(A1, A2, A3),
+		    Key = random:uniform(1 bsl 64),
+		    case w_ctl_file(GC#gconf.id, Port, Key) of
 			ok ->
 			    proc_lib:init_ack(ok),
-			    aloop(L, GC);
+			    aloop(L, GC, Key);
 			error ->
 			    error_logger:format(
 			      "Failed to create/manipulate the ctlfile ~n"
@@ -87,8 +90,8 @@ run_listen(GC) ->
 			      "None of Yaws ctl functions will work~n",
 			      [ctl_file(GC#gconf.id), GC#gconf.id]),
 			    proc_lib:init_ack(ok),
-			    aloop(L, GC)
-			end;
+			    aloop(L, GC, Key)
+		    end;
 		Err ->
 		    e("Cannot get sockname for ctlsock: ~p",[Err] )
 	    end;
@@ -107,12 +110,12 @@ e(Fmt, Args) ->
 %% so that only this user can read the file
 %% That way we're making sure different users
 %% cannot manipulate eachothers webservers
-w_ctl_file(Sid, Port) ->
-    case catch 
+w_ctl_file(Sid, Port, Key) ->
+    case catch
 	begin
 	    F = ctl_file(Sid),
 	    ?Debug("Ctlfile : ~s~n", [F]),
-	    file:write_file(F, io_lib:format("~w", [Port])),
+	    file:write_file(F, io_lib:format("~w.", [{Port,Key}])),
 	    {ok, FI} = file:read_file_info(F),
 	    ok = file:write_file_info(F, FI#file_info{mode = 8#00600})
 	end of
@@ -129,46 +132,48 @@ ctl_file(Sid) ->
     FN.
 
 
-aloop(L, GC) ->
+aloop(L, GC, Key) ->
     case gen_tcp:accept(L) of
 	{ok, A} ->
-	    handle_a(A, GC);
+	    handle_a(A, GC, Key);
 	Err ->
 	    error_logger:format("yaws_ctl failed to accept: ~p~n",
 				[Err]),
 	    timer:sleep(2000),
 	    ignore
     end,
-    ?MODULE:aloop(L, GC).
+    ?MODULE:aloop(L, GC, Key).
 
-handle_a(A, GC) ->
+handle_a(A, GC, Key) ->
     case gen_tcp:recv(A, 0) of
 	{ok, Data} ->
-	    case binary_to_term(Data) of
-		hup ->
+	    case catch binary_to_term(Data) of
+		{hup, Key} ->
 		    Res = yaws:dohup(A),
 		    Res;
-		stop ->
+		{stop, Key} ->
 		    gen_tcp:send(A, io_lib:format(
 				      "stopping yaws with id=~p\n",
 				      [GC#gconf.id])),
 		    file:delete(ctl_file(GC#gconf.id)),
 		    init:stop();
-		{trace, What} ->
+		{{trace, What}, Key} ->
 		    Res = actl_trace(What),
 		    gen_tcp:send(A, Res),
 		    gen_tcp:close(A);
-		status ->
+		{status, Key} ->
 		    a_status(A),
 		    gen_tcp:close(A);
-		{load, Mods} ->
+		{{load, Mods}, Key} ->
 		    a_load(A, Mods),
 		    gen_tcp:close(A);
-		id ->
+		{id, Key} ->
 		    a_id(A),
 		    gen_tcp:close(A);
-		Other ->
+		{Other, Key} ->
 		    gen_tcp:send(A, io_lib:format("Other: ~p~n", [Other])),
+		    gen_tcp:close(A);
+		_Other ->
 		    gen_tcp:close(A)
 	    
 	    end;
@@ -285,18 +290,21 @@ connect(Sid) ->
 
 
 %% The ctl file contains the port number the yaws server
-%% is listening at.
+%% is listening at and secret key string.
 
 connect_file(CtlFile) ->
-    case file:read_file(CtlFile) of
-	{ok, Bin} ->
-	    L = binary_to_list(Bin),
-	    I = list_to_integer(L),
-	    gen_tcp:connect({127,0,0,1}, I,
-			    [{active, false},
-			     {reuseaddr, true},
-			     binary,
-			     {packet, 2}], 2000);
+    case file:consult(CtlFile) of
+	{ok, [{Port, Key}]} ->
+	    case gen_tcp:connect({127,0,0,1}, Port,
+				 [{active, false},
+				  {reuseaddr, true},
+				  binary,
+				  {packet, 2}], 2000) of
+		{ok, Socket} ->
+		    {ok, Socket, Key};
+		Err ->
+		    Err
+	    end;
 	Err ->
 	    Err
     end.
@@ -319,15 +327,15 @@ actl(SID, Term) ->
 		      "specify by <-I id> which yaws system you want "
 		      " to control~n",
 		      [ctl_file(SID), Reason]);
-	{ok, Socket} ->
-	    Str = s_cmd(Socket, SID, Term),
+	{ok, Socket, Key} ->
+	    Str = s_cmd(Socket, SID, Key, Term),
 	    io:format("~s", [Str])
     end,
     init:stop().
 
 
-s_cmd(Fd, SID, Term) ->	    
-    gen_tcp:send(Fd, term_to_binary(Term)),
+s_cmd(Fd, SID, Key, Term) ->
+    gen_tcp:send(Fd, term_to_binary({Term, Key})),
     Res = case gen_tcp:recv(Fd, 0) of
 	      {ok, Bin} ->
 		  binary_to_list(Bin);
@@ -367,7 +375,7 @@ lls(CtlFile0 = "ctl-" ++ Id) ->
 		      [Id, "noaccess", User]);
 	{{ok, FI}, {ok, _Bin}} ->
 	    Running = case connect(Id) of
-			  {ok, Sock} ->
+			  {ok, Sock, _Key} ->
 			      gen_tcp:close(Sock),
 			      "running";
 			  {error, timeout} ->
