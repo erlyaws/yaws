@@ -1,3 +1,92 @@
+2006-07-13 13:06  klacke
+
+	* vsn.mk: preparing for 1.64
+
+2006-07-13 10:42  jbevemyr
+
+	* applications/mail/src/smtp.erl: Fixes from Bengt Kleberg to make
+	smtp.erl useful outside the webmail app.
+
+2006-07-06 11:04  klacke
+
+	* src/: Makefile, yaws_cgi.erl, yaws_ctl.erl: patch by Sergei
+	Golovan which fixed a CGI bug and made yaws_ctl safe
+
+2006-07-03 11:17  klacke
+
+	* scripts/: Install, darwin/Yaws.StartupItem: install patches for
+	macosX by Eric Baur
+
+2006-06-27 22:26  yarivvv
+
+	* www/haxe_intro.yaws: fix documentation typo
+
+2006-06-27 06:47  yarivvv
+
+	* www/haxe_sample.yaws: fixed documentation bug in haxe_sample.yaws
+
+2006-06-27 06:29  yarivvv
+
+	* www/: haxe_intro.yaws, haxe_intro.yaws: fixed documentation bug
+	in haxe_intro.yaws
+
+2006-06-27 06:10  yarivvv
+
+	* src/Makefile, src/haxe.erl, src/yaws_rpc.erl,
+	www/haxe_intro.yaws, www/haxe_sample.html, www/json_intro.yaws,
+	www/TAB.inc, www/json_sample.yaws: Added a haXe remoting adapter
+	with documentation
+
+2006-06-22 12:30  klacke
+
+	* src/yaws_server.erl: made index.php autoload if it exists
+
+2006-06-19 11:00  klacke
+
+	* www/json_intro.yaws: [no log message]
+
+2006-06-16 14:50  klacke
+
+	* scripts/debian/yaws.init.d: [no log message]
+
+2006-06-16 14:38  klacke
+
+	* scripts/: Install, debian/yaws.init.d: added debian startup
+	script
+
+2006-06-16 14:25  klacke
+
+	* c_src/Makefile: [no log message]
+
+2006-06-16 14:21  klacke
+
+	* README: [no log message]
+
+2006-06-15 14:44  klacke
+
+	* www/shopingcart/shopcart.erl: [no log message]
+
+2006-06-11 16:51  klacke
+
+	* vsn.mk, www/news: tiny followup rel
+
+2006-06-11 16:47  klacke
+
+	* scripts/: Install, Makefile: weird make behaviour from macos make
+
+2006-06-07 23:09  klacke
+
+	* Makefile: [no log message]
+
+2006-06-07 22:35  klacke
+
+	* Makefile, src/yaws.erl, src/yaws_server.erl, src/yaws_sup.erl,
+	www/news: mikl hup fixes
+
+2006-06-07 22:13  klacke
+
+	* ChangeLog, www/internals.yaws, www/news: [no log message]
+
 2006-06-07 22:07  klacke
 
 	* Makefile, configure, configure.in, vsn.mk, src/Makefile,

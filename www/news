@@ -1,3 +1,11 @@
+Thu Jul 13 13:07:10 CEST 2006 version 1.64
+Fixes from Bengt Kleberg to make smtp.erl useful outside the webmail app.
+patch by Sergei Golovan which fixed a CGI bug and made yaws_ctl safe.
+install patches for  macosX by Eric Baur.
+Added a haXe remoting adapter with documentation (yarivvv)
+made index.php autoload if it exists (klacke)
+added debian /etc startup script (klacke)
+
 Sun Jun 11 16:49:13 CEST 2006 version 1.63
 Odd fix for MacOsX make behaviour. make install did not work.
 
