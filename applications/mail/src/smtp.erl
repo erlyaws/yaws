@@ -5,7 +5,7 @@
 %    Purpose:   
 
 -module('smtp').
--author('jb@son.bevemyr.com').
+-author('jb@bevemyr.com').
 
 -export([send/6]).
 
@@ -82,13 +82,13 @@ smtp_send_b64(Port, Data) ->
     gen_tcp:send(Port, B64).
 
 boundary_date() ->
-    dat2str_boundary(yaws:date_and_time()).
+    dat2str_boundary(calendar:local_time()).
 
-dat2str_boundary([Y1,Y2, Mo, D, H, M, S | Diff]) ->
+dat2str_boundary({{Y, Mo, D}, {H, M, S}}) ->
     lists:flatten(
       io_lib:format("~s_~2.2.0w_~s_~w_~2.2.0w:~2.2.0w:~2.2.0w_~w",
-		    [weekday(Y1,Y2,Mo,D), D, int_to_mt(Mo),
-		     y(Y1,Y2),H,M,S,random:uniform(5000)])).
+		    [weekday(Y,Mo,D), D, int_to_mt(Mo),
+		     Y,H,M,S,random:uniform(5000)])).
 
 
 smtp_init(Server, From, Recipients) ->
@@ -96,7 +96,7 @@ smtp_init(Server, From, Recipients) ->
 					      {reuseaddr,true},
 					      binary]),
     smtp_expect(220, Port, "SMTP server does not respond"),
-    smtp_put("MAIL FROM: " ++ From, Port),
+    smtp_put( smtp_from(From), Port ),
     smtp_expect(250, Port, "Sender not accepted by mail server"),
     send_recipients(Recipients, Port),
     smtp_put("DATA", Port),
@@ -114,15 +114,15 @@ smtp_send_part(Port, Data) ->
     gen_tcp:send(Port, Data).
 
 smtp_send_message(Port, Data) ->
-    {LastNL, Escaped} = dot_escape(Data, true),
+    {_LastNL, Escaped} = dot_escape(Data, true),
     gen_tcp:send(Port, Escaped).
 
-send_recipients([], Port) ->
-    ok;
-send_recipients([R|Rs], Port) ->
-    smtp_put("RCPT TO: " ++ R, Port),
-    smtp_expect(250, Port, io_lib:format("Recipient ~s not accepted.",[R])),
-    send_recipients(Rs, Port).
+send_recipients( Recipients, Port ) ->
+	Fun = fun (R) ->
+			smtp_put( smtp_recipient(R), Port),
+			smtp_expect(250, Port, io_lib:format("Recipient ~s not accepted.",[R]))
+		end,
+	lists:foreach( Fun, Recipients ).
 
 smtp_put(Message, Port) ->
     gen_tcp:send(Port, [Message,"\r\n"]).
@@ -138,7 +138,7 @@ smtp_expect(Code, Port, Acc, ErrorMsg) ->
 	    case string:chr(NAcc, $\n) of
 		0 ->
 		    smtp_expect(Code, Port, NAcc, ErrorMsg);
-		N ->
+		_N ->
 		    ResponseCode = to_int(NAcc),
 		    if 
 			ResponseCode == Code -> ok;
@@ -148,6 +148,28 @@ smtp_expect(Code, Port, Acc, ErrorMsg) ->
 	Err ->
 	    throw({error, Err})
     end.
+
+%% add smtp from prelude. add <> around address (if needed)
+smtp_from( Address ) ->
+	lists:append( "MAIL FROM: ", add_angle_brackets( Address ) ).
+
+%% add smtp recipients prelude. add <> around address (if needed)
+smtp_recipient( Address ) ->
+	lists:append( "RCPT TO: ", add_angle_brackets( Address ) ).
+
+%% make sure the address has <> around itself
+add_angle_brackets( Address ) ->
+	add_angle_bracket_start( add_angle_bracket_close(Address) ).
+
+add_angle_bracket_start( [$<|T] ) -> [$<|T];
+add_angle_bracket_start( Address ) -> [$<|Address].
+
+%% add > at the end of address, if it is not present
+add_angle_bracket_close( Address ) ->
+	case lists:reverse( Address ) of
+	[$>|_T] -> Address;
+	Reversed -> lists:reverse( [$>|Reversed] )
+	end.
 
 %% Add an . at all lines starting with a dot.
 
@@ -165,21 +187,21 @@ dot_escape([C|Rest], _, Acc) ->
 
 %%
 
-dot_unescape(Data) ->
-    {_,Dt} = dot_unescape(Data, true, []),
-    Dt.
-
-dot_unescape([], NL, Acc) ->
-    {NL, lists:reverse(Acc)};
-dot_unescape([$.|Rest], true, Acc) ->
-    dot_unescape(Rest, false, Acc);
-dot_unescape([$\n|Rest], _, Acc) ->
-    dot_unescape(Rest, true, [$\n|Acc]);
-dot_unescape([L|Rest], NL, Acc) when list(L) ->
-    {NL2, L2} = dot_unescape(L, NL, []),
-    dot_unescape(Rest, NL2, [L2|Acc]);
-dot_unescape([C|Rest], _, Acc) ->
-    dot_unescape(Rest, false, [C|Acc]).
+%dot_unescape(Data) ->
+%    {_,Dt} = dot_unescape(Data, true, []),
+%    Dt.
+%
+%dot_unescape([], NL, Acc) ->
+%    {NL, lists:reverse(Acc)};
+%dot_unescape([$.|Rest], true, Acc) ->
+%    dot_unescape(Rest, false, Acc);
+%dot_unescape([$\n|Rest], _, Acc) ->
+%    dot_unescape(Rest, true, [$\n|Acc]);
+%dot_unescape([L|Rest], NL, Acc) when list(L) ->
+%    {NL2, L2} = dot_unescape(L, NL, []),
+%    dot_unescape(Rest, NL2, [L2|Acc]);
+%dot_unescape([C|Rest], _, Acc) ->
+%    dot_unescape(Rest, false, [C|Acc]).
 
 
 %%
@@ -215,16 +237,16 @@ str2b64_line(S, Out, N) ->
 
 %%
 
-str2b64_end({[C1,C2],Out,N}) ->
+str2b64_end({[C1,C2],Out,_N}) ->
     O1 = e(C1 bsr 2),
     O2 = e(((C1 band 16#03) bsl 4) bor (C2 bsr 4)),
     O3 = e((C2 band 16#0f) bsl 2),
     lists:reverse(Out, [O1,O2,O3,$=]);
-str2b64_end({[C1],Out,N}) ->
+str2b64_end({[C1],Out,_N}) ->
     O1 = e(C1 bsr 2),
     O2 = e((C1 band 16#03) bsl 4),
     lists:reverse(Out, [O1,O2,$=,$=]);
-str2b64_end({[],Out,N}) -> lists:reverse(Out);
+str2b64_end({[],Out,_N}) -> lists:reverse(Out);
 str2b64_end([]) -> [].
 
 %%
@@ -239,10 +261,9 @@ e(X) -> erlang:fault({badchar,X}).
 
 %%
 
-y(Y1, Y2) -> 256 * Y1 + Y2.
 
-weekday(Y1,Y2,Mo,D) ->
-    int_to_wd(calendar:day_of_the_week(Y1*256+Y2,Mo,D)).
+weekday(Y,Mo,D) ->
+    int_to_wd(calendar:day_of_the_week(Y,Mo,D)).
 
 int_to_wd(1) -> "Mon";
 int_to_wd(2) -> "Tue";
