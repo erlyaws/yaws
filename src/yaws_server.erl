@@ -3108,12 +3108,12 @@ check_comps([Pair |Tail], Comps) ->
 				      
 split_at(_, [], _Ack) ->
     false;
+split_at(AM={"/", _Mod}, [PEslash|Tail], Ack) ->
+    {ok, lists:reverse(Ack), AM, Tail};
 split_at(AM={PE, _Mod}, [PEslash|Tail], Ack) ->
     ?Debug("AM=~p PEslash=~p~n", [AM, PEslash]),
     case no_slash_eq(PE, PEslash) of
 	true ->
-	    {ok, lists:reverse(Ack), AM, Tail};
-	false when PE == "/" ->
 	    {ok, lists:reverse(Ack), AM, Tail};
 	false ->
 	    split_at(AM, Tail, [PEslash|Ack])
