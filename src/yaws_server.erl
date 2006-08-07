@@ -3015,6 +3015,7 @@ do_url_type(SC, GetPath, ArgDocroot) ->
 	_ ->
 	    {Comps, RevFile} = split(GetPath, [], []),
 	    ?Debug("Comps = ~p RevFile = ~p~n",[Comps, RevFile]),
+
 	    case check_appmods(SC#sconf.appmods, Comps, RevFile) of
 		false ->
 		    DR = ArgDocroot,
@@ -3111,6 +3112,8 @@ split_at(AM={PE, _Mod}, [PEslash|Tail], Ack) ->
     ?Debug("AM=~p PEslash=~p~n", [AM, PEslash]),
     case no_slash_eq(PE, PEslash) of
 	true ->
+	    {ok, lists:reverse(Ack), AM, Tail};
+	false when PE == "/" ->
 	    {ok, lists:reverse(Ack), AM, Tail};
 	false ->
 	    split_at(AM, Tail, [PEslash|Ack])
