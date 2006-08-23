@@ -475,7 +475,7 @@ parse_object2(Obj, S, C, Kv) ->
 parse_array(C, Kv) ->
     get_token(C, fun
         (eof, C2) -> {done, {error, premature_eof}, C2};
-        (rsbrace, C2) -> Kv({}, C2);		% empty array
+	(rsbrace, C2) -> Kv({array, []}, C2);  % empty array	     
         (T, C2) -> parse_array([], T, C2, Kv)
     end).
 
