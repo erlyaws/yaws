@@ -31,7 +31,7 @@ c() ->
 	    CharSet = string:strip(CharSet0, both, 10),
 	    put(charset, ";charset=" ++ CharSet);
 	_ ->
-	    error_logger:format("Ignoring bad charset.def\n"),
+	    error_logger:format("Ignoring bad charset.def\n", []),
 	    put(charset, [])
     end,
     T = ets:new(aa, [set, public]),

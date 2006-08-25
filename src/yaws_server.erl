@@ -1806,7 +1806,7 @@ get_chunked_client_data(CliSock,Bs,SSL) ->
     yaws:setopts(CliSock, [binary, {packet, raw}],SSL),
     if
 	N == 0 ->
-	    _Tmp=yaws:do_recv(CliSock, 2, 5000,SSL),%% flush last crnl
+	    _Tmp=yaws:do_recv(CliSock, 2, SSL),%% flush last crnl
 	    list_to_binary(Bs);
 	true ->
 	    B = yaws_revproxy:get_chunk(CliSock, N, 0,SSL),
@@ -3408,7 +3408,12 @@ ssl_flush(_Sock, 0) ->
 ssl_flush(Sock, Sz) when list(Sz) ->
     ssl_flush(Sock, strip_list_to_integer(Sz));
 ssl_flush(Sock, Sz) ->
-    yaws:split_recv(ssl:recv(Sock, Sz, 1000), Sz).
+    case ssl:recv(Sock, Sz, 1000) of
+	{ok, Bin} ->
+	    ssl_flush(Sock, Sz - size(Bin));
+	_ ->
+	    ok
+    end.
 
 mtime(F) ->
     F#file_info.mtime.

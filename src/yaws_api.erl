@@ -1279,7 +1279,8 @@ ehtml_expander(Bin, Before, After) when binary(Bin) ->
     ehtml_expander_done(yaws_api:htmlize(Bin), Before, After);
 
 ehtml_expander({ssi,File, Del, Bs}, Before, After) ->
-    Str = case yaws_server:ssi(File, Del, Bs) of
+    UT = get(yaws_ut),
+    Str = case yaws_server:ssi(File, Del, Bs,  UT#urltype.dir) of
 	      {error, Rsn} ->
 		  io_lib:format("ERROR: ~p~n",[Rsn]);
 	      X ->

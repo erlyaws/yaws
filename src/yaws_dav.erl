@@ -513,7 +513,7 @@ store_chunked_client_data(Fd, CliSock, SSL) ->
     yaws:setopts(CliSock, [binary, {packet, raw}], SSL),
     if
 	N == 0 ->
-	    _Tmp=yaws:do_recv(CliSock, 2, 5000,SSL);%% flush last crnl
+	    _Tmp=yaws:do_recv(CliSock, 2, SSL);%% flush last crnl
 	true ->
 	    B = yaws_revproxy:store_chunk(CliSock, N, 0,SSL),
 	    yaws_revproxy:eat_crnl(CliSock,SSL),
