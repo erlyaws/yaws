@@ -42,14 +42,24 @@
 comp_opts(GC) ->
     ?Debug("I=~p~n", [GC#gconf.include_dir]),
     I = lists:map(fun(Dir) -> {i, Dir} end, GC#gconf.include_dir),
-    Opts = [binary, return_errors | I],
+    Warnings = case get(use_yfile_name) of
+		   true  -> [return_warnings];
+		   _     -> []
+	       end,
+    Opts = [binary, return_errors] ++ Warnings ++ I,
     ?Debug("Compile opts = ~p~n", [Opts]),
     Opts.
 
 
 compile_file(File) ->
     GC=get(gc), SC=get(sc),
-    put(yfile,yaws:to_list(File)),
+    case get(use_yfile_name) of
+	true ->
+	    %% Run by 'yaws -check'
+	    put(yfile,filename:rootname(yaws:to_list(File)));
+	_ ->
+	    put(yfile,yaws:to_list(File))
+    end,
     %% broken erlang compiler isn't
     %% reentrant, can only have one erlang compiler at a time running 
     global:trans({yaws, self()},
@@ -143,7 +153,15 @@ compile_file(C, LineNo,  _Chars = "</erl>" ++ Tail, erl, NumChars, Ack, Es) ->
     ?Debug("stop erl:~p",[LineNo]),
     file:close(C#comp.outfd),
     case proc_compile_file(C#comp.outfile, comp_opts(C#comp.gc)) of
-	{ok, ModuleName, Binary} ->
+	{ok, ModuleName, Binary, Warnings} ->
+	    case get(use_yfile_name) of
+		true ->
+		  file:write_file("../../ebin/"++filename:rootname(C#comp.outfile)++".beam",
+				  Binary);
+		_ ->
+		    ok
+	    end,
+	    comp_warn(C, Warnings),
 	    case code:load_binary(ModuleName, C#comp.outfile, Binary) of
 		{module, ModuleName} ->
 		    C2 = C#comp{modnum = C#comp.modnum+1},
@@ -157,9 +175,9 @@ compile_file(C, LineNo,  _Chars = "</erl>" ++ Tail, erl, NumChars, Ack, Es) ->
 		    compile_file(C, LineNo, Tail, html, 0,
 				 [A2, {skip, 6}|Ack], Es+1)
 	    end;
-	{error, Errors, _Warnings} ->
+	{error, Errors, Warnings} ->
 	    %% FIXME remove outfile here ... keep while debuging
-	    A2 = comp_err(C, LineNo, NumChars, Errors),
+	    A2 = comp_err(C, LineNo, NumChars, Errors, Warnings),
 	    compile_file(C, LineNo, Tail, html, 0, [A2, {skip, 6}|Ack], Es+1);
 	{error, Str} ->  
 	    %% this is boring but does actually happen
@@ -251,7 +269,7 @@ is_exported(Fun, A, Mod) ->
     end.
 
 	     
-new_out_file_name(Tail) ->
+new_out_file_module(Tail) ->
     case Tail of
 	">" ++ _ ->
 	    Mnum = case catch gen_server:call(yaws_server, mnum) of
@@ -260,23 +278,35 @@ new_out_file_name(Tail) ->
 		       Other ->
 			   Other
 		   end,
-	    [$m | integer_to_list(Mnum)];
+	    Prefix = case get(use_yfile_name) of
+			 true -> filename:rootname(get(yfile))++"_yaws";
+			 _    -> "m"
+		     end,
+	    Prefix ++ integer_to_list(Mnum);
 	_ ->
 	    case string:tokens(Tail, " =>\r\n\"") of
 		["module", Module] ->
 		    Module
 	    end
     end.
-	    
 
+new_out_file_name(Module, GC) ->
+    case get(use_yfile_name) of
+	true ->
+	    Module ++ ".erl";
+	_ ->
+	    filename:join([GC#gconf.tmpdir, "yaws",
+			   GC#gconf.id, Module ++ ".erl"])
+    end.
 
 %% this will generate 10 lines
 new_out_file(Line, C, Tail, GC) ->
-    Module = new_out_file_name(Tail),
-    OutFile = filename:join([GC#gconf.tmpdir, "yaws", GC#gconf.id, Module ++ ".erl"]),
+    Module = new_out_file_module(Tail),
+    OutFile = new_out_file_name(Module, GC),
     ?Debug("Writing outout file~s~n", [OutFile]),
     {ok, Out} = file:open(OutFile, [write]),
-    ok = io:format(Out, "-module(~s).~n-compile(export_all).~n~n", [Module]),
+%    ok = io:format(Out, "-module(\'~s\').~n-compile(export_all).~n~n", [Module]),
+    ok = io:format(Out, "-module(\'~s\').~n-export([out/1]).~n~n", [Module]),
     ok = io:format(Out, "-yawsfile('" ++ get(yfile) ++ "').~n",[]),
     io:format(Out, "%%~n%% code at line ~w from file ~s~n%%~n",
 	      [Line, C#comp.infile]),
@@ -296,6 +326,16 @@ gen_err(C, _LineNo, NumChars, Err) ->
     yaws:elog("~s~n", [S]),
     {error, NumChars, S}.
 
+
+comp_err(C, LineNo, NumChars, Err, Warns) ->
+    case get(use_yfile_name) of
+	true ->
+	    report_errors(C, Err),
+	    report_warnings(C, Warns),
+	    {error, NumChars,  ""};
+	_ ->
+	    comp_err(C, LineNo, NumChars, Err)
+    end.
 
 comp_err(C, _LineNo, NumChars, Err) ->
     case Err of
@@ -317,6 +357,13 @@ comp_err(C, _LineNo, NumChars, Err) ->
 				 "Other err ~p</pre>~n", [Err])}
     end.
 
+comp_warn(C, Warnings) ->
+    case get(use_yfile_name) of
+	true ->
+	    report_warnings(C, Warnings);
+	_ ->
+	    ok
+    end.
 
 %% due to compiler not producing proper error
 %% we NEED to catch all io produced by the compiler
@@ -337,7 +384,9 @@ compiler_proc(Top, F, Opts) ->
 get_compiler_data(P, Ack) ->
     receive
 	{P, result, {ok, Mod, Bin}} ->
-	    {ok, Mod, Bin};
+	    {ok, Mod, Bin, []};
+	{P, result, {ok, Mod, Bin, Warnings}} ->
+	    {ok, Mod, Bin, Warnings};
 	{io_request, P1, P2, {put_chars, M, F, A}} ->
 	    P1 ! {io_reply, P2, ok},
 	    Str = apply(M, F, A),
@@ -412,3 +461,59 @@ ggg() ->
 	    io:format("~s", [X]),
 	    ggg()
     end.
+
+
+%% -----------------------------------------------------------------
+%% From compile.erl in order to print proper error/warning messages
+%% if compiled with check option.
+report_errors(C, Errors) ->
+    Check = true,
+    case Check of
+	true ->
+	    File = "./" ++ filename:basename(C#comp.infile),
+	    SLine = C#comp.startline - 10,
+	    lists:foreach(fun ({{_F,_L},Eds}) -> list_errors(File, SLine, Eds);
+			      ({_F,Eds})      -> list_errors(File, SLine, Eds)
+			  end, Errors);
+	false ->
+	    ok
+    end.
+
+report_warnings(C, Ws0) ->
+    Check = true,
+    case Check of
+	true ->
+	    File = "./" ++ filename:basename(C#comp.infile),
+	    SLine = C#comp.startline - 10,
+	    Ws1 = lists:flatmap(fun({{_F,_L},Eds}) ->
+					format_message(File, SLine, Eds);
+				   ({_F,Eds}) ->
+					format_message(File, SLine, Eds)
+				end,
+		     Ws0),
+	    Ws = ordsets:from_list(Ws1),
+	    lists:foreach(fun({_,Str}) -> io:put_chars(Str) end, Ws);
+	false -> ok
+    end.
+
+format_message(F, SLine, [{Line0,Mod,E}|Es]) ->
+    Line = Line0 + SLine,
+    M = {{F,Line},io_lib:format("~s:~w: Warning: ~s\n", [F,Line,Mod:format_error(E)])},
+    [M|format_message(F, SLine, Es)];
+format_message(F, SLine, [{Mod,E}|Es]) ->
+    M = {none,io_lib:format("~s: Warning: ~s\n", [F,Mod:format_error(E)])},
+    [M|format_message(F, SLine, Es)];
+format_message(_, _, []) -> [].
+
+%% list_errors(File, StartLine, ErrorDescriptors) -> ok
+
+list_errors(F, SLine, [{Line0,Mod,E}|Es]) ->
+    Line = Line0 + SLine,
+    io:fwrite("~s:~w: ~s\n", [F,Line,Mod:format_error(E)]),
+    list_errors(F, SLine, Es);
+list_errors(F, SLine, [{Mod,E}|Es]) ->
+    io:fwrite("~s: ~s\n", [F,Mod:format_error(E)]),
+    list_errors(F, SLine, Es);
+list_errors(_F, _SLine, []) ->
+    ok.
+

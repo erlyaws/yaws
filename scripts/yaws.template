@@ -157,11 +157,12 @@ while [ $# -gt 0 ]
 	  mkdir ${HOME}/.yaws/ 2> /dev/null
 	  mkdir ${HOME}/.yaws/${ID} 2> /dev/null
 	  out=`exec $erl -noshell -pa ${yawsdir}${delim}ebin ${xpath} -s yaws_ctl check ${id} $*`
-	  if [ "$out" = "ok" ]; then
+	  if [ "$?" = "0" ]; then
+	      echo "$out"
 	      echo "$1" ok
 	      exit 0
 	  fi
-	  echo $out
+	  echo "$out"
 	  exit 1;;
       --to_erl)
 	  TO_ERL=yes

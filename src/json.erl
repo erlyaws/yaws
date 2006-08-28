@@ -263,6 +263,7 @@ esc_to_char($t) -> $\t.
 
 scan_number([]) -> {more, []};
 scan_number(eof) -> {done, {error, incomplete_number}, []};
+scan_number([$-, $- | _Ds]) -> {done, {error, invalid_number}, []};
 scan_number([$- | Ds] = Input) ->
     case scan_number(Ds) of
 	{more, _Cont} -> {more, Input};

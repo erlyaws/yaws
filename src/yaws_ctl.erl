@@ -424,13 +424,14 @@ check([Id, File| IncludeDirs]) ->
     yaws_server:setup_dirs(GC2),
     put(sc, #sconf{}),
     put(gc, GC2),
+    put(use_yfile_name, true),
     case yaws_compile:compile_file(atom_to_list(File)) of
 	{ok, [{errors, 0}| _Spec]} ->
-	    io:format("ok~n",[]),
-	    init:stop();
+	    timer:sleep(100),erlang:halt(0);
+%	    init:stop();
 	_Other ->
-	    io:format("~nErrors in ~p~n", [File]),
-	    init:stop()
+	    timer:sleep(100),erlang:halt(1)
+%	    init:stop()
     end.
 
 %% control a daemon http/traffic tracer
