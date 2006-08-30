@@ -2147,7 +2147,16 @@ handle_out_reply(L, LineNo, YawsFile, UT, A) when list (L) ->
 %% yssi, yaws include
 handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, [ARG]) ->
     SC = get(sc),
-    UT2 = url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile], ARG#arg.docroot),
+    
+    % special case for abs paths
+    UT2=case Yfile of
+	    [$/|_] ->
+               url_type( Yfile, ARG#arg.docroot);
+           _Else ->
+               url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile],
+                        ARG#arg.docroot)
+       end, 
+
     case UT2#urltype.type of
 	yaws ->
 	    Mtime = mtime(UT2#urltype.finfo),
