@@ -1,0 +1,7 @@
+<erl>
+%% Bootstrap page to handle both "/xxx" and "/xxx/" root paths
+out(A) ->
+       	Redir = yapp:prepath(A) ++ "/list.yaws",
+	{redirect, Redir }.
+</erl>
+

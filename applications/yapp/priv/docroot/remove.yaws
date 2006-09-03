@@ -1,0 +1,45 @@
+<erl>
+out(A) -> {ssi, "HEAD.inc","%%",[{"remove", "choosen"}]}.
+</erl>
+
+
+<h3>Remove yapp</h3>
+<form action="remove_post.yaws" method="post">
+<erl>
+
+format_yapp_tables([]) -> [];
+format_yapp_tables([ServId|T]) ->
+   Yapps = yapp_handler:list(yapp_handler,ServId),
+   [ format_yapp_table(ServId, Yapps) | format_yapp_tables(T)].
+
+format_yapp_table(ServId, undefined) -> "";
+format_yapp_table(ServId, Yapps) ->
+    ["<h3> Server id : ", ServId, "</h3>",
+     "<table border=\"1\"><tr><th>Select</th><th>Application</th><th>Url</th></tr>",
+    format_yapps(ServId, Yapps),
+    "<table>"].
+
+format_yapps(ServId,[]) ->
+    [];
+format_yapps(ServId, [{Urlpath, Appname}|T]) ->
+    ["<tr><td>",
+     "<input type=\"radio\" name=\"srvidurlpath\" value=\"", ServId,",",Urlpath, "\" />", 
+     "</td><td>", atom_to_list(Appname), "</td><td>", Urlpath, "</td></tr>" | format_yapps(ServId, T)]. 
+     
+out(A) ->
+   Header = "Cache-Control:no-store", 
+
+   [{header,Header},{html, format_yapp_tables(yapp:get_server_ids())}].
+ 
+</erl>
+<p>
+<input type="submit" value="Remove Yapp">
+</p>
+</form>
+<p>The Yapps listed in this page are those stored in the Yapp registry. It excludes the applications
+loaded from yaws.conf with the bootstrap_yapps opaque variable. It will also include those registered 
+applications that are not available in the Erlang load path, and therefore not shown on the "List" page.</p>
+
+<erl>
+out(A) -> {ssi,"END.inc",[],[]}.
+</erl>

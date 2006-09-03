@@ -1,0 +1,37 @@
+<erl>
+out(A) -> {ssi, "HEAD.inc","%%",[{"add", "choosen"}]}.
+</erl>
+
+<h3>Add yapp</h3>
+<form action="add_post.yaws" method="post">
+<p>
+<erl>
+
+format_srvid_radio([]) -> [];
+format_srvid_radio([ServId|T]) ->
+   [ "<br />",
+     "<input type=\"radio\" name=\"srvid\" value=\"", ServId, "\" />", ServId |
+    format_srvid_radio(T)].
+
+ 
+out(A) ->
+    Header = "Cache-Control:no-store", 
+   [{header, Header},   {html, [ "Server id:  ", format_srvid_radio(yapp:get_server_ids())]}].
+ 
+</erl>
+</p>
+<p>Appmod : <input type="textfield" name="appmod"></p>
+<p>Path (optional): <input type="textfield" name="path"></p>
+<p><input type="submit" value="Add Yapp"></p>
+</form>
+<p><em>Note:</em> An added Yapp will always be stored in the registry, 
+but if the application is not really in the load path of the Erlang system it will not
+be loaded into Yaws server configuration. In such case it will not show up the when listing
+the applications in the Yapp console, but it will show up in the Remove list.</p>
+<p>If the yapp handler fails to find the application, a record will be written to the error log.
+The application may be included in the load path later, and will be put into Yaws configuration
+when Yaws is hupped or next time a Yapp is added/removed.</p>
+
+<erl>
+out(A) -> {ssi,"END.inc",[],[]}.
+</erl>

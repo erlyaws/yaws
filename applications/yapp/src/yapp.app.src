@@ -1,0 +1,8 @@
+{application, yapp,
+ [{description,"Yaws applications handler"},
+  {vsn,"%VSN%"},
+  {modules,[%MODULES%]},
+  {registered, [yapp_handler]},
+  {mod,{yapp_app,[]}},
+  {env, [{yapp_registry_impl, yapp_mnesia_server}]},
+  {applications,[yaws]}]}.

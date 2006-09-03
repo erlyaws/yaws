@@ -1,0 +1,32 @@
+An easy way to deploy Yaws applications (Yapps) independently of
+each other.
+
+To compile : 
+  make
+Generate edoc documents : 
+  make docs
+Install:
+  make install
+
+You need to have compiled (configured) the Yaws application before
+making yapp.
+See the generated documents for more info in how to use the yapp 
+application.
+The current application uses mnesia so a precondition is that a
+schema is generated for the node Yaws is running on.
+
+Known problems
+- You need a trailing "/" to your path when doing directory
+  based access to the yapp.
+
+
+TODO
+
+- subscribe on mnesia events so that the yapp registry can be
+  updated and used in a cluster of yaws nodes.
+
+- Support to create .boot and relup scripts so that Yapps can be
+  added/upgraded/downgraded/removed on a running Yaws server.
+
+- Cluster support for the point above.
+
