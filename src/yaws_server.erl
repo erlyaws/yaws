@@ -2234,8 +2234,9 @@ handle_out_reply({status, Code},_LineNo,_YawsFile,_UT,_A) when integer(Code) ->
 handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _UT, _A) ->
     exit(normal);
 
-handle_out_reply({ssi, File, Delimiter, Bindings}, LineNo, YawsFile, UT,A) ->
-    case ssi(File, Delimiter, Bindings, UT#urltype.dir) of
+handle_out_reply({ssi, File, Delimiter, Bindings}, LineNo, YawsFile, UT, A) ->
+    [ARG] = A,
+    case ssi(File, Delimiter, Bindings, UT#urltype.dir, ARG#arg.docroot) of
 	{error, Rsn} ->
 	    L = ?F("yaws code at~s:~p had the following err:~n~p",
 		   [YawsFile, LineNo, Rsn]),
@@ -2359,17 +2360,20 @@ handle_out_reply_l([], _LineNo, _YawsFile, _UT, _A, Res) ->
 
 %% fast server side include with macrolike variable bindings expansion
 ssi(File, Delimiter, Bindings, Dir) ->
-    ssi(File, Delimiter, Bindings, Dir, get(sc)).
-ssi(File, Delimiter, Bindings, Dir, SC) ->
+    SC = get(sc),
+    ssi(File, Delimiter, Bindings, Dir, SC#sconf.docroot, SC ).
+ssi(File, Delimiter, Bindings, Dir, Docroot) ->
+    ssi(File, Delimiter, Bindings, Dir, Docroot, get(sc)).
+ssi(File, Delimiter, Bindings, Dir, Docroot, SC) ->
     Key = {ssi, File, Delimiter},
     FullPath =
 	case File of
 	    {rel_path, FileName} ->
-		[SC#sconf.docroot, Dir,[$/|FileName]];
+		[Docroot, Dir,[$/|FileName]];
 	    {abs_path, FileName} ->
-		[SC#sconf.docroot, [$/|FileName]];
+		[Docroot, [$/|FileName]];
 	    FileName when list(FileName) ->
-		[SC#sconf.docroot, [$/|FileName]]
+		[Docroot, [$/|FileName]]
 	end,
     Mtime = path_to_mtime(FullPath),
     case ets:lookup(SC#sconf.ets, Key) of
@@ -2385,11 +2389,11 @@ ssi(File, Delimiter, Bindings, Dir, SC) ->
 		{ok, Bin} ->
 		    D =delim_split_file(Delimiter,binary_to_list(Bin),data,[]),
 		    ets:insert(SC#sconf.ets,{Key,D, Mtime}),
-		    ssi(File, Delimiter, Bindings, Dir, SC);
+		    ssi(File, Delimiter, Bindings, Dir, Docroot, SC);
 		{error, _} when SC#sconf.xtra_docroots /= [] ->
 		    SC2 = SC#sconf{docroot = hd(SC#sconf.xtra_docroots),
 				   xtra_docroots = tl(SC#sconf.xtra_docroots)},
-		    ssi(File, Delimiter, Bindings, Dir, SC2);
+		    ssi(File, Delimiter, Bindings, Dir, SC2#sconf.docroot, SC2);
 		{error, Rsn} ->
 		    error_logger:format("Failed to read/ssi file ~p~n", 
 					[FullPath]),
