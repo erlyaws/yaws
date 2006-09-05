@@ -139,29 +139,37 @@ out(A) ->
 
 
   <h2>The quick and easy way to get in the air</h2>
-  <p>The following two functions yaws:start_embedded/1 and
-  yaws:start_embedded/4 will start Yaws in embedded mode
+  <p>The following three functions yaws:start_embedded/1,2,3
+  will start Yaws in embedded mode
   and provide the minimal information that Yaws requires.</p>
   <p>NB: With this method you don't need to specify any -yaws switches
   to your (system) start script.</p>
   <p>The only thing that you really need to specify is the "DocRoot", i.e
   the directory path to where your .html and .yaws files lives.
-  You will then get default values for your server name ("localhost"),
-  listen port (8888) and the IP address you will listen to ({0,0,0,0}
-  which means all IP addresses on your machine).</p>
-  <p>By using yaws:start_embedded/4 you can set some other values
-  than the default ones. See the example below:</p>
+  You will then get the same default values for all the other configuration
+  parameters as you can find in the <i>yaws.hrl</i> header file. So, for 
+  example: your server name will be: <i>localhost</i>, listen port: <i>8000</i>,
+  etc.</p>
+  <p>By using yaws:start_embedded/2 you can set some other values
+  than the default ones for the server configuration (#sconf{}), and with
+  yaws:start_embedded/3 you also can specify global configuration (#gconf{}. 
+  See the example below:</p>
 <div class="box">
   <pre>
 %%
-%% Check with inet:i(). that you are listening to port 8888!
+%% Check with inet:i(). that you are listening to port 8000!
 %%
 1> yaws:start_embedded("/home/tobbe/docroot").
 
 %%
-%% Alternative way
+%% Alternative ways
 %%
-1> yaws:start_embedded("/home/tobbe/docroot", "sej", 8080, {192,168,128,42}).
+1> yaws:start_embedded("/home/tobbe/docroot", [{servername, "sej"}, {listen, {0,0,0,0}}]).
+
+1> yaws:start_embedded("/home/tobbe/docroot", 
+                       [{servername, "sej"}, {listen, {0,0,0,0}}],
+                       [{auth_log, false}, {copy_errlog, false}]).
+
   </pre>
 </div>
 

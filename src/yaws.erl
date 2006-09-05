@@ -17,7 +17,7 @@
 -include_lib("kernel/include/file.hrl").
 
 -compile(export_all).
--export([start_embedded/1, start_embedded/2, start_embedded/4]).  % Thanks!
+-export([start_embedded/1, start_embedded/2, start_embedded/3]).  % Thanks!
 -import(lists, [reverse/1, reverse/2]).
 
 
@@ -30,66 +30,143 @@ stop() ->
 
 %%% Quick and easy way of starting Yaws in embedded mode.
 %%% No need for any start-script switches and no dependencies
-%%% to Yaws header files. Just call either start_embedded/1 
-%%% or start_embedded/4 and you are in the air.
+%%% to Yaws header files. Just call start_embedded/N and
+%%% you are in the air.
 start_embedded(DocRoot) ->
-    start_embedded(DocRoot, "localhost", 8888, {0,0,0,0}).
+    start_embedded(DocRoot, []).
 
-start_embedded(DocRoot, Host, Port, Listen) when list(DocRoot),
-						 list(Host),
-						 integer(Port),
-						 tuple(Listen),
-						 size(Listen) == 4 ->
-    L = [{servername, Host}, {port, Port}, {listen, Listen}],
-    start_embedded(DocRoot, L).
+start_embedded(DocRoot, SL) when list(DocRoot),list(SL) ->
+    start_embedded(DocRoot, SL, []).
 
-start_embedded(DocRoot, CL) when list(DocRoot),list(CL) ->
-    D = #sconf{},
-    GC = yaws_config:make_default_gconf(false, ""),
-    SC = #sconf{port = lkup(port, CL, 
-			    D#sconf.port),
-		flags = set_flags(lkup(flags, CL, []), 
-				  ?SC_DEF),
-		servername = lkup(servername, CL, 
-				  D#sconf.servername),
-		listen = lkup(listen, CL, 
-			      D#sconf.listen),
-		authdirs = lkup(listen, CL, 
-				D#sconf.authdirs),
-		partial_post_size = lkup(partial_post_size, CL, 
-					 D#sconf.partial_post_size),
-		appmods = lkup(appmods, CL, 
-			       D#sconf.appmods),
-		errormod_404 = lkup(errormod_404, CL, 
-				    D#sconf.errormod_404),
-		errormod_crash = lkup(errormod_crash, CL, 
-				      D#sconf.errormod_crash),
-		arg_rewrite_mod = lkup(arg_rewrite_mod, CL, 
-				       D#sconf.arg_rewrite_mod),
-		opaque = lkup(opaque, CL, 
-			      D#sconf.opaque),
-		allowed_scripts = lkup(allowed_scripts, CL, 
-				       D#sconf.allowed_scripts),
-		docroot = DocRoot},
+start_embedded(DocRoot, SL, GL) when list(DocRoot),list(SL),list(GL) ->
+    GC = setup_gconf(GL, yaws_config:make_default_gconf(false, "")),
+    SC = setup_sconf(DocRoot, #sconf{}, SL),
     yaws_api:setconf(GC, [[SC]]).
 
-set_flags([{access_log, Bool}|T], Flags) ->
-    set_flags(T, yaws:flag(Flags, ?SC_ACCESS_LOG, Bool));
-set_flags([{add_port, Bool}|T], Flags) ->
-    set_flags(T, yaws:flags(Flags, ?SC_ADD_PORT, Bool));
-set_flags([{tilde_expand, Bool}|T], Flags) ->
-    set_flags(T, yaws:flag(Flags, ?SC_TILDE_EXPAND, Bool));
-set_flags([{dir_listings, Bool}|T], Flags) ->
-    set_flags(T, yaws:flag(Flags, ?SC_DIR_LISTINGS, Bool));
-set_flags([{deflate, Bool}|T], Flags) ->
-    set_flags(T, yaws:flags(Flags, ?SC_DEFLATE, Bool));
-set_flags([{dir_all_zip, Bool}|T], Flags) ->
-    set_flags(T, yaws:flag(Flags, ?SC_DIR_ALL_ZIP, Bool));
-set_flags([{dav, Bool}|T], Flags) ->
-    set_flags(T, yaws:flags(Flags, ?SC_DAV, Bool));
-set_flags([_|T], Flags) ->
-    set_flags(T, Flags);
-set_flags([], Flags) ->
+setup_gconf([], GC) -> GC;
+setup_gconf(GL, GC) ->
+    #gconf{yaws_dir = lkup(yaws_dir, GL, 
+			   GC#gconf.yaws_dir),
+	   trace = lkup(trace, GL, 
+			GC#gconf.trace),
+	   flags = set_gc_flags(lkup(flags, GL, []), 
+				?GC_DEF),
+	   logdir = lkup(logdir, GL, 
+			 GC#gconf.logdir),
+	   ebin_dir = lkup(ebin_dir, GL, 
+			   GC#gconf.ebin_dir),
+	   runmods = lkup(runmods, GL, 
+			  GC#gconf.runmods),
+	   keepalive_timeout = lkup(keepalive_timeout, GL, 
+				    GC#gconf.keepalive_timeout),
+	   max_num_cached_files = lkup(max_num_cached_files, GL, 
+				       GC#gconf.max_num_cached_files),
+	   max_num_cached_bytes = lkup(max_num_cached_bytes, GL, 
+				       GC#gconf.max_num_cached_bytes),
+	   max_size_cached_file = lkup(max_size_cached_file, GL, 
+				       GC#gconf.max_size_cached_file),
+	   large_file_chunk_size = lkup(large_file_chunk_size, GL, 
+					GC#gconf.large_file_chunk_size),
+	   log_wrap_size = lkup(log_wrap_size, GL, 
+				GC#gconf.log_wrap_size),
+	   cache_refresh_secs = lkup(cache_refresh_secs, GL, 
+				     GC#gconf.cache_refresh_secs),
+	   include_dir = lkup(include_dir, GL, 
+			      GC#gconf.include_dir),
+	   phpexe = lkup(phpexe, GL, 
+			 GC#gconf.phpexe),
+	   yaws = lkup(yaws, GL, 
+		       GC#gconf.yaws),
+	   id = lkup(id, GL, 
+		     GC#gconf.id),
+	   tmpdir = lkup(tmpdir, GL, 
+			 GC#gconf.tmpdir)
+	  }.
+
+set_gc_flags([{tty_trace, Bool}|T], Flags) -> 
+    set_gc_flags(T, yaws:flag(Flags,?GC_TTY_TRACE, Bool));
+set_gc_flags([{debug, Bool}|T], Flags) -> 
+    set_gc_flags(T, yaws:flag(Flags, ?GC_DEBUG, Bool));
+set_gc_flags([{auth_log, Bool}|T], Flags) -> 
+    set_gc_flags(T, yaws:flag(Flags, ?GC_AUTH_LOG, Bool));
+set_gc_flags([{copy_errlog, Bool}|T], Flags) -> 
+    set_gc_flags(T, yaws:flag(Flags, ?GC_COPY_ERRLOG, Bool));
+set_gc_flags([{backwards_compat_parse, Bool}|T], Flags) -> 
+    set_gc_flags(T, yaws:flag(Flags, ?GC_BACKWARDS_COMPAT_PARSE, Bool));
+set_gc_flags([{log_resolve_hostname, Bool}|T], Flags) -> 
+    set_gc_flags(T, yaws:flag(Flags, ?GC_LOG_RESOLVE_HOSTNAME, Bool));
+set_gc_flags([{fail_on_bind_err, Bool}|T], Flags) -> 
+    set_gc_flags(T, yaws:flag(Flags,?GC_FAIL_ON_BIND_ERR,Bool));
+set_gc_flags([{pick_first_virthost_on_nomatch, Bool}|T], Flags) -> 
+    set_gc_flags(T, yaws:flag(Flags, ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,Bool));
+set_gc_flags([{use_fdsrv, Bool}|T], Flags) -> 
+    set_gc_flags(T, yaws:flag(Flags,?GC_USE_FDSRV,Bool));
+set_gc_flags([_|T], Flags) -> 
+    set_gc_flags(T, Flags);
+set_gc_flags([], Flags) -> 
+    Flags.
+
+
+setup_sconf(DocRoot, D, SL) ->
+    #sconf{port = lkup(port, SL, 
+		       D#sconf.port),
+	   flags = set_sc_flags(lkup(flags, SL, []), 
+				?SC_DEF),
+	   redirect_map = lkup(redirect_map, SL, 
+			       D#sconf.redirect_map),
+	   rhost = lkup(rhost, SL, 
+			D#sconf.rhost),
+	   rmethod = lkup(rmethod, SL, 
+			  D#sconf.rmethod),
+	   docroot = DocRoot,
+	   xtra_docroots = lkup(xtra_docroots, SL, 
+				D#sconf.xtra_docroots),
+	   listen = lkup(listen, SL, 
+			 D#sconf.listen),
+	   servername = lkup(servername, SL, 
+			     D#sconf.servername),
+	   ets = lkup(ets, SL, 
+		      D#sconf.ets),
+	   ssl = lkup(ssl, SL, 
+		      D#sconf.ssl),
+	   authdirs = lkup(listen, SL, 
+			   D#sconf.authdirs),
+	   partial_post_size = lkup(partial_post_size, SL, 
+				    D#sconf.partial_post_size),
+	   appmods = lkup(appmods, SL, 
+			  D#sconf.appmods),
+	   errormod_404 = lkup(errormod_404, SL, 
+			       D#sconf.errormod_404),
+	   errormod_crash = lkup(errormod_crash, SL, 
+				 D#sconf.errormod_crash),
+	   arg_rewrite_mod = lkup(arg_rewrite_mod, SL, 
+				  D#sconf.arg_rewrite_mod),
+	   opaque = lkup(opaque, SL, 
+			 D#sconf.opaque),
+	   start_mod = lkup(start_mod, SL, 
+			    D#sconf.start_mod),
+	   allowed_scripts = lkup(allowed_scripts, SL, 
+				  D#sconf.allowed_scripts),
+	   revproxy = lkup(revproxy, SL, 
+			   D#sconf.revproxy)}.
+	   
+set_sc_flags([{access_log, Bool}|T], Flags) ->
+    set_sc_flags(T, yaws:flag(Flags, ?SC_ACCESS_LOG, Bool));
+set_sc_flags([{add_port, Bool}|T], Flags) ->
+    set_sc_flags(T, yaws:flags(Flags, ?SC_ADD_PORT, Bool));
+set_sc_flags([{tilde_expand, Bool}|T], Flags) ->
+    set_sc_flags(T, yaws:flag(Flags, ?SC_TILDE_EXPAND, Bool));
+set_sc_flags([{dir_listings, Bool}|T], Flags) ->
+    set_sc_flags(T, yaws:flag(Flags, ?SC_DIR_LISTINGS, Bool));
+set_sc_flags([{deflate, Bool}|T], Flags) ->
+    set_sc_flags(T, yaws:flags(Flags, ?SC_DEFLATE, Bool));
+set_sc_flags([{dir_all_zip, Bool}|T], Flags) ->
+    set_sc_flags(T, yaws:flag(Flags, ?SC_DIR_ALL_ZIP, Bool));
+set_sc_flags([{dav, Bool}|T], Flags) ->
+    set_sc_flags(T, yaws:flags(Flags, ?SC_DAV, Bool));
+set_sc_flags([_|T], Flags) ->
+    set_sc_flags(T, Flags);
+set_sc_flags([], Flags) ->
     Flags.
 
 lkup(Key, List, Def) ->
