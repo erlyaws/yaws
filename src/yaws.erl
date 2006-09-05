@@ -17,13 +17,40 @@
 -include_lib("kernel/include/file.hrl").
 
 -compile(export_all).
+-export([start_embedded/1, start_embedded/4]).  % Thanks!
 -import(lists, [reverse/1, reverse/2]).
 
 
 start() ->
     application:start(yaws, permanent).
+
 stop() ->
     application:stop(yaws).
+
+
+%%% Quick and easy way of starting Yaws in embedded mode.
+%%% No need for any start-script switches and no dependencies
+%%% to Yaws header files. Just call either start_embedded/1 
+%%% or start_embedded/4 and you are in the air.
+start_embedded(DocRoot) ->
+    start_embedded(DocRoot, "localhost", 8888, {0,0,0,0}).
+
+start_embedded(DocRoot, Host, Port, Listen) when list(DocRoot),
+						 list(Host),
+						 integer(Port),
+						 tuple(Listen),
+						 size(Listen) == 4 ->
+    ok = application:load(yaws),
+    ok = application:set_env(yaws, embedded, true),
+    application:start(yaws),
+    GC = yaws_config:make_default_gconf(false, ""),
+    SC = #sconf{port = Port,
+		servername = Host,
+		listen = Listen,
+		docroot = DocRoot},
+    yaws_api:setconf(GC, [[SC]]).
+
+
 
 hup(Sock) ->
     spawn(fun() ->
