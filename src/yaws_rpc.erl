@@ -44,7 +44,7 @@
 %-define(debug, 1).
 %-include("../../yaws/src/yaws_debug.hrl").
 
--include("../../yaws/include/yaws_api.hrl").
+-include("../include/yaws_api.hrl").
 
 %%% ###################################################################### 
 %%% public interface
