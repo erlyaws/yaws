@@ -17,7 +17,7 @@
 -include_lib("kernel/include/file.hrl").
 
 -compile(export_all).
--export([start_embedded/1, start_embedded/4]).  % Thanks!
+-export([start_embedded/1, start_embedded/2, start_embedded/4]).  % Thanks!
 -import(lists, [reverse/1, reverse/2]).
 
 
@@ -40,15 +40,63 @@ start_embedded(DocRoot, Host, Port, Listen) when list(DocRoot),
 						 integer(Port),
 						 tuple(Listen),
 						 size(Listen) == 4 ->
-    ok = application:load(yaws),
-    ok = application:set_env(yaws, embedded, true),
-    application:start(yaws),
+    L = [{servername, Host}, {port, Port}, {listen, Listen}],
+    start_embedded(DocRoot, L).
+
+start_embedded(DocRoot, CL) when list(DocRoot),list(CL) ->
+    D = #sconf{},
     GC = yaws_config:make_default_gconf(false, ""),
-    SC = #sconf{port = Port,
-		servername = Host,
-		listen = Listen,
+    SC = #sconf{port = lkup(port, CL, 
+			    D#sconf.port),
+		flags = set_flags(lkup(flags, CL, []), 
+				  ?SC_DEF),
+		servername = lkup(servername, CL, 
+				  D#sconf.servername),
+		listen = lkup(listen, CL, 
+			      D#sconf.listen),
+		authdirs = lkup(listen, CL, 
+				D#sconf.authdirs),
+		partial_post_size = lkup(partial_post_size, CL, 
+					 D#sconf.partial_post_size),
+		appmods = lkup(appmods, CL, 
+			       D#sconf.appmods),
+		errormod_404 = lkup(errormod_404, CL, 
+				    D#sconf.errormod_404),
+		errormod_crash = lkup(errormod_crash, CL, 
+				      D#sconf.errormod_crash),
+		arg_rewrite_mod = lkup(arg_rewrite_mod, CL, 
+				       D#sconf.arg_rewrite_mod),
+		opaque = lkup(opaque, CL, 
+			      D#sconf.opaque),
+		allowed_scripts = lkup(allowed_scripts, CL, 
+				       D#sconf.allowed_scripts),
 		docroot = DocRoot},
     yaws_api:setconf(GC, [[SC]]).
+
+set_flags([{access_log, Bool}|T], Flags) ->
+    set_flags(T, yaws:flag(Flags, ?SC_ACCESS_LOG, Bool));
+set_flags([{add_port, Bool}|T], Flags) ->
+    set_flags(T, yaws:flags(Flags, ?SC_ADD_PORT, Bool));
+set_flags([{tilde_expand, Bool}|T], Flags) ->
+    set_flags(T, yaws:flag(Flags, ?SC_TILDE_EXPAND, Bool));
+set_flags([{dir_listings, Bool}|T], Flags) ->
+    set_flags(T, yaws:flag(Flags, ?SC_DIR_LISTINGS, Bool));
+set_flags([{deflate, Bool}|T], Flags) ->
+    set_flags(T, yaws:flags(Flags, ?SC_DEFLATE, Bool));
+set_flags([{dir_all_zip, Bool}|T], Flags) ->
+    set_flags(T, yaws:flag(Flags, ?SC_DIR_ALL_ZIP, Bool));
+set_flags([{dav, Bool}|T], Flags) ->
+    set_flags(T, yaws:flags(Flags, ?SC_DAV, Bool));
+set_flags([_|T], Flags) ->
+    set_flags(T, Flags);
+set_flags([], Flags) ->
+    Flags.
+
+lkup(Key, List, Def) ->
+    case lists:keysearch(Key, 1, List) of
+	{value,{_,Value}} -> Value;
+	_                 -> Def
+    end.
 
 
 
