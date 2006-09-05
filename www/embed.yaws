@@ -147,7 +147,7 @@ out(A) ->
   <p>The only thing that you really need to specify is the "DocRoot", i.e
   the directory path to where your .html and .yaws files lives.
   You will then get default values for your server name ("localhost"),
-  listen port (8888) and the IP address you will listen to ({0,0,0,}
+  listen port (8888) and the IP address you will listen to ({0,0,0,0}
   which means all IP addresses on your machine).</p>
   <p>By using yaws:start_embedded/4 you can set some other values
   than the default ones. See the example below:</p>
