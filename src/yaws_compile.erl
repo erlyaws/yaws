@@ -43,7 +43,7 @@ comp_opts(GC) ->
     ?Debug("I=~p~n", [GC#gconf.include_dir]),
     I = lists:map(fun(Dir) -> {i, Dir} end, GC#gconf.include_dir),
     Warnings = case get(use_yfile_name) of
-		   true  -> [return_warnings];
+		   true  -> [return_warnings, debug_info];
 		   _     -> []
 	       end,
     Opts = [binary, return_errors] ++ Warnings ++ I,
