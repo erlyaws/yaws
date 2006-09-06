@@ -34,7 +34,10 @@ gzipDeflate(Z, undefined, Bin, Flush) ->
     {ok, Priv, [Head | Bs]};
     
 gzipDeflate(Z, {Crc32,Size}, Bin, Flush) ->
-    {ok, Bs} = zlib:deflate(Z, Bin, Flush),
+    Bs = case zlib:deflate(Z, Bin, Flush) of
+	{ok, Bs1} -> Bs1;
+	Bs1 when is_list(Bs1) -> Bs1
+    end,
     {ok, Crc1} = crc32(Z, Crc32, Bin),
     Size1 = Size+size(Bin),
     Data = 
