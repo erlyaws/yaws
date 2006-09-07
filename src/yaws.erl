@@ -129,7 +129,7 @@ setup_sconf(DocRoot, D, SL) ->
 		      D#sconf.ets),
 	   ssl = lkup(ssl, SL, 
 		      D#sconf.ssl),
-	   authdirs = lkup(listen, SL, 
+	   authdirs = lkup(authdirs, SL, 
 			   D#sconf.authdirs),
 	   partial_post_size = lkup(partial_post_size, SL, 
 				    D#sconf.partial_post_size),
