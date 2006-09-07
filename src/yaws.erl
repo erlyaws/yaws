@@ -39,6 +39,9 @@ start_embedded(DocRoot, SL) when list(DocRoot),list(SL) ->
     start_embedded(DocRoot, SL, []).
 
 start_embedded(DocRoot, SL, GL) when list(DocRoot),list(SL),list(GL) ->
+    ok = application:load(yaws),
+    ok = application:set_env(yaws, embedded, true),
+    application:start(yaws),
     GC = setup_gconf(GL, yaws_config:make_default_gconf(false, "")),
     SC = setup_sconf(DocRoot, #sconf{}, SL),
     yaws_api:setconf(GC, [[SC]]).
