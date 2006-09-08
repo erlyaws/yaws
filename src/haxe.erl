@@ -520,12 +520,10 @@ parse_object(C, Kv, Obj) ->
 			  obj_end ->
 			      NewCache =
 				  put_obj(Obj, Cache),
-			      ?L(NewCache),
 			      Kv(Obj, {Chars, NewCache});
 			  _ ->
 			      NewCache =
 				  put_obj(placeholder, Cache),
-			      ?L(NewCache),
 			      parse_object_field(
 				Obj, T,
 				{Chars, NewCache}, Cache, Kv)
@@ -581,9 +579,6 @@ parse_object_next({struct, Props} = Obj, C, OrigCache, Kv) ->
 		      Obj1 = {struct, lists:reverse(Props)},
 		      Cache1 = append_new_elems(
 				    Cache, Obj1, OrigCache),
-		      ?L(Cache),
-		      ?L(Cache1),
-		      ?L(OrigCache),
 		      Kv(Obj1, {Chars, Cache1});
 		  (eof, C1) ->
 		      {done, {error, premature_eof}, C1};
