@@ -21,10 +21,12 @@
 %% Modified by Yariv Sadan (yarivvv@gmail.com)
 
 -module(haxe).
--export([encode/1, decode_string/1, decode/2, decode_next/1]).
+-export([encode/1, encode/2, decode_string/1, decode_string/2,
+	 decode/1, decode/2, decode_next/1]).
 -export([is_obj/1, obj_new/0, obj_fetch/2, obj_find/2, obj_is_key/2]).
+-export([test/0]).
 -export([obj_store/3, obj_from_list/1, obj_fold/3]).
--compile(export_all).
+
 -author("Jim Larson <jalarson@amazon.com>, Robert Wai-Chi Chu <robchu@amazon.com>").
 -author("Gaspar Chilingarov <nm@web.am>, Gurgen Tumanyan <barbarian@armkb.com>").
 -autor("Yariv Sadan <yarivvv@gmail.com>").
@@ -69,17 +71,27 @@
 %%% error prone, so it's better to avoid it except in extreme
 %%% cases.
 
--define(Log(X, Y), io:format(X ++ "\n", Y)).
+-define(L(Obj), io:format("~s:~w: ~w\n", [?MODULE, ?LINE, Obj])).
 
 encode({ref, _Idx} = Ref) -> encode_basic(Ref);
-encode(Obj) ->
-    {Result, _Cache} = encode(Obj, []),
-    Result.
+
+
+encode(Obj) -> encode(Obj, true).
+
+%% The second parameter indicates whether the cache should
+%% be used. By default, it's turned on (this follows the default configuration
+%% in haXe).
+encode(Obj, true) ->
+    {Result, _Cache} = encode(Obj, dict:new()),
+    Result;
+encode(Obj, false) ->
+    {Result, _Cache} = encode(Obj, undefined),
+    Result;
 encode(L, Cache) when is_list(L) ->
     case is_string(L) of
 	yes -> encode_string(L, $s, Cache);
 	unicode -> encode_string(xmerl_ucs:to_utf8(L), $j, Cache);
-	no -> exit({haxe_encode, {not_string, L}})
+	no -> exit({error, {haxe_encode, {not_string, L}}})
     end;
 encode({array, Props}, Cache) -> encode_array(Props, Cache);
 encode({struct, Props}, Cache) -> encode_object(Props, Cache);
@@ -88,15 +100,15 @@ encode({exception, E}, Cache) ->
     {[$x | Result], Cache2};
 encode(Term, Cache) ->
     case encode_basic(Term) of
-	error ->
-	    exit({haxe_encode, {bad_term, Term}});
+	{error, _Err} = Err ->
+	    exit(Err);
 	Result ->
 	    {Result, Cache}
     end.
 
 encode_basic(Term) ->
     case Term of
-	true -> "t";			 
+	true -> "t";
 	false -> "f";
 	null -> "n";
 	undefined -> "n";
@@ -107,47 +119,71 @@ encode_basic(Term) ->
 	0 -> "z";
 	I when is_integer(I) -> [$i | integer_to_list(I)];
 	F when is_float(F) -> [$d | io_lib:format("~g", [F])];
-	_ ->
-	    error
+	_ -> {error, {bad_term, Term}}
     end.
 
     
-%% Find an object in the list of previously encoded objects
+%% Find a string in the list of previously encoded string
 %% end return {true, {ref, Idx}}, if the search succeeded,
-%% where Idx is the position of the object in the (reversed) list.
+%% where Idx is the value associated with the string.
 %% Otherwise, return 'false'.
-find_ref(Obj, Cache) -> 
-    find_ref(Obj, Cache, length(Cache) - 1).
-find_ref(_Obj, [], _) -> false;
-find_ref(Obj, [Other | _Rest], Idx) when Obj == Other -> {true, {ref, Idx}};
-find_ref(Obj, [_Other | Rest], Idx) -> find_ref(Obj, Rest, Idx - 1).
-
+find_ref(_Str, undefined) ->
+    false;
+find_ref(Str, CacheDict) ->
+    case dict:find(Str, CacheDict) of 
+	error ->
+	    false;
+	{ok, Idx} ->
+	    {true, Idx}
+    end.
 
 %% Encode an Erlang string to haXe.
-%% Accumulate strings in reverse.
-encode_string(S, Cache) -> encode_string(S, $s, Cache).
-encode_string(S, FirstChar, Cache) ->
-    encode_string(S, FirstChar, [], Cache).
-encode_string([], FirstChar, Acc, Cache) ->
-    Str = lists:reverse(Acc),
-    Result = [FirstChar, integer_to_list(length(Acc)), $: | Str],
+encode_string(Str, Cache) ->
+    encode_string(Str, $s, Cache).
+
+encode_string(Str, FirstChar, Cache) ->
     case find_ref(Str, Cache) of
-	{true, Ref} ->
-	    {encode(Ref), Cache};
-	_ ->
-	    {Result, [Str | Cache]}
-    end;
-encode_string([C | Cs], FirstChar, Acc, Cache) ->
+	false ->
+	    case encode_string2(Str, FirstChar) of
+		{ok, Result} ->
+		    NewCache =
+			case Cache of
+			    undefined ->
+				undefined;
+			    _ ->
+				dict:store(Str, dict:size(Cache), Cache)
+			end,
+		    {Result, NewCache};
+		Err ->
+		    Err
+	    end;
+	{true, Idx} ->
+	    {[$R | integer_to_list(Idx)], Cache}
+    end.
+encode_string2(S, FirstChar) ->
+    encode_string2(S, FirstChar, []).
+encode_string2([], FirstChar, Acc) ->
+    Str = lists:reverse(Acc),
+    Len = integer_to_list(
+	    length(
+	      case FirstChar of
+		  $j ->
+		      xmerl_ucs:from_utf8(Str);
+		  _ ->
+		      Str
+	      end)),
+    {ok, [FirstChar, Len, $: | Str]};
+encode_string2([C | Cs], FirstChar, Acc) ->
     case C of
-	$\\ -> encode_string(Cs, FirstChar, [$\\, $\\ | Acc]);
-	$\n -> encode_string(Cs, FirstChar, [$n, $\\ | Acc]);
-	$\r -> encode_string(Cs, FirstChar, [$r, $\\ | Acc]);
-        C when C =< 16#FFFF -> encode_string(Cs, FirstChar, [C | Acc], Cache);
-        _ -> exit({haxe_encode, {bad_char, C}})
+	$\\ -> encode_string2(Cs, FirstChar, [$\\, $\\ | Acc]);
+	$\n -> encode_string2(Cs, FirstChar, [$n, $\\ | Acc]);
+	$\r -> encode_string2(Cs, FirstChar, [$r, $\\ | Acc]);
+        C when C =< 16#FFFF -> encode_string2(Cs, FirstChar, [C | Acc]);
+        _ -> exit({error, {haxe_encode, {bad_char, C}}})
     end.
 
 encode_object(Props, Cache) ->
-    {Result, Cache2} = encode_object_rest(Props, [placeholder | Cache]),
+    {Result, Cache2} = encode_object_rest(Props, Cache),
     {[$o | Result], Cache2}.
 encode_object_rest(Props, Cache) ->
     {EncodedProps, Cache1} =
@@ -157,7 +193,7 @@ encode_object_rest(Props, Cache) ->
 		      case Key of
 			  L when is_list(L) -> encode_string(L, Cache2);
 			  A when is_atom(A) -> encode_string(atom_to_list(A), Cache2);
-			  _ -> exit({haxe_encode, {bad_key, Key}})
+			  _ -> exit({error, {haxe_encode, {bad_key, Key}}})
 		      end,
 		  {EncodedVal, Cache4} = encode(Value, Cache3),
 		  case Acc of
@@ -165,16 +201,11 @@ encode_object_rest(Props, Cache) ->
 		  end
 	  end,
 	  
-	  % We insert 'placeholder' into the ref list to ensure its length
-	  % matches the number of objects that have been serialized so far.
-	  
 	  {[], Cache},
 	  Props),
 
     Result = [lists:reverse(EncodedProps), $g],
-
     {Result, Cache1}.
-
 
 encode_array(Props, Cache) ->
     {NullCount, Arr, Cache1} = lists:foldl(
@@ -189,7 +220,7 @@ encode_array(Props, Cache) ->
 		  {Encoded, Cache3}  = encode(Elem, Cache2),
 		  {0, [Encoded, encode_nulls(NullCount) | Arr], Cache3}
 	  end,
-	  {0, [$a], [placholder | Cache]}, Props),
+	  {0, [$a], Cache}, Props),
     {lists:reverse([$h , encode_nulls(NullCount) | Arr]), Cache1}.
 
 encode_nulls(0) -> [];
@@ -220,6 +251,7 @@ token([C | Rest]) ->
 	float -> scan_float(Rest);
 	string -> scan_string(Rest);
 	utf8 -> scan_utf8(Rest);
+	error -> {done, {error, invalid_token}, Rest};
 	Token -> {done, {ok, Token}, Rest}
     end.
 
@@ -242,6 +274,7 @@ token_identifier(C) ->
 	$c -> class;
 	$g -> obj_end;
 	$r -> ref;
+	$R -> str_ref;
 	$x -> exception;
 
 	%% this token is only valid as an element
@@ -389,9 +422,15 @@ scan_exponent(Rest, Es, R, _X) ->
 
 %% Return the first haXe value decoded from the input string.
 %% The string must contain at least one complete haXe value.
-
+%%
+%% The second (optional) parameter indicates if caching should
+%% be turned on. Caching is on by default, but it can be turned
+%% off for performance and lower memory consumption depending
+%% on the content of the messages.
 decode_string(CharList) ->
-    {done, V, _} = decode(CharList ++ [eof]),
+    decode_string(CharList, true).
+decode_string(CharList, UseCache) ->
+    {done, V, _} = decode(CharList ++ [eof], UseCache),
     V.
 
 %% Attempt to decode a haXe value from the input string
@@ -405,17 +444,25 @@ decode_string(CharList) ->
 %% a true end to the input, and may flush a final number.
 
 decode(CharList) ->
-    decode({{[], []}, fun first_cont_fun/2}, CharList).
+    decode(CharList, true).
 
-decode({{[], Cache}, Kv}, CharList) ->
+%% Note: our Cache for decoding is the tuple
+%% {ObjCache::list(), StringCache::dict()}
+decode(CharList, true) ->
+    decode2(CharList, {[], dict:new()});
+decode(CharList, false) ->
+    decode2(CharList, undefined).
+
+decode2(CharList, Cache) ->
+    decode3({{[], Cache}, fun first_cont_fun/2}, CharList).
+
+decode3({{[],Cache}, Kv}, CharList) ->
     get_token({CharList, Cache}, Kv);
-decode({{OldChars, Cache}, Kv}, CharList) ->
+decode3({{OldChars, Cache}, Kv}, CharList) ->
     get_token({OldChars ++ CharList, Cache}, Kv).
 
-%% This function helps parse contiguous haXe terms
-%% that share the same cache.
 decode_next({OldChars, Cache}) ->
-    decode({{[], Cache}, fun first_cont_fun/2}, OldChars).
+    decode3({{[], Cache}, fun first_cont_fun/2}, OldChars).
 
 first_cont_fun(eof, Cs) -> {done, eof, Cs};
 first_cont_fun(T, Cs) ->
@@ -450,9 +497,13 @@ parse_value(Token, {Chars, Cache} = C, Kv, AcceptNullSeq)->
 	enum -> parse_enum(C, Kv);
 	exception -> parse_exception(C, Kv);
 	ref -> parse_ref(C, Kv);
+	str_ref -> parse_ref(C, Kv, true);
 	null_seq when AcceptNullSeq -> parse_null_seq(C, Kv);
-	S when is_list(S) -> Kv(S, {Chars, [S | Cache]});
-	N when is_number(N) -> Kv(N, C);
+	Str when is_list(Str) ->
+	    Kv(Str,
+	       {Chars,
+		put_str(Str, Cache)});
+	Num when is_number(Num) -> Kv(Num, C);
 	_ -> {done, {error, syntax_error}, C}
     end.
 
@@ -464,32 +515,50 @@ parse_object(Chars, Kv) ->
 
 parse_object(C, Kv, Obj) ->
     get_token(C,
-	      fun(T, {Chars2, Cache2}) ->
+	      fun(T, {Chars, Cache}) ->
 		      case T of
 			  obj_end ->
-			      Kv(Obj, {Chars2, [Obj | Cache2]});
-			  _ -> parse_object_field(Obj, T,
-						  {Chars2,
-						   [placeholder | Cache2]},
-						   Cache2,
-						   Kv)
+			      NewCache =
+				  put_obj(Obj, Cache),
+			      ?L(NewCache),
+			      Kv(Obj, {Chars, NewCache});
+			  _ ->
+			      NewCache =
+				  put_obj(placeholder, Cache),
+			      ?L(NewCache),
+			      parse_object_field(
+				Obj, T,
+				{Chars, NewCache}, Cache, Kv)
 		      end
 	      end).
+
+put_obj(_xObj, undefined) ->
+    undefined;
+put_obj(Obj, {ObjCache, StrCache}) ->
+    {[Obj | ObjCache], StrCache}.
+
+put_str(_Str, undefined) ->
+    undefined;
+put_str(Str, {ObjCache, StrCache}) ->
+    {ObjCache, dict:store(dict:size(StrCache), Str, StrCache)}.
 
 parse_object_field(_Obj, eof, C, _OrigCache, _Kv) ->
     {done, {error, premature_eof}, C};
 
 %% if the key is a reference, we deference it and continue
-parse_object_field(Obj, ref, C, OrigCache, Kv) ->
+parse_object_field(Obj, RefType, C, OrigCache, Kv)
+  when RefType == ref; RefType == str_ref ->
     parse_ref(C,
 	      fun(Key, C1) ->
 		      parse_object_val(Obj, Key, C1, OrigCache, Kv)
-	      end);
+	      end,
+	     RefType == str_ref);
 
 %% if the key is a string, we put it in the cache and continue
 parse_object_field(Obj, Field, {Chars, Cache}, OrigCache, Kv)
   when is_list(Field) ->
-    parse_object_val(Obj, Field, {Chars, [Field | Cache]}, OrigCache, Kv).
+    NewCache = put_str(Field, Cache),
+    parse_object_val(Obj, Field, {Chars, NewCache}, OrigCache, Kv).
 
 parse_object_val(Obj, Field, {Chars, Cache}, OrigCache, Kv)
   when is_list(Field) ->
@@ -505,19 +574,32 @@ parse_object_val(Obj, Field, {Chars, Cache}, OrigCache, Kv)
 parse_object_val(_Obj, Field, C, _OrigCache, _Kv) ->
     {done, {error, {member_name_not_string, Field}}, C}.
 
-parse_object_next(Obj, C, OrigCache, Kv) ->
+parse_object_next({struct, Props} = Obj, C, OrigCache, Kv) ->
     get_token(C,
 	      fun
-		  (obj_end, {Chars1, Cache1}) ->
-		      {struct, Props} = Obj,
-		      Obj2 = {struct, lists:reverse(Props)},
-		      Cache2 = append_new_elems(Cache1, [Obj2 | OrigCache]),
-		      Kv(Obj2, {Chars1, Cache2});
+		  (obj_end, {Chars, Cache}) ->
+		      Obj1 = {struct, lists:reverse(Props)},
+		      Cache1 = append_new_elems(
+				    Cache, Obj1, OrigCache),
+		      ?L(Cache),
+		      ?L(Cache1),
+		      ?L(OrigCache),
+		      Kv(Obj1, {Chars, Cache1});
 		  (eof, C1) ->
 		      {done, {error, premature_eof}, C1};
 		  (T, C1) ->		
 		      parse_object_field(Obj, T, C1, OrigCache, Kv)
 	      end).
+
+
+append_new_elems(undefined, _Obj, _Cache) ->
+    undefined;
+append_new_elems({TempObjCache, NewStrCache}, Obj,
+		 {ObjCache, _OrigStrCache}) ->
+    ObjCache1 = [Obj | ObjCache],
+    NumNewElts = length(TempObjCache) - length(ObjCache1),
+    NewElts = lists:sublist(TempObjCache, NumNewElts),
+    {NewElts ++ ObjCache1, NewStrCache}.
 
 
 parse_array({Chars, Cache}, Kv) ->
@@ -531,7 +613,8 @@ parse_array({Chars, Cache}, Kv) ->
     %%
     %% If it sounds backwards, well, it is! :)
 
-    parse_array([], {Chars, [placeholder | Cache]}, Cache, Kv).
+    parse_array([], {Chars, put_obj(placeholder, Cache)},
+		Cache, Kv).
 
 parse_array(Elems, C, OrigCache, Kv) ->
     get_token(C,
@@ -540,8 +623,7 @@ parse_array(Elems, C, OrigCache, Kv) ->
 		  (array_end, {Chars1, Cache1}) -> 
 		      Arr = {array, lists:reverse(Elems)},
 		      Cache2 = append_new_elems(
-				 Cache1,
-				 [Arr | OrigCache]),
+				 Cache1, Arr, OrigCache),
 		      Kv(Arr, {Chars1, Cache2});
 		  (T, C1) ->
 		      parse_array_tok(Elems, T, C1, OrigCache, Kv) 
@@ -555,12 +637,6 @@ parse_array_tok(Elems, T, Cont, OrigCache, Kv) ->
 			parse_array([V | Elems], C1, OrigCache, Kv)
 		end,
 	       true).
-
-append_new_elems(TempCache, Cache) ->
-    NumNewElts = length(TempCache) - length(Cache),
-    NewElts = lists:sublist(TempCache, NumNewElts),
-    Result = NewElts ++ Cache,
-    Result.
 
 parse_enum(Chars, _Kv) ->
     {done, {error, enums_not_supported}, Chars}.
@@ -580,15 +656,43 @@ parse_exception(Cont, Kv) ->
 %%% The next three functions help with storing references
 %%% to deserialized objects for future lookup during decoding
 
-parse_ref({Chars, Cache}, Kv) ->
+parse_ref(Cont, Kv) ->
+    parse_ref(Cont, Kv, false).
+
+parse_ref({Chars, Cache}, Kv, IsStrRef) ->
     case scan_int(Chars) of
-	{done, {ok, Idx}, Chars1} when Idx > length(Cache) ->
-	    {done, {error, {ref_idx_out_of_bounds, Idx}}, {Chars1, Cache}};
 	{done, {ok, Idx}, Chars1} ->
-	    Kv(lists:nth(length(Cache) - Idx, Cache), {Chars1, Cache});
+	    parse_ref2(IsStrRef, {Chars1, Cache}, Idx, Kv);
 	Other ->
 	    Other
     end.
+
+parse_ref2(_IsStrRef, {_Chars, undefined} = Cont, _Idx, _Kv) ->
+    {done, {error, references_disabled}, Cont};
+
+parse_ref2(false, {_Chars, {ObjCache, _StrCache}} = Cont, Idx, Kv) ->
+    if Idx > length(ObjCache) ->
+	    {done, {error, {ref_idx_out_of_bounds, Idx}}, Cont};
+       true ->
+	    Val = lists:nth(length(ObjCache) - Idx, ObjCache),
+	    if
+		Val == placeholder ->
+		    {done, {error, {illegal_ref, Idx}}, Cont};
+		true ->
+		    Kv(Val, Cont)
+	    end
+    end;
+
+parse_ref2(true, {_Chars, {_ObjCache, StrCache}} = Cont, Idx, Kv) ->
+    Cond = Idx + 1 > dict:size(StrCache),
+    if Cond ->
+	    {done, {error, {str_ref_idx_out_of_bounds, Idx}}, Cont};
+       true ->
+	    {ok, Val} = dict:find(Idx, StrCache),
+	    Kv(Val, Cont)
+    end.
+    
+
 
 parse_null_seq({Chars, Cache}, Kv) ->
     case scan_int(Chars) of
@@ -667,7 +771,7 @@ is_string(_, _) -> no.
 test() ->
     Tests = [
 	     {1, "i1"},
-	     {1.1, "d1.1"},
+	     {1.1, "d1.10000"},
 	     {"foo", "s3:foo"},
 	     %% todo test utf8
 	     {null, "n"},
@@ -681,27 +785,38 @@ test() ->
 	     {{array, [null]}, "anh"},
 	     {{array, [null, null]}, "au2h"},
 	     {{array, [3, 4, null, null, null, 5, null]}, "ai3i4u3i5nh"},
-	     {{struct, [{foo, "bar"}, {baz, "boing"}]}, "os3:foos3:bars3:bazs5:boingg"},
-	     {{exception, "bad"}, "xs3:bad"},
-	     {{array, ["foo", "bar", "foo"]}, "as3:foos3:barr1h"},
-	     {{struct, [{foo, 34}, {bar, "foo"}]}, "os3:fooi34s3:barr1g"}
+	     {{struct, [{foo, "bar"}, {baz, "boing"}]},
+	      "os3:foos3:bars3:bazs5:boingg"},
+	     {{array, ["foo", "bar", "foo", {struct, [{bar, "baz"}, {foo, 123}]}]}, "as3:foos3:bars3:fooos3:bars3:bazs3:fooi123gh"},
+	     {{exception, "bad"}, "xs3:bad"}
 	    ],
-    {Passed, Failed} =
-	lists:foldl(
-	  fun({Term, Str}, Agg) ->
-		  Encoded = lists:flatten(encode(Term)),
-		  {ok, Decoded} = decode_string(Str),
-		  Check = fun(Val1, Val2, {P, F}) ->
-				  case Val1 == Val2 of
-				      true -> {P + 1, F};
-				      _ -> {P, F + 1}
-				  end
-			  end,
-		  Agg1 = Check(Str, Encoded, Agg),
-		  Agg2 = Check(Term, Decoded, Agg1),
-		  io:format("~s == ~s\n~w\n~w == ~w\n~w\n\n", [Str, Encoded, Str == Encoded,
-							       Term, Decoded, Term == Decoded]),
-		  Agg2
-	  end,
-	  {0, 0}, Tests),
-    io:format("passed: ~w, failed: ~w\n", [Passed, Failed]).
+
+    {Passed, Failed} = run_tests(Tests, false),
+
+    Tests1 = [
+	      {{array, ["foo", "bar", "foo"]}, "as3:foos3:barR0h"},
+	      {{struct, [{foo, "bar"}, {bar, "foo"}]}, "os3:foos3:barR1R0g"},
+	      {{array, ["foo", "bar", "foo", {struct, [{bar, "baz"}, {foo, 123}]}]}, "as3:foos3:barR0oR1s3:bazR0i123gh"}
+	     ],
+    {Passed1, Failed1} = run_tests(Tests1, true),
+    io:format("passed: ~w, failed: ~w\n",
+	      [Passed + Passed1, Failed + Failed1]).
+
+run_tests(Tests, EnableReferences) ->
+    lists:foldl(
+      fun({Term, Str}, Agg) ->
+	      Encoded = lists:flatten(encode(Term,EnableReferences)),
+	      {ok, Decoded} = decode_string(Str,EnableReferences),
+	      Check = fun(Val1, Val2, {P, F}) ->
+			      case Val1 == Val2 of
+				  true -> {P + 1, F};
+				  _ -> {P, F + 1}
+			      end
+		      end,
+	      Agg1 = Check(Str, Encoded, Agg),
+	      Agg2 = Check(Term, Decoded, Agg1),
+	      io:format("~s == ~s\n~w\n~w == ~w\n~w\n\n", [Str, Encoded, Str == Encoded,
+							   Term, Decoded, Term == Decoded]),
+	      Agg2
+      end,
+      {0, 0}, Tests).
