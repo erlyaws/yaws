@@ -166,8 +166,11 @@ find_registered([],_Path) ->
 find_registered([ #yapp{urlpath = RegPath} = Y | T ], Path) ->
     case string:str(Path, RegPath) of  
 	1 ->
-	    Rest = string:substr(Path,1+length(RegPath)),
-	    {Y, Rest};
+	    case string:substr(Path,1+length(RegPath)) of
+		[] -> {Y,[]};
+		[$/ |_] = Rest -> {Y,Rest};
+		_ -> find_registered(T,Path)
+	    end;
 	_ ->
 	    find_registered(T, Path)
     end.
