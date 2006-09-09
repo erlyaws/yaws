@@ -22,10 +22,10 @@ out(A) ->
 	 "applications with some optional information in their "
 	 ".app files and the web pages in the priv/docroot directory "
 	 "as default. The Yaws applications handler takes care of adding, "
-	 "and removing, separate Yaws applications, Yapps, into a running server. "
+	 "and removing, the applications into a running server. "
 	 " When anyone access the server with an URL that matches the path for an "
-	 " active Yapp, the docroot will be temporarily switched to where the web "
-	 " pages for the Yapp is located."},
+	 " added application, the docroot will be temporarily switched to where the web "
+	 " pages for that application are located."},
 	
 	{h2,[], "Using the application handler"},
 	{h3,[], "Installing"},
@@ -44,9 +44,11 @@ out(A) ->
 	{p,[], "First we include the ebin directory of the yapp handler "
 	  "application by adding the line "
 	},
-	box("ebin_dir = /<yaws_root>/applications/yapp/ebin"),
-	{p,[],"Then we make sure that the yapp handler application is started "
-	 "when Yaws is started, by using the runmod directive"},
+	box("ebin_dir = /<yaws_root>/{applications,lib}/yapp/ebin"),
+	{p,[],
+	"The \"applications\" part is used for a local_installed Yaws, and \"lib\""
+	" for a real installed one. Then we make sure that the yapp handler "
+	" application is started when Yaws is started, by using the runmod directive"},
 	box("runmod = yapp"),
 	{p,[],
 	 "For every virtual server that we want to use yapps we add yapp as an "
@@ -73,7 +75,7 @@ out(A) ->
 	 "For instance the yapp handler application (named yapp) is a yapp in itself, "
 	 "got it?, that provides a web gui to list active yapps and add/remove yapps " 
 	 "from the registry. But since we can not add itself to the registry before it " 
-	 "is added we can bootstrap into the server when Yaws is started. "},
+	 "is added we have to bootstrap into the server when Yaws is started. "},
 	box("
 <server myinternalserver>
 	port = 8001
@@ -96,7 +98,7 @@ out(A) ->
 	{p,[],{pre,[],
 	       "erl -sname node_name
 1> mnesia:create_schema([node()])."}},
-	{p,[],["(we can leave out the -sname options, then the mnesia node name will "
+	{p,[],["(we can leave out the -sname options, then the mnesia schema name will "
 	       "be \"nonode@nohost\") then we exit and start yaws with the same name: ",
 	       {pre,[],"yaws -sname node_name"}]},
 	{p,[],["Now we can access the yapp handler web console from a browser with url:",
@@ -116,29 +118,30 @@ out(A) ->
 	 "Making paths to other documents in the same web application using root paths "
 	 "like href=\"/doc2.html\" will not work since a yapp is always below the top. "
 	 "Instead use relative paths href=\"doc2.html\" or use the prepath library "
-	 "function in any .yaws file: HREF=yapp:prepath(A) ++ \"/doc2.html\"."},
+	 "function in any .yaws file: HREF=yapp:prepath(A) ++ \"/doc2.html\", "
+	 "where A is a <code>#arg</code> record."},
 	{h3,[],"Appmods"},
-	{p,[],[
-	       "The yapp handler takes care of throwing in \"private\" appmods for a yapp "
-	       "when it is accessed. The appmods modules are put in the applications ebin "
-	       "directory as any other Erlang module and configured in the .app file "
-	       "with the the environment variable yapp_appmods. For instance; if we "
-	       "have a yapp named yappx with root path \"/yappx\" and add: ",
-	       box("
+	{p,[],
+	     "The yapp handler takes care of throwing in \"private\" appmods for a yapp "
+	     "when it is accessed. The appmods modules are put in the applications ebin "
+	     "directory as any other Erlang module and configured in the .app file "
+	     "with the the environment variable yapp_appmods. For instance; if we "
+	     "have a yapp named yappx with root path \"/yappx\" and add: "},
+	 box("
   {env, [
          {yapp_appmods,[{\"/ctrl\",yappx_controller}]}
         ]},
 "),
-	       "to the env part in the yappx.app file, an access to the URL "
-	       "http://servername/yappx/ctrl will cause a call to the "
-	       "yappx_controller:out/1 function, while http://servername/yappy/ctrl "
-	       "will not do it. "
-	      ]},
+	 {p,[],"to the env part in the yappx.app file, an access to the URL "
+	  "http://servername/yappx/ctrl will cause a call to the "
+	  "yappx_controller:out/1 function, while http://servername/yappy/ctrl "
+	  "will not do it. "
+	 },
 	{h2,[],"Problems"},
 	{p,[],"Embedded ssi directives in ehtml parts will not work for now."},
 	{p,[],
 	 "http://servername/yappname (without a trailing \"/\") will not work unless " 
-	 "one have a redirect in the index.yaws file, see the index.yaws file in "
+	 "a redirect is done in the index.yaws file, see the index.yaws file in "
 	 "the yapp handler itself (yaws/applications/yapp/priv/docroot/index.yaws). "},
 
 	{h2,[],"Future"},
