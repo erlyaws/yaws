@@ -33,7 +33,7 @@ out(A) ->
 	       " system, then do: "]},
        box("
 # export CVS_RSH=ssh 
-# export CVSROOT=:pserver:anonymous@cvs.erlyaws.sourceforge.net:/cvsroot/erlyaws
+# export CVSROOT=:pserver:anonymous@erlyaws.cvs.sourceforge.net:/cvsroot/erlyaws
 # cvs  login
 # cvs -z3 co .
 # cd yaws; make; make install
