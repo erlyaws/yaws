@@ -1217,14 +1217,7 @@ not_implemented(CliSock, Req, Head) ->
 				   ?format_record(Head, headers)]),
     SC=get(sc),
     ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
-    PPS = SC#sconf.partial_post_size,
-    CT = 
-	case yaws:lowercase(Head#headers.content_type) of
-	    "multipart/form-data"++_ -> multipart;
-	    _ -> urlencoded
-	end,
-    ARG = make_arg(CliSock, Head, Req, undefined),
-    handle_request(CliSock, ARG, p).
+    body_method(CliSock, Req, Head).
     
 
 'DELETE'(CliSock, Req, Head) ->
@@ -3121,7 +3114,7 @@ check_comps([Pair |Tail], Comps) ->
 				      
 split_at(_, [], _Ack) ->
     false;
-split_at(AM={"/", _Mod}, [PEslash|Tail], Ack) ->
+split_at(AM={"/", _Mod}, [_PEslash|Tail], Ack) ->
     {ok, lists:reverse(Ack), AM, Tail};
 split_at(AM={PE, _Mod}, [PEslash|Tail], Ack) ->
     ?Debug("AM=~p PEslash=~p~n", [AM, PEslash]),
