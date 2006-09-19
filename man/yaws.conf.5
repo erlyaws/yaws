@@ -168,6 +168,18 @@ This feature makes it possible to bind to ports < 1024 even when
 we're not running as root. It requires the Jungerl package called fd_server
 to be properly installed.. The feature doen't (yet) work with SSL.
 
+.TP
+\fB use_large_ssl_pool = true | false \fR
+SSL servers by default has a pool of pending accept processes.
+
+An SSL connection might include user interaction.
+So while one person has a dialog box on the screen asking him to review
+the server's certificate, no other person is able to establish a new
+connnection to the server unless we run multiple SSL acceptor processes.
+The default is 8, if we set the this configurable, we use 50 pending
+accept processes. So in environments where a large number of slow
+connectors is expected, this configurable makes sense.
+
 
 .SH SERVER PART
 Yaws can virthost several webservers on the same ip address as well

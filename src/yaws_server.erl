@@ -708,7 +708,12 @@ initial_acceptor(GS) ->
 	GS#gs.ssl == nossl ->
 	    acceptor(GS);
 	GS#gs.ssl == ssl ->
-	    initial_acceptor(GS, 5)
+	    GC = GS#gs.gconf,
+	    PoolSize = if
+			   ?gc_use_large_ssl_pool(GC) -> 50;
+			   true -> 8
+		       end,
+	    initial_acceptor(GS, PoolSize)
     end.
 
 

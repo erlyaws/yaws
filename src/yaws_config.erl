@@ -523,6 +523,15 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}
 	    end;
+	["use_large_ssl_pool", '=',  Bool] ->
+	    case is_bool(Bool) of
+		{true, Val} ->
+		    fload(FD, globals, 
+			  ?gc_set_use_large_ssl_pool(GC,Val),
+			  C, Cs, Lno+1, Next);
+		false ->
+		    {error, ?F("Expect true|false at line ~w", [Lno])}
+	    end;
 	
 
 	['<', "server", Server, '>'] ->  %% first server 
