@@ -558,8 +558,9 @@ Establish variable bindings that can be used in the page.
 All bindings can then be used in the rest of yaws code 
 (in HTML source and within erl tags). 
 In HTML source %%Key%% is expanded to Value and within erl 
-tags yaws_api:get_binding(Key) can be used to extract Value.
-
+tags \fIyaws_api:binding(Key)\fR can be used to extract Value
+and \fIyaws_api:binding_exists(Key)\fR can be used to check for
+the existance of a binding.
 
 .TP
 \fB{yssi, YawsFile}\fR

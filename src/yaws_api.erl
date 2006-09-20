@@ -1635,6 +1635,12 @@ binding(Key) ->
 	Value -> Value
     end.
 
+binding_exists(Key) ->
+     case get({binding, Key}) of
+	undefined -> false;
+	_ -> true
+     end.
+
 
 %% Return the parsed url that the client requested.
 request_url(ARG) ->
