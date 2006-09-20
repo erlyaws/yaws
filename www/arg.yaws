@@ -26,6 +26,7 @@ out(A) ->
 
 -record(arg, {
 	  clisock,        %% the socket leading to the peer client
+	  client_ip_port, %% {Ip, Port} for the client
 	  headers,        %% headers
 	  req,            %% request
 	  clidata,        %% The client data (as a binary in POST requests)
@@ -53,20 +54,15 @@ out(A) ->
   </p>
 
   <p> The code to display the #arg{} record
-    is in defined in file <a href="code.yaws?file=/arg.yaws">arg.yaws</a>
+    is in defined in file <a href="code.yaws?file=/arg2.yaws">arg2.yaws</a>
+    and is invoked at <a href="arg2.yaws">arg2.yaws</a>
   </p>
 
 <erl>
 
 out(A) ->
 
-    Peer = if
-	       tuple(A#arg.clisock),
-	       element(1, A#arg.clisock) == sslsocket ->
-		   ssl:peername(A#arg.clisock);
-	       true ->
-		   inet:peername(A#arg.clisock)
-	   end,
+    Peer = A#arg.client_ip_port,
     Req = A#arg.req,
     H = yaws_api:reformat_header(A#arg.headers),
     {ehtml,
@@ -83,7 +79,7 @@ out(A) ->
       {hr,[],[]},
       {h5, [], "Other items"},
       {ul,[],
-       [{li, [], f("clisock from: ~p", [Peer])},
+       [{li, [], f("Peer: ~p", [Peer])},
 	{li,[], f("docroot: ~s", [A#arg.docroot])},
 	{li,[], f("fullpath: ~s", [A#arg.fullpath])}]},
       {hr,[],[]},
