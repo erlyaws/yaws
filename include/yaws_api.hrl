@@ -10,6 +10,7 @@
 
 -record(arg, {
 	  clisock,        %% the socket leading to the peer client
+	  client_ip_port, %% {ClientIp, ClientPort} tuple
 	  headers,        %% headers
 	  req,            %% request
 	  clidata,        %% The client data (as a binary in POST requests)

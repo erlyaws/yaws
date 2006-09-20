@@ -1002,23 +1002,7 @@ maybe_auth_log(Item, ARG) ->
 	    ok;
 	true ->
 	    Req = ARG#arg.req,
-	    CliSock = ARG#arg.clisock,
-	    IP = if
-		     port(CliSock) ->
-			 case inet:peername(CliSock) of
-			     {ok, {Ip, _}} ->
-				 Ip;
-			     _ ->
-				 unknown
-			 end;
-		     true ->
-			 case ssl:peername(CliSock) of
-			     {ok, {Ip, _}} ->
-				 Ip;
-			     _ ->
-				 unknown
-			 end
-		 end,
+	    {IP,_} = ARG#arg.client_ip_port,
 	    Path = safe_decode_path(Req#http_request.path),
 	    yaws_log:authlog(SC#sconf.servername, IP, Path, Item)
     end.
@@ -1297,7 +1281,24 @@ no_body_method(CliSock, Req, Head) ->
 
 make_arg(CliSock, Head, Req, Bin) ->
     SC = get(sc),
+    IP = if
+	     port(CliSock) ->
+		 case inet:peername(CliSock) of
+		     {ok, IpPort} ->
+			 IpPort;
+		     _ ->
+			 {unknown, unknown}
+		 end;
+	     true ->
+		 case ssl:peername(CliSock) of
+		     {ok, IpPort} ->
+			 IpPort;
+		     _ ->
+			 {unknown, unknown}
+		 end
+	 end,
     ARG = #arg{clisock = CliSock,
+	       client_ip_port = IP,
 	       headers = Head,
 	       req = Req,
 	       opaque = SC#sconf.opaque,
