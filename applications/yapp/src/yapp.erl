@@ -219,29 +219,32 @@ insert_yapp_in_sconfgroup(SrvId, Yapp, [#sconf{}=SC|SCG]) ->
 
 %% the yapp application itself maybe a yapp, treated as special case
 insert_yapp_in_sconf({UrlPath, yapp}, SC) ->
-    insert_yapp_in_sconf1({UrlPath, yapp}, SC);
+    insert_yapp_in_sconf0({UrlPath, yapp}, SC);
 insert_yapp_in_sconf({UrlPath, AppName}, SC) ->
-    case application:load(AppName) of
+    case start_app([AppName]) of
         ok -> 
 	    insert_yapp_in_sconf0({UrlPath, AppName}, SC);
-	{error,{already_loaded,AppName}} ->
-	    insert_yapp_in_sconf0({UrlPath, AppName}, SC);
 	Error ->
-	    log(error, "yapp:insert_yapp_in_sconf - Yapp not found ~p, ~p", [AppName, Error]),
+	    log(error, "yapp:insert_yapp_in_sconf - Error loading Yapp ~p, ~p", 
+		[AppName, Error]),
 	    no_app
     end.
 
-insert_yapp_in_sconf0({UrlPath, AppName}, SC) ->
-    case lists:keymember(AppName, 1, application:which_applications()) of
-	false ->
-	    log(info, "Starting app ~p" , [AppName]),
-	    application:start(AppName);
-	_ ->
-	    do_nothing
-    end,
-    insert_yapp_in_sconf1({UrlPath, AppName}, SC).
+start_app([AppName|T]) ->
+    log(info, "Starting app ~p" , [AppName]),
+    case application:start(AppName) of
+       {error,{not_started,RequiredApp}} ->
+           start_app([RequiredApp,AppName|T]);
+       {error,{already_started,AppName}} ->
+           start_app(T);
+       ok ->
+           start_app(T);
+       Error -> Error
+    end;
+start_app([]) -> ok;
+start_app(Error) -> Error.
 
-insert_yapp_in_sconf1({UrlPath, AppName}, #sconf{opaque = OP} = SC) ->
+insert_yapp_in_sconf0({UrlPath, AppName}, #sconf{opaque = OP} = SC) ->
     log(info,"Inserting App ~p in Url ~p~n", [AppName, UrlPath]),
     AppEnv = application:get_all_env(AppName),
     DocSubRoot = proplists:get_value(yapp_docroot,AppEnv, ?priv_docroot),
