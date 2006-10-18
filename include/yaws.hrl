@@ -187,7 +187,8 @@
           realm = "",
           type = "Basic",
           users = [],
-	  pam = false   % should we use pam to auth a user
+	  mod = [],     %% authentication module callback
+	  pam = false   %% should we use pam to auth a user
          }).
 
 

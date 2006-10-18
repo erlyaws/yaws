@@ -919,6 +919,9 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
 	["realm", '=', Realm] ->
 	    A2 = Auth#auth{realm = Realm},
 	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
+	["authmod", '=', Mod] ->
+	    A2 = Auth#auth{mod = list_to_atom(Mod)},
+	    fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
 	["user", '=', User] ->
 	    case string:tokens(User, ":") of
 		[Name, Passwd] ->

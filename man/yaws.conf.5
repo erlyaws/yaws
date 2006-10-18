@@ -422,6 +422,19 @@ In the directory defined here, the WWW-Authenticate Realm is set to
 this value. 
 
 .TP
+\fBauthmod = AuthMod\fR
+If an auth module is defined then AuthMod:auth(Arg, Auth) will
+be called for all access to the directory. The auth/2 function 
+should return one of: true, false, {false, realm}, {appmod, Mod}.
+If {appmod, Mod} is returned then a call to Mod:out(Arg) will
+be used to deliver the content.
+
+This can, for example, be used to implement cookie authentication.
+The auth() callback would check if a valid cookie header is present,
+if not it would return {appmod, ?MODULE} and the out/1 function 
+in the same module would return {redirect_local, "/login.html"}.
+
+.TP
 \fBuser = User:Password\fR
 Inside this directory, the user User has access if the user supplies
 the password Password in the popup dialogue presented by the browser.

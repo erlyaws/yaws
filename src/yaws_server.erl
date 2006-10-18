@@ -1340,6 +1340,15 @@ handle_request(CliSock, ARG, N) ->
 		    case {IsAuth, 
 			  is_revproxy(DecPath, SC#sconf.revproxy),
 			  is_redirect_map(DecPath, SC#sconf.redirect_map)} of
+			{{appmod, Mod}, _, _} ->
+			    UT = #urltype{type = appmod, 
+			    		  data = {Mod, DecPath},
+			     		  path = DecPath},
+			    ARG2 = ARG#arg{server_path = DecPath,
+					   querydata= QueryPart,
+					   fullpath=UT#urltype.fullpath,
+					   pathinfo=UT#urltype.pathinfo},
+			    handle_ut(CliSock, ARG2, UT, N);
 			{_, _, {true, MethodHostPort}} ->
 			    deliver_302_map(CliSock, Req, ARG, MethodHostPort);
 			{true, false, _} ->
@@ -1368,8 +1377,24 @@ handle_request(CliSock, ARG, N) ->
 is_auth(_ARG, _Req_dir, _H, [] ) -> 
     true;
 is_auth(ARG, Req_dir,H,[{Auth_dir, 
-			 #auth{realm=Realm, users=Users, pam=Pam}}|T] ) ->
+			 Auth=#auth{realm=Realm, users=Users, 
+				    pam=Pam, mod=Mod}}|T] ) ->
     case lists:prefix(Auth_dir, Req_dir) of
+	true when Mod /= [] ->
+	    case catch Mod:auth(ARG, Auth) of
+		{'EXIT', _} ->
+		    {false, ""};
+		{appmod, AppMod} ->
+		    {appmod, AppMod};
+		true -> 
+		    true;
+		{false, Realm} ->
+		    maybe_auth_log({401, Realm}, ARG),
+		    {false, Realm};
+		_ ->
+		    maybe_auth_log({401, Realm}, ARG),
+		    {false, ""}
+	    end;
 	true ->
 	    case H#headers.authorization of
 		undefined ->
