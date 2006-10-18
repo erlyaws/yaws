@@ -340,6 +340,8 @@ do_auth_log(ServerName, IP, Path, Item, State) ->
 	 case Item of
 	     {ok, User} ->
 		 [" OK user=", User];
+	     403 ->
+		 [" 403"];
 	     {401, Realm} ->
 		 [" 401 realm=", Realm];
 	     {401, User, PWD} ->

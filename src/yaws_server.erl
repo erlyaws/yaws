@@ -1361,6 +1361,8 @@ handle_request(CliSock, ARG, N) ->
 			{true, {true, PP}, _} ->
 			    yaws_revproxy:init(CliSock, ARG,
 					       DecPath,QueryPart,PP, N);
+			{false, _, _} ->
+			    deliver_403(CliSock, Req);
 			{{false, Realm}, _, _} ->
 			    deliver_401(CliSock, Req, Realm)
 		    end
@@ -1392,8 +1394,8 @@ is_auth(ARG, Req_dir,H,[{Auth_dir,
 		    maybe_auth_log({401, Realm}, ARG),
 		    {false, Realm};
 		_ ->
-		    maybe_auth_log({401, Realm}, ARG),
-		    {false, ""}
+		    maybe_auth_log(403, ARG),
+		    false
 	    end;
 	true ->
 	    case H#headers.authorization of
