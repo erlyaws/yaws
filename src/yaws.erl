@@ -53,7 +53,7 @@ setup_gconf(GL, GC) ->
 	   trace = lkup(trace, GL, 
 			GC#gconf.trace),
 	   flags = set_gc_flags(lkup(flags, GL, []), 
-				?GC_DEF),
+				GC#gconf.flags),
 	   logdir = lkup(logdir, GL, 
 			 GC#gconf.logdir),
 	   ebin_dir = lkup(ebin_dir, GL, 
