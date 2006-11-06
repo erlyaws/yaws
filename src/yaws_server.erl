@@ -3091,14 +3091,18 @@ do_url_type(SC, GetPath, ArgDocroot) ->
 			   [PathElem, Trail, File]),
 		    #urltype{type = appmod, 
 			     data = {Mod, if
-					      Trail==[],PathElem == File ->
+					      Trail==[], PathElem == File ->
 						  [];
 					      hd(File) == $/, 
 					      PathElem == tl(File) ->
 						  [];
 					      true ->
-						  [$/ | conc_path(Trail) ++
-						   File]
+						  case conc_path(Trail) ++ File of
+						      X when hd(X) == $/ ->
+							  X;
+						      X ->
+							  X
+						  end
 					  end},
 			     path = conc_path(Head)}
 	    
@@ -3147,8 +3151,8 @@ check_comps([Pair |Tail], Comps) ->
 				      
 split_at(_, [], _Ack) ->
     false;
-split_at(AM={"/", _Mod}, [_PEslash|Tail], Ack) ->
-    {ok, lists:reverse(Ack), AM, Tail};
+split_at(AM={"/", _Mod}, [PEslash|Tail], Ack) ->
+    {ok, lists:reverse(Ack), AM, [PEslash|Tail]};
 split_at(AM={PE, _Mod}, [PEslash|Tail], Ack) ->
     ?Debug("AM=~p PEslash=~p~n", [AM, PEslash]),
     case no_slash_eq(PE, PEslash) of
