@@ -404,7 +404,7 @@ gserv(Top, GC, Group0) ->
     SC = hd(Group),
     case do_listen(GC, SC) of
 	{SSLBOOL, {ok, Listen}} ->
-	    call_start_mod(SC),
+	    lists:foreach(fun(XSC) -> call_start_mod(XSC) end, Group),
 	    error_logger:info_msg(
 	      "Yaws: Listening to ~s:~w for servers~s~n",
 	      [inet_parse:ntoa(SC#sconf.listen),
@@ -622,6 +622,8 @@ call_start_mod(SC) ->
 	    Mod = l2a(Mod0),
 	    case code:ensure_loaded(Mod) of
 		{module, Mod} ->
+		    error_logger:info_msg(
+		      "Yaws: calling start_mod: ~p:start/1~n", [Mod]),
 		    spawn(Mod, start, [SC]);
 		Err ->
 		    error_logger:format("Cannot load module ~p: ~p~n", 
