@@ -198,6 +198,7 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
 	    {"SERVER_PORT", Hostport},
 	    {"REQUEST_METHOD", yaws:to_list(R#http_request.method)},
 	    {"REQUEST_URI", RequestURI},
+	    {"DOCUMENT_ROOT", Arg#arg.docroot},
 	    {"PATH_INFO", checkdef(Pathinfo)},
 	    {"SCRIPT_FILENAME", Scriptfilename},    % For PHP 4.3.2 and higher
 						    % see http://bugs.php.net/bug.php?id=28227
