@@ -777,6 +777,8 @@ acceptor0(GS, Top) ->
 		    Top ! {self(), done_client, Int};
 		{'EXIT', normal} ->
 		    exit(normal);
+	        {'EXIT', shutdown} ->
+                    exit(shutdown);
 		{'EXIT', {error, einval}} ->
 		    %% Typically clients that close their end of the socket
 		    %% don't log. Happens all the time.
@@ -790,7 +792,7 @@ acceptor0(GS, Top) ->
 		{'EXIT', Reason} ->
 		    error_logger:error_msg("Yaws process died: ~p~n", 
 					   [Reason]),
-		    exit(normal)
+		    exit(shutdown)
 	    end,
 	    
 	    %% we cache processes
