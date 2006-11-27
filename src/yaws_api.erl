@@ -557,20 +557,13 @@ fl([Fmt, Arg | Tail]) ->
 fl([]) ->
     [].
 
-
-
-%% htmlize  
-htmlize(<<Char, Tail/binary>>) ->
-    case htmlize_char(Char) of
-	Char ->
-	    <<Char, (htmlize(Tail))/binary>>;
-        Bin ->		
-            <<Bin/binary, (htmlize(Tail))/binary>>
-    end;
-htmlize(<<>>) ->			 
-    <<>>;
+%% htmlize
+htmlize(Bin) when binary(Bin) ->
+    list_to_binary(htmlize_l(binary_to_list(Bin)));
 htmlize(List) when list(List) ->
     htmlize_l(List).
+
+
 
 htmlize_char($>) ->
     <<"&gt;">>;
