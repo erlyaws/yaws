@@ -789,6 +789,8 @@ acceptor0(GS, Top) ->
 		    exit(normal);
 		{'EXIT', {{error, closed}, _}} ->
 		    exit(normal);
+		{'EXIT', {{error, econnreset},_}} ->
+		    exit(normal);
 		{'EXIT', Reason} ->
 		    error_logger:error_msg("Yaws process died: ~p~n", 
 					   [Reason]),
