@@ -396,7 +396,10 @@ get_compiler_data(P, Ack) ->
 	{P, result, error} ->
 	    S = lists:map(
 		  fun(S) -> S ++ "\n" end, lists:reverse(Ack)),
-	    {error, S}
+	    {error, S};
+	{P, result, {'EXIT', Reason}} ->
+	    S = lists:flatten(io_lib:format("~p", [Reason])),
+            {error, S} 
     end.
 
 					    
