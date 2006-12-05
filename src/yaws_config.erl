@@ -297,6 +297,8 @@ yaws_dir() ->
 
 del_tail([_H, ".." |Tail]) ->
     del_tail(Tail);
+del_tail(["..", _H |Tail]) ->
+    del_tail(Tail);
 del_tail([_X, _Y]) ->
     [];
 del_tail([H|T]) ->
