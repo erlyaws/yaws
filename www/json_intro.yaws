@@ -30,11 +30,14 @@ out(A) ->
       [{h1, [], "AJAX through JSON RPC"},
        
 	{p, [],
-	  {i, [], "Note: this documentation used to refer to the module "
+	 {i, [], 
+	  ["Note: this documentation used to refer to the module "
 	    "'yaws_jsonrpc'. This module has been depracated in favor "
-	    "of 'yaws_rpc', which handles both JSON RPC and haXe "
+	    "of 'yaws_rpc', which handles both JSON RPC, haXe and SOAP "
 	    "remoting. All references to 'yaws_jsonrpc' on this page "
-	    "were therefore changed to 'yaws_rpc'."}},
+	    "were therefore changed to 'yaws_rpc'. For more specific "
+	   "information about SOAP, refer to ",
+	   {a, [{href, "/soap_intro.yaws"}], "the SOAP page."}]}},
        {p, [],
 	["The Yaws Json binding is a way to have Javascript code in the "
 	 "browser evaluate a remote procedure call in the Yaws server."

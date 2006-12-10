@@ -68,6 +68,7 @@ load(E) ->
 		{ok, GC5, Cs} ->
 		    yaws:mkdir(GC#gconf.tmpdir),
 		    Cs2 = add_yaws_auth(Cs),
+		    add_yaws_soap_srv(GC5),
 		    validate_cs(GC5, Cs2);
 		Err ->
 		    Err
@@ -75,6 +76,19 @@ load(E) ->
 	_ ->
 	    {error, "Can't open config file" ++ File}
     end.
+
+
+add_yaws_soap_srv(GC) when GC#gconf.enable_soap == true ->
+    SoapStarted = (whereis(yaws_soap_srv) /= undefined),
+    if (SoapStarted == false) ->
+	    Spec = {yaws_soap_srv, {yaws_soap_srv, start_link, []},
+		    permanent, 5000, worker, [yaws_soap_srv]},
+	    spawn(fun() -> supervisor:start_child(yaws_sup, Spec) end);
+       true ->
+	    ok
+    end;
+add_yaws_soap_srv(_GC) -> 
+    ok.
 
 
 add_yaws_auth(SCs) ->
@@ -366,6 +380,15 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 	    Mod = list_to_atom(Mod0),
 	    fload(FD, globals, GC#gconf{runmods = [Mod|GC#gconf.runmods]},
 		  C, Cs, Lno+1, Next);
+
+	["enable_soap", '=', Bool] ->
+	    if (Bool == "true") ->
+		    fload(FD, globals, GC#gconf{enable_soap = true},
+			  C, Cs, Lno+1, Next);
+	       true ->
+		    fload(FD, globals, GC#gconf{enable_soap = false},
+			  C, Cs, Lno+1, Next)
+	    end;
 
 	["log_wrap_size", '=', Int] ->
 	     case (catch list_to_integer(Int)) of

@@ -44,7 +44,9 @@ start_embedded(DocRoot, SL, GL) when list(DocRoot),list(SL),list(GL) ->
     application:start(yaws),
     GC = setup_gconf(GL, yaws_config:make_default_gconf(false, "")),
     SC = setup_sconf(DocRoot, #sconf{}, SL),
+    yaws_config:add_yaws_soap_srv(GC),
     yaws_api:setconf(GC, [[SC]]).
+    
 
 setup_gconf([], GC) -> GC;
 setup_gconf(GL, GC) ->
@@ -83,7 +85,9 @@ setup_gconf(GL, GC) ->
 	   id = lkup(id, GL, 
 		     GC#gconf.id),
 	   tmpdir = lkup(tmpdir, GL, 
-			 GC#gconf.tmpdir)
+			 GC#gconf.tmpdir),
+	   enable_soap = lkup(enable_soap, GL, 
+			      GC#gconf.enable_soap)
 	  }.
 
 set_gc_flags([{tty_trace, Bool}|T], Flags) -> 

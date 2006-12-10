@@ -36,7 +36,8 @@
 %% modified by Yariv Sadan (yarivvv@gmail.com)
 
 -module(yaws_rpc).
--author("Gaspar Chilingarov <nm@web.am>, Gurgen Tumanyan <barbarian@armkb.com>").                    -modified_by("Yariv Sadan <yarivvv@gmail.com>").
+-author("Gaspar Chilingarov <nm@web.am>, Gurgen Tumanyan <barbarian@armkb.com>").                    
+-modified_by("Yariv Sadan <yarivvv@gmail.com>").
 
 -export([handler/2]).
 -export([handler_session/2, handler_session/3]).
@@ -124,18 +125,21 @@ handle_payload(Args, Handler, Type) -> % {{{
 	    eval_payload(Args, Handler, DecodedPayload, Type, ID, RpcType);
 	{error, Reason} ->
 	    ?ERROR_LOG({html, client2erl, Payload, Reason}),
-	    send(Args, 400)
+	    send(Args, 400, RpcType)
     end. % }}}
 
 %%% Identify the RPC type. We first try recognize haXe by the
-%%% "X-Haxe-Remoting" HTTP header, and if it's absent we
-%%% assume the request is JSON.
+%%% "X-Haxe-Remoting" HTTP header, then the "SOAPAction" header,
+%%% and if those are absent we assume the request is JSON.
 recognize_rpc_type(Args) ->
     OtherHeaders = ((Args#arg.headers)#headers.other),
-    case lists:any(fun(A) -> element(3, A) == "X-Haxe-Remoting" end, OtherHeaders) of
-	true -> haxe;
-	_ -> json
-    end.    
+    recognize_rpc_hdr([{X,Y,yaws:to_lower(Z),Q,W} || {X,Y,Z,Q,W} <- OtherHeaders]).
+
+recognize_rpc_hdr([{_,_,"x-haxe-remoting",_,_}|_]) -> haxe;
+recognize_rpc_hdr([{_,_,"soapaction",_,_}|_])      -> soap;
+recognize_rpc_hdr([_|T])                           -> recognize_rpc_hdr(T);
+recognize_rpc_hdr([])                              -> json.
+
     
 %%%
 %%% call handler/3 and provide session support
@@ -152,32 +156,31 @@ eval_payload(Args, {M, F}, Payload, {session, CookieName}, ID, RpcType) -> % {{{
 			{undefined, undefined}
 		end
 	end,
-    case catch M:F(Args#arg.state, Payload, SessionValue) of
+    CbackFun = callback_fun(M, F, Args, Payload, SessionValue, RpcType),
+    case catch CbackFun() of
 	{'EXIT', Reason} ->
 	    ?ERROR_LOG({M, F, {'EXIT', Reason}}),
-	    send(Args, 500);
+	    send(Args, 500, RpcType);
 	{error, Reason} ->
 	    ?ERROR_LOG({M, F, Reason}),
-	    send(Args, 500);
+	    send(Args, 500, RpcType);
+	{error, Reason, Rc} ->
+	    ?ERROR_LOG({M, F, Reason}),
+	    send(Args, Rc, Reason, [], RpcType);
 	{false, ResponsePayload} ->
 	    % do not have updates in session data
 	    encode_send(Args, 200, ResponsePayload, [], ID, RpcType);
+	{false, ResponsePayload, RespCode} ->
+	    % do not have updates in session data
+	    encode_send(Args, RespCode, ResponsePayload, [], ID, RpcType);
+	false ->   % soap notify
+	    false; 
 	{true, _NewTimeout, NewSessionValue, ResponsePayload} -> % be compatible with xmlrpc module
-	    CO = case NewSessionValue of
-		     undefined when Cookie == undefined -> []; % nothing to do
-		     undefined -> % rpc handler requested session delete
-			 yaws_api:delete_cookie_session(Cookie), []; % XXX: may be return set-cookie with empty val?
-		     _ ->  % any other value will stored in session
-			 case SessionValue of
-			     undefined -> % got session data and should start new session now
-				 Cookie1 = yaws_api:new_cookie_session(NewSessionValue),
-				 yaws_api:setcookie(CookieName, Cookie1, "/"); % return set_cookie header
-			     _ -> 
-				 yaws_api:replace_cookie_session(Cookie, NewSessionValue),
-				 [] % nothing to add to yaws data
-			 end
-		 end,
-	    encode_send(Args, 200, ResponsePayload, CO, ID, RpcType)
+	    CO = handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue),
+	    encode_send(Args, 200, ResponsePayload, CO, ID, RpcType);
+	{true, _NewTimeout, NewSessionValue, ResponsePayload, RespCode} -> % be compatible with xmlrpc module
+	    CO = handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue),
+	    encode_send(Args, RespCode, ResponsePayload, CO, ID, RpcType)
     end; % }}}
 
 %%%
@@ -193,9 +196,32 @@ eval_payload(Args, {M, F}, Payload, simple, ID, RpcType) -> % {{{
 	    send(Args, 500);
 	{false, ResponsePayload} ->
 	    encode_send(Args, 200, ResponsePayload, [], ID, RpcType);
+	false -> % Soap notify !?
+	    false;
 	{true, _NewTimeout, _NewState, ResponsePayload} ->
 	    encode_send(Args, 200, ResponsePayload, [], ID, RpcType)
     end. % }}}  
+
+handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue) ->
+    case NewSessionValue of
+	undefined when Cookie == undefined -> []; % nothing to do
+	undefined -> % rpc handler requested session delete
+	    yaws_api:delete_cookie_session(Cookie), []; % XXX: may be return set-cookie with empty val?
+	_ ->  % any other value will stored in session
+	    case SessionValue of
+		undefined -> % got session data and should start new session now
+		    Cookie1 = yaws_api:new_cookie_session(NewSessionValue),
+		    yaws_api:setcookie(CookieName, Cookie1, "/"); % return set_cookie header
+		_ -> 
+		    yaws_api:replace_cookie_session(Cookie, NewSessionValue),
+		    [] % nothing to add to yaws data
+	    end
+    end.
+
+callback_fun(M, F, Args, Payload, SessionValue, soap) ->
+    fun() -> yaws_soap_srv:handler(Args, {M,F}, Payload, SessionValue) end;
+callback_fun(M, F, Args, Payload, SessionValue, _RpcType) ->
+    fun() -> M:F(Args#arg.state, Payload, SessionValue) end.
 
 
 %%% XXX compatibility with XMLRPC handlers
@@ -208,25 +234,33 @@ encode_send(Args, StatusCode, Payload, AddOn, ID, RpcType) -> % {{{
     case encode_handler_payload(Payload, ID, RpcType) of
 	{ok, EncodedPayload} ->
 %        ?Debug("rpc encoded response ~p ~n", [EncodedPayload]),
-	    send(Args, StatusCode, EncodedPayload, AddOn);
+	    send(Args, StatusCode, EncodedPayload, AddOn, RpcType);
 	{error, Reason} ->
 	    ?ERROR_LOG({rpc_encode, payload, Payload, Reason}),
-	    send(Args, 500)
+	    send(Args, 500, RpcType)
     end. % }}}
 
-send(Args, StatusCode) -> send(Args, StatusCode, "", []). %  {{{
+send(Args, StatusCode) -> send(Args, StatusCode, json).
 
-send(Args, StatusCode, Payload, AddOnData) when not is_list(AddOnData) ->
-    send(Args, StatusCode, Payload, [AddOnData]);
+send(Args, StatusCode, RpcType) -> send(Args, StatusCode, "", [], RpcType). %  {{{
 
-send(_Args, StatusCode, Payload, AddOnData) ->
+send(Args, StatusCode, Payload, AddOnData, RpcType) when not is_list(AddOnData) ->
+    send(Args, StatusCode, Payload, [AddOnData], RpcType);
+
+send(_Args, StatusCode, Payload, AddOnData, RpcType) ->
     A = [
     {status, StatusCode}, 
-    {content, "text/xml", Payload}, 
+    content_hdr(RpcType, Payload),
     {header, {content_length, lists:flatlength(Payload) }}
     ] ++ AddOnData,
     A
      . % }}}
+
+content_hdr(json, Payload) -> {content, "application/json", Payload};
+content_hdr(_, Payload)    -> {content, "text/xml", Payload}.  % FIXME  would like to add charset info here !!
+
+encode_handler_payload(Xml, _ID, soap) ->   % {{{
+    {ok, Xml};
 
 encode_handler_payload({response, [ErlStruct]}, ID, RpcType) ->   % {{{
     encode_handler_payload({response, ErlStruct}, ID, RpcType);
@@ -262,7 +296,10 @@ decode_handler_payload(haxe, [$_, $_, $x, $= | HaxeStr]) ->
 	error:Err -> {error, Err}
     end;
 decode_handler_payload(haxe, _HaxeStr) ->
-    {error, missing_haxe_prefix}.
+    {error, missing_haxe_prefix};
+
+decode_handler_payload(soap, Payload) ->
+    {ok, Payload, undefined}.
 
 
 % vim: tabstop=4 ft=erlang

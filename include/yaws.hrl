@@ -89,7 +89,8 @@
 	       %username,           %% maybe run as a different user than root
 	       %uid,                %% unix uid of user that started yaws
 	       id = "default",      %% string identifying this instance of yaws
-	       tmpdir
+	       tmpdir,
+	       enable_soap = false  %% start yaws_soap_srv iff true
 	      }).  
 
 

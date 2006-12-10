@@ -1,0 +1,359 @@
+
+<erl>
+
+
+box(Str) ->
+    {'div',[{class,"box"}],
+     {pre,[], yaws_api:htmlize(Str)}}.
+
+tbox(T) ->
+    box(lists:flatten(io_lib:format("~p",[T]))).
+
+
+ssi(File) ->
+    {'div',[{class,"box"}],
+     {pre,[],
+      {ssi, File,[],[]}}}.
+
+ss(A, File) ->
+    {ok, B} = file:read_file(
+		filename:join([A#arg.docroot, File])),
+    box(binary_to_list(B)).
+    
+
+
+out(A) -> 
+    [{ssi, "TAB.inc", "%%",[{"soap_intro", "choosen"}]},
+     {ehtml,
+      {'div', [{id, "entry"}],
+
+      [{h1, [], "SOAP with Yaws"},
+       
+       {p, [],
+	["SOAP is an XML-based protocol for communication over a network "
+	 "connection. The main focus of SOAP is remote procedure calls (RPCs) "
+	 "transported via HTTP. "
+	 "SOAP is similar to XML-RPC but makes use of XML Schema to define "
+	 "the data types it is making use of. "
+	 ]},
+
+       {h2, [], "Preparations"},
+
+       {p, [],
+	["Yaws is making use of the 'erlsom' XML Schema "
+	 "parser and some SOAP specific library code. "
+	 "Thus, to be able to use SOAP with Yaws you need to have "
+	 "'erlsom' installed. Currently, the easiest way of installing "
+	 "'erlsom' is to check out the library from Sourceforge and "
+	 "install it from there. "]},
+
+       {p,[],"To install 'erlsom' do:"},
+
+       box("cvs -d:pserver:anonymous@erlsom.cvs.sourceforge.net:/cvsroot/erlsom login\n"
+	   " cvs -z3 -d:pserver:anonymous@erlsom.cvs.sourceforge.net:/cvsroot/erlsom co -P erlsom\n"
+	   "cd erlsom; make\n"
+	   "sudo make install        # iff you want to install as root\n"
+	  ),
+
+       {h2, [], "The SOAP client side"},
+
+       {p, [],
+	["The SOAP interface is defined by a WSDL specification, which "
+	 "simply is a (rather verbose) piece of XML document that specifies "
+	 "the public interface for a web service. As a client, "
+	 "we don't need to understand everything in the WSDL specification "
+	 "The parts that are most interesting is the name of the operation "
+	 "we want to perform (i.e the function we want to call) and what "
+	 "input data it expects."
+	]},
+
+       {p,[],
+	["As an example, lets have a look at a public SOAP service that "
+	 "returns some weather data for the location we send to it. "
+	 "The WSDL specification can be found here: ",
+	 {a, [{href, "http://www.webservicex.net/WeatherForecast.asmx?WSDL"}], 
+	  "http://www.webservicex.net/WeatherForecast.asmx?WSDL "}
+	 ]},
+
+       {p,[],
+	["We start by finding the operation named: ",
+	 {i, [], "GetWeatherByPlaceName, "},
+	 "which is the operation we want to invoke. As can be seen, we have "
+	 "one input message and one output message defined. The input message is "
+	 "the one we (as a client) will send to the server. "
+	]},
+
+       box("<wsdl:operation name=\"GetWeatherByPlaceName\">\n"
+	   "  <documentation>\n"
+	   "    Get one week  weather forecast for a place name(USA)\n"
+	   "  </documentation>\n"
+	   "  <wsdl:input message=\"tns:GetWeatherByPlaceNameSoapIn\"/>\n"
+	   "  <wsdl:output message=\"tns:GetWeatherByPlaceNameSoapOut\"/>\n"
+	   "</wsdl:operation>\n"),
+
+       {p,[],
+	["Now, follow the reference to the message: ",
+	 {i, [], "tns:GetWeatherByPlaceNameSoapIn, "},
+	 "to where it is defined: " 
+	]},
+
+       box("<wsdl:message name=\"GetWeatherByPlaceNameSoapIn\">\n"
+	   "<wsdl:part name=\"parameters\" element=\"tns:GetWeatherByPlaceName\"/>\n"
+	   "</wsdl:message>\n"),
+
+       {p,[],
+	["Continue by following the reference to: ",
+	 {i, [], "tns:GetWeatherByPlaceName, "},
+	 "and you will end up with an XML Schema type definition: "
+	]},
+
+       box("<s:element name=\"GetWeatherByPlaceName\">\n"
+	   "<s:complexType>\n"
+	   "<s:sequence>\n"
+	   "<s:element minOccurs=\"0\" maxOccurs=\"1\" name=\"PlaceName\" type=\"s:string\"/>\n"
+	   "</s:complexType>\n"
+	   "</s:sequence>\n"
+	   "</s:element>\n"),
+       
+       {p,[],
+	"This tells us that the function we want to call takes one argument "
+	"of a string type (which apparently denotes a Name of a place in the US). "
+	"Left for us is just to call the function from an Erlang shell which has "
+	"got the Yaws ebin directory in the path:"
+       },
+
+       box("1> yaws_soap_lib:call(\n"
+	   "      \"http://www.webservicex.net/WeatherForecast.asmx?WSDL\"\n"
+	   "      \"GetWeatherByPlaceName\"\n"
+	   "      [\"Boston\"]).\n"
+	   "{ok,undefined,\n"
+	   "  [{'p:GetWeatherByPlaceNameResponse',\n"
+	   "     [],\n"
+	   "     {'p:WeatherForecasts',[],\n"
+	   "       \"40.3044128\",\n"
+	   "       \"79.81284\",\n"
+	   "       \"0.000453\",\n"
+	   "       \"42\",\n"
+	   "       \"BOSTON\",\n"
+	   "       \"PA\",\n"
+	   "       undefined,\n"
+	   "       {'p:ArrayOfWeatherData',\n"
+	   "         [],\n"
+	   "         [{'p:WeatherData',\n"
+	   "         [],\n"
+	   "         \"Friday, December 08, 2006\"|...},\n"
+	   "         .....\n"),
+
+       {p,[],
+	"So what happend here? We specified the URL to the WSDL file. "
+	"The yaws_soap_lib:call/3 function then went to retrieve the file, parsed it, "
+	"created a proper message, sent off the message, waited for the "
+	"reply and finally returned a parsed reply as Erlang records. "
+       },
+
+       {p,[],
+	"Eventhough this was very convenient, we probably want do more thnn just one call "
+	"to the web service. So to avoid retrieving and parsing the WSDL file for every "
+	"call. We can do it in two steps: "
+	},
+
+       box("1> Wsdl = yaws_soap_lib:initModel(\n"
+	   "      \"http://www.webservicex.net/WeatherForecast.asmx?WSDL\").\n"
+	   "...\n"
+	   "2> yaws_soap_lib:call(\n"
+	   "      Wsdl,\n"
+	   "      \"GetWeatherByPlaceName\"\n"
+	   "      [\"Boston\"]).\n"
+	  ),
+
+       {p,[],
+	"To be able to work with the records that we get in the response, "
+	"we can create a header file that we can include in our source code. In our example "
+	"the generated '.hrl' file will look like this: "
+	},
+
+       box("3> yaws_soap_lib:write_hrl(Wsdl, \"/tmp/wfc.hrl\").\n"
+	   "...\n"
+	   "4> {ok,Bin}=file:read_file(\"/tmp/wfc.hrl\"),io:fwrite(binary_to_list(Bin)).\n"
+	   "-record('soap:detail', {anyAttribs, choice}).\n"
+	   "-record('soap:Fault', {anyAttribs, 'faultcode', 'faultstring', 'faultactor', 'detail'}).\n"
+	   "-record('soap:Body', {anyAttribs, choice}).\n"
+	   "-record('soap:Header', {anyAttribs, choice}).\n"
+	   "-record('soap:Envelope', {anyAttribs, 'Header', 'Body', choice}).\n"
+	   "-record('p:GetWeatherByPlaceNameResponse', {anyAttribs, 'GetWeatherByPlaceNameResult'}).\n"
+	   "-record('p:GetWeatherByPlaceName', {anyAttribs, 'PlaceName'}).\n"
+	   "-record('p:WeatherData', {anyAttribs, 'Day', 'WeatherImage', 'MaxTemperatureF', \n"
+	   "                          'MinTemperatureF', 'MaxTemperatureC', 'MinTemperatureC'}).\n"
+	   "-record('p:ArrayOfWeatherData', {anyAttribs, 'WeatherData'}).\n"
+	   "-record('p:WeatherForecasts', {anyAttribs, 'Latitude', 'Longitude', 'AllocationFactor', \n"
+	   "                               'FipsCode', 'PlaceName', 'StateCode', 'Status', 'Details'}).\n"
+	   "-record('p:GetWeatherByZipCodeResponse', {anyAttribs, 'GetWeatherByZipCodeResult'}).\n"
+	   "-record('p:GetWeatherByZipCode', {anyAttribs, 'ZipCode'}).\n"
+	  ),
+
+       {p,[],
+	"As you can see, every record in our header has an XML namespace prefix prepended "
+	"in the name of the record. The prefix 'p' as shown above is the default prefix you'll "
+	"get if you don't specify a prefix yourself. This is probably good enough, but if you "
+	"want to set it to something else, you can do it as shown below:"
+	},
+
+       box("5> yaws_soap_lib:initModel(... , \"foo\").           % foo is my prefix\n"
+	   "6> yaws_soap_lib:write_hrl(... , ... , \"foo\").\n"
+	   ),
+
+       {p,[],
+	["Some final notes:",
+	 {ul, [],
+	  [{li, [],
+	    "The \"http://...\" URL given as the first argument to the "
+	    "functions above may as well be a local file, and thus written as \"file://....\". "},
+	   {li, [],
+	    "When we retrieve a HTTP located file, we will use 'ibrowse' if it exist "
+	    "in the code path. Otherwise we will use the OTP 'http' client."}
+	  ]}]},
+
+       {h2, [], "The SOAP server side"},
+
+       {p,[],
+	"If we want to run our own weather service we need to take the WSDL "
+	"and add our own location to it. Either we can just study the WSDL file to "
+	"see which URL we need to change in the 'service' part of the document, or "
+	"we can make use of some nice access functions, that work on the "
+	"#wsdl{} record that yaws_soap_lib:initModel/2 returned, as shown below: "
+	},
+
+       box("7> Ops = yaws_soap_lib:wsdl_operations(Wsdl).\n"
+	   "8> {ok,Op} = yaws_soap_lib:get_operation(Ops, \"GetWeatherByPlaceName\").\n"
+	   "9> yaws_soap_lib:wsdl_op_address(Op).\n"
+	   "\"http://www.webservicex.net/WeatherForecast.asmx\"\n"
+	  ),
+
+       {p,[],
+	"Now, edit the WSDL file and change the above URL to something like this:"
+	},
+
+       box("<wsdl:service name=\"WeatherForecast\">\n"
+	   "  <documentation xmlns=......\n"
+ 	   "  <wsdl:port name=\"WeatherForecastSoap\".....\n"
+	   "    <soap:address location=\"http://localhost:8181/WeatherForecast.yaws\" />\n"
+	   "  </wsdl:port>\n"
+	   ".....\n"
+	  ),
+
+
+       {p,[],
+	"Next, start an Erlang shell and start Yaws with SOAP enabled. We need to write "
+	"the code that returns the weather info. This is done in a callback module that "
+	"the Yaws SOAP code will call with the incoming message. The message will be an "
+	"Erlang record and what we return must also be an Erlang record. So we will need "
+	"to create a .hrl containing the record definitions that we can include: "
+	},
+
+       box("1> Docroot = \"/tmp\".\n"
+	   "\n"
+	   "2> GL = [{enable_soap,true},   % <== THIS WILL ENABLE SOAP IN A YAWS SERVER!!\n"
+	   "         {trace, false},\n"
+	   "         {tmpdir,\"/tmp\"},{logdir,\"/tmp\"},\n"
+	   "       {flags,[{auth_log,false},{tty_trace, false},{copy_errlog, true}]}].\n"
+	   "\n"
+	   "3> SL = [{port,8181},{servername,\"localhost\"},{dir_listings, true},\n"
+	   "         {listen,{127,0,0,1}},{flags,[{access_log,false}]}].\n"
+	   "\n"
+	   "% BELOW, WE CREATE THE .hrl FILE!!\n"
+	   "4> yaws_soap_lib:write_hrl(\"file:///tmp/MyWeatherService.wsdl\", \"/tmp/my_soap.hrl\").\n"
+	   "\n"
+	   "% WE MUST ADD A PATH TO OUR CALLBACK CODE!!\n"
+	   "5> code:add_path(\"/tmp\").\n"
+	   ),
+
+       {p,[],
+	"We continue by writing our weather forecast callback module:"
+	},
+
+       box("# cat /tmp/my_soap.erl\n"
+	   "-module(my_soap).\n"
+	   "-export([handler/4]).\n"
+	   "-include(\"my_soap.hrl\").  % .hrl file generated by erlsom\n"
+	   "\n"
+	   "handler(_Header,\n"
+	   "        [#'p:GetWeatherByPlaceName'{'PlaceName' = Place}],\n"
+	   "        _Action, \n"
+	   "        _SessionValue) ->\n"
+	   "    {ok, undefined, get_weather_info(Place)}.\n"
+	   "\n"
+	   "get_weather_info(Place) -> \n"
+	   "    [{'p:GetWeatherByPlaceNameResponse', [],\n"
+	   "     {'p:WeatherForecasts',[],\n"
+	   "       \"40.3044128\",\n"
+	   "       \"79.81284\",\n"
+	   "       \"0.000453\",\n"
+	   "       \"42\",\n"
+	   "       Place,\n"
+	   "       \"PA\",\n"
+	   "       undefined,\n"
+	   "       {'p:ArrayOfWeatherData', [],\n"
+	   "          [{'p:WeatherData', [],\n"
+	   "            \"Sunday, December 10, 2006\",\n"
+	   "            \"http://www.nws.noaa.gov/weather/images/fcicons/nfew.jpg\",\n"
+	   "            \"51\",\n"
+	   "            \"28\",\n"
+	   "            \"11\",\n"
+	   "            \"-2\"}]}}}].\n"
+	  ),
+
+       {p,[],
+	"The final piece on the server side is the '.yaws' file that invokes the "
+	"Yaws SOAP server (note that we are using the same way of hooking in our "
+	"callback module as for Json and HaXe):"
+	},
+
+       box("# cat /tmp/WeatherForecast.yaws\n"
+	   "<erl>\n"
+	   "out(A) ->\n"
+	   "    yaws_rpc:handler_session(A, {my_soap, handler}).\n"
+	   "</erl>\n"
+	  ),
+
+       {p,[],
+	"We are now ready to try it out. Start another Erlang shell and call it: "
+	},
+
+       box("1> yaws_soap_lib:call(\"file:///tmp/MyWeatherService.wsdl\",\n"
+	   "                      \"GetWeatherByPlaceName\",\n"
+	   "                      [\"Stockholm\"]).\n"
+	   "{ok,undefined,\n"
+	   "  [{'p:GetWeatherByPlaceNameResponse', [],\n"
+	   "     {'p:WeatherForecasts',[],\n"
+	   "       \"40.3044128\",\n"
+	   "       \"79.81284\",\n"
+	   "       \"0.000453\",\n"
+	   "       \"42\",\n"
+	   "       \"Stockholm\",           % <=== Yippie, it works !!\n"
+	   "       \"PA\",\n"
+	   "       undefined,\n"
+	   "       {'p:ArrayOfWeatherData', [],\n"
+	   "         [{'p:WeatherData', [],\n"
+	   "           \"Sunday, December 10, 2006\"|...}]}}}]}\n"
+	   "\n"
+	  ),
+
+       {p,[],
+	"There you have it! "
+	},
+
+
+     {ssi, "END2",[],[]}
+    ]}}].
+
+
+
+
+</erl>
+
+
+
+
+
+
+
