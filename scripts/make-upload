@@ -14,7 +14,7 @@ echo "cd incoming " >  /tmp/cmds.$$
 echo "put $1 " >> /tmp/cmds.$$
 ncftp -u anonymous -p klacke@hyber.org upload.sourceforge.net < /tmp/cmds.$$
 rm /tmp/cmds.$$
-#scp $1 klacke@gnejs.hyber.org:/var/yaws/www/download
+
 
 
 echo "Now login at sourceforge at go the page"

@@ -76,17 +76,16 @@ clean:
 	rm -f $(EBIN_FILES) yaws_generated.erl charset.def mime_types.erl
 
 install: all docsinstall
-	install -d $(DESTDIR)/$(PREFIX)/lib/yaws/examples/ebin
-	install -d $(DESTDIR)/$(PREFIX)/lib/yaws/examples/include
-	install -d $(DESTDIR)/$(PREFIX)/lib/yaws/ebin
-	install -d $(DESTDIR)/$(VARDIR)/log/yaws
-	install -d $(DESTDIR)/$(VARDIR)/yaws/ebin
-#	cp -r ../include/* $(DESTDIR)/$(PREFIX)/lib/yaws/
+	$(INSTALL) -d $(DESTDIR)/$(PREFIX)/lib/yaws/examples/ebin
+	$(INSTALL) -d $(DESTDIR)/$(PREFIX)/lib/yaws/examples/include
+	$(INSTALL) -d $(DESTDIR)/$(PREFIX)/lib/yaws/ebin
+	$(INSTALL) -d $(DESTDIR)/$(VARDIR)/log/yaws
+	$(INSTALL) -d $(DESTDIR)/$(VARDIR)/yaws/ebin
 	(cd ..; tar cf - ebin ) | (cd $(DESTDIR)/$(PREFIX)/lib/yaws; tar xf - )
 	(cd ..; tar cf - include ) | (cd $(DESTDIR)/$(PREFIX)/lib/yaws; tar xf - )
 
 docsinstall:
-	install -d $(DESTDIR)/$(VARDIR)/yaws/www
+	$(INSTALL) -d $(DESTDIR)/$(VARDIR)/yaws/www
 	(cd ..; tar cf - www ) | (cd $(DESTDIR)/$(VARDIR)/yaws; tar xf - )
 
 

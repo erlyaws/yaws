@@ -61,5 +61,6 @@ install:	.install
 		cp yaws.conf $(DESTDIR)/$(ETCDIR)/yaws.conf.template; \
 	else \
 		echo "Installing $(DESTDIR)/$(ETCDIR)/yaws.conf"; \
+		mkdir -p $(DESTDIR)/$(ETCDIR); \
 		cp yaws.conf $(DESTDIR)/$(ETCDIR)/yaws.conf; \
 	fi

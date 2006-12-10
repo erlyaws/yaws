@@ -19,6 +19,7 @@ e=${etcdir}
 v=${vardir}
 
 install -d ${destdir}/${prefix}/bin
+install -d ${destdir}/${prefix}/etc
 
 cat yaws.template | \
     ./Subst %yawsdir% ${prefix}/lib/yaws | \
@@ -62,7 +63,7 @@ elif [ -f /etc/debian_version ]; then
 
 elif [ "`uname -s`" = "Darwin" -a `id -u` = 0 ]; then
      startupdir="/Library/StartupItems/Yaws"
-     if [ ! -e ${startupdir} && ]; then
+     if [ ! -e ${startupdir} ]; then
        mkdir ${startupdir};
      elif [ ! -d ${startupdir} ]; then
 	 echo "${startupdir} exists but is not a directory, bailing out ..."
