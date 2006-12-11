@@ -779,7 +779,9 @@ to_lower([C|Cs]) when C >= $A, C =< $Z ->
 to_lower([C|Cs]) ->
     [C|to_lower(Cs)];
 to_lower([]) ->
-    [].
+    [];
+to_lower(A) when is_atom(A) ->
+    to_lower(atom_to_list(A)).
 
 
 to_integer(I) when list(I) ->
