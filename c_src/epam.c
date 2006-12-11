@@ -307,7 +307,8 @@ static void do_auth(char *service, char*user, char*pwd, char* mode, int sid)
 	werr(pamh, sid, retval, "start");
 	return;
     }
-    
+    pam_set_item(pamh, PAM_RUSER, user);
+
     retval = pam_authenticate(pamh, 0); 
     if (retval != PAM_SUCCESS) {
 	werr(pamh, sid, retval, "auth");
@@ -360,7 +361,9 @@ int main(int argc, char *argv[])
 
     // test clause
     if (argc == 4 ) {
-	do_auth("system-auth", argv[2], argv[3], "AS", 33);
+	/* ./epam authmodule user passwd */
+	printf("testing service=%s u=%s pwd=%s\n", argv[1],argv[2], argv[3]);
+	do_auth(argv[1], argv[2], argv[3], "AS", 33);
 	exit(0);
     }
     wstart();
