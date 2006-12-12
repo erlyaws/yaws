@@ -45,8 +45,8 @@ start_embedded(DocRoot, SL, GL) when list(DocRoot),list(SL),list(GL) ->
     GC = setup_gconf(GL, yaws_config:make_default_gconf(false, "")),
     SC = setup_sconf(DocRoot, #sconf{}, SL),
     yaws_config:add_yaws_soap_srv(GC),
-    yaws_config:add_yaws_auth(SL),
-    yaws_api:setconf(GC, [[SC]]).
+    SCs = yaws_config:add_yaws_auth([SC]),
+    yaws_api:setconf(GC, [SCs]).
     
 
 setup_gconf([], GC) -> GC;
