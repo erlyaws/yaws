@@ -1,3 +1,17 @@
+Tue Dec 12 10:51:18 CET 2006 version 1.66
+pam fixes, e.g make pam_group.so/pam_wheel.so work (klacke)
+Full SOAP server/client implementation in Yaws 
+bug found in path handling for yaws_dir by CEAN guys
+suppress dead client error msgs (klacke)
+shutdown fixes from Danile Luna
+added env DOCUMENT_ROOT to cgi env vars  Michael FIG
+the pathinfo elem in #arg got wrong when appmod was / (klacke)
+start_embedded default flags patch by Jason Andersson
+Added option for having a module for handling authentication. (jb)
+Fix to yapp for starting dependencies, patch from Michael Leonhard
+added the client IP address to the #arg record
+added config flag 'use_large_ssl_pool =  bool()'   (klacke)
+
 Mon Sep 11 19:59:57 CEST 2006 version 1.65
 patch by Chris NewCombeto handle PUT method better.
 Yapp added. Yaws application (Yapp) handler in yaws/applications/yapp directory "Drops" web applications independently of each other into an existing server where they get the default URL http://servername/application_name/. Yapps are simply Erlang/OTP applications with web pages in their priv/docroot directory (default). One can also configure private appmods, useful for controller parts in MVC like applications. (Mikael Karlsson)

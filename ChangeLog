@@ -1,3 +1,122 @@
+2006-12-12 10:47  klacke
+
+	* vsn.mk: preparing for 1.66
+
+2006-12-12 10:33  klacke
+
+	* scripts/yaws.template: [no log message]
+
+2006-12-12 10:29  klacke
+
+	* src/yaws.erl: need pam for embedded mode
+
+2006-12-12 00:54  klacke
+
+	* src/yaws.erl, www/json_sample.yaws: small bug fixes
+
+2006-12-11 17:20  klacke
+
+	* c_src/epam.c: set RUSER so that pam_group.so works for us
+
+2006-12-10 23:32  etnt
+
+	* include/erlsom.hrl, include/soap.hrl, include/yaws.hrl,
+	priv/envelope.xsd, priv/soap.xsd, priv/wsdl.xsd, src/Makefile,
+	src/yaws.erl, src/yaws_config.erl, src/yaws_rpc.erl,
+	src/yaws_soap_lib.erl, src/yaws_soap_srv.erl, www/TAB.inc,
+	www/json_intro.yaws, www/soap_intro.yaws: Adding SOAP processing
+	capabilities to Yaws.  Read the www/soap_intro.yaws for more info.
+
+2006-12-10 20:55  klacke
+
+	* scripts/Install, scripts/Makefile, scripts/make-upload,
+	src/Makefile: Make/build fixes
+
+2006-12-06 00:05  klacke
+
+	* src/yaws_config.erl: bug found in path handling for yaws_dir by
+	CEAN guys
+
+2006-12-01 22:15  klacke
+
+	* src/yaws_compile.erl: handle compiler crash
+
+2006-11-28 21:48  klacke
+
+	* src/yaws_server.erl: filer econnreset errors
+
+2006-11-27 20:29  klacke
+
+	* src/yaws_api.erl: memory better htmlize
+
+2006-11-20 23:20  klacke
+
+	* src/yaws_server.erl: shutdown fixes from Danile Luna
+
+2006-11-19 23:14  klacke
+
+	* src/yaws_cgi.erl:  added env DOCUMENT_ROOT to cgi env vars -
+	Michael FIG
+
+2006-11-19 18:09  klacke
+
+	* src/yaws_server.erl: dont log write errors when error is 'closed'
+
+2006-11-09 21:30  etnt
+
+	* src/yaws_server.erl: Fixed bug: the 'start_mod' module was not
+	called correctly when having several servers listening to the same
+	port.
+
+2006-11-06 23:41  klacke
+
+	* src/yaws_server.erl: the pathinfo elem in #arg got wrong when
+	appmod was /
+
+2006-11-05 22:20  klacke
+
+	* src/yaws.erl: start_embedded default flags patch by Jason
+	Andersson
+
+2006-10-18 16:18  jbevemyr
+
+	* src/: yaws_log.erl, yaws_server.erl: Fixed logging for authmodule
+
+2006-10-18 15:51  jbevemyr
+
+	* include/yaws.hrl, man/yaws.conf.5, src/yaws_config.erl,
+	src/yaws_server.erl: Added option for having a module for handling
+	authentication.
+
+2006-10-09 22:44  mikaelka
+
+	* applications/yapp/src/yapp.erl: Fix to yapp for starting
+	dependencies, patch from Michael Leonhard
+
+2006-09-20 14:34  klacke
+
+	* man/yaws_api.5, src/yaws_api.erl: [no log message]
+
+2006-09-20 09:46  klacke
+
+	* www/: arg.yaws, arg2.yaws: added the client IP address to the
+	#arg record
+
+2006-09-20 09:29  klacke
+
+	* include/yaws_api.hrl, src/yaws_server.erl: added the client IP
+	address to the #arg record
+
+2006-09-19 09:41  klacke
+
+	* include/yaws.hrl, man/yaws.conf.5, src/yaws_config.erl,
+	src/yaws_server.erl: added config flag 'use_large_ssl_pool =
+	bool()'
+
+2006-09-11 20:12  klacke
+
+	* ChangeLog, vsn.mk, www/news: preparing for 1.65
+
 2006-09-11 11:11  klacke
 
 	* src/yaws_server.erl: patch by Chris NewCombeto handle PUT method
