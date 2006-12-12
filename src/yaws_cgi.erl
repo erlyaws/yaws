@@ -186,8 +186,17 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
     Scriptname = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
     ExtraEnv ++
 	lists:filter(
-	  fun(X)->case X of {_,L} when list(L)->true;_->false end 
-	  end,
+          fun({K, L}) when list(L) -> 
+                  case lists:keysearch(K, 1, ExtraEnv) of
+                      false ->
+                          true;
+                      _ ->
+			  %% we have override in extraenv
+                          false
+                  end;
+             (_) ->
+                  false
+          end,      
 	  ([
 	    {"SERVER_SOFTWARE", "Yaws/"++yaws_generated:version()},
 	    {"SERVER_NAME", Hostname},
