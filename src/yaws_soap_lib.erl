@@ -234,7 +234,7 @@ get_url_file("http://"++_ = URL) ->
 		    {error, "failed to retrieve: "++URL}
 	    end;
 	{ok,{{_HTTP,RC,Emsg}, _Headers, _Body}} -> 
-	    error_logger:error_msg("~p: http-request got: ~p~n", [{RC, Emsg}]),
+	    error_logger:error_msg("~p: http-request got: ~p~n", [?MODULE, {RC, Emsg}]),
 	    {error, "failed to retrieve: "++URL};
 	_ -> 
 	    error_logger:error_msg("~p: http-request failed~n", []),
