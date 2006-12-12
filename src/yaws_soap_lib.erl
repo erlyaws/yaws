@@ -8,7 +8,7 @@
 -export([initModel/1, initModel/2, 
 	 initModelFile/1,
 	 config_file_xsd/0,
-	 call/3, call/4, call/5, call/6,
+	 call/3, call/4, call/6,
 	 write_hrl/2, write_hrl/3,
 	 findHeader/2,
 	 parseMessage/2,
@@ -87,7 +87,7 @@ call(Wsdl, Operation, ListOfData) when record(Wsdl, wsdl) ->
     case get_operation(Wsdl#wsdl.operations, Operation) of
 	{ok, Op} ->
 	    Msg = mk_msg(?DefaultPrefix, Operation, ListOfData),
-	    call(Operation, Op#operation.port, Op#operation.service, Msg, Wsdl);
+	    call(Wsdl, Operation, Op#operation.port, Op#operation.service, [], Msg);
 	Else ->
 	    Else
     end.
@@ -101,8 +101,8 @@ call(WsdlURL, Operation, Header, Msg) when list(WsdlURL) ->
 call(Wsdl, Operation, Header, Msg) when record(Wsdl, wsdl) ->
     case get_operation(Wsdl#wsdl.operations, Operation) of
 	{ok, Op} ->
-	    call(Operation, Op#operation.port, Op#operation.service, 
-		 Msg, Wsdl, Header);
+	    call(Wsdl, Operation, Op#operation.port, Op#operation.service, 
+		 Header, Msg);
 	Else ->
 	    Else
     end.
@@ -121,10 +121,7 @@ get_operation([], _Op)                               -> {error, "operation not f
 %%% --------------------------------------------------------------------
 %%% Make a SOAP request
 %%% --------------------------------------------------------------------
-call(Operation, Port, Service, Message, WSDL) ->
-    call(Operation, Port, Service, Message, WSDL, []).
-
-call(Operation, Port, Service, Message, #wsdl{operations = Operations, model = Model}, Headers) ->
+call(#wsdl{operations = Operations, model = Model}, Operation, Port, Service, Headers, Message) ->
     %% find the operation
     case findOperation(Operation, Port, Service, Operations) of
 	#operation{address = URL, action = SoapAction} ->
