@@ -232,7 +232,13 @@ get_url_file("http://"++_ = URL) ->
 		    {ok, Body};
 		_ -> 
 		    {error, "failed to retrieve: "++URL}
-	    end
+	    end;
+	{ok,{{_HTTP,RC,Emsg}, _Headers, _Body}} -> 
+	    error_logger:error_msg("~p: http-request got: ~p~n", [{RC, Emsg}]),
+	    {error, "failed to retrieve: "++URL};
+	_ -> 
+	    error_logger:error_msg("~p: http-request failed~n", []),
+	    {error, "failed to retrieve: "++URL}
     end;
 get_url_file("file://"++Fname) ->
     {ok, Bin} = file:read_file(Fname),
