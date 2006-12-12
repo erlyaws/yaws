@@ -8,7 +8,7 @@
 -export([initModel/1, initModel/2, 
 	 initModelFile/1,
 	 config_file_xsd/0,
-	 call/3, call/5, call/6,
+	 call/3, call/4, call/5, call/6,
 	 write_hrl/2, write_hrl/3,
 	 findHeader/2,
 	 parseMessage/2,
@@ -91,6 +91,19 @@ call(Wsdl, Operation, ListOfData) when record(Wsdl, wsdl) ->
 	Else ->
 	    Else
     end.
+
+%%% --------------------------------------------------------------------
+%%% Takes the actual records for the Header and Body message.
+%%% --------------------------------------------------------------------
+call(Wsdl, Operation, Header, Msg) when record(Wsdl, wsdl) ->
+    case get_operation(Wsdl#wsdl.operations, Operation) of
+	{ok, Op} ->
+	    call(Operation, Op#operation.port, Op#operation.service, 
+		 Msg, Wsdl, Header);
+	Else ->
+	    Else
+    end.
+
 
 mk_msg(Prefix, Operation, ListOfData) ->
     list_to_tuple([list_to_atom(Prefix++":"++Operation), % record name
