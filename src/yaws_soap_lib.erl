@@ -179,10 +179,13 @@ findOperation(Operation, Port, Service, [#operation{} | Tail]) ->
     findOperation(Operation, Port, Service, Tail).
 
 
-mk_envelope(Message, []) ->
-    #'soap:Envelope'{'Body' =  #'soap:Body'{choice = [Message]}};
-mk_envelope(Message, Headers) ->
-    #'soap:Envelope'{'Body'   =  #'soap:Body'{choice = [Message]},
+mk_envelope(M, H) when tuple(M) -> mk_envelope([M], H);
+mk_envelope(M, H) when tuple(H) -> mk_envelope(M, [H]);
+%%
+mk_envelope(Messages, []) when list(Messages) ->
+    #'soap:Envelope'{'Body' =  #'soap:Body'{choice = Messages}};
+mk_envelope(Messages, Headers) when list(Messages),list(Headers) ->
+    #'soap:Envelope'{'Body'   =  #'soap:Body'{choice   = Messages},
 		     'Header' =  #'soap:Header'{choice = Headers}}.
 
 %%% -------------------------------------------------------------------- 
