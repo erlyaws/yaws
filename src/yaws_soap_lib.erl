@@ -95,6 +95,9 @@ call(Wsdl, Operation, ListOfData) when record(Wsdl, wsdl) ->
 %%% --------------------------------------------------------------------
 %%% Takes the actual records for the Header and Body message.
 %%% --------------------------------------------------------------------
+call(WsdlURL, Operation, Header, Msg) when list(WsdlURL) ->
+    Wsdl = initModel(WsdlURL, ?DefaultPrefix),
+    call(Wsdl, Operation, Header, Msg);
 call(Wsdl, Operation, Header, Msg) when record(Wsdl, wsdl) ->
     case get_operation(Wsdl#wsdl.operations, Operation) of
 	{ok, Op} ->
