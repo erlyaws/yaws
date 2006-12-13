@@ -38,6 +38,9 @@ man pages though.
     <li>
       <a href="yman.yaws?page=yaws"> man page for yaws</a></li>
 
+    <li>
+      <a href="yman.yaws?page=yaws_soap_lib"> man page for yaws_soap_lib</a></li>
+
   </ul>
 
 </div>
