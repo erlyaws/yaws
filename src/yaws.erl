@@ -17,7 +17,18 @@
 -include_lib("kernel/include/file.hrl").
 
 -compile(export_all).
--export([start_embedded/1, start_embedded/2, start_embedded/3]).  % Thanks!
+-export([start_embedded/1, start_embedded/2, start_embedded/3,   % Thanks!
+	 add_server/2]). 
+-export([new_ssl/0,
+	 ssl_keyfile/1, ssl_keyfile/2,
+	 ssl_certfile/1, ssl_certfile/2,
+	 ssl_verify/1, ssl_verify/2,
+	 ssl_depth/1, ssl_depth/2,
+	 ssl_password/1, ssl_password/2,
+	 ssl_cacertfile/1, ssl_cacertfile/2,
+	 ssl_ciphers/1, ssl_ciphers/2,
+	 ssl_cachetimeout/1, ssl_cachetimeout/2]).
+
 -import(lists, [reverse/1, reverse/2]).
 
 
@@ -47,6 +58,31 @@ start_embedded(DocRoot, SL, GL) when list(DocRoot),list(SL),list(GL) ->
     yaws_config:add_yaws_soap_srv(GC),
     SCs = yaws_config:add_yaws_auth([SC]),
     yaws_api:setconf(GC, [SCs]).
+
+add_server(DocRoot, SL) when list(DocRoot),list(SL) ->
+    SC = setup_sconf(DocRoot, #sconf{}, SL),
+    yaws_config:add_sconf(SC).
+
+%%% Access functions for the SSL record.
+new_ssl()             -> #ssl{}.
+%%
+ssl_keyfile(S)      -> S#ssl.keyfile.
+ssl_certfile(S)     -> S#ssl.certfile.
+ssl_verify(S)       -> S#ssl.verify.
+ssl_depth(S)        -> S#ssl.depth.
+ssl_password(S)     -> S#ssl.password.
+ssl_cacertfile(S)   -> S#ssl.cacertfile.
+ssl_ciphers(S)      -> S#ssl.ciphers.
+ssl_cachetimeout(S) -> S#ssl.cachetimeout.
+%%
+ssl_keyfile(S, Keyfile)           -> S#ssl{keyfile = Keyfile}.
+ssl_certfile(S, Certfile)         -> S#ssl{certfile = Certfile}.
+ssl_verify(S, Verify)             -> S#ssl{verify = Verify}.
+ssl_depth(S, Depth)               -> S#ssl{depth = Depth}.
+ssl_password(S, Password)         -> S#ssl{password = Password}.
+ssl_cacertfile(S, Cacertfile)     -> S#ssl{cacertfile = Cacertfile}.
+ssl_ciphers(S, Ciphers)           -> S#ssl{ciphers = Ciphers}.
+ssl_cachetimeout(S, Cachetimeout) -> S#ssl{cachetimeout = Cachetimeout}.
     
 
 setup_gconf([], GC) -> GC;
