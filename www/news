@@ -1,3 +1,8 @@
+Sun Dec 17 20:58:21 CET 2006 version 1.66
+Followup to the previous soap release.
+Adding entry for the yaws_soap_lib man-page (tobbe)
+pam fixes (made pam_wheel/pam_group work) (klacke)
+
 Tue Dec 12 10:51:18 CET 2006 version 1.66
 pam fixes, e.g make pam_group.so/pam_wheel.so work (klacke)
 Full SOAP server/client implementation in Yaws 

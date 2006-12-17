@@ -51,11 +51,14 @@ out(A) ->
 
        box("cvs -d:pserver:anonymous@erlsom.cvs.sourceforge.net:/cvsroot/erlsom login\n"
 	   " cvs -z3 -d:pserver:anonymous@erlsom.cvs.sourceforge.net:/cvsroot/erlsom co -P erlsom\n"
-	   "cd erlsom; make\n"
+	   "cd erlsom; ./configure; make\n"
 	   "sudo make install        # iff you want to install as root\n"
 	  ),
-
-       {h2, [], "The SOAP client side"},
+	  
+	  {p, [], "Or download a released version of erlsom and install"},
+	  
+	  
+	  {h2, [], "The SOAP client side"},
 
        {p, [],
 	["The SOAP interface is defined by a WSDL specification, which "
