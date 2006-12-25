@@ -645,6 +645,9 @@ setcookie(Name, Value, Path, Expire, Domain, Secure) ->
 %% only the first match is returned
 
 
+find_cookie_val(Cookie, A) when record(A, arg) ->
+    find_cookie_val(Cookie,  (A#arg.headers)#headers.cookie);
+%%
 find_cookie_val(_Cookie, []) ->
     [];
 find_cookie_val(Cookie, [FullCookie | FullCookieList]) ->
