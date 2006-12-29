@@ -132,7 +132,15 @@ box("{array, [\"foo\", \"bar\"]}"),
 	"mechanism whereby the client side Javascript code, can RPC the "
 	"web server for data which can be subsequently used to populate "
 	"the DOM. Also required to build a good AJAX application is "
-	"good knowledge on how the DOM in the browser works"}
+	"good knowledge on how the DOM in the browser works"},
+
+       {p, [],
+	[{b,[],"Update:"},
+	 "The yaws_rpc:handler will now also call: M:F(cookie_expire) which is "
+	 "expected to return a proper Cookie expire string. This makes it possible "
+	 "to setup the Cookie lifetime. If this calback function is non-existant, "
+	 "the default behaviour is to not set a cookie expiration time, i.e it will "
+	 "live for this session only."]}
 
 
       ]}},

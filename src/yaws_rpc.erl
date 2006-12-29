@@ -176,10 +176,10 @@ eval_payload(Args, {M, F}, Payload, {session, CookieName}, ID, RpcType) -> % {{{
 	false ->   % soap notify
 	    false; 
 	{true, _NewTimeout, NewSessionValue, ResponsePayload} -> % be compatible with xmlrpc module
-	    CO = handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue),
+	    CO = handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue, M, F),
 	    encode_send(Args, 200, ResponsePayload, CO, ID, RpcType);
 	{true, _NewTimeout, NewSessionValue, ResponsePayload, RespCode} -> % be compatible with xmlrpc module
-	    CO = handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue),
+	    CO = handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue, M, F),
 	    encode_send(Args, RespCode, ResponsePayload, CO, ID, RpcType)
     end; % }}}
 
@@ -202,7 +202,7 @@ eval_payload(Args, {M, F}, Payload, simple, ID, RpcType) -> % {{{
 	    encode_send(Args, 200, ResponsePayload, [], ID, RpcType)
     end. % }}}  
 
-handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue) ->
+handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue, M, F) ->
     case NewSessionValue of
 	undefined when Cookie == undefined -> []; % nothing to do
 	undefined -> % rpc handler requested session delete
@@ -211,11 +211,23 @@ handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue) ->
 	    case SessionValue of
 		undefined -> % got session data and should start new session now
 		    Cookie1 = yaws_api:new_cookie_session(NewSessionValue),
-		    yaws_api:setcookie(CookieName, Cookie1, "/"); % return set_cookie header
+		    case get_expire(M, F) of
+			false ->
+			    yaws_api:setcookie(CookieName, Cookie1, "/"); % return set_cookie header
+			Expire ->
+			    yaws_api:setcookie(CookieName, Cookie1, "/", Expire) % return set_cookie header
+		    end;
 		_ -> 
 		    yaws_api:replace_cookie_session(Cookie, NewSessionValue),
 		    [] % nothing to add to yaws data
 	    end
+    end.
+
+%%% Make it possible for callback module to set Cookie Expire string!
+get_expire(M, F) -> 
+    case catch M:F(cookie_expire) of
+	Expire when list(Expire) -> Expire;
+	_                        -> false
     end.
 
 callback_fun(M, F, Args, Payload, SessionValue, soap) ->
