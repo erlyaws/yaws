@@ -185,6 +185,14 @@ The default is 8, if we set the this configurable, we use 50 pending
 accept processes. So in environments where a large number of slow
 connectors is expected, this configurable makes sense.
 
+.TP
+\fB subconfig = File \fR
+Load specified config file.
+
+.TP
+\fB subconfigdir = Directory \fR
+Load all config file in specified directory.
+
 
 .SH SERVER PART
 Yaws can virthost several webservers on the same ip address as well

@@ -336,6 +336,84 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
     case toks(Chars) of
 	[] ->
 	    fload(FD, globals, GC, C, Cs, Lno+1, Next);
+
+	["subconfig", '=', Name] ->
+	    File = filename:absname(Name),
+	    case is_file(File) of
+		true ->
+		    error_logger:info_msg("Yaws: Using subconfig file ~s~n", [File]),
+		    case file:open(File, [read]) of
+			{ok, FD1} ->
+			    R = (catch fload(FD1, globals, GC, undefined, 
+					     Cs, 1, io:get_line(FD1, ''))),
+			    ?Debug("FLOAD: ~p", [R]),
+			    case R of
+				{ok, GC1, Cs1} ->
+				    fload(FD, globals, GC1, C, Cs1, Lno+1, Next);
+				Err ->
+				    Err
+			    end;
+			_ ->
+			    {error, "Can't open config file" ++ File}
+		    end;
+		false ->
+		    {error, ?F("Expect filename at line ~w", [Lno])}
+	    end;
+
+	["subconfigdir", '=', Name] ->
+	    Dir = filename:absname(Name),
+	    case is_dir(Dir) of
+		true ->
+		    case file:list_dir(Dir) of
+			{ok, Names} ->
+			    Paths = lists:map(
+				      fun(N) ->
+					    filename:absname(N, Dir)
+				      end, Names),
+			    case lists:foldl(
+				   fun(File, Acc) ->
+					case Acc of
+					    {error, _Err} ->
+						Acc;
+					    {ok, GCp, Csp} ->
+						case is_file(File) of
+						    true ->
+							error_logger:info_msg(
+							  "Yaws: Using subconfig file ~s~n",
+							  [File]),
+							case file:open(File, [read]) of
+							    {ok, FD1} ->
+								R = (catch fload(FD1,
+										 globals,
+										 GCp,
+										 undefined, 
+										 Csp,
+										 1,
+										 io:get_line(FD1, ''))),
+								?Debug("FLOAD: ~p", [R]),
+								R;
+							    _ ->
+								{error, "Can't open config file" ++
+									File}
+							end;
+						    false ->
+							%% Ignore subdirectories
+							Acc
+						end
+					end
+				    end, {ok, GC, Cs}, Paths) of
+				{ok, GC1, Cs1} ->
+				    fload(FD, globals, GC1, C, Cs1, Lno+1, Next);
+				Err ->
+				    Err
+			    end;
+			{error, Error} ->
+			    {error, ?F("Direcory ~s is not readable: ~s", [Name, Error])}
+		    end;
+		false ->
+		    {error, ?F("Expect directory at line ~w", [Lno])}
+	    end;
+
 	["trace", '=', Bstr] when GC#gconf.trace == false ->
 	    case Bstr of
 		"traffic" ->
