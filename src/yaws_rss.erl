@@ -323,7 +323,6 @@ do_insert(State, {App, Tag, Title, Link, Desc, Creator, GregSecs}) ->
 		      end,
 	    Item = {Title, Link, Desc, Creator, GregSecs},
 	    Res = dets:insert(?DB, ?ITEM(App, Tag, Counter, Item)),
-	    io:format("Inserted item ~p~n",[Counter]),
 	    set_counter(?DB, Counter),
 	    {State#s{counter = Counter}, Res};
 	false ->
@@ -342,7 +341,6 @@ do_retrieve(State, App, Tag) ->
 			Acc
 		end,
 	    Items = sort_items(expired(State, dets:foldl(F, [], ?DB))),
-	    io:format("Retrieve ~p items for App=~p~n",[length(Items),App]),
 	    Xml = to_xml(Items),
 	    {State, {ok, Xml}};
 	false ->
@@ -382,9 +380,10 @@ sort_items(Is) ->
 to_xml([{Title, Link, Desc, Creator, GregSecs}|Tail]) ->
     Date = w3cdtf(GregSecs),
     [["<item>\n",
-      "<title>", Title, "</title>\n",
+      "<title>", yaws_api:htmlize(Title), "</title>\n",
       "<link>", Link, "</link>\n",
-      "<description>", Desc, "</description>\n",
+      "<guid>", Link, "</guid>\n",
+      "<description>", yaws_api:htmlize(Desc), "</description>\n",
       "<dc:creator>", Creator, "</dc:creator>\n",
       "<dc:date>", Date, "</dc:date>\n",
       "</item>\n"] | 
