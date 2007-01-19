@@ -1713,8 +1713,7 @@ getuid() ->
  	{win32, _} ->
  	    {ok, "XXX"};
  	_ ->
- 	    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
- 				 "/../priv/", "setuid_drv"),
+	    load_setuid_drv(),
  	    P = open_port({spawn, "setuid_drv g"},[]),
  	    receive
  		{P, {data, "ok " ++ IntList}} ->
@@ -1722,10 +1721,8 @@ getuid() ->
  	    end
     end.
 
-
 idu(User) ->
-    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
- 			 "/../priv/", "setuid_drv"),
+    load_setuid_drv(),
     P = open_port({spawn, "setuid_drv " ++ [$u|User]}, []),
     receive
  	{P, {data, "ok " ++ IntList}} ->
@@ -1733,8 +1730,7 @@ idu(User) ->
     end.
 
 user_to_home(User) ->
-    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
-			 "/../priv/", "setuid_drv"),
+    load_setuid_drv(),
     P = open_port({spawn, "setuid_drv " ++ [$h|User]}, []),
     receive
 	{P, {data, "ok " ++ Home}} ->
@@ -1744,14 +1740,23 @@ user_to_home(User) ->
 
 
 uid_to_name(Uid) ->
-    erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
- 			 "/../priv/", "setuid_drv"),
+    load_setuid_drv(),
     P = open_port({spawn, "setuid_drv " ++ [$n|integer_to_list(Uid)]}, []),
     receive
  	{P, {data, "ok " ++ Name}} ->
  	    Name
     end.
 
+load_setuid_drv() ->
+    Path = filename:dirname(code:which(?MODULE)) ++ "/../priv/",
+    case erl_ddll:load_driver(Path, "setuid_drv") of
+	ok ->
+	    ok;
+	{error, Reason} ->
+	    error_logger:format("Failed to load setuid_drv (from ~p) : ~p",
+				[Path, erl_ddll:format_error(Reason)]),
+	    exit(normal)
+    end.
 
 exists(F) ->
     case file:open(F, [read, raw]) of
