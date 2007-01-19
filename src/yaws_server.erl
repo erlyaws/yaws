@@ -3060,7 +3060,13 @@ do_url_type(SC, GetPath, ArgDocroot) ->
 		     fullpath = FullPath,
 		     mime = Mime};
 	"/" -> %% special case 
-	    maybe_return_dir(ArgDocroot, GetPath);
+	    case lists:keysearch("/", 1, SC#sconf.appmods) of
+		{value, {_, Mod}} ->
+		    #urltype{type = appmod, 
+			     data = {Mod, []}};
+		_ ->
+		    maybe_return_dir(ArgDocroot, GetPath)
+	    end;
 	[$/, $~ |Tail] ->
 	    ret_user_dir(Tail);
 	_ ->
