@@ -171,7 +171,7 @@ CFLAGS="$CFLAGS -I/usr/include/security"
 case "$target_os" in
 	*linux*)
 	   AC_DEFINE(LINUX)
-	   LD_SHARED="ld -shared"
+	   LD_SHARED="gcc -shared"
 	   AC_SUBST(LD_SHARED)
 	   FPIC=-fpic
 	   AC_SUBST(FPIC)
