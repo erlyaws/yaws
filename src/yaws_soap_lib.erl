@@ -245,9 +245,13 @@ get_url_file("http://"++_ = URL) ->
 	{ok,{{_HTTP,200,_OK}, _Headers, Body}} -> 
 	    case http_uri:parse(URL) of
 		{_Method, _Host, _Port, _Path, _Qargs} ->
+		    %% Erlang/OTP =< R11B-1
+		    {ok, Body};
+		{_Method, _UserInfo, _Host, _Port, _Path, _Qargs} ->
+		    %% Erlang/OTP >= R11B-2
 		    {ok, Body};
 		_ -> 
-		    {error, "failed to retrieve: "++URL}
+		    {error, "failed to parse URL: "++URL}
 	    end;
 	{ok,{{_HTTP,RC,Emsg}, _Headers, _Body}} -> 
 	    error_logger:error_msg("~p: http-request got: ~p~n", [?MODULE, {RC, Emsg}]),
