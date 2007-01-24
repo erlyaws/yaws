@@ -66,7 +66,7 @@ load(E) ->
 	    ?Debug("FLOAD: ~p", [R]),
 	    case R of
 		{ok, GC5, Cs} ->
-		    yaws:mkdir(GC#gconf.tmpdir),
+		    yaws:mkdir(GC5#gconf.tmpdir),
 		    Cs2 = add_yaws_auth(Cs),
 		    add_yaws_soap_srv(GC5),
 		    validate_cs(GC5, Cs2);
@@ -500,17 +500,18 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 	    Dir = filename:absname(Incdir),
 	    case is_dir(Dir) of
 		true ->
-		    fload(FD, globals, GC#gconf{include_dir=[Dir|GC#gconf.include_dir]},
+		    fload(FD, globals, GC#gconf{include_dir=
+						[Dir|GC#gconf.include_dir]},
 			  C, Cs, Lno+1, Next);
 		false ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}
 	    end;
 
-	["tmpdir", '=', Dir] ->
-	     Dir = filename:absname(Dir),
+	["tmpdir", '=', TmpDir] ->
+	    Dir = filename:absname(TmpDir),
 	    case is_dir(Dir) of
 		true ->
-		    fload(FD, globals, GC#gconf{tmpdir=[Dir|GC#gconf.include_dir]},
+		    fload(FD, globals, GC#gconf{tmpdir=Dir},
 			  C, Cs, Lno+1, Next);
 		false ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}
