@@ -319,6 +319,13 @@ out(A) ->
 	  ),
 
        {p,[],
+	"Now, in your Yaws shell, setup the Soap server as shown below:"
+	},
+
+       box("6> yaws_soap_srv:setup({my_soap, handler}, \"file:///tmp/MyWeatherService.wsdl\").\n"
+	  ),
+
+       {p,[],
 	"We are now ready to try it out. Start another Erlang shell and call it: "
 	},
 
