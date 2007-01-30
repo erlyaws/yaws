@@ -45,7 +45,8 @@ out(A) ->
 	 "Thus, to be able to use SOAP with Yaws you need to have "
 	 "'erlsom' installed. Currently, the easiest way of installing "
 	 "'erlsom' is to check out the library from Sourceforge and "
-	 "install it from there. "]},
+	 "install it from there (you can also download a released version "
+	 "of erlsom and install it)."]},
 
        {p,[],"To install 'erlsom' do:"},
 
@@ -55,7 +56,14 @@ out(A) ->
 	   "sudo make install        # iff you want to install as root\n"
 	  ),
 	  
-	  {p, [], "Or download a released version of erlsom and install"},
+	  {p, [], 
+	   "<b>Important:</b> The SOAP specific code that makes use of erlsom has some limitations "
+	   "that it is important to be aware of. Only the Soap <i>'document'</i> binding "
+	   "style is supported. There is no support for non-soap bindings, nor for the "
+	   "RPC binding style. Also, only the <i>'literal'</i> encoding is supported "
+	   "There is no support for <i>'soap-encoding'</i>. For an explanation of the differences "
+	   "between these concepts, see this "
+	   "<a href=\"http://www-128.ibm.com/developerworks/webservices/library/ws-whichwsdl/\">description</a>."},
 	  
 	  
 	  {h2, [], "The SOAP client side"},
