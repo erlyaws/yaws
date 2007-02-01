@@ -17,8 +17,6 @@
 
 
 
-
-
 -export([parse_query/1, parse_post/1, parse_multipart_post/1,
 	 parse_multipart/2]).
 -export([code_to_phrase/1, ssi/2, redirect/1]).
@@ -651,12 +649,47 @@ find_cookie_val(Cookie, A) when record(A, arg) ->
 find_cookie_val(_Cookie, []) ->
     [];
 find_cookie_val(Cookie, [FullCookie | FullCookieList]) ->
-    case find_cookie_val2(Cookie, FullCookie) of
+    %%case find_cookie_val2(Cookie, FullCookie) of
+    case eat_cookie(Cookie, FullCookie) of
 	[] ->
 	    find_cookie_val(Cookie, FullCookieList);
 	Val ->
 	    Val
     end.
+
+%% Remove leading spaces before eating.
+eat_cookie([], _)           -> [];
+eat_cookie([$\s|T], Str)    -> eat_cookie(T, Str);
+eat_cookie(_, [])           -> [];
+eat_cookie(Cookie, [$\s|T]) -> eat_cookie(Cookie, T);
+eat_cookie(Cookie, Str) when list(Cookie),list(Str) ->
+    try
+	eat_cookie2(Cookie++"=", Str, Cookie)
+    catch
+	_:_ -> []
+    end.
+
+%% Look for the Cookie and extract its value.
+eat_cookie2(_, [], _)    -> 
+    throw("not found");
+eat_cookie2([H|T], [H|R], C) -> 
+    eat_cookie2(T, R, C);
+eat_cookie2([H|_], [X|R], C) when H =/= X ->
+    {_,Rest} = eat_until(R, $;),
+    eat_cookie(C, Rest);
+eat_cookie2([], L, _) -> 
+    {Meat,_} = eat_until(L, $;),
+    Meat.
+
+eat_until(L, U) ->
+    eat_until(L, U, []).
+
+eat_until([H|T], H, Acc)              -> {lists:reverse(Acc), T};
+eat_until([H|T], U, Acc) when H =/= U -> eat_until(T, U, [H|Acc]);
+eat_until([], _, Acc)                 -> {lists:reverse(Acc), []}.
+
+
+    
 
 find_cookie_val2(Cookie, FullCookie) ->    
     case lists:prefix(Cookie, FullCookie) of
