@@ -80,10 +80,12 @@ install: all docsinstall
 	$(INSTALL) -d $(DESTDIR)/$(PREFIX)/lib/yaws/examples/ebin
 	$(INSTALL) -d $(DESTDIR)/$(PREFIX)/lib/yaws/examples/include
 	$(INSTALL) -d $(DESTDIR)/$(PREFIX)/lib/yaws/ebin
+	$(INSTALL) -d $(DESTDIR)/$(PREFIX)/lib/yaws/priv
 	$(INSTALL) -d $(DESTDIR)/$(VARDIR)/log/yaws
 	$(INSTALL) -d $(DESTDIR)/$(VARDIR)/yaws/ebin
 	(cd ..; tar cf - ebin ) | (cd $(DESTDIR)/$(PREFIX)/lib/yaws; tar xf - )
 	(cd ..; tar cf - include ) | (cd $(DESTDIR)/$(PREFIX)/lib/yaws; tar xf - )
+	(cd ..; tar cf - priv/*.xsd ) | (cd $(DESTDIR)/$(PREFIX)/lib/yaws; tar xf - )
 
 docsinstall:
 	$(INSTALL) -d $(DESTDIR)/$(VARDIR)/yaws/www
