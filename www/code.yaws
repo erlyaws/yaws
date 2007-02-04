@@ -6,7 +6,6 @@ out(A) ->
 		    {ok, Fname} ->
 			File = A#arg.docroot ++ 
 			    yaws_api:sanitize_file_name(Fname),
-			error_logger:format("File =~p~n", [File]),
 			case file:read_file(File) of
 			    {ok, B} ->
 				C = {'div', 

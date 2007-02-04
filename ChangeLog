@@ -1,3 +1,155 @@
+2007-02-04 16:56  klacke
+
+	* vsn.mk: preparing for release 1.67
+
+2007-02-04 16:47  klacke
+
+	* src/yaws_server.erl: Removed the urlc_total counter - it didn't
+	provide info which was worth the proce of having it - Also Chris
+	NewCombe reported trobles with the counter
+
+2007-02-02 10:28  etnt
+
+	* src/Makefile: Added install of the priv/*.xsd files
+
+2007-02-01 16:58  etnt
+
+	* src/yaws_api.erl: Fixing yaws_api:find_cookie_val/2 which was
+	broken.
+
+2007-01-30 11:27  etnt
+
+	* www/soap_intro.yaws: Added paragraph with some limitation
+	regarding binding style and type of encoding.
+
+2007-01-26 16:55  etnt
+
+	* www/soap_intro.yaws: Made the examples look prettier.
+
+2007-01-26 15:53  etnt
+
+	* www/soap_intro.yaws: Adding missing description on call to:
+	yaws_soap_srv:setup/2.
+
+2007-01-24 08:49  klacke
+
+	* src/yaws_config.erl: patch from Dimitriy Kargapolov for tmpdir
+	handling
+
+2007-01-23 15:46  etnt
+
+	* src/yaws_soap_lib.erl: Bugfix by Feredrik Thulin: The
+	(undocumented) http_uri:parse/1 return format was changed between
+	Erlang/OTP R11B-1 and R11B-2.
+
+2007-01-19 21:43  klacke
+
+	* configure.in: [no log message]
+
+2007-01-19 21:42  klacke
+
+	* src/yaws.erl: Patch from Fredrik Thulin to make setuid_drv work
+	better under ubuntu where gcc with some stack smashing tech is used
+	to build, then we cannot use ld, we need to use ggc to greate the
+	shared object
+
+2007-01-19 10:17  etnt
+
+	* src/yaws_server.erl: Appmod </, Mod> didn't work properly. Should
+	be fixed now.
+
+2007-01-17 10:43  etnt
+
+	* src/yaws_rss.erl: The generated content was not valid RSS 2.0
+	content. This is fixed now.
+
+2007-01-02 23:58  klacke
+
+	* doc/yaws.tex, man/yaws.conf.5, src/yaws_config.erl: added ability
+	to have config files in several files, patch from Sergei Golovan
+
+2006-12-29 19:27  etnt
+
+	* src/yaws_rpc.erl, www/json_intro.yaws: Added call to callback
+	function: M:F(cookie_expire) which is expected to return a proper
+	cookie expire string. If non-existant, the default behaviour will
+	prevail, i.e a session bases cookie lifetime.
+
+2006-12-25 16:45  etnt
+
+	* src/yaws_api.erl: Extending yaws_api:find_cookie_val/2 to accept
+	an #arg record as second argument as well.
+
+2006-12-22 04:10  yarivvv
+
+	* www/haxe_intro.yaws: tweaked the haXe documentation
+
+2006-12-17 21:02  klacke
+
+	* www/: news, soap_intro.yaws: vsn 1.66
+
+2006-12-17 19:23  klacke
+
+	* applications/mail/src/Makefile: [no log message]
+
+2006-12-16 16:12  mikaelka
+
+	* applications/yapp/Makefile: Fix to yapp Makefile to clean all
+	generated files in doc directory
+
+2006-12-14 23:45  etnt
+
+	* src/yaws.erl: Adding add_server/2 and lots of access functions
+	for manipuling the #ssl{} record
+
+2006-12-13 09:30  etnt
+
+	* www/doc.yaws: Adding entry for the yaws_soap_lib man-page.
+
+2006-12-12 17:43  etnt
+
+	* man/: yaws.conf.5, yaws_soap_lib.5: Adding a new man page for the
+	yaws_soap_lib module. Also, added enable_soap config to yaws.conf.5
+
+2006-12-12 17:25  etnt
+
+	* src/yaws_soap_lib.erl: [no log message]
+
+2006-12-12 17:13  etnt
+
+	* src/yaws_soap_lib.erl: [no log message]
+
+2006-12-12 16:46  etnt
+
+	* src/yaws_soap_lib.erl: [no log message]
+
+2006-12-12 16:42  etnt
+
+	* src/yaws_soap_lib.erl: Adding yaws_soap_lib:call/4 which takes
+	the acual Header and Body messages.
+
+2006-12-12 15:24  etnt
+
+	* src/yaws_soap_lib.erl: [no log message]
+
+2006-12-12 15:20  etnt
+
+	* src/yaws.erl: Fixing the setup of the PAM/Auth stuff when
+	starting embedded Yaws.
+
+2006-12-12 14:49  etnt
+
+	* src/yaws_soap_lib.erl: Fixing the handling of the return value
+	from the http-request.
+
+2006-12-12 13:32  klacke
+
+	* src/yaws_cgi.erl: override cgienv if provideded env in extraenv
+
+2006-12-12 10:54  klacke
+
+	* ChangeLog, www/news: [no log message]
+
 2006-12-12 10:47  klacke
 
 	* vsn.mk: preparing for 1.66

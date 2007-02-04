@@ -33,7 +33,8 @@ err() ->
      {p, [], "error"}}.
 
 multipart(A, State) ->
-    case yaws_api:parse_multipart_post(A) of
+    Parse = yaws_api:parse_multipart_post(A),
+    case Parse of
 	{cont, Cont, Res} ->
 	    case addFileChunk(A, Res, State) of
 		{done, Result} ->

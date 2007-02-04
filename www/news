@@ -1,3 +1,22 @@
+Sun Feb  4 16:56:30 CET 2007 version 1.67
+Bugfix release
+Removed the urlc_total counter - it didn't provide info which was worth the price of having it - Also Chris NewCombe reported troubles with the counter. (klacke)
+Added install of the priv/*.xsd files for the SOAP server (tobbe)
+Fixing yaws_api:find_cookie_val/2 which was broken (tobbe)
+Made the examples SOAP look prettier. (tobbe)
+Adding missing description on call to yaws_soap_srv:setup/2. (tobbe)
+patch from Dimitriy Kargapolov for tmpdir handling (klacke)
+Bugfix by Fredrik Thulin: The (undocumented) http_uri:parse/1 return format was changed between Erlang/OTP R11B-1 and R11B-2. (tobbe)
+Patch from Fredrik Thulin to make setuid_drv work better under ubuntu where gcc with some stack smashing tech is used to build, then we cannot use ld, we need to use ggc to greate the shared object.
+Appmod </, Mod> didn't work properly. Should be fixed now again !!!!!
+RSS The generated content was not valid RSS 2.0 content (tobbe)
+added ability  to have config files in several files, patch from Sergei Golovan.
+Added call to callback  function: M:F(cookie_expire) which is expected to return a proper cookie expire string. If non-existant, the default behaviour will prevail, i.e a session bases cookie lifetime. (tobbe)
+Extending yaws_api:find_cookie_val/2 to accept an #arg record as second argument as well. (tobbe)
+tweaked the haXe documentation (yariv)
+
+
+
 Sun Dec 17 20:58:21 CET 2006 version 1.66
 Followup to the previous soap release.
 Adding entry for the yaws_soap_lib man-page (tobbe)

@@ -1,10 +1,11 @@
 
 <erl>
+-export([pserv/0]).
 
 ensure_pcookie_server() ->
     case whereis(pcookie_server) of
 	undefined ->
-	    proc_lib:start(?MODULE, pserv, []);
+	    proc_lib:start(?MODULE, pserv,[]);
 	_ ->
 	    ok
     end.
