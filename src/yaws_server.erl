@@ -69,20 +69,7 @@ getconf() ->
 stats() -> 
     {S, Time} = status(),
     Diff = calendar:time_difference(Time, calendar:local_time()),
-    G = fun(L) -> reverse(lists:keysort(2, L)) end,
-    R= flatmap(
-	 fun({_Pid, SCS}) ->
-		 map(
-		   fun(SC) ->
-
-			   E = SC#sconf.ets,
-			   L = ets:match(E, {{urlc_total, '$1'}, '$2'}),
-			   {SC#sconf.servername,  
-			    flatten(inet_parse:ntoa(SC#sconf.listen)),
-			    G(map(fun(P) -> list_to_tuple(P) end, L))}
-		   end, SCS)
-	 end, S#state.pairs),
-    {Diff, R}.
+    {Diff, []}.
 
 l2a(L) when list(L) -> list_to_atom(L);
 l2a(A) when atom(A) -> A.
@@ -2889,7 +2876,6 @@ url_type(GetPath, ArgDocroot) ->
     SC=get(sc),
     GC=get(gc),
     E = SC#sconf.ets,
-    update_total(E, GetPath),
     case ets:lookup(E, {url, GetPath}) of
 	[] ->
 	    UT = do_url_type(SC, GetPath, ArgDocroot),
@@ -2950,13 +2936,6 @@ cache_size(_UT) ->
     0.
 
 
-update_total(E, Path) ->
-    case (catch ets:update_counter(E, {urlc_total, Path}, 1)) of
-	{'EXIT', _} ->
-	    ets:insert(E, {{urlc_total, Path}, 1});
-	_ ->
-	    ok
-    end.
 
 
 cache_file(SC, GC, Path, UT) when 
