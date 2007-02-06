@@ -184,7 +184,33 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
 	       end,
     PeerAddr = get_socket_peername(Arg#arg.clisock),
     Scriptname = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
+
+
+	%Pass auth info in environment - yes - including password in plain text.
+	%REMOTE_USER always = AUTH_USER
+	%!todo - LOGON_USER - same as AUTH_USER unless some auth filter has mapped the user to another username under which to run the request.
+	case H#headers.authorization of
+	undefined ->
+	    AuthEnv = [];
+	{User, Password, "Basic " ++ Auth64} ->
+		AuthEnv = [
+				  {"HTTP_AUTHORIZATION", "Basic " ++ Auth64},
+				  {"AUTH_TYPE", "Basic"},
+				  {"AUTH_USER", User},
+				  {"REMOTE_USER", User},
+				  {"LOGON_USER", User},
+				  {"AUTH_PASSWORD", Password}
+				  ];
+	{_User, _Password, _OrigString} ->
+		%not attempting to pass through any auth info for auth schemes that we don't yet handle
+		AuthEnv = []
+	end,
+
+	%%todo - review. should AuthEnv entries be overridable by ExtraEnv or not?
+	%% we should define policy here rather than let through dupes.
+
     ExtraEnv ++
+	AuthEnv ++
 	lists:filter(
           fun({K, L}) when list(L) -> 
                   case lists:keysearch(K, 1, ExtraEnv) of
