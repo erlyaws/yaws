@@ -360,7 +360,7 @@ do_listen(GC, SC) ->
 	    %% Use fdsrv kit from jungerl, requires fdsrv
 	    %% to be properly installed
 	    fdsrv:start(),
-	    case fdsrv:bind_socket(tcp, SC#sconf.port) of
+	    case fdsrv:bind_socket(tcp, {SC#sconf.listen, SC#sconf.port}) of
 		{ok, Fd} ->
 		    {nossl, gen_tcp_listen(SC#sconf.port,[{fd, Fd}|opts(SC)])};
 		Err ->
