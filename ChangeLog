@@ -1,3 +1,24 @@
+2007-02-08 16:38  klacke
+
+	* configure: need to also check in configure after the setuod_drv
+	gcc/ld patch
+
+2007-02-06 17:25  klacke
+
+	* src/yaws_cgi.erl: added auth env stuff to yaws_cgi patch by
+	Julian Noble
+
+2007-02-06 12:04  etnt
+
+	* src/yaws_server.erl: Bugfix by Magnus Froberg: binding socket
+	with fd_server now only listens to the specified IP address given
+	in #sconf.listen
+
+2007-02-04 17:38  klacke
+
+	* ChangeLog, www/code.yaws, www/news, www/setpcookie.yaws,
+	www/upload.yaws: preparing for 1.67
+
 2007-02-04 16:56  klacke
 
 	* vsn.mk: preparing for release 1.67

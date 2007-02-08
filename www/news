@@ -1,3 +1,8 @@
+Thu Feb  8 16:45:47 CET 2007 version 1.68
+Forgot to update configure after the patch to configure.in for ubuntu edgy users in 1.67
+Patch by Julian Noble to pass auth info over the CGI interface.
+Bugfix by Magnus Froberg: binding socket with fd_server now only listens to the specified IP address given in #sconf.listen
+
 Sun Feb  4 16:56:30 CET 2007 version 1.67
 Bugfix release
 Removed the urlc_total counter - it didn't provide info which was worth the price of having it - Also Chris NewCombe reported troubles with the counter. (klacke)
