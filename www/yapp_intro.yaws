@@ -137,6 +137,30 @@ out(A) ->
 	  "yappx_controller:out/1 function, while http://servername/yappy/ctrl "
 	  "will not do it. "
 	 },
+	{h3,[],"Opaque variables"},
+	{p,[],[
+	     "In a similar way the yapp handler adds \"private\" opaques for a yapp "
+             "with the the environment variable yapp_opaque. "
+	     "As an example ", {a,[{href,"http://erlyweb.org/"}], "ErlyWeb "}, 
+	     "applications uses both appmods and opaques in yaws.conf. These can " 
+	     "be put in the  .app file instead if one makes a yapp of it:"]},
+	 box("
+ {application, myapp1,
+ [{description,\"myapp1 is an erlyweb yapp\"},
+  {vsn,\"0.1\"},
+  {modules,[]},
+  {registered, []},
+%  {mod,{myapp1_mod,[]}}, %% Only needed if the application needs to be started
+  {env, [
+	 {yapp_docroot,\"www\"},
+         {yapp_appmods,[{\"/\",erlyweb}]},
+	 {yapp_opaque,[{\"appname\",\"myapp1\"}]}
+        ]},
+  {applications,[kernel,stdlib]}]}.
+"),
+	{p,[],"Also note that the docroot is www instead of the default priv/docroot in "
+              "ErlyWeb applications."},
+
 	{h2,[],"Problems"},
 	{p,[],"Embedded ssi directives in ehtml parts will not work for now."},
 	{p,[],

@@ -20,8 +20,8 @@ out(A) ->
  
 </erl>
 </p>
-<p>Appmod : <input type="textfield" name="appmod"></p>
-<p>Path (optional): <input type="textfield" name="path"></p>
+<p>Application name: <input type="textfield" name="appname"></p>
+<p>Path (optional) : <input type="textfield" name="path"></p>
 <p><input type="submit" value="Add Yapp"></p>
 </form>
 <p><em>Note:</em> An added Yapp will always be stored in the registry, 

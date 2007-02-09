@@ -21,7 +21,7 @@ format_yapp_table(Yapps) ->
 
 format_yapps([]) ->
     [];
-format_yapps([{yapp, Urlpath, Docroot, Appname, Appmods}|T]) ->
+format_yapps([{yapp, Urlpath, Docroot, Appname, Appmods, _Opaque}|T]) ->
     [{tr,[],[{td,[],atom_to_list(Appname)}, {td,[], Urlpath},{td,[],Docroot}]} |
      format_yapps(T)]. 
      

@@ -14,23 +14,23 @@ get_value(K,P) ->
 
 format(P) ->
 	SrvId = get_value("srvid",P),	
-	Appmod = get_value("appmod",P),
+	AppName = get_value("appname",P),
 	Path = get_value("path",P),
-	format(SrvId,Appmod,Path).
+	format(SrvId,AppName,Path).
 
 format([],_,_) -> error(no_srv_id);
-format(_,[],_) -> error(no_appmod);
+format(_,[],_) -> error(no_appname);
 format(S,A,[]) -> format(S,A,"/" ++ A);
 format(S,A,P) -> 
 	case (catch yapp_handler:add(yapp_handler, S, P, list_to_atom(A))) of
 	   ok ->
-		["Added Server Id: ", S,", Appmod: ", A, ", Path: ", P];
+		["Added Server Id: ", S,", AppName: ", A, ", Path: ", P];
            Error ->
              error(Error)
         end.
 
 error(no_srv_id) ->   "<p>No Server Id selected!</p>";
-error(no_appmod) ->   "<p>No Appmod given!</p>";
+error(no_appname) ->   "<p>No AppName given!</p>";
 error(E) ->       ["<p>Error adding yapp<pre>", io:format("~p",[E]),"</pre></p>"].
 
 out(A) -> 

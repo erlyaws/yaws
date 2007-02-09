@@ -72,6 +72,7 @@
 -define(prepath, yapp_prepath).
 -define(srv_id, "yapp_server_id").
 -define(bootstrap_yapps, "bootstrap_yapps"). %% Opaque key for "bootstrap yapps"
+-define(erlyweb_appname,"appname").
 -define(yapp_list, yapp_list).
 
 -define(priv_docroot, "priv/docroot").
@@ -81,7 +82,8 @@
 	  urlpath,
 	  docroot = "",
 	  appname = "",
-	  appmods = []
+	  appmods = [],
+	  opaque = []
 	 }).
 
 %% The yapp_reg is stored in Mnesia in the y_registry 
@@ -97,18 +99,25 @@ arg_rewrite(Arg) ->
     case find_registered_yapps(Arg) of
 	undefined ->
             Arg;
-	{#yapp{urlpath = YappPath, docroot = Docroot, appmods=YappMods }, Rest} ->
+	{#yapp{urlpath = YappPath, docroot = Docroot, 
+	       appmods = YappMods, opaque = YOpaque }, Rest} ->
 
 	    %% Add Yapp appmods, Yaws uses process dictionary...
 	    SC = get(sc),
 	    AppMods = SC#sconf.appmods,
-	    put(sc, SC#sconf{appmods = AppMods ++ YappMods}),
+	    
+	    Opaque = SC#sconf.opaque,
+            SC2 = SC#sconf{docroot = Docroot,
+	       appmods = AppMods ++ YappMods, opaque = YOpaque ++ Opaque},
+
+	    put(sc, SC2),
 
 	    Req = Arg#arg.req,
+	    Opaque2 = Arg#arg.opaque,
 	    NewReq = Req#http_request{path={abs_path,Rest}},	    
 
 	    Arg#arg{docroot=Docroot, 
-		    req=NewReq, state=[{?prepath,YappPath}]}
+		    req=NewReq, state=[{?prepath,YappPath}], opaque = YOpaque ++ Opaque2}
 
 	end.
 
@@ -247,12 +256,14 @@ start_app(Error) -> Error.
 insert_yapp_in_sconf0({UrlPath, AppName}, #sconf{opaque = OP} = SC) ->
     log(info,"Inserting App ~p in Url ~p~n", [AppName, UrlPath]),
     AppEnv = application:get_all_env(AppName),
-    DocSubRoot = proplists:get_value(yapp_docroot,AppEnv, ?priv_docroot),
-    YAppMods = proplists:get_value(yapp_appmods, AppEnv, []), 
+    DocSubRoot = proplists:get_value(yapp_docroot, AppEnv, ?priv_docroot),
+    YAppMods   = proplists:get_value(yapp_appmods, AppEnv, []), 
+    YOpaque    = proplists:get_value(yapp_opaque,  AppEnv, []), 
     Y = #yapp{urlpath= UrlPath,
 	      docroot = code:lib_dir(AppName) ++ "/" ++ DocSubRoot,
 	      appname = AppName,
-	      appmods=YAppMods},
+	      appmods = YAppMods,
+	      opaque  = YOpaque },
 
     OP2 = case proplists:get_value(?yapp_list, OP) of
 	      undefined ->
