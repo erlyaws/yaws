@@ -166,6 +166,13 @@ get_socket_peername(Socket) ->
     {ok, {IP, _Port}}=inet:peername(Socket),
     inet_parse:ntoa(IP).
 
+get_socket_sockname(Socket={sslsocket,_,_}) ->
+	{ok, {IP, _Port}}=ssl:sockname(Socket),
+	inet_parse:ntoa(IP);
+get_socket_sockname(Socket) ->
+    {ok, {IP, _Port}}=inet:sockname(Socket),
+    inet_parse:ntoa(IP).
+
 
 cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
     H = Arg#arg.headers,
@@ -183,6 +190,8 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
 		   [] -> integer_to_list(SC#sconf.port)
 	       end,
     PeerAddr = get_socket_peername(Arg#arg.clisock),
+    LocalAddr = get_socket_sockname(Arg#arg.clisock),
+
     Scriptname = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
 
 
@@ -248,15 +257,14 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
 						% Debian sarge (Sergei Golovan).
 	    {"SCRIPT_NAME", Scriptname},
 						%{"REMOTE_HOST", ""},  We SHOULD send this
-	    {"REMOTE_ADDR", PeerAddr},
-						%{"AUTH_TYPE", ""},    Fixme:  We MUST send this, but I don't
-						% understand it.
-						%{"REMOTE_USER", ""},
+        {"REMOTE_ADDR", PeerAddr},
+        {"SERVER_ADDR", LocalAddr},   %Apache compat
+		{"LOCAL_ADDR", LocalAddr},    %IIS compat
 	    {"QUERY_STRING", checkdef(Arg#arg.querydata)},
 	    {"CONTENT_TYPE", H#headers.content_type},
 	    {"CONTENT_LENGTH", H#headers.content_length},
 	    {"HTTP_ACCEPT", H#headers.accept},
-            {"HTTP_HOST", host(H#headers.host)},
+        {"HTTP_HOST", host(H#headers.host)},
 	    {"HTTP_USER_AGENT", H#headers.user_agent},
 	    {"HTTP_COOKIE", flatten_val(make_cookie_val(H#headers.cookie))}
 	   ]++lists:map(fun({http_header,_,Var,_,Val})->{tohttp(Var),Val} end,
