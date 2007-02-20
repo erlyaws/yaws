@@ -75,8 +75,8 @@ send_clidata(Worker, Data) ->
 
 start_worker(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
     ExeFN = case Exefilename of 
-		undefined -> Scriptfilename;
-		"" -> Scriptfilename;
+		undefined -> exeof(Scriptfilename);
+		"" -> exeof(Scriptfilename);
 		FN -> FN
 	    end,
     PI = case Pathinfo of
@@ -319,6 +319,8 @@ pathof(F) ->
 	[$/ | Tail] -> lists:reverse(Tail)
     end.
 
+exeof(F) ->
+    [$\., $/|lists:reverse(lists:takewhile(fun notslash/1, lists:reverse(F)))].
 
 
 % We almost always generate stream content.
