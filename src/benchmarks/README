@@ -1,0 +1,19 @@
+Benchmarks for yaws_server as discussed in the 'Benchmarking' section of the OTP 'Efficiency Guide'
+
+In an erl shell run from the benchmarks folder:
+--------------------------
+1> c(bench).
+{ok,bench}
+2> bench:run().
+Compiling conc_path_bm.erl...
+Compiling bench.erl...
+Compiling all.erl...
+Running conc_path_bm: conc_path_orig conc_path_tail conc_path_lappend conc_path_lflatten conc_path_lconcat
+ok
+--------------------------
+This should generate an index.html file in this folder showing the relative performance.
+
+
+See conc_path_bm.erl for a trivial example that may be useful as a base.
+
+
