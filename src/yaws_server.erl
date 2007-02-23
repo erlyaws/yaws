@@ -20,6 +20,9 @@
 -include_lib("kernel/include/file.hrl").
 -include_lib("kernel/include/inet.hrl").
 
+-export([check_appmods/3, mappath/3, vdirpath/3]).
+
+
 %% External exports
 -export([start_link/1]).
 
@@ -67,7 +70,7 @@ getconf() ->
      gen_server:call(?MODULE,getconf).
 
 stats() -> 
-    {S, Time} = status(),
+    {_S, Time} = status(),
     Diff = calendar:time_difference(Time, calendar:local_time()),
     {Diff, []}.
 
@@ -1303,7 +1306,9 @@ make_arg(CliSock, Head, Req, Bin) ->
 	       opaque = SC#sconf.opaque,
 	       pid = self(),
 	       docroot = SC#sconf.docroot,
-	       clidata = Bin},
+		   docroot_mount = "/",
+	       clidata = Bin
+		   },
     apply(SC#sconf.arg_rewrite_mod, arg_rewrite, [ARG]).
 
 
@@ -1331,40 +1336,121 @@ handle_request(CliSock, ARG, N) ->
 		{'EXIT', _} ->   %% weird broken cracker requests
 		    deliver_400(CliSock, Req);
 		{DecPath, QueryPart} ->
+			% http://<server><port><DecPath>?<QueryPart>
+			% DecPath is stored in arg.server_path and is equiv to SCRIPT_PATH + PATH_INFO  (where PATH_INFO may be empty)
+
+			QueryString = case QueryPart of
+			[] ->
+				undefined;
+			_ ->
+				QueryPart
+			end,
+
+
 		    SC=get(sc),
-		    ?Debug("Test revproxy: ~p and ~p~n", 
-			[DecPath, SC#sconf.revproxy]),
-		    IsAuth = is_auth(ARG, DecPath,ARG#arg.headers,
-				     SC#sconf.authdirs),
-		    case {IsAuth, 
-			  is_revproxy(DecPath, SC#sconf.revproxy),
-			  is_redirect_map(DecPath, SC#sconf.redirect_map)} of
-			{{appmod, Mod}, _, _} ->
-			    UT = #urltype{type = appmod, 
-			    		  data = {Mod, DecPath},
-			     		  path = DecPath},
-			    ARG2 = ARG#arg{server_path = DecPath,
-					   querydata= QueryPart,
-					   fullpath=UT#urltype.fullpath,
-					   pathinfo=UT#urltype.pathinfo},
-			    handle_ut(CliSock, ARG2, UT, N);
-			{_, _, {true, MethodHostPort}} ->
-			    deliver_302_map(CliSock, Req, ARG, MethodHostPort);
-			{true, false, _} ->
-			    UT   = url_type(DecPath, ARG#arg.docroot),
-			    ARG2 = ARG#arg{server_path = DecPath,
-					   querydata= QueryPart,
-					   fullpath=UT#urltype.fullpath,
-					   pathinfo=UT#urltype.pathinfo},
-			    handle_ut(CliSock, ARG2, UT, N);
-			{true, {true, PP}, _} ->
-			    yaws_revproxy:init(CliSock, ARG,
-					       DecPath,QueryPart,PP, N);
-			{false, _, _} ->
-			    deliver_403(CliSock, Req);
-			{{false, Realm}, _, _} ->
-			    deliver_401(CliSock, Req, Realm)
-		    end
+
+			%%by this stage, ARG#arg.docroot_mount is either "/" , or has been set by a rewrite module.
+			%%!todo - retrieve 'vdir' definitions from main part of config file rather than
+			%% rely on rewrite module to dig them out of opaque.
+
+			ARGvdir = ARG#arg.docroot_mount,
+
+			%%here we make sure that the conf file, or any rewrite mod wrote nothing, or something sensible into arg.docroot_mount
+			%% It must be empty, or of the form "/path/" where path may be further slash-separated.
+			%
+			%!todo - review - is handle_request (which is presumably performance sensitive) really the place for sanity checks?
+			% Presumably this sort of check is trivial enough that it'll have negligible impact.
+
+			VdirSanity = case ARGvdir of
+			"/" ->
+				sane;
+			[$/|_] ->
+				case string:right(ARGvdir,1) of 
+				"/" when length(ARGvdir) > 2 ->
+					sane;
+				_ ->
+					loopy
+				end;
+			_ ->
+				loopy
+			end,
+
+
+			case VdirSanity of 
+			loopy ->
+				%!todo - log somewhere?
+				?Debug("BAD arg.docroot_mount data: '~p'\n",[ARGvdir]),
+				deliver_xxx(CliSock, Req, 500);
+			sane ->
+			    ?Debug("Test revproxy: ~p and ~p~n", 
+					[DecPath, SC#sconf.revproxy]),
+			    IsAuth = is_auth(ARG, DecPath,ARG#arg.headers,
+					     SC#sconf.authdirs),
+			    case {IsAuth, 
+				  is_revproxy(DecPath, SC#sconf.revproxy),
+				  is_redirect_map(DecPath, SC#sconf.redirect_map)} of
+				{{appmod, Mod}, _, _} ->
+					%This isn't the standard 'appmod' branch 
+					%- this is an appmod call as optionally specified by the output of an auth module.
+				    UT = #urltype{
+							type = appmod, 
+				    		data = {Mod, undefined},
+				     		path = DecPath
+							},
+
+
+					%arg.prepath ?
+				    ARG2 = ARG#arg{
+							server_path = DecPath,
+						   	querydata= QueryString,
+							prepath=undefined,
+						   	pathinfo=undefined,
+							appmod_prepath=undefined,
+							appmoddata=undefined
+							},
+				    handle_ut(CliSock, ARG2, UT, N);
+				{_, _, {true, MethodHostPort}} ->
+				    deliver_302_map(CliSock, Req, ARG, MethodHostPort);
+				{true, false, _} ->
+					%'main' branch so to speak. Most requests pass through here.
+
+				    UT   = url_type(DecPath, ARG#arg.docroot, ARG#arg.docroot_mount),
+				    ARG2 = ARG#arg{
+							server_path = DecPath,
+						   	querydata = QueryString,
+						   	fullpath = UT#urltype.fullpath,
+							prepath = UT#urltype.dir,
+						   	pathinfo = UT#urltype.pathinfo
+							},
+
+					%!todo - remove special treatment of appmod here.
+					% - prepath & pathinfo are applicable to other types of dynamic url too
+					%   replace: appmoddata with pathinfo & appmod_prepath with prepath.
+					case UT#urltype.type of
+					appmod ->
+	 					{_Mod, PathInfo} = UT#urltype.data,
+		 	    		ARG3 = ARG2#arg{
+							appmoddata = case PathInfo of
+								undefined ->
+									undefined;
+								_ ->
+									lists:dropwhile(fun(C) -> C == $/ end, PathInfo)
+								end,
+		 			 		appmod_prepath = UT#urltype.dir
+						}; 
+					_ ->
+						ARG3 = ARG2
+					end,
+
+				    handle_ut(CliSock, ARG3, UT, N);
+				{true, {true, PP}, _} ->
+				    yaws_revproxy:init(CliSock, ARG, DecPath, QueryString, PP, N);
+				{false, _, _} ->
+				    deliver_403(CliSock, Req);
+				{{false, Realm}, _, _} ->
+				    deliver_401(CliSock, Req, Realm)
+			    end
+			end
 	    end;
 	%%{absoluteURI, _Scheme, _Host, _Port, _RawPath}
 	%%will not make it here.
@@ -1452,6 +1538,9 @@ is_redirect_map(Path, [E={Prefix,_,_}|Tail]) ->
 	    is_redirect_map(Path, Tail)
     end.
 
+
+
+
 %% Return values:
 %% continue, done, {page, Page}
 
@@ -1476,10 +1565,15 @@ handle_ut(CliSock, ARG, UT, N) ->
 	    SC2 = SC#sconf{docroot = hd(SC#sconf.xtra_docroots),
 			   xtra_docroots = tl(SC#sconf.xtra_docroots)},
 	    put(sc, SC2),
+
+		%!todo - review & change. rewriting the docroot and xtra_docroots
+		% is not a good way to handle the xtra_docroot feature because
+		% it makes less information available to the subsequent calls - 
+		% this is especially an issue for a nested ssi.
 	    ARG2 = ARG#arg{docroot = SC2#sconf.docroot},
 	    handle_request(CliSock, ARG2, N);
 	directory when ?sc_has_dir_listings(SC) ->
-	    P = UT#urltype.dir,
+	    P = UT#urltype.fullpath,  
 	    yaws:outh_set_dyn_headers(Req, H, UT),
 	    yaws_ls:list_directory(ARG, CliSock, UT#urltype.data, P, Req,
 				   ?sc_has_dir_all_zip(SC));
@@ -1542,13 +1636,11 @@ handle_ut(CliSock, ARG, UT, N) ->
 	    deliver_302(CliSock, Req, ARG, UT#urltype.path);
 	appmod ->
 	    yaws:outh_set_dyn_headers(Req, H, UT),
- 	    {Mod, PathData} = UT#urltype.data,
- 	    A2 = ARG#arg{appmoddata = PathData,  % trail
- 			 appmod_prepath = UT#urltype.path}, % head
+		{Mod,_} = UT#urltype.data,
 	    deliver_dyn_part(CliSock, 
 			     0, "appmod",
 			     N,
-			     A2,UT,
+			     ARG,UT,
 			     fun(A)->Mod:out(A) end,
 			     fun(A)->finish_up_dyn_file(A, CliSock)
 			     end
@@ -1648,6 +1740,9 @@ new_redir_h(OH, Loc, Status) ->
 % without a trailing / in the HTTP req
 % otherwise the relative urls in /dir/index.html will be broken.
 
+%!todo - review.
+% Why is DecPath being tokenized around "?" - only to reassemble??
+% What happens when Path is not flat?
 
 deliver_302(CliSock, _Req, Arg, Path) ->
     ?Debug("in redir 302 ",[]),
@@ -1658,13 +1753,11 @@ deliver_302(CliSock, _Req, Arg, Path) ->
     DecPath = yaws_api:url_decode(Path),
     RedirHost = yaws:redirect_host(SC, Headers#headers.host),
     Loc = case string:tokens(DecPath, "?") of
-	      [P] ->
-		  ["Location: ", Scheme,
-		   RedirHost, P, "\r\n"];
-	      [P, Q] ->
-		  ["Location: ", Scheme,
-		   RedirHost, P, "?", Q, "\r\n"]
-	  end,
+	    [P] ->
+			["Location: ", Scheme, RedirHost, P, "\r\n"];
+	    [P, Q] ->
+			["Location: ", Scheme, RedirHost, P, "?", Q, "\r\n"]
+	  	end,
 
     new_redir_h(H, Loc),
     deliver_accumulated(CliSock),
@@ -1679,17 +1772,15 @@ deliver_302_map(CliSock, Req, Arg, MethodHostPort) ->
     {Scheme, RedirHost} =
 	case MethodHostPort of
 	    {_,Method,HostPort} ->
-		{Method, HostPort};
+			{Method, HostPort};
 	    {_,HostPort} ->
-		{yaws:redirect_scheme(SC), HostPort}
+			{yaws:redirect_scheme(SC), HostPort}
 	end,
     Loc = case string:tokens(DecPath, "?") of
 	      [P] ->
-		  ["Location: ", Scheme,
-		   RedirHost, P, "\r\n"];
+		  	["Location: ", Scheme, RedirHost, P, "\r\n"];
 	      [P, Q] ->
-		  ["Location: ", Scheme,
-		   RedirHost, P, "?", Q, "\r\n"]
+		  	["Location: ", Scheme, RedirHost, P, "?", Q, "\r\n"]
 	  end,
 
 
@@ -1795,7 +1886,7 @@ do_yaws(CliSock, ARG, UT, N) ->
 	Other  ->
 	    del_old_files(get(gc),Other),
 	    {ok, [{errors, Errs}| Spec]} = 
-		yaws_compile:compile_file(UT#urltype.fullpath),
+			yaws_compile:compile_file(UT#urltype.fullpath),
 	    ?Debug("Spec for file ~s is:~n~p~n",[UT#urltype.fullpath, Spec]),
 	    ets:insert(SC#sconf.ets, {Key, spec, Mtime, Spec, Errs}),
 	    deliver_dyn_file(CliSock, Spec, ARG, UT, N)
@@ -2176,10 +2267,14 @@ handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, [ARG]) ->
     % special case for abs paths
     UT2=case Yfile of
 	    [$/|_] ->
-               url_type( Yfile, ARG#arg.docroot);
+               url_type( Yfile, ARG#arg.docroot, ARG#arg.docroot_mount);
            _Else ->
-               url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile],
-                        ARG#arg.docroot)
+				%why lists:flatten? is urltype.dir ever nested more than 1 level deep?
+				%!todo - replace with conc_path if 1 level - or specify that urltype fields should be written flat!
+				% All this deep listing of relatively *short* strings seems unwieldy.
+				%just how much performance can it gain if we end up using slower funcs like lists:flatten anyway?
+				% review!.
+               	url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile], ARG#arg.docroot, ARG#arg.docroot_mount)
        end, 
 
     case UT2#urltype.type of
@@ -2310,9 +2405,9 @@ handle_out_reply({redirect_local, Path0, Status}, _LineNo, _YawsFile, _UT,A) ->
     Arg = hd(A),
     SC=get(sc),
     Path = case Path0 of
-	       {abs_path, P} ->
+	   {abs_path, P} ->
 		   P;
-	       {rel_path, P} ->
+	   {rel_path, P} ->
 		   {abs_path, RP} = (Arg#arg.req)#http_request.path,
 		   case string:rchr(RP, $/) of
 		       0 ->
@@ -2320,9 +2415,9 @@ handle_out_reply({redirect_local, Path0, Status}, _LineNo, _YawsFile, _UT,A) ->
 		       N ->
 			   [lists:sublist(RP, N),P]
 		   end;
-	       P ->
+	   P ->
 		   P
-	   end,
+	end,
     Scheme = yaws:redirect_scheme(SC),
     Headers = Arg#arg.headers,
     HostPort = yaws:redirect_host(SC, Headers#headers.host),
@@ -2384,22 +2479,37 @@ handle_out_reply_l([], _LineNo, _YawsFile, _UT, _A, Res) ->
 
 
 %% fast server side include with macrolike variable bindings expansion
+%
+% - ssi/4 known callers: yaws_api
+%
 ssi(File, Delimiter, Bindings, Dir) ->
     SC = get(sc),
     ssi(File, Delimiter, Bindings, Dir, SC#sconf.docroot, SC ).
+
+
 ssi(File, Delimiter, Bindings, Dir, Docroot) ->
     ssi(File, Delimiter, Bindings, Dir, Docroot, get(sc)).
+
+
 ssi(File, Delimiter, Bindings, Dir, Docroot, SC) ->
+	
+	%JMN - line below looks suspicious, why are we not keying on {ssi, File, Dir} ???
+	%Surely a name like header.inc may be present in various parts of the hierarchy so Dir should form part of key.
     Key = {ssi, File, Delimiter},
+
+	%!todo - overhaul ssi to work with vdirs.
+	%FullPath = construct_fullpath(DR, lists:flatten([Dir, File]), VirtualDir),		
+
     FullPath =
 	case File of
-	    {rel_path, FileName} ->
+	{rel_path, FileName} ->
 		[Docroot, Dir,[$/|FileName]];
-	    {abs_path, FileName} ->
+	{abs_path, FileName} ->
 		[Docroot, [$/|FileName]];
-	    FileName when list(FileName) ->
+	FileName when list(FileName) ->
 		[Docroot, [$/|FileName]]
 	end,
+
     Mtime = path_to_mtime(FullPath),
     case ets:lookup(SC#sconf.ets, Key) of
 	[{_, Parts, Mtime}] ->
@@ -2872,13 +2982,13 @@ now_secs() ->
 
 
 %% a file cache,
-url_type(GetPath, ArgDocroot) ->
+url_type(GetPath, ArgDocroot, VirtualDir) ->
     SC=get(sc),
     GC=get(gc),
     E = SC#sconf.ets,
     case ets:lookup(E, {url, GetPath}) of
 	[] ->
-	    UT = do_url_type(SC, GetPath, ArgDocroot),
+	    UT = do_url_type(SC, GetPath, ArgDocroot, VirtualDir),
 	    ?TC([{record, UT, urltype}]),
 	    ?Debug("UT=~s\n", [?format_record(UT, urltype)]),
 	    CF = cache_file(SC, GC, GetPath, UT),
@@ -2892,7 +3002,7 @@ url_type(GetPath, ArgDocroot) ->
 		    ?Debug("Timed out entry for ~s ~p~n", 
 			[GetPath, {When, N}]),
 		    %% more than 30 secs old entry
-		    UT2 = do_url_type(SC, GetPath, ArgDocroot),
+		    UT2 = do_url_type(SC, GetPath, ArgDocroot, VirtualDir),
 		    case file_changed(UT, UT2) of
 			true ->
 			    ?Debug("Recaching~n", []),
@@ -3023,17 +3133,24 @@ clear_ets(E) ->
     
 
 %% return #urltype{}
-do_url_type(SC, GetPath, ArgDocroot) ->
-    ?Debug("do_url_type SC=~s~nGetPath=~p~n", 
-	   [?format_record(SC,sconf), GetPath]),
+do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
+    ?Debug("do_url_type SC=~s~nGetPath=~p~nVirtualDir=~p~n", 
+	   [?format_record(SC,sconf), GetPath,VirtualDir]),
+
+
     case GetPath of
 	_ when ?sc_has_dav(SC) ->
-	    {Comps, RevFile} = split(GetPath, [], []),
+	    {Comps, RevFile} = comp_split(GetPath),
 	    {_Type, Mime} = suffix_type(RevFile),
-	    DR = ArgDocroot,
-	    FullPath = [DR, GetPath],
+
+		FullPath = construct_fullpath(ArgDocroot, GetPath, VirtualDir),
+
+		%!!WARNING!!!
+		%!TODO - review & test!
+		%Implications of vdirs on DAV have not yet been fully considered by author of vdir support (JMN)
+
 	    #urltype{type = dav, 
-		     dir = Comps,
+		     dir = conc_path(Comps),
 		     getpath = GetPath,
 		     path = GetPath,
 		     fullpath = FullPath,
@@ -3041,22 +3158,32 @@ do_url_type(SC, GetPath, ArgDocroot) ->
 	"/" -> %% special case 
 	    case lists:keysearch("/", 1, SC#sconf.appmods) of
 		{value, {_, Mod}} ->
-		    #urltype{type = appmod, 
-			     data = {Mod, []}};
+		    #urltype{
+				type = appmod, 
+			    data = {Mod, []},
+				dir = "",
+				path = "",
+				fullpath = ArgDocroot
+			};
 		_ ->
-		    maybe_return_dir(ArgDocroot, GetPath)
+		    maybe_return_dir(ArgDocroot, GetPath, VirtualDir)
 	    end;
 	[$/, $~ |Tail] ->
 	    ret_user_dir(Tail);
 	_ ->
-	    {Comps, RevFile} = split(GetPath, [], []),
+		FullPath = construct_fullpath(ArgDocroot, GetPath, VirtualDir),
+
+
+	    {Comps, RevFile} = comp_split(GetPath),
 	    ?Debug("Comps = ~p RevFile = ~p~n",[Comps, RevFile]),
 
-	    case check_appmods(SC#sconf.appmods, Comps, RevFile) of
+		RequestSegs = string:tokens(GetPath,"/"),
+
+	    %case check_appmods(SC#sconf.appmods, Comps, RevFile) of
+		case active_appmod(SC#sconf.appmods, RequestSegs) of
 		false ->
-		    DR = ArgDocroot,
-		    FullPath = [DR, GetPath],
 		    ?Debug("FullPath = ~p~n", [FullPath]),
+
 		    case prim_file:read_file_info(FullPath) of
 			{ok, FI} when FI#file_info.type == regular ->
 			    {Type, Mime} = suffix_type(SC, RevFile),
@@ -3064,7 +3191,7 @@ do_url_type(SC, GetPath, ArgDocroot) ->
 				     finfo=FI,
 				     deflate=deflate_q(?sc_has_deflate(SC), 
 						       Type, Mime),
-				     dir = Comps,
+				     dir = conc_path(Comps),
 				     path = GetPath,
 				     getpath = GetPath,
 				     fullpath = FullPath,
@@ -3072,48 +3199,206 @@ do_url_type(SC, GetPath, ArgDocroot) ->
 			{ok, FI} when FI#file_info.type == directory ->
 			    case RevFile of
 				[] ->
-				    %% dir urls without trailing /
-				    maybe_return_dir(DR, GetPath);
+				    maybe_return_dir(ArgDocroot, GetPath, VirtualDir);
 				_ ->
-				    #urltype{type = redir,
-					     path = [GetPath, "/"]}
+				    %%Presence of RevFile indicates dir url had no trailing /
+				    #urltype{
+						type = redir,
+					    path = [GetPath, "/"]}
 			    end;
 			_Err ->
 			    %% non-optimal, on purpose
-			    maybe_return_path_info(SC, Comps, RevFile)
+			    maybe_return_path_info(SC, Comps, RevFile, ArgDocroot, VirtualDir)
 		    end;
-		{ok, Head, {PathElem, Mod}, Trail} ->
-		    File = lists:reverse(RevFile),
-		    ?Debug("PathElem = ~p Trail = ~p File = ~p~n", 
-			   [PathElem, Trail, File]),
-		    #urltype{type = appmod, 
-			     data = {Mod, if
-					      Trail==[], PathElem == File ->
-						  [];
-					      hd(File) == $/, 
-					      PathElem == tl(File) ->
-						  [];
-					      true ->
-						  case conc_path(Trail) ++ File of
-						      X when hd(X) == $/ ->
-							  X;
-						      X ->
-							  X
-						  end
-					  end},
-			     path = conc_path(Head)}
+		{ok, {Mount, Mod}} ->
+			%active_appmod found the most specific appmod for this request path
+			% - now we need to determine the prepath & path_info
+
+			MountSegs = string:tokens(Mount,"/"),
+				
+			case Mount of
+			[$/|_] ->
+				%'anchored' appmod mount.
+
+				PreSegments = lists:sublist(RequestSegs,length(MountSegs)-1),
+				PostSegments = lists:sublist(RequestSegs,length(MountSegs)+1,length(RequestSegs));
+			_ ->
+				%'floating' appmod mount.
+				
+				{PreSegments,PostSegments} = split_at_segment(Mount,RequestSegs,[])
+			end,
+			?Debug("Pre ~p Post ~p~n",[PreSegments,PostSegments]),								
+
+			Prepath = case PreSegments of 
+			"" ->
+				"/";
+			_ ->
+				"/" ++ join(PreSegments,"/") ++ "/"
+			end,
+
+			PathI = case PostSegments of
+			[] ->
+				"";
+			_ ->
+				"/" ++ join(PostSegments,"/")			
+			end,
+			%absence of RevFile tells us there was a trailing slash.
+			PathInf = case RevFile of
+			[] ->
+				PathI ++ "/";
+			_ ->
+				PathI
+			end,
+			PathInfo = case PathInf of
+			"" ->
+				undefined;
+			_ ->
+				PathInf
+			end,
+
+			#urltype{
+				type = appmod,
+				data = {Mod, PathInfo},
+				dir = Prepath, 
+				path = Prepath ++ tl(MountSegs),
+				fullpath = FullPath,
+				pathinfo = PathInfo
+			}				
+
+		    %File = lists:reverse(RevFile),
+		    %?Debug("PathElem = ~p Trail = ~p File = ~p~n", [PathElem, Trail, File]),
+		    %#urltype{type = appmod, 
+			%     data = {Mod, if
+			%		      Trail==[], PathElem == File ->
+			%				  [];
+			%			  hd(File) == $/, PathElem == tl(File) ->
+			%				  [];
+			%		      true ->
+			%				  case conc_path(Trail) ++ File of
+			%				  X when hd(X) == $/ ->
+			%					  X;
+			%				  X ->
+			%					  X
+			%				  end
+			%		  	  end},
+			%     path = conc_path(Head)}
 	    
 	    end
     end.
-			    
 
-split([$/|Tail], Comps, Part) when Part /= [] ->
+			    
+% comp_split/1 - split a path around "/" returning final segment as reversed string.
+% return {Comps, RevPart} where Comps is a (possibly empty) list of path components - always with trailing "/"
+% revPart is the final segment in reverse and has no "/".  
+% e.g split( "/test/etc/index.html",[],[]) -> {["/test/", "etc/"], "lmth.xedni"}
+% revPart is useful in this form for looking up the file extension's mime-type.
+%
+% Terminology note to devs: reserve the word 'comp' to refer to a single fragment of a path that we know has 
+% a trailing slash. If you're dealing just with the part between slashes - consider using the term 'segment' instead.
+% e.g  "x/" "/"   are all valid 'comps'
+% "/x" "/x/y/" "x" are not.
+%
+comp_split(Path) ->
+	do_comp_split(Path,[],[]).
+
+%when Part /= [] 
+do_comp_split([$/|Tail], Comps, Part) ->
     NewComp = lists:reverse([$/|Part]),
-    split(Tail,  [NewComp | Comps], []);
-split([H|T], Comps, Part)  ->
-    split(T, Comps, [H|Part]);
-split([], Comps, Part) ->
+    do_comp_split(Tail,  [NewComp | Comps], []);
+do_comp_split([H|T], Comps, Part)  ->
+    do_comp_split(T, Comps, [H|Part]);
+do_comp_split([], Comps, Part) ->
     {lists:reverse(Comps), Part}.
+
+
+%%active_appmod/2
+%find longest appmod match for request. (ie 'most specific' appmod) 
+% - conceptually similar to the vdirpath scanning - but must also support 'floating appmods'
+% i.e an appmod specified as <path , appmodname> where 'path' has no leading slash.
+%
+% a 'floating' appmod is not tied to a specific point in the URI structure
+% e.g for the configuration entry <myapp , myappAppmod> 
+% the requests /docs/stuff/myapp/etc  & /otherpath/myapp   will both trigger the myappAppmod module.
+% whereas for the configuration entry </docs/stuff/myapp , myappAppmod>
+% the request /otherpath/myapp will not trigger the appmod.
+%
+% !todo - consider supporting 'compound' floating appmods. 
+% e.g <stuff/myapp , someappmod> to match   /somewhere/stuff/myapp/xyz  but not /somewhere/myapp/xyz 
+%
+active_appmod([], _RequestSegs) ->
+	false;
+active_appmod(AppMods, RequestSegs) ->
+
+	%!todo - review/test performance (e.g 'fun' calls are slower than a call to a local func - replace?)
+
+	%Accumulator is of form {RequestSegs, {AppmodMountPoint,Mod}}
+	Matched = lists:foldl(
+				fun(Pair,Acc) ->
+					{Mount, Mod} = Pair,
+					{ReqSegs, {LongestSoFar, _}} = Acc,
+
+					MountSegs = string:tokens(Mount,"/"),
+					case lists:prefix(MountSegs,ReqSegs) of
+					true ->
+						case LongestSoFar of
+						[$/|_] ->
+							%simple comparison of string length (as opposed to number of segments) should be ok here.
+							if length(Mount) > length(LongestSoFar) ->
+								{ReqSegs, {Mount, Mod}};
+							true ->
+								Acc
+							end;
+						_ ->
+							%existing match is 'floating' - we trump it.
+
+							{ReqSegs, {Mount, Mod}}
+						end;
+					false ->
+						case LongestSoFar of
+						[$/|_] ->										
+							%There is already a match for an 'anchored' (ie absolute path) mount point.
+							% floating appmod can't override.
+							Acc;
+						_ ->
+							%check for 'floating' match
+							case lists:member(Mount, ReqSegs) of
+							true ->
+								%!todo - review & document.
+								%latest 'floating' match wins if multiple match?
+								% (order in config vs position in request URI ?) 
+
+								{ReqSegs, {Mount, Mod}};
+							false ->
+								Acc
+							end
+						end
+					end
+				end, {RequestSegs, {"",""}}, AppMods),
+
+	case Matched of
+	{_RequestSegs, {"",""}} ->
+		%no appmod corresponding specifically to this http_request.path
+
+		false;
+	{_RequestSegs, {Mount, Mod}} ->
+
+		{ok, {Mount, Mod}}
+	end
+.
+
+%split a list of segments into 2 lists either side of element matching Seg.
+%(no elements contain slashes)
+split_at_segment(_, [], _Acc) ->
+    false;
+split_at_segment(Seg,[Seg|Tail],Acc) ->
+	{lists:reverse(Acc),Tail};
+split_at_segment(Seg,[H|Tail],Acc) ->
+	split_at_segment(Seg, Tail, [H|Acc]).
+
+
+
+
+
 
 
 check_appmods([], _, _) ->
@@ -3146,17 +3431,17 @@ check_comps([Pair |Tail], Comps) ->
     end.
     
 				      
-split_at(_, [], _Ack) ->
+split_at(_, [], _Acc) ->
     false;
-split_at(AM={"/", _Mod}, [PEslash|Tail], Ack) ->
-    {ok, lists:reverse(Ack), AM, [PEslash|Tail]};
-split_at(AM={PE, _Mod}, [PEslash|Tail], Ack) ->
+split_at(AM={"/", _Mod}, [PEslash|Tail], Acc) ->
+    {ok, lists:reverse(Acc), AM, [PEslash|Tail]};
+split_at(AM={PE, _Mod}, [PEslash|Tail], Acc) ->
     ?Debug("AM=~p PEslash=~p~n", [AM, PEslash]),
     case no_slash_eq(PE, PEslash) of
 	true ->
-	    {ok, lists:reverse(Ack), AM, Tail};
+	    {ok, lists:reverse(Acc), AM, Tail};
 	false ->
-	    split_at(AM, Tail, [PEslash|Ack])
+	    split_at(AM, Tail, [PEslash|Acc])
     end.
 
 
@@ -3171,18 +3456,46 @@ no_slash_eq(_,_) ->
     false.
 
 
-try_index_file(DR, GetPath) ->
-     case prim_file:read_file_info([DR, GetPath, "index.yaws"]) of
-	{ok, FI} when FI#file_info.type == regular ->
-	    do_url_type(get(sc), GetPath ++ "index.yaws", DR);
+
+
+
+%% construct_fullpath
+%
+%preconditions: 
+% - DR, GetPath, VirtualDir already validated &/or normalized 
+% - VirtualDir is empty string, or a prefix of GetPath of the form "/path/" where path may also contain "/"
+% - DocRoot is a valid physical path to a directory, with no trailing "/"
+%
+%i.e this is an inner function, so no sanity checks here.
+%
+construct_fullpath(DocRoot,GetPath,VirtualDir) ->
+	case VirtualDir of
+	[] ->
+		DocRoot ++ GetPath;
 	_ ->
-	    case prim_file:read_file_info([DR, GetPath, "index.html"]) of
+		%trim the virtual base off the GET request path before appending to DocRoot.
+		%(leaving one "/" - therefore don't add 1 to length)
+		DocRoot ++ string:substr(GetPath,length(VirtualDir))	
+	end
+.
+
+%preconditions: 
+% - see 'construct_fullpath'
+%
+try_index_file(DR, GetPath, VirtualDir) ->
+	FullPath = construct_fullpath(DR, GetPath, VirtualDir),
+
+    case prim_file:read_file_info([FullPath, "index.yaws"]) of
+	{ok, FI} when FI#file_info.type == regular ->
+	    do_url_type(get(sc), GetPath ++ "index.yaws", DR, VirtualDir);
+	_ ->
+	    case prim_file:read_file_info([FullPath, "index.html"]) of
 		{ok, FI} when FI#file_info.type == regular ->
-		    do_url_type(get(sc), GetPath ++ "index.html", DR);
+		    do_url_type(get(sc), GetPath ++ "index.html", DR, VirtualDir);
 		_ ->
-		    case prim_file:read_file_info([DR, GetPath,"index.php"]) of
+		    case prim_file:read_file_info([FullPath, "index.php"]) of
 			{ok, FI} when FI#file_info.type == regular ->
-			    do_url_type(get(sc), GetPath ++ "index.php", DR);
+			    do_url_type(get(sc), GetPath ++ "index.php", DR, VirtualDir);
 			_ ->
 			    noindex
 		    end
@@ -3190,13 +3503,16 @@ try_index_file(DR, GetPath) ->
      end.
 		
 
-maybe_return_dir(DR, GetPath) ->
-    case try_index_file(DR, GetPath) of
+maybe_return_dir(DR, GetPath,VirtualDir) ->
+    case try_index_file(DR, GetPath,VirtualDir) of
 	noindex ->
-	    case file:list_dir([DR, GetPath]) of
+		FullPath = construct_fullpath(DR, GetPath, VirtualDir),
+
+	    case file:list_dir(FullPath) of
 		{ok, List} ->
 		    #urltype{type = directory,
-			     dir = [DR , GetPath],
+			     fullpath = FullPath,
+				 dir = GetPath,
 			     data = List -- [".yaws_auth"]};
 		_Err ->
 		    #urltype{type=error}
@@ -3207,13 +3523,14 @@ maybe_return_dir(DR, GetPath) ->
 
 
 
-
+%%- maybe_return_path_info/5
+%% <historical-comments>
 % sick apache style urls http://www.x.com/a/foo.yaws/c/d/
 % where /c/d/ ends up in pathinfo
-
+%
 % neither is this entirely correct since the /c/d/ files may exists
 % and in that case we'll deliver em :-(
-
+%
 % Comment from Carsten:
 %
 % Theses urls may be a matter of taste, but since they are mentioned in
@@ -3231,64 +3548,130 @@ maybe_return_dir(DR, GetPath) ->
 % will not work, if a/foo.yaws is a directory and
 % /a/foo.yaws/b/bar.yaws a script.  Possibly, this used to be
 % different and may again be changed in the future.
+%
+%% </historical-comments>
+%JMN 2007-02 - the 'future' mentioned above is here.
+% 
+% We now support urls which may contain segments on either side of the actual script that *look* like a script but aren't.
+% e.g  http://www.x.com/a/foo.yaws/b/showcode.yaws/item/mypage.yaws?ok=true
+%
+% where foo.yaws may actually be a directory,
+% showcode.yaws is the actual script
+% /item/mypage.yaws  is just the PATH_INFO data that is passed to the script
+% 
+% This is done by scanning for the rightmost dotted component that corresponds to a script file.
+% Starting from the right - we do a call to the filesystem to test that it is a file, only when we reach a dotted component
+% which has a suffix corresponding to a non 'regular' mime type.
+% (this should keep the number of calls to the filesystem to a minimum - 
+%  except maybe in some pathologically weird cases where there are many dotted components in the post-script PATH_INFO)
+% 
+% If we don't ever hit a dotted segment that represents a script file - that's ok..
+% It just means this is an invalid path, because we only even started scanning after determining that
+% the full path did not correspond directly to a file or folder - and therefore should be a script url.
+% (appmods were checked for earlier)
+% 
+%  
+%
+%!todo - reduce this comment block to statements relevant to current state of code only.
+% - e.g Late 2007 may be a good time to remove the historical comments. - always available in repository.
 
-maybe_return_path_info(SC, Comps, RevFile) ->
-    case path_info_split(Comps,[]) of
-	{false, Type} ->
-	     #urltype{type=Type};
-	{ok, HeadComps, File, TrailComps, Type, Mime} ->
-	    DR = SC#sconf.docroot,
+%!todo - support some sort of 'scriptalias' to allow non-dotted script components.
+% (for efficiency - we don't want to call into filesystem for every non-dotted segment - but looking up scriptaliases ok)
+%
+maybe_return_path_info(SC, Comps, RevFile, DR, VirtualDir) ->
+
+    case path_info_split(Comps, {DR, VirtualDir}) of
+	{not_a_script, error} ->
+		 %can we use urltype.data to return more info?
+		 % - logging?
+	     #urltype{type=error};
+	{ok, FI, FullPath, HeadComps, File, TrailComps, Type, Mime} ->
+		%'File' is the only comp that has been returned without trailing "/"
+
 	    {Type2, Mime2} = 
-		case member(Type, SC#sconf.allowed_scripts) of
-		    true ->
-			{Type, Mime};
-		    false ->
-			{regular, "text/plain"}
-		end,
+			case member(Type, SC#sconf.allowed_scripts) of
+			true ->
+				{Type, Mime};
+			false ->
+				%!todo review. 
+				%Should we really be returning the file as text/plain when there is pathinfo present?
+				%Perhaps a 403 error would be more appropriate. 
+				{regular, "text/plain"}
+			end,
 
-	    FullPath = [DR, HeadComps, $/, File],
-	    ?Debug("FullPath = ~p~n", [FullPath]),
-	    case prim_file:read_file_info(FullPath) of
-		{ok, FI} when FI#file_info.type == regular ->
-		    Trail = [$/ | conc_path(TrailComps ++ 
-					    [lists:reverse(RevFile)])],
-		    #urltype{type = Type2,
-			     finfo=FI,
-			     deflate=deflate_q(?sc_has_deflate(SC), 
-					       Type, Mime),
-			     dir = HeadComps,
-			     path = [HeadComps, $/, File],
-			     fullpath = FullPath,
-			     pathinfo = Trail,
-			     getpath = case HeadComps of
-					   [] -> [$/|File];
-					   [_|_] ->
-					       conc_path(
-						 HeadComps++[File])
-				       end,
-			     mime = Mime2};
-		_ ->
-		    #urltype{type = error}
-	    end
+	    ?Debug("'script-selection' FullPath= ~p~n Mime=~p~n", [FullPath, Mime2]),
+
+		%Trail = [$/ | conc_path(TrailComps ++ [lists:reverse(RevFile)])],
+		Trail = conc_path([ "/" ] ++ TrailComps ++ [ lists:reverse(RevFile) ]),
+
+
+	    #urltype{type = Type2,
+		     finfo=FI,
+		     deflate=deflate_q(?sc_has_deflate(SC), 
+				       Type, Mime),
+		     dir =  conc_path(HeadComps),
+		     path = conc_path(HeadComps ++ [File]),
+		     fullpath = FullPath,
+		     pathinfo = Trail,
+		     getpath = case HeadComps of
+				   [] -> [$/|File];
+				   [_|_] ->
+				       conc_path(HeadComps ++ [File])
+			       end,
+		     mime = Mime2}
     end.
 
 
-path_info_split([H|T], Ack) ->
+%%scan a list of 'comps' of form "pathsegment/"   (trailing slash always present)
+% - looking for the rightmost dotted component that corresponds to a script file.
+% 
+% By the time path_info_split is called - the fullpath has already been tested and found not to be a file or directory
+%
+% Limitation: we don't support a script file without a dot. 
+%  - otherwise we'd have to hit the filesystem for too many path components to see if they exist & are an executable file.
+%
+% !!todo - review (potential security issue).
+% Right-to-left scanning should stop once we reach a 'document root mount point',
+% otherwise the Docroot that has been determined based on the full request path becomes invalid! 
+%
+path_info_split(Comps,DR_Vdir) ->
+	path_info_split(lists:reverse(Comps), DR_Vdir, []).
+
+path_info_split([H|T], {DR, VirtualDir}, AccPathInfo) ->
     [$/|RevPath] = lists:reverse(H),
     case suffix_from_rev(RevPath) of
 	[] ->   % shortcut clause, not necessary
-	    path_info_split(T, [H|Ack]);
+	    path_info_split(T, {DR, VirtualDir}, [H|AccPathInfo]);
 	Suff ->
 	    {Type, Mime} = mime_types:t(Suff),
 	    case Type of
 		regular ->
-		    path_info_split(T, [H|Ack]);
+			%Don't hit the filesystem to test components that 'mime_types' indicates can't possibly be scripts
+		    path_info_split(T, {DR, VirtualDir}, [H|AccPathInfo]);
 		X ->
-		    {ok, lists:reverse(Ack), yaws:delall($/, H), T, X, Mime}
+
+			%We may still be in the 'PATH_INFO' section
+			%Test to see if it really is a script 
+			
+			TestPath = lists:flatten(lists:reverse(T)),
+			FullPath = construct_fullpath(DR, TestPath, VirtualDir) ++ string:strip(H,right,$/),
+
+		    ?Debug("Testing for script at: ~p~n", [FullPath]),
+
+		    case prim_file:read_file_info(FullPath) of
+			{ok, FI} when FI#file_info.type == regular ->
+				{ok, FI, FullPath, lists:reverse(T), string:strip(H,right,$/), AccPathInfo, X, Mime};
+			{ok, FI} when FI#file_info.type == directory ->
+				%just a case of a bad path starting at this point.
+			    {not_a_script, error};
+			_Err ->
+				%just looked like a script - keep going.				
+			    path_info_split(T, {DR, VirtualDir}, [H|AccPathInfo])
+		    end
 	    end
     end;
-path_info_split([], _Ack) ->
-    {false, error}.
+path_info_split([], _DR_Vdir, _Acc) ->
+    {not_a_script, error}.
 
 
 suffix_from_rev(R) ->
@@ -3302,11 +3685,34 @@ suffix_from_rev([], _A) ->
     [].
 
 
-
+%conc_path 
+% - single-level concatenatenation of a list of path components which already contain slashes.
+% tests suggest it's significantly faster than lists:flatten or lists:concat 
+% & marginally faster than lists:append (for paths of 3 or more segments anyway)
+% tested with various fairly short path lists - see src/benchmarks folder
+%
+%%Original
 conc_path([]) ->
     [];
 conc_path([H|T]) ->
     H ++ conc_path(T).
+
+%% tail-recursive version slower for longer paths according to bench.erl
+% (mainly because we need to do 'Acc ++ H' rather than 'H ++ Acc')
+% Tail recursion not very useful here anyway as we're dealing with short strings.
+%conc_path2([]) ->
+%	[];
+%conc_path2([H|T]) ->
+%	cpath(T,H).
+
+%cpath([],Acc) ->
+%	Acc;
+%cpath([H|[]],Acc) ->
+%	H ++ Acc;
+%cpath([H|T],Acc) ->
+%	cpath(T,Acc ++ H).
+
+
 
 
 
@@ -3336,7 +3742,12 @@ ret_user_dir(Upath)  ->
 				    allowed_scripts = [],
 				    docroot=DR2},
 			    put(sc, SC2),
-			    redir_user(do_url_type(SC2, Path, DR2), User)%% recurse
+
+				%% !todo - review interactions between Virtual Dirs & Home Dir paths.
+				%% VirtualDir hardcoded empty is not nice behaviour -
+				%% a rewrite mod author may reasonably expect to be able to have influence here.
+
+			    redir_user(do_url_type(SC2, Path, DR2,""), User)%% recurse
 		    end;
 		{redir_dir, User} ->
 		    #urltype {type = redir,
@@ -3494,3 +3905,120 @@ safe_ehtml_expand(X) ->
 
 err_pre(R) ->
     io_lib:format("<pre> ~n~p~n </pre>~n", [R]).
+
+
+%concatenate a list of strings using another string as a separator.
+%e.g join(["usr","local","etc"],"/")   =  "usr/local/etc"
+%
+join(List, Sep) ->
+	    lists:foldl(fun(A, "") -> A; (A, Acc) -> Acc ++ Sep ++ A
+			end, "", List).
+
+
+%%mappath/3    (virtual-path to physical-path)
+%- this returns physical path a URI would map to, taking into consideration vdirs and
+% assuming each path segment of the URI represents a folder (or maybe filename at end).
+% ie it does not (and is not intended to) take into account 'script points' in the path. (cgi,php,appmod etc)
+% The result may not actually exists as a path.
+%
+% mappath/3 is analogous to the Microsoft ASP function Server.MapPath or the 'filename' array member of the result 
+% of the PHP function 'apache_lookup_uri'.  
+%
+mappath(SC, ARG, RequestPath) ->
+
+	{VirtualDir, DR} = vdirpath(SC, ARG, RequestPath),
+
+	PhysicalPath = construct_fullpath(DR, RequestPath, VirtualDir),
+
+	%Resultant path might not exist - that's not the concern of the 'mappath' function.
+	PhysicalPath
+.
+
+
+%%vdirpath/3
+%find longest "vdir" match. (ie a 'document-root mount-point' -> DOCUMENT_ROOT_MOUNT)
+%
+%e.g if we have in our .conf:
+%   vdir = "/app/  /path1/somewhere"
+%   vdir = "/app/test/shared/ /path2/somewhere"
+%
+% A request path of /app/test/doc.html  must be served from under /path1/somewhere
+% /app/test/shared/doc.html will be served from under /path2/somewhere
+%
+% Also must be able to handle:
+%   vdir = "/somewhere/ /path3/has spaces/in path/docs"
+%In this case, the 1st space separates the vdir from the physical path
+% i.e subsequent spaces are part of the path.
+
+vdirpath(SC, ARG, RequestPath) ->
+	Opaquelist = ARG#arg.opaque,
+
+	%!todo - move out of opaque.
+	% We don't want to scan all opaque entries each time 
+	%- vdir directives should be pre-collated into a list somewhere. (own field in sconf record)
+
+
+	RequestSegs = string:tokens(RequestPath,"/"),
+			
+
+	%Accumulator is of form {RequestSegs,{VdirMountPoint,VdirPhysicalPath}}
+	Matched = lists:foldl(
+				fun(ListItem,Acc) ->
+					case ListItem of 
+					{"vdir",Vmap} ->
+
+						{ReqSegs,VdirSpec} = Acc,
+
+						[Virt |PhysParts] = string:tokens(Vmap," \t"),
+						VirtSegs = string:tokens(Virt,"/"),
+						case lists:prefix(VirtSegs,ReqSegs) of
+						true ->
+							{LongestSoFar,_} = VdirSpec,
+							if length(Virt) > length(LongestSoFar) ->
+								%reassemble (because physical path may have spaces)
+								Phys = join(PhysParts, " "),
+
+								{ReqSegs, {Virt, Phys}};
+							true ->
+								Acc
+							end;
+						false ->
+							Acc
+						end;
+					 _Else ->
+						%irrelevant member of opaque list. no change in accumulator
+						Acc
+					end
+				end, {RequestSegs,{"",""}}, Opaquelist),
+
+
+
+	case Matched of
+	{_RequestSegs, {"",""}} ->
+		%no virtual dir corresponding to this http_request.path
+
+		%NOTE - we *don't* know that the state of ARG#arg.docroot currently reflects the main docroot		
+		% specified for the virtual server in the conf file.
+		% This is because we may be being called from a page that is under a vdir, and so docroot may
+		% have been rewritten. It may also have been rewritten by an appmod or arg_rewrite_mod.
+		% Therefore we need to get it directly from the sconf record.
+
+		Result = {"",SC#sconf.docroot};
+	{_RequestSegs, {Virt,DocRoot }} ->
+		%sanitize Virt & DocRoot so that they are correct with regards to leading & trailing slashes
+		case string:right(Virt,1) of
+		"/" ->
+			VirtualDir = Virt;
+		_ ->
+			VirtualDir = Virt ++ "/"
+		end,
+		DR = string:strip(DocRoot,right,$/),
+
+		Result = {VirtualDir, DR}
+	end,
+
+
+	%return {VdirURI, Physpath}  - i.e tuple representing the data specified in conf file for the 'vdir' directive. 
+	Result
+.
+

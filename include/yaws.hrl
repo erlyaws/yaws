@@ -196,14 +196,32 @@
 
 %% this internal record is used and returned by the URL path parser
 
+%<JMN_2007-02>
+%!todo - document this record and its usage more.
+% - is it really a win to store 'unflat' strings when they are generally quite short?
+% - we end up having to flatten at various points anyway, so I think in general they should just be stored flat.
+%
+% As an example of the problems - deliver_302 only handles flat paths, but I've seen it being passed #urltype.path
+% directly. Elsewhere I see urltype.path being written to in nested form.
+% WHEN is it being flattened? I don't know for sure that the unflat path could ever get to the deliver_302 but it sure
+% looks like a bug waiting to happen.
+%
+% I understand that for big strings, they can be passed over sockets etc unflattened and it gives a performance gain.
+% For URLs & filesystem paths however (which are generally reasonably short) 
+% - I think a canonical flat form is best for code maintainability and reliability  
+% - and perhaps also for performance - as it saves having to check for nestedness all over the place.
+%
+%
+%</JMN_2007-02>
+
 -record(urltype, {type,   %% error | yaws | regular | directory | 
-                          %% forbidden | appmod
+                          %% forbidden | appmod 
 		  finfo,
 		  path = [],
-		  fullpath = [], %% deep list
+		  fullpath = [], %% deep list (WHY?)
 		  dir = [],      %% relative dir where the path leads to
 		                 %% flat | unflat need flat for authentication
-		  data,  %% Binary | FileDescriptor | DirListing | undefined
+		  data,  	%% type-specific e.g: Binary | FileDescriptor | DirListing | undefined
 		  deflate,  %% undefined | Binary | dynamic
 		  mime = "text/html",    %% MIME type
 		  getpath,  %% as GET'ed by client

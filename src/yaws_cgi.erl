@@ -185,14 +185,32 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
     {Hostname, Hosttail}=lists:splitwith(fun(X)->X /= $: end, 
 					 checkdef(H#headers.host)),
     Hostport = case Hosttail of
-
 		   [$: | P] -> P;
 		   [] -> integer_to_list(SC#sconf.port)
 	       end,
     PeerAddr = get_socket_peername(Arg#arg.clisock),
     LocalAddr = get_socket_sockname(Arg#arg.clisock),
 
-    Scriptname = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
+    %Scriptname = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
+	%SCRIPT_NAME is the path of the script relative to the root of the website.
+	%just dropping docroot from the fullpath does not give the full SCRIPT_NAME path if a 'vdir' is involved.
+	UriTail = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
+	case Arg#arg.docroot_mount of
+	"/" ->
+		%no arg.docroot_mount means that arg.docroot corresponds to the URI-root of the request "/"
+		Scriptname = UriTail;
+	Vdir ->
+		Scriptname = Vdir ++ string:strip(UriTail,left,$/)
+	end,	
+
+	Pathinfo2 = checkdef(Pathinfo),
+	case Pathinfo2 of
+	"" ->
+		PathTranslated = "";
+	_ ->
+		%determine what physical path the server would map Pathinfo2 to if it had received just Pathinfo2 in the request.
+		PathTranslated = yaws_server:mappath(SC,Arg,Pathinfo2)
+	end,
 
 
 	%Pass auth info in environment - yes - including password in plain text.
@@ -235,36 +253,51 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
 	  ([
 	    {"SERVER_SOFTWARE", "Yaws/"++yaws_generated:version()},
 	    {"SERVER_NAME", Hostname},
+        {"HTTP_HOST", Hostname},
 	    {"GATEWAY_INTERFACE", "CGI/1.1"},
-	    {"SERVER_PROTOCOL", 
-	     lists:flatten(
-	       ["HTTP/",integer_to_list(Maj),".",integer_to_list(Min)])},
+	    {"SERVER_PROTOCOL", "HTTP/" ++ integer_to_list(Maj) ++ "." ++ integer_to_list(Min)},
 	    {"SERVER_PORT", Hostport},
 	    {"REQUEST_METHOD", yaws:to_list(R#http_request.method)},
 	    {"REQUEST_URI", RequestURI},
-	    {"DOCUMENT_ROOT", Arg#arg.docroot},
-	    {"PATH_INFO", checkdef(Pathinfo)},
+	    {"DOCUMENT_ROOT", 	Arg#arg.docroot},
+		{"DOCUMENT_ROOT_MOUNT", Arg#arg.docroot_mount},
 	    {"SCRIPT_FILENAME", Scriptfilename},    % For PHP 4.3.2 and higher
-						    % see http://bugs.php.net/bug.php?id=28227
-						    % (Sergei Golovan).
-	    {"PATH_TRANSLATED", Scriptfilename},    % This seems not to
-						% correspond to the
-						% documentation I have
-						% read, but it works
-						% with PHP.
-						%
-						% (Not with PHP 4.3.10-16) from
-						% Debian sarge (Sergei Golovan).
+						    	% see http://bugs.php.net/bug.php?id=28227
+						    	% (Sergei Golovan).
+	    						% {"SCRIPT_TRANSLATED", Scriptfilename},   %IIS6+ 
+	    {"PATH_INFO",		Pathinfo2},
+	    {"PATH_TRANSLATED",	PathTranslated},  
+								%<JMN_2007-02> 
+								% CGI/1.1 spec says PATH_TRANSLATED should be NULL or unset if PATH_INFO is NULL
+								% This is in contrast to IIS behaviour - and may break some apps.
+								% broken apps that expect it to always correspond to path of script
+								% should be modified to use SCRIPT_FILENAME instead - or be wrapped.
+								%</JMN_2007-02>
+								%--------------------
+								% <pre_2007-02_comments>
+								% This seems not to
+								% correspond to the
+								% documentation I have
+								% read, but it works
+								% with PHP.
+								%
+								% (Not with PHP 4.3.10-16) from
+								% Debian sarge (Sergei Golovan).
+								% </pre_2007-02_comments>
+								%---------------------
 	    {"SCRIPT_NAME", Scriptname},
-						%{"REMOTE_HOST", ""},  We SHOULD send this
         {"REMOTE_ADDR", PeerAddr},
+		{"REMOTE_HOST", PeerAddr},  % We SHOULD send this
+									% Resolving DNS not practical for performance reasons 
+									% - at least on 1st contact from a particular host.
+									% we could do background lookup so that it's available for subsequent invocations,
+									% but it hardly seems worthwhile. We are permitted by the CGI/1.1 spec to substitute REMOTE_ADDR
         {"SERVER_ADDR", LocalAddr},   %Apache compat
 		{"LOCAL_ADDR", LocalAddr},    %IIS compat
 	    {"QUERY_STRING", checkdef(Arg#arg.querydata)},
 	    {"CONTENT_TYPE", H#headers.content_type},
 	    {"CONTENT_LENGTH", H#headers.content_length},
 	    {"HTTP_ACCEPT", H#headers.accept},
-        {"HTTP_HOST", host(H#headers.host)},
 	    {"HTTP_USER_AGENT", H#headers.user_agent},
 	    {"HTTP_COOKIE", flatten_val(make_cookie_val(H#headers.cookie))}
 	   ]++lists:map(fun({http_header,_,Var,_,Val})->{tohttp(Var),Val} end,
@@ -281,13 +314,14 @@ tohttp_c(C) when C >= $a , C =< $z ->
 tohttp_c(C) ->
     C.
 
+%JMN - apparently redundant. host/1 was being used in cgi_env/5 when Hostname had already been split out of Host. 
 %% Get Host part from a host string that can contain host or host:port
-host(Host) ->
-   case string:tokens(Host, ":") of
-       [Hostname, _Port] -> Hostname;
-       [Hostname]       -> Hostname;
-       _Other           -> Host
-   end.
+%host(Host) ->
+%   case string:tokens(Host, ":") of
+%       [Hostname, _Port] -> Hostname;
+%       [Hostname]       -> Hostname;
+%       _Other           -> Host
+%   end.
 
 
 make_cookie_val([]) ->
