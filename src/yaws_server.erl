@@ -1423,7 +1423,7 @@ handle_request(CliSock, ARG, N) ->
 						   	pathinfo = UT#urltype.pathinfo
 							},
 
-					%!todo - remove special treatment of appmod here.
+					%!todo - remove special treatment of appmod here. (after suitable deprecation period)
 					% - prepath & pathinfo are applicable to other types of dynamic url too
 					%   replace: appmoddata with pathinfo & appmod_prepath with prepath.
 					case UT#urltype.type of
@@ -1433,6 +1433,8 @@ handle_request(CliSock, ARG, N) ->
 							appmoddata = case PathInfo of
 								undefined ->
 									undefined;
+								"/" ->
+									"/";
 								_ ->
 									lists:dropwhile(fun(C) -> C == $/ end, PathInfo)
 								end,
@@ -1965,7 +1967,7 @@ deliver_dyn_part(CliSock,                  % essential params
 						% to continue normally
 		) ->
     Res = (catch YawsFun(Arg)),
-    case handle_out_reply(Res, LineNo, YawsFile, UT, [Arg]) of
+    case handle_out_reply(Res, LineNo, YawsFile, UT, Arg) of
 	{get_more, Cont, State} when 
 	      element(1, Arg#arg.clidata) == partial  ->
 	    More = get_more_post_data(CliDataPos, Arg),
@@ -1990,7 +1992,7 @@ deliver_dyn_part(CliSock,                  % essential params
 	    finish_up_dyn_file(Arg, CliSock);
 	{page, Page} ->
 	    {page, Page};
-        Arg2 = #arg{} ->
+    Arg2 = #arg{} ->
 	    DeliverCont(Arg2);
 	{streamcontent, MimeType, FirstChunk} ->
 	    yaws:outh_set_content_type(MimeType),
@@ -2254,14 +2256,14 @@ accumulate_content(Data) ->
 %% `streamcontent', `get_more_data' etc, which are not handled here
 %% completely but returned, have to be the last element of the list.
 
-handle_out_reply(L, LineNo, YawsFile, UT, A) when list (L) ->
-    handle_out_reply_l(L, LineNo, YawsFile, UT, A, undefined);
+handle_out_reply(L, LineNo, YawsFile, UT, ARG) when list (L) ->
+    handle_out_reply_l(L, LineNo, YawsFile, UT, ARG, undefined);
 
 
 
 
 %% yssi, yaws include
-handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, [ARG]) ->
+handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, ARG) ->
     SC = get(sc),
     
     % special case for abs paths
@@ -2300,7 +2302,7 @@ handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, [ARG]) ->
 	    SC2 = SC#sconf{docroot = hd(SC#sconf.xtra_docroots),
 				   xtra_docroots = tl(SC#sconf.xtra_docroots)},
 	    put(sc, SC2), ARG2 = ARG#arg{docroot = SC2#sconf.docroot},
-	    Ret = handle_out_reply({yssi, Yfile}, LineNo, YawsFile,UT, [ARG2]),
+	    Ret = handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, ARG2),
 	    put(sc, SC),
 	    Ret;
 	_ ->
@@ -2309,81 +2311,80 @@ handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, [ARG]) ->
     end;
 
 
-handle_out_reply({html, Html}, _LineNo, _YawsFile,  _UT, _A) ->
+handle_out_reply({html, Html}, _LineNo, _YawsFile,  _UT, _ARG) ->
     accumulate_content(Html);
 
-handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  UT, A) ->
+handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  UT, ARG) ->
     put(yaws_ut, UT),
     Res = case safe_ehtml_expand(E) of
 	{ok, Val} ->
 	    accumulate_content(Val);
 	{error, ErrStr} ->
-	    handle_crash(A,ErrStr)
+	    handle_crash(ARG, ErrStr)
     end,
     erase(yaws_ut),
     Res;
 
-handle_out_reply({content, MimeType, Cont}, _LineNo,_YawsFile, _UT, _A) ->
+handle_out_reply({content, MimeType, Cont}, _LineNo,_YawsFile, _UT, _ARG) ->
     yaws:outh_set_content_type(MimeType),
     accumulate_content(Cont);
 
 handle_out_reply({streamcontent, MimeType, First}, 
-		 _LineNo,_YawsFile, _UT, _A) ->
+		 _LineNo,_YawsFile, _UT, _ARG) ->
     yaws:outh_set_content_type(MimeType),
     {streamcontent, MimeType, First};
 
 handle_out_reply(Res = {page, _Page},
-		 _LineNo,_YawsFile, _UT, _A) ->
+		 _LineNo,_YawsFile, _UT, _ARG) ->
     Res;
 
 handle_out_reply({streamcontent_with_size, Sz, MimeType, First}, 
-		 _LineNo,_YawsFile, _UT, _A) ->
+		 _LineNo,_YawsFile, _UT, _ARG) ->
     yaws:outh_set_content_type(MimeType),
     {streamcontent_with_size, Sz, MimeType, First};
 
-handle_out_reply({header, H},  _LineNo, _YawsFile, _UT, _A) ->
+handle_out_reply({header, H},  _LineNo, _YawsFile, _UT, _ARG) ->
     yaws:accumulate_header(H);
 
-handle_out_reply({allheaders, Hs}, _LineNo, _YawsFile, _UT, _A) ->
+handle_out_reply({allheaders, Hs}, _LineNo, _YawsFile, _UT, _ARG) ->
     yaws:outh_clear_headers(),
     foreach(fun({header, Head}) -> yaws:accumulate_header(Head) end, Hs);
 
-handle_out_reply({status, Code},_LineNo,_YawsFile,_UT,_A) when integer(Code) ->
+handle_out_reply({status, Code},_LineNo,_YawsFile,_UT,_ARG) when integer(Code) ->
     yaws:outh_set_status_code(Code);
 
-handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _UT, _A) ->
+handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _UT, _ARG) ->
     exit(normal);
 
-handle_out_reply({ssi, File, Delimiter, Bindings}, LineNo, YawsFile, UT, A) ->
-    [ARG] = A,
+handle_out_reply({ssi, File, Delimiter, Bindings}, LineNo, YawsFile, UT, ARG) ->
     case ssi(File, Delimiter, Bindings, UT#urltype.dir, ARG#arg.docroot) of
 	{error, Rsn} ->
 	    L = ?F("yaws code at~s:~p had the following err:~n~p",
 		   [YawsFile, LineNo, Rsn]),
-	    handle_crash(A, L);
+	    handle_crash(ARG, L);
 	OutData ->
 	    accumulate_content(OutData)
     end;
 
 
-handle_out_reply(break, _LineNo, _YawsFile, _UT, _A) ->
+handle_out_reply(break, _LineNo, _YawsFile, _UT, _ARG) ->
     break;
 
-handle_out_reply({redirect_local, Path}, LN, YF, UT, A) ->
-    handle_out_reply({redirect_local, Path, 302}, LN, YF, UT,A);
+handle_out_reply({redirect_local, Path}, LN, YF, UT, ARG) ->
+    handle_out_reply({redirect_local, Path, 302}, LN, YF, UT, ARG);
 
 %% What about:
 %%
 %% handle_out_reply({redirect_local, Path, Status}, LineNo,
-%%		 YawsFile, SC, A) when string(Path) ->
+%%		 YawsFile, SC, ARG) when string(Path) ->
 %%   handle_out_reply({redirect_local, {any_path, Path}, Status}, LineNo,
-%%		 YawsFile, SC, A);    
+%%		 YawsFile, SC, ARG);    
 %%
 %% It would introduce a slight incompatibility with earlier versions,
 %% but might be desirable.
 
 handle_out_reply({redirect_local, {any_path, URL}, Status}, LineNo,
-		 YawsFile, _UT, A) ->
+		 YawsFile, _UT, ARG) ->
     PathType = 
 	case yaws_api:is_absolute_URI(URL) of
 	    true -> net_path;
@@ -2393,22 +2394,21 @@ handle_out_reply({redirect_local, {any_path, URL}, Status}, LineNo,
 		     end
 	end,
     handle_out_reply({redirect_local, {PathType, URL}, Status}, LineNo,
-		     YawsFile, _UT, A);
+		     YawsFile, _UT, ARG);
 
 handle_out_reply({redirect_local, {net_path, URL}, Status}, _LineNo,
-		  _YawsFile,  _UT, _A) ->
+		  _YawsFile,  _UT, _ARG) ->
     Loc = ["Location: ", URL, "\r\n"],
     new_redir_h(get(outh), Loc, Status),
     ok;
 
-handle_out_reply({redirect_local, Path0, Status}, _LineNo, _YawsFile, _UT,A) ->
-    Arg = hd(A),
+handle_out_reply({redirect_local, Path0, Status}, _LineNo, _YawsFile, _UT, ARG) ->
     SC=get(sc),
     Path = case Path0 of
 	   {abs_path, P} ->
 		   P;
 	   {rel_path, P} ->
-		   {abs_path, RP} = (Arg#arg.req)#http_request.path,
+		   {abs_path, RP} = (ARG#arg.req)#http_request.path,
 		   case string:rchr(RP, $/) of
 		       0 ->
 			   [$/|P];
@@ -2419,60 +2419,58 @@ handle_out_reply({redirect_local, Path0, Status}, _LineNo, _YawsFile, _UT,A) ->
 		   P
 	end,
     Scheme = yaws:redirect_scheme(SC),
-    Headers = Arg#arg.headers,
+    Headers = ARG#arg.headers,
     HostPort = yaws:redirect_host(SC, Headers#headers.host),
     Loc = ["Location: ", Scheme, HostPort, Path, "\r\n"],
     new_redir_h(get(outh), Loc, Status),
     ok;
 
-handle_out_reply({redirect, URL}, LN, YF, UT,A) ->
-    handle_out_reply({redirect, URL, 302}, LN, YF, UT, A);
+handle_out_reply({redirect, URL}, LN, YF, UT, ARG) ->
+    handle_out_reply({redirect, URL, 302}, LN, YF, UT, ARG);
 
-handle_out_reply({redirect, URL, Status}, _LineNo, _YawsFile, _UT, _A) ->
+handle_out_reply({redirect, URL, Status}, _LineNo, _YawsFile, _UT, _ARG) ->
     Loc = ["Location: ", URL, "\r\n"],
     new_redir_h(get(outh), Loc, Status),
     ok;
 
-handle_out_reply({bindings, L}, _LineNo, _YawsFile, _UT,_A) ->
+handle_out_reply({bindings, L}, _LineNo, _YawsFile, _UT, _ARG) ->
     foreach(fun({Key, Value}) -> put({binding, Key}, Value) end, L),
     ok;
 
-handle_out_reply(ok, _LineNo, _YawsFile, _UT,_A) ->
+handle_out_reply(ok, _LineNo, _YawsFile, _UT, _ARG) ->
     ok;
 
-handle_out_reply({'EXIT', Err}, LineNo, YawsFile, _UT,ArgL) ->
-    A = hd(ArgL),
+handle_out_reply({'EXIT', Err}, LineNo, YawsFile, _UT, ARG) ->
     L = ?F("~n~nERROR erlang  code  crashed:~n "
 	   "File: ~s:~w~n"
 	   "Reason: ~p~nReq: ~p~n",
-	   [YawsFile, LineNo, Err, A#arg.req]),
-    handle_crash(A, L);
+	   [YawsFile, LineNo, Err, ARG#arg.req]),
+    handle_crash(ARG, L);
 
-handle_out_reply({get_more, Cont, State}, _LineNo, _YawsFile, _UT,_A) ->
+handle_out_reply({get_more, Cont, State}, _LineNo, _YawsFile, _UT, _ARG) ->
     {get_more, Cont, State};
 
-handle_out_reply(Arg = #arg{},  _LineNo, _YawsFile, _UT, _A) ->
+handle_out_reply(Arg = #arg{},  _LineNo, _YawsFile, _UT, _ARG) ->
     Arg;
 
-handle_out_reply(Reply, LineNo, YawsFile, _UT, ArgL) ->
-    A = hd(ArgL),
+handle_out_reply(Reply, LineNo, YawsFile, _UT, ARG) ->
     L =  ?F("yaws code at ~s:~p crashed or "
 	    "ret bad val:~p ~nReq: ~p",
-	    [YawsFile, LineNo, Reply, A#arg.req]),
-    handle_crash(A, L).
+	    [YawsFile, LineNo, Reply, ARG#arg.req]),
+    handle_crash(ARG, L).
 
     
 
-handle_out_reply_l([Reply|T], LineNo, YawsFile, UT, A, _Res) ->		  
-    case handle_out_reply(Reply, LineNo, YawsFile, UT, A) of
+handle_out_reply_l([Reply|T], LineNo, YawsFile, UT, ARG, _Res) ->		  
+    case handle_out_reply(Reply, LineNo, YawsFile, UT, ARG) of
 	break ->
 	    break;
 	{page, Page} ->
 	    {page, Page};
 	RetVal ->
-	    handle_out_reply_l(T, LineNo, YawsFile, UT, A, RetVal)
+	    handle_out_reply_l(T, LineNo, YawsFile, UT, ARG, RetVal)
     end;
-handle_out_reply_l([], _LineNo, _YawsFile, _UT, _A, Res) ->
+handle_out_reply_l([], _LineNo, _YawsFile, _UT, _ARG, Res) ->
     Res.
 
 
@@ -2492,7 +2490,9 @@ ssi(File, Delimiter, Bindings, Dir, Docroot) ->
 
 
 ssi(File, Delimiter, Bindings, Dir, Docroot, SC) ->
-	
+
+	%Dir here should be equiv to arg.prepath
+
 	%JMN - line below looks suspicious, why are we not keying on {ssi, File, Dir} ???
 	%Surely a name like header.inc may be present in various parts of the hierarchy so Dir should form part of key.
     Key = {ssi, File, Delimiter},
@@ -2505,9 +2505,11 @@ ssi(File, Delimiter, Bindings, Dir, Docroot, SC) ->
 	{rel_path, FileName} ->
 		[Docroot, Dir,[$/|FileName]];
 	{abs_path, FileName} ->
-		[Docroot, [$/|FileName]];
-	FileName when list(FileName) ->
 		[Docroot, [$/|FileName]]
+	%[$/|_] ->
+	%	construct_fullpath(Docroot, File, VirtualDir);
+	%_ ->
+	%	construct_fullpath(Docroot, lists:flatten([Dir, File]), VirtualDir)
 	end,
 
     Mtime = path_to_mtime(FullPath),
@@ -2599,13 +2601,13 @@ delim_split(_,_,[],Ack,DAcc) ->
 
 
 %% Erlang yaws code crashed, display either the
-%% actual crash or a custimized error message 
+%% actual crash or a customized error message 
 
-handle_crash(A, L) ->
+handle_crash(ARG, L) ->
     ?Debug("handle_crash(~p)~n", [L]),
     SC=get(sc),
     yaws:elog("~s", [L]),
-    case catch apply(SC#sconf.errormod_crash, crashmsg, [A, SC, L]) of
+    case catch apply(SC#sconf.errormod_crash, crashmsg, [ARG, SC, L]) of
 	{html, Str} ->
 	    accumulate_content(Str),
 	    break;
@@ -3132,7 +3134,7 @@ clear_ets(E) ->
     ets:insert(E, {num_bytes, 0}).
     
 
-%% return #urltype{}
+%% return #urltype record
 do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
     ?Debug("do_url_type SC=~s~nGetPath=~p~nVirtualDir=~p~n", 
 	   [?format_record(SC,sconf), GetPath,VirtualDir]),
