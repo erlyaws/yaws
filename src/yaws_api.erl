@@ -1176,13 +1176,19 @@ ehtml_expand(Bin) when binary(Bin) -> Bin; % yaws_api:htmlize(Bin);
 
 ehtml_expand({ssi,File, Del, Bs}) ->
     UT = get(yaws_ut),
-    case yaws_server:ssi(File, Del, Bs, UT#urltype.dir) of
+	ARG = get(yaws_arg),
+
+    case yaws_server:ssi(File, Del, Bs, UT, ARG) of
 	{error, Rsn} ->
 	    io_lib:format("ERROR: ~p~n",[Rsn]);
 	X ->
 	    X
     end;
 
+
+%!todo (low priority) - investigate whether tail-recursion would be of any benefit here instead of the current ehtml_expand(Body) recursion.
+%		- provide a tail_recursive version & add a file in the benchmarks folder to measure it.
+%
 ehtml_expand({Tag}) -> 
     ["<", atom_to_list(Tag), " />"];
 ehtml_expand({pre_html, X}) -> X;
@@ -1309,7 +1315,9 @@ ehtml_expander(Bin, Before, After) when binary(Bin) ->
 
 ehtml_expander({ssi,File, Del, Bs}, Before, After) ->
     UT = get(yaws_ut),
-    Str = case yaws_server:ssi(File, Del, Bs,  UT#urltype.dir) of
+	ARG = get(yaws_arg),
+
+    Str = case yaws_server:ssi(File, Del, Bs, UT, ARG) of
 	      {error, Rsn} ->
 		  io_lib:format("ERROR: ~p~n",[Rsn]);
 	      X ->

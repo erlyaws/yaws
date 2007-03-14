@@ -1384,11 +1384,12 @@ handle_request(CliSock, ARG, N) ->
 			sane ->
 			    ?Debug("Test revproxy: ~p and ~p~n", 
 					[DecPath, SC#sconf.revproxy]),
-			    IsAuth = is_auth(ARG, DecPath,ARG#arg.headers,
-					     SC#sconf.authdirs),
-			    case {IsAuth, 
-				  is_revproxy(DecPath, SC#sconf.revproxy),
-				  is_redirect_map(DecPath, SC#sconf.redirect_map)} of
+
+				IsAuth = is_auth(ARG, DecPath,ARG#arg.headers,SC#sconf.authdirs),
+				IsRev = is_revproxy(DecPath, SC#sconf.revproxy),
+				IsRedirect = is_redirect_map(DecPath, SC#sconf.redirect_map),
+
+				case {IsAuth, IsRev, IsRedirect} of
 				{{appmod, Mod}, _, _} ->
 					%This isn't the standard 'appmod' branch 
 					%- this is an appmod call as optionally specified by the output of an auth module.
@@ -1471,7 +1472,8 @@ is_auth(ARG, Req_dir,H,[{Auth_dir,
     case lists:prefix(Auth_dir, Req_dir) of
 	true when Mod /= [] ->
 	    case catch Mod:auth(ARG, Auth) of
-		{'EXIT', _} ->
+		{'EXIT', Reason} ->
+			io:fwrite("authmod crashed: ~p~n", [Reason]),
 		    {false, ""};
 		{appmod, AppMod} ->
 		    {appmod, AppMod};
@@ -2316,13 +2318,18 @@ handle_out_reply({html, Html}, _LineNo, _YawsFile,  _UT, _ARG) ->
 
 handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  UT, ARG) ->
     put(yaws_ut, UT),
+    put(yaws_arg, ARG),  %kludge
+
     Res = case safe_ehtml_expand(E) of
 	{ok, Val} ->
 	    accumulate_content(Val);
 	{error, ErrStr} ->
 	    handle_crash(ARG, ErrStr)
     end,
+
     erase(yaws_ut),
+    erase(yaws_arg),
+
     Res;
 
 handle_out_reply({content, MimeType, Cont}, _LineNo,_YawsFile, _UT, _ARG) ->
@@ -2357,7 +2364,7 @@ handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _UT, _ARG) ->
     exit(normal);
 
 handle_out_reply({ssi, File, Delimiter, Bindings}, LineNo, YawsFile, UT, ARG) ->
-    case ssi(File, Delimiter, Bindings, UT#urltype.dir, ARG#arg.docroot) of
+    case ssi(File, Delimiter, Bindings, UT, ARG) of
 	{error, Rsn} ->
 	    L = ?F("yaws code at~s:~p had the following err:~n~p",
 		   [YawsFile, LineNo, Rsn]),
@@ -2478,38 +2485,46 @@ handle_out_reply_l([], _LineNo, _YawsFile, _UT, _ARG, Res) ->
 
 %% fast server side include with macrolike variable bindings expansion
 %
-% - ssi/4 known callers: yaws_api
-%
-ssi(File, Delimiter, Bindings, Dir) ->
-    SC = get(sc),
-    ssi(File, Delimiter, Bindings, Dir, SC#sconf.docroot, SC ).
+
+%ssi(File, Delimiter, Bindings, Dir) ->
+%    SC = get(sc),
+%    ssi(File, Delimiter, Bindings, Dir, SC#sconf.docroot, SC ).
 
 
-ssi(File, Delimiter, Bindings, Dir, Docroot) ->
-    ssi(File, Delimiter, Bindings, Dir, Docroot, get(sc)).
+ssi(File, Delimiter, Bindings, UT, ARG) ->
+    ssi(File, Delimiter, Bindings, UT, ARG, get(sc)).
 
 
-ssi(File, Delimiter, Bindings, Dir, Docroot, SC) ->
+ssi(File, Delimiter, Bindings, UT, ARG, SC) ->
 
+	Dir = UT#urltype.dir,
 	%Dir here should be equiv to arg.prepath
+
+	Docroot = ARG#arg.docroot,
+	VirtualDir = ARG#arg.docroot_mount,
+
 
 	%JMN - line below looks suspicious, why are we not keying on {ssi, File, Dir} ???
 	%Surely a name like header.inc may be present in various parts of the hierarchy so Dir should form part of key.
     Key = {ssi, File, Delimiter},
 
-	%!todo - overhaul ssi to work with vdirs.
-	%FullPath = construct_fullpath(DR, lists:flatten([Dir, File]), VirtualDir),		
+	%!todo - review rel_path & abs_path - define & document behaviour.. or remove them.
 
     FullPath =
 	case File of
 	{rel_path, FileName} ->
 		[Docroot, Dir,[$/|FileName]];
 	{abs_path, FileName} ->
-		[Docroot, [$/|FileName]]
-	%[$/|_] ->
-	%	construct_fullpath(Docroot, File, VirtualDir);
-	%_ ->
-	%	construct_fullpath(Docroot, lists:flatten([Dir, File]), VirtualDir)
+		[Docroot, [$/|FileName]];
+	[$/|_] ->
+		%absolute path - need to determine Docroot and any Vdir that might apply
+		{Vdir, DR} = vdirpath(SC, ARG, File),
+
+		construct_fullpath(DR, File, Vdir);
+	_ ->
+		%relative to the Docroot and VirtualDir that correspond to the request.
+
+		construct_fullpath(Docroot, lists:flatten([Dir, File]), VirtualDir)
 	end,
 
     Mtime = path_to_mtime(FullPath),
@@ -2526,11 +2541,17 @@ ssi(File, Delimiter, Bindings, Dir, Docroot, SC) ->
 		{ok, Bin} ->
 		    D =delim_split_file(Delimiter,binary_to_list(Bin),data,[]),
 		    ets:insert(SC#sconf.ets,{Key,D, Mtime}),
-		    ssi(File, Delimiter, Bindings, Dir, Docroot, SC);
+		    ssi(File, Delimiter, Bindings, UT, ARG, SC);
 		{error, _} when SC#sconf.xtra_docroots /= [] ->
 		    SC2 = SC#sconf{docroot = hd(SC#sconf.xtra_docroots),
 				   xtra_docroots = tl(SC#sconf.xtra_docroots)},
-		    ssi(File, Delimiter, Bindings, Dir, SC2#sconf.docroot, SC2);
+
+			ARG2 = ARG#arg{
+						docroot = hd(SC#sconf.xtra_docroots),
+						docroot_mount = "/"
+						},
+
+		    ssi(File, Delimiter, Bindings, UT, ARG2, SC2);
 		{error, Rsn} ->
 		    error_logger:format("Failed to read/ssi file ~p~n", 
 					[FullPath]),
@@ -3157,7 +3178,7 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
 		     path = GetPath,
 		     fullpath = FullPath,
 		     mime = Mime};
-	"/" -> %% special case 
+		"/" -> %% special case
 	    case lists:keysearch("/", 1, SC#sconf.appmods) of
 		{value, {_, Mod}} ->
 		    #urltype{
@@ -3219,24 +3240,33 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
 			MountSegs = string:tokens(Mount,"/"),
 				
 			case Mount of
+			[$/] ->
+				%'root' appmod
+				PreSegments = [],
+				PostSegments = lists:sublist(RequestSegs,1,length(RequestSegs)),
+				Prepath = "";
 			[$/|_] ->
 				%'anchored' appmod mount.
-
 				PreSegments = lists:sublist(RequestSegs,length(MountSegs)-1),
-				PostSegments = lists:sublist(RequestSegs,length(MountSegs)+1,length(RequestSegs));
+				PostSegments = lists:sublist(RequestSegs,length(MountSegs)+1,length(RequestSegs)),
+				Prepath = case PreSegments of 
+				"" ->
+					"/";
+				_ ->
+					"/" ++ join(PreSegments,"/") ++ "/"
+				end;
 			_ ->
 				%'floating' appmod mount.
-				
-				{PreSegments,PostSegments} = split_at_segment(Mount,RequestSegs,[])
+				{PreSegments,PostSegments} = split_at_segment(Mount,RequestSegs,[]),
+				Prepath = case PreSegments of 
+				"" ->
+					"/";
+				_ ->
+					"/" ++ join(PreSegments,"/") ++ "/"
+				end
 			end,
 			?Debug("Pre ~p Post ~p~n",[PreSegments,PostSegments]),								
 
-			Prepath = case PreSegments of 
-			"" ->
-				"/";
-			_ ->
-				"/" ++ join(PreSegments,"/") ++ "/"
-			end,
 
 			PathI = case PostSegments of
 			[] ->
@@ -3257,12 +3287,19 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
 			_ ->
 				PathInf
 			end,
+			Path = case MountSegs of
+			[] ->
+				%'root' appmod
+				Prepath;				
+			_ ->
+				Prepath ++ tl(MountSegs)
+			end,
 
 			#urltype{
 				type = appmod,
 				data = {Mod, PathInfo},
 				dir = Prepath, 
-				path = Prepath ++ tl(MountSegs),
+				path = Path,
 				fullpath = FullPath,
 				pathinfo = PathInfo
 			}				
