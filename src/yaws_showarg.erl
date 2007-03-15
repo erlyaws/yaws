@@ -54,7 +54,7 @@ out(ARG) ->
 					]}
 				]},	
 				{h4,[], "headers"},
-				{pre,[], f("~p",[ARG#arg.headers])},
+				{pre,[], f("~p",[yaws_api:reformat_header(ARG#arg.headers)])},
 				{hr,[],[]},
 				{h4,[], "raw ARG"},
 				{pre,[], yaws_api:htmlize(f("~p", [ARG]))},
