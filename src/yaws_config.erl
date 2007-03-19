@@ -740,7 +740,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 		    C2 = C#sconf{docroot = hd(RootDirs),
 				 xtra_docroots = tl(RootDirs)},
 		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-		false ->
+		_ ->
 		    {error, ?F("Expect directory at line ~w", [Lno])}
 	    end;
 
