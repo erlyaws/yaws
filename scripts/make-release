@@ -4,7 +4,7 @@
 
 . ../vsn.mk
 
-echo tagging and packing release ${YAWS_VSN} 
+echo packing release ${YAWS_VSN} 
 
 CVS_RSH=ssh
 Y=`echo ${YAWS_VSN} | sed 's/\./-/g'`
@@ -16,10 +16,24 @@ fi
 
 cd ../..
 
-cvs tag -F yaws-${Y}
+#cvs tag -F yaws-${Y}
 
 rm -rf tmp 2> /dev/null
 mkdir tmp
+
+svn export https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/trunk
+cd trunk
+mv yaws yaws-${YAWS_VSN}
+ln -s yaws-${YAWS_VSN} yaws
+tar cfz  yaws-${YAWS_VSN}.tar.gz yaws  yaws-${YAWS_VSN}
+
+echo release resides in `pwd`/yaws-${YAWS_VSN}.tar.gz 
+
+exit 0
+
+
+
+
 
 cvs export -d tmp -r yaws-$Y .
 cd tmp
