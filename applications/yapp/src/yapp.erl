@@ -100,25 +100,29 @@ arg_rewrite(Arg) ->
 	undefined ->
             Arg;
 	{#yapp{urlpath = YappPath, docroot = Docroot, 
-	       appmods = YappMods, opaque = YOpaque }, Rest} ->
+	       appmods = YappMods, opaque = YOpaque }, _Rest} ->
 
-	    %% Add Yapp appmods, Yaws uses process dictionary...
+	    DocMount =
+		case string:right(YappPath,1) of
+		    "/" -> YappPath;
+		    _ -> YappPath ++ "/"
+		end,
+
+	    VDir = {"vdir", DocMount ++ " " ++ Docroot},
+
+	    AddOpaque = [ VDir | YOpaque], 
+	    
+	    %% Add Yapp appmods, Yaws uses process dictionary.
 	    SC = get(sc),
 	    AppMods = SC#sconf.appmods,
-	    
 	    Opaque = SC#sconf.opaque,
-            SC2 = SC#sconf{docroot = Docroot,
-	       appmods = AppMods ++ YappMods, opaque = YOpaque ++ Opaque},
-
+            SC2 = SC#sconf{docroot=Docroot, appmods = AppMods ++ YappMods, 
+			   opaque = AddOpaque ++ Opaque},
 	    put(sc, SC2),
 
-	    Req = Arg#arg.req,
 	    Opaque2 = Arg#arg.opaque,
-	    NewReq = Req#http_request{path={abs_path,Rest}},	    
-
-	    Arg#arg{docroot=Docroot, 
-		    req=NewReq, state=[{?prepath,YappPath}], opaque = YOpaque ++ Opaque2}
-
+	    Arg#arg{docroot=Docroot, docroot_mount=DocMount,
+			    opaque = AddOpaque ++ Opaque2}
 	end.
 
 
@@ -144,7 +148,7 @@ start() ->
 %% fun or an erl section in a .yaws file to get the Yapp root
 %% path. 
 prepath(Arg) ->
-   proplists:get_value(?prepath,Arg#arg.state,"").
+    Arg#arg.docroot_mount.
 
 
 %% @spec log(Level, FormatStr::string(), Args) -> void()

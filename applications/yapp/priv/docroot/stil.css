@@ -1,0 +1,68 @@
+
+
+html {margin: 0; padding: 0;}
+
+body {font: 12px Verdana, Arial, Helvetica, sans-serif;
+   margin: 0; padding: 0;
+   background: rgb(95%,95%,95%); color: black;}
+
+h1 {font-size: 200%; text-transform: lowercase; letter-spacing: 3px;
+   margin: 0.66em 0 0.33em 3%; padding: 0;}
+
+h3 {font-size: 133%; margin: 0; padding: 0; 
+   border-bottom: 1px solid black;}
+
+h4 {font-size: 100%; margin: 0; padding: 0.33em 0 0;
+   border-bottom: 1px solid rgb(50%,50%,35%);
+   color: rgb(50%,50%,35%);}
+
+
+h5 {font-size: 100%; margin: 0; padding: 0.33em 0 0;
+   color: rgb(50%,50%,35%);}
+
+p {line-height: 1.66; margin: 0.5em 0 1em 3em;}
+
+
+div.logo {margin: 3em;}
+
+
+div#entry {margin: 0 33% 1em 7%; padding: 0;}
+
+div#sidebar {position: absolute; top: 4em; right: 0; width: 20%; font-size: 11px;}
+
+div#sidebar a {display: block; padding: 8px 0 2px 10px; margin: 0;
+   border-left: 1px solid rgb(50%,50%,35%);}
+
+div#sidebar a:hover {background: rgb(221,221,221);}
+
+div.links {
+    background: green;
+  }
+
+div.box { border: solid; border-width: thin; width: 96%; 
+          background: rgb(211, 211, 211)  }
+
+div.news { border: solid; border-width: thin; width: 96%; 
+	   border-bottom: 3px solid black;
+	   margin: 18px 5px 2px 10px;
+           background: rgb(211, 211, 211)  }
+
+div.box pre {margin: 0.66em 0 0.33em 1%; padding: 0;}
+
+div.man { border: solid; border-width: thin; width: 100%; 
+          font-size: 90%;
+          margin : 4;
+          background: rgb(211,211,211)  }
+
+
+div.choosen {border: solid; border-width: thin;
+	     background: rgb(231, 231, 231)  }
+
+div.none { }
+
+
+
+I {       font-size : 12px; 
+          font-family: Times, Verdana, Arial, Helvetica, sans-serif;}
+
+

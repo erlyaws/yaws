@@ -1,7 +1,39 @@
+
 <erl>
-%% Bootstrap page to handle both "/xxx" and "/xxx/" root paths
-out(A) ->
-       	Redir = yapp:prepath(A) ++ "/list.yaws",
-	{redirect, Redir }.
+out(A) -> {ssi, "HEAD.inc","%%",[{"list", "choosen"}]}.
 </erl>
+
+<h3>Yapp list</h3>
+
+<erl>
+
+format_yapp_tables([]) -> [];
+format_yapp_tables([{ServId,Yapps}|T]) ->
+   [{h3,[], ["Server id : ", ServId]}, [{p,[],format_yapp_table(Yapps)}] |
+    format_yapp_tables(T)].
+
+format_yapp_table(Yapps) ->
+    {table,[{border,"1"}],
+      [{tr,[],[{th,[],"Application"},{th,[],"Url"},{th,[],"Docroot"}]} |
+    format_yapps(Yapps)]
+    }.
+
+format_yapps([]) ->
+    [];
+format_yapps([{yapp, Urlpath, Docroot, Appname, Appmods, _Opaque}|T]) ->
+    [{tr,[],[{td,[],atom_to_list(Appname)}, {td,[], Urlpath},{td,[],Docroot}]} |
+     format_yapps(T)]. 
+     
+out(A) ->
+    Header = "Cache-Control:no-store",  
+   [{header, Header},
+   {ehtml, format_yapp_tables(yapp:get_yapps())}].
+ 
+</erl>
+
+<erl>
+out(A) -> {ssi,"END.inc",[],[]}.
+</erl>
+
+
 

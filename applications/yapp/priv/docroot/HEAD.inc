@@ -9,7 +9,7 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
  <meta name="keywords" content="Yaws"/>
  <title>Yapp</title>
  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"/>
- <link rel="stylesheet" type="text/css" href="/stil.css"/>
+ <link rel="stylesheet" type="text/css" href="stil.css"/>
  <link rel="shortcut icon" href="/icons/yaws_y.gif" type="image/x-icon"/>
 </head>
 
@@ -22,7 +22,7 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 
 <div id="sidebar">
 <h4> Yapp </h4>
-<div class="%%list%%"> <a href="list.yaws" id="list">List</a></div>
+<div class="%%list%%"> <a href="index.yaws" id="list">List</a></div>
 <div class="%%add%%"> <a href="add.yaws" id="Add" >Add</a> </div>
 <div class="%%remove%%"> <a href="remove.yaws" id="remove">Remove</a> </div>
 </div>

@@ -150,10 +150,10 @@ out(A) ->
   {vsn,\"0.1\"},
   {modules,[]},
   {registered, []},
-%  {mod,{myapp1_mod,[]}}, %% Only needed if the application needs to be started
+%  {mod,{myapp1_app,[]}}, %% Only needed if the application needs to be started
   {env, [
 	 {yapp_docroot,\"www\"},
-         {yapp_appmods,[{\"/\",erlyweb}]},
+         {yapp_appmods,[{\"erlyweb\",erlyweb}]},
 	 {yapp_opaque,[{\"appname\",\"myapp1\"}]}
         ]},
   {applications,[kernel,stdlib]}]}.
@@ -163,10 +163,6 @@ out(A) ->
 
 	{h2,[],"Problems"},
 	{p,[],"Embedded ssi directives in ehtml parts will not work for now."},
-	{p,[],
-	 "http://servername/yappname (without a trailing \"/\") will not work unless " 
-	 "a redirect is done in the index.yaws file, see the index.yaws file in "
-	 "the yapp handler itself (yaws/applications/yapp/priv/docroot/index.yaws). "},
 
 	{h2,[],"Future"},
 	{p,[],
