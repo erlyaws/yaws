@@ -197,17 +197,17 @@ setup_sconf(DocRoot, D, SL) ->
 set_sc_flags([{access_log, Bool}|T], Flags) ->
     set_sc_flags(T, yaws:flag(Flags, ?SC_ACCESS_LOG, Bool));
 set_sc_flags([{add_port, Bool}|T], Flags) ->
-    set_sc_flags(T, yaws:flags(Flags, ?SC_ADD_PORT, Bool));
+    set_sc_flags(T, yaws:flag(Flags, ?SC_ADD_PORT, Bool));
 set_sc_flags([{tilde_expand, Bool}|T], Flags) ->
     set_sc_flags(T, yaws:flag(Flags, ?SC_TILDE_EXPAND, Bool));
 set_sc_flags([{dir_listings, Bool}|T], Flags) ->
     set_sc_flags(T, yaws:flag(Flags, ?SC_DIR_LISTINGS, Bool));
 set_sc_flags([{deflate, Bool}|T], Flags) ->
-    set_sc_flags(T, yaws:flags(Flags, ?SC_DEFLATE, Bool));
+    set_sc_flags(T, yaws:flag(Flags, ?SC_DEFLATE, Bool));
 set_sc_flags([{dir_all_zip, Bool}|T], Flags) ->
     set_sc_flags(T, yaws:flag(Flags, ?SC_DIR_ALL_ZIP, Bool));
 set_sc_flags([{dav, Bool}|T], Flags) ->
-    set_sc_flags(T, yaws:flags(Flags, ?SC_DAV, Bool));
+    set_sc_flags(T, yaws:flag(Flags, ?SC_DAV, Bool));
 set_sc_flags([_|T], Flags) ->
     set_sc_flags(T, Flags);
 set_sc_flags([], Flags) ->
