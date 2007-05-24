@@ -56,7 +56,7 @@
 -export([parse_set_cookie/1, format_set_cookie/1, 
 	 postvar/2, queryvar/2, getvar/2]).
 
--export([binding/1]).
+-export([binding/1,dir_listing/1, dir_listing/2]).
 
 
 -import(lists, [map/2, flatten/1, reverse/1]).
@@ -1756,3 +1756,27 @@ setconf(GC0, Groups0) ->
 getconf() ->
     gen_server:call(yaws_server, getconf, infinity).
 
+
+%% Function which invokeable typically from an index.yaws file
+dir_listing(Arg) ->
+    dir_listing(Arg, ".").
+dir_listing(Arg, RelDir) ->
+    %% .yaws.auth
+    Dir0 = filename:dirname(Arg#arg.fullpath),
+    Dir = case RelDir of
+              "." -> Dir0;
+              _ -> filename:join([Dir0, RelDir])
+          end,
+    Req = Arg#arg.req,
+    case file:list_dir(Dir) of
+        {ok, Data0} ->
+            Data = Data0 -- [".yaws.auth", "index.yaws"],
+            yaws_ls:list_directory(Arg, Arg#arg.clisock, Data,
+				   Dir,
+                                   Req,  false),
+	    ok;
+        _Err ->
+            %% Just ignore errors ??, the programmer has to
+            %% make sure it's a valid path here
+	    ok
+    end.

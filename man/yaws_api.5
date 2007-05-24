@@ -363,6 +363,11 @@ Like before, but
 calls \fIExefilename\fR to handle the script.  The file name of the
 script is handed to the executable via a CGI meta variable.
 
+.TP
+\fBdir_listing(Arg)\fR
+Perform a directory listing. Can be used in special directories 
+when we don't want to turn on dir listings for the entire server.
+Always returns ok.
 
 .SH RETURN VALUES from out/1
 .PP
