@@ -78,7 +78,7 @@ out(A) ->
 	 box("
 {table, [{bgcolor, \"tan\"}],
  {tr, []
-  [{td, [{width, \"70%\"}], {p, [{class=\"foo\"}], \"Hi there\"}}]}}
+  [{td, [{width, \"70%\"}], {p, [{class, \"foo\"}], \"Hi there\"}}]}}
 "),
 	 
 	 {p, [], "Corresponds to the following HTML code: "},

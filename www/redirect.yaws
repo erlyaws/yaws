@@ -34,7 +34,7 @@ out(_A) ->
 </p>
 
 <p> The code above redirects to an external URL. The HTTP RFC mandates
-  that the Loaction header must contain complete URLs, including the 
+  that the Loction header must contain complete URLs, including the 
   the method, http, https etc. A very common case of redirection, is 
   a to redirect to another file on the same server. The code
   in <a href="redirect3.yaws"> redirect3.yaws </a> shows an example of
@@ -58,7 +58,7 @@ out(_A) ->
 
 <p>While working with redirects, the tool <a href="http://curl.haxx.se/"> curl </a> 
 is an excellent way to troubleshoot the behaviour of your 
-redirects.For example:</p>
+redirects. For example:</p>
 
 <div class="box">
   <verbatim>

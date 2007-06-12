@@ -58,7 +58,7 @@ ssi(File) ->
 
 <div class="box">
   <pre>
-    P = yaws_api:parse_query_data(A),
+    P = yaws_api:parse_query(A),
     L = case lists:keysearch(page, 1, P) of
               {value, {page, Page}} ->
                    .....

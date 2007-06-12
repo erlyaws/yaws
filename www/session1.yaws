@@ -13,7 +13,7 @@ out(A) ->
 	    Cookie = yaws_api:new_cookie_session(M),
 	    Data = {ehtml,
 		    {html,[],
-		     ["I just set yout cookie to ", Cookie, "Click ",
+		     ["I just set your cookie to ", Cookie, "Click ",
 		      {a, [{href,"session1.yaws"}], " here "},
 		      "to revisit"]}},
 	    CO = yaws_api:setcookie("baz",Cookie,"/"),
