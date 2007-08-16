@@ -1696,18 +1696,6 @@ erase_header(content_encoding) ->
 erase_header(location) ->
     put(outh, (get(outh))#outh{location = undefined}).
 
-
-% setuser(undefined) ->	     
-%     ignore;
-% setuser(User) ->	     
-%     erl_ddll:load_driver(filename:dirname(code:which(?MODULE)) ++ 
-% 			 "/../priv/", "setuid_drv"),
-%     P = open_port({spawn, "setuid_drv " ++ [$s|User]}, []),
-%     receive
-% 	{P, {data, "ok " ++ IntList}} ->
-% 	    {ok, IntList}
-%     end.
-
 getuid() ->
     case os:type() of
  	{win32, _} ->
@@ -1748,7 +1736,13 @@ uid_to_name(Uid) ->
     end.
 
 load_setuid_drv() ->
-    Path = filename:dirname(code:which(?MODULE)) ++ "/../priv/",
+    Path = case code:priv_dir(yaws) of
+	       {error, _} ->
+		   %% localinstall
+		   filename:dirname(code:which(?MODULE)) ++ "/../priv/lib";
+	       PrivDir ->
+		   filename:join(code:priv_dir(yaws),"lib")
+	   end,
     case erl_ddll:load_driver(Path, "setuid_drv") of
 	ok ->
 	    ok;
