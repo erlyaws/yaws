@@ -30,8 +30,9 @@ local_install:	../bin/yaws
 		./Subst %docroot% `pwd`/../www | \
 		./Subst %certdir% `pwd`/../ssl | \
 		./Subst %sslport% 4443 > $${target}; \
-	install -d $$HOME/bin; \
-	cp ../bin/yaws $$HOME/bin/yaws; \
+	$(INSTALL) -d $$HOME/bin; \
+	rm $$HOME/bin/yaws 2> /dev/null; \
+	cp -f ../bin/yaws $$HOME/bin/yaws; \
 	echo "--- Installed  $$HOME/bin/yaws"
 
 yaws.conf:
