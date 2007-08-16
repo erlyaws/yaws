@@ -10,18 +10,18 @@
 -export([cgi_worker/7]).
 
 
-% TO DO:  Handle failure and timeouts.
+%%  TO DO:  Handle failure and timeouts.
 
-% call_cgi calls the script `Scriptfilename' (full path).
-% If `Exefilename' is given, it is the executable to handle this, 
-% otherwise `Scriptfilame' is assumed to be executable itself.
-% 
-% Corresponding to a URI of
-%    `http://somehost/some/dir/script.cgi/path/info', 
-% `Pathinfo' should be set to `/path/info'.
+%%  call_cgi calls the script `Scriptfilename' (full path).
+%%  If `Exefilename' is given, it is the executable to handle this, 
+%%  otherwise `Scriptfilame' is assumed to be executable itself.
+%%  
+%%  Corresponding to a URI of
+%%     `http://somehost/some/dir/script.cgi/path/info', 
+%%  `Pathinfo' should be set to `/path/info'.
 
-% These functions can be used from a `.yaws' file.
-% Note however, that they usually generate stream content.
+%%  These functions can be used from a `.yaws' file.
+%%  Note however, that they usually generate stream content.
 
 call_cgi(Arg, Scriptfilename) ->				     
     call_cgi(Arg, undefined, Scriptfilename, undefined, []).
@@ -40,8 +40,8 @@ call_cgi(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv) ->
 		    handle_clidata(Arg, Worker);
 		undefined ->
 		    ?Debug("Error while reading clidata: ~p~n", 
-			[Arg#arg.clidata]),
-						% Error, what to do?
+			   [Arg#arg.clidata]),
+		    %%  Error, what to do?
 		    exit(normal)
 	    end;
 	_ ->
@@ -167,8 +167,8 @@ get_socket_peername(Socket) ->
     inet_parse:ntoa(IP).
 
 get_socket_sockname(Socket={sslsocket,_,_}) ->
-	{ok, {IP, _Port}}=ssl:sockname(Socket),
-	inet_parse:ntoa(IP);
+    {ok, {IP, _Port}}=ssl:sockname(Socket),
+    inet_parse:ntoa(IP);
 get_socket_sockname(Socket) ->
     {ok, {IP, _Port}}=inet:sockname(Socket),
     inet_parse:ntoa(IP).
@@ -191,52 +191,64 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
     PeerAddr = get_socket_peername(Arg#arg.clisock),
     LocalAddr = get_socket_sockname(Arg#arg.clisock),
 
-    %Scriptname = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
-	%SCRIPT_NAME is the path of the script relative to the root of the website.
-	%just dropping docroot from the fullpath does not give the full SCRIPT_NAME path if a 'vdir' is involved.
-	UriTail = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
-	case Arg#arg.docroot_mount of
+    Scheme = (catch yaws:redirect_scheme(SC)),
+    %% Needed by trac, for redirs after POST
+    HttpsEnv  = case Scheme of
+                    "https://" -> [{"HTTPS", "1"}];
+                    _ ->[]
+                end,
+
+
+    %%Scriptname = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
+    %%SCRIPT_NAME is the path of the script relative to the root of the website.
+    %%just dropping docroot from the fullpath does not give the full SCRIPT_NAME 
+    %% path if a 'vdir' is involved.
+    UriTail = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
+    case Arg#arg.docroot_mount of
 	"/" ->
-		%no arg.docroot_mount means that arg.docroot corresponds to the URI-root of the request "/"
-		Scriptname = UriTail;
+	    %%no arg.docroot_mount means that arg.docroot corresponds to the URI-root of the request "/"
+	    Scriptname = UriTail;
 	Vdir ->
-		Scriptname = Vdir ++ string:strip(UriTail,left,$/)
-	end,	
+	    Scriptname = Vdir ++ string:strip(UriTail,left,$/)
+    end,	
 
-	Pathinfo2 = checkdef(Pathinfo),
-	case Pathinfo2 of
+    Pathinfo2 = checkdef(Pathinfo),
+    case Pathinfo2 of
 	"" ->
-		PathTranslated = "";
+	    PathTranslated = "";
 	_ ->
-		%determine what physical path the server would map Pathinfo2 to if it had received just Pathinfo2 in the request.
-		PathTranslated = yaws_server:mappath(SC,Arg,Pathinfo2)
-	end,
+	    %%determine what physical path the server would map Pathinfo2 
+	    %%to if it had received just Pathinfo2 in the request.
+	    PathTranslated = yaws_server:mappath(SC,Arg,Pathinfo2)
+    end,
 
 
-	%Pass auth info in environment - yes - including password in plain text.
-	%REMOTE_USER always = AUTH_USER
-	%!todo - LOGON_USER - same as AUTH_USER unless some auth filter has mapped the user to another username under which to run the request.
-	case H#headers.authorization of
+    %%Pass auth info in environment - yes - including password in plain text.
+    %%REMOTE_USER always = AUTH_USER
+    %%!todo - LOGON_USER - same as AUTH_USER unless some auth filter has mapped 
+    %%the user to another username under which to run the request.
+    case H#headers.authorization of
 	undefined ->
 	    AuthEnv = [];
 	{User, Password, "Basic " ++ Auth64} ->
-		AuthEnv = [
-				  {"HTTP_AUTHORIZATION", "Basic " ++ Auth64},
-				  {"AUTH_TYPE", "Basic"},
-				  {"AUTH_USER", User},
-				  {"REMOTE_USER", User},
-				  {"LOGON_USER", User},
-				  {"AUTH_PASSWORD", Password}
-				  ];
+	    AuthEnv = [
+		       {"HTTP_AUTHORIZATION", "Basic " ++ Auth64},
+		       {"AUTH_TYPE", "Basic"},
+		       {"AUTH_USER", User},
+		       {"REMOTE_USER", User},
+		       {"LOGON_USER", User},
+		       {"AUTH_PASSWORD", Password}
+		      ];
 	{_User, _Password, _OrigString} ->
-		%not attempting to pass through any auth info for auth schemes that we don't yet handle
-		AuthEnv = []
-	end,
+	    %%not attempting to pass through any auth info for auth schemes that we don't yet handle
+	    AuthEnv = []
+    end,
 
-	%%todo - review. should AuthEnv entries be overridable by ExtraEnv or not?
-	%% we should define policy here rather than let through dupes.
+    %%todo - review. should AuthEnv entries be overridable by ExtraEnv or not?
+    %% we should define policy here rather than let through dupes.
 
     ExtraEnv ++
+	HttpsEnv ++
 	AuthEnv ++
 	lists:filter(
           fun({K, L}) when list(L) -> 
@@ -253,47 +265,47 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
 	  ([
 	    {"SERVER_SOFTWARE", "Yaws/"++yaws_generated:version()},
 	    {"SERVER_NAME", Hostname},
-        {"HTTP_HOST", Hostname},
+	    {"HTTP_HOST", Hostname},
 	    {"GATEWAY_INTERFACE", "CGI/1.1"},
 	    {"SERVER_PROTOCOL", "HTTP/" ++ integer_to_list(Maj) ++ "." ++ integer_to_list(Min)},
 	    {"SERVER_PORT", Hostport},
 	    {"REQUEST_METHOD", yaws:to_list(R#http_request.method)},
 	    {"REQUEST_URI", RequestURI},
 	    {"DOCUMENT_ROOT", 	Arg#arg.docroot},
-		{"DOCUMENT_ROOT_MOUNT", Arg#arg.docroot_mount},
+	    {"DOCUMENT_ROOT_MOUNT", Arg#arg.docroot_mount},
 	    {"SCRIPT_FILENAME", Scriptfilename},    % For PHP 4.3.2 and higher
-						    	% see http://bugs.php.net/bug.php?id=28227
-						    	% (Sergei Golovan).
-	    						% {"SCRIPT_TRANSLATED", Scriptfilename},   %IIS6+ 
+						% see http://bugs.php.net/bug.php?id=28227
+						% (Sergei Golovan).
+						% {"SCRIPT_TRANSLATED", Scriptfilename},   %IIS6+ 
 	    {"PATH_INFO",		Pathinfo2},
 	    {"PATH_TRANSLATED",	PathTranslated},  
-								%<JMN_2007-02> 
-								% CGI/1.1 spec says PATH_TRANSLATED should be NULL or unset if PATH_INFO is NULL
-								% This is in contrast to IIS behaviour - and may break some apps.
-								% broken apps that expect it to always correspond to path of script
-								% should be modified to use SCRIPT_FILENAME instead - or be wrapped.
-								%</JMN_2007-02>
-								%--------------------
-								% <pre_2007-02_comments>
-								% This seems not to
-								% correspond to the
-								% documentation I have
-								% read, but it works
-								% with PHP.
-								%
-								% (Not with PHP 4.3.10-16) from
-								% Debian sarge (Sergei Golovan).
-								% </pre_2007-02_comments>
-								%---------------------
+	    %% <JMN_2007-02> 
+	    %%  CGI/1.1 spec says PATH_TRANSLATED should be NULL or unset if PATH_INFO is NULL
+	    %%  This is in contrast to IIS behaviour - and may break some apps.
+	    %%  broken apps that expect it to always correspond to path of script
+	    %%  should be modified to use SCRIPT_FILENAME instead - or be wrapped.
+	    %% </JMN_2007-02>
+	    %% --------------------
+	    %%  <pre_2007-02_comments>
+	    %%  This seems not to
+	    %%  correspond to the
+	    %%  documentation I have
+	    %%  read, but it works
+	    %%  with PHP.
+	    %% 
+	    %%  (Not with PHP 4.3.10-16) from
+	    %%  Debian sarge (Sergei Golovan).
+	    %%  </pre_2007-02_comments>
+	    %% ---------------------
 	    {"SCRIPT_NAME", Scriptname},
-        {"REMOTE_ADDR", PeerAddr},
-		{"REMOTE_HOST", PeerAddr},  % We SHOULD send this
-									% Resolving DNS not practical for performance reasons 
-									% - at least on 1st contact from a particular host.
-									% we could do background lookup so that it's available for subsequent invocations,
-									% but it hardly seems worthwhile. We are permitted by the CGI/1.1 spec to substitute REMOTE_ADDR
-        {"SERVER_ADDR", LocalAddr},   %Apache compat
-		{"LOCAL_ADDR", LocalAddr},    %IIS compat
+	    {"REMOTE_ADDR", PeerAddr},
+	    {"REMOTE_HOST", PeerAddr},  %%  We SHOULD send this
+	    %%  Resolving DNS not practical for performance reasons 
+	    %%  - at least on 1st contact from a particular host.
+	    %%  we could do background lookup so that it's available for subsequent invocations,
+	    %%  but it hardly seems worthwhile. We are permitted by the CGI/1.1 spec to substitute REMOTE_ADDR
+	    {"SERVER_ADDR", LocalAddr},   %% Apache compat
+	    {"LOCAL_ADDR", LocalAddr},    %% IIS compat
 	    {"QUERY_STRING", checkdef(Arg#arg.querydata)},
 	    {"CONTENT_TYPE", H#headers.content_type},
 	    {"CONTENT_LENGTH", H#headers.content_length},
@@ -314,14 +326,15 @@ tohttp_c(C) when C >= $a , C =< $z ->
 tohttp_c(C) ->
     C.
 
-%JMN - apparently redundant. host/1 was being used in cgi_env/5 when Hostname had already been split out of Host. 
-%% Get Host part from a host string that can contain host or host:port
-%host(Host) ->
-%   case string:tokens(Host, ":") of
-%       [Hostname, _Port] -> Hostname;
-%       [Hostname]       -> Hostname;
-%       _Other           -> Host
-%   end.
+%% JMN - apparently redundant. host/1 was being used in cgi_env/5 when 
+%% Hostname had already been split out of Host. 
+%% %%  Get Host part from a host string that can contain host or host:port
+%% host(Host) ->
+%%    case string:tokens(Host, ":") of
+%%        [Hostname, _Port] -> Hostname;
+%%        [Hostname]       -> Hostname;
+%%        _Other           -> Host
+%%    end.
 
 
 make_cookie_val([]) ->
@@ -357,8 +370,8 @@ exeof(F) ->
     [$\., $/|lists:reverse(lists:takewhile(fun notslash/1, lists:reverse(F)))].
 
 
-% We almost always generate stream content.
-% Actually, we could do away with `content' altogether.
+%% We almost always generate stream content.
+%% Actually, we could do away with `content' altogether.
 
 do_header(_Arg, "Content-type: "++CT, {partial_data, Data}) ->
     {streamcontent, CT, Data};
@@ -424,7 +437,7 @@ pass_through_clidata(Parent, CGIPort) ->
 	    ok
     end.
 
-    
+
 do_work(Parent, Arg, Port) ->
     header_loop(Parent, Arg, {start, Port}).
 
@@ -470,7 +483,7 @@ data_loop(Pid, Port) ->
  	    ?Debug("~p~n", [_Other]),
 	    data_loop(Pid, Port)
     end.
-    
+
 
 
 get_line({start, Port}) ->
