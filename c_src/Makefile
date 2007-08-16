@@ -9,7 +9,7 @@ ifdef WIN32
 	PRIV_FILES=../priv/.foo
 else
 # don't make pam if configured out with --disable-pam
-	PRIV_FILES= ../priv/setuid_drv.$(DLL)  $(EPAM)
+	PRIV_FILES= ../priv/lib/setuid_drv.$(DLL)  $(EPAM)
 endif
 
 
@@ -28,8 +28,8 @@ clean:
 	-rm -f $(PRIV_FILES) setuid_drv.$(OBJ) 
 
 install:	$(PRIV_FILES)
-	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/yaws/priv
-	$(INSTALL) $(PRIV_FILES) $(DESTDIR)$(PREFIX)/lib/yaws/priv
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/yaws/priv/lib
+	$(INSTALL) $(PRIV_FILES) $(DESTDIR)$(PREFIX)/lib/yaws/priv/lib
 ifndef WIN32
 	if [ `id -u` = "0" -a -d $(DESTDIR)$(PREFIX)/lib/yaws/priv/epam ]; then \
 		chown root $(DESTDIR)$(PREFIX)/lib/yaws/priv/epam; \
@@ -38,7 +38,7 @@ ifndef WIN32
 endif
 
 
-../priv/setuid_drv.$(DLL): setuid_drv.$(OBJ)
+../priv/lib/setuid_drv.$(DLL): setuid_drv.$(OBJ)
 	$(LD_SHARED) $(OUT) $@  setuid_drv.$(OBJ) $(DLL_LIBS)
 setuid_drv.$(OBJ):	setuid_drv.c
 	$(CC) -c $(FPIC) $(CFLAGS) -DDYNAMIC_DRIVER setuid_drv.c

@@ -16,6 +16,7 @@ logdir = %logdir%
 # directory to its search path
 
 ebin_dir = %yawsdir%/examples/ebin
+ebin_dir = %vardir%/yaws/ebin
 
 
 # This is a directory where application specific .hrl

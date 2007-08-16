@@ -35,11 +35,13 @@ local_install:	../bin/yaws
 	cp -f ../bin/yaws $$HOME/bin/yaws; \
 	echo "--- Installed  $$HOME/bin/yaws"
 
+
 yaws.conf:
 	@echo PREFIX is $(PREFIX)
 	cat yaws.conf.template | \
 		./Subst %yawsdir% $(PREFIX)/lib/yaws | \
 		./Subst %logdir% $(VARDIR)/log/yaws | \
+		./Subst %vardir% $(VARDIR) | \
 		./Subst %host% `hostname` | \
 		./Subst %port% 80 | \
 		./Subst %docroot% $(VARDIR)/yaws/www | \

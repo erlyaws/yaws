@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -x
+#set -x
 
 prefix=$1
 destdir=$2
