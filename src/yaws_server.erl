@@ -67,7 +67,7 @@ gs_status() ->
 	      receive {P, Stat} -> Stat end
       end, Pids).
 getconf() ->		    
-     gen_server:call(?MODULE,getconf).
+    gen_server:call(?MODULE,getconf).
 
 stats() -> 
     {_S, Time} = status(),
@@ -121,7 +121,8 @@ init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded, Id}) ->
 			    init:stop(),
 			    {stop, E};
 			Dir ->
-			    GC = yaws_config:make_default_gconf(true, Env#env.id),
+			    GC = yaws_config:make_default_gconf(true, 
+								Env#env.id),
 			    yaws_log:setdir(GC#gconf{logdir = Dir}, []),
 			    error_logger:error_msg("Yaws: bad conf: ~s "
 						   "terminating~n",[E]),
@@ -162,7 +163,7 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
     end,
 
     runmod(RunMod, GC),
-   
+
     L2 = lists:zf(
 	   fun(Group) -> start_group(GC, Group) end,
 	   Sconfs),
@@ -254,7 +255,8 @@ handle_call({update_sconf, NewSc}, From, State) ->
 		    Pid ! {update_sconf, NewSc, OldSc, From, self()},
 		    receive
 			{updated_sconf, NewSc2} ->			
-			    P2 = yaws_config:update_sconf(NewSc2, State#state.pairs),
+			    P2 = yaws_config:update_sconf(NewSc2, 
+							  State#state.pairs),
 			    {noreply, State#state{pairs = P2}}
 		    after 1000 ->
 			    {reply, {error, "Failed to update new conf"}, State}
@@ -291,14 +293,14 @@ handle_call({add_sconf, SC}, From, State) ->
 	[] ->
 	    %% Need to create a new group
 	    error_logger:info_msg("Creating new virt server ~s\n",
-				 [yaws:sconf_to_srvstr(SC)]),
+				  [yaws:sconf_to_srvstr(SC)]),
 	    GC = State#state.gc,
 	    case start_group(GC, [SC]) of
 		false ->
 		    {reply, ok, State};
 		{true, Pair} ->
-		    %Pid = element(1, Pair),
-		    %Pid ! {newuid, GC#gconf.uid},
+						%Pid = element(1, Pair),
+						%Pid ! {newuid, GC#gconf.uid},
 		    P2 = [Pair | State#state.pairs],
 		    {reply, ok, State#state{pairs = P2}}
 	    end
@@ -405,7 +407,7 @@ gserv(Top, GC, Group0) ->
 					     [yaws:sconf_to_srvstr(S),
 					      S#sconf.docroot])
 		       end, Group)
-	      ]),
+		    ]),
 	    proc_lib:init_ack({self(), Group}),
 	    GS = #gs{gconf = GC,
 		     group = Group,
@@ -420,7 +422,7 @@ gserv(Top, GC, Group0) ->
 	    proc_lib:init_ack({error, "Can't listen to socket: ~p ",[Err]}),
 	    exit(normal)
     end.
-			
+
 
 setup_dirs(GC) ->
     TD0 = filename:join([GC#gconf.tmpdir,"yaws"]),
@@ -456,7 +458,7 @@ clear_ets_complete(SC) ->
  	    ets:insert(E, {num_files, 0}),
  	    ets:insert(E, {num_bytes, 0}),
  	    SC
-     end.
+    end.
 
 
 gserv_loop(GS, Ready, Rnum, Last) ->
@@ -496,6 +498,11 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 		    {links, Ls} = process_info(self(), links),
 		    foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
 		    exit(normal);
+		_ when Reason == failaccept ->
+		     error_logger:format("Accept proc died, terminate gserv",[]),
+		    {links, Ls} = process_info(self(), links),
+		    foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
+		    exit(noserver);
 		_ ->
 		    gserv_loop(GS, Ready, Rnum, Last)
 	    end;
@@ -519,7 +526,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 		    stop_ready(Ready, Last),
 		    NewSc2 = clear_ets_complete(NewSc),
 		    GS2 = GS#gs{group = [ NewSc2 | 
-					 lists:delete(OldSc,GS#gs.group)]},
+					  lists:delete(OldSc,GS#gs.group)]},
 		    Ready2 = [],
 		    Updater ! {updated_sconf, NewSc2},
 		    gen_server:reply(From, ok),
@@ -530,7 +537,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 	    end;
 
 	{delete_sconf, OldSc, From} ->
-	    
+
 	    case lists:member(OldSc, GS#gs.group) of
 		false ->
 		    error_logger:error_msg("gserv: No found SC ~n",[]),
@@ -556,7 +563,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 				  [yaws:sconf_to_srvstr(SC)]),
 	    New = acceptor(GS2),
 	    gserv_loop(GS2, Ready2, 0, New);
- 
+
 	{update_gconf, GC} ->
 	    stop_ready(Ready, Last),
 	    GS2 = GS#gs{gconf = GC},
@@ -585,7 +592,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 stop_ready(Ready, Last) ->
     unlink(Last),
     exit(Last, shutdown),
-    
+
     lists:foreach(
       fun({_,Pid}) -> 
 	      Pid ! {self(), stop}
@@ -651,7 +658,7 @@ ssl_opts(SSL) ->
 	    true ->
 		 false
 	 end,
-	 
+
 	 if SSL#ssl.certfile /= undefined ->
 		 {certfile, SSL#ssl.certfile};
 	    true ->
@@ -663,13 +670,13 @@ ssl_opts(SSL) ->
 	    true ->
 		 false
 	 end,
-	 
+
 	 if SSL#ssl.verify /= undefined ->
 		 {verify, SSL#ssl.verify};
 	    true ->
 		 false
 	 end,
-	 
+
 	 if SSL#ssl.password /= undefined ->
 		 {password, SSL#ssl.password};
 	    true ->
@@ -691,45 +698,11 @@ do_accept(GS) when GS#gs.ssl == nossl ->
     ?Debug("wait in accept ... ~n",[]),
     gen_tcp:accept(GS#gs.l);
 do_accept(GS) when GS#gs.ssl == ssl ->
-    ssl:accept(GS#gs.l,10000).
-
+    ssl:transport_accept(GS#gs.l,10000).
 
 
 initial_acceptor(GS) ->
-    if
-	GS#gs.ssl == nossl ->
-	    acceptor(GS);
-	GS#gs.ssl == ssl ->
-	    GC = GS#gs.gconf,
-	    PoolSize = if
-			   ?gc_use_large_ssl_pool(GC) -> 50;
-			   true -> 8
-		       end,
-	    initial_acceptor(GS, PoolSize)
-    end.
-
-
-% an SSL connection might include user interaction.
-% So while one person has a dialog box on the screen asking him to review
-% the server's certificate, no other person is able to establish a new
-% connnection to the server.
-% unless we run multiple SSL acceptor processes
-% Therefore, the code below!
-
-initial_acceptor(_GS, 0) ->
-    ok;
-initial_acceptor(GS, 1) ->
-    acceptor(GS);
-initial_acceptor(GS, N) when N>1 ->
-    Self = self(),
-    proc_lib:spawn_link(fun() ->
-				receive
-				after (N-1)*2000 ->
-					acceptor0(GS, Self)
-				end
-			end),
-    initial_acceptor(GS, N-1).
-
+    acceptor(GS).
 
 
 acceptor(GS) ->
@@ -741,6 +714,20 @@ acceptor0(GS, Top) ->
     Top ! {self(), next},
     case X of
 	{ok, Client} ->
+	    if
+		GS#gs.ssl == ssl ->
+		    case ssl:accept(Client) of
+			ok ->
+			    ok;
+			{error, Reason} ->
+			    error_logger:format("SSL accept failed: ~p~n", 
+						[Reason]),
+			    exit(normal)
+		    end;
+		true ->
+		    ok
+	    end,
+
 	    case (GS#gs.gconf)#gconf.trace of  %% traffic trace
 		{true, _} ->
 		    {ok, {IP, Port}} = case GS#gs.ssl of
@@ -750,7 +737,7 @@ acceptor0(GS, Top) ->
 					       inet:peername(Client)
 				       end,
 		    Str = ?F("New (~p) connection from ~s:~w~n", 
-			[GS#gs.ssl, inet_parse:ntoa(IP),Port]),
+			     [GS#gs.ssl, inet_parse:ntoa(IP),Port]),
 		    yaws_log:trace_traffic(from_client, Str);
 		_ ->
 		    ok
@@ -781,12 +768,12 @@ acceptor0(GS, Top) ->
 		    exit(normal);
 		{'EXIT', {{error, econnreset},_}} ->
 		    exit(normal);
-		{'EXIT', Reason} ->
+		{'EXIT', Reason2} ->
 		    error_logger:error_msg("Yaws process died: ~p~n", 
-					   [Reason]),
+					   [Reason2]),
 		    exit(shutdown)
 	    end,
-	    
+
 	    %% we cache processes
 	    receive
 		{Top, stop} ->
@@ -804,8 +791,13 @@ acceptor0(GS, Top) ->
 		    acceptor0(GS, Top)
 	    end;
 	ERR ->
-	    yaws_debug:derror("Failed to accept: ~p~n", [ERR]),
-	    exit(normal)
+	    %% When we fail to accept, the correct thing to do
+	    %% is to terminate yaws as an application, if we're running
+	    %% yaws as a standalone webserver, we want to restart the
+	    %% entire webserver, preferably through heart
+	    error_logger:format("yaws: Failed to accept - terminating: ~p~n", 
+				[ERR]),
+	    exit(failaccept)
     end.
 
 
@@ -878,19 +870,19 @@ handle_method_result(Res, CliSock, IP, GS, Req, H, Num) ->
 	    put(outh, #outh{}),
 	    case P of
 		{Options, Page} ->
-						% We got additional headers
-						% for the page to deliver.
-						%
-						% Might be useful for
-						% `Vary' or
-						% `Content-Location'.
+		    %% We got additional headers
+		    %% for the page to deliver.
+		    %%
+		    %% Might be useful for
+		    %% `Vary' or
+		    %% `Content-Location'.
 		    deepforeach(
 		      fun(X) -> case X of
 				    {header, Header} ->
 					yaws:accumulate_header(Header);
 				    _Something ->
 					?Debug("Got ~p in page option list.",
-					    [_Something])
+					       [_Something])
 				end
 		      end,
 		      Options);
@@ -943,8 +935,8 @@ comp_sname(_, [$:|_]) -> true;
 comp_sname([H|T], [H|T1]) -> comp_sname(T,T1);
 comp_sname([],[])-> true;
 comp_sname(_,_)-> false.
-   
-    
+
+
 
 
 pick_sconf(GC, H, [SC|_Group], ssl) ->
@@ -978,8 +970,8 @@ pick_host(GC, Host, [], Group) ->
     if ?gc_pick_first_virthost_on_nomatch(GC) ->
 	    hd(Group);
        true ->
-	    yaws_debug:format("Drop req since ~p doesn't match any servername \n", 
-			      [Host]),
+	    yaws_debug:format("Drop req since ~p doesn't match any "
+			      "servername \n", [Host]),
 	    exit(normal)
     end.
 
@@ -993,7 +985,7 @@ inet_peername(Sock, SC) ->
 	_SSL ->
 	    ssl:peername(Sock)
     end.
-	    
+
 
 
 maybe_auth_log(Item, ARG) ->
@@ -1106,59 +1098,13 @@ bad_request(CliSock, Req, _Head) ->
 
 %% ret:  continue | done
 'GET'(CliSock, Req, Head) ->
-    SC=get(sc),
-    ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
-    flush(CliSock, Head#headers.content_length),
-    ARG = make_arg(CliSock, Head, Req, undefined),
-    handle_request(CliSock, ARG, 0).
+    no_body_method(CliSock, Req, Head).
 
 
 'POST'(CliSock, Req, Head) ->
     ?Debug("POST Req=~s~n H=~s~n", [?format_record(Req, http_request),
 				    ?format_record(Head, headers)]),
-    SC=get(sc),
-    ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
-    PPS = SC#sconf.partial_post_size,
-    CT = 
-	case yaws:lowercase(Head#headers.content_type) of
-	    "multipart/form-data"++_ -> multipart;
-	    _ -> urlencoded
-	end,
-    Bin = case Head#headers.content_length of
-	      undefined ->
-		  Chunked = Head#headers.transfer_encoding == "chunked",
-		  case Head#headers.connection of
-		      "close" when Chunked == false->
-			  get_client_data(CliSock, all, is_ssl(SC#sconf.ssl));
-		      _ when Chunked == true ->
-			  get_chunked_client_data(CliSock,[],
-						  is_ssl(SC#sconf.ssl))
-		  end;
-	      Len when integer(PPS) ->
-		  Int_len = list_to_integer(Len),
-		  if 
-		      Int_len == 0 ->
-			  <<>>;
-		      PPS < Int_len, CT == multipart ->
-			  {partial, get_client_data(CliSock, PPS,
-						    is_ssl(SC#sconf.ssl))};
-		      true ->
-			  get_client_data(CliSock, Int_len,  
-					  is_ssl(SC#sconf.ssl))
-		  end;
-	      Len when PPS == nolimit ->
-		  Int_len = list_to_integer(Len),
-		  if
-		      Int_len == 0 ->
-			  <<>>;
-		      true ->
-			  get_client_data(CliSock, Int_len, 
-					  is_ssl(SC#sconf.ssl))
-		  end
-	  end,
-    ?Debug("POST data = ~s~n", [binary_to_list(un_partial(Bin))]),
-    ARG = make_arg(CliSock, Head, Req, Bin),
-    handle_request(CliSock, ARG, size(un_partial(Bin))).
+    body_method(CliSock, Req, Head).
 
 
 is_ssl(undefined) ->
@@ -1190,7 +1136,7 @@ not_implemented(CliSock, Req, Head) ->
     ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
     flush(CliSock, Head#headers.content_length),
     deliver_501(CliSock, Req).
-    
+
 
 'TRACE'(CliSock, Req, Head) ->
     not_implemented(CliSock, Req, Head).
@@ -1206,10 +1152,8 @@ not_implemented(CliSock, Req, Head) ->
 'PUT'(CliSock, Req, Head) ->
     ?Debug("PUT Req=~p~n H=~p~n", [?format_record(Req, http_request),
 				   ?format_record(Head, headers)]),
-    SC=get(sc),
-    ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
     body_method(CliSock, Req, Head).
-    
+
 
 'DELETE'(CliSock, Req, Head) ->
     no_body_method(CliSock, Req, Head).
@@ -1236,36 +1180,37 @@ body_method(CliSock, Req, Head) ->
     ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
     PPS = SC#sconf.partial_post_size,
     Bin = case Head#headers.content_length of
-             undefined ->
-                 case Head#headers.connection of
-                     "close" ->
-                         get_client_data(CliSock, all, is_ssl(SC#sconf.ssl));
-                     _ ->
-                         ?Debug("No content length header ",[]),
-                         exit(normal)
-                 end;
-             Len when integer(PPS) ->
-                 Int_len = list_to_integer(Len),
-                 if 
-                     Int_len == 0 ->
-                         <<>>;
-                     PPS < Int_len ->
-                         {partial, get_client_data(CliSock, PPS,
-                                                   is_ssl(SC#sconf.ssl))};
-                     true ->
-                         get_client_data(CliSock, Int_len,  
-                                         is_ssl(SC#sconf.ssl))
-                 end;
-             Len when PPS == nolimit ->
-                 Int_len = list_to_integer(Len),
-                 if
-                     Int_len == 0 ->
-                         <<>>;
-                     true ->
-                         get_client_data(CliSock, Int_len, 
-                                         is_ssl(SC#sconf.ssl))
-                 end
-         end,
+	      undefined ->
+		  case Head#headers.transfer_encoding of
+		      "chunked" ->
+			  get_chunked_client_data(CliSock, [],
+						  is_ssl(SC#sconf.ssl));
+		      _ ->
+			  <<>>
+			      end;
+	      Len when integer(PPS) ->
+		  Int_len = list_to_integer(Len),
+		  if 
+		      Int_len == 0 ->
+			  <<>>;
+		      PPS < Int_len ->
+			  {partial, get_client_data(CliSock, PPS,
+						    is_ssl(SC#sconf.ssl))};
+		      true ->
+			  get_client_data(CliSock, Int_len,  
+					  is_ssl(SC#sconf.ssl))
+		  end;
+	      Len when PPS == nolimit ->
+		  Int_len = list_to_integer(Len),
+		  if
+		      Int_len == 0 ->
+			  <<>>;
+		      true ->
+			  get_client_data(CliSock, Int_len, 
+					  is_ssl(SC#sconf.ssl))
+		  end
+	  end,
+    ?Debug("Request data = ~s~n", [binary_to_list(un_partial(Bin))]),
     ARG = make_arg(CliSock, Head, Req, Bin),
     handle_request(CliSock, ARG, size(un_partial(Bin))).
 
@@ -1306,9 +1251,9 @@ make_arg(CliSock, Head, Req, Bin) ->
 	       opaque = SC#sconf.opaque,
 	       pid = self(),
 	       docroot = SC#sconf.docroot,
-		   docroot_mount = "/",
+	       docroot_mount = "/",
 	       clidata = Bin
-		   },
+	      },
     apply(SC#sconf.arg_rewrite_mod, arg_rewrite, [ARG]).
 
 
@@ -1336,124 +1281,148 @@ handle_request(CliSock, ARG, N) ->
 		{'EXIT', _} ->   %% weird broken cracker requests
 		    deliver_400(CliSock, Req);
 		{DecPath, QueryPart} ->
-			% http://<server><port><DecPath>?<QueryPart>
-			% DecPath is stored in arg.server_path and is equiv to SCRIPT_PATH + PATH_INFO  (where PATH_INFO may be empty)
+		    %% http://<server><port><DecPath>?<QueryPart>
+		    %% DecPath is stored in arg.server_path and is equiv to 
+		    %%SCRIPT_PATH + PATH_INFO  (where PATH_INFO may be empty)
 
-			QueryString = case QueryPart of
-			[] ->
-				undefined;
-			_ ->
-				QueryPart
-			end,
+		    QueryString = case QueryPart of
+				      [] ->
+					  undefined;
+				      _ ->
+					  QueryPart
+				  end,
 
 
 		    SC=get(sc),
 
-			%%by this stage, ARG#arg.docroot_mount is either "/" , or has been set by a rewrite module.
-			%%!todo - retrieve 'vdir' definitions from main part of config file rather than
-			%% rely on rewrite module to dig them out of opaque.
+		    %%by this stage, ARG#arg.docroot_mount is either "/" , 
+		    %% or has been set by a rewrite module.
+		    %%!todo - retrieve 'vdir' definitions from main part of 
+		    %% config file rather than
+		    %% rely on rewrite module to dig them out of opaque.
 
-			ARGvdir = ARG#arg.docroot_mount,
+		    ARGvdir = ARG#arg.docroot_mount,
 
-			%%here we make sure that the conf file, or any rewrite mod wrote nothing, or something sensible into arg.docroot_mount
-			%% It must be empty, or of the form "/path/" where path may be further slash-separated.
-			%
-			%!todo - review - is handle_request (which is presumably performance sensitive) really the place for sanity checks?
-			% Presumably this sort of check is trivial enough that it'll have negligible impact.
+		    %%here we make sure that the conf file, or any rewrite mod 
+		    %% wrote  nothing, or something sensible into 
+		    %% arg.docroot_mount
+		    %% It must be empty, or of the form "/path/" where path 
+		    %% may be  further slash-separated.
+		    %%
+		    %%!todo - review - is handle_request 
+		    %% (which is presumably performance 
+		    %%sensitive) really the place for sanity checks?
+		    %% Presumably this sort of check is trivial enough 
+		    %% that it'll have negligible impact.
 
-			VdirSanity = case ARGvdir of
-			"/" ->
-				sane;
-			[$/|_] ->
-				case string:right(ARGvdir,1) of 
-				"/" when length(ARGvdir) > 2 ->
-					sane;
-				_ ->
-					loopy
-				end;
-			_ ->
-				loopy
-			end,
+		    VdirSanity = case ARGvdir of
+				     "/" ->
+					 sane;
+				     [$/|_] ->
+					 case string:right(ARGvdir,1) of 
+					     "/" when length(ARGvdir) > 2 ->
+						 sane;
+					     _ ->
+						 loopy
+					 end;
+				     _ ->
+					 loopy
+				 end,
 
 
-			case VdirSanity of 
+		    case VdirSanity of 
 			loopy ->
-				%!todo - log somewhere?
-				?Debug("BAD arg.docroot_mount data: '~p'\n",[ARGvdir]),
-				deliver_xxx(CliSock, Req, 500);
+			    %%!todo - log somewhere?
+			    ?Debug("BAD arg.docroot_mount data: '~p'\n",
+				   [ARGvdir]),
+			    deliver_xxx(CliSock, Req, 500);
 			sane ->
 			    ?Debug("Test revproxy: ~p and ~p~n", 
-					[DecPath, SC#sconf.revproxy]),
+				   [DecPath, SC#sconf.revproxy]),
 
-				IsAuth = is_auth(ARG, DecPath,ARG#arg.headers,SC#sconf.authdirs),
-				IsRev = is_revproxy(DecPath, SC#sconf.revproxy),
-				IsRedirect = is_redirect_map(DecPath, SC#sconf.redirect_map),
+			    IsAuth = is_auth(ARG, DecPath,ARG#arg.headers,
+					     SC#sconf.authdirs),
+			    IsRev = is_revproxy(DecPath, SC#sconf.revproxy),
+			    IsRedirect = is_redirect_map(DecPath, 
+							 SC#sconf.redirect_map),
 
-				case {IsAuth, IsRev, IsRedirect} of
+			    case {IsAuth, IsRev, IsRedirect} of
 				{{appmod, Mod}, _, _} ->
-					%This isn't the standard 'appmod' branch 
-					%- this is an appmod call as optionally specified by the output of an auth module.
+				    %%This isn't the standard 'appmod' branch 
+				    %%- this is an appmod call as optionally 
+				    %% specified by the 
+				    %% output of an auth module.
 				    UT = #urltype{
-							type = appmod, 
-				    		data = {Mod, undefined},
-				     		path = DecPath
-							},
+				      type = appmod, 
+				      data = {Mod, undefined},
+				      path = DecPath
+				     },
 
 
-					%arg.prepath ?
+				    %%arg.prepath ?
 				    ARG2 = ARG#arg{
-							server_path = DecPath,
-						   	querydata= QueryString,
-							prepath=undefined,
-						   	pathinfo=undefined,
-							appmod_prepath=undefined,
-							appmoddata=undefined
-							},
+					     server_path = DecPath,
+					     querydata= QueryString,
+					     prepath=undefined,
+					     pathinfo=undefined,
+					     appmod_prepath=undefined,
+					     appmoddata=undefined
+					    },
 				    handle_ut(CliSock, ARG2, UT, N);
 				{_, _, {true, MethodHostPort}} ->
-				    deliver_302_map(CliSock, Req, ARG, MethodHostPort);
+				    deliver_302_map(CliSock, Req, ARG, 
+						    MethodHostPort);
 				{true, false, _} ->
-					%'main' branch so to speak. Most requests pass through here.
+				    %%'main' branch so to speak. Most 
+				    %% requests pass through here.
 
-				    UT   = url_type(DecPath, ARG#arg.docroot, ARG#arg.docroot_mount),
+				    UT   = url_type(DecPath, ARG#arg.docroot, 
+						    ARG#arg.docroot_mount),
 				    ARG2 = ARG#arg{
-							server_path = DecPath,
-						   	querydata = QueryString,
-						   	fullpath = UT#urltype.fullpath,
-							prepath = UT#urltype.dir,
-						   	pathinfo = UT#urltype.pathinfo
-							},
+					     server_path = DecPath,
+					     querydata = QueryString,
+					     fullpath = UT#urltype.fullpath,
+					     prepath = UT#urltype.dir,
+					     pathinfo = UT#urltype.pathinfo
+					    },
 
-					%!todo - remove special treatment of appmod here. (after suitable deprecation period)
-					% - prepath & pathinfo are applicable to other types of dynamic url too
-					%   replace: appmoddata with pathinfo & appmod_prepath with prepath.
-					case UT#urltype.type of
+				    %%!todo - remove special treatment of 
+				    %% appmod here. 
+				    %% (after suitable deprecation period)
+				    %% - prepath & pathinfo are applicable to 
+				    %% other types  of dynamic url too
+				    %%   replace: appmoddata with pathinfo & 
+				    %% appmod_prepath with prepath.
+				    case UT#urltype.type of
 					appmod ->
-	 					{_Mod, PathInfo} = UT#urltype.data,
-		 	    		ARG3 = ARG2#arg{
-							appmoddata = case PathInfo of
-								undefined ->
-									undefined;
-								"/" ->
-									"/";
-								_ ->
-									lists:dropwhile(fun(C) -> C == $/ end, PathInfo)
-								end,
-		 			 		appmod_prepath = UT#urltype.dir
-						}; 
+					    {_Mod, PathInfo} = UT#urltype.data,
+					    ARG3 = ARG2#arg{
+						     appmoddata = 
+						     case PathInfo of
+							 undefined ->
+							     undefined;
+							 "/" ->
+							     "/";
+							 _ ->
+							     lists:dropwhile(
+							       fun(C) -> C == $/ end, PathInfo)
+						     end,
+						     appmod_prepath = UT#urltype.dir
+						    }; 
 					_ ->
-						ARG3 = ARG2
-					end,
+					    ARG3 = ARG2
+				    end,
 
 				    handle_ut(CliSock, ARG3, UT, N);
 				{true, {true, PP}, _} ->
-				    yaws_revproxy:init(CliSock, ARG, DecPath, QueryString, PP, N);
+				    yaws_revproxy:init(CliSock, ARG, DecPath, 
+						       QueryString, PP, N);
 				{false, _, _} ->
 				    deliver_403(CliSock, Req);
 				{{false, Realm}, _, _} ->
 				    deliver_401(CliSock, Req, Realm)
 			    end
-			end
+		    end
 	    end;
 	%%{absoluteURI, _Scheme, _Host, _Port, _RawPath}
 	%%will not make it here.
@@ -1473,7 +1442,7 @@ is_auth(ARG, Req_dir,H,[{Auth_dir,
 	true when Mod /= [] ->
 	    case catch Mod:auth(ARG, Auth) of
 		{'EXIT', Reason} ->
-			io:fwrite("authmod crashed: ~p~n", [Reason]),
+		    io:fwrite("authmod crashed: ~p~n", [Reason]),
 		    {false, ""};
 		{appmod, AppMod} ->
 		    {appmod, AppMod};
@@ -1569,11 +1538,11 @@ handle_ut(CliSock, ARG, UT, N) ->
 	    SC2 = SC#sconf{docroot = hd(SC#sconf.xtra_docroots),
 			   xtra_docroots = tl(SC#sconf.xtra_docroots)},
 	    put(sc, SC2),
-
-		%!todo - review & change. rewriting the docroot and xtra_docroots
-		% is not a good way to handle the xtra_docroot feature because
-		% it makes less information available to the subsequent calls - 
-		% this is especially an issue for a nested ssi.
+	    
+	    %%!todo - review & change. rewriting the docroot and xtra_docroots
+	    %% is not a good way to handle the xtra_docroot feature because
+	    %% it makes less information available to the subsequent calls - 
+	    %% this is especially an issue for a nested ssi.
 	    ARG2 = ARG#arg{docroot = SC2#sconf.docroot},
 	    handle_request(CliSock, ARG2, N);
 	directory when ?sc_has_dir_listings(SC) ->
@@ -1586,7 +1555,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 	regular ->
 	    ETag = yaws:make_etag(UT#urltype.finfo),
 	    Range = case H#headers.if_range of
-%			[$"|_] = Range_etag when Range_etag /= ETag -> 
+			%%	[$"|_] = Range_etag when Range_etag /= ETag -> 
 			[34|_] = Range_etag when Range_etag /= ETag -> 
 			    all; 
 			_ ->
@@ -1640,7 +1609,7 @@ handle_ut(CliSock, ARG, UT, N) ->
 	    deliver_302(CliSock, Req, ARG, UT#urltype.path);
 	appmod ->
 	    yaws:outh_set_dyn_headers(Req, H, UT),
-		{Mod,_} = UT#urltype.data,
+	    {Mod,_} = UT#urltype.data,
 	    deliver_dyn_part(CliSock, 
 			     0, "appmod",
 			     N,
@@ -1725,7 +1694,7 @@ done_or_continue() ->
 	false -> continue;
 	keep_alive -> continue 
     end.
-	    
+
 
 
 %% we may have content, 
@@ -1740,13 +1709,13 @@ new_redir_h(OH, Loc, Status) ->
 
 
 
-% we must deliver a 302 if the browser asks for a dir
-% without a trailing / in the HTTP req
-% otherwise the relative urls in /dir/index.html will be broken.
+%% we must deliver a 302 if the browser asks for a dir
+%% without a trailing / in the HTTP req
+%% otherwise the relative urls in /dir/index.html will be broken.
 
-%!todo - review.
-% Why is DecPath being tokenized around "?" - only to reassemble??
-% What happens when Path is not flat?
+%%!todo - review.
+%% Why is DecPath being tokenized around "?" - only to reassemble??
+%% What happens when Path is not flat?
 
 deliver_302(CliSock, _Req, Arg, Path) ->
     ?Debug("in redir 302 ",[]),
@@ -1757,11 +1726,11 @@ deliver_302(CliSock, _Req, Arg, Path) ->
     DecPath = yaws_api:url_decode(Path),
     RedirHost = yaws:redirect_host(SC, Headers#headers.host),
     Loc = case string:tokens(DecPath, "?") of
-	    [P] ->
-			["Location: ", Scheme, RedirHost, P, "\r\n"];
-	    [P, Q] ->
-			["Location: ", Scheme, RedirHost, P, "?", Q, "\r\n"]
-	  	end,
+	      [P] ->
+		  ["Location: ", Scheme, RedirHost, P, "\r\n"];
+	      [P, Q] ->
+		  ["Location: ", Scheme, RedirHost, P, "?", Q, "\r\n"]
+	  end,
 
     new_redir_h(H, Loc),
     deliver_accumulated(CliSock),
@@ -1776,15 +1745,15 @@ deliver_302_map(CliSock, Req, Arg, MethodHostPort) ->
     {Scheme, RedirHost} =
 	case MethodHostPort of
 	    {_,Method,HostPort} ->
-			{Method, HostPort};
+		{Method, HostPort};
 	    {_,HostPort} ->
-			{yaws:redirect_scheme(SC), HostPort}
+		{yaws:redirect_scheme(SC), HostPort}
 	end,
     Loc = case string:tokens(DecPath, "?") of
 	      [P] ->
-		  	["Location: ", Scheme, RedirHost, P, "\r\n"];
+		  ["Location: ", Scheme, RedirHost, P, "\r\n"];
 	      [P, Q] ->
-		  	["Location: ", Scheme, RedirHost, P, "?", Q, "\r\n"]
+		  ["Location: ", Scheme, RedirHost, P, "?", Q, "\r\n"]
 	  end,
 
 
@@ -1850,10 +1819,10 @@ deliver_401(CliSock, _Req, Realm) ->
     accumulate_content(B),
     deliver_accumulated(CliSock),
     done.
-    
+
 deliver_403(CliSock, Req) ->
     deliver_xxx(CliSock, Req, 403).	% Forbidden
-    
+
 deliver_416(CliSock, _Req, Tot) ->
     B = list_to_binary(["<html><h1>416 ",
 			yaws_api:code_to_phrase(416),
@@ -1875,8 +1844,8 @@ deliver_416(CliSock, _Req, Tot) ->
 
 deliver_501(CliSock, Req) ->
     deliver_xxx(CliSock, Req, 501). % Not implemented
-						
-    
+
+
 
 
 do_yaws(CliSock, ARG, UT, N) ->
@@ -1890,7 +1859,7 @@ do_yaws(CliSock, ARG, UT, N) ->
 	Other  ->
 	    del_old_files(get(gc),Other),
 	    {ok, [{errors, Errs}| Spec]} = 
-			yaws_compile:compile_file(UT#urltype.fullpath),
+		yaws_compile:compile_file(UT#urltype.fullpath),
 	    ?Debug("Spec for file ~s is:~n~p~n",[UT#urltype.fullpath, Spec]),
 	    ets:insert(SC#sconf.ets, {Key, spec, Mtime, Spec, Errs}),
 	    deliver_dyn_file(CliSock, Spec, ARG, UT, N)
@@ -1910,14 +1879,21 @@ del_old_files(GC, [{_FileAtom, spec, _Mtime1, Spec, _}]) ->
 	 (_) ->
 	      ok
       end, Spec).
-		     
 
-get_client_data(CliSock, all, SSlBool) ->
-    get_client_data_all(CliSock, [], SSlBool);
 
 get_client_data(CliSock, Len, SSlBool) ->
-    get_client_data_len(CliSock, Len, [], SSlBool).
+    get_client_data(CliSock, Len, [], SSlBool).
 
+get_client_data(_CliSock, 0, Bs, _SSlBool) ->
+    list_to_binary(Bs);
+get_client_data(CliSock, Len, Bs, SSlBool) ->
+    case yaws:cli_recv(CliSock, Len, SSlBool) of
+	{ok, B} ->
+	    get_client_data(CliSock, Len-size(B), [Bs,B], SSlBool);
+	_Other ->
+	    ?Debug("get_client_data: ~p~n", [_Other]),
+	    exit(normal)
+    end.
 
 %% not nice to support this for ssl sockets
 get_chunked_client_data(CliSock,Bs,SSL) ->
@@ -1934,29 +1910,6 @@ get_chunked_client_data(CliSock,Bs,SSL) ->
 	    get_chunked_client_data(CliSock, [Bs,B], SSL)
     end.
 
-
-get_client_data_len(_CliSock, 0, Bs, _SSlBool) ->
-    list_to_binary(Bs);
-get_client_data_len(CliSock, Len, Bs, SSlBool) ->
-    case yaws:cli_recv(CliSock, Len, SSlBool) of
-	{ok, B} ->
-	    get_client_data_len(CliSock, Len-size(B), [Bs,B], SSlBool);
-	_Other ->
-	    ?Debug("get_client_data_len: ~p~n", [_Other]),
-	    exit(normal)
-    end.
-
-get_client_data_all(CliSock, Bs, SSlBool) ->
-    case yaws:cli_recv(CliSock, 4000, SSlBool) of
-	{ok, B} ->
-	    get_client_data_all(CliSock, [Bs|B] , SSlBool);
-	eof ->
-	    list_to_binary(Bs);
-	_Other ->
-	    ?Debug("get_client_data_all: ~p~n", [_Other]),
-	    exit(normal)
-    end.
-
 %% Return values:
 %% continue, done, {page, Page}
 
@@ -1971,7 +1924,7 @@ deliver_dyn_part(CliSock,                  % essential params
     Res = (catch YawsFun(Arg)),
     case handle_out_reply(Res, LineNo, YawsFile, UT, Arg) of
 	{get_more, Cont, State} when 
-	      element(1, Arg#arg.clidata) == partial  ->
+	element(1, Arg#arg.clidata) == partial  ->
 	    More = get_more_post_data(CliDataPos, Arg),
 	    case un_partial(More) of
 		Bin when binary(Bin) ->
@@ -1994,7 +1947,7 @@ deliver_dyn_part(CliSock,                  % essential params
 	    finish_up_dyn_file(Arg, CliSock);
 	{page, Page} ->
 	    {page, Page};
-    Arg2 = #arg{} ->
+	Arg2 = #arg{} ->
 	    DeliverCont(Arg2);
 	{streamcontent, MimeType, FirstChunk} ->
 	    yaws:outh_set_content_type(MimeType),
@@ -2141,14 +2094,14 @@ send_streamcontent_chunk(undeflated, CliSock, Data) ->
 	empty -> ok;
 	{Size, Chunk} ->
 	    ?Debug("send ~p bytes to ~p ~n", 
-		[Size, CliSock]),
+		   [Size, CliSock]),
 	    yaws:outh_inc_act_contlen(Size),
 	    yaws:gen_tcp_send(CliSock, Chunk)
     end,
     undeflated;
 send_streamcontent_chunk({Z, Priv}, CliSock, Data) ->
     ?Debug("send ~p bytes to ~p ~n", 
-		[binary_size(Data), CliSock]),
+	   [binary_size(Data), CliSock]),
     {ok, P, D} = yaws_zlib:gzipDeflate(Z, Priv, to_binary(Data), none),
     case make_chunk(D) of
 	empty -> ok;
@@ -2173,7 +2126,7 @@ sync_streamcontent({Z, Priv}, CliSock) ->
 	    yaws:gen_tcp_send(CliSock, Chunk)
     end,
     {Z, P}.
-    
+
 
 end_streaming(discard, _) ->
     done_or_continue();
@@ -2192,26 +2145,26 @@ end_streaming({Z, Priv}, CliSock) ->
     zlib:close(Z),
     done_or_continue().
 
-    
+
 %% what about trailers ??
 
 skip_data(List, Fd, Sz) when list(List) ->
     skip_data(list_to_binary(List), Fd, Sz);
 skip_data(Bin, Fd, Sz) when binary(Bin) ->
     ?Debug("Skip data ~p bytes from", [Sz]),
-     case  Bin of
-	 <<Head:Sz/binary ,Tail/binary>> ->
-	     {Head, Tail};
-	 _ ->
-	     case (catch file:read(Fd, 4000)) of
-		 {ok, Bin2} when binary(Bin2) -> 
-		     Bin3 = <<Bin/binary, Bin2/binary>>,
-		     skip_data(Bin3, Fd, Sz);
-		 _Err ->
-		     ?Debug("EXIT in skip_data: ~p  ~p ~p~n", [Bin, Sz, _Err]),
-		     exit(normal)
-	     end
-     end;
+    case  Bin of
+	<<Head:Sz/binary ,Tail/binary>> ->
+	    {Head, Tail};
+	_ ->
+	    case (catch file:read(Fd, 4000)) of
+		{ok, Bin2} when binary(Bin2) -> 
+		    Bin3 = <<Bin/binary, Bin2/binary>>,
+		    skip_data(Bin3, Fd, Sz);
+		_Err ->
+		    ?Debug("EXIT in skip_data: ~p  ~p ~p~n", [Bin, Sz, _Err]),
+		    exit(normal)
+	    end
+    end;
 skip_data({bin, Bin}, _, Sz) ->
     ?Debug("Skip bin data ~p bytes ", [Sz]),
     <<Head:Sz/binary ,Tail/binary>> = Bin,
@@ -2267,19 +2220,23 @@ handle_out_reply(L, LineNo, YawsFile, UT, ARG) when list (L) ->
 %% yssi, yaws include
 handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, ARG) ->
     SC = get(sc),
-    
-    % special case for abs paths
+
+    %% special case for abs paths
     UT2=case Yfile of
 	    [$/|_] ->
-               url_type( Yfile, ARG#arg.docroot, ARG#arg.docroot_mount);
-           _Else ->
-				%why lists:flatten? is urltype.dir ever nested more than 1 level deep?
-				%!todo - replace with conc_path if 1 level - or specify that urltype fields should be written flat!
-				% All this deep listing of relatively *short* strings seems unwieldy.
-				%just how much performance can it gain if we end up using slower funcs like lists:flatten anyway?
-				% review!.
-               	url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile], ARG#arg.docroot, ARG#arg.docroot_mount)
-       end, 
+		url_type( Yfile, ARG#arg.docroot, ARG#arg.docroot_mount);
+	    _Else ->
+		%%why lists:flatten? is urltype.dir ever nested more than 
+		%% 1 level deep?
+		%%!todo - replace with conc_path if 1 level - or specify that 
+		%% urltype fields should be written flat!
+		%% All this deep listing of relatively *short* strings 
+		%seems unwieldy. just how much performance can it gain if we 
+		%% end up using slower funcs like lists:flatten anyway?
+		%% review!.
+               	url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile], 
+			 ARG#arg.docroot, ARG#arg.docroot_mount)
+	end, 
 
     case UT2#urltype.type of
 	yaws ->
@@ -2302,7 +2259,7 @@ handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, ARG) ->
 	    end;
 	error when SC#sconf.xtra_docroots /= [] ->
 	    SC2 = SC#sconf{docroot = hd(SC#sconf.xtra_docroots),
-				   xtra_docroots = tl(SC#sconf.xtra_docroots)},
+			   xtra_docroots = tl(SC#sconf.xtra_docroots)},
 	    put(sc, SC2), ARG2 = ARG#arg{docroot = SC2#sconf.docroot},
 	    Ret = handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, ARG2),
 	    put(sc, SC),
@@ -2321,11 +2278,11 @@ handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  UT, ARG) ->
     put(yaws_arg, ARG),  %kludge
 
     Res = case safe_ehtml_expand(E) of
-	{ok, Val} ->
-	    accumulate_content(Val);
-	{error, ErrStr} ->
-	    handle_crash(ARG, ErrStr)
-    end,
+	      {ok, Val} ->
+		  accumulate_content(Val);
+	      {error, ErrStr} ->
+		  handle_crash(ARG, ErrStr)
+	  end,
 
     erase(yaws_ut),
     erase(yaws_arg),
@@ -2404,7 +2361,7 @@ handle_out_reply({redirect_local, {any_path, URL}, Status}, LineNo,
 		     YawsFile, _UT, ARG);
 
 handle_out_reply({redirect_local, {net_path, URL}, Status}, _LineNo,
-		  _YawsFile,  _UT, _ARG) ->
+		 _YawsFile,  _UT, _ARG) ->
     Loc = ["Location: ", URL, "\r\n"],
     new_redir_h(get(outh), Loc, Status),
     ok;
@@ -2412,9 +2369,9 @@ handle_out_reply({redirect_local, {net_path, URL}, Status}, _LineNo,
 handle_out_reply({redirect_local, Path0, Status}, _LineNo, _YawsFile, _UT, ARG) ->
     SC=get(sc),
     Path = case Path0 of
-	   {abs_path, P} ->
+	       {abs_path, P} ->
 		   P;
-	   {rel_path, P} ->
+	       {rel_path, P} ->
 		   {abs_path, RP} = (ARG#arg.req)#http_request.path,
 		   case string:rchr(RP, $/) of
 		       0 ->
@@ -2422,9 +2379,9 @@ handle_out_reply({redirect_local, Path0, Status}, _LineNo, _YawsFile, _UT, ARG) 
 		       N ->
 			   [lists:sublist(RP, N),P]
 		   end;
-	   P ->
+	       P ->
 		   P
-	end,
+	   end,
     Scheme = yaws:redirect_scheme(SC),
     Headers = ARG#arg.headers,
     HostPort = yaws:redirect_host(SC, Headers#headers.host),
@@ -2466,7 +2423,7 @@ handle_out_reply(Reply, LineNo, YawsFile, _UT, ARG) ->
 	    [YawsFile, LineNo, Reply, ARG#arg.req]),
     handle_crash(ARG, L).
 
-    
+
 
 handle_out_reply_l([Reply|T], LineNo, YawsFile, UT, ARG, _Res) ->		  
     case handle_out_reply(Reply, LineNo, YawsFile, UT, ARG) of
@@ -2484,11 +2441,11 @@ handle_out_reply_l([], _LineNo, _YawsFile, _UT, _ARG, Res) ->
 
 
 %% fast server side include with macrolike variable bindings expansion
-%
+%%
 
-%ssi(File, Delimiter, Bindings, Dir) ->
-%    SC = get(sc),
-%    ssi(File, Delimiter, Bindings, Dir, SC#sconf.docroot, SC ).
+%%ssi(File, Delimiter, Bindings, Dir) ->
+%%    SC = get(sc),
+%%    ssi(File, Delimiter, Bindings, Dir, SC#sconf.docroot, SC ).
 
 
 ssi(File, Delimiter, Bindings, UT, ARG) ->
@@ -2497,34 +2454,40 @@ ssi(File, Delimiter, Bindings, UT, ARG) ->
 
 ssi(File, Delimiter, Bindings, UT, ARG, SC) ->
 
-	Dir = UT#urltype.dir,
-	%Dir here should be equiv to arg.prepath
+    Dir = UT#urltype.dir,
+    %%Dir here should be equiv to arg.prepath
 
-	Docroot = ARG#arg.docroot,
-	VirtualDir = ARG#arg.docroot_mount,
+    Docroot = ARG#arg.docroot,
+    VirtualDir = ARG#arg.docroot_mount,
 
 
-	%JMN - line below looks suspicious, why are we not keying on {ssi, File, Dir} ???
-	%Surely a name like header.inc may be present in various parts of the hierarchy so Dir should form part of key.
+    %%JMN - line below looks suspicious, why are we not keying on 
+    %% {ssi, File, Dir} ???
+    %%Surely a name like header.inc may be present in various parts of the 
+    %% hierarchy so Dir should form part of key.
     Key = {ssi, File, Delimiter},
 
-	%!todo - review rel_path & abs_path - define & document behaviour.. or remove them.
+    %%!todo - review rel_path & abs_path - define & document behaviour.. 
+    %% or remove them.
 
     FullPath =
 	case File of
-	{rel_path, FileName} ->
+	    {rel_path, FileName} ->
 		[Docroot, Dir,[$/|FileName]];
-	{abs_path, FileName} ->
+	    {abs_path, FileName} ->
 		[Docroot, [$/|FileName]];
-	[$/|_] ->
-		%absolute path - need to determine Docroot and any Vdir that might apply
+	    [$/|_] ->
+		%%absolute path - need to determine Docroot and any Vdir 
+		%% that might apply
 		{Vdir, DR} = vdirpath(SC, ARG, File),
-
+		
 		construct_fullpath(DR, File, Vdir);
-	_ ->
-		%relative to the Docroot and VirtualDir that correspond to the request.
-
-		construct_fullpath(Docroot, lists:flatten([Dir, File]), VirtualDir)
+	    _ ->
+		%%relative to the Docroot and VirtualDir that correspond 
+		%% to the request.
+		
+		construct_fullpath(Docroot, lists:flatten([Dir, File]), 
+				   VirtualDir)
 	end,
 
     Mtime = path_to_mtime(FullPath),
@@ -2546,10 +2509,10 @@ ssi(File, Delimiter, Bindings, UT, ARG, SC) ->
 		    SC2 = SC#sconf{docroot = hd(SC#sconf.xtra_docroots),
 				   xtra_docroots = tl(SC#sconf.xtra_docroots)},
 
-			ARG2 = ARG#arg{
-						docroot = hd(SC#sconf.xtra_docroots),
-						docroot_mount = "/"
-						},
+		    ARG2 = ARG#arg{
+			     docroot = hd(SC#sconf.xtra_docroots),
+			     docroot_mount = "/"
+			    },
 
 		    ssi(File, Delimiter, Bindings, UT, ARG2, SC2);
 		{error, Rsn} ->
@@ -2582,13 +2545,13 @@ expand_parts([{var, V} |T] , Bs, Ack) ->
 	{value, {_, Val}} ->
 	    expand_parts(T, Bs, [Val|Ack]);
 	false ->
+	    error_logger:format("No variable binding found for ~p", [V]),
 	    expand_parts(T, Bs, Ack)
-	    %%{error, ?F("No variable binding found for ~p", [V])}
     end;
 expand_parts([], _,Ack) ->
     lists:reverse(Ack).
 
-	    
+
 
 delim_split_file([], Data, _, _Ack) ->
     [{data, Data}];
@@ -2651,7 +2614,7 @@ handle_crash(ARG, L) ->
 		  {p, [], "Customized crash display code returned bad val"}],
 	    accumulate_content(ehtml_expand(T2)),
 	    break
-	
+
     end.
 
 %% Ret: true | false | {data, Data}
@@ -2679,12 +2642,12 @@ decide_deflate(true, Arg, Data, decide, Mode) ->
 					    {data, DB};
 					_Err -> 
 					    ?Debug(
-						"gzip Err: ~p~n", [_Err]),
-						false
-					end;
-				    stream ->
-					true
-				end;
+					       "gzip Err: ~p~n", [_Err]),
+					    false
+				    end;
+				stream ->
+				    true
+			    end;
 			false -> false
 		    end;
 		false ->
@@ -2788,7 +2751,7 @@ get_more_post_data(PPS, ARG) ->
     Len = list_to_integer((ARG#arg.headers)#headers.content_length),
     if N + PPS < Len ->
 	    case get_client_data(ARG#arg.clisock, N, 
-			       is_ssl(SC#sconf.ssl)) of
+				 is_ssl(SC#sconf.ssl)) of
 		Bin when binary(Bin) ->
 		    {partial, Bin};
 		Else ->
@@ -2796,7 +2759,7 @@ get_more_post_data(PPS, ARG) ->
 	    end;
        true ->
 	    case get_client_data(ARG#arg.clisock, Len - PPS, 
-			       is_ssl(SC#sconf.ssl)) of
+				 is_ssl(SC#sconf.ssl)) of
 		Bin when binary(Bin) ->
 		    Bin;
 		Else ->
@@ -2830,7 +2793,7 @@ ut_open(UT) ->
 	    case UT#urltype.deflate of
 		B when binary(B) ->
 		    ?Debug("ut_open using deflated binary of size ~p~n", 
-			[size(B)]),
+			   [size(B)]),
 		    {bin, B}
 	    end
     end.
@@ -2881,7 +2844,7 @@ parse_range_throw(L, Tot) ->
 	    end
     end.
 
-			    
+
 %% This is not exactly what the RFC describes, but we do not want to
 %% deal with multipart/byteranges.
 unite_ranges(all, _) ->
@@ -2902,8 +2865,8 @@ unite_ranges({fromto, F0, T0, Tot},{fromto,F1,T1, Tot}) ->
      end,
      Tot
     }.
-	 
-	     	
+
+
 %% ret:  all | error | {fromto, From, To, Tot}
 requested_range(RangeHeader, TotalSize) ->
     case yaws:split_sep(RangeHeader, $,) of
@@ -2937,16 +2900,16 @@ deliver_small_file(CliSock, _Req, UT, Range) ->
     ut_close(Fd),
     deliver_accumulated(CliSock),
     done_or_continue().
-    
+
 deliver_large_file(CliSock,  _Req, UT, Range) ->
     case deliver_accumulated(undefined, CliSock, 
 			     case Range of
-				all -> 
+				 all -> 
 				     case yaws:outh_get_content_encoding() of
-					identity -> no;
-					D -> D
+					 identity -> no;
+					 D -> D
 				     end;
-				_ -> no
+				 _ -> no
 			     end, 
 			     undefined, stream) of
 	discard -> 
@@ -2967,7 +2930,7 @@ send_file(CliSock, Fd,  {fromto, From, To, _Tot}, undeflated) ->
 
 send_file(CliSock, Fd, Priv) ->
     ?Debug("send_file(~p,~p, ...)~n", 
-	[CliSock, Fd]),
+	   [CliSock, Fd]),
     case file:read(Fd, (get(gc))#gconf.large_file_chunk_size) of
 	{ok, Bin} ->
 	    Priv1 = send_streamcontent_chunk(Priv, CliSock, Bin),
@@ -2989,7 +2952,7 @@ send_file_range(CliSock, Fd, Len) when Len > 0 ->
 send_file_range(CliSock, Fd, 0) ->
     file:close(Fd),
     end_streaming(undeflated, CliSock).
-    
+
 
 
 
@@ -3023,7 +2986,7 @@ url_type(GetPath, ArgDocroot, VirtualDir) ->
 	    if 
 		((N-When) >= Refresh) ->
 		    ?Debug("Timed out entry for ~s ~p~n", 
-			[GetPath, {When, N}]),
+			   [GetPath, {When, N}]),
 		    %% more than 30 secs old entry
 		    UT2 = do_url_type(SC, GetPath, ArgDocroot, VirtualDir),
 		    case file_changed(UT, UT2) of
@@ -3057,11 +3020,11 @@ file_changed(UT1, UT2) ->
 	_ ->
 	    true % don't care too much
     end.
-	
-	    
+
+
 
 cache_size(UT) when binary(UT#urltype.deflate), 
-		    binary(UT#urltype.data) ->
+binary(UT#urltype.data) ->
     size(UT#urltype.deflate) + size(UT#urltype.data);
 cache_size(UT) when binary(UT#urltype.data) ->
     size(UT#urltype.data);
@@ -3072,9 +3035,9 @@ cache_size(_UT) ->
 
 
 cache_file(SC, GC, Path, UT) when 
-  UT#urltype.type == regular ;
-  UT#urltype.type == yaws,
-  UT#urltype.pathinfo == undefined ->
+UT#urltype.type == regular ;
+UT#urltype.type == yaws,
+UT#urltype.pathinfo == undefined ->
     E = SC#sconf.ets,
     [{num_files, N}] = ets:lookup(E, num_files),
     [{num_bytes, B}] = ets:lookup(E, num_bytes),
@@ -3110,8 +3073,8 @@ cache_file(SC, GC, Path, UT) when
 				    {ok, DB} when binary(DB), 
 						  size(DB)*10<size(Bin)*9 ->
 					?Debug("storing deflated version "
-					    "of ~p~n",
-					[UT#urltype.fullpath]),
+					       "of ~p~n",
+					       [UT#urltype.fullpath]),
 					DB;
 				    _ -> undefined
 				end;
@@ -3153,7 +3116,7 @@ clear_ets(E) ->
     ets:match_delete(E, {{urlc, '_'}, '_', '_'}),
     ets:insert(E, {num_files, 0}),
     ets:insert(E, {num_bytes, 0}).
-    
+
 
 %% return #urltype record
 do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
@@ -3166,11 +3129,12 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
 	    {Comps, RevFile} = comp_split(GetPath),
 	    {_Type, Mime} = suffix_type(RevFile),
 
-		FullPath = construct_fullpath(ArgDocroot, GetPath, VirtualDir),
+	    FullPath = construct_fullpath(ArgDocroot, GetPath, VirtualDir),
 
-		%!!WARNING!!!
-		%!TODO - review & test!
-		%Implications of vdirs on DAV have not yet been fully considered by author of vdir support (JMN)
+	    %%!!WARNING!!!
+	    %%!TODO - review & test!
+	    %%Implications of vdirs on DAV have not yet been fully 
+	    %% considered by author of vdir support (JMN)
 
 	    #urltype{type = dav, 
 		     dir = conc_path(Comps),
@@ -3178,32 +3142,31 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
 		     path = GetPath,
 		     fullpath = FullPath,
 		     mime = Mime};
-		"/" -> %% special case
+	"/" -> %% special case
 	    case lists:keysearch("/", 1, SC#sconf.appmods) of
 		{value, {_, Mod}} ->
 		    #urltype{
-				type = appmod, 
-			    data = {Mod, []},
-				dir = "",
-				path = "",
-				fullpath = ArgDocroot
-			};
+		  type = appmod, 
+		  data = {Mod, []},
+		  dir = "",
+		  path = "",
+		  fullpath = ArgDocroot
+		 };
 		_ ->
 		    maybe_return_dir(ArgDocroot, GetPath, VirtualDir)
 	    end;
 	[$/, $~ |Tail] ->
 	    ret_user_dir(Tail);
 	_ ->
-		FullPath = construct_fullpath(ArgDocroot, GetPath, VirtualDir),
-
+	    FullPath = construct_fullpath(ArgDocroot, GetPath, VirtualDir),
 
 	    {Comps, RevFile} = comp_split(GetPath),
 	    ?Debug("Comps = ~p RevFile = ~p~n",[Comps, RevFile]),
 
-		RequestSegs = string:tokens(GetPath,"/"),
+	    RequestSegs = string:tokens(GetPath,"/"),
 
-	    %case check_appmods(SC#sconf.appmods, Comps, RevFile) of
-		case active_appmod(SC#sconf.appmods, RequestSegs) of
+	    %%case check_appmods(SC#sconf.appmods, Comps, RevFile) of
+	    case active_appmod(SC#sconf.appmods, RequestSegs) of
 		false ->
 		    ?Debug("FullPath = ~p~n", [FullPath]),
 
@@ -3222,125 +3185,120 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
 			{ok, FI} when FI#file_info.type == directory ->
 			    case RevFile of
 				[] ->
-				    maybe_return_dir(ArgDocroot, GetPath, VirtualDir);
+				    maybe_return_dir(ArgDocroot, GetPath, 
+						     VirtualDir);
 				_ ->
-				    %%Presence of RevFile indicates dir url had no trailing /
+				    %%Presence of RevFile indicates dir url 
+				    %% had no trailing /
 				    #urltype{
-						type = redir,
-					    path = [GetPath, "/"]}
+				  type = redir,
+				  path = [GetPath, "/"]}
 			    end;
 			_Err ->
 			    %% non-optimal, on purpose
-			    maybe_return_path_info(SC, Comps, RevFile, ArgDocroot, VirtualDir)
+			    maybe_return_path_info(SC, Comps, RevFile, 
+						   ArgDocroot, VirtualDir)
 		    end;
 		{ok, {Mount, Mod}} ->
-			%active_appmod found the most specific appmod for this request path
-			% - now we need to determine the prepath & path_info
+		    %%active_appmod found the most specific appmod for this 
+		    %% request path
+		    %% - now we need to determine the prepath & path_info
 
-			MountSegs = string:tokens(Mount,"/"),
-				
-			case Mount of
+		    MountSegs = string:tokens(Mount,"/"),
+
+		    case Mount of
 			[$/] ->
-				%'root' appmod
-				PreSegments = [],
-				PostSegments = lists:sublist(RequestSegs,1,length(RequestSegs)),
-				Prepath = "";
+			    %%'root' appmod
+			    PreSegments = [],
+			    PostSegments = lists:sublist(RequestSegs,1,
+							 length(RequestSegs)),
+			    Prepath = "";
 			[$/|_] ->
-				%'anchored' appmod mount.
-				PreSegments = lists:sublist(RequestSegs,length(MountSegs)-1),
-				PostSegments = lists:sublist(RequestSegs,length(MountSegs)+1,length(RequestSegs)),
-				Prepath = case PreSegments of 
-				"" ->
-					"/";
+			    %%'anchored' appmod mount.
+			    PreSegments = lists:sublist(RequestSegs,
+							length(MountSegs)-1),
+			    PostSegments = lists:sublist(RequestSegs,
+							 length(MountSegs)+1,
+							 length(RequestSegs)),
+			    Prepath = case PreSegments of 
+					  "" ->
+					      "/";
+					  _ ->
+					      "/" ++ join(PreSegments,"/") ++ "/"
+				      end;
+			_ ->
+			    %%'floating' appmod mount.
+			    {PreSegments,PostSegments} = 
+				split_at_segment(Mount,RequestSegs,[]),
+			    Prepath = case PreSegments of 
+					  "" ->
+					      "/";
+					  _ ->
+					      "/" ++ join(PreSegments,"/") ++ 
+						  "/"
+				      end
+		    end,
+		    ?Debug("Pre ~p Post ~p~n",[PreSegments,PostSegments]),	
+
+		    PathI = case PostSegments of
+				[] ->
+				    "";
 				_ ->
-					"/" ++ join(PreSegments,"/") ++ "/"
-				end;
-			_ ->
-				%'floating' appmod mount.
-				{PreSegments,PostSegments} = split_at_segment(Mount,RequestSegs,[]),
-				Prepath = case PreSegments of 
-				"" ->
-					"/";
-				_ ->
-					"/" ++ join(PreSegments,"/") ++ "/"
-				end
-			end,
-			?Debug("Pre ~p Post ~p~n",[PreSegments,PostSegments]),								
+				    "/" ++ join(PostSegments,"/")
+			    end,
+		    %%absence of RevFile tells us there was a trailing slash.
+		    PathInf = case RevFile of
+				  [] ->
+				      PathI ++ "/";
+				  _ ->
+				      PathI
+			      end,
+		    PathInfo = case PathInf of
+				   "" ->
+				       undefined;
+				   _ ->
+				       PathInf
+			       end,
+		    Path = case MountSegs of
+			       [] ->
+				   %%'root' appmod
+				   Prepath;				
+			       _ ->
+				   Prepath ++ tl(MountSegs)
+			   end,
 
+		    #urltype{
+			     type = appmod,
+			     data = {Mod, PathInfo},
+			     dir = Prepath, 
+			     path = Path,
+			     fullpath = FullPath,
+			     pathinfo = PathInfo
+			    }				
 
-			PathI = case PostSegments of
-			[] ->
-				"";
-			_ ->
-				"/" ++ join(PostSegments,"/")			
-			end,
-			%absence of RevFile tells us there was a trailing slash.
-			PathInf = case RevFile of
-			[] ->
-				PathI ++ "/";
-			_ ->
-				PathI
-			end,
-			PathInfo = case PathInf of
-			"" ->
-				undefined;
-			_ ->
-				PathInf
-			end,
-			Path = case MountSegs of
-			[] ->
-				%'root' appmod
-				Prepath;				
-			_ ->
-				Prepath ++ tl(MountSegs)
-			end,
-
-			#urltype{
-				type = appmod,
-				data = {Mod, PathInfo},
-				dir = Prepath, 
-				path = Path,
-				fullpath = FullPath,
-				pathinfo = PathInfo
-			}				
-
-		    %File = lists:reverse(RevFile),
-		    %?Debug("PathElem = ~p Trail = ~p File = ~p~n", [PathElem, Trail, File]),
-		    %#urltype{type = appmod, 
-			%     data = {Mod, if
-			%		      Trail==[], PathElem == File ->
-			%				  [];
-			%			  hd(File) == $/, PathElem == tl(File) ->
-			%				  [];
-			%		      true ->
-			%				  case conc_path(Trail) ++ File of
-			%				  X when hd(X) == $/ ->
-			%					  X;
-			%				  X ->
-			%					  X
-			%				  end
-			%		  	  end},
-			%     path = conc_path(Head)}
-	    
 	    end
     end.
 
-			    
-% comp_split/1 - split a path around "/" returning final segment as reversed string.
-% return {Comps, RevPart} where Comps is a (possibly empty) list of path components - always with trailing "/"
-% revPart is the final segment in reverse and has no "/".  
-% e.g split( "/test/etc/index.html",[],[]) -> {["/test/", "etc/"], "lmth.xedni"}
-% revPart is useful in this form for looking up the file extension's mime-type.
-%
-% Terminology note to devs: reserve the word 'comp' to refer to a single fragment of a path that we know has 
-% a trailing slash. If you're dealing just with the part between slashes - consider using the term 'segment' instead.
-% e.g  "x/" "/"   are all valid 'comps'
-% "/x" "/x/y/" "x" are not.
-%
-comp_split(Path) ->
-	do_comp_split(Path,[],[]).
 
-%when Part /= [] 
+%% comp_split/1 - split a path around "/" returning final segment as 
+%% reversed string.
+%% return {Comps, RevPart} where Comps is a (possibly empty) list of path 
+%% components - always with trailing "/"
+%% revPart is the final segment in reverse and has no "/".  
+%% e.g split( "/test/etc/index.html",[],[]) -> {["/test/", "etc/"], "lmth.xedni"}
+%% revPart is useful in this form for looking up the file extension's mime-type.
+%%
+%% Terminology note to devs: reserve the word 'comp' to refer to a single 
+%% fragment of a path that we know has 
+%% a trailing slash. If you're dealing just with the part between slashes - 
+%% consider using the term 'segment' instead.
+%% e.g  "x/" "/"   are all valid 'comps'
+%% "/x" "/x/y/" "x" are not.
+%%
+comp_split(Path) ->
+    do_comp_split(Path,[],[]).
+
+%%when Part /= [] 
 do_comp_split([$/|Tail], Comps, Part) ->
     NewComp = lists:reverse([$/|Part]),
     do_comp_split(Tail,  [NewComp | Comps], []);
@@ -3351,92 +3309,100 @@ do_comp_split([], Comps, Part) ->
 
 
 %%active_appmod/2
-%find longest appmod match for request. (ie 'most specific' appmod) 
-% - conceptually similar to the vdirpath scanning - but must also support 'floating appmods'
-% i.e an appmod specified as <path , appmodname> where 'path' has no leading slash.
-%
-% a 'floating' appmod is not tied to a specific point in the URI structure
-% e.g for the configuration entry <myapp , myappAppmod> 
-% the requests /docs/stuff/myapp/etc  & /otherpath/myapp   will both trigger the myappAppmod module.
-% whereas for the configuration entry </docs/stuff/myapp , myappAppmod>
-% the request /otherpath/myapp will not trigger the appmod.
-%
-% !todo - consider supporting 'compound' floating appmods. 
-% e.g <stuff/myapp , someappmod> to match   /somewhere/stuff/myapp/xyz  but not /somewhere/myapp/xyz 
-%
+%%find longest appmod match for request. (ie 'most specific' appmod) 
+%% - conceptually similar to the vdirpath scanning - but must also support 
+%% 'floating appmods' i.e an appmod specified as <path , appmodname> where 
+%% 'path' has no leading slash.
+%%
+%% a 'floating' appmod is not tied to a specific point in the URI structure
+%% e.g for the configuration entry <myapp , myappAppmod> 
+%% the requests /docs/stuff/myapp/etc  & /otherpath/myapp   will both 
+%% trigger the myappAppmod module.
+%% whereas for the configuration entry </docs/stuff/myapp , myappAppmod>
+%% the request /otherpath/myapp will not trigger the appmod.
+%%
+%% !todo - consider supporting 'compound' floating appmods. 
+%% e.g <stuff/myapp , someappmod> to match   /somewhere/stuff/myapp/xyz  
+%% but not /somewhere/myapp/xyz 
+%%
 active_appmod([], _RequestSegs) ->
-	false;
+    false;
 active_appmod(AppMods, RequestSegs) ->
 
-	%!todo - review/test performance (e.g 'fun' calls are slower than a call to a local func - replace?)
+    %%!todo - review/test performance (e.g 'fun' calls are slower than a 
+    %% call to a local func - replace?)
 
-	%Accumulator is of form {RequestSegs, {AppmodMountPoint,Mod}}
-	Matched = lists:foldl(
-				fun(Pair,Acc) ->
-					{Mount, Mod} = Pair,
-					{ReqSegs, {LongestSoFar, _}} = Acc,
+    %%Accumulator is of form {RequestSegs, {AppmodMountPoint,Mod}}
+    Matched = lists:foldl(
+		fun(Pair,Acc) ->
+			{Mount, Mod} = Pair,
+			{ReqSegs, {LongestSoFar, _}} = Acc,
 
-					MountSegs = string:tokens(Mount,"/"),
-					case lists:prefix(MountSegs,ReqSegs) of
-					true ->
-						case LongestSoFar of
-						[$/|_] ->
-							%simple comparison of string length (as opposed to number of segments) should be ok here.
-							if length(Mount) > length(LongestSoFar) ->
-								{ReqSegs, {Mount, Mod}};
-							true ->
-								Acc
-							end;
-						_ ->
-							%existing match is 'floating' - we trump it.
+			MountSegs = string:tokens(Mount,"/"),
+			case lists:prefix(MountSegs,ReqSegs) of
+			    true ->
+				case LongestSoFar of
+				    [$/|_] ->
+					%%simple comparison of string length 
+					%% (as opposed to number of segments) 
+					%% should be ok here.
+					if length(Mount) > 
+					   length(LongestSoFar) ->
+						{ReqSegs, {Mount, Mod}};
+					   true ->
+						Acc
+					end;
+				    _ ->
+					%%existing match is 'floating' - 
+					%% we trump it.
 
-							{ReqSegs, {Mount, Mod}}
-						end;
-					false ->
-						case LongestSoFar of
-						[$/|_] ->										
-							%There is already a match for an 'anchored' (ie absolute path) mount point.
-							% floating appmod can't override.
-							Acc;
-						_ ->
-							%check for 'floating' match
-							case lists:member(Mount, ReqSegs) of
-							true ->
-								%!todo - review & document.
-								%latest 'floating' match wins if multiple match?
-								% (order in config vs position in request URI ?) 
+					{ReqSegs, {Mount, Mod}}
+				end;
+			    false ->
+				case LongestSoFar of
+				    [$/|_] ->
+					%%There is already a match for an 
+					%% 'anchored' (ie absolute path) 
+					%% mount point.
+					%% floating appmod can't override.
+					Acc;
+				    _ ->
+					%%check for 'floating' match
+					case lists:member(Mount, ReqSegs) of
+					    true ->
+						%%!todo - review & document.
+						%%latest 'floating' match wins 
+						%% if multiple match?
+						%% (order in config vs position 
+						%% in request URI ?) 
 
-								{ReqSegs, {Mount, Mod}};
-							false ->
-								Acc
-							end
-						end
+						{ReqSegs, {Mount, Mod}};
+					    false ->
+						Acc
 					end
-				end, {RequestSegs, {"",""}}, AppMods),
+				end
+			end
+		end, {RequestSegs, {"",""}}, AppMods),
 
-	case Matched of
+    case Matched of
 	{_RequestSegs, {"",""}} ->
-		%no appmod corresponding specifically to this http_request.path
+%%%no appmod corresponding specifically to this http_request.path
 
-		false;
+	    false;
 	{_RequestSegs, {Mount, Mod}} ->
 
-		{ok, {Mount, Mod}}
-	end
-.
+	    {ok, {Mount, Mod}}
+    end
+	.
 
-%split a list of segments into 2 lists either side of element matching Seg.
-%(no elements contain slashes)
+%%split a list of segments into 2 lists either side of element matching Seg.
+%%(no elements contain slashes)
 split_at_segment(_, [], _Acc) ->
     false;
 split_at_segment(Seg,[Seg|Tail],Acc) ->
-	{lists:reverse(Acc),Tail};
+    {lists:reverse(Acc),Tail};
 split_at_segment(Seg,[H|Tail],Acc) ->
-	split_at_segment(Seg, Tail, [H|Acc]).
-
-
-
-
+    split_at_segment(Seg, Tail, [H|Acc]).
 
 
 
@@ -3456,7 +3422,6 @@ check_appmods(AppMods, Comps, RevFile) ->
 	RET ->
 	    RET
     end.
-			      
 
 
 check_comps([], _) ->
@@ -3468,8 +3433,8 @@ check_comps([Pair |Tail], Comps) ->
 	RET ->
 	    RET
     end.
-    
-				      
+
+
 split_at(_, [], _Acc) ->
     false;
 split_at(AM={"/", _Mod}, [PEslash|Tail], Acc) ->
@@ -3499,30 +3464,32 @@ no_slash_eq(_,_) ->
 
 
 %% construct_fullpath
-%
-%preconditions: 
-% - DR, GetPath, VirtualDir already validated &/or normalized 
-% - VirtualDir is empty string, or a prefix of GetPath of the form "/path/" where path may also contain "/"
-% - DocRoot is a valid physical path to a directory, with no trailing "/"
-%
-%i.e this is an inner function, so no sanity checks here.
-%
+%%
+%%preconditions: 
+%% - DR, GetPath, VirtualDir already validated &/or normalized 
+%% - VirtualDir is empty string, or a prefix of GetPath of the form "/path/" 
+%% where path may also contain "/"
+%% - DocRoot is a valid physical path to a directory, with no trailing "/"
+%%
+%%i.e this is an inner function, so no sanity checks here.
+%%
 construct_fullpath(DocRoot,GetPath,VirtualDir) ->
-	case VirtualDir of
+    case VirtualDir of
 	[] ->
-		DocRoot ++ GetPath;
+	    DocRoot ++ GetPath;
 	_ ->
-		%trim the virtual base off the GET request path before appending to DocRoot.
-		%(leaving one "/" - therefore don't add 1 to length)
-		DocRoot ++ string:substr(GetPath,length(VirtualDir))	
-	end
-.
+	    %%trim the virtual base off the GET request path before appending 
+	    %% to DocRoot.
+	    %%(leaving one "/" - therefore don't add 1 to length)
+	    DocRoot ++ string:substr(GetPath,length(VirtualDir))	
+    end
+	.
 
-%preconditions: 
-% - see 'construct_fullpath'
-%
+%%preconditions: 
+%% - see 'construct_fullpath'
+%%
 try_index_file(DR, GetPath, VirtualDir) ->
-	FullPath = construct_fullpath(DR, GetPath, VirtualDir),
+    FullPath = construct_fullpath(DR, GetPath, VirtualDir),
 
     case prim_file:read_file_info([FullPath, "index.yaws"]) of
 	{ok, FI} when FI#file_info.type == regular ->
@@ -3530,28 +3497,30 @@ try_index_file(DR, GetPath, VirtualDir) ->
 	_ ->
 	    case prim_file:read_file_info([FullPath, "index.html"]) of
 		{ok, FI} when FI#file_info.type == regular ->
-		    do_url_type(get(sc), GetPath ++ "index.html", DR, VirtualDir);
+		    do_url_type(get(sc), GetPath ++ "index.html", DR, 
+				VirtualDir);
 		_ ->
 		    case prim_file:read_file_info([FullPath, "index.php"]) of
 			{ok, FI} when FI#file_info.type == regular ->
-			    do_url_type(get(sc), GetPath ++ "index.php", DR, VirtualDir);
+			    do_url_type(get(sc), GetPath ++ "index.php", DR, 
+					VirtualDir);
 			_ ->
 			    noindex
 		    end
 	    end
-     end.
-		
+    end.
+
 
 maybe_return_dir(DR, GetPath,VirtualDir) ->
     case try_index_file(DR, GetPath,VirtualDir) of
 	noindex ->
-		FullPath = construct_fullpath(DR, GetPath, VirtualDir),
+	    FullPath = construct_fullpath(DR, GetPath, VirtualDir),
 
 	    case file:list_dir(FullPath) of
 		{ok, List} ->
 		    #urltype{type = directory,
 			     fullpath = FullPath,
-				 dir = GetPath,
+			     dir = GetPath,
 			     data = List -- [".yaws_auth"]};
 		_Err ->
 		    #urltype{type=error}
@@ -3564,84 +3533,89 @@ maybe_return_dir(DR, GetPath,VirtualDir) ->
 
 %%- maybe_return_path_info/5
 %% <historical-comments>
-% sick apache style urls http://www.x.com/a/foo.yaws/c/d/
-% where /c/d/ ends up in pathinfo
-%
-% neither is this entirely correct since the /c/d/ files may exists
-% and in that case we'll deliver em :-(
-%
-% Comment from Carsten:
-%
-% Theses urls may be a matter of taste, but since they are mentioned in
-% cgi doc it seemed good to implement them.  Besides, I find them handy.
-%
-% If the current behaviour is correct is hard to tell without first
-% writing a specification :-) To treat foo.yaws as a directory if it
-% is one, was intentional.  I find it nice to be able to change the
-% implementation from a script to a real directory and did not want to
-% break anyones site, just because they might have a directory called
-% `examples.yaws'.  There is one inconsistency though:
-%
-%   http://www.x.com/a/foo.yaws/b/bar.yaws/c/d
-%
-% will not work, if a/foo.yaws is a directory and
-% /a/foo.yaws/b/bar.yaws a script.  Possibly, this used to be
-% different and may again be changed in the future.
-%
+%% sick apache style urls http://www.x.com/a/foo.yaws/c/d/
+%% where /c/d/ ends up in pathinfo
+%%
+%% neither is this entirely correct since the /c/d/ files may exists
+%% and in that case we'll deliver em :-(
+%%
+%% Comment from Carsten:
+%%
+%% Theses urls may be a matter of taste, but since they are mentioned in
+%% cgi doc it seemed good to implement them.  Besides, I find them handy.
+%%
+%% If the current behaviour is correct is hard to tell without first
+%% writing a specification :-) To treat foo.yaws as a directory if it
+%% is one, was intentional.  I find it nice to be able to change the
+%% implementation from a script to a real directory and did not want to
+%% break anyones site, just because they might have a directory called
+%% `examples.yaws'.  There is one inconsistency though:
+%%
+%%   http://www.x.com/a/foo.yaws/b/bar.yaws/c/d
+%%
+%% will not work, if a/foo.yaws is a directory and
+%% /a/foo.yaws/b/bar.yaws a script.  Possibly, this used to be
+%% different and may again be changed in the future.
+%%
 %% </historical-comments>
-%JMN 2007-02 - the 'future' mentioned above is here.
-% 
-% We now support urls which may contain segments on either side of the actual script that *look* like a script but aren't.
-% e.g  http://www.x.com/a/foo.yaws/b/showcode.yaws/item/mypage.yaws?ok=true
-%
-% where foo.yaws may actually be a directory,
-% showcode.yaws is the actual script
-% /item/mypage.yaws  is just the PATH_INFO data that is passed to the script
-% 
-% This is done by scanning for the rightmost dotted component that corresponds to a script file.
-% Starting from the right - we do a call to the filesystem to test that it is a file, only when we reach a dotted component
-% which has a suffix corresponding to a non 'regular' mime type.
-% (this should keep the number of calls to the filesystem to a minimum - 
-%  except maybe in some pathologically weird cases where there are many dotted components in the post-script PATH_INFO)
-% 
-% If we don't ever hit a dotted segment that represents a script file - that's ok..
-% It just means this is an invalid path, because we only even started scanning after determining that
-% the full path did not correspond directly to a file or folder - and therefore should be a script url.
-% (appmods were checked for earlier)
-% 
-%  
-%
-%!todo - reduce this comment block to statements relevant to current state of code only.
-% - e.g Late 2007 may be a good time to remove the historical comments. - always available in repository.
+%%JMN 2007-02 - the 'future' mentioned above is here.
+%% 
+%% We now support urls which may contain segments on either side of the actual script that *look* like a script but aren't.
+%% e.g  http://www.x.com/a/foo.yaws/b/showcode.yaws/item/mypage.yaws?ok=true
+%%
+%% where foo.yaws may actually be a directory,
+%% showcode.yaws is the actual script
+%% /item/mypage.yaws  is just the PATH_INFO data that is passed to the script
+%% 
+%% This is done by scanning for the rightmost dotted component that corresponds to a script file.
+%% Starting from the right - we do a call to the filesystem to test that it is a file, only when we reach a dotted component
+%% which has a suffix corresponding to a non 'regular' mime type.
+%% (this should keep the number of calls to the filesystem to a minimum - 
+%%  except maybe in some pathologically weird cases where there are many dotted components in the post-script PATH_INFO)
+%% 
+%% If we don't ever hit a dotted segment that represents a script file - that's ok..
+%% It just means this is an invalid path, because we only even started scanning after determining that
+%% the full path did not correspond directly to a file or folder - and therefore should be a script url.
+%% (appmods were checked for earlier)
+%% 
+%%  
+%%
+%%!todo - reduce this comment block to statements relevant to current state of code only.
+%% - e.g Late 2007 may be a good time to remove the historical comments. - always available in repository.
 
-%!todo - support some sort of 'scriptalias' to allow non-dotted script components.
-% (for efficiency - we don't want to call into filesystem for every non-dotted segment - but looking up scriptaliases ok)
-%
+%%!todo - support some sort of 'scriptalias' to allow non-dotted script components.
+%% (for efficiency - we don't want to call into filesystem for every non-dotted segment - but looking up scriptaliases ok)
+%%
+
+
 maybe_return_path_info(SC, Comps, RevFile, DR, VirtualDir) ->
 
     case path_info_split(Comps, {DR, VirtualDir}) of
 	{not_a_script, error} ->
-		 %can we use urltype.data to return more info?
-		 % - logging?
-	     #urltype{type=error};
+	    %%can we use urltype.data to return more info?
+	    %% - logging?
+	    #urltype{type=error};
 	{ok, FI, FullPath, HeadComps, File, TrailComps, Type, Mime} ->
-		%'File' is the only comp that has been returned without trailing "/"
+	    %%'File' is the only comp that has been returned without trailing "/"
 
 	    {Type2, Mime2} = 
-			case member(Type, SC#sconf.allowed_scripts) of
-			true ->
-				{Type, Mime};
-			false ->
-				%!todo review. 
-				%Should we really be returning the file as text/plain when there is pathinfo present?
-				%Perhaps a 403 error would be more appropriate. 
-				{regular, "text/plain"}
-			end,
+		case member(Type, SC#sconf.allowed_scripts) of
+		    true ->
+			{Type, Mime};
+		    false ->
+			%%!todo review. 
+			%%Should we really be returning the file as text/plain 
+			%% when there is pathinfo present?
+			%%Perhaps a 403 error would be more appropriate. 
+			{regular, "text/plain"}
+		end,
 
-	    ?Debug("'script-selection' FullPath= ~p~n Mime=~p~n", [FullPath, Mime2]),
+	    ?Debug("'script-selection' FullPath= ~p~n Mime=~p~n", 
+		   [FullPath, Mime2]),
 
-		%Trail = [$/ | conc_path(TrailComps ++ [lists:reverse(RevFile)])],
-		Trail = conc_path([ "/" ] ++ TrailComps ++ [ lists:reverse(RevFile) ]),
+	    %%Trail = [$/ | conc_path(TrailComps ++ [lists:reverse(RevFile)])],
+	    Trail = conc_path([ "/" ] ++ TrailComps ++ 
+			      [ lists:reverse(RevFile) ]),
 
 
 	    #urltype{type = Type2,
@@ -3662,19 +3636,23 @@ maybe_return_path_info(SC, Comps, RevFile, DR, VirtualDir) ->
 
 
 %%scan a list of 'comps' of form "pathsegment/"   (trailing slash always present)
-% - looking for the rightmost dotted component that corresponds to a script file.
-% 
-% By the time path_info_split is called - the fullpath has already been tested and found not to be a file or directory
-%
-% Limitation: we don't support a script file without a dot. 
-%  - otherwise we'd have to hit the filesystem for too many path components to see if they exist & are an executable file.
-%
-% !!todo - review (potential security issue).
-% Right-to-left scanning should stop once we reach a 'document root mount point',
-% otherwise the Docroot that has been determined based on the full request path becomes invalid! 
-%
+%% - looking for the rightmost dotted component that corresponds to a script 
+%% file.
+
+%% By the time path_info_split is called - the fullpath has already been tested
+%%  and found not to be a file or directory
+%%
+%% Limitation: we don't support a script file without a dot. 
+%%  - otherwise we'd have to hit the filesystem for too many path components 
+%% to see if they exist & are an executable file.
+%%
+%% !!todo - review (potential security issue).
+%% Right-to-left scanning should stop once we reach a 'document root mount 
+%% point', otherwise the Docroot that has been determined based on the full
+%%  request path becomes invalid! 
+%%
 path_info_split(Comps,DR_Vdir) ->
-	path_info_split(lists:reverse(Comps), DR_Vdir, []).
+    path_info_split(lists:reverse(Comps), DR_Vdir, []).
 
 path_info_split([H|T], {DR, VirtualDir}, AccPathInfo) ->
     [$/|RevPath] = lists:reverse(H),
@@ -3685,26 +3663,29 @@ path_info_split([H|T], {DR, VirtualDir}, AccPathInfo) ->
 	    {Type, Mime} = mime_types:t(Suff),
 	    case Type of
 		regular ->
-			%Don't hit the filesystem to test components that 'mime_types' indicates can't possibly be scripts
+		    %%Don't hit the filesystem to test components that 
+		    %%'mime_types' indicates can't possibly be scripts
 		    path_info_split(T, {DR, VirtualDir}, [H|AccPathInfo]);
 		X ->
 
-			%We may still be in the 'PATH_INFO' section
-			%Test to see if it really is a script 
-			
-			TestPath = lists:flatten(lists:reverse(T)),
-			FullPath = construct_fullpath(DR, TestPath, VirtualDir) ++ string:strip(H,right,$/),
+		    %%We may still be in the 'PATH_INFO' section
+		    %%Test to see if it really is a script 
+
+		    TestPath = lists:flatten(lists:reverse(T)),
+		    FullPath = construct_fullpath(DR, TestPath, VirtualDir) ++
+			string:strip(H,right,$/),
 
 		    ?Debug("Testing for script at: ~p~n", [FullPath]),
 
 		    case prim_file:read_file_info(FullPath) of
 			{ok, FI} when FI#file_info.type == regular ->
-				{ok, FI, FullPath, lists:reverse(T), string:strip(H,right,$/), AccPathInfo, X, Mime};
+			    {ok, FI, FullPath, lists:reverse(T), 
+			     string:strip(H,right,$/), AccPathInfo, X, Mime};
 			{ok, FI} when FI#file_info.type == directory ->
-				%just a case of a bad path starting at this point.
+			    %%just a case of a bad path starting at this point.
 			    {not_a_script, error};
 			_Err ->
-				%just looked like a script - keep going.				
+			    %%just looked like a script - keep going.
 			    path_info_split(T, {DR, VirtualDir}, [H|AccPathInfo])
 		    end
 	    end
@@ -3723,13 +3704,14 @@ suffix_from_rev([C|T], A) ->
 suffix_from_rev([], _A) ->
     [].
 
+%%conc_path 
+%% - single-level concatenatenation of a list of path components which 
+%% already contain slashes.
+%% tests suggest it's significantly faster than lists:flatten or lists:concat 
+%% & marginally faster than lists:append (for paths of 3 or more segments anyway)
+%% tested with various fairly short path lists - see src/benchmarks folder
+%%
 
-%conc_path 
-% - single-level concatenatenation of a list of path components which already contain slashes.
-% tests suggest it's significantly faster than lists:flatten or lists:concat 
-% & marginally faster than lists:append (for paths of 3 or more segments anyway)
-% tested with various fairly short path lists - see src/benchmarks folder
-%
 %%Original
 conc_path([]) ->
     [];
@@ -3737,22 +3719,19 @@ conc_path([H|T]) ->
     H ++ conc_path(T).
 
 %% tail-recursive version slower for longer paths according to bench.erl
-% (mainly because we need to do 'Acc ++ H' rather than 'H ++ Acc')
-% Tail recursion not very useful here anyway as we're dealing with short strings.
-%conc_path2([]) ->
-%	[];
-%conc_path2([H|T]) ->
-%	cpath(T,H).
+%% (mainly because we need to do 'Acc ++ H' rather than 'H ++ Acc')
+%% Tail recursion not very useful here anyway as we're dealing with short strings.
+%%conc_path2([]) ->
+%%	[];
+%%conc_path2([H|T]) ->
+%%	cpath(T,H).
 
-%cpath([],Acc) ->
-%	Acc;
-%cpath([H|[]],Acc) ->
-%	H ++ Acc;
-%cpath([H|T],Acc) ->
-%	cpath(T,Acc ++ H).
-
-
-
+%%cpath([],Acc) ->
+%%	Acc;
+%%cpath([H|[]],Acc) ->
+%%	H ++ Acc;
+%%cpath([H|T],Acc) ->
+%%	cpath(T,Acc ++ H).
 
 
 ret_app_mod(Path, Mod, PrePath) ->
@@ -3782,11 +3761,14 @@ ret_user_dir(Upath)  ->
 				    docroot=DR2},
 			    put(sc, SC2),
 
-				%% !todo - review interactions between Virtual Dirs & Home Dir paths.
-				%% VirtualDir hardcoded empty is not nice behaviour -
-				%% a rewrite mod author may reasonably expect to be able to have influence here.
+			    %% !todo - review interactions between Virtual 
+			    %% Dirs & Home Dir paths.
+			    %% VirtualDir hardcoded empty is not nice behaviour -
+			    %% a rewrite mod author may reasonably expect to 
+			    %% be able to have influence here.
 
-			    redir_user(do_url_type(SC2, Path, DR2,""), User)%% recurse
+			    redir_user(do_url_type(SC2, Path, DR2,""), User)
+			    %% recurse
 		    end;
 		{redir_dir, User} ->
 		    #urltype {type = redir,
@@ -3843,7 +3825,7 @@ suffix_type(L) ->
     L2 = yaws:upto_char($., L),
     mime_types:revt(L2).
 
-		     
+
 
 %% Some silly heuristics.
 
@@ -3873,7 +3855,7 @@ flush(Sock, Sz) ->
 	    ssl_flush(Sock, Sz)
     end.
 
-	    
+
 strip_list_to_integer(L) ->
     case catch list_to_integer(L) of
 	{'EXIT', _} ->
@@ -3948,118 +3930,126 @@ err_pre(R) ->
     io_lib:format("<pre> ~n~p~n </pre>~n", [R]).
 
 
-%concatenate a list of strings using another string as a separator.
-%e.g join(["usr","local","etc"],"/")   =  "usr/local/etc"
-%
+%%concatenate a list of strings using another string as a separator.
+%%e.g join(["usr","local","etc"],"/")   =  "usr/local/etc"
+%%
 join(List, Sep) ->
-	    lists:foldl(fun(A, "") -> A; (A, Acc) -> Acc ++ Sep ++ A
-			end, "", List).
+    lists:foldl(fun(A, "") -> A; (A, Acc) -> Acc ++ Sep ++ A
+		end, "", List).
 
 
 %%mappath/3    (virtual-path to physical-path)
-%- this returns physical path a URI would map to, taking into consideration vdirs and
-% assuming each path segment of the URI represents a folder (or maybe filename at end).
-% ie it does not (and is not intended to) take into account 'script points' in the path. (cgi,php,appmod etc)
-% The result may not actually exists as a path.
-%
-% mappath/3 is analogous to the Microsoft ASP function Server.MapPath or the 'filename' array member of the result 
-% of the PHP function 'apache_lookup_uri'.  
-%
+%%- this returns physical path a URI would map to, taking into consideration 
+%% vdirs and assuming each path segment of the URI represents a folder 
+%% (or maybe filename at end).
+%% ie it does not (and is not intended to) take into account 'script points' 
+%% in the path. (cgi,php,appmod etc)
+%% The result may not actually exists as a path.
+%%
+%% mappath/3 is analogous to the Microsoft ASP function Server.MapPath or 
+%% the 'filename' array member of the result 
+%% of the PHP function 'apache_lookup_uri'.  
+%%
 mappath(SC, ARG, RequestPath) ->
 
-	{VirtualDir, DR} = vdirpath(SC, ARG, RequestPath),
-
-	PhysicalPath = construct_fullpath(DR, RequestPath, VirtualDir),
-
-	%Resultant path might not exist - that's not the concern of the 'mappath' function.
-	PhysicalPath
-.
+    {VirtualDir, DR} = vdirpath(SC, ARG, RequestPath),
+    
+    PhysicalPath = construct_fullpath(DR, RequestPath, VirtualDir),
+    
+    %%Resultant path might not exist - that's not the concern of the 
+    %% 'mappath' function.
+    PhysicalPath.
 
 
 %%vdirpath/3
-%find longest "vdir" match. (ie a 'document-root mount-point' -> DOCUMENT_ROOT_MOUNT)
-%
-%e.g if we have in our .conf:
-%   vdir = "/app/  /path1/somewhere"
-%   vdir = "/app/test/shared/ /path2/somewhere"
-%
-% A request path of /app/test/doc.html  must be served from under /path1/somewhere
-% /app/test/shared/doc.html will be served from under /path2/somewhere
-%
-% Also must be able to handle:
-%   vdir = "/somewhere/ /path3/has spaces/in path/docs"
-%In this case, the 1st space separates the vdir from the physical path
-% i.e subsequent spaces are part of the path.
+%%find longest "vdir" match. 
+%% (ie a 'document-root mount-point' -> DOCUMENT_ROOT_MOUNT)
+%%
+%%e.g if we have in our .conf:
+%%   vdir = "/app/  /path1/somewhere"
+%%   vdir = "/app/test/shared/ /path2/somewhere"
+%%
+%% A request path of /app/test/doc.html  must be served from under 
+%% /path1/somewhere
+%% /app/test/shared/doc.html will be served from under /path2/somewhere
+%%
+%% Also must be able to handle:
+%%   vdir = "/somewhere/ /path3/has spaces/in path/docs"
+%%In this case, the 1st space separates the vdir from the physical path
+%% i.e subsequent spaces are part of the path.
 
 vdirpath(SC, ARG, RequestPath) ->
-	Opaquelist = ARG#arg.opaque,
-
-	%!todo - move out of opaque.
-	% We don't want to scan all opaque entries each time 
-	%- vdir directives should be pre-collated into a list somewhere. (own field in sconf record)
-
-
-	RequestSegs = string:tokens(RequestPath,"/"),
-			
-
-	%Accumulator is of form {RequestSegs,{VdirMountPoint,VdirPhysicalPath}}
-	Matched = lists:foldl(
-				fun(ListItem,Acc) ->
-					case ListItem of 
-					{"vdir",Vmap} ->
-
-						{ReqSegs,VdirSpec} = Acc,
-
-						[Virt |PhysParts] = string:tokens(Vmap," \t"),
-						VirtSegs = string:tokens(Virt,"/"),
-						case lists:prefix(VirtSegs,ReqSegs) of
-						true ->
-							{LongestSoFar,_} = VdirSpec,
-							if length(Virt) > length(LongestSoFar) ->
-								%reassemble (because physical path may have spaces)
-								Phys = join(PhysParts, " "),
-
-								{ReqSegs, {Virt, Phys}};
-							true ->
-								Acc
-							end;
-						false ->
-							Acc
-						end;
-					 _Else ->
-						%irrelevant member of opaque list. no change in accumulator
-						Acc
-					end
-				end, {RequestSegs,{"",""}}, Opaquelist),
+    Opaquelist = ARG#arg.opaque,
+    %%!todo - move out of opaque.
+    %% We don't want to scan all opaque entries each time 
+    %%- vdir directives should be pre-collated into a list somewhere. 
+    %% (own field in sconf record)
 
 
+    RequestSegs = string:tokens(RequestPath,"/"),
 
-	case Matched of
+    %%Accumulator is of form {RequestSegs,{VdirMountPoint,VdirPhysicalPath}}
+    Matched = 
+	lists:foldl(
+	  fun(ListItem,Acc) ->
+		  case ListItem of 
+		      {"vdir",Vmap} ->
+			  
+			  {ReqSegs,VdirSpec} = Acc,
+			  
+			  [Virt |PhysParts] = string:tokens(Vmap," \t"),
+			  VirtSegs = string:tokens(Virt,"/"),
+			  case lists:prefix(VirtSegs,ReqSegs) of
+			      true ->
+				  {LongestSoFar,_} = VdirSpec,
+				  if length(Virt) > length(LongestSoFar) ->
+					  %%reassemble (because physical 
+					  %% path may have spaces)
+					  Phys = join(PhysParts, " "),
+					  
+					  {ReqSegs, {Virt, Phys}};
+				     true ->
+					  Acc
+				  end;
+			      false ->
+				  Acc
+			  end;
+		      _Else ->
+			  %%irrelevant member of opaque list. no change in 
+			  %% accumulator
+			  Acc
+		  end
+	  end, {RequestSegs,{"",""}}, Opaquelist),
+    
+    
+    case Matched of
 	{_RequestSegs, {"",""}} ->
-		%no virtual dir corresponding to this http_request.path
+	    %%no virtual dir corresponding to this http_request.path
+	    %%NOTE - we *don't* know that the state of ARG#arg.docroot 
+	    %% currently reflects the main docroot		
+	    %% specified for the virtual server in the conf file.
+	    %% This is because we may be being called from a page that is 
+	    %% under a vdir, and so docroot may
+	    %% have been rewritten. It may also have been rewritten by an 
+	    %% appmod or arg_rewrite_mod.
+	    %% Therefore we need to get it directly from the sconf record.
 
-		%NOTE - we *don't* know that the state of ARG#arg.docroot currently reflects the main docroot		
-		% specified for the virtual server in the conf file.
-		% This is because we may be being called from a page that is under a vdir, and so docroot may
-		% have been rewritten. It may also have been rewritten by an appmod or arg_rewrite_mod.
-		% Therefore we need to get it directly from the sconf record.
-
-		Result = {"",SC#sconf.docroot};
+	    Result = {"",SC#sconf.docroot};
 	{_RequestSegs, {Virt,DocRoot }} ->
-		%sanitize Virt & DocRoot so that they are correct with regards to leading & trailing slashes
-		case string:right(Virt,1) of
+	    %%sanitize Virt & DocRoot so that they are correct with 
+	    %% regards to leading & trailing slashes
+	    case string:right(Virt,1) of
 		"/" ->
-			VirtualDir = Virt;
+		    VirtualDir = Virt;
 		_ ->
-			VirtualDir = Virt ++ "/"
-		end,
-		DR = string:strip(DocRoot,right,$/),
+		    VirtualDir = Virt ++ "/"
+	    end,
+	    DR = string:strip(DocRoot,right,$/),
 
-		Result = {VirtualDir, DR}
-	end,
-
-
-	%return {VdirURI, Physpath}  - i.e tuple representing the data specified in conf file for the 'vdir' directive. 
-	Result
-.
+	    Result = {VirtualDir, DR}
+    end,
+    
+    %%return {VdirURI, Physpath}  - i.e tuple representing the data 
+    %% specified in conf file for the 'vdir' directive. 
+    Result.
 

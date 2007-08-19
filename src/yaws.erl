@@ -322,6 +322,7 @@ date_and_time_to_string(DAT) ->
 	    erlang:fault({badarg, {?MODULE, date_and_time_to_string, [DAT]}})
     end.
 
+
 universal_time_to_string(UTC) ->
     Local = calendar:universal_time_to_local_time(UTC),
     DT = local_time_to_date_and_time(Local),
@@ -375,13 +376,13 @@ universal_time_to_date_and_time(UTC) ->
     short_time(UTC) ++ [$+, 0, 0].
 
 local_time_to_date_and_time(Local) ->
-    UTC = calendar:local_time_to_universal_time(Local),
+    UTC = erlang:local_time_to_universaltime(Local),
     date_and_time(Local, UTC).
 
 date_and_time_to_universal_time([Y1,Y2, Mo, D, H, M, S]) ->
     %% Local time specified, convert to UTC
     Local = {{y(Y1,Y2), Mo, D}, {H, M, S}},
-    calendar:local_time_to_universal_time(Local);
+    erlang:local_time_to_universaltime(Local);
 date_and_time_to_universal_time([Y1,Y2, Mo, D, H, M, S, Sign, Hd, Md]) ->
     %% Time specified as local time + diff from UTC. Conv to UTC.
     Local = {{y(Y1,Y2), Mo, D}, {H, M, S}},
@@ -470,22 +471,7 @@ old_integer_to_hex(I) when I>=16 ->
 %% hex_to_integer
 
 hex_to_integer(Hex) ->
-    case catch erlang:list_to_integer(Hex, 16) of
-	{'EXIT', _} ->
-	    old_hex_to_integer(Hex);
-	X ->
-	    X
-    end.
-
-
-old_hex_to_integer(Hex) ->
-    DEHEX = fun (H) when H >= $a, H =< $f -> H - $a + 10;
-		(H) when H >= $A, H =< $F -> H - $A + 10;
-		(H) when H >= $0, H =< $9 -> H - $0
-	    end,
-    lists:foldl(fun(E, Acc) -> Acc*16+DEHEX(E) end, 0, Hex).
-
-
+    erlang:list_to_integer(Hex, 16).
 
 %% string_to_hex
 
@@ -516,7 +502,7 @@ hex_to_string(Hex) ->
     String.
 
 
-%% mk_list
+%% mk_list, join style
 
 mk_list([]) ->
     [];
@@ -530,7 +516,7 @@ mk_list([X|Rest]) ->
 universal_time_as_string() ->
     time_to_string(calendar:universal_time(), "GMT").
 local_time_as_gmt_string(LocalTime) ->
-    time_to_string(calendar:local_time_to_universal_time(LocalTime),"GMT").
+    time_to_string(erlang:local_time_to_universaltime(LocalTime),"GMT").
 
 
 time_to_string( {{Year, Month, Day}, {Hour, Min, Sec}}, Zone) ->
@@ -644,8 +630,6 @@ stringdate_to_datetime2([M1, M2, M3, $\s , Y1, Y2, Y3, Y4, $\s ,
       list_to_integer([S1, S2])}}.
 
 
-
-
 %% used by If-Modified-Since header code
 is_modified_p(FI, UTC_string) ->
     case catch stringdate_to_datetime(UTC_string) of
@@ -653,7 +637,7 @@ is_modified_p(FI, UTC_string) ->
 	    true;
 	UTC ->
 	    Mtime = FI#file_info.mtime,
-	    MtimeUTC = calendar:local_time_to_universal_time(Mtime),
+	    MtimeUTC = erlang:local_time_to_universaltime(Mtime),
 	    MtimeUTC > UTC
     end.
 
@@ -1741,7 +1725,7 @@ load_setuid_drv() ->
 		   %% localinstall
 		   filename:dirname(code:which(?MODULE)) ++ "/../priv/lib";
 	       PrivDir ->
-		   filename:join(code:priv_dir(yaws),"lib")
+		   filename:join(PrivDir,"lib")
 	   end,
     case erl_ddll:load_driver(Path, "setuid_drv") of
 	ok ->
@@ -2130,7 +2114,6 @@ upto_char(Char, [H|T]) when list(H) ->
 	false ->
 	    [H, upto_char(Char, T)]
     end.
-
 
 
 %% map over deep list and maintain

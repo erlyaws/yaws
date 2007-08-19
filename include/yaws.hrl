@@ -19,7 +19,6 @@
 -define(GC_FAIL_ON_BIND_ERR,                64).
 -define(GC_PICK_FIRST_VIRTHOST_ON_NOMATCH, 128).
 -define(GC_USE_FDSRV,                      256).
--define(GC_USE_LARGE_SSL_POOL,             512).
 
 -define(GC_DEF, (?GC_AUTH_LOG bor ?GC_FAIL_ON_BIND_ERR)).
 
@@ -41,8 +40,6 @@
 	((GC#gconf.flags band ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH) /= 0)).
 -define(gc_use_fdsrv(GC),
 	((GC#gconf.flags band ?GC_USE_FDSRV) /= 0)).
--define(gc_use_large_ssl_pool(GC),
-	((GC#gconf.flags band ?GC_USE_LARGE_SSL_POOL) /= 0)).
 
 -define(gc_set_tty_trace(GC, Bool), 
 	GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_TTY_TRACE, Bool)}).
@@ -66,8 +63,6 @@
 -define(gc_set_use_fdsrv(GC, Bool), 
 	GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_USE_FDSRV,Bool)}).
 
--define(gc_set_use_large_ssl_pool(GC, Bool), 
-	GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_USE_LARGE_SSL_POOL,Bool)}).
 
 %% global conf
 -record(gconf,{yaws_dir,           %% topdir of Yaws installation

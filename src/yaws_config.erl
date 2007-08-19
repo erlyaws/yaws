@@ -9,8 +9,6 @@
 -author('klacke@bluetail.com').
 
 
-
-
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
@@ -627,16 +625,11 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		false ->
 		    {error, ?F("Expect true|false at line ~w", [Lno])}
 	    end;
-	["use_large_ssl_pool", '=',  Bool] ->
-	    case is_bool(Bool) of
-		{true, Val} ->
-		    fload(FD, globals, 
-			  ?gc_set_use_large_ssl_pool(GC,Val),
-			  C, Cs, Lno+1, Next);
-		false ->
-		    {error, ?F("Expect true|false at line ~w", [Lno])}
-	    end;
-	
+	["use_large_ssl_pool", '=',  _Bool] ->
+	    error_logger:format("ssl_pool is deprecated and not used any more\n",
+				[]),
+	    fload(FD, globals, GC,
+		  C, Cs, Lno+1, Next);
 
 	['<', "server", Server, '>'] ->  %% first server 
             fload(FD, server, GC, #sconf{servername = Server},
