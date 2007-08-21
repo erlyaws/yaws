@@ -182,7 +182,7 @@ cont_len_check(H,Psock) ->
 		undefined when Psock#psock.type == client ->
 		    Psock#psock{mode = expectheaders, state = undefined};
 		undefined when Psock#psock.type == server ->
-		    Psock#psock{mode = undefined, state = undefined}
+		    Psock#psock{mode = undefined, state = 0}
 	    end;
 	Int when integer(Int) ->
 	    Psock#psock{mode = len,
