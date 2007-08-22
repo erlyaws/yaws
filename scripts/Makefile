@@ -27,6 +27,7 @@ local_install:	../bin/yaws
 		./Subst %logdir% $$HOME/yaws_logs | \
 		./Subst %host% `hostname` | \
 		./Subst %port% 8000 | \
+		./Subst %vardir% $(VARDIR) | \
 		./Subst %docroot% `pwd`/../www | \
 		./Subst %certdir% `pwd`/../ssl | \
 		./Subst %sslport% 4443 > $${target}; \

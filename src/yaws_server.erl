@@ -20,7 +20,7 @@
 -include_lib("kernel/include/file.hrl").
 -include_lib("kernel/include/inet.hrl").
 
--export([check_appmods/3, mappath/3, vdirpath/3]).
+-export([mappath/3, vdirpath/3]).
 
 
 %% External exports
@@ -2545,7 +2545,6 @@ expand_parts([{var, V} |T] , Bs, Ack) ->
 	{value, {_, Val}} ->
 	    expand_parts(T, Bs, [Val|Ack]);
 	false ->
-	    error_logger:format("No variable binding found for ~p", [V]),
 	    expand_parts(T, Bs, Ack)
     end;
 expand_parts([], _,Ack) ->
@@ -3164,8 +3163,6 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
 	    ?Debug("Comps = ~p RevFile = ~p~n",[Comps, RevFile]),
 
 	    RequestSegs = string:tokens(GetPath,"/"),
-
-	    %%case check_appmods(SC#sconf.appmods, Comps, RevFile) of
 	    case active_appmod(SC#sconf.appmods, RequestSegs) of
 		false ->
 		    ?Debug("FullPath = ~p~n", [FullPath]),
@@ -3386,11 +3383,9 @@ active_appmod(AppMods, RequestSegs) ->
 
     case Matched of
 	{_RequestSegs, {"",""}} ->
-%%%no appmod corresponding specifically to this http_request.path
-
+	    %%no appmod corresponding specifically to this http_request.path
 	    false;
 	{_RequestSegs, {Mount, Mod}} ->
-
 	    {ok, {Mount, Mod}}
     end
 	.
@@ -3403,62 +3398,6 @@ split_at_segment(Seg,[Seg|Tail],Acc) ->
     {lists:reverse(Acc),Tail};
 split_at_segment(Seg,[H|Tail],Acc) ->
     split_at_segment(Seg, Tail, [H|Acc]).
-
-
-
-check_appmods([], _, _) ->
-    false;
-check_appmods(AppMods, Comps, RevFile) ->
-    case check_comps(AppMods, Comps) of
-	false ->
-	    %% check last elem last
-	    File = lists:reverse(RevFile),
-	    case check_comps(AppMods, [File]) of
-		false ->
-		    false;
-		{ok, _, AM, _} ->
-		    {ok, Comps, AM,[]}
-	    end;
-	RET ->
-	    RET
-    end.
-
-
-check_comps([], _) ->
-    false;
-check_comps([Pair |Tail], Comps) ->
-    case split_at(Pair, Comps,[]) of
-	false ->
-	    check_comps(Tail, Comps);
-	RET ->
-	    RET
-    end.
-
-
-split_at(_, [], _Acc) ->
-    false;
-split_at(AM={"/", _Mod}, [PEslash|Tail], Acc) ->
-    {ok, lists:reverse(Acc), AM, [PEslash|Tail]};
-split_at(AM={PE, _Mod}, [PEslash|Tail], Acc) ->
-    ?Debug("AM=~p PEslash=~p~n", [AM, PEslash]),
-    case no_slash_eq(PE, PEslash) of
-	true ->
-	    {ok, lists:reverse(Acc), AM, Tail};
-	false ->
-	    split_at(AM, Tail, [PEslash|Acc])
-    end.
-
-
-%% ignore slashes in the comparision
-no_slash_eq([H1|T1], [H1|T2]) ->
-    no_slash_eq(T1, T2);
-no_slash_eq(X, [$/|T]) ->
-    no_slash_eq(X,T);
-no_slash_eq([],[]) ->
-    true;
-no_slash_eq(_,_) ->
-    false.
-
 
 
 
