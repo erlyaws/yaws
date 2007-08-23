@@ -526,9 +526,13 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 	     end;
 
 	["php_exe_path", '=' , PhpPath] ->
-	    fload(FD, globals, GC#gconf{phpexe = PhpPath},
-		  C, Cs, Lno+1, Next);
-
+	    case is_file(PhpPath) of
+		true ->
+		    fload(FD, globals, GC#gconf{phpexe = PhpPath},
+			  C, Cs, Lno+1, Next);
+		false ->
+		    {error, "Expect executable file at line ~w", [Lno]}
+	    end;
 
 	%% deprected, don't use
 	["read_timeout", '=', _Val] ->
@@ -748,7 +752,9 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 			    C2 = C#sconf{partial_post_size = I},
 			    fload(FD, server, GC, C2, Cs, Lno+1, Next);
 			_ ->
-			    {error, ?F("Expect integer or 'nolimit' at line ~w", [Lno])}
+			    {error, 
+			     ?F("Expect integer or 'nolimit' at line ~w", 
+				[Lno])}
 		    end
 	    end;
 	['<', "auth", '>'] ->
@@ -813,12 +819,6 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 			 lists:map(fun(X)->element(1,mime_types:t(X)) end,
 				   Suffixes)},
 	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
-
-	["php_exe_path", '=' , _PhpPath] ->
-	    error_logger:format("php_exe_path must now be specified in"
-				" in the global part of the conf instead of"
-				"within the server ",[]),
-	    fload(FD, server, GC, C, Cs, Lno+1, Next);
 
 	["revproxy", '=', Prefix, Url] ->
 	    case (catch yaws_api:parse_url(Url)) of

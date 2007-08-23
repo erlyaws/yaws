@@ -376,13 +376,13 @@ universal_time_to_date_and_time(UTC) ->
     short_time(UTC) ++ [$+, 0, 0].
 
 local_time_to_date_and_time(Local) ->
-    UTC = erlang:local_time_to_universaltime(Local),
+    UTC = erlang:localtime_to_universaltime(Local),
     date_and_time(Local, UTC).
 
 date_and_time_to_universal_time([Y1,Y2, Mo, D, H, M, S]) ->
     %% Local time specified, convert to UTC
     Local = {{y(Y1,Y2), Mo, D}, {H, M, S}},
-    erlang:local_time_to_universaltime(Local);
+    erlang:localtime_to_universaltime(Local);
 date_and_time_to_universal_time([Y1,Y2, Mo, D, H, M, S, Sign, Hd, Md]) ->
     %% Time specified as local time + diff from UTC. Conv to UTC.
     Local = {{y(Y1,Y2), Mo, D}, {H, M, S}},
@@ -516,7 +516,7 @@ mk_list([X|Rest]) ->
 universal_time_as_string() ->
     time_to_string(calendar:universal_time(), "GMT").
 local_time_as_gmt_string(LocalTime) ->
-    time_to_string(erlang:local_time_to_universaltime(LocalTime),"GMT").
+    time_to_string(erlang:localtime_to_universaltime(LocalTime),"GMT").
 
 
 time_to_string( {{Year, Month, Day}, {Hour, Min, Sec}}, Zone) ->
@@ -637,7 +637,7 @@ is_modified_p(FI, UTC_string) ->
 	    true;
 	UTC ->
 	    Mtime = FI#file_info.mtime,
-	    MtimeUTC = erlang:local_time_to_universaltime(Mtime),
+	    MtimeUTC = erlang:localtime_to_universaltime(Mtime),
 	    MtimeUTC > UTC
     end.
 
