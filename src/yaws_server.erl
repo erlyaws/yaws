@@ -1302,7 +1302,7 @@ handle_request(CliSock, ARG, N) ->
 		    %% rely on rewrite module to dig them out of opaque.
 
 		    ARGvdir = ARG#arg.docroot_mount,
-
+		    io:format("Here ~p~n", [ARGvdir]),
 		    %%here we make sure that the conf file, or any rewrite mod 
 		    %% wrote  nothing, or something sensible into 
 		    %% arg.docroot_mount

@@ -16,7 +16,10 @@ fi
 
 cd ../..
 
+
+
 #cvs tag -F yaws-${Y}
+svn copy https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/trunk/ https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/tags/yaws-${Y} -m "version ${Y}"
 
 rm -rf tmp 2> /dev/null
 mkdir tmp

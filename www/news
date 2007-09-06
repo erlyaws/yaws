@@ -1,3 +1,14 @@
+Thu Sep  6 19:40:28 CEST 2007 version 1.70
+Regular bugfix an small feature release.
+Revproxy bug found by igor goryachev.
+Started to use the nes ssl:transport_accept()  function, when accept fails, I now fail yaws entirely and it needs to be restarted by its supervisor or heart. If we have filedescriptor leaks, even outside of  yaws, there is no good thing to do when accept fails. (klacke)
+A body message patch from Brian Templeton which cleaned up code and improved RFC 2616 compliance
+Added HTTPS env variable for trac (klacke)
+added x-javascript as a compressible mime type, patch by anthony shipman 
+added a dir_listing function in yaws_api (klacke)
+fixed yapp dependencies to vdir handling, added local stylesheet and updated yapp_intro documentation (mikaelk)
+Virtual Directory support. ARG record and CGI variable changes. This change by Julian Noble was quite extensive. The feature is still completely undocumented - thus it is still experimental. 
+
 Thu Feb  8 16:45:47 CET 2007 version 1.68
 Forgot to update configure after the patch to configure.in for ubuntu edgy users in 1.67
 Patch by Julian Noble to pass auth info over the CGI interface.

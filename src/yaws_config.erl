@@ -531,7 +531,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 		    fload(FD, globals, GC#gconf{phpexe = PhpPath},
 			  C, Cs, Lno+1, Next);
 		false ->
-		    {error, "Expect executable file at line ~w", [Lno]}
+		    {error, ?F("Expect executable file at line ~w", [Lno])}
 	    end;
 
 	%% deprected, don't use
