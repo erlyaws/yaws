@@ -41,7 +41,8 @@ if [ -f /etc/gentoo-release ]; then
     chmod a+rwx ${destdir}/${vardir}/run/yaws
     cp gentoo/init.d.yaws  ${destdir}/${etcdir}/init.d/yaws
     chmod +x ${destdir}/${etcdir}/init.d/yaws
-    sed -e "s;%prefix%;$p;g" gentoo/conf.d.yaws > ${destdir}/${etcdir}/conf.d/yaws
+    sed -e "s;%prefix%;$p;g" gentoo/conf.d.yaws | \
+    sed -e "s;%etcdir%;$e;g" > ${destdir}/${etcdir}/conf.d/yaws
 elif [ -f /etc/redhat-release ]; then
     install -d ${destdir}/${etcdir}/init.d
     sed -e "s;%prefix%;$p;g" redhat/yaws.init.d  > ${destdir}/${etcdir}/init.d/yaws

@@ -15,7 +15,7 @@ YAWS_EXEC=%prefix%/bin/yaws
 
 
 # The Yaws config file
-YAWS_CONF_FILE=/etc/yaws.conf
+YAWS_CONF_FILE=%etcdir%/yaws.conf
 
 # The start options
 YAWS_START_OPTS="--daemon --heart --id ${YAWS_ID} --conf ${YAWS_CONF_FILE}"   
