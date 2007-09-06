@@ -9,6 +9,7 @@
 # use: rc-update add yaws default
 #
 
+
 opts="start stop reload restart query debug"  
 
 depend() {
