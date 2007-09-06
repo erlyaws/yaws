@@ -48,6 +48,22 @@ out(A) ->
       </p>
     </li>
 
+    <li><h4>Tail-f systems autorendered webUI  </h4>
+
+      <p><a href="http://www.tail-f.com">Tail-F Systems</a> a NETCONF 
+      centric company renders their WebUI
+      from a datamodel automatically using AJAX and Yaws</p>
+    </li>
+
+    <li><h4>Kreditor AB</h4>
+    <p><a href="http://www.kreditor.se">Kreditor</a> in Stockholm - 
+    a finance company has their entire
+    app Yaws and Mnesia based
+    </p>
+    </li>
+
+
+
 </ul>
 
 

@@ -19,11 +19,12 @@ cd ../..
 
 
 #cvs tag -F yaws-${Y}
+svn delete https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/tags/yaws-${Y} -m ""  2> /dev/null
 svn copy https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/trunk/ https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/tags/yaws-${Y} -m "version ${Y}"
 
 rm -rf tmp 2> /dev/null
 mkdir tmp
-
+cd tmp
 svn export https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/trunk
 cd trunk
 mv yaws yaws-${YAWS_VSN}
