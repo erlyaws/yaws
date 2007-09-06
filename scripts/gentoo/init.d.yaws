@@ -18,38 +18,33 @@ depend() {
 
 start() {
        ebegin "Starting ${YAWS_APP} "
-       start-stop-daemon --start --verbose  \
-           --exec  ${YAWS_EXEC} -- ${YAWS_START_OPTS}   
+       ${YAWS_EXEC}  ${YAWS_START_OPTS}   
        eend $?
 }
 
 
 stop() {
        ebegin "Stopping ${YAWS_APP} "
-       start-stop-daemon --start --quiet  \
-           --exec ${YAWS_EXEC} -- ${YAWS_STOP_OPTS}
+       ${YAWS_EXEC}  ${YAWS_STOP_OPTS}
        eend $?
 }
 
 
 reload() {
        ebegin "Reloading ${YAWS_APP} "
-       start-stop-daemon --start --quiet --chuid ${YAWS_UID} \
-           --exec ${YAWS_EXEC} -- ${YAWS_RELOAD_OPTS}
+       ${YAWS_EXEC}  ${YAWS_RELOAD_OPTS}
        eend $?
 }
 
 query() {
        ebegin "Querying ${YAWS_APP} "
-       start-stop-daemon --start --quiet --chuid ${YAWS_UID} \
-           --exec ${YAWS_EXEC} -- ${YAWS_QUERY_OPTS}
+       ${YAWS_EXEC}  ${YAWS_QUERY_OPTS}
        eend $?
 }
 
 debug() {
        ebegin "Debug ${YAWS_APP} "
-       start-stop-daemon --start --quiet --chuid ${YAWS_UID} \
-           --exec ${YAWS_EXEC} -- ${YAWS_DEBUG_OPTS}
+       ${YAWS_EXEC}  ${YAWS_DEBUG_OPTS}
        eend $?
 }
 
