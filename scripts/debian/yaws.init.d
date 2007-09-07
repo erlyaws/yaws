@@ -11,6 +11,7 @@
 yaws=%prefix%/bin/yaws
 prog=yaws
 yawsid=myserverid
+conf="--conf %etcdir%/yaws.conf"
 
 test -x $yaws || exit 1
 
@@ -18,7 +19,7 @@ test -x $yaws || exit 1
 case "$1" in
     start)
 	echo -n "Starting $prog: "
-	$yaws  --id ${yawsid} --daemon --heart
+	$yaws  --id ${yawsid} --daemon --heart ${conf}
 	echo "."
     ;;
     stop)

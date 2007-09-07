@@ -9,8 +9,11 @@
 # use: rc-update add yaws default
 #
 
+yaws=%prefix%/bin/yaws
+idopts="--id myserverid"
+conf="--conf %etcdir%/yaws.conf"
 
-opts="start stop reload restart query debug"  
+opts="start stop reload restart query"  
 
 depend() {
        need net
@@ -18,36 +21,28 @@ depend() {
 
 
 start() {
-       ebegin "Starting ${YAWS_APP} "
-       ${YAWS_EXEC}  ${YAWS_START_OPTS}   
+       ebegin "Starting yaws "
+       ${yaws} --daemon  --heart ${idopts} ${conf}
        eend $?
 }
 
 
 stop() {
-       ebegin "Stopping ${YAWS_APP} "
-       ${YAWS_EXEC}  ${YAWS_STOP_OPTS}
+       ebegin "Stopping yaws "
+       ${yaws} --stop ${idopts}
        eend $?
 }
 
 
 reload() {
-       ebegin "Reloading ${YAWS_APP} "
-       ${YAWS_EXEC}  ${YAWS_RELOAD_OPTS}
+       ebegin "Reloading yaws "
+       ${yaws}  --hup ${idopts}
        eend $?
 }
 
 query() {
-       ebegin "Querying ${YAWS_APP} "
-       ${YAWS_EXEC}  ${YAWS_QUERY_OPTS}
+       ebegin "Querying yaws "
+       ${yaws} --status ${idopts}
        eend $?
 }
-
-debug() {
-       ebegin "Debug ${YAWS_APP} "
-       ${YAWS_EXEC}  ${YAWS_DEBUG_OPTS}
-       eend $?
-}
-
-
 

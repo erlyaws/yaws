@@ -126,7 +126,7 @@ the daemon empty all its internal content caches.
 Hence when updating the doc root,
 HUPing the daemon is the fastest way to see the content updates. 
 .TP
-\fB\--stop [-I id]\fR
+\fB\--stop [--id id]\fR
 Stop the daemon (called id)
 .TP
 \fB\--ls \fR
@@ -134,10 +134,10 @@ Lists current ids and status of all yaws servers on localhost. In practice this
 amounts to a listdir in $HOME/.yaws/yaws - and check wether the different
 systems who has created files there are alive.
 .TP
-\fB--status [-I id]\fR
+\fB--status [--id id]\fR
 Query a running yaws daemon for its status, and print it.
 .TP
-\fB--load Modules [-I id]\fR 
+\fB--load Modules [--id id]\fR 
 Try to (re)load erlang modules into a running daemon.  This is useful
 after modifying appmods or modules used by scripts.
 

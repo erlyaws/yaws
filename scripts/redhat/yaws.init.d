@@ -15,10 +15,11 @@
 yaws=%prefix%/bin/yaws
 prog=yaws
 yawsid=myserverid
+conf="--conf %etcdir%/yaws.conf"
 
 start() {
         echo -n $"Starting $prog: "
-        daemon $yaws --id ${myserverid} --daemon --heart
+        daemon $yaws --id ${myserverid} --daemon --heart ${conf}
         RETVAL=$?
         echo
         [ $RETVAL = 0 ] && touch /var/lock/subsys/yaws

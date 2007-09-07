@@ -3,6 +3,7 @@
 
 YAWS_BIN=%prefix%bin/yaws
 YAWS_ID=myserverid
+conf="--conf %etcdir%/yaws.conf"
 
 test -x $YAWS_BIN || exit 5
 
@@ -46,7 +47,7 @@ case "$1" in
 
 	# NOTE: startproc returns 0, even if service is 
 	# already running to match LSB spec.
-	startproc $YAWS_BIN --daemon --heart --id ${YAWS_ID}
+	startproc $YAWS_BIN --daemon --heart --id ${YAWS_ID} ${conf}
 
 	# Remember status and be verbose
 	rc_status -v

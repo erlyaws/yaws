@@ -34,30 +34,34 @@ chmod +x ${destdir}/${prefix}/bin/yaws
 install -d ${destdir}/${prefix}/lib/yaws/examples/ebin
 install -d ${destdir}/${prefix}/lib/yaws/examples/include
 
+## seems gentoo don't like to be installed in /usr/local/etc
+## since /sbin/runscript still reads /etc/conf.d
 if [ -f /etc/gentoo-release ]; then
     install -d ${destdir}/${etcdir}/init.d/
     install -d ${destdir}/${etcdir}/conf.d/
     install -d ${destdir}/${vardir}/run/yaws
     chmod a+rwx ${destdir}/${vardir}/run/yaws
-    cp gentoo/init.d.yaws  ${destdir}/${etcdir}/init.d/yaws
+    sed -e  "s;%prefix%;$p;g"  \
+	-e "s;%etcdir%;$e;g"  > ${destdir}/${etcdir}/init.d/yaws
     chmod +x ${destdir}/${etcdir}/init.d/yaws
-    sed -e "s;%prefix%;$p;g" gentoo/conf.d.yaws | \
-    sed -e "s;%etcdir%;$e;g" > ${destdir}/${etcdir}/conf.d/yaws
 elif [ -f /etc/redhat-release ]; then
     install -d ${destdir}/${etcdir}/init.d
-    sed -e "s;%prefix%;$p;g" redhat/yaws.init.d  > ${destdir}/${etcdir}/init.d/yaws
+    sed -e "s;%prefix%;$p;g" \
+	-e "s;%etcdir%;$e;g" >  ${destdir}/${etcdir}/init.d/yaws
     chmod +x ${destdir}/${etcdir}/init.d/yaws
     install -d ${destdir}/${vardir}/run/yaws
     chmod a+rwx ${destdir}/${vardir}/run/yaws
 elif [ -f /etc/suseservers ]; then
     install -d ${destdir}/${etcdir}/init.d
-    sed -e "s;%prefix%;$p;g" suse/yaws.init.d  > ${destdir}/${etcdir}/init.d/yaws
+    sed -e "s;%prefix%;$p;g" \
+	-e "s;%etcdir%;$e;g"  > ${destdir}/${etcdir}/init.d/yaws
     chmod +x ${destdir}/${etcdir}/init.d/yaws
     install -d ${destdir}/${vardir}/run/yaws
     chmod a+rwx ${destdir}/${vardir}/run/yaws
 elif [ -f /etc/debian_version ]; then
     install -d ${destdir}/${etcdir}/init.d
-    sed -e "s;%prefix%;$p;g" debian/yaws.init.d  > ${destdir}/${etcdir}/init.d/yaws
+    sed -e "s;%prefix%;$p;g" \
+	-e "s;%etcdir%;$e;g" >  ${destdir}/${etcdir}/init.d/yaws
     chmod +x ${destdir}/${etcdir}/init.d/yaws
     install -d ${destdir}/${vardir}/run/yaws
     chmod a+rwx ${destdir}/${vardir}/run/yaws
