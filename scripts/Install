@@ -42,26 +42,26 @@ if [ -f /etc/gentoo-release ]; then
     install -d ${destdir}/${vardir}/run/yaws
     chmod a+rwx ${destdir}/${vardir}/run/yaws
     sed -e  "s;%prefix%;$p;g"  \
-	-e "s;%etcdir%;$e;g"  > ${destdir}/${etcdir}/init.d/yaws
+	-e "s;%etcdir%;$e;g" gentoo/init.d.yaws > ${destdir}/${etcdir}/init.d/yaws
     chmod +x ${destdir}/${etcdir}/init.d/yaws
 elif [ -f /etc/redhat-release ]; then
     install -d ${destdir}/${etcdir}/init.d
     sed -e "s;%prefix%;$p;g" \
-	-e "s;%etcdir%;$e;g" >  ${destdir}/${etcdir}/init.d/yaws
+	-e "s;%etcdir%;$e;g" redhat/yaws.init.d >  ${destdir}/${etcdir}/init.d/yaws
     chmod +x ${destdir}/${etcdir}/init.d/yaws
     install -d ${destdir}/${vardir}/run/yaws
     chmod a+rwx ${destdir}/${vardir}/run/yaws
 elif [ -f /etc/suseservers ]; then
     install -d ${destdir}/${etcdir}/init.d
     sed -e "s;%prefix%;$p;g" \
-	-e "s;%etcdir%;$e;g"  > ${destdir}/${etcdir}/init.d/yaws
+	-e "s;%etcdir%;$e;g" suse/yaws.init.d/ > ${destdir}/${etcdir}/init.d/yaws
     chmod +x ${destdir}/${etcdir}/init.d/yaws
     install -d ${destdir}/${vardir}/run/yaws
     chmod a+rwx ${destdir}/${vardir}/run/yaws
 elif [ -f /etc/debian_version ]; then
     install -d ${destdir}/${etcdir}/init.d
     sed -e "s;%prefix%;$p;g" \
-	-e "s;%etcdir%;$e;g" >  ${destdir}/${etcdir}/init.d/yaws
+	-e "s;%etcdir%;$e;g" debian/yaws.init.d >  ${destdir}/${etcdir}/init.d/yaws
     chmod +x ${destdir}/${etcdir}/init.d/yaws
     install -d ${destdir}/${vardir}/run/yaws
     chmod a+rwx ${destdir}/${vardir}/run/yaws
