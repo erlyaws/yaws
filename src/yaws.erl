@@ -1906,7 +1906,13 @@ http_recv_request(CliSock, SSL) ->
 	    http_recv_request(CliSock,SSL);
 	{error, {http_error, _}} ->
 	    bad_request;
-	{error, closed} -> closed;
+	{error, closed} -> 
+	    receive 
+		{'EXIT', CliSock, _} -> ok
+	    after 0 ->
+		    ok
+	    end,
+	    closed;
 	{error, timeout} -> closed;
 	_Other ->
 	    ?Debug("Got ~p~n", [_Other]),
