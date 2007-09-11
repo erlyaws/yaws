@@ -845,6 +845,13 @@ aloop(CliSock, GS, Num) ->
 
 
 erase_transients() ->
+    %% flush all messages
+    Fun = fun(G) -> receive
+		       X -> G(G)
+		    after 0 -> ok
+		    end
+	  end,
+    Fun(Fun),
     I = get(init_db),
     erase(),
     if I == undefined ->
