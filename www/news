@@ -1,7 +1,10 @@
+Fri Sep 14 21:52:52 CEST 2007 version 1.71
+Lots of broken png anf gif files found in the wiki due to the cvs->svn conversion (klacke)
+
 Thu Sep  6 19:40:28 CEST 2007 version 1.70
 Regular bugfix and small feature release.
 Revproxy bug found by igor goryachev.
-Started to use the nes ssl:transport_accept()  function, when accept fails, I now fail yaws entirely and it needs to be restarted by its supervisor or heart. If we have filedescriptor leaks, even outside of  yaws, there is no good thing to do when accept fails. (klacke)
+Started to use the new ssl:transport_accept()  function, when accept fails, We now fail yaws entirely and it needs to be restarted by its supervisor or heart. If we have filedescriptor leaks, even outside of  yaws, there is no good thing to do when accept fails. (klacke)
 A body message patch from Brian Templeton which cleaned up code and improved RFC 2616 compliance
 Added HTTPS env variable for trac (klacke)
 added x-javascript as a compressible mime type, patch by anthony shipman 
