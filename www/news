@@ -1,3 +1,6 @@
+Wed Sep 19 23:17:47 CEST 2007
+Even more bad properties found. Now all png, gif and wob (those are for the wiki) files have svn:mime-type application/octet-stream and no other properties. Finally fixed I hope.
+
 Fri Sep 14 21:52:52 CEST 2007 version 1.71
 Lots of broken png anf gif files found in the wiki due to the cvs->svn conversion (klacke)
 
