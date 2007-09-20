@@ -1,4 +1,7 @@
-Wed Sep 19 23:17:47 CEST 2007
+Thu Sep 20 15:09:35 CEST 2007 1.73
+Sloppy ssl bug found by John Webb
+
+Wed Sep 19 23:17:47 CEST 2007 1.72
 Even more bad properties found. Now all png, gif and wob (those are for the wiki) files have svn:mime-type application/octet-stream and no other properties. Finally fixed I hope.
 
 Fri Sep 14 21:52:52 CEST 2007 version 1.71

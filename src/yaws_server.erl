@@ -716,7 +716,7 @@ acceptor0(GS, Top) ->
 	{ok, Client} ->
 	    if
 		GS#gs.ssl == ssl ->
-		    case ssl:accept(Client) of
+		    case ssl:ssl_accept(Client) of
 			ok ->
 			    ok;
 			{error, Reason} ->
