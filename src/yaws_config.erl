@@ -609,7 +609,8 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 	                         GC#gconf.id == default ->
 	    fload(FD, globals, GC#gconf{id=String},C, Cs, Lno+1, Next);
 	["id", '=', String]  ->
-	    error_logger:format("Ignoring 'id = ~p' setting at line ~p~n", [String,Lno]),
+	    error_logger:format("Ignoring 'id = ~p' setting at line ~p~n", 
+				[String,Lno]),
 	    fload(FD, globals, GC, C, Cs, Lno+1, Next);
 	["pick_first_virthost_on_nomatch", '=',  Bool] ->
 	    case is_bool(Bool) of

@@ -78,18 +78,6 @@ actl_trace(What) ->
 
 
 
-%% change owner of logfiles and logdir
-%% only called when we lower rights after socket(s) are opened
-% uid_change(GC) ->
-%     case file:list_dir(GC#gconf.logdir) of
-% 	{ok, L} ->
-% 	    yaws:uid_change_files(GC, GC#gconf.logdir,L);
-% 	{error, Rsn} ->
-% 	    error_logger:format("Failed to listdir ~p : ~p",
-% 				[GC#gconf.logdir, Rsn])
-%     end.
-
-
 
 %%%----------------------------------------------------------------------
 %%% Callback functions from gen_server
