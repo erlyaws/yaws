@@ -334,7 +334,11 @@ do_alog(ServerName, Ip, User, Req, Status, Length, Referrer,
 
 do_auth_log(ServerName, IP, Path, Item, State) ->
     AL = State#state.auth_log,
-    I = [inet_parse:ntoa(IP), 
+    IpStr = case catch inet_parse:ntoa(IP) of
+		{'EXIT', _} -> "unknownip";
+		Val -> Val
+	    end,
+    I = [IpStr,
 	 " ", State#state.now,
 	 " ", ServerName, " " ,"\"", Path,"\"",
 	 case Item of
