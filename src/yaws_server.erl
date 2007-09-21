@@ -2479,7 +2479,7 @@ ssi(File, Delimiter, Bindings, UT, ARG, SC) ->
     FullPath =
 	case File of
 	    {rel_path, FileName} ->
-		[Docroot, Dir,[$/|FileName]];
+		[Docroot, [$/|Dir],[$/|FileName]];
 	    {abs_path, FileName} ->
 		[Docroot, [$/|FileName]];
 	    [$/|_] ->
@@ -2492,7 +2492,7 @@ ssi(File, Delimiter, Bindings, UT, ARG, SC) ->
 		%%relative to the Docroot and VirtualDir that correspond 
 		%% to the request.
 		
-		construct_fullpath(Docroot, lists:flatten([Dir, File]), 
+		construct_fullpath(Docroot, lists:flatten([Dir, [$/|File]]),
 				   VirtualDir)
 	end,
 
@@ -2596,6 +2596,8 @@ handle_crash(ARG, L) ->
     ?Debug("handle_crash(~p)~n", [L]),
     SC=get(sc),
     yaws:elog("~s", [L]),
+    put(yaws_ut, #urltype{}),
+    put(yaws_arg, ARG),
     case catch apply(SC#sconf.errormod_crash, crashmsg, [ARG, SC, L]) of
 	{html, Str} ->
 	    accumulate_content(Str),
