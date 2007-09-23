@@ -2003,6 +2003,8 @@ parse_auth(Orig = "Basic " ++ Auth64) ->
 		    undefined
 	    end
     end;
+parse_auth(Orig = "Negotiate " ++ _Auth64) ->
+    {undefined, undefined, Orig};
 parse_auth(_) ->
     undefined.
 

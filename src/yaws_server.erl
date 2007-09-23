@@ -1347,8 +1347,16 @@ handle_request(CliSock, ARG, N) ->
 			    ?Debug("Test revproxy: ~p and ~p~n", 
 				   [DecPath, SC#sconf.revproxy]),
 
-			    IsAuth = is_auth(ARG, DecPath,ARG#arg.headers,
-					     SC#sconf.authdirs),
+			    {IsAuth, ARG1} =
+				case is_auth(ARG, DecPath,ARG#arg.headers,
+					     SC#sconf.authdirs) of
+				    {true, User} ->
+					{true, set_auth_user(ARG, User)};
+				    E ->
+					{E, ARG}
+				end,
+
+
 			    IsRev = is_revproxy(DecPath, SC#sconf.revproxy),
 			    IsRedirect = is_redirect_map(DecPath, 
 							 SC#sconf.redirect_map),
@@ -1367,7 +1375,7 @@ handle_request(CliSock, ARG, N) ->
 
 
 				    %%arg.prepath ?
-				    ARG2 = ARG#arg{
+				    ARG2 = ARG1#arg{
 					     server_path = DecPath,
 					     querydata= QueryString,
 					     prepath=undefined,
@@ -1377,15 +1385,15 @@ handle_request(CliSock, ARG, N) ->
 					    },
 				    handle_ut(CliSock, ARG2, UT, N);
 				{_, _, {true, MethodHostPort}} ->
-				    deliver_302_map(CliSock, Req, ARG, 
+				    deliver_302_map(CliSock, Req, ARG1, 
 						    MethodHostPort);
 				{true, false, _} ->
 				    %%'main' branch so to speak. Most 
 				    %% requests pass through here.
 
-				    UT   = url_type(DecPath, ARG#arg.docroot, 
-						    ARG#arg.docroot_mount),
-				    ARG2 = ARG#arg{
+				    UT   = url_type(DecPath, ARG1#arg.docroot, 
+						    ARG1#arg.docroot_mount),
+				    ARG2 = ARG1#arg{
 					     server_path = DecPath,
 					     querydata = QueryString,
 					     fullpath = UT#urltype.fullpath,
@@ -1422,7 +1430,7 @@ handle_request(CliSock, ARG, N) ->
 
 				    handle_ut(CliSock, ARG3, UT, N);
 				{true, {true, PP}, _} ->
-				    yaws_revproxy:init(CliSock, ARG, DecPath, 
+				    yaws_revproxy:init(CliSock, ARG1, DecPath, 
 						       QueryString, PP, N);
 				{false, _, _} ->
 				    deliver_403(CliSock, Req);
@@ -1439,6 +1447,17 @@ handle_request(CliSock, ARG, N) ->
 	    deliver_400(CliSock, Req)
     end.
 
+set_auth_user(ARG, User) ->
+    H = ARG#arg.headers,
+    Auth =
+	case H#headers.authorization of
+	    {_User, Pass, Orig} ->
+		{User, Pass, Orig};
+	    E ->
+		E
+	end,
+    H2 = H#headers{authorization = Auth},
+    ARG#arg{headers = H2}.
 
 is_auth(_ARG, _Req_dir, _H, [] ) -> 
     true;
@@ -1453,7 +1472,9 @@ is_auth(ARG, Req_dir,H,[{Auth_dir,
 		    {false, ""};
 		{appmod, AppMod} ->
 		    {appmod, AppMod};
-		true -> 
+		{true, User} -> 
+		    {true, User};
+		true ->
 		    true;
 		{false, Realm} ->
 		    maybe_auth_log({401, Realm}, ARG),

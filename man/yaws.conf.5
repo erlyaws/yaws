@@ -578,6 +578,32 @@ at startup, as well as some user specific configuration.
 
 .fi
 
+An example specifying the GSSAPI/SPNEGO module (authmod_gssapi) to be
+used for authentication. This module requires egssapi version 0.1~pre2
+or later available at http://www.hem.za.org/egssapi/.
+
+The Kerberos5 keytab is specified as 'keytab = File' directive in
+opaque. This keytab should contain the keys of the HTTP service
+principal, 'HTTP/www.funky.org' in this example. 
+
+.nf
+ 
+<server www.funky.org>
+        port = 80
+        listen = 192.168.128.31
+        docroot = /var/yaws/www_funky_org
+        start_mod = authmod_gssapi
+        <auth>
+                authmod = authmod_gssapi
+                dir = secret/dir1
+        </auth>
+        <opaque>
+                keytab = /etc/yaws/http.keytab
+        </opaque>
+</server>
+
+.fi
+
 
 
 And finally a sligthly more complex example

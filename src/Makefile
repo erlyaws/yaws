@@ -35,11 +35,12 @@ MODULES=yaws \
 	yaws_pam \
 	json jsonrpc yaws_jsonrpc yaws_xmlrpc\
 	haxe yaws_rpc \
-	yaws_soap_srv yaws_soap_lib
+	yaws_soap_srv yaws_soap_lib \
+	authmod_gssapi
 
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app
-ERLC_FLAGS+=-W $(DEBUG_FLAGS) -pa ../../yaws
+ERLC_FLAGS+=-W $(DEBUG_FLAGS) -pa ../../yaws -I ../include
 
 #
 # Targets
