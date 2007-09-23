@@ -1175,10 +1175,7 @@ ehtml_expand(Ch) when Ch >= 0, Ch =< 255 -> Ch; %yaws_api:htmlize_char(Ch);
 ehtml_expand(Bin) when binary(Bin) -> Bin; % yaws_api:htmlize(Bin);
 
 ehtml_expand({ssi,File, Del, Bs}) ->
-    UT = get(yaws_ut),
-	ARG = get(yaws_arg),
-
-    case yaws_server:ssi(File, Del, Bs, UT, ARG) of
+    case yaws_server:ssi(File, Del, Bs) of
 	{error, Rsn} ->
 	    io_lib:format("ERROR: ~p~n",[Rsn]);
 	X ->
@@ -1186,8 +1183,10 @@ ehtml_expand({ssi,File, Del, Bs}) ->
     end;
 
 
-%!todo (low priority) - investigate whether tail-recursion would be of any benefit here instead of the current ehtml_expand(Body) recursion.
-%		- provide a tail_recursive version & add a file in the benchmarks folder to measure it.
+%!todo (low priority) - investigate whether tail-recursion would be of any 
+%% benefit here instead of the current ehtml_expand(Body) recursion.
+%		- provide a tail_recursive version & add a file in the 
+%% benchmarks folder to measure it.
 %
 ehtml_expand({Tag}) -> 
     ["<", atom_to_list(Tag), " />"];
@@ -1314,10 +1313,7 @@ ehtml_expander(Bin, Before, After) when binary(Bin) ->
     ehtml_expander_done(yaws_api:htmlize(Bin), Before, After);
 
 ehtml_expander({ssi,File, Del, Bs}, Before, After) ->
-    UT = get(yaws_ut),
-	ARG = get(yaws_arg),
-
-    Str = case yaws_server:ssi(File, Del, Bs, UT, ARG) of
+    Str = case yaws_server:ssi(File, Del, Bs) of
 	      {error, Rsn} ->
 		  io_lib:format("ERROR: ~p~n",[Rsn]);
 	      X ->
@@ -1338,7 +1334,8 @@ ehtml_expander({Tag, Attrs}, Before, After) ->
 			After);
 ehtml_expander({Tag, Attrs, Body}, Before, After) ->
     ehtml_expander(Body,
-		   [["\n<", atom_to_list(Tag), ehtml_attrs_expander(Attrs), ">"]|
+		   [["\n<", atom_to_list(Tag), 
+		     ehtml_attrs_expander(Attrs), ">"]|
 		    Before],
 		   ["</", atom_to_list(Tag), ">"|After]);
 %% Variable references

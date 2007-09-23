@@ -8,6 +8,7 @@
 -module(yaws_server).
 -author('klacke@hyber.org').
 
+%% Yikes .. this needs to go away.
 -compile(export_all).
 %%-export([Function/Arity, ...]).
 
@@ -2449,9 +2450,9 @@ handle_out_reply_l([], _LineNo, _YawsFile, _UT, _ARG, Res) ->
 %% fast server side include with macrolike variable bindings expansion
 %%
 
-%%ssi(File, Delimiter, Bindings, Dir) ->
-%%    SC = get(sc),
-%%    ssi(File, Delimiter, Bindings, Dir, SC#sconf.docroot, SC ).
+
+ssi(File, Delimiter, Bindings) ->
+    ssi(File, Delimiter, Bindings, get(yaws_ut), get(yaws_arg), get (sc)).
 
 
 ssi(File, Delimiter, Bindings, UT, ARG) ->
