@@ -384,11 +384,14 @@ handle_info(minute10, State) ->
     
 
 wrap_p(AL, State) when record(AL, alog) ->
-    {ok, FI} = file:read_file_info(AL#alog.filename),
-    if
-	FI#file_info.size > State#state.log_wrap_size->
+    case file:read_file_info(AL#alog.filename) of
+	{ok, FI} when 	FI#file_info.size > State#state.log_wrap_size->
 	    true;
-	true ->
+	{ok, _FI} ->
+	    false;
+	{error, enoent} ->
+	    enoent;
+	_ ->
 	    false
     end;
 wrap_p(_,_) ->
@@ -397,7 +400,7 @@ wrap_p(_,_) ->
 
 
 wrap(AL, State) ->
-    case (catch wrap_p(AL, State)) of
+    case wrap_p(AL, State) of
 	true ->
 	    file:close(AL#alog.fd),
 	    Old = [AL#alog.filename, ".old"],
@@ -408,6 +411,12 @@ wrap(AL, State) ->
 	    AL#alog{fd = Fd2};
 	false ->
 	    AL;
+	enoent ->
+	    %% Logfile disapeared, 
+	    error_logger:format("Logfile ~p disapeared - we reopen it",
+				[AL#alog.filename]),
+	    {ok, Fd2} = file:open(AL#alog.filename, [write, raw]),
+	    AL#alog{fd = Fd2};
 	{'EXIT', Rsn} ->
 	    error_logger:format("Failed to wraplog ~p:~p~n",
 				[AL#alog.filename, Rsn]),
