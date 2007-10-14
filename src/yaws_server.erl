@@ -426,6 +426,7 @@ gserv(Top, GC, Group0) ->
 
 
 setup_dirs(GC) ->
+    file:make_dir(GC#gconf.tmpdir),
     TD0 = filename:join([GC#gconf.tmpdir,"yaws"]),
     file:make_dir(TD0),
     TD1 = filename:join([TD0, GC#gconf.id]),
