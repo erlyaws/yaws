@@ -56,7 +56,8 @@
 -export([parse_set_cookie/1, format_set_cookie/1, 
 	 postvar/2, queryvar/2, getvar/2]).
 
--export([binding/1,dir_listing/1, dir_listing/2]).
+-export([binding/1,binding_exists/1,
+	 dir_listing/1, dir_listing/2]).
 
 
 -import(lists, [map/2, flatten/1, reverse/1]).
@@ -649,7 +650,6 @@ find_cookie_val(Cookie, A) when record(A, arg) ->
 find_cookie_val(_Cookie, []) ->
     [];
 find_cookie_val(Cookie, [FullCookie | FullCookieList]) ->
-    %%case find_cookie_val2(Cookie, FullCookie) of
     case eat_cookie(Cookie, FullCookie) of
 	[] ->
 	    find_cookie_val(Cookie, FullCookieList);
@@ -689,30 +689,6 @@ eat_until([H|T], U, Acc) when H =/= U -> eat_until(T, U, [H|Acc]);
 eat_until([], _, Acc)                 -> {lists:reverse(Acc), []}.
 
 
-    
-
-find_cookie_val2(Cookie, FullCookie) ->    
-    case lists:prefix(Cookie, FullCookie) of
-	false when FullCookie == [] ->
-	    [];
-	false ->
-	    find_cookie_val2(Cookie, tl(FullCookie));
-	true ->
-	    case lists:dropwhile(fun(X) -> X /= $= end, FullCookie) of
-		[] ->
-		    [];
-		List ->
-		    find_cookie_val3(tl(List),[])
-	    end
-    end.
-
-
-find_cookie_val3([], Ack) ->
-    lists:reverse(Ack);
-find_cookie_val3([$;|_], Ack) ->
-    lists:reverse(Ack);
-find_cookie_val3([H|T], Ack) ->
-    find_cookie_val3(T, [H|Ack]).
 
 url_decode([$%, Hi, Lo | Tail]) ->
     Hex = yaws:hex_to_integer([Hi, Lo]),
@@ -1638,10 +1614,16 @@ queryvar(ARG, Key) ->
 		Val0 ->
 		    Val0
 	    end,
-    case lists:keysearch(Key,1,Parse) of
-	{value,{_,undefined}} -> undefined;
-	{value,{_,Val}} -> {ok, Val};
-	false -> undefined
+    case lists:filter(fun(KV) ->
+			      Key =:= element(1, KV)
+		      end,
+		      Parse) of
+	[] -> undefined;
+	[{_, V}] -> V;
+	Vs -> list_to_tuple(lists:map(fun(KV) ->
+					      element(2, KV)
+				      end,
+				      Vs))
     end.
 
 postvar(ARG, Key) when atom(Key) ->
@@ -1655,13 +1637,17 @@ postvar(ARG, Key) ->
 		Val0 ->
 		    Val0
 	    end,
-    case lists:keysearch(Key,1,Parse) of
-	{value, {_,undefined}} -> undefined;
-	{value,{_,Val}} -> {ok, Val};
-	false -> undefined
+    case lists:filter(fun(KV) ->
+			      Key =:= element(1, KV)
+		      end,
+		      Parse) of
+	[] -> undefined;
+	[{_, V}] -> V;
+	Vs -> list_to_tuple(lists:map(fun(KV) ->
+					      element(2, KV)
+				      end,
+				      Vs))
     end.
-
-
 
 binding(Key) ->
     case get({binding, Key}) of
