@@ -149,13 +149,11 @@ and vulnerable behaviour. In versions >  1.41 the Key is a list/string.
 
 
 .TP
-\fB username = Username \fR
-When running a Yaws server in production, it may feel safe
-to run yaws as a different user than root. Set this value to a 
-non priviliged username on the system, such as "nobody".
-Yaws will initially have to run a root in order to properly
-listen to priviliged ports .
-
+\fBrunmod = ModuleName \fR
+At startup yaws will invoke \fIModuleName:start()\fR in a separate
+process. It is possible to have several runmods.
+This is useful if we want to reuse the yaws startup shell script
+for our own application.
 
 .TP
 \fB pick_first_virthost_on_nomatch = true | false \fR
