@@ -1950,6 +1950,8 @@ deliver_dyn_part(CliSock,                  % essential params
 		 DeliverCont               % call DeliverCont(Arg)
 						% to continue normally
 		) ->
+    put(yaws_ut, UT),
+    put(yaws_arg, Arg), 
     Res = (catch YawsFun(Arg)),
     case handle_out_reply(Res, LineNo, YawsFile, UT, Arg) of
 	{get_more, Cont, State} when 
@@ -2303,19 +2305,12 @@ handle_out_reply({html, Html}, _LineNo, _YawsFile,  _UT, _ARG) ->
     accumulate_content(Html);
 
 handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  UT, ARG) ->
-    put(yaws_ut, UT),
-    put(yaws_arg, ARG),  %kludge
-
     Res = case safe_ehtml_expand(E) of
 	      {ok, Val} ->
 		  accumulate_content(Val);
 	      {error, ErrStr} ->
 		  handle_crash(ARG, ErrStr)
 	  end,
-
-    erase(yaws_ut),
-    erase(yaws_arg),
-
     Res;
 
 handle_out_reply({content, MimeType, Cont}, _LineNo,_YawsFile, _UT, _ARG) ->
@@ -2619,8 +2614,6 @@ handle_crash(ARG, L) ->
     ?Debug("handle_crash(~p)~n", [L]),
     SC=get(sc),
     yaws:elog("~s", [L]),
-    put(yaws_ut, #urltype{}),
-    put(yaws_arg, ARG),
     case catch apply(SC#sconf.errormod_crash, crashmsg, [ARG, SC, L]) of
 	{html, Str} ->
 	    accumulate_content(Str),
