@@ -783,7 +783,10 @@ acceptor0(GS, Top) ->
 		    erase_transients(),
 		    acceptor0(GS, Top)
 	    end;
-	{error, timeout} ->
+	{error, Reason} when ((Reason == timeout) or 
+			      (Reason == econnaborted)) ->
+	    %% The econnaborted is
+	    %% caused by recieving a RST when a SYN or SYN+ACK was expected.
 	    Top ! {self(), done_client, 0},
 	    receive
 		{Top, stop} ->
@@ -851,7 +854,7 @@ aloop(CliSock, GS, Num) ->
 erase_transients() ->
     %% flush all messages
     Fun = fun(G) -> receive
-		       X -> G(G)
+		       _X -> G(G)
 		    after 0 -> ok
 		    end
 	  end,
@@ -2306,7 +2309,7 @@ handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, ARG) ->
 handle_out_reply({html, Html}, _LineNo, _YawsFile,  _UT, _ARG) ->
     accumulate_content(Html);
 
-handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  UT, ARG) ->
+handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  _UT, ARG) ->
     Res = case safe_ehtml_expand(E) of
 	      {ok, Val} ->
 		  accumulate_content(Val);
