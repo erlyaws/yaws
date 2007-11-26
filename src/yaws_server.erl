@@ -732,15 +732,14 @@ acceptor0(GS, Top) ->
 
 	    case (GS#gs.gconf)#gconf.trace of  %% traffic trace
 		{true, _} ->
-		    {ok, {IP, Port}} = case GS#gs.ssl of
-					   ssl ->
-					       ssl:peername(Client);
-					   nossl ->
-					       inet:peername(Client)
-				       end,
-		    Str = ?F("New (~p) connection from ~s:~w~n", 
-			     [GS#gs.ssl, inet_parse:ntoa(IP),Port]),
-		    yaws_log:trace_traffic(from_client, Str);
+		    case peername(Client, GS#gs.ssl) of
+			{ok, {IP, Port}} ->
+			    Str = ?F("New (~p) connection from ~s:~w~n", 
+				     [GS#gs.ssl, inet_parse:ntoa(IP),Port]),
+			    yaws_log:trace_traffic(from_client, Str);
+			_ ->
+			    ignore
+		    end;
 		_ ->
 		    ok
 	    end,
@@ -821,18 +820,21 @@ aloop(CliSock, GS, Num) ->
 	    ?Debug("Request = ~s~n", [?format_record(Req, http_request)]),
 	    IP = case ?sc_has_access_log(SC) of
 		     true ->
-			 {ok, {Ip, _Port}} = peername(CliSock, SSL),
-			 Ip,
-			 case ?gc_log_has_resolve_hostname((GS#gs.gconf)) of
-			     true ->
-				 case inet:gethostbyaddr(Ip) of
-				     {ok, HE} ->
-					 HE#hostent.h_name;
-				     _ ->
+			 case peername(CliSock, SSL) of
+			     {ok, {Ip, _Port}}  ->
+				 case ?gc_log_has_resolve_hostname((GS#gs.gconf)) of
+				     true ->
+					 case inet:gethostbyaddr(Ip) of
+					     {ok, HE} ->
+						 HE#hostent.h_name;
+					     _ ->
+						 Ip
+					 end;
+				     false ->
 					 Ip
 				 end;
-			     false ->
-				 Ip
+			     _ ->
+				 undefined
 			 end;
 		     _ ->
 			 undefined
