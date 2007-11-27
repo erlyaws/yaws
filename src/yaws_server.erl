@@ -814,7 +814,7 @@ aloop(CliSock, GS, Num) ->
     put(init_db, get()),
     SSL = GS#gs.ssl,
     case  yaws:http_get_headers(CliSock, SSL) of
-	{Req0, H0} ->
+	{Req0, H0} when Req0#http_request.method /= bad_request ->
 	    {Req, H} = fix_abs_uri(Req0, H0),
 	    SC = pick_sconf(GS#gs.gconf, H, GS#gs.group, SSL),
 	    ?Debug("SC: ~s", [?format_record(SC, sconf)]),
@@ -847,7 +847,10 @@ aloop(CliSock, GS, Num) ->
 	    Call = call_method(Req#http_request.method, CliSock, Req, H),
 	    handle_method_result(Call, CliSock, IP, GS, Req, H, Num);
 	closed -> 
-	    {ok, Num}
+	    {ok, Num};
+	_ ->
+	    % not even HTTP traffic
+	    exit(normal)
     end.
 
 
