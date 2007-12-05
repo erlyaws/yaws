@@ -783,10 +783,13 @@ acceptor0(GS, Top) ->
 		    erase_transients(),
 		    acceptor0(GS, Top)
 	    end;
-	{error, Reason} when ((Reason == timeout) or 
+	{error, Reason} when ((Reason == timeout) or
+			      (Reason == einval) or
 			      (Reason == econnaborted)) ->
 	    %% The econnaborted is
 	    %% caused by recieving a RST when a SYN or SYN+ACK was expected.
+	    %% einval is reported to happen, it could be accept attempts
+	    %% on just recently reconfigured servers through --hup ... ???
 	    Top ! {self(), done_client, 0},
 	    receive
 		{Top, stop} ->
@@ -799,6 +802,7 @@ acceptor0(GS, Top) ->
 	    %% is to terminate yaws as an application, if we're running
 	    %% yaws as a standalone webserver, we want to restart the
 	    %% entire webserver, preferably through heart
+	    %% typical errors here are shortage of fds or memory
 	    error_logger:format("yaws: Failed to accept - terminating: ~p~n", 
 				[ERR]),
 	    exit(failaccept)
