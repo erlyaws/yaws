@@ -69,7 +69,7 @@ handler(Args, Id, Payload, SessionValue) ->
     end.
 
 %% Setup a SOAP interface according to the config file.
-setup(ConfigFile) ->
+setup(_ConfigFile) ->
     tbd.
 
 setup(Id, WsdlFile) when tuple(Id),size(Id)==2 ->
