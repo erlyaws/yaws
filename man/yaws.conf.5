@@ -100,6 +100,8 @@ The logs written by yaws are all wrap logs, the default value at the
 size where they wrap around and the original gets renamed to File.old
 is 1000000, 1 M. This value can changed.
 
+If we set the value to \fI0\fR the logs will never wrap. 
+
 .TP
 \fB tmpdir = Dir\fR
 Yaws generates files when generating dynamic content, i.e. when

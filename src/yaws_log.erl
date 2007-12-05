@@ -372,7 +372,8 @@ handle_info(minute10, State) ->
     Dir = State#state.dir,
     E = filename:join([Dir, "report.log"]),
     case file:read_file_info(E) of
-	{ok, FI} when  FI#file_info.size > State#state.log_wrap_size, 
+	{ok, FI} when  State#state.log_wrap_size > 0, 
+	               FI#file_info.size > State#state.log_wrap_size, 
 		       State#state.copy_errlog == true ->
 	    gen_event:call(error_logger, yaws_log_file_h, wrap);
 	_ ->
@@ -385,7 +386,8 @@ handle_info(minute10, State) ->
 
 wrap_p(AL, State) when record(AL, alog) ->
     case file:read_file_info(AL#alog.filename) of
-	{ok, FI} when 	FI#file_info.size > State#state.log_wrap_size->
+	{ok, FI} when FI#file_info.size > State#state.log_wrap_size,
+                      State#state.log_wrap_size > 0 ->
 	    true;
 	{ok, _FI} ->
 	    false;
