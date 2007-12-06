@@ -3034,12 +3034,12 @@ url_type(GetPath, ArgDocroot, VirtualDir) ->
 			    cache_file(SC, GC, GetPath, UT2);
 			false ->
 			    ?Debug("Using unchanged cached version~n", []),
-			    ets:update_counter(E, {urlc, GetPath}, 1),
+			    (catch ets:update_counter(E, {urlc, GetPath}, 1)),
 			    UT
 		    end;
 		true ->
 		    ?Debug("Serve page from cache ~p", [{When , N, N-When}]),
-		    ets:update_counter(E, {urlc, GetPath}, 1),
+		    (catch ets:update_counter(E, {urlc, GetPath}, 1)),
 		    UT
 	    end
     end.
@@ -3069,10 +3069,9 @@ cache_size(_UT) ->
 
 
 
-cache_file(SC, GC, Path, UT) when 
-UT#urltype.type == regular ;
-UT#urltype.type == yaws,
-UT#urltype.pathinfo == undefined ->
+cache_file(SC, GC, Path, UT) 
+  when ((UT#urltype.type == regular) or
+	((UT#urltype.type == yaws) and (UT#urltype.pathinfo == undefined))) ->
     E = SC#sconf.ets,
     [{num_files, N}] = ets:lookup(E, num_files),
     [{num_bytes, B}] = ets:lookup(E, num_bytes),
