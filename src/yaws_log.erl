@@ -352,12 +352,25 @@ tty_trace(Str, State) ->
     end.
 
 %%----------------------------------------------------------------------
+%% Func: handle_event/2
+%% Returns: 
+%%----------------------------------------------------------------------
+handle_event({yaws_hupped, _Res}, State) ->
+    handle_info(minute10,State),
+    {ok, State};
+
+handle_event(_Event, State) ->
+    {ok, State}.
+
+
+
+
+%%----------------------------------------------------------------------
 %% Func: handle_info/2
 %% Returns: {noreply, State}          |
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-
 handle_info(secs3, State) ->
     {noreply, State#state{now = fmtnow()}};
 
@@ -376,6 +389,8 @@ handle_info(minute10, State) ->
 	               FI#file_info.size > State#state.log_wrap_size, 
 		       State#state.copy_errlog == true ->
 	    gen_event:call(error_logger, yaws_log_file_h, wrap);
+	{error,enoent} ->
+	    gen_event:call(error_logger, yaws_log_file_h, reopen);
 	_ ->
 	    ok
     end,

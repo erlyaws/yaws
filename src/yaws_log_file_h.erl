@@ -34,6 +34,11 @@ init(File, PrevHandler) ->
 	    Error
     end.
 
+handle_call(reopen, {Fd, File, Prev}) ->
+    file:close(Fd),
+    {ok, Fd2} = file:open(File, [write,append]),
+    {ok, ok, {Fd2, File, Prev}};
+
 handle_call(wrap, {Fd, File, Prev}) ->
     Old = File ++ ".old",
     file:delete(Old),
