@@ -158,7 +158,15 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
 
     case Embedded of
 	false ->
-	    yaws_ctl:start(GC, FirstTime);
+	    case yaws_ctl:start(GC, FirstTime) of
+		ok -> 
+		    ok;
+		{error, RSN} ->
+		    %% Must call init stop here otherwise heart
+		    %% will restart us
+		    init:stop(),
+		    receive nothing -> ok end
+	    end;
         true -> 
 	    ok
     end,
