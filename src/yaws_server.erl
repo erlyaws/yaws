@@ -164,6 +164,7 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
 		{error, RSN} ->
 		    %% Must call init stop here otherwise heart
 		    %% will restart us
+		    error_logger:format("Failed to start: ~p~n", [RSN]),
 		    init:stop(),
 		    receive nothing -> ok end
 	    end;
@@ -2575,6 +2576,7 @@ path_to_mtime(FullPath) ->
 	    Err
     end.
 
+
 expand_parts([{data, D} |T], Bs, Ack) ->	    
     expand_parts(T, Bs, [D|Ack]);
 expand_parts([{var, V} |T] , Bs, Ack) ->
@@ -2588,8 +2590,11 @@ expand_parts([{var, V} |T] , Bs, Ack) ->
 	    end;
 	{value, {_, Val}} ->
 	    expand_parts(T, Bs, [Val|Ack]);
-	false ->
-	    expand_parts(T, Bs, Ack)
+	false  ->
+	    case get({binding,V}) of
+		undefined -> expand_parts(T, Bs, Ack);
+		Valb -> expand_parts(T, Bs, [Valb|Ack])
+	    end
     end;
 expand_parts([], _,Ack) ->
     lists:reverse(Ack).
