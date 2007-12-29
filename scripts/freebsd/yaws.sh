@@ -4,7 +4,8 @@
 
 
 YAWS_BIN=%prefix%bin/yaws
-YAWS_ID=myserverid
+# By default we run with the default id
+# YAWS_ID=myserverid
 CONF=%etcdir%yaws.conf
 
 

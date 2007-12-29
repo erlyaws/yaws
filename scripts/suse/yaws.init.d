@@ -2,7 +2,10 @@
 
 
 YAWS_BIN=%prefix%bin/yaws
-YAWS_ID=myserverid
+
+## By default we run with the default id
+# YAWS_ID_OPTS=--id myserverid
+
 conf="--conf %etcdir%/yaws.conf"
 
 test -x $YAWS_BIN || exit 5
@@ -47,7 +50,7 @@ case "$1" in
 
 	# NOTE: startproc returns 0, even if service is 
 	# already running to match LSB spec.
-	startproc $YAWS_BIN --daemon --heart --id ${YAWS_ID} ${conf}
+	startproc $YAWS_BIN --daemon --heart  ${YAWS_ID_OPTS} ${conf}
 
 	# Remember status and be verbose
 	rc_status -v
@@ -57,7 +60,7 @@ case "$1" in
 	## Stop daemon with killproc(8) and if this fails
 	## set echo the echo return value.
 
-	startproc $YAWS_BIN --stop --id ${YAWS_ID}
+	startproc $YAWS_BIN --stop  ${YAWS_ID_OPTS}
 
 	# Remember status and be verbose
 	rc_status -v
@@ -87,7 +90,7 @@ case "$1" in
 
 	echo -n "Force Reload service YAWS"
 	## if it supports it:
-	$YAWS_BIN --id ${YAWS_ID} --hup
+	$YAWS_BIN  ${YAWS_ID_OPTS} --hup
 	rc_status -v
 
 	;;
@@ -97,7 +100,7 @@ case "$1" in
 
 	# If it supports signalling:
 
-	startproc $YAWS_BIN --id ${YAWS_ID} --hup
+	startproc $YAWS_BIN  ${YAWS_ID_OPTS} --hup
 	rc_status -v
 	
 	;;
@@ -113,7 +116,7 @@ case "$1" in
 	# 3 - service not running
 
 	# NOTE: checkproc returns LSB compliant status values.
-	checkproc $YAWS_BIN --id ${YAWS_ID} --status
+	checkproc $YAWS_BIN  ${YAWS_ID_OPTS} --status
 	rc_status -v
 	;;
     probe)

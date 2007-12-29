@@ -10,7 +10,10 @@
 
 yaws=%prefix%/bin/yaws
 prog=yaws
-yawsid=myserverid
+
+# By default we run with the default id
+# idopts=--id myserverid
+
 conf="--conf %etcdir%/yaws.conf"
 
 test -x $yaws || exit 1
@@ -19,28 +22,28 @@ test -x $yaws || exit 1
 case "$1" in
     start)
 	echo -n "Starting $prog: "
-	$yaws  --id ${yawsid} --daemon --heart ${conf}
+	$yaws  ${idopts} --daemon --heart ${conf}
 	echo "."
     ;;
     stop)
 	echo -n "Stopping $prog: "
-	$yaws  --id ${yawsid} --stop
+	$yaws  ${idopts} --stop
 	echo "."
 	;;
     reload)
 	echo -n "Reloading $prog: "
-	$yaws  --id ${yawsid} --hup
+	$yaws  ${idopts} --hup
 	echo "."
 	;;
     status)
-	$yaws  --id ${yawsid} --status
+	$yaws  ${idopts} --status
 	echo "."
 	;;
     restart)
 	echo -n "Stopping $prog: "
-        $yaws  --id ${yawsid} --stop
+        $yaws  ${idopts} --stop
 	echo -n "Starting $prog: "
-        $yaws  --id ${yawsid} --daemon --heart
+        $yaws  ${idopts} --daemon --heart
 	echo "."
         ;;
 
