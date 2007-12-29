@@ -8,7 +8,7 @@
 -module(yaws_api).
 -author('klacke@hyber.org').
 
-%% -compile(export_all).
+%% -compile(expot_all).
 
 
 -include("../include/yaws.hrl").
@@ -1614,17 +1614,7 @@ queryvar(ARG, Key) ->
 		Val0 ->
 		    Val0
 	    end,
-    case lists:filter(fun(KV) ->
-			      Key =:= element(1, KV)
-		      end,
-		      Parse) of
-	[] -> undefined;
-	[{_, V}] -> {ok,V};
-	Vs -> list_to_tuple(lists:map(fun(KV) ->
-					      element(2, KV)
-				      end,
-				      Vs))
-    end.
+    filter_parse(Key, Parse).
 
 postvar(ARG, Key) when atom(Key) ->
     postvar(ARG, atom_to_list(Key));
@@ -1637,17 +1627,24 @@ postvar(ARG, Key) ->
 		Val0 ->
 		    Val0
 	    end,
+    filter_parse(Key, Parse).
+
+filter_parse(Key, Parse) ->
     case lists:filter(fun(KV) ->
-			      Key =:= element(1, KV)
+			      (Key == element(1, KV)) 
+				  andalso
+			      (element(2, KV) /= undefined)
 		      end,
 		      Parse) of
 	[] -> undefined;
 	[{_, V}] -> {ok,V};
+	%% Multivalued case - return list of values
 	Vs -> list_to_tuple(lists:map(fun(KV) ->
 					      element(2, KV)
 				      end,
 				      Vs))
     end.
+    
 
 binding(Key) ->
     case get({binding, Key}) of
