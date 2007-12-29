@@ -1,3 +1,14 @@
+Sat Dec 29 15:18:12 CET 2007 1.74
+patch to make ssi work inside the crash handler from Michael FIG
+tidy up patch by Richard Buckner
+Logging work by Richar Bucker to make yaws work nice together with normal UNIX logrotate.
+race condition on  update counter for a page, a pagecounter could be removed by another process
+Fixed a problem with heart restarting Yaws in a loop.
+Fixed a couple of problems with Yaws terminating on purpose when accept() fails.
+A bindings patch from Richard Bucker.
+silently discard traffic which isn't even HTTP.
+multivalued queryval/postval patch by yinso chen
+
 Thu Sep 20 15:09:35 CEST 2007 1.73
 Sloppy ssl bug found by John Webb
 
