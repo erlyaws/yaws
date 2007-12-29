@@ -1619,7 +1619,7 @@ queryvar(ARG, Key) ->
 		      end,
 		      Parse) of
 	[] -> undefined;
-	[{_, V}] -> V;
+	[{_, V}] -> {ok,V};
 	Vs -> list_to_tuple(lists:map(fun(KV) ->
 					      element(2, KV)
 				      end,
@@ -1642,7 +1642,7 @@ postvar(ARG, Key) ->
 		      end,
 		      Parse) of
 	[] -> undefined;
-	[{_, V}] -> V;
+	[{_, V}] -> {ok,V};
 	Vs -> list_to_tuple(lists:map(fun(KV) ->
 					      element(2, KV)
 				      end,
