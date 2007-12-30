@@ -122,8 +122,8 @@ arg_rewrite(Arg) ->
 
 	    Opaque2 = Arg#arg.opaque,
 	    Arg#arg{docroot=Docroot, docroot_mount=DocMount,
-			    opaque = AddOpaque ++ Opaque2}
-	end.
+		    opaque = AddOpaque ++ Opaque2}
+    end.
 
 
 %% Interface run_mod

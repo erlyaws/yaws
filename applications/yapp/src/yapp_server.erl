@@ -45,7 +45,7 @@ init([]) ->
     {ok, #state{}};
 
 init([YappRegistry]) ->
-    init_yapps(YappRegistry),
+    self() ! init_yapps,
     {ok, #state{yapp_registry = YappRegistry}}.
 
 %%--------------------------------------------------------------------
@@ -102,6 +102,9 @@ handle_cast(_Msg, State) ->
 %%--------------------------------------------------------------------
 handle_info({setdep,{yapp_registry,P}} , State) ->
     {noreply, State#state{yapp_registry=P}};
+handle_info(init_yapps, State) ->
+    init_yapps(State#state.yapp_registry),
+    {noreply, State};
 handle_info(_Info, State) ->
     {noreply, State}.
 
