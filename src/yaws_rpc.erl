@@ -117,6 +117,7 @@ handle_payload(Args, Handler, Type) -> % {{{
     % haXe parameters are URL encoded
     DecodedStr = case RpcType of
 		     haxe -> yaws_api:url_decode(Payload);
+             json -> yaws_api:url_decode(Payload);
 		     _ -> Payload
 		 end,
     case decode_handler_payload(RpcType, DecodedStr) of
@@ -293,7 +294,9 @@ decode_handler_payload(json, JSonStr) -> %{{{
         ID = jsonrpc:s(Obj, id),
         {ok, {call, Method, Args}, ID}
     catch 
-        error:Err -> {error, Err}
+        error:Err ->
+	        ?ERROR_LOG({ json_decode , JSonStr , Err }),
+           {error, Err}
     end; %}}}
 
 decode_handler_payload(haxe, [$_, $_, $x, $= | HaxeStr]) ->
