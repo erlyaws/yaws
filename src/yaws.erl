@@ -1816,7 +1816,7 @@ gen_tcp_send(S, Data) ->
 		ok ->
 		    ok;
 		Err ->
-		    erlang:error(Err)
+		    exit(normal)   %% keep quiet
 	    end;
 	true ->
 	    case Res of
