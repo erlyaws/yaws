@@ -17,7 +17,8 @@
 -include_lib("kernel/include/file.hrl").
 
 -compile(export_all).
--export([start_embedded/1, start_embedded/2, start_embedded/3,   % Thanks!
+-export([start_embedded/1, start_embedded/2, start_embedded/3,
+	 start_embedded/4,
 	 add_server/2]). 
 -export([new_ssl/0,
 	 ssl_keyfile/1, ssl_keyfile/2,
