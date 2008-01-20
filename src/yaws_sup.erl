@@ -107,7 +107,7 @@ get_app_args() ->
 	       end,
     Id = case application:get_env(yaws, id) of
 		   undefined ->
-		       undefined;
+		       "default";
 		   {ok, Id0} ->
 		       Id0
 	       end,

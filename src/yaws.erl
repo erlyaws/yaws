@@ -50,10 +50,13 @@ start_embedded(DocRoot, SL) when list(DocRoot),list(SL) ->
     start_embedded(DocRoot, SL, []).
 
 start_embedded(DocRoot, SL, GL) when list(DocRoot),list(SL),list(GL) ->
+    start_embedded(DocRoot, SL, GL, "default").
+start_embedded(DocRoot, SL, GL, Id) when list(DocRoot),list(SL),list(GL) ->
     ok = application:load(yaws),
     ok = application:set_env(yaws, embedded, true),
+    ok = application:set_env(yaws, id, Id),
     application:start(yaws),
-    GC = setup_gconf(GL, yaws_config:make_default_gconf(false, "")),
+    GC = setup_gconf(GL, yaws_config:make_default_gconf(false, Id)),
     SC = setup_sconf(DocRoot, #sconf{}, SL),
     yaws_config:add_yaws_soap_srv(GC),
     SCs = yaws_config:add_yaws_auth([SC]),
