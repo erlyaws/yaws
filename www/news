@@ -1,3 +1,9 @@
+Sun Feb  3 2008 version 1.75
+Better id handling for embedde startup (Klacke)
+Reintroduced the SPNEGO/GSSAPI auth support by Mikael Magnusson
+rpc patch by adam.boz@gmail.com
+updated yapp documentation and startup sequence of yapp to avoid deadlock situation when yapp is inncluded in other applications .app files. (Micke)
+
 Sat Dec 29 15:18:12 CET 2007 1.74
 patch to make ssi work inside the crash handler from Michael FIG
 tidy up patch by Richard Buckner
