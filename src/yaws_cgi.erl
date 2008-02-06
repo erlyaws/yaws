@@ -311,6 +311,11 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
 	    {"CONTENT_LENGTH", H#headers.content_length},
 	    {"HTTP_ACCEPT", H#headers.accept},
 	    {"HTTP_USER_AGENT", H#headers.user_agent},
+	    {"HTTP_REFERER", H#headers.referer},
+	    {"HTTP_IF_MODIFIED_SINCE", H#headers.if_modified_since},
+	    {"HTTP_IF_MATCH", H#headers.if_match},
+	    {"HTTP_IF_NONE_MATCH", H#headers.if_none_match},
+	    {"HTTP_IF_UNMODIFIED_SINCE", H#headers.if_unmodified_since},
 	    {"HTTP_COOKIE", flatten_val(make_cookie_val(H#headers.cookie))}
 	   ]++lists:map(fun({http_header,_,Var,_,Val})->{tohttp(Var),Val} end,
 			H#headers.other)
@@ -384,6 +389,8 @@ do_header(_Arg, "Content-Type: "++CT, {all_data, Data}) ->
 do_header(_Arg, "Location: "++Loc, _) ->
     {redirect_local, {any_path, Loc}};
 do_header(_Arg, "Status: "++[N1,N2,N3|_], _) ->
+    {status, list_to_integer([N1,N2,N3])};
+do_header(_Arg, "HTTP/1."++[_,_,N1,N2,N3|_], _) ->
     {status, list_to_integer([N1,N2,N3])};
 do_header(_Arg, Line, _) ->
     {header, Line}.    % Is this correct?
