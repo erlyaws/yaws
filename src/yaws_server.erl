@@ -794,6 +794,7 @@ acceptor0(GS, Top) ->
 	    end;
 	{error, Reason} when ((Reason == timeout) or
 			      (Reason == einval) or
+			      (Reason == normal) or
 			      (Reason == econnaborted)) ->
 	    %% The econnaborted is
 	    %% caused by recieving a RST when a SYN or SYN+ACK was expected.
