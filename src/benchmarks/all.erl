@@ -24,12 +24,12 @@
 -define(NORMAL, 0).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% 	Interface 
+%%%         Interface 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%---------------------------------------------------------------------------
 %% run() -> _
-%%	
+%%        
 %% Runs all benchmark modules in the current directory on all erlang
 %% installations specified by releases/0
 %%---------------------------------------------------------------------------
@@ -39,12 +39,12 @@ run() ->
     lists:foreach(fun run/1, releases()).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% 	Internal functions
+%%%         Internal functions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%---------------------------------------------------------------------------
 %% run(Release) -> _
-%%	Release = string() - Erlang release 	
+%%        Release = string() - Erlang release         
 %% Help functions to run/0
 %%---------------------------------------------------------------------------
 run(Release) -> 
@@ -52,7 +52,7 @@ run(Release) ->
     command(Release ++ " -noshell -s bench run -s erlang halt").
 %%---------------------------------------------------------------------------
 %% command(Command) -> _
-%%	Command = string() - is the name and arguments of the external 
+%%        Command = string() - is the name and arguments of the external 
 %%                           program which will be run
 %%---------------------------------------------------------------------------
 command(Command) ->
@@ -61,21 +61,21 @@ command(Command) ->
     print_output(Port).
 %%---------------------------------------------------------------------------
 %% print_output(Port) -> _
-%%	Port = port()	
+%%        Port = port()        
 %% Print data from the port i.e. output from external program,
 %% on standard out.
 %%---------------------------------------------------------------------------
 print_output(Port) ->
     receive
-	{Port, {data,Bytes}} ->
-	    io:put_chars(Bytes),
-	    print_output(Port);
-	{Port, {exit_status, ?NORMAL}} ->
-	    ok
+        {Port, {data,Bytes}} ->
+            io:put_chars(Bytes),
+            print_output(Port);
+        {Port, {exit_status, ?NORMAL}} ->
+            ok
     end.
 %%---------------------------------------------------------------------------
 %% run() -> Releases
-%%	Releases = [Release |_]
+%%        Releases = [Release |_]
 %%      Release = string() - Erlang release  
 %% Defines which erlang releases to run on
 %%  --- Change this function to reflect your own erlang installations ---

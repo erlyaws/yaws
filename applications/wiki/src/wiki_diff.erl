@@ -31,14 +31,14 @@ diff(New, Old) ->
 
 check(Patch, New, Old) ->
     case patch(New, Patch) of
-	Old ->
-	    true;
-	_ ->
-	    exit(oops)
+        Old ->
+            true;
+        _ ->
+            exit(oops)
     end.
 
 patchL(New, Patches) ->
-    foldl(fun(Patch, N) -> patch(N, Patch) end,	New, Patches).
+    foldl(fun(Patch, N) -> patch(N, Patch) end,        New, Patches).
 
 patch(New, Patch) ->
     sneaky_flatten(patch1(binary_to_term(Patch), str2lines(New))).
@@ -58,17 +58,17 @@ diff([], _, Patch) ->
     term_to_binary(reverse(Patch));
 diff(Old = [{_,Str}|T], New, Patch) ->
     case match(Old, New) of
-	{yes, Ln, Ln, Old1} ->
-	    case Str of
-		"\n" ->
-		    diff(Old1, New, [Str|Patch]);
-		_ ->
-		    diff(Old1, New, [{Ln,Ln}|Patch])
-	    end;
-	{yes, L1, L2, Old1} ->
-	    diff(Old1, New, [{L1,L2}|Patch]);
-	no ->
-	    diff(T, New, [Str|Patch])
+        {yes, Ln, Ln, Old1} ->
+            case Str of
+                "\n" ->
+                    diff(Old1, New, [Str|Patch]);
+                _ ->
+                    diff(Old1, New, [{Ln,Ln}|Patch])
+            end;
+        {yes, L1, L2, Old1} ->
+            diff(Old1, New, [{L1,L2}|Patch]);
+        no ->
+            diff(T, New, [Str|Patch])
     end.
 
 match(X=[{Ln,Str}|T], [{L1,Str}|T1]) -> extend_match(T, T1, L1, L1);

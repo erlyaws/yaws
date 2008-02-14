@@ -14,12 +14,12 @@ start() ->
     application:start(yaws),
     GC = yaws_config:make_default_gconf(false),
     SC = #sconf{port = 8888,
-		servername = "foobar",
-		listen = {0,0,0,0},
-		docroot = "/tmp"},
+                servername = "foobar",
+                listen = {0,0,0,0},
+                docroot = "/tmp"},
     yaws_api:setconf(GC, [[SC]]).
 
-		
+                
 
     
 

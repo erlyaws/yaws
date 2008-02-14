@@ -13,8 +13,8 @@
 -include("../include/yaws_api.hrl").
 
 -export([out404/3,
-	 out404/1,
-	 crashmsg/3]).
+         out404/1,
+         crashmsg/3]).
 
 
 %% The default error 404 error delivery module
@@ -39,17 +39,17 @@ out404(Arg, GC, SC) ->
 
 not_found_body(Path, _GC, _SC) ->
     L = ["<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">"
-	 "<HTML><HEAD>"
-	 "<TITLE>404 Not Found</TITLE>"
-	 "</HEAD><BODY>"
-	 "<H1>Not Found</H1>"
-	 "The requested URL ", 
-	 yaws_api:htmlize(Path), 
-	 " was not found on this server.<P>"
-	 "<HR>",
-	 yaws:address(),
-	 "  </BODY></HTML>"
-	],
+         "<HTML><HEAD>"
+         "<TITLE>404 Not Found</TITLE>"
+         "</HEAD><BODY>"
+         "<H1>Not Found</H1>"
+         "The requested URL ", 
+         yaws_api:htmlize(Path), 
+         " was not found on this server.<P>"
+         "<HR>",
+         yaws:address(),
+         "  </BODY></HTML>"
+        ],
     list_to_binary(L).
 
 
@@ -57,7 +57,7 @@ not_found_body(Path, _GC, _SC) ->
 
 %% possibility to customize crash messages, 
 
-% while developing
+%% while developing
 %% it's extremely convenient to get the crash messages in the browser,
 %% however not in production :-)
 

@@ -27,8 +27,8 @@ run(_Page, ArgList) ->
     Pages = wiki_utils:getpages_by_prefix(Prefix, Root),
     
     lists:map(fun(F) -> 
-		[wiki_to_html:format_menu_link(Prefix, F, Root),"<br>"] end, 
-	Pages).
+                [wiki_to_html:format_menu_link(Prefix, F, Root),"<br>"] end, 
+        Pages).
 
 
 %% Get the category to use in the menu If not passed as parameter, use
@@ -36,10 +36,10 @@ run(_Page, ArgList) ->
 %% Be careful: plugin syntax is for the moment case sensitive
 get_prefix(ArgList) ->
     case lists:keysearch("prefix", 1, ArgList) of
-	{value, {"prefix", Prefix}} ->
-	    Prefix;
-	_Other ->
-	    "Category"
+        {value, {"prefix", Prefix}} ->
+            Prefix;
+        _Other ->
+            "Category"
     end.
 
 %% TODO: is it relevant to be able to handle several category in

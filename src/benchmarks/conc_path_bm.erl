@@ -37,82 +37,82 @@ benchmarks() ->
 % original conc_path from yaws_server.erl
 %--------------------------------------
 conc_path_orig(Iter) ->
-	do_conc_path_orig(Iter, getData()).
+        do_conc_path_orig(Iter, getData()).
 
 do_conc_path_orig(0, _Path) -> ok;
 do_conc_path_orig(Iter, Path) ->
 
-	?rep20(conc_path(Path)),
+        ?rep20(conc_path(Path)),
 
-	do_conc_path_orig(Iter-1, Path).
+        do_conc_path_orig(Iter-1, Path).
 
 
 %--------------------------------------
 % slightly tweaked conc_path from yaws_server.erl
 %--------------------------------------
 conc_path_tweaked(Iter) ->
-	do_conc_path_tweaked(Iter, getData()).
+        do_conc_path_tweaked(Iter, getData()).
 
 do_conc_path_tweaked(0, _Path) -> ok;
 do_conc_path_tweaked(Iter, Path) ->
 
-	?rep20(conc_path2(Path)),
+        ?rep20(conc_path2(Path)),
 
-	do_conc_path_tweaked(Iter-1, Path).
+        do_conc_path_tweaked(Iter-1, Path).
 
 %--------------------------------------
 % tail recursive version of conc_path
 %--------------------------------------
 conc_path_tail(Iter) ->
-	do_conc_path_tail(Iter, getData()).
+        do_conc_path_tail(Iter, getData()).
 
 do_conc_path_tail(0, _Path) -> ok;
 do_conc_path_tail(Iter, Path) ->
 
-	?rep20(conc_path_tailrecursive(Path)),
+        ?rep20(conc_path_tailrecursive(Path)),
 
-	do_conc_path_tail(Iter-1, Path).
+        do_conc_path_tail(Iter-1, Path).
 
 
 %--------------------------------------
 % lists:flatten 
 %--------------------------------------
 conc_path_lflatten(Iter) ->
-	do_conc_path_lflatten(Iter, getData()).
+        do_conc_path_lflatten(Iter, getData()).
 
 do_conc_path_lflatten(0, _Path) -> ok;
 do_conc_path_lflatten(Iter, Path) ->
 
-	?rep20(lists:flatten(Path)),
+        ?rep20(lists:flatten(Path)),
 
-	do_conc_path_lflatten(Iter-1, Path).
+        do_conc_path_lflatten(Iter-1, Path).
 
 
 %--------------------------------------
 % lists:concat
 %--------------------------------------
 conc_path_lconcat(Iter) ->
-	do_conc_path_lconcat(Iter, getData()).
+        do_conc_path_lconcat(Iter, getData()).
 
 do_conc_path_lconcat(0, _Path) -> ok;
 do_conc_path_lconcat(Iter, Path) ->
 
-	?rep20(lists:concat(Path)),
+        ?rep20(lists:concat(Path)),
 
-	do_conc_path_lconcat(Iter-1, Path).
+        do_conc_path_lconcat(Iter-1, Path).
 
 %--------------------------------------
 % lists:append
 %--------------------------------------
 conc_path_lappend(Iter) ->
-	do_conc_path_lappend(Iter, getData()).
+        do_conc_path_lappend(Iter, getData()).
 
 do_conc_path_lappend(0, _Path) -> ok;
 do_conc_path_lappend(Iter, Path) ->
 
-	?rep20(lists:append(Path)),
+        ?rep20(lists:append(Path)),
 
-	do_conc_path_lappend(Iter-1, Path).
+        do_conc_path_lappend(Iter-1, Path).
 
 
 
@@ -152,20 +152,20 @@ conc_path([H|T]) ->
 conc_path2([]) ->
     [];
 conc_path2([H|[]]) ->
-	H;
+        H;
 conc_path2([H|T]) ->
     H ++ conc_path2(T).
 
 
 
 conc_path_tailrecursive([]) ->
-	[];
+        [];
 conc_path_tailrecursive([H|T]) ->
-	c2(T,H).
+        c2(T,H).
 
 c2([],Acc) ->
-	Acc;
+        Acc;
 c2([H|[]],Acc) ->
-	H ++ Acc;
+        H ++ Acc;
 c2([H|T],Acc) ->
-	c2(T,Acc ++ H).
+        c2(T,Acc ++ H).

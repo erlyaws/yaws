@@ -16,9 +16,9 @@
 %%% </code>
 %%% <p>where "myvirtserverid" is the the "server id" set in the opaque variable
 %%% yapp_server_id in yaws.conf:<pre>
-%%%	&lt;opaque&gt;
-%%%		yapp_server_id = myvirtserverid
-%%%	&lt;/opaque&gt; </pre>
+%%%        &lt;opaque&gt;
+%%%                yapp_server_id = myvirtserverid
+%%%        &lt;/opaque&gt; </pre>
 %%% </p>
 %%% <p>If Yaws is running on a different node use:
 %%% </p><code>

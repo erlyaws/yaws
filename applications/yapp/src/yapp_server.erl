@@ -16,7 +16,7 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-	 terminate/2, code_change/3]).
+         terminate/2, code_change/3]).
 
 -record(state, {yapp_registry}).
 
@@ -136,9 +136,9 @@ init_yapps(YappRegistry) ->
     Yapps = yapp_registry:list(YappRegistry),
     YB = BYS ++ Yapps,
     case YB of
-	[] ->
-	    do_nothing;
-	_ ->
-	    yapp:insert(YB)
+        [] ->
+            do_nothing;
+        _ ->
+            yapp:insert(YB)
     end.
 

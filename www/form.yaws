@@ -3,7 +3,7 @@
 
 out(A) -> 
        {ssi, "TAB.inc", "%%",[{"form", "choosen"}]}.
-	    
+            
 </erl>
 
 
@@ -20,7 +20,7 @@ out(A) ->
   </p>
 
   <form method="post"
-	action="/post.yaws">
+        action="/post.yaws">
 
     This is a serious poll.
 

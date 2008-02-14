@@ -1,20 +1,20 @@
 <erl module=haxe_sample>
 
 out(A) -> 
-	A1 = A#arg{state = {new_state, "alive and kicking"}},
-	yaws_rpc:handler(A1, {haxe_sample, respond}).
+        A1 = A#arg{state = {new_state, "alive and kicking"}},
+        yaws_rpc:handler(A1, {haxe_sample, respond}).
 
 respond(State, {call, echo, Value} = _Request) ->
-	{new_state, StateVal} = State,
-	{array, [First, Second]} = Value,
-	Response =
-		{response,
-		{struct, [
-			{you_sent_first, First},
-			{btw, "Hello haXe!"},
-			{also, {array, ["take", "this", 4, "array"]}},
-			{my_state_is, StateVal}
-			]
-		}},
-    	{true, 0, null, Response}.
+        {new_state, StateVal} = State,
+        {array, [First, Second]} = Value,
+        Response =
+                {response,
+                {struct, [
+                        {you_sent_first, First},
+                        {btw, "Hello haXe!"},
+                        {also, {array, ["take", "this", 4, "array"]}},
+                        {my_state_is, StateVal}
+                        ]
+                }},
+            {true, 0, null, Response}.
 </erl>

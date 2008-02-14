@@ -23,13 +23,13 @@ out(A) ->
       [{h1, [], "Streaming data to the client"},
        
        {p, [],
-	"Sometimes we want to stream data to the client. Maybe we don't know or cannot compute the size of the data. Regardless of what, we do not want to keep all data in memory until it's shipped to the client. We want to use chunked encodings, and simply send data in chunks to the client. This is performed in steps. First the out/1 return value:"},
+        "Sometimes we want to stream data to the client. Maybe we don't know or cannot compute the size of the data. Regardless of what, we do not want to keep all data in memory until it's shipped to the client. We want to use chunked encodings, and simply send data in chunks to the client. This is performed in steps. First the out/1 return value:"},
 
        box(" {streamcontent, MimeType, FirstChunk}"),
 
        {p,[], ["Is returned from the out/1 function"
-	       " This make the erlang process processing that particular page go into a receive loop, waiting for more data. Somehow, another process in  the erlang system, must then deliver data to the waiting/receiving erlang processs. There are two asyncronous API functions that can be used to deliver that data."]},
-	
+               " This make the erlang process processing that particular page go into a receive loop, waiting for more data. Somehow, another process in  the erlang system, must then deliver data to the waiting/receiving erlang processs. There are two asyncronous API functions that can be used to deliver that data."]},
+        
        box("yaws_api:stream_chunk_deliver(YawsPid, Data)"),
        {p, [], "and"},
        box("yaws_api:stream_chunk_end(YawsPid)"),
@@ -41,9 +41,9 @@ out(A) ->
        ssi("urandom.yaws"),
        
        {p, [], 
-	["The above slightly bizzare code can be executed ",
-	 {a, [{href, "urandom.yaws"}], "Here"},
-	 " The code creates a process which reads a random amount of bytes from /dev/urandom and sends them to the client, piece by piece. "]},
+        ["The above slightly bizzare code can be executed ",
+         {a, [{href, "urandom.yaws"}], "Here"},
+         " The code creates a process which reads a random amount of bytes from /dev/urandom and sends them to the client, piece by piece. "]},
 
        {p,[], "There is also a version of the API code which delivers the data in a blocking fashion. Whenever the producer of the stream is faster than the consumer, that is the WWW client, we must use a syncronous version of the code. The api function is called:"},
 

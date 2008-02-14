@@ -7,9 +7,9 @@ box(Str) ->
 
 fpostvar(A, Key) ->
     case postvar(A,"lang") of
-	undefined -> "None";
-	{ok, Val} -> 
-	    Val
+        undefined -> "None";
+        {ok, Val} -> 
+            Val
     end.
     
 
@@ -18,14 +18,14 @@ out(A) ->
      {ehtml,
       {'div',[{id, "entry"}], [{h2, [],"post.yaws"},
        {p,[],[ "This is the ", {tt, [], "post.yaws"}, " file ",
-	       "This yaws file gets invoked with POSTed client data. "
-	       "This is the data that is submitted from the forms page ",
-	       {a, [{href, "form.yaws"}], " form.yaws "}]},
+               "This yaws file gets invoked with POSTed client data. "
+               "This is the data that is submitted from the forms page ",
+               {a, [{href, "form.yaws"}], " form.yaws "}]},
        
        {p, [], ["POST data is naturally organized as a ", 
-		{tt, [], "{Key, Value} "}, " list. A call to "
-		"the function ", {tt, [], "yaws_api:parse_post(A) "},
-		" will parse the POSTed data. and return a key/value list "]},
+                {tt, [], "{Key, Value} "}, " list. A call to "
+                "the function ", {tt, [], "yaws_api:parse_post(A) "},
+                " will parse the POSTed data. and return a key/value list "]},
        box("
 out(A) ->
     {ehtml, 

@@ -7,7 +7,7 @@
 ;; you may not use this file except in compliance with the License.
 ;; You may obtain a copy of the License at
 
-;;	http://www.apache.org/licenses/LICENSE-2.0
+;;        http://www.apache.org/licenses/LICENSE-2.0
 
 ;; Unless required by applicable law or agreed to in writing, software
 ;; distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,12 +36,12 @@
 ;; configure these:
 (defvar default-mode (list "SGML" 'sgml-mode))
 (defvar second-modes (list
-		      (list "Erlang" "<erl>" "</erl>" 'erlang-mode)
-		      (list "Erlang" "<?erl" "?>" 'erlang-mode)
+                      (list "Erlang" "<erl>" "</erl>" 'erlang-mode)
+                      (list "Erlang" "<?erl" "?>" 'erlang-mode)
                       (list "C++" "<?php" "?>" 'c++-mode)
                       (list "Python" "<?python" "?>" 'python-mode)
-		      (list "Tcl" "<?" "?>" 'tcl-mode)
-		      ))
+                      (list "Tcl" "<?" "?>" 'tcl-mode)
+                      ))
 ;; ----------------
 
 (defvar two-mode-update 0)
@@ -68,11 +68,11 @@
   (when two-mode-mode-idle-timer
     (cancel-timer two-mode-mode-idle-timer))
   (setq two-mode-mode-idle-timer
-	(run-with-idle-timer two-mode-mode-delay t
-			     'two-mode-mode-update-mode))
+        (run-with-idle-timer two-mode-mode-delay t
+                             'two-mode-mode-update-mode))
   (or (assq 'two-mode-bool minor-mode-alist)
       (setq minor-mode-alist
-	    (cons '(two-mode-bool " two-mode") minor-mode-alist))))
+            (cons '(two-mode-bool " two-mode") minor-mode-alist))))
 
 (defun two-mode-mode-need-update ()
   (setq two-mode-update 1))
@@ -89,36 +89,36 @@
 
       (two-mode-mode-setup)
       (if two-mode-switch-hook
-	  (run-hooks 'two-mode-switch-hook))
+          (run-hooks 'two-mode-switch-hook))
       (if (eq font-lock-mode t)
-	  (font-lock-fontify-buffer))
+          (font-lock-fontify-buffer))
       (turn-on-font-lock-if-enabled))))
 
 (defun two-mode-mode-update-mode ()
   (when (and two-mode-bool two-mode-update)
     (setq two-mode-update 0)
     (let ((mode-list second-modes)
-	  (flag 0))
+          (flag 0))
       (while mode-list
-	(let ((mode (car mode-list))
-	      (lm -1)
-	      (rm -1))
-	  (save-excursion 
-	    (if (search-backward (cadr mode) nil t)
-		(setq lm (point))
-	      (setq lm -1)))
-	  (save-excursion
-	    (if (search-backward (car (cddr mode)) nil t)
-		(setq rm (point))
-	      (setq rm -1)))
-	  (if (and (not (and (= lm -1) (= rm -1))) (>= lm rm))
-	      (progn
-		(setq flag 1)
-		(setq mode-list '())
-		(two-mode-change-mode (car mode) (car (cdr (cddr mode)))))))
-	(setq mode-list (cdr mode-list)))
+        (let ((mode (car mode-list))
+              (lm -1)
+              (rm -1))
+          (save-excursion 
+            (if (search-backward (cadr mode) nil t)
+                (setq lm (point))
+              (setq lm -1)))
+          (save-excursion
+            (if (search-backward (car (cddr mode)) nil t)
+                (setq rm (point))
+              (setq rm -1)))
+          (if (and (not (and (= lm -1) (= rm -1))) (>= lm rm))
+              (progn
+                (setq flag 1)
+                (setq mode-list '())
+                (two-mode-change-mode (car mode) (car (cdr (cddr mode)))))))
+        (setq mode-list (cdr mode-list)))
       (if (= flag 0)
-	  (two-mode-change-mode (car default-mode) (cadr default-mode))))))
+          (two-mode-change-mode (car default-mode) (cadr default-mode))))))
 
 (defun two-mode-mode ()
   "Turn on two-mode-mode"

@@ -2,9 +2,9 @@
 -define(_YAWS_DAV, true).
 
 -record(propfind, {
-	  prop = [],
-	  uri  = ""
-	 }).
+          prop = [],
+          uri  = ""
+         }).
 
 
 

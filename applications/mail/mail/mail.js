@@ -1,8 +1,8 @@
 /*    -*- Java -*- 
  * 
- *    File:	 mail.js
- *    Author:	 Johan Bevemyr
- *    Created:	 Sun Feb 15 23:40:56 2004
+ *    File:         mail.js
+ *    Author:         Johan Bevemyr
+ *    Created:         Sun Feb 15 23:40:56 2004
  *    Purpose:   support functions for webmail
  */
 

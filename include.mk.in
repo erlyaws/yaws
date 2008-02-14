@@ -82,16 +82,16 @@ APPSCRIPT = '$$vsn=shift; $$mods=""; while(@ARGV){ $$_=shift; s/^([A-Z].*)$$/\'\
 # Targets
 
 ../ebin/%.app: %.app.src ../vsn.mk Makefile
-	perl -e $(APPSCRIPT) "$(VSN)" $(MODULES) < $< > $@
+        perl -e $(APPSCRIPT) "$(VSN)" $(MODULES) < $< > $@
 
 ../ebin/%.appup: %.appup 
-	cp $< $@
+        cp $< $@
 
 ../ebin/%.$(EMULATOR): %.erl
-	"$(ERLC)" $(ERLC_FLAGS) -o ../ebin $<
+        "$(ERLC)" $(ERLC_FLAGS) -o ../ebin $<
 
 %.$(EMULATOR): %.erl
-	"$(ERLC)" $(ERLC_FLAGS) $<
+        "$(ERLC)" $(ERLC_FLAGS) $<
 
 
 

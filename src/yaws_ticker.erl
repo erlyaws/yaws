@@ -8,9 +8,9 @@
 
 ticker(Time, To, Msg) ->
     receive
-	{'EXIT', _} ->
-	    exit(normal)
+        {'EXIT', _} ->
+            exit(normal)
     after Time ->
-	    To ! Msg
+            To ! Msg
     end,
     ?MODULE:ticker(Time, To, Msg).

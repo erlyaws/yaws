@@ -9,7 +9,7 @@
 %% $Id$
 
 -export([format_wiki/3,format_wiki/4, format_link/2, format_wiki_files/4,
-	format_wiki_files/5, format_menu_link/3]).
+        format_wiki_files/5, format_menu_link/3]).
 
 -include_lib("kernel/include/file.hrl").
 
@@ -66,12 +66,12 @@ format_link({file, FileName, Description, _}, FileDir, Page, Root,_) ->
 wiki_link(LinkName, Page, Root) ->
     FullName = Root ++ "/" ++ Page ++ ".wob",
     case is_file(FullName) of
-	true ->
-	    ["<a href=\"showPage.yaws?node=",
-	     wiki:str2urlencoded(Page),"\">",LinkName,"</a> "];
-	false ->
-	    [" ",Page,"<a href=\"createNewPage.yaws?node=",
-	     wiki:str2urlencoded(Page),"\">???</a>"]
+        true ->
+            ["<a href=\"showPage.yaws?node=",
+             wiki:str2urlencoded(Page),"\">",LinkName,"</a> "];
+        false ->
+            [" ",Page,"<a href=\"createNewPage.yaws?node=",
+             wiki:str2urlencoded(Page),"\">???</a>"]
     end.
 
 %% Same as format_link, but drop the prefix
@@ -79,18 +79,18 @@ wiki_link(LinkName, Page, Root) ->
 format_menu_link(Prefix, Page, Root) ->
     Prefix_length = length(Prefix),
     LinkName = case Prefix_length < length(Page) of
-		   true  -> string:substr(Page, Prefix_length + 1);
-		   false -> Page
-	       end,
+                   true  -> string:substr(Page, Prefix_length + 1);
+                   false -> Page
+               end,
     wiki_link(LinkName, Page, Root).
 
 
 get_filesize(File) ->
     case file:read_file_info(File) of
-	{ok, FileInfo} ->
-	    Size = FileInfo#file_info.size/1024,
-	    io_lib:format("~.1fKB",[Size]);
-	_ -> "unknown"
+        {ok, FileInfo} ->
+            Size = FileInfo#file_info.size/1024,
+            io_lib:format("~.1fKB",[Size]);
+        _ -> "unknown"
     end.
     
 

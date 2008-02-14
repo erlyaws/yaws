@@ -2,34 +2,34 @@
 
 out(A) ->
     case mail:check_session(A) of
-	{ok, Session} ->
-	    L = yaws_api:parse_post(A),
-	    Cmd = mail:get_val("cmd", L, reply),
-	    case Cmd of
-		"reply" ->
-		    From = yaws_api:url_decode(mail:get_val("from", L, "")),
-		    Subject = yaws_api:url_decode(mail:get_val("subject", L, "")),
-		    To = yaws_api:url_decode(mail:get_val("to", L, "")),
-		    Cc = yaws_api:url_decode(mail:get_val("cc", L, "")),
-		    Bcc = yaws_api:url_decode(mail:get_val("bcc", L, "")),
-		    Quote = yaws_api:url_decode(mail:get_val("quote", L, "")),
-		    NewCc =
-			if To == [] -> Cc;
-			   Cc == [] -> To;
-			   true -> To ++ ", " ++ Cc
-			end,
-		    mail:compose(Session,"",From,NewCc,Bcc,"RE: "++Subject,
-				 Quote);
-		"delete" ->
-		    Nr = mail:get_val("nr", L, ""),
-		    mail:delete(Session, [Nr])
-	    end;
-	Error ->
-	    Error
+        {ok, Session} ->
+            L = yaws_api:parse_post(A),
+            Cmd = mail:get_val("cmd", L, reply),
+            case Cmd of
+                "reply" ->
+                    From = yaws_api:url_decode(mail:get_val("from", L, "")),
+                    Subject = yaws_api:url_decode(mail:get_val("subject", L, "")),
+                    To = yaws_api:url_decode(mail:get_val("to", L, "")),
+                    Cc = yaws_api:url_decode(mail:get_val("cc", L, "")),
+                    Bcc = yaws_api:url_decode(mail:get_val("bcc", L, "")),
+                    Quote = yaws_api:url_decode(mail:get_val("quote", L, "")),
+                    NewCc =
+                        if To == [] -> Cc;
+                           Cc == [] -> To;
+                           true -> To ++ ", " ++ Cc
+                        end,
+                    mail:compose(Session,"",From,NewCc,Bcc,"RE: "++Subject,
+                                 Quote);
+                "delete" ->
+                    Nr = mail:get_val("nr", L, ""),
+                    mail:delete(Session, [Nr])
+            end;
+        Error ->
+            Error
     end.
 
-</erl>	    
-	 
+</erl>            
+         
 
 
 

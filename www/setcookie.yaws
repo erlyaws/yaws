@@ -4,12 +4,12 @@
 
 session(A, Visits) ->
     receive
-	{From, tick} ->
-	    N = calendar:local_time(),
-	    From ! {self(), [N|Visits]},
-	    session(A, [N|Visits])
+        {From, tick} ->
+            N = calendar:local_time(),
+            From ! {self(), [N|Visits]},
+            session(A, [N|Visits])
     after 60000 ->    %% keep state for 60 secs only
-	    exit(normal)
+            exit(normal)
     end.
 
 
@@ -17,24 +17,24 @@ out(A) ->
     H = A#arg.headers,
     C = H#headers.cookie,
     case yaws_api:find_cookie_val("foobar", C) of
-	[] ->
+        [] ->
             Now = calendar:local_time(),
-	    P = spawn(fun() -> session(A, [Now]) end),
-	    yaws_api:setcookie("foobar", 
-			       pid_to_list(P), "/");
-	PidStr ->
-	    Pid = list_to_pid(PidStr),
-	    case process_info(Pid, messages) of
-		undefined ->
-		    Now = calendar:local_time(),
-		    P = spawn(fun() -> 
-				      session(A, [Now]) 
-			      end),
-		    yaws_api:setcookie("foobar", 
-				       pid_to_list(P), "/");
-		_ ->
-		    ok
-	    end
+            P = spawn(fun() -> session(A, [Now]) end),
+            yaws_api:setcookie("foobar", 
+                               pid_to_list(P), "/");
+        PidStr ->
+            Pid = list_to_pid(PidStr),
+            case process_info(Pid, messages) of
+                undefined ->
+                    Now = calendar:local_time(),
+                    P = spawn(fun() -> 
+                                      session(A, [Now]) 
+                              end),
+                    yaws_api:setcookie("foobar", 
+                                       pid_to_list(P), "/");
+                _ ->
+                    ok
+            end
     end.
 
 </erl>
@@ -58,4 +58,4 @@ this session.
 </html>
 
 
-			       
+                               

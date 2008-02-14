@@ -44,30 +44,30 @@ out(A) ->
     <li><p>GC is a #gconf{} record. The definition of the
       record is:</p>
 
-<div class="box">	
+<div class="box">        
       <verbatim>
 %% global conf
 -record(gconf,{file,
-	       yaws_dir,
-	       tty_trace = false,
-	       trace,
-	       debug,
-	       logdir,
-	       ebin_dir = [],
-	       runmods = [],
-	       keepalive_timeout = 15000,
-	       max_num_cached_files = 400,
-	       max_num_cached_bytes = 1000000,  %% 1 MEG
-	       max_size_cached_file = 8000,
-	       large_file_chunk_size = 10240,
-	       cache_refresh_secs = 30,  % seconds  (auto zero when debug)
-	       default_type = "text/html",
-	       timeout = 30000,
-	       include_dir = [],
-	       yaws,                %% server string
-	       username,            %% maybe run as a different user than root
-	       uid                  %% unix uid of user that started yaws
-	      }).  
+               yaws_dir,
+               tty_trace = false,
+               trace,
+               debug,
+               logdir,
+               ebin_dir = [],
+               runmods = [],
+               keepalive_timeout = 15000,
+               max_num_cached_files = 400,
+               max_num_cached_bytes = 1000000,  %% 1 MEG
+               max_size_cached_file = 8000,
+               large_file_chunk_size = 10240,
+               cache_refresh_secs = 30,  % seconds  (auto zero when debug)
+               default_type = "text/html",
+               timeout = 30000,
+               include_dir = [],
+               yaws,                %% server string
+               username,            %% maybe run as a different user than root
+               uid                  %% unix uid of user that started yaws
+              }).  
       </verbatim>
 </div>
 
@@ -90,15 +90,15 @@ out(A) ->
       <verbatim>
 
 -record(ssl, 
-	{
-	 keyfile,
-	 certfile,
-	 verify = 0,
-	 depth = 1,
-	 password,
-	 cacertfile,
-	 ciphers,
-	 cachetimeout}).
+        {
+         keyfile,
+         certfile,
+         verify = 0,
+         depth = 1,
+         password,
+         cacertfile,
+         ciphers,
+         cachetimeout}).
 
 
 
@@ -109,28 +109,28 @@ out(A) ->
 
 %% server conf
 -record(sconf,
-	{port = 8000,                %% which port is this server listening to
-	 rhost,                      %% forced redirect host (+ optional port)
-	 rmethod,                    %% forced redirect method
-	 docroot,                    %% path to the docs
-	 access_log = true,          %% log acces 
-	 listen = {127,0,0,1},       %% bind to this IP, {0,0,0,0} is possible
-	 servername = "localhost",   %% servername is what Host: header is
+        {port = 8000,                %% which port is this server listening to
+         rhost,                      %% forced redirect host (+ optional port)
+         rmethod,                    %% forced redirect method
+         docroot,                    %% path to the docs
+         access_log = true,          %% log acces 
+         listen = {127,0,0,1},       %% bind to this IP, {0,0,0,0} is possible
+         servername = "localhost",   %% servername is what Host: header is
          add_port = true,            %% add port after reading config
-	 ets,                        %% local store for this server
-	 ssl,
-	 authdirs = [],
-	 partial_post_size = nolimit,
-	 appmods = [],                %% list of modules for this app
-	 errormod_404 = yaws_404,     %% the default 404 error module 
-	 errormod_crash = yaws_404,   %% use the same module for crashes
-	 arg_rewrite_mod = yaws,
-	 tilde_expand = false,        %% allow public_html user dirs
-	 dir_listings = false,        %% allow dir listings
-	 opaque = [],                 %% useful in embedded mode
-	 start_mod,                   %% user provided module to be started
-	 allowed_scripts = [yaws]
-	}).
+         ets,                        %% local store for this server
+         ssl,
+         authdirs = [],
+         partial_post_size = nolimit,
+         appmods = [],                %% list of modules for this app
+         errormod_404 = yaws_404,     %% the default 404 error module 
+         errormod_crash = yaws_404,   %% use the same module for crashes
+         arg_rewrite_mod = yaws,
+         tilde_expand = false,        %% allow public_html user dirs
+         dir_listings = false,        %% allow dir listings
+         opaque = [],                 %% useful in embedded mode
+         start_mod,                   %% user provided module to be started
+         allowed_scripts = [yaws]
+        }).
 
       </verbatim>
     </div>

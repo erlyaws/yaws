@@ -24,13 +24,13 @@
 -define(TTL, (30 * 60)).  % 30 minutes
 
 -record(ysession,
-	{cookie,       %% the cookie assigned to the session
-	 to,           %% greg secs untill timeout death
-	 ttl,          %% default time to live
-	 starttime,    %% When calendar:local_time() did sess start
-	 opaque        %% any data the user supplies
-	}).
-	 
+        {cookie,       %% the cookie assigned to the session
+         to,           %% greg secs untill timeout death
+         ttl,          %% default time to live
+         starttime,    %% When calendar:local_time() did sess start
+         opaque        %% any data the user supplies
+        }).
+         
 
 
 
@@ -41,10 +41,10 @@
 %%%----------------------------------------------------------------------
 start_link() ->
     gen_server:start_link({local, yaws_session_server}, 
-			  yaws_session_server, [], []).
+                          yaws_session_server, [], []).
 start() ->
     gen_server:start({local, yaws_session_server}, 
-		     yaws_session_server, [], []).
+                     yaws_session_server, [], []).
 stop() ->
     gen_server:call(?MODULE, stop).
 
@@ -58,12 +58,12 @@ new_session(Opaque, TTL) ->
 
 cookieval_to_opaque(CookieString) ->
     case ets:lookup(?MODULE, CookieString) of
-	[Y] ->
-	    Y2 = Y#ysession{to = gnow() + Y#ysession.ttl},
-	    ets:insert(?MODULE, Y2),
-	    {ok, Y#ysession.opaque};
-	[] ->
-	    {error, no_session}
+        [Y] ->
+            Y2 = Y#ysession{to = gnow() + Y#ysession.ttl},
+            ets:insert(?MODULE, Y2),
+            {ok, Y#ysession.opaque};
+        [] ->
+            {error, no_session}
     end.
 
 
@@ -72,22 +72,22 @@ print_sessions() ->
     io:format("** ~p sessions active ~n~n", [length(Ss)]),
     N = gnow(),
     lists:foreach(fun(S) ->
-			  io:format("Cookie   ~p ~n", [S#ysession.cookie]),
-			  io:format("Start    ~p ~n", [S#ysession.starttime]),
-			  io:format("TTL      ~p secs~n", [S#ysession.to - N]),
-			  io:format("Opaque   ~p ~n~n~n", [S#ysession.opaque]),
-			  ok
-		  end, Ss).
+                          io:format("Cookie   ~p ~n", [S#ysession.cookie]),
+                          io:format("Start    ~p ~n", [S#ysession.starttime]),
+                          io:format("TTL      ~p secs~n", [S#ysession.to - N]),
+                          io:format("Opaque   ~p ~n~n~n", [S#ysession.opaque]),
+                          ok
+                  end, Ss).
 
 
 replace_session(Cookie, NewOpaque) ->
     case ets:lookup(?MODULE, Cookie) of
-	[Y] ->
-	    Y2 = Y#ysession{to = gnow() + Y#ysession.ttl,
-			    opaque = NewOpaque},
-	    ets:insert(?MODULE, Y2);
-	[] ->
-	    error
+        [Y] ->
+            Y2 = Y#ysession{to = gnow() + Y#ysession.ttl,
+                            opaque = NewOpaque},
+            ets:insert(?MODULE, Y2);
+        [] ->
+            error
     end.
 
 
@@ -120,11 +120,11 @@ to() ->
 %% pretty good seed, but non portable
 seed() ->
     case (catch list_to_binary(
-	   os:cmd("dd if=/dev/urandom ibs=12 count=1 2>/dev/null"))) of
-	<<X:32, Y:32, Z:32>> ->
-	    {X, Y, Z};
-	_ ->
-	    now()
+           os:cmd("dd if=/dev/urandom ibs=12 count=1 2>/dev/null"))) of
+        <<X:32, Y:32, Z:32>> ->
+            {X, Y, Z};
+        _ ->
+            now()
     end.
 
 
@@ -146,10 +146,10 @@ handle_call({new_session, Opaque, TTL}, _From, _State) ->
     TS = calendar:local_time(),
     C = atom_to_list(node()) ++ [$-|integer_to_list(N)],
     NS = #ysession{cookie = C,
-		   starttime = TS,
-		   opaque = Opaque,
-		   to = Now + TTL,
-		   ttl = TTL},
+                   starttime = TS,
+                   opaque = Opaque,
+                   to = Now + TTL,
+                   ttl = TTL},
     ets:insert(?MODULE, NS),
     {reply, C, undefined, to()};
 
@@ -204,19 +204,19 @@ trav_ets(_N, '$end_of_table') ->
     ok;
 trav_ets(N, Key) ->
     case ets:lookup(?MODULE, Key) of
-	[Y] ->
-	    if
-		Y#ysession.to > N ->
-		    trav_ets(N, ets:next(?MODULE, Key));
-		true ->
-		    report_timedout_sess(Y),
-		    Next = ets:next(?MODULE, Key),
-		    ets:delete(?MODULE, Key),
-		    trav_ets(N, Next)
-		    
-	    end;
-	[] ->
-	   trav_ets(N, ets:next(?MODULE, Key))
+        [Y] ->
+            if
+                Y#ysession.to > N ->
+                    trav_ets(N, ets:next(?MODULE, Key));
+                true ->
+                    report_timedout_sess(Y),
+                    Next = ets:next(?MODULE, Key),
+                    ets:delete(?MODULE, Key),
+                    trav_ets(N, Next)
+                    
+            end;
+        [] ->
+           trav_ets(N, ets:next(?MODULE, Key))
     end.
 
 gnow() ->

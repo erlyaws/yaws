@@ -47,6 +47,6 @@ man pages though.
 
 
 <erl>
-	out(_) -> {ssi, "END2", [],[]}.
+        out(_) -> {ssi, "END2", [],[]}.
 </erl>
 

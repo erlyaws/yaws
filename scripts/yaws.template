@@ -8,9 +8,9 @@ to_erl="%to_erl%"
 
 case `uname` in
     CYGWIN*)
-	yawsdir=`cygpath --windows $yawsdir`
-	werl="%werl%"
-	delim=\\;;
+        yawsdir=`cygpath --windows $yawsdir`
+        werl="%werl%"
+        delim=\\;;
     *)
         delim=/
 esac
@@ -87,96 +87,96 @@ while [ $# -gt 0 ]
   shift;
   case $arg in
       -i|--interactive)
-	  interactive="true";
-	  debug=" -yaws debug ";
-	  daemon="";;
+          interactive="true";
+          debug=" -yaws debug ";
+          daemon="";;
       -w|--winteractive)
-	  interactive="true";
-	  debug=" -yaws debug ";
-	  daemon="";
-	  erl=$werl;;
+          interactive="true";
+          debug=" -yaws debug ";
+          daemon="";
+          erl=$werl;;
       -D|--daemon)
-	  daemon=" -detached ";;
+          daemon=" -detached ";;
       -d|--debug)
-	  debug=" -boot start_sasl -yaws debug ";;
+          debug=" -boot start_sasl -yaws debug ";;
       -t|--tracetraf)
-	  trace=" -yaws trace traffic ";;
+          trace=" -yaws trace traffic ";;
       -T|--tracehttp)
-	  trace=" -yaws trace http ";;
+          trace=" -yaws trace http ";;
       -I|--id)
-	  id=$1
-	  shift;;
+          id=$1
+          shift;;
       -x|--traceout)
-	  traceoutput=" -yaws traceoutput ";;
+          traceoutput=" -yaws traceoutput ";;
       --trace)
-	  traceoutput=" -yaws traceoutput ";
-	  trace=" -yaws trace traffic ";;
+          traceoutput=" -yaws traceoutput ";
+          trace=" -yaws trace traffic ";;
       -M|--mnesiadir)
-	  mnesia=" -mnesia dir '"$1"' -run mnesia start"
-	  shift;;
+          mnesia=" -mnesia dir '"$1"' -run mnesia start"
+          shift;;
       -c|--conf)
-	  conf=" -conf $1 "
-	  shift;;
+          conf=" -conf $1 "
+          shift;;
       -pa|--pa)
-	  xpath=" ${xpath} -pa $1 "
-	  shift;;
+          xpath=" ${xpath} -pa $1 "
+          shift;;
       -r|--runmod)
-	  runmod=" -runmod $1 "
-	  shift;;
+          runmod=" -runmod $1 "
+          shift;;
       -h|--hup)
-	  ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl hup";;
+          ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl hup";;
       -s|--stop)
-	  ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl stop";;
+          ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl stop";;
       -ls|--ls)
-	  ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl ls";;
+          ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl ls";;
       -S|--status)
-	  ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl status";;
+          ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl status";;
       -load|--load)
-	  $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl load ${id} $*
-	  exit 0;;
+          $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl load ${id} $*
+          exit 0;;
       -j|--ctltrace)
-	  ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl trace $1"
-	  shift;;
+          ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl trace $1"
+          shift;;
       -v|--version) 
-	  exec $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws printversion;
-	  exit 0;;
+          exec $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws printversion;
+          exit 0;;
       --sname|-sname)
-	  sname=" -sname $1 "
-	  shift;;
+          sname=" -sname $1 "
+          shift;;
       -name|--name)
-	  sname=" -name $1 "
-	  shift;;
+          sname=" -name $1 "
+          shift;;
       -heart|--heart)
-	  heart=" -heart ";;
+          heart=" -heart ";;
       -proto_dist|--proto_dist)
-	  pdist=" -proto_dist $1 "
-	  shift;;
+          pdist=" -proto_dist $1 "
+          shift;;
       -erlarg|--erlarg)
-	  erlarg="$erlarg $1 "
-	  shift;;
+          erlarg="$erlarg $1 "
+          shift;;
       -check|--check)
-	  mkdir ${HOME}/.yaws/ 2> /dev/null
-	  mkdir ${HOME}/.yaws/${ID} 2> /dev/null
-	  out=`exec $erl -noshell -pa ${yawsdir}${delim}ebin ${xpath} -s yaws_ctl check ${id} $*`
-	  if [ "$?" = "0" ]; then
-	      echo "$out"
-	      echo "$1" ok
-	      exit 0
-	  fi
-	  echo "$out"
-	  exit 1;;
+          mkdir ${HOME}/.yaws/ 2> /dev/null
+          mkdir ${HOME}/.yaws/${ID} 2> /dev/null
+          out=`exec $erl -noshell -pa ${yawsdir}${delim}ebin ${xpath} -s yaws_ctl check ${id} $*`
+          if [ "$?" = "0" ]; then
+              echo "$out"
+              echo "$1" ok
+              exit 0
+          fi
+          echo "$out"
+          exit 1;;
       --to_erl)
-	  TO_ERL=yes
-	  PIPE_DIR="${vardir}/run/yaws/pipe/$1"
-	  shift;;
+          TO_ERL=yes
+          PIPE_DIR="${vardir}/run/yaws/pipe/$1"
+          shift;;
       --run_erl)
-	  RUN_ERL=yes
-	  daemon=""
-	  PIPE_DIR="${vardir}/run/yaws/pipe/$1"
-	  LOG_DIR="${vardir}/log/yaws/erlang-log/$1"
-	  shift;;
+          RUN_ERL=yes
+          daemon=""
+          PIPE_DIR="${vardir}/run/yaws/pipe/$1"
+          LOG_DIR="${vardir}/log/yaws/erlang-log/$1"
+          shift;;
       *)
-	  help
+          help
   esac
 done
 
@@ -193,10 +193,10 @@ fi
 
 if [ -n "$RUN_ERL" ]; then
     if [ ! -d $LOG_DIR ]; then
-	mkdir -p $LOG_DIR
+        mkdir -p $LOG_DIR
     fi
     if [ ! -d $PIPE_DIR ]; then
-	mkdir -p $PIPE_DIR
+        mkdir -p $PIPE_DIR
     fi
     RUN_ERL="$run_erl -daemon $PIPE_DIR/ $LOG_DIR"
 else

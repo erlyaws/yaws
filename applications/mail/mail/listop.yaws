@@ -2,13 +2,13 @@
 
 out(A) ->
     case mail:check_session(A) of
-	{ok, Session} ->
-	    L = yaws_api:parse_post(A),
-	    Op = mail:get_val("cmd", L, ""),
-	    ToDelete = [M || {M,Op} <- L, Op=="yes"],
-	    mail:delete(Session, ToDelete);
-	Error ->
-	    Error
+        {ok, Session} ->
+            L = yaws_api:parse_post(A),
+            Op = mail:get_val("cmd", L, ""),
+            ToDelete = [M || {M,Op} <- L, Op=="yes"],
+            mail:delete(Session, ToDelete);
+        Error ->
+            Error
     end.
 
 </erl>

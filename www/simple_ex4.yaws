@@ -5,7 +5,7 @@
 
 <erl>
 out(Arg) -> {html, f("Printing the arg structure :"
-	             "~n<pre>~p~n</pre>~n", [Arg])}.
+                     "~n<pre>~p~n</pre>~n", [Arg])}.
 </erl>
 
 

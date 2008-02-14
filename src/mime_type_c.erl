@@ -25,14 +25,14 @@ c() ->
     io:format("Compiling mime.types ... > mime_types.erl ~n", []),
     {ok, B} = file:read_file("charset.def"),
     case string:tokens(binary_to_list(B)," \r\n\t" ++ [0, 12]) of
-	[] ->
-	    put(charset, []);
-	[CharSet0] ->
-	    CharSet = string:strip(CharSet0, both, 10),
-	    put(charset, ";charset=" ++ CharSet);
-	_ ->
-	    error_logger:format("Ignoring bad charset.def\n", []),
-	    put(charset, [])
+        [] ->
+            put(charset, []);
+        [CharSet0] ->
+            CharSet = string:strip(CharSet0, both, 10),
+            put(charset, ";charset=" ++ CharSet);
+        _ ->
+            error_logger:format("Ignoring bad charset.def\n", []),
+            put(charset, [])
     end,
     T = ets:new(aa, [set, public]),
     c(F, T, io:get_line(F, '')).
@@ -45,24 +45,24 @@ c(F, T, {error, terminated}) ->
     gen(T);
 c(F, T, Line) ->
     case Line of
-	[$#|_] ->
-	    ignore;
-	[$\s|_ ] ->
-	    ignore;
-	L ->
-	    case string:tokens(L, [$\s, $\t]) of
-		[] ->
-		    ignore;
-		[_] ->  
-		    ignore;
-		[MimeType | Exts] ->
-		    lists:foreach(
-		      fun(E) ->
-			      ets:insert(T, {E, MimeType}),
-			      ets:insert(T, {up(E), MimeType})
-		      end, Exts)
-	    end
-    
+        [$#|_] ->
+            ignore;
+        [$\s|_ ] ->
+            ignore;
+        L ->
+            case string:tokens(L, [$\s, $\t]) of
+                [] ->
+                    ignore;
+                [_] ->  
+                    ignore;
+                [MimeType | Exts] ->
+                    lists:foreach(
+                      fun(E) ->
+                              ets:insert(T, {E, MimeType}),
+                              ets:insert(T, {up(E), MimeType})
+                      end, Exts)
+            end
+
     end,
     c(F, T, io:get_line(F, '')).
 
@@ -70,10 +70,10 @@ up(L) ->
     lists:map(fun(C) -> upper(C) end, L).
 upper(C) ->
     if
-	C >= $a, C =< $z ->
-	    C - ($a - $A);
-	true ->
-	    C
+        C >= $a, C =< $z ->
+            C - ($a - $A);
+        true ->
+            C
     end.
 
 nonl([]) ->
@@ -85,20 +85,20 @@ nonl([H|T]) ->
 
 special(Fd, Ext, Type) ->
     io:format(Fd, "t(~p) -> {~p, ~p};~n", 
-	      [Ext, Type, "text/html" ++ get(charset)]).
-    
+              [Ext, Type, "text/html" ++ get(charset)]).
+
 
 revspecial(Fd, Ext, Type) ->
     io:format(Fd, "revt(~p) -> {~p, ~p};~n", 
-	      [lists:reverse(Ext), Type, "text/html" ++ get(charset)]).
-    
+              [lists:reverse(Ext), Type, "text/html" ++ get(charset)]).
+
 
 gen(T) ->
     {ok, Fd} = file:open("mime_types.erl", [write]),
     io:format(Fd, 
-	      "-module(mime_types). ~n"
-	      "-compile(export_all). ~n", []),
-   
+              "-module(mime_types). ~n"
+              "-compile(export_all). ~n", []),
+
     L = lists:sort(ets:tab2list(T)),
     special(Fd, "yaws", yaws),
     special(Fd, "php", php),
@@ -107,16 +107,16 @@ gen(T) ->
     special(Fd, "CGI", cgi),
     lists:foreach(
       fun({Ext, MT0}) ->
-	      MT = case MT0 of
-		       "text/" ++ _ ->
-			   MT0 ++ get(charset);
-		       _ ->
-			   MT0
-		   end,
-	      io:format(Fd, "t(~p) -> {regular, ~p};~n", [nonl(Ext), MT])
+              MT = case MT0 of
+                       "text/" ++ _ ->
+                           MT0 ++ get(charset);
+                       _ ->
+                           MT0
+                   end,
+              io:format(Fd, "t(~p) -> {regular, ~p};~n", [nonl(Ext), MT])
       end, L),
     io:format(Fd, "t(_) -> {regular, \"text/plain" ++ get(charset) 
-	      ++ "\"}.~n~n~n", []),
+              ++ "\"}.~n~n~n", []),
 
 
 
@@ -127,23 +127,23 @@ gen(T) ->
     revspecial(Fd, "CGI", cgi),
     lists:foreach(
       fun({Ext, MT0}) ->
-	      MT = case MT0 of
-		       "text/" ++ _ ->
-			   MT0 ++ get(charset);
-		       _ ->
-			   MT0
-		   end,
-	      io:format(Fd, "revt(~p) -> {regular, ~p};~n", 
-			[nonl(lists:reverse(Ext)), MT])
+              MT = case MT0 of
+                       "text/" ++ _ ->
+                           MT0 ++ get(charset);
+                       _ ->
+                           MT0
+                   end,
+              io:format(Fd, "revt(~p) -> {regular, ~p};~n", 
+                        [nonl(lists:reverse(Ext)), MT])
       end, L),
     io:format(Fd, "revt(_) -> {regular, 
                                \"text/plain" ++ get(charset) ++
-	      "\"}.~n~n~n", []).
-
-    
-		  
-		 
-			  
+              "\"}.~n~n~n", []).
 
 
-		      
+
+
+
+
+
+

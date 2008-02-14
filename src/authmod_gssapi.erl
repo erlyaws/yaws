@@ -77,11 +77,11 @@
 -module(authmod_gssapi).
 
 -export([
-	 start/1,
-	 stop/0,
-	 auth/2,
-	 out/1
-	]).
+         start/1,
+         stop/0,
+         auth/2,
+         out/1
+        ]).
 
 -include("yaws.hrl").
 -include("yaws_api.hrl").
@@ -126,35 +126,35 @@ stop() ->
 
 
 auth(Arg, Auth) when is_record(Arg, arg),
- 		     is_record(Auth, auth) ->
+                      is_record(Auth, auth) ->
 
     H = Arg#arg.headers,
 
     ?INFO("~p~n", [?MODULE]),
 
     case H#headers.authorization of
-	undefined ->
-	    ?INFO("Request auth~n"),
-	    {appmod, ?MODULE};
+        undefined ->
+            ?INFO("Request auth~n"),
+            {appmod, ?MODULE};
         {_, _, "Negotiate " ++ Data} ->
-	    ?INFO("Negotiate~n", []),
-	    Bin = base64:decode(Data),
+            ?INFO("Negotiate~n", []),
+            Bin = base64:decode(Data),
 
- 	    case catch spnego:accept_sec_context(?SERVER, Bin) of
-		{'EXIT', Reason} ->
-		    ?ERROR("spnego failed EXIT:~p~n", [Reason]),
- 		    throw(Reason);
-		{error, Reason} ->
-		    ?ERROR("spnego failed error:~p~n", [Reason]),
-		    throw(Reason);
-		{ok, {Context, User, Ccname, Resp}} ->
-		    ?DEBUG("spnego user ok ~p~n", [User]),
-		    spnego:delete_sec_context(Context),
-		    {true, {User, Ccname, base64:encode(Resp)}};
-		E ->
-		    ?ERROR("spnego error ~p~n", [E]),
-		    throw(error)
-	    end
+             case catch spnego:accept_sec_context(?SERVER, Bin) of
+                {'EXIT', Reason} ->
+                    ?ERROR("spnego failed EXIT:~p~n", [Reason]),
+                     throw(Reason);
+                {error, Reason} ->
+                    ?ERROR("spnego failed error:~p~n", [Reason]),
+                    throw(Reason);
+                {ok, {Context, User, Ccname, Resp}} ->
+                    ?DEBUG("spnego user ok ~p~n", [User]),
+                    spnego:delete_sec_context(Context),
+                    {true, {User, Ccname, base64:encode(Resp)}};
+                E ->
+                    ?ERROR("spnego error ~p~n", [E]),
+                    throw(error)
+            end
     end.
     
 out(_Arg) ->
@@ -162,12 +162,12 @@ out(_Arg) ->
      {header, ["WWW-Authenticate:", "Negotiate"]},
      {ehtml,
       [{html,[], 
-	[
-	 {body, [],
-	  [{h1,[], "401 authentication needed"}
-	  ]
-	 }
-	]
+        [
+         {body, [],
+          [{h1,[], "401 authentication needed"}
+          ]
+         }
+        ]
        }
       ]
      } ].
@@ -175,19 +175,19 @@ out(_Arg) ->
 
 start_opaque(Opaque) when is_list(Opaque) ->
     if
-	is_list(Opaque) ->
-	    Keytab = get_option("keytab", Opaque),
-	    start(Keytab);
-	true ->
-	    throw(keytab_not_found)
+        is_list(Opaque) ->
+            Keytab = get_option("keytab", Opaque),
+            start(Keytab);
+        true ->
+            throw(keytab_not_found)
     end.
 
 get_option(Name, Options) when is_list(Options) ->
     case lists:keysearch(Name, 1, Options) of
-	{value, {Name, Value}} ->
-	    Value;
-	false ->
-	    throw(not_found)
+        {value, {Name, Value}} ->
+            Value;
+        false ->
+            throw(not_found)
     end.
 
 -ifndef(ENABLE_DEBUG).

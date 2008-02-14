@@ -11,30 +11,30 @@
 %%--------------------------------------------------------------------
 %% External exports
 -export([start_link/0,
-	 start_link/3
-	]).
+         start_link/3
+        ]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, 
-	 terminate/2, code_change/3]).
+         terminate/2, code_change/3]).
 -export([auth/2,
-	 close/1]).
+         close/1]).
 
 
 -define(TO, (1000 * 60 * 3)).
 
 
 -record(user, {i,    %% sid
-	       from, %% pid
-	       ref}).%% monitorref
+               from, %% pid
+               ref}).%% monitorref
 
 -record(state, {i,
-		port,
-		mode,
-		sids = [], % active sessions [#user{}]
-		srv,
-		reqs = []  % outstandig requests [#user{}]
-	       }).
+                port,
+                mode,
+                sids = [], % active sessions [#user{}]
+                srv,
+                reqs = []  % outstandig requests [#user{}]
+               }).
 
 %%====================================================================
 %% External functions
@@ -72,9 +72,9 @@ close(Handle) ->
 
 init([]) ->
     {Srv, Act,Sess} = 
-	{okundef(application:get_env(pam_service)),
-	 okundef(application:get_env(pam_use_acct)),
-	 okundef(application:get_env(pam_use_sess))},
+        {okundef(application:get_env(pam_service)),
+         okundef(application:get_env(pam_use_acct)),
+         okundef(application:get_env(pam_use_sess))},
     init([Srv, Act, Sess]);
 
 init([undefined, _Act, _Sess]) ->
@@ -86,34 +86,34 @@ init([SRV, Act, Sess]) ->
     %% in yaws
 
     M1 = case Act of
-	     undefined -> 
-		 "";
-	     true ->
-		 "A";
-	     false ->
-		 []
-	 end,
+             undefined -> 
+                 "";
+             true ->
+                 "A";
+             false ->
+                 []
+         end,
     %% and we definitely never want to use the
     %% the session capability in yaws since noone is never
     %% ever going to close the session
     M2 = case Sess of
-	     undefined ->
-		 "";
-	     true ->
-		 "S";
-	     false ->
-		 []
-	 end,
+             undefined ->
+                 "";
+             true ->
+                 "S";
+             false ->
+                 []
+         end,
     Mode = M1 ++ M2,
 
     %% we're not starting the portprogram now, it's done
     %% on demand. 
     {ok, #state{i = 0,
-		mode = Mode,
-		srv = SRV,
-		port = undefined,
-		sids = [],
-		reqs = []}}.
+                mode = Mode,
+                srv = SRV,
+                port = undefined,
+                sids = [],
+                reqs = []}}.
 
 okundef({ok,Val}) ->
     Val;
@@ -135,29 +135,29 @@ handle_call({auth, User, Password}, From, State0) ->
     State = ensure_port(State0),
     I = integer_to_list(State#state.i),
     port_command(State#state.port, [$a, User, 0, Password, 0, 
-				    State#state.mode,0, I, 0]),
+                                    State#state.mode,0, I, 0]),
     Ref = erlang:monitor(process, element(1, From)),
     U = #user{i = State#state.i,
-	      ref = Ref,
-	      from = From},
+              ref = Ref,
+              from = From},
     R = [U| State#state.reqs],
 
     {noreply, State#state{i = State#state.i + 1,
-			  reqs = R}, ?TO};
+                          reqs = R}, ?TO};
 
 handle_call({close, _Sid}, _From, State = #state{port=undefined}) ->
     {reply, ok, State};
 handle_call({close, Sid}, _From, State = #state{port = Port}) ->
     case lists:keysearch(Sid, #user.i, State#state.sids) of
-	{value, U} ->
-	    erlang:demonitor(U#user.ref);
-	false ->
-	    ok
+        {value, U} ->
+            erlang:demonitor(U#user.ref);
+        false ->
+            ok
     end,
     port_command(Port, [$c, integer_to_list(Sid), 0]),
 
     {reply, ok, State#state{
-		  sids = lists:keydelete(Sid, #user.i, State#state.sids)},
+                  sids = lists:keydelete(Sid, #user.i, State#state.sids)},
      ?TO}.
 
 
@@ -195,19 +195,19 @@ handle_info({'EXIT', Port, _}, State = #state{port = Port}) ->
       fun(U) -> gen_server:reply(U#user.from, {no, "epam died"}) end,
       State#state.reqs),
     {noreply, State#state{sids = [],
-			  reqs = [],
-			  port = undefined
-			 }};
+                          reqs = [],
+                          port = undefined
+                         }};
 handle_info({'DOWN', MonitorRef, _Type, _Object, _Info}, State) 
 when State#state.port /= undefined ->
     case lists:keysearch(MonitorRef, #user.ref, State#state.sids) of
-	{value, U} ->
-	    port_command(State#state.port, 
-			 [$c, integer_to_list(U#user.i), 0]),
-	    S2 = lists:keydelete(MonitorRef, #user.ref, State#state.sids),
-	    {noreply, State#state{sids = S2}, ?TO};
-	false ->
-	    {noreply, State, ?TO}
+        {value, U} ->
+            port_command(State#state.port, 
+                         [$c, integer_to_list(U#user.i), 0]),
+            S2 = lists:keydelete(MonitorRef, #user.ref, State#state.sids),
+            {noreply, State#state{sids = S2}, ?TO};
+        false ->
+            {noreply, State, ?TO}
     end;
 
 handle_info({'DOWN', _MonitorRef, _Type, _Object, _Info}, State) ->
@@ -215,21 +215,21 @@ handle_info({'DOWN', _MonitorRef, _Type, _Object, _Info}, State) ->
 
 handle_info({_Port, {data, Str}}, State) ->
     case string:tokens(Str, " \n") of
-	["pam", IntStr | Reply] ->
-	    I = list_to_integer(IntStr),
-	    {value, U} = lists:keysearch(I, #user.i, State#state.reqs),
-	    R = case reply(U#user.from, I, Reply) of
-		    yes ->
-			[U |State#state.sids];
-		    no ->
-			State#state.sids
-		end,
-	    {noreply, 
-	     State#state{reqs = lists:keydelete(I,#user.i,State#state.reqs),
-			 sids = R}, ?TO};
-	_Other ->
-	    error_logger:format("epam: ~s", [Str]),
-	    {noreply, State, ?TO}
+        ["pam", IntStr | Reply] ->
+            I = list_to_integer(IntStr),
+            {value, U} = lists:keysearch(I, #user.i, State#state.reqs),
+            R = case reply(U#user.from, I, Reply) of
+                    yes ->
+                        [U |State#state.sids];
+                    no ->
+                        State#state.sids
+                end,
+            {noreply, 
+             State#state{reqs = lists:keydelete(I,#user.i,State#state.reqs),
+                         sids = R}, ?TO};
+        _Other ->
+            error_logger:format("epam: ~s", [Str]),
+            {noreply, State, ?TO}
     end.
 
 
@@ -270,19 +270,19 @@ fsp([H|T]) -> H ++ " " ++ fsp(T).
 
 ensure_port(S = #state{port = undefined, srv = Srv}) ->
     Prg0 = filename:dirname(code:which(?MODULE)) ++ 
-	"/../priv/epam ",
+        "/../priv/epam ",
 
     Prg = Prg0 ++ Srv,
     P = open_port({spawn, Prg}, [{packet, 2}]),
     receive
-	{P, {data, "ok"}} ->
-	    S#state{port = P};
-	{P, {data, ErrStr}} ->
-	    error_logger:format("epam: ~s~n", [ErrStr]),
-	    exit(noepam);
-	{'EXIT', P, _} ->
-	    error_logger:format("yaws_pam: Cannot start epam",[]),
-	    exit(noepam)
+        {P, {data, "ok"}} ->
+            S#state{port = P};
+        {P, {data, ErrStr}} ->
+            error_logger:format("epam: ~s~n", [ErrStr]),
+            exit(noepam);
+        {'EXIT', P, _} ->
+            error_logger:format("yaws_pam: Cannot start epam",[]),
+            exit(noepam)
     end;
 ensure_port(S)->
     S.

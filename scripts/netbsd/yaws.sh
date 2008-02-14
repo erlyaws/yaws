@@ -14,7 +14,7 @@
 
 if [ -f /etc/rc.subr ]
 then
-	. /etc/rc.subr
+        . /etc/rc.subr
 fi
 
 name="yaws"
@@ -32,25 +32,25 @@ extra_commands="reload status"
 : ${yaws_flags:=--heart}
 
 yaws_start() {
-	$yaws_command --id $yaws_id $yaws_flags --daemon
+        $yaws_command --id $yaws_id $yaws_flags --daemon
 }
 
 yaws_stop() {
-	$yaws_command --id $yaws_id --stop 
+        $yaws_command --id $yaws_id --stop 
 }
 
 yaws_status() {
-	$yaws_command --id $yaws_id --status
+        $yaws_command --id $yaws_id --status
 }
 
 yaws_reload() {
-	$yaws_command --id $yaws_id --hup
+        $yaws_command --id $yaws_id --hup
 }
 
 if [ -f /etc/rc.subr -a -f /etc/rc.conf ]
 then
-	load_rc_config $name
-	run_rc_command "$1"
+        load_rc_config $name
+        run_rc_command "$1"
 else
-	yaws_start
+        yaws_start
 fi

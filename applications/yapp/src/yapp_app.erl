@@ -27,10 +27,10 @@
 %%--------------------------------------------------------------------
 start(_Type, StartArgs) ->
     case yapp_sup:start_link(StartArgs) of
-	{ok, Pid} -> 
-	    {ok, Pid};
-	Error ->
-	    Error
+        {ok, Pid} -> 
+            {ok, Pid};
+        Error ->
+            Error
     end.
 
 %%--------------------------------------------------------------------

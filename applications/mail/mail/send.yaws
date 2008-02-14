@@ -2,10 +2,10 @@
 
 out(A) ->
     case mail:check_session(A) of
-	{ok, Session} ->
-	    mail:send(Session,A);
-	Error ->
-	    Error
+        {ok, Session} ->
+            mail:send(Session,A);
+        Error ->
+            Error
     end.
 
-</erl>	    
+</erl>            

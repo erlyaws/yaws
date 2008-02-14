@@ -30,20 +30,20 @@
 
 
 -record(state, {
-	  running,
-	  dir,
-	  now,
-	  tracefd,
-	  log_wrap_size = ?WRAP_LOG_SIZE,
-	  tty_trace = false,
-	  copy_errlog,
-	  auth_log,
-	  alogs =  []}).
+          running,
+          dir,
+          now,
+          tracefd,
+          log_wrap_size = ?WRAP_LOG_SIZE,
+          tty_trace = false,
+          copy_errlog,
+          auth_log,
+          alogs =  []}).
 
 
 -record(alog, {fd,
-	       servername,
-	       filename}).
+               servername,
+               filename}).
 
 
 %%%----------------------------------------------------------------------
@@ -60,7 +60,7 @@ accesslog(ServerName, Ip, Req, Status, Length, Referrer, UserAgent) ->
 
 accesslog(ServerName, Ip, User, Req, Status, Length, Referrer, UserAgent) ->
     gen_server:cast(?MODULE, {access, ServerName, Ip, User, Req, 
-			      Status, Length, Referrer, UserAgent}).
+                              Status, Length, Referrer, UserAgent}).
 setdir(GC, Sconfs) ->
     gen_server:call(?MODULE, {setdir, GC, Sconfs}).
 
@@ -108,61 +108,61 @@ handle_call({setdir, GC, Sconfs}, _From, State)
     ?Debug("setdir ~s~n", [Dir]),
     ElogFile = filename:join([Dir, "report.log"]),
     Copy = if ?gc_has_copy_errlog(GC) ->
-		   gen_event:add_handler(error_logger, yaws_log_file_h, 
-					 ElogFile),
-		   true;
-	      true ->
-		   false
-	   end,
+                   gen_event:add_handler(error_logger, yaws_log_file_h, 
+                                         ElogFile),
+                   true;
+              true ->
+                   false
+           end,
     SCs = lists:flatten(Sconfs),
     L = lists:zf(
-	  fun(SC) when ?sc_has_access_log(SC)  ->
-		  FileName = case os:type() of
-				 {win32,_ } ->
-				     lists:map(fun($:) -> $.;
-						  (C ) -> C
-					       end,
-					       SC#sconf.servername);
-				 _ ->
-				     SC#sconf.servername
-			     end,
-		  A = filename:join([Dir, FileName ++ ".access"]),
-		  case file:open(A, [write, raw, append]) of
-		      {ok, Fd} ->
-			  {true, #alog{servername = SC#sconf.servername,
-				       fd = Fd,
-				       filename = A}};
-		      _Err ->
-			  error_logger:format("Cannot open ~p~n",[A]),
-			  false
-		  end;
-	     (_) ->
-		  false
-	  end, SCs),
+          fun(SC) when ?sc_has_access_log(SC)  ->
+                  FileName = case os:type() of
+                                 {win32,_ } ->
+                                     lists:map(fun($:) -> $.;
+                                                              (C ) -> C
+                                                       end,
+                                               SC#sconf.servername);
+                                 _ ->
+                                     SC#sconf.servername
+                             end,
+                  A = filename:join([Dir, FileName ++ ".access"]),
+                  case file:open(A, [write, raw, append]) of
+                      {ok, Fd} ->
+                          {true, #alog{servername = SC#sconf.servername,
+                                       fd = Fd,
+                                       filename = A}};
+                      _Err ->
+                          error_logger:format("Cannot open ~p~n",[A]),
+                          false
+                  end;
+             (_) ->
+                  false
+          end, SCs),
 
     AuthLogFileName = filename:join([Dir, "auth.log"]),
     AuthLog = 
-	if ?gc_has_auth_log(GC) ->
-		case file:open(AuthLogFileName, [write, raw, append]) of
-		    {ok, AFd} ->
-			#alog{fd = AFd,
-			      servername = undefined,
-			      filename = AuthLogFileName};
-		    _Err ->
-			error_logger:format("Cannot open ~s~n", 
-					    [AuthLogFileName]),
-			undefined
-		end;
-	   true ->
-		undefined
-	end,
+        if ?gc_has_auth_log(GC) ->
+                case file:open(AuthLogFileName, [write, raw, append]) of
+                    {ok, AFd} ->
+                        #alog{fd = AFd,
+                              servername = undefined,
+                              filename = AuthLogFileName};
+                    _Err ->
+                        error_logger:format("Cannot open ~s~n", 
+                                            [AuthLogFileName]),
+                        undefined
+                end;
+           true ->
+                undefined
+        end,
     S2 = State#state{running = true,
-		     dir  = Dir,
-		     now = fmtnow(),
-		     log_wrap_size = GC#gconf.log_wrap_size,
-		     copy_errlog = Copy,
-		     auth_log = AuthLog,
-		     alogs = L},
+                     dir  = Dir,
+                     now = fmtnow(),
+                     log_wrap_size = GC#gconf.log_wrap_size,
+                     copy_errlog = Copy,
+                     auth_log = AuthLog,
+                     alogs = L},
 
     yaws:ticker(3000, secs3),
     yaws:ticker(10 * 60 * 1000, minute10),
@@ -180,72 +180,72 @@ handle_call({setdir, GC, Sconfs}, _From, State)
     Dir = State#state.dir,
     ElogFile = filename:join([Dir, "report.log"]),
     Copy = if ?gc_has_copy_errlog(GC), State#state.copy_errlog == false->
-		   gen_event:add_handler(error_logger, yaws_log_file_h, 
-					 ElogFile),
-		   true;
-	      ?gc_has_copy_errlog(GC) ->
-		   true;
-	      State#state.copy_errlog == true ->
-		   gen_event:delete_handler(error_logger, yaws_log_file_h, 
-					    normal),
-		   false;
-	      true ->
-		   false
-	   end,
-    
+                   gen_event:add_handler(error_logger, yaws_log_file_h, 
+                                         ElogFile),
+                   true;
+              ?gc_has_copy_errlog(GC) ->
+                   true;
+              State#state.copy_errlog == true ->
+                   gen_event:delete_handler(error_logger, yaws_log_file_h, 
+                                            normal),
+                   false;
+              true ->
+                   false
+           end,
+
     %% close all files
     lists:map(
       fun(AL) ->
-	      file:close(AL#alog.fd)
+              file:close(AL#alog.fd)
       end, State#state.alogs),
     SCs = lists:flatten(Sconfs),
-    
+
     %% reopen logfiles
     L = lists:zf(fun(SC) -> open_alog(Dir, SC) end,
-		 SCs),
+                 SCs),
     S2 = State#state{running = true,
-		     dir  = Dir,
-		     now = fmtnow(),
-		     copy_errlog = Copy,
-		     alogs = L},
-    
+                     dir  = Dir,
+                     now = fmtnow(),
+                     copy_errlog = Copy,
+                     alogs = L},
+
     {reply, ok, S2};
 
 
 %% a virt server has been added
 handle_call({soft_add_sc, SC}, _From, State) ->
     case open_alog(State#state.dir, SC) of
-	{true, A} ->
-	    {reply, ok, State#state{alogs = [A|State#state.alogs]}};
-	false ->
-	    {reply, ok, State}
+        {true, A} ->
+            {reply, ok, State#state{alogs = [A|State#state.alogs]}};
+        false ->
+            {reply, ok, State}
     end;
 
 %% a virt server has been deleted
 handle_call({soft_del_sc, SC}, _From, State) ->
     case lists:keysearch(SC#sconf.servername, #alog.servername,
-			 State#state.alogs) of
-	{value, A} ->
-	    file:close(A#alog.fd),
-	    {reply,ok, State#state{alogs = State#state.alogs -- [A]}};
-	false ->
-	    {reply,ok,State}
+                         State#state.alogs) of
+        {value, A} ->
+            file:close(A#alog.fd),
+            {reply,ok, State#state{alogs = State#state.alogs -- [A]}};
+        false ->
+            {reply,ok,State}
     end;
 
 
 handle_call({open_trace, What}, _From, State) ->
     case State#state.tracefd of
-	undefined ->
-	    ok;
-	Fd0 ->
-	    file:close(Fd0)
+        undefined ->
+            ok;
+        Fd0 ->
+            file:close(Fd0)
     end,
     F = lists:concat(["trace.", What]),
     case file:open(filename:join([State#state.dir, F]),[write, raw]) of
-	{ok, Fd} ->
-	    {reply, ok, State#state{tracefd = Fd}};
-	Err ->
-	    {reply,  Err, State}
+        {ok, Fd} ->
+            {reply, ok, State#state{tracefd = Fd}};
+        Err ->
+            {reply,  Err, State}
     end;
 
 
@@ -262,25 +262,25 @@ handle_call(state, _From, State) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
 handle_cast({access, ServerName, Ip, User, Req, Status, 
-	     Length, Referrer, UserAgent}, State) ->
+             Length, Referrer, UserAgent}, State) ->
     case State#state.running of 
-	true ->
-	    do_alog(ServerName, Ip, User, Req, Status, Length, 
-		    Referrer, UserAgent, State),
-	    {noreply, State};
-	false ->
-	    {noreply, State}
+        true ->
+            do_alog(ServerName, Ip, User, Req, Status, Length, 
+                    Referrer, UserAgent, State),
+            {noreply, State};
+        false ->
+            {noreply, State}
     end;
 
 handle_cast({auth, ServerName, IP, Path, Item}, State) ->
     case State#state.running of 
-	true when State#state.auth_log /= undefined ->
-	    do_auth_log(ServerName, IP, Path, Item, State),
-	    {noreply, State};
-	false ->
-	    {noreply,State}
+        true when State#state.auth_log /= undefined ->
+            do_auth_log(ServerName, IP, Path, Item, State),
+            {noreply, State};
+        false ->
+            {noreply,State}
     end;
-	    
+
 handle_cast({trace, from_server, Data}, State) ->
     Str = ["*** SRV -> CLI *** ", Data],
     file:write(State#state.tracefd, Str),
@@ -296,13 +296,13 @@ handle_cast({trace, from_client, Data}, State) ->
 open_alog(Dir, SC) when ?sc_has_access_log(SC) ->
     A = filename:join([Dir, SC#sconf.servername ++ ".access"]),
     case file:open(A, [write, raw, append]) of
-	{ok, Fd} ->
-	    {true, #alog{servername = SC#sconf.servername,
-			 fd = Fd,
-			 filename = A}};
-	_Err ->
-	    error_logger:format("Cannot open ~p",[A]),
-	    false
+        {ok, Fd} ->
+            {true, #alog{servername = SC#sconf.servername,
+                         fd = Fd,
+                         filename = A}};
+        _Err ->
+            error_logger:format("Cannot open ~p",[A]),
+            false
     end;
 open_alog(_,_) ->
     false.
@@ -310,45 +310,45 @@ open_alog(_,_) ->
 
 
 do_alog(ServerName, Ip, User, Req, Status, Length, Referrer,
-	UserAgent, State) ->
+        UserAgent, State) ->
     case lists:keysearch(ServerName, #alog.servername, State#state.alogs) of
-	{value, AL} ->
-	    I = fmt_alog(State#state.now, Ip, User, Req, Status,  Length, 
-			 Referrer, UserAgent),
-	    file:write(AL#alog.fd, I);
-	_ ->
-	    false
+        {value, AL} ->
+            I = fmt_alog(State#state.now, Ip, User, Req, Status,  Length, 
+                         Referrer, UserAgent),
+            file:write(AL#alog.fd, I);
+        _ ->
+            false
     end.
 
 do_auth_log(ServerName, IP, Path, Item, State) ->
     AL = State#state.auth_log,
     IpStr = case catch inet_parse:ntoa(IP) of
-		{'EXIT', _} -> "unknownip";
-		Val -> Val
-	    end,
+                {'EXIT', _} -> "unknownip";
+                Val -> Val
+            end,
     I = [IpStr,
-	 " ", State#state.now,
-	 " ", ServerName, " " ,"\"", Path,"\"",
-	 case Item of
-	     {ok, User} ->
-		 [" OK user=", User];
-	     403 ->
-		 [" 403"];
-	     {401, Realm} ->
-		 [" 401 realm=", Realm];
-	     {401, User, PWD} ->
-		 [" 401 user=", User, " badpwd=", PWD]
-	 end, "\n"],
+         " ", State#state.now,
+         " ", ServerName, " " ,"\"", Path,"\"",
+         case Item of
+             {ok, User} ->
+                 [" OK user=", User];
+             403 ->
+                 [" 403"];
+             {401, Realm} ->
+                 [" 401 realm=", Realm];
+             {401, User, PWD} ->
+                 [" 401 user=", User, " badpwd=", PWD]
+         end, "\n"],
     file:write(AL#alog.fd, I).
 
 
 
 tty_trace(Str, State) ->
     case State#state.tty_trace of
-	false ->
-	    ok;
-	true ->
-	    io:format("~s", [binary_to_list(list_to_binary([Str]))])
+        false ->
+            ok;
+        true ->
+            io:format("~s", [binary_to_list(list_to_binary([Str]))])
     end.
 
 %%----------------------------------------------------------------------
@@ -378,38 +378,38 @@ handle_info(secs3, State) ->
 %% once every 10  minute, check log sizes
 handle_info(minute10, State) ->
     L = lists:map(
-	  fun(AL) ->
-		  wrap(AL, State)
-	  end, State#state.alogs),
-    
+          fun(AL) ->
+                  wrap(AL, State)
+          end, State#state.alogs),
+
     Dir = State#state.dir,
     E = filename:join([Dir, "report.log"]),
     case file:read_file_info(E) of
-	{ok, FI} when  State#state.log_wrap_size > 0, 
-	               FI#file_info.size > State#state.log_wrap_size, 
-		       State#state.copy_errlog == true ->
-	    gen_event:call(error_logger, yaws_log_file_h, wrap);
-	{error,enoent} ->
-	    gen_event:call(error_logger, yaws_log_file_h, reopen);
-	_ ->
-	    ok
+        {ok, FI} when  State#state.log_wrap_size > 0, 
+        FI#file_info.size > State#state.log_wrap_size, 
+        State#state.copy_errlog == true ->
+            gen_event:call(error_logger, yaws_log_file_h, wrap);
+        {error,enoent} ->
+            gen_event:call(error_logger, yaws_log_file_h, reopen);
+        _ ->
+            ok
     end,
     {noreply, State#state{alogs= L,
-			  auth_log = wrap(State#state.auth_log, State)}}.
+                          auth_log = wrap(State#state.auth_log, State)}}.
 
-    
+
 
 wrap_p(AL, State) when record(AL, alog) ->
     case file:read_file_info(AL#alog.filename) of
-	{ok, FI} when FI#file_info.size > State#state.log_wrap_size,
-                      State#state.log_wrap_size > 0 ->
-	    true;
-	{ok, _FI} ->
-	    false;
-	{error, enoent} ->
-	    enoent;
-	_ ->
-	    false
+        {ok, FI} when FI#file_info.size > State#state.log_wrap_size,
+        State#state.log_wrap_size > 0 ->
+            true;
+        {ok, _FI} ->
+            false;
+        {error, enoent} ->
+            enoent;
+        _ ->
+            false
     end;
 wrap_p(_,_) ->
     false.
@@ -418,26 +418,26 @@ wrap_p(_,_) ->
 
 wrap(AL, State) ->
     case wrap_p(AL, State) of
-	true ->
-	    file:close(AL#alog.fd),
-	    Old = [AL#alog.filename, ".old"],
-	    file:delete(Old),
-	    file:rename(AL#alog.filename, Old),
-	    {ok, Fd2} = file:open(AL#alog.filename, [write, raw]),
-	    error_logger:info_msg("Wrap log ~p",[AL#alog.filename]), 
-	    AL#alog{fd = Fd2};
-	false ->
-	    AL;
-	enoent ->
-	    %% Logfile disapeared, 
-	    error_logger:format("Logfile ~p disapeared - we reopen it",
-				[AL#alog.filename]),
-	    {ok, Fd2} = file:open(AL#alog.filename, [write, raw]),
-	    AL#alog{fd = Fd2};
-	{'EXIT', Rsn} ->
-	    error_logger:format("Failed to wraplog ~p:~p~n",
-				[AL#alog.filename, Rsn]),
-	    AL
+        true ->
+            file:close(AL#alog.fd),
+            Old = [AL#alog.filename, ".old"],
+            file:delete(Old),
+            file:rename(AL#alog.filename, Old),
+            {ok, Fd2} = file:open(AL#alog.filename, [write, raw]),
+            error_logger:info_msg("Wrap log ~p",[AL#alog.filename]), 
+            AL#alog{fd = Fd2};
+        false ->
+            AL;
+        enoent ->
+            %% Logfile disapeared, 
+            error_logger:format("Logfile ~p disapeared - we reopen it",
+                                [AL#alog.filename]),
+            {ok, Fd2} = file:open(AL#alog.filename, [write, raw]),
+            AL#alog{fd = Fd2};
+        {'EXIT', Rsn} ->
+            error_logger:format("Failed to wraplog ~p:~p~n",
+                                [AL#alog.filename, Rsn]),
+            AL
     end.
 
 
@@ -473,12 +473,13 @@ fmt_ip(HostName) ->
 fmtnow() ->
     {{Year, Month, Date}, {Hour, Min, Sec}} = calendar:local_time(),
     io_lib:format("[~2..0w/~s/~4..0w:~2..0w:~2..0w:~2..0w ~s]",
-		  [Date,yaws:month(Month),Year, Hour, Min, Sec, zone()]).
+                  [Date,yaws:month(Month),Year, Hour, Min, Sec, zone()]).
 
 zone() ->
     Time = erlang:universaltime(),
     LocalTime = calendar:universal_time_to_local_time(Time),
-    DiffSecs = calendar:datetime_to_gregorian_seconds(LocalTime) - calendar:datetime_to_gregorian_seconds(Time),
+    DiffSecs = calendar:datetime_to_gregorian_seconds(LocalTime) - 
+        calendar:datetime_to_gregorian_seconds(Time),
     zone((DiffSecs/3600)*100).
 
 %% Ugly reformatting code to get times like +0000 and -1300

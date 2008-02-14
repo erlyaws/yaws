@@ -19,7 +19,7 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-	 terminate/2, code_change/3]).
+         terminate/2, code_change/3]).
 
 -record(state, {dummy}).
 
@@ -118,14 +118,14 @@ code_change(_OldVsn, State, _Extra) ->
 %% UrlPath = string()
 %% AppName = atom()
 -record(y_registry, {
-	  key,
-	  value
-	  }).
+          key,
+          value
+          }).
 
 init_y_registry() ->
     case proplists:get_value(y_registry, mnesia:system_info(tables)) of
-	true -> already_created;
-	_    -> create_y_registry_table()
+        true -> already_created;
+        _    -> create_y_registry_table()
     end.
 
 create_y_registry_table() ->
@@ -134,20 +134,20 @@ create_y_registry_table() ->
 
 init_yapp_reg() ->
     F = fun() ->
-		case get_yapp_reg() of
-		    { error, _ } ->
-			put_yapp_reg([]);
-		    _ ->
-			do_nothing
-		end
-	end,
+                case get_yapp_reg() of
+                    { error, _ } ->
+                        put_yapp_reg([]);
+                    _ ->
+                        do_nothing
+                end
+        end,
     {atomic, Value} = mnesia:transaction(F),
     Value.
 
 get_yapp_reg() ->
     case mnesia:read({y_registry, yapp_reg}) of
-	[] -> { error, no_yapp_reg };
-	[{y_registry,yapp_reg,YappReg}] -> YappReg
+        [] -> { error, no_yapp_reg };
+        [{y_registry,yapp_reg,YappReg}] -> YappReg
     end.
 
 put_yapp_reg(YappReg) ->    
@@ -164,20 +164,20 @@ list_yapps() ->
 %% the Name of the application.
 register_yapp(SrvId, KeyValue) ->
     {atomic, Value} = mnesia:transaction(fun() ->
-					      register2(SrvId,KeyValue)
-				      end),
+                                              register2(SrvId,KeyValue)
+                                      end),
     Value.
 
 register2(SrvId, {YappUrl, AppName}) ->
     YR = get_yapp_reg(),
     YR2 = 
-	case proplists:get_value(SrvId,YR) of
-	    undefined ->
-		[{SrvId,[{YappUrl,AppName}]} | YR ];
-	    UrlApps ->
-		UrlApps2 = insert_into_urlapps(YappUrl,AppName,UrlApps),
-		lists:keyreplace(SrvId, 1, YR, {SrvId,UrlApps2})
-	end,
+        case proplists:get_value(SrvId,YR) of
+            undefined ->
+                [{SrvId,[{YappUrl,AppName}]} | YR ];
+            UrlApps ->
+                UrlApps2 = insert_into_urlapps(YappUrl,AppName,UrlApps),
+                lists:keyreplace(SrvId, 1, YR, {SrvId,UrlApps2})
+        end,
     put_yapp_reg(YR2).
 
 
@@ -186,38 +186,38 @@ register2(SrvId, {YappUrl, AppName}) ->
 %% The YappUrl is the root path to the Yapp.
 unregister_yapp(SrvId, YappUrl) ->
     {atomic, Value} = mnesia:transaction(fun() ->
-					      unregister2(SrvId,YappUrl)
-				     end),
+                                              unregister2(SrvId,YappUrl)
+                                     end),
     Value.
 
 unregister2(SrvId,YappUrl) ->
     YR = get_yapp_reg(),
     case proplists:get_value(SrvId,YR) of
-	undefined ->
-	    {error, {srv_id_not_defined, SrvId}};
-	UrlApps ->
-	    YR2 =
-		case delete_from_urlapps(YappUrl, UrlApps) of
-		    [] ->
-			lists:keydelete(SrvId,1,YR);
-		    UrlApps2 ->
-			lists:keyreplace(SrvId, 1, YR, {SrvId,UrlApps2})
-		end,
-	    put_yapp_reg(YR2)
+        undefined ->
+            {error, {srv_id_not_defined, SrvId}};
+        UrlApps ->
+            YR2 =
+                case delete_from_urlapps(YappUrl, UrlApps) of
+                    [] ->
+                        lists:keydelete(SrvId,1,YR);
+                    UrlApps2 ->
+                        lists:keyreplace(SrvId, 1, YR, {SrvId,UrlApps2})
+                end,
+            put_yapp_reg(YR2)
     end.
 
 insert_into_urlapps(YappUrl,AppName,UrlApps)->
     case lists:keymember(YappUrl, 1, UrlApps) of
-	false ->
-	    [{YappUrl,AppName}|UrlApps];
-	true ->
-	    lists:keyreplace(YappUrl, 1, UrlApps, {YappUrl, AppName})
+        false ->
+            [{YappUrl,AppName}|UrlApps];
+        true ->
+            lists:keyreplace(YappUrl, 1, UrlApps, {YappUrl, AppName})
     end.    
 
 delete_from_urlapps(YappUrl, UrlApps) ->
     case lists:keymember(YappUrl, 1, UrlApps) of
-	false ->
-	    UrlApps;
-	true ->
-	    lists:keydelete(YappUrl, 1, UrlApps)
+        false ->
+            UrlApps;
+        true ->
+            lists:keydelete(YappUrl, 1, UrlApps)
     end.

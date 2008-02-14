@@ -10,22 +10,22 @@
 
 
 -define(F(Format,Args),
- 	lists:flatten(io_lib:format(Format,Args))).
+         lists:flatten(io_lib:format(Format,Args))).
 
 -define(f(L), lists:flatten(L)).
 
 -define(W(A), ?F("~w", [A])).
 
 -define(format_record(Rec, Name),
-	yaws_debug:format_record(Rec, Name, record_info(fields, Name))).
-	       
+        yaws_debug:format_record(Rec, Name, record_info(fields, Name))).
+               
 
 
 -define(Trace(What, Fmt, Args), if Trace == false ->
-					ok;
-				   _ ->
-					yaws_debug:dtrace(What,Fmt,Args)
-				end).
+                                        ok;
+                                   _ ->
+                                        yaws_debug:dtrace(What,Fmt,Args)
+                                end).
 
 
 
@@ -39,16 +39,16 @@
 
 
 -define(Dassert(X,Op,Y,Msg),
-	yaws_debug:assert(Op,X,Y,{assert,?FILE,?LINE,Msg})).
+        yaws_debug:assert(Op,X,Y,{assert,?FILE,?LINE,Msg})).
 
 
 -define(Dalert(X,Op,Y,Msg),
-	yaws_debug:assert(Op,X,Y,{alert,?FILE,?LINE,Msg})).
+        yaws_debug:assert(Op,X,Y,{alert,?FILE,?LINE,Msg})).
 
 -define(Deval(Expr),Expr).
 
 -define(Debug(F, A),
-	yaws_debug:assert([],0,0,{{debug,"DEBUG"}, ?FILE,?LINE,F, A})).
+        yaws_debug:assert([],0,0,{{debug,"DEBUG"}, ?FILE,?LINE,F, A})).
 
 
 %% ease of use, just do ?Dvar(Variable)
@@ -66,7 +66,7 @@
 
 
 -define(Dfunassert(Fun, Msg), 
-	yaws_debug:assert('fun', Fun, 0, {assert,?FILE,?LINE,Msg})).
+        yaws_debug:assert('fun', Fun, 0, {assert,?FILE,?LINE,Msg})).
 
 -else. %% not debug_mode
 
@@ -80,6 +80,6 @@
 -define(Dfunassert(Fun, Msg), debug_disabled).
 -define(Derror(Fmt,Args),debug_disabled).
 -define(TC(L), debug_disabled).
-	      
+              
 -endif. %% debug defined
 

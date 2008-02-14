@@ -75,7 +75,7 @@ function smilies_toolbar() {
 
   for (smile in smilies) {
     tool += ("<img src='"+smilies[smile]+"' onmousedown='return addText(\""+
-	     smile+"\")'></img> ");
+             smile+"\")'></img> ");
   }
 
   return tool;
@@ -89,7 +89,7 @@ function expandSmilies(message) {
     i = message.indexOf(smile,i);
     while(i >= 0) {
       message = message.substring(0,i)+"<img src='"+smilies[smile]+"'>"+
-	        message.substring(i+smile.length);
+                message.substring(i+smile.length);
       i = message.indexOf(smile,i);
     }
   }
@@ -140,49 +140,49 @@ function reader_init() {
       debug("reader_init(): something");
 
       if (reply.substring(0,2) == "ok") {
-	var msg = reply.substring(2);
-	var messages = "";
-	var members = "";
+        var msg = reply.substring(2);
+        var messages = "";
+        var members = "";
 
-	while(msg.length > 0) {
-	  var op   = msg.substring(0,1);
-	  var i    = msg.indexOf(":");
-	  var len  = parseInt(msg.substring(1,i));
-	  var body = msg.substring(i+1, i+len+1);
+        while(msg.length > 0) {
+          var op   = msg.substring(0,1);
+          var i    = msg.indexOf(":");
+          var len  = parseInt(msg.substring(1,i));
+          var body = msg.substring(i+1, i+len+1);
 
-	  msg = msg.substring(i+len+1);
+          msg = msg.substring(i+len+1);
 
-	  debug("msg = " + msg);
-	  debug("i = " + i);
-	  debug("len = " + len);
-	  debug("body = " + body);
-	  debug("op = " + op);
+          debug("msg = " + msg);
+          debug("i = " + i);
+          debug("len = " + len);
+          debug("body = " + body);
+          debug("op = " + op);
 
-	  switch(op) {
-	  case "m":
-	    messages += body.replace(/\n/g,"<br>")+"<br>";
-	    break;
-	  case "e":
-	    members = body;
-	    break;
-	  default:
-	  }
-	}
+          switch(op) {
+          case "m":
+            messages += body.replace(/\n/g,"<br>")+"<br>";
+            break;
+          case "e":
+            members = body;
+            break;
+          default:
+          }
+        }
 
-	if (messages.length > 0)
-	  msgs.innerHTML = msgs.innerHTML + messages;
+        if (messages.length > 0)
+          msgs.innerHTML = msgs.innerHTML + messages;
 
-	if (members.length > 0)
-	  memb.innerHTML = members;
+        if (members.length > 0)
+          memb.innerHTML = members;
 
-	move_to_end(msgs);
-	setTimeout("reader_init()", 0);
+        move_to_end(msgs);
+        setTimeout("reader_init()", 0);
       }
       else if (reply.substring(0,7) == "timeout") {
-	setTimeout("reader_init()", 0);
+        setTimeout("reader_init()", 0);
       }
       else {
-	// alert("Chat server got unsupported reply.'" + reply+"'");
+        // alert("Chat server got unsupported reply.'" + reply+"'");
       }
     }
   }

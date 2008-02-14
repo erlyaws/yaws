@@ -9,13 +9,13 @@
 
 %% API
 -export([start_link/0,
-	 setup/1, setup/2, setup/3,
-	 handler/4
-	]).
+         setup/1, setup/2, setup/3,
+         handler/4
+        ]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-	 terminate/2, code_change/3]).
+         terminate/2, code_change/3]).
 
 -include("../include/yaws_api.hrl").
 -include("../include/yaws.hrl").
@@ -25,8 +25,8 @@
 
 %% State
 -record(s, {
-	  wsdl_list = []          % list of {Id, WsdlModel} tuples, where Id == {M,F}
-	 }).
+          wsdl_list = []  % list of {Id, WsdlModel} tuples, where Id == {M,F}
+         }).
 
 -define(OK_CODE, 200).
 -define(BAD_MESSAGE_CODE, 400).
@@ -43,13 +43,13 @@
 start_link() ->
     %% We are dependent on erlsom
     case code:ensure_loaded(erlsom) of
-	{error, _} -> 
-	    Emsg = "could not load erlsom",
-	    error_logger:error_msg("~p: exiting, reason: ~s~n",
-				   [?MODULE, Emsg]),
-	    {error, Emsg};
-	{module, erlsom} ->
-	    gen_server:start_link({local, ?SERVER}, ?MODULE, [], [])
+        {error, _} -> 
+            Emsg = "could not load erlsom",
+            error_logger:error_msg("~p: exiting, reason: ~s~n",
+                                   [?MODULE, Emsg]),
+            {error, Emsg};
+        {module, erlsom} ->
+            gen_server:start_link({local, ?SERVER}, ?MODULE, [], [])
     end.
 
 %%% To be called from yaws_rpc.erl
@@ -57,15 +57,16 @@ start_link() ->
 handler(Args, Id, Payload, SessionValue) ->
     Headers = Args#arg.headers,
     SoapAction = yaws_soap_lib:findHeader("SOAPAction", Headers#headers.other),
-    case gen_server:call(?SERVER, {request, Id, Payload, SessionValue, SoapAction}) of
-	{ok, XmlDoc, ResCode, undefined} ->
-	    {false, XmlDoc, ResCode};
-	{ok, XmlDoc, ResCode, SessVal} ->
-	    {true, 0, SessVal, XmlDoc, ResCode};
-	{error, _, _} = Error ->
-	    Error;
-	false ->
-	    false    % soap notify
+    case gen_server:call(?SERVER, {request, Id, Payload, 
+                                   SessionValue, SoapAction}) of
+        {ok, XmlDoc, ResCode, undefined} ->
+            {false, XmlDoc, ResCode};
+        {ok, XmlDoc, ResCode, SessVal} ->
+            {true, 0, SessVal, XmlDoc, ResCode};
+        {error, _, _} = Error ->
+            Error;
+        false ->
+            false    % soap notify
     end.
 
 %% Setup a SOAP interface according to the config file.
@@ -75,12 +76,12 @@ setup(_ConfigFile) ->
 setup(Id, WsdlFile) when tuple(Id),size(Id)==2 ->
     Wsdl = yaws_soap_lib:initModel(WsdlFile),
     gen_server:call(?SERVER, {add_wsdl, Id, Wsdl}).
-    
+
 
 setup(Id, WsdlFile, Prefix) when tuple(Id),size(Id)==2 ->
     Wsdl = yaws_soap_lib:initModel(WsdlFile, Prefix),
     gen_server:call(?SERVER, {add_wsdl, Id, Wsdl}).
-    
+
 
 
 %%====================================================================
@@ -157,13 +158,14 @@ request(State, {M,F} = Id, Payload, SessionValue, Action) ->
     {ok, Model} = get_model(State, Id),
     Umsg = (catch erlsom_lib:toUnicode(Payload)),
     case catch yaws_soap_lib:parseMessage(Umsg, Model) of
-	{ok, Header, Body} -> 
-	    %% call function
-	    result(Model, catch apply(M, F, [Header, Body, Action, SessionValue]));
-	{error, Error} ->
-	    cli_error(Error);
-	OtherError -> 
-	    srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))
+        {ok, Header, Body} -> 
+            %% call function
+            result(Model, catch apply(M, F, [Header, Body, 
+                                             Action, SessionValue]));
+        {error, Error} ->
+            cli_error(Error);
+        OtherError -> 
+            srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))
     end.
 
 %%% Analyse the result and produce some output
@@ -185,43 +187,43 @@ return(Model, ResHeader, ResBody, ResCode, SessVal) when not is_list(ResBody) ->
 return(Model, ResHeader, ResBody, ResCode, SessVal) ->
     %% add envelope
     Header2 = case ResHeader of
-		  undefined -> undefined;
-		  _         -> #'soap:Header'{choice = ResHeader}
-	      end,
+                  undefined -> undefined;
+                  _         -> #'soap:Header'{choice = ResHeader}
+              end,
     Envelope = #'soap:Envelope'{'Body' =  #'soap:Body'{choice = ResBody},
-				'Header' = Header2},
+                                'Header' = Header2},
     case catch erlsom:write(Envelope, Model) of
-	{ok, XmlDoc} ->
-	    {ok, XmlDoc, ResCode, SessVal};
-	{error, WriteError} ->
-	    srv_error(f("Error writing XML: ~p", [WriteError]));
-	OtherWriteError ->
-	    error_logger:error_msg("~p(~p): OtherWriteError=~p~n", 
-				   [?MODULE, ?LINE, OtherWriteError]),
-	    srv_error(f("Error writing XML: ~p", [OtherWriteError]))
+        {ok, XmlDoc} ->
+            {ok, XmlDoc, ResCode, SessVal};
+        {error, WriteError} ->
+            srv_error(f("Error writing XML: ~p", [WriteError]));
+        OtherWriteError ->
+            error_logger:error_msg("~p(~p): OtherWriteError=~p~n", 
+                                   [?MODULE, ?LINE, OtherWriteError]),
+            srv_error(f("Error writing XML: ~p", [OtherWriteError]))
     end.
 
 f(S,A) -> lists:flatten(io_lib:format(S,A)).
 
 cli_error(Error) -> 
     error_logger:error_msg("~p(~p): Cli Error: ~p~n", 
-			   [?MODULE, ?LINE, Error]),
+                           [?MODULE, ?LINE, Error]),
     Fault = yaws_soap_lib:makeFault("Client", "Client error"),
     {error, Fault, ?BAD_MESSAGE_CODE}.
 
 srv_error(Error) -> 
     error_logger:error_msg("~p(~p): Srv Error: ~p~n", 
-			   [?MODULE, ?LINE, Error]),
+                           [?MODULE, ?LINE, Error]),
     Fault = yaws_soap_lib:makeFault("Server", "Server error"),
     {error, Fault, ?SERVER_ERROR_CODE}.
-   
+
 
 
 
 get_model(State, Id) ->
     case lists:keysearch(Id, 1, State#s.wsdl_list) of
-	{value, {_, Model}} -> {ok, Model};
-	_                   -> {error, "model not found"}
+        {value, {_, Model}} -> {ok, Model};
+        _                   -> {error, "model not found"}
     end.
 
 uinsert({K,_} = E, [{K,_}|T]) -> [E|T];

@@ -51,17 +51,17 @@
 -import(lists, [member/2, map/2, reverse/1, reverse/2]).
 
 -record(env, {node,
-	      f,
-	      f1 = false,
-	      f2 = false,
-	      f3 = false,
-	      h1 = false,
-	      h2 = false,
-	      h3 = false,
-	      u = false,
-	      n = 0, 
-	      dl = false
-	     }).
+              f,
+              f1 = false,
+              f2 = false,
+              f3 = false,
+              h1 = false,
+              h2 = false,
+              h3 = false,
+              u = false,
+              n = 0, 
+              dl = false
+             }).
 
 format(Str, F, Node) ->
     Env = #env{node=Node,f=F},
@@ -76,11 +76,11 @@ blank_line(_)         -> no.
 
 format_txt([$\n|T], Env, L, Doc) ->
     case blank_line(T) of
-	{yes, T1} ->
-	    {Env1, L1} = clear_line(Env, reverse("<p>\n", L)),
-	    format_txt(T1, Env1, L1, Doc);
-	no ->
-	    after_nl(T, Env, [$\n|L], Doc)
+        {yes, T1} ->
+            {Env1, L1} = clear_line(Env, reverse("<p>\n", L)),
+            format_txt(T1, Env1, L1, Doc);
+        no ->
+            after_nl(T, Env, [$\n|L], Doc)
     end;
 format_txt([$\\,H|T], Env, L, Doc) ->
     format_txt(T, Env, [H|L], Doc);
@@ -126,23 +126,23 @@ format_txt("ftp://" ++ T, Env, L, Doc) ->
 format_txt("slideshow:" ++ T, Env, L, Doc) ->
     {X, T1} = collect_wiki_link(T),
     Txt = "<a href='slideShow.yaws?node="++wiki:str2urlencoded(Env#env.node)++
-	"&next=1'>"++X++ "</a>",
+        "&next=1'>"++X++ "</a>",
     format_txt(T1, Env, reverse(Txt, L), Doc);
 format_txt("mailto:" ++ T, Env, L, Doc) ->
     {X, T1} = collect_mail(T, []),
     Txt = "<a href='mailto:" ++ X ++ "'>" ++ 
-	"<img border=0 src='WikiPreferences.files/mailto.png'>"
-	++ X ++ "</a>",
+        "<img border=0 src='WikiPreferences.files/mailto.png'>"
+        ++ X ++ "</a>",
     format_txt(T1, Env, reverse(Txt, L), Doc);
 format_txt("mailtoall:" ++ T, Env, L, Doc) ->
     {Name, T1} = collect_wiki_link(T),
     case get_mailto(Doc, []) of
-	[] ->
-	    format_txt(T, Env, L, Doc);
-	[F|Rs] ->
-	    Recipients = [F | [[$,|R] || R <- Rs]],
-	    Txt = "<a href='mailto:" ++ Recipients ++ "'>" ++ Name ++ "</a>",
-	    format_txt(T1, Env, reverse(Txt, L), Doc)
+        [] ->
+            format_txt(T, Env, L, Doc);
+        [F|Rs] ->
+            Recipients = [F | [[$,|R] || R <- Rs]],
+            Txt = "<a href='mailto:" ++ Recipients ++ "'>" ++ Name ++ "</a>",
+            format_txt(T1, Env, reverse(Txt, L), Doc)
     end;
 format_txt("<?plugin " ++ T, Env, L, Doc) ->
     Page = Env#env.node,
@@ -198,12 +198,12 @@ format_external_url(F) ->
 format_external_url(F, Scheme) ->
     F1 = Scheme ++ F,
     case is_graphic(F) of
-	true ->
-	    "<img src=\"" ++  F1 ++ "\">";
-	false ->
-	    "<a href=\"" ++  F1 ++ "\">" ++ 
-	    "<img border=0 src='WikiPreferences.files/http.png'>"
-	    ++ F1 ++ "</a> "
+        true ->
+            "<img src=\"" ++  F1 ++ "\">";
+        false ->
+            "<a href=\"" ++  F1 ++ "\">" ++ 
+            "<img border=0 src='WikiPreferences.files/http.png'>"
+            ++ F1 ++ "</a> "
     end.
 
 is_graphic(F) ->
@@ -258,17 +258,17 @@ eregion(T0, Env, L, Doc) ->
     Expired = date_less(Date, {date(),time()}),
     {Region, T2} = collect_region($], T1, []),
     case Expired of
-	error ->
-	    L1 = reverse("ERROR: bad expires date entry - "++DateStr++". "
-			 "The date should be on the form \"3 Jan 2003 "
-			 "00:00:00\".", L),
-	    format_txt(T2, Env, L1, Doc);
-	true ->
-	    format_txt(T2, Env, L, Doc);
-	false ->
-	    {Env1, RTxt} = format_txt(Region, Env, [], Doc),
-	    L1 = reverse(RTxt, L),
-	    format_txt(T2, Env1, L1, Doc)
+        error ->
+            L1 = reverse("ERROR: bad expires date entry - "++DateStr++". "
+                         "The date should be on the form \"3 Jan 2003 "
+                         "00:00:00\".", L),
+            format_txt(T2, Env, L1, Doc);
+        true ->
+            format_txt(T2, Env, L, Doc);
+        false ->
+            {Env1, RTxt} = format_txt(Region, Env, [], Doc),
+            L1 = reverse(RTxt, L),
+            format_txt(T2, Env1, L1, Doc)
     end.
 
 collect_region(_, [], Acc) ->
@@ -286,14 +286,14 @@ date_less(D1,D2) ->
     Ds1 < Ds2.
 
 -record(date,
-	{
-	  year,
-	  month,
-	  day,
-	  hours, 
-	  minutes,
-	  seconds
-	  }).
+        {
+          year,
+          month,
+          day,
+          hours, 
+          minutes,
+          seconds
+          }).
 
 parse_date(Date) ->
     parse_date(Date, #date{}).
@@ -301,51 +301,51 @@ parse_date(Date) ->
 parse_date([], D) ->
     Entries = tl(tuple_to_list(D)),
     AllDone = lists:all(fun(X) -> if integer(X) -> true;
-				     true -> false
-				  end
-			end, Entries),
+                                     true -> false
+                                  end
+                        end, Entries),
     if
-	AllDone ->
-	    {{D#date.year,D#date.month,D#date.day},
-	     {D#date.hours,D#date.minutes,D#date.seconds}};
-	true ->
-	    error
+        AllDone ->
+            {{D#date.year,D#date.month,D#date.day},
+             {D#date.hours,D#date.minutes,D#date.seconds}};
+        true ->
+            error
     end;
 parse_date([D|Ds], Date) ->
     case char_type(D) of
-	space -> parse_date(Ds, Date);
-	alpha when Date#date.month == undefined ->
-	    case is_month(lowercase([D|Ds])) of
-		false ->
-		    parse_date(Ds, Date);
-		{true, M, Rest} ->
-		    parse_date(Rest, Date#date{month=M})
-	    end;
-	alpha ->
-	    parse_date(Ds, Date);
-	digit ->
-	    case parse_time([D|Ds]) of
-		error ->
-		    {Number,Rest} = get_number([D|Ds], 0),
-		    if
-			Number < 32, Date#date.day == undefined ->
-			    parse_date(Rest, Date#date{day=Number});
-			Number < 50, Date#date.year == undefined ->
-			    parse_date(Rest, Date#date{year=Number+2000});
-			Number < 100, Date#date.year == undefined ->
-			    parse_date(Rest, Date#date{year=Number+1900});
-			Number > 1900, Date#date.year == undefined ->
-			    parse_date(Rest, Date#date{year=Number});
-			true ->
-			    parse_date(Rest, Date)
-		    end;
-		{Hours, Minutes, Seconds, Rest} ->
-		    parse_date(Rest, Date#date{hours=Hours,
-					       minutes=Minutes,
-					       seconds=Seconds})
-	    end;
-	_ ->
-	    parse_date(Ds, Date)
+        space -> parse_date(Ds, Date);
+        alpha when Date#date.month == undefined ->
+            case is_month(lowercase([D|Ds])) of
+                false ->
+                    parse_date(Ds, Date);
+                {true, M, Rest} ->
+                    parse_date(Rest, Date#date{month=M})
+            end;
+        alpha ->
+            parse_date(Ds, Date);
+        digit ->
+            case parse_time([D|Ds]) of
+                error ->
+                    {Number,Rest} = get_number([D|Ds], 0),
+                    if
+                        Number < 32, Date#date.day == undefined ->
+                            parse_date(Rest, Date#date{day=Number});
+                        Number < 50, Date#date.year == undefined ->
+                            parse_date(Rest, Date#date{year=Number+2000});
+                        Number < 100, Date#date.year == undefined ->
+                            parse_date(Rest, Date#date{year=Number+1900});
+                        Number > 1900, Date#date.year == undefined ->
+                            parse_date(Rest, Date#date{year=Number});
+                        true ->
+                            parse_date(Rest, Date)
+                    end;
+                {Hours, Minutes, Seconds, Rest} ->
+                    parse_date(Rest, Date#date{hours=Hours,
+                                               minutes=Minutes,
+                                               seconds=Seconds})
+            end;
+        _ ->
+            parse_date(Ds, Date)
     end.
 
 lowercase([C|S]) -> [lowercase(C)|lowercase(S)];
@@ -402,17 +402,17 @@ get_number(Rest, N) -> {N, Rest}.
 
 parse_time(Time) ->
     F = fun() ->
-		{Hour,[$:|R1]}    = get_number(Time, 0),
-		{Minutes,[$:|R2]} = get_number(R1, 0),
-		{Seconds,R3}      = get_number(R2, 0),
-		{Hour, Minutes, Seconds, R3}
-	end,
+                {Hour,[$:|R1]}    = get_number(Time, 0),
+                {Minutes,[$:|R2]} = get_number(R1, 0),
+                {Seconds,R3}      = get_number(R2, 0),
+                {Hour, Minutes, Seconds, R3}
+        end,
     case catch F() of
-	{Hour, Minutes, Seconds, Rest} when integer(Hour),
-				      integer(Minutes),
-				      integer(Seconds) ->
-	    {Hour, Minutes, Seconds, Rest};
-	_ -> error
+        {Hour, Minutes, Seconds, Rest} when integer(Hour),
+                                      integer(Minutes),
+                                      integer(Seconds) ->
+            {Hour, Minutes, Seconds, Rest};
+        _ -> error
     end.
 
 note(T, Env, L, Doc) ->
@@ -434,19 +434,19 @@ note_start() ->
      <td bgcolor=\"yellow\"><font size=\"-1\">".
 
 note_end() -> "</font></td></tr></table><p>\n".
-	      
+              
 mk_list(T, Env, L, Doc) ->
     {Lev, T1} = count_indent_levels(T, 0),
     {Env1, L1} = adjust_indents(Env, Lev, L),
     T2 = skip_blanks(T1),
     case T2 of
-	[$*|T3] ->
-	    format_txt(T3,Env1,reverse("<li>", L1), Doc);
-	[$[|T4] ->
-	    {Env2, L2} = open_dl(Env1, L1),
+        [$*|T3] ->
+            format_txt(T3,Env1,reverse("<li>", L1), Doc);
+        [$[|T4] ->
+            {Env2, L2} = open_dl(Env1, L1),
             add_dl(T4, Env2, reverse("<dt>", L2), Doc);
-	_ ->
-	   format_txt(T2,Env1,L1, Doc)
+        _ ->
+           format_txt(T2,Env1,L1, Doc)
     end.
 
 skip_blanks([$ |T])  -> skip_blanks(T);
@@ -537,10 +537,10 @@ collect_wiki_link([H|T], L, Quoted) when $0 =< H, H =< $9 ->
     collect_wiki_link(T, [H|L], Quoted);
 collect_wiki_link(S=[H|T], L, Quoted) ->
     case member(H, "äÄöÖåÅ") of
-	true ->
-	    collect_wiki_link(T, [H|L], Quoted);
-	false ->
-	    {reverse(L), S}
+        true ->
+            collect_wiki_link(T, [H|L], Quoted);
+        false ->
+            {reverse(L), S}
     end;
 collect_wiki_link(T, L, Quoted) ->
     {reverse(L), T}.
@@ -555,11 +555,11 @@ plugin(Data, Page) ->
        0 -> %% Broken plugin syntax
            {"", "<?plugin " ++ Data};
        EndPluginIndex ->
-	   PluginData = string:sub_string(Data, 1, EndPluginIndex -1),
-	   [PluginName| ArgStrings] = string:tokens(PluginData, " "),
-	   Result  = exec_plugin(PluginName, Page, ArgStrings),
-	   Rest    = string:sub_string(Data, EndPluginIndex + 2),
-	   {Result, Rest}
+           PluginData = string:sub_string(Data, 1, EndPluginIndex -1),
+           [PluginName| ArgStrings] = string:tokens(PluginData, " "),
+           Result  = exec_plugin(PluginName, Page, ArgStrings),
+           Rest    = string:sub_string(Data, EndPluginIndex + 2),
+           {Result, Rest}
    end.
 
 exec_plugin(Name, Page, ArgStrings) ->

@@ -3,26 +3,26 @@
 
 out(A) -> 
     {Code, F} = case queryvar(A, "file") of
-		    {ok, Fname} ->
-			File = A#arg.docroot ++ 
-			    yaws_api:sanitize_file_name(Fname),
-			case file:read_file(File) of
-			    {ok, B} ->
-				C = {'div', 
-				     [],
-				     {pre, [], B}},
-				{C, Fname};
-			    _ ->
-				{[], "Can't read " ++ Fname }
-			end;
-		    undefined ->
-			{[], "Bad request"}
-		end,
+                    {ok, Fname} ->
+                        File = A#arg.docroot ++ 
+                            yaws_api:sanitize_file_name(Fname),
+                        case file:read_file(File) of
+                            {ok, B} ->
+                                C = {'div', 
+                                     [],
+                                     {pre, [], B}},
+                                {C, Fname};
+                            _ ->
+                                {[], "Can't read " ++ Fname }
+                        end;
+                    undefined ->
+                        {[], "Bad request"}
+                end,
     {ehtml, {html, [],
-	     {'div', 
-	      [],
-	      [{h2, [], F}, 
-	       Code]}}}.
+             {'div', 
+              [],
+              [{h2, [], F}, 
+               Code]}}}.
 
 
 </erl>

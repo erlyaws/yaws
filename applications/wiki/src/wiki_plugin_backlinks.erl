@@ -21,6 +21,6 @@ run(Page, ArgList) ->
     AllRefs = wiki_utils:getallrefs(Page, Root),
     
     lists:map(fun(F) -> 
-		[wiki_to_html:format_link(F, Root),"<br>"] end, 
-	AllRefs).
+                [wiki_to_html:format_link(F, Root),"<br>"] end, 
+        AllRefs).
 

@@ -2,7 +2,7 @@
 
 out(A) -> 
     yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
-	    
+            
 </erl>
 
 

@@ -2,19 +2,19 @@
 
 out(A) ->
     L = case (A#arg.req)#http_request.method of
-	    'GET' ->
-		yaws_api:parse_query(A);
-	    'POST' ->
-		yaws_api:parse_post(A)
-	end,
+            'GET' ->
+                yaws_api:parse_query(A);
+            'POST' ->
+                yaws_api:parse_post(A)
+        end,
     User = mail:getopt("user", L, ""),
     Passwd = mail:getopt("password", L, ""),
     case mail:login(User, Passwd) of
-	{ok, Cookie} ->
-	    [yaws_api:setcookie("mailsession", Cookie),
-	     {redirect_local, {rel_path,"mail.yaws"}}];
-	{error, Reason} ->
-	    mail:display_login(A, Reason)
+        {ok, Cookie} ->
+            [yaws_api:setcookie("mailsession", Cookie),
+             {redirect_local, {rel_path,"mail.yaws"}}];
+        {error, Reason} ->
+            mail:display_login(A, Reason)
     end.
 
-</erl>	    
+</erl>            

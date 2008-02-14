@@ -26,44 +26,44 @@ list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
     Descriptions = read_descriptions(DirName),
 
     L0 = lists:zf(
-	   fun(F) ->
-		   File = DirName ++ [$/|F],
-		   FI = file:read_file_info(File),
-		   file_entry(FI, DirName, F, Qry,Descriptions)
-	   end, List),
+           fun(F) ->
+                   File = DirName ++ [$/|F],
+                   FI = file:read_file_info(File),
+                   file_entry(FI, DirName, F, Qry,Descriptions)
+           end, List),
 
     L1 = lists:keysort(Pos, L0),
 
     L2 = if Direction == normal -> L1;
-	    Direction == reverse -> lists:reverse(L1)
-	 end,
+            Direction == reverse -> lists:reverse(L1)
+         end,
 
     L3 = [Html || {_, _, _, _, Html} <- L2],
     
-    Body = [ doc_head(DirStr),	     	     
-	     dir_header(DirName,DirStr),
-	     table_head(Direction),	     
-	     parent_dir(),
-	     if 
-		 DoAllZip == true -> 
-		     allzip();
-		 DoAllZip == true_nozip ->
-		     [];
-		true ->
-		     []
-	     end,
-	     
-%% 	     if DoAllGZip == true -> alltgz() end,
-%% 	     if DoAllBZip2 == true -> alltbz2() end,
+    Body = [ doc_head(DirStr),                          
+             dir_header(DirName,DirStr),
+             table_head(Direction),             
+             parent_dir(),
+             if 
+                 DoAllZip == true -> 
+                     allzip();
+                 DoAllZip == true_nozip ->
+                     [];
+                true ->
+                     []
+             end,
+             
+%%              if DoAllGZip == true -> alltgz() end,
+%%              if DoAllBZip2 == true -> alltbz2() end,
 
-%% 	     if DoAllZip == true -> alltgz() end,
-%% 	     if DoAllZip == true -> alltbz2() end,
+%%              if DoAllZip == true -> alltgz() end,
+%%              if DoAllZip == true -> alltbz2() end,
 
-	     L3,
-	     table_tail(),
-	     dir_footer(DirName),%yaws:address(),
-	     doc_tail()
-	    ],
+             L3,
+             table_tail(),
+             dir_footer(DirName),%yaws:address(),
+             doc_tail()
+            ],
     
     B = list_to_binary(Body),
 
@@ -73,25 +73,25 @@ list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
 
 parse_query(Path) ->
     case string:tokens(Path, [$?]) of
-	[DirStr, [PosC, $=, DirC] = Q] ->
-	    Pos = case PosC of
-		      $N -> 1; % name
-		      $M -> 2; % last modified
-		      $S -> 3; % size
-		      $D -> 4  % Description		      		      
-		  end,
-	    Dir = case DirC of
-		      $r -> reverse;
-		      _  -> normal
-		  end,
-	    {DirStr, Pos, Dir, "/?"++Q};
-	_ ->
-	    {Path, 1, normal, ""}
+        [DirStr, [PosC, $=, DirC] = Q] ->
+            Pos = case PosC of
+                      $N -> 1; % name
+                      $M -> 2; % last modified
+                      $S -> 3; % size
+                      $D -> 4  % Description                                            
+                  end,
+            Dir = case DirC of
+                      $r -> reverse;
+                      _  -> normal
+                  end,
+            {DirStr, Pos, Dir, "/?"++Q};
+        _ ->
+            {Path, 1, normal, ""}
     end.
 
 parse_description(Line) ->
     L = string:strip(Line),
-    Pos = string:chr(L,$ ),				      
+    Pos = string:chr(L,$ ),                                      
     Filename = string:substr(L, 1, Pos-1),
     D = string:substr(L,Pos+1),
     Description = string:strip(D,left),
@@ -100,15 +100,15 @@ parse_description(Line) ->
 read_descriptions(DirName) ->
     File = DirName ++ [$/ | "MANIFEST.txt"],
     case file:read_file(File) of
-	{ok,Bin} -> Lines = string:tokens(binary_to_list(Bin),"\n"),
-		    lists:map(fun parse_description/1,Lines);
-	_ -> []
+        {ok,Bin} -> Lines = string:tokens(binary_to_list(Bin),"\n"),
+                    lists:map(fun parse_description/1,Lines);
+        _ -> []
     end.
 
 get_description(Name,Descriptions) ->
     case lists:keysearch(Name,1,Descriptions) of
-	{value, {_,Description}} -> Description;
-	_ -> []
+        {value, {_,Description}} -> Description;
+        _ -> []
     end.
 
 doc_head(DirName) ->
@@ -136,8 +136,8 @@ doc_tail() ->
 
 table_head(Direction) ->
     NextDirection = if Direction == normal  -> "r";
-		       Direction == reverse -> "n"
-		    end,
+                       Direction == reverse -> "n"
+                    end,
     ["<table>\n"
      "  <tr>\n"
      "    <td><img src=\"/icons/blank.gif\" alt=\"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\"/><a href=\"?N=",NextDirection,"\">Name</a></td>\n"
@@ -155,16 +155,16 @@ table_tail() ->
 dir_footer(DirName) ->
     File = DirName ++ [$/ | "README.txt"],
     case file:read_file(File) of
-	{ok,Bin} -> "<pre>\n" ++ binary_to_list(Bin) ++ "</pre>\n";
-	_ -> yaws:address()
+        {ok,Bin} -> "<pre>\n" ++ binary_to_list(Bin) ++ "</pre>\n";
+        _ -> yaws:address()
     end.
 
 dir_header(DirName,DirStr) ->
     File = DirName ++ [$/ | "HEADER.txt"],
     case file:read_file(File) of
-	{ok,Bin} -> "<pre>\n" ++ binary_to_list(Bin) ++ "</pre>\n";
-	_ ->     HtmlDirName = yaws_api:htmlize(yaws_api:url_decode(DirStr)),
-		 "<h1>Index of " ++ HtmlDirName ++ "</h1>\n"
+        {ok,Bin} -> "<pre>\n" ++ binary_to_list(Bin) ++ "</pre>\n";
+        _ ->     HtmlDirName = yaws_api:htmlize(yaws_api:url_decode(DirStr)),
+                 "<h1>Index of " ++ HtmlDirName ++ "</h1>\n"
     end.
 
 parent_dir() ->    
@@ -176,7 +176,7 @@ parent_dir() ->
        "    <td></td>\n"
        "  </tr>\n",
        ["/icons/" ++ Gif,
-	Alt
+        Alt
        ]).
 
 %% FIXME: would be nice with a good size approx.  but it would require
@@ -191,7 +191,7 @@ allzip() ->
        "    <td>Build a zip archive of current directory</td>\n"
        "  </tr>\n",
        ["/icons/" ++ Gif,
-	Alt]).
+        Alt]).
 
 alltgz() ->
     {Gif, Alt} = list_gif(zip,""),
@@ -202,7 +202,7 @@ alltgz() ->
        "    <td>Build a gzip archive of current directory</td>\n"
        "  </tr>\n",
        ["/icons/" ++ Gif,
-	Alt]).
+        Alt]).
 
 alltbz2() ->
     {Gif, Alt} = list_gif(zip,""),    
@@ -213,70 +213,70 @@ alltbz2() ->
        "    <td>Build a bzip2 archive of current directory</td>\n"
        "  </tr>\n",
        ["/icons/" ++ Gif,
-	Alt]).
+        Alt]).
 
 is_user_dir(SP) ->
     case SP of
-	[$/,$~ | T] -> User = string:sub_word(T,1,$/),
-		       case catch yaws:user_to_home(User) of
-			   {'EXIT', _} ->
-			       false;
-			   Home -> 
-			       {true,Home}
-		       end;	
-	_ -> false
+        [$/,$~ | T] -> User = string:sub_word(T,1,$/),
+                       case catch yaws:user_to_home(User) of
+                           {'EXIT', _} ->
+                               false;
+                           Home -> 
+                               {true,Home}
+                       end;        
+        _ -> false
     end.
 
 out(A) ->
     SP = A#arg.server_path,    
     PP = A#arg.appmod_prepath,
     Dir = case is_user_dir(SP) of
-	      {true,Home} -> Home ++ "/public_html";
-	      false -> A#arg.docroot
-	  end ++ PP,
+              {true,Home} -> Home ++ "/public_html";
+              false -> A#arg.docroot
+          end ++ PP,
     
 %%    {html,?F("<h2>~p</h2>",[Dir])}.
 
     YPid = self(),
     
-    case filename:basename(A#arg.server_path) of		    
-	"all.zip" -> spawn_link(fun() -> zip(YPid, Dir) end),
-		     {streamcontent, "application/zip", ""};
-	"all.tgz" -> spawn_link(fun() -> tgz(YPid, Dir) end),
-		     {streamcontent, "application/gzip", ""};		    
-	"all.tbz2" -> spawn_link(fun() -> tbz2(YPid, Dir) end),
-		      {streamcontent, "application/gzip", ""}
+    case filename:basename(A#arg.server_path) of                    
+        "all.zip" -> spawn_link(fun() -> zip(YPid, Dir) end),
+                     {streamcontent, "application/zip", ""};
+        "all.tgz" -> spawn_link(fun() -> tgz(YPid, Dir) end),
+                     {streamcontent, "application/gzip", ""};                    
+        "all.tbz2" -> spawn_link(fun() -> tbz2(YPid, Dir) end),
+                      {streamcontent, "application/gzip", ""}
     end.
 
 zip(YPid, Dir) ->
     process_flag(trap_exit, true),    
     P = open_port({spawn, "zip -q -1 -r - ."},
-		  [{cd, Dir},use_stdio, binary, exit_status]),
+                  [{cd, Dir},use_stdio, binary, exit_status]),
     stream_loop(YPid, P).
 
 tgz(YPid, Dir) ->
     process_flag(trap_exit, true),    
     P = open_port({spawn, "tar cz ."},
-		  [{cd, Dir},use_stdio, binary, exit_status]),
+                  [{cd, Dir},use_stdio, binary, exit_status]),
     stream_loop(YPid, P).
 
 tbz2(YPid, Dir) ->
     process_flag(trap_exit, true),    
     P = open_port({spawn, "tar cj ."},
-		  [{cd, Dir},use_stdio, binary, exit_status]),
+                  [{cd, Dir},use_stdio, binary, exit_status]),
     stream_loop(YPid, P).
 
 stream_loop(YPid, P) ->
     receive
-	{P, {data, Data}} ->
-	    yaws_api:stream_chunk_deliver_blocking(YPid, Data),
-	    stream_loop(YPid, P);
-	{P, {exit_status, _}} ->
-	    yaws_api:stream_chunk_end(YPid);
-	{'EXIT', YPid, Status} ->
-	    exit(Status);
-	Else ->
-	    error_logger:error_msg("Could not deliver zip file: ~p\n", [Else])
+        {P, {data, Data}} ->
+            yaws_api:stream_chunk_deliver_blocking(YPid, Data),
+            stream_loop(YPid, P);
+        {P, {exit_status, _}} ->
+            yaws_api:stream_chunk_end(YPid);
+        {'EXIT', YPid, Status} ->
+            exit(Status);
+        Else ->
+            error_logger:error_msg("Could not deliver zip file: ~p\n", [Else])
     end.
 
 
@@ -292,26 +292,26 @@ file_entry({ok, FI}, _DirName, Name, Qry, Descriptions) ->
     Ext = filename:extension(Name),
     {Gif, Alt} = list_gif(FI#file_info.type, Ext),
     QryStr = if FI#file_info.type == directory -> Qry;
-		true -> ""
-	     end,
+                true -> ""
+             end,
 
     Description = get_description(Name,Descriptions),
 
     Entry = 
-	?F("  <tr>\n"
-	   "    <td><img src=~p alt=~p/><a href=~p title=~p>~s</a></td>\n"
-	   "    <td>~s</td>\n"
-	   "    <td>~s</td>\n"
-	   "    <td>~s</td>\n"
-	   "  </tr>\n",
-	   ["/icons/" ++ Gif,
-	    Alt,
-	    yaws_api:url_encode(Name) ++ QryStr,
-	    Name,
-	    trim(Name,20),
-	    datestr(FI), 
-	    sizestr(FI),
-	   Description]),
+        ?F("  <tr>\n"
+           "    <td><img src=~p alt=~p/><a href=~p title=~p>~s</a></td>\n"
+           "    <td>~s</td>\n"
+           "    <td>~s</td>\n"
+           "    <td>~s</td>\n"
+           "  </tr>\n",
+           ["/icons/" ++ Gif,
+            Alt,
+            yaws_api:url_encode(Name) ++ QryStr,
+            Name,
+            trim(Name,20),
+            datestr(FI), 
+            sizestr(FI),
+           Description]),
     ?Debug("Entry:~p", [Entry]),
     
     {true, {Name, FI#file_info.mtime, FI#file_info.size, Description, Entry}};
@@ -333,8 +333,8 @@ trim([], _, Acc) ->
 datestr(FI) ->    
     {{Year, Month, Day}, {Hour, Min, _}} = FI#file_info.mtime,
     io_lib:format("~s-~s-~w ~s:~s",
-		  [yaws:mk2(Day),yaws:month(Month),Year,
-		   yaws:mk2(Hour),yaws:mk2(Min)]).
+                  [yaws:mk2(Day),yaws:month(Month),Year,
+                   yaws:mk2(Hour),yaws:mk2(Min)]).
 
 sizestr(FI) when FI#file_info.size > 1000000 ->
     ?F("~.1fM", [FI#file_info.size / 1000000]);

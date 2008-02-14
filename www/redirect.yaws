@@ -23,9 +23,9 @@ The code:</p>
 
 <erl>
 out(_A) ->
-	{ehtml,
-	{'div', [{class,"box"}],
-	 {pre,[],
+        {ehtml,
+        {'div', [{class,"box"}],
+         {pre,[],
           {ssi, "redirect2.yaws",[],[]}}}}.
 </erl>
 
@@ -43,9 +43,9 @@ out(_A) ->
 
 <erl>
 out(_A) ->
-	{ehtml,
-	{'div', [{class,"box"}],
-	 {pre,[],
+        {ehtml,
+        {'div', [{class,"box"}],
+         {pre,[],
           {ssi, "redirect3.yaws",[],[]}}}}.
 </erl>
 
@@ -91,9 +91,9 @@ redirects. For example:</p>
 
 <erl>
 out(_A) ->
-	{ehtml,
-	{'div', [{class,"box"}],
-	 {pre,[],
+        {ehtml,
+        {'div', [{class,"box"}],
+         {pre,[],
           {ssi, "redirect4.yaws",[],[]}}}}.
 </erl>
 

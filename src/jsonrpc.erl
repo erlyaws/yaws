@@ -36,57 +36,69 @@
 %%% call function calls json-rpc method on remote host 
 %%%
 %%% URL - remote server url (may use https)
-%%% Options - option list to be passed to http:request (ssl options ot timeout, for example)
+%%% Options - option list to be passed to http:request 
+%% (ssl options ot timeout, for example)
 %%% Payload -> {call, MethodName, Args} tuple
 %%% MethodName -> atom
 %%% Args -> list
 %%%
-call(URL, Options, Payload) -> % {{{
+call(URL, Options, Payload) -> 
     try
         {ok, CallPayloadDeep} = encode_call_payload(Payload),
         CallPayload = lists:flatten(CallPayloadDeep),
         {ok, Response} = http:request(post, 
-            {URL,[{"Content-length",length(CallPayload)}],"application/x-www-form-urlencoded",CallPayload}, 
-            Options, []),
+            {URL,[{"Content-length",length(CallPayload)}],
+             "application/x-www-form-urlencoded",CallPayload}, 
+                                      Options, []),
 
-        RespBody= if (size(Response) == 2) or (size(Response) == 3) -> element(size(Response), Response) end,
+        RespBody= if (size(Response) == 2) or (size(Response) == 3) -> 
+                          element(size(Response), Response) 
+                  end,
         decode_call_payload(RespBody)
     catch
         error:Err-> 
-            error_logger:error_report([{'json_rpc:call', error}, {error, Err}, {stack, erlang:get_stacktrace()}]),
+            error_logger:error_report([{'json_rpc:call', error}, 
+                                       {error, Err}, 
+                                       {stack, erlang:get_stacktrace()}]),
             {error,Err}
-    end. % }}}
+    end. 
 
 %%%
 %%% json-rpc.org defines such structure for making call
 %%% 
 %%% {"method":"methodname", "params": object, "id": integer}
-encode_call_payload({call, Method, Args}) when is_atom(Method) and is_list(Args) ->   % {{{
-    ID = element(3, erlang:now()),    % id makes sense when there are many requests in same
-                                    % communication channel and replies can come in random order
-                                    % here it can be changed to something less expensive
+encode_call_payload({call, Method, Args}) when is_atom(Method) and 
+                                               is_list(Args) ->  
+    ID = element(3, erlang:now()), % id makes sense when there are many 
+                                                % requests in same
+                                                % communication channel and 
+                                                %replies can come in random 
+                                                %order here it can be changed 
+                                                %to something less expensive
     Struct =  json:encode({struct, [{method, atom_to_list(Method)}, 
                                     {params, {array, Args}}, 
                                     {id, ID}]}),
-    {ok, Struct}. % }}}
+    {ok, Struct}. 
      
 %%%
 %%% decode response structure
 %%% 
 %%% {"id":requestID,"result":object,"error":error_description}
-decode_call_payload(JSonStr) -> %{{{
+decode_call_payload(JSonStr) -> 
     {ok, JSON} = json:decode_string(JSonStr),
     Result = s(JSON, result),
     Error = s(JSON, error),
 %    ID = s(JSON, id),    % ignored for now
     if 
-    (Error =/= undefined) -> {error, Error};
-    true -> {ok,{response,[Result]}}                % make it compliant with xmlrpc response
-    end. %}}}
+        (Error =/= undefined) -> 
+            {error, Error};
+        true -> 
+            {ok,{response,[Result]}} % make it compliant with xmlrpc response
+    end. 
     
 %%% lookup element in proplist 
 %%% XXX: are there ready implementation in erlang std library?
-s ({struct, List}, ElemName) -> % {{{
+s ({struct, List}, ElemName) -> 
     s(List, ElemName);
 
 s(List, ElemName) when is_list(List) ->
@@ -96,6 +108,6 @@ s(List, ElemName) when is_list(List) ->
     _ ->
         undefined
     end. 
-% }}}
+
     
 % vim: tabstop=4 ft=erlang

@@ -10,30 +10,30 @@ out(A) ->
     H = {ssi, "TAB.inc", [],[]},
     L = case queryvar(A,"page") of
             {ok, Page} ->
-		%% only allow regular chars in Page
-		case lists:all(fun(C) ->
-				       if
-					   $a =< C, C =< $z ->
-					       true;
-					   $A =< C, C =< $Z ->
-					       true;
+                %% only allow regular chars in Page
+                case lists:all(fun(C) ->
+                                       if
+                                           $a =< C, C =< $z ->
+                                               true;
+                                           $A =< C, C =< $Z ->
+                                               true;
                                            C == $_ ->
                                                true;
                                            C == $. ->
                                                true;
-					   true ->
-					       false
-				       end
-			       end, Page) of
-		    true ->
-		        os:cmd("man  " ++ Page ++ "  | col -b -p -x");
-		    false ->
-			"illegal character detected in query arg"
-		end;
-	    undefined ->
-		"no man page found in query arg "
-	end,
-	
+                                           true ->
+                                               false
+                                       end
+                               end, Page) of
+                    true ->
+                        os:cmd("man  " ++ Page ++ "  | col -b -p -x");
+                    false ->
+                        "illegal character detected in query arg"
+                end;
+            undefined ->
+                "no man page found in query arg "
+        end,
+        
     Man = {ehtml, {'div', [{id, "entry"}], prebox(L)}},
     Trail = {ssi, "END2",[],[]},
     [H, Man, Trail].

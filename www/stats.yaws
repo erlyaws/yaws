@@ -12,19 +12,19 @@ out(A) ->
            [Days, Hours, Minutes]),
     
     T =lists:map(
-	 fun({Host,IP,Hits}) ->
-		 L1= f("<hr \><h3> stats for ~p at ~p  </h3>~n",
-		       [Host,IP]),
-		 T = "<table border=\"2\" > \n"
+         fun({Host,IP,Hits}) ->
+                 L1= f("<hr \><h3> stats for ~p at ~p  </h3>~n",
+                       [Host,IP]),
+                 T = "<table border=\"2\" > \n"
                      "<TR> <TH>URL</TH> <TH>Number of hits</TH> </TR>",
-		 {L2, Total}=lists:mapfoldl(
-		      fun({Url, Hits}, Sum) ->
-			      {f("<TR> <TD>~s</TD> <TD>~w</TD> </TR>~n",
-				[Url, Hits]), Sum + Hits}
-		      end, 0, Hits),
-		 END = f("<TR><TH>Total</TH><TH>~w</TH><TR></table>", [Total]),
-		 [L1, T, L2, END]
-	 end, L),
+                 {L2, Total}=lists:mapfoldl(
+                      fun({Url, Hits}, Sum) ->
+                              {f("<TR> <TD>~s</TD> <TD>~w</TD> </TR>~n",
+                                [Url, Hits]), Sum + Hits}
+                      end, 0, Hits),
+                 END = f("<TR><TH>Total</TH><TH>~w</TH><TR></table>", [Total]),
+                 [L1, T, L2, END]
+         end, L),
     {html, [H, T]}.
 </erl>
 

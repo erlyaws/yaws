@@ -6,19 +6,19 @@
 -module(yaws_soap_lib).
 
 -export([initModel/1, initModel/2, 
-	 initModelFile/1,
-	 config_file_xsd/0,
-	 call/3, call/4, call/6,
-	 write_hrl/2, write_hrl/3,
-	 findHeader/2,
-	 parseMessage/2,
-	 makeFault/2,
-	 is_wsdl/1, wsdl_model/1, wsdl_op_service/1,
-	 wsdl_op_port/1, wsdl_op_operation/1, 
-	 wsdl_op_binding/1, wsdl_op_address/1, 
-	 wsdl_op_action/1, wsdl_operations/1,
-	 get_operation/2
-	]).
+         initModelFile/1,
+         config_file_xsd/0,
+         call/3, call/4, call/6,
+         write_hrl/2, write_hrl/3,
+         findHeader/2,
+         parseMessage/2,
+         makeFault/2,
+         is_wsdl/1, wsdl_model/1, wsdl_op_service/1,
+         wsdl_op_port/1, wsdl_op_operation/1, 
+         wsdl_op_binding/1, wsdl_op_address/1, 
+         wsdl_op_action/1, wsdl_operations/1,
+         get_operation/2
+        ]).
 
 
 %%% For testing...
@@ -85,11 +85,11 @@ call(WsdlURL, Operation, ListOfData) when list(WsdlURL) ->
     call(Wsdl, Operation, ListOfData);
 call(Wsdl, Operation, ListOfData) when record(Wsdl, wsdl) ->
     case get_operation(Wsdl#wsdl.operations, Operation) of
-	{ok, Op} ->
-	    Msg = mk_msg(?DefaultPrefix, Operation, ListOfData),
-	    call(Wsdl, Operation, Op#operation.port, Op#operation.service, [], Msg);
-	Else ->
-	    Else
+        {ok, Op} ->
+            Msg = mk_msg(?DefaultPrefix, Operation, ListOfData),
+            call(Wsdl, Operation, Op#operation.port, Op#operation.service, [], Msg);
+        Else ->
+            Else
     end.
 
 %%% --------------------------------------------------------------------
@@ -100,18 +100,18 @@ call(WsdlURL, Operation, Header, Msg) when list(WsdlURL) ->
     call(Wsdl, Operation, Header, Msg);
 call(Wsdl, Operation, Header, Msg) when record(Wsdl, wsdl) ->
     case get_operation(Wsdl#wsdl.operations, Operation) of
-	{ok, Op} ->
-	    call(Wsdl, Operation, Op#operation.port, Op#operation.service, 
-		 Header, Msg);
-	Else ->
-	    Else
+        {ok, Op} ->
+            call(Wsdl, Operation, Op#operation.port, Op#operation.service, 
+                 Header, Msg);
+        Else ->
+            Else
     end.
 
 
 mk_msg(Prefix, Operation, ListOfData) ->
     list_to_tuple([list_to_atom(Prefix++":"++Operation), % record name
-		   []                                    % anyAttribs
-		   | ListOfData]).                       % rest of record data
+                   []                                    % anyAttribs
+                   | ListOfData]).                       % rest of record data
 
 get_operation([#operation{operation = X} = Op|_], X) -> {ok, Op};
 get_operation([_|T], Op)                             -> get_operation(T, Op);
@@ -124,28 +124,29 @@ get_operation([], _Op)                               -> {error, "operation not f
 call(#wsdl{operations = Operations, model = Model}, Operation, Port, Service, Headers, Message) ->
     %% find the operation
     case findOperation(Operation, Port, Service, Operations) of
-	#operation{address = URL, action = SoapAction} ->
-	    %% Add the Soap envelope
-	    Envelope = mk_envelope(Message, Headers),
-	    %% Encode the message
-	    case erlsom:write(Envelope, Model) of
-		{ok, XmlMessage} ->
-		    Request = make_request_body(XmlMessage),
-		    HttpHeaders = [],
-		    HttpClientOptions = [],
-		    HttpRes = http_request(URL, SoapAction, Request, HttpClientOptions, HttpHeaders),
-		    case HttpRes of
-			{ok, _Code, _ReturnHeaders, Body} ->
-			    parseMessage(Body, Model);
-			Error -> 
-			    %% in case of HTTP error: return {error, description}
-			    Error
-		    end;
-		{error, EncodingError} ->
-		    {error, {encoding_error, EncodingError}}
-	    end;
-	false ->
-	    {error, {unknown_operation, Operation}}
+        #operation{address = URL, action = SoapAction} ->
+            %% Add the Soap envelope
+            Envelope = mk_envelope(Message, Headers),
+            %% Encode the message
+            case erlsom:write(Envelope, Model) of
+                {ok, XmlMessage} ->
+                    Request = make_request_body(XmlMessage),
+                    HttpHeaders = [],
+                    HttpClientOptions = [],
+                    HttpRes = http_request(URL, SoapAction, Request, 
+                                           HttpClientOptions, HttpHeaders),
+                    case HttpRes of
+                        {ok, _Code, _ReturnHeaders, Body} ->
+                            parseMessage(Body, Model);
+                        Error -> 
+                            %in case of HTTP error: return {error, description}
+                            Error
+                    end;
+                {error, EncodingError} ->
+                    {error, {encoding_error, EncodingError}}
+            end;
+        false ->
+            {error, {unknown_operation, Operation}}
     end.
 
 %%%
@@ -156,21 +157,22 @@ parseMessage(Message, #wsdl{model = Model}) ->
 %%
 parseMessage(Message, Model) ->
     case erlsom:parse(Message, Model) of
-	{ok, #'soap:Envelope'{'Body' = #'soap:Body'{choice = Body},
-			      'Header' = undefined}} ->
-	    {ok, undefined, Body};
-	{ok, #'soap:Envelope'{'Body' = #'soap:Body'{choice = Body},
-			      'Header' = #'soap:Header'{choice = Header}}} ->
-	    {ok, Header, Body};
-	{error, ErrorMessage} ->
-	    {error, {decoding, ErrorMessage}}
+        {ok, #'soap:Envelope'{'Body' = #'soap:Body'{choice = Body},
+                              'Header' = undefined}} ->
+            {ok, undefined, Body};
+        {ok, #'soap:Envelope'{'Body' = #'soap:Body'{choice = Body},
+                              'Header' = #'soap:Header'{choice = Header}}} ->
+            {ok, Header, Body};
+        {error, ErrorMessage} ->
+            {error, {decoding, ErrorMessage}}
     end.
 
 
 findOperation(_Operation, _Port, _Service, []) ->
     false;
 findOperation(Operation, Port, Service, 
-	       [Op = #operation{operation = Operation, port = Port, service = Service} | _]) ->
+               [Op = #operation{operation = Operation, 
+                                port = Port, service = Service} | _]) ->
     Op;
 findOperation(Operation, Port, Service, [#operation{} | Tail]) ->
     findOperation(Operation, Port, Service, Tail).
@@ -183,7 +185,7 @@ mk_envelope(Messages, []) when list(Messages) ->
     #'soap:Envelope'{'Body' =  #'soap:Body'{choice = Messages}};
 mk_envelope(Messages, Headers) when list(Messages),list(Headers) ->
     #'soap:Envelope'{'Body'   =  #'soap:Body'{choice   = Messages},
-		     'Header' =  #'soap:Header'{choice = Headers}}.
+                     'Header' =  #'soap:Header'{choice = Headers}}.
 
 %%% -------------------------------------------------------------------- 
 %%% Parse a WSDL file and return a 'Model'
@@ -200,8 +202,8 @@ initModelFile(ConfigFile) ->
     %% read (parse) the config file
     {ok, Config} = erlsom:parse_file(ConfigFile, ConfigSchema),
     #yaws_soap_config{xsd_path = XsdPath, 
-		      wsdl_file = Wsdl,
-		      add_files = AddFiles} = Config,
+                      wsdl_file = Wsdl,
+                      add_files = AddFiles} = Config,
     #xsd_file{name = WsdlFile, prefix = Prefix, import_specs = Import} = Wsdl,
     initModel2(WsdlFile, Prefix, XsdPath, Import, AddFiles).
 
@@ -211,9 +213,9 @@ priv_dir() ->
 initModel2(WsdlFile, Prefix, Path, Import, AddFiles) ->
     WsdlName = filename:join([Path, "wsdl.xsd"]),
     IncludeWsdl = {"http://schemas.xmlsoap.org/wsdl/", "wsdl", WsdlName},
-    {ok, WsdlModel} = erlsom:compile_xsd_file(filename:join([Path, "soap.xsd"]), 
-					      [{prefix, "soap"},
-					       {include_files, [IncludeWsdl]}]),
+    {ok, WsdlModel} = erlsom:compile_xsd_file(filename:join([Path,"soap.xsd"]), 
+                                              [{prefix, "soap"},
+                                               {include_files, [IncludeWsdl]}]),
     %% add the xsd model (since xsd is also used in the wsdl)
     WsdlModel2 = erlsom:add_xsd_model(WsdlModel),
     %% parse Wsdl
@@ -224,11 +226,13 @@ initModel2(WsdlFile, Prefix, Path, Import, AddFiles) ->
     %% Ns = [#ns{prefix="xsd", uri="http://www.w3.org/2001/XMLSchema"}],
     %% TODO: pass the right options here
     Options = makeOptions(Import),
-    {ok, Model} = erlsom_compile:compile_parsed_xsd(Xsd, [{prefix, Prefix} | Options]),
+    {ok, Model} = erlsom_compile:compile_parsed_xsd(
+                    Xsd, [{prefix, Prefix} | Options]),
     %% TODO: add files as required
     %% now compile envelope.xsd, and add Model
-    {ok, EnvelopeModel} = erlsom:compile_xsd_file(filename:join([Path, "envelope.xsd"]),
-						  [{prefix, "soap"}]),
+    {ok, EnvelopeModel} = erlsom:compile_xsd_file(
+                            filename:join([Path, "envelope.xsd"]),
+                            [{prefix, "soap"}]),
     SoapModel = erlsom:add_model(EnvelopeModel, Model),
     SoapModel2 = addModels(AddFiles, SoapModel),
     Ports = getPorts(ParsedWsdl),
@@ -242,23 +246,24 @@ initModel2(WsdlFile, Prefix, Path, Import, AddFiles) ->
 %%% --------------------------------------------------------------------
 get_url_file("http://"++_ = URL) ->
     case http:request(URL) of
-	{ok,{{_HTTP,200,_OK}, _Headers, Body}} -> 
-	    case http_uri:parse(URL) of
-		{_Method, _Host, _Port, _Path, _Qargs} ->
-		    %% Erlang/OTP =< R11B-1
-		    {ok, Body};
-		{_Method, _UserInfo, _Host, _Port, _Path, _Qargs} ->
-		    %% Erlang/OTP >= R11B-2
-		    {ok, Body};
-		_ -> 
-		    {error, "failed to parse URL: "++URL}
-	    end;
-	{ok,{{_HTTP,RC,Emsg}, _Headers, _Body}} -> 
-	    error_logger:error_msg("~p: http-request got: ~p~n", [?MODULE, {RC, Emsg}]),
-	    {error, "failed to retrieve: "++URL};
-	_ -> 
-	    error_logger:error_msg("~p: http-request failed~n", []),
-	    {error, "failed to retrieve: "++URL}
+        {ok,{{_HTTP,200,_OK}, _Headers, Body}} -> 
+            case http_uri:parse(URL) of
+                {_Method, _Host, _Port, _Path, _Qargs} ->
+                    %% Erlang/OTP =< R11B-1
+                    {ok, Body};
+                {_Method, _UserInfo, _Host, _Port, _Path, _Qargs} ->
+                    %% Erlang/OTP >= R11B-2
+                    {ok, Body};
+                _ -> 
+                    {error, "failed to parse URL: "++URL}
+            end;
+        {ok,{{_HTTP,RC,Emsg}, _Headers, _Body}} -> 
+            error_logger:error_msg("~p: http-request got: ~p~n", 
+                                   [?MODULE, {RC, Emsg}]),
+            {error, "failed to retrieve: "++URL};
+        _ -> 
+            error_logger:error_msg("~p: http-request failed~n", []),
+            {error, "failed to retrieve: "++URL}
     end;
 get_url_file("file://"++Fname) ->
     {ok, Bin} = file:read_file(Fname),
@@ -270,16 +275,17 @@ get_url_file("file://"++Fname) ->
 %%% --------------------------------------------------------------------
 http_request(URL, SoapAction, Request, Options, Headers) ->
     case code:ensure_loaded(ibrowse) of
-	{module, ibrowse} ->
-	    %% If ibrowse exist in the path then let's use it...
-	    ibrowse_request(URL, SoapAction, Request, Options, Headers);
-	_ ->
-	    %% ...otherwise, let's use the OTP http client.
-	    inets_request(URL, SoapAction, Request, Options, Headers)
+        {module, ibrowse} ->
+            %% If ibrowse exist in the path then let's use it...
+            ibrowse_request(URL, SoapAction, Request, Options, Headers);
+        _ ->
+            %% ...otherwise, let's use the OTP http client.
+            inets_request(URL, SoapAction, Request, Options, Headers)
     end.
 
 inets_request(URL, SoapAction, Request, Options, Headers) ->
-    NewHeaders = [{"Host", "localhost:8800"}, {"SOAPAction", SoapAction}|Headers],
+    NewHeaders = [{"Host", "localhost:8800"}, 
+                  {"SOAPAction", SoapAction}|Headers],
     NewOptions = [{cookies, enabled}|Options],
     http:set_options(NewOptions),
     case http:request(post,
@@ -287,7 +293,8 @@ inets_request(URL, SoapAction, Request, Options, Headers) ->
                        "text/xml; charset=utf-8",
                        Request},
                       [{http_timeout,20000}],
-                      [{sync, true}, {full_result, true}, {body_format, string}]) of
+                      [{sync, true}, {full_result, true}, 
+                       {body_format, string}]) of
         {ok,{{_HTTP,200,_OK},ResponseHeaders,ResponseBody}} ->
             {ok, 200, ResponseHeaders, ResponseBody};
         {ok,{{_HTTP,500,_Descr},ResponseHeaders,ResponseBody}} ->
@@ -305,7 +312,7 @@ ibrowse_request(URL, SoapAction, Request, Options, Headers) ->
             NewOptions = [{content_type, "text/xml; encoding=utf-8"} | Options],
             case ibrowse:send_req(URL, NewHeaders, post, Request, NewOptions) of
                 {ok, Status, ResponseHeaders, ResponseBody} ->
-                    {ok, list_to_integer(Status), ResponseHeaders, ResponseBody};
+                    {ok, list_to_integer(Status), ResponseHeaders,ResponseBody};
                 {error, Reason} ->
                     {error, Reason}
             end;
@@ -315,9 +322,9 @@ ibrowse_request(URL, SoapAction, Request, Options, Headers) ->
 
 start_ibrowse() ->
     case ibrowse:start() of
-	{ok, _} -> ok;
-	{error, {already_started, _}} -> ok;
-	_ -> error
+        {ok, _} -> ok;
+        {error, {already_started, _}} -> ok;
+        _ -> error
     end.
 
 
@@ -358,8 +365,8 @@ findHeader0(_Label, []) ->
   undefined;
 findHeader0(Label, [{_,_,Hdr,_,Val}|T]) ->
     case {Label, yaws:to_lower(Hdr)} of
-	{X,X} -> Val;
-	_     -> findHeader0(Label, T)
+        {X,X} -> Val;
+        _     -> findHeader0(Label, T)
     end;
 findHeader0(_Label, undefined) ->
   undefined.
@@ -383,9 +390,10 @@ addModels(Import, Model) ->
 %% -record(xsd_file, {atts, name, prefix, import_specs}).
 addModel(undefined, Acc) ->
   Acc;
-addModel(#xsd_file{name = XsdFile, prefix = Prefix, import_specs = Import}, Acc) ->
+addModel(#xsd_file{name = XsdFile, prefix = Prefix, 
+                   import_specs = Import}, Acc) ->
   Options = makeOptions(Import),
-  {ok, Model2} = erlsom:add_xsd_file(XsdFile, [{prefix, Prefix} | Options], Acc),
+  {ok, Model2} = erlsom:add_xsd_file(XsdFile, [{prefix, Prefix} |Options], Acc),
   Model2.
 
 %% returns [#port{}]
@@ -440,12 +448,15 @@ getOperationsFromBinding(#'wsdl:tBinding'{name = BindingName,
                                           choice = _Choice,
                                           operation = Operations}, Ports) ->
   %% TODO: get soap info from Choice
-  getOperationsFromOperations(Operations, BindingName, BindingType, Operations, Ports, []).
+  getOperationsFromOperations(Operations, BindingName, BindingType, 
+                              Operations, Ports, []).
 
-getOperationsFromOperations([], _BindingName, _BindingType, _Operations, _Ports, Acc) ->
+getOperationsFromOperations([], _BindingName, _BindingType, 
+                            _Operations, _Ports, Acc) ->
   Acc;
 
-getOperationsFromOperations([#'wsdl:tBindingOperation'{name = Name, choice = Choice} | Tail],
+getOperationsFromOperations([#'wsdl:tBindingOperation'{name = Name, 
+                                                       choice = Choice} | Tail],
                             BindingName, BindingType, Operations, Ports, Acc) ->
   %% get SOAP action from Choice,
   case Choice of 
@@ -454,9 +465,11 @@ getOperationsFromOperations([#'wsdl:tBindingOperation'{name = Name, choice = Cho
       Ports2 = searchPorts(BindingName, Ports),
       %% for each port, make an operation record 
       CombinedPorts = combinePorts(Ports2, Name, BindingName, Action),
-      getOperationsFromOperations(Tail, BindingName, BindingType, Operations, Ports, CombinedPorts ++ Acc);
+      getOperationsFromOperations(Tail, BindingName, BindingType, 
+                                  Operations, Ports, CombinedPorts ++ Acc);
     _ ->
-      getOperationsFromOperations(Tail, BindingName, BindingType, Operations, Ports, Acc)
+      getOperationsFromOperations(Tail, BindingName, BindingType, 
+                                  Operations, Ports, Acc)
   end.
 
 combinePorts(Ports, Name, BindingName, Action) ->
@@ -464,11 +477,14 @@ combinePorts(Ports, Name, BindingName, Action) ->
 
 combinePorts([], _Name, _BindingName, _Action, Acc) ->
   Acc;
-combinePorts([#port{service = Service, port = PortName, address = Address} | Tail], 
+combinePorts([#port{service = Service, port = PortName, 
+                    address = Address} | Tail], 
              Name, BindingName, Action, Acc) ->
   combinePorts(Tail, Name, BindingName, Action,
-               [#operation{service = Service, port = PortName, operation = Name, 
-                           binding = BindingName, address = Address, action = Action} | Acc]).
+               [#operation{service = Service, port = PortName, 
+                           operation = Name, 
+                           binding = BindingName, address = Address, 
+                           action = Action} | Acc]).
 
 searchPorts(BindingName, Ports) ->
   searchPorts(BindingName, Ports, []).

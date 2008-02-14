@@ -43,23 +43,23 @@ We have the following relevant record definitions:
 .nf
 
 -record(arg, {
-	  clisock,        %% the socket leading to the peer client
-	  headers,        %% headers
-	  req,            %% request
-	  clidata,        %% The client data (as a binary in POST requests)
-	  server_path,    %% The normalized server path
-	  querydata,      %% Was the URL on the form of ...?query (GET reqs)
-	  appmoddata,     %% the remainder of the path up to the query
-	  docroot,        %% where's the data
-	  fullpath,       %% full path to yaws file
-	  cont,		  %% Continuation for chunked multipart uploads
-	  state,          %% State for use by users of the out/1 callback
-	  pid,            %% pid of the yaws worker process
-	  opaque,         %% useful to pass static data
-	  appmod_prepath, %% path in front of: <appmod><appmoddata>
-	  pathinfo        %% Set to 'd/e' when calling c.yaws for the request
+          clisock,        %% the socket leading to the peer client
+          headers,        %% headers
+          req,            %% request
+          clidata,        %% The client data (as a binary in POST requests)
+          server_path,    %% The normalized server path
+          querydata,      %% Was the URL on the form of ...?query (GET reqs)
+          appmoddata,     %% the remainder of the path up to the query
+          docroot,        %% where's the data
+          fullpath,       %% full path to yaws file
+          cont,                  %% Continuation for chunked multipart uploads
+          state,          %% State for use by users of the out/1 callback
+          pid,            %% pid of the yaws worker process
+          opaque,         %% useful to pass static data
+          appmod_prepath, %% path in front of: <appmod><appmoddata>
+          pathinfo        %% Set to 'd/e' when calling c.yaws for the request
                           %% http://some.host/a/b/c.yaws/d/e
-	 }).              
+         }).              
 .fi
 \fR
 

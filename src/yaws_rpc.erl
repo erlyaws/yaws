@@ -116,17 +116,17 @@ handle_payload(Args, Handler, Type) -> % {{{
 
     % haXe parameters are URL encoded
     DecodedStr = case RpcType of
-		     haxe -> yaws_api:url_decode(Payload);
+                     haxe -> yaws_api:url_decode(Payload);
              json -> yaws_api:url_decode(Payload);
-		     _ -> Payload
-		 end,
+                     _ -> Payload
+                 end,
     case decode_handler_payload(RpcType, DecodedStr) of
-	{ok, DecodedPayload, ID} ->
-	    % ?Debug("client2erl decoded call ~p ~n", [DecodedPayload]),
-	    eval_payload(Args, Handler, DecodedPayload, Type, ID, RpcType);
-	{error, Reason} ->
-	    ?ERROR_LOG({html, client2erl, Payload, Reason}),
-	    send(Args, 400, RpcType)
+        {ok, DecodedPayload, ID} ->
+            % ?Debug("client2erl decoded call ~p ~n", [DecodedPayload]),
+            eval_payload(Args, Handler, DecodedPayload, Type, ID, RpcType);
+        {error, Reason} ->
+            ?ERROR_LOG({html, client2erl, Payload, Reason}),
+            send(Args, 400, RpcType)
     end. % }}}
 
 %%% Identify the RPC type. We first try recognize haXe by the
@@ -146,42 +146,42 @@ recognize_rpc_hdr([])                              -> json.
 %%% call handler/3 and provide session support
 eval_payload(Args, {M, F}, Payload, {session, CookieName}, ID, RpcType) -> % {{{
     {SessionValue, Cookie} =
-	case yaws_api:find_cookie_val(CookieName, (Args#arg.headers)#headers.cookie) of
-	    [] ->      % have no session started, just call handler
-		{undefined, undefined};
-	    Cookie2 -> % get old session data
-		case yaws_api:cookieval_to_opaque(Cookie2) of
-		    {ok, OP} ->
-			{OP, Cookie2};
-		    {error, _ErrMsg} -> % cannot get corresponding session
-			{undefined, undefined}
-		end
-	end,
+        case yaws_api:find_cookie_val(CookieName, (Args#arg.headers)#headers.cookie) of
+            [] ->      % have no session started, just call handler
+                {undefined, undefined};
+            Cookie2 -> % get old session data
+                case yaws_api:cookieval_to_opaque(Cookie2) of
+                    {ok, OP} ->
+                        {OP, Cookie2};
+                    {error, _ErrMsg} -> % cannot get corresponding session
+                        {undefined, undefined}
+                end
+        end,
     CbackFun = callback_fun(M, F, Args, Payload, SessionValue, RpcType),
     case catch CbackFun() of
-	{'EXIT', Reason} ->
-	    ?ERROR_LOG({M, F, {'EXIT', Reason}}),
-	    send(Args, 500, RpcType);
-	{error, Reason} ->
-	    ?ERROR_LOG({M, F, Reason}),
-	    send(Args, 500, RpcType);
-	{error, Reason, Rc} ->
-	    ?ERROR_LOG({M, F, Reason}),
-	    send(Args, Rc, Reason, [], RpcType);
-	{false, ResponsePayload} ->
-	    % do not have updates in session data
-	    encode_send(Args, 200, ResponsePayload, [], ID, RpcType);
-	{false, ResponsePayload, RespCode} ->
-	    % do not have updates in session data
-	    encode_send(Args, RespCode, ResponsePayload, [], ID, RpcType);
-	false ->   % soap notify
-	    false; 
-	{true, _NewTimeout, NewSessionValue, ResponsePayload} -> % be compatible with xmlrpc module
-	    CO = handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue, M, F),
-	    encode_send(Args, 200, ResponsePayload, CO, ID, RpcType);
-	{true, _NewTimeout, NewSessionValue, ResponsePayload, RespCode} -> % be compatible with xmlrpc module
-	    CO = handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue, M, F),
-	    encode_send(Args, RespCode, ResponsePayload, CO, ID, RpcType)
+        {'EXIT', Reason} ->
+            ?ERROR_LOG({M, F, {'EXIT', Reason}}),
+            send(Args, 500, RpcType);
+        {error, Reason} ->
+            ?ERROR_LOG({M, F, Reason}),
+            send(Args, 500, RpcType);
+        {error, Reason, Rc} ->
+            ?ERROR_LOG({M, F, Reason}),
+            send(Args, Rc, Reason, [], RpcType);
+        {false, ResponsePayload} ->
+            % do not have updates in session data
+            encode_send(Args, 200, ResponsePayload, [], ID, RpcType);
+        {false, ResponsePayload, RespCode} ->
+            % do not have updates in session data
+            encode_send(Args, RespCode, ResponsePayload, [], ID, RpcType);
+        false ->   % soap notify
+            false; 
+        {true, _NewTimeout, NewSessionValue, ResponsePayload} -> % be compatible with xmlrpc module
+            CO = handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue, M, F),
+            encode_send(Args, 200, ResponsePayload, CO, ID, RpcType);
+        {true, _NewTimeout, NewSessionValue, ResponsePayload, RespCode} -> % be compatible with xmlrpc module
+            CO = handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue, M, F),
+            encode_send(Args, RespCode, ResponsePayload, CO, ID, RpcType)
     end; % }}}
 
 %%%
@@ -189,46 +189,46 @@ eval_payload(Args, {M, F}, Payload, {session, CookieName}, ID, RpcType) -> % {{{
 %%%
 eval_payload(Args, {M, F}, Payload, simple, ID, RpcType) -> % {{{
     case catch M:F(Args#arg.state, Payload) of
-	{'EXIT', Reason} ->
-	    ?ERROR_LOG({M, F, {'EXIT', Reason}}),
-	    send(Args, 500);
-	{error, Reason} ->
-	    ?ERROR_LOG({M, F, Reason}),
-	    send(Args, 500);
-	{false, ResponsePayload} ->
-	    encode_send(Args, 200, ResponsePayload, [], ID, RpcType);
-	false -> % Soap notify !?
-	    false;
-	{true, _NewTimeout, _NewState, ResponsePayload} ->
-	    encode_send(Args, 200, ResponsePayload, [], ID, RpcType)
+        {'EXIT', Reason} ->
+            ?ERROR_LOG({M, F, {'EXIT', Reason}}),
+            send(Args, 500);
+        {error, Reason} ->
+            ?ERROR_LOG({M, F, Reason}),
+            send(Args, 500);
+        {false, ResponsePayload} ->
+            encode_send(Args, 200, ResponsePayload, [], ID, RpcType);
+        false -> % Soap notify !?
+            false;
+        {true, _NewTimeout, _NewState, ResponsePayload} ->
+            encode_send(Args, 200, ResponsePayload, [], ID, RpcType)
     end. % }}}  
 
 handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue, M, F) ->
     case NewSessionValue of
-	undefined when Cookie == undefined -> []; % nothing to do
-	undefined -> % rpc handler requested session delete
-	    yaws_api:delete_cookie_session(Cookie), []; % XXX: may be return set-cookie with empty val?
-	_ ->  % any other value will stored in session
-	    case SessionValue of
-		undefined -> % got session data and should start new session now
-		    Cookie1 = yaws_api:new_cookie_session(NewSessionValue),
-		    case get_expire(M, F) of
-			false ->
-			    yaws_api:setcookie(CookieName, Cookie1, "/"); % return set_cookie header
-			Expire ->
-			    yaws_api:setcookie(CookieName, Cookie1, "/", Expire) % return set_cookie header
-		    end;
-		_ -> 
-		    yaws_api:replace_cookie_session(Cookie, NewSessionValue),
-		    [] % nothing to add to yaws data
-	    end
+        undefined when Cookie == undefined -> []; % nothing to do
+        undefined -> % rpc handler requested session delete
+            yaws_api:delete_cookie_session(Cookie), []; % XXX: may be return set-cookie with empty val?
+        _ ->  % any other value will stored in session
+            case SessionValue of
+                undefined -> % got session data and should start new session now
+                    Cookie1 = yaws_api:new_cookie_session(NewSessionValue),
+                    case get_expire(M, F) of
+                        false ->
+                            yaws_api:setcookie(CookieName, Cookie1, "/"); % return set_cookie header
+                        Expire ->
+                            yaws_api:setcookie(CookieName, Cookie1, "/", Expire) % return set_cookie header
+                    end;
+                _ -> 
+                    yaws_api:replace_cookie_session(Cookie, NewSessionValue),
+                    [] % nothing to add to yaws data
+            end
     end.
 
 %%% Make it possible for callback module to set Cookie Expire string!
 get_expire(M, F) -> 
     case catch M:F(cookie_expire) of
-	Expire when list(Expire) -> Expire;
-	_                        -> false
+        Expire when list(Expire) -> Expire;
+        _                        -> false
     end.
 
 callback_fun(M, F, Args, Payload, SessionValue, soap) ->
@@ -245,12 +245,12 @@ encode_send(Args, StatusCode, [Payload], AddOn, ID, RpcType) ->  % {{{
 encode_send(Args, StatusCode, Payload, AddOn, ID, RpcType) -> % {{{
 %    ?Debug("rpc response ~p ~n", [Payload]),
     case encode_handler_payload(Payload, ID, RpcType) of
-	{ok, EncodedPayload} ->
+        {ok, EncodedPayload} ->
 %        ?Debug("rpc encoded response ~p ~n", [EncodedPayload]),
-	    send(Args, StatusCode, EncodedPayload, AddOn, RpcType);
-	{error, Reason} ->
-	    ?ERROR_LOG({rpc_encode, payload, Payload, Reason}),
-	    send(Args, 500, RpcType)
+            send(Args, StatusCode, EncodedPayload, AddOn, RpcType);
+        {error, Reason} ->
+            ?ERROR_LOG({rpc_encode, payload, Payload, Reason}),
+            send(Args, 500, RpcType)
     end. % }}}
 
 send(Args, StatusCode) -> send(Args, StatusCode, json).
@@ -280,10 +280,10 @@ encode_handler_payload({response, [ErlStruct]}, ID, RpcType) ->   % {{{
     
 encode_handler_payload({response, ErlStruct}, ID, RpcType) ->
     StructStr =
-	case RpcType of
-	    json -> json:encode({struct, [ {result, ErlStruct}, {id, ID}]});
-	    haxe -> [$h, $x, $r | haxe:encode(ErlStruct)]
-	end,
+        case RpcType of
+            json -> json:encode({struct, [ {result, ErlStruct}, {id, ID}]});
+            haxe -> [$h, $x, $r | haxe:encode(ErlStruct)]
+        end,
     {ok, StructStr}.  % }}}
 
 decode_handler_payload(json, JSonStr) -> %{{{
@@ -295,20 +295,20 @@ decode_handler_payload(json, JSonStr) -> %{{{
         {ok, {call, Method, Args}, ID}
     catch 
         error:Err ->
-	        ?ERROR_LOG({ json_decode , JSonStr , Err }),
+                ?ERROR_LOG({ json_decode , JSonStr , Err }),
            {error, Err}
     end; %}}}
 
 decode_handler_payload(haxe, [$_, $_, $x, $= | HaxeStr]) ->
     try
-	{done, {ok, {array, [MethodName | _]}}, Cont} = haxe:decode(HaxeStr),
-	{done, {ok, Args}, _Cont2} = haxe:decode_next(Cont),
-	
-	%% ID is undefined because haXe remoting doesn't automagically handle
-	%% sessions.
-	{ok, {call, list_to_atom(MethodName), Args}, undefined}
+        {done, {ok, {array, [MethodName | _]}}, Cont} = haxe:decode(HaxeStr),
+        {done, {ok, Args}, _Cont2} = haxe:decode_next(Cont),
+        
+        %% ID is undefined because haXe remoting doesn't automagically handle
+        %% sessions.
+        {ok, {call, list_to_atom(MethodName), Args}, undefined}
     catch
-	error:Err -> {error, Err}
+        error:Err -> {error, Err}
     end;
 decode_handler_payload(haxe, _HaxeStr) ->
     {error, missing_haxe_prefix};

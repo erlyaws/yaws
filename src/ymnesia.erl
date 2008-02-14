@@ -33,7 +33,7 @@
 
 
 -define(elog(X,Y), error_logger:info_msg("*elog ~p:~p: " X,
-					 [?MODULE, ?LINE | Y])).
+                                         [?MODULE, ?LINE | Y])).
 
 %%% Possible to call mnesia in another way
 -define(MNESIA(Mod, Args), apply(mnesia, Mod, Args)).
@@ -44,26 +44,26 @@
 out(A) ->
     %%?elog("Inside Ymnesia~n", []),
     case string:tokens(A#arg.appmoddata, "/.") of
-	["table" | _] ->
-	    case is_post(A) of
-		true ->
-		    L = yaws_api:parse_post(A),
-		    {Cbox, Rest} = extract_cbox(L),
-		    Name = lk("tablename", Rest),
-		    Ls = select_fields(Rest),
-		    Sp = (catch select_pattern(Name, Ls)),
-		    case catch table(Cbox, Sp, l2a(Name)) of
-			{'EXIT', Reason} ->
-			    ?elog("Error , reason: ~p~n", [Reason]),
-			    error_page("table not found: "++Name);
-			Else ->
-			    Else
-		    end;
-		false ->
-		    return_top_page()
-	    end;
-	_ ->
-	    return_top_page()
+        ["table" | _] ->
+            case is_post(A) of
+                true ->
+                    L = yaws_api:parse_post(A),
+                    {Cbox, Rest} = extract_cbox(L),
+                    Name = lk("tablename", Rest),
+                    Ls = select_fields(Rest),
+                    Sp = (catch select_pattern(Name, Ls)),
+                    case catch table(Cbox, Sp, l2a(Name)) of
+                        {'EXIT', Reason} ->
+                            ?elog("Error , reason: ~p~n", [Reason]),
+                            error_page("table not found: "++Name);
+                        Else ->
+                            Else
+                    end;
+                false ->
+                    return_top_page()
+            end;
+        _ ->
+            return_top_page()
     end.
 
 %%% Get the fields to be part of the select
@@ -71,7 +71,7 @@ select_fields([{"tablename",_}|T]) -> select_fields(T);
 select_fields([{_,undefined}|T])   -> select_fields(T);
 select_fields([H|T])               -> [H|select_fields(T)];
 select_fields([])                  -> [].
-    
+
 select_pattern(Name, Ls) ->
     Wp = ?MNESIA(table_info, [l2a(Name), wild_pattern]),
     mk_select_pattern(map(fun(A) -> a2l(A) end,get_attributes(l2a(Name))), Ls, Wp, 2).
@@ -87,13 +87,13 @@ mk_select_pattern([], [], Wp, _) ->
 %%% could be expected. Note: atom is anything between single quotes.
 be_smart([$'|T])     -> l2a(eat_until($', T));
 be_smart([$[|_] = L) -> str2term(L);
-be_smart([${|_] = L) -> str2term(L);
-be_smart(L) ->
-    case be_smart(L, false) of
-	integer -> list_to_integer(L);
-	float   -> list_to_float(L);
-	_       -> L
-    end.
+         be_smart([${|_] = L) -> str2term(L);
+                  be_smart(L) ->
+                         case be_smart(L, false) of
+                             integer -> list_to_integer(L);
+                             float   -> list_to_float(L);
+                             _       -> L
+                         end.
 
 eat_until(H, [H|_]) -> [];
 eat_until(X, [H|T]) -> [H|eat_until(X,T)].
@@ -114,14 +114,14 @@ return_top_page() ->
     {ehtml,
      [{head, [],
        [meta() ++
-	style()]},
+        style()]},
       {body, [],
        mk_table_tab()}]}.
 
 is_post(A) ->
     case (A#arg.req)#http_request.method of
-            'GET'  -> false;
-            'POST' -> true
+        'GET'  -> false;
+        'POST' -> true
     end.
 
 meta() ->
@@ -132,34 +132,34 @@ meta() ->
 style() ->
     [{style, [{type, "text/css"}],
       [{pre_html,
-	["table {border-collapse: collapse; border: solid black 1px;}\n"
-	 "p {padding: 5px; font-weight: bold;}\n"
-	 "input[type=text] {vertical-align: bottom; width: 100%; font-size: 80%;}\n"
-	 "input[type=checkbox] {vertical-align: top; font-size: 80%;}\n"
-	 "span.attribute {vertical-align: top; font-size: 80%;}\n"
-	 "th {padding: 5px; border: solid black 1px;}\n"
-	 "td {padding: 5px; border: solid black 1px;}\n"
-	]}]}].
+        ["table {border-collapse: collapse; border: solid black 1px;}\n"
+         "p {padding: 5px; font-weight: bold;}\n"
+         "input[type=text] {vertical-align: bottom; width: 100%; font-size: 80%;}\n"
+         "input[type=checkbox] {vertical-align: top; font-size: 80%;}\n"
+         "span.attribute {vertical-align: top; font-size: 80%;}\n"
+         "th {padding: 5px; border: solid black 1px;}\n"
+         "td {padding: 5px; border: solid black 1px;}\n"
+        ]}]}].
 
 
 %%% Build the result page.
 table(Cbox, Sp, Table) when atom(Table) ->
     case catch ?MNESIA(table_info, [Table, attributes]) of
-	Headers when list(Headers) ->
-	    Vp = view_pattern(Cbox, map(fun(X) -> a2l(X) end, Headers)),
-	    {Q, Result} = do_query(Sp),
-	    {ehtml,
-	     [{head, [],
-	       [meta() ++
-		style()]},
-	      {body, [],
-	       [{'div', [],
-		 {p, [], "Query: "++Q}},
-		{'div', [],
-		 {p, [], "Table: "++a2l(Table)}} |
-		mk_tab(Vp, Headers, t2l(Result))]}]}; 
-	Else ->
-	    Else
+        Headers when list(Headers) ->
+            Vp = view_pattern(Cbox, map(fun(X) -> a2l(X) end, Headers)),
+            {Q, Result} = do_query(Sp),
+            {ehtml,
+             [{head, [],
+               [meta() ++
+                style()]},
+              {body, [],
+               [{'div', [],
+                 {p, [], "Query: "++Q}},
+                {'div', [],
+                 {p, [], "Table: "++a2l(Table)}} |
+                mk_tab(Vp, Headers, t2l(Result))]}]}; 
+        Else ->
+            Else
     end.
 
 %%% Create a pattern denoting which fields to show in the result.
@@ -177,29 +177,29 @@ mk_table_tab() ->
     Rows = get_tables(),
     [{'div', [],
       [{table, [],
-	map(fun(Row) ->
-		    {tr, [], 
-		     {form, [{action, "table.yaws"}, 
-			     {method, "post"},
-			     {name, Row}],
-		      [{td, [], sublnk(a2l(Row))} |
-		       mk_input_fields(Row)]}}
-	    end, Rows)}]}].
+        map(fun(Row) ->
+                    {tr, [], 
+                     {form, [{action, "table.yaws"}, 
+                             {method, "post"},
+                             {name, Row}],
+                      [{td, [], sublnk(a2l(Row))} |
+                       mk_input_fields(Row)]}}
+            end, Rows)}]}].
 
 %%% Create each table cell; consisting of the attribute name and an input field.
 mk_input_fields(Table) ->
     As = get_attributes(Table),
     Max = max_noof_attrs(),
     map(fun(0) ->
-		{td, [], []};
-	   (Attribute) ->
-		A = a2l(Attribute),
-		{td, [], 
-		 [{input, [{type, "checkbox"}, {name, "cbox_"++A}]},
-		  {span, [{class, "attribute"}], A}, 
-		  {input, [{type, "text"}, {name, A}]}]}
-	end, As ++ lists:duplicate(Max-length(As), 0)).
-		
+                {td, [], []};
+           (Attribute) ->
+                A = a2l(Attribute),
+                {td, [], 
+                 [{input, [{type, "checkbox"}, {name, "cbox_"++A}]},
+                  {span, [{class, "attribute"}], A}, 
+                  {input, [{type, "text"}, {name, A}]}]}
+        end, As ++ lists:duplicate(Max-length(As), 0)).
+
 
 extract_cbox(L) ->
     extract_cbox(L, [], []).
@@ -216,12 +216,12 @@ extract_cbox([], Cs, Rs) ->
 mk_tab(Vp, Headers, Rows) ->
     [{'div', [],
       [{table, [],
-	[{tr, [],
-	  [{th, [], a2l(X)} || X <- vp(Vp,Headers)]} |
-	 map(fun(Row) ->
-		     {tr, [],
-		      [{td, [], massage(W)} || W <- vp(Vp,Row)]}
-	     end, Rows)]}]}].
+        [{tr, [],
+          [{th, [], a2l(X)} || X <- vp(Vp,Headers)]} |
+         map(fun(Row) ->
+                     {tr, [],
+                      [{td, [], massage(W)} || W <- vp(Vp,Row)]}
+             end, Rows)]}]}].
 
 %%% Match the view pattern to select which entries to let through.
 vp([], L) -> L;
@@ -234,11 +234,11 @@ vp([], [], _)        -> [].
 %%% Create a link that submit the form: onclick
 sublnk(E) -> 
     {a, [{href, "#"},
-	 {onclick, E++".submit();"}],
+         {onclick, E++".submit();"}],
      [E,
       {input, [{type, "hidden"},
-	       {name, "tablename"},
-	       {value, E}]}]}.
+               {name, "tablename"},
+               {value, E}]}]}.
 
 massage(W) ->
     lists:flatten(io_lib:format("~p",[W])).
@@ -260,8 +260,8 @@ get_attributes(Table) ->
 
 max_noof_attrs() ->
     foldl(fun(Table, Max) ->
-		  max(length(get_attributes(Table)), Max)
-	  end, 0, get_tables()).
+                  max(length(get_attributes(Table)), Max)
+          end, 0, get_tables()).
 
 max(X,Y) when X>Y   -> X;
 max(X,Y) when X=< Y -> Y.
@@ -279,13 +279,13 @@ lk(Key, L) ->
 
 lk(Key, L, Default) ->
     case lists:keysearch(Key, 1, L) of
-    {value, {_,Val}}  -> Val;
-	_             -> Default
+        {value, {_,Val}}  -> Val;
+        _             -> Default
     end.
 
 t2l(L) ->
     map(fun(T) -> tail(tuple_to_list(T)) end, L).
-			    
+
 
 
 tail([]) -> [];

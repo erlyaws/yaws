@@ -24,7 +24,7 @@ out(A) ->
       [{h1, [], "Appmods (Application modules)"},
        
        {p, [],
-	["Appmods are a way to let the application programmer take control over the URL path.  Or put in another way, to let the application programmer fake real paths in URLs where in reality an Erlang modules is executing. Possibly an example make this easy to understand. Say we have the folowing url"]},
+        ["Appmods are a way to let the application programmer take control over the URL path.  Or put in another way, to let the application programmer fake real paths in URLs where in reality an Erlang modules is executing. Possibly an example make this easy to understand. Say we have the folowing url"]},
 
        box("http://yaws.hyber.org/pathelem/foo/bar/x.pdf"),
        
@@ -33,21 +33,21 @@ out(A) ->
        
        box("
 <server tita>
-	port = 8001
-	listen = 0.0.0.0
-	docroot = /home/klacke/yaws/yaws/scripts/../www
-	appmods = <pathelem, myappmod>
+        port = 8001
+        listen = 0.0.0.0
+        docroot = /home/klacke/yaws/yaws/scripts/../www
+        appmods = <pathelem, myappmod>
 </server>"),
 
 
 
        
        {p,[],
-	["Then the webserver would invoke ",
-	 {tt,[], "myappmod:out(A)"},
-	 " instead of trying to deliver the actual file. When shipping such an ",
-	 {a, [{href, "/pathelem/foo/bar/x.pdf"}], "Url"}, 
-	 " there are 2 fields in the #arg record which are especially interesting. If we have the following code in \"myappmod.erl\":"]},
+        ["Then the webserver would invoke ",
+         {tt,[], "myappmod:out(A)"},
+         " instead of trying to deliver the actual file. When shipping such an ",
+         {a, [{href, "/pathelem/foo/bar/x.pdf"}], "Url"}, 
+         " there are 2 fields in the #arg record which are especially interesting. If we have the following code in \"myappmod.erl\":"]},
 
        ssi("code/myappmod.erl"),
 
@@ -55,10 +55,10 @@ out(A) ->
 
 
        {p,[],
-	"Thus the following url"},
+        "Thus the following url"},
        box("http://yaws.hyber.org/zap/pathelem/foo/bar/x.pdf?a=b"),
        {p,[],
-	"Produces the following output:"},
+        "Produces the following output:"},
        box("
 A#arg.appmoddata = \"/foo/bar/x.pdf\"
 A#arg.appmod_prepath = \"/zap/\"
@@ -67,7 +67,7 @@ A#arg.querydata = \"a=b\""),
        {br,[],[]},
 
        {p, [],
-	"Appmods would typically be used by webapplications that want to provide the illusion of proper paths to the browser. "}
+        "Appmods would typically be used by webapplications that want to provide the illusion of proper paths to the browser. "}
 
 
        ]

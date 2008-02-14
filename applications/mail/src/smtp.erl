@@ -1,7 +1,7 @@
 %    -*- Erlang -*- 
-%    File:	smtp.erl  (~jb/work/yaws/applications/mail/src/smtp.erl)
-%    Author:	Johan Bevemyr
-%    Created:	Tue Feb 24 23:15:59 2004
+%    File:        smtp.erl  (~jb/work/yaws/applications/mail/src/smtp.erl)
+%    Author:        Johan Bevemyr
+%    Created:        Tue Feb 24 23:15:59 2004
 %    Purpose:   
 
 -module('smtp').
@@ -13,9 +13,9 @@
 
 %
 % smtp:send("mail.bevemyr.com", "jb@bevemyr.com", 
-% 	   ["katrin@bevemyr.com","jb@bevemyr.com"],
-% 	   "Test Subject",
-% 	   "My Message", [{"file1.txt","text/plain","hej hopp igen"}]).
+%            ["katrin@bevemyr.com","jb@bevemyr.com"],
+%            "Test Subject",
+%            "My Message", [{"file1.txt","text/plain","hej hopp igen"}]).
 %
 
 
@@ -23,41 +23,41 @@ send(Server, From, To, Subject, Message, Attached) ->
     {ok, Port} = smtp_init(Server, From, To),
     Boundary="--Next_Part("++boundary_date()++")--",
     CommonHeaders = 
-	[mail_header("To: ", To),
-	 mail_header("From: ", From),
-	 mail_header("Subject: ", Subject)],
+        [mail_header("To: ", To),
+         mail_header("From: ", From),
+         mail_header("Subject: ", Subject)],
     Headers = case Attached of
-		  [] ->
-		      [mail_header("Content-Type: ", "text/plain"),
-		       mail_header("Content-Transfer-Encoding: ", "8bit")];
-		  _ ->
-		      [mail_header("Mime-Version: ", "1.0"),
-		       mail_header("Content-Type: ",
-				   "Multipart/Mixed;\r\n boundary=\""++
-				   Boundary++"\""),
-		       mail_header("Content-Transfer-Encoding: ", "8bit")]
-	      end,
+                  [] ->
+                      [mail_header("Content-Type: ", "text/plain"),
+                       mail_header("Content-Transfer-Encoding: ", "8bit")];
+                  _ ->
+                      [mail_header("Mime-Version: ", "1.0"),
+                       mail_header("Content-Type: ",
+                                   "Multipart/Mixed;\r\n boundary=\""++
+                                   Boundary++"\""),
+                       mail_header("Content-Transfer-Encoding: ", "8bit")]
+              end,
     smtp_send_part(Port, [CommonHeaders, Headers, "\r\n"]),
     case Attached of
-	[] ->
-	    ok;
-	_ ->
-	    smtp_send_part(Port, ["--",Boundary,"\r\n",
-				  mail_header("Content-Type: ",
-					      "Text/Plain; charset=us-ascii"),
-				  mail_header("Content-Transfer-Encoding: ",
-					      "8bit"),
-				  "\r\n"])
+        [] ->
+            ok;
+        _ ->
+            smtp_send_part(Port, ["--",Boundary,"\r\n",
+                                  mail_header("Content-Type: ",
+                                              "Text/Plain; charset=us-ascii"),
+                                  mail_header("Content-Transfer-Encoding: ",
+                                              "8bit"),
+                                  "\r\n"])
     end,
     smtp_send_message(Port, Message),
     case Attached of
-	[] ->
-	    smtp_send_part(Port, ["\r\n.\r\n"]),
-	    smtp_close(Port);
-	Files ->
-	    smtp_send_attachments(Port, Boundary, Files),
-	    smtp_send_part(Port, ["\r\n.\r\n"]),
-	    smtp_close(Port)
+        [] ->
+            smtp_send_part(Port, ["\r\n.\r\n"]),
+            smtp_close(Port);
+        Files ->
+            smtp_send_attachments(Port, Boundary, Files),
+            smtp_send_part(Port, ["\r\n.\r\n"]),
+            smtp_close(Port)
     end.
 
 
@@ -65,14 +65,14 @@ smtp_send_attachments(Port, Boundary, []) ->
     smtp_send_part(Port, ["\r\n--",Boundary,"--\r\n"]);
 smtp_send_attachments(Port, Boundary, [{FileName,ContentType,Data}|Rest]) ->
     smtp_send_part(Port, ["\r\n--",Boundary,"\r\n",
-			  mail_header("Content-Type: ", ContentType),
-			  mail_header("Content-Transfer-Encoding: ",
-				      "base64"),
-			  mail_header("Content-Disposition: ",
-				      "attachment; filename=\""++
-				      FileName++"\""),
-			  "\r\n"
-			 ]),
+                          mail_header("Content-Type: ", ContentType),
+                          mail_header("Content-Transfer-Encoding: ",
+                                      "base64"),
+                          mail_header("Content-Disposition: ",
+                                      "attachment; filename=\""++
+                                      FileName++"\""),
+                          "\r\n"
+                         ]),
     smtp_send_b64(Port, Data),
     smtp_send_attachments(Port, Boundary, Rest).
 
@@ -87,14 +87,14 @@ boundary_date() ->
 dat2str_boundary({{Y, Mo, D}, {H, M, S}}) ->
     lists:flatten(
       io_lib:format("~s_~2.2.0w_~s_~w_~2.2.0w:~2.2.0w:~2.2.0w_~w",
-		    [weekday(Y,Mo,D), D, int_to_mt(Mo),
-		     Y,H,M,S,random:uniform(5000)])).
+                    [weekday(Y,Mo,D), D, int_to_mt(Mo),
+                     Y,H,M,S,random:uniform(5000)])).
 
 
 smtp_init(Server, From, Recipients) ->
     {ok, Port} = gen_tcp:connect(Server, 25, [{active, false},
-					      {reuseaddr,true},
-					      binary]),
+                                              {reuseaddr,true},
+                                              binary]),
     smtp_expect(220, Port, "SMTP server does not respond"),
     smtp_put( smtp_from(From), Port ),
     smtp_expect(250, Port, "Sender not accepted by mail server"),
@@ -118,11 +118,11 @@ smtp_send_message(Port, Data) ->
     gen_tcp:send(Port, Escaped).
 
 send_recipients( Recipients, Port ) ->
-	Fun = fun (R) ->
-			smtp_put( smtp_recipient(R), Port),
-			smtp_expect(250, Port, io_lib:format("Recipient ~s not accepted.",[R]))
-		end,
-	lists:foreach( Fun, Recipients ).
+        Fun = fun (R) ->
+                        smtp_put( smtp_recipient(R), Port),
+                        smtp_expect(250, Port, io_lib:format("Recipient ~s not accepted.",[R]))
+                end,
+        lists:foreach( Fun, Recipients ).
 
 smtp_put(Message, Port) ->
     gen_tcp:send(Port, [Message,"\r\n"]).
@@ -133,43 +133,43 @@ smtp_expect(Code, Port, ErrorMsg) ->
 smtp_expect(Code, Port, Acc, ErrorMsg) ->
     Res = gen_tcp:recv(Port, 0, 15000),
     case Res of
-	{ok, Bin} ->
-	    NAcc = Acc++binary_to_list(Bin),
-	    case string:chr(NAcc, $\n) of
-		0 ->
-		    smtp_expect(Code, Port, NAcc, ErrorMsg);
-		_N ->
-		    ResponseCode = to_int(NAcc),
-		    if 
-			ResponseCode == Code -> ok;
-			true -> throw({error, ErrorMsg})
-		    end
-	    end;
-	Err ->
-	    throw({error, Err})
+        {ok, Bin} ->
+            NAcc = Acc++binary_to_list(Bin),
+            case string:chr(NAcc, $\n) of
+                0 ->
+                    smtp_expect(Code, Port, NAcc, ErrorMsg);
+                _N ->
+                    ResponseCode = to_int(NAcc),
+                    if 
+                        ResponseCode == Code -> ok;
+                        true -> throw({error, ErrorMsg})
+                    end
+            end;
+        Err ->
+            throw({error, Err})
     end.
 
 %% add smtp from prelude. add <> around address (if needed)
 smtp_from( Address ) ->
-	lists:append( "MAIL FROM: ", add_angle_brackets( Address ) ).
+        lists:append( "MAIL FROM: ", add_angle_brackets( Address ) ).
 
 %% add smtp recipients prelude. add <> around address (if needed)
 smtp_recipient( Address ) ->
-	lists:append( "RCPT TO: ", add_angle_brackets( Address ) ).
+        lists:append( "RCPT TO: ", add_angle_brackets( Address ) ).
 
 %% make sure the address has <> around itself
 add_angle_brackets( Address ) ->
-	add_angle_bracket_start( add_angle_bracket_close(Address) ).
+        add_angle_bracket_start( add_angle_bracket_close(Address) ).
 
 add_angle_bracket_start( [$<|T] ) -> [$<|T];
 add_angle_bracket_start( Address ) -> [$<|Address].
 
 %% add > at the end of address, if it is not present
 add_angle_bracket_close( Address ) ->
-	case lists:reverse( Address ) of
-	[$>|_T] -> Address;
-	Reversed -> lists:reverse( [$>|Reversed] )
-	end.
+        case lists:reverse( Address ) of
+        [$>|_T] -> Address;
+        Reversed -> lists:reverse( [$>|Reversed] )
+        end.
 
 %% Add an . at all lines starting with a dot.
 
@@ -214,10 +214,10 @@ str2b64_final([], Acc) ->
     lists:reverse(Acc);
 str2b64_final(String, Acc) ->
     case str2b64_line(String, []) of
-	{ok, Line, Rest} ->
-	    str2b64_final(Rest, ["\n",Line|Acc]);
-	{more, Cont} ->
-	    lists:reverse(["\n",str2b64_end(Cont)|Acc])
+        {ok, Line, Rest} ->
+            str2b64_final(Rest, ["\n",Line|Acc]);
+        {more, Cont} ->
+            lists:reverse(["\n",str2b64_end(Cont)|Acc])
     end.
 
 %%

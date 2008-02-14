@@ -15,7 +15,7 @@
 
 %% External exports
 -export([start/0, start_link/0, open/1, open/2, close/0, close/2,
-	 insert/5, insert/6, insert/7, retrieve/2]).
+         insert/5, insert/6, insert/7, retrieve/2]).
 
 -export([t_setup/0, t_exp/0, t_xopen/0]).
 
@@ -23,12 +23,12 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 
 -record(s, {
-	  open_apps = [],    % activated applications
-	  expire = false,    % false | days
-	  rm_exp = false,    % remove expired items
-	  max=infinite,      % maximum number of elements in DB
-	  days=7,            % maximum number of days in DB
-	  counter}).         % item counter
+          open_apps = [],    % activated applications
+          expire = false,    % false | days
+          rm_exp = false,    % remove expired items
+          max=infinite,      % maximum number of elements in DB
+          days=7,            % maximum number of days in DB
+          counter}).         % item counter
 
 -define(SERVER, ?MODULE).
 -define(DB, ?MODULE).
@@ -270,32 +270,32 @@ terminate(_Reason, _State) ->
 %%%
 do_open_dir(State, App, Opts) -> 
     case get_db_mod(Opts, dets) of
-	dets -> 
-	    File = get_db_file(Opts),
-	    Expire = get_expire(Opts, #s.expire), 
-	    Max = get_max(Opts, #s.max), 
-	    Days = get_days(Opts, #s.days), 
-	    RmExp = get_rm_exp(Opts, #s.rm_exp), 
-	    case dets:is_dets_file(File) of
-		false -> 
-		    {State, {error, "not a proper dets file"}};
-		_     ->
-		    case catch dets:open_file(?DB, [{file, File}]) of
-			{ok,DB} = Res   -> 
-			    {State#s{
-			       open_apps = u_insert(App, State#s.open_apps),
-			       expire = Expire, 
-			       days = Days,
-			       rm_exp = RmExp,
-			       max = Max,
-			       counter = init_counter(DB)}, 
-			     Res};
-			{error, _Reason} -> 
-			    {State, {error, "open dets file"}}
-		    end
-	    end;
-	DBmod ->
-	    {State, catch apply(DBmod, open, Opts)}
+        dets -> 
+            File = get_db_file(Opts),
+            Expire = get_expire(Opts, #s.expire), 
+            Max = get_max(Opts, #s.max), 
+            Days = get_days(Opts, #s.days), 
+            RmExp = get_rm_exp(Opts, #s.rm_exp), 
+            case dets:is_dets_file(File) of
+                false -> 
+                    {State, {error, "not a proper dets file"}};
+                _     ->
+                    case catch dets:open_file(?DB, [{file, File}]) of
+                        {ok,DB} = Res   -> 
+                            {State#s{
+                               open_apps = u_insert(App, State#s.open_apps),
+                               expire = Expire, 
+                               days = Days,
+                               rm_exp = RmExp,
+                               max = Max,
+                               counter = init_counter(DB)}, 
+                             Res};
+                        {error, _Reason} -> 
+                            {State, {error, "open dets file"}}
+                    end
+            end;
+        DBmod ->
+            {State, catch apply(DBmod, open, Opts)}
     end.
 
 get_db_file(Opts) ->
@@ -304,8 +304,8 @@ get_db_file(Opts) ->
 
 init_counter(DB) ->
     case dets:lookup(DB, counter) of
-	[]            -> dets:insert(DB, {counter, 0}), 0;
-	[{counter,N}] -> N
+        []            -> dets:insert(DB, {counter, 0}), 0;
+        [{counter,N}] -> N
     end.
 
 set_counter(DB, N) ->
@@ -315,18 +315,18 @@ do_insert(State, {App, {DbMod,Tag}, Title, Link, Desc, Creator, GregSecs}) ->
     {State, catch apply(DbMod, insert, [App, Tag,Title,Link,Desc,Creator,GregSecs])};
 do_insert(State, {App, Tag, Title, Link, Desc, Creator, GregSecs}) ->
     case lists:member(App, State#s.open_apps) of
-	true ->
-	    Counter = if (State#s.max > 0) -> 
-			      (State#s.counter + 1) rem State#s.max;
-			 true -> 
-			      State#s.counter + 1
-		      end,
-	    Item = {Title, Link, Desc, Creator, GregSecs},
-	    Res = dets:insert(?DB, ?ITEM(App, Tag, Counter, Item)),
-	    set_counter(?DB, Counter),
-	    {State#s{counter = Counter}, Res};
-	false ->
-	    {State, {error, "no open DB"}}
+        true ->
+            Counter = if (State#s.max > 0) -> 
+                              (State#s.counter + 1) rem State#s.max;
+                         true -> 
+                              State#s.counter + 1
+                      end,
+            Item = {Title, Link, Desc, Creator, GregSecs},
+            Res = dets:insert(?DB, ?ITEM(App, Tag, Counter, Item)),
+            set_counter(?DB, Counter),
+            {State#s{counter = Counter}, Res};
+        false ->
+            {State, {error, "no open DB"}}
     end.
 
 
@@ -334,19 +334,19 @@ do_retrieve(State, App, {DbMod,Tag}) ->
     {State, catch apply(DbMod, retrieve, [App, Tag])};
 do_retrieve(State, App, Tag) ->
     case lists:member(App, State#s.open_apps) of
-	true ->
-	    F = fun(?ITEM(Xa, Xt, _Counter, Item), Acc) when Xa == App, Xt == Tag -> 
-			[Item|Acc];
-		   (_, Acc) -> 
-			Acc
-		end,
-	    Items = sort_items(expired(State, dets:foldl(F, [], ?DB))),
-	    Xml = to_xml(Items),
-	    {State, {ok, Xml}};
-	false ->
-	    {State, {error, "no open DB"}}
+        true ->
+            F = fun(?ITEM(Xa, Xt, _Counter, Item), Acc) when Xa == App, Xt == Tag -> 
+                        [Item|Acc];
+                   (_, Acc) -> 
+                        Acc
+                end,
+            Items = sort_items(expired(State, dets:foldl(F, [], ?DB))),
+            Xml = to_xml(Items),
+            {State, {ok, Xml}};
+        false ->
+            {State, {error, "no open DB"}}
     end.
-	    
+            
 
 
 -define(ONE_DAY, 86400).  % 24*60*60 seconds
@@ -357,10 +357,10 @@ expired(State, List) when State#s.expire == days ->
     Gs = calendar:datetime_to_gregorian_seconds({date(),time()}),
     Old = Gs - (?ONE_DAY * State#s.days),
     F = fun(?X(GregSecs), Acc) when GregSecs > Old ->
-		[?X(GregSecs) | Acc];
-	   (_, Acc) ->
-		Acc
-	end,
+                [?X(GregSecs) | Acc];
+           (_, Acc) ->
+                Acc
+        end,
     lists:foldl(F, [], List);
 expired(_State, List) ->
     List.
@@ -445,8 +445,8 @@ get_rm_exp(Opts, Def ) -> lkup(rm_exp, Opts, Def).
 
 lkup(Key, List, Def) ->
     case lists:keysearch(Key, 1, List) of
-	{value,{_,Value}} -> Value;
-	_                 -> Def
+        {value,{_,Value}} -> Value;
+        _                 -> Def
     end.
 
 
@@ -467,34 +467,34 @@ a2l(L) when list(L) -> L.
 t_setup() ->
     %%open([{db_file, "yaws_rss.dets"}, {max,7}]),
     insert(test,xml,"Normalizing XML, Part 2",
-	   "http://www.xml.com/pub/a/2002/12/04/normalizing.html",
-	   "In this second and final look at applying relational "
-	   "normalization techniques to W3C XML Schema data modeling, "
-	   "Will Provost discusses when not to normalize, the scope "
-	   "of uniqueness and the fourth and fifth normal forms."),
+           "http://www.xml.com/pub/a/2002/12/04/normalizing.html",
+           "In this second and final look at applying relational "
+           "normalization techniques to W3C XML Schema data modeling, "
+           "Will Provost discusses when not to normalize, the scope "
+           "of uniqueness and the fourth and fifth normal forms."),
     insert(test,xml,"The .NET Schema Object Model",
-	   "http://www.xml.com/pub/a/2002/12/04/som.html",
-	   "Priya Lakshminarayanan describes in detail the use of "
-	   "the .NET Schema Object Model for programmatic manipulation "
-	   "of W3C XML Schemas."),
+           "http://www.xml.com/pub/a/2002/12/04/som.html",
+           "Priya Lakshminarayanan describes in detail the use of "
+           "the .NET Schema Object Model for programmatic manipulation "
+           "of W3C XML Schemas."),
     insert(test,xml,"SVG's Past and Promising Future",
-	   "http://www.xml.com/pub/a/2002/12/04/svg.html",
-	   "In this month's SVG column, Antoine Quint looks back at "
-	   "SVG's journey through 2002 and looks forward to 2003.").
+           "http://www.xml.com/pub/a/2002/12/04/svg.html",
+           "In this month's SVG column, Antoine Quint looks back at "
+           "SVG's journey through 2002 and looks forward to 2003.").
 
 
 t_exp() ->
     %%open([{db_file, "yaws_rss.dets"}, {expire,days}]),
     insert(test,xml,"Expired article",
-	   "http://www.xml.com/pub/a/2002/12/04/normalizing.html",
-	   "In this second and final look at applying relational "
-	   "normalization techniques to W3C XML Schema data modeling, "
-	   "Will Provost discusses when not to normalize, the scope "
-	   "of uniqueness and the fourth and fifth normal forms.",
-	  "tobbe",
-	  63269561882).  % 6/12-2004
+           "http://www.xml.com/pub/a/2002/12/04/normalizing.html",
+           "In this second and final look at applying relational "
+           "normalization techniques to W3C XML Schema data modeling, "
+           "Will Provost discusses when not to normalize, the scope "
+           "of uniqueness and the fourth and fifth normal forms.",
+          "tobbe",
+          63269561882).  % 6/12-2004
 
 t_xopen() ->
     open([{db_file, "yaws_rss.dets"}, 
-	  {expire,days},
-	  {days, 20}]).
+          {expire,days},
+          {days, 20}]).

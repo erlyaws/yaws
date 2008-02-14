@@ -5,19 +5,19 @@
 %% B = normal | locked | old
 template(Node,Root,Data,Modified,Locked) ->
     MenuId =
-	if Locked == true -> "lockedmenuframe" ; 
-	   true -> "menuframe"
-	end,
+        if Locked == true -> "lockedmenuframe" ; 
+           true -> "menuframe"
+        end,
 
     File = Root ++ "/WikiPreferences.files/template.html",
     case wiki:file_type(File) of
-	error ->
-	    %% template file missing, create default template
-	    WobFile = Root ++ "/WikiPreferences.wob",
-	    wiki:addFile([WobFile,"template.html"], false),
-	    file:write_file(File,template_file());
-	_ ->
-	    ok
+        error ->
+            %% template file missing, create default template
+            WobFile = Root ++ "/WikiPreferences.wob",
+            wiki:addFile([WobFile,"template.html"], false),
+            file:write_file(File,template_file());
+        _ ->
+            ok
     end,
 
     {ssi,
@@ -37,19 +37,19 @@ template(Node,Root,Data,Modified,Locked) ->
 
 template2(Root,Title,Header,Data,Locked) ->
     MenuId =
-	if Locked == true -> "lockedmenuframe" ; 
-	   true -> "menuframe"
-	end,
+        if Locked == true -> "lockedmenuframe" ; 
+           true -> "menuframe"
+        end,
 
     File = Root ++ "/WikiPreferences.files/template_info.html",
     case wiki:file_type(File) of
-	error ->
-	    %% template file missing, create default template
-	    WobFile = Root ++ "/WikiPreferences.wob",
-	    wiki:addFile([WobFile,"template_info.html"], false),
-	    file:write_file(File,template_info_file());
-	_ ->
-	    ok
+        error ->
+            %% template file missing, create default template
+            WobFile = Root ++ "/WikiPreferences.wob",
+            wiki:addFile([WobFile,"template_info.html"], false),
+            file:write_file(File,template_info_file());
+        _ ->
+            ok
     end,
 
     {ssi,

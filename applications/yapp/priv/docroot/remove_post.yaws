@@ -6,23 +6,23 @@ out(A) -> {ssi, "HEAD.inc","%%",[{"remove", "choosen"}]}.
 <erl>
 
 get_value(K,P) ->
-	case proplists:get_value(K,P) of
-	   undefined -> {"",""};
+        case proplists:get_value(K,P) of
+           undefined -> {"",""};
            V -> 
              [ServId,Path|_] = string:tokens(string:strip(V),","),
-	     {string:strip(ServId), string:strip(Path)}
+             {string:strip(ServId), string:strip(Path)}
         end.
 
 format(P) ->
-	{SrvId,UrlPath} = get_value("srvidurlpath",P),	
-	format(SrvId,UrlPath).
+        {SrvId,UrlPath} = get_value("srvidurlpath",P),        
+        format(SrvId,UrlPath).
 
 format([],_) -> error(no_srv_id);
 format(_,[]) -> error(no_path);
 format(S,P) -> 
-	case yapp_handler:remove(yapp_handler, S, P) of
-	   ok ->
-		["Removed Server Id: ", S,", Path: ", P];
+        case yapp_handler:remove(yapp_handler, S, P) of
+           ok ->
+                ["Removed Server Id: ", S,", Path: ", P];
            Error ->
              error(Error)
         end.

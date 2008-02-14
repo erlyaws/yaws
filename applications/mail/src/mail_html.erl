@@ -1,7 +1,7 @@
 %    -*- Erlang -*- 
-%    File:	mail_html.erl
-%    Author:	Johan Bevemyr
-%    Created:	Sat Jun 19 15:13:49 2004
+%    File:        mail_html.erl
+%    Author:        Johan Bevemyr
+%    Created:        Sat Jun 19 15:13:49 2004
 %    Purpose:   Transform HTML to text
 
 -module('mail_html').
@@ -62,18 +62,18 @@ parse([], Acc) -> lists:reverse(Acc);
 
 parse([{begin_tag, T, A, L}|Rest], Acc) ->
     case tag_type(T) of
-	leaf ->
-	    parse(Rest, [{T,A}|Acc]);
-	node ->
-	    case find_body(T, Rest, []) of
-		{error, Reason} ->
-		    %% no body found, assume leaf
-		    %% io:format("Error: ~s on line ~p\n", [Reason, L]),
-		    parse(Rest, [{T,A}|Acc]);
-		{Body,Rest2} ->
-		    ParsedBody = parse(Body),
-		    parse(Rest2, [{T,A,ParsedBody}|Acc])
-	    end
+        leaf ->
+            parse(Rest, [{T,A}|Acc]);
+        node ->
+            case find_body(T, Rest, []) of
+                {error, Reason} ->
+                    %% no body found, assume leaf
+                    %% io:format("Error: ~s on line ~p\n", [Reason, L]),
+                    parse(Rest, [{T,A}|Acc]);
+                {Body,Rest2} ->
+                    ParsedBody = parse(Body),
+                    parse(Rest2, [{T,A,ParsedBody}|Acc])
+            end
     end;
 parse([{end_tag, T, A, L}|Rest], Acc) ->
     %% errounous end tag, ignore
@@ -87,13 +87,13 @@ find_body(Tag, [{end_tag,Tag,_,_}|Rest], Acc) ->
     {lists:reverse(Acc),Rest};
 find_body(Tag, [{begin_tag, Tag, A, L}|Rest], Acc) ->
     case find_body(Tag, Rest, []) of
-	{error, Reason} ->
-	    %% no body found
-	    {error, Reason};
-	{Body, Rest1} ->
-	    find_body(Tag, Rest1,
-		      [{end_tag, Tag, [], -1}|lists:reverse(Body)++
-		       [{begin_tag, Tag, A, L}|Acc]])
+        {error, Reason} ->
+            %% no body found
+            {error, Reason};
+        {Body, Rest1} ->
+            find_body(Tag, Rest1,
+                      [{end_tag, Tag, [], -1}|lists:reverse(Body)++
+                       [{begin_tag, Tag, A, L}|Acc]])
     end;
 find_body(Tag, [X|Rest], Acc) ->
     find_body(Tag, Rest, [X|Acc]).
@@ -128,11 +128,11 @@ tokenize([$<,$!,$-,$-|R0], Acc, Tokens, L0) ->
 tokenize([$<|R0], Acc, Tokens, L0) ->
     {Tag,R1,L1} = scan_tag(R0,L0),
     if 
-	Acc == [] ->
-	    next_token(Tag, R1, [Tag|Tokens], L1);
-	true ->
-	    Data = {data,lists:reverse(Acc),L0},
-	    next_token(Tag, R1, [Tag,Data|Tokens], L1)
+        Acc == [] ->
+            next_token(Tag, R1, [Tag|Tokens], L1);
+        true ->
+            Data = {data,lists:reverse(Acc),L0},
+            next_token(Tag, R1, [Tag,Data|Tokens], L1)
     end;
 tokenize([C=$\n|R0], Acc, Tokens, L) ->
     tokenize(R0, [C|Acc], Tokens, L+1);
@@ -187,14 +187,14 @@ scan_tag_args(R0, Acc, L0) ->
     {Name,R1,L1} = scan_value(R0, L0),
     {R2, L2} = skip_space(R1, L1),
     case R2 of
-	[$=|R3] ->
-	    {R4,L4} = skip_space(R3, L2),
-	    {Value,R5,L5} = scan_value(R4, L4),
-	    {R6,L6} = skip_space(R5, L5),
-	    OptName = list_to_atom(lowercase(Name)),
-	    scan_tag_args(R6, [{OptName,Value}|Acc], L6);
-	_ ->
-	    scan_tag_args(R2, [Name|Acc], L2)
+        [$=|R3] ->
+            {R4,L4} = skip_space(R3, L2),
+            {Value,R5,L5} = scan_value(R4, L4),
+            {R6,L6} = skip_space(R5, L5),
+            OptName = list_to_atom(lowercase(Name)),
+            scan_tag_args(R6, [{OptName,Value}|Acc], L6);
+        _ ->
+            scan_tag_args(R2, [Name|Acc], L2)
     end.
 
 %
@@ -218,12 +218,12 @@ scan_token(R=[$=|_], Acc, L) ->  %% bad html
     {lists:reverse(Acc), R, L};
 scan_token([C|R], Acc, L0) ->
     case char_class(C) of
-	space ->
-	    {lists:reverse(Acc), R, L0};
-	nl ->
-	    {lists:reverse(Acc), R, L0+1};
-	_ ->
-	    scan_token(R, [C|Acc], L0)
+        space ->
+            {lists:reverse(Acc), R, L0};
+        nl ->
+            {lists:reverse(Acc), R, L0+1};
+        _ ->
+            scan_token(R, [C|Acc], L0)
     end.
 
 %
@@ -238,7 +238,7 @@ scan_quote([C=$\r|R], Acc, Q, L) ->
     scan_quote(R, [C|Acc], Q, L+1);
 scan_quote([C|R], Acc, Q, L) ->
     scan_quote(R, [C|Acc], Q, L).
-	    
+            
 %
 
 scan_endtag(R, Tag, L) ->
@@ -248,15 +248,15 @@ scan_endtag([], _Tag, Acc, L) ->
     {lists:reverse(Acc), [], L};
 scan_endtag(R=[$<,$/|R0], Tag, Acc, L0) ->
     case casecmp(Tag, R0) of
-	{true, R1} ->
-	    {R2,_} = skip_space(R1,L0),
-	    if hd(R2) == $> ->
-		    {lists:reverse(Acc), R, L0};
-	       true ->
-		    scan_endtag(R0, Tag, Acc, L0)
-	    end;
-	false ->
-	    scan_endtag(R0, Tag, Acc, L0)
+        {true, R1} ->
+            {R2,_} = skip_space(R1,L0),
+            if hd(R2) == $> ->
+                    {lists:reverse(Acc), R, L0};
+               true ->
+                    scan_endtag(R0, Tag, Acc, L0)
+            end;
+        false ->
+            scan_endtag(R0, Tag, Acc, L0)
     end;
 scan_endtag([C=$\n|R], Tag, Acc, L) ->
     scan_endtag(R, Tag, [C|Acc], L+1);
@@ -291,12 +291,12 @@ skip_space([], L) ->
     {[], L};
 skip_space(R = [C|R0], L) ->
     case char_class(C) of
-	nl ->
-	    skip_space(R0, L+1);
-	space ->
-	    skip_space(R0, L);
-	_ ->
-	    {R, L}
+        nl ->
+            skip_space(R0, L+1);
+        space ->
+            skip_space(R0, L);
+        _ ->
+            {R, L}
     end.
 
 %

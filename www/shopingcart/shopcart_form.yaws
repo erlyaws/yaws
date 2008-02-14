@@ -2,10 +2,10 @@
 
 out(A) -> 
     case shopcart:top(A) of
-	ok ->
-	    shopcart:formupdate(A);
-	X ->
-	    X
+        ok ->
+            shopcart:formupdate(A);
+        X ->
+            X
     end.
 
 </erl>

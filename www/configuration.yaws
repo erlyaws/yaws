@@ -10,108 +10,108 @@ out(A) ->
     [{ssi, "TAB.inc", "%%",[{"configuration", "choosen"}]},
      {ehtml,
       [{'div', [{id, "entry"}],
-	[{h1,[],"Build and install"},
-	 {p,[], ["Yaws is hosted by the excellent source code site SourceForge ",
-		 {a ,[{href,"http://sourceforge.net"}], 
-		  {img, [{src,"http://sourceforge.net/sflogo.php?group_id=45637&amp;type=1"}, 
-			 {width,"88"}, 
-			 {height,"31"}, 
-			 {border,"0"}, 
-			 {alt,"SourceForge.net Logo"}],[]}},
-		 " The Yaws SourceForge www page is ",
-		 {a ,[{href,"http://sourceforge.net/projects/erlyaws/"}], 
-		  "http://sourceforge.net/projects/erlyaws"}]},
-	 
-	 {p, [], ["Tested releases are downloadable from the yaws website download "
-		  " directory, use a regular release unless you plan to hack yaws.  "
-		  "Regular releases are found at ",
-		  {a, [{href, "http://yaws.hyber.org/download"}],
-		   "http://yaws.hyber.org/download"}]},
+        [{h1,[],"Build and install"},
+         {p,[], ["Yaws is hosted by the excellent source code site SourceForge ",
+                 {a ,[{href,"http://sourceforge.net"}], 
+                  {img, [{src,"http://sourceforge.net/sflogo.php?group_id=45637&amp;type=1"}, 
+                         {width,"88"}, 
+                         {height,"31"}, 
+                         {border,"0"}, 
+                         {alt,"SourceForge.net Logo"}],[]}},
+                 " The Yaws SourceForge www page is ",
+                 {a ,[{href,"http://sourceforge.net/projects/erlyaws/"}], 
+                  "http://sourceforge.net/projects/erlyaws"}]},
+         
+         {p, [], ["Tested releases are downloadable from the yaws website download "
+                  " directory, use a regular release unless you plan to hack yaws.  "
+                  "Regular releases are found at ",
+                  {a, [{href, "http://yaws.hyber.org/download"}],
+                   "http://yaws.hyber.org/download"}]},
 
-	 {p,[], ["To check out the latest source first install an ",
-	       {a, [{href,"http://www.erlang.org"}],"Erlang"},
-		 " system, then follow the instructions at ",
-		 {a, [{href, "http://sourceforge.net/svn/?group_id=45637"}],
-		  "the yaws/sourceforge svn page"}]},
-	 {p, [], ["To build and to what is knows as a local install, e.g. "
-		  "a developer install or a regular install "]},
-	 box("
+         {p,[], ["To check out the latest source first install an ",
+               {a, [{href,"http://www.erlang.org"}],"Erlang"},
+                 " system, then follow the instructions at ",
+                 {a, [{href, "http://sourceforge.net/svn/?group_id=45637"}],
+                  "the yaws/sourceforge svn page"}]},
+         {p, [], ["To build and to what is knows as a local install, e.g. "
+                  "a developer install or a regular install "]},
+         box("
 # cd erlyaws/trunk/yaws; ./configure; make; make install
 "),
        
-	 {p,[], "The above commands will "
-	  "checkout the bleeding edge source, build it and install it at "
-	  "127.0.0.1:80 with the docroot set to the local documentation."},
+         {p,[], "The above commands will "
+          "checkout the bleeding edge source, build it and install it at "
+          "127.0.0.1:80 with the docroot set to the local documentation."},
 
-	 {p, [], [{tt, [], "make"} ,
-		  " (without install) will build the yaws system and ",
-		  {tt, [], "make local_install"},
-		  " does a local install at http://127.0.0.1:8000. "
-		  "This is the typical mode of operation"
-		  " while either just trying out yaws, or hacking yaws. This will install "
-		  " a template configuration file yaws.conf in $HOME. "
-		  "If $HOME/yaws.conf exists, the old file will not be overwritten. "]},
-	 
-	 {p,[],"A yaws executable (shell script) will be written into  "
-	  "the $HOME/bin directory."},
-	 
-	 {p,[], "To run a locally installed system, we run the yaws script found in the "
-	  " bin directory in the source code tree or $HOME/bin/yaws "},
-	 
-	 {p,[],[
-		{tt,[], "make install"}, 
-		" will also build the yaws system and also  "
-		"install it in /usr/local. A configuration file /etc/yaws.conf will "
-		" also be installed unless the file already exists. The default config "
-		" file will set up the system to listen on http://127.0.0.1:80 "]},
-	 
-	 {h2,[], "Running yaws"},
-	 {p,[], ["The yaws executable is a shell script which invokes the   "
-		 "erlang system and instructs it to start yaws. "
-		 " The command line flags for yaws are documented in  ",
-		 {a,[{href, "yman.yaws?page=yaws"}], 
-		  ["man page for ",
-		   {tt, [], "yaws (1)"}]}]},
-	 
+         {p, [], [{tt, [], "make"} ,
+                  " (without install) will build the yaws system and ",
+                  {tt, [], "make local_install"},
+                  " does a local install at http://127.0.0.1:8000. "
+                  "This is the typical mode of operation"
+                  " while either just trying out yaws, or hacking yaws. This will install "
+                  " a template configuration file yaws.conf in $HOME. "
+                  "If $HOME/yaws.conf exists, the old file will not be overwritten. "]},
+         
+         {p,[],"A yaws executable (shell script) will be written into  "
+          "the $HOME/bin directory."},
+         
+         {p,[], "To run a locally installed system, we run the yaws script found in the "
+          " bin directory in the source code tree or $HOME/bin/yaws "},
+         
+         {p,[],[
+                {tt,[], "make install"}, 
+                " will also build the yaws system and also  "
+                "install it in /usr/local. A configuration file /etc/yaws.conf will "
+                " also be installed unless the file already exists. The default config "
+                " file will set up the system to listen on http://127.0.0.1:80 "]},
+         
+         {h2,[], "Running yaws"},
+         {p,[], ["The yaws executable is a shell script which invokes the   "
+                 "erlang system and instructs it to start yaws. "
+                 " The command line flags for yaws are documented in  ",
+                 {a,[{href, "yman.yaws?page=yaws"}], 
+                  ["man page for ",
+                   {tt, [], "yaws (1)"}]}]},
+         
        
-	 {p,[], "When developing yaws code, the interactive mode is ideal. Typically "
-	  "yaws is then started as: "},
-	 {br,[],[]},
-	 box("yaws -i"),
-	 
-	 
-	 {p, [], "Run yaws as a daemon as"},
-	 box("yaws --daemon"),
+         {p,[], "When developing yaws code, the interactive mode is ideal. Typically "
+          "yaws is then started as: "},
+         {br,[],[]},
+         box("yaws -i"),
+         
+         
+         {p, [], "Run yaws as a daemon as"},
+         box("yaws --daemon"),
 
-	 {p,[], "All command line flags to yaws are described in the "
-	  "man page for yaws.  "},
+         {p,[], "All command line flags to yaws are described in the "
+          "man page for yaws.  "},
 
-	 {h2,[], "Configuring Yaws"},
+         {h2,[], "Configuring Yaws"},
 
-	 {p,[],["Web server configuration can be supplied to yaws  "
-		"in either of two ways depending ",
-		"on whether we run yaws as a standalone daemon or if we run yaws as an "
-		"	embedded application inside another Erlang program. "]},
+         {p,[],["Web server configuration can be supplied to yaws  "
+                "in either of two ways depending ",
+                "on whether we run yaws as a standalone daemon or if we run yaws as an "
+                "        embedded application inside another Erlang program. "]},
        {p,[],["The yaws configuration is described in ",
-	      {a, [{href,"yman.yaws?page=yaws.conf"}], 
-	       ["man page for ",
-		{tt,[], "yaws.conf (5)"}]}]},
-	 
-	 {h3, [], "Embedded mode"},
-	 
-	 {p,[], ["It is possible to run yaws in embedded mode where yaws is part of a  "
-		 "larger application. When running yaws in embedded mode, it is often not "
-		 " possible to let yaws read its configuration data from /etc/yaws.conf."]},
-	 
-	 {p,[], ["The function ",
-		 {tt, [], "yaws_api:setconf(Gconf, Groups)"}, 
-		 "can be used by an other erlang process to explicitly set a yaws "
-		 "configuration at runtime."
-		 " To execute Yaws in embedded mode, it must be started with the environment ",
-		 {tt, [], "{embedded, true}"},
-		 " The embedded mode is fully described at ",
-		 {a, [{href, "embed.yaws"}], "embed.yaws"}]}
-	]}]},
+              {a, [{href,"yman.yaws?page=yaws.conf"}], 
+               ["man page for ",
+                {tt,[], "yaws.conf (5)"}]}]},
+         
+         {h3, [], "Embedded mode"},
+         
+         {p,[], ["It is possible to run yaws in embedded mode where yaws is part of a  "
+                 "larger application. When running yaws in embedded mode, it is often not "
+                 " possible to let yaws read its configuration data from /etc/yaws.conf."]},
+         
+         {p,[], ["The function ",
+                 {tt, [], "yaws_api:setconf(Gconf, Groups)"}, 
+                 "can be used by an other erlang process to explicitly set a yaws "
+                 "configuration at runtime."
+                 " To execute Yaws in embedded mode, it must be started with the environment ",
+                 {tt, [], "{embedded, true}"},
+                 " The embedded mode is fully described at ",
+                 {a, [{href, "embed.yaws"}], "embed.yaws"}]}
+        ]}]},
      {ssi, "END2",[],[]}
     ].
 

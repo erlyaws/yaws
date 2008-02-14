@@ -82,19 +82,19 @@ dnl compile a linked in driver on windows using gcc
 dnl
 
 case "$target_os" in
-	*cygwin*)
+        *cygwin*)
 
 
            ERLDIR=`echo "${ERL}" | sed 's/\/bin\/*erl.*//'`
            ERL_DLL_LIB="${ERLDIR}/usr/lib/erl_dll.lib"
            AC_SUBST(ERL_DLL_LIB)
-	;;
-	*)	
-    	  ERLDIR=`awk -F= '/ROOTDIR=/ { print [$]2; exit; }' $ERL`;;
+        ;;
+        *)        
+              ERLDIR=`awk -F= '/ROOTDIR=/ { print [$]2; exit; }' $ERL`;;
     esac
 
 if test ! -d "$ERLDIR" ; then
-	AC_MSG_ERROR([Broken Erlang installation, $ERLDIR does not exist!])
+        AC_MSG_ERROR([Broken Erlang installation, $ERLDIR does not exist!])
 fi
 AC_SUBST(ERLDIR)
 AC_SUBST(ERL_DLL_LIB)
@@ -117,41 +117,41 @@ dnl
 case "$target_os" in
      *cygwin*)
         WIN32=win32
-	    cat >> confdefs.h <<\EOF
+            cat >> confdefs.h <<\EOF
 #define WIN32 1
 EOF
-	    LD_SHARED="gcc -shared"
-	    DLL=dll
-	    DLL_LIBS="-lc \"$ERL_DLL_LIB\""
-	
+            LD_SHARED="gcc -shared"
+            DLL=dll
+            DLL_LIBS="-lc \"$ERL_DLL_LIB\""
+        
 
-	EXE=.exe
-	AC_SUBST(EXE)
+        EXE=.exe
+        AC_SUBST(EXE)
 
-	DLL=dll
-	AC_SUBST(DLL)
+        DLL=dll
+        AC_SUBST(DLL)
 
-	OBJ=obj
-	AC_SUBST(OBJ)
-	;;
+        OBJ=obj
+        AC_SUBST(OBJ)
+        ;;
       *)
 
 
-	LINKER=$CC
-	AC_SUBST(LINKER)
+        LINKER=$CC
+        AC_SUBST(LINKER)
 
-	AC_SUBST(CFLAGS)
+        AC_SUBST(CFLAGS)
 
-	OUT="-o "
-	AC_SUBST(OUT)
+        OUT="-o "
+        AC_SUBST(OUT)
 
-	DLL=so
-	AC_SUBST(DLL)
-	OBJ=o
-	AC_SUBST(OBJ)
+        DLL=so
+        AC_SUBST(DLL)
+        OBJ=o
+        AC_SUBST(OBJ)
 
 
-	;;
+        ;;
 esac
 
 
@@ -169,57 +169,57 @@ dnl or use --with-extrainclude=....
 CFLAGS="$CFLAGS -I/usr/include/security"
 
 case "$target_os" in
-	*linux*)
-	   AC_DEFINE(LINUX)
-	   LD_SHARED="gcc -shared"
-	   AC_SUBST(LD_SHARED)
-	   FPIC=-fpic
-	   AC_SUBST(FPIC)
-	   ;;
+        *linux*)
+           AC_DEFINE(LINUX)
+           LD_SHARED="gcc -shared"
+           AC_SUBST(LD_SHARED)
+           FPIC=-fpic
+           AC_SUBST(FPIC)
+           ;;
 
-	*solaris*)
-	   AC_DEFINE(SOLARIS)
-	   LD_SHARED="ld -G"
-	   AC_SUBST(LD_SHARED)
-	   LIBS="$LIBS -lsocket -lnsl -lresolv"
-	   AC_SUBST(LIBS)
-	   FPIC=-fpic
-	   AC_SUBST(FPIC)
-	   ;;
+        *solaris*)
+           AC_DEFINE(SOLARIS)
+           LD_SHARED="ld -G"
+           AC_SUBST(LD_SHARED)
+           LIBS="$LIBS -lsocket -lnsl -lresolv"
+           AC_SUBST(LIBS)
+           FPIC=-fpic
+           AC_SUBST(FPIC)
+           ;;
 
-	*bsd*)
-	   AC_DEFINE(BSD)
-	   case "$target_os" in
-		bsdi*)
+        *bsd*)
+           AC_DEFINE(BSD)
+           case "$target_os" in
+                bsdi*)
                     BSDI=bsdi
-		    AC_DEFINE(BSDI)
-		    AC_SUBST(BSDI)
-		    ;;
-	   esac
-	   LD_SHARED="ld -Bshareable"	  
-	   AC_SUBST(LD_SHARED)
-	   FPIC=-fpic
-	   AC_SUBST(FPIC)
-	   ;;
-	 *darwin*)
-	   CFLAGS="$CFLAGS -I/usr/include/pam"
-	   LD_SHARED="gcc -bundle -fPIC -flat_namespace -undefined suppress"
-   	   AC_SUBST(LD_SHARED)
-	   FPIC=-fPIC
-	   AC_SUBST(FPIC)
-	   ;;
-	 *cygwin*)
-	   AC_PATH_PROG(WERL, werl)
-	   AC_SUBST(WERL)
-	   AC_DEFINE(WIN32)
-	   FPIC=-fpic
-	   AC_SUBST(FPIC)
-	   AC_SUBST(WIN32)
-	   ;;
-	*)
+                    AC_DEFINE(BSDI)
+                    AC_SUBST(BSDI)
+                    ;;
+           esac
+           LD_SHARED="ld -Bshareable"          
+           AC_SUBST(LD_SHARED)
+           FPIC=-fpic
+           AC_SUBST(FPIC)
+           ;;
+         *darwin*)
+           CFLAGS="$CFLAGS -I/usr/include/pam"
+           LD_SHARED="gcc -bundle -fPIC -flat_namespace -undefined suppress"
+              AC_SUBST(LD_SHARED)
+           FPIC=-fPIC
+           AC_SUBST(FPIC)
+           ;;
+         *cygwin*)
+           AC_PATH_PROG(WERL, werl)
+           AC_SUBST(WERL)
+           AC_DEFINE(WIN32)
+           FPIC=-fpic
+           AC_SUBST(FPIC)
+           AC_SUBST(WIN32)
+           ;;
+        *)
            AC_MSG_RESULT(unknown)
-	   AC_MSG_ERROR(Non-supported target OS!)
-	   ;;
+           AC_MSG_ERROR(Non-supported target OS!)
+           ;;
 esac
 
 

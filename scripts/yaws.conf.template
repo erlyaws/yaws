@@ -122,23 +122,23 @@ use_fdsrv = false
 # in this case, but an explicit IP can be given as well
 
 <server %host%>
-	port = %port%
-	listen = 0.0.0.0
-	docroot = %docroot%
+        port = %port%
+        listen = 0.0.0.0
+        docroot = %docroot%
 </server>
 
 <server localhost>
-	port = %port%
-	listen = 0.0.0.0
-	docroot = /tmp
-	dir_listings = true
-	dav = true
-	<auth>
-		realm = foobar
-		dir = /
-		user = foo:bar
-		user = baz:bar
-	</auth>
+        port = %port%
+        listen = 0.0.0.0
+        docroot = /tmp
+        dir_listings = true
+        dav = true
+        <auth>
+                realm = foobar
+                dir = /
+                user = foo:bar
+                user = baz:bar
+        </auth>
 </server>
 
 
@@ -146,17 +146,17 @@ use_fdsrv = false
 # And then an ssl server
 
 <server %host%>
-	port = %sslport%
-	docroot = /tmp
-	listen = 0.0.0.0
-	dir_listings = true
-	<ssl>  
-	        keyfile = %certdir%/yaws-key.pem
-	        certfile = %certdir%/yaws-cert.pem
-	</ssl>
+        port = %sslport%
+        docroot = /tmp
+        listen = 0.0.0.0
+        dir_listings = true
+        <ssl>  
+                keyfile = %certdir%/yaws-key.pem
+                certfile = %certdir%/yaws-cert.pem
+        </ssl>
 </server>
-				
-	
+                                
+        
 
 
 

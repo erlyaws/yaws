@@ -44,9 +44,9 @@ init([]) ->
     YappRegistryModule = proplists:get_value(yapp_registry_impl, AllEnv, yapp_mnesia_server),
     YappRegName = YappRegistryModule,
     YappRegistry = {yapp_registry_worker,{YappRegistryModule, start_link,[YappRegName]},
-			 permanent,2000,worker,[YappRegistryModule, yapp_registry]},
+                         permanent,2000,worker,[YappRegistryModule, yapp_registry]},
     YappHandler = {yapp_handler_worker,{yapp_server, start_link, [yapp_handler, YappRegName]},
-		   permanent,2000,worker,[yapp_handler, yapp_server]},
+                   permanent,2000,worker,[yapp_handler, yapp_server]},
     yapp_event_handler:add_handler(yaws_event_manager, yapp_handler),
     {ok,{{one_for_all,0,5}, [YappRegistry, YappHandler]}}.
 

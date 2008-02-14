@@ -17,7 +17,7 @@ ssi(File) ->
 
 ss(A, File) ->
     {ok, B} = file:read_file(
-		filename:join([A#arg.docroot, File])),
+                filename:join([A#arg.docroot, File])),
     box(binary_to_list(B)).
     
 
@@ -29,76 +29,76 @@ out(A) ->
 
       [{h1, [], "AJAX through JSON RPC"},
        
-	{p, [],
-	 {i, [], 
-	  ["Note: this documentation used to refer to the module "
-	    "'yaws_jsonrpc'. This module has been depracated in favor "
-	    "of 'yaws_rpc', which handles both JSON RPC, haXe and SOAP "
-	    "remoting. All references to 'yaws_jsonrpc' on this page "
-	    "were therefore changed to 'yaws_rpc'. For more specific "
-	   "information about SOAP, refer to ",
-	   {a, [{href, "/soap_intro.yaws"}], "the SOAP page."}]}},
+        {p, [],
+         {i, [], 
+          ["Note: this documentation used to refer to the module "
+            "'yaws_jsonrpc'. This module has been depracated in favor "
+            "of 'yaws_rpc', which handles both JSON RPC, haXe and SOAP "
+            "remoting. All references to 'yaws_jsonrpc' on this page "
+            "were therefore changed to 'yaws_rpc'. For more specific "
+           "information about SOAP, refer to ",
+           {a, [{href, "/soap_intro.yaws"}], "the SOAP page."}]}},
        {p, [],
-	["The Yaws Json binding is a way to have Javascript code in the "
-	 "browser evaluate a remote procedure call in the Yaws server."
-	 "JSON itself as described at ",
-	 {a, [{href, "http://www.json.org/"}], "http://www.json.org/ "},
-	 "is basically a simple marshaling format which can be used "
-	 " from a variety of different programming languages, in particular "
-	 " it completely straightforward to implement in Javascript."]},
+        ["The Yaws Json binding is a way to have Javascript code in the "
+         "browser evaluate a remote procedure call in the Yaws server."
+         "JSON itself as described at ",
+         {a, [{href, "http://www.json.org/"}], "http://www.json.org/ "},
+         "is basically a simple marshaling format which can be used "
+         " from a variety of different programming languages, in particular "
+         " it completely straightforward to implement in Javascript."]},
        {p, [],
-	"The yaws JSON implementation consist of Javascript client and a "
-	" server side library which must be explicitly invoked by Erlang "
-	"code in a .yaws page."},
+        "The yaws JSON implementation consist of Javascript client and a "
+        " server side library which must be explicitly invoked by Erlang "
+        "code in a .yaws page."},
 
        {p,[],
-	"It is not particularly easy to show and explain an AJAX setup "
-	"through JSON RPC, but here is an attempt:"
-	},
+        "It is not particularly easy to show and explain an AJAX setup "
+        "through JSON RPC, but here is an attempt:"
+        },
        {p,[], 
-	"First we have an HTML page which:"},
+        "First we have an HTML page which:"},
        {ol, [],
-	[
-	 {li,[],{p,[], "Includes the client side of the JSON library."
-		 " The library is included in the yaws distribution "
-		 " and it is found under \"www/jsolait/jsolait.js\" ."}},
-	 {li,[],{p,[],"Second the HTML code defines the name of a method, "
-		 "i.e. the name of a server side function which shall be "
-		 " called by the client side Javascript code"}},
-	 {li,[],{p,[],"Finally the HTML code defines a FORM which is "
-		 "used to invoke the RPC. This is just a really simple "
-		 "example, really any Javascript code can invoke any RPC in "
-		 "more interesting scenarios than submitting a form"}}]},
+        [
+         {li,[],{p,[], "Includes the client side of the JSON library."
+                 " The library is included in the yaws distribution "
+                 " and it is found under \"www/jsolait/jsolait.js\" ."}},
+         {li,[],{p,[],"Second the HTML code defines the name of a method, "
+                 "i.e. the name of a server side function which shall be "
+                 " called by the client side Javascript code"}},
+         {li,[],{p,[],"Finally the HTML code defines a FORM which is "
+                 "used to invoke the RPC. This is just a really simple "
+                 "example, really any Javascript code can invoke any RPC in "
+                 "more interesting scenarios than submitting a form"}}]},
        
        {p, [], "The HTML code looks like "},
        ss(A,"json_sample.html"),
        {p, [], ["This HTML code resides in file ",
-		{a,[{href, "json_sample.html"}], "json_sample.html"},
-		" and it is the HTML code that is the AJAX GUI !!!"]},
+                {a,[{href, "json_sample.html"}], "json_sample.html"},
+                " and it is the HTML code that is the AJAX GUI !!!"]},
        {p, [], "Following that we need to take a look at the page "
-	"json_sample.yaws which is the \"serviceURL\" according to "
-	"the Javascript code. This code defines the function to be "
-	"called. Remember that the Javascript code defined one method, "
-	"called \"test1\", this information will be passed to the "
-	"serviceURL. The code looks like:"},
+        "json_sample.yaws which is the \"serviceURL\" according to "
+        "the Javascript code. This code defines the function to be "
+        "called. Remember that the Javascript code defined one method, "
+        "called \"test1\", this information will be passed to the "
+        "serviceURL. The code looks like:"},
        ss(A, "json_sample.yaws"),
 
        {p,[], "The two important lines on the server side are"},
        {ol,[],
-	[
-	 {li,[],
-	  {pre,[],"yaws_rpc:handler_session(A2, {sample_mod, counter})."}},
-	 {li,[],
-	  {pre,[],"counter([{ip, IP}] = _State, {call, test1, Value} = _Request, Session)"}}]},
+        [
+         {li,[],
+          {pre,[],"yaws_rpc:handler_session(A2, {sample_mod, counter})."}},
+         {li,[],
+          {pre,[],"counter([{ip, IP}] = _State, {call, test1, Value} = _Request, Session)"}}]},
 
        {p,[], 
-	"The first line tells Yaws to forward all JSON-RPC methods to the "
-	" \"counter\" function in the \"sample_mod\" module. "
-	"The second line says, "
-	" basically, - this is the counter function that will be called when "
-	" the client invokes a method called 'test1'. We would duplicate "
-	" this line with a different name than 'test1' for each RPC function "
-	"we wish to implement."},
+        "The first line tells Yaws to forward all JSON-RPC methods to the "
+        " \"counter\" function in the \"sample_mod\" module. "
+        "The second line says, "
+        " basically, - this is the counter function that will be called when "
+        " the client invokes a method called 'test1'. We would duplicate "
+        " this line with a different name than 'test1' for each RPC function "
+        "we wish to implement."},
        
        {p,[],"On the client side we have"},
 
@@ -121,26 +121,26 @@ box(" {struct, [{field1, \"foo\"}, {field2, \"bar\"}]} "),
 box("{array, [\"foo\", \"bar\"]}"),
 {p, [],"for an array. We can nest arrays and structs in each other "},
 
-			 
+                         
 
 
 
        {p, [],
-	"Finally, we must stress that this example is extremely simple. "
-	"In order to build a proper AJAX application in Yaws, a lot of "
-	"client side  work is required, all Yaws provides is the basic "
-	"mechanism whereby the client side Javascript code, can RPC the "
-	"web server for data which can be subsequently used to populate "
-	"the DOM. Also required to build a good AJAX application is "
-	"good knowledge on how the DOM in the browser works"},
+        "Finally, we must stress that this example is extremely simple. "
+        "In order to build a proper AJAX application in Yaws, a lot of "
+        "client side  work is required, all Yaws provides is the basic "
+        "mechanism whereby the client side Javascript code, can RPC the "
+        "web server for data which can be subsequently used to populate "
+        "the DOM. Also required to build a good AJAX application is "
+        "good knowledge on how the DOM in the browser works"},
 
        {p, [],
-	[{b,[],"Update:"},
-	 "The yaws_rpc:handler will now also call: M:F(cookie_expire) which is "
-	 "expected to return a proper Cookie expire string. This makes it possible "
-	 "to setup the Cookie lifetime. If this calback function is non-existant, "
-	 "the default behaviour is to not set a cookie expiration time, i.e it will "
-	 "live for this session only."]}
+        [{b,[],"Update:"},
+         "The yaws_rpc:handler will now also call: M:F(cookie_expire) which is "
+         "expected to return a proper Cookie expire string. This makes it possible "
+         "to setup the Cookie lifetime. If this calback function is non-existant, "
+         "the default behaviour is to not set a cookie expiration time, i.e it will "
+         "live for this session only."]}
 
 
       ]}},

@@ -2,21 +2,21 @@
 
 out(A) ->
     case mail:check_session(A) of
-	{ok, Session} ->
-	    L = yaws_api:parse_query(A),
-	    Refresh =
-		case lists:keysearch("refresh",1,L) of
-	             {value, _} -> true;
-	             _          -> false
-	        end,
-	    Sort =
-		case lists:keysearch("sort",1,L) of
-	             {value, {_,SortStr}} -> list_to_atom(SortStr);
-	             _                -> undefined
-	        end,
-	    mail:list(Session, {Refresh, Sort});
-	Error ->
-	    Error
+        {ok, Session} ->
+            L = yaws_api:parse_query(A),
+            Refresh =
+                case lists:keysearch("refresh",1,L) of
+                     {value, _} -> true;
+                     _          -> false
+                end,
+            Sort =
+                case lists:keysearch("sort",1,L) of
+                     {value, {_,SortStr}} -> list_to_atom(SortStr);
+                     _                -> undefined
+                end,
+            mail:list(Session, {Refresh, Sort});
+        Error ->
+            Error
     end.
 
 </erl>

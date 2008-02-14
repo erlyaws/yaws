@@ -27,7 +27,7 @@
 %% +deftype tag() = int(). 
 
 -export([str2wiki/1, wiki2str/1, 
-	 getRegion/2, putRegion/3, writeAppendRegion/3]).
+         getRegion/2, putRegion/3, writeAppendRegion/3]).
 
 -import(lists, [reverse/1]).
 
@@ -42,14 +42,14 @@ number_blocks([], _)            -> [].
 str2wiki(Str, L) ->
     {Before, Stuff} = collect_str(Str),
     case Stuff of
-	"<<\n" ++ T -> 
-	    {In, Str3} = collect_write_append([$\n|T], []),
-	    str2wiki(Str3, [{write_append,In},{txt,Before}|L]);
-	"<\n" ++ T -> 
-	    {In, Str3} = collect_open_region([$\n|T], []),
-	    str2wiki(Str3, [{open,In},{txt,Before}|L]);
-	[] ->
-	    reverse([{txt,Before}|L])
+        "<<\n" ++ T -> 
+            {In, Str3} = collect_write_append([$\n|T], []),
+            str2wiki(Str3, [{write_append,In},{txt,Before}|L]);
+        "<\n" ++ T -> 
+            {In, Str3} = collect_open_region([$\n|T], []),
+            str2wiki(Str3, [{open,In},{txt,Before}|L]);
+        [] ->
+            reverse([{txt,Before}|L])
     end.
 
 %% collect_str(Str) -> {Str1, Str2}

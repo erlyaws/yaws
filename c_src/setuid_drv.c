@@ -35,7 +35,7 @@ static ErlDrvData setuid_start(ErlDrvPort port, char *buf)
     struct passwd *pe;
 
     if ((t = strchr(buf, ' ')) == NULL)
-	return (ErlDrvData) -1;
+        return (ErlDrvData) -1;
 
     /* Rewind pw mapping */
     setpwent();
@@ -43,65 +43,65 @@ static ErlDrvData setuid_start(ErlDrvPort port, char *buf)
     t++;
     switch (*t++) {
     case 's':  /* setuid */
-	while ((pe = getpwent())) {
-	    if (strcmp(pe->pw_name , t) == 0) {
-		if ((setuid(pe->pw_uid)  != 0) ||
-		    (setreuid(pe->pw_uid, pe->pw_uid) != 0)) {
-		    return (ErlDrvData) -1;
-		}
-		sprintf(xbuf, "ok %d", pe->pw_uid);
-		endpwent();
-		driver_output(port,xbuf, strlen(xbuf));
-		return (ErlDrvData) port;
-	    }
-	}
-	endpwent();
-	return (ErlDrvData) -1;
+        while ((pe = getpwent())) {
+            if (strcmp(pe->pw_name , t) == 0) {
+                if ((setuid(pe->pw_uid)  != 0) ||
+                    (setreuid(pe->pw_uid, pe->pw_uid) != 0)) {
+                    return (ErlDrvData) -1;
+                }
+                sprintf(xbuf, "ok %d", pe->pw_uid);
+                endpwent();
+                driver_output(port,xbuf, strlen(xbuf));
+                return (ErlDrvData) port;
+            }
+        }
+        endpwent();
+        return (ErlDrvData) -1;
     case 'n': {
-	int uid = atoi(t);
-	while ((pe = getpwent())) {
-	    if (pe->pw_uid == uid) {
-		sprintf(xbuf, "ok %s", pe->pw_name);
-		endpwent();
-		driver_output(port,xbuf, strlen(xbuf));
-		return (ErlDrvData) port;
-	    }
-	}
-	endpwent();
-	driver_output(port, "ok -", 4);
-	return (ErlDrvData) port;
+        int uid = atoi(t);
+        while ((pe = getpwent())) {
+            if (pe->pw_uid == uid) {
+                sprintf(xbuf, "ok %s", pe->pw_name);
+                endpwent();
+                driver_output(port,xbuf, strlen(xbuf));
+                return (ErlDrvData) port;
+            }
+        }
+        endpwent();
+        driver_output(port, "ok -", 4);
+        return (ErlDrvData) port;
     }
     case 'g':   /* getuid */
-	sprintf(xbuf, "ok %d", getuid());
-	driver_output(port,xbuf, strlen(xbuf));
-	return (ErlDrvData) port;
+        sprintf(xbuf, "ok %d", getuid());
+        driver_output(port,xbuf, strlen(xbuf));
+        return (ErlDrvData) port;
     case 'u':
-	while ((pe = getpwent())) {
-	    if (strcmp(pe->pw_name , t) == 0) {
-		sprintf(xbuf, "ok %d", pe->pw_uid);
-		endpwent();
-		driver_output(port,xbuf, strlen(xbuf));
-		return (ErlDrvData) port;
-	    }
-	}
-	endpwent();
-	return (ErlDrvData) -1;
+        while ((pe = getpwent())) {
+            if (strcmp(pe->pw_name , t) == 0) {
+                sprintf(xbuf, "ok %d", pe->pw_uid);
+                endpwent();
+                driver_output(port,xbuf, strlen(xbuf));
+                return (ErlDrvData) port;
+            }
+        }
+        endpwent();
+        return (ErlDrvData) -1;
 
     case 'h':
-	while ((pe = getpwent())) {
-	    if (strcmp(pe->pw_name , t) == 0) {
-		sprintf(xbuf, "ok %s", pe->pw_dir);
-		endpwent();
-		driver_output(port,xbuf, strlen(xbuf));
-		return (ErlDrvData) port;
-	    }
-	}
-	endpwent();
-	return (ErlDrvData) -1;
+        while ((pe = getpwent())) {
+            if (strcmp(pe->pw_name , t) == 0) {
+                sprintf(xbuf, "ok %s", pe->pw_dir);
+                endpwent();
+                driver_output(port,xbuf, strlen(xbuf));
+                return (ErlDrvData) port;
+            }
+        }
+        endpwent();
+        return (ErlDrvData) -1;
 
     }
     
-	
+        
 }
 
 
