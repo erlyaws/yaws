@@ -17,7 +17,7 @@
           filename,
           last}).
 
-
+-define(DIR, "/tmp/YawsTestUploads/").
 
 
 out(A) when A#arg.state == undefined ->
@@ -61,7 +61,7 @@ addFileChunk(_A, [], State) when State#upload.last==true,
                                  State#upload.fd /= undefined ->
 
     file:close(State#upload.fd),
-    file:delete(["/tmp/",State#upload.filename]),
+    %%file:delete([?DIR,State#upload.filename]),
     Res = {ehtml, 
            {p,[], "File upload done"}},
     {done, Res};
@@ -80,17 +80,17 @@ addFileChunk(A, [{head, {"foo", Opts}}|Res], State ) ->
             %% we must not put the file in the
             %% docroot, it may execute uploade code if the
             %% file is a .yaws file !!!!!
-
-            case file:open(["/tmp/", Fname] ,[write]) of
-                {ok, Fd} ->
-                    S2 = State#upload{filename = Fname,
-                                      fd = Fd},
-                    addFileChunk(A, Res, S2);
-                Err ->
-                    {done, err()}
-            end;
-        false ->
-            {done, err()}
+	    file:make_dir(?DIR),
+	    case file:open([?DIR, Fname] ,[write]) of
+		{ok, Fd} ->
+		    S2 = State#upload{filename = Fname,
+				      fd = Fd},
+		    addFileChunk(A, Res, S2);
+		Err ->
+		    {done, err()}
+	    end;
+	false ->
+	    {done, err()}
     end;
 
 addFileChunk(A, [{body, Data}|Res], State) 

@@ -384,7 +384,7 @@ do_listen(GC, SC) ->
         undefined ->
             {nossl, gen_tcp_listen(SC#sconf.port, opts(SC))};
         SSL ->
-            {ssl, ssl:listen(SC#sconf.port, ssl_opts(SC, SSL))}
+            {ssl, ssl:listen(SC#sconf.port, ssl_opts(GC, SC, SSL))}
     end.
 
 gen_tcp_listen(Port, Opts) ->
@@ -652,18 +652,19 @@ opts(SC) ->
 
 
 
-ssl_opts(SC, SSL) ->
+ssl_opts(GC, SC, SSL) ->
     Opts = [
             binary,
             {ip, SC#sconf.listen},
             {packet, http},
-            {active, false} | ssl_opts(SSL)],
+            {active, false} | ssl_opts(GC, SSL)],
+    io:format("OPTS ~p~n", [Opts]),
     Opts.
 
 
 
 
-ssl_opts(SSL) ->
+ssl_opts(GC, SSL) ->
     L = [if SSL#ssl.keyfile /= undefined ->
                  {keyfile, SSL#ssl.keyfile};
             true ->
@@ -676,7 +677,7 @@ ssl_opts(SSL) ->
                  false
          end,
 
-         if SSL#ssl.cacertfile /= undefined ->
+         if SSL#ssl.cacertfile /= undefined  ->
                  {cacertfile, SSL#ssl.cacertfile};
             true ->
                  false
@@ -696,6 +697,12 @@ ssl_opts(SSL) ->
          if SSL#ssl.ciphers /= undefined ->
                  {ciphers, SSL#ssl.ciphers};
             true ->
+                 false
+         end,
+         if ?gc_use_old_ssl(GC) ->
+                 false;
+            true ->  
+                 %{ssl_imp, new}
                  false
          end
         ],

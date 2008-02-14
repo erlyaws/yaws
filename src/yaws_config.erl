@@ -630,11 +630,20 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
+        ["use_old_ssl", '=',  Bool] ->
+            case is_bool(Bool) of
+                {true, Val} ->
+                    fload(FD, globals, 
+                          ?gc_set_use_old_ssl(GC,Val),
+                          C, Cs, Lno+1, Next);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
+            end;
         ["use_large_ssl_pool", '=',  _Bool] ->
-            %% just ignore
+            %% just ignore - not relevant any longer
             fload(FD, globals, GC,
                   C, Cs, Lno+1, Next);
-
+        
         ['<', "server", Server, '>'] ->  %% first server 
             fload(FD, server, GC, #sconf{servername = Server},
                   Cs, Lno+1, Next);
