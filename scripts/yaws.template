@@ -25,9 +25,9 @@ help()
     echo "usage:  "
     echo ""
     echo 
-    echo "       yaws -i | --interactive         -- interactive (no daemon) mode"
-    echo "       yaws -w | --winteractive        -- cygwin interactive (werl) "
-    echo "       yaws --daemon                   -- daemon mode"
+    echo "       yaws -i | --interactive       -- interactive (no daemon) mode"
+    echo "       yaws -w | --winteractive      -- cygwin interactive (werl) "
+    echo "       yaws --daemon                 -- daemon mode"
     
     echo ""
     
@@ -48,6 +48,7 @@ help()
     echo "            --runmod mod     --  call mod:start/0 at startup"
     echo "            --heart          --  auto restart yaws if it crashes"
     echo "            --erlarg X       --  pass argument X to $erl"
+    echo "            --setcookie X    --  set an erlang cookie" 
     echo "            --run_erl X      --  use run_erl with pipe-id X"
     echo "            --to_erl X       --  connect to pipe-id X"
     
