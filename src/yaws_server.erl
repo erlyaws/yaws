@@ -1627,12 +1627,28 @@ handle_ut(CliSock, ARG, UT, N) ->
                     case H#headers.if_none_match of
                         undefined ->
                             case H#headers.if_match of
-                                undefined ->                                     
-                                    yaws:outh_set_static_headers
-                                      (Req, UT, H, Range),
-                                    deliver_file
-                                      (CliSock, Req, UT, Range);
-
+                                undefined ->
+                                    case H#headers.if_modified_since of
+                                        undefined ->
+                                            yaws:outh_set_static_headers
+                                              (Req, UT, H, Range),
+                                            deliver_file
+                                              (CliSock, Req, UT, Range);
+                                        UTC_string ->
+                                            case yaws:is_modified_p(
+						   UT#urltype.finfo, UTC_string) of
+                                                true ->
+                                                   yaws:outh_set_static_headers
+                                                      (Req, UT, H, Range),
+                                                   deliver_file(
+						     CliSock, Req, UT, Range);
+                                                false ->
+                                                    yaws:outh_set_304_headers(
+						      Req, UT, H),
+                                                    deliver_accumulated(CliSock),
+                                                    done_or_continue()
+                                            end
+                                    end;
                                 Line -> 
                                     case member(ETag,
                                                 yaws:split_sep(Line, $,)) of
@@ -1750,7 +1766,8 @@ done_or_continue() ->
     case yaws:outh_get_doclose() of
         true -> done;
         false -> continue;
-        keep_alive -> continue 
+        keep_alive -> continue;
+	undefined -> continue
     end.
 
 

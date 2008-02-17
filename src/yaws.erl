@@ -29,6 +29,7 @@
          ssl_cacertfile/1, ssl_cacertfile/2,
          ssl_ciphers/1, ssl_ciphers/2,
          ssl_cachetimeout/1, ssl_cachetimeout/2]).
+-export([is_modified_p/2]).
 
 -import(lists, [reverse/1, reverse/2]).
 
@@ -1819,7 +1820,7 @@ gen_tcp_send(S, Data) ->
             case Res of
                 ok ->
                     ok;
-                Err ->
+                _Err ->
                     exit(normal)   %% keep quiet
             end;
         true ->
