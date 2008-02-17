@@ -14,8 +14,13 @@
 
 yaws=%prefix%/bin/yaws
 prog=yaws
-#yawsid_opts=--id =myserverid
-conf="--conf %etcdir%/yaws.conf"
+#
+# Default yawsid is "default". If you change this to another ID,
+# be sure to also uncomment the yawsid_opts line just below.
+#
+yawsid=default
+#yawsid_opts="--id $yawsid"
+conf="--conf %etcdir%yaws.conf"
 
 start() {
         echo -n $"Starting $prog: "
@@ -29,7 +34,7 @@ start() {
 stop() {
 	echo -n $"Stopping $prog: "
 	str=`$yaws ${yawsid_opts} --stop`
-	if [ "$str" = "stopping" ]; then
+	if [ "$str" = "stopping yaws with id=$yawsid" ]; then
 	    echo_success
 	    RETVAL=0
 	else
