@@ -112,7 +112,7 @@ while [ $# -gt 0 ]
           traceoutput=" -yaws traceoutput ";
           trace=" -yaws trace traffic ";;
       -M|--mnesiadir)
-          mnesia=" -mnesia dir '"$1"' -run mnesia start"
+          mnesia=" -mnesia dir '\"$1\"' -run mnesia start"
           shift;;
       -c|--conf)
           conf=" -conf $1 "
