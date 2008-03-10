@@ -1,77 +1,103 @@
 
 <erl>
-
-
-box(Str) ->
-    {'div',[{class,"box"}],
-     {pre,[], yaws_api:htmlize(Str)}}.
-
-tbox(T) ->
-    box(lists:flatten(io_lib:format("~p",[T]))).
-
-
 out(A) -> 
-    [{ssi, "TAB.inc", "%%",[{"cgi", "choosen"}]},
-     {ehtml,
-      {'div', [{id, "entry"}],
+       {ssi, "TAB.inc", "%%",[{"cgi", "choosen"}]}.
+</erl>
 
-       [{h1, [], "Plain CGI and PHP"},
-       
-       {p,[],
-        "Yaws supports plain CGI just fine. the two most common ways to run yaws cgi script is either as regular cgi scripts or as php scripts through the typical php-cgi binary. Yaws chooses how to ship a file pased on file extension. Let's start with the php-cgi example. PHP files have the extension .php and if we enable php by indicating it in yaws.conf:"},
-        box("php_exe_path = /usr/bin/php-cgi"
-           ),
-        {p,[], "And then also ensure that we have enaable php processing for the individual server as in "},
-        box("
+
+<div id="entry">
+
+<h1>Plain CGI and PHP</h1>
+
+<p>
+  Yaws supports plain CGI just fine. The two most common ways to run yaws cgi script is either as regular cgi scripts or as php scripts through the typical php-cgi binary. Yaws chooses how to ship a file pased on file extension. Let's start with the php-cgi example. PHP files have the extension .php and if we enable php by indicating it in yaws.conf:
+</p>
+
+
+<div class="box">        
+      <verbatim>
+        php_exe_path = /usr/bin/php-cgi
+      </verbatim>
+</div>
+
+<p>And then also ensure that we have enaable php processing for the individual server as in:
+</p>
+
+
+<div class="box">        
+      <verbatim>
 
 <server www.hyber.org>
         port = 80
         listen = 0.0.0.0
         allowed_scripts = php yaws cgi
-        ...."
-           ),
-        {p, [], "Yaws will invoke the php-cgi binary and talk the CGI protocol to the binary. "},
+        ....
+</server>
+      </verbatim>
+</div>
+
+<p>
+
+Yaws will invoke the php-cgi binary and talk the CGI protocol to the binary. 
+</p>
+<p>
         
-        {p, [], "Another common situation is that we write our CGI scripts in e.g. python and use python libraries to speak the CGI protocol. The easiest way forward here is to rename the python scripts with the extension \".cgi\" as in this example:"
-        },
-        
-        {p, [], " We have the following python file called foo.cgi"},
-        box("
+Another common situation is that we write our CGI scripts in e.g. python and use python libraries to speak the CGI protocol. The easiest way forward here is to rename the python scripts with the extension ".cgi" as in this example:
+</p>
+<p>        
+We have the following python file called foo.cgi:
+</p>
+
+
+<div class="box">        
+      <verbatim>
+
 #!/usr/bin/python
 
 import cgi
 
-print \"Content-type: text/html\n\n\"
-print \"<h1>hi there </h1>\"
-            "),
+print "Content-type: text/html\n\n"
+print "<h1>hi there </h1>"
+      </verbatim>
+</div>
+<p>
 
-        {p, [], "Since the file ends with the magic suffix \".cgi\", Yaws will just invoke the file as an executable and speak CGI to it. Thus for this scheme to work we must also make the file exeutable"},
+Since the file ends with the magic suffix ".cgi", Yaws will just invoke the file as an executable and speak CGI to it. Thus for this scheme to work we must also make the file exeutable.
+</p>
 
-        {p, [], "Yet another common scenario is when have a set of CGI files not ending with the \".cgi\" file extension. We can put all the CGI files in a common directory and define an appmod as follows:"},
+<p>
+Yet another common scenario is when have a set of CGI files not ending with the \".cgi\" file extension. We can put all the CGI files in a common directory and define an appmod as follows:
+</p>
 
-box("
+
+<div class="box">        
+      <verbatim>
 
 out(Arg) ->
     yaws_cgi:call_cgi(Arg,  lists:flatten(Arg#arg.fullpath)).
 
-"),
+      </verbatim>
+</div>
+<p>
+and then configure the appmod appropriately in yaws.conf. The default yaws.conf file contains an entry.
+</p>
 
-{p, [], "and then configure the appmod appropriately in yaws.conf. The default yaws.conf file contains an entry"},
-box("
+
+
+<div class="box">        
+      <verbatim>
+
         appmods = <cgi-bin, yaws_appmod_cgi>        
-"),
-
-{p, [], "Thus if we put put any executable files in the \"cgi-bin\" directory under the docroot, Yaws will speak CGI to those executables."}
-
-
-
-]}},
+      </verbatim>
+</div>
+<p>
+Thus if we put put any executable files in the \"cgi-bin\" directory under the docroot, Yaws will speak CGI to those executables.
+</p>
 
 
 
-
-{ssi, "END2",[],[]}
-].
-
+<erl>
+out(A) -> {ssi, "END2",[],[]}.
 </erl>
+
 

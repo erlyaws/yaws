@@ -64,7 +64,7 @@ load(E) ->
             ?Debug("FLOAD: ~p", [R]),
             case R of
                 {ok, GC5, Cs} ->
-                    yaws:mkdir(GC5#gconf.tmpdir),
+                    yaws:mkdir(yaws:tmpdir()),
                     Cs2 = add_yaws_auth(Cs),
                     add_yaws_soap_srv(GC5),
                     validate_cs(GC5, Cs2);
@@ -261,39 +261,12 @@ make_default_gconf(Debug, Id) ->
                                ?GC_FAIL_ON_BIND_ERR bor
                                ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH
                    end,
-           tmpdir = default_tmp_dir(),
+           
            yaws = "Yaws " ++ yaws_generated:version(),
            id = Id
           }.
 
 
-
-default_tmp_dir() ->
-    case os:type() of
-        {win32,_} ->
-            case os:getenv("TEMP") of
-                false ->
-                    case os:getenv("TMP") of
-                        %%
-                        %% No temporary path set?
-                        %% Then try standard paths.
-                        %%
-                        false ->
-                            case file:read_file_info("C:/WINNT/Temp") of
-                                {error, _} ->
-                                    "C:/WINDOWS/Temp";
-                                {ok, _} ->
-                                    "C:/WINNT/Temp"
-                            end;
-                        PathTMP ->
-                            PathTMP
-                    end;
-                PathTEMP ->
-                    PathTEMP
-            end;
-        _ ->
-            filename:join([os:getenv("HOME"), ".yaws"])
-    end.
 
 make_default_sconf() ->
     Y = yaws_dir(),
@@ -506,14 +479,9 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
             end;
 
         ["tmpdir", '=', TmpDir] ->
-            Dir = filename:absname(TmpDir),
-            case is_dir(Dir) of
-                true ->
-                    fload(FD, globals, GC#gconf{tmpdir=Dir},
-                          C, Cs, Lno+1, Next);
-                false ->
-                    {error, ?F("Expect directory at line ~w", [Lno])}
-            end;
+            %% ignore
+            error_logger:format("tmpdir in yaws.conf is no longer supported\n",[]),
+            fload(FD, globals, GC,C, Cs, Lno+1, Next);
 
         %% keep this bugger for backward compat for a while
         ["keepalive_timeout", '=', Val] ->
@@ -1029,11 +997,11 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
             A2 = Auth#auth{mod = list_to_atom(Mod)},
             fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
         ["user", '=', User] ->
-            case string:tokens(User, ":") of
+            case (catch string:tokens(User, ":")) of
                 [Name, Passwd] ->
                     A2 = Auth#auth{users = [{Name, Passwd}|Auth#auth.users]},
                     fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
-                false ->
+                _ ->
                     {error, ?F("Invalid user at line ~w", [Lno])}
             end;
         ["pam", "service", '=', Serv] ->

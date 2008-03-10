@@ -59,9 +59,19 @@ yaws_generated.erl:	yaws_generated.template ../vsn.mk
 	. ../vsn.mk; \
 	sed -e "s/%VSN%/${YAWS_VSN}/" -e \
 	       "s;%VARDIR%;${VARDIR};g"  -e  \
+	       "s;%localinstall%;true;g"  -e  \
 	       "s;%ETCDIR%;${ETCDIR};g"   \
 	< yaws_generated.template > yaws_generated.erl
 
+
+## need to differentiate between local install and not
+regen:
+	. ../vsn.mk; \
+	sed -e "s/%VSN%/${YAWS_VSN}/" -e \
+	       "s;%VARDIR%;${VARDIR};g"  -e  \
+	       "s;%localinstall%;false;g"  -e  \
+	       "s;%ETCDIR%;${ETCDIR};g"   \
+	< yaws_generated.template > yaws_generated.erl
 
 
 charset.def:	
@@ -78,7 +88,7 @@ debug:
 clean:
 	rm -f $(EBIN_FILES) yaws_generated.erl charset.def mime_types.erl
 
-install: all docsinstall
+install: regen all docsinstall
 	$(INSTALL) -d $(DESTDIR)/$(PREFIX)/lib/yaws/examples/ebin
 	$(INSTALL) -d $(DESTDIR)/$(PREFIX)/lib/yaws/examples/include
 	$(INSTALL) -d $(DESTDIR)/$(PREFIX)/lib/yaws/ebin
@@ -88,12 +98,11 @@ install: all docsinstall
 	(cd ..; tar cf - ebin ) | (cd $(DESTDIR)/$(PREFIX)/lib/yaws; tar xf - )
 	(cd ..; tar cf - include ) | (cd $(DESTDIR)/$(PREFIX)/lib/yaws; tar xf - )
 	(cd ..; tar cf - priv/*.xsd ) | (cd $(DESTDIR)/$(PREFIX)/lib/yaws; tar xf - )
+	$(RM) yaws_generated.erl ../ebin/yaws_generated.beam 2>/dev/null || true
 
 docsinstall:
 	$(INSTALL) -d $(DESTDIR)/$(VARDIR)/yaws/www
 	(cd ..; tar cf - www ) | (cd $(DESTDIR)/$(VARDIR)/yaws; tar xf - )
-
-
 
 tags:
 	erl  -noshell -pa ../ebin -s yaws_debug mktags

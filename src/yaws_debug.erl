@@ -120,7 +120,7 @@ fail({{debug,Fstr}, File,Line,Fmt, Args}) ->
                           [Fstr, node(), filename:basename(File), 
                            Line, self()])),
 
-    case io:format(user, Str ++ Fmt ++ "~n", Args) of
+    case (catch io:format(user, Str ++ Fmt ++ "~n", Args)) of
         ok -> ok;
         _ -> io:format(user, "ERROR ~p:~p: Pid ~w: (bad format)~n~p,~p~n",
                        [File, Line, self(), Fmt, Args]),
@@ -129,7 +129,7 @@ fail({{debug,Fstr}, File,Line,Fmt, Args}) ->
     end;
 
 fail({format, File,Line,Fmt,Args}) ->
-    case io:format(user, Fmt,Args) of
+    case (catch io:format(user, Fmt,Args)) of
         ok -> ok;
         _ ->
             io:format(user, "ERROR ~p:~p: Pid ~w: (bad format)~n~p,~p~n",

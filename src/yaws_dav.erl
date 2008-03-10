@@ -144,12 +144,12 @@ do_move(From, To) ->
             out201();
         _ ->
             case file:copy(From, To) of
-                ok ->
+                {ok,_} ->
                     ok = file:delete(From),
                     out201();
-                Error ->
+                {error, Reason} ->
                     ?elog("move from ~p to ~p failed: ~p\n",
-                          [From, To, Error]),
+                          [From, To, Reason]),
                     out409()
             end
     end.

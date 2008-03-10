@@ -29,7 +29,7 @@
          ssl_cacertfile/1, ssl_cacertfile/2,
          ssl_ciphers/1, ssl_ciphers/2,
          ssl_cachetimeout/1, ssl_cachetimeout/2]).
--export([is_modified_p/2]).
+-export([is_modified_p/2, tmpdir/0]).
 
 -import(lists, [reverse/1, reverse/2]).
 
@@ -126,8 +126,6 @@ setup_gconf(GL, GC) ->
                        GC#gconf.yaws),
            id = lkup(id, GL, 
                      GC#gconf.id),
-           tmpdir = lkup(tmpdir, GL, 
-                         GC#gconf.tmpdir),
            enable_soap = lkup(enable_soap, GL, 
                               GC#gconf.enable_soap)
           }.
@@ -241,7 +239,7 @@ dohup(Sock) ->
                          Err
                  end),
     gen_event:notify(yaws_event_manager, {yaws_hupped, Res}),
-    gen_event:notify(yaws_log, {minute10, '_'}),
+    gen_event:notify(yaws_log, {yaws_hupped, Res}),
     gen_tcp:send(Sock, io_lib:format("hupped: ~p~n", [Res])),
     gen_tcp:close(Sock).
 
@@ -1726,11 +1724,11 @@ uid_to_name(Uid) ->
     end.
 
 load_setuid_drv() ->
-    Path = case code:priv_dir(yaws) of
-               {error, _} ->
-                   %% localinstall
+    Path = case yaws_generated:is_local_install() of
+               true ->
                    filename:dirname(code:which(?MODULE)) ++ "/../priv/lib";
-               PrivDir ->
+               false ->
+                   PrivDir = code:priv_dir(yaws),
                    filename:join(PrivDir,"lib")
            end,
     case erl_ddll:load_driver(Path, "setuid_drv") of
@@ -2187,4 +2185,31 @@ redirect_scheme_port(SC) ->
     Scheme = redirect_scheme(SC),
     PortPart = redirect_port(SC),
     {Scheme, PortPart}.
+
+tmpdir() ->
+    case os:type() of
+        {win32,_} ->
+            case os:getenv("TEMP") of
+                false ->
+                    case os:getenv("TMP") of
+                        %%
+                        %% No temporary path set?
+                        %% Then try standard paths.
+                        %%
+                        false ->
+                            case file:read_file_info("C:/WINNT/Temp") of
+                                {error, _} ->
+                                    "C:/WINDOWS/Temp";
+                                {ok, _} ->
+                                    "C:/WINNT/Temp"
+                            end;
+                        PathTMP ->
+                            PathTMP
+                    end;
+                PathTEMP ->
+                    PathTEMP
+            end;
+        _ ->
+            filename:join([os:getenv("HOME"), ".yaws"])
+    end.
 

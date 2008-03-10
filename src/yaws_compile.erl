@@ -300,7 +300,7 @@ new_out_file_name(Module, GC) ->
         true ->
             Module ++ ".erl";
         _ ->
-            filename:join([GC#gconf.tmpdir, "yaws",
+            filename:join([yaws:tmpdir(), "yaws",
                            GC#gconf.id, Module ++ ".erl"])
     end.
 

@@ -89,7 +89,6 @@
                phpexe = "/usr/bin/php-cgi",  %% cgi capable php executable
                yaws,                %% server string
                id = "default",      %% string identifying this instance of yaws
-               tmpdir,
                enable_soap = false  %% start yaws_soap_srv iff true
               }).  
 

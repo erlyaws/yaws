@@ -429,8 +429,8 @@ rewrite_headers(PS, H) when PS#psock.type == server ->
 %% Rewrite a properly formatted location redir
 rewrite_loc_url(LocUrl, PS) ->
     SC=get(sc),
-    Scheme = yaws_server:redirect_scheme(SC),
-    RedirHost = yaws_server:redirect_host(SC, PS#psock.r_host),
+    Scheme = yaws:redirect_scheme(SC),
+    RedirHost = yaws:redirect_host(SC, PS#psock.r_host),
     _RealPath = LocUrl#url.path,
     [Scheme, RedirHost, yaws:slash_append(PS#psock.prefix, LocUrl#url.path)].
 
@@ -441,8 +441,8 @@ rewrite_loc_url(LocUrl, PS) ->
 
 rewrite_loc_rel(PS, Loc) ->
     SC=get(sc),
-    Scheme = yaws_server:redirect_scheme(SC),
-    RedirHost = yaws_server:redirect_host(SC, PS#psock.r_host),
+    Scheme = yaws:redirect_scheme(SC),
+    RedirHost = yaws:redirect_host(SC, PS#psock.r_host),
     [Scheme, RedirHost,Loc].
 
 

@@ -374,7 +374,8 @@ handle_event(_Event, State) ->
 handle_info(secs3, State) ->
     {noreply, State#state{now = fmtnow()}};
 
-
+handle_info({notify,{yaws_hupped,_}}, State) ->
+    handle_info(minute10,State);
 %% once every 10  minute, check log sizes
 handle_info(minute10, State) ->
     L = lists:map(
@@ -433,11 +434,7 @@ wrap(AL, State) ->
             error_logger:format("Logfile ~p disapeared - we reopen it",
                                 [AL#alog.filename]),
             {ok, Fd2} = file:open(AL#alog.filename, [write, raw]),
-            AL#alog{fd = Fd2};
-        {'EXIT', Rsn} ->
-            error_logger:format("Failed to wraplog ~p:~p~n",
-                                [AL#alog.filename, Rsn]),
-            AL
+            AL#alog{fd = Fd2}
     end.
 
 

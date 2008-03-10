@@ -433,8 +433,6 @@ do_parse_spec(QueryList, Spec, Last, Cur, State) when list(QueryList) ->
     do_parse_spec(list_to_binary(QueryList), Spec, Last, Cur, State).
 
 
-
-
 tail_spec(['ALLSTRINGS']) ->
     [string, 'ALLSTRINGS'];
 tail_spec(L) ->

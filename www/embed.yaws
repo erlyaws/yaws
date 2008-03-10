@@ -258,6 +258,11 @@ out(Arg) ->
 <p>Thus passing data from the surrounding applications configuration routines
   down to each .yaws web page.</p>
 
+<p>Another important fact to consider when choosing wether to run your yaws
+application as an embedded yaws app or not is that all the yaws control 
+functions are disabled when we use yaws as an embedded web server. I.e
+yaws --ls, yaws --stop etc. This under the assumption that you already have support for this type of functionality in your application.
+</p>
 
 
 </div>

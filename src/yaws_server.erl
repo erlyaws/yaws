@@ -149,10 +149,17 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
               yaws_debug:format("Add path ~p~n", [D]),
               code:add_pathz(D)
       end, GC#gconf.ebin_dir),
-    yaws_debug:format("Running with id=~p~n"
-                      "Running with debug checks turned on (slower server) ~n"
+    yaws_debug:format("Running with id=~p (localinstall=~p) ~n"
+                      "~s"
                       "Logging to directory ~p~n",
-                      [GC#gconf.id, GC#gconf.logdir]),
+                      [GC#gconf.id, yaws_generated:is_local_install(),
+                       if ?gc_has_debug(GC) ->
+                               "Running with debug checks "
+                               "turned on (slower server) ~n";
+                          true ->
+                               ""
+                       end,
+                       GC#gconf.logdir]),
 
     setup_dirs(GC),
 
@@ -241,12 +248,8 @@ handle_call({setconf, GC, Groups}, _From, State) ->
     foreach(fun(Pid) ->
                     gserv_stop(Pid)
             end, Curr),
-    case init2(GC, Groups, undef, State#state.embedded, false) of
-        {ok, State2} ->
-            {reply, ok, State2};
-        Err ->
-            {reply, Err, #state{gc=GC, pairs=[], mnum=0}}
-    end;
+    {ok, State2} = init2(GC, Groups, undef, State#state.embedded, false),
+    {reply, ok, State2};
 
 handle_call(getconf, _From, State) ->
     Groups = map(fun({_Pid, SCs}) -> SCs end, State#state.pairs),
@@ -268,7 +271,7 @@ handle_call({update_sconf, NewSc}, From, State) ->
                             P2 = yaws_config:update_sconf(NewSc2, 
                                                           State#state.pairs),
                             {noreply, State#state{pairs = P2}}
-                    after 1000 ->
+                    after 2000 ->
                             {reply, {error, "Failed to update new conf"}, State}
                     end
             end;
@@ -435,9 +438,10 @@ gserv(Top, GC, Group0) ->
 
 
 setup_dirs(GC) ->
-    file:make_dir(GC#gconf.tmpdir),
-    TD0 = filename:join([GC#gconf.tmpdir,"yaws"]),
+    file:make_dir(yaws:tmpdir()),
+    TD0 = filename:join([yaws:tmpdir(),"yaws"]),
     file:make_dir(TD0),
+    file:make_dir(filename:join([yaws:tmpdir(),"yaws", "CTL"])),
     TD1 = filename:join([TD0, GC#gconf.id]),
     file:make_dir(TD1),
     case file:list_dir(TD1) of
@@ -813,6 +817,9 @@ acceptor0(GS, Top) ->
                 {Top, accept} ->
                     acceptor0(GS, Top)
             end;
+        {error, closed} ->
+            %% This is what happens when we call yaws --stop
+            exit(normal);
         ERR ->
             %% When we fail to accept, the correct thing to do
             %% is to terminate yaws as an application, if we're running
@@ -1942,10 +1949,10 @@ do_yaws(CliSock, ARG, UT, N) ->
 
 del_old_files(_, []) ->
     ok;
-del_old_files(GC, [{_FileAtom, spec, _Mtime1, Spec, _}]) ->
+del_old_files(_GC, [{_FileAtom, spec, _Mtime1, Spec, _}]) ->
     foreach(
       fun({mod, _, _, _,  Mod, _Func}) ->
-              F=filename:join([GC#gconf.tmpdir, "yaws", 
+              F=filename:join([yaws:tmpdir(), "yaws", 
                                yaws:to_list(Mod) ++ ".erl"]),
               code:purge(Mod),
               code:purge(Mod),
@@ -2822,21 +2829,12 @@ get_more_post_data(PPS, ARG) ->
     N = SC#sconf.partial_post_size,
     Len = list_to_integer((ARG#arg.headers)#headers.content_length),
     if N + PPS < Len ->
-            case get_client_data(ARG#arg.clisock, N, 
-                                 is_ssl(SC#sconf.ssl)) of
-                Bin when binary(Bin) ->
-                    {partial, Bin};
-                Else ->
-                    {error, Else}
-            end;
+            Bin = get_client_data(ARG#arg.clisock, N, 
+                                  is_ssl(SC#sconf.ssl)),
+            {partial, Bin};
        true ->
-            case get_client_data(ARG#arg.clisock, Len - PPS, 
-                                 is_ssl(SC#sconf.ssl)) of
-                Bin when binary(Bin) ->
-                    Bin;
-                Else ->
-                    {error, Else}
-            end
+            get_client_data(ARG#arg.clisock, Len - PPS, 
+                            is_ssl(SC#sconf.ssl))
     end.
 
 

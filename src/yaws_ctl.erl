@@ -25,13 +25,7 @@
 start(_GC, FirstTime) when FirstTime == false ->
     ok;
 start(GC, true) ->
-    case proc_lib:start_link(?MODULE, run, [GC]) of
-        ok ->
-            ok;
-        {error, RSN} ->
-            error_logger:format("~s~n",[RSN]),
-            erlang:error(RSN)
-    end.
+    proc_lib:start_link(?MODULE, run, [GC]).
 
 
 run(GC) ->
@@ -46,15 +40,13 @@ run(GC) ->
             %% message
             gen_tcp:close(Sock),
             e("There is already a yaws system running with the same ~n"
-              " id <~p> on this computer, ~n"
+              " id <~p> on this computer and this user, ~n"
               " set another id in the yaws conf file ~n", 
               [GC#gconf.id]);
         {error, eaccess} ->
             %% We're not allowed to open the ctl file
-            e("Error reading ~s, you are probably (sometimes) running ~n"
-              " yaws as another userid, but with the same yaws id <~p> ~n"
-              " set another id in the yaws conf file ~n", 
-              [ctl_file(GC#gconf.id), GC#gconf.id]);
+            e("Error reading ~s, you don't have access rights to read it",
+              [ctl_file(GC#gconf.id)]);
         {error, _} ->
             %% Fine, this should be the case
             run_listen(GC)
@@ -127,7 +119,7 @@ w_ctl_file(Sid, Port, Key) ->
 
 
 ctl_file(Sid) ->
-    FN = filename:join([yaws_generated:ctldir(), "ctl-" ++ yaws:to_list(Sid)]),
+    FN = filename:join([ctldir(), "ctl-" ++ yaws:to_list(Sid)]),
     filelib:ensure_dir(FN),
     FN.
 
@@ -178,9 +170,7 @@ handle_a(A, GC, Key) ->
 
             end;
         {error, _} ->
-            gen_tcp:close(A);
-        _Err ->
-            ignore
+            gen_tcp:close(A)
     end.
 
 
@@ -349,7 +339,7 @@ s_cmd(Fd, SID, Key, Term) ->
 
 %% List existing yaws nodes on this machine
 ls(_) ->
-    case file:list_dir(yaws_generated:ctldir()) of
+    case file:list_dir(ctldir()) of
         {ok, List} ->
             io:format("~-15s~-10s~-10s~n",
                       ["Id", "Status", "Owner"]),
@@ -366,7 +356,7 @@ ls(_) ->
 
 
 lls(CtlFile0 = "ctl-" ++ Id) ->
-    CtlFile = filename:join([yaws_generated:ctldir(), CtlFile0]),
+    CtlFile = filename:join([ctldir(), CtlFile0]),
     case {file:read_file_info(CtlFile),
           file:read_file(CtlFile)} of
         {{ok, FI}, {error, eacces}} ->
@@ -438,7 +428,8 @@ check([Id, File| IncludeDirs]) ->
 trace([What, SID]) ->
     actl(SID, {trace, What}).
 
-
+ctldir() ->
+    filename:join([yaws:tmpdir(), "CTL"]).
 
 
 

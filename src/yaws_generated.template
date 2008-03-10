@@ -6,8 +6,6 @@
 %%%----------------------------------------------------------------------
 
 %% generated code from some environment variables
-%% especially VARDIR is important since it controls
-%% where the --hup and friends
 
 -module(yaws_generated).
 -author('klacke@bluetail.com').
@@ -18,8 +16,8 @@ version() -> "%VSN%".
 
 vardir() ->  "%VARDIR%".
 
-ctldir() -> "%VARDIR%/run/yaws".
-
 etcdir() -> "%ETCDIR%".
-          
+
+is_local_install() -> %localinstall%.
+                   
 
