@@ -83,8 +83,8 @@ start_worker(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
              undefined -> Arg#arg.pathinfo;
              OK -> OK
          end,
-    Worker = spawn(?MODULE, cgi_worker, 
-                   [self(), Arg, ExeFN, Scriptfilename, PI, ExtraEnv, SC]),
+    Worker = proc_lib:spawn(?MODULE, cgi_worker, 
+                            [self(), Arg, ExeFN, Scriptfilename, PI, ExtraEnv, SC]),
     Worker.
 
 
@@ -456,7 +456,9 @@ do_work(Parent, Arg, Port) ->
     header_loop(Parent, Arg, {start, Port}).
 
 header_loop(Parent, Arg, S) ->
-    case get_line(S) of
+    Line = get_line(S),
+    ?Debug("Line = ~p~n", [Line]),
+    case Line of
         {failure, F} ->
             Parent ! {self(), failure, F};
         {[], T} ->

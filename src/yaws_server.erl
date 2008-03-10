@@ -658,7 +658,6 @@ ssl_opts(GC, SC, SSL) ->
             {ip, SC#sconf.listen},
             {packet, http},
             {active, false} | ssl_opts(GC, SSL)],
-    io:format("OPTS ~p~n", [Opts]),
     Opts.
 
 
@@ -702,7 +701,7 @@ ssl_opts(GC, SSL) ->
          if ?gc_use_old_ssl(GC) ->
                  false;
             true ->  
-                 %{ssl_imp, new}
+                 %{ssl_imp, new} .... doesn't work yet
                  false
          end
         ],

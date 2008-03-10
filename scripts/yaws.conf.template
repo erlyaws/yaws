@@ -125,6 +125,7 @@ use_fdsrv = false
         port = %port%
         listen = 0.0.0.0
         docroot = %docroot%
+        appmods = <cgi-bin, yaws_appmod_cgi>        
 </server>
 
 <server localhost>
@@ -132,7 +133,6 @@ use_fdsrv = false
         listen = 0.0.0.0
         docroot = /tmp
         dir_listings = true
-        dav = true
         <auth>
                 realm = foobar
                 dir = /

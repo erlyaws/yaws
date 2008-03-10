@@ -36,7 +36,8 @@ MODULES=yaws \
 	json jsonrpc yaws_jsonrpc yaws_xmlrpc\
 	haxe yaws_rpc \
 	yaws_soap_srv yaws_soap_lib \
-	authmod_gssapi
+	authmod_gssapi \
+	yaws_appmod_cgi
 
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app
