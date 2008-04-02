@@ -133,9 +133,7 @@ iscontent({streamcontent, _, _}) ->
 iscontent(_) ->
     false.
 
-isredirect({redirect_local, _}) ->
-    true;
-isredirect({redirect, _}) ->
+isredirect({status, I}) when is_integer(I) , I >301, I < 304 ->
     true;
 isredirect(_) ->
     false.
@@ -393,14 +391,12 @@ do_header(_Arg, "Content-Type: "++CT, {partial_data, Data}) ->
     {streamcontent, CT, Data};
 do_header(_Arg, "Content-Type: "++CT, {all_data, Data}) ->
     {content, CT, Data};
-do_header(_Arg, "Location: "++Loc, _) ->
-    {redirect_local, {any_path, Loc}};
 do_header(_Arg, "Status: "++[N1,N2,N3|_], _) ->
     {status, list_to_integer([N1,N2,N3])};
 do_header(_Arg, "HTTP/1."++[_,_,N1,N2,N3|_], _) ->
     {status, list_to_integer([N1,N2,N3])};
 do_header(_Arg, Line, _) ->
-    {header, Line}.    % Is this correct?
+    {header, Line}.   
 
 
 
