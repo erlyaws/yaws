@@ -478,9 +478,10 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Expect directory at line ~w", [Lno])}
             end;
 
-        ["tmpdir", '=', TmpDir] ->
+        ["tmpdir", '=', _TmpDir] ->
             %% ignore
-            error_logger:format("tmpdir in yaws.conf is no longer supported\n",[]),
+            error_logger:format(
+              "tmpdir in yaws.conf is no longer supported - ignoring\n",[]),
             fload(FD, globals, GC,C, Cs, Lno+1, Next);
 
         %% keep this bugger for backward compat for a while
@@ -574,7 +575,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
         ["id", '=', String] when GC#gconf.id == undefined;  
-        GC#gconf.id == default ->
+                                 GC#gconf.id == default ->
             fload(FD, globals, GC#gconf{id=String},C, Cs, Lno+1, Next);
         ["id", '=', String]  ->
             error_logger:format("Ignoring 'id = ~p' setting at line ~p~n", 

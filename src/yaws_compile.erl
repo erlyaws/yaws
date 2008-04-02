@@ -300,8 +300,7 @@ new_out_file_name(Module, GC) ->
         true ->
             Module ++ ".erl";
         _ ->
-            filename:join([yaws:tmpdir(), "yaws",
-                           GC#gconf.id, Module ++ ".erl"])
+            filename:join([yaws:id_dir(GC#gconf.id), Module ++ ".erl"])
     end.
 
 %% this will generate 10 lines

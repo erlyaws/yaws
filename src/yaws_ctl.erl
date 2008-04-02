@@ -31,10 +31,8 @@ start(GC, true) ->
 run(GC) ->
     %% First check if there is already a Yaws system running
     %% with the same sid.
-
     case connect(GC#gconf.id) of
         {ok, Sock, _Key} ->
-
             %% Not good, let's get some sys info
             %% from that system so we can produce a good error
             %% message
@@ -46,7 +44,7 @@ run(GC) ->
         {error, eaccess} ->
             %% We're not allowed to open the ctl file
             e("Error reading ~s, you don't have access rights to read it",
-              [ctl_file(GC#gconf.id)]);
+              [yaws:ctl_file(GC#gconf.id)]);
         {error, _} ->
             %% Fine, this should be the case
             run_listen(GC)
@@ -73,16 +71,13 @@ run_listen(GC) ->
                             proc_lib:init_ack(ok),
                             aloop(L, GC, Key);
                         error ->
-                            error_logger:format(
+                            e(
                               "Failed to create/manipulate the ctlfile ~n"
                               "called ~s~n"
                               "Either problems with permissions or "
                               " earlier runs of yaws ~nwith the same id "
-                              " <~p> as this, check dir for perms~n"
-                              "None of Yaws ctl functions will work~n",
-                              [ctl_file(GC#gconf.id), GC#gconf.id]),
-                            proc_lib:init_ack(ok),
-                            aloop(L, GC, Key)
+                              " <~p> as this, check dir for perms~n",
+                              [yaws:ctl_file(GC#gconf.id), GC#gconf.id])
                     end;
                 Err ->
                     e("Cannot get sockname for ctlsock: ~p",[Err] )
@@ -101,12 +96,12 @@ e(Fmt, Args) ->
 %% write the control file, set perms of the file
 %% so that only this user can read the file
 %% That way we're making sure different users
-%% cannot manipulate eachothers webservers
+%% cannot manipulate each others webservers
 w_ctl_file(Sid, Port, Key) ->
     case catch
              begin
-                 F = ctl_file(Sid),
-                 ?Debug("Ctlfile : ~s~n", [F]),
+                 F = yaws:ctl_file(Sid),
+                 error_logger:info_msg("Ctlfile : ~s~n", [F]),
                  file:write_file(F, io_lib:format("~w.", [{Port,Key}])),
                  {ok, FI} = file:read_file_info(F),
                  ok = file:write_file_info(F, FI#file_info{mode = 8#00600})
@@ -117,11 +112,6 @@ w_ctl_file(Sid, Port, Key) ->
                  ok
          end.
 
-
-ctl_file(Sid) ->
-    FN = filename:join([ctldir(), "ctl-" ++ yaws:to_list(Sid)]),
-    filelib:ensure_dir(FN),
-    FN.
 
 
 aloop(L, GC, Key) ->
@@ -147,7 +137,7 @@ handle_a(A, GC, Key) ->
                     gen_tcp:send(A, io_lib:format(
                                       "stopping yaws with id=~p\n",
                                       [GC#gconf.id])),
-                    file:delete(ctl_file(GC#gconf.id)),
+                    file:delete(yaws:ctl_file(GC#gconf.id)),
                     init:stop();
                 {{trace, What}, Key} ->
                     Res = actl_trace(What),
@@ -273,10 +263,8 @@ purge([M|Ms], Ack) ->
             purge(Ms, [M|Ack])
     end.
 
-
-
 connect(Sid) ->
-    connect_file(ctl_file(Sid)).
+    connect_file(yaws:ctl_file(Sid)).
 
 
 %% The ctl file contains the port number the yaws server
@@ -308,45 +296,58 @@ actl(SID, Term) ->
                       "You are not allowd to read the file <~s>, ~n"
                       "specify by <-I id> which yaws system you want "
                       " to control~n",
-                      [SID, ctl_file(SID)]);
+                      [SID, yaws:ctl_file(SID)]),
+            timer:sleep(10),
+            erlang:halt(1);
         {error, econnrefused} ->
-            io:format("No yaws system responds~n",[]);
+            io:format("No yaws system responds~n",[]),
+            timer:sleep(10),
+            erlang:halt(2);
         {error, Reason} ->
             io:format("You failed to read the ctlfile ~s~n"
                       "error was: <~p>~n"
                       "specify by <-I id> which yaws system you want "
                       " to control~n",
-                      [ctl_file(SID), Reason]);
+                      [yaws:ctl_file(SID), Reason]),
+            timer:sleep(10),
+            erlang:halt(3);
         {ok, Socket, Key} ->
-            Str = s_cmd(Socket, SID, Key, Term),
-            io:format("~s", [Str])
-    end,
-    init:stop().
+            {Ret, Str} = s_cmd(Socket, SID, Key, Term),
+            io:format("~s", [Str]),
+            timer:sleep(10),
+            case Ret of 
+                ok ->
+                    erlang:halt(0);
+                error ->
+                    erlang:halt(4)
+            end
+    end.
 
 
 s_cmd(Fd, SID, Key, Term) ->
     gen_tcp:send(Fd, term_to_binary({Term, Key})),
     Res = case gen_tcp:recv(Fd, 0) of
               {ok, Bin} ->
-                  binary_to_list(Bin);
+                  {ok, binary_to_list(Bin)};
               Err ->
-                  io_lib:format("yaws server for yaws id <~p> not "
-                                "responding: ~p ~n", [SID, Err])
+                  {error, io_lib:format("yaws server for yaws id <~p> not "
+                                        "responding: ~p ~n", [SID, Err])}
           end,
     gen_tcp:close(Fd),
     Res.
 
 
-%% List existing yaws nodes on this machine
+%% List existing yaws nodes on this machine for this user
 ls(_) ->
-    case file:list_dir(ctldir()) of
+    Dir =     filename:join([yaws:tmpdir(), "yaws"]),
+    case file:list_dir(Dir) of
         {ok, List} ->
             io:format("~-15s~-10s~-10s~n",
                       ["Id", "Status", "Owner"]),
             io:format("-------------------------------------~n",[]),
             lists:foreach(
-              fun(CtlFile) ->
-                      lls(CtlFile)
+              fun(IdDir) ->
+                      lls(IdDir)
               end, List);
         _ ->
             ok
@@ -355,34 +356,32 @@ ls(_) ->
     init:stop().
 
 
-lls(CtlFile0 = "ctl-" ++ Id) ->
-    CtlFile = filename:join([ctldir(), CtlFile0]),
+lls(IdDir) ->
+    CtlFile = yaws:ctl_file(IdDir),
     case {file:read_file_info(CtlFile),
           file:read_file(CtlFile)} of
         {{ok, FI}, {error, eacces}} ->
             User = yaws:uid_to_name(FI#file_info.uid),
             io:format("~-15s~-10s~-10s~n",
-                      [Id, "noaccess", User]);
+                      [IdDir, "noaccess", User]);
         {{ok, FI}, {ok, _Bin}} ->
-            Running = case connect(Id) of
+            Running = case connect(IdDir) of
                           {ok, Sock, _Key} ->
                               gen_tcp:close(Sock),
                               "running";
                           {error, timeout} ->
                               "hanging??";
                           {error, eacces} ->
-                              "unknown";
+                              "noaccess";
                           _Err ->
                               "stopped"
                       end,
             User = yaws:uid_to_name(FI#file_info.uid),
             io:format("~-15s~-10s~-10s~n",
-                      [Id, Running, User]);
+                      [IdDir, Running, User]);
         _ ->
             ok
-    end;
-lls(_) ->
-    ok.
+    end.
 
 
 
@@ -427,11 +426,6 @@ check([Id, File| IncludeDirs]) ->
 %% control a daemon http/traffic tracer
 trace([What, SID]) ->
     actl(SID, {trace, What}).
-
-ctldir() ->
-    filename:join([yaws:tmpdir(), "CTL"]).
-
-
 
 
 

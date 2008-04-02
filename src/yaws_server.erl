@@ -114,7 +114,8 @@ init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded, Id}) ->
                         _ ->
                             ok
                     end,
-                    init2(Gconf, Sconfs, Env#env.runmod, Env#env.embedded, true);
+                    init2(Gconf, Sconfs, Env#env.runmod, 
+                          Env#env.embedded, true);
                 {error, E} ->
                     case erase(logdir) of
                         undefined ->
@@ -155,7 +156,7 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
                       [GC#gconf.id, yaws_generated:is_local_install(),
                        if ?gc_has_debug(GC) ->
                                "Running with debug checks "
-                               "turned on (slower server) ~n";
+                               "turned on (slower server) \n";
                           true ->
                                ""
                        end,
@@ -171,7 +172,7 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
                 {error, RSN} ->
                     %% Must call init stop here otherwise heart
                     %% will restart us
-                    error_logger:format("Failed to start: ~p~n", [RSN]),
+                    error_logger:format("Failed to start: ~s~n", [RSN]),
                     init:stop(),
                     receive nothing -> ok end
             end;
@@ -437,23 +438,21 @@ gserv(Top, GC, Group0) ->
     end.
 
 
+
 setup_dirs(GC) ->
-    file:make_dir(yaws:tmpdir()),
-    TD0 = filename:join([yaws:tmpdir(),"yaws"]),
-    file:make_dir(TD0),
-    file:make_dir(filename:join([yaws:tmpdir(),"yaws", "CTL"])),
-    TD1 = filename:join([TD0, GC#gconf.id]),
-    file:make_dir(TD1),
-    case file:list_dir(TD1) of
+    Dir = yaws:id_dir(GC#gconf.id),
+    Ctl = yaws:ctl_file(GC#gconf.id),
+    filelib:ensure_dir(Ctl),
+    case file:list_dir(Dir) of
         {ok, LL} ->
             foreach(
               fun(F) ->
-                      file:delete(filename:join([TD1, F]))
-              end, LL -- ["ctl"]);
+                      file:delete(filename:join([Dir, F]))
+              end, LL -- ["CTL"]);
         {error, RSN} ->
             error_logger:format("Failed to list ~p probably "
                                 "due to permission errs: ~p",
-                                [TD1, RSN]),
+                                [Dir, RSN]),
             erlang:error(RSN)
     end.
 

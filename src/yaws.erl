@@ -29,7 +29,7 @@
          ssl_cacertfile/1, ssl_cacertfile/2,
          ssl_ciphers/1, ssl_ciphers/2,
          ssl_cachetimeout/1, ssl_cachetimeout/2]).
--export([is_modified_p/2, tmpdir/0]).
+-export([is_modified_p/2, tmpdir/0, id_dir/1, ctl_file/1]).
 
 -import(lists, [reverse/1, reverse/2]).
 
@@ -2213,3 +2213,8 @@ tmpdir() ->
             filename:join([os:getenv("HOME"), ".yaws"])
     end.
 
+
+id_dir(Id) ->
+    filename:join([yaws:tmpdir(), "yaws", yaws:to_list(Id)]).
+ctl_file(Id) ->
+    filename:join([id_dir(Id), "CTL"]).
