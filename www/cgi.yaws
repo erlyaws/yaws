@@ -10,7 +10,7 @@ out(A) ->
 <h1>Plain CGI and PHP</h1>
 
 <p>
-  Yaws supports plain CGI just fine. The two most common ways to run yaws cgi script is either as regular cgi scripts or as php scripts through the typical php-cgi binary. Yaws chooses how to ship a file pased on file extension. Let's start with the php-cgi example. PHP files have the extension .php and if we enable php by indicating it in yaws.conf:
+  Yaws supports plain CGI just fine. The two most common ways to run yaws cgi script is either as regular cgi scripts or as php scripts through the typical php-cgi binary. Yaws chooses how to ship a file based on file extension. Let's start with the php-cgi example. PHP files have the extension .php and if we enable php by indicating it in yaws.conf:
 </p>
 
 
@@ -20,7 +20,7 @@ out(A) ->
       </verbatim>
 </div>
 
-<p>And then also ensure that we have enaable php processing for the individual server as in:
+<p>And then also ensure that we have enabled php processing for the individual server as in:
 </p>
 
 
@@ -66,7 +66,7 @@ Since the file ends with the magic suffix ".cgi", Yaws will just invoke the file
 </p>
 
 <p>
-Yet another common scenario is when have a set of CGI files not ending with the \".cgi\" file extension. We can put all the CGI files in a common directory and define an appmod as follows:
+Yet another common scenario is when have a set of CGI files not ending with the ".cgi" file extension. We can put all the CGI files in a common directory and define an appmod as follows:
 </p>
 
 
@@ -91,7 +91,7 @@ and then configure the appmod appropriately in yaws.conf. The default yaws.conf 
       </verbatim>
 </div>
 <p>
-Thus if we put put any executable files in the \"cgi-bin\" directory under the docroot, Yaws will speak CGI to those executables.
+Thus if we put put any executable files in the "cgi-bin" directory under the docroot, Yaws will speak CGI to those executables.
 </p>
 
 

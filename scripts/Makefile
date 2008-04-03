@@ -50,7 +50,7 @@ yaws.conf:
 		./Subst %sslport% 443 > yaws.conf
 
 clean:
-	rm -f ../bin/yaws
+	rm -f ../bin/yaws yaws.conf
 
 install:	.install
 
