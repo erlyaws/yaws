@@ -1,3 +1,14 @@
+Thu Apr  3 23:13:03 CEST 2008 version 1.76
+Patch from Lev Walkin to pass HTTP_REFERER as well as the HTTP_IF headers to the cgi script
+Untabified all code. This is the right thing (TM) I've finally realized after programming for some 20 years with TABS in the files. (klacke)
+redhat /etc/init patch by Steve Vinovski
+quote patch for mnesiadir by Richard Bucker
+Added CGI documentation including a new page http://yaws.hyber.org/cgi.yaws  (klacke)
+Several cleanups due to dialyzer, also moved the control file into users HOME directory so that we don't have the problem of writing in /var when we're running as non-root
+Adding support for: imports in the WSDL and support for more than one schema in the WSDL. Committed on behalf of: Willem de Jong.
+CGI should not just because it sees a Location: header do a 302, it is up the CGI script to set the correct status code (Sebastian strollo)
+Added some rudimentary docs in yaws.conf.5 for virtual directories. A feature added some time ago by Julian Noble, but never properly documented. (klacke)
+
 Sun Feb  3 2008 version 1.75
 Better id handling for embedde startup (Klacke)
 Reintroduced the SPNEGO/GSSAPI auth support by Mikael Magnusson

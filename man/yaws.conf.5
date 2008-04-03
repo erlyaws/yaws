@@ -650,6 +650,29 @@ max_num_cached_bytes = 6000000
 
 .fi
 
+Finally an example with virtual directories, vdirs.
+
+.nf
+
+<server server.domain>
+        port = 80
+        listen = 192.168.128.31
+        docroot = /var/yaws/www
+        arg_rewrite_mod = yaws_vdir
+        <opaque>
+          vdir = "/virtual1/ /usr/local/somewhere/notrelated/to/main/docroot"
+          vdir = "/myapp/ /some/other/path can include/spaces"
+          vdir = "/icons/  /usr/local/www/yaws/icons"
+        </opaque>
+ </server>
+
+.fi
+
+The first defined vdir can then be accessed at or under 
+http://server.domain/virtual1/  or http://server.domain/virtual1 
+ 
+
+
 .SH AUTHOR
 Written by Claes Wikstrom
 .SH "SEE ALSO"
