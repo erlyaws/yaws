@@ -151,6 +151,9 @@ while [ $# -gt 0 ]
       -proto_dist|--proto_dist)
           pdist=" -proto_dist $1 "
           shift;;
+       -setcookie|--setcookie)
+         erlarg="$erlarg -setcookie $1 "
+         shift;;
       -erlarg|--erlarg)
           erlarg="$erlarg $1 "
           shift;;
