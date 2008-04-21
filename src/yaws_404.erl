@@ -60,7 +60,8 @@ not_found_body(Path, _GC, _SC) ->
 %% while developing
 %% it's extremely convenient to get the crash messages in the browser,
 %% however not in production :-)
-
+%% This function can only return an {ehtml, EH} or an {html, HTML}
+%% value, no status codes, no headers etc.
 crashmsg(_Arg, _SC, L) ->
     {ehtml,
      [{h2, [], "Internal error, yaws code crashed"},

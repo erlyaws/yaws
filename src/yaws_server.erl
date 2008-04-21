@@ -2669,6 +2669,7 @@ handle_crash(ARG, L) ->
     ?Debug("handle_crash(~p)~n", [L]),
     SC=get(sc),
     yaws:elog("~s", [L]),
+    yaws:outh_set_status_code(500),
     case catch apply(SC#sconf.errormod_crash, crashmsg, [ARG, SC, L]) of
         {html, Str} ->
             accumulate_content(Str),
