@@ -792,6 +792,12 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             put(rss, []),
             fload(FD, rss, GC, C, Cs, Lno+1, Next);
 
+        ["tilde_allowed_scripts", '=' | Suffixes] ->
+            C2 = C#sconf{tilde_allowed_scripts = 
+                         lists:map(fun(X)->element(1,mime_types:t(X)) end,
+                                   Suffixes)},
+            fload(FD, server, GC, C2, Cs, Lno+1, Next);
+
         ["allowed_scripts", '=' | Suffixes] ->
             C2 = C#sconf{allowed_scripts = 
                          lists:map(fun(X)->element(1,mime_types:t(X)) end,

@@ -3766,7 +3766,7 @@ ret_user_dir(Upath)  ->
                         Home ->
                             DR2 = Home ++ "/public_html/",
                             SC2 = SC#sconf{
-                                    allowed_scripts = [],
+                                    allowed_scripts = SC#sconf.tilde_allowed_scripts,
                                     docroot=DR2},
                             put(sc, SC2),
 

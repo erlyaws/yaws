@@ -54,7 +54,11 @@ start_embedded(DocRoot, SL) when list(DocRoot),list(SL) ->
 start_embedded(DocRoot, SL, GL) when list(DocRoot),list(SL),list(GL) ->
     start_embedded(DocRoot, SL, GL, "default").
 start_embedded(DocRoot, SL, GL, Id) when list(DocRoot),list(SL),list(GL) ->
-    ok = application:load(yaws),
+    case application:load(yaws) of
+        ok -> ok;
+        {error, {already_loaded,yaws}} -> ok;
+        _ -> exit("Can not load yaws")
+    end,
     ok = application:set_env(yaws, embedded, true),
     ok = application:set_env(yaws, id, Id),
     application:start(yaws),

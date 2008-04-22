@@ -174,6 +174,7 @@
          opaque = [],                 %% useful in embedded mode
          start_mod,                   %% user provided module to be started
          allowed_scripts = [yaws,php,cgi],
+         tilde_allowed_scripts = [],
          revproxy = []
         }).
 
