@@ -154,19 +154,6 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%--------------------------------------------------------------------
 
-request(State, {M,F} = Id, {Req, Attachments}, SessionValue, Action) ->
-    {ok, Model} = get_model(State, Id),
-    case catch yaws_soap_lib:parseMessage(Req, Model) of
-        {ok, Header, Body} -> 
-            %% call function
-            result(Model, catch apply(M, F, [Header, Body, 
-                                             Action, SessionValue,
-					     Attachments]));
-        {error, Error} ->
-            cli_error(Error);
-        OtherError -> 
-            srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))
-    end;
 request(State, {M,F} = Id, Payload, SessionValue, Action) ->
     {ok, Model} = get_model(State, Id),
     Umsg = (catch erlsom_lib:toUnicode(Payload)),

@@ -109,23 +109,17 @@ parse_request(Args) -> % {{{
      end.  % }}}
 
 handle_payload(Args, Handler, Type) -> % {{{
+    Payload = binary_to_list(Args#arg.clidata),
+%    ?Debug("rpc plaintext call ~p ~n", [Payload]),
+
     RpcType = recognize_rpc_type(Args),
+
     % haXe parameters are URL encoded
-    {Payload,DecodedStr} = 
-	case RpcType of
-	    T when T==haxe; T==json ->
-		PL = binary_to_list(Args#arg.clidata),
-		%%    ?Debug("rpc plaintext call ~p ~n", [PL]),
-		{PL, yaws_api:url_decode(PL)};
-	    soap_dime ->
-		[{_,_,_,Req}|As]=yaws_dime:decode(Args#arg.clidata),
-		{Args#arg.clidata,
-		 {binary_to_list(Req),As}};
-	    _ ->
-		PL = binary_to_list(Args#arg.clidata),
-		{PL, PL}
-		%%    ?Debug("rpc plaintext call ~p ~n", [PL])
-	end,
+    DecodedStr = case RpcType of
+                     haxe -> yaws_api:url_decode(Payload);
+             json -> yaws_api:url_decode(Payload);
+                     _ -> Payload
+                 end,
     case decode_handler_payload(RpcType, DecodedStr) of
         {ok, DecodedPayload, ID} ->
             % ?Debug("client2erl decoded call ~p ~n", [DecodedPayload]),
@@ -139,12 +133,8 @@ handle_payload(Args, Handler, Type) -> % {{{
 %%% "X-Haxe-Remoting" HTTP header, then the "SOAPAction" header,
 %%% and if those are absent we assume the request is JSON.
 recognize_rpc_type(Args) ->
-    case (Args#arg.headers)#headers.content_type of
-	"application/dime" -> soap_dime;
-	_ ->
-	    OtherHeaders = ((Args#arg.headers)#headers.other),
-	    recognize_rpc_hdr([{X,Y,yaws:to_lower(Z),Q,W} || {X,Y,Z,Q,W} <- OtherHeaders])
-    end.
+    OtherHeaders = ((Args#arg.headers)#headers.other),
+    recognize_rpc_hdr([{X,Y,yaws:to_lower(Z),Q,W} || {X,Y,Z,Q,W} <- OtherHeaders]).
 
 recognize_rpc_hdr([{_,_,"x-haxe-remoting",_,_}|_]) -> haxe;
 recognize_rpc_hdr([{_,_,"soapaction",_,_}|_])      -> soap;
@@ -241,7 +231,7 @@ get_expire(M, F) ->
         _                        -> false
     end.
 
-callback_fun(M, F, Args, Payload, SessionValue, RpcType) when RpcType==soap; RpcType==soap_dime ->
+callback_fun(M, F, Args, Payload, SessionValue, soap) ->
     fun() -> yaws_soap_srv:handler(Args, {M,F}, Payload, SessionValue) end;
 callback_fun(M, F, Args, Payload, SessionValue, _RpcType) ->
     fun() -> M:F(Args#arg.state, Payload, SessionValue) end.
@@ -323,8 +313,6 @@ decode_handler_payload(haxe, [$_, $_, $x, $= | HaxeStr]) ->
 decode_handler_payload(haxe, _HaxeStr) ->
     {error, missing_haxe_prefix};
 
-decode_handler_payload(soap_dime, Payload) ->
-    {ok, Payload, undefined};
 decode_handler_payload(soap, Payload) ->
     {ok, Payload, undefined}.
 
