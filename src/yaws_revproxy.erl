@@ -285,12 +285,7 @@ ploop(From0, To, Pid) ->
                     Hstr = headers_to_str(H = rewrite_headers(From, H0)),
                     yaws:gen_tcp_send(TS, [RStr, "\r\n", Hstr]),
                     From2 = sockmode(H, R, From),
-                    if
-                        From2#psock.mode == expectchunked ->
-                            true;
-                        true ->
-                            yaws:gen_tcp_send(TS,"\r\n")
-                    end,
+                    yaws:gen_tcp_send(TS,"\r\n"),
                     ploop(From2, To, Pid);
                 closed ->
                     done
@@ -300,7 +295,7 @@ ploop(From0, To, Pid) ->
             N = get_chunk_num(From#psock.s, get(ssl)),
             if N == 0 ->
                     ok=eat_crnl(From#psock.s, get(ssl)),
-                    yaws:gen_tcp_send(TS,["\r\n0\r\n\r\n"]),
+                    yaws:gen_tcp_send(TS,["0\r\n\r\n"]),
                     ?Debug("SEND final 0 ",[]),
                     ploop_keepalive(From#psock{mode = expectheaders, 
                                      state = undefined},To, Pid);
@@ -311,19 +306,11 @@ ploop(From0, To, Pid) ->
         chunk ->
             CG = get_chunk(From#psock.s,From#psock.state, 0, get(ssl)),
             SZ = From#psock.state,
-            Data2 = ["\r\n", yaws:integer_to_hex(SZ),"\r\n", CG],
+            Data2 = [yaws:integer_to_hex(SZ),"\r\n", CG, "\r\n"],
             yaws:gen_tcp_send(TS, Data2),
-            ploop(From#psock{mode = expect_nl_before_chunked,
+            ok = eat_crnl(From#psock.s, get(ssl)),
+            ploop(From#psock{mode = expectchunked,
                              state = undefined}, To, Pid);
-        expect_nl_before_chunked ->
-            case yaws:do_recv(From#psock.s, 0, get(ssl)) of
-                {ok, <<13,10>>} ->
-                    yaws:gen_tcp_send(TS,<<13,10>>),
-                    ploop(From#psock{mode = expectchunked,
-                                     state = undefined}, To, Pid);
-                _Other ->
-                    exit(normal)
-            end;
         len when From#psock.state == 0 ->
             ploop_keepalive(From#psock{mode = expectheaders,
                              state = undefined},To, Pid);
