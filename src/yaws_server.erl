@@ -935,7 +935,8 @@ handle_method_result(Res, CliSock, IP, GS, Req, H, Num) ->
             put (sc, (get(sc))#sconf{appmods = []}),
             Call = call_method(Req#http_request.method, 
                                CliSock, 
-                               Req#http_request{path = {abs_path, Page}}, H),
+                               Req#http_request{path = {abs_path, Page}}, 
+                               H#headers{content_length = undefined}),
             handle_method_result(Call, CliSock, IP, GS, Req, H, Num)
     end.
 
