@@ -110,9 +110,17 @@ init([]) ->
     {X,Y,Z} = seed(),
     random:seed(X, Y, Z),
     ets:new(?MODULE, [set, named_table, public, {keypos, 2}]),
+    start_long_timer(),
     {ok, undefined, to()}.
 
+%% timeout once every hour even if the server handles traffic all the time.
+start_long_timer() ->
+    erlang:send_after(long_to(), self(), long_timeout).
 
+long_to() ->
+    60 * 60 * 1000.
+
+%% timeout if the server is idle for more than 2 minutes.
 to() ->
     2 * 60 * 1000.  
 
@@ -171,7 +179,7 @@ report_timedout_sess(_S) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
 handle_cast(_Msg, State) ->
-    {noreply, State}.
+    {noreply, State, to()}.
 
 %%----------------------------------------------------------------------
 %% Func: handle_info/2
@@ -181,6 +189,11 @@ handle_cast(_Msg, State) ->
 %%----------------------------------------------------------------------
 handle_info(timeout, _State) ->
     trav_ets(),
+    {noreply, undefined, to()};
+
+handle_info(long_timeout, _State) ->
+    trav_ets(),
+    start_long_timer(),
     {noreply, undefined, to()}.
 
 
