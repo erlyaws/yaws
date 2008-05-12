@@ -16,13 +16,17 @@
 
 -include_lib("kernel/include/file.hrl").
 
--compile(export_all).
-%%-export([Function/Arity, ...]).
-
 -export([load/1,
          toks/1,
-         make_default_gconf/2]).
-
+         make_default_gconf/2, make_default_sconf/0,
+         add_sconf/1,
+         add_yaws_auth/1,
+         add_yaws_soap_srv/1,
+         search_sconf/2, search_group/2,
+         update_sconf/2, delete_sconf/2,
+         eq_sconfs/2, soft_setconf/4, hard_setconf/2,
+         can_hard_gc/2, can_soft_setconf/4,
+         can_soft_gc/2, verify_upgrade_args/2]).
 
 %% where to look for yaws.conf 
 paths() ->
@@ -266,12 +270,9 @@ make_default_gconf(Debug, Id) ->
            id = Id
           }.
 
-
-
 make_default_sconf() ->
     Y = yaws_dir(),
     #sconf{docroot = filename:join([Y, "www"])}.
-
 
 yaws_dir() ->
     P = filename:split(code:which(?MODULE)),
@@ -1085,7 +1086,7 @@ toks([$#|_T], Mode, Ack, Tack) ->
 
 toks([H|T], free, Ack, Tack) -> 
                                                 %?Debug("Char=~p", [H]),
-    case {is_quote(H), is_string_char(H), is_special(H), is_space(H)} of
+    case {is_quote(H), is_string_char(H), is_special(H), yaws:is_space(H)} of
         {_,_, _, true} ->
             toks(T, free, Ack, Tack);
         {_,_, true, _} ->
@@ -1100,7 +1101,8 @@ toks([H|T], free, Ack, Tack) ->
     end;
 toks([C|T], string, Ack, Tack) -> 
                                                 %?Debug("Char=~p", [C]),
-    case {is_backquote(C), is_quote(C), is_string_char(C), is_special(C), is_space(C)} of
+    case {is_backquote(C), is_quote(C), is_string_char(C), is_special(C), 
+          yaws:is_space(C)} of
         {true, _, _, _,_} ->
             toks(T, [backquote,string], Ack, Tack);
         {_, _, true, _,_} ->
@@ -1149,9 +1151,6 @@ is_string_char(C) ->
         true ->
             lists:member(C, [$., $/, $:, $_, $-, $~])
     end.
-
-is_space(C) ->
-    lists:member(C, [$\s, $\n, $\t, $\r]).
 
 is_special(C) ->
     lists:member(C, [$=, $<, $>, $,]).

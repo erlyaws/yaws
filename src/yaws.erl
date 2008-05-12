@@ -15,8 +15,7 @@
 
 
 -include_lib("kernel/include/file.hrl").
-
--compile(export_all).
+-export([start/0, stop/0, hup/1, restart/0, modules/0, load/0]).
 -export([start_embedded/1, start_embedded/2, start_embedded/3,
          start_embedded/4,
          add_server/2]). 
@@ -29,7 +28,81 @@
          ssl_cacertfile/1, ssl_cacertfile/2,
          ssl_ciphers/1, ssl_ciphers/2,
          ssl_cachetimeout/1, ssl_cachetimeout/2]).
--export([is_modified_p/2, tmpdir/0, id_dir/1, ctl_file/1]).
+
+-export([first/2, elog/2, filesize/1, upto/2, to_string/1, to_list/1,
+         integer_to_hex/1, hex_to_integer/1,
+         string_to_hex/1, hex_to_string/1,
+         is_modified_p/2, flag/3, dohup/1, is_ssl/1,
+         address/0, is_space/1, setopts/3,
+         eat_crnl/2, get_chunk_num/2, get_chunk/4,
+         list_to_uue/1, uue_to_list/1, printversion/0,
+         strip_spaces/1, strip_spaces/2,
+         month/1, mk2/1, 
+         arg_rewrite/1, to_lowerchar/1, to_lower/1, funreverse/2, is_prefix/2,
+         split_sep/2, accepts_gzip/2, upto_char/2, deepmap/2,
+         ticker/2, ticker/3]).
+
+-export([outh_set_status_code/1,
+         outh_set_non_cacheable/1,
+         outh_set_content_type/1,
+         outh_set_content_encoding/1,
+         outh_set_cookie/1,
+         outh_clear_headers/0,
+         outh_set_static_headers/3,         outh_set_static_headers/4,
+         outh_set_304_headers/3,
+         outh_set_dyn_headers/3,
+         outh_set_connection/1,
+         outh_set_content_length/1,
+         outh_set_dcc/2,
+         outh_set_transfer_encoding_off/0,
+         outh_fix_doclose/0,
+         dcc/2]).
+
+-export([make_allow_header/0,
+         make_server_header/0,
+         make_last_modified_header/1,
+         make_location_header/1,
+         make_etag_header/1,
+         make_content_range_header/1,
+         make_content_length_header/1,
+         make_content_encoding_header/1,
+         make_connection_close_header/1,
+         make_transfer_encoding_chunked_header/1,
+         make_www_authenticate_header/1,
+         make_etag/1,
+         make_content_type_header/1,
+         make_date_header/0]).
+
+-export([outh_get_status_code/0,
+         outh_get_contlen/0,
+         outh_get_act_contlen/0,
+         outh_inc_act_contlen/1,
+         outh_get_doclose/0,
+         outh_get_chunked/0,
+         outh_get_content_encoding/0,
+         outh_get_content_encoding_header/0,
+         outh_get_content_type/0,
+         outh_serialize/0]).
+
+-export([accumulate_header/1, headers_to_str/1,
+         getuid/0,
+         user_to_home/1,
+         uid_to_name/1,
+         exists/1,
+         mkdir/1]).
+
+-export([do_recv/3, cli_recv/3,
+         gen_tcp_send/2,
+         http_get_headers/2]).
+
+-export([sconf_to_srvstr/1, 
+         redirect_host/2, redirect_port/1,
+         redirect_scheme_port/1, redirect_scheme/1,
+         tmpdir/0,
+         id_dir/1, ctl_file/1]).
+         
+         
+         
 
 -import(lists, [reverse/1, reverse/2]).
 
@@ -135,23 +208,23 @@ setup_gconf(GL, GC) ->
           }.
 
 set_gc_flags([{tty_trace, Bool}|T], Flags) -> 
-    set_gc_flags(T, yaws:flag(Flags,?GC_TTY_TRACE, Bool));
+    set_gc_flags(T, flag(Flags,?GC_TTY_TRACE, Bool));
 set_gc_flags([{debug, Bool}|T], Flags) -> 
-    set_gc_flags(T, yaws:flag(Flags, ?GC_DEBUG, Bool));
+    set_gc_flags(T, flag(Flags, ?GC_DEBUG, Bool));
 set_gc_flags([{auth_log, Bool}|T], Flags) -> 
-    set_gc_flags(T, yaws:flag(Flags, ?GC_AUTH_LOG, Bool));
+    set_gc_flags(T, flag(Flags, ?GC_AUTH_LOG, Bool));
 set_gc_flags([{copy_errlog, Bool}|T], Flags) -> 
-    set_gc_flags(T, yaws:flag(Flags, ?GC_COPY_ERRLOG, Bool));
+    set_gc_flags(T, flag(Flags, ?GC_COPY_ERRLOG, Bool));
 set_gc_flags([{backwards_compat_parse, Bool}|T], Flags) -> 
-    set_gc_flags(T, yaws:flag(Flags, ?GC_BACKWARDS_COMPAT_PARSE, Bool));
+    set_gc_flags(T, flag(Flags, ?GC_BACKWARDS_COMPAT_PARSE, Bool));
 set_gc_flags([{log_resolve_hostname, Bool}|T], Flags) -> 
-    set_gc_flags(T, yaws:flag(Flags, ?GC_LOG_RESOLVE_HOSTNAME, Bool));
+    set_gc_flags(T, flag(Flags, ?GC_LOG_RESOLVE_HOSTNAME, Bool));
 set_gc_flags([{fail_on_bind_err, Bool}|T], Flags) -> 
-    set_gc_flags(T, yaws:flag(Flags,?GC_FAIL_ON_BIND_ERR,Bool));
+    set_gc_flags(T, flag(Flags,?GC_FAIL_ON_BIND_ERR,Bool));
 set_gc_flags([{pick_first_virthost_on_nomatch, Bool}|T], Flags) -> 
-    set_gc_flags(T, yaws:flag(Flags, ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,Bool));
+    set_gc_flags(T, flag(Flags, ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,Bool));
 set_gc_flags([{use_fdsrv, Bool}|T], Flags) -> 
-    set_gc_flags(T, yaws:flag(Flags,?GC_USE_FDSRV,Bool));
+    set_gc_flags(T, flag(Flags,?GC_USE_FDSRV,Bool));
 set_gc_flags([_|T], Flags) -> 
     set_gc_flags(T, Flags);
 set_gc_flags([], Flags) -> 
@@ -202,19 +275,19 @@ setup_sconf(DocRoot, D, SL) ->
                            D#sconf.revproxy)}.
 
 set_sc_flags([{access_log, Bool}|T], Flags) ->
-    set_sc_flags(T, yaws:flag(Flags, ?SC_ACCESS_LOG, Bool));
+    set_sc_flags(T, flag(Flags, ?SC_ACCESS_LOG, Bool));
 set_sc_flags([{add_port, Bool}|T], Flags) ->
-    set_sc_flags(T, yaws:flag(Flags, ?SC_ADD_PORT, Bool));
+    set_sc_flags(T, flag(Flags, ?SC_ADD_PORT, Bool));
 set_sc_flags([{tilde_expand, Bool}|T], Flags) ->
-    set_sc_flags(T, yaws:flag(Flags, ?SC_TILDE_EXPAND, Bool));
+    set_sc_flags(T, flag(Flags, ?SC_TILDE_EXPAND, Bool));
 set_sc_flags([{dir_listings, Bool}|T], Flags) ->
-    set_sc_flags(T, yaws:flag(Flags, ?SC_DIR_LISTINGS, Bool));
+    set_sc_flags(T, flag(Flags, ?SC_DIR_LISTINGS, Bool));
 set_sc_flags([{deflate, Bool}|T], Flags) ->
-    set_sc_flags(T, yaws:flag(Flags, ?SC_DEFLATE, Bool));
+    set_sc_flags(T, flag(Flags, ?SC_DEFLATE, Bool));
 set_sc_flags([{dir_all_zip, Bool}|T], Flags) ->
-    set_sc_flags(T, yaws:flag(Flags, ?SC_DIR_ALL_ZIP, Bool));
+    set_sc_flags(T, flag(Flags, ?SC_DIR_ALL_ZIP, Bool));
 set_sc_flags([{dav, Bool}|T], Flags) ->
-    set_sc_flags(T, yaws:flag(Flags, ?SC_DAV, Bool));
+    set_sc_flags(T, flag(Flags, ?SC_DAV, Bool));
 set_sc_flags([_|T], Flags) ->
     set_sc_flags(T, Flags);
 set_sc_flags([], Flags) ->
@@ -288,68 +361,6 @@ upto(_I, [0|_]) ->
     " ....";
 upto(I,[H|T]) ->
     [H|upto(I-1, T)].
-zip([H1|T1], [H2|T2]) ->
-    [{H1, H2} |zip(T1, T2)];
-zip([], []) ->
-    [].
-
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Date and Time functions
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-date_and_time() ->
-    case catch erlang:now() of
-        {'EXIT', _} -> % We don't have info about UTC
-            short_time(calendar:local_time());
-        Now ->
-            UTC = calendar:now_to_universal_time(Now),
-            Local = calendar:universal_time_to_local_time(UTC),
-            date_and_time(Local, UTC)
-    end.
-
-date_and_time(Local, UTC) ->
-    DiffSecs = calendar:datetime_to_gregorian_seconds(Local) -
-        calendar:datetime_to_gregorian_seconds(UTC),
-    short_time(Local) ++ diff(DiffSecs).
-
-%% short_time
-
-short_time({{Y,M,D},{H,Mi,S}}) ->
-    [y1(Y), y2(Y), M, D, H, Mi, S].
-
-%% Format date according to ISO 8601
-date_and_time_to_string(DAT) ->
-    case validate_date_and_time(DAT) of
-        true ->
-            dat2str(DAT);
-        false ->
-            erlang:error({badarg, {?MODULE, date_and_time_to_string, [DAT]}})
-    end.
-
-
-universal_time_to_string(UTC) ->
-    Local = calendar:universal_time_to_local_time(UTC),
-    DT = local_time_to_date_and_time(Local),
-    date_and_time_to_string(DT).
-
-
-dat2str([Y1,Y2, Mo, D, H, M, S | Diff]) ->
-    lists:flatten(
-      io_lib:format("~s ~w-~2.2.0w-~2.2.0w,~2.2.0w:~2.2.0w:~2.2.0w",
-                    [weekday(Y1,Y2,Mo,D), y(Y1,Y2),Mo,D,H,M,S]) ++
-      case Diff of
-          [Sign,Hd,Md] ->
-              io_lib:format("~c~2.2.0w~2.2.0w",
-                            [Sign,Hd,Md]);
-          _ -> []
-      end).
-
-weekday(Y1,Y2,Mo,D) ->
-    int_to_wd(calendar:day_of_the_week(Y1*256+Y2,Mo,D)).
 
 int_to_wd(1) ->
     "Mon";
@@ -366,61 +377,6 @@ int_to_wd(6) ->
 int_to_wd(7) ->
     "Sun".
 
-y1(Y) -> (Y bsr 8) band 255.
-y2(Y) -> Y band 255.
-
-y(Y1, Y2) -> 256 * Y1 + Y2.
-
-diff(Secs) ->
-    case calendar:seconds_to_daystime(Secs) of
-        {0, {H, M,_}} ->
-            [$+, H, M];
-        {-1, _} ->
-            {0, {H, M, _}} = calendar:seconds_to_daystime(-Secs),
-            [$-, H, M]
-    end.
-
-universal_time_to_date_and_time(UTC) ->
-    short_time(UTC) ++ [$+, 0, 0].
-
-local_time_to_date_and_time(Local) ->
-    UTC = erlang:localtime_to_universaltime(Local),
-    date_and_time(Local, UTC).
-
-date_and_time_to_universal_time([Y1,Y2, Mo, D, H, M, S]) ->
-    %% Local time specified, convert to UTC
-    Local = {{y(Y1,Y2), Mo, D}, {H, M, S}},
-    erlang:localtime_to_universaltime(Local);
-date_and_time_to_universal_time([Y1,Y2, Mo, D, H, M, S, Sign, Hd, Md]) ->
-    %% Time specified as local time + diff from UTC. Conv to UTC.
-    Local = {{y(Y1,Y2), Mo, D}, {H, M, S}},
-    LocalSecs = calendar:datetime_to_gregorian_seconds(Local),
-    Diff = (Hd*60 + Md)*60,
-    UTCSecs = if Sign == $+ -> LocalSecs - Diff;
-                 Sign == $- -> LocalSecs + Diff
-              end,
-    calendar:gregorian_seconds_to_datetime(UTCSecs).
-
-validate_date_and_time([Y1,Y2, Mo, D, H, M, S | Diff]) 
-  when 0 =< Y1, 0 =< Y2, 0 < Mo, Mo < 13, 0 < D, D < 32, 0 =< H,
-       H < 24, 0 =< M, M < 60, 0 =< S, S < 61  ->
-    case check_diff(Diff) of
-        true ->
-            calendar:valid_date(y(Y1,Y2), Mo, D);
-        false ->
-            false
-    end;
-validate_date_and_time(_) -> false.
-
-
-
-check_diff([]) -> true;
-check_diff([$+, H, M]) when 0 =< H, H < 24, 0 =< M, M < 60 -> true;
-check_diff([$-, H, M]) when 0 =< H, H < 24, 0 =< M, M < 60 -> true;
-check_diff(_) -> false.
-
-
-%% to_string
 
 to_string(X) when float(X) ->
     io_lib:format("~.2.0f",[X]);
@@ -438,24 +394,6 @@ to_list(L) when list(L) ->
     L;
 to_list(A) when atom(A) ->
     atom_to_list(A).
-
-
-lowercase([C|S]) -> [lowercase(C)|lowercase(S)];
-lowercase(C) when C>=$A, C=<$Z -> C+32;
-lowercase(C) -> C.
-
-%%
-
-uppercase([C|S]) -> [uppercase(C)|uppercase(S)];
-uppercase(C) when C>=$a, C=<$z -> C-32;
-uppercase(C) -> C.
-
-%%
-
-lowercase_string(String) ->
-    lists:map(fun(X) -> lowercase(X) end, String).
-
-%% integer_to_hex
 
 
 integer_to_hex(I) ->
@@ -508,16 +446,6 @@ hex_to_string(Hex) ->
                     end, {[], nolow},
                     Hex),
     String.
-
-
-%% mk_list, join style
-
-mk_list([]) ->
-    [];
-mk_list([X]) ->
-    to_string(X);
-mk_list([X|Rest]) ->
-    [to_string(X)," ",mk_list(Rest)].
 
 
 
@@ -597,24 +525,6 @@ month_str_to_int("Dec") ->
 
 
 
-day_str_to_int("Mon") ->
-    1;
-day_str_to_int("Tue") ->
-    2;
-day_str_to_int("Wed") ->
-    3;
-day_str_to_int("Thu") ->
-    4;
-day_str_to_int("Fri") ->
-    5;
-day_str_to_int("Sat") ->
-    6;
-day_str_to_int("Sun") ->
-    7.
-
-
-%% Wed, 23 Jan 2002 19:07:44 GMT
-
 stringdate_to_datetime([$ |T]) ->
     stringdate_to_datetime(T);
 stringdate_to_datetime([_D1, _D2, _D3, $\,, $ |Tail]) ->
@@ -651,11 +561,12 @@ is_modified_p(FI, UTC_string) ->
 
 
 ticker(Time, Msg) ->
-    S = self(),
-    spawn_link(yaws, ticker, [Time, S, Msg]).
-ticker(Time, To, Msg) ->
-    process_flag(trap_exit, true),
-    yaws_ticker:ticker(Time, To, Msg).
+    ticker(Time, self(), Msg).
+ticker(Time, To, Msg ) ->
+    spawn_link(fun() ->
+                       process_flag(trap_exit, true),                       
+                       yaws_ticker:ticker(Time, To, Msg) 
+               end).
 
 
 address() ->
@@ -767,15 +678,15 @@ enc(0) -> $`;
 
 dec(Char) -> (Char - $ ) band 8#77.
 
-to_octal(I) -> reverse(to_octal1(I)).
+%% to_octal(I) -> reverse(to_octal1(I)).
 
-to_octal1(0) ->  [];
-to_octal1(I) ->  [$0 + I band 7|to_octal1(I bsr 3)].
+%% to_octal1(0) ->  [];
+%% to_octal1(I) ->  [$0 + I band 7|to_octal1(I bsr 3)].
 
-oct_to_dig(O) -> oct_to_dig(O, 0).
+%% oct_to_dig(O) -> oct_to_dig(O, 0).
 
-oct_to_dig([], D)    -> D;
-oct_to_dig([H|T], D) -> oct_to_dig(T, D*8 + H - $0).
+%% oct_to_dig([], D)    -> D;
+%% oct_to_dig([H|T], D) -> oct_to_dig(T, D*8 + H - $0).
 
 
 
@@ -787,14 +698,18 @@ printversion() ->
 arg_rewrite(A) ->
     A.
 
+is_ssl(#sconf{ssl = undefined}) ->
+    nossl;
+is_ssl(#sconf{ssl = S}) when record(S, ssl) ->
+    ssl.
 
 
-delall(H, [H|T]) ->
-    delall(H,T);
-delall(H,[H1|T]) ->
-    [H1 | delall(H, T)];
-delall(_,[]) ->
-    [].
+%% delall(H, [H|T]) ->
+%%     delall(H,T);
+%% delall(H,[H1|T]) ->
+%%     [H1 | delall(H, T)];
+%% delall(_,[]) ->
+%%     [].
 
 
 
@@ -813,11 +728,6 @@ to_lower(A) when is_atom(A) ->
     to_lower(atom_to_list(A)).
 
 
-to_integer(I) when list(I) ->
-    list_to_integer(I);
-to_integer(I) when integer(I) ->
-    I.
-
 
 funreverse(List, Fun) ->
     funreverse(List, Fun, []).
@@ -826,26 +736,6 @@ funreverse([H|T], Fun, Ack) ->
     funreverse(T, Fun, [Fun(H)|Ack]);
 funreverse([], _Fun, Ack) ->
     Ack.
-
-
-%% splits Str in two parts
-%% First part leading Upto SubStr and remaining part after
-split_at(Str, Substr) ->
-    split_at(Str, Substr,[]).
-
-split_at(Str, Substr, Ack) ->
-    case is_prefix(Substr, Str) of
-        {true, Tail} ->
-            {lists:reverse(Ack), Tail};
-        false ->
-            case Str of
-                [] ->
-                    {lists:reverse(Ack), []};
-                [H|T] ->
-                    split_at(T, Substr, [H|Ack])
-            end
-    end.
-
 
 %% is arg1 a prefix of arg2
 is_prefix([H|T1], [H|T2]) ->
@@ -928,46 +818,46 @@ parse_qvalue(_) ->
 three_digits_to_integer(D1, D2, D3) ->
     100*(D1-$0)+10*(D2-$0)+D3-$0.
 
-has_buggy_deflate(UserAgent, Mime) ->
-    UA = parse_ua(UserAgent),
-    in_ua(
-      fun("Mozilla/5.0") ->
-              in_comment(
-                fun("rv:0."++_) ->
-                        true;
-                   ("Konqueror"++_) ->
-                        true;
-                   (_) ->
-                        false
-                end,
-                UA);
-         ("Mozilla/4.0") ->
-              in_comment(
-                fun("MSIE"++_) ->
-                                                % The fact that IE is
-                                                % broken does of
-                                                % course mean that we
-                                                % will have to abondon
-                                                % `deflate' (in favor
-                                                % of `gzip')
-                                                % altogether.  To
-                                                % do...
-                        true;
-                   (_) ->
-                        false
-                end,
-                UA);
-         ("AppleWebKit"++_) ->
-              true;
-         ("Galeon"++_) ->
-              true;
-         ("w3m"++_) ->
-                                                % Problems when saving.
-              Mime /= "text/html"; 
-         (_)  ->
-              false
-      end,
-      UA).
+%% has_buggy_deflate(UserAgent, Mime) ->
+%%     UA = parse_ua(UserAgent),
+%%     in_ua(
+%%       fun("Mozilla/5.0") ->
+%%               in_comment(
+%%                 fun("rv:0."++_) ->
+%%                         true;
+%%                    ("Konqueror"++_) ->
+%%                         true;
+%%                    (_) ->
+%%                         false
+%%                 end,
+%%                 UA);
+%%          ("Mozilla/4.0") ->
+%%               in_comment(
+%%                 fun("MSIE"++_) ->
+%%                                                 % The fact that IE is
+%%                                                 % broken does of
+%%                                                 % course mean that we
+%%                                                 % will have to abondon
+%%                                                 % `deflate' (in favor
+%%                                                 % of `gzip')
+%%                                                 % altogether.  To
+%%                                                 % do...
+%%                         true;
+%%                    (_) ->
+%%                         false
+%%                 end,
+%%                 UA);
+%%          ("AppleWebKit"++_) ->
+%%               true;
+%%          ("Galeon"++_) ->
+%%               true;
+%%          ("w3m"++_) ->
+%%                                                 % Problems when saving.
+%%               Mime /= "text/html"; 
+%%          (_)  ->
+%%               false
+%%       end,
+%%       UA).
 
 %% Gzip encoding
 
@@ -1397,7 +1287,7 @@ make_last_modified_header(FI) ->
 
 do_make_last_modified(FI) ->
     Then = FI#file_info.mtime,
-    ["Last-Modified: ", yaws:local_time_as_gmt_string(Then), "\r\n"].
+    ["Last-Modified: ", local_time_as_gmt_string(Then), "\r\n"].
 
 
 
@@ -1479,13 +1369,13 @@ make_date_header() ->
     N = element(2, now()),
     case get(date_header) of
         {_Str, Secs} when (Secs+10) < N ->
-            H = ["Date: ", yaws:universal_time_as_string(), "\r\n"],
+            H = ["Date: ", universal_time_as_string(), "\r\n"],
             put(date_header, {H, N}),
             H;
         {Str, _Secs} ->
             Str;
         undefined ->
-            H = ["Date: ", yaws:universal_time_as_string(), "\r\n"],
+            H = ["Date: ", universal_time_as_string(), "\r\n"],
             put(date_header, {H, N}),
             H
     end.
@@ -1603,7 +1493,8 @@ accumulate_header({"Location", What}) ->
     accumulate_header({location, What});
 
 accumulate_header({cache_control, What}) ->
-    put(outh, (get(outh))#outh{cache_control = ["Cache-Control: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{cache_control = ["Cache-Control: " , 
+                                                What, "\r\n"]});
 accumulate_header({"Cache-Control", What}) ->
     accumulate_header({cache_control, What});
 
@@ -1618,7 +1509,8 @@ accumulate_header({"Set-Cookie", What}) ->
     accumulate_header({set_cookie, What});
 
 accumulate_header({content_type, What}) ->
-    put(outh, (get(outh))#outh{content_type = ["Content-Type: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{content_type = ["Content-Type: " , 
+                                               What, "\r\n"]});
 accumulate_header({"Content-Type", What}) ->
     accumulate_header({content_type, What});
 
@@ -1700,15 +1592,6 @@ getuid() ->
                     {ok, IntList}
             end
     end.
-
-idu(User) ->
-    load_setuid_drv(),
-    P = open_port({spawn, "setuid_drv " ++ [$u|User]}, []),
-    receive
-        {P, {data, "ok " ++ IntList}} ->
-            {ok, IntList}
-    end.
-
 user_to_home(User) ->
     load_setuid_drv(),
     P = open_port({spawn, "setuid_drv " ++ [$h|User]}, []),
@@ -1716,8 +1599,6 @@ user_to_home(User) ->
         {P, {data, "ok " ++ Home}} ->
             Home
     end.
-
-
 
 uid_to_name(Uid) ->
     load_setuid_drv(),
@@ -2058,19 +1939,6 @@ d($/) -> 63;
 d(_) -> 63.
 
 
-
-
-slash_append("/", [$/|T]) ->
-    [$/|T];
-slash_append("/", T) ->
-    [$/|T];
-slash_append([], [$/|T]) ->
-    [$/|T];
-slash_append([], T) ->
-    [$/|T];
-slash_append([H|T], X) ->
-    [H | slash_append(T,X)].
-
 flag(CurFlag, Bit, true) ->
     CurFlag bor Bit;
 flag(CurFlag, Bit, false) ->
@@ -2219,6 +2087,52 @@ tmpdir() ->
 
 
 id_dir(Id) ->
-    filename:join([yaws:tmpdir(), "yaws", yaws:to_list(Id)]).
+    filename:join([tmpdir(), "yaws", to_list(Id)]).
 ctl_file(Id) ->
     filename:join([id_dir(Id), "CTL"]).
+
+
+eat_crnl(Fd,SSL) ->
+    setopts(Fd, [{packet, line}],SSL),
+    case do_recv(Fd,0, SSL) of
+        {ok, <<13,10>>} ->
+            ok;
+        {ok, [13,10]} ->
+            ok;
+        Err ->
+            {error, Err}
+    end.
+
+get_chunk_num(Fd,SSL) ->
+    case do_recv(Fd, 0, SSL) of
+        {ok, Line} ->
+            ?Debug("Get chunk num from line ~p~n",[Line]),
+            erlang:list_to_integer(nonl(Line),16);
+        {error, _Rsn} ->
+            exit(normal)
+    end.
+
+nonl(B) when binary(B) ->
+    nonl(binary_to_list(B));
+nonl([10|T]) ->
+    nonl(T);
+nonl([13|T]) ->
+    nonl(T);
+nonl([H|T]) ->
+    [H|nonl(T)];
+nonl([]) ->
+    [].
+            
+
+
+get_chunk(_Fd, N, N, _) ->
+    [];
+get_chunk(Fd, N, Asz,SSL) ->
+    case do_recv(Fd, N, SSL) of
+        {ok, Bin} ->
+            SZ = size(Bin),
+            [Bin|get_chunk(Fd, N, SZ+Asz,SSL)];
+        _ ->
+            exit(normal)
+    end.
+

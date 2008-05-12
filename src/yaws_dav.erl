@@ -32,11 +32,11 @@ put(SC, ARG) ->
     H = ARG#arg.headers,
     PPS = SC#sconf.partial_post_size,
     CT = 
-        case yaws:lowercase(H#headers.content_type) of
+        case yaws:to_lower(H#headers.content_type) of
             "multipart/form-data"++_ -> multipart;
             _ -> urlencoded
         end,
-    SSL = yaws_server:is_ssl(SC#sconf.ssl),
+    SSL = yaws:is_ssl(SC),
     FName = davpath(ARG),
     CliSock = ARG#arg.clisock,
     TmpName = FName ++ ".tmp",
@@ -516,7 +516,7 @@ store_chunked_client_data(Fd, CliSock, SSL) ->
             _Tmp=yaws:do_recv(CliSock, 2, SSL);%% flush last crnl
         true ->
             B = yaws_revproxy:store_chunk(CliSock, N, 0,SSL),
-            yaws_revproxy:eat_crnl(CliSock,SSL),
+            yaws:eat_crnl(CliSock,SSL),
             ok = file:write(Fd, B),
             store_chunked_client_data(Fd, CliSock, SSL)
     end.

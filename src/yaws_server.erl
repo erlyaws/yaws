@@ -8,12 +8,7 @@
 -module(yaws_server).
 -author('klacke@hyber.org').
 
-%% Yikes .. this needs to go away.
--compile(export_all).
-%%-export([Function/Arity, ...]).
-
 -behaviour(gen_server).
-
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
@@ -29,6 +24,27 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
+-export([status/0,
+         getconf/0,
+         stats/0,
+         gs_status/0,
+         ssi/3,ssi/5,ssi/6 
+        ]).
+
+%% internal exports
+-export([gserv/3,acceptor0/2, load_and_run/2, done_or_continue/0,
+         accumulate_content/1, deliver_accumulated/5, setup_dirs/1,
+         deliver_dyn_part/8, finish_up_dyn_file/2
+        ]).
+
+-export(['GET'/3,
+         'POST'/3,
+         'HEAD'/3,
+         'TRACE'/3,
+         'OPTIONS'/3,
+         'PUT'/3,
+         'DELETE'/3]).
+
 -import(filename, [join/1]).
 -import(lists, [member/2, foreach/2, map/2, 
                 flatten/1, flatmap/2, reverse/1]).
@@ -612,18 +628,12 @@ stop_ready(Ready, Last) ->
               Pid ! {self(), stop}
       end, Ready).
 
-
-
-
-
-
 gserv_stop(Gpid) ->
     Gpid ! {self(), stop},
     receive
         {Gpid, ok} ->
             ok
     end.
-
 
 call_start_mod(SC) ->
     case SC#sconf.start_mod of
@@ -642,8 +652,6 @@ call_start_mod(SC) ->
             end
     end.
 
-
-
 opts(SC) ->
     [binary, 
      {ip, SC#sconf.listen},
@@ -653,8 +661,6 @@ opts(SC) ->
      {active, false}
     ].
 
-
-
 ssl_opts(GC, SC, SSL) ->
     Opts = [
             binary,
@@ -662,9 +668,6 @@ ssl_opts(GC, SC, SSL) ->
             {packet, http},
             {active, false} | ssl_opts(GC, SSL)],
     Opts.
-
-
-
 
 ssl_opts(GC, SSL) ->
     L = [if SSL#ssl.keyfile /= undefined ->
@@ -726,7 +729,7 @@ initial_acceptor(GS) ->
 
 
 acceptor(GS) ->
-    proc_lib:spawn_link(yaws_server, acceptor0, [GS, self()]).
+    proc_lib:spawn_link(?MODULE, acceptor0, [GS, self()]).
 acceptor0(GS, Top) ->
     ?TC([{record, GS, gs}]),
     put(gc, GS#gs.gconf),
@@ -851,7 +854,8 @@ aloop(CliSock, GS, Num) ->
                      true ->
                          case peername(CliSock, SSL) of
                              {ok, {Ip, _Port}}  ->
-                                 case ?gc_log_has_resolve_hostname((GS#gs.gconf)) of
+                                 case ?gc_log_has_resolve_hostname(
+                                         (GS#gs.gconf)) of
                                      true ->
                                          case inet:gethostbyaddr(Ip) of
                                              {ok, HE} ->
@@ -1019,19 +1023,6 @@ pick_host(GC, Host, [], Group) ->
             exit(normal)
     end.
 
-
-
-
-inet_peername(Sock, SC) ->
-    case SC#sconf.ssl of
-        undefined ->
-            inet:peername(Sock);
-        _SSL ->
-            ssl:peername(Sock)
-    end.
-
-
-
 maybe_auth_log(Item, ARG) ->
     GC=get(gc),
     SC=get(sc),
@@ -1109,37 +1100,6 @@ optional_header(Item) ->
         Item -> Item
     end.
 
-
-
-
-%% This is a request that is completely
-%% broken, it can either be evil, but the most
-%% probable cause is a broken (perl) test script that
-%% tries to to talk to us ... albeit in a bad way ...
-%% so let's log a small entry. I see no good reason to 
-%% play nice and reply to this ...
-
-bad_request(CliSock, Req, _Head) ->
-    From = if
-               port(CliSock) ->
-                   case inet:peername(CliSock) of
-                       {ok, {IP, _Port}} ->
-                           inet_parse:ntoa(IP);
-                       _ ->
-                           "unknown"
-                   end;
-               true ->
-                   case ssl:peername(CliSock) of
-                       {ok, {IP, _Port}} ->
-                           inet_parse:ntoa(IP);
-                       _ ->
-                           "unknown"
-                   end
-           end,
-    error_logger:info_msg("Bad req: ~p from ~s~n", [Req, From]),
-    done.
-
-
 %% ret:  continue | done
 'GET'(CliSock, Req, Head) ->
     no_body_method(CliSock, Req, Head).
@@ -1150,11 +1110,6 @@ bad_request(CliSock, Req, _Head) ->
                                     ?format_record(Head, headers)]),
     body_method(CliSock, Req, Head).
 
-
-is_ssl(undefined) ->
-    nossl;
-is_ssl(R) when record(R, ssl) ->
-    ssl.
 
 un_partial({partial, Bin}) ->
     Bin;
@@ -1177,7 +1132,7 @@ call_method(Method, CliSock, Req, H) ->
 
 not_implemented(CliSock, Req, Head) ->
     SC=get(sc),
-    ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
+    ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
     flush(CliSock, Head#headers.content_length),
     deliver_501(CliSock, Req).
 
@@ -1188,7 +1143,7 @@ not_implemented(CliSock, Req, Head) ->
 'OPTIONS'(CliSock, Req, Head) ->
     ?Debug("OPTIONS", []),
     SC=get(sc),
-    ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
+    ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
     flush(CliSock, Head#headers.content_length),
     ?Debug("OPTIONS delivering", []),
     deliver_options(CliSock, Req).
@@ -1221,14 +1176,14 @@ not_implemented(CliSock, Req, Head) ->
 
 body_method(CliSock, Req, Head) ->
     SC=get(sc),
-    ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
+    ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
     PPS = SC#sconf.partial_post_size,
     Bin = case Head#headers.content_length of
               undefined ->
                   case Head#headers.transfer_encoding of
                       "chunked" ->
                           get_chunked_client_data(CliSock, [],
-                                                  is_ssl(SC#sconf.ssl));
+                                                  yaws:is_ssl(SC));
                       _ ->
                           <<>>
                               end;
@@ -1239,10 +1194,10 @@ body_method(CliSock, Req, Head) ->
                           <<>>;
                       PPS < Int_len ->
                           {partial, get_client_data(CliSock, PPS,
-                                                    is_ssl(SC#sconf.ssl))};
+                                                    yaws:is_ssl(SC))};
                       true ->
                           get_client_data(CliSock, Int_len,  
-                                          is_ssl(SC#sconf.ssl))
+                                          yaws:is_ssl(SC))
                   end;
               Len when PPS == nolimit ->
                   Int_len = list_to_integer(Len),
@@ -1251,7 +1206,7 @@ body_method(CliSock, Req, Head) ->
                           <<>>;
                       true ->
                           get_client_data(CliSock, Int_len, 
-                                          is_ssl(SC#sconf.ssl))
+                                          yaws:is_ssl(SC))
                   end
           end,
     ?Debug("Request data = ~s~n", [binary_to_list(un_partial(Bin))]),
@@ -1264,7 +1219,7 @@ body_method(CliSock, Req, Head) ->
 
 no_body_method(CliSock, Req, Head) ->
     SC=get(sc),
-    ok = yaws:setopts(CliSock, [{packet, raw}, binary], is_ssl(SC#sconf.ssl)),
+    ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
     flush(CliSock, Head#headers.content_length),
     ARG = make_arg(CliSock, Head, Req, undefined),
     handle_request(CliSock, ARG, 0).
@@ -1979,15 +1934,15 @@ get_client_data(CliSock, Len, Bs, SSlBool) ->
 %% not nice to support this for ssl sockets
 get_chunked_client_data(CliSock,Bs,SSL) ->
     yaws:setopts(CliSock, [binary, {packet, line}],SSL),
-    N = yaws_revproxy:get_chunk_num(CliSock,SSL),
+    N = yaws:get_chunk_num(CliSock,SSL),
     yaws:setopts(CliSock, [binary, {packet, raw}],SSL),
     if
         N == 0 ->
             _Tmp=yaws:do_recv(CliSock, 2, SSL),%% flush last crnl
             list_to_binary(Bs);
         true ->
-            B = yaws_revproxy:get_chunk(CliSock, N, 0,SSL),
-            yaws_revproxy:eat_crnl(CliSock,SSL),
+            B = yaws:get_chunk(CliSock, N, 0,SSL),
+            yaws:eat_crnl(CliSock,SSL),
             get_chunked_client_data(CliSock, [Bs,B], SSL)
     end.
 
@@ -2390,7 +2345,8 @@ handle_out_reply({allheaders, Hs}, _LineNo, _YawsFile, _UT, _ARG) ->
     yaws:outh_clear_headers(),
     foreach(fun({header, Head}) -> yaws:accumulate_header(Head) end, Hs);
 
-handle_out_reply({status, Code},_LineNo,_YawsFile,_UT,_ARG) when integer(Code) ->
+handle_out_reply({status, Code},_LineNo,_YawsFile,_UT,_ARG) 
+    when integer(Code) ->
     yaws:outh_set_status_code(Code);
 
 handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _UT, _ARG) ->
@@ -2501,7 +2457,7 @@ handle_out_reply(Reply, LineNo, YawsFile, _UT, ARG) ->
 
 
 
-handle_out_reply_l([Reply|T], LineNo, YawsFile, UT, ARG, _Res) ->                  
+handle_out_reply_l([Reply|T], LineNo, YawsFile, UT, ARG, _Res) ->             
     case handle_out_reply(Reply, LineNo, YawsFile, UT, ARG) of
         break ->
             break;
@@ -2831,19 +2787,12 @@ get_more_post_data(PPS, ARG) ->
     Len = list_to_integer((ARG#arg.headers)#headers.content_length),
     if N + PPS < Len ->
             Bin = get_client_data(ARG#arg.clisock, N, 
-                                  is_ssl(SC#sconf.ssl)),
+                                  yaws:is_ssl(SC)),
             {partial, Bin};
        true ->
             get_client_data(ARG#arg.clisock, Len - PPS, 
-                            is_ssl(SC#sconf.ssl))
+                            yaws:is_ssl(SC))
     end.
-
-
-do_tcp_close(Sock) when port(Sock) ->
-    gen_tcp:close(Sock);
-do_tcp_close(Sock) ->
-    ssl:close(Sock).
-
 
 
 ut_open(UT) ->
@@ -2880,9 +2829,6 @@ ut_close({bin, _}) ->
     ok;
 ut_close(Fd) ->
     file:close(Fd).
-
-
-
 
 parse_range(L, Tot) ->
     case catch parse_range_throw(L, Tot) of
@@ -3025,13 +2971,8 @@ send_file_range(CliSock, Fd, 0) ->
     end_streaming(undeflated, CliSock).
 
 
-
-
-
 crnl() ->
     "\r\n".
-crnl2() ->
-    "\r\n\r\n".
 
 now_secs() ->
     {M,S,_}=now(),
@@ -3744,10 +3685,10 @@ conc_path([H|T]) ->
 %%        cpath(T,Acc ++ H).
 
 
-ret_app_mod(Path, Mod, PrePath) ->
-    #urltype{type = appmod,
-             data = {Mod, Path},
-             path = PrePath}.
+%% ret_app_mod(Path, Mod, PrePath) ->
+%%     #urltype{type = appmod,
+%%              data = {Mod, Path},
+%%              path = PrePath}.
 
 
 

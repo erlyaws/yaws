@@ -7,12 +7,22 @@
 
 -module(yaws_debug).
 -author('klacke@hyber.org').
--compile(export_all).
-
 
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
+-export([typecheck/3,
+         format_record/3,
+         assert/4,
+         format/2,
+         derror/2,
+         dinfo/2,
+         mktags/0,
+         xref/1,
+         pids/0,
+         eprof/0,
+         check_headers/1, nobin/1]).
+         
 
 
 typecheck([{record, Rec, X} | Tail], File, Line) when atom(X),
@@ -50,7 +60,7 @@ format_record([Val|Vals], [F|Fs]) when is_integer(Val);
 format_record([Val|Vals], [F|Fs]) ->
     case is_string(Val) of
         true ->
-            [io_lib:format("     ~w = ~s\n", [F,Val]),
+            [io_lib:format("     ~w = \"~s\"\n", [F,Val]),
              format_record(Vals, Fs)];
         false ->
             [io_lib:format("     ~w = ~p~n", [F, nobin(Val)]),

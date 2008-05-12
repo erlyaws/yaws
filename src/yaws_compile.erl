@@ -8,10 +8,6 @@
 -module(yaws_compile).
 -author('klacke@hyber.org').
 
--compile(export_all).
-
-
-
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
@@ -38,6 +34,9 @@
           outfile,
           outfd}).
 
+-export([compile_file/1]).
+%% internal exports
+-export([compiler_proc/3]).
 
 comp_opts(GC) ->
     ?Debug("I=~p~n", [GC#gconf.include_dir]),
@@ -452,21 +451,6 @@ get_line_from_chars([], _Line) ->
 get_line_from_chars([H|T], Line) ->
     get_line_from_chars(T, [H|Line]).
 
-
-
-
-gg() ->
-    {ok, _Fd} = file_open("arg.yaws"),
-    ggg().
-
-ggg() ->
-    case get_line() of
-        eof ->
-            eof;
-        X ->
-            io:format("~s", [X]),
-            ggg()
-    end.
 
 
 %% -----------------------------------------------------------------

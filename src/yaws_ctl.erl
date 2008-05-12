@@ -11,12 +11,16 @@
 -module(yaws_ctl).
 -author('klacke@bluetail.com').
 
--compile(export_all).
 -include_lib("kernel/include/file.hrl").
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
+-export([start/2, actl_trace/1]).
+-export([ls/1,hup/1,stop/1,status/1,load/1,
+         check/1,trace/1]).
+%% internal
+-export([run/1, aloop/3]).
 
 
 %% assumes the appropriate file structures 

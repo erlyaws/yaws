@@ -12,14 +12,18 @@
 -behaviour(gen_server).
 
 %% External exports
--export([start_link/0, start/0]).
+-export([start_link/0, start/0, stop/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
--compile(export_all).
-
 -include("../include/yaws_api.hrl").
 
+-export([new_session/1,new_session/2,
+         cookieval_to_opaque/1,
+         print_sessions/0,
+         replace_session/2,
+         delete_session/1]).
+         
 
 -define(TTL, (30 * 60)).  % 30 minutes
 

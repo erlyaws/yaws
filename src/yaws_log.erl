@@ -10,16 +10,23 @@
 -include_lib("kernel/include/file.hrl").
 
 
--compile(export_all).
-%%-export([Function/Arity, ...]).
-
 -behaviour(gen_server).
 
 %% External exports
 -export([start_link/0]).
 
 %% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, 
+         handle_event/2]).
+-export([accesslog/5,
+         accesslog/7,
+         accesslog/8,
+         setdir/2,
+         open_trace/1,
+         trace_traffic/2,
+         authlog/4,
+         actl_trace/1]).
+
 
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").

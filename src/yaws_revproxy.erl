@@ -6,11 +6,12 @@
 %%% Created :  3 Dec 2003 by  <klacke@hyber.org>
 %%%-------------------------------------------------------------------
 -module(yaws_revproxy).
--compile(export_all).
 
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
+-export([init/6]).
+
 
 %% reverse proxy implementation.
 
@@ -33,6 +34,11 @@
 %% with redirection).
 %% I did not yet check that.
 
+
+%% This code is still buggy - we cannot revproxy from https->http
+%% this is nontrivial to fix. OTP ssl app cannot deal with what we
+%% need to do. Maybe this will work once the ssl native in OTP works.
+
 init(CliSock, ARG, _DecPath, _QueryPart, {Prefix, URL}, N) ->
     GC=get(gc), SC=get(sc),
     %% Connect to the backend server
@@ -48,7 +54,7 @@ init(CliSock, ARG, _DecPath, _QueryPart, {Prefix, URL}, N) ->
             Headers = rewrite_headers(Cli, Headers0),
             ReqStr = yaws_api:reformat_request(
                        rewrite_path(ARG#arg.req, Prefix)),
-            Hstr = headers_to_str(Headers),
+            Hstr = yaws:headers_to_str(Headers),
 
             %% Sending received data from the client to the proxied server:
             %%  MREMOND: TODO: Refactor.
@@ -84,7 +90,7 @@ init(CliSock, ARG, _DecPath, _QueryPart, {Prefix, URL}, N) ->
                          httpconnection= if KeepAlive == undefined ->
                                                  "keep-alive";
                                             true ->
-                                                 yaws:lowercase(KeepAlive)
+                                                 yaws:to_lower(KeepAlive)
                                          end
                         },     
             %% Need to check if we could close the connection after server answer
@@ -109,12 +115,6 @@ init(CliSock, ARG, _DecPath, _QueryPart, {Prefix, URL}, N) ->
              )
     end.
 
-
-
-headers_to_str(Headers) ->
-    lists:map(
-      fun(H) -> [H, "\r\n"] end,
-      yaws_api:reformat_header(Headers)).
 
 
 connect_url(URL, _SC) ->
@@ -209,42 +209,6 @@ set_sock_mode(PS) ->
     end.
 
 
-get_chunk_num(Fd) ->
-    get_chunk_num(Fd,nossl).
-get_chunk_num(Fd,SSL) ->
-    case yaws:do_recv(Fd, 0, SSL) of
-        {ok, Line} ->
-            ?Debug("Get chunk num from line ~p~n",[Line]),
-            erlang:list_to_integer(nonl(Line),16);
-        {error, _Rsn} ->
-            exit(normal)
-    end.
-
-nonl(B) when binary(B) ->
-    nonl(binary_to_list(B));
-nonl([10|T]) ->
-    nonl(T);
-nonl([13|T]) ->
-    nonl(T);
-nonl([H|T]) ->
-    [H|nonl(T)];
-nonl([]) ->
-    [].
-            
-
-
-get_chunk(_Fd, N, N, _) ->
-    [];
-get_chunk(Fd, N, Asz,SSL) ->
-    case yaws:do_recv(Fd, N, SSL) of
-        {ok, Bin} ->
-            SZ = size(Bin),
-            [Bin|get_chunk(Fd, N, SZ+Asz,SSL)];
-        _ ->
-            exit(normal)
-    end.
-
-
 
 ploop(From0, To, GC, SC, Pid) ->
     put(sc, SC),
@@ -282,7 +246,7 @@ ploop(From0, To, Pid) ->
                                 yaws_api:reformat_request(
                                   rewrite_path(R, From#psock.prefix))
                         end,
-                    Hstr = headers_to_str(H = rewrite_headers(From, H0)),
+                    Hstr = yaws:headers_to_str(H = rewrite_headers(From, H0)),
                     yaws:gen_tcp_send(TS, [RStr, "\r\n", Hstr]),
                     From2 = sockmode(H, R, From),
                     yaws:gen_tcp_send(TS,"\r\n"),
@@ -292,9 +256,9 @@ ploop(From0, To, Pid) ->
             end;
         expectchunked ->
             %% read the chunk number, we're in line mode
-            N = get_chunk_num(From#psock.s, get(ssl)),
+            N = yaws:get_chunk_num(From#psock.s, get(ssl)),
             if N == 0 ->
-                    ok=eat_crnl(From#psock.s, get(ssl)),
+                    ok=yaws:eat_crnl(From#psock.s, get(ssl)),
                     yaws:gen_tcp_send(TS,["0\r\n\r\n"]),
                     ?Debug("SEND final 0 ",[]),
                     ploop_keepalive(From#psock{mode = expectheaders, 
@@ -304,7 +268,7 @@ ploop(From0, To, Pid) ->
                                     state = N},To, Pid)
             end;
         chunk ->
-            CG = get_chunk(From#psock.s,From#psock.state, 0, get(ssl)),
+            CG = yaws:get_chunk(From#psock.s,From#psock.state, 0, get(ssl)),
             SZ = From#psock.state,
             Data2 = [yaws:integer_to_hex(SZ),"\r\n", CG, "\r\n"],
             yaws:gen_tcp_send(TS, Data2),
@@ -419,7 +383,7 @@ rewrite_loc_url(LocUrl, PS) ->
     Scheme = yaws:redirect_scheme(SC),
     RedirHost = yaws:redirect_host(SC, PS#psock.r_host),
     _RealPath = LocUrl#url.path,
-    [Scheme, RedirHost, yaws:slash_append(PS#psock.prefix, LocUrl#url.path)].
+    [Scheme, RedirHost, slash_append(PS#psock.prefix, LocUrl#url.path)].
 
 
 %% This is the case for broken webservers that reply with
@@ -432,22 +396,18 @@ rewrite_loc_rel(PS, Loc) ->
     RedirHost = yaws:redirect_host(SC, PS#psock.r_host),
     [Scheme, RedirHost,Loc].
 
-
-
-eat_crnl(Fd) ->
-    eat_crnl(Fd,nossl).
-eat_crnl(Fd,SSL) ->
-    yaws:setopts(Fd, [{packet, line}],SSL),
-    case yaws:do_recv(Fd,0, SSL) of
-        {ok, <<13,10>>} ->
-            ok;
-        {ok, [13,10]} ->
-            ok;
-        Err ->
-            {error, Err}
-    end.
-
     
+
+slash_append("/", [$/|T]) ->
+    [$/|T];
+slash_append("/", T) ->
+    [$/|T];
+slash_append([], [$/|T]) ->
+    [$/|T];
+slash_append([], T) ->
+    [$/|T];
+slash_append([H|T], X) ->
+    [H | slash_append(T,X)].
         
 
 

@@ -10,13 +10,12 @@
 -module(yaws_ls).
 -author('klacke@hyber.org').
 
--compile(export_all).
-
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
 -include_lib("kernel/include/file.hrl").
+-export([list_directory/6, out/1]).
 
 list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
     {abs_path, Path} = Req#http_request.path,
