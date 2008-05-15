@@ -1,0 +1,21 @@
+@title Yaws -An Erlang Web Server
+@doc 
+<p>
+This is a very rough import of Yaws into Erlware.
+In particular <i>-disable-pam</i> was used to create
+the configure script. It is uncertain what the effects
+of this are. Also some modules was not included in the
+yaws.app file and may therefore not be compiled.
+</p>
+<p>
+They were: <code>ymnesia, yaws_showarg, yaws_vdir, yaws_content_negotiation</code>
+It is unclear if they were intentionally left out or not.
+</p>
+<p>
+Finally some files, that normally is generated at build time
+was included <i>already generated</i>. 
+They were: <code>mime_types.erl, yaws_generated.erl</code>.
+</p>
+
+@author Torbjorn Tornkvist
+@copyright 2008 Torbjorn Tornkvist
