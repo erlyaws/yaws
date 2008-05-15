@@ -2,7 +2,7 @@
 %%% Created : 14 Oct 2005 by Torbjorn Tornkvist <tobbe@tornkvist.org>
 %%% Desc.   : A naive Mnesia table viewer Yaws-app interface.
 %%%
-%%% @author Torbjörn Törnkvist <tobbe@tornkvist.org>
+%%% @author Torbjorn Tornkvist <tobbe@tornkvist.org>
 %%%
 %%% @doc Ymnesia is a Yaws appmod to view Mnesia tables.
 %%%      Add <b>ymnesia</b> as an appmod to your Yaws configuration.
@@ -15,11 +15,13 @@
 %%%           the result. <br/>No checkbox means: <i>show all attributes</i>.</li>
 %%%      </ul>
 %%%
-%%%      <p>To test it, add it as an appmod to you Yaws configuration, e.g:
+%%%      <p>
+%%%      To test it, add it as an appmod to you Yaws configuration, e.g:
 %%%
 %%%          appmods = [{"showdb", ymnesia}}
 %%%
-%%%      then point your browser to:  http://<host>/showdb/
+%%%      then point your browser to:  http://&lt;host>/showdb/
+%%%      </p>
 %%% @end
 %%%
 %%%-------------------------------------------------------------------

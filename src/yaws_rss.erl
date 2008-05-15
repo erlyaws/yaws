@@ -4,7 +4,7 @@
 %%%
 %%% @doc A Yaws RSS feed interface.
 %%%
-%%% @author  Torbjörn Törnkvist <tobbe@tornkvist.org>
+%%% @author  Torbjorn Tornkvist <tobbe@tornkvist.org>
 %%% @end
 %%%
 %%% $Id$
@@ -45,13 +45,13 @@ start() ->
     gen_server:start({local, ?SERVER}, ?MODULE, [], []).
 
 %%%
-%%% @spec open(App::atom(), Dir::string()) -> 
+%%% @spec open(App::atom()) -> 
 %%%         {ok, DB::db()} | {error, string()}
 %%%
 %%% @type db(). An opaque handle leading to an RSS database.
 %%%
-%%% @doc See {@open/2}
-%%%
+%%% @doc See {@link open/2} 
+%%% @end
 open(App) ->
     open(App, []).
 
@@ -62,7 +62,7 @@ open(App) ->
 %%% @doc Open a RSS database.
 %%%      Per default <em>dets</em> is used as database,
 %%%      but by using the <em>db_mod</em> option it is
-%%%      possible to use your own database.</br>
+%%%      possible to use your own database.<br/>
 %%%      These are the options:
 %%%      <p><dl>
 %%%
@@ -101,7 +101,7 @@ open(App) ->
 %%%      be stored in the database. The default in <em>infinite</em></dd>
 %%%      </dl></p>
 %%%      <p>If no database exist, a new will be created.
-%%%      The returned database handle is to be used with {@link close/1}.
+%%%      The returned database handle is to be used with {@link close/1}.</p>
 %%% @end
 %%%
 open(App, Opts) ->
@@ -111,7 +111,7 @@ open(App, Opts) ->
 %%% @spec close() -> ok | {error, string()}
 %%%
 %%% @doc Close the RSS database.
-%%%
+%%% @end
 close() ->
     gen_server:call(?SERVER, {close, ?DB}, infinity).
 
@@ -121,7 +121,7 @@ close() ->
 %%%
 %%% @doc Close the user provided RSS database.
 %%%      A call to; <em>DbMod:close(DbName)</em> will be made.
-%%%
+%%% @end
 close(DBmod, DBname) ->
     gen_server:call(?SERVER, {close, DBmod, DBname}, infinity).
 
@@ -153,7 +153,7 @@ insert(App, Tag, Title, Link, Desc) ->
 %%% @doc Works as {@link insert/5} but takes an extra argument
 %%%      <em>Creator</em> which may contains an identification
 %%%      of who created the item.
-%%%
+%%% @end
 insert(App, Tag, Title, Link, Desc, Creator) ->
     GregSecs = calendar:datetime_to_gregorian_seconds({date(),time()}),
     insert(App, Tag, Title, Link, Desc, Creator, GregSecs).
@@ -167,7 +167,7 @@ insert(App, Tag, Title, Link, Desc, Creator) ->
 %%% @doc Works as {@link insert/6} but takes an extra argument
 %%%      <em>GregSecs</em> which is the creation time of the item
 %%%      in Gregorian Seconds.
-%%%
+%%% @end
 insert(App, Tag, Title, Link, Desc, Creator, GregSecs) ->
     Args = {App, Tag, Title, Link, Desc, Creator, GregSecs},
     gen_server:call(?SERVER, {insert, Args}, infinity).
@@ -175,9 +175,9 @@ insert(App, Tag, Title, Link, Desc, Creator, GregSecs) ->
 
 %%%
 %%% @spec retrieve(App::atom(), Tag::atom()) ->
-%%%          {ok, RSScontent::IoList()} | {error, string()}
+%%%           {ok, RSSContent::iolist()} |{error, string()}
 %%%
-%%% @type IoList.  A deep list of strings and/or binaries.
+%%% @type ioList().  A deep list of strings and/or binaries.
 %%%
 %%% @doc Retrieve the <em>RSScontent</em> (in XML and all...)
 %%%      to be delivered to a RSS client. 
@@ -187,7 +187,7 @@ insert(App, Tag, Title, Link, Desc, Creator, GregSecs) ->
 %%%      to be called, and <em>OpaqueTag</em> the Tag that is
 %%%      used in <em>DbModule:retrieve(Tag)</em> which must return
 %%%      a list of tuples: <em>{Title, Link, Desc, Creator, GregSecs}</em></p>
-%%%
+%%% @end
 retrieve(App, Tag) ->
     gen_server:call(?SERVER, {retrieve, App, Tag}, infinity).
 
