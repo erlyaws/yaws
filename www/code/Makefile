@@ -5,7 +5,7 @@ all:	myappmod.beam
 debug:
 
 install:	all
-	cp myappmod.beam $(DESTDIR)/$(VARDIR)/yaws/ebin
+	cp myappmod.beam $(DESTDIR)$(VARDIR)/yaws/ebin
 
 clean:
 	$(RM) myappmod.beam

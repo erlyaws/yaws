@@ -3,12 +3,12 @@
 #set -x
 
 prefix=$1
-destdir=$2
-erl=$3
-werl=$4
-etcdir=$5
-vardir=$6
-bindir=$7
+erl=$2
+werl=$3
+etcdir=$4
+vardir=$5
+bindir=$6
+destdir=$7
 
 #bindir=`dirname $erl` ; bindir=`dirname $bindir`/lib/erlang/bin
 
@@ -18,8 +18,8 @@ p=${prefix}
 e=${etcdir}
 v=${vardir}
 
-install -d ${destdir}/${prefix}/bin
-install -d ${destdir}/${prefix}/etc
+install -d ${destdir}${prefix}/bin
+install -d ${destdir}${prefix}/etc
 
 cat yaws.template | \
     ./Subst %yawsdir% ${prefix}/lib/yaws | \
@@ -27,44 +27,44 @@ cat yaws.template | \
     ./Subst %erl% "${erl}" | \
     ./Subst %run_erl% "${bindir}/run_erl" | \
     ./Subst %to_erl% "${bindir}/to_erl" | \
-    ./Subst %werl% "${werl}" > ${destdir}/${prefix}/bin/yaws
+    ./Subst %werl% "${werl}" > ${destdir}${prefix}/bin/yaws
 
-chmod +x ${destdir}/${prefix}/bin/yaws
+chmod +x ${destdir}${prefix}/bin/yaws
 
-install -d ${destdir}/${prefix}/lib/yaws/examples/ebin
-install -d ${destdir}/${prefix}/lib/yaws/examples/include
+install -d ${destdir}${prefix}/lib/yaws/examples/ebin
+install -d ${destdir}${prefix}/lib/yaws/examples/include
 
 ## seems gentoo don't like to be installed in /usr/local/etc
 ## since /sbin/runscript still reads /etc/conf.d
 if [ -f /etc/gentoo-release ]; then
-    install -d ${destdir}/${etcdir}/init.d/
-    install -d ${destdir}/${etcdir}/conf.d/
-    install -d ${destdir}/${vardir}/run/yaws
-    chmod a+rwx ${destdir}/${vardir}/run/yaws
+    install -d ${destdir}${etcdir}/init.d/
+    install -d ${destdir}${etcdir}/conf.d/
+    install -d ${destdir}${vardir}/run/yaws
+    chmod a+rwx ${destdir}${vardir}/run/yaws
     sed -e  "s;%prefix%;$p;g"  \
-	-e "s;%etcdir%;$e;g" gentoo/init.d.yaws > ${destdir}/${etcdir}/init.d/yaws
-    chmod +x ${destdir}/${etcdir}/init.d/yaws
+	-e "s;%etcdir%;$e;g" gentoo/init.d.yaws > ${destdir}${etcdir}/init.d/yaws
+    chmod +x ${destdir}${etcdir}/init.d/yaws
 elif [ -f /etc/redhat-release ]; then
-    install -d ${destdir}/${etcdir}/init.d
+    install -d ${destdir}${etcdir}/init.d
     sed -e "s;%prefix%;$p;g" \
-	-e "s;%etcdir%;$e;g" redhat/yaws.init.d >  ${destdir}/${etcdir}/init.d/yaws
-    chmod +x ${destdir}/${etcdir}/init.d/yaws
-    install -d ${destdir}/${vardir}/run/yaws
-    chmod a+rwx ${destdir}/${vardir}/run/yaws
+	-e "s;%etcdir%;$e;g" redhat/yaws.init.d >  ${destdir}${etcdir}/init.d/yaws
+    chmod +x ${destdir}${etcdir}/init.d/yaws
+    install -d ${destdir}${vardir}/run/yaws
+    chmod a+rwx ${destdir}${vardir}/run/yaws
 elif [ -f /etc/suseservers ]; then
-    install -d ${destdir}/${etcdir}/init.d
+    install -d ${destdir}${etcdir}/init.d
     sed -e "s;%prefix%;$p;g" \
-	-e "s;%etcdir%;$e;g" suse/yaws.init.d/ > ${destdir}/${etcdir}/init.d/yaws
-    chmod +x ${destdir}/${etcdir}/init.d/yaws
-    install -d ${destdir}/${vardir}/run/yaws
-    chmod a+rwx ${destdir}/${vardir}/run/yaws
+	-e "s;%etcdir%;$e;g" suse/yaws.init.d/ > ${destdir}${etcdir}/init.d/yaws
+    chmod +x ${destdir}${etcdir}/init.d/yaws
+    install -d ${destdir}${vardir}/run/yaws
+    chmod a+rwx ${destdir}${vardir}/run/yaws
 elif [ -f /etc/debian_version ]; then
-    install -d ${destdir}/${etcdir}/init.d
+    install -d ${destdir}${etcdir}/init.d
     sed -e "s;%prefix%;$p;g" \
-	-e "s;%etcdir%;$e;g" debian/yaws.init.d >  ${destdir}/${etcdir}/init.d/yaws
-    chmod +x ${destdir}/${etcdir}/init.d/yaws
-    install -d ${destdir}/${vardir}/run/yaws
-    chmod a+rwx ${destdir}/${vardir}/run/yaws
+	-e "s;%etcdir%;$e;g" debian/yaws.init.d >  ${destdir}${etcdir}/init.d/yaws
+    chmod +x ${destdir}${etcdir}/init.d/yaws
+    install -d ${destdir}${vardir}/run/yaws
+    chmod a+rwx ${destdir}${vardir}/run/yaws
 
 elif [ "`uname -s`" = "Darwin" -a `id -u` = 0 ]; then
      startupdir="/Library/StartupItems/Yaws"
@@ -80,11 +80,11 @@ elif [ "`uname -s`" = "Darwin" -a `id -u` = 0 ]; then
       # MacOS is particular about the ownership of startup items.
      chown -R root:wheel ${startupdir}
 elif [ "`uname -s`" = "FreeBSD" ]; then
-    sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" freebsd/yaws.sh > ${destdir}/${etcdir}/rc.d/yaws.sh
+    sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" freebsd/yaws.sh > ${destdir}${etcdir}/rc.d/yaws.sh
 elif [ "`uname -s`" = "NetBSD" ]; then
     sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" netbsd/yaws.sh > /etc/rc.d/yaws
 else    
-    install -d ${destdir}/${etcdir} 
+    install -d ${destdir}${etcdir} 
     echo "Don't know how to make /etc/init scrips for this system"
     echo "possibly add ${prefix}/bin/yaws --daemon --heart to your /etc/rc.local manually"
 fi

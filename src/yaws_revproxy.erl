@@ -272,7 +272,7 @@ ploop(From0, To, Pid) ->
             SZ = From#psock.state,
             Data2 = [yaws:integer_to_hex(SZ),"\r\n", CG, "\r\n"],
             yaws:gen_tcp_send(TS, Data2),
-            ok = eat_crnl(From#psock.s, get(ssl)),
+            ok = yaws:eat_crnl(From#psock.s, get(ssl)),
             ploop(From#psock{mode = expectchunked,
                              state = undefined}, To, Pid);
         len when From#psock.state == 0 ->

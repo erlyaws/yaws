@@ -32,11 +32,11 @@ clean:
 install: all
 	install -d $(MAILINSTALLDIR)
 	install -d $(EBININSTALLDIR)
-	install -d $(DESTDIR)/etc/mail
-	@if [ -f $(DESTDIR)/etc/mail/yaws-webmail.conf ]; \
-		then echo "$(DESTDIR)/etc/mail/yaws-webmail.conf already exists"; \
+	install -d $(DESTDIR)$(PREFIX)/etc/mail
+	@if [ -f $(DESTDIR)$(PREFIX)/etc/mail/yaws-webmail.conf ]; \
+		then echo "$(DESTDIR)$(PREFIX)/etc/mail/yaws-webmail.conf already exists"; \
 	else \
-		cp yaws-webmail.conf $(DESTDIR)/etc/mail/yaws-webmail.conf; fi
+		cp yaws-webmail.conf $(DESTDIR)$(PREFIX)/etc/mail/yaws-webmail.conf; fi
 	(cd ../ebin; find . -name '*' -print | xargs tar cf - ) | (cd $(EBININSTALLDIR); tar xf - )
 	(cd ../mail; find . -name '*' -print | xargs tar cf -  ) | (cd $(MAILINSTALLDIR); tar xf - )
 
