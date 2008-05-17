@@ -54,6 +54,17 @@ run(GC) ->
             run_listen(GC)
     end.
 
+rand() ->
+    try 
+        crypto:start(),
+        crypto:rand_uniform(0, 1 bsl 64)
+    catch
+        _ ->
+            {A1, A2, A3}=now(),
+            random:seed(A1, A2, A3),
+            random:uniform(1 bsl 64)
+    end.
+
 
 ctl_args() ->
     [{packet, 2},
@@ -67,10 +78,7 @@ run_listen(GC) ->
         {ok,  L} ->
             case inet:sockname(L) of
                 {ok, {_, Port}} ->
-                    %% Need better crypto here
-                    {A1, A2, A3}=now(),
-                    random:seed(A1, A2, A3),
-                    Key = random:uniform(1 bsl 64),
+                    Key = rand(),
                     case w_ctl_file(GC#gconf.id, Port, Key) of
                         ok ->
                             proc_lib:init_ack(ok),
