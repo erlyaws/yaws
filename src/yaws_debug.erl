@@ -21,7 +21,9 @@
          xref/1,
          pids/0,
          eprof/0,
-         check_headers/1, nobin/1]).
+         check_headers/1, nobin/1,
+         do_debug_dump/1
+        ]).
          
 
 
@@ -309,3 +311,341 @@ xnobin(T) when tuple(T) ->
     list_to_tuple(xnobin(tuple_to_list(T)));
 xnobin(X) ->
     X.
+
+
+
+%%%%%%%%%%%%%%% debug dump %%%%%%%%%%%%%%%%%%%%%%%
+
+
+do_debug_dump(Socket) ->
+    gen_version(Socket),
+    gen_sep(Socket),
+    %% keep proc status last, to report on hangs for the others
+    CollectOS = gen_os(Socket),		    
+    Collect = lists:foldl(fun({F, Str}, Acc) ->
+				  Ret = collect(F, Socket, Str),
+				  gen_sep(Socket),
+				  [Ret|Acc]
+			  end,
+			  CollectOS,
+			  [{fun send_status/1, "Yaws status"},
+                           {fun send_inet/1,   "Inet status"},
+			   {proc_status_fun(), "process status"}]),
+    lists:foreach(fun(ok) ->
+			  ok;
+		     ({pid, Pid}) ->
+			  exit(Pid, shutdown)
+		  end, Collect),
+    ok.
+
+
+gen_version(Socket) ->
+    sock_format(Socket, "Yawsvsn: ~p~n", [yaws_generated:version()]).
+
+gen_os(Socket) ->
+    OSType = os:type(),
+    [gen_oscmd(Socket, "uname -a"),
+     gen_oscmd(Socket, "ifconfig -a"),
+     gen_oscmd(Socket, top_cmd(OSType)),
+     gen_oscmd(Socket, netstat_cmd(OSType))].
+
+gen_oscmd(Socket, Cmd) ->    
+    F = fun(Sock) ->
+		sock_format(Sock, "~s:~n~s~n", [Cmd, os:cmd(Cmd)])
+	end,
+    Ret = collect(F, Socket, Cmd),
+    gen_sep(Socket),
+    Ret.
+
+%% FIXME The 'top -b -n 1' invocation is actually for version 3.2.x
+%% typically(?) found on Linux, while the 'top -b' is for (e.g.) version
+%% 3.5.x typically(?) found on *BSD. For the latter, '-b' itself means
+%% "run only once", '-n' is an alias for '-b', and '1' means show only
+%% one process. Obviously there is a problem if 3.2.x or equivalent ends
+%% up getting invoked w/o '-n 1', since it will loop forever...
+top_cmd({unix, linux}) -> "top -b -n 1";
+top_cmd({unix, sunos}) -> "top -b -d 2 -s 1 || /usr/ucb/ps -auxww";
+top_cmd({unix, qnx})   -> "pidin times; pidin pmem";
+top_cmd({unix, darwin}) -> "top -o cpu -l 1";
+top_cmd(_)             -> "top -b".
+
+netstat_cmd({unix, linux})   -> "netstat -ant";
+netstat_cmd({unix, freebsd}) -> "netstat -an -p tcp";
+netstat_cmd({unix, sunos})   -> "netstat -an -P tcp";
+netstat_cmd(_)               -> "netstat -an".
+		
+gen_sep(Socket) ->    
+    sock_format(Socket,"~n~s~n", [lists:duplicate(40, $*)]).
+    
+
+proc_status_fun() ->
+    fun(Fd) ->
+	    sock_format(Fd, "Process status:~n", []),
+	    i1(Fd, processes())
+    end.
+
+i1(Fd, Ps) ->
+    Alive = lists:filter(fun palive/1, Ps),
+    i2(Fd, Alive),
+    case lists:filter(fun pzombie/1, Ps) of
+        [] ->
+            ok;
+        Zombies ->
+            %% Zombies is not the same as Ps-Alive, since the remote
+            %% process that fetched Ps is included among Alive, but has
+            %% exited (for ni/0).
+            sock_format(Fd, "\nDead processes:\n", []),
+            i2(Fd, Zombies)
+    end.
+
+i2(Fd, Ps) ->
+    iformat(Fd, "Pid", "Initial Call", "Current Function", "Reds", "Msgs",
+            "Heap", "Stack"),
+    {Reds,Msgs,Heap,Stack,Susp1,Susp2,MemSusp,_} =
+        lists:foldl(fun display_info/2, {0,0,0,0,[],[],[],Fd}, Ps),
+    iformat(Fd, "Total", "", "", io_lib:write(Reds), io_lib:write(Msgs),
+           io_lib:write(Heap), io_lib:write(Stack)),
+    lists:foreach(fun(Susp) -> display_susp1(Fd, Susp) end, Susp1),
+    lists:foreach(fun(Susp) -> display_susp2(Fd, Susp) end, Susp2),
+    lists:foreach(fun(Susp) -> display_susp3(Fd, Susp) end, MemSusp).
+
+
+palive(Pid) ->
+    case process_info(Pid, status) of
+        undefined         -> false;
+        {status, exiting} -> false;
+        _                 -> true
+    end.
+
+pzombie(Pid) ->
+    case process_info(Pid, status) of
+        undefined         -> false;
+        {status, exiting} -> true;
+        _                 -> false
+    end.
+
+
+-define(MEM_LARGE, 40000).
+
+display_info(Pid, {R,M,H,St,S1,S2,S3,Fd}) ->
+    case process_info(Pid) of
+        undefined ->
+            {R, M};
+        Info ->
+            Call = initial_call(Info),
+            Curr = fetch(current_function, Info),
+            Reds = fetch(reductions, Info),
+            LM = fetch(message_queue_len, Info),
+            Heap = fetch(heap_size, Info),
+            Stack = fetch(stack_size, Info),
+            Mem = case process_info(Pid, memory) of
+                      false -> 0;
+                      {memory, Int} -> Int
+                  end,
+            iformat(Fd,
+                    io_lib:write(Pid),
+                    mfa_string(Call),
+                    mfa_string(Curr),
+                    io_lib:write(Reds),
+                    io_lib:write(LM),
+                    io_lib:write(Heap),
+                    io_lib:write(Stack)),
+            %% if it got msgs, it's suspicios
+            NS1 = if LM > 0 -> [{Pid, Reds, LM} | S1];
+                     true -> S1
+                  end,
+            %% if it's in gen:wait_resp* it's suspicios
+            NS2 = case Curr of
+                      {gen, wait_resp, _} -> [{Pid, Reds} | S2];
+                      {gen, wait_resp_mon, _} -> [{Pid, Reds} | S2];
+                      _ -> S2
+                  end,
+            %% If it is large .. it is suspicios
+            NS3 = if Mem > ?MEM_LARGE ->
+                          [{Pid, Mem} | S3];
+                     true ->
+                          S3
+                  end,
+            {R+Reds, M+LM, H+Heap,St+Stack, NS1, NS2, NS3, Fd}
+    end.
+
+display_susp1(Fd, {Pid, Reds0, LM0}) ->
+    case process_info(Pid) of
+        undefined ->
+            ok;
+        Info ->
+            Reds1 = fetch(reductions, Info),
+            LM1 = fetch(message_queue_len, Info),
+            Msgs = fetch(messages, Info),
+	    Bt = case process_info(Pid, backtrace) of
+		     {backtrace, Bin} ->
+			 binary_to_list(Bin);
+		     _ ->
+			 []
+		 end,
+            if LM1 > 0 ->
+                    %% still suspicious
+                    sock_format(Fd,
+                              "*** Suspicious *** : ~-12w, Qlen = ~4w/~-4w, "
+                              "Reds = ~12w/~-12w\n",
+                              [Pid, LM0, LM1, Reds0, Reds1]),
+                    lists:foreach(
+                      fun(Msg) -> sock_format(Fd, "  ~p\n",[Msg]) end,
+                      Msgs),
+                    gen_sep(Fd),
+		    sock_format(Fd, "\n\n\n\n*** Backtrace *** for ~w\n~s\n",
+                              [Pid,Bt]);
+               true ->
+                    ok
+            end
+    end.
+
+display_susp2(Fd, {Pid, Reds0}) ->
+    case process_info(Pid, reductions) of
+	undefined ->
+	    ok;
+	{reductions, Reds0} ->
+	    %% it hasn't done any work... print bt
+	    case process_info(Pid, backtrace) of
+		{backtrace, Bin} ->
+                    gen_sep(Fd),
+		    sock_format(Fd, "\n\n\n\n*** Backtrace (gen_wait) "
+                                "*** for ~w\n~s\n",
+				[Pid, binary_to_list(Bin)]);
+		_ ->
+		    ok
+	    end;
+	_ ->
+	    ok
+    end.
+
+display_susp3(Fd, {Pid, _Mem}) ->
+    case {process_info(Pid, memory), process_info(Pid, current_function)} of
+	{undefined, _} ->
+	    ok;
+        {_, {current_function,{yaws_debug,display_susp3,2}}} ->
+            ok;
+	{memory, Mem2} when Mem2 > ?MEM_LARGE ->
+            %% it's still too big
+	    case process_info(Pid, backtrace) of
+		{backtrace, Bin} ->
+                    gen_sep(Fd),
+		    sock_format(Fd, 
+                                "\n\n\n\n*** Backtrace (mem=~p) "
+                                "*** for ~w\n~p~n~s\n",
+				[Mem2, Pid, process_info(Pid),
+                                 binary_to_list(Bin)]);
+		_ ->
+		    ok
+	    end;
+	_ ->
+	    ok
+    end.
+
+
+
+initial_call(Info)  ->
+    case fetch(initial_call, Info) of
+        {proc_lib, init_p, 5} ->
+            proc_lib:translate_initial_call(Info);
+        ICall ->
+            ICall
+    end.
+
+mfa_string({M, F, A}) ->
+    io_lib:format("~w:~w/~w", [M, F, A]);
+mfa_string(X) ->
+    io_lib:write(X).
+
+fetch(Key, Info) ->
+    case lists:keysearch(Key, 1, Info) of
+        {value, {_, Val}} -> Val;
+        false -> 0
+    end.
+
+iformat(Fd, A1, A2, A3, A4, A5, A6, A7) ->
+    sock_format(Fd, "~-12s ~-23s ~-23s ~12s ~4s ~12s ~10s\n",
+                [A1,A2,A3,A4,A5,A6,A7]).
+
+sock_format(Sock, Fmt, Args) ->
+    gen_tcp:send(Sock, io_lib:format(Fmt, Args)).
+
+-define(COLLECT_TIMEOUT, 10000).
+
+
+%% purpose of this collect function is to not hang, remember a probable
+%% reason for running debug-dump is that the system is in a
+%% corrupt state.
+
+collect(F, Sock, User) ->
+    SELF = self(),
+    Pid = spawn(fun() ->
+			F(Sock),
+			SELF ! {self(), ok},
+			timer:sleep(infinity)
+		end),
+    Ref = erlang:monitor(process, Pid),
+    receive
+	{Pid, ok} ->
+	    erlang:demonitor(Ref),
+	    exit(Pid, shutdown),
+	    ok;
+	Down = {'DOWN', Ref, _,_,_} ->
+	    sock_format(Sock, "*** Failed to collect ~s: ~p~n", [User, Down]),
+	    ok
+    after ?COLLECT_TIMEOUT ->
+	    erlang:demonitor(Ref),
+	    sock_format(Sock, "*** Failed to collect ~s: timeout~n", [User]),
+	    {pid, Pid}	% Let it hang for proc status, exit after
+    end.
+    
+send_status(Sock) ->
+    {InitStatus, _} = init:get_status(),
+    sock_format(Sock, ["vsn: ", yaws_generated:version(), "\n"], []),
+    sock_format(Sock, "status: ~p\n", [InitStatus]),
+    ok.
+
+send_inet(Sock) ->
+    Chars = capture_io(fun() -> inet:i() end),
+    sock_format(Sock, "inet:i() output ~n~s~n", [Chars]),
+    ok.
+
+
+%% This function runs a Fun that is producing IO through
+%% io:format() and collects the IO and retuns the IO as a char list   
+%% Returns io_list() | {timeout, io_list()}
+%%
+capture_io(Fun) ->
+    do_capture_io(Fun).
+capture_io(Fun, MilliSecTimeout) ->
+    {ok, Tref} = timer:send_after(MilliSecTimeout, capio_timeout),
+    Chars = do_capture_io(Fun),
+    timer:cancel(Tref),
+    Chars.
+    
+do_capture_io(Fun) ->
+    Pid = spawn(fun() -> 
+                        receive run -> ok end,
+                        Fun()
+                end),
+    Mref = erlang:monitor(process,Pid),
+    group_leader(self(), Pid),
+    Pid ! run,
+    collect_io(Pid, Mref, []).
+
+collect_io(Pid, Mref, Ack) ->
+    receive
+        {'DOWN', Mref, _,_,_} ->
+            Ack;
+        {io_request, From, Me, {put_chars, M, F, A}} ->
+            From ! {io_reply, Me, ok},
+            collect_io(Pid, Mref, [Ack, apply(M,F, A)]);
+        capio_timeout ->
+            {timeout, Ack}
+    end.
+    
+
+
+    
+
+

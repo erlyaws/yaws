@@ -18,7 +18,7 @@
 
 -export([start/2, actl_trace/1]).
 -export([ls/1,hup/1,stop/1,status/1,load/1,
-         check/1,trace/1]).
+         check/1,trace/1, debug_dump/1]).
 %% internal
 -export([run/1, aloop/3]).
 
@@ -67,6 +67,7 @@ run_listen(GC) ->
         {ok,  L} ->
             case inet:sockname(L) of
                 {ok, {_, Port}} ->
+                    %% Need better crypto here
                     {A1, A2, A3}=now(),
                     random:seed(A1, A2, A3),
                     Key = random:uniform(1 bsl 64),
@@ -156,6 +157,9 @@ handle_a(A, GC, Key) ->
                 {id, Key} ->
                     a_id(A),
                     gen_tcp:close(A);
+                {debug_dump, Key} ->
+                    a_debug_dump(A),
+                    gen_tcp:close(A);
                 {Other, Key} ->
                     gen_tcp:send(A, io_lib:format("Other: ~p~n", [Other])),
                     gen_tcp:close(A);
@@ -212,31 +216,40 @@ a_id(Sock) ->
     gen_tcp:send(Sock, ID),
     ok.
 
-
 a_status(Sock) ->
-    {UpTime, L} = yaws_server:stats(),
-    {Days, {Hours, Minutes, _Secs}} = UpTime,
-    H = f("~n Uptime: ~w Days, ~w Hours, ~w Minutes  ~n",
-          [Days, Hours, Minutes]),
+    gen_tcp:send(Sock, a_status()).
+a_status() ->
+    try 
+      {UpTime, L} = yaws_server:stats(),
+      {Days, {Hours, Minutes, _Secs}} = UpTime,
+      H = f("~n Uptime: ~w Days, ~w Hours, ~w Minutes  ~n",
+            [Days, Hours, Minutes]),
+      
+      T =lists:map(
+           fun({Host,IP,Hits}) ->
+                   L1= f("stats for ~p at ~p  ~n",
+                         [Host,IP]),
+                   T = "\n"
+                       "URL                  Number of hits\n",
+                   L2=lists:map(
+                        fun({Url, Hits2}) ->
+                                f("~-30s ~-7w ~n",
+                                  [Url, Hits2])
+                        end, Hits),
+                   END = "\n",
+                   [L1, T, L2, END]
+           end, L),
+        [H, T]
+    catch
+        _:Err ->
+            io_lib:format("Cannot get status ~p~n", [Err])
+    end.
 
-    T =lists:map(
-         fun({Host,IP,Hits}) ->
-                 L1= f("stats for ~p at ~p  ~n",
-                       [Host,IP]),
-                 T = "\n"
-                     "URL                  Number of hits\n",
-                 L2=lists:map(
-                      fun({Url, Hits2}) ->
-                              f("~-30s ~-7w ~n",
-                                [Url, Hits2])
-                      end, Hits),
-                 END = "\n",
-                 [L1, T, L2, END]
-         end, L),
-    gen_tcp:send(Sock, [H, T]),
 
-    %% Now lets' figure out the status of loaded modules
-    ok.
+a_debug_dump(Sock) ->
+    gen_tcp:send(Sock, a_status()),
+    yaws_debug:do_debug_dump(Sock).
+
 
 a_load(A, Mods) ->
     case purge(Mods) of
@@ -316,9 +329,9 @@ actl(SID, Term) ->
             timer:sleep(10),
             erlang:halt(3);
         {ok, Socket, Key} ->
-            {Ret, Str} = s_cmd(Socket, SID, Key, Term),
-            io:format("~s", [Str]),
-            timer:sleep(10),
+            gen_tcp:send(Socket, term_to_binary({Term, Key})),
+            Ret = s_cmd(Socket, SID, 0),
+            timer:sleep(40), %% sucks bigtime, we have no good way to flush io
             case Ret of 
                 ok ->
                     erlang:halt(0);
@@ -328,17 +341,19 @@ actl(SID, Term) ->
     end.
 
 
-s_cmd(Fd, SID, Key, Term) ->
-    gen_tcp:send(Fd, term_to_binary({Term, Key})),
-    Res = case gen_tcp:recv(Fd, 0) of
-              {ok, Bin} ->
-                  {ok, binary_to_list(Bin)};
-              Err ->
-                  {error, io_lib:format("yaws server for yaws id <~p> not "
-                                        "responding: ~p ~n", [SID, Err])}
-          end,
-    gen_tcp:close(Fd),
-    Res.
+s_cmd(Fd, SID, Count) ->
+    case gen_tcp:recv(Fd, 0) of
+        {ok, Bin} ->
+            io:format("~s", [binary_to_list(Bin)]),
+            s_cmd(Fd, SID, Count+1);
+        {error, closed} when Count > 0 ->
+            gen_tcp:close(Fd);
+        Err ->
+            io_lib:format("yaws server for yaws id <~p> not "
+                          "responding: ~p ~n", [SID, Err]),
+            error
+    end.
+
 
 
 %% List existing yaws nodes on this machine for this user
@@ -430,6 +445,9 @@ check([Id, File| IncludeDirs]) ->
 %% control a daemon http/traffic tracer
 trace([What, SID]) ->
     actl(SID, {trace, What}).
+
+debug_dump([SID]) ->
+    actl(SID, debug_dump).
 
 
 

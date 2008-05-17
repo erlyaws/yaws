@@ -57,6 +57,7 @@ help()
     echo "ctl functions ... "
     echo "        yaws --hup [--id ID]       -- hup the daemon, reload conf"
     echo "        yaws --stop [--id ID]      -- stop the daemon "
+    echo "        yaws --debug-dump [--id ID]-- produce a debug dump "
     echo "        yaws --status [--id ID]    -- query the daemon status "
     echo "        yaws --load Modules        -- load modules "
     echo "        yaws --ls                  -- list Yaws nodes and their status"
@@ -133,6 +134,9 @@ while [ $# -gt 0 ]
           ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl status";;
       -load|--load)
           $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl load ${id} $*
+          exit 0;;
+      --debug-dump)
+          $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl debug_dump ${id}
           exit 0;;
       -j|--ctltrace)
           ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl trace $1"

@@ -75,7 +75,7 @@ start_link(A) ->
     gen_server:start_link({local, yaws_server}, yaws_server, A, []).
 
 status() ->
-    gen_server:call(?MODULE, status).
+    gen_server:call(?MODULE, status, 10000).
 gs_status() ->
     [_|Pids] = gen_server:call(?MODULE, pids),
     lists:map(

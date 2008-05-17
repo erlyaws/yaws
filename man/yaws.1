@@ -142,6 +142,12 @@ Try to (re)load erlang modules into a running daemon.  This is useful
 after modifying appmods or modules used by scripts.
 
 .TP
+\fB--debug-dump  [--id id]\fR 
+Produce a debug dump on stdout. In particular this code lists what 
+we refer to as suspicious processes. I.e. processes that might be
+hanging or processes that are "large" - hardcoded to 40k words.
+
+.TP
 \fB--ctltrace [--id ID] http | traffic | off\fR
 Control the trace capabilities of a running yaws daemon. If the
 http or traffic option is given, the daemon will write a log
