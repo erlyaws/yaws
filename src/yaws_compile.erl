@@ -276,7 +276,7 @@ is_exported(Fun, A, Mod) ->
 new_out_file_module(Tail) ->
     case Tail of
         ">" ++ _ ->
-            Mnum = case catch gen_server:call(yaws_server, mnum) of
+            Mnum = case catch gen_server:call(yaws_server, mnum, infinity) of
                        {'EXIT', _} ->
                            1;
                        Other ->

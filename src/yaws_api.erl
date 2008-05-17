@@ -880,7 +880,7 @@ set_access_log(Bool) ->
 %% interactively turn on|off tracing to the tty (as well)
 %% typically useful in embedded mode
 set_tty_trace(Bool) ->
-    gen_server:call(yaws_log, {trace_tty, Bool}).
+    gen_server:call(yaws_log, {trace_tty, Bool}, infinity).
 
 
 

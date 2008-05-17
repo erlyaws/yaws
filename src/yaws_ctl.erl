@@ -20,7 +20,7 @@
 -export([ls/1,hup/1,stop/1,status/1,load/1,
          check/1,trace/1, debug_dump/1]).
 %% internal
--export([run/1, aloop/3]).
+-export([run/1, aloop/3, handle_a/3]).
 
 
 %% assumes the appropriate file structures 
@@ -122,7 +122,7 @@ w_ctl_file(Sid, Port, Key) ->
 aloop(L, GC, Key) ->
     case gen_tcp:accept(L) of
         {ok, A} ->
-            handle_a(A, GC, Key);
+            proc_lib:spawn (?MODULE, handle_a, [A, GC, Key]);
         Err ->
             error_logger:format("yaws_ctl failed to accept: ~p~n",
                                 [Err]),
@@ -212,7 +212,7 @@ f(Fmt, As) ->
 
 
 a_id(Sock) ->
-    ID = gen_server:call(yaws_server, id, []),
+    ID = gen_server:call(yaws_server, id, [], infinity),
     gen_tcp:send(Sock, ID),
     ok.
 

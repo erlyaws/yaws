@@ -58,7 +58,7 @@ handler(Args, Id, Payload, SessionValue) ->
     Headers = Args#arg.headers,
     SoapAction = yaws_soap_lib:findHeader("SOAPAction", Headers#headers.other),
     case gen_server:call(?SERVER, {request, Id, Payload, 
-                                   SessionValue, SoapAction}) of
+                                   SessionValue, SoapAction}, infinity) of
         {ok, XmlDoc, ResCode, undefined} ->
             {false, XmlDoc, ResCode};
         {ok, XmlDoc, ResCode, SessVal} ->
@@ -75,12 +75,12 @@ setup(_ConfigFile) ->
 
 setup(Id, WsdlFile) when tuple(Id),size(Id)==2 ->
     Wsdl = yaws_soap_lib:initModel(WsdlFile),
-    gen_server:call(?SERVER, {add_wsdl, Id, Wsdl}).
+    gen_server:call(?SERVER, {add_wsdl, Id, Wsdl}, infinity).
 
 
 setup(Id, WsdlFile, Prefix) when tuple(Id),size(Id)==2 ->
     Wsdl = yaws_soap_lib:initModel(WsdlFile, Prefix),
-    gen_server:call(?SERVER, {add_wsdl, Id, Wsdl}).
+    gen_server:call(?SERVER, {add_wsdl, Id, Wsdl}, infinity).
 
 
 

@@ -50,15 +50,15 @@ start() ->
     gen_server:start({local, yaws_session_server}, 
                      yaws_session_server, [], []).
 stop() ->
-    gen_server:call(?MODULE, stop).
+    gen_server:call(?MODULE, stop, infinity).
 
 
 %% will return a new cookie as a string
 new_session(Opaque) ->
-    gen_server:call(?MODULE, {new_session, Opaque, ?TTL}).
+    gen_server:call(?MODULE, {new_session, Opaque, ?TTL}, infinity).
 
 new_session(Opaque, TTL) ->
-    gen_server:call(?MODULE, {new_session, Opaque, TTL}).
+    gen_server:call(?MODULE, {new_session, Opaque, TTL}, infinity).
 
 cookieval_to_opaque(CookieString) ->
     case ets:lookup(?MODULE, CookieString) of

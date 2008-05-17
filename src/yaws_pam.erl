@@ -50,10 +50,10 @@ start_link(Service, UseAccounting, UseSess) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, Args, []).
 
 auth(User, Password) ->
-    gen_server:call(?MODULE, {auth, User, Password}).
+    gen_server:call(?MODULE, {auth, User, Password}, infinity).
 %% yaws never use close, ... no session mgmt in yaws
 close(Handle) ->
-    gen_server:call(?MODULE, {close, Handle}).
+    gen_server:call(?MODULE, {close, Handle}, infinity).
 
 
 

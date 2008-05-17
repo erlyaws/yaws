@@ -77,14 +77,14 @@ start_link(A) ->
 status() ->
     gen_server:call(?MODULE, status, 10000).
 gs_status() ->
-    [_|Pids] = gen_server:call(?MODULE, pids),
+    [_|Pids] = gen_server:call(?MODULE, pids, 10000),
     lists:map(
       fun(P) ->
               P ! {self(), status},
               receive {P, Stat} -> Stat end
       end, Pids).
 getconf() ->                    
-    gen_server:call(?MODULE,getconf).
+    gen_server:call(?MODULE,getconf, infinity).
 
 stats() -> 
     {_S, Time} = status(),

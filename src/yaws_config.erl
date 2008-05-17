@@ -1502,14 +1502,14 @@ is_list_of_scs(_) ->
 
 add_sconf(SC) ->
     ok= gen_server:call(yaws_server, {add_sconf, SC}, infinity),
-    ok = gen_server:call(yaws_log, {soft_add_sc, SC}).
+    ok = gen_server:call(yaws_log, {soft_add_sc, SC}, infinity).
 
 update_sconf(SC) ->
     ok = gen_server:call(yaws_server, {update_sconf, SC}, infinity).
 
 delete_sconf(SC) ->
     ok = gen_server:call(yaws_server, {delete_sconf, SC}, infinity),
-    ok = gen_server:call(yaws_log, {soft_del_sc, SC}).
+    ok = gen_server:call(yaws_log, {soft_del_sc, SC}, infinity).
 
 update_gconf(GC) ->
     ok = gen_server:call(yaws_server, {update_gconf, GC}, infinity).

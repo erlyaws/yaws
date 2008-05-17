@@ -69,10 +69,10 @@ accesslog(ServerName, Ip, User, Req, Status, Length, Referrer, UserAgent) ->
     gen_server:cast(?MODULE, {access, ServerName, Ip, User, Req, 
                               Status, Length, Referrer, UserAgent}).
 setdir(GC, Sconfs) ->
-    gen_server:call(?MODULE, {setdir, GC, Sconfs}).
+    gen_server:call(?MODULE, {setdir, GC, Sconfs}, infinity).
 
 open_trace(What) ->
-    gen_server:call(?MODULE, {open_trace, What}).
+    gen_server:call(?MODULE, {open_trace, What}, infinity).
 trace_traffic(ServerOrClient , Data) ->
     gen_server:cast(?MODULE, {trace, ServerOrClient, Data}).
 
@@ -81,7 +81,7 @@ authlog(ServerName, IP, Path, Item) ->
 
 %% from external ctl prog
 actl_trace(What) ->
-    gen_server:call(?MODULE, {actl_trace, What}).
+    gen_server:call(?MODULE, {actl_trace, What}, infinity).
 
 
 
