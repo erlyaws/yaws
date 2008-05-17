@@ -40,7 +40,7 @@ init([]) ->
     YawsLog = {yaws_log, {yaws_log, start_link, []},
                permanent, 5000, worker, [yaws_log]},
 
-    YawsServArgs = [get_app_args()],
+    YawsServArgs = [_Env = get_app_args()],
     YawsServ = {yaws_server, {yaws_server, start_link, YawsServArgs},
                 permanent, 5000, worker, [yaws_server]},
 
@@ -51,7 +51,13 @@ init([]) ->
                         {gen_event, start_link,[{local,yaws_event_manager}]},
                         permanent, 5000, worker, [gen_event]},
 
-    {ok,{{one_for_all,10,30}, [YawsLog, YawsRSS, YawsServ, Sess, 
+    %% The idea behind this is if we're running in an embedded env, 
+    %% typically the supervisor above us wants to control the restarts.
+    %% 
+    %% If we're running standalone --heart can restart the entire node
+    %% If heart is not used, we die.
+    %% 0, 1 means that we never want supervisor restarts
+    {ok,{{one_for_all, 0, 1}, [YawsLog, YawsRSS, YawsServ, Sess, 
                                YawsEventManager]}}.
 
 %%----------------------------------------------------------------------

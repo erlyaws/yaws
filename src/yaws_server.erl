@@ -2439,8 +2439,9 @@ handle_out_reply(ok, _LineNo, _YawsFile, _UT, _ARG) ->
 handle_out_reply({'EXIT', Err}, LineNo, YawsFile, _UT, ARG) ->
     L = ?F("~n~nERROR erlang  code  crashed:~n "
            "File: ~s:~w~n"
-           "Reason: ~p~nReq: ~p~n",
-           [YawsFile, LineNo, Err, ARG#arg.req]),
+           "Reason: ~p~nReq: ~p~n"
+           "Stack: ~p~n",
+           [YawsFile, LineNo, Err, ARG#arg.req, erlang:get_stacktrace()]),
     handle_crash(ARG, L);
 
 handle_out_reply({get_more, Cont, State}, _LineNo, _YawsFile, _UT, _ARG) ->
