@@ -64,6 +64,7 @@ out(A) ->
                default_type = "text/html",
                timeout = 30000,
                include_dir = [],
+               mnesia_dir = [],
                yaws,                %% server string
                username,            %% maybe run as a different user than root
                uid                  %% unix uid of user that started yaws

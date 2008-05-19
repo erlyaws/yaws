@@ -479,6 +479,17 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Expect directory at line ~w", [Lno])}
             end;
 
+        ["mnesia_dir", '=', Mnesiadir] ->
+            Dir = filename:absname(Mnesiadir),
+            case is_dir(Dir) of
+                true ->
+                    put(mnesiadir, Dir),
+                    fload(FD, globals, GC#gconf{mnesia_dir = Dir},
+                          C, Cs, Lno+1, Next);
+                false ->
+                    {error, ?F("Expect directory at line ~w", [Lno])}
+            end;
+
         ["tmpdir", '=', _TmpDir] ->
             %% ignore
             error_logger:format(

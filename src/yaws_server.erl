@@ -161,6 +161,15 @@ init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded, Id}) ->
 
 init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
     put(gc, GC),
+    case GC#gconf.mnesia_dir of
+        MD when length(MD) > 0 ->
+            yaws_debug:format("loading mnesia ~p~n", [MD]),
+            application:set_env(mnesia,dir,MD),
+            mnesia:start();
+        _ ->
+            yaws_debug:format("mnesia not in yaws.conf ~n", []),
+            ok
+    end,
     foreach(
       fun(D) ->
               yaws_debug:format("Add path ~p~n", [D]),

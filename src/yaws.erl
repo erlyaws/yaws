@@ -195,6 +195,8 @@ setup_gconf(GL, GC) ->
                                 GC#gconf.log_wrap_size),
            cache_refresh_secs = lkup(cache_refresh_secs, GL, 
                                      GC#gconf.cache_refresh_secs),
+            mnesia_dir = lkup(mnesia_dir, GL,
+			      GC#gconf.mnesia_dir),
            include_dir = lkup(include_dir, GL, 
                               GC#gconf.include_dir),
            phpexe = lkup(phpexe, GL, 
