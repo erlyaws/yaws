@@ -40,7 +40,7 @@ local_install: all
 
 
 # Target for folks that want to build a proper OTP release
-# to be used with regular OTP release management. 
+# to be used with regular OTP release management.  
 release:	vsn.mk include.mk yaws.rel.src all
 	sed -e "s/%YAWS_VSN%/${YAWS_VSN}/g" \
 	       -e "s/%ERTS_VSN%/${ERTS_VSN}/" \
