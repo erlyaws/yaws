@@ -634,6 +634,11 @@ EXTRAINCLUDE
 EPAM
 ERL_DLL_LIB
 ERLDIR
+ERTS_VSN
+KERNEL_VSN
+STDLIB_VSN
+SASL_VSN
+MNESIA_VSN
 CC
 CFLAGS
 LDFLAGS
@@ -1988,6 +1993,127 @@ echo "$as_me: error: Broken Erlang installation, $ERLDIR does not exist!" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
+
+
+
+    { echo "$as_me:$LINENO: checking erts version" >&5
+echo $ECHO_N "checking erts version... $ECHO_C" >&6; }
+    if test "${bt_cv_erts_vsn+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  bt_cv_erts_vsn="`ls ${ERLDIR} ${ERLDIR}/lib | \
+                   awk -F- '/^erts-/ { if ($2 > v) v=$2; }
+                            END    { print v; }'`"
+     case "$bt_cv_erts_vsn" in
+         "")
+             { { echo "$as_me:$LINENO: error: \"Could not figure out version Erlang library: erts\"" >&5
+echo "$as_me: error: \"Could not figure out version Erlang library: erts\"" >&2;}
+   { (exit 1); exit 1; }; }
+             ;;
+         *)
+             ;;
+     esac
+fi
+
+    ERTS_VSN=$bt_cv_erts_vsn
+        { echo "$as_me:$LINENO: result: $bt_cv_erts_vsn" >&5
+echo "${ECHO_T}$bt_cv_erts_vsn" >&6; }
+
+
+    { echo "$as_me:$LINENO: checking kernel version" >&5
+echo $ECHO_N "checking kernel version... $ECHO_C" >&6; }
+    if test "${bt_cv_kernel_vsn+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  bt_cv_kernel_vsn="`ls ${ERLDIR} ${ERLDIR}/lib | \
+                   awk -F- '/^kernel-/ { if ($2 > v) v=$2; }
+                            END    { print v; }'`"
+     case "$bt_cv_kernel_vsn" in
+         "")
+             { { echo "$as_me:$LINENO: error: \"Could not figure out version Erlang library: kernel\"" >&5
+echo "$as_me: error: \"Could not figure out version Erlang library: kernel\"" >&2;}
+   { (exit 1); exit 1; }; }
+             ;;
+         *)
+             ;;
+     esac
+fi
+
+    KERNEL_VSN=$bt_cv_kernel_vsn
+        { echo "$as_me:$LINENO: result: $bt_cv_kernel_vsn" >&5
+echo "${ECHO_T}$bt_cv_kernel_vsn" >&6; }
+
+
+    { echo "$as_me:$LINENO: checking stdlib version" >&5
+echo $ECHO_N "checking stdlib version... $ECHO_C" >&6; }
+    if test "${bt_cv_stdlib_vsn+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  bt_cv_stdlib_vsn="`ls ${ERLDIR} ${ERLDIR}/lib | \
+                   awk -F- '/^stdlib-/ { if ($2 > v) v=$2; }
+                            END    { print v; }'`"
+     case "$bt_cv_stdlib_vsn" in
+         "")
+             { { echo "$as_me:$LINENO: error: \"Could not figure out version Erlang library: stdlib\"" >&5
+echo "$as_me: error: \"Could not figure out version Erlang library: stdlib\"" >&2;}
+   { (exit 1); exit 1; }; }
+             ;;
+         *)
+             ;;
+     esac
+fi
+
+    STDLIB_VSN=$bt_cv_stdlib_vsn
+        { echo "$as_me:$LINENO: result: $bt_cv_stdlib_vsn" >&5
+echo "${ECHO_T}$bt_cv_stdlib_vsn" >&6; }
+
+
+    { echo "$as_me:$LINENO: checking sasl version" >&5
+echo $ECHO_N "checking sasl version... $ECHO_C" >&6; }
+    if test "${bt_cv_sasl_vsn+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  bt_cv_sasl_vsn="`ls ${ERLDIR} ${ERLDIR}/lib | \
+                   awk -F- '/^sasl-/ { if ($2 > v) v=$2; }
+                            END    { print v; }'`"
+     case "$bt_cv_sasl_vsn" in
+         "")
+             { { echo "$as_me:$LINENO: error: \"Could not figure out version Erlang library: sasl\"" >&5
+echo "$as_me: error: \"Could not figure out version Erlang library: sasl\"" >&2;}
+   { (exit 1); exit 1; }; }
+             ;;
+         *)
+             ;;
+     esac
+fi
+
+    SASL_VSN=$bt_cv_sasl_vsn
+        { echo "$as_me:$LINENO: result: $bt_cv_sasl_vsn" >&5
+echo "${ECHO_T}$bt_cv_sasl_vsn" >&6; }
+
+
+    { echo "$as_me:$LINENO: checking mnesia version" >&5
+echo $ECHO_N "checking mnesia version... $ECHO_C" >&6; }
+    if test "${bt_cv_mnesia_vsn+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  bt_cv_mnesia_vsn="`ls ${ERLDIR} ${ERLDIR}/lib | \
+                   awk -F- '/^mnesia-/ { if ($2 > v) v=$2; }
+                            END    { print v; }'`"
+     case "$bt_cv_mnesia_vsn" in
+         "")
+             { { echo "$as_me:$LINENO: error: \"Could not figure out version Erlang library: mnesia\"" >&5
+echo "$as_me: error: \"Could not figure out version Erlang library: mnesia\"" >&2;}
+   { (exit 1); exit 1; }; }
+             ;;
+         *)
+             ;;
+     esac
+fi
+
+    MNESIA_VSN=$bt_cv_mnesia_vsn
+        { echo "$as_me:$LINENO: result: $bt_cv_mnesia_vsn" >&5
+echo "${ECHO_T}$bt_cv_mnesia_vsn" >&6; }
 
 
 ac_ext=c
@@ -4318,6 +4444,11 @@ EXTRAINCLUDE!$EXTRAINCLUDE$ac_delim
 EPAM!$EPAM$ac_delim
 ERL_DLL_LIB!$ERL_DLL_LIB$ac_delim
 ERLDIR!$ERLDIR$ac_delim
+ERTS_VSN!$ERTS_VSN$ac_delim
+KERNEL_VSN!$KERNEL_VSN$ac_delim
+STDLIB_VSN!$STDLIB_VSN$ac_delim
+SASL_VSN!$SASL_VSN$ac_delim
+MNESIA_VSN!$MNESIA_VSN$ac_delim
 CC!$CC$ac_delim
 CFLAGS!$CFLAGS$ac_delim
 LDFLAGS!$LDFLAGS$ac_delim
@@ -4347,7 +4478,7 @@ LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 84; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 89; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
