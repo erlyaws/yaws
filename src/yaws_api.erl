@@ -399,11 +399,10 @@ parse_post_data_urlencoded(Bin, Spec) ->
 %% with the same length as the Spec or EXIT
 %% special value undefined is reserverd for non set fields
 %% Key wil always be a regular atom.
-
-
-do_parse_spec(<<$%, Hi:8, Lo:8, Tail/binary>>, Spec, Last, Cur, State) ->
-       Hex = yaws:hex_to_integer([Hi, Lo]),
-               do_parse_spec(Tail, Spec, Last, [ Hex | Cur],  State);
+do_parse_spec(<<$%, Hi:8, Lo:8, Tail/binary>>, Spec, Last, Cur, State) 
+    when Hi /= $u ->
+    Hex = yaws:hex_to_integer([Hi, Lo]),
+    do_parse_spec(Tail, Spec, Last, [ Hex | Cur],  State);
                
 do_parse_spec(<<$&, Tail/binary>>, Spec, _Last , Cur,  key) ->
     [{mkkey_reverse(Cur), undefined} |
@@ -419,6 +418,12 @@ do_parse_spec(<<$+, Tail/binary>>, Spec, Last, Cur,  State) ->
 
 do_parse_spec(<<$=, Tail/binary>>, Spec, _Last, Cur, key) ->
     do_parse_spec(Tail, Spec, mkkey_reverse(Cur), [], value); %% change mode
+
+do_parse_spec(<<$%, $u, A:8, B:8,C:8,D:8, Tail/binary>>, 
+	       Spec, Last, Cur, State) ->
+    %% non-standard encoding for Unicode characters: %uxxxx,		     
+    Hex = yaws:hex_to_integer([A,B,C,D]),
+    do_parse_spec(Tail, Spec, Last, [ Hex | Cur],  State);
 
 do_parse_spec(<<H:8, Tail/binary>>, Spec, Last, Cur, State) ->
     do_parse_spec(Tail, Spec, Last, [H|Cur], State);
