@@ -8,9 +8,9 @@ to_erl="%to_erl%"
 
 case `uname` in
     CYGWIN*)
-        yawsdir=`cygpath --windows $yawsdir`
+        yawsdir=`cygpath -m $yawsdir`
         werl="%werl%"
-        delim=\\;;
+        delim=/;;
     *)
         delim=/
 esac

@@ -379,10 +379,10 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                                     Err
                             end;
                         {error, Error} ->
-                            {error, ?F("Direcory ~s is not readable: ~s", [Name, Error])}
+                            {error, ?F("Directory ~s is not readable: ~s", [Name, Error])}
                     end;
                 false ->
-                    {error, ?F("Expect directory at line ~w", [Lno])}
+                    {error, ?F("Expect directory at line ~w (subconfdir: ~s)", [Lno, Dir])}
             end;
 
         ["trace", '=', Bstr] when GC#gconf.trace == false ->
@@ -412,7 +412,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     fload(FD, globals, GC#gconf{logdir = Dir},
                           C, Cs, Lno+1, Next);
                 false ->
-                    {error, ?F("Expect directory at line ~w", [Lno])}
+                    {error, ?F("Expect directory at line ~w (logdir ~s)", [Lno, Dir])}
             end;
 
         ["ebin_dir", '=', Ebindir] ->
@@ -423,7 +423,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                                                 [Dir|GC#gconf.ebin_dir]},
                           C, Cs, Lno+1, Next);
                 false ->
-                    {error, ?F("Expect directory at line ~w", [Lno])}
+                    {error, ?F("Expect directory at line ~w (ebin_dir: ~s)", [Lno, Dir])}
             end;
 
         ["runmod", '=', Mod0] ->
@@ -476,7 +476,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                                                 [Dir|GC#gconf.include_dir]},
                           C, Cs, Lno+1, Next);
                 false ->
-                    {error, ?F("Expect directory at line ~w", [Lno])}
+                    {error, ?F("Expect directory at line ~w (include_dir: ~s)", [Lno, Dir])}
             end;
 
         ["mnesia_dir", '=', Mnesiadir] ->
@@ -728,7 +728,8 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                                  xtra_docroots = tl(RootDirs)},
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 _ ->
-                    {error, ?F("Expect directory at line ~w", [Lno])}
+                    {error, ?F("Expect directory at line ~w (docroot: ~s)", 
+			       [Lno, hd(RootDirs)])}
             end;
 
         ["partial_post_size",'=',Size] ->

@@ -57,22 +57,20 @@ $(EBIN_FILES) : ../include/yaws.hrl ../include/yaws_api.hrl
 
 yaws_generated.erl:	yaws_generated.template ../vsn.mk
 	. ../vsn.mk; \
-	sed -e "s/%VSN%/${YAWS_VSN}/" -e \
-	       "s;%VARDIR%;${VARDIR};g"  -e  \
-	       "s;%localinstall%;true;g"  -e  \
-	       "s;%ETCDIR%;${ETCDIR};g"   \
-	< yaws_generated.template > yaws_generated.erl
-
+	cat yaws_generated.template | \
+	../scripts/Subst %VSN% ${YAWS_VSN} | \
+	../scripts/Subst %VARDIR% ${VARDIR} | \
+	../scripts/Subst %localinstall% true | \
+	../scripts/Subst %ETCDIR% ${ETCDIR} > yaws_generated.erl
 
 ## need to differentiate between local install and not
 regen:
 	. ../vsn.mk; \
-	sed -e "s/%VSN%/${YAWS_VSN}/" -e \
-	       "s;%VARDIR%;${VARDIR};g"  -e  \
-	       "s;%localinstall%;false;g"  -e  \
-	       "s;%ETCDIR%;${ETCDIR};g"   \
-	< yaws_generated.template > yaws_generated.erl
-
+	cat yaws_generated.template | \
+	../scripts/Subst %VSN% ${YAWS_VSN} | \
+	../scripts/Subst %VARDIR% ${VARDIR} | \
+	../scripts/Subst %localinstall% false | \
+	../scripts/Subst %ETCDIR% ${ETCDIR} > yaws_generated.erl
 
 charset.def:	
 	if [ ! -z "$(DEFAULT_CHARSET)" ]; then \
