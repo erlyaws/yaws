@@ -45,7 +45,7 @@ run(GC) ->
               " id <~p> on this computer and this user, ~n"
               " set another id in the yaws conf file ~n", 
               [GC#gconf.id]);
-        {error, eaccess} ->
+        {error, eacces} ->
             %% We're not allowed to open the ctl file
             e("Error reading ~s, you don't have access rights to read it",
               [yaws:ctl_file(GC#gconf.id)]);
@@ -316,7 +316,7 @@ connect_file(CtlFile) ->
 
 actl(SID, Term) ->
     case connect(SID) of
-        {error, eaccess} ->
+        {error, eacces} ->
             io:format("Another user is using the yaws sid <~p>, ~n"
                       "You are not allowd to read the file <~s>, ~n"
                       "specify by <-I id> which yaws system you want "
