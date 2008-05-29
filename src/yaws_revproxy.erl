@@ -10,7 +10,7 @@
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
--export([init/6]).
+-export([init/6, ploop/5]).
 
 
 %% reverse proxy implementation.
@@ -172,13 +172,12 @@ s_sockmode(H,Resp,Psock) ->
             end
     end.
 
-
+cont_len_check(H,Psock) when H#headers.transfer_encoding == "chunked" ->
+	Psock#psock{mode = expectchunked, state = init};
 cont_len_check(H,Psock) ->
     case H#headers.content_length of
         undefined ->
             case H#headers.transfer_encoding of
-                "chunked" ->
-                    Psock#psock{mode = expectchunked, state = init};
                 undefined when Psock#psock.type == client ->
                     Psock#psock{mode = expectheaders, state = undefined};
                 undefined when Psock#psock.type == server ->
