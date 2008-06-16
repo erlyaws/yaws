@@ -25,8 +25,7 @@ out(A) ->
                       
                       [length(VisitList),
                        lists:map(fun(D) ->
-                                         Ds = yaws:time_to_string(D, "GMT"),
-                                         f("<li> ~s~n", [Ds])  end, 
+                                         f("<li> ~p~n", [D])  end, 
                                  VisitList)
                       ])
               after 500 ->
