@@ -34,9 +34,9 @@ out(A) ->
     to let Yaws read it's configuration data from /etc/yaws.conf.</p>
 
   <p>To solve this, when Yaws is started in embedded mode, it doesn't
-    read it's config from /etc, rather it expects the larger application
+    read it's config from /etc/yaws.conf, rather it expects the larger application
     to feed it the Yaws configuration through the function call
-    yaws_api:set_conf(GC, Groups)
+    yaws_api:setconf(GC, Groups)
   </p>
 
   <p> The two arguments here are</p>
@@ -259,7 +259,7 @@ out(Arg) ->
 <p>Thus passing data from the surrounding applications configuration routines
   down to each .yaws web page.</p>
 
-<p>Another important fact to consider when choosing wether to run your yaws
+<p>Another important fact to consider when choosing weather to run your yaws
 application as an embedded yaws app or not is that all the yaws control 
 functions are disabled when we use yaws as an embedded web server. I.e
 yaws --ls, yaws --stop etc. This under the assumption that you already have support for this type of functionality in your application.
