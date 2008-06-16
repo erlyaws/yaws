@@ -1,3 +1,21 @@
+Mon Jun 16 22:44:45 CEST 2008 version 1.77
+Content-Length chunked patch by Oleg Avdeev
+eaccess typos in confd_ctl.erl - Sergei Golovan
+added support for weird utf8 urlencoding
+Added the cygwin README by Bill Robtersson
+Added a 'make release' target in the top makefile. The release file picks up the versions of installed applications (erts,kernel, stdlib, sasl and mnesia). The product of this is a release package file (e.g. yaws-1.77.tar.gz) which can be installed on an embedded system using the SASL application release_handler. (Vance Shipley)
+added mnesia_dir support to the gconf record as per patch BY Richard Bucker
+The supervisor args were wrong, yaws shall have 1,0 restart strategy. This may break some backwards compat. Sites that ues yaws embedded need to check this. 
+Added debug dump functionality (klacke)
+cygwin install patch by Bill Robertsson
+Adding files for Erlware. A very rough packaging of 1.76 has been released at erlware.org. See the doc/overview.edoc for more details. (tobbe)
+Major general code cleanup, finally got rid of all the export_all statements and in that process removed a bit of code that wasn't used (klacke)
+Better timeout support in yaws-session_server 
+{page, P} patch by Robert David that handles better the case with a browser POST request
+patch by oleg avdeev for CRNL in revproxy
+embedded startup problem solved by Anders Nygren
+Make crashmsg set status code 500
+
 Thu Apr  3 23:13:03 CEST 2008 version 1.76
 Patch from Lev Walkin to pass HTTP_REFERER as well as the HTTP_IF headers to the cgi script
 Untabified all code. This is the right thing (TM) I've finally realized after programming for some 20 years with TABS in the files. (klacke)
