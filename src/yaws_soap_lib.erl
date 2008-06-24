@@ -318,8 +318,8 @@ get_url_file("http://"++_ = URL) ->
 	{ok,{{_HTTP,RC,Emsg}, _Headers, _Body}} -> 
 	    error_logger:error_msg("~p: http-request got: ~p~n", [?MODULE, {RC, Emsg}]),
 	    {error, "failed to retrieve: "++URL};
-	_ -> 
-	    error_logger:error_msg("~p: http-request failed~n", []),
+	{error, Reason} -> 
+	    error_logger:error_msg("~p: http-request failed: ~p~n", [?MODULE, Reason]),
 	    {error, "failed to retrieve: "++URL}
     end;
 get_url_file("file://"++Fname) ->
