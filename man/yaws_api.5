@@ -7,14 +7,14 @@ yaws_api \- api available to yaws web server programmers
 .SH DESCRIPTION
 
 .PP
-This is the api available to yaws web server programmers. The erlang
+This is the api available to yaws web server programmers. The Erlang
 module yaws_api contains a wide variety of functions that can
 be used inside yaws pages.
 
 .PP
 Each chunk of yaws code is executed while the yaws page is
 being delivered from the server. We give a very simple example here 
-to show the basic idea. Imagine the following html code:
+to show the basic idea. Imagine the following HTML code:
 
 \fI
 .nf
@@ -182,7 +182,7 @@ The Pid must typically be passed (somehow) to the producer of the stream.
 
 .TP
 \fBstream_chunk_deliver_blocking(YawsPid, Data)\fR
-A syncronous verion of the above function. This syncronous version must always
+A synchronous version of the above function. This syncronous version must always
 be used when the producer of the stream is faster than the consumer. 
 This is usually the case since the client is the WWW browser.
 
@@ -286,9 +286,9 @@ Example usage could be:
 .TP
 \fBnew_cookie_session(Opaque)\fR
 Create a new cookie based session, the yaws system will set the
-cookie. The new randomgenerated cookie is returned from this
+cookie. The new random generated cookie is returned from this
 function. The Opaque argument will typically contain user data
-such as username and password
+such as user name and password
 
 .TP
 \fBnew_cookie_session(Opaque, TTL)\fR
@@ -297,7 +297,7 @@ overriding the system specified time-out value.
 
 .TP 
 \fBnew_cookie_session(Opaque, TTL, CleanupPid)\fR
-As above, but also send a message 
+As above, but also sends a message 
 \fI{yaws_session_end, Reason, Cookie, Opaque}\fR to the provided CleanuPid where
 Reason can be either of \fItimeout\fR or \fInormal\fR. The \fICookie\fR 
 is the HTTP cookie as returned by \fInew_session()\fR and the Opaque
@@ -330,15 +330,17 @@ program to execute a \fIsetconf/2\fR
 The Gconf is a \fI#gconf{}\fR record and the Group variable is
 a list of lists of \fI#sconf{}\fR records. Each sublist must 
 contain \fI#sconf{}\fR records with the same IP/Port listen address.
-
+To create a suitable initial #gconf{} record see the code in
+yaws_config:make_default_gconf/2. Especially the \fIyaws_dir\fR parameter
+is important to get right.
 
 
 .TP
 \fBurl_decode(Str)\fR
-Decode url-encoded string. A URL ncoded string is a string where
+Decode url-encoded string. A URL encoded string is a string where
 all alfa numeric characters and the the character _ are preserved
 and all other characters are encode as "%XY" where X and Y are the
-hex values of the least respective most significat 4 bits in the 8 bit 
+hex values of the least respective most significant 4 bits in the 8 bit 
 character.
 
 .TP
@@ -348,7 +350,7 @@ Url-encodes a string. All URLs in HTML documents must be URL encoded.
 
 .TP
 \fBreformat_header(H)\fR
-Returns a list of reformated header values from a #header{}
+Returns a list of reformatted header values from a #header{}
 record. The return list is suitable for retransmit.
 
 .TP
@@ -476,7 +478,7 @@ Sets the Cache-Control: header.
 
 \fI{set_cookie, Cookie}\fR
 
-Prepends a a Set-Cookie: header to the list of previousy
+Prepends a a Set-Cookie: header to the list of previously
 set Set-Cookie: headers.
 
 \fI{content_type, MimeType}\fR
@@ -552,8 +554,8 @@ accumulating the HTTP header \fIH\fR for page \fIPage\fR.
 .TP
 \fB{ssi, File, Delimiter, Bindings}\fR
 Server side include File and  macro expansion in File.
-Each occurence of a string, say "xyz", inside File which
-is inside Delimters is replaced with the corresponsing
+Each occurrence of a string, say "xyz", inside File which
+is inside Delimiters is replaced with the corresponding
 value in Bindings. 
 
 Example:
@@ -563,7 +565,7 @@ File contains the string .... %%xyz%%  .....
 
 Bindings contain the tuple {"xyz", "Dingbat"}
 
-The occurence of %%xyz%% in File will be replaced with "Dingbat"
+The occurrence of %%xyz%% in File will be replaced with "Dingbat"
 in the Server side included output.
 
 The {ssi, File, Delimiter, Bindings} statement can also
@@ -579,7 +581,7 @@ All bindings can then be used in the rest of yaws code
 In HTML source %%Key%% is expanded to Value and within erl 
 tags \fIyaws_api:binding(Key)\fR can be used to extract Value
 and \fIyaws_api:binding_exists(Key)\fR can be used to check for
-the existance of a binding.
+the existence of a binding.
 
 .TP
 \fB{yssi, YawsFile}\fR
