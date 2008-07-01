@@ -18,7 +18,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 -include("../include/yaws_api.hrl").
 
--export([new_session/1,new_session/2,
+-export([new_session/1,new_session/2,new_session/3,
          cookieval_to_opaque/1,
          print_sessions/0,
          replace_session/2,
@@ -32,12 +32,10 @@
          to,           %% greg secs untill timeout death
          ttl,          %% default time to live
          starttime,    %% When calendar:local_time() did sess start
+         cleanup,      %% PID to notify of session end
          opaque        %% any data the user supplies
         }).
          
-
-
-
 
 
 %%%----------------------------------------------------------------------
@@ -55,10 +53,20 @@ stop() ->
 
 %% will return a new cookie as a string
 new_session(Opaque) ->
-    gen_server:call(?MODULE, {new_session, Opaque, ?TTL}, infinity).
+    gen_server:call(?MODULE, {new_session, Opaque, ?TTL, undefined}, infinity).
 
 new_session(Opaque, TTL) ->
-    gen_server:call(?MODULE, {new_session, Opaque, TTL}, infinity).
+    gen_server:call(?MODULE, {new_session, Opaque, TTL, undefined}, infinity).
+
+new_session(Opaque, TTL, Cleanup) ->
+    case TTL of
+        undefined ->
+            gen_server:call(?MODULE, 
+                            {new_session, Opaque, ?TTL, Cleanup}, infinity);
+        _ ->
+            gen_server:call(?MODULE, 
+                            {new_session, Opaque, TTL, Cleanup}, infinity)
+    end.
 
 cookieval_to_opaque(CookieString) ->
     case ets:lookup(?MODULE, CookieString) of
@@ -96,7 +104,14 @@ replace_session(Cookie, NewOpaque) ->
 
 
 delete_session(CookieVal) ->
-    ets:delete(?MODULE, CookieVal).
+    case ets:lookup(?MODULE, CookieVal) of
+        [Y] -> 
+            ets:delete(?MODULE, CookieVal),
+            report_deleted_sess(Y);
+        [] ->
+            true
+    end.
+            
 
 
 %%%----------------------------------------------------------------------
@@ -152,7 +167,7 @@ seed() ->
 %%----------------------------------------------------------------------
 
 
-handle_call({new_session, Opaque, TTL}, _From, _State) ->
+handle_call({new_session, Opaque, TTL, Cleanup}, _From, _State) ->
     Now = gnow(),
     N = random:uniform(16#ffffffffffffffff), %% 64 bits
     TS = calendar:local_time(),
@@ -161,7 +176,8 @@ handle_call({new_session, Opaque, TTL}, _From, _State) ->
                    starttime = TS,
                    opaque = Opaque,
                    to = Now + TTL,
-                   ttl = TTL},
+                   ttl = TTL,
+                   cleanup = Cleanup},
     ets:insert(?MODULE, NS),
     {reply, C, undefined, to()};
 
@@ -169,11 +185,21 @@ handle_call(stop, _From, State) ->
     {stop, stopped, State}.
 
 
+send_cleanup_message(Sess,Msg) ->
+    case Sess#ysession.cleanup of
+        undefined ->
+            nocleanup;
+        Pid ->
+            Pid ! Msg
+    end.
 
-report_timedout_sess(_S) ->
-    %%error_logger:info_msg("Session timedout: ~p ", [S#ysession.opaque]).
-    silence.
+report_timedout_sess(S) ->
+    send_cleanup_message(S,{yaws_session_end,timeout,
+                            S#ysession.cookie, S#ysession.opaque}).
 
+report_deleted_sess(S) ->
+    send_cleanup_message(S,{yaws_session_end,normal,
+                            S#ysession.cookie, S#ysession.opaque}).
 
 
 %%----------------------------------------------------------------------

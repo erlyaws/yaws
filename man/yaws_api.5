@@ -293,7 +293,17 @@ such as username and password
 .TP
 \fBnew_cookie_session(Opaque, TTL)\fR
 As above, but allows to set a session specific time-out value,
-overriding teh system specified time-out value.
+overriding the system specified time-out value.
+
+.TP 
+\fBnew_cookie_session(Opaque, TTL, CleanupPid)\fR
+As above, but also send a message 
+\fI{yaws_session_end, Reason, Cookie, Opaque}\fR to the provided CleanuPid where
+Reason can be either of \fItimeout\fR or \fInormal\fR. The \fICookie\fR 
+is the HTTP cookie as returned by \fInew_session()\fR and the Opaque
+is the user provided Opaque parameter to \fInew_session()\fR.
+The purpose of the feature is to cleanup resources assigned to the session.
+
 
 .TP 
 \fBcookieval_to_opaque(CookieVal)\fR

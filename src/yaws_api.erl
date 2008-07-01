@@ -33,7 +33,7 @@
 -export([get_line/1, mime_type/1]).
 -export([stream_chunk_deliver/2, stream_chunk_deliver_blocking/2,
          stream_chunk_end/1]).
--export([new_cookie_session/1, new_cookie_session/2,
+-export([new_cookie_session/1, new_cookie_session/2, new_cookie_session/3, 
          cookieval_to_opaque/1, request_url/1,
          print_cookie_sessions/0,
          replace_cookie_session/2, delete_cookie_session/1]).
@@ -847,6 +847,9 @@ new_cookie_session(Opaque) ->
 
 new_cookie_session(Opaque, TTL) ->
     yaws_session_server:new_session(Opaque, TTL).
+
+new_cookie_session(Opaque, TTL, Cleanup) ->
+    yaws_session_server:new_session(Opaque, TTL, Cleanup).
 
 %% as returned in #ysession.cookie
 cookieval_to_opaque(CookieVal) ->
