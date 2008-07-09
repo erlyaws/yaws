@@ -1518,8 +1518,8 @@ parse_set_cookie_key([C|T], Acc) ->
 
 parse_set_cookie_value([$"|T]) ->
     parse_quoted(T,[]);
-                        parse_set_cookie_value(T) ->
-                               parse_set_cookie_value(T,[]).
+parse_set_cookie_value(T) ->
+    parse_set_cookie_value(T,[]).
 
 parse_set_cookie_value([],Acc) ->
     {lists:reverse(Acc), false, []};
@@ -1532,12 +1532,11 @@ parse_quoted([], Acc) ->
     {lists:reverse(Acc), true, []};
 parse_quoted([$"|T], Acc) ->
     {lists:reverse(Acc), true, T};
-              parse_quoted([$\\,C|T], Acc) ->    
-                     parse_quoted(T,[C,$\\|Acc]);
-              parse_quoted([C|T], Acc) ->
-                     parse_quoted(T,[C|Acc]).
-
-                                                %%
+parse_quoted([$\\,C|T], Acc) ->    
+    parse_quoted(T,[C,$\\|Acc]);
+parse_quoted([C|T], Acc) ->
+    parse_quoted(T,[C|Acc]).
+%%
 
 add_set_cookie(C, Key, Value, Quoted) when C#setcookie.key==undefined ->
     C#setcookie{key=Key,value=Value,quoted=Quoted};

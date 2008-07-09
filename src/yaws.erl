@@ -1615,6 +1615,7 @@ load_setuid_drv() ->
                true ->
                    filename:dirname(code:which(?MODULE)) ++ "/../priv/lib";
                false ->
+                   %% ignore dialyzer on this one
                    PrivDir = code:priv_dir(yaws),
                    filename:join(PrivDir,"lib")
            end,
@@ -1808,7 +1809,9 @@ http_recv_request(CliSock, SSL) ->
 
 
 http_collect_headers(CliSock, Req, H, SSL) ->
-    case do_recv(CliSock, 0, SSL) of
+    Recv = do_recv(CliSock, 0, SSL),
+    io:format("RECV ~p~n", [Recv]),
+    case Recv of
         {ok, {http_header,  _Num, 'Host', _, Host}} ->
             http_collect_headers(CliSock, Req, H#headers{host = Host},SSL);
         {ok, {http_header, _Num, 'Connection', _, Conn}} ->

@@ -144,19 +144,14 @@ encode_string(Str, Cache) ->
 encode_string(Str, FirstChar, Cache) ->
     case find_ref(Str, Cache) of
         false ->
-            case encode_string2(Str, FirstChar) of
-                {ok, Result} ->
-                    NewCache =
-                        case Cache of
-                            undefined ->
-                                undefined;
-                            _ ->
-                                dict:store(Str, dict:size(Cache), Cache)
-                        end,
-                    {Result, NewCache};
-                Err ->
-                    Err
-            end;
+            {ok, Result} = encode_string2(Str, FirstChar),
+            NewCache =
+                case Cache of
+                    undefined ->
+                        undefined;
+                    _ ->
+                        dict:store(Str, dict:size(Cache), Cache)
+                end;
         {true, Idx} ->
             {[$R | integer_to_list(Idx)], Cache}
     end.

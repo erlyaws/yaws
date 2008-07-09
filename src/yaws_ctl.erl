@@ -220,7 +220,7 @@ f(Fmt, As) ->
 
 
 a_id(Sock) ->
-    ID = gen_server:call(yaws_server, id, [], infinity),
+    ID = gen_server:call(yaws_server, id, infinity),
     gen_tcp:send(Sock, ID),
     ok.
 

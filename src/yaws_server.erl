@@ -851,9 +851,12 @@ acceptor0(GS, Top) ->
 aloop(CliSock, GS, Num) ->
     put(init_db, get()),
     SSL = GS#gs.ssl,
-    case  yaws:http_get_headers(CliSock, SSL) of
+    Head = yaws:http_get_headers(CliSock, SSL),
+    ?Debug("Head = ~p~n", [Head]),
+    case Head of
         {Req0, H0} when Req0#http_request.method /= bad_request ->
             {Req, H} = fix_abs_uri(Req0, H0),
+            ?Debug("{Req, H} = ~p~n", [{Req, H}]),
             SC = pick_sconf(GS#gs.gconf, H, GS#gs.group, SSL),
             ?Debug("SC: ~s", [?format_record(SC, sconf)]),
             ?TC([{record, SC, sconf}]),
@@ -1973,23 +1976,13 @@ deliver_dyn_part(CliSock,                  % essential params
         {get_more, Cont, State} when 
         element(1, Arg#arg.clidata) == partial  ->
             More = get_more_post_data(CliDataPos, Arg),
-            case un_partial(More) of
-                Bin when binary(Bin) ->
-                    A2 = Arg#arg{clidata = More,
-                                 cont = Cont,
-                                 state = State},
-                    deliver_dyn_part(
-                      CliSock, LineNo, YawsFile, 
-                      CliDataPos+size(un_partial(More)), 
-                      A2, UT, YawsFun, DeliverCont
-                     );
-                Err ->
-                    A2 = Arg#arg{clidata = Err,
-                                 cont = undefined,
-                                 state = State},
-                    catch YawsFun(A2),
-                    exit(normal)         % ???
-            end;
+            A2 = Arg#arg{clidata = More,
+                         cont = Cont,
+                         state = State},
+            deliver_dyn_part(
+              CliSock, LineNo, YawsFile, CliDataPos+size(un_partial(More)), 
+              A2, UT, YawsFun, DeliverCont
+             );
         break ->
             finish_up_dyn_file(Arg, CliSock);
         {page, Page} ->
@@ -3090,14 +3083,15 @@ cache_file(SC, GC, Path, UT)
                         case ?sc_has_deflate(SC)
                             and (UT#urltype.type==regular) of
                             true ->
-                                case yaws_zlib:gzip(Bin) of
-                                    {ok, DB} when binary(DB), 
-                                                  size(DB)*10<size(Bin)*9 ->
+                                {ok, DBL} = yaws_zlib:gzip(Bin),
+                                DB = list_to_binary(DBL),
+                                if 
+                                    size(DB)*10<size(Bin)*9 ->
                                         ?Debug("storing deflated version "
                                                "of ~p~n",
                                                [UT#urltype.fullpath]),
                                         DB;
-                                    _ -> undefined
+                                    true -> undefined
                                 end;
                             false -> undefined
                         end,
@@ -3257,8 +3251,6 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
                                                   "/"
                                       end
                     end,
-                    ?Debug("Pre ~p Post ~p~n",[PreSegments,PostSegments]),        
-
                     PathI = case PostSegments of
                                 [] ->
                                     "";
