@@ -440,6 +440,7 @@ wrap(AL, State) ->
             %% Logfile disapeared, 
             error_logger:format("Logfile ~p disapeared - we reopen it",
                                 [AL#alog.filename]),
+	    file:close(AL#alog.fd),
             {ok, Fd2} = file:open(AL#alog.filename, [write, raw]),
             AL#alog{fd = Fd2}
     end.
