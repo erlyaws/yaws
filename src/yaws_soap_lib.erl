@@ -551,7 +551,7 @@ searchPorts(BindingName, [Port | Tail], Acc) ->
     #port{binding = #qname{localPart = BindingName}} ->
       searchPorts(BindingName, Tail, [Port | Acc]);
     _ -> 
-      searchPorts(BindingName, Tail)
+      searchPorts(BindingName, Tail, Ack)
   end.
 
 
