@@ -417,13 +417,14 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 
         ["ebin_dir", '=', Ebindir] ->
             Dir = filename:absname(Ebindir),
-            case is_dir(Dir) of
+            case warn_dir("ebin_dir", Dir) of
                 true ->
                     fload(FD, globals, GC#gconf{ebin_dir = 
                                                 [Dir|GC#gconf.ebin_dir]},
                           C, Cs, Lno+1, Next);
                 false ->
-                    {error, ?F("Expect directory at line ~w (ebin_dir: ~s)", [Lno, Dir])}
+                    fload(FD, globals, GC, C, Cs, Lno+1, Next)
+	    
             end;
 
         ["runmod", '=', Mod0] ->
@@ -470,13 +471,14 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 
         ["include_dir", '=', Incdir] ->
             Dir = filename:absname(Incdir),
-            case is_dir(Dir) of
+            case warn_dir("include_dir", Dir) of
                 true ->
                     fload(FD, globals, GC#gconf{include_dir=
                                                 [Dir|GC#gconf.include_dir]},
                           C, Cs, Lno+1, Next);
                 false ->
-                    {error, ?F("Expect directory at line ~w (include_dir: ~s)", [Lno, Dir])}
+                    fload(FD, globals, GC, C, Cs, Lno+1, Next)
+
             end;
 
         ["mnesia_dir", '=', Mnesiadir] ->
@@ -487,7 +489,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     fload(FD, globals, GC#gconf{mnesia_dir = Dir},
                           C, Cs, Lno+1, Next);
                 false ->
-                    {error, ?F("Expect directory at line ~w", [Lno])}
+                    {error, ?F("Expect mnesia directory at line ~w", [Lno])}
             end;
 
         ["tmpdir", '=', _TmpDir] ->
@@ -1070,6 +1072,16 @@ is_bool("false") ->
 is_bool(_) ->
     false.
 
+
+warn_dir(Type, Dir) ->
+    case is_dir(Dir) of
+	true ->
+	    true;
+	false ->
+	    error_logger:format("Config Warning: Directory ~s for ~s doesn't exist~n",
+				[Dir, Type]),
+	    false
+    end.
 
 is_dir(Val) ->
     case file:read_file_info(Val) of
