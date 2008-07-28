@@ -46,7 +46,7 @@ paths() ->
 load(E = #env{conf = false}) ->
     case yaws:first(fun(F) -> yaws:exists(F) end, paths()) of
         false ->
-            {error, "Can't find no config file "};
+            {error, "Can't find config file "};
         {ok, _, File} ->
             load(E#env{conf = {file, File}})
     end;
@@ -188,7 +188,7 @@ validate_group(List) ->
 
 no_two_same([H,H|_]) ->
     throw({error, 
-           ?F("To servers in the same group cannot have same name ~p",[H])});
+           ?F("Two servers in the same group cannot have same name ~p",[H])});
 no_two_same([_H|T]) ->
     no_two_same(T);
 no_two_same([]) ->
@@ -299,7 +299,7 @@ fload(FD, globals, GC, _C, Cs, _Lno, eof) ->
 
 fload(FD, _,  _GC, _C, _Cs, Lno, eof) ->
     file:close(FD),
-    {error, ?F("Unexpected end of file at line ~w", [Lno])};
+    {error, ?F("Unexpected end-of-file at line ~w", [Lno])};
 
 fload(FD, globals, GC, C, Cs, Lno, Chars) -> 
     Next = io:get_line(FD, ''),
