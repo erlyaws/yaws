@@ -140,5 +140,12 @@ init_yapps(YappRegistry) ->
             do_nothing;
         _ ->
             yapp:insert(YB)
-    end.
+    end,
 
+    Handlers = gen_event:which_handlers(yaws_event_manager),
+    case lists:member(yapp_event_handler, Handlers) of
+	false -> 
+	    ok = yapp_event_handler:add_handler(yaws_event_manager, yapp_handler);
+	true -> 
+	    do_nothing
+    end.

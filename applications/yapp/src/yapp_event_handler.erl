@@ -50,7 +50,8 @@ init([YappServer]) ->
 %%--------------------------------------------------------------------
 handle_event({yaws_hupped, _Res}, State) ->
     io:format("yapp got hup event~n"),
-    yapp_handler:init_yapps(State#state.yapp_server),
+    YappServ = State#state.yapp_server,
+    YappServ ! init_yapps,
     {ok, State};
 
 handle_event(_Event, State) ->

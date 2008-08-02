@@ -57,8 +57,7 @@ init([]) ->
     %% If we're running standalone --heart can restart the entire node
     %% If heart is not used, we die.
     %% 0, 1 means that we never want supervisor restarts
-    {ok,{{one_for_all, 0, 1}, [YawsLog, YawsRSS, YawsServ, Sess, 
-                               YawsEventManager]}}.
+    {ok,{{one_for_all, 0, 1}, [YawsEventManager,YawsLog, YawsRSS, YawsServ, Sess]}}.
 
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------

@@ -138,10 +138,28 @@ arg_rewrite(Arg) ->
 %% up in a mnesia registry table and stored in Yaws #sconf.opaque record
 %% for the each server id. 
 start() ->
-    receive after 500 -> ok end, %% Give Yaws some time to settle own things
-    log(info, "Starting yapp~n",[]),
-    application:start(yapp).
+    case wait_for_yaws() of
+	ok ->
+	    log(info, "Starting yapp~n",[]),
+	    application:start(yapp);
+	Error ->
+	    log(error, "Failed waiting for Yaws to start when starting Yapp: ~p~n",[Error])
+    end.
+    
+wait_for_yaws() ->  wait_for_yaws(20).
 
+wait_for_yaws(0) -> {error, timeout};
+wait_for_yaws(N) ->
+    WA = application:which_applications(),
+    case [Yaws || {Yaws,_,_} <- WA, yaws =:= Yaws] of
+	[] ->
+	    log(info, "Yapp starting but Yaws not ready - waiting 500 ms",[]),
+	    receive after 500 -> ok end, %% Give Yaws some time to settle own things
+	    wait_for_yaws(N-1);
+	_ -> 
+	    ok
+    end.
+     
 
 %% @spec prepath(Arg::yawsArg()) -> Path::string()
 %% @doc Get the Yapp root-path. Can be called from a Yapp erl/1
