@@ -76,7 +76,7 @@ load(E) ->
                     Err
             end;
         _ ->
-            {error, "Can't open config file" ++ File}
+            {error, "Can't open config file " ++ File}
     end.
 
 
@@ -325,7 +325,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                                     Err
                             end;
                         _ ->
-                            {error, "Can't open config file" ++ File}
+                            {error, "Can't open config file " ++ File}
                     end;
                 false ->
                     {error, ?F("Expect filename at line ~w", [Lno])}
@@ -364,7 +364,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                                                                    ?Debug("FLOAD: ~p", [R]),
                                                                    R;
                                                                _ ->
-                                                                   {error, "Can't open config file" ++
+                                                                   {error, "Can't open config file " ++
                                                                     File}
                                                            end;
                                                        false ->

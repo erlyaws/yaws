@@ -1,0 +1,6 @@
+{release, {"Yaws %YAWS_VSN%","Yaws-%YAWS_VSN%"}, {erts, "%ERTS_VSN%"},
+ [{kernel,"%KERNEL_VSN%"},
+  {stdlib,"%STDLIB_VSN%"},
+  {sasl, "%SASL_VSN%"},
+  {mnesia, "%MNESIA_VSN%"},
+  {yaws, "%YAWS_VSN%"}]}.
