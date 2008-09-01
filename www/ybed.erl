@@ -12,7 +12,8 @@
 
 start() ->
     application:start(yaws),
-    GC = yaws_config:make_default_gconf(false),
+    Id = "default",
+    GC = yaws_config:make_default_gconf(false, Id),
     SC = #sconf{port = 8888,
                 servername = "foobar",
                 listen = {0,0,0,0},
