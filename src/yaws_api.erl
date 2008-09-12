@@ -57,7 +57,7 @@
          postvar/2, queryvar/2, getvar/2]).
 
 -export([binding/1,binding_exists/1,
-         dir_listing/1, dir_listing/2]).
+         dir_listing/1, dir_listing/2, redirect_self/1]).
 
 
 -import(lists, [map/2, flatten/1, reverse/1]).
@@ -1766,3 +1766,38 @@ dir_listing(Arg, RelDir) ->
             %% make sure it's a valid path here
             ok
     end.
+
+%% Returns #redir_self{} record
+redirect_self(A) ->
+    {Port, PortStr} = 
+        case {SC#sconf.rmethod, SC#sconf.ssl, SC#sconf.port} of
+            {"https", _, 443} -> {443, ""};
+            {"http", _, 80} -> {80, ""};
+            {_, undefined, 80} -> {80, ""};
+            {_, undefined, Port} -> 
+                {port, [$:|integer_to_list(Port)]};
+            {_, _SSL, 443} ->
+                {443, ""};
+            {_, _SSL, Port} -> 
+                {Port, [$:|integer_to_list(Port)]}
+        end,
+    H = A#arg.headers,
+    Host = yaws:redirect_host(get(sc), H#headers.host),
+    {Scheme, SchemeStr} = 
+        case {SC#sconf.ssl,SC#sconf.rmethod} of
+            {_, Method} when list(Method) ->
+                {list_to_atom(Method), Method++"://"};
+            {undefined,_} ->
+                {http, "http://"};
+            {_SSl,_} ->
+                {https, "https://"}
+        end,
+    #redir_self{host = Host,
+                scheme = Scheme,
+                scheme_str = SchemeStr,
+                port = Port,
+                port_str = PortStr}.
+
+
+
+

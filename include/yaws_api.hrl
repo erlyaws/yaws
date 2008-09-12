@@ -98,6 +98,14 @@
             version}).
 
 
+-record(redir_self, {
+          host,        %% string() - our own host
+          scheme,      %% http | https
+          scheme_str,  %% "https://"  | "http://"
+          port,        %% integer()  - our own port
+          port_str     %% "" | ":<int>" - the optional port part
+                       %%                 to append to the url
+         }).
 
 
 

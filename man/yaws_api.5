@@ -158,6 +158,26 @@ out(Arg) ->
 
 
 .TP
+\fBredirect_self(Arg)\fR
+If we want to issue a redirect to ourselves, this function
+is useful. It returns a record \fI#redir_self{}\fR defined in
+\fIyaws_api.hrl\fR. The record contains fields to construct
+a URL to ourselves.       
+\fI
+.nf
+
+-record(redir_self, {
+          host,        %% string() - our own host
+          scheme,      %% http | https
+          scheme_str,  %% "https://"  | "http://"
+          port,        %% integer()  - our own port
+          port_str     %% "" | ":<int>" - the optional port part
+                       %%                 to append to the url
+         }).
+.nf
+
+
+.TP
 \fBget_line(String)\fR
 This function is convenient when getting \\r\\n terminated lines
 from a stream of data. It returns:
