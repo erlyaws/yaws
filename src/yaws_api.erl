@@ -1769,17 +1769,18 @@ dir_listing(Arg, RelDir) ->
 
 %% Returns #redir_self{} record
 redirect_self(A) ->
+    SC = get(sc),
     {Port, PortStr} = 
         case {SC#sconf.rmethod, SC#sconf.ssl, SC#sconf.port} of
             {"https", _, 443} -> {443, ""};
             {"http", _, 80} -> {80, ""};
             {_, undefined, 80} -> {80, ""};
-            {_, undefined, Port} -> 
-                {port, [$:|integer_to_list(Port)]};
+            {_, undefined, Port2} -> 
+                {port, [$:|integer_to_list(Port2)]};
             {_, _SSL, 443} ->
                 {443, ""};
-            {_, _SSL, Port} -> 
-                {Port, [$:|integer_to_list(Port)]}
+            {_, _SSL, Port2} -> 
+                {Port2, [$:|integer_to_list(Port2)]}
         end,
     H = A#arg.headers,
     Host = yaws:redirect_host(get(sc), H#headers.host),
