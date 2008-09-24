@@ -59,6 +59,7 @@
          dcc/2]).
 
 -export([make_allow_header/0,
+         make_allow_header/1,
          make_server_header/0,
          make_last_modified_header/1,
          make_location_header/1,
@@ -1259,13 +1260,24 @@ dcc(Req, Headers) ->
 %%
 
 make_allow_header() ->
-    HasDav = ?sc_has_dav(get(sc)),
-    ["Allow: GET, POST, OPTIONS, HEAD",
-     if HasDav == true ->
-             ", PUT, PROPFIND, MKCOL, MOVE, COPY\r\n";
-        true ->
-             "\r\n"
-     end].
+    make_allow_header([]).
+make_allow_header(Options) ->
+    case Options of
+        [] ->
+            HasDav = ?sc_has_dav(get(sc)),
+            ["Allow: GET, POST, OPTIONS, HEAD",
+             if HasDav == true ->
+                     ", PUT, PROPFIND, MKCOL, MOVE, COPY\r\n";
+                true ->
+                     "\r\n"
+             end];
+        _ ->
+            ["Allow: ",
+             lists:foldl(fun(M, "") -> atom_to_list(M);
+                            (M, Acc) -> atom_to_list(M) ++ ", " ++ Acc end,
+                         "", lists:reverse(Options)),
+             "\r\n"]
+    end.
 make_server_header() ->
     HasDav = ?sc_has_dav(get(sc)),
     ["Server: Yaws/", yaws_generated:version(), " Yet Another Web Server\r\n" |

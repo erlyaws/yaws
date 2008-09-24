@@ -45,7 +45,6 @@
          'PUT'/3,
          'DELETE'/3]).
 
--import(filename, [join/1]).
 -import(lists, [member/2, foreach/2, map/2, 
                 flatten/1, flatmap/2, reverse/1]).
 
@@ -1059,7 +1058,7 @@ maybe_access_log(Ip, Req, H) ->
                          I -> integer_to_list(I)
                      end,
             Len = case Req#http_request.method of
-                      'HEAD' -> "-";  % ???
+                      'HEAD' -> "-";
                       _ -> case yaws:outh_get_contlen() of
                                undefined ->
                                    case yaws:outh_get_act_contlen() of
@@ -1140,7 +1139,7 @@ call_method(Method, CliSock, Req, H) ->
 
 'HEAD'(CliSock, Req, Head) ->
     put(acc_content, discard),
-    'GET'(CliSock, Req, Head).
+    no_body_method(CliSock, Req, Head).
 
 not_implemented(CliSock, Req, Head) ->
     SC=get(sc),
@@ -1153,12 +1152,7 @@ not_implemented(CliSock, Req, Head) ->
     not_implemented(CliSock, Req, Head).
 
 'OPTIONS'(CliSock, Req, Head) ->
-    ?Debug("OPTIONS", []),
-    SC=get(sc),
-    ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
-    flush(CliSock, Head#headers.content_length),
-    ?Debug("OPTIONS delivering", []),
-    deliver_options(CliSock, Req).
+    no_body_method(CliSock, Req, Head).
 
 'PUT'(CliSock, Req, Head) ->
     ?Debug("PUT Req=~p~n H=~p~n", [?format_record(Req, http_request),
@@ -1577,80 +1571,108 @@ handle_ut(CliSock, ARG, UT, N) ->
             ARG2 = ARG#arg{docroot = SC2#sconf.docroot},
             handle_request(CliSock, ARG2, N);
         directory when ?sc_has_dir_listings(SC) ->
-            P = UT#urltype.fullpath,  
-            yaws:outh_set_dyn_headers(Req, H, UT),
-            yaws_ls:list_directory(ARG, CliSock, UT#urltype.data, P, Req,
-                                   ?sc_has_dir_all_zip(SC));
+            Directory_allowed = ['GET', 'HEAD', 'OPTIONS'],
+            if
+                Req#http_request.method == 'GET';
+                Req#http_request.method == 'HEAD' ->
+                    yaws:outh_set_dyn_headers(Req, H, UT),
+                    P = UT#urltype.fullpath,  
+                    yaws_ls:list_directory(ARG, CliSock, UT#urltype.data, P, Req,
+                                           ?sc_has_dir_all_zip(SC));
+                Req#http_request.method == 'OPTIONS' ->
+                    deliver_options(CliSock, Req, Directory_allowed);
+                true ->
+                    deliver_405(CliSock, Req, Directory_allowed)
+            end;
         directory ->
             handle_ut(CliSock, ARG, #urltype{type = error}, N);
         regular ->
-            ETag = yaws:make_etag(UT#urltype.finfo),
-            Range = case H#headers.if_range of
-                        %%        [$"|_] = Range_etag when Range_etag /= ETag -> 
-                        [34|_] = Range_etag when Range_etag /= ETag -> 
-                            all; 
+            Regular_allowed = ['GET', 'HEAD', 'OPTIONS'],
+            if
+                Req#http_request.method == 'GET';
+                Req#http_request.method == 'HEAD' ->
+                    ETag = yaws:make_etag(UT#urltype.finfo),
+                    Range = case H#headers.if_range of
+                                %% [$"|_] = Range_etag when Range_etag /= ETag -> 
+                                [34|_] = Range_etag when Range_etag /= ETag -> 
+                                    all; 
+                                _ ->
+                                    requested_range(H#headers.range, 
+                                                    (UT#urltype.finfo)#file_info.size)
+                            end,
+                    case Range of
+                        error -> deliver_416(CliSock, Req, 
+                                             (UT#urltype.finfo)#file_info.size);
                         _ ->
-                            requested_range(H#headers.range, 
-                                            (UT#urltype.finfo)#file_info.size)
-                    end,
-            case Range of
-                error -> deliver_416(CliSock, Req, 
-                                     (UT#urltype.finfo)#file_info.size);
-                _ ->
-                    case H#headers.if_none_match of
-                        undefined ->
-                            case H#headers.if_match of
+                            Do_deliver = case Req#http_request.method of
+                                             'GET' -> fun() -> deliver_file(CliSock, Req, UT, Range) end;
+                                             'HEAD' -> fun() -> deliver_accumulated(CliSock), done end
+                                         end,
+                            case H#headers.if_none_match of
                                 undefined ->
-                                    case H#headers.if_modified_since of
+                                    case H#headers.if_match of
                                         undefined ->
-                                            yaws:outh_set_static_headers
-                                              (Req, UT, H, Range),
-                                            deliver_file
-                                              (CliSock, Req, UT, Range);
-                                        UTC_string ->
-                                            case yaws:is_modified_p(
-						   UT#urltype.finfo, UTC_string) of
-                                                true ->
-                                                   yaws:outh_set_static_headers
+                                            case H#headers.if_modified_since of
+                                                undefined ->
+                                                    yaws:outh_set_static_headers
                                                       (Req, UT, H, Range),
-                                                   deliver_file(
-						     CliSock, Req, UT, Range);
+                                                    Do_deliver();
+                                                UTC_string ->
+                                                    case yaws:is_modified_p(
+                                                           UT#urltype.finfo, UTC_string) of
+                                                        true ->
+                                                            yaws:outh_set_static_headers
+                                                              (Req, UT, H, Range),
+                                                            Do_deliver();
+                                                        false ->
+                                                            yaws:outh_set_304_headers(
+                                                              Req, UT, H),
+                                                            deliver_accumulated(CliSock),
+                                                            done_or_continue()
+                                                    end
+                                            end;
+                                        Line -> 
+                                            case member(ETag,
+                                                        yaws:split_sep(Line, $,)) of
+                                                true -> 
+                                                    yaws:outh_set_static_headers
+                                                      (Req, UT, H, Range),
+                                                    Do_deliver();
                                                 false ->
-                                                    yaws:outh_set_304_headers(
-						      Req, UT, H),
-                                                    deliver_accumulated(CliSock),
-                                                    done_or_continue()
+                                                    deliver_xxx(CliSock, Req, 412) 
                                             end
                                     end;
-                                Line -> 
-                                    case member(ETag,
-                                                yaws:split_sep(Line, $,)) of
-                                        true -> 
+                                Line ->
+                                    case member(ETag,yaws:split_sep(Line, $,)) of
+                                        true ->
+                                            yaws:outh_set_304_headers(Req, UT, H),
+                                            deliver_accumulated(CliSock),
+                                            done_or_continue();
+                                        false ->
                                             yaws:outh_set_static_headers
                                               (Req, UT, H, Range),
-                                            deliver_file(CliSock, 
-                                                         Req, UT, Range);
-                                        false ->
-                                            deliver_xxx(CliSock, Req, 412) 
+                                            Do_deliver()
                                     end
-                            end;
-                        Line ->
-                            case member(ETag,yaws:split_sep(Line, $,)) of
-                                true ->
-                                    yaws:outh_set_304_headers(Req, UT, H),
-                                    deliver_accumulated(CliSock),
-                                    done_or_continue();
-                                false ->
-                                    yaws:outh_set_static_headers
-                                      (Req, UT, H, Range),
-                                    deliver_file(CliSock, Req, UT, Range)
                             end
-                    end
+                    end;
+                Req#http_request.method == 'OPTIONS' ->
+                    deliver_options(CliSock, Req, Regular_allowed);
+                true ->
+                    deliver_405(CliSock, Req, Regular_allowed)
             end;
         yaws ->
             ?Debug("UT = ~s~n", [?format_record(UT, urltype)]),
-            yaws:outh_set_dyn_headers(Req, H, UT),
-            do_yaws(CliSock, ARG, UT, N);
+            Yaws_allowed = ['GET', 'HEAD', 'OPTIONS'],
+            if
+                Req#http_request.method == 'GET';
+                Req#http_request.method == 'HEAD' ->
+                    yaws:outh_set_dyn_headers(Req, H, UT),
+                    do_yaws(CliSock, ARG, UT, N);
+                Req#http_request.method == 'OPTIONS' ->
+                    deliver_options(CliSock, Req, Yaws_allowed);
+                true ->
+                    deliver_405(CliSock, Req, Yaws_allowed)
+            end;
         redir ->
             yaws:outh_set_dyn_headers(Req, H, UT),
             deliver_302(CliSock, Req, ARG, UT#urltype.path);
@@ -1820,21 +1842,24 @@ deliver_302_map(CliSock, Req, Arg, MethodHostPort) ->
     deliver_accumulated(CliSock),
     done_or_continue().
 
-deliver_options(CliSock, _Req) ->
+deliver_options(CliSock, _Req, Options) ->
     H = #outh{status = 200,
               doclose = false,
               chunked = false,
               server = yaws:make_server_header(),
-              allow = yaws:make_allow_header()},
+              allow = yaws:make_allow_header(Options)},
     put(outh, H),
     deliver_accumulated(CliSock),
     continue.
 
 deliver_xxx(CliSock, _Req, Code) ->
+    deliver_xxx(CliSock, _Req, Code, "").
+deliver_xxx(CliSock, _Req, Code, ExtraHtml) ->
     B = list_to_binary(["<html><h1>",
                         integer_to_list(Code), $\ ,
                         yaws_api:code_to_phrase(Code),
-                        "</h1></html>"]),
+                        "</h1></html>",
+                       ExtraHtml]),
     H = #outh{status = Code,
               doclose = true,
               chunked = false,
@@ -1870,6 +1895,12 @@ deliver_401(CliSock, _Req, Realm) ->
 
 deliver_403(CliSock, Req) ->
     deliver_xxx(CliSock, Req, 403).        % Forbidden
+
+deliver_405(CliSock, Req, Methods) ->
+    Methods_msg = lists:flatten(["<p>This resource allows ",
+                                 join([atom_to_list(M) || M <- Methods], ", "),
+                                 "</p>"]),
+    deliver_xxx(CliSock, Req, 405, Methods_msg).
 
 deliver_416(CliSock, _Req, Tot) ->
     B = list_to_binary(["<html><h1>416 ",
