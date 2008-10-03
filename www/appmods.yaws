@@ -28,7 +28,7 @@ out(A) ->
 
        box("http://yaws.hyber.org/pathelem/foo/bar/x.pdf"),
        
-       {p,[],["With the above url, the webserver would try to deliver the file \"foo/bar/x.pdf\" relative to the docroot. However if we had specified \"pathelem\" as an appmod, the server would stop processing the url after seeing the \"pathelem\" part of the URL. Say we had the following in our yaws.conf configuration file"]},
+       {p,[],["With the above url, the webserver would try to deliver the file \"/pathelem/foo/bar/x.pdf\" relative to the docroot. However if we had specified \"pathelem\" as an appmod, the server would stop processing the url after seeing the \"pathelem\" part of the URL. Say we had the following in our yaws.conf configuration file"]},
 
        
        box("
