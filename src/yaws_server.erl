@@ -1152,7 +1152,13 @@ not_implemented(CliSock, Req, Head) ->
     not_implemented(CliSock, Req, Head).
 
 'OPTIONS'(CliSock, Req, Head) ->
-    no_body_method(CliSock, Req, Head).
+    case Req#http_request.path of
+        '*' ->
+            % Handle "*" as per RFC2616 section 5.1.2
+            deliver_options(CliSock, Req, ['GET', 'HEAD', 'OPTIONS', 'PUT', 'POST', 'DELETE']);
+        _ ->
+            no_body_method(CliSock, Req, Head)
+    end.
 
 'PUT'(CliSock, Req, Head) ->
     ?Debug("PUT Req=~p~n H=~p~n", [?format_record(Req, http_request),
