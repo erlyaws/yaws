@@ -989,12 +989,12 @@ fix_abs_uri(Req, H) ->
 
 %% compare servername and ignore any optional
 %% :Port postfix
-comp_sname([$:|_], _) -> true;
-comp_sname(_, [$:|_]) -> true;
-comp_sname([H|T], [H|T1]) -> comp_sname(T,T1);
-comp_sname([],[])-> true;
-comp_sname(_,_)-> false.
 
+comp_sname(Hname, Sname) ->
+    case {string:tokens(Hname, ":"), string:tokens(Sname, ":")} of
+        {[X|_], [X|_]} -> true;
+        _              -> false
+    end.
 
 
 
