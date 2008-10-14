@@ -26,7 +26,8 @@ out(A) ->
                                        end
                                end, Page) of
                     true ->
-                        os:cmd("man  " ++ Page ++ "  | col -b -p -x");
+			%os:cmd("man  " ++ Page ++ "  | col -b -p -x");
+			unesc(os:cmd("man " ++ Page));
                     false ->
                         "illegal character detected in query arg"
                 end;
@@ -37,5 +38,21 @@ out(A) ->
     Man = {ehtml, {'div', [{id, "entry"}], prebox(L)}},
     Trail = {ssi, "END2",[],[]},
     [H, Man, Trail].
+
+
+unesc([27 | T]) ->
+    unesc(uptom(T));
+unesc([H|T]) ->
+    [H|unesc(T)];
+unesc([]) ->	     
+    [].
+	     
+uptom([$m|T]) ->
+    T;
+uptom([H|T]) ->
+    uptom(T);
+uptom([]) ->
+    [].
+
 
 </erl>
