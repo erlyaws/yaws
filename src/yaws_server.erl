@@ -292,7 +292,7 @@ handle_call({update_sconf, NewSc}, From, State) ->
                 false ->
                     Pid ! {update_sconf, NewSc, OldSc, From, self()},
                     receive
-                        {updated_sconf, NewSc2} ->                        
+                        {updated_sconf, Pid, NewSc2} ->                        
                             P2 = yaws_config:update_sconf(NewSc2, 
                                                           State#state.pairs),
                             {noreply, State#state{pairs = P2}}
@@ -324,10 +324,15 @@ handle_call({delete_sconf, SC}, From, State) ->
 handle_call({add_sconf, SC}, From, State) ->
     case yaws_config:search_group(SC, State#state.pairs) of
         [{Pid, Group}] ->
-            Pid ! {add_sconf, From, SC},
-            P2 = lists:keyreplace(Pid, 1, State#state.pairs,
-                                  {Pid, [SC|Group]}),
-            {noreply, State#state{pairs = P2}};
+            Pid ! {add_sconf, From, SC, self()},
+	    receive
+		{added_sconf, Pid, SC2} ->			
+		    P2 = lists:keyreplace(Pid, 1, State#state.pairs,
+					  {Pid, [SC2|Group]}),
+		    {noreply, State#state{pairs = P2}}
+	    after 2000 ->
+		    {reply, {error, "Failed to add new conf"}, State}
+	    end;
         [] ->
             %% Need to create a new group
             error_logger:info_msg("Creating new virt server ~s\n",
@@ -566,7 +571,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     GS2 = GS#gs{group = [ NewSc2 | 
                                           lists:delete(OldSc,GS#gs.group)]},
                     Ready2 = [],
-                    Updater ! {updated_sconf, NewSc2},
+                    Updater ! {updated_sconf, self(), NewSc2},
                     gen_server:reply(From, ok),
                     error_logger:info_msg("Updating sconf for server ~s~n",
                                           [yaws:sconf_to_srvstr(NewSc2)]),
@@ -592,10 +597,12 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     gserv_loop(GS2, Ready2, 0, New)
             end;
 
-        {add_sconf, From, SC} ->
+        {add_sconf, From, SC, Adder} ->
             stop_ready(Ready, Last),
-            GS2 = GS#gs{group =  [setup_ets(SC) |GS#gs.group]},
+            SC2 = setup_ets(SC),
+	    GS2 = GS#gs{group =  [SC2 |GS#gs.group]},
             Ready2 = [],
+            Adder ! {added_sconf, self(), SC2},
             gen_server:reply(From, ok),
             error_logger:info_msg("Adding sconf for server ~s~n",
                                   [yaws:sconf_to_srvstr(SC)]),
