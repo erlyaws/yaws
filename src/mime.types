@@ -464,6 +464,7 @@ text/xml			xml xsl
 text/xml-external-parsed-entity
 video/mp4v-es
 video/mpeg			mpeg mpg mpe
+video/mp2t                      ts
 video/parityfec
 video/pointer
 video/quicktime			qt mov
@@ -476,6 +477,7 @@ video/vnd.nokia.interleaved-multimedia
 video/vnd.vivo
 video/x-msvideo			avi
 video/x-sgi-movie		movie
+video/x-flv                     flv
 x-conference/x-cooltalk		ice
 text/html			shtml html htm
 application/xhtml+xml		xhtml
