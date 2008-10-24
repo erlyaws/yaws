@@ -478,6 +478,8 @@ video/vnd.vivo
 video/x-msvideo			avi
 video/x-sgi-movie		movie
 video/x-flv                     flv
+video/x-m4v                     m4v
+video/x-ms-wmv                  wmv
 x-conference/x-cooltalk		ice
 text/html			shtml html htm
 application/xhtml+xml		xhtml
