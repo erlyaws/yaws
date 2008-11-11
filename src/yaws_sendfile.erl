@@ -10,7 +10,14 @@
 
 start() ->
     Shlib = "yaws_sendfile_drv",
-    Dir = filename:join([filename:dirname(code:which(?MODULE)), "..", "priv"]),
+    Dir = case yaws_generated:is_local_install() of
+	      true ->
+		  filename:dirname(code:which(?MODULE)) ++ "/../priv/lib";
+	       false ->
+		  %% ignore dialyzer on this one
+		  PrivDir = code:priv_dir(yaws),
+		  filename:join(PrivDir,"lib")
+	  end,
     case erl_ddll:load_driver(Dir, Shlib) of
         ok -> ok;
         {error, already_loaded} -> ok;
