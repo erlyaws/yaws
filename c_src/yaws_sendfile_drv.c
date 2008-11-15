@@ -24,6 +24,11 @@
 
 typedef struct _desc {
     ErlDrvPort port;
+    int socket_fd;
+    int file_fd;
+    off_t offset;
+    size_t count;
+    ssize_t total;
 } Desc;
 
 static ErlDrvData yaws_sendfile_drv_start(ErlDrvPort port, char* buf)
@@ -31,6 +36,8 @@ static ErlDrvData yaws_sendfile_drv_start(ErlDrvPort port, char* buf)
     Desc* d = (Desc*)driver_alloc(sizeof(Desc));
     if (d == NULL) return (ErlDrvData) -1;
     d->port = port;
+    d->socket_fd = d->file_fd = -1;
+    d->offset = d->count = d->total = 0;
     return (ErlDrvData)d;
 }
 
@@ -61,54 +68,103 @@ typedef union {
     }* result;
 } Buffer;
 
-static int set_error_buffer(Buffer b, int err)
+static int set_error_buffer(Buffer* b, int err)
 {
     char* s;
     char* t;
-    memset(b.result, 0, sizeof(*b.result));
-    for (s = erl_errno_id(err), t = b.result->errno_string; *s; s++, t++) {
+    memset(b->result, 0, sizeof *b->result);
+    for (s = erl_errno_id(err), t = b->result->errno_string; *s; s++, t++) {
         *t = tolower(*s);
     }
-    return sizeof(*b.result) - 1 + t - b.result->errno_string;
+    *t = '\0';
+    return sizeof(*b->result) - 1 + t - b->result->errno_string;
 }
 
-#if defined(__linux__)
-#define CALL_SENDFILE(out_fd, in_fd, offset, count) sendfile((out_fd), (in_fd), (offset), (count))
-#elif defined(__APPLE__) && defined(__MACH__)
-static ssize_t CALL_SENDFILE(int out_fd, int in_fd, off_t* offset, size_t count)
+static ssize_t yaws_sendfile_call(int out_fd, int in_fd, off_t* offset, size_t count)
 {
+#if defined(__linux__)
+    off_t cur = *offset;
+    ssize_t retval;
+    do {
+        retval = sendfile(out_fd, in_fd, offset, count);
+    } while (retval < -1 && errno == EINTR);
+    if (retval >= 0 && retval != count) {
+        if (*offset == cur) {
+            *offset += retval;
+        }
+        retval = -1;
+	errno = EAGAIN;
+    }
+    return retval;
+#elif defined(__APPLE__) && defined(__MACH__)
     off_t len = count;
-    int retval = sendfile(in_fd, out_fd, *offset, &len, NULL, 0);
+    int retval;
+    do {
+        retval = sendfile(in_fd, out_fd, *offset, &len, NULL, 0);
+    } while (retval < 0 && errno == EINTR);
+    if (retval < 0 && errno == EAGAIN) {
+        *offset += len;
+    }
     return retval == 0 ? len : retval;
-}
 #else
-#define CALL_SENDFILE(out_fd, in_fd, offset, count) -1
+    errno = ENOSYS;
+    return -1;
 #endif
+}
 
 static void yaws_sendfile_drv_output(ErlDrvData handle, char* buf, int buflen)
 {
     int fd;
-    int out_buflen;
+    int out_buflen = 0;
     Desc* d = (Desc*)handle;
     Buffer b;
     b.buffer = buf;
     fd = open(b.args->filename, O_RDONLY);
     if (fd < 0) {
-        out_buflen = set_error_buffer(b, errno);
+        out_buflen = set_error_buffer(&b, errno);
     } else {
-        ssize_t result = CALL_SENDFILE(b.args->out_fd, fd, &b.args->offset.offset, b.args->count.size);
-        close(fd);
+        d->socket_fd = b.args->out_fd;
+        d->file_fd = fd;
+        d->offset = b.args->offset.offset;
+        d->count = b.args->count.size;
+        driver_select(d->port, (ErlDrvEvent)d->socket_fd, DO_WRITE, 1);
+    }
+    if (out_buflen != 0) {
+        driver_output(d->port, buf, out_buflen);
+    }
+}
+
+static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
+{
+    Desc* d = (Desc*)handle;
+    off_t cur_offset = d->offset;
+    ssize_t result;
+    result = yaws_sendfile_call(d->socket_fd, d->file_fd, &d->offset, d->count);
+    if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        off_t written = d->offset - cur_offset;
+        d->count -= written;
+        d->total += written;
+        /*driver_select(d->port, (ErlDrvEvent)d->socket_fd, DO_WRITE, 1);*/
+    } else {
+        int out_buflen;
+        char buf[32];
+        Buffer b;
+        b.buffer = buf;
+        memset(buf, 0, sizeof buf);
+        driver_select(d->port, (ErlDrvEvent)d->socket_fd, DO_WRITE, 0);
+        close(d->file_fd);
         if (result < 0) {
-            out_buflen = set_error_buffer(b, errno);
+            out_buflen = set_error_buffer(&b, errno);
         } else {
-            b.result->count.count = result;
+            b.result->count.count = d->total + result;
             b.result->success = 1;
             b.result->errno_string[0] = '\0';
             out_buflen = sizeof(*b.result);
         }
+        d->socket_fd = d->file_fd = -1;
+        d->offset = d->count = d->total = 0;
+        driver_output(d->port, buf, out_buflen);
     }
-    assert(out_buflen <= buflen);
-    driver_output(d->port, buf, out_buflen);
 }
 
 static ErlDrvEntry yaws_sendfile_driver_entry = {
@@ -117,7 +173,7 @@ static ErlDrvEntry yaws_sendfile_driver_entry = {
     yaws_sendfile_drv_stop,
     yaws_sendfile_drv_output,
     NULL,
-    NULL,
+    yaws_sendfile_drv_ready_output,
     "yaws_sendfile_drv",
     NULL,
     NULL,
