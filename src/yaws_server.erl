@@ -1676,9 +1676,10 @@ handle_ut(CliSock, ARG, UT, N) ->
             end;
         yaws ->
             ?Debug("UT = ~s~n", [?format_record(UT, urltype)]),
-            Yaws_allowed = ['GET', 'HEAD', 'OPTIONS'],
+            Yaws_allowed = ['GET', 'POST', 'HEAD', 'OPTIONS'],
             if
                 Req#http_request.method == 'GET';
+                Req#http_request.method == 'POST';
                 Req#http_request.method == 'HEAD' ->
                     yaws:outh_set_dyn_headers(Req, H, UT),
                     do_yaws(CliSock, ARG, UT, N);
