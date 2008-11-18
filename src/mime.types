@@ -17,6 +17,7 @@ application/activemessage
 application/andrew-inset	ez
 application/applefile
 application/atomicmail
+application/atom+xml		atom
 application/batch-SMTP
 application/beep+xml
 application/cals-1840
@@ -69,6 +70,7 @@ application/prs.nprend
 application/qsig
 application/remote-printing
 application/riscos
+application/rss+xml		rss
 application/rtf			rtf
 application/sdp
 application/set-payment
@@ -138,6 +140,8 @@ application/vnd.fujixerox.ddd
 application/vnd.fujixerox.docuworks
 application/vnd.fujixerox.docuworks.binder
 application/vnd.fut-misnet
+application/vnd.google-earth.kml+xml	kml
+application/vnd.google-earth.kmz	kmz
 application/vnd.grafeq
 application/vnd.groove-account
 application/vnd.groove-identity-message
