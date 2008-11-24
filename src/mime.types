@@ -27,6 +27,7 @@ application/dca-rft
 application/dec-dx
 application/dvcs
 application/eshop
+application/font-tdpfr
 application/http
 application/hyperstudio
 application/iges
@@ -38,7 +39,7 @@ application/index.vnd
 application/iotp
 application/ipp
 application/isup
-application/font-tdpfr
+application/json		json
 application/mac-binhex40	hqx
 application/mac-compactpro	cpt
 application/macwriteii
@@ -468,7 +469,7 @@ text/xml			xml xsl
 text/xml-external-parsed-entity
 video/mp4v-es
 video/mpeg			mpeg mpg mpe
-video/mp2t                      ts
+video/mp2t			ts
 video/parityfec
 video/pointer
 video/quicktime			qt mov
@@ -481,9 +482,9 @@ video/vnd.nokia.interleaved-multimedia
 video/vnd.vivo
 video/x-msvideo			avi
 video/x-sgi-movie		movie
-video/x-flv                     flv
-video/x-m4v                     m4v
-video/x-ms-wmv                  wmv
+video/x-flv			flv
+video/x-m4v			m4v
+video/x-ms-wmv			wmv
 x-conference/x-cooltalk		ice
 text/html			shtml html htm
 application/xhtml+xml		xhtml
