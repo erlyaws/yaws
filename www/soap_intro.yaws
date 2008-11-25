@@ -134,8 +134,8 @@ out(A) ->
        },
 
        box("1> yaws_soap_lib:call(\n"
-           "      \"http://www.webservicex.net/WeatherForecast.asmx?WSDL\"\n"
-           "      \"GetWeatherByPlaceName\"\n"
+           "      \"http://www.webservicex.net/WeatherForecast.asmx?WSDL\",\n"
+           "      \"GetWeatherByPlaceName\",\n"
            "      [\"Boston\"]).\n"
            "{ok,undefined,\n"
            "  [{'p:GetWeatherByPlaceNameResponse',\n"
