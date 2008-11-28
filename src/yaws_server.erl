@@ -855,7 +855,7 @@ acceptor0(GS, Top) ->
 %%%----------------------------------------------------------------------
 
 aloop(CliSock, GS, Num) ->
-    put(init_db, get()),
+    init_db(),
     SSL = GS#gs.ssl,
     Head = yaws:http_get_headers(CliSock, SSL),
     ?Debug("Head = ~p~n", [Head]),
@@ -902,6 +902,11 @@ aloop(CliSock, GS, Num) ->
     end.
 
 
+%% keep original dictionary but filter out eventual previous init_db
+%% in erase_transients/0
+init_db() ->
+    put(init_db, lists:keydelete(init_db, 1, get())).
+
 erase_transients() ->
     %% flush all messages
     Fun = fun(G) -> receive
@@ -915,6 +920,9 @@ erase_transients() ->
     if I == undefined ->
             ok;
        list(I) ->
+           %% Need to keep init_db in case we do not enter aloop (i.e. init:db)
+           %% again as R12B-5 requires proc_lib keys in dict while exiting...
+           put(init_db, I),
             lists:foreach(fun({K,V}) -> put(K,V) end, I)
     end.
 
