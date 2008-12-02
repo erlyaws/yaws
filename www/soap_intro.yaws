@@ -133,7 +133,9 @@ out(A) ->
         "got the Yaws ebin directory in the path:"
        },
 
-       box("1> yaws_soap_lib:call(\n"
+       box("1> inets:start().\n"
+           "ok\n"
+           "2> yaws_soap_lib:call(\n"
            "      \"http://www.webservicex.net/WeatherForecast.asmx?WSDL\",\n"
            "      \"GetWeatherByPlaceName\",\n"
            "      [\"Boston\"]).\n"
@@ -168,10 +170,12 @@ out(A) ->
         "call. We can do it in two steps: "
         },
 
-       box("1> Wsdl = yaws_soap_lib:initModel(\n"
+       box("1> inets:start().\n"
+           "ok\n"
+           "2> Wsdl = yaws_soap_lib:initModel(\n"
            "      \"http://www.webservicex.net/WeatherForecast.asmx?WSDL\").\n"
            "...\n"
-           "2> yaws_soap_lib:call(\n"
+           "3> yaws_soap_lib:call(\n"
            "      Wsdl,\n"
            "      \"GetWeatherByPlaceName\"\n"
            "      [\"Boston\"]).\n"
@@ -183,9 +187,9 @@ out(A) ->
         "the generated '.hrl' file will look like this: "
         },
 
-       box("3> yaws_soap_lib:write_hrl(Wsdl, \"/tmp/wfc.hrl\").\n"
+       box("4> yaws_soap_lib:write_hrl(Wsdl, \"/tmp/wfc.hrl\").\n"
            "...\n"
-           "4> {ok,Bin}=file:read_file(\"/tmp/wfc.hrl\"),io:fwrite(binary_to_list(Bin)).\n"
+           "5> {ok,Bin}=file:read_file(\"/tmp/wfc.hrl\"),io:fwrite(binary_to_list(Bin)).\n"
            "-record('soap:detail', {anyAttribs, choice}).\n"
            "-record('soap:Fault', {anyAttribs, 'faultcode', 'faultstring', 'faultactor', 'detail'}).\n"
            "-record('soap:Body', {anyAttribs, choice}).\n"
@@ -209,8 +213,8 @@ out(A) ->
         "want to set it to something else, you can do it as shown below:"
         },
 
-       box("5> yaws_soap_lib:initModel(... , \"foo\").           % foo is my prefix\n"
-           "6> yaws_soap_lib:write_hrl(... , ... , \"foo\").\n"
+       box("6> yaws_soap_lib:initModel(... , \"foo\").           % foo is my prefix\n"
+           "7> yaws_soap_lib:write_hrl(... , ... , \"foo\").\n"
            ),
 
        {p,[],
@@ -234,9 +238,9 @@ out(A) ->
         "#wsdl{} record that yaws_soap_lib:initModel/2 returned, as shown below: "
         },
 
-       box("7> Ops = yaws_soap_lib:wsdl_operations(Wsdl).\n"
-           "8> {ok,Op} = yaws_soap_lib:get_operation(Ops, \"GetWeatherByPlaceName\").\n"
-           "9> yaws_soap_lib:wsdl_op_address(Op).\n"
+       box("8> Ops = yaws_soap_lib:wsdl_operations(Wsdl).\n"
+           "9> {ok,Op} = yaws_soap_lib:get_operation(Ops, \"GetWeatherByPlaceName\").\n"
+           "10> yaws_soap_lib:wsdl_op_address(Op).\n"
            "\"http://www.webservicex.net/WeatherForecast.asmx\"\n"
           ),
 
@@ -265,7 +269,7 @@ out(A) ->
            "\n"
            "2> GL = [{enable_soap,true},   % <== THIS WILL ENABLE SOAP IN A YAWS SERVER!!\n"
            "         {trace, false},\n"
-           "         {tmpdir,\"/tmp\"},{logdir,\"/tmp\"},\n"
+           "         {tmpdir,Docroot},{logdir,Docroot},\n"
            "       {flags,[{auth_log,false},{tty_trace, false},{copy_errlog, true}]}].\n"
            "\n"
            "3> SL = [{port,8181},{servername,\"localhost\"},{dir_listings, true},\n"
@@ -275,7 +279,7 @@ out(A) ->
            "4> yaws_soap_lib:write_hrl(\"file:///tmp/MyWeatherService.wsdl\", \"/tmp/my_soap.hrl\").\n"
            "\n"
            "% WE MUST ADD A PATH TO OUR CALLBACK CODE!!\n"
-           "5> code:add_path(\"/tmp\").\n"
+           "5> code:add_path(Docroot).\n"
            ),
 
        {p,[],
@@ -346,14 +350,22 @@ out(A) ->
         "Now, in your Yaws shell, setup the Soap server as shown below:"
         },
 
-       box("6> yaws_soap_srv:setup({my_soap, handler}, \"file:///tmp/MyWeatherService.wsdl\").\n"
+       box("6> yaws:start_embedded(Docroot,SL,GL).\n"
+           "=INFO REPORT==== 29-Nov-2008::20:03:50 ===\n"
+           "Yaws: Listening to 127.0.0.1:8181 for servers\n"
+           " - http://localhost:8181 under /tmp\n"
+           "ok\n"
+           "7> yaws_soap_srv:setup({my_soap, handler}, \"file:///tmp/MyWeatherService.wsdl\").\n"
+           "ok\n"
           ),
 
        {p,[],
         "We are now ready to try it out. Start another Erlang shell and call it: "
         },
 
-       box("1> yaws_soap_lib:call(\"file:///tmp/MyWeatherService.wsdl\",\n"
+       box("1> inets:start().\n"
+           "ok\n"
+           "2> yaws_soap_lib:call(\"file:///tmp/MyWeatherService.wsdl\",\n"
            "                      \"GetWeatherByPlaceName\",\n"
            "                      [\"Stockholm\"]).\n"
            "{ok,undefined,\n"
