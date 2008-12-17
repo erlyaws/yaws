@@ -1135,7 +1135,23 @@ optional_header(Item) ->
 'POST'(CliSock, Req, Head) ->
     ?Debug("POST Req=~s~n H=~s~n", [?format_record(Req, http_request),
                                     ?format_record(Head, headers)]),
-    body_method(CliSock, Req, Head).
+
+    OtherHeaders = Head#headers.other,
+    Continue =
+        case lists:keysearch("Expect", 3, OtherHeaders) of
+            {value, {_,_,"Expect",_,Value}} ->
+                Value;
+            _ ->
+                ""
+        end,
+    case string:to_lower(Continue) of
+        "100-continue" ->
+            deliver_100(CliSock),
+            body_method(CliSock, Req, Head);
+        _ ->
+            body_method(CliSock, Req, Head)
+    end.
+
 
 
 un_partial({partial, Bin}) ->
@@ -1874,6 +1890,17 @@ deliver_options(CliSock, _Req, Options) ->
     put(outh, H),
     deliver_accumulated(CliSock),
     continue.
+
+deliver_100(CliSock) ->
+    H = #outh{status = 100,
+              doclose = false,
+              chunked = false,
+              server = yaws:make_server_header(),
+              allow = yaws:make_allow_header()},
+    put(outh, H),
+    deliver_accumulated(CliSock),
+    continue.
+
 
 deliver_xxx(CliSock, _Req, Code) ->
     deliver_xxx(CliSock, _Req, Code, "").
