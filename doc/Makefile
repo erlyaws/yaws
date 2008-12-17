@@ -11,19 +11,20 @@ all debug:
 docs:	yaws.ps yaws.pdf
 
 yaws.ps:	yaws.dvi
-	-dvips -o yaws.ps yaws.dvi
-	-cp yaws.ps ../www
+	$(COND_DVILATEX)$(DVIPS) -o yaws.ps yaws.dvi
+	$(COND_DVILATEX)cp yaws.ps ../www
 
 yaws.pdf:	yaws.tex $(IMG_PDF)
-	-pdflatex yaws.tex
-	-cp yaws.pdf ../www
+	$(COND_PDFLATEX)$(PDFLATEX) yaws.tex
+	$(COND_PDFLATEX)$(PDFLATEX) yaws.tex
+	$(COND_PDFLATEX)cp yaws.pdf ../www
 
 yaws.dvi:	yaws.tex  $(IMG_EPS)
-	-latex yaws.tex
-	-latex yaws.tex
+	$(COND_DVILATEX)$(DVILATEX) yaws.tex
+	$(COND_DVILATEX)$(DVILATEX) yaws.tex
 
 %.pdf:	%.eps
-	-epstopdf $<
+	$(COND_PDFLATEX)$(EPSTOPDF) $<
 
 clean:
 	rm  -f *.ps *.dvi *.log *.aux *.pdf *.toc *.beam 2> /dev/null || true

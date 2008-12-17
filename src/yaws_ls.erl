@@ -321,11 +321,13 @@ file_entry(_Err, _, _Name, _, _) ->
 
 trim(L,N) ->
     trim(L,N,[]).
-trim([_H|_T], 4, Acc) ->
+trim([_H1,_H2,_H3]=[H|T], 3=I, Acc) ->
+    trim(T, I-1, [H|Acc]);
+trim([_H1,_H2,_H3|_T], 3=_I, Acc) ->
     lists:reverse(Acc) ++ "..&gt;";
 trim([H|T], I, Acc) ->
     trim(T, I-1, [H|Acc]);
-trim([], _, Acc) ->
+trim([], _I, Acc) ->
     lists:reverse(Acc).
 
 %% FI -> 16-Jan-2006 23:06

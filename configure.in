@@ -167,6 +167,33 @@ AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 
 
+dnl Make LaTeX and related commands configurable
+dnl
+dnl We might want to check whether latex is pdflatex and creates
+dnl PDF instead of DVI without being given -output-format=dvi.
+dnl However, this at least allows to give the working command at
+dnl configure time.
+AC_ARG_VAR([DVILATEX], [(pdf)latex command creating DVI file])
+AC_CHECK_PROG([DVILATEX], [latex], [latex])
+
+AC_ARG_VAR([DVIPS], [dvips command])
+AC_CHECK_PROG([DVIPS], [dvips], [dvips])
+
+AC_ARG_VAR([PDFLATEX], [(pdf)latex command creating PDF file])
+AC_CHECK_PROG([PDFLATEX], [pdflatex], [pdflatex])
+
+AC_ARG_VAR([EPSTOPDF], [epstopdf command])
+AC_CHECK_PROG([EPSTOPDF], [epstopdf], [epstopdf])
+
+AS_IF([test "x$DVILATEX" = "xno" || test "x$DVIPS" = "xno"],
+      [AC_SUBST([COND_DVILATEX], ["-"])],
+      [AC_SUBST([COND_DVILATEX], [""])])
+
+AS_IF([test "x$PDFLATEX" = "xno" || test "x$EPSTOPDF" = "xno"],
+      [AC_SUBST([COND_PDFLATEX], ["-"])],
+      [AC_SUBST([COND_PDFLATEX], [""])])
+
+
 dnl Sigh, pam headers do not seem to have a standard place. On FreeBSD and
 dnl Linuces I've seen they are in /usr/include/security, but MacOS has them
 dnl in /usr/include/pam... I'm to sick of M4 at this very moment to write

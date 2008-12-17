@@ -6,6 +6,14 @@ prefix             = ${PREFIX}
 ETCDIR             = @sysconfdir@
 VARDIR             = @localstatedir@
 
+DVILATEX = @DVILATEX@
+PDFLATEX = @PDFLATEX@
+DVIPS = @DVIPS@
+EPSTOPDF = @EPSTOPDF@
+
+COND_DVILATEX = @COND_DVILATEX@
+COND_PDFLATEX = @COND_PDFLATEX@
+
 ERL="@ERL@"
 WERL="@WERL@"
 ERLC="@ERLC@"
