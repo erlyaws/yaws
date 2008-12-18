@@ -2099,7 +2099,14 @@ tmpdir() ->
                     PathTEMP
             end;
         _ ->
-            filename:join([os:getenv("HOME"), ".yaws"])
+	    %% This feature is useable together with 
+	    %% privbind and authbind on linux
+	    case os:getenv("YAWSHOME") of
+		false ->
+		    filename:join([os:getenv("HOME"), ".yaws"]);
+		DIR ->
+		    filename:join([DIR, ".yaws"])
+	    end
     end.
 
 
