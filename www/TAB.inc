@@ -55,6 +55,7 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <div class="%%soap_intro%%"> <a href="/soap_intro.yaws">SOAP with Yaws</a></div>
 <div class="%%yapp_intro%%"> <a href="/yapp_intro.yaws">Yaws applications</a></div>
 <div class="%%cgi%%"> <a href="/cgi.yaws">CGI</a></div>
+<div class="%%privbind%%"> <a href="/privbind.yaws">Binding to priviliged ports</a></div>
 <h4> Misc </h4>
 <div class="%%internals%%"> <a href="/internals.yaws">Internals</a> </div>
 

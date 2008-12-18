@@ -34,7 +34,7 @@ paths() ->
         {ok, "0"} ->    %% root 
             [yaws_generated:etcdir() ++ "/yaws.conf"];
         _ -> %% developer
-            [filename:join([os:getenv("HOME"), "yaws.conf"]),
+            [filename:join([yaws:home(), "yaws.conf"]),
              "./yaws.conf", 
              yaws_generated:etcdir() ++ "/yaws.conf"]
     end.

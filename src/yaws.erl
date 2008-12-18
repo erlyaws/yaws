@@ -37,7 +37,7 @@
          eat_crnl/2, get_chunk_num/2, get_chunk/4,
          list_to_uue/1, uue_to_list/1, printversion/0,
          strip_spaces/1, strip_spaces/2,
-         month/1, mk2/1, 
+         month/1, mk2/1, home/0,
          arg_rewrite/1, to_lowerchar/1, to_lower/1, funreverse/2, is_prefix/2,
          split_sep/2, accepts_gzip/2, upto_char/2, deepmap/2,
          ticker/2, ticker/3]).
@@ -2099,16 +2099,19 @@ tmpdir() ->
                     PathTEMP
             end;
         _ ->
-	    %% This feature is useable together with 
-	    %% privbind and authbind on linux
-	    case os:getenv("YAWSHOME") of
-		false ->
-		    filename:join([os:getenv("HOME"), ".yaws"]);
-		DIR ->
-		    filename:join([DIR, ".yaws"])
-	    end
+	    filename:join([home(), ".yaws"])
     end.
 
+%% This feature is useable together with 
+%% privbind and authbind on linux
+
+home() ->
+    case os:getenv("YAWSHOME") of
+	false ->
+	    os:getenv("HOME");
+	DIR ->
+	    DIR
+    end.
 
 id_dir(Id) ->
     filename:join([tmpdir(), "yaws", to_list(Id)]).
