@@ -335,6 +335,9 @@ browser. This is good for debugging but not in production.
 The function \fIModule:crashmsg(Arg, SC, Str)\fR will be
 called. The \fIStr\fR is the real crash message formated as a string.
 
+The function must return, \fI{content,MimeType,Cont}\fR or
+\fI{html, Str}\fR or \fI{ehtml, Term}\fR. That data will be shipped
+to the client. 
 
 .TP
 \fBarg_rewrite_mod = Module\fR

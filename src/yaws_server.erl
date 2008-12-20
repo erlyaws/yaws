@@ -2712,6 +2712,9 @@ handle_crash(ARG, L) ->
     yaws:elog("~s", [L]),
     yaws:outh_set_status_code(500),
     case catch apply(SC#sconf.errormod_crash, crashmsg, [ARG, SC, L]) of
+        {content,MimeType,Cont} ->
+	   yaws:outh_set_content_type(MimeType),
+	   accumulate_content(Cont);
         {html, Str} ->
             accumulate_content(Str),
             break;
