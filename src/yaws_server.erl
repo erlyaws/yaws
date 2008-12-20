@@ -3019,43 +3019,16 @@ deliver_large_file(CliSock,  _Req, UT, Range) ->
         discard -> 
             ok;
         Priv ->
-            {ok,Fd} = file:open(UT#urltype.fullpath, [raw, binary, read]),
-            send_file(CliSock, Fd, Range, Priv)
+            send_file(CliSock, UT#urltype.fullpath, Range, Priv)
     end,
     done_or_continue().
 
 
-send_file(CliSock, Fd, all, Priv) ->
-    send_file(CliSock, Fd, Priv);
-send_file(CliSock, Fd,  {fromto, From, To, _Tot}, undeflated) ->
-    file:position(Fd, {bof, From}),
-    send_file_range(CliSock, Fd, To - From + 1).
-
-
-send_file(CliSock, Fd, Priv) ->
-    ?Debug("send_file(~p,~p, ...)~n", 
-           [CliSock, Fd]),
-    case file:read(Fd, (get(gc))#gconf.large_file_chunk_size) of
-        {ok, Bin} ->
-            Priv1 = send_streamcontent_chunk(Priv, CliSock, Bin),
-            send_file(CliSock, Fd, Priv1);
-        eof ->
-            file:close(Fd),
-            end_streaming(Priv, CliSock)
-    end.
-
-send_file_range(CliSock, Fd, Len) when Len > 0 ->
-    {ok, Bin} = file:read(Fd, 
-                          case (get(gc))#gconf.large_file_chunk_size of
-                              S when S < Len -> S;
-                              _ -> Len
-                          end
-                         ),
-    send_streamcontent_chunk(undeflated, CliSock, Bin),
-    send_file_range(CliSock, Fd, Len - size(Bin));
-send_file_range(CliSock, Fd, 0) ->
-    file:close(Fd),
-    end_streaming(undeflated, CliSock).
+send_file(CliSock, Path, all, _Priv) ->
+    ?Debug("send_file(~p,~p, ...)~n", [CliSock, Path]),
+    yaws_sendfile_compat:send(CliSock, Path);
+send_file(CliSock, Path,  {fromto, From, To, _Tot}, undeflated) ->
+    yaws_sendfile_compat:send(CliSock, Path, From, 1+To-From).
 
 
 crnl() ->

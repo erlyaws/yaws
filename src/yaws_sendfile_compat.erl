@@ -34,7 +34,7 @@ send(Out, FileName, Offset, Count) ->
 enabled() ->
     false.
 start_link() ->
-    ignore;
+    ignore.
 stop() ->
     ok.
 init(_) ->
@@ -42,14 +42,14 @@ init(_) ->
 send(Out, Filename) ->
     send(Out, Filename, 0, all).
 send(Out, Filename, Offset) ->
-    sendfile(Out, Filename, Offset, all).
+    send(Out, Filename, Offset, all).
 send(Out, Filename, Offset, Count) ->
     case file:open(Filename, [read, raw]) of
         {ok, Fd} ->
             file:position(Fd, {bof, Offset}),
             Ret = loop_send(Fd, file:read(Fd, 2048), Out, Count),
             file:close(Fd),
-            retl
+            Ret;
         Err ->
             Err
     end.
@@ -61,7 +61,7 @@ loop_send(Fd, {ok, Bin}, Out, all) ->
         Err ->
             Err
     end;
-loop_send(Fd, eof, Out, _) ->
+loop_send(_Fd, eof, _Out, _) ->
     ok;
 loop_send(Fd, {ok, Bin}, Out, Count) ->
     Sz = size(Bin),
@@ -78,7 +78,7 @@ loop_send(Fd, {ok, Bin}, Out, Count) ->
             <<Deliver:Count/binary , _/binary>> = Bin,
             gen_tcp:send(Deliver, Count)
     end;
-loop_send(Fd, Err, _,_) ->
+loop_send(_Fd, Err, _,_) ->
     Err.
 
 

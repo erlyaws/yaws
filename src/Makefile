@@ -49,7 +49,7 @@ ERLC_FLAGS+=-W $(DEBUG_FLAGS) -pa ../../yaws -I ../include
 # Targets
 #
 
-all: yaws_generated.erl $(EBIN_FILES) 
+all: yaws_generated.erl yaws_configure.hrl $(EBIN_FILES) 
 
 dav:
 	$(MAKE) MODULES="$(MODULES) yaws_dav"
