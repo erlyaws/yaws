@@ -84,7 +84,6 @@ dnl
 case "$target_os" in
         *cygwin*)
 
-
            ERLDIR=`echo "${ERL}" | sed 's/\/bin\/*erl.*//'`
            ERL_DLL_LIB="${ERLDIR}/usr/lib/erl_dll.lib"
            AC_SUBST(ERL_DLL_LIB)
@@ -200,6 +199,7 @@ dnl in /usr/include/pam... I'm to sick of M4 at this very moment to write
 dnl a test that searches for the files, so hard coded for now...
 dnl or use --with-extrainclude=....
 CFLAGS="$CFLAGS -I/usr/include/security"
+HAVE_SENDFILE=false
 
 case "$target_os" in
         *linux*)
@@ -208,6 +208,7 @@ case "$target_os" in
            AC_SUBST(LD_SHARED)
            FPIC=-fpic
            AC_SUBST(FPIC)
+           HAVE_SENDFILE=true
            ;;
 
         *solaris*)
@@ -223,6 +224,9 @@ case "$target_os" in
         *bsd*)
            AC_DEFINE(BSD)
            case "$target_os" in
+                freebsd*)
+                    HAVE_SENDFILE=true
+                    ;;
                 bsdi*)
                     BSDI=bsdi
                     AC_DEFINE(BSDI)
@@ -235,6 +239,7 @@ case "$target_os" in
            AC_SUBST(FPIC)
            ;;
          *darwin*)
+           HAVE_SENDFILE=true
            CFLAGS="$CFLAGS -I/usr/include/pam"
            LD_SHARED="gcc -bundle -fPIC -flat_namespace -undefined suppress"
               AC_SUBST(LD_SHARED)
@@ -255,7 +260,7 @@ case "$target_os" in
            ;;
 esac
 
-
+AC_SUBST(HAVE_SENDFILE)
 
 AC_OUTPUT(include.mk)
 

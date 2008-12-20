@@ -37,7 +37,9 @@ MODULES=yaws \
 	haxe yaws_rpc \
 	yaws_soap_srv yaws_soap_lib \
 	authmod_gssapi \
-	yaws_appmod_cgi
+	yaws_appmod_cgi \
+	yaws_sendfile yaws_sendfile_compat
+
 
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app
@@ -62,6 +64,13 @@ yaws_generated.erl:	yaws_generated.template ../vsn.mk
 	../scripts/Subst %VARDIR% ${VARDIR} | \
 	../scripts/Subst %localinstall% true | \
 	../scripts/Subst %ETCDIR% ${ETCDIR} > yaws_generated.erl
+
+yaws_configure.hrl:	 ../vsn.mk
+	set -x; \
+	if [  $(HAVE_SENDFILE) = "true" ]; then \
+		echo "-define(HAVE_SENDFILE, true)." > yaws_configure.hrl; \
+	else touch yaws_configure.hrl; fi
+
 
 ## need to differentiate between local install and not
 regen:

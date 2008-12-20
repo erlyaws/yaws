@@ -659,11 +659,18 @@ SET_MAKE
 INSTALL_PROGRAM
 INSTALL_SCRIPT
 INSTALL_DATA
+DVILATEX
+DVIPS
+PDFLATEX
+EPSTOPDF
+COND_DVILATEX
+COND_PDFLATEX
 LD_SHARED
 FPIC
 BSDI
 WERL
 WIN32
+HAVE_SENDFILE
 LIBOBJS
 LTLIBOBJS'
 ac_subst_files=''
@@ -675,7 +682,11 @@ CFLAGS
 LDFLAGS
 LIBS
 CPPFLAGS
-CPP'
+CPP
+DVILATEX
+DVIPS
+PDFLATEX
+EPSTOPDF'
 
 
 # Initialize some variables set by options.
@@ -1266,6 +1277,10 @@ Some influential environment variables:
   CPPFLAGS    C/C++/Objective C preprocessor flags, e.g. -I<include dir> if
               you have headers in a nonstandard directory <include dir>
   CPP         C preprocessor
+  DVILATEX    (pdf)latex command creating DVI file
+  DVIPS       dvips command
+  PDFLATEX    (pdf)latex command creating PDF file
+  EPSTOPDF    epstopdf command
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -1977,7 +1992,6 @@ fi
 
 case "$target_os" in
         *cygwin*)
-
 
            ERLDIR=`echo "${ERL}" | sed 's/\/bin\/*erl.*//'`
            ERL_DLL_LIB="${ERLDIR}/usr/lib/erl_dll.lib"
@@ -3641,7 +3655,183 @@ test -z "$INSTALL_DATA" && INSTALL_DATA='${INSTALL} -m 644'
 
 
 
+
+# Extract the first word of "latex", so it can be a program name with args.
+set dummy latex; ac_word=$2
+{ echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+if test "${ac_cv_prog_DVILATEX+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$DVILATEX"; then
+  ac_cv_prog_DVILATEX="$DVILATEX" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_DVILATEX="latex"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+fi
+fi
+DVILATEX=$ac_cv_prog_DVILATEX
+if test -n "$DVILATEX"; then
+  { echo "$as_me:$LINENO: result: $DVILATEX" >&5
+echo "${ECHO_T}$DVILATEX" >&6; }
+else
+  { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+fi
+
+
+
+
+# Extract the first word of "dvips", so it can be a program name with args.
+set dummy dvips; ac_word=$2
+{ echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+if test "${ac_cv_prog_DVIPS+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$DVIPS"; then
+  ac_cv_prog_DVIPS="$DVIPS" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_DVIPS="dvips"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+fi
+fi
+DVIPS=$ac_cv_prog_DVIPS
+if test -n "$DVIPS"; then
+  { echo "$as_me:$LINENO: result: $DVIPS" >&5
+echo "${ECHO_T}$DVIPS" >&6; }
+else
+  { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+fi
+
+
+
+
+# Extract the first word of "pdflatex", so it can be a program name with args.
+set dummy pdflatex; ac_word=$2
+{ echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+if test "${ac_cv_prog_PDFLATEX+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$PDFLATEX"; then
+  ac_cv_prog_PDFLATEX="$PDFLATEX" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_PDFLATEX="pdflatex"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+fi
+fi
+PDFLATEX=$ac_cv_prog_PDFLATEX
+if test -n "$PDFLATEX"; then
+  { echo "$as_me:$LINENO: result: $PDFLATEX" >&5
+echo "${ECHO_T}$PDFLATEX" >&6; }
+else
+  { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+fi
+
+
+
+
+# Extract the first word of "epstopdf", so it can be a program name with args.
+set dummy epstopdf; ac_word=$2
+{ echo "$as_me:$LINENO: checking for $ac_word" >&5
+echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+if test "${ac_cv_prog_EPSTOPDF+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  if test -n "$EPSTOPDF"; then
+  ac_cv_prog_EPSTOPDF="$EPSTOPDF" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_EPSTOPDF="epstopdf"
+    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+fi
+fi
+EPSTOPDF=$ac_cv_prog_EPSTOPDF
+if test -n "$EPSTOPDF"; then
+  { echo "$as_me:$LINENO: result: $EPSTOPDF" >&5
+echo "${ECHO_T}$EPSTOPDF" >&6; }
+else
+  { echo "$as_me:$LINENO: result: no" >&5
+echo "${ECHO_T}no" >&6; }
+fi
+
+
+
+if test "x$DVILATEX" = "xno" || test "x$DVIPS" = "xno"; then
+  COND_DVILATEX="-"
+
+else
+  COND_DVILATEX=""
+
+fi
+
+
+if test "x$PDFLATEX" = "xno" || test "x$EPSTOPDF" = "xno"; then
+  COND_PDFLATEX="-"
+
+else
+  COND_PDFLATEX=""
+
+fi
+
+
+
 CFLAGS="$CFLAGS -I/usr/include/security"
+HAVE_SENDFILE=false
 
 case "$target_os" in
         *linux*)
@@ -3653,6 +3843,7 @@ _ACEOF
 
            FPIC=-fpic
 
+           HAVE_SENDFILE=true
            ;;
 
         *solaris*)
@@ -3674,6 +3865,9 @@ _ACEOF
 _ACEOF
 
            case "$target_os" in
+                freebsd*)
+                    HAVE_SENDFILE=true
+                    ;;
                 bsdi*)
                     BSDI=bsdi
                     cat >>confdefs.h <<\_ACEOF
@@ -3689,6 +3883,7 @@ _ACEOF
 
            ;;
          *darwin*)
+           HAVE_SENDFILE=true
            CFLAGS="$CFLAGS -I/usr/include/pam"
            LD_SHARED="gcc -bundle -fPIC -flat_namespace -undefined suppress"
 
@@ -4469,16 +4664,23 @@ SET_MAKE!$SET_MAKE$ac_delim
 INSTALL_PROGRAM!$INSTALL_PROGRAM$ac_delim
 INSTALL_SCRIPT!$INSTALL_SCRIPT$ac_delim
 INSTALL_DATA!$INSTALL_DATA$ac_delim
+DVILATEX!$DVILATEX$ac_delim
+DVIPS!$DVIPS$ac_delim
+PDFLATEX!$PDFLATEX$ac_delim
+EPSTOPDF!$EPSTOPDF$ac_delim
+COND_DVILATEX!$COND_DVILATEX$ac_delim
+COND_PDFLATEX!$COND_PDFLATEX$ac_delim
 LD_SHARED!$LD_SHARED$ac_delim
 FPIC!$FPIC$ac_delim
 BSDI!$BSDI$ac_delim
 WERL!$WERL$ac_delim
 WIN32!$WIN32$ac_delim
+HAVE_SENDFILE!$HAVE_SENDFILE$ac_delim
 LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 89; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 96; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
@@ -4497,7 +4699,7 @@ fi
 
 cat >>$CONFIG_STATUS <<_ACEOF
 cat >"\$tmp/subs-1.sed" <<\CEOF$ac_eof
-/@[a-zA-Z_][a-zA-Z_0-9]*@/!b end
+/@[a-zA-Z_][a-zA-Z_0-9]*@/!b
 _ACEOF
 sed '
 s/[,\\&]/\\&/g; s/@/@|#_!!_#|/g
@@ -4510,8 +4712,6 @@ N; s/^.*\n//; s/[,\\&]/\\&/g; s/@/@|#_!!_#|/g; b n
 ' >>$CONFIG_STATUS <conf$$subs.sed
 rm -f conf$$subs.sed
 cat >>$CONFIG_STATUS <<_ACEOF
-:end
-s/|#_!!_#|//g
 CEOF$ac_eof
 _ACEOF
 
@@ -4759,7 +4959,7 @@ s&@abs_builddir@&$ac_abs_builddir&;t t
 s&@abs_top_builddir@&$ac_abs_top_builddir&;t t
 s&@INSTALL@&$ac_INSTALL&;t t
 $ac_datarootdir_hack
-" $ac_file_inputs | sed -f "$tmp/subs-1.sed" >$tmp/out
+" $ac_file_inputs | sed -f "$tmp/subs-1.sed" | sed 's/|#_!!_#|//g' >$tmp/out
 
 test -z "$ac_datarootdir_hack$ac_datarootdir_seen" &&
   { ac_out=`sed -n '/\${datarootdir}/p' "$tmp/out"`; test -n "$ac_out"; } &&

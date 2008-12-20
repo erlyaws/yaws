@@ -4,11 +4,12 @@
 %%% Created :  9 Nov 2008 by Steve Vinoski <vinoski@ieee.org>
 
 -module(yaws_sendfile).
--export([start/0, init/1, stop/0, send/2, send/3, send/4]).
+-export([start_link/0, init/1, stop/0, send/2, send/3, send/4]).
 
 -include_lib("kernel/include/file.hrl").
 
-start() ->
+start_link() ->
+    io:format("STARTING \n",[]),
     Shlib = "yaws_sendfile_drv",
     Dir = case yaws_generated:is_local_install() of
 	      true ->
@@ -23,7 +24,7 @@ start() ->
         {error, already_loaded} -> ok;
         _ -> exit({error, could_not_load_driver})
     end,
-    spawn(?MODULE, init, [Shlib]).
+    {ok, spawn_link(?MODULE, init, [Shlib])}.
 
 init(Shlib) ->
     register(?MODULE, self()),
@@ -98,5 +99,9 @@ loop(Port) ->
             try erlang:port_close(Port) catch error:_ -> ok end,
             receive {'EXIT', Port, _Reason} -> ok
             after 0 -> ok
-            end
+            end;
+        {'EXIT', Port , _} ->
+            error_logger:format("Fatal sendfile port died ~n", []),
+            exit(sendfile)
+    
     end.

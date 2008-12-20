@@ -1,0 +1,90 @@
+%%% File    : yaws_sendfile_compat.erl
+%%% Author  : Claes Wikstrom, klacke@hyber.org
+%%% Description : Conditional OS dependent call to sendfile
+%%% Created :  Sat Dec 20 20:00:11 CET 2008
+
+-module(yaws_sendfile_compat).
+-export([start_link/0, init/1, stop/0, send/2, send/3, send/4, enabled/0]).
+
+-include_lib("kernel/include/file.hrl").
+-include("yaws_configure.hrl").
+
+%% will be true for MacOsX, FreeBSD, Linux
+-ifdef(HAVE_SENDFILE).
+
+enabled() ->
+    true.
+start_link() ->
+    yaws_sendfile:start_link().
+stop() ->
+    yaws_sendfile:stop().
+init(ShLib) ->
+    yaws_sendfile:init(ShLib).
+send(Out, FileName) ->
+    yaws_sendfile:send(Out, FileName).
+send(Out, FileName, Offset) ->
+    yaws_sendfile:send(Out, FileName, Offset).
+send(Out, FileName, Offset, Count) ->
+    yaws_sendfile:send(Out, FileName, Offset, Count).
+
+
+-else.
+
+%% Emulate sendfile, this is true for win32, qnx, solaris. OpenBSD,NetBSD I still don't know
+enabled() ->
+    false.
+start_link() ->
+    ignore;
+stop() ->
+    ok.
+init(_) ->
+    ok.
+send(Out, Filename) ->
+    send(Out, Filename, 0, all).
+send(Out, Filename, Offset) ->
+    sendfile(Out, Filename, Offset, all).
+send(Out, Filename, Offset, Count) ->
+    case file:open(Filename, [read, raw]) of
+        {ok, Fd} ->
+            file:position(Fd, {bof, Offset}),
+            Ret = loop_send(Fd, file:read(Fd, 2048), Out, Count),
+            file:close(Fd),
+            retl
+        Err ->
+            Err
+    end.
+
+loop_send(Fd, {ok, Bin}, Out, all) ->
+    case gen_tcp:write(Out, Bin) of
+        ok ->
+            loop_send(Fd, file:read(Fd, 2048), Out, all);
+        Err ->
+            Err
+    end;
+loop_send(Fd, eof, Out, _) ->
+    ok;
+loop_send(Fd, {ok, Bin}, Out, Count) ->
+    Sz = size(Bin),
+    if Sz < Count ->
+            case gen_tcp:write(Out, Bin) of
+                true ->
+                    loop_send(Fd, file:read(Fd, 2048), Out, Count-Sz);
+                Err ->
+                    Err
+            end;
+       Sz == Count ->
+            gen_tcp:write(Out, Bin);
+       Sz > Count ->
+            <<Deliver:Count/binary , _/binary>> = Bin,
+            gen_tcp:send(Deliver, Count)
+    end;
+loop_send(Fd, Err, _,_) ->
+    Err.
+
+
+-endif.
+
+
+
+            
+    
