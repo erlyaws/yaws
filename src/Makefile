@@ -56,6 +56,7 @@ dav:
 
 $(EBIN_FILES) : ../include/yaws.hrl ../include/yaws_api.hrl
 
+../ebin/yaws_sendfile_compat.$(EMULATOR): yaws_configure.hrl
 
 yaws_generated.erl:	yaws_generated.template ../vsn.mk
 	. ../vsn.mk; \

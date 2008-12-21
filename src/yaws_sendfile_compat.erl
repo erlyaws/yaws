@@ -30,6 +30,8 @@ send(Out, FileName, Offset, Count) ->
 
 -else.
 
+-include("../include/yaws.hrl").
+
 %% Emulate sendfile, this is true for win32, qnx, solaris. OpenBSD,NetBSD I still don't know
 enabled() ->
     false.
@@ -44,47 +46,43 @@ send(Out, Filename) ->
 send(Out, Filename, Offset) ->
     send(Out, Filename, Offset, all).
 send(Out, Filename, Offset, Count) ->
-    case file:open(Filename, [read, raw]) of
+    case file:open(Filename, [read, binary, raw]) of
         {ok, Fd} ->
             file:position(Fd, {bof, Offset}),
-            Ret = loop_send(Fd, file:read(Fd, 2048), Out, Count),
+            ChunkSize = (get(gc))#gconf.large_file_chunk_size,
+            Ret = loop_send(Fd, ChunkSize, file:read(Fd, ChunkSize), Out, Count),
             file:close(Fd),
             Ret;
         Err ->
             Err
     end.
 
-loop_send(Fd, {ok, Bin}, Out, all) ->
-    case gen_tcp:write(Out, Bin) of
+loop_send(Fd, ChunkSize, {ok, Bin}, Out, all) ->
+    case gen_tcp:send(Out, Bin) of
         ok ->
-            loop_send(Fd, file:read(Fd, 2048), Out, all);
+            loop_send(Fd, ChunkSize, file:read(Fd, ChunkSize), Out, all);
         Err ->
             Err
     end;
-loop_send(_Fd, eof, _Out, _) ->
+loop_send(_Fd, _ChunkSize, eof, _Out, _) ->
     ok;
-loop_send(Fd, {ok, Bin}, Out, Count) ->
+loop_send(Fd, ChunkSize, {ok, Bin}, Out, Count) ->
     Sz = size(Bin),
     if Sz < Count ->
-            case gen_tcp:write(Out, Bin) of
+            case gen_tcp:send(Out, Bin) of
                 true ->
-                    loop_send(Fd, file:read(Fd, 2048), Out, Count-Sz);
+                    loop_send(Fd, ChunkSize, file:read(Fd, ChunkSize), Out, Count-Sz);
                 Err ->
                     Err
             end;
        Sz == Count ->
-            gen_tcp:write(Out, Bin);
+            gen_tcp:send(Out, Bin);
        Sz > Count ->
             <<Deliver:Count/binary , _/binary>> = Bin,
-            gen_tcp:send(Deliver, Count)
+            gen_tcp:send(Out, Deliver)
     end;
-loop_send(_Fd, Err, _,_) ->
+loop_send(_Fd, _, Err, _,_) ->
     Err.
 
 
 -endif.
-
-
-
-            
-    
