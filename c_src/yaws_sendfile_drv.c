@@ -10,7 +10,7 @@
 #include <assert.h>
 #if defined(__linux__)
 #include <sys/sendfile.h>
-#elif defined(__APPLE__) && defined(__MACH__)
+#elif (defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__)
 #include <sys/socket.h>
 #include <sys/uio.h>
 #else
@@ -101,6 +101,16 @@ static ssize_t yaws_sendfile_call(int out_fd, int in_fd, off_t* offset, size_t c
     int retval;
     do {
         retval = sendfile(in_fd, out_fd, *offset, &len, NULL, 0);
+    } while (retval < 0 && errno == EINTR);
+    if (retval < 0 && errno == EAGAIN) {
+        *offset += len;
+    }
+    return retval == 0 ? len : retval;
+#elif defined(__FreeBSD__)
+    off_t len = 0;
+    int retval;
+    do {
+        retval = sendfile(in_fd, out_fd, *offset, count, NULL, &len, 0);
     } while (retval < 0 && errno == EINTR);
     if (retval < 0 && errno == EAGAIN) {
         *offset += len;

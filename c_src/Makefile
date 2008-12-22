@@ -11,7 +11,7 @@ else
 # don't make pam if configured out with --disable-pam
 	PRIV_FILES= ../priv/lib/setuid_drv.$(DLL)  $(EPAM)
 endif
-                                                                    
+
 ifeq ($(HAVE_SENDFILE),true)
 	PRIV_FILES += ../priv/lib/yaws_sendfile_drv.$(DLL)
 endif
@@ -29,7 +29,7 @@ CFLAGS += -I/usr/include/pam/ $(EXTRAINCLUDE)
 all: $(PRIV_FILES) 
 
 clean:
-	-rm -f $(PRIV_FILES) setuid_drv.$(OBJ) 
+	-rm -f $(PRIV_FILES) setuid_drv.$(OBJ) epam.$(OBJ) yaws_sendfile_drv.$(OBJ)
 
 install:	$(PRIV_FILES)
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/yaws/priv/lib
@@ -43,19 +43,19 @@ endif
 
 
 ../priv/lib/setuid_drv.$(DLL): setuid_drv.$(OBJ)
-	$(LD_SHARED) $(OUT) $@  setuid_drv.$(OBJ) $(DLL_LIBS)
+	$(LD_SHARED) $(OUT) $@ $< $(DLL_LIBS)
 setuid_drv.$(OBJ):	setuid_drv.c
-	$(CC) -c $(FPIC) $(CFLAGS) -DDYNAMIC_DRIVER setuid_drv.c
+	$(CC) -c $(FPIC) $(CFLAGS) -DDYNAMIC_DRIVER $<
 
 ../priv/lib/yaws_sendfile_drv.$(DLL): yaws_sendfile_drv.$(OBJ)
-	$(LD_SHARED) $(OUT) $@  yaws_sendfile_drv.$(OBJ) $(DLL_LIBS)
+	$(LD_SHARED) $(OUT) $@ $< $(DLL_LIBS)
 yaws_sendfile_drv.$(OBJ):	yaws_sendfile_drv.c
-	$(CC) -c $(FPIC) $(CFLAGS) -DDYNAMIC_DRIVER yaws_sendfile_drv.c
+	$(CC) -c $(FPIC) $(CFLAGS) -DDYNAMIC_DRIVER $<
 
 ../priv/.foo:
-	touch ../priv/.foo	
+	touch $@
 
-epam.o:	epam.c
-	$(CC) -c $(CFLAGS) epam.c
-../priv/epam: epam.o
-	$(CC) -o $@ epam.o -lpam
+epam.$(OBJ):	epam.c
+	$(CC) -c $(CFLAGS) $<
+../priv/epam: epam.$(OBJ)
+	$(CC) -o $@ $< -lpam
