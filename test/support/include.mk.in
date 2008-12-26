@@ -1,0 +1,9 @@
+
+
+ERL="@ERL@"
+YTOP="@YTOP@"
+
+YAWS=$(YTOP)/bin/yaws
+
+%.beam: %.erl
+        "$(ERLC)" -Ddebug $<

@@ -1,0 +1,5 @@
+
+ERL="@ERL@"
+YTOP="@YTOP@"
+
+YAWS=${YTOP}/bin/yaws
