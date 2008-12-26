@@ -1,0 +1,1 @@
+cc -o ../priv/ibrowse_drv.so -I ~/R9C-0/usr/include/ -bundle -flat_namespace -undefined suppress -fno-common ibrowse_drv.c
