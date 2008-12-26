@@ -1,0 +1,67 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Module ibrowse_lib</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css">
+</head>
+<body bgcolor="white">
+
+<h1>Module ibrowse_lib</h1>
+Module with a few useful functions.
+<ul><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+
+<h2><a name="description">Description</a></h2>Module with a few useful functions
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1"><tr><td valign="top"><a href="#dec2hex-2">dec2hex/2</a></td><td>dec2hex taken from gtk.erl in std dist
+  M = integer() -- number of hex digits required
+  N = integer() -- the number to represent as hex.</td></tr>
+<tr><td valign="top"><a href="#decode_base64-1">decode_base64/1</a></td><td>Implements the base64 decoding algorithm.</td></tr>
+<tr><td valign="top"><a href="#decode_rfc822_date-1">decode_rfc822_date/1</a></td><td/></tr>
+<tr><td valign="top"><a href="#drv_ue-1">drv_ue/1</a></td><td/></tr>
+<tr><td valign="top"><a href="#drv_ue-2">drv_ue/2</a></td><td/></tr>
+<tr><td valign="top"><a href="#encode_base64-1">encode_base64/1</a></td><td>Implements the base64 encoding algorithm.</td></tr>
+<tr><td valign="top"><a href="#status_code-1">status_code/1</a></td><td>Given a status code, returns an atom describing the status code.</td></tr>
+<tr><td valign="top"><a href="#url_encode-1">url_encode/1</a></td><td>URL-encodes a string based on RFC 1738.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3><a name="dec2hex-2">dec2hex/2</a></h3>
+<p><tt>dec2hex(M::integer(), N::integer()) -&gt; string()</tt></p>
+<p>dec2hex taken from gtk.erl in std dist
+  M = integer() -- number of hex digits required
+  N = integer() -- the number to represent as hex</p>
+
+<h3><a name="decode_base64-1">decode_base64/1</a></h3>
+<p><tt>decode_base64(List::In) -&gt; Out | <a href="#type-exit">exit({error, invalid_input})</a></tt>
+<ul><li><tt>In = string() | binary()</tt></li><li><tt>Out = string() | binary()</tt></li></ul></p>
+<p>Implements the base64 decoding algorithm. The output data type matches in the input data type.</p>
+
+<h3><a name="decode_rfc822_date-1">decode_rfc822_date/1</a></h3>
+<tt>decode_rfc822_date(String) -&gt; term()
+</tt>
+
+<h3><a name="drv_ue-1">drv_ue/1</a></h3>
+<tt>drv_ue(Str) -&gt; term()
+</tt>
+
+<h3><a name="drv_ue-2">drv_ue/2</a></h3>
+<tt>drv_ue(Str, Port) -&gt; term()
+</tt>
+
+<h3><a name="encode_base64-1">encode_base64/1</a></h3>
+<p><tt>encode_base64(List::In) -&gt; Out</tt>
+<ul><li><tt>In = string() | binary()</tt></li><li><tt>Out = string() | binary()</tt></li></ul></p>
+<p>Implements the base64 encoding algorithm. The output data type matches in the input data type.</p>
+
+<h3><a name="status_code-1">status_code/1</a></h3>
+<p><tt>status_code(StatusCode::<a href="#type-status_code">status_code()</a>) -&gt; StatusDescription</tt>
+<ul><li><tt><a name="type-status_code">status_code()</a> = string() | integer()</tt></li><li><tt>StatusDescription = atom()</tt></li></ul></p>
+<p>Given a status code, returns an atom describing the status code.</p>
+
+<h3><a name="url_encode-1">url_encode/1</a></h3>
+<p><tt>url_encode(Str) -&gt; UrlEncodedStr</tt>
+<ul><li><tt>Str = string()</tt></li><li><tt>UrlEncodedStr = string()</tt></li></ul></p>
+<p>URL-encodes a string based on RFC 1738. Returns a flat list.</p>
+</body>
+</html>

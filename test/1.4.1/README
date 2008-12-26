@@ -1,0 +1,301 @@
+$Id: README,v 1.16 2008/05/21 15:28:11 chandrusf Exp $
+
+ibrowse is a HTTP client. The following are a list of features.
+	- RFC2616 compliant (AFAIK) 
+	- supports GET, POST, OPTIONS, HEAD, PUT, DELETE, TRACE, 
+          MKCOL, PROPFIND, PROPPATCH, LOCK, UNLOCK, MOVE and COPY
+	- Understands HTTP/0.9, HTTP/1.0 and HTTP/1.1
+	- Understands chunked encoding
+        - Can generate requests using Chunked Transfer-Encoding
+	- Pools of connections to each webserver
+	- Pipelining support
+	- Download to file
+	- Asynchronous requests. Responses are streamed to a process
+	- Basic authentication
+	- Supports proxy authentication
+	- Can talk to Secure webservers using SSL
+	- any other features in the code not listed here :)
+
+ibrowse is available under two different licenses. LGPL and the BSD license.
+
+Comments to : Chandrashekhar.Mullaparthi@t-mobile.co.uk
+
+CONTRIBUTIONS & CHANGE HISTORY
+==============================
+21-05-2008 - * Fixed bug in reading some options from the ibrowse.conf file.
+               Reported by Erik Reitsma on the erlyaws mailing list
+             * Fixed bug when cleaning up closing connections
+
+27-03-2008 - * Major rewrite of the load balancing feature. Additional module,
+               ibrowse_lb.erl, introduced to achieve this.
+             * Can now get a handle to a connection process which is not part of
+               the load balancing pool. Useful when an application is making
+               requests to a webserver which are time consuming (such as 
+               uploading a large file). Such requests can be put on a separate
+               connection, and all other smaller/quicker requests can use the
+               load balancing pool. See ibrowse:spawn_worker_process/2 and
+               ibrowse:spawn_link_worker_process/2
+             * Ram Krishnan sent a patch to enable a client to send a lot of
+               data in a request by providing a fun which is invoked by the
+               connection handling process. This fun can fetch the data from 
+               any where. This is useful when trying to upload a large file
+               to a webserver.
+             * Use the TCP_NODELAY option on every socket by default
+             * Rudimentary support for load testing of ibrowse. Undocumented, 
+               but see ibrowse_test:load_test/3. Use the source, Luke!
+             * New function ibrowse:show_dest_status/2 to view state of
+               connections/pipelines to a web server
+
+20-02-2008 - Ram Krishnan sent another patch for another hidden bug in the
+             save_response_to_file feature.
+
+07-02-2008 - Ram Krishnan (kriyative _at_ gmail dot com) sent a simple patch to
+             enable specifying the filename in the save_response_to_file option.
+             When testing the patch, I realised that my original implementation
+             of this feature was quite flaky and a lot of corner cases were 
+             not covered.  Fixed all of them. Thanks Ram!
+
+17-10-2007 - Matthew Reilly (matthew dot reilly _at_ sipphone dot com) 
+             sent a bug report and a fix. If the chunk trailer spans two TCP 
+             packets, then ibrowse fails to recognise that the chunked transfer
+	     has ended.
+
+29-08-2007 - Bug report by Peter Kristensen(ptx _at_ daimi dot au dot dk). 
+             ibrowse crashes when the webserver returns just the Status line 
+             and nothing else.
+
+28-06-2007 - Added host_header option to enable connection to secure sites
+             via stunnel
+
+20-04-2007 - Geoff Cant sent a patch to remove URL encoding for digits in
+             ibrowse_lib:url_encode/1.
+             ibrowse had a dependency on the inets application because the 
+             ibrowse_http_client.erl invoked httpd_util:encode_base64/1. This
+             dependency is now removed and the encode_base64/1 has been 
+             implemented in ibrowse_lib.erl
+
+06-03-2007 -  Eric Merritt sent a patch to support WebDAV requests.
+
+12-01-2007 -  Derek Upham sent in a bug fix. The reset_state function was not
+              behaving correctly when the transfer encoding was not chunked.
+
+13-11-2006 -  Youns Hafri reported a bug where ibrowse was not returning the 
+                temporary filename when the server was closing the connection 
+                after sending the data (as in HTTP/1.0).
+              Released ibrowse under the BSD license
+
+12-10-2006 -  Chris Newcombe reported bug in dealing with requests where no 
+              body is expected in the response. The first request would succeed
+              and the next request would hang.
+
+24-May-2006 - Sean Hinde reported a bug. Async responses with pipelining was 
+              returning the wrong result.
+
+08-Dec-2005 - Richard Cameron (camster@citeulike.org). Patch to ibrowse to
+              prevent port number being included in the Host header when port
+              80 is intended.
+
+22-Nov-2005 - Added ability to generate requests using the Chunked 
+              Transfer-Encoding.
+
+08-May-2005 - Youns Hafri made a CRUX LINUX port of ibrowse.
+	      http://yhafri.club.fr/crux/index.html
+
+Here are some usage examples. Enjoy!
+
+5> ibrowse:start().
+{ok,<0.94.0>}
+
+%% A simple GET
+6> ibrowse:send_req("http://intranet/messenger/", [], get).
+{ok,"200",
+    [{"Server","Microsoft-IIS/5.0"},
+     {"Content-Location","http://intranet/messenger/index.html"},
+     {"Date","Fri, 17 Dec 2004 15:16:19 GMT"},
+     {"Content-Type","text/html"},
+     {"Accept-Ranges","bytes"},
+     {"Last-Modified","Fri, 17 Dec 2004 08:38:21 GMT"},
+     {"Etag","\"aa7c9dc313e4c41:d77\""},
+     {"Content-Length","953"}],
+    "<html>\r\n\r\n<head>\r\n<title>Messenger</title>\r\n<meta name=\"GENERATOR\" content=\"Microsoft FrontPage 5.0\">\r\n<meta name=\"ProgId\" content=\"FrontPage.Editor.Document\">\r\n<meta name=\"description\" content=\"Messenger Home Page\">\r\n</head>\r\n\r\n<frameset border=\"0\" frameborder=\"0\" rows=\"60,*\">\r\n  <frame src=\"/messenger/images/topnav.html\" name=\"mFrameTopNav\" scrolling=\"NO\" target=\"mFrameMain\">\r\n  <frameset cols=\"18%,*\">\r\n    <frameset rows=\"*,120\">\r\n      <frame src=\"index-toc.html\" name=\"mFrameTOC\" target=\"mFrameMain\" scrolling=\"auto\"  noresize=\"true\">\r\n      <frame src=\"/shared/search/namesearch.html\" name=\"mFrameNameSearch\" scrolling=\"NO\" target=\"mFrameMain\">\r\n    </frameset>\r\n    <frame src=\"home/16-12-04-xmascardsmms.htm\" name=\"mFrameMain\" scrolling=\"auto\" target=\"mFrameMain\" id=\"mFrameMain\">\r\n  </frameset>\r\n  <noframes>\r\n  <body>\r\n\r\n  <p><i>This site requires a browser that can view frames.</i></p>\r\n\r\n  </body>\r\n  </noframes>\r\n</frameset>\r\n\r\n</html>"}
+
+%% =============================================================================
+%% A GET using a proxy
+7> ibrowse:send_req("http://www.google.com/", [], get, [], 
+		 [{proxy_user, "XXXXX"},
+		  {proxy_password, "XXXXX"},
+		  {proxy_host, "proxy"},
+		  {proxy_port, 8080}], 1000).
+{ok,"302",
+    [{"Date","Fri, 17 Dec 2004 15:22:56 GMT"},
+     {"Content-Length","217"},
+     {"Content-Type","text/html"},
+     {"Set-Cookie",
+      "PREF=ID=f58155c797f96096:CR=1:TM=1103296999:LM=1103296999:S=FiWdtAqQvhQ0TvHq; expires=Sun, 17-Jan-2038 19:14:07 GMT; path=/; domain=.google.com"},
+     {"Server","GWS/2.1"},
+     {"Location",
+      "http://www.google.co.uk/cxfer?c=PREF%3D:TM%3D1103296999:S%3Do8bEY2FIHwdyGenS&prev=/"},
+     {"Via","1.1 netapp01 (NetCache NetApp/5.5R2)"}],
+    "<HTML><HEAD><TITLE>302 Moved</TITLE></HEAD><BODY>\n<H1>302 Moved</H1>\nThe document has moved\n<A HREF=\"http://www.google.co.uk/cxfer?c=PREF%3D:TM%3D1103296999:S%3Do8bEY2FIHwdyGenS&amp;prev=/\">here</A>.\r\n</BODY></HTML>\r\n"}
+
+%% =============================================================================
+%% A GET response saved to file. A temporary file is created and the
+%% filename returned. The response will only be saved to file is the
+%% status code is in the 200 range. The directory to download to can
+%% be set using the application env var 'download_dir' - the default
+%% is the current working directory.
+8> ibrowse:send_req("http://www.erlang.se/", [], get, [],
+		 [{proxy_user, "XXXXX"},
+		  {proxy_password, "XXXXX"},
+		  {proxy_host, "proxy"},
+		  {proxy_port, 8080},
+		  {save_response_to_file, true}], 1000).
+{error,req_timedout}
+
+%% =============================================================================
+9> ibrowse:send_req("http://www.erlang.se/", [], get, [],
+		 [{proxy_user, "XXXXX"},
+		  {proxy_password, "XXXXX"},
+		  {proxy_host, "proxy"},
+		  {proxy_port, 8080},
+		  {save_response_to_file, true}], 5000).
+{ok,"200",
+    [{"Transfer-Encoding","chunked"},
+     {"Date","Fri, 17 Dec 2004 15:24:36 GMT"},
+     {"Content-Type","text/html"},
+     {"Server","Apache/1.3.9 (Unix)"},
+     {"Via","1.1 netapp01 (NetCache NetApp/5.5R2)"}],
+    {file,"/Users/chandru/code/ibrowse/src/ibrowse_tmp_file_1103297041125854"}}
+
+%% =============================================================================
+%% Setting size of connection pool and pipeline size. This sets the
+%% number of maximum connections to this server to 10 and the pipeline
+%% size to 1. Connections are setup a required.
+11> ibrowse:set_dest("www.hotmail.com", 80, [{max_sessions, 10},
+					     {max_pipeline_size, 1}]).
+ok
+
+%% =============================================================================
+%% Example using the HEAD method
+56> ibrowse:send_req("http://www.erlang.org", [], head).
+{ok,"200",
+    [{"Date","Mon, 28 Feb 2005 04:40:53 GMT"},
+     {"Server","Apache/1.3.9 (Unix)"},
+     {"Last-Modified","Thu, 10 Feb 2005 09:31:23 GMT"},
+     {"Etag","\"8d71d-1efa-420b29eb\""},
+     {"Accept-ranges","bytes"},
+     {"Content-Length","7930"},
+     {"Content-Type","text/html"}],
+    []}
+
+%% =============================================================================
+%% Example using the OPTIONS method
+62> ibrowse:send_req("http://www.sun.com", [], options).   
+{ok,"200",
+    [{"Server","Sun Java System Web Server 6.1"},
+     {"Date","Mon, 28 Feb 2005 04:44:39 GMT"},
+     {"Content-Length","0"},
+     {"P3p",
+      "policyref=\"http://www.sun.com/p3p/Sun_P3P_Policy.xml\", CP=\"CAO DSP COR CUR ADMa DEVa TAIa PSAa PSDa CONi TELi OUR  SAMi PUBi IND PHY ONL PUR COM NAV INT DEM CNT STA POL PRE GOV\""},
+     {"Set-Cookie",
+      "SUN_ID=X.X.X.X:169191109565879; EXPIRES=Wednesday, 31-Dec-2025 23:59:59 GMT; DOMAIN=.sun.com; PATH=/"},
+     {"Allow",
+      "HEAD, GET, PUT, POST, DELETE, TRACE, OPTIONS, MOVE, INDEX, MKDIR, RMDIR"}],
+    []}
+
+%% =============================================================================
+%% Example of using Asynchronous requests
+18> ibrowse:send_req("http://www.google.com", [], get, [], 
+		     [{proxy_user, "XXXXX"}, 
+		      {proxy_password, "XXXXX"}, 
+		      {proxy_host, "proxy"}, 
+		      {proxy_port, 8080}, 
+		      {stream_to, self()}]).
+{ibrowse_req_id,{1115,327256,389608}}
+19> flush().
+Shell got {ibrowse_async_headers,{1115,327256,389608},
+	   "302",
+	   [{"Date","Thu, 05 May 2005 21:06:41 GMT"},
+	    {"Content-Length","217"},
+	    {"Content-Type","text/html"},
+	    {"Set-Cookie",
+	     "PREF=ID=b601f16bfa32f071:CR=1:TM=1115327201:LM=1115327201:S=OX5hSB525AMjUUu7; expires=Sun, 17-Jan-2038 19:14:07 GMT; path=/; domain=.google.com"},
+	    {"Server","GWS/2.1"},
+	    {"Location",
+	     "http://www.google.co.uk/cxfer?c=PREF%3D:TM%3D1115327201:S%3DDS9pDJ4IHcAuZ_AS&prev=/"},
+	    {"Via",
+	     "1.1 hatproxy01 (NetCache NetApp/5.6.2)"}]}
+Shell got {ibrowse_async_response,{1115,327256,389608},
+	   "<HTML><HEAD><TITLE>302 Moved</TITLE></HEAD><BODY>\n<H1>302 Moved</H1>\nThe document has moved\n<A HREF=\"http://www.google.co.uk/cxfer?c=PREF%3D:TM%3D1115327201:S%3DDS9pDJ4IHcAuZ_AS&amp;prev=/\">here</A>.\r\n</BODY></HTML>\r\n"}
+Shell got {ibrowse_async_response_end,{1115,327256,389608}}
+ok
+
+%% =============================================================================
+%% Another example of using async requests
+24> ibrowse:send_req("http://yaws.hyber.org/simple_ex2.yaws", [], get, [], 
+		     [{proxy_user, "XXXXX"}, 
+		      {proxy_password, "XXXXX"}, 
+		      {proxy_host, "proxy"}, 
+		      {proxy_port, 8080}, 
+		      {stream_to, self()}]).
+{ibrowse_req_id,{1115,327430,512314}}
+25> flush().
+Shell got {ibrowse_async_headers,{1115,327430,512314},
+	   "200", 
+	   [{"Date","Thu, 05 May 2005 20:58:08 GMT"},
+	    {"Content-Length","64"},
+	    {"Content-Type","text/html;charset="},
+	    {"Server",
+	     "Yaws/1.54 Yet Another Web Server"},
+	    {"Via",
+	     "1.1 hatproxy01 (NetCache NetApp/5.6.2)"}]}
+Shell got {ibrowse_async_response,{1115,327430,512314},
+	   "<html>\n\n\n<h1> Yesssssss </h1>\n\n<h2> Hello again </h2>\n\n\n</html>\n"}
+Shell got {ibrowse_async_response_end,{1115,327430,512314}}
+
+%% =============================================================================
+%% Example of request which fails when using the async option. Here
+%% the {ibrowse_req_id, ReqId} is not returned. Instead the error code is
+%% returned.  
+68> ibrowse:send_req("http://www.earlyriser.org", [], get, [], [{stream_to, self()}]).
+{error,conn_failed}
+
+%% Example of request using both Proxy-Authorization and authorization by the final webserver.
+17> ibrowse:send_req("http://www.erlang.se/lic_area/protected/patches/erl_756_otp_beam.README", 
+		     [], get, [], 
+		     [{proxy_user, "XXXXX"}, 
+		      {proxy_password, "XXXXX"}, 
+		      {proxy_host, "proxy"}, 
+		      {proxy_port, 8080}, 
+		      {basic_auth, {"XXXXX", "XXXXXX"}}]).
+{ok,"200",
+    [{"Accept-Ranges","bytes"},
+     {"Date","Thu, 05 May 2005 21:02:09 GMT"},
+     {"Content-Length","2088"},
+     {"Content-Type","text/plain"},
+     {"Server","Apache/1.3.9 (Unix)"},
+     {"Last-Modified","Tue, 03 May 2005 15:08:18 GMT"},
+     {"ETag","\"1384c8-828-427793e2\""},
+     {"Via","1.1 hatproxy01 (NetCache NetApp/5.6.2)"}],
+    "Patch Id:\t\terl_756_otp_beam\nLabel:\t\t\tinets patch\nDate:\t\t\t2005-05-03\nTrouble Report Id:\tOTP-5513, OTP-5514, OTP-5516, OTP-5517, OTP-5521, OTP-5537\nSeq num:\t\tseq9806\nSystem:\t\t\totp\nRelease:\t\tR10B\nOperating System:\tall\nArchitecture:\t\tall\nErlang machine:\t\tBEAM\nApplication:\t\tinets-4.4\nFiles:\t\t\tall\n\nDescription:\n\n    OTP-5513  The server did not handle HTTP-0.9 messages with an implicit\n\t      version.\n\n    OTP-5514  An internal server timeout killed the request handling\n\t      process without sending a message back to the client. As this\n\t      timeout only affects a single request it has been set to\n\t      infinity (if the main server process dies the request\n\t      handling process will also die and the client will receive an\n\t      error). This might make a client that does not use a timeout\n\t      hang for a longer period of time, but that is an expected\n\t      behavior!\n\n    OTP-5516  That a third party closes the http servers accept socket is\n\t      recoverable for inets, hence intes will only produce an info\n\t      report as there was no error in inets but measures where\n\t      taken to avoid failure due to errors elsewhere.\n\n    OTP-5517  The HTTP client proxy settings where ignored. Bug introduced\n\t      in inets-4.3.\n\n    OTP-5521  Inets only sent the \"WWW-Authenticate\" header at the first\n\t      attempt to get a page, if the user supplied the wrong\n\t      user/password combination the header was not sent again. This\n\t      forces the user to kill the browser entirely after a failed\n\t      login attempt, before the user may try to login again. Inets\n\t      now always send the authentication header.\n\n    OTP-5537  A major rewrite of big parts of the HTTP server code was\n\t      performed. There where many things that did not work\n\t      satisfactory. Cgi script handling can never have worked\n\t      properly and the cases when it did sort of work, a big\n\t      unnecessary delay was enforced. Headers where not always\n\t      treated as expected and HTTP version handling did not work,\n\t      all responses where sent as version HTTP/1.1 no matter what.\n\n\n"}
+
+%% =============================================================================
+%% Example of a TRACE request. Very interesting! yaws.hyber.org didn't
+%% support this. Nor did www.google.com. But good old BBC supports
+%% this.
+35> 37> ibrowse:send_req("http://www.bbc.co.uk/", [], trace, [], 
+			 [{proxy_user, "XXXXX"},
+			  {proxy_password, "XXXXX"},
+			  {proxy_host, "proxy"},
+			  {proxy_port, 8080}]).         
+{ok,"200",
+    [{"Transfer-Encoding","chunked"},
+     {"Date","Thu, 05 May 2005 21:40:27 GMT"},
+     {"Content-Type","message/http"},
+     {"Server","Apache/2.0.51 (Unix)"},
+     {"Set-Cookie",
+      "BBC-UID=7452e72a29424c5b0b232c7131c7d9395d209b7170e8604072e0fcb3630467300; expires=Mon, 04-May-09 21:40:27 GMT; path=/; domain=bbc.co.uk;"},
+     {"Set-Cookie",
+      "BBC-UID=7452e72a29424c5b0b232c7131c7d9395d209b7170e8604072e0fcb3630467300; expires=Mon, 04-May-09 21:40:27 GMT; path=/; domain=bbc.co.uk;"},
+     {"Via","1.1 hatproxy01 (NetCache NetApp/5.6.2)"}],
+    "TRACE / HTTP/1.1\r\nHost: www.bbc.co.uk\r\nConnection: keep-alive\r\nX-Forwarded-For: 172.24.28.29\r\nVia: 1.1 hatproxy01 (NetCache NetApp/5.6.2)\r\nCookie: BBC-UID=7452e72a29424c5b0b232c7131c7d9395d209b7170e8604072e0fcb3630467300\r\n\r\n"}
