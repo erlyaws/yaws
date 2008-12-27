@@ -1,4 +1,4 @@
 include ../support/include.mk
 
-all:	test.beam
+all:	test.beam tftest.beam
 clean:	tclean

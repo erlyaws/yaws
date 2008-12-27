@@ -30,12 +30,14 @@ start:
 i:
 	$(YTOP)/bin/yaws -sname test -i --id testid --conf ./yaws.conf
 
+PA =           -pa $(YTOP)/test/ibrowse/ebin  \
+               -pa $(YTOP)/test/src  \
+	       -pa $(YTOP)/ebin
+
 ## connect to existing yaws node
 connect:
-	$(ERL) -sname client \
-               -pa $(YTOP)/test/ibrowse/ebin  \
-               -pa $(YTOP)/test/src  \
-	       -pa $(YTOP)/ebin -s test connect `hostname`
+	$(ERL) -sname client $(PA) \
+	       -s test connect `hostname`
 
 
 status:
