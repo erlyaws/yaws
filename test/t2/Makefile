@@ -3,7 +3,7 @@ include ../support/include.mk
 all:	conf setup app_test.beam
 	echo "all ok"
 
-test:	
+test:	start
 	$(ERL) -noinput $(PA) -s tftest
 	$(MAKE) stop
 debug:

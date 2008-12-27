@@ -3,7 +3,7 @@ include ../support/include.mk
 all:	conf setup
 	echo "all ok"
 
-test:	
+test:	all
 	sh ./runtest
 	$(MAKE) stop
 
