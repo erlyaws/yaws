@@ -166,7 +166,6 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
             application:set_env(mnesia,dir,MD),
             mnesia:start();
         _ ->
-            yaws_debug:format("mnesia not in yaws.conf ~n", []),
             ok
     end,
     foreach(

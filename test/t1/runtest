@@ -1,0 +1,12 @@
+#!/bin/sh
+
+wget -r http://localhost:8000   
+cat logs/report.log | grep -v www/arg.yaws | grep -v www/arg2.yaws | grep ERROR
+if [ ! $? = 0 ]; then
+   exit 1
+fi
+
+#
+# Continue with some more curl based tests here
+#
+

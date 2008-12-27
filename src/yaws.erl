@@ -1822,7 +1822,6 @@ http_recv_request(CliSock, SSL) ->
 
 http_collect_headers(CliSock, Req, H, SSL) ->
     Recv = do_recv(CliSock, 0, SSL),
-    io:format("RECV ~p~n", [Recv]),
     case Recv of
         {ok, {http_header,  _Num, 'Host', _, Host}} ->
             http_collect_headers(CliSock, Req, H#headers{host = Host},SSL);

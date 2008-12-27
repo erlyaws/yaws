@@ -9,7 +9,6 @@
 -include_lib("kernel/include/file.hrl").
 
 start_link() ->
-    io:format("STARTING \n",[]),
     Shlib = "yaws_sendfile_drv",
     Dir = case yaws_generated:is_local_install() of
 	      true ->

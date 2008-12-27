@@ -90,8 +90,8 @@ parse_post(Arg) ->
             end;
         Other ->
             error_logger:error_msg(
-              "ERROR: Can't parse post body for ~p requests",
-              [Other]),
+              "ERROR: Can't parse post body for ~p requests: URL: ~p",
+              [Other, Arg#arg.fullpath]),
             []
     end.
 
