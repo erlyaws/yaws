@@ -678,7 +678,7 @@ more of those functions during the examples in the following chapters.
 The functions used are:
 \begin{itemize}
 \item \verb+yaws_api:f/2+ alias for io\_lib:format/2. The \verb+f/2+ function
-is automatically \verb+-includeed+ in all \Yaws\  code.
+is automatically \verb+-included+ in all \Yaws\  code.
 \item \verb+yaws_api:reformat_header/1+ - This function takes the \#headers record
 and unparses it, that is reproduces regular text.
 \item \verb+yaws_api:parse_query/1+ - The topic of next section.
@@ -1795,15 +1795,21 @@ The
 
 
 
-\item              \verb+port = Port+ -
-              This makes the server listen on Port
+\item       \verb+port = Port+ -
+              This makes the server listen on Port.
 
 \item        \verb+listen = IpAddress+ -
               This makes the  server  listen  on  IpAddress  When
               virthosting  several  servers  on  the same IP/port
               address, if the browser doesn't send a Host: field,
               \Yaws\   will  pick  the first server specified in the
-              config file
+              config file.
+
+\item        \verb+listen_backlog = Integer+ -
+              This sets the TCP listen backlog for the server to
+              define the maximum length the queue of pending
+              connections may grow to. The default is the same as
+              the default provided by gen\_tcp:listen/2, which is 5.
 
 \item       \verb+rport = Port+
               This forces  all  local  redirects  issued  by  the
@@ -1828,8 +1834,9 @@ The
               traffic logging for this virtual server. The
               default value is true.
 
-\item               \verb+docroot  =  Directory+ - This makes the server
-              serve all its content from Directory
+\item       \verb+docroot  =  Directory+ -
+              This makes the server serve all its content from
+              Directory.
 
 \item       \verb+partial_post_size = Integer+ -
               When a \Yaws\  file receives large  POSTs,  the
@@ -2039,7 +2046,7 @@ When there are several
 virtual hosts defined for the same IP number and port,
 and an HTTP request arrives with a Host field that does
 not match any defined virtual host, then the one which
-defined ``first'' in the file is choosen.
+defined ``first'' in the file is chosen.
 
 
 An example with www-authenticate and no access logging at all.

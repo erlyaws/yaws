@@ -195,7 +195,7 @@ Yaws can virthost several webservers on the same ip address as well
 as several webservers on different ip addresses. The on limitation here is
 that there can be only one server with ssl enabled per each individual ip address.
 .pp
-Each virttual host is defined within a matching pair of \fB<server ServerName>\fR
+Each virtual host is defined within a matching pair of \fB<server ServerName>\fR
 and \fB</server>\fR. The ServerName will be the name of the webserver.
 
 .pp
@@ -209,8 +209,14 @@ This makes the server listen on IpAddress
 When virthosting several servers on the same ip/port address, if the
 browser doesn't send a Host: field, yaws will pick the \fIfirst\fR
 server specified in the config file.
-If the specified ip address is 0.0.0.0 yaws will listen on all local ip
+If the specified ip address is 0.0.0.0 yaws will listen on all local IP
 addresses on the specified port.
+
+.TP
+\fBlisten_backlog = Integer\fR
+This sets the TCP listen backlog for the server to define the maximum
+length the queue of pending connections may grow to. The default is
+the same as the default provided by \fIgen_tcp:listen/2\fR, which is 5.
 
 .TP
 \fBrhost = Host[:Port] \fR

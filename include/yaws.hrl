@@ -176,7 +176,8 @@
          start_mod,                   %% user provided module to be started
          allowed_scripts = [yaws,php,cgi],
          tilde_allowed_scripts = [],
-         revproxy = []
+         revproxy = [],
+         soptions = []
         }).
 
 %% we cannot compare sconfs directly due to the ets

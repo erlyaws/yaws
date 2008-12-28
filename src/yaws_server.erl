@@ -409,14 +409,14 @@ do_listen(GC, SC) ->
             fdsrv:start(),
             case fdsrv:bind_socket(tcp, {SC#sconf.listen, SC#sconf.port}) of
                 {ok, Fd} ->
-                    {nossl, gen_tcp_listen(SC#sconf.port,[{fd, Fd}|opts(SC)])};
+                    {nossl, gen_tcp_listen(SC#sconf.port,[{fd, Fd}|listen_opts(SC)])};
                 Err ->
                     {nossl, Err}
             end;
         undefined ->
-            {nossl, gen_tcp_listen(SC#sconf.port, opts(SC))};
+            {nossl, gen_tcp_listen(SC#sconf.port, listen_opts(SC))};
         SSL ->
-            {ssl, ssl:listen(SC#sconf.port, ssl_opts(GC, SC, SSL))}
+            {ssl, ssl:listen(SC#sconf.port, ssl_listen_opts(GC, SC, SSL))}
     end.
 
 gen_tcp_listen(Port, Opts) ->
@@ -666,24 +666,25 @@ call_start_mod(SC) ->
             end
     end.
 
-opts(SC) ->
+listen_opts(SC) ->
     [binary, 
      {ip, SC#sconf.listen},
      {packet, http},
      {recbuf, 8192},
      {reuseaddr, true},
      {active, false}
+     | proplists:get_value(listen_opts, SC#sconf.soptions, [])
     ].
 
-ssl_opts(GC, SC, SSL) ->
+ssl_listen_opts(GC, SC, SSL) ->
     Opts = [
             binary,
             {ip, SC#sconf.listen},
             {packet, http},
-            {active, false} | ssl_opts(GC, SSL)],
+            {active, false} | ssl_listen_opts(GC, SSL)],
     Opts.
 
-ssl_opts(GC, SSL) ->
+ssl_listen_opts(GC, SSL) ->
     L = [if SSL#ssl.keyfile /= undefined ->
                  {keyfile, SSL#ssl.keyfile};
             true ->

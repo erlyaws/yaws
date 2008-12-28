@@ -715,6 +715,21 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                     C2 = C#sconf{listen = Addr},
                     fload(FD, server, GC, C2, Cs, Lno+1, Next)
             end;
+        ["listen_backlog", '=', Val] ->
+            case (catch list_to_integer(Val)) of
+                B when integer(B) ->
+                    C2 = case proplists:lookup(listen_opts, C#sconf.soptions) of
+                             none ->
+                                 C#sconf{soptions = [{listen_opts, [{backlog, B}]} |
+                                                     C#sconf.soptions]};
+                             Opts ->
+                                 C#sconf{soptions = [{listen_opts, [{backlog, B} | Opts]} |
+                                                     C#sconf.soptions]}
+                         end,
+                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            end;
         ["servername", '=', Name] ->
             C2 = ?sc_set_add_port((C#sconf{servername = Name}),false),
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
@@ -1330,7 +1345,8 @@ eq_sconfs(S1,S2) ->
      S1#sconf.opaque == S2#sconf.opaque andalso
      S1#sconf.start_mod == S2#sconf.start_mod andalso
      S1#sconf.allowed_scripts == S2#sconf.allowed_scripts andalso
-     S1#sconf.revproxy == S2#sconf.revproxy).
+     S1#sconf.revproxy == S2#sconf.revproxy andalso
+     S1#sconf.soptions == S2#sconf.soptions).
 
 
 
