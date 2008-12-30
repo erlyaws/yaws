@@ -1001,6 +1001,16 @@ fload(FD, opaque, GC, C, Cs, Lno, Chars) ->
         [Key, '=', Value] ->
             C2 = C#sconf{opaque = [{Key,Value} | C#sconf.opaque]},
             fload(FD, opaque, GC, C2, Cs, Lno+1, Next);
+        [Key, '='| Value] ->
+            String_value = lists:flatten(
+                             lists:map(
+                               fun(Item) when is_atom(Item) ->
+                                       atom_to_list(Item);
+                                  (Item) ->
+                                       Item
+                               end, Value)),
+            C2 = C#sconf{opaque = [{Key, String_value} | C#sconf.opaque]},
+            fload(FD, opaque, GC, C2, Cs, Lno+1, Next);
         [H|T] ->
             {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end.
