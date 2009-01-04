@@ -396,9 +396,9 @@ handle_info(minute10, State) ->
         {ok, FI} when  State#state.log_wrap_size > 0, 
         FI#file_info.size > State#state.log_wrap_size, 
         State#state.copy_errlog == true ->
-            gen_event:call(error_logger, yaws_log_file_h, wrap);
+            gen_event:call(error_logger, yaws_log_file_h, wrap, infinity);
         {error,enoent} ->
-            gen_event:call(error_logger, yaws_log_file_h, reopen);
+            gen_event:call(error_logger, yaws_log_file_h, reopen, infinity);
         _ ->
             ok
     end,
