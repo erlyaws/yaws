@@ -1,3 +1,33 @@
+Thu Jan  8 22:00:51 CET 2009 version 1.78
+Added --wait-started option to the yaws script (klacke)
+Added initial test suites (klacke)
+wrap log infinity bug found bt Phanikar.K 
+allow keys with multiple values within opaque data
+fix handling of any existing listen_opts when reading listen_backlog conf variable (vinovsky)
+incorporate Lev Walkin's patch for a configurable TCP listen backlog, adding yaws.conf support and documentation as well (vinovski)
+Added sendfile support, Works on Linux, FreeBSD and MacosX (vinovski)
+patch by wde@free.fr to let errormod_crash return {content, MimeType, Cont} 
+added support/docs for authbind/privbind  (klacke)
+handle 100 continue with POST patch by Haobu Yu
+configure/latex support and also slightly nicer listdir output by Hans Ulrich Niedermann
+better soap docs by Stu Bailey
+haxe serialization patch by Tomas Abrahamsson
+proc dict/proc_lib patch by Magnus F
+mime type patch by Tomas Abrahamsson
+POST patch for .yaws files (submitted by Tomas Abrahamsson)
+Several new MIME types added (vinovski)
+patch from magnus Froberg addressing a sync issue with add-sconf, e.g. dynamic updates that manifested itself when add_sconf was run several times in a row in certain scenarios.
+Implement special handling of the '*' URI for the OPTIONS method as specified in RFC2616 section 9.2. (vinovski)
+Added more thorough support for the HTTP OPTIONS method. For "active" applications such as appmods and yapps, the OPTIONS method is delivered through to the application for processing. For "passive" resources such as files and directories, OPTIONS returns a canned response just as before. (vinovski)
+added redirect_self() to yaws_api (klacke)
+yaws.rel.src was missing and better error printuts when yaws.conf is missing, patch by Vance Shipley
+solaris patch by Vance Shipley
+name of a file sent in a multipart request contains quotes, I get a crash pathh by Michael Slaski
+Blindly applied soap patch from Vance shipley addressing ... which causes operations to be missed when there are more than one port type in a WSDL.
+file descriptor leak found by John Fessenden
+modified patch by Robert David to add a hook to yaws session server when a session is gone
+Vance Shipley patch to correct error handling in yaws_soap_lib
+
 Mon Jun 16 22:44:45 CEST 2008 version 1.77
 Content-Length chunked patch by Oleg Avdeev
 eaccess typos in confd_ctl.erl - Sergei Golovan

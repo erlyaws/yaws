@@ -20,6 +20,7 @@ tclean:
 setup:
 	@rm -rf logs 2> /dev/null
 	@mkdir logs
+	@$(MAKE) stop 2>&1 > /dev/null || true
 	$(MAKE) start
 
 start:	

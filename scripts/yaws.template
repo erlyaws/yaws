@@ -81,6 +81,22 @@ mnesia="";
 id="default";
 pdist=""
 erlarg=""
+program=$0
+
+wait_started() {
+    i=0
+    while (test $i -lt 6); do
+        sleep 1
+        i=`expr $i + 1`
+        ${program}  --id ${id} --status 2>&1 > /dev/null
+        if [ $? = 0 ]; then
+            exit 0
+        fi
+    done
+    echo "No yaws system responding for id=${id}"
+    exit 1
+}
+
 
 while [ $# -gt 0 ] 
   do
@@ -98,6 +114,8 @@ while [ $# -gt 0 ]
           erl=$werl;;
       -D|--daemon)
           daemon=" -detached ";;
+      --wait-started)
+          wait_started;;
       -d|--debug)
           debug=" -boot start_sasl -yaws debug ";;
       -t|--tracetraf)

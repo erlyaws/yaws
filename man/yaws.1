@@ -153,6 +153,10 @@ Control the trace capabilities of a running yaws daemon. If the
 http or traffic option is given, the daemon will write a log
 for debug purposes into the logdir.
 
+.TP
+\fB--wait-started [--id ID] \fR
+Waits at most 5 seconds for the server to start. Exits with 0 if
+server is running, 1 otherwise. Typically useful in test scripts. 
 
 .SH MISC OPTIONS
 

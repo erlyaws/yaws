@@ -37,9 +37,7 @@ run(GC) ->
     %% with the same sid.
     case connect(GC#gconf.id) of
         {ok, Sock, _Key} ->
-            %% Not good, let's get some sys info
-            %% from that system so we can produce a good error
-            %% message
+            %% Not good, 
             gen_tcp:close(Sock),
             e("There is already a yaws system running with the same ~n"
               " id <~p> on this computer and this user, ~n"
