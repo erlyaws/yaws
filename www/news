@@ -3,9 +3,9 @@ Added --wait-started option to the yaws script (klacke)
 Added initial test suites (klacke)
 wrap log infinity bug found bt Phanikar.K 
 allow keys with multiple values within opaque data
-fix handling of any existing listen_opts when reading listen_backlog conf variable (vinovsky)
-incorporate Lev Walkin's patch for a configurable TCP listen backlog, adding yaws.conf support and documentation as well (vinovski)
-Added sendfile support, Works on Linux, FreeBSD and MacosX (vinovski)
+fix handling of any existing listen_opts when reading listen_backlog conf variable (vinoski)
+incorporate Lev Walkin's patch for a configurable TCP listen backlog, adding yaws.conf support and documentation as well (vinoski)
+Added sendfile support, Works on Linux, FreeBSD and MacosX (vinoski)
 patch by wde@free.fr to let errormod_crash return {content, MimeType, Cont} 
 added support/docs for authbind/privbind  (klacke)
 handle 100 continue with POST patch by Haobu Yu
@@ -15,10 +15,10 @@ haxe serialization patch by Tomas Abrahamsson
 proc dict/proc_lib patch by Magnus F
 mime type patch by Tomas Abrahamsson
 POST patch for .yaws files (submitted by Tomas Abrahamsson)
-Several new MIME types added (vinovski)
+Several new MIME types added (vinoski)
 patch from magnus Froberg addressing a sync issue with add-sconf, e.g. dynamic updates that manifested itself when add_sconf was run several times in a row in certain scenarios.
-Implement special handling of the '*' URI for the OPTIONS method as specified in RFC2616 section 9.2. (vinovski)
-Added more thorough support for the HTTP OPTIONS method. For "active" applications such as appmods and yapps, the OPTIONS method is delivered through to the application for processing. For "passive" resources such as files and directories, OPTIONS returns a canned response just as before. (vinovski)
+Implement special handling of the '*' URI for the OPTIONS method as specified in RFC2616 section 9.2. (vinoski)
+Added more thorough support for the HTTP OPTIONS method. For "active" applications such as appmods and yapps, the OPTIONS method is delivered through to the application for processing. For "passive" resources such as files and directories, OPTIONS returns a canned response just as before. (vinoski)
 added redirect_self() to yaws_api (klacke)
 yaws.rel.src was missing and better error printuts when yaws.conf is missing, patch by Vance Shipley
 solaris patch by Vance Shipley
@@ -49,7 +49,7 @@ Make crashmsg set status code 500
 Thu Apr  3 23:13:03 CEST 2008 version 1.76
 Patch from Lev Walkin to pass HTTP_REFERER as well as the HTTP_IF headers to the cgi script
 Untabified all code. This is the right thing (TM) I've finally realized after programming for some 20 years with TABS in the files. (klacke)
-redhat /etc/init patch by Steve Vinovski
+redhat /etc/init patch by Steve Vinoski
 quote patch for mnesiadir by Richard Bucker
 Added CGI documentation including a new page http://yaws.hyber.org/cgi.yaws  (klacke)
 Several cleanups due to dialyzer, also moved the control file into users HOME directory so that we don't have the problem of writing in /var when we're running as non-root
