@@ -275,7 +275,9 @@ setup_sconf(DocRoot, D, SL) ->
            allowed_scripts = lkup(allowed_scripts, SL, 
                                   D#sconf.allowed_scripts),
            revproxy = lkup(revproxy, SL, 
-                           D#sconf.revproxy)}.
+                           D#sconf.revproxy),
+           soptions = lkup(soptions, SL,
+                           D#sconf.soptions)}.
 
 set_sc_flags([{access_log, Bool}|T], Flags) ->
     set_sc_flags(T, flag(Flags, ?SC_ACCESS_LOG, Bool));
