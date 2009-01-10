@@ -1002,16 +1002,10 @@ fix_abs_uri(Req, H) ->
     end.
 
 
-%% compare servername and ignore any optional
+%% case-insensitive compare servername and ignore any optional
 %% :Port postfix
 comp_sname(Hname, Sname) ->
-    case string:tokens(Hname, ":") of
-        [Sname|_] ->
-             true;
-        _         ->
-             false
-    end.
-
+    hd(string:tokens(string:to_lower(Hname), ":")) =:= hd(string:tokens(string:to_lower(Sname), ":")).
 
 
 pick_sconf(GC, H, [SC|_Group], ssl) ->
