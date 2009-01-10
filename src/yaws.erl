@@ -1763,9 +1763,7 @@ http_get_headers(CliSock, SSL) ->
         tuple(Res) ->
             {Request, Headers} = Res,
             ReqStr = yaws_api:reformat_request(Request),
-            HStr = lists:map(
-                     fun(H) -> [H, "\r\n"] end,
-                     yaws_api:reformat_header(Headers)),
+            HStr = headers_to_str(Headers),
             yaws_log:trace_traffic(from_client, 
                                    ?F("~n~s~n~s~n",[ReqStr, HStr])),
             Res;
