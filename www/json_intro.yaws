@@ -140,7 +140,126 @@ box("{array, [\"foo\", \"bar\"]}"),
          "expected to return a proper Cookie expire string. This makes it possible "
          "to setup the Cookie lifetime. If this calback function is non-existant, "
          "the default behaviour is to not set a cookie expiration time, i.e it will "
-         "live for this session only."]}
+         "live for this session only."]},
+
+       {h3, [], "One more example "},
+
+       {p, [],
+        ["Here is yet another example, stolen from ",
+         {a, 
+          [{href,"http://blog.tornkvist.org/blog.yaws?id=1179347231289901#"}],
+          "Tobbes blog"}
+         ]},
+        {h4, [], "Setup the DOM"},     
+        {p, [], "In the file ''ex1.html'' we create the DOM with a little HTML and add some Javascript that will talk with the Erlang server side."},
+        box("
+
+<html>
+<head>
+<script type=\"text/javascript\"
+           src=\"/jquery-1.2.3.js\"></script>
+</head>
+<body>
+
+<script language=\"javascript\" type=\"text/javascript\">
+
+function ex1(what) {
+   $.getJSON(\"/ex1.yaws\",
+            {'op': \"ex1\", 'what': what},
+            function(x) {
+              do_ex1(what, x)
+            });
+}
+
+function do_ex1(what, x) {
+  jQuery.each(x, doit);
+}
+
+function doit() {
+  $('#'+this.who).html(this.what);
+}
+
+</script>
+
+<button onclick=\"ex1('one')\">Update one!</button>
+<button onclick=\"ex1('two')\">Update two!</button>
+<button onclick=\"ex1('three')\">Update three!</button>
+
+<div id=\"one\">This is one</div>
+<div id=\"two\">This is two</div>
+<div id=\"three\">This is three</div>
+
+</body>
+</html>
+"),
+       {h4, [], "The erlang server side"},
+       {p, [], "This is the code that needs to be installed and "
+               "execute on the server side. It nicely illustrates how "
+               "to return JSON structs to the client. "},
+       box("
+-module(ex1).
+-export([out/1]).
+
+out(A) ->
+    L = yaws_api:parse_query(A),
+    dispatch(lkup(\"op\", L, false), A, L).
+
+dispatch(\"ex1\", A, L) -> 
+    ex1(A, L).
+
+ex1(_A, L) ->
+    J = json:encode(array(what(lkup(\"what\", L, false)))),
+    return_json(J).
+
+what(\"one\")   -> one();
+what(\"two\")   -> one() ++ two();
+what(\"three\") -> one() ++ two() ++ three().
+
+array(L) -> {array, L}.
+
+one()   -> obj(\"one\").
+two()   -> obj(\"two\").
+three() -> obj(\"three\").
+
+obj(M) ->
+    obj(M, \"r\").  
+
+%%%
+%%% How ::= \"r\" | \"a\"  , r=replace, a=append
+%%%
+obj(M, How) ->
+    C = now2str(),
+    [{struct,
+      [{\"who\", M},
+       {\"how\", How},
+       {\"what\", C ++\" \"++M++\" content\"}]}].
+
+return_json(Json) ->
+    {content, 
+    \"application/json; charset=iso-8859-1\", 
+    Json}.
+
+now2str() ->
+    {A,B,C} = erlang:now(),
+    i2l(A)++\"-\"++i2l(B)++\"-\"++i2l(C).
+
+i2l(I) when is_integer(I) -> integer_to_list(I);
+i2l(L) when is_list(L)    -> L.
+
+lkup(Key, List, Def) ->
+    case lists:keysearch(Key, 1, List) of
+    {value,{_,Value}} -> Value;
+    _                 -> Def
+    end.
+
+") ,
+     {h2, [], "The json library"},
+     {p, [], "The Yaws JSON library contains 3 simple functions, "
+     " One to encode and two for decoding. See source code json.erl "
+     " for detailed instructions on usage "}
+
+
+
 
 
       ]}},
