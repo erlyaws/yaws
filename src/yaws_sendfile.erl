@@ -70,9 +70,9 @@ send(Out, Filename, Offset, Count) ->
 call_port(Msg) ->
     ?MODULE ! {call, self(), Msg},
     receive
-        {data, <<Count:64/native, 1:8, _/binary>>} ->
+        {?MODULE, {data, <<Count:64/native, 1:8, _/binary>>}} ->
             {ok, Count};
-        {data, <<_:64/native, 0:8, Error/binary>>} ->
+        {?MODULE, {data, <<_:64/native, 0:8, Error/binary>>}} ->
             {error, list_to_atom(
                       lists:takewhile(fun(El) -> El =/= 0 end,
                                       binary_to_list(Error)))}
@@ -81,21 +81,14 @@ call_port(Msg) ->
 loop(Port) ->
     receive
         {call, Caller, Msg} ->
-            try erlang:port_command(Port, Msg) of
-                true ->
-                    receive
-                        {Port, Response} ->
-                            Caller ! Response
-                    end
-            catch
-                error:badarg ->
-                    {error, einval};
-                error:Reason ->
-                    {error, Reason}
+            erlang:port_command(Port, Msg),
+            receive
+                {Port, Response} ->
+                    Caller ! {?MODULE, Resp}
             end,
             loop(Port);
         stop ->
-            try erlang:port_close(Port) catch error:_ -> ok end,
+            erlang:port_close(Port),
             receive {'EXIT', Port, _Reason} -> ok
             after 0 -> ok
             end;

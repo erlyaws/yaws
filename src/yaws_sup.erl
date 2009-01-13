@@ -34,9 +34,6 @@ start_link() ->
 %%----------------------------------------------------------------------
 init([]) ->
 
-    Sess = {yaws_session_server, {yaws_session_server, start_link, []},
-            permanent, 5000, worker, [yaws_session_server]},
-
     YawsLog = {yaws_log, {yaws_log, start_link, []},
                permanent, 5000, worker, [yaws_log]},
 
@@ -44,25 +41,11 @@ init([]) ->
     YawsServ = {yaws_server, {yaws_server, start_link, YawsServArgs},
                 permanent, 5000, worker, [yaws_server]},
 
-    YawsRSS = {yaws_rss, 
-               {yaws_rss, start_link, []},
-               permanent, 5000, worker, [yaws_rss]},
+    %% and this guy, will restart auxilliary procs that can fail
+    Sup = {yaws_sup_restarts,
+           {yaws_sup_restarts, start_link, []},
+           transient, infinity, supervisor, [yaws_sup_restarts]},
     
-
-    YawsEventManager = {yaws_event_manager, 
-                        {gen_event, start_link,[{local,yaws_event_manager}]},
-                        permanent, 5000, worker, [gen_event]},
-
-    SendFile = case yaws_sendfile_compat:enabled() of
-                   true ->
-                       [{yaws_sendfile, 
-                         {yaws_sendfile_compat, start_link, []},
-                         permanent, 5000, worker, [yaws_sendfile]}];
-                   false ->
-                       []
-               end,
-    
-                       
 
     %% The idea behind this is if we're running in an embedded env, 
     %% typically the supervisor above us wants to control the restarts.
@@ -70,7 +53,7 @@ init([]) ->
     %% If we're running standalone --heart can restart the entire node
     %% If heart is not used, we die.
     %% 0, 1 means that we never want supervisor restarts
-    {ok,{{one_for_all, 0, 1}, [YawsEventManager,YawsLog, YawsRSS, YawsServ, Sess] ++ SendFile}}.
+    {ok,{{one_for_all, 0, 1}, [YawsLog, YawsServ, Sup]}}.
 
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------
