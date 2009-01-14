@@ -3017,14 +3017,14 @@ deliver_large_file(CliSock,  _Req, UT, Range) ->
     done_or_continue().
 
 
-send_file(CliSock, Path, all, _Priv, no) ->
+send_file(CliSock, Path, all, _Priv, no) when is_port(CliSock) ->
     ?Debug("send_file(~p,~p,no ...)~n", [CliSock, Path]),
     yaws_sendfile_compat:send(CliSock, Path);
 send_file(CliSock, Path, all, Priv, _Enc) ->
     ?Debug("send_file(~p,~p, ...)~n", [CliSock, Path]),
     {ok, Fd} = file:open(Path, [raw, binary, read]),
     send_file(CliSock, Fd, Priv);
-send_file(CliSock, Path,  {fromto, From, To, _Tot}, undeflated, no) ->
+send_file(CliSock, Path,  {fromto, From, To, _Tot}, undeflated, no) when is_port(CliSock) ->
     yaws_sendfile_compat:send(CliSock, Path, From, To - From + 1);
 send_file(CliSock, Path,  {fromto, From, To, _Tot}, undeflated, _Enc) ->
     {ok, Fd} = file:open(Path, [raw, binary, read]),
