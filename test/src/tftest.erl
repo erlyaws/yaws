@@ -55,7 +55,8 @@ start2() ->
     application:load(sasl),
     application:set_env(sasl, errlog_type, error),
     application:start(sasl),
-    case catch app_test:start() of
+    TEST = os:getenv("TEST"),
+    case catch app_test_start(TEST) of
 	ok ->
 	    cover_stop(CM),
 	    exit(tests_ok);
@@ -66,6 +67,12 @@ start2() ->
 		       end,
 	    exit({tests_failed, M, Line, Error})
     end.
+
+
+app_test_start(false) ->
+    app_test:start();
+app_test_start(Mod) ->
+    app_test:start([list_to_atom(Mod)]).
 
 %% @spec (Mods::[atom()]) -> CoveredModules::[atom()]
 cover_start(Mods) ->

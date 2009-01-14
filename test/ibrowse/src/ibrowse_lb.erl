@@ -72,8 +72,8 @@ start_link(Args) ->
 %%--------------------------------------------------------------------
 init([Host, Port]) ->
     process_flag(trap_exit, true),
-    Max_sessions = ibrowse:get_config_value({max_sessions, Host, Port}, 10),
-    Max_pipe_sz = ibrowse:get_config_value({max_pipeline_size, Host, Port}, 10),
+    Max_sessions = ibrowse:get_config_value({max_sessions, Host, Port}, 100),
+    Max_pipe_sz = ibrowse:get_config_value({max_pipeline_size, Host, Port},100),
     put(my_trace_flag, ibrowse_lib:get_trace_status(Host, Port)),
     put(ibrowse_trace_token, ["LB: ", Host, $:, integer_to_list(Port)]),
     Tid = ets:new(ibrowse_lb, [public, ordered_set]),

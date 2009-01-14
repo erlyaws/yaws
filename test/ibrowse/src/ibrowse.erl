@@ -115,8 +115,8 @@
 
 -include("ibrowse.hrl").
 
--define(DEF_MAX_SESSIONS,10).
--define(DEF_MAX_PIPELINE_SIZE,10).
+-define(DEF_MAX_SESSIONS,100).
+-define(DEF_MAX_PIPELINE_SIZE,100).
 
 %%====================================================================
 %% External functions
