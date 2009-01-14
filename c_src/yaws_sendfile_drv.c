@@ -87,7 +87,7 @@ static ssize_t yaws_sendfile_call(int out_fd, int in_fd, off_t* offset, size_t c
     ssize_t retval;
     do {
         retval = sendfile(out_fd, in_fd, offset, count);
-    } while (retval < -1 && errno == EINTR);
+    } while (retval < 0 && errno == EINTR);
     if (retval >= 0 && retval != count) {
         if (*offset == cur) {
             *offset += retval;
@@ -125,22 +125,19 @@ static ssize_t yaws_sendfile_call(int out_fd, int in_fd, off_t* offset, size_t c
 static void yaws_sendfile_drv_output(ErlDrvData handle, char* buf, int buflen)
 {
     int fd;
-    int out_buflen = 0;
     Desc* d = (Desc*)handle;
     Buffer b;
     b.buffer = buf;
     fd = open(b.args->filename, O_RDONLY | O_NONBLOCK);
     if (fd < 0) {
-        out_buflen = set_error_buffer(&b, errno);
+        int out_buflen = set_error_buffer(&b, errno);
+        driver_output(d->port, buf, out_buflen);
     } else {
         d->socket_fd = b.args->out_fd;
         d->file_fd = fd;
         d->offset = b.args->offset.offset;
         d->count = b.args->count.size;
         driver_select(d->port, (ErlDrvEvent)d->socket_fd, DO_WRITE, 1);
-    }
-    if (out_buflen != 0) {
-        driver_output(d->port, buf, out_buflen);
     }
 }
 
