@@ -84,7 +84,7 @@ loop(Port) ->
             erlang:port_command(Port, Msg),
             receive
                 {Port, Response} ->
-                    Caller ! {?MODULE, Resp}
+                    Caller ! {?MODULE, Response}
             end,
             loop(Port);
         stop ->
@@ -95,5 +95,4 @@ loop(Port) ->
         {'EXIT', Port , _} ->
             error_logger:format("Fatal sendfile port died ~n", []),
             exit(sendfile)
-    
     end.
