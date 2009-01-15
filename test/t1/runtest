@@ -1,12 +1,54 @@
 #!/bin/sh
 
-wget -r http://localhost:8000   
+wget -q -r http://localhost:8000
 cat logs/report.log | grep -v www/arg.yaws | grep -v www/arg2.yaws | grep ERROR
-if [ ! $? = 0 ]; then
-   exit 1
-fi
+[ $? -eq 0 ] || exit 1
 
 #
 # Continue with some more curl based tests here
 #
 
+#
+# Load Yaws with a number of concurrent curl requests for files of varying
+# size up to the fd limit to make sure the sendfile driver is not serializing
+# requests and creating a request queue so long that it eats up all the available
+# fds. The file sizes are passed into this script as command-line arguments.
+#
+sizes="$@"
+fdlimit=`ulimit -n`
+fdlimit=`expr $fdlimit / 2`
+outdir=/tmp/yt$$
+trap "rm -rf $outdir" HUP INT EXIT
+mkdir -p $outdir
+i=0
+echo starting $fdlimit background curl tasks
+while [ $i -lt $fdlimit ]; do
+    for j in $sizes; do
+        curl -s -o $outdir/${j}-${i}.dat http://localhost:8000/$j.dat >/dev/null 2>&1 &
+        curls="$curls $!"
+    done
+    i=`expr $i + 1`
+done
+echo waiting for curl tasks to complete
+for job in $curls; do
+    wait $job
+    if [ $? -ne 0 ]; then
+        echo failure in background curl job
+        exit 1
+    fi
+done
+echo verifying all retrieved files
+for j in $sizes; do
+    count=`ls -1 $outdir/${j}*.dat | wc -l`
+    if [ $count -ne $fdlimit ]; then
+        echo not all $j byte data files retrieved: expected $fdlimit, got $count
+        exit 1
+    fi
+    none=`ls -l $outdir/${j}*.dat | awk '{print $5}' | grep -v $j`
+    if [ -n "$none" ]; then
+        echo not all $j byte data files have the right size
+        exit 1
+    fi
+done
+
+exit 0
