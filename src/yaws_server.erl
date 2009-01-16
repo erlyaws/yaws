@@ -1005,7 +1005,7 @@ fix_abs_uri(Req, H) ->
 %% case-insensitive compare servername and ignore any optional
 %% :Port postfix
 comp_sname(Hname, Sname) ->
-    hd(string:tokens(string:to_lower(Hname), ":")) =:= hd(string:tokens(string:to_lower(Sname), ":")).
+    hd(string:tokens(yaws:to_lower(Hname), ":")) =:= hd(string:tokens(yaws:to_lower(Sname), ":")).
 
 
 pick_sconf(GC, H, [SC|_Group], ssl) ->
@@ -1138,7 +1138,7 @@ optional_header(Item) ->
             _ ->
                 ""
         end,
-    case string:to_lower(Continue) of
+    case yaws:to_lower(Continue) of
         "100-continue" ->
             deliver_100(CliSock),
             body_method(CliSock, Req, Head);

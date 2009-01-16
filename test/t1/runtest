@@ -1,12 +1,5 @@
 #!/bin/sh
 
-wget -q -r http://localhost:8000
-cat logs/report.log | grep -v www/arg.yaws | grep -v www/arg2.yaws | grep ERROR
-[ $? -eq 0 ] || exit 1
-
-#
-# Continue with some more curl based tests here
-#
 
 #
 # Load Yaws with a number of concurrent curl requests for files of varying
@@ -14,6 +7,7 @@ cat logs/report.log | grep -v www/arg.yaws | grep -v www/arg2.yaws | grep ERROR
 # requests and creating a request queue so long that it eats up all the available
 # fds. The file sizes are passed into this script as command-line arguments.
 #
+
 sizes="$@"
 fdlimit=`ulimit -n`
 fdlimit=`expr $fdlimit / 2`

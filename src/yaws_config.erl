@@ -183,7 +183,7 @@ validate_group(List) ->
             ok
     end,
     %% second all servernames in a group must be unique
-    SN = lists:sort([string:to_lower(X#sconf.servername) || X <- List]),
+    SN = lists:sort([yaws:to_lower(X#sconf.servername) || X <- List]),
     no_two_same(SN).
 
 no_two_same([H,H|_]) ->
