@@ -59,6 +59,7 @@ send(Out, Filename, Offset, Count) ->
             case prim_inet:getfd(Out) of
                 {ok, Socket_fd} ->
                     call_port(
+                      Socket_fd,
                       list_to_binary(
                         [<<Offset:64/native, Count2:64/native,
                           Socket_fd:32/native>>, Filename, <<0:8>>]));
@@ -67,32 +68,41 @@ send(Out, Filename, Offset, Count) ->
             end
     end.
 
-call_port(Msg) ->
-    ?MODULE ! {call, self(), Msg},
+call_port(Socket_id, Msg) ->
+    ?MODULE ! {call, self(), Socket_id, Msg},
     receive
-        {?MODULE, {data, <<Count:64/native, 1:8, _/binary>>}} ->
-            {ok, Count};
-        {?MODULE, {data, <<_:64/native, 0:8, Error/binary>>}} ->
-            {error, list_to_atom(
-                      lists:takewhile(fun(El) -> El =/= 0 end,
-                                      binary_to_list(Error)))}
+        {?MODULE, Reply} ->
+            Reply
     end.
 
 loop(Port) ->
     receive
-        {call, Caller, Msg} ->
+        {call, Caller, Id, Msg} ->
+            put(Id, Caller),
             erlang:port_command(Port, Msg),
-            receive
-                {Port, Response} ->
-                    Caller ! {?MODULE, Response}
-            end,
+            loop(Port);
+        {Port, {data, <<Cnt:64/native, Id:32/native, Res:8, Err/binary>>}} ->
+            Response = case Res of
+                           1 ->
+                               {ok, Cnt};
+                           0 ->
+                               {error,
+                                list_to_atom(
+                                  lists:takewhile(fun(El) -> El =/= 0 end,
+                                                  binary_to_list(Err)))}
+                       end,
+            Caller = erase(Id),
+            Caller ! {?MODULE, Response},
             loop(Port);
         stop ->
             erlang:port_close(Port),
             receive {'EXIT', Port, _Reason} -> ok
             after 0 -> ok
             end;
-        {'EXIT', Port , _} ->
-            error_logger:format("Fatal sendfile port died ~n", []),
+        {'EXIT', Port, Posix_error} ->
+            error_logger:format("Fatal error: sendfile port died, error ~p~n", [Posix_error]),
+            exit(sendfile);
+        {'EXIT', error, Reason} ->
+            error_logger:format("Fatal error: sendfile driver failure: ~p~n", [Reason]),
             exit(sendfile)
     end.

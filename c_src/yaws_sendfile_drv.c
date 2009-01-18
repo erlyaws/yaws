@@ -7,7 +7,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
-#include <assert.h>
 #if defined(__linux__)
 #include <sys/sendfile.h>
 #elif (defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__)
@@ -22,28 +21,50 @@
 #include "erl_driver_compat.h"
 #endif
 
-typedef struct _desc {
-    ErlDrvPort port;
-    int socket_fd;
-    int file_fd;
+#include "hashtable.h"
+
+typedef struct _transfer {
     off_t offset;
     size_t count;
     ssize_t total;
+    int file_fd;
+} Transfer;
+
+typedef struct hashtable* Transfers;
+
+typedef struct _desc {
+    ErlDrvPort port;
+    Transfers xfer_table;
 } Desc;
+
+static unsigned int fdhash(void* k)
+{
+    return *(unsigned int*)&k;
+}
+
+static int fdeq(void* k1, void* k2)
+{
+    return *(int*)&k1 == *(int*)&k2;
+}
 
 static ErlDrvData yaws_sendfile_drv_start(ErlDrvPort port, char* buf)
 {
     Desc* d = (Desc*)driver_alloc(sizeof(Desc));
     if (d == NULL) return (ErlDrvData) -1;
     d->port = port;
-    d->socket_fd = d->file_fd = -1;
-    d->offset = d->count = d->total = 0;
+    d->xfer_table = create_hashtable(8192, fdhash, fdeq);
+    if (d->xfer_table == NULL) {
+        driver_free(d);
+        return (ErlDrvData) -1;
+    }
     return (ErlDrvData)d;
 }
 
-static void yaws_sendfile_drv_stop(ErlDrvData drv_data)
+static void yaws_sendfile_drv_stop(ErlDrvData handle)
 {
-    driver_free(drv_data);
+    Desc* d = (Desc*)handle;
+    hashtable_destroy(d->xfer_table, 1);
+    driver_free(d);
 }
 
 typedef union {
@@ -63,16 +84,17 @@ typedef union {
     }* args;
     struct {
         U64_t         count;
+        unsigned int  out_fd: 32;
         unsigned char success;
         char          errno_string[1];
     }* result;
 } Buffer;
 
-static int set_error_buffer(Buffer* b, int err)
+static int set_error_buffer(Buffer* b, int socket_fd, int err)
 {
-    char* s;
-    char* t;
+    char* s, *t;
     memset(b->result, 0, sizeof *b->result);
+    b->result->out_fd = socket_fd;
     for (s = erl_errno_id(err), t = b->result->errno_string; *s; s++, t++) {
         *t = tolower(*s);
     }
@@ -124,51 +146,74 @@ static ssize_t yaws_sendfile_call(int out_fd, int in_fd, off_t* offset, size_t c
 
 static void yaws_sendfile_drv_output(ErlDrvData handle, char* buf, int buflen)
 {
-    int fd;
+    int fd, socket_fd;
     Desc* d = (Desc*)handle;
     Buffer b;
     b.buffer = buf;
+    socket_fd = b.args->out_fd;
     fd = open(b.args->filename, O_RDONLY | O_NONBLOCK);
     if (fd < 0) {
-        int out_buflen = set_error_buffer(&b, errno);
+        int out_buflen = set_error_buffer(&b, socket_fd, errno);
         driver_output(d->port, buf, out_buflen);
     } else {
-        d->socket_fd = b.args->out_fd;
-        d->file_fd = fd;
-        d->offset = b.args->offset.offset;
-        d->count = b.args->count.size;
-        driver_select(d->port, (ErlDrvEvent)d->socket_fd, DO_WRITE, 1);
+        Transfer* xfer = (Transfer*)hashtable_search(d->xfer_table, *(void**)&socket_fd);
+        if (xfer == NULL) {
+            xfer = (Transfer*)malloc(sizeof(Transfer));
+            if (xfer == NULL) {
+                int out_buflen = set_error_buffer(&b, socket_fd, ENOMEM);
+                driver_output(d->port, buf, out_buflen);
+                return;
+            }
+            if (!hashtable_insert(d->xfer_table, *(void**)&socket_fd, xfer)) {
+                int out_buflen = set_error_buffer(&b, socket_fd, ENOMEM);
+                driver_output(d->port, buf, out_buflen);
+                free(xfer);
+                return;
+            }
+        }
+        xfer->file_fd = fd;
+        xfer->offset = b.args->offset.offset;
+        xfer->count = b.args->count.size;
+        xfer->total = 0;
+        driver_select(d->port, (ErlDrvEvent)socket_fd, DO_WRITE, 1);
     }
 }
 
 static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
 {
     Desc* d = (Desc*)handle;
-    off_t cur_offset = d->offset;
-    ssize_t result;
-    result = yaws_sendfile_call(d->socket_fd, d->file_fd, &d->offset, d->count);
+    int socket_fd = (int)ev;
+    Transfer* xfer = (Transfer*)hashtable_search(d->xfer_table, *(void**)&socket_fd);
+    if (xfer == NULL) {
+        /* fatal error, something is very wrong */
+        driver_failure_atom(d->port, "socket_fd_not_found");
+        return;
+    }
+    off_t cur_offset = xfer->offset;
+    ssize_t result = yaws_sendfile_call(socket_fd, xfer->file_fd, &xfer->offset, xfer->count);
     if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-        off_t written = d->offset - cur_offset;
-        d->count -= written;
-        d->total += written;
+        off_t written = xfer->offset - cur_offset;
+        xfer->count -= written;
+        xfer->total += written;
     } else {
         int out_buflen;
-        char buf[32];
+        char buf[36];
         Buffer b;
         b.buffer = buf;
         memset(buf, 0, sizeof buf);
-        driver_select(d->port, (ErlDrvEvent)d->socket_fd, DO_WRITE, 0);
-        close(d->file_fd);
+        driver_select(d->port, (ErlDrvEvent)socket_fd, DO_WRITE, 0);
+        close(xfer->file_fd);
         if (result < 0) {
-            out_buflen = set_error_buffer(&b, errno);
+            out_buflen = set_error_buffer(&b, socket_fd, errno);
         } else {
-            b.result->count.count = d->total + result;
+            b.result->count.count = xfer->total + result;
+            b.result->out_fd = socket_fd;
             b.result->success = 1;
             b.result->errno_string[0] = '\0';
             out_buflen = sizeof(*b.result);
         }
-        d->socket_fd = d->file_fd = -1;
-        d->offset = d->count = d->total = 0;
+        xfer->file_fd = -1;
+        xfer->offset = xfer->count = xfer->total = 0;
         driver_output(d->port, buf, out_buflen);
     }
 }

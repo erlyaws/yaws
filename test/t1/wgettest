@@ -1,6 +1,7 @@
 #!/bin/sh
 
+rm -rf localhost:8000
 wget -q -r http://localhost:8000
 cat logs/report.log | grep -v www/arg.yaws | grep -v www/arg2.yaws | grep ERROR
 [ $? -eq 0 ] || exit 1
-
+exit 0

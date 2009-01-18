@@ -10,8 +10,20 @@
 
 sizes="$@"
 fdlimit=`ulimit -n`
-fdlimit=`expr $fdlimit / 2`
-outdir=/tmp/yt$$
+fdlimit=`expr $fdlimit / 4`
+if [ `uname -s` = Darwin ]; then
+    proclimit=`ulimit -u`
+    if [ $proclimit -lt $fdlimit ]; then
+        newproclimit=`expr $fdlimit \* 3`
+        ulimit -u $newproclimit
+        if [ $? -ne 0 ]; then
+            echo unable to run enough processes for this test, skipping
+            echo please raise your max process limit via '"sysctl -w kern.maxprocperuid=<N>"'
+            exit 0
+        fi
+    fi
+fi
+outdir=./runtest$$
 trap "rm -rf $outdir" HUP INT EXIT
 mkdir -p $outdir
 i=0
@@ -26,8 +38,9 @@ done
 echo waiting for curl tasks to complete
 for job in $curls; do
     wait $job
-    if [ $? -ne 0 ]; then
-        echo failure in background curl job
+    result=$?
+    if [ $result -ne 0 ]; then
+        echo failure in background curl job $job, exit status was $result
         exit 1
     fi
 done

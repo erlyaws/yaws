@@ -29,7 +29,7 @@ CFLAGS += -I/usr/include/pam/ $(EXTRAINCLUDE)
 all: $(PRIV_FILES) 
 
 clean:
-	-rm -f $(PRIV_FILES) setuid_drv.$(OBJ) epam.$(OBJ) yaws_sendfile_drv.$(OBJ)
+	-rm -f $(PRIV_FILES) setuid_drv.$(OBJ) epam.$(OBJ) yaws_sendfile_drv.$(OBJ) hashtable.$(OBJ)
 
 install:	$(PRIV_FILES)
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/yaws/priv/lib
@@ -47,10 +47,12 @@ endif
 setuid_drv.$(OBJ):	setuid_drv.c
 	$(CC) -c $(FPIC) $(CFLAGS) -DDYNAMIC_DRIVER $<
 
-../priv/lib/yaws_sendfile_drv.$(DLL): yaws_sendfile_drv.$(OBJ)
-	$(LD_SHARED) $(OUT) $@ $< $(DLL_LIBS)
+../priv/lib/yaws_sendfile_drv.$(DLL): yaws_sendfile_drv.$(OBJ) hashtable.$(OBJ)
+	$(LD_SHARED) $(OUT) $@ $^ $(DLL_LIBS)
 yaws_sendfile_drv.$(OBJ):	yaws_sendfile_drv.c
 	$(CC) -c $(FPIC) $(CFLAGS) -DDYNAMIC_DRIVER $<
+hashtable.$(OBJ):	hashtable.c
+	$(CC) -c $(FPIC) $(CFLAGS) $<
 
 ../priv/.foo:
 	touch $@
