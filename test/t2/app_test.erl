@@ -21,7 +21,77 @@ start() ->
 
 test1() ->
     io:format("test1\n",[]),
-    ?line ok.
+    L = lists:seq(1, 500),
+    SELF = self(),
+    Pids = lists:map(fun(I) -> 
+			     spawn(fun() -> slow_client(I, SELF) end)
+		     end, L),
+    ?line ok = allow_connects(Pids, 5),
+    ?line ok = collect_pids(Pids).
+    
+
+collect_pids([]) ->
+    ok;
+collect_pids(Pids) ->
+    receive
+	{Pid, done} ->
+	    collect_pids(lists:delete(Pid, Pids))
+    end.
+
+
+
+%% max 5 connectors at a time
+allow_connects([], _) ->
+    io:format("All pids connected \n",[]);
+allow_connects(Pids, 0) ->
+    receive
+	{Pid, connected} ->
+	    allow_connects(lists:delete(Pid, Pids), 1)
+    end;
+allow_connects(Pids, I) ->
+    receive 
+	{Pid, allow} ->
+	    Pid ! allow,
+	    allow_connects(Pids, I-1);
+	{Pid, connected} ->
+	    allow_connects(lists:delete(Pid, Pids), I+1)
+    end.
+
+
+
+slow_client(I, Top) ->
+    Top ! {self(), allow},
+    receive 
+	allow ->
+	    ok
+    end,
+    ?line {ok, C} = gen_tcp:connect(localhost, 8000, [{active, false}, 
+						      {packet, http}]),
+    Top ! {self(), connected},
+    ?line ok = gen_tcp:send(C, "GET /1000.txt HTTP/1.1\n"
+			    "Host: localhost:8000\n\n"),
+    ?line {ok, Sz} = get_cont_len(C),
+    ?line ok = inet:setopts(C, [binary,{packet, 0}]),
+    read_loop(C, I, Sz),
+    Top ! {self(), done}.
+
+read_loop(C, _I, Sz) when Sz - 200000 < 0 ->
+    ?line ok = gen_tcp:close(C),
+    ok;
+read_loop(C, I, Sz)  ->
+    ?line {ok, B} = gen_tcp:recv(C, 0),
+    %%io:format("(I=~p Sz=~p) ", [I, size(B)]),
+    timer:sleep(2),
+    read_loop(C, I, Sz - size(B)).
+
+
+get_cont_len(C) ->
+    ?line {value, {http_header, _,_,_, LenStr}} = 
+	lists:keysearch('Content-Length', 3, tftest:get_headers(C)),
+    {ok, list_to_integer(LenStr)}.
+
+
+
 
 test2() ->
     io:format("test2\n",[]),

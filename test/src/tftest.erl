@@ -5,7 +5,7 @@
 
 %% Use these functions if you want to start/stop coverage yourself
 -export([cover_start/1, cover_stop/1]).
-
+-export([get_headers/1]).
 -include("../include/tftest.hrl").
 
 start() ->
@@ -153,3 +153,15 @@ dohalt(true, Int) ->
     erlang:halt(Int);
 dohalt(false, _) ->
     ok.
+
+
+%% read out the http headers from a socket
+get_headers(C) ->
+    get_headers(C, gen_tcp:recv(C, 0), []).
+get_headers(_C, {ok, http_eoh}, Ack) ->
+    Ack;
+get_headers(_C, {error, R}, _) ->
+    {error, R};
+get_headers(C, {ok, H}, Ack) ->
+    get_headers(C, gen_tcp:recv(C, 0), [H|Ack]).
+

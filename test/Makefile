@@ -28,6 +28,6 @@ test:
 	@set -e ; \
           for d in $(SUBDIRS) ; do \
             if [ -f $$d/Makefile ]; then \
-              ( cd $$d && $(MAKE) $@ ) || exit 1 ; \
+              ( cd $$d && $(MAKE) all start test ) || exit 1 ; \
             fi ; \
           done

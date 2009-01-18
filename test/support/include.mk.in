@@ -20,12 +20,11 @@ tclean:
 setup:
 	@rm -rf logs 2> /dev/null
 	@mkdir logs
-	@$(MAKE) stop 2>&1 > /dev/null || true
-	$(MAKE) start
 
 start:	
 	$(YTOP)/bin/yaws -sname test --daemon --id testid --conf ./yaws.conf
-	../support/wait_started.sh
+	$(YTOP)/bin/yaws --id testid --wait-started
+
 
 ## Interactive node
 i:

@@ -3,7 +3,10 @@ include ../support/include.mk
 all:	conf setup
 	echo "all ok"
 
-test:	all
+## to run test, do
+# make all start test
+
+test:	
 	$(MAKE) t1 t2
 	$(MAKE) stop
 
