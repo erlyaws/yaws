@@ -667,7 +667,7 @@ call_start_mod(SC) ->
     end.
 
 listen_opts(SC) ->
-    [binary, 
+    [binary,
      {ip, SC#sconf.listen},
      {packet, http},
      {recbuf, 8192},
@@ -677,12 +677,10 @@ listen_opts(SC) ->
     ].
 
 ssl_listen_opts(GC, SC, SSL) ->
-    Opts = [
-            binary,
-            {ip, SC#sconf.listen},
-            {packet, http},
-            {active, false} | ssl_listen_opts(GC, SSL)],
-    Opts.
+    [binary,
+     {ip, SC#sconf.listen},
+     {packet, http},
+     {active, false} | ssl_listen_opts(GC, SSL)].
 
 ssl_listen_opts(GC, SSL) ->
     L = [if SSL#ssl.keyfile /= undefined ->
