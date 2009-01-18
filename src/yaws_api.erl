@@ -1021,8 +1021,8 @@ reformat_header(H) ->
 
 reformat_request(Req) ->
     Path = case Req#http_request.path of
-	       {abs_path, Path} ->
-		   Path;
+	       {abs_path, AbsPath} ->
+		   AbsPath;
 	       {absoluteURI, _Scheme, _Host0, _Port, RawPath} ->
 		   RawPath
 	   end,
