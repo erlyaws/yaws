@@ -147,7 +147,7 @@ do_server_options_recv(S, Hdrs) ->
     {ok, Hdr} = gen_tcp:recv(S, 0, 2000),
     server_options_recv(S, [Hdr|Hdrs]).
 
-
+-define(SENDFILE_GET_TIMEOUT, 120000).
 
 sendfile_get() ->
     io:format("sendfile_get\n",[]),
@@ -159,7 +159,7 @@ sendfile_get() ->
                                    ?line {ok, "200", _Headers, _} = 
                                        ibrowse:send_req(
                                          "http://localhost:8000/1000.txt", 
-                                         [], get),
+                                         [], get, [], [], ?SENDFILE_GET_TIMEOUT),
                                    SELF ! {self(), k1, done}
                            end)
              end, L),
@@ -170,7 +170,7 @@ sendfile_get() ->
                                    ?line {ok, "200", _Headers, _} = 
                                        ibrowse:send_req(
                                          "http://localhost:8000/2000.txt", 
-                                         [], get),
+                                         [], get, [], [], ?SENDFILE_GET_TIMEOUT),
                                    SELF ! {self(), k2, done}
                            end)
              end, L),
@@ -181,7 +181,7 @@ sendfile_get() ->
                                    ?line {ok, "200", _Headers, _} = 
                                        ibrowse:send_req(
                                          "http://localhost:8000/3000.txt", 
-                                         [], get),
+                                         [], get, [], [], ?SENDFILE_GET_TIMEOUT),
                                    SELF ! {self(), k3, done}
                            end)
              end, L),
@@ -200,7 +200,7 @@ collect(L, Count, Tag) ->
         {Pid, Tag, done} ->
             io:format("(~p ~p)", [Tag, Count]),
             collect(lists:delete(Pid, L), Count+1, Tag)
-    after 30000 ->
+    after ?SENDFILE_GET_TIMEOUT ->
             io:format("TIMEOUT ~p\n~p~n",[process_info(self()), L]),
             ?line exit(timeout)
     end.
