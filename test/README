@@ -1,0 +1,20 @@
+
+To run all tests, do
+
+# make test
+
+at the toplevel, i.e. here
+
+
+To run tests in one of the test directories, go down there
+and do:
+
+# make all start test
+
+
+To run a specific test in e.g t2, do
+
+# cd t2
+# TEST=t1 make all start test
+
+
