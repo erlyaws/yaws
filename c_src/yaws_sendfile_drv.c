@@ -175,14 +175,14 @@ static void yaws_sendfile_drv_output(ErlDrvData handle, char* buf, int buflen)
         xfer->offset = b.args->offset.offset;
         xfer->count = b.args->count.size;
         xfer->total = 0;
-        driver_select(d->port, (ErlDrvEvent)socket_fd, DO_WRITE, 1);
+        driver_select(d->port, *(ErlDrvEvent*)&socket_fd, DO_WRITE, 1);
     }
 }
 
 static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
 {
     Desc* d = (Desc*)handle;
-    int socket_fd = (int)ev;
+    int socket_fd = *(int*)&ev;
     Transfer* xfer = (Transfer*)hashtable_search(d->xfer_table, *(void**)&socket_fd);
     if (xfer == NULL) {
         /* fatal error, something is very wrong */
@@ -201,7 +201,7 @@ static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
         Buffer b;
         b.buffer = buf;
         memset(buf, 0, sizeof buf);
-        driver_select(d->port, (ErlDrvEvent)socket_fd, DO_WRITE, 0);
+        driver_select(d->port, *(ErlDrvEvent*)&socket_fd, DO_WRITE, 0);
         close(xfer->file_fd);
         if (result < 0) {
             out_buflen = set_error_buffer(&b, socket_fd, errno);
