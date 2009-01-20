@@ -9,39 +9,56 @@
 #
 
 sizes="$@"
-fdlimit=`ulimit -n`
-fdlimit=`expr $fdlimit / 4`
-if [ `uname -s` = Darwin ]; then
-    proclimit=`ulimit -u`
-    if [ $proclimit -lt $fdlimit ]; then
-        newproclimit=`expr $fdlimit \* 3`
-        ulimit -u $newproclimit
-        if [ $? -ne 0 ]; then
-            echo unable to run enough processes for this test, skipping
-            echo please raise your max process limit via '"sysctl -w kern.maxprocperuid=<N>"'
-            exit 0
+if [ -n "$RUNTEST_CURLS" ]; then
+    fdlimit=$RUNTEST_CURLS
+else
+    fdlimit=`ulimit -n`
+    fdlimit=`expr $fdlimit / 4`
+    [ $fdlimit -gt 1024 ] && fdlimit=1024
+    if [ `uname -s` = Darwin ]; then
+        proclimit=`ulimit -u`
+        if [ $proclimit -lt $fdlimit ]; then
+            newproclimit=`expr $fdlimit \* 3`
+            ulimit -u $newproclimit
+            if [ $? -ne 0 ]; then
+                echo unable to run enough processes for this test, skipping
+                echo please raise your max process limit via '"sysctl -w kern.maxprocperuid=<N>"'
+                exit 0
+            fi
         fi
     fi
 fi
-outdir=./runtest$$
+rm -f erl_crash.dump
+outdir=./runtest_out$$
 trap "rm -rf $outdir" HUP INT EXIT
 mkdir -p $outdir
 i=0
 echo starting $fdlimit background curl tasks
 while [ $i -lt $fdlimit ]; do
     for j in $sizes; do
-        curl -s -o $outdir/${j}-${i}.dat http://localhost:8000/$j.dat >/dev/null 2>&1 &
-        curls="$curls $!"
+        curlhdrs=curl-${j}-${i}.txt
+        curl -D $outdir/$curlhdrs -s -o $outdir/${j}-${i}.dat http://localhost:8000/$j.dat >/dev/null 2>&1 &
+        p=$!
+        ( cd $outdir ; ln -s $curlhdrs ${p}.txt )
+        curls="$curls $p"
     done
     i=`expr $i + 1`
 done
 echo waiting for curl tasks to complete
 for job in $curls; do
-    wait $job
-    result=$?
-    if [ $result -ne 0 ]; then
-        echo failure in background curl job $job, exit status was $result
-        exit 1
+    kill -0 $job 2>/dev/null
+    if [ $? -eq 0 ]; then
+        wait $job
+        result=$?
+        if [ $result -ne 0 ]; then
+            echo failure in background curl job $job, exit status $result
+            cat $outdir/${job}.txt
+            sleep 5
+            [ -f erl_crash.dump ] && echo 'Yaws crashed! See logs/report.log and erl_crash.dump for details'
+            exit 1
+        else
+            ( cd $outdir ; rm -f `readlink ${job}.txt` ${job}.txt )
+        fi
     fi
 done
 echo verifying all retrieved files
@@ -57,5 +74,10 @@ for j in $sizes; do
         exit 1
     fi
 done
+
+if [ -f erl_crash.dump ]; then
+    echo yaws crashed, see logs/report.log and erl_crash.dump for details
+    exit 1
+fi
 
 exit 0
