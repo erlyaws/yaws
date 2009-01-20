@@ -1,4 +1,7 @@
-Sun Jan 18 12:47:55 CET 2009
+Tue Jan 20 20:19:16 CET 2009 version 1.79
+This release fixes the completely broken 1.78 release. So at last, we have good\
+ sendfile support.
+traffic trace was broken for certain types of requsts - found by wde
 Fixed several sendfile related bugs (vinoski)
 Improved yaws supervision structure (klacke)
 apply case-insensitive servername comparison patch from John Webb
