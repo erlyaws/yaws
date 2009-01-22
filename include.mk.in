@@ -95,10 +95,10 @@ APPSCRIPT = '$$vsn=shift; $$mods=""; while(@ARGV){ $$_=shift; s/^([A-Z].*)$$/\'\
 	cp $< $@
 
 ../ebin/%.$(EMULATOR): %.erl
-	"$(ERLC)" $(ERLC_FLAGS) -o ../ebin $<
+	$(ERLC) $(ERLC_FLAGS) -o ../ebin $<
 
 %.$(EMULATOR): %.erl
-	"$(ERLC)" $(ERLC_FLAGS) $<
+	$(ERLC) $(ERLC_FLAGS) $<
 
 
 

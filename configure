@@ -1933,8 +1933,7 @@ echo "${ECHO_T}no" >&6; }
 fi
 
 
-ERLBINDIR=`dirname $ERL` ; ERLBINDIR=`dirname $ERLBINDIR`/lib/erlang/bin
-
+ERLBINDIR=`dirname "$ERL"` ; ERLBINDIR=`dirname "$ERLBINDIR"`/lib/erlang/bin
 
 
 
@@ -2016,7 +2015,7 @@ echo $ECHO_N "checking erts version... $ECHO_C" >&6; }
     if test "${bt_cv_erts_vsn+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  bt_cv_erts_vsn="`ls ${ERLDIR} ${ERLDIR}/lib | \
+  bt_cv_erts_vsn="`ls \"${ERLDIR}\" \"${ERLDIR}/lib\" | \
                    awk -F- '/^erts-/ { if ($2 > v) v=$2; }
                             END    { print v; }'`"
      case "$bt_cv_erts_vsn" in
@@ -2040,7 +2039,7 @@ echo $ECHO_N "checking kernel version... $ECHO_C" >&6; }
     if test "${bt_cv_kernel_vsn+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  bt_cv_kernel_vsn="`ls ${ERLDIR} ${ERLDIR}/lib | \
+  bt_cv_kernel_vsn="`ls \"${ERLDIR}\" \"${ERLDIR}/lib\" | \
                    awk -F- '/^kernel-/ { if ($2 > v) v=$2; }
                             END    { print v; }'`"
      case "$bt_cv_kernel_vsn" in
@@ -2064,7 +2063,7 @@ echo $ECHO_N "checking stdlib version... $ECHO_C" >&6; }
     if test "${bt_cv_stdlib_vsn+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  bt_cv_stdlib_vsn="`ls ${ERLDIR} ${ERLDIR}/lib | \
+  bt_cv_stdlib_vsn="`ls \"${ERLDIR}\" \"${ERLDIR}/lib\" | \
                    awk -F- '/^stdlib-/ { if ($2 > v) v=$2; }
                             END    { print v; }'`"
      case "$bt_cv_stdlib_vsn" in
@@ -2088,7 +2087,7 @@ echo $ECHO_N "checking sasl version... $ECHO_C" >&6; }
     if test "${bt_cv_sasl_vsn+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  bt_cv_sasl_vsn="`ls ${ERLDIR} ${ERLDIR}/lib | \
+  bt_cv_sasl_vsn="`ls \"${ERLDIR}\" \"${ERLDIR}/lib\" | \
                    awk -F- '/^sasl-/ { if ($2 > v) v=$2; }
                             END    { print v; }'`"
      case "$bt_cv_sasl_vsn" in
@@ -2112,7 +2111,7 @@ echo $ECHO_N "checking mnesia version... $ECHO_C" >&6; }
     if test "${bt_cv_mnesia_vsn+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  bt_cv_mnesia_vsn="`ls ${ERLDIR} ${ERLDIR}/lib | \
+  bt_cv_mnesia_vsn="`ls \"${ERLDIR}\" \"${ERLDIR}/lib\" | \
                    awk -F- '/^mnesia-/ { if ($2 > v) v=$2; }
                             END    { print v; }'`"
      case "$bt_cv_mnesia_vsn" in

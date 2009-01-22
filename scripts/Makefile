@@ -5,8 +5,8 @@ all debug:	../bin/yaws yaws.conf
 
 ../bin/yaws:	yaws.template
 	cat yaws.template | \
-		./Subst %yawsdir% `pwd`/..  | \
-		./Subst %vardir% $(VARDIR)  | \
+		./Subst %yawsdir% "`pwd`/.."  | \
+		./Subst %vardir% "$(VARDIR)"  | \
 		./Subst %run_erl% "$(ERLBINDIR)/run_erl"  | \
 		./Subst %to_erl% "$(ERLBINDIR)/to_erl"  | \
 		./Subst %erl% $(ERL)  | \
@@ -23,11 +23,11 @@ local_install:	../bin/yaws
 	fi; \
 	echo "--- Installing local config file at $${target} "; \
 	cat yaws.conf.template | \
-		./Subst %yawsdir% `pwd`/..  | \
+		./Subst %yawsdir% "`pwd`/.."  | \
 		./Subst %logdir% $$HOME/yaws_logs  | \
 		./Subst %host% `hostname`  | \
 		./Subst %port% 8000  | \
-		./Subst %vardir% $(VARDIR)  | \
+		./Subst %vardir% "$(VARDIR)"  | \
 		./Subst %docroot% `pwd`/../www  | \
 		./Subst %certdir% `pwd`/../ssl  | \
 		./Subst %sslport% 4443  > $${target}; \
@@ -40,13 +40,13 @@ local_install:	../bin/yaws
 yaws.conf:
 	@echo PREFIX is $(PREFIX)
 	cat yaws.conf.template | \
-		./Subst %yawsdir% $(PREFIX)/lib/yaws  | \
-		./Subst %logdir% $(VARDIR)/log/yaws  | \
-		./Subst %vardir% $(VARDIR)  | \
+		./Subst %yawsdir% "$(PREFIX)/lib/yaws"  | \
+		./Subst %logdir% "$(VARDIR)/log/yaws"  | \
+		./Subst %vardir% "$(VARDIR)"  | \
 		./Subst %host% `hostname`  | \
 		./Subst %port% 80  | \
-		./Subst %docroot% $(VARDIR)/yaws/www  | \
-		./Subst %certdir% $(ETCDIR)  | \
+		./Subst %docroot% "$(VARDIR)/yaws/www"  | \
+		./Subst %certdir% "$(ETCDIR)"  | \
 		./Subst %sslport% 443  > yaws.conf
 
 clean:

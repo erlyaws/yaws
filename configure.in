@@ -10,7 +10,7 @@ AC_DEFINE_UNQUOTED(CPU_VENDOR_OS, "$target")
 
 AC_PATH_PROG(ERL, erl)
 AC_PATH_PROG(ERLC, erlc)
-ERLBINDIR=`dirname $ERL` ; ERLBINDIR=`dirname $ERLBINDIR`/lib/erlang/bin
+ERLBINDIR=`dirname "$ERL"` ; ERLBINDIR=`dirname "$ERLBINDIR"`/lib/erlang/bin
 
 AC_SUBST(ERL)
 AC_SUBST(ERLC)
@@ -60,7 +60,7 @@ AC_DEFUN(BT_ERL_LIB_VSN,
 [
     AC_MSG_CHECKING([$1 version])
     AC_CACHE_VAL(bt_cv_$1_vsn,
-    [bt_cv_$1_vsn="`ls ${ERLDIR} ${ERLDIR}/lib | \
+    [bt_cv_$1_vsn="`ls \"${ERLDIR}\" \"${ERLDIR}/lib\" | \
                    awk -F- '/^$1-/ { if ([$]2 > v) v=[$]2; }
                             END    { print v; }'`"
      case "$bt_cv_$1_vsn" in
