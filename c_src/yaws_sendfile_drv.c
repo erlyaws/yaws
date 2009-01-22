@@ -179,6 +179,8 @@ static void yaws_sendfile_drv_output(ErlDrvData handle, char* buf, int buflen)
     }
 }
 
+
+
 static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
 {
     Desc* d = (Desc*)handle;

@@ -2068,6 +2068,13 @@ deliver_dyn_part(CliSock,                  % essential params
             Priv = deliver_accumulated(Arg, CliSock, 
                                        decide, undefined, stream),
             stream_loop_send(Priv, CliSock);
+		% For other timeout's (other than 30 second) support
+        {streamcontent_with_timeout, MimeType, FirstChunk, TimeOut} ->
+            yaws:outh_set_content_type(MimeType),
+            accumulate_content(FirstChunk),
+            Priv = deliver_accumulated(Arg, CliSock, 
+                                       decide, undefined, stream),
+            stream_loop_send(Priv, CliSock, TimeOut);
         {streamcontent_with_size, Sz, MimeType, FirstChunk} ->
             yaws:outh_set_content_type(MimeType),
             accumulate_content(FirstChunk),
@@ -2148,7 +2155,9 @@ stream_loop_send(Priv, CliSock) ->
 stream_loop_send(Priv, CliSock, FlushStatus) ->
     TimeOut = case FlushStatus of
                   flushed -> 30000;
-                  unflushed -> 300
+                  unflushed -> 300;
+                  %% Other timeouts (including infinity) support
+                  OtherTimeout -> OtherTimeout
               end,
     receive
         {streamcontent, Cont} ->
@@ -2166,7 +2175,10 @@ stream_loop_send(Priv, CliSock, FlushStatus) ->
                     erlang:error(stream_timeout);
                 unflushed ->
                     P = sync_streamcontent(Priv, CliSock),
-                    stream_loop_send(P, CliSock, flushed)
+                    stream_loop_send(P, CliSock, flushed);
+				% Other timeouts support
+				ElapsedTime ->
+                    erlang:error({stream_timeout, ElapsedTime})
             end
     end.
 
@@ -2403,6 +2415,11 @@ handle_out_reply({streamcontent, MimeType, First},
                  _LineNo,_YawsFile, _UT, _ARG) ->
     yaws:outh_set_content_type(MimeType),
     {streamcontent, MimeType, First};
+
+handle_out_reply({streamcontent_with_timeout, MimeType, First, Timeout}, 
+                 _LineNo,_YawsFile, _UT, _ARG) ->
+    yaws:outh_set_content_type(MimeType),
+    {streamcontent_with_timeout, MimeType, First, Timeout};
 
 handle_out_reply(Res = {page, _Page},
                  _LineNo,_YawsFile, _UT, _ARG) ->

@@ -477,6 +477,14 @@ if the yaws code doesn't have access to all the data in one go. (Typically
 if a file is very large or if data arrives from back end servers on the network.
 
 .TP
+\fB{streamcontent_with_timeout, MimeType, FirstChunk, Timeout}\fR
+Similar to above, but with an explicit timeout. The deafult timeout
+is 30 secs. I.e if the application fails to deliver data to the
+Yaws process, the streaming will stop. This is often not the 
+desired behaviour in Comet/Ajax applications.  It's possible to
+provide 'infinity' as timeout.
+
+.TP
 \fB{header, H}\fR
 Accumulates a HTTP header. The trailing CRNL which is supposed
 to end all HTTP headers must NOT be added. It is added by the server.
