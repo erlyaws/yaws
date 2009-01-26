@@ -30,16 +30,17 @@ else
 fi
 rm -f erl_crash.dump
 outdir=./runtest_out$$
-trap "rm -rf $outdir" HUP INT EXIT
+#trap "rm -rf $outdir" HUP INT EXIT
 mkdir -p $outdir
 i=0
 echo starting $fdlimit background curl tasks
 while [ $i -lt $fdlimit ]; do
     for j in $sizes; do
         curlhdrs=curl-${j}-${i}.txt
-        curl -D $outdir/$curlhdrs -s -o $outdir/${j}-${i}.dat http://localhost:8000/$j.dat >/dev/null 2>&1 &
+        curl -D $outdir/$curlhdrs --connect-timeout 60 -s \
+            -o $outdir/${j}-${i}.dat http://localhost:8000/$j.dat >/dev/null 2>&1 &
         p=$!
-        ( cd $outdir ; ln -s $curlhdrs ${p}.txt )
+        ( cd $outdir ; rm -f ${p}.txt ; ln -s $curlhdrs ${p}.txt )
         curls="$curls $p"
     done
     i=`expr $i + 1`
