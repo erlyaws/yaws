@@ -23,7 +23,17 @@
 
 #include "hashtable.h"
 
-typedef struct _transfer {
+typedef union {
+    void* hashkey;
+    ErlDrvEvent ev_data;
+#ifdef _LP64
+    u_int64_t socket_fd;
+#else
+    u_int32_t socket_fd;
+#endif
+} SocketFd;
+
+typedef struct {
     off_t offset;
     size_t count;
     ssize_t total;
@@ -32,19 +42,20 @@ typedef struct _transfer {
 
 typedef struct hashtable* Transfers;
 
-typedef struct _desc {
+typedef struct {
     ErlDrvPort port;
     Transfers xfer_table;
 } Desc;
 
+
 static unsigned int fdhash(void* k)
 {
-    return *(unsigned int*)&k;
+    return ((SocketFd*)&k)->socket_fd;
 }
 
 static int fdeq(void* k1, void* k2)
 {
-    return *(int*)&k1 == *(int*)&k2;
+    return k1 == k2;
 }
 
 static ErlDrvData yaws_sendfile_drv_start(ErlDrvPort port, char* buf)
@@ -156,15 +167,20 @@ static void yaws_sendfile_drv_output(ErlDrvData handle, char* buf, int buflen)
         int out_buflen = set_error_buffer(&b, socket_fd, errno);
         driver_output(d->port, buf, out_buflen);
     } else {
-        Transfer* xfer = (Transfer*)hashtable_search(d->xfer_table, *(void**)&socket_fd);
+        Transfer* xfer;
+        SocketFd sfd;
+        sfd.socket_fd = socket_fd;
+        xfer = (Transfer*)hashtable_search(d->xfer_table, sfd.hashkey);
         if (xfer == NULL) {
+            /* Transfer objects are intentionally not freed until the
+               driver stops, or if an insertion error occurs below. */
             xfer = (Transfer*)malloc(sizeof(Transfer));
             if (xfer == NULL) {
                 int out_buflen = set_error_buffer(&b, socket_fd, ENOMEM);
                 driver_output(d->port, buf, out_buflen);
                 return;
             }
-            if (!hashtable_insert(d->xfer_table, *(void**)&socket_fd, xfer)) {
+            if (!hashtable_insert(d->xfer_table, sfd.hashkey, xfer)) {
                 int out_buflen = set_error_buffer(&b, socket_fd, ENOMEM);
                 driver_output(d->port, buf, out_buflen);
                 free(xfer);
@@ -175,7 +191,7 @@ static void yaws_sendfile_drv_output(ErlDrvData handle, char* buf, int buflen)
         xfer->offset = b.args->offset.offset;
         xfer->count = b.args->count.size;
         xfer->total = 0;
-        driver_select(d->port, *(ErlDrvEvent*)&socket_fd, DO_WRITE, 1);
+        driver_select(d->port, sfd.ev_data, DO_WRITE, 1);
     }
 }
 
@@ -184,17 +200,18 @@ static void yaws_sendfile_drv_output(ErlDrvData handle, char* buf, int buflen)
 static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
 {
     Desc* d = (Desc*)handle;
-    int socket_fd = *(int*)&ev;
     ssize_t result;
     off_t cur_offset;
-    Transfer* xfer = (Transfer*)hashtable_search(d->xfer_table, *(void**)&socket_fd);
+    Transfer* xfer;
+    SocketFd* sfd = (SocketFd*)&ev;
+    xfer = (Transfer*)hashtable_search(d->xfer_table, sfd->hashkey);
     if (xfer == NULL) {
         /* fatal error, something is very wrong */
         driver_failure_atom(d->port, "socket_fd_not_found");
         return;
     }
     cur_offset = xfer->offset;
-    result = yaws_sendfile_call(socket_fd, xfer->file_fd, &xfer->offset, xfer->count);
+    result = yaws_sendfile_call(sfd->socket_fd, xfer->file_fd, &xfer->offset, xfer->count);
     if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
         off_t written = xfer->offset - cur_offset;
         xfer->count -= written;
@@ -205,13 +222,13 @@ static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
         Buffer b;
         b.buffer = buf;
         memset(buf, 0, sizeof buf);
-        driver_select(d->port, *(ErlDrvEvent*)&socket_fd, DO_WRITE, 0);
+        driver_select(d->port, ev, DO_WRITE, 0);
         close(xfer->file_fd);
         if (result < 0) {
-            out_buflen = set_error_buffer(&b, socket_fd, errno);
+            out_buflen = set_error_buffer(&b, sfd->socket_fd, errno);
         } else {
             b.result->count.count = xfer->total + result;
-            b.result->out_fd = socket_fd;
+            b.result->out_fd = sfd->socket_fd;
             b.result->success = 1;
             b.result->errno_string[0] = '\0';
             out_buflen = sizeof(*b.result);
