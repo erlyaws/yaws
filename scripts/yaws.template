@@ -51,7 +51,7 @@ help()
     echo "            --setcookie X    --  set an erlang cookie" 
     echo "            --run_erl X      --  use run_erl with pipe-id X"
     echo "            --to_erl X       --  connect to pipe-id X"
-    
+    echo "            --disable-kpoll  --  Pass +K false to erlang"
     echo ""
     
     echo "ctl functions ... "
@@ -81,6 +81,7 @@ mnesia="";
 id="default";
 pdist=""
 erlarg=""
+kpoll=true
 program=$0
 
 wait_started() {
@@ -168,6 +169,8 @@ while [ $# -gt 0 ]
       -name|--name)
           sname=" -name $1 "
           shift;;
+      --disable-kpoll)
+          kpoll=false;;
       -heart|--heart)
           heart=" -heart ";;
       -proto_dist|--proto_dist)
@@ -236,7 +239,7 @@ trace="${trace} ${traceoutput}"
 
 [ "$run_erl" = "eval" ] && [ -z "$daemon" ] && [ -z "$interactive" ] && help
 
-XEC="${daemon} ${heart} -pa ${yawsdir}${delim}ebin  ${xpath} ${sname} ${pdist} ${erlarg} ${debug} -run yaws ${trace} ${conf} ${runmod} ${mnesia} ${id}"
+XEC="${daemon} ${heart} +K ${kpoll} -pa ${yawsdir}${delim}ebin  ${xpath} ${sname} ${pdist} ${erlarg} ${debug} -run yaws ${trace} ${conf} ${runmod} ${mnesia} ${id}"
 
 if [ -z "$heart" ] || [ -z "$daemon" ]; then
     HEART_COMMAND="";
