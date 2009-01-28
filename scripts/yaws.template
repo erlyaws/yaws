@@ -24,16 +24,16 @@ help()
 {
     echo "usage:  "
     echo ""
-    echo 
+    echo
     echo "       yaws -i | --interactive       -- interactive (no daemon) mode"
     echo "       yaws -w | --winteractive      -- cygwin interactive (werl) "
     echo "       yaws --daemon                 -- daemon mode"
-    
+
     echo ""
-    
+
     echo ""
-    echo "       Auxilliary flags for the daemon: "
-    echo "            --id Id          --  Set system id"
+    echo "       Auxiliary flags for the daemon: "
+    echo "            --id Id          --  set system id"
     echo "            --debug          --  debug mode "
     echo "            --conf File      --  set config file"
     echo "            --tracetraf      --  trace traffic"
@@ -42,27 +42,28 @@ help()
     echo "            --version        --  print version"
     echo "            --pa path        --  add load path"
     echo "            --mnesiadir dir  --  start Mnesia in dir"
-    echo "            --proto_dist Mod     --  use Mod for distrib"
+    echo "            --proto_dist Mod --  use Mod for distrib"
     echo "            --sname xxx      --  start with sname xxx"
     echo "            --name xxx       --  start with name xxx"
     echo "            --runmod mod     --  call mod:start/0 at startup"
     echo "            --heart          --  auto restart yaws if it crashes"
     echo "            --erlarg X       --  pass argument X to $erl"
-    echo "            --setcookie X    --  set an erlang cookie" 
+    echo "            --setcookie X    --  set an erlang cookie"
     echo "            --run_erl X      --  use run_erl with pipe-id X"
     echo "            --to_erl X       --  connect to pipe-id X"
-    echo "            --disable-kpoll  --  Pass +K false to erlang"
+    echo "            --disable-kpoll  --  pass +K false to erlang"
     echo ""
-    
+
     echo "ctl functions ... "
-    echo "        yaws --hup [--id ID]       -- hup the daemon, reload conf"
-    echo "        yaws --stop [--id ID]      -- stop the daemon "
-    echo "        yaws --debug-dump [--id ID]-- produce a debug dump "
-    echo "        yaws --status [--id ID]    -- query the daemon status "
-    echo "        yaws --load Modules        -- load modules "
-    echo "        yaws --ls                  -- list Yaws nodes and their status"
-    echo "        yaws --ctltrace traffic|http    -- toggle trace of running daemon"
-    echo "        yaws --check YawsFile [IncDirs] -- test compile File "
+    echo "        yaws --hup [--id ID]                 -- hup the daemon, reload conf"
+    echo "        yaws --stop [--id ID]                -- stop the daemon "
+    echo "        yaws --debug-dump [--id ID]          -- produce a debug dump "
+    echo "        yaws --status [--id ID]              -- query the daemon status "
+    echo "        yaws --load Modules                  -- load modules "
+    echo "        yaws --ls                            -- list Yaws nodes and their status"
+    echo "        yaws --ctltrace traffic|http         -- toggle trace of running daemon"
+    echo "        yaws --check YawsFile [IncDirs]      -- test compile File "
+    echo "        yaws --wait-started[=secs] [--id ID] -- wait for daemon to be ready"
     exit 1
 }
 
@@ -82,11 +83,13 @@ id="default";
 pdist=""
 erlarg=""
 kpoll=true
+call_wait_started=""
 program=$0
 
 wait_started() {
     i=0
-    while (test $i -lt 6); do
+    count=$1
+    while [ $i -lt $count ]; do
         sleep 1
         i=`expr $i + 1`
         ${program}  --id ${id} --status 2>&1 > /dev/null
@@ -99,7 +102,7 @@ wait_started() {
 }
 
 
-while [ $# -gt 0 ] 
+while [ $# -gt 0 ]
   do
   arg=$1
   shift;
@@ -115,8 +118,10 @@ while [ $# -gt 0 ]
           erl=$werl;;
       -D|--daemon)
           daemon=" -detached ";;
+      --wait-started=*)
+          call_wait_started=`echo $arg | sed -e 's/--wait-started=//'`;;
       --wait-started)
-          wait_started;;
+          call_wait_started=6;;
       -d|--debug)
           debug=" -boot start_sasl -yaws debug ";;
       -t|--tracetraf)
@@ -160,7 +165,7 @@ while [ $# -gt 0 ]
       -j|--ctltrace)
           ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl trace $1"
           shift;;
-      -v|--version) 
+      -v|--version)
           exec $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws printversion;
           exit 0;;
       --sname|-sname)
@@ -176,9 +181,9 @@ while [ $# -gt 0 ]
       -proto_dist|--proto_dist)
           pdist=" -proto_dist $1 "
           shift;;
-       -setcookie|--setcookie)
-         erlarg="$erlarg -setcookie $1 "
-         shift;;
+      -setcookie|--setcookie)
+          erlarg="$erlarg -setcookie $1 "
+          shift;;
       -erlarg|--erlarg)
           erlarg="$erlarg $1 "
           shift;;
@@ -208,6 +213,7 @@ while [ $# -gt 0 ]
   esac
 done
 
+[ -n "$call_wait_started" ] && wait_started $call_wait_started
 
 if [ ! -z "${ex}" ]; then
     exec ${ex} ${id}
