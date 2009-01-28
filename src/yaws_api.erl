@@ -1669,6 +1669,16 @@ binding_exists(Key) ->
         _ -> true
     end.
 
+%% split inputstring at first occurrence of Char
+split_at(String, Char) ->
+    split_at(String, Char, []).
+split_at([H|T], H, Ack) ->
+    {lists:reverse(Ack), T};
+split_at([H|T], Char, Ack) ->
+    split_at(T, Char, [H|Ack]);
+split_at([], _Char, Ack) ->
+    {[], lists:reverse(Ack)}.
+
 
 %% Return the parsed url that the client requested.
 request_url(ARG) ->
@@ -1676,12 +1686,7 @@ request_url(ARG) ->
     Headers = ARG#arg.headers,
     {abs_path, Path} = (ARG#arg.req)#http_request.path,
     DecPath = url_decode(Path),
-    {P,Q} = case string:tokens(DecPath, "?") of
-                [P0] ->
-                    {P0, []};
-                [P0,Q0] ->
-                    {P0,Q0}
-            end,
+    {P,Q} = split_at(DecPath, $?),
     #url{scheme = case SC#sconf.ssl of
                       undefined ->
                           "http";
