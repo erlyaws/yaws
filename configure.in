@@ -18,7 +18,7 @@ AC_SUBST(ERLC)
 AC_SUBST(ERLBINDIR)
 
 AC_ARG_WITH(default-charset,
-[  --with-defaultcharset=String   specify default charset, i.e UTF-8 ])
+AS_HELP_STRING([--with-defaultcharset=String], [specify default charset, i.e UTF-8]))
 
 
 if test "x$with_defaultcharset" = "x" ; then
@@ -32,7 +32,7 @@ AC_SUBST(DEFAULT_CHARSET)
 
 
 AC_ARG_WITH(extrainclude,
-[  --with-extrainclude= dir to include if e.g. pam is installed in some odd place ])
+AS_HELP_STRING([--with-extrainclude=DIR], [dir to include if e.g. pam is installed in some odd place]))
 
 
 if test "x$with_extrainclude" = "x" ; then
@@ -45,7 +45,7 @@ AC_SUBST(EXTRAINCLUDE)
 
 
 
-AC_ARG_ENABLE(pam, [--disable-pam disables pam auth], EPAM=, EPAM=../priv/epam)
+AC_ARG_ENABLE(pam, AS_HELP_STRING([--disable-pam], [disables pam auth]), EPAM=, EPAM=../priv/epam)
 AC_SUBST(EPAM)
 
 
@@ -260,6 +260,8 @@ case "$target_os" in
            ;;
 esac
 
+AC_ARG_ENABLE(sendfile, AS_HELP_STRING([--disable-sendfile], [disables use of sendfile system call]),
+                        [ test "$enableval" = no && HAVE_SENDFILE=false ])
 AC_SUBST(HAVE_SENDFILE)
 YTOP=`pwd`
 AC_SUBST(YTOP)

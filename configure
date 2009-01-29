@@ -1261,13 +1261,16 @@ if test -n "$ac_init_help"; then
 Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
---disable-pam disables pam auth
+  --disable-pam           disables pam auth
+  --disable-sendfile      disables use of sendfile system call
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-defaultcharset=String   specify default charset, i.e UTF-8
-  --with-extrainclude= dir to include if e.g. pam is installed in some odd place
+  --with-defaultcharset=String
+                          specify default charset, i.e UTF-8
+  --with-extrainclude=DIR dir to include if e.g. pam is installed in some odd
+                          place
 
 Some influential environment variables:
   CC          C compiler command
@@ -1934,6 +1937,7 @@ fi
 
 
 ERLBINDIR=`dirname "$ERL"` ; ERLBINDIR=`dirname "$ERLBINDIR"`/lib/erlang/bin
+
 
 
 
@@ -3948,6 +3952,11 @@ echo "$as_me: error: Non-supported target OS!" >&2;}
    { (exit 1); exit 1; }; }
            ;;
 esac
+
+# Check whether --enable-sendfile was given.
+if test "${enable_sendfile+set}" = set; then
+  enableval=$enable_sendfile;  test "$enableval" = no && HAVE_SENDFILE=false
+fi
 
 
 YTOP=`pwd`

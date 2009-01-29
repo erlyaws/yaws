@@ -67,7 +67,7 @@ yaws_generated.erl:	yaws_generated.template ../vsn.mk
 	../scripts/Subst %localinstall% true | \
 	../scripts/Subst %ETCDIR% ${ETCDIR} > yaws_generated.erl
 
-yaws_configure.hrl:	 ../vsn.mk
+yaws_configure.hrl:	 ../vsn.mk ../include.mk
 	set -x; \
 	if [  $(HAVE_SENDFILE) = "true" ]; then \
 		echo "-define(HAVE_SENDFILE, true)." > yaws_configure.hrl; \
@@ -95,7 +95,7 @@ debug:
 	$(MAKE) TYPE=debug
 
 clean:
-	rm -f $(EBIN_FILES) yaws_generated.erl charset.def mime_types.erl
+	rm -f $(EBIN_FILES) yaws_generated.erl charset.def mime_types.erl yaws_configure.hrl
 
 install: regen all docsinstall
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/yaws/examples/ebin
