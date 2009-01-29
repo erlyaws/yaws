@@ -12,10 +12,10 @@ start([F]) ->
 start() ->
     ?line ok,
     ?line {ok, _} = ibrowse:start_link(),
+    server_options_test(),
     test1(),
     test2(),
     test3(),
-    server_options_test(),
     sendfile_get().
 
 
