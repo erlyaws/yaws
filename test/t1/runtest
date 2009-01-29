@@ -30,7 +30,7 @@ else
 fi
 rm -f erl_crash.dump
 outdir=./runtest_out$$
-#trap "rm -rf $outdir" HUP INT EXIT
+trap "rm -rf $outdir" HUP INT EXIT
 mkdir -p $outdir
 i=0
 echo starting $fdlimit background curl tasks
