@@ -3,6 +3,7 @@ SUBDIRS	=	c_src src man www/shopingcart www/code doc scripts
 include ./include.mk
 include ./vsn.mk
 
+PKGCONFIG_FILES = yaws.pc
 
 all debug clean:	
 	@set -e ; \
@@ -17,7 +18,9 @@ install:	all
 	set -e ; \
 	for d in $(SUBDIRS) ; do \
 	    if [ -f $$d/Makefile ]; then ( cd $$d && $(MAKE) $@ ) || exit 1 ; fi ; \
-	  done
+	done
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/pkgconfig
+	$(INSTALL) -m 644 $(PKGCONFIG_FILES) $(DESTDIR)$(PREFIX)/lib/pkgconfig
 	@echo "-------------------------------"
 	@echo
 	@echo "** etc files went into        ${ETCDIR}"	

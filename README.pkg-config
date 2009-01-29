@@ -1,0 +1,15 @@
+##
+## pkg-config(1) support
+##
+
+If you have pkg-config installed on your system, you can
+use it as shown below to obtain information about Yaws:
+
+$ pkg-config yaws --modversion
+1.80
+
+$ pkg-config yaws --cflags
+-I/usr/local/lib/yaws/include  
+
+$ pkg-config yaws --libs
+-pa /usr/local/lib/yaws/ebin  

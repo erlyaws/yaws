@@ -195,7 +195,7 @@ AS_IF([test "x$PDFLATEX" = "xno" || test "x$EPSTOPDF" = "xno"],
 
 dnl Sigh, pam headers do not seem to have a standard place. On FreeBSD and
 dnl Linuces I've seen they are in /usr/include/security, but MacOS has them
-dnl in /usr/include/pam... I'm to sick of M4 at this very moment to write
+dnl in /usr/include/pam... I'm too sick of M4 at this very moment to write
 dnl a test that searches for the files, so hard coded for now...
 dnl or use --with-extrainclude=....
 CFLAGS="$CFLAGS -I/usr/include/security"
@@ -268,3 +268,8 @@ AC_SUBST(YTOP)
 AC_OUTPUT(include.mk)
 AC_OUTPUT(test/support/include.mk)
 AC_OUTPUT(test/support/include.sh)
+
+dnl pkg-config support
+. ./vsn.mk
+AC_SUBST(YAWS_VSN)
+AC_OUTPUT(yaws.pc)
