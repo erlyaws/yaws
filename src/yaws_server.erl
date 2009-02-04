@@ -914,13 +914,13 @@ erase_transients() ->
           end,
     Fun(Fun),
     I = get(init_db),
-    erase(),
     if I == undefined ->
             ok;
        list(I) ->
            %% Need to keep init_db in case we do not enter aloop (i.e. init:db)
            %% again as R12B-5 requires proc_lib keys in dict while exiting...
-           put(init_db, I),
+            erase(),
+            put(init_db, I),
             lists:foreach(fun({K,V}) -> put(K,V) end, I)
     end.
 
