@@ -734,7 +734,7 @@ do_accept(GS) when GS#gs.ssl == nossl ->
     ?Debug("wait in accept ... ~n",[]),
     gen_tcp:accept(GS#gs.l);
 do_accept(GS) when GS#gs.ssl == ssl ->
-    ssl:transport_accept(GS#gs.l,10000).
+    ssl:transport_accept(GS#gs.l).
 
 
 initial_acceptor(GS) ->
