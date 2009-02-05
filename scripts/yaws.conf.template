@@ -72,12 +72,6 @@ fail_on_bind_err = true
 
 
 
-# If yaws is started as root, it can, once it has opened
-# all relevant sockets for listening, change the uid to a 
-# user with lower accessrights than root 
-
-# username = nobody
-
 
 # If HTTP auth is used, it is possible to have a specific
 # auth log.
