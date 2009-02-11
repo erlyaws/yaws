@@ -53,15 +53,23 @@ run(GC) ->
     end.
 
 rand() ->
-    try 
-        crypto:start(),
-        crypto:rand_uniform(0, 1 bsl 64)
-    catch
-        _ ->
-            {A1, A2, A3}=now(),
+    case os:type() of
+        {win32, _} ->
+             {A1, A2, A3}=now(),
             random:seed(A1, A2, A3),
-            random:uniform(1 bsl 64)
+            random:uniform(1 bsl 64);
+        _ ->
+            try 
+                crypto:start(),
+                crypto:rand_uniform(0, 1 bsl 64)
+            catch
+                _ ->
+                    {A1, A2, A3}=now(),
+                    random:seed(A1, A2, A3),
+                    random:uniform(1 bsl 64)
+            end
     end.
+
 
 
 ctl_args() ->

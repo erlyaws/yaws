@@ -1599,7 +1599,7 @@ erase_header(location) ->
 getuid() ->
     case os:type() of
         {win32, _} ->
-            {ok, "XXX"};
+            {ok, "0"};
         _ ->
             load_setuid_drv(),
             P = open_port({spawn, "setuid_drv g"},[]),
@@ -1608,13 +1608,20 @@ getuid() ->
                     {ok, IntList}
             end
     end.
+
 user_to_home(User) ->
-    load_setuid_drv(),
-    P = open_port({spawn, "setuid_drv " ++ [$h|User]}, []),
-    receive
-        {P, {data, "ok " ++ Home}} ->
-            Home
+    case os:type() of
+        {win32, _} ->
+            ".";
+        _ ->
+            load_setuid_drv(),
+            P = open_port({spawn, "setuid_drv " ++ [$h|User]}, []),
+            receive
+                {P, {data, "ok " ++ Home}} ->
+                    Home
+            end
     end.
+
 
 uid_to_name(Uid) ->
     load_setuid_drv(),

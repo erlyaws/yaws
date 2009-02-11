@@ -1,0 +1,192 @@
+<project>
+    <shortName>Yaws</shortName>
+    <fullName>Yaws webserver @vsn@</fullName>
+    <version>@vsn@</version>
+    <installerFilename></installerFilename>
+    <readmeFile></readmeFile>
+    <licenseFile>LICENSE.txt</licenseFile>
+    <splashImage>img/yaws_head.gif</splashImage>
+    <enableRollback>1</enableRollback>
+    <saveRelativePaths>1</saveRelativePaths>
+    <componentList>
+        <component>
+            <name>default</name>
+            <description>Default Component</description>
+            <canBeEdited>1</canBeEdited>
+            <selected>1</selected>
+            <show>1</show>
+            <folderList>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>${installdir}</destination>
+                    <name>programfiles</name>
+                    <platforms>all</platforms>
+                    <shortcutList>
+                        <shortcut>
+                            <comment>Uninstall</comment>
+                            <exec>${installdir}/${uninstallerName}</exec>
+                            <icon></icon>
+                            <name>Uninstall ${product_fullname}</name>
+                            <path>${installdir}</path>
+                            <platforms>all</platforms>
+                            <runInTerminal>0</runInTerminal>
+                            <windowsExec>${installdir}/${uninstallerName}.exe</windowsExec>
+                            <windowsExecArgs></windowsExecArgs>
+                            <windowsIcon></windowsIcon>
+                            <windowsPath>${installdir}</windowsPath>
+                        </shortcut>
+                    </shortcutList>
+                </folder>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>${installdir}</destination>
+                    <name>programfileslinux</name>
+                    <platforms>linux</platforms>
+                </folder>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>${installdir}</destination>
+                    <name>programfileswindows</name>
+                    <platforms>windows</platforms>
+                    <actionList>
+                        <logMessage>
+                            <text>hello there logging</text>
+                        </logMessage>
+                        <registrySet>
+                            <key>HKEY_LOCAL_MACHINE\SOFTWARE\Hyber\Yaws</key>
+                            <name>DIR</name>
+                            <type>REG_SZ</type>
+                            <value>${installdir}</value>
+                        </registrySet>
+
+                        <addDirectoryToPath>
+                          <scope>system</scope>
+                          <path>${installdir}/bin</path>
+                        </addDirectoryToPath>
+                        <substitute>
+                          <files>${installdir}/README.txt</files>
+                          <substitutionList>
+                            <substitution>
+                              <pattern>%yawsdir%</pattern>
+                              <value>${installdir}</value>
+                            </substitution>
+                          </substitutionList>
+                        </substitute>
+
+                        <substitute>
+                          <files>${installdir}/yaws.conf</files>
+                          <substitutionList>
+                            <substitution>
+                              <pattern>%yawsdir%</pattern>
+                              <value>${installdir}</value>
+                            </substitution>
+                          </substitutionList>
+                        </substitute>
+
+                    </actionList>
+
+
+                    <distributionFileList>
+                        <distributionDirectory>
+                            <origin>bin</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>scripts</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>logs</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>include</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>ssl</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>doc</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>ebin</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>www</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                          <origin>applications</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                          <origin>priv</origin>
+                        </distributionDirectory>
+                        <distributionFile>
+                            <origin>LICENSE.txt</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>yaws.conf</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>README.txt</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>include.mk</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>vsn.mk</origin>
+                        </distributionFile>
+                        <distributionDirectory>
+                            <origin>src</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>examples</origin>
+                        </distributionDirectory>
+                        
+
+                    </distributionFileList>
+                </folder>
+            </folderList>
+            <startMenuShortcutList>
+                <startMenuShortcut>
+                    <comment>Docs</comment>
+                    <name>Docs</name>
+                    <runInTerminal>0</runInTerminal>
+                    <windowsExec>${installdir}/doc</windowsExec>
+                    <windowsExecArgs></windowsExecArgs>
+                    <windowsIcon></windowsIcon>
+                    <windowsPath>${installdir}/doc</windowsPath>
+                </startMenuShortcut>
+                <startMenuShortcut>
+                    <comment>README</comment>
+                    <name>README</name>
+                    <runInTerminal>0</runInTerminal>
+                    <windowsExec>${installdir}/README.txt</windowsExec>
+                    <windowsExecArgs></windowsExecArgs>
+                    <windowsIcon></windowsIcon>
+                    <windowsPath>${installdir}/</windowsPath>
+                </startMenuShortcut>
+            </startMenuShortcutList>
+        </component>
+    </componentList>
+    <parameterList>
+        <directoryParameter>
+            <name>installdir</name>
+            <description>Installer.Parameter.installdir.description</description>
+            <explanation>Installer.Parameter.installdir.explanation</explanation>
+            <value>${platform_install_prefix}/${product_shortname}-${product_version}</value>
+            <default>${platform_install_prefix}/${product_shortname}-${product_version}</default>
+            <allowEmptyValue>0</allowEmptyValue>
+            <ask>yes</ask>
+            <cliOptionName>prefix</cliOptionName>
+            <mustBeWritable>yes</mustBeWritable>
+            <mustExist>0</mustExist>
+            <width>30</width>
+        </directoryParameter>
+    </parameterList>
+  <finalPageActionList>
+        <actionGroup progressText="${msg(Installer.ReadmeFile.View)}">
+            <actionList>
+                <readFile path="${installdir}/README.txt" name="languageFileText" encoding="iso8859-1"/>
+                <showText text="${languageFileText}" title="${msg(Installer.ReadmeFile.Title)}"/>
+            </actionList>
+        </actionGroup>
+  </finalPageActionList>
+</project>
+
