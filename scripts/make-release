@@ -13,7 +13,7 @@ if [ ! -f ./make-release ]; then
     echo "need to be in scripts dir"; exit 1;
 fi
 
-
+(cd ../win32; make clean all)
 cd ../..
 
 
@@ -32,23 +32,9 @@ ln -s yaws-${YAWS_VSN} yaws
 tar cfz  yaws-${YAWS_VSN}.tar.gz yaws  yaws-${YAWS_VSN}
 
 echo release resides in `pwd`/yaws-${YAWS_VSN}.tar.gz 
+echo release resides in `pwd`/win32/Yaws-${YAWS_VSN}-windows-installer.exe
 
 exit 0
-
-
-
-
-
-cvs export -d tmp -r yaws-$Y .
-cd tmp
-mv yaws yaws-${YAWS_VSN}
-ln -s yaws-${YAWS_VSN} yaws
-tar cfz  yaws-${YAWS_VSN}.tar.gz yaws  yaws-${YAWS_VSN}
-
-#mv yaws-${YAWS_VSN}.tar.gz ..
-#cd ..
-
-echo release resides in `pwd`/yaws-${YAWS_VSN}.tar.gz 
 
 
 

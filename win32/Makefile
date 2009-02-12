@@ -45,5 +45,6 @@ clean:
 	$(RM) *.o
 	$(RM) *.a
 	$(RM) *.exe
-	$(RM) -rf ebin examples applications ssl src www include doc priv bin logs scripts vsn.mk  LICENSE.txt 
+	$(RM) -rf ebin examples applications ssl src www include doc priv bin logs scripts vsn.mk  LICENSE.txt build.xml
+
 

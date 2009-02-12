@@ -1,3 +1,23 @@
+Thu Feb 12 22:58:16 CET 2009
+Full windows support with a proper .exe Windows installer (klacke)
+Added a timestamp check on the ssl cert/key files making it possible to just upload new cert/key files and do yaws --hup to automatically have the new cert/key files being used (klacke)
+Disgusting DOS attack discovered by Manuel Duran Aguete whereby if a neverendig series of headers are sent to yaws, we die of out of memory. Actual attack not described here. Contact me (klacke) if you're interested in the details
+and want a backport patch. I'm not reallu sure this is indeed the right procedure for announcing a DOS bug. (First time !!!)
+init_db patch cleanup by Liu Yubao 
+patch by Liu Yubao to remove timeout in ssl accept
+add pkg-config support contributed by Olivier Girondel
+add --disable-sendfile option to configure, fix src/Makefile to clean yaws_configure.hrl (Steve)
+set HEART_COMMAND to allow a maximum of 5 restarts within any 60 second period (Steve)
+patch for queryparts that contain a question mark
+Document the --wait-started option for the yaws script (Steve)
+Fix the yaws script to allow --id ID to be passed after --wait-started (Steve)
+Allow optional wait time to be specified to yaws via --wait-started=<seconds> (Steve)
+added kpoll as default
+fix sendfile socket fd handling problems on 64-bit platforms (Steve)
+cygwin build patch by Davide marques
+stream content with a timeout patch from Davide Marques
+traffic trace was broken for certain types of requsts - found by wde
+
 Tue Jan 20 20:19:16 CET 2009 version 1.79
 This release fixes the completely broken 1.78 release. So at last, we have good\
  sendfile support.

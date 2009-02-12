@@ -1,0 +1,12 @@
+
+To compile this stuff, two things in particular are required.
+One is a copy of the install-builder. Since yaws is an open
+source project. We have a free license of bitrock installer.
+
+Download the bitrock installer and install it somewhere.
+http://www.bitrock.com/download_installbuilder_download.html
+
+Next is the mingw crosscompiler. On Ubuntu,debian,gentoo
+it's just a simple matter of installing mingw
+
+
