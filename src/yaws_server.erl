@@ -53,6 +53,7 @@
 -record(gs, {gconf,         
              group,         %% list of #sconf{} s
              ssl,           %% ssl | nossl
+             certinfo,
              l,             %% listen socket
              mnum = 0,      
              sessions = 0,  %% number of HTTP sessions
@@ -65,6 +66,11 @@
                 embedded    %% true if in embedded mode, false otherwise
                }).
 
+%% undefined | mtime from #file_info
+-record(certinfo, {keyfile,
+                   certfile,
+                   cacertfile
+                  }).
 
 -define(elog(X,Y), error_logger:info_msg("*elog ~p:~p: " X,
                                          [?MODULE, ?LINE | Y])).
@@ -279,6 +285,15 @@ handle_call(getconf, _From, State) ->
     Groups = map(fun({_Pid, SCs}) -> SCs end, State#state.pairs),
     {reply, {ok, State#state.gc, Groups}, State};
 
+%% If cert has changed, server will stop implicitly
+handle_call(check_certs, _From, State) ->
+    L = lists:map(fun({Pid, _SCs}) ->
+                          Pid ! {check_cert_changed, self()},
+                          receive {Pid, YesNo} ->
+                                  YesNo
+                          end
+                  end, State#state.pairs),
+    {reply, L, State};
 
 handle_call({update_sconf, NewSc}, From, State) ->
     case yaws_config:search_sconf(NewSc, State#state.pairs) of
@@ -375,9 +390,11 @@ handle_cast(_Msg, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
+handle_info({'EXIT', Pid, certchanged},  State) ->
+    {noreply, State#state{pairs = lists:keydelete(Pid, 1, State#state.pairs)}};
 handle_info({'EXIT', Pid, Reason},  State) ->
-    ?Debug("got EXIT Pid = ~p~n"
-           " pairs = ~p~n", [Pid, State#state.pairs]),
+    io:format("got EXIT Pid = ~p/~p~n"
+           " pairs = ~p~n", [Pid, Reason,State#state.pairs]),
     case lists:keysearch(Pid, 1, State#state.pairs) of
         {value, _} ->
             %% one of our gservs died 
@@ -414,10 +431,45 @@ do_listen(GC, SC) ->
                     {nossl, Err}
             end;
         undefined ->
-            {nossl, gen_tcp_listen(SC#sconf.port, listen_opts(SC))};
+            {nossl, undefined, gen_tcp_listen(SC#sconf.port, listen_opts(SC))};
         SSL ->
-            {ssl, ssl:listen(SC#sconf.port, ssl_listen_opts(GC, SC, SSL))}
+            {ssl, certinfo(SSL), 
+             ssl:listen(SC#sconf.port, ssl_listen_opts(GC, SC, SSL))}
     end.
+
+certinfo(SSL) ->
+    #certinfo{
+          keyfile = if SSL#ssl.keyfile /= undefined ->
+                            case file:read_file_info(SSL#ssl.keyfile) of
+                                {ok, FI} ->
+                                    FI#file_info.mtime;
+                                _ ->
+                                    undefined
+                            end;
+                       true ->
+                            undefined
+                    end,
+          certfile = if SSL#ssl.certfile /= undefined ->
+                             case file:read_file_info(SSL#ssl.certfile) of
+                                 {ok, FI} ->
+                                     FI#file_info.mtime;
+                                 _ ->
+                                     undefined
+                             end;
+                        true ->
+                            undefined
+                     end,
+          cacertfile = if SSL#ssl.cacertfile /= undefined ->
+                             case file:read_file_info(SSL#ssl.cacertfile) of
+                                 {ok, FI} ->
+                                     FI#file_info.mtime;
+                                 _ ->
+                                     undefined
+                             end;
+                        true ->
+                            undefined
+                     end
+         }.
 
 gen_tcp_listen(Port, Opts) ->
     ?Debug("Listen ~p:~p~n", [Port, Opts]),
@@ -437,7 +489,7 @@ gserv(Top, GC, Group0) ->
                 end, Group0),
     SC = hd(Group),
     case do_listen(GC, SC) of
-        {SSLBOOL, {ok, Listen}} ->
+        {SSLBOOL, CertInfo, {ok, Listen}} ->
             lists:foreach(fun(XSC) -> call_start_mod(XSC) end, Group),
             error_logger:info_msg(
               "Yaws: Listening to ~s:~w for servers~s~n",
@@ -454,10 +506,11 @@ gserv(Top, GC, Group0) ->
             GS = #gs{gconf = GC,
                      group = Group,
                      ssl = SSLBOOL,
+                     certinfo = CertInfo, 
                      l = Listen},
             Last = initial_acceptor(GS),
             gserv_loop(GS, [], 0, Last);
-        {_,Err} ->
+        {_,_,Err} ->
             error_logger:format("Yaws: Failed to listen ~s:~w  : ~p~n",
                                 [inet_parse:ntoa(SC#sconf.listen),
                                  SC#sconf.port, Err]),
@@ -607,7 +660,34 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                                   [yaws:sconf_to_srvstr(SC)]),
             New = acceptor(GS2),
             gserv_loop(GS2, Ready2, 0, New);
-
+        {check_cert_changed, From} ->
+            Changed = case GS#gs.ssl of
+                          ssl ->
+                              [SC] = GS#gs.group,
+                              CertInfo = GS#gs.certinfo,
+                              case certinfo(SC#sconf.ssl) of
+                                  CertInfo ->
+                                      no;
+                                  _Other ->
+                                      yes
+                              end;
+                          nossl ->
+                              no
+                      end,
+            if
+                Changed == no ->
+                    From ! {self(), no},
+                    gserv_loop(GS, Ready, Rnum, Last);
+                Changed == yes ->
+                    error_logger:info_msg(
+                      "Stopping ~s due to cert change\n",
+                      [yaws:sconf_to_srvstr(hd(GS#gs.group))]),
+                    {links, Ls0} = process_info(self(), links),
+                    Ls = Ls0 -- [get(top)],
+                    foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
+                    From ! {self(), yes},
+                    exit(certchanged)
+            end;
         {update_gconf, GC} ->
             stop_ready(Ready, Last),
             GS2 = GS#gs{gconf = GC},

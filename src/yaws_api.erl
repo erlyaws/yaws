@@ -1733,6 +1733,22 @@ sanitize_file_name([]) ->
 %% than /etc/yaws.conf, for example from a database
 %% this code is also called by the server -h hup code
 setconf(GC0, Groups0) ->
+    setconf(GC0, Groups0, true).
+setconf(GC0, Groups0, CheckCertsChanged) ->
+    CertsChanged = if CheckCertsChanged == true ->
+                           lists:member(yes,gen_server:call(
+                                              yaws_server, 
+                                              check_certs, infinity));
+                      true ->
+                           false
+                   end,
+    if
+        CertsChanged ->
+            application:stop(ssl),
+            application:start(ssl);
+        true ->
+            ok
+    end,
     {GC, Groups} = yaws_config:verify_upgrade_args(GC0, Groups0),
     {ok, OLDGC, OldGroups} = yaws_api:getconf(),
     case {yaws_config:can_hard_gc(GC, OLDGC),

@@ -1547,9 +1547,6 @@ is_list_of_scs([]) ->
 is_list_of_scs(_) ->
     false.
 
-
-
-
 add_sconf(SC) ->
     ok= gen_server:call(yaws_server, {add_sconf, SC}, infinity),
     ok = gen_server:call(yaws_log, {soft_add_sc, SC}, infinity).

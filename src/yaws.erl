@@ -314,12 +314,26 @@ hup(Sock) ->
 
 dohup(Sock) ->
     Env = yaws_sup:get_app_args(),
-    Res = (catch case yaws_config:load(Env) of
-                     {ok, Gconf, Sconfs} ->
-                         yaws_api:setconf(Gconf, Sconfs);
-                     Err ->
-                         Err
-                 end),
+    Res = try yaws_config:load(Env) of
+        {ok, Gconf, Sconfs} ->
+            case yaws_config:check_certs_updated() of
+                false ->
+                    yaws_api:setconf(Gconf, Sconfs);
+                true ->
+                    %% slightly more complex, , first stop
+                    %% all ssl servers entirely
+                    
+                    yaws_api:setconf(Gconf, []),
+                    application:stop(ssl),
+                    application:start(ssl),
+                    yaws_api:setconf(Gconf, Sconfs)
+            end;
+        Err ->
+            Err
+    catch
+        _:X ->
+            X
+    end,
     gen_event:notify(yaws_event_manager, {yaws_hupped, Res}),
     gen_event:notify(yaws_log, {yaws_hupped, Res}),
     gen_tcp:send(Sock, io_lib:format("hupped: ~p~n", [Res])),
