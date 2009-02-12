@@ -393,8 +393,6 @@ handle_cast(_Msg, State) ->
 handle_info({'EXIT', Pid, certchanged},  State) ->
     {noreply, State#state{pairs = lists:keydelete(Pid, 1, State#state.pairs)}};
 handle_info({'EXIT', Pid, Reason},  State) ->
-    io:format("got EXIT Pid = ~p/~p~n"
-           " pairs = ~p~n", [Pid, Reason,State#state.pairs]),
     case lists:keysearch(Pid, 1, State#state.pairs) of
         {value, _} ->
             %% one of our gservs died 
