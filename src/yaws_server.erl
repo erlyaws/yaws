@@ -390,7 +390,7 @@ handle_cast(_Msg, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-handle_info({'EXIT', Pid, certchanged},  State) ->
+handle_info({Pid, certchanged},  State) ->
     {noreply, State#state{pairs = lists:keydelete(Pid, 1, State#state.pairs)}};
 handle_info({'EXIT', Pid, Reason},  State) ->
     case lists:keysearch(Pid, 1, State#state.pairs) of
@@ -684,7 +684,9 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     Ls = Ls0 -- [get(top)],
                     foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
                     From ! {self(), yes},
-                    exit(certchanged)
+                    unlink(get(top)),
+                    get(top) ! {self(), certchanged},
+                    exit(normal)
             end;
         {update_gconf, GC} ->
             stop_ready(Ready, Last),
