@@ -3,15 +3,15 @@
 ## To install 
 # sudo apt-get install mingw32
 
+TARGET  = i586-mingw32msvc-
 
-CC	= i586-mingw32msvc-gcc
-AR	= i586-mingw32msvc-ar
-LD	= i586-mingw32msvc-gcc
+CC	= $(TARGET)gcc
+AR	= $(TARGET)ar
+LD	= $(TARGET)gcc
 
 
 CP	= cp
 RM	= rm -f
-#AR	= i586-mingw32msvc-ar
 MKDIR	= -mkdir
 
 ##
