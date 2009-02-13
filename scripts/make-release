@@ -2,36 +2,57 @@
 
 #set -x
 
-. ../vsn.mk
+# determine absolute path to source dir root
+srctree="$(cd $(dirname "$0") && cd .. && pwd)"
+
+# change to scripts dir (or wherever this script resides)
+cd "$(dirname "$0")"
+
+. "../vsn.mk"
 
 echo packing release ${YAWS_VSN} 
 
-CVS_RSH=ssh
 Y=`echo ${YAWS_VSN} | sed 's/\./-/g'`
+TAG="yaws-${Y}"
+TAG="yaws-${YAWS_VSN}"
+
+NAME_VERSION="yaws-${YAWS_VSN}"
 
 if [ ! -f ./make-release ]; then
     echo "need to be in scripts dir"; exit 1;
 fi
 
-(cd ../win32; make clean all)
-cd ../..
+(cd "../win32"; make clean all)
+cd "../.."
 
+export GIT_DIR="$srctree/.git"
+if test -d "$GIT_DIR" && test -f "$GIT_DIR/config"; then :;
+else
+	echo "Fatal: Could not find GIT_DIR at $GIT_DIR."
+	exit 13
+fi
 
-
+# Add release tag
 #cvs tag -F yaws-${Y}
-svn delete https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/tags/yaws-${Y} -m ""  2> /dev/null
-svn copy https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/trunk/ https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/tags/yaws-${Y} -m "version ${Y}"
+#svn delete https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/tags/yaws-${Y} -m ""  2> /dev/null
+#svn copy https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/trunk/ https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/tags/yaws-${Y} -m "version ${Y}"
+git tag -f -a -m "version ${Y}" "$TAG"
 
-rm -rf tmp 2> /dev/null
-mkdir tmp
-cd tmp
-svn export https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/trunk
-cd trunk
-mv yaws yaws-${YAWS_VSN}
-ln -s yaws-${YAWS_VSN} yaws
-tar cfz  yaws-${YAWS_VSN}.tar.gz yaws  yaws-${YAWS_VSN}
+# Create release .tar.gz of sources
+#rm -rf tmp 2> /dev/null
+#mkdir tmp
+#cd tmp
+#svn export https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/trunk
+#cd trunk
+#mv yaws yaws-${YAWS_VSN}
+#ln -s yaws-${YAWS_VSN} yaws
+#tar cfz  yaws-${YAWS_VSN}.tar.gz yaws  yaws-${YAWS_VSN}
+# Caution... the following lines do not add the "yaws" symlink to the tarball.
+git archive --format=tar --prefix="$NAME_VERSION/" "$TAG" | gzip -c --best > "$NAME_VERSION.tar.gz"
+git archive --format=tar --prefix="$NAME_VERSION/" "$TAG" | lzma -c > "$NAME_VERSION.tar.lzma"
 
-echo release resides in `pwd`/yaws-${YAWS_VSN}.tar.gz 
+echo release resides in `pwd`/$NAME_VERSION.tar.lzma
+echo release resides in `pwd`/$NAME_VERSION.tar.gz
 echo release resides in `pwd`/win32/Yaws-${YAWS_VSN}-windows-installer.exe
 
 exit 0
