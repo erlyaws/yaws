@@ -14,6 +14,12 @@ set -x
 
 INSTALL_BUILDER=${INSTALL_BUILDER:=${HOME}/installbuilder-5.4.14}
 
+test -d "$INSTALL_BUILDER" || {
+	echo "Error: Could not find directory $INSTALL_BUILDER."
+	echo "Fatal: $0 requires installbuilder."
+	exit 13
+}
+
 echo "-define(HAVE_SENFDILE, false). " > ../src/yaws_configure.hrl
 (cd ../src; make)
 
