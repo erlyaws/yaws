@@ -268,8 +268,10 @@ in each chunk is determined by the this parameter.
 The deafult value is 10240.
 
 .TP
-\fB dav = true | false\fR
-Turns on the DAV protocol for this server.
+\fBdav = true | false\fR
+Turns on the DAV protocol for this server. The dav support
+in yaws is highly limited. If dav is turned on, .yaws processing
+of .yaws pages is turned off.
 
 .TP
 \fBtilde_expand = true|false \fR
@@ -428,12 +430,50 @@ Ends an SSL definition
 Defines an redirect mapping. The following items are allowed
 within a matching pair of <redirect> and </redirect> delimiters.
 
-.TP
-\fBPath = [Scheme://]Host[:Port]\fR
-All accesses to Path will be redirected to [Scheme://]Host[:Port]Path.
-Scheme and Port is optional. The default is to use the servers scheme
-and port, rsheme and rport will be used if defined. To redirect
-all references to a site use "/" as Path.
+We can have a series of
+
+\fB Path = URL\fR or
+
+\fB Path = file\fR
+
+All accesses to Path will be redirected to URL/Path or alternatively
+to scheme:host:port/file/Path if a file is used. Note that the original
+path is appended to the redirected url. So if we for example have:
+
+.nf
+<redirect>
+  /foo = http://www.mysite.org/zapp
+  /bar = /tomato.html
+</redirect>
+.fi
+
+Asumming this config resides on a site called http://abc.com, 
+We have the following redirects:
+
+http://abc.com/foo -> http://www.mysite.org/zapp/foo
+
+http://abc.com/foo/test -> http://www.mysite.org/zapp/foo/test
+
+http://abc.com/bar -> http://abc.com/bar
+
+http://abc.com/bar/x/y/z -> http://abc.com/bar/x/y/z
+
+Sometimes we do not want to have the original path
+appended to the redirected path. To get that behaviour we
+specify the config with '==' instead of '='.
+
+<redirect>
+  /foo == http://www.mysite.org/zapp
+  /bar = /tomato.html
+</redirect>
+
+Now a request for http://abc.com/foo/x/y/z simply gets redirected
+to http://www.mysite.org/zapp. This is typically used when we simply
+want a static redirect at some place in the docroot.
+
+When we specify a file as target for the redirect, the redir will
+be to the current http(s) server.
+
 
 .TP
 \fB<auth> ... </auth>\fR

@@ -26,7 +26,8 @@
          htmlize/1, htmlize_char/1, f/2, fl/1]).
 -export([find_cookie_val/2, secs/0, 
          url_decode/1, url_decode_q_split/1,
-         url_encode/1, parse_url/1, parse_url/2, format_url/1]).
+         url_encode/1, parse_url/1, parse_url/2, format_url/1,
+         format_partial_url/2]).
 -export([is_absolute_URI/1]).
 -export([path_norm/1, path_norm_reverse/1,
          sanitize_file_name/1]).
@@ -1070,7 +1071,7 @@ parse_url(Str, Strict) ->
         "file://" ++ Rest ->
             parse_url(host, Strict, #url{scheme = file}, Rest, []);
         _ when Strict == sloppy ->
-            parse_url(host, Strict, #url{scheme = http}, Str, [])
+            parse_url(host, Strict, #url{scheme = undefined}, Str, [])
     end.
 
 
@@ -1112,9 +1113,46 @@ parse_url(path, Strict, U, Str, Ack) ->
     end.
 
 
+%% used to construct redir headers from partial URLs such 
+%% as e.g. /foo/bar
+
+format_partial_url(Url, SC) ->
+    [if 
+         Url#url.scheme == undefined ->
+             yaws:redirect_scheme(SC);
+         true ->
+             yaws:to_string(Url#url.scheme) ++ "://"
+     end,
+     if
+         Url#url.host == undefined ->
+             yaws:redirect_host(SC, undefined);
+         true ->
+             Url#url.host
+     end,
+     if
+         Url#url.port == undefined ->
+             yaws:redirect_port(SC);
+         true  ->
+             [$: | integer_to_list(Url#url.port)]
+     end,
+     Url#url.path,
+     if
+         Url#url.querypart == [] ->
+             [];
+         true ->
+             [$?|Url#url.querypart]
+     end
+    ].
+
+
 format_url(Url) when record(Url, url) ->
     [
-     yaws:to_string(Url#url.scheme), "://",
+     if 
+         Url#url.scheme == undefined ->
+             "http://";
+         true ->
+             yaws:to_string(Url#url.scheme) ++ "://"
+     end,
      Url#url.host,
      if
          Url#url.port == undefined ->
@@ -1669,15 +1707,6 @@ binding_exists(Key) ->
         _ -> true
     end.
 
-%% split inputstring at first occurrence of Char
-split_at(String, Char) ->
-    split_at(String, Char, []).
-split_at([H|T], H, Ack) ->
-    {lists:reverse(Ack), T};
-split_at([H|T], Char, Ack) ->
-    split_at(T, Char, [H|Ack]);
-split_at([], _Char, Ack) ->
-    {[], lists:reverse(Ack)}.
 
 
 %% Return the parsed url that the client requested.
@@ -1686,7 +1715,7 @@ request_url(ARG) ->
     Headers = ARG#arg.headers,
     {abs_path, Path} = (ARG#arg.req)#http_request.path,
     DecPath = url_decode(Path),
-    {P,Q} = split_at(DecPath, $?),
+    {P,Q} = yaws:split_at(DecPath, $?),
     #url{scheme = case SC#sconf.ssl of
                       undefined ->
                           "http";

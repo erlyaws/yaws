@@ -1068,20 +1068,28 @@ fload(FD, server_redirect, _GC, _C, _Cs, Lno, eof, _RedirMap) ->
 fload(FD, server_redirect, GC, C, Cs, Lno, Chars, RedirMap) ->
     %%?Debug("Chars: ~s", [Chars]),
     Next = io:get_line(FD, ''),
-    case toks(Chars) of
+    Toks = toks(Chars),
+    case Toks of
         [] ->
             fload(FD, server_redirect, GC, C, Cs, Lno+1, Next, RedirMap);
-        [Path, '=', MethodHostPort] ->
-            Entry  = case MethodHostPort of
-                         "http://"++HostPort ->
-                             {Path, "http://", HostPort};
-                         "https://"++HostPort ->
-                             {Path, "https://", HostPort};
-                         HostPort ->
-                             {Path, HostPort}
-                     end,
-            fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
-                  [Entry|RedirMap]);
+        [Path, '=', URL] ->
+            io:format(" = ~p ~p~n", [URL, Toks]),
+            try yaws_api:parse_url(URL, sloppy) of
+                U when record(U, url) ->
+                     fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
+                           [{Path, U, append}|RedirMap])
+            catch _:_ ->
+                    {error, ?F("bad redir ~p at line ~w", [URL, Lno])}
+            end;
+        [Path, '=', '=', URL] ->
+            io:format(" == ~p~n", [URL]),
+            try yaws_api:parse_url(URL, sloppy) of
+                U when record(U, url) ->
+                     fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
+                           [{Path, U, noappend}|RedirMap])
+            catch _:_ ->
+                    {error, ?F("Bad redir ~p at line ~w", [URL, Lno])}
+            end;
         ['<', "/redirect", '>'] ->
             C2 = C#sconf{redirect_map = lists:reverse(RedirMap)},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);

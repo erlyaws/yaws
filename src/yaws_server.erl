@@ -1464,7 +1464,6 @@ handle_request(CliSock, ARG, N) ->
                             IsRev = is_revproxy(DecPath, SC#sconf.revproxy),
                             IsRedirect = is_redirect_map(DecPath, 
                                                          SC#sconf.redirect_map),
-
                             case {IsAuth, IsRev, IsRedirect} of
                                 {{appmod, Mod}, _, _} ->
                                     %%This isn't the standard 'appmod' branch 
@@ -1488,9 +1487,8 @@ handle_request(CliSock, ARG, N) ->
                                              appmoddata=undefined
                                             },
                                     handle_ut(CliSock, ARG2, UT, N);
-                                {_, _, {true, MethodHostPort}} ->
-                                    deliver_302_map(CliSock, Req, ARG1, 
-                                                    MethodHostPort);
+                                {_, _, {true, Redir}} ->
+                                    deliver_302_map(CliSock, Req, ARG1, Redir);
                                 {true, false, _} ->
                                     %%'main' branch so to speak. Most 
                                     %% requests pass through here.
@@ -1628,22 +1626,13 @@ is_revproxy(Path, [{Prefix, URL} | Tail]) ->
 
 is_redirect_map(_, []) ->
     false;
-is_redirect_map(Path, [E={Prefix, _}|Tail]) ->
-    case yaws:is_prefix(Prefix, Path) of
-        {true, _} ->
-            {true, E};
-        false ->
-            is_redirect_map(Path, Tail)
-    end;
-is_redirect_map(Path, [E={Prefix,_,_}|Tail]) ->
+is_redirect_map(Path, [E={Prefix, _URL, _AppendMode}|Tail]) ->
     case yaws:is_prefix(Prefix, Path) of
         {true, _} ->
             {true, E};
         false ->
             is_redirect_map(Path, Tail)
     end.
-
-
 
 
 %% Return values:
@@ -1914,31 +1903,26 @@ deliver_302(CliSock, _Req, Arg, Path) ->
     deliver_accumulated(CliSock),
     done_or_continue().
 
-
-deliver_302_map(CliSock, Req, Arg, MethodHostPort) ->
+                               
+deliver_302_map(CliSock, Req, Arg, 
+                {_Prefix,URL,Mode})  when is_record(URL,url) ->
     ?Debug("in redir 302 ",[]),
     H = get(outh),
-    SC=get(sc),
     DecPath = safe_decode_path(Req#http_request.path),
-    {Scheme, RedirHost} =
-        case MethodHostPort of
-            {_,Method,HostPort} ->
-                {Method, HostPort};
-            {_,HostPort} ->
-                {yaws:redirect_scheme(SC), HostPort}
-        end,
-    Loc = case string:tokens(DecPath, "?") of
-              [P] ->
-                  ["Location: ", Scheme, RedirHost, P, "\r\n"];
-              [P, Q] ->
-                  ["Location: ", Scheme, RedirHost, P, "?", Q, "\r\n"]
+    {P, Q} = yaws:split_at(DecPath, $?),
+    LocPath = yaws_api:format_partial_url(URL, get(sc)),
+    Loc = if
+              Mode == append, Q == [] ->
+                  ["Location: ", LocPath, P, "\r\n"];
+              Mode == append, Q /= [] ->
+                  ["Location: ", LocPath, P, "?", Q, "\r\n"];
+              Mode == noappend,Q == [] ->
+                  ["Location: ", LocPath, "\r\n"];
+              Mode == noappend,Q /= [] ->
+                  ["Location: ", LocPath, "?", Q, "\r\n"]
           end,
-
-
     Headers = Arg#arg.headers,
-
     {DoClose, _Chunked} = yaws:dcc(Req, Headers),
-
     new_redir_h(H#outh{
                   connection  = yaws:make_connection_close_header(DoClose),
                   doclose = DoClose,

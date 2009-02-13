@@ -75,8 +75,8 @@
 
 
 -record(url,
-        {scheme,
-         host, 
+        {scheme,          %% undefined means not set
+         host,            %% undefined means not set
          port,            %% undefined means not set
          path = [],
          querypart = []}).
