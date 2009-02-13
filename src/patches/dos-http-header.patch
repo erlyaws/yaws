@@ -1,0 +1,132 @@
+Index: yaws.erl
+===================================================================
+--- yaws.erl	(revision 1380)
++++ yaws.erl	(working copy)
+@@ -1793,7 +1803,7 @@
+         closed -> 
+             closed;
+         R -> 
+-            H = http_collect_headers(CliSock, R,  #headers{}, SSL),
++            H = http_collect_headers(CliSock, R,  #headers{}, SSL, 0),
+             {R, H}
+     end.
+ 
+@@ -1820,57 +1830,70 @@
+ 
+ 
+ 
+-http_collect_headers(CliSock, Req, H, SSL) ->
++http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
+     Recv = do_recv(CliSock, 0, SSL),
+     case Recv of
+         {ok, {http_header,  _Num, 'Host', _, Host}} ->
+-            http_collect_headers(CliSock, Req, H#headers{host = Host},SSL);
++            http_collect_headers(CliSock, Req, H#headers{host = Host},
++                                 SSL, Count+1);
+         {ok, {http_header, _Num, 'Connection', _, Conn}} ->
+             http_collect_headers(CliSock, Req, 
+-                                 H#headers{connection = Conn},SSL);
++                                 H#headers{connection = Conn},SSL, Count+1);
+         {ok, {http_header, _Num, 'Accept', _, Accept}} ->
+-            http_collect_headers(CliSock, Req, H#headers{accept = Accept},SSL);
++            http_collect_headers(CliSock, Req, H#headers{accept = Accept},
++                                 SSL, Count+1);
+         {ok, {http_header, _Num, 'If-Modified-Since', _, X}} ->
+             http_collect_headers(CliSock, Req,  
+-                                 H#headers{if_modified_since = X},SSL);
++                                 H#headers{if_modified_since = X},SSL, Count+1);
+         {ok, {http_header, _Num, 'If-Match', _, X}} ->
+-            http_collect_headers(CliSock, Req, H#headers{if_match = X},SSL);
++            http_collect_headers(CliSock, Req, H#headers{if_match = X},
++                                 SSL, Count+1);
+         {ok, {http_header, _Num, 'If-None-Match', _, X}} ->
+             http_collect_headers(CliSock, Req, 
+-                                 H#headers{if_none_match = X},SSL);
++                                 H#headers{if_none_match = X},SSL, Count+1);
+         {ok, {http_header, _Num, 'If-Range', _, X}} ->
+-            http_collect_headers(CliSock, Req, H#headers{if_range = X},SSL);
++            http_collect_headers(CliSock, Req, H#headers{if_range = X},
++                                 SSL, Count+1);
+         {ok, {http_header, _Num, 'If-Unmodified-Since', _, X}} ->
+             http_collect_headers(CliSock, Req,  
+-                                 H#headers{if_unmodified_since = X},SSL);
++                                 H#headers{if_unmodified_since = X},SSL, 
++                                 Count+1);
+         {ok, {http_header, _Num, 'Range', _, X}} ->
+-            http_collect_headers(CliSock, Req, H#headers{range = X},SSL);
++            http_collect_headers(CliSock, Req, H#headers{range = X},
++                                 SSL, Count+1);
+         {ok, {http_header, _Num, 'Referer',_, X}} ->
+-            http_collect_headers(CliSock, Req, H#headers{referer = X},SSL);
++            http_collect_headers(CliSock, Req, H#headers{referer = X},
++                                 SSL, Count+1);
+         {ok, {http_header, _Num, 'User-Agent', _, X}} ->
+-            http_collect_headers(CliSock, Req, H#headers{user_agent = X},SSL);
++            http_collect_headers(CliSock, Req, H#headers{user_agent = X},
++                                 SSL, Count+1);
+         {ok, {http_header, _Num, 'Accept-Ranges', _, X}} ->
+             http_collect_headers(CliSock, Req, 
+-                                 H#headers{accept_ranges = X},SSL);
++                                 H#headers{accept_ranges = X},SSL, Count+1);
+         {ok, {http_header, _Num, 'Cookie', _, X}} ->
+             http_collect_headers(CliSock, Req,  
+-                                 H#headers{cookie = [X|H#headers.cookie]},SSL);
++                                 H#headers{cookie = [X|H#headers.cookie]},
++                                 SSL, Count+1);
+         {ok, {http_header, _Num, 'Keep-Alive', _, X}} ->
+-            http_collect_headers(CliSock, Req, H#headers{keep_alive = X},SSL);
++            http_collect_headers(CliSock, Req, H#headers{keep_alive = X},
++                                 SSL, Count+1);
+         {ok, {http_header, _Num, 'Content-Length', _, X}} ->
+             http_collect_headers(CliSock, Req, 
+-                                 H#headers{content_length = X},SSL);
++                                 H#headers{content_length = X},SSL, 
++                                 Count+1);
+         {ok, {http_header, _Num, 'Content-Type', _, X}} ->
+             http_collect_headers(CliSock, Req, 
+-                                 H#headers{content_type = X},SSL);
++                                 H#headers{content_type = X},SSL, Count+1);
+         {ok, {http_header, _Num, 'Transfer-Encoding', _, X}} ->
+             http_collect_headers(CliSock, Req, 
+-                                 H#headers{transfer_encoding=X},SSL);
++                                 H#headers{transfer_encoding=X},SSL, Count+1);
+         {ok, {http_header, _Num, 'Location', _, X}} ->
+-            http_collect_headers(CliSock, Req, H#headers{location=X},SSL);
++            http_collect_headers(CliSock, Req, H#headers{location=X},
++                                 SSL, Count+1);
+         {ok, {http_header, _Num, 'Authorization', _, X}} ->
+             http_collect_headers(CliSock, Req,  
+-                                 H#headers{authorization = parse_auth(X)},SSL);
++                                 H#headers{authorization = parse_auth(X)},
++                                 SSL, Count+1);
+ 
+         {ok, http_eoh} ->
+             H;
+@@ -1879,19 +1902,23 @@
+         %% bad (typically test script) clients
+ 
+         {error, {http_error, "\r\n"}} ->
+-            http_collect_headers(CliSock, Req, H,SSL);
++            http_collect_headers(CliSock, Req, H,SSL, Count+1);
+         {error, {http_error, "\n"}} ->
+-            http_collect_headers(CliSock, Req, H,SSL);
++            http_collect_headers(CliSock, Req, H,SSL, Count+1);
+ 
+         %% auxilliary headers we don't have builtin support for
+         {ok, X} ->
+             ?Debug("OTHER header ~p~n", [X]),
+             http_collect_headers(CliSock, Req,  
+-                                 H#headers{other=[X|H#headers.other]},SSL);
++                                 H#headers{other=[X|H#headers.other]},
++                                 SSL, Count+1);
+         _Err ->
+             exit(normal)
+ 
+-    end.
++    end;
++http_collect_headers(_CliSock, _Req, _H, _SSL, _Count)  ->
++    error_logger:format("Max num headers - DOS attack closing\n", []),
++    exit(normal).
+ 
+ 
+ 
