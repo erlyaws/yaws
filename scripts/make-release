@@ -13,7 +13,7 @@ cd "$(dirname "$0")"
 echo packing release ${YAWS_VSN} 
 
 Y=`echo ${YAWS_VSN} | sed 's/\./-/g'`
-TAG="yaws-${Y}"
+TAG="yaws-${YAWS_VSN}"
 NAME_VERSION="yaws-${YAWS_VSN}"
 
 if [ ! -f ./make-release ]; then
@@ -24,22 +24,24 @@ fi
 cd ../..
 
 
+export GIT_DIR="$srctree/.git"
+if test -d "$GIT_DIR" && test -f "$GIT_DIR/config"; then :;
+else
+	echo "Fatal: Could not find GIT_DIR at $GIT_DIR."
+	exit 13
+fi
+
 
 # Add/update release tag
-#cvs tag -F yaws-${Y}
-svn delete https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/tags/$TAG -m ""  2> /dev/null
-svn copy https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/trunk/ https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/tags/$TAG -m "version ${Y}"
+git tag -f -a -m "version ${Y}" "$TAG"
 
 # Create release .tar.gz of sources
 # (including symlink yaws -> $NAME_VERSION)
 rm -rf tmp 2> /dev/null
 mkdir tmp
-cd tmp
-svn export https://erlyaws.svn.sourceforge.net/svnroot/erlyaws/trunk
-cd trunk
-mv yaws "$NAME_VERSION"
-ln -s "$NAME_VERSION" yaws
-tar cfz "$NAME_VERSION.tar.gz" yaws "$NAME_VERSION"
+git archive --format=tar --prefix="$NAME_VERSION/" "$TAG" | (cd tmp && tar xf -)
+ln -s $NAME_VERSION tmp/yaws
+(cd tmp && tar cfz - yaws "$NAME_VERSION") > "$NAME_VERSION.tar.gz"
 
 echo release resides in `pwd`/$NAME_VERSION.tar.gz
 echo release resides in `pwd`/win32/Yaws-${YAWS_VSN}-windows-installer.exe
