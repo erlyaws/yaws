@@ -310,7 +310,12 @@ connect_file(CtlFile) ->
                                   binary,
                                   {packet, 2}], 2000) of
                 {ok, Socket} ->
-                    {ok, Socket, Key};
+                    case inet:port(Socket) of
+                        Port ->
+                            {error, erefused};
+                        _ ->
+                            {ok, Socket, Key}
+                    end;
                 Err ->
                     Err
             end;
