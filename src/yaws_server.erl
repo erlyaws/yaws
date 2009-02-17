@@ -3379,7 +3379,7 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
                     case Mount of
                         [$/] ->
                             %%'root' appmod
-                            _PreSegments = [],
+                            PreSegments = [],
                             PostSegments = lists:sublist(RequestSegs,1,
                                                          length(RequestSegs)),
                             Prepath = "";

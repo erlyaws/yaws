@@ -173,6 +173,30 @@ that all .yaws files are syntactically correct
 .TP
 \fB\--version\fR
 output version information and exit
+
+.SH ENVIRONMENT VARIABLES
+.TP
+\fBHOME\fR
+Is used to determine where we write the temporary files. By default
+all tmp files end up in $HOME/.yaws. This includes the JIT files
+that are the result of processed .yaws files and also the so called 
+control file that is used by the daemon to write the port number
+to which it is listening for control commands such as "yaws --status"
+
+Thus HOME is the handle we use in the control commands to
+find the control file so that we know where to connect to.
+
+.TP
+\fBYAWSHOME\fR
+Can be used to override the HOME variable. This is useful when we 
+for example are running yaws under port binding programs such as
+authpriv.
+
+It's useful by distros that don't want Yaws to write any files
+ever in the HOME directory of root. 
+
+
+
 .SH AUTHOR
 Written by Claes Wikstrom
 .SH "SEE ALSO"

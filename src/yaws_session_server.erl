@@ -18,7 +18,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 -include("../include/yaws_api.hrl").
 
--export([new_session/1,new_session/2,new_session/3,
+-export([new_session/1,new_session/2,new_session/3,new_session/4,
          cookieval_to_opaque/1,
          print_sessions/0,
          replace_session/2,
@@ -68,8 +68,18 @@ new_session(Opaque, TTL, Cleanup) ->
                             {new_session, Opaque, TTL, Cleanup}, infinity)
     end.
 
-cookieval_to_opaque(CookieString) ->
-    case ets:lookup(?MODULE, CookieString) of
+new_session(Opaque, TTL, Cleanup, Cookie) ->
+    case TTL of
+        undefined ->
+            gen_server:call(?MODULE,
+                            {new_session, Opaque, ?TTL, Cleanup, Cookie}, infinity);
+        _ ->
+            gen_server:call(?MODULE,
+                            {new_session, Opaque, TTL, Cleanup, Cookie}, infinity)
+    end.
+
+cookieval_to_opaque(Cookie) ->
+    case ets:lookup(?MODULE, Cookie) of
         [Y] ->
             Y2 = Y#ysession{to = gnow() + Y#ysession.ttl},
             ets:insert(?MODULE, Y2),
@@ -167,19 +177,22 @@ seed() ->
 %%----------------------------------------------------------------------
 
 
-handle_call({new_session, Opaque, TTL, Cleanup}, _From, _State) ->
-    Now = gnow(),
+handle_call({new_session, Opaque, TTL, Cleanup}, From, State) ->
     N = random:uniform(16#ffffffffffffffff), %% 64 bits
+    Cookie = atom_to_list(node()) ++ [$-|integer_to_list(N)],
+    handle_call({new_session, Opaque, TTL, Cleanup, Cookie}, From, State);
+
+handle_call({new_session, Opaque, TTL, Cleanup, Cookie}, _From, _State) ->
+    Now = gnow(),
     TS = calendar:local_time(),
-    C = atom_to_list(node()) ++ [$-|integer_to_list(N)],
-    NS = #ysession{cookie = C,
+    NS = #ysession{cookie = Cookie,
                    starttime = TS,
                    opaque = Opaque,
                    to = Now + TTL,
                    ttl = TTL,
                    cleanup = Cleanup},
     ets:insert(?MODULE, NS),
-    {reply, C, undefined, to()};
+    {reply, Cookie, undefined, to()};
 
 handle_call(stop, _From, State) ->
     {stop, stopped, State}.
