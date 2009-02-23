@@ -421,12 +421,17 @@ do_listen(GC, SC) ->
         undefined when ?gc_use_fdsrv(GC) ->
             %% Use fdsrv kit from jungerl, requires fdsrv
             %% to be properly installed
+            %% This solves the problem of binding to priviliged ports. A
+            %% better solution is to use privbind or authbind. Also this
+            %% doesn't work for ssl.
+
             fdsrv:start(),
             case fdsrv:bind_socket(tcp, {SC#sconf.listen, SC#sconf.port}) of
                 {ok, Fd} ->
-                    {nossl, gen_tcp_listen(SC#sconf.port,[{fd, Fd}|listen_opts(SC)])};
+                    {nossl, undefined, 
+                     gen_tcp_listen(SC#sconf.port,[{fd, Fd}|listen_opts(SC)])};
                 Err ->
-                    {nossl, Err}
+                    {nossl, undefined, Err}
             end;
         undefined ->
             {nossl, undefined, gen_tcp_listen(SC#sconf.port, listen_opts(SC))};
