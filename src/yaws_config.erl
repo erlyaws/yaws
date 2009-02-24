@@ -284,15 +284,23 @@ yaws_dir() ->
             code:lib_dir(yaws)
     end.
 
+del_tail(Parts) ->
+     del_tail(Parts,[]).
+%% Initial ".." should be preserved
+del_tail([".." |Tail], Acc) ->
+    del_tail(Tail, [".."|Acc]);
+del_tail(Parts, Acc) ->
+    del_tail2(Parts, Acc).
 
-del_tail([_H, ".." |Tail]) ->
-    del_tail(Tail);
-del_tail(["..", _H |Tail]) ->
-    del_tail(Tail);
-del_tail([_X, _Y]) ->
-    [];
-del_tail([H|T]) ->
-    [H|del_tail(T)].
+%% Embedded ".." should be removed together with preceding dir
+del_tail2([_H, ".." |Tail], Acc) ->
+    del_tail2(Tail, Acc);
+del_tail2([".." |Tail], [_P|Acc]) ->
+    del_tail2(Tail, Acc);
+del_tail2([_X, _Y], Acc) ->
+    lists:reverse(Acc);
+del_tail2([H|T], Acc) ->
+    del_tail2(T, [H|Acc]).
 
 
 
