@@ -275,9 +275,14 @@ make_default_sconf() ->
     #sconf{docroot = filename:join([Y, "www"])}.
 
 yaws_dir() ->
-    P = filename:split(code:which(?MODULE)),
-    P1 = del_tail(P),
-    filename:join(P1).
+    case  yaws_generated:is_local_install() of
+        true ->
+            P = filename:split(code:which(?MODULE)),
+            P1 = del_tail(P),
+            filename:join(P1);
+        false ->
+            code:lib_dir(yaws)
+    end.
 
 
 del_tail([_H, ".." |Tail]) ->
