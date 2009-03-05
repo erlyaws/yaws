@@ -48,7 +48,7 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <div class="%%session%%"> <a href="/session.yaws">Cookie sessions</a>   </div>
 <div class="%%appmods%%"> <a href="/appmods.yaws">Appmods</a> </div>
 <div class="%%stream%%"> <a href="/stream.yaws">Streaming data</a> </div>
-<a href="/shopingcart/index.yaws">Tiny shopping cart</a>
+<a href="/shoppingcart/index.yaws">Tiny shopping cart</a>
 <div class="%%embed%%"> <a href="/embed.yaws">Embedding Yaws</a></div>
 <div class="%%json_intro%%"> <a href="/json_intro.yaws">AJAX/Json RPC</a></div>
 <div class="%%haxe_intro%%"> <a href="/haxe_intro.yaws">haXe remoting</a></div>

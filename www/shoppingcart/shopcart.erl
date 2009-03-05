@@ -1,7 +1,7 @@
 
 %% a small shoppingcart example which tries to show
 %% a variety of tricks and tacticts to display a 
-%% shopingcart style page with server side state.
+%% shoppingcart style page with server side state.
 
 
 -module(shopcart).

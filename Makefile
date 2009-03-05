@@ -1,5 +1,5 @@
 
-SUBDIRS	=	c_src src man www/shopingcart www/code doc scripts
+SUBDIRS	=	c_src src man www/shoppingcart www/code doc scripts
 include ./include.mk
 include ./vsn.mk
 
