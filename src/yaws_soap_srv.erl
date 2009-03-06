@@ -154,9 +154,24 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%--------------------------------------------------------------------
 
-request(State, {M,F} = Id, Payload, SessionValue, Action) ->
+request(State, {M,F} = Id, {Req, Attachments}, SessionValue, Action) ->
     {ok, Model} = get_model(State, Id),
-    Umsg = (catch erlsom_lib:toUnicode(Payload)),
+    %%error_logger:info_report([?MODULE, {payload, Req}]),
+    case catch yaws_soap_lib:parseMessage(Req, Model) of
+        {ok, Header, Body} -> 
+            %% call function
+            result(Model, catch apply(M, F, [Header, Body, 
+                                             Action, SessionValue,
+					     Attachments]));
+        {error, Error} ->
+            cli_error(Error);
+        OtherError -> 
+            srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))
+    end;
+request(State, {M,F} = Id, Req, SessionValue, Action) ->
+    %%error_logger:info_report([?MODULE, {payload, Req}]),
+    {ok, Model} = get_model(State, Id),
+    Umsg = (catch erlsom_lib:toUnicode(Req)),
     case catch yaws_soap_lib:parseMessage(Umsg, Model) of
         {ok, Header, Body} -> 
             %% call function
@@ -170,9 +185,11 @@ request(State, {M,F} = Id, Payload, SessionValue, Action) ->
 
 %%% Analyse the result and produce some output
 result(Model, {ok, ResHeader, ResBody, ResCode, SessVal}) ->
-    return(Model, ResHeader, ResBody, ResCode, SessVal);
+    return(Model, ResHeader, ResBody, ResCode, SessVal, undefined);
 result(Model, {ok, ResHeader, ResBody}) ->
-    return(Model, ResHeader, ResBody, ?OK_CODE, undefined);
+    return(Model, ResHeader, ResBody, ?OK_CODE, undefined, undefined);
+result(Model, {ok, ResHeader, ResBody, Files}) ->
+    return(Model, ResHeader, ResBody, ?OK_CODE, undefined, Files);
 result(_Model, {error, client, ClientMssg}) ->
     cli_error(ClientMssg);
 result(_Model, false) ->   % soap notify !
@@ -180,11 +197,11 @@ result(_Model, false) ->   % soap notify !
 result(_Model, Error) ->
     srv_error(io_lib:format("Error processing message: ~p", [Error])).
 
-return(#wsdl{model = Model}, ResHeader, ResBody, ResCode, SessVal) ->
-    return(Model, ResHeader, ResBody, ResCode, SessVal);
-return(Model, ResHeader, ResBody, ResCode, SessVal) when not is_list(ResBody) ->
-    return(Model, ResHeader, [ResBody], ResCode, SessVal);
-return(Model, ResHeader, ResBody, ResCode, SessVal) ->
+return(#wsdl{model = Model}, ResHeader, ResBody, ResCode, SessVal, Files) ->
+    return(Model, ResHeader, ResBody, ResCode, SessVal, Files);
+return(Model, ResHeader, ResBody, ResCode, SessVal, Files) when not is_list(ResBody) ->
+    return(Model, ResHeader, [ResBody], ResCode, SessVal, Files);
+return(Model, ResHeader, ResBody, ResCode, SessVal, Files) ->
     %% add envelope
     Header2 = case ResHeader of
                   undefined -> undefined;
@@ -194,7 +211,13 @@ return(Model, ResHeader, ResBody, ResCode, SessVal) ->
                                 'Header' = Header2},
     case catch erlsom:write(Envelope, Model) of
         {ok, XmlDoc} ->
-            {ok, XmlDoc, ResCode, SessVal};
+	    case Files of
+		undefined ->
+		    {ok, XmlDoc, ResCode, SessVal};
+		_ ->
+		    DIME = yaws_dime:encode(XmlDoc, Files),
+		    {ok, DIME, ResCode, SessVal}
+	    end;
         {error, WriteError} ->
             srv_error(f("Error writing XML: ~p", [WriteError]));
         OtherWriteError ->

@@ -13,6 +13,7 @@
 	 initModelFile/1,
 	 config_file_xsd/0,
 	 call/3, call/4, call/6,
+	 call_attach/4, call_attach/5, call_attach/7,
 	 write_hrl/2, write_hrl/3,
 	 findHeader/2,
 	 parseMessage/2,
@@ -32,6 +33,8 @@
 -include("../include/soap.hrl").
 -include("../include/erlsom.hrl").  % FIXME a better solution ?
 
+
+-define(HTTP_REQ_TIMEOUT, 20000).
 
 %%-define(dbg(X,Y), 
 %%        error_logger:info_msg("*dbg ~p(~p): " X,
@@ -134,9 +137,48 @@ get_operation([], _Op)                               -> {error, "operation not f
 
 
 %%% --------------------------------------------------------------------
-%%% Make a SOAP request
+%%% Make a SOAP request (no attachments)
 %%% --------------------------------------------------------------------
-call(#wsdl{operations = Operations, model = Model}, Operation, Port, Service, Headers, Message) ->
+call(Wsdl, Operation, Port, Service, Headers, Message) ->
+	call_attach(Wsdl, Operation, Port, Service, Headers, Message, []).
+
+
+%%% --------------------------------------------------------------------
+%%% For Quick deployment (with attachments)
+%%% --------------------------------------------------------------------
+call_attach(WsdlURL, Operation, ListOfData, Attachments) when list(WsdlURL) ->
+    Wsdl = initModel(WsdlURL, ?DefaultPrefix),
+    call_attach(Wsdl, Operation, ListOfData, Attachments);
+call_attach(Wsdl, Operation, ListOfData, Attachments) when record(Wsdl, wsdl) ->
+    case get_operation(Wsdl#wsdl.operations, Operation) of
+	{ok, Op} ->
+	    Msg = mk_msg(?DefaultPrefix, Operation, ListOfData),
+	    call_attach(Wsdl, Operation, Op#operation.port, Op#operation.service, [], Msg, Attachments);
+	Else ->
+	    Else
+    end.
+
+%%% --------------------------------------------------------------------
+%%% Takes the actual records for the Header and Body message 
+%%% (with attachments)
+%%% --------------------------------------------------------------------
+call_attach(WsdlURL, Operation, Header, Msg, Attachments) when list(WsdlURL) ->
+    Wsdl = initModel(WsdlURL, ?DefaultPrefix),
+    call_attach(Wsdl, Operation, Header, Msg, Attachments);
+call_attach(Wsdl, Operation, Header, Msg, Attachments) when record(Wsdl, wsdl) ->
+    case get_operation(Wsdl#wsdl.operations, Operation) of
+	{ok, Op} ->
+	    call_attach(Wsdl, Operation, Op#operation.port, Op#operation.service, 
+		 Header, Msg, Attachments);
+	Else ->
+	    Else
+    end.
+    
+    
+%%% --------------------------------------------------------------------
+%%% Make a SOAP request (with attachments)
+%%% --------------------------------------------------------------------
+call_attach(#wsdl{operations = Operations, model = Model}, Operation, Port, Service, Headers, Message, Attachments) ->
     %% find the operation
     case findOperation(Operation, Port, Service, Operations) of
 	#operation{address = URL, action = SoapAction} ->
@@ -145,12 +187,13 @@ call(#wsdl{operations = Operations, model = Model}, Operation, Port, Service, He
 	    %% Encode the message
 	    case erlsom:write(Envelope, Model) of
 		{ok, XmlMessage} ->
-		    Request = make_request_body(XmlMessage),
+				
+		    {ContentType, Request} = make_request_body(XmlMessage, Attachments),
 		    HttpHeaders = [],
 		    HttpClientOptions = [],
                     ?dbg("+++ Request = ~p~n", [Request]),
 		    HttpRes = http_request(URL, SoapAction, Request, 
-                                           HttpClientOptions, HttpHeaders),
+                                           HttpClientOptions, HttpHeaders, ContentType),
                     ?dbg("+++ HttpRes = ~p~n", [HttpRes]),
 		    case HttpRes of
 			{ok, _Code, _ReturnHeaders, Body} ->
@@ -334,25 +377,25 @@ get_url_file(Fname) ->
 %%% --------------------------------------------------------------------
 %%% Make a HTTP Request
 %%% --------------------------------------------------------------------
-http_request(URL, SoapAction, Request, Options, Headers) ->
+http_request(URL, SoapAction, Request, Options, Headers, ContentType) ->
     case code:ensure_loaded(ibrowse) of
 	{module, ibrowse} ->
 	    %% If ibrowse exist in the path then let's use it...
-	    ibrowse_request(URL, SoapAction, Request, Options, Headers);
+	    ibrowse_request(URL, SoapAction, Request, Options, Headers, ContentType);
 	_ ->
 	    %% ...otherwise, let's use the OTP http client.
-	    inets_request(URL, SoapAction, Request, Options, Headers)
+	    inets_request(URL, SoapAction, Request, Options, Headers, ContentType)
     end.
 
-inets_request(URL, SoapAction, Request, Options, Headers) ->
+inets_request(URL, SoapAction, Request, Options, Headers, ContentType) ->
     NewHeaders = [{"Host", "localhost:8800"}, {"SOAPAction", SoapAction}|Headers],
     NewOptions = [{cookies, enabled}|Options],
     http:set_options(NewOptions),
     case http:request(post,
                       {URL,NewHeaders,
-                       "text/xml; charset=utf-8",
+                       ContentType,
                        Request},
-                      [{timeout,20000}],
+                      [{timeout,?HTTP_REQ_TIMEOUT}],
                       [{sync, true}, {full_result, true}, {body_format, string}]) of
         {ok,{{_HTTP,200,_OK},ResponseHeaders,ResponseBody}} ->
             {ok, 200, ResponseHeaders, ResponseBody};
@@ -364,10 +407,10 @@ inets_request(URL, SoapAction, Request, Options, Headers) ->
             Other
     end.
 
-ibrowse_request(URL, SoapAction, Request, Options, Headers) ->
+ibrowse_request(URL, SoapAction, Request, Options, Headers, ContentType) ->
     case start_ibrowse() of
         ok ->
-            NewHeaders = [{"Content-Type", "text/xml; charset=utf-8"}, {"SOAPAction", SoapAction} | Headers],
+            NewHeaders = [{"Content-Type", ContentType}, {"SOAPAction", SoapAction} | Headers],
             NewOptions = Options,
                          %%[{content_type, "text/xml; encoding=utf-8"} | Options],
             case ibrowse:send_req(URL, NewHeaders, post, Request, NewOptions) of
@@ -391,8 +434,10 @@ start_ibrowse() ->
 rmsp(Str) -> string:strip(Str, left).
 
 
-make_request_body(Content) ->
-        "<?xml version=\"1.0\" encoding=\"utf-8\"?>"++Content.
+make_request_body(Content, []) ->
+        {"text/xml; charset=utf-8", "<?xml version=\"1.0\" encoding=\"utf-8\"?>"++Content};
+make_request_body(Content, AttachedFiles) ->
+		{"application/dime", yaws_dime:encode("<?xml version=\"1.0\" encoding=\"utf-8\"?>"++Content, AttachedFiles)}.
 
 
 makeFault(FaultCode, FaultString) ->
