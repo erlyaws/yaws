@@ -53,7 +53,7 @@
 -record(gs, {gconf,         
              group,         %% list of #sconf{} s
              ssl,           %% ssl | nossl
-             certinfo,
+             certinfo,      %% undefined | #certinfo{}
              l,             %% listen socket
              mnum = 0,      
              sessions = 0,  %% number of HTTP sessions
@@ -597,7 +597,8 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
                     exit(normal);
                 _ when Reason == failaccept ->
-                     error_logger:format("Accept proc died, terminate gserv",[]),
+                     error_logger:format(
+                       "Accept proc died, terminate gserv",[]),
                     {links, Ls} = process_info(self(), links),
                     foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
                     exit(noserver);
@@ -1085,7 +1086,8 @@ fix_abs_uri(Req, H) ->
 %% case-insensitive compare servername and ignore any optional
 %% :Port postfix
 comp_sname(Hname, Sname) ->
-    hd(string:tokens(yaws:to_lower(Hname), ":")) =:= hd(string:tokens(yaws:to_lower(Sname), ":")).
+    hd(string:tokens(yaws:to_lower(Hname), ":")) =:= 
+        hd(string:tokens(yaws:to_lower(Sname), ":")).
 
 
 pick_sconf(GC, H, [SC|_Group], ssl) ->
@@ -1261,7 +1263,8 @@ not_implemented(CliSock, Req, Head) ->
     case Req#http_request.path of
         '*' ->
             % Handle "*" as per RFC2616 section 5.1.2
-            deliver_options(CliSock, Req, ['GET', 'HEAD', 'OPTIONS', 'PUT', 'POST', 'DELETE']);
+            deliver_options(CliSock, Req, ['GET', 'HEAD', 'OPTIONS', 
+                                           'PUT', 'POST', 'DELETE']);
         _ ->
             no_body_method(CliSock, Req, Head)
     end.
@@ -1412,7 +1415,7 @@ handle_request(CliSock, ARG, N) ->
 
                     SC=get(sc),
 
-                    %%by this stage, ARG#arg.docroot_mount is either "/" , 
+                    %% by this stage, ARG#arg.docroot_mount is either "/" , 
                     %% or has been set by a rewrite module.
                     %%!todo - retrieve 'vdir' definitions from main part of 
                     %% config file rather than
@@ -1518,19 +1521,23 @@ handle_request(CliSock, ARG, N) ->
                                     case UT#urltype.type of
                                         appmod ->
                                             {_Mod, PathInfo} = UT#urltype.data,
-                                            ARG3 = ARG2#arg{
-                                                     appmoddata = 
-                                                     case PathInfo of
-                                                         undefined ->
-                                                             undefined;
-                                                         "/" ->
-                                                             "/";
-                                                         _ ->
-                                                             lists:dropwhile(
-                                                               fun(C) -> C == $/ end, PathInfo)
-                                                     end,
-                                                     appmod_prepath = UT#urltype.dir
-                                                    }; 
+                                            ARG3 = 
+                                                ARG2#arg{
+                                                  appmoddata = 
+                                                  case PathInfo of
+                                                      undefined ->
+                                                          undefined;
+                                                      "/" ->
+                                                          "/";
+                                                      _ ->
+                                                          lists:dropwhile(
+                                                            fun(C) -> C == $/ 
+                                                                          end, 
+                                                            PathInfo)
+                                                  end,
+                                                  appmod_prepath = 
+                                                  UT#urltype.dir
+                                                 }; 
                                         _ ->
                                             ARG3 = ARG2
                                     end,
@@ -1643,7 +1650,8 @@ is_redirect_map(Path, [E={Prefix, _URL, _AppendMode}|Tail]) ->
 %% Return values:
 %% continue, done, {page, Page}
 
-handle_ut(CliSock, ARG, UT, N) ->
+
+handle_ut(CliSock, ARG, UT = #urltype{type = error}, N) ->
     Req = ARG#arg.req,
     H = ARG#arg.headers,
     SC=get(sc),GC=get(gc),
@@ -1670,194 +1678,259 @@ handle_ut(CliSock, ARG, UT, N) ->
             %% it makes less information available to the subsequent calls - 
             %% this is especially an issue for a nested ssi.
             ARG2 = ARG#arg{docroot = SC2#sconf.docroot},
-            handle_request(CliSock, ARG2, N);
-        directory when ?sc_has_dir_listings(SC) ->
+            handle_request(CliSock, ARG2, N)
+    end;
+
+
+handle_ut(CliSock, ARG, UT = #urltype{type = directory}, N) ->
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
+    SC=get(sc),
+
+    if (?sc_has_dir_listings(SC)) ->
             Directory_allowed = ['GET', 'HEAD', 'OPTIONS'],
             if
                 Req#http_request.method == 'GET';
                 Req#http_request.method == 'HEAD' ->
                     yaws:outh_set_dyn_headers(Req, H, UT),
                     P = UT#urltype.fullpath,  
-                    yaws_ls:list_directory(ARG, CliSock, UT#urltype.data, P, Req,
+                    yaws_ls:list_directory(ARG, CliSock, UT#urltype.data, 
+                                           P, Req,
                                            ?sc_has_dir_all_zip(SC));
                 Req#http_request.method == 'OPTIONS' ->
                     deliver_options(CliSock, Req, Directory_allowed);
                 true ->
                     deliver_405(CliSock, Req, Directory_allowed)
             end;
-        directory ->
-            handle_ut(CliSock, ARG, #urltype{type = error}, N);
-        regular ->
-            Regular_allowed = ['GET', 'HEAD', 'OPTIONS'],
-            if
-                Req#http_request.method == 'GET';
-                Req#http_request.method == 'HEAD' ->
-                    ETag = yaws:make_etag(UT#urltype.finfo),
-                    Range = case H#headers.if_range of
-                                %% [$"|_] = Range_etag when Range_etag /= ETag -> 
-                                [34|_] = Range_etag when Range_etag /= ETag -> 
-                                    all; 
-                                _ ->
-                                    requested_range(H#headers.range, 
-                                                    (UT#urltype.finfo)#file_info.size)
-                            end,
-                    case Range of
-                        error -> deliver_416(CliSock, Req, 
-                                             (UT#urltype.finfo)#file_info.size);
+       true ->
+            handle_ut(CliSock, ARG, #urltype{type = error}, N)
+    end;
+
+handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
+
+    Regular_allowed = ['GET', 'HEAD', 'OPTIONS'],
+    if
+        Req#http_request.method == 'GET';
+        Req#http_request.method == 'HEAD' ->
+            ETag = yaws:make_etag(UT#urltype.finfo),
+            Range = case H#headers.if_range of
+                        [34|_] = Range_etag when Range_etag /= ETag -> 
+                            all; 
                         _ ->
-                            Do_deliver = case Req#http_request.method of
-                                             'GET' -> fun() -> deliver_file(CliSock, Req, UT, Range) end;
-                                             'HEAD' -> fun() -> deliver_accumulated(CliSock), done end
-                                         end,
-                            case H#headers.if_none_match of
+                            requested_range(
+                              H#headers.range, 
+                              (UT#urltype.finfo)#file_info.size)
+                    end,
+            case Range of
+                error -> deliver_416(
+                           CliSock, Req, 
+                           (UT#urltype.finfo)#file_info.size);
+                _ ->
+                    Do_deliver = 
+                        case Req#http_request.method of
+                            'GET' -> fun() -> deliver_file(CliSock, Req, 
+                                                           UT, Range) end;
+                            'HEAD' -> fun() -> deliver_accumulated(CliSock), 
+                                               done end
+                        end,
+                    case H#headers.if_none_match of
+                        undefined ->
+                            case H#headers.if_match of
                                 undefined ->
-                                    case H#headers.if_match of
+                                    case H#headers.if_modified_since of
                                         undefined ->
-                                            case H#headers.if_modified_since of
-                                                undefined ->
-                                                    yaws:outh_set_static_headers
-                                                      (Req, UT, H, Range),
-                                                    Do_deliver();
-                                                UTC_string ->
-                                                    case yaws:is_modified_p(
-                                                           UT#urltype.finfo, UTC_string) of
-                                                        true ->
-                                                            yaws:outh_set_static_headers
-                                                              (Req, UT, H, Range),
-                                                            Do_deliver();
-                                                        false ->
-                                                            yaws:outh_set_304_headers(
-                                                              Req, UT, H),
-                                                            deliver_accumulated(CliSock),
-                                                            done_or_continue()
-                                                    end
-                                            end;
-                                        Line -> 
-                                            case member(ETag,
-                                                        yaws:split_sep(Line, $,)) of
-                                                true -> 
+                                            yaws:outh_set_static_headers
+                                              (Req, UT, H, Range),
+                                            Do_deliver();
+                                        UTC_string ->
+                                            case yaws:is_modified_p(
+                                                   UT#urltype.finfo, 
+                                                   UTC_string) of
+                                                true ->
                                                     yaws:outh_set_static_headers
                                                       (Req, UT, H, Range),
                                                     Do_deliver();
                                                 false ->
-                                                    deliver_xxx(CliSock, Req, 412) 
+                                                    yaws:outh_set_304_headers(
+                                                      Req, UT, H),
+                                                    deliver_accumulated(
+                                                      CliSock),
+                                                    done_or_continue()
                                             end
                                     end;
-                                Line ->
-                                    case member(ETag,yaws:split_sep(Line, $,)) of
-                                        true ->
-                                            yaws:outh_set_304_headers(Req, UT, H),
-                                            deliver_accumulated(CliSock),
-                                            done_or_continue();
+                                Line -> 
+                                    case member(ETag,
+                                                yaws:split_sep(Line, $,)) of
+                                        true -> 
+                                            yaws:outh_set_static_headers(
+                                              Req, UT, H, Range),
+                                            Do_deliver();
                                         false ->
-                                            yaws:outh_set_static_headers
-                                              (Req, UT, H, Range),
-                                            Do_deliver()
+                                            deliver_xxx(CliSock, Req, 412) 
                                     end
+                            end;
+                        Line ->
+                            case member(ETag,yaws:split_sep(Line, $,)) of
+                                true ->
+                                    yaws:outh_set_304_headers(Req, UT, H),
+                                    deliver_accumulated(CliSock),
+                                    done_or_continue();
+                                false ->
+                                    yaws:outh_set_static_headers
+                                      (Req, UT, H, Range),
+                                    Do_deliver()
                             end
-                    end;
-                Req#http_request.method == 'OPTIONS' ->
-                    deliver_options(CliSock, Req, Regular_allowed);
-                true ->
-                    deliver_405(CliSock, Req, Regular_allowed)
+                    end
             end;
-        yaws ->
-            ?Debug("UT = ~s~n", [?format_record(UT, urltype)]),
-            Yaws_allowed = ['GET', 'POST', 'HEAD', 'OPTIONS'],
-            if
-                Req#http_request.method == 'GET';
-                Req#http_request.method == 'POST';
-                Req#http_request.method == 'HEAD' ->
-                    yaws:outh_set_dyn_headers(Req, H, UT),
-                    do_yaws(CliSock, ARG, UT, N);
-                Req#http_request.method == 'OPTIONS' ->
-                    deliver_options(CliSock, Req, Yaws_allowed);
-                true ->
-                    deliver_405(CliSock, Req, Yaws_allowed)
-            end;
-        redir ->
+        Req#http_request.method == 'OPTIONS' ->
+            deliver_options(CliSock, Req, Regular_allowed);
+        true ->
+            deliver_405(CliSock, Req, Regular_allowed)
+    end;
+
+handle_ut(CliSock, ARG, UT = #urltype{type = yaws}, N) ->
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
+
+    ?Debug("UT = ~s~n", [?format_record(UT, urltype)]),
+    Yaws_allowed = ['GET', 'POST', 'HEAD', 'OPTIONS'],
+    if
+        Req#http_request.method == 'GET';
+        Req#http_request.method == 'POST';
+        Req#http_request.method == 'HEAD' ->
             yaws:outh_set_dyn_headers(Req, H, UT),
-            deliver_302(CliSock, Req, ARG, UT#urltype.path);
-        appmod ->
-            yaws:outh_set_dyn_headers(Req, H, UT),
-            {Mod,_} = UT#urltype.data,
-            deliver_dyn_part(CliSock, 
-                             0, "appmod",
-                             N,
-                             ARG,UT,
-                             fun(A)->Mod:out(A) end,
-                             fun(A)->finish_up_dyn_file(A, CliSock)
-                             end
-                            );
-        cgi ->
-            yaws:outh_set_dyn_headers(Req, H, UT),
-            deliver_dyn_part(CliSock, 
-                             0, "cgi",
-                             N,
-                             ARG,UT,
-                             fun(A)->yaws_cgi:call_cgi(
-                                       A,flatten(UT#urltype.fullpath))
-                             end,
-                             fun(A)->finish_up_dyn_file(A, CliSock)
-                             end
-                            );
-        php ->
-            yaws:outh_set_dyn_headers(Req, H, UT),
-            deliver_dyn_part(CliSock, 
-                             0, "php",
-                             N,
-                             ARG,UT,
-                             fun(A)->yaws_cgi:call_cgi(
-                                       A,
-                                       GC#gconf.phpexe,
-                                       flatten(UT#urltype.fullpath))
-                             end,
-                             fun(A)->finish_up_dyn_file(A, CliSock)
-                             end
-                            );
-        dav ->
-            Next =
-                if
-                    Req#http_request.method == 'PUT' ->
-                        fun(A) -> yaws_dav:put(SC, A) end;
-                    Req#http_request.method == 'DELETE' ->
-                        fun(A) -> yaws_dav:delete(A) end;
-                    Req#http_request.method == "PROPFIND" ->
-                        fun(A)-> yaws_dav:propfind(A) end;
-                    Req#http_request.method == "MOVE" ->
-                        fun(A)-> yaws_dav:move(A) end;
-                    Req#http_request.method == "COPY" ->
-                        fun(A)-> yaws_dav:copy(A) end;
-                    Req#http_request.method == "MKCOL" ->
-                        fun(A)-> yaws_dav:mkcol(A) end;
-                    Req#http_request.method == 'GET';
-                    Req#http_request.method == 'HEAD' ->
-                        case prim_file:read_file_info(UT#urltype.fullpath) of
-                            {ok, FI} when FI#file_info.type == regular ->
-                                {regular, FI};
-                            _ ->
-                                error
-                        end;
-                    true ->
+            do_yaws(CliSock, ARG, UT, N);
+        Req#http_request.method == 'OPTIONS' ->
+            deliver_options(CliSock, Req, Yaws_allowed);
+        true ->
+            deliver_405(CliSock, Req, Yaws_allowed)
+    end;
+
+
+handle_ut(CliSock, ARG, UT = #urltype{type = redir}, _N) ->
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
+    yaws:outh_set_dyn_headers(Req, H, UT),
+    deliver_302(CliSock, Req, ARG, UT#urltype.path);
+
+handle_ut(CliSock, ARG, UT = #urltype{type = appmod}, N) ->
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
+    yaws:outh_set_dyn_headers(Req, H, UT),
+    {Mod,_} = UT#urltype.data,
+    deliver_dyn_part(CliSock, 
+                     0, "appmod",
+                     N,
+                     ARG,UT,
+                     fun(A)->Mod:out(A) end,
+                     fun(A)->finish_up_dyn_file(A, CliSock)
+                     end
+                    );
+
+
+handle_ut(CliSock, ARG, UT = #urltype{type = cgi}, N) ->
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
+    yaws:outh_set_dyn_headers(Req, H, UT),
+    deliver_dyn_part(CliSock, 
+                     0, "cgi",
+                     N,
+                     ARG,UT,
+                     fun(A)->yaws_cgi:call_cgi(
+                               A,flatten(UT#urltype.fullpath))
+                     end,
+                     fun(A)->finish_up_dyn_file(A, CliSock)
+                     end
+                    );
+
+handle_ut(CliSock, ARG, UT = #urltype{type = dav}, N) ->
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
+    SC=get(sc),
+    Next =
+        if
+            Req#http_request.method == 'PUT' ->
+                fun(A) -> yaws_dav:put(SC, A) end;
+            Req#http_request.method == 'DELETE' ->
+                fun(A) -> yaws_dav:delete(A) end;
+            Req#http_request.method == "PROPFIND" ->
+                fun(A)-> yaws_dav:propfind(A) end;
+            Req#http_request.method == "MOVE" ->
+                fun(A)-> yaws_dav:move(A) end;
+            Req#http_request.method == "COPY" ->
+                fun(A)-> yaws_dav:copy(A) end;
+            Req#http_request.method == "MKCOL" ->
+                fun(A)-> yaws_dav:mkcol(A) end;
+            Req#http_request.method == 'GET';
+            Req#http_request.method == 'HEAD' ->
+                case prim_file:read_file_info(UT#urltype.fullpath) of
+                    {ok, FI} when FI#file_info.type == regular ->
+                        {regular, FI};
+                    _ ->
                         error
-                end,
-            case Next of
-                error ->
-                    handle_ut(CliSock, ARG, #urltype{type = error}, N);
-                {regular, Finfo} ->
-                    handle_ut(CliSock, ARG, UT#urltype{type = regular,
-                                                       finfo = Finfo}, N);
-                _ ->
-                    yaws:outh_set_dyn_headers(Req, H, UT),
-                    deliver_dyn_part(CliSock, 
-                                     0, "dav",
-                                     N,
-                                     ARG,UT,
-                                     Next,
-                                     fun(A)->finish_up_dyn_file(A, CliSock)  end
-                                    )
-            end
+                end;
+            true ->
+                error
+        end,
+    case Next of
+        error ->
+            handle_ut(CliSock, ARG, #urltype{type = error}, N);
+        {regular, Finfo} ->
+            handle_ut(CliSock, ARG, UT#urltype{type = regular,
+                                               finfo = Finfo}, N);
+        _ ->
+            yaws:outh_set_dyn_headers(Req, H, UT),
+            deliver_dyn_part(CliSock, 
+                             0, "dav",
+                             N,
+                             ARG,UT,
+                             Next,
+                             fun(A)->finish_up_dyn_file(A, CliSock)  end
+                            )
+    end;
+
+handle_ut(CliSock, ARG, UT = #urltype{type = php}, N) ->
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
+    GC=get(gc),
+    yaws:outh_set_dyn_headers(Req, H, UT),
+    yaws:outh_set_dyn_headers(Req, H, UT),
+    deliver_dyn_part(CliSock, 
+                     0, "php",
+                     N,
+                     ARG,UT,
+                     fun(A)->yaws_cgi:call_cgi(
+                               A,
+                               GC#gconf.phpexe,
+                               flatten(UT#urltype.fullpath))
+                     end,
+                     fun(A)->finish_up_dyn_file(A, CliSock)
+                     end
+                    );
+
+handle_ut(CliSock, ARG, UT = #urltype{type = {extmod, {Ext,Mod}}}, N) ->
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
+
+    ?Debug("UT = ~s~n", [?format_record(UT, urltype)]),
+    Allowed = ['GET', 'POST', 'HEAD', 'OPTIONS'],
+    if
+        Req#http_request.method == 'GET';
+        Req#http_request.method == 'POST';
+        Req#http_request.method == 'HEAD' ->
+            yaws:outh_set_dyn_headers(Req, H, UT),
+            do_extmod(CliSock, ARG, UT, N);
+        Req#http_request.method == 'OPTIONS' ->
+            deliver_options(CliSock, Req, Allowed);
+        true ->
+            deliver_405(CliSock, Req, Allowed)
     end.
+
+do_extmod(CliSock, ARG, UT, N) ->
+    done.
+
 
 done_or_continue() ->
     case yaws:outh_get_doclose() of
@@ -1866,8 +1939,6 @@ done_or_continue() ->
         keep_alive -> continue;
 	undefined -> continue
     end.
-
-
 
 %% we may have content, 
 
@@ -2031,7 +2102,6 @@ deliver_416(CliSock, _Req, Tot) ->
 
 deliver_501(CliSock, Req) ->
     deliver_xxx(CliSock, Req, 501). % Not implemented
-
 
 
 
@@ -3384,7 +3454,6 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
                     case Mount of
                         [$/] ->
                             %%'root' appmod
-                            PreSegments = [],
                             PostSegments = lists:sublist(RequestSegs,1,
                                                          length(RequestSegs)),
                             Prepath = "";
@@ -3646,63 +3715,6 @@ maybe_return_dir(DR, GetPath,VirtualDir) ->
 
 
 
-%%- maybe_return_path_info/5
-%% <historical-comments>
-%% sick apache style urls http://www.x.com/a/foo.yaws/c/d/
-%% where /c/d/ ends up in pathinfo
-%%
-%% neither is this entirely correct since the /c/d/ files may exists
-%% and in that case we'll deliver em :-(
-%%
-%% Comment from Carsten:
-%%
-%% Theses urls may be a matter of taste, but since they are mentioned in
-%% cgi doc it seemed good to implement them.  Besides, I find them handy.
-%%
-%% If the current behaviour is correct is hard to tell without first
-%% writing a specification :-) To treat foo.yaws as a directory if it
-%% is one, was intentional.  I find it nice to be able to change the
-%% implementation from a script to a real directory and did not want to
-%% break anyones site, just because they might have a directory called
-%% `examples.yaws'.  There is one inconsistency though:
-%%
-%%   http://www.x.com/a/foo.yaws/b/bar.yaws/c/d
-%%
-%% will not work, if a/foo.yaws is a directory and
-%% /a/foo.yaws/b/bar.yaws a script.  Possibly, this used to be
-%% different and may again be changed in the future.
-%%
-%% </historical-comments>
-%%JMN 2007-02 - the 'future' mentioned above is here.
-%% 
-%% We now support urls which may contain segments on either side of the actual script that *look* like a script but aren't.
-%% e.g  http://www.x.com/a/foo.yaws/b/showcode.yaws/item/mypage.yaws?ok=true
-%%
-%% where foo.yaws may actually be a directory,
-%% showcode.yaws is the actual script
-%% /item/mypage.yaws  is just the PATH_INFO data that is passed to the script
-%% 
-%% This is done by scanning for the rightmost dotted component that corresponds to a script file.
-%% Starting from the right - we do a call to the filesystem to test that it is a file, only when we reach a dotted component
-%% which has a suffix corresponding to a non 'regular' mime type.
-%% (this should keep the number of calls to the filesystem to a minimum - 
-%%  except maybe in some pathologically weird cases where there are many dotted components in the post-script PATH_INFO)
-%% 
-%% If we don't ever hit a dotted segment that represents a script file - that's ok..
-%% It just means this is an invalid path, because we only even started scanning after determining that
-%% the full path did not correspond directly to a file or folder - and therefore should be a script url.
-%% (appmods were checked for earlier)
-%% 
-%%  
-%%
-%%!todo - reduce this comment block to statements relevant to current state of code only.
-%% - e.g Late 2007 may be a good time to remove the historical comments. - always available in repository.
-
-%%!todo - support some sort of 'scriptalias' to allow non-dotted script components.
-%% (for efficiency - we don't want to call into filesystem for every non-dotted segment - but looking up scriptaliases ok)
-%%
-
-
 maybe_return_path_info(SC, Comps, RevFile, DR, VirtualDir) ->
 
     case path_info_split(Comps, {DR, VirtualDir}) of
@@ -3728,7 +3740,6 @@ maybe_return_path_info(SC, Comps, RevFile, DR, VirtualDir) ->
             ?Debug("'script-selection' FullPath= ~p~n Mime=~p~n", 
                    [FullPath, Mime2]),
 
-            %%Trail = [$/ | conc_path(TrailComps ++ [lists:reverse(RevFile)])],
             Trail = conc_path([ "/" ] ++ TrailComps ++ 
                               [ lists:reverse(RevFile) ]),
 
@@ -3927,11 +3938,16 @@ deflate_q(_, _, _) ->
 suffix_type(SC, L) ->
     R=suffix_type(L),
     case R of
-        {regular, _} ->
-            R;
-        {X, _Mime} -> 
+        {regular, Ext, Mime} ->
+            case lists:keysearch(Ext, 1, SC#sconf.extension_mods) of
+                {value, ExtMod} ->
+                    {{extmod, ExtMod}, Mime};
+                false ->
+                    {regular, Mime}
+            end;
+        {X, _Ext, Mime} -> 
             case member(X, SC#sconf.allowed_scripts) of
-                true -> R;
+                true -> {X, Mime};
                 false -> {regular, "text/plain"}
             end
     end.

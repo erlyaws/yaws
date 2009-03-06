@@ -89,8 +89,8 @@ special(Fd, Ext, Type) ->
 
 
 revspecial(Fd, Ext, Type) ->
-    io:format(Fd, "revt(~p) -> {~p, ~p};~n", 
-              [lists:reverse(Ext), Type, "text/html" ++ get(charset)]).
+    io:format(Fd, "revt(~p) -> {~p, ~p, ~p};~n", 
+              [lists:reverse(Ext), Type, Ext, "text/html" ++ get(charset)]).
 
 
 gen(T) ->
@@ -133,10 +133,10 @@ gen(T) ->
                        _ ->
                            MT0
                    end,
-              io:format(Fd, "revt(~p) -> {regular, ~p};~n", 
-                        [nonl(lists:reverse(Ext)), MT])
+              io:format(Fd, "revt(~p) -> {regular, ~p, ~p};~n", 
+                        [nonl(lists:reverse(Ext)), nonl(Ext), MT])
       end, L),
-    io:format(Fd, "revt(_) -> {regular, 
+    io:format(Fd, "revt(Ext) -> {regular, Ext,
                                \"text/plain" ++ get(charset) ++
               "\"}.~n~n~n", []).
 

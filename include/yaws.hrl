@@ -180,7 +180,9 @@
          allowed_scripts = [yaws,php,cgi],
          tilde_allowed_scripts = [],
          revproxy = [],
-         soptions = []
+         soptions = [],
+         extension_mods = [{"glurk", foo}] %% [{Extension:string(), 
+                                           %%   Mod:atom()] 
         }).
 
 %% we cannot compare sconfs directly due to the ets
