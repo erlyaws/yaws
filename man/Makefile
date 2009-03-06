@@ -19,7 +19,7 @@ pdf:
 	rm xxx;
 
 clean:
-	rm *.pdf
+	rm *.pdf 2>/dev/null || true
 
 
 all debug:
