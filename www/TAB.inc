@@ -32,7 +32,7 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <div class="%%download%%"> <a href="http://yaws.hyber.org/download/" id="download">Download </a> </div>
 <div class="%%contact%%"> <a href="contact.yaws" id="contact">Contact </a> </div>
 <div class="%%doc%%"> <a href="doc.yaws" id="doc">Documentation</a>  </div>
-<div class="%%wiki%%"> <a href="http://yaws.hyber.org/wiki/" id="wiki">Wiki</a>  </div>
+<div class="%%wiki%%"> <a href="http://wiki.github.com/klacke/yaws" id="wiki">Wiki</a>  </div>
 <h4> Examples </h4>
 <div class="%%simple%%"> <a href="/simple.yaws">Simple</a> </div>
 <div class="%%dynamic%%"> <a href="/dynamic.yaws">Dynamic content</a> </div>

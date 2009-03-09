@@ -17,6 +17,8 @@
 -include_lib("kernel/include/file.hrl").
 -export([list_directory/6, out/1]).
 
+-define(FILE_LEN_SZ, 45).
+
 list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
     {abs_path, Path} = Req#http_request.path,
     {DirStr, Pos, Direction, Qry} = parse_query(Path),
@@ -307,7 +309,7 @@ file_entry({ok, FI}, _DirName, Name, Qry, Descriptions) ->
             Alt,
             yaws_api:url_encode(Name) ++ QryStr,
             Name,
-            trim(Name,20),
+            trim(Name,?FILE_LEN_SZ),
             datestr(FI), 
             sizestr(FI),
            Description]),

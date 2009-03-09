@@ -1,4 +1,14 @@
-Thu Feb 12 22:58:16 CET 2009
+Mon Mar  9 21:48:18 CET 2009 Yaws 1.81
+Moved the Yaws repository to http://www.github.som. See instructions at http://yaws.hyber.org/configuration.yaws on how to git clone Yaws. This is the first yaws release out of the github repo. The default Yaws wiki previously found at http://yaws.hyber.org/wiki has been moved to the wiki at github. New address of wiki is http://wiki.github.com/klacke/yaws. The previous (Erlang based wiki written by Johan Bevemyr) turned ... well unmodern, and was also plagued by spammers. 
+Several cleanups by Hans Ulrich Niedermann, file perms, speling errors etc.
+remove leading slash in yapp_appmods examples (Tom McNulty)
+Add DIME support for SOAP Anders Nygren
+patch by Jouni Ryno finding broken fdsrv support
+Two patches by Joseph Wayen Norton, one dbg-bug and one providing better cookie support for yaws sesssions
+When yaws_ctl checks the CTL file to see if any current instance is running, check the socket opened to the port read from the CTL file to verify that the ephemeral port for that socket is not the same as the port read from the CTL file. This avoids a false positive caused by connecting the socket to its own port. (Steve Vinoski)
+cleaned up the redirect feature. It was poorly implemented and poorly documented. This fix is backwards compatible for users using redirect in confd.conf. However, it is NOT backwards compatible for embedded users that specify the redirect_map explicitly in their #sconf{} records. The required changes for embedded users should be evident from the code. The new required format is documented in the code where #sconf{} is defined (klacke)
+
+Thu Feb 12 22:58:16 CET 2009 Yaws 1.80
 Full windows support with a proper .exe Windows installer (klacke)
 Added a timestamp check on the ssl cert/key files making it possible to just upload new cert/key files and do yaws --hup to automatically have the new cert/key files being used (klacke)
 Disgusting DOS attack discovered by Manuel Duran Aguete whereby if a neverendig series of headers are sent to yaws, we die of out of memory. Actual attack not described here. Contact me (klacke) if you're interested in the details

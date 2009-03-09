@@ -352,6 +352,15 @@ actl(SID, Term) ->
             Ret = s_cmd(Socket, SID, 0),
             timer:sleep(40), %% sucks bigtime, we have no good way to flush io
             case Ret of 
+                ok when Term == stop ->
+                    %% wait for Yaws node to truly stop.
+                    case gen_tcp:recv(Socket, 0) of
+                        {error, closed} ->
+                            erlang:halt(0);
+                        Other ->
+                            io:format("~p~n", [Other]),
+                            erlang:halt(3)
+                    end;
                 ok ->
                     erlang:halt(0);
                 error ->

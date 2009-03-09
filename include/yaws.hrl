@@ -181,8 +181,11 @@
          tilde_allowed_scripts = [],
          revproxy = [],
          soptions = [],
-         extension_mods = [{"glurk", foo}] %% [{Extension:string(), 
-                                           %%   Mod:atom()] 
+
+         %% [{Extension:string(), Mod:atom()]
+         %% work in progress .....
+         extension_mods = [{"yxxxxxx", yaws_ext_handler_yaws}] 
+
         }).
 
 %% we cannot compare sconfs directly due to the ets

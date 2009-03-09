@@ -44,7 +44,7 @@ ln -s $NAME_VERSION tmp/yaws
 (cd tmp && tar cfz - yaws "$NAME_VERSION") > "$NAME_VERSION.tar.gz"
 
 echo release resides in `pwd`/$NAME_VERSION.tar.gz
-echo release resides in `pwd`/win32/Yaws-${YAWS_VSN}-windows-installer.exe
+echo release resides in `pwd`/yaws/win32/Yaws-${YAWS_VSN}-windows-installer.exe
 
 exit 0
 
