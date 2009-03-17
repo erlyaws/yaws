@@ -2020,9 +2020,9 @@ echo $ECHO_N "checking erts version... $ECHO_C" >&6; }
     if test "${bt_cv_erts_vsn+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  bt_cv_erts_vsn="`ls \"${ERLDIR}\" \"${ERLDIR}/lib\" | \
+  bt_cv_erts_vsn=`ls "${ERLDIR}" "${ERLDIR}/lib" | \
                    awk -F- '/^erts-/ { if ($2 > v) v=$2; }
-                            END    { print v; }'`"
+                            END    { print v; }'`
      case "$bt_cv_erts_vsn" in
          "")
              { { echo "$as_me:$LINENO: error: \"Could not figure out version Erlang library: erts\"" >&5
@@ -2044,9 +2044,9 @@ echo $ECHO_N "checking kernel version... $ECHO_C" >&6; }
     if test "${bt_cv_kernel_vsn+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  bt_cv_kernel_vsn="`ls \"${ERLDIR}\" \"${ERLDIR}/lib\" | \
+  bt_cv_kernel_vsn=`ls "${ERLDIR}" "${ERLDIR}/lib" | \
                    awk -F- '/^kernel-/ { if ($2 > v) v=$2; }
-                            END    { print v; }'`"
+                            END    { print v; }'`
      case "$bt_cv_kernel_vsn" in
          "")
              { { echo "$as_me:$LINENO: error: \"Could not figure out version Erlang library: kernel\"" >&5
@@ -2068,9 +2068,9 @@ echo $ECHO_N "checking stdlib version... $ECHO_C" >&6; }
     if test "${bt_cv_stdlib_vsn+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  bt_cv_stdlib_vsn="`ls \"${ERLDIR}\" \"${ERLDIR}/lib\" | \
+  bt_cv_stdlib_vsn=`ls "${ERLDIR}" "${ERLDIR}/lib" | \
                    awk -F- '/^stdlib-/ { if ($2 > v) v=$2; }
-                            END    { print v; }'`"
+                            END    { print v; }'`
      case "$bt_cv_stdlib_vsn" in
          "")
              { { echo "$as_me:$LINENO: error: \"Could not figure out version Erlang library: stdlib\"" >&5
@@ -2092,9 +2092,9 @@ echo $ECHO_N "checking sasl version... $ECHO_C" >&6; }
     if test "${bt_cv_sasl_vsn+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  bt_cv_sasl_vsn="`ls \"${ERLDIR}\" \"${ERLDIR}/lib\" | \
+  bt_cv_sasl_vsn=`ls "${ERLDIR}" "${ERLDIR}/lib" | \
                    awk -F- '/^sasl-/ { if ($2 > v) v=$2; }
-                            END    { print v; }'`"
+                            END    { print v; }'`
      case "$bt_cv_sasl_vsn" in
          "")
              { { echo "$as_me:$LINENO: error: \"Could not figure out version Erlang library: sasl\"" >&5
@@ -2116,9 +2116,9 @@ echo $ECHO_N "checking mnesia version... $ECHO_C" >&6; }
     if test "${bt_cv_mnesia_vsn+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
-  bt_cv_mnesia_vsn="`ls \"${ERLDIR}\" \"${ERLDIR}/lib\" | \
+  bt_cv_mnesia_vsn=`ls "${ERLDIR}" "${ERLDIR}/lib" | \
                    awk -F- '/^mnesia-/ { if ($2 > v) v=$2; }
-                            END    { print v; }'`"
+                            END    { print v; }'`
      case "$bt_cv_mnesia_vsn" in
          "")
              { { echo "$as_me:$LINENO: error: \"Could not figure out version Erlang library: mnesia\"" >&5
@@ -3508,12 +3508,12 @@ fi
 case "$target_os" in
      *cygwin*)
         WIN32=win32
-            cat >> confdefs.h <<\EOF
+            cat >> confdefs.h << EOF
 #define WIN32 1
 EOF
             LD_SHARED="gcc -shared"
             DLL=dll
-            DLL_LIBS="-lc \"$ERL_DLL_LIB\""
+            DLL_LIBS=-lc "$ERL_DLL_LIB"
 
 
         EXE=.exe

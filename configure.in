@@ -60,9 +60,9 @@ AC_DEFUN(BT_ERL_LIB_VSN,
 [
     AC_MSG_CHECKING([$1 version])
     AC_CACHE_VAL(bt_cv_$1_vsn,
-    [bt_cv_$1_vsn="`ls \"${ERLDIR}\" \"${ERLDIR}/lib\" | \
+    [bt_cv_$1_vsn=`ls "${ERLDIR}" "${ERLDIR}/lib" | \
                    awk -F- '/^$1-/ { if ([$]2 > v) v=[$]2; }
-                            END    { print v; }'`"
+                            END    { print v; }'`
      case "$bt_cv_$1_vsn" in
          "")
              AC_MSG_ERROR("Could not figure out version Erlang library: $1")
@@ -122,12 +122,12 @@ dnl
 case "$target_os" in
      *cygwin*)
         WIN32=win32
-            cat >> confdefs.h <<\EOF
+            cat >> confdefs.h << EOF
 #define WIN32 1
 EOF
             LD_SHARED="gcc -shared"
             DLL=dll
-            DLL_LIBS="-lc \"$ERL_DLL_LIB\""
+            DLL_LIBS=-lc "$ERL_DLL_LIB"
         
 
         EXE=.exe
