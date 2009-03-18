@@ -114,11 +114,6 @@ dnl ===============================================================
 
 
 
-dnl
-dnl cygwin code here is broken and not used ....
-dnl
-
-
 case "$target_os" in
      *cygwin*)
         WIN32=win32
@@ -127,7 +122,7 @@ case "$target_os" in
 EOF
             LD_SHARED="gcc -shared"
             DLL=dll
-            DLL_LIBS=-lc "$ERL_DLL_LIB"
+            DLL_LIBS="-lc \"$ERL_DLL_LIB\""
         
 
         EXE=.exe
