@@ -484,6 +484,7 @@ video/x-msvideo			avi
 video/x-sgi-movie		movie
 video/x-flv			flv
 video/x-m4v			m4v
+video/mp4			mp4
 video/x-ms-wmv			wmv
 x-conference/x-cooltalk		ice
 text/html			shtml html htm
