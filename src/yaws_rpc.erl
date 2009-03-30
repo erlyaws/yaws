@@ -237,7 +237,7 @@ handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue, M, F) ->
 %%% Make it possible for callback module to set Cookie Expire string!
 get_expire(M, F) -> 
     case catch M:F(cookie_expire) of
-        Expire when list(Expire) -> Expire;
+        Expire when is_list(Expire) -> Expire;
         _                        -> false
     end.
 

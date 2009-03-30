@@ -96,8 +96,8 @@ stats() ->
     Diff = calendar:time_difference(Time, calendar:local_time()),
     {Diff, []}.
 
-l2a(L) when list(L) -> list_to_atom(L);
-l2a(A) when atom(A) -> A.
+l2a(L) when is_list(L) -> list_to_atom(L);
+l2a(A) when is_atom(A) -> A.
 
 
 
@@ -871,7 +871,7 @@ acceptor0(GS, Top) ->
                     ssl:close(Client)
             end,
             case Res of
-                {ok, Int} when integer(Int) ->
+                {ok, Int} when is_integer(Int) ->
                     Top ! {self(), done_client, Int};
                 {'EXIT', normal} ->
                     exit(normal);
@@ -1002,7 +1002,7 @@ erase_transients() ->
     I = get(init_db),
     if I == undefined ->
             ok;
-       list(I) ->
+       is_list(I) ->
             erase(),
             lists:foreach(fun({K,V}) -> put(K,V) end, I)
     end.
@@ -1071,7 +1071,7 @@ fix_abs_uri(Req, H) ->
     case Req#http_request.path of
         {absoluteURI, _Scheme, Host0, Port, RawPath} ->
             Host = case Port of
-                       P when integer(P) ->
+                       P when is_integer(P) ->
                            Host0 ++ [$: | integer_to_list(P)];
                                                 % Is this ok?
                        _ ->
@@ -1238,9 +1238,9 @@ un_partial(Bin) ->
 
 call_method(Method, CliSock, Req, H) ->
     case Method of
-        F when atom(F) ->
+        F when is_atom(F) ->
             ?MODULE:F(CliSock, Req, H);
-        L when list(L) ->
+        L when is_list(L) ->
             handle_extension_method(L, CliSock, Req, H)
     end.
 
@@ -1308,7 +1308,7 @@ body_method(CliSock, Req, Head) ->
                       _ ->
                           <<>>
                               end;
-              Len when integer(PPS) ->
+              Len when is_integer(PPS) ->
                   Int_len = list_to_integer(Len),
                   if 
                       Int_len == 0 ->
@@ -1349,7 +1349,7 @@ no_body_method(CliSock, Req, Head) ->
 make_arg(CliSock, Head, Req, Bin) ->
     SC = get(sc),
     IP = if
-             port(CliSock) ->
+             is_port(CliSock) ->
                  case inet:peername(CliSock) of
                      {ok, IpPort} ->
                          IpPort;
@@ -1472,6 +1472,7 @@ handle_request(CliSock, ARG, N) ->
                             IsRev = is_revproxy(DecPath, SC#sconf.revproxy),
                             IsRedirect = is_redirect_map(DecPath, 
                                                          SC#sconf.redirect_map),
+
                             case {IsAuth, IsRev, IsRedirect} of
                                 {{appmod, Mod}, _, _} ->
                                     %%This isn't the standard 'appmod' branch 
@@ -1910,7 +1911,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = php}, N) ->
                      end
                     );
 
-handle_ut(CliSock, ARG, UT = #urltype{type = {extmod, {Ext,Mod}}}, N) ->
+handle_ut(CliSock, ARG, UT = #urltype{type = {extmod, {_Ext,_Mod}}}, N) ->
     Req = ARG#arg.req,
     H = ARG#arg.headers,
 
@@ -1928,7 +1929,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = {extmod, {Ext,Mod}}}, N) ->
             deliver_405(CliSock, Req, Allowed)
     end.
 
-do_extmod(CliSock, ARG, UT, N) ->
+do_extmod(_CliSock, _ARG, _UT, _N) ->
     done.
 
 
@@ -2409,16 +2410,16 @@ end_streaming({Z, Priv}, CliSock) ->
 
 %% what about trailers ??
 
-skip_data(List, Fd, Sz) when list(List) ->
+skip_data(List, Fd, Sz) when is_list(List) ->
     skip_data(list_to_binary(List), Fd, Sz);
-skip_data(Bin, Fd, Sz) when binary(Bin) ->
+skip_data(Bin, Fd, Sz) when is_binary(Bin) ->
     ?Debug("Skip data ~p bytes from", [Sz]),
     case  Bin of
         <<Head:Sz/binary ,Tail/binary>> ->
             {Head, Tail};
         _ ->
             case (catch file:read(Fd, 4000)) of
-                {ok, Bin2} when binary(Bin2) -> 
+                {ok, Bin2} when is_binary(Bin2) -> 
                     Bin3 = <<Bin/binary, Bin2/binary>>,
                     skip_data(Bin3, Fd, Sz);
                 _Err ->
@@ -2435,9 +2436,9 @@ skip_data({ok, X}, Fd, Sz) ->
 
 
 
-to_binary(B) when binary(B) ->
+to_binary(B) when is_binary(B) ->
     B;
-to_binary(L) when list(L) ->
+to_binary(L) when is_list(L) ->
     list_to_binary(L).
 
 
@@ -2450,9 +2451,9 @@ binary_size(I, []) ->
 binary_size(I, [H|T]) ->
     J = binary_size(I, H),
     binary_size(J, T);
-binary_size(I, B) when binary(B) ->
+binary_size(I, B) when is_binary(B) ->
     I + size(B);
-binary_size(I, _Int) when integer(_Int) ->
+binary_size(I, _Int) when is_integer(_Int) ->
     I+1.
 
 accumulate_content(Data) ->
@@ -2472,7 +2473,7 @@ accumulate_content(Data) ->
 %% `streamcontent', `get_more_data' etc, which are not handled here
 %% completely but returned, have to be the last element of the list.
 
-handle_out_reply(L, LineNo, YawsFile, UT, ARG) when list (L) ->
+handle_out_reply(L, LineNo, YawsFile, UT, ARG) when is_list (L) ->
     handle_out_reply_l(L, LineNo, YawsFile, UT, ARG, undefined);
 
 
@@ -2574,7 +2575,7 @@ handle_out_reply({allheaders, Hs}, _LineNo, _YawsFile, _UT, _ARG) ->
     foreach(fun({header, Head}) -> yaws:accumulate_header(Head) end, Hs);
 
 handle_out_reply({status, Code},_LineNo,_YawsFile,_UT,_ARG) 
-    when integer(Code) ->
+    when is_integer(Code) ->
     yaws:outh_set_status_code(Code);
 
 handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _UT, _ARG) ->
@@ -3038,12 +3039,12 @@ ut_open(UT) ->
                     {ok, Bin} = file:read_file(UT#urltype.fullpath),
                     ?Debug("ut_open read ~p\n",[size(Bin)]),
                     {bin, Bin};
-                B when binary(B) ->
+                B when is_binary(B) ->
                     {bin, B}
             end;
         deflate -> 
             case UT#urltype.deflate of
-                B when binary(B) ->
+                B when is_binary(B) ->
                     ?Debug("ut_open using deflated binary of size ~p~n", 
                            [size(B)]),
                     {bin, B}
@@ -3129,7 +3130,7 @@ requested_range(RangeHeader, TotalSize) ->
 
 deliver_file(CliSock, Req, UT, Range) ->
     if
-        binary(UT#urltype.data) ->
+        is_binary(UT#urltype.data) ->
             %% cached
             deliver_small_file(CliSock, Req, UT, Range);
         true ->
@@ -3270,10 +3271,10 @@ file_changed(UT1, UT2) ->
 
 
 
-cache_size(UT) when binary(UT#urltype.deflate), 
-binary(UT#urltype.data) ->
+cache_size(UT) when is_binary(UT#urltype.deflate), 
+is_binary(UT#urltype.data) ->
     size(UT#urltype.deflate) + size(UT#urltype.data);
-cache_size(UT) when binary(UT#urltype.data) ->
+cache_size(UT) when is_binary(UT#urltype.data) ->
     size(UT#urltype.data);
 cache_size(_UT) ->
     0.
@@ -4000,7 +4001,7 @@ tcp_flush(_Sock, undefined) ->
     ok;
 tcp_flush(_Sock, 0) ->
     ok;
-tcp_flush(Sock, Sz) when list(Sz) ->
+tcp_flush(Sock, Sz) when is_list(Sz) ->
     tcp_flush(Sock, strip_list_to_integer(Sz));
 tcp_flush(Sock, Sz) ->
     gen_tcp:recv(Sock, Sz, 1000).
@@ -4010,7 +4011,7 @@ ssl_flush(_Sock, undefined) ->
     ok;
 ssl_flush(_Sock, 0) ->
     ok;
-ssl_flush(Sock, Sz) when list(Sz) ->
+ssl_flush(Sock, Sz) when is_list(Sz) ->
     ssl_flush(Sock, strip_list_to_integer(Sz));
 ssl_flush(Sock, Sz) ->
     case ssl:recv(Sock, Sz, 1000) of

@@ -407,7 +407,7 @@ handle_info(minute10, State) ->
 
 
 
-wrap_p(AL, State) when record(AL, alog) ->
+wrap_p(AL, State) when is_record(AL, alog) ->
     case file:read_file_info(AL#alog.filename) of
         {ok, FI} when FI#file_info.size > State#state.log_wrap_size,
         State#state.log_wrap_size > 0 ->
@@ -467,7 +467,7 @@ fmt_alog(Time, Ip, User, Req, Status,  Length, Referrer, UserAgent) ->
      Status, [$\s], Length, [$\s,$"], Referrer, [$",$\s,$"], UserAgent, [$",$\n]].
 
 
-fmt_ip(IP) when tuple(IP) ->
+fmt_ip(IP) when is_tuple(IP) ->
     inet_parse:ntoa(IP);
 fmt_ip(undefined) ->
     "0.0.0.0";

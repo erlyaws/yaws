@@ -57,7 +57,7 @@ handle_clidata(Arg, Worker) ->
         {partial, Data} ->
             send_clidata(Worker, Data),
             {get_more, cgicont, {cgistate, Worker}};
-        Data when binary(Data) ->
+        Data when is_binary(Data) ->
             send_clidata(Worker, Data),
             end_of_clidata(Arg, Worker)
     end.
@@ -147,11 +147,11 @@ checkdef(L) ->
 
 deep_drop_prefix([], L) ->
     L;
-deep_drop_prefix([X|Xs], [X|Ys]) when integer(X) ->
+deep_drop_prefix([X|Xs], [X|Ys]) when is_integer(X) ->
     deep_drop_prefix(Xs, Ys);
-deep_drop_prefix([X|Xs], Ys) when list(X) ->
+deep_drop_prefix([X|Xs], Ys) when is_list(X) ->
     deep_drop_prefix(X++Xs, Ys);
-deep_drop_prefix(Xs, [Y|Ys]) when list(Y) ->
+deep_drop_prefix(Xs, [Y|Ys]) when is_list(Y) ->
     deep_drop_prefix(Xs, Y++Ys);
 deep_drop_prefix(_, _) ->
     false.
@@ -251,7 +251,7 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
         HttpsEnv ++
         AuthEnv ++
         lists:filter(
-          fun({K, L}) when list(L) -> 
+          fun({K, L}) when is_list(L) -> 
                   case lists:keysearch(K, 1, ExtraEnv) of
                       false ->
                           true;
@@ -358,7 +358,7 @@ make_cookie_val([C|CS]) ->
 %% Seems not to be necessary, but open_port documentation says that
 %% value has to be a string.
 
-flatten_val(L) when list(L) ->
+flatten_val(L) when is_list(L) ->
     lists:flatten(L);
 flatten_val(X) ->
     X.

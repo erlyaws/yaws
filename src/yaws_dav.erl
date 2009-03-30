@@ -53,7 +53,7 @@ put(SC, ARG) ->
                             _ when Chunked == true ->
                                 store_chunked_client_data(Fd, CliSock, SSL)
                         end;
-                    Len when integer(PPS) ->
+                    Len when is_integer(PPS) ->
                         Int_len = list_to_integer(Len),
                         if 
                             Int_len == 0 ->
@@ -325,7 +325,7 @@ depth(A) ->
 to_depth("infinity") -> infinity;
 to_depth(L) ->
     case catch list_to_integer(L) of
-        I when integer(I) -> I;
+        I when is_integer(I) -> I;
         _                 -> 0
     end.
 
@@ -338,9 +338,9 @@ xml_expand(L, Cset) ->
 
 
 parse_xml([]) -> [];
-parse_xml(L) when list(L) ->
+parse_xml(L) when is_list(L) ->
     case catch xmerl_scan:string(L, [{namespace_conformant, true}]) of
-        {X,_} when record(X, xmlElement) ->
+        {X,_} when is_record(X, xmlElement) ->
             parse_dav(X);
         _Z ->
             ?elog("to_xml: error ~p~n", [_Z]),

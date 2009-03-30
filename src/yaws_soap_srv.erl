@@ -73,12 +73,12 @@ handler(Args, Id, Payload, SessionValue) ->
 setup(_ConfigFile) ->
     tbd.
 
-setup(Id, WsdlFile) when tuple(Id),size(Id)==2 ->
+setup(Id, WsdlFile) when is_tuple(Id),size(Id)==2 ->
     Wsdl = yaws_soap_lib:initModel(WsdlFile),
     gen_server:call(?SERVER, {add_wsdl, Id, Wsdl}, infinity).
 
 
-setup(Id, WsdlFile, Prefix) when tuple(Id),size(Id)==2 ->
+setup(Id, WsdlFile, Prefix) when is_tuple(Id),size(Id)==2 ->
     Wsdl = yaws_soap_lib:initModel(WsdlFile, Prefix),
     gen_server:call(?SERVER, {add_wsdl, Id, Wsdl}, infinity).
 

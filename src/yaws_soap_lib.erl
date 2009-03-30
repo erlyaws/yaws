@@ -56,12 +56,12 @@
 %%%
 %%% Writes the header file (record definitions) for a WSDL file
 %%%
-write_hrl(WsdlURL, Output) when list(WsdlURL) ->
+write_hrl(WsdlURL, Output) when is_list(WsdlURL) ->
     write_hrl(initModel(WsdlURL), Output);
-write_hrl(#wsdl{model = Model}, Output) when list(Output) ->
+write_hrl(#wsdl{model = Model}, Output) when is_list(Output) ->
     erlsom:write_hrl(Model, Output).
 
-write_hrl(WsdlURL, Output, Prefix) when list(WsdlURL),list(Prefix) ->
+write_hrl(WsdlURL, Output, Prefix) when is_list(WsdlURL),is_list(Prefix) ->
     write_hrl(initModel(WsdlURL, Prefix), Output).
 
 
@@ -75,7 +75,7 @@ qtest() ->
 %%% --------------------------------------------------------------------
 %%% Access functions
 %%% --------------------------------------------------------------------
-is_wsdl(Wsdl) when record(Wsdl,wsdl) -> true;
+is_wsdl(Wsdl) when is_record(Wsdl,wsdl) -> true;
 is_wsdl(_)                           -> false.
 
 wsdl_operations(#wsdl{operations = Ops}) -> Ops.
@@ -98,14 +98,15 @@ wsdl_op_action(#operation{action = Action}) -> Action.
 %%% --------------------------------------------------------------------
 %%% For Quick deployment
 %%% --------------------------------------------------------------------
-call(WsdlURL, Operation, ListOfData) when list(WsdlURL) ->
+call(WsdlURL, Operation, ListOfData) when is_list(WsdlURL) ->
     Wsdl = initModel(WsdlURL, ?DefaultPrefix),
     call(Wsdl, Operation, ListOfData);
-call(Wsdl, Operation, ListOfData) when record(Wsdl, wsdl) ->
+call(Wsdl, Operation, ListOfData) when is_record(Wsdl, wsdl) ->
     case get_operation(Wsdl#wsdl.operations, Operation) of
 	{ok, Op} ->
 	    Msg = mk_msg(?DefaultPrefix, Operation, ListOfData),
-	    call(Wsdl, Operation, Op#operation.port, Op#operation.service, [], Msg);
+	    call(Wsdl, Operation, Op#operation.port, 
+                 Op#operation.service, [], Msg);
 	Else ->
 	    Else
     end.
@@ -113,10 +114,10 @@ call(Wsdl, Operation, ListOfData) when record(Wsdl, wsdl) ->
 %%% --------------------------------------------------------------------
 %%% Takes the actual records for the Header and Body message.
 %%% --------------------------------------------------------------------
-call(WsdlURL, Operation, Header, Msg) when list(WsdlURL) ->
+call(WsdlURL, Operation, Header, Msg) when is_list(WsdlURL) ->
     Wsdl = initModel(WsdlURL, ?DefaultPrefix),
     call(Wsdl, Operation, Header, Msg);
-call(Wsdl, Operation, Header, Msg) when record(Wsdl, wsdl) ->
+call(Wsdl, Operation, Header, Msg) when is_record(Wsdl, wsdl) ->
     case get_operation(Wsdl#wsdl.operations, Operation) of
 	{ok, Op} ->
 	    call(Wsdl, Operation, Op#operation.port, Op#operation.service, 
@@ -131,9 +132,12 @@ mk_msg(Prefix, Operation, ListOfData) ->
 		   []                                    % anyAttribs
 		   | ListOfData]).                       % rest of record data
 
-get_operation([#operation{operation = X} = Op|_], X) -> {ok, Op};
-get_operation([_|T], Op)                             -> get_operation(T, Op);
-get_operation([], _Op)                               -> {error, "operation not found"}.
+get_operation([#operation{operation = X} = Op|_], X) -> 
+    {ok, Op};
+get_operation([_|T], Op)                             -> 
+    get_operation(T, Op);
+get_operation([], _Op)                               -> 
+    {error, "operation not found"}.
 
 
 %%% --------------------------------------------------------------------
@@ -146,14 +150,17 @@ call(Wsdl, Operation, Port, Service, Headers, Message) ->
 %%% --------------------------------------------------------------------
 %%% For Quick deployment (with attachments)
 %%% --------------------------------------------------------------------
-call_attach(WsdlURL, Operation, ListOfData, Attachments) when list(WsdlURL) ->
+call_attach(WsdlURL, Operation, ListOfData, Attachments) 
+  when is_list(WsdlURL) ->
     Wsdl = initModel(WsdlURL, ?DefaultPrefix),
     call_attach(Wsdl, Operation, ListOfData, Attachments);
-call_attach(Wsdl, Operation, ListOfData, Attachments) when record(Wsdl, wsdl) ->
+call_attach(Wsdl, Operation, ListOfData, Attachments) 
+  when is_record(Wsdl, wsdl) ->
     case get_operation(Wsdl#wsdl.operations, Operation) of
 	{ok, Op} ->
 	    Msg = mk_msg(?DefaultPrefix, Operation, ListOfData),
-	    call_attach(Wsdl, Operation, Op#operation.port, Op#operation.service, [], Msg, Attachments);
+	    call_attach(Wsdl, Operation, Op#operation.port, 
+                        Op#operation.service, [], Msg, Attachments);
 	Else ->
 	    Else
     end.
@@ -162,13 +169,16 @@ call_attach(Wsdl, Operation, ListOfData, Attachments) when record(Wsdl, wsdl) ->
 %%% Takes the actual records for the Header and Body message 
 %%% (with attachments)
 %%% --------------------------------------------------------------------
-call_attach(WsdlURL, Operation, Header, Msg, Attachments) when list(WsdlURL) ->
+call_attach(WsdlURL, Operation, Header, Msg, Attachments) 
+  when is_list(WsdlURL) ->
     Wsdl = initModel(WsdlURL, ?DefaultPrefix),
     call_attach(Wsdl, Operation, Header, Msg, Attachments);
-call_attach(Wsdl, Operation, Header, Msg, Attachments) when record(Wsdl, wsdl) ->
+call_attach(Wsdl, Operation, Header, Msg, Attachments) 
+  when is_record(Wsdl, wsdl) ->
     case get_operation(Wsdl#wsdl.operations, Operation) of
 	{ok, Op} ->
-	    call_attach(Wsdl, Operation, Op#operation.port, Op#operation.service, 
+	    call_attach(Wsdl, Operation, Op#operation.port, 
+                        Op#operation.service, 
 		 Header, Msg, Attachments);
 	Else ->
 	    Else
@@ -178,7 +188,8 @@ call_attach(Wsdl, Operation, Header, Msg, Attachments) when record(Wsdl, wsdl) -
 %%% --------------------------------------------------------------------
 %%% Make a SOAP request (with attachments)
 %%% --------------------------------------------------------------------
-call_attach(#wsdl{operations = Operations, model = Model}, Operation, Port, Service, Headers, Message, Attachments) ->
+call_attach(#wsdl{operations = Operations, model = Model}, 
+            Operation, Port, Service, Headers, Message, Attachments) ->
     %% find the operation
     case findOperation(Operation, Port, Service, Operations) of
 	#operation{address = URL, action = SoapAction} ->
@@ -188,18 +199,21 @@ call_attach(#wsdl{operations = Operations, model = Model}, Operation, Port, Serv
 	    case erlsom:write(Envelope, Model) of
 		{ok, XmlMessage} ->
 				
-		    {ContentType, Request} = make_request_body(XmlMessage, Attachments),
+		    {ContentType, Request} = 
+                        make_request_body(XmlMessage, Attachments),
 		    HttpHeaders = [],
 		    HttpClientOptions = [],
                     ?dbg("+++ Request = ~p~n", [Request]),
 		    HttpRes = http_request(URL, SoapAction, Request, 
-                                           HttpClientOptions, HttpHeaders, ContentType),
+                                           HttpClientOptions, HttpHeaders, 
+                                           ContentType),
                     ?dbg("+++ HttpRes = ~p~n", [HttpRes]),
 		    case HttpRes of
 			{ok, _Code, _ReturnHeaders, Body} ->
 			    parseMessage(Body, Model);
 			Error -> 
-			    %% in case of HTTP error: return {error, description}
+			    %% in case of HTTP error: return 
+                            %% {error, description}
 			    Error
 		    end;
 		{error, EncodingError} ->
@@ -238,12 +252,12 @@ findOperation(Operation, Port, Service, [#operation{} | Tail]) ->
     findOperation(Operation, Port, Service, Tail).
 
 
-mk_envelope(M, H) when tuple(M) -> mk_envelope([M], H);
-mk_envelope(M, H) when tuple(H) -> mk_envelope(M, [H]);
+mk_envelope(M, H) when is_tuple(M) -> mk_envelope([M], H);
+mk_envelope(M, H) when is_tuple(H) -> mk_envelope(M, [H]);
 %%
-mk_envelope(Messages, []) when list(Messages) ->
+mk_envelope(Messages, []) when is_list(Messages) ->
     #'soap:Envelope'{'Body' =  #'soap:Body'{choice = Messages}};
-mk_envelope(Messages, Headers) when list(Messages),list(Headers) ->
+mk_envelope(Messages, Headers) when is_list(Messages),is_list(Headers) ->
     #'soap:Envelope'{'Body'   =  #'soap:Body'{choice   = Messages},
 		     'Header' =  #'soap:Header'{choice = Headers}}.
 

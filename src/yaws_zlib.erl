@@ -56,7 +56,7 @@ gzipDeflate(Z, {Crc32,Size}, Bin, Flush) ->
 
 %% like zlib:gzip/1, but returns an io list
 
-gzip(Data) when binary(Data) ->
+gzip(Data) when is_binary(Data) ->
     Z = zlib:open(),
     {ok, _, D} = gzipDeflate(Z, gzipInit(Z), Data, finish),
     gzipEnd(Z),
@@ -72,7 +72,7 @@ gzip_loop(Z, P, [], [], A) ->
     gzipEnd(Z),
     zlib:close(Z),
     {ok, [A|D]};
-gzip_loop(Z, P, B, C, A) when binary(B) ->
+gzip_loop(Z, P, B, C, A) when is_binary(B) ->
     {ok, P1, D} = gzipDeflate(Z, P, B, none),
     gzip_loop(Z, P1, C, [],
               case D of
@@ -83,7 +83,7 @@ gzip_loop(Z, P, B, C, A) when binary(B) ->
                           _ -> [A|D]
                       end
               end);
-gzip_loop(Z, P, [I|T], C, A) when integer(I) ->
+gzip_loop(Z, P, [I|T], C, A) when is_integer(I) ->
     gzip_loop(Z, P, list_to_binary([I|T]), C, A);
 gzip_loop(Z, P, [H], C, A) ->
     gzip_loop(Z, P, H, C, A);
@@ -91,7 +91,7 @@ gzip_loop(Z, P, [H|T], C, A) ->
     gzip_loop(Z, P, H, [T|C], A);
 gzip_loop(Z, P, [], C, A) ->
     gzip_loop(Z, P, C, [], A);
-gzip_loop(Z, P, I, C, A) when integer(I) ->
+gzip_loop(Z, P, I, C, A) when is_integer(I) ->
     gzip_loop(Z, P, <<I>>, C, A).
 
 

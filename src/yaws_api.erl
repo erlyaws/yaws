@@ -344,7 +344,7 @@ parse_multi(is_end, "\r", Boundary, Acc, Res, Tmp) ->
 
 do_header([]) -> {[]};
 do_header(Head) ->
-    {ok, Fields} = regexp:split(Head, "\r\n"),
+    Fields = string:tokens(Head, "\r\n"),
     MFields = merge_lines_822(Fields),
     Header = lists:map(fun isolate_arg/1, MFields),
     case lists:keysearch("content-disposition", 1, Header) of
@@ -437,7 +437,7 @@ do_parse_spec(<<>>, Spec, Last, Cur, _State) ->
     [{Last, coerce_type(S, Cur)}];
 do_parse_spec(undefined,_,_,_,_) ->
     [];
-do_parse_spec(QueryList, Spec, Last, Cur, State) when list(QueryList) ->
+do_parse_spec(QueryList, Spec, Last, Cur, State) when is_list(QueryList) ->
     do_parse_spec(list_to_binary(QueryList), Spec, Last, Cur, State).
 
 
@@ -565,9 +565,9 @@ fl([]) ->
     [].
 
 %% htmlize
-htmlize(Bin) when binary(Bin) ->
+htmlize(Bin) when is_binary(Bin) ->
     list_to_binary(htmlize_l(binary_to_list(Bin)));
-htmlize(List) when list(List) ->
+htmlize(List) when is_list(List) ->
     htmlize_l(List).
 
 
@@ -580,8 +580,8 @@ htmlize_char($&) ->
     <<"&amp;">>;
 htmlize_char($") ->
     <<"&quot;">>;
-             htmlize_char(X) ->
-                    X.
+htmlize_char(X) ->
+    X.
 
 
 %% htmlize list (usually much more efficient than above)
@@ -597,14 +597,15 @@ htmlize_l([$&|Tail], Acc) ->
     htmlize_l(Tail, [$;,$p,$m,$a,$&|Acc]);
 htmlize_l([$"|Tail], Acc) ->
     htmlize_l(Tail, [$; , $t, $o,  $u,  $q  ,$&|Acc]);
-           htmlize_l([X|Tail], Acc) when integer(X) ->
-                  htmlize_l(Tail, [X|Acc]);
-           htmlize_l([X|Tail], Acc) when binary(X) ->
-                  X2 = htmlize_l(binary_to_list(X)),
-                  htmlize_l(Tail, [X2|Acc]);
-           htmlize_l([X|Tail], Ack) when list(X) ->
-                  X2 = htmlize_l(X),
-                  htmlize_l(Tail, [X2|Ack]).
+           
+htmlize_l([X|Tail], Acc) when is_integer(X) ->
+    htmlize_l(Tail, [X|Acc]);
+htmlize_l([X|Tail], Acc) when is_binary(X) ->
+    X2 = htmlize_l(binary_to_list(X)),
+    htmlize_l(Tail, [X2|Acc]);
+htmlize_l([X|Tail], Ack) when is_list(X) ->
+    X2 = htmlize_l(X),
+    htmlize_l(Tail, [X2|Ack]).
 
 
 
@@ -652,7 +653,7 @@ setcookie(Name, Value, Path, Expire, Domain, Secure) ->
 %% only the first match is returned
 
 
-find_cookie_val(Cookie, A) when record(A, arg) ->
+find_cookie_val(Cookie, A) when is_record(A, arg) ->
     find_cookie_val(Cookie,  (A#arg.headers)#headers.cookie);
 %%
 find_cookie_val(_Cookie, []) ->
@@ -670,7 +671,7 @@ eat_cookie([], _)           -> [];
 eat_cookie([$\s|T], Str)    -> eat_cookie(T, Str);
 eat_cookie(_, [])           -> [];
 eat_cookie(Cookie, [$\s|T]) -> eat_cookie(Cookie, T);
-eat_cookie(Cookie, Str) when list(Cookie),list(Str) ->
+eat_cookie(Cookie, Str) when is_list(Cookie),is_list(Str) ->
     try
         eat_cookie2(Cookie++"=", Str, Cookie)
     catch
@@ -702,14 +703,15 @@ url_decode([$%, Hi, Lo | Tail]) ->
             Hex = yaws:hex_to_integer([Hi, Lo]),
             [Hex | url_decode(Tail)];
             url_decode([$?|T]) ->
-                   %% Don't decode the query string here, that is parsed separately.
+                   %% Don't decode the query string here, that is 
+                   %% parsed separately.
                    [$?|T];
-            url_decode([H|T]) when integer(H) ->
+            url_decode([H|T]) when is_integer(H) ->
                    [H |url_decode(T)];
             url_decode([]) ->
                    [];
             %% deep lists
-            url_decode([H|T]) when list(H) ->
+            url_decode([H|T]) when is_list(H) ->
                    [url_decode(H) | url_decode(T)].
 
 
@@ -1145,7 +1147,7 @@ format_partial_url(Url, SC) ->
     ].
 
 
-format_url(Url) when record(Url, url) ->
+format_url(Url) when is_record(Url, url) ->
     [
      if 
          Url#url.scheme == undefined ->
@@ -1197,7 +1199,7 @@ is_abs_URI1(_) ->
 %% Body  = EHTML
 
 ehtml_expand(Ch) when Ch >= 0, Ch =< 255 -> Ch; %yaws_api:htmlize_char(Ch);
-ehtml_expand(Bin) when binary(Bin) -> Bin; % yaws_api:htmlize(Bin);
+ehtml_expand(Bin) when is_binary(Bin) -> Bin; % yaws_api:htmlize(Bin);
 
 ehtml_expand({ssi,File, Del, Bs}) ->
     case yaws_server:ssi(File, Del, Bs) of
@@ -1220,7 +1222,7 @@ ehtml_expand({Tag, Attrs}) ->
     NL = ehtml_nl(Tag),
     [NL, "<", atom_to_list(Tag), ehtml_attrs(Attrs), "></",
      atom_to_list(Tag), ">"];
-ehtml_expand({Tag, Attrs, Body}) when atom(Tag) ->
+ehtml_expand({Tag, Attrs, Body}) when is_atom(Tag) ->
     Ts = atom_to_list(Tag),
     NL = ehtml_nl(Tag),
     [NL, "<", Ts, ehtml_attrs(Attrs), ">", ehtml_expand(Body), "</", Ts, ">"];
@@ -1230,27 +1232,27 @@ ehtml_expand([]) -> [].
 
 
 ehtml_attrs([]) -> [];
-ehtml_attrs([Attribute|Tail]) when atom(Attribute) ->
+ehtml_attrs([Attribute|Tail]) when is_atom(Attribute) ->
     [[$ |atom_to_list(Attribute)]|ehtml_attrs(Tail)];
-ehtml_attrs([Attribute|Tail]) when list(Attribute) ->
+ehtml_attrs([Attribute|Tail]) when is_list(Attribute) ->
     [" ", Attribute|ehtml_attrs(Tail)];
 ehtml_attrs([{Name, Value} | Tail]) ->
-    ValueString = if atom(Value) -> [$",atom_to_list(Value),$"];
-                     list(Value) -> [$",Value,$"];
-                     integer(Value) -> [$",integer_to_list(Value),$"];
-                     float(Value) -> [$",float_to_list(Value),$"]
+    ValueString = if is_atom(Value) -> [$",atom_to_list(Value),$"];
+                     is_list(Value) -> [$",Value,$"];
+                     is_integer(Value) -> [$",integer_to_list(Value),$"];
+                     is_float(Value) -> [$",float_to_list(Value),$"]
                   end,
     [[$ |atom_to_list(Name)], [$=|ValueString]|ehtml_attrs(Tail)];
 ehtml_attrs([{check, Name, Value} | Tail]) ->
-    ValueString = if atom(Value) -> [$",atom_to_list(Value),$"];
-                     list(Value) ->
+    ValueString = if is_atom(Value) -> [$",atom_to_list(Value),$"];
+                     is_list(Value) ->
                           Q = case deepmember($", Value) of
                                   true -> $';
                                   false -> $"
                               end,
                           [Q,Value,Q];
-                      integer(Value) -> [$",integer_to_list(Value),$"];
-                      float(Value) -> [$",float_to_list(Value),$"]
+                     is_integer(Value) -> [$",integer_to_list(Value),$"];
+                     is_float(Value) -> [$",float_to_list(Value),$"]
                    end,
                    [[$ |atom_to_list(Name)], 
                     [$=|ValueString]|ehtml_attrs(Tail)].
@@ -1335,7 +1337,7 @@ ehtml_expander(X) ->
 %% Text
 ehtml_expander(Ch, Before, After) when Ch >= 0, Ch =< 255 ->
     ehtml_expander_done(yaws_api:htmlize_char(Ch), Before, After);
-ehtml_expander(Bin, Before, After) when binary(Bin) ->
+ehtml_expander(Bin, Before, After) when is_binary(Bin) ->
     ehtml_expander_done(yaws_api:htmlize(Bin), Before, After);
 
 ehtml_expander({ssi,File, Del, Bs}, Before, After) ->
@@ -1365,7 +1367,7 @@ ehtml_expander({Tag, Attrs, Body}, Before, After) ->
                     Before],
                    ["</", atom_to_list(Tag), ">"|After]);
 %% Variable references
-ehtml_expander(Var, Before, After) when atom(Var) ->
+ehtml_expander(Var, Before, After) when is_atom(Var) ->
     [reverse(Before), {ehtml, ehtml_var_name(Var)}, After];
 %% Lists
 ehtml_expander([H|T], Before, After) ->
@@ -1386,17 +1388,17 @@ ehtml_attrs_expander([Var|T]) ->
     [[" ",
       ehtml_attr_part_expander(Var)]|
      ehtml_attrs_expander(T)];
-ehtml_attrs_expander(Var) when atom(Var) ->
+ehtml_attrs_expander(Var) when is_atom(Var) ->
     %% Var in the cdr of an attribute list
     [{ehtml_attrs, ehtml_var_name(Var)}].
 
-ehtml_attr_part_expander(A) when atom(A) ->
+ehtml_attr_part_expander(A) when is_atom(A) ->
     case ehtml_var_p(A) of
         true  -> {preformatted, ehtml_var_name(A)};
         false -> atom_to_list(A)
     end;
-ehtml_attr_part_expander(I) when integer(I) -> integer_to_list(I);
-ehtml_attr_part_expander(S) when list(S) -> S.
+ehtml_attr_part_expander(I) when is_integer(I) -> integer_to_list(I);
+ehtml_attr_part_expander(S) when is_list(S) -> S.
 
 ehtml_expander_done(X, Before, After) -> [reverse([X|Before]), After].
 
@@ -1404,10 +1406,10 @@ ehtml_expander_done(X, Before, After) -> [reverse([X|Before]), After].
 %% binaries.
 %% Returns: [binary() | {ehtml, Var} | {preformatted, Var}, {ehtml_attrs, Var}]
 %% Var = atom()
-ehtml_expander_compress([Tag|T], Acc) when tuple(Tag) ->
+ehtml_expander_compress([Tag|T], Acc) when is_tuple(Tag) ->
     [list_to_binary(reverse(Acc)), Tag | ehtml_expander_compress(T, [])];
 ehtml_expander_compress([], Acc) -> [list_to_binary(reverse(Acc))];
-ehtml_expander_compress([H|T], Acc) when integer(H) ->
+ehtml_expander_compress([H|T], Acc) when is_integer(H) ->
     ehtml_expander_compress(T, [H|Acc]).
 
 %% Apply an expander with the variable bindings in Env.  Env is a list of
@@ -1415,7 +1417,7 @@ ehtml_expander_compress([H|T], Acc) when integer(H) ->
 %% term.
 ehtml_apply(Expander, Env) -> [ehtml_eval(X, Env) || X <- Expander].
 
-ehtml_eval(Bin, _Env) when binary(Bin) -> Bin;
+ehtml_eval(Bin, _Env) when is_binary(Bin) -> Bin;
 ehtml_eval({Type, Var}, Env) ->
     case lists:keysearch(Var, 1, Env) of
         false -> erlang:error({ehtml_unbound, Var});
@@ -1429,14 +1431,14 @@ ehtml_eval({Type, Var}, Env) ->
 
 %% Get the name part of a variable reference.
 %% e.g. ehtml_var_name('$foo') -> foo.
-ehtml_var_name(A) when atom(A) ->
+ehtml_var_name(A) when is_atom(A) ->
     case ehtml_var_p(A) of
         true -> list_to_atom(tl(atom_to_list(A)));
         false -> erlang:error({bad_ehtml_var_name, A})
     end.
 
 %% Is X a variable reference? Variable references are atoms starting with $.
-ehtml_var_p(X) when atom(X) -> hd(atom_to_list(X)) == $$;
+ehtml_var_p(X) when is_atom(X) -> hd(atom_to_list(X)) == $$;
 ehtml_var_p(_) -> false.
 
 ehtml_expander_test() ->
@@ -1491,7 +1493,7 @@ deepmember(_C,[]) ->
     false;
 deepmember(C,[C|_Cs]) ->
     true;
-deepmember(C,[L|Cs]) when list(L) ->
+deepmember(C,[L|Cs]) when is_list(L) ->
     case deepmember(C,L) of
         true  -> true;
         false -> deepmember(C,Cs)
@@ -1642,7 +1644,7 @@ skip_space(T) -> T.
 %%
 
 
-getvar(ARG,Key) when atom(Key) ->
+getvar(ARG,Key) when is_atom(Key) ->
     getvar(ARG, atom_to_list(Key));
 getvar(ARG,Key) ->
     case (ARG#arg.req)#http_request.method of
@@ -1652,7 +1654,7 @@ getvar(ARG,Key) ->
     end.
 
 
-queryvar(ARG,Key) when atom(Key) ->
+queryvar(ARG,Key) when is_atom(Key) ->
     queryvar(ARG, atom_to_list(Key));
 queryvar(ARG, Key) ->
     Parse = case get(query_parse) of
@@ -1665,7 +1667,7 @@ queryvar(ARG, Key) ->
             end,
     filter_parse(Key, Parse).
 
-postvar(ARG, Key) when atom(Key) ->
+postvar(ARG, Key) when is_atom(Key) ->
     postvar(ARG, atom_to_list(Key));
 postvar(ARG, Key) ->
     Parse = case get(post_parse) of
@@ -1841,7 +1843,7 @@ redirect_self(A) ->
     Host = yaws:redirect_host(get(sc), H#headers.host),
     {Scheme, SchemeStr} = 
         case {SC#sconf.ssl,SC#sconf.rmethod} of
-            {_, Method} when list(Method) ->
+            {_, Method} when is_list(Method) ->
                 {list_to_atom(Method), Method++"://"};
             {undefined,_} ->
                 {http, "http://"};

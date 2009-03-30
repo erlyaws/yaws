@@ -183,10 +183,10 @@ cont_len_check(H,Psock) ->
                 undefined when Psock#psock.type == server ->
                     Psock#psock{mode = undefined, state = 0}
             end;
-        Int when integer(Int) ->
+        Int when is_integer(Int) ->
             Psock#psock{mode = len,
                         state = Int};
-        List when list(List) ->
+        List when is_list(List) ->
             Psock#psock{mode = len,
                         state = list_to_integer(List)}
     
@@ -237,9 +237,9 @@ ploop(From0, To, Pid) ->
                     RStr = 
                         if
                             %% FIXME handle bad_request here
-                            record(R, http_response) ->
+                            is_record(R, http_response) ->
                                 yaws_api:reformat_response(R);
-                            record(R, http_request) ->
+                            is_record(R, http_request) ->
                                 Pid ! {cli2srv, R#http_request.method, 
                                        H0#headers.host},
                                 yaws_api:reformat_request(

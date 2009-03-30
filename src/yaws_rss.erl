@@ -430,9 +430,9 @@ w3cdtf_diff(Y, Mo, D, H, Mi, S, _DiffD, DiffH, _DiffMi) when DiffH == 0 ->
         add_zero(H) ++ ":" ++ add_zero(Mi) ++ ":"  ++
         add_zero(S) ++ "Z".
 
-add_zero(I) when integer(I) -> add_zero(i2l(I));
+add_zero(I) when is_integer(I) -> add_zero(i2l(I));
 add_zero([A])               -> [$0,A];
-add_zero(L) when list(L)    -> L. 
+add_zero(L) when is_list(L)    -> L. 
 
 
 
@@ -455,11 +455,11 @@ u_insert(E, [H|T]) -> [H|u_insert(E,T)];
 u_insert(E, [])    -> [E].
 
 
-i2l(I) when integer(I) -> integer_to_list(I);
-i2l(L) when list(L)    -> L.
+i2l(I) when is_integer(I) -> integer_to_list(I);
+i2l(L) when is_list(L)    -> L.
 
-a2l(A) when atom(A) -> atom_to_list(A);
-a2l(L) when list(L) -> L.
+a2l(A) when is_atom(A) -> atom_to_list(A);
+a2l(L) when is_list(L) -> L.
 
      
     

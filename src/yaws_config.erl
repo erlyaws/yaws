@@ -456,7 +456,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 
         ["log_wrap_size", '=', Int] ->
             case (catch list_to_integer(Int)) of
-                I when integer(I) ->
+                I when is_integer(I) ->
                     fload(FD, globals, GC#gconf{log_wrap_size = I},
                           C, Cs, Lno+1, Next);
                 _ ->
@@ -514,7 +514,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
         %% keep this bugger for backward compat for a while
         ["keepalive_timeout", '=', Val] ->
             case (catch list_to_integer(Val)) of
-                I when integer(I) ->
+                I when is_integer(I) ->
                     fload(FD, globals, GC#gconf{keepalive_timeout = I},
                           C, Cs, Lno+1, Next);
                 _ ->
@@ -536,7 +536,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 
         ["max_num_cached_files", '=', Val] ->
             case (catch list_to_integer(Val)) of
-                I when integer(I) ->
+                I when is_integer(I) ->
                     fload(FD, globals, GC#gconf{max_num_cached_files = I},
                           C, Cs, Lno+1, Next);
                 _ ->
@@ -546,7 +546,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 
         ["max_num_cached_bytes", '=', Val] ->
             case (catch list_to_integer(Val)) of
-                I when integer(I) ->
+                I when is_integer(I) ->
                     fload(FD, globals, GC#gconf{max_num_cached_bytes = I},
                           C, Cs, Lno+1, Next);
                 _ ->
@@ -556,7 +556,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 
         ["max_size_cached_file", '=', Val] ->
             case (catch list_to_integer(Val)) of
-                I when integer(I) ->
+                I when is_integer(I) ->
                     fload(FD, globals, GC#gconf{max_size_cached_file = I},
                           C, Cs, Lno+1, Next);
                 _ ->
@@ -565,7 +565,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 
         ["cache_refresh_secs", '=', Val] ->
             case (catch list_to_integer(Val)) of
-                I when integer(I), I >= 0 ->
+                I when is_integer(I), I >= 0 ->
                     fload(FD, globals, GC#gconf{cache_refresh_secs = I},
                           C, Cs, Lno+1, Next);
                 _ ->
@@ -700,7 +700,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             end;
         ["port", '=', Val] ->
             case (catch list_to_integer(Val)) of
-                I when integer(I) ->
+                I when is_integer(I) ->
                     C2 = C#sconf{port = I},
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 _ ->
@@ -730,7 +730,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             end;
         ["listen_backlog", '=', Val] ->
             case (catch list_to_integer(Val)) of
-                B when integer(B) ->
+                B when is_integer(B) ->
                     C2 = case proplists:get_value(listen_opts, C#sconf.soptions) of
                              undefined ->
                                  C#sconf{soptions = [{listen_opts, [{backlog, B}]} |
@@ -769,7 +769,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 Val ->
                     case (catch list_to_integer(Val)) of
-                        I when integer(I) ->
+                        I when is_integer(I) ->
                             C2 = C#sconf{partial_post_size = I},
                             fload(FD, server, GC, C2, Cs, Lno+1, Next);
                         _ ->
@@ -879,7 +879,7 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
 
         ["keyfile", '=', Val] ->
             case is_file(Val) of
-                true when  record(C#sconf.ssl, ssl) ->
+                true when  is_record(C#sconf.ssl, ssl) ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{keyfile = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
                 true ->
@@ -890,7 +890,7 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
             end;
         ["certfile", '=', Val] ->
             case is_file(Val) of
-                true when  record(C#sconf.ssl, ssl) ->
+                true when  is_record(C#sconf.ssl, ssl) ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{certfile = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
                 true ->
@@ -901,7 +901,7 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
             end;
         ["cacertfile", '=', Val] ->
             case is_file(Val) of
-                true when  record(C#sconf.ssl, ssl) ->
+                true when  is_record(C#sconf.ssl, ssl) ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{cacertfile = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
                 true ->
@@ -913,7 +913,7 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
         ["verify", '=', Val0] ->
             Val = (catch list_to_integer(Val0)),
             case lists:member(Val, [1,2,3]) of
-                true when  record(C#sconf.ssl, ssl) ->
+                true when  is_record(C#sconf.ssl, ssl) ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{verify = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
                 true ->
@@ -925,7 +925,7 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
         ["depth", '=', Val0] ->
             Val = (catch list_to_integer(Val0)),
             case lists:member(Val, [1,2,3,4,5,6,7]) of
-                true when  record(C#sconf.ssl, ssl) ->
+                true when  is_record(C#sconf.ssl, ssl) ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{depth = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
                 true ->
@@ -936,7 +936,7 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
             end;
         ["password", '=', Val] ->
             if 
-                record(C#sconf.ssl, ssl) ->
+                is_record(C#sconf.ssl, ssl) ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{password = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
                 true ->
@@ -945,7 +945,7 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
             end;
         ["ciphers", '=', Val] ->
             if 
-                record(C#sconf.ssl, ssl) ->
+                is_record(C#sconf.ssl, ssl) ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{ciphers = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
                 true ->
@@ -1088,7 +1088,7 @@ fload(FD, server_redirect, GC, C, Cs, Lno, Chars, RedirMap) ->
         [Path, '=', URL] ->
             io:format(" = ~p ~p~n", [URL, Toks]),
             try yaws_api:parse_url(URL, sloppy) of
-                U when record(U, url) ->
+                U when is_record(U, url) ->
                      fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
                            [{Path, U, append}|RedirMap])
             catch _:_ ->
@@ -1097,7 +1097,7 @@ fload(FD, server_redirect, GC, C, Cs, Lno, Chars, RedirMap) ->
         [Path, '=', '=', URL] ->
             io:format(" == ~p~n", [URL]),
             try yaws_api:parse_url(URL, sloppy) of
-                U when record(U, url) ->
+                U when is_record(U, url) ->
                      fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
                            [{Path, U, noappend}|RedirMap])
             catch _:_ ->
@@ -1525,7 +1525,7 @@ find_sc(_SC,[]) ->
 
 
 
-verify_upgrade_args(GC, Groups0) when record(GC, gconf) ->
+verify_upgrade_args(GC, Groups0) when is_record(GC, gconf) ->
     case is_groups(Groups0) of
         true ->
             %% embeded code may give appmods as a list of strings
@@ -1537,9 +1537,9 @@ verify_upgrade_args(GC, Groups0) when record(GC, gconf) ->
                                         lists:map(
                                           fun({PE, Mod}) ->
                                                   {PE, Mod};
-                                             (AM) when list(AM) ->
+                                             (AM) when is_list(AM) ->
                                                   {AM,list_to_atom(AM)};
-                                             (AM) when atom(AM) ->
+                                             (AM) when is_atom(AM) ->
                                                   {atom_to_list(AM), AM}
                                           end,
                                           SC#sconf.appmods)}
@@ -1561,7 +1561,7 @@ is_groups([H|T]) ->
 is_groups([]) ->
     true.
 
-is_list_of_scs([H|T]) when record(H, sconf) ->
+is_list_of_scs([H|T]) when is_record(H, sconf) ->
     is_list_of_scs(T);
 is_list_of_scs([]) ->
     true;

@@ -184,7 +184,7 @@
 
          %% [{Extension:string(), Mod:atom()]
          %% work in progress .....
-         extension_mods = [{"yxxxxxx", yaws_ext_handler_yaws}] 
+         extension_mods = [{"ys", yaws_ext_handler_yaws}] 
 
         }).
 

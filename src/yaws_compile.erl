@@ -261,7 +261,7 @@ line() ->
 
 is_exported(Fun, A, Mod) ->
     case (catch Mod:module_info()) of
-        List when list(List) ->
+        List when is_list(List) ->
             case lists:keysearch(exports, 1, List) of
                 {value, {exports, Exp}} ->
                     lists:member({Fun, A}, Exp);
@@ -341,7 +341,7 @@ comp_err(C, LineNo, NumChars, Err, Warns) ->
 
 comp_err(C, _LineNo, NumChars, Err) ->
     case Err of
-        [{_FileName, [ {Line0, Mod, E} |_]} |_] when integer(Line0) ->
+        [{_FileName, [ {Line0, Mod, E} |_]} |_] when is_integer(Line0) ->
             Line = Line0 + C#comp.startline - 10,
             ?Debug("XX ~p~n", [{_LineNo, Line0}]),
             Str = io_lib:format("~s:~w:~n ~s\ngenerated file at: ~s~n", 

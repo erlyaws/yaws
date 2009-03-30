@@ -122,12 +122,12 @@ stop() ->
 start_embedded(DocRoot) ->
     start_embedded(DocRoot, []).
 
-start_embedded(DocRoot, SL) when list(DocRoot),list(SL) ->
+start_embedded(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
     start_embedded(DocRoot, SL, []).
 
-start_embedded(DocRoot, SL, GL) when list(DocRoot),list(SL),list(GL) ->
+start_embedded(DocRoot, SL, GL) when is_list(DocRoot),is_list(SL),is_list(GL) ->
     start_embedded(DocRoot, SL, GL, "default").
-start_embedded(DocRoot, SL, GL, Id) when list(DocRoot),list(SL),list(GL) ->
+start_embedded(DocRoot, SL, GL, Id) when is_list(DocRoot),is_list(SL),is_list(GL) ->
     case application:load(yaws) of
         ok -> ok;
         {error, {already_loaded,yaws}} -> ok;
@@ -142,7 +142,7 @@ start_embedded(DocRoot, SL, GL, Id) when list(DocRoot),list(SL),list(GL) ->
     SCs = yaws_config:add_yaws_auth([SC]),
     yaws_api:setconf(GC, [SCs]).
 
-add_server(DocRoot, SL) when list(DocRoot),list(SL) ->
+add_server(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
     SC = setup_sconf(DocRoot, #sconf{}, SL),
     yaws_config:add_sconf(SC).
 
@@ -386,11 +386,11 @@ int_to_wd(7) ->
     "Sun".
 
 
-to_string(X) when float(X) ->
+to_string(X) when is_float(X) ->
     io_lib:format("~.2.0f",[X]);
-to_string(X) when integer(X) ->
+to_string(X) when is_integer(X) ->
     integer_to_list(X);
-to_string(X) when atom(X) ->
+to_string(X) when is_atom(X) ->
     atom_to_list(X);
 to_string(X) ->
     lists:concat([X]).
@@ -398,9 +398,9 @@ to_string(X) ->
 %%
 
 
-to_list(L) when list(L) ->
+to_list(L) when is_list(L) ->
     L;
-to_list(A) when atom(A) ->
+to_list(A) when is_atom(A) ->
     atom_to_list(A).
 
 
@@ -708,7 +708,7 @@ arg_rewrite(A) ->
 
 is_ssl(#sconf{ssl = undefined}) ->
     nossl;
-is_ssl(#sconf{ssl = S}) when record(S, ssl) ->
+is_ssl(#sconf{ssl = S}) when is_record(S, ssl) ->
     ssl.
 
 
@@ -1088,7 +1088,7 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
         = case Range of 
               all ->
                   case UT#urltype.deflate of
-                      DB when binary(DB) -> % cached
+                      DB when is_binary(DB) -> % cached
                           case accepts_gzip(Headers, UT#urltype.mime) of
                               true -> {true, size(DB)};
                               false -> {false, FIL}
@@ -1355,9 +1355,9 @@ make_content_range_header({fromto, From, To, Tot}) ->
      integer_to_list(From), $-, integer_to_list(To),
      $/, integer_to_list(Tot), $\r, $\n].
 
-make_content_length_header(Size) when integer(Size) ->
+make_content_length_header(Size) when is_integer(Size) ->
     ["Content-Length: ", integer_to_list(Size), "\r\n"];
-make_content_length_header(FI) when record(FI, file_info) ->
+make_content_length_header(FI) when is_record(FI, file_info) ->
     Size = FI#file_info.size,
     ["Content-Length: ", integer_to_list(Size), "\r\n"];
 make_content_length_header(_) ->
@@ -1488,7 +1488,7 @@ noundef(Str) ->
 
 
 
-accumulate_header({X, erase}) when atom(X) ->
+accumulate_header({X, erase}) when is_atom(X) ->
     erase_header(X);
 
 %% special headers
@@ -1539,7 +1539,7 @@ accumulate_header({content_encoding, What}) ->
 accumulate_header({"Content-Encoding", What}) ->
     accumulate_header({content_encoding, What});
 
-accumulate_header({content_length, Len}) when integer(Len) ->
+accumulate_header({content_length, Len}) when is_integer(Len) ->
     H = get(outh),
     put(outh, H#outh{
                 chunked = false,
@@ -1548,15 +1548,15 @@ accumulate_header({content_length, Len}) when integer(Len) ->
                 content_length = make_content_length_header(Len)});
 accumulate_header({"Content-Length", Len}) ->
     case Len of
-        I when integer(I) ->
+        I when is_integer(I) ->
             accumulate_header({content_length, I});
-        L when list(L) ->
+        L when is_list(L) ->
             accumulate_header({content_length, list_to_integer(L)})
     end;
 
 %% non-special headers (which may be special in a future Yaws version)
 
-accumulate_header({Name, What}) when list(Name) ->
+accumulate_header({Name, What}) when is_list(Name) ->
     H = get(outh),
     Old = case H#outh.other of
               undefined ->
@@ -1570,7 +1570,7 @@ accumulate_header({Name, What}) when list(Name) ->
 
 
 %% backwards compatible clause
-accumulate_header(Data) when list(Data) ->
+accumulate_header(Data) when is_list(Data) ->
     Str = lists:flatten(Data),
     accumulate_header(split_header(Str)).
 
@@ -1704,7 +1704,7 @@ cli_recv(S, Num, SslBool) ->
 cli_recv_trace(false, _) -> ok;
 cli_recv_trace(Trace, Res) ->
     case Res of
-        {ok, Val} when tuple(Val) ->
+        {ok, Val} when is_tuple(Val) ->
             yaws_log:trace_traffic(from_client, ?F("~p~n", [Val]));
         {error, What} ->
             yaws_log:trace_traffic(from_client, ?F("~n~p~n", [What]));
@@ -1770,7 +1770,7 @@ http_get_headers(CliSock, SSL) ->
     if
         GC#gconf.trace == false ->
             Res;
-        tuple(Res) ->
+        is_tuple(Res) ->
             {Request, Headers} = Res,
             ReqStr = yaws_api:reformat_request(Request),
             HStr = headers_to_str(Headers),
@@ -1810,9 +1810,9 @@ do_http_get_headers(CliSock, SSL) ->
 
 http_recv_request(CliSock, SSL) ->
     case do_recv(CliSock, 0,  SSL) of
-        {ok, R} when record(R, http_request) ->
+        {ok, R} when is_record(R, http_request) ->
             R;
-        {ok, R} when record(R, http_response) ->
+        {ok, R} when is_record(R, http_response) ->
             R;
         {error, {http_error, "\r\n"}} ->
             http_recv_request(CliSock, SSL);
@@ -2024,12 +2024,12 @@ load(M) ->
 
 upto_char(Char, [Char|_]) ->
     [];
-upto_char(Char, [H|T]) when integer(H) ->
+upto_char(Char, [H|T]) when is_integer(H) ->
     [H|upto_char(Char, T)];
 upto_char(_, []) ->
     [];
 %% deep lists
-upto_char(Char, [H|T]) when list(H) ->
+upto_char(Char, [H|T]) when is_list(H) ->
     case lists:member(Char ,H) of
         true ->
             upto_char(Char, H);
@@ -2041,7 +2041,7 @@ upto_char(Char, [H|T]) when list(H) ->
 %% map over deep list and maintain
 %% list structure as is
 
-deepmap(Fun, [H|T]) when list(H) ->
+deepmap(Fun, [H|T]) when is_list(H) ->
     [deepmap(Fun, H) | deepmap(Fun, T)];
 deepmap(Fun, [H|T]) ->
     [Fun(H) | deepmap(Fun,T)];
@@ -2055,7 +2055,7 @@ sconf_to_srvstr(SC) ->
 
 redirect_scheme(SC) ->
     case {SC#sconf.ssl,SC#sconf.rmethod} of
-        {_, Method} when list(Method) ->
+        {_, Method} when is_list(Method) ->
             Method++"://";
         {undefined,_} ->
             "http://";
@@ -2165,7 +2165,7 @@ get_chunk_num(Fd,SSL) ->
             exit(normal)
     end.
 
-nonl(B) when binary(B) ->
+nonl(B) when is_binary(B) ->
     nonl(binary_to_list(B));
 nonl([10|T]) ->
     nonl(T);

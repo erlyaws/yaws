@@ -27,10 +27,10 @@
          
 
 
-typecheck([{record, Rec, X} | Tail], File, Line) when atom(X),
+typecheck([{record, Rec, X} | Tail], File, Line) when is_atom(X),
                                                       element(1, Rec) == X ->
     typecheck(Tail, File, Line);
-typecheck([{int, Int} |Tail], File, Line) when integer(Int) ->
+typecheck([{int, Int} |Tail], File, Line) when is_integer(Int) ->
     typecheck(Tail, File, Line);
 typecheck([Err|_], File, Line) ->
     io:format(user, "TC ERROR ~s:~w:~n~p",
@@ -55,7 +55,7 @@ format_record([], []) ->
     [];
 format_record([Val|Vals], [F|Fs]) when is_integer(Val); 
                                        Val == []; 
-                                       atom(Val);
+                                       is_atom(Val);
                                        is_float(Val)->
     [io_lib:format("     ~w = ~w\n", [F,Val]),
      format_record(Vals, Fs)];
@@ -69,8 +69,8 @@ format_record([Val|Vals], [F|Fs]) ->
              format_record(Vals, Fs)]
     end.
 
-is_string(L) when list(L) ->
-    lists:filter(fun(X) when integer(X),
+is_string(L) when is_list(L) ->
+    lists:filter(fun(X) when is_integer(X),
                              $A < X, X < $z ->
                          false;
                     (_) ->
@@ -85,23 +85,23 @@ assert(equal,X,Y,_) when X==Y ->
     ok;
 assert(neq,X,Y,_) when X/=Y ->
     ok;
-assert(integer,X,_,_) when integer(X) ->
+assert(integer,X,_,_) when is_integer(X) ->
     ok;
-assert(list,X,_,_) when list(X) ->
+assert(list,X,_,_) when is_list(X) ->
     ok;
-assert({list,length,equal},X,Y,_) when list(X), length(X)==Y ->
+assert({list,length,equal},X,Y,_) when is_list(X), length(X)==Y ->
     ok;
-assert(greater,X,Y,_) when integer(X), integer(Y), X>Y ->
+assert(greater,X,Y,_) when is_integer(X), is_integer(Y), X>Y ->
     ok;
-assert(min,X,Y,_) when integer(X), integer(Y), X>=Y ->
+assert(min,X,Y,_) when is_integer(X), is_integer(Y), X>=Y ->
     ok;
-assert(lesser,X,Y,_) when integer(X), integer(Y), X<Y ->
+assert(lesser,X,Y,_) when is_integer(X), is_integer(Y), X<Y ->
     ok;
-assert(max,X,Y,_) when integer(X), integer(Y), X=<Y ->
+assert(max,X,Y,_) when is_integer(X), is_integer(Y), X=<Y ->
     ok;
-assert(interval,X,{Min,Max},_) when integer(X), integer(Min), 
-integer(Max), 
-X>=Min, Max>=X ->
+assert(interval,X,{Min,Max},_) when is_integer(X), is_integer(Min), 
+                                    is_integer(Max), 
+                                    X>=Min, Max>=X ->
     ok;
 assert('fun', Fun, _, Failure) ->
     case catch Fun() of
@@ -109,7 +109,7 @@ assert('fun', Fun, _, Failure) ->
         _Other -> fail(Failure)
     end;
 
-assert(in,X,L,Failure) when list(L) ->
+assert(in,X,L,Failure) when is_list(L) ->
     case lists:member(X,L) of
         true -> ok;
         _ -> fail(Failure)
@@ -191,7 +191,7 @@ pids() ->
     lists:zf(
       fun(P) ->
               case process_info(P) of
-                  L when list(L) ->
+                  L when is_list(L) ->
                       {value, {_, {M1, _,_}}} = 
                           lists:keysearch(current_function, 1, L),
                       {value, {_, {M2, _,_}}} = 
@@ -303,11 +303,11 @@ nobin(X) ->
     end.
 
 
-xnobin(B) when binary(B) ->
+xnobin(B) when is_binary(B) ->
     lists:flatten(io_lib:format("#Bin(~w)", [size(B)]));
-xnobin(L) when list(L) ->
+xnobin(L) when is_list(L) ->
     lists:map(fun(X) -> xnobin(X) end, L);
-xnobin(T) when tuple(T) ->
+xnobin(T) when is_tuple(T) ->
     list_to_tuple(xnobin(tuple_to_list(T)));
 xnobin(X) ->
     X.
