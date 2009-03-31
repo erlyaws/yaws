@@ -12,7 +12,6 @@ cd "$(dirname "$0")"
 
 echo packing release ${YAWS_VSN} 
 
-Y=`echo ${YAWS_VSN} | sed 's/\./-/g'`
 TAG="yaws-${YAWS_VSN}"
 NAME_VERSION="yaws-${YAWS_VSN}"
 
@@ -33,7 +32,7 @@ fi
 
 
 # Add/update release tag
-git tag -f -a -m "version ${Y}" "$TAG"
+git tag -f -a -m "version ${YAWS_VSN}" "$TAG"
 
 # Create release .tar.gz of sources
 # (including symlink yaws -> $NAME_VERSION)
