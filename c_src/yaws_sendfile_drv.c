@@ -3,6 +3,7 @@
 /* Created : 09 Nov 2008 by Steve Vinoski <vinoski@ieee.org> */
 
 #include <errno.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -23,13 +24,38 @@
 
 #include "hashtable.h"
 
+#define lshift_index(s, i, shift, t) (((t)((unsigned char*)(s))[i]) << (shift))
+#define lshift32(s, i, shift) lshift_index(s, i, shift, uint32_t)
+#define lshift64(s, i, shift) lshift_index(s, i, shift, uint64_t)
+#define get_int32(s) (lshift32(s,0,24) | lshift32(s,1,16) | lshift32(s,2,8) | lshift32(s,3,0))
+#define get_int64(s) (lshift64(s,0,56) | lshift64(s,1,48) | lshift64(s,2,40) | lshift64(s,3,32) | \
+                      lshift64(s,4,24) | lshift64(s,5,16) | lshift64(s,6,8) | lshift64(s,7,0))
+
+#define put_shift(i, s, idx, shift) (((unsigned char*)(s))[idx] = ((unsigned char)((i) >> (shift)) & 0XFF))
+#define put_int32(i, s) do { \
+    put_shift(i, s, 0, 24); \
+    put_shift(i, s, 1, 16); \
+    put_shift(i, s, 2,  8); \
+    put_shift(i, s, 3,  0); \
+    } while(0)
+#define put_int64(i, s) do { \
+    put_shift(i, s, 0, 56); \
+    put_shift(i, s, 1, 48); \
+    put_shift(i, s, 2, 40); \
+    put_shift(i, s, 3, 32); \
+    put_shift(i, s, 4, 24); \
+    put_shift(i, s, 5, 16); \
+    put_shift(i, s, 6,  8); \
+    put_shift(i, s, 7,  0); \
+    } while(0)
+
 typedef union {
     void* hashkey;
     ErlDrvEvent ev_data;
 #ifdef _LP64
-    u_int64_t socket_fd;
+    uint64_t socket_fd;
 #else
-    u_int32_t socket_fd;
+    uint32_t socket_fd;
 #endif
 } SocketFd;
 
@@ -82,20 +108,21 @@ typedef union {
     off_t offset;
     size_t size;
     ssize_t count;
-    u_int64_t bits;
+    uint64_t bits;
+    unsigned char bytes[8];
 } U64_t;
 
 typedef union {
     char* buffer;
     struct {
-        U64_t        offset;
-        U64_t        count;
-        unsigned int out_fd: 32;
-        char         filename[1];
+        U64_t    offset;
+        U64_t    count;
+        uint32_t out_fd;
+        char     filename[1];
     }* args;
     struct {
         U64_t         count;
-        unsigned int  out_fd: 32;
+        uint32_t      out_fd;
         unsigned char success;
         char          errno_string[1];
     }* result;
@@ -161,7 +188,7 @@ static void yaws_sendfile_drv_output(ErlDrvData handle, char* buf, int buflen)
     Desc* d = (Desc*)handle;
     Buffer b;
     b.buffer = buf;
-    socket_fd = b.args->out_fd;
+    socket_fd = get_int32(&(b.args->out_fd));
     fd = open(b.args->filename, O_RDONLY | O_NONBLOCK);
     if (fd < 0) {
         int out_buflen = set_error_buffer(&b, socket_fd, errno);
@@ -188,13 +215,12 @@ static void yaws_sendfile_drv_output(ErlDrvData handle, char* buf, int buflen)
             }
         }
         xfer->file_fd = fd;
-        xfer->offset = b.args->offset.offset;
-        xfer->count = b.args->count.size;
+        xfer->offset = get_int64(&(b.args->offset.offset));
+        xfer->count = get_int64(&(b.args->count.size));
         xfer->total = 0;
         driver_select(d->port, sfd.ev_data, DO_WRITE, 1);
     }
 }
-
 
 
 static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
@@ -227,8 +253,9 @@ static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
         if (result < 0) {
             out_buflen = set_error_buffer(&b, sfd->socket_fd, errno);
         } else {
-            b.result->count.count = xfer->total + result;
-            b.result->out_fd = sfd->socket_fd;
+            uint64_t total = xfer->total + result;
+            put_int64(total, &(b.result->count.count));
+            put_int32(sfd->socket_fd, &(b.result->out_fd));
             b.result->success = 1;
             b.result->errno_string[0] = '\0';
             out_buflen = sizeof(*b.result);
