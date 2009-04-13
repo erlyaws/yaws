@@ -217,14 +217,14 @@ while [ $# -gt 0 ]
               eval "$var=$v"
               var='YAWS_HEART_SECS'
           done
-          num=`expr "$YAWS_HEART_COUNT" : "([0-9]*)"`
-          if [ "$num" != "$YAWS_HEART_COUNT" ]; then
-              echo error: count argument to --heart-restart is $YAWS_HEART_COUNT, not a number
+          num=`expr "$YAWS_HEART_COUNT" : '\([0-9]*\)'`
+          if [ -z "$num" -o "$num" != "$YAWS_HEART_COUNT" ]; then
+              echo error: count argument to --heart-restart is '"'$YAWS_HEART_COUNT'"': not a number
               exit 1
           fi
-          num=`expr "$YAWS_HEART_SECS" : "([0-9]*)"`
-          if [ "$num" != "$YAWS_HEART_SECS" ]; then
-              echo error: time argument to --heart-restart is $YAWS_HEART_SECS, not a number
+          num=`expr "$YAWS_HEART_SECS" : '\([0-9]*\)'`
+          if [ -z "$num" -o "$num" != "$YAWS_HEART_SECS" ]; then
+              echo error: time argument to --heart-restart is '"'$YAWS_HEART_SECS'"': not a number
               exit 1
           fi
           IFS="$saveifs"
