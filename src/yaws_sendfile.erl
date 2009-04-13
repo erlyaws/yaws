@@ -13,7 +13,7 @@ start_link() ->
     Dir = case yaws_generated:is_local_install() of
 	      true ->
 		  filename:dirname(code:which(?MODULE)) ++ "/../priv/lib";
-	       false ->
+              false ->
 		  %% ignore dialyzer on this one
 		  PrivDir = code:priv_dir(yaws),
 		  filename:join(PrivDir,"lib")
