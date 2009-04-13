@@ -356,13 +356,20 @@ will be automatically loaded when referenced.
 It is best to run \Yaws\  interactively while developing the site.
 In order to start the \Yaws\  as a daemon, we give the flags:
 \begin{verbatim}
-# yaws -D -heart
+# yaws -D --heart
 \end{verbatim}
 
-The \textit{-D} flags instructs \Yaws\  to run as a daemon and the 
-\textit{-heart} flags will start a heartbeat program called heart
-which restarts the daemon if it should crash or if it stops responding to
-a regular heartbeat.
+The \textit{-D} or \textit{--daemon} flags instructs \Yaws\ to run as
+a daemon and the \textit{--heart} flag will start a heartbeat program
+called heart which restarts the daemon if it should crash or if it
+stops responding to a regular heartbeat. By default, heart will
+restart the daemon unless it has already restarted 5 times in 60
+seconds or less, in which case it considers the situation fatal and
+refuses to restart the daemon again. The \textit{-heart-restart=C,T}
+flag changes the default 5 restarts in 60 seconds to \textit{C}
+restarts in \textit{T} seconds. For infinite restarts, set both
+\textit{C} and \textit{T} to 0. This flag also enables the
+\textit{--heart} flag.
 
 Once started in daemon mode, we have very limited ways of interacting
 with the daemon. It is possible to query the daemon using:

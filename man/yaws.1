@@ -29,11 +29,20 @@ Daemon mode. This will start yaws as a daemon.
 .TP
 \fB\--heart\fR
 This will cause the yaws system to be automatically restarted
-in case it should crash. This switch also require the \fI--daemon\fR
+in case it should crash. This switch also requires the \fI--daemon\fR
 switch to be present.
 .TP
+\fB\--heart-restart=C,T\fR
+This controls the number of restarts in a given time period that heart
+tolerates before refusing to restart Yaws. By default, heart allows up
+to 5 restarts within a 60 second period before refusing to restart
+Yaws again. This option allows up to \fIC\fR restarts in \fIT\fR
+seconds instead. To allow infinite restarts, set both \fIC\fR and
+\fIT\fR to 0. This switch automatically enables the \fI--heart\fR
+switch.
+.TP
 \fB\--debug\fR
-Debug mode. This will produce some auxilliary error output for some
+Debug mode. This will produce some auxiliary error output for some
 error conditions. It will also start the otp sasl lib for additional
 error printouts.
 
@@ -160,9 +169,12 @@ http or traffic option is given, the daemon will write a log
 for debug purposes into the logdir.
 
 .TP
-\fB--wait-started [--id ID] \fR
+\fB--wait-started[=T] [--id ID] \fR
 Waits at most 5 seconds for the server to start. Exits with 0 if
-server is running, 1 otherwise. Typically useful in test scripts. 
+server is running, 1 otherwise. Typically useful in test scripts. The
+default 5 seconds can be modified by appending \fI=T\fR to the option,
+where \fIT\fR is the desired number of seconds to wait for the server
+to start.
 
 .SH MISC OPTIONS
 

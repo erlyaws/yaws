@@ -33,25 +33,26 @@ help()
 
     echo ""
     echo "       Auxiliary flags for the daemon: "
-    echo "            --id Id          --  set system id"
-    echo "            --debug          --  debug mode "
-    echo "            --conf File      --  set config file"
-    echo "            --tracetraf      --  trace traffic"
-    echo "            --tracehttp      --  trace http traffic"
-    echo "            --traceout       --  trace output to stdout"
-    echo "            --version        --  print version"
-    echo "            --pa path        --  add load path"
-    echo "            --mnesiadir dir  --  start Mnesia in dir"
-    echo "            --proto_dist Mod --  use Mod for distrib"
-    echo "            --sname xxx      --  start with sname xxx"
-    echo "            --name xxx       --  start with name xxx"
-    echo "            --runmod mod     --  call mod:start/0 at startup"
-    echo "            --heart          --  auto restart yaws if it crashes"
-    echo "            --erlarg X       --  pass argument X to $erl"
-    echo "            --setcookie X    --  set an erlang cookie"
-    echo "            --run_erl X      --  use run_erl with pipe-id X"
-    echo "            --to_erl X       --  connect to pipe-id X"
-    echo "            --disable-kpoll  --  pass +K false to erlang"
+    echo "            --id Id             --  set system id"
+    echo "            --debug             --  debug mode "
+    echo "            --conf File         --  set config file"
+    echo "            --tracetraf         --  trace traffic"
+    echo "            --tracehttp         --  trace http traffic"
+    echo "            --traceout          --  trace output to stdout"
+    echo "            --version           --  print version"
+    echo "            --pa path           --  add load path"
+    echo "            --mnesiadir dir     --  start Mnesia in dir"
+    echo "            --proto_dist Mod    --  use Mod for distrib"
+    echo "            --sname xxx         --  start with sname xxx"
+    echo "            --name xxx          --  start with name xxx"
+    echo "            --runmod mod        --  call mod:start/0 at startup"
+    echo "            --heart             --  auto restart yaws if it crashes"
+    echo "            --heart-restart=C,T --  allow C heart restarts in T seconds"
+    echo "            --erlarg X          --  pass argument X to $erl"
+    echo "            --setcookie X       --  set an erlang cookie"
+    echo "            --run_erl X         --  use run_erl with pipe-id X"
+    echo "            --to_erl X          --  connect to pipe-id X"
+    echo "            --disable-kpoll     --  pass +K false to erlang"
     echo ""
 
     echo "ctl functions ... "
@@ -93,40 +94,35 @@ wait_started() {
         sleep 1
         i=`expr $i + 1`
         ${program}  --id ${id} --status 2>&1 > /dev/null
-        if [ $? = 0 ]; then
-            exit 0
-        fi
+        [ $? = 0 ] && exit 0
     done
     echo "No yaws system responding for id=${id}"
     exit 1
 }
 
-
 now=`date -u +%s`
+restarts=1
+starttime=$now
 if [ "$HEART" = true ]; then
     # we were restarted by heart, make sure we haven't reached our restart count
-    # if we get 5 restarts within 60 seconds, we exit completely
-    timediff=`expr $now - $YAWS_HEART_START`
-    if [ $timediff -le 60 ]; then
-        if [ $YAWS_HEART_RESTARTS -eq 5 ]; then
-            echo 5 restarts attempted within 60 seconds, exiting
-            exit 1
-        else
-            # we haven't reached the restart max count yet, but we're still
-            # within the 60 second window so increment the counter
-            # but keep the same start time
-            restarts=`expr $YAWS_HEART_RESTARTS + 1`
-            starttime=$YAWS_HEART_START
+    # if we get $YAWS_HEART_COUNT restarts within $YAWS_HEART_SECS seconds, we
+    # exit completely
+    # if both are 0, disable restart checking and just always restart
+    if [ $YAWS_HEART_COUNT -ne 0 -o $YAWS_HEART_SECS -ne 0 ]; then
+        timediff=`expr $now - $YAWS_HEART_START`
+        if [ $timediff -le $YAWS_HEART_SECS ]; then
+            if [ $YAWS_HEART_RESTARTS -eq $YAWS_HEART_COUNT ]; then
+                echo $YAWS_HEART_COUNT restarts attempted within $YAWS_HEART_SECS seconds, exiting
+                exit 1
+            else
+                # we haven't reached the restart max count yet, but we're still
+                # within the $YAWS_HEART_SECS second window so increment the counter
+                # but keep the same start time
+                restarts=`expr $YAWS_HEART_RESTARTS + 1`
+                starttime=$YAWS_HEART_START
+            fi
         fi
-    else
-        # the previous restart was outside our 60 second window,
-        # so reset both the start time and the restart counter
-        restarts=1
-        starttime=$now
     fi
-else
-    restarts=1
-    starttime=$now
 fi
 HEART_COMMAND="${ENV_PGM} HEART=true YAWS_HEART_RESTARTS=$restarts YAWS_HEART_START=$starttime $program "${1+"$@"}
 export HEART_COMMAND
@@ -148,7 +144,12 @@ while [ $# -gt 0 ]
       -D|--daemon)
           daemon=" -detached ";;
       --wait-started=*)
-          call_wait_started=`echo $arg | sed -e 's/--wait-started=//'`;;
+          call_wait_started=`echo $arg | sed -e 's/--wait-started=//'`
+          num=`expr "$call_wait_started" : "([0-9]*)"`
+          if [ "$num" != "$call_wait_started" ]; then
+              echo error: argument to --wait-started is $call_wait_started, not a number
+              exit 1
+          fi;;
       --wait-started)
           call_wait_started=6;;
       -d|--debug)
@@ -207,6 +208,27 @@ while [ $# -gt 0 ]
           kpoll=false;;
       -heart|--heart)
           heart=" -heart ";;
+      --heart-restart=*)
+          vals=`echo $arg | sed -e 's/--heart-restart=//'`
+          saveifs="$IFS"
+          IFS=,
+          var='YAWS_HEART_COUNT'
+          for v in $vals; do
+              eval "$var=$v"
+              var='YAWS_HEART_SECS'
+          done
+          num=`expr "$YAWS_HEART_COUNT" : "([0-9]*)"`
+          if [ "$num" != "$YAWS_HEART_COUNT" ]; then
+              echo error: count argument to --heart-restart is $YAWS_HEART_COUNT, not a number
+              exit 1
+          fi
+          num=`expr "$YAWS_HEART_SECS" : "([0-9]*)"`
+          if [ "$num" != "$YAWS_HEART_SECS" ]; then
+              echo error: time argument to --heart-restart is $YAWS_HEART_SECS, not a number
+              exit 1
+          fi
+          IFS="$saveifs"
+          heart=" -heart ";;
       -proto_dist|--proto_dist)
           pdist=" -proto_dist $1 "
           shift;;
@@ -241,6 +263,9 @@ while [ $# -gt 0 ]
           help
   esac
 done
+YAWS_HEART_COUNT=${YAWS_HEART_COUNT:-5}
+YAWS_HEART_SECS=${YAWS_HEART_SECS:-60}
+export YAWS_HEART_COUNT YAWS_HEART_SECS
 
 [ -n "$call_wait_started" ] && wait_started $call_wait_started
 
