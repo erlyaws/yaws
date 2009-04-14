@@ -132,7 +132,7 @@ static int set_error_buffer(Buffer* b, int socket_fd, int err)
 {
     char* s, *t;
     memset(b->result, 0, sizeof *b->result);
-    b->result->out_fd = socket_fd;
+    put_int32(socket_fd, &(b->result->out_fd));
     for (s = erl_errno_id(err), t = b->result->errno_string; *s; s++, t++) {
         *t = tolower(*s);
     }
