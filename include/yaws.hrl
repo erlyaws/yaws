@@ -172,8 +172,9 @@
          authdirs = [],
          partial_post_size = nolimit,
          appmods = [],                %% list of modules for this app
-         errormod_404 = yaws_404,     %% the default 404 error module 
-         errormod_crash = yaws_404,   %% use the same module for crashes
+         errormod_401 = yaws_outmod,     %% the default 401 error module
+	 errormod_404 = yaws_outmod,     %% the default 404 error module 
+         errormod_crash = yaws_outmod,   %% use the same module for crashes
          arg_rewrite_mod = yaws,
          opaque = [],                 %% useful in embedded mode
          start_mod,                   %% user provided module to be started
@@ -197,7 +198,8 @@
          {dir = [],
           realm = "",
           type = "Basic",
-          users = [],
+	  headers = [],  %% headers to send on 401
+          users = [],   %% list of {User, Password} tuples
           mod = [],     %% authentication module callback
           pam = false   %% should we use pam to auth a user
          }).

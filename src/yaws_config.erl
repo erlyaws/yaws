@@ -808,6 +808,10 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             C2 = C#sconf{errormod_crash = list_to_atom(Module)},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
+	["errormod_401", '=' , Module] ->
+	    C2 = C#sconf{errormod_401 = list_to_atom(Module)},
+	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+
         ["arg_rewrite_mod", '=', Module] ->
             C2 = C#sconf{arg_rewrite_mod = list_to_atom(Module)},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
@@ -1054,7 +1058,11 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
             A2 = Auth#auth{realm = Realm},
             fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
         ["authmod", '=', Mod] ->
-            A2 = Auth#auth{mod = list_to_atom(Mod)},
+	    %% Add the auth header for the mod
+	    Mod2 = list_to_atom(Mod),
+	    code:ensure_loaded(Mod2),
+	    H = Mod2:get_header() ++ Auth#auth.headers,
+            A2 = Auth#auth{mod = Mod2, headers = H},
             fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
         ["user", '=', User] ->
             case (catch string:tokens(User, ":")) of
@@ -1068,7 +1076,17 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
             A2 = Auth#auth{pam=Serv},
             fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
         ['<', "/auth", '>'] ->
-            C2 = C#sconf{authdirs = [Auth|C#sconf.authdirs]},
+	    Pam = Auth#auth.pam,
+	    Users = Auth#auth.users,
+	    Realm = Auth#auth.realm,
+	    A2 =  case {Pam, Users} of
+		    {false, []} ->
+			  Auth;
+		      _ ->
+			  H = Auth#auth.headers ++ yaws:make_www_authenticate_header({realm, Realm}),
+			  Auth#auth{headers = H}
+		  end,
+	    C2 = C#sconf{authdirs = [A2|C#sconf.authdirs]},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
         [H|T] ->
             {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}

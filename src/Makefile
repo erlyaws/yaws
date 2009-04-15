@@ -26,7 +26,7 @@ MODULES=yaws \
 	mime_type_c \
 	mime_types \
 	yaws_session_server \
-	yaws_404 \
+	yaws_outmod \
 	yaws_revproxy \
 	yaws_html  \
 	yaws_log_file_h \

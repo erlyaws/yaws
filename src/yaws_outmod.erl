@@ -1,11 +1,11 @@
 %%%----------------------------------------------------------------------
-%%% File    : yaws_404.erl
+%%% File    : yaws_outmod.erl
 %%% Author  : Claes Wikstrom <klacke@hyber.org>
 %%% Purpose : 
 %%% Created :  4 Nov 2002 by Claes Wikstrom <klacke@hyber.org>
 %%%----------------------------------------------------------------------
 
--module(yaws_404).
+-module(yaws_outmod).
 -author('klacke@hyber.org').
 
 
@@ -14,6 +14,7 @@
 
 -export([out404/3,
          out404/1,
+	 out401/1,
          crashmsg/3]).
 
 
@@ -36,6 +37,26 @@ out404(Arg, GC, SC) ->
      {html, B}].
 
 
+
+%% The default error 401 error delivery module
+%% This function can be used to generate
+%% a special page on 401's (it doesn't even have to be a 401)
+
+
+out401(_Arg) ->
+    [{status, 401},
+     %{header, ["WWW-Authenticate:", "Negotiate\r\n", "WWW-Authenticate: ", "Basic realm=\"\""]},
+     {ehtml,
+      [{html,[], 
+        [
+         {body, [],
+          [{h1,[], "401 authentication needed"}
+          ]
+         }
+        ]
+       }
+      ]
+     } ].
 
 not_found_body(Path, _GC, _SC) ->
     L = ["<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">"
