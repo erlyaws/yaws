@@ -80,7 +80,7 @@
          start/1,
          stop/0,
          auth/2,
-         out/1
+	 get_header/0
         ]).
 
 -include("yaws.hrl").
@@ -133,9 +133,6 @@ auth(Arg, Auth) when is_record(Arg, arg),
     ?INFO("~p~n", [?MODULE]),
 
     case H#headers.authorization of
-        undefined ->
-            ?INFO("Request auth~n"),
-            {appmod, ?MODULE};
         {_, _, "Negotiate " ++ Data} ->
             ?INFO("Negotiate~n", []),
             Bin = base64:decode(Data),
@@ -154,23 +151,15 @@ auth(Arg, Auth) when is_record(Arg, arg),
                 E ->
                     ?ERROR("spnego error ~p~n", [E]),
                     throw(error)
-            end
+            end;
+        _ ->
+            ?INFO("Request auth~n"),
+            {appmod, ?MODULE}
     end.
-    
-out(_Arg) ->
-    [{status, 401},
-     {header, ["WWW-Authenticate:", "Negotiate"]},
-     {ehtml,
-      [{html,[], 
-        [
-         {body, [],
-          [{h1,[], "401 authentication needed"}
-          ]
-         }
-        ]
-       }
-      ]
-     } ].
+
+%% The header that is set when authentication fails
+get_header() -> 
+    yaws:make_www_authenticate_header("Negotiate").
 
 
 start_opaque(Opaque) when is_list(Opaque) ->

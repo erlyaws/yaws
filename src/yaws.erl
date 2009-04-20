@@ -55,6 +55,7 @@
          outh_set_content_length/1,
          outh_set_dcc/2,
          outh_set_transfer_encoding_off/0,
+	 outh_set_auth/1,
          outh_fix_doclose/0,
          dcc/2]).
 
@@ -1221,6 +1222,19 @@ outh_set_transfer_encoding_off() ->
                 make_transfer_encoding_chunked_header(false)},
     put(outh, H2).
 
+outh_set_auth([]) ->
+    ok;
+
+outh_set_auth(Headers) ->
+    H = get(outh),
+    L = H#outh.www_authenticate,
+    H2 = case L of
+	     undefined ->
+		 H#outh{www_authenticate = Headers};
+	     _ ->
+		 H#outh{www_authenticate = H#outh.www_authenticate ++ Headers}
+	 end,
+    put(outh, H2).
 
 outh_fix_doclose() ->
     H = get(outh),
@@ -1380,9 +1394,11 @@ make_transfer_encoding_chunked_header(true) ->
 make_transfer_encoding_chunked_header(false) ->
     undefined.
 
-make_www_authenticate_header(Realm) ->
-    ["WWW-Authenticate: Basic realm=\"", Realm, ["\"\r\n"]].
+make_www_authenticate_header({realm, Realm}) ->
+    ["WWW-Authenticate: Basic realm=\"", Realm, ["\"\r\n"]];
 
+make_www_authenticate_header(Method) ->
+    ["WWW-Authenticate: ", Method, ["\r\n"]].
 
 make_date_header() ->
     N = element(2, now()),
