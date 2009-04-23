@@ -128,16 +128,17 @@ typedef union {
     }* result;
 } Buffer;
 
-static int set_error_buffer(Buffer* b, int socket_fd, int err)
+static size_t set_error_buffer(Buffer* b, int socket_fd, int err)
 {
     char* s, *t;
-    memset(b->result, 0, sizeof *b->result);
+    size_t result_size = sizeof *(b->result);
+    memset(b->result, 0, result_size);
     put_int32(socket_fd, &(b->result->out_fd));
     for (s = erl_errno_id(err), t = b->result->errno_string; *s; s++, t++) {
         *t = tolower(*s);
     }
     *t = '\0';
-    return sizeof(*b->result) - 1 + t - b->result->errno_string;
+    return result_size - 1 + t - b->result->errno_string;
 }
 
 static ssize_t yaws_sendfile_call(int out_fd, int in_fd, off_t* offset, size_t count)
@@ -243,6 +244,7 @@ static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
         xfer->count -= written;
         xfer->total += written;
     } else {
+        int save_errno = errno;
         int out_buflen;
         char buf[36];
         Buffer b;
@@ -251,7 +253,7 @@ static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
         driver_select(d->port, ev, DO_WRITE, 0);
         close(xfer->file_fd);
         if (result < 0) {
-            out_buflen = set_error_buffer(&b, sfd->socket_fd, errno);
+            out_buflen = set_error_buffer(&b, sfd->socket_fd, save_errno);
         } else {
             uint64_t total = xfer->total + result;
             put_int64(total, &(b.result->count.count));
