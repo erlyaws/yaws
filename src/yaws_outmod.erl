@@ -44,8 +44,6 @@ out404(Arg, GC, SC) ->
 
 
 out401(_Arg) ->
-    [{status, 401},
-     %{header, ["WWW-Authenticate:", "Negotiate\r\n", "WWW-Authenticate: ", "Basic realm=\"\""]},
      {ehtml,
       [{html,[], 
         [
@@ -56,7 +54,7 @@ out401(_Arg) ->
         ]
        }
       ]
-     } ].
+     }.
 
 not_found_body(Path, _GC, _SC) ->
     L = ["<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">"
