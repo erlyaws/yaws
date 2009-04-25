@@ -234,10 +234,10 @@ case "$target_os" in
            AC_SUBST(FPIC)
            ;;
          *darwin*)
-           HAVE_SENDFILE=true
+           AC_CHECK_LIB([c],[sendfile],[HAVE_SENDFILE=true])
            CFLAGS="$CFLAGS -I/usr/include/pam"
            LD_SHARED="gcc -bundle -fPIC -flat_namespace -undefined suppress"
-              AC_SUBST(LD_SHARED)
+           AC_SUBST(LD_SHARED)
            FPIC=-fPIC
            AC_SUBST(FPIC)
            ;;
