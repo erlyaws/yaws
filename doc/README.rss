@@ -97,11 +97,14 @@ to produce RSS content as:
 
 <rss>
   rss_id = <application>
+  rss_dir = <database directory>
 </rss>
 
-This corresponds to the 'App' argument above and must be
+The rss_id corresponds to the 'App' argument above and must be
 defined by the application in question. So, for example,
-the wikie application is using 'wiki' as rss_id.
+the wiki application is using 'wiki' as rss_id. The rss_dir
+setting specifies the directory where the RSS database resides.
+Both are mandatory.
 
 Other, non-mandatory, configuration parameters are (with
 explanation and default values):
