@@ -46,7 +46,7 @@ top(A) ->
     case check_cookie(A) of
         {ok, _Session, _Cookie} ->
             ok;
-        {error, Reason} ->
+        {error, _Reason} ->
             login(A)
     end.
 
@@ -77,21 +77,20 @@ css_head(PageTitle) ->
 
 %% the little status field in the upper left corner
 head_status(User) ->
-    T = 
-        {ehtml, 
-         {table, [],
-          {tr, [],
-           [{td, [{width, "30%"}],
-             {table, [ {border, "1"}, {bgcolor, beige},{bordercolor, black}],
-              [{tr, [], {td, [], pb("User: ~s", [User])}}
-              ]}
-             },
-            {td, [{align, right}], {img, [{src, "junk.jpg"}  
-                                         ]}}
-           ]
-          }
-         }
-        }.
+    {ehtml, 
+     {table, [],
+      {tr, [],
+       [{td, [{width, "30%"}],
+         {table, [ {border, "1"}, {bgcolor, beige},{bordercolor, black}],
+          [{tr, [], {td, [], pb("User: ~s", [User])}}
+          ]}
+        },
+        {td, [{align, right}], {img, [{src, "junk.jpg"}  
+                                     ]}}
+       ]
+      }
+     }
+    }.
 
 
 %% bold paragraph according to style.css
@@ -164,7 +163,7 @@ login(A) ->
 
 
 logout(A) ->
-    {ok, Sess, Cookie} = check_cookie(A),
+    {ok, _Sess, Cookie} = check_cookie(A),
     yaws_api:delete_cookie_session(Cookie),
     {ehtml, {h3, [], "Yo, "}}.
 
@@ -206,7 +205,7 @@ xpath({abs_path, P}, _A) ->
 
 formupdate(A) ->
     {ok, Sess, Cookie} = check_cookie(A),
-    J = junk(),
+    _J = junk(),
     Items = Sess#sess.items,
     L = yaws_api:parse_post(A),
     I2 = handle_l(L, Items),
@@ -218,7 +217,7 @@ handle_l([], Items) ->
     Items;
 handle_l([{Str, Num} | Tail], Items) ->
     case catch list_to_integer(Num) of
-        Int when integer(Int) ->
+        Int when is_integer(Int) ->
             handle_l(Tail, [{Str, Int} | lists:keydelete(Str,1, Items)]);
         _ ->
             handle_l(Tail, Items)
@@ -228,11 +227,11 @@ handle_l([{Str, Num} | Tail], Items) ->
 ip(A) ->
     S = A#arg.clisock,
     case inet:peername(S) of
-        {ok, {Ip, Port}} ->
+        {ok, {Ip, _Port}} ->
             case inet:gethostbyaddr(Ip) of
                 {ok, HE} ->
                     io_lib:format("~s/~s", [fmtip(Ip), HE#hostent.h_name]);
-                Err ->
+                _Err ->
                     io_lib:format("~s", [fmtip(Ip)])
             end;
         _ ->
@@ -245,7 +244,7 @@ fmtip({A,B,C,D}) ->
 
 %% generate the final "you have bought page ... "
 buy(A) ->
-    {ok, Sess, Cookie} = check_cookie(A),
+    {ok, Sess, _Cookie} = check_cookie(A),
     Css = css_head("Shopcart"),
     Head = head_status(Sess#sess.user),
     Top = toprow(),
@@ -292,7 +291,7 @@ b_rows([{Desc, Num}|Tail], Junk, Ack, TRS) when Num >  0 ->
           ]},
     b_rows(Tail, Junk, A+Ack, [TR|TRS]);
 
-b_rows([{Desc, Num}|Tail], Junk, Ack, TRS) when Num ==  0 ->
+b_rows([{_Desc, Num}|Tail], Junk, Ack, TRS) when Num ==  0 ->
      b_rows(Tail, Junk, Ack, TRS);
 
 b_rows([], _, Ack, TRS) when Ack > 0 ->
@@ -323,7 +322,7 @@ b_rows(_, _,_,_) ->
 %% the entire shopcart is one big form which gets posted
 %% when the user updates the shopcart
 index(A) ->
-    {ok, Sess, Cookie} = check_cookie(A),
+    {ok, Sess, _Cookie} = check_cookie(A),
     io:format("Inside index: ~p~n", [Sess#sess.items]),
     Css = css_head("Shopcart"),
     Head = head_status(Sess#sess.user),
@@ -392,7 +391,7 @@ rows(Items) ->
          }
         ],
     
-    Rows = [First | L] ++ T.
+    _Rows = [First | L] ++ T.
 
 
 
@@ -412,7 +411,7 @@ total([], _,Ack) ->
 %% We need to set the value in each input field                      
 jval(Str, Items) ->
     case lists:keysearch(Str, 1, Items) of
-        {value, {_, Num}} when integer(Num) ->
+        {value, {_, Num}} when is_integer(Num) ->
             integer_to_list(Num);
         false ->
             "0"
