@@ -100,11 +100,14 @@ open(App) ->
 %%%      <dd>Specifies the maximum number of items that should
 %%%      be stored in the database. The default in <em>infinite</em></dd>
 %%%      </dl></p>
-%%%      <p>If no database exist, a new will be created.
+%%%      <p>If no database exist, a new one will be created.
 %%%      The returned database handle is to be used with {@link close/1}.</p>
 %%% @end
 %%%
 open(App, Opts) ->
+    %% This is called during read of yaws.conf during startup, so make sure this
+    %% server is up and running before invoking it
+    ok = wait_for_server(?SERVER),
     gen_server:call(?SERVER, {open, App, Opts}, infinity).
 
 %%%
@@ -498,3 +501,17 @@ t_xopen() ->
     open([{db_file, "yaws_rss.dets"}, 
           {expire,days},
           {days, 20}]).
+
+wait_for_server(Server) ->
+    wait_for_server(Server, 20).
+
+wait_for_server(_Server, 0) ->
+    {error, timeout};
+wait_for_server(Server, N) ->
+    case erlang:whereis(Server) of
+        undefined ->
+            receive after 500 -> ok end,
+            wait_for_server(Server, N-1);
+        _ ->
+            ok
+    end.
