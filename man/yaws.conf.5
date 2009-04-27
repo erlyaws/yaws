@@ -247,6 +247,17 @@ dir listing feature of Yaws. A status code 403 Forbidden will be sent.
 Set to true_nozip to avoid the auto-generated all.zip entries.
 
 .TP
+\fBextra_cgi_vars = .....\fR
+Add additional CGI variables. For example:
+.nf
+
+<extra_cgi_vars dir='a path to some scripts'>
+var = val
+...
+</extra_cgi_vars>
+.fi
+
+.TP
 \fBdeflate = true | false\fR
 Turns on or off deflate compression for a server
 
