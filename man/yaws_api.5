@@ -225,7 +225,7 @@ This function is automatically included from yaws_api in all
  .yaws pages. It is used to search for a variable in the 
 querypart of the url. Returns {ok, Val} or undefined.
 If a variable is defined multiple times, the function may also
-return \fI[{ok, Val1}, ....]\fR.
+return \fI{Val1, ....}\fR.
 
 
 .TP
@@ -239,7 +239,7 @@ This function is automatically included from yaws_api in all
  .yaws pages. It is used to search for a variable in the 
 POSTed data from the client. Returns {ok, Val} or undefined.
 If a variable is defined multiple times, the function may also
-return \fI[{ok, Val1}, ....]\fR.
+return \fI{Val1, ....}\fR.
 
 .TP
 \fBgetvar(Arg, VarName)\fR
