@@ -1664,6 +1664,10 @@ handle_ut(CliSock, ARG, UT = #urltype{type = unauthorized}, N) ->
     H = ARG#arg.headers,
     SC = get(sc),
     yaws:outh_set_dyn_headers(Req, H, UT),
+
+    %% outh_set_dyn headers sets status to 200 by default
+    %% so we need to set it 401
+    yaws:outh_set_status_code(401),
     deliver_dyn_part(CliSock,
 		     0,
 		     "appmod",

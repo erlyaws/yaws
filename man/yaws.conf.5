@@ -332,6 +332,20 @@ SC is a #sconf{} record (defined in yaws.hrl)
 The function can and must do the same things that 
 a normal \fIout/1\fR does.
 
+.TP
+\fBerrormod_401 = Module\fR
+It is possible to set a special module that handles
+401 Unauthorized messages. This can for example be used 
+to display a login page instead.
+
+The function \fIModule:out401(Arg)\fR will
+be invoked. The arguments are
+
+Arg is a #arg{} record
+
+The function can and must do the same things that 
+a normal \fIout/1\fR does.
+
 
 .TP
 \fBerrormod_crash = Module\fR
