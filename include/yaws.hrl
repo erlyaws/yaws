@@ -182,6 +182,7 @@
          tilde_allowed_scripts = [],
          revproxy = [],
          soptions = [],
+         extra_cgi_vars = [],
 
          %% [{Extension:string(), Mod:atom()]
          %% work in progress .....
