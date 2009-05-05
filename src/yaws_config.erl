@@ -104,10 +104,105 @@ add_yaws_auth(SCs) ->
 %% specified as an auth directory. These are merged with server conf.
 
 setup_auth(SC) ->
-    lists:flatten(
+    Auth_dirs0 = get_yaws_auth_dirs(SC#sconf.docroot),
+%%    io:format("yaws_auth_dirs: ~p~n sconf.authdirs: ~p~n", [Auth_dirs0,SC#sconf.authdirs]),
+    Auth_dirs1 = [#auth{dir = [X]} || X <- Auth_dirs0],
+    Auth_dirs2 = Auth_dirs1 ++ SC#sconf.authdirs,
+    Auth_dirs3 = load_yaws_auth_file(SC, Auth_dirs2, []),
+%%    io:format("authdirs0: ~p~n", [Auth_dirs0]),
+%%    io:format("authdirs1: ~p~n", [Auth_dirs1]),
+%%    io:format("authdirs2: ~p~n", [Auth_dirs2]),
+    io:format("authdirs3: ~p~n", [Auth_dirs3]),
+    start_pam(Auth_dirs3),
+    L = lists:flatten(
       lists:map(fun(Auth) ->
                         add_yaws_auth(SC, Auth#auth.dir, Auth)
-                end, SC#sconf.authdirs)).
+                end, SC#sconf.authdirs ++ Auth_dirs1)),
+    io:format("L: ~p~n", [L]),
+    Auth_dirs3.
+%    L.
+    
+
+%% Call get_yaws_auth_dirs/3 with default values and then
+%% strip leading docroot from dir
+get_yaws_auth_dirs(Docroot) ->
+    {ok, FileList} = file:list_dir(Docroot),
+    Auth_dirs = get_yaws_auth_dirs(Docroot ++ "/", FileList, []),
+    Len = string:len(Docroot),
+    [string:sub_string(X, Len+1) || X <- Auth_dirs].
+    
+    
+
+%% Bottom of recursion, we have searched all the entries in this directory
+get_yaws_auth_dirs(_Docroot, [], AuthDirs) ->
+    AuthDirs;
+
+%% Recursivly search the docroot for any dir that contains .yaws_auth and return it
+get_yaws_auth_dirs(Docroot, [File|T], AuthDirs0) ->
+    Path = string:concat(Docroot, File),
+    case filelib:is_dir(Path) of
+	true ->
+	    {ok, FileList} = file:list_dir(Path),
+	    AuthDirs1 = get_yaws_auth_dirs(Path ++ "/", FileList, AuthDirs0),
+	    get_yaws_auth_dirs(Docroot, T, AuthDirs1);
+	false ->
+	    case File of
+		".yaws_auth" ->
+		    get_yaws_auth_dirs(Docroot, T, [Docroot|AuthDirs0]);
+		_ ->
+		    get_yaws_auth_dirs(Docroot, T, AuthDirs0)
+	    end
+    end.
+
+start_pam([]) ->
+    ok;
+
+start_pam([{_Dir, A}|T]) ->
+    PamStarted = whereis(yaws_pam) /= undefined,
+    if
+        A#auth.pam == false ->
+            ok;
+        PamStarted == false ->
+            Spec = {yaws_pam, {yaws_pam, start_link, 
+                               [yaws:to_list(A#auth.pam),undefined,undefined]},
+                    permanent, 5000, worker, [yaws_pam]},
+            spawn(fun() ->
+                          supervisor:start_child(yaws_sup, Spec)
+                  end);
+        true ->
+            ok
+    end,
+    start_pam(T).
+
+load_yaws_auth_file(_SC, [], Acc) ->
+    Acc;
+
+load_yaws_auth_file(SC, [A|T], Acc) ->
+    [Dir] = A#auth.dir,
+    FN=[SC#sconf.docroot , [$/|Dir], [$/|".yaws_auth"]],
+    A2 = case file:consult(FN) of
+	{ok, [{realm, Realm} |TermList]} ->
+	    error_logger:info_msg("Reading .yaws_auth ~s~n",[FN]),
+	    Header = A#auth.headers ++ 
+		yaws:make_www_authenticate_header({realm, Realm}),
+	    {Dir, A#auth{realm = Realm,
+			 users = TermList++A#auth.users,
+			 headers = Header}};
+	{ok, TermList} ->
+	    error_logger:info_msg("Reading .yaws_auth ~s~n",[FN]),
+	    Header = A#auth.headers ++ 
+		yaws:make_www_authenticate_header({realm, ""}),
+	    {Dir, A#auth{users = TermList++A#auth.users,
+			 headers = Header}};
+	{error, enoent} ->
+	    {Dir, A};
+	_Err ->
+	    error_logger:format("Bad .yaws_auth file in dir ~p~n", 
+				[Dir]),
+	    {Dir, A}
+    end,
+    load_yaws_auth_file(SC, T, [A2|Acc]). 
+
 
 add_yaws_auth(SC, Dirs, A) ->
     PamStarted = whereis(yaws_pam) /= undefined,
@@ -131,11 +226,17 @@ add_yaws_auth(SC, Dirs, A) ->
               case file:consult(FN) of
                   {ok, [{realm, Realm} |TermList]} ->
                       error_logger:info_msg("Reading .yaws_auth ~s~n",[FN]),
+		      Header = A#auth.headers ++ 
+			  yaws:make_www_authenticate_header({realm, Realm}),
                       {Dir, A#auth{realm = Realm,
-                                   users = TermList++A#auth.users}};
+                                   users = TermList++A#auth.users,
+				   headers = Header}};
                   {ok, TermList} ->
                       error_logger:info_msg("Reading .yaws_auth ~s~n",[FN]),
-                      {Dir, A#auth{users = TermList++A#auth.users}};
+		      Header = A#auth.headers ++ 
+			  yaws:make_www_authenticate_header(""),
+                      {Dir, A#auth{users = TermList++A#auth.users,
+				   headers = Header}};
                   {error, enoent} ->
                       {Dir, A};
                   _Err ->
