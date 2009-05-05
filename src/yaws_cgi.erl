@@ -244,6 +244,14 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
             AuthEnv = []
     end,
 
+    Extra_CGI_Vars = lists:flatmap(fun({Dir, Vars}) ->
+					   case lists:prefix(Dir, Scriptname) of
+					       true -> Vars;
+					       false -> []
+					   end
+				   end,
+				   SC#sconf.extra_cgi_vars),
+
     %%todo - review. should AuthEnv entries be overridable by ExtraEnv or not?
     %% we should define policy here rather than let through dupes.
 
@@ -324,7 +332,8 @@ cgi_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
             {"HTTP_COOKIE", flatten_val(make_cookie_val(H#headers.cookie))}
            ]++lists:map(fun({http_header,_,Var,_,Val})->{tohttp(Var),Val} end,
                         H#headers.other)
-          )).
+          )) ++
+	Extra_CGI_Vars.
 
 tohttp(X) ->
     "HTTP_"++lists:map(fun tohttp_c/1, yaws:to_list(X)).

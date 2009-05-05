@@ -1238,13 +1238,13 @@ is protected by the cookie login code.
 \subsection{Database driven applications}
 
 We can use code similar to the code in the previous section to associate
-a user session to entries in a database. Mneisa fits perfectly
+a user session to entries in a database. Mnesia fits perfectly
 together with \Yaws\  and keeping user persistent state in Mnesia is
 both easy and convenient.
 
 Once the user has logged in we can typically use the user name
 as key into the database. We can mix ram\_tables and disc\_tables
-to our liking. The Mneisa database must be initialized by means
+to our liking. The Mnesia database must be initialized by means
 of \verb+create_table/2+ before it
 can be used. This is typically done while installing the
 web application on a machine. 

@@ -41,12 +41,12 @@ yaws.conf:
 	@echo PREFIX is $(PREFIX)
 	cat yaws.conf.template | \
 		./Subst %yawsdir% "$(PREFIX)/lib/yaws"  | \
-		./Subst %logdir% "$(VARDIR)/log/yaws"  | \
+		./Subst %logdir% "/var/log/yaws"  | \
 		./Subst %vardir% "$(VARDIR)"  | \
 		./Subst %host% `hostname`  | \
 		./Subst %port% 80  | \
 		./Subst %docroot% "$(VARDIR)/yaws/www"  | \
-		./Subst %certdir% "$(ETCDIR)"  | \
+		./Subst %certdir% "$(ETCDIR)/yaws"  | \
 		./Subst %sslport% 443  > yaws.conf
 
 clean:
@@ -58,13 +58,13 @@ install:	.install
 	-rm -rf /tmp/yaws 2> /dev/null
 	sh  ./Install $(PREFIX) $(ERL) \
 		$(WERL) $(ETCDIR)/ $(VARDIR)/ $(ERLBINDIR)/ $(DESTDIR)
-	@cp ../ssl/yaws-cert.pem $(DESTDIR)$(ETCDIR)
-	@cp ../ssl/yaws-key.pem $(DESTDIR)$(ETCDIR)
-	@if [ -f $(DESTDIR)$(ETCDIR)/yaws.conf ]; \
+	@if [ -f $(DESTDIR)$(ETCDIR)/yaws/yaws.conf ]; \
 		then echo "Keeping old config file "; \
-		cp yaws.conf $(DESTDIR)$(ETCDIR)/yaws.conf.template; \
+		cp yaws.conf $(DESTDIR)$(ETCDIR)/yaws/yaws.conf.template; \
 	else \
-		echo "Installing $(DESTDIR)$(ETCDIR)/yaws.conf"; \
-		mkdir -p $(DESTDIR)$(ETCDIR); \
-		cp yaws.conf $(DESTDIR)$(ETCDIR)/yaws.conf; \
+		echo "Installing $(DESTDIR)$(ETCDIR)/yaws/yaws.conf"; \
+		mkdir -p $(DESTDIR)$(ETCDIR)/yaws; \
+		cp yaws.conf $(DESTDIR)$(ETCDIR)/yaws/yaws.conf; \
 	fi
+	@cp ../ssl/yaws-cert.pem $(DESTDIR)$(ETCDIR)/yaws
+	@cp ../ssl/yaws-key.pem $(DESTDIR)$(ETCDIR)/yaws

@@ -968,6 +968,8 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                 _URL ->
                     {error, "Can't revproxy to an URL with a path "}
             end;
+	['<', "extra_cgi_vars", "dir", '=', Dir, '>'] ->
+	    fload(FD, extra_cgi_vars, GC, C, Cs, Lno+1, Next, {Dir, []});
         [H|T] ->
             {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end;
@@ -1224,6 +1226,24 @@ fload(FD, server_redirect, GC, C, Cs, Lno, Chars, RedirMap) ->
             end;
         ['<', "/redirect", '>'] ->
             C2 = C#sconf{redirect_map = lists:reverse(RedirMap)},
+            fload(FD, server, GC, C2, Cs, Lno+1, Next);
+        [H|T] ->
+            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
+    end;
+
+fload(FD, extra_cgi_vars, _GC, _C, _Cs, Lno, eof, _EVars) ->
+    file:close(FD),
+    {error, ?F("Unexpected end of file at line ~w", [Lno])};
+
+fload(FD, extra_cgi_vars, GC, C, Cs, Lno, Chars, EVars = {Dir, Vars}) ->
+    Next = io:get_line(FD, ''),
+    case toks(Chars) of
+        [] ->
+            fload(FD, extra_cgi_vars, GC, C, Cs, Lno+1, Next, EVars);
+        [Var, '=', Val] ->
+	    fload(FD, extra_cgi_vars, GC, C, Cs, Lno+1, Next, {Dir, [{Var, Val} | Vars]});
+        ['<', "/extra_cgi_vars", '>'] ->
+            C2 = C#sconf{extra_cgi_vars = [EVars | C#sconf.extra_cgi_vars]},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
         [H|T] ->
             {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
