@@ -10,7 +10,6 @@ set -x
 # as e.g
 # INSTALL_BUILDER=/home/luser/installbuilder-5.4.10 ./mkinstaller.sh 
 
-# The official build is done on armstrong and use the installation below:
 
 INSTALL_BUILDER=${INSTALL_BUILDER:=${HOME}/installbuilder-5.4.14}
 
