@@ -111,7 +111,7 @@ setup_auth(SC) ->
     Auth_dirs1 = [#auth{dir = [X]} || X <- Auth_dirs0],
     Auth_dirs2 = Auth_dirs1 ++ SC#sconf.authdirs,
     
-    %% load the files and parse them
+    %% load the .yaws_auth files and parse them
     Auth_dirs3 = load_yaws_auth_file(SC, Auth_dirs2, []),
 
     start_pam(Auth_dirs3),
@@ -135,7 +135,8 @@ get_yaws_auth_dirs(Docroot) ->
 get_yaws_auth_dirs(_Docroot, [], AuthDirs) ->
     AuthDirs;
 
-%% Recursivly search the docroot for any dir that contains .yaws_auth and return it
+%% Recursivly search the docroot for any dir that contains .yaws_auth 
+%% and return it
 get_yaws_auth_dirs(Docroot, [File|T], AuthDirs0) ->
     Path = string:concat(Docroot, File),
     case filelib:is_dir(Path) of
@@ -172,36 +173,74 @@ start_pam([{_Dir, A}|T]) ->
     end,
     start_pam(T).
 
+
+
 load_yaws_auth_file(_SC, [], Acc) ->
     Acc;
 
+%% Load the .yaws_auth file if it exists and parse it, 
+%% adding the result to the record
 load_yaws_auth_file(SC, [A|T], Acc) ->
     [Dir] = A#auth.dir,
-    FN=[SC#sconf.docroot , [$/|Dir], [$/|".yaws_auth"]],
-    A2 = case file:consult(FN) of
-	{ok, [{realm, Realm} |TermList]} ->
-	    error_logger:info_msg("Reading .yaws_auth ~s~n",[FN]),
-	    Header = A#auth.headers ++ 
-		yaws:make_www_authenticate_header({realm, Realm}),
-	    {Dir, A#auth{realm = Realm,
-			 users = TermList++A#auth.users,
-			 headers = Header}};
-	{ok, TermList} ->
-	    error_logger:info_msg("Reading .yaws_auth ~s~n",[FN]),
-	    Header = A#auth.headers ++ 
-		yaws:make_www_authenticate_header({realm, ""}),
-	    {Dir, A#auth{users = TermList++A#auth.users,
-			 headers = Header}};
-	{error, enoent} ->
-	    {Dir, A};
-	_Err ->
-	    error_logger:format("Bad .yaws_auth file in dir ~p~n", 
-				[Dir]),
-	    {Dir, A}
-    end,
+    FN0=[SC#sconf.docroot, [$/|Dir], [$/|".yaws_auth"]],
+    FN1 = remove_multiple_slash(lists:flatten(FN0)),
+    A2 = case file:consult(FN1) of
+	     {ok, TermList} ->
+		 error_logger:info_msg("Reading .yaws_auth ~s~n",[FN1]),
+		 Auth = parse_yaws_auth_file(TermList, A),
+		 [Dir1] = Auth#auth.dir,
+		 {Dir1, Auth};
+	     {error, enoent} ->
+		 {Dir, A};
+	     _Err ->
+		 error_logger:format("Bad .yaws_auth file in dir ~p~n", 
+				     [Dir]),
+		 {Dir, A}
+	 end,
     load_yaws_auth_file(SC, T, [A2|Acc]). 
 
+parse_yaws_auth_file([], Auth0) ->
+    Realm = Auth0#auth.realm,
+    Headers = Auth0#auth.headers ++ yaws:make_www_authenticate_header({realm, Realm}),
+    Auth0#auth{headers = Headers};
 
+parse_yaws_auth_file([{realm, Realm}|T], Auth0) ->
+    parse_yaws_auth_file(T, Auth0#auth{realm = Realm});
+
+parse_yaws_auth_file([{pam, Pam}|T], Auth0) ->
+    parse_yaws_auth_file(T, Auth0#auth{pam = Pam});
+
+parse_yaws_auth_file([{authmod, Authmod0}|T], Auth0) ->
+    Authmod1 = list_to_atom(Authmod0),
+    code:ensure_loaded(Authmod1),
+    %% Add the auth header for the mod
+    Headers = Authmod1:get_header() ++ Auth0#auth.headers,
+    
+    parse_yaws_auth_file(T, Auth0#auth{mod = Authmod1, headers = Headers});
+
+parse_yaws_auth_file([{file, File}|T], Auth0) ->
+    [Dir] = Auth0#auth.dir,
+    New_dir = [Dir ++ File],
+    parse_yaws_auth_file(T, Auth0#auth{dir = New_dir});
+
+parse_yaws_auth_file([{User, Password}|T], Auth0) ->
+    Users = [{User, Password}|Auth0#auth.users],
+    parse_yaws_auth_file(T, Auth0#auth{users = Users}).
+
+
+%% Replace all "//" and "///" with "/"
+%% Might be a better way to do this
+remove_multiple_slash(L) ->
+    remove_multiple_slash(L, []).
+
+remove_multiple_slash([], Acc)->
+    lists:reverse(Acc);
+remove_multiple_slash("///" ++ T, Acc) ->
+    remove_multiple_slash(T, [$/|Acc]);
+remove_multiple_slash("//" ++ T, Acc) ->
+    remove_multiple_slash(T, [$/|Acc]);
+remove_multiple_slash([H|T], Acc) ->    
+    remove_multiple_slash(T, [H|Acc]).
 
 %% This is the function that arranges sconfs into
 %% different server groups
@@ -1116,9 +1155,9 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
             A2 = Auth#auth{realm = Realm},
             fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
         ["authmod", '=', Mod] ->
-	    %% Add the auth header for the mod
 	    Mod2 = list_to_atom(Mod),
 	    code:ensure_loaded(Mod2),
+	    %% Add the auth header for the mod
 	    H = Mod2:get_header() ++ Auth#auth.headers,
             A2 = Auth#auth{mod = Mod2, headers = H},
             fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
