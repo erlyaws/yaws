@@ -3392,7 +3392,7 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
     case GetPath of
         _ when ?sc_has_dav(SC) ->
             {Comps, RevFile} = comp_split(GetPath),
-            {_Type, Mime} = suffix_type(RevFile),
+            {_Type, _, Mime} = suffix_type(RevFile),
 
             FullPath = construct_fullpath(ArgDocroot, GetPath, VirtualDir),
 
@@ -3410,13 +3410,11 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
         "/" -> %% special case
             case lists:keysearch("/", 1, SC#sconf.appmods) of
                 {value, {_, Mod}} ->
-                    #urltype{
-                  type = appmod, 
-                  data = {Mod, []},
-                  dir = "",
-                  path = "",
-                  fullpath = ArgDocroot
-                 };
+                    #urltype{type = appmod, 
+                             data = {Mod, []},
+                             dir = "",
+                             path = "",
+                             fullpath = ArgDocroot};
                 _ ->
                     maybe_return_dir(ArgDocroot, GetPath, VirtualDir)
             end;
