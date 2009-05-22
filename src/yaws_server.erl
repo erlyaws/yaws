@@ -3292,7 +3292,12 @@ cache_size(_UT) ->
 
 
 
-cache_file(SC, GC, Path, UT) 
+cache_file(SC, GC, Path, UT)
+  when GC#gconf.max_num_cached_files == 0;
+       GC#gconf.max_num_cached_bytes == 0;
+       GC#gconf.max_size_cached_file == 0 ->
+    UT;
+cache_file(SC, GC, Path, UT)
   when ((UT#urltype.type == regular) or
         ((UT#urltype.type == yaws) and (UT#urltype.pathinfo == undefined))) ->
     E = SC#sconf.ets,
@@ -3307,6 +3312,7 @@ cache_file(SC, GC, Path, UT)
             cleanup_cache(E, num),
             cache_file(SC, GC, Path, UT);
         FI#file_info.size < GC#gconf.max_size_cached_file,
+        FI#file_info.size < GC#gconf.max_num_cached_bytes,
         B + FI#file_info.size > GC#gconf.max_num_cached_bytes ->
             error_logger:info_msg("Max size cached bytes reached for server "
                                   "~p", [SC#sconf.servername]),
@@ -3315,7 +3321,8 @@ cache_file(SC, GC, Path, UT)
         true ->
             ?Debug("Check file size\n",[]),
             if
-                FI#file_info.size > GC#gconf.max_size_cached_file ->
+                FI#file_info.size > GC#gconf.max_size_cached_file;
+                FI#file_info.size > GC#gconf.max_num_cached_bytes ->
                     ?Debug("Too large\n",[]),
                     UT;
                 true ->
