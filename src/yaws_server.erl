@@ -2043,6 +2043,7 @@ deliver_options(CliSock, _Req, Options) ->
               doclose = false,
               chunked = false,
               server = yaws:make_server_header(),
+              date = yaws:make_date_header(),
               allow = yaws:make_allow_header(Options)},
     put(outh, H),
     deliver_accumulated(CliSock),
