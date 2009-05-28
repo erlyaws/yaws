@@ -13,7 +13,7 @@ if [ -n "$RUNTEST_CURLS" ]; then
     fdlimit=$RUNTEST_CURLS
 else
     fdlimit=`ulimit -n`
-    fdlimit=`expr $fdlimit / 4`
+    fdlimit=`expr $fdlimit / 8`
     [ $fdlimit -gt 1024 ] && fdlimit=1024
     if [ `uname -s` = Darwin ]; then
         proclimit=`ulimit -u`

@@ -43,7 +43,7 @@ connect:
 status:
 	$(YTOP)/bin/yaws  --id testid --status
 stop:
-	$(YTOP)/bin/yaws --id testid --stop
+	$(YTOP)/bin/yaws --id testid --stop || true
 
 stdconf:
 	cat ../conf/stdconf.conf | \
