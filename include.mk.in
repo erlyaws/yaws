@@ -3,7 +3,7 @@
 
 PREFIX             = @prefix@
 prefix             = ${PREFIX}
-ETCDIR             = @sysconfdir@
+ETCDIR             = @sysconfdir@/yaws
 VARDIR             = @localstatedir@
 
 DVILATEX = @DVILATEX@
