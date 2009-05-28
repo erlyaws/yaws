@@ -806,7 +806,7 @@ ssl_listen_opts(GC, SSL) ->
          if ?gc_use_old_ssl(GC) ->
                  false;
             true ->  
-                 %{ssl_imp, new} .... doesn't work yet
+                 %%{ssl_imp, new} - still doesn't work (R13B)
                  false
          end
         ],

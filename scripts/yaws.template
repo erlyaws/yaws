@@ -13,6 +13,7 @@ if [ -z "$HOME" ]; then
         export HOME=/root
     else
         export HOME=/tmp
+    fi
 fi
 
 case `uname` in
