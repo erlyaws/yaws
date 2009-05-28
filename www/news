@@ -1,4 +1,4 @@
-Thu May 28 20:17:10 CEST 2009
+Thu May 28 20:17:10 CEST 2009 Yaws 1.82
 Have the yaws script set HOME if unset, this is required since some distros (Ubuntu) don't set HOME for code run under/etc/rc and erlexec requires HOME to be set.  (Klacke)
 add extra cgi vars patch from joe_e_e
 new ebuild file for gentoo from joe_e_e
