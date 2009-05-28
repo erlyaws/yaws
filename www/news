@@ -2,7 +2,7 @@ Thu May 28 20:17:10 CEST 2009
 Have the yaws script set HOME if unset, this is required since some distros (Ubuntu) don't set HOME for code run under/etc/rc and erlexec requires HOME to be set.  (Klacke)
 add extra cgi vars patch from joe_e_e
 new ebuild file for gentoo from joe_e_e
-patch by joe_e_e to move all files from /etc to /etc/yaws in the install script.
+patch by joe_e_e to move all files from /etc to /etc/yaws in the install script. THis may cause some troubles for some users when upgrading. By default the make install target dorsn't overwrite /etc files. Pay attention.
 added sendfile check for Darwin, since no sendfile is available on OS X Tiger (Steve)
 RSS fixes, (Steve)
 Several authentication fixes by Fabian Alenius. Changed the way authentication is done, added support for multiple authentication methods to be used for one directory and changed so that the 401 page can be customized similarly to the 404 page. In general this is a major cleanup of how authentication is done. Much better. One backwards incompat change here. Fabian Renamed yaws_401.erl to yaws_outmod.erl, which is probably a better name considering it's current use(it also displays the crashmsg).   We need some better docs describing authentication !!!
