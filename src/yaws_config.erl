@@ -32,11 +32,11 @@
 paths() ->
     case yaws:getuid() of
         {ok, "0"} ->    %% root 
-            [yaws_generated:etcdir() ++ "/yaws.conf"];
+            [yaws_generated:etcdir() ++ "/yaws/yaws.conf"];
         _ -> %% developer
             [filename:join([yaws:home(), "yaws.conf"]),
              "./yaws.conf", 
-             yaws_generated:etcdir() ++ "/yaws.conf"]
+             yaws_generated:etcdir() ++ "/yaws/yaws.conf"]
     end.
 
 
