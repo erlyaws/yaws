@@ -14,7 +14,7 @@ prog=yaws
 # By default we run with the default id
 # idopts=--id myserverid
 
-conf="--conf %etcdir%/yaws.conf"
+conf="--conf %etcdir%/yaws/yaws.conf"
 
 test -x $yaws || exit 1
 

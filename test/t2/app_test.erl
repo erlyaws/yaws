@@ -175,22 +175,22 @@ sendfile_get() ->
                            end)
              end, L),
 
-    K3 = lists:map(
-             fun(_) ->
-                     spawn(fun() ->
-                                   ?line {ok, "200", _Headers, _} = 
-                                       ibrowse:send_req(
-                                         "http://localhost:8000/3000.txt", 
-                                         [], get, [], [], ?SENDFILE_GET_TIMEOUT),
-                                   SELF ! {self(), k3, done}
-                           end)
-             end, L),
+    %% K3 = lists:map(
+    %%          fun(_) ->
+    %%                  spawn(fun() ->
+    %%                                ?line {ok, "200", _Headers, _} = 
+    %%                                    ibrowse:send_req(
+    %%                                      "http://localhost:8000/3000.txt", 
+    %%                                      [], get, [], [], ?SENDFILE_GET_TIMEOUT),
+    %%                                SELF ! {self(), k3, done}
+    %%                        end)
+    %%          end, L),
 
 
-    io:format("K3 = ~p~n", [K3]),
+ %   io:format("K3 = ~p~n", [K3]),
     collect(K1, 1, k1),
     collect(K2, 1, k2),
-    collect(K3, 1, k3),
+%    collect(K3, 1, k3),
     ok.
 
 collect([], _, _) ->

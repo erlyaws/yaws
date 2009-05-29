@@ -1761,7 +1761,7 @@ sanitize_file_name([]) ->
 
 %% to be used in embedded mode, make it possible
 %% to pass a config to yaws from another data source
-%% than /etc/yaws.conf, for example from a database
+%% than /etc/yaws/yaws.conf, for example from a database
 %% this code is also called by the server -h hup code
 setconf(GC0, Groups0) ->
     setconf(GC0, Groups0, true).

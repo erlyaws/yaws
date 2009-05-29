@@ -3,19 +3,28 @@ include ../support/include.mk
 
 # 
 all:	conf setup app_test.beam
-	echo "all ok"
+	@echo "all ok"
 
 
 
 # invoke as 
-# TEST=test3 make start test
-# or just make test to run all start test
+# TEST=test3 make test
+# or just make test to run all
 
-test:	
+ULIMIT = 768
+
+test:	conf start
 	dd if=/dev/zero of=../../www/1000.txt bs=1024 count=1000 >/dev/null 2>&1
 	dd if=/dev/zero of=../../www/2000.txt bs=1024 count=2000 >/dev/null 2>&1
 	dd if=/dev/zero of=../../www/3000.txt bs=1024 count=3000 >/dev/null 2>&1
 	dd if=/dev/zero of=../../www/10000.txt bs=1024 count=10000 >/dev/null 2>&1
+	ul=`ulimit -n` ; \
+	val=`expr $$ul '<' $(ULIMIT)` ; \
+	if [ $$val = 1 ] ; then \
+	    echo trying to raise "ulimit -n" for the test... ; \
+	    set -e ; \
+	    ulimit -n $(ULIMIT) ; \
+	fi ; \
 	$(ERL) -noinput $(PA) -s tftest
 	$(MAKE) stop
 
@@ -26,8 +35,4 @@ debug:
 conf:	stdconf
 
 clean:	tclean
-	-rm -rf localhost:8000
-
-
-
-
+	-rm -rf localhost:8000 logs yaws.conf

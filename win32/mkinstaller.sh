@@ -10,7 +10,6 @@ set -x
 # as e.g
 # INSTALL_BUILDER=/home/luser/installbuilder-5.4.10 ./mkinstaller.sh 
 
-# The official build is done on armstrong and use the installation below:
 
 INSTALL_BUILDER=${INSTALL_BUILDER:=${HOME}/installbuilder-5.4.14}
 
@@ -20,7 +19,9 @@ test -d "$INSTALL_BUILDER" || {
 	exit 13
 }
 
-echo "-define(HAVE_SENDFILE, false). " > ../src/yaws_configure.hrl
+(cd ../src; make clean)
+echo "" > ../src/yaws_configure.hrl
+(cd ../doc; make docs)
 (cd ../src; make)
 
 

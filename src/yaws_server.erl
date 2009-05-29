@@ -806,7 +806,7 @@ ssl_listen_opts(GC, SSL) ->
          if ?gc_use_old_ssl(GC) ->
                  false;
             true ->  
-                 %{ssl_imp, new} .... doesn't work yet
+                 %%{ssl_imp, new} - still doesn't work (R13B)
                  false
          end
         ],
@@ -2043,6 +2043,7 @@ deliver_options(CliSock, _Req, Options) ->
               doclose = false,
               chunked = false,
               server = yaws:make_server_header(),
+              date = yaws:make_date_header(),
               allow = yaws:make_allow_header(Options)},
     put(outh, H),
     deliver_accumulated(CliSock),
@@ -3292,7 +3293,12 @@ cache_size(_UT) ->
 
 
 
-cache_file(SC, GC, Path, UT) 
+cache_file(SC, GC, Path, UT)
+  when GC#gconf.max_num_cached_files == 0;
+       GC#gconf.max_num_cached_bytes == 0;
+       GC#gconf.max_size_cached_file == 0 ->
+    UT;
+cache_file(SC, GC, Path, UT)
   when ((UT#urltype.type == regular) or
         ((UT#urltype.type == yaws) and (UT#urltype.pathinfo == undefined))) ->
     E = SC#sconf.ets,
@@ -3307,6 +3313,7 @@ cache_file(SC, GC, Path, UT)
             cleanup_cache(E, num),
             cache_file(SC, GC, Path, UT);
         FI#file_info.size < GC#gconf.max_size_cached_file,
+        FI#file_info.size < GC#gconf.max_num_cached_bytes,
         B + FI#file_info.size > GC#gconf.max_num_cached_bytes ->
             error_logger:info_msg("Max size cached bytes reached for server "
                                   "~p", [SC#sconf.servername]),
@@ -3315,7 +3322,8 @@ cache_file(SC, GC, Path, UT)
         true ->
             ?Debug("Check file size\n",[]),
             if
-                FI#file_info.size > GC#gconf.max_size_cached_file ->
+                FI#file_info.size > GC#gconf.max_size_cached_file;
+                FI#file_info.size > GC#gconf.max_num_cached_bytes ->
                     ?Debug("Too large\n",[]),
                     UT;
                 true ->
@@ -3385,7 +3393,7 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
     case GetPath of
         _ when ?sc_has_dav(SC) ->
             {Comps, RevFile} = comp_split(GetPath),
-            {_Type, Mime} = suffix_type(RevFile),
+            {_Type, _, Mime} = suffix_type(RevFile),
 
             FullPath = construct_fullpath(ArgDocroot, GetPath, VirtualDir),
 
@@ -3403,13 +3411,11 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
         "/" -> %% special case
             case lists:keysearch("/", 1, SC#sconf.appmods) of
                 {value, {_, Mod}} ->
-                    #urltype{
-                  type = appmod, 
-                  data = {Mod, []},
-                  dir = "",
-                  path = "",
-                  fullpath = ArgDocroot
-                 };
+                    #urltype{type = appmod, 
+                             data = {Mod, []},
+                             dir = "",
+                             path = "",
+                             fullpath = ArgDocroot};
                 _ ->
                     maybe_return_dir(ArgDocroot, GetPath, VirtualDir)
             end;

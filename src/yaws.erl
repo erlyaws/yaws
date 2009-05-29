@@ -464,11 +464,10 @@ local_time_as_gmt_string(LocalTime) ->
     time_to_string(erlang:localtime_to_universaltime(LocalTime),"GMT").
 
 
-time_to_string( {{Year, Month, Day}, {Hour, Min, Sec}}, Zone) ->
-    io_lib:format("~s, ~s ~s ~w ~s:~s:~s ~s",
-                  [day(Year, Month, Day),
-                   mk2(Day), month(Month), Year,
-                   mk2(Hour), mk2(Min), mk2(Sec), Zone]).
+time_to_string({{Year, Month, Day}, {Hour, Min, Sec}}, Zone) ->
+    [day(Year, Month, Day), ", ",
+     mk2(Day), " ", month(Month), " ", integer_to_list(Year), " ",
+     mk2(Hour), ":", mk2(Min), ":", mk2(Sec), " ", Zone].
 
 
 
@@ -1344,22 +1343,21 @@ pack_bin(<<_:6,A:6,B:6,C:6,D:6,E:6,F:6,G:6,H:6,I:6,J:6,K:6>>) ->
 
 %% Like Base64 for no particular reason.
 pc(X) when X >= 0, X < 26 -> 
-            X + $A;
-     pc(X) when X >= 26, X < 52 -> 
-            X - 26 + $a;
-     pc(X) when X >= 52, X < 62 ->
-            X - 52 + $0;
-     pc(62) ->
-            $+;
-                pc(63) ->
-                    $/.
+    X + $A;
+pc(X) when X >= 26, X < 52 -> 
+    X - 26 + $a;
+pc(X) when X >= 52, X < 62 ->
+    X - 52 + $0;
+pc(62) ->
+    $+;
+pc(63) ->
+    $/.
 
 
-
-                        make_content_type_header(no_content_type) ->
-                               undefined;
-                        make_content_type_header(MimeType) ->
-                               ["Content-Type: ", MimeType, "\r\n"].
+make_content_type_header(no_content_type) ->
+    undefined;
+make_content_type_header(MimeType) ->
+    ["Content-Type: ", MimeType, "\r\n"].
 
 
 make_content_range_header(all) ->

@@ -6,6 +6,16 @@ erl="%erl%"
 run_erl="%run_erl%"
 to_erl="%to_erl%"
 
+# erlexec requires HOME to be set, and some distros
+# run /etc/rc scripts without HOME being set 
+if [ -z "$HOME" ]; then
+    if [ `id u` = 0 -a -d /root ]; then
+        export HOME=/root
+    else
+        export HOME=/tmp
+    fi
+fi
+
 case `uname` in
     CYGWIN*)
         yawsdir=`cygpath -m $yawsdir`
@@ -17,7 +27,6 @@ esac
 
 
 ENV_PGM=`which env`
-
 
 
 help()
