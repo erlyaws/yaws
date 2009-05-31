@@ -1,3 +1,20 @@
+Thu May 28 20:17:10 CEST 2009 Yaws 1.82
+Have the yaws script set HOME if unset, this is required since some distros (Ubuntu) don't set HOME for code run under/etc/rc and erlexec requires HOME to be set.  (Klacke)
+add extra cgi vars patch from joe_e_e
+new ebuild file for gentoo from joe_e_e
+patch by joe_e_e to move all files from /etc to /etc/yaws in the install script. This may cause some troubles for some users when upgrading. By default the make install target doesn't overwrite /etc files. Pay attention.
+added sendfile check for Darwin, since no sendfile is available on OS X Tiger (Steve)
+RSS fixes, (Steve)
+Several authentication fixes by Fabian Alenius. Changed the way authentication is done, added support for multiple authentication methods to be used for one directory and changed so that the 401 page can be customized similarly to the 404 page. In general this is a major cleanup of how authentication is done. Much better. One backwards incompat change here. Fabian Renamed yaws_401.erl to yaws_outmod.erl, which is probably a better name considering it's current use(it also displays the crashmsg).   We need some better docs describing authentication !!!
+add date header to OPTIONS response (Steve)
+fix badmatch calling yaws_server:suffix_type from yaw_server:do_url_type when dav is true (Steve)
+Added fix and tests for github issue #2. Handle zero values for max_num_cached_files, max_num_cached_bytes, and max_size_cached_file to prevent infinite loops. (Steve)
+modify time_to_string to avoid slow io_lib:format (Steve)
+added sendfile check for Darwin, since no sendfile is available on OS X Tiger (Steve)
+document rss_dir (Steve)
+add ets-based yapp registry implementation for cases where mnesia is overkill (Steve)
+Fixed so that the HTTP status is set to 401 explicitly in yaws_server:handle_ut(...), previously out401 needed to return    {status, ...} or status would default to 200.  (Fabian Alenius)
+
 Mon Mar  9 21:48:18 CET 2009 Yaws 1.81
 Moved the Yaws repository to http://www.github.som. See instructions at http://yaws.hyber.org/configuration.yaws on how to git clone Yaws. This is the first yaws release out of the github repo. The default Yaws wiki previously found at http://yaws.hyber.org/wiki has been moved to the wiki at github. New address of wiki is http://wiki.github.com/klacke/yaws. The previous (Erlang based wiki written by Johan Bevemyr) turned ... well unmodern, and was also plagued by spammers. 
 Several cleanups by Hans Ulrich Niedermann, file perms, speling errors etc.
@@ -11,8 +28,7 @@ cleaned up the redirect feature. It was poorly implemented and poorly documented
 Thu Feb 12 22:58:16 CET 2009 Yaws 1.80
 Full windows support with a proper .exe Windows installer (klacke)
 Added a timestamp check on the ssl cert/key files making it possible to just upload new cert/key files and do yaws --hup to automatically have the new cert/key files being used (klacke)
-Disgusting DOS attack discovered by Manuel Duran Aguete whereby if a neverendig series of headers are sent to yaws, we die of out of memory. Actual attack not described here. Contact me (klacke) if you're interested in the details
-and want a backport patch. I'm not reallu sure this is indeed the right procedure for announcing a DOS bug. (First time !!!)
+Disgusting DOS attack discovered by Manuel Duran Aguete whereby if a neverendig series of headers are sent to yaws, we die of out of memory. Actual attack not described here. Contact me (klacke) if you're interested in the details and want a backport patch. I'm not really sure this is indeed the right procedure for announcing a DOS bug. (First time !!!) 
 init_db patch cleanup by Liu Yubao 
 patch by Liu Yubao to remove timeout in ssl accept
 add pkg-config support contributed by Olivier Girondel
@@ -29,8 +45,7 @@ stream content with a timeout patch from Davide Marques
 traffic trace was broken for certain types of requsts - found by wde
 
 Tue Jan 20 20:19:16 CET 2009 version 1.79
-This release fixes the completely broken 1.78 release. So at last, we have good\
- sendfile support.
+This release fixes the completely broken 1.78 release. So at last, we have good sendfile support. 
 traffic trace was broken for certain types of requsts - found by wde
 Fixed several sendfile related bugs (vinoski)
 Improved yaws supervision structure (klacke)

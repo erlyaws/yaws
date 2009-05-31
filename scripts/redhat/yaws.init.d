@@ -20,7 +20,7 @@ prog=yaws
 #
 yawsid=default
 #yawsid_opts="--id $yawsid"
-conf="--conf %etcdir%yaws.conf"
+conf="--conf %etcdir%yaws/yaws.conf"
 
 start() {
         echo -n $"Starting $prog: "

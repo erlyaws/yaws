@@ -6,7 +6,7 @@
 YAWS_BIN=%prefix%bin/yaws
 # By default we run with the default id
 # YAWS_ID=myserverid
-CONF=%etcdir%yaws.conf
+CONF=%etcdir%yaws/yaws.conf
 
 
 if [ "x${YAWS_ID}" = x ]; then

@@ -19,7 +19,9 @@ test -d "$INSTALL_BUILDER" || {
 	exit 13
 }
 
-echo "-define(HAVE_SENDFILE, false). " > ../src/yaws_configure.hrl
+(cd ../src; make clean)
+echo "" > ../src/yaws_configure.hrl
+(cd ../doc; make docs)
 (cd ../src; make)
 
 
