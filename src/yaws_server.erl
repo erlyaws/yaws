@@ -3580,10 +3580,7 @@ do_comp_split([], Comps, Part) ->
 %% whereas for the configuration entry </docs/stuff/myapp , myappAppmod>
 %% the request /otherpath/myapp will not trigger the appmod.
 %%
-%% !todo - consider supporting 'compound' floating appmods. 
-%% e.g <stuff/myapp , someappmod> to match   /somewhere/stuff/myapp/xyz  
-%% but not /somewhere/myapp/xyz 
-%%
+
 active_appmod([], _RequestSegs) ->
     false;
 active_appmod(AppMods, RequestSegs) ->
@@ -3592,57 +3589,58 @@ active_appmod(AppMods, RequestSegs) ->
     %% call to a local func - replace?)
 
     %%Accumulator is of form {RequestSegs, {AppmodMountPoint,Mod}}
-    Matched = lists:foldl(
-                fun(Pair,Acc) ->
-                        {Mount, Mod} = Pair,
-                        {ReqSegs, {LongestSoFar, _}} = Acc,
-
-                        MountSegs = string:tokens(Mount,"/"),
-                        case lists:prefix(MountSegs,ReqSegs) of
-                            true ->
-                                case LongestSoFar of
-                                    [$/|_] ->
-                                        %%simple comparison of string length 
-                                        %% (as opposed to number of segments) 
-                                        %% should be ok here.
-                                        if length(Mount) > 
-                                           length(LongestSoFar) ->
-                                                {ReqSegs, {Mount, Mod}};
-                                           true ->
-                                                Acc
-                                        end;
-                                    _ ->
-                                        %%existing match is 'floating' - 
-                                        %% we trump it.
-
-                                        {ReqSegs, {Mount, Mod}}
-                                end;
-                            false ->
-                                case LongestSoFar of
-                                    [$/|_] ->
-                                        %%There is already a match for an 
-                                        %% 'anchored' (ie absolute path) 
-                                        %% mount point.
-                                        %% floating appmod can't override.
-                                        Acc;
-                                    _ ->
-                                        %%check for 'floating' match
-                                        case lists:member(Mount, ReqSegs) of
-                                            true ->
-                                                %%!todo - review & document.
-                                                %%latest 'floating' match wins 
-                                                %% if multiple match?
-                                                %% (order in config vs position 
-                                                %% in request URI ?) 
-
-                                                {ReqSegs, {Mount, Mod}};
-                                            false ->
-                                                Acc
-                                        end
-                                end
-                        end
-                end, {RequestSegs, {"",""}}, AppMods),
-
+    Matched = 
+        lists:foldl(
+          fun(Pair,Acc) ->
+                  {Mount, Mod} = Pair,
+                  {ReqSegs, {LongestSoFar, _}} = Acc,
+                  
+                  MountSegs = string:tokens(Mount,"/"),
+                  case lists:prefix(MountSegs,ReqSegs) of
+                      true ->
+                          case LongestSoFar of
+                              [$/|_] ->
+                                  %%simple comparison of string length 
+                                  %% (as opposed to number of segments) 
+                                  %% should be ok here.
+                                  if length(Mount) > 
+                                     length(LongestSoFar) ->
+                                          {ReqSegs, {Mount, Mod}};
+                                     true ->
+                                          Acc
+                                  end;
+                              _ ->
+                                  %%existing match is 'floating' - 
+                                  %% we trump it.
+                                  
+                                  {ReqSegs, {Mount, Mod}}
+                          end;
+                      false ->
+                          case LongestSoFar of
+                              [$/|_] ->
+                                  %%There is already a match for an 
+                                  %% 'anchored' (ie absolute path) 
+                                  %% mount point.
+                                  %% floating appmod can't override.
+                                  Acc;
+                              _ ->
+                                  %%check for 'floating' match
+                                  case lists:member(Mount, ReqSegs) of
+                                      true ->
+                                          %%!todo - review & document.
+                                          %%latest 'floating' match wins 
+                                          %% if multiple match?
+                                          %% (order in config vs position 
+                                          %% in request URI ?) 
+                                          
+                                          {ReqSegs, {Mount, Mod}};
+                                      false ->
+                                          Acc
+                                  end
+                          end
+                  end
+          end, {RequestSegs, {"",""}}, AppMods),
+    
     case Matched of
         {_RequestSegs, {"",""}} ->
             %%no appmod corresponding specifically to this http_request.path
