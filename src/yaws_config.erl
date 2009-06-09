@@ -215,7 +215,6 @@ parse_yaws_auth_file([{authmod, Authmod0}|T], Auth0) ->
     code:ensure_loaded(Authmod1),
     %% Add the auth header for the mod
     Headers = Authmod1:get_header() ++ Auth0#auth.headers,
-    
     parse_yaws_auth_file(T, Auth0#auth{mod = Authmod1, headers = Headers});
 
 parse_yaws_auth_file([{file, File}|T], Auth0) ->
@@ -235,10 +234,8 @@ remove_multiple_slash(L) ->
 
 remove_multiple_slash([], Acc)->
     lists:reverse(Acc);
-remove_multiple_slash("///" ++ T, Acc) ->
-    remove_multiple_slash(T, [$/|Acc]);
 remove_multiple_slash("//" ++ T, Acc) ->
-    remove_multiple_slash(T, [$/|Acc]);
+    remove_multiple_slash([$/|T], Acc);
 remove_multiple_slash([H|T], Acc) ->    
     remove_multiple_slash(T, [H|Acc]).
 
