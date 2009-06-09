@@ -1780,14 +1780,16 @@ setconf(GC0, Groups0, CheckCertsChanged) ->
         true ->
             ok
     end,
-    {GC, Groups} = yaws_config:verify_upgrade_args(GC0, Groups0),
+    
+    {GC, Groups1} = yaws_config:verify_upgrade_args(GC0, Groups0),
+    Groups2 = lists:map(fun(X) -> yaws_config:add_yaws_auth(X) end, Groups1),
     {ok, OLDGC, OldGroups} = yaws_api:getconf(),
     case {yaws_config:can_hard_gc(GC, OLDGC),
-          yaws_config:can_soft_setconf(GC, Groups, OLDGC, OldGroups)} of
+          yaws_config:can_soft_setconf(GC, Groups2, OLDGC, OldGroups)} of
         {true, true} ->
-            yaws_config:soft_setconf(GC, Groups, OLDGC, OldGroups);
+            yaws_config:soft_setconf(GC, Groups2, OLDGC, OldGroups);
         {true, false} when OLDGC == undefined -> 
-            yaws_config:hard_setconf(GC, Groups);
+            yaws_config:hard_setconf(GC, Groups2);
         _ ->
             {error, need_restart}
     end.
