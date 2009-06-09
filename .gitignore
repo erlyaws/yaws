@@ -1,0 +1,16 @@
+*.beam
+*.o
+*.so
+yaws.pc
+bin/yaws
+config.log
+config.status
+ebin/yaws.app
+include.mk
+priv/epam
+scripts/yaws.conf
+src/charset.def
+src/mime_types.erl
+src/yaws_configure.hrl
+test/support/include.mk
+test/support/include.sh
