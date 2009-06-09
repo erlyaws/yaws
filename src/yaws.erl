@@ -1785,11 +1785,17 @@ http_get_headers(CliSock, SSL) ->
         GC#gconf.trace == false ->
             Res;
         is_tuple(Res) ->
-            {Request, Headers} = Res,
-            ReqStr = yaws_api:reformat_request(Request),
+            {RoR, Headers} = Res,
+            {RoRStr, From} = case element(1, RoR) of
+                                 http_request ->
+                                     {yaws_api:reformat_request(RoR),
+                                      from_client};
+                                 http_response ->
+                                     {yaws_api:reformat_response(RoR),
+                                      from_server}
+                             end,
             HStr = headers_to_str(Headers),
-            yaws_log:trace_traffic(from_client, 
-                                   ?F("~n~s~n~s~n",[ReqStr, HStr])),
+            yaws_log:trace_traffic(From, ?F("~n~s~n~s~n",[RoRStr, HStr])),
             Res;
         Res == closed ->
             yaws_log:trace_traffic(from_client, "closed\n"),

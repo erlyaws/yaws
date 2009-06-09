@@ -1022,14 +1022,16 @@ reformat_header(H) ->
 
 
 
+reformat_request(#http_request{method = bad_request}) ->
+    ["Bad request"];
 reformat_request(Req) ->
     Path = case Req#http_request.path of
-	       {abs_path, AbsPath} ->
-		   AbsPath;
-	       {absoluteURI, _Scheme, _Host0, _Port, RawPath} ->
-		   RawPath
-	   end,
-    {Maj,Min} = Req#http_request.version,
+               {abs_path, AbsPath} ->
+                   AbsPath;
+               {absoluteURI, _Scheme, _Host0, _Port, RawPath} ->
+                   RawPath
+           end,
+    {Maj, Min} = Req#http_request.version,
     [yaws:to_list(Req#http_request.method), " ", Path," HTTP/",
      integer_to_list(Maj),".", integer_to_list(Min)].
 
