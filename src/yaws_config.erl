@@ -584,14 +584,6 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
 
-        ["backwards_compat_parse", '=', Bool] ->
-            case is_bool(Bool) of
-                {true, Val} ->
-                    fload(FD, globals, ?gc_set_backwards_compat_parse(GC, Val),
-                          C, Cs, Lno+1, Next);
-                false ->
-                    {error, ?F("Expect true|false at line ~w", [Lno])}
-            end;
 
         ["auth_log", '=', Bool] ->
             case is_bool(Bool) of
@@ -1558,9 +1550,6 @@ find_sc(SC, [S|Ss]) ->
     end;
 find_sc(_SC,[]) ->
     false.
-
-
-
 
 
 verify_upgrade_args(GC, Groups0) when is_record(GC, gconf) ->
