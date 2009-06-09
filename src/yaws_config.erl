@@ -115,8 +115,6 @@ setup_auth(SC) ->
     Auth_dirs3 = load_yaws_auth_file(SC, Auth_dirs2, []),
 
     start_pam(Auth_dirs3),
-
-    io:format("Auth_dirs3: ~p~n", [Auth_dirs3]),
     Auth_dirs3.
 
     
