@@ -64,6 +64,8 @@ int runwait(char *execString) {
             return ret;
         }
     printf("Failed to create the process entirely\n");
+    printf("Tried to invoke: <%s> \n", execString);
+    printf("Make sure you have <erl> in your environment PATH \n"); 
     return 1;
 }
 
