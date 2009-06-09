@@ -207,22 +207,24 @@ parse_yaws_auth_file([], Auth0) ->
 parse_yaws_auth_file([{realm, Realm}|T], Auth0) ->
     parse_yaws_auth_file(T, Auth0#auth{realm = Realm});
 
-parse_yaws_auth_file([{pam, Pam}|T], Auth0) ->
+parse_yaws_auth_file([{pam, Pam}|T], Auth0) 
+  when is_atom(Pam) ->
     parse_yaws_auth_file(T, Auth0#auth{pam = Pam});
 
-parse_yaws_auth_file([{authmod, Authmod0}|T], Auth0) ->
-    Authmod1 = list_to_atom(Authmod0),
-    code:ensure_loaded(Authmod1),
+parse_yaws_auth_file([{authmod, Authmod0}|T], Auth0) 
+  when is_atom(Authmod0)->
+    code:ensure_loaded(Authmod0),
     %% Add the auth header for the mod
-    Headers = Authmod1:get_header() ++ Auth0#auth.headers,
-    parse_yaws_auth_file(T, Auth0#auth{mod = Authmod1, headers = Headers});
+    Headers = Authmod0:get_header() ++ Auth0#auth.headers,
+    parse_yaws_auth_file(T, Auth0#auth{mod = Authmod0, headers = Headers});
 
 parse_yaws_auth_file([{file, File}|T], Auth0) ->
     [Dir] = Auth0#auth.dir,
     New_dir = [Dir ++ File],
     parse_yaws_auth_file(T, Auth0#auth{dir = New_dir});
 
-parse_yaws_auth_file([{User, Password}|T], Auth0) ->
+parse_yaws_auth_file([{User, Password}|T], Auth0) 
+  when is_list(User), is_list(Password) ->
     Users = [{User, Password}|Auth0#auth.users],
     parse_yaws_auth_file(T, Auth0#auth{users = Users}).
 
