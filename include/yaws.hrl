@@ -105,6 +105,7 @@
 %% flags for sconfs
 -define(SC_ACCESS_LOG,   1).
 -define(SC_ADD_PORT,     2).
+-define(SC_STATISTICS,   4).
 -define(SC_TILDE_EXPAND, 8).
 -define(SC_DIR_LISTINGS, 16).
 -define(SC_DEFLATE,      32).
@@ -117,6 +118,8 @@
         (((SC)#sconf.flags band ?SC_ACCESS_LOG) /= 0)).
 -define(sc_has_add_port(SC), 
         (((SC)#sconf.flags band ?SC_ADD_PORT) /= 0)).
+-define(sc_has_statistics(SC),
+        (((SC)#sconf.flags band ?SC_STATISTICS) /= 0)).
 -define(sc_has_tilde_expand(SC),
         (((SC)#sconf.flags band ?SC_TILDE_EXPAND) /= 0)).
 -define(sc_has_dir_listings(SC),
@@ -133,8 +136,10 @@
         SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_ACCESS_LOG, Bool)}).
 -define(sc_set_add_port(SC, Bool), 
         SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_ADD_PORT, Bool)}).
+-define(sc_set_statistics(SC, Bool),
+        SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_STATISTICS, Bool)}).
 -define(sc_set_ssl(SC, Bool), 
-        SC#sconf{flags = yaws:flag(SC#sconf.flags , ?SC_SSL, Bool)}).
+        SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_SSL, Bool)}).
 -define(sc_set_tilde_expand(SC, Bool), 
         SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_TILDE_EXPAND, Bool)}).
 -define(sc_set_dir_listings(SC, Bool), 
@@ -178,7 +183,7 @@
          revproxy = [],
          soptions = [],
          extra_cgi_vars = [],
-
+	 stats,                      %% raw traffic statistics
          %% [{Extension:string(), Mod:atom()]
          %% work in progress .....
          extension_mods = [{"ys", yaws_ext_handler_yaws}] 
