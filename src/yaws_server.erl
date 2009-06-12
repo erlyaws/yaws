@@ -488,8 +488,16 @@ gserv(Top, GC, Group0) ->
     ?TC([{record, GC, gconf}]),
     put(gc, GC),
     put(top, Top),
-    Group = map(fun(SC) -> setup_ets(SC)
-                end, Group0),
+    Group1 = map(fun(SC) -> setup_ets(SC)
+		 end, Group0),
+    Group = map(fun(SC) ->
+			case ?sc_has_statistics(SC) of
+			    true ->
+				start_stats(SC);
+			    false ->
+				SC
+			end
+		end, Group1),
     SC = hd(Group),
     case do_listen(GC, SC) of
         {SSLBOOL, CertInfo, {ok, Listen}} ->
@@ -559,6 +567,11 @@ clear_ets_complete(SC) ->
     end.
 
 
+start_stats(SC) ->
+    {ok, Pid} = yaws_stats:start_link(),
+    SC#sconf{stats = Pid}.
+
+
 gserv_loop(GS, Ready, Rnum, Last) ->
     receive
         {From , status} ->
@@ -623,6 +636,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                                            [OldSc, GS#gs.group]),
                     erlang:error(nosc);
                 true ->
+		    %% TODO oliv3: ici on tue un pid de stats ou on en lance un
                     stop_ready(Ready, Last),
                     NewSc2 = clear_ets_complete(NewSc),
                     GS2 = GS#gs{group = [ NewSc2 | 
@@ -637,12 +651,12 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             end;
 
         {delete_sconf, OldSc, From} ->
-
             case lists:member(OldSc, GS#gs.group) of
                 false ->
                     error_logger:error_msg("gserv: No found SC ~n",[]),
                     erlang:error(nosc);
                 true ->
+		    %% TODO oliv3: ici tuer le pid stats
                     stop_ready(Ready, Last),
                     GS2 = GS#gs{group =  lists:delete(OldSc,GS#gs.group)},
                     Ready2 = [],
@@ -655,6 +669,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             end;
 
         {add_sconf, From, SC, Adder} ->
+	    %% TODO oliv3 ici lancer un process stats
             stop_ready(Ready, Last),
             SC2 = setup_ets(SC),
 	    GS2 = GS#gs{group =  [SC2 |GS#gs.group]},
@@ -977,6 +992,7 @@ aloop(CliSock, GS, Num) ->
                  end,
             put(outh, #outh{}),
             put(sc, SC),
+	    yaws_stats:hit(),
             Call = call_method(Req#http_request.method, CliSock, Req, H),
             handle_method_result(Call, CliSock, IP, GS, Req, H, Num);
         closed -> 
@@ -3183,13 +3199,17 @@ deliver_large_file(CliSock,  _Req, UT, Range) ->
 
 send_file(CliSock, Path, all, _Priv, no) when is_port(CliSock) ->
     ?Debug("send_file(~p,~p,no ...)~n", [CliSock, Path]),
-    yaws_sendfile_compat:send(CliSock, Path);
+    yaws_sendfile_compat:send(CliSock, Path),
+    {ok, Size} = yaws:filesize(Path),
+    yaws_stats:sent(Size);
 send_file(CliSock, Path, all, Priv, _Enc) ->
     ?Debug("send_file(~p,~p, ...)~n", [CliSock, Path]),
     {ok, Fd} = file:open(Path, [raw, binary, read]),
     send_file(CliSock, Fd, Priv);
 send_file(CliSock, Path,  {fromto, From, To, _Tot}, undeflated, no) when is_port(CliSock) ->
-    yaws_sendfile_compat:send(CliSock, Path, From, To - From + 1);
+    Size = To - From + 1,
+    yaws_sendfile_compat:send(CliSock, Path, From, Size),
+    yaws_stats:sent(Size);
 send_file(CliSock, Path,  {fromto, From, To, _Tot}, undeflated, _Enc) ->
     {ok, Fd} = file:open(Path, [raw, binary, read]),
     file:position(Fd, {bof, From}),
