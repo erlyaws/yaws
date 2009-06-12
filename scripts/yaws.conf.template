@@ -127,6 +127,7 @@ use_fdsrv = false
         listen = 0.0.0.0
         docroot = /tmp
         dir_listings = true
+        statistics = true
         <auth>
                 realm = foobar
                 dir = /
