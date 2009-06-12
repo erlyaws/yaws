@@ -277,12 +277,15 @@ setup_sconf(DocRoot, D, SL) ->
            revproxy = lkup(revproxy, SL, 
                            D#sconf.revproxy),
            soptions = lkup(soptions, SL,
-                           D#sconf.soptions)}.
+                           D#sconf.soptions),
+	   stats = lkup(soptions, SL, D#sconf.stats)}.
 
 set_sc_flags([{access_log, Bool}|T], Flags) ->
     set_sc_flags(T, flag(Flags, ?SC_ACCESS_LOG, Bool));
 set_sc_flags([{add_port, Bool}|T], Flags) ->
     set_sc_flags(T, flag(Flags, ?SC_ADD_PORT, Bool));
+set_sc_flags([{statistics, Bool}|T], Flags) ->
+    set_sc_flags(T, flag(Flags, ?SC_STATISTICS, Bool));
 set_sc_flags([{tilde_expand, Bool}|T], Flags) ->
     set_sc_flags(T, flag(Flags, ?SC_TILDE_EXPAND, Bool));
 set_sc_flags([{dir_listings, Bool}|T], Flags) ->
@@ -1738,10 +1741,12 @@ gen_tcp_send(S, Data) ->
               _SSL ->
                   ssl:send(S, Data)
           end,
+    Size = iolist_size(Data),
     case ?gc_has_debug((get(gc))) of
         false ->
             case Res of
                 ok ->
+		    yaws_stats:sent(Size),
                     ok;
                 _Err ->
                     exit(normal)   %% keep quiet
@@ -1749,6 +1754,7 @@ gen_tcp_send(S, Data) ->
         true ->
             case Res of
                 ok ->
+		    yaws_stats:sent(Size),
                     ?Debug("Sent ~p~n", [yaws_debug:nobin(Data)]),
                     ok;
                 Err ->
