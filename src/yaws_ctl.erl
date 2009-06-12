@@ -18,7 +18,7 @@
 
 -export([start/2, actl_trace/1]).
 -export([ls/1,hup/1,stop/1,status/1,load/1,
-         check/1,trace/1, debug_dump/1]).
+         check/1,trace/1, debug_dump/1, stats/1]).
 %% internal
 -export([run/1, aloop/3, handle_a/3]).
 
@@ -174,6 +174,9 @@ handle_a(A, GC, Key) ->
                 {debug_dump, Key} ->
                     a_debug_dump(A),
                     gen_tcp:close(A);
+                {stats, Key} ->
+                    a_stats(A),
+                    gen_tcp:close(A);
                 {Other, Key} ->
                     gen_tcp:send(A, io_lib:format("Other: ~p~n", [Other])),
                     gen_tcp:close(A);
@@ -263,6 +266,67 @@ a_status() ->
 a_debug_dump(Sock) ->
     gen_tcp:send(Sock, a_status()),
     yaws_debug:do_debug_dump(Sock).
+
+
+-define(IPV4_FMT, "~p.~p.~p.~p").
+-define(IPV6_FMT, "~2.16.0b~2.16.0b:~2.16.0b~2.16.0b:~2.16.0b~2.16.0b:~2.16.0b~2.16.0b").
+
+format_ip(IP) ->
+    case size(IP) of
+	4 ->
+	    {A, B, C, D} = IP,
+	    io_lib:format(?IPV4_FMT,
+			  [A, B, C, D]);
+
+	8 ->
+	    {A, B, C, D, E, F, G, H} = IP,
+	    io_lib:format(?IPV6_FMT,
+			  [A, B, C, D, E, F, G, H])
+    end.
+
+a_stats(Sock) ->
+    gen_tcp:send(Sock, a_stats()).
+a_stats() ->
+    {ok, _GC, Servers0} = yaws_server:getconf(),
+    Servers1 = lists:flatten(Servers0),
+    %% io:format("~p~n", [Servers1]),
+    Servers2 = parse(Servers1),
+
+    case Servers2 of
+	[] ->
+	    f("No statistics available~n", []);
+
+	Servers2 ->
+	    Stats = fstats(Servers2),
+	    Header = f("Host IP Port Hits Sent~n", []),
+
+	    Lines = lists:map(fun({Host, IP0, Port, {Hits, Sent}}) ->
+				      %% we don't use inet_parse:ntoa/1
+				      %% since it's not documented
+				      IP = format_ip(IP0),
+				      f("~s ~s ~p ~p ~p~n",
+					[Host, IP, Port, Hits, Sent])
+			      end, Stats),
+	    [Header, Lines]
+    end.
+
+parse(V) ->
+    parse(V, []).
+parse([], Acc) ->
+    Acc;
+parse([#sconf{stats=undefined}|Tail], Acc) ->
+    parse(Tail, Acc);
+parse([#sconf{listen=IP, port=Port, servername=Servername, stats=Stats}|Tail], Acc) ->
+    Host = {Servername, IP, Port, Stats},
+    parse(Tail, [Host|Acc]).
+
+fstats(S) ->
+    fstats(S, []).
+fstats([], Acc) ->
+    lists:keysort(1, Acc);
+fstats([{IP, Port, Server, Stats}|Tail], Acc) ->
+    S = {IP, Port, Server, yaws_stats:get(Stats)},
+    fstats(Tail, [S|Acc]).
 
 
 a_load(A, Mods) ->
@@ -477,11 +541,6 @@ trace([What, SID]) ->
 debug_dump([SID]) ->
     actl(SID, debug_dump).
 
-
-
-
-
-
-
-
+stats([SID]) ->
+    actl(SID, stats).
 
