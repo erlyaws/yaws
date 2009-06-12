@@ -196,6 +196,8 @@ while [ $# -gt 0 ]
           ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl ls";;
       -S|--status)
           ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl status";;
+      --stats)
+          ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl stats";;
       -load|--load)
           $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl load $* ${id}
           exit 0;;
