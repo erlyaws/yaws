@@ -155,10 +155,4 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%--------------------------------------------------------------------
 get_stats() ->
-    SC = erlang:get(sc),
-    case SC of
-	undefined ->
-	    undefined;
-	SC ->
-	    SC#sconf.stats
-    end.
+    (erlang:get(sc))#sconf.stats.
