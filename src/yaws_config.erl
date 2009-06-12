@@ -121,6 +121,8 @@ setup_auth(SC) ->
 
 %% Call get_yaws_auth_dirs/3 with default values and then
 %% strip leading docroot from dir
+get_yaws_auth_dirs(undefined) ->
+    [];
 get_yaws_auth_dirs(Docroot) ->
     {ok, FileList} = file:list_dir(Docroot),
     Auth_dirs = get_yaws_auth_dirs(Docroot ++ "/", FileList, []),
