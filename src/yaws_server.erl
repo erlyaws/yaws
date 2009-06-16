@@ -669,11 +669,18 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     error_logger:error_msg("gserv: No found SC ~n",[]),
                     erlang:error(nosc);
                 true ->
-		    %% TODO oliv3: ici tuer le pid stats
+		    Pid = OldSc#sconf.stats,
                     stop_ready(Ready, Last),
                     GS2 = GS#gs{group =  lists:delete(OldSc,GS#gs.group)},
                     Ready2 = [],
-                    ets:delete(OldSc#sconf.ets),
+		    case ?sc_has_statistics(OldSc) of
+			true ->
+			    error_logger:info_msg("delete_sconf: Pid= ~p~n", [Pid]),
+			    yaws_stats:stop(Pid);
+			false ->
+			    ok
+		    end,
+		    ets:delete(OldSc#sconf.ets),
                     gen_server:reply(From, ok),
                     error_logger:info_msg("Deleting sconf for server ~s~n",
                                           [yaws:sconf_to_srvstr(OldSc)]),
@@ -681,8 +688,15 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     gserv_loop(GS2, Ready2, 0, New)
             end;
 
-        {add_sconf, From, SC, Adder} ->
-	    %% TODO oliv3 ici lancer un process stats
+        {add_sconf, From, SC0, Adder} ->
+	    SC = case ?sc_has_statistics(SC0) of
+		     true ->
+			 {ok, Pid} = yaws_stats:start_link(),
+			 error_logger:info_msg("add_sconf: Pid= ~p~n", [Pid]),
+			 SC0#sconf{stats=Pid};
+		     false ->
+			 SC0
+		 end,
             stop_ready(Ready, Last),
             SC2 = setup_ets(SC),
 	    GS2 = GS#gs{group =  [SC2 |GS#gs.group]},
