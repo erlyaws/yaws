@@ -140,8 +140,7 @@ handle_info(_Info, State) ->
 %% cleaning up. When it returns, the gen_server terminates with Reason.
 %% The return value is ignored.
 %%--------------------------------------------------------------------
-terminate(Reason, State) ->
-    io:format("yaws_stat ~p terminated (~p, ~p)~n", [self(), Reason, State]),
+terminate(_Reason, _State) ->
     ok.
 
 %%--------------------------------------------------------------------
