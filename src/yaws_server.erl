@@ -636,9 +636,22 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                                            [OldSc, GS#gs.group]),
                     erlang:error(nosc);
                 true ->
-		    %% TODO oliv3: ici on tue un pid de stats ou on en lance un
+		    Pid = OldSc#sconf.stats,
+		    error_logger:info_msg("update_sconf: Stats pid ~p~n", [Pid]),
+		    case Pid of
+			undefined ->
+			    ok;
+			Pid when is_pid(Pid) ->
+			    yaws_stats:stop(Pid)
+		    end,
+		    NewSc1 = case ?sc_has_statistics(NewSc) of
+				 true ->
+				     start_stats(NewSc);
+				 false ->
+				     NewSc
+			     end,
                     stop_ready(Ready, Last),
-                    NewSc2 = clear_ets_complete(NewSc),
+                    NewSc2 = clear_ets_complete(NewSc1),
                     GS2 = GS#gs{group = [ NewSc2 | 
                                           lists:delete(OldSc,GS#gs.group)]},
                     Ready2 = [],
@@ -736,6 +749,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 
 
 stop_ready(Ready, Last) ->
+    error_logger:info_msg("stop_ready(~p, ~p)~n", [Ready, Last]),
     unlink(Last),
     exit(Last, shutdown),
 
