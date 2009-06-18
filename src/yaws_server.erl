@@ -1656,6 +1656,33 @@ is_redirect_map(Path, [E={Prefix, _URL, _AppendMode}|Tail]) ->
             is_redirect_map(Path, Tail)
     end.
 
+%% Find out what which module to call when urltype is unauthorized
+%% Precedence is: 
+%% 1. SC#errormod401 if it's not default
+%% 2. First authdir which prefix the requested dir and has an authmod set
+%% 3. yaws_outmod
+
+get_unauthorized_outmod(_Req_dir, _Auth_dirs, Errormod401) 
+  when Errormod401 /= yaws_outmod ->
+    Errormod401;
+
+get_unauthorized_outmod(_Req_dir, [], Errormod401) ->
+    Errormod401;
+ 
+get_unauthorized_outmod(Req_dir, [{Auth_dir, Auth}|T], Errormod401) ->
+    case lists:prefix(Auth_dir, Req_dir) of
+	true ->
+	    case Auth#auth.mod /= [] of 
+		true ->
+		    Auth#auth.mod;
+		false ->
+		    get_unauthorized_outmod(Req_dir, T, Errormod401)
+	    end;
+	false ->
+	    get_unauthorized_outmod(Req_dir, T, Errormod401)
+    end.
+    
+
 
 %% Return values:
 %% continue, done, {page, Page}
@@ -1668,13 +1695,15 @@ handle_ut(CliSock, ARG, UT = #urltype{type = unauthorized}, N) ->
     %% outh_set_dyn headers sets status to 200 by default
     %% so we need to set it 401
     yaws:outh_set_status_code(401),
+    Outmod = get_unauthorized_outmod(UT#urltype.path, SC#sconf.authdirs, SC#sconf.errormod_401),
+
     deliver_dyn_part(CliSock,
 		     0,
 		     "appmod",
 		     N,
 		     ARG,
 		     UT,
-		     fun(A)->(SC#sconf.errormod_401):out401(A)
+		     fun(A)->Outmod:out(A)
 		     end,
 		     fun(A)->finish_up_dyn_file(A, CliSock)
 		     end);

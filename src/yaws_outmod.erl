@@ -14,7 +14,7 @@
 
 -export([out404/3,
          out404/1,
-	 out401/1,
+	 out/1,
          crashmsg/3]).
 
 
@@ -43,7 +43,7 @@ out404(Arg, GC, SC) ->
 %% a special page on 401's (it doesn't even have to be a 401)
 
 
-out401(_Arg) ->
+out(_Arg) ->
      {ehtml,
       [{html,[], 
         [

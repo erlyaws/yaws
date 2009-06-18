@@ -80,7 +80,8 @@
          start/1,
          stop/0,
          auth/2,
-	 get_header/0
+	 get_header/0,
+	 out/1
         ]).
 
 -include("yaws.hrl").
@@ -124,6 +125,8 @@ stop() ->
     supervisor:terminate_child(?SUPERVISOR, ?SERVER),
     supervisor:delete_child(?SUPERVISOR, ?SERVER).
 
+out(Arg) ->
+    yaws_outmod:out(Arg).
 
 auth(Arg, Auth) when is_record(Arg, arg),
                       is_record(Auth, auth) ->
