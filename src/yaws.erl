@@ -140,8 +140,7 @@ start_embedded(DocRoot, SL, GL, Id) when is_list(DocRoot),is_list(SL),is_list(GL
     GC = setup_gconf(GL, yaws_config:make_default_gconf(false, Id)),
     SC = setup_sconf(DocRoot, #sconf{}, SL),
     yaws_config:add_yaws_soap_srv(GC),
-    SCs = yaws_config:add_yaws_auth([SC]),
-    yaws_api:setconf(GC, [SCs]).
+    yaws_api:setconf(GC, [SC]).
 
 add_server(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
     SC = setup_sconf(DocRoot, #sconf{}, SL),
@@ -1785,11 +1784,17 @@ http_get_headers(CliSock, SSL) ->
         GC#gconf.trace == false ->
             Res;
         is_tuple(Res) ->
-            {Request, Headers} = Res,
-            ReqStr = yaws_api:reformat_request(Request),
+            {RoR, Headers} = Res,
+            {RoRStr, From} = case element(1, RoR) of
+                                 http_request ->
+                                     {yaws_api:reformat_request(RoR),
+                                      from_client};
+                                 http_response ->
+                                     {yaws_api:reformat_response(RoR),
+                                      from_server}
+                             end,
             HStr = headers_to_str(Headers),
-            yaws_log:trace_traffic(from_client, 
-                                   ?F("~n~s~n~s~n",[ReqStr, HStr])),
+            yaws_log:trace_traffic(From, ?F("~n~s~n~s~n",[RoRStr, HStr])),
             Res;
         Res == closed ->
             yaws_log:trace_traffic(from_client, "closed\n"),

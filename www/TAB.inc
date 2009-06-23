@@ -33,29 +33,31 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <div class="%%contact%%"> <a href="contact.yaws" id="contact">Contact </a> </div>
 <div class="%%doc%%"> <a href="doc.yaws" id="doc">Documentation</a>  </div>
 <div class="%%wiki%%"> <a href="http://wiki.github.com/klacke/yaws" id="wiki">Wiki</a>  </div>
+
 <h4> Examples </h4>
-<div class="%%simple%%"> <a href="/simple.yaws">Simple</a> </div>
-<div class="%%dynamic%%"> <a href="/dynamic.yaws">Dynamic content</a> </div>
-<div class="%%query%%"> <a href="/query.yaws">Query part of url</a></div>
-<div class="%%form%%"> <a href="/form.yaws">Forms</a> </div>
-<div class="%%redirect%%"> <a href="/redirect.yaws">Redirect</a> </div>
-<div class="%%arg%%"> <a href="/arg.yaws">Arg</a> </div>
-<div class="%%ssi%%"> <a href="/ssi.yaws">Server side includes</a> </div>
-<div class="%%bindings%%"> <a href="/bindings.yaws">Bindings</a> </div>
-<div class = "%%upload0%%"> <a href="/upload0.yaws">File upload</a> </div>
-<div class="%%cookies%%"> <a href="/cookies.yaws">Cookies</a>  </div>
-<div class="%%pcookie%%"> <a href="/pcookie.yaws">Persistent Cookies</a> </div>
-<div class="%%session%%"> <a href="/session.yaws">Cookie sessions</a>   </div>
+<div class="%%json_intro%%"> <a href="/json_intro.yaws">AJAX/Json RPC</a></div>
 <div class="%%appmods%%"> <a href="/appmods.yaws">Appmods</a> </div>
+<div class="%%arg%%"> <a href="/arg.yaws">Arg</a> </div>
+<div class="%%privbind%%"> <a href="/privbind.yaws">Binding to priviliged ports</a></div>
+<div class="%%bindings%%"> <a href="/bindings.yaws">Bindings</a> </div>
+<div class="%%cgi%%"> <a href="/cgi.yaws">CGI</a></div>
+<div class="%%session%%"> <a href="/session.yaws">Cookie sessions</a>   </div>
+<div class="%%cookies%%"> <a href="/cookies.yaws">Cookies</a>  </div>
+<div class="%%dynamic%%"> <a href="/dynamic.yaws">Dynamic content</a> </div>
+<div class="%%embed%%"> <a href="/embed.yaws">Embedding Yaws</a></div>
+<div class="%%upload0%%"> <a href="/upload0.yaws">File upload</a> </div>
+<div class="%%form%%"> <a href="/form.yaws">Forms</a> </div>
+<div class="%%haxe_intro%%"> <a href="/haxe_intro.yaws">haXe remoting</a></div>
+<div class="%%pcookie%%"> <a href="/pcookie.yaws">Persistent Cookies</a> </div>
+<div class="%%query%%"> <a href="/query.yaws">Query part of url</a></div>
+<div class="%%redirect%%"> <a href="/redirect.yaws">Redirect</a> </div>
+<div class="%%ssi%%"> <a href="/ssi.yaws">Server side includes</a> </div>
+<div class="%%simple%%"> <a href="/simple.yaws">Simple</a> </div>
+<div class="%%soap_intro%%"> <a href="/soap_intro.yaws">SOAP with Yaws</a></div>
 <div class="%%stream%%"> <a href="/stream.yaws">Streaming data</a> </div>
 <a href="/shoppingcart/index.yaws">Tiny shopping cart</a>
-<div class="%%embed%%"> <a href="/embed.yaws">Embedding Yaws</a></div>
-<div class="%%json_intro%%"> <a href="/json_intro.yaws">AJAX/Json RPC</a></div>
-<div class="%%haxe_intro%%"> <a href="/haxe_intro.yaws">haXe remoting</a></div>
-<div class="%%soap_intro%%"> <a href="/soap_intro.yaws">SOAP with Yaws</a></div>
 <div class="%%yapp_intro%%"> <a href="/yapp_intro.yaws">Yaws applications</a></div>
-<div class="%%cgi%%"> <a href="/cgi.yaws">CGI</a></div>
-<div class="%%privbind%%"> <a href="/privbind.yaws">Binding to priviliged ports</a></div>
+
 <h4> Misc </h4>
 <div class="%%internals%%"> <a href="/internals.yaws">Internals</a> </div>
 

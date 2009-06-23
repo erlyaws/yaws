@@ -32,8 +32,6 @@
         ((GC#gconf.flags band ?GC_AUTH_LOG) /= 0)).
 -define(gc_has_copy_errlog(GC), 
         ((GC#gconf.flags band ?GC_COPY_ERRLOG) /= 0)).
--define(gc_has_backwards_compat_parse(GC), 
-        ((GC#gconf.flags band ?GC_BACKWARDS_COMPAT_PARSE) /= 0)).
 -define(gc_log_has_resolve_hostname(GC), 
         ((GC#gconf.flags band ?GC_LOG_RESOLVE_HOSTNAME) /= 0)).
 -define(gc_fail_on_bind_err(GC), 
@@ -53,9 +51,6 @@
         GC#gconf{flags = yaws:flag(GC#gconf.flags, ?GC_AUTH_LOG, Bool)}).
 -define(gc_set_copy_errlog(GC, Bool), 
         GC#gconf{flags = yaws:flag(GC#gconf.flags, ?GC_COPY_ERRLOG, Bool)}).
--define(gc_set_backwards_compat_parse(GC, Bool), 
-        GC#gconf{flags = yaws:flag(GC#gconf.flags, 
-                                   ?GC_BACKWARDS_COMPAT_PARSE, Bool)}).
 -define(gc_log_set_resolve_hostname(GC, Bool), 
         GC#gconf{flags = yaws:flag(GC#gconf.flags, 
                                    ?GC_LOG_RESOLVE_HOSTNAME, Bool)}).

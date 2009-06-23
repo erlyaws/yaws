@@ -138,15 +138,6 @@ Default value is true.
 
 
 .TP
-\fBbackwards_compat_parse  = true | false\fR
-Versions of Yaws > than 1.41 changes the return value
-of the parse_query and parse_post functions. Earlier versions
-used {Key, Val} where Key was an atom. This made Yaws vulnerable
-for DOS attacks. Set this flag to keep the old deprecated 
-and vulnerable behaviour. In versions >  1.41 the Key is a list/string.
-
-
-.TP
 \fBrunmod = ModuleName \fR
 At startup yaws will invoke \fIModuleName:start()\fR in a separate
 process. It is possible to have several runmods.

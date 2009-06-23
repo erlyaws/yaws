@@ -383,7 +383,7 @@ handle_info(secs3, State) ->
 
 handle_info({notify,{yaws_hupped,_}}, State) ->
     handle_info(minute10,State);
-%% once every 10  minute, check log sizes
+%% once every 10 minutes, check log sizes
 handle_info(minute10, State) ->
     L = lists:map(
           fun(AL) ->
@@ -437,8 +437,8 @@ wrap(AL, State) ->
         false ->
             AL;
         enoent ->
-            %% Logfile disapeared, 
-            error_logger:format("Logfile ~p disapeared - we reopen it",
+            %% Logfile disappeared, 
+            error_logger:format("Logfile ~p disappeared - we reopen it",
                                 [AL#alog.filename]),
 	    file:close(AL#alog.fd),
             {ok, Fd2} = file:open(AL#alog.filename, [write, raw]),
@@ -476,9 +476,9 @@ fmt_ip(HostName) ->
 
 
 fmtnow() ->
-    {{Year, Month, Date}, {Hour, Min, Sec}} = calendar:local_time(),
-    io_lib:format("[~2..0w/~s/~4..0w:~2..0w:~2..0w:~2..0w ~s]",
-                  [Date,yaws:month(Month),Year, Hour, Min, Sec, zone()]).
+    {{Year, Month, Day}, {Hour, Min, Sec}} = calendar:local_time(),
+    [fill_zero(Day,2),"/",yaws:month(Month),"/",integer_to_list(Year),":",
+     fill_zero(Hour,2),":",fill_zero(Min,2),":",fill_zero(Sec,2)," ",zone()].
 
 zone() ->
     Time = erlang:universaltime(),
@@ -490,6 +490,16 @@ zone() ->
 %% Ugly reformatting code to get times like +0000 and -1300
 
 zone(Val) when Val < 0 ->
-    io_lib:format("-~4..0w", [trunc(abs(Val))]);
+    [$-|fill_zero(trunc(abs(Val)), 4)];
 zone(Val) when Val >= 0 ->
-    io_lib:format("+~4..0w", [trunc(abs(Val))]).
+    [$+|fill_zero(trunc(Val), 4)].
+
+fill_zero(N, Width) ->
+    left_fill(N, Width, $0).
+
+left_fill(N, Width, Fill) when is_integer(N) ->
+    left_fill(integer_to_list(N), Width, Fill);
+left_fill(N, Width, _Fill) when length(N) >= Width ->
+    N;
+left_fill(N, Width, Fill) ->
+    left_fill([Fill|N], Width, Fill).

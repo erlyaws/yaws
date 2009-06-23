@@ -56,8 +56,8 @@
              certinfo,      %% undefined | #certinfo{}
              l,             %% listen socket
              mnum = 0,      
-             sessions = 0,  %% number of HTTP sessions
-             reqs = 0}).    %% number of HTTP requests
+             sessions = 0,  %% number of active HTTP sessions
+             reqs = 0}).    %% total number of processed HTTP requests
 
 
 -record(state, {gc,         %% Global conf #gc{} record
@@ -566,15 +566,15 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             gserv_loop(GS, Ready, Rnum, Last);
         {_From, next} when Ready == [] ->
             New = acceptor(GS),
-            gserv_loop(GS, Ready, Rnum, New);
+            gserv_loop(GS#gs{sessions = GS#gs.sessions + 1}, Ready, Rnum, New);
         {_From, next} ->
             [{_Then, R}|RS] = Ready,
             R ! {self(), accept},
             gserv_loop(GS, RS, Rnum-1, R);
         {From, done_client, Int} ->
             GS2 = if
-                      Int == 0 -> GS;
-                      Int > 0 -> GS#gs{sessions = GS#gs.sessions + 1,
+                      Int == 0 -> GS#gs{sessions = GS#gs.sessions - 1};
+                      Int > 0 -> GS#gs{sessions = GS#gs.sessions - 1,
                                        reqs = GS#gs.reqs + Int}
                   end,
             if
@@ -603,7 +603,8 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
                     exit(noserver);
                 _ ->
-                    gserv_loop(GS, Ready, Rnum, Last)
+                    gserv_loop(GS#gs{sessions = GS#gs.sessions - 1}, 
+                               Ready, Rnum, Last)
             end;
         {From, stop} ->   
             unlink(From),
@@ -3322,7 +3323,7 @@ cache_size(_UT) ->
 
 
 
-cache_file(SC, GC, Path, UT)
+cache_file(_SC, GC, _Path, UT)
   when GC#gconf.max_num_cached_files == 0;
        GC#gconf.max_num_cached_bytes == 0;
        GC#gconf.max_size_cached_file == 0 ->
