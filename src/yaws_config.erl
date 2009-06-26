@@ -124,11 +124,14 @@ setup_auth(SC) ->
 get_yaws_auth_dirs(undefined) ->
     [];
 get_yaws_auth_dirs(Docroot) ->
-    {ok, FileList} = file:list_dir(Docroot),
-    Auth_dirs = get_yaws_auth_dirs(Docroot ++ "/", FileList, []),
-    Len = string:len(Docroot),
-    [string:sub_string(X, Len+1) || X <- Auth_dirs].
-    
+    case file:list_dir(Docroot) of
+        {ok, FileList} ->
+            Auth_dirs = get_yaws_auth_dirs(Docroot ++ "/", FileList, []),
+            Len = string:len(Docroot),
+            [string:sub_string(X, Len+1) || X <- Auth_dirs];
+        _ ->
+            []
+    end.
     
 
 %% Bottom of recursion, we have searched all the entries in this directory
@@ -141,9 +144,14 @@ get_yaws_auth_dirs(Docroot, [File|T], AuthDirs0) ->
     Path = string:concat(Docroot, File),
     case filelib:is_dir(Path) of
 	true ->
-	    {ok, FileList} = file:list_dir(Path),
-	    AuthDirs1 = get_yaws_auth_dirs(Path ++ "/", FileList, AuthDirs0),
-	    get_yaws_auth_dirs(Docroot, T, AuthDirs1);
+            case file:list_dir(Path) of
+                {ok, FileList} ->
+                    AuthDirs1 = get_yaws_auth_dirs(Path ++ "/", FileList, 
+                                                   AuthDirs0),
+                    get_yaws_auth_dirs(Docroot, T, AuthDirs1);
+                _ ->
+                    []
+            end;
 	false ->
 	    case File of
 		".yaws_auth" ->
