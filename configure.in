@@ -56,7 +56,7 @@ dnl BT_ERL_LIB_VSN figures out version of an erlang application
 dnl and substitutes it as "APPNAME"_VSN
 dnl
 
-AC_DEFUN(BT_ERL_LIB_VSN,
+AC_DEFUN([BT_ERL_LIB_VSN],
 [
     AC_MSG_CHECKING([$1 version])
     AC_CACHE_VAL(bt_cv_$1_vsn,
