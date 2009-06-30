@@ -149,28 +149,18 @@ for our own application.
 When Yaws gets a request, it extracts the Host: header from the
 client request to choose a virtual server amongst all servers
 with the same IP/Port pair.
-This configuration parameter decides wether yaws should pick the
-first (as difined in the yaws.conf file) if no name match or not.
+This configuration parameter decides whether yaws should pick the
+first (as defined in the yaws.conf file) if no name match or not.
 In real live hosting scenarios we typically want this to be false
-whereas in testing/development scenarios we want 
+whereas in testing/development scenarios it may be convenient to
+set it to true.
 
 .TP
 \fB use_fdsrv = true | false \fR
 This feature makes it possible to bind to ports < 1024 even when
 we're not running as root. It requires the Jungerl package called fd_server
-to be properly installed.. The feature doen't (yet) work with SSL.
+to be properly installed. The feature doesn't  work with SSL.
 
-.TP
-\fB use_large_ssl_pool = true | false \fR
-SSL servers by default has a pool of pending accept processes.
-
-An SSL connection might include user interaction.
-So while one person has a dialog box on the screen asking him to review
-the server's certificate, no other person is able to establish a new
-connnection to the server unless we run multiple SSL acceptor processes.
-The default is 8, if we set the this configurable, we use 50 pending
-accept processes. So in environments where a large number of slow
-connectors is expected, this configurable makes sense.
 
 .TP
 \fB subconfig = File \fR
@@ -183,7 +173,7 @@ Load all config file in specified directory.
 
 .SH SERVER PART
 Yaws can virthost several webservers on the same ip address as well
-as several webservers on different ip addresses. The on limitation here is
+as several webservers on different ip addresses. The one limitation here is
 that there can be only one server with ssl enabled per each individual ip address.
 .pp
 Each virtual host is defined within a matching pair of \fB<server ServerName>\fR
@@ -242,7 +232,7 @@ Set to true_nozip to avoid the auto-generated all.zip entries.
 Add additional CGI variables. For example:
 .nf
 
-<extra_cgi_vars dir='a path to some scripts'>
+<extra_cgi_vars dir='/path/to/some/scripts'>
 var = val
 ...
 </extra_cgi_vars>
@@ -250,7 +240,7 @@ var = val
 
 .TP
 \fBdeflate = true | false\fR
-Turns on or off deflate compression for a server
+Turns on or off deflate compression for a server.
 
 .TP
 \fB docroot = Directory ...\fR
@@ -261,7 +251,6 @@ docroot. If this is the case, the various directories will be searched in
 order for the requested file. This also works with the ssi
 and yssi constructs where the full list of directories will be searched
 for files to ssi/yssi include.
-
 
 .TP
 \fBpartial_post_size = Integer\fR
@@ -279,7 +268,7 @@ of .yaws pages is turned off.
 \fBtilde_expand = true|false \fR
 If this value is set to false yaws will never
 do tilde expansion. The default is false. tilde_expansion is the
-mechanism whereby a URL ob the form http://www.foo.com/~username
+mechanism whereby a URL on the form http://www.foo.com/~username
 is changed into a request where the docroot for that
 particular request is set to the directory ~username/public_html/
 The default value is false.
@@ -443,7 +432,7 @@ Ends an SSL definition
  
 .TP
 \fB<redirect> ... </redirect>\fR
-Defines an redirect mapping. The following items are allowed
+Defines a redirect mapping. The following items are allowed
 within a matching pair of <redirect> and </redirect> delimiters.
 
 We can have a series of
@@ -569,8 +558,7 @@ the description of the \fIstart_mod\fR directive.
 This mechanism can be used to pass data from a surrounding application
 into the individual .yaws pages.
 
-.TP
-\fB keyfile = File\fR
+
 
 
 .SH EXAMPLES
