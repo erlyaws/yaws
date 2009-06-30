@@ -120,7 +120,7 @@ case "$target_os" in
             cat >> confdefs.h << EOF
 #define WIN32 1
 EOF
-            LD_SHARED="gcc -shared"
+            LD_SHARED="$CC -shared"
             DLL=dll
             DLL_LIBS="-lc \"$ERL_DLL_LIB\""
         
@@ -199,7 +199,7 @@ HAVE_SENDFILE=false
 case "$target_os" in
         *linux*)
            AC_DEFINE(LINUX)
-           LD_SHARED="gcc -shared"
+           LD_SHARED="$CC -shared"
            AC_SUBST(LD_SHARED)
            FPIC=-fpic
            AC_SUBST(FPIC)
@@ -236,7 +236,7 @@ case "$target_os" in
          *darwin*)
            AC_CHECK_LIB([c],[sendfile],[HAVE_SENDFILE=true])
            CFLAGS="$CFLAGS -I/usr/include/pam"
-           LD_SHARED="gcc -bundle -fPIC -flat_namespace -undefined suppress"
+           LD_SHARED="$CC -bundle -fPIC -flat_namespace -undefined suppress"
            AC_SUBST(LD_SHARED)
            FPIC=-fPIC
            AC_SUBST(FPIC)
