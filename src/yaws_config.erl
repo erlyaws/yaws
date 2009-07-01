@@ -221,9 +221,14 @@ parse_yaws_auth_file([{pam, Pam}|T], Auth0)
 
 parse_yaws_auth_file([{authmod, Authmod0}|T], Auth0) 
   when is_atom(Authmod0)->
-    code:ensure_loaded(Authmod0),
-    %% Add the auth header for the mod
-    Headers = Authmod0:get_header() ++ Auth0#auth.headers,
+    Headers = try
+                  Authmod0:get_header() ++ Auth0#auth.headers
+              catch 
+                  _:_ ->
+                      error_logger:format("Failed to ~p:get_header() \n",
+                                          [Authmod0]),
+                      Auth0#auth.headers
+              end,
     parse_yaws_auth_file(T, Auth0#auth{mod = Authmod0, headers = Headers});
 
 parse_yaws_auth_file([{file, File}|T], Auth0) ->

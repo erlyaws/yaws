@@ -1423,7 +1423,7 @@ handle_request(CliSock, ARG, N) ->
                     %% rely on rewrite module to dig them out of opaque.
 
                     ARGvdir = ARG#arg.docroot_mount,
-                    %%here we make sure that the conf file, or any rewrite mod 
+                    %% here we make sure that the conf file, or any rewrite mod 
                     %% wrote  nothing, or something sensible into 
                     %% arg.docroot_mount
                     %% It must be empty, or of the form "/path/" where path 
@@ -1448,93 +1448,92 @@ handle_request(CliSock, ARG, N) ->
                                      _ ->
                                          loopy
                                  end,
-
+                    
 
                     case VdirSanity of 
                         loopy ->
                             %%!todo - log somewhere?
-                            ?Debug("BAD arg.docroot_mount data: '~p'\n",
-                                   [ARGvdir]),
-                            deliver_xxx(CliSock, Req, 500);
-                        sane ->
-                            ?Debug("Test revproxy: ~p and ~p~n", 
-                                   [DecPath, SC#sconf.revproxy]),
+                            error_logger:format(
+                              "BAD arg.docroot_mount data: '~p'\n",[ARGvdir]),
+                            deliver_xxx(CliSock, Req, 500),
+                            exit(normal);
+                        _ ->
+                            ok
+                    end,
+                    {IsAuth, ARG1} =
+                        case is_auth(ARG, DecPath,ARG#arg.headers,
+                                     SC#sconf.authdirs) of
+                            {true, User} ->
+                                {true, set_auth_user(ARG, User)};
+                            E ->
+                                {E, ARG}
+                        end,
+                    
 
-                            {IsAuth, ARG1} =
-                                case is_auth(ARG, DecPath,ARG#arg.headers,
-                                             SC#sconf.authdirs) of
-                                    {true, User} ->
-                                        {true, set_auth_user(ARG, User)};
-                                    E ->
-                                        {E, ARG}
-                                end,
-
-
-                            IsRev = is_revproxy(DecPath, SC#sconf.revproxy),
-                            IsRedirect = is_redirect_map(DecPath, 
-                                                         SC#sconf.redirect_map),
-
-                            case {IsAuth, IsRev, IsRedirect} of
-                                {_, _, {true, Redir}} ->
-                                    deliver_302_map(CliSock, Req, ARG1, Redir);
-                                {true, false, _} ->
-                                    %%'main' branch so to speak. Most 
-                                    %% requests pass through here.
-
-                                    UT   = url_type(DecPath, ARG1#arg.docroot, 
-                                                    ARG1#arg.docroot_mount),
-                                    ARG2 = ARG1#arg{
-                                             server_path = DecPath,
-                                             querydata = QueryString,
-                                             fullpath = UT#urltype.fullpath,
-                                             prepath = UT#urltype.dir,
-                                             pathinfo = UT#urltype.pathinfo
-                                            },
-
-                                    %%!todo - remove special treatment of 
-                                    %% appmod here. 
-                                    %% (after suitable deprecation period)
-                                    %% - prepath & pathinfo are applicable to 
-                                    %% other types  of dynamic url too
-                                    %%   replace: appmoddata with pathinfo & 
-                                    %% appmod_prepath with prepath.
-                                    case UT#urltype.type of
-                                        appmod ->
-                                            {_Mod, PathInfo} = UT#urltype.data,
-                                            ARG3 = 
-                                                ARG2#arg{
-                                                  appmoddata = 
-                                                  case PathInfo of
-                                                      undefined ->
-                                                          undefined;
-                                                      "/" ->
-                                                          "/";
-                                                      _ ->
-                                                          lists:dropwhile(
-                                                            fun(C) -> C == $/ 
-                                                                          end, 
-                                                            PathInfo)
-                                                  end,
-                                                  appmod_prepath = 
-                                                  UT#urltype.dir
-                                                 }; 
-                                        _ ->
-                                            ARG3 = ARG2
-                                    end,
-
-                                    handle_ut(CliSock, ARG3, UT, N);
-                                {true, {true, PP}, _} ->
-                                    yaws_revproxy:init(CliSock, ARG1, DecPath, 
-                                                       QueryString, PP, N);
-                                {false_403, _, _} ->
-                                    deliver_403(CliSock, Req);
-                                {false, _, _} ->		
-				    UT = #urltype{
-                                      type = unauthorized, 
-				      path = DecPath
-                                     },
-				    handle_ut(CliSock, ARG, UT, N)
-                            end
+                    IsRev = is_revproxy(DecPath, SC#sconf.revproxy),
+                    IsRedirect = is_redirect_map(DecPath, 
+                                                 SC#sconf.redirect_map),
+                    
+                    case {IsAuth, IsRev, IsRedirect} of
+                        {_, _, {true, Redir}} ->
+                            deliver_302_map(CliSock, Req, ARG1, Redir);
+                        {true, false, _} ->
+                            %%'main' branch so to speak. Most 
+                            %% requests pass through here.
+                            
+                            UT   = url_type(DecPath, ARG1#arg.docroot, 
+                                            ARG1#arg.docroot_mount),
+                            ARG2 = ARG1#arg{
+                                     server_path = DecPath,
+                                     querydata = QueryString,
+                                     fullpath = UT#urltype.fullpath,
+                                     prepath = UT#urltype.dir,
+                                     pathinfo = UT#urltype.pathinfo
+                                    },
+                            
+                            %%!todo - remove special treatment of 
+                            %% appmod here. 
+                            %% (after suitable deprecation period)
+                            %% - prepath & pathinfo are applicable to 
+                            %% other types  of dynamic url too
+                            %%   replace: appmoddata with pathinfo & 
+                            %% appmod_prepath with prepath.
+                            case UT#urltype.type of
+                                appmod ->
+                                    {_Mod, PathInfo} = UT#urltype.data,
+                                    ARG3 = 
+                                        ARG2#arg{
+                                          appmoddata = 
+                                          case PathInfo of
+                                              undefined ->
+                                                  undefined;
+                                              "/" ->
+                                                  "/";
+                                              _ ->
+                                                  lists:dropwhile(
+                                                    fun(C) -> C == $/ 
+                                                                  end, 
+                                                    PathInfo)
+                                          end,
+                                          appmod_prepath = 
+                                          UT#urltype.dir
+                                         }; 
+                                _ ->
+                                    ARG3 = ARG2
+                            end,
+                            
+                            handle_ut(CliSock, ARG3, UT, N);
+                        {true, {true, PP}, _} ->
+                            yaws_revproxy:init(CliSock, ARG1, DecPath, 
+                                               QueryString, PP, N);
+                        {false_403, _, _} ->
+                            deliver_403(CliSock, Req);
+                        {false, _, _} ->		
+                            UT = #urltype{
+                              type = unauthorized, 
+                              path = DecPath
+                             },
+                            handle_ut(CliSock, ARG, UT, N)
                     end
             end;
         %%{absoluteURI, _Scheme, _Host, _Port, _RawPath}
@@ -1586,7 +1585,8 @@ is_auth(ARG, Req_dir, H, [{Auth_dir, Auth_methods}|T], {Ret, Auth_headers}) ->
 	    is_auth(ARG, Req_dir, H, T, {Ret, Auth_headers})
     end.
 
-handle_auth(ARG, _Auth_H, #auth{realm = Realm, users=[], pam=false, mod = []}) ->
+handle_auth(ARG, _Auth_H, #auth{realm = Realm, 
+                                users=[], pam=false, mod = []}) ->
     maybe_auth_log({401, Realm}, ARG),
     false;
 
@@ -1615,25 +1615,29 @@ handle_auth(ARG, Auth_H, Auth_methods = #auth{mod = Mod}) when Mod /= [] ->
 handle_auth(ARG, undefined, Auth_methods) ->
     handle_auth(ARG, undefined, Auth_methods#auth{pam = false, users= []});
 
-handle_auth(ARG, {User, Password, OrigString}, Auth_methods = #auth{pam = Pam}) when Pam /= false ->
+handle_auth(ARG, {User, Password, OrigString}, 
+            Auth_methods = #auth{pam = Pam}) when Pam /= false ->
     case yaws_pam:auth(User, Password) of
 	{yes, _} ->
 	    maybe_auth_log({ok, User}, ARG),
 	    true;
 	{no, _Rsn} ->
-	    handle_auth(ARG, {User, Password, OrigString}, Auth_methods#auth{pam = false})
+	    handle_auth(ARG, {User, Password, OrigString}, 
+                        Auth_methods#auth{pam = false})
     end;
 
 
 
 
-handle_auth(ARG, {User, Password, OrigString}, Auth_methods = #auth{users = Users}) when Users /= [] ->
+handle_auth(ARG, {User, Password, OrigString}, 
+            Auth_methods = #auth{users = Users}) when Users /= [] ->
     case member({User, Password}, Users) of
 	true ->
 	    maybe_auth_log({ok, User}, ARG),
 	    true;
 	false ->
-	    handle_auth(ARG, {User, Password, OrigString}, Auth_methods#auth{users = []})
+	    handle_auth(ARG, {User, Password, OrigString}, 
+                        Auth_methods#auth{users = []})
     end.
 	    
 
@@ -1696,7 +1700,8 @@ handle_ut(CliSock, ARG, UT = #urltype{type = unauthorized}, N) ->
     %% outh_set_dyn headers sets status to 200 by default
     %% so we need to set it 401
     yaws:outh_set_status_code(401),
-    Outmod = get_unauthorized_outmod(UT#urltype.path, SC#sconf.authdirs, SC#sconf.errormod_401),
+    Outmod = get_unauthorized_outmod(UT#urltype.path, SC#sconf.authdirs, 
+                                     SC#sconf.errormod_401),
 
     deliver_dyn_part(CliSock,
 		     0,

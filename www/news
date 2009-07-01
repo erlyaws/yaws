@@ -1,3 +1,9 @@
+Wed Jun 24 20:42:51 CEST 2009
+An unfortunate backwards incompatibility crept in to the 1.82 release. Authentication is now backwards compat.
+eliminate io_lib:format overhead in yaws_log:fmtnow (Steve)
+handle authdirs search properly when docroot not defined (Olivier Girondel)
+removed ancient backwards compat flag (klacke)
+
 Thu May 28 20:17:10 CEST 2009 Yaws 1.82
 Have the yaws script set HOME if unset, this is required since some distros (Ubuntu) don't set HOME for code run under/etc/rc and erlexec requires HOME to be set.  (Klacke)
 add extra cgi vars patch from joe_e_e
