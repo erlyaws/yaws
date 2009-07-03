@@ -1173,7 +1173,13 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
 	    Mod2 = list_to_atom(Mod),
 	    code:ensure_loaded(Mod2),
 	    %% Add the auth header for the mod
-	    H = Mod2:get_header() ++ Auth#auth.headers,
+	    H = try 
+                    Mod2:get_header() ++ Auth#auth.headers
+                catch _:_ ->
+                        error_logger:format("Failed to ~p:get_header() \n",
+                                            [Mod2]),
+                        Auth#auth.headers
+                end,
             A2 = Auth#auth{mod = Mod2, headers = H},
             fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
         ["user", '=', User] ->

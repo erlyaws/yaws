@@ -31,10 +31,10 @@ out(A) ->
 
   <p> The large application typically has it's configuration
     data fed from internal databases, anyway it's usually not feasible
-    to let Yaws read it's configuration data from /etc/yaws.conf.</p>
+    to let Yaws read it's configuration data from /etc/yaws/yaws.conf.</p>
 
   <p>To solve this, when Yaws is started in embedded mode, it doesn't
-    read it's config from /etc/yaws.conf, rather it expects the larger application
+    read it's config from /etc/yaws/yaws.conf, rather it expects the larger application
     to feed it the Yaws configuration through the function call
     yaws_api:setconf(GC, Groups)
   </p>

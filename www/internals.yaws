@@ -177,7 +177,7 @@ out(A) ->
     </verbatim>
   </div>
 
-  <p>The structure is derived from the /etc/yaws.conf file and is passed
+  <p>The structure is derived from the /etc/yaws/yaws.conf file and is passed
   around all through the functions in the server.
   </p>
   
@@ -193,7 +193,7 @@ out(A) ->
     </server>
   </verbatim>
   </p>
-  <p>In the /etc/yaws.conf file corresponds to one <tt>#sconf{}</tt>
+  <p>In the /etc/yaws/yaws.conf file corresponds to one <tt>#sconf{}</tt>
   record. We have: </p>
 
   <div class="box">

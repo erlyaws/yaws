@@ -150,7 +150,7 @@ out(A) ->
   <p>
     <tt>make install</tt>
     will also build the yaws system and also  
-    install it in /usr/local. A configuration file /etc/yaws.conf will 
+    install it in /usr/local. A configuration file /etc/yaws/yaws.conf will 
     also be installed unless the file already exists. The default config 
     file will set up the system to listen on http://127.0.0.1:80
   </p>
@@ -206,7 +206,7 @@ out(A) ->
      <p>
        It is possible to run yaws in embedded mode where yaws is part of a  
        larger application. When running yaws in embedded mode, it is often not 
-       possible to let yaws read its configuration data from /etc/yaws.conf.
+       possible to let yaws read its configuration data from /etc/yaws/yaws.conf.
      </p>
 
      <p>
