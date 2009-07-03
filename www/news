@@ -1,11 +1,8 @@
-Fri Jul  3 15:43:03 CEST 2009
+Fri Jul  3 15:43:03 CEST 2009 Yaws 1.83
 New stats feature added by Olivier Girondel whereby (optionally) stats is collected for a virt server. Stats available from comand line (yaws --stats). There are also plugins for munin to graph the statistics.
 The authmod code should now be backwards compatible (faal)
 fixes for traffic tracing in reverse proxy mode (Olivier Girondel)
 Better error msg if erl is not found for win32 users (klacke)
-
-Wed Jun 24 20:42:51 CEST 2009
-An unfortunate backwards incompatibility crept in to the 1.82 release. Authentication is now backwards compat.
 eliminate io_lib:format overhead in yaws_log:fmtnow (Steve)
 handle authdirs search properly when docroot not defined (Olivier Girondel)
 removed ancient backwards compat flag (klacke)
