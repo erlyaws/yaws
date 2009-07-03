@@ -961,8 +961,19 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                 _URL ->
                     {error, "Can't revproxy to an URL with a path "}
             end;
+
 	['<', "extra_cgi_vars", "dir", '=', Dir, '>'] ->
 	    fload(FD, extra_cgi_vars, GC, C, Cs, Lno+1, Next, {Dir, []});
+
+        ["statistics", '=', Bool] ->
+            case is_bool(Bool) of
+                {true, Val} ->
+                    C2 = ?sc_set_statistics(C, Val),
+                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
+            end;
+
         [H|T] ->
             {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
     end;

@@ -74,6 +74,7 @@ help()
     echo "        yaws --ctltrace traffic|http         -- toggle trace of running daemon"
     echo "        yaws --check YawsFile [IncDirs]      -- test compile File "
     echo "        yaws --wait-started[=secs] [--id ID] -- wait for daemon to be ready"
+    echo "        yaws --stats [--id ID]               -- show daemon statistics"
     exit 1
 }
 
@@ -195,6 +196,8 @@ while [ $# -gt 0 ]
           ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl ls";;
       -S|--status)
           ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl status";;
+      --stats)
+          ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl stats";;
       -load|--load)
           $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl load $* ${id}
           exit 0;;

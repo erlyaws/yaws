@@ -1,0 +1,15 @@
+Usage:
+
+1. Copy the scripts to /usr/share/munin/plugins
+
+2. To graph statistics for the server "SERVER":
+
+# ln -s /usr/share/munin/plugins/yaws_hits_ /etc/munin/plugins/yaws_hits_SERVER
+# ln -s /usr/share/munin/plugins/yaws_sent_ /etc/munin/plugins/yaws_sent_SERVER
+
+3. Change /etc/munin/plugin-conf.d/munin-node and add:
+
+[yaws*]
+user root
+
+4. Restart munin-node

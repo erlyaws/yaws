@@ -1,0 +1,59 @@
+#!/bin/bash
+
+#
+# YAWS server bytes sent
+#
+# Needs following minimal configuration in plugin-conf.d/munin-node:
+# [yaws*]
+# user root
+#
+# Magick markers
+#%# family=auto
+#%# capabilities=autoconf
+
+ID=`basename $0 | sed 's/^yaws_sent_//g'`
+TMPFILE=.yaws_sent_$ID
+STATS=`yaws --stats --id $ID | tail --lines=+2 > $TMPFILE`
+
+if [ "$1" = "autoconf" ]; then
+	if which yaws > /dev/null; then
+                echo yes
+                exit 0
+        else
+                echo no
+                exit 1
+        fi
+fi
+
+if [ "$1" = "config" ]; then
+        echo graph_title Bytes sent by server $ID
+        echo graph_vlabel Bytes
+        echo graph_category Yaws
+	echo graph_args --base 1024 -l 0
+
+	while read line; do
+	    HOST=`echo $line | awk '{ print $1 }'`
+	    FIELD=`echo $HOST | sed 's/[\.:]/_/g'`
+
+	    echo $FIELD.label $HOST
+	    echo $FIELD.draw LINE2
+	    echo $FIELD.type DERIVE
+	    echo $FIELD.min 0
+	done < $TMPFILE
+
+	rm -f $TMPFILE
+
+        exit 0
+fi
+
+while read line; do
+    HOST=`echo $line | awk '{ print $1 }'`
+    FIELD=`echo $HOST | sed 's/[\.:]/_/g'`
+    SENT=`echo $line | awk '{ print $5 }'`
+
+    echo $FIELD.value $SENT
+done < $TMPFILE
+
+rm -f $TMPFILE
+
+exit 0
