@@ -351,7 +351,7 @@ do_header(Head) ->
         {value, {_,"form-data"++Line}} ->
             Parameters = parse_arg_line(Line),
             {value, {_,Name}} = lists:keysearch(name, 1, Parameters),
-            {lists:reverse(Name), Parameters};
+            {Name, Parameters};
         _ ->
             {Header}
     end.
