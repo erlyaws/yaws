@@ -1,4 +1,5 @@
-Fri Jul  3 15:43:03 CEST 2009 Yaws 1.83
+Sun Jul  5 20:05:00 CEST 2009 1.84
+patch from anders abramhamson - a bug with multipart posts
 New stats feature added by Olivier Girondel whereby (optionally) stats is collected for a virt server. Stats available from comand line (yaws --stats). There are also plugins for munin to graph the statistics.
 The authmod code should now be backwards compatible (faal)
 fixes for traffic tracing in reverse proxy mode (Olivier Girondel)
