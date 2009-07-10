@@ -279,12 +279,9 @@ setup_sconf(DocRoot, D, SL) ->
            soptions = lkup(soptions, SL,
                            D#sconf.soptions),
 	   stats = lkup(stats, SL, D#sconf.stats),
-                                       D#sconf.fcgi_app_server_host),
+
            fcgi_app_server_host = lkup(fcgi_app_server_host, SL, 
                                        D#sconf.fcgi_app_server_host),
-           fcgi_app_server_port = lkup(fcgi_app_server_port, SL, 
-                                       D#sconf.fcgi_app_server_port)}.
-
                             
            fcgi_app_server_port = lkup(fcgi_app_server_port, SL, 
                                        D#sconf.fcgi_app_server_port)}.
