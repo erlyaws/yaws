@@ -1600,6 +1600,113 @@ implementation of certain CGI meta-variables.  The author of this
 feature is therefore interested in hearing about your experiences with
 it.  He can be contacted as \verb+carsten@codimi.de+.
 
+\chapter{FastCGI}
+
+Yaws supports the responder role and the authorizer role of the
+FastCGI protocol. See www.fastcgi.com for details on the FastCGI
+protocol. 
+
+The benefits of using FastCGI include:
+\begin{enumerate}
+\item Unlike CGI, it is not necessary to spawn a new process for
+every request; the application server can handle multiple requests
+in a single process.
+\item The fact that the application server can run on a different
+computer benefits scalability and security.
+\item The application server can be written in any language for
+which a FastCGI library is available. Existing applications
+which have been written for other web servers can be used with
+Yaws.
+\item FastCGI can also be used to implement external authentication
+servers (in addition to generating dynamic content).
+\end{enumerate}
+
+Support for FastCGI was added to Yaws by Bruno Rijsman
+(brunorijsman@hotmail.com).
+
+\section{The FastCGI responder role}
+
+The FastCGI responder role allows Yaws to communicate with an 
+application server running on a different (or on the same) computer
+to generate dynamic content.
+
+The FastCGI protocol (which runs over TCP) is used to send the request
+information from Yaws to the application server and to send the
+response information (e.g. the generated dynamic content) from
+the application server back to Yaws.
+
+FastCGI responders can be invoked in two ways:
+
+\begin{enumerate}
+
+\item 
+By including \verb+fcgi+ in the \verb+allowed_scripts+ line 
+in the configuration file (note that the default value for
+\verb+allowed_scripts+ includes \verb+fcgi+).
+
+In this case a request for any resource with the
+.fcgi extension will result in a FastCGI call to the application
+server to dynamically generate the content. 
+
+Note: the Yaws server
+will only call the application server if a file corresponding to
+the resource name (i.e. a file with the .fcgi extension)
+exists locally on the Yaws server. The contents of that
+file are not relevant.
+
+\item
+By creating an appmod which calls \verb+yaws_api:call_fcgi_responder+.
+See the \verb+yaws_api (5)+ man page for details.
+
+\end{enumerate}
+
+\section{The FastCGI authorizer role}
+
+The FastCGI authorizer role allows Yaws to communicate with an 
+authentication server to authenticate requests.
+
+The FastCGI protocol is used to send the request
+information from Yaws to the authentication server and the
+authentication respone back from the authentication server to
+Yaws.
+
+If access is allowed, Yaws processing of the request proceeds
+normally.
+
+If access is denied, the authentication server provides the
+response which is sent back to the client. This is typically
+a not authorized response or a redirect to a login page.
+
+FastCGI authorizers are invoked by creating an appmod which 
+calls \verb+yaws_api:call_fcgi_authorizer+.
+See the \verb+yaws_api (5)+ man page for details.
+
+\section{The FastCGI filter role}
+
+FastCGI defines a third role, the filter role, which
+is currently not supported by Yaws.
+
+
+\section{FastCGI configuration}
+
+The following commands in the \verb+yaws.conf+ file control the
+operation of FastCGI.
+
+If you use FastCGI, you \emph{must} include the \verb+fcgi_app_server+ 
+command in the configuration file to specify the host name (or IP address)
+and TCP port of the FastCGI application server.
+
+You may include the \verb+fcgi_trace_protocol+ command to enable or disable
+tracing of FastCGI protocol messages. This is useful for debugging.
+
+You may include the \verb+fcgi_log_app_error+ command to enable or disable
+logging application errors (any output to stderr and non-zero exit codes).
+
+You may include the \verb+extra_cgi_vars+ command to pass additional
+environment variables to the application.
+
+
+
 \chapter{Security}
 
 \Yaws\  is of course susceptible to intrusions. \Yaws\  has the

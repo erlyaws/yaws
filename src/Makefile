@@ -38,6 +38,7 @@ MODULES=yaws \
 	yaws_soap_srv yaws_soap_lib \
 	authmod_gssapi \
 	yaws_appmod_cgi \
+	yaws_appmod_fcgi \
 	yaws_sendfile yaws_sendfile_compat \
 	yaws_sup_restarts \
 	yaws_stats

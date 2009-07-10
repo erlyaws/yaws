@@ -103,8 +103,10 @@ gen(T) ->
     special(Fd, "yaws", yaws),
     special(Fd, "php", php),
     special(Fd, "cgi", cgi),
+    special(Fd, "fcgi", fcgi),
     special(Fd, "PHP", php),
     special(Fd, "CGI", cgi),
+    special(Fd, "FCGI", fcgi),
     lists:foreach(
       fun({Ext, MT0}) ->
               MT = case MT0 of
@@ -123,8 +125,10 @@ gen(T) ->
     revspecial(Fd, "yaws", yaws),
     revspecial(Fd, "php", php),
     revspecial(Fd, "cgi", cgi),
+    revspecial(Fd, "fcgi", fcgi),
     revspecial(Fd, "PHP", php),
     revspecial(Fd, "CGI", cgi),
+    revspecial(Fd, "FCGI", fcgi),
     lists:foreach(
       fun({Ext, MT0}) ->
               MT = case MT0 of

@@ -1,6 +1,6 @@
-%%----------------------------------------------------------------------
+%%%----------------------------------------------------------------------
 %%% File    : yaws_config.erl
-%% Author  : Claes Wikstrom <klacke@bluetail.com>
+%%% Author  : Claes Wikstrom <klacke@bluetail.com>
 %%% Purpose : 
 %%% Created : 16 Jan 2002 by Claes Wikstrom <klacke@bluetail.com>
 %%%----------------------------------------------------------------------
@@ -193,18 +193,18 @@ load_yaws_auth_file(SC, [A|T], Acc) ->
     FN0=[SC#sconf.docroot, [$/|Dir], [$/|".yaws_auth"]],
     FN1 = remove_multiple_slash(lists:flatten(FN0)),
     A2 = case file:consult(FN1) of
-	     {ok, TermList} ->
-		 error_logger:info_msg("Reading .yaws_auth ~s~n",[FN1]),
-		 Auth = parse_yaws_auth_file(TermList, A),
-		 [Dir1] = Auth#auth.dir,
-		 {Dir1, Auth};
-	     {error, enoent} ->
-		 {Dir, A};
-	     _Err ->
-		 error_logger:format("Bad .yaws_auth file in dir ~p~n", 
-				     [Dir]),
-		 {Dir, A}
-	 end,
+             {ok, TermList} ->
+                 error_logger:info_msg("Reading .yaws_auth ~s~n",[FN1]),
+                 Auth = parse_yaws_auth_file(TermList, A),
+                 [Dir1] = Auth#auth.dir,
+                 {Dir1, Auth};
+             {error, enoent} ->
+                 {Dir, A};
+             _Err ->
+                 error_logger:format("Bad .yaws_auth file in dir ~p~n", 
+                                     [Dir]),
+                 {Dir, A}
+         end,
     load_yaws_auth_file(SC, T, [A2|Acc]). 
 
 parse_yaws_auth_file([], Auth0) ->
@@ -411,6 +411,23 @@ del_tail2([H|T], Acc) ->
 
 
 
+string_to_host_and_port(String) ->
+    case string:rchr(String, $:) of
+        0 ->
+            {error, "missing colon (:) character."};
+        ColonPos ->
+            Host = string:left(String, ColonPos - 1),
+            PortStr = string:sub_string(String, ColonPos + 1),
+            case (catch list_to_integer(PortStr)) of
+                Port when is_integer(Port) and (Port >= 0) and (Port =< 65535) ->
+                    {ok, Host, Port};
+                _ ->
+                    {error, ?F("~p is not a valid port number.", [PortStr])}
+            end
+    end.
+
+
+
 %% two states, global, server
 fload(FD, globals, GC, _C, Cs, _Lno, eof) ->
     file:close(FD),
@@ -544,7 +561,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                           C, Cs, Lno+1, Next);
                 false ->
                     fload(FD, globals, GC, C, Cs, Lno+1, Next)
-	    
+
             end;
 
         ["runmod", '=', Mod0] ->
@@ -858,7 +875,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 _ ->
                     {error, ?F("Expect directory at line ~w (docroot: ~s)", 
-			       [Lno, hd(RootDirs)])}
+                               [Lno, hd(RootDirs)])}
             end;
 
         ["partial_post_size",'=',Size] ->
@@ -907,9 +924,9 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             C2 = C#sconf{errormod_crash = list_to_atom(Module)},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
-	["errormod_401", '=' , Module] ->
-	    C2 = C#sconf{errormod_401 = list_to_atom(Module)},
-	    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+        ["errormod_401", '=' , Module] ->
+            C2 = C#sconf{errormod_401 = list_to_atom(Module)},
+            fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
         ["arg_rewrite_mod", '=', Module] ->
             C2 = C#sconf{arg_rewrite_mod = list_to_atom(Module)},
@@ -923,6 +940,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
+
         ['<', "/server", '>'] ->
             fload(FD, globals, GC, undefined, [C|Cs], Lno+1, Next);
 
@@ -967,13 +985,41 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                     {error, "Can't revproxy to an URL with a path "}
             end;
 
-	['<', "extra_cgi_vars", "dir", '=', Dir, '>'] ->
-	    fload(FD, extra_cgi_vars, GC, C, Cs, Lno+1, Next, {Dir, []});
+        ['<', "extra_cgi_vars", "dir", '=', Dir, '>'] ->
+            fload(FD, extra_cgi_vars, GC, C, Cs, Lno+1, Next, {Dir, []});
 
         ["statistics", '=', Bool] ->
             case is_bool(Bool) of
                 {true, Val} ->
                     C2 = ?sc_set_statistics(C, Val),
+                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
+            end;
+        ["fcgi_app_server", '=', Val] ->
+            case string_to_host_and_port(Val) of
+                {ok, Host, Port} ->
+                    C2 = C#sconf{fcgi_app_server_host = Host, fcgi_app_server_port = Port},
+                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                {error, Reason} ->
+                    {error, ?F("Invalid fcgi_app_server ~p at line ~w: ~s", [Val, Lno, Reason])}
+            end;
+
+                
+
+        ["fcgi_trace_protocol", '=', Bool] ->
+            case is_bool(Bool) of
+                {true, Val} ->
+                    C2 = ?sc_set_fcgi_trace_protocol(C, Val),
+                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
+            end;
+
+        ["fcgi_log_app_error", '=', Bool] ->
+            case is_bool(Bool) of
+                {true, Val} ->
+                    C2 = ?sc_set_fcgi_log_app_error(C, Val),
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
@@ -1170,9 +1216,9 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
             A2 = Auth#auth{realm = Realm},
             fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
         ["authmod", '=', Mod] ->
-	    Mod2 = list_to_atom(Mod),
-	    code:ensure_loaded(Mod2),
-	    %% Add the auth header for the mod
+            Mod2 = list_to_atom(Mod),
+            code:ensure_loaded(Mod2),
+            %% Add the auth header for the mod
 	    H = try 
                     Mod2:get_header() ++ Auth#auth.headers
                 catch _:_ ->
@@ -1194,17 +1240,17 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
             A2 = Auth#auth{pam=Serv},
             fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
         ['<', "/auth", '>'] ->
-	    Pam = Auth#auth.pam,
-	    Users = Auth#auth.users,
-	    Realm = Auth#auth.realm,
-	    A2 =  case {Pam, Users} of
-		    {false, []} ->
-			  Auth;
-		      _ ->
-			  H = Auth#auth.headers ++ yaws:make_www_authenticate_header({realm, Realm}),
-			  Auth#auth{headers = H}
-		  end,
-	    C2 = C#sconf{authdirs = [A2|C#sconf.authdirs]},
+            Pam = Auth#auth.pam,
+            Users = Auth#auth.users,
+            Realm = Auth#auth.realm,
+            A2 =  case {Pam, Users} of
+                    {false, []} ->
+                          Auth;
+                      _ ->
+                          H = Auth#auth.headers ++ yaws:make_www_authenticate_header({realm, Realm}),
+                          Auth#auth{headers = H}
+                  end,
+            C2 = C#sconf{authdirs = [A2|C#sconf.authdirs]},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
         [H|T] ->
             {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
@@ -1275,12 +1321,12 @@ is_bool(_) ->
 
 warn_dir(Type, Dir) ->
     case is_dir(Dir) of
-	true ->
-	    true;
-	false ->
-	    error_logger:format("Config Warning: Directory ~s for ~s doesn't exist~n",
-				[Dir, Type]),
-	    false
+        true ->
+            true;
+        false ->
+            error_logger:format("Config Warning: Directory ~s for ~s doesn't exist~n",
+                                [Dir, Type]),
+            false
     end.
 
 is_dir(Val) ->
@@ -1531,7 +1577,9 @@ eq_sconfs(S1,S2) ->
      S1#sconf.start_mod == S2#sconf.start_mod andalso
      S1#sconf.allowed_scripts == S2#sconf.allowed_scripts andalso
      S1#sconf.revproxy == S2#sconf.revproxy andalso
-     S1#sconf.soptions == S2#sconf.soptions).
+     S1#sconf.soptions == S2#sconf.soptions andalso
+     S1#sconf.fcgi_app_server_host == S2#sconf.fcgi_app_server_host andalso
+     S1#sconf.fcgi_app_server_port == S2#sconf.fcgi_app_server_port).
 
 
 

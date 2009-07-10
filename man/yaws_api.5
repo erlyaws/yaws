@@ -401,6 +401,79 @@ calls \fIExefilename\fR to handle the script.  The file name of the
 script is handed to the executable via a CGI meta variable.
 
 .TP
+\fBcall_fcgi_responder(Arg)\fR 
+Calls a FastCGI responder.
+The address and port of the FastCGI application server are taken
+from the server configuration (see yaws.conf). 
+Used to make `.yaws' wrappers for FastCGI responders.
+Returns the same return values as out/1 (see below).
+
+.TP
+\fBcall_fcgi_responder(Arg, Options)\fR 
+Same as above, but Options overrides the defaults from the server
+configuration:
+
+\fI
+.nf
+Options = [Option]
+Option -- one of the following:
+.fi
+\fR
+
+\fB{app_server_host, string() | ip_address()}\fR 
+The hostname or the IP address of the FastCGI application server.
+
+\fB{app_server_port, 0..65535}\fR 
+The TCP port number of the FastCGI application server.
+
+\fB{path_info, string()}\fR 
+Override default pathinfo in Arg#arg.pathinfo.
+
+\fB{extra_env, ExtraEnv}\fR 
+Override default pathinfo in Arg#arg.pathinfo.
+
+\fI
+.nf
+ExtraEnv = [Var]
+Var = {Name, Value}
+Name = string()
+Value = string()
+.fi
+\fR
+
+\fB{trace_protocol, boolean()}\fR 
+Enable or disable tracing of FastCGI protocol messages as info
+log messages.
+
+\fB{log_app_error, boolean()}\fR 
+Enable or disable logging of application error messages: output
+to stderr and non-zero exit value.
+
+.TP
+\fBcall_fcgi_authorizer(Arg) -> {allowed, Variables} | {denied, Out}\fR 
+Calls a FastCGI authorizer.
+The address and port of the FastCGI application server are taken
+from the server configuration (see yaws.conf). 
+Used to make `.yaws' wrappers for FastCGI authorizers.
+Variables contains the values of the variables returned by the FastCGI
+application server in the "Variable-XXX: YYY" headers.
+
+\fI
+.nf
+Out -- See return values for out/1 below
+Variables = {Name, Value}
+Name = string()
+Value = string()
+.fi
+\fR
+
+.TP
+\fBcall_fcgi_authorizer(Arg, Options)\fR 
+Same as above, but Options overrides the defaults from the server
+configuration. See call_fcgi_responder/2 above for a description
+of Options.
+
+.TP
 \fBdir_listing(Arg)\fR
 Perform a directory listing. Can be used in special directories 
 when we don't want to turn on dir listings for the entire server.

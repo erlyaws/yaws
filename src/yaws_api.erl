@@ -51,6 +51,9 @@
 
 -export([call_cgi/2, call_cgi/3]).
 
+-export([call_fcgi_responder/1, call_fcgi_responder/2,
+         call_fcgi_authorizer/1, call_fcgi_authorizer/2]).
+
 -export([ehtml_expand/1, ehtml_expander/1, ehtml_apply/2,
          ehtml_expander_test/0]).
 
@@ -1475,6 +1478,58 @@ call_cgi(Arg, Scriptfilename) ->
 
 call_cgi(Arg, Exefilename, Scriptfilename) -> 
     yaws_cgi:call_cgi(Arg, Exefilename, Scriptfilename).
+
+%% call_fci_responder issues a responder role call to the FastCGI 
+%% application server. It returns the same return value as out/1.
+%%
+%% call_fci_authorizer issues a authorizer role call to the FastCGI 
+%% application server. It returns:
+%%
+%% {denied, Out} : Access is denied. Out is the same return value as 
+%% out/1.
+%%
+%% {allowed, Variables} : Access is allowed. Variables is a list of
+%% environment variables returned by the authorization server using
+%% Variable-XXX: YYY headers.
+%%
+%% Note: the FastCGI filter role is not yet supported. 
+%%
+%% The following information is taken from the server configuration:
+%% - The hostname (or address) and port number of the application server.
+%% - Extra CGI variables.
+%% - Trace FastCGI protocol messages?
+%% - Log application server error messages?
+%%
+%% The caller can optionally provide an Options argument which supports
+%% the following options. These override the defaults taken from the
+%% server config.
+%%
+%% {app_server_host, string() | ip_address()} : The hostname or IP address
+%% of the application server.
+%%
+%% {app_server_port, int()} : The TCP port number of the application server.
+%%
+%% {path_info, string()} : Override the patinfo string from Arg.
+%%
+%% {extra_env, [{string(), string()}]} : Extra environment variables to be
+%% passed to the application server, as a list of name-value pairs.
+%%
+%% trace_protocol : Trace FastCGI protocol messages.
+%%
+%% log_app_error : Log application errors (output to stderr and non-zero
+%% exit value).
+%%
+call_fcgi_responder(Arg) ->
+    yaws_fcgi:call_fcgi_responder(Arg).
+
+call_fcgi_responder(Arg, Options) ->
+    yaws_fcgi:call_fcgi_responder(Arg, Options).
+
+call_fcgi_authorizer(Arg) ->
+    yaws_fcgi:call_fcgi_authorizer(Arg).
+
+call_fcgi_authorizer(Arg, Options) ->
+    yaws_fcgi:call_fcgi_authorizer(Arg, Options).
 
 %%
 

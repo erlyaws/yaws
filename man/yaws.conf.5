@@ -229,7 +229,7 @@ Set to true_nozip to avoid the auto-generated all.zip entries.
 
 .TP
 \fBextra_cgi_vars = .....\fR
-Add additional CGI variables. For example:
+Add additional CGI or FastCGI variables. For example:
 .nf
 
 <extra_cgi_vars dir='/path/to/some/scripts'>
@@ -241,6 +241,24 @@ var = val
 .TP
 \fBstatistics  = true | false\fR
 Turns on/off statistics gathering for a virtual server. 
+
+.TP
+\fBfcgi_app_server = Host:Port \fR
+The hostname and TCP port number of the FastCGI aplication server.
+The TCP port number is not optional.
+There is no default value.
+
+.TP
+\fBfcgi_trace_protocol = true | false \fR
+Enable or disable tracing of FastCGI protocol messages as info
+log messages.
+Disabled by default.
+
+.TP
+\fBfcgi_log_app_error = true | false \fR
+Enable or disable logging of application error messages: output
+to stderr and non-zero exit value.
+Disabled by default.
 
 .TP
 \fBdeflate = true | false\fR
@@ -280,13 +298,17 @@ The default value is false.
 .TP
 \fBallowed_scripts = [ListOfSuffixes]\fR
 The allowed script types for this server.  Recognized are `yaws',
-`cgi', `php'.  Default is \fIallowed_scripts = [yaws,php,cgi]\fR.
+`cgi', `fcgi', `php'.  Default is \fIallowed_scripts = [yaws,php,cgi,fcgi]\fR.
+
+Note: for fcgi scripts, the FastCGI application server is only
+called if a local file with the .fcgi extension exists. However,
+the contents of the local .fcgi file are ignored.
 
 .TP
 \fBtilde_allowed_scripts = [ListOfSuffixes]\fR
 The allowed script types for this server when executing files in
 a users public_html folder  Recognized are `yaws',
-`cgi', `php'.  Default is \fItilde_allowed_scripts = []\fR.
+`cgi', `fcgi', `php'.  Default is \fItilde_allowed_scripts = []\fR.
 
 
 .TP

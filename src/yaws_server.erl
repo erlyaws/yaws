@@ -1952,6 +1952,21 @@ handle_ut(CliSock, ARG, UT = #urltype{type = cgi}, N) ->
                      end
                     );
 
+handle_ut(CliSock, ARG, UT = #urltype{type = fcgi}, N) ->
+    error_logger:error_msg("*** handle_ut: type=fcgi~n"),    %%@@@
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
+    yaws:outh_set_dyn_headers(Req, H, UT),
+    deliver_dyn_part(CliSock, 
+                     0, "fcgi",
+                     N,
+                     ARG,UT,
+                     fun(A)->yaws_cgi:call_fcgi_responder(A)
+                     end,
+                     fun(A)->finish_up_dyn_file(A, CliSock)
+                     end
+                    );
+
 handle_ut(CliSock, ARG, UT = #urltype{type = dav}, N) ->
     Req = ARG#arg.req,
     H = ARG#arg.headers,
@@ -4172,7 +4187,7 @@ join(List, Sep) ->
 %% vdirs and assuming each path segment of the URI represents a folder 
 %% (or maybe filename at end).
 %% ie it does not (and is not intended to) take into account 'script points' 
-%% in the path. (cgi,php,appmod etc)
+%% in the path. (cgi,fcgi,php,appmod etc)
 %% The result may not actually exists as a path.
 %%
 %% mappath/3 is analogous to the Microsoft ASP function Server.MapPath or 

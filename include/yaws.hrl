@@ -78,7 +78,7 @@
                max_num_cached_bytes = 1000000,  %% 1 MEG
                max_size_cached_file = 8000,
                large_file_chunk_size = 10240,
-	       mnesia_dir = [],
+               mnesia_dir = [],
                log_wrap_size = 10000000,  % wrap logs after 10M
                cache_refresh_secs = 30,  % seconds  (auto zero when debug)
                include_dir = [],    %% list of inc dirs for .yaws files 
@@ -103,14 +103,16 @@
 
 
 %% flags for sconfs
--define(SC_ACCESS_LOG,   1).
--define(SC_ADD_PORT,     2).
+-define(SC_ACCESS_LOG,          1).
+-define(SC_ADD_PORT,            2).
 -define(SC_STATISTICS,   4).
--define(SC_TILDE_EXPAND, 8).
--define(SC_DIR_LISTINGS, 16).
--define(SC_DEFLATE,      32).
--define(SC_DIR_ALL_ZIP,  64).
--define(SC_DAV,         128).
+-define(SC_TILDE_EXPAND,        8).
+-define(SC_DIR_LISTINGS,        16).
+-define(SC_DEFLATE,             32).
+-define(SC_DIR_ALL_ZIP,         64).
+-define(SC_DAV,                 128).
+-define(SC_FCGI_TRACE_PROTOCOL, 512).
+-define(SC_FCGI_LOG_APP_ERROR,  1024).
 
 -define(SC_DEF, ?SC_ACCESS_LOG bor ?SC_ADD_PORT).
 
@@ -130,6 +132,10 @@
         (((SC)#sconf.flags band ?SC_DIR_ALL_ZIP) /= 0)).
 -define(sc_has_dav(SC),
         (((SC)#sconf.flags band ?SC_DAV) /= 0)).
+-define(sc_fcgi_trace_protocol(SC),
+        (((SC)#sconf.flags band ?SC_FCGI_TRACE_PROTOCOL) /= 0)).
+-define(sc_fcgi_log_app_error(SC),
+        (((SC)#sconf.flags band ?SC_FCGI_LOG_APP_ERROR) /= 0)).
 
 
 -define(sc_set_access_log(SC, Bool), 
@@ -150,6 +156,10 @@
         SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_DIR_ALL_ZIP, Bool)}).
 -define(sc_set_dav(SC, Bool), 
         SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_DAV, Bool)}).
+-define(sc_set_fcgi_trace_protocol(SC, Bool), 
+        SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_FCGI_TRACE_PROTOCOL, Bool)}).
+-define(sc_set_fcgi_log_app_error(SC, Bool), 
+        SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_FCGI_LOG_APP_ERROR, Bool)}).
 
 
 
@@ -173,17 +183,21 @@
          partial_post_size = nolimit,
          appmods = [],                %% list of modules for this app
          errormod_401 = yaws_outmod,     %% the default 401 error module
-	 errormod_404 = yaws_outmod,     %% the default 404 error module 
+         errormod_404 = yaws_outmod,     %% the default 404 error module 
          errormod_crash = yaws_outmod,   %% use the same module for crashes
          arg_rewrite_mod = yaws,
          opaque = [],                 %% useful in embedded mode
          start_mod,                   %% user provided module to be started
-         allowed_scripts = [yaws,php,cgi],
+         allowed_scripts = [yaws,php,cgi,fcgi],
          tilde_allowed_scripts = [],
          revproxy = [],
          soptions = [],
          extra_cgi_vars = [],
 	 stats,                      %% raw traffic statistics
+	 fcgi_app_server_host,        %% FastCGI application server host name or IP address
+
+         fcgi_app_server_port,        %% FastCGI application server port number
+         
          %% [{Extension:string(), Mod:atom()]
          %% work in progress .....
          extension_mods = [{"ys", yaws_ext_handler_yaws}] 
@@ -199,7 +213,7 @@
          {dir = [],
           realm = "",
           type = "Basic",
-	  headers = [],  %% headers to send on 401
+          headers = [],  %% headers to send on 401
           users = [],   %% list of {User, Password} tuples
           mod = [],     %% authentication module callback
           pam = false   %% should we use pam to auth a user
