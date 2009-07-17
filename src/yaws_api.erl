@@ -1520,16 +1520,16 @@ call_cgi(Arg, Exefilename, Scriptfilename) ->
 %% exit value).
 %%
 call_fcgi_responder(Arg) ->
-    yaws_fcgi:call_fcgi_responder(Arg).
+    yaws_cgi:call_fcgi_responder(Arg).
 
 call_fcgi_responder(Arg, Options) ->
-    yaws_fcgi:call_fcgi_responder(Arg, Options).
+    yaws_cgi:call_fcgi_responder(Arg, Options).
 
 call_fcgi_authorizer(Arg) ->
-    yaws_fcgi:call_fcgi_authorizer(Arg).
+    yaws_cgi:call_fcgi_authorizer(Arg).
 
 call_fcgi_authorizer(Arg, Options) ->
-    yaws_fcgi:call_fcgi_authorizer(Arg, Options).
+    yaws_cgi:call_fcgi_authorizer(Arg, Options).
 
 %%
 
