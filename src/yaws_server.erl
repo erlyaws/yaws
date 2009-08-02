@@ -2110,10 +2110,16 @@ deliver_302_map(CliSock, Req, Arg,
     {P, Q} = yaws:split_at(DecPath, $?),
     LocPath = yaws_api:format_partial_url(URL, get(sc)),
     Loc = if
-              Mode == append, Q == [] ->
-                  ["Location: ", LocPath, P, "\r\n"];
-              Mode == append, Q /= [] ->
-                  ["Location: ", LocPath, P, "?", Q, "\r\n"];
+              Mode == append ->
+                  Newpath = filename:join([URL#url.path ++ P]),
+                  NLocPath = yaws_api:format_partial_url(
+                               URL#url{path = Newpath}, get(sc)),
+                  case Q of
+                      [] ->
+                          ["Location: ", NLocPath, "\r\n"];
+                      _Q ->
+                          ["Location: ", NLocPath, "?", Q, "\r\n"]
+                  end;
               Mode == noappend,Q == [] ->
                   ["Location: ", LocPath, "\r\n"];
               Mode == noappend,Q /= [] ->

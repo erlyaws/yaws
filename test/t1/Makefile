@@ -1,19 +1,28 @@
 include ../support/include.mk
 
+.PHONY: all test newconf small_datafile t1 t2 t3 t4 t5 t6 t7
+
 all:	conf setup
 	@echo "all ok"
 
 ## to run test, do
 # make all test
 
-test:	
-	$(MAKE) t1 t2 t3 t4 t5 t6
+test:
+	set -e ; \
+	for t in t1 t2 t3 t4 t5 t6 t7; do \
+	    $(MAKE) $$t ; \
+	done
 
-t1: start
+newconf:
+	@rm -f yaws.conf
+	$(MAKE) conf
+
+t1: newconf start
 	$(SHELL) ./wgettest
 	$(MAKE) stop
 
-t2: start
+t2: newconf start
 	sizes='131072 1048576 8388608' ; \
 	for sz in $$sizes; do \
             dd if=/dev/zero \
@@ -36,30 +45,36 @@ CHECK_WITH_CURL = \
 small_datafile:
 	dd if=/dev/zero of=$(DATAFILE) count=1 bs=10 >/dev/null 2>&1
 
-t3: small_datafile
-	@rm -f yaws.conf
-	$(MAKE) conf
+t3: newconf small_datafile
 	echo 'max_num_cached_files = 0' >> yaws.conf
 	$(CHECK_WITH_CURL)
 
-t4: small_datafile
-	@rm -f yaws.conf
-	$(MAKE) conf
+t4: newconf small_datafile
 	echo 'max_num_cached_bytes = 0' >> yaws.conf
 	$(CHECK_WITH_CURL)
 
-t5: small_datafile
-	@rm -f yaws.conf
-	$(MAKE) conf
+t5: newconf small_datafile
 	echo 'max_size_cached_file = 0' >> yaws.conf
 	$(CHECK_WITH_CURL)
 
-t6: small_datafile
-	@rm -f yaws.conf
-	$(MAKE) conf
+t6: newconf small_datafile
 	echo 'max_num_cached_bytes = 5' >> yaws.conf
 	echo 'max_size_cached_file = 50' >> yaws.conf
 	$(CHECK_WITH_CURL)
+
+# Verify redirection does not create URIs with multiple adjacent slashes
+# Test submitted by James Lee
+t7: newconf
+	perl -i -ne \
+	  'print; \
+           print "<redirect>\n/ = localhost\n</redirect>\n" if (/server localhost/)' \
+          yaws.conf
+	$(MAKE) start
+	loc=`curl -s -m 5 -i http://localhost:8000/foo | \
+	  perl -ne 'print "$$1\n" if (m#Location:\s+http://(.+)#)' | \
+	  grep //` ; \
+	$(MAKE) stop ; \
+	[ "$$loc" = "" ] && exit 0 || exit 1
 
 conf:	stdconf
 

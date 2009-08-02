@@ -21,7 +21,7 @@ start() ->
 
 test1() ->
     io:format("test1\n",[]),
-    L = lists:seq(1, 500),
+    L = lists:seq(1, 100),
     SELF = self(),
     Pids = lists:map(fun(I) -> 
 			     spawn(fun() -> slow_client(I, SELF) end)
@@ -68,8 +68,8 @@ slow_client(I, Top) ->
     ?line {ok, C} = gen_tcp:connect(localhost, 8000, [{active, false}, 
 						      {packet, http}]),
     Top ! {self(), connected},
-    ?line ok = gen_tcp:send(C, "GET /1000.txt HTTP/1.1\n"
-			    "Host: localhost:8000\n\n"),
+    ?line ok = gen_tcp:send(C, "GET /1000.txt HTTP/1.1\r\n"
+			    "Host: localhost:8000\r\n\r\n"),
     ?line {ok, Sz} = get_cont_len(C),
     ?line ok = inet:setopts(C, [binary,{packet, 0}]),
     read_loop(C, I, Sz),
@@ -95,9 +95,7 @@ get_cont_len(C) ->
 
 test2() ->
     io:format("test2\n",[]),
-    blkget(10),
-    timer:sleep(10000),
-    test3().
+    blkget(10).
 
 
 blkget(0) ->
@@ -105,8 +103,8 @@ blkget(0) ->
 blkget(I) ->
     spawn(fun() ->
                   {ok, C} = gen_tcp:connect(localhost, 8000, [{active, false}]),
-                  gen_tcp:send(C, "GET /2000.txt\n"
-                                  "Host: localhost:8000\n\n"),
+                  gen_tcp:send(C, "GET /2000.txt HTTP/1.1\r\n"
+                                  "Host: localhost:8000\r\n\r\n"),
                   gen_tcp:recv(C, 200),
                   timer:sleep(5000),
                   exit(normal)
@@ -141,17 +139,20 @@ server_options_recv(S, [{http_header,_,'Allow',_,"GET, HEAD, OPTIONS, PUT, POST,
     do_server_options_recv(S, Hdrs);
 server_options_recv(S, [{http_header,_,'Content-Length',_,"0"}|_]=Hdrs) ->
     do_server_options_recv(S, Hdrs);
-server_options_recv(_S, _Hdrs) ->
+server_options_recv(S, [{http_header,_,'Date',_,_}|_]=Hdrs) ->
+    do_server_options_recv(S, Hdrs);
+server_options_recv(_S, [Hdr|_Hdrs]) ->
+    io:format("unexpected server options HTTP header: ~p~n", [Hdr]),
     error.
 do_server_options_recv(S, Hdrs) ->
-    {ok, Hdr} = gen_tcp:recv(S, 0, 2000),
+    {ok, Hdr} = gen_tcp:recv(S, 0, 5000),
     server_options_recv(S, [Hdr|Hdrs]).
 
 -define(SENDFILE_GET_TIMEOUT, 120000).
 
 sendfile_get() ->
     io:format("sendfile_get\n",[]),
-    L = lists:seq(1, 20),
+    L = lists:seq(1, 10),
     SELF = self(),
     K1 = lists:map(
              fun(_) ->
@@ -175,22 +176,21 @@ sendfile_get() ->
                            end)
              end, L),
 
-    %% K3 = lists:map(
-    %%          fun(_) ->
-    %%                  spawn(fun() ->
-    %%                                ?line {ok, "200", _Headers, _} = 
-    %%                                    ibrowse:send_req(
-    %%                                      "http://localhost:8000/3000.txt", 
-    %%                                      [], get, [], [], ?SENDFILE_GET_TIMEOUT),
-    %%                                SELF ! {self(), k3, done}
-    %%                        end)
-    %%          end, L),
+    K3 = lists:map(
+             fun(_) ->
+                     spawn(fun() ->
+                                   ?line {ok, "200", _Headers, _} = 
+                                       ibrowse:send_req(
+                                         "http://localhost:8000/3000.txt", 
+                                         [], get, [], [], ?SENDFILE_GET_TIMEOUT),
+                                   SELF ! {self(), k3, done}
+                           end)
+             end, L),
 
 
- %   io:format("K3 = ~p~n", [K3]),
     collect(K1, 1, k1),
     collect(K2, 1, k2),
-%    collect(K3, 1, k3),
+    collect(K3, 1, k3),
     ok.
 
 collect([], _, _) ->
@@ -204,15 +204,3 @@ collect(L, Count, Tag) ->
             io:format("TIMEOUT ~p\n~p~n",[process_info(self()), L]),
             ?line exit(timeout)
     end.
-                    
-                
-                
-                              
-    
-           
-
-
-
-
-
-

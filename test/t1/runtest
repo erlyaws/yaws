@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 #
 # Load Yaws with a number of concurrent curl requests for files of varying
 # size up to the fd limit to make sure the sendfile driver is not serializing
@@ -63,6 +62,11 @@ for job in $curls; do
     fi
 done
 echo verifying all retrieved files
+# On some systems (e.g. MacBook Pro) it seems to take a bit for the
+# file writes to actually appear. The sleep and ls below help the loop
+# avoid failing due to files that just haven't appeared yet.
+sleep 5
+ls $outdir >/dev/null 2>&1
 for j in $sizes; do
     count=`ls -1 $outdir/${j}*.dat | wc -l`
     if [ $count -ne $fdlimit ]; then

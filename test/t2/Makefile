@@ -1,10 +1,10 @@
 include ../support/include.mk
 
+.PHONY: all test debug conf clean
 
 # 
 all:	conf setup app_test.beam
 	@echo "all ok"
-
 
 
 # invoke as 

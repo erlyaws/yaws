@@ -13,9 +13,10 @@ none:
 	echo "Do make clean|all|test"
 	exit 1
 
+.PHONY: tclean setup start i connect status stop
+
 tclean:
 	@rm -rf logs *.beam *.log yaws.conf erl_crash.dump 2> /dev/null || true
-
 
 setup:
 	@rm -rf logs 2> /dev/null
@@ -44,6 +45,7 @@ status:
 	$(YTOP)/bin/yaws  --id testid --status
 stop:
 	$(YTOP)/bin/yaws --id testid --stop || true
+	@sleep 5
 
 stdconf:
 	cat ../conf/stdconf.conf | \

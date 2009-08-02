@@ -2,6 +2,16 @@
 
 rm -rf localhost:8000
 wget -q -r http://localhost:8000
-cat logs/report.log | grep -v www/arg.yaws | grep -v www/arg2.yaws | grep ERROR
-[ $? -eq 0 ] || exit 1
+# Give yaws some time to write out its report.log file
+count=10
+while [ $count -gt 0 ]; do
+    if [ ! -f logs/report.log ]; then
+        sleep 3
+    else
+        # log file written, now check it
+        cat logs/report.log | grep -v www/arg.yaws | grep -v www/arg2.yaws | grep ERROR >/dev/null 2>&1
+        [ $? -eq 0 ] || exit 1
+    fi
+    count=`expr $count - 1`
+done
 exit 0
