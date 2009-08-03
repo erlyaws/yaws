@@ -55,28 +55,41 @@ For example:
 
   make local_install
      and perform something we call a
-     local install. It will create an executable script in the $HOMe/bin 
+     local install. It will create an executable script in the $HOME/bin 
      directory and a config file in $HOME/yaws.conf. This is for developers
      only
 
 4.   To test the build, Start as bin/yaws -i 
      This will start a webserver at http://0.0.0.0:8000
-     Terminate through ^C or > init:stop()
+     Terminate through ^C or 
+     > init:stop()
 
 5. as root make install
 
-6. as root Start as /usr/local/bin/yaws -i 
+6. as root start as /usr/local/bin/yaws -i 
    (this starts an interactive system)
 
 7. This will create a webserver at http://${host} and one at https://${host}
 
-8. as root Edit /etc/yaws.conf 
+8. as root edit /usr/local/etc/yaws/yaws.conf 
 
-9. Create content in /var/yaws
+9. Create content in /usr/local/var/yaws
 
 10a. Start as /usr/local/bin/yaws --daemon --heart
      This will start a daemon (--daemon) which will be autorestarted when/if
      it crashes or hangs (--heart)
+     Also, for most unices, we create proper start scripts in
+     /etc/init.d (sysconfdir)
 
 10b. Or start interactive system as /usr/local/bin/yaws -i
+
+
+11.  Example: Here is how I compile/start the yaws system that runs
+     at http://yaws.hyber.org (Ubuntu server system)
+
+     # ./configure --sysconfdir=/etc
+     # make && make install
+     # /etc/init.d/yaws start
+
+
 
