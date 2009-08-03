@@ -503,9 +503,10 @@ gserv(Top, GC, Group0) ->
         {SSLBOOL, CertInfo, {ok, Listen}} ->
             lists:foreach(fun(XSC) -> call_start_mod(XSC) end, Group),
             error_logger:info_msg(
-              "Yaws: Listening to ~s:~w for servers~s~n",
+              "Yaws: Listening to ~s:~w for <~p> virtual servers:~s~n",
               [inet_parse:ntoa(SC#sconf.listen),
                SC#sconf.port,
+               length(Group),
                catch map(
                        fun(S) ->  
                                io_lib:format("~n - ~s under ~s",
