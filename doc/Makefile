@@ -17,6 +17,9 @@ check:
 	@if [ -z "$(PDFLATEX)" ]; then \
 		echo "Need pdflatex"; exit 1; \
 	fi
+	@if [ -z "`which latex2html`" ]; then \
+		echo "Need latex2html"; exit 1; \
+	fi
 
 
 
