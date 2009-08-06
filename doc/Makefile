@@ -8,7 +8,17 @@ IMG_PDF = $(IMG_EPS:.eps=.pdf)
 all debug:	
 	echo "To build the docs, please use make docs before doing make install"
 
-docs:	yaws.ps yaws.pdf
+docs:	check yaws.ps yaws.pdf
+
+check:
+	@if [ -z "$(DVIPS)" ]; then \
+		echo "Need dvips"; exit 1; \
+	fi
+	@if [ -z "$(PDFLATEX)" ]; then \
+		echo "Need pdflatex"; exit 1; \
+	fi
+
+
 
 yaws.ps:	yaws.dvi
 	$(COND_DVILATEX)$(DVIPS) -o yaws.ps yaws.dvi
