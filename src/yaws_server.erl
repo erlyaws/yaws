@@ -2316,7 +2316,7 @@ deliver_dyn_part(CliSock,                  % essential params
             accumulate_content(FirstChunk),
             Priv = deliver_accumulated(Arg, CliSock, 
                                        decide, undefined, stream),
-            stream_loop_send(Priv, CliSock);
+            stream_loop_send(Priv, CliSock, 30000);
 		% For other timeout's (other than 30 second) support
         {streamcontent_with_timeout, MimeType, FirstChunk, TimeOut} ->
             yaws:outh_set_content_type(MimeType),
@@ -2329,7 +2329,7 @@ deliver_dyn_part(CliSock,                  % essential params
             accumulate_content(FirstChunk),
             Priv = deliver_accumulated(Arg, CliSock, 
                                        decide, Sz, stream),
-            stream_loop_send(Priv, CliSock);
+            stream_loop_send(Priv, CliSock, 30000);
         _ ->
             DeliverCont(Arg)
     end.
@@ -2392,45 +2392,53 @@ deliver_dyn_file(CliSock, Bin, Fd, [H|T],Arg, UT, N) ->
             ok
     end;
 
-
 deliver_dyn_file(CliSock, _Bin, _Fd, [], ARG,_UT,_N) ->
     ?Debug("deliver_dyn: done~n", []),
     finish_up_dyn_file(ARG, CliSock).
 
 
-stream_loop_send(Priv, CliSock) ->
-    stream_loop_send(Priv, CliSock, unflushed).
+stream_loop_send(Priv, CliSock, Timeout) ->
+    {ok, FlushTimer} = timer:send_after(300, flush_timer),
+    {ok, TimeoutTimer} = timer:send_after(Timeout, timeout_timer),
+    stream_loop_send(Priv, CliSock, Timeout,
+                     FlushTimer, TimeoutTimer).
 
-stream_loop_send(Priv, CliSock, FlushStatus) ->
-    TimeOut = case FlushStatus of
-                  flushed -> 30000;
-                  unflushed -> 300;
-                  %% Other timeouts (including infinity) support
-                  OtherTimeout -> OtherTimeout
-              end,
+cancel_t(T, Msg) ->
+    timer:cancel(T),
+    receive 
+        Msg -> ok 
+    after 0 -> ok
+    end.
+
+stream_loop_send(Priv, CliSock, Timeout, 
+                 FlushTimer, TimeoutTimer) ->
     receive
         {streamcontent, Cont} ->
             P = send_streamcontent_chunk(Priv, CliSock, Cont),
-            stream_loop_send(P, CliSock, unflushed) ;
+            cancel_t(TimeoutTimer, timeout_timer),
+            {ok, TimeoutTimer2} = timer:send_after(Timeout, timeout_timer),
+            stream_loop_send(P, CliSock, Timeout,
+                             FlushTimer, TimeoutTimer2) ;
         {streamcontent_with_ack, From, Cont} ->        % acknowledge after send
             P = send_streamcontent_chunk(Priv, CliSock, Cont),
             From ! {self(), streamcontent_ack},
-            stream_loop_send(P, CliSock, unflushed) ;
+            cancel_t(TimeoutTimer, timeout_timer),
+            {ok, TimeoutTimer2} = timer:send_after(Timeout, timeout_timer),
+            stream_loop_send(P, CliSock, Timeout,
+                             FlushTimer, TimeoutTimer2) ;
         endofstreamcontent ->
-            end_streaming(Priv, CliSock)
-    after TimeOut ->
-            case FlushStatus of
-                flushed ->
-                    erlang:error(stream_timeout);
-                unflushed ->
-                    P = sync_streamcontent(Priv, CliSock),
-                    stream_loop_send(P, CliSock, flushed);
-				% Other timeouts support
-				ElapsedTime ->
-                    erlang:error({stream_timeout, ElapsedTime})
-            end
+            cancel_t(TimeoutTimer, timeout_timer),
+            cancel_t(FlushTimer, flush_timer),
+            end_streaming(Priv, CliSock);
+        timeout_timer  ->
+            cancel_t(TimeoutTimer, timeout_timer),
+            cancel_t(FlushTimer, flush_timer),
+            erlang:error(stream_timeout);
+        flush_timer  ->
+            P = sync_streamcontent(Priv, CliSock),
+            stream_loop_send(P, CliSock, Timeout,
+                             FlushTimer, TimeoutTimer)
     end.
-
 
 make_chunk(Data) ->
     case yaws:outh_get_chunked() of
