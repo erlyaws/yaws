@@ -56,6 +56,7 @@
              certinfo,      %% undefined | #certinfo{}
              l,             %% listen socket
              mnum = 0,      
+ 	     connections = 0, %% number of TCP connections opened now
              sessions = 0,  %% number of active HTTP sessions
              reqs = 0}).    %% total number of processed HTTP requests
 
@@ -578,18 +579,25 @@ gserv_loop(GS, Ready, Rnum, Last) ->
         {From , status} ->
             From ! {self(), GS},
             gserv_loop(GS, Ready, Rnum, Last);
-        {_From, next} when Ready == [] ->
-            New = acceptor(GS),
-            gserv_loop(GS#gs{sessions = GS#gs.sessions + 1}, Ready, Rnum, New);
-        {_From, next} ->
+        {_From, next, Accepted} when Ready == [] ->
+ 	    close_accepted_if_max(GS,Accepted),
+ 	    New = acceptor(GS),
+ 	    GS2 = inc_con(GS),
+            gserv_loop(GS2#gs{sessions = GS2#gs.sessions + 1}, Ready, Rnum, New);
+        {_From, next, Accepted} ->
+	    close_accepted_if_max(GS,Accepted),
             [{_Then, R}|RS] = Ready,
             R ! {self(), accept},
-            gserv_loop(GS, RS, Rnum-1, R);
+ 	    GS2 = inc_con(GS),
+            gserv_loop(GS2, RS, Rnum-1, R);
+	{_From, decrement} ->
+ 	    GS2 = dec_con(GS),
+ 	    gserv_loop(GS2, Ready, Rnum, Last);
         {From, done_client, Int} ->
             GS2 = if
-                      Int == 0 -> GS#gs{sessions = GS#gs.sessions - 1};
-                      Int > 0 -> GS#gs{sessions = GS#gs.sessions - 1,
-                                       reqs = GS#gs.reqs + Int}
+		      Int == 0 -> dec_con(GS#gs{sessions = GS#gs.sessions - 1});
+		      Int > 0 -> dec_con(GS#gs{sessions = GS#gs.sessions - 1,
+ 					       reqs = GS#gs.reqs + Int})
                   end,
             if
                 Rnum == 8 ->
@@ -878,7 +886,7 @@ acceptor0(GS, Top) ->
     ?TC([{record, GS, gs}]),
     put(gc, GS#gs.gconf),
     X = do_accept(GS),
-    Top ! {self(), next},
+    Top ! {self(), next, X},
     case X of
         {ok, Client} ->
             if
@@ -889,6 +897,7 @@ acceptor0(GS, Top) ->
                         {error, Reason} ->
                             error_logger:format("SSL accept failed: ~p~n", 
                                                 [Reason]),
+			    Top ! {self(), decrement},
                             exit(normal)
                     end;
                 true ->
@@ -919,20 +928,26 @@ acceptor0(GS, Top) ->
                 {ok, Int} when is_integer(Int) ->
                     Top ! {self(), done_client, Int};
                 {'EXIT', normal} ->
+		    Top ! {self(), decrement},
                     exit(normal);
                 {'EXIT', shutdown} ->
                     exit(shutdown);
                 {'EXIT', {error, einval}} ->
                     %% Typically clients that close their end of the socket
                     %% don't log. Happens all the time.
+		    Top ! {self(), decrement},
                     exit(normal);
                 {'EXIT', {{error, einval}, _}} ->
+		    Top ! {self(), decrement},
                     exit(normal);
                 {'EXIT', {error, closed}} ->
+		    Top ! {self(), decrement},
                     exit(normal);
                 {'EXIT', {{error, closed}, _}} ->
+		    Top ! {self(), decrement},
                     exit(normal);
                 {'EXIT', {{error, econnreset},_}} ->
+		    Top ! {self(), decrement},
                     exit(normal);
                 {'EXIT', Reason2} ->
                     error_logger:error_msg("Yaws process died: ~p~n", 
@@ -965,6 +980,7 @@ acceptor0(GS, Top) ->
             end;
         {error, closed} ->
             %% This is what happens when we call yaws --stop
+	    Top ! {self(), decrement},
             exit(normal);
         ERR ->
             %% When we fail to accept, the correct thing to do
@@ -4312,3 +4328,27 @@ vdirpath(SC, ARG, RequestPath) ->
     %% specified in conf file for the 'vdir' directive. 
     Result.
 
+close_accepted_if_max(GS,{ok, Socket}) ->
+    MaxCon = (GS#gs.gconf)#gconf.max_connections,
+    NumCon = GS#gs.connections,
+    if MaxCon == nolimit orelse NumCon < MaxCon ->
+	    ok;
+       true ->
+            S=case peername(Socket, GS#gs.ssl) of
+                  {ok, {IP, Port}} ->
+                      io_lib:format("~s:~w", [inet_parse:ntoa(IP), Port]);
+                  _ ->
+                      "unknown"
+              end,
+            error_logger:format(
+              "Max connections reached - closing conn to ~s~n",[S]),
+	    gen_tcp:close(Socket)
+    end;
+close_accepted_if_max(_,_) ->
+    ok.
+
+inc_con(GS) ->
+    GS#gs{connections=GS#gs.connections + 1}.
+
+dec_con(GS) ->
+    GS#gs{connections=GS#gs.connections - 1}.

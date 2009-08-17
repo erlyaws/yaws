@@ -95,6 +95,12 @@ a command line flag to yaws.
 Enable or disable the auth log. Default is true.
 
 .TP
+\fB max_connections = nolimit | <int>\fR
+Set this value to control the maximum number of connections
+from HTTP clients into the server. This is implemented by closing
+the last socket if the limit threshold is reached.
+
+.TP
 \fB log_wrap_size = Integer\fR
 The logs written by yaws are all wrap logs, the default value at the
 size where they wrap around and the original gets renamed to File.old
@@ -526,7 +532,7 @@ this value.
 \fBauthmod = AuthMod\fR
 If an auth module is defined then AuthMod:auth(Arg, Auth) will
 be called for all access to the directory. The auth/2 function 
-should return one of: true, false, {false, realm}, {appmod, Mod}.
+should return one of: true, false, {false, Realm}, {appmod, Mod}.
 If {appmod, Mod} is returned then a call to Mod:out(Arg) will
 be used to deliver the content.
 
