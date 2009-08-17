@@ -95,6 +95,12 @@ a command line flag to yaws.
 Enable or disable the auth log. Default is true.
 
 .TP
+\fB max_connections = nolimit | <int>\fR
+Set this value to control the maximum number of connections
+from HTTP clients into the server. This is implemented by closing
+the last socket if the limit threshold is reached.
+
+.TP
 \fB log_wrap_size = Integer\fR
 The logs written by yaws are all wrap logs, the default value at the
 size where they wrap around and the original gets renamed to File.old

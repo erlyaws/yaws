@@ -77,6 +77,7 @@
                max_num_cached_files = 400,
                max_num_cached_bytes = 1000000,  %% 1 MEG
                max_size_cached_file = 8000,
+	       max_connections = nolimit, %% max number of TCP connections 
                large_file_chunk_size = 10240,
                mnesia_dir = [],
                log_wrap_size = 10000000,  % wrap logs after 10M

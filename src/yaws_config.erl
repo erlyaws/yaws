@@ -577,6 +577,17 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     fload(FD, globals, GC#gconf{enable_soap = false},
                           C, Cs, Lno+1, Next)
             end;
+        
+        ["max_connections", '=', Int] ->
+            case (catch list_to_integer(Int)) of
+                I when is_integer(I) ->
+                    fload(FD, globals, GC#gconf{max_connections = I},
+                          C, Cs, Lno+1, Next);
+                _ when Int == "nolimit" ->
+                    fload(FD, globals, GC, C, Cs, Lno+1, Next);
+                _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            end;
 
         ["log_wrap_size", '=', Int] ->
             case (catch list_to_integer(Int)) of
