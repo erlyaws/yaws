@@ -532,7 +532,7 @@ this value.
 \fBauthmod = AuthMod\fR
 If an auth module is defined then AuthMod:auth(Arg, Auth) will
 be called for all access to the directory. The auth/2 function 
-should return one of: true, false, {false, realm}, {appmod, Mod}.
+should return one of: true, false, {false, Realm}, {appmod, Mod}.
 If {appmod, Mod} is returned then a call to Mod:out(Arg) will
 be used to deliver the content.
 

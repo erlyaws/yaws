@@ -1,11 +1,11 @@
 include ../../include.mk
 
 all:	myappmod.beam
-	cp myappmod.beam ../../examples/ebin
+	cp -f myappmod.beam ../../examples/ebin
 debug:
 
 install:	all
-	cp myappmod.beam $(DESTDIR)$(VARDIR)/yaws/ebin
+	cp -f myappmod.beam $(DESTDIR)$(VARDIR)/yaws/ebin
 
 clean:
 	$(RM) myappmod.beam
