@@ -858,13 +858,16 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
         ["listen_backlog", '=', Val] ->
             case (catch list_to_integer(Val)) of
                 B when is_integer(B) ->
-                    C2 = case proplists:get_value(listen_opts, C#sconf.soptions) of
+                    C2 = case proplists:get_value(listen_opts, 
+                                                  C#sconf.soptions) of
                              undefined ->
-                                 C#sconf{soptions = [{listen_opts, [{backlog, B}]} |
-                                                     C#sconf.soptions]};
+                                 C#sconf{soptions = 
+                                         [{listen_opts, [{backlog, B}]} |
+                                          C#sconf.soptions]};
                              Opts ->
-                                 C#sconf{soptions = [{listen_opts, [{backlog, B} | Opts]} |
-                                                     C#sconf.soptions]}
+                                 C#sconf{soptions = 
+                                         [{listen_opts, [{backlog, B} | Opts]} |
+                                          C#sconf.soptions]}
                          end,
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 _ ->
