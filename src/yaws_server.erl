@@ -1653,7 +1653,7 @@ handle_auth(ARG, _Auth_H, #auth{realm = Realm,
 
 handle_auth(ARG, Auth_H, Auth_methods = #auth{mod = Mod}) when Mod /= [] ->
     case catch Mod:auth(ARG, Auth_methods) of
-	{'EXIT', Reason} ->
+	{'EXIT', _Reason} ->
             L = ?F("authmod crashed ~n~p:auth(~p, ~n ~p) \n"
                    "Stack: ~p~n",
                    [Mod, ARG, Auth_methods,
