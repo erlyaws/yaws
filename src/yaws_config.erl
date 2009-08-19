@@ -891,7 +891,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 
         ["partial_post_size",'=',Size] ->
             case Size of
-                nolimit ->
+                "nolimit" ->
                     C2 = C#sconf{partial_post_size = nolimit},
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 Val ->
