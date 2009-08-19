@@ -1654,8 +1654,13 @@ handle_auth(ARG, _Auth_H, #auth{realm = Realm,
 handle_auth(ARG, Auth_H, Auth_methods = #auth{mod = Mod}) when Mod /= [] ->
     case catch Mod:auth(ARG, Auth_methods) of
 	{'EXIT', Reason} ->
-	    error_logger:format("authmod crashed: ~p~n", [Reason]),
-	    false;
+            L = ?F("authmod crashed ~n~p:auth(~p, ~n ~p) \n"
+                   "Stack: ~p~n",
+                   [Mod, ARG, Auth_methods,
+                    erlang:get_stacktrace()]),
+            handle_crash(ARG, L),
+            deliver_accumulated(ARG#arg.clisock),
+            exit(normal);
 
 	%% appmod means the auth headers are undefined, i.e. false.
 	%% TODO: change so that authmods simply return true/false
