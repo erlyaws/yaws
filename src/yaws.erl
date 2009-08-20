@@ -218,6 +218,8 @@ set_gc_flags([{auth_log, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags, ?GC_AUTH_LOG, Bool));
 set_gc_flags([{copy_errlog, Bool}|T], Flags) -> 
     set_gc_flags(T, flag(Flags, ?GC_COPY_ERRLOG, Bool));
+set_gc_flags([{copy_error_log, Bool}|T], Flags) ->
+    set_gc_flags(T, flag(Flags, ?GC_COPY_ERRLOG, Bool));
 set_gc_flags([{backwards_compat_parse, Bool}|T], Flags) -> 
     set_gc_flags(T, flag(Flags, ?GC_BACKWARDS_COMPAT_PARSE, Bool));
 set_gc_flags([{log_resolve_hostname, Bool}|T], Flags) -> 
@@ -262,6 +264,8 @@ setup_sconf(DocRoot, D, SL) ->
                                     D#sconf.partial_post_size),
            appmods = lkup(appmods, SL, 
                           D#sconf.appmods),
+           errormod_401 = lkup(errormod_401, SL,
+                               D#sconf.errormod_401),
            errormod_404 = lkup(errormod_404, SL, 
                                D#sconf.errormod_404),
            errormod_crash = lkup(errormod_crash, SL, 
