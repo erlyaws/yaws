@@ -39,7 +39,8 @@ The default value for logdir is "."
 .TP
 \fB ebin_dir = Directory\fR
 This directive adds Directory to the erlang search path. It is possible to
-have several of these command in the configuration file.
+have several of these command in the configuration file. The default value 
+is "yaws_dir"/examples/ebin
 
 
 .TP
@@ -56,13 +57,15 @@ To stop the Yaws server with id "foobar". Each Yaws server will write
 its internals data into a file called $HOME/.yaws/yaws/ID where ID the
 identity of the server. Yaws also creates a file called
 ${VARDIR}/run/yaws/ctl-${ID} which contain the portnumber where the server is
-listening for control commands.
+listening for control commands. The default id is "default"
 
 .TP
 \fB include_dir = Directory\fR
 This directive adds Directory to the path of directories where the erlang
 compiler seraches for include files. We need to use this if we want to 
-include .hrl files in our yaws erlang code.
+include .hrl files in our yaws erlang code. The default value is 
+"yaws_dir"/examples/include.
+
 .TP
 \fB max_num_cached_files = Integer\fR
 Yaws will cache small files such as commonly accessed GIF images in RAM.
@@ -85,9 +88,9 @@ it may be convenient to set this value to 0. If the debug flag (-d) is passed
 to the yaws start script, this value is automatically set to 0.
 
 .TP
-\fB trace  = traffic | http\fR
+\fBtrace  = false | traffic | http\fR
 This enables traffic or http tracing. Tracing is also possible to enable with
-a command line flag to yaws.
+a command line flag to yaws. Default is false.
 
 
 .TP
@@ -104,7 +107,7 @@ the last socket if the limit threshold is reached.
 \fB log_wrap_size = Integer\fR
 The logs written by yaws are all wrap logs, the default value at the
 size where they wrap around and the original gets renamed to File.old
-is 1000000, 1 M. This value can changed.
+is 1000000, 1 megabyte. This value can changed.
 
 If we set the value to \fI0\fR the logs will never wrap. If we want to use
 Yaws in combination with a more traditional log wrapper such as 
@@ -112,17 +115,17 @@ logrotate, set the size to \fI0\fR and Yaws will reopen the logfiles
 once they have be renamed/removed.
 
 .TP
-\fB log_resolve_hostname = Bool\fR
+\fBlog_resolve_hostname = true | false\fR
 By default the client host IP is not resolved in the access logs.
 
 
 .TP
-\fB fail_on_bind_err = Bool\fR
+\fBfail_on_bind_err = true | false\fR
 Fail completely or not if yaws fails to bind a listen socket
 Default is true.
 
 .TP
-\fB enable_soap = Bool\fR
+\fBenable_soap = true | false\fR
 If true, a soap server will be started at startup of Yaws.
 Default is false.
 
@@ -159,13 +162,13 @@ This configuration parameter decides whether yaws should pick the
 first (as defined in the yaws.conf file) if no name match or not.
 In real live hosting scenarios we typically want this to be false
 whereas in testing/development scenarios it may be convenient to
-set it to true.
+set it to true. Default is true.
 
 .TP
 \fB use_fdsrv = true | false \fR
 This feature makes it possible to bind to ports < 1024 even when
 we're not running as root. It requires the Jungerl package called fd_server
-to be properly installed. The feature doesn't  work with SSL.
+to be properly installed. The feature doesn't  work with SSL. Default is false.
 
 
 .TP
@@ -189,7 +192,7 @@ and \fB</server>\fR. The ServerName will be the name of the webserver.
 The following directives are allowed inside a server definition.
 .TP
 \fBport = Port \fR
-This makes the server listen on Port
+This makes the server listen on Port. Default is 8000.
 .TP
 \fBlisten = IpAddress\fR
 This makes the server listen on IpAddress
@@ -197,7 +200,7 @@ When virthosting several servers on the same ip/port address, if the
 browser doesn't send a Host: field, yaws will pick the \fIfirst\fR
 server specified in the config file.
 If the specified ip address is 0.0.0.0 yaws will listen on all local IP
-addresses on the specified port.
+addresses on the specified port. Default is 0.0.0.0.
 
 .TP
 \fBlisten_backlog = Integer\fR
@@ -222,7 +225,6 @@ method. This is useful when an SSL off-loader, or stunnel, is used in
 front of yaws.
 .TP
 
-
 \fBaccess_log = true | false\fR
 Setting this directive to false turns of traffic logging for this
 virtual server. The default value is true. 
@@ -231,7 +233,7 @@ virtual server. The default value is true.
 \fBdir_listings = true | true_nozip | false\fR
 Setting this directive to false disallows the automatic
 dir listing feature of Yaws. A status code 403 Forbidden will be sent.
-Set to true_nozip to avoid the auto-generated all.zip entries.
+Set to true_nozip to avoid the auto-generated all.zip entries. Default is false.
 
 .TP
 \fBextra_cgi_vars = .....\fR
@@ -246,7 +248,7 @@ var = val
 
 .TP
 \fBstatistics  = true | false\fR
-Turns on/off statistics gathering for a virtual server. 
+Turns on/off statistics gathering for a virtual server. Default is false.
 
 .TP
 \fBfcgi_app_server = Host:Port \fR
@@ -268,7 +270,7 @@ Disabled by default.
 
 .TP
 \fBdeflate = true | false\fR
-Turns on or off deflate compression for a server.
+Turns on or off deflate compression for a server. Default is false.
 
 .TP
 \fB docroot = Directory ...\fR
@@ -290,7 +292,7 @@ The deafult value is 10240.
 \fBdav = true | false\fR
 Turns on the DAV protocol for this server. The dav support
 in yaws is highly limited. If dav is turned on, .yaws processing
-of .yaws pages is turned off.
+of .yaws pages is turned off. Default is false.
 
 .TP
 \fBtilde_expand = true|false \fR
@@ -299,7 +301,7 @@ do tilde expansion. The default is false. tilde_expansion is the
 mechanism whereby a URL on the form http://www.foo.com/~username
 is changed into a request where the docroot for that
 particular request is set to the directory ~username/public_html/
-The default value is false.
+Default is false.
 
 .TP
 \fBallowed_scripts = [ListOfSuffixes]\fR
@@ -340,11 +342,9 @@ appmoddata field.
 
 .TP
 \fBerrormod_404 = Module\fR
-It is possible to set a special module that handles
-404 Not Found messages.
+It is possible to set a special module that handles 404 Not Found messages.
 
-The function \fIModule:out404(Arg, GC, SC)\fR will
-be invoked. The arguments are
+The function \fIModule:out404(Arg, GC, SC)\fR will be invoked. The arguments are
 
 Arg is a #arg{} record
 
@@ -352,8 +352,7 @@ GC is a #gconf{} record (defined in yaws.hrl)
 
 SC is a #sconf{} record (defined in yaws.hrl)
 
-The function can and must do the same things that 
-a normal \fIout/1\fR does.
+The function can and must do the same things that a normal \fIout/1\fR does.
 
 .TP
 \fBerrormod_401 = Module\fR
@@ -366,8 +365,7 @@ be invoked. The arguments are
 
 Arg is a #arg{} record
 
-The function can and must do the same things that 
-a normal \fIout/1\fR does.
+The function can and must do the same things that a normal \fIout/1\fR does.
 
 
 .TP
@@ -401,8 +399,6 @@ application to syncronize the startup with the yaws server
 as well as getting hold of user specific configuration data,
 see the explanation for the <opaque> context.
 
-
-
 .TP
 \fBrevproxy = Prefix Url\fR
 Make yaws a reverse proxy. The Prefix is a path inside our own docroot
@@ -416,7 +412,6 @@ Makes the hyber website appear under /tmp/foo
 It is possible to have multiple reverse proxies inside the same server.
 
 WARNING, this feature is yet not in production quality.
-
 
 .TP
 \fBservername = Name\fR
@@ -442,7 +437,6 @@ A file containing trusted certificates to use during client authentication
 and to use when attempting to build the server certificate chain. 
 The list is also used in the list of acceptable client CAs passed to
 the client when a certificate is requested.
-
 .TP
 \fB verify = 1 | 2 | 3\fR
 Specifies the level of verification the server does on clinet certs. 1 means nothing, 2 means the the server will ask the client for a cert but not fail if the client doesn't supply a client cert, 3 means that the server requires the client to supply a client cert.
@@ -452,16 +446,13 @@ Specifies the depth of certificate chains the server is prepared to follow when 
 .TP
 \fB password = String\fR
 String If the private key is encrypted on disc, this password is the 3des key to decrypt it.
-
 .TP
 \fB ciphers = String\fR
 * This string specifies the ssl cipher string. The syntax of the ssl cipher string is a little horrible sublanguage of its own. It is documented in the ssl man page for "ciphers". 
-
 .TP
 \fB </ssl> \fR
 Ends an SSL definition
 
- 
 .TP
 \fB<redirect> ... </redirect>\fR
 Defines a redirect mapping. The following items are allowed
