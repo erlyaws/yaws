@@ -98,6 +98,10 @@ loop(Port) ->
             receive {'EXIT', Port, _Reason} -> ok
             after 0 -> ok
             end;
+        {'EXIT', _, shutdown} ->
+            erlang:port_close(Port),
+            unregister(?MODULE),
+            exit(shutdown);
         {'EXIT', Port, Posix_error} ->
             error_logger:format("Fatal error: sendfile port died, error ~p~n", [Posix_error]),
             exit(Posix_error);
