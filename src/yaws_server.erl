@@ -23,7 +23,8 @@
 -export([start_link/1]).
 
 %% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
+        code_change/3]).
 -export([status/0,
          getconf/0,
          stats/0,
@@ -1590,15 +1591,18 @@ handle_request(CliSock, ARG, N) ->
                         {false_403, _, _} ->
                             deliver_403(CliSock, Req);
                         {false, _, _} ->		
+                            UT = #urltype{type = unauthorized, 
+                                          path = DecPath
+                                         },
+                            handle_ut(CliSock, ARG, UT, N);
+                        {{false, AuthMethods, Realm}, _, _} ->
                             UT = #urltype{
-                              type = unauthorized, 
-                              path = DecPath
-                             },
+                              type = {unauthorized, AuthMethods, Realm},
+                              path = DecPath},
                             handle_ut(CliSock, ARG, UT, N)
+                    
                     end
             end;
-        %%{absoluteURI, _Scheme, _Host, _Port, _RawPath}
-        %%will not make it here.
         {scheme, _Scheme, _RequestString} ->
             deliver_501(CliSock, Req);
         _ ->                                    % for completeness
@@ -1611,6 +1615,8 @@ set_auth_user(ARG, User) ->
         case H#headers.authorization of
             {_User, Pass, Orig} ->
                 {User, Pass, Orig};
+            undefined ->
+                {User, undefined, undefined};
             E ->
                 E
         end,
@@ -1630,7 +1636,7 @@ is_auth(ARG, Req_dir, H, [{Auth_dir, Auth_methods}|T], {Ret, Auth_headers}) ->
     case lists:prefix(Auth_dir, Req_dir) of
 	true ->
 	    Auth_H = H#headers.authorization,
-	    case handle_auth(ARG, Auth_H, Auth_methods) of
+	    case handle_auth(ARG, Auth_H, Auth_methods, false) of
 
 		%% If we auth using an authmod we need to return User
 		%% so that we can set it in ARG.
@@ -1639,6 +1645,10 @@ is_auth(ARG, Req_dir, H, [{Auth_dir, Auth_methods}|T], {Ret, Auth_headers}) ->
 		false ->
 		    L = Auth_methods#auth.headers,
 		    is_auth(ARG, Req_dir, H, T, {false, L ++ Auth_headers});
+                {false, Realm} ->
+                    L = Auth_methods#auth.headers,
+                    is_auth(ARG, Req_dir, H, T, {{false, Auth_methods, Realm},
+                                                 L ++ Auth_headers});
 		Is_auth ->
 		    Is_auth
 	    end;
@@ -1647,11 +1657,11 @@ is_auth(ARG, Req_dir, H, [{Auth_dir, Auth_methods}|T], {Ret, Auth_headers}) ->
     end.
 
 handle_auth(ARG, _Auth_H, #auth{realm = Realm, 
-                                users=[], pam=false, mod = []}) ->
+                                users=[], pam=false, mod = []}, Ret) ->
     maybe_auth_log({401, Realm}, ARG),
-    false;
+    Ret;
 
-handle_auth(ARG, Auth_H, Auth_methods = #auth{mod = Mod}) when Mod /= [] ->
+handle_auth(ARG, Auth_H, Auth_methods = #auth{mod = Mod}, Ret) when Mod /= [] ->
     case catch Mod:auth(ARG, Auth_methods) of
 	{'EXIT', _Reason} ->
             L = ?F("authmod crashed ~n~p:auth(~p, ~n ~p) \n"
@@ -1665,45 +1675,46 @@ handle_auth(ARG, Auth_H, Auth_methods = #auth{mod = Mod}) when Mod /= [] ->
 	%% appmod means the auth headers are undefined, i.e. false.
 	%% TODO: change so that authmods simply return true/false
 	{appmod, _AppMod} ->
-	    handle_auth(ARG, Auth_H, Auth_methods#auth{mod = []});
+	    handle_auth(ARG, Auth_H, Auth_methods#auth{mod = []}, Ret);
 	{true, User} -> 
 	    {true, User};
 	true ->
 	    true;
-	{false, _Realm} ->
-	    handle_auth(ARG, Auth_H, Auth_methods#auth{mod = []});
+	{false, Realm} ->
+	    handle_auth(ARG, Auth_H, Auth_methods#auth{mod = []},
+                        {false, Realm});
 	_ ->
 	    maybe_auth_log(403, ARG),
 	    false_403
     end;
 
 %% if the headers are undefined we do not need to check Pam or Users
-handle_auth(ARG, undefined, Auth_methods) ->
-    handle_auth(ARG, undefined, Auth_methods#auth{pam = false, users= []});
+handle_auth(ARG, undefined, Auth_methods, Ret) ->
+    handle_auth(ARG, undefined, Auth_methods#auth{pam = false, users= []}, Ret);
 
 handle_auth(ARG, {User, Password, OrigString}, 
-            Auth_methods = #auth{pam = Pam}) when Pam /= false ->
+            Auth_methods = #auth{pam = Pam}, Ret) when Pam /= false ->
     case yaws_pam:auth(User, Password) of
 	{yes, _} ->
 	    maybe_auth_log({ok, User}, ARG),
 	    true;
 	{no, _Rsn} ->
 	    handle_auth(ARG, {User, Password, OrigString}, 
-                        Auth_methods#auth{pam = false})
+                        Auth_methods#auth{pam = false}, Ret)
     end;
 
 
 
 
 handle_auth(ARG, {User, Password, OrigString}, 
-            Auth_methods = #auth{users = Users}) when Users /= [] ->
+            Auth_methods = #auth{users = Users}, Ret) when Users /= [] ->
     case member({User, Password}, Users) of
 	true ->
 	    maybe_auth_log({ok, User}, ARG),
 	    true;
 	false ->
 	    handle_auth(ARG, {User, Password, OrigString}, 
-                        Auth_methods#auth{users = []})
+                        Auth_methods#auth{users = []}, Ret)
     end.
 	    
 
@@ -1757,83 +1768,6 @@ get_unauthorized_outmod(Req_dir, [{Auth_dir, Auth}|T], Errormod401) ->
 
 %% Return values:
 %% continue, done, {page, Page}
-handle_ut(CliSock, ARG, UT = #urltype{type = unauthorized}, N) ->
-    Req = ARG#arg.req,
-    H = ARG#arg.headers,
-    SC = get(sc),
-    yaws:outh_set_dyn_headers(Req, H, UT),
-
-    %% outh_set_dyn headers sets status to 200 by default
-    %% so we need to set it 401
-    yaws:outh_set_status_code(401),
-    Outmod = get_unauthorized_outmod(UT#urltype.path, SC#sconf.authdirs, 
-                                     SC#sconf.errormod_401),
-
-    deliver_dyn_part(CliSock,
-		     0,
-		     "appmod",
-		     N,
-		     ARG,
-		     UT,
-		     fun(A)->Outmod:out(A)
-		     end,
-		     fun(A)->finish_up_dyn_file(A, CliSock)
-		     end);
-
-handle_ut(CliSock, ARG, UT = #urltype{type = error}, N) ->
-    Req = ARG#arg.req,
-    H = ARG#arg.headers,
-    SC=get(sc),GC=get(gc),
-    case UT#urltype.type of
-        error when SC#sconf.xtra_docroots == [] ->
-            yaws:outh_set_dyn_headers(Req, H, UT),
-            deliver_dyn_part(CliSock, 
-                             0, "404",
-                             N,
-                             ARG,UT,
-                             fun(A)->(SC#sconf.errormod_404):
-                                         out404(A,GC,SC) 
-                             end,
-                             fun(A)->finish_up_dyn_file(A, CliSock)
-                             end
-                            );
-        error ->
-            SC2 = SC#sconf{docroot = hd(SC#sconf.xtra_docroots),
-                           xtra_docroots = tl(SC#sconf.xtra_docroots)},
-            put(sc, SC2),
-            
-            %%!todo - review & change. rewriting the docroot and xtra_docroots
-            %% is not a good way to handle the xtra_docroot feature because
-            %% it makes less information available to the subsequent calls - 
-            %% this is especially an issue for a nested ssi.
-            ARG2 = ARG#arg{docroot = SC2#sconf.docroot},
-            handle_request(CliSock, ARG2, N)
-    end;
-
-
-handle_ut(CliSock, ARG, UT = #urltype{type = directory}, N) ->
-    Req = ARG#arg.req,
-    H = ARG#arg.headers,
-    SC=get(sc),
-
-    if (?sc_has_dir_listings(SC)) ->
-            Directory_allowed = ['GET', 'HEAD', 'OPTIONS'],
-            if
-                Req#http_request.method == 'GET';
-                Req#http_request.method == 'HEAD' ->
-                    yaws:outh_set_dyn_headers(Req, H, UT),
-                    P = UT#urltype.fullpath,  
-                    yaws_ls:list_directory(ARG, CliSock, UT#urltype.data, 
-                                           P, Req,
-                                           ?sc_has_dir_all_zip(SC));
-                Req#http_request.method == 'OPTIONS' ->
-                    deliver_options(CliSock, Req, Directory_allowed);
-                true ->
-                    deliver_405(CliSock, Req, Directory_allowed)
-            end;
-       true ->
-            handle_ut(CliSock, ARG, #urltype{type = error}, N)
-    end;
 
 handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
     Req = ARG#arg.req,
@@ -1936,6 +1870,111 @@ handle_ut(CliSock, ARG, UT = #urltype{type = yaws}, N) ->
         true ->
             deliver_405(CliSock, Req, Yaws_allowed)
     end;
+
+handle_ut(CliSock, ARG, UT = #urltype{type = {unauthorized, Auth, Realm}}, N) ->
+    Req = ARG#arg.req,
+    H   = ARG#arg.headers,
+    SC  = get(sc),
+    yaws:outh_set_dyn_headers(Req, H, UT),
+
+    %% outh_set_dyn headers sets status to 200 by default
+    %% so we need to set it 401
+    yaws:outh_set_status_code(401),
+    Outmod = get_unauthorized_outmod(UT#urltype.path, SC#sconf.authdirs,
+                                     SC#sconf.errormod_401),
+    OutFun = fun (A) ->
+                     case catch Outmod:out401(A, Auth, Realm) of
+                         {'EXIT', {undef, _}} ->
+                             %% Possibly a deprecated warning
+                             Outmod:out(A);
+                         {'EXIT', Reason} ->
+                             exit(Reason);
+                         Result ->
+                             Result
+                     end
+             end,
+    DeliverFun = fun (A) -> finish_up_dyn_file(A, CliSock) end,
+    deliver_dyn_part(CliSock, 0, "appmod", N, ARG, UT, OutFun, DeliverFun);
+
+
+handle_ut(CliSock, ARG, UT = #urltype{type = unauthorized}, N) ->
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
+    SC = get(sc),
+    yaws:outh_set_dyn_headers(Req, H, UT),
+
+    %% outh_set_dyn headers sets status to 200 by default
+    %% so we need to set it 401
+    yaws:outh_set_status_code(401),
+    Outmod = get_unauthorized_outmod(UT#urltype.path, SC#sconf.authdirs, 
+                                     SC#sconf.errormod_401),
+
+    deliver_dyn_part(CliSock,
+		     0,
+		     "appmod",
+		     N,
+		     ARG,
+		     UT,
+		     fun(A)->Outmod:out(A)
+		     end,
+		     fun(A)->finish_up_dyn_file(A, CliSock)
+		     end);
+
+handle_ut(CliSock, ARG, UT = #urltype{type = error}, N) ->
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
+    SC=get(sc),GC=get(gc),
+    case UT#urltype.type of
+        error when SC#sconf.xtra_docroots == [] ->
+            yaws:outh_set_dyn_headers(Req, H, UT),
+            deliver_dyn_part(CliSock, 
+                             0, "404",
+                             N,
+                             ARG,UT,
+                             fun(A)->(SC#sconf.errormod_404):
+                                         out404(A,GC,SC) 
+                             end,
+                             fun(A)->finish_up_dyn_file(A, CliSock)
+                             end
+                            );
+        error ->
+            SC2 = SC#sconf{docroot = hd(SC#sconf.xtra_docroots),
+                           xtra_docroots = tl(SC#sconf.xtra_docroots)},
+            put(sc, SC2),
+            
+            %%!todo - review & change. rewriting the docroot and xtra_docroots
+            %% is not a good way to handle the xtra_docroot feature because
+            %% it makes less information available to the subsequent calls - 
+            %% this is especially an issue for a nested ssi.
+            ARG2 = ARG#arg{docroot = SC2#sconf.docroot},
+            handle_request(CliSock, ARG2, N)
+    end;
+
+
+handle_ut(CliSock, ARG, UT = #urltype{type = directory}, N) ->
+    Req = ARG#arg.req,
+    H = ARG#arg.headers,
+    SC=get(sc),
+
+    if (?sc_has_dir_listings(SC)) ->
+            Directory_allowed = ['GET', 'HEAD', 'OPTIONS'],
+            if
+                Req#http_request.method == 'GET';
+                Req#http_request.method == 'HEAD' ->
+                    yaws:outh_set_dyn_headers(Req, H, UT),
+                    P = UT#urltype.fullpath,  
+                    yaws_ls:list_directory(ARG, CliSock, UT#urltype.data, 
+                                           P, Req,
+                                           ?sc_has_dir_all_zip(SC));
+                Req#http_request.method == 'OPTIONS' ->
+                    deliver_options(CliSock, Req, Directory_allowed);
+                true ->
+                    deliver_405(CliSock, Req, Directory_allowed)
+            end;
+       true ->
+            handle_ut(CliSock, ARG, #urltype{type = error}, N)
+    end;
+
 
 
 handle_ut(CliSock, ARG, UT = #urltype{type = redir}, _N) ->
@@ -4357,3 +4396,6 @@ inc_con(GS) ->
 
 dec_con(GS) ->
     GS#gs{connections=GS#gs.connections - 1}.
+
+code_change(_OldVsn, Data, _Extra) ->
+    {ok, Data}.
