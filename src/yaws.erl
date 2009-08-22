@@ -196,8 +196,8 @@ setup_gconf(GL, GC) ->
                                 GC#gconf.log_wrap_size),
            cache_refresh_secs = lkup(cache_refresh_secs, GL, 
                                      GC#gconf.cache_refresh_secs),
-            mnesia_dir = lkup(mnesia_dir, GL,
-			      GC#gconf.mnesia_dir),
+           mnesia_dir = lkup(mnesia_dir, GL,
+                             GC#gconf.mnesia_dir),
            include_dir = lkup(include_dir, GL, 
                               GC#gconf.include_dir),
            phpexe = lkup(phpexe, GL, 
@@ -282,11 +282,9 @@ setup_sconf(DocRoot, D, SL) ->
                            D#sconf.revproxy),
            soptions = lkup(soptions, SL,
                            D#sconf.soptions),
-	   stats = lkup(stats, SL, D#sconf.stats),
-
+           stats = lkup(stats, SL, D#sconf.stats),
            fcgi_app_server_host = lkup(fcgi_app_server_host, SL, 
                                        D#sconf.fcgi_app_server_host),
-                            
            fcgi_app_server_port = lkup(fcgi_app_server_port, SL, 
                                        D#sconf.fcgi_app_server_port)}.
 
@@ -716,7 +714,7 @@ printversion() ->
     io:format("Yaws ~s~n", [yaws_generated:version()]),
     init:stop().
 
-%% our default arg rewriteer does's of cource nothing
+%% our default arg rewriter does of course nothing
 arg_rewrite(A) ->
     A.
 
@@ -768,7 +766,7 @@ is_prefix(_,_) ->
     false.
 
 
-%% Split a string of words seperated by Sep into a list of words and
+%% Split a string of words separated by Sep into a list of words and
 %% strip off white space.
 %%
 %% HTML semantics are used, such that empty words are omitted.
@@ -2165,7 +2163,7 @@ tmpdir() ->
 	    filename:join([home(), ".yaws"])
     end.
 
-%% This feature is useable together with 
+%% This feature is usable together with 
 %% privbind and authbind on linux
 
 home() ->
