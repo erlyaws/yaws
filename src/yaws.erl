@@ -39,7 +39,8 @@
          strip_spaces/1, strip_spaces/2,
          month/1, mk2/1, home/0,
          arg_rewrite/1, to_lowerchar/1, to_lower/1, funreverse/2, is_prefix/2,
-         split_sep/2, accepts_gzip/2, upto_char/2, deepmap/2,
+         split_sep/2, join_sep/2,
+         accepts_gzip/2, upto_char/2, deepmap/2,
          ticker/2, ticker/3]).
 
 -export([outh_set_status_code/1,
@@ -796,6 +797,15 @@ split_sep([Sep|Tail], Sep, AccW, AccL) ->
               [lists:reverse(drop_spaces(AccW))|AccL]);
 split_sep([C|Tail], Sep, AccW, AccL) ->
     split_sep(Tail, Sep, [C|AccW], AccL).
+
+
+%% Join strings with separator. Same as string:join in later
+%% versions of Erlang. Separator is expected to be a list.
+
+join_sep([], Sep) when is_list(Sep) ->
+    [];
+join_sep([H|T], Sep) ->
+    H ++ lists:append([Sep ++ X || X <- T]).
 
 
 %% header parsing

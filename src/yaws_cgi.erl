@@ -57,7 +57,7 @@ get_from_worker(Arg, WorkerPid) ->
         {failure, Reason} ->
             [{status, 500}, {html, io_lib:format("CGI failure: ~p", [Reason])}];
         {Headers, Data} ->
-            AllResps = lists:map(fun(X)->do_header(Arg, X, Data) end, Headers),
+            AllResps = lists:map(fun(X)-> do_header(Arg, X, Data) end, Headers),
             {ContentResps, Others} = filter2(fun iscontent/1, AllResps),
             {RedirResps, OtherResps} = filter2(fun isredirect/1, Others), 
             case RedirResps of
@@ -354,20 +354,21 @@ exeof(F) ->
     [$\., $/|lists:reverse(lists:takewhile(fun notslash/1, lists:reverse(F)))].
 
 
-do_header(_Arg, "Content-type: "++CT, {partial_data, Data}) ->
-    {streamcontent, CT, Data};
-do_header(_Arg, "Content-type: "++CT, {all_data, Data}) ->
-    {content, CT, Data};
-do_header(_Arg, "Content-Type: "++CT, {partial_data, Data}) ->
-    {streamcontent, CT, Data};
-do_header(_Arg, "Content-Type: "++CT, {all_data, Data}) ->
-    {content, CT, Data};
-do_header(_Arg, "Status: "++[N1,N2,N3|_], _) ->
-    {status, list_to_integer([N1,N2,N3])};
 do_header(_Arg, "HTTP/1."++[_,_,N1,N2,N3|_], _) ->
     {status, list_to_integer([N1,N2,N3])};
-do_header(_Arg, Line, _) ->
-    {header, Line}.   
+do_header(Arg, Header, Data) when is_list(Header) ->
+    [HdrName | HdrVal] = yaws:split_sep(Header, $:),
+    HdrNmParts = [yaws:to_lower(H) || H <- yaws:split_sep(HdrName, $-)],
+    HdrLower = yaws:join_sep(HdrNmParts, "-"),
+    do_header(Arg, {HdrLower, yaws:join_sep(HdrVal, ":"), Header}, Data);
+do_header(_Arg, {"content-type", CT, _}, {partial_data, Data}) ->
+    {streamcontent, CT, Data};
+do_header(_Arg, {"content-type", CT, _}, {all_data, Data}) ->
+    {content, CT, Data};
+do_header(_Arg, {"status", [N1,N2,N3|_], _}, _) ->
+    {status, list_to_integer([N1,N2,N3])};
+do_header(_Arg, {_, _, Line}, _) ->
+    {header, Line}.
 
 
 get_resp(WorkerPid) ->
