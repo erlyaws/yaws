@@ -2249,9 +2249,10 @@ deliver_403(CliSock, Req) ->
     deliver_xxx(CliSock, Req, 403).        % Forbidden
 
 deliver_405(CliSock, Req, Methods) ->
-    Methods_msg = lists:flatten(["<p>This resource allows ",
-                                 join([atom_to_list(M) || M <- Methods], ", "),
-                                 "</p>"]),
+    Methods_msg = lists:flatten(
+                    ["<p>This resource allows ",
+                     yaws:join_sep([atom_to_list(M) || M <- Methods], ", "),
+                     "</p>"]),
     deliver_xxx(CliSock, Req, 405, Methods_msg).
 
 deliver_416(CliSock, _Req, Tot) ->
@@ -3658,7 +3659,9 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
                                           "" ->
                                               "/";
                                           _ ->
-                                              "/" ++ join(PreSegments,"/") ++ "/"
+                                              "/" ++
+                                                  yaws:join_sep(PreSegments,"/")
+                                                  ++ "/"
                                       end;
                         _ ->
                             %%'floating' appmod mount.
@@ -3668,15 +3671,16 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
                                           "" ->
                                               "/";
                                           _ ->
-                                              "/" ++ join(PreSegments,"/") ++ 
-                                                  "/"
+                                              "/" ++
+                                                  yaws:join_sep(PreSegments,"/")
+                                                  ++ "/"
                                       end
                     end,
                     PathI = case PostSegments of
                                 [] ->
                                     "";
                                 _ ->
-                                    "/" ++ join(PostSegments,"/")
+                                    "/" ++ yaws:join_sep(PostSegments,"/")
                             end,
                     %%absence of RevFile tells us there was a trailing slash.
                     PathInf = case RevFile of
@@ -4249,14 +4253,6 @@ err_pre(R) ->
     io_lib:format("<pre> ~n~p~n </pre>~n", [R]).
 
 
-%%concatenate a list of strings using another string as a separator.
-%%e.g join(["usr","local","etc"],"/")   =  "usr/local/etc"
-%%
-join(List, Sep) ->
-    lists:foldl(fun(A, "") -> A; (A, Acc) -> Acc ++ Sep ++ A
-                end, "", List).
-
-
 %%mappath/3    (virtual-path to physical-path)
 %%- this returns physical path a URI would map to, taking into consideration 
 %% vdirs and assuming each path segment of the URI represents a folder 
@@ -4324,7 +4320,7 @@ vdirpath(SC, ARG, RequestPath) ->
                                   if length(Virt) > length(LongestSoFar) ->
                                           %%reassemble (because physical 
                                           %% path may have spaces)
-                                          Phys = join(PhysParts, " "),
+                                          Phys = yaws:join_sep(PhysParts, " "),
                                           
                                           {ReqSegs, {Virt, Phys}};
                                      true ->
