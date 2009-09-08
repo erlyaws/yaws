@@ -152,7 +152,7 @@ do_server_options_recv(S, Hdrs) ->
 
 sendfile_get() ->
     io:format("sendfile_get\n",[]),
-    L = lists:seq(1, 10),
+    L = lists:seq(1, 5),
     SELF = self(),
     K1 = lists:map(
              fun(_) ->
