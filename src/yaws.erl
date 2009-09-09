@@ -1986,23 +1986,26 @@ parse_auth(_) ->
     undefined.
 
 
-
 decode_base64([]) ->
     [];
-decode_base64([Sextet1,Sextet2,$=,$=|Rest]) ->
+decode_base64(Auth64) ->
+    decode_base64(Auth64, Acc).
+decode_base64([], Acc) ->
+    lists:reverse(Acc);
+decode_base64([Sextet1,Sextet2,$=,$=|Rest], Acc) ->
     Bits2x6=
         (d(Sextet1) bsl 18) bor
         (d(Sextet2) bsl 12),
     Octet1=Bits2x6 bsr 16,
-    [Octet1|decode_base64(Rest)];
-decode_base64([Sextet1,Sextet2,Sextet3,$=|Rest]) ->
+    decode_base64(Rest, [Octet1|Acc]);
+decode_base64([Sextet1,Sextet2,Sextet3,$=|Rest], Acc) ->
     Bits3x6=
         (d(Sextet1) bsl 18) bor
         (d(Sextet2) bsl 12) bor
         (d(Sextet3) bsl 6),
     Octet1=Bits3x6 bsr 16,
     Octet2=(Bits3x6 bsr 8) band 16#ff,
-    [Octet1,Octet2|decode_base64(Rest)];
+    decode_base64(Rest, [Octet2,Octet1|Acc]);
 decode_base64([Sextet1,Sextet2,Sextet3,Sextet4|Rest]) ->
     Bits4x6=
         (d(Sextet1) bsl 18) bor
@@ -2012,8 +2015,8 @@ decode_base64([Sextet1,Sextet2,Sextet3,Sextet4|Rest]) ->
     Octet1=Bits4x6 bsr 16,
     Octet2=(Bits4x6 bsr 8) band 16#ff,
     Octet3=Bits4x6 band 16#ff,
-    [Octet1,Octet2,Octet3|decode_base64(Rest)];
-decode_base64(_CatchAll) ->
+    decode_base64(Rest, [Octet3,Octet2,Octet1|Acc]);
+decode_base64(_CatchAll, _Acc) ->
     {error, bad_base64}.
 
 d(X) when X >= $A, X =<$Z ->
