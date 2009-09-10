@@ -1989,7 +1989,7 @@ parse_auth(_) ->
 decode_base64([]) ->
     [];
 decode_base64(Auth64) ->
-    decode_base64(Auth64, Acc).
+    decode_base64(Auth64, []).
 decode_base64([], Acc) ->
     lists:reverse(Acc);
 decode_base64([Sextet1,Sextet2,$=,$=|Rest], Acc) ->
@@ -2006,7 +2006,7 @@ decode_base64([Sextet1,Sextet2,Sextet3,$=|Rest], Acc) ->
     Octet1=Bits3x6 bsr 16,
     Octet2=(Bits3x6 bsr 8) band 16#ff,
     decode_base64(Rest, [Octet2,Octet1|Acc]);
-decode_base64([Sextet1,Sextet2,Sextet3,Sextet4|Rest]) ->
+decode_base64([Sextet1,Sextet2,Sextet3,Sextet4|Rest], Acc) ->
     Bits4x6=
         (d(Sextet1) bsl 18) bor
         (d(Sextet2) bsl 12) bor
