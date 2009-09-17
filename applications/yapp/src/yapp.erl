@@ -151,8 +151,8 @@ wait_for_yaws() ->  wait_for_yaws(20).
 wait_for_yaws(0) -> {error, timeout};
 wait_for_yaws(N) ->
     WA = application:which_applications(),
-    case [Yaws || {Yaws,_,_} <- WA, yaws =:= Yaws] of
-	[] ->
+    case lists:keysearch(yaws, 1, WA) of
+	false ->
 	    log(info, "Yapp starting but Yaws not ready - waiting 500 ms",[]),
 	    receive after 500 -> ok end, %% Give Yaws some time to settle own things
 	    wait_for_yaws(N-1);
