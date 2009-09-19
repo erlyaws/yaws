@@ -62,18 +62,18 @@ out(A) ->
 
        {p,[],"Pid can send data on the socket by calling:"},
 
-       box(" yaws_api:stream_process_deliver(Socket, Bin)"),
+       box(" yaws_api:stream_process_deliver(Socket, IoList)"),
 
-       {p,[],"where Bin is the binary data to be sent (all data must be sent as binaries). For chunked transfer, Pid must call:"},
+       {p,[],"where IoList is the data to be sent. For chunked transfer, Pid must call:"},
 
-       box(" yaws_api:stream_process_deliver_chunk(Socket, Bin)"),
+       box(" yaws_api:stream_process_deliver_chunk(Socket, IoList)"),
 
-       {p,[],"which tells yaws to use HTTP chunked transfer to send Bin. Applications using chunked transfer in this manner must always remember to end their data transfer by calling:"},
+       {p,[],"which tells yaws to use HTTP chunked transfer to send IoList. Applications using chunked transfer in this manner must always remember to end their data transfer by calling:"},
 
-       box(" yaws_api:stream_process_deliver_final_chunk(Socket, Bin)"),
+       box(" yaws_api:stream_process_deliver_final_chunk(Socket, IoList)"),
 
 
-       {p,[],"where Bin is a binary of length 0 or more. This creates the final HTTP chunk that the client uses to detect the end of the transfer."},
+       {p,[],"where IoList is an iolist of size 0 or more. This creates the final HTTP chunk that the client uses to detect the end of the transfer."},
 
        {p,[],"When Pid finishes sending data, or when it receives a {discard, YawsPid} message, it must call:"},
 

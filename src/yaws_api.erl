@@ -837,26 +837,24 @@ stream_chunk_end(YawsPid) ->
     YawsPid ! endofstreamcontent.
 
 %% This won't work for SSL for now
-stream_process_deliver(Sock, Data) ->
-    gen_tcp:send(Sock, Data).
+stream_process_deliver(Sock, IoList) ->
+    gen_tcp:send(Sock, IoList).
 
 %% This won't work for SSL for now either
-stream_process_deliver_chunk(Sock, Data) ->
-    Chunk = case size(Data) of
+stream_process_deliver_chunk(Sock, IoList) ->
+    Chunk = case erlang:iolist_size(IoList) of
                 0 ->
-                    stream_process_deliver_final_chunk(Sock, Data);
+                    stream_process_deliver_final_chunk(Sock, IoList);
                 S ->
-                    list_to_binary([yaws:integer_to_hex(S), "\r\n",
-                                    Data, "\r\n"])
+                    [yaws:integer_to_hex(S), "\r\n", IoList, "\r\n"]
             end,
     gen_tcp:send(Sock, Chunk).
-stream_process_deliver_final_chunk(Sock, Data) ->
-    Chunk = case size(Data) of
+stream_process_deliver_final_chunk(Sock, IoList) ->
+    Chunk = case erlang:iolist_size(IoList) of
                 0 ->
                     <<"0\r\n\r\n">>;
                 S ->
-                    list_to_binary([yaws:integer_to_hex(S), "\r\n",
-                                    Data, "\r\n0\r\n\r\n"])
+                    [yaws:integer_to_hex(S), "\r\n", IoList, "\r\n0\r\n\r\n"]
             end,
     gen_tcp:send(Sock, Chunk).
 

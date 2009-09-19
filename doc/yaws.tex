@@ -1465,18 +1465,19 @@ to \verb+Pid+:
 
 We call one of the following functions to send data:
 \begin{itemize}
-\item \verb+yaws_api:stream_process_deliver(Socket, Bin)+ sends binary
-  data \verb+Bin+ using socket \verb+Socket+ without chunking the data.
+\item \verb+yaws_api:stream_process_deliver(Socket, IoList)+ sends
+  data \verb+IoList+ using socket \verb+Socket+ without chunking the
+  data.
 
-\item \verb+yaws_api:stream_process_deliver_chunk(Socket, Bin)+ sends
-  binary data \verb+Bin+ using socket \verb+Socket+ but converts the
-  data into chunked transfer form before sending it.
+\item \verb+yaws_api:stream_process_deliver_chunk(Socket, IoList)+
+  sends data \verb+IoList+ using socket \verb+Socket+ but converts
+  the data into chunked transfer form before sending it.
 \end{itemize}
 
 Pids using chunked transfer must indicate the end of their transfer by
 calling the following function:
 \begin{itemize}
-\item \verb+yaws_api:stream_process_deliver_final_chunk(Socket, Bin)+
+\item \verb+yaws_api:stream_process_deliver_final_chunk(Socket, IoList)+
 \end{itemize}
 
 which delivers a special HTTP chunk to mark the end of the data

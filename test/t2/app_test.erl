@@ -16,6 +16,7 @@ start() ->
     test1(),
     test2(),
     test3(),
+    streamcontent_test(),
     sendfile_get().
 
 
@@ -23,12 +24,12 @@ test1() ->
     io:format("test1\n",[]),
     L = lists:seq(1, 100),
     SELF = self(),
-    Pids = lists:map(fun(I) -> 
+    Pids = lists:map(fun(I) ->
 			     spawn(fun() -> slow_client(I, SELF) end)
 		     end, L),
     ?line ok = allow_connects(Pids, 5),
     ?line ok = collect_pids(Pids).
-    
+
 
 collect_pids([]) ->
     ok;
@@ -49,7 +50,7 @@ allow_connects(Pids, 0) ->
 	    allow_connects(lists:delete(Pid, Pids), 1)
     end;
 allow_connects(Pids, I) ->
-    receive 
+    receive
 	{Pid, allow} ->
 	    Pid ! allow,
 	    allow_connects(Pids, I-1);
@@ -61,11 +62,11 @@ allow_connects(Pids, I) ->
 
 slow_client(I, Top) ->
     Top ! {self(), allow},
-    receive 
+    receive
 	allow ->
 	    ok
     end,
-    ?line {ok, C} = gen_tcp:connect(localhost, 8000, [{active, false}, 
+    ?line {ok, C} = gen_tcp:connect(localhost, 8000, [{active, false},
 						      {packet, http}]),
     Top ! {self(), connected},
     ?line ok = gen_tcp:send(C, "GET /1000.txt HTTP/1.1\r\n"
@@ -86,7 +87,7 @@ read_loop(C, I, Sz)  ->
 
 
 get_cont_len(C) ->
-    ?line {value, {http_header, _,_,_, LenStr}} = 
+    ?line {value, {http_header, _,_,_, LenStr}} =
 	lists:keysearch('Content-Length', 3, tftest:get_headers(C)),
     {ok, list_to_integer(LenStr)}.
 
@@ -116,12 +117,14 @@ blkget(I) ->
 
 test3() ->
     io:format("test3\n",[]),
-    ?line {ok, "200", _Headers, []} = ibrowse:send_req("http://localhost:8000", [], head),
+    ?line {ok, "200", _Headers, []} = ibrowse:send_req("http://localhost:8000",
+                                                       [], head),
     ok.
 
 server_options_test() ->
     io:format("server_options_test\n",[]),
-    {ok, S} = gen_tcp:connect("localhost", 8000, [{packet, raw}, list, {active, false}]),
+    {ok, S} = gen_tcp:connect("localhost", 8000, [{packet, raw}, list,
+                                                  {active, false}]),
     ok = gen_tcp:send(S, "OPTIONS * HTTP/1.1\r\nHost: localhost\r\n\r\n"),
     inet:setopts(S, [{packet, http}]),
     ?line ok = server_options_recv(S),
@@ -157,9 +160,9 @@ sendfile_get() ->
     K1 = lists:map(
              fun(_) ->
                      spawn(fun() ->
-                                   ?line {ok, "200", _Headers, _} = 
+                                   ?line {ok, "200", _Headers, _} =
                                        ibrowse:send_req(
-                                         "http://localhost:8000/1000.txt", 
+                                         "http://localhost:8000/1000.txt",
                                          [], get, [], [], ?SENDFILE_GET_TIMEOUT),
                                    SELF ! {self(), k1, done}
                            end)
@@ -168,9 +171,9 @@ sendfile_get() ->
     K2 = lists:map(
              fun(_) ->
                      spawn(fun() ->
-                                   ?line {ok, "200", _Headers, _} = 
+                                   ?line {ok, "200", _Headers, _} =
                                        ibrowse:send_req(
-                                         "http://localhost:8000/2000.txt", 
+                                         "http://localhost:8000/2000.txt",
                                          [], get, [], [], ?SENDFILE_GET_TIMEOUT),
                                    SELF ! {self(), k2, done}
                            end)
@@ -179,9 +182,9 @@ sendfile_get() ->
     K3 = lists:map(
              fun(_) ->
                      spawn(fun() ->
-                                   ?line {ok, "200", _Headers, _} = 
+                                   ?line {ok, "200", _Headers, _} =
                                        ibrowse:send_req(
-                                         "http://localhost:8000/3000.txt", 
+                                         "http://localhost:8000/3000.txt",
                                          [], get, [], [], ?SENDFILE_GET_TIMEOUT),
                                    SELF ! {self(), k3, done}
                            end)
@@ -191,12 +194,13 @@ sendfile_get() ->
     collect(K1, 1, k1),
     collect(K2, 1, k2),
     collect(K3, 1, k3),
+    io:format("\n",[]),
     ok.
 
 collect([], _, _) ->
     ok;
 collect(L, Count, Tag) ->
-    receive 
+    receive
         {Pid, Tag, done} ->
             io:format("(~p ~p)", [Tag, Count]),
             collect(lists:delete(Pid, L), Count+1, Tag)
@@ -204,3 +208,12 @@ collect(L, Count, Tag) ->
             io:format("TIMEOUT ~p\n~p~n",[process_info(self()), L]),
             ?line exit(timeout)
     end.
+
+
+streamcontent_test() ->
+    io:format("streamcontent_test\n",[]),
+    Uri = "http://localhost:8000/streamtest",
+    ?line {ok, "200", Headers, Body} = ibrowse:send_req(Uri, [], get),
+    ?line "chunked" = proplists:get_value("Transfer-Encoding", Headers),
+    ?line Body = "this is an iolist",
+    ok.

@@ -2,12 +2,12 @@ include ../support/include.mk
 
 .PHONY: all test debug conf clean
 
-# 
-all:	conf setup app_test.beam
+#
+all:	conf setup app_test.beam streamtest.beam
 	@echo "all ok"
 
 
-# invoke as 
+# invoke as
 # TEST=test3 make test
 # or just make test to run all
 
@@ -30,9 +30,12 @@ test:	conf start
 
 
 debug:
-	$(ERL) $(PA) 
+	$(ERL) $(PA)
 
-conf:	stdconf
+conf:
+	cat ../conf/stdconf.conf | \
+	../../scripts/Subst %YTOP% $(YTOP) | \
+	perl -pe 's/^(\s*appmods =.+)/\1 streamtest/' > yaws.conf
 
 clean:	tclean
 	-rm -rf localhost:8000 logs yaws.conf
