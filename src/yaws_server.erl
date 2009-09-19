@@ -2465,9 +2465,34 @@ deliver_dyn_file(CliSock, _Bin, _Fd, [], ARG,_UT,_N) ->
 
 stream_loop_send(Priv, CliSock, Timeout) ->
     {ok, FlushTimer} = timer:send_after(300, flush_timer),
-    {ok, TimeoutTimer} = timer:send_after(Timeout, timeout_timer),
-    stream_loop_send(Priv, CliSock, Timeout,
-                     FlushTimer, TimeoutTimer).
+    case Timeout of
+	infinity ->
+	    untimed_stream_loop_send(Priv, CliSock, FlushTimer);
+	_ ->
+	    {ok, TimeoutTimer} = timer:send_after(Timeout, timeout_timer),
+	    stream_loop_send(Priv, CliSock, Timeout,
+			     FlushTimer, TimeoutTimer)
+    end.
+
+untimed_stream_loop_send(Priv, CliSock, FlushTimer) ->
+    receive
+        {streamcontent, Cont} ->
+            P = send_streamcontent_chunk(Priv, CliSock, Cont),
+            untimed_stream_loop_send(P, CliSock, FlushTimer) ;
+        {streamcontent_with_ack, From, Cont} ->        % acknowledge after send
+            P = send_streamcontent_chunk(Priv, CliSock, Cont),
+            From ! {self(), streamcontent_ack},
+            untimed_stream_loop_send(P, CliSock, FlushTimer) ;
+        endofstreamcontent ->
+            cancel_t(FlushTimer, flush_timer),
+            end_streaming(Priv, CliSock);
+        timeout_timer  ->
+            cancel_t(FlushTimer, flush_timer),
+            erlang:error(stream_timeout);
+        flush_timer  ->
+            P = sync_streamcontent(Priv, CliSock),
+            untimed_stream_loop_send(P, CliSock, FlushTimer)
+    end.
 
 cancel_t(T, Msg) ->
     timer:cancel(T),
