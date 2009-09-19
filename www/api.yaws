@@ -11,7 +11,7 @@ out(A) ->
 <p>
 Here we describe the API avalable to Yaws applications. 
 First and foremost, the entire regular erlang API is available, this
-include mnesia ans all other erlang applications that are part of the
+include mnesia and all other erlang applications that are part of the
 regular erlang system.
 <p>
 Here we describe the functions available in the yaws_api module 

@@ -8,7 +8,7 @@
 -module(yaws_api).
 -author('klacke@hyber.org').
 
-%% -compile(expot_all).
+%% -compile(export_all).
 
 
 -include("../include/yaws.hrl").
@@ -34,6 +34,8 @@
 -export([get_line/1, mime_type/1]).
 -export([stream_chunk_deliver/2, stream_chunk_deliver_blocking/2,
          stream_chunk_end/1]).
+-export([stream_process_deliver/2, stream_process_deliver_chunk/2,
+         stream_process_deliver_final_chunk/2, stream_process_end/2]).
 -export([new_cookie_session/1, new_cookie_session/2, new_cookie_session/3, 
          cookieval_to_opaque/1, request_url/1,
          print_cookie_sessions/0,
@@ -834,7 +836,33 @@ stream_chunk_deliver_blocking(YawsPid, Data) ->
 stream_chunk_end(YawsPid) ->
     YawsPid ! endofstreamcontent.
 
+%% This won't work for SSL for now
+stream_process_deliver(Sock, Data) ->
+    gen_tcp:send(Sock, Data).
 
+%% This won't work for SSL for now either
+stream_process_deliver_chunk(Sock, Data) ->
+    Chunk = case size(Data) of
+                0 ->
+                    stream_process_deliver_final_chunk(Sock, Data);
+                S ->
+                    list_to_binary([yaws:integer_to_hex(S), "\r\n",
+                                    Data, "\r\n"])
+            end,
+    gen_tcp:send(Sock, Chunk).
+stream_process_deliver_final_chunk(Sock, Data) ->
+    Chunk = case size(Data) of
+                0 ->
+                    <<"0\r\n\r\n">>;
+                S ->
+                    list_to_binary([yaws:integer_to_hex(S), "\r\n",
+                                    Data, "\r\n0\r\n\r\n"])
+            end,
+    gen_tcp:send(Sock, Chunk).
+
+stream_process_end(Sock, YawsPid) ->
+    gen_tcp:controlling_process(Sock, YawsPid),
+    YawsPid ! endofstreamcontent.
 
 %% Return new cookie string
 new_cookie_session(Opaque) ->

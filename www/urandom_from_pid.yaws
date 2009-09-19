@@ -1,0 +1,44 @@
+
+<erl>
+
+out(A) ->
+    %% Create a random number
+    {_A1, A2, A3} = now(),
+    random:seed(erlang:phash(node(), 100000),
+                erlang:phash(A2, A3),
+                A3),
+    Sz = random:uniform(100000),
+
+    Pid = spawn(fun() ->
+                        %% Read random junk
+                        S="dd if=/dev/urandom count=1 bs=" ++
+                            integer_to_list(Sz) ++ " 2>/dev/null",
+                        P = open_port({spawn, S}, [binary,stream, eof]),
+                        rec_loop(A#arg.clisock, P)
+                end),
+
+    [{header, {content_length, Sz}},
+     {streamcontent_from_pid, "application/octet-stream", Pid}].
+
+
+rec_loop(Sock, P) ->
+    receive
+        {discard, YawsPid} ->
+            yaws_api:stream_process_end(Sock, YawsPid);
+        {ok, YawsPid} ->
+            rec_loop(Sock, YawsPid, P)
+    end,
+    port_close(P),
+    exit(normal).
+
+rec_loop(Sock, YawsPid, P) ->
+    receive
+        {P, {data, BinData}} ->
+            yaws_api:stream_process_deliver(Sock, BinData),
+            rec_loop(Sock, YawsPid, P);
+        {P, eof} ->
+            yaws_api:stream_process_end(Sock, YawsPid)
+    end.
+
+</erl>
+
