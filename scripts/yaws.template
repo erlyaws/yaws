@@ -43,7 +43,8 @@ help()
     echo ""
     echo "       Auxiliary flags for the daemon: "
     echo "            --id Id             --  set system id"
-    echo "            --debug             --  debug mode "
+    echo "            --debug             --  debug mode"
+    echo "            --nodebug           --  turn off debug mode"
     echo "            --conf File         --  set config file"
     echo "            --tracetraf         --  trace traffic"
     echo "            --tracehttp         --  trace http traffic"
@@ -164,6 +165,8 @@ while [ $# -gt 0 ]
           call_wait_started=6;;
       -d|--debug)
           debug=" -boot start_sasl -yaws debug ";;
+      --nodebug)
+          debug="";;
       -t|--tracetraf)
           trace=" -yaws trace traffic ";;
       -T|--tracehttp)
