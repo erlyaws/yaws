@@ -3,12 +3,12 @@
 yaws \- yet another webserver
 .SH SYNOPSIS
 .B yaws
-[\fIOPTIONS\fR] 
+[\fIOPTIONS\fR]
 .SH DESCRIPTION
 .\" Add any additional description here
 .PP
 Yaws is fast lightweight webserver. It can run as daemon or
-in interactive mode where it is possible to directly interact 
+in interactive mode where it is possible to directly interact
 with the webserver. Yaws is particularly good at generating
 dynamic content. See the user docs for more information on that topic.
 
@@ -45,6 +45,11 @@ switch.
 Debug mode. This will produce some auxiliary error output for some
 error conditions. It will also start the otp sasl lib for additional
 error printouts.
+.TP
+\fB\--nodebug\fR
+Non-debug mode. This is useful for running interactively via the
+\FI-i\fR option but without incurring the performance penalties of
+debug mode.
 
 .TP
 \fB\--conf file\fR
@@ -73,7 +78,7 @@ in the log directory.
 
 .TP
 \fB\--traceout\fR
-When yaws is put into trace mode using either --tracetraf or --tracehttp, traces are written to files. If we provide the --traceout flag, the trace will also be written to stdout. 
+When yaws is put into trace mode using either --tracetraf or --tracehttp, traces are written to files. If we provide the --traceout flag, the trace will also be written to stdout.
 
 .TP
 \fB\--trace\fR
@@ -110,19 +115,19 @@ Pass STRING as an additional argument to the "erl" program.
 
 .TP
 \fB\--id ID\fR
-This flag sets the id. If we're starting a daemon (or an interactive 
-system) it gives the Yaws server the identity ID. This means that the 
+This flag sets the id. If we're starting a daemon (or an interactive
+system) it gives the Yaws server the identity ID. This means that the
 server will write all internal files into the directory
-$HOME/.yaws/ID. 
+$HOME/.yaws/ID.
 
-Yaws also creates a file called 
+Yaws also creates a file called
 ${VARDIR}/run/yaws/ctl-${ID} which contains the portnumber the daemon
 is listening on for control request by the control command such
 as "yaws --hup" etc.
 
 If we're invoking a control command which should perform some
 control function on the daemon, we may have to give the --id flag also
-to the control command. If we don't do this the control command 
+to the control command. If we don't do this the control command
 may interact with the wrong daemon due to finding the wrong "ctl" file.
 
 The daemon may also optionally specify the "id" in the yaws.conf
@@ -135,11 +140,11 @@ from the "outside" while it is running.
 
 .TP
 \fB\--hup [--id ID]\fR
-HUP the daemon. This forces the daemon to reread the configuration file. 
+HUP the daemon. This forces the daemon to reread the configuration file.
 It also makes
-the daemon empty all its internal content caches. 
+the daemon empty all its internal content caches.
 Hence when updating the doc root,
-HUPing the daemon is the fastest way to see the content updates. 
+HUPing the daemon is the fastest way to see the content updates.
 .TP
 \fB\--stop [--id id]\fR
 Stop the daemon (called id)
@@ -155,13 +160,13 @@ Query a running yaws daemon for its status, and print it.
 \fB--stats [--id id]\fR
 Query a running yaws daemon for its statistics, and print it.
 .TP
-\fB--load Modules [--id id]\fR 
+\fB--load Modules [--id id]\fR
 Try to (re)load erlang modules into a running daemon.  This is useful
 after modifying appmods or modules used by scripts.
 
 .TP
-\fB--debug-dump  [--id id]\fR 
-Produce a debug dump on stdout. In particular this code lists what 
+\fB--debug-dump  [--id id]\fR
+Produce a debug dump on stdout. In particular this code lists what
 we refer to as suspicious processes. I.e. processes that might be
 hanging or processes that are "large" - hardcoded to 40k words.
 
@@ -194,7 +199,7 @@ output version information and exit
 \fBHOME\fR
 Is used to determine where we write the temporary files. By default
 all tmp files end up in $HOME/.yaws. This includes the JIT files
-that are the result of processed .yaws files and also the so called 
+that are the result of processed .yaws files and also the so called
 control file that is used by the daemon to write the port number
 to which it is listening for control commands such as "yaws --status"
 
@@ -203,12 +208,12 @@ find the control file so that we know where to connect to.
 
 .TP
 \fBYAWSHOME\fR
-Can be used to override the HOME variable. This is useful when we 
+Can be used to override the HOME variable. This is useful when we
 for example are running yaws under port binding programs such as
 authpriv.
 
 It's useful by distros that don't want Yaws to write any files
-ever in the HOME directory of root. 
+ever in the HOME directory of root.
 
 
 
