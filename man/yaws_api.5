@@ -13,7 +13,7 @@ be used inside yaws pages.
 
 .PP
 Each chunk of yaws code is executed while the yaws page is
-being delivered from the server. We give a very simple example here 
+being delivered from the server. We give a very simple example here
 to show the basic idea. Imagine the following HTML code:
 
 \fI
@@ -44,7 +44,7 @@ We have the following relevant record definitions:
 
 -record(arg, {
           clisock,        %% the socket leading to the peer client
-          client_ip_port, %% {ClientIp, ClientPort} tuple 
+          client_ip_port, %% {ClientIp, ClientPort} tuple
           headers,        %% headers
           req,            %% request
           clidata,        %% The client data (as a binary in POST requests)
@@ -60,14 +60,14 @@ We have the following relevant record definitions:
           appmod_prepath, %% path in front of: <appmod><appmoddata>
           pathinfo        %% Set to 'd/e' when calling c.yaws for the request
                           %% http://some.host/a/b/c.yaws/d/e
-         }).              
+         }).
 .fi
 \fR
 
 The headers argument is also a record:
 \fI
 .nf
-            
+
 -record(headers, {
           connection,
           accept,
@@ -107,7 +107,7 @@ will \fBnot\fR be parsed and searched for <erl> tags.
 \fBpre_ssi_files(DocRoot, ListOfFiles) ->
 Server side include of pre indented code.  The data in Files
 will be included but contained in a <pre> tag. The data will be
-htmlized. 
+htmlized.
 
 .TP
 \fBpre_ssi_string(String)\fR
@@ -132,7 +132,7 @@ Sets a cookie to the browser.
 This function can be used to search for a cookie that was previously
 set by \fBsetcookie/2-6\fR. For example if we set a cookie
 as \fByaws_api:setcookie("sid",SomeRandomSid) \fR, then on subsequent requests
-from the browser we can call: 
+from the browser we can call:
 \fBfind_cookie("sid",(Arg#arg.headers)#headers.cookie)\fR
 
 The function returns [] if no cookie was found, otherwise the actual cookie
@@ -142,8 +142,8 @@ is returned as a string.
 .TP
 \fBredirect(Url\fR
 This function generates a redirect to the browser.
-It will clear any previously set headers. So to generate 
-a redirect \fBand\fR set a cookie, we need to set the cookie after 
+It will clear any previously set headers. So to generate
+a redirect \fBand\fR set a cookie, we need to set the cookie after
 the redirect as in:
 \fI
 .nf
@@ -163,7 +163,7 @@ out(Arg) ->
 If we want to issue a redirect to ourselves, this function
 is useful. It returns a record \fI#redir_self{}\fR defined in
 \fIyaws_api.hrl\fR. The record contains fields to construct
-a URL to ourselves.       
+a URL to ourselves.
 \fI
 .nf
 
@@ -193,25 +193,61 @@ Returns the mime type as defined by the extension of FileName
 
 .TP
 \fBstream_chunk_deliver(YawsPid, Data)\fR
-When a yaws function needs to deliver chunks of data which it gets 
+When a yaws function needs to deliver chunks of data which it gets
 from a process. The other process can call this function to deliver
 these chunks. It requires the \fBout/1\fR function to return the
 value \fB{streamcontent, MimeType, FirstChunk}\fR to work.
 YawsPid is the process identifier of the yaws process delivering the original
-.yaws file. That is self() in the yaws code. 
+.yaws file. That is self() in the yaws code.
 The Pid must typically be passed (somehow) to the producer of the stream.
 
 .TP
 \fBstream_chunk_deliver_blocking(YawsPid, Data)\fR
-A synchronous version of the above function. This syncronous version must always
-be used when the producer of the stream is faster than the consumer. 
-This is usually the case since the client is the WWW browser.
+A synchronous version of the above function. This synchronous version
+must always be used when the producer of the stream is faster than the
+consumer. This is usually the case since the client is the WWW browser.
 
 .TP
 \fBstream_chunk_end(YawsPid)\fR
 When the process discussed above is done delivering data, it must call
 this function to let the yaws content delivering process finish up
 the HTTP transaction.
+
+.TP
+\fBstream_process_deliver(Socket, IoList)\fR
+Yaws allows application processes to deliver data directly to the
+client. The application tells yaws about such a process by returning
+\fB{streamcontent_from_pid, MimeType, Pid}\fR from its \fBout/1\fR
+function. In this case, \fIPid\fR uses the
+\fBstream_process_deliver/2\fR function to deliver data to the
+client. The application gets \fISocket\fR from \fIArg#arg.clisock\fR,
+and \fIIoList\fR is the data to be sent to the client.
+
+.TP
+\fBstream_process_deliver_chunk(Socket, IoList)\fR
+Same as above but delivers \fIIoList\fR using HTTP chunked transfer
+format. \fIIoList\fR must have a size greater than zero. The
+application process delivering the data will have had to have make
+sure that the HTTP headers of the response indicate chunked transfer
+mode, either by ensuring no Content-Length header is set or by
+specifically setting the Transfer-Encoding header to chunked.
+
+.TP
+\fBstream_process_deliver_final_chunk(Socket, IoList)\fR
+If the application process delivering data to the client uses chunked
+transfer mode, it must call this to deliver the final chunk of the
+transfer. This tells yaws to create a special final chunk in the
+format required by the HTTP specification (RFC 2616). \fIIoList\fR may
+be empty, but if its size is greater than zero, that data will be
+sent as a separate chunk before the final chunk.
+
+.TP
+\fBstream_process_end(Socket, YawsPid)\fR
+Application processes delivering data directly to clients must call
+this function to inform yaws that they've finished using
+\fISocket\fR. The \fIYawsPid\fR argument will have been passed to the
+process earlier when yaws sent it a message telling it to proceed with
+data delivery.
 
 .TP
 \fBparse_query(Arg)\fR
@@ -222,7 +258,7 @@ part of the URL.
 .TP
 \fBqueryvar(Arg, VarName)\fR
 This function is automatically included from yaws_api in all
- .yaws pages. It is used to search for a variable in the 
+ .yaws pages. It is used to search for a variable in the
 querypart of the url. Returns {ok, Val} or undefined.
 If a variable is defined multiple times, the function may also
 return \fI{Val1, ....}\fR.
@@ -236,7 +272,7 @@ It will return a {Key, Value} list of the items set by the browser.
 .TP
 \fBpostvar(Arg, VarName)\fR
 This function is automatically included from yaws_api in all
- .yaws pages. It is used to search for a variable in the 
+ .yaws pages. It is used to search for a variable in the
 POSTed data from the client. Returns {ok, Val} or undefined.
 If a variable is defined multiple times, the function may also
 return \fI{Val1, ....}\fR.
@@ -252,7 +288,7 @@ and queryvar/2 if it is a GET request from the client.
 \fBparse_multipart_post(Arg)\fR
 
 If the browser has set the Content-Type header to the value
-"multipart/form-data", which is the case when the browser 
+"multipart/form-data", which is the case when the browser
 wants to upload a file to the server the following happens:
 
 
@@ -267,7 +303,7 @@ should return {get_more, Cont, User_state} where User_state might
 usefully be a File Descriptor.
 
 
-The Res value is a list of either: 
+The Res value is a list of either:
 \fB{header, Header}\fR | \fB{part_body, Binary}\fR | \fB{body, Binary}\fR
 
 
@@ -275,7 +311,7 @@ Example usage could be:
 \fI
 .nf
  <erl>
- 
+
  out(A) ->
         case yaws_api:parse_multipart_post(A) of
              {cont, Cont, Res} ->
@@ -285,7 +321,7 @@ Example usage could be:
                     handle_res(A, Res),
                     {html, f("<pre>Done </pre>",[])}
         end.
- 
+
  handle_res(A, [{head, Name}|T]) ->
       io:format("head:~p~n",[Name]),
       handle_res(A, T);
@@ -297,7 +333,7 @@ Example usage could be:
       handle_res(A, T);
  handle_res(A, []) ->
       io:format("End_res~n").
- 
+
  </erl>
 .fi
 \fR
@@ -316,17 +352,17 @@ such as user name and password
 As above, but allows to set a session specific time-out value,
 overriding the system specified time-out value.
 
-.TP 
+.TP
 \fBnew_cookie_session(Opaque, TTL, CleanupPid)\fR
-As above, but also sends a message 
+As above, but also sends a message
 \fI{yaws_session_end, Reason, Cookie, Opaque}\fR to the provided CleanuPid where
-Reason can be either of \fItimeout\fR or \fInormal\fR. The \fICookie\fR 
+Reason can be either of \fItimeout\fR or \fInormal\fR. The \fICookie\fR
 is the HTTP cookie as returned by \fInew_session()\fR and the Opaque
 is the user provided Opaque parameter to \fInew_session()\fR.
 The purpose of the feature is to cleanup resources assigned to the session.
 
 
-.TP 
+.TP
 \fBcookieval_to_opaque(CookieVal)\fR
 
 .TP
@@ -344,12 +380,12 @@ The purpose of the feature is to cleanup resources assigned to the session.
 \fBsetconf(Gconf, Groups)\fR
 This function is intended for embedded mode in yaws. It makes it possible
 to load a yaws configuration from another data source than /etc/yaws.conf, such
-as a database. 
+as a database.
 If yaws is started with the environment \fI{embedded, true}\fR, yaws will
 start with an empty default configuration, and wait for some other
 program to execute a \fIsetconf/2\fR
 The Gconf is a \fI#gconf{}\fR record and the Group variable is
-a list of lists of \fI#sconf{}\fR records. Each sublist must 
+a list of lists of \fI#sconf{}\fR records. Each sublist must
 contain \fI#sconf{}\fR records with the same IP/Port listen address.
 To create a suitable initial #gconf{} record see the code in
 yaws_config:make_default_gconf/2. Especially the \fIyaws_dir\fR parameter
@@ -361,7 +397,7 @@ is important to get right.
 Decode url-encoded string. A URL encoded string is a string where
 all alfa numeric characters and the the character _ are preserved
 and all other characters are encode as "%XY" where X and Y are the
-hex values of the least respective most significant 4 bits in the 8 bit 
+hex values of the least respective most significant 4 bits in the 8 bit
 character.
 
 .TP
@@ -389,27 +425,27 @@ Parse URL in a string, returns a #url record
 Takes a #url record a formats the Url as a string
 
 .TP
-\fBcall_cgi(Arg, Scriptfilename)\fR 
+\fBcall_cgi(Arg, Scriptfilename)\fR
 Calls an executable CGI script,
 given by its full path.  Used to make `.yaws' wrappers for CGI
 programs.  This function usually returns \fIstreamcontent\fR.
 
 .TP
-\fBcall_cgi(Arg, Exefilename, Scriptfilename)\fR 
+\fBcall_cgi(Arg, Exefilename, Scriptfilename)\fR
 Like before, but
 calls \fIExefilename\fR to handle the script.  The file name of the
 script is handed to the executable via a CGI meta variable.
 
 .TP
-\fBcall_fcgi_responder(Arg)\fR 
+\fBcall_fcgi_responder(Arg)\fR
 Calls a FastCGI responder.
 The address and port of the FastCGI application server are taken
-from the server configuration (see yaws.conf). 
+from the server configuration (see yaws.conf).
 Used to make `.yaws' wrappers for FastCGI responders.
 Returns the same return values as out/1 (see below).
 
 .TP
-\fBcall_fcgi_responder(Arg, Options)\fR 
+\fBcall_fcgi_responder(Arg, Options)\fR
 Same as above, but Options overrides the defaults from the server
 configuration:
 
@@ -420,16 +456,16 @@ Option -- one of the following:
 .fi
 \fR
 
-\fB{app_server_host, string() | ip_address()}\fR 
+\fB{app_server_host, string() | ip_address()}\fR
 The hostname or the IP address of the FastCGI application server.
 
-\fB{app_server_port, 0..65535}\fR 
+\fB{app_server_port, 0..65535}\fR
 The TCP port number of the FastCGI application server.
 
-\fB{path_info, string()}\fR 
+\fB{path_info, string()}\fR
 Override default pathinfo in Arg#arg.pathinfo.
 
-\fB{extra_env, ExtraEnv}\fR 
+\fB{extra_env, ExtraEnv}\fR
 Override default pathinfo in Arg#arg.pathinfo.
 
 \fI
@@ -441,19 +477,19 @@ Value = string()
 .fi
 \fR
 
-\fB{trace_protocol, boolean()}\fR 
+\fB{trace_protocol, boolean()}\fR
 Enable or disable tracing of FastCGI protocol messages as info
 log messages.
 
-\fB{log_app_error, boolean()}\fR 
+\fB{log_app_error, boolean()}\fR
 Enable or disable logging of application error messages: output
 to stderr and non-zero exit value.
 
 .TP
-\fBcall_fcgi_authorizer(Arg) -> {allowed, Variables} | {denied, Out}\fR 
+\fBcall_fcgi_authorizer(Arg) -> {allowed, Variables} | {denied, Out}\fR
 Calls a FastCGI authorizer.
 The address and port of the FastCGI application server are taken
-from the server configuration (see yaws.conf). 
+from the server configuration (see yaws.conf).
 Used to make `.yaws' wrappers for FastCGI authorizers.
 Variables contains the values of the variables returned by the FastCGI
 application server in the "Variable-XXX: YYY" headers.
@@ -468,14 +504,14 @@ Value = string()
 \fR
 
 .TP
-\fBcall_fcgi_authorizer(Arg, Options)\fR 
+\fBcall_fcgi_authorizer(Arg, Options)\fR
 Same as above, but Options overrides the defaults from the server
 configuration. See call_fcgi_responder/2 above for a description
 of Options.
 
 .TP
 \fBdir_listing(Arg)\fR
-Perform a directory listing. Can be used in special directories 
+Perform a directory listing. Can be used in special directories
 when we don't want to turn on dir listings for the entire server.
 Always returns ok.
 
@@ -486,12 +522,12 @@ of the server.
 
 .TP
 \fB{html, DeepList}\fB
-This assumes that DeepList is formatted HTML code. 
+This assumes that DeepList is formatted HTML code.
 The code will be inserted in the page.
 
 .TP
 \fB{ehtml, Term}\fR
-This will transform the erlang term Term into a 
+This will transform the erlang term Term into a
 stream of HTML content. The basic syntax of Term
 is
 
@@ -509,15 +545,15 @@ Body  = EHTML
 
 
 For example, \fI{p, [], "Howdy"}\fR expands into
-"<p>Howdy</p> and 
+"<p>Howdy</p> and
 
 \fI
 .nf
-{form, [{action, "a.yaws"}], 
+{form, [{action, "a.yaws"}],
    {input, [{type,text}]}}
 
 .fi
-\fR 
+\fR
 
 expands into
 
@@ -529,12 +565,12 @@ expands into
 .fi
 \fR
 
-It may be more convenient to generate erlang tuples 
+It may be more convenient to generate erlang tuples
 than plain html code.
 
 .TP
 \fB{content, MimeType, Content}\fR
-This function will make the web server generate 
+This function will make the web server generate
 different content than HTML. This return value is only allowed
 in a yaws file which has only one <erl> </erl> part and no
 html parts at all.
@@ -543,7 +579,7 @@ html parts at all.
 .TP
 \fB{streamcontent, MimeType, FirstChunk}\fR
 This return value plays the same role as the \fIcontent\fR return
-value above. 
+value above.
 
 However it makes it possible to stream data to the client
 if the yaws code doesn't have access to all the data in one go. (Typically
@@ -553,7 +589,7 @@ if a file is very large or if data arrives from back end servers on the network.
 \fB{streamcontent_with_timeout, MimeType, FirstChunk, Timeout}\fR
 Similar to above, but with an explicit timeout. The deafult timeout
 is 30 secs. I.e if the application fails to deliver data to the
-Yaws process, the streaming will stop. This is often not the 
+Yaws process, the streaming will stop. This is often not the
 desired behaviour in Comet/Ajax applications.  It's possible to
 provide 'infinity' as timeout.
 
@@ -563,7 +599,7 @@ Accumulates a HTTP header. The trailing CRNL which is supposed
 to end all HTTP headers must NOT be added. It is added by the server.
 The following list of headers are given special treatment.
 
-\fI{connection, What}\fR  
+\fI{connection, What}\fR
 
 This sets the connection header. If \fIWhat\fR is the special value
 \fI"close"\fR, the connection will be closed once the yaws page is delivered
@@ -658,7 +694,7 @@ accumulating the HTTP header \fIH\fR for page \fIPage\fR.
 Server side include File and  macro expansion in File.
 Each occurrence of a string, say "xyz", inside File which
 is inside Delimiters is replaced with the corresponding
-value in Bindings. 
+value in Bindings.
 
 Example:
 Delimiter = %%
@@ -671,16 +707,16 @@ The occurrence of %%xyz%% in File will be replaced with "Dingbat"
 in the Server side included output.
 
 The {ssi, File, Delimiter, Bindings} statement can also
-occur inside a deep ehtml structure. 
+occur inside a deep ehtml structure.
 
 
 .TP
 \fB{bindings, [{Key1, Value2}, {Key2, Value2} .....]}\fR
 Establish variable bindings that can be used in the page.
 
-All bindings can then be used in the rest of yaws code 
-(in HTML source and within erl tags). 
-In HTML source %%Key%% is expanded to Value and within erl 
+All bindings can then be used in the rest of yaws code
+(in HTML source and within erl tags).
+In HTML source %%Key%% is expanded to Value and within erl
 tags \fIyaws_api:binding(Key)\fR can be used to extract Value
 and \fIyaws_api:binding_exists(Key)\fR can be used to check for
 the existence of a binding.
