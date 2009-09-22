@@ -1590,11 +1590,6 @@ handle_request(CliSock, ARG, N) ->
                                                QueryString, PP, N);
                         {false_403, _, _} ->
                             deliver_403(CliSock, Req);
-                        {false, _, _} ->
-                            UT = #urltype{type = unauthorized,
-                                          path = DecPath
-                                         },
-                            handle_ut(CliSock, ARG, UT, N);
                         {{false, AuthMethods, Realm}, _, _} ->
                             UT = #urltype{
                               type = {unauthorized, AuthMethods, Realm},
@@ -1644,7 +1639,9 @@ is_auth(ARG, Req_dir, H, [{Auth_dir, Auth_methods}|T], {Ret, Auth_headers}) ->
 		    {true, User};
 		false ->
 		    L = Auth_methods#auth.headers,
-		    is_auth(ARG, Req_dir, H, T, {false, L ++ Auth_headers});
+		    Realm = Auth_methods#auth.realm,
+		    is_auth(ARG, Req_dir, H, T, {{false, Auth_methods, Realm},
+						 L ++ Auth_headers});
                 {false, Realm} ->
                     L = Auth_methods#auth.headers,
                     is_auth(ARG, Req_dir, H, T, {{false, Auth_methods, Realm},
@@ -1663,10 +1660,11 @@ handle_auth(ARG, _Auth_H, #auth{realm = Realm,
 
 handle_auth(ARG, Auth_H, Auth_methods = #auth{mod = Mod}, Ret) when Mod /= [] ->
     case catch Mod:auth(ARG, Auth_methods) of
-	{'EXIT', _Reason} ->
+	{'EXIT', Reason} ->
             L = ?F("authmod crashed ~n~p:auth(~p, ~n ~p) \n"
+		   "Reason: ~p~n"
                    "Stack: ~p~n",
-                   [Mod, ARG, Auth_methods,
+		   [Mod, ARG, Auth_methods, Reason,
                     erlang:get_stacktrace()]),
             handle_crash(ARG, L),
             deliver_accumulated(ARG#arg.clisock),
@@ -1702,9 +1700,6 @@ handle_auth(ARG, {User, Password, OrigString},
 	    handle_auth(ARG, {User, Password, OrigString},
                         Auth_methods#auth{pam = false}, Ret)
     end;
-
-
-
 
 handle_auth(ARG, {User, Password, OrigString},
             Auth_methods = #auth{users = Users}, Ret) when Users /= [] ->
@@ -1895,30 +1890,6 @@ handle_ut(CliSock, ARG, UT = #urltype{type = {unauthorized, Auth, Realm}}, N) ->
              end,
     DeliverFun = fun (A) -> finish_up_dyn_file(A, CliSock) end,
     deliver_dyn_part(CliSock, 0, "appmod", N, ARG, UT, OutFun, DeliverFun);
-
-
-handle_ut(CliSock, ARG, UT = #urltype{type = unauthorized}, N) ->
-    Req = ARG#arg.req,
-    H = ARG#arg.headers,
-    SC = get(sc),
-    yaws:outh_set_dyn_headers(Req, H, UT),
-
-    %% outh_set_dyn headers sets status to 200 by default
-    %% so we need to set it 401
-    yaws:outh_set_status_code(401),
-    Outmod = get_unauthorized_outmod(UT#urltype.path, SC#sconf.authdirs,
-                                     SC#sconf.errormod_401),
-
-    deliver_dyn_part(CliSock,
-		     0,
-		     "appmod",
-		     N,
-		     ARG,
-		     UT,
-		     fun(A)->Outmod:out(A)
-		     end,
-		     fun(A)->finish_up_dyn_file(A, CliSock)
-		     end);
 
 handle_ut(CliSock, ARG, UT = #urltype{type = error}, N) ->
     Req = ARG#arg.req,

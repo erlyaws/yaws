@@ -12,7 +12,8 @@
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 
--export([out404/3,
+-export([out401/3,
+	 out404/3,
          out404/1,
 	 out/1,
          crashmsg/3]).
@@ -41,8 +42,20 @@ out404(Arg, GC, SC) ->
 %% The default error 401 error delivery module
 %% This function can be used to generate
 %% a special page on 401's (it doesn't even have to be a 401)
+out401(_Arg, _Auth, _Realm) ->
+    {ehtml,
+     [{html,[],
+       [
+	{body, [],
+	 [{h1,[], "401 authentication needed"}
+	 ]
+	}
+       ]
+      }
+     ]
+    }.
 
-
+%% Deprecated, out401/3 will be used
 out(_Arg) ->
      {ehtml,
       [{html,[], 

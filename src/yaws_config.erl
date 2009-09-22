@@ -94,118 +94,83 @@ add_yaws_soap_srv(_GC) ->
 
 
 add_yaws_auth(SCs) ->
-    lists:map(
-      fun(SC) ->
-              SC#sconf{authdirs = setup_auth(SC)}
-      end, SCs).
+    [SC#sconf{authdirs = setup_auth(SC)} || SC <- SCs].
 
 
 %% We search and setup www authenticate for each directory
 %% specified as an auth directory or containing a .yaws_auth file. 
 %% These are merged with server conf.
-
-setup_auth(SC) ->
-    Auth_dirs0 = get_yaws_auth_dirs(SC#sconf.docroot),
-
-    %% create new auth records
-    Auth_dirs1 = [#auth{dir = [X]} || X <- Auth_dirs0],
-    Auth_dirs2 = Auth_dirs1 ++ SC#sconf.authdirs,
-    
-    %% load the .yaws_auth files and parse them
-    Auth_dirs3 = load_yaws_auth_file(SC, Auth_dirs2, []),
-
-    start_pam(Auth_dirs3),
-    Auth_dirs3.
+setup_auth(#sconf{docroot = Docroot, authdirs = Authdirs}) ->
+    Authdirs1 = load_yaws_auth_from_docroot(Docroot),
+    Authdirs2 = load_yaws_auth_from_authdirs(Authdirs, Docroot, Authdirs1),
+    Authdirs3 = [{Dir, A} || A = #auth{dir = [Dir]} <- Authdirs2], % A->{Dir, A}
+    start_pam(Authdirs3),
+    Authdirs3.
 
     
-
-%% Call get_yaws_auth_dirs/3 with default values and then
-%% strip leading docroot from dir
-get_yaws_auth_dirs(undefined) ->
+load_yaws_auth_from_docroot(undefined) ->
     [];
-get_yaws_auth_dirs(Docroot) ->
-    case file:list_dir(Docroot) of
-        {ok, FileList} ->
-            Auth_dirs = get_yaws_auth_dirs(Docroot ++ "/", FileList, []),
-            Len = string:len(Docroot),
-            [string:sub_string(X, Len+1) || X <- Auth_dirs];
-        _ ->
-            []
-    end.
+load_yaws_auth_from_docroot(Docroot) ->
+    Fun = fun (Path, Acc) ->
+		  %% Strip Docroot and then filename
+		  SP  = string:sub_string(Path, length(Docroot)+1),
+		  Dir = filename:dirname(SP),
+		  case load_yaws_auth_file(Path, #auth{dir = [Dir]}) of
+		      {ok, Auth} -> [Auth| Acc];
+		      _          -> Acc
+		  end
+	  end,
+    filelib:fold_files(Docroot, "^.yaws_auth$", true, Fun, []).
+
+
+load_yaws_auth_from_authdirs([], _, Acc) ->
+    lists:reverse(Acc);
+load_yaws_auth_from_authdirs([Auth = #auth{dir = [D]}| Rest], Docroot, Acc) ->
+    Dir     = case D of
+		  "/" ++ Rest -> Rest;	% strip leading slash
+		  _           -> D
+	      end,
+    Path    = filename:join([Docroot, Dir, ".yaws_auth"]),
+    NewAuth = case catch load_yaws_auth_file(Path, Auth) of
+		  {ok, A} -> A;
+		  _       -> Auth
+	      end,
+    load_yaws_auth_from_authdirs(Rest, Docroot, [NewAuth| Acc]);
+load_yaws_auth_from_authdirs([{_Dir, Auth}| Rest], Docroot, Acc) ->
+    %% handle {Dir, A} by stripping it
+    load_yaws_auth_from_authdirs([Auth| Rest], Docroot, Acc);
+load_yaws_auth_from_authdirs([_| Rest], Docroot, Acc) ->
+    load_yaws_auth_from_authdirs(Rest, Docroot, Acc).
     
 
-%% Bottom of recursion, we have searched all the entries in this directory
-get_yaws_auth_dirs(_Docroot, [], AuthDirs) ->
-    AuthDirs;
-
-%% Recursivly search the docroot for any dir that contains .yaws_auth 
-%% and return it
-get_yaws_auth_dirs(Docroot, [File|T], AuthDirs0) ->
-    Path = string:concat(Docroot, File),
-    case filelib:is_dir(Path) of
-	true ->
-            case file:list_dir(Path) of
-                {ok, FileList} ->
-                    AuthDirs1 = get_yaws_auth_dirs(Path ++ "/", FileList, 
-                                                   AuthDirs0),
-                    get_yaws_auth_dirs(Docroot, T, AuthDirs1);
-                _ ->
-                    []
-            end;
-	false ->
-	    case File of
-		".yaws_auth" ->
-		    get_yaws_auth_dirs(Docroot, T, [Docroot|AuthDirs0]);
-		_ ->
-		    get_yaws_auth_dirs(Docroot, T, AuthDirs0)
-	    end
+load_yaws_auth_file(Path, Auth) ->
+    case file:consult(Path) of
+	{ok, TermList} ->
+	    error_logger:info_msg("Reading .yaws_auth ~s~n", [Path]),
+	    parse_yaws_auth_file(TermList, Auth);
+	{error, enoent} ->
+	    {error, enoent};
+	Error ->
+	    error_logger:format("Bad .yaws_auth file ~s ~p~n", [Path, Error]),
+	    Error
     end.
+    
 
 start_pam([]) ->
     ok;
-
+start_pam([{_Dir, #auth{pam = false}}|T]) ->
+    start_pam(T);
 start_pam([{_Dir, A}|T]) ->
-    PamStarted = whereis(yaws_pam) /= undefined,
-    if
-        A#auth.pam == false ->
-            ok;
-        PamStarted == false ->
+    case whereis(yaws_pam) of
+	undefined ->	% pam not started
             Spec = {yaws_pam, {yaws_pam, start_link, 
                                [yaws:to_list(A#auth.pam),undefined,undefined]},
                     permanent, 5000, worker, [yaws_pam]},
-            spawn(fun() ->
-                          supervisor:start_child(yaws_sup, Spec)
-                  end);
-        true ->
-            ok
-    end,
-    start_pam(T).
+	    spawn(fun() -> supervisor:start_child(yaws_sup, Spec) end);
+	_ ->
+	    start_pam(T)
+    end.
 
-
-
-load_yaws_auth_file(_SC, [], Acc) ->
-    Acc;
-
-%% Load the .yaws_auth file if it exists and parse it, 
-%% adding the result to the record
-load_yaws_auth_file(SC, [A|T], Acc) ->
-    [Dir] = A#auth.dir,
-    FN0=[SC#sconf.docroot, [$/|Dir], [$/|".yaws_auth"]],
-    FN1 = remove_multiple_slash(lists:flatten(FN0)),
-    A2 = case file:consult(FN1) of
-             {ok, TermList} ->
-                 error_logger:info_msg("Reading .yaws_auth ~s~n",[FN1]),
-                 Auth = parse_yaws_auth_file(TermList, A),
-                 [Dir1] = Auth#auth.dir,
-                 {Dir1, Auth};
-             {error, enoent} ->
-                 {Dir, A};
-             _Err ->
-                 error_logger:format("Bad .yaws_auth file in dir ~p~n", 
-                                     [Dir]),
-                 {Dir, A}
-         end,
-    load_yaws_auth_file(SC, T, [A2|Acc]). 
 
 parse_yaws_auth_file([], Auth0) ->
     Realm = Auth0#auth.realm,
@@ -242,17 +207,18 @@ parse_yaws_auth_file([{User, Password}|T], Auth0)
     parse_yaws_auth_file(T, Auth0#auth{users = Users}).
 
 
+%% Not used anymore
 %% Replace all "//" and "///" with "/"
 %% Might be a better way to do this
-remove_multiple_slash(L) ->
-    remove_multiple_slash(L, []).
+%% remove_multiple_slash(L) ->
+%%     remove_multiple_slash(L, []).
 
-remove_multiple_slash([], Acc)->
-    lists:reverse(Acc);
-remove_multiple_slash("//" ++ T, Acc) ->
-    remove_multiple_slash([$/|T], Acc);
-remove_multiple_slash([H|T], Acc) ->    
-    remove_multiple_slash(T, [H|Acc]).
+%% remove_multiple_slash([], Acc)->
+%%     lists:reverse(Acc);
+%% remove_multiple_slash("//" ++ T, Acc) ->
+%%     remove_multiple_slash([$/|T], Acc);
+%% remove_multiple_slash([H|T], Acc) ->
+%%     remove_multiple_slash(T, [H|Acc]).
 
 %% This is the function that arranges sconfs into
 %% different server groups
@@ -1794,4 +1760,3 @@ delete_sconf(SC) ->
 
 update_gconf(GC) ->
     ok = gen_server:call(yaws_server, {update_gconf, GC}, infinity).
-

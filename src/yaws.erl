@@ -18,7 +18,8 @@
 -export([start/0, stop/0, hup/1, restart/0, modules/0, load/0]).
 -export([start_embedded/1, start_embedded/2, start_embedded/3,
          start_embedded/4,
-         add_server/2]). 
+	 add_server/2,
+	 create_gconf/2, create_sconf/2]).
 -export([new_ssl/0,
          ssl_keyfile/1, ssl_keyfile/2,
          ssl_certfile/1, ssl_certfile/2,
@@ -138,14 +139,27 @@ start_embedded(DocRoot, SL, GL, Id) when is_list(DocRoot),is_list(SL),is_list(GL
     ok = application:set_env(yaws, embedded, true),
     ok = application:set_env(yaws, id, Id),
     application:start(yaws),
-    GC = setup_gconf(GL, yaws_config:make_default_gconf(false, Id)),
-    SC = setup_sconf(DocRoot, #sconf{}, SL),
+    GC = create_gconf(GL, Id),
+    SC = create_sconf(DocRoot, SL),
     yaws_config:add_yaws_soap_srv(GC),
     yaws_api:setconf(GC, [[SC]]).
 
 add_server(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
-    SC = setup_sconf(DocRoot, #sconf{}, SL),
-    yaws_config:add_sconf(SC).
+    SC  = create_sconf(DocRoot, SL),
+    %% Change #auth in authdirs to {Dir, #auth} if needed
+    Fun = fun
+	      (A = #auth{dir = [Dir]}, Acc) -> [{Dir, A}| Acc];
+	      (A, Acc)                      -> [A| Acc]
+	  end,
+    Authdirs = lists:foldr(Fun, [], SC#sconf.authdirs),
+    yaws_config:add_sconf(SC#sconf{authdirs = Authdirs}).
+
+create_gconf(GL, Id) when is_list(GL) ->
+    setup_gconf(GL, yaws_config:make_default_gconf(false, Id)).
+
+create_sconf(DocRoot, SL) when is_list(DocRoot), is_list(SL) ->
+    setup_sconf(DocRoot, #sconf{}, SL).
+
 
 %%% Access functions for the SSL record.
 new_ssl()             -> #ssl{}.
