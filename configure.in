@@ -8,6 +8,7 @@ dnl work out who the cpu, vendor and OS are
 AC_CANONICAL_SYSTEM
 AC_DEFINE_UNQUOTED(CPU_VENDOR_OS, "$target")
 
+AC_ERLANG_NEED_ERL
 AC_PATH_PROG(ERL, erl)
 AC_PATH_PROG(ERLC, erlc)
 ERLBINDIR=`dirname "$ERL"` ; ERLBINDIR=`dirname "$ERLBINDIR"`/lib/erlang/bin
@@ -76,8 +77,8 @@ AC_DEFUN([BT_ERL_LIB_VSN],
 ])dnl
 
 
-dnl 
-dnl I keep the cugwin dll code in case I later learn how to
+dnl
+dnl I keep the cygwin dll code in case I later learn how to
 dnl compile a linked in driver on windows using gcc
 dnl
 
@@ -88,7 +89,7 @@ case "$target_os" in
            ERL_DLL_LIB="${ERLDIR}/usr/lib/erl_dll.lib"
            AC_SUBST(ERL_DLL_LIB)
         ;;
-        *)        
+        *)
               ERLDIR=`awk -F= '/ROOTDIR=/ { print [$]2; exit; }' $ERL`;;
     esac
 
@@ -123,7 +124,7 @@ EOF
             LD_SHARED="$CC -shared"
             DLL=dll
             DLL_LIBS="-lc \"$ERL_DLL_LIB\""
-        
+
 
         EXE=.exe
         AC_SUBST(EXE)
@@ -228,15 +229,31 @@ case "$target_os" in
                     AC_SUBST(BSDI)
                     ;;
            esac
-           LD_SHARED="ld -Bshareable"          
+           LD_SHARED="ld -Bshareable"
            AC_SUBST(LD_SHARED)
            FPIC=-fpic
            AC_SUBST(FPIC)
            ;;
          *darwin*)
            AC_CHECK_LIB([c],[sendfile],[HAVE_SENDFILE=true])
-           CFLAGS="$CFLAGS -I/usr/include/pam"
-           LD_SHARED="$CC -bundle -fPIC -flat_namespace -undefined suppress"
+           case "$target_os" in
+               darwin10*)
+                   AC_LANG(Erlang)
+                   AC_RUN_IFELSE(
+                       [AC_LANG_PROGRAM([],[dnl
+                                   halt(case erlang:system_info(wordsize) of
+                                       8 -> 0; 4 -> 1 end)])],
+	               [AC_MSG_NOTICE(found 64-bit Erlang)
+                           CBIT=-m64],
+	               [AC_MSG_NOTICE(found 32-bit Erlang)
+                           CBIT=-m32])
+                   ;;
+               *)
+                   CBIT=""
+                   ;;
+           esac
+           CFLAGS="$CFLAGS $CBIT -I/usr/include/pam"
+           LD_SHARED="$CC $CBIT -bundle -fPIC -flat_namespace -undefined suppress"
            AC_SUBST(LD_SHARED)
            FPIC=-fPIC
            AC_SUBST(FPIC)
