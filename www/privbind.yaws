@@ -7,7 +7,7 @@ out(A) ->
 
 <div id="entry">
 
-<h1>Binding to priviliged ports</h1>
+<h1>Binding to privileged ports</h1>
 
 <p>
   A common misfeature found on UN*X operating systems is the 
@@ -92,7 +92,7 @@ $ sudo YAWSHOME=/tmp/abc privbind -u klacke /home/klacke/bin/yaws \
 
 <p>
   Yet another option is to is to install fdsrv which is a standalone 
-  program that has the suid bit set, binds priviliged ports and passes 
+  program that has the suid bit set, binds privileged ports and passes 
   the filedescriptor to yaws. I have made a package out of the jungerl 
   code that can be easily installed just through the usual cycle of 
   make && make install The code is at

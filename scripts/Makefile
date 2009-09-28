@@ -41,7 +41,7 @@ yaws.conf:
 	@echo PREFIX is $(PREFIX)
 	cat yaws.conf.template | \
 		./Subst %yawsdir% "$(PREFIX)/lib/yaws"  | \
-		./Subst %logdir% "/var/log/yaws"  | \
+		./Subst %logdir% "$(PREFIX)/var/log/yaws"  | \
 		./Subst %vardir% "$(VARDIR)"  | \
 		./Subst %host% `hostname`  | \
 		./Subst %port% 80  | \

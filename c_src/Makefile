@@ -60,4 +60,4 @@ hashtable.$(OBJ):	hashtable.c
 epam.$(OBJ):	epam.c
 	$(CC) -c $(CFLAGS) $<
 ../priv/epam: epam.$(OBJ)
-	$(CC) -o $@ $< -lpam
+	$(CC) -o $@ $(CFLAGS) $< -lpam
