@@ -38,7 +38,7 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <div class="%%json_intro%%"> <a href="/json_intro.yaws">AJAX/Json RPC</a></div>
 <div class="%%appmods%%"> <a href="/appmods.yaws">Appmods</a> </div>
 <div class="%%arg%%"> <a href="/arg.yaws">Arg</a> </div>
-<div class="%%privbind%%"> <a href="/privbind.yaws">Binding to priviliged ports</a></div>
+<div class="%%privbind%%"> <a href="/privbind.yaws">Binding to privileged ports</a></div>
 <div class="%%bindings%%"> <a href="/bindings.yaws">Bindings</a> </div>
 <div class="%%cgi%%"> <a href="/cgi.yaws">CGI</a></div>
 <div class="%%session%%"> <a href="/session.yaws">Cookie sessions</a>   </div>
