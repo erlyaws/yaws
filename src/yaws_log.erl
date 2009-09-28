@@ -476,30 +476,22 @@ fmt_ip(HostName) ->
 
 
 fmtnow() ->
-    {{Year, Month, Day}, {Hour, Min, Sec}} = calendar:local_time(),
-    [fill_zero(Day,2),"/",yaws:month(Month),"/",integer_to_list(Year),":",
-     fill_zero(Hour,2),":",fill_zero(Min,2),":",fill_zero(Sec,2)," ",zone()].
+    {{Year, Month, Date}, {Hour, Min, Sec}} = 
+        calendar:now_to_local_time(now()),
+    io_lib:format("[~2..0w/~s/~4..0w:~2..0w:~2..0w:~2..0w ~s]",
+                  [Date,yaws:month(Month),Year, Hour, Min, Sec, zone()]).
 
 zone() ->
     Time = erlang:universaltime(),
     LocalTime = calendar:universal_time_to_local_time(Time),
     DiffSecs = calendar:datetime_to_gregorian_seconds(LocalTime) - 
         calendar:datetime_to_gregorian_seconds(Time),
-    zone((DiffSecs/3600)*100).
+    zone(DiffSecs div 3600, (DiffSecs rem 3600) div 60).
 
 %% Ugly reformatting code to get times like +0000 and -1300
 
-zone(Val) when Val < 0 ->
-    [$-|fill_zero(trunc(abs(Val)), 4)];
-zone(Val) when Val >= 0 ->
-    [$+|fill_zero(trunc(Val), 4)].
+zone(Hr, Min) when Hr < 0; Min < 0 ->
+    io_lib:format("-~2..0w~2..0w", [abs(Hr), abs(Min)]);
+zone(Hr, Min) when Hr >= 0, Min >= 0 ->
+    io_lib:format("+~2..0w~2..0w", [Hr, Min]).
 
-fill_zero(N, Width) ->
-    left_fill(N, Width, $0).
-
-left_fill(N, Width, Fill) when is_integer(N) ->
-    left_fill(integer_to_list(N), Width, Fill);
-left_fill(N, Width, _Fill) when length(N) >= Width ->
-    N;
-left_fill(N, Width, Fill) ->
-    left_fill([Fill|N], Width, Fill).
