@@ -215,21 +215,3 @@ compute_new_value(PrevValue, NewData) ->
         Data when is_list(NewData) ->
             PrevValue ++ Data
     end.
-
-%%% Example Usage
-%%% -module(my_yaws_controller).
-%%% -export([out/1]).
-%%%  
-%%% out(Arg) ->
-%%%      Options = [no_temp_file],
-%%%      case yaws_multipart:read_multipart_form(Arg, Options) of
-%%%              {done, Params} -> 
-%%%                    io:format("Params : ~p",[Params]),
-%%%                    [{filename, FileName},{value,FileContent}] = dict:find("my_file", Params),
-%%%                   AnotherParam = dict:find("another_param", Params);
-%%%                   % do something with FileName, FileContent and AnotherParam
-%%%               {error, Reason} ->
-%%%                    io:format("Error reading multipart form: ~s", [Reason]);
-%%%               Other -> Other
-%%%       end
-%%% .
