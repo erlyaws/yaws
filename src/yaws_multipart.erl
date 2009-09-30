@@ -1,9 +1,8 @@
 -module(yaws_multipart).
-
--include("yaws.hrl").
--include("yaws_api.hrl").
-
 -export([read_multipart_form/2]).
+
+-include("../include/yaws.hrl").
+-include("../include/yaws_api.hrl").
 
 -record(upload, {
           fd,
@@ -16,7 +15,7 @@
           running_file_size = 0,
           max_file_size,
           no_temp_file,
-          temp_dir = "/tmp",
+          temp_dir = yaws:tmpdir("/tmp"),
           temp_file
          }).
 
@@ -40,8 +39,7 @@ read_options([Option|Rest], State) ->
                        true = filelib:is_dir(Dir),
                        State#upload{temp_dir = Dir}
                end,
-    read_options(Rest, NewState)
-        .
+    read_options(Rest, NewState).
 
 multipart(A, State) ->
     Parse = yaws_api:parse_multipart_post(A),
@@ -76,30 +74,31 @@ addFileChunk(_A, [], State) ->
 
 addFileChunk(A, [{head, {_Name, Opts}}|Res], State ) ->
     S1 = close_previous_param(State),
-    S2 = lists:foldl(fun({filename, Fname0}, RunningState) ->
-                             case create_temp_file(State) of
-                                 [undefined, undefined] ->
-                                     %% values will be stored in memory as
-                                     %% dictated by state#upload.no_temp_file
-                                     RunningState#upload{
-                                       filename            = Fname0,
-                                       param_running_value = undefined,
-                                       running_file_size   = 0};
-                                 [Fname, Fd] ->
-                                     RunningState#upload{
-                                       fd                  = Fd,
-                                       filename            = Fname0,
-                                       temp_file           = Fname,
-                                       param_running_value = undefined,
-                                       running_file_size   = 0}
-                             end;
-                        ({name, ParamName}, RunningState) ->
-                             RunningState#upload{
-                               param_name          = ParamName,
-                               param_running_value = undefined}
-                     end,
-                     S1,
-                     Opts),
+    S2 = lists:foldl(
+           fun({filename, Fname0}, RunningState) ->
+                   case create_temp_file(State) of
+                       [undefined, undefined] ->
+                           %% values will be stored in memory as
+                           %% dictated by state#upload.no_temp_file
+                           RunningState#upload{
+                             filename            = Fname0,
+                             param_running_value = undefined,
+                             running_file_size   = 0};
+                       [Fname, Fd] ->
+                           RunningState#upload{
+                             fd                  = Fd,
+                             filename            = Fname0,
+                             temp_file           = Fname,
+                             param_running_value = undefined,
+                             running_file_size   = 0}
+                   end;
+              ({name, ParamName}, RunningState) ->
+                   RunningState#upload{
+                     param_name          = ParamName,
+                     param_running_value = undefined}
+           end,
+           S1,
+           Opts),
     addFileChunk(A,Res,S2);
 
 addFileChunk(A, [{body, Data}|Res], State) when State#upload.fd /= undefined ->
@@ -118,32 +117,33 @@ addFileChunk(A, [{body, Data}|Res], State) ->
     Check    = check_param_size(State, NewSize),
     case Check of
         ok ->
-            NewState = case State#upload.param_running_value of
-                           undefined ->
-                               State#upload{param_running_value = Data};
-                           PrevValue ->
-                               NewData = compute_new_value(PrevValue, Data),
-                               State#upload{param_running_value = NewData}
-                       end,
+            NewState =
+                case State#upload.param_running_value of
+                    undefined ->
+                        State#upload{param_running_value = Data};
+                    PrevValue ->
+                        NewData = compute_new_value(PrevValue, Data),
+                        State#upload{param_running_value = NewData}
+                end,
             addFileChunk(A, Res, NewState#upload{running_file_size = NewSize});
         Error={error, _Reason} ->
             Error
-    end
-        .
+    end.
 
 create_temp_file(State) ->
     case State#upload.no_temp_file of
         undefined ->
-            FilePath = case State#upload.fixed_filename of
-                           undefined ->
-                               {A, B, C} = now(),
-                               FileName = "yaws_"++ integer_to_list(A) ++
-                                           "_" ++ integer_to_list(B) ++
-                                           "_" ++ integer_to_list(C),
-                               filename:join([State#upload.temp_dir, FileName]);
-                           Filename ->
-                               Filename
-                       end,
+            FilePath =
+                case State#upload.fixed_filename of
+                    undefined ->
+                        {A, B, C} = now(),
+                        FileName = "yaws_"++ integer_to_list(A) ++
+                            "_" ++ integer_to_list(B) ++
+                            "_" ++ integer_to_list(C),
+                        filename:join([State#upload.temp_dir, FileName]);
+                    Filename ->
+                        Filename
+                end,
             {ok,Fd} = file:open(FilePath, [write,binary]),
             [FilePath, Fd];
         true ->
@@ -188,11 +188,10 @@ close_previous_param(State = #upload{param_name = ParamName}) ->
 
 compute_new_size(State, Data) ->
     case Data of
-        undefined -> State#upload.running_file_size;
-        _Bin when is_binary(Data) ->
-            State#upload.running_file_size + byte_size(Data);
-        _Str when is_list(Data) ->
-            State#upload.running_file_size + length(Data)
+        undefined ->
+            State#upload.running_file_size;
+        _ ->
+            State#upload.running_file_size + iolist_size(Data)
     end.
 
 
