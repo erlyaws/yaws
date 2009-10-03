@@ -17,12 +17,7 @@ out(A) ->
                ],
          [{input, [{type, submit}, {value, "Upload"}] ,[]},
           {input, [{type,file}, {width, "50"}, {name, "foo"}], []}
-         ]},
-        {br,[],[]},
-        {hr,[],[]},
-        {p, [], ["You can also find a more extensive example in ",
-                 {a, [{href, "code.yaws?file=/yaws_multipart.erl"}],
-                  "yaws_multipart.erl"}, "."]}]}}},
+         ]}]}}},
      {ssi, "END2",[],[]}].
 
 </erl>

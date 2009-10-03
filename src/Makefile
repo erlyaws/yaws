@@ -41,7 +41,8 @@ MODULES=yaws \
 	yaws_appmod_fcgi \
 	yaws_sendfile yaws_sendfile_compat \
 	yaws_sup_restarts \
-	yaws_stats
+	yaws_stats \
+	yaws_multipart
 
 
 

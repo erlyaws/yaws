@@ -102,7 +102,7 @@
 -export([sconf_to_srvstr/1, 
          redirect_host/2, redirect_port/1,
          redirect_scheme_port/1, redirect_scheme/1,
-         tmpdir/0, split_at/2,
+         tmpdir/0, tmpdir/1, split_at/2,
          id_dir/1, ctl_file/1]).
          
          
@@ -2164,6 +2164,8 @@ redirect_scheme_port(SC) ->
     {Scheme, PortPart}.
 
 tmpdir() ->
+    tmpdir(filename:join([home(), ".yaws"])).
+tmpdir(DefaultTmpDir) ->
     case os:type() of
         {win32,_} ->
             case os:getenv("TEMP") of
@@ -2187,7 +2189,7 @@ tmpdir() ->
                     PathTEMP
             end;
         _ ->
-	    filename:join([home(), ".yaws"])
+	    DefaultTmpDir
     end.
 
 %% This feature is usable together with 

@@ -7,9 +7,6 @@
     <a href="code.yaws?file=/upload.yaws">here in file upload.yaws</a>
   </p>
 
-  <p>A more extensive example is <a href="code.yaws?file=/yaws_multipart.erl">
-      available here</a>.
-  </p>
 <erl>
 
 
@@ -38,6 +35,7 @@ err() ->
 multipart(A, State) ->
     Parse = yaws_api:parse_multipart_post(A),
     case Parse of
+        [] -> ok;
         {cont, Cont, Res} ->
             case addFileChunk(A, Res, State) of
                 {done, Result} ->
