@@ -1,0 +1,25 @@
+Edit he openssl.cfg here - especially the part
+where we define a set of subjectAltName
+
+[sslserver]
+subjectAltName                  = @aliases
+
+[aliases]
+DNS.1 = bla.com
+DNS.2 = super.bla.com
+
+
+
+
+
+Create a new CA using
+
+# /usr/lib/ssl/misc/CA.pl -newca
+
+Create a CSR 
+
+# openssl req -new -config ./openssl.cnf -newkey rsa:1024 -nodes -keyout yaws.ppk -out yaws.csr
+
+Sign the csr
+
+# openssl ca -config ./openssl.cnf -extensions sslserver -in yaws.csr -out yaws-cert.pem
