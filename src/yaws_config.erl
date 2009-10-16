@@ -245,14 +245,22 @@ validate_groups([H|T]) ->
     end.
 
 validate_group(List) ->
-    %% first, max one ssl per group
-    case lists:filter(fun(SC) -> 
-                              SC#sconf.ssl /= undefined 
-                      end, List) of
-        L when length(L) > 1 ->
-            throw({error, ?F("Max one ssl server per IP: ~p", 
-                             [(hd(L))#sconf.servername])});
-        _ ->
+    %% all ssl servers with the same IP must share the same ssl  configuration
+    %% check if one ssl server in the group
+    case lists:any(fun(SC) -> SC#sconf.ssl  /= undefined end,List) of 
+	true ->
+            [SC0|SCs] = List,
+            %% check if all servers in the group have the same ssl configuration
+            case lists:filter(
+                   fun(SC) -> SC#sconf.ssl /= SC0#sconf.ssl end,SCs) of
+                L when length(L) > 1 ->
+                    throw({error, ?F("SSL server per IP must share the "
+                                     "same certificate : ~p", 
+                                     [(hd(L))#sconf.servername])});
+                _ ->
+                    ok
+            end;
+	_ -> 
             ok
     end,
     %% second all servernames in a group must be unique

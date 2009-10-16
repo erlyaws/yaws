@@ -718,19 +718,22 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             New = acceptor(GS2),
             gserv_loop(GS2, Ready2, 0, New);
         {check_cert_changed, From} ->
-            Changed = case GS#gs.ssl of
-                          ssl ->
-                              [SC] = GS#gs.group,
-                              CertInfo = GS#gs.certinfo,
-                              case certinfo(SC#sconf.ssl) of
-                                  CertInfo ->
-                                      no;
-                                  _Other ->
-                                      yes
-                              end;
-                          nossl ->
-                              no
-                      end,
+            Changed = 
+                case GS#gs.ssl of
+                    ssl ->
+                        CertInfo = GS#gs.certinfo,			
+			case lists:any(
+                               fun(SC) ->  
+                                       certinfo(SC#sconf.ssl) =/= CertInfo end,
+                               GS#gs.group) of
+                            true ->
+                                yes;
+                            false ->
+                                no
+                        end;
+                    nossl ->
+                        no
+                end,
             if
                 Changed == no ->
                     From ! {self(), no},
@@ -1009,7 +1012,7 @@ aloop(CliSock, GS, Num) ->
         {Req0, H0} when Req0#http_request.method /= bad_request ->
             {Req, H} = fix_abs_uri(Req0, H0),
             ?Debug("{Req, H} = ~p~n", [{Req, H}]),
-            SC = pick_sconf(GS#gs.gconf, H, GS#gs.group, SSL),
+            SC = pick_sconf(GS#gs.gconf, H, GS#gs.group),
             ?Debug("SC: ~s", [?format_record(SC, sconf)]),
             ?TC([{record, SC, sconf}]),
             ?Debug("Headers = ~s~n", [?format_record(H, headers)]),
@@ -1153,20 +1156,9 @@ comp_sname(Hname, Sname) ->
         hd(string:tokens(yaws:to_lower(Sname), ":")).
 
 
-pick_sconf(GC, H, [SC|_Group], ssl) ->
-    case comp_sname(H#headers.host, SC#sconf.servername) of
-        true ->
-            SC;
-        false when ?gc_pick_first_virthost_on_nomatch(GC)  ->
-            SC;
-        false ->
-            yaws_debug:format("Drop req since ~p =/ ~p \n",
-                              [H#headers.host, SC#sconf.servername]),
-            exit(normal)
-    end;
 
 
-pick_sconf(GC, H, Group, nossl) ->
+pick_sconf(GC, H, Group) ->
     case H#headers.host of
         undefined when ?gc_pick_first_virthost_on_nomatch(GC) ->
             hd(Group);

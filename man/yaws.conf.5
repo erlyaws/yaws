@@ -169,7 +169,8 @@ set it to true. Default is true.
 This feature makes it possible to bind to ports < 1024 even when
 we're not running as root. It requires the Jungerl package called fd_server
 to be properly installed. The feature doesn't  work with SSL. Default is false.
-
+The use of fdsrv is not encouraged, see 
+http://yaws.hyber.org/privbind.yaws
 
 .TP
 \fB subconfig = File \fR
@@ -182,8 +183,7 @@ Load all config file in specified directory.
 
 .SH SERVER PART
 Yaws can virthost several webservers on the same ip address as well
-as several webservers on different ip addresses. The one limitation here is
-that there can be only one server with ssl enabled per each individual ip address.
+as several webservers on different ip addresses. This includes SSL servers.
 .pp
 Each virtual host is defined within a matching pair of \fB<server ServerName>\fR
 and \fB</server>\fR. The ServerName will be the name of the webserver.
@@ -424,6 +424,15 @@ the name inside <server Name> in certain NAT scenarios. Rarely used feature.
 .TP
 \fB <ssl>  .... </ssl> \fR
 This begins and ends an SSL configuration for this server.
+It's possible to virthost several SSL servers on the same IP
+given that they all share the same certificate configuration.
+In general it is complicated to virthost several SSL servers on
+the same IP address since the certificate is typically 
+bound to a domainname in the common name part of the certificate.
+One solution (the only?) to this problem is to have a certificate
+with multiple subjectAltNames. See
+http://wiki.cacert.org/VhostTaskForce#Interoperability_Test
+ 
 .TP
 \fB keyfile = File\fR
 Specifies which file contains the private key for the certificate.
@@ -439,16 +448,23 @@ The list is also used in the list of acceptable client CAs passed to
 the client when a certificate is requested.
 .TP
 \fB verify = 1 | 2 | 3\fR
-Specifies the level of verification the server does on clinet certs. 1 means nothing, 2 means the the server will ask the client for a cert but not fail if the client doesn't supply a client cert, 3 means that the server requires the client to supply a client cert.
+Specifies the level of verification the server does on client certs. 
+1 means nothing, 2 means the the server will ask the client for a cert but 
+not fail if the client doesn't supply a client cert, 3 means that the server 
+requires the client to supply a client cert.
 .TP
 \fB depth = Int\fR
-Specifies the depth of certificate chains the server is prepared to follow when verifying client certs.
+Specifies the depth of certificate chains the server is prepared to follow 
+when verifying client certs.
 .TP
 \fB password = String\fR
-String If the private key is encrypted on disc, this password is the 3des key to decrypt it.
+String If the private key is encrypted on disc, this password is the 
+3des key to decrypt it.
 .TP
 \fB ciphers = String\fR
-* This string specifies the ssl cipher string. The syntax of the ssl cipher string is a little horrible sublanguage of its own. It is documented in the ssl man page for "ciphers". 
+This string specifies the ssl cipher string. The syntax of the ssl cipher 
+string is a little horrible sublanguage of its own. It is documented in the 
+ssl man page for "ciphers". 
 .TP
 \fB </ssl> \fR
 Ends an SSL definition

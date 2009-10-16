@@ -1,3 +1,8 @@
+This is a small README describing how to
+generate selfsigned certs with multiple 
+subjectAltName which is required if we want to
+virthost several ssl servers on the same ip.
+
 Edit he openssl.cfg here - especially the part
 where we define a set of subjectAltName
 
