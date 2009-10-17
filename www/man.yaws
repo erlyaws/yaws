@@ -20,7 +20,7 @@ out(A) ->
                                        end
                                end, Page) of
                     true ->
-                        os:cmd("man  " ++ Page ++ "  | col -b -p -x");
+                        os:cmd("env LC_ALL=en_US.ISO-8859-1 man  " ++ Page ++ "  | col -b -p -x");
                     false ->
                         "illegal character detected in query arg"
                 end;
