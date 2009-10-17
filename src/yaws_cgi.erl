@@ -6,22 +6,26 @@
 -include("yaws_debug.hrl").
 -include("../include/yaws.hrl").
 
-% Returns Out (i.e. same return values as out/1).
-%
+%%% Returns Out (i.e. same return values as out/1).
+%%%
 -export([call_cgi/5, call_cgi/4, call_cgi/3, call_cgi/2]).
 -export([call_fcgi_responder/2, call_fcgi_responder/1]).
 
-% Returns {allowed, Variables} or {denied, Out}.
-%
+%%% Returns {allowed, Out} or {denied, Out}.
+%%%
 -export([call_fcgi_authorizer/2, call_fcgi_authorizer/1]).
 
-% TODO: Implement FastCGI filter role.
+%%% Returns [{VariableName, VariableValue}].
+%%%
+-export([fcgi_extract_variables/1]).
+
+%%% TODO: Implement FastCGI filter role.
 
 -export([cgi_worker/7, fcgi_worker/5]).
 
-%%======================================================================================================================
-%% Code which is shared between CGI and FastCGI    
-%%======================================================================================================================
+%%%==============================================================================
+%%% Code shared between CGI and FastCGI
+%%%==============================================================================
 
 -define(ASCII_NEW_LINE, 10).
 -define(ASCII_CARRIAGE_RETURN, 13).
@@ -59,7 +63,7 @@ get_from_worker(Arg, WorkerPid) ->
         {Headers, Data} ->
             AllResps = lists:map(fun(X)-> do_header(Arg, X, Data) end, Headers),
             {ContentResps, Others} = filter2(fun iscontent/1, AllResps),
-            {RedirResps, OtherResps} = filter2(fun isredirect/1, Others), 
+            {RedirResps, OtherResps} = filter2(fun isredirect/1, Others),
             case RedirResps of
                 [R|_] ->
                     WorkerPid ! {self(), no_data},
@@ -150,7 +154,7 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
         _ -> RequestURI = undefined
     end,
     {Maj,Min} = R#http_request.version,
-    {Hostname, Hosttail}=lists:splitwith(fun(X)->X /= $: end, 
+    {Hostname, Hosttail}=lists:splitwith(fun(X)->X /= $: end,
                                          checkdef(H#headers.host)),
     Hostport = case Hosttail of
                    [$: | P] -> P;
@@ -169,24 +173,24 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
 
     %%Scriptname = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
     %%SCRIPT_NAME is the path of the script relative to the root of the website.
-    %%just dropping docroot from the fullpath does not give the full SCRIPT_NAME 
+    %%just dropping docroot from the fullpath does not give the full SCRIPT_NAME
     %% path if a 'vdir' is involved.
     UriTail = deep_drop_prefix(Arg#arg.docroot, Arg#arg.fullpath),
     case Arg#arg.docroot_mount of
         "/" ->
-            %%no arg.docroot_mount means that arg.docroot 
+            %%no arg.docroot_mount means that arg.docroot
             %% corresponds to the URI-root of the request "/"
             Scriptname = UriTail;
         Vdir ->
             Scriptname = Vdir ++ string:strip(UriTail,left,$/)
-    end,        
+    end,
 
     Pathinfo2 = checkdef(Pathinfo),
     case Pathinfo2 of
         "" ->
             PathTranslated = "";
         _ ->
-            %%determine what physical path the server would map Pathinfo2 
+            %%determine what physical path the server would map Pathinfo2
             %%to if it had received just Pathinfo2 in the request.
             PathTranslated = yaws_server:mappath(SC,Arg,Pathinfo2)
     end,
@@ -194,7 +198,7 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
 
     %%Pass auth info in environment - yes - including password in plain text.
     %%REMOTE_USER always = AUTH_USER
-    %%!todo - LOGON_USER - same as AUTH_USER unless some auth filter has mapped 
+    %%!todo - LOGON_USER - same as AUTH_USER unless some auth filter has mapped
     %%the user to another username under which to run the request.
     case H#headers.authorization of
         undefined ->
@@ -209,7 +213,7 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
                        {"AUTH_PASSWORD", Password}
                       ];
         {_User, _Password, _OrigString} ->
-            %%not attempting to pass through any auth info for 
+            %%not attempting to pass through any auth info for
             %% auth schemes that we don't yet handle
             AuthEnv = []
     end,
@@ -229,7 +233,7 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
         HttpsEnv ++
         AuthEnv ++
         lists:filter(
-          fun({K, L}) when is_list(L) -> 
+          fun({K, L}) when is_list(L) ->
                   case lists:keysearch(K, 1, ExtraEnv) of
                       false ->
                           true;
@@ -239,13 +243,13 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
                   end;
              (_) ->
                   false
-          end,      
+          end,
           ([
             {"SERVER_SOFTWARE", "Yaws/"++yaws_generated:version()},
             {"SERVER_NAME", Hostname},
             {"HTTP_HOST", Hostname},
             {"GATEWAY_INTERFACE", "CGI/1.1"},
-            {"SERVER_PROTOCOL", "HTTP/" ++ integer_to_list(Maj) ++ 
+            {"SERVER_PROTOCOL", "HTTP/" ++ integer_to_list(Maj) ++
              "." ++ integer_to_list(Min)},
             {"SERVER_PORT", Hostport},
             {"REQUEST_METHOD", yaws:to_list(R#http_request.method)},
@@ -255,14 +259,14 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
             {"SCRIPT_FILENAME", Scriptfilename},% For PHP 4.3.2 and higher
                                                 % see http://bugs.php.net/bug.php?id=28227
                                                 % (Sergei Golovan).
-                                                % {"SCRIPT_TRANSLATED", Scriptfilename},   %IIS6+ 
+                                                % {"SCRIPT_TRANSLATED", Scriptfilename},   %IIS6+
             {"PATH_INFO",                Pathinfo2},
-            {"PATH_TRANSLATED",        PathTranslated},  
-            %% <JMN_2007-02> 
-            %%  CGI/1.1 spec says PATH_TRANSLATED should be NULL or unset 
+            {"PATH_TRANSLATED",        PathTranslated},
+            %% <JMN_2007-02>
+            %%  CGI/1.1 spec says PATH_TRANSLATED should be NULL or unset
             %% if PATH_INFO is NULL
             %%  This is in contrast to IIS behaviour - and may break some apps.
-            %%  broken apps that expect it to always correspond to path of 
+            %%  broken apps that expect it to always correspond to path of
             %% script
             %%  should be modified to use SCRIPT_FILENAME instead - or wrapped.
             %% </JMN_2007-02>
@@ -273,7 +277,7 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
             %%  documentation I have
             %%  read, but it works
             %%  with PHP.
-            %% 
+            %%
             %%  (Not with PHP 4.3.10-16) from
             %%  Debian sarge (Sergei Golovan).
             %%  </pre_2007-02_comments>
@@ -281,11 +285,11 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
             {"SCRIPT_NAME", Scriptname},
             {"REMOTE_ADDR", PeerAddr},
             {"REMOTE_HOST", PeerAddr},  %%  We SHOULD send this
-            %%  Resolving DNS not practical for performance reasons 
+            %%  Resolving DNS not practical for performance reasons
             %%  - at least on 1st contact from a particular host.
-            %%  we could do background lookup so that it's available 
+            %%  we could do background lookup so that it's available
             %% for subsequent invocations,
-            %%  but it hardly seems worthwhile. We are permitted by the 
+            %%  but it hardly seems worthwhile. We are permitted by the
             %% CGI/1.1 spec to substitute REMOTE_ADDR
             {"SERVER_ADDR", LocalAddr},   %% Apache compat
             {"LOCAL_ADDR", LocalAddr},    %% IIS compat
@@ -327,8 +331,8 @@ make_cookie_val([C|CS]) ->
     [make_cookie_val(CS), $; | C].
 
 
-%% Seems not to be necessary, but open_port documentation says that
-%% value has to be a string.
+%%% Seems not to be necessary, but open_port documentation says that
+%%% value has to be a string.
 
 flatten_val(L) when is_list(L) ->
     lists:flatten(L);
@@ -401,24 +405,24 @@ get_opt(Key, List, Default) ->
     end.
 
 
-%%======================================================================================================================
-%% Code which is specific to CGI    
-%%======================================================================================================================
+%%%==============================================================================
+%%% Code specific to CGI
+%%%==============================================================================
 
-%%  TO DO:  Handle failure and timeouts.
+%%%  TO DO:  Handle failure and timeouts.
 
-%%  call_cgi calls the script `Scriptfilename' (full path).
-%%  If `Exefilename' is given, it is the executable to handle this, 
-%%  otherwise `Scriptfilame' is assumed to be executable itself.
-%%  
-%%  Corresponding to a URI of
-%%     `http://somehost/some/dir/script.cgi/path/info', 
-%%  `Pathinfo' should be set to `/path/info'.
+%%%  call_cgi calls the script `Scriptfilename' (full path).
+%%%  If `Exefilename' is given, it is the executable to handle this,
+%%%  otherwise `Scriptfilame' is assumed to be executable itself.
+%%%
+%%%  Corresponding to a URI of
+%%%     `http://somehost/some/dir/script.cgi/path/info',
+%%%  `Pathinfo' should be set to `/path/info'.
 
-%%  These functions can be used from a `.yaws' file.
-%%  Note however, that they usually generate stream content.
+%%%  These functions can be used from a `.yaws' file.
+%%%  Note however, that they usually generate stream content.
 
-call_cgi(Arg, Scriptfilename) ->                                     
+call_cgi(Arg, Scriptfilename) ->
     call_cgi(Arg, undefined, Scriptfilename, undefined, []).
 
 call_cgi(Arg, Exefilename, Scriptfilename) ->
@@ -431,23 +435,23 @@ call_cgi(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv) ->
     case Arg#arg.state of
         {cgistate, WorkerPid} ->
             case Arg#arg.cont of
-                cgicont -> 
+                cgicont ->
                     handle_clidata(Arg, WorkerPid);
                 undefined ->
-                    ?Debug("Error while reading clidata: ~p~n", 
+                    ?Debug("Error while reading clidata: ~p~n",
                            [Arg#arg.clidata]),
                     %%  Error, what to do?
                     exit(normal)
             end;
         _ ->
-            WorkerPid = cgi_start_worker(Arg, Exefilename, Scriptfilename, 
+            WorkerPid = cgi_start_worker(Arg, Exefilename, Scriptfilename,
                                       Pathinfo, ExtraEnv, get(sc)),
             handle_clidata(Arg, WorkerPid)
     end.
 
 
 cgi_start_worker(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
-    ExeFN = case Exefilename of 
+    ExeFN = case Exefilename of
                 undefined -> exeof(Scriptfilename);
                 "" -> exeof(Scriptfilename);
                 FN -> FN
@@ -456,8 +460,9 @@ cgi_start_worker(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
              undefined -> Arg#arg.pathinfo;
              OK -> OK
          end,
-    WorkerPid = proc_lib:spawn(?MODULE, cgi_worker, 
-                            [self(), Arg, ExeFN, Scriptfilename, PI, ExtraEnv, SC]),
+    WorkerPid = proc_lib:spawn(?MODULE, cgi_worker,
+                               [self(), Arg, ExeFN, Scriptfilename,
+                                PI, ExtraEnv, SC]),
     WorkerPid.
 
 
@@ -466,7 +471,7 @@ cgi_worker(Parent, Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv,SC) ->
     Env = build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv,SC),
     ?Debug("~p~n", [Env]),
     CGIPort = open_port({spawn, Exefilename},
-                        [{env, Env}, 
+                        [{env, Env},
                          {cd, pathof(Scriptfilename)},
                          exit_status,
                          binary]),
@@ -529,7 +534,7 @@ cgi_data_loop(Pid, Port) ->
             yaws_api:stream_chunk_deliver_blocking(Pid, Data),
             cgi_data_loop(Pid, Port);
         {Port, {exit_status, _Status}} ->
-            ?Debug("~p~n", [{exit_status, _Status}]),            
+            ?Debug("~p~n", [{exit_status, _Status}]),
             yaws_api:stream_chunk_end(Pid);
         _Other ->
             ?Debug("~p~n", [_Other]),
@@ -549,7 +554,7 @@ cgi_get_line({start, Port}) ->
             ?Debug("~p~n", [{exit_status, Status}]),
             {failure, {exit_status, Status}};
         _Other ->
-            ?Debug("~p~n", [_Other]),            
+            ?Debug("~p~n", [_Other]),
             cgi_get_line({start, Port})
     end;
 cgi_get_line(State) ->
@@ -557,12 +562,15 @@ cgi_get_line(State) ->
 
 cgi_get_line(Acc, {S, <<?ASCII_NEW_LINE, Tail/binary>>, Port}) ->
     {lists:reverse(Acc), {S, Tail, Port}};
-cgi_get_line(Acc, {S, <<?ASCII_CARRIAGE_RETURN, ?ASCII_NEW_LINE, Tail/binary>>, Port}) ->
+cgi_get_line(Acc, {S, <<?ASCII_CARRIAGE_RETURN, ?ASCII_NEW_LINE, Tail/binary>>,
+                   Port}) ->
     {lists:reverse(Acc), {S, Tail, Port}};
 cgi_get_line(Acc, {middle, <<>>, Port}) ->
     cgi_get_line(Acc, cgi_add_resp(<<>>, Port));
-cgi_get_line(Acc, {middle, <<?ASCII_CARRIAGE_RETURN>>, Port}) ->          % We SHOULD test for CRLF.
-    cgi_get_line(Acc, cgi_add_resp(<<?ASCII_CARRIAGE_RETURN>>, Port));    % Would be easier without.
+cgi_get_line(Acc, {middle, <<?ASCII_CARRIAGE_RETURN>>, Port}) ->
+    %% We SHOULD test for CRLF.
+    %% Would be easier without.
+    cgi_get_line(Acc, cgi_add_resp(<<?ASCII_CARRIAGE_RETURN>>, Port));
 cgi_get_line(Acc, {ending, <<>>, Port}) ->
     {lists:reverse(Acc), {ending, <<>>, Port}};
 cgi_get_line(Acc, {S, <<C, Tail/binary>>, Port}) ->
@@ -574,7 +582,7 @@ cgi_add_resp(Bin, Port) ->
         {Port, {data,Data}} ->
             {middle, <<Bin/binary, Data/binary>>, Port};
         {Port, {exit_status, _Status}} ->
-            ?Debug("~p~n", [{exit_status, _Status}]),            
+            ?Debug("~p~n", [{exit_status, _Status}]),
             {ending, Bin, Port};
         _Other ->
             ?Debug("~p~n", [_Other]),
@@ -582,9 +590,9 @@ cgi_add_resp(Bin, Port) ->
     end.
 
 
-%%======================================================================================================================
-%% Code which is specific to FastCGI    
-%%======================================================================================================================
+%%%==============================================================================
+%%% Code specific to FastCGI
+%%%==============================================================================
 
 -define(FCGI_VERSION_1, 1).
 
@@ -613,9 +621,11 @@ fcgi_type_name(?FCGI_TYPE_GET_VALUES_RESULT) -> "get_values_result";
 fcgi_type_name(?FCGI_TYPE_UNKNOWN_TYPE) -> "unknown-type";
 fcgi_type_name(_) -> "?".
 
-% The FCGI implementation does not support handling concurrent requests over a connection; it creates a separate 
-% connection for each request. Hence, all application records have the same request-id, namely 1.
-%
+%%% The FCGI implementation does not support handling concurrent requests
+%%% over a connection; it creates a separate connection for each
+%%% request. Hence, all application records have the same request-id,
+%%% namely 1.
+%%%
 -define(FCGI_REQUEST_ID_MANAGEMENT, 0).
 -define(FCGI_REQUEST_ID_APPLICATION, 1).
 
@@ -644,29 +654,45 @@ fcgi_status_name(?FCGI_STATUS_OVERLOADED) -> "overloaded";
 fcgi_status_name(?FCGI_STATUS_UNKNOWN_ROLE) -> "unknown-role";
 fcgi_status_name(_) -> "?".
 
-% Amount of time (in milliseconds) allowed to connect to the application server.
-%
+%%% Amount of time (in milliseconds) allowed to connect to the application
+%%% server.
+%%%
 -define(FCGI_CONNECT_TIMEOUT_MSECS, 10000).
 
-% Amount of time (in milliseconds) allowed for data to arrive when reading the TCP connection to the application server.
-%
+%%% Amount of time (in milliseconds) allowed for data to arrive when
+%%% reading the TCP connection to the application server.
+%%%
 -define(FCGI_READ_TIMEOUT_MSECS, 1000).
 
-% TODO: Implement a configurable timeout which applies to the whole operation (as oposed to individual socket reads).
+%%% TODO: Implement a configurable timeout which applies to the whole
+%%% operation (as oposed to individual socket reads).
 
 -record(fcgi_worker_state, {
-            app_server_host,            % The hostname or IP address of the application server
-            app_server_port,            % The TCP port number of the application server
+            app_server_host,            % The hostname or IP address of
+                                        % the application server
+            app_server_port,            % The TCP port number of the
+                                        % application server
             path_info,                  % The path info
-            env,                        % All environment variables to be passed to the application (incl the extras)
-            keep_connection,            % Delegate close authority to the application?
-            trace_protocol,             % If true, log info messages for sent and received FastCGI messages
-            log_app_error,              % If true, log error messages for application errors (stderr and non-zero exit)
-            role,                       % The role of the worker (responder, authorizer, filter)
-            parent_pid,                 % The PID of the parent process = the Yaws worker process
-            yaws_worker_pid,            % When doing chunked output, stream to this Yaws worker.
-            app_server_socket,          % The TCP socket to the FastCGI application server
-            stream_to_socket            % The TCP socket to the web browser (stream chunked delivery to this socket) 
+            env,                        % All environment variables to be passed
+                                        % to the application (incl the extras)
+            keep_connection,            % Delegate close authority to the
+                                        % application?
+            trace_protocol,             % If true, log info messages for sent
+                                        % and received FastCGI messages
+            log_app_error,              % If true, log error messages for
+                                        % application errors (stderr and
+                                        % non-zero exit)
+            role,                       % The role of the worker
+                                        % (responder, authorizer, filter)
+            parent_pid,                 % The PID of the parent process = the
+                                        % Yaws worker process
+            yaws_worker_pid,            % When doing chunked output, stream to
+                                        % this Yaws worker.
+            app_server_socket,          % The TCP socket to the FastCGI
+                                        % application server
+            stream_to_socket            % The TCP socket to the web browser
+                                        % (stream chunked delivery to
+                                        %  this socket)
         }).
 
 
@@ -684,33 +710,42 @@ call_fcgi_authorizer(Arg, Options) ->
     Out = call_fcgi(?FCGI_ROLE_AUTHORIZER, Arg, Options),
     case fcgi_is_access_allowed(Out) of
         true ->
-            Variables = fcgi_extract_variables(Out),
-            {allowed, Variables};
+            StrippedOut = strip_content_from_out(Out),
+            {allowed, StrippedOut};
         false ->
             {denied, Out}
     end.
-         
+
 
 call_fcgi(Role, Arg, Options) ->
     case Arg#arg.state of
         {cgistate, WorkerPid} ->
             case Arg#arg.cont of
-                cgicont -> 
+                cgicont ->
                     ?Debug("Call FastCGI: continuation~n", []),
                     handle_clidata(Arg, WorkerPid)
             end;
         _ ->
             ?Debug("Call FastCGI:~n"
                    "  Role = ~p (~s)~n"
-                   "  Options = ~p~n" 
+                   "  Options = ~p~n"
                    "  Arg = ~p~n",
                    [Role, fcgi_role_name(Role),
-                    Options, 
+                    Options,
                     Arg]),
             ServerConf = get(sc),
             WorkerPid = fcgi_start_worker(Role, Arg, ServerConf, Options),
             handle_clidata(Arg, WorkerPid)
     end.
+
+
+is_not_content({content, _MimeType, _Content}) -> false;
+is_not_content({streamcontent, _MimeType, _Content}) -> false;
+is_not_content(_) -> true.
+
+
+strip_content_from_out(Out) ->
+    lists:filter(fun is_not_content/1, Out).
 
 
 fcgi_worker_fail(WorkerState, Reason) ->
@@ -721,7 +756,7 @@ fcgi_worker_fail(WorkerState, Reason) ->
 
 
 fcgi_worker_fail_if(Condition, WorkerState, Reason) ->
-    if 
+    if
         Condition ->
             fcgi_worker_fail(WorkerState, Reason);
         true ->
@@ -730,49 +765,59 @@ fcgi_worker_fail_if(Condition, WorkerState, Reason) ->
 
 
 fcgi_start_worker(Role, Arg, ServerConf, Options) ->
-    proc_lib:spawn(?MODULE, fcgi_worker, [self(), Role, Arg, ServerConf, Options]).
+    proc_lib:spawn(?MODULE, fcgi_worker,
+                   [self(), Role, Arg, ServerConf, Options]).
 
 
 fcgi_worker(ParentPid, Role, Arg, ServerConf, Options) ->
-    AppServerHost = get_opt(app_server_host, Options, ServerConf#sconf.fcgi_app_server_host),
-    AppServerPort = get_opt(app_server_port, Options, ServerConf#sconf.fcgi_app_server_port),
+    AppServerHost = get_opt(app_server_host, Options,
+                            ServerConf#sconf.fcgi_app_server_host),
+    AppServerPort = get_opt(app_server_port, Options,
+                            ServerConf#sconf.fcgi_app_server_port),
     PreliminaryWorkerState = #fcgi_worker_state{parent_pid = ParentPid},
-    fcgi_worker_fail_if(AppServerHost == undefined, PreliminaryWorkerState, app_server_host_must_be_configured),
-    fcgi_worker_fail_if(AppServerPort == undefined, PreliminaryWorkerState, app_server_port_must_be_configured),
+    fcgi_worker_fail_if(AppServerHost == undefined, PreliminaryWorkerState,
+                        app_server_host_must_be_configured),
+    fcgi_worker_fail_if(AppServerPort == undefined, PreliminaryWorkerState,
+                        app_server_port_must_be_configured),
     PathInfo = get_opt(path_info, Options, Arg#arg.pathinfo),
     ScriptFileName = "",        % There is no script file in the case of FastCGI
     ExtraEnv = get_opt(extra_env, Options, []),
     Env = build_env(Arg, ScriptFileName, PathInfo, ExtraEnv, ServerConf),
-    TraceProtocol = get_opt(trace_protocol, Options, ?sc_fcgi_trace_protocol(ServerConf)),
-    LogAppError = get_opt(log_app_error, Options, ?sc_fcgi_log_app_error(ServerConf)),
-    AppServerSocket = fcgi_connect_to_application_server(PreliminaryWorkerState, AppServerHost, AppServerPort),
+    TraceProtocol = get_opt(trace_protocol, Options,
+                            ?sc_fcgi_trace_protocol(ServerConf)),
+    LogAppError = get_opt(log_app_error, Options,
+                          ?sc_fcgi_log_app_error(ServerConf)),
+    AppServerSocket =
+        fcgi_connect_to_application_server(PreliminaryWorkerState,
+                                           AppServerHost, AppServerPort),
     ?Debug("Start FastCGI worker:~n"
            "  Role = ~p (~s)~n"
            "  AppServerHost = ~p~n"
            "  AppServerPort = ~p~n"
            "  PathInfo = ~p~n"
            "  ExtraEnv = ~p~n"
-           "  TraceProtocol = ~p~n" 
-           "  LogAppStderr = ~p~n", 
+           "  TraceProtocol = ~p~n"
+           "  LogAppStderr = ~p~n",
            [Role, fcgi_role_name(Role),
-            AppServerHost, 
+            AppServerHost,
             AppServerPort,
-            PathInfo, 
-            ExtraEnv, 
-            TraceProtocol, 
+            PathInfo,
+            ExtraEnv,
+            TraceProtocol,
             LogAppError]),
     WorkerState = #fcgi_worker_state{
                 app_server_host = AppServerHost,
                 app_server_port = AppServerPort,
                 path_info = PathInfo,
                 env = Env,
-                keep_connection = false,             % Currently hard-coded; make configurable in the future?
-                trace_protocol = TraceProtocol,              
+                keep_connection = false,        % Currently hard-coded; make
+                                                % configurable in the future?
+                trace_protocol = TraceProtocol,
                 log_app_error = LogAppError,
                 role = Role,
-                parent_pid = ParentPid,      
+                parent_pid = ParentPid,
                 yaws_worker_pid = Arg#arg.pid,
-                app_server_socket = AppServerSocket       
+                app_server_socket = AppServerSocket
             },
     fcgi_send_begin_request(WorkerState),
     fcgi_send_params(WorkerState, Env),
@@ -812,27 +857,32 @@ fcgi_send_begin_request(WorkerState) ->
         false -> ?FCGI_DONT_KEEP_CONN
     end,
     Role = WorkerState#fcgi_worker_state.role,
-    fcgi_send_record(WorkerState, ?FCGI_TYPE_BEGIN_REQUEST, ?FCGI_REQUEST_ID_APPLICATION, <<Role:16, Flags:8, 0:40>>).
+    fcgi_send_record(WorkerState, ?FCGI_TYPE_BEGIN_REQUEST,
+                     ?FCGI_REQUEST_ID_APPLICATION, <<Role:16, Flags:8, 0:40>>).
 
 
-fcgi_send_params(WorkerState, NameValueList) -> 
-    fcgi_send_record(WorkerState, ?FCGI_TYPE_PARAMS, ?FCGI_REQUEST_ID_APPLICATION, NameValueList).
+fcgi_send_params(WorkerState, NameValueList) ->
+    fcgi_send_record(WorkerState, ?FCGI_TYPE_PARAMS,
+                     ?FCGI_REQUEST_ID_APPLICATION, NameValueList).
 
 
 fcgi_send_stdin(WorkerState, Data) ->
-    fcgi_send_record(WorkerState, ?FCGI_TYPE_STDIN, ?FCGI_REQUEST_ID_APPLICATION, Data).
+    fcgi_send_record(WorkerState, ?FCGI_TYPE_STDIN,
+                     ?FCGI_REQUEST_ID_APPLICATION, Data).
 
 
-%% Not needed yet
-%%
-%% fcgi_send_data(ParentPid, Socket, Data) ->
-%%     fcgi_send_record(ParentPid, Socket, ?FCGI_TYPE_DATA, ?FCGI_REQUEST_ID_APPLICATION, Data).
+%%% Not needed yet
+%%%
+%%% fcgi_send_data(ParentPid, Socket, Data) ->
+%%%     fcgi_send_record(ParentPid, Socket, ?FCGI_TYPE_DATA,
+%%%                      ?FCGI_REQUEST_ID_APPLICATION, Data).
 
 
-%% Not needed yet
-%%
-%% fcgi_send_abort_request(ParentPid, Socket) ->
-%%     fcgi_send_record(ParentPid, Socket, ?FCGI_TYPE_ABORT_REQUEST, ?FCGI_REQUEST_ID_APPLICATION, <<>>).
+%%% Not needed yet
+%%%
+%%% fcgi_send_abort_request(ParentPid, Socket) ->
+%%%     fcgi_send_record(ParentPid, Socket, ?FCGI_TYPE_ABORT_REQUEST,
+%%%                      ?FCGI_REQUEST_ID_APPLICATION, <<>>).
 
 
 fcgi_data_to_string(Data) ->
@@ -846,8 +896,9 @@ fcgi_data_to_string(LinesStr, Count, CharStr, HexStr, <<>>) ->
             Padding = lists:duplicate(16 - Count, $ ),
             LinesStr ++ "\n    " ++ CharStr ++ Padding ++ "  " ++ HexStr
     end;
-fcgi_data_to_string(LinesStr, Count, CharStr, HexStr, <<Byte:8, MoreData/binary>>) ->
-    Char = if 
+fcgi_data_to_string(LinesStr, Count, CharStr, HexStr,
+                    <<Byte:8, MoreData/binary>>) ->
+    Char = if
         (Byte >= $!) and (Byte =< $~) ->
             Byte;
         true ->
@@ -856,17 +907,20 @@ fcgi_data_to_string(LinesStr, Count, CharStr, HexStr, <<Byte:8, MoreData/binary>
     Hex = io_lib:format("~2.16.0b ", [Byte]),
     if
         Count == 16 ->
-            fcgi_data_to_string(LinesStr ++ "\n    " ++ CharStr ++ "  " ++ HexStr, 1, [Char], Hex, MoreData);
+            fcgi_data_to_string(LinesStr ++ "\n    " ++ CharStr ++ "  " ++
+                                HexStr, 1, [Char], Hex, MoreData);
         true ->
-            fcgi_data_to_string(LinesStr, Count + 1, CharStr ++ [Char], HexStr ++ Hex, MoreData)
+            fcgi_data_to_string(LinesStr, Count + 1, CharStr ++ [Char],
+                                HexStr ++ Hex, MoreData)
     end.
 
 
-fcgi_trace_protocol(WorkerState, Action, Version, Type, RequestId, ContentLength, PaddingLength, Reserved, ContentData, 
+fcgi_trace_protocol(WorkerState, Action, Version, Type, RequestId,
+                    ContentLength, PaddingLength, Reserved, ContentData,
                     PaddingData) ->
     Trace = WorkerState#fcgi_worker_state.trace_protocol,
     if
-        Trace -> 
+        Trace ->
             error_logger:info_msg(
                 "~s FastCGI record:~n"
                 "  version = ~p~n"
@@ -878,47 +932,53 @@ fcgi_trace_protocol(WorkerState, Action, Version, Type, RequestId, ContentLength
                 "  content-data = ~s~n"
                 "  padding-data = ~s~n",
                 [Action,
-                 Version, 
-                 Type, fcgi_type_name(Type), 
-                 RequestId, 
-                 ContentLength, 
-                 PaddingLength, 
-                 Reserved, 
-                 fcgi_data_to_string(ContentData), 
+                 Version,
+                 Type, fcgi_type_name(Type),
+                 RequestId,
+                 ContentLength,
+                 PaddingLength,
+                 Reserved,
+                 fcgi_data_to_string(ContentData),
                  fcgi_data_to_string(PaddingData)]);
-        true -> 
+        true ->
             ok
     end.
 
 
 fcgi_send_record(WorkerState, Type, RequestId, NameValueList) ->
-    EncodedRecord = fcgi_encode_record(WorkerState, Type, RequestId, NameValueList),
+    EncodedRecord = fcgi_encode_record(WorkerState, Type, RequestId,
+                                       NameValueList),
     AppServerSocket = WorkerState#fcgi_worker_state.app_server_socket,
     case gen_tcp:send(AppServerSocket, EncodedRecord) of
         {error, Reason} ->
-            fcgi_worker_fail(WorkerState, {send_to_application_server_failed, Reason});
+            fcgi_worker_fail(WorkerState, {send_to_application_server_failed,
+                                           Reason});
         ok ->
             ok
     end.
 
 
-fcgi_encode_record(WorkerState, Type, RequestId, NameValueList) 
+fcgi_encode_record(WorkerState, Type, RequestId, NameValueList)
   when is_list(NameValueList) ->
-    fcgi_encode_record(WorkerState, Type, RequestId, fcgi_encode_name_value_list(NameValueList));
-    
-fcgi_encode_record(WorkerState, Type, RequestId, ContentData) 
+    fcgi_encode_record(WorkerState, Type, RequestId,
+                       fcgi_encode_name_value_list(NameValueList));
+
+fcgi_encode_record(WorkerState, Type, RequestId, ContentData)
   when is_binary(ContentData) ->
     Version = 1,
     ContentLength = size(ContentData),
-    PaddingLength = if                              % Add padding bytes (if needed) to content bytes to make
-        ContentLength rem 8 == 0 ->                 % content plus padding a multiple of 8 bytes.
-            0;
-        true ->
-            8 - (ContentLength rem 8)
-    end,
+    %% Add padding bytes (if needed) to content bytes to make
+    %% content plus padding a multiple of 8 bytes.
+    PaddingLength = if
+                        ContentLength rem 8 == 0 ->
+                            0;
+                        true ->
+                            8 - (ContentLength rem 8)
+                    end,
     PaddingData = <<0:(PaddingLength * 8)>>,
     Reserved = 0,
-    fcgi_trace_protocol(WorkerState, "Send", Version, Type, RequestId, ContentLength, PaddingLength, Reserved, 
+    fcgi_trace_protocol(WorkerState, "Send", Version, Type, RequestId,
+                        ContentLength, PaddingLength, Reserved,
                         ContentData, PaddingData),
     <<Version:8,
       Type:8,
@@ -932,26 +992,29 @@ fcgi_encode_record(WorkerState, Type, RequestId, ContentData)
 
 fcgi_encode_name_value_list(_NameValueList = []) ->
     <<>>;
-fcgi_encode_name_value_list(_NameValueList = [{Name, Value} | Tail]) -> 
-    <<(fcgi_encode_name_value(Name,Value))/binary, (fcgi_encode_name_value_list(Tail))/binary>>.
+fcgi_encode_name_value_list(_NameValueList = [{Name, Value} | Tail]) ->
+    <<(fcgi_encode_name_value(Name,Value))/binary,
+      (fcgi_encode_name_value_list(Tail))/binary>>.
 
 
 fcgi_encode_name_value(Name, _Value = undefined) ->
     fcgi_encode_name_value(Name, "");
 fcgi_encode_name_value(Name, Value) when is_list(Name) and is_list(Value) ->
     NameSize = length(Name),
+    %% If name size is < 128, encode it as one byte with the high bit clear.
+    %% If the name size >= 128, encoded it as 4 bytes with the high bit set.
     NameSizeData = if
-        NameSize < 128 ->                         % If name size is < 128, encode it as one byte with the high bit 
-            <<NameSize:8>>;                       % clear. If the name size >= 128, encoded it as 4 bytes with the high
-        true ->                                   % bit set
-            <<(NameSize bor 16#80000000):32>>
-    end,
-    % Same encoding for the value size.
+                       NameSize < 128 ->
+                           <<NameSize:8>>;
+                       true ->
+                           <<(NameSize bor 16#80000000):32>>
+                               end,
+    %% Same encoding for the value size.
     ValueSize = length(Value),
     ValueSizeData = if
-        ValueSize < 128 -> 
-            <<ValueSize:8>>; 
-        true -> 
+        ValueSize < 128 ->
+            <<ValueSize:8>>;
+        true ->
             <<(ValueSize bor 16#80000000):32>>
     end,
     <<NameSizeData/binary,
@@ -983,7 +1046,8 @@ fcgi_header_loop(WorkerState, LineState) ->
                     ParentPid ! {self(), all_data, Data},
                     receive
                         {ParentPid, stream_data} ->
-                            yaws_api:stream_chunk_end(WorkerState#fcgi_worker_state.yaws_worker_pid);
+                            yaws_api:stream_chunk_end(
+                              WorkerState#fcgi_worker_state.yaws_worker_pid);
                         {ParentPid, no_data} ->
                             ok
                     end
@@ -995,7 +1059,7 @@ fcgi_header_loop(WorkerState, LineState) ->
 
 
 fcgi_get_line(WorkerState, start) ->
-    case fcgi_get_output(WorkerState) of 
+    case fcgi_get_output(WorkerState) of
         {data, Data} ->
             fcgi_get_line(WorkerState, [], {middle, Data});
         {exit_status, 0} ->
@@ -1008,12 +1072,14 @@ fcgi_get_line(WorkerState, LineState) ->
 
 fcgi_get_line(_WorkerState, Acc, {State, <<?ASCII_NEW_LINE, Tail/binary>>}) ->
     {lists:reverse(Acc), {State, Tail}};
-fcgi_get_line(_WorkerState, Acc, {State, <<?ASCII_CARRIAGE_RETURN, ?ASCII_NEW_LINE, Tail/binary>>}) ->
+fcgi_get_line(_WorkerState, Acc, {State, <<?ASCII_CARRIAGE_RETURN,
+                                           ?ASCII_NEW_LINE, Tail/binary>>}) ->
     {lists:reverse(Acc), {State, Tail}};
 fcgi_get_line(WorkerState, Acc, {middle, <<>>}) ->
     fcgi_get_line(WorkerState, Acc, fcgi_add_resp(WorkerState, <<>>));
 fcgi_get_line(WorkerState, Acc, {middle, <<?ASCII_CARRIAGE_RETURN>>}) ->
-    fcgi_get_line(WorkerState, Acc, fcgi_add_resp(WorkerState, <<?ASCII_CARRIAGE_RETURN>>));
+    fcgi_get_line(WorkerState, Acc, fcgi_add_resp(WorkerState,
+                                                  <<?ASCII_CARRIAGE_RETURN>>));
 fcgi_get_line(_WorkerState, Acc, {ending, <<>>}) ->
     {lists:reverse(Acc), {ending, <<>>}};
 fcgi_get_line(WorkerState, Acc, {State, <<Char, Tail/binary>>}) ->
@@ -1021,7 +1087,7 @@ fcgi_get_line(WorkerState, Acc, {State, <<Char, Tail/binary>>}) ->
 
 
 fcgi_add_resp(WorkerState, OldData) ->
-    case fcgi_get_output(WorkerState) of 
+    case fcgi_get_output(WorkerState) of
         {data, NewData} ->
             {middle, <<OldData/binary, NewData/binary>>};
         {exit_status, _Status} ->
@@ -1031,7 +1097,7 @@ fcgi_add_resp(WorkerState, OldData) ->
 
 fcgi_data_loop(WorkerState) ->
     YawsWorkerPid = WorkerState#fcgi_worker_state.yaws_worker_pid,
-    case fcgi_get_output(WorkerState) of 
+    case fcgi_get_output(WorkerState) of
         {data, Data} ->
             yaws_api:stream_chunk_deliver_blocking(YawsWorkerPid, Data),
             fcgi_data_loop(WorkerState);
@@ -1045,20 +1111,26 @@ fcgi_get_output(WorkerState) ->
     case Type of
         ?FCGI_TYPE_END_REQUEST ->
             <<AppStatus:32/signed, ProtStatus:8, _Reserved:24>> = ContentData,
-            fcgi_worker_fail_if(ProtStatus < ?FCGI_STATUS_REQUEST_COMPLETE, WorkerState, 
-                           {received_unknown_protocol_status, ProtStatus}),
-            fcgi_worker_fail_if(ProtStatus > ?FCGI_STATUS_UNKNOWN_ROLE, WorkerState,
-                           {received_unknown_protocol_status, ProtStatus}),
+            fcgi_worker_fail_if(ProtStatus < ?FCGI_STATUS_REQUEST_COMPLETE,
+                                WorkerState,
+                                {received_unknown_protocol_status, ProtStatus}),
+            fcgi_worker_fail_if(ProtStatus > ?FCGI_STATUS_UNKNOWN_ROLE,
+                                WorkerState,
+                                {received_unknown_protocol_status, ProtStatus}),
             if
                 ProtStatus /= ?FCGI_STATUS_REQUEST_COMPLETE ->
-                    error_logger:error_msg("FastCGI protocol error: ~p (~s)~n", ProtStatus, 
+                    error_logger:error_msg("FastCGI protocol error: ~p (~s)~n",
+                                           ProtStatus,
                                            fcgi_status_name(ProtStatus));
                 true ->
                     ok
             end,
             if
-                (AppStatus /= 0) and (WorkerState#fcgi_worker_state.log_app_error) ->
-                    error_logger:error_msg("FastCGI application non-zero exit status: ~p~n", [AppStatus]);
+                (AppStatus /= 0),
+                (WorkerState#fcgi_worker_state.log_app_error) ->
+                    error_logger:error_msg(
+                      "FastCGI application non-zero exit status: ~p~n",
+                      [AppStatus]);
                 true ->
                     ok
             end,
@@ -1067,60 +1139,79 @@ fcgi_get_output(WorkerState) ->
             {data, ContentData};
         ?FCGI_TYPE_STDERR ->
             if
-                (ContentData /= <<>>) and (WorkerState#fcgi_worker_state.log_app_error) ->
-                    error_logger:error_msg("FastCGI application stderr output:~s~n", 
-                                           [fcgi_data_to_string(ContentData)]);
+                (ContentData /= <<>>),
+                (WorkerState#fcgi_worker_state.log_app_error) ->
+                    error_logger:error_msg(
+                      "FastCGI application stderr output:~s~n",
+                      [fcgi_data_to_string(ContentData)]);
                 true ->
                     ok
             end,
             fcgi_get_output(WorkerState);
         ?FCGI_TYPE_UNKNOWN_TYPE ->
             <<UnknownType:8, _Reserved:56>> = ContentData,
-            fcgi_worker_fail(WorkerState, {application_did_not_understand_record_type_we_sent, UnknownType});
+            fcgi_worker_fail(
+              WorkerState,
+              {application_did_not_understand_record_type_we_sent, UnknownType});
         OtherType ->
-            fcgi_worker_fail(WorkerState, {received_unknown_record_type, OtherType})
+            fcgi_worker_fail(WorkerState,
+                             {received_unknown_record_type, OtherType})
     end.
 
 
 fcgi_receive_record(WorkerState) ->
     {ok, Header} = fcgi_receive_binary(WorkerState, 8, ?FCGI_READ_TIMEOUT_MSECS),
-    <<Version:8, Type:8, RequestId:16, ContentLength:16, PaddingLength:8, Reserved:8>> = Header, 
-    fcgi_worker_fail_if(Version /= 1, WorkerState, {received_unsupported_version, Version}),
+    <<Version:8, Type:8, RequestId:16, ContentLength:16,
+      PaddingLength:8, Reserved:8>> = Header,
+    fcgi_worker_fail_if(Version /= 1, WorkerState,
+                        {received_unsupported_version, Version}),
     case Type of
         ?FCGI_TYPE_END_REQUEST ->
-            fcgi_worker_fail_if(RequestId /= ?FCGI_REQUEST_ID_APPLICATION, WorkerState, 
+            fcgi_worker_fail_if(RequestId /= ?FCGI_REQUEST_ID_APPLICATION,
+                                WorkerState,
                                 {unexpected_request_id, RequestId}),
-            fcgi_worker_fail_if(ContentLength /= 8, WorkerState, 
-                                {incorrect_content_length_for_end_request, ContentLength}),
+            fcgi_worker_fail_if(ContentLength /= 8, WorkerState,
+                                {incorrect_content_length_for_end_request,
+                                 ContentLength}),
             ok;
         ?FCGI_TYPE_STDOUT ->
-            fcgi_worker_fail_if(RequestId /= ?FCGI_REQUEST_ID_APPLICATION, WorkerState, 
+            fcgi_worker_fail_if(RequestId /= ?FCGI_REQUEST_ID_APPLICATION,
+                                WorkerState,
                                 {unexpected_request_id, RequestId}),
             ok;
         ?FCGI_TYPE_STDERR ->
-            fcgi_worker_fail_if(RequestId /= ?FCGI_REQUEST_ID_APPLICATION, WorkerState, 
+            fcgi_worker_fail_if(RequestId /= ?FCGI_REQUEST_ID_APPLICATION,
+                                WorkerState,
                                 {unexpected_request_id, RequestId}),
             ok;
         ?FCGI_TYPE_UNKNOWN_TYPE ->
-            fcgi_worker_fail_if(RequestId /= ?FCGI_REQUEST_ID_MANAGEMENT, WorkerState, 
+            fcgi_worker_fail_if(RequestId /= ?FCGI_REQUEST_ID_MANAGEMENT,
+                                WorkerState,
                                 {unexpected_request_id, RequestId}),
-            fcgi_worker_fail_if(ContentLength /= 8, WorkerState, 
-                                {incorrect_content_length_for_unknown_type, ContentLength}),
+            fcgi_worker_fail_if(ContentLength /= 8, WorkerState,
+                                {incorrect_content_length_for_unknown_type,
+                                 ContentLength}),
             ok;
         OtherType ->
             throw({received_unexpected_type, OtherType})
     end,
-    case fcgi_receive_binary(WorkerState, ContentLength, ?FCGI_READ_TIMEOUT_MSECS) of
+    case fcgi_receive_binary(WorkerState, ContentLength,
+                             ?FCGI_READ_TIMEOUT_MSECS) of
         {error, Reason} ->
             fcgi_worker_fail(WorkerState, {unable_to_read_content_data, Reason});
         {ok, ContentData} ->
-            case fcgi_receive_binary(WorkerState, PaddingLength, ?FCGI_READ_TIMEOUT_MSECS) of
+            case fcgi_receive_binary(WorkerState, PaddingLength,
+                                     ?FCGI_READ_TIMEOUT_MSECS) of
                 {error, Reason} ->
-                    fcgi_worker_fail(WorkerState, {unable_to_read_record_padding_data, Reason});
+                    fcgi_worker_fail(
+                      WorkerState,
+                      {unable_to_read_record_padding_data, Reason});
                 {ok, PaddingData} ->
-                    fcgi_trace_protocol(WorkerState, "Receive", Version, Type, RequestId, ContentLength, PaddingLength, 
-                                        Reserved, ContentData, PaddingData),
-                    {Type, ContentData}                            
+                    fcgi_trace_protocol(WorkerState, "Receive",
+                                        Version, Type, RequestId, ContentLength,
+                                        PaddingLength, Reserved, ContentData,
+                                        PaddingData),
+                    {Type, ContentData}
             end
     end.
 
@@ -1137,9 +1228,10 @@ fcgi_receive_binary(WorkerState, Length, Timeout) ->
     end.
 
 
-% Access is allowed if, and only if, the resonse from the authorizer running on the application server contains 
-% a 200 OK status. Any other status or absence of a status means access is denied.
-%
+%%% Access is allowed if, and only if, the resonse from the authorizer
+%%% running on the application server contains a 200 OK status. Any other
+%%% status or absence of a status means access is denied.
+%%%
 fcgi_is_access_allowed([Head | Tail]) ->
     fcgi_is_access_allowed(Head) orelse fcgi_is_access_allowed(Tail);
 fcgi_is_access_allowed({status, 200}) ->
@@ -1148,8 +1240,8 @@ fcgi_is_access_allowed(_AnythingElse) ->
     false.
 
 
-% Look for headers of the form "Variable-VAR_NAME: var value"
-%
+%%% Look for headers of the form "Variable-VAR_NAME: var value"
+%%%
 fcgi_extract_variables([Head | Tail]) ->
     fcgi_extract_variables(Head) ++ fcgi_extract_variables(Tail);
 fcgi_extract_variables({header, "Variable-" ++ Rest}) ->
@@ -1162,7 +1254,8 @@ fcgi_split_header(Header) ->
     fcgi_split_header(name, [], [], Header).
 
 fcgi_split_header(_, NameAcc, ValueAcc, "") ->
-    {string:strip(lists:reverse(NameAcc)), string:strip(lists:reverse(ValueAcc))};
+    {string:strip(lists:reverse(NameAcc)),
+     string:strip(lists:reverse(ValueAcc))};
 fcgi_split_header(name, NameAcc, ValueAcc, [$: | MoreStr]) ->
     fcgi_split_header(value, NameAcc, ValueAcc, MoreStr);
 fcgi_split_header(name, NameAcc, ValueAcc, [Char | MoreStr]) ->

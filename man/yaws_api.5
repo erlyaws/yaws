@@ -486,7 +486,7 @@ Enable or disable logging of application error messages: output
 to stderr and non-zero exit value.
 
 .TP
-\fBcall_fcgi_authorizer(Arg) -> {allowed, Variables} | {denied, Out}\fR
+\fBcall_fcgi_authorizer(Arg) -> {allowed, Out} | {denied, Out}\fR
 Calls a FastCGI authorizer.
 The address and port of the FastCGI application server are taken
 from the server configuration (see yaws.conf).
@@ -494,20 +494,42 @@ Used to make `.yaws' wrappers for FastCGI authorizers.
 Variables contains the values of the variables returned by the FastCGI
 application server in the "Variable-XXX: YYY" headers.
 
+If access is denied, Out contains the complete response returned by
+the FastCGI application server. This response is typically returned
+as-is to the HTTP client.
+
+If access is allowed, Out contains the response returned by the
+FastCGI application server minus the body (i.e. minus the content)
+which should be ignored per the FastCGI specification. This response
+is typically not returned to the HTTP client. The calling application
+module may wish to inspect the response, for example by extracting
+variables (see fcgi_extract_variables below) or by inspecting the
+headers returned by the FastCGI application server.
+
 \fI
 .nf
 Out -- See return values for out/1 below
-Variables = {Name, Value}
-Name = string()
-Value = string()
 .fi
 \fR
 
 .TP
-\fBcall_fcgi_authorizer(Arg, Options)\fR
+\fBcall_fcgi_authorizer(Arg, Options) -> {allowed, Out} | {denied, Out}\fR
 Same as above, but Options overrides the defaults from the server
 configuration. See call_fcgi_responder/2 above for a description
 of Options.
+
+.TP
+\fBfcgi_extract_variables(Out) -> [{Name, Value}]\fR
+Extracts the environment variables from a FastCGI authorizer response
+by looking for headers of the form "Variable-Name: Value".
+
+\fI
+.nf
+Name = string() -- The name of the variable (the "Variable-" prefix
+has already been removed).
+Value = string() -- The value of the variable.
+.fi
+\fR
 
 .TP
 \fBdir_listing(Arg)\fR
