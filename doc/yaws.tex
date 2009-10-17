@@ -160,7 +160,7 @@ out(Arg) ->
 
 It illustrates the basic idea behind \Yaws\ . The HTML code
 can contain <erl> and </erl> tags and inside these tags an \Erlang\  function
-called out/1 gets called and the output of that function is inserted
+called \verb+out/1+ gets called and the output of that function is inserted
 into the HTML document, dynamically.
 
 It is possible to have several chunks of HTML code together with several
@@ -584,12 +584,18 @@ that is processing the request.
           querydata,      %% Was the URL on the form of ...?query (GET reqs)
           appmoddata,     %% the remainder of the path leading up to the querey
           docroot,        %% where's the data
+          docroot_mount,  %% virtual directory e.g /myapp/ that the docroot
+                          %%  refers to.
           fullpath,       %% full path to yaws file
           cont,           %% Continuation for chunked multipart uploads
           state,          %% State for use by users of the out/1 callback
           pid,            %% pid of the yaws worker process
           opaque,         %% useful to pass static data
           appmod_prepath, %% path in front of: <appmod><appmoddata>
+          prepath,        %% Path prior to 'dynamic' segment of URI. 
+                          %%  ie http://some.host/<prepath>/<script-point>/d/e 
+                          %% where <script-point> is an appmod mount point, 
+                          %% or .yaws,.php,.cgi,.fcgi etc script file.
           pathinfo        %% Set to 'd/e' when calling c.yaws for the request
                           %% http://some.host/a/b/c.yaws/d/e
          }).
@@ -615,9 +621,12 @@ that is processing the request.
           accept_ranges,
           cookie = [],
           keep_alive,
+          location,
           content_length,
           content_type,
+          content_encoding,
           authorization,
+          transfer_encoding,
           other = []   %% misc other headers
          }).
 
@@ -684,12 +693,13 @@ more of those functions during the examples in the following chapters.
 
 The functions used are:
 \begin{itemize}
-\item \verb+yaws_api:f/2+ alias for io\_lib:format/2. The \verb+f/2+ function
-is automatically \verb+-included+ in all \Yaws\  code.
-\item \verb+yaws_api:reformat_header/1+ - This function takes the \#headers record
+\item \verb+yaws_api:f/2+ alias for \verb+io\_lib:format/2+. The
+  \verb+f/2+ function is automatically \verb+-included+ in all
+  \Yaws\  code.
+\item \verb+yaws_api:reformat_header/1+ --- This function takes the \#headers record
 and unparses it, that is reproduces regular text.
-\item \verb+yaws_api:parse_query/1+ - The topic of next section.
-\item \verb+yaws_api:parse_post/1+ -- Ditto.
+\item \verb+yaws_api:parse_query/1+ --- The topic of next section.
+\item \verb+yaws_api:parse_post/1+ --- Ditto.
 \end{itemize}
 
 
@@ -798,7 +808,7 @@ in the body.
 
 It is possible to upload files from the client to the server by
 means of POST. We indicate this in the form by telling the browser that we
-want a different encoding, here is a form that does this:
+want a different encoding. Here is an example form that does this:
 \begin{verbatim}
 
 out(A) ->
@@ -813,8 +823,8 @@ out(A) ->
 
 \end{verbatim}
 
-The page delivers the entire HTML page with enclosing \verb+html+ markers.
-It looks like:
+As shown in the figure, the page delivers the entire HTML page with
+enclosing \verb+html+ markers.
 
 
 \begin{figure}[h]
@@ -825,26 +835,87 @@ It looks like:
 \end{center}
 \end{figure}
 
-The user get an option to browse the local host for a file
+The user gets an option to browse the local host for a file
 or the user can explicitly fill in the file name in the input
 field. The file browsing part is automatically taken care of by the
 browser.
 
-The action field in the form states that the client shall POST to a page called
-\verb+file_upload_form.yaws+. This page will get the contents of the file
-in the body of the POST message. Here we have one easy case and one hard
-case. \Yaws\  will read the data from the client. However if the file is large
-the entire contents of the file will not be part of the read operation.
-It is not acceptable to let \Yaws\  continue to read the full POST body
-and then when that is done, invoke the POST page. \Yaws\  must
-feed the page with the chunks of the file as they arrive.
+The action field in the form states that the client shall POST to a
+page called \verb+file_upload_form.yaws+. This page will get the
+contents of the file in the body of the POST message. To read it, we
+use the \verb+yaws_multipart+ module, which provides the following
+capabilities:
 
-First the easy case:
+\begin{enumerate}
+\item It reads all parameters --- files uploaded and other simple parameters.
+\item It takes a few options to help file uploads. Specifically:
+\begin{enumerate}
+\item \verb+{max_file_size, MaxBytes}+: if the file size in bytes
+  exceeds \verb+MaxBytes+, return an error
+\item \verb+no_temp_file+: read the uploaded file into memory without
+  any temp files
+\item \verb+{temp_file,FullFilePath}+: specify \verb+FullFilePath+ for
+  the temp file; if not given, a unique file name is generated
+\item \verb+{temp_dir, TempDir}+: specify \verb+TempDir+ as the
+  directory to store the uploaded temp file; if this option is not
+  provided, then by default an OS-specific temp directory such as
+  ``/tmp'' is used
+\end{enumerate}
+\end{enumerate}
 
-Not YET  Written ... .....  fill this in later .....
+Just call \verb+yaws_multipart:read_multipart_form+ from your
+\verb+out/1+ function and it'll return a tuple with the first element
+set to one of these three atoms:
 
+\begin{itemize}
+\item \verb+get_more+: more data needs to be read; return this tuple
+  directly to \Yaws\  from your \verb+out/1+ function and it will call
+  your \verb+out/1+ function again when it has read more POST data, at
+  which point you must call \verb+read_multipart_form+ again
+\item \verb+done+: multipart form reading is complete; a
+  \verb+dict+ full of parameters is returned
+\item \verb+error+: an error occurred
+\end{itemize}
 
+The \verb+dict+ returned with \verb+done+ allows you to query it for
+parameters by name. For file upload parameters, it returns one of the
+following lists:
 
+\begin{verbatim}
+[{filename, "name of the uploaded file as entered on the form"},
+ {value, Contents_of_the_file_all_in_memory}]
+\end{verbatim}
+
+or:
+
+\begin{verbatim}
+[{filename, "name of the uploaded file as entered on the form"},
+ {temp_file, "full pathname of the temp file"}]
+\end{verbatim}
+
+For the temporary file case, it's your responsibility to delete the
+file when you're done with it.
+
+Here's an example:
+
+\begin{verbatim}
+-module(my_yaws_controller).
+-export([out/1]).
+
+out(Arg) ->
+    Options = [no_temp_file],
+    case yaws_multipart:read_multipart_form(Arg, Options) of
+        {done, Params} -> 
+            io:format("Params : ~p", [Params]),
+            [{filename, FileName},{value,FileContent}] =
+                dict:find("my_file", Params),
+            AnotherParam = dict:find("another_param", Params);
+        %% do something with FileName, FileContent and AnotherParam
+        {error, Reason} ->
+            io:format("Error reading multipart form: ~s", [Reason]);
+        Other -> Other
+    end.
+\end{verbatim}
 
 
 \chapter{Mode of operation}
@@ -855,7 +926,7 @@ When the client requests a \Yaws\  page, \Yaws\  will look in its caches
 requested page in the cache. If \Yaws\  doesn't find the page in the
 cache, it will compile the page. This only happens the first time a
 page is requested.
-Say that the page is 400 bytes big has the following layout:
+Say that the page is 400 bytes big and has the following layout:
 
 
 
@@ -2032,7 +2103,7 @@ The
               http://www.foo.com/~username is changed into
               a request where the docroot for that particular
            request is set to the directory
-              \verb+~user­name/public_html/+ The default value is false.
+              \verb+~userÂ­name/public_html/+ The default value is false.
 
 \item       \verb+allowed_scripts = [ListOfSuffixes]+ -
               The allowed script types for this server.  Recognized
@@ -2201,7 +2272,7 @@ The
        </server>
 
 \end{verbatim}
-       And this example shows a similar setup but two web­
+       And this example shows a similar setup but two webÂ­
        servers on the same IP address
 
 \begin{verbatim}
