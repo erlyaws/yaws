@@ -1,3 +1,24 @@
+Sat Oct 17 22:56:36 CEST 2009 1.85
+This is mostly (again) a bugfix/minor enhancement release.
+redirect bug reported by James Lee (steve)
+streamcontent_with_timeout bug , git issue #16 fixed (klacke)
+max number of connections patch by Kinoshita (klacke)
+updated mime.types from recent Apache web server sources (steve)
+config of partial_post_size = nolimit was broken (klacke)
+stopping yaws_sendfile thru supervisor does not hang - by ks (klacke)
+Major work on the auth code, Auth - unauthorized enhancements, Setup auth rewrite/cleanup, (Embedded) Config enhancements (Anders Dahlin)
+fix HTTP header case sensitivity problem in yaws_cgi (Bruno Rijsman)
+fix decode_base64 to return just a tuple in case of error (reported by Gabri
+add streamcontent_from_pid capability to allow direct streaming to socket (steve)
+Fixed support for Timeout=infinity in streamcontent_with_timeout. (davide)
+Use iolists instead of binaries for streamcontent_from_pid data, and add a new test for the streamcontent_from_pid feature (klacke)
+add --nodebug option  (steve)
+determine gcc flags for 32-bit or 64-bit Erlang on OS X Snow Leopard (steve)
+add new multipart example yaws_multipart.erl (Praveen Ray)
+timezone format patch by Per Hedeland
+Patch from wde with support for virthosting several ssl serveres on the same IP. This makes sense if we have multiple subjectAltName in the ssl cert
+fixes for FCGI authorization (Bruno Rijsman), plus I cleaned up indentation  and comments in yaws_cgi.erl
+
 Sun Jul  5 20:05:00 CEST 2009 1.84
 patch from anders abramhamson - a bug with multipart posts
 New stats feature added by Olivier Girondel whereby (optionally) stats is collected for a virt server. Stats available from comand line (yaws --stats). There are also plugins for munin to graph the statistics.
