@@ -101,6 +101,7 @@ encode(true) -> "true";
 encode(false) -> "false";
 encode(null) -> "null";
 encode(undefined) -> "null";
+encode(B) when is_binary(B) -> encode_string(binary_to_list(B));
 encode(I) when is_integer(I) -> integer_to_list(I);
 encode(F) when is_float(F) -> io_lib:format("~g", [F]);
 encode(L) when is_list(L) ->
