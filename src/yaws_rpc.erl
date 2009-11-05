@@ -308,13 +308,16 @@ encode_handler_payload(Xml, _ID, soap) ->   % {{{
 encode_handler_payload({response, [ErlStruct]}, ID, RpcType) ->   % {{{
     encode_handler_payload({response, ErlStruct}, ID, RpcType);
     
+
 encode_handler_payload({response, ErlStruct}, ID, RpcType) ->
     StructStr =
         case RpcType of
-            json -> json:encode({struct, [ {result, ErlStruct}, {id, ID}]});
+            json -> json:encode({struct, [ {result, ErlStruct}, {id, ID}, 
+                                           {error, null}]});
             haxe -> [$h, $x, $r | haxe:encode(ErlStruct)]
         end,
-    {ok, StructStr}.  % }}}
+    {ok, StructStr}.
+
 
 decode_handler_payload(json, JSonStr) -> %{{{
     try 
