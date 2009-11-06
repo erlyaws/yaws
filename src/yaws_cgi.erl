@@ -754,15 +754,10 @@ fcgi_worker_fail(WorkerState, Reason) ->
     error_logger:error_msg("FastCGI failure: ~p~n", [Reason]),
     exit(Reason).
 
-
-fcgi_worker_fail_if(Condition, WorkerState, Reason) ->
-    if
-        Condition ->
-            fcgi_worker_fail(WorkerState, Reason);
-        true ->
-            ok
-    end.
-
+fcgi_worker_fail_if(true, WorkerState, Reason) ->
+    fcgi_worker_fail(WorkerState, Reason);
+fcgi_worker_fail_if(_Condition, _WorkerState, _Reason) ->
+    ok.
 
 fcgi_start_worker(Role, Arg, ServerConf, Options) ->
     proc_lib:spawn(?MODULE, fcgi_worker,
@@ -844,7 +839,8 @@ fcgi_connect_to_application_server(WorkerState, Host, Port) ->
     Options = [binary, {packet, 0}, {active, false}],
     case gen_tcp:connect(Host, Port, Options, ?FCGI_CONNECT_TIMEOUT_MSECS) of
         {error, Reason} ->
-            fcgi_worker_fail(WorkerState, {connect_to_application_server_failed, Reason});
+            fcgi_worker_fail(WorkerState, {connect_to_application_server_failed,
+                                           Reason});
         {ok, Socket} ->
             Socket
     end.
