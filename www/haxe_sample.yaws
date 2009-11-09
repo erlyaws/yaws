@@ -5,6 +5,9 @@ out(A) ->
         A1 = A#arg{state = {new_state, "alive and kicking"}},
         yaws_rpc:handler(A1, {haxe_sample, respond}).
 
+respond(State, {call, failure, Value} = _Request) ->
+        { false, { error, { struct, [ { message, "Failure" }, { code, 500 } ] } } };
+
 respond(State, {call, echo, Value} = _Request) ->
         {new_state, StateVal} = State,
         {array, [First, Second]} = Value,
