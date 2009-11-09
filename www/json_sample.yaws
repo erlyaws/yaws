@@ -16,6 +16,10 @@ out(A) ->
 
 
 
+counter([{ip, IP}] = _State, {call, errortest, Value} = _Request, Session) ->  
+    io:format("Request = ~p~n", [_Request]),
+    { false, { error, "Expected failure" } };
+
 counter([{ip, IP}] = _State, {call, test1, Value} = _Request, Session) ->  
     io:format("Request = ~p~n", [_Request]),
     IPStr = io_lib:format("Client ip is  ~p~n" , [ IP ]),

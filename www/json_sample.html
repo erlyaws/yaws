@@ -6,7 +6,7 @@
   <script>
 
 var serviceURL = "json_sample.yaws";
-var methods = [ "test1" ];
+var methods = [ "test1", "errortest" ];
 
 var jsonrpc = imprt("jsonrpc");
 var service = new jsonrpc.ServiceProxy(serviceURL, methods);
@@ -19,6 +19,17 @@ function test() {
        "<PRE>" + service.test1(foo, bar) + "</PRE>";
      } catch(e) {
         alert(e);
+     } 
+     return false;
+}
+
+function errortest() {
+    try {
+     document.getElementById('failure').innerHTML = 
+       "<PRE>" + service.errortest() + "</PRE>";
+     } catch(e) {
+     document.getElementById('failure').innerHTML = 
+        "<PRE>" + e + "</PRE>";
      } 
      return false;
 }
@@ -37,6 +48,13 @@ function test() {
       <p>
         <input type="submit" value="Do JSON-RPC call"/>
       </p>
+    </form>
+    <form action="" method="post" onSubmit="return errortest()">
+      <p>
+        <input type="submit" value="Do JSON-RPC call expected to fail"/>
+      </p>
+      <div id="failure">
+      </div>
     </form>
   </body>
 </html>
