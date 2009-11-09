@@ -1,4 +1,5 @@
 <erl module=haxe_sample>
+-export([respond/2]).
 
 out(A) -> 
         A1 = A#arg{state = {new_state, "alive and kicking"}},
