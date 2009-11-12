@@ -1155,9 +1155,6 @@ comp_sname(Hname, Sname) ->
     hd(string:tokens(yaws:to_lower(Hname), ":")) =:=
         hd(string:tokens(yaws:to_lower(Sname), ":")).
 
-
-
-
 pick_sconf(GC, H, Group) ->
     case H#headers.host of
         undefined when ?gc_pick_first_virthost_on_nomatch(GC) ->
@@ -1166,19 +1163,21 @@ pick_sconf(GC, H, Group) ->
             pick_host(GC, Host, Group, Group)
     end.
 
-
+%% Compare Host against [] in case caller sends an empty Host header
+pick_host(GC, Host, SCs, Group)
+  when Host == []; SCs == [] ->
+    if
+        ?gc_pick_first_virthost_on_nomatch(GC) ->
+            hd(Group);
+        true ->
+            yaws_debug:format("Drop req since ~p doesn't match any "
+                              "servername \n", [Host]),
+            exit(normal)
+    end;
 pick_host(GC, Host, [SC|T], Group) ->
     case comp_sname(Host, SC#sconf.servername) of
         true -> SC;
         false -> pick_host(GC, Host, T, Group)
-    end;
-pick_host(GC, Host, [], Group) ->
-    if ?gc_pick_first_virthost_on_nomatch(GC) ->
-            hd(Group);
-       true ->
-            yaws_debug:format("Drop req since ~p doesn't match any "
-                              "servername \n", [Host]),
-            exit(normal)
     end.
 
 maybe_auth_log(Item, ARG) ->
