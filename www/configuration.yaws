@@ -110,7 +110,7 @@ out(A) ->
   <div class="box">
     <pre>
 # cd yaws
-# ./configure; make; make local_install
+# autoconf; ./configure; make; make local_install
     </pre>
   </div>
   <p>
