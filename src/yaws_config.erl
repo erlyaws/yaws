@@ -83,7 +83,7 @@ load(E) ->
 add_yaws_soap_srv(GC) when GC#gconf.enable_soap == true ->
     SoapStarted = (whereis(yaws_soap_srv) /= undefined),
     if (SoapStarted == false) ->
-            Spec = {yaws_soap_srv, {yaws_soap_srv, start_link, []},
+            Spec = {yaws_soap_srv, {yaws_soap_srv, start_link, [GC#gconf.soap_srv_mods] },
                     permanent, 5000, worker, [yaws_soap_srv]},
             spawn(fun() -> supervisor:start_child(yaws_sup, Spec) end);
        true ->
@@ -550,8 +550,17 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                true ->
                     fload(FD, globals, GC#gconf{enable_soap = false},
                           C, Cs, Lno+1, Next)
+            end;		
+
+        ["soap_srv_mods", '=' | SoapSrvMods] ->
+            case parse_soap_srv_mods(SoapSrvMods, []) of
+                {ok, L} ->
+                    fload(FD, globals, GC#gconf{soap_srv_mods = L}, 
+						  C, Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
             end;
-        
+
         ["max_connections", '=', Int] ->
             case (catch list_to_integer(Int)) of
                 I when is_integer(I) ->
@@ -1414,6 +1423,29 @@ is_special(C) ->
     lists:member(C, [$=, $<, $>, $,]).
 
 
+parse_soap_srv_mods(['<', Module, ',' , Handler, ',', WsdlFile, '>' | Tail], Ack) ->
+	case is_file(WsdlFile) of
+		true ->
+			S = { {list_to_atom(Module), list_to_atom(Handler)}, WsdlFile},
+			parse_soap_srv_mods(Tail, [S |Ack]);
+		false ->
+			{error, ?F("Bad wsdl file ~p", [WsdlFile])}
+	end;
+
+parse_soap_srv_mods(['<', Module, ',' , Handler, ',', WsdlFile, ',', Prefix, '>' | Tail], Ack) ->
+	case is_file(WsdlFile) of
+		true ->
+			S = { {list_to_atom(Module), list_to_atom(Handler)}, WsdlFile, Prefix},
+			parse_soap_srv_mods(Tail, [S |Ack]);
+		false ->
+			{error, ?F("Bad wsdl file ~p", [WsdlFile])}
+	end;
+
+parse_soap_srv_mods([ SoapSrvMod | _Tail], _Ack) ->
+	{error, ?F("Bad soap_srv_mods syntax: ~p", [SoapSrvMod])};
+
+parse_soap_srv_mods([], Ack) ->
+    {ok, Ack}.
 
 parse_appmods(['<', PathElem, ',' , AppMod, '>' | Tail], Ack) ->
     S = {PathElem , list_to_atom(AppMod)},

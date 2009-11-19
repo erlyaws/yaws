@@ -8,7 +8,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0,
+-export([start_link/1,
          setup/1, setup/2, setup/3,
          handler/4
         ]).
@@ -40,7 +40,7 @@
 %% Function: start_link() -> {ok,Pid} | ignore | {error,Error}
 %% Description: Starts the server
 %%--------------------------------------------------------------------
-start_link() ->
+start_link(L) ->
     %% We are dependent on erlsom
     case code:ensure_loaded(erlsom) of
         {error, _} -> 
@@ -49,7 +49,7 @@ start_link() ->
                                    [?MODULE, Emsg]),
             {error, Emsg};
         {module, erlsom} ->
-            gen_server:start_link({local, ?SERVER}, ?MODULE, [], [])
+            gen_server:start_link({local, ?SERVER}, ?MODULE, L, [])
     end.
 
 %%% To be called from yaws_rpc.erl
@@ -95,9 +95,19 @@ setup(Id, WsdlFile, Prefix) when is_tuple(Id),size(Id)==2 ->
 %%                         {stop, Reason}
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
-init([]) ->
-    {ok, #s{}}.
+init(L) -> %% [ {{Mod,Handler}, WsdlFile} ]
+	WsdlList = lists:foldl( fun( SoapSrvMod, OldList) -> 
+									setup_on_init( SoapSrvMod, OldList ) 
+							end,[],L),
+    {ok, #s{wsdl_list = WsdlList}}.
 
+setup_on_init( {Id, WsdlFile}, OldList ) when is_tuple(Id),size(Id)==2 ->
+	Wsdl = yaws_soap_lib:initModel(WsdlFile),
+	uinsert({Id, Wsdl}, OldList);
+setup_on_init( {Id, WsdlFile, Prefix}, OldList ) when is_tuple(Id),size(Id)==2 ->
+	Wsdl = yaws_soap_lib:initModel(WsdlFile, Prefix),
+	uinsert({Id, Wsdl}, OldList).
+	
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
 %%                                      {reply, Reply, State, Timeout} |

@@ -113,7 +113,7 @@ l2a(A) when is_atom(A) -> A.
 
 init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded, Id}) ->
     process_flag(trap_exit, true),
-    put(start_time, calendar:local_time()),  %% for uptime
+    put(start_time, calendar:local_time ()),  %% for uptime
     case Env#env.embedded of
         false ->
             Config = (catch yaws_config:load(Env)),
