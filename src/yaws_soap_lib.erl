@@ -12,7 +12,7 @@
 -export([initModel/1, initModel/2, 
 	 initModelFile/1,
 	 config_file_xsd/0,
-	 call/3, call/4, call/6,
+	 call/3, call/4, call/5, call/6,
 	 call_attach/4, call_attach/5, call_attach/7,
 	 write_hrl/2, write_hrl/3,
 	 findHeader/2,
@@ -110,6 +110,23 @@ call(Wsdl, Operation, ListOfData) when is_record(Wsdl, wsdl) ->
 	Else ->
 	    Else
     end.
+
+%%% --------------------------------------------------------------------
+%%% With additional specified prefix
+%%% --------------------------------------------------------------------
+call(WsdlURL, Operation, ListOfData, prefix, Prefix) when is_list(WsdlURL) ->
+	Wsdl = initModel(WsdlURL, Prefix),
+	call(Wsdl, Operation, ListOfData, prefix, Prefix );
+call(Wsdl, Operation, ListOfData, prefix, Prefix) when is_record(Wsdl, wsdl) ->
+	case get_operation(Wsdl#wsdl.operations, Operation) of
+	{ok, Op} ->
+	    Msg = mk_msg(Prefix, Operation, ListOfData),
+	    call(Wsdl, Operation, Op#operation.port, 
+                 Op#operation.service, [], Msg);
+	Else ->
+	    Else
+    end.
+
 
 %%% --------------------------------------------------------------------
 %%% Takes the actual records for the Header and Body message.
