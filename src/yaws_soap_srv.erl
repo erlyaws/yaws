@@ -8,7 +8,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1,
+-export([start_link/0, start_link/1,
          setup/1, setup/2, setup/3,
          handler/4
         ]).
@@ -40,6 +40,8 @@
 %% Function: start_link() -> {ok,Pid} | ignore | {error,Error}
 %% Description: Starts the server
 %%--------------------------------------------------------------------
+start_link() ->
+	start_link([]).
 start_link(L) ->
     %% We are dependent on erlsom
     case code:ensure_loaded(erlsom) of
