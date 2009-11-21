@@ -1955,8 +1955,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = appmod}, N) ->
                      N,
                      ARG,UT,
                      fun(A)->Mod:out(A) end,
-                     fun(A)->finish_up_dyn_file(A, CliSock)
-                     end
+                     fun(A)->finish_up_dyn_file(A, CliSock) end
                     );
 
 
@@ -1971,8 +1970,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = cgi}, N) ->
                      fun(A)->yaws_cgi:call_cgi(
                                A,flatten(UT#urltype.fullpath))
                      end,
-                     fun(A)->finish_up_dyn_file(A, CliSock)
-                     end
+                     fun(A)->finish_up_dyn_file(A, CliSock) end
                     );
 
 handle_ut(CliSock, ARG, UT = #urltype{type = fcgi}, N) ->
@@ -2040,7 +2038,6 @@ handle_ut(CliSock, ARG, UT = #urltype{type = php}, N) ->
     Req = ARG#arg.req,
     H = ARG#arg.headers,
     GC=get(gc),
-    yaws:outh_set_dyn_headers(Req, H, UT),
     yaws:outh_set_dyn_headers(Req, H, UT),
     deliver_dyn_part(CliSock,
                      0, "php",
@@ -2306,12 +2303,12 @@ get_chunked_client_data(CliSock,Bs,SSL) ->
 %% Return values:
 %% continue, done, {page, Page}
 
-deliver_dyn_part(CliSock,                  % essential params
-                 LineNo, YawsFile,         % for diagnostic output
-                 CliDataPos,               % for `get_more'
+deliver_dyn_part(CliSock,                       % essential params
+                 LineNo, YawsFile,              % for diagnostic output
+                 CliDataPos,                    % for `get_more'
                  Arg,UT,
-                 YawsFun,                  % call YawsFun(Arg)
-                 DeliverCont               % call DeliverCont(Arg)
+                 YawsFun,                       % call YawsFun(Arg)
+                 DeliverCont                    % call DeliverCont(Arg)
                                                 % to continue normally
                 ) ->
     put(yaws_ut, UT),
@@ -2340,7 +2337,7 @@ deliver_dyn_part(CliSock,                  % essential params
             Priv = deliver_accumulated(Arg, CliSock,
                                        decide, undefined, stream),
             stream_loop_send(Priv, CliSock, 30000);
-		% For other timeout's (other than 30 second) support
+        %% For other timeout values (other than 30 second)
         {streamcontent_with_timeout, MimeType, FirstChunk, TimeOut} ->
             yaws:outh_set_content_type(MimeType),
             accumulate_content(FirstChunk),
