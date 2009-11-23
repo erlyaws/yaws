@@ -1637,7 +1637,7 @@ split_header([C|S], A) ->
 
 
 erase_header(connection) ->
-    put(outh, (get(outh))#outh{connection = undefined});
+    put(outh, (get(outh))#outh{connection = undefined, doclose = false});
 erase_header(cache_control) ->
     put(outh, (get(outh))#outh{cache_control = undefined});
 erase_header(set_cookie) ->
