@@ -353,6 +353,17 @@ instead of searching the filesystems below the point foo.
 The Arg argument will have the missing path part supplied in its
 appmoddata field. 
 
+It is also possible to exclude certain directories from appmod
+processing. This is particulaly interesting for '/' appmods.
+Here is an example:
+
+   appmods = </, myapp exclude_paths icons js top/static>
+
+The above configuration will invoke the 'myapp' erlang module on everything 
+except any file found in directories, 'icons', 'js' and 'top/static' 
+relative to the docroot.
+
+
 
 .TP
 \fBerrormod_404 = Module\fR

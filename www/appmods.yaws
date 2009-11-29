@@ -67,7 +67,30 @@ A#arg.querydata = \"a=b\""),
        {br,[],[]},
 
        {p, [],
-        "Appmods would typically be used by webapplications that want to provide the illusion of proper paths to the browser. "}
+        "Appmods would typically be used by webapplications that want to provide the illusion of proper paths to the browser. "},
+
+       {p, [], "A special case of an appmod that is particularly interesting is the '/' appmod. This used when we want application code to handle all requests. This is common with web frameworks such as Nitrogen."},
+       
+       box("
+<server tita>
+        port = 8001
+        listen = 0.0.0.0
+        docroot = /home/klacke/yaws/yaws/scripts/../www
+        appmods = </, myappmod>
+</server>"),
+
+       {p, [], "The above configuration snippet is an example of a slash appmod. One complication with the slash appmod is that usually we have a set of folders containing static data, images and java script, and we want yaws to just deliver those files without intervention from the slash appmod. This can be achieved by excluding a set of directories."},
+ 
+
+       box("
+<server tita>
+        port = 8001
+        listen = 0.0.0.0
+        docroot = /home/klacke/yaws/yaws/scripts/../www
+        appmods = </, myappmod exclude_paths icons js top/static>
+</server>"),
+
+       {p, [], "The above configuration will invoke the 'myappmod' erlang module on everything except any file found in directories, 'icons', 'js' and 'top/static' relative to the docroot"}
 
 
        ]

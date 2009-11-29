@@ -1451,6 +1451,20 @@ parse_appmods(['<', PathElem, ',' , AppMod, '>' | Tail], Ack) ->
     S = {PathElem , list_to_atom(AppMod)},
     parse_appmods(Tail, [S |Ack]);
 
+parse_appmods(['<', PathElem, ',' , AppMod, "exclude_paths" |Tail], Ack)->
+    Paths = lists:takewhile(fun(X) -> X /= '>' end, 
+                            Tail),
+    Tail2 = lists:dropwhile(fun(X) -> X /= '>' end, 
+                            Tail),
+    Tail3 = tl(Tail2),
+
+    S = {PathElem , list_to_atom(AppMod), lists:map(
+                                            fun(Str) ->
+                                                    string:tokens(Str, "/")
+                                            end, Paths)},
+    parse_appmods(Tail3, [S |Ack]);
+
+
 parse_appmods([AppMod | Tail], Ack) ->
     %% just some simpleminded test to catch syntax errors in the config
     case AppMod of

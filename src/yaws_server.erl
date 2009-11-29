@@ -3790,12 +3790,18 @@ active_appmod(AppMods, RequestSegs) ->
     Matched =
         lists:foldl(
           fun(Pair,Acc) ->
-                  {Mount, Mod} = Pair,
+                  {Mount, Mod, Excludes} = case Pair of
+                                               {X, Y} -> {X, Y, []};
+                                               {X,Y,Z} -> {X,Y,Z}
+                                           end,
                   {ReqSegs, {LongestSoFar, _}} = Acc,
 
                   MountSegs = string:tokens(Mount,"/"),
-                  case lists:prefix(MountSegs,ReqSegs) of
-                      true ->
+                  case {is_excluded(ReqSegs, Excludes) ,
+                        lists:prefix(MountSegs,ReqSegs)} of
+                      {true, _} ->
+                          Acc;
+                      {false, true} ->
                           case LongestSoFar of
                               [$/|_] ->
                                   %%simple comparison of string length
@@ -3813,7 +3819,7 @@ active_appmod(AppMods, RequestSegs) ->
 
                                   {ReqSegs, {Mount, Mod}}
                           end;
-                      false ->
+                      {false, false} ->
                           case LongestSoFar of
                               [$/|_] ->
                                   %%There is already a match for an
@@ -3847,6 +3853,17 @@ active_appmod(AppMods, RequestSegs) ->
             {ok, {Mount, Mod}}
     end
         .
+
+is_excluded(_, []) ->
+    false;
+is_excluded(RequestSegs, [ExcludeSegs|T]) ->
+    case lists:prefix(ExcludeSegs, RequestSegs) of
+        true ->
+            true;
+        false ->
+            is_excluded(RequestSegs, T)
+    end.
+
 
 %%split a list of segments into 2 lists either side of element matching Seg.
 %%(no elements contain slashes)

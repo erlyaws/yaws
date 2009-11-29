@@ -122,7 +122,7 @@ out(A) ->
          ssl,
          authdirs = [],
          partial_post_size = nolimit,
-         appmods = [],                %% list of modules for this app
+         appmods = [],                %% list of appmod specs
          errormod_404 = yaws_404,     %% the default 404 error module 
          errormod_crash = yaws_404,   %% use the same module for crashes
          arg_rewrite_mod = yaws,
@@ -264,6 +264,16 @@ application as an embedded yaws app or not is that all the yaws control
 functions are disabled when we use yaws as an embedded web server. I.e
 yaws --ls, yaws --stop etc. This under the assumption that you already have support for this type of functionality in your application.
 </p>
+
+<p>Finally, an interesting appmod definition that may apply to many embedded yaws installations is that / appmod with a set of exclude dirs. Here is an example:
+</p>
+<div class="box">
+<verbatim>
+SC#sconf{.....
+         appmods = {"/", myapp, [["js"], ["top", "static"], ["icons"]]},
+         ....
+</verbatim>
+</div>
 
 
 </div>

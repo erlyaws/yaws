@@ -186,7 +186,13 @@
          ssl,                        %% undefined | #ssl{}
          authdirs = [],
          partial_post_size = nolimit,
-         appmods = [],                %% list of modules for this app
+         appmods = [], 
+         %%  An item in the appmods list  can be either of the
+         %% following, this is all due to backwards compat issues.
+         %% 1.  an atom - this is the equivalent to {atom, atom}
+         %% 2 . A two tuple {Path, Mod}
+         %% 3 A three tuple {Path, Mod, [ExcludeDir ....]}
+
          errormod_401 = yaws_outmod,     %% the default 401 error module
          errormod_404 = yaws_outmod,     %% the default 404 error module 
          errormod_crash = yaws_outmod,   %% use the same module for crashes
@@ -285,12 +291,6 @@
           
 -define(READ_TIMEOUT, 30000).
 
-
-
-
--record(appmodspec, {
-          type,  %% atom, pair or absolute
-          data}).
 
 
 %% as read by application:get_env()
