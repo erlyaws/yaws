@@ -4392,7 +4392,7 @@ vdirpath(SC, ARG, RequestPath) ->
 close_accepted_if_max(GS,{ok, Socket}) ->
     MaxCon = (GS#gs.gconf)#gconf.max_connections,
     NumCon = GS#gs.connections,
-    if MaxCon == nolimit orelse NumCon < MaxCon ->
+    if (MaxCon == nolimit) or (NumCon < MaxCon) ->
 	    ok;
        true ->
             S=case peername(Socket, GS#gs.ssl) of
