@@ -98,7 +98,7 @@ debug:
 	$(MAKE) TYPE=debug
 
 clean:
-	rm -f $(EBIN_FILES) yaws_generated.erl charset.def mime_types.erl yaws_configure.hrl
+	rm -f $(EBIN_FILES) yaws_generated.erl charset.def mime_types.erl yaws_configure.hrl ../ebin/*.beam
 
 install: regen all docsinstall
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/yaws/examples/ebin
