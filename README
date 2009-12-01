@@ -5,7 +5,13 @@ This is yaws, a webserver for dynamic content written in Erlang.
 To build and install
 
 
-1. Get and install an erlang system (http://www.erlang.org)
+0. Get and install an erlang system (http://www.erlang.org)
+
+1. If you've cloned the source from github, there is no ./configure
+   script in the source, create one:
+
+# autoconf
+
 
 2. ./configure --prefix=/usr/local
    This will install everything under /usr/local including var files
@@ -50,7 +56,7 @@ For example:
      This will build the system
 
   make docs 
-     (Optionnal) You can issue this command if you want to build Yaws
+     (Optional) You can issue this command if you want to build Yaws
      documentation.
 
   make local_install
@@ -87,6 +93,7 @@ For example:
 11.  Example: Here is how I compile/start the yaws system that runs
      at http://yaws.hyber.org (Ubuntu server system)
 
+     # autoconf
      # ./configure --sysconfdir=/etc
      # make && make install
      # /etc/init.d/yaws start
