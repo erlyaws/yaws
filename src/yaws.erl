@@ -271,8 +271,7 @@ setup_sconf(DocRoot, D, SL) ->
                              D#sconf.servername),
            ets = lkup(ets, SL, 
                       D#sconf.ets),
-           ssl = lkup(ssl, SL, 
-                      D#sconf.ssl),
+           ssl = setup_sconf_ssl(SL, D#sconf.ssl),
            authdirs = lkup(authdirs, SL, 
                            D#sconf.authdirs),
            partial_post_size = lkup(partial_post_size, SL, 
@@ -302,6 +301,33 @@ setup_sconf(DocRoot, D, SL) ->
                                        D#sconf.fcgi_app_server_host),
            fcgi_app_server_port = lkup(fcgi_app_server_port, SL, 
                                        D#sconf.fcgi_app_server_port)}.
+
+setup_sconf_ssl(SL, DefaultSSL) ->
+    case lkup(ssl, SL, undefined) of
+	undefined ->
+	    DefaultSSL;
+	SSL when is_record(SSL, ssl) ->
+	    SSL;
+	SSLProps when is_list(SSLProps) ->
+	    SSL1 = #ssl{
+	      keyfile = proplists:get_value(keyfile, SSLProps),
+	      certfile = proplists:get_value(certfile, SSLProps),
+	      password = proplists:get_value(password, SSLProps),
+	      cacertfile = proplists:get_value(cacertfile, SSLProps),
+	      ciphers = proplists:get_value(ciphers, SSLProps),
+	      cachetimeout = proplists:get_value(cachetimeout, SSLProps)
+	     },
+	    %% Prevent overriding the ssl record's default values!
+	    SSL2 =
+		case proplists:get_value(verify, SSLProps) of
+		    undefined -> SSL1;
+		    Verify -> SSL1#ssl{verify=Verify}
+		end,
+	    case proplists:get_value(depth, SSLProps) of
+		undefined -> SSL2;
+		Depth -> SSL2#ssl{depth=Depth}
+	    end
+    end.
 
 set_sc_flags([{access_log, Bool}|T], Flags) ->
     set_sc_flags(T, flag(Flags, ?SC_ACCESS_LOG, Bool));
