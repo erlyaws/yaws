@@ -103,9 +103,10 @@ add_yaws_auth(SCs) ->
 setup_auth(#sconf{docroot = Docroot, authdirs = Authdirs}) ->
     Authdirs1 = load_yaws_auth_from_docroot(Docroot),
     Authdirs2 = load_yaws_auth_from_authdirs(Authdirs, Docroot, Authdirs1),
-    Authdirs3 = [{Dir, A} || A = #auth{dir = [Dir]} <- Authdirs2], % A->{Dir, A}
-    start_pam(Authdirs3),
-    Authdirs3.
+    Authdirs3 = ensure_auth_headers(Authdirs2),
+    Authdirs4 = [{Dir, A} || A = #auth{dir = [Dir]} <- Authdirs3], % A->{Dir, A}
+    start_pam(Authdirs4),
+    Authdirs4.
 
     
 load_yaws_auth_from_docroot(undefined) ->
@@ -156,6 +157,18 @@ load_yaws_auth_file(Path, Auth) ->
     end.
     
 
+ensure_auth_headers(Authdirs) ->
+    [add_auth_headers(Auth) || Auth <- Authdirs].
+
+add_auth_headers(Auth = #auth{headers = []}) ->
+    %% Headers needs to be set
+    Realm   = Auth#auth.realm,
+    Headers = yaws:make_www_authenticate_header({realm, Realm}),
+    Auth#auth{headers = Headers};
+add_auth_headers(Auth) ->
+    Auth.
+
+
 start_pam([]) ->
     ok;
 start_pam([{_Dir, #auth{pam = false}}|T]) ->
@@ -172,10 +185,8 @@ start_pam([{_Dir, A}|T]) ->
     end.
 
 
-parse_yaws_auth_file([], Auth0) ->
-    Realm = Auth0#auth.realm,
-    Headers = Auth0#auth.headers ++ yaws:make_www_authenticate_header({realm, Realm}),
-    Auth0#auth{headers = Headers};
+parse_yaws_auth_file([], Auth) ->
+    Auth;
 
 parse_yaws_auth_file([{realm, Realm}|T], Auth0) ->
     parse_yaws_auth_file(T, Auth0#auth{realm = Realm});
