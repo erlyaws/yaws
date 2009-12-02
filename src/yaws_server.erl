@@ -2589,8 +2589,14 @@ wait_for_streamcontent_pid(Priv, CliSock, ContentPid) ->
         discard ->
             ContentPid ! {discard, self()};
         _ ->
-            gen_tcp:controlling_process(CliSock, ContentPid),
-            ContentPid ! {ok, self()}
+	    SC = get(sc),
+	    case SC#sconf.ssl of
+		undefined ->
+		    gen_tcp:controlling_process(CliSock, ContentPid);
+		_ ->
+		    ssl:controlling_process(CliSock, ContentPid)
+	    end,
+	    ContentPid ! {ok, self()}
     end,
     receive
         endofstreamcontent ->

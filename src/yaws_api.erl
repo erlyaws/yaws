@@ -836,11 +836,11 @@ stream_chunk_deliver_blocking(YawsPid, Data) ->
 stream_chunk_end(YawsPid) ->
     YawsPid ! endofstreamcontent.
 
-%% This won't work for SSL for now
+stream_process_deliver(Sock={sslsocket,_,_}, IoList) ->
+    ssl:send(Sock, IoList);
 stream_process_deliver(Sock, IoList) ->
     gen_tcp:send(Sock, IoList).
 
-%% This won't work for SSL for now either
 stream_process_deliver_chunk(Sock, IoList) ->
     Chunk = case erlang:iolist_size(IoList) of
                 0 ->
@@ -848,7 +848,8 @@ stream_process_deliver_chunk(Sock, IoList) ->
                 S ->
                     [yaws:integer_to_hex(S), "\r\n", IoList, "\r\n"]
             end,
-    gen_tcp:send(Sock, Chunk).
+    stream_process_deliver(Sock, Chunk).
+
 stream_process_deliver_final_chunk(Sock, IoList) ->
     Chunk = case erlang:iolist_size(IoList) of
                 0 ->
@@ -856,8 +857,11 @@ stream_process_deliver_final_chunk(Sock, IoList) ->
                 S ->
                     [yaws:integer_to_hex(S), "\r\n", IoList, "\r\n0\r\n\r\n"]
             end,
-    gen_tcp:send(Sock, Chunk).
+    stream_process_deliver(Sock, Chunk).
 
+stream_process_end(Sock={sslsocket,_,_}, YawsPid) ->
+    ssl:controlling_process(Sock, YawsPid),
+    YawsPid ! endofstreamcontent;
 stream_process_end(Sock, YawsPid) ->
     gen_tcp:controlling_process(Sock, YawsPid),
     YawsPid ! endofstreamcontent.
