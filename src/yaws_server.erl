@@ -1523,7 +1523,7 @@ handle_request(CliSock, ARG, N) ->
                         end,
 
 
-                    IsRev = is_revproxy(DecPath, SC#sconf.revproxy),
+                    IsRev = is_revproxy(ARG, DecPath, SC),
                     IsRedirect = is_redirect_map(DecPath,
                                                  SC#sconf.redirect_map),
 
@@ -1704,14 +1704,28 @@ handle_auth(ARG, {User, Password, OrigString},
     end.
 
 
-is_revproxy(_,[]) ->
+is_revproxy(ARG, Path, SC = #sconf{revproxy = RevConf}) ->
+    IsFwd = ?sc_forward_proxy(SC),
+    %% Note: these are mututally exclusive.
+    case {IsFwd, RevConf} of
+        {false, []} ->
+            false;
+        {false, _} ->
+            is_revproxy1(Path, RevConf);
+        {true, _} ->
+            {true, {"/", fwdproxy_url(ARG)}};
+        {_, _} ->
+            false
+    end.
+
+is_revproxy1(_,[]) ->
     false;
-is_revproxy(Path, [{Prefix, URL} | Tail]) ->
+is_revproxy1(Path, [{Prefix, URL} | Tail]) ->
     case yaws:is_prefix(Prefix, Path) of
         {true,_} ->
             {true, {Prefix,URL}};
         false ->
-            is_revproxy(Path, Tail)
+            is_revproxy1(Path, Tail)
     end.
 
 is_redirect_map(_, []) ->
@@ -2050,29 +2064,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = php}, N) ->
                      end,
                      fun(A)->finish_up_dyn_file(A, CliSock)
                      end
-                    );
-
-handle_ut(CliSock, ARG, UT = #urltype{type = {extmod, {_Ext,_Mod}}}, N) ->
-    Req = ARG#arg.req,
-    H = ARG#arg.headers,
-
-    ?Debug("UT = ~s~n", [?format_record(UT, urltype)]),
-    Allowed = ['GET', 'POST', 'HEAD', 'OPTIONS'],
-    if
-        Req#http_request.method == 'GET';
-        Req#http_request.method == 'POST';
-        Req#http_request.method == 'HEAD' ->
-            yaws:outh_set_dyn_headers(Req, H, UT),
-            do_extmod(CliSock, ARG, UT, N);
-        Req#http_request.method == 'OPTIONS' ->
-            deliver_options(CliSock, Req, Allowed);
-        true ->
-            deliver_405(CliSock, Req, Allowed)
-    end.
-
-do_extmod(_CliSock, _ARG, _UT, _N) ->
-    done.
-
+                    ).
 
 done_or_continue() ->
     case yaws:outh_get_doclose() of
@@ -4168,13 +4160,8 @@ deflate_q(_, _, _) ->
 suffix_type(SC, L) ->
     R=suffix_type(L),
     case R of
-        {regular, Ext, Mime} ->
-            case lists:keysearch(Ext, 1, SC#sconf.extension_mods) of
-                {value, ExtMod} ->
-                    {{extmod, ExtMod}, Mime};
-                false ->
-                    {regular, Mime}
-            end;
+        {regular, _Ext, Mime} ->
+            {regular, Mime};
         {X, _Ext, Mime} ->
             case member(X, SC#sconf.allowed_scripts) of
                 true -> {X, Mime};
@@ -4433,3 +4420,27 @@ dec_con(GS) ->
 
 code_change(_OldVsn, Data, _Extra) ->
     {ok, Data}.
+
+
+fwdproxy_url(ARG) ->
+    Headers = ARG#arg.headers,
+    {abs_path, Path} = (ARG#arg.req)#http_request.path,
+
+    {Host, Port} =
+    case yaws:split_at(Headers#headers.host, $:) of
+        {Host0, Port0} ->
+            case string:to_integer(Port0) of
+                {Port1, []} ->
+                    {Host0, Port1};
+                _ ->
+                    {Headers#headers.host, undefined}
+            end;
+        _Other ->
+            {Headers#headers.host, undefined}
+    end,
+
+    #url{scheme = http,
+         host = Host,
+         port = Port,
+         path = Path}.
+

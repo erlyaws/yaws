@@ -993,6 +993,15 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                     {error, "Can't revproxy to an URL with a path "}
             end;
 
+        ["fwdproxy", '=', Bool] ->
+            case is_bool(Bool) of
+                {true, Val} ->
+                    C2 = ?sc_set_forward_proxy(C, Val),
+                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
+            end;
+
         ['<', "extra_cgi_vars", "dir", '=', Dir, '>'] ->
             fload(FD, extra_cgi_vars, GC, C, Cs, Lno+1, Next, {Dir, []});
 

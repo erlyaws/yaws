@@ -118,6 +118,8 @@
 -define(SC_DAV,                 128).
 -define(SC_FCGI_TRACE_PROTOCOL, 512).
 -define(SC_FCGI_LOG_APP_ERROR,  1024).
+-define(SC_FORWARD_PROXY,       2048).
+
 
 -define(SC_DEF, ?SC_ACCESS_LOG bor ?SC_ADD_PORT).
 
@@ -141,6 +143,8 @@
         (((SC)#sconf.flags band ?SC_FCGI_TRACE_PROTOCOL) /= 0)).
 -define(sc_fcgi_log_app_error(SC),
         (((SC)#sconf.flags band ?SC_FCGI_LOG_APP_ERROR) /= 0)).
+-define(sc_forward_proxy(SC),
+        (((SC)#sconf.flags band ?SC_FORWARD_PROXY) /= 0)).
 
 
 -define(sc_set_access_log(SC, Bool), 
@@ -162,9 +166,13 @@
 -define(sc_set_dav(SC, Bool), 
         SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_DAV, Bool)}).
 -define(sc_set_fcgi_trace_protocol(SC, Bool), 
-        SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_FCGI_TRACE_PROTOCOL, Bool)}).
+        SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_FCGI_TRACE_PROTOCOL, 
+                                   Bool)}).
 -define(sc_set_fcgi_log_app_error(SC, Bool), 
-        SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_FCGI_LOG_APP_ERROR, Bool)}).
+        SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_FCGI_LOG_APP_ERROR, 
+                                   Bool)}).
+-define(sc_set_forward_proxy(SC, Bool), 
+        SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_FORWARD_PROXY, Bool)}).
 
 
 
@@ -197,22 +205,19 @@
          errormod_404 = yaws_outmod,     %% the default 404 error module 
          errormod_crash = yaws_outmod,   %% use the same module for crashes
          arg_rewrite_mod = yaws,
-         opaque = [],                 %% useful in embedded mode
-         start_mod,                   %% user provided module to be started
+         opaque = [],                    %% useful in embedded mode
+         start_mod,                      %% user provided module to be started
          allowed_scripts = [yaws,php,cgi,fcgi],
          tilde_allowed_scripts = [],
          revproxy = [],
          soptions = [],
          extra_cgi_vars = [],
-	 stats,                      %% raw traffic statistics
-	 fcgi_app_server_host,        %% FastCGI application server host name or IP address
+	 stats,                       %% raw traffic statistics
+	 fcgi_app_server_host,        %% FastCGI application server host 
+                                      %% name or IP address
 
-         fcgi_app_server_port,        %% FastCGI application server port number
+         fcgi_app_server_port         %% FastCGI application server port number
          
-         %% [{Extension:string(), Mod:atom()]
-         %% work in progress .....
-         extension_mods = [{"ys", yaws_ext_handler_yaws}] 
-
         }).
 
 %% we cannot compare sconfs directly due to the ets

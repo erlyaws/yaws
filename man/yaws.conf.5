@@ -439,6 +439,14 @@ It is possible to have multiple reverse proxies inside the same server.
 WARNING, this feature is yet not in production quality.
 
 .TP
+\fBfwdproxy = true|false \fR
+Make yaws a forward proxy. By enabling this option you can use yaws
+as a proxy for outgoing web traffic, typically by configuring the proxy
+settings in a web-browser to explicitly target yaws as its proxy server.
+
+WARNING, this feature is yet not in production quality.
+
+.TP
 \fBservername = Name\fR
 If we're virthosting everal servers and want to force a server
 to match specific Host: headers we can do this with the "servername"
