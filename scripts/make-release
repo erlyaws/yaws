@@ -40,6 +40,7 @@ rm -rf tmp 2> /dev/null
 mkdir tmp
 git archive --format=tar --prefix="$NAME_VERSION/" "$TAG" | (cd tmp && tar xf -)
 ln -s $NAME_VERSION tmp/yaws
+(cd tmp/yaws; autoconf)
 (cd tmp && tar cfz - yaws "$NAME_VERSION") > "$NAME_VERSION.tar.gz"
 
 echo release resides in `pwd`/$NAME_VERSION.tar.gz
