@@ -13,6 +13,13 @@ To build and install
 # autoconf
 
 
+1.b Install build-deps. On Ubuntu/debian this is pretty much equal to 
+# apt-get build-dep yaws 
+
+:-)
+
+
+
 2. ./configure --prefix=/usr/local
    This will install everything under /usr/local including var files
    in /usr/local/var/run/yaws and etc files in
