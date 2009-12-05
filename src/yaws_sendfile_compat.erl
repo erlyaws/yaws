@@ -9,6 +9,8 @@
 -include_lib("kernel/include/file.hrl").
 -include("yaws_configure.hrl").
 
+-include("../include/yaws.hrl").
+
 %% will be true for MacOsX, FreeBSD, Linux
 -ifdef(HAVE_SENDFILE).
 
@@ -21,18 +23,32 @@ stop() ->
 init(ShLib) ->
     yaws_sendfile:init(ShLib).
 send(Out, FileName) ->
-    yaws_sendfile:send(Out, FileName).
+    case yaws_sendfile:send(Out, FileName) of
+        {error, eoverflow} ->
+            compat_send(Out, FileName, 0, all);
+        Other ->
+            Other
+    end.
 send(Out, FileName, Offset) ->
-    yaws_sendfile:send(Out, FileName, Offset).
+    case yaws_sendfile:send(Out, FileName, Offset) of
+        {error, eoverflow} ->
+            compat_send(Out, FileName, Offset, all);
+        Other ->
+            Other
+    end.
 send(Out, FileName, Offset, Count) ->
-    yaws_sendfile:send(Out, FileName, Offset, Count).
-
+    case yaws_sendfile:send(Out, FileName, Offset, Count) of
+        {error, eoverflow} ->
+            compat_send(Out, FileName, Offset, Count);
+        Other ->
+            Other
+    end.
 
 -else.
 
--include("../include/yaws.hrl").
+%% Emulate sendfile, this is true for win32, qnx, solaris. OpenBSD,NetBSD I
+%% still don't know
 
-%% Emulate sendfile, this is true for win32, qnx, solaris. OpenBSD,NetBSD I still don't know
 enabled() ->
     false.
 start_link() ->
@@ -46,6 +62,11 @@ send(Out, Filename) ->
 send(Out, Filename, Offset) ->
     send(Out, Filename, Offset, all).
 send(Out, Filename, Offset, Count) ->
+    compat_send(Out, Filename, Offset, Count).
+
+-endif.
+
+compat_send(Out, Filename, Offset, Count) ->
     case file:open(Filename, [read, binary, raw]) of
         {ok, Fd} ->
             file:position(Fd, {bof, Offset}),
@@ -71,7 +92,8 @@ loop_send(Fd, ChunkSize, {ok, Bin}, Out, Count) ->
     if Sz < Count ->
             case gen_tcp:send(Out, Bin) of
                 true ->
-                    loop_send(Fd, ChunkSize, file:read(Fd, ChunkSize), Out, Count-Sz);
+                    loop_send(Fd, ChunkSize, file:read(Fd, ChunkSize),
+                              Out, Count-Sz);
                 Err ->
                     Err
             end;
@@ -85,4 +107,3 @@ loop_send(_Fd, _, Err, _,_) ->
     Err.
 
 
--endif.
