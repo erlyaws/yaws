@@ -1,3 +1,20 @@
+Sun Dec  6 14:35:33 CET 2009 1.86
+Mostly a bugfix release. Two new features. First the ability to exclude directories from an appmod. This is especially interesting for users that have an appmod at '/' but still want yaws to ship normal static contet such as js files and images. Secondly support for Forward proxying was added. Here is the changes list:
+It wasn't possible to handle huge files (above 2GIG ?) If sendfile hits EOVERFLOW send the file from Erlang code instead (Steve and klacke)
+json binary key support (TBBle)
+Forward proxy functionality added through a patch by Colm Dougan
+patch from anders dahlin to always populate yaws auth headers
+Added SSL support to stream_process_* functions. (davide)
+Added support for passing SSL configurations to start_embedded as a proplist (passing #ssl{} still works). (davide)
+Added support for excluding dirs from an appmod.  (klacke)
+erasing the connection header must also set doclose to false (steve)
+Several soap patches by Eric Liang. docs, support on addtional specified prefix when rpc call by method: yaws_soap_lib:call, add the soap_srv_mods support, which can setup soap serve modules while yaws start.
+prevent crash caused by malicious client sending an empty Host header (steve)
+Several haXe fixes by Paul Hampson - Add example for haXe returning an error object, Document how to run haXe remoting sample under neko, Export haXe remoting handler function, Add example for JSON-RPC returning an error object, Allow JSON-RPC/haXe remoting handlers to send error objects.
+yaws_rpc produced non-compliant jsonrpc results. Looking at the JSON-RPC specification at http://json-rpc.org/wiki/specification the returned result of a call needs to contain an error field, with value null for the success case. The example json-rpc python client code on the json-rpc.org site expects this field to be present. (TBBle)
+Allow binaries as json values. (Matt Stancliff)
+mkcert SSL scripts (klacke)
+
 Sat Oct 17 22:56:36 CEST 2009 1.85
 This is mostly (again) a bugfix/minor enhancement release.
 redirect bug reported by James Lee (steve)
