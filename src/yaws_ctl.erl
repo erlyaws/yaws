@@ -451,7 +451,7 @@ s_cmd(Fd, SID, Count) ->
 
 %% List existing yaws nodes on this machine for this user
 ls(_) ->
-    Dir =     filename:join([yaws:tmpdir(), "yaws"]),
+    Dir = filename:join([yaws:tmpdir(), "yaws"]),
     case file:list_dir(Dir) of
         {ok, List} ->
             io:format("~-15s~-10s~-10s~n",
@@ -463,7 +463,6 @@ ls(_) ->
               end, List);
         _ ->
             ok
-
     end,
     init:stop().
 

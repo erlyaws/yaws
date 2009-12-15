@@ -83,7 +83,7 @@ auth_log = true
 # When we're running multiple yaws systems on the same 
 # host, we need to give each yaws system an individual
 # name. Yaws will write a number of runtime files under
-# ${HOME}/.yaws/${id}
+# ${HOME}/.yaws/yaws/${id}
 # The default value is "default"
 
 

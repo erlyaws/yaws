@@ -28,23 +28,26 @@ status_cmd="yaws_status"
 reload_cmd="yaws_reload"
 extra_commands="reload status"
 
-: ${yaws_id:=default}
+if [ -n "$yaws_id" ]
+then
+    yaws_id="--id $yaws_id"
+fi
 : ${yaws_flags:=--heart}
 
 yaws_start() {
-        $yaws_command --id $yaws_id $yaws_flags --daemon
+        $yaws_command $yaws_id $yaws_flags --daemon
 }
 
 yaws_stop() {
-        $yaws_command --id $yaws_id --stop 
+        $yaws_command $yaws_id --stop 
 }
 
 yaws_status() {
-        $yaws_command --id $yaws_id --status
+        $yaws_command $yaws_id --status
 }
 
 yaws_reload() {
-        $yaws_command --id $yaws_id --hup
+        $yaws_command $yaws_id --hup
 }
 
 if [ -f /etc/rc.subr -a -f /etc/rc.conf ]

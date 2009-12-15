@@ -24,7 +24,7 @@ stop() {
 }
 
 reload() {
-    $yaws  ${idarg} --hup
+    $yaws ${idarg} --hup
 }
 
 

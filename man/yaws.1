@@ -118,7 +118,7 @@ Pass STRING as an additional argument to the "erl" program.
 This flag sets the id. If we're starting a daemon (or an interactive
 system) it gives the Yaws server the identity ID. This means that the
 server will write all internal files into the directory
-$HOME/.yaws/ID.
+$HOME/.yaws/yaws/ID.
 
 Yaws also creates a file called
 ${VARDIR}/run/yaws/ctl-${ID} which contains the portnumber the daemon
@@ -151,7 +151,7 @@ Stop the daemon (called id)
 .TP
 \fB\--ls \fR
 Lists current ids and status of all yaws servers on localhost. In practice this
-amounts to a listdir in $HOME/.yaws/yaws - and check wether the different
+amounts to a listdir in $HOME/.yaws/yaws - and check whether the different
 systems who has created files there are alive.
 .TP
 \fB--status [--id id]\fR

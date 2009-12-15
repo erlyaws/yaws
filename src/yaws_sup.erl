@@ -110,6 +110,8 @@ get_app_args() ->
     Id = case application:get_env(yaws, id) of
              undefined ->
                  "default";
+             {ok, Id0} when is_atom(Id0) ->
+                 atom_to_list(Id0);
              {ok, Id0} ->
                  Id0
          end,
