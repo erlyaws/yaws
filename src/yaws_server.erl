@@ -922,16 +922,19 @@ acceptor0(GS, Top) ->
                     ok
             end,
             Res = (catch aloop(Client, GS,  0)),
-	    case yaws:outh_get_doclose() of
-		false -> ok;
-		true ->
-		    if
-			GS#gs.ssl == nossl ->
-			    gen_tcp:close(Client);
-			GS#gs.ssl == ssl ->
-			    ssl:close(Client)
-		    end
-	    end,
+            %% Skip closing the socket, as required by web sockets & stream processes.
+            CloseSocket = (get(outh) =:= undefined) orelse 
+                                (done_or_continue() =:= done),
+            case CloseSocket of
+		        false -> ok;
+		        true ->
+                    if
+                        GS#gs.ssl == nossl ->
+                            gen_tcp:close(Client);
+                        GS#gs.ssl == ssl ->
+                            ssl:close(Client)
+                    end
+            end,
             case Res of
                 {ok, Int} when is_integer(Int) ->
                     Top ! {self(), done_client, Int};
