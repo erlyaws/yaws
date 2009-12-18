@@ -1,0 +1,94 @@
+<erl>
+
+out(A) ->
+    Host = (A#arg.headers)#headers.host,
+    {abs_path, Path} = (A#arg.req)#http_request.path,
+    EndpointPath = filename:dirname(Path)
+	++ "websockets_example_endpoint.yaws",
+    WebSocketLocation = Host ++ EndpointPath,
+    Body = html_body(WebSocketLocation),
+    {content, "text/html", Body}.
+
+%% this html was copied from the basic example in
+%% http://github.com/davebryson/erlang_websocket/
+html_body(WebSocketLocation) ->
+"<html>
+<head> 
+  <title>Basic WebSocket Example</title> 
+  <script type=\"text/javascript\"> 
+     if (!window.WebSocket)
+        alert(\"WebSocket not supported by this browser\");
+    
+    // Get an Element
+    function $() { return document.getElementById(arguments[0]); }
+    // Get the value of an Element
+    function $F() { return document.getElementById(arguments[0]).value; }
+    
+    var client = {
+        connect: function(){
+         this._ws=new WebSocket(\"ws://" ++ WebSocketLocation ++ "\");
+         this._ws.onopen=this._onopen;
+         this._ws.onmessage=this._onmessage;
+         this._ws.onclose=this._onclose;
+        },
+        _onopen: function(){
+          $('connect').className='hidden';
+          $('connected').className='';
+          $('phrase').focus();
+          client._send('client-connected');
+       },
+        _send: function(message){
+           if (this._ws)
+            this._ws.send(message);
+        },
+       chat: function(text) {
+          if (text != null && text.length>0 )
+            client._send(text);
+        },
+        _onmessage: function(m) {
+          if (m.data){
+            var text = m.data; 
+            var msg=$('msgs');
+            var spanText = document.createElement('span');
+            spanText.className='text';
+            spanText.innerHTML=text;
+            var lineBreak = document.createElement('br');
+            msg.appendChild(spanText);
+            msg.appendChild(lineBreak);
+            msg.scrollTop = msg.scrollHeight - msg.clientHeight;   
+          }
+        },
+        _onclose: function(m) {
+          this._ws=null;
+          $('connect').className='';
+          $('connected').className='hidden';
+          $('msg').innerHTML='';
+        }
+    };
+  </script> 
+  <style type='text/css'> 
+    div.hidden { display: none; }
+  </style> 
+ 
+</head> 
+<body> 
+  <h1>Basic Echo Example</h1> 
+  <div id=\"msgs\"></div> 
+  <div id=\"connect\"> 
+     <input id='cA' class='button' type='submit' name='connect' value='Connect'/> 
+  </div> 
+  <br/> 
+  <div id=\"connected\" class=\"hidden\"> 
+    Say Something:&nbsp;<input id='phrase' type='text'/> 
+    <input id='sendB' class='button' type='submit' name='connect' value='Send'/> 
+  </div> 
+ 
+  <script type='text/javascript'> 
+    $('cA').onclick = function(event) { client.connect(); return false; };
+    $('sendB').onclick = function(event) { client.chat($F('phrase')); $('phrase').value=''; return false; };	
+ </script> 
+  </body> 
+</html>".
+
+</erl>
+

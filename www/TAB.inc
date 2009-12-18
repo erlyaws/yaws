@@ -55,6 +55,7 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <div class="%%simple%%"> <a href="/simple.yaws">Simple</a> </div>
 <div class="%%soap_intro%%"> <a href="/soap_intro.yaws">SOAP with Yaws</a></div>
 <div class="%%stream%%"> <a href="/stream.yaws">Streaming data</a> </div>
+<div class="%%websockets%%"> <a href="/websockets.yaws">Web Sockets</a> </div>
 <a href="/shoppingcart/index.yaws">Tiny shopping cart</a>
 <div class="%%yapp_intro%%"> <a href="/yapp_intro.yaws">Yaws applications</a></div>
 

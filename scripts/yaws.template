@@ -81,17 +81,17 @@ help()
 
 
 
-debug="";
-daemon="";
-interactive="";
-trace="";
-conf="";
-runmod="";
-sname="";
-heart="";
-xpath="";
-mnesia="";
-id="default";
+debug=""
+daemon=""
+interactive=""
+trace=""
+conf=""
+runmod=""
+sname=""
+heart=""
+xpath=""
+mnesia=""
+id=""
 pdist=""
 erlarg=""
 kpoll=true
@@ -104,10 +104,11 @@ wait_started() {
     while [ $i -lt $count ]; do
         sleep 1
         i=`expr $i + 1`
-        ${program}  --id ${id} --status 2>&1 > /dev/null
+        idarg="--id ${id:-default}"
+        ${program}  ${idarg} --status 2>&1 > /dev/null
         [ $? = 0 ] && exit 0
     done
-    echo "No yaws system responding for id=${id}"
+    echo "No yaws system responding for id=$id"
     exit 1
 }
 
@@ -135,7 +136,7 @@ if [ "$HEART" = true ]; then
         fi
     fi
 fi
-HEART_COMMAND="${ENV_PGM} HEART=true YAWS_HEART_RESTARTS=$restarts YAWS_HEART_START=$starttime $program "${1+"$@"}
+HEART_COMMAND="$ENV_PGM HEART=true YAWS_HEART_RESTARTS=$restarts YAWS_HEART_START=$starttime $program "${1+"$@"}
 export HEART_COMMAND
 
 while [ $# -gt 0 ]
@@ -186,7 +187,7 @@ while [ $# -gt 0 ]
           conf=" -conf $1 "
           shift;;
       -pa|--pa)
-          xpath=" ${xpath} -pa $1 "
+          xpath=" $xpath -pa $1 "
           shift;;
       -r|--runmod)
           runmod=" -runmod $1 "
@@ -202,10 +203,12 @@ while [ $# -gt 0 ]
       --stats)
           ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl stats";;
       -load|--load)
-          $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl load $* ${id}
+          loadid=${id:-default}
+          $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl load $* $loadid
           exit 0;;
       --debug-dump)
-          $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl debug_dump ${id}
+          ddid=${id:-default}
+          $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl debug_dump $ddid
           exit 0;;
       -j|--ctltrace)
           ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl trace $1"
@@ -254,9 +257,10 @@ while [ $# -gt 0 ]
           erlarg="$erlarg $1 "
           shift;;
       -check|--check)
-          mkdir ${HOME}/.yaws/ 2> /dev/null
-          mkdir ${HOME}/.yaws/${ID} 2> /dev/null
-          out=`exec $erl -noshell -pa ${yawsdir}${delim}ebin ${xpath} -s yaws_ctl check ${id} $*`
+          checkid=${id:-default}
+          mkdir ${HOME}/.yaws/yaws 2> /dev/null
+          mkdir ${HOME}/.yaws/yaws/$checkid 2> /dev/null
+          out=`exec $erl -noshell -pa ${yawsdir}${delim}ebin $xpath -s yaws_ctl check $checkid $*`
           if [ "$?" = "0" ]; then
               echo "$out"
               echo "$1" ok
@@ -284,8 +288,9 @@ export YAWS_HEART_COUNT YAWS_HEART_SECS
 
 [ -n "$call_wait_started" ] && wait_started $call_wait_started
 
-if [ ! -z "${ex}" ]; then
-    exec ${ex} ${id}
+if [ -n "$ex" ]; then
+    [ -n "$id" ] && execid=$id || execid=default
+    exec $ex $execid
     exit 0
 fi
 
@@ -306,18 +311,18 @@ else
     RUN_ERL="eval"
 fi
 
-if [ ! -z "${id}" ]; then
-    id="-yaws id ${id}"
+if [ -n "$id" ]; then
+    id="-yaws id $id"
 fi
 
-trace="${trace} ${traceoutput}"
+trace="$trace $traceoutput"
 
 [ "$run_erl" = "eval" ] && [ -z "$daemon" ] && [ -z "$interactive" ] && help
 
-XEC="${daemon} ${heart} +K ${kpoll} -pa ${yawsdir}${delim}ebin  ${xpath} ${sname} ${pdist} ${erlarg} ${debug} -run yaws ${trace} ${conf} ${runmod} ${mnesia} ${id}"
+XEC="$daemon $heart +K $kpoll -pa ${yawsdir}${delim}ebin $xpath $sname $pdist $erlarg $debug -run yaws $trace $conf $runmod $mnesia $id"
 
 if [ -z "$heart" ] || [ -z "$daemon" ]; then
     unset HEART_COMMAND
 fi
 
-${RUN_ERL} "exec $erl $XEC"
+$RUN_ERL "exec $erl $XEC"

@@ -134,7 +134,11 @@ static size_t set_error_buffer(Buffer* b, int socket_fd, int err)
     size_t result_size = sizeof *(b->result);
     memset(b->result, 0, result_size);
     put_int32(socket_fd, &(b->result->out_fd));
-    for (s = erl_errno_id(err), t = b->result->errno_string; *s; s++, t++) {
+    s = erl_errno_id(err);
+    if (strcmp(s, "unknown") == 0 && err == EOVERFLOW) {
+        s = "EOVERFLOW";
+    }
+    for (t = b->result->errno_string; *s; s++, t++) {
         *t = tolower(*s);
     }
     *t = '\0';
@@ -238,7 +242,8 @@ static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
         return;
     }
     cur_offset = xfer->offset;
-    result = yaws_sendfile_call(sfd->socket_fd, xfer->file_fd, &xfer->offset, xfer->count);
+    result = yaws_sendfile_call(sfd->socket_fd, xfer->file_fd,
+                                &xfer->offset, xfer->count);
     if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
         off_t written = xfer->offset - cur_offset;
         xfer->count -= written;

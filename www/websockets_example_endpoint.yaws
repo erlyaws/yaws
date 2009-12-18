@@ -1,0 +1,63 @@
+<erl>
+out(A) -> 
+    case get_upgrade_header(A#arg.headers) of 
+	undefined ->
+	    {content, "text/plain", "You're not a web sockets client! Go away!"};
+	"WebSocket" ->
+	    WebSocketOwner = spawn(fun() -> websocket_owner() end),
+	    {websocket, WebSocketOwner, passive}
+    end.
+
+websocket_owner() ->
+    receive
+	{ok, WebSocket} ->
+	    %% This is how we read messages (plural!!) from websockets on passive mode
+	    case yaws_api:websocket_receive(WebSocket) of
+		{error,closed} ->
+		    io:format("The websocket got disconnected right from the start. "
+			      "This wasn't supposed to happen!!~n");
+		{ok, Messages} ->
+		    case Messages of
+			[<<"client-connected">>] ->
+			    yaws_api:websocket_setopts(WebSocket, [{active, true}]),
+			    echo_server(WebSocket);
+			Other ->
+			    io:format("websocket_owner got: ~p. Terminating~n", [Other])
+		    end
+	    end;
+	_ -> ok
+    end.
+
+echo_server(WebSocket) ->
+    receive
+	{tcp, WebSocket, DataFrame} ->
+	    Data = yaws_api:websocket_unframe_data(DataFrame),
+	    io:format("Got data from Websocket: ~p~n", [Data]),
+            yaws_api:websocket_send(WebSocket, Data), 
+            echo_server(WebSocket);
+	{tcp_closed, WebSocket} ->
+	    io:format("Websocket closed. Terminating echo_server...~n");
+	Any ->
+	    io:format("echo_server received msg:~p~n", [Any]),
+	    echo_server(WebSocket)
+    end.
+
+get_upgrade_header(#headers{other=L}) ->
+    lists:foldl(fun({http_header,_,K0,_,V}, undefined) ->
+                        K = case is_atom(K0) of
+                                true ->
+                                    atom_to_list(K0);
+                                false ->
+                                    K0
+                            end,
+                        case string:to_lower(K) of
+                            "upgrade" ->
+                                V;
+                            _ ->
+                                undefined
+                        end;
+                   (_, Acc) ->
+                        Acc
+                end, undefined, L).
+
+</erl>

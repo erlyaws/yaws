@@ -922,11 +922,18 @@ acceptor0(GS, Top) ->
                     ok
             end,
             Res = (catch aloop(Client, GS,  0)),
-            if
-                GS#gs.ssl == nossl ->
-                    gen_tcp:close(Client);
-                GS#gs.ssl == ssl ->
-                    ssl:close(Client)
+            %% Skip closing the socket, as required by web sockets & stream processes.
+            CloseSocket = (get(outh) =:= undefined) orelse 
+                                (done_or_continue() =:= done),
+            case CloseSocket of
+		        false -> ok;
+		        true ->
+                    if
+                        GS#gs.ssl == nossl ->
+                            gen_tcp:close(Client);
+                        GS#gs.ssl == ssl ->
+                            ssl:close(Client)
+                    end
             end,
             case Res of
                 {ok, Int} when is_integer(Int) ->
@@ -2347,6 +2354,12 @@ deliver_dyn_part(CliSock,                       % essential params
             Priv = deliver_accumulated(Arg, CliSock,
                                        no, undefined, stream),
             wait_for_streamcontent_pid(Priv, CliSock, Pid);
+        {websocket, OwnerPid, SocketMode} ->
+			%% The handshake passes control over the socket to OwnerPid
+			%% and terminates the Yaws worker!
+            yaws_websockets:handshake(Arg, OwnerPid, SocketMode)
+			%% this point is never reached
+			;
         _ ->
             DeliverCont(Arg)
     end.
@@ -2581,8 +2594,14 @@ wait_for_streamcontent_pid(Priv, CliSock, ContentPid) ->
         discard ->
             ContentPid ! {discard, self()};
         _ ->
-            gen_tcp:controlling_process(CliSock, ContentPid),
-            ContentPid ! {ok, self()}
+	    SC = get(sc),
+	    case SC#sconf.ssl of
+		undefined ->
+		    gen_tcp:controlling_process(CliSock, ContentPid);
+		_ ->
+		    ssl:controlling_process(CliSock, ContentPid)
+	    end,
+	    ContentPid ! {ok, self()}
     end,
     receive
         endofstreamcontent ->
@@ -2760,6 +2779,11 @@ handle_out_reply({streamcontent_from_pid, MimeType, Pid},
                  _LineNo,_YawsFile, _UT, _ARG) ->
     yaws:outh_set_content_type(MimeType),
     {streamcontent_from_pid, MimeType, Pid};
+
+handle_out_reply({websocket, _OwnerPid, _SocketMode}=Reply,
+				_LineNo,_YawsFile, _UT, _ARG) ->
+	yaws:accumulate_header({connection, erase}),
+	Reply;
 
 handle_out_reply({header, H},  _LineNo, _YawsFile, _UT, _ARG) ->
     yaws:accumulate_header(H);

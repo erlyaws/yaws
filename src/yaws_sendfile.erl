@@ -61,7 +61,8 @@ send(Out, Filename, Offset, Count) ->
                     call_port(
                       Socket_fd,
                       list_to_binary(
-                        [<<Offset:64, Count2:64, Socket_fd:32>>, Filename, <<0:8>>]));
+                        [<<Offset:64, Count2:64, Socket_fd:32>>,
+                         Filename, <<0:8>>]));
                 Error3 ->
                     Error3
             end
@@ -103,9 +104,11 @@ loop(Port) ->
             unregister(?MODULE),
             exit(shutdown);
         {'EXIT', Port, Posix_error} ->
-            error_logger:format("Fatal error: sendfile port died, error ~p~n", [Posix_error]),
+            error_logger:format("Fatal error: sendfile port died, error ~p~n",
+                                [Posix_error]),
             exit(Posix_error);
         {'EXIT', error, Reason} ->
-            error_logger:format("Fatal error: sendfile driver failure: ~p~n", [Reason]),
+            error_logger:format("Fatal error: sendfile driver failure: ~p~n",
+                                [Reason]),
             exit(Reason)
     end.

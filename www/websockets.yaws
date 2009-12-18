@@ -1,0 +1,86 @@
+
+<erl>
+
+
+box(Str) ->
+    {'div',[{class,"box"}],
+     {pre,[],yaws_api:htmlize(Str)}}.
+
+tbox(T) ->
+    box(lists:flatten(io_lib:format("~p",[T]))).
+
+
+ssi(File) ->
+    {'div',[{class,"box"}],
+     {pre,[],
+      {ssi, File,[],[]}}}.
+
+
+out(A) ->
+    [{ssi, "TAB.inc", "%%",[{"websockets", "choosen"}]},
+     {ehtml,
+     {'div',[{id, "entry"}],
+      [{h1, [], "Web Sockets in Yaws"},
+
+       {p, [], ["Web Sockets! The new kid in town! Joe ", {a, [{href, "http://armstrongonsoftware.blogspot.com/2009/12/comet-is-dead-long-live-websockets.html"}], "loves it"}, ", maybe you should too?"]},
+
+       {p, [], "Web Sockets allow for *real* two-way communication between the browser and Yaws without the overhead and latency that come with polling/long-polling solutions. That should be enough for an introduction. Now... how to use it?"},
+	   
+	   {p, [], "First start by returning:"},
+
+       box(" {websocket, OwnerPid, SocketMode}"),
+
+       {p,[], "from the out/1 function."
+               " This makes the erlang process within yaws processing that particular page do a protocol upgrade from HTTP to the Web Socket Protocol, after which the OwnerPid can use the socket to interface directly with the Web Sockets client."},
+			   
+		{p,[], "When yaws completes the Web Sockets handshake, it sends one of the following messages to OwnerPid:"},
+
+       {ul,[],
+        [{li,[]," {ok, WebSocket} indicates to OwnerPid that the handshake completed successfully and that the WebSocket is set up and can be used to communicate with the web sockets client."},
+         {li,[]," discard indicates to OwnerPid that the handshake failed and no web sockets connection is available."}]},
+
+       {p,[], "SocketMode defines how the messages sent by the client are to be delivered to the OwnerPid."},
+	   
+	   {ul, [], [
+			{li, [], [
+				{p,[], "On passive mode (SocketMode=false) it is up to the receiving process to issue a synchronous request to: "},
+				box("yaws_api:websocket_receive(WebSocket)"),
+				{p, [], " to grab the incoming messages."}
+			]},
+			{li, [], [
+				{p, [], "On active mode (SocketMode=true) the incoming Web Socket data frames are delivered to OwnerPid as messages. On this mode the following messages are to be expected:"},
+				box("{tcp, WebSocket, DataFrame}
+{tcp_closed, WebSocket}"),
+					{p, [], "To extract the data from a Web Socket data frame you can use this function: "},
+					box("yaws_api:websocket_unframe_data(DataFrame)")
+			]},
+			{li, [], [
+				{p, [], "If SocketMode=once then only ONE message will be sent as if in active mode and after that we're back to passive mode."}
+			]}
+		]},
+
+       {p,[], "For switching between the various \"receive modes\" you can do this:"},
+
+       box("yaws_api:websocket_setopts(WebSocket, [{active, NewSocketMode}])"),
+
+       {p,[],
+        "This function just wraps (gen_tcp|ssl):setops/2 to absctract away from using a regular/secure http connection."},
+
+       {p, [], "Enough theory for now. Sample echo server follows!"},
+
+       ssi("websockets_example_endpoint.yaws"),
+
+       {p, [],
+        ["The above code can be executed ",
+         {a, [{href, "websockets_example.yaws"}], "Here"},
+         "."]}
+
+       ]}},
+       {ssi, "END2",[],[]}
+       ].
+
+
+</erl>
+
+
+</html>

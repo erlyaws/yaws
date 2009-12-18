@@ -101,7 +101,7 @@ encode(true) -> "true";
 encode(false) -> "false";
 encode(null) -> "null";
 encode(undefined) -> "null";
-encode(B) when is_binary(B) -> encode_string(binary_to_list(B));
+encode(B) when is_binary(B) -> encode_string(B);
 encode(I) when is_integer(I) -> integer_to_list(I);
 encode(F) when is_float(F) -> io_lib:format("~g", [F]);
 encode(L) when is_list(L) ->
@@ -117,9 +117,10 @@ encode(Bad) -> exit({json_encode, {bad_term, Bad}}).
 %% Encode an Erlang string to JSON.
 %% Accumulate strings in reverse.
 
-encode_string(S) -> encode_string(S, [$"]).			 % " fix highlight for vim :)
+encode_string(B) when is_binary(B) -> encode_string(binary_to_list(B));
+encode_string(S) -> encode_string(S, [$"]).  
 
-encode_string([], Acc) -> lists:reverse([$" | Acc]); % " fix highlight for vim :)
+encode_string([], Acc) -> lists:reverse([$" | Acc]); 
 encode_string([C | Cs], Acc) ->
     case C of
 	$" -> encode_string(Cs, [$", $\\ | Acc]);
@@ -133,7 +134,7 @@ encode_string([C | Cs], Acc) ->
         C when C >= 0, C < $\s ->
             % Control characters must be unicode-encoded.
             Hex = lists:flatten(io_lib:format("~4.16.0b", [C])),
-            encode_string(Cs, lists:reverse(Hex) ++ "u\\" ++ Acc); 		% "
+            encode_string(Cs, lists:reverse(Hex) ++ "u\\" ++ Acc); % "
         C when C =< 16#FFFF -> encode_string(Cs, [C | Acc]);
         _ -> exit({json_encode, {bad_char, C}})
     end.
@@ -146,6 +147,7 @@ encode_string([C | Cs], Acc) ->
 encode_object({struct, _Props} = Obj) ->
     M = obj_fold(fun({Key, Value}, Acc) ->
 	S = case Key of
+            B when is_binary(B) -> encode_string(B);    
 	    L when is_list(L) -> encode_string(L);
 	    A when is_atom(A) -> encode_string(atom_to_list(A));
             _ -> exit({json_encode, {bad_key, Key}})

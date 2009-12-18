@@ -57,7 +57,7 @@ To stop the Yaws server with id "foobar". Each Yaws server will write
 its internals data into a file called $HOME/.yaws/yaws/ID where ID the
 identity of the server. Yaws also creates a file called
 ${VARDIR}/run/yaws/ctl-${ID} which contain the portnumber where the server is
-listening for control commands. The default id is "default"
+listening for control commands. The default id is "default".
 
 .TP
 \fB include_dir = Directory\fR
@@ -483,7 +483,7 @@ the client when a certificate is requested.
 \fB verify = 1 | 2 | 3\fR
 Specifies the level of verification the server does on client certs. 
 1 means nothing, 2 means the the server will ask the client for a cert but 
-not fail if the client doesn't supply a client cert, 3 means that the server 
+not fail if the client does not supply a client cert, 3 means that the server 
 requires the client to supply a client cert.
 .TP
 \fB depth = Int\fR
