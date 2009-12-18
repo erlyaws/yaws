@@ -1783,13 +1783,15 @@ verify_upgrade_args(GC, Groups0) when is_record(GC, gconf) ->
         true ->
             %% embeded code may give appmods as a list of strings
             %% So the above is for backwards compatibility
-            %% appmods should be {StringPathElem, ModAtom} tuples
+            %% appmods should be {StringPathElem, ModAtom} or {StringPathElem,ModAtom,ExcludePathsList} tuples
             Groups = yaws:deepmap(
                        fun(SC) ->
                                SC#sconf{appmods =
                                         lists:map(
                                           fun({PE, Mod}) ->
                                                   {PE, Mod};
+											 ({PE,Mod,Ex}) ->
+												  {PE,Mod,Ex};
                                              (AM) when is_list(AM) ->
                                                   {AM,list_to_atom(AM)};
                                              (AM) when is_atom(AM) ->
