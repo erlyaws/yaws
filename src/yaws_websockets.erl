@@ -49,8 +49,6 @@ handshake(Arg, ContentPid, SocketMode) ->
 	    end,
 	    case TakeOverResult of
 		ok ->
-		    %% Make sure that Yaws doesn't close the socket!
-		    put(outh, (get(outh))#outh{doclose = false}),
 		    ContentPid ! {ok, CliSock};
 		{error, Reason} ->
 		    ContentPid ! discard,

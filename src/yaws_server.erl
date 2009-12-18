@@ -2779,6 +2779,7 @@ handle_out_reply({streamcontent_from_pid, MimeType, Pid},
 
 handle_out_reply({websocket, _OwnerPid, _SocketMode}=Reply,
 				_LineNo,_YawsFile, _UT, _ARG) ->
+	yaws:accumulate_header({connection, erase}),
 	Reply;
 
 handle_out_reply({header, H},  _LineNo, _YawsFile, _UT, _ARG) ->
