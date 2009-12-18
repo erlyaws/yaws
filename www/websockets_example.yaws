@@ -1,0 +1,157 @@
+
+<erl>
+
+out(A) -> 
+    case get_upgrade_header(A#arg.headers) of 
+	undefined ->
+	    serve_html_page(A);
+	"WebSocket" ->
+	    WebSocketOwner = spawn(fun() -> websocket_owner() end),
+	    {websocket, WebSocketOwner, passive}
+    end.
+
+
+websocket_owner() ->
+    receive
+	{ok, WebSocket} ->
+	    %% This is how we read messages (plural!!) from websockets on passive mode
+	    case yaws_api:websocket_receive(WebSocket) of
+		{error,closed} ->
+		    io:format("The websocket got disconnected right from the start. "
+			      "This wasn't supposed to happen!!~n");
+		{ok, Messages} ->
+		    case Messages of
+			[<<"client-connected">>] ->
+			    yaws_api:websocket_setopts(WebSocket, [{active, true}]),
+			    echo_server(WebSocket);
+			Other ->
+			    io:format("websocket_owner got: ~p. Terminating~n", [Other])
+		    end
+	    end;
+	_ -> ok
+    end.
+
+
+echo_server(WebSocket) ->
+    receive
+	{tcp, WebSocket, DataFrame} ->
+	    Data = yaws_api:websocket_unframe_data(DataFrame),
+	    io:format("Got data from Websocket: ~p~n", [Data]),
+            yaws_api:websocket_send(WebSocket, Data), 
+            echo_server(WebSocket);
+	{tcp_closed, WebSocket} ->
+	    io:format("Websocket closed. Terminating echo_server...~n");
+	Any ->
+	    io:format("echo_server received msg:~p~n", [Any]),
+	    echo_server(WebSocket)
+    end.
+
+get_upgrade_header(#headers{other=L}) ->
+    lists:foldl(fun({http_header,_,K0,_,V}, undefined) ->
+                        K = case is_atom(K0) of
+                                true ->
+                                    atom_to_list(K0);
+                                false ->
+                                    K0
+                            end,
+                        case string:to_lower(K) of
+                            "upgrade" ->
+                                V;
+                            _ ->
+                                undefined
+                        end;
+                   (_, Acc) ->
+                        Acc
+                end, undefined, L).
+
+serve_html_page(A) ->
+    Host = (A#arg.headers)#headers.host,
+    {abs_path, Path} = (A#arg.req)#http_request.path,
+    WebSocketLocation = Host ++ Path,
+    io:format("WebSocketLocation: ~p ~n", [WebSocketLocation]),
+    Body = html_body(WebSocketLocation),
+    {content, "text/html", Body}.
+
+%% this html was copied from the basic example in
+%% http://github.com/davebryson/erlang_websocket/
+html_body(WebSocketLocation) ->
+"<html>
+<head> 
+  <title>Basic WebSocket Example</title> 
+  <script type=\"text/javascript\"> 
+     if (!window.WebSocket)
+        alert(\"WebSocket not supported by this browser\");
+    
+    // Get an Element
+    function $() { return document.getElementById(arguments[0]); }
+    // Get the value of an Element
+    function $F() { return document.getElementById(arguments[0]).value; }
+    
+    var client = {
+        connect: function(){
+         this._ws=new WebSocket(\"ws://" ++ WebSocketLocation ++ "\");
+         this._ws.onopen=this._onopen;
+         this._ws.onmessage=this._onmessage;
+         this._ws.onclose=this._onclose;
+        },
+        _onopen: function(){
+          $('connect').className='hidden';
+          $('connected').className='';
+          $('phrase').focus();
+          client._send('client-connected');
+       },
+        _send: function(message){
+           if (this._ws)
+            this._ws.send(message);
+        },
+       chat: function(text) {
+          if (text != null && text.length>0 )
+            client._send(text);
+        },
+        _onmessage: function(m) {
+          if (m.data){
+            var text = m.data; 
+            var msg=$('msgs');
+            var spanText = document.createElement('span');
+            spanText.className='text';
+            spanText.innerHTML=text;
+            var lineBreak = document.createElement('br');
+            msg.appendChild(spanText);
+            msg.appendChild(lineBreak);
+            msg.scrollTop = msg.scrollHeight - msg.clientHeight;   
+          }
+        },
+        _onclose: function(m) {
+          this._ws=null;
+          $('connect').className='';
+          $('connected').className='hidden';
+          $('msg').innerHTML='';
+        }
+    };
+  </script> 
+  <style type='text/css'> 
+    div.hidden { display: none; }
+  </style> 
+ 
+</head> 
+<body> 
+  <h1>Basic Echo Example</h1> 
+  <div id=\"msgs\"></div> 
+  <div id=\"connect\"> 
+     <input id='cA' class='button' type='submit' name='connect' value='Connect'/> 
+  </div> 
+  <br/> 
+  <div id=\"connected\" class=\"hidden\"> 
+    Say Something:&nbsp;<input id='phrase' type='text'/> 
+    <input id='sendB' class='button' type='submit' name='connect' value='Send'/> 
+  </div> 
+ 
+  <script type='text/javascript'> 
+    $('cA').onclick = function(event) { client.connect(); return false; };
+    $('sendB').onclick = function(event) { client.chat($F('phrase')); $('phrase').value=''; return false; };	
+ </script> 
+  </body> 
+</html>".
+
+</erl>
+

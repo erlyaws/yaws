@@ -42,7 +42,8 @@ MODULES=yaws \
 	yaws_sendfile yaws_sendfile_compat \
 	yaws_sup_restarts \
 	yaws_stats \
-	yaws_multipart
+	yaws_multipart \
+	yaws_websockets
 
 
 

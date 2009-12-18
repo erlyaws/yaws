@@ -922,12 +922,16 @@ acceptor0(GS, Top) ->
                     ok
             end,
             Res = (catch aloop(Client, GS,  0)),
-            if
-                GS#gs.ssl == nossl ->
-                    gen_tcp:close(Client);
-                GS#gs.ssl == ssl ->
-                    ssl:close(Client)
-            end,
+	    case yaws:outh_get_doclose() of
+		false -> ok;
+		true ->
+		    if
+			GS#gs.ssl == nossl ->
+			    gen_tcp:close(Client);
+			GS#gs.ssl == ssl ->
+			    ssl:close(Client)
+		    end
+	    end,
             case Res of
                 {ok, Int} when is_integer(Int) ->
                     Top ! {self(), done_client, Int};
@@ -2347,6 +2351,12 @@ deliver_dyn_part(CliSock,                       % essential params
             Priv = deliver_accumulated(Arg, CliSock,
                                        no, undefined, stream),
             wait_for_streamcontent_pid(Priv, CliSock, Pid);
+        {websocket, OwnerPid, SocketMode} ->
+			%% The handshake passes control over the socket to OwnerPid
+			%% and terminates the Yaws worker!
+            yaws_websockets:handshake(Arg, OwnerPid, SocketMode)
+			%% this point is never reached
+			;
         _ ->
             DeliverCont(Arg)
     end.
@@ -2766,6 +2776,10 @@ handle_out_reply({streamcontent_from_pid, MimeType, Pid},
                  _LineNo,_YawsFile, _UT, _ARG) ->
     yaws:outh_set_content_type(MimeType),
     {streamcontent_from_pid, MimeType, Pid};
+
+handle_out_reply({websocket, _OwnerPid, _SocketMode}=Reply,
+				_LineNo,_YawsFile, _UT, _ARG) ->
+	Reply;
 
 handle_out_reply({header, H},  _LineNo, _YawsFile, _UT, _ARG) ->
     yaws:accumulate_header(H);
