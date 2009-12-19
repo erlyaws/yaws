@@ -922,12 +922,13 @@ acceptor0(GS, Top) ->
                     ok
             end,
             Res = (catch aloop(Client, GS,  0)),
-            %% Skip closing the socket, as required by web sockets & stream processes.
+            %% Skip closing the socket, as required by web sockets & stream
+            %% processes.
             CloseSocket = (get(outh) =:= undefined) orelse 
                                 (done_or_continue() =:= done),
             case CloseSocket of
-		        false -> ok;
-		        true ->
+                false -> ok;
+                true ->
                     if
                         GS#gs.ssl == nossl ->
                             gen_tcp:close(Client);
@@ -2355,11 +2356,9 @@ deliver_dyn_part(CliSock,                       % essential params
                                        no, undefined, stream),
             wait_for_streamcontent_pid(Priv, CliSock, Pid);
         {websocket, OwnerPid, SocketMode} ->
-			%% The handshake passes control over the socket to OwnerPid
-			%% and terminates the Yaws worker!
-            yaws_websockets:handshake(Arg, OwnerPid, SocketMode)
-			%% this point is never reached
-			;
+            %% The handshake passes control over the socket to OwnerPid
+            %% and terminates the Yaws worker!
+            yaws_websockets:handshake(Arg, OwnerPid, SocketMode);
         _ ->
             DeliverCont(Arg)
     end.
@@ -2781,9 +2780,9 @@ handle_out_reply({streamcontent_from_pid, MimeType, Pid},
     {streamcontent_from_pid, MimeType, Pid};
 
 handle_out_reply({websocket, _OwnerPid, _SocketMode}=Reply,
-				_LineNo,_YawsFile, _UT, _ARG) ->
-	yaws:accumulate_header({connection, erase}),
-	Reply;
+                 _LineNo,_YawsFile, _UT, _ARG) ->
+    yaws:accumulate_header({connection, erase}),
+    Reply;
 
 handle_out_reply({header, H},  _LineNo, _YawsFile, _UT, _ARG) ->
     yaws:accumulate_header(H);

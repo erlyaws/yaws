@@ -1781,17 +1781,18 @@ find_sc(_SC,[]) ->
 verify_upgrade_args(GC, Groups0) when is_record(GC, gconf) ->
     case is_groups(Groups0) of
         true ->
-            %% embeded code may give appmods as a list of strings
-            %% So the above is for backwards compatibility
-            %% appmods should be {StringPathElem, ModAtom} or {StringPathElem,ModAtom,ExcludePathsList} tuples
+            %% Embedded code may give appmods as a list of strings, or
+            %% appmods can be {StringPathElem,ModAtom} or
+            %% {StringPathElem,ModAtom,ExcludePathsList} tuples. Handle
+            %% all possible variants here.
             Groups = yaws:deepmap(
                        fun(SC) ->
                                SC#sconf{appmods =
                                         lists:map(
                                           fun({PE, Mod}) ->
                                                   {PE, Mod};
-											 ({PE,Mod,Ex}) ->
-												  {PE,Mod,Ex};
+                                             ({PE,Mod,Ex}) ->
+                                                  {PE,Mod,Ex};
                                              (AM) when is_list(AM) ->
                                                   {AM,list_to_atom(AM)};
                                              (AM) when is_atom(AM) ->
