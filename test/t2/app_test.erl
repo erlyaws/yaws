@@ -7,7 +7,8 @@
 %% Way to invoke just one test
 start([F]) ->
     ?line {ok, _} = ibrowse:start_link(),
-    apply(app_test, F, []).
+    apply(app_test, F, []),
+    ibrowse:stop().
 
 start() ->
     ?line ok,
@@ -16,8 +17,10 @@ start() ->
     test1(),
     test2(),
     test3(),
+    appmod_test(),
     streamcontent_test(),
-    sendfile_get().
+    sendfile_get(),
+    ibrowse:stop().
 
 
 test1() ->
@@ -43,7 +46,7 @@ collect_pids(Pids) ->
 
 %% max 5 connectors at a time
 allow_connects([], _) ->
-    io:format("All pids connected \n",[]);
+    io:format("  test1: all pids connected \n",[]);
 allow_connects(Pids, 0) ->
     receive
 	{Pid, connected} ->
@@ -209,6 +212,23 @@ collect(L, Count, Tag) ->
             ?line exit(timeout)
     end.
 
+-define(APPMOD_HEADER, "Appmod-Called").
+
+appmod_test() ->
+    io:format("appmod_test\n",[]),
+    Uri1 = "http://localhost:8002/",
+    ?line {ok, "200", Headers1, _} = ibrowse:send_req(Uri1, [], get),
+    ?line "true" = proplists:get_value(?APPMOD_HEADER, Headers1),
+    Uri2 = "http://localhost:8003/",
+    ?line {ok, "200", Headers2, _} = ibrowse:send_req(Uri2, [], get),
+    ?line "true" = proplists:get_value(?APPMOD_HEADER, Headers2),
+    Uri3 = "http://localhost:8003/icons/layout.gif",
+    ?line {ok, "200", Headers3, _} = ibrowse:send_req(Uri3, [], get),
+    ?line false = proplists:get_value(?APPMOD_HEADER, Headers3, false),
+    Uri4 = "http://localhost:8004/non_root_appmod",
+    ?line {ok, "200", Headers4, _} = ibrowse:send_req(Uri4, [], get),
+    ?line "true" = proplists:get_value(?APPMOD_HEADER, Headers4),
+    ok.
 
 streamcontent_test() ->
     io:format("streamcontent_test\n",[]),
@@ -217,3 +237,10 @@ streamcontent_test() ->
     ?line "chunked" = proplists:get_value("Transfer-Encoding", Headers),
     ?line Body = "this is an iolist",
     ok.
+
+%% used for appmod tests
+%%
+out(A) ->
+    %% add our special header to mark that we were here
+    [{status, 200},
+     {header, {?APPMOD_HEADER, "true"}}].

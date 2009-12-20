@@ -3620,7 +3620,11 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
                      mime = Mime};
         "/" -> %% special case
             case lists:keysearch("/", 1, SC#sconf.appmods) of
-                {value, {_, Mod}} ->
+                {value, AppmodDef} ->
+                    %% AppmodDef can be either a 2-tuple or 3-tuple depending
+                    %% on whether there are exclude paths present. We want
+                    %% only the second element of the tuple in either case.
+                    Mod = element(2, AppmodDef),
                     #urltype{type = appmod,
                              data = {Mod, []},
                              dir = "",

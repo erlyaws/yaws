@@ -34,8 +34,7 @@ debug:
 
 conf:
 	cat ../conf/stdconf.conf | \
-	../../scripts/Subst %YTOP% $(YTOP) | \
-	perl -pe 's/^(\s*appmods =.+)/\1 streamtest/' > yaws.conf
+	../../scripts/Subst %YTOP% $(YTOP) > yaws.conf
 
 clean:	tclean
 	-rm -rf localhost:8000 logs yaws.conf
