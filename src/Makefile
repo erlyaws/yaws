@@ -8,6 +8,18 @@ endif
 
 include ../vsn.mk
 VSN=$(YAWS_VSN)
+
+
+## the websocket code uses new modern bits stuff
+ifeq ($(shell test $(ERTS_MAJOR) -gt 4 && test $(ERTS_MINOR) -gt 6 && echo YES), YES)
+	HASBITS=true
+endif
+
+ifeq ($(HASBITS),true)
+	BITSMODS=yaws_websockets
+endif
+
+
 MODULES=yaws \
 	yaws_app \
 	yaws_ticker \
@@ -43,7 +55,7 @@ MODULES=yaws \
 	yaws_sup_restarts \
 	yaws_stats \
 	yaws_multipart \
-	yaws_websockets
+	$(BITSMODS)
 
 
 

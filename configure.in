@@ -99,11 +99,18 @@ fi
 AC_SUBST(ERLDIR)
 AC_SUBST(ERL_DLL_LIB)
 
+
+ERTS_MINOR=`ls "${ERLDIR}" | grep erts | sed 's/erts-.\.//' | sed 's/\..*//'`
+ERTS_MAJOR=`ls "${ERLDIR}" |grep erts | sed 's/erts-//' | sed 's/\..*//'`
+AC_SUBST(ERTS_MINOR)
+AC_SUBST(ERTS_MAJOR)
+
 BT_ERL_LIB_VSN(erts)
 BT_ERL_LIB_VSN(kernel)
 BT_ERL_LIB_VSN(stdlib)
 BT_ERL_LIB_VSN(sasl)
 BT_ERL_LIB_VSN(mnesia)
+
 
 AC_PROG_CC
 AC_PROG_GCC_TRADITIONAL
