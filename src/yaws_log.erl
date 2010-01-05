@@ -463,8 +463,19 @@ terminate(_Reason, _State) ->
 
 
 fmt_alog(Time, Ip, User, Req, Status,  Length, Referrer, UserAgent) ->
-    [fmt_ip(Ip), " - ", User, [$\s], Time, [$\s, $"], Req, [$",$\s], 
+    [fmt_ip(Ip), " - ", User, [$\s], Time, [$\s, $"], no_ctl(Req), [$",$\s], 
      Status, [$\s], Length, [$\s,$"], Referrer, [$",$\s,$"], UserAgent, [$",$\n]].
+
+
+%% Odd security advisory that only affects webservers where users are 
+%% somehow allowed to upload files that later can be downloaded.
+
+no_ctl([H|T]) when H < 32 ->
+    no_ctl(T);
+no_ctl([H|T]) ->
+    [H|no_ctl(T)];
+no_ctl([]) ->
+    [].
 
 
 fmt_ip(IP) when is_tuple(IP) ->

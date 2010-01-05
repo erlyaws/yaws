@@ -1,3 +1,11 @@
+Tue Jan  5 14:42:15 CET 2010 1.87
+websocket support (davide and wde)
+proper handling of "/" appmod with excluded paths (patch from wde)
+Added new unit tests for appmods, with both / and non-/ tests. The / tests include exclude_paths testing. (steve)
+patch from wde solving a problem with appmod exclude paths and verify_upgrade
+yaws_server: fixed the test for whether to close the socket. The yaws:outh_get_doclose() doesn't return a boolean and it requires the outh dicionary entry to be set (sometimes it isn't). (davide)
+do not pass the --id option if the default id is used (steve)
+
 Sun Dec  6 14:35:33 CET 2009 1.86
 Mostly a bugfix release. Two new features. First the ability to exclude directories from an appmod. This is especially interesting for users that have an appmod at '/' but still want yaws to ship normal static contet such as js files and images. Secondly support for Forward proxying was added. Here is the changes list:
 It wasn't possible to handle huge files (above 2GIG ?) If sendfile hits EOVERFLOW send the file from Erlang code instead (Steve and klacke)
