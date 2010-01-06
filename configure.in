@@ -99,9 +99,9 @@ fi
 AC_SUBST(ERLDIR)
 AC_SUBST(ERL_DLL_LIB)
 
-
-ERTS_MINOR=`ls "${ERLDIR}" | grep erts | sed 's/erts-.\.//' | sed 's/\..*//'`
-ERTS_MAJOR=`ls "${ERLDIR}" |grep erts | sed 's/erts-//' | sed 's/\..*//'`
+erts_vsn=`ls "${ERLDIR}" | grep ^erts | tail -1 | sed 's/erts-//'`
+ERTS_MINOR=`echo $erts_vsn | sed -e 's/^.\.//' -e 's/\..*//'`
+ERTS_MAJOR=`echo $erts_vsn | sed 's/\..*//'`
 AC_SUBST(ERTS_MINOR)
 AC_SUBST(ERTS_MAJOR)
 
