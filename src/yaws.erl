@@ -2264,6 +2264,8 @@ nonl([10|T]) ->
     nonl(T);
 nonl([13|T]) ->
     nonl(T);
+nonl([32|T]) ->
+    nonl(T);
 nonl([H|T]) ->
     [H|nonl(T)];
 nonl([]) ->
