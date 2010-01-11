@@ -1952,7 +1952,12 @@ redirect_self(A) ->
                 {Port2, [$:|integer_to_list(Port2)]}
         end,
     H = A#arg.headers,
-    Host = yaws:redirect_host(get(sc), H#headers.host),
+    Host0 = yaws:redirect_host(get(sc), H#headers.host),
+    %% redirect host contains the port number - for mysterious reasons
+    Host = case string:tokens(Host0, ":") of
+               [H0, _] -> H0;
+               [H1] -> H1
+           end,
     {Scheme, SchemeStr} = 
         case {SC#sconf.ssl,SC#sconf.rmethod} of
             {_, Method} when is_list(Method) ->
