@@ -1,5 +1,9 @@
-Tue Jan  5 14:42:15 CET 2010 1.87
+Mon Jan 11 22:09:00 CET 2010 1.87
 websocket support (davide and wde)
+conditional compile of websockets, only use if the chosen erl supports it (klacke/steve)
+patch by Andrei Soroker to strip the port part in #redir_self records - this patch may break some code, users that use redir_self() and unconditionally strip off their optional port number are affected
+support some extra status codes in code_to_phrase (steve)
+drop spaces before parsing ints - patch by Colm Dougan
 proper handling of "/" appmod with excluded paths (patch from wde)
 Added new unit tests for appmods, with both / and non-/ tests. The / tests include exclude_paths testing. (steve)
 patch from wde solving a problem with appmod exclude paths and verify_upgrade
