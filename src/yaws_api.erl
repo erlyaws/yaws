@@ -512,7 +512,17 @@ code_to_phrase(501) -> "Not Implemented";
 code_to_phrase(502) -> "Bad Gateway";
 code_to_phrase(503) -> "Service Unavailable";
 code_to_phrase(504) -> "Gateway Timeout";
-code_to_phrase(505) -> "HTTP Version Not Supported".
+code_to_phrase(505) -> "HTTP Version Not Supported";
+
+%% Below are some non-HTTP status codes from other protocol standards that
+%% we've seen used with HTTP in the wild, so we include them here. HTTP 1.1
+%% section 6.1.1 allows for this sort of extensibility, but we recommend
+%% sticking with the HTTP status codes above for maximal portability and
+%% interoperability.
+%%
+code_to_phrase(451) -> "Requested Action Aborted";   % from FTP (RFC 959)
+code_to_phrase(452) -> "Insufficient Storage Space"; % from FTP (RFC 959)
+code_to_phrase(453) -> "Not Enough Bandwidth".       % from RTSP (RFC 2326)
 
 
 
