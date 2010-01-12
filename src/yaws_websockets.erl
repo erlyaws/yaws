@@ -1,8 +1,8 @@
 %%%----------------------------------------------------------------------
 %%% File    : yaws_websockets.erl
-%%% Author  : Davide Marquês <nesrait@gmail.com>
+%%% Author  : Davide Marques <nesrait@gmail.com>
 %%% Purpose : 
-%%% Created :  18 Dec 2009 by Davide Marquês <nesrait@gmail.com>
+%%% Created :  18 Dec 2009 by Davide Marques <nesrait@gmail.com>
 %%% Modified: 
 %%%----------------------------------------------------------------------
 
