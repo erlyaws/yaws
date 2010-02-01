@@ -1103,7 +1103,7 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
             end;
         ["depth", '=', Val0] ->
             Val = (catch list_to_integer(Val0)),
-            case lists:member(Val, [1,2,3,4,5,6,7]) of
+            case lists:member(Val, [0, 1,2,3,4,5,6,7]) of
                 true when  is_record(C#sconf.ssl, ssl) ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{depth = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
@@ -1111,7 +1111,7 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Need to set option ssl to true before line ~w",
                                [Lno])};
                 _ ->
-                    {error, ?F("Expect reasonable integer at line ~w", [Lno])}
+                    {error, ?F("Expect integer 0..7 at line ~w", [Lno])}
             end;
         ["password", '=', Val] ->
             if 

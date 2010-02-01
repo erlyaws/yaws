@@ -12,8 +12,6 @@
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
-
-
 -include_lib("kernel/include/file.hrl").
 -export([start/0, stop/0, hup/1, restart/0, modules/0, load/0]).
 -export([start_embedded/1, start_embedded/2, start_embedded/3,
@@ -1774,7 +1772,6 @@ do_recv(Sock, Num, nossl) ->
 do_recv(Sock, Num, ssl) ->
     ssl:recv(Sock, Num, ?READ_TIMEOUT).
 
-
 cli_recv(S, Num, SslBool) ->
     Res = do_recv(S, Num, SslBool),
     cli_recv_trace((get(gc))#gconf.trace, Res),
@@ -1883,7 +1880,6 @@ setopts(Sock, Opts, ssl) ->
     ok = ssl:setopts(Sock, Opts).
 
 do_http_get_headers(CliSock, SSL) ->
-    setopts(CliSock, [{packet, http}], SSL),
     case http_recv_request(CliSock,SSL) of
         bad_request ->
             {#http_request{method=bad_request, version={0,9}},
@@ -1897,6 +1893,7 @@ do_http_get_headers(CliSock, SSL) ->
 
 
 http_recv_request(CliSock, SSL) ->
+    setopts(CliSock, [{packet, http}], SSL),
     case do_recv(CliSock, 0,  SSL) of
         {ok, R} when is_record(R, http_request) ->
             R;
@@ -1912,13 +1909,12 @@ http_recv_request(CliSock, SSL) ->
             closed;
         {error, timeout} -> closed;
         _Other ->
-            ?Debug("Got ~p~n", [_Other]),
+            error_logger:format("Unhandled reply fr. do_recv() ~p~n", [_Other]),
             exit(normal)
     end.
 
-
-
 http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
+    setopts(CliSock, [{packet, httph}], SSL),
     Recv = do_recv(CliSock, 0, SSL),
     case Recv of
         {ok, {http_header,  _Num, 'Host', _, Host}} ->

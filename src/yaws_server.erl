@@ -860,11 +860,15 @@ ssl_listen_opts(GC, SSL) ->
             true ->
                  false
          end,
+         if SSL#ssl.depth /= undefined ->
+                 {depth, SSL#ssl.depth};
+            true ->
+                 false
+         end,
          if ?gc_use_old_ssl(GC) ->
                  false;
             true ->
-                 %%{ssl_imp, new} - still doesn't work (R13B)
-                 false
+                 {ssl_imp, new}
          end
         ],
     filter_false(L).

@@ -37,8 +37,9 @@ max_connections = nolimit
 
 trace = false
 
-
-
+# Enable this if we want to use the old OTP ssl implementation
+# OTP R13B03 is known to work with this flag set         to false (default)
+use_old_ssl = false
 
 
 # it is possible to have yaws start additional 
@@ -85,7 +86,10 @@ auth_log = true
 # name. Yaws will write a number of runtime files under
 # ${HOME}/.yaws/yaws/${id}
 # The default value is "default"
-
+# If we're not planning to run multiple webservers on the
+# same host it's mych better to leave this value unset since
+# then all the ctl function (--stop et.el) work without having
+# to supply the id.
 
 # id = myname
 
@@ -95,6 +99,7 @@ auth_log = true
 # header doesn't match any name on any Host
 # This is often nice in testing environments but not
 # acceptable in real live hosting scenarios
+# think http://suckmydick.bigcompany.com
 
 pick_first_virthost_on_nomatch = true
 
@@ -106,7 +111,9 @@ pick_first_virthost_on_nomatch = true
 # a privileged port.
 # If we use this feature, it requires fdsrv to be properly installed.
 # Doesn't yet work with SSL.
-# Read http://yaws.hyber.org/privbind.yaws for more info
+# Read http://yaws.hyber.org/privbind.yaws for more info and a better 
+# solution than fd_srv
+
 use_fdsrv = false
 
 
@@ -149,6 +156,7 @@ use_fdsrv = false
         <ssl>  
                 keyfile = %certdir%/yaws-key.pem
                 certfile = %certdir%/yaws-cert.pem
+                depth = 0
         </ssl>
 </server>
                                 
