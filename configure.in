@@ -77,21 +77,11 @@ AC_DEFUN([BT_ERL_LIB_VSN],
 ])dnl
 
 
-dnl
-dnl I keep the cygwin dll code in case I later learn how to
-dnl compile a linked in driver on windows using gcc
-dnl
 
-case "$target_os" in
-        *cygwin*)
 
-           ERLDIR=`echo "${ERL}" | sed 's/\/bin\/*erl.*//'`
-           ERL_DLL_LIB="${ERLDIR}/usr/lib/erl_dll.lib"
-           AC_SUBST(ERL_DLL_LIB)
-        ;;
-        *)
-              ERLDIR=`awk -F= '/ROOTDIR=/ { print [$]2; exit; }' $ERL`;;
-    esac
+ERLDIR=`"${ERL}" -noshell -eval 'io:format("~s",[[code:root_dir()]]), erlang:halt().'`
+ERL_DLL_LIB="${ERLDIR}/usr/lib/erl_dll.lib"
+
 
 if test ! -d "$ERLDIR" ; then
         AC_MSG_ERROR([Broken Erlang installation, $ERLDIR does not exist!])
