@@ -117,8 +117,10 @@ load_yaws_auth_from_docroot(Docroot) ->
 		  SP  = string:sub_string(Path, length(Docroot)+1),
 		  Dir = filename:dirname(SP),
 		  case load_yaws_auth_file(Path, #auth{dir = [Dir]}) of
-		      {ok, Auth} -> [Auth| Acc];
-		      _          -> Acc
+		      Auth when is_record(Auth, auth)  -> 
+                          [Auth| Acc];
+		      _Other -> 
+                          Acc
 		  end
 	  end,
     filelib:fold_files(Docroot, "^.yaws_auth$", true, Fun, []).
@@ -1264,7 +1266,8 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
                     {false, []} ->
                           Auth;
                       _ ->
-                          H = Auth#auth.headers ++ yaws:make_www_authenticate_header({realm, Realm}),
+                          H = Auth#auth.headers ++ 
+                              yaws:make_www_authenticate_header({realm, Realm}),
                           Auth#auth{headers = H}
                   end,
             C2 = C#sconf{authdirs = [A2|C#sconf.authdirs]},
@@ -1285,7 +1288,6 @@ fload(FD, server_redirect, GC, C, Cs, Lno, Chars, RedirMap) ->
         [] ->
             fload(FD, server_redirect, GC, C, Cs, Lno+1, Next, RedirMap);
         [Path, '=', URL] ->
-            io:format(" = ~p ~p~n", [URL, Toks]),
             try yaws_api:parse_url(URL, sloppy) of
                 U when is_record(U, url) ->
                      fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
@@ -1294,7 +1296,6 @@ fload(FD, server_redirect, GC, C, Cs, Lno, Chars, RedirMap) ->
                     {error, ?F("bad redir ~p at line ~w", [URL, Lno])}
             end;
         [Path, '=', '=', URL] ->
-            io:format(" == ~p~n", [URL]),
             try yaws_api:parse_url(URL, sloppy) of
                 U when is_record(U, url) ->
                      fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
