@@ -662,7 +662,7 @@ fcgi_status_name(_) -> "?".
 %%% Amount of time (in milliseconds) allowed for data to arrive when
 %%% reading the TCP connection to the application server.
 %%%
--define(FCGI_READ_TIMEOUT_MSECS, 1000).
+-define(FCGI_READ_TIMEOUT_MSECS, 10000).
 
 %%% TODO: Implement a configurable timeout which applies to the whole
 %%% operation (as oposed to individual socket reads).
