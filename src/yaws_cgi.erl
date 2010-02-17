@@ -775,7 +775,7 @@ fcgi_worker(ParentPid, Role, Arg, ServerConf, Options) ->
     fcgi_worker_fail_if(AppServerPort == undefined, PreliminaryWorkerState,
                         app_server_port_must_be_configured),
     PathInfo = get_opt(path_info, Options, Arg#arg.pathinfo),
-    ScriptFileName = "",        % There is no script file in the case of FastCGI
+    ScriptFileName = Arg#arg.fullpath,
     ExtraEnv = get_opt(extra_env, Options, []),
     Env = build_env(Arg, ScriptFileName, PathInfo, ExtraEnv, ServerConf),
     TraceProtocol = get_opt(trace_protocol, Options,
