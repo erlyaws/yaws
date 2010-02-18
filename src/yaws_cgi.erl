@@ -1116,8 +1116,8 @@ fcgi_get_output(WorkerState) ->
             if
                 ProtStatus /= ?FCGI_STATUS_REQUEST_COMPLETE ->
                     error_logger:error_msg("FastCGI protocol error: ~p (~s)~n",
-                                           ProtStatus,
-                                           fcgi_status_name(ProtStatus));
+                                           [ProtStatus,
+                                            fcgi_status_name(ProtStatus)]);
                 true ->
                     ok
             end,

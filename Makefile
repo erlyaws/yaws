@@ -81,3 +81,13 @@ foo:
 	@echo
 	@echo "--------------------------------"
 
+yaws.plt:	clean debug
+	dialyzer --build_plt -c ebin --output_plt yaws.plt \
+   	   -r $(ERLDIR)/lib/sasl-$(SASL_VSN) \
+   	   -r $(ERLDIR)/lib/kernel-$(KERNEL_VSN) \
+   	   -r $(ERLDIR)/lib/stdlib-$(STDLIB_VSN) 
+
+#   	   -r $(ERLDIR)/lib/ssl-$(SSL_VSN) 
+
+dialyzer:	yaws.plt
+	dialyzer --plt yaws.plt -c ebin

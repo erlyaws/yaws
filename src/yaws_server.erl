@@ -1631,7 +1631,7 @@ is_auth(_ARG, _Req_dir, _H, [], {Ret, Auth_headers}) ->
     yaws:outh_set_auth(Auth_headers),
     Ret;
 
-is_auth(ARG, Req_dir, H, [X = {Auth_dir, Auth_methods}|T], {Ret, Auth_headers}) ->
+is_auth(ARG, Req_dir, H, [{Auth_dir, Auth_methods}|T], {Ret, Auth_headers}) ->
     case lists:prefix(Auth_dir, Req_dir) of
 	true ->
 	    Auth_H = H#headers.authorization,
@@ -1726,9 +1726,7 @@ is_revproxy(ARG, Path, SC = #sconf{revproxy = RevConf}) ->
         {false, _} ->
             is_revproxy1(Path, RevConf);
         {true, _} ->
-            {true, {"/", fwdproxy_url(ARG)}};
-        {_, _} ->
-            false
+            {true, {"/", fwdproxy_url(ARG)}}
     end.
 
 is_revproxy1(_,[]) ->
@@ -4458,18 +4456,13 @@ fwdproxy_url(ARG) ->
     Headers = ARG#arg.headers,
     {abs_path, Path} = (ARG#arg.req)#http_request.path,
 
-    {Host, Port} =
-    case yaws:split_at(Headers#headers.host, $:) of
-        {Host0, Port0} ->
-            case string:to_integer(Port0) of
-                {Port1, []} ->
-                    {Host0, Port1};
-                _ ->
-                    {Headers#headers.host, undefined}
-            end;
-        _Other ->
-            {Headers#headers.host, undefined}
-    end,
+    {Host0, Port0} = yaws:split_at(Headers#headers.host, $:),
+    {Host, Port} = case string:to_integer(Port0) of
+                       {Port1, []} ->
+                           {Host0, Port1};
+                       _ ->
+                           {Headers#headers.host, undefined}
+                   end,
 
     #url{scheme = http,
          host = Host,

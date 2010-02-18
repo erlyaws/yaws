@@ -135,10 +135,4 @@ tags:
 xref:
 	erl -noshell -pa ../ebin -s yaws_debug xref ../ebin
 
-DIALYZER_FLAGS+=-Wno_return
 
-dialyzer: .dialyzer.ok
-
-.dialyzer.ok:	$(MODULES:%=../ebin/%.$(EMULATOR))
-	dialyzer  $(DIALYZER_FLAGS) -c ../ebin
-	touch .dialyzer.ok

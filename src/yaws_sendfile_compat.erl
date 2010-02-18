@@ -91,7 +91,7 @@ loop_send(Fd, ChunkSize, {ok, Bin}, Out, Count) ->
     Sz = size(Bin),
     if Sz < Count ->
             case gen_tcp:send(Out, Bin) of
-                true ->
+                ok ->
                     loop_send(Fd, ChunkSize, file:read(Fd, ChunkSize),
                               Out, Count-Sz);
                 Err ->

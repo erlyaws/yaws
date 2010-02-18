@@ -27,6 +27,8 @@ CFLAGS += -I/usr/include/pam/ $(EXTRAINCLUDE)
 #
 
 all: $(PRIV_FILES) 
+debug: 
+	CFLAGS="$(CFLAGS) -g" $(MAKE) all
 
 clean:
 	-rm -f $(PRIV_FILES) setuid_drv.$(OBJ) epam.$(OBJ) yaws_sendfile_drv.$(OBJ) hashtable.$(OBJ)
