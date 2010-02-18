@@ -134,7 +134,7 @@ If true, a soap server will be started at startup of Yaws.
 Default is false.
 
 .TP
-\fBsoap_srv_mods = [ListOfModuleSetting] \fR
+\fBsoap_srv_mods = ListOfModuleSetting \fR
 If enable_soap is true, a startup yaws will invoke \fIyaws_soap_srv:setup()\fR
 to setup modules set here. 
 ModuleSetting is either a triad like \fI<Mod, HandlerFunc, WsdlFile>\fR 
@@ -322,23 +322,24 @@ particular request is set to the directory ~username/public_html/
 Default is false.
 
 .TP
-\fBallowed_scripts = [ListOfSuffixes]\fR
+\fBallowed_scripts = ListOfSuffixes\fR
 The allowed script types for this server.  Recognized are `yaws',
-`cgi', `fcgi', `php'.  Default is \fIallowed_scripts = [yaws,php,cgi,fcgi]\fR.
+`cgi', `fcgi', `php'.  Default is \fIallowed_scripts = yaws php cgi fcgi \fR.
 
 Note: for fcgi scripts, the FastCGI application server is only
 called if a local file with the .fcgi extension exists. However,
 the contents of the local .fcgi file are ignored.
 
 .TP
-\fBtilde_allowed_scripts = [ListOfSuffixes]\fR
+\fBtilde_allowed_scripts = ListOfSuffixes\fR
 The allowed script types for this server when executing files in
 a users public_html folder  Recognized are `yaws',
-`cgi', `fcgi', `php'.  Default is \fItilde_allowed_scripts = []\fR.
+`cgi', `fcgi', `php'.  Default is \fItilde_allowed_scripts = \fR
+i.e. empty
 
 
 .TP
-\fBappmods = [ListOfModuleNames]\fR
+\fBappmods = ListOfModuleNames\fR
 If any the names in ListOfModuleNames appear as components in the
 path for a request, the path request parsing will terminate and
 that module will be called. There is also an alternate syntax for

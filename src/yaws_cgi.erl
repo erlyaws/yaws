@@ -662,7 +662,7 @@ fcgi_status_name(_) -> "?".
 %%% Amount of time (in milliseconds) allowed for data to arrive when
 %%% reading the TCP connection to the application server.
 %%%
--define(FCGI_READ_TIMEOUT_MSECS, 1000).
+-define(FCGI_READ_TIMEOUT_MSECS, 10000).
 
 %%% TODO: Implement a configurable timeout which applies to the whole
 %%% operation (as oposed to individual socket reads).
@@ -775,7 +775,7 @@ fcgi_worker(ParentPid, Role, Arg, ServerConf, Options) ->
     fcgi_worker_fail_if(AppServerPort == undefined, PreliminaryWorkerState,
                         app_server_port_must_be_configured),
     PathInfo = get_opt(path_info, Options, Arg#arg.pathinfo),
-    ScriptFileName = "",        % There is no script file in the case of FastCGI
+    ScriptFileName = Arg#arg.fullpath,
     ExtraEnv = get_opt(extra_env, Options, []),
     Env = build_env(Arg, ScriptFileName, PathInfo, ExtraEnv, ServerConf),
     TraceProtocol = get_opt(trace_protocol, Options,

@@ -1525,6 +1525,7 @@ handle_request(CliSock, ARG, N) ->
                         _ ->
                             ok
                     end,
+
                     {IsAuth, ARG1} =
                         case is_auth(ARG, DecPath,ARG#arg.headers,
                                      SC#sconf.authdirs) of
@@ -1630,7 +1631,7 @@ is_auth(_ARG, _Req_dir, _H, [], {Ret, Auth_headers}) ->
     yaws:outh_set_auth(Auth_headers),
     Ret;
 
-is_auth(ARG, Req_dir, H, [{Auth_dir, Auth_methods}|T], {Ret, Auth_headers}) ->
+is_auth(ARG, Req_dir, H, [X = {Auth_dir, Auth_methods}|T], {Ret, Auth_headers}) ->
     case lists:prefix(Auth_dir, Req_dir) of
 	true ->
 	    Auth_H = H#headers.authorization,

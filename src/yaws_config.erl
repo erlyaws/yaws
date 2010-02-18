@@ -17,7 +17,6 @@
 -include_lib("kernel/include/file.hrl").
 
 -export([load/1,
-         toks/1,
          make_default_gconf/2, make_default_sconf/0,
          add_sconf/1,
          add_yaws_auth/1,
@@ -117,8 +116,10 @@ load_yaws_auth_from_docroot(Docroot) ->
 		  SP  = string:sub_string(Path, length(Docroot)+1),
 		  Dir = filename:dirname(SP),
 		  case load_yaws_auth_file(Path, #auth{dir = [Dir]}) of
-		      {ok, Auth} -> [Auth| Acc];
-		      _          -> Acc
+		      Auth when is_record(Auth, auth)  -> 
+                          [Auth| Acc];
+		      _Other -> 
+                          Acc
 		  end
 	  end,
     filelib:fold_files(Docroot, "^.yaws_auth$", true, Fun, []).
@@ -425,7 +426,7 @@ fload(FD, _,  _GC, _C, _Cs, Lno, eof) ->
 
 fload(FD, globals, GC, C, Cs, Lno, Chars) -> 
     Next = io:get_line(FD, ''),
-    case toks(Chars) of
+    case toks(Lno, Chars) of
         [] ->
             fload(FD, globals, GC, C, Cs, Lno+1, Next);
 
@@ -766,13 +767,15 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                   Cs, Lno+1, Next);
 
         [H|_] ->
-            {error, ?F("Unexpected tokens ~p at line ~w", [H, Lno])}
+            {error, ?F("Unexpected tokens ~p at line ~w", [H, Lno])};
+        Err ->
+            Err
     end;
 
 
 fload(FD, server, GC, C, Cs, Lno, Chars) ->
     Next = io:get_line(FD, ''),
-    case toks(Chars) of
+    case toks(Lno, Chars) of
         [] ->
             fload(FD, server, GC, C, Cs, Lno+1, Next);
 
@@ -971,6 +974,8 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
         ["allowed_scripts", '=' | Suffixes] ->
+            io:format("Suf ~p~n", [Suffixes]),
+
             C2 = C#sconf{allowed_scripts = 
                          lists:map(fun(X)->element(1,mime_types:t(X)) end,
                                    Suffixes)},
@@ -1043,14 +1048,16 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             end;
 
         [H|T] ->
-            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
+            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
+        Err ->
+            Err
     end;
 
 
 
 fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
     Next = io:get_line(FD, ''),
-    case toks(Chars) of
+    case toks(Lno, Chars) of
         [] ->
             fload(FD, ssl, GC, C, Cs, Lno+1, Next);
 
@@ -1135,7 +1142,9 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
             fload(FD, server, GC, C, Cs, Lno+1, Next);
 
         [H|T] ->
-            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
+            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
+        Err -> 
+            Err
     end;
 
 fload(FD, rss, _GC, _C, _Cs, Lno, eof) ->
@@ -1145,7 +1154,7 @@ fload(FD, rss, _GC, _C, _Cs, Lno, eof) ->
 fload(FD, rss, GC, C, Cs, Lno, Chars) ->
     %%?Debug("Chars: ~s", [Chars]),
     Next = io:get_line(FD, ''),
-    case toks(Chars) of
+    case toks(Lno, Chars) of
         [] ->
             fload(FD, rss, GC, C, Cs, Lno+1, Next);
         ['<', "/rss", '>'] ->
@@ -1175,7 +1184,9 @@ fload(FD, rss, GC, C, Cs, Lno, Chars) ->
             put(rss, [{rm_max, Value} | get(rss)]),
             fload(FD, rss, GC, C, Cs, Lno+1, Next);
         [H|T] ->
-            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
+            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
+        Err ->
+            Err
     end;
 
 fload(FD, opaque, _GC, _C, _Cs, Lno, eof) ->
@@ -1185,7 +1196,7 @@ fload(FD, opaque, _GC, _C, _Cs, Lno, eof) ->
 fload(FD, opaque, GC, C, Cs, Lno, Chars) ->
     %%?Debug("Chars: ~s", [Chars]),
     Next = io:get_line(FD, ''),
-    case toks(Chars) of
+    case toks(Lno, Chars) of
         [] ->
             fload(FD, opaque, GC, C, Cs, Lno+1, Next);
         ['<', "/opaque", '>'] ->
@@ -1204,7 +1215,9 @@ fload(FD, opaque, GC, C, Cs, Lno, Chars) ->
             C2 = C#sconf{opaque = [{Key, String_value} | C#sconf.opaque]},
             fload(FD, opaque, GC, C2, Cs, Lno+1, Next);
         [H|T] ->
-            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
+            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
+        Err ->
+            Err
     end.
 
 
@@ -1215,7 +1228,7 @@ fload(FD, server_auth, _GC, _C, _Cs, Lno, eof, _Auth) ->
 fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
     %%?Debug("Chars: ~s", [Chars]),
     Next = io:get_line(FD, ''),
-    case toks(Chars) of
+    case toks(Lno, Chars) of
         [] ->
             fload(FD, server_auth, GC, C, Cs, Lno+1, Next, Auth);
         ["dir", '=', Authdir] ->
@@ -1264,13 +1277,16 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
                     {false, []} ->
                           Auth;
                       _ ->
-                          H = Auth#auth.headers ++ yaws:make_www_authenticate_header({realm, Realm}),
+                          H = Auth#auth.headers ++ 
+                              yaws:make_www_authenticate_header({realm, Realm}),
                           Auth#auth{headers = H}
                   end,
             C2 = C#sconf{authdirs = [A2|C#sconf.authdirs]},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
         [H|T] ->
-            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
+            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
+        Err ->
+            Err
     end;
 
 fload(FD, server_redirect, _GC, _C, _Cs, Lno, eof, _RedirMap) ->
@@ -1280,12 +1296,11 @@ fload(FD, server_redirect, _GC, _C, _Cs, Lno, eof, _RedirMap) ->
 fload(FD, server_redirect, GC, C, Cs, Lno, Chars, RedirMap) ->
     %%?Debug("Chars: ~s", [Chars]),
     Next = io:get_line(FD, ''),
-    Toks = toks(Chars),
+    Toks = toks(Lno, Chars),
     case Toks of
         [] ->
             fload(FD, server_redirect, GC, C, Cs, Lno+1, Next, RedirMap);
         [Path, '=', URL] ->
-            io:format(" = ~p ~p~n", [URL, Toks]),
             try yaws_api:parse_url(URL, sloppy) of
                 U when is_record(U, url) ->
                      fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
@@ -1294,7 +1309,6 @@ fload(FD, server_redirect, GC, C, Cs, Lno, Chars, RedirMap) ->
                     {error, ?F("bad redir ~p at line ~w", [URL, Lno])}
             end;
         [Path, '=', '=', URL] ->
-            io:format(" == ~p~n", [URL]),
             try yaws_api:parse_url(URL, sloppy) of
                 U when is_record(U, url) ->
                      fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
@@ -1306,7 +1320,9 @@ fload(FD, server_redirect, GC, C, Cs, Lno, Chars, RedirMap) ->
             C2 = C#sconf{redirect_map = lists:reverse(RedirMap)},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
         [H|T] ->
-            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
+            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
+        Err ->
+            Err
     end;
 
 fload(FD, extra_cgi_vars, _GC, _C, _Cs, Lno, eof, _EVars) ->
@@ -1315,7 +1331,7 @@ fload(FD, extra_cgi_vars, _GC, _C, _Cs, Lno, eof, _EVars) ->
 
 fload(FD, extra_cgi_vars, GC, C, Cs, Lno, Chars, EVars = {Dir, Vars}) ->
     Next = io:get_line(FD, ''),
-    case toks(Chars) of
+    case toks(Lno, Chars) of
         [] ->
             fload(FD, extra_cgi_vars, GC, C, Cs, Lno+1, Next, EVars);
         [Var, '=', Val] ->
@@ -1324,7 +1340,9 @@ fload(FD, extra_cgi_vars, GC, C, Cs, Lno, Chars, EVars = {Dir, Vars}) ->
             C2 = C#sconf{extra_cgi_vars = [EVars | C#sconf.extra_cgi_vars]},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
         [H|T] ->
-            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])}
+            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
+        Err ->
+            Err
     end.
 
 
@@ -1365,63 +1383,61 @@ is_file(Val) ->
 
 
 %% tokenizer
-toks(Chars) ->
-    toks(Chars, free, [], []). % two accumulators
+toks(Lno, Chars) ->
+    toks(Lno, Chars, free, [], []). % two accumulators
 
-toks([$#|_T], Mode, Ack, Tack) ->
-    toks([], Mode, Ack, Tack);
+toks(Lno, [$#|_T], Mode, Ack, Tack) ->
+    toks(Lno, [], Mode, Ack, Tack);
 
-toks([H|T], free, Ack, Tack) -> 
-                                                %?Debug("Char=~p", [H]),
+toks(Lno, [H|T], free, Ack, Tack) -> 
+    %%?Debug("Char=~p", [H]),
     case {is_quote(H), is_string_char(H), is_special(H), yaws:is_space(H)} of
         {_,_, _, true} ->
-            toks(T, free, Ack, Tack);
+            toks(Lno, T, free, Ack, Tack);
         {_,_, true, _} ->
-            toks(T, free, [], [list_to_atom([H]) | Tack]);
+            toks(Lno, T, free, [], [list_to_atom([H]) | Tack]);
         {_,true, _,_} ->
-            toks(T, string, [H], Tack);
+            toks(Lno, T, string, [H], Tack);
         {true,_, _,_} ->
-            toks(T, quote, [], Tack);
+            toks(Lno, T, quote, [], Tack);
         {false, false, false, false} ->
-            %% weird char, let's ignore it
-            toks(T, free, Ack, Tack)
+            {error, ?F("Unexpected character  <~c> at line ~w", [H, Lno])}
     end;
-toks([C|T], string, Ack, Tack) -> 
+toks(Lno, [C|T], string, Ack, Tack) -> 
                                                 %?Debug("Char=~p", [C]),
     case {is_backquote(C), is_quote(C), is_string_char(C), is_special(C), 
           yaws:is_space(C)} of
         {true, _, _, _,_} ->
-            toks(T, [backquote,string], Ack, Tack);
+            toks(Lno, T, [backquote,string], Ack, Tack);
         {_, _, true, _,_} ->
-            toks(T, string, [C|Ack], Tack);
+            toks(Lno, T, string, [C|Ack], Tack);
         {_, _, _, true, _} ->
-            toks(T, free, [], [list_to_atom([C]), lists:reverse(Ack)|Tack]);
+            toks(Lno, T, free, [], [list_to_atom([C]), lists:reverse(Ack)|Tack]);
         {_, true, _, _, _} ->
-            toks(T, quote, [], [lists:reverse(Ack)|Tack]);
+            toks(Lno, T, quote, [], [lists:reverse(Ack)|Tack]);
         {_, _, _, _, true} ->
-            toks(T, free, [], [lists:reverse(Ack)|Tack]);
+            toks(Lno, T, free, [], [lists:reverse(Ack)|Tack]);
         {false, false, false, false, false} ->
-            %% weird char, let's ignore it
-            toks(T, free, Ack, Tack)
+            {error, ?F("Unexpected character  <~c> at line ~w", [C, Lno])}
     end;
-toks([C|T], quote, Ack, Tack) -> 
+toks(Lno, [C|T], quote, Ack, Tack) -> 
                                                 %?Debug("Char=~p", [C]),
     case {is_quote(C), is_backquote(C)} of
         {true, _} ->
-            toks(T, free, [], [lists:reverse(Ack)|Tack]);
+            toks(Lno, T, free, [], [lists:reverse(Ack)|Tack]);
         {_, true} ->
-            toks(T, [backquote,quote], [C|Ack], Tack);
+            toks(Lno, T, [backquote,quote], [C|Ack], Tack);
         {false, false} ->
-            toks(T, quote, [C|Ack], Tack)
+            toks(Lno, T, quote, [C|Ack], Tack)
     end;
-toks([C|T], [backquote,Mode], Ack, Tack) ->
-    toks(T, Mode, [C|Ack], Tack);
-toks([], string, Ack, Tack) ->
+toks(Lno, [C|T], [backquote,Mode], Ack, Tack) ->
+    toks(Lno, T, Mode, [C|Ack], Tack);
+toks(_Lno, [], string, Ack, Tack) ->
     lists:reverse([lists:reverse(Ack) | Tack]);
-toks([], free, _,Tack) ->
+toks(_Lno, [], free, _,Tack) ->
     lists:reverse(Tack).
 
-is_quote($") -> true ; 
+is_quote(34) -> true ;  %% $" but emacs mode can't handle it 
 is_quote(_)  -> false.
 
 is_backquote($\\) -> true ; 
@@ -1443,26 +1459,29 @@ is_special(C) ->
     lists:member(C, [$=, $<, $>, $,]).
 
 
-parse_soap_srv_mods(['<', Module, ',' , Handler, ',', WsdlFile, '>' | Tail], Ack) ->
-	case is_file(WsdlFile) of
-		true ->
-			S = { {list_to_atom(Module), list_to_atom(Handler)}, WsdlFile},
-			parse_soap_srv_mods(Tail, [S |Ack]);
-		false ->
-			{error, ?F("Bad wsdl file ~p", [WsdlFile])}
-	end;
+parse_soap_srv_mods(['<', Module, ',' , Handler, ',', WsdlFile, '>' | Tail], 
+                    Ack) ->
+    case is_file(WsdlFile) of
+        true ->
+            S = { {list_to_atom(Module), list_to_atom(Handler)}, WsdlFile},
+            parse_soap_srv_mods(Tail, [S |Ack]);
+        false ->
+            {error, ?F("Bad wsdl file ~p", [WsdlFile])}
+    end;
 
-parse_soap_srv_mods(['<', Module, ',' , Handler, ',', WsdlFile, ',', Prefix, '>' | Tail], Ack) ->
-	case is_file(WsdlFile) of
-		true ->
-			S = { {list_to_atom(Module), list_to_atom(Handler)}, WsdlFile, Prefix},
-			parse_soap_srv_mods(Tail, [S |Ack]);
-		false ->
-			{error, ?F("Bad wsdl file ~p", [WsdlFile])}
-	end;
+parse_soap_srv_mods(['<', Module, ',' , Handler, ',', WsdlFile, ',', 
+                     Prefix, '>' | Tail], Ack) ->
+    case is_file(WsdlFile) of
+        true ->
+            S = { {list_to_atom(Module), list_to_atom(Handler)}, 
+                  WsdlFile, Prefix},
+            parse_soap_srv_mods(Tail, [S |Ack]);
+        false ->
+            {error, ?F("Bad wsdl file ~p", [WsdlFile])}
+    end;
 
 parse_soap_srv_mods([ SoapSrvMod | _Tail], _Ack) ->
-	{error, ?F("Bad soap_srv_mods syntax: ~p", [SoapSrvMod])};
+    {error, ?F("Bad soap_srv_mods syntax: ~p", [SoapSrvMod])};
 
 parse_soap_srv_mods([], Ack) ->
     {ok, Ack}.
@@ -1477,7 +1496,7 @@ parse_appmods(['<', PathElem, ',' , AppMod, "exclude_paths" |Tail], Ack)->
     Tail2 = lists:dropwhile(fun(X) -> X /= '>' end, 
                             Tail),
     Tail3 = tl(Tail2),
-
+    
     S = {PathElem , list_to_atom(AppMod), lists:map(
                                             fun(Str) ->
                                                     string:tokens(Str, "/")
