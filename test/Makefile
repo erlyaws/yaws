@@ -17,6 +17,7 @@ all:	conf
 
 clean: 	
 	@cd src; $(MAKE) clean
+	@cd ibrowse/src; $(MAKE) clean
 	@set -e ; \
           for d in $(SUBDIRS) ; do \
             if [ -f $$d/Makefile ]; then \
