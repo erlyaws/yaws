@@ -1391,34 +1391,40 @@ toks(Lno, [$#|_T], Mode, Ack, Tack) ->
 
 toks(Lno, [H|T], free, Ack, Tack) -> 
     %%?Debug("Char=~p", [H]),
-    case {is_quote(H), is_string_char(H), is_special(H), yaws:is_space(H)} of
+    case {is_quote(H), is_string_char([H|T]),is_special(H), yaws:is_space(H)} of
         {_,_, _, true} ->
             toks(Lno, T, free, Ack, Tack);
         {_,_, true, _} ->
             toks(Lno, T, free, [], [list_to_atom([H]) | Tack]);
         {_,true, _,_} ->
             toks(Lno, T, string, [H], Tack);
+        {_,utf8, _,_} ->
+            toks(Lno, tl(T), string, [H, hd(T)], Tack);
         {true,_, _,_} ->
             toks(Lno, T, quote, [], Tack);
         {false, false, false, false} ->
-            {error, ?F("Unexpected character  <~c> at line ~w", [H, Lno])}
+            {error, ?F("Unexpected character  <~p / ~c> at line ~w", 
+                       [H,H, Lno])}
     end;
 toks(Lno, [C|T], string, Ack, Tack) -> 
                                                 %?Debug("Char=~p", [C]),
-    case {is_backquote(C), is_quote(C), is_string_char(C), is_special(C), 
+    case {is_backquote(C), is_quote(C), is_string_char([C|T]), is_special(C), 
           yaws:is_space(C)} of
         {true, _, _, _,_} ->
             toks(Lno, T, [backquote,string], Ack, Tack);
         {_, _, true, _,_} ->
             toks(Lno, T, string, [C|Ack], Tack);
+        {_, _, utf8, _,_} ->
+            toks(Lno, tl(T), string, [C, hd(T)|Ack], Tack);
         {_, _, _, true, _} ->
-            toks(Lno, T, free, [], [list_to_atom([C]), lists:reverse(Ack)|Tack]);
+            toks(Lno, T, free, [], [list_to_atom([C]),lists:reverse(Ack)|Tack]);
         {_, true, _, _, _} ->
             toks(Lno, T, quote, [], [lists:reverse(Ack)|Tack]);
         {_, _, _, _, true} ->
             toks(Lno, T, free, [], [lists:reverse(Ack)|Tack]);
         {false, false, false, false, false} ->
-            {error, ?F("Unexpected character  <~c> at line ~w", [C, Lno])}
+            {error, ?F("Unexpected character  <~p / ~c> at line ~w", 
+                       [C, C, Lno])}
     end;
 toks(Lno, [C|T], quote, Ack, Tack) -> 
                                                 %?Debug("Char=~p", [C]),
@@ -1443,7 +1449,7 @@ is_quote(_)  -> false.
 is_backquote($\\) -> true ; 
 is_backquote(_)  -> false.
 
-is_string_char(C) ->
+is_string_char([C|T]) ->
     if
         $a =< C, C =< $z ->
             true;
@@ -1451,6 +1457,9 @@ is_string_char(C) ->
             true;
         $0 =< C, C =< $9 ->
             true;
+        C == 195 , T /= [] ->
+            %% FIXME check that [C, hd(T)] really is a char ?? how
+            utf8;
         true ->
             lists:member(C, [$., $/, $:, $_, $-, $~])
     end.
