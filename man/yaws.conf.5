@@ -1,10 +1,10 @@
 .TH YAWS.CONF "5" "" "" "User Commands"
 .SH NAME
-/etc/yaws/yaws.conf \- Configuration file for the yaws webserver
+/etc/yaws/yaws.conf \- Configuration file for the yaws web server
 .SH DESCRIPTION
 .\" Add any additional description here
 .PP
-Yaws is fast lightweight webserver. It reads a configuration file called
+Yaws is fast lightweight web server. It reads a configuration file called
 yaws.conf to control its operations. The configuration contains two distinct
 parts a global part which affects all the virtual hosts and a server part
 where options for each virtual host is supplied.
@@ -38,7 +38,7 @@ The default value for logdir is "."
 
 .TP
 \fB ebin_dir = Directory\fR
-This directive adds Directory to the erlang search path. It is possible to
+This directive adds Directory to the Erlang search path. It is possible to
 have several of these command in the configuration file. The default value 
 is "yaws_dir"/examples/ebin
 
@@ -46,7 +46,7 @@ is "yaws_dir"/examples/ebin
 .TP
 \fB id = String\fR
 It is possible run multiple yaws servers on the same machine. We use the
-id of a yaws server to control it using the different ctl commands such
+id of a yaws server to control it using the different control commands such
 as:
 .nf
 
@@ -56,14 +56,14 @@ as:
 To stop the Yaws server with id "foobar". Each Yaws server will write
 its internals data into a file called $HOME/.yaws/yaws/ID where ID the
 identity of the server. Yaws also creates a file called
-${VARDIR}/run/yaws/ctl-${ID} which contain the portnumber where the server is
+${VARDIR}/run/yaws/ctl-${ID} which contain the port number where the server is
 listening for control commands. The default id is "default".
 
 .TP
 \fB include_dir = Directory\fR
-This directive adds Directory to the path of directories where the erlang
-compiler seraches for include files. We need to use this if we want to 
-include .hrl files in our yaws erlang code. The default value is 
+This directive adds Directory to the path of directories where the Erlang
+compiler searches for include files. We need to use this if we want to 
+include .hrl files in our yaws Erlang code. The default value is 
 "yaws_dir"/examples/include.
 
 .TP
@@ -141,7 +141,7 @@ ModuleSetting is either a triad like \fI<Mod, HandlerFunc, WsdlFile>\fR
 or a quadruple form like \fI<Mod, HandlerFunc, WsdlFile, Prefix>\fR which 
 specifies the \fIprefix\fR. A \fIprefix\fR will be used as argument of 
 \fIyaws_soap_lib:initModel()\fR and then be used as a XML namespace prefix.
-Note, the \fIWsdlFile\fR here should be an absloute-path file 
+Note, the \fIWsdlFile\fR here should be an absolute-path file 
 in local file systems.
 
 For example, we can specify
@@ -160,7 +160,7 @@ Enable or disable copying of the error log. When we run in
 embedded mode, there may very well be some other systems process
 that is responsible for writing the errorlog to a file whereas
 when we run in normal standalone mode, we typically want the
-erlang errorlog written to a report.log file.
+Erlang errorlog written to a report.log file.
 Default value is true.
 
 
@@ -200,8 +200,8 @@ Load all config file in specified directory.
 
 
 .SH SERVER PART
-Yaws can virthost several webservers on the same ip address as well
-as several webservers on different ip addresses. This includes SSL servers.
+Yaws can virthost several web servers on the same IP address as well
+as several web servers on different IP addresses. This includes SSL servers.
 .pp
 Each virtual host is defined within a matching pair of \fB<server ServerName>\fR
 and \fB</server>\fR. The ServerName will be the name of the webserver.
@@ -501,10 +501,10 @@ when verifying client certs.
 .TP
 \fB password = String\fR
 String If the private key is encrypted on disc, this password is the 
-3des key to decrypt it.
+3Dee key to decrypt it.
 .TP
 \fB ciphers = String\fR
-This string specifies the ssl cipher string. The syntax of the ssl cipher 
+This string specifies the SSL cipher string. The syntax of the SSL cipher 
 string is a little horrible sublanguage of its own. It is documented in the 
 ssl man page for "ciphers". 
 .TP
@@ -598,7 +598,7 @@ We can obviously have several of these value inside a single <auth> </auth>
 pair.
 
 The usage of User:Password in the actual config file is deprecated
-as of release 1.51. It is prefered to have the users in a file called
+as of release 1.51. It is preferred to have the users in a file called
 \fI.yaws_auth\fR in the actual directory. The .yaws_auth file has to be
 file parseable by \fIfile:consult/1\fR
 
@@ -656,7 +656,7 @@ logdir = /var/log/yaws
 .fi
 
 .pp
-And this example shows a similar setup but two webservers on the same ip address
+And this example shows a similar setup but two web servers on the same IP address
 
 .nf
 
@@ -748,9 +748,9 @@ principal, 'HTTP/www.funky.org' in this example.
 
 
 
-And finally a sligthly more complex example
-with two servers on the same ip, and one ssl server on a
-different ip.
+And finally a slightly more complex example
+with two servers on the same IP, and one SSL server on a
+different IP.
 
 When there are more than one server on the same IP, and they have different
 names the server must be able to choose one of them if the client
