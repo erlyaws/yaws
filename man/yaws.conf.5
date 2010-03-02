@@ -497,7 +497,10 @@ requires the client to supply a client cert.
 .TP
 \fB depth = Int\fR
 Specifies the depth of certificate chains the server is prepared to follow 
-when verifying client certs.
+when verifying client certs. For the OTP new ssl implementation it
+is also used to specify how far the server, i.e. we, shall follow the
+SSL certificates we present to the clients. Hence, using self signed certs,
+we typically need to set this to 0.
 .TP
 \fB password = String\fR
 String If the private key is encrypted on disc, this password is the 
