@@ -810,6 +810,12 @@ call_start_mod(SC) ->
     end.
 
 listen_opts(SC) ->
+    InetType = if 
+                   is_tuple( SC#sconf.listen), size( SC#sconf.listen) == 8 ->
+                       [inet6];
+                 true ->
+                       []
+             end,
     [binary,
      {ip, SC#sconf.listen},
      {packet, http},
@@ -817,13 +823,19 @@ listen_opts(SC) ->
      {reuseaddr, true},
      {active, false}
      | proplists:get_value(listen_opts, SC#sconf.soptions, [])
-    ].
+    ] ++ InetType.
 
 ssl_listen_opts(GC, SC, SSL) ->
+    InetType = if 
+                   is_tuple( SC#sconf.listen), size( SC#sconf.listen) == 8 ->
+                       [inet6];
+                 true ->
+                       []
+             end,
     [binary,
      {ip, SC#sconf.listen},
      {packet, http},
-     {active, false} | ssl_listen_opts(GC, SSL)].
+     {active, false} | ssl_listen_opts(GC, SSL)] ++ InetType.
 
 ssl_listen_opts(GC, SSL) ->
     L = [if SSL#ssl.keyfile /= undefined ->
