@@ -2285,7 +2285,7 @@ get_client_data(CliSock, Len, Bs, SSlBool) ->
         {ok, B} ->
             get_client_data(CliSock, Len-size(B), [Bs,B], SSlBool);
         _Other ->
-            ?Debug("get_client_data: ~p~n", [_Other]),
+            error_logger:format("get_client_data: ~p~n", [_Other]),
             exit(normal)
     end.
 

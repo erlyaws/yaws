@@ -301,16 +301,20 @@ and yssi constructs where the full list of directories will be searched
 for files to ssi/yssi include.
 
 .TP
-\fBpartial_post_size = Integer\fR
+\fBpartial_post_size = Integer | nolimit\fR
 When a yaws file receives large POSTs, the amount of data received
 in each chunk is determined by the this parameter.
 The deafult value is 10240.
+
 
 .TP
 \fBdav = true | false\fR
 Turns on the DAV protocol for this server. The dav support
 in yaws is highly limited. If dav is turned on, .yaws processing
 of .yaws pages is turned off. Default is false.
+Setting it to nolimit is potentially
+dangerous. There is a hardcoded timeout on POST reads at 30 seconds.
+If the read is not done within the timeout, the POST will fail.
 
 .TP
 \fBtilde_expand = true|false \fR

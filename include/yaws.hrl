@@ -193,7 +193,7 @@
          ets,                        %% local store for this server
          ssl,                        %% undefined | #ssl{}
          authdirs = [],
-         partial_post_size = nolimit,
+         partial_post_size = 10240,
          appmods = [], 
          %%  An item in the appmods list  can be either of the
          %% following, this is all due to backwards compat issues.
