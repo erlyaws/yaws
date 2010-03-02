@@ -177,15 +177,8 @@ encode_send(Args, StatusCode, [Payload], AddOn, ID) ->  % {{{
     encode_send(Args, StatusCode, Payload, AddOn, ID); % }}}
 
 encode_send(Args, StatusCode, Payload, AddOn, ID) -> % {{{
-%    ?Debug("jsonrpc response ~p ~n", [Payload]),
-    case encode_handler_payload(Payload, ID) of
-    {ok, EncodedPayload} ->
-%        ?Debug("jsonpc encoded response ~p ~n", [EncodedPayload]),
-        send(Args, StatusCode, EncodedPayload, AddOn);
-    {error, Reason} ->
-        ?ERROR_LOG({jsonrpc_encode, payload, Payload, Reason}),
-        send(Args, 500)
-     end. % }}}
+    {ok, EncodedPayload} = encode_handler_payload(Payload, ID),
+    send(Args, StatusCode, EncodedPayload, AddOn).
 
 send(Args, StatusCode) -> send(Args, StatusCode, "", []). %  {{{
 

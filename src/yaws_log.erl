@@ -98,6 +98,7 @@ actl_trace(What) ->
 %%          {stop, Reason}
 %%----------------------------------------------------------------------
 init([]) ->
+    process_flag(trap_exit, true),
     {ok, #state{running = false, now = fmtnow()}}.
 
 %%----------------------------------------------------------------------
@@ -403,7 +404,9 @@ handle_info(minute10, State) ->
             ok
     end,
     {noreply, State#state{alogs= L,
-                          auth_log = wrap(State#state.auth_log, State)}}.
+                          auth_log = wrap(State#state.auth_log, State)}};
+handle_info({'EXIT', _, _}, State) ->
+    {noreply, State}.
 
 
 
@@ -455,6 +458,7 @@ wrap(AL, State) ->
 %% Returns: any (ignored by gen_server)
 %%----------------------------------------------------------------------
 terminate(_Reason, _State) ->
+    gen_event:delete_handler(error_logger, yaws_log_file_h, normal),
     ok.
 
 %%%----------------------------------------------------------------------
