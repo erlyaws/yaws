@@ -771,9 +771,9 @@ fcgi_worker(ParentPid, Role, Arg, ServerConf, Options) ->
                             ServerConf#sconf.fcgi_app_server_port),
     PreliminaryWorkerState = #fcgi_worker_state{parent_pid = ParentPid},
     fcgi_worker_fail_if(AppServerHost == undefined, PreliminaryWorkerState,
-                        app_server_host_must_be_configured),
+                        "app server host must be configured"),
     fcgi_worker_fail_if(AppServerPort == undefined, PreliminaryWorkerState,
-                        app_server_port_must_be_configured),
+                        "app server port must be configured"),
     PathInfo = get_opt(path_info, Options, Arg#arg.pathinfo),
     ScriptFileName = Arg#arg.fullpath,
     ExtraEnv = get_opt(extra_env, Options, []),
@@ -839,8 +839,8 @@ fcgi_connect_to_application_server(WorkerState, Host, Port) ->
     Options = [binary, {packet, 0}, {active, false}],
     case gen_tcp:connect(Host, Port, Options, ?FCGI_CONNECT_TIMEOUT_MSECS) of
         {error, Reason} ->
-            fcgi_worker_fail(WorkerState, {connect_to_application_server_failed,
-                                           Reason});
+            fcgi_worker_fail(WorkerState,
+                             {"connect to application server failed", Reason});
         {ok, Socket} ->
             Socket
     end.
@@ -947,8 +947,8 @@ fcgi_send_record(WorkerState, Type, RequestId, NameValueList) ->
     AppServerSocket = WorkerState#fcgi_worker_state.app_server_socket,
     case gen_tcp:send(AppServerSocket, EncodedRecord) of
         {error, Reason} ->
-            fcgi_worker_fail(WorkerState, {send_to_application_server_failed,
-                                           Reason});
+            fcgi_worker_fail(WorkerState,
+                             {"send to application server failed", Reason});
         ok ->
             ok
     end.
@@ -1109,10 +1109,12 @@ fcgi_get_output(WorkerState) ->
             <<AppStatus:32/signed, ProtStatus:8, _Reserved:24>> = ContentData,
             fcgi_worker_fail_if(ProtStatus < ?FCGI_STATUS_REQUEST_COMPLETE,
                                 WorkerState,
-                                {received_unknown_protocol_status, ProtStatus}),
+                                {"received unknown protocol status",
+                                 ProtStatus}),
             fcgi_worker_fail_if(ProtStatus > ?FCGI_STATUS_UNKNOWN_ROLE,
                                 WorkerState,
-                                {received_unknown_protocol_status, ProtStatus}),
+                                {"received unknown protocol status",
+                                 ProtStatus}),
             if
                 ProtStatus /= ?FCGI_STATUS_REQUEST_COMPLETE ->
                     error_logger:error_msg("FastCGI protocol error: ~p (~s)~n",
@@ -1148,10 +1150,11 @@ fcgi_get_output(WorkerState) ->
             <<UnknownType:8, _Reserved:56>> = ContentData,
             fcgi_worker_fail(
               WorkerState,
-              {application_did_not_understand_record_type_we_sent, UnknownType});
+              {"application did not understand record type we sent",
+               UnknownType});
         OtherType ->
             fcgi_worker_fail(WorkerState,
-                             {received_unknown_record_type, OtherType})
+                             {"received unknown record type", OtherType})
     end.
 
 
@@ -1160,48 +1163,49 @@ fcgi_receive_record(WorkerState) ->
     <<Version:8, Type:8, RequestId:16, ContentLength:16,
       PaddingLength:8, Reserved:8>> = Header,
     fcgi_worker_fail_if(Version /= 1, WorkerState,
-                        {received_unsupported_version, Version}),
+                        {"received unsupported version", Version}),
     case Type of
         ?FCGI_TYPE_END_REQUEST ->
             fcgi_worker_fail_if(RequestId /= ?FCGI_REQUEST_ID_APPLICATION,
                                 WorkerState,
-                                {unexpected_request_id, RequestId}),
+                                {"unexpected request id", RequestId}),
             fcgi_worker_fail_if(ContentLength /= 8, WorkerState,
-                                {incorrect_content_length_for_end_request,
+                                {"incorrect content length for end request",
                                  ContentLength}),
             ok;
         ?FCGI_TYPE_STDOUT ->
             fcgi_worker_fail_if(RequestId /= ?FCGI_REQUEST_ID_APPLICATION,
                                 WorkerState,
-                                {unexpected_request_id, RequestId}),
+                                {"unexpected request id", RequestId}),
             ok;
         ?FCGI_TYPE_STDERR ->
             fcgi_worker_fail_if(RequestId /= ?FCGI_REQUEST_ID_APPLICATION,
                                 WorkerState,
-                                {unexpected_request_id, RequestId}),
+                                {"unexpected request id", RequestId}),
             ok;
         ?FCGI_TYPE_UNKNOWN_TYPE ->
             fcgi_worker_fail_if(RequestId /= ?FCGI_REQUEST_ID_MANAGEMENT,
                                 WorkerState,
-                                {unexpected_request_id, RequestId}),
+                                {"unexpected request id", RequestId}),
             fcgi_worker_fail_if(ContentLength /= 8, WorkerState,
-                                {incorrect_content_length_for_unknown_type,
+                                {"incorrect content length for unknown type",
                                  ContentLength}),
             ok;
         OtherType ->
-            throw({received_unexpected_type, OtherType})
+            throw({"received unexpected type", OtherType})
     end,
     case fcgi_receive_binary(WorkerState, ContentLength,
                              ?FCGI_READ_TIMEOUT_MSECS) of
         {error, Reason} ->
-            fcgi_worker_fail(WorkerState, {unable_to_read_content_data, Reason});
+            fcgi_worker_fail(WorkerState,
+                             {"unable to read content data", Reason});
         {ok, ContentData} ->
             case fcgi_receive_binary(WorkerState, PaddingLength,
                                      ?FCGI_READ_TIMEOUT_MSECS) of
                 {error, Reason} ->
                     fcgi_worker_fail(
                       WorkerState,
-                      {unable_to_read_record_padding_data, Reason});
+                      {"unable to read record padding data", Reason});
                 {ok, PaddingData} ->
                     fcgi_trace_protocol(WorkerState, "Receive",
                                         Version, Type, RequestId, ContentLength,
@@ -1218,7 +1222,8 @@ fcgi_receive_binary(WorkerState, Length, Timeout) ->
     AppServerSocket = WorkerState#fcgi_worker_state.app_server_socket,
     case gen_tcp:recv(AppServerSocket, Length, Timeout) of
         {error, Reason} ->
-            fcgi_worker_fail(WorkerState, {send_to_application_server_failed, Reason});
+            fcgi_worker_fail(WorkerState,
+                             {"recv from application server failed", Reason});
         {ok, Data} ->
             {ok, Data}
     end.
