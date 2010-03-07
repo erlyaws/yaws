@@ -836,7 +836,7 @@ fcgi_pass_through_client_data(WorkerState) ->
 
 
 fcgi_connect_to_application_server(WorkerState, Host, Port) ->
-    Options = [binary, {packet, 0}, {active, false}],
+    Options = [binary, {packet, 0}, {active, false}, {nodelay, true}],
     case gen_tcp:connect(Host, Port, Options, ?FCGI_CONNECT_TIMEOUT_MSECS) of
         {error, Reason} ->
             fcgi_worker_fail(WorkerState,
@@ -1194,24 +1194,36 @@ fcgi_receive_record(WorkerState) ->
         OtherType ->
             throw({"received unexpected type", OtherType})
     end,
-    case fcgi_receive_binary(WorkerState, ContentLength,
-                             ?FCGI_READ_TIMEOUT_MSECS) of
+    Content = case ContentLength of
+                  0 ->
+                      {ok, <<>>};
+                  _ ->
+                      fcgi_receive_binary(WorkerState, ContentLength,
+                                          ?FCGI_READ_TIMEOUT_MSECS)
+              end,
+    case Content of
         {error, Reason} ->
             fcgi_worker_fail(WorkerState,
                              {"unable to read content data", Reason});
         {ok, ContentData} ->
-            case fcgi_receive_binary(WorkerState, PaddingLength,
-                                     ?FCGI_READ_TIMEOUT_MSECS) of
-                {error, Reason} ->
-                    fcgi_worker_fail(
-                      WorkerState,
-                      {"unable to read record padding data", Reason});
-                {ok, PaddingData} ->
-                    fcgi_trace_protocol(WorkerState, "Receive",
-                                        Version, Type, RequestId, ContentLength,
-                                        PaddingLength, Reserved, ContentData,
-                                        PaddingData),
-                    {Type, ContentData}
+            case PaddingLength of
+                0 ->
+                    {Type, ContentData};
+                _ ->
+                    case fcgi_receive_binary(WorkerState, PaddingLength,
+                                             ?FCGI_READ_TIMEOUT_MSECS) of
+                        {error, Reason} ->
+                            fcgi_worker_fail(
+                              WorkerState,
+                              {"unable to read record padding data", Reason});
+                        {ok, PaddingData} ->
+                            fcgi_trace_protocol(WorkerState, "Receive",
+                                                Version, Type, RequestId,
+                                                ContentLength, PaddingLength,
+                                                Reserved, ContentData,
+                                                PaddingData),
+                            {Type, ContentData}
+                    end
             end
     end.
 
