@@ -344,7 +344,7 @@ handle_call({add_sconf, SC}, From, State) ->
 	    receive
 		{added_sconf, Pid, SC2} ->
 		    P2 = lists:keyreplace(Pid, 1, State#state.pairs,
-					  {Pid, [SC2|Group]}),
+					  {Pid, Group ++ [SC2]}),
 		    {noreply, State#state{pairs = P2}}
 	    after 2000 ->
 		    {reply, {error, "Failed to add new conf"}, State}
@@ -662,8 +662,15 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 			     end,
                     stop_ready(Ready, Last),
                     NewSc2 = clear_ets_complete(NewSc1),
-                    GS2 = GS#gs{group = [ NewSc2 |
-                                          lists:delete(OldSc,GS#gs.group)]},
+                    %% Need to insert the sconf at the same position
+                    %% it previously was
+                    NewG = lists:map(fun(Sc) when Sc == OldSc->
+                                             NewSc2;
+                                        (Other) ->
+                                             Other
+                                     end, GS#gs.group),
+
+                    GS2 = GS#gs{group = NewG},
                     Ready2 = [],
                     Updater ! {updated_sconf, self(), NewSc2},
                     gen_server:reply(From, ok),
@@ -709,7 +716,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 		 end,
             stop_ready(Ready, Last),
             SC2 = setup_ets(SC),
-	    GS2 = GS#gs{group =  [SC2 |GS#gs.group]},
+	    GS2 = GS#gs{group =  GS#gs.group ++ [SC2]},
             Ready2 = [],
             Adder ! {added_sconf, self(), SC2},
             gen_server:reply(From, ok),
