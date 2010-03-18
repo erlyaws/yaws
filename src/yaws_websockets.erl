@@ -23,10 +23,15 @@ handshake(Arg, ContentPid, SocketMode) ->
 	    %% Yaws will take care of closing the socket
 	    ContentPid ! discard;
 	Origin ->
+	   SC = get(sc),
 	    Host = (Arg#arg.headers)#headers.host,
 	    {abs_path, Path} = (Arg#arg.req)#http_request.path,
-	    %% TODO: Support for wss://
-	    WebSocketLocation = "ws://" ++ Host ++ Path,
+	    WebSocketLocation = 
+		case SC#sconf.ssl of
+			undefined -> "ws://" ++ Host ++ Path;
+			_ -> "wss://" ++ Host ++ Path
+		end,
+				
 	    Handshake =
 		["HTTP/1.1 101 Web Socket Protocol Handshake\r\n",
 		 "Upgrade: WebSocket\r\n",
@@ -34,7 +39,7 @@ handshake(Arg, ContentPid, SocketMode) ->
 		 "WebSocket-Origin: ", Origin, "\r\n",
 		 "WebSocket-Location: ", WebSocketLocation, "\r\n",
 		 "\r\n"],
-	    SC = get(sc),
+	 
 	    case SC#sconf.ssl of
 		undefined ->
 		    gen_tcp:send(CliSock, Handshake),
