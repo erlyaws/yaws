@@ -1,3 +1,24 @@
+Thu Mar 18 21:51:32 CET 2010
+Highlights in this release are, new SSL implementation is now default,
+FCGI enhhancements and IPV6 support.
+ssl support for websockets, patch by wde
+Erroneous common log format entries, time should be surrounded by brackets (Klacke)
+When executing yaws --hup the order of the hosts in a virthost group wans't maintained, thus breaking the feature of pick first virthost on nomatch (Klacke)
+set nodelay on FCGI TCP connection, and avoid 0-length FCGI gen_tcp:recv (steve)
+Set {nodelay,true} on the TCP connection to the FCGI server to improve performance of small requests. (steve)
+The code receives packets from the FCGI server and for some cases was extracting length fields from some packets and then making further gen_tcp:recv calls based on those length values. The code was not checking for length values of 0 before calling recv, and passing 0 to recv means to return all available bytes. For both correctness and performance, the code must avoid the recv calls altogether when the length is 0. (steve)
+convert error atoms into error strings for fcgi_worker_fail (steve)
+IpV6 support
+The default value for partial_post_size was nolimit, not a good default value and also erroneoulsy documented (Klacke)
+An atempt at having utf8 characters in the host names for yaws servers. Probably not entirely correct, but it works. (Klacke)
+Anders Dahlin found that yaws log code doesn't delete the gen_event handler it adds error logger when terminating, that means that restarting yaws leaves old processes hanging around
+dialyzer work (Klacke)
+Closed Issue #31, made parsing of yaws.conf more tight complaining on e.g allowd_scripts = [ yaws ]
+ fix for FastCGI/PHP Issue (http://github.com/klacke/yaws/issues#issue/30) (davide)
+auth through .yaws_auth files has become broken, (Klacke)
+allow caller to set Host header for SOAP requests (Steve)
+added support for OTP new ssl implementation ,Also set it as default. It's possible through yaws.conf to use the old SSL. The new seems to work well though, I've tested with a wide set of browsers, and in general it seems to work (klacke)
+
 Mon Jan 11 22:09:00 CET 2010 1.87
 websocket support (davide and wde)
 conditional compile of websockets, only use if the chosen erl supports it (klacke/steve)

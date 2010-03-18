@@ -921,6 +921,9 @@ acceptor0(GS, Top) ->
                     case ssl:ssl_accept(Client) of
                         ok ->
                             ok;
+                        {error, closed} ->
+                            Top ! {self(), decrement},
+                            exit(normal);
                         {error, Reason} ->
                             error_logger:format("SSL accept failed: ~p~n",
                                                 [Reason]),
