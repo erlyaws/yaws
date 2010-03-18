@@ -1,6 +1,5 @@
-Thu Mar 18 21:51:32 CET 2010
-Highlights in this release are, new SSL implementation is now default,
-FCGI enhhancements and IPV6 support.
+Thu Mar 18 21:51:32 CET 2010 Yaws 1.88
+Highlights in this release are, new SSL implementation is now default, FCGI enhhancements and IPV6 support.
 ssl support for websockets, patch by wde
 Erroneous common log format entries, time should be surrounded by brackets (Klacke)
 When executing yaws --hup the order of the hosts in a virthost group wans't maintained, thus breaking the feature of pick first virthost on nomatch (Klacke)
