@@ -108,6 +108,15 @@ from HTTP clients into the server. This is implemented by closing
 the last socket if the limit threshold is reached.
 
 .TP
+\fB process_options = "[]" | "[{fullsweep_after, int()} | {min_heap_size, int()}]"\fR
+Override the garbage collection option parameters for processes
+which handle new connections. Useful for systems which expect long lived
+connections which handle a lot of data. The default value is erlangs
+default which does minimal garbage collection until the process dies.
+The value type is a quoted string which contains an erlang proplist.
+See erlangs erlang:spawn_opt/4 function for more details.
+
+.TP
 \fB log_wrap_size = Integer\fR
 The logs written by yaws are all wrap logs, the default value at the
 size where they wrap around and the original gets renamed to File.old

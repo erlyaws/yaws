@@ -77,7 +77,11 @@
                max_num_cached_files = 400,
                max_num_cached_bytes = 1000000,  %% 1 MEG
                max_size_cached_file = 8000,
-	       max_connections = nolimit, %% max number of TCP connections 
+               max_connections = nolimit, %% max number of TCP connections 
+               process_options = [],      %% Override default connection handler processes
+                                          %% spawn options for performance/memory tuning.
+                                          %% [] | [{fullsweep_after, Number}, {min_heap_size, Size}]
+                                          %% other options such as monitor, link are ignored.
                large_file_chunk_size = 10240,
                mnesia_dir = [],
                log_wrap_size = 10000000,  % wrap logs after 10M

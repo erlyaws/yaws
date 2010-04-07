@@ -29,6 +29,13 @@ include_dir = %yawsdir%/examples/include
 # max number of connections from clients into the server
 max_connections = nolimit
 
+# Override the garbage collection option parameters for processes
+# which handle new connections. Useful for systems which expect long lived
+# connections which handle a lot of data. The default value is erlangs
+# default. Valid options are {fullsweep_after, X} and/or {min_heap_size, Y} where
+# X and Y are integers. See erlangs erlang:spawn_opt/4 function for more details.
+# The value type is a quoted string containing an erlang proplist
+process_options = "[]"
 
 # This is a debug variable, possible values are http | traffic | false
 # It is also possible to set the trace (possibly to the tty) while

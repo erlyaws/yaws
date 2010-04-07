@@ -908,7 +908,14 @@ initial_acceptor(GS) ->
 
 
 acceptor(GS) ->
-    proc_lib:spawn_link(?MODULE, acceptor0, [GS, self()]).
+    case (GS#gs.gconf)#gconf.process_options of
+        [] ->
+            proc_lib:spawn_link(?MODULE, acceptor0, [GS, self()]);
+        Opts ->
+            %% as we tightly controlled what is set in options, we can blindly add "link" to
+            %% get a linked process as per default case and use the provided options.
+            proc_lib:spawn_opt(?MODULE, acceptor0, [GS, self()], [link | Opts])
+    end.
 acceptor0(GS, Top) ->
     ?TC([{record, GS, gs}]),
     put(gc, GS#gs.gconf),
