@@ -1918,14 +1918,16 @@ the filesystem path that is actually protected here is
 into another - larger - application. The \Yaws\  source tree must be
 integrated into the larger applications build environment. \Yaws\  is
 then simply started by \verb+application:start()+ from the larger
-applications boot script.
+applications boot script, or the \Yaws\  components needed for the
+larger application can be started individually under the application's
+supervisor(s).
 
-By default \Yaws\  reads its configuration data from a config file, the
-default is "/etc/yaws.conf". If \Yaws\  is integrated into a larger
-application that application typically has its configuration data kept
-at some other centralized place. Sometimes we may not even have a file
-system to read the configuration from if we run a small embedded
-system.
+By default \Yaws\ reads its configuration data from a config file, the
+default is "/etc/yaws.conf". If \Yaws\ is integrated into a larger
+application, however, that application typically has its configuration
+data kept at some other centralized place. Sometimes we may not even
+have a file system to read the configuration from if we run a small
+embedded system.
 
 \Yaws\  reads its application environment. If the environment key
 \verb+embedded+ is set to t\verb+true+, \Yaws\  starts in embedded mode.
@@ -1936,17 +1938,93 @@ after \Yaws\  has started by means of the function
 It is possible to call \verb+setconf/2+ several times to force \Yaws\  to
 reread the configuration.
 
+\section{Creating Global and Server Configurations}
 
+The \verb+yaws_api:setconf/2+ function mentioned in the previous
+section takes two arguments:
 
+\begin{itemize}
+
+\item a \verb+#gconf+ record instance, specifying global
+  \Yaws\  configuration
+
+\item a list of lists of \verb+#sconf+ record instances, each
+  specifying configuration for a particular server instance
+
+\end{itemize}
+
+These record types are specified in \verb+yaws.hrl+, which is not
+normally intended for inclusion by applications. Instead,
+\Yaws\  provides the \verb+yaws_api:embedded_start_conf/1,2,3,4+
+functions that allow embedded mode applications to specify
+configuration data using property lists (lists of
+\verb+\{key, value\}+ pairs).
+
+The \verb+yaws_api:embedded_start_conf+ functions all return a tuple
+containing the following four items:
+
+\begin{itemize}
+
+\item the atom \verb+ok+.
+
+\item a list of lists of \verb+#sconf+ record instances. This variable
+  is intended to be passed directly to\\* \verb+yaws_api:setconf/2+ as
+  its second argument.
+
+\item a \verb+#gconf+ record instance. This variable is intended to
+  be passed directly to \verb+yaws_api:setconf/2+ as its first
+  argument.
+
+\item a list of supervisor child specification for the
+  \Yaws\  components the embedded mode application's configuration
+  specified should be started. This allows embedded mode applications
+  to start \Yaws\  under its own supervisors.
+
+\end{itemize}
+
+Note that \verb+yaws_api:embedded_start_conf+ does not actually start
+any servers, but rather it only returns the configuration information
+and child specifications needed for the embedded mode application to
+start and configure \Yaws\  itself.
+
+\section{Starting Yaws in Embedded Mode}
+
+An embedded mode application can start \Yaws\  in one of two ways:
+
+\begin{itemize}
+
+\item It can call \verb+yaws_api:embedded_start_conf+ to obtain
+  configuration and \Yaws\  startup information as described in the
+  previous section, start \Yaws\  under its own supervisors, and then
+  pass the global and server configuration settings to
+  \verb+yaws_api:setconf/2+.
+
+\item It can call \verb+yaws:start_embedded/1,2,3,4+, each of which
+  takes exactly the same arguments as the corresponding
+  \verb+yaws_api:embedded_start_conf/1,2,3,4+ function. Instead of just
+  returning start and configuration information, however,
+  \verb+yaws:start_embedded+ also starts and configures \Yaws\ , which
+  can be more convenient but does not allow the embedded mode
+  application any supervision control over \Yaws\ .
+
+\end{itemize}
+
+Both of these functions take care of setting the environment key
+\verb+embedded+ to \verb+true+. Neither approach requires any special
+settings in the embedded mode application's \verb+.app+ file nor any
+special command-line switches to the \Erlang\  runtime.
+
+For an example of how to use \verb+yaws_api:embedded_start_conf+ along
+with \verb+yaws_api:setconf+, please see the files
+\verb+www/ybed_sup.erl+ and \verb+www/ybed.erl+ in the
+\Yaws\  distribution.
 
 \chapter{The config file - yaws.conf}
 
 In this section we provide a complete listing of all possible
-configuration file options.
-The
-       configuration contains two distinct parts  a  global  part
-       which  affects  all  the  virtual  hosts and a server part
-       where options for each virtual host is supplied.
+configuration file options.  The configuration contains two distinct
+parts: a global part which affects all the virtual hosts and a server
+part where options for each virtual host is supplied.
 
 \section{Global Part}
 

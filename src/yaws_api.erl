@@ -44,7 +44,9 @@
          replace_cookie_session/2, delete_cookie_session/1]).
 
 -export([getconf/0, 
-         setconf/2]).
+         setconf/2,
+         embedded_start_conf/1, embedded_start_conf/2,
+         embedded_start_conf/3, embedded_start_conf/4]).
 
 -export([set_status_code/1, reformat_header/1,
          reformat_request/1, reformat_response/1, reformat_url/1]).
@@ -1922,7 +1924,37 @@ getconf() ->
     gen_server:call(yaws_server, getconf, infinity).
 
 
-%% Function which invokeable typically from an index.yaws file
+embedded_start_conf(DocRoot) when is_list(DocRoot) ->
+    embedded_start_conf(DocRoot, []).
+embedded_start_conf(DocRoot, SL) when is_list(DocRoot), is_list(SL) ->
+    embedded_start_conf(DocRoot, SL, []).
+embedded_start_conf(DocRoot, SL, GL)
+  when is_list(DocRoot), is_list(SL), is_list(GL) ->
+    embedded_start_conf(DocRoot, SL, GL, "default").
+embedded_start_conf(DocRoot, SL, GL, Id)
+  when is_list(DocRoot), is_list(SL), is_list(GL) ->
+    case application:load(yaws) of
+        ok -> ok;
+        {error, {already_loaded,yaws}} -> ok;
+        _ -> exit("cannot load yaws")
+    end,
+    ok = application:set_env(yaws, embedded, true),
+    ok = application:set_env(yaws, id, Id),
+    ChildSpecs = yaws_sup:child_specs(),
+    GC = yaws:create_gconf(GL, Id),
+    SCList  = case SL of
+                  [] ->
+                      [[]];
+                  [Cnf|_] when is_tuple(Cnf) ->
+                      [[yaws:create_sconf(DocRoot, SL)]];
+                  [Cnf|_] when is_list(Cnf) ->
+                      [[yaws:create_sconf(DocRoot, SLItem)] || SLItem <- SL]
+              end,
+    SoapChild = yaws_config:add_yaws_soap_srv(GC, false),
+    {ok, SCList, GC, ChildSpecs ++ SoapChild}.
+
+
+%% Function which is invoked typically from an index.yaws file
 dir_listing(Arg) ->
     dir_listing(Arg, ".").
 dir_listing(Arg, RelDir) ->
@@ -1982,7 +2014,3 @@ redirect_self(A) ->
                 scheme_str = SchemeStr,
                 port = Port,
                 port_str = PortStr}.
-
-
-
-

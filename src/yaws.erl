@@ -128,19 +128,12 @@ start_embedded(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
 
 start_embedded(DocRoot, SL, GL) when is_list(DocRoot),is_list(SL),is_list(GL) ->
     start_embedded(DocRoot, SL, GL, "default").
-start_embedded(DocRoot, SL, GL, Id) when is_list(DocRoot),is_list(SL),is_list(GL) ->
-    case application:load(yaws) of
-        ok -> ok;
-        {error, {already_loaded,yaws}} -> ok;
-        _ -> exit("Can not load yaws")
-    end,
-    ok = application:set_env(yaws, embedded, true),
-    ok = application:set_env(yaws, id, Id),
+start_embedded(DocRoot, SL, GL, Id)
+  when is_list(DocRoot), is_list(SL), is_list(GL) ->
+    {ok, SCList, GC, _} = yaws_api:embedded_start_conf(DocRoot, SL, GL, Id),
     application:start(yaws),
-    GC = create_gconf(GL, Id),
-    SC = create_sconf(DocRoot, SL),
     yaws_config:add_yaws_soap_srv(GC),
-    yaws_api:setconf(GC, [[SC]]).
+    yaws_api:setconf(GC, SCList).
 
 add_server(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
     SC  = create_sconf(DocRoot, SL),
