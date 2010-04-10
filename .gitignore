@@ -1,7 +1,14 @@
 *.beam
 *.o
 *.so
+*.access
+*.dat
+autom4te.cache
+auth.log
+report.log
+configure
 yaws.pc
+yaws.plt
 bin/yaws
 config.log
 config.status
@@ -12,5 +19,10 @@ scripts/yaws.conf
 src/charset.def
 src/mime_types.erl
 src/yaws_configure.hrl
+src/yaws_generated.erl
 test/support/include.mk
 test/support/include.sh
+test/t1/localhost:8000/
+test/t[12]/logs/
+test/t[12]/yaws.conf
+www/yaws.pdf
