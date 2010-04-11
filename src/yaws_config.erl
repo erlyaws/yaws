@@ -219,19 +219,6 @@ parse_yaws_auth_file([{User, Password}|T], Auth0)
     parse_yaws_auth_file(T, Auth0#auth{users = Users}).
 
 
-%% Not used anymore
-%% Replace all "//" and "///" with "/"
-%% Might be a better way to do this
-%% remove_multiple_slash(L) ->
-%%     remove_multiple_slash(L, []).
-
-%% remove_multiple_slash([], Acc)->
-%%     lists:reverse(Acc);
-%% remove_multiple_slash("//" ++ T, Acc) ->
-%%     remove_multiple_slash([$/|T], Acc);
-%% remove_multiple_slash([H|T], Acc) ->
-%%     remove_multiple_slash(T, [H|Acc]).
-
 %% This is the function that arranges sconfs into
 %% different server groups
 validate_cs(GC, Cs) ->
@@ -240,6 +227,11 @@ validate_cs(GC, Cs) ->
     L3 = arrange(L2, start, [], []),
     case validate_groups(L3) of
         ok ->
+            yaws_debug:format(GC, "Starting with GC = ~p~n",[GC]),
+            lists:foreach(fun(Group) ->
+                                 yaws_debug:format(GC, "VirtHost SC list = ~p~n",
+                                                   [Group])
+                         end, L3),
             {ok, GC, L3};
         Err ->
             Err
