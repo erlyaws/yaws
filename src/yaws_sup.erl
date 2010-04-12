@@ -16,7 +16,7 @@
 
 %% supervisor callbacks
 -export([init/1]).
--export([get_app_args/0]).
+-export([get_app_args/0, child_specs/0]).
 
 -import(lists, [member/2]).
 
@@ -34,18 +34,7 @@ start_link() ->
 %%----------------------------------------------------------------------
 init([]) ->
 
-    YawsLog = {yaws_log, {yaws_log, start_link, []},
-               permanent, 5000, worker, [yaws_log]},
-
-    YawsServArgs = [_Env = get_app_args()],
-    YawsServ = {yaws_server, {yaws_server, start_link, YawsServArgs},
-                permanent, 5000, worker, [yaws_server]},
-
-    %% and this guy, will restart auxilliary procs that can fail
-    Sup = {yaws_sup_restarts,
-           {yaws_sup_restarts, start_link, []},
-           transient, infinity, supervisor, [yaws_sup_restarts]},
-    
+    ChildSpecs = child_specs(),
 
     %% The idea behind this is if we're running in an embedded env, 
     %% typically the supervisor above us wants to control the restarts.
@@ -53,7 +42,24 @@ init([]) ->
     %% If we're running standalone --heart can restart the entire node
     %% If heart is not used, we die.
     %% 0, 1 means that we never want supervisor restarts
-    {ok,{{one_for_all, 0, 1}, [YawsLog, YawsServ, Sup]}}.
+    {ok,{{one_for_all, 0, 1}, ChildSpecs}}.
+
+%%----------------------------------------------------------------------
+%%----------------------------------------------------------------------
+child_specs() ->
+    YawsLog = {yaws_log, {yaws_log, start_link, []},
+               permanent, 5000, worker, [yaws_log]},
+
+    YawsServArgs = [_Env = get_app_args()],
+    YawsServ = {yaws_server, {yaws_server, start_link, YawsServArgs},
+                permanent, 5000, worker, [yaws_server]},
+
+    %% and this guy will restart auxiliary procs that can fail
+    Sup = {yaws_sup_restarts,
+           {yaws_sup_restarts, start_link, []},
+           transient, infinity, supervisor, [yaws_sup_restarts]},
+
+    [YawsLog, YawsServ, Sup].
 
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------

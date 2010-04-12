@@ -20,7 +20,7 @@
          make_default_gconf/2, make_default_sconf/0,
          add_sconf/1,
          add_yaws_auth/1,
-         add_yaws_soap_srv/1,
+         add_yaws_soap_srv/1, add_yaws_soap_srv/2,
          search_sconf/2, search_group/2,
          update_sconf/2, delete_sconf/2,
          eq_sconfs/2, soft_setconf/4, hard_setconf/2,
@@ -80,16 +80,23 @@ load(E) ->
 
 
 add_yaws_soap_srv(GC) when GC#gconf.enable_soap == true ->
-    SoapStarted = (whereis(yaws_soap_srv) /= undefined),
-    if (SoapStarted == false) ->
-            Spec = {yaws_soap_srv, {yaws_soap_srv, start_link, [GC#gconf.soap_srv_mods] },
-                    permanent, 5000, worker, [yaws_soap_srv]},
-            spawn(fun() -> supervisor:start_child(yaws_sup, Spec) end);
+    add_yaws_soap_srv(GC, true);
+add_yaws_soap_srv(_GC) ->
+    [].
+add_yaws_soap_srv(GC, false) when GC#gconf.enable_soap == true ->
+    [{yaws_soap_srv, {yaws_soap_srv, start_link, [GC#gconf.soap_srv_mods]},
+      permanent, 5000, worker, [yaws_soap_srv]}];
+add_yaws_soap_srv(GC, true) when GC#gconf.enable_soap == true ->
+    Spec = add_yaws_soap_srv(GC, false),
+    case whereis(yaws_soap_srv) of
+        undefined ->
+            spawn(fun() -> supervisor:start_child(yaws_sup, hd(Spec)) end);
        true ->
             ok
-    end;
-add_yaws_soap_srv(_GC) -> 
-    ok.
+    end,
+    Spec;
+add_yaws_soap_srv(_GC, _Start) ->
+    [].
 
 
 add_yaws_auth(SCs) ->
