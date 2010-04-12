@@ -26,3 +26,4 @@ test/t1/localhost:8000/
 test/t[12]/logs/
 test/t[12]/yaws.conf
 www/yaws.pdf
+www/*.txt
