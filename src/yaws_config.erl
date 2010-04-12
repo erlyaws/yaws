@@ -576,6 +576,15 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
+        ["process_options", '=', POpts] ->
+            case parse_process_options(POpts) of
+                {ok, ProcList} ->
+                    fload(FD, globals, GC#gconf{process_options=ProcList},
+                          C, Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+
         ["log_wrap_size", '=', Int] ->
             case (catch list_to_integer(Int)) of
                 I when is_integer(I) ->
@@ -1459,6 +1468,39 @@ is_string_char([C|T]) ->
 is_special(C) ->
     lists:member(C, [$=, $<, $>, $,]).
 
+%% parse the argument string PLString which can either be the undefined atom
+%% or a proplist. Currently the only supported keys are fullsweep_after and
+%% min_heap_size. Any other key/values are ignored.
+parse_process_options(PLString) ->
+    case erl_scan:string(PLString ++ ".") of
+        {ok, PLTokens, _} ->
+            case erl_parse:parse_term(PLTokens) of
+                {ok, undefined} ->
+                    {ok, []};
+                {ok, []} ->
+                    {ok, []};
+                {ok, [Hd|_Tl]=PList} when is_atom(Hd); is_tuple(Hd) ->
+                    %% create new safe proplist of desired options
+                    {ok, proplists_int_copy([], PList, [fullsweep_after, min_heap_size])};
+                _ ->
+                    {error, "Expect undefined or proplist"}
+            end;
+        _ ->
+            {error, "Expect undefined or proplist"}
+    end.
+
+%% copy proplist integer values for the given keys from the 
+%% Src proplist to the Dest proplist. Ignored keys that are not
+%% found or have non-integer values. Returns the new Dest proplist.
+proplists_int_copy(Dest, _Src, []) ->
+    Dest;
+proplists_int_copy(Dest, Src, [Key|NextKeys]) ->
+    case proplists:get_value(Key, Src) of
+        Val when is_integer(Val) ->
+            proplists_int_copy([{Key, Val}|Dest], Src, NextKeys);
+        _ ->
+            proplists_int_copy(Dest, Src, NextKeys)
+    end.
 
 parse_soap_srv_mods(['<', Module, ',' , Handler, ',', WsdlFile, '>' | Tail], 
                     Ack) ->
