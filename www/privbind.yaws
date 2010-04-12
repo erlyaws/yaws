@@ -109,6 +109,36 @@ http://yaws.hyber.org/download/fd_server-2.3.0.tgz
   All in all the fdsrv option is much worse that the authbind option.
 </p>
 
+
+<p>
+Here is a description on how to do this on MacOs X. It's not exactly the same,
+since we're still binding to non privileged ports. However, 
+edit /etc/sysctl and add:
+</p>
+
+<pre>
+net.inet.ip.forwarding=1
+</pre>
+
+<p>
+Then with ipfw as the firewall (turn off the gui firewall in system
+preferences and manage own rules) use the ipfw rules like these - for
+testing on your own box use something like:
+</p>
+
+<pre>
+ipfw add fwd 127.0.0.1,8080 tcp from any to 127.0.0.1 dst-port 80 in
+ipfw add fwd 127.0.0.1,8443 tcp from any to 127.0.0.1 dst-port 443 in
+</pre>
+
+<p>
+set up yaws to use 8080 and 8443 in yaws.conf and then run as some non
+root user.  When you browse to http://127.0.0.1 or https://127.0.0.1
+you will see your pages that are actually on 8080 and 8443 internally
+but will be forwarded via ipfw forwarding.
+</p>
+
+
 <p>
 
 Yet another (more complicated way) for linux users is to hack the kernel.
