@@ -29,6 +29,13 @@ include_dir = %yawsdir%/examples/include
 # max number of connections from clients into the server
 max_connections = nolimit
 
+# Normally, yaws does not restrict the number of times a connection is
+# kept alive using keepalive. Setting this parameter to an integer X
+# will ensure that connections are closed once they have been used X times.
+# This can be a useful to guard against long running connections 
+# collecting too much garbage in the erlang VM.
+keepalive_maxuses = nolimit
+
 # Override the garbage collection option parameters for processes
 # which handle new connections. Useful for systems which expect long lived
 # connections which handle a lot of data. The default value is erlangs

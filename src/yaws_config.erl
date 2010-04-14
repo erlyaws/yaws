@@ -659,6 +659,18 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
+        ["keepalive_maxuses", '=', Int] ->
+            case (catch list_to_integer(Int)) of
+                I when is_integer(I) ->
+                    fload(FD, globals, GC#gconf{keepalive_maxuses = I},
+                          C, Cs, Lno+1, Next);
+                _ when Int == "nolimit" ->
+                    %% nolimit is the default
+                    fload(FD, globals, GC, C, Cs, Lno+1, Next);
+                _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            end;
+
         ["php_exe_path", '=' , PhpPath] ->
             case is_file(PhpPath) of
                 true ->

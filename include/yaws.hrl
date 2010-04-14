@@ -74,6 +74,7 @@
                ebin_dir = [],
                runmods = [],       %% runmods for entire server
                keepalive_timeout = 15000,
+               keepalive_maxuses = nolimit, %% nolimit or non negative integer
                max_num_cached_files = 400,
                max_num_cached_bytes = 1000000,  %% 1 MEG
                max_size_cached_file = 8000,
@@ -270,6 +271,8 @@
 
           doclose,       %% bool
           chunked,       %% bool
+          exceedmaxuses=false,
+                         %% bool, true if hit keep-alive max uses
           encoding=identity,
                          %% identity, deflate
           contlen,       %% integer

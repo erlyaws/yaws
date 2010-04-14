@@ -1082,9 +1082,11 @@ aloop(CliSock, GS, Num) ->
                  end,
             put(outh, #outh{}),
             put(sc, SC),
-	    yaws_stats:hit(),
+	        yaws_stats:hit(),
+            check_keepalive_maxuses(GS, Num),
             Call = call_method(Req#http_request.method, CliSock, Req, H),
-            handle_method_result(Call, CliSock, IP, GS, Req, H, Num);
+            Call2 = fix_keepalive_maxuses(Call),
+            handle_method_result(Call2, CliSock, IP, GS, Req, H, Num);
         closed ->
             {ok, Num};
         _ ->
@@ -1092,6 +1094,34 @@ aloop(CliSock, GS, Num) ->
             exit(normal)
     end.
 
+%% Checks how many times keepalive has been used and updates the
+%% process dictionary outh variable if required to say that the 
+%% connection has exceeded its maxuses.
+check_keepalive_maxuses(GS, Num) ->
+    case (GS#gs.gconf)#gconf.keepalive_maxuses of
+        nolimit ->
+            ok;
+        0 ->
+            ok;
+        N when Num+1 < N ->
+            ok;
+        _N ->
+            put(outh, (get(outh))#outh{exceedmaxuses=true})
+    end.
+
+%% Change to Res to 'done' if we've exceeded our maxuses.
+fix_keepalive_maxuses(Res) ->
+    case Res of
+        continue ->
+            case (get(outh))#outh.exceedmaxuses of
+                true -> 
+                    done; %% no keepalive this time!
+                _ ->
+                    Res
+            end;
+        _ ->
+            Res
+    end.
 
 %% keep original dictionary but filter out eventual previous init_db
 %% in erase_transients/0
@@ -1151,11 +1181,13 @@ handle_method_result(Res, CliSock, IP, GS, Req, H, Num) ->
                     ok
             end,
             put (sc, (get(sc))#sconf{appmods = []}),
+            check_keepalive_maxuses(GS, Num),
             Call = call_method(Req#http_request.method,
                                CliSock,
                                Req#http_request{path = {abs_path, Page}},
                                H#headers{content_length = undefined}),
-            handle_method_result(Call, CliSock, IP, GS, Req, H, Num)
+            Call2 = fix_keepalive_maxuses(Call),
+            handle_method_result(Call2, CliSock, IP, GS, Req, H, Num)
     end.
 
 

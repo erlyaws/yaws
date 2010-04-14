@@ -108,6 +108,14 @@ from HTTP clients into the server. This is implemented by closing
 the last socket if the limit threshold is reached.
 
 .TP
+\fB keepalive_maxuses = nolimit | <int>\fR
+Normally, yaws does not restrict the number of times a connection is
+kept alive using keepalive. Setting this parameter to an integer X
+will ensure that connections are closed once they have been used X times.
+This can be a useful to guard against long running connections 
+collecting too much garbage in the erlang VM.
+
+.TP
 \fB process_options = "[]" | "[{fullsweep_after, int()} | {min_heap_size, int()}]"\fR
 Override the garbage collection option parameters for processes
 which handle new connections. Useful for systems which expect long lived

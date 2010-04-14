@@ -55,7 +55,7 @@
          outh_set_content_length/1,
          outh_set_dcc/2,
          outh_set_transfer_encoding_off/0,
-	 outh_set_auth/1,
+         outh_set_auth/1,
          outh_fix_doclose/0,
          dcc/2]).
 
@@ -1303,7 +1303,10 @@ outh_fix_doclose() ->
 
 
 dcc(Req, Headers) ->
+    H = get(outh),
     DoClose = case Req#http_request.version of
+                  _ when H#outh.exceedmaxuses == true ->
+                      true; %% too many keepalives
                   {1, 0} -> 
                       case Headers#headers.connection of
                           "close" -> true;
