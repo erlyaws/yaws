@@ -226,6 +226,25 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
 				   end,
 				   SC#sconf.extra_cgi_vars),
 
+    %% Some versions of erlang:open_port can't handle query strings that
+    %% end with an equal sign. This is because the broken versions treat
+    %% environment variable strings ending with '=' as environment variable
+    %% names intended to be deleted from the environment, i.e. as if they
+    %% have no value. The result is that no QUERY_STRING environment
+    %% variable gets set for these cases. We work around this by appending
+    %% a & character to any query string that ends in =.
+    QueryString = case checkdef(Arg#arg.querydata) of
+                      "" ->
+                          "";
+                      QS ->
+                          case lists:reverse(QS) of
+                              [$= | _] ->
+                                  QS ++ "&";
+                              _ ->
+                                  QS
+                          end
+                  end,
+
     %%todo - review. should AuthEnv entries be overridable by ExtraEnv or not?
     %% we should define policy here rather than let through dupes.
 
@@ -256,10 +275,11 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
             {"REQUEST_URI", RequestURI},
             {"DOCUMENT_ROOT",         Arg#arg.docroot},
             {"DOCUMENT_ROOT_MOUNT", Arg#arg.docroot_mount},
-            {"SCRIPT_FILENAME", Scriptfilename},% For PHP 4.3.2 and higher
-                                                % see http://bugs.php.net/bug.php?id=28227
-                                                % (Sergei Golovan).
-                                                % {"SCRIPT_TRANSLATED", Scriptfilename},   %IIS6+
+            %% SCRIPT_FILENAME is for PHP 4.3.2 and higher
+            %% see http://bugs.php.net/bug.php?id=28227
+            %% (Sergei Golovan).
+            {"SCRIPT_FILENAME", Scriptfilename},
+            %% {"SCRIPT_TRANSLATED", Scriptfilename},   %IIS6+
             {"PATH_INFO",                Pathinfo2},
             {"PATH_TRANSLATED",        PathTranslated},
             %% <JMN_2007-02>
@@ -293,7 +313,7 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
             %% CGI/1.1 spec to substitute REMOTE_ADDR
             {"SERVER_ADDR", LocalAddr},   %% Apache compat
             {"LOCAL_ADDR", LocalAddr},    %% IIS compat
-            {"QUERY_STRING", checkdef(Arg#arg.querydata)},
+            {"QUERY_STRING", QueryString},
             {"CONTENT_TYPE", H#headers.content_type},
             {"CONTENT_LENGTH", H#headers.content_length},
             {"HTTP_ACCEPT", H#headers.accept},
