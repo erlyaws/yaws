@@ -869,9 +869,9 @@ fcgi_connect_to_application_server(WorkerState, Host, Port) ->
 fcgi_send_begin_request(WorkerState) ->
     KeepConnection = WorkerState#fcgi_worker_state.keep_connection,
     Flags = case KeepConnection of
-        true -> ?FCGI_KEEP_CONN;
-        false -> ?FCGI_DONT_KEEP_CONN
-    end,
+                true -> ?FCGI_KEEP_CONN;
+                false -> ?FCGI_DONT_KEEP_CONN
+            end,
     Role = WorkerState#fcgi_worker_state.role,
     fcgi_send_record(WorkerState, ?FCGI_TYPE_BEGIN_REQUEST,
                      ?FCGI_REQUEST_ID_APPLICATION, <<Role:16, Flags:8, 0:40>>).
@@ -1051,12 +1051,18 @@ fcgi_header_loop(WorkerState, LineState) ->
         {_EmptyLine = [], NewLineState} ->
             case NewLineState of
                 {middle, Data} ->
-                    ParentPid ! {self(), partial_data, Data},
-                    receive
-                        {ParentPid, stream_data} ->
-                            fcgi_data_loop(WorkerState);
-                        {ParentPid, no_data} ->
-                            ok
+                    case WorkerState#fcgi_worker_state.role of
+                        ?FCGI_ROLE_AUTHORIZER ->
+                            % For authorization we never stream to the client
+                            fcgi_collect_all_data_loop(WorkerState, Data);
+                        _ ->
+                            ParentPid ! {self(), partial_data, Data},
+                            receive
+                                {ParentPid, stream_data} ->
+                                    fcgi_stream_data_loop(WorkerState);
+                                {ParentPid, no_data} ->
+                                    ok
+                            end
                     end;
                 {ending, Data} ->
                     ParentPid ! {self(), all_data, Data},
@@ -1111,14 +1117,32 @@ fcgi_add_resp(WorkerState, OldData) ->
     end.
 
 
-fcgi_data_loop(WorkerState) ->
+fcgi_stream_data_loop(WorkerState) ->
     YawsWorkerPid = WorkerState#fcgi_worker_state.yaws_worker_pid,
     case fcgi_get_output(WorkerState) of
         {data, Data} ->
             yaws_api:stream_chunk_deliver_blocking(YawsWorkerPid, Data),
-            fcgi_data_loop(WorkerState);
+            fcgi_stream_data_loop(WorkerState);
         {exit_status, _Status} ->
             yaws_api:stream_chunk_end(YawsWorkerPid)
+    end.
+
+
+fcgi_collect_all_data_loop(WorkerState, Data) ->
+    YawsWorkerPid = WorkerState#fcgi_worker_state.yaws_worker_pid,
+    case fcgi_get_output(WorkerState) of
+        {data, MoreData} ->
+            NewData = <<Data/binary, MoreData/binary>>,
+            fcgi_collect_all_data_loop(WorkerState, NewData);
+        {exit_status, _Status} ->
+            ParentPid = WorkerState#fcgi_worker_state.parent_pid,
+            ParentPid ! {self(), all_data, Data},
+            receive
+                {ParentPid, stream_data} ->
+                    yaws_api:stream_chunk_end(YawsWorkerPid);
+                {ParentPid, no_data} ->
+                    ok
+            end
     end.
 
 
