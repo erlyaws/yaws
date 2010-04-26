@@ -1663,10 +1663,10 @@ parse_set_cookie(Str, Cookie) ->
     case Rest1 of
         [$=|Rest2] ->
             {Value,Quoted,Rest3} = parse_set_cookie_value(Rest2),
-            NewC=add_set_cookie(yaws:to_lower(Cookie),Key,Value,Quoted),
+            NewC=add_set_cookie(Cookie,yaws:to_lower(Key),Value,Quoted),
             parse_set_cookie(Rest3,NewC);
         [$;|Rest2] ->
-            NewC =add_set_cookie(yaws:to_lower(Cookie),Key,undefined,false),
+            NewC =add_set_cookie(Cookie,yaws:to_lower(Key),undefined,false),
             parse_set_cookie(Rest2,NewC);
         _ ->
             Cookie
