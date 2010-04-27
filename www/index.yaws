@@ -9,24 +9,25 @@ out(A) ->
 
 
         {p,[],"Yaws is a HTTP high perfomance 1.1 webserver particularly"
-         " well suited for dynamic-content webapplications. Two separate modes of operations are supported."},
+         " well suited for dynamic-content web applications. Two
+         separate modes of operations are supported:"},
         {ul,[],
          [{li,[],
            {p,[],"Standalone mode where Yaws runs as a regular webserver " 
             "daemon. This is the default mode."}},
           {li,[],
            {p,[], "Embedded mode where Yaws runs as an embedded webserver in "
-            "another erlang application."}}
+            "another Erlang application."}}
          ]},
         {p,[], ["Yaws is entirely written in ",
                 {a, [{href, "http://www.erlang.org"}],  "Erlang"},
-                " furthermore it is a multithreaded webserver where one "
-                "Erlang light weight process is used to handle each client."]},
-        {p,[], "The main advantages of yaws compared to other Web technologies"
+                ", and furthermore it is a multithreaded webserver where one "
+                "Erlang lightweight process is used to handle each client."]},
+        {p,[], "The main advantages of Yaws compared to other Web technologies"
          " are performance and elegance. The performance comes from the "
          " underlying Erlang system and its ability to handle concurrent "
          " processes in an efficent way. Its elegance comes from Erlang as "
-         "well. Web applications dont have to be written in ugly adhoc "
+         "well. Web applications don't have to be written in ugly ad hoc "
          "languages."},
         
         {h2,[], "yaws.hyber.org"},
