@@ -994,8 +994,6 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
         ["allowed_scripts", '=' | Suffixes] ->
-            io:format("Suf ~p~n", [Suffixes]),
-
             C2 = C#sconf{allowed_scripts = 
                          lists:map(fun(X)->element(1,mime_types:t(X)) end,
                                    Suffixes)},
