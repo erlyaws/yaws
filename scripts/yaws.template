@@ -136,7 +136,17 @@ if [ "$HEART" = true ]; then
         fi
     fi
 fi
-HEART_COMMAND="$ENV_PGM HEART=true YAWS_HEART_RESTARTS=$restarts YAWS_HEART_START=$starttime $program "${1+"$@"}
+HEART_COMMAND="$ENV_PGM HEART=true YAWS_HEART_RESTARTS=$restarts YAWS_HEART_START=$starttime $program"
+# This loop quotes arguments containing whitespace so they can be passed
+# properly to the next heart restart
+for arg in "$@"; do
+    ws=`( set X $arg ; echo $# )`
+    if [ "$ws" -gt 2 ]; then
+        HEART_COMMAND="$HEART_COMMAND '$arg'"
+    else
+        HEART_COMMAND="$HEART_COMMAND $arg"
+    fi
+done
 export HEART_COMMAND
 
 while [ $# -gt 0 ]
