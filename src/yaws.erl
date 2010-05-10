@@ -1764,11 +1764,10 @@ ensure_exist(Path) ->
 %%
 %%
 
-
 do_recv(Sock, Num, nossl) ->
-    gen_tcp:recv(Sock, Num, ?READ_TIMEOUT);
+    gen_tcp:recv(Sock, Num, (get(gc))#gconf.keepalive_timeout);
 do_recv(Sock, Num, ssl) ->
-    ssl:recv(Sock, Num, ?READ_TIMEOUT).
+    ssl:recv(Sock, Num, (get(gc))#gconf.keepalive_timeout).
 
 cli_recv(S, Num, SslBool) ->
     Res = do_recv(S, Num, SslBool),

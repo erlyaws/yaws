@@ -102,27 +102,27 @@ new ssl implementation.
 Enable or disable the auth log. Default is true.
 
 .TP
-\fB max_connections = nolimit | <int>\fR
+\fB max_connections = nolimit | Integer\fR
 Set this value to control the maximum number of connections
 from HTTP clients into the server. This is implemented by closing
 the last socket if the limit threshold is reached.
 
 .TP
-\fB keepalive_maxuses = nolimit | <int>\fR
+\fB keepalive_maxuses = nolimit | Integer\fR
 Normally, yaws does not restrict the number of times a connection is
 kept alive using keepalive. Setting this parameter to an integer X
 will ensure that connections are closed once they have been used X times.
 This can be a useful to guard against long running connections 
-collecting too much garbage in the erlang VM.
+collecting too much garbage in the Erlang VM.
 
 .TP
 \fB process_options = "[]" | "[{fullsweep_after, int()} | {min_heap_size, int()}]"\fR
-Override the garbage collection option parameters for processes
-which handle new connections. Useful for systems which expect long lived
-connections which handle a lot of data. The default value is erlangs
+Override the garbage collection option parameters for processes that
+handle new connections. Useful for systems that expect long-lived
+connections that handle a lot of data. The default value is Erlang's
 default which does minimal garbage collection until the process dies.
-The value type is a quoted string which contains an erlang proplist.
-See erlangs erlang:spawn_opt/4 function for more details.
+The value type is a quoted string which contains an Erlang property
+list.  See Erlang's \fIerlang:spawn_opt/4\fR function for more details.
 
 .TP
 \fB log_wrap_size = Integer\fR
@@ -200,11 +200,18 @@ whereas in testing/development scenarios it may be convenient to
 set it to true. Default is true.
 
 .TP
+\fB keepalive_timeout = TimeInMilliseconds | infinity \fR
+If the HTTP session will be kept alive (i.e., not immediately closed)
+it will close after keepalive_timeout milliseconds unless a new
+request is received in that time. The default value is 30000. The
+value \fIinfinity\fR is legal but not recommended.
+
+.TP
 \fB use_fdsrv = true | false \fR
-This feature makes it possible to bind to ports < 1024 even when
-we're not running as root. It requires the Jungerl package called fd_server
-to be properly installed. The feature doesn't  work with SSL. Default is false.
-The use of fdsrv is not encouraged, see 
+This feature makes it possible to bind to ports < 1024 even when we're
+not running as root. It requires the Jungerl package called fd_server
+to be properly installed. The feature doesn't work with SSL. Default
+is false.  The use of fdsrv is not encouraged, see
 http://yaws.hyber.org/privbind.yaws
 
 .TP
@@ -321,17 +328,17 @@ for files to ssi/yssi include.
 \fBpartial_post_size = Integer | nolimit\fR
 When a yaws file receives large POSTs, the amount of data received
 in each chunk is determined by the this parameter.
-The deafult value is 10240.
+The default value is 10240.
 
 
 .TP
 \fBdav = true | false\fR
-Turns on the DAV protocol for this server. The dav support
-in yaws is highly limited. If dav is turned on, .yaws processing
-of .yaws pages is turned off. Default is false.
-Setting it to nolimit is potentially
-dangerous. There is a hardcoded timeout on POST reads at 30 seconds.
-If the read is not done within the timeout, the POST will fail.
+Turns on the DAV protocol for this server. The dav support in yaws is
+highly limited. If dav is turned on, .yaws processing of .yaws pages
+is turned off. Default is false.  Setting it to nolimit is potentially
+dangerous. The socket read timeout is supplied by the
+keepalive_timeout setting.  If the read is not done within the
+timeout, the POST will fail.
 
 .TP
 \fBtilde_expand = true|false \fR
@@ -840,3 +847,6 @@ Written by Claes Wikstrom
 .BR yaws (1)
 .BR erl (1)
 
+Comment] Local Variables:
+Comment] mode: nroff
+Comment] End:

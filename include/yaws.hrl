@@ -73,7 +73,7 @@
                logdir,          
                ebin_dir = [],
                runmods = [],       %% runmods for entire server
-               keepalive_timeout = 15000,
+               keepalive_timeout = 30000,
                keepalive_maxuses = nolimit, %% nolimit or non negative integer
                max_num_cached_files = 400,
                max_num_cached_bytes = 1000000,  %% 1 MEG
@@ -301,7 +301,6 @@
 
 
           
--define(READ_TIMEOUT, 30000).
 
 
 

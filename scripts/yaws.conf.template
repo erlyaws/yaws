@@ -117,6 +117,11 @@ auth_log = true
 
 pick_first_virthost_on_nomatch = true
 
+# If the HTTP client session is to be kept alive, wait this many
+# milliseconds for a new request before timing out the connection. Note
+# that infinity is a valid value but it's not recommended.
+
+keepalive_timeout = 30000
 
 # All unices are broken since it's not possible to bind to
 # a privileged port (< 1024) unless uid==0

@@ -1633,11 +1633,11 @@ header.
 	      valid redirect status codes.
 
 \item       \verb+{redirect_local, Path}+
-              Does a redirect to the same Scheme://Host:Port/Path
-              as we currently are executing in. Path can be
-	      either be the path directly (equivalent to
-	      \verb+abs_path+), or one of \verb+{{abs_path, Path}+ or
-	      \verb+{{rel_path, RelativePath}}+
+              Does a redirect to the same Scheme://Host:Port/Path in
+              which we are currently executing. Path can be either be
+              the path directly (equivalent to \verb+abs_path+), or
+              one of \verb+{{abs_path, Path}+ or
+              \verb+{{rel_path, RelativePath}}+
 
 \item       \verb+{redirect_local, Path, Status}+
               Same as \verb+redirect_local+ above with the additional
@@ -2072,10 +2072,10 @@ part where options for each virtual host is supplied.
 
 \item        \verb+max_size_cached_file = Integer+ -
               This  directive  sets  a  maximum size on the files
-              that are RAM cached by \Yaws\ .  The default  value  i
+              that are RAM cached by \Yaws\ .  The default value is
               8000, 8 kBytes.
 
-\item        \verb+cache_refresh_secs = Integer+
+\item        \verb+cache_refresh_secs = Integer+ -
               The  RAM  cache  is used to serve pages that sit in
               the  cache.  An  entry  sits  in  cache   at   most
               cache\_refresh\_secs  number  of seconds. The default
@@ -2085,6 +2085,27 @@ part where options for each virtual host is supplied.
               site,  it may be convenient to set this value to 0.
               If the debug flag (-d) is passed to the \Yaws\   start
               script, this value is automatically set to 0.
+
+\item        \verb+max_connections = nolimit | Integer+ -
+              This value controls the maximum number of connections
+              from HTTP clients into the server. This is implemented
+              by closing the last socket if the threshold is reached.
+
+\item        \verb+keepalive_maxuses = nolimit | Integer+ -
+              Normally, \Yaws\ does not restrict the number of times a
+              connection is kept alive using keepalive. Setting this
+              parameter to an integer \verb+X+ will ensure that
+              connections are closed once they have been used \verb+X+
+              times.  This can be a useful to guard against
+              long-running connections collecting too much garbage in
+              the \Erlang\ VM.
+
+\item        \verb+keepalive_timeout = Integer | infinity+ -
+              If the HTTP session will be kept alive (i.e., not
+              immediately closed) it will close after the specified
+              number of milliseconds unless a new request is received
+              in that time. The default value is 30000. The value
+              \verb+infinity+ is legal but not recommended.
 
 \item        \verb+trace  = traffic | http+ -
               This  enables  traffic  or http tracing. Tracing is
