@@ -110,8 +110,17 @@ when we want to run erlang distribution over SSL.
 
 .TP
 \fB\--erlarg STRING\fR
-Pass STRING as an additional argument to the "erl" program.
-
+Pass STRING as an additional argument to the "erl" program. If STRING
+comprises multiple words, you must quote it so that your shell passes
+it to yaws as a single argument. If STRING contains any single quote
+characters, you must quote each of them as well. For example, to pass
+the option \fI-env NAME O'Keeffe\fR to "erl" from a Bourne-compatible
+shell:
+.PP
+.nf
+.ce
+--erlarg "-env NAME O\\'Keeffe"
+.fi
 
 .TP
 \fB\--id ID\fR
