@@ -247,7 +247,16 @@ Application processes delivering data directly to clients must call
 this function to inform yaws that they've finished using
 \fISocket\fR. The \fIYawsPid\fR argument will have been passed to the
 process earlier when yaws sent it a message telling it to proceed with
-data delivery.
+data delivery. Yaws expects \fISocket\fR to be open.
+
+.TP
+\fBstream_process_end(closed, YawsPid)\fR
+Same as the previous function but the application calls this if it
+closes the client socket as part of its data delivery process. This
+allows yaws to continue without assuming the socket is still open and
+encountering errors due to that assumption. The \fIYawsPid\fR argument
+will have been passed to the application process earlier when yaws
+sent it a message telling it to proceed with data delivery.
 
 .TP
 \fBparse_query(Arg)\fR

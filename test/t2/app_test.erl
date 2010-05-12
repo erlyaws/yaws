@@ -43,7 +43,6 @@ collect_pids(Pids) ->
     end.
 
 
-
 %% max 5 connectors at a time
 allow_connects([], _) ->
     io:format("  test1: all pids connected \n",[]);
@@ -232,15 +231,63 @@ appmod_test() ->
 
 streamcontent_test() ->
     io:format("streamcontent_test\n",[]),
-    Uri = "http://localhost:8000/streamtest",
-    ?line {ok, "200", Headers, Body} = ibrowse:send_req(Uri, [], get),
-    ?line "chunked" = proplists:get_value("Transfer-Encoding", Headers),
-    ?line Body = "this is an iolist",
+    Uri1 = "http://localhost:8000/streamtest/1",
+    ?line {ok, "200", Headers1, Body1} = ibrowse:send_req(Uri1, [], get),
+    ?line "chunked" = proplists:get_value("Transfer-Encoding", Headers1),
+    ?line Body1 = "this is an iolist",
+
+    %% The following test attempts to ensure that Yaws doesn't report the
+    %% following problem due to the application closing the socket and then
+    %% handing it back to Yaws via stream_process_end.
+    %%
+    %% =ERROR REPORT==== 12-May-2010::00:27:05 ===
+    %% Yaws process died: {{badmatch,{error,einval}},
+    %%                     [{yaws,setopts,3},
+    %%                      {yaws,http_recv_request,2},
+    %%                      {yaws,do_http_get_headers,2},
+    %%                      {yaws,http_get_headers,2},
+    %%                      {yaws_server,aloop,3},
+    %%                      {yaws_server,acceptor0,2},
+    %%                      {proc_lib,init_p_do_apply,3}]}
+    %%
+    %% The test uses plain sockets because closing the remote end makes
+    %% ibrowse unhappy. Unfortunately the only way to currently check that
+    %% the above message doesn't appear is to turn on traffic tracing in
+    %% yaws.conf and then visually check the file logs/report.log.
+    %%
+    Path = "/streamtest/2",
+    {ok, Sock} = gen_tcp:connect("localhost", 8000, [binary, {active, false}]),
+    gen_tcp:send(Sock, "GET " ++ Path ++ " HTTP/1.1\r\nHost: localhost\r\n\r\n"),
+    inet:setopts(Sock, [{packet, http}]),
+    {ok, Len} = recv_hdrs(Sock),
+    inet:setopts(Sock, [{packet, raw}, {active, false}]),
+    {ok, <<"closing the socket">>} = gen_tcp:recv(Sock, Len),
+    timer:sleep(10000),
+    gen_tcp:close(Sock),
     ok.
+
+recv_hdrs(Sock) ->
+    recv_hdrs(Sock, 0).
+recv_hdrs(Sock, Len) ->
+    inet:setopts(Sock, [{active, once}]),
+    receive
+        {http, Sock, http_eoh} ->
+            {ok, Len};
+        {http, Sock, {http_error, Error}} ->
+            {error, Error};
+        {http, Sock, {http_header, _, 'Content-Length', _, LenStr}} ->
+            recv_hdrs(Sock, list_to_integer(LenStr));
+        {http, Sock, {http_header, _, _, _, _}} ->
+            recv_hdrs(Sock, Len);
+        {http, Sock, {http_response, _, 200, "OK"}} ->
+            recv_hdrs(Sock, Len);
+        Other ->
+            {error, {"unexpected message", Other}}
+    end.
 
 %% used for appmod tests
 %%
-out(A) ->
+out(_A) ->
     %% add our special header to mark that we were here
     [{status, 200},
      {header, {?APPMOD_HEADER, "true"}}].

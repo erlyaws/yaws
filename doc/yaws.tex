@@ -1558,7 +1558,12 @@ Finally, \verb+Pid+ must always call
 \verb+yaws_api:stream_process_end(Socket, YawsPid)+ when it finishes
 sending data or when it receives the \verb+{discard, YawsPid}+ message
 from \Yaws\ --- this is required to inform \Yaws\ that \verb+Pid+ has
-finished with the socket and will not use it directly anymore.
+finished with the socket and will not use it directly anymore. If the
+application has to close the socket while it's in control of it,
+though, it must pass the atom \verb+closed+ as the first argument to
+\verb+yaws_api:stream_process_end+ in place of the socket to inform
+\Yaws\ that the socket has been closed and it should no longer attempt
+to use it.
 
 Applications using \verb+streamcontent_from_pid+ wanting to avoid
 chunked transfer encoding for their streams should be sure to include

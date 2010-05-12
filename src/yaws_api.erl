@@ -873,6 +873,8 @@ stream_process_deliver_final_chunk(Sock, IoList) ->
             end,
     stream_process_deliver(Sock, Chunk).
 
+stream_process_end(closed, YawsPid) ->
+    YawsPid ! {endofstreamcontent, closed};
 stream_process_end(Sock={sslsocket,_,_}, YawsPid) ->
     ssl:controlling_process(Sock, YawsPid),
     YawsPid ! endofstreamcontent;

@@ -2668,18 +2668,25 @@ wait_for_streamcontent_pid(Priv, CliSock, ContentPid) ->
     end,
     receive
         endofstreamcontent ->
-            erlang:demonitor(Ref),
-            %% should just use demonitor [flush] option instead?
-            receive
-                {'DOWN', Ref, _, _, _} ->
-                    ok
-            after 0 ->
-                    ok
-            end;
+            demonitor_streamcontent_pid(Ref);
+        {endofstreamcontent, closed} ->
+            H = get(outh),
+            put(outh, H#outh{doclose = true}),
+            demonitor_streamcontent_pid(Ref);
         {'DOWN', Ref, _, _, _} ->
             ok
     end,
     done_or_continue().
+
+demonitor_streamcontent_pid(Ref) ->
+    erlang:demonitor(Ref),
+    %% should just use demonitor [flush] option instead?
+    receive
+        {'DOWN', Ref, _, _, _} ->
+            ok
+    after 0 ->
+            ok
+    end.
 
 skip_data(List, Fd, Sz) when is_list(List) ->
     skip_data(list_to_binary(List), Fd, Sz);

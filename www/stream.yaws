@@ -81,6 +81,10 @@ out(A) ->
 
        {p,[],"This informs yaws that Pid is finished with the socket and will no longer use it directly."},
 
+       box(" yaws_api:stream_process_end(closed, YawsPid)"),
+
+       {p,[],"This informs yaws that Pid has not only finished with the socket, but has also closed it. Yaws will not attempt to use the socket anymore after the application calls this function."},
+
        {p,[],"Applications using streamcontent_from_pid should be sure to set a Content-Length header in their out/1 return value if they want to avoid chunked transfer encoding for their return value. Yaws automatically sets the HTTP Transfer-Encoding header to chunked if it doesn't detect a Content-Length header."},
 
        {p,[],"Here's an example of using streamcontent_from_pid:"},
