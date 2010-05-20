@@ -136,6 +136,10 @@ rewrite_path(Req, Pref) ->
     New.
 
 
+strip_prefix("","") ->
+    "/";
+strip_prefix(P,"") ->
+    P;
 strip_prefix(P,"/") ->
     P;
 strip_prefix([H|T1],[H|T2]) ->
