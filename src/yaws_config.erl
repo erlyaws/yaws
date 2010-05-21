@@ -1008,7 +1008,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                             [$/|_Tail] ->
                                 Prefix;
                             Other ->
-                                lists:reverse([$/|Other])
+                                lists:reverse(Other)
                         end,
                     C2 = C#sconf{revproxy = [{P, URL} | C#sconf.revproxy]},
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
