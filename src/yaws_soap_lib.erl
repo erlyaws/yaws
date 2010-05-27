@@ -31,8 +31,6 @@
 
 
 -include("../include/soap.hrl").
--include("../include/erlsom.hrl").  % FIXME a better solution ?
-
 
 -define(HTTP_REQ_TIMEOUT, 20000).
 
@@ -45,11 +43,7 @@
 -record(yaws_soap_config, {atts, xsd_path,  user_module, wsdl_file, add_files}).
 -record(xsd_file, {atts, name, prefix, import_specs}).
 -record(import_specs, {atts, namespace, prefix, location}).
-%% this comes from erlsom_compile. Maybe better to have an accessor function 
-%% in erlsom_lib?
--record(schemaType, 
-        {elInfo, targetNamespace, elementFormDefault, attributeFormDefault, 
-        blockDefault, finalDefault, version, imports, elements}).
+
 -define(DefaultPrefix, "p").
 
 
@@ -299,7 +293,12 @@ initModelFile(ConfigFile) ->
     initModel2(WsdlFile, Prefix, XsdPath, Import, AddFiles).
 
 priv_dir() -> 
-    filename:join([filename:dirname(code:which(yaws)),"..", "priv"]).
+    case code:priv_dir(yaws) of
+        {error, bad_name} ->
+           filename:join([filename:dirname(code:which(yaws)),"..", "priv"]);
+        A ->
+            A
+    end.
 
 initModel2(WsdlFile, Prefix, Path, Import, AddFiles) ->
     WsdlName = filename:join([Path, "wsdl.xsd"]),
@@ -355,9 +354,10 @@ parseWsdls([WsdlFile | Tail], Prefix, WsdlModel, Options, {AccModel, AccOperatio
 %%% generates wsdls that depend on this feature. 
 makeImportList([], Acc) ->
   Acc;
-makeImportList([#schemaType{targetNamespace = Tns} = Xsd | Tail], Acc) ->
-  makeImportList(Tail, [{Tns, undefined, Xsd} | Acc]).
-  
+makeImportList([ Xsd | Tail], Acc) ->
+  makeImportList(Tail, [{erlsom_lib:getTargetNamespaceFromXsd(Xsd),
+                         undefined, Xsd} | Acc]).
+
 
 %%% --------------------------------------------------------------------
 %%% compile each of the schemas, and add it to the model.
@@ -629,10 +629,11 @@ searchPorts(BindingName, Ports) ->
 searchPorts(_BindingName, [], Acc) ->
   Acc;
 searchPorts(BindingName, [Port | Tail], Acc) ->
-  case Port of 
-    #port{binding = #qname{localPart = BindingName}} ->
+  PortBinding = erlsom_lib:localName(Port#port.binding),
+  case PortBinding of
+    BindingName ->
       searchPorts(BindingName, Tail, [Port | Acc]);
-    _ -> 
+    _ ->
       searchPorts(BindingName, Tail, Acc)
   end.
 
