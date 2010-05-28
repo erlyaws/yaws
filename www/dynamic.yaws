@@ -77,7 +77,7 @@ out(A) ->
          
          box("
 {table, [{bgcolor, \"tan\"}],
- {tr, 
+ {tr, [],
   [{td, [{width, \"70%\"}], {p, [{class, \"foo\"}], \"Hi there\"}}]}}
 "),
          
