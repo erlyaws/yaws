@@ -33,6 +33,8 @@
 ;; multiple modes, so I suppose that 'two-mode-mode' isn't strictly
 ;; accurate anymore.
 
+;; Modified May 2010 by Steve Vinoski to work with emacs 23.
+
 ;; configure these:
 (defvar default-mode (list "SGML" 'sgml-mode))
 (defvar second-modes (list
@@ -44,7 +46,7 @@
                       ))
 ;; ----------------
 
-(defvar two-mode-update 0)
+(defvar two-mode-update nil)
 (defvar two-mode-mode-idle-timer nil)
 (defvar two-mode-bool nil)
 (defvar two-mode-mode-delay (/ (float 1) (float 8)))
@@ -60,27 +62,26 @@
 (setq two-mode-switch-hook nil)
 
 (defun two-mode-mode-setup ()
-  (make-local-hook 'post-command-hook)
   (add-hook 'post-command-hook 'two-mode-mode-need-update nil t)
-  (make-local-variable 'minor-mode-alist)
   (make-local-variable 'two-mode-bool)
   (setq two-mode-bool t)
-  (when two-mode-mode-idle-timer
+  (make-local-variable 'two-mode-mode-idle-timer)
+  (if two-mode-mode-idle-timer
     (cancel-timer two-mode-mode-idle-timer))
   (setq two-mode-mode-idle-timer
-        (run-with-idle-timer two-mode-mode-delay t
-                             'two-mode-mode-update-mode))
+        (run-with-idle-timer two-mode-mode-delay t 'two-mode-mode-update-mode))
+  (make-local-variable 'minor-mode-alist)
   (or (assq 'two-mode-bool minor-mode-alist)
       (setq minor-mode-alist
             (cons '(two-mode-bool " two-mode") minor-mode-alist))))
 
 (defun two-mode-mode-need-update ()
-  (setq two-mode-update 1))
+  (setq two-mode-update t))
 
 (defun two-mode-change-mode (to-mode func)
-  (if (string= to-mode mode-name)
-      t
-    (progn
+  (let ((mode (if (listp mode-name) (car (last mode-name)) mode-name)))
+    (if (string= to-mode mode)
+        t
       (funcall func)
       ;; After the mode was set, we reread the "Local Variables" section.
       ;; We do need this for example in SGML-mode if "sgml-parent-document"
@@ -92,39 +93,40 @@
           (run-hooks 'two-mode-switch-hook))
       (if (eq font-lock-mode t)
           (font-lock-fontify-buffer))
-      (turn-on-font-lock-if-enabled))))
+      (if (fboundp 'turn-on-font-lock-if-enabled)
+          (turn-on-font-lock-if-enabled)
+        (turn-on-font-lock-if-desired)))))
 
 (defun two-mode-mode-update-mode ()
   (when (and two-mode-bool two-mode-update)
     (setq two-mode-update 0)
     (let ((mode-list second-modes)
-          (flag 0))
+          (to-mode (car default-mode))
+          (func (cadr default-mode)))
       (while mode-list
         (let ((mode (car mode-list))
               (lm -1)
               (rm -1))
-          (save-excursion 
+          (save-excursion
             (if (search-backward (cadr mode) nil t)
-                (setq lm (point))
-              (setq lm -1)))
+                (setq lm (point))))
           (save-excursion
             (if (search-backward (car (cddr mode)) nil t)
-                (setq rm (point))
-              (setq rm -1)))
+                (setq rm (point))))
           (if (and (not (and (= lm -1) (= rm -1))) (>= lm rm))
               (progn
-                (setq flag 1)
-                (setq mode-list '())
-                (two-mode-change-mode (car mode) (car (cdr (cddr mode)))))))
-        (setq mode-list (cdr mode-list)))
-      (if (= flag 0)
-          (two-mode-change-mode (car default-mode) (cadr default-mode))))))
+                (setq mode-list nil)
+                (setq to-mode (car mode))
+                (setq func (car (cdr (cddr mode)))))
+            (setq mode-list (cdr mode-list)))))
+      (two-mode-change-mode to-mode func))))
 
 (defun two-mode-mode ()
   "Turn on two-mode-mode"
   (interactive)
-  (funcall (cadr default-mode))
+  (setq two-mode-update t)
   (two-mode-mode-setup)
+  (two-mode-mode-update-mode)
   (if two-mode-hook
      (run-hooks 'two-mode-hook)))
 
