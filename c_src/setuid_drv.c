@@ -56,7 +56,7 @@ static ErlDrvData setuid_start(ErlDrvPort port, char *buf)
             }
         }
         endpwent();
-        return (ErlDrvData) -1;
+        break;
     case 'n': {
         int uid = atoi(t);
         while ((pe = getpwent())) {
@@ -85,8 +85,7 @@ static ErlDrvData setuid_start(ErlDrvPort port, char *buf)
             }
         }
         endpwent();
-        return (ErlDrvData) -1;
-
+        break;
     case 'h':
         while ((pe = getpwent())) {
             if (strcmp(pe->pw_name , t) == 0) {
@@ -97,9 +96,10 @@ static ErlDrvData setuid_start(ErlDrvPort port, char *buf)
             }
         }
         endpwent();
-        return (ErlDrvData) -1;
-
+        break;
     }
+    // In any case return error(?) for non void function
+    return (ErlDrvData) -1;
     
         
 }
