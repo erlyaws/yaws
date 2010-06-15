@@ -59,8 +59,22 @@ erlang::::type=normal;defaultpriv=basic,net_privaddr
 
 
 <p>
-  Linux doesn't have anything like the above. There are a couple
-  of options on Linux. The best is to use an auxiliary program
+  On Linux, kernels later than 2.6.24, it's possible to do:
+</p>
+<div class="box">        
+      <verbatim>
+$ setcap 'cap_net_bind_service=+ep' /usr/bin/erl
+      </verbatim>
+</div>
+
+<p>
+  The above command grants the capability of binding 
+  privileged ports to /usr/bin/erl
+<p>
+
+<p>
+  There are a couple
+  of other options on Linux. One is to use an auxiliary program
   like authbind <em>http://packages.debian.org/stable/authbind</em>
   or privbind <em>http://sourceforge.net/projects/privbind/</em>
 </p>
