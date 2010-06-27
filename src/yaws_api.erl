@@ -360,7 +360,20 @@ do_header(Head) ->
         {value, {_,"form-data"++Line}} ->
             Parameters = parse_arg_line(Line),
             {value, {_,Name}} = lists:keysearch(name, 1, Parameters),
-            {Name, Parameters};
+            {Name,
+             lists:map(fun({"content-type", Val}) ->
+                               {content_type, Val};
+                          ({"content-transfer-encoding", Val}) ->
+                               {content_transfer_encoding, Val};
+                          ({"content-id", Val}) ->
+                               {content_id, Val};
+                          ({"content-description", Val}) ->
+                               {content_description, Val};
+                          (KV) ->
+                               KV
+                       end,
+                       Parameters ++ lists:keydelete("content-disposition", 1,
+                                                     Header))};
         _ ->
             {Header}
     end.

@@ -3,17 +3,23 @@
 -include("../../include/yaws_api.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
+data_to_parse() ->
+    list_to_binary(
+      ["--!!!\r\n",
+       "Content-Disposition: form-data; name=\"abc123\"; "
+       ++ "filename=\"abc123\"\r\n"
+       ++ "Content-Type: text/plain\r\n"
+       ++ "Test-Header: sampledata\r\n\r\n",
+       "sometext\n\r\n--!!!--\r\n"]).
+
 complete_parse() ->
-    Data = list_to_binary(
-	     ["--!!!\r\n",
-	      "Content-Disposition: form-data; name=\"abc123\"; "
-	      ++ "filename=\"abc123\"\r\n\r\n",
-	      "sometext\n\r\n--!!!--\r\n"]),
-    yaws_api:parse_multipart_post(mk_arg(Data)).
+    yaws_api:parse_multipart_post(mk_arg(data_to_parse())).
 
 complete_parse_test() ->
-    {result,[{head,{"abc123", [{filename,"abc123"},{name,"abc123"}]}},
-	     {body,"sometext\n"}]} = complete_parse().
+    {result,[{head,{"abc123", [{filename,"abc123"},{name,"abc123"},
+                               {content_type,"text/plain"},
+                               {"test-header","sampledata"}]}},
+             {body,"sometext\n"}]} = complete_parse().
 
 
 incomplete_body_test() ->
@@ -57,6 +63,14 @@ incomplete_head_test() ->
      [{head,{"ghi789",[{filename,"ghi789"},{name,"ghi789"}]}},
       {body,"sometext\n"}]} = {Res1, Res2}.
 
+read_multipart_form_test() ->
+    {done, Dict} = yaws_multipart:read_multipart_form(mk_arg(data_to_parse()),
+                                                      [no_temp_file]),
+    {ok, Params} = dict:find("abc123", Dict),
+    "abc123" = proplists:get_value(filename, Params),
+    "sometext\n" = proplists:get_value(value, Params),
+    "text/plain" = proplists:get_value(content_type, Params),
+    "sampledata" = proplists:get_value("test-header", Params).
 
 mk_arg(Data) ->
     ContentType = "multipart/form-data; boundary=!!!",

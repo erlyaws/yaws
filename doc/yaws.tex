@@ -848,7 +848,8 @@ use the \verb+yaws_multipart+ module, which provides the following
 capabilities:
 
 \begin{enumerate}
-\item It reads all parameters --- files uploaded and other simple parameters.
+\item It reads all parameters --- files uploaded and other simple
+  parameters.
 \item It takes a few options to help file uploads. Specifically:
 \begin{enumerate}
 \item \verb+{max_file_size, MaxBytes}+: if the file size in bytes
@@ -884,18 +885,30 @@ following lists:
 
 \begin{verbatim}
 [{filename, "name of the uploaded file as entered on the form"},
- {value, Contents_of_the_file_all_in_memory}]
+ {value, Contents_of_the_file_all_in_memory} | _T]
 \end{verbatim}
 
 or:
 
 \begin{verbatim}
 [{filename, "name of the uploaded file as entered on the form"},
- {temp_file, "full pathname of the temp file"}]
+ {temp_file, "full pathname of the temp file"} | _T]
 \end{verbatim}
 
-For the temporary file case, it's your responsibility to delete the
-file when you're done with it.
+Some multipart/form messages also include headers such as
+\verb+Content-Type+ and \verb+Content-Transfer-Encoding+ for different
+subparts of the message. If these headers are present in any subpart
+of a multipart/form message, they're also included in that subpart's
+parameter list, like this:
+
+\begin{verbatim}
+[{filename, "name of the uploaded file as entered on the form"},
+ {value, Contents_of_the_file_all_in_memory},
+ {content_type, "image/png"} | _T]
+\end{verbatim}
+
+Note that for the temporary file case, it's your responsibility to
+delete the file when you're done with it.
 
 Here's an example:
 
@@ -906,14 +919,14 @@ Here's an example:
 out(Arg) ->
     Options = [no_temp_file],
     case yaws_multipart:read_multipart_form(Arg, Options) of
-        {done, Params} -> 
-            io:format("Params : ~p", [Params]),
-            [{filename, FileName},{value,FileContent}] =
+        {done, Params} ->
+            io:format("Params : ~p~n", [Params]),
+            {ok, [{filename, FileName},{value,FileContent}|_]} =
                 dict:find("my_file", Params),
             AnotherParam = dict:find("another_param", Params);
         %% do something with FileName, FileContent and AnotherParam
         {error, Reason} ->
-            io:format("Error reading multipart form: ~s", [Reason]);
+            io:format("Error reading multipart form: ~s~n", [Reason]);
         Other -> Other
     end.
 \end{verbatim}
