@@ -63,13 +63,14 @@ erlang::::type=normal;defaultpriv=basic,net_privaddr
 </p>
 <div class="box">        
       <verbatim>
-$ setcap 'cap_net_bind_service=+ep' /usr/bin/erl
+$ setcap 'cap_net_bind_service=+ep' /usr/lib/erlang/erts-5.7.4/bin/beam
       </verbatim>
 </div>
 
 <p>
   The above command grants the capability of binding 
-  privileged ports to /usr/bin/erl
+  privileged ports to beam. Note, you have to grant the priviliges to the
+  actual exectuable you are using.
 <p>
 
 <p>
