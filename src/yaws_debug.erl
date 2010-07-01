@@ -618,11 +618,12 @@ send_inet(Sock) ->
 %%
 capture_io(Fun) ->
     do_capture_io(Fun).
-capture_io(Fun, MilliSecTimeout) ->
-    {ok, Tref} = timer:send_after(MilliSecTimeout, capio_timeout),
-    Chars = do_capture_io(Fun),
-    timer:cancel(Tref),
-    Chars.
+
+%% capture_io(Fun, MilliSecTimeout) ->
+%%    {ok, Tref} = timer:send_after(MilliSecTimeout, capio_timeout),
+%%    Chars = do_capture_io(Fun),
+%%    timer:cancel(Tref),
+%%    Chars.
     
 do_capture_io(Fun) ->
     Pid = spawn(fun() -> 

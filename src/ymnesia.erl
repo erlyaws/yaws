@@ -145,9 +145,9 @@ style() ->
 
 
 %%% Build the result page.
-table(Cbox, Sp, Table) when atom(Table) ->
+table(Cbox, Sp, Table) when is_atom(Table) ->
     case catch ?MNESIA(table_info, [Table, attributes]) of
-        Headers when list(Headers) ->
+        Headers when is_list(Headers) ->
             Vp = view_pattern(Cbox, map(fun(X) -> a2l(X) end, Headers)),
             {Q, Result} = do_query(Sp),
             {ehtml,
@@ -262,33 +262,22 @@ get_attributes(Table) ->
 
 max_noof_attrs() ->
     foldl(fun(Table, Max) ->
-                  max(length(get_attributes(Table)), Max)
+                  erlang:max(length(get_attributes(Table)), Max)
           end, 0, get_tables()).
 
-max(X,Y) when X>Y   -> X;
-max(X,Y) when X=< Y -> Y.
 
+a2l(A) when is_atom(A) -> atom_to_list(A);
+a2l(L) when is_list(L) -> L.
 
-a2l(A) when atom(A) -> atom_to_list(A);
-a2l(L) when list(L) -> L.
-
-l2a(L) when list(L) -> list_to_atom(L);
-l2a(A) when atom(A) -> A.
+l2a(L) when is_list(L) -> list_to_atom(L);
+l2a(A) when is_atom(A) -> A.
 
 lk(Key, L) ->
     {value, {_,Val}} = lists:keysearch(Key, 1, L),
     Val.
 
-lk(Key, L, Default) ->
-    case lists:keysearch(Key, 1, L) of
-        {value, {_,Val}}  -> Val;
-        _             -> Default
-    end.
-
 t2l(L) ->
     map(fun(T) -> tail(tuple_to_list(T)) end, L).
-
-
 
 tail([]) -> [];
 tail(L)  -> tl(L).

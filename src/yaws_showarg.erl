@@ -2,7 +2,7 @@
 
 -export([out/1]).
 
--include_lib("yaws/include/yaws_api.hrl").
+-include("../include/yaws_api.hrl").
 
 f(Fmt, Args) ->
     io_lib:format(Fmt, Args).

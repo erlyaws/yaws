@@ -46,7 +46,7 @@ call(URL, Options, Payload) ->
     try
         {ok, CallPayloadDeep} = encode_call_payload(Payload),
         CallPayload = lists:flatten(CallPayloadDeep),
-        {ok, Response} = http:request(post, 
+        {ok, Response} = httpc:request(post, 
             {URL,[{"Content-length",length(CallPayload)}],
              "application/x-www-form-urlencoded",CallPayload}, 
                                       Options, []),

@@ -386,7 +386,7 @@ addSchemas([Xsd| Tail], AccModel, Prefix, Options, ImportList) ->
 %%% Get a file from an URL spec.
 %%% --------------------------------------------------------------------
 get_url_file("http://"++_ = URL) ->
-    case http:request(URL) of
+    case httpc:request(URL) of
 	{ok,{{_HTTP,200,_OK}, _Headers, Body}} -> 
 	    {ok, Body};
 	{ok,{{_HTTP,RC,Emsg}, _Headers, _Body}} -> 
@@ -427,8 +427,8 @@ inets_request(URL, SoapAction, Request, Options, Headers, ContentType) ->
                          NHeaders
                  end,
     NewOptions = [{cookies, enabled}|Options],
-    http:set_options(NewOptions),
-    case http:request(post,
+    httpc:set_options(NewOptions),
+    case httpc:request(post,
                       {URL,NewHeaders,
                        ContentType,
                        Request},

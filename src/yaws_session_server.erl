@@ -15,7 +15,8 @@
 -export([start_link/0, start/0, stop/0]).
 
 %% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
+		 code_change/3]).
 -include("../include/yaws_api.hrl").
 
 -export([new_session/1,new_session/2,new_session/3,new_session/4,
@@ -247,6 +248,14 @@ handle_info(long_timeout, _State) ->
 %%----------------------------------------------------------------------
 terminate(_Reason, _State) ->
     ok.
+
+%%----------------------------------------------------------------------
+%% Func: code_change/3
+%% Purpose: Handle upgrade
+%% Returns: new State data
+%%----------------------------------------------------------------------
+code_change(_OldVsn, Data, _Extra) ->
+    {ok, Data}.
 
 %%%----------------------------------------------------------------------
 %%% Internal functions
