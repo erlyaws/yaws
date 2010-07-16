@@ -778,7 +778,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                                               true
                                       end
                               end, Ready),
-            gserv_loop(GS, R2, Rnum, Last)
+            gserv_loop(GS, R2, length(R2), Last)
     end.
 
 
