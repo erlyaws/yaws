@@ -218,11 +218,8 @@
          soptions = [],
          extra_cgi_vars = [],
 	 stats,                       %% raw traffic statistics
-	 fcgi_app_server_host,        %% FastCGI application server host 
-                                      %% name or IP address
-
-         fcgi_app_server_port         %% FastCGI application server port number
-         
+         fcgi_app_server,             %% FastCGI application server {host,port}
+         phpfcgi                      %% {host, port} of a FastCGI php server
         }).
 
 %% we cannot compare sconfs directly due to the ets

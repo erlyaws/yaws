@@ -222,14 +222,20 @@ Compile and install is straight forward:
 The make command will compile the \Yaws\  web server with the \verb+erlc+
 compiler found by the configure script.
 
-make install - will install the executable - called \verb+yaws+ in
-/usr/local/bin/ and a working configuration file in \textit{ /etc/yaws.conf}
+\begin{itemize}
 
-make local\_install will install the executable in \$HOME/bin and a
-working configuration file in \$HOME/yaws.conf
+\item  \verb+make install+ - will install the executable called
+         \verb+yaws+ in \verb+/usr/local/bin/+ and a working
+         configuration file in \verb+/etc/yaws.conf+
+
+\item  \verb+make local_install+ - will install the executable in
+         \verb+$HOME/bin+ and a working configuration file in
+         \verb+$HOME/yaws.conf+
+
+\end{itemize}
 
 While developing a \Yaws\  site, it's typically most convenient to
-use the local\_install and run \Yaws\  as a non privileged user.
+use the local\_install and run \Yaws\  as a non-privileged user.
 
 
 \subsection{Configure}
@@ -694,7 +700,7 @@ more of those functions during the examples in the following chapters.
 
 The functions used are:
 \begin{itemize}
-\item \verb+yaws_api:f/2+ alias for \verb+io\_lib:format/2+. The
+\item \verb+yaws_api:f/2+ alias for \verb+io_lib:format/2+. The
   \verb+f/2+ function is automatically \verb+-included+ in all
   \Yaws\  code.
 \item \verb+yaws_api:reformat_header/1+ --- This function takes the \#headers record
@@ -969,13 +975,13 @@ ahead 60 bytes in the file.
 \end{enumerate}
 
 \Yaws\  writes the source output of the compilation into a directory
-/tmp/yaws/\$UID. The beam files are never written to a file.
+\verb+/tmp/yaws/$UID+. The beam files are never written to a file.
 Sometimes it can be useful to look at the generated source code
 files, for example if the \Yaws\ /\Erlang\  code contains a compilation
 error which is hard to understand.
 
 
-\section{Evaluating the \Yaws\  code}
+\section{Evaluating the Yaws Code}
 
 All client requests will execute in their own \Erlang\  process.
 For each group of virtual hosts on the same IP:PORT pair
@@ -1115,8 +1121,7 @@ or when our web application decides to auto logout the user.
 All cookie based applications are different but they have
 some things in common. In the example that follow we assume the
 existence of a function \verb+myapp:auth(UserName, Passwd)+ and it
-returns \verb+ok+ or \verb+{error, Reason}+
-
+returns \verb+ok+ or \verb+{error, Reason}+.
 
 Furthermore - let's have a record:
 
@@ -1360,7 +1365,7 @@ there and instead of reading the actual file from the disk, \Yaws\  will
 invoke the appmod with the remainder of the path inserted into
 \verb+Arg#arg.appmoddata+.
 
-Say the user requests the URL \textit{http://www.funky.org/myapp/xx/bar.html}
+Say the user requests the URL \textit{http://www.funky.org/myapp/xx/bar.html}.
 \Yaws\  will not ship the file \verb+bar.html+ to the client, instead it
 will invoke \verb+myapp:out(Arg)+ with \verb+Arg#arg.appmoddata+
 set to the string \verb+xx/bar.html+. Any optional query data - that
@@ -1670,7 +1675,7 @@ header.
               arrives.
 
 \item       \verb+{page, Page}+
-              Make Yaws return a different page than the one being
+              Make \Yaws\  return a different page than the one being
               requested.
 
 \item       \verb+{page, {Options, Page}}+
@@ -1729,7 +1734,7 @@ all traffic or just all HTTP messages and write them to a file.
 
 \chapter{External scripts via CGI}
 
-Yaws can also interface to external programs generating dynamic
+\Yaws\  can also interface to external programs generating dynamic
 content via the Common Gateway Interface (CGI).  This has to be
 explicitly enabled for a virtual host by listing \verb+cgi+ in the
 \verb+allowed_scripts+ line in the configuration file.  Any request
@@ -1737,9 +1742,9 @@ for a page ending in \verb+.cgi+ (or \verb+.CGI+) will then result in
 trying to execute the corresponding file.
 
 If you have a Php executable compiled for using CGI in the \verb+PATH+
-of the Yaws server, you can enable Php support by adding \verb+php+ to
+of the \Yaws\  server, you can enable Php support by adding \verb+php+ to
 \verb+allowed_scripts+.  Requests for pages ending in \verb+.php+ will
-then result in Yaws executing \verb+php+ (configurable via
+then result in \Yaws\  executing \verb+php+ (configurable via
 \verb+php_exe_path+) and passing the name of the corresponding file to
 it via the appropriate environment variable.
 
@@ -1748,19 +1753,18 @@ scripts and appmods via the functions \verb+yaws_api:call_cgi/2+ and
 \verb+yaws_api:call_cgi/3+.  This makes it possible to write wrappers
 for CGI programs, irrespective of the value of \verb+allowed_scripts+.
 
-This is a new feature in Yaws.  It is used by its author for self
-written CGI programs as well as for using a standard CGI package, so
-it is working.  You should not be surprised however, should some
-scripts not work as expected due to an incomplete or incorrect
-implementation of certain CGI meta-variables.  The author of this
-feature is therefore interested in hearing about your experiences with
-it.  He can be contacted as \verb+carsten@codimi.de+.
+The author of this \Yaws\  feature uses it for self-written CGI programs
+as well as for using a standard CGI package.  You should not be
+surprised however, should some scripts not work as expected due to an
+incomplete or incorrect implementation of certain CGI meta-variables.
+The author of this feature is interested in hearing about your
+experiences with it.  He can be contacted at \verb+carsten@codimi.de+.
 
 \chapter{FastCGI}
 
-Yaws supports the responder role and the authorizer role of the
-FastCGI protocol. See www.fastcgi.com for details on the FastCGI
-protocol.
+\Yaws\  supports the responder role and the authorizer role of the
+FastCGI protocol. See \verb+www.fastcgi.com+ for details on the
+FastCGI protocol.
 
 The benefits of using FastCGI include:
 \begin{enumerate}
@@ -1772,24 +1776,24 @@ computer benefits scalability and security.
 \item The application server can be written in any language for
 which a FastCGI library is available. Existing applications
 which have been written for other web servers can be used with
-Yaws.
+\Yaws\ .
 \item FastCGI can also be used to implement external authentication
 servers (in addition to generating dynamic content).
 \end{enumerate}
 
-Support for FastCGI was added to Yaws by Bruno Rijsman
-(brunorijsman@hotmail.com).
+Support for FastCGI was added to \Yaws\  by Bruno Rijsman
+(\verb+brunorijsman@hotmail.com+).
 
-\section{The FastCGI responder role}
+\section{The FastCGI Responder Role}
 
-The FastCGI responder role allows Yaws to communicate with an
+The FastCGI responder role allows \Yaws\  to communicate with an
 application server running on a different (or on the same) computer
 to generate dynamic content.
 
 The FastCGI protocol (which runs over TCP) is used to send the request
-information from Yaws to the application server and to send the
+information from \Yaws\  to the application server and to send the
 response information (e.g. the generated dynamic content) from
-the application server back to Yaws.
+the application server back to \Yaws\ .
 
 FastCGI responders can be invoked in two ways:
 
@@ -1800,14 +1804,13 @@ By including \verb+fcgi+ in the \verb+allowed_scripts+ line
 in the configuration file (note that the default value for
 \verb+allowed_scripts+ includes \verb+fcgi+).
 
-In this case a request for any resource with the
-.fcgi extension will result in a FastCGI call to the application
-server to dynamically generate the content.
+In this case a request for any resource with the \verb+.fcgi+
+extension will result in a FastCGI call to the application server to
+dynamically generate the content.
 
-Note: the Yaws server
-will only call the application server if a file corresponding to
-the resource name (i.e. a file with the .fcgi extension)
-exists locally on the Yaws server. The contents of that
+Note: the \Yaws\  server will only call the application server if a file
+corresponding to the resource name (i.e. a file with the \verb+.fcgi+
+extension) exists locally on the \Yaws\  server. The contents of that
 file are not relevant.
 
 \item
@@ -1816,17 +1819,16 @@ See the \verb+yaws_api (5)+ man page for details.
 
 \end{enumerate}
 
-\section{The FastCGI authorizer role}
+\section{The FastCGI Authorizer Role}
 
-The FastCGI authorizer role allows Yaws to communicate with an
+The FastCGI authorizer role allows \Yaws\  to communicate with an
 authentication server to authenticate requests.
 
-The FastCGI protocol is used to send the request
-information from Yaws to the authentication server and the
-authentication respone back from the authentication server to
-Yaws.
+The FastCGI protocol is used to send the request information from
+\Yaws\  to the authentication server and the authentication respone back
+from the authentication server to \Yaws\ .
 
-If access is allowed, Yaws processing of the request proceeds
+If access is allowed, \Yaws\  processing of the request proceeds
 normally.
 
 If access is denied, the authentication server provides the
@@ -1837,30 +1839,29 @@ FastCGI authorizers are invoked by creating an appmod which
 calls \verb+yaws_api:call_fcgi_authorizer+.
 See the \verb+yaws_api (5)+ man page for details.
 
-\section{The FastCGI filter role}
+\section{The FastCGI Filter Role}
 
 FastCGI defines a third role, the filter role, which
-is currently not supported by Yaws.
+\Yaws\  does not currently support.
 
 
-\section{FastCGI configuration}
+\section{FastCGI Configuration}
 
 The following commands in the \verb+yaws.conf+ file control the
 operation of FastCGI.
 
 If you use FastCGI, you \emph{must} include the \verb+fcgi_app_server+
-command in the configuration file to specify the host name (or IP address)
+setting in the configuration file to specify the host name (or IP address)
 and TCP port of the FastCGI application server.
 
-You may include the \verb+fcgi_trace_protocol+ command to enable or disable
+You may include the \verb+fcgi_trace_protocol+ setting to enable or disable
 tracing of FastCGI protocol messages. This is useful for debugging.
 
-You may include the \verb+fcgi_log_app_error+ command to enable or disable
+You may include the \verb+fcgi_log_app_error+ setting to enable or disable
 logging application errors (any output to stderr and non-zero exit codes).
 
 You may include the \verb+extra_cgi_vars+ command to pass additional
 environment variables to the application.
-
 
 
 \chapter{Security}
@@ -2132,7 +2133,7 @@ part where options for each virtual host is supplied.
               \Yaws\ .
 
 \item        \verb+username  = User+ -
-             When Yaws is run as root, it can be configured to
+             When \Yaws\  is run as root, it can be configured to
              change userid once it has created the necessary
              listen sockets on privilged ports.
 
@@ -2148,27 +2149,22 @@ part where options for each virtual host is supplied.
 
 \section{Server Part}
 
-\Yaws\   can  virthost  several  web servers  on  the  same IP
-       address as well as  several  web servers  on  different  IP
-       addresses.  The  on  limitation  here is that there can be
-       only one server with ssl enabled per  each  individual  IP
-       address.   Each virtual host is defined within a matching
-       pair of \verb+<server ServerName>+ and \verb+</server>+.
-       The  ServerName
-       will be the name of the web server.
+\Yaws\ can virthost several web servers on the same IP address as well
+as several web servers on different IP addresses.  The only limitation
+here is that there can be only one server with SSL enabled per each
+individual IP address.  Each virtual host is defined within a matching
+pair of \verb+<server ServerName>+ and \verb+</server>+.  The
+\verb+ServerName+ will be the name of the web server.
 
-       The following directives are allowed inside a server definition.
+The following directives are allowed inside a server definition.
 
 \begin{itemize}
-
-
-
 
 \item       \verb+port = Port+ -
               This makes the server listen on Port.
 
 \item        \verb+listen = IpAddress+ -
-              This makes the  server  listen  on  IpAddress  When
+              This makes the  server  listen  on  \verb+IpAddress+  when
               virthosting  several  servers  on  the same IP/port
               address, if the browser doesn't send a Host: field,
               \Yaws\   will  pick  the first server specified in the
@@ -2178,7 +2174,8 @@ part where options for each virtual host is supplied.
               This sets the TCP listen backlog for the server to
               define the maximum length the queue of pending
               connections may grow to. The default is the same as
-              the default provided by gen\_tcp:listen/2, which is 5.
+              the default provided by \verb+gen_tcp:listen/2+, which
+              is 5.
 
 \item       \verb+rport = Port+
               This forces  all  local  redirects  issued  by  the
@@ -2215,53 +2212,76 @@ part where options for each virtual host is supplied.
 
 \item       \verb+tilde_expand = true|false+ -
               If  this  value  is  set  to false \Yaws\  will
-              never do tilde  expansion.  The  default  is
-              false.   tilde\_expansion   is  the  mechanism
-              whereby    a     URL     on     the     form
-              http://www.foo.com/~username is changed into
-              a request where the docroot for that particular
-           request is set to the directory
-              \verb+~user­name/public_html/+ The default value is false.
+              never do tilde  expansion.  Tilde expansion takes a URL
+              of the form \verb+http://www.foo.com/~username+ and
+              changes it into a request where the docroot for that
+              particular request is set to the directory
+              \verb+~username/public_html/+. The default value is
+              false.
 
 \item       \verb+allowed_scripts = [ListOfSuffixes]+ -
               The allowed script types for this server.  Recognized
               are `yaws', `cgi', `php'.  Default is
               \verb+allowed_scripts = yaws+.
 
+\item       \verb+appmods = [ListOfModuleNames]+ -
+              If any the names in \verb+ListOfModuleNames+ appear
+              as components in the path for a request, the
+              path request parsing will terminate and that
+              module will be called.
+
+              Assume  for  example  that  we  have  the  URL
+              \verb+http://www.hyber.org/myapp/foo/bar/baz?user=joe+
+              while we have the module \verb+foo+ defined  as  an
+              appmod,  the  function  \verb+foo:out(Arg)+ will be
+              invoked instead of searching the file systems
+              below the point \verb+foo+.
+
+              The \verb+Arg+ argument will have the missing path
+              part supplied in its \verb+appmoddata+ field.
+
 \item       \verb+php_exe_path = Path+ -
               The name of (and possibly path to) the php executable
 	      used to interpret php scripts (if allowed).  Default is
 	      \verb+php_exe_path = php+.
 
-\item       \verb+appmods = [ListOfModuleNames]+ -
-              If any the names in ListOfModuleNames appear
-              as components in the path for a request, the
-              path request parsing will terminate and that
-              module will be called.
+\item       \verb+phpfcgi = HostPortSpec+ -
+              The host and port of a PHP FCGI server for interpreting
+              \verb+.php+ files. If specified, it overrides the
+              \verb+php_exe_path+ setting. For all servers where
+              \verb+phpfcgi+ is not specified, the binary specified by
+              \verb+php_exe_path+ is invoked as normal CGI.
 
-              Assume for example  that  we  have  the  URL
-              http://www.hyber.org/myapp/foo/bar/baz?user=joe
-              while we have the module foo defined  as  an
-              appmod,  the  function  foo:out(Arg) will be
-              invoked instead of searching the file systems
-              below the point foo.
+\item       \verb+fcgi_app_server = HostPortSpec+ -
+              The hostname (or IP address) and TCP port of a
+              FastCGI application server. This is separate from the
+              \verb+phpfcgi+ setting and is used for normal FCGI
+              applications. Because they're separate, both
+              \verb+fcgi_app_server+ and \verb+phpfcgi+ can be set for
+              the same server to allow it to serve both \verb+.fcgi+
+              and \verb+.php+ files.
 
-              The  Arg argument will have the missing path
-              part supplied in its appmoddata field.
+\item       \verb+fcgi_trace_protocol = true | false+ -
+              Enable or disable tracing of FastCGI protocol
+              messages. This is useful for debugging.
+
+\item       \verb+fcgi_log_app_error = true | false+ -
+              Enable or disable logging FCGI application errors (any
+              output to stderr and non-zero exit codes).
 
 \item     \verb+errormod_404 = Module+ -
               It is possible to set a special module  that
               handles 404 Not Found messages.
 
-              The function Module:out404(Arg, GC, SC) will
+              The function \verb+Module:out404(Arg, GC, SC)+ will
               be invoked. The arguments are
 
-              Arg is a arg{} record
+              \verb+Arg+ is an \verb+arg{}+ record
 
-              GC  is  a  gconf{}   record   (defined   in
+              \verb+GC+ is a \verb+gconf{}+ record (defined in
               yaws.hrl)
 
-              SC   is   a   sconf{}  record  (defined  in
+              \verb+SC+ is a \verb+sconf{}+ record (defined in
               yaws.hrl)
 
               The function can and must do the same things
@@ -2275,9 +2295,9 @@ part where options for each virtual host is supplied.
               browser.  This is good for debugging but not
               in production.
 
-              The function Module:crashmsg(Arg,  SC,  Str)
-              will  be  called.  The Str is the real crash
-              message formated as a string.
+              The function \verb+Module:crashmsg(Arg,  SC,  Str)+
+              will  be  called.  The \verb+Str+ is the real crash
+              message formatted as a string.
 
 \item       \verb+arg_rewrite_mod = Module+ -
               It is possible  to  install  a  module  that

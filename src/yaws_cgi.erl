@@ -785,10 +785,15 @@ fcgi_start_worker(Role, Arg, ServerConf, Options) ->
 
 
 fcgi_worker(ParentPid, Role, Arg, ServerConf, Options) ->
-    AppServerHost = get_opt(app_server_host, Options,
-                            ServerConf#sconf.fcgi_app_server_host),
-    AppServerPort = get_opt(app_server_port, Options,
-                            ServerConf#sconf.fcgi_app_server_port),
+    {DefaultSvrHost, DefaultSvrPort} =
+        case ServerConf#sconf.fcgi_app_server of
+            undefined ->
+                {undefined, undefined};
+            Else ->
+                Else
+        end,
+    AppServerHost = get_opt(app_server_host, Options, DefaultSvrHost),
+    AppServerPort = get_opt(app_server_port, Options, DefaultSvrPort),
     PreliminaryWorkerState = #fcgi_worker_state{parent_pid = ParentPid},
     fcgi_worker_fail_if(AppServerHost == undefined, PreliminaryWorkerState,
                         "app server host must be configured"),
