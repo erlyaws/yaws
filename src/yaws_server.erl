@@ -583,22 +583,24 @@ gserv_loop(GS, Ready, Rnum, Last) ->
         {_From, next, Accepted} when Ready == [] ->
  	    close_accepted_if_max(GS,Accepted),
  	    New = acceptor(GS),
- 	    GS2 = inc_con(GS),
+ 	    GS2 = GS#gs{connections=GS#gs.connections + 1},
             gserv_loop(GS2#gs{sessions = GS2#gs.sessions + 1}, Ready, Rnum, New);
         {_From, next, Accepted} ->
 	    close_accepted_if_max(GS,Accepted),
             [{_Then, R}|RS] = Ready,
             R ! {self(), accept},
- 	    GS2 = inc_con(GS),
+ 	    GS2 = GS#gs{connections=GS#gs.connections + 1},
             gserv_loop(GS2, RS, Rnum-1, R);
 	{_From, decrement} ->
- 	    GS2 = dec_con(GS),
+ 	    GS2 = GS#gs{connections=GS#gs.connections - 1},
  	    gserv_loop(GS2, Ready, Rnum, Last);
         {From, done_client, Int} ->
             GS2 = if
-		      Int == 0 -> dec_con(GS#gs{sessions = GS#gs.sessions - 1});
-		      Int > 0 -> dec_con(GS#gs{sessions = GS#gs.sessions - 1,
- 					       reqs = GS#gs.reqs + Int})
+		      Int == 0 -> GS#gs{sessions = GS#gs.sessions - 1,
+                                        connections = GS#gs.connections - 1};
+		      Int > 0 -> GS#gs{sessions = GS#gs.sessions - 1,
+                                       reqs = GS#gs.reqs + Int,
+                                       connections = GS#gs.connections - 1}
                   end,
             if
                 Rnum == 8 ->
@@ -912,8 +914,9 @@ acceptor(GS) ->
         [] ->
             proc_lib:spawn_link(?MODULE, acceptor0, [GS, self()]);
         Opts ->
-            %% as we tightly controlled what is set in options, we can blindly add "link" to
-            %% get a linked process as per default case and use the provided options.
+            %% as we tightly controlled what is set in options, we can
+            %% blindly add "link" to get a linked process as per default
+            %% case and use the provided options.
             proc_lib:spawn_opt(?MODULE, acceptor0, [GS, self()], [link | Opts])
     end.
 acceptor0(GS, Top) ->
@@ -1222,11 +1225,32 @@ fix_abs_uri(Req, H) ->
     end.
 
 
-%% case-insensitive compare servername and ignore any optional
-%% :Port postfix
-comp_sname(Hname, Sname) ->
-    hd(string:tokens(yaws:to_lower(Hname), ":")) =:=
-        hd(string:tokens(yaws:to_lower(Sname), ":")).
+%% Case-insensitive compare servername and ignore any optional :Port
+%% postfix. This is performance-sensitive code, so if you change it,
+%% measure it.
+comp_sname([], []) ->
+    true;
+comp_sname([$:|_], [$:|_]) ->
+    true;
+comp_sname([$:|_], []) ->
+    true;
+comp_sname([], [$:|_]) ->
+    true;
+comp_sname([$:|_], _) ->
+    false;
+comp_sname(_, [$:|_]) ->
+    false;
+comp_sname([], _) ->
+    false;
+comp_sname(_, []) ->
+    false;
+comp_sname([C1|T1], [C2|T2]) ->
+    case string:to_lower(C1) == string:to_lower(C2) of
+        true ->
+            comp_sname(T1, T2);
+        false ->
+            false
+    end.
 
 pick_sconf(GC, H, Group) ->
     case H#headers.host of
@@ -4503,12 +4527,16 @@ vdirpath(SC, ARG, RequestPath) ->
     %% specified in conf file for the 'vdir' directive.
     Result.
 
+close_accepted_if_max(GS,{ok, _Socket})
+  when (GS#gs.gconf)#gconf.max_connections == nolimit ->
+    ok;
 close_accepted_if_max(GS,{ok, Socket}) ->
     MaxCon = (GS#gs.gconf)#gconf.max_connections,
     NumCon = GS#gs.connections,
-    if (MaxCon == nolimit) or (NumCon < MaxCon) ->
+    if
+        NumCon < MaxCon ->
 	    ok;
-       true ->
+        true ->
             S=case peername(Socket, GS#gs.ssl) of
                   {ok, {IP, Port}} ->
                       io_lib:format("~s:~w", [inet_parse:ntoa(IP), Port]);
@@ -4521,12 +4549,6 @@ close_accepted_if_max(GS,{ok, Socket}) ->
     end;
 close_accepted_if_max(_,_) ->
     ok.
-
-inc_con(GS) ->
-    GS#gs{connections=GS#gs.connections + 1}.
-
-dec_con(GS) ->
-    GS#gs{connections=GS#gs.connections - 1}.
 
 code_change(_OldVsn, Data, _Extra) ->
     {ok, Data}.
