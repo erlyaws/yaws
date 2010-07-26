@@ -1,6 +1,6 @@
 %%% File        : yapp.erl
-%%% @author Mikael Karlsson <mikael@creado.com>
-%%% @since 11 Dec 2005 by Mikael Karlsson <mikael@creado.com>
+%%% @author Mikael Karlsson <mikael@creado.se>
+%%% @since 11 Dec 2005 by Mikael Karlsson <mikael@creado.se>
 %%% @see yapp_handler
 %%% @doc Yaws applications handler. 
 %%% <p>An easy way to deploy Yaws applications independently of
@@ -59,7 +59,7 @@
 %%% by yaws.hrl.
 
 -module(yapp).
--author('mikael@creado.com').
+-author('mikael@creado.se').
 
 -include("yaws_api.hrl").
 -include("yaws.hrl").

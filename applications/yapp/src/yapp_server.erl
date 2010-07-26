@@ -1,9 +1,9 @@
 %%%-------------------------------------------------------------------
 %%% File    : yapp_server.erl
-%%% Author  : Mikael Karlsson <mikael@creado.com>
+%%% Author  : Mikael Karlsson <mikael@creado.se>
 %%% Description : 
 %%%
-%%% Created : 28 May 2006 by Mikael Karlsson <mikael@creado.com>
+%%% Created : 28 May 2006 by Mikael Karlsson <mikael@creado.se>
 %%%-------------------------------------------------------------------
 -module(yapp_server).
 

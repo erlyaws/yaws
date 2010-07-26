@@ -1,0 +1,23 @@
+
+Modify yaws.conf as:
+%% add path to yapp and yapp example - modify to your own installation directory
+ebin_dir = /home/mikael/local/yaws/applications/yapp/ebin
+ebin_dir = /home/mikael/local/src/yaws/applications/yapp/examples/yapp_ex_1/ebin
+
+%% add yapp runmod
+runmod = yapp
+
+%% add to first <server ...>
+         arg_rewrite_mod = yapp
+         <opaque>
+             yapp_server_id = external
+         </opaque>        
+
+%% add to second <server ..>, that is to <server localhost>
+%% note you will only be able to access the yapp admin interface from http://localhost[:port]/yapp/
+         arg_rewrite_mod = yapp
+         <opaque>
+             yapp_server_id = internal
+             bootstrap_yapps = yapp
+         </opaque>        
+

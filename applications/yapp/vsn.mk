@@ -1,1 +1,1 @@
-YAPP_VSN=0.4.1
+YAPP_VSN=0.4.2

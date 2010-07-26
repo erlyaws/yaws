@@ -1,0 +1,41 @@
+<html>
+<head><title>Yapp example 1 - simple</title></head>
+<body>
+
+<h3>Yapp simple example</h3>
+<p>Yaws applications is built on the OTP application concept, but this does not mean they need to be complex.
+In the simplest form an OTP applications is made of a .app description file and the necessary library files. There
+is no need to have application modules (application_app.erl), supervisors, gen_servers etc. unless they are really needed. 
+</p>
+
+<p>This application is a very simple example and contains only two files:</p>
+<pre>
+yapp_ex_1/ebin/yapp_ex_1.app       - otp .app file
+yapp_ex_1/priv/docroot/index.yaws  - yaws file
+</pre>
+
+<p>The index.yaws file contains this text and the script part:</p>
+<pre>
+out(A) -&gt;
+    Header = "Cache-Control:no-store",  
+    [X] = string:tokens(yapp:prepath(A),"/"),
+    [{header, Header},
+     {ehtml, [{p,[],  X ++ " there"}]}].
+</pre>
+<p>Which gives URL path to that dispatches to the application appended with "there":</p>
+
+<erl>
+out(A) ->
+    Header = "Cache-Control:no-store",  
+    [X] = string:tokens(yapp:prepath(A),"/"),
+    [{header, Header},
+     {ehtml, [{p,[],  X ++ " there"}]}].
+</erl>
+
+<p>The default text will be "yapp_ex_1 there" but if you register your yapp under another path, e.g. "hi" 
+will get another outcome. Note that you can register your yapp under several virtual hosts and use different
+dispatch paths.</p>
+
+</body>
+</html>
+
