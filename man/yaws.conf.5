@@ -293,32 +293,29 @@ var = val
 Turns on/off statistics gathering for a virtual server. Default is false.
 
 .TP
-\fBfcgi_app_server = Host:Port \fR
-The hostname and TCP port number of the FastCGI aplication server.
-The TCP port number is not optional.
-There is no default value.
+\fBfcgi_app_server = Host:Port\fR
+The hostname and TCP port number of a FastCGI application server.
+The TCP port number is not optional. There is no default value.
 
 .TP
-\fBfcgi_trace_protocol = true | false \fR
+\fBfcgi_trace_protocol = true | false\fR
 Enable or disable tracing of FastCGI protocol messages as info
-log messages.
-Disabled by default.
+log messages. Disabled by default.
 
 .TP
-\fBfcgi_log_app_error = true | false \fR
-Enable or disable logging of application error messages: output
-to stderr and non-zero exit value.
-Disabled by default.
+\fBfcgi_log_app_error = true | false\fR
+Enable or disable logging of application error messages (output
+to stderr and non-zero exit value). Disabled by default.
 
 .TP
 \fBdeflate = true | false\fR
 Turns on or off deflate compression for a server. Default is false.
 
 .TP
-\fB docroot = Directory ...\fR
+\fBdocroot = Directory ...\fR
 This makes the server serve all its content from Directory.
 
-It is possible to pass a space separated list of directories as 
+It is possible to pass a space separated list of directories as
 docroot. If this is the case, the various directories will be searched in
 order for the requested file. This also works with the ssi
 and yssi constructs where the full list of directories will be searched
@@ -486,6 +483,34 @@ to match specific Host: headers we can do this with the "servername"
 directive. This name doesn't necessarily have to be the same as the
 the name inside <server Name> in certain NAT scenarios. Rarely used feature.
 
+.TP
+\fBphpfcgi = Host:Port\fR
+
+Use the specified fastcgi server to interpret .php files.  This allows
+for faster execution than through the standard CGI interface, because
+the PHP interpreter does not have to be restarted for every
+request. It also makes it possible to use a separate PHP interpreter
+for each <server>, possibly running in different user contexts and
+with different memory and CPU restrictions.
+
+Yaws does not start the PHP interpreter in fastcgi mode for you. To
+run PHP in fastcgi mode, call it with the -b option. For example:
+
+\fBphp5-cgi -b '127.0.0.1:54321'\fR
+
+This starts a php5 in fastcgi mode listening on the local network
+interface. To make use of this PHP server from yaws, specify:
+
+\fBphpfcgi = 127.0.0.1:54321\fR
+
+The PHP interpreter needs read access to the files it is to
+serve. Thus, if you run it in a different security context than yaws
+itself, make sure it has access to the .php files.
+
+Please note that anyone who is able to connect to the php fastcgi
+server directly can use it to read any file to which it has read
+access. You should consider this when setting up a system with several
+mutually untrusted instances of php.
 
 .TP
 \fB <ssl>  .... </ssl> \fR
@@ -493,12 +518,12 @@ This begins and ends an SSL configuration for this server.
 It's possible to virthost several SSL servers on the same IP
 given that they all share the same certificate configuration.
 In general it is complicated to virthost several SSL servers on
-the same IP address since the certificate is typically 
+the same IP address since the certificate is typically
 bound to a domainname in the common name part of the certificate.
 One solution (the only?) to this problem is to have a certificate
 with multiple subjectAltNames. See
 http://wiki.cacert.org/VhostTaskForce#Interoperability_Test
- 
+
 .TP
 \fB keyfile = File\fR
 Specifies which file contains the private key for the certificate.

@@ -285,15 +285,18 @@ setup_sconf(DocRoot, D, SL) ->
                             D#sconf.start_mod),
            allowed_scripts = lkup(allowed_scripts, SL, 
                                   D#sconf.allowed_scripts),
+           tilde_allowed_scripts = lkup(tilde_allowed_scripts, SL,
+                                        D#sconf.tilde_allowed_scripts),
            revproxy = lkup(revproxy, SL, 
                            D#sconf.revproxy),
            soptions = lkup(soptions, SL,
                            D#sconf.soptions),
+           extra_cgi_vars = lkup(extra_cgi_vars, SL,
+                                 D#sconf.extra_cgi_vars),
            stats = lkup(stats, SL, D#sconf.stats),
-           fcgi_app_server_host = lkup(fcgi_app_server_host, SL, 
-                                       D#sconf.fcgi_app_server_host),
-           fcgi_app_server_port = lkup(fcgi_app_server_port, SL, 
-                                       D#sconf.fcgi_app_server_port)}.
+           fcgi_app_server = lkup(fcgi_app_server, SL,
+                                  D#sconf.fcgi_app_server),
+           phpfcgi = lkup(phpfcgi, SL, D#sconf.phpfcgi)}.
 
 setup_sconf_ssl(SL, DefaultSSL) ->
     case lkup(ssl, SL, undefined) of
