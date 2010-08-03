@@ -63,6 +63,7 @@ help()
     echo "            --run_erl X         --  use run_erl with pipe-id X"
     echo "            --to_erl X          --  connect to pipe-id X"
     echo "            --disable-kpoll     --  pass +K false to erlang"
+    echo "            --umask umaskval    --  set process umask to umaskval"
     echo ""
 
     echo "ctl functions ... "
@@ -287,6 +288,9 @@ while [ $# -gt 0 ]
           daemon=""
           PIPE_DIR="${vardir}/run/yaws/pipe/$1"
           LOG_DIR="${vardir}/log/yaws/erlang-log/$1"
+          shift;;
+      --umask)
+          umask $1
           shift;;
       *)
           help

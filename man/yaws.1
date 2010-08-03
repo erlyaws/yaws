@@ -12,7 +12,7 @@ in interactive mode where it is possible to directly interact
 with the webserver. Yaws is particularly good at generating
 dynamic content. See the user docs for more information on that topic.
 
-.SH DEAMON/SERVER options
+.SH DAEMON/SERVER options
 
 
 .TP
@@ -141,6 +141,10 @@ may interact with the wrong daemon due to finding the wrong "ctl" file.
 
 The daemon may also optionally specify the "id" in the yaws.conf
 configuration file.
+
+.TP
+\fB\--umask MASK\fR
+Set the umask for the daemon to MASK.
 
 .SH CONTROL OPTIONS
 .PP
