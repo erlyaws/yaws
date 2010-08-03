@@ -17,7 +17,7 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, 
-         handle_event/2]).
+         handle_event/2, code_change/3]).
 -export([accesslog/5,
          accesslog/7,
          accesslog/8,
@@ -460,6 +460,15 @@ wrap(AL, State) ->
 terminate(_Reason, _State) ->
     gen_event:delete_handler(error_logger, yaws_log_file_h, normal),
     ok.
+
+
+%%----------------------------------------------------------------------
+%% Func: code_change/3
+%% Purpose: Handle upgrade
+%% Returns: new State data
+%%----------------------------------------------------------------------
+code_change(_OldVsn, Data, _Extra) ->
+    {ok, Data}.
 
 %%%----------------------------------------------------------------------
 %%% Internal functions

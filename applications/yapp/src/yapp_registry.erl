@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : yapp_registry.erl
-%%% @author Mikael Karlsson <mikael@creado.com>
-%%% @since 1 June 2006 by Mikael Karlsson <mikael@creado.com>
+%%% @author Mikael Karlsson <mikael@creado.se>
+%%% @since 1 June 2006 by Mikael Karlsson <mikael@creado.se>
 %%% @doc Yapp registry api.
 %%% <p>The default yapp registry (yapp_mnesia_server) uses mnesia, so a 
 %%% prerequisite is that a schema is created. </p>

@@ -9,7 +9,7 @@ body {font: 12px Verdana, Arial, Helvetica, sans-serif;
 h1 {font-size: 200%; text-transform: lowercase; letter-spacing: 3px;
    margin: 0.66em 0 0.33em 3%; padding: 0;}
 
-h3 {font-size: 133%; margin: 0; padding: 0; 
+h3 {font-size: 133%; margin: 10; padding: 10; 
    border-bottom: 1px solid black;}
 
 h4 {font-size: 100%; margin: 0; padding: 0.33em 0 0;

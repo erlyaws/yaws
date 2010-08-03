@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : yapp_event_handler.erl
-%%% @author Mikael Karlsson <mikael@creado.com>
-%%% @since 3 Jun 2006 by Mikael Karlsson <mikael@creado.com>
+%%% @author Mikael Karlsson <mikael@creado.se>
+%%% @since 3 Jun 2006 by Mikael Karlsson <mikael@creado.se>
 %%% @see yapp_handler 
 %%% @doc Yapp event handler. 
 %%% <p>Listens for hup events from the Yaws event manager and makes

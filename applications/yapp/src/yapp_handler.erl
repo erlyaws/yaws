@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : yapp_handler.erl
-%%% @author Mikael Karlsson <mikael@creado.com>
-%%% @since 1 Jun 2006 by Mikael Karlsson <mikael@creado.com>
+%%% @author Mikael Karlsson <mikael@creado.se>
+%%% @since 1 Jun 2006 by Mikael Karlsson <mikael@creado.se>
 %%% @see yapp 
 %%% @see yapp_registry
 %%% @see yapp_server

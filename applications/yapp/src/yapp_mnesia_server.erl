@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : yapp_mnesia_server.erl
-%%% @author Mikael Karlsson <mikael@creado.com>
-%%% @since 28 May 2006 by Mikael Karlsson <mikael@creado.com>
+%%% @author Mikael Karlsson <mikael@creado.se>
+%%% @since 28 May 2006 by Mikael Karlsson <mikael@creado.se>
 %%% @see yapp_registry 
 %%% @doc Yapp registry implementation that uses mnesia.
 %%% <p>This module is selected to be used by the yaws handler 

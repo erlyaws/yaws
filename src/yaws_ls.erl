@@ -194,27 +194,27 @@ allzip() ->
        ["/icons/" ++ Gif,
         Alt]).
 
-alltgz() ->
-    {Gif, Alt} = list_gif(zip,""),
-    ?F("  <tr>\n"
-       "    <td><img src=~p alt=~p/><a href=\"all.tgz\">all.tgz</a></td>\n"
-       "    <td></td>\n"
-       "    <td>-</td>\n"
-       "    <td>Build a gzip archive of current directory</td>\n"
-       "  </tr>\n",
-       ["/icons/" ++ Gif,
-        Alt]).
+%% alltgz() ->
+%%    {Gif, Alt} = list_gif(zip,""),
+%%    ?F("  <tr>\n"
+%%       "    <td><img src=~p alt=~p/><a href=\"all.tgz\">all.tgz</a></td>\n"
+%%       "    <td></td>\n"
+%%       "    <td>-</td>\n"
+%%       "    <td>Build a gzip archive of current directory</td>\n"
+%%       "  </tr>\n",
+%%       ["/icons/" ++ Gif,
+%%        Alt]).
 
-alltbz2() ->
-    {Gif, Alt} = list_gif(zip,""),    
-    ?F("  <tr>\n"
-       "    <td><img src=~p alt=~p/><a href=\"all.tbz2\">all.tbz2</a></td>\n"
-       "    <td></td>\n"
-       "    <td>-</td>\n"
-       "    <td>Build a bzip2 archive of current directory</td>\n"
-       "  </tr>\n",
-       ["/icons/" ++ Gif,
-        Alt]).
+%% alltbz2() ->
+%%    {Gif, Alt} = list_gif(zip,""),    
+%%    ?F("  <tr>\n"
+%%       "    <td><img src=~p alt=~p/><a href=\"all.tbz2\">all.tbz2</a></td>\n"
+%%       "    <td></td>\n"
+%%       "    <td>-</td>\n"
+%%       "    <td>Build a bzip2 archive of current directory</td>\n"
+%%       "  </tr>\n",
+%%       ["/icons/" ++ Gif,
+%%        Alt]).
 
 is_user_dir(SP) ->
     case SP of

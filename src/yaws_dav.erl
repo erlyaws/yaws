@@ -509,13 +509,13 @@ store_client_data(Fd, CliSock, Len, SSlBool) ->
 %% not nice to support this for ssl sockets
 store_chunked_client_data(Fd, CliSock, SSL) ->
     yaws:setopts(CliSock, [binary, {packet, line}], SSL),
-    N = yaws_revproxy:store_chunk_num(CliSock, SSL),
+    N = yaws:get_chunk_num(CliSock, SSL),
     yaws:setopts(CliSock, [binary, {packet, raw}], SSL),
     if
         N == 0 ->
             _Tmp=yaws:do_recv(CliSock, 2, SSL);%% flush last crnl
         true ->
-            B = yaws_revproxy:store_chunk(CliSock, N, 0,SSL),
+            B = yaws:get_chunk(CliSock, N, 0,SSL),
             yaws:eat_crnl(CliSock,SSL),
             ok = file:write(Fd, B),
             store_chunked_client_data(Fd, CliSock, SSL)

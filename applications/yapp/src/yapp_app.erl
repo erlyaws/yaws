@@ -1,9 +1,9 @@
 %%%-------------------------------------------------------------------
 %%% File    : yapp_app.erl
-%%% Author  : Mikael Karlsson <mikael@creado.com>
+%%% Author  : Mikael Karlsson <mikael@creado.se>
 %%% Description : 
 %%%
-%%% Created :  1 Jun 2006 by Mikael Karlsson <mikael@creado.com>
+%%% Created :  1 Jun 2006 by Mikael Karlsson <mikael@creado.se>
 %%%-------------------------------------------------------------------
 -module(yapp_app).
 
