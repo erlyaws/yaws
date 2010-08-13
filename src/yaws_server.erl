@@ -887,7 +887,7 @@ ssl_listen_opts(GC, SSL) ->
                  false
          end,
          if ?gc_use_old_ssl(GC) ->
-                 false;
+                 {ssl_imp, old};
             true ->
                  {ssl_imp, new}
          end
