@@ -2204,6 +2204,12 @@ The following directives are allowed inside a server definition.
               This makes the server serve all its content from
               Directory.
 
+\item       \verb+auth_skip_docroot = true | false+ -
+              If true, the docroot will not be searched for
+              \verb+.yaws_auth+ files. This is useful when the docroot
+              is quite large and the time to search it is prohibitive
+              when \Yaws\  starts up. Defaults to false.
+
 \item       \verb+partial_post_size = Integer+ -
               When a \Yaws\  file receives large  POSTs,  the
               amount  of  data  received  in each chunk is

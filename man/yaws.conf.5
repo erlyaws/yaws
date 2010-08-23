@@ -37,14 +37,14 @@ goes here.
 The default value for logdir is "."
 
 .TP
-\fB ebin_dir = Directory\fR
+\fBebin_dir = Directory\fR
 This directive adds Directory to the Erlang search path. It is possible to
 have several of these command in the configuration file. The default value 
 is "yaws_dir"/examples/ebin
 
 
 .TP
-\fB id = String\fR
+\fBid = String\fR
 It is possible run multiple yaws servers on the same machine. We use the
 id of a yaws server to control it using the different control commands such
 as:
@@ -60,32 +60,34 @@ ${VARDIR}/run/yaws/ctl-${ID} which contain the port number where the server is
 listening for control commands. The default id is "default".
 
 .TP
-\fB include_dir = Directory\fR
+\fBinclude_dir = Directory\fR
 This directive adds Directory to the path of directories where the Erlang
 compiler searches for include files. We need to use this if we want to 
 include .hrl files in our yaws Erlang code. The default value is 
 "yaws_dir"/examples/include.
 
 .TP
-\fB max_num_cached_files = Integer\fR
+\fBmax_num_cached_files = Integer\fR
 Yaws will cache small files such as commonly accessed GIF images in RAM.
 This directive sets a maximum number on the number of cached files.
 The default value is 400.
 .TP 
-\fB max_num_cached_bytes = Integer\fR
+\fBmax_num_cached_bytes = Integer\fR
 This directive controls the total amount of RAM which can maximally be
 used for cached RAM files. The default value is 1000000, 1 megabyte.
 .TP
-\fB max_size_cached_file = Integer\fR
+\fBmax_size_cached_file = Integer\fR
 This directive sets a maximum size on the files that are RAM cached by yaws.
 The default value i 8000, 8 kBytes.
 .TP
-\fB cache_refresh_secs = Integer\fR
+\fBcache_refresh_secs = Integer\fR
 The RAM cache is used to serve pages that sit in the cache. An entry sits in
-cache at most cache_refresh_secs number of seconds. The default is 30. This means that when the content is updated under the docroot, that change doesn't show
-until 30 seconds have passed. While developing a yaws site, 
-it may be convenient to set this value to 0. If the debug flag (-d) is passed
-to the yaws start script, this value is automatically set to 0.
+cache at most cache_refresh_secs number of seconds. The default is
+30. This means that when the content is updated under the docroot,
+that change doesn't show until 30 seconds have passed. While
+developing a yaws site, it may be convenient to set this value to
+0. If the debug flag (-d) is passed to the yaws start script, this
+value is automatically set to 0.
 
 .TP
 \fBtrace  = false | traffic | http\fR
@@ -98,17 +100,17 @@ This re-enables the old OTP ssl implementation. By default we use the
 new ssl implementation. 
  
 .TP
-\fB auth_log  = true | false\fR
+\fBauth_log  = true | false\fR
 Enable or disable the auth log. Default is true.
 
 .TP
-\fB max_connections = nolimit | Integer\fR
+\fBmax_connections = nolimit | Integer\fR
 Set this value to control the maximum number of connections
 from HTTP clients into the server. This is implemented by closing
 the last socket if the limit threshold is reached.
 
 .TP
-\fB keepalive_maxuses = nolimit | Integer\fR
+\fBkeepalive_maxuses = nolimit | Integer\fR
 Normally, yaws does not restrict the number of times a connection is
 kept alive using keepalive. Setting this parameter to an integer X
 will ensure that connections are closed once they have been used X times.
@@ -116,7 +118,7 @@ This can be a useful to guard against long running connections
 collecting too much garbage in the Erlang VM.
 
 .TP
-\fB process_options = "[]" | "[{fullsweep_after, int()} | {min_heap_size, int()}]"\fR
+\fBprocess_options = "[]" | "[{fullsweep_after, int()} | {min_heap_size, int()}]"\fR
 Override the garbage collection option parameters for processes that
 handle new connections. Useful for systems that expect long-lived
 connections that handle a lot of data. The default value is Erlang's
@@ -125,7 +127,7 @@ The value type is a quoted string which contains an Erlang property
 list.  See Erlang's \fIerlang:spawn_opt/4\fR function for more details.
 
 .TP
-\fB log_wrap_size = Integer\fR
+\fBlog_wrap_size = Integer\fR
 The logs written by yaws are all wrap logs, the default value at the
 size where they wrap around and the original gets renamed to File.old
 is 1000000, 1 megabyte. This value can changed.
@@ -151,7 +153,7 @@ If true, a soap server will be started at startup of Yaws.
 Default is false.
 
 .TP
-\fBsoap_srv_mods = ListOfModuleSetting \fR
+\fBsoap_srv_mods = ListOfModuleSetting\fR
 If enable_soap is true, a startup yaws will invoke \fIyaws_soap_srv:setup()\fR
 to setup modules set here. 
 ModuleSetting is either a triad like \fI<Mod, HandlerFunc, WsdlFile>\fR 
@@ -172,7 +174,7 @@ interpret php scripts (if allowed).  Default is
 \fIphp_exe_path = php-cgi\fR.
 
 .TP
-\fB copy_error_log  = true | false\fR
+\fBcopy_error_log  = true | false\fR
 Enable or disable copying of the error log. When we run in
 embedded mode, there may very well be some other systems process
 that is responsible for writing the errorlog to a file whereas
@@ -182,14 +184,14 @@ Default value is true.
 
 
 .TP
-\fBrunmod = ModuleName \fR
+\fBrunmod = ModuleName\fR
 At startup yaws will invoke \fIModuleName:start()\fR in a separate
 process. It is possible to have several runmods.
 This is useful if we want to reuse the yaws startup shell script
 for our own application.
 
 .TP
-\fB pick_first_virthost_on_nomatch = true | false \fR
+\fBpick_first_virthost_on_nomatch = true | false\fR
 When Yaws gets a request, it extracts the Host: header from the
 client request to choose a virtual server amongst all servers
 with the same IP/Port pair.
@@ -200,14 +202,14 @@ whereas in testing/development scenarios it may be convenient to
 set it to true. Default is true.
 
 .TP
-\fB keepalive_timeout = TimeInMilliseconds | infinity \fR
+\fBkeepalive_timeout = TimeInMilliseconds | infinity\fR
 If the HTTP session will be kept alive (i.e., not immediately closed)
 it will close after keepalive_timeout milliseconds unless a new
 request is received in that time. The default value is 30000. The
 value \fIinfinity\fR is legal but not recommended.
 
 .TP
-\fB use_fdsrv = true | false \fR
+\fBuse_fdsrv = true | false\fR
 This feature makes it possible to bind to ports < 1024 even when we're
 not running as root. It requires the Jungerl package called fd_server
 to be properly installed. The feature doesn't work with SSL. Default
@@ -215,11 +217,11 @@ is false.  The use of fdsrv is not encouraged, see
 http://yaws.hyber.org/privbind.yaws
 
 .TP
-\fB subconfig = File \fR
+\fBsubconfig = File\fR
 Load specified config file.
 
 .TP
-\fB subconfigdir = Directory \fR
+\fBsubconfigdir = Directory\fR
 Load all config file in specified directory.
 
 
@@ -233,7 +235,7 @@ and \fB</server>\fR. The ServerName will be the name of the webserver.
 .pp
 The following directives are allowed inside a server definition.
 .TP
-\fBport = Port \fR
+\fBport = Port\fR
 This makes the server listen on Port. Default is 8000.
 .TP
 \fBlisten = IpAddress\fR
@@ -251,7 +253,7 @@ length the queue of pending connections may grow to. The default is
 the same as the default provided by \fIgen_tcp:listen/2\fR, which is 5.
 
 .TP
-\fBrhost = Host[:Port] \fR
+\fBrhost = Host[:Port]\fR
 This forces all local redirects issued by the server to go to Host.
 This is useful when yaws listens to a port which is different from 
 the port that the user connects to. For example, running yaws as a
@@ -261,7 +263,7 @@ listens to a high port number port, 8000, and iptables are used to
 redirect traffic to port 80 to port 8000 (most NAT:ing firewalls 
 will also do this for you).
 .TP
-\fBrscheme = http | https \fR
+\fBrscheme = http | https\fR
 This forces all local redirects issued by the server to use this 
 method. This is useful when an SSL off-loader, or stunnel, is used in 
 front of yaws.
@@ -315,11 +317,17 @@ Turns on or off deflate compression for a server. Default is false.
 \fBdocroot = Directory ...\fR
 This makes the server serve all its content from Directory.
 
-It is possible to pass a space separated list of directories as
+It is possible to pass a space-separated list of directories as
 docroot. If this is the case, the various directories will be searched in
 order for the requested file. This also works with the ssi
 and yssi constructs where the full list of directories will be searched
 for files to ssi/yssi include.
+
+.TP
+\fBauth_skip_docroot = true | false\fR
+If true, the docroot will not be searched for \fI.yaws_auth\fR
+files. This is useful when the docroot is quite large and the time to
+search it is prohibitive when yaws starts up. Defaults to false.
 
 .TP
 \fBpartial_post_size = Integer | nolimit\fR
@@ -338,7 +346,7 @@ keepalive_timeout setting.  If the read is not done within the
 timeout, the POST will fail.
 
 .TP
-\fBtilde_expand = true|false \fR
+\fBtilde_expand = true|false\fR
 If this value is set to false yaws will never
 do tilde expansion. The default is false. tilde_expansion is the
 mechanism whereby a URL on the form http://www.foo.com/~username
@@ -349,7 +357,7 @@ Default is false.
 .TP
 \fBallowed_scripts = ListOfSuffixes\fR
 The allowed script types for this server.  Recognized are `yaws',
-`cgi', `fcgi', `php'.  Default is \fIallowed_scripts = yaws php cgi fcgi \fR.
+`cgi', `fcgi', `php'.  Default is \fIallowed_scripts = yaws php cgi fcgi\fR.
 
 Note: for fcgi scripts, the FastCGI application server is only
 called if a local file with the .fcgi extension exists. However,
@@ -359,7 +367,7 @@ the contents of the local .fcgi file are ignored.
 \fBtilde_allowed_scripts = ListOfSuffixes\fR
 The allowed script types for this server when executing files in
 a users public_html folder  Recognized are `yaws',
-`cgi', `fcgi', `php'.  Default is \fItilde_allowed_scripts = \fR
+`cgi', `fcgi', `php'.  Default is \fItilde_allowed_scripts =\fR
 i.e. empty
 
 
@@ -469,7 +477,7 @@ It is possible to have multiple reverse proxies inside the same server.
 WARNING, this feature is yet not in production quality.
 
 .TP
-\fBfwdproxy = true|false \fR
+\fBfwdproxy = true|false\fR
 Make yaws a forward proxy. By enabling this option you can use yaws
 as a proxy for outgoing web traffic, typically by configuring the proxy
 settings in a web-browser to explicitly target yaws as its proxy server.
@@ -513,7 +521,7 @@ access. You should consider this when setting up a system with several
 mutually untrusted instances of php.
 
 .TP
-\fB <ssl>  .... </ssl> \fR
+\fB<ssl>  .... </ssl>\fR
 This begins and ends an SSL configuration for this server.
 It's possible to virthost several SSL servers on the same IP
 given that they all share the same certificate configuration.
@@ -525,42 +533,42 @@ with multiple subjectAltNames. See
 http://wiki.cacert.org/VhostTaskForce#Interoperability_Test
 
 .TP
-\fB keyfile = File\fR
+\fBkeyfile = File\fR
 Specifies which file contains the private key for the certificate.
 If not specified then the certificate file will be used.
 .TP
-\fB certfile = File\fR
+\fBcertfile = File\fR
 Specifies which file contains the certificate for the server.
 .TP
-\fB cacertfile = File\fR
+\fBcacertfile = File\fR
 A file containing trusted certificates to use during client authentication 
 and to use when attempting to build the server certificate chain. 
 The list is also used in the list of acceptable client CAs passed to
 the client when a certificate is requested.
 .TP
-\fB verify = 1 | 2 | 3\fR
+\fBverify = 1 | 2 | 3\fR
 Specifies the level of verification the server does on client certs. 
 1 means nothing, 2 means the the server will ask the client for a cert but 
 not fail if the client does not supply a client cert, 3 means that the server 
 requires the client to supply a client cert.
 .TP
-\fB depth = Int\fR
+\fBdepth = Int\fR
 Specifies the depth of certificate chains the server is prepared to follow 
 when verifying client certs. For the OTP new ssl implementation it
 is also used to specify how far the server, i.e. we, shall follow the
 SSL certificates we present to the clients. Hence, using self signed certs,
 we typically need to set this to 0.
 .TP
-\fB password = String\fR
+\fBpassword = String\fR
 String If the private key is encrypted on disc, this password is the 
 3Dee key to decrypt it.
 .TP
-\fB ciphers = String\fR
+\fBciphers = String\fR
 This string specifies the SSL cipher string. The syntax of the SSL cipher 
 string is a little horrible sublanguage of its own. It is documented in the 
 ssl man page for "ciphers". 
 .TP
-\fB </ssl> \fR
+\fB</ssl>\fR
 Ends an SSL definition
 
 .TP
@@ -570,9 +578,9 @@ within a matching pair of <redirect> and </redirect> delimiters.
 
 We can have a series of
 
-\fB Path = URL\fR or
+\fBPath = URL\fR or
 
-\fB Path = file\fR
+\fBPath = file\fR
 
 All accesses to Path will be redirected to URL/Path or alternatively
 to scheme:host:port/file/Path if a file is used. Note that the original
@@ -620,8 +628,8 @@ within a matching pair of <auth> and </auth> delimiters.
 
 .TP
 \fBdir = Dir\fR
-Makes Dir to be controlled bu WWW-authenticate headers. In order for
-a user to have access to WWW-Authenticate controled directory, the user
+Makes Dir to be controlled by WWW-authenticate headers. In order for
+a user to have access to WWW-Authenticate controlled directory, the user
 must supply a password. The Dir must be specified relative to the docroot.
 
 .TP
@@ -667,7 +675,7 @@ any subdirectories to Dir are not automatically also protected.
 The .yaws_auth file is never visible in a dir listing
 
 .TP
-\fBpam service = \fIpam-service\fR \fR
+\fBpam service = \fIpam-service\fR\fR
 If the item \fBpam\fR is part of the auth structure, 
 Yaws will also try to authenticate the user using "pam" using
 the pam \fIservice\fR indicated. Usual services are typically found
@@ -681,7 +689,7 @@ typically installed as suid root by the yaws install script.
 Ends an auth definition
 
 .TP
-\fB <opaque>  .... </opaque> \fR
+\fB<opaque>  .... </opaque>\fR
 This begins and ends an opaque configuration context for this server,
 where 'Key = Value' directives can be specified. These directives are
 ignored by yaws (hence the name opaque), but can be accessed as a list
@@ -708,7 +716,8 @@ logdir = /var/log/yaws
 .fi
 
 .pp
-And this example shows a similar setup but two web servers on the same IP address
+And this example shows a similar setup but two web servers on the same
+IP address.
 
 .nf
 

@@ -106,8 +106,8 @@ add_yaws_auth(SCs) ->
 %% We search and setup www authenticate for each directory
 %% specified as an auth directory or containing a .yaws_auth file. 
 %% These are merged with server conf.
-setup_auth(#sconf{docroot = Docroot, authdirs = Authdirs}) ->
-    Authdirs1 = load_yaws_auth_from_docroot(Docroot),
+setup_auth(#sconf{docroot = Docroot, authdirs = Authdirs}=SC) ->
+    Authdirs1 = load_yaws_auth_from_docroot(Docroot, ?sc_auth_skip_docroot(SC)),
     Authdirs2 = load_yaws_auth_from_authdirs(Authdirs, Docroot, Authdirs1),
     Authdirs3 = ensure_auth_headers(Authdirs2),
     Authdirs4 = [{Dir, A} || A = #auth{dir = [Dir]} <- Authdirs3], % A->{Dir, A}
@@ -115,9 +115,11 @@ setup_auth(#sconf{docroot = Docroot, authdirs = Authdirs}) ->
     Authdirs4.
 
     
-load_yaws_auth_from_docroot(undefined) ->
+load_yaws_auth_from_docroot(_, true) ->
     [];
-load_yaws_auth_from_docroot(Docroot) ->
+load_yaws_auth_from_docroot(undefined, _) ->
+    [];
+load_yaws_auth_from_docroot(Docroot, _) ->
     Fun = fun (Path, Acc) ->
 		  %% Strip Docroot and then filename
 		  SP  = string:sub_string(Path, length(Docroot)+1),
@@ -826,6 +828,14 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             case is_bool(Bool) of
                 {true, Val} ->
                     C2 = ?sc_set_deflate(C, Val),
+                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
+            end;
+        ["auth_skip_docroot",'=',Bool] ->
+            case is_bool(Bool) of
+                {true,Val} ->
+                    C2 = ?sc_set_auth_skip_docroot(C, Val),
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}

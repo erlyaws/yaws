@@ -115,7 +115,7 @@
 %% flags for sconfs
 -define(SC_ACCESS_LOG,          1).
 -define(SC_ADD_PORT,            2).
--define(SC_STATISTICS,   4).
+-define(SC_STATISTICS,          4).
 -define(SC_TILDE_EXPAND,        8).
 -define(SC_DIR_LISTINGS,        16).
 -define(SC_DEFLATE,             32).
@@ -124,6 +124,7 @@
 -define(SC_FCGI_TRACE_PROTOCOL, 512).
 -define(SC_FCGI_LOG_APP_ERROR,  1024).
 -define(SC_FORWARD_PROXY,       2048).
+-define(SC_AUTH_SKIP_DOCROOT,   4096).
 
 
 -define(SC_DEF, ?SC_ACCESS_LOG bor ?SC_ADD_PORT).
@@ -150,6 +151,8 @@
         (((SC)#sconf.flags band ?SC_FCGI_LOG_APP_ERROR) /= 0)).
 -define(sc_forward_proxy(SC),
         (((SC)#sconf.flags band ?SC_FORWARD_PROXY) /= 0)).
+-define(sc_auth_skip_docroot(SC),
+        (((SC)#sconf.flags band ?SC_AUTH_SKIP_DOCROOT) /= 0)).
 
 
 -define(sc_set_access_log(SC, Bool), 
@@ -178,6 +181,8 @@
                                    Bool)}).
 -define(sc_set_forward_proxy(SC, Bool), 
         SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_FORWARD_PROXY, Bool)}).
+-define(sc_set_auth_skip_docroot(SC, Bool),
+        SC#sconf{flags = yaws:flag(SC#sconf.flags,?SC_AUTH_SKIP_DOCROOT,Bool)}).
 
 
 
