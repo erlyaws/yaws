@@ -772,7 +772,8 @@ fcgi_worker_fail(WorkerState, Reason) ->
     ParentPid = WorkerState#fcgi_worker_state.parent_pid,
     ParentPid ! {self(), failure, Reason},
     error_logger:error_msg("FastCGI failure: ~p~n", [Reason]),
-    exit(Reason).
+    %% exit normally to avoid filling log with crash messages
+    exit(normal).
 
 fcgi_worker_fail_if(true, WorkerState, Reason) ->
     fcgi_worker_fail(WorkerState, Reason);
@@ -826,19 +827,19 @@ fcgi_worker(ParentPid, Role, Arg, ServerConf, Options) ->
             TraceProtocol,
             LogAppError]),
     WorkerState = #fcgi_worker_state{
-                app_server_host = AppServerHost,
-                app_server_port = AppServerPort,
-                path_info = PathInfo,
-                env = Env,
-                keep_connection = false,        % Currently hard-coded; make
-                                                % configurable in the future?
-                trace_protocol = TraceProtocol,
-                log_app_error = LogAppError,
-                role = Role,
-                parent_pid = ParentPid,
-                yaws_worker_pid = Arg#arg.pid,
-                app_server_socket = AppServerSocket
-            },
+      app_server_host = AppServerHost,
+      app_server_port = AppServerPort,
+      path_info = PathInfo,
+      env = Env,
+      keep_connection = false,                % Currently hard-coded; make
+                                              % configurable in the future?
+      trace_protocol = TraceProtocol,
+      log_app_error = LogAppError,
+      role = Role,
+      parent_pid = ParentPid,
+      yaws_worker_pid = Arg#arg.pid,
+      app_server_socket = AppServerSocket
+     },
     fcgi_send_begin_request(WorkerState),
     fcgi_send_params(WorkerState, Env),
     fcgi_send_params(WorkerState, []),
