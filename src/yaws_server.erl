@@ -1030,6 +1030,12 @@ acceptor0(GS, Top) ->
             %% This is what happens when we call yaws --stop
 	    Top ! {self(), decrement},
             exit(normal);
+        {error, Reason} when ((Reason == emfile) or
+                              (Reason == enfile)) ->
+            error_logger:format("yaws: Failed to accept - no more "
+                                "file descriptors - terminating: ~p~n",
+                                [Reason]),
+            exit(failaccept);
         ERR ->
             %% When we fail to accept, the correct thing to do
             %% is to terminate yaws as an application, if we're running
