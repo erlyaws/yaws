@@ -18,19 +18,22 @@
 
 handshake(Arg, ContentPid, SocketMode) ->
     CliSock = Arg#arg.clisock,
-    case origin_header(Arg#arg.headers) of
+    case get_origin_header(Arg#arg.headers) of
 	undefined ->
 	    %% Yaws will take care of closing the socket
 	    ContentPid ! discard;
 	Origin ->
 	    ProtocolVersion = ws_version(Arg#arg.headers),
-	    Protocol = protocol_header(Arg#arg.headers),
+	    Protocol = get_protocol_header(Arg#arg.headers),
 	    Host = (Arg#arg.headers)#headers.host,
 	    {abs_path, Path} = (Arg#arg.req)#http_request.path,
-	    %% TODO: Support for wss://
-	    WebSocketLocation = "ws://" ++ Host ++ Path,
-	    Handshake = handshake(ProtocolVersion, Arg, CliSock, WebSocketLocation, Origin, Protocol),
 	    SC = get(sc),
+	    WebSocketLocation = 
+		case SC#sconf.ssl of
+			undefined -> "ws://" ++ Host ++ Path;
+			_ -> "wss://" ++ Host ++ Path
+		end,
+	    Handshake = handshake(ProtocolVersion, Arg, CliSock, WebSocketLocation, Origin, Protocol),
 	    case SC#sconf.ssl of
 		undefined ->
 		    gen_tcp:send(CliSock, Handshake),
@@ -114,10 +117,10 @@ unframe_all(DataFramesBin, Acc) ->
 
 
 %% Internal functions
-origin_header(Headers) ->
+get_origin_header(Headers) ->
     query_header("origin", Headers).
 
-protocol_header(Headers) ->
+get_protocol_header(Headers) ->
     query_header("sec-websocket-protocol", Headers, "unknown").
 
 				   
