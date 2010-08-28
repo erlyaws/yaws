@@ -23,23 +23,17 @@ handshake(Arg, ContentPid, SocketMode) ->
 	    %% Yaws will take care of closing the socket
 	    ContentPid ! discard;
 	Origin ->
-	   SC = get(sc),
+	    ProtocolVersion = ws_version(Arg#arg.headers),
+	    Protocol = get_protocol_header(Arg#arg.headers),
 	    Host = (Arg#arg.headers)#headers.host,
 	    {abs_path, Path} = (Arg#arg.req)#http_request.path,
+	    SC = get(sc),
 	    WebSocketLocation = 
 		case SC#sconf.ssl of
 			undefined -> "ws://" ++ Host ++ Path;
 			_ -> "wss://" ++ Host ++ Path
 		end,
-				
-	    Handshake =
-		["HTTP/1.1 101 Web Socket Protocol Handshake\r\n",
-		 "Upgrade: WebSocket\r\n",
-		 "Connection: Upgrade\r\n",
-		 "WebSocket-Origin: ", Origin, "\r\n",
-		 "WebSocket-Location: ", WebSocketLocation, "\r\n",
-		 "\r\n"],
-	 
+	    Handshake = handshake(ProtocolVersion, Arg, CliSock, WebSocketLocation, Origin, Protocol),
 	    case SC#sconf.ssl of
 		undefined ->
 		    gen_tcp:send(CliSock, Handshake),
@@ -61,6 +55,35 @@ handshake(Arg, ContentPid, SocketMode) ->
 	    end
     end,
     exit(normal).
+
+
+handshake(ws_76, Arg, CliSock, WebSocketLocation, Origin, Protocol) ->
+    {ok, Challenge} = gen_tcp:recv(CliSock, 8),
+    Key1 = secret_key("sec-websocket-key1", Arg#arg.headers),
+    Key2 = secret_key("sec-websocket-key2", Arg#arg.headers),
+    ChallengeResponse = challenge(Key1, Key2, binary_to_list(Challenge)),
+    ["HTTP/1.1 101 Web Socket Protocol Handshake\r\n",
+     "Upgrade: WebSocket\r\n",
+     "Connection: Upgrade\r\n",
+     "Sec-WebSocket-Origin: ", Origin, "\r\n",
+     "Sec-WebSocket-Location: ", WebSocketLocation, "\r\n",
+     "Sec-WebSocket-Protocol: ", Protocol, "\r\n",
+     "\r\n", ChallengeResponse];
+
+handshake(ws_75, _Arg, _CliSock, WebSocketLocation, Origin, Protocol) ->
+    ["HTTP/1.1 101 Web Socket Protocol Handshake\r\n",
+     "Upgrade: WebSocket\r\n",
+     "Connection: Upgrade\r\n",
+     "WebSocket-Origin: ", Origin, "\r\n",
+     "WebSocket-Location: ", WebSocketLocation, "\r\n",
+     "\r\n"].
+
+
+ws_version(Headers) ->
+    case query_header("sec-websocket-key1", Headers) of
+	undefined ->  ws_75;
+	_         ->  ws_76
+    end.
 
 
 %% This should take care of all the Data Framing scenarios specified in
@@ -94,7 +117,17 @@ unframe_all(DataFramesBin, Acc) ->
 
 
 %% Internal functions
-get_origin_header(#headers{other=L}) ->
+get_origin_header(Headers) ->
+    query_header("origin", Headers).
+
+get_protocol_header(Headers) ->
+    query_header("sec-websocket-protocol", Headers, "unknown").
+
+				   
+query_header(HeaderName, Headers) ->
+    query_header(HeaderName, Headers, undefined).
+    
+query_header(Header, #headers{other=L}, Default) ->
     lists:foldl(fun({http_header,_,K0,_,V}, undefined) ->
                         K = case is_atom(K0) of
                                 true ->
@@ -103,15 +136,43 @@ get_origin_header(#headers{other=L}) ->
                                     K0
                             end,
                         case string:to_lower(K) of
-                            "origin" ->
+                            Header ->
                                 V;
                             _ ->
-                                undefined
+                                Default
                         end;
                    (_, Acc) ->
                         Acc
-                end, undefined, L).
+                end, Default, L).
 
+secret_key(KeyName, Headers) ->
+    case query_header(KeyName, Headers) of
+	undefined ->
+	    0;
+	Key ->
+	    Digits = lists:filter(fun(C) -> (C >= 48) andalso (C =< 57) end, Key),
+	    NumberOfSpaces = length(lists:filter(fun(C) -> C == 32 end, Key)),
+	    list_to_integer(Digits) div NumberOfSpaces
+    end.
+
+
+challenge(Key1, Key2, Challenge) ->
+    BinaryAnswer =
+	crypto:md5_final(
+	  crypto:md5_update(
+	    crypto:md5_init(),
+	    digits32(Key1) ++ digits32(Key2) ++ Challenge)),
+    BinaryAnswer.
+
+digits32(Num) ->
+    Digit4 = Num rem 256,
+    Num2 = Num div 256,
+    Digit3 = Num2 rem 256,
+    Num3 = Num2 div 256,
+    Digit2 = Num3 rem 256,
+    Digit1 = Num3 div 256,
+    [Digit1, Digit2, Digit3, Digit4].
+					  
 unpack_length(Binary, LenBytes, Length) ->
     <<_, _:LenBytes/bytes, B, _/bitstring>> = Binary,
     B_v = B band 16#7F,
