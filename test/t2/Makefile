@@ -3,7 +3,7 @@ include ../support/include.mk
 .PHONY: all test debug clean
 
 #
-all:	stdconf setup app_test.beam streamtest.beam
+all:	conf setup app_test.beam streamtest.beam
 	@echo "all ok"
 
 
@@ -13,7 +13,7 @@ all:	stdconf setup app_test.beam streamtest.beam
 
 ULIMIT = 768
 
-test:	stdconf start
+test:	conf start
 	dd if=/dev/zero of=../../www/1000.txt bs=1024 count=1000 >/dev/null 2>&1
 	dd if=/dev/zero of=../../www/2000.txt bs=1024 count=2000 >/dev/null 2>&1
 	dd if=/dev/zero of=../../www/3000.txt bs=1024 count=3000 >/dev/null 2>&1
@@ -27,6 +27,8 @@ test:	stdconf start
 	fi ; \
 	$(ERL) -noinput $(PA) -s tftest
 	$(MAKE) stop
+
+conf:	stdconf
 
 debug:
 	$(ERL) $(PA)
