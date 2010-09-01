@@ -1,6 +1,6 @@
 include ../support/include.mk
 
-.PHONY: all test debug conf clean
+.PHONY: all test debug clean
 
 #
 all:	conf setup app_test.beam streamtest.beam
@@ -28,13 +28,10 @@ test:	conf start
 	$(ERL) -noinput $(PA) -s tftest
 	$(MAKE) stop
 
+conf:	stdconf
 
 debug:
 	$(ERL) $(PA)
-
-conf:
-	cat ../conf/stdconf.conf | \
-	../../scripts/Subst %YTOP% $(YTOP) > yaws.conf
 
 clean:	tclean
 	-rm -rf localhost:8000 logs yaws.conf
