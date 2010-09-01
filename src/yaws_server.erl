@@ -694,7 +694,8 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     Ready2 = [],
 		    case ?sc_has_statistics(OldSc) of
 			true ->
-			    error_logger:info_msg("delete_sconf: Pid= ~p~n", [Pid]),
+			    error_logger:info_msg("delete_sconf: Pid= ~p~n",
+                                                  [Pid]),
 			    yaws_stats:stop(Pid);
 			false ->
 			    ok
@@ -1091,7 +1092,7 @@ aloop(CliSock, GS, Num) ->
                  end,
             put(outh, #outh{}),
             put(sc, SC),
-	        yaws_stats:hit(),
+            yaws_stats:hit(),
             check_keepalive_maxuses(GS, Num),
             Call = call_method(Req#http_request.method, CliSock, Req, H),
             Call2 = fix_keepalive_maxuses(Call),
