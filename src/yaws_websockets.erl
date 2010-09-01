@@ -154,12 +154,7 @@ secret_key(KeyName, Headers) ->
     end.
 
 challenge(Key1, Key2, Challenge) ->
-    BinaryAnswer =
-	crypto:md5_final(
-	  crypto:md5_update(
-	    crypto:md5_init(),
-	    digits32(Key1) ++ digits32(Key2) ++ Challenge)),
-    BinaryAnswer.
+    erlang:md5(digits32(Key1) ++ digits32(Key2) ++ Challenge).
 
 digits32(Num) ->
     Digit4 = Num rem 256,
