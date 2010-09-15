@@ -1899,11 +1899,11 @@ http_recv_request(CliSock, SSL) ->
             R;
         {ok, R} when is_record(R, http_response) ->
             R;
-        {error, {http_error, "\r\n"}} ->
+        {_, {http_error, "\r\n"}} ->
             http_recv_request(CliSock, SSL);
-        {error, {http_error, "\n"}} ->
+        {_, {http_error, "\n"}} ->
             http_recv_request(CliSock,SSL);
-        {error, {http_error, _}} ->
+        {_, {http_error, _}} ->
             bad_request;
         {error, closed} -> 
             closed;
@@ -1985,9 +1985,9 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
         %% these are here to be a little forgiving to
         %% bad (typically test script) clients
 
-        {error, {http_error, "\r\n"}} ->
+        {_, {http_error, "\r\n"}} ->
             http_collect_headers(CliSock, Req, H,SSL, Count+1);
-        {error, {http_error, "\n"}} ->
+        {_, {http_error, "\n"}} ->
             http_collect_headers(CliSock, Req, H,SSL, Count+1);
 
         %% auxilliary headers we don't have builtin support for
