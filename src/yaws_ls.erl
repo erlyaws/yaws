@@ -240,43 +240,154 @@ out(A) ->
 
     YPid = self(),
     
-    case filename:basename(A#arg.server_path) of                    
-        "all.zip" -> spawn_link(fun() -> zip(YPid, Dir) end),
-                     {streamcontent, "application/zip", ""};
-        "all.tgz" -> spawn_link(fun() -> tgz(YPid, Dir) end),
-                     {streamcontent, "application/gzip", ""};                    
-        "all.tbz2" -> spawn_link(fun() -> tbz2(YPid, Dir) end),
-                      {streamcontent, "application/gzip", ""}
+    Forbidden_Paths = accumulate_forbidden_paths(),
+    case filename:basename(A#arg.server_path) of
+        "all.zip" -> spawn_link(fun() -> zip(YPid, Dir, Forbidden_Paths) end),
+                     {streamcontent, "application/zip", ""}
+%%        "all.tgz" -> spawn_link(fun() -> tgz(YPid, Dir) end),
+%%                     {streamcontent, "application/gzip", ""};                    
+%%        "all.tbz2" -> spawn_link(fun() -> tbz2(YPid, Dir) end),
+%%                     {streamcontent, "application/gzip", ""}
     end.
 
-zip(YPid, Dir) ->
-    process_flag(trap_exit, true),    
-    P = open_port({spawn, "zip -q -1 -r - ."},
-                  [{cd, Dir},use_stdio, binary, exit_status]),
-    stream_loop(YPid, P).
+mkrandbytes(0, Acc) ->
+    Acc;
+mkrandbytes(N, Acc) when is_integer(N), N > 0 ->
+    I = random:uniform(256) - 1,
+    << Acc/binary, I:8/unsigned-big-integer >>.
+mkrandbytes(N) ->
+    mkrandbytes(N, <<>>).
 
-tgz(YPid, Dir) ->
-    process_flag(trap_exit, true),    
-    P = open_port({spawn, "tar cz ."},
-                  [{cd, Dir},use_stdio, binary, exit_status]),
-    stream_loop(YPid, P).
+generate_random_fn() ->
+    Bytes = try crypto:rand_bytes(64) of
+                B when is_bitstring(B) ->
+                    B
+            catch _:_ ->
+                    mkrandbytes(64)
+            end,
+    << Int:512/unsigned-big-integer >> = << Bytes/binary >>,
+    integer_to_list(Int).
 
-tbz2(YPid, Dir) ->
-    process_flag(trap_exit, true),    
-    P = open_port({spawn, "tar cj ."},
-                  [{cd, Dir},use_stdio, binary, exit_status]),
-    stream_loop(YPid, P).
+mktempfilename([]) ->
+    {error, no_temp_dir};
+mktempfilename([Dir|R]) ->
+    RandomFN = generate_random_fn(),
+    Filename = filename:join(Dir, RandomFN),
+    case file:open(Filename, [write]) of
+        {ok, FileHandle} ->
+            {ok, {Filename, FileHandle}};
+        _Else ->
+            mktempfilename(R)
+    end.
 
-stream_loop(YPid, P) ->
+mktempfilename() ->
+    %% TODO: Add code to determine the temporary directory on various
+    %% operating systems.
+    PossibleDirs = ["/tmp", "/var/tmp"],
+    mktempfilename(PossibleDirs).    
+
+zip(YPid, Dir, ForbiddenPaths) ->
+    {ok, RE_ForbiddenNames} = re:compile("\\.yaws\$"),
+    Files = dig_through_dir(Dir, ForbiddenPaths, RE_ForbiddenNames),
+    {ok, {Tempfile, TempfileH}} = mktempfilename(),
+    file:write(TempfileH, lists:foldl(fun(I, Acc) ->
+                                              Acc ++ I ++ "\n"
+                                      end, [], Files)),    
+    file:close(TempfileH),
+    process_flag(trap_exit, true),    
+    %% TODO: find a way to directly pass the list of files to
+    %% zip. Erlang ports do not allow stdin to be closed
+    %% independently; however, zip needs stdin to be closed as an
+    %% indicator that the list of files is complete.
+    P = open_port({spawn, "zip -q -1 - -@ < " ++ Tempfile},
+                  [{cd, Dir},use_stdio, binary, exit_status]),
+    F = fun() ->
+                file:delete(Tempfile)                
+        end,
+    stream_loop(YPid, P, F).
+
+accumulate_forbidden_paths() ->
+    SC = get(sc),
+    Auth = SC#sconf.authdirs,
+    lists:foldl(fun({Path, _Auth}, Acc) ->
+                        Acc ++ [Path]
+                end, [], Auth).
+
+
+%% tgz(YPid, Dir) ->
+%%    process_flag(trap_exit, true),    
+%%    P = open_port({spawn, "tar cz ."},
+%%                  [{cd, Dir},use_stdio, binary, exit_status]),
+%%    stream_loop(YPid, P).
+
+%% tbz2(YPid, Dir) ->
+%%     process_flag(trap_exit, true),    
+%%     P = open_port({spawn, "tar cj ."},
+%%                   [{cd, Dir},use_stdio, binary, exit_status]),
+%%     stream_loop(YPid, P).
+
+dir_contains_indexfile(_Dir, []) ->
+    false;
+dir_contains_indexfile(Dir, [File|R]) ->
+    case file:read_file_info(filename:join(Dir, File)) of
+        {ok, _} ->
+            true;
+        _Else ->
+            dir_contains_indexfile(Dir, R)
+    end.
+    
+dir_contains_indexfile(Dir) ->
+    Indexfiles = [".yaws.auth", "index.yaws", "index.html", "index.htm"],
+    dir_contains_indexfile(Dir, Indexfiles).
+
+dig_through_dir(Basedirlen, Dir, ForbiddenPaths, RE_ForbiddenNames) ->
+    Dir1 = string:sub_string(Dir, Basedirlen),
+    case {lists:member(Dir1, ForbiddenPaths),
+          dir_contains_indexfile(Dir)} of
+        {true,_} ->
+            [];
+        {_,true} ->
+            [];
+        {false, false} ->
+            {ok, Files} = file:list_dir(Dir),
+            lists:foldl(fun(I, Acc) ->
+                                  Filename = filename:join(Dir, I),
+                                  case {file:read_file_info(Filename),
+                                        re:run(Filename, RE_ForbiddenNames)} of
+                                      {_, {match, _}} ->
+                                          Acc;
+                                      {{ok, #file_info{type=directory}}, _} ->
+                                          Acc ++ dig_through_dir(Basedirlen,
+                                                                  Filename,
+                                                                  ForbiddenPaths,
+                                                                  RE_ForbiddenNames);
+                                      {{ok, #file_info{type=regular}}, _} ->
+                                          Acc ++ [string:sub_string(Filename, Basedirlen)];
+                                      _Else ->
+                                          Acc %% Ignore other files
+                                  end
+                        end, [], Files)
+    end.
+
+dig_through_dir(Dir, ForbiddenPaths, RE_ForbiddenNames) ->
+    dig_through_dir(length(Dir) + 1,
+                    Dir,
+                    ForbiddenPaths,
+                    RE_ForbiddenNames).
+
+stream_loop(YPid, P, FinishedFun) ->
     receive
         {P, {data, Data}} ->
             yaws_api:stream_chunk_deliver_blocking(YPid, Data),
-            stream_loop(YPid, P);
+            stream_loop(YPid, P, FinishedFun);
         {P, {exit_status, _}} ->
-            yaws_api:stream_chunk_end(YPid);
+            yaws_api:stream_chunk_end(YPid),
+            FinishedFun();
         {'EXIT', YPid, Status} ->
+            FinishedFun(),
             exit(Status);
         Else ->
+            FinishedFun(),
             error_logger:error_msg("Could not deliver zip file: ~p\n", [Else])
     end.
 
