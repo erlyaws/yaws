@@ -154,6 +154,7 @@ handle_a(A, GC, Key) ->
                     Res = yaws:dohup(A),
                     Res;
                 {stop, Key} ->
+                    error_logger:info_msg("Stopping yaws\n",[]),
                     gen_tcp:send(A, io_lib:format(
                                       "stopping yaws with id=~p\n",
                                       [GC#gconf.id])),
@@ -423,7 +424,7 @@ actl(SID, Term) ->
                         {error, closed} ->
                             erlang:halt(0);
                         Other ->
-                            io:format("~p~n", [Other]),
+                            io:format("Stopping yaws: ~p~n", [Other]),
                             erlang:halt(3)
                     end;
                 ok ->

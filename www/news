@@ -1,3 +1,31 @@
+Sat Sep 25 13:39:29 CEST 2010 Yaws 1.89
+Maintenance release with a long series of fixes mostly from Steve Vinoski./yaws
+all.zip should not not include .yaws files, nor directories "protected" with an index file, nor directories protected by an auth directive. (Hans-Christian Esperer )
+adjust to R14B change in gen_tcp:recv for {packet,http} mode Where we handle the return value of gen_tcp:recv while reading headers from the socket (such as with calls to yaws:do_recv), handle new R14B return values as well as existing return values for previous releases. (Steve)
+for portability, use erlang:md5 rather than crypto md5  Since OpenSSL availability on Windows for working with the crypto module is apparently questionable, use the erlang:md5 function in place of the crypto md5 functions. (Steve)
+websockets v76 update (Dominique Boucher)
+several fcgi updates and bugfixes (Steve)
+Add auth_skip_docroot server config variable (Christian Hennig)
+Fix use_old_ssl=bool() for R14A  (Joseph Wayne Norton)
+add --umask option to yaws script  (Steve)
+Some yapp work, added a simple example (Mikael Karlsson)
+performance enhancements (Steve)
+add support for PHP FCGI applications (Hans-Christian Esperer)
+fix cached process counter (Hans-Christian Esperer)
+return part headers from yaws_multipart:read_multipart_form  (Steve, based on a patch from Dilshod Temirkhodjaev.
+patch for no-return-in-nonvoid-function error  (Alexander Simonov)
+two-mode.el now works with emacs 23 (Steve)
+Allow "stream processes" to close the client socket  (Steve)
+Augment yaws man page with --erlarg argument quoting info  (Steve)
+Use gconf keepalive_timeout for connection lifetime (Brady McCary)
+handle multi-word arguments for heart restart command (Steve)
+Fix bug where yaws_api:parse_set_cookie tried to convert a record to lower case. (Anders Nygren)
+patch by Sergey Shilov to set old_ssl for embedded mode
+fix socket usage for FCGI authorization (bruno rijsman, steve vinoski)
+work around an erlang:open_port bug for CGI QUERY_STRING env var (Steve)
+Added a new configuration parameter called "keepalive_maxuses" which allows the yaws admin to close persistant connections after X number of uses. (Thomas O'Dowd )
+improved embedded support (Steve)
+
 Thu Mar 18 21:51:32 CET 2010 Yaws 1.88
 Highlights in this release are, new SSL implementation is now default, FCGI enhhancements and IPV6 support.
 ssl support for websockets, patch by wde

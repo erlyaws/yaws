@@ -236,11 +236,6 @@ validate_cs(GC, Cs) ->
     L3 = arrange(L2, start, [], []),
     case validate_groups(L3) of
         ok ->
-            yaws_debug:format(GC, "Starting with GC = ~p~n",[GC]),
-            lists:foreach(fun(Group) ->
-                                 yaws_debug:format(GC, "VirtHost SC list = ~p~n",
-                                                   [Group])
-                         end, L3),
             {ok, GC, L3};
         Err ->
             Err
