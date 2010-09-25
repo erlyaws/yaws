@@ -1,16 +1,6 @@
 \documentclass[11pt,oneside,english]{book}
-\newif\ifpdf
-\ifx\pdfoutput\undefined
-   \pdffalse              % we are not running PDFLaTeX
-\else
-   \ifnum \pdfoutput=0    % we are running PDFLaTeX generating DVI
-      \pdffalse
-   \else
-      \ifnum \pdfoutput=1 % we are running PDFLaTeX generating PDF
-      \pdftrue
-      \fi
-   \fi
-\fi
+
+\usepackage{ifpdf}
 
 \ifpdf
   \usepackage[pdftex]{graphicx}

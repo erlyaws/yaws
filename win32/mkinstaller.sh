@@ -59,17 +59,23 @@ done
 
 
 # Convert readable files to DOS style:
-
-which unix2dos
-if [ $? != 0 ]; then
-    echo "No unix2dos program found";
+TODOS=""
+if [ -x /usr/bin/unix2dos ]; then
+    TODOS=/usr/bin/unix2dos
+fi
+if [ -x /usr/bin/todos ]; then
+    TODOS=/usr/bin/todos
+fi
+if [ "$TODOS" = "" ]; then
+    echo "No unix2dos/todos program found";
+    echo "Run aptitude install tofrodos";
     exit 1
 fi
 
-unix2dos LICENCE.txt
+${TODOS} LICENCE.txt
 for d in `echo ${DIRS0} ${DIRS1}`; do
     for suffix in txt erl conf html yaws js pem; do
-        find . -name "*.$suffix" -exec unix2dos {} \;
+        find . -name "*.$suffix" -exec ${TODOS} {} \;
     done
 done
 
