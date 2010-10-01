@@ -1127,8 +1127,13 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Expect existing file at line ~w", [Lno])}
             end;
         ["verify", '=', Val0] ->
-            Val = (catch list_to_integer(Val0)),
-            case lists:member(Val, [1,2,3]) of
+            Val =
+                try
+                    list_to_integer(Val0)
+                catch error:badarg ->
+                    list_to_atom(Val0)
+                end,
+            case lists:member(Val, [0,1,2,verify_peer,verify_none]) of
                 true when  is_record(C#sconf.ssl, ssl) ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{verify = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
@@ -1136,7 +1141,17 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Need to set option ssl to true before line ~w",
                                [Lno])};
                 _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                    {error, ?F("Expect integer or verify_none, verify_peer at line ~w", [Lno])}
+            end;
+        ["fail_if_no_peer_cert", '=', Val0] ->
+            Val = (catch list_to_atom(Val0)),
+            if
+                is_record(C#sconf.ssl, ssl) ->
+                    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{fail_if_no_peer_cert = Val}},
+                    fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
+                true ->
+                    {error, ?F("Need to set option fail_if_no_peer_cert to true before line ~w",
+                               [Lno])}
             end;
         ["depth", '=', Val0] ->
             Val = (catch list_to_integer(Val0)),

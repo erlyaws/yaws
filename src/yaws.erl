@@ -155,23 +155,25 @@ create_sconf(DocRoot, SL) when is_list(DocRoot), is_list(SL) ->
 %%% Access functions for the SSL record.
 new_ssl()             -> #ssl{}.
 %%
-ssl_keyfile(S)      -> S#ssl.keyfile.
-ssl_certfile(S)     -> S#ssl.certfile.
-ssl_verify(S)       -> S#ssl.verify.
-ssl_depth(S)        -> S#ssl.depth.
-ssl_password(S)     -> S#ssl.password.
-ssl_cacertfile(S)   -> S#ssl.cacertfile.
-ssl_ciphers(S)      -> S#ssl.ciphers.
-ssl_cachetimeout(S) -> S#ssl.cachetimeout.
+ssl_keyfile(S)              -> S#ssl.keyfile.
+ssl_certfile(S)             -> S#ssl.certfile.
+ssl_verify(S)               -> S#ssl.verify.
+ssl_fail_if_no_peer_cert(S) -> S#ssl.fail_if_no_peer_cert.
+ssl_depth(S)                -> S#ssl.depth.
+ssl_password(S)             -> S#ssl.password.
+ssl_cacertfile(S)           -> S#ssl.cacertfile.
+ssl_ciphers(S)              -> S#ssl.ciphers.
+ssl_cachetimeout(S)         -> S#ssl.cachetimeout.
 %%
-ssl_keyfile(S, Keyfile)           -> S#ssl{keyfile = Keyfile}.
-ssl_certfile(S, Certfile)         -> S#ssl{certfile = Certfile}.
-ssl_verify(S, Verify)             -> S#ssl{verify = Verify}.
-ssl_depth(S, Depth)               -> S#ssl{depth = Depth}.
-ssl_password(S, Password)         -> S#ssl{password = Password}.
-ssl_cacertfile(S, Cacertfile)     -> S#ssl{cacertfile = Cacertfile}.
-ssl_ciphers(S, Ciphers)           -> S#ssl{ciphers = Ciphers}.
-ssl_cachetimeout(S, Cachetimeout) -> S#ssl{cachetimeout = Cachetimeout}.
+ssl_keyfile(S, Keyfile)                       -> S#ssl{keyfile = Keyfile}.
+ssl_certfile(S, Certfile)                     -> S#ssl{certfile = Certfile}.
+ssl_verify(S, Verify)                         -> S#ssl{verify = Verify}.
+ssl_fail_if_no_peer_cert(S, FailIfNoPeerCert) -> S#ssl{fail_if_no_peer_cert = FailIfNoPeerCert}.
+ssl_depth(S, Depth)                           -> S#ssl{depth = Depth}.
+ssl_password(S, Password)                     -> S#ssl{password = Password}.
+ssl_cacertfile(S, Cacertfile)                 -> S#ssl{cacertfile = Cacertfile}.
+ssl_ciphers(S, Ciphers)                       -> S#ssl{ciphers = Ciphers}.
+ssl_cachetimeout(S, Cachetimeout)             -> S#ssl{cachetimeout = Cachetimeout}.
 
 
 setup_gconf([], GC) -> GC;
