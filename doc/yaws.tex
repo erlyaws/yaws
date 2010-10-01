@@ -2320,14 +2320,34 @@ The following directives are allowed inside a server definition.
               all the certificates of the acceptable
               signers for the client certs.
 
-\item        \verb+verify = 1 | 2 | 3+
-              Specifies  the  level  of  verification  the
-              server  does  on client certs. 1 means nothing
-              , 2 means the the  server  will  ask  the
-              client for a cert but not fail if the client
-              doesn't supply a client cert, 3  means  that
-              the  server  requires the client to supply a
-              client cert.
+\item        \verb+verify = 0 | 1 | 2 | verify_none | verify_peer+
+              Specifies the level of verification the server does
+              on client certs. 0 means that the server will not
+              ask for a cert (\verb+verify_none+), 1 means that
+              the server will ask the client for a cert but not
+              fail if the client does not supply a client cert
+              (\verb+verify_peer+, \verb+fail_if_no_peer_cert+
+              = \verb+false+), 2 means that the server requires
+              the client to supply a client cert
+              (\verb+verify_peer+, \verb+fail_if_no_peer_cert+ =
+              \verb+true+).
+
+              Setting \verb+verify_none+ means that the x509
+              validation will be skipped (no certificate request
+              is sent to the client), \verb+verify_peer+ means
+              that a certificate request is sent to the client
+              (x509 validation is performed.
+
+              You might want to use \verb+fail_if_no_peer_cert+
+              in combination with \verb+verify_peer+.
+
+\item        \verb+fail_if_no_peer_cert = true | false+
+              If verify is set to \verb+verify_peer+ and set
+              to \verb+true+ the connection will fail if the
+              client does not send a certificate (i.e. an empty
+              certificate). If set to false the server will
+              fail only if an invalid certificate is supplied
+              (an empty certificate is considered valid).
 
 \item        \verb+depth = Int+
               Specifies the depth  of  certificate  chains

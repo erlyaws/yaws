@@ -546,11 +546,25 @@ and to use when attempting to build the server certificate chain.
 The list is also used in the list of acceptable client CAs passed to
 the client when a certificate is requested.
 .TP
-\fBverify = 1 | 2 | 3\fR
+\fBverify = 0 | 1 | 2 | verify_none | verify_peer\fR
 Specifies the level of verification the server does on client certs. 
-1 means nothing, 2 means the the server will ask the client for a cert but 
-not fail if the client does not supply a client cert, 3 means that the server 
-requires the client to supply a client cert.
+0 means that the server will not ask for a cert (verify_none), 1 means that the
+server will ask the client for a cert but not fail if the client does not
+supply a client cert (verify_peer, fail_if_no_peer_cert = false), 2 means that
+the server requires the client to supply a client cert (verify_peer,
+fail_if_no_peer_cert = true).
+
+Setting verify_none means that the x509 validation will be skipped (no
+certificate request is sent to the client), verify_peer means that a
+certificate request is sent to the client (x509 validation is performed.
+
+You might want to use fail_if_no_peer_cert in combination with verify_peer.
+.TP
+\fBfail_if_no_peer_cert = true | false\fR
+If verify is set to verify_peer and set to true the connection will fail if the
+client does not send a certificate (i.e. an empty certificate). If set to false
+the server will fail only if an invalid certificate is supplied (an empty
+certificate is considered valid).
 .TP
 \fBdepth = Int\fR
 Specifies the depth of certificate chains the server is prepared to follow 

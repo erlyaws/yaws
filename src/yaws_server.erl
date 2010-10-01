@@ -872,6 +872,12 @@ ssl_listen_opts(GC, SSL) ->
                  false
          end,
 
+         if SSL#ssl.fail_if_no_peer_cert /= undefined ->
+                 {fail_if_no_peer_cert, SSL#ssl.fail_if_no_peer_cert};
+            true ->
+                 false
+         end,
+
          if SSL#ssl.password /= undefined ->
                  {password, SSL#ssl.password};
             true ->

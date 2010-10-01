@@ -105,6 +105,7 @@
          keyfile,
          certfile,
          verify = 0,
+         fail_if_no_peer_cert,
          depth = 1,
          password,
          cacertfile,
