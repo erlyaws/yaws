@@ -213,6 +213,8 @@ while [ $# -gt 0 ]
           ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl status";;
       --stats)
           ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl stats";;
+      --running-config)
+          ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl running_config";;
       -load|--load)
           loadid=${id:-default}
           $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl load $* $loadid

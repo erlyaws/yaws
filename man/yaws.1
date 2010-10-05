@@ -173,6 +173,12 @@ Query a running yaws daemon for its status, and print it.
 \fB--stats [--id id]\fR
 Query a running yaws daemon for its statistics, and print it.
 .TP
+\fB--running-config [--id id]\fR
+Query a running yaws daemon for its current configuration, and print it.
+This can be useful when attempting to figure out how to set config
+in embedded mode. Configure yaws to you liking in non-embedded mode, run
+this command and use the output to populate the embedded mode records.
+.TP
 \fB--load Modules [--id id]\fR
 Try to (re)load erlang modules into a running daemon.  This is useful
 after modifying appmods or modules used by scripts.
