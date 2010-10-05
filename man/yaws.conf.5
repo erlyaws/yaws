@@ -546,10 +546,10 @@ and to use when attempting to build the server certificate chain.
 The list is also used in the list of acceptable client CAs passed to
 the client when a certificate is requested.
 .TP
-\fBverify = 1 | 2 | 3\fR
+\fBverify = 0 | 1 | 2\fR
 Specifies the level of verification the server does on client certs. 
-1 means nothing, 2 means the the server will ask the client for a cert but 
-not fail if the client does not supply a client cert, 3 means that the server 
+0 means nothing, 1 means the the server will ask the client for a cert but 
+not fail if the client does not supply a client cert, 2 means that the server 
 requires the client to supply a client cert.
 .TP
 \fBdepth = Int\fR
