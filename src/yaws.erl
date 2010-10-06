@@ -1980,7 +1980,9 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
             http_collect_headers(CliSock, Req,  
                                  H#headers{authorization = parse_auth(X)},
                                  SSL, Count+1);
-
+        {ok, {http_header, _Num, 'X-Forwarded-For', _, X}} ->
+            http_collect_headers(CliSock, Req, H#headers{x_forwarded_for=X},
+                                 SSL, Count+1);
         {ok, http_eoh} ->
             H;
 
