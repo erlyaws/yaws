@@ -1306,6 +1306,7 @@ maybe_auth_log(Item, ARG) ->
 
 
 maybe_access_log(Ip, Req, H) ->
+    GC=get(gc),
     SC=get(sc),
     case ?sc_has_access_log(SC) of
         true ->
@@ -1342,7 +1343,24 @@ maybe_access_log(Ip, Req, H) ->
                        _ ->
                            "-"
                    end,
-            yaws_log:accesslog(SC#sconf.servername, Ip, User,
+            RealIp = case GC#gconf.x_forwarded_for_log_proxy_whitelist of
+                       [] -> Ip;
+                       ProxyIps ->
+                         case lists:member(Ip, ProxyIps) of
+                           false -> Ip;
+                           true ->
+                             case yaws:split_sep(H#headers.x_forwarded_for, $,) of
+                               [] -> Ip;
+                               IPs ->
+                                 LastIpStr = lists:last(IPs),
+                                 case inet_parse:address(LastIpStr) of
+                                   {error, _} -> "invalid ip: " ++ LastIpStr;
+                                   {ok, ClientIp} -> ClientIp
+                                 end
+                             end
+                         end
+                     end,
+            yaws_log:accesslog(SC#sconf.servername, RealIp, User,
                                [Meth, $\s, Path, $\s, Ver],
                                Status, Len, Referrer, UserAgent);
         false ->
