@@ -68,6 +68,7 @@
           content_encoding,
           authorization,
           transfer_encoding,
+          x_forwarded_for,
           other = []   %% misc other headers
          }).
 

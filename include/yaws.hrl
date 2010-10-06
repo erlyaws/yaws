@@ -78,17 +78,23 @@
                max_num_cached_files = 400,
                max_num_cached_bytes = 1000000,  %% 1 MEG
                max_size_cached_file = 8000,
-               max_connections = nolimit, %% max number of TCP connections 
-               process_options = [],      %% Override default connection handler processes
-                                          %% spawn options for performance/memory tuning.
-                                          %% [] | [{fullsweep_after, Number}, {min_heap_size, Size}]
-                                          %% other options such as monitor, link are ignored.
+               max_connections = nolimit, % max number of TCP connections
+               process_options = [],  % Override default connection handler
+                                    % processes spawn options for
+                                    % performance/memory tuning.  [] |
+                                    % [{fullsweep_after,Number},
+                                    % {min_heap_size, Size}] other options such
+                                    % as monitor, link are ignored.
                large_file_chunk_size = 10240,
                mnesia_dir = [],
                log_wrap_size = 10000000,  % wrap logs after 10M
                cache_refresh_secs = 30,  % seconds  (auto zero when debug)
                include_dir = [],    %% list of inc dirs for .yaws files 
                phpexe = "/usr/bin/php-cgi",  %% cgi capable php executable
+               x_forwarded_for_log_proxy_whitelist = [], % list of proxy server
+                                    % ips we will replace with the last element
+                                    % of the list in the X-Forwarded-For http
+                                    % header in logs
                yaws,                %% server string
                id = "default",      %% string identifying this instance of yaws
                enable_soap = false, %% start yaws_soap_srv iff true
@@ -320,3 +326,9 @@
 %% Typically used in error printouts as in:
 %% error_logger:format("Err ~p at ~p~n", [Reason, ?stack()])
 -define(stack(), try throw(1) catch _:_ -> erlang:get_stacktrace() end).
+
+
+%%% The following is for emacs, do not remove
+%%% Local Variables:
+%%% comment-column: 36
+%%% End:
