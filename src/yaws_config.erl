@@ -775,6 +775,14 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
             fload(FD, globals, GC,
                   C, Cs, Lno+1, Next);
         
+        ["x_forwarded_for_log_proxy_whitelist", '=' | Suffixes] ->
+            case ip_list_parser(Suffixes, []) of
+              error -> {error, ?F("Expect IP address at line ~w:", [Lno])};
+              {ok, Addrs} ->
+                GC2 = GC#gconf{ x_forwarded_for_log_proxy_whitelist = Addrs },
+                fload(FD, globals, GC2, C, Cs, Lno+1, Next)
+            end;
+
         ['<', "server", Server, '>'] ->  %% first server 
             fload(FD, server, GC, #sconf{servername = Server},
                   Cs, Lno+1, Next);
@@ -1942,3 +1950,11 @@ delete_sconf(SC) ->
 
 update_gconf(GC) ->
     ok = gen_server:call(yaws_server, {update_gconf, GC}, infinity).
+
+ip_list_parser([], Addrs) -> {ok,lists:reverse(Addrs)};
+ip_list_parser([IP|IPs], Addrs) ->
+  case inet_parse:address(IP) of
+    {error, _} -> error;
+    {ok,Addr} ->
+      ip_list_parser(IPs, [Addr|Addrs])
+  end.

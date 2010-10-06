@@ -89,6 +89,9 @@
                cache_refresh_secs = 30,  % seconds  (auto zero when debug)
                include_dir = [],    %% list of inc dirs for .yaws files 
                phpexe = "/usr/bin/php-cgi",  %% cgi capable php executable
+               x_forwarded_for_log_proxy_whitelist = [], %% list of proxy server ips we will replace
+                                                         %% with the last element of the list in the
+                                                         %% X-Forwarded-For http header in logs
                yaws,                %% server string
                id = "default",      %% string identifying this instance of yaws
                enable_soap = false, %% start yaws_soap_srv iff true
