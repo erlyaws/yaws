@@ -34,30 +34,29 @@ out(A) ->
          "connection. The main focus of SOAP is remote procedure calls (RPCs) "
          "transported via HTTP. "
          "SOAP is similar to XML-RPC but makes use of XML Schema to define "
-         "the data types it is making use of. "
+         "the data types it uses. "
          ]},
 
        {h2, [], "Preparations"},
 
        {p, [],
-        ["Yaws is making use of the 'erlsom' XML Schema "
+        ["Yaws uses the 'erlsom' XML Schema "
          "parser and some SOAP specific library code. "
          "Thus, to be able to use SOAP with Yaws you need to have "
          "'erlsom' installed. Currently, the easiest way of installing "
-         "'erlsom' is to check out the library from Sourceforge and "
+         "'erlsom' is to check out the library from github.com and "
          "install it from there (you can also download a released version "
          "of erlsom and install it)."]},
 
        {p,[],"To install 'erlsom' do:"},
 
-       box("cvs -d:pserver:anonymous@erlsom.cvs.sourceforge.net:/cvsroot/erlsom login\n"
-           " cvs -z3 -d:pserver:anonymous@erlsom.cvs.sourceforge.net:/cvsroot/erlsom co -P erlsom\n"
-           "cd erlsom; ./configure; make\n"
+       box("git clone http://github.com/willemdj/erlsom.git\n"
+           "cd erlsom; chmod a+x configure; ./configure; make\n"
            "sudo make install        # iff you want to install as root\n"
           ),
           
           {p, [], 
-           "<b>Important:</b> The SOAP specific code that makes use of erlsom has some limitations "
+           "<b>Important:</b> The SOAP-specific code that makes use of erlsom has some limitations "
            "that it is important to be aware of. Only the Soap <i>'document'</i> binding "
            "style is supported. There is no support for non-soap bindings, nor for the "
            "RPC binding style. Also, only the <i>'literal'</i> encoding is supported "
@@ -158,14 +157,14 @@ out(A) ->
            "         .....\n"),
 
        {p,[],
-        "So what happend here? We specified the URL to the WSDL file. "
+        "So what happened here? We specified the URL to the WSDL file. "
         "The yaws_soap_lib:call/3 function then went to retrieve the file, parsed it, "
         "created a proper message, sent off the message, waited for the "
         "reply and finally returned a parsed reply as Erlang records. "
        },
 
        {p,[],
-        "Eventhough this was very convenient, we probably want do more thnn just one call "
+        "Even though this is very convenient, we probably want do more than just one call "
         "to the web service. So to avoid retrieving and parsing the WSDL file for every "
         "call. We can do it in two steps: "
         },
@@ -234,7 +233,7 @@ out(A) ->
         "If we want to run our own weather service we need to take the WSDL "
         "and add our own location to it. Either we can just study the WSDL file to "
         "see which URL we need to change in the 'service' part of the document, or "
-        "we can make use of some nice access functions, that work on the "
+        "we can make use of some nice access functions that work on the "
         "#wsdl{} record that yaws_soap_lib:initModel/2 returned, as shown below: "
         },
 
