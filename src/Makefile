@@ -54,6 +54,7 @@ MODULES=yaws \
 	yaws_sendfile yaws_sendfile_compat \
 	yaws_sup_restarts \
 	yaws_stats \
+	yaws_vdir \
 	yaws_multipart \
 	$(BITSMODS)
 
