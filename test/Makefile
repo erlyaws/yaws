@@ -1,6 +1,6 @@
 include support/include.mk
 
-SUBDIRS = t1 t2
+SUBDIRS = t1 t2 eunit
 
 all:	conf
 	@cd ibrowse/src; $(MAKE)
@@ -15,7 +15,7 @@ all:	conf
 
 
 
-clean: 	
+clean:
 	@cd src; $(MAKE) clean
 	@cd ibrowse/src; $(MAKE) clean
 	@set -e ; \
