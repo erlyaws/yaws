@@ -452,6 +452,11 @@ Arg #arg{} records at an early stage in the yaws server.
 This can be used to do various things such as checking a cookie,
 rewriting paths etc.
 
+The module \fIyaws_vdir\fR can be used in case you want to serve static content
+that is not located in your docroot. See the example at the bottom of this man 
+page for how to use the \fIopaque\fR + \fIvdir\fR elements to instruct the
+\fIyaws_vdir\fR module what paths to rewrite.
+
 .TP
 \fBstart_mod = Module\fR
 Defines a user provided callback module.
