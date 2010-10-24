@@ -58,7 +58,12 @@ handshake(Arg, ContentPid, SocketMode) ->
     exit(normal).
 
 handshake(ws_76, Arg, CliSock, WebSocketLocation, Origin, Protocol) ->
-    {ok, Challenge} = gen_tcp:recv(CliSock, 8),
+    {ok, Challenge} = case CliSock of
+                          {sslsocket, _, _} ->
+                              ssl:recv(CliSock, 8);
+                          _ ->
+                              gen_tcp:recv(CliSock, 8)
+                      end,
     Key1 = secret_key("sec-websocket-key1", Arg#arg.headers),
     Key2 = secret_key("sec-websocket-key2", Arg#arg.headers),
     ChallengeResponse = challenge(Key1, Key2, binary_to_list(Challenge)),
