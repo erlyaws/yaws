@@ -1247,6 +1247,7 @@ video/mpeg4-generic
 video/mpv					
 video/nv					
 video/ogg					ogv
+video/webm					webm
 video/parityfec					
 video/pointer					
 video/quicktime					qt mov
