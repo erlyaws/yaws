@@ -91,7 +91,7 @@ addFileChunk(A, [{head, {_Name, Opts}}|Res], State ) ->
 		    {done, err()}
 	    end;
 	false ->
-	    {done, err()}
+            addFileChunk(A,Res,State)
     end;
 
 addFileChunk(A, [{body, Data}|Res], State)
