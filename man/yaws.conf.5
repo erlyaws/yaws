@@ -224,6 +224,21 @@ Load specified config file.
 \fBsubconfigdir = Directory\fR
 Load all config file in specified directory.
 
+.TP
+\fBx_forwarded_for_log_proxy_whitelist = ListOfUpstreamProxyServerIps\fR
+
+In case yaws is running behind a http proxy or http load balancer it
+may be desirable to configure this proxy to put the ip address of the
+originating client into the X-Forwarded-For header and have yaws log
+this ip address as the requests source ip address instead of logging
+the proxy servers ip address over and over again. This setting allows
+to specify for which source ip addresses rewriting in this manner is
+attempted.
+
+For example if there are two proxies with the ip addresses 192.168.0.1
+and 192.168.0.2 in front of yaws, we can specify:
+
+        x_forwarded_for_log_proxy_whitelist = 192.168.0.1 192.168.0.2
 
 .SH SERVER PART
 Yaws can virthost several web servers on the same IP address as well
