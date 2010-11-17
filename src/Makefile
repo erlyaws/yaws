@@ -56,6 +56,7 @@ MODULES=yaws \
 	yaws_stats \
 	yaws_vdir \
 	yaws_multipart \
+	yaws_dime.erl \
 	$(BITSMODS)
 
 
