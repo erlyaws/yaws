@@ -740,6 +740,7 @@ path_norm(Path) ->
 path_norm_reverse("/" ++ T) -> start_dir(0, "/", T);
 path_norm_reverse(       T) -> start_dir(0,  "", T).
 
+start_dir(N, Path, [$\\|T]    ) -> start_dir(N, Path, [$/|T]);
 start_dir(N, Path, ".."       ) -> rest_dir(N, Path, "");
 start_dir(N, Path, "/"   ++ T ) -> start_dir(N    , Path, T);
 start_dir(N, Path, "./"  ++ T ) -> start_dir(N    , Path, T);
@@ -752,6 +753,7 @@ rest_dir (_N, Path, []         ) -> case Path of
                                     end;
 rest_dir (0, Path, [ $/ | T ] ) -> start_dir(0    , [ $/ | Path ], T);
 rest_dir (N, Path, [ $/ | T ] ) -> start_dir(N - 1,        Path  , T);
+rest_dir (N, Path, [ $\\ | T ] ) -> rest_dir(N, Path, [$/|T]);
 rest_dir (0, Path, [  H | T ] ) -> rest_dir (0    , [  H | Path ], T);
 rest_dir (N, Path, [  _H | T ] ) -> rest_dir (N    ,        Path  , T).
 
