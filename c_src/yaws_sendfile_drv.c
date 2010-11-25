@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+#include <ctype.h>
+#include <unistd.h>
 #if defined(__linux__)
 #include <sys/sendfile.h>
 #elif (defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__)
