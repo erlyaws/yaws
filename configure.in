@@ -89,11 +89,16 @@ fi
 AC_SUBST(ERLDIR)
 AC_SUBST(ERL_DLL_LIB)
 
-erts_vsn=`ls "${ERLDIR}" | grep ^erts | tail -1 | sed 's/erts-//'`
+erts_vsn=`ls "${ERLDIR}" | grep ^erts- | tail -1 | sed 's/erts-//'`
 ERTS_MINOR=`echo $erts_vsn | sed -e 's/^.\.//' -e 's/\..*//'`
 ERTS_MAJOR=`echo $erts_vsn | sed 's/\..*//'`
 AC_SUBST(ERTS_MINOR)
 AC_SUBST(ERTS_MAJOR)
+
+if test $ERTS_MAJOR -gt 5 -o '(' $ERTS_MAJOR -eq 5 -a $ERTS_MINOR -gt 6 ')'; then
+   BITS_SUPPORT=true
+fi
+AC_SUBST(BITS_SUPPORT)
 
 BT_ERL_LIB_VSN(erts)
 BT_ERL_LIB_VSN(kernel)

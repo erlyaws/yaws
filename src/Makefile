@@ -11,12 +11,8 @@ VSN=$(YAWS_VSN)
 
 
 ## the websocket code uses new modern bits stuff
-ifeq ($(shell test $(ERTS_MAJOR) -gt 4 && test $(ERTS_MINOR) -gt 6 && echo YES), YES)
-	HASBITS=true
-endif
-
-ifeq ($(HASBITS),true)
-	BITSMODS=yaws_websockets
+ifeq ($(BITS_SUPPORT),true)
+BITSMODS=yaws_websockets
 endif
 
 
