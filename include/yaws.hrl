@@ -102,7 +102,7 @@
                                     %% {{Mod, Func}, WsdlFile, Prefix } |
                                     %%        {{Mod, Func}, WsdlFile}
                                     %% automatically setup in yaws_soap_srv init.
-               ysession_mod = yaws_session_server
+               ysession_mod = yaws_session_server %% storage module for ysession
               }).  
 
 
