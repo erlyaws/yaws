@@ -22,6 +22,15 @@
 -define(TABLE, ysession).
 
 init_backend(Fields) ->
+    case net_kernel:get_net_ticktime() of
+        ignored ->
+            Message = "mnesia backend needs distribution (a node name)",
+            Error = {?MODULE, Message},
+            error_logger:error_msg("~p~n", [Error]),
+            exit (Error);
+        _ ->
+            ok
+    end,
     case catch mnesia:table_info(schema, where_to_write) of
         Nodes when is_list(Nodes) ->
             case catch mnesia:table_info(?TABLE, where_to_write) of

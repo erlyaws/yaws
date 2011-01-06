@@ -782,6 +782,10 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     GC2 = GC#gconf{x_forwarded_for_log_proxy_whitelist = Addrs},
                     fload(FD, globals, GC2, C, Cs, Lno+1, Next)
             end;
+        ["ysession_mod", '=', Mod_str] ->
+            Ysession_mod = list_to_atom(Mod_str),
+            fload(FD, globals, GC#gconf{ysession_mod = Ysession_mod},
+                  C, Cs, Lno+1, Next);
         ['<', "server", Server, '>'] ->  %% first server 
             fload(FD, server, GC, #sconf{servername = Server},
                   Cs, Lno+1, Next);

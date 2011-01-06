@@ -98,10 +98,11 @@
                yaws,                %% server string
                id = "default",      %% string identifying this instance of yaws
                enable_soap = false, %% start yaws_soap_srv iff true
-               soap_srv_mods = []   %% a list of 
+               soap_srv_mods = [],  %% a list of 
                                     %% {{Mod, Func}, WsdlFile, Prefix } |
                                     %%        {{Mod, Func}, WsdlFile}
                                     %% automatically setup in yaws_soap_srv init.
+               ysession_mod = yaws_session_server
               }).  
 
 

@@ -11,12 +11,12 @@
 
 %% Change this macro to test another backend storage module
 %%-define(BACKEND, ?MODULE).
--define(BACKEND, yaws_mnesia_session).
+-define(BACKEND, yaws_session_server).
 
 start() ->
     application:load(yaws),
-    application:set_env(yaws, session_back, ?BACKEND),
-    Result = yaws_session_server:start(),
+    Result = gen_server:start({local, yaws_session_server}, 
+                              yaws_session_server, ?BACKEND, []),
     ?BACKEND:cleanup(),
     Result.
 
