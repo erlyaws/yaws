@@ -182,6 +182,14 @@ when we run in normal standalone mode, we typically want the
 Erlang errorlog written to a report.log file.
 Default value is true.
 
+.TP
+\fBysession_mod = Module\fR
+Allows to specify a different Yaws session storage mechanism instead of 
+an ETS table. One of the drawbacks of the default yaws_session_server
+implementation is that server side cookies are lost when the server
+restarts.
+Specifying a different module here will pass all writes/read
+operations to this module (it must implements appropriate callbacks). 
 
 .TP
 \fBrunmod = ModuleName\fR

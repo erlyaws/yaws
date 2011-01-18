@@ -17,14 +17,23 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
 		 code_change/3]).
+
 -include("../include/yaws_api.hrl").
+-include("../include/yaws.hrl").
 
 -export([new_session/1,new_session/2,new_session/3,new_session/4,
          cookieval_to_opaque/1,
          print_sessions/0,
          replace_session/2,
          delete_session/1]).
-         
+
+%% Default ETS backend callbacks
+-export ([init_backend/1, stop_backend/0,
+          list/0, lookup/1, insert/1, delete/1,
+          traverse/1, cleanup/0]).
+
+%% Utility functions for callbacks
+-export ([has_timedout/2, report_timedout_sess/1, cookie/1]).
 
 -define(TTL, (30 * 60)).  % 30 minutes
 
@@ -36,94 +45,55 @@
          cleanup,      %% PID to notify of session end
          opaque        %% any data the user supplies
         }).
-         
+
+-record(state,
+        {backend      %% storage engine module
+        }).
 
 
 %%%----------------------------------------------------------------------
 %%% API
 %%%----------------------------------------------------------------------
 start_link() ->
+    {ok, #gconf{ysession_mod = Backend}, _} = yaws_server:getconf(),
     gen_server:start_link({local, yaws_session_server}, 
-                          yaws_session_server, [], []).
+                          yaws_session_server, Backend, []).
 start() ->
+    {ok, #gconf{ysession_mod = Backend}, _} = yaws_server:getconf(),
     gen_server:start({local, yaws_session_server}, 
-                     yaws_session_server, [], []).
+                     yaws_session_server, Backend, []).
 stop() ->
     gen_server:call(?MODULE, stop, infinity).
 
 
 %% will return a new cookie as a string
 new_session(Opaque) ->
-    gen_server:call(?MODULE, {new_session, Opaque, ?TTL, undefined}, infinity).
+    Call = {new_session, Opaque, ?TTL, undefined, undefined},
+    gen_server:call(?MODULE, Call, infinity).
 
 new_session(Opaque, TTL) ->
-    gen_server:call(?MODULE, {new_session, Opaque, TTL, undefined}, infinity).
+    Call = {new_session, Opaque, TTL, undefined, undefined},
+    gen_server:call(?MODULE, Call, infinity).
 
 new_session(Opaque, TTL, Cleanup) ->
-    case TTL of
-        undefined ->
-            gen_server:call(?MODULE, 
-                            {new_session, Opaque, ?TTL, Cleanup}, infinity);
-        _ ->
-            gen_server:call(?MODULE, 
-                            {new_session, Opaque, TTL, Cleanup}, infinity)
-    end.
+    Call = {new_session, Opaque, TTL, Cleanup, undefined},
+    gen_server:call(?MODULE, Call, infinity).
 
 new_session(Opaque, TTL, Cleanup, Cookie) ->
-    case TTL of
-        undefined ->
-            gen_server:call(?MODULE,
-                            {new_session, Opaque, ?TTL, Cleanup, Cookie}, infinity);
-        _ ->
-            gen_server:call(?MODULE,
-                            {new_session, Opaque, TTL, Cleanup, Cookie}, infinity)
-    end.
-
+    Call = {new_session, Opaque, TTL, Cleanup, Cookie},
+    gen_server:call(?MODULE, Call, infinity).
+    
 cookieval_to_opaque(Cookie) ->
-    case ets:lookup(?MODULE, Cookie) of
-        [Y] ->
-            Y2 = Y#ysession{to = gnow() + Y#ysession.ttl},
-            ets:insert(?MODULE, Y2),
-            {ok, Y#ysession.opaque};
-        [] ->
-            {error, no_session}
-    end.
-
+    gen_server:call(?MODULE, {cookieval_to_opaque, Cookie}, infinity).
 
 print_sessions() ->
-    Ss = ets:tab2list(?MODULE),
-    io:format("** ~p sessions active ~n~n", [length(Ss)]),
-    N = gnow(),
-    lists:foreach(fun(S) ->
-                          io:format("Cookie   ~p ~n", [S#ysession.cookie]),
-                          io:format("Start    ~p ~n", [S#ysession.starttime]),
-                          io:format("TTL      ~p secs~n", [S#ysession.to - N]),
-                          io:format("Opaque   ~p ~n~n~n", [S#ysession.opaque]),
-                          ok
-                  end, Ss).
-
+    gen_server:cast(?MODULE, print_sessions, infinity).
 
 replace_session(Cookie, NewOpaque) ->
-    case ets:lookup(?MODULE, Cookie) of
-        [Y] ->
-            Y2 = Y#ysession{to = gnow() + Y#ysession.ttl,
-                            opaque = NewOpaque},
-            ets:insert(?MODULE, Y2);
-        [] ->
-            error
-    end.
-
+    gen_server:call(?MODULE, {replace_session, Cookie, NewOpaque}, infinity).
 
 delete_session(CookieVal) ->
-    case ets:lookup(?MODULE, CookieVal) of
-        [Y] -> 
-            ets:delete(?MODULE, CookieVal),
-            report_deleted_sess(Y);
-        [] ->
-            true
-    end.
-            
-
+    gen_server:call(?MODULE, {delete_session, CookieVal}, infinity).
 
 %%%----------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -136,12 +106,144 @@ delete_session(CookieVal) ->
 %%          ignore               |
 %%          {stop, Reason}
 %%----------------------------------------------------------------------
-init([]) ->
+init(Backend) ->
     {X,Y,Z} = seed(),
     random:seed(X, Y, Z),
-    ets:new(?MODULE, [set, named_table, public, {keypos, 2}]),
+    Backend:init_backend(record_info(fields, ysession)),
     start_long_timer(),
-    {ok, undefined, to()}.
+    {ok, #state{backend = Backend}, to()}.
+
+%%----------------------------------------------------------------------
+%% Func: handle_call/3
+%% Returns: {reply, Reply, State}          |
+%%          {reply, Reply, State, Timeout} |
+%%          {noreply, State}               |
+%%          {noreply, State, Timeout}      |
+%%          {stop, Reason, Reply, State}   | (terminate/2 is called)
+%%          {stop, Reason, State}            (terminate/2 is called)
+%%----------------------------------------------------------------------
+
+handle_call({new_session, Opaque, undefined, Cleanup, Cookie}, From, State) ->
+    handle_call({new_session, Opaque, ?TTL, Cleanup, Cookie}, From, State);
+
+handle_call({new_session, Opaque, TTL, Cleanup, undefined}, From, State) ->
+    N = random:uniform(16#ffffffffffffffff), %% 64 bits
+    Cookie = atom_to_list(node()) ++ [$-|integer_to_list(N)],
+    handle_call({new_session, Opaque, TTL, Cleanup, Cookie}, From, State);
+
+handle_call({new_session, Opaque, TTL, Cleanup, Cookie}, _From, State) ->
+    Now = gnow(),
+    TS = calendar:local_time(),
+    NS = #ysession{cookie = Cookie,
+                   starttime = TS,
+                   opaque = Opaque,
+                   to = Now + TTL,
+                   ttl = TTL,
+                   cleanup = Cleanup},
+    Backend = State#state.backend, 
+    true = Backend:insert(NS),
+    {reply, Cookie, State, to()};
+
+handle_call({cookieval_to_opaque, Cookie}, _From, State) ->
+    Backend = State#state.backend,
+    Result =
+        case Backend:lookup(Cookie) of
+            [Y] ->
+                Y2 = Y#ysession{to = gnow() + Y#ysession.ttl},
+                Backend:insert(Y2),
+                {ok, Y#ysession.opaque};
+            [] ->
+                {error, no_session}
+        end,
+    {reply, Result, State, to()};
+
+handle_call({replace_session, Cookie, NewOpaque}, _From, State) ->
+    Backend = State#state.backend,
+    Result = 
+        case Backend:lookup(Cookie) of
+            [Y] ->
+                Y2 = Y#ysession{to = gnow() + Y#ysession.ttl,
+                                opaque = NewOpaque},
+                Backend:insert(Y2);
+            [] ->
+                error
+        end,
+    {reply, Result, State, to()};
+
+handle_call({delete_session, CookieVal}, _From, State) ->
+    Backend = State#state.backend,
+    Result =
+        case Backend:lookup(CookieVal) of
+            [Y] -> 
+                Backend:delete(CookieVal),
+                report_deleted_sess(Y);
+            [] ->
+                true
+        end,
+    {reply, Result, State, to()};
+
+handle_call(stop, From, State) ->
+    gen_server:reply(From, ok),
+    {stop, normal, State}.
+
+%%----------------------------------------------------------------------
+%% Func: handle_cast/2
+%% Returns: {noreply, State}          |
+%%          {noreply, State, Timeout} |
+%%          {stop, Reason, State}            (terminate/2 is called)
+%%----------------------------------------------------------------------
+handle_cast(print_session, #state{backend = Backend} = State) ->
+    Ss = Backend:list(Backend),
+    io:format("** ~p sessions active ~n~n", [length(Ss)]),
+    N = gnow(),
+    lists:foreach(fun(S) ->
+                          io:format("Cookie   ~p ~n", [S#ysession.cookie]),
+                          io:format("Start    ~p ~n", [S#ysession.starttime]),
+                          io:format("TTL      ~p secs~n", [S#ysession.to - N]),
+                          io:format("Opaque   ~p ~n~n~n", [S#ysession.opaque]),
+                          ok
+                  end, Ss),
+    {noreply, State, to()};
+
+handle_cast(_Msg, State) ->
+    {noreply, State, to()}.
+
+%%----------------------------------------------------------------------
+%% Func: handle_info/2
+%% Returns: {noreply, State}          |
+%%          {noreply, State, Timeout} |
+%%          {stop, Reason, State}            (terminate/2 is called)
+%%----------------------------------------------------------------------
+handle_info(timeout, #state{backend = Backend} = State) ->
+    Backend:traverse(gnow()),
+    {noreply, State, to()};
+
+handle_info(long_timeout, #state{backend = Backend} = State) ->
+    Backend:traverse(gnow()),
+    start_long_timer(),
+    {noreply, State, to()}.
+
+
+%%----------------------------------------------------------------------
+%% Func: terminate/2
+%% Purpose: Shutdown the server
+%% Returns: any (ignored by gen_server)
+%%----------------------------------------------------------------------
+terminate(_Reason, #state{backend = Backend}) ->
+    Backend:stop_backend(),
+    ok.
+
+%%----------------------------------------------------------------------
+%% Func: code_change/3
+%% Purpose: Handle upgrade
+%% Returns: new State data
+%%----------------------------------------------------------------------
+code_change(_OldVsn, Data, _Extra) ->
+    {ok, Data}.
+
+%%%----------------------------------------------------------------------
+%%% Internal functions
+%%%----------------------------------------------------------------------
 
 %% timeout once every hour even if the server handles traffic all the time.
 start_long_timer() ->
@@ -154,7 +256,6 @@ long_to() ->
 to() ->
     2 * 60 * 1000.  
 
-
 %% pretty good seed, but non portable
 seed() ->
     case (catch list_to_binary(
@@ -165,39 +266,9 @@ seed() ->
             now()
     end.
 
-
-
-%%----------------------------------------------------------------------
-%% Func: handle_call/3
-%% Returns: {reply, Reply, State}          |
-%%          {reply, Reply, State, Timeout} |
-%%          {noreply, State}               |
-%%          {noreply, State, Timeout}      |
-%%          {stop, Reason, Reply, State}   | (terminate/2 is called)
-%%          {stop, Reason, State}            (terminate/2 is called)
-%%----------------------------------------------------------------------
-
-
-handle_call({new_session, Opaque, TTL, Cleanup}, From, State) ->
-    N = random:uniform(16#ffffffffffffffff), %% 64 bits
-    Cookie = atom_to_list(node()) ++ [$-|integer_to_list(N)],
-    handle_call({new_session, Opaque, TTL, Cleanup, Cookie}, From, State);
-
-handle_call({new_session, Opaque, TTL, Cleanup, Cookie}, _From, _State) ->
-    Now = gnow(),
-    TS = calendar:local_time(),
-    NS = #ysession{cookie = Cookie,
-                   starttime = TS,
-                   opaque = Opaque,
-                   to = Now + TTL,
-                   ttl = TTL,
-                   cleanup = Cleanup},
-    ets:insert(?MODULE, NS),
-    {reply, Cookie, undefined, to()};
-
-handle_call(stop, _From, State) ->
-    {stop, stopped, State}.
-
+gnow() ->
+    calendar:datetime_to_gregorian_seconds(
+      calendar:local_time()).
 
 send_cleanup_message(Sess,Msg) ->
     case Sess#ysession.cleanup of
@@ -215,76 +286,53 @@ report_deleted_sess(S) ->
     send_cleanup_message(S,{yaws_session_end,normal,
                             S#ysession.cookie, S#ysession.opaque}).
 
+has_timedout(Y, Time) ->
+    Y#ysession.to =< Time.
 
-%%----------------------------------------------------------------------
-%% Func: handle_cast/2
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
-%%----------------------------------------------------------------------
-handle_cast(_Msg, State) ->
-    {noreply, State, to()}.
+cookie(Y) ->
+    Y#ysession.cookie.
 
-%%----------------------------------------------------------------------
-%% Func: handle_info/2
-%% Returns: {noreply, State}          |
-%%          {noreply, State, Timeout} |
-%%          {stop, Reason, State}            (terminate/2 is called)
-%%----------------------------------------------------------------------
-handle_info(timeout, _State) ->
-    trav_ets(),
-    {noreply, undefined, to()};
+%% Backend callbacks (ETS as default)
 
-handle_info(long_timeout, _State) ->
-    trav_ets(),
-    start_long_timer(),
-    {noreply, undefined, to()}.
+init_backend (_) ->
+    ets:new(?MODULE, [set, named_table, public, {keypos, 2}]).
 
-
-%%----------------------------------------------------------------------
-%% Func: terminate/2
-%% Purpose: Shutdown the server
-%% Returns: any (ignored by gen_server)
-%%----------------------------------------------------------------------
-terminate(_Reason, _State) ->
+stop_backend() ->
     ok.
 
-%%----------------------------------------------------------------------
-%% Func: code_change/3
-%% Purpose: Handle upgrade
-%% Returns: new State data
-%%----------------------------------------------------------------------
-code_change(_OldVsn, Data, _Extra) ->
-    {ok, Data}.
+lookup(Key) ->
+    ets:lookup(?MODULE, Key).
 
-%%%----------------------------------------------------------------------
-%%% Internal functions
-%%%----------------------------------------------------------------------
+insert(Session) ->
+    ets:insert(?MODULE, Session).
 
-trav_ets() ->
-    N = gnow(),
-    trav_ets(N, ets:first(?MODULE)).
+list() ->
+    ets:tab2list(?MODULE).
 
-trav_ets(_N, '$end_of_table') ->
+delete(Key) ->
+    ets:delete(?MODULE, Key).
+
+cleanup() ->
+    ets:delete_all_objects(?MODULE).
+
+traverse(N) ->
+    traverse(N, ets:first(?MODULE)).
+
+traverse(_N, '$end_of_table') ->
     ok;
-trav_ets(N, Key) ->
-    case ets:lookup(?MODULE, Key) of
+traverse(N, Key) ->
+    case lookup(Key) of
         [Y] ->
-            if
-                Y#ysession.to > N ->
-                    trav_ets(N, ets:next(?MODULE, Key));
+            case has_timedout(Y, N) of
+                false ->
+                    traverse(N, ets:next(?MODULE, Key));
                 true ->
                     report_timedout_sess(Y),
                     Next = ets:next(?MODULE, Key),
-                    ets:delete(?MODULE, Key),
-                    trav_ets(N, Next)
-                    
+                    delete(Key),
+                    traverse(N, Next)                    
             end;
         [] ->
-           trav_ets(N, ets:next(?MODULE, Key))
+           traverse(N, ets:next(?MODULE, Key))
     end.
-
-gnow() ->
-    calendar:datetime_to_gregorian_seconds(
-      calendar:local_time()).
 
