@@ -6,7 +6,7 @@ AC_INIT(Makefile)
 
 dnl work out who the cpu, vendor and OS are
 AC_CANONICAL_SYSTEM
-AC_DEFINE_UNQUOTED(CPU_VENDOR_OS, "$target")
+AC_DEFINE_UNQUOTED(CPU_VENDOR_OS, "$host")
 
 AC_ERLANG_NEED_ERL
 AC_PATH_PROG(ERL, erl)
@@ -118,7 +118,7 @@ dnl ===============================================================
 
 
 
-case "$target_os" in
+case "$host_os" in
      *cygwin*)
         WIN32=win32
             cat >> confdefs.h << EOF
@@ -200,10 +200,25 @@ dnl or use --with-extrainclude=....
 CFLAGS="$CFLAGS -I/usr/include/security"
 HAVE_SENDFILE=false
 
-case "$target_os" in
+case "$host_os" in
         *linux*)
            AC_DEFINE(LINUX)
-           LD_SHARED="$CC -shared"
+           AC_RUN_IFELSE(
+               [AC_LANG_PROGRAM([],[dnl
+                           halt(case erlang:system_info(wordsize) of
+                               8 -> 0; 4 -> 1 end)])],
+	       [AC_MSG_NOTICE(found 64-bit Erlang)
+                   case "$host_cpu" in
+                       x86_64) CBIT= ;;
+                       *) CBIT=-m64 ;;
+                   esac],
+	       [AC_MSG_NOTICE(found 32-bit Erlang)
+                   case "$host_cpu" in
+                       i?86) CBIT= ;;
+                       *) CBIT=-m32 ;;
+                   esac])
+           CFLAGS="$CFLAGS $CBIT"
+           LD_SHARED="$CC $CBIT -shared"
            AC_SUBST(LD_SHARED)
            FPIC=-fpic
            AC_SUBST(FPIC)
@@ -222,7 +237,7 @@ case "$target_os" in
 
         *bsd*)
            AC_DEFINE(BSD)
-           case "$target_os" in
+           case "$host_os" in
                 freebsd*)
                     HAVE_SENDFILE=true
                     ;;
@@ -239,7 +254,7 @@ case "$target_os" in
            ;;
          *darwin*)
            AC_CHECK_LIB([c],[sendfile],[HAVE_SENDFILE=true])
-           case "$target_os" in
+           case "$host_os" in
                darwin10*)
                    AC_LANG(Erlang)
                    AC_RUN_IFELSE(
@@ -271,7 +286,7 @@ case "$target_os" in
            ;;
         *)
            AC_MSG_RESULT(unknown)
-           AC_MSG_ERROR(Non-supported target OS!)
+           AC_MSG_ERROR(Unsupported host OS!)
            ;;
 esac
 
