@@ -79,7 +79,7 @@ AC_DEFUN([BT_ERL_LIB_VSN],
 
 
 
-ERLDIR=`"${ERL}" -noshell -eval 'io:format("~s",[[code:root_dir()]]), erlang:halt().'`
+ERLDIR=`"${ERL}" -noshell -eval 'io:format("~s~n",[[code:root_dir()]]), erlang:halt().' | tail -1`
 ERL_DLL_LIB="${ERLDIR}/usr/lib/erl_dll.lib"
 
 
