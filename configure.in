@@ -203,6 +203,7 @@ HAVE_SENDFILE=false
 case "$host_os" in
         *linux*)
            AC_DEFINE(LINUX)
+           AC_LANG(Erlang)
            AC_RUN_IFELSE(
                [AC_LANG_PROGRAM([],[dnl
                            halt(case erlang:system_info(wordsize) of
@@ -253,6 +254,7 @@ case "$host_os" in
            AC_SUBST(FPIC)
            ;;
          *darwin*)
+           AC_LANG(C)
            AC_CHECK_LIB([c],[sendfile],[HAVE_SENDFILE=true])
            case "$host_os" in
                darwin10*)
