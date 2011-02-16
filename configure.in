@@ -11,12 +11,9 @@ AC_DEFINE_UNQUOTED(CPU_VENDOR_OS, "$host")
 AC_ERLANG_NEED_ERL
 AC_PATH_PROG(ERL, erl)
 AC_PATH_PROG(ERLC, erlc)
-ERLBINDIR=`dirname "$ERL"` ; ERLBINDIR=`dirname "$ERLBINDIR"`/lib/erlang/bin
 
 AC_SUBST(ERL)
 AC_SUBST(ERLC)
-
-AC_SUBST(ERLBINDIR)
 
 AC_ARG_WITH(defaultcharset,
 AS_HELP_STRING([--with-defaultcharset=String], [specify default charset, i.e UTF-8]))
@@ -80,6 +77,7 @@ AC_DEFUN([BT_ERL_LIB_VSN],
 
 
 ERLDIR=`"${ERL}" -noshell -eval 'io:format("~s~n",[[code:root_dir()]]), erlang:halt().' | tail -1`
+ERLBINDIR="${ERLDIR}/bin"
 ERL_DLL_LIB="${ERLDIR}/usr/lib/erl_dll.lib"
 
 
@@ -87,6 +85,7 @@ if test ! -d "$ERLDIR" ; then
         AC_MSG_ERROR([Broken Erlang installation, $ERLDIR does not exist!])
 fi
 AC_SUBST(ERLDIR)
+AC_SUBST(ERLBINDIR)
 AC_SUBST(ERL_DLL_LIB)
 
 erts_vsn=`ls "${ERLDIR}" | grep ^erts- | tail -1 | sed 's/erts-//'`
