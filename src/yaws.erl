@@ -40,7 +40,8 @@
          arg_rewrite/1, to_lowerchar/1, to_lower/1, funreverse/2, is_prefix/2,
          split_sep/2, join_sep/2,
          accepts_gzip/2, upto_char/2, deepmap/2,
-         ticker/2, ticker/3]).
+         ticker/2, ticker/3,
+         parse_qvalue/1]).
 
 -export([outh_set_status_code/1,
          outh_set_non_cacheable/1,

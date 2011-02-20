@@ -315,7 +315,7 @@ read_bmres_file(Name, Check) ->
         {error, Reason} when is_atom(Reason) ->
             exit(self(), Reason); 
         {error, Reason} ->
-            exit(self(), file:format(Reason))
+            exit(self(), file:format_error(Reason))
     end.
 
 %%---------------------------------------------------------------------------
