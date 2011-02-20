@@ -144,7 +144,7 @@ bm_compile(FileName, OptionsList) ->
 %%---------------------------------------------------------------------------
 bm_cases(Module) ->
     case catch Module:benchmarks() of
-        {Iter, BmList} when integer(Iter), list(BmList) ->
+        {Iter, BmList} when is_integer(Iter), is_list(BmList) ->
             {Module, Iter, BmList};
         %% The benchmark is incorrect implemented there is no point in
         %% trying to continue
@@ -301,18 +301,18 @@ fetch_bmres_data([Name | BmResultFiles], AccResData, Check) ->
 %%---------------------------------------------------------------------------
 read_bmres_file(Name, Check) ->
     case file:consult(Name) of
-        {ok, [Check1, List]} when Check =:= undefined, integer(Check1) ->
+        {ok, [Check1, List]} when Check =:= undefined, is_integer(Check1) ->
             {List, Check1};
-        {ok, [Check, List]} when integer(Check) ->
+        {ok, [Check, List]} when is_integer(Check) ->
             {List, Check};
-        {ok, [Check1, _List]} when integer(Check1) ->
+        {ok, [Check1, _List]} when is_integer(Check1) ->
             Reason = 
                 lists:flatten(
                   io_lib:format("Different test setup, remove old setup "
                                 "result by removing *.bmres files and "
                                 "try again", [])),
             exit(self(), Reason); 
-        {error, Reason} when atom(Reason) ->
+        {error, Reason} when is_atom(Reason) ->
             exit(self(), Reason); 
         {error, Reason} ->
             exit(self(), file:format(Reason))
