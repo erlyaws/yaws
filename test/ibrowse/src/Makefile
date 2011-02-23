@@ -11,7 +11,7 @@ INCLUDE_DIRS = -I./
 
 ERLC ?= erlc
 ERLC_EMULATOR ?= erl -boot start_clean
-COMPILER_OPTIONS = -W +warn_unused_vars +nowarn_shadow_vars +warn_unused_import
+COMPILER_OPTIONS = -W +debug_info +warn_unused_vars +nowarn_shadow_vars +warn_unused_import
 
 .SUFFIXES: .erl .beam $(SUFFIXES)
 EBIN = ../ebin

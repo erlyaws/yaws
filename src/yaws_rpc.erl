@@ -260,10 +260,7 @@ encode_send(Args, StatusCode, Payload, AddOn, ID, RpcType) -> % {{{
             send(Args, StatusCode, EncodedPayload, AddOn, NewRpcType);
         {ok, EncodedPayload} ->
 %        ?Debug("rpc encoded response ~p ~n", [EncodedPayload]),
-            send(Args, StatusCode, EncodedPayload, AddOn, RpcType);
-        {error, Reason} ->
-            ?ERROR_LOG({rpc_encode, payload, Payload, Reason}),
-            send(Args, 500, RpcType)
+            send(Args, StatusCode, EncodedPayload, AddOn, RpcType)
     end. % }}}
 
 send(Args, StatusCode) -> send(Args, StatusCode, json).

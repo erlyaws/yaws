@@ -2769,8 +2769,11 @@ skip_data(Bin, Fd, Sz) when is_binary(Bin) ->
         <<Head:Sz/binary ,Tail/binary>> ->
             {Head, Tail};
         _ ->
-            case (catch file:read(Fd, 4000)) of
+            case (catch ut_read(Fd)) of
                 {ok, Bin2} when is_binary(Bin2) ->
+                    Bin3 = <<Bin/binary, Bin2/binary>>,
+                    skip_data(Bin3, Fd, Sz);
+                Bin2 when is_binary(Bin2) ->
                     Bin3 = <<Bin/binary, Bin2/binary>>,
                     skip_data(Bin3, Fd, Sz);
                 _Err ->

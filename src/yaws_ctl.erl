@@ -397,9 +397,9 @@ connect_file(CtlFile) ->
                                   {packet, 2}], 2000) of
                 {ok, Socket} ->
                     case inet:port(Socket) of
-                        Port ->
+                        {ok,Port} ->
                             {error, erefused};
-                        _ ->
+                        _X ->
                             {ok, Socket, Key}
                     end;
                 Err ->

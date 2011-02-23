@@ -87,7 +87,7 @@ cookieval_to_opaque(Cookie) ->
     gen_server:call(?MODULE, {cookieval_to_opaque, Cookie}, infinity).
 
 print_sessions() ->
-    gen_server:cast(?MODULE, print_sessions, infinity).
+    gen_server:cast(?MODULE, print_sessions).
 
 replace_session(Cookie, NewOpaque) ->
     gen_server:call(?MODULE, {replace_session, Cookie, NewOpaque}, infinity).
