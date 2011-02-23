@@ -467,11 +467,9 @@ u_insert(E, [H|T]) -> [H|u_insert(E,T)];
 u_insert(E, [])    -> [E].
 
 
-i2l(I) when is_integer(I) -> integer_to_list(I);
-i2l(L) when is_list(L)    -> L.
+i2l(I) when is_integer(I) -> integer_to_list(I).
 
-a2l(A) when is_atom(A) -> atom_to_list(A);
-a2l(L) when is_list(L) -> L.
+a2l(A) when is_atom(A) -> atom_to_list(A).
 
      
     
