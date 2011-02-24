@@ -1770,9 +1770,7 @@ ensure_exist(Path) ->
 %%
 
 do_recv(Sock, Num, nossl) ->
-    X=gen_tcp:recv(Sock, Num, (get(gc))#gconf.keepalive_timeout),
-    io:format("X = ~p~n", [X]),
-    X;
+    gen_tcp:recv(Sock, Num, (get(gc))#gconf.keepalive_timeout);
 do_recv(Sock, Num, ssl) ->
     ssl:recv(Sock, Num, (get(gc))#gconf.keepalive_timeout).
 
