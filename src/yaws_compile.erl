@@ -457,34 +457,23 @@ get_line_from_chars([H|T], Line) ->
 %% From compile.erl in order to print proper error/warning messages
 %% if compiled with check option.
 report_errors(C, Errors) ->
-    Check = true,
-    case Check of
-        true ->
-            File = "./" ++ filename:basename(C#comp.infile),
-            SLine = C#comp.startline - 10,
-            lists:foreach(fun ({{_F,_L},Eds}) -> list_errors(File, SLine, Eds);
-                              ({_F,Eds})      -> list_errors(File, SLine, Eds)
-                          end, Errors);
-        false ->
-            ok
-    end.
+    File = "./" ++ filename:basename(C#comp.infile),
+    SLine = C#comp.startline - 10,
+    lists:foreach(fun ({{_F,_L},Eds}) -> list_errors(File, SLine, Eds);
+                      ({_F,Eds})      -> list_errors(File, SLine, Eds)
+                  end, Errors).
 
 report_warnings(C, Ws0) ->
-    Check = true,
-    case Check of
-        true ->
-            File = "./" ++ filename:basename(C#comp.infile),
-            SLine = C#comp.startline - 10,
-            Ws1 = lists:flatmap(fun({{_F,_L},Eds}) ->
-                                        format_message(File, SLine, Eds);
-                                   ({_F,Eds}) ->
-                                        format_message(File, SLine, Eds)
-                                end,
-                                Ws0),
-            Ws = ordsets:from_list(Ws1),
-            lists:foreach(fun({_,Str}) -> io:put_chars(Str) end, Ws);
-        false -> ok
-    end.
+    File = "./" ++ filename:basename(C#comp.infile),
+    SLine = C#comp.startline - 10,
+    Ws1 = lists:flatmap(fun({{_F,_L},Eds}) ->
+                            format_message(File, SLine, Eds);
+                           ({_F,Eds}) ->
+                            format_message(File, SLine, Eds)
+                        end,
+                        Ws0),
+    Ws = ordsets:from_list(Ws1),
+    lists:foreach(fun({_,Str}) -> io:put_chars(Str) end, Ws).
 
 format_message(F, SLine, [{Line0,Mod,E}|Es]) ->
     Line = Line0 + SLine,
