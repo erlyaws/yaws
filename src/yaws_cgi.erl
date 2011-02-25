@@ -1241,42 +1241,30 @@ fcgi_receive_record(WorkerState) ->
         OtherType ->
             throw({"received unexpected type", OtherType})
     end,
-    Content = case ContentLength of
-                  0 ->
-                      {ok, <<>>};
-                  _ ->
-                      fcgi_receive_binary(WorkerState, ContentLength,
-                                          ?FCGI_READ_TIMEOUT_MSECS)
-              end,
-    case Content of
-        {error, Reason} ->
-            fcgi_worker_fail(WorkerState,
-                             {"unable to read content data", Reason});
-        {ok, ContentData} ->
-            case PaddingLength of
-                0 ->
-                    {Type, ContentData};
-                _ ->
-                    case fcgi_receive_binary(WorkerState, PaddingLength,
-                                             ?FCGI_READ_TIMEOUT_MSECS) of
-                        {error, Reason} ->
-                            fcgi_worker_fail(
-                              WorkerState,
-                              {"unable to read record padding data", Reason});
-                        {ok, PaddingData} ->
-                            fcgi_trace_protocol(WorkerState, "Receive",
-                                                Version, Type, RequestId,
-                                                ContentLength, PaddingLength,
-                                                Reserved, ContentData,
-                                                PaddingData),
-                            {Type, ContentData}
-                    end
-            end
+    ContentData = case ContentLength of
+                      0 ->
+                          {ok, <<>>};
+                      _ ->
+                          fcgi_receive_binary(WorkerState, ContentLength,
+                                              ?FCGI_READ_TIMEOUT_MSECS)
+                  end,
+    case PaddingLength of
+        0 ->
+            {Type, ContentData};
+        _ ->
+            PaddingData = fcgi_receive_binary(WorkerState, PaddingLength,
+                                              ?FCGI_READ_TIMEOUT_MSECS),
+            fcgi_trace_protocol(WorkerState, "Receive",
+                                Version, Type, RequestId,
+                                ContentLength, PaddingLength,
+                                Reserved, ContentData,
+                                PaddingData),
+            {Type, ContentData}
     end.
 
 
 fcgi_receive_binary(_WorkerState, Length, _Timeout) when Length == 0 ->
-    {ok, <<>>};
+    <<>>;
 fcgi_receive_binary(WorkerState, Length, Timeout) ->
     AppServerSocket = WorkerState#fcgi_worker_state.app_server_socket,
     case gen_tcp:recv(AppServerSocket, Length, Timeout) of
@@ -1284,7 +1272,7 @@ fcgi_receive_binary(WorkerState, Length, Timeout) ->
             fcgi_worker_fail(WorkerState,
                              {"recv from application server failed", Reason});
         {ok, Data} ->
-            {ok, Data}
+            Data
     end.
 
 

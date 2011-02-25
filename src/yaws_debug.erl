@@ -440,7 +440,7 @@ display_info(Pid, {R,M,H,St,S1,S2,S3,Fd}) ->
             Heap = fetch(heap_size, Info),
             Stack = fetch(stack_size, Info),
             Mem = case process_info(Pid, memory) of
-                      false -> 0;
+                      undefined -> 0;
                       {memory, Int} -> Int
                   end,
             iformat(Fd,
@@ -526,7 +526,7 @@ display_susp3(Fd, {Pid, _Mem}) ->
 	    ok;
         {_, {current_function,{yaws_debug,display_susp3,2}}} ->
             ok;
-	{memory, Mem2} when Mem2 > ?MEM_LARGE ->
+	{{memory, Mem2}, _} when Mem2 > ?MEM_LARGE ->
             %% it's still too big
 	    case process_info(Pid, backtrace) of
 		{backtrace, Bin} ->

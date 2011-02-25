@@ -250,13 +250,13 @@ out(A) ->
 %%                     {streamcontent, "application/gzip", ""}
     end.
 
-mkrandbytes(0, Acc) ->
-    Acc;
-mkrandbytes(N, Acc) when is_integer(N), N > 0 ->
-    I = random:uniform(256) - 1,
-    << Acc/binary, I:8/unsigned-big-integer >>.
+
+
 mkrandbytes(N) ->
-    mkrandbytes(N, <<>>).
+    list_to_binary(lists:map(fun(N) ->
+                                     I = random:uniform(256) - 1
+                             end, lists:seq(1,N))).
+
 
 generate_random_fn() ->
     Bytes = try crypto:rand_bytes(64) of
