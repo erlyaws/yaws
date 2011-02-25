@@ -253,8 +253,8 @@ out(A) ->
 
 
 mkrandbytes(N) ->
-    list_to_binary(lists:map(fun(N) ->
-                                     I = random:uniform(256) - 1
+    list_to_binary(lists:map(fun(_) ->
+                                     random:uniform(256) - 1
                              end, lists:seq(1,N))).
 
 
