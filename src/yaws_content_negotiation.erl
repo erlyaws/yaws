@@ -27,8 +27,8 @@ compute_rsva(Arg, VariantList) ->
             URI
     end.
 
-get_other_header(Name, Headers#headers.other) ->
-    case lists:keysearch(Name, 3, Headers) of
+get_other_header(Name, Headers) ->
+    case lists:keysearch(Name, 3, Headers#headers.other) of
         {value, {_,_,Name,_,Field}} -> Field;
         false -> undefined
     end.
