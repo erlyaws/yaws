@@ -91,7 +91,7 @@ add_yaws_soap_srv(GC, true) when GC#gconf.enable_soap == true ->
     case whereis(yaws_soap_srv) of
         undefined ->
             spawn(fun() -> supervisor:start_child(yaws_sup, hd(Spec)) end);
-       true ->
+       _ ->
             ok
     end,
     Spec;
