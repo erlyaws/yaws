@@ -251,19 +251,13 @@ out(A) ->
     end.
 
 
-
-mkrandbytes(N) ->
-    list_to_binary(lists:map(fun(_) ->
-                                     random:uniform(256) - 1
-                             end, lists:seq(1,N))).
-
-
 generate_random_fn() ->
     Bytes = try crypto:rand_bytes(64) of
                 B when is_bitstring(B) ->
                     B
             catch _:_ ->
-                    mkrandbytes(64)
+                    %% for installations without crypto
+                    << <<(random:uniform(256) - 1)>> || _ <- lists:seq(1,64) >>
             end,
     << Int:512/unsigned-big-integer >> = << Bytes/binary >>,
     integer_to_list(Int).
