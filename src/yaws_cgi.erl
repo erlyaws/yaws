@@ -617,29 +617,32 @@ cgi_add_resp(Bin, Port) ->
 -define(FCGI_VERSION_1, 1).
 
 -define(FCGI_TYPE_BEGIN_REQUEST, 1).
--define(FCGI_TYPE_ABORT_REQUEST, 2).
+%%% Not needed yet
+%%%-define(FCGI_TYPE_ABORT_REQUEST, 2).
 -define(FCGI_TYPE_END_REQUEST, 3).
 -define(FCGI_TYPE_PARAMS, 4).
 -define(FCGI_TYPE_STDIN, 5).
 -define(FCGI_TYPE_STDOUT, 6).
 -define(FCGI_TYPE_STDERR, 7).
--define(FCGI_TYPE_DATA, 8).
--define(FCGI_TYPE_GET_VALUES, 9).
--define(FCGI_TYPE_GET_VALUES_RESULT, 10).
+%%% Not needed yet
+%%%-define(FCGI_TYPE_DATA, 8).
+%%%-define(FCGI_TYPE_GET_VALUES, 9).
+%%%-define(FCGI_TYPE_GET_VALUES_RESULT, 10).
 -define(FCGI_TYPE_UNKNOWN_TYPE, 11).
 
 fcgi_type_name(?FCGI_TYPE_BEGIN_REQUEST) -> "begin-request";
-fcgi_type_name(?FCGI_TYPE_ABORT_REQUEST) -> "abort-request";
+%%% Not needed yet
+%%%fcgi_type_name(?FCGI_TYPE_ABORT_REQUEST) -> "abort-request";
 fcgi_type_name(?FCGI_TYPE_END_REQUEST) -> "end-request";
 fcgi_type_name(?FCGI_TYPE_PARAMS) -> "params";
 fcgi_type_name(?FCGI_TYPE_STDIN) -> "stdin";
 fcgi_type_name(?FCGI_TYPE_STDOUT) -> "stdout";
 fcgi_type_name(?FCGI_TYPE_STDERR) -> "stderr";
-fcgi_type_name(?FCGI_TYPE_DATA) -> "data";
-fcgi_type_name(?FCGI_TYPE_GET_VALUES) -> "get_values";
-fcgi_type_name(?FCGI_TYPE_GET_VALUES_RESULT) -> "get_values_result";
-fcgi_type_name(?FCGI_TYPE_UNKNOWN_TYPE) -> "unknown-type";
-fcgi_type_name(_) -> "?".
+%%% Not needed yet
+%%%fcgi_type_name(?FCGI_TYPE_DATA) -> "data";
+%%%fcgi_type_name(?FCGI_TYPE_GET_VALUES) -> "get_values";
+%%%fcgi_type_name(?FCGI_TYPE_GET_VALUES_RESULT) -> "get_values_result";
+fcgi_type_name(?FCGI_TYPE_UNKNOWN_TYPE) -> "unknown-type".
 
 %%% The FCGI implementation does not support handling concurrent requests
 %%% over a connection; it creates a separate connection for each
@@ -873,11 +876,13 @@ fcgi_connect_to_application_server(WorkerState, Host, Port) ->
 
 
 fcgi_send_begin_request(WorkerState) ->
-    KeepConnection = WorkerState#fcgi_worker_state.keep_connection,
-    Flags = case KeepConnection of
-                true -> ?FCGI_KEEP_CONN;
-                false -> ?FCGI_DONT_KEEP_CONN
-            end,
+    %% Not needed yet -- keep_connection is currently hard-coded to false
+    %%KeepConnection = WorkerState#fcgi_worker_state.keep_connection,
+    %%Flags = case KeepConnection of
+    %%            true -> ?FCGI_KEEP_CONN;
+    %%            false -> ?FCGI_DONT_KEEP_CONN
+    %%        end,
+    Flags = ?FCGI_DONT_KEEP_CONN,
     Role = WorkerState#fcgi_worker_state.role,
     fcgi_send_record(WorkerState, ?FCGI_TYPE_BEGIN_REQUEST,
                      ?FCGI_REQUEST_ID_APPLICATION, <<Role:16, Flags:8, 0:40>>).
@@ -1198,15 +1203,12 @@ fcgi_get_output(WorkerState) ->
             fcgi_worker_fail(
               WorkerState,
               {"application did not understand record type we sent",
-               UnknownType});
-        OtherType ->
-            fcgi_worker_fail(WorkerState,
-                             {"received unknown record type", OtherType})
+               UnknownType})
     end.
 
 
 fcgi_receive_record(WorkerState) ->
-    {ok, Header} = fcgi_receive_binary(WorkerState, 8, ?FCGI_READ_TIMEOUT_MSECS),
+    Header = fcgi_receive_binary(WorkerState, 8, ?FCGI_READ_TIMEOUT_MSECS),
     <<Version:8, Type:8, RequestId:16, ContentLength:16,
       PaddingLength:8, Reserved:8>> = Header,
     fcgi_worker_fail_if(Version /= 1, WorkerState,
@@ -1243,7 +1245,7 @@ fcgi_receive_record(WorkerState) ->
     end,
     ContentData = case ContentLength of
                       0 ->
-                          {ok, <<>>};
+                          <<>>;
                       _ ->
                           fcgi_receive_binary(WorkerState, ContentLength,
                                               ?FCGI_READ_TIMEOUT_MSECS)
