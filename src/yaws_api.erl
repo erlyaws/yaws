@@ -401,89 +401,46 @@ merge_lines_822([Line|Lines], Acc) ->
 %% which is used for file upload
 
 parse_post_data_urlencoded(Bin) ->
-    parse_post_data_urlencoded(Bin, ['ALLSTRINGS']).
+    do_parse_spec(Bin, nokey, [], key).
 
-parse_post_data_urlencoded(Bin, Spec) ->
-    do_parse_spec(Bin, Spec, nokey, [], key).
-
-%% Spec is a typelist of the types we expect
-%% acceptable types are
-
-%% int
-%% float
-%% string
-%% ip
-%% binary
-%% checkbox
-%% 'ALLSTRINGS' 
-
-%% special value ['ALLSTRINGS'] can be used in order to denote that
-%% the remainder of the args are all strings
 
 %% It will return a [{Key, Value}] list from the post data
-%% with the same length as the Spec or EXIT
-%% special value undefined is reserverd for non set fields
-%% Key wil always be a regular atom.
-do_parse_spec(<<$%, Hi:8, Lo:8, Tail/binary>>, Spec, Last, Cur, State) 
+
+do_parse_spec(<<$%, Hi:8, Lo:8, Tail/binary>>, Last, Cur, State) 
     when Hi /= $u ->
     Hex = yaws:hex_to_integer([Hi, Lo]),
-    do_parse_spec(Tail, Spec, Last, [ Hex | Cur],  State);
+    do_parse_spec(Tail, Last, [ Hex | Cur],  State);
                
-do_parse_spec(<<$&, Tail/binary>>, Spec, _Last , Cur,  key) ->
+do_parse_spec(<<$&, Tail/binary>>, _Last , Cur,  key) ->
     [{lists:reverse(Cur), undefined} |
-     do_parse_spec(Tail, Spec, nokey, [], key)];  %% cont keymode
+     do_parse_spec(Tail, nokey, [], key)];  %% cont keymode
 
-do_parse_spec(<<$&, Tail/binary>>, Spec, Last, Cur, value) ->
-    [S|Ss] = tail_spec(Spec),
-    V = {Last, coerce_type(S, Cur)},
-    [V | do_parse_spec(Tail, Ss, nokey, [], key)];
+do_parse_spec(<<$&, Tail/binary>>, Last, Cur, value) ->
+    V = {Last, lists:reverse(Cur)},
+    [V | do_parse_spec(Tail, nokey, [], key)];
 
-do_parse_spec(<<$+, Tail/binary>>, Spec, Last, Cur,  State) ->
-    do_parse_spec(Tail, Spec, Last, [$\s|Cur], State);
+do_parse_spec(<<$+, Tail/binary>>, Last, Cur,  State) ->
+    do_parse_spec(Tail, Last, [$\s|Cur], State);
 
-do_parse_spec(<<$=, Tail/binary>>, Spec, _Last, Cur, key) ->
-    do_parse_spec(Tail, Spec, lists:reverse(Cur), [], value); %% change mode
+do_parse_spec(<<$=, Tail/binary>>, _Last, Cur, key) ->
+    do_parse_spec(Tail, lists:reverse(Cur), [], value); %% change mode
 
 do_parse_spec(<<$%, $u, A:8, B:8,C:8,D:8, Tail/binary>>, 
-	       Spec, Last, Cur, State) ->
+	       Last, Cur, State) ->
     %% non-standard encoding for Unicode characters: %uxxxx,		     
     Hex = yaws:hex_to_integer([A,B,C,D]),
-    do_parse_spec(Tail, Spec, Last, [ Hex | Cur],  State);
+    do_parse_spec(Tail, Last, [ Hex | Cur],  State);
 
-do_parse_spec(<<H:8, Tail/binary>>, Spec, Last, Cur, State) ->
-    do_parse_spec(Tail, Spec, Last, [H|Cur], State);
-do_parse_spec(<<>>, _Spec, nokey, Cur, _State) ->
+do_parse_spec(<<H:8, Tail/binary>>, Last, Cur, State) ->
+    do_parse_spec(Tail, Last, [H|Cur], State);
+do_parse_spec(<<>>, nokey, Cur, _State) ->
     [{lists:reverse(Cur), undefined}];
-do_parse_spec(<<>>, Spec, Last, Cur, _State) ->
-    [S|_Ss] = tail_spec(Spec),
-    [{Last, coerce_type(S, Cur)}];
-do_parse_spec(undefined,_,_,_,_) ->
+do_parse_spec(<<>>, Last, Cur, _State) ->
+    [{Last, lists:reverse(Cur)}];
+do_parse_spec(undefined,_,_,_) ->
     [];
-do_parse_spec(QueryList, Spec, Last, Cur, State) when is_list(QueryList) ->
-    do_parse_spec(list_to_binary(QueryList), Spec, Last, Cur, State).
-
-
-tail_spec(['ALLSTRINGS']) ->
-    [string, 'ALLSTRINGS'];
-tail_spec(L) ->
-    L.
-
-coerce_type(_, []) ->
-    undefined;
-coerce_type(int, Str) ->
-    list_to_integer(lists:reverse(Str));
-coerce_type(float, Str) ->
-    list_to_float(lists:reverse(Str));
-coerce_type(string, Str) ->
-    lists:reverse(Str);
-coerce_type(checkbox, "no") ->
-    on;
-coerce_type(checkbox, _Str) ->
-    off;
-coerce_type(ip, _Str) ->
-    erlang:error(nyi_ip);
-coerce_type(binary, Str) ->
-    list_to_binary(lists:reverse(Str)).
+do_parse_spec(QueryList, Last, Cur, State) when is_list(QueryList) ->
+    do_parse_spec(list_to_binary(QueryList), Last, Cur, State).
 
 
 code_to_phrase(100) -> "Continue";
