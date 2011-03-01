@@ -367,7 +367,7 @@ scan_chars(Chars, Type) ->
             Other
     end.
 
-scan_chars(eof, A, _NumLeft) ->
+scan_chars([eof|_], A, _NumLeft) ->
     {done, {error, premature_eof}, A};
 scan_chars(Rest, A, 0) ->
     {done, {ok, lists:reverse(A)}, Rest};

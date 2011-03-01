@@ -1203,10 +1203,6 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
             Err
     end;
 
-fload(FD, rss, _GC, _C, _Cs, Lno, eof) ->
-    file:close(FD),
-    {error, ?F("Unexpected end of file at line ~w", [Lno])};
-
 fload(FD, rss, GC, C, Cs, Lno, Chars) ->
     %%?Debug("Chars: ~s", [Chars]),
     Next = io:get_line(FD, ''),
@@ -1244,10 +1240,6 @@ fload(FD, rss, GC, C, Cs, Lno, Chars) ->
         Err ->
             Err
     end;
-
-fload(FD, opaque, _GC, _C, _Cs, Lno, eof) ->
-    file:close(FD),
-    {error, ?F("Unexpected end of file at line ~w", [Lno])};
 
 fload(FD, opaque, GC, C, Cs, Lno, Chars) ->
     %%?Debug("Chars: ~s", [Chars]),
