@@ -221,7 +221,7 @@ static void yaws_sendfile_drv_output(ErlDrvData handle, char* buf, int buflen)
         xfer->offset = get_int64(&(b.args->offset.offset));
         xfer->count = get_int64(&(b.args->count.size));
         xfer->total = 0;
-#ifdef ERL_DRV_USE
+#if defined(ERL_DRV_USE) && defined(ERL_DRV_WRITE)
         driver_select(d->port, sfd.ev_data, ERL_DRV_USE|ERL_DRV_WRITE, 1);
 #else
         driver_select(d->port, sfd.ev_data, DO_WRITE, 1);
@@ -259,8 +259,8 @@ static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
         Buffer b;
         b.buffer = buf;
         memset(buf, 0, sizeof buf);
-#ifdef ERL_DRV_USE
-        driver_select(d->port, ev, ERL_DRV_USE|ERL_DRV_WRITE, 0);
+#ifdef ERL_DRV_WRITE
+        driver_select(d->port, ev, ERL_DRV_WRITE, 0);
 #else
         driver_select(d->port, ev, DO_WRITE, 0);
 #endif
