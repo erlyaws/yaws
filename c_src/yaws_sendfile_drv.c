@@ -147,40 +147,36 @@ static size_t set_error_buffer(Buffer* b, int socket_fd, int err)
     return result_size - 1 + t - b->result->errno_string;
 }
 
-static ssize_t yaws_sendfile_call(int out_fd, int in_fd, off_t* offset, size_t count)
+static ssize_t yaws_sendfile_call(int out_fd, int in_fd,
+                                  off_t* offset, size_t count)
 {
 #if defined(__linux__)
     off_t cur = *offset;
-    ssize_t retval;
-    do {
-        retval = sendfile(out_fd, in_fd, offset, count);
-    } while (retval < 0 && errno == EINTR);
+    ssize_t retval = sendfile(out_fd, in_fd, offset, count);
     if (retval >= 0 && retval != count) {
         if (*offset == cur) {
             *offset += retval;
         }
         retval = -1;
 	errno = EAGAIN;
+    } else if (retval < 0 && errno == EINTR) {
+        errno = EAGAIN;
     }
     return retval;
 #elif defined(__APPLE__) && defined(__MACH__)
     off_t len = count;
-    int retval;
-    do {
-        retval = sendfile(in_fd, out_fd, *offset, &len, NULL, 0);
-    } while (retval < 0 && errno == EINTR);
-    if (retval < 0 && errno == EAGAIN) {
+    int retval = sendfile(in_fd, out_fd, *offset, &len, NULL, 0);
+    if (retval < 0 && (errno == EAGAIN || errno == EINTR)) {
         *offset += len;
+        errno = EAGAIN;
     }
     return retval == 0 ? len : retval;
 #elif defined(__FreeBSD__)
     off_t len = 0;
-    int retval;
-    do {
-        retval = sendfile(in_fd, out_fd, *offset, count, NULL, &len, 0);
-    } while (retval < 0 && errno == EINTR);
-    if (retval < 0 && errno == EAGAIN) {
+    int retval = sendfile(in_fd, out_fd, *offset, count, NULL, &len, 0);
+    if (retval < 0 && (errno == EAGAIN || errno == EINTR)) {
         *offset += len;
+        errno = EAGAIN;
     }
     return retval == 0 ? len : retval;
 #else
@@ -225,7 +221,11 @@ static void yaws_sendfile_drv_output(ErlDrvData handle, char* buf, int buflen)
         xfer->offset = get_int64(&(b.args->offset.offset));
         xfer->count = get_int64(&(b.args->count.size));
         xfer->total = 0;
+#ifdef ERL_DRV_USE
+        driver_select(d->port, sfd.ev_data, ERL_DRV_USE|ERL_DRV_WRITE, 1);
+#else
         driver_select(d->port, sfd.ev_data, DO_WRITE, 1);
+#endif
     }
 }
 
@@ -247,9 +247,11 @@ static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
     result = yaws_sendfile_call(sfd->socket_fd, xfer->file_fd,
                                 &xfer->offset, xfer->count);
     if (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-        off_t written = xfer->offset - cur_offset;
-        xfer->count -= written;
-        xfer->total += written;
+        if (xfer->offset != cur_offset) {
+            off_t written = xfer->offset - cur_offset;
+            xfer->count -= written;
+            xfer->total += written;
+        }
     } else {
         int save_errno = errno;
         int out_buflen;
@@ -257,7 +259,11 @@ static void yaws_sendfile_drv_ready_output(ErlDrvData handle, ErlDrvEvent ev)
         Buffer b;
         b.buffer = buf;
         memset(buf, 0, sizeof buf);
+#ifdef ERL_DRV_USE
+        driver_select(d->port, ev, ERL_DRV_USE|ERL_DRV_WRITE, 0);
+#else
         driver_select(d->port, ev, DO_WRITE, 0);
+#endif
         close(xfer->file_fd);
         if (result < 0) {
             out_buflen = set_error_buffer(&b, sfd->socket_fd, save_errno);
