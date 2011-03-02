@@ -367,13 +367,10 @@ scan_chars(Chars, Type) ->
             Other
     end.
 
-scan_chars([eof|_], A, _NumLeft) ->
-    {done, {error, premature_eof}, A};
 scan_chars(Rest, A, 0) ->
     {done, {ok, lists:reverse(A)}, Rest};
 scan_chars([$\\] = Chars, _A, 0) ->
     {done, {error, missing_escape_character}, Chars};
-
 scan_chars([$\\, C | Rest], A, NumLeft) ->
     scan_chars(Rest, [esc_to_char(C) | A], NumLeft - 2);
 scan_chars([C | Rest], A, NumLeft) ->
