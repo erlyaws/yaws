@@ -23,9 +23,10 @@ setup:
 	@mkdir logs
 
 start:	setup
-	$(YTOP)/bin/yaws -sname test --daemon --id testid --conf ./yaws.conf
-	$(YTOP)/bin/yaws --id testid --wait-started
-
+	set -e ; if [ -f ./yaws.conf ]; then \
+	  $(YTOP)/bin/yaws -sname test --daemon --id testid --conf ./yaws.conf; \
+	  $(YTOP)/bin/yaws --id testid --wait-started; \
+	fi
 
 ## Interactive node
 i:
@@ -49,10 +50,8 @@ stop:
 
 stdconf:
 	cat ../conf/stdconf.conf | \
-	../../scripts/Subst %YTOP% $(YTOP) \
-   	> yaws.conf
+	../../scripts/Subst %YTOP% $(YTOP) > yaws.conf
 
 authconf:
 	cat ../conf/authconf.conf | \
-	../../scripts/Subst %YTOP% $(YTOP) \
-  	> yaws.conf
+	../../scripts/Subst %YTOP% $(YTOP) > yaws.conf
