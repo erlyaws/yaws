@@ -32,7 +32,7 @@ init([]) ->
     YawsRSS = {yaws_rss, 
                {yaws_rss, start_link, []},
                permanent, 5000, worker, [yaws_rss]},
-    
+
 
     YawsEventManager = {yaws_event_manager, 
                         {gen_event, start_link,[{local,yaws_event_manager}]},

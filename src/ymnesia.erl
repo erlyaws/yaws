@@ -76,7 +76,8 @@ select_fields([])                  -> [].
 
 select_pattern(Name, Ls) ->
     Wp = ?MNESIA(table_info, [l2a(Name), wild_pattern]),
-    mk_select_pattern(map(fun(A) -> a2l(A) end,get_attributes(l2a(Name))), Ls, Wp, 2).
+    mk_select_pattern(map(fun(A) -> a2l(A) end,get_attributes(l2a(Name))), 
+                      Ls, Wp, 2).
 
 mk_select_pattern([A|As], [{A,V}|T], Wp, N) ->
     mk_select_pattern(As, T, setelement(N, Wp, be_smart(V)), N+1);
@@ -89,13 +90,13 @@ mk_select_pattern([], [], Wp, _) ->
 %%% could be expected. Note: atom is anything between single quotes.
 be_smart([$'|T])     -> l2a(eat_until($', T));
 be_smart([$[|_] = L) -> str2term(L);
-         be_smart([${|_] = L) -> str2term(L);
-                  be_smart(L) ->
-                         case be_smart(L, false) of
-                             integer -> list_to_integer(L);
-                             float   -> list_to_float(L);
-                             _       -> L
-                         end.
+be_smart([${|_] = L) -> str2term(L);
+be_smart(L) ->
+    case be_smart(L, false) of
+        integer -> list_to_integer(L);
+        float   -> list_to_float(L);
+        _       -> L
+    end.
 
 eat_until(H, [H|_]) -> [];
 eat_until(X, [H|T]) -> [H|eat_until(X,T)].
@@ -116,7 +117,7 @@ return_top_page() ->
     {ehtml,
      [{head, [],
        [meta() ++
-        style()]},
+            style()]},
       {body, [],
        mk_table_tab()}]}.
 
@@ -153,7 +154,7 @@ table(Cbox, Sp, Table) when is_atom(Table) ->
             {ehtml,
              [{head, [],
                [meta() ++
-                style()]},
+                    style()]},
               {body, [],
                [{'div', [],
                  {p, [], "Query: "++Q}},

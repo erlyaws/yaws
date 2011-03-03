@@ -11,7 +11,7 @@ out(ARG) ->
     [
      {html, 
       "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">
-<html>
+     <html>
       <head>
       <style type=\"text/css\">
                                         table {border-collapse: collapse; }
@@ -20,8 +20,8 @@ out(ARG) ->
       </style>
       </head>
       "},
-        {ehtml,
-         [
+     {ehtml,
+      [
           {body,[], 
            [
             {h4,[], "ARG information"},

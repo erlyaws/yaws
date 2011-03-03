@@ -128,8 +128,8 @@ handle_call({setdir, GC, Sconfs}, _From, State)
                   FileName = case os:type() of
                                  {win32,_ } ->
                                      lists:map(fun($:) -> $.;
-                                                              (C ) -> C
-                                                       end,
+                                                  (C ) -> C
+                                               end,
                                                SC#sconf.servername);
                                  _ ->
                                      SC#sconf.servername
@@ -395,8 +395,8 @@ handle_info(minute10, State) ->
     E = filename:join([Dir, "report.log"]),
     case file:read_file_info(E) of
         {ok, FI} when  State#state.log_wrap_size > 0, 
-        FI#file_info.size > State#state.log_wrap_size, 
-        State#state.copy_errlog == true ->
+                       FI#file_info.size > State#state.log_wrap_size, 
+                       State#state.copy_errlog == true ->
             gen_event:call(error_logger, yaws_log_file_h, wrap, infinity);
         {error,enoent} ->
             gen_event:call(error_logger, yaws_log_file_h, reopen, infinity);
@@ -413,7 +413,7 @@ handle_info({'EXIT', _, _}, State) ->
 wrap_p(AL, State) when is_record(AL, alog) ->
     case file:read_file_info(AL#alog.filename) of
         {ok, FI} when FI#file_info.size > State#state.log_wrap_size,
-        State#state.log_wrap_size > 0 ->
+                      State#state.log_wrap_size > 0 ->
             true;
         {ok, _FI} ->
             false;
@@ -449,9 +449,6 @@ wrap(AL, State) ->
     end.
 
 
-
-
-
 %%----------------------------------------------------------------------
 %% Func: terminate/2
 %% Purpose: Shutdown the server
@@ -477,7 +474,8 @@ code_change(_OldVsn, Data, _Extra) ->
 
 fmt_alog(Time, Ip, User, Req, Status,  Length, Referrer, UserAgent) ->
     [fmt_ip(Ip), " - ", User, [$\s], Time, [$\s, $"], no_ctl(Req), [$",$\s], 
-     Status, [$\s], Length, [$\s,$"], Referrer, [$",$\s,$"], UserAgent, [$",$\n]].
+     Status, [$\s], Length, [$\s,$"], Referrer, [$",$\s,$"], UserAgent, 
+     [$",$\n]].
 
 
 %% Odd security advisory that only affects webservers where users are 
@@ -503,8 +501,9 @@ fmtnow() ->
     {{Year, Month, Day}, {Hour, Min, Sec}} = 
         calendar:now_to_local_time(now()),
     ["[",fill_zero(Day,2),"/",yaws:month(Month),"/",integer_to_list(Year),":",
-     fill_zero(Hour,2),":",fill_zero(Min,2),":",fill_zero(Sec,2)," ",zone(),"]"].
-    
+     fill_zero(Hour,2),":",fill_zero(Min,2),":",
+     fill_zero(Sec,2)," ",zone(),"]"].
+
 
 zone() ->
     Time = erlang:universaltime(),

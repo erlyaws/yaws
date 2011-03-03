@@ -24,7 +24,7 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
-        code_change/3]).
+         code_change/3]).
 -export([status/0,
          getconf/0,
          stats/0,
@@ -187,7 +187,7 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
                       [GC#gconf.id, yaws_generated:is_local_install(),
                        if ?gc_has_debug(GC) ->
                                "Running with debug checks "
-                               "turned on (slower server) \n";
+                                   "turned on (slower server) \n";
                           true ->
                                ""
                        end,
@@ -358,8 +358,6 @@ handle_call({add_sconf, SC}, From, State) ->
                 false ->
                     {reply, ok, State};
                 {true, Pair} ->
-                                                %Pid = element(1, Pair),
-                                                %Pid ! {newuid, GC#gconf.uid},
                     P2 = [Pair | State#state.pairs],
                     {reply, ok, State#state{pairs = P2}}
             end
@@ -465,18 +463,18 @@ certinfo(SSL) ->
                                      undefined
                              end;
                         true ->
-                            undefined
+                             undefined
                      end,
           cacertfile = if SSL#ssl.cacertfile /= undefined ->
-                             case file:read_file_info(SSL#ssl.cacertfile) of
-                                 {ok, FI} ->
-                                     FI#file_info.mtime;
-                                 _ ->
-                                     undefined
-                             end;
-                        true ->
-                            undefined
-                     end
+                               case file:read_file_info(SSL#ssl.cacertfile) of
+                                   {ok, FI} ->
+                                       FI#file_info.mtime;
+                                   _ ->
+                                       undefined
+                               end;
+                          true ->
+                               undefined
+                       end
          }.
 
 gen_tcp_listen(Port, Opts) ->
@@ -518,7 +516,7 @@ gserv(Top, GC, Group0) ->
                                              [yaws:sconf_to_srvstr(S),
                                               S#sconf.docroot])
                        end, Group)
-                    ]),
+              ]),
             proc_lib:init_ack({self(), Group}),
             GS = #gs{gconf = GC,
                      group = Group,
@@ -564,12 +562,12 @@ setup_ets(SC) ->
 clear_ets_complete(SC) ->
     case SC#sconf.ets of
         undefined ->
-             setup_ets(SC);
-         E ->
-             ets:match_delete(E,'_'),
-             ets:insert(E, {num_files, 0}),
-             ets:insert(E, {num_bytes, 0}),
-             SC
+            setup_ets(SC);
+        E ->
+            ets:match_delete(E,'_'),
+            ets:insert(E, {num_files, 0}),
+            ets:insert(E, {num_bytes, 0}),
+            SC
     end.
 
 
@@ -587,7 +585,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
  	    close_accepted_if_max(GS,Accepted),
  	    New = acceptor(GS),
  	    GS2 = GS#gs{connections=GS#gs.connections + 1},
-            gserv_loop(GS2#gs{sessions = GS2#gs.sessions + 1}, Ready, Rnum, New);
+            gserv_loop(GS2#gs{sessions = GS2#gs.sessions + 1}, Ready, Rnum,New);
         {_From, next, Accepted} ->
 	    close_accepted_if_max(GS,Accepted),
             [{_Then, R}|RS] = Ready,
@@ -625,8 +623,8 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
                     exit(normal);
                 _ when Reason == failaccept ->
-                     error_logger:format(
-                       "Accept proc died, terminate gserv",[]),
+                    error_logger:format(
+                      "Accept proc died, terminate gserv",[]),
                     {links, Ls} = process_info(self(), links),
                     foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
                     exit(noserver);
@@ -652,7 +650,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     erlang:error(nosc);
                 true ->
 		    Pid = OldSc#sconf.stats,
-		    error_logger:info_msg("update_sconf: Stats pid ~p~n", [Pid]),
+		    error_logger:info_msg("update_sconf: Stats pid ~p~n",[Pid]),
 		    case Pid of
 			undefined ->
 			    ok;
@@ -826,9 +824,9 @@ listen_opts(SC) ->
     InetType = if 
                    is_tuple( SC#sconf.listen), size( SC#sconf.listen) == 8 ->
                        [inet6];
-                 true ->
+                   true ->
                        []
-             end,
+               end,
     [binary,
      {ip, SC#sconf.listen},
      {packet, http},
@@ -842,9 +840,9 @@ ssl_listen_opts(GC, SC, SSL) ->
     InetType = if 
                    is_tuple( SC#sconf.listen), size( SC#sconf.listen) == 8 ->
                        [inet6];
-                 true ->
+                   true ->
                        []
-             end,
+               end,
     [binary,
      {ip, SC#sconf.listen},
      {packet, http},
@@ -971,7 +969,7 @@ acceptor0(GS, Top) ->
             %% Skip closing the socket, as required by web sockets & stream
             %% processes.
             CloseSocket = (get(outh) =:= undefined) orelse 
-                                (done_or_continue() =:= done),
+                          (done_or_continue() =:= done),
             case CloseSocket of
                 false -> ok;
                 true ->
@@ -1041,7 +1039,7 @@ acceptor0(GS, Top) ->
 	    Top ! {self(), decrement},
             exit(normal);
         {error, Reason} when ((Reason == emfile) or
-                              (Reason == enfile)) ->
+                                                   (Reason == enfile)) ->
             error_logger:format("yaws: Failed to accept - no more "
                                 "file descriptors - terminating: ~p~n",
                                 [Reason]),
@@ -3430,7 +3428,6 @@ ut_close(Fd) ->
 parse_range(L, Tot) ->
     case catch parse_range_throw(L, Tot) of
         {'EXIT', _} ->
-                                                % error
             error;
         R -> R
     end.
@@ -3542,7 +3539,8 @@ send_file(CliSock, Path, all, Priv, _Enc) ->
     ?Debug("send_file(~p,~p, ...)~n", [CliSock, Path]),
     {ok, Fd} = file:open(Path, [raw, binary, read]),
     send_file(CliSock, Fd, Priv);
-send_file(CliSock, Path,  {fromto, From, To, _Tot}, undeflated, no) when is_port(CliSock) ->
+send_file(CliSock, Path,  {fromto, From, To, _Tot}, undeflated, no) 
+  when is_port(CliSock) ->
     Size = To - From + 1,
     yaws_sendfile_compat:send(CliSock, Path, From, Size),
     yaws_stats:sent(Size);

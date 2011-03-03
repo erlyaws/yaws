@@ -157,8 +157,7 @@ handle_call({close, Sid}, _From, State = #state{port = Port}) ->
     port_command(Port, [$c, integer_to_list(Sid), 0]),
 
     {reply, ok, State#state{
-                  sids = lists:keydelete(Sid, #user.i, State#state.sids)},
-     ?TO}.
+                  sids = lists:keydelete(Sid, #user.i, State#state.sids)},?TO}.
 
 
 %%--------------------------------------------------------------------
@@ -179,9 +178,9 @@ handle_cast(_Msg, State) ->
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%--------------------------------------------------------------------
 handle_info(timeout, State) when 
-State#state.port /= undefined,
-State#state.sids == [],
-State#state.reqs == [] ->
+      State#state.port /= undefined,
+      State#state.sids == [],
+      State#state.reqs == [] ->
     unlink(State#state.port),
     port_close(State#state.port),
     {noreply, State#state{port = undefined}};
@@ -199,7 +198,7 @@ handle_info({'EXIT', Port, _}, State = #state{port = Port}) ->
                           port = undefined
                          }};
 handle_info({'DOWN', MonitorRef, _Type, _Object, _Info}, State) 
-when State#state.port /= undefined ->
+  when State#state.port /= undefined ->
     case lists:keysearch(MonitorRef, #user.ref, State#state.sids) of
         {value, U} ->
             port_command(State#state.port, 
@@ -265,8 +264,8 @@ reply(From, _Sid, ["no", What |Reason ]) ->
 fsp([]) -> [];
 fsp([X]) -> X;
 fsp([H|T]) -> H ++ " " ++ fsp(T).
-    
-    
+
+
 
 ensure_port(S = #state{port = undefined, srv = Srv}) ->
     Prg0 = filename:dirname(code:which(?MODULE)) ++ 

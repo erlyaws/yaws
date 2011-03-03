@@ -72,13 +72,13 @@ handler(Args, Handler) ->
 %%%
 
 %%% we should be called from yaws page or module
-handler(Args, Handler, Type) when is_record(Args, arg) -> %% {{{
+handler(Args, Handler, Type) when is_record(Args, arg) ->
     case parse_request(Args) of
         ok ->
             handle_payload(Args, Handler, Type);
         {status, StatusCode} ->        %% cannot parse request
             send(Args, StatusCode)
-    end. %% }}}
+    end.
 
 -define(ERROR_LOG(Reason),
         error_logger:error_report({?MODULE, ?LINE, Reason})).
@@ -100,7 +100,7 @@ parse_request(Args) -> %% {{{
         _ -> {status, 400}
     end. %% }}}
 
-handle_payload(Args, Handler, Type) -> %% {{{
+handle_payload(Args, Handler, Type) ->
     Payload = binary_to_list(Args#arg.clidata),
     %%    ?Debug("xmlrpc encoded call ~p ~n", [Payload]),
     case xmlrpc_decode:payload(Payload) of
@@ -110,11 +110,11 @@ handle_payload(Args, Handler, Type) -> %% {{{
         {error, Reason} ->
             ?ERROR_LOG({xmlrpc_decode, payload, Payload, Reason}),
             send(Args, 400)
-    end. %% }}}
+    end.
 
 %%%%%%
 %%% call handler/3 and provide session support
-eval_payload(Args, {M, F}, Payload, {session, CookieName}) -> % {{{
+eval_payload(Args, {M, F}, Payload, {session, CookieName}) ->
     {SessionValue, Cookie} = 
         case yaws_api:find_cookie_val(CookieName, 
                                       (Args#arg.headers)#headers.cookie) of
@@ -129,7 +129,7 @@ eval_payload(Args, {M, F}, Payload, {session, CookieName}) -> % {{{
                         {undefined, undefined}
                 end
         end,
-    
+
     case catch M:F(Args#arg.state, Payload, SessionValue) of
         {'EXIT', Reason} ->
             ?ERROR_LOG({M, F, {'EXIT', Reason}}),
@@ -164,12 +164,12 @@ eval_payload(Args, {M, F}, Payload, {session, CookieName}) -> % {{{
                          end
                  end,
             encode_send(Args, 200, ResponsePayload, CO)
-    end; %% }}}
+    end;
 
 %%%
 %%% call handler/2 without session support
 %%%
-eval_payload(Args, {M, F}, Payload, simple) -> %% {{{
+eval_payload(Args, {M, F}, Payload, simple) ->
     case catch M:F(Args#arg.state, Payload) of
         {'EXIT', Reason} ->
             ?ERROR_LOG({M, F, {'EXIT', Reason}}),
@@ -181,10 +181,10 @@ eval_payload(Args, {M, F}, Payload, simple) -> %% {{{
             encode_send(Args, 200, ResponsePayload, []);
         {true, _NewTimeout, _NewState, ResponsePayload} ->
             encode_send(Args, 200, ResponsePayload, [])
-    end. %% }}}
+    end.
 
 
-encode_send(Args, StatusCode, Payload, AddOn) -> %% {{{
+encode_send(Args, StatusCode, Payload, AddOn) ->
     %%    ?Debug("xmlrpc decoded response ~p ~n", [Payload]),
     case xmlrpc_encode:payload(Payload) of
         {ok, EncodedPayload} ->
@@ -193,9 +193,9 @@ encode_send(Args, StatusCode, Payload, AddOn) -> %% {{{
         {error, Reason} ->
             ?ERROR_LOG({xmlrpc_encode, payload, Payload, Reason}),
             send(Args, 500)
-    end. %% }}}
+    end.
 
-send(Args, StatusCode) -> send(Args, StatusCode, "", []). %% {{{
+send(Args, StatusCode) -> send(Args, StatusCode, "", []).
 
 send(Args, StatusCode, Payload, AddOnData) when not is_list(AddOnData) ->
     send(Args, StatusCode, Payload, [AddOnData]);
@@ -208,6 +208,5 @@ send(_Args, StatusCode, Payload, AddOnData) ->
          {content, "text/xml", Payload}, 
          {header, {content_length, lists:flatlength(Payload) }}
         ] ++ AddOnData,
-    A. %% }}}
+    A.
 
-%% vim: tabstop=4 ft=erlang

@@ -91,7 +91,7 @@ add_yaws_soap_srv(GC, true) when GC#gconf.enable_soap == true ->
     case whereis(yaws_soap_srv) of
         undefined ->
             spawn(fun() -> supervisor:start_child(yaws_sup, hd(Spec)) end);
-       _ ->
+        _ ->
             ok
     end,
     Spec;
@@ -114,7 +114,7 @@ setup_auth(#sconf{docroot = Docroot, authdirs = Authdirs}=SC) ->
     start_pam(Authdirs4),
     Authdirs4.
 
-    
+
 load_yaws_auth_from_docroot(_, true) ->
     [];
 load_yaws_auth_from_docroot(undefined, _) ->
@@ -138,21 +138,21 @@ load_yaws_auth_from_authdirs([], _, Acc) ->
     lists:reverse(Acc);
 load_yaws_auth_from_authdirs([Auth = #auth{dir = [D]}| Rest], Docroot, Acc) ->
     Dir     = case D of
-		  "/" ++ Rest -> Rest;	% strip leading slash
-		  _           -> D
-	      end,
+                  "/" ++ Rest -> Rest;	% strip leading slash
+                  _           -> D
+              end,
     Path    = filename:join([Docroot, Dir, ".yaws_auth"]),
     NewAuth = case catch load_yaws_auth_file(Path, Auth) of
-		  {ok, A} -> A;
-		  _       -> Auth
-	      end,
+                  {ok, A} -> A;
+                  _       -> Auth
+              end,
     load_yaws_auth_from_authdirs(Rest, Docroot, [NewAuth| Acc]);
 load_yaws_auth_from_authdirs([{_Dir, Auth}| Rest], Docroot, Acc) ->
     %% handle {Dir, A} by stripping it
     load_yaws_auth_from_authdirs([Auth| Rest], Docroot, Acc);
 load_yaws_auth_from_authdirs([_| Rest], Docroot, Acc) ->
     load_yaws_auth_from_authdirs(Rest, Docroot, Acc).
-    
+
 
 load_yaws_auth_file(Path, Auth) ->
     case file:consult(Path) of
@@ -165,7 +165,7 @@ load_yaws_auth_file(Path, Auth) ->
 	    error_logger:format("Bad .yaws_auth file ~s ~p~n", [Path, Error]),
 	    Error
     end.
-    
+
 
 ensure_auth_headers(Authdirs) ->
     [add_auth_headers(Auth) || Auth <- Authdirs].
@@ -322,7 +322,7 @@ add_port(SC, Port) ->
             case (catch list_to_integer(Prt)) of
                 {'EXIT', _} ->
                     SC#sconf{servername = 
-                             Srv ++ [$:|integer_to_list(Port)]};
+                                 Srv ++ [$:|integer_to_list(Port)]};
                 _Int ->
                     SC
             end;
@@ -354,7 +354,7 @@ make_default_gconf(Debug, Id) ->
                                ?GC_FAIL_ON_BIND_ERR bor
                                ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH
                    end,
-           
+
            yaws = "Yaws " ++ yaws_generated:version(),
            id = Id
           }.
@@ -374,7 +374,7 @@ yaws_dir() ->
     end.
 
 del_tail(Parts) ->
-     del_tail(Parts,[]).
+    del_tail(Parts,[]).
 %% Initial ".." should be preserved
 del_tail([".." |Tail], Acc) ->
     del_tail(Tail, [".."|Acc]);
@@ -480,7 +480,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                                                                    R;
                                                                _ ->
                                                                    {error, "Can't open config file " ++
-                                                                    File}
+                                                                        File}
                                                            end;
                                                        false ->
                                                            %% Ignore subdirectories
@@ -535,7 +535,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
             case warn_dir("ebin_dir", Dir) of
                 true ->
                     fload(FD, globals, GC#gconf{ebin_dir = 
-                                                [Dir|GC#gconf.ebin_dir]},
+                                                    [Dir|GC#gconf.ebin_dir]},
                           C, Cs, Lno+1, Next);
                 false ->
                     fload(FD, globals, GC, C, Cs, Lno+1, Next)
@@ -560,7 +560,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
             case parse_soap_srv_mods(SoapSrvMods, []) of
                 {ok, L} ->
                     fload(FD, globals, GC#gconf{soap_srv_mods = L}, 
-						  C, Cs, Lno+1, Next);
+                          C, Cs, Lno+1, Next);
                 {error, Str} ->
                     {error, ?F("~s at line ~w", [Str, Lno])}
             end;
@@ -618,7 +618,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
             case warn_dir("include_dir", Dir) of
                 true ->
                     fload(FD, globals, GC#gconf{include_dir=
-                                                [Dir|GC#gconf.include_dir]},
+                                                    [Dir|GC#gconf.include_dir]},
                           C, Cs, Lno+1, Next);
                 false ->
                     fload(FD, globals, GC, C, Cs, Lno+1, Next)
@@ -891,12 +891,12 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                                                   C#sconf.soptions) of
                              undefined ->
                                  C#sconf{soptions = 
-                                         [{listen_opts, [{backlog, B}]} |
-                                          C#sconf.soptions]};
+                                             [{listen_opts, [{backlog, B}]} |
+                                              C#sconf.soptions]};
                              Opts ->
                                  C#sconf{soptions = 
-                                         [{listen_opts, [{backlog, B} | Opts]} |
-                                          C#sconf.soptions]}
+                                             [{listen_opts, [{backlog, B} | Opts]} |
+                                              C#sconf.soptions]}
                          end,
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 _ ->
@@ -1001,14 +1001,14 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 
         ["tilde_allowed_scripts", '=' | Suffixes] ->
             C2 = C#sconf{tilde_allowed_scripts = 
-                         lists:map(fun(X)->element(1,mime_types:t(X)) end,
-                                   Suffixes)},
+                             lists:map(fun(X)->element(1,mime_types:t(X)) end,
+                                       Suffixes)},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
         ["allowed_scripts", '=' | Suffixes] ->
             C2 = C#sconf{allowed_scripts = 
-                         lists:map(fun(X)->element(1,mime_types:t(X)) end,
-                                   Suffixes)},
+                             lists:map(fun(X)->element(1,mime_types:t(X)) end,
+                                       Suffixes)},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
         ["revproxy", '=', Prefix, Url] ->
@@ -1142,7 +1142,7 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
                 try
                     list_to_integer(Val0)
                 catch error:badarg ->
-                    list_to_atom(Val0)
+                        list_to_atom(Val0)
                 end,
             case lists:member(Val, [0,1,2,verify_peer,verify_none]) of
                 true when  is_record(C#sconf.ssl, ssl) ->
@@ -1152,16 +1152,19 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Need to set option ssl to true before line ~w",
                                [Lno])};
                 _ ->
-                    {error, ?F("Expect integer or verify_none, verify_peer at line ~w", [Lno])}
+                    {error, ?F("Expect integer or verify_none, "
+                               "verify_peer at line ~w", [Lno])}
             end;
         ["fail_if_no_peer_cert", '=', Val0] ->
             Val = (catch list_to_atom(Val0)),
             if
                 is_record(C#sconf.ssl, ssl) ->
-                    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{fail_if_no_peer_cert = Val}},
+                    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{
+                                         fail_if_no_peer_cert = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
                 true ->
-                    {error, ?F("Need to set option fail_if_no_peer_cert to true before line ~w",
+                    {error, ?F("Need to set option fail_if_no_peer_cert "
+                               "to true before line ~w",
                                [Lno])}
             end;
         ["depth", '=', Val0] ->
@@ -1322,7 +1325,7 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
             Users = Auth#auth.users,
             Realm = Auth#auth.realm,
             A2 =  case {Pam, Users} of
-                    {false, []} ->
+                      {false, []} ->
                           Auth;
                       _ ->
                           H = Auth#auth.headers ++ 
@@ -1351,16 +1354,16 @@ fload(FD, server_redirect, GC, C, Cs, Lno, Chars, RedirMap) ->
         [Path, '=', URL] ->
             try yaws_api:parse_url(URL, sloppy) of
                 U when is_record(U, url) ->
-                     fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
-                           [{Path, U, append}|RedirMap])
+                    fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
+                          [{Path, U, append}|RedirMap])
             catch _:_ ->
                     {error, ?F("bad redir ~p at line ~w", [URL, Lno])}
             end;
         [Path, '=', '=', URL] ->
             try yaws_api:parse_url(URL, sloppy) of
                 U when is_record(U, url) ->
-                     fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
-                           [{Path, U, noappend}|RedirMap])
+                    fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
+                          [{Path, U, noappend}|RedirMap])
             catch _:_ ->
                     {error, ?F("Bad redir ~p at line ~w", [URL, Lno])}
             end;
@@ -1383,7 +1386,8 @@ fload(FD, extra_cgi_vars, GC, C, Cs, Lno, Chars, EVars = {Dir, Vars}) ->
         [] ->
             fload(FD, extra_cgi_vars, GC, C, Cs, Lno+1, Next, EVars);
         [Var, '=', Val] ->
-	    fload(FD, extra_cgi_vars, GC, C, Cs, Lno+1, Next, {Dir, [{Var, Val} | Vars]});
+	    fload(FD, extra_cgi_vars, GC, C, Cs, Lno+1, Next, 
+                  {Dir, [{Var, Val} | Vars]});
         ['<', "/extra_cgi_vars", '>'] ->
             C2 = C#sconf{extra_cgi_vars = [EVars | C#sconf.extra_cgi_vars]},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
@@ -1407,7 +1411,8 @@ warn_dir(Type, Dir) ->
         true ->
             true;
         false ->
-            error_logger:format("Config Warning: Directory ~s for ~s doesn't exist~n",
+            error_logger:format("Config Warning: Directory ~s "
+                                "for ~s doesn't exist~n",
                                 [Dir, Type]),
             false
     end.
@@ -1455,7 +1460,6 @@ toks(Lno, [H|T], free, Ack, Tack) ->
                        [H,H, Lno])}
     end;
 toks(Lno, [C|T], string, Ack, Tack) -> 
-                                                %?Debug("Char=~p", [C]),
     case {is_backquote(C), is_quote(C), is_string_char([C|T]), is_special(C), 
           yaws:is_space(C)} of
         {true, _, _, _,_} ->
@@ -1475,7 +1479,6 @@ toks(Lno, [C|T], string, Ack, Tack) ->
                        [C, C, Lno])}
     end;
 toks(Lno, [C|T], quote, Ack, Tack) -> 
-                                                %?Debug("Char=~p", [C]),
     case {is_quote(C), is_backquote(C)} of
         {true, _} ->
             toks(Lno, T, free, [], [lists:reverse(Ack)|Tack]);
@@ -1528,7 +1531,8 @@ parse_process_options(PLString) ->
                     {ok, []};
                 {ok, [Hd|_Tl]=PList} when is_atom(Hd); is_tuple(Hd) ->
                     %% create new safe proplist of desired options
-                    {ok, proplists_int_copy([], PList, [fullsweep_after, min_heap_size])};
+                    {ok, proplists_int_copy([], PList, [fullsweep_after, 
+                                                        min_heap_size])};
                 _ ->
                     {error, "Expect undefined or proplist"}
             end;
@@ -1586,7 +1590,7 @@ parse_appmods(['<', PathElem, ',' , AppMod, "exclude_paths" |Tail], Ack)->
     Tail2 = lists:dropwhile(fun(X) -> X /= '>' end, 
                             Tail),
     Tail3 = tl(Tail2),
-    
+
     S = {PathElem , list_to_atom(AppMod), lists:map(
                                             fun(Str) ->
                                                     string:tokens(Str, "/")
@@ -1705,9 +1709,9 @@ delete_sconf(OldSc, Pairs) ->
 
 
 same_virt_srv(S, NewSc) when
-S#sconf.listen == NewSc#sconf.listen,
-S#sconf.port == NewSc#sconf.port,
-S#sconf.ssl == NewSc#sconf.ssl ->
+      S#sconf.listen == NewSc#sconf.listen,
+      S#sconf.port == NewSc#sconf.port,
+      S#sconf.ssl == NewSc#sconf.ssl ->
     true;
 same_virt_srv(_,_) ->
     false.
@@ -1896,17 +1900,17 @@ verify_upgrade_args(GC, Groups0) when is_record(GC, gconf) ->
             Groups = yaws:deepmap(
                        fun(SC) ->
                                SC#sconf{appmods =
-                                        lists:map(
-                                          fun({PE, Mod}) ->
-                                                  {PE, Mod};
-                                             ({PE,Mod,Ex}) ->
-                                                  {PE,Mod,Ex};
-                                             (AM) when is_list(AM) ->
-                                                  {AM,list_to_atom(AM)};
-                                             (AM) when is_atom(AM) ->
-                                                  {atom_to_list(AM), AM}
-                                          end,
-                                          SC#sconf.appmods)}
+                                            lists:map(
+                                              fun({PE, Mod}) ->
+                                                      {PE, Mod};
+                                                 ({PE,Mod,Ex}) ->
+                                                      {PE,Mod,Ex};
+                                                 (AM) when is_list(AM) ->
+                                                      {AM,list_to_atom(AM)};
+                                                 (AM) when is_atom(AM) ->
+                                                      {atom_to_list(AM), AM}
+                                              end,
+                                              SC#sconf.appmods)}
                        end, Groups0),
             {GC, Groups};
         _ ->

@@ -16,7 +16,7 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
-		 code_change/3]).
+         code_change/3]).
 
 -include("../include/yaws_api.hrl").
 -include("../include/yaws.hrl").
@@ -82,7 +82,7 @@ new_session(Opaque, TTL, Cleanup) ->
 new_session(Opaque, TTL, Cleanup, Cookie) ->
     Call = {new_session, Opaque, TTL, Cleanup, Cookie},
     gen_server:call(?MODULE, Call, infinity).
-    
+
 cookieval_to_opaque(Cookie) ->
     gen_server:call(?MODULE, {cookieval_to_opaque, Cookie}, infinity).
 
@@ -259,7 +259,7 @@ to() ->
 %% pretty good seed, but non portable
 seed() ->
     case (catch list_to_binary(
-           os:cmd("dd if=/dev/urandom ibs=12 count=1 2>/dev/null"))) of
+                  os:cmd("dd if=/dev/urandom ibs=12 count=1 2>/dev/null"))) of
         <<X:32, Y:32, Z:32>> ->
             {X, Y, Z};
         _ ->
@@ -333,6 +333,6 @@ traverse(N, Key) ->
                     traverse(N, Next)                    
             end;
         [] ->
-           traverse(N, ets:next(?MODULE, Key))
+            traverse(N, ets:next(?MODULE, Key))
     end.
 

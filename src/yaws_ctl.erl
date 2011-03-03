@@ -55,7 +55,7 @@ run(GC) ->
 rand() ->
     case os:type() of
         {win32, _} ->
-             {A1, A2, A3}=now(),
+            {A1, A2, A3}=now(),
             random:seed(A1, A2, A3),
             random:uniform(1 bsl 64);
         _ ->
@@ -126,9 +126,9 @@ w_ctl_file(Sid, Port, Key) ->
                  {ok, FI} = file:read_file_info(F),
                  ok = file:write_file_info(F, FI#file_info{mode = 8#00600})
              end of
-                     {'EXIT', _} ->
+             {'EXIT', _} ->
                  error;
-               _ ->
+             _ ->
                  ok
          end.
 
@@ -242,25 +242,25 @@ a_status(Sock) ->
     gen_tcp:send(Sock, a_status()).
 a_status() ->
     try 
-      {UpTime, L} = yaws_server:stats(),
-      {Days, {Hours, Minutes, _Secs}} = UpTime,
-      H = f("~n Uptime: ~w Days, ~w Hours, ~w Minutes  ~n",
-            [Days, Hours, Minutes]),
-      
-      T =lists:map(
-           fun({Host,IP,Hits}) ->
-                   L1= f("stats for ~p at ~p  ~n",
-                         [Host,IP]),
-                   T = "\n"
-                       "URL                  Number of hits\n",
-                   L2=lists:map(
-                        fun({Url, Hits2}) ->
-                                f("~-30s ~-7w ~n",
-                                  [Url, Hits2])
-                        end, Hits),
-                   END = "\n",
-                   [L1, T, L2, END]
-           end, L),
+        {UpTime, L} = yaws_server:stats(),
+        {Days, {Hours, Minutes, _Secs}} = UpTime,
+        H = f("~n Uptime: ~w Days, ~w Hours, ~w Minutes  ~n",
+              [Days, Hours, Minutes]),
+
+        T =lists:map(
+             fun({Host,IP,Hits}) ->
+                     L1= f("stats for ~p at ~p  ~n",
+                           [Host,IP]),
+                     T = "\n"
+                         "URL                  Number of hits\n",
+                     L2=lists:map(
+                          fun({Url, Hits2}) ->
+                                  f("~-30s ~-7w ~n",
+                                    [Url, Hits2])
+                          end, Hits),
+                     END = "\n",
+                     [L1, T, L2, END]
+             end, L),
         [H, T]
     catch
         _:Err ->
@@ -566,3 +566,4 @@ stats([SID]) ->
     actl(SID, stats).
 running_config([SID]) ->
     actl(SID, running_config).
+ 

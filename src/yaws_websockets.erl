@@ -30,15 +30,15 @@ handshake(Arg, ContentPid, SocketMode) ->
 	    SC = get(sc),
 	    WebSocketLocation = 
 		case SC#sconf.ssl of
-			undefined -> "ws://" ++ Host ++ Path;
-			_ -> "wss://" ++ Host ++ Path
+                    undefined -> "ws://" ++ Host ++ Path;
+                    _ -> "wss://" ++ Host ++ Path
 		end,
 	    Handshake = handshake(ProtocolVersion, Arg, CliSock,
                                   WebSocketLocation, Origin, Protocol),
 	    case SC#sconf.ssl of
 		undefined ->
 		    gen_tcp:send(CliSock, Handshake),
-		    inet:setopts(CliSock, [{packet, raw}, {active, SocketMode}]),
+		    inet:setopts(CliSock, [{packet, raw},{active, SocketMode}]),
 		    TakeOverResult =
 			gen_tcp:controlling_process(CliSock, ContentPid);
 		_ ->
@@ -109,7 +109,7 @@ unframe_one(DataFrames) ->
 	_ -> %% Type band 16#80 =:= 16#80
 	    {Length, LenBytes} = unpack_length(DataFrames, 0, 0),
 	    <<_, _:LenBytes/bytes, Data:Length/bytes,
-	     NextFrame/bitstring>> = DataFrames,
+              NextFrame/bitstring>> = DataFrames,
 	    {ok, Data, NextFrame}
     end.
 

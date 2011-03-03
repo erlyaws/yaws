@@ -105,7 +105,7 @@ add_file_chunk(A, [{head, {_Name, Opts}}|Res], State ) ->
            Opts),
     add_file_chunk(A,Res,S2);
 
-add_file_chunk(A, [{body, Data}|Res], State) when State#upload.fd /= undefined ->
+add_file_chunk(A, [{body, Data}|Res],State) when State#upload.fd /= undefined ->
     NewSize = compute_new_size(State,Data),
     Check   = check_param_size(State, NewSize),
     case Check of
@@ -129,7 +129,7 @@ add_file_chunk(A, [{body, Data}|Res], State) ->
                         NewData = compute_new_value(PrevValue, Data),
                         State#upload{param_running_value = NewData}
                 end,
-            add_file_chunk(A, Res, NewState#upload{running_file_size = NewSize});
+            add_file_chunk(A, Res,NewState#upload{running_file_size = NewSize});
         Error={error, _Reason} ->
             Error
     end.

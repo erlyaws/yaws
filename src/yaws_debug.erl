@@ -24,7 +24,7 @@
          check_headers/1, nobin/1,
          do_debug_dump/1
         ]).
-         
+
 
 
 typecheck([{record, Rec, X} | Tail], File, Line) when is_atom(X),
@@ -374,10 +374,10 @@ netstat_cmd({unix, linux})   -> "netstat -ant";
 netstat_cmd({unix, freebsd}) -> "netstat -an -p tcp";
 netstat_cmd({unix, sunos})   -> "netstat -an -P tcp";
 netstat_cmd(_)               -> "netstat -an".
-		
+
 gen_sep(Socket) ->    
     sock_format(Socket,"~n~s~n", [lists:duplicate(40, $*)]).
-    
+
 
 proc_status_fun() ->
     fun(Fd) ->
@@ -405,7 +405,7 @@ i2(Fd, Ps) ->
     {Reds,Msgs,Heap,Stack,Susp1,Susp2,MemSusp,_} =
         lists:foldl(fun display_info/2, {0,0,0,0,[],[],[],Fd}, Ps),
     iformat(Fd, "Total", "", "", io_lib:write(Reds), io_lib:write(Msgs),
-           io_lib:write(Heap), io_lib:write(Stack)),
+            io_lib:write(Heap), io_lib:write(Stack)),
     lists:foreach(fun(Susp) -> display_susp1(Fd, Susp) end, Susp1),
     lists:foreach(fun(Susp) -> display_susp2(Fd, Susp) end, Susp2),
     lists:foreach(fun(Susp) -> display_susp3(Fd, Susp) end, MemSusp).
@@ -487,15 +487,15 @@ display_susp1(Fd, {Pid, Reds0, LM0}) ->
             if LM1 > 0 ->
                     %% still suspicious
                     sock_format(Fd,
-                              "*** Suspicious *** : ~-12w, Qlen = ~4w/~-4w, "
-                              "Reds = ~12w/~-12w\n",
-                              [Pid, LM0, LM1, Reds0, Reds1]),
+                                "*** Suspicious *** : ~-12w, Qlen = ~4w/~-4w, "
+                                "Reds = ~12w/~-12w\n",
+                                [Pid, LM0, LM1, Reds0, Reds1]),
                     lists:foreach(
                       fun(Msg) -> sock_format(Fd, "  ~p\n",[Msg]) end,
                       Msgs),
                     gen_sep(Fd),
 		    sock_format(Fd, "\n\n\n\n*** Backtrace *** for ~w\n~s\n",
-                              [Pid,Bt]);
+                                [Pid,Bt]);
                true ->
                     ok
             end
@@ -599,7 +599,7 @@ collect(F, Sock, User) ->
 	    sock_format(Sock, "*** Failed to collect ~s: timeout~n", [User]),
 	    {pid, Pid}	% Let it hang for proc status, exit after
     end.
-    
+
 send_status(Sock) ->
     {InitStatus, _} = init:get_status(),
     sock_format(Sock, ["vsn: ", yaws_generated:version(), "\n"], []),
@@ -624,7 +624,7 @@ capture_io(Fun) ->
 %%    Chars = do_capture_io(Fun),
 %%    timer:cancel(Tref),
 %%    Chars.
-    
+
 do_capture_io(Fun) ->
     Pid = spawn(fun() -> 
                         receive run -> ok end,
@@ -645,9 +645,9 @@ collect_io(Pid, Mref, Ack) ->
         capio_timeout ->
             {timeout, Ack}
     end.
-    
 
 
-    
+
+
 
 

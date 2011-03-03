@@ -18,18 +18,18 @@ gzipDeflate(Z, undefined, Bin, Flush) ->
     Crc32 = zlib:crc32(Z),
     Head = <<
                                                 % ID
-            16#1f, 16#8b,
+             16#1f, 16#8b,
                                                 % deflate
-            8:8,
+             8:8,
                                                 % flags
-            0:8, 
+             0:8, 
                                                 % mtime
-            0:32, 
+             0:32, 
                                                 % xflags
-            0:8, 
+             0:8, 
                                                 % OS_UNKNOWN
                                                 % Set to Unix instead?
-            255:8>>,
+             255:8>>,
     {ok, Priv, Bs} = gzipDeflate(Z, {Crc32,0}, Bin, Flush),
     {ok, Priv, [Head | Bs]};
 

@@ -40,7 +40,7 @@ list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
          end,
 
     L3 = [Html || {_, _, _, _, Html} <- L2],
-    
+
     Body = [ doc_head(DirStr),                          
              dir_header(DirName,DirStr),
              table_head(Direction),             
@@ -50,22 +50,22 @@ list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
                      allzip();
                  DoAllZip == true_nozip ->
                      [];
-                true ->
+                 true ->
                      []
              end,
-             
-%%              if DoAllGZip == true -> alltgz() end,
-%%              if DoAllBZip2 == true -> alltbz2() end,
 
-%%              if DoAllZip == true -> alltgz() end,
-%%              if DoAllZip == true -> alltbz2() end,
+             %%              if DoAllGZip == true -> alltgz() end,
+             %%              if DoAllBZip2 == true -> alltbz2() end,
+
+             %%              if DoAllZip == true -> alltgz() end,
+             %%              if DoAllZip == true -> alltbz2() end,
 
              L3,
              table_tail(),
              dir_footer(DirName),%yaws:address(),
              doc_tail()
-            ],
-    
+           ],
+
     B = list_to_binary(Body),
 
     yaws_server:accumulate_content(B),
@@ -79,7 +79,7 @@ parse_query(Path) ->
                       $N -> 1; % name
                       $M -> 2; % last modified
                       $S -> 3; % size
-                      $D -> 4  % Description                                            
+                      $D -> 4  % Description         
                   end,
             Dir = case DirC of
                       $r -> reverse;
@@ -132,8 +132,8 @@ doc_head(DirName) ->
       ).
 
 doc_tail() ->
-"</body>\n"
-"</html>\n".
+    "</body>\n"
+        "</html>\n".
 
 table_head(Direction) ->
     NextDirection = if Direction == normal  -> "r";
@@ -149,8 +149,8 @@ table_head(Direction) ->
      "  <tr><th colspan=\"4\"><hr/></th></tr>\n"].
 
 table_tail() ->
-"  <tr><th colspan=\"4\"><hr/></th></tr>\n"
-"</table>\n".
+    "  <tr><th colspan=\"4\"><hr/></th></tr>\n"
+        "</table>\n".
 
 
 dir_footer(DirName) ->
@@ -235,19 +235,19 @@ out(A) ->
               {true,Home} -> Home ++ "/public_html";
               false -> A#arg.docroot
           end ++ PP,
-    
-%%    {html,?F("<h2>~p</h2>",[Dir])}.
+
+    %%    {html,?F("<h2>~p</h2>",[Dir])}.
 
     YPid = self(),
-    
+
     Forbidden_Paths = accumulate_forbidden_paths(),
     case filename:basename(A#arg.server_path) of
         "all.zip" -> spawn_link(fun() -> zip(YPid, Dir, Forbidden_Paths) end),
                      {streamcontent, "application/zip", ""}
-%%        "all.tgz" -> spawn_link(fun() -> tgz(YPid, Dir) end),
-%%                     {streamcontent, "application/gzip", ""};                    
-%%        "all.tbz2" -> spawn_link(fun() -> tbz2(YPid, Dir) end),
-%%                     {streamcontent, "application/gzip", ""}
+                     %%        "all.tgz" -> spawn_link(fun() -> tgz(YPid, Dir) end),
+                     %%                     {streamcontent, "application/gzip", ""};                    
+                     %%        "all.tbz2" -> spawn_link(fun() -> tbz2(YPid, Dir) end),
+                     %%                     {streamcontent, "application/gzip", ""}
     end.
 
 
@@ -329,7 +329,7 @@ dir_contains_indexfile(Dir, [File|R]) ->
         _Else ->
             dir_contains_indexfile(Dir, R)
     end.
-    
+
 dir_contains_indexfile(Dir) ->
     Indexfiles = [".yaws.auth", "index.yaws", "index.html", "index.htm"],
     dir_contains_indexfile(Dir, Indexfiles).
@@ -345,21 +345,23 @@ dig_through_dir(Basedirlen, Dir, ForbiddenPaths, RE_ForbiddenNames) ->
         {false, false} ->
             {ok, Files} = file:list_dir(Dir),
             lists:foldl(fun(I, Acc) ->
-                                  Filename = filename:join(Dir, I),
-                                  case {file:read_file_info(Filename),
-                                        re:run(Filename, RE_ForbiddenNames)} of
-                                      {_, {match, _}} ->
-                                          Acc;
-                                      {{ok, #file_info{type=directory}}, _} ->
-                                          Acc ++ dig_through_dir(Basedirlen,
-                                                                  Filename,
-                                                                  ForbiddenPaths,
-                                                                  RE_ForbiddenNames);
-                                      {{ok, #file_info{type=regular}}, _} ->
-                                          Acc ++ [string:sub_string(Filename, Basedirlen)];
-                                      _Else ->
-                                          Acc %% Ignore other files
-                                  end
+                                Filename = filename:join(Dir, I),
+                                case {file:read_file_info(Filename),
+                                      re:run(Filename, RE_ForbiddenNames)} of
+                                    {_, {match, _}} ->
+                                        Acc;
+                                    {{ok, #file_info{type=directory}}, _} ->
+                                        Acc ++ dig_through_dir(
+                                                 Basedirlen,
+                                                 Filename,
+                                                 ForbiddenPaths,
+                                                 RE_ForbiddenNames);
+                                    {{ok, #file_info{type=regular}}, _} ->
+                                        Acc ++ [string:sub_string(
+                                                  Filename, Basedirlen)];
+                                    _Else ->
+                                        Acc %% Ignore other files
+                                end
                         end, [], Files)
     end.
 
@@ -417,9 +419,9 @@ file_entry({ok, FI}, _DirName, Name, Qry, Descriptions) ->
             trim(Name,?FILE_LEN_SZ),
             datestr(FI), 
             sizestr(FI),
-           Description]),
+            Description]),
     ?Debug("Entry:~p", [Entry]),
-    
+
     {true, {Name, FI#file_info.mtime, FI#file_info.size, Description, Entry}};
 
 file_entry(_Err, _, _Name, _, _) ->

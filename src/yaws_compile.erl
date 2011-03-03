@@ -132,7 +132,8 @@ compile_file(C, LineNo,  Chars = "<verbatim>" ++ _Tail, html,
     ?Debug("start verbatim:~p",[LineNo]),
     Len = length(Chars),
     C2 = C#comp{outfile = ["<pre>\n"]},  %% use as accumulator
-    compile_file(C2,  LineNo+1, line() , verbatim , Len, [{data, NumChars} | Ack], Es);
+    compile_file(C2,  LineNo+1, line() , verbatim , Len, 
+                 [{data, NumChars} | Ack], Es);
 
 compile_file(C, LineNo,  Chars = "</verbatim>" ++ _Tail, verbatim, 
              NumChars, Ack, Es) ->
@@ -149,7 +150,7 @@ compile_file(C, LineNo,  Chars, verbatim, NumChars, Ack,Es) ->
         false ->
             C2 = C#comp{outfile = [yaws_api:htmlize(Chars) | C#comp.outfile]},
             compile_file(C2, LineNo+1, line(), verbatim, NumChars + 
-                         length(Chars), Ack,Es)
+                             length(Chars), Ack,Es)
     end;
 
 compile_file(C, LineNo,  _Chars = "</erl>" ++ Tail, erl, NumChars, Ack, Es) ->
@@ -160,7 +161,8 @@ compile_file(C, LineNo,  _Chars = "</erl>" ++ Tail, erl, NumChars, Ack, Es) ->
             case get(use_yfile_name) of
                 true ->
                     file:write_file("../../ebin/" ++ 
-                                    filename:rootname(C#comp.outfile)++".beam",
+                                        filename:rootname(
+                                          C#comp.outfile)++".beam",
                                     Binary);
                 _ ->
                     ok
@@ -203,7 +205,7 @@ compile_file(C, LineNo,  Chars, erl, NumChars, Ack,Es) ->
             ?Debug("Gen: ~s", [Chars]),
             io:format(C#comp.outfd, "~s", [Chars]),
             compile_file(C, LineNo+1, line(), erl, NumChars + 
-                         length(Chars), Ack,Es)
+                             length(Chars), Ack,Es)
     end;
 
 compile_file(C, LineNo, [], html, NumChars, Ack, Es) ->
@@ -467,9 +469,9 @@ report_warnings(C, Ws0) ->
     File = "./" ++ filename:basename(C#comp.infile),
     SLine = C#comp.startline - 10,
     Ws1 = lists:flatmap(fun({{_F,_L},Eds}) ->
-                            format_message(File, SLine, Eds);
+                                format_message(File, SLine, Eds);
                            ({_F,Eds}) ->
-                            format_message(File, SLine, Eds)
+                                format_message(File, SLine, Eds)
                         end,
                         Ws0),
     Ws = ordsets:from_list(Ws1),
@@ -477,7 +479,8 @@ report_warnings(C, Ws0) ->
 
 format_message(F, SLine, [{Line0,Mod,E}|Es]) ->
     Line = Line0 + SLine,
-    M = {{F,Line},io_lib:format("~s:~w: Warning: ~s\n", [F,Line,Mod:format_error(E)])},
+    M = {{F,Line},io_lib:format("~s:~w: Warning: ~s\n", 
+                                [F,Line,Mod:format_error(E)])},
     [M|format_message(F, SLine, Es)];
 format_message(F, SLine, [{Mod,E}|Es]) ->
     M = {none,io_lib:format("~s: Warning: ~s\n", [F,Mod:format_error(E)])},

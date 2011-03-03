@@ -103,9 +103,9 @@
          redirect_scheme_port/1, redirect_scheme/1,
          tmpdir/0, tmpdir/1, split_at/2,
          id_dir/1, ctl_file/1]).
-         
-         
-         
+
+
+
 
 -import(lists, [reverse/1, reverse/2]).
 
@@ -141,10 +141,10 @@ add_server(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
     %% Change #auth in authdirs to {Dir, #auth} if needed
     Fun = fun
 	      (A = #auth{dir = [Dir]}, Acc) -> [{Dir, A}| Acc];
-	      (A, Acc)                      -> [A| Acc]
-	  end,
-    Authdirs = lists:foldr(Fun, [], SC#sconf.authdirs),
-    yaws_config:add_sconf(SC#sconf{authdirs = Authdirs}).
+        (A, Acc)                      -> [A| Acc]
+                                                          end,
+Authdirs = lists:foldr(Fun, [], SC#sconf.authdirs),
+yaws_config:add_sconf(SC#sconf{authdirs = Authdirs}).
 
 create_gconf(GL, Id) when is_list(GL) ->
     setup_gconf(GL, yaws_config:make_default_gconf(false, Id)).
@@ -890,46 +890,6 @@ parse_qvalue(_) ->
 three_digits_to_integer(D1, D2, D3) ->
     100*(D1-$0)+10*(D2-$0)+D3-$0.
 
-%% has_buggy_deflate(UserAgent, Mime) ->
-%%     UA = parse_ua(UserAgent),
-%%     in_ua(
-%%       fun("Mozilla/5.0") ->
-%%               in_comment(
-%%                 fun("rv:0."++_) ->
-%%                         true;
-%%                    ("Konqueror"++_) ->
-%%                         true;
-%%                    (_) ->
-%%                         false
-%%                 end,
-%%                 UA);
-%%          ("Mozilla/4.0") ->
-%%               in_comment(
-%%                 fun("MSIE"++_) ->
-%%                                                 % The fact that IE is
-%%                                                 % broken does of
-%%                                                 % course mean that we
-%%                                                 % will have to abondon
-%%                                                 % `deflate' (in favor
-%%                                                 % of `gzip')
-%%                                                 % altogether.  To
-%%                                                 % do...
-%%                         true;
-%%                    (_) ->
-%%                         false
-%%                 end,
-%%                 UA);
-%%          ("AppleWebKit"++_) ->
-%%               true;
-%%          ("Galeon"++_) ->
-%%               true;
-%%          ("w3m"++_) ->
-%%                                                 % Problems when saving.
-%%               Mime /= "text/html"; 
-%%          (_)  ->
-%%               false
-%%       end,
-%%       UA).
 
 %% Gzip encoding
 

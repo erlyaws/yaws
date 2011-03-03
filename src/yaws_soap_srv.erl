@@ -41,7 +41,7 @@
 %% Description: Starts the server
 %%--------------------------------------------------------------------
 start_link() ->
-	start_link([]).
+    start_link([]).
 start_link(L) ->
     %% We are dependent on erlsom
     case code:ensure_loaded(erlsom) of
@@ -98,18 +98,19 @@ setup(Id, WsdlFile, Prefix) when is_tuple(Id),size(Id)==2 ->
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
 init(L) -> %% [ {{Mod,Handler}, WsdlFile} ]
-	WsdlList = lists:foldl( fun( SoapSrvMod, OldList) -> 
-									setup_on_init( SoapSrvMod, OldList ) 
-							end,[],L),
+    WsdlList = lists:foldl( fun( SoapSrvMod, OldList) -> 
+                                    setup_on_init( SoapSrvMod, OldList ) 
+                            end,[],L),
     {ok, #s{wsdl_list = WsdlList}}.
 
-setup_on_init( {Id, WsdlFile}, OldList ) when is_tuple(Id),size(Id)==2 ->
-	Wsdl = yaws_soap_lib:initModel(WsdlFile),
-	uinsert({Id, Wsdl}, OldList);
-setup_on_init( {Id, WsdlFile, Prefix}, OldList ) when is_tuple(Id),size(Id)==2 ->
-	Wsdl = yaws_soap_lib:initModel(WsdlFile, Prefix),
-	uinsert({Id, Wsdl}, OldList).
-	
+setup_on_init( {Id, WsdlFile}, OldList ) when is_tuple(Id),size(Id) == 2 ->
+    Wsdl = yaws_soap_lib:initModel(WsdlFile),
+    uinsert({Id, Wsdl}, OldList);
+setup_on_init( {Id, WsdlFile, Prefix}, OldList ) when is_tuple(Id),
+                                                      size(Id) == 2 ->
+    Wsdl = yaws_soap_lib:initModel(WsdlFile, Prefix),
+    uinsert({Id, Wsdl}, OldList).
+
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
 %%                                      {reply, Reply, State, Timeout} |

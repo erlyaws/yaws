@@ -26,7 +26,9 @@
                 type,   %% client | server
                 r_req,  %% if'we're server, what req method are we processing
                 r_host, %% and value of Host: for the cli request
-                httpconnection="keep-alive", %% Do we need to keep the connection open ("keep-alive" | "close")  
+                httpconnection="keep-alive", %% Do we need to keep the 
+                                             %% connection open 
+                                             %% ("keep-alive" | "close")  
                 state}).%% various depending on mode, ......
 
 %% MREMOND: TODO: Check if redirection works properly (this is
@@ -60,19 +62,19 @@ init(CliSock, ARG, _DecPath, _QueryPart, {Prefix, URL}, N) ->
             %%  MREMOND: TODO: Refactor.
             yaws:gen_tcp_send(Ssock, [ReqStr, "\r\n", Hstr, "\r\n"]),
             RemainingData = if
-                       N /= 0 ->
-                           %% Send data to the server:
-                           ClientData=ARG#arg.clidata,
-                           yaws:gen_tcp_send(Ssock,ClientData),
+                                N /= 0 ->
+                                    %% Send data to the server:
+                                    ClientData=ARG#arg.clidata,
+                                    yaws:gen_tcp_send(Ssock,ClientData),
                                     N - size(ClientData);
-                       true ->
-                           %% MREMOND: Check this (If N == 0, it might
-                           %% be because, we do not know the size of
-                           %% the data to receive. For now we will get
-                           %% back in http mode, expecting headers
-                           %% (new request)
-                           0
-                   end,
+                                true ->
+                                    %% MREMOND: Check this (If N == 0, it might
+                                    %% be because, we do not know the size of
+                                    %% the data to receive. For now we will get
+                                    %% back in http mode, expecting headers
+                                    %% (new request)
+                                    0
+                            end,
 
             Cli2 = case RemainingData of
                        0      -> 
@@ -80,7 +82,7 @@ init(CliSock, ARG, _DecPath, _QueryPart, {Prefix, URL}, N) ->
                            Cli#psock{mode = expectheaders, state = undefined};
                        _Other -> Cli
                    end,
-            
+
             Srv = #psock{s = Ssock, 
                          prefix = Prefix, 
                          url = URL,
@@ -93,11 +95,12 @@ init(CliSock, ARG, _DecPath, _QueryPart, {Prefix, URL}, N) ->
                                                  yaws:to_lower(KeepAlive)
                                          end
                         },     
-            %% Need to check if we could close the connection after server answer
+            %% Need to check if we could close the connection after serveranswer
             %% Now we _must_ spawn a process here, because we
             %% can't use {active, once} due to the inefficencies
             %% that would occur with chunked encodings
-            P1 = proc_lib:spawn_link(?MODULE, ploop, [Cli2, Srv, GC, SC, self()]),
+            P1 = proc_lib:spawn_link(?MODULE, ploop, 
+                                     [Cli2, Srv, GC, SC, self()]),
             ?Debug("Client=~p, Srv=~p", [P1, self()]),
             ploop(Srv, Cli2, GC, SC, P1);
         _ERR ->
@@ -164,8 +167,8 @@ s_sockmode(H,Resp,Psock) ->
             %% we're replying to a HEAD
             %% no body
             Psock#psock{mode = expectheaders, state = undefined};
-        
-        true ->
+
+       true ->
             case lists:member(Resp#http_response.status, 
                               [100,204,205,304,406]) of
                 true ->
@@ -177,7 +180,7 @@ s_sockmode(H,Resp,Psock) ->
     end.
 
 cont_len_check(H,Psock) when H#headers.transfer_encoding == "chunked" ->
-	Psock#psock{mode = expectchunked, state = init};
+    Psock#psock{mode = expectchunked, state = init};
 cont_len_check(H,Psock) ->
     case H#headers.content_length of
         undefined ->
@@ -193,7 +196,7 @@ cont_len_check(H,Psock) ->
         List when is_list(List) ->
             Psock#psock{mode = len,
                         state = list_to_integer(List)}
-    
+
     end.
 
 
@@ -265,10 +268,10 @@ ploop(From0, To, Pid) ->
                     yaws:gen_tcp_send(TS,["0\r\n\r\n"]),
                     ?Debug("SEND final 0 ",[]),
                     ploop_keepalive(From#psock{mode = expectheaders, 
-                                     state = undefined},To, Pid);
+                                               state = undefined},To, Pid);
                true ->
                     ploop(From#psock{mode = chunk, 
-                                    state = N},To, Pid)
+                                     state = N},To, Pid)
             end;
         chunk ->
             CG = yaws:get_chunk(From#psock.s,From#psock.state, 0, get(ssl)),
@@ -280,7 +283,7 @@ ploop(From0, To, Pid) ->
                              state = undefined}, To, Pid);
         len when From#psock.state == 0 ->
             ploop_keepalive(From#psock{mode = expectheaders,
-                             state = undefined},To, Pid);
+                                       state = undefined},To, Pid);
         len ->
             case yaws:do_recv(From#psock.s, From#psock.state, get(ssl)) of
                 {ok, Bin} ->
@@ -314,9 +317,9 @@ ploop_keepalive(From, To, Pid) ->
     %% TODO: We should get this value from the config file
     case check_server_keepalive() of
         false -> done; %% Close the connection: Server config do not
-                       %%  allow proxy keep-alive
+        %%  allow proxy keep-alive
         true -> ploop(From, To, Pid) %% Try keeping the connection
-                                     %% alive => Wait for headers
+                %% alive => Wait for headers
     end.
 
 %% TODO: Get proxy keepalive value in SC record
@@ -364,12 +367,12 @@ rewrite_headers(PS, H) when PS#psock.type == server ->
                       LocUrl#url.port == ProxyUrl#url.port,
                       LocUrl#url.scheme == ProxyUrl#url.scheme ->
                           rewrite_loc_url(LocUrl, PS);
-                      
+
                       element(1, LocUrl) == 'EXIT' ->
                           rewrite_loc_rel(PS, H#headers.location);
                       true ->
                           ?Debug("Not rew ~p~n~p~n", 
-                              [LocUrl, ProxyUrl]),
+                                 [LocUrl, ProxyUrl]),
                           H#headers.location
                   end
           end,
@@ -399,7 +402,7 @@ rewrite_loc_rel(PS, Loc) ->
     RedirHost = yaws:redirect_host(SC, PS#psock.r_host),
     [Scheme, RedirHost,Loc].
 
-    
+
 
 slash_append("/", [$/|T]) ->
     [$/|T];
@@ -411,15 +414,15 @@ slash_append([], T) ->
     [$/|T];
 slash_append([H|T], X) ->
     [H | slash_append(T,X)].
-        
 
 
 
 
-        
 
 
-        
+
+
+
 
 
 

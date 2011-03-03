@@ -170,7 +170,7 @@ scan_value([$"|R], L) ->
 scan_value([$'|R], L) ->
     scan_quote(R, [], $', L);
 scan_value(R, L) ->
-                      scan_token(R, [], L).
+    scan_token(R, [], L).
 
 %%
 

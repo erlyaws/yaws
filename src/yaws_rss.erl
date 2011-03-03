@@ -21,7 +21,7 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
-		 code_change/3]).
+         code_change/3]).
 
 -record(s, {
           open_apps = [],    % activated applications
@@ -358,7 +358,7 @@ do_retrieve(State, App, Tag) ->
         false ->
             {State, {error, "no open DB"}}
     end.
-            
+
 
 
 -define(ONE_DAY, 86400).  % 24*60*60 seconds
@@ -408,10 +408,10 @@ to_xml([]) ->
 %%% w3cdtf(GregSecs) -> "YYYY-MM-DDThh:mm:ssTZD"
 %%%
 w3cdtf(GregSecs) ->    Date = calendar:gregorian_seconds_to_datetime(GregSecs),
-    {{Y, Mo, D},{H, Mi, S}} = Date,
-    [UDate|_] = calendar:local_time_to_universal_time_dst(Date),
-    {DiffD,{DiffH,DiffMi,_}}=calendar:time_difference(UDate,Date),
-    w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi). 
+                       {{Y, Mo, D},{H, Mi, S}} = Date,
+                       [UDate|_] = calendar:local_time_to_universal_time_dst(Date),
+                       {DiffD,{DiffH,DiffMi,_}}=calendar:time_difference(UDate,Date),
+                       w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi). 
 
 %%%  w3cdtf's helper function
 w3cdtf_diff(Y, Mo, D, H, Mi, S, _DiffD, DiffH, DiffMi) when DiffH < 12,  DiffH /= 0 ->
@@ -432,7 +432,7 @@ w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi) when DiffH > 12,  DiffD /=
         ":" ++ add_zero(60-DiffMi);
 
 w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi) when DiffH > 12,  DiffD /= 0, DiffMi == 0 ->
-   i2l(Y) ++ "-" ++ add_zero(Mo) ++ "-" ++ add_zero(D) ++ "T" ++
+    i2l(Y) ++ "-" ++ add_zero(Mo) ++ "-" ++ add_zero(D) ++ "T" ++
         add_zero(H) ++ ":" ++ add_zero(Mi) ++ ":"  ++
         add_zero(S) ++ "-" ++ add_zero(24-DiffH) ++
         ":" ++ add_zero(DiffMi); 
@@ -471,9 +471,9 @@ i2l(I) when is_integer(I) -> integer_to_list(I).
 
 a2l(A) when is_atom(A) -> atom_to_list(A).
 
-     
-    
- 
+
+
+
 t_setup() ->
     %%open([{db_file, "yaws_rss.dets"}, {max,7}]),
     insert(test,xml,"Normalizing XML, Part 2",
@@ -501,8 +501,8 @@ t_exp() ->
            "normalization techniques to W3C XML Schema data modeling, "
            "Will Provost discusses when not to normalize, the scope "
            "of uniqueness and the fourth and fifth normal forms.",
-          "tobbe",
-          63269561882).  % 6/12-2004
+           "tobbe",
+           63269561882).  % 6/12-2004
 
 t_xopen() ->
     open([{db_file, "yaws_rss.dets"}, 

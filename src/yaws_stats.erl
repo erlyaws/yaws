@@ -41,7 +41,7 @@ start_link() ->
 stop(Pid) ->
     gen_server:cast(Pid, {stop}).
 
-    
+
 hit() ->
     case get_stats() of
 	undefined ->

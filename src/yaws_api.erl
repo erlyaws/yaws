@@ -315,30 +315,38 @@ parse_multi(header, [H|T], Boundary, Acc, Res, Tmp) ->
 parse_multi(header, [], Boundary, Acc, Res, Tmp) ->
     {cont, {header, [], Boundary, Acc, Tmp}, Res};
 
+%% store in case no match
 parse_multi(body, [B|T], [B|T1], Acc, Res, _Tmp) ->
-    parse_multi(boundary, T, T1, Acc, Res, {[B|T], [B|T1]}); %% store in case no match
+    parse_multi(boundary, T, T1, Acc, Res, {[B|T], [B|T1]}); 
 parse_multi(body, [H|T], Boundary, Acc, Res, Tmp) ->
     parse_multi(body, T, Boundary, [H|Acc], Res, Tmp);
-parse_multi(body, [], Boundary, [], Res, Tmp) ->  %% would be empty partial body result
+%% would be empty partial body result
+parse_multi(body, [], Boundary, [], Res, Tmp) ->  
     {cont, {body, [], Boundary, [], Tmp}, Res};
-parse_multi(body, [], Boundary, Acc, Res, Tmp) ->        %% make a partial body result
+%% make a partial body result
+parse_multi(body, [], Boundary, Acc, Res, Tmp) ->        
     {cont, {body, [], Boundary, [], Tmp}, [{part_body, lists:reverse(Acc)}|Res]};
 
 parse_multi(boundary, [B|T], [B|T1], Acc, Res, Tmp) ->
     parse_multi(boundary, T, T1, Acc, Res, Tmp);
-parse_multi(boundary, [_H|_T], [_B|_T1], start, Res, {[D|T2], Bound}) -> %% false alarm
+%% false alarm
+parse_multi(boundary, [_H|_T], [_B|_T1], start, Res, {[D|T2], Bound}) -> 
     parse_multi(body, T2, Bound, [D], Res, []);
-parse_multi(boundary, [_H|_T], [_B|_T1], Acc, Res, {[D|T2], Bound}) -> %% false alarm
+%% false alarm
+parse_multi(boundary, [_H|_T], [_B|_T1], Acc, Res, {[D|T2], Bound}) -> 
     parse_multi(body, T2, Bound, [D|Acc], Res, []);
-parse_multi(boundary, [], [B|T1], Acc, Res, Tmp) -> %% run out of body
+%% run out of body
+parse_multi(boundary, [], [B|T1], Acc, Res, Tmp) -> 
     {cont, {boundary, [], [B|T1], Acc, Tmp}, Res};
 parse_multi(boundary, [], [], start, Res, {_, Bound}) ->
     {cont, {is_end, [], Bound, [], []}, Res};
 parse_multi(boundary, [], [], Acc, Res, {_, Bound}) ->
     {cont, {is_end, [], Bound, [], []}, [{body, lists:reverse(Acc)}|Res]};
-parse_multi(boundary, [H|T], [], start, Res, {_, Bound}) -> %% matched whole boundary!
+%% matched whole boundary!
+parse_multi(boundary, [H|T], [], start, Res, {_, Bound}) -> 
     parse_multi(is_end, [H|T], Bound, [], Res, []);
-parse_multi(boundary, [H|T], [], Acc, Res, {_, Bound}) -> %% matched whole boundary!
+%% matched whole boundary!
+parse_multi(boundary, [H|T], [], Acc, Res, {_, Bound}) -> 
     parse_multi(is_end, [H|T], Bound, [], [{body, lists:reverse(Acc)}|Res], []);
 
 parse_multi(is_end, "--"++_, _Boundary, _Acc, Res, _Tmp) ->
