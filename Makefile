@@ -5,7 +5,7 @@ include ./vsn.mk
 
 PKGCONFIG_FILES = yaws.pc
 
-all debug clean:	
+all debug clean: cleantests
 	@set -e ; \
 	  for d in $(SUBDIRS) ; do \
 	    if [ -f $$d/Makefile ]; then ( cd $$d && $(MAKE) $@ ) || exit 1 ; fi ; \
@@ -13,6 +13,8 @@ all debug clean:
 	rm -rf yaws-${YAWS_VSN}.script yaws-${YAWS_VSN}.boot
 	rm -rf yaws-${YAWS_VSN}.rel yaws-${YAWS_VSN}.tar.gz
 
+cleantests:
+	cd test && $(MAKE) clean
 
 install:	all 
 	set -e ; \
