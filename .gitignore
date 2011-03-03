@@ -21,6 +21,8 @@ src/charset.def
 src/mime_types.erl
 src/yaws_configure.hrl
 src/yaws_generated.erl
+test/ibrowse
+test/ibrowse.tar.gz
 test/support/include.mk
 test/support/include.sh
 test/t1/localhost:8000/
