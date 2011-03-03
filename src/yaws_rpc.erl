@@ -117,10 +117,6 @@ handle_payload(Args, Handler, Type) -> % {{{
 		PL = binary_to_list(Args#arg.clidata),
 		%%    ?Debug("rpc plaintext call ~p ~n", [PL]),
 		{PL, yaws_api:url_decode(PL)};
-	    soap_dime ->
-		[{_,_,_,Req}|As]=yaws_dime:decode(Args#arg.clidata),
-		{Args#arg.clidata,
-		 {binary_to_list(Req),As}};
 	    _ ->
 		PL = binary_to_list(Args#arg.clidata),
 		{PL, PL}
@@ -139,12 +135,9 @@ handle_payload(Args, Handler, Type) -> % {{{
 %%% "X-Haxe-Remoting" HTTP header, then the "SOAPAction" header,
 %%% and if those are absent we assume the request is JSON.
 recognize_rpc_type(Args) ->
-    case (Args#arg.headers)#headers.content_type of
-	"application/dime" -> soap_dime;
-	_ ->
-	    OtherHeaders = ((Args#arg.headers)#headers.other),
-	    recognize_rpc_hdr([{X,Y,yaws:to_lower(Z),Q,W} || {X,Y,Z,Q,W} <- OtherHeaders])
-    end.
+    OtherHeaders = ((Args#arg.headers)#headers.other),
+    recognize_rpc_hdr(
+      [{X,Y,yaws:to_lower(Z),Q,W} || {X,Y,Z,Q,W} <- OtherHeaders]).
 
 recognize_rpc_hdr([{_,_,"x-haxe-remoting",_,_}|_]) -> haxe;
 recognize_rpc_hdr([{_,_,"soapaction",_,_}|_])      -> soap;
@@ -241,7 +234,7 @@ get_expire(M, F) ->
         _                        -> false
     end.
 
-callback_fun(M, F, Args, Payload, SessionValue, RpcType) when RpcType==soap; RpcType==soap_dime ->
+callback_fun(M, F, Args, Payload, SessionValue, RpcType) when RpcType==soap ->
     fun() -> yaws_soap_srv:handler(Args, {M,F}, Payload, SessionValue) end;
 callback_fun(M, F, Args, Payload, SessionValue, _RpcType) ->
     fun() -> M:F(Args#arg.state, Payload, SessionValue) end.
@@ -282,22 +275,8 @@ send(_Args, StatusCode, Payload, AddOnData, RpcType) ->
 content_hdr(json, Payload) -> {content, "application/json", Payload};
 content_hdr(_, Payload)    -> {content, "text/xml", Payload}.  % FIXME  would like to add charset info here !!
 
-encode_handler_payload({Xml,[]}, _ID, soap_dime) ->   % {{{
-    {ok, Xml, soap};
-
-encode_handler_payload({Xml,As}, _ID, soap_dime) ->   % {{{
-	EncodedPayload = yaws_dime:encode(Xml, As),
-    {ok, EncodedPayload};
-
-encode_handler_payload(Xml, _ID, soap_dime) ->   % {{{
-    {ok, Xml, soap};
-
 encode_handler_payload({Xml,[]}, _ID, soap) ->   % {{{
     {ok, Xml};
-
-encode_handler_payload({Xml,As}, _ID, soap) ->   % {{{
-	EncodedPayload = yaws_dime:encode(Xml, As),
-    {ok, EncodedPayload, soap_dime};
 
 encode_handler_payload(Xml, _ID, soap) ->   % {{{
     {ok, Xml};
@@ -355,9 +334,6 @@ decode_handler_payload(haxe, [$_, $_, $x, $= | HaxeStr]) ->
     end;
 decode_handler_payload(haxe, _HaxeStr) ->
     {error, missing_haxe_prefix};
-
-decode_handler_payload(soap_dime, Payload) ->
-    {ok, Payload, undefined};
 decode_handler_payload(soap, Payload) ->
     {ok, Payload, undefined}.
 

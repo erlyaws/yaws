@@ -472,10 +472,7 @@ rmsp(Str) -> string:strip(Str, left).
 
 
 make_request_body(Content, []) ->
-        {"text/xml; charset=utf-8", "<?xml version=\"1.0\" encoding=\"utf-8\"?>"++Content};
-make_request_body(Content, AttachedFiles) ->
-		{"application/dime", yaws_dime:encode("<?xml version=\"1.0\" encoding=\"utf-8\"?>"++Content, AttachedFiles)}.
-
+        {"text/xml; charset=utf-8", "<?xml version=\"1.0\" encoding=\"utf-8\"?>"++Content}.
 
 makeFault(FaultCode, FaultString) ->
   try 
