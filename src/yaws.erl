@@ -132,9 +132,11 @@ start_embedded(DocRoot, SL, GL) when is_list(DocRoot),is_list(SL),is_list(GL) ->
 start_embedded(DocRoot, SL, GL, Id)
   when is_list(DocRoot), is_list(SL), is_list(GL) ->
     {ok, SCList, GC, _} = yaws_api:embedded_start_conf(DocRoot, SL, GL, Id),
-    application:start(yaws),
+    ok = application:start(yaws),
     yaws_config:add_yaws_soap_srv(GC),
-    yaws_api:setconf(GC, SCList).
+    SCs = [yaws_config:add_yaws_auth(X) || X <- SCList],
+    yaws_api:setconf(GC, SCs),
+    ok.
 
 add_server(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
     SC  = create_sconf(DocRoot, SL),
