@@ -69,12 +69,113 @@
 -export([binding/1,binding_exists/1,
          dir_listing/1, dir_listing/2, redirect_self/1]).
 
+-export([arg_clisock/1
+         , arg_client_ip_port/1
+         , arg_headers/1
+         , arg_req/1
+         , arg_clidata/1
+         , arg_server_path/1
+         , arg_querydata/1
+         , arg_appmoddata/1
+         , arg_docroot/1
+         , arg_docroot_mount/1
+         , arg_fullpath/1
+         , arg_cont/1
+         , arg_state/1
+         , arg_pid/1
+         , arg_opaque/1
+         , arg_appmod_prepath/1
+         , arg_prepath/1
+         , arg_pathinfo/1
+
+         , http_request_method/1
+         , http_request_path/1
+         , http_request_version/1
+
+         , http_response_version/1
+         , http_response_status/1
+         , http_response_phrase/1
+
+         , headers_connection/1
+         , headers_accept/1
+         , headers_host/1
+         , headers_if_modified_since/1
+         , headers_if_match/1
+         , headers_if_none_match/1
+         , headers_if_range/1
+         , headers_if_unmodified_since/1
+         , headers_range/1
+         , headers_referer/1
+         , headers_user_agent/1
+         , headers_accept_ranges/1
+         , headers_cookie/1
+         , headers_keep_alive/1
+         , headers_location/1
+         , headers_content_length/1
+         , headers_content_type/1
+         , headers_content_encoding/1
+         , headers_authorization/1
+         , headers_transfer_encoding/1
+         , headers_x_forwarded_for/1
+         , headers_other/1
+         
+        ]).
+
 
 -import(lists, [map/2, flatten/1, reverse/1]).
 
 %% these are a bunch of function that are useful inside
 %% yaws scripts
 
+arg_clisock(#arg{clisock = X}) -> X.
+arg_client_ip_port(#arg{client_ip_port = X}) -> X.
+arg_headers(#arg{headers = X}) -> X.
+arg_req(#arg{req = X}) -> X.
+arg_clidata(#arg{clidata = X}) -> X.
+arg_server_path(#arg{server_path = X}) -> X.
+arg_querydata(#arg{querydata = X}) -> X.
+arg_appmoddata(#arg{appmoddata = X}) -> X.
+arg_docroot(#arg{docroot = X}) -> X.
+arg_docroot_mount(#arg{docroot_mount = X}) -> X.
+arg_fullpath(#arg{fullpath = X}) -> X.
+arg_cont(#arg{cont = X}) -> X.
+arg_state(#arg{state = X}) -> X.
+arg_pid(#arg{pid = X}) -> X.
+arg_opaque(#arg{opaque = X}) -> X.
+arg_appmod_prepath(#arg{appmod_prepath = X}) -> X.
+arg_prepath(#arg{prepath = X}) -> X.
+arg_pathinfo(#arg{pathinfo = X}) ->  X.
+
+http_request_method(#http_request{method = X}) -> X.
+http_request_path(#http_request{path = X}) -> X.
+http_request_version(#http_request{version = X}) -> X.
+
+http_response_version(#http_response{version = X}) -> X.
+http_response_status(#http_response{status = X}) -> X.
+http_response_phrase(#http_response{phrase = X}) -> X.
+
+headers_connection(#headers{connection = X}) -> X.
+headers_accept(#headers{accept = X}) -> X.
+headers_host(#headers{host = X}) -> X.
+headers_if_modified_since(#headers{if_modified_since = X}) -> X.
+headers_if_match(#headers{if_match = X}) -> X.
+headers_if_none_match(#headers{if_none_match = X}) -> X.
+headers_if_range(#headers{if_range = X}) -> X.
+headers_if_unmodified_since(#headers{if_unmodified_since = X}) -> X.
+headers_range(#headers{range = X}) -> X.
+headers_referer(#headers{referer = X}) -> X.
+headers_user_agent(#headers{user_agent = X}) -> X.
+headers_accept_ranges(#headers{accept_ranges = X}) -> X.
+headers_cookie(#headers{cookie = X}) -> X.
+headers_keep_alive(#headers{keep_alive = X}) -> X.
+headers_location(#headers{location = X}) -> X.
+headers_content_length(#headers{content_length = X}) -> X.
+headers_content_type(#headers{content_type = X}) -> X.
+headers_content_encoding(#headers{content_encoding = X}) -> X.
+headers_authorization(#headers{authorization = X}) -> X.
+headers_transfer_encoding(#headers{transfer_encoding = X}) -> X.
+headers_x_forwarded_for(#headers{x_forwarded_for = X}) -> X.
+headers_other(#headers{other = X}) -> X.
 
 
 %% parse the command line query data
