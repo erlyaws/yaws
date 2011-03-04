@@ -76,7 +76,7 @@ get_yaws_session_server_backend() ->
 	    case application:get_env(yaws, embedded) of
 		true ->
 		    case application:get_env(yaws, embedded_conf) of
-			L ->
+			L when is_list(L) ->
 			    case lists:keysearch(gc, 1, L) of
 				{value, {_, #gconf{ysession_mod = Backend}}} ->
 				    Backend;
