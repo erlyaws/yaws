@@ -55,15 +55,41 @@
 %%% API
 %%%----------------------------------------------------------------------
 start_link() ->
-    {ok, #gconf{ysession_mod = Backend}, _} = yaws_server:getconf(),
+    Backend = get_yaws_session_server_backend(),
     gen_server:start_link({local, yaws_session_server}, 
                           yaws_session_server, Backend, []).
 start() ->
-    {ok, #gconf{ysession_mod = Backend}, _} = yaws_server:getconf(),
+    Backend = get_yaws_session_server_backend(),
     gen_server:start({local, yaws_session_server}, 
                      yaws_session_server, Backend, []).
 stop() ->
     gen_server:call(?MODULE, stop, infinity).
+
+
+%% We are bending over here in our pursuit of finding a
+%% proper ysession_server backend.
+get_yaws_session_server_backend() ->
+    #gconf{ysession_mod = DefaultBackend} = #gconf{},
+    case yaws_server:getconf() of
+	{ok, #gconf{ysession_mod = Backend}, _} -> Backend;
+	_ ->
+	    case application:get_env(yaws, embedded) of
+		true ->
+		    case application:get_env(yaws, embedded_conf) of
+			L ->
+			    case lists:keysearch(gc, 1, L) of
+				{value, {_, #gconf{ysession_mod = Backend}}} ->
+				    Backend;
+				_ ->
+				    DefaultBackend
+			    end;
+			_ ->
+			    DefaultBackend
+		    end;
+		_ ->
+		    DefaultBackend
+	    end
+    end.
 
 
 %% will return a new cookie as a string
