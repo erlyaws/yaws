@@ -1546,10 +1546,10 @@ ehtml_attrs_expander(Var) when is_atom(Var) ->
     [{ehtml_attrs, ehtml_var_name(Var)}].
 
 ehtml_attr_part_expander(A) when is_atom(A) ->
-    case ehtml_var_p(A) of
-        true  -> {preformatted, ehtml_var_name(A)};
-        false -> atom_to_list(A)
-    end;
+    case atom_to_list(A) of
+        [$$|_Rest] -> {preformatted, ehtml_var_name(A)};
+        Other -> Other
+    end;     
 ehtml_attr_part_expander(I) when is_integer(I) -> integer_to_list(I);
 ehtml_attr_part_expander(S) when is_list(S) -> S.
 
@@ -1585,14 +1585,10 @@ ehtml_eval({Type, Var}, Env) ->
 %% Get the name part of a variable reference.
 %% e.g. ehtml_var_name('$foo') -> foo.
 ehtml_var_name(A) when is_atom(A) ->
-    case ehtml_var_p(A) of
-        true -> list_to_atom(tl(atom_to_list(A)));
-        false -> erlang:error({bad_ehtml_var_name, A})
-    end.
-
-%% Is X a variable reference? Variable references are atoms starting with $.
-ehtml_var_p(X) when is_atom(X) -> hd(atom_to_list(X)) == $$;
-ehtml_var_p(_) -> false.
+    case atom_to_list(A) of
+        [$$|Rest] -> list_to_atom(Rest);
+        _Other -> erlang:error({bad_ehtml_var_name, A})
+    end. 
 
 ehtml_expander_test() ->
     %% Expr is a template containing variables.

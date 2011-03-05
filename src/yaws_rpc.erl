@@ -264,10 +264,6 @@ send(Args, StatusCode) -> send(Args, StatusCode, json).
 
 send(Args, StatusCode, RpcType) -> send(Args, StatusCode, "", [], RpcType). 
 
-send(Args, StatusCode, Payload, AddOnData, RpcType) 
-  when not is_list(AddOnData) ->
-    send(Args, StatusCode, Payload, [AddOnData], RpcType);
-
 send(_Args, StatusCode, Payload, AddOnData, RpcType) ->
     A = [
     {status, StatusCode}, 

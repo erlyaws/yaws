@@ -216,13 +216,6 @@ it will close after keepalive_timeout milliseconds unless a new
 request is received in that time. The default value is 30000. The
 value \fIinfinity\fR is legal but not recommended.
 
-.TP
-\fBuse_fdsrv = true | false\fR
-This feature makes it possible to bind to ports < 1024 even when we're
-not running as root. It requires the Jungerl package called fd_server
-to be properly installed. The feature doesn't work with SSL. Default
-is false.  The use of fdsrv is not encouraged, see
-http://yaws.hyber.org/privbind.yaws
 
 .TP
 \fBsubconfig = File\fR

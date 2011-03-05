@@ -123,20 +123,6 @@ pick_first_virthost_on_nomatch = true
 
 keepalive_timeout = 30000
 
-# All unices are broken since it's not possible to bind to
-# a privileged port (< 1024) unless uid==0
-# There is a contrib in jungerl which makes it possible by means 
-# of an external setuid root programm called fdsrv to listen to
-# a privileged port.
-# If we use this feature, it requires fdsrv to be properly installed.
-# Doesn't yet work with SSL.
-# Read http://yaws.hyber.org/privbind.yaws for more info and a better 
-# solution than fd_srv
-
-use_fdsrv = false
-
-
-
 
 # and then a set of virtual servers
 # First two virthosted servers on the same IP (0.0.0.0)

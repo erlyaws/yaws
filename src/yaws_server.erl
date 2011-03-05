@@ -418,24 +418,6 @@ terminate(_Reason, _State) ->
 
 do_listen(GC, SC) ->
     case SC#sconf.ssl of
-        undefined when ?gc_use_fdsrv(GC) ->
-            %% Use fdsrv kit from jungerl, requires fdsrv
-            %% to be properly installed
-            %% This solves the problem of binding to privileged ports. A
-            %% better solution is to use privbind or authbind. Also this
-            %% doesn't work for ssl.
-
-            fdsrv:start(),
-            case fdsrv:bind_socket(tcp, {SC#sconf.listen, SC#sconf.port}) of
-                {ok, Fd} ->
-                    {nossl, undefined,
-                     gen_tcp_listen(SC#sconf.port,[{fd, Fd}|listen_opts(SC)])};
-                ignore ->
-                    {nossl, undefined,
-                     gen_tcp_listen(SC#sconf.port, listen_opts(SC))};
-                Err ->
-                    {nossl, undefined, Err}
-            end;
         undefined ->
             {nossl, undefined, gen_tcp_listen(SC#sconf.port, listen_opts(SC))};
         SSL ->
@@ -3396,7 +3378,6 @@ ut_open(UT) ->
         identity ->
             case UT#urltype.data of
                 undefined ->
-
                     ?Debug("ut_open reading\n",[]),
                     {ok, Bin} = file:read_file(UT#urltype.fullpath),
                     ?Debug("ut_open read ~p\n",[size(Bin)]),

@@ -715,8 +715,6 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Expect 0 or positive integer at line ~w",[Lno])}
             end;
 
-        ["username", '=' , _Uname] ->
-            {error, "username feature not supported anymore - use fdsrv"};
 
         ["copy_error_log", '=', Bool] ->
             case is_bool(Bool) of
@@ -752,15 +750,9 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
-        ["use_fdsrv", '=',  Bool] ->
-            case is_bool(Bool) of
-                {true, Val} ->
-                    fload(FD, globals, 
-                          ?gc_set_use_fdsrv(GC,Val),
-                          C, Cs, Lno+1, Next);
-                false ->
-                    {error, ?F("Expect true|false at line ~w", [Lno])}
-            end;
+        ["use_fdsrv", '=',  _Bool] ->
+            %% feature removed
+            fload(FD, globals, GC, C, Cs, Lno+1, Next);
         ["use_old_ssl", '=',  Bool] ->
             case is_bool(Bool) of
                 {true, Val} ->
