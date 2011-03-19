@@ -2488,36 +2488,32 @@ finish_up_dyn_file(Arg, CliSock) ->
 
 %% do the header and continue
 deliver_dyn_file(CliSock, Specs, ARG, UT, N) ->
-    Fd = ut_open(UT),
-    Bin = ut_read(Fd),
-    deliver_dyn_file(CliSock, Bin, Fd, Specs, ARG, UT, N).
+    Bin = ut_read(UT),
+    deliver_dyn_file(CliSock, Bin, Specs, ARG, UT, N).
 
-
-
-deliver_dyn_file(CliSock, Bin, Fd, [H|T],Arg, UT, N) ->
+deliver_dyn_file(CliSock, Bin, [H|T], Arg, UT, N) ->
     ?Debug("deliver_dyn_file: ~p~n", [H]),
     case H of
         {mod, LineNo, YawsFile, NumChars, Mod, out} ->
-            {_, Bin2} = skip_data(Bin, Fd, NumChars),
+            {_, Bin2} = skip_data(Bin, NumChars),
             deliver_dyn_part(CliSock, LineNo, YawsFile,
                              N, Arg, UT,
                              fun(A)->Mod:out(A) end,
-                             fun(A)->deliver_dyn_file(
-                                       CliSock,Bin2,Fd,T,A,UT,0)
+                             fun(A)->deliver_dyn_file(CliSock,Bin2,T,A,UT,0)
                              end);
         {data, 0} ->
-            deliver_dyn_file(CliSock, Bin, Fd,T,Arg,UT,N);
+            deliver_dyn_file(CliSock, Bin, T, Arg, UT, N);
         {data, NumChars} ->
-            {Send, Bin2} = skip_data(Bin, Fd, NumChars),
+            {Send, Bin2} = skip_data(Bin, NumChars),
             accumulate_content(Send),
-            deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT,N);
+            deliver_dyn_file(CliSock, Bin2, T, Arg, UT, N);
         {skip, 0} ->
-            deliver_dyn_file(CliSock, Bin, Fd,T,Arg,UT,N);
+            deliver_dyn_file(CliSock, Bin, T, Arg, UT, N);
         {skip, NumChars} ->
-            {_, Bin2} = skip_data(Bin, Fd, NumChars),
-            deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT,N);
+            {_, Bin2} = skip_data(Bin, NumChars),
+            deliver_dyn_file(CliSock, Bin2, T, Arg, UT, N);
         {binding, NumChars} ->
-            {Send, Bin2} = skip_data(Bin, Fd, NumChars),
+            {Send, Bin2} = skip_data(Bin, NumChars),
             "%%"++Key = binary_to_list(Send),
             Chunk =
                 case get({binding, Key--"%%"}) of
@@ -2525,20 +2521,19 @@ deliver_dyn_file(CliSock, Bin, Fd, [H|T],Arg, UT, N) ->
                     Value -> Value
                 end,
             accumulate_content(Chunk),
-            deliver_dyn_file(CliSock, Bin2, Fd, T, Arg, UT, N);
+            deliver_dyn_file(CliSock, Bin2, T, Arg, UT, N);
         {error, NumChars, Str} ->
-            {_, Bin2} = skip_data(Bin, Fd, NumChars),
+            {_, Bin2} = skip_data(Bin, NumChars),
             accumulate_content(Str),
-            deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT, N);
+            deliver_dyn_file(CliSock, Bin2, T, Arg, UT, N);
         {verbatim, NumChars, Data} ->
-            {_Send, Bin2} = skip_data(Bin, Fd, NumChars),
+            {_Send, Bin2} = skip_data(Bin, NumChars),
             accumulate_content(Data),
-            deliver_dyn_file(CliSock, Bin2, Fd, T,Arg,UT,N);
+            deliver_dyn_file(CliSock, Bin2, T, Arg, UT, N);
         yssi ->
             ok
     end;
-
-deliver_dyn_file(CliSock, _Bin, _Fd, [], ARG,_UT,_N) ->
+deliver_dyn_file(CliSock, _Bin, [], ARG,_UT,_N) ->
     ?Debug("deliver_dyn: done~n", []),
     finish_up_dyn_file(ARG, CliSock).
 
@@ -2741,34 +2736,10 @@ demonitor_streamcontent_pid(Ref) ->
             ok
     end.
 
-skip_data(List, Fd, Sz) when is_list(List) ->
-    skip_data(list_to_binary(List), Fd, Sz);
-skip_data(Bin, Fd, Sz) when is_binary(Bin) ->
+skip_data(Bin, Sz) ->
     ?Debug("Skip data ~p bytes from", [Sz]),
-    case  Bin of
-        <<Head:Sz/binary ,Tail/binary>> ->
-            {Head, Tail};
-        _ ->
-            case (catch ut_read(Fd)) of
-                {ok, Bin2} when is_binary(Bin2) ->
-                    Bin3 = <<Bin/binary, Bin2/binary>>,
-                    skip_data(Bin3, Fd, Sz);
-                Bin2 when is_binary(Bin2) ->
-                    Bin3 = <<Bin/binary, Bin2/binary>>,
-                    skip_data(Bin3, Fd, Sz);
-                _Err ->
-                    ?Debug("EXIT in skip_data: ~p  ~p ~p~n", [Bin, Sz, _Err]),
-                    exit(normal)
-            end
-    end;
-skip_data({bin, Bin}, _, Sz) ->
-    ?Debug("Skip bin data ~p bytes ", [Sz]),
-    <<Head:Sz/binary ,Tail/binary>> = Bin,
-    {Head, {bin, Tail}};
-skip_data({ok, X}, Fd, Sz) ->
-    skip_data(X, Fd, Sz).
-
-
+    <<Head:Sz/binary, Tail/binary>> = Bin,
+    {Head, Tail}.
 
 to_binary(B) when is_binary(B) ->
     B;
@@ -2830,7 +2801,7 @@ handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, ARG) ->
                 %seems unwieldy. just how much performance can it gain if we
                 %% end up using slower funcs like lists:flatten anyway?
                 %% review!.
-                       url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile],
+                url_type(lists:flatten(UT#urltype.dir) ++ [$/|Yfile],
                          ARG#arg.docroot, ARG#arg.docroot_mount)
         end,
 
@@ -3245,19 +3216,12 @@ decide_deflate(true, Arg, Data, decide, Mode) ->
             ?Debug("Mime-Type: ~p~n", [Mime]),
             case compressible_mime_type(Mime) of
                 true ->
-                    case yaws:accepts_gzip(Arg#arg.headers,
-                                           Mime) of
+                    case yaws:accepts_gzip(Arg#arg.headers, Mime) of
                         true ->
                             case Mode of
                                 final ->
-                                    case yaws_zlib:gzip(to_binary(Data)) of
-                                        {ok, DB} ->
-                                            {data, DB};
-                                        _Err ->
-                                            ?Debug(
-                                               "gzip Err: ~p~n", [_Err]),
-                                            false
-                                    end;
+                                    {ok, DB} = yaws_zlib:gzip(to_binary(Data)),
+                                    {data, DB};
                                 stream ->
                                     true
                             end;
@@ -3372,39 +3336,28 @@ get_more_post_data(PPS, ARG) ->
     end.
 
 
-ut_open(UT) ->
-    ?Debug("ut_open() UT.fullpath = ~p~n", [UT#urltype.fullpath]),
+ut_read(UT) ->
+    ?Debug("ut_read() UT.fullpath = ~p~n", [UT#urltype.fullpath]),
     case yaws:outh_get_content_encoding() of
         identity ->
             case UT#urltype.data of
                 undefined ->
-                    ?Debug("ut_open reading\n",[]),
+                    ?Debug("ut_read reading\n",[]),
                     {ok, Bin} = file:read_file(UT#urltype.fullpath),
-                    ?Debug("ut_open read ~p\n",[size(Bin)]),
-                    {bin, Bin};
+                    ?Debug("ut_read read ~p\n",[size(Bin)]),
+                    Bin;
                 B when is_binary(B) ->
-                    {bin, B}
+                    B
             end;
         deflate ->
             case UT#urltype.deflate of
                 B when is_binary(B) ->
-                    ?Debug("ut_open using deflated binary of size ~p~n",
+                    ?Debug("ut_read using deflated binary of size ~p~n",
                            [size(B)]),
-                    {bin, B}
+                    B
             end
     end.
 
-
-ut_read({bin, B}) ->
-    B;
-ut_read(Fd) ->
-    file:read(Fd, 4000).
-
-
-ut_close({bin, _}) ->
-    ok;
-ut_close(Fd) ->
-    file:close(Fd).
 
 parse_range(L, Tot) ->
     case catch parse_range_throw(L, Tot) of
@@ -3480,16 +3433,16 @@ deliver_file(CliSock, Req, UT, Range) ->
     end.
 
 deliver_small_file(CliSock, _Req, UT, Range) ->
-    Fd = ut_open(UT),
-    case Range of
-        all ->
-            Bin = ut_read(Fd);
-        {fromto, From, To, _Tot} ->
-            Length = To - From + 1,
-            <<_:From/binary, Bin:Length/binary, _/binary>> = ut_read(Fd)
-    end,
+    Bin0 = ut_read(UT),
+    Bin = case Range of
+              all ->
+                  Bin0;
+              {fromto, From, To, _Tot} ->
+                  Length = To - From + 1,
+                  <<_:From/binary, Bin1:Length/binary, _/binary>> = Bin0,
+                  Bin1
+          end,
     accumulate_content(Bin),
-    ut_close(Fd),
     deliver_accumulated(CliSock),
     done_or_continue().
 
