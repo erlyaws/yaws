@@ -9,7 +9,7 @@
 
 sizes="$@"
 if [ -n "$RUNTEST_CURLS" ]; then
-    fdlimit=$RUNTEST_CURLS
+    fdlimit=`expr $RUNTEST_CURLS / $#`
 else
     fdlimit=`ulimit -n`
     fdlimit=`expr $fdlimit / 8`
@@ -32,7 +32,8 @@ outdir=./runtest_out$$
 trap "rm -rf $outdir" HUP INT EXIT
 mkdir -p $outdir
 i=0
-echo starting $fdlimit background curl tasks
+numcurls=`expr $fdlimit '*' $#`
+echo starting $numcurls background curl tasks
 while [ $i -lt $fdlimit ]; do
     for j in $sizes; do
         curlhdrs=curl-${j}-${i}.txt
