@@ -21,8 +21,10 @@ different log files written by yaws.
 printouts from yaws. 
 
 .br
-\fBHost.access\fR - for each virtual host served by yaws, a file Host.access
-will be written which contains an access log in Common Log Format.
+\fB<Host>.access\fR - for each virtual host served by yaws, a file
+<Host>.access will be written which contains an access log in Common
+Log Format. (See http://en.wikipedia.org/wiki/Common_Log_Format for
+more details on Common Log Format.)
 
 .br
 \fBtrace.http\fR - this file contains the HTTP trace if that is enabled
@@ -35,6 +37,61 @@ goes here.
 \fBtrace.traffic\fR - this file contains the traffic trace if that is enabled
 
 The default value for logdir is "."
+
+.TP
+
+\fBlogger_mod = Module\fR
+This directive sets \fBModule\fR as the access logging module. The
+function \fBModule:accesslog/8\fR will be called. The arguments to
+this function are as follows:
+
+.br
+\fBServerName\fR - Name of the server that was accessed (as a
+string). If the server was accessed on a port other than the HTTP
+default port 80, the name also includes the port number,
+e.g. "server:8000". Implementations of the \fBaccesslog\fR function
+can use this argument to distinguish among different logging formats
+for different servers.
+
+.br
+\fBIpAddress\fR - IP address of the accessing client (as a tuple).
+
+.br
+\fBUser\fR - The username of the authenticated user (as a string).
+
+.br
+\fBReq\fR - The HTTP method, URI path, and HTTP version of the
+request (as a list of strings and characters).
+
+.br
+\fBStatus\fR - The HTTP status code returned to the client (as a
+string).
+
+.br
+\fBLength\fR - The content-length of the response returned to the
+client (as a string).
+
+.br
+\fBReferrer\fR - The URL of the web resource where the request
+originated (as a string); the value of the HTTP \fBReferer\fR header.
+
+.br
+\fBUserAgent\fR - The identification string of the user agent issuing
+the request (as a string); the value of the HTTP \fBUser-Agent\fR
+header.
+
+Arguments for values not available for a particular request, such as
+\fBUser\fR, are provided as the string "-".
+
+Because it's important to avoid blocking the caller, the default
+logging function in Yaws is a cast. You should strive to make your
+custom access logging function return to its caller as quickly as
+possible.
+
+Custom access logging functions can preprocess access logging data and
+then call \fByaws_log:accesslog/8\fR to send the data to the default
+log.
+
 
 .TP
 \fBebin_dir = Directory\fR

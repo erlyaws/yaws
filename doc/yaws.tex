@@ -2047,16 +2047,73 @@ part where options for each virtual host is supplied.
               written by \Yaws\ .
 
               \begin{itemize}
-              \item report.log - this is a text file that contains  all
+              \item \verb+report.log+ - this is a text file that contains  all
               error logger printouts from \Yaws\ .
-              \item Host.access - for each virtual host served by \Yaws\ ,
-              a file Host.access will be written  which  contains
+              \item \verb+<Host>.access+ - for each virtual host served by \Yaws\ ,
+              a file \verb+<Host>.access+ will be written  which  contains
               an access log in Common Log Format.
-              \item trace.http  -  this file contains the HTTP trace if
+              \item \verb+auth.log+ - if configured, all HTTP
+              auth-related messages go here.
+              \item \verb+trace.http+  -  this file contains the HTTP trace if
               that is enabled
-              \item trace.traffic -  this  file  contains  the  traffic
+              \item \verb+trace.traffic+ -  this  file  contains  the  traffic
               trace if that is enabled
               \end{itemize}
+
+\item       \verb+logger_mod = Module+ -
+              It is possible to set a special module that handles
+              access logging. The default is to log all web server
+              traffic to the \verb+<Host>.access+ file in the
+              configured or default \verb+logdir+.
+
+              When it needs to log an access, \Yaws\ will invoke the
+              function \verb+Module:accesslog/8+. The arguments to
+              this function are as follows:
+
+\begin{itemize}
+\item \verb+ServerName+ - name of the server that was accessed (as a
+  string). If the server was accessed on a port other than the HTTP
+  default port 80, the name also includes the port number,
+  e.g. ``server:8000''. Implementations of the \verb+accesslog+
+  function can use this argument to distinguish among different
+  logging formats for different servers.
+
+\item \verb+IpAddress+ - IP address of the accessing client (as a
+  tuple).
+
+\item \verb+User+ - the username of the authenticated user (as a
+  string).
+
+\item \verb+Req+ - the HTTP method, URI path, and HTTP version of the
+  request (as a list of strings and characters).
+
+\item \verb+Status+ - the HTTP status code returned to the client (as
+  a string).
+
+\item \verb+Length+ - the content-length of the response returned to
+  the client (as a string).
+
+\item \verb+Referrer+ - the URL of the web resource where the request
+  originated (as a string); the value of the HTTP \verb+Referer+
+  header.
+
+\item \verb+UserAgent+ - the identification string of the client user
+  agent issuing the request (as a string); the value of the HTTP
+  \verb+User-Agent+ header.
+\end{itemize}
+
+              Arguments for values not available for a particular
+              request, such as \verb+User+, are provided as the string
+              ``-''.
+
+              Because it's important to avoid blocking the caller, the
+              default logging function in \Yaws\ is a cast. You should
+              strive to make your custom access logging function
+              return to its caller as quickly as possible.
+
+              Custom access logging functions can preprocess access
+              logging data and then call \verb+yaws_log:accesslog/8+
+              to send the data to the default log.
 
 \item        \verb+ebin_dir = Directory+ -
               This  directive adds Directory to the \Erlang\  search
@@ -2186,7 +2243,7 @@ The following directives are allowed inside a server definition.
               \Yaws\ .
 
 \item       \verb+access_log = true | false+
-              Setting  this  directive  to  false turns of
+              Setting  this  directive  to  false turns off
               traffic logging for this virtual server. The
               default value is true.
 
@@ -2287,7 +2344,7 @@ The following directives are allowed inside a server definition.
               It  is possible to set a special module that
               handles the HTML generation of server  crash
               messages.  The  default  is  to  display the
-              entire  formated  crash   message   in   the
+              entire  formatted  crash   message   in   the
               browser.  This is good for debugging but not
               in production.
 
@@ -2301,7 +2358,6 @@ The following directives are allowed inside a server definition.
               early stage in the \Yaws\  server.  This can be
               used to do various things such as checking a
               cookie, rewriting paths etc.
-
 
 \item        \verb+<ssl>  .... </ssl>+
               This begins and ends  an  SSL  configuration

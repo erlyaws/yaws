@@ -530,6 +530,10 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Expect directory at line ~w (logdir ~s)", [Lno, Dir])}
             end;
 
+        ["logger_mod", '=', LoggerMod] ->
+            fload(FD, globals, GC#gconf{logger_mod = list_to_atom(LoggerMod)},
+                  C, Cs, Lno+1, Next);
+
         ["ebin_dir", '=', Ebindir] ->
             Dir = filename:absname(Ebindir),
             case warn_dir("ebin_dir", Dir) of

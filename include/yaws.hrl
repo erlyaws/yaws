@@ -66,7 +66,8 @@
 -record(gconf,{yaws_dir,           %% topdir of Yaws installation
                trace,              %% false | {true,http}|{true,traffic}
                flags = ?GC_DEF,    %% boolean flags
-               logdir,          
+               logdir,
+               logger_mod = yaws_log, % access logging module
                ebin_dir = [],
                runmods = [],       %% runmods for entire server
                keepalive_timeout = 30000,

@@ -1346,9 +1346,10 @@ maybe_access_log(Ip, Req, H) ->
                                      end
                              end
                      end,
-            yaws_log:accesslog(SC#sconf.servername, RealIp, User,
-                               [Meth, $\s, Path, $\s, Ver],
-                               Status, Len, Referrer, UserAgent);
+            LoggerMod = GC#gconf.logger_mod,
+            LoggerMod:accesslog(SC#sconf.servername, RealIp, User,
+                                [Meth, $\s, Path, $\s, Ver],
+                                Status, Len, Referrer, UserAgent);
         false ->
             ignore
     end.
