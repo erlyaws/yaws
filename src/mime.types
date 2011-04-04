@@ -68,6 +68,7 @@ application/fastinfoset
 application/fastsoap				
 application/fits				
 application/font-tdpfr				pfr
+application/font-woff				woff
 application/h224				
 application/http				
 application/hyperstudio				stk
