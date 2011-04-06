@@ -1,7 +1,7 @@
 %%----------------------------------------------------------------------
 %%% File    : yaws_api.erl
 %%% Author  : Claes Wikstrom <klacke@hyber.org>
-%%% Purpose : 
+%%% Purpose :
 %%% Created : 24 Jan 2002 by Claes Wikstrom <klacke@hyber.org>
 %%%----------------------------------------------------------------------
 
@@ -24,7 +24,7 @@
 -export([pre_ssi_files/2,  pre_ssi_string/1, pre_ssi_string/2,
          set_content_type/1,
          htmlize/1, htmlize_char/1, f/2, fl/1]).
--export([find_cookie_val/2, secs/0, 
+-export([find_cookie_val/2, secs/0,
          url_decode/1, url_decode_q_split/1,
          url_encode/1, parse_url/1, parse_url/2, format_url/1,
          format_partial_url/2]).
@@ -38,12 +38,12 @@
          stream_process_deliver_final_chunk/2, stream_process_end/2]).
 -export([websocket_send/2, websocket_receive/1,
          websocket_unframe_data/1, websocket_setopts/2]).
--export([new_cookie_session/1, new_cookie_session/2, new_cookie_session/3, 
+-export([new_cookie_session/1, new_cookie_session/2, new_cookie_session/3,
          cookieval_to_opaque/1, request_url/1,
          print_cookie_sessions/0,
          replace_cookie_session/2, delete_cookie_session/1]).
 
--export([getconf/0, 
+-export([getconf/0,
          setconf/2,
          embedded_start_conf/1, embedded_start_conf/2,
          embedded_start_conf/3, embedded_start_conf/4]).
@@ -63,7 +63,7 @@
 -export([ehtml_expand/1, ehtml_expander/1, ehtml_apply/2,
          ehtml_expander_test/0]).
 
--export([parse_set_cookie/1, format_set_cookie/1, 
+-export([parse_set_cookie/1, format_set_cookie/1,
          postvar/2, queryvar/2, getvar/2]).
 
 -export([binding/1,binding_exists/1,
@@ -118,7 +118,7 @@
          , headers_transfer_encoding/1
          , headers_x_forwarded_for/1
          , headers_other/1
-         
+
         ]).
 
 
@@ -220,22 +220,22 @@ parse_post(Arg) ->
 %% It is possible to get the server to maintain a state on behalf of the
 %% out/1 user by returning {get_more, Cont, State}.
 %%
-%% 
+%%
 %% yaws_api:parse_multipart_post/1 will return either:
-%% 
+%%
 %% {cont, Cont, Res} where Res is new result(s) from this segment. This
 %% indicates that there is more data to come and the out/1 function
 %% should return {get_more, Cont, User_state} where User_state might
 %% usefully be a File Descriptor.
 %%
 %% or {result, Res} if this is the last (or only) segment.
-%% 
+%%
 %% Res is a list of {header, Header} | {part_body, Binary} | {body, Binary}
-%% 
+%%
 %% Example usage could be:
-%% 
+%%
 %% <erl>
-%% 
+%%
 %% out(A) ->
 %%        case yaws_api:parse_multipart_post(A) of
 %%             {cont, Cont, Res} ->
@@ -245,7 +245,7 @@ parse_post(Arg) ->
 %%                    handle_res(A, Res),
 %%                    {html, f("<pre>Done </pre>",[])}
 %%        end.
-%% 
+%%
 %% handle_res(A, [{head, Name}|T]) ->
 %%      io:format("head:~p~n",[Name]),
 %%      handle_res(A, T);
@@ -257,7 +257,7 @@ parse_post(Arg) ->
 %%      handle_res(A, T);
 %% handle_res(A, []) ->
 %%      io:format("End_res~n").
-%% 
+%%
 %% </erl>
 
 parse_multipart_post(Arg) ->
@@ -282,7 +282,7 @@ parse_multipart_post(Arg) ->
                             {value, {_, Boundary}} =
                                 lists:keysearch(boundary, 1, LineArgs),
                             parse_multipart(
-                              binary_to_list(un_partial(Arg#arg.clidata)), 
+                              binary_to_list(un_partial(Arg#arg.clidata)),
                               Boundary)
                     end;
                 _Other ->
@@ -374,7 +374,7 @@ isolate_arg([H|T], L)     -> isolate_arg(T, [H|L]).
 
 
 %%
-%%% Stateful parser of multipart data - allows easy re-entry
+%% Stateful parser of multipart data - allows easy re-entry
 %% States are header|body|boundary|is_end
 
 parse_multipart(Data, St) ->
@@ -386,9 +386,9 @@ parse_multipart(Data, St) ->
     end.
 
 %% Re-entry
-parse_multi(Data, {cont, {boundary, Start_data, PartBoundary, 
+parse_multi(Data, {cont, {boundary, Start_data, PartBoundary,
                           Acc, {Possible,Boundary}}}) ->
-    parse_multi(boundary, Start_data++Data, PartBoundary, Acc, [], 
+    parse_multi(boundary, Start_data++Data, PartBoundary, Acc, [],
                 {Possible++Data,Boundary});
 parse_multi(Data, {cont, {State, Start_data, Boundary, Acc, Tmp}}) ->
     parse_multi(State, Start_data++Data, Boundary, Acc, [], Tmp);
@@ -418,36 +418,36 @@ parse_multi(header, [], Boundary, Acc, Res, Tmp) ->
 
 %% store in case no match
 parse_multi(body, [B|T], [B|T1], Acc, Res, _Tmp) ->
-    parse_multi(boundary, T, T1, Acc, Res, {[B|T], [B|T1]}); 
+    parse_multi(boundary, T, T1, Acc, Res, {[B|T], [B|T1]});
 parse_multi(body, [H|T], Boundary, Acc, Res, Tmp) ->
     parse_multi(body, T, Boundary, [H|Acc], Res, Tmp);
 %% would be empty partial body result
-parse_multi(body, [], Boundary, [], Res, Tmp) ->  
+parse_multi(body, [], Boundary, [], Res, Tmp) ->
     {cont, {body, [], Boundary, [], Tmp}, Res};
 %% make a partial body result
-parse_multi(body, [], Boundary, Acc, Res, Tmp) ->        
+parse_multi(body, [], Boundary, Acc, Res, Tmp) ->
     {cont, {body, [], Boundary, [], Tmp}, [{part_body, lists:reverse(Acc)}|Res]};
 
 parse_multi(boundary, [B|T], [B|T1], Acc, Res, Tmp) ->
     parse_multi(boundary, T, T1, Acc, Res, Tmp);
 %% false alarm
-parse_multi(boundary, [_H|_T], [_B|_T1], start, Res, {[D|T2], Bound}) -> 
+parse_multi(boundary, [_H|_T], [_B|_T1], start, Res, {[D|T2], Bound}) ->
     parse_multi(body, T2, Bound, [D], Res, []);
 %% false alarm
-parse_multi(boundary, [_H|_T], [_B|_T1], Acc, Res, {[D|T2], Bound}) -> 
+parse_multi(boundary, [_H|_T], [_B|_T1], Acc, Res, {[D|T2], Bound}) ->
     parse_multi(body, T2, Bound, [D|Acc], Res, []);
 %% run out of body
-parse_multi(boundary, [], [B|T1], Acc, Res, Tmp) -> 
+parse_multi(boundary, [], [B|T1], Acc, Res, Tmp) ->
     {cont, {boundary, [], [B|T1], Acc, Tmp}, Res};
 parse_multi(boundary, [], [], start, Res, {_, Bound}) ->
     {cont, {is_end, [], Bound, [], []}, Res};
 parse_multi(boundary, [], [], Acc, Res, {_, Bound}) ->
     {cont, {is_end, [], Bound, [], []}, [{body, lists:reverse(Acc)}|Res]};
 %% matched whole boundary!
-parse_multi(boundary, [H|T], [], start, Res, {_, Bound}) -> 
+parse_multi(boundary, [H|T], [], start, Res, {_, Bound}) ->
     parse_multi(is_end, [H|T], Bound, [], Res, []);
 %% matched whole boundary!
-parse_multi(boundary, [H|T], [], Acc, Res, {_, Bound}) -> 
+parse_multi(boundary, [H|T], [], Acc, Res, {_, Bound}) ->
     parse_multi(is_end, [H|T], Bound, [], [{body, lists:reverse(Acc)}|Res], []);
 
 parse_multi(is_end, "--"++_, _Boundary, _Acc, Res, _Tmp) ->
@@ -515,11 +515,11 @@ parse_post_data_urlencoded(Bin) ->
 
 %% It will return a [{Key, Value}] list from the post data
 
-do_parse_spec(<<$%, Hi:8, Lo:8, Tail/binary>>, Last, Cur, State) 
+do_parse_spec(<<$%, Hi:8, Lo:8, Tail/binary>>, Last, Cur, State)
     when Hi /= $u ->
     Hex = yaws:hex_to_integer([Hi, Lo]),
     do_parse_spec(Tail, Last, [ Hex | Cur],  State);
-               
+
 do_parse_spec(<<$&, Tail/binary>>, _Last , Cur,  key) ->
     [{lists:reverse(Cur), undefined} |
      do_parse_spec(Tail, nokey, [], key)];  %% cont keymode
@@ -534,9 +534,9 @@ do_parse_spec(<<$+, Tail/binary>>, Last, Cur,  State) ->
 do_parse_spec(<<$=, Tail/binary>>, _Last, Cur, key) ->
     do_parse_spec(Tail, lists:reverse(Cur), [], value); %% change mode
 
-do_parse_spec(<<$%, $u, A:8, B:8,C:8,D:8, Tail/binary>>, 
+do_parse_spec(<<$%, $u, A:8, B:8,C:8,D:8, Tail/binary>>,
 	       Last, Cur, State) ->
-    %% non-standard encoding for Unicode characters: %uxxxx,		     
+    %% non-standard encoding for Unicode characters: %uxxxx,
     Hex = yaws:hex_to_integer([A,B,C,D]),
     do_parse_spec(Tail, Last, [ Hex | Cur],  State);
 
@@ -617,7 +617,7 @@ ssi(DocRoot, Files) ->
                               {ok, Bin} ->
                                   Bin;
                               {error, Reason} ->
-                                  io_lib:format("Cannot include file ~p: ~p", 
+                                  io_lib:format("Cannot include file ~p: ~p",
                                                 [F, Reason])
                           end
                   end, Files),
@@ -633,7 +633,7 @@ pre_ssi_string(Str) ->
     pre_ssi_string(Str, "box").
 
 pre_ssi_string(Str, Class) ->
-    {html, ["<br><br>\n<div class=\"", Class, "\"> <pre>\n", 
+    {html, ["<br><br>\n<div class=\"", Class, "\"> <pre>\n",
             htmlize_l(Str),
             "\n</pre></div>\n<br>\n\n"]}.
 
@@ -682,7 +682,7 @@ htmlize_l([$&|Tail], Acc) ->
     htmlize_l(Tail, [$;,$p,$m,$a,$&|Acc]);
 htmlize_l([$"|Tail], Acc) ->
     htmlize_l(Tail, [$; , $t, $o,  $u,  $q  ,$&|Acc]);
-           
+
 htmlize_l([X|Tail], Acc) when is_integer(X) ->
     htmlize_l(Tail, [X|Acc]);
 htmlize_l([X|Tail], Acc) when is_binary(X) ->
@@ -731,7 +731,7 @@ setcookie(Name, Value, Path, Expire, Domain, Secure) ->
 
 
 %% This function can be passed the cookie we get in the Arg#arg.headers.cookies
-%% to search for a specific cookie 
+%% to search for a specific cookie
 %% return [] if not found
 %%        Str if found
 %% if serveral cookies with the same name are passed fron the browser,
@@ -764,14 +764,14 @@ eat_cookie(Cookie, Str) when is_list(Cookie),is_list(Str) ->
     end.
 
 %% Look for the Cookie and extract its value.
-eat_cookie2(_, [], _)    -> 
+eat_cookie2(_, [], _)    ->
     throw("not found");
-eat_cookie2([H|T], [H|R], C) -> 
+eat_cookie2([H|T], [H|R], C) ->
     eat_cookie2(T, R, C);
 eat_cookie2([H|_], [X|R], C) when H =/= X ->
     {_,Rest} = eat_until(R, $;),
     eat_cookie(C, Rest);
-eat_cookie2([], L, _) -> 
+eat_cookie2([], L, _) ->
     {Meat,_} = eat_until(L, $;),
     Meat.
 
@@ -788,7 +788,7 @@ url_decode([$%, Hi, Lo | Tail]) ->
             Hex = yaws:hex_to_integer([Hi, Lo]),
             [Hex | url_decode(Tail)];
             url_decode([$?|T]) ->
-                   %% Don't decode the query string here, that is 
+                   %% Don't decode the query string here, that is
                    %% parsed separately.
                    [$?|T];
             url_decode([H|T]) when is_integer(H) ->
@@ -813,7 +813,7 @@ start_dir(N, Path, "./"  ++ T ) -> start_dir(N    , Path, T);
 start_dir(N, Path, "../" ++ T ) -> start_dir(N + 1, Path, T);
 start_dir(N, Path,          T ) -> rest_dir (N    , Path, T).
 
-rest_dir (_N, Path, []         ) -> case Path of 
+rest_dir (_N, Path, []         ) -> case Path of
                                         [] -> "/";
                                         _  -> Path
                                     end;
@@ -835,10 +835,10 @@ url_decode_q_split([$%, Hi, Lo | Tail], Ack) ->
     end,
     url_decode_q_split(Tail, [Hex|Ack]);
 url_decode_q_split([$?|T], Ack) ->
-    %% Don't decode the query string here, 
+    %% Don't decode the query string here,
     %% that is parsed separately.
     {path_norm_reverse(Ack), T};
-url_decode_q_split([H|T], Ack) when H /= 0 -> 
+url_decode_q_split([H|T], Ack) when H /= 0 ->
     url_decode_q_split(T, [H|Ack]);
 url_decode_q_split([], Ack) ->
     {path_norm_reverse(Ack), []}.
@@ -876,13 +876,13 @@ is_nb_space(X) ->
 
 %% ret: {line, Line, Trail} | {lastline, Line, Trail} | need_more
 
-get_line(L) ->    
+get_line(L) ->
     get_line(L, []).
 get_line("\r\n\r\n" ++ Tail, Cur) ->
     {lastline, lists:reverse(Cur), Tail};
 get_line("\r\n" ++ Tail, Cur) when Tail /= []  ->
     case is_nb_space(hd(Tail)) of
-        true ->  %% multiline ... continue 
+        true ->  %% multiline ... continue
             get_line(Tail, [$\n, $\r | Cur]);
         false ->
             {line, lists:reverse(Cur), Tail}
@@ -1061,7 +1061,7 @@ reformat_header(H) ->
                      {true, I};
                 (undefined) ->
                      false
-             end, 
+             end,
              [
               if H#headers.connection == undefined ->
                       undefined;
@@ -1220,7 +1220,7 @@ parse_url(Str, Strict) ->
         "http://" ++ Rest ->
             parse_url(host, Strict, #url{scheme = http}, Rest, []);
         "https://" ++ Rest ->
-            parse_url(host, Strict, #url{scheme = https}, Rest, []);        
+            parse_url(host, Strict, #url{scheme = https}, Rest, []);
         "ftp://" ++ Rest ->
             parse_url(host, Strict, #url{scheme = ftp}, Rest, []);
         "file://" ++ Rest ->
@@ -1233,7 +1233,7 @@ parse_url(Str, Strict) ->
 parse_url(host, Strict, U, Str, Ack) ->
     case Str of
         [] ->
-            U#url{host = lists:reverse(Ack), 
+            U#url{host = lists:reverse(Ack),
                   path = "/"
                  };
         [$/|Tail] ->
@@ -1268,11 +1268,11 @@ parse_url(path, Strict, U, Str, Ack) ->
     end.
 
 
-%% used to construct redir headers from partial URLs such 
+%% used to construct redir headers from partial URLs such
 %% as e.g. /foo/bar
 
 format_partial_url(Url, SC) ->
-    [if 
+    [if
          Url#url.scheme == undefined ->
              yaws:redirect_scheme(SC);
          true ->
@@ -1302,7 +1302,7 @@ format_partial_url(Url, SC) ->
 
 format_url(Url) when is_record(Url, url) ->
     [
-     if 
+     if
          Url#url.scheme == undefined ->
              "http://";
          true ->
@@ -1331,8 +1331,8 @@ is_absolute_URI(_) ->
 
 is_abs_URI1([$:|_]) ->
     true;
-is_abs_URI1([C|T]) when 
-((C>=$a) and (C=<$z)) 
+is_abs_URI1([C|T]) when
+((C>=$a) and (C=<$z))
 or ((C>=$A) and (C=<$Z))
 or ((C>=$0) and (C=<$9))
 or (C==$+) or (C==$-) or (C==$.) ->
@@ -1363,12 +1363,12 @@ ehtml_expand({ssi,File, Del, Bs}) ->
     end;
 
 
-%%!todo (low priority) - investigate whether tail-recursion would be of any 
+%%!todo (low priority) - investigate whether tail-recursion would be of any
 %% benefit here instead of the current ehtml_expand(Body) recursion.
-%%                - provide a tail_recursive version & add a file in the 
+%%                - provide a tail_recursive version & add a file in the
 %% benchmarks folder to measure it.
                                                 %
-ehtml_expand({Tag}) -> 
+ehtml_expand({Tag}) ->
     ["<", atom_to_list(Tag), " />"];
 ehtml_expand({pre_html, X}) -> X;
 ehtml_expand({Tag, Attrs}) ->
@@ -1407,7 +1407,7 @@ ehtml_attrs([{check, Name, Value} | Tail]) ->
                      is_integer(Value) -> [$",integer_to_list(Value),$"];
                      is_float(Value) -> [$",float_to_list(Value),$"]
                    end,
-                   [[$ |atom_to_list(Name)], 
+                   [[$ |atom_to_list(Name)],
                     [$=|ValueString]|ehtml_attrs(Tail)].
 
 
@@ -1515,7 +1515,7 @@ ehtml_expander({Tag, Attrs}, Before, After) ->
                         After);
 ehtml_expander({Tag, Attrs, Body}, Before, After) ->
     ehtml_expander(Body,
-                   [["\n<", atom_to_list(Tag), 
+                   [["\n<", atom_to_list(Tag),
                      ehtml_attrs_expander(Attrs), ">"]|
                     Before],
                    ["</", atom_to_list(Tag), ">"|After]);
@@ -1549,7 +1549,7 @@ ehtml_attr_part_expander(A) when is_atom(A) ->
     case atom_to_list(A) of
         [$$|_Rest] -> {preformatted, ehtml_var_name(A)};
         Other -> Other
-    end;     
+    end;
 ehtml_attr_part_expander(I) when is_integer(I) -> integer_to_list(I);
 ehtml_attr_part_expander(S) when is_list(S) -> S.
 
@@ -1588,7 +1588,7 @@ ehtml_var_name(A) when is_atom(A) ->
     case atom_to_list(A) of
         [$$|Rest] -> list_to_atom(Rest);
         _Other -> erlang:error({bad_ehtml_var_name, A})
-    end. 
+    end.
 
 ehtml_expander_test() ->
     %% Expr is a template containing variables.
@@ -1622,7 +1622,7 @@ ehtml_expander_test() ->
 %% call_cgi calls the script `Scriptfilename' (full path).  If
 %% `Exefilename' is given, it is the executable to handle this,
 %% otherwise `Scriptfilame' is assumed to be executable itself.
-%% 
+%%
 %% Note however, that these functions usually generate stream content.
 %% (If you have good use for a version generating {content, _, _}
 %% instead, contact carsten@codimi.de)
@@ -1630,26 +1630,26 @@ ehtml_expander_test() ->
 %% Also note, that they may return `get_more' and expect to be called
 %% again.
 
-call_cgi(Arg, Scriptfilename) ->                                     
+call_cgi(Arg, Scriptfilename) ->
     yaws_cgi:call_cgi(Arg, Scriptfilename).
 
-call_cgi(Arg, Exefilename, Scriptfilename) -> 
+call_cgi(Arg, Exefilename, Scriptfilename) ->
     yaws_cgi:call_cgi(Arg, Exefilename, Scriptfilename).
 
-%% call_fci_responder issues a responder role call to the FastCGI 
+%% call_fci_responder issues a responder role call to the FastCGI
 %% application server. It returns the same return value as out/1.
 %%
-%% call_fci_authorizer issues a authorizer role call to the FastCGI 
+%% call_fci_authorizer issues a authorizer role call to the FastCGI
 %% application server. It returns:
 %%
-%% {denied, Out} : Access is denied. Out is the same return value as 
+%% {denied, Out} : Access is denied. Out is the same return value as
 %% out/1.
 %%
 %% {allowed, Variables} : Access is allowed. Variables is a list of
 %% environment variables returned by the authorization server using
 %% Variable-XXX: YYY headers.
 %%
-%% Note: the FastCGI filter role is not yet supported. 
+%% Note: the FastCGI filter role is not yet supported.
 %%
 %% The following information is taken from the server configuration:
 %% - The hostname (or address) and port number of the application server.
@@ -1703,10 +1703,10 @@ deepmember(C,[N|Cs]) when C /= N ->
     deepmember(C, Cs).
 
 
-%%  Parse a Set-Cookie header. 
-%% 
+%%  Parse a Set-Cookie header.
+%%
 %%  RFC (2109) ports are from RFC 2965
-%% 
+%%
 %%  "Cookie:" cookie-version 1*((";" | ",") cookie-value)
 %%  "Set-Cookie:"  cookies
 %%  "Set-Cookie2:" cookies
@@ -1718,7 +1718,7 @@ deepmember(C,[N|Cs]) when C /= N ->
 %%  path            =       "$Path" "=" value
 %%  domain          =       "$Domain" "=" value
 %%  port            =       "$Port" "=" <"> value <">
-%% 
+%%
 %%  cookie-av       = "Comment" "=" value
 %%                  | "CommentURL" "=" <"> http_URL <">
 %%                  | "Discard"
@@ -1728,7 +1728,7 @@ deepmember(C,[N|Cs]) when C /= N ->
 %%                  | "Port" [ "=" <"> portlist <"> ]
 %%                  | "Secure"
 %%                  | "Version" "=" 1*DIGIT
-%% 
+%%
 
 parse_set_cookie(Str) ->
     parse_set_cookie(Str, #setcookie{}).
@@ -1780,7 +1780,7 @@ parse_quoted([], Acc) ->
     {lists:reverse(Acc), true, []};
 parse_quoted([$"|T], Acc) ->
     {lists:reverse(Acc), true, T};
-parse_quoted([$\\,C|T], Acc) ->    
+parse_quoted([$\\,C|T], Acc) ->
     parse_quoted(T,[C,$\\|Acc]);
 parse_quoted([C|T], Acc) ->
     parse_quoted(T,[C|Acc]).
@@ -1883,7 +1883,7 @@ postvar(ARG, Key) ->
 
 filter_parse(Key, Parse) ->
     case lists:filter(fun(KV) ->
-                              (Key == element(1, KV)) 
+                              (Key == element(1, KV))
                                   andalso
                                     (element(2, KV) /= undefined)
                       end,
@@ -1969,7 +1969,7 @@ setconf(GC0, Groups0) ->
 setconf(GC0, Groups0, CheckCertsChanged) ->
     CertsChanged = if CheckCertsChanged == true ->
                            lists:member(yes,gen_server:call(
-                                              yaws_server, 
+                                              yaws_server,
                                               check_certs, infinity));
                       true ->
                            false
@@ -1981,7 +1981,7 @@ setconf(GC0, Groups0, CheckCertsChanged) ->
         true ->
             ok
     end,
-    
+
     {GC, Groups1} = yaws_config:verify_upgrade_args(GC0, Groups0),
     Groups2 = lists:map(fun(X) -> yaws_config:add_yaws_auth(X) end, Groups1),
     {ok, OLDGC, OldGroups} = yaws_api:getconf(),
@@ -1989,7 +1989,7 @@ setconf(GC0, Groups0, CheckCertsChanged) ->
           yaws_config:can_soft_setconf(GC, Groups2, OLDGC, OldGroups)} of
         {true, true} ->
             yaws_config:soft_setconf(GC, Groups2, OLDGC, OldGroups);
-        {true, false} when OLDGC == undefined -> 
+        {true, false} when OLDGC == undefined ->
             yaws_config:hard_setconf(GC, Groups2);
         _ ->
             {error, need_restart}
@@ -2066,16 +2066,16 @@ dir_listing(Arg, RelDir) ->
 %% Returns #redir_self{} record
 redirect_self(A) ->
     SC = get(sc),
-    {Port, PortStr} = 
+    {Port, PortStr} =
         case {SC#sconf.rmethod, SC#sconf.ssl, SC#sconf.port} of
             {"https", _, 443} -> {443, ""};
             {"http", _, 80} -> {80, ""};
             {_, undefined, 80} -> {80, ""};
-            {_, undefined, Port2} -> 
+            {_, undefined, Port2} ->
                 {port, [$:|integer_to_list(Port2)]};
             {_, _SSL, 443} ->
                 {443, ""};
-            {_, _SSL, Port2} -> 
+            {_, _SSL, Port2} ->
                 {Port2, [$:|integer_to_list(Port2)]}
         end,
     H = A#arg.headers,
@@ -2085,7 +2085,7 @@ redirect_self(A) ->
                [H0, _] -> H0;
                [H1] -> H1
            end,
-    {Scheme, SchemeStr} = 
+    {Scheme, SchemeStr} =
         case {SC#sconf.ssl,SC#sconf.rmethod} of
             {_, Method} when is_list(Method) ->
                 {list_to_atom(Method), Method++"://"};
