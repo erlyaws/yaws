@@ -275,14 +275,14 @@ parse_multipart_post(Arg) ->
                     case Arg#arg.cont of
                         {cont, Cont} ->
                             parse_multipart(
-                              binary_to_list(un_partial(Arg#arg.clidata)),
+                              un_partial(Arg#arg.clidata),
                               {cont, Cont});
                         undefined ->
                             LineArgs = parse_arg_line(Line),
                             {value, {_, Boundary}} =
                                 lists:keysearch(boundary, 1, LineArgs),
                             parse_multipart(
-                              binary_to_list(un_partial(Arg#arg.clidata)),
+                              un_partial(Arg#arg.clidata),
                               Boundary)
                     end;
                 _Other ->
@@ -362,18 +362,6 @@ make_parse_line_reply(Key, Value, Rest) ->
           lists:reverse(Value)}, Rest},
     X.
 
-
-
-%%
-
-isolate_arg(Str) -> isolate_arg(Str, []).
-
-isolate_arg([$:,$ |T], L) -> {yaws:funreverse(L, {yaws, to_lowerchar}), T};
-isolate_arg([H|T], L)     -> isolate_arg(T, [H|L]).
-
-
-
-%%
 %% Stateful parser of multipart data - allows easy re-entry
 %% States are header|body|boundary|is_end
 
@@ -385,122 +373,100 @@ parse_multipart(Data, St) ->
             {result, lists:reverse(Res)}
     end.
 
-%% Re-entry
-parse_multi(Data, {cont, {boundary, Start_data, PartBoundary,
-                          Acc, {Possible,Boundary}}}) ->
-    parse_multi(boundary, Start_data++Data, PartBoundary, Acc, [],
-                {Possible++Data,Boundary});
-parse_multi(Data, {cont, {State, Start_data, Boundary, Acc, Tmp}}) ->
-    parse_multi(State, Start_data++Data, Boundary, Acc, [], Tmp);
+%% Reentry point
+parse_multi(Data, {cont, {State, BoundaryCtx, HdrEndCtx, OldData}}) ->
+    NData = <<OldData/binary, Data/binary>>,
+    parse_multi(State, NData, BoundaryCtx, HdrEndCtx, []);
 
 %% Initial entry point
 parse_multi(Data, Boundary) ->
     B1 = "\r\n--"++Boundary,
-    D1 = "\r\n"++Data,
-    parse_multi(boundary, D1, B1, start, [], {D1, B1}).
+    D1 = <<"\r\n", Data/binary>>,
+    BoundaryCtx = bm_start(B1),
+    HdrEndCtx = bm_start("\r\n\r\n"),
+    parse_multi(boundary, D1, BoundaryCtx, HdrEndCtx, []).
 
-parse_multi(header, "\r\n\r\n"++Body, Boundary, Acc, Res, Tmp) ->
-    Header = do_header(lists:reverse(Acc)),
-    parse_multi(body, Body, Boundary, [], [{head, Header}|Res], Tmp);
-parse_multi(header, "\r\n"++Body, Boundary, [], Res, Tmp) ->
-    Header = do_header([]),
-    parse_multi(body, Body, Boundary, [], [{head, Header}|Res], Tmp);
-parse_multi(header, "\r\n\r", Boundary, Acc, Res, Tmp) ->
-    {cont, {header, "\r\n\r", Boundary, Acc, Tmp}, Res};
-parse_multi(header, "\r\n", Boundary, Acc, Res, Tmp) ->
-    {cont, {header, "\r\n", Boundary, Acc, Tmp}, Res};
-parse_multi(header, "\r", Boundary, Acc, Res, Tmp) ->
-    {cont, {header, "\r", Boundary, Acc, Tmp}, Res};
-parse_multi(header, [H|T], Boundary, Acc, Res, Tmp) ->
-    parse_multi(header, T, Boundary, [H|Acc], Res, Tmp);
-parse_multi(header, [], Boundary, Acc, Res, Tmp) ->
-    {cont, {header, [], Boundary, Acc, Tmp}, Res};
-
-%% store in case no match
-parse_multi(body, [B|T], [B|T1], Acc, Res, _Tmp) ->
-    parse_multi(boundary, T, T1, Acc, Res, {[B|T], [B|T1]});
-parse_multi(body, [H|T], Boundary, Acc, Res, Tmp) ->
-    parse_multi(body, T, Boundary, [H|Acc], Res, Tmp);
-%% would be empty partial body result
-parse_multi(body, [], Boundary, [], Res, Tmp) ->
-    {cont, {body, [], Boundary, [], Tmp}, Res};
-%% make a partial body result
-parse_multi(body, [], Boundary, Acc, Res, Tmp) ->
-    {cont, {body, [], Boundary, [], Tmp}, [{part_body, lists:reverse(Acc)}|Res]};
-
-parse_multi(boundary, [B|T], [B|T1], Acc, Res, Tmp) ->
-    parse_multi(boundary, T, T1, Acc, Res, Tmp);
-%% false alarm
-parse_multi(boundary, [_H|_T], [_B|_T1], start, Res, {[D|T2], Bound}) ->
-    parse_multi(body, T2, Bound, [D], Res, []);
-%% false alarm
-parse_multi(boundary, [_H|_T], [_B|_T1], Acc, Res, {[D|T2], Bound}) ->
-    parse_multi(body, T2, Bound, [D|Acc], Res, []);
-%% run out of body
-parse_multi(boundary, [], [B|T1], Acc, Res, Tmp) ->
-    {cont, {boundary, [], [B|T1], Acc, Tmp}, Res};
-parse_multi(boundary, [], [], start, Res, {_, Bound}) ->
-    {cont, {is_end, [], Bound, [], []}, Res};
-parse_multi(boundary, [], [], Acc, Res, {_, Bound}) ->
-    {cont, {is_end, [], Bound, [], []}, [{body, lists:reverse(Acc)}|Res]};
-%% matched whole boundary!
-parse_multi(boundary, [H|T], [], start, Res, {_, Bound}) ->
-    parse_multi(is_end, [H|T], Bound, [], Res, []);
-%% matched whole boundary!
-parse_multi(boundary, [H|T], [], Acc, Res, {_, Bound}) ->
-    parse_multi(is_end, [H|T], Bound, [], [{body, lists:reverse(Acc)}|Res], []);
-
-parse_multi(is_end, "--"++_, _Boundary, _Acc, Res, _Tmp) ->
-    {result, Res};
-parse_multi(is_end, "-", Boundary, Acc, Res, Tmp) ->
-    {cont, {is_end, "-", Boundary, Acc, Tmp}, Res};
-parse_multi(is_end, "\r\n"++Next, Boundary, _Acc, Res, _Tmp) ->
-    parse_multi(header, Next, Boundary, [], Res, []);
-parse_multi(is_end, "\r", Boundary, Acc, Res, Tmp) ->
-    {cont, {is_end, "\r", Boundary, Acc, Tmp}, Res}.
-
-
-do_header([]) -> {[]};
-do_header(Head) ->
-    Fields = string:tokens(Head, "\r\n"),
-    MFields = merge_lines_822(Fields),
-    Header = lists:map(fun isolate_arg/1, MFields),
-    case lists:keysearch("content-disposition", 1, Header) of
-        {value, {_,"form-data"++Line}} ->
-            Parameters = parse_arg_line(Line),
-            {value, {_,Name}} = lists:keysearch(name, 1, Parameters),
-            {Name,
-             lists:map(fun({"content-type", Val}) ->
-                               {content_type, Val};
-                          ({"content-transfer-encoding", Val}) ->
-                               {content_transfer_encoding, Val};
-                          ({"content-id", Val}) ->
-                               {content_id, Val};
-                          ({"content-description", Val}) ->
-                               {content_description, Val};
-                          (KV) ->
-                               KV
-                       end,
-                       Parameters ++ lists:keydelete("content-disposition", 1,
-                                                     Header))};
-        _ ->
-            {Header}
+parse_multi(boundary, <<"--\r\n", Data/binary>>, BoundaryCtx, HdrEndCtx, Acc) ->
+    parse_multi(boundary, Data, BoundaryCtx, HdrEndCtx, Acc);
+parse_multi(boundary, Data, BoundaryCtx, HdrEndCtx, Acc) ->
+    case bm_find(Data, BoundaryCtx) of
+        {0, Len} ->
+            LenPlusCRLF = Len+2,
+            <<_:LenPlusCRLF/binary, Rest/binary>> = Data,
+            parse_multi(start_header, Rest, BoundaryCtx, HdrEndCtx, Acc);
+        {_Pos, _Len} ->
+            case Data of
+                <<"\r\n", Rest/binary>> ->
+                    parse_multi(start_header, Rest, BoundaryCtx, HdrEndCtx, Acc);
+                _ ->
+                    parse_multi(body, Data, BoundaryCtx, HdrEndCtx, Acc)
+            end;
+        nomatch ->
+            case Data of
+                <<>> ->
+                    {result, Acc};
+                <<"\r\n">> ->
+                    {result, Acc};
+                _ ->
+                    {cont, {boundary, BoundaryCtx, HdrEndCtx, Data}, Acc}
+            end
+    end;
+parse_multi(start_header, Data, BoundaryCtx, HdrEndCtx, Acc) ->
+    parse_multi(header, Data, BoundaryCtx, HdrEndCtx, Acc, [], []);
+parse_multi(body, Data, BoundaryCtx, HdrEndCtx, Acc) ->
+    case bm_find(Data, BoundaryCtx) of
+        {Pos, Len} ->
+            <<Body:Pos/binary, _:Len/binary, Rest/binary>> = Data,
+            NAcc = [{body, binary_to_list(Body)}|Acc],
+            parse_multi(boundary, Rest, BoundaryCtx, HdrEndCtx, NAcc);
+        nomatch ->
+            NAcc = [{part_body, binary_to_list(Data)}|Acc],
+            {cont, {body, BoundaryCtx, HdrEndCtx, <<>>}, NAcc}
     end.
 
-merge_lines_822(Lines) ->
-    merge_lines_822(Lines, []).
-
-merge_lines_822([], Acc) ->
-    lists:reverse(Acc);
-merge_lines_822([Line=" "++_|Lines], []) ->
-    merge_lines_822(Lines, [Line]);
-merge_lines_822([Line=" "++_|Lines], [Prev|Acc]) ->
-    merge_lines_822(Lines, [Prev++Line|Acc]);
-merge_lines_822(["\t"++Line|Lines], [Prev|Acc]) ->
-    merge_lines_822(Lines, [Prev++[$ |Line]|Acc]);
-merge_lines_822([Line|Lines], Acc) ->
-    merge_lines_822(Lines, [Line|Acc]).
-
+parse_multi(start_header, Data, BoundaryCtx, HdrEndCtx, Acc, [], []) ->
+    case bm_find(Data, HdrEndCtx) of
+        nomatch ->
+            {cont, {start_header, BoundaryCtx, HdrEndCtx, Data}, Acc};
+        _ ->
+            parse_multi(header, Data, BoundaryCtx, HdrEndCtx, Acc, [], [])
+    end;
+parse_multi(header, Data, BoundaryCtx, HdrEndCtx, Acc, Name, Hdrs) ->
+    case erlang:decode_packet(httph_bin, Data, []) of
+        {ok, http_eoh, Rest} ->
+            Head = case Name of
+                       [] ->
+                           lists:reverse(Hdrs);
+                       _ ->
+                           {Name, lists:reverse(Hdrs)}
+                   end,
+            parse_multi(body, Rest, BoundaryCtx, HdrEndCtx, [{head, Head}|Acc]);
+        {ok, {http_header, _, Hdr, _, HdrVal}, Rest} when is_atom(Hdr) ->
+            Header = {case Hdr of
+                          'Content-Type' ->
+                              content_type;
+                          Else ->
+                              Else
+                      end,
+                      binary_to_list(HdrVal)},
+            parse_multi(header, Rest, BoundaryCtx, HdrEndCtx, Acc,
+                        Name, [Header|Hdrs]);
+        {ok, {http_header, _, Hdr, _, HdrVal}, Rest} ->
+            HdrValStr = binary_to_list(HdrVal),
+            case yaws:to_lower(binary_to_list(Hdr)) of
+                "content-disposition" ->
+                    "form-data"++Params = HdrValStr,
+                    Parameters = parse_arg_line(Params),
+                    {value, {_, NewName}} = lists:keysearch(name, 1, Parameters),
+                    parse_multi(header, Rest, BoundaryCtx, HdrEndCtx, Acc,
+                                NewName, Parameters++Hdrs);
+                LowerHdr ->
+                    parse_multi(header, Rest, BoundaryCtx, HdrEndCtx, Acc,
+                                Name, [{LowerHdr, HdrValStr}|Hdrs])
+            end;
+        {error, _Reason}=Error ->
+            Error
+    end.
 
 %% parse POST data when ENCTYPE is unset or
 %% Content-type: application/x-www-form-urlencoded
@@ -2099,3 +2065,38 @@ redirect_self(A) ->
                 scheme_str = SchemeStr,
                 port = Port,
                 port_str = PortStr}.
+
+%% Boyer-Moore searching, used for parsing multipart/form-data
+bm_start(Str) ->
+    Len = length(Str),
+    Tbl = bm_set_shifts(Str, Len),
+    {Tbl, list_to_binary(Str), lists:reverse(Str), Len}.
+
+bm_find(Bin, SearchCtx) ->
+    bm_find(Bin, SearchCtx, 0).
+bm_find(Bin, {_, _, _, Len}, Pos) when size(Bin) < (Pos + Len) ->
+    nomatch;
+bm_find(Bin, {Tbl, BStr, RevStr, Len}=SearchCtx, Pos) ->
+    case Bin of
+        <<_:Pos/binary, BStr:Len/binary, _/binary>> ->
+            {Pos, Len};
+        <<_:Pos/binary, NoMatch:Len/binary, _/binary>> ->
+            RevNoMatch = lists:reverse(binary_to_list(NoMatch)),
+            Shift = bm_next_shift(RevNoMatch, RevStr, 0, Tbl),
+            bm_find(Bin, SearchCtx, Pos+Shift)
+    end.
+
+bm_set_shifts(Str, Len) ->
+    erlang:make_tuple(256, Len, bm_set_shifts(Str, 0, Len, [])).
+bm_set_shifts(_Str, Count, Len, Acc) when Count =:= Len-1 ->
+    lists:reverse(Acc);
+bm_set_shifts([H|T], Count, Len, Acc) ->
+    Shift = Len - Count - 1,
+    bm_set_shifts(T, Count+1, Len, [{H+1,Shift}|Acc]).
+
+bm_next_shift([H|T1], [H|T2], Comparisons, Tbl) ->
+    bm_next_shift(T1, T2, Comparisons+1, Tbl);
+bm_next_shift([H|_], _, Comparisons, Tbl) ->
+    try
+    max(element(H+1, Tbl) - Comparisons, 1)
+    catch _:_ -> throw({error, {H, Comparisons}}) end. 
