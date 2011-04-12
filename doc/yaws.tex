@@ -858,8 +858,14 @@ capabilities:
   directory to store the uploaded temp file; if this option is not
   provided, then by default an OS-specific temp directory such as
   ``/tmp'' is used
+\item \verb+list+: return file data in list form; this is the default
+\item \verb+binary+: return file data in binary form
 \end{enumerate}
 \end{enumerate}
+
+Note that the \verb+list+ and \verb+binary+ options affect only file
+data, not filenames, headers, or other parameters associated with each
+file. These are always returned as strings.
 
 Just call \verb+yaws_multipart:read_multipart_form+ from your
 \verb+out/1+ function and it'll return a tuple with the first element

@@ -17,8 +17,9 @@
 
 
 
--export([parse_query/1, parse_post/1, parse_multipart_post/1,
-         parse_multipart/2]).
+-export([parse_query/1, parse_post/1,
+         parse_multipart_post/1, parse_multipart_post/2,
+         parse_multipart/2, parse_multipart/3]).
 -export([code_to_phrase/1, ssi/2, redirect/1]).
 -export([setcookie/2, setcookie/3, setcookie/4, setcookie/5, setcookie/6]).
 -export([pre_ssi_files/2,  pre_ssi_string/1, pre_ssi_string/2,
@@ -261,6 +262,8 @@ parse_post(Arg) ->
 %% </erl>
 
 parse_multipart_post(Arg) ->
+    parse_multipart_post(Arg, [list]).
+parse_multipart_post(Arg, Options) ->
     H = Arg#arg.headers,
     CT = H#headers.content_type,
     Req = Arg#arg.req,
@@ -283,7 +286,7 @@ parse_multipart_post(Arg) ->
                                 lists:keysearch(boundary, 1, LineArgs),
                             parse_multipart(
                               un_partial(Arg#arg.clidata),
-                              Boundary)
+                              Boundary, Options)
                     end;
                 _Other ->
                     error_logger:error_msg("Can't parse multipart if we "
@@ -296,16 +299,10 @@ parse_multipart_post(Arg) ->
             []
     end.
 
-
-
-
-
 un_partial({partial, Bin}) ->
     Bin;
 un_partial(Bin) ->
     Bin.
-
-
 
 parse_arg_line(Line) ->
     parse_arg_line(Line, []).
@@ -358,15 +355,23 @@ parse_arg_value([C|Line], Key, Value, Quote, _) ->
 %%
 
 make_parse_line_reply(Key, Value, Rest) ->
-    X = {{list_to_atom(yaws:funreverse(Key, {yaws, to_lowerchar})),
-          lists:reverse(Value)}, Rest},
-    X.
+    {{list_to_atom(yaws:funreverse(Key, {yaws, to_lowerchar})),
+      lists:reverse(Value)}, Rest}.
+
+
+-record(mp_parse_state, {
+          state,
+          boundary_ctx,
+          hdr_end_ctx,
+          old_data,
+          data_type
+         }).
 
 %% Stateful parser of multipart data - allows easy re-entry
-%% States are header|body|boundary|is_end
-
 parse_multipart(Data, St) ->
-    case parse_multi(Data, St) of
+    parse_multipart(Data, St, [list]).
+parse_multipart(Data, St, Options) ->
+    case parse_multi(Data, St, Options) of
         {cont, St2, Res} ->
             {cont, {cont, St2}, lists:reverse(Res)};
         {result, Res} ->
@@ -374,33 +379,32 @@ parse_multipart(Data, St) ->
     end.
 
 %% Reentry point
-parse_multi(Data, {cont, {State, BoundaryCtx, HdrEndCtx, OldData}}) ->
+parse_multi(Data, {cont, #mp_parse_state{old_data = OldData}=ParseState}, _) ->
     NData = <<OldData/binary, Data/binary>>,
-    parse_multi(State, NData, BoundaryCtx, HdrEndCtx, []);
+    parse_multi(NData, ParseState, []);
 
-%% Initial entry point
-parse_multi(Data, Boundary) ->
-    B1 = "\r\n--"++Boundary,
-    D1 = <<"\r\n", Data/binary>>,
-    BoundaryCtx = bm_start(B1),
-    HdrEndCtx = bm_start("\r\n\r\n"),
-    parse_multi(boundary, D1, BoundaryCtx, HdrEndCtx, []).
-
-parse_multi(boundary, <<"--\r\n", Data/binary>>, BoundaryCtx, HdrEndCtx, Acc) ->
-    parse_multi(boundary, Data, BoundaryCtx, HdrEndCtx, Acc);
-parse_multi(boundary, Data, BoundaryCtx, HdrEndCtx, Acc) ->
+parse_multi(<<"--\r\n", Data/binary>>,
+            #mp_parse_state{state=boundary}=ParseState, Acc) ->
+    parse_multi(Data, ParseState, Acc);
+parse_multi(Data, #mp_parse_state{state=boundary}=ParseState, Acc) ->
+    #mp_parse_state{boundary_ctx = BoundaryCtx} = ParseState,
     case bm_find(Data, BoundaryCtx) of
         {0, Len} ->
             LenPlusCRLF = Len+2,
             <<_:LenPlusCRLF/binary, Rest/binary>> = Data,
-            parse_multi(start_header, Rest, BoundaryCtx, HdrEndCtx, Acc);
+            NParseState = ParseState#mp_parse_state{state = start_header},
+            parse_multi(Rest, NParseState, Acc);
         {_Pos, _Len} ->
-            case Data of
-                <<"\r\n", Rest/binary>> ->
-                    parse_multi(start_header, Rest, BoundaryCtx, HdrEndCtx, Acc);
-                _ ->
-                    parse_multi(body, Data, BoundaryCtx, HdrEndCtx, Acc)
-            end;
+            {NParseState, NData} = case Data of
+                                       <<"\r\n", Rest/binary>> ->
+                                           {ParseState#mp_parse_state{
+                                              state = start_header},
+                                            Rest};
+                                       _ ->
+                                           {ParseState#mp_parse_state{
+                                              state = body}, Data}
+                                   end,
+            parse_multi(NData, NParseState, Acc);
         nomatch ->
             case Data of
                 <<>> ->
@@ -408,30 +412,72 @@ parse_multi(boundary, Data, BoundaryCtx, HdrEndCtx, Acc) ->
                 <<"\r\n">> ->
                     {result, Acc};
                 _ ->
-                    {cont, {boundary, BoundaryCtx, HdrEndCtx, Data}, Acc}
+                    NParseState = ParseState#mp_parse_state{old_data = Data},
+                    {cont, NParseState, Acc}
             end
     end;
-parse_multi(start_header, Data, BoundaryCtx, HdrEndCtx, Acc) ->
-    parse_multi(header, Data, BoundaryCtx, HdrEndCtx, Acc, [], []);
-parse_multi(body, Data, BoundaryCtx, HdrEndCtx, Acc) ->
+parse_multi(Data, #mp_parse_state{state=start_header}=ParseState, Acc) ->
+    NParseState = ParseState#mp_parse_state{state = header},
+    parse_multi(Data, NParseState, Acc, [], []);
+parse_multi(Data, #mp_parse_state{state=body}=ParseState, Acc) ->
+    #mp_parse_state{boundary_ctx = BoundaryCtx} = ParseState,
     case bm_find(Data, BoundaryCtx) of
         {Pos, Len} ->
             <<Body:Pos/binary, _:Len/binary, Rest/binary>> = Data,
-            NAcc = [{body, binary_to_list(Body)}|Acc],
-            parse_multi(boundary, Rest, BoundaryCtx, HdrEndCtx, NAcc);
+            BodyData = case ParseState#mp_parse_state.data_type of
+                           list ->
+                               binary_to_list(Body);
+                           binary ->
+                               Body
+                       end,
+            NAcc = [{body, BodyData}|Acc],
+            NParseState = ParseState#mp_parse_state{state = boundary},
+            parse_multi(Rest, NParseState, NAcc);
         nomatch ->
-            NAcc = [{part_body, binary_to_list(Data)}|Acc],
-            {cont, {body, BoundaryCtx, HdrEndCtx, <<>>}, NAcc}
-    end.
+            NParseState = ParseState#mp_parse_state{
+                            state = body,
+                            old_data = <<>>
+                           },
+            BodyData = case ParseState#mp_parse_state.data_type of
+                           list ->
+                               binary_to_list(Data);
+                           binary ->
+                               Data
+                       end,
+            NAcc = [{part_body, BodyData}|Acc],
+            {cont, NParseState, NAcc}
+    end;
+%% Initial entry point
+parse_multi(Data, Boundary, Options) ->
+    B1 = "\r\n--"++Boundary,
+    D1 = <<"\r\n", Data/binary>>,
+    BoundaryCtx = bm_start(B1),
+    HdrEndCtx = bm_start("\r\n\r\n"),
+    DataType = lists:foldl(fun(_, list) ->
+                                   list;
+                              (list, _) ->
+                                   list;
+                              (binary, undefined) ->
+                                   binary;
+                              (_, Acc) ->
+                                   Acc
+                           end, undefined, Options),
+    ParseState = #mp_parse_state{state = boundary,
+                                 boundary_ctx = BoundaryCtx,
+                                 hdr_end_ctx = HdrEndCtx,
+                                 data_type = DataType},
+    parse_multi(D1, ParseState, []).
 
-parse_multi(start_header, Data, BoundaryCtx, HdrEndCtx, Acc, [], []) ->
+parse_multi(Data, #mp_parse_state{state=start_header}=ParseState, Acc, [], []) ->
+    #mp_parse_state{hdr_end_ctx = HdrEndCtx} = ParseState,
     case bm_find(Data, HdrEndCtx) of
         nomatch ->
-            {cont, {start_header, BoundaryCtx, HdrEndCtx, Data}, Acc};
+            {cont, ParseState#mp_parse_state{old_data = Data}, Acc};
         _ ->
-            parse_multi(header, Data, BoundaryCtx, HdrEndCtx, Acc, [], [])
+            NParseState = ParseState#mp_parse_state{state = header},
+            parse_multi(Data, NParseState, Acc, [], [])
     end;
-parse_multi(header, Data, BoundaryCtx, HdrEndCtx, Acc, Name, Hdrs) ->
+parse_multi(Data, #mp_parse_state{state=header}=ParseState, Acc, Name, Hdrs) ->
     case erlang:decode_packet(httph_bin, Data, []) of
         {ok, http_eoh, Rest} ->
             Head = case Name of
@@ -440,7 +486,8 @@ parse_multi(header, Data, BoundaryCtx, HdrEndCtx, Acc, Name, Hdrs) ->
                        _ ->
                            {Name, lists:reverse(Hdrs)}
                    end,
-            parse_multi(body, Rest, BoundaryCtx, HdrEndCtx, [{head, Head}|Acc]);
+            NParseState = ParseState#mp_parse_state{state = body},
+            parse_multi(Rest, NParseState, [{head, Head}|Acc]);
         {ok, {http_header, _, Hdr, _, HdrVal}, Rest} when is_atom(Hdr) ->
             Header = {case Hdr of
                           'Content-Type' ->
@@ -449,8 +496,7 @@ parse_multi(header, Data, BoundaryCtx, HdrEndCtx, Acc, Name, Hdrs) ->
                               Else
                       end,
                       binary_to_list(HdrVal)},
-            parse_multi(header, Rest, BoundaryCtx, HdrEndCtx, Acc,
-                        Name, [Header|Hdrs]);
+            parse_multi(Rest, ParseState, Acc, Name, [Header|Hdrs]);
         {ok, {http_header, _, Hdr, _, HdrVal}, Rest} ->
             HdrValStr = binary_to_list(HdrVal),
             case yaws:to_lower(binary_to_list(Hdr)) of
@@ -458,10 +504,10 @@ parse_multi(header, Data, BoundaryCtx, HdrEndCtx, Acc, Name, Hdrs) ->
                     "form-data"++Params = HdrValStr,
                     Parameters = parse_arg_line(Params),
                     {value, {_, NewName}} = lists:keysearch(name, 1, Parameters),
-                    parse_multi(header, Rest, BoundaryCtx, HdrEndCtx, Acc,
+                    parse_multi(Rest, ParseState, Acc,
                                 NewName, Parameters++Hdrs);
                 LowerHdr ->
-                    parse_multi(header, Rest, BoundaryCtx, HdrEndCtx, Acc,
+                    parse_multi(Rest, ParseState, Acc,
                                 Name, [{LowerHdr, HdrValStr}|Hdrs])
             end;
         {error, _Reason}=Error ->

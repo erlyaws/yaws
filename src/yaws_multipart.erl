@@ -17,7 +17,8 @@
           no_temp_file,
           temp_dir = yaws:tmpdir("/tmp"),
           temp_file,
-          headers = []
+          headers = [],
+          data_type = list
          }).
 
 read_multipart_form(A, Options) when A#arg.state == undefined ->
@@ -38,12 +39,16 @@ read_options([Option|Rest], State) ->
                        State#upload{fixed_filename = FullPath};
                    {temp_dir, Dir} ->
                        true = filelib:is_dir(Dir),
-                       State#upload{temp_dir = Dir}
+                       State#upload{temp_dir = Dir};
+                   list ->
+                       State#upload{data_type = list};
+                   binary ->
+                       State#upload{data_type = binary}
                end,
     read_options(Rest, NewState).
 
 multipart(A, State) ->
-    Parse = yaws_api:parse_multipart_post(A),
+    Parse = yaws_api:parse_multipart_post(A, [State#upload.data_type]),
     case Parse of
         {cont, Cont, Res} ->
             case add_file_chunk(A, Res, State) of
