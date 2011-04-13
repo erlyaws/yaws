@@ -2143,6 +2143,4 @@ bm_set_shifts([H|T], Count, Len, Acc) ->
 bm_next_shift([H|T1], [H|T2], Comparisons, Tbl) ->
     bm_next_shift(T1, T2, Comparisons+1, Tbl);
 bm_next_shift([H|_], _, Comparisons, Tbl) ->
-    try
-    max(element(H+1, Tbl) - Comparisons, 1)
-    catch _:_ -> throw({error, {H, Comparisons}}) end. 
+    max(element(H+1, Tbl) - Comparisons, 1).
