@@ -51,10 +51,7 @@ send(Out, Filename, Offset, Count) ->
         _ ->
             case prim_inet:getfd(Out) of
                 {ok, SocketFd} ->
-                    Call = list_to_binary(
-                             [<<Offset:64, Count1:64, SocketFd:32>>,
-                              Filename, <<0:8>>]),
-                    gen_server:call(?MODULE, {send, SocketFd, Call}, infinity);
+                    do_send(Out, SocketFd, Filename, Offset, Count1);
                 Error3 ->
                     Error3
             end
@@ -128,6 +125,16 @@ terminate(_Reason, #state{port = Port}=State) ->
 code_change(_OldVsn, Data, _Extra) ->
     {ok, Data}.
 
+do_send(Out, SocketFd, Filename, Offset, Count) ->
+    Call = list_to_binary([<<Offset:64, Count:64, SocketFd:32>>,
+                           Filename, <<0:8>>]),
+    case gen_server:call(?MODULE, {send, SocketFd, Call}, infinity) of
+        {error, eoverflow} ->
+            compat_send(Out, Filename, Offset, Count);
+        Else ->
+            Else
+    end.
+
 -else.
 
 enabled() ->
@@ -144,6 +151,8 @@ send(Out, Filename, Offset) ->
     send(Out, Filename, Offset, all).
 send(Out, Filename, Offset, Count) ->
     compat_send(Out, Filename, Offset, Count).
+
+-endif.
 
 compat_send(Out, Filename, Offset, Count) ->
     case file:open(Filename, [read, binary, raw]) of
@@ -184,5 +193,3 @@ loop_send(Fd, ChunkSize, {ok, Bin}, Out, Count) ->
     end;
 loop_send(_Fd, _, Err, _,_) ->
     Err.
-
--endif.
