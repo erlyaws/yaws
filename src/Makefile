@@ -47,7 +47,7 @@ MODULES=yaws \
 	authmod_gssapi \
 	yaws_appmod_cgi \
 	yaws_appmod_fcgi \
-	yaws_sendfile yaws_sendfile_compat \
+	yaws_sendfile \
 	yaws_sup_restarts \
 	yaws_stats \
 	yaws_vdir \
@@ -70,7 +70,7 @@ dav:
 
 $(EBIN_FILES) : ../include/yaws.hrl ../include/yaws_api.hrl
 
-../ebin/yaws_sendfile_compat.$(EMULATOR): yaws_configure.hrl
+../ebin/yaws_sendfile.$(EMULATOR): yaws_configure.hrl
 
 yaws_generated.erl:	yaws_generated.template ../vsn.mk
 	. ../vsn.mk; \

@@ -39,10 +39,10 @@ init([]) ->
                         permanent, 5000, worker, [gen_event]},
 
 
-    SendFile = case yaws_sendfile_compat:enabled() of
+    SendFile = case yaws_sendfile:enabled() of
                    true ->
-                       [{yaws_sendfile, 
-                         {yaws_sendfile_compat, start_link, []},
+                       [{yaws_sendfile,
+                         {yaws_sendfile, start_link, []},
                          permanent, 5000, worker, [yaws_sendfile]}];
                    false ->
                        []

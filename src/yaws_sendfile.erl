@@ -4,11 +4,72 @@
 %%% Created :  9 Nov 2008 by Steve Vinoski <vinoski@ieee.org>
 
 -module(yaws_sendfile).
--export([start_link/0, init/1, stop/0, send/2, send/3, send/4]).
+-author('vinoski@ieee.org').
+
+-export([start_link/0, start/0, stop/0,
+         enabled/0, send/2, send/3, send/4]).
+
+-include("yaws_configure.hrl").
+-include("../include/yaws.hrl").
+
+-ifdef(HAVE_SENDFILE).
+
+-behavior(gen_server).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
+         code_change/3]).
 
 -include_lib("kernel/include/file.hrl").
 
 start_link() ->
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+
+start() ->
+    gen_server:start({local, ?MODULE}, ?MODULE, [], []).
+
+enabled() ->
+    true.
+
+send(Out, Filename) ->
+    send(Out, Filename, 0, 0).
+send(Out, Filename, Offset) ->
+    send(Out, Filename, Offset, 0).
+send(Out, Filename, Offset, Count) ->
+    Count1 = case Count of
+                 0 ->
+                     case file:read_file_info(Filename) of
+                         {ok, #file_info{size = Size}} ->
+                             Size - Offset;
+                         Error ->
+                             Error
+                     end;
+                 _ ->
+                     Count
+             end,
+    case Count1 of
+        {error, _}=Error2 ->
+            Error2;
+        _ ->
+            case prim_inet:getfd(Out) of
+                {ok, SocketFd} ->
+                    Call = list_to_binary(
+                             [<<Offset:64, Count1:64, SocketFd:32>>,
+                              Filename, <<0:8>>]),
+                    gen_server:call(?MODULE, {send, SocketFd, Call}, infinity);
+                Error3 ->
+                    Error3
+            end
+    end.
+
+stop() ->
+    gen_server:cast(?MODULE, stop).
+
+-record(state, {
+          port,                    % driver port
+          caller_tbl               % table mapping socket fd to caller
+         }).
+
+init([]) ->
+    process_flag(trap_exit, true),
     Shlib = "yaws_sendfile_drv",
     Dir = case yaws_generated:is_local_install() of
 	      true ->
@@ -21,94 +82,107 @@ start_link() ->
     case erl_ddll:load_driver(Dir, Shlib) of
         ok -> ok;
         {error, already_loaded} -> ok;
-        _ -> exit({error, could_not_load_driver})
+        _ -> exit({error, "could not load driver" ++ Shlib})
     end,
-    {ok, spawn_link(?MODULE, init, [Shlib])}.
-
-init(Shlib) ->
-    register(?MODULE, self()),
-    process_flag(trap_exit, true),
     Port = open_port({spawn, Shlib}, [binary]),
-    loop(Port).
+    CallerTable = ets:new(yaws_sendfile, []),
+    {ok, #state{port = Port, caller_tbl = CallerTable}}.
 
+handle_call({send, SocketFd, Msg}, From, State) ->
+    true = erlang:port_command(State#state.port, Msg),
+    true = ets:insert(State#state.caller_tbl, {SocketFd, From}),
+    {noreply, State};
+handle_call(_Req, _From, State) ->
+    {reply, ok, State}.
+
+handle_info({_, {data, <<Cnt:64, SocketFd:32, Res:8, Err/binary>>}}, State) ->
+    Reply = case Res of
+                1 ->
+                    {ok, Cnt};
+                0 ->
+                    {error,
+                     list_to_atom(
+                       lists:takewhile(fun(El) -> El =/= 0 end,
+                                       binary_to_list(Err)))}
+            end,
+    CallerTable = State#state.caller_tbl,
+    [{SocketFd, From}] = ets:lookup(CallerTable, SocketFd),
+    gen_server:reply(From, Reply),
+    ets:delete(CallerTable, SocketFd),
+    {noreply, State};
+handle_info(_Info, State) ->
+    {noreply, State}.
+
+handle_cast(stop, State) ->
+    {stop, State};
+handle_cast(_, State) ->
+    {noreply, State}.
+
+terminate(_Reason, #state{port = Port}=State) ->
+    erlang:port_close(Port),
+    receive {'EXIT', Port, _Reason} -> ok
+    after 0 -> ok
+    end,
+    {noreply, State#state{port = undefined}}.
+
+code_change(_OldVsn, Data, _Extra) ->
+    {ok, Data}.
+
+-else.
+
+enabled() ->
+    false.
+start_link() ->
+    ignore.
+start() ->
+    ignore.
 stop() ->
-    ?MODULE ! stop,
-    unregister(?MODULE),
     ok.
-
 send(Out, Filename) ->
-    send(Out, Filename, 0, 0).
+    send(Out, Filename, 0, all).
 send(Out, Filename, Offset) ->
-    send(Out, Filename, Offset, 0).
+    send(Out, Filename, Offset, all).
 send(Out, Filename, Offset, Count) ->
-    Count2 = case Count of
-                 0 ->
-                     case file:read_file_info(Filename) of
-                         {ok, #file_info{size = Size}} ->
-                             Size - Offset;
-                         Error ->
-                             Error
-                     end;
-                 _ ->
-                     Count
-             end,
-    case Count2 of
-        {error, _}=Error2 ->
-            Error2;
-        _ ->
-            case prim_inet:getfd(Out) of
-                {ok, Socket_fd} ->
-                    call_port(
-                      Socket_fd,
-                      list_to_binary(
-                        [<<Offset:64, Count2:64, Socket_fd:32>>,
-                         Filename, <<0:8>>]));
-                Error3 ->
-                    Error3
-            end
+    compat_send(Out, Filename, Offset, Count).
+
+compat_send(Out, Filename, Offset, Count) ->
+    case file:open(Filename, [read, binary, raw]) of
+        {ok, Fd} ->
+            file:position(Fd, {bof, Offset}),
+            ChunkSize = (get(gc))#gconf.large_file_chunk_size,
+            Ret = loop_send(Fd, ChunkSize, file:read(Fd, ChunkSize), Out, Count),
+            file:close(Fd),
+            Ret;
+        Err ->
+            Err
     end.
 
-call_port(Socket_id, Msg) ->
-    ?MODULE ! {call, self(), Socket_id, Msg},
-    receive
-        {?MODULE, Reply} ->
-            Reply
-    end.
-
-loop(Port) ->
-    receive
-        {call, Caller, Id, Msg} ->
-            put(Id, Caller),
-            erlang:port_command(Port, Msg),
-            loop(Port);
-        {Port, {data, <<Cnt:64, Id:32, Res:8, Err/binary>>}} ->
-            Response = case Res of
-                           1 ->
-                               {ok, Cnt};
-                           0 ->
-                               {error,
-                                list_to_atom(
-                                  lists:takewhile(fun(El) -> El =/= 0 end,
-                                                  binary_to_list(Err)))}
-                       end,
-            Caller = erase(Id),
-            Caller ! {?MODULE, Response},
-            loop(Port);
-        stop ->
-            erlang:port_close(Port),
-            receive {'EXIT', Port, _Reason} -> ok
-            after 0 -> ok
+loop_send(Fd, ChunkSize, {ok, Bin}, Out, all) ->
+    case gen_tcp:send(Out, Bin) of
+        ok ->
+            loop_send(Fd, ChunkSize, file:read(Fd, ChunkSize), Out, all);
+        Err ->
+            Err
+    end;
+loop_send(_Fd, _ChunkSize, eof, _Out, _) ->
+    ok;
+loop_send(Fd, ChunkSize, {ok, Bin}, Out, Count) ->
+    Sz = size(Bin),
+    if Sz < Count ->
+            case gen_tcp:send(Out, Bin) of
+                ok ->
+                    loop_send(Fd, ChunkSize, file:read(Fd, ChunkSize),
+                              Out, Count-Sz);
+                Err ->
+                    Err
             end;
-        {'EXIT', _, shutdown} ->
-            erlang:port_close(Port),
-            unregister(?MODULE),
-            exit(shutdown);
-        {'EXIT', Port, Posix_error} ->
-            error_logger:format("Fatal error: sendfile port died, error ~p~n",
-                                [Posix_error]),
-            exit(Posix_error);
-        {'EXIT', error, Reason} ->
-            error_logger:format("Fatal error: sendfile driver failure: ~p~n",
-                                [Reason]),
-            exit(Reason)
-    end.
+       Sz == Count ->
+            gen_tcp:send(Out, Bin);
+       Sz > Count ->
+            <<Deliver:Count/binary , _/binary>> = Bin,
+            gen_tcp:send(Out, Deliver)
+    end;
+loop_send(_Fd, _, Err, _,_) ->
+    Err.
+
+-endif.
