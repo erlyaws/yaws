@@ -20,6 +20,15 @@
 
 -include_lib("kernel/include/file.hrl").
 
+-endif.
+
+send(Out, Filename) ->
+    send(Out, Filename, 0, all).
+send(Out, Filename, Offset) ->
+    send(Out, Filename, Offset, all).
+
+-ifdef(HAVE_SENDFILE).
+
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
@@ -29,21 +38,19 @@ start() ->
 enabled() ->
     true.
 
-send(Out, Filename) ->
-    send(Out, Filename, 0, 0).
-send(Out, Filename, Offset) ->
-    send(Out, Filename, Offset, 0).
 send(Out, Filename, Offset, Count) ->
     Count1 = case Count of
-                 0 ->
+                 all ->
                      case file:read_file_info(Filename) of
                          {ok, #file_info{size = Size}} ->
                              Size - Offset;
                          Error ->
                              Error
                      end;
+                 Count when is_integer(Count) ->
+                     Count;
                  _ ->
-                     Count
+                     {error, badarg}
              end,
     case Count1 of
         {error, _}=Error2 ->
@@ -126,6 +133,8 @@ terminate(_Reason, #state{port = Port, caller_tbl = CallerTable}) ->
 code_change(_OldVsn, Data, _Extra) ->
     {ok, Data}.
 
+do_send(_Out, _SocketFd, _Filename, _Offset, Count) when Count =< 0 ->
+    {ok, 0};
 do_send(Out, SocketFd, Filename, Offset, Count) ->
     Call = list_to_binary([<<Offset:64, Count:64, SocketFd:32>>,
                            Filename, <<0:8>>]),
@@ -146,16 +155,16 @@ start() ->
     ignore.
 stop() ->
     ok.
-send(Out, Filename) ->
-    send(Out, Filename, 0, all).
-send(Out, Filename, Offset) ->
-    send(Out, Filename, Offset, all).
 send(Out, Filename, Offset, Count) ->
     compat_send(Out, Filename, Offset, Count).
 
 -endif.
 
-compat_send(Out, Filename, Offset, Count) ->
+compat_send(Out, Filename, Offset, Count0) ->
+    Count = case Count0 of
+                0 -> all;
+                _ -> Count0
+            end,
     case file:open(Filename, [read, binary, raw]) of
         {ok, Fd} ->
             file:position(Fd, {bof, Offset}),
