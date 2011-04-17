@@ -115,12 +115,13 @@ handle_cast(stop, State) ->
 handle_cast(_, State) ->
     {noreply, State}.
 
-terminate(_Reason, #state{port = Port}=State) ->
+terminate(_Reason, #state{port = Port, caller_tbl = CallerTable}) ->
     erlang:port_close(Port),
     receive {'EXIT', Port, _Reason} -> ok
     after 0 -> ok
     end,
-    {noreply, State#state{port = undefined}}.
+    ets:delete(CallerTable),
+    ok.
 
 code_change(_OldVsn, Data, _Extra) ->
     {ok, Data}.
