@@ -266,7 +266,7 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
           ([
             {"SERVER_SOFTWARE", "Yaws/"++yaws_generated:version()},
             {"SERVER_NAME", Hostname},
-            {"HTTP_HOST", Hostname},
+            {"HTTP_HOST", checkdef(H#headers.host)},
             {"GATEWAY_INTERFACE", "CGI/1.1"},
             {"SERVER_PROTOCOL", "HTTP/" ++ integer_to_list(Maj) ++
              "." ++ integer_to_list(Min)},
