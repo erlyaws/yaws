@@ -21,7 +21,7 @@ else
             ulimit -u $newproclimit
             if [ $? -ne 0 ]; then
                 echo unable to run enough processes for this test, skipping
-                echo please raise your max process limit via '"sysctl -w kern.maxprocperuid=<N>"'
+                echo please raise your max process limit via '"'sysctl -w kern.maxprocperuid=$newproclimit'"'
                 exit 0
             fi
         fi
