@@ -1,8 +1,8 @@
-%    -*- Erlang -*- 
+%    -*- Erlang -*-
 %    File:        smtp.erl  (~jb/work/yaws/applications/mail/src/smtp.erl)
 %    Author:        Johan Bevemyr
 %    Created:        Tue Feb 24 23:15:59 2004
-%    Purpose:   
+%    Purpose:
 
 -module('smtp').
 -author('jb@bevemyr.com').
@@ -12,7 +12,7 @@
 %% Example
 
 %
-% smtp:send("mail.bevemyr.com", "jb@bevemyr.com", 
+% smtp:send("mail.bevemyr.com", "jb@bevemyr.com",
 %            ["katrin@bevemyr.com","jb@bevemyr.com"],
 %            "Test Subject",
 %            "My Message", [{"file1.txt","text/plain","hej hopp igen"}]).
@@ -22,7 +22,7 @@
 send(Server, From, To, Subject, Message, Attached) ->
     {ok, Port} = smtp_init(Server, From, To),
     Boundary="--Next_Part("++boundary_date()++")--",
-    CommonHeaders = 
+    CommonHeaders =
         [mail_header("To: ", To),
          mail_header("From: ", From),
          mail_header("Subject: ", Subject)],
@@ -140,7 +140,7 @@ smtp_expect(Code, Port, Acc, ErrorMsg) ->
                     smtp_expect(Code, Port, NAcc, ErrorMsg);
                 _N ->
                     ResponseCode = to_int(NAcc),
-                    if 
+                    if
                         ResponseCode == Code -> ok;
                         true -> throw({error, ErrorMsg})
                     end
@@ -182,7 +182,7 @@ dot_escape([$.|Rest], true, Acc) ->
     dot_escape(Rest, false, [$.,$.|Acc]);
 dot_escape([$\n|Rest], _, Acc) ->
     dot_escape(Rest, true, [$\n|Acc]);
-dot_escape([C|Rest], _, Acc) ->    
+dot_escape([C|Rest], _, Acc) ->
     dot_escape(Rest, false, [C|Acc]).
 
 %%

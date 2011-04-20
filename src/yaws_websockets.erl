@@ -1,9 +1,9 @@
 %%%----------------------------------------------------------------------
 %%% File    : yaws_websockets.erl
 %%% Author  : Davide Marques <nesrait@gmail.com>
-%%% Purpose : 
+%%% Purpose :
 %%% Created :  18 Dec 2009 by Davide Marques <nesrait@gmail.com>
-%%% Modified: 
+%%% Modified:
 %%%----------------------------------------------------------------------
 
 -module(yaws_websockets).
@@ -28,7 +28,7 @@ handshake(Arg, ContentPid, SocketMode) ->
 	    Host = (Arg#arg.headers)#headers.host,
 	    {abs_path, Path} = (Arg#arg.req)#http_request.path,
 	    SC = get(sc),
-	    WebSocketLocation = 
+	    WebSocketLocation =
 		case SC#sconf.ssl of
                     undefined -> "ws://" ++ Host ++ Path;
                     _ -> "wss://" ++ Host ++ Path

@@ -11,7 +11,7 @@ connect([Host]) ->
 
 
 run(Eunits) ->
-    try 
+    try
         lists:foreach(fun(E) ->
                               io:format("Running ~p~n", [E]),
                               E:test()
@@ -26,6 +26,6 @@ run(Eunits) ->
             erlang:halt(1)
     end.
 
-        
 
-                   
+
+

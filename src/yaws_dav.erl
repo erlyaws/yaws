@@ -31,7 +31,7 @@ delete(A) ->
 put(SC, ARG) ->
     H = ARG#arg.headers,
     PPS = SC#sconf.partial_post_size,
-    CT = 
+    CT =
         case yaws:to_lower(H#headers.content_type) of
             "multipart/form-data"++_ -> multipart;
             _ -> urlencoded
@@ -55,7 +55,7 @@ put(SC, ARG) ->
                         end;
                     Len when is_integer(PPS) ->
                         Int_len = list_to_integer(Len),
-                        if 
+                        if
                             Int_len == 0 ->
                                 ok;
                             PPS < Int_len, CT == multipart ->
@@ -208,13 +208,13 @@ get_entries(A) ->
 response_entry({Name, F}, Url) when F#file_info.type == directory  -> % Dir
     {response, [],
      [{href, [], [Url ++ Name]},
-      {propstat, [], 
+      {propstat, [],
        [{prop, [],
          [{name, [], [Name]},
-          {creationdate, [], [date_string(F#file_info.ctime)]}, 
+          {creationdate, [], [date_string(F#file_info.ctime)]},
           {getlastmodified, [], [date_string(F#file_info.mtime)]},
           {getcontentlength, [], [integer_to_list(F#file_info.size)]},
-          {resourcetype, [], 
+          {resourcetype, [],
            [{collection, [], []}]}
           %%{ishidden, [], [bool2lnum(F#file.is_hidden)]}]},
          ]},
@@ -224,10 +224,10 @@ response_entry({Name, F}, Url) when F#file_info.type == directory  -> % Dir
 response_entry({Name, F}, Url) when F#file_info.type == regular ->  % File
     {response, [],
      [{href, [], [Url ++ Name]},
-      {propstat, [], 
+      {propstat, [],
        [{prop, [],
          [{name, [], [Name]},
-          {creationdate, [], [date_string(F#file_info.ctime)]}, 
+          {creationdate, [], [date_string(F#file_info.ctime)]},
           {getlastmodified, [], [date_string(F#file_info.mtime)]},
           {getcontentlength, [], [integer_to_list(F#file_info.size)]},
           {resourcetype, [], []}
@@ -278,17 +278,17 @@ depth_zero(A) ->
     ?elog("server_path=~p~n", [A#arg.server_path]),
     [{response, [],
       [{href, [], [Url]},
-       {propstat, [], 
+       {propstat, [],
         [{prop, [],
           [{name, [], [Name]},
-           {creationdate, [], [date_string(F#file_info.ctime)]}, 
+           {creationdate, [], [date_string(F#file_info.ctime)]},
            {getlastmodified, [], [date_string(F#file_info.mtime)]},
            {getcontentlength, [], [integer_to_list(F#file_info.size)]},
-           {resourcetype, [], 
+           {resourcetype, [],
             is_collection(F)}
            %%{ishidden, [], [bool2lnum(F#file.is_hidden)]}]},
           ]},
-         {status, [],   
+         {status, [],
           ["HTTP/1.1 200 OK"]}]}]}].
 
 is_collection(F) when F#file_info.type == directory ->

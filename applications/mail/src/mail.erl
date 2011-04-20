@@ -1,20 +1,20 @@
-%    -*- Erlang -*- 
+%    -*- Erlang -*-
 %    File:        mail.erl  (~jb/mail.erl)
 %    Author:        Johan Bevemyr
 %    Created:        Sat Oct 25 10:59:24 2003
-%    Purpose:   
+%    Purpose:
 
 % RFC 822
 % RFC 1939
-% RFC 2048 
+% RFC 2048
 
 -module('mail').
 -author('jb@trut.bluetail.com').
 
 -export([parse_headers/1, list/2, list/3, ploop/5,pop_request/4, diff/2,
-         session_manager_init/0, check_cookie/1, check_session/1, 
+         session_manager_init/0, check_cookie/1, check_session/1,
          login/2, display_login/2, stat/3, showmail/2, compose/1, compose/7,
-         send/6, send/2, get_val/3, logout/1, base64_2_str/1, retr/4, 
+         send/6, send/2, get_val/3, logout/1, base64_2_str/1, retr/4,
          delete/2, send_attachment/2, send_attachment_plain/2,
          wrap_text/2, getopt/3, decode/1]).
 
@@ -111,7 +111,7 @@ build_toolbar([{[],Url,Cmd}|Rest], Used) ->
         [{td, [nowrap,{width,"2%"},{valign,middle},{align,left}],
           [{a, [{class,nolink}, {href,Url}],
             {font, [{size,2},{color,"#000000"},{title,Cmd}],Cmd}}]} |
-         build_toolbar(Rest, Used+3)];    
+         build_toolbar(Rest, Used+3)];
 build_toolbar([{Gif,Url,Cmd}|Rest], Used) ->
     (if Used == -1 ->
              [];
@@ -243,13 +243,13 @@ sendChunk([{head, {"message", _Opts}}|Rest], S) ->
     S2 = S#send{port=Port},
     MailDomain = maildomain(),
     Session = S#send.session,
-    CommonHeaders = 
+    CommonHeaders =
         [mail_header("To: ", S#send.to),
          mail_header("From: ", Session#session.user++"@"++MailDomain),
          mail_header("Cc: ", S#send.cc),
          mail_header("Bcc: ", S#send.bcc),
          mail_header("Subject: ", S#send.subject)],
-    {Headers,S3} = 
+    {Headers,S3} =
         case S#send.attached of
             "no" ->
                 {CommonHeaders ++
@@ -523,7 +523,7 @@ file_attachement(N) ->
        {input, [{type,"file"},{name,"file"++I},{size,"30"}],[]}}
      ]
     }.
-    
+
 
 build_tabs(Tabs) ->
     [{script,[{type,"text/javascript"}],
@@ -573,7 +573,7 @@ showmail(Session, MailNr, Count) ->
     MailStr = integer_to_list(MailNr),
     tick_session(Session#session.cookie),
 
-    Formated = 
+    Formated =
         case retr(popserver(), Session#session.user,
                   Session#session.passwd, MailNr) of
             {error, Reason} ->
@@ -656,7 +656,7 @@ list_msg(Session, Refresh, Sort, Count) ->
                  "function setCmd(val) { \n"
                  "   if (val == 'delete') {\n"
                  "      var res = confirm('Are you sure you want"
-                 " to delete the selected emails?');\n" 
+                 " to delete the selected emails?');\n"
                  "      if (!res) { \n"
                  "           return;\n"
                  "      }\n"
@@ -825,7 +825,7 @@ format_from(From0) ->
             string:strip(From);
         N ->
             NewF=string:strip(unquote(decode(string:substr(From,1,N-1)))),
-            if 
+            if
                 NewF == [] -> From;
                 true -> NewF
             end
@@ -1173,7 +1173,7 @@ add_att(Fname, Ctype, Data, Atts) ->
                    ctype = Ctype,
                    data = Data} | Atts]
     end.
-                
+
 
 session_manager_gc(C, Cfg) ->
     lists:zf(fun(Entry={Cookie,Session,Time}) ->
@@ -1184,9 +1184,9 @@ session_manager_gc(C, Cfg) ->
                         true ->
                              {true, Entry}
                      end
-             end, C).    
+             end, C).
 
-sm_reply(ttl, From, Cfg) -> 
+sm_reply(ttl, From, Cfg) ->
     From ! {session_manager, Cfg#cfg.ttl};
 sm_reply(popserver, From, Cfg) ->
     From ! {session_manager, Cfg#cfg.popserver};
@@ -1214,8 +1214,8 @@ maildomain() ->  req(maildomain).
 sendtimeout() -> req(sendtimeout).
 
 
-    
-    
+
+
 diff({M1,S1,_}, {M2,S2,_}) ->
     (M2-M1)*1000000+(S2-S1).
 
@@ -1331,7 +1331,7 @@ parse_headers([Line|Lines], Headers) ->
             Headers;
         N ->
             Key = lowercase(string:strip(string:sub_string(Line, 1, N-1))),
-            Value = 
+            Value =
                 if length(Line) > N+1 ->
                         string:strip(string:sub_string(Line, N+2));
                    true ->
@@ -1384,7 +1384,7 @@ add_header("cc", Value, H) ->
     H#mail{cc = Value};
 add_header("bcc", Value, H) ->
     H#mail{bcc = Value};
-add_header("subject", Value, H) -> 
+add_header("subject", Value, H) ->
     SubjectFmt = lists:flatten(decode(Value)),
     H#mail{subject = Value,
            subject_fmt = SubjectFmt,
@@ -1410,7 +1410,7 @@ pop_request(Command, Server, User, Password) ->
 
 %%
 %% first authenticate then run a bunch of commands
-%% 
+%%
 
 ploop(Command, Server, User, Password, From) ->
     case gen_tcp:connect(Server, 110, [{active, false},
@@ -1624,7 +1624,7 @@ receive_data(State=#pstate{port=Port,acc=[],more=true,remain=Remain}) ->
                                                   more=true},
                             {more, State2};
                         {ok, DotState, Lines, NAcc} ->
-                            
+
                             State2 = State#pstate{acc=NAcc,
                                                   dotstate=DotState,
                                                   lines=[Lines|State#pstate.lines],
@@ -1687,7 +1687,7 @@ split_at(L,N) ->
 
 split_at(L,0,Acc) ->
     {lists:reverse(Acc),L};
-split_at([C|Cs], N, Acc) ->    
+split_at([C|Cs], N, Acc) ->
     split_at(Cs, N-1, [C|Acc]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1741,7 +1741,7 @@ dot_escape([$.|Rest], true, Acc) ->
     dot_escape(Rest, false, [$.,$.|Acc]);
 dot_escape([$\n|Rest], _, Acc) ->
     dot_escape(Rest, true, [$\n|Acc]);
-dot_escape([C|Rest], _, Acc) ->    
+dot_escape([C|Rest], _, Acc) ->
     dot_escape(Rest, false, [C|Acc]).
 
 %%
@@ -1824,7 +1824,7 @@ smtp_expect(Code, Port, Acc, ErrorMsg) ->
                     smtp_expect(Code, Port, NAcc, ErrorMsg);
                 N ->
                     ResponseCode = to_int(NAcc),
-                    if 
+                    if
                         ResponseCode == Code -> ok;
                         true -> throw({error, ErrorMsg})
                     end
@@ -1920,9 +1920,9 @@ b642str([H|T], Acc, N, Out) ->
     case d(H) of
         no ->
             b642str(T, Acc, N, Out);
-        I  -> 
+        I  ->
             Acc1 = (Acc bsl 6) bor I,
-            case N of 
+            case N of
                 3 ->
                     B1 = Acc1 bsr 16,
                     B2 = (Acc1 band 16#ffff) bsr 8,
@@ -2007,7 +2007,7 @@ int_to_mt(10) -> "Oct";
 int_to_mt(11) -> "Nov";
 int_to_mt(12) -> "Dec".
 
-validate_date_and_time([Y1,Y2, Mo, D, H, M, S | Diff]) 
+validate_date_and_time([Y1,Y2, Mo, D, H, M, S | Diff])
   when 0 =< Y1, 0 =< Y2, 0 < Mo, Mo < 13, 0 < D, D < 32, 0 =< H,
        H < 24, 0 =< M, M < 60, 0 =< S, S < 61  ->
     case check_diff(Diff) of
@@ -2047,7 +2047,7 @@ format_message(Session, Message, MailNr, Depth) ->
     Subject = lists:flatten(decode(H#mail.subject)),
     CC = lists:flatten(decode(H#mail.cc)),
     ToolBar =
-        if 
+        if
             MailNr == -1 ->
                 [{"tool-newmail.gif", "javascript:setCmd('reply');", "Reply"}];
             MailNr == attachment ->
@@ -2180,7 +2180,7 @@ select_alt_body([Prefered|Rest], Bodies) ->
         [First|_] ->
             First
     end.
-                  
+
 has_body_type(Type, {H,B}) ->
     case H#mail.content_type of
         {CT, _Ops} ->
@@ -2243,7 +2243,7 @@ format_body(Session, H, Msg, Depth) ->
             Cookie = Session#session.cookie,
             mail_session_manager ! {session_set_attach_data,
                                     self(), Cookie, FileName, ContT, B},
-            
+
             receive
                 {session_manager, Num} ->
                     [{table,[{bgcolor, "lightgrey"}],
@@ -2422,14 +2422,14 @@ decode_message("base64"++_, Msg) ->
     end;
 decode_message("quoted-printable"++_, Msg) ->
     case catch quoted_2_str(lists:flatten(Msg)) of
-        {'EXIT', Reason} -> 
+        {'EXIT', Reason} ->
             io:format("failed to decode quoted-printable ~p\n", [Reason]),
             Msg;
         Decoded -> Decoded
     end;
 decode_message(_, Msg) -> Msg.
-    
-            
+
+
 quoted_2_str(Msg) ->
     quoted_2_str(Msg, []).
 
@@ -2555,7 +2555,7 @@ char_class($\r) -> nl;
 char_class($ )  -> space;
 char_class($\t) -> tab;
 char_class(O)   -> text.
-    
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 sleep(X) ->
@@ -2565,7 +2565,7 @@ sleep(X) ->
         X -> ok
     end.
 
-        
+
 %%%%%%%%%%%%%%%%%%%%%% read cfg file %%%%%%%%%%%%%%%%%%
 %% def for root is: /etc/mail/yaws-webmail.conf
 
@@ -2617,7 +2617,7 @@ read_config(FD, Cfg, Lno, Chars) ->
             end;
         ["popserver", '=', Server] ->
             read_config(FD, Cfg#cfg{popserver = Server}, Lno+1, Next);
-        
+
         ["smtpserver", '=', Domain] ->
             read_config(FD, Cfg#cfg{smtpserver = Domain}, Lno+1, Next);
         ["maildomain", '=', Domain] ->
@@ -2636,7 +2636,7 @@ read_config(FD, Cfg, Lno, Chars) ->
                                   "line ~w", [H, Lno]),
             read_config(FD, Cfg, Lno+1, Next)
     end.
-        
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 -record(date, {year, month, day, hours, minutes, seconds}).
@@ -2644,7 +2644,7 @@ read_config(FD, Cfg, Lno, Chars) ->
 parse_date([]) -> [];
 parse_date(Date) ->
     D = parse_date(Date, #date{}),
-    if 
+    if
         integer(D#date.year),integer(D#date.month),
         integer(D#date.day),integer(D#date.hours),
         integer(D#date.minutes),integer(D#date.seconds) ->
@@ -2690,7 +2690,7 @@ parse_date([D|Ds], Date) ->
         _ ->
             parse_date(Ds, Date)
     end.
-                      
+
 is_month("jan"++Rest) -> {true, 1, Rest};
 is_month("feb"++Rest) -> {true, 2, Rest};
 is_month("mar"++Rest) -> {true, 3, Rest};
@@ -2745,7 +2745,7 @@ parse_time(Time) ->
             {Hour, Minutes, Seconds, Rest};
         _ -> error
     end.
-                
+
 format_date({{Year,Month,Day},{Hour,Minutes,Seconds}}) ->
     M = enc_month(Month),
     io_lib:format("~2..0w ~s ~4..0w ~2..0w:~2..0w:~2..0w",
@@ -2759,7 +2759,7 @@ format_date([]) -> [];
 format_date(error) -> [].
 
 send_attachment(Session, Number) ->
-    mail_session_manager ! {session_get_attach_data, self(), 
+    mail_session_manager ! {session_get_attach_data, self(),
                             Session#session.cookie, Number},
     receive
         {session_manager, error} ->
@@ -2803,7 +2803,7 @@ send_attachment(Session, Number) ->
 %
 
 send_attachment_plain(Session, Number) ->
-    mail_session_manager ! {session_get_attach_data, self(), 
+    mail_session_manager ! {session_get_attach_data, self(),
                             Session#session.cookie, Number},
     receive
         {session_manager, error} ->
@@ -2838,7 +2838,7 @@ getopt(Key, KeyList, Default) ->
             Default;
         {value, Tuple} ->
             Val = element(2,Tuple),
-            if 
+            if
                 Val == undefined -> Default;
                 true -> Val
             end
@@ -2856,7 +2856,7 @@ content_type(FileName) ->
 
 %%
 
-%% State = 
+%% State =
 
 find_dot(Data, State) ->
     find_dot(State, Data, []).

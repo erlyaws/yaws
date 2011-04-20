@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : yaws_log_file_h.erl
 %%% Author  :  <klacke@hyber.org>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 11 Mar 2004 by  <klacke@hyber.org>
 %%%-------------------------------------------------------------------

@@ -1,11 +1,11 @@
-%    -*- Erlang -*- 
+%    -*- Erlang -*-
 %    File:        wiki.erl  (~jb/work/wiki/src/wiki.erl)
 %    Author:    Joe Armstrong
 %    Author:        Johan Bevemyr
 %    Purpose:   Wiki web in Erlang
 
 %%
-%% History: Ported and partly rewritten by Johan Bevemyr for 
+%% History: Ported and partly rewritten by Johan Bevemyr for
 %%          the yaws http server.
 %%
 
@@ -25,7 +25,7 @@
 
 -export([showPage/3, createNewPage/3, showHistory/3, allPages/3,
          lastEdited/3, wikiZombies/3, editPage/3, editFiles/3,
-         previewNewPage/3, allRefsToMe/3, deletePage/3, 
+         previewNewPage/3, allRefsToMe/3, deletePage/3,
          editTag/3, finalDeletePage/3, storePage/3, putPassword/3,
          storeNewPage/3, previewPage/3, previewTagged/3, copyFiles/3,
          deleteFiles/3, addFile/1, addFile/2,
@@ -53,7 +53,7 @@
 
 showPage(Params, Root, Prefix) ->
     Page = getopt("node", Params),
-    if 
+    if
         Page == undefined ->
             error(invalid_request);
         true ->
@@ -103,7 +103,7 @@ create_thumb(SrcPath, DstPath) ->
 getThumb(Params, Root, Prefix) ->
     Page = getopt("node", Params),
     Pict = getopt("pict", Params),
-    if 
+    if
         Page == undefined ->
             error(invalid_request);
         true ->
@@ -114,7 +114,7 @@ getThumb(Params, Root, Prefix) ->
             UpToDate = thumb_up2date(SrcPath, DstPath),
             if UpToDate ->
                     done;
-               true -> 
+               true ->
                     create_thumb(SrcPath, DstPath)
             end,
             {redirect_local, Prefix++FileDir++"/"++ThumbName}
@@ -123,7 +123,7 @@ getThumb(Params, Root, Prefix) ->
 getMidSize(Params, Root, Prefix) ->
     Page = getopt("node", Params),
     Pict = getopt("pict", Params),
-    if 
+    if
         Page == undefined ->
             error(invalid_request);
         true ->
@@ -136,7 +136,7 @@ getMidSize(Params, Root, Prefix) ->
             DstAge = get_age(DstPath),
             SrcAge = get_age(SrcPath),
             if DstAge > SrcAge -> false;
-               true -> 
+               true ->
                     os:cmd("convert -size 400x400 -scale 400x400 '"++
                            shell_quote(SrcPath)++"' '"++
                            shell_quote(DstPath)++"'")
@@ -155,7 +155,7 @@ shell_quote([$'|R]) ->
     [$\\, $'| shell_quote(R)];
 shell_quote([C|R]) ->
     [C|shell_quote(R)].
-     
+
 
 get_age(Path) ->
     case file:read_file_info(Path) of
@@ -257,7 +257,7 @@ addFile([WobFile, FileAtm], Halt) ->
             {wik002, Pwd, Email, Time, Who, TxtStr, Files, Patches} =
                 bin_to_wik002(Bin),
 
-            NewFiles = 
+            NewFiles =
                 case lists:keysearch(File, 2, Files) of
                     {value, _} ->
                         Files;
@@ -284,7 +284,7 @@ createNewPage(Params, Root, Prefix) ->
     Sid  = getopt("sid", Params),
 
 
-    if 
+    if
         Sid /= undefined ->
             {Txt,Passwd,Email} =
                 session_get_all(Sid, initial_page_content(), "", ""),
@@ -333,12 +333,12 @@ createNewPage1(Page, Root, Sid, Prefix, Content, Passwd, Email) ->
 
 storePage(Params, Root, Prefix) ->
     Password = getopt("password", Params, ""),
-    Page     = getopt("node", Params), 
+    Page     = getopt("node", Params),
     Cancel   = getopt("cancel", Params),
     Edit     = getopt("edit", Params),
     Sid      = getopt("sid", Params),
-    
-    if 
+
+    if
         Cancel /= undefined ->
             session_end(Sid),
             redirect({node, Page}, Prefix);
@@ -360,7 +360,7 @@ storePage(Params, Root, Prefix) ->
                     show({no_such_page,Page}, Root)
             end
     end.
-    
+
 
 storePage1(Params, Root, Prefix) ->
     Page     = getopt("node",Params),
@@ -381,12 +381,12 @@ storePage1(Params, Root, Prefix) ->
     end.
 
 storeNewPage(Params, Root, Prefix) ->
-    
+
     Page     = getopt("node", Params),
     Password = getopt("password", Params),
     Email0   = getopt("email", Params),
     Txt0     = getopt("txt", Params),
-    
+
     Txt = zap_cr(urlencoded2str(Txt0)),
     Email = urlencoded2str(Email0),
     %% Check the password
@@ -411,7 +411,7 @@ storeTagged(Params, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
-            Wik = {wik002,_Pwd,_Email,_Time,_Who,OldTxt,_Files,_Patches} = 
+            Wik = {wik002,_Pwd,_Email,_Time,_Who,OldTxt,_Files,_Patches} =
                 bin_to_wik002(Bin),
             W    = wiki_split:str2wiki(OldTxt),
             ITag = list_to_integer(Tag),
@@ -421,7 +421,7 @@ storeTagged(Params, Root, Prefix) ->
                          wiki_split:putRegion(ITag, W, Txt);
                      write_append ->
                          Time = format_time({date(), time()}),
-                         wiki_split:putRegion(ITag, W, 
+                         wiki_split:putRegion(ITag, W,
                                               "''" ++ Time ++ "''\n\n" ++
                                               Txt ++ "\n\n____\n" ++ Old)
                    end,
@@ -468,7 +468,7 @@ addFileInit(Params, Root, Prefix) ->
     Page        = getopt("node", Params),
     Password    = getopt("password", Params),
     template2(Root, "Add File", Page,
-             [form("POST", "addFile.yaws", 
+             [form("POST", "addFile.yaws",
                    [
                     input("hidden", "node", Page),
                     input("hidden", "password", Password),
@@ -493,7 +493,7 @@ addFileInit(Params, Root, Prefix) ->
               "the zip file and check the 'unzip' checkbox above."
              ],
             false).
-    
+
 -record(addfile, {
           root,
           prefix,
@@ -530,14 +530,14 @@ addFile(Arg, Root, Prefix) ->
                     show({error_on_upload, State#addfile.node}, Root)
             end
     end.
-                
+
 
 prepare_addFile_state(undefined, Root, Prefix) ->
     #addfile{root=Root, prefix=Prefix};
 prepare_addFile_state(State, Root, Prefix) ->
     State#addfile{root=Root, prefix=Prefix}.
 
-    
+
 merge_body(undefined, Data) ->
     Data;
 merge_body(Acc, New) ->
@@ -705,7 +705,7 @@ updateFilesInit(Params, Root, Prefix) ->
         end,
 
     NewFiles = [UpdateDesc(F) || F <- OldFiles],
-    
+
     Time = {date(), time()},
     Who = "unknown",
     Ds = {wik002,Pwd, Email,Time,Who,Txt,NewFiles,Patches},
@@ -727,7 +727,7 @@ deleteFilesInit(Params, Root, Prefix) ->
     {ok, Bin} = file:read_file(File),
     Wik = {wik002,Pwd,_Email,_Time, _Who,_Txt,Files,_Patches}
         = bin_to_wik002(Bin),
-    
+
     Extend = fun({file, Name, Desc, _}) ->
                      {file, Name, Desc, []};
                 ({file, Name, _}) ->
@@ -750,7 +750,7 @@ deleteFilesInit(Params, Root, Prefix) ->
 
     template2(Root, "Confirm", Page,
              [List,
-              form("POST", "deleteFiles.yaws", 
+              form("POST", "deleteFiles.yaws",
                    [DelList,
                     input("submit", "delete", "Delete"),
                     input("submit", "cancel", "Cancel"),
@@ -758,13 +758,13 @@ deleteFilesInit(Params, Root, Prefix) ->
                     input("hidden", "password", Password)])
              ],
             false).
-    
+
 deleteFiles(Params, Root, Prefix) ->
     Password = getopt("password", Params, ""),
-    Page     = getopt("node", Params), 
+    Page     = getopt("node", Params),
     Cancel   = getopt("cancel", Params),
-    
-    if 
+
+    if
         Cancel /= undefined ->
             redirect({node, Page}, Prefix);
         true  ->
@@ -789,7 +789,7 @@ deleteFiles1(Params, Root, Prefix) ->
     {ok, Bin} = file:read_file(File),
     Wik = {wik002,Pwd,Email,_Time, _Who,Txt,Files,Patches}
         = bin_to_wik002(Bin),
-    
+
     Extend = fun({file, Name, Desc, _}) ->
                      {file, Name, Desc, []};
                 ({file, Name, _}) ->
@@ -834,7 +834,7 @@ copyFilesInit(Params, Root, Prefix) ->
     {ok, Bin} = file:read_file(File),
     Wik = {wik002,Pwd,_Email,_Time, _Who,_Txt,Files,Patches}
         = bin_to_wik002(Bin),
-    
+
     Extend = fun({file, Name, Desc, _}) ->
                      {file, Name, Desc, []};
                 ({file, Name, _}) ->
@@ -856,14 +856,14 @@ copyFilesInit(Params, Root, Prefix) ->
 
     PageFiles = sort(files(Root, "*.wob")),
     Pages = [filename:basename(P,".wob") || P <- PageFiles, P /= File],
-    
+
     if
         length(CheckedFiles) == 0 ->
             editFiles(Params, Root, Prefix);
         true ->
             template2(Root, "Confirm", Page,
                      [List,
-                      form("POST", "copyFiles.yaws", 
+                      form("POST", "copyFiles.yaws",
                            [CpList,
                             "Destination: ",
                             input("select","destination",Pages),
@@ -875,7 +875,7 @@ copyFilesInit(Params, Root, Prefix) ->
                     false)
     end.
 
-    
+
 copyFiles(Params, Root, Prefix) ->
     Password = getopt("password", Params, ""),
     Page     = getopt("node", Params),
@@ -896,8 +896,8 @@ copyFiles(Params, Root, Prefix) ->
     end.
 
 copyFiles1(Params, Root, Prefix) ->
-    Page     = getopt("node", Params), 
-    Dest     = getopt("destination", Params), 
+    Page     = getopt("node", Params),
+    Dest     = getopt("destination", Params),
 
     case checkPassword(Dest, "", Root, Prefix) of
         true ->
@@ -909,8 +909,8 @@ copyFiles1(Params, Root, Prefix) ->
     end.
 
 copyFiles2(Params, Root, Prefix) ->
-    Page     = getopt("node", Params), 
-    Dest     = getopt("destination", Params), 
+    Page     = getopt("node", Params),
+    Dest     = getopt("destination", Params),
     Password = getopt("password", Params, ""),
 
     case checkPassword(Dest, Password, Root, Prefix) of
@@ -923,12 +923,12 @@ copyFiles2(Params, Root, Prefix) ->
     end.
 
 copyFiles3(Params, Root, Prefix) ->
-    Page     = getopt("node", Params), 
-    Dest     = getopt("destination", Params), 
-    
+    Page     = getopt("node", Params),
+    Dest     = getopt("destination", Params),
+
     {SrcWobFile, SrcFileDir} = page2filename(Page, Root),
     {DstWobFile, DstFileDir} = page2filename(Dest, Root),
-    
+
     SrcFileNames = [lists:nthtail(3,N) ||
                        {N,S,_} <- Params,
                        lists:prefix("cp_",N)],
@@ -959,7 +959,7 @@ showHistory(Params, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
-            {wik002,Pwd,Email,_Time,_Who,OldTxt,_Files,Patches} = 
+            {wik002,Pwd,Email,_Time,_Who,OldTxt,_Files,Patches} =
                 bin_to_wik002(Bin),
             Links = reverse(mk_history_links(reverse(Patches), Page, 1)),
             template2(Root, "History", Page, Links, false);
@@ -985,11 +985,11 @@ redirect_edit(Page, Sid, Password, Prefix) ->
 redirect_create(Page, Sid, Prefix) ->
     UrlSid = str2urlencoded(Sid),
     {redirect_local, Prefix++"createNewPage.yaws?node="++str2urlencoded(Page)++
-     "&sid="++UrlSid}.    
+     "&sid="++UrlSid}.
 
 redirect_change(Page, Prefix) ->
     {redirect_local, Prefix++"changePassword.yaws?node="++
-     str2urlencoded(Page)}.    
+     str2urlencoded(Page)}.
 
 mk_history_links([{C,Time,Who}|T], Page, N) ->
     [["<li>",i2s(N)," modified on <a href='showOldPage.yaws?node=",
@@ -1012,7 +1012,7 @@ allPages(_, Root, Prefix) ->
                                 F = filename:basename(I, ".wob"),
                                 [wiki_to_html:format_link(F, Root),
                                  "<br>"]
-                        end, 
+                        end,
                         Files)], false).
 
 lastEdited(_, Root, Prefix) ->
@@ -1026,7 +1026,7 @@ lastEdited(_, Root, Prefix) ->
     S1 = lists:map(fun({{Year,Month,Day},Fx}) ->
                      [p(),i2s(Year),"-",i2s(Month),"-",i2s(Day),"<p>",
                       "<ul>",
-                      lists:map(fun(F) -> 
+                      lists:map(fun(F) ->
                                   F1 = filename:basename(F, ".wob"),
                                   J = wiki_to_html:format_link(F1, Root),
                                   [J,"<br>"] end, Fx),
@@ -1050,13 +1050,13 @@ collect_this_day(Day, T, L) ->
 last_edited_time(File) ->
     case file:read_file(File) of
         {ok, Bin} ->
-            {wik002,Pwd,_Email,Time,_Who,_Txt,_Files,_Patches} = 
+            {wik002,Pwd,_Email,Time,_Who,_Txt,_Files,_Patches} =
                 bin_to_wik002(Bin),
             Time;
         _ ->
             error
     end.
-        
+
 showOldPage(Params, Root, Prefix) ->
     Page = getopt("node", Params),
     Nt = getopt("index", Params),
@@ -1065,7 +1065,7 @@ showOldPage(Params, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
-            Wik = {wik002,Pwd,_Email,_Time,_Who,Txt,Files,Patches} = 
+            Wik = {wik002,Pwd,_Email,_Time,_Who,Txt,Files,Patches} =
                 bin_to_wik002(Bin),
             %% N = #patches to do
             N = length(Patches) - Index + 1,
@@ -1104,13 +1104,13 @@ deletePage(Params,  Root, Prefix) ->
 deletePage1(Params, Root, Prefix) ->
     Page = getopt("node", Params),
     Password = getopt("password", Params),
-    
+
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
             {wik002, _Pwd,_Email,_Time,_Who,Content,_Files,_Patches} =
                 bin_to_wik002(Bin),
-    
+
             Txt = quote_lt(Content),
             template2(Root, "Delete", Page,
                      [p("Reconfirm deleting this page - hit the 'Delete' "
@@ -1151,7 +1151,7 @@ finalDeletePage(Params, Root, Prefix) ->
 finalDeletePage1(Params, Root, Prefix) ->
     Page = getopt("node", Params),
     Txt0 = getopt("text", Params),
-    
+
     {File,FileDir} = page2filename(Page, Root),
     case file:delete(File) of
         ok ->
@@ -1242,7 +1242,7 @@ session_manager_init(N,Sessions) ->
 
 % Sessions = [{Pid, Sid}]
 session_manager(N,Sessions) ->
-    receive 
+    receive
         {'EXIT', Pid, _} ->
             NewS = lists:keydelete(Pid, 1, Sessions),
             session_manager(N, NewS);
@@ -1286,7 +1286,7 @@ session_manager(N,Sessions) ->
         Unknown ->
             session_manager(N, Sessions)
     end.
-                                    
+
 session_proc(Sid,State) ->
     receive
         stop ->
@@ -1318,7 +1318,7 @@ to_sm(Msg) ->
 
 session_end(undefined) -> done;
 session_end(Sid) -> to_sm({to_sid, self(), Sid, stop}).
-    
+
 session_new(Txt) ->
     session_new(Txt, "", "").
 
@@ -1335,7 +1335,7 @@ session_new(Sid, Txt, Passwd, Email) ->
     receive
         {session_id, Sid} -> Sid
     end.
-    
+
 session_get_text(undefined, OldTxt) -> OldTxt;
 session_get_text(Sid, OldTxt) ->
     to_sm({to_sid, self(), Sid, {get_text, self()}}),
@@ -1452,7 +1452,7 @@ checkPassword(Page, Password, Root, Prefix) ->
         {ok, Bin} ->
             {wik002, Pwd,_Email,_Time,_Who,_TxtStr,Files,_Patches} =
                 bin_to_wik002(Bin),
-            case Pwd of 
+            case Pwd of
                 ""       -> true;
                 Password -> true;
                 _        -> false
@@ -1484,7 +1484,7 @@ editFiles1(Page, Password, Root, Prefix) ->
                 lists:map(fun({file,Name,Description,_Content}) ->
                                   ["<tr><td align=left valign=top>",
                                    input("checkbox","cb_"++Name,"on", ""),
-                                   Name, 
+                                   Name,
                                    "</td><td width='70%' align=left "
                                    "valign=top>",
                                    textarea("cbt_"++Name, 2, 20, Description),
@@ -1606,12 +1606,12 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
                            true -> []
                         end,
                     F1 = add_blanks_nicely(Page),
-                    TopHeader = 
+                    TopHeader =
                         ["<a href='showPage.yaws?node=",
                          str2urlencoded(Page),
                          "'>",F1,"</a>\n"],
                     Locked = Pwd /= "",
-                    Link = 
+                    Link =
                         wiki_templates:template(Page, Root,
                                                 [DeepStr, Auto],
                                                 utils:time_to_string(Time),
@@ -1633,23 +1633,23 @@ thumbIndex(Params, Root, Prefix) ->
                              1, lists:keysort(2,Files)),
             Pics = [{F,N} || {F,N} <- NumFiles, pict_suffix(F)],
             Node = str2urlencoded(Page),
-            DeepStr = 
+            DeepStr =
                 ["<table>",
                  build_thumb_table(Pics, Node, Prefix, Root, FileDir),
                  "</table>"],
             F1 = add_blanks_nicely(Page),
-            TopHeader = 
+            TopHeader =
                 ["<a href='showPage.yaws?node=",Node,"'>",
                  F1,"</a>\n"],
             Locked = Pwd /= "",
-            Link = 
+            Link =
                 wiki_templates:template(Page, Root, DeepStr,
                                         utils:time_to_string(Time),
                                         Locked);
         _ ->
             show({no_such_page,Page}, Root)
     end.
-    
+
 build_thumb_table([], _Node, _Prefix, _Root, _FileDir) -> [];
 build_thumb_table(Pics, Node, Prefix, Root, FileDir) ->
     build_thumb_rows(Pics, Node, Prefix, Root, FileDir, 0, 5, ["<tr>"]).
@@ -1719,7 +1719,7 @@ get_img(Index, Direction, Files) ->
                     end
             end
     end.
-            
+
 
 editTag(Params, Root, Prefix) ->
     Page = getopt("node", Params),
@@ -1732,7 +1732,7 @@ editTag(Params, Root, Prefix) ->
                 bin_to_wik002(Bin),
             Wik = wiki_split:str2wiki(OldTxt),
             {Type, Str} = wiki_split:getRegion(list_to_integer(Tag), Wik),
-            Str1 = case Type of 
+            Str1 = case Type of
                        open -> quote_lt(Str);
                        write_append -> ""
                    end,
@@ -1833,7 +1833,7 @@ previewPage1(Params, Root, Prefix) ->
     Password = getopt("password", Params),
     Txt0     = getopt("text", Params),
     Sid      = getopt("sid", Params,"undefined"),
-    
+
     Txt = zap_cr(Txt0),
     Wik = wiki_split:str2wiki(Txt),
     session_set_text(Sid, Txt),
@@ -1848,7 +1848,7 @@ previewPage1(Params, Root, Prefix) ->
                     input("hidden", "node", Page),
                     input("hidden", "password", Password),
                     input("hidden", "txt", str2formencoded(Txt))]),
-              p(),hr(),h1(Page), 
+              p(),hr(),h1(Page),
               wiki_to_html:format_wiki(Page, Wik, Root, preview)], false).
 
 %% Preview Tagged
@@ -1875,7 +1875,7 @@ previewTagged(Params, Root, Prefix) ->
                      input("hidden", "node", Page),
                      input("hidden", "tag", Tag),
                      input("hidden", "txt", str2formencoded(Txt))]),
-               p(),hr(), 
+               p(),hr(),
                wiki_to_html:format_wiki(Page,{txt,10000,Txt},Root)],
               false);
         false ->
@@ -1887,12 +1887,12 @@ previewTagged(Params, Root, Prefix) ->
 
 legal_flat_text("<" ++ _) -> false;
 legal_flat_text(X)        -> legal_flat_text1(X).
-    
+
 legal_flat_text1("\n<" ++ _) -> false;
 legal_flat_text1("\n>" ++ _) -> false;
 legal_flat_text1([_|T])      -> legal_flat_text1(T);
 legal_flat_text1([])         -> true.
-    
+
 previewNewPage(Params, Root, Prefix) ->
     Page  = getopt("node", Params),
     P1    = getopt("password1", Params),
@@ -1904,7 +1904,7 @@ previewNewPage(Params, Root, Prefix) ->
     Txt = zap_cr(Txt0),
     Wik = wiki_split:str2wiki(Txt),
     session_set_text(Sid, Txt),
-    if 
+    if
         P1 == P2 ->
             session_set_all(Sid,Txt,P1,Email),
             template2(Root, "Preview",
@@ -1949,10 +1949,10 @@ send(To, Subject, Data) ->
     io:format("sending ...~n", []),
     os:cmd("/usr/sbin/sendmail -t > /dev/null < " ++ TmpFile),
     file:delete(TmpFile).
-                               
+
 open_tmp_file(RootName, Suffix) ->
     open_tmp_file(10, RootName, Suffix).
- 
+
 open_tmp_file(0, _, Suffix) ->
     exit({cannot_open_a_temporay_file, Suffix});
 open_tmp_file(N, RootName, Suffix) ->
@@ -1964,7 +1964,7 @@ open_tmp_file(N, RootName, Suffix) ->
             {FileName, Stream};
         {error, _} ->
             open_tmp_file(N-1, RootName, Suffix)
-    end.      
+    end.
 
 
 ls(Root) ->
@@ -1986,7 +1986,7 @@ error(invalid_request) ->
 
 bin_to_wik002(Bin) ->
     case binary_to_term(Bin) of
-        {wik001,Pwd,Email,Time,Who,OldTxt,Patches} -> 
+        {wik001,Pwd,Email,Time,Who,OldTxt,Patches} ->
             {wik002,Pwd,Email,Time,Who,OldTxt,[],Patches};
         {wik002,Pwd,Email,Time,Who,OldTxt,Files,Patches} ->
             {wik002,Pwd,Email,Time,Who,OldTxt,Files,Patches}
@@ -2120,7 +2120,7 @@ big_letter($Å) -> true;
 big_letter($Ä) -> true;
 big_letter($Ö) -> true;
 big_letter(_)  -> false.
-    
+
 little_letter(H) when $a =< H, H =< $z -> true;
 little_letter($å) -> true;
 little_letter($ä) -> true;
@@ -2169,20 +2169,20 @@ quote_lt([])     -> [].
 
 %% The default encoding for all forms is `application/x-www-form-urlencoded'.
 %% A form data set is represented in this media type as follows:
-%% 
+%%
 %%   1. The form field names and values are escaped: space characters are
 %%      replaced by `+', and then reserved characters are escaped as per [URL];
 %%      that is, non-alphanumeric characters are replaced by `%HH', a percent
 %%      sign and two hexadecimal digits representing the ASCII code of the
 %%      character. Line breaks, as in multi-line text field values, are
 %%      represented as CR LF pairs, i.e. `%0D%0A'.
-%% 
+%%
 %%   2. The fields are listed in the order they appear in the document with the
 %%      name separated from the value by `=' and the pairs separated from each
 %%      other by `&'. Fields with null values may be omitted. In particular,
 %%      unselected radio buttons and checkboxes should not appear in the
 %%      encoded data, but hidden fields with VALUE attributes present should.
-%% 
+%%
 
 
 str2fileencoded([$_|T]) ->
@@ -2273,15 +2273,15 @@ hex2dec($e) -> 14;
 hex2dec($f) -> 15.
 
 
-%% 
+%%
 
 %% MR: Is this really necessary ?
 %%     We can now use filelib:fold_files/5
-files(Dir, Re) -> 
+files(Dir, Re) ->
     Re1 = regexp:sh_to_awk(Re),
     find_files(Dir, Re1, []).
 
-find_files(Dir, Re, L) -> 
+find_files(Dir, Re, L) ->
     case file:list_dir(Dir) of
         {ok, Files} -> find_files(Files, Dir, Re, L);
         {error, _}  -> L
@@ -2292,12 +2292,12 @@ find_files([File|T], Dir, Re, L) ->
     case file_type(FullName) of
         regular ->
             case regexp:match(FullName, Re) of
-                {match, _, _}  -> 
+                {match, _, _}  ->
                     find_files(T, Dir, Re, [FullName|L]);
                 _ ->
                     find_files(T, Dir, Re, L)
             end;
-        _ -> 
+        _ ->
             find_files(T, Dir, Re, L)
     end;
 find_files([], _, _, L) ->
@@ -2360,7 +2360,7 @@ check_precon([F|Fs], Args) ->
         NotOk ->
             NotOk
     end.
-    
+
 %%
 
 getopt(Key, KeyList) ->
@@ -2374,7 +2374,7 @@ getopt(Key, KeyList, Default)  ->
             Default;
         {value, Tuple} ->
             Val = element(2,Tuple),
-            if 
+            if
                 Val == undefined -> Default;
                 true -> Val
             end
@@ -2462,27 +2462,27 @@ searchPages(SearchPost, Root, Prefix) ->
                         [input("submit", "searchstart", "Search"),
                          input("text", "search", "")])],
             template2(Root,"Search", "Wiki page search",
-                      [S0, "<hr>", 
-                       h1("Nothing to find")], 
+                      [S0, "<hr>",
+                       h1("Nothing to find")],
                       false);
         {error, Error} ->
             S0 = [forms("POST", "searchPage.yaws",
                         [input("submit", "searchstart", "Search"),
                          input("text", "search", "")])],
             template2(Root,"Search", "Wiki page search",
-                      [S0, "<hr>", 
+                      [S0, "<hr>",
                        h1(io_lib:format("Error in the regular "
-                                        "expression \"~p\"", 
-                          [Error]))], 
-                      false);            
+                                        "expression \"~p\"",
+                          [Error]))],
+                      false);
         Search ->
             Files = sort(files(Root, "*.wob")),
-            {Sres, _S} = lists:mapfoldl(fun(F, S) -> 
-                                                {searchPage(F, S), S} end, 
+            {Sres, _S} = lists:mapfoldl(fun(F, S) ->
+                                                {searchPage(F, S), S} end,
                                         Search, Files),
             Sres_sort = reverse(sort(Sres)),
             S1 = lists:map(fun({Matches, Fx}) ->
-                                   [p(),i2s(Matches),"  ", 
+                                   [p(),i2s(Matches),"  ",
                                     wiki_to_html:format_link(
                                       filename:basename(Fx, ".wob"), Root),
                                     "</p>"]
@@ -2491,8 +2491,8 @@ searchPages(SearchPost, Root, Prefix) ->
                         [input("submit", "searchstart", "Search"),
                          input("text", "search", Search)])],
             template2(Root,"Search", "Wiki page search",
-                      [S0, "<hr>", 
-                       h1("Number of matches found per page"), S1], 
+                      [S0, "<hr>",
+                       h1("Number of matches found per page"), S1],
                       false)
     end.
 

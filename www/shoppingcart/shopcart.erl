@@ -1,6 +1,6 @@
 
 %% a small shoppingcart example which tries to show
-%% a variety of tricks and tacticts to display a 
+%% a variety of tricks and tacticts to display a
 %% shoppingcart style page with server side state.
 
 
@@ -20,7 +20,7 @@
           passwd,
           addr,
           items = []}).
-          
+
 
 %% this function extracts the session from the cookie
 check_cookie(A) ->
@@ -54,7 +54,7 @@ top(A) ->
 
 %% generate a css head  the title of the page set dynamically
 css_head(PageTitle) ->
-    Z = 
+    Z =
     [<<"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">
 <html>
 
@@ -77,7 +77,7 @@ css_head(PageTitle) ->
 
 %% the little status field in the upper left corner
 head_status(User) ->
-    {ehtml, 
+    {ehtml,
      {table, [],
       {tr, [],
        [{td, [{width, "30%"}],
@@ -85,7 +85,7 @@ head_status(User) ->
           [{tr, [], {td, [], pb("User: ~s", [User])}}
           ]}
         },
-        {td, [{align, right}], {img, [{src, "junk.jpg"}  
+        {td, [{align, right}], {img, [{src, "junk.jpg"}
                                      ]}}
        ]
       }
@@ -101,16 +101,16 @@ pb(Fmt, Args) ->
 %% toprow of buttons to push
 toprow() ->
     {ehtml,
-     {table, [{cellspacing, "4"}, 
+     {table, [{cellspacing, "4"},
               {bgcolor, tan},
               {width, "100%"}
               ],
       [
-       {tr, [], 
+       {tr, [],
         [{td, [], {a, [{href, "buy.yaws"}] , {p, [{class, toprow}], "Buy"}}},
          {td, [], {a, [{href, "logout.yaws"}], {p, [{class, toprow}], "Logout"}}},
          {td, [], {a, [{href, "source.html"}], {p, [{class, toprow}], "The Source"}}},
-         {td, [{width, "70%"}], ""} 
+         {td, [{width, "70%"}], ""}
         ]}
       ]
      }
@@ -140,14 +140,14 @@ login(A) ->
                      {type, text},
                      {value, "Joe Junk shopper"},
                      {size, "48"}]},
-            
-            
+
+
             {p, [], "Password"},
             {input, [{name, password},
                      {type, text},
                      {value, "xyz123"},
                      {size, "48"}]},
-            
+
             {input, [{type, submit},
                      {value, "Login"}]},
 
@@ -184,7 +184,7 @@ loginpost(A) ->
         {{ok, User},
          {ok, Url},
          {ok, Pwd}} ->
-            
+
             %% here's the place to validate the user
             %% we allow all users,
             io:format("User ~p logged in ~n", [User]),
@@ -197,7 +197,7 @@ loginpost(A) ->
             login(A)
     end.
 
-xpath({abs_path, P}, _A) ->    
+xpath({abs_path, P}, _A) ->
     P.
 
 %% this is the function that gets the form when the user
@@ -212,7 +212,7 @@ formupdate(A) ->
     Sess2 = Sess#sess{items = I2},
     yaws_api:replace_cookie_session(Cookie, Sess2),
     {redirect, "index.yaws"}.  %% force browser to reload
-    
+
 handle_l([], Items) ->
     Items;
 handle_l([{Str, Num} | Tail], Items) ->
@@ -249,7 +249,7 @@ buy(A) ->
     Head = head_status(Sess#sess.user),
     Top = toprow(),
     BROWS = b_rows(Sess#sess.items),
-    Res = 
+    Res =
         if
             length (BROWS) > 0 ->
                 {ehtml,
@@ -267,7 +267,7 @@ buy(A) ->
                  [{h4, [], "Congratulations, you have bought nothing"}]}
         end,
 
-                 
+
     [Css, Head, Top, Res, bot()].
 
 
@@ -284,7 +284,7 @@ b_rows(Items) ->
 b_rows([{Desc, Num}|Tail], Junk, Ack, TRS) when Num >  0 ->
     {value, {_, Price}} = lists:keysearch(Desc, 1, Junk),
     A = Num * Price,
-    TR = {tr, [], 
+    TR = {tr, [],
           [{td, [], Desc},
            {td, [], io_lib:format("~w", [Num])},
            {td, [], io_lib:format("~w", [A])}
@@ -309,7 +309,7 @@ b_rows([], _, Ack, TRS) when Ack > 0 ->
                Empty,
                {td, [], pb("~w", [Ack + Tax])}
               ]},
-    
+
     lists:reverse([Total, TaxRow | TRS]);
 b_rows(_, _,_,_) ->
     [].
@@ -317,7 +317,7 @@ b_rows(_, _,_,_) ->
 
 
 
-%% this is the main function which displays 
+%% this is the main function which displays
 %% the shopcart .....
 %% the entire shopcart is one big form which gets posted
 %% when the user updates the shopcart
@@ -329,7 +329,7 @@ index(A) ->
     Top = toprow(),
     Cart =
         {ehtml,
-         {form, 
+         {form,
           [{name, form},
            {method,post},
            {action, "shopcart_form.yaws"}],
@@ -341,7 +341,7 @@ index(A) ->
           ]
          }
         },
-    
+
     [Css, Head, Top, Cart, bot()].
 
 
@@ -353,9 +353,9 @@ rows(Items) ->
     First = {tr, [],
              [{th, [], pb("Num Items", [])},
               {th, [], pb("Item description", [])},
-              {th, [], pb("Price SEK ",[])} 
+              {th, [], pb("Price SEK ",[])}
              ]},
-    
+
     L = lists:map(
           fun({Desc, Price}) ->
                   {tr, [],
@@ -368,7 +368,7 @@ rows(Items) ->
                      {td, [], pb("~w ", [Price])}
                     ]}
           end, Junk),
-    
+
     Total = total(Items, Junk, 0),
     Tax = round(0.27 * Total),
     T = [{tr, [],
@@ -390,7 +390,7 @@ rows(Items) ->
           ]
          }
         ],
-    
+
     _Rows = [First | L] ++ T.
 
 
@@ -408,7 +408,7 @@ total([], _,Ack) ->
     Ack.
 
 
-%% We need to set the value in each input field                      
+%% We need to set the value in each input field
 jval(Str, Items) ->
     case lists:keysearch(Str, 1, Items) of
         {value, {_, Num}} when is_integer(Num) ->

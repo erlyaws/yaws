@@ -1,4 +1,4 @@
-%%    -*- Erlang -*- 
+%%    -*- Erlang -*-
 %%    File:        parse_html.erl
 %%    Author:        Johan Bevemyr
 %%    Created:        Tue Nov 25 20:53:36 2003
@@ -71,9 +71,9 @@ parse([{data, Data, _Line}|Tokens], CTag, Stack, Acc) ->
     end.
 %%
 
-tag_type(p)          -> leaf; 
-tag_type(hr)         -> leaf; 
-tag_type(input)      -> leaf; 
+tag_type(p)          -> leaf;
+tag_type(hr)         -> leaf;
+tag_type(input)      -> leaf;
 tag_type(base)       -> leaf;
 tag_type(img)        -> leaf;
 tag_type('!doctype') -> leaf;
@@ -93,7 +93,7 @@ tokenize([$<,$!,$-,$-|R0], Acc, Tokens, L0) ->
     tokenize(R1, Acc, Tokens, L1);
 tokenize([$<|R0], Acc, Tokens, L0) ->
     {Tag,R1,L1} = scan_tag(R0,L0),
-    if 
+    if
         Acc == [] ->
             next_token(Tag, R1, [Tag|Tokens], L1);
         true ->

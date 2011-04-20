@@ -5,7 +5,7 @@
 %% B = normal | locked | old
 template(Node,Root,Data,Modified,Locked) ->
     MenuId =
-        if Locked == true -> "lockedmenuframe" ; 
+        if Locked == true -> "lockedmenuframe" ;
            true -> "menuframe"
         end,
 
@@ -37,7 +37,7 @@ template(Node,Root,Data,Modified,Locked) ->
 
 template2(Root,Title,Header,Data,Locked) ->
     MenuId =
-        if Locked == true -> "lockedmenuframe" ; 
+        if Locked == true -> "lockedmenuframe" ;
            true -> "menuframe"
         end,
 
@@ -63,7 +63,7 @@ template2(Root,Title,Header,Data,Locked) ->
 
 template_file() ->
     <<"<html>
-<head> 
+<head>
 <title> @@NODE@@ </title>
 <style type=\"text/css\">
 <!--
@@ -73,11 +73,11 @@ template_file() ->
 </head>
 <body>
 <table width='100%' border=0>
-<tr> 
-<td> 
-<table width='100%' border=0> 
-<tr> 
-<!-- the menu --> 
+<tr>
+<td>
+<table width='100%' border=0>
+<tr>
+<!-- the menu -->
 <td id=\"@@MENUID@@\" valign='top' width='90%'>
 <table width=\"100%\"><tr><td id=\"menu\">
 <a href=\"@@HOME@@\"><img border=0 src='WikiPreferences.files/home.gif' alt='Home' title='Go to initial page'></a>&nbsp;&nbsp;
@@ -90,30 +90,30 @@ template_file() ->
 </td></tr></table>
 </td>
 </tr>
-<tr> 
-<td> 
+<tr>
+<td>
 <p>&nbsp;<br>
-  
+
 <!-- the generated page -->
 <h1><a href='@@ALLREFS@@'>@@NODE@@</a></h1>
 @@DATA@@
 <hr><p>Last Modified: @@MODIFIED@@
-</td> 
-</tr> 
-</table> 
-</td> 
-  
-<!-- the right hand image --> 
-<td width=10 align='right' valign='top'></td> 
-</tr> 
-</table> 
+</td>
+</tr>
+</table>
+</td>
+
+<!-- the right hand image -->
+<td width=10 align='right' valign='top'></td>
+</tr>
+</table>
 </body>
 </html>
 ">>.
 
 template_info_file() ->
     <<"<html>
-<head> 
+<head>
 <title> @@TITLE@@ </title>
 <style type=\"text/css\">
 <!--
@@ -123,30 +123,30 @@ template_info_file() ->
 </head>
 <body>
 <table width='100%' border=0>
-<tr> 
-<td> 
-<table width='100%' border=0> 
-<tr> 
-<!-- the menu --> 
+<tr>
+<td>
+<table width='100%' border=0>
+<tr>
+<!-- the menu -->
 <td id=\"@@MENUID@@\" valign='top' width='90%'>
 </td>
-</tr> 
-<tr> 
-<td> 
+</tr>
+<tr>
+<td>
 <p>&nbsp;<br>
-  
+
 <!-- the generated page -->
 <h1>@@HEADER@@</h1>
 @@DATA@@
-</td> 
-</tr> 
-</table> 
-</td> 
-  
-<!-- the right hand image --> 
-<td width=10 align='right' valign='top'></td> 
-</tr> 
-</table> 
+</td>
+</tr>
+</table>
+</td>
+
+<!-- the right hand image -->
+<td width=10 align='right' valign='top'></td>
+</tr>
+</table>
 </body>
 </html>
 ">>.

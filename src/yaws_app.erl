@@ -1,7 +1,7 @@
 %%%----------------------------------------------------------------------
 %%% File    : yaws_app.erl
 %%% Author  : Claes Wikstrom <klacke@bluetail.com>
-%%% Purpose : 
+%%% Purpose :
 %%% Created : 16 Jan 2002 by Claes Wikstrom <klacke@hyber.org>
 %%%----------------------------------------------------------------------
 

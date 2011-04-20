@@ -24,9 +24,9 @@
 %% +deftype wikiText() = {wik, [{text,tag(),string()} |
 %%                              {open,tag(),string()} |
 %%                              {write_append, tag(), string()}]}
-%% +deftype tag() = int(). 
+%% +deftype tag() = int().
 
--export([str2wiki/1, wiki2str/1, 
+-export([str2wiki/1, wiki2str/1,
          getRegion/2, putRegion/3, writeAppendRegion/3]).
 
 -import(lists, [reverse/1]).
@@ -42,10 +42,10 @@ number_blocks([], _)            -> [].
 str2wiki(Str, L) ->
     {Before, Stuff} = collect_str(Str),
     case Stuff of
-        "<<\n" ++ T -> 
+        "<<\n" ++ T ->
             {In, Str3} = collect_write_append([$\n|T], []),
             str2wiki(Str3, [{write_append,In},{txt,Before}|L]);
-        "<\n" ++ T -> 
+        "<\n" ++ T ->
             {In, Str3} = collect_open_region([$\n|T], []),
             str2wiki(Str3, [{open,In},{txt,Before}|L]);
         [] ->
@@ -54,7 +54,7 @@ str2wiki(Str, L) ->
 
 %% collect_str(Str) -> {Str1, Str2}
 %% where Str2 == [], "<" ++ _ | "<<" ++ _
-    
+
 collect_str(Str) -> collect_after_nl(Str, []).
 
 collect_after_nl(S = "<<\n" ++ _, L) -> {reverse(L), S};
@@ -81,7 +81,7 @@ wiki2str1([{txt,_,Str}|T])          -> [Str|wiki2str1(T)];
 wiki2str1([{open,_,Str}|T])         -> ["<\n",Str,"\n>"|wiki2str1(T)];
 wiki2str1([{write_append,_,Str}|T]) -> ["<<\n",Str,"\n>>"|wiki2str1(T)];
 wiki2str1([])                       -> [].
-    
+
 sneaky_flatten(L) ->
     binary_to_list(list_to_binary(L)).
 
@@ -89,7 +89,7 @@ getRegion(Tag, {wik, L}) -> getRegion1(Tag, L).
 
 getRegion1(Tag, [{Type,Tag,Str}|_]) -> {Type, Str};
 getRegion1(Tag, [_|T])              -> getRegion1(Tag, T).
-    
+
 putRegion(Tag, {wik, L}, Str1) -> {wik, putRegion1(Tag, L, Str1)}.
 
 putRegion1(Tag, [{Type,Tag,_}|T], New) -> [{Type,Tag,New}|T];

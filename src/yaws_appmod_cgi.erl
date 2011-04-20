@@ -1,6 +1,6 @@
 %%% File    : yaws_appmod_cgi.erl
 %%% Author  : Claes  Wikstrom <klacke@hyber.org>
-%%% Description : 
+%%% Description :
 %%% Created : 10 Mar 2008 by Claes  Wikstrom <klacke@hyber.org>
 
 -module(yaws_appmod_cgi).

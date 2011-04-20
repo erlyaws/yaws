@@ -31,7 +31,7 @@
 
 -import(lists, [map/2, foldl/3, reverse/1]).
 
--include("../include/yaws_api.hrl"). 
+-include("../include/yaws_api.hrl").
 
 
 -define(elog(X,Y), error_logger:info_msg("*elog ~p:~p: " X,
@@ -76,7 +76,7 @@ select_fields([])                  -> [].
 
 select_pattern(Name, Ls) ->
     Wp = ?MNESIA(table_info, [l2a(Name), wild_pattern]),
-    mk_select_pattern(map(fun(A) -> a2l(A) end,get_attributes(l2a(Name))), 
+    mk_select_pattern(map(fun(A) -> a2l(A) end,get_attributes(l2a(Name))),
                       Ls, Wp, 2).
 
 mk_select_pattern([A|As], [{A,V}|T], Wp, N) ->
@@ -86,7 +86,7 @@ mk_select_pattern([_|As], L, Wp, N) ->
 mk_select_pattern([], [], Wp, _) ->
     Wp.
 
-%%% Try to be intelligent and convert the Key to the datatype that 
+%%% Try to be intelligent and convert the Key to the datatype that
 %%% could be expected. Note: atom is anything between single quotes.
 be_smart([$'|T])     -> l2a(eat_until($', T));
 be_smart([$[|_] = L) -> str2term(L);
@@ -128,7 +128,7 @@ is_post(A) ->
     end.
 
 meta() ->
-    [{pre_html, 
+    [{pre_html,
       "<META HTTP-EQUIV=\"EXPIRES\" CONTENT=\""
       "Sun, 16 Oct 2004 11:12:01 GMT\">"}].
 
@@ -160,7 +160,7 @@ table(Cbox, Sp, Table) when is_atom(Table) ->
                  {p, [], "Query: "++Q}},
                 {'div', [],
                  {p, [], "Table: "++a2l(Table)}} |
-                mk_tab(Vp, Headers, t2l(Result))]}]}; 
+                mk_tab(Vp, Headers, t2l(Result))]}]};
         Else ->
             Else
     end.
@@ -181,8 +181,8 @@ mk_table_tab() ->
     [{'div', [],
       [{table, [],
         map(fun(Row) ->
-                    {tr, [], 
-                     {form, [{action, "table.yaws"}, 
+                    {tr, [],
+                     {form, [{action, "table.yaws"},
                              {method, "post"},
                              {name, Row}],
                       [{td, [], sublnk(a2l(Row))} |
@@ -197,9 +197,9 @@ mk_input_fields(Table) ->
                 {td, [], []};
            (Attribute) ->
                 A = a2l(Attribute),
-                {td, [], 
+                {td, [],
                  [{input, [{type, "checkbox"}, {name, "cbox_"++A}]},
-                  {span, [{class, "attribute"}], A}, 
+                  {span, [{class, "attribute"}], A},
                   {input, [{type, "text"}, {name, A}]}]}
         end, As ++ lists:duplicate(Max-length(As), 0)).
 
@@ -235,7 +235,7 @@ vp(Vp, [_|T], N)     -> vp(Vp, T, N+1);
 vp([], [], _)        -> [].
 
 %%% Create a link that submit the form: onclick
-sublnk(E) -> 
+sublnk(E) ->
     {a, [{href, "#"},
          {onclick, E++".submit();"}],
      [E,

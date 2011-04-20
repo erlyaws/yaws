@@ -711,12 +711,12 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             New = acceptor(GS2),
             gserv_loop(GS2, Ready2, 0, New);
         {check_cert_changed, From} ->
-            Changed = 
+            Changed =
                 case GS#gs.ssl of
                     ssl ->
-                        CertInfo = GS#gs.certinfo,			
+                        CertInfo = GS#gs.certinfo,
 			case lists:any(
-                               fun(SC) ->  
+                               fun(SC) ->
                                        certinfo(SC#sconf.ssl) =/= CertInfo end,
                                GS#gs.group) of
                             true ->
@@ -803,7 +803,7 @@ call_start_mod(SC) ->
     end.
 
 listen_opts(SC) ->
-    InetType = if 
+    InetType = if
                    is_tuple( SC#sconf.listen), size( SC#sconf.listen) == 8 ->
                        [inet6];
                    true ->
@@ -819,7 +819,7 @@ listen_opts(SC) ->
     ] ++ InetType.
 
 ssl_listen_opts(GC, SC, SSL) ->
-    InetType = if 
+    InetType = if
                    is_tuple( SC#sconf.listen), size( SC#sconf.listen) == 8 ->
                        [inet6];
                    true ->
@@ -950,7 +950,7 @@ acceptor0(GS, Top) ->
             Res = (catch aloop(Client, GS,  0)),
             %% Skip closing the socket, as required by web sockets & stream
             %% processes.
-            CloseSocket = (get(outh) =:= undefined) orelse 
+            CloseSocket = (get(outh) =:= undefined) orelse
                           (done_or_continue() =:= done),
             case CloseSocket of
                 false -> ok;
@@ -1094,7 +1094,7 @@ aloop(CliSock, GS, Num) ->
     end.
 
 %% Checks how many times keepalive has been used and updates the
-%% process dictionary outh variable if required to say that the 
+%% process dictionary outh variable if required to say that the
 %% connection has exceeded its maxuses.
 check_keepalive_maxuses(GS, Num) ->
     case (GS#gs.gconf)#gconf.keepalive_maxuses of
@@ -1113,7 +1113,7 @@ fix_keepalive_maxuses(Res) ->
     case Res of
         continue ->
             case (get(outh))#outh.exceedmaxuses of
-                true -> 
+                true ->
                     done; %% no keepalive this time!
                 _ ->
                     Res
@@ -3474,7 +3474,7 @@ send_file(CliSock, Path, all, Priv, _Enc) ->
     ?Debug("send_file(~p,~p, ...)~n", [CliSock, Path]),
     {ok, Fd} = file:open(Path, [raw, binary, read]),
     send_file(CliSock, Fd, Priv);
-send_file(CliSock, Path,  {fromto, From, To, _Tot}, undeflated, no) 
+send_file(CliSock, Path,  {fromto, From, To, _Tot}, undeflated, no)
   when is_port(CliSock) ->
     Size = To - From + 1,
     yaws_sendfile:send(CliSock, Path, From, Size),

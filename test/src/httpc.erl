@@ -28,7 +28,7 @@ request3(Request, URL, ExtraHeaders, Body) ->
 		      https -> ssl;
 		      http -> gen_tcp
 		  end,
-	    Head = 
+	    Head =
 		io_lib:format(
 		  "~s ~s~s HTTP/1.0\r\n"
 		  "Host: ~s\r\n"
@@ -207,7 +207,7 @@ clen(_Old, "Content-length:"++Con) ->
 clen(Old, _) ->
     Old.
 
-   
+
 
 
 get_head(Mod, S, Prev) ->
@@ -230,24 +230,24 @@ get_head(Mod, S, Prev) ->
 	Err ->
 	    Err
     end.
-    
+
 
 
 
 
 is_nb_space(X) ->
     lists:member(X, [$\s, $\t]).
-    
+
 
 % ret: {line, Line, Trail} | {lastline, Line, Trail}
 
-get_line(L) ->    
+get_line(L) ->
     get_line(L, []).
 get_line("\r\n\r\n" ++ Tail, Cur) ->
     {lastline, lists:reverse(Cur), Tail};
 get_line("\r\n" ++ Tail, Cur) when Tail /= []  ->
     case is_nb_space(hd(Tail)) of
-	true ->  %% multiline ... continue 
+	true ->  %% multiline ... continue
 	    get_line(Tail, [$\n, $\r | Cur]);
 	false ->
 	    {line, lists:reverse(Cur), Tail}
@@ -258,8 +258,8 @@ get_line([H|T], Cur) ->
     get_line(T, [H|Cur]);
 get_line([], _) ->
     need_more.
-		
-		     
+
+
 
 
 

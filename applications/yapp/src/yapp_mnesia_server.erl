@@ -2,9 +2,9 @@
 %%% File    : yapp_mnesia_server.erl
 %%% @author Mikael Karlsson <mikael@creado.se>
 %%% @since 28 May 2006 by Mikael Karlsson <mikael@creado.se>
-%%% @see yapp_registry 
+%%% @see yapp_registry
 %%% @doc Yapp registry implementation that uses mnesia.
-%%% <p>This module is selected to be used by the yaws handler 
+%%% <p>This module is selected to be used by the yaws handler
 %%% by setting the application environment property
 %%% {yapp_registry_impl, yapp_mnesia_server} in the yapp.app file.</p>
 %%% @end
@@ -112,8 +112,8 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
-%% The yapp_reg is stored in Mnesia in the y_registry 
-%% and contains a list of {yapp_server_id, yapps} tuples, where 
+%% The yapp_reg is stored in Mnesia in the y_registry
+%% and contains a list of {yapp_server_id, yapps} tuples, where
 %% yapps is a list of {UrlPath, AppName} tuples
 %% UrlPath = string()
 %% AppName = atom()
@@ -150,17 +150,17 @@ get_yapp_reg() ->
         [{y_registry,yapp_reg,YappReg}] -> YappReg
     end.
 
-put_yapp_reg(YappReg) ->    
+put_yapp_reg(YappReg) ->
     mnesia:write(#y_registry{ key=yapp_reg, value=YappReg}).
-    
+
 
 list_yapps() ->
     {atomic, Value} = mnesia:transaction(fun() -> get_yapp_reg() end),
     Value.
 
 %% @spec register_yapp(SrvId::string(), {YappUrl::string(), AppName::atom()}) -> ok | exit()
-%% @doc Register a Yapp. Registers in the virtual server with the opaque property 
-%% yapp_server_id = SrvID. The YappUrl is the root path to the Yapp and the AppName is 
+%% @doc Register a Yapp. Registers in the virtual server with the opaque property
+%% yapp_server_id = SrvID. The YappUrl is the root path to the Yapp and the AppName is
 %% the Name of the application.
 register_yapp(SrvId, KeyValue) ->
     {atomic, Value} = mnesia:transaction(fun() ->
@@ -170,7 +170,7 @@ register_yapp(SrvId, KeyValue) ->
 
 register2(SrvId, {YappUrl, AppName}) ->
     YR = get_yapp_reg(),
-    YR2 = 
+    YR2 =
         case proplists:get_value(SrvId,YR) of
             undefined ->
                 [{SrvId,[{YappUrl,AppName}]} | YR ];
@@ -182,7 +182,7 @@ register2(SrvId, {YappUrl, AppName}) ->
 
 
 %% @spec unregister_yapp(SrvId::string(), YappUrl::string()) -> ok | exit()
-%% @doc Unregister a Yapp. Unregisters in the virtual server with yapp_server_id = SrvID. 
+%% @doc Unregister a Yapp. Unregisters in the virtual server with yapp_server_id = SrvID.
 %% The YappUrl is the root path to the Yapp.
 unregister_yapp(SrvId, YappUrl) ->
     {atomic, Value} = mnesia:transaction(fun() ->
@@ -212,7 +212,7 @@ insert_into_urlapps(YappUrl,AppName,UrlApps)->
             [{YappUrl,AppName}|UrlApps];
         true ->
             lists:keyreplace(YappUrl, 1, UrlApps, {YappUrl, AppName})
-    end.    
+    end.
 
 delete_from_urlapps(YappUrl, UrlApps) ->
     case lists:keymember(YappUrl, 1, UrlApps) of

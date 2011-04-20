@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : yapp_sup.erl
 %%% Author  : Mikael Karlsson <mikael@creado.se>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created :  1 Jun 2006 by Mikael Karlsson <mikael@creado.se>
 %%%-------------------------------------------------------------------
@@ -34,9 +34,9 @@ start_link(_) ->
 %% Func: init(Args) -> {ok,  {SupFlags,  [ChildSpec]}} |
 %%                     ignore                          |
 %%                     {error, Reason}
-%% Description: Whenever a supervisor is started using 
-%% supervisor:start_link/[2,3], this function is called by the new process 
-%% to find out about restart strategy, maximum restart frequency and child 
+%% Description: Whenever a supervisor is started using
+%% supervisor:start_link/[2,3], this function is called by the new process
+%% to find out about restart strategy, maximum restart frequency and child
 %% specifications.
 %%--------------------------------------------------------------------
 init([]) ->

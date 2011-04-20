@@ -29,12 +29,12 @@ start_link() ->
 init([]) ->
     Sess = {yaws_session_server, {yaws_session_server, start_link, []},
             permanent, 5000, worker, [yaws_session_server]},
-    YawsRSS = {yaws_rss, 
+    YawsRSS = {yaws_rss,
                {yaws_rss, start_link, []},
                permanent, 5000, worker, [yaws_rss]},
 
 
-    YawsEventManager = {yaws_event_manager, 
+    YawsEventManager = {yaws_event_manager,
                         {gen_event, start_link,[{local,yaws_event_manager}]},
                         permanent, 5000, worker, [gen_event]},
 

@@ -15,7 +15,7 @@
 
 start() ->
     application:load(yaws),
-    Result = gen_server:start({local, yaws_session_server}, 
+    Result = gen_server:start({local, yaws_session_server},
                               yaws_session_server, ?BACKEND, []),
     ?BACKEND:cleanup(),
     Result.
@@ -24,8 +24,8 @@ init_test() ->
     {ok, _} = start(),
     ?assertEqual([], ?BACKEND:list()),
     yaws_session_server:stop().
-            
-new_session_and_list_test() ->             
+
+new_session_and_list_test() ->
     {ok, _} = start(),
     ?assertMatch([], ?BACKEND:list()),
     Cookie1 = yaws_session_server:new_session({opaque, 1}),
@@ -91,7 +91,7 @@ timeout_test () ->
     end,
     ?assertMatch([_], ?BACKEND:list()),
     yaws_session_server:stop().
-    
+
 %% Our test callbacks
 init_backend(_) ->
     proc_lib:start (?MODULE, mock_session_server, []),
@@ -173,7 +173,7 @@ mock_loop() ->
 
 sessions() ->
     lists:foldl(fun({{session, _}, Session}, Acc) -> [Session | Acc];
-                    (_, Acc) -> Acc 
+                    (_, Acc) -> Acc
                  end, [], get()).
 
 

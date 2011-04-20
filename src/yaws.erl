@@ -1,7 +1,7 @@
 %%%----------------------------------------------------------------------
 %%% File    : yaws.erl
 %%% Author  : Claes Wikstrom <klacke@bluetail.com>
-%%% Purpose : 
+%%% Purpose :
 %%% Created : 16 Jan 2002 by Claes Wikstrom <klacke@bluetail.com>
 %%%----------------------------------------------------------------------
 
@@ -98,7 +98,7 @@
          gen_tcp_send/2,
          http_get_headers/2]).
 
--export([sconf_to_srvstr/1, 
+-export([sconf_to_srvstr/1,
          redirect_host/2, redirect_port/1,
          redirect_scheme_port/1, redirect_scheme/1,
          tmpdir/0, tmpdir/1, split_at/2,
@@ -181,116 +181,116 @@ ssl_cachetimeout(S, Cachetimeout)             -> S#ssl{cachetimeout = Cachetimeo
 
 setup_gconf([], GC) -> GC;
 setup_gconf(GL, GC) ->
-    #gconf{yaws_dir = lkup(yaws_dir, GL, 
+    #gconf{yaws_dir = lkup(yaws_dir, GL,
                            GC#gconf.yaws_dir),
-           trace = lkup(trace, GL, 
+           trace = lkup(trace, GL,
                         GC#gconf.trace),
-           flags = set_gc_flags(lkup(flags, GL, []), 
+           flags = set_gc_flags(lkup(flags, GL, []),
                                 GC#gconf.flags),
-           logdir = lkup(logdir, GL, 
+           logdir = lkup(logdir, GL,
                          GC#gconf.logdir),
-           ebin_dir = lkup(ebin_dir, GL, 
+           ebin_dir = lkup(ebin_dir, GL,
                            GC#gconf.ebin_dir),
-           runmods = lkup(runmods, GL, 
+           runmods = lkup(runmods, GL,
                           GC#gconf.runmods),
-           keepalive_timeout = lkup(keepalive_timeout, GL, 
+           keepalive_timeout = lkup(keepalive_timeout, GL,
                                     GC#gconf.keepalive_timeout),
-           max_num_cached_files = lkup(max_num_cached_files, GL, 
+           max_num_cached_files = lkup(max_num_cached_files, GL,
                                        GC#gconf.max_num_cached_files),
-           max_num_cached_bytes = lkup(max_num_cached_bytes, GL, 
+           max_num_cached_bytes = lkup(max_num_cached_bytes, GL,
                                        GC#gconf.max_num_cached_bytes),
-           max_size_cached_file = lkup(max_size_cached_file, GL, 
+           max_size_cached_file = lkup(max_size_cached_file, GL,
                                        GC#gconf.max_size_cached_file),
-           large_file_chunk_size = lkup(large_file_chunk_size, GL, 
+           large_file_chunk_size = lkup(large_file_chunk_size, GL,
                                         GC#gconf.large_file_chunk_size),
-           log_wrap_size = lkup(log_wrap_size, GL, 
+           log_wrap_size = lkup(log_wrap_size, GL,
                                 GC#gconf.log_wrap_size),
-           cache_refresh_secs = lkup(cache_refresh_secs, GL, 
+           cache_refresh_secs = lkup(cache_refresh_secs, GL,
                                      GC#gconf.cache_refresh_secs),
            mnesia_dir = lkup(mnesia_dir, GL,
                              GC#gconf.mnesia_dir),
-           include_dir = lkup(include_dir, GL, 
+           include_dir = lkup(include_dir, GL,
                               GC#gconf.include_dir),
-           phpexe = lkup(phpexe, GL, 
+           phpexe = lkup(phpexe, GL,
                          GC#gconf.phpexe),
-           yaws = lkup(yaws, GL, 
+           yaws = lkup(yaws, GL,
                        GC#gconf.yaws),
-           id = lkup(id, GL, 
+           id = lkup(id, GL,
                      GC#gconf.id),
-           enable_soap = lkup(enable_soap, GL, 
+           enable_soap = lkup(enable_soap, GL,
                               GC#gconf.enable_soap)
           }.
 
-set_gc_flags([{tty_trace, Bool}|T], Flags) -> 
+set_gc_flags([{tty_trace, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags,?GC_TTY_TRACE, Bool));
-set_gc_flags([{debug, Bool}|T], Flags) -> 
+set_gc_flags([{debug, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags, ?GC_DEBUG, Bool));
-set_gc_flags([{auth_log, Bool}|T], Flags) -> 
+set_gc_flags([{auth_log, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags, ?GC_AUTH_LOG, Bool));
-set_gc_flags([{copy_errlog, Bool}|T], Flags) -> 
+set_gc_flags([{copy_errlog, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags, ?GC_COPY_ERRLOG, Bool));
 set_gc_flags([{copy_error_log, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags, ?GC_COPY_ERRLOG, Bool));
-set_gc_flags([{backwards_compat_parse, Bool}|T], Flags) -> 
+set_gc_flags([{backwards_compat_parse, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags, ?GC_BACKWARDS_COMPAT_PARSE, Bool));
-set_gc_flags([{log_resolve_hostname, Bool}|T], Flags) -> 
+set_gc_flags([{log_resolve_hostname, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags, ?GC_LOG_RESOLVE_HOSTNAME, Bool));
-set_gc_flags([{fail_on_bind_err, Bool}|T], Flags) -> 
+set_gc_flags([{fail_on_bind_err, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags,?GC_FAIL_ON_BIND_ERR,Bool));
-set_gc_flags([{pick_first_virthost_on_nomatch, Bool}|T], Flags) -> 
+set_gc_flags([{pick_first_virthost_on_nomatch, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags, ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,Bool));
-set_gc_flags([{use_old_ssl, Bool}|T], Flags) -> 
+set_gc_flags([{use_old_ssl, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags,?GC_USE_OLD_SSL,Bool));
-set_gc_flags([_|T], Flags) -> 
+set_gc_flags([_|T], Flags) ->
     set_gc_flags(T, Flags);
-set_gc_flags([], Flags) -> 
+set_gc_flags([], Flags) ->
     Flags.
 
 
 setup_sconf(DocRoot, D, SL) ->
-    #sconf{port = lkup(port, SL, 
+    #sconf{port = lkup(port, SL,
                        D#sconf.port),
-           flags = set_sc_flags(lkup(flags, SL, []), 
+           flags = set_sc_flags(lkup(flags, SL, []),
                                 ?SC_DEF),
-           redirect_map = lkup(redirect_map, SL, 
+           redirect_map = lkup(redirect_map, SL,
                                D#sconf.redirect_map),
-           rhost = lkup(rhost, SL, 
+           rhost = lkup(rhost, SL,
                         D#sconf.rhost),
-           rmethod = lkup(rmethod, SL, 
+           rmethod = lkup(rmethod, SL,
                           D#sconf.rmethod),
            docroot = DocRoot,
-           xtra_docroots = lkup(xtra_docroots, SL, 
+           xtra_docroots = lkup(xtra_docroots, SL,
                                 D#sconf.xtra_docroots),
-           listen = lkup(listen, SL, 
+           listen = lkup(listen, SL,
                          D#sconf.listen),
-           servername = lkup(servername, SL, 
+           servername = lkup(servername, SL,
                              D#sconf.servername),
-           ets = lkup(ets, SL, 
+           ets = lkup(ets, SL,
                       D#sconf.ets),
            ssl = setup_sconf_ssl(SL, D#sconf.ssl),
-           authdirs = lkup(authdirs, SL, 
+           authdirs = lkup(authdirs, SL,
                            D#sconf.authdirs),
-           partial_post_size = lkup(partial_post_size, SL, 
+           partial_post_size = lkup(partial_post_size, SL,
                                     D#sconf.partial_post_size),
-           appmods = lkup(appmods, SL, 
+           appmods = lkup(appmods, SL,
                           D#sconf.appmods),
            errormod_401 = lkup(errormod_401, SL,
                                D#sconf.errormod_401),
-           errormod_404 = lkup(errormod_404, SL, 
+           errormod_404 = lkup(errormod_404, SL,
                                D#sconf.errormod_404),
-           errormod_crash = lkup(errormod_crash, SL, 
+           errormod_crash = lkup(errormod_crash, SL,
                                  D#sconf.errormod_crash),
-           arg_rewrite_mod = lkup(arg_rewrite_mod, SL, 
+           arg_rewrite_mod = lkup(arg_rewrite_mod, SL,
                                   D#sconf.arg_rewrite_mod),
-           opaque = lkup(opaque, SL, 
+           opaque = lkup(opaque, SL,
                          D#sconf.opaque),
-           start_mod = lkup(start_mod, SL, 
+           start_mod = lkup(start_mod, SL,
                             D#sconf.start_mod),
-           allowed_scripts = lkup(allowed_scripts, SL, 
+           allowed_scripts = lkup(allowed_scripts, SL,
                                   D#sconf.allowed_scripts),
            tilde_allowed_scripts = lkup(tilde_allowed_scripts, SL,
                                         D#sconf.tilde_allowed_scripts),
-           revproxy = lkup(revproxy, SL, 
+           revproxy = lkup(revproxy, SL,
                            D#sconf.revproxy),
            soptions = lkup(soptions, SL,
                            D#sconf.soptions),
@@ -414,7 +414,7 @@ filesize(Fname) ->
         Err ->
             Err
     end.
-%% 
+%%
 upto(0, []) ->
     [];
 upto(_I, []) ->
@@ -602,9 +602,9 @@ stringdate_to_datetime1([A, $\s |T]) ->
 
 
 stringdate_to_datetime2([M1, M2, M3, $\s , Y1, Y2, Y3, Y4, $\s ,
-                         H1, H2, $:, Min1, Min2,$:, 
+                         H1, H2, $:, Min1, Min2,$:,
                          S1, S2,$\s ,$G, $M, $T|_], Day) ->
-    {{list_to_integer([Y1,Y2,Y3,Y4]), 
+    {{list_to_integer([Y1,Y2,Y3,Y4]),
       month_str_to_int([M1, M2, M3]), Day},
      {list_to_integer([H1, H2]),
       list_to_integer([Min1, Min2]),
@@ -627,8 +627,8 @@ ticker(Time, Msg) ->
     ticker(Time, self(), Msg).
 ticker(Time, To, Msg ) ->
     spawn_link(fun() ->
-                       process_flag(trap_exit, true),                       
-                       yaws_ticker:ticker(Time, To, Msg) 
+                       process_flag(trap_exit, true),
+                       yaws_ticker:ticker(Time, To, Msg)
                end).
 
 
@@ -673,7 +673,7 @@ drop_spaces(YS=[X|XS]) ->
     end.
 
 
-%%% basic uuencode and decode functionality    
+%%% basic uuencode and decode functionality
 
 list_to_uue(L) -> list_to_uue(L, []).
 
@@ -684,7 +684,7 @@ list_to_uue(L, Out) ->
     Encoded = encode_line(L45),
     list_to_uue(L1, reverse(Encoded, Out)).
 
-uue_to_list(L) -> 
+uue_to_list(L) ->
     uue_to_list(L, []).
 
 uue_to_list([], Out) ->
@@ -707,7 +707,7 @@ encode_line1([C])      -> encode_line1([C,0,0]);
 encode_line1([])       -> [$\n].
 
 decode_line([H|T]) ->
-    case dec(H) of 
+    case dec(H) of
         0   -> {[], []};
         Len -> decode_line(T, Len, [])
     end.
@@ -834,8 +834,8 @@ split_sep([C|T], Sep, AccL) ->
 split_sep([], _Sep, AccW, AccL) ->
     lists:reverse([lists:reverse(drop_spaces(AccW))|AccL]);
 split_sep([Sep|Tail], Sep, AccW, AccL) ->
-    split_sep(drop_spaces(Tail), 
-              Sep, 
+    split_sep(drop_spaces(Tail),
+              Sep,
               [lists:reverse(drop_spaces(AccW))|AccL]);
 split_sep([C|Tail], Sep, AccW, AccL) ->
     split_sep(Tail, Sep, [C|AccW], AccL).
@@ -855,7 +855,7 @@ join_sep([H|T], Sep) ->
 parse_qval(S) ->
     parse_qval([], S).
 
-parse_qval(A, ";q="++Q) ->   
+parse_qval(A, ";q="++Q) ->
     {lists:reverse(A), parse_qvalue(Q)};
 parse_qval(A, "") ->
     {lists:reverse(A), 1000};
@@ -898,9 +898,9 @@ accepts_gzip(H, Mime) ->
         [] ->
             false;
         [AcceptEncoding] ->
-            EncodingList = [parse_qval(X) || 
+            EncodingList = [parse_qval(X) ||
                                X <- split_sep(AcceptEncoding, $,)],
-            case [Q || {"gzip", Q} <- EncodingList] 
+            case [Q || {"gzip", Q} <- EncodingList]
                 ++ [Q || {"*", Q} <- EncodingList] of
                 [] ->
                     false;
@@ -959,7 +959,7 @@ has_buggy_gzip(UserAgent, Mime) ->
                   in_ua(fun("6."++_) -> true;
                            (_) -> false
                         end, UA);
-             ("Opera/6."++_) -> 
+             ("Opera/6."++_) ->
                   true;
              (_) ->
                   false
@@ -1002,7 +1002,7 @@ parse_ua_l(Line) ->
             [UA | parse_ua_l(Tail)]
     end.
 
-parse_comment(L) ->            
+parse_comment(L) ->
     parse_comment(L, [], []).
 
 parse_comment([], _, _) ->
@@ -1012,7 +1012,7 @@ parse_comment([pclose|T], CAcc, CsAcc) ->
     {{comment, lists:reverse([lists:reverse(CAcc)|CsAcc])}, T};
 parse_comment([popen|T], CAcc, CsAcc) ->
     {Comment, Tail} = parse_comment(T),
-    parse_comment(drop_spaces(Tail), 
+    parse_comment(drop_spaces(Tail),
                   [], [Comment, lists:reverse(CAcc) | CsAcc]);
 parse_comment([$;|T], CAcc, CsAcc) ->
     parse_comment(drop_spaces(T), [], [lists:reverse(CAcc)|CsAcc]);
@@ -1035,9 +1035,9 @@ parse_ua1([C|T], Acc) ->
     parse_ua1(T, [C|Acc]).
 
 
-in_ua(Pred, L) -> 
+in_ua(Pred, L) ->
     lists:any(
-      fun(X) -> 
+      fun(X) ->
               case X of
                   {ua, UA} -> Pred(UA);
                   _ -> false
@@ -1078,12 +1078,12 @@ outh_set_non_cacheable(_Version) ->
     ok.
 
 outh_set_content_type(Mime) ->
-    put(outh, (get(outh))#outh{content_type = 
+    put(outh, (get(outh))#outh{content_type =
                                make_content_type_header(Mime)}),
     ok.
 
 outh_set_content_encoding(Encoding) ->
-    put(outh, (get(outh))#outh{content_encoding = 
+    put(outh, (get(outh))#outh{content_encoding =
                                make_content_encoding_header(Encoding)}),
     ok.
 
@@ -1108,8 +1108,8 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
     H = get(outh),
     FIL = (UT#urltype.finfo)#file_info.size,
     {DoClose0, Chunked0} = dcc(Req, Headers),
-    {DoDeflate, Length} 
-        = case Range of 
+    {DoDeflate, Length}
+        = case Range of
               all ->
                   case UT#urltype.deflate of
                       DB when is_binary(DB) -> % cached
@@ -1202,7 +1202,7 @@ outh_set_dyn_headers(Req, Headers, UT) ->
            content_type = make_content_type_header(UT#urltype.mime),
            doclose = DoClose,
            chunked = Chunked,
-           transfer_encoding = 
+           transfer_encoding =
            make_transfer_encoding_chunked_header(Chunked)},
 
     put(outh, H2).
@@ -1230,7 +1230,7 @@ outh_set_dcc(Req, Headers) ->
     H2 = H#outh{connection = make_connection_close_header(DoClose),
                 doclose = DoClose,
                 chunked = Chunked,
-                transfer_encoding = 
+                transfer_encoding =
                 make_transfer_encoding_chunked_header(Chunked)},
     put(outh, H2).
 
@@ -1241,7 +1241,7 @@ outh_set_dcc(Req, Headers) ->
 outh_set_transfer_encoding_off() ->
     H = get(outh),
     H2 = H#outh{chunked = false,
-                transfer_encoding = 
+                transfer_encoding =
                 make_transfer_encoding_chunked_header(false)},
     put(outh, H2).
 
@@ -1275,12 +1275,12 @@ dcc(Req, Headers) ->
     DoClose = case Req#http_request.version of
                   _ when H#outh.exceedmaxuses == true ->
                       true; %% too many keepalives
-                  {1, 0} -> 
+                  {1, 0} ->
                       case Headers#headers.connection of
                           "close" -> true;
                           "Keep-Alive" -> keep_alive;
-                          _ -> true                                          
-                      end;              
+                          _ -> true
+                      end;
                   {1, 1} ->
                       Headers#headers.connection == "close";
                   {0,9} ->
@@ -1369,9 +1369,9 @@ pack_bin(<<_:6,A:6,B:6,C:6,D:6,E:6,F:6,G:6,H:6,I:6,J:6,K:6>>) ->
      $"].
 
 %% Like Base64 for no particular reason.
-pc(X) when X >= 0, X < 26 -> 
+pc(X) when X >= 0, X < 26 ->
     X + $A;
-pc(X) when X >= 26, X < 52 -> 
+pc(X) when X >= 26, X < 52 ->
     X - 26 + $a;
 pc(X) when X >= 52, X < 62 ->
     X - 52 + $0;
@@ -1390,7 +1390,7 @@ make_content_type_header(MimeType) ->
 make_content_range_header(all) ->
     undefined;
 make_content_range_header({fromto, From, To, Tot}) ->
-    ["Content-Range: bytes ", 
+    ["Content-Range: bytes ",
      integer_to_list(From), $-, integer_to_list(To),
      $/, integer_to_list(Tot), $\r, $\n].
 
@@ -1458,7 +1458,7 @@ outh_inc_act_contlen(Int) ->
     L = case O#outh.act_contlen of
             undefined ->
                 Int;
-            Len ->    
+            Len ->
                 Len+Int
         end,
     put(outh, O#outh{act_contlen = L}),
@@ -1476,7 +1476,7 @@ outh_get_content_encoding() ->
 outh_get_content_encoding_header() ->
     (get(outh))#outh.content_encoding.
 
-outh_get_content_type() ->    
+outh_get_content_type() ->
     case (get(outh))#outh.content_type of
         [_, Mime, _] ->
             Mime
@@ -1501,7 +1501,7 @@ outh_serialize() ->
             ContentEncoding = make_content_encoding_header(H#outh.encoding);
         ContentEncoding ->
             ok
-    end,        
+    end,
     Headers = [noundef(H#outh.connection),
                noundef(H#outh.server),
                noundef(H#outh.location),
@@ -1553,7 +1553,7 @@ accumulate_header({"Location", What}) ->
     accumulate_header({location, What});
 
 accumulate_header({cache_control, What}) ->
-    put(outh, (get(outh))#outh{cache_control = ["Cache-Control: " , 
+    put(outh, (get(outh))#outh{cache_control = ["Cache-Control: " ,
                                                 What, "\r\n"]});
 accumulate_header({"Cache-Control", What}) ->
     accumulate_header({cache_control, What});
@@ -1569,13 +1569,13 @@ accumulate_header({"Set-Cookie", What}) ->
     accumulate_header({set_cookie, What});
 
 accumulate_header({content_type, What}) ->
-    put(outh, (get(outh))#outh{content_type = ["Content-Type: " , 
+    put(outh, (get(outh))#outh{content_type = ["Content-Type: " ,
                                                What, "\r\n"]});
 accumulate_header({"Content-Type", What}) ->
     accumulate_header({content_type, What});
 
 accumulate_header({content_encoding, What}) ->
-    put(outh, (get(outh))#outh{content_encoding = 
+    put(outh, (get(outh))#outh{content_encoding =
                                ["Content-Encoding: " , What, "\r\n"]});
 accumulate_header({"Content-Encoding", What}) ->
     accumulate_header({content_encoding, What});
@@ -1847,9 +1847,9 @@ do_http_get_headers(CliSock, SSL) ->
         bad_request ->
             {#http_request{method=bad_request, version={0,9}},
              #headers{}};
-        closed -> 
+        closed ->
             closed;
-        R -> 
+        R ->
             H = http_collect_headers(CliSock, R,  #headers{}, SSL, 0),
             {R, H}
     end.
@@ -1868,7 +1868,7 @@ http_recv_request(CliSock, SSL) ->
             http_recv_request(CliSock,SSL);
         {_, {http_error, _}} ->
             bad_request;
-        {error, closed} -> 
+        {error, closed} ->
             closed;
         {error, timeout} -> closed;
         _Other ->
@@ -1884,26 +1884,26 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
             http_collect_headers(CliSock, Req, H#headers{host = Host},
                                  SSL, Count+1);
         {ok, {http_header, _Num, 'Connection', _, Conn}} ->
-            http_collect_headers(CliSock, Req, 
+            http_collect_headers(CliSock, Req,
                                  H#headers{connection = Conn},SSL, Count+1);
         {ok, {http_header, _Num, 'Accept', _, Accept}} ->
             http_collect_headers(CliSock, Req, H#headers{accept = Accept},
                                  SSL, Count+1);
         {ok, {http_header, _Num, 'If-Modified-Since', _, X}} ->
-            http_collect_headers(CliSock, Req,  
+            http_collect_headers(CliSock, Req,
                                  H#headers{if_modified_since = X},SSL, Count+1);
         {ok, {http_header, _Num, 'If-Match', _, X}} ->
             http_collect_headers(CliSock, Req, H#headers{if_match = X},
                                  SSL, Count+1);
         {ok, {http_header, _Num, 'If-None-Match', _, X}} ->
-            http_collect_headers(CliSock, Req, 
+            http_collect_headers(CliSock, Req,
                                  H#headers{if_none_match = X},SSL, Count+1);
         {ok, {http_header, _Num, 'If-Range', _, X}} ->
             http_collect_headers(CliSock, Req, H#headers{if_range = X},
                                  SSL, Count+1);
         {ok, {http_header, _Num, 'If-Unmodified-Since', _, X}} ->
-            http_collect_headers(CliSock, Req,  
-                                 H#headers{if_unmodified_since = X},SSL, 
+            http_collect_headers(CliSock, Req,
+                                 H#headers{if_unmodified_since = X},SSL,
                                  Count+1);
         {ok, {http_header, _Num, 'Range', _, X}} ->
             http_collect_headers(CliSock, Req, H#headers{range = X},
@@ -1915,30 +1915,30 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
             http_collect_headers(CliSock, Req, H#headers{user_agent = X},
                                  SSL, Count+1);
         {ok, {http_header, _Num, 'Accept-Ranges', _, X}} ->
-            http_collect_headers(CliSock, Req, 
+            http_collect_headers(CliSock, Req,
                                  H#headers{accept_ranges = X},SSL, Count+1);
         {ok, {http_header, _Num, 'Cookie', _, X}} ->
-            http_collect_headers(CliSock, Req,  
+            http_collect_headers(CliSock, Req,
                                  H#headers{cookie = [X|H#headers.cookie]},
                                  SSL, Count+1);
         {ok, {http_header, _Num, 'Keep-Alive', _, X}} ->
             http_collect_headers(CliSock, Req, H#headers{keep_alive = X},
                                  SSL, Count+1);
         {ok, {http_header, _Num, 'Content-Length', _, X}} ->
-            http_collect_headers(CliSock, Req, 
-                                 H#headers{content_length = X},SSL, 
+            http_collect_headers(CliSock, Req,
+                                 H#headers{content_length = X},SSL,
                                  Count+1);
         {ok, {http_header, _Num, 'Content-Type', _, X}} ->
-            http_collect_headers(CliSock, Req, 
+            http_collect_headers(CliSock, Req,
                                  H#headers{content_type = X},SSL, Count+1);
         {ok, {http_header, _Num, 'Transfer-Encoding', _, X}} ->
-            http_collect_headers(CliSock, Req, 
+            http_collect_headers(CliSock, Req,
                                  H#headers{transfer_encoding=X},SSL, Count+1);
         {ok, {http_header, _Num, 'Location', _, X}} ->
             http_collect_headers(CliSock, Req, H#headers{location=X},
                                  SSL, Count+1);
         {ok, {http_header, _Num, 'Authorization', _, X}} ->
-            http_collect_headers(CliSock, Req,  
+            http_collect_headers(CliSock, Req,
                                  H#headers{authorization = parse_auth(X)},
                                  SSL, Count+1);
         {ok, {http_header, _Num, 'X-Forwarded-For', _, X}} ->
@@ -1958,7 +1958,7 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
         %% auxilliary headers we don't have builtin support for
         {ok, X} ->
             ?Debug("OTHER header ~p~n", [X]),
-            http_collect_headers(CliSock, Req,  
+            http_collect_headers(CliSock, Req,
                                  H#headers{other=[X|H#headers.other]},
                                  SSL, Count+1);
         _Err ->
@@ -2113,14 +2113,14 @@ redirect_scheme(SC) ->
             "http://";
         {_SSl,_} ->
             "https://"
-    end.    
+    end.
 
 redirect_host(SC, HostHdr) ->
     case SC#sconf.rhost of
         undefined ->
             if HostHdr == undefined ->
                     ServerName = SC#sconf.servername,
-                    SnameNoPort = 
+                    SnameNoPort =
                         case string:chr(ServerName, $:) of
                             0 ->
                                 ServerName;
@@ -2140,13 +2140,13 @@ redirect_port(SC) ->
         {"https", _, 443} -> "";
         {"http", _, 80} -> "";
         {_, undefined, 80} -> "";
-        {_, undefined, Port} -> 
+        {_, undefined, Port} ->
             [$:|integer_to_list(Port)];
         {_, _SSL, 443} ->
             "";
-        {_, _SSL, Port} -> 
+        {_, _SSL, Port} ->
             [$:|integer_to_list(Port)]
-    end.    
+    end.
 
 redirect_scheme_port(SC) ->
     Scheme = redirect_scheme(SC),
@@ -2182,7 +2182,7 @@ tmpdir(DefaultTmpDir) ->
 	    DefaultTmpDir
     end.
 
-%% This feature is usable together with 
+%% This feature is usable together with
 %% privbind and authbind on linux
 
 home() ->
@@ -2231,7 +2231,7 @@ nonl([H|T]) ->
     [H|nonl(T)];
 nonl([]) ->
     [].
-            
+
 
 
 get_chunk(_Fd, N, N, _) ->

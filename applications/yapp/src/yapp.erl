@@ -2,16 +2,16 @@
 %%% @author Mikael Karlsson <mikael@creado.se>
 %%% @since 11 Dec 2005 by Mikael Karlsson <mikael@creado.se>
 %%% @see yapp_handler
-%%% @doc Yaws applications handler. 
+%%% @doc Yaws applications handler.
 %%% <p>An easy way to deploy Yaws applications independently of
 %%% each other.</p>
 %%% <p>This module implements Yaws runmod and arg_rewrite_mod interfaces.
-%%% It has functions to insert and remove Yapps to the Yaws sconfs records. 
-%%% It is used by the yapp_handler implementation. The yapp module will make Yaws 
+%%% It has functions to insert and remove Yapps to the Yaws sconfs records.
+%%% It is used by the yapp_handler implementation. The yapp module will make Yaws
 %%% temporarily switch the docroot
 %%% to the applications priv/docroot directory when it encounters the registered
 %%% URL path of the application. One can set another docroot than the default
-%%%  (priv/docroot) by setting the environment variable yapp_docroot in the 
+%%%  (priv/docroot) by setting the environment variable yapp_docroot in the
 %%% .app file for the application.
 %%% The application may also have own appmods which are put in the
 %%% application environment variable yapp_appmods like: </p>
@@ -20,8 +20,8 @@
 %%%        ]}, </code>
 %%% <p>
 %%% In order to include the yapp module, runmod shall be set to yapp.
-%%% The arg_rewrite_mod shall also be set to yapp and the opaque variable 
-%%% yapp_server_id shall be set to an unique string for every virtual server 
+%%% The arg_rewrite_mod shall also be set to yapp and the opaque variable
+%%% yapp_server_id shall be set to an unique string for every virtual server
 %%% using yapp, like: </p>
 %%% <pre>
 %%% .
@@ -29,12 +29,12 @@
 %%% .
 %%% runmod = yapp
 %%% .
-%%% &lt;server aspen4&gt; 
+%%% &lt;server aspen4&gt;
 %%%        port = 8001
 %%%        listen = 0.0.0.0
 %%%        dir_listings = true
-%%%        arg_rewrite_mod = yapp        
-%%%        docroot = /home/yaws/scripts/../www 
+%%%        arg_rewrite_mod = yapp
+%%%        docroot = /home/yaws/scripts/../www
 %%%        &lt;opaque&gt;
 %%%                yapp_server_id = aspeninternal
 %%%                bootstrap_yapps = yapp
@@ -65,7 +65,7 @@
 -include("yaws.hrl").
 -export([arg_rewrite/1, start/0, prepath/1, insert/1, insert/2, remove/2,
          log/3,
-         reset_yaws_conf/0, srv_id/1, 
+         reset_yaws_conf/0, srv_id/1,
          get_bootstrap_yapps/0, get_yapps/0, get_server_ids/0]).
  %%     reload_yaws/0,
 
@@ -86,8 +86,8 @@
           opaque = []
          }).
 
-%% The yapp_reg is stored in Mnesia in the y_registry 
-%% and contains a list of {yapp_server_id, yapps} tuples, where 
+%% The yapp_reg is stored in Mnesia in the y_registry
+%% and contains a list of {yapp_server_id, yapps} tuples, where
 %% yapps is a list of {UrlPath, AppName} tuples
 %% UrlPath = string()
 %% Interface arg_rewrite_mod
@@ -99,7 +99,7 @@ arg_rewrite(Arg) ->
     case find_registered_yapps(Arg) of
         undefined ->
             Arg;
-        {#yapp{urlpath = YappPath, docroot = Docroot, 
+        {#yapp{urlpath = YappPath, docroot = Docroot,
                appmods = YappMods, opaque = YOpaque }, _Rest} ->
 
             DocMount =
@@ -110,13 +110,13 @@ arg_rewrite(Arg) ->
 
             VDir = {"vdir", DocMount ++ " " ++ Docroot},
 
-            AddOpaque = [ VDir | YOpaque], 
-            
+            AddOpaque = [ VDir | YOpaque],
+
             %% Add Yapp appmods, Yaws uses process dictionary.
             SC = get(sc),
             AppMods = SC#sconf.appmods,
             Opaque = SC#sconf.opaque,
-            SC2 = SC#sconf{docroot=Docroot, appmods = AppMods ++ YappMods, 
+            SC2 = SC#sconf{docroot=Docroot, appmods = AppMods ++ YappMods,
                            opaque = AddOpaque ++ Opaque},
             put(sc, SC2),
 
@@ -136,7 +136,7 @@ arg_rewrite(Arg) ->
 %% as an arg_rewrite_mod in #sconf.
 %% Configuration data for mapping Yapp paths to applications is looked
 %% up in a mnesia registry table and stored in Yaws #sconf.opaque record
-%% for the each server id. 
+%% for the each server id.
 start() ->
     case wait_for_yaws() of
 	ok ->
@@ -145,7 +145,7 @@ start() ->
 	Error ->
 	    log(error, "Failed waiting for Yaws to start when starting Yapp: ~p~n",[Error])
     end.
-    
+
 wait_for_yaws() ->  wait_for_yaws(20).
 
 wait_for_yaws(0) -> {error, timeout};
@@ -156,15 +156,15 @@ wait_for_yaws(N) ->
 	    log(info, "Yapp starting but Yaws not ready - waiting 500 ms",[]),
 	    receive after 500 -> ok end, %% Give Yaws some time to settle own things
 	    wait_for_yaws(N-1);
-	_ -> 
+	_ ->
 	    ok
     end.
-     
+
 
 %% @spec prepath(Arg::yawsArg()) -> Path::string()
 %% @doc Get the Yapp root-path. Can be called from a Yapp erl/1
 %% fun or an erl section in a .yaws file to get the Yapp root
-%% path. 
+%% path.
 prepath(Arg) ->
     Arg#arg.docroot_mount.
 
@@ -195,7 +195,7 @@ find_registered_yapps(Arg) ->
 find_registered([],_Path) ->
     undefined;
 find_registered([ #yapp{urlpath = RegPath} = Y | T ], Path) ->
-    case string:str(Path, RegPath) of  
+    case string:str(Path, RegPath) of
         1 ->
             case string:substr(Path,1+length(RegPath)) of
                 [] -> {Y,[]};
@@ -207,7 +207,7 @@ find_registered([ #yapp{urlpath = RegPath} = Y | T ], Path) ->
     end.
 
 %% @hidden
-insert([]) -> 
+insert([]) ->
     ok;
 insert(Yapps) when is_list(Yapps) ->
     {ok, Gconf, Sconfs} = get_conf(),
@@ -218,7 +218,7 @@ insert(SrvId, Yapp)->
     {ok, Gconf, SconfGroups} = get_conf(),
     NewSconfGroups = insert_yapp_in_sconfgroups(SrvId, Yapp, SconfGroups),
     yaws_api:setconf(Gconf, NewSconfGroups).
-    
+
 
 insert_yapps_in_sconfs([], SconfGroups) ->
     SconfGroups;
@@ -253,10 +253,10 @@ insert_yapp_in_sconf({UrlPath, yapp}, SC) ->
     insert_yapp_in_sconf0({UrlPath, yapp}, SC);
 insert_yapp_in_sconf({UrlPath, AppName}, SC) ->
     case start_app([AppName]) of
-        ok -> 
+        ok ->
             insert_yapp_in_sconf0({UrlPath, AppName}, SC);
         Error ->
-            log(error, "yapp:insert_yapp_in_sconf - Error loading Yapp ~p, ~p", 
+            log(error, "yapp:insert_yapp_in_sconf - Error loading Yapp ~p, ~p",
                 [AppName, Error]),
             no_app
     end.
@@ -279,8 +279,8 @@ insert_yapp_in_sconf0({UrlPath, AppName}, #sconf{opaque = OP} = SC) ->
     log(info,"Inserting App ~p in Url ~p~n", [AppName, UrlPath]),
     AppEnv = application:get_all_env(AppName),
     DocSubRoot = proplists:get_value(yapp_docroot, AppEnv, ?priv_docroot),
-    YAppMods   = proplists:get_value(yapp_appmods, AppEnv, []), 
-    YOpaque    = proplists:get_value(yapp_opaque,  AppEnv, []), 
+    YAppMods   = proplists:get_value(yapp_appmods, AppEnv, []),
+    YOpaque    = proplists:get_value(yapp_opaque,  AppEnv, []),
     Y = #yapp{urlpath= UrlPath,
               docroot = code:lib_dir(AppName) ++ "/" ++ DocSubRoot,
               appname = AppName,
@@ -296,7 +296,7 @@ insert_yapp_in_sconf0({UrlPath, AppName}, #sconf{opaque = OP} = SC) ->
           end,
     SC#sconf{opaque = OP2}.
 
-insert_yapp_in_yapp_list(#yapp{} = Y, []) -> 
+insert_yapp_in_yapp_list(#yapp{} = Y, []) ->
     [Y];
 insert_yapp_in_yapp_list(#yapp{urlpath= UP} = Y, [#yapp{urlpath=UP} | T])  ->
     [Y|T];
@@ -312,13 +312,13 @@ remove(SrvId, RegPath) ->
 remove_yapp_from_sconfgroups(_SrvId, _RegPath, []) ->
     [];
 remove_yapp_from_sconfgroups(SrvId, RegPath, [SCG|T]) ->
-    [remove_yapp_from_sconfgroup(SrvId, RegPath,SCG) | 
-     remove_yapp_from_sconfgroups(SrvId, RegPath, T)]. 
+    [remove_yapp_from_sconfgroup(SrvId, RegPath,SCG) |
+     remove_yapp_from_sconfgroups(SrvId, RegPath, T)].
 
 remove_yapp_from_sconfgroup(_SrvId, _RegPath, []) ->
     [];
 remove_yapp_from_sconfgroup(SrvId, RegPath, [ H | T ]) ->
-    case srv_id(H) of 
+    case srv_id(H) of
         SrvId ->
             [ remove_yapp_from_sconf(RegPath, H) | T ];
         _ ->
@@ -335,9 +335,9 @@ remove_yapp_from_sconf(RegPath, #sconf{opaque = OP} = SC) ->
           end,
     SC#sconf{opaque = OP2}.
 
-remove_yapp_from_yapp_list(_, [] ) -> 
+remove_yapp_from_yapp_list(_, [] ) ->
     [];
-remove_yapp_from_yapp_list(RegPath, [ #yapp{urlpath = RegPath} | T ] ) -> 
+remove_yapp_from_yapp_list(RegPath, [ #yapp{urlpath = RegPath} | T ] ) ->
     T;
 remove_yapp_from_yapp_list(RegPath, [H | T]) ->
     [H | remove_yapp_from_yapp_list(RegPath, T)].
@@ -356,19 +356,19 @@ reset_yaws_conf() ->
 get_conf() ->
     yaws_api:getconf().
 %    yaws_config:load(yaws_sup:get_app_args()).
-    
+
 %% @spec srv_id(Sconf) -> string() | undefined
 %%  Sconf = yawsSconf()
 %% @doc Get the server id from an Sconf if available
-srv_id(#sconf{opaque = OP}) -> 
+srv_id(#sconf{opaque = OP}) ->
     proplists:get_value(?srv_id, OP).
 
 %% @spec get_bootstrap_yapps() -> [{ ServerId, [ {Path, ApplicationName}]}]
 %%   ServerId = string()
 %%   Path = string()
 %%   Applicationame = atom()
-%% @doc Gets the Yapps defined in each opaque 
-%% "bootstrap_yapps = appname1, appname2" for every server id. (If available). 
+%% @doc Gets the Yapps defined in each opaque
+%% "bootstrap_yapps = appname1, appname2" for every server id. (If available).
 %% Bootstrap yapps will get the same pathname as their application name
 %% and are "static" meaning that they can not be removed from the server
 %% unless yaws.conf is changed (or if embedded yaws - yaws:setconf/2 is used).
@@ -376,14 +376,14 @@ get_bootstrap_yapps() ->
 
     {ok, _Gconf, Sconfs} = get_conf(),
 
-    YL = [ {proplists:get_value(?srv_id, OP), 
-       make_yapp_tuples(proplists:get_value(?bootstrap_yapps, OP))} 
+    YL = [ {proplists:get_value(?srv_id, OP),
+       make_yapp_tuples(proplists:get_value(?bootstrap_yapps, OP))}
       || #sconf{opaque=OP} <- lists:flatten(Sconfs) ],
 
-    [{SrvId, Yapps} || 
+    [{SrvId, Yapps} ||
         {SrvId, Yapps} <- YL, SrvId =/= undefined, Yapps =/= []].
 
-                              
+
 
 make_yapp_tuples(undefined) ->
     [];
@@ -392,7 +392,7 @@ make_yapp_tuples(BootStrapYapps) ->
 
 make_yapp_tuple(A) ->
     B = string:strip(A),
-    {"/" ++ B, list_to_atom(B)}. 
+    {"/" ++ B, list_to_atom(B)}.
 
 %% @spec get_yapps() -> [{ServId,[{yapp, Urlpath, Docroot, Appname , Appmods}]}]
 %%  Urlpath = string()
@@ -403,7 +403,7 @@ make_yapp_tuple(A) ->
 get_yapps() ->
     {ok, _Gconf, Sconfs} = yaws_api:getconf(),
     Yapps1 = [{proplists:get_value("yapp_server_id", OP),
-               proplists:get_value(yapp_list, OP)} || 
+               proplists:get_value(yapp_list, OP)} ||
                  #sconf{opaque=OP} <- lists:flatten(Sconfs)],
     [{S,Y} || {S,Y} <- Yapps1, Y =/= undefined, S =/= undefined].
 

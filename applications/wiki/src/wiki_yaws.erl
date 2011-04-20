@@ -1,4 +1,4 @@
-%    -*- Erlang -*- 
+%    -*- Erlang -*-
 %    File:        wiki_yaws.erl  (~jb/work/wiki/src/wiki_yaws.erl)
 %    Author:        Johan Bevemyr
 %    Created:        Thu Jun 27 22:26:49 2002
@@ -23,7 +23,7 @@ get_path_prefix(UrlPath) ->
             lists:sublist(UrlPath, N)
     end.
 
- 
+
 parse_multipost(Arg) ->
     case yaws_api:parse_multipart_post(Arg) of
         {result, PostList} when Arg#arg.state == undefined->

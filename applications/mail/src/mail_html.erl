@@ -1,4 +1,4 @@
-%    -*- Erlang -*- 
+%    -*- Erlang -*-
 %    File:        mail_html.erl
 %    Author:        Johan Bevemyr
 %    Created:        Sat Jun 19 15:13:49 2004
@@ -127,7 +127,7 @@ tokenize([$<,$!,$-,$-|R0], Acc, Tokens, L0) ->
     tokenize(R1, Acc, Tokens, L1);
 tokenize([$<|R0], Acc, Tokens, L0) ->
     {Tag,R1,L1} = scan_tag(R0,L0),
-    if 
+    if
         Acc == [] ->
             next_token(Tag, R1, [Tag|Tokens], L1);
         true ->
@@ -238,7 +238,7 @@ scan_quote([C=$\r|R], Acc, Q, L) ->
     scan_quote(R, [C|Acc], Q, L+1);
 scan_quote([C|R], Acc, Q, L) ->
     scan_quote(R, [C|Acc], Q, L).
-            
+
 %
 
 scan_endtag(R, Tag, L) ->

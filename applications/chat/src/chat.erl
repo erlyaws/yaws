@@ -1,8 +1,8 @@
-%    -*- Erlang -*- 
+%    -*- Erlang -*-
 %    File:        chat.erl  (chat.erl)
 %    Author:        Johan Bevemyr
 %    Created:        Thu Nov 18 21:27:41 2004
-%    Purpose:   
+%    Purpose:
 
 -module('chat').
 -author('jb@son.bevemyr.com').
@@ -34,7 +34,7 @@
                color,
                cookie}).
 
- 
+
 login(User, Password) ->
     session_server(),
     erlang:send(chat_server, {new_session, User, self()}),
@@ -187,7 +187,7 @@ chat_server(Users0) ->
         5000 ->
             chat_server(Users)
     end.
-            
+
 
 %%
 
@@ -226,7 +226,7 @@ send_to_all(Type, Msg, Users) ->
                 if U#user.pid /= undefined ->
                         %% io:format("Sending ~p to ~p\n", [Msg, U#user.user]),
                         U#user.pid ! {msgs, [{Type, Msg}]},
-                        U#user{pid=undefined, last_read = Now}; 
+                        U#user{pid=undefined, last_read = Now};
                    true ->
                         U#user{buffer=[{Type,Msg}|U#user.buffer]}
                 end
@@ -241,7 +241,7 @@ send_to_one(Type, Msg, Users, User) ->
                 if U#user.pid /= undefined ->
                         %% io:format("Sending ~p to ~p\n", [Msg, U#user.user]),
                         U#user.pid ! {msgs, [{Type, Msg}]},
-                        U#user{pid=undefined, last_read = Now}; 
+                        U#user{pid=undefined, last_read = Now};
                    true ->
                         U#user{buffer=[{Type,Msg}|U#user.buffer]}
                 end;
@@ -359,7 +359,7 @@ fmt_msg(User, Msg, Color) ->
 
 %%
 
-fmt_members(Users) -> 
+fmt_members(Users) ->
     [[U#user.user,"<br>"] || U <- Users].
 
 %%

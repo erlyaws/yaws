@@ -1,7 +1,7 @@
 %%%----------------------------------------------------------------------
 %%% File    : mime_type_c.erl
 %%% Author  : Claes Wikstrom <klacke@hyber.org>
-%%% Purpose : 
+%%% Purpose :
 %%% Created : 10 Jul 2002 by Claes Wikstrom <klacke@hyber.org>
 %%%----------------------------------------------------------------------
 
@@ -53,7 +53,7 @@ c(F, T, Line) ->
             case string:tokens(L, [$\s, $\t]) of
                 [] ->
                     ignore;
-                [_] ->  
+                [_] ->
                     ignore;
                 [MimeType | Exts] ->
                     lists:foreach(
@@ -84,18 +84,18 @@ nonl([H|T]) ->
     [H|nonl(T)].
 
 special(Fd, Ext, Type) ->
-    io:format(Fd, "t(~p) -> {~p, ~p};~n", 
+    io:format(Fd, "t(~p) -> {~p, ~p};~n",
               [Ext, Type, "text/html" ++ get(charset)]).
 
 
 revspecial(Fd, Ext, Type) ->
-    io:format(Fd, "revt(~p) -> {~p, ~p, ~p};~n", 
+    io:format(Fd, "revt(~p) -> {~p, ~p, ~p};~n",
               [lists:reverse(Ext), Type, Ext, "text/html" ++ get(charset)]).
 
 
 gen(T) ->
     {ok, Fd} = file:open("mime_types.erl", [write]),
-    io:format(Fd, 
+    io:format(Fd,
               "-module(mime_types). ~n"
               "-compile(export_all). ~n", []),
 
@@ -117,7 +117,7 @@ gen(T) ->
                    end,
               io:format(Fd, "t(~p) -> {regular, ~p};~n", [nonl(Ext), MT])
       end, L),
-    io:format(Fd, "t(_) -> {regular, \"text/plain" ++ get(charset) 
+    io:format(Fd, "t(_) -> {regular, \"text/plain" ++ get(charset)
               ++ "\"}.~n~n~n", []),
 
 
@@ -137,7 +137,7 @@ gen(T) ->
                        _ ->
                            MT0
                    end,
-              io:format(Fd, "revt(~p) -> {regular, ~p, ~p};~n", 
+              io:format(Fd, "revt(~p) -> {regular, ~p, ~p};~n",
                         [nonl(lists:reverse(Ext)), nonl(Ext), MT])
       end, L),
     io:format(Fd, "revt(Ext) -> {regular, Ext,

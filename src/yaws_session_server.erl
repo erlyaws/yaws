@@ -56,11 +56,11 @@
 %%%----------------------------------------------------------------------
 start_link() ->
     Backend = get_yaws_session_server_backend(),
-    gen_server:start_link({local, yaws_session_server}, 
+    gen_server:start_link({local, yaws_session_server},
                           yaws_session_server, Backend, []).
 start() ->
     Backend = get_yaws_session_server_backend(),
-    gen_server:start({local, yaws_session_server}, 
+    gen_server:start({local, yaws_session_server},
                      yaws_session_server, Backend, []).
 stop() ->
     gen_server:call(?MODULE, stop, infinity).
@@ -166,7 +166,7 @@ handle_call({new_session, Opaque, TTL, Cleanup, Cookie}, _From, State) ->
                    to = Now + TTL,
                    ttl = TTL,
                    cleanup = Cleanup},
-    Backend = State#state.backend, 
+    Backend = State#state.backend,
     true = Backend:insert(NS),
     {reply, Cookie, State, to()};
 
@@ -185,7 +185,7 @@ handle_call({cookieval_to_opaque, Cookie}, _From, State) ->
 
 handle_call({replace_session, Cookie, NewOpaque}, _From, State) ->
     Backend = State#state.backend,
-    Result = 
+    Result =
         case Backend:lookup(Cookie) of
             [Y] ->
                 Y2 = Y#ysession{to = gnow() + Y#ysession.ttl,
@@ -200,7 +200,7 @@ handle_call({delete_session, CookieVal}, _From, State) ->
     Backend = State#state.backend,
     Result =
         case Backend:lookup(CookieVal) of
-            [Y] -> 
+            [Y] ->
                 Backend:delete(CookieVal),
                 report_deleted_sess(Y);
             [] ->
@@ -280,7 +280,7 @@ long_to() ->
 
 %% timeout if the server is idle for more than 2 minutes.
 to() ->
-    2 * 60 * 1000.  
+    2 * 60 * 1000.
 
 %% pretty good seed, but non portable
 seed() ->
@@ -356,7 +356,7 @@ traverse(N, Key) ->
                     report_timedout_sess(Y),
                     Next = ets:next(?MODULE, Key),
                     delete(Key),
-                    traverse(N, Next)                    
+                    traverse(N, Next)
             end;
         [] ->
             traverse(N, ets:next(?MODULE, Key))

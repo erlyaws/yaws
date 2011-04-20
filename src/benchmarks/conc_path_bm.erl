@@ -2,8 +2,8 @@
 %% See '8.5 Benchmarking' under 'Efficiency Guide' in the OTP documentation.
 %%
 %
-% This particular benchmark was assembled to learn about Erlang benchmarking on a simple case and to 
-% satisfy my curiosity as to why the yaws_server:conc_path/1 function was used instead of one of the 
+% This particular benchmark was assembled to learn about Erlang benchmarking on a simple case and to
+% satisfy my curiosity as to why the yaws_server:conc_path/1 function was used instead of one of the
 % 'lists' functions such as lists:append, and why conc_path isn't tail-recursive.
 %
 % Note that I'm not suggesting that conc_path is necessarily worth of particular attention regarding performance!
@@ -75,7 +75,7 @@ do_conc_path_tail(Iter, Path) ->
 
 
 %--------------------------------------
-% lists:flatten 
+% lists:flatten
 %--------------------------------------
 conc_path_lflatten(Iter) ->
         do_conc_path_lflatten(Iter, getData()).

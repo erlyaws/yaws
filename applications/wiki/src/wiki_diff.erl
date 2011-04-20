@@ -79,7 +79,7 @@ extend_match([{_,S}|T1], [{L2,S}|T2], L1, _) -> extend_match(T1, T2, L1, L2);
 extend_match(X, _, L1, L2)                   -> {yes, L1, L2, X}.
 
 str2lines(L) -> str2lines(L, 1, [], []).
- 
+
 str2lines([H|T], Line, C, L) ->
     case H of
         $\n -> str2lines(T, Line+1,[],[{Line,reverse([$\n|C])}|L]);
@@ -89,4 +89,4 @@ str2lines([], Line, [], L) ->
     reverse(L);
 str2lines([], Line, C, L) ->
     reverse([{Line,reverse(C)}|L]).
-                                   
+

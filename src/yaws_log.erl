@@ -1,7 +1,7 @@
 %%----------------------------------------------------------------------
 %%% File    : yaws_log.erl
 %%% Author  : Claes Wikstrom <klacke@hyber.org>
-%%% Purpose : 
+%%% Purpose :
 %%% Created : 26 Jan 2002 by Claes Wikstrom <klacke@hyber.org>
 %%%----------------------------------------------------------------------
 
@@ -16,7 +16,7 @@
 -export([start_link/0]).
 
 %% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, 
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          handle_event/2, code_change/3]).
 -export([accesslog/5,
          accesslog/7,
@@ -66,7 +66,7 @@ accesslog(ServerName, Ip, Req, Status, Length, Referrer, UserAgent) ->
     accesslog(ServerName, Ip, "-", Req, Status, Length, Referrer, UserAgent).
 
 accesslog(ServerName, Ip, User, Req, Status, Length, Referrer, UserAgent) ->
-    gen_server:cast(?MODULE, {access, ServerName, Ip, User, Req, 
+    gen_server:cast(?MODULE, {access, ServerName, Ip, User, Req,
                               Status, Length, Referrer, UserAgent}).
 setdir(GC, Sconfs) ->
     gen_server:call(?MODULE, {setdir, GC, Sconfs}, infinity).
@@ -110,13 +110,13 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-handle_call({setdir, GC, Sconfs}, _From, State) 
+handle_call({setdir, GC, Sconfs}, _From, State)
   when State#state.running == false ->
     Dir = GC#gconf.logdir,
     ?Debug("setdir ~s~n", [Dir]),
     ElogFile = filename:join([Dir, "report.log"]),
     Copy = if ?gc_has_copy_errlog(GC) ->
-                   gen_event:add_handler(error_logger, yaws_log_file_h, 
+                   gen_event:add_handler(error_logger, yaws_log_file_h,
                                          ElogFile),
                    true;
               true ->
@@ -149,7 +149,7 @@ handle_call({setdir, GC, Sconfs}, _From, State)
           end, SCs),
 
     AuthLogFileName = filename:join([Dir, "auth.log"]),
-    AuthLog = 
+    AuthLog =
         if ?gc_has_auth_log(GC) ->
                 case file:open(AuthLogFileName, [write, raw, append]) of
                     {ok, AFd} ->
@@ -157,7 +157,7 @@ handle_call({setdir, GC, Sconfs}, _From, State)
                               servername = undefined,
                               filename = AuthLogFileName};
                     _Err ->
-                        error_logger:format("Cannot open ~s~n", 
+                        error_logger:format("Cannot open ~s~n",
                                             [AuthLogFileName]),
                         undefined
                 end;
@@ -182,19 +182,19 @@ handle_call({setdir, GC, Sconfs}, _From, State)
 %% We can't ever change logdir, we can however
 %% change logging opts for various servers
 
-handle_call({setdir, GC, Sconfs}, _From, State) 
+handle_call({setdir, GC, Sconfs}, _From, State)
   when State#state.running == true ->
 
     Dir = State#state.dir,
     ElogFile = filename:join([Dir, "report.log"]),
     Copy = if ?gc_has_copy_errlog(GC), State#state.copy_errlog == false->
-                   gen_event:add_handler(error_logger, yaws_log_file_h, 
+                   gen_event:add_handler(error_logger, yaws_log_file_h,
                                          ElogFile),
                    true;
               ?gc_has_copy_errlog(GC) ->
                    true;
               State#state.copy_errlog == true ->
-                   gen_event:delete_handler(error_logger, yaws_log_file_h, 
+                   gen_event:delete_handler(error_logger, yaws_log_file_h,
                                             normal),
                    false;
               true ->
@@ -269,11 +269,11 @@ handle_call(state, _From, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-handle_cast({access, ServerName, Ip, User, Req, Status, 
+handle_cast({access, ServerName, Ip, User, Req, Status,
              Length, Referrer, UserAgent}, State) ->
-    case State#state.running of 
+    case State#state.running of
         true ->
-            do_alog(ServerName, Ip, User, Req, Status, Length, 
+            do_alog(ServerName, Ip, User, Req, Status, Length,
                     Referrer, UserAgent, State),
             {noreply, State};
         false ->
@@ -281,7 +281,7 @@ handle_cast({access, ServerName, Ip, User, Req, Status,
     end;
 
 handle_cast({auth, ServerName, IP, Path, Item}, State) ->
-    case State#state.running of 
+    case State#state.running of
         true when State#state.auth_log /= undefined ->
             do_auth_log(ServerName, IP, Path, Item, State),
             {noreply, State};
@@ -321,7 +321,7 @@ do_alog(ServerName, Ip, User, Req, Status, Length, Referrer,
         UserAgent, State) ->
     case lists:keysearch(ServerName, #alog.servername, State#state.alogs) of
         {value, AL} ->
-            I = fmt_alog(State#state.now, Ip, User, Req, Status,  Length, 
+            I = fmt_alog(State#state.now, Ip, User, Req, Status,  Length,
                          Referrer, UserAgent),
             file:write(AL#alog.fd, I);
         _ ->
@@ -361,7 +361,7 @@ tty_trace(Str, State) ->
 
 %%----------------------------------------------------------------------
 %% Func: handle_event/2
-%% Returns: 
+%% Returns:
 %%----------------------------------------------------------------------
 handle_event({yaws_hupped, _Res}, State) ->
     handle_info(minute10,State),
@@ -394,8 +394,8 @@ handle_info(minute10, State) ->
     Dir = State#state.dir,
     E = filename:join([Dir, "report.log"]),
     case file:read_file_info(E) of
-        {ok, FI} when  State#state.log_wrap_size > 0, 
-                       FI#file_info.size > State#state.log_wrap_size, 
+        {ok, FI} when  State#state.log_wrap_size > 0,
+                       FI#file_info.size > State#state.log_wrap_size,
                        State#state.copy_errlog == true ->
             gen_event:call(error_logger, yaws_log_file_h, wrap, infinity);
         {error,enoent} ->
@@ -435,12 +435,12 @@ wrap(AL, State) ->
             file:delete(Old),
             file:rename(AL#alog.filename, Old),
             {ok, Fd2} = file:open(AL#alog.filename, [write, raw]),
-            error_logger:info_msg("Wrap log ~p",[AL#alog.filename]), 
+            error_logger:info_msg("Wrap log ~p",[AL#alog.filename]),
             AL#alog{fd = Fd2};
         false ->
             AL;
         enoent ->
-            %% Logfile disappeared, 
+            %% Logfile disappeared,
             error_logger:format("Logfile ~p disappeared - we reopen it",
                                 [AL#alog.filename]),
 	    file:close(AL#alog.fd),
@@ -473,12 +473,12 @@ code_change(_OldVsn, Data, _Extra) ->
 
 
 fmt_alog(Time, Ip, User, Req, Status,  Length, Referrer, UserAgent) ->
-    [fmt_ip(Ip), " - ", User, [$\s], Time, [$\s, $"], no_ctl(Req), [$",$\s], 
-     Status, [$\s], Length, [$\s,$"], Referrer, [$",$\s,$"], UserAgent, 
+    [fmt_ip(Ip), " - ", User, [$\s], Time, [$\s, $"], no_ctl(Req), [$",$\s],
+     Status, [$\s], Length, [$\s,$"], Referrer, [$",$\s,$"], UserAgent,
      [$",$\n]].
 
 
-%% Odd security advisory that only affects webservers where users are 
+%% Odd security advisory that only affects webservers where users are
 %% somehow allowed to upload files that later can be downloaded.
 
 no_ctl([H|T]) when H < 32 ->
@@ -498,7 +498,7 @@ fmt_ip(HostName) ->
 
 
 fmtnow() ->
-    {{Year, Month, Day}, {Hour, Min, Sec}} = 
+    {{Year, Month, Day}, {Hour, Min, Sec}} =
         calendar:now_to_local_time(now()),
     ["[",fill_zero(Day,2),"/",yaws:month(Month),"/",integer_to_list(Year),":",
      fill_zero(Hour,2),":",fill_zero(Min,2),":",
@@ -508,7 +508,7 @@ fmtnow() ->
 zone() ->
     Time = erlang:universaltime(),
     LocalTime = calendar:universal_time_to_local_time(Time),
-    DiffSecs = calendar:datetime_to_gregorian_seconds(LocalTime) - 
+    DiffSecs = calendar:datetime_to_gregorian_seconds(LocalTime) -
         calendar:datetime_to_gregorian_seconds(Time),
     zone(DiffSecs div 3600, (DiffSecs rem 3600) div 60).
 

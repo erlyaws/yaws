@@ -1,7 +1,7 @@
 %%%----------------------------------------------------------------------
 %%% File    : yaws_debug.erl
 %%% Author  : Claes Wikstrom <klacke@hyber.org>
-%%% Purpose : 
+%%% Purpose :
 %%% Created :  7 Feb 2002 by Claes Wikstrom <klacke@hyber.org>
 %%%----------------------------------------------------------------------
 
@@ -53,8 +53,8 @@ format_record(Record, Name, Fields) ->
 
 format_record([], []) ->
     [];
-format_record([Val|Vals], [F|Fs]) when is_integer(Val); 
-                                       Val == []; 
+format_record([Val|Vals], [F|Fs]) when is_integer(Val);
+                                       Val == [];
                                        is_atom(Val);
                                        is_float(Val)->
     [io_lib:format("     ~w = ~w\n", [F,Val]),
@@ -99,8 +99,8 @@ assert(lesser,X,Y,_) when is_integer(X), is_integer(Y), X<Y ->
     ok;
 assert(max,X,Y,_) when is_integer(X), is_integer(Y), X=<Y ->
     ok;
-assert(interval,X,{Min,Max},_) when is_integer(X), is_integer(Min), 
-                                    is_integer(Max), 
+assert(interval,X,{Min,Max},_) when is_integer(X), is_integer(Min),
+                                    is_integer(Max),
                                     X>=Min, Max>=X ->
     ok;
 assert('fun', Fun, _, Failure) ->
@@ -129,7 +129,7 @@ fail({alert,File,Line,Message}) ->
 fail({{debug,Fstr}, File,Line,Fmt, Args}) ->
     Str = lists:flatten(
             io_lib:format("~s <~p> ~s:~p, pid ~w: ~n",
-                          [Fstr, node(), filename:basename(File), 
+                          [Fstr, node(), filename:basename(File),
                            Line, self()])),
 
     case (catch io:format(user, Str ++ Fmt ++ "~n", Args)) of
@@ -193,9 +193,9 @@ pids() ->
       fun(P) ->
               case process_info(P) of
                   L when is_list(L) ->
-                      {value, {_, {M1, _,_}}} = 
+                      {value, {_, {M1, _,_}}} =
                           lists:keysearch(current_function, 1, L),
-                      {value, {_, {M2, _,_}}} = 
+                      {value, {_, {M2, _,_}}} =
                           lists:keysearch(initial_call, 1, L),
                       S1= atom_to_list(M1),
                       S2 = atom_to_list(M2),
@@ -322,7 +322,7 @@ do_debug_dump(Socket) ->
     gen_version(Socket),
     gen_sep(Socket),
     %% keep proc status last, to report on hangs for the others
-    CollectOS = gen_os(Socket),		    
+    CollectOS = gen_os(Socket),
     Collect = lists:foldl(fun({F, Str}, Acc) ->
 				  Ret = collect(F, Socket, Str),
 				  gen_sep(Socket),
@@ -350,7 +350,7 @@ gen_os(Socket) ->
      gen_oscmd(Socket, top_cmd(OSType)),
      gen_oscmd(Socket, netstat_cmd(OSType))].
 
-gen_oscmd(Socket, Cmd) ->    
+gen_oscmd(Socket, Cmd) ->
     F = fun(Sock) ->
 		sock_format(Sock, "~s:~n~s~n", [Cmd, os:cmd(Cmd)])
 	end,
@@ -375,7 +375,7 @@ netstat_cmd({unix, freebsd}) -> "netstat -an -p tcp";
 netstat_cmd({unix, sunos})   -> "netstat -an -P tcp";
 netstat_cmd(_)               -> "netstat -an".
 
-gen_sep(Socket) ->    
+gen_sep(Socket) ->
     sock_format(Socket,"~n~s~n", [lists:duplicate(40, $*)]).
 
 
@@ -531,7 +531,7 @@ display_susp3(Fd, {Pid, _Mem}) ->
 	    case process_info(Pid, backtrace) of
 		{backtrace, Bin} ->
                     gen_sep(Fd),
-		    sock_format(Fd, 
+		    sock_format(Fd,
                                 "\n\n\n\n*** Backtrace (mem=~p) "
                                 "*** for ~w\n~p~n~s\n",
 				[Mem2, Pid, process_info(Pid),
@@ -613,7 +613,7 @@ send_inet(Sock) ->
 
 
 %% This function runs a Fun that is producing IO through
-%% io:format() and collects the IO and retuns the IO as a char list   
+%% io:format() and collects the IO and retuns the IO as a char list
 %% Returns io_list() | {timeout, io_list()}
 %%
 capture_io(Fun) ->
@@ -626,7 +626,7 @@ capture_io(Fun) ->
 %%    Chars.
 
 do_capture_io(Fun) ->
-    Pid = spawn(fun() -> 
+    Pid = spawn(fun() ->
                         receive run -> ok end,
                         Fun()
                 end),

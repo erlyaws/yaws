@@ -15,8 +15,8 @@ compute_rsva(Arg, VariantList) ->
     AcceptLanguage = parse_accept_field(
                        get_other_header('Accept-Language', Headers)),
     AcceptFeatures = [], % yet to be implemented
-    RankedVariants = overall_quality(VariantList, Accept, 
-                                     AcceptCharset, AcceptLanguage, 
+    RankedVariants = overall_quality(VariantList, Accept,
+                                     AcceptCharset, AcceptLanguage,
                                      AcceptFeatures),
     case determine_result(RankedVariants) of
         none ->
@@ -43,12 +43,12 @@ determine_result([_|T], Acc) ->
 determine_result([], {URI,{_,0}}) -> URI;
 determine_result([], _) -> none.
 
-overall_quality(VariantList, Accept, AcceptCharset, AcceptLanguage, 
+overall_quality(VariantList, Accept, AcceptCharset, AcceptLanguage,
                 AcceptFeatures) ->
-    overall_quality(VariantList, Accept, AcceptCharset, 
+    overall_quality(VariantList, Accept, AcceptCharset,
                     AcceptLanguage, AcceptFeatures, []).
 
-overall_quality([{URI,Qs,Attributes}|T], Accept, AcceptCharset, 
+overall_quality([{URI,Qs,Attributes}|T], Accept, AcceptCharset,
                 AcceptLanguage, AcceptFeatures, Acc) ->
     %% QX = {Qvalue, [0=definitive, >0=speculative]}
     Qt = case {lists:keysearch(type, 1, Attributes), Accept} of
@@ -71,16 +71,16 @@ overall_quality([{URI,Qs,Attributes}|T], Accept, AcceptCharset,
          end,
     Qf = {1000, 0},  % Accept-Features:  not yet implemented
     Q = round5(Qs, Qt, Qc, Ql, Qf),
-    overall_quality(T, Accept, AcceptCharset, AcceptLanguage, 
+    overall_quality(T, Accept, AcceptCharset, AcceptLanguage,
                     AcceptFeatures, [{URI, Q}|Acc]);
 %% fallback-variant
-overall_quality([URI|T], Accept, AcceptCharset, AcceptLanguage, 
-                AcceptFeatures, Acc) 
+overall_quality([URI|T], Accept, AcceptCharset, AcceptLanguage,
+                AcceptFeatures, Acc)
   when is_list(URI) ->
     Q = {1, 0},  % {0.000001, definitive}
-    overall_quality(T, Accept, AcceptCharset, AcceptLanguage, 
+    overall_quality(T, Accept, AcceptCharset, AcceptLanguage,
                     AcceptFeatures, [{URI, Q}|Acc]);
-overall_quality([], _Accept, _AcceptCharset, _AcceptLanguage, 
+overall_quality([], _Accept, _AcceptCharset, _AcceptLanguage,
                 _AcceptFeatures, Acc) -> Acc.
 
 %% this functions rounds to five decimal places but to avoid

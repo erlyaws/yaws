@@ -5,8 +5,8 @@
 %%         : Johan Bevemyr, minor modifications (jb@bevemyr.com)
 %% Purpose : Wiki formatting engine
 %%
-%% Rules:  
-%% Inline annotations: 
+%% Rules:
+%% Inline annotations:
 %%                      *              Bold
 %%                      ''             Italic
 %%                      '''            Code
@@ -26,7 +26,7 @@
 %%                      {{             Embedded HTML
 %%                        ...
 %%                      }}
-%%                      <              Writable region within a 
+%%                      <              Writable region within a
 %%                        ...          locked page
 %%                      >
 %%                      <<             Write append region within
@@ -40,7 +40,7 @@
 %%                                       the number of -'s
 %%                                       * is the bullet. Then the text
 %%                      - [Header] Text  Is a displayed list.
-%%          
+%%
 %%                                       Blanks or tabs between the - mark
 %%                                       and the * (or Header) and Text
 %%                                       are not significant.
@@ -59,7 +59,7 @@
               h2 = false,
               h3 = false,
               u = false,
-              n = 0, 
+              n = 0,
               dl = false
              }).
 
@@ -130,7 +130,7 @@ format_txt("slideshow:" ++ T, Env, L, Doc) ->
     format_txt(T1, Env, reverse(Txt, L), Doc);
 format_txt("mailto:" ++ T, Env, L, Doc) ->
     {X, T1} = collect_mail(T, []),
-    Txt = "<a href='mailto:" ++ X ++ "'>" ++ 
+    Txt = "<a href='mailto:" ++ X ++ "'>" ++
         "<img border=0 src='WikiPreferences.files/mailto.png'>"
         ++ X ++ "</a>",
     format_txt(T1, Env, reverse(Txt, L), Doc);
@@ -167,7 +167,7 @@ collect_url(S=[$.,$\r|_], L)  -> {reverse(L), S};
 collect_url(S=[$.,$\t|_], L)  -> {reverse(L), S};
 collect_url(S=[$\n|_], L)     -> {reverse(L), S};
 collect_url([H|T], L)         -> collect_url(T, [H|L]);
-collect_url([], L)            -> {reverse(L), []}.  
+collect_url([], L)            -> {reverse(L), []}.
 
 collect_mail(S=[$ |_], L)      -> {reverse(L), S};
 collect_mail(S=[$)|_], L)      -> {reverse(L), S};
@@ -179,7 +179,7 @@ collect_mail(S=[$.,$\r|_], L)  -> {reverse(L), S};
 collect_mail(S=[$.,$\t|_], L)  -> {reverse(L), S};
 collect_mail(S=[$\n|_], L)     -> {reverse(L), S};
 collect_mail([H|T], L)         -> collect_mail(T, [H|L]);
-collect_mail([], L)            -> {reverse(L), []}.  
+collect_mail([], L)            -> {reverse(L), []}.
 
 get_mailto([$\\,C|T], L) ->
     get_mailto(T, L);
@@ -201,7 +201,7 @@ format_external_url(F, Scheme) ->
         true ->
             "<img src=\"" ++  F1 ++ "\">";
         false ->
-            "<a href=\"" ++  F1 ++ "\">" ++ 
+            "<a href=\"" ++  F1 ++ "\">" ++
             "<img border=0 src='WikiPreferences.files/http.png'>"
             ++ F1 ++ "</a> "
     end.
@@ -290,7 +290,7 @@ date_less(D1,D2) ->
           year,
           month,
           day,
-          hours, 
+          hours,
           minutes,
           seconds
           }).
@@ -434,7 +434,7 @@ note_start() ->
      <td bgcolor=\"yellow\"><font size=\"-1\">".
 
 note_end() -> "</font></td></tr></table><p>\n".
-              
+
 mk_list(T, Env, L, Doc) ->
     {Lev, T1} = count_indent_levels(T, 0),
     {Env1, L1} = adjust_indents(Env, Lev, L),
@@ -466,7 +466,7 @@ add_dl([H|T], Env, L, Doc) ->
     add_dl(T, Env, [H|L], Doc);
 add_dl([], Env, L, Doc) ->
     format_txt([], Env, reverse("</dt>", L), Doc).
-    
+
 count_indent_levels([$-|T], N) -> count_indent_levels(T, N+1);
 count_indent_levels(T, N)      -> {N, T}.
 

@@ -26,9 +26,9 @@
                 type,   %% client | server
                 r_req,  %% if'we're server, what req method are we processing
                 r_host, %% and value of Host: for the cli request
-                httpconnection="keep-alive", %% Do we need to keep the 
-                                             %% connection open 
-                                             %% ("keep-alive" | "close")  
+                httpconnection="keep-alive", %% Do we need to keep the
+                                             %% connection open
+                                             %% ("keep-alive" | "close")
                 state}).%% various depending on mode, ......
 
 %% MREMOND: TODO: Check if redirection works properly (this is
@@ -77,14 +77,14 @@ init(CliSock, ARG, _DecPath, _QueryPart, {Prefix, URL}, N) ->
                             end,
 
             Cli2 = case RemainingData of
-                       0      -> 
+                       0      ->
                            %% Sockmode will be changed in the ploop function
                            Cli#psock{mode = expectheaders, state = undefined};
                        _Other -> Cli
                    end,
 
-            Srv = #psock{s = Ssock, 
-                         prefix = Prefix, 
+            Srv = #psock{s = Ssock,
+                         prefix = Prefix,
                          url = URL,
                          r_req = (ARG#arg.req)#http_request.method,
                          r_host = (ARG#arg.headers)#headers.host,
@@ -94,12 +94,12 @@ init(CliSock, ARG, _DecPath, _QueryPart, {Prefix, URL}, N) ->
                                             true ->
                                                  yaws:to_lower(KeepAlive)
                                          end
-                        },     
+                        },
             %% Need to check if we could close the connection after serveranswer
             %% Now we _must_ spawn a process here, because we
             %% can't use {active, once} due to the inefficencies
             %% that would occur with chunked encodings
-            P1 = proc_lib:spawn_link(?MODULE, ploop, 
+            P1 = proc_lib:spawn_link(?MODULE, ploop,
                                      [Cli2, Srv, GC, SC, self()]),
             ?Debug("Client=~p, Srv=~p", [P1, self()]),
             ploop(Srv, Cli2, GC, SC, P1);
@@ -107,11 +107,11 @@ init(CliSock, ARG, _DecPath, _QueryPart, {Prefix, URL}, N) ->
             yaws:outh_set_dyn_headers(ARG#arg.req, ARG#arg.headers,
                                       #urltype{}),
             yaws_server:deliver_dyn_part(
-              CliSock,  
+              CliSock,
               0, "404",
               0,
               ARG, no_UT_defined,
-              fun(A)->(SC#sconf.errormod_404):out404(A,get(gc),get(sc)) 
+              fun(A)->(SC#sconf.errormod_404):out404(A,get(gc),get(sc))
               end,
               fun(A)->yaws_server:finish_up_dyn_file(A, CliSock)
               end
@@ -151,7 +151,7 @@ strip_prefix([H|T1],[H|T2]) ->
 
 
 %% Once we have read the headers, what comes after
-%% the headers, 
+%% the headers,
 %% This is applicable both for cli and srv sockets
 
 sockmode(H,Req,Psock) ->
@@ -169,7 +169,7 @@ s_sockmode(H,Resp,Psock) ->
             Psock#psock{mode = expectheaders, state = undefined};
 
        true ->
-            case lists:member(Resp#http_response.status, 
+            case lists:member(Resp#http_response.status,
                               [100,204,205,304,406]) of
                 true ->
                     %% no body, illegal
@@ -241,13 +241,13 @@ ploop(From0, To, Pid) ->
             case yaws:http_get_headers(From#psock.s, get(ssl)) of
                 {R, H0} ->
                     ?Debug("R = ~p~n",[R]),
-                    RStr = 
+                    RStr =
                         if
                             %% FIXME handle bad_request here
                             is_record(R, http_response) ->
                                 yaws_api:reformat_response(R);
                             is_record(R, http_request) ->
-                                Pid ! {cli2srv, R#http_request.method, 
+                                Pid ! {cli2srv, R#http_request.method,
                                        H0#headers.host},
                                 yaws_api:reformat_request(
                                   rewrite_path(R, From#psock.prefix))
@@ -267,10 +267,10 @@ ploop(From0, To, Pid) ->
                     ok=yaws:eat_crnl(From#psock.s, get(ssl)),
                     yaws:gen_tcp_send(TS,["0\r\n\r\n"]),
                     ?Debug("SEND final 0 ",[]),
-                    ploop_keepalive(From#psock{mode = expectheaders, 
+                    ploop_keepalive(From#psock{mode = expectheaders,
                                                state = undefined},To, Pid);
                true ->
-                    ploop(From#psock{mode = chunk, 
+                    ploop(From#psock{mode = chunk,
                                      state = N},To, Pid)
             end;
         chunk ->
@@ -293,7 +293,7 @@ ploop(From0, To, Pid) ->
                     ploop(From#psock{state = From#psock.state - SZ},
                           To, Pid);
                 _Rsn ->
-                    ?Debug("Failed to read :~p~n", [_Rsn]),  
+                    ?Debug("Failed to read :~p~n", [_Rsn]),
                     exit(normal)
             end;
         undefined ->
@@ -349,7 +349,7 @@ rewrite_headers(PS, H) when PS#psock.type == client ->
 
 
 
-%% And on the way from the server to the client we 
+%% And on the way from the server to the client we
 %% need to rewrite the Location header, and the
 %% Set-Cookie header
 
@@ -371,7 +371,7 @@ rewrite_headers(PS, H) when PS#psock.type == server ->
                       element(1, LocUrl) == 'EXIT' ->
                           rewrite_loc_rel(PS, H#headers.location);
                       true ->
-                          ?Debug("Not rew ~p~n~p~n", 
+                          ?Debug("Not rew ~p~n~p~n",
                                  [LocUrl, ProxyUrl]),
                           H#headers.location
                   end

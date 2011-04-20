@@ -11,7 +11,7 @@
 %% Quick steps:
 %% 1) Compile this module
 %% 2) Drop the .beam in your code path
-%% 3) Run Yaws with the 
+%% 3) Run Yaws with the
 
 -module (yaws_mnesia_session).
 
@@ -58,7 +58,7 @@ insert(Session) ->
     {atomic, ok} = mnesia:transaction(Fun),
     true.
 
-lookup(Key) ->            
+lookup(Key) ->
     Fun = fun () -> mnesia:read(?TABLE, Key) end,
     {atomic, Result} = mnesia:transaction(Fun),
     Result.
@@ -97,7 +97,7 @@ tr_traverse(N, Key) ->
                     yaws_session_server:report_timedout_sess(Y),
                     Next = mnesia:next(?TABLE, Key),
                     mnesia:delete({?TABLE, Key}),
-                    tr_traverse(N, Next)                    
+                    tr_traverse(N, Next)
             end;
         [] ->
            tr_traverse(N, mnesia:next(?MODULE, Key))

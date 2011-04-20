@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : yapp_server.erl
 %%% Author  : Mikael Karlsson <mikael@creado.se>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 28 May 2006 by Mikael Karlsson <mikael@creado.se>
 %%%-------------------------------------------------------------------
@@ -76,7 +76,7 @@ handle_call({yapp_handler, remove, {SrvId,YappUrl}}, _From, State) ->
     yapp_registry:'unregister'(State#state.yapp_registry, SrvId, YappUrl),
     yapp:remove(SrvId, YappUrl),
     {reply, ok, State};
-    
+
 handle_call({yapp_handler, init_yapps},_From, State) ->
     Reply = init_yapps(State#state.yapp_registry),
     {reply, Reply, State};
@@ -131,7 +131,7 @@ code_change(_OldVsn, State, _Extra) ->
 
 
 init_yapps(YappRegistry) ->
-    
+
     BYS = yapp:get_bootstrap_yapps(),
     Yapps = yapp_registry:list(YappRegistry),
     YB = BYS ++ Yapps,
@@ -144,8 +144,8 @@ init_yapps(YappRegistry) ->
 
     Handlers = gen_event:which_handlers(yaws_event_manager),
     case lists:member(yapp_event_handler, Handlers) of
-	false -> 
+	false ->
 	    ok = yapp_event_handler:add_handler(yaws_event_manager, yapp_handler);
-	true -> 
+	true ->
 	    do_nothing
     end.

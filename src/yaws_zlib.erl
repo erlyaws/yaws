@@ -22,11 +22,11 @@ gzipDeflate(Z, undefined, Bin, Flush) ->
                                                 % deflate
              8:8,
                                                 % flags
-             0:8, 
+             0:8,
                                                 % mtime
-             0:32, 
+             0:32,
                                                 % xflags
-             0:8, 
+             0:8,
                                                 % OS_UNKNOWN
                                                 % Set to Unix instead?
              255:8>>,
@@ -37,7 +37,7 @@ gzipDeflate(Z, {Crc32,Size}, Bin, Flush) ->
     Bs = zlib:deflate(Z, Bin, Flush),
     {ok, Crc1} = crc32(Z, Crc32, Bin),
     Size1 = Size+size(Bin),
-    Data = 
+    Data =
         if
             Flush == finish ->
                                                 % Appending should not
@@ -74,7 +74,7 @@ gzip_loop(Z, P, B, C, A) when is_binary(B) ->
     gzip_loop(Z, P1, C, [],
               case D of
                   [] -> A;
-                  _ -> 
+                  _ ->
                       case A of
                           [] -> D;
                           _ -> [A|D]

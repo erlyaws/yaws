@@ -23,10 +23,10 @@ findallrefsto(Page, Root) ->
          ["<p>The following pages contain references to ",
           wiki_to_html:format_link(Page, Root),".",
           "<ul>",
-          map(fun(F) -> 
-                      [wiki_to_html:format_link(F, Root),"<br>"] end, 
+          map(fun(F) ->
+                      [wiki_to_html:format_link(F, Root),"<br>"] end,
               Pages),
-          "</ul>"], false). 
+          "</ul>"], false).
 
 %% Backlinks list
 getallrefs(Page, Root) ->
@@ -42,7 +42,7 @@ getallrefs(Page, Root) ->
                    end, All),
     sort(Pages).
 
-zombies(Root) -> 
+zombies(Root) ->
     All = wiki:ls(Root),
     {Reached, Missing} = gc(["home"], [], [], Root),
     %% Missing = Pages refered to but do not exists at all
@@ -51,8 +51,8 @@ zombies(Root) ->
     template2(Root, "Zombies", "Zombies",
          [p("These pages have no links to them."),
           "<ul>",
-          map(fun(F) -> 
-                      [wiki_to_html:format_link(F, Root),"<br>"] end, 
+          map(fun(F) ->
+                      [wiki_to_html:format_link(F, Root),"<br>"] end,
               NotReached),
           "</ul>"], false).
 
@@ -62,9 +62,9 @@ getpages_by_prefix(Prefix, Root) ->
                          fun(F, AccIn)-> [F|AccIn] end, []),
     Pages = lists:map(fun(I) -> filename:basename(I, ".wob") end,
                       Files),
-    sort(Pages).                      
+    sort(Pages).
 
-    
+
 gc([H|T], Visited, Missing, Root) ->
     case member(H, Visited) or member(H, Missing) of
         true ->

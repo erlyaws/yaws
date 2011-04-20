@@ -19,8 +19,8 @@ run(Page, ArgList) ->
     Root = Sconf#sconf.docroot,
 
     AllRefs = wiki_utils:getallrefs(Page, Root),
-    
-    lists:map(fun(F) -> 
-                [wiki_to_html:format_link(F, Root),"<br>"] end, 
+
+    lists:map(fun(F) ->
+                [wiki_to_html:format_link(F, Root),"<br>"] end,
         AllRefs).
 

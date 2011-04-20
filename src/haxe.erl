@@ -5,12 +5,12 @@
 %%% compliance with the License. You should have received a copy of the
 %%% Erlang Public License along with this software. If not, it can be
 %%% retrieved via the world wide web at http://www.erlang.org/.
-%%% 
+%%%
 %%% Software distributed under the License is distributed on an "AS IS"
 %%% basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
 %%% the License for the specific language governing rights and limitations
 %%% under the License.
-%%% 
+%%%
 %%% The Initial Developer of the Original Code is A2Z Development USA, Inc.
 %%% All Rights Reserved.
 
@@ -85,7 +85,7 @@ encode(Obj) -> encode(Obj, true, 2).
 %% The following options are available:
 %%    {use_cache, boolean()}      -- default = true
 %%    {haxe_version, Vsn}         -- default = 2, can be 1 or 2
-%% 
+%%
 %% The haxe_version is a rough indication of what haXe version we
 %% should encode to. This does not really capture the different
 %% encodings used in the different haXe 1.x versions, see the
@@ -125,7 +125,7 @@ encode(L, Cache, _Vsn=2) when is_list(L) ->
     end;
 encode({array, Props}, Cache, Vsn) -> encode_array(Props, Cache, Vsn);
 encode({struct, Props}, Cache, Vsn) -> encode_object(Props, Cache, Vsn);
-encode({exception, E}, Cache, Vsn) -> 
+encode({exception, E}, Cache, Vsn) ->
     {Result, Cache2} = encode(E, Cache, Vsn),
     {[$x | Result], Cache2};
 encode(Term, Cache, _Vsn) ->
@@ -154,7 +154,7 @@ encode_basic(Term) ->
         _ -> {error, {bad_term, Term}}
     end.
 
-    
+
 %% Find a string in the list of previously encoded string
 %% end return {true, {ref, Idx}}, if the search succeeded,
 %% where Idx is the value associated with the string.
@@ -162,7 +162,7 @@ encode_basic(Term) ->
 find_ref(_Str, undefined) ->
     false;
 find_ref(Str, CacheDict) ->
-    case dict:find(Str, CacheDict) of 
+    case dict:find(Str, CacheDict) of
         error ->
             false;
         {ok, Idx} ->
@@ -223,7 +223,7 @@ encode_object_rest(Props, Cache, Vsn) ->
                       [] -> {[[EncodedKey, EncodedVal]], Cache4};                                        _  -> {[[EncodedKey, EncodedVal] | Acc], Cache4}
                   end
           end,
-          
+
           {[], Cache},
           Props),
 
@@ -304,7 +304,7 @@ token_identifier(Vsn, C) ->
               end;
         $n -> null;
         $t -> true;
-        $f -> false;   
+        $f -> false;
         $z -> 0;
         $k -> nan;
         $p -> infinity;
@@ -442,7 +442,7 @@ scan_exponent_begin(eof, _Es, _R, X) -> {done, {error, missing_exponent}, X};
 scan_exponent_begin([D | Ds], Es, R, X) when D == $-;
                                              D == $+;
                                              D >= $0, D =< $9 ->
-    scan_exponent(Ds, [D | Es], R, X). 
+    scan_exponent(Ds, [D | Es], R, X).
 
 scan_exponent([], _Es, _R, X) -> {more, X};
 scan_exponent(eof, Es, R, _X) ->
@@ -535,7 +535,7 @@ decode(CharList, true) ->  %% function clause for backwards compatibility
     decode_o(CharList, [{use_cache, true}]);
 decode(CharList, false) -> %% function clause for backwards compatibility
     decode_o(CharList, [{use_cache, false}]).
-    
+
 decode_o(CharList, Opts) ->
     %% Note: our Cache for decoding is the tuple
     %% {ObjCache::list(), StringCache::dict()}
@@ -681,7 +681,7 @@ parse_object_next({struct, Props} = Obj, C, OrigCache, Kv) ->
                       Kv(Obj1, C1#cont{cache=Cache1});
                   (eof, C1) ->
                       {done, {error, premature_eof}, C1};
-                  (T, C1) ->                
+                  (T, C1) ->
                       parse_object_field(Obj, T, C1, OrigCache, Kv)
               end).
 
@@ -714,13 +714,13 @@ parse_array(Elems, C, OrigCache, Kv) ->
     get_token(C,
               fun
                   (eof, C1) -> {done, {error, premature_eof}, C1};
-                  (array_end, C1=#cont{cache=Cache1}) -> 
+                  (array_end, C1=#cont{cache=Cache1}) ->
                       Arr = {array, lists:reverse(Elems)},
                       Cache2 = append_new_elems(
                                  Cache1, Arr, OrigCache),
                       Kv(Arr, C1#cont{cache=Cache2});
                   (T, C1) ->
-                      parse_array_tok(Elems, T, C1, OrigCache, Kv) 
+                      parse_array_tok(Elems, T, C1, OrigCache, Kv)
               end).
 
 parse_array_tok(Elems, T, Cont, OrigCache, Kv) ->
@@ -745,7 +745,7 @@ parse_exception(Cont, Kv) ->
                                           Kv({exception, Val}, C2)
                                   end)
               end).
-                      
+
 
 %%% The next three functions help with storing references
 %%% to deserialized objects for future lookup during decoding
@@ -785,7 +785,7 @@ parse_ref2(true, #cont{cache={_ObjCache, StrCache}} = Cont, Idx, Kv) ->
             {ok, Val} = dict:find(Idx, StrCache),
             Kv(Val, Cont)
     end.
-    
+
 
 
 parse_null_seq(Cont = #cont{chars=Chars}, Kv) ->

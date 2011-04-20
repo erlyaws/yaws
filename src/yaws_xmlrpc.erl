@@ -8,10 +8,10 @@
 %%
 %% Redistribution and use in source and binary forms, with or without
 %% modification, are permitted provided that the following conditions
-%% are met: 
+%% are met:
 %%
 %% 1. Redistributions of source code must retain the above copyright
-%%    notice, this list of conditions and the following disclaimer. 
+%%    notice, this list of conditions and the following disclaimer.
 %% 2. Redistributions in binary form must reproduce the above
 %%    copyright notice, this list of conditions and the following
 %%    disclaimer in the documentation and/or other materials provided
@@ -31,7 +31,7 @@
 
 -module(yaws_xmlrpc).
 %%-author('jocke@gleipnir.com').
--author("Gaspar Chilingarov <nm@web.am>, Gurgen Tumanyan <barbarian@armkb.com>").                                    
+-author("Gaspar Chilingarov <nm@web.am>, Gurgen Tumanyan <barbarian@armkb.com>").
 -export([handler/2]).
 -export([handler_session/2, handler_session/3]).
 
@@ -41,7 +41,7 @@
 -include("../include/yaws_api.hrl").
 
 
-%%% ###################################################################### 
+%%% ######################################################################
 %%% public interface
 %%%
 
@@ -67,7 +67,7 @@ handler(Args, Handler) ->
     handler(Args, Handler, simple).
 
 
-%%% ###################################################################### 
+%%% ######################################################################
 %%% private functions
 %%%
 
@@ -87,7 +87,7 @@ handler(Args, Handler, Type) when is_record(Args, arg) ->
 %%% check that request come in reasonable protocol version and reasonable method
 %%%
 parse_request(Args) -> %% {{{
-    case {(Args#arg.req)#http_request.method, 
+    case {(Args#arg.req)#http_request.method,
           (Args#arg.req)#http_request.version} of
         {'POST', {1,0}} ->
             %%        ?Debug("HTTP Version 1.0~n", []),
@@ -115,8 +115,8 @@ handle_payload(Args, Handler, Type) ->
 %%%%%%
 %%% call handler/3 and provide session support
 eval_payload(Args, {M, F}, Payload, {session, CookieName}) ->
-    {SessionValue, Cookie} = 
-        case yaws_api:find_cookie_val(CookieName, 
+    {SessionValue, Cookie} =
+        case yaws_api:find_cookie_val(CookieName,
                                       (Args#arg.headers)#headers.cookie) of
             [] ->      % have no session started, just call handler
                 {undefined, undefined};
@@ -140,24 +140,24 @@ eval_payload(Args, {M, F}, Payload, {session, CookieName}) ->
         {false, ResponsePayload} ->
             %% do not have updates in session data
             encode_send(Args, 200, ResponsePayload, []);
-        {true, _NewTimeout, NewSessionValue, ResponsePayload} -> 
+        {true, _NewTimeout, NewSessionValue, ResponsePayload} ->
             %% be compatible with xmlrpc module
             CO = case NewSessionValue of
                      undefined when Cookie == undefined -> []; %% nothing to do
                      undefined -> %% rpc handler requested session delete
-                         yaws_api:delete_cookie_session(Cookie), []; 
+                         yaws_api:delete_cookie_session(Cookie), [];
                      %% XXX: may be return set-cookie with empty val?
                      _ ->  %% any other value will stored in session
                          case SessionValue of
-                             undefined -> 
-                                 %% got session data and should start 
+                             undefined ->
+                                 %% got session data and should start
                                  %% new session now
                                  Cookie1 = yaws_api:new_cookie_session(
                                              NewSessionValue),
                                  yaws_api:setcookie(
-                                   CookieName, Cookie1, "/"); 
+                                   CookieName, Cookie1, "/");
                              %% return set_cookie header
-                             _ -> 
+                             _ ->
                                  yaws_api:replace_cookie_session(
                                    Cookie, NewSessionValue),
                                  [] %% nothing to add to yaws data
@@ -204,8 +204,8 @@ send(Args, StatusCode, Payload, AddOnData) when not is_list(AddOnData) ->
 %%% generate valid yaws response
 send(_Args, StatusCode, Payload, AddOnData) ->
     A = [
-         {status, StatusCode}, 
-         {content, "text/xml", Payload}, 
+         {status, StatusCode},
+         {content, "text/xml", Payload},
          {header, {content_length, lists:flatlength(Payload) }}
         ] ++ AddOnData,
     A.

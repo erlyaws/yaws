@@ -55,7 +55,7 @@ fold_files(Dir, RegExp, Recursive, Fun, InitialAcc) ->
     Wrapper = fun
                   (FullName, false, Acc) ->
                       NewAcc = case regexp:match(FullName, CompiledRegExp) of
-                                   {match, _, _}  -> 
+                                   {match, _, _}  ->
                                        Fun(FullName, Acc);
                                    _ ->
                                        Acc

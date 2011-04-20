@@ -1,7 +1,7 @@
 %%%----------------------------------------------------------------------
 %%% File    : yaws_ls.erl
 %%% Author  : Claes Wikstrom <klacke@hyber.org>
-%%% Purpose : 
+%%% Purpose :
 %%% Created :  5 Feb 2002 by Claes Wikstrom <klacke@hyber.org>
 %%% Modified: 13 Jan 2004 by Martin Bjorklund <mbj@bluetail.com>
 %%% Modified:    Jan 2006 by Sébastien Bigot <sebastien.bigot@tremplin-utc.net>
@@ -22,7 +22,7 @@
 list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
     {abs_path, Path} = Req#http_request.path,
     {DirStr, Pos, Direction, Qry} = parse_query(Path),
-    ?Debug("List=~p Dirname~p~n", [List, DirName]), 
+    ?Debug("List=~p Dirname~p~n", [List, DirName]),
 
     Descriptions = read_descriptions(DirName),
 
@@ -41,12 +41,12 @@ list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
 
     L3 = [Html || {_, _, _, _, Html} <- L2],
 
-    Body = [ doc_head(DirStr),                          
+    Body = [ doc_head(DirStr),
              dir_header(DirName,DirStr),
-             table_head(Direction),             
+             table_head(Direction),
              parent_dir(),
-             if 
-                 DoAllZip == true -> 
+             if
+                 DoAllZip == true ->
                      allzip();
                  DoAllZip == true_nozip ->
                      [];
@@ -79,7 +79,7 @@ parse_query(Path) ->
                       $N -> 1; % name
                       $M -> 2; % last modified
                       $S -> 3; % size
-                      $D -> 4  % Description         
+                      $D -> 4  % Description
                   end,
             Dir = case DirC of
                       $r -> reverse;
@@ -92,7 +92,7 @@ parse_query(Path) ->
 
 parse_description(Line) ->
     L = string:strip(Line),
-    Pos = string:chr(L,$ ),                                      
+    Pos = string:chr(L,$ ),
     Filename = string:substr(L, 1, Pos-1),
     D = string:substr(L,Pos+1),
     Description = string:strip(D,left),
@@ -115,7 +115,7 @@ get_description(Name,Descriptions) ->
 doc_head(DirName) ->
     HtmlDirName = yaws_api:htmlize(yaws_api:url_decode(DirName)),
     ?F("<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n"
-       "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n"       
+       "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n"
        "<html>\n"
        " <head>\n"
        "  <title>Index of ~s</title>\n"
@@ -168,8 +168,8 @@ dir_header(DirName,DirStr) ->
                  "<h1>Index of " ++ HtmlDirName ++ "</h1>\n"
     end.
 
-parent_dir() ->    
-    {Gif, Alt} = list_gif(directory,"."),    
+parent_dir() ->
+    {Gif, Alt} = list_gif(directory,"."),
     ?F("  <tr>\n"
        "    <td><img src=~p alt=~p/><a href=\"..\">Parent Directory</a></td>\n"
        "    <td></td>\n"
@@ -184,7 +184,7 @@ parent_dir() ->
 %% a deep scan of possibly the entire docroot, (and also some knowledge
 %% about zip's compression ratio in advance...)
 allzip() ->
-    {Gif, Alt} = list_gif(zip,""),    
+    {Gif, Alt} = list_gif(zip,""),
     ?F("  <tr>\n"
        "    <td><img src=~p alt=~p/><a href=\"all.zip\">all.zip</a></td>\n"
        "    <td></td>\n"
@@ -206,7 +206,7 @@ allzip() ->
 %%        Alt]).
 
 %% alltbz2() ->
-%%    {Gif, Alt} = list_gif(zip,""),    
+%%    {Gif, Alt} = list_gif(zip,""),
 %%    ?F("  <tr>\n"
 %%       "    <td><img src=~p alt=~p/><a href=\"all.tbz2\">all.tbz2</a></td>\n"
 %%       "    <td></td>\n"
@@ -222,14 +222,14 @@ is_user_dir(SP) ->
                        case catch yaws:user_to_home(User) of
                            {'EXIT', _} ->
                                false;
-                           Home -> 
+                           Home ->
                                {true,Home}
-                       end;        
+                       end;
         _ -> false
     end.
 
 out(A) ->
-    SP = A#arg.server_path,    
+    SP = A#arg.server_path,
     PP = A#arg.appmod_prepath,
     Dir = case is_user_dir(SP) of
               {true,Home} -> Home ++ "/public_html";
@@ -245,7 +245,7 @@ out(A) ->
         "all.zip" -> spawn_link(fun() -> zip(YPid, Dir, Forbidden_Paths) end),
                      {streamcontent, "application/zip", ""}
                      %%        "all.tgz" -> spawn_link(fun() -> tgz(YPid, Dir) end),
-                     %%                     {streamcontent, "application/gzip", ""};                    
+                     %%                     {streamcontent, "application/gzip", ""};
                      %%        "all.tbz2" -> spawn_link(fun() -> tbz2(YPid, Dir) end),
                      %%                     {streamcontent, "application/gzip", ""}
     end.
@@ -278,7 +278,7 @@ mktempfilename() ->
     %% TODO: Add code to determine the temporary directory on various
     %% operating systems.
     PossibleDirs = ["/tmp", "/var/tmp"],
-    mktempfilename(PossibleDirs).    
+    mktempfilename(PossibleDirs).
 
 zip(YPid, Dir, ForbiddenPaths) ->
     {ok, RE_ForbiddenNames} = re:compile("\\.yaws\$"),
@@ -286,9 +286,9 @@ zip(YPid, Dir, ForbiddenPaths) ->
     {ok, {Tempfile, TempfileH}} = mktempfilename(),
     file:write(TempfileH, lists:foldl(fun(I, Acc) ->
                                               Acc ++ I ++ "\n"
-                                      end, [], Files)),    
+                                      end, [], Files)),
     file:close(TempfileH),
-    process_flag(trap_exit, true),    
+    process_flag(trap_exit, true),
     %% TODO: find a way to directly pass the list of files to
     %% zip. Erlang ports do not allow stdin to be closed
     %% independently; however, zip needs stdin to be closed as an
@@ -296,7 +296,7 @@ zip(YPid, Dir, ForbiddenPaths) ->
     P = open_port({spawn, "zip -q -1 - -@ < " ++ Tempfile},
                   [{cd, Dir},use_stdio, binary, exit_status]),
     F = fun() ->
-                file:delete(Tempfile)                
+                file:delete(Tempfile)
         end,
     stream_loop(YPid, P, F).
 
@@ -309,13 +309,13 @@ accumulate_forbidden_paths() ->
 
 
 %% tgz(YPid, Dir) ->
-%%    process_flag(trap_exit, true),    
+%%    process_flag(trap_exit, true),
 %%    P = open_port({spawn, "tar cz ."},
 %%                  [{cd, Dir},use_stdio, binary, exit_status]),
 %%    stream_loop(YPid, P).
 
 %% tbz2(YPid, Dir) ->
-%%     process_flag(trap_exit, true),    
+%%     process_flag(trap_exit, true),
 %%     P = open_port({spawn, "tar cj ."},
 %%                   [{cd, Dir},use_stdio, binary, exit_status]),
 %%     stream_loop(YPid, P).
@@ -405,7 +405,7 @@ file_entry({ok, FI}, _DirName, Name, Qry, Descriptions) ->
 
     Description = get_description(Name,Descriptions),
 
-    Entry = 
+    Entry =
         ?F("  <tr>\n"
            "    <td><img src=~p alt=~p/><a href=~p title=~p>~s</a></td>\n"
            "    <td>~s</td>\n"
@@ -417,7 +417,7 @@ file_entry({ok, FI}, _DirName, Name, Qry, Descriptions) ->
             yaws_api:url_encode(Name) ++ QryStr,
             Name,
             trim(Name,?FILE_LEN_SZ),
-            datestr(FI), 
+            datestr(FI),
             sizestr(FI),
             Description]),
     ?Debug("Entry:~p", [Entry]),
@@ -440,7 +440,7 @@ trim([], _I, Acc) ->
     lists:reverse(Acc).
 
 %% FI -> 16-Jan-2006 23:06
-datestr(FI) ->    
+datestr(FI) ->
     {{Year, Month, Day}, {Hour, Min, _}} = FI#file_info.mtime,
     io_lib:format("~s-~s-~w ~s:~s",
                   [yaws:mk2(Day),yaws:month(Month),Year,
@@ -457,7 +457,7 @@ sizestr(_FI) ->
 
 list_gif(directory, ".") ->
     {"back.gif", "[DIR]"};
-list_gif(regular, ".txt") -> 
+list_gif(regular, ".txt") ->
     {"text.gif", "[TXT]"};
 list_gif(regular, ".c") ->
     {"c.gif", "[&nbsp;&nbsp;&nbsp;]"};

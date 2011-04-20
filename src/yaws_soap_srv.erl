@@ -45,7 +45,7 @@ start_link() ->
 start_link(L) ->
     %% We are dependent on erlsom
     case code:ensure_loaded(erlsom) of
-        {error, _} -> 
+        {error, _} ->
             Emsg = "could not load erlsom",
             error_logger:error_msg("~p: exiting, reason: ~s~n",
                                    [?MODULE, Emsg]),
@@ -59,7 +59,7 @@ start_link(L) ->
 handler(Args, Id, Payload, SessionValue) ->
     Headers = Args#arg.headers,
     SoapAction = yaws_soap_lib:findHeader("SOAPAction", Headers#headers.other),
-    case gen_server:call(?SERVER, {request, Id, Payload, 
+    case gen_server:call(?SERVER, {request, Id, Payload,
                                    SessionValue, SoapAction}, infinity) of
         {ok, XmlDoc, ResCode, undefined} ->
             {false, XmlDoc, ResCode};
@@ -98,8 +98,8 @@ setup(Id, WsdlFile, Prefix) when is_tuple(Id),size(Id)==2 ->
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
 init(L) -> %% [ {{Mod,Handler}, WsdlFile} ]
-    WsdlList = lists:foldl( fun( SoapSrvMod, OldList) -> 
-                                    setup_on_init( SoapSrvMod, OldList ) 
+    WsdlList = lists:foldl( fun( SoapSrvMod, OldList) ->
+                                    setup_on_init( SoapSrvMod, OldList )
                             end,[],L),
     {ok, #s{wsdl_list = WsdlList}}.
 
@@ -171,14 +171,14 @@ request(State, {M,F} = Id, {Req, Attachments}, SessionValue, Action) ->
     {ok, Model} = get_model(State, Id),
     %%error_logger:info_report([?MODULE, {payload, Req}]),
     case catch yaws_soap_lib:parseMessage(Req, Model) of
-        {ok, Header, Body} -> 
+        {ok, Header, Body} ->
             %% call function
-            result(Model, catch apply(M, F, [Header, Body, 
+            result(Model, catch apply(M, F, [Header, Body,
                                              Action, SessionValue,
 					     Attachments]));
         {error, Error} ->
             cli_error(Error);
-        OtherError -> 
+        OtherError ->
             srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))
     end;
 request(State, {M,F} = Id, Req, SessionValue, Action) ->
@@ -186,13 +186,13 @@ request(State, {M,F} = Id, Req, SessionValue, Action) ->
     {ok, Model} = get_model(State, Id),
     Umsg = (catch erlsom_lib:toUnicode(Req)),
     case catch yaws_soap_lib:parseMessage(Umsg, Model) of
-        {ok, Header, Body} -> 
+        {ok, Header, Body} ->
             %% call function
-            result(Model, catch apply(M, F, [Header, Body, 
+            result(Model, catch apply(M, F, [Header, Body,
                                              Action, SessionValue]));
         {error, Error} ->
             cli_error(Error);
-        OtherError -> 
+        OtherError ->
             srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))
     end.
 
@@ -229,21 +229,21 @@ return(Model, ResHeader, ResBody, ResCode, SessVal, undefined) ->
         {error, WriteError} ->
             srv_error(f("Error writing XML: ~p", [WriteError]));
         OtherWriteError ->
-            error_logger:error_msg("~p(~p): OtherWriteError=~p~n", 
+            error_logger:error_msg("~p(~p): OtherWriteError=~p~n",
                                    [?MODULE, ?LINE, OtherWriteError]),
             srv_error(f("Error writing XML: ~p", [OtherWriteError]))
     end.
 
 f(S,A) -> lists:flatten(io_lib:format(S,A)).
 
-cli_error(Error) -> 
-    error_logger:error_msg("~p(~p): Cli Error: ~p~n", 
+cli_error(Error) ->
+    error_logger:error_msg("~p(~p): Cli Error: ~p~n",
                            [?MODULE, ?LINE, Error]),
     Fault = yaws_soap_lib:makeFault("Client", "Client error"),
     {error, Fault, ?BAD_MESSAGE_CODE}.
 
-srv_error(Error) -> 
-    error_logger:error_msg("~p(~p): Srv Error: ~p~n", 
+srv_error(Error) ->
+    error_logger:error_msg("~p(~p): Srv Error: ~p~n",
                            [?MODULE, ?LINE, Error]),
     Fault = yaws_soap_lib:makeFault("Server", "Server error"),
     {error, Fault, ?SERVER_ERROR_CODE}.

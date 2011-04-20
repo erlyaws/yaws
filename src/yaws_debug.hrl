@@ -1,7 +1,7 @@
 %%%----------------------------------------------------------------------
 %%% File    : yaws_debug.hrl
 %%% Author  : Claes Wikstrom <klacke@hyber.org>
-%%% Purpose : 
+%%% Purpose :
 %%% Created :  7 Feb 2002 by Claes Wikstrom <klacke@hyber.org>
 %%%----------------------------------------------------------------------
 
@@ -18,7 +18,7 @@
 
 -define(format_record(Rec, Name),
         yaws_debug:format_record(Rec, Name, record_info(fields, Name))).
-               
+
 
 
 -define(Trace(What, Fmt, Args), if Trace == false ->
@@ -65,7 +65,7 @@
         yaws_debug:assert([],0,0,{format, ?FILE,?LINE,Fmt,Args})).
 
 
--define(Dfunassert(Fun, Msg), 
+-define(Dfunassert(Fun, Msg),
         yaws_debug:assert('fun', Fun, 0, {assert,?FILE,?LINE,Msg})).
 
 -else. %% not debug_mode
@@ -80,6 +80,6 @@
 -define(Dfunassert(Fun, Msg), debug_disabled).
 -define(Derror(Fmt,Args),debug_disabled).
 -define(TC(L), debug_disabled).
-              
+
 -endif. %% debug defined
 

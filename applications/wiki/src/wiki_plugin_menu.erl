@@ -25,9 +25,9 @@ run(_Page, ArgList) ->
 
     %% Get all page starting with a given word
     Pages = wiki_utils:getpages_by_prefix(Prefix, Root),
-    
-    lists:map(fun(F) -> 
-                [wiki_to_html:format_menu_link(Prefix, F, Root),"<br>"] end, 
+
+    lists:map(fun(F) ->
+                [wiki_to_html:format_menu_link(Prefix, F, Root),"<br>"] end,
         Pages).
 
 

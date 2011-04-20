@@ -5,12 +5,12 @@
 %%% compliance with the License. You should have received a copy of the
 %%% Erlang Public License along with this software. If not, it can be
 %%% retrieved via the world wide web at http://www.erlang.org/.
-%%% 
+%%%
 %%% Software distributed under the License is distributed on an "AS IS"
 %%% basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
 %%% the License for the specific language governing rights and limitations
 %%% under the License.
-%%% 
+%%%
 %%% The Initial Developer of the Original Code is A2Z Development USA, Inc.
 %%% All Rights Reserved.
 
@@ -45,11 +45,11 @@
 %%% by other modules.  (See discussion at
 %%% http://groups.yahoo.com/group/json/message/52)
 %%%
-%%%###################################################################### 
+%%%######################################################################
 %%% UPD by Gaspar: for this moment utf-8 encoding inplemented by default
 %%%                if incoming character list have symbols with codes
 %%%                > 255
-%%%###################################################################### 
+%%%######################################################################
 %%%
 %%% Numbers: Thanks to Erlang's bignums, JSON-encoded integers of any
 %%% size can be parsed.  Conversely, extremely large integers may
@@ -70,11 +70,11 @@
 %%% lack of a distinguished string datatype, JSON arrays map
 %%% to Erlang tuples.  Consider utilities like tuple_fold/3
 %%% to deal with tuples in their native form.
-%%%###################################################################### 
+%%%######################################################################
 %%% UPD by Gaspar: array changed to {array, ArrayElementList}
 %%%                ArrayElementList -> list
 %%%                to provide compatibility to xmlrpc module
-%%%###################################################################### 
+%%%######################################################################
 %%%
 %%% Objects: Though not explicitly stated in the JSON "spec",
 %%% JSON's JavaScript heritage mandates that member names must
@@ -83,11 +83,11 @@
 %%% allowable value.  Object keys may be atoms or strings on
 %%% encoding but are always decoded as strings.
 %%%
-%%%###################################################################### 
+%%%######################################################################
 %%% UPD by Gaspar: struct changed to {array, PropList}
-%%%                object keys always decoded to atoms to 
+%%%                object keys always decoded to atoms to
 %%%                provide full compatility with xmlrpc module
-%%%###################################################################### 
+%%%######################################################################
 %%%
 
 %%% ENCODING
@@ -118,9 +118,9 @@ encode(Bad) -> exit({json_encode, {bad_term, Bad}}).
 %% Accumulate strings in reverse.
 
 encode_string(B) when is_binary(B) -> encode_string(binary_to_list(B));
-encode_string(S) -> encode_string(S, [$"]).  
+encode_string(S) -> encode_string(S, [$"]).
 
-encode_string([], Acc) -> lists:reverse([$" | Acc]); 
+encode_string([], Acc) -> lists:reverse([$" | Acc]);
 encode_string([C | Cs], Acc) ->
     case C of
 	$" -> encode_string(Cs, [$", $\\ | Acc]);
@@ -147,7 +147,7 @@ encode_string([C | Cs], Acc) ->
 encode_object({struct, _Props} = Obj) ->
     M = obj_fold(fun({Key, Value}, Acc) ->
 	S = case Key of
-            B when is_binary(B) -> encode_string(B);    
+            B when is_binary(B) -> encode_string(B);
 	    L when is_list(L) -> encode_string(L);
 	    A when is_atom(A) -> encode_string(atom_to_list(A));
             _ -> exit({json_encode, {bad_key, Key}})
@@ -316,7 +316,7 @@ scan_exponent_begin(eof, _Es, _R, X) -> {done, {error, missing_exponent}, X};
 scan_exponent_begin([D | Ds], Es, R, X) when D == $-;
                                              D == $+;
                                              D >= $0, D =< $9 ->
-    scan_exponent(Ds, [D | Es], R, X). 
+    scan_exponent(Ds, [D | Es], R, X).
 
 scan_exponent([], _Es, _R, X) -> {more, X};
 scan_exponent(eof, Es, R, _X) ->
@@ -480,7 +480,7 @@ parse_object2(Obj, S, C, Kv) ->
 parse_array(C, Kv) ->
     get_token(C, fun
         (eof, C2) -> {done, {error, premature_eof}, C2};
-	(rsbrace, C2) -> Kv({array, []}, C2);  % empty array	     
+	(rsbrace, C2) -> Kv({array, []}, C2);  % empty array
         (T, C2) -> parse_array([], T, C2, Kv)
     end).
 
@@ -535,7 +535,7 @@ obj_fetch(Key, {struct, Props}) when is_list(Props) ->
         Value ->
             Value
     end.
-    
+
 %% Fetch an object member's value, or indicate that there is no such member.
 %% Return {ok, Value} or 'error'.
 

@@ -1,7 +1,7 @@
 %%%----------------------------------------------------------------------
 %%% File    : yaws_outmod.erl
 %%% Author  : Claes Wikstrom <klacke@hyber.org>
-%%% Purpose : 
+%%% Purpose :
 %%% Created :  4 Nov 2002 by Claes Wikstrom <klacke@hyber.org>
 %%%----------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ out401(_Arg, _Auth, _Realm) ->
 %% Deprecated, out401/3 will be used
 out(_Arg) ->
      {ehtml,
-      [{html,[], 
+      [{html,[],
         [
          {body, [],
           [{h1,[], "401 authentication needed"}
@@ -75,8 +75,8 @@ not_found_body(Path, _GC, _SC) ->
          "<TITLE>404 Not Found</TITLE>"
          "</HEAD><BODY>"
          "<H1>Not Found</H1>"
-         "The requested URL ", 
-         yaws_api:htmlize(Path), 
+         "The requested URL ",
+         yaws_api:htmlize(Path),
          " was not found on this server.<P>"
          "<HR>",
          yaws:address(),
@@ -87,7 +87,7 @@ not_found_body(Path, _GC, _SC) ->
 
 
 
-%% possibility to customize crash messages, 
+%% possibility to customize crash messages,
 
 %% while developing
 %% it's extremely convenient to get the crash messages in the browser,

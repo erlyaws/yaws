@@ -9,7 +9,7 @@ f(Fmt, Args) ->
 
 out(ARG) ->
     [
-     {html, 
+     {html,
       "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">
      <html>
       <head>
@@ -22,21 +22,21 @@ out(ARG) ->
       "},
      {ehtml,
       [
-          {body,[], 
+          {body,[],
            [
             {h4,[], "ARG information"},
-            {table,[], 
+            {table,[],
              [
-              {thead,[], 
+              {thead,[],
                [
-                {tr,[], 
+                {tr,[],
                  [
                   {th,[],"record field"},{th,[],"value"}
                  ]}
                ]},
-              {tbody,[], 
+              {tbody,[],
                [
-                {tr,[], 
+                {tr,[],
                  [ {td,[],"clisock"},
                    {td,[],f("~p",[ARG#arg.clisock])} ]},
                 {tr,[], [ {td,[],"client_ip_port"},
@@ -55,26 +55,26 @@ out(ARG) ->
                           {td,[],f("~p",[ARG#arg.appmoddata])} ]},
                 {tr,[], [ {td,[],"docroot"},
                           {td,[],f("~p",[ARG#arg.docroot])} ]},
-                {tr,[], [ {td,[],"docroot_mount"},                
+                {tr,[], [ {td,[],"docroot_mount"},
                           {td,[],f("~p",[ARG#arg.docroot_mount])} ]},
-                {tr,[], [ {td,[],"fullpath"},                        
+                {tr,[], [ {td,[],"fullpath"},
                           {td,[],f("~p",[ARG#arg.fullpath])} ]},
-                {tr,[], [ {td,[],"cont"},                                
+                {tr,[], [ {td,[],"cont"},
                           {td,[],f("~p",[ARG#arg.cont])} ]},
-                {tr,[], [ {td,[],"state"},                                
+                {tr,[], [ {td,[],"state"},
                           {td,[],f("~p",[ARG#arg.state])} ]},
-                {tr,[], [ {td,[],"pid"},                                
+                {tr,[], [ {td,[],"pid"},
                           {td,[],f("~p",[ARG#arg.pid])} ]},
-                {tr,[], [ {td,[],"opaque"},                                
+                {tr,[], [ {td,[],"opaque"},
                           {td,[],yaws_api:htmlize(f("~p",[ARG#arg.opaque]))} ]},
-                {tr,[], [ {td,[],"appmod_prepath (deprecated)"},          
+                {tr,[], [ {td,[],"appmod_prepath (deprecated)"},
                           {td,[],f("~p",[ARG#arg.appmod_prepath])} ]},
-                {tr,[], [ {td,[],"prepath"},                      
+                {tr,[], [ {td,[],"prepath"},
                           {td,[],f("~p",[ARG#arg.prepath])} ]},
-                {tr,[], [ {td,[],"pathinfo"},                   
+                {tr,[], [ {td,[],"pathinfo"},
                           {td,[],f("~p",[ARG#arg.pathinfo])} ]}
                ]}
-             ]},        
+             ]},
             {h4,[], "headers"},
             {pre,[], f("~p",[yaws_api:reformat_header(ARG#arg.headers)])},
             {hr,[],[]},

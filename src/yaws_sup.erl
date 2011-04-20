@@ -1,7 +1,7 @@
 %%%----------------------------------------------------------------------
 %%% File    : yaws_sup.erl
 %%% Author  : Claes Wikstrom <klacke@bluetail.com>
-%%% Purpose : 
+%%% Purpose :
 %%% Created : 16 Jan 2002 by Claes Wikstrom <klacke@bluetail.com>
 %%%----------------------------------------------------------------------
 
@@ -36,9 +36,9 @@ init([]) ->
 
     ChildSpecs = child_specs(),
 
-    %% The idea behind this is if we're running in an embedded env, 
+    %% The idea behind this is if we're running in an embedded env,
     %% typically the supervisor above us wants to control the restarts.
-    %% 
+    %%
     %% If we're running standalone --heart can restart the entire node
     %% If heart is not used, we die.
     %% 0, 1 means that we never want supervisor restarts
@@ -122,8 +122,8 @@ get_app_args() ->
                  Id0
          end,
 
-    #env{debug = Debug, trace = Trace, 
-         traceoutput = TraceOutput, conf = Conf, 
+    #env{debug = Debug, trace = Trace,
+         traceoutput = TraceOutput, conf = Conf,
          runmod = RunMod, embedded = Embedded, id = Id}.
 
 %%----------------------------------------------------------------------

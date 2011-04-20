@@ -21,8 +21,8 @@ format_wiki_files(Page, FileDir, Files, Root) ->
 
 format_wiki_files(Page, FileDir, Files, Root, Heading) ->
     LinkFun = fun(I) -> format_link(I, FileDir, Page, Root, show) end,
-    ("<hr><b><p>" ++ Heading ++ "</b><br>\n" 
-     "<table cellspacing=10 width = \"100%\">\n" 
+    ("<hr><b><p>" ++ Heading ++ "</b><br>\n"
+     "<table cellspacing=10 width = \"100%\">\n"
      ++ lists:map(LinkFun, lists:keysort(2,Files)) ++
      "</table></p>\n").
 
@@ -59,7 +59,7 @@ format_link({file, FileName, Description, _}, FileDir, Page, Root,_) ->
     ["<tr><td valign=top align=left><a href=\"",
      wiki:str2urlencoded(FileDir),
      "/", wiki:str2urlencoded(FileName),"\" title='",Size,"'>",
-     FileName, 
+     FileName,
      "</a></td><td align=left valign=top>",
      Description, "</td></tr>\n"].
 
@@ -92,7 +92,7 @@ get_filesize(File) ->
             io_lib:format("~.1fKB",[Size]);
         _ -> "unknown"
     end.
-    
+
 
 i2s(X) ->
     integer_to_list(X).
@@ -101,9 +101,9 @@ pp({wik,L}, F, Node, Root) ->
     map(fun(I) -> pp(I, F, Node, Root) end, L);
 pp({txt,_,Str}, F, Node, Root) ->
     wiki_format_txt:format(Str, F, Node);
-pp({open,Tag,Str}, F, Node, Root) -> 
+pp({open,Tag,Str}, F, Node, Root) ->
     open("#CCFFCC",Tag,F,pp({txt,9999,Str}, F, Node, Root));
-pp({write_append,Tag,Str}, F, Node, Root) -> 
+pp({write_append,Tag,Str}, F, Node, Root) ->
     open("#99FFFF",Tag,F,pp({txt,8888,Str}, F, Node, Root));
 pp(Other, F, Node, Root) ->
     wiki:show({cannot,format,Other}, Root).

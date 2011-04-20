@@ -3,16 +3,16 @@
 %% compliance with the License. You should have received a copy of the
 %% Erlang Public License along with this software. If not, it can be
 %% retrieved via the world wide web at http://www.erlang.org/.
-%% 
+%%
 %% Software distributed under the License is distributed on an "AS IS"
 %% basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
 %% the License for the specific language governing rights and limitations
 %% under the License.
-%% 
+%%
 %% The Initial Developer of the Original Code is Ericsson Utvecklings AB.
 %% Portions created by Ericsson are Copyright 1999, Ericsson Utvecklings
 %% AB. All Rights Reserved.''
-%% 
+%%
 %%     $Id$
 %%
 -module(all).
@@ -24,12 +24,12 @@
 -define(NORMAL, 0).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%         Interface 
+%%%         Interface
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%---------------------------------------------------------------------------
 %% run() -> _
-%%        
+%%
 %% Runs all benchmark modules in the current directory on all erlang
 %% installations specified by releases/0
 %%---------------------------------------------------------------------------
@@ -44,24 +44,24 @@ run() ->
 
 %%---------------------------------------------------------------------------
 %% run(Release) -> _
-%%        Release = string() - Erlang release         
+%%        Release = string() - Erlang release
 %% Help functions to run/0
 %%---------------------------------------------------------------------------
-run(Release) -> 
+run(Release) ->
     command(Release ++ " -noshell -compile bench -s erlang halt"),
     command(Release ++ " -noshell -s bench run -s erlang halt").
 %%---------------------------------------------------------------------------
 %% command(Command) -> _
-%%        Command = string() - is the name and arguments of the external 
+%%        Command = string() - is the name and arguments of the external
 %%                           program which will be run
 %%---------------------------------------------------------------------------
 command(Command) ->
     io:format("~s\n", [Command]),  % Progress info to user
-    Port = open_port({spawn,Command}, [exit_status, in]), 
+    Port = open_port({spawn,Command}, [exit_status, in]),
     print_output(Port).
 %%---------------------------------------------------------------------------
 %% print_output(Port) -> _
-%%        Port = port()        
+%%        Port = port()
 %% Print data from the port i.e. output from external program,
 %% on standard out.
 %%---------------------------------------------------------------------------
@@ -76,7 +76,7 @@ print_output(Port) ->
 %%---------------------------------------------------------------------------
 %% run() -> Releases
 %%        Releases = [Release |_]
-%%      Release = string() - Erlang release  
+%%      Release = string() - Erlang release
 %% Defines which erlang releases to run on
 %%  --- Change this function to reflect your own erlang installations ---
 %%---------------------------------------------------------------------------

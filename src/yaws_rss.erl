@@ -46,18 +46,18 @@ start() ->
     gen_server:start({local, ?SERVER}, ?MODULE, [], []).
 
 %%%
-%%% @spec open(App::atom()) -> 
+%%% @spec open(App::atom()) ->
 %%%         {ok, DB::db()} | {error, string()}
 %%%
 %%% @type db(). An opaque handle leading to an RSS database.
 %%%
-%%% @doc See {@link open/2} 
+%%% @doc See {@link open/2}
 %%% @end
 open(App) ->
     open(App, []).
 
 %%%
-%%% @spec open(App::atom(), Opts::list()) -> 
+%%% @spec open(App::atom(), Opts::list()) ->
 %%%         {ok, DB::db()} | {error, string()}
 %%%
 %%% @doc Open a RSS database.
@@ -82,13 +82,13 @@ open(App) ->
 %%%      <dt>{db_dir, Dir}</dt>
 %%%      <dd>Specifies the directory where the database will be created.
 %%%      Default is: /tmp</dd>
-%%%      
+%%%
 %%%      <dt>{expire, Expire}</dt>
 %%%      <dd>Specifies what method to use to expire items. Possible values
 %%%      are: <em>false</em>, <em>days</em>, meaning
-%%%      never expire, expire after a number of days. 
+%%%      never expire, expire after a number of days.
 %%%      Default is to never expire items.</dd>
-%%%      
+%%%
 %%%      <dt>{days, Number}</dt>
 %%%      <dd>Specifies the number of days befor an item is expired.
 %%%      Default is 7 days.</dd>
@@ -120,7 +120,7 @@ close() ->
     gen_server:call(?SERVER, {close, ?DB}, infinity).
 
 %%%
-%%% @spec close(DbMod::atom(), DbName::atom()) -> 
+%%% @spec close(DbMod::atom(), DbName::atom()) ->
 %%%          ok | {error, string()}
 %%%
 %%% @doc Close the user provided RSS database.
@@ -130,7 +130,7 @@ close(DBmod, DBname) ->
     gen_server:call(?SERVER, {close, DBmod, DBname}, infinity).
 
 %%%
-%%% @spec insert(App::atom(), Tag::atom(), Title::string(), 
+%%% @spec insert(App::atom(), Tag::atom(), Title::string(),
 %%%              Link::string(), Desc::string()) ->
 %%%          ok | {error, string()}
 %%%
@@ -138,7 +138,7 @@ close(DBmod, DBname) ->
 %%%      An application (App) can maintain several feeds each
 %%%      one refered to with a symbolic name (Tag).
 %%%      <em>Link</em> should be a URL pointing to the item.
-%%%      <p>In case another database backend is used, the 
+%%%      <p>In case another database backend is used, the
 %%%      <em>Tag</em> has the format: <em>{DbModule, OpaqueTag}</em>
 %%%      where <em>DbModule</em> is the database backend module
 %%%      to be called, and <em>OpaqueTag</em> the Tag that is
@@ -149,7 +149,7 @@ insert(App, Tag, Title, Link, Desc) ->
     insert(App, Tag, Title, Link, Desc, "").
 
 %%%
-%%% @spec insert(App::atom(), Tag::atom(), Title::string(), 
+%%% @spec insert(App::atom(), Tag::atom(), Title::string(),
 %%%              Link::string(), Desc::string(),
 %%%              Creator::string()) ->
 %%%          ok | {error, string()}
@@ -163,7 +163,7 @@ insert(App, Tag, Title, Link, Desc, Creator) ->
     insert(App, Tag, Title, Link, Desc, Creator, GregSecs).
 
 %%%
-%%% @spec insert(App::atom(), Tag::atom(), Title::string(), 
+%%% @spec insert(App::atom(), Tag::atom(), Title::string(),
 %%%              Link::string(), Desc::string(),
 %%%              Creator::string(), GregSecs::integer()) ->
 %%%          ok | {error, string()}
@@ -184,8 +184,8 @@ insert(App, Tag, Title, Link, Desc, Creator, GregSecs) ->
 %%% @type ioList().  A deep list of strings and/or binaries.
 %%%
 %%% @doc Retrieve the <em>RSScontent</em> (in XML and all...)
-%%%      to be delivered to a RSS client. 
-%%%      <p>In case another database backend is used, the 
+%%%      to be delivered to a RSS client.
+%%%      <p>In case another database backend is used, the
 %%%      <em>Tag</em> has the format: <em>{DbModule, OpaqueTag}</em>
 %%%      where <em>DbModule</em> is the database backend module
 %%%      to be called, and <em>OpaqueTag</em> the Tag that is
@@ -276,33 +276,33 @@ code_change(_OldVsn, Data, _Extra) ->
 %%% Internal functions
 %%%----------------------------------------------------------------------
 
-%%% 
+%%%
 %%% Check what database store that should be used.
 %%% Per default 'dets' is used.
 %%%
-do_open_dir(State, App, Opts) -> 
+do_open_dir(State, App, Opts) ->
     case get_db_mod(Opts, dets) of
-        dets -> 
+        dets ->
             File = get_db_file(Opts),
-            Expire = get_expire(Opts, #s.expire), 
-            Max = get_max(Opts, #s.max), 
-            Days = get_days(Opts, #s.days), 
-            RmExp = get_rm_exp(Opts, #s.rm_exp), 
+            Expire = get_expire(Opts, #s.expire),
+            Max = get_max(Opts, #s.max),
+            Days = get_days(Opts, #s.days),
+            RmExp = get_rm_exp(Opts, #s.rm_exp),
             case dets:is_dets_file(File) of
-                false -> 
+                false ->
                     {State, {error, "not a proper dets file"}};
                 _     ->
                     case catch dets:open_file(?DB, [{file, File}]) of
-                        {ok,DB} = Res   -> 
+                        {ok,DB} = Res   ->
                             {State#s{
                                open_apps = u_insert(App, State#s.open_apps),
-                               expire = Expire, 
+                               expire = Expire,
                                days = Days,
                                rm_exp = RmExp,
                                max = Max,
-                               counter = init_counter(DB)}, 
+                               counter = init_counter(DB)},
                              Res};
-                        {error, _Reason} -> 
+                        {error, _Reason} ->
                             {State, {error, "open dets file"}}
                     end
             end;
@@ -328,9 +328,9 @@ do_insert(State, {App, {DbMod,Tag}, Title, Link, Desc, Creator, GregSecs}) ->
 do_insert(State, {App, Tag, Title, Link, Desc, Creator, GregSecs}) ->
     case lists:member(App, State#s.open_apps) of
         true ->
-            Counter = if (State#s.max > 0) -> 
+            Counter = if (State#s.max > 0) ->
                               (State#s.counter + 1) rem State#s.max;
-                         true -> 
+                         true ->
                               State#s.counter + 1
                       end,
             Item = {Title, Link, Desc, Creator, GregSecs},
@@ -347,9 +347,9 @@ do_retrieve(State, App, {DbMod,Tag}) ->
 do_retrieve(State, App, Tag) ->
     case lists:member(App, State#s.open_apps) of
         true ->
-            F = fun(?ITEM(Xa, Xt, _Counter, Item), Acc) when Xa == App, Xt == Tag -> 
+            F = fun(?ITEM(Xa, Xt, _Counter, Item), Acc) when Xa == App, Xt == Tag ->
                         [Item|Acc];
-                   (_, Acc) -> 
+                   (_, Acc) ->
                         Acc
                 end,
             Items = sort_items(expired(State, dets:foldl(F, [], ?DB))),
@@ -398,9 +398,9 @@ to_xml([{Title, Link, Desc, Creator, GregSecs}|Tail]) ->
       "<description>", yaws_api:htmlize(Desc), "</description>\n",
       "<dc:creator>", Creator, "</dc:creator>\n",
       "<dc:date>", Date, "</dc:date>\n",
-      "</item>\n"] | 
+      "</item>\n"] |
      to_xml(Tail)];
-to_xml([]) -> 
+to_xml([]) ->
     [].
 
 %%%
@@ -411,7 +411,7 @@ w3cdtf(GregSecs) ->    Date = calendar:gregorian_seconds_to_datetime(GregSecs),
                        {{Y, Mo, D},{H, Mi, S}} = Date,
                        [UDate|_] = calendar:local_time_to_universal_time_dst(Date),
                        {DiffD,{DiffH,DiffMi,_}}=calendar:time_difference(UDate,Date),
-                       w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi). 
+                       w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi).
 
 %%%  w3cdtf's helper function
 w3cdtf_diff(Y, Mo, D, H, Mi, S, _DiffD, DiffH, DiffMi) when DiffH < 12,  DiffH /= 0 ->
@@ -435,7 +435,7 @@ w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi) when DiffH > 12,  DiffD /=
     i2l(Y) ++ "-" ++ add_zero(Mo) ++ "-" ++ add_zero(D) ++ "T" ++
         add_zero(H) ++ ":" ++ add_zero(Mi) ++ ":"  ++
         add_zero(S) ++ "-" ++ add_zero(24-DiffH) ++
-        ":" ++ add_zero(DiffMi); 
+        ":" ++ add_zero(DiffMi);
 
 w3cdtf_diff(Y, Mo, D, H, Mi, S, _DiffD, DiffH, _DiffMi) when DiffH == 0 ->
     i2l(Y) ++ "-" ++ add_zero(Mo) ++ "-" ++ add_zero(D) ++ "T" ++
@@ -444,7 +444,7 @@ w3cdtf_diff(Y, Mo, D, H, Mi, S, _DiffD, DiffH, _DiffMi) when DiffH == 0 ->
 
 add_zero(I) when is_integer(I) -> add_zero(i2l(I));
 add_zero([A])               -> [$0,A];
-add_zero(L) when is_list(L)    -> L. 
+add_zero(L) when is_list(L)    -> L.
 
 
 
@@ -452,7 +452,7 @@ get_db_mod(Opts, Def)  -> lkup(db_mod, Opts, Def).
 get_db_dir(Opts, Def)  -> lkup(db_dir, Opts, Def).
 get_expire(Opts, Def)  -> lkup(expire, Opts, Def).
 get_max(Opts, Def)     -> lkup(max, Opts, Def).
-get_days(Opts, Def)    -> lkup(days, Opts, Def). 
+get_days(Opts, Def)    -> lkup(days, Opts, Def).
 get_rm_exp(Opts, Def ) -> lkup(rm_exp, Opts, Def).
 
 lkup(Key, List, Def) ->
@@ -505,7 +505,7 @@ t_exp() ->
            63269561882).  % 6/12-2004
 
 t_xopen() ->
-    open([{db_file, "yaws_rss.dets"}, 
+    open([{db_file, "yaws_rss.dets"},
           {expire,days},
           {days, 20}]).
 

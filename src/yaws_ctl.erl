@@ -1,7 +1,7 @@
 %%%----------------------------------------------------------------------
 %%% File    : yaws_ctl.erl
 %%% Author  : Claes Wikstrom <klacke@bluetail.com>
-%%% Purpose : 
+%%% Purpose :
 %%% Created : 29 Apr 2002 by Claes Wikstrom <klacke@bluetail.com>
 %%%----------------------------------------------------------------------
 
@@ -23,7 +23,7 @@
 -export([run/1, aloop/3, handle_a/3]).
 
 
-%% assumes the appropriate file structures 
+%% assumes the appropriate file structures
 %% are already created with the right perms
 
 start(_GC, FirstTime) when FirstTime == false ->
@@ -37,11 +37,11 @@ run(GC) ->
     %% with the same sid.
     case connect(GC#gconf.id) of
         {ok, Sock, _Key} ->
-            %% Not good, 
+            %% Not good,
             gen_tcp:close(Sock),
             e("There is already a yaws system running with the same ~n"
               " id <~p> on this computer and this user, ~n"
-              " set another id in the yaws conf file ~n", 
+              " set another id in the yaws conf file ~n",
               [GC#gconf.id]);
         {error, eacces} ->
             %% We're not allowed to open the ctl file
@@ -59,7 +59,7 @@ rand() ->
             random:seed(A1, A2, A3),
             random:uniform(1 bsl 64);
         _ ->
-            try 
+            try
                 crypto:start(),
                 crypto:rand_uniform(0, 1 bsl 64)
             catch
@@ -204,8 +204,8 @@ actl_trace(What) ->
                     yaws_api:setconf(GC#gconf{trace = {true, What}},SCs),
                     io_lib:format(
                       "Turning on trace of ~p to file ~s~n",
-                      [What, 
-                       filename:join([GC#gconf.logdir, 
+                      [What,
+                       filename:join([GC#gconf.logdir,
                                       "trace." ++ atom_to_list(What)])]);
                 false when What == off ->
                     io_lib:format("Tracing is already turned off ~n",[]);
@@ -219,8 +219,8 @@ actl_trace(What) ->
                     yaws_api:setconf(GC#gconf{trace = {true, What}},SCs),
                     io_lib:format(
                       "Turning on trace of ~p to file ~s~n",
-                      [What, 
-                       filename:join([GC#gconf.logdir, 
+                      [What,
+                       filename:join([GC#gconf.logdir,
                                       "trace." ++ atom_to_list(What)])])
             end;
         false ->
@@ -241,7 +241,7 @@ a_id(Sock) ->
 a_status(Sock) ->
     gen_tcp:send(Sock, a_status()).
 a_status() ->
-    try 
+    try
         {UpTime, L} = yaws_server:stats(),
         {Days, {Hours, Minutes, _Secs}} = UpTime,
         H = f("~n Uptime: ~w Days, ~w Hours, ~w Minutes  ~n",
@@ -304,7 +304,7 @@ a_running_config() ->
                              Group)
                           ]
                   end, Groups),
-    ["** GLOBAL CONF ** \n", GcStr, L]. 
+    ["** GLOBAL CONF ** \n", GcStr, L].
 
 a_stats(Sock) ->
     gen_tcp:send(Sock, a_stats()).
@@ -365,7 +365,7 @@ loadm([M|Ms]) ->
     [code:load_file(M)|loadm(Ms)].
 
 purge(Ms) ->
-    case purge(Ms, []) of 
+    case purge(Ms, []) of
         [] -> ok;
         L -> {cannot_purge, L}
     end.
@@ -437,7 +437,7 @@ actl(SID, Term) ->
             gen_tcp:send(Socket, term_to_binary({Term, Key})),
             Ret = s_cmd(Socket, SID, 0),
             timer:sleep(40), %% sucks bigtime, we have no good way to flush io
-            case Ret of 
+            case Ret of
                 ok when Term == stop ->
                     %% wait for Yaws node to truly stop.
                     case gen_tcp:recv(Socket, 0) of
@@ -525,7 +525,7 @@ hup([SID]) ->
 
 
 %% stop a daemon
-stop([SID]) ->        
+stop([SID]) ->
     actl(SID, stop).
 
 %% query a daemon for status/stats
@@ -538,7 +538,7 @@ load(X) ->
 
 check([Id, File| IncludeDirs]) ->
     GC = yaws_config:make_default_gconf(false, undefined),
-    GC2 = GC#gconf{include_dir = lists:map(fun(X) -> atom_to_list(X) end, 
+    GC2 = GC#gconf{include_dir = lists:map(fun(X) -> atom_to_list(X) end,
                                            IncludeDirs),
                    id = atom_to_list(Id)
                   },
@@ -566,4 +566,4 @@ stats([SID]) ->
     actl(SID, stats).
 running_config([SID]) ->
     actl(SID, running_config).
- 
+

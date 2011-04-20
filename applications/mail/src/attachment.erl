@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : attachment.erl
 %%% Author  :  <klacke@hyber.org>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created :  4 Feb 2004 by  <klacke@hyber.org>
 %%%-------------------------------------------------------------------
@@ -28,8 +28,8 @@ err() ->
     [{status, 404},
      {header, {connection, "close"}}].
 
-     
-     
-     
+
+
+
 
 

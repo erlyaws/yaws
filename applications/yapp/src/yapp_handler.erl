@@ -2,13 +2,13 @@
 %%% File    : yapp_handler.erl
 %%% @author Mikael Karlsson <mikael@creado.se>
 %%% @since 1 Jun 2006 by Mikael Karlsson <mikael@creado.se>
-%%% @see yapp 
+%%% @see yapp
 %%% @see yapp_registry
 %%% @see yapp_server
-%%% @doc Yaws applications handler. 
+%%% @doc Yaws applications handler.
 %%% <p>An easy way to deploy Yaws applications (Yapps) independently of
-%%% each other. A Yapp is an Erlang application already installed, by for 
-%%% instance erlmerge. 
+%%% each other. A Yapp is an Erlang application already installed, by for
+%%% instance erlmerge.
 %%% </p>
 %%% <p>
 %%% To register a Yapp on the virtual server uses the command (example):</p> <code>
@@ -44,14 +44,14 @@ list(YappServer, YawsServerId) ->
     gen_server:call(YappServer,{?MODULE, list, YawsServerId}).
 
 %% @spec add(YappServer::pid(), SrvId::string(), YappUrl::string(), AppName::atom()) -> ok | exit()
-%% @doc Add a Yapp. Adds in the virtual server with the opaque property 
-%% yapp_server_id = SrvID. The YappUrl is the root path to the Yapp and the AppName is 
+%% @doc Add a Yapp. Adds in the virtual server with the opaque property
+%% yapp_server_id = SrvID. The YappUrl is the root path to the Yapp and the AppName is
 %% the Name of the application.
 add(YappServer, SrvId, YappUrl, AppName) ->
     gen_server:call(YappServer,{?MODULE, add, {SrvId, YappUrl, AppName}}).
-    
+
 %% @spec add(YappServer::pid(), SrvId::string(),  AppName::atom()) -> ok | exit()
-%% @doc Add a Yapp. Adds in the virtual server with the opaque property 
+%% @doc Add a Yapp. Adds in the virtual server with the opaque property
 %% yapp_server_id = SrvID. The root URL will become  "/" ++ atom_to_list(AppName)
 %% the Name of the application.
 add(YappServer, SrvId, AppName) ->
@@ -60,7 +60,7 @@ add(YappServer, SrvId, AppName) ->
 
 %% @spec remove(YappServer::pid(), SrvId::string(), YappUrlOrName::string()) -> ok | exit()
 %%   YappUrlOrName = string() | atom()
-%% @doc Remove a Yapp from Yaws. Removes in the virtual server with yapp_server_id = SrvID. 
+%% @doc Remove a Yapp from Yaws. Removes in the virtual server with yapp_server_id = SrvID.
 %% The YappUrlOrName is either the root path to the Yapp or the name of it.
 remove(YappServer, SrvId, YappUrlOrName) when is_list(YappUrlOrName)->
     gen_server:call(YappServer,{?MODULE, remove, {SrvId, YappUrlOrName}});
