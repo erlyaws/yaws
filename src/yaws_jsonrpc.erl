@@ -208,12 +208,12 @@ encode_handler_payload({response, [ErlStruct]},ID) ->
     encode_handler_payload({response, ErlStruct}, ID);
 
 encode_handler_payload({response, ErlStruct},ID) ->
-    StructStr = json:encode({struct, [ {result, ErlStruct}, {id, ID}]}),
+    StructStr = json2:encode({struct, [{result, ErlStruct}, {id, ID}]}),
     {ok, StructStr}.
 
 decode_handler_payload(JSonStr) ->
     try
-        {ok, JSON} = json:decode_string(JSonStr),
+        {ok, JSON} = json2:decode_string(JSonStr),
         Method = list_to_atom(jsonrpc:s(JSON, method)),
         {array, Args} = jsonrpc:s(JSON, params),
         ID = jsonrpc:s(JSON, id),

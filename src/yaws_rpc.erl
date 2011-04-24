@@ -289,7 +289,7 @@ encode_handler_payload({error, [ErlStruct]}, ID, RpcType) ->
 encode_handler_payload({error, ErlStruct}, ID, RpcType) ->
     StructStr =
         case RpcType of
-            json -> json:encode({struct, [ {result, null}, {id, ID},
+            json -> json2:encode({struct, [{result, null}, {id, ID},
                                            {error, ErlStruct}]});
             haxe -> [$h, $x, $r | haxe:encode({exception, ErlStruct})]
         end,
@@ -302,7 +302,7 @@ encode_handler_payload({response, [ErlStruct]}, ID, RpcType) ->
 encode_handler_payload({response, ErlStruct}, ID, RpcType) ->
     StructStr =
         case RpcType of
-            json -> json:encode({struct, [ {result, ErlStruct}, {id, ID},
+            json -> json2:encode({struct, [{result, ErlStruct}, {id, ID},
                                            {error, null}]});
             haxe -> [$h, $x, $r | haxe:encode(ErlStruct)]
         end,
@@ -311,7 +311,7 @@ encode_handler_payload({response, ErlStruct}, ID, RpcType) ->
 
 decode_handler_payload(json, JSonStr) ->
     try
-        {ok, Obj} = json:decode_string(JSonStr),
+        {ok, Obj} = json2:decode_string(JSonStr),
         Method = list_to_atom(jsonrpc:s(Obj, method)),
         {array, Args} = jsonrpc:s(Obj, params),
         ID = jsonrpc:s(Obj, id),

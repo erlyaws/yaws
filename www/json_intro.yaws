@@ -208,7 +208,7 @@ dispatch(\"ex1\", A, L) ->
     ex1(A, L).
 
 ex1(_A, L) ->
-    J = json:encode(array(what(lkup(\"what\", L, false)))),
+    J = json2:encode(array(what(lkup(\"what\", L, false)))),
     return_json(J).
 
 what(\"one\")   -> one();
@@ -255,7 +255,7 @@ lkup(Key, List, Def) ->
 ") ,
      {h2, [], "The json library"},
      {p, [], "The Yaws JSON library contains 3 simple functions, "
-     " One to encode and two for decoding. See source code json.erl "
+     " One to encode and two for decoding. See source code json2.erl "
      " for detailed instructions on usage "}
 
 

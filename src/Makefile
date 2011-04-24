@@ -41,7 +41,7 @@ MODULES=yaws \
 	yaws_rss \
 	yaws_dav \
 	yaws_pam \
-	json jsonrpc yaws_jsonrpc yaws_xmlrpc\
+	json json2 jsonrpc yaws_jsonrpc yaws_xmlrpc\
 	haxe yaws_rpc \
 	yaws_soap_srv yaws_soap_lib \
 	authmod_gssapi \

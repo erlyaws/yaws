@@ -75,9 +75,9 @@ encode_call_payload({call, Method, Args}) when is_atom(Method) and
                                                 %replies can come in random
                                                 %order here it can be changed
                                                 %to something less expensive
-    Struct =  json:encode({struct, [{method, atom_to_list(Method)},
-                                    {params, {array, Args}},
-                                    {id, ID}]}),
+    Struct =  json2:encode({struct, [{method, atom_to_list(Method)},
+                                     {params, {array, Args}},
+                                     {id, ID}]}),
     {ok, Struct}.
 
 %%%
@@ -85,7 +85,7 @@ encode_call_payload({call, Method, Args}) when is_atom(Method) and
 %%%
 %%% {"id":requestID,"result":object,"error":error_description}
 decode_call_payload(JSonStr) ->
-    {ok, JSON} = json:decode_string(JSonStr),
+    {ok, JSON} = json2:decode_string(JSonStr),
     Result = s(JSON, result),
     Error = s(JSON, error),
 %    ID = s(JSON, id),    % ignored for now

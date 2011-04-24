@@ -1,6 +1,6 @@
 include ../support/include.mk
 
-.PHONY: all test newconf small_datafile t1 t2 t3 t4 t5 t6 t7
+.PHONY: all test newconf small_datafile t1 t2 t3 t4 t5 t6 t7 json
 
 all:	conf setup
 	@echo "all ok"
@@ -10,7 +10,7 @@ all:	conf setup
 
 test:
 	set -e ; \
-	for t in t1 t2 t3 t4 t5 t6 t7; do \
+	for t in t1 t2 t3 t4 t5 t6 t7 json; do \
 	    $(MAKE) $$t ; \
 	done
 
@@ -75,6 +75,10 @@ t7: newconf
 	  grep //` ; \
 	$(MAKE) stop ; \
 	[ "$$loc" = "" ] && exit 0 || exit 1
+
+json:
+	$(ERL) -noinput $(PA) -eval \
+	    'case json2:test() of ok -> halt(0); _ -> halt(1) end'
 
 conf:	stdconf
 

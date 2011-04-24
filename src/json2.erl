@@ -1,23 +1,4 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED
-%%% WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED
-%%%
-%%% Use module json2.erl instead
-%%%
-%%% This module is deprecated. It uses list_to_atom and so could potentially
-%%% fill the atom table. It also fails to pass its own internal tests due to
-%%% changes made years ago outside the context of Yaws.
-%%%
-%%% Do not report problems with this module, as they will not be fixed. You
-%%% should instead convert your code to use the json2 module.
-%%%
-%%% WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED
-%%% WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%(%% Copyright (c) 2005-2006, A2Z Development USA, Inc.  All Rights Reserved.
+%%% Copyright (c) 2005-2006, A2Z Development USA, Inc.  All Rights Reserved.
 %%%
 %%% The contents of this file are subject to the Erlang Public License,
 %%% Version 1.1, (the "License"); you may not use this file except in
@@ -33,15 +14,15 @@
 %%% The Initial Developer of the Original Code is A2Z Development USA, Inc.
 %%% All Rights Reserved.
 
--module(json).
--deprecated(module).
+-module(json2).
 -export([encode/1, decode_string/1, decode/2]).
 -export([is_obj/1, obj_new/0, obj_fetch/2, obj_find/2, obj_is_key/2]).
 -export([obj_store/3, obj_from_list/1, obj_fold/3]).
 -export([test/0]).
 -author("Jim Larson <jalarson@amazon.com>, Robert Wai-Chi Chu <robchu@amazon.com>").
 -author("Gaspar Chilingarov <nm@web.am>, Gurgen Tumanyan <barbarian@armkb.com>").
--vsn("2").
+-author("Steve Vinoski <vinoski@ieee.org>").
+-vsn("3").
 
 %%% JavaScript Object Notation ("JSON", http://www.json.org) is a simple
 %%% data syntax meant as a lightweight alternative to other representations,
@@ -55,21 +36,11 @@
 %%%	number			number
 %%%	string			string
 %%%	array			{array, ElementList}
-%%%	object			tagged proplist with string (or atom) keys (i.e. {struct, PropList} )
+%%%	object			tagged proplist with string keys (i.e. {struct, PropList} )
 %%%	true, false, null	atoms 'true', 'false', and 'null'
 %%%
 %%% Character Sets: the external representation, and the internal
-%%% representation of strings, are lists of UTF-16 code units.
-%%% The encoding of supplementary characters, as well as
-%%% transcoding to other schemes, such as UTF-8, can be provided
-%%% by other modules.  (See discussion at
-%%% http://groups.yahoo.com/group/json/message/52)
-%%%
-%%%######################################################################
-%%% UPD by Gaspar: for this moment utf-8 encoding inplemented by default
-%%%                if incoming character list have symbols with codes
-%%%                > 255
-%%%######################################################################
+%%% representation of strings, are lists of UTF-8 code units.
 %%%
 %%% Numbers: Thanks to Erlang's bignums, JSON-encoded integers of any
 %%% size can be parsed.  Conversely, extremely large integers may
@@ -88,13 +59,7 @@
 %%%
 %%% Arrays: Because of the string decision above, and Erlang's
 %%% lack of a distinguished string datatype, JSON arrays map
-%%% to Erlang tuples.  Consider utilities like tuple_fold/3
-%%% to deal with tuples in their native form.
-%%%######################################################################
-%%% UPD by Gaspar: array changed to {array, ArrayElementList}
-%%%                ArrayElementList -> list
-%%%                to provide compatibility to xmlrpc module
-%%%######################################################################
+%%% to {array, ArrayElementList}, where ArrayElementList -> list.
 %%%
 %%% Objects: Though not explicitly stated in the JSON "spec",
 %%% JSON's JavaScript heritage mandates that member names must
@@ -103,17 +68,11 @@
 %%% allowable value.  Object keys may be atoms or strings on
 %%% encoding but are always decoded as strings.
 %%%
-%%%######################################################################
-%%% UPD by Gaspar: struct changed to {array, PropList}
-%%%                object keys always decoded to atoms to
-%%%                provide full compatility with xmlrpc module
-%%%######################################################################
-%%%
 
 %%% ENCODING
 
 %% Encode an erlang number, string, tuple, or object to JSON syntax, as a
-%% possibly deep list of UTF-16 code units, throwing a runtime error in the
+%% possibly deep list of UTF-8 code units, throwing a runtime error in the
 %% case of un-convertible input.
 %% Note: object keys may be either strings or atoms.
 
@@ -247,10 +206,6 @@ token([C | Cs] = Input) ->
 	$] -> {done, {ok, rsbrace}, Cs};
 	$: -> {done, {ok, colon}, Cs};
 	$, -> {done, {ok, comma}, Cs};
-	$/ -> case scan_comment(Cs) of
-	    {more, X} -> {more, X};
-	    {done, _, Chars} -> token(Chars)
-	end;
         _ -> {done, {error, {bad_char, C}}, Cs}
     end.
 
@@ -347,27 +302,6 @@ scan_exponent([D | Ds], Es, R, X) when D >= $0, D =< $9 ->
 scan_exponent(Rest, Es, R, _X) ->
     X = R * math:pow(10, list_to_integer(lists:reverse(Es))),
     {done, {ok, X}, Rest}.
-
-scan_comment([]) -> {more, "/"};
-scan_comment(eof) -> {done, eof, []};
-scan_comment([$/ | Rest]) -> scan_cpp_comment(Rest);
-scan_comment([$* | Rest]) -> scan_c_comment(Rest).
-
-%% Ignore up to next CR or LF.  If the line ends in CRLF,
-%% the LF will be treated as separate whitespace, which is
-%% okay since it will also be ignored.
-
-scan_cpp_comment([]) -> {more, "//"};
-scan_cpp_comment(eof) -> {done, eof, []};
-scan_cpp_comment([$\r | Rest]) -> {done, [], Rest};
-scan_cpp_comment([$\n | Rest]) -> {done, [], Rest};
-scan_cpp_comment([_ | Rest]) -> scan_cpp_comment(Rest).
-
-scan_c_comment([]) -> {more, "/*"};
-scan_c_comment(eof) -> {done, eof, []};
-scan_c_comment([$*]) -> {more, "/**"};
-scan_c_comment([$*, $/ | Rest]) -> {done, [], Rest};
-scan_c_comment([_ | Rest]) -> scan_c_comment(Rest).
 
 %%% PARSING
 %%%
@@ -572,8 +506,7 @@ obj_is_key(Key, {struct, Props}) ->
 
 %% Store a new member in an object.  Returns a new object.
 
-obj_store(KeyList, Value, {struct, Props}) when is_list(Props) ->
-	Key = list_to_atom(KeyList),
+obj_store(Key, Value, {struct, Props}) when is_list(Props) ->
     {struct, [{Key, Value} | proplists:delete(Key, Props)]}.
 
 %% Create an object from a list of Key/Value pairs.
@@ -594,7 +527,8 @@ obj_fold(Fun, Acc, {struct, Props}) ->
 is_string([]) -> yes;
 is_string(List) -> is_string(List, non_unicode).
 
-is_string([C|Rest], non_unicode) when C >= 0, C =< 255 -> is_string(Rest, non_unicode);
+is_string([C|Rest], non_unicode) when C >= 0, C =< 255 ->
+    is_string(Rest, non_unicode);
 is_string([C|Rest], _) when C =< 65000 -> is_string(Rest, unicode);
 is_string([], non_unicode) -> yes;
 is_string([], unicode) -> unicode;
@@ -614,22 +548,28 @@ is_string(_, _) -> no.
 
 test() ->
     E2Js = e2j_test_vec(),
-    Failures = lists:foldl(fun({E, J}, Fs) ->
-	case (catch test_e2j(E, J)) of
-	    ok ->
-                case (catch round_trip(E)) of
-                    ok ->
-                        case (catch round_trip_one_char(E)) of
-                            ok -> Fs;
-                            Reason -> [{round_trip_one_char, E, Reason} | Fs]
-                        end;
-                    Reason ->
-                        [{round_trip, E, Reason} | Fs]
-                end;
-	    Reason ->
-                [{erlang_to_json, E, J, Reason} | Fs]
-	end;
-    (end_of_tests, Fs) -> Fs end, [], E2Js),
+    Failures =
+        lists:foldl(
+          fun({E, J}, Fs) ->
+                  case (catch test_e2j(E, J)) of
+                      ok ->
+                          case (catch round_trip(E)) of
+                              ok ->
+                                  case (catch round_trip_one_char(E)) of
+                                      ok ->
+                                          Fs;
+                                      Reason ->
+                                          [{round_trip_one_char, E, Reason} | Fs]
+                                  end;
+                              Reason ->
+                                  [{round_trip, E, Reason} | Fs]
+                          end;
+                      Reason ->
+                          [{erlang_to_json, E, J, Reason} | Fs]
+                  end;
+             (end_of_tests, Fs) ->
+                  Fs
+          end, [], E2Js),
     case Failures of
 	[] -> ok;
 	_ -> {failed, Failures}
@@ -670,14 +610,24 @@ round_trip_one_char(E) ->
 %% Test for equivalence of Erlang terms.
 %% Due to arbitrary order of construction, equivalent objects might
 %% compare unequal as erlang terms, so we need to carefully recurse
-%% through aggregates (tuples and objects).
+%% through aggregates (arrays and objects).
 
 equiv({struct, Props1}, {struct, Props2}) ->
     equiv_object(Props1, Props2);
-equiv(T1, T2) when is_tuple(T1), is_tuple(T2) ->
-    equiv_tuple(T1, T2);
+equiv({array, ArrayList1}, {array, ArrayList2}) ->
+    equiv_array(ArrayList1, ArrayList2);
 equiv(N1, N2) when is_number(N1), is_number(N2)	-> N1 == N2;
-equiv(S1, S2) when is_list(S1), is_list(S2)	-> S1 == S2;
+equiv(S1, S2) when is_list(S1), is_list(S2) ->
+    case {is_string(S1), is_string(S2)} of
+        {unicode, unicode} ->
+            xmerl_ucs:to_utf8(S1) == xmerl_ucs:to_utf8(S2);
+        {unicode, _} ->
+            xmerl_ucs:to_utf8(S1) == S2;
+        {_, unicode} ->
+            S1 == xmerl_ucs:to_utf8(S2);
+	_ ->
+            S1 == S2
+    end;
 equiv(true, true) -> true;
 equiv(false, false) -> true;
 equiv(null, null) -> true.
@@ -693,15 +643,14 @@ equiv_object(Props1, Props2) ->
 	equiv(K1, K2) and equiv(V1, V2)
     end, Pairs).
 
-%% Recursively compare tuple elements for equivalence.
+%% Recursively compare array elements for equivalence.
 
-equiv_tuple({}, {}) ->
+equiv_array([], []) ->
     true;
-equiv_tuple(T1, T2) when size(T1) == size(T2) ->
-    S = size(T1),
-    lists:all(fun(I) ->
-	equiv(element(I, T1), element(I, T2))
-    end, lists:seq(1, S)).
+equiv_array(A1, A2) when length(A1) == length(A2) ->
+    lists:all(fun({E1,E2}) ->
+                      equiv(E1, E2)
+              end, lists:zip(A1, A2)).
 
 e2j_test_vec() -> [
     {1, "1"},
@@ -712,7 +661,7 @@ e2j_test_vec() -> [
     {1.234E+10, "1.23400e+10"},
     {-1.234E-10, "-1.23400e-10"},
     {"foo", "\"foo\""},
-    {"foo" ++ [500] ++ "bar", [$", $f, $o, $o, 500, $b, $a, $r, $"]},
+    {"foo" ++ [500] ++ "bar", [$", $f, $o, $o, $\307, $\264, $b, $a, $r, $"]},
     {"foo" ++ [5] ++ "bar", "\"foo\\u0005bar\""},
     {"", "\"\""},
     {[], "\"\""},
@@ -721,12 +670,12 @@ e2j_test_vec() -> [
     {obj_from_list([{"foo", "bar"}]), "{\"foo\":\"bar\"}"},
     {obj_from_list([{"foo", "bar"}, {"baz", 123}]),
      "{\"foo\":\"bar\",\"baz\":123}"},
-    {{}, "[]"},
-    {{{}}, "[[]]"},
-    {{1, "foo"}, "[1,\"foo\"]"},
+    {{array, []}, "[]"},
+    {{array, [{array, []}]}, "[[]]"},
+    {{array, [1, "foo"]}, "[1,\"foo\"]"},
 
     % json array in a json object
-    {obj_from_list([{"foo", {123}}]),
+    {obj_from_list([{"foo", {array, [123]}}]),
      "{\"foo\":[123]}"},
 
     % json object in a json object
@@ -734,13 +683,13 @@ e2j_test_vec() -> [
      "{\"foo\":{\"bar\":true}}"},
 
     % fold evaluation order
-    {obj_from_list([{"foo", {}},
+    {obj_from_list([{"foo", {array, []}},
                      {"bar", obj_from_list([{"baz", true}])},
                      {"alice", "bob"}]),
      "{\"foo\":[],\"bar\":{\"baz\":true},\"alice\":\"bob\"}"},
 
     % json object in a json array
-    {{-123, "foo", obj_from_list([{"bar", {}}]), null},
+    {{array, [-123, "foo", obj_from_list([{"bar", {array, []}}]), null]},
      "[-123,\"foo\",{\"bar\":[]},null]"},
 
     end_of_tests
@@ -750,8 +699,6 @@ e2j_test_vec() -> [
 %%%
 %%% Measure the overhead of the CPS-based parser by writing a conventional
 %%% scanner-parser that expects all input to be available.
-%%%
-%%% JSON has dropped comments - disable their parsing.
 %%%
 %%% Allow a compile-time option to decode object member names as atoms,
 %%% to reduce the internal representation overheads when communicating
