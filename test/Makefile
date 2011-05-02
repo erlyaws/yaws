@@ -2,8 +2,7 @@ include support/include.mk
 
 SUBDIRS = t1 t2 eunit
 
-all:	conf fetch_ibrowse
-	@cd ibrowse; $(MAKE)
+all:	conf ibrowse
 	@cd src; $(MAKE) all
 	@set -e ; \
           for d in $(SUBDIRS) ; do \
@@ -29,6 +28,9 @@ test:
               ( cd $$d && $(MAKE) all start test ) || exit 1 ; \
             fi ; \
           done
+
+ibrowse: fetch_ibrowse
+	@cd ibrowse; $(MAKE)
 
 IBROWSE_URI = https://github.com/cmullaparthi/ibrowse.git
 IBROWSE_DOWNLOAD_URI = https://github.com/cmullaparthi/ibrowse/tarball/master

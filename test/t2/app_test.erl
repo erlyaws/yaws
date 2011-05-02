@@ -20,6 +20,7 @@ start() ->
     appmod_test(),
     streamcontent_test(),
     sendfile_get(),
+    json_test(),
     ibrowse:stop().
 
 
@@ -265,6 +266,226 @@ streamcontent_test() ->
     timer:sleep(10000),
     gen_tcp:close(Sock),
     ok.
+
+json_test() ->
+    io:format("json_test\n",[]),
+    io:format("  param array1\n", []),
+    ?line ok = do_json({struct, [{"jsonrpc", "2.0"},
+                                 {"method", "subtract"},
+                                 {"params", {array, [42, 23]}},
+                                 {"id", 1}]},
+                       {struct, [{"jsonrpc", "2.0"},
+                                 {"result", 19},
+                                 {"id", 1}]}),
+    io:format("  param array2\n", []),
+    ?line ok = do_json({struct, [{"jsonrpc", "2.0"},
+                                 {"method", "subtract"},
+                                 {"params", {array, [23, 42]}},
+                                 {"id", 2}]},
+                       {struct, [{"jsonrpc", "2.0"},
+                                 {"result", -19},
+                                 {"id", 2}]}),
+    io:format("  param obj1\n", []),
+    ?line ok = do_json({struct, [{"jsonrpc", "2.0"},
+                                 {"method", "subtract"},
+                                 {"params", {struct, [{"subtrahend", 23},
+                                                      {"minuend", 42}]}},
+                                 {"id", 3}]},
+                       {struct, [{"jsonrpc", "2.0"},
+                                 {"result", 19},
+                                 {"id", 3}]}),
+    io:format("  param obj2\n", []),
+    ?line ok = do_json({struct, [{"jsonrpc", "2.0"},
+                                 {"method", "subtract"},
+                                 {"params", {struct, [{"minuend", 42},
+                                                      {"subtrahend", 23}]}},
+                                 {"id", 4}]},
+                       {struct, [{"jsonrpc", "2.0"},
+                                 {"result", 19},
+                                 {"id", 4}]}),
+    io:format("  notif1\n", []),
+    ?line ok = do_json({struct, [{"jsonrpc", "2.0"},
+                                 {"method", "update"},
+                                 {"params", {array, [1,2,3,4,5]}}]},
+                       notification),
+    io:format("  notif2\n", []),
+    ?line ok = do_json({struct, [{"jsonrpc", "2.0"},
+                                 {"method", "foobar"}]},
+                       notification),
+    io:format("  missing method\n", []),
+    ?line ok = do_json({struct, [{"jsonrpc", "2.0"},
+                                 {"method", "foobar"},
+                                 {"id", "1"}]},
+                       {struct, [{"jsonrpc", "2.0"},
+                                 {"id", "1"},
+                                 {"error", {struct,
+                                            [{"code", -32601},
+                                             {"message", "method not found"}]}
+                                  }]}),
+    io:format("  invalid json\n", []),
+    InvalidJson = "{\"jsonrpc\": \"2.0\", \"method\": \"foobar,"
+        "\"params\": \"bar\", \"baz]",
+    ?line ok = do_json(InvalidJson,
+                       {struct, [{"jsonrpc", "2.0"},
+                                 {"id", null},
+                                 {"error", {struct,
+                                            [{"code", -32700},
+                                             {"message", "parse error"}]}
+                                  }]},
+                       no_encode),
+    io:format("  invalid req1\n", []),
+    InvalidReq1 = "{\"jsonrpc\": \"2.0\", \"method\": 1, \"params\": \"bar\"}",
+    ?line ok = do_json(InvalidReq1,
+                       {struct, [{"jsonrpc", "2.0"},
+                                 {"id", null},
+                                 {"error", {struct,
+                                            [{"code", -32600},
+                                             {"message", "invalid request"}]}
+                                  }]},
+                       no_encode),
+    io:format("  invalid params\n", []),
+    InvalidReq2 = "{\"jsonrpc\": \"2.0\", \"method\": \"x\","
+        "\"params\": \"bar\"}",
+    ?line ok = do_json(InvalidReq2,
+                       {struct, [{"jsonrpc", "2.0"},
+                                 {"id", null},
+                                 {"error", {struct,
+                                            [{"code", -32602},
+                                             {"message", "invalid params"}]}
+                                  }]},
+                       no_encode),
+    io:format("  invalid batch json\n", []),
+    InvalidJsonBatch = "[ {\"jsonrpc\": \"2.0\", \"method\": \"sum\","
+        "\"params\": [1,2,4],\"id\": \"1\"},{\"jsonrpc\": \"2.0\", \"method\" ]",
+    ?line ok = do_json(InvalidJsonBatch,
+                       {struct, [{"jsonrpc", "2.0"},
+                                 {"id", null},
+                                 {"error", {struct,
+                                            [{"code", -32700},
+                                             {"message", "parse error"}]}
+                                  }]},
+                       no_encode),
+    io:format("  empty batch\n", []),
+    EmptyBatch = "[]",
+    ?line ok = do_json(EmptyBatch,
+                       {struct, [{"jsonrpc", "2.0"},
+                                 {"id", null},
+                                 {"error", {struct,
+                                            [{"code", -32600},
+                                             {"message", "invalid request"}]}
+                                  }]},
+                       no_encode),
+    io:format("  invalid batch1\n", []),
+    BogusBatch1 = "[1]",
+    ?line ok = do_json(BogusBatch1,
+                       {array,
+                        [{struct, [{"jsonrpc", "2.0"},
+                                   {"id", null},
+                                   {"error", {struct,
+                                              [{"code", -32600},
+                                               {"message", "invalid request"}]}
+                                   }]}]},
+                       no_encode),
+    io:format("  invalid batch2\n", []),
+    BogusBatch2 = "[1,2,3]",
+    ?line ok = do_json(BogusBatch2,
+                       {array,
+                        [{struct, [{"jsonrpc", "2.0"},
+                                   {"id", null},
+                                   {"error", {struct,
+                                              [{"code", -32600},
+                                               {"message", "invalid request"}]}
+                                   }]},
+                         {struct, [{"jsonrpc", "2.0"},
+                                   {"id", null},
+                                   {"error", {struct,
+                                              [{"code", -32600},
+                                               {"message", "invalid request"}]}
+                                   }]},
+                         {struct, [{"jsonrpc", "2.0"},
+                                   {"id", null},
+                                   {"error", {struct,
+                                              [{"code", -32600},
+                                               {"message", "invalid request"}]}
+                                   }]}]},
+                       no_encode),
+    io:format("  mixed batch\n", []),
+    MixedBatch = "
+    [{\"jsonrpc\":\"2.0\",\"method\":\"sum\",\"params\": [1,2,4], \"id\": \"1\"},
+     {\"jsonrpc\":\"2.0\",\"method\":\"notify_hello\", \"params\": [7]},
+     {\"jsonrpc\":\"2.0\",\"method\":\"subtract\",\"params\":[42,23],
+      \"id\":\"2\"},
+     {\"foo\": \"boo\"},
+     {\"jsonrpc\":\"2.0\",\"method\":\"foo.get\",
+      \"params\":{\"name\": \"myself\"}, \"id\": \"5\"},
+     {\"jsonrpc\": \"2.0\", \"method\": \"get_data\", \"id\": \"9\"}]",
+    ?line ok = do_json(MixedBatch,
+                       {array,
+                        [{struct,[{"jsonrpc","2.0"},
+                                  {"result",7},
+                                  {"id","1"}]},
+                         {struct,[{"jsonrpc","2.0"},
+                                  {"result",19},{"id","2"}]},
+                         {struct,[{"jsonrpc","2.0"},
+                                  {"error",
+                                   {struct,[{"code",-32600},
+                                            {"message","invalid request"}]}},
+                                  {"id",null}]},
+                         {struct,[{"jsonrpc","2.0"},
+                                  {"error",
+                                   {struct,[{"code",-32601},
+                                            {"message","method not found"}]}},
+                                  {"id","5"}]},
+                         {struct,[{"jsonrpc","2.0"},
+                                  {"result",{array,["hello",5]}},
+                                  {"id","9"}]}]},
+                       no_encode),
+    io:format("  all-notification batch\n", []),
+    NotifBatch = "[
+        {\"jsonrpc\": \"2.0\", \"method\": \"notify_sum\", \"params\": [1,2,4]},
+        {\"jsonrpc\": \"2.0\", \"method\": \"notify_hello\", \"params\": [7]}]",
+    ?line ok = do_json(NotifBatch, notification, no_encode),
+    ok.
+
+do_json(Req, Expected) ->
+    do_json(Req, Expected, encode).
+do_json(Req, notification, NeedEncode) ->
+    ?line {ok, "200", Headers, Body} = json_send(Req, NeedEncode),
+    ?line "application/json" = proplists:get_value("Content-Type", Headers),
+    ?line [] = Body,
+    ok;
+do_json(Req, {struct, _}=Expected, NeedEncode) ->
+    ?line {ok, "200", Headers, Body} = json_send(Req, NeedEncode),
+    ?line "application/json" = proplists:get_value("Content-Type", Headers),
+    check_json(Expected, Body, true);
+do_json(Req, {array, Array}, NeedEncode) ->
+    ?line {ok, "200", Headers, Body} = json_send(Req, NeedEncode),
+    ?line "application/json" = proplists:get_value("Content-Type", Headers),
+    ?line {ok, {array, GotArray}} = json2:decode_string(Body),
+    lists:map(fun({Obj, Got}) ->
+                      ?line ok = check_json(Obj, Got, false)
+              end, lists:zip(Array, GotArray)),
+    ok.
+
+check_json({struct, _}=Exp, Body, true) ->
+    ?line {ok, DecodedBody} = json2:decode_string(Body),
+    check_json(Exp, DecodedBody);
+check_json({struct, _}=Exp, Body, false) ->
+    check_json(Exp, Body).
+check_json({struct, Members}, DecodedBody) ->
+    lists:foreach(fun({Key, Val}) ->
+                          ?line Val = jsonrpc:s(DecodedBody, Key)
+                  end, Members),
+    ok.
+
+json_send(Req) ->
+    json_send(Req, encode).
+json_send(Req, encode) ->
+    json_send(json2:encode(Req), no_encode);
+json_send(Req, no_encode) ->
+    Uri = "http://localhost:8005/jsontest",
+    ReqHdrs = [{content_type, "application/json"}],
+    ibrowse:send_req(Uri, ReqHdrs, post, Req).
 
 recv_hdrs(Sock) ->
     recv_hdrs(Sock, 0).

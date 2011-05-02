@@ -1,3 +1,18 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED
+%%% WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED
+%%%
+%%% Use module yaws_rpc.erl instead
+%%%
+%%% This module is deprecated.
+%%%
+%%% Do not report problems with this module, as they will not be fixed. You
+%%% should instead convert your code to use the yaws_rpc module.
+%%%
+%%% WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED
+%%% WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Copyright (C) 2003 Joakim Grebenö <jocke@gleipnir.com>.
 %% All rights reserved.
 %%

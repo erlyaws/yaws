@@ -38,6 +38,7 @@
 -module(yaws_rpc).
 -author("Gaspar Chilingarov <nm@web.am>, Gurgen Tumanyan <barbarian@armkb.com>").
 -modified_by("Yariv Sadan <yarivvv@gmail.com>").
+-modified_by("Steve Vinoski <vinoski@ieee.org>").
 
 -export([handler/2]).
 -export([handler_session/2, handler_session/3]).
@@ -102,35 +103,96 @@ parse_request(Args) ->
         {'POST', {1,1}} ->
             ?Debug("HTTP Version 1.1~n", []),
             ok;
-        {'POST', _HTTPVersion} -> {status, 505};
-        {_Method, {1,1}} -> {status, 501};
-        _ -> {status, 400}
+        {'POST', _HTTPVersion} ->
+            {status, 505};
+        {_Method, {1,1}} ->
+            {status, 501};
+        _ ->
+            {status, 400}
     end.
 
-handle_payload(Args, Handler, Type) -> % {{{
+handle_payload(Args, Handler, Type) ->
     RpcType = recognize_rpc_type(Args),
     %% haXe parameters are URL encoded
+    PL = binary_to_list(Args#arg.clidata),
     {Payload,DecodedStr} =
 	case RpcType of
 	    T when T==haxe; T==json ->
-		PL = binary_to_list(Args#arg.clidata),
-                ?Debug("rpc plaintext call ~p ~n", [PL]),
+                ?Debug("rpc ~p call ~p~n", [T, PL]),
 		{PL, yaws_api:url_decode(PL)};
 	    _ ->
-		PL = binary_to_list(Args#arg.clidata),
-                ?Debug("rpc plaintext call ~p ~n", [PL]),
+                ?Debug("rpc plaintext call ~p~n", [PL]),
                 {PL, PL}
 	end,
     case decode_handler_payload(RpcType, DecodedStr) of
+        Batch when RpcType == json, is_list(Batch) ->
+            BatchRes =
+                lists:foldl(fun(Req, Acc) ->
+                                    Result = check_decoded_payload(Args, Handler,
+                                                                   Req, Payload,
+                                                                   Type, json),
+                                    case Result of
+                                        empty ->
+                                            Acc;
+                                        {result, _Code, Send} ->
+                                            [Send|Acc];
+                                        {send, S} ->
+                                            %% TODO: it would be better if
+                                            %% Result was never of the
+                                            %% {send, ...} variety because
+                                            %% it requires us to take the
+                                            %% content out via searching.
+                                            case lists:keysearch(content,1,S) of
+                                                {value, {content, _, Send}} ->
+                                                    [Send|Acc];
+                                                _ ->
+                                                    Acc
+                                            end
+                                    end
+                            end, [], Batch),
+            case BatchRes of
+                [] ->
+                    %% all notifications, no replies
+                    send(Args, 200, json);
+                _ ->
+                    send(Args, 200,
+                         "["++yaws:join_sep(lists:reverse(BatchRes),",")++"]",
+                         [], json)
+            end;
+        NonBatch ->
+            Result = check_decoded_payload(Args, Handler, NonBatch,
+                                           Payload, Type, RpcType),
+            case Result of
+                {send, Send} ->
+                    Send;
+                empty ->
+                    send(Args, 200, RpcType);
+                {result, Code, Send} ->
+                    send(Args, Code, Send, [], RpcType)
+            end
+    end.
+
+check_decoded_payload(Args, Handler, DecodedResult, Payload, Type, RpcType) ->
+    case DecodedResult of
         {ok, DecodedPayload, ID} ->
-            ?Debug("client2erl decoded call ~p ~n", [DecodedPayload]),
+            ?Debug("client2erl decoded call ~p~n", [DecodedPayload]),
             eval_payload(Args, Handler, DecodedPayload, Type, ID, RpcType);
         {error, Reason} ->
             ?ERROR_LOG({html, client2erl, Payload, Reason}),
-            send(Args, 400, RpcType)
+            case RpcType of
+                json ->
+                    case Reason of
+                        {ErrCode, _ErrString} ->
+                            {result, 200, json_error(ErrCode)};
+                        ErrCode ->
+                            {result, 200, json_error(ErrCode)}
+                    end;
+                _ ->
+                    {send, send(Args, 400, RpcType)}
+            end
     end.
 
-%%% Identify the RPC type. We first try recognize haXe by the
+%%% Identify the RPC type. We first try to recognize haXe by the
 %%% "X-Haxe-Remoting" HTTP header, then the "SOAPAction" header,
 %%% and if those are absent we assume the request is JSON.
 recognize_rpc_type(Args) ->
@@ -142,7 +204,6 @@ recognize_rpc_hdr([{_,_,"x-haxe-remoting",_,_}|_]) -> haxe;
 recognize_rpc_hdr([{_,_,"soapaction",_,_}|_])      -> soap;
 recognize_rpc_hdr([_|T])                           -> recognize_rpc_hdr(T);
 recognize_rpc_hdr([])                              -> json.
-
 
 %%%
 %%% call handler/3 and provide session support
@@ -162,33 +223,41 @@ eval_payload(Args, {M, F}, Payload, {session, CookieName}, ID, RpcType) ->
         end,
     CbackFun = callback_fun(M, F, Args, Payload, SessionValue, RpcType),
     case catch CbackFun() of
+        {'EXIT', {function_clause, _}} when RpcType == json ->
+            case ID of
+                undefined ->
+                    %% empty HTTP reply for notification
+                    empty;
+                _ ->
+                    {result, 200, json_error(-32601, ID)}
+            end;
         {'EXIT', Reason} ->
             ?ERROR_LOG({M, F, {'EXIT', Reason}}),
-            send(Args, 500, RpcType);
+            {send, send(Args, 500, RpcType)};
         {error, Reason} ->
             ?ERROR_LOG({M, F, Reason}),
-            send(Args, 500, RpcType);
+            {send, send(Args, 500, RpcType)};
         {error, Reason, Rc} ->
             ?ERROR_LOG({M, F, Reason}),
-            send(Args, Rc, Reason, [], RpcType);
+            {send, send(Args, Rc, Reason, [], RpcType)};
         {false, ResponsePayload} ->
             %% do not have updates in session data
-            encode_send(Args, 200, ResponsePayload, [], ID, RpcType);
+            {send, encode_send(Args, 200, ResponsePayload, [], ID, RpcType)};
         {false, ResponsePayload, RespCode} ->
             %% do not have updates in session data
-            encode_send(Args, RespCode, ResponsePayload, [], ID, RpcType);
-        false ->   % soap notify
-            false;
+            {send, encode_send(Args,RespCode,ResponsePayload,[],ID,RpcType)};
+        false ->   % soap or json-rpc notify
+            empty;
         {true, _NewTimeout, NewSessionValue, ResponsePayload} ->
             %% be compatible with xmlrpc module
             CO = handle_cookie(Cookie, CookieName, SessionValue,
                                NewSessionValue, M, F),
-            encode_send(Args, 200, ResponsePayload, CO, ID, RpcType);
+            {send, encode_send(Args, 200, ResponsePayload, CO, ID, RpcType)};
         {true, _NewTimeout, NewSessionValue, ResponsePayload, RespCode} ->
             %% be compatible with xmlrpc module
             CO = handle_cookie(Cookie, CookieName, SessionValue,
                                NewSessionValue, M, F),
-            encode_send(Args, RespCode, ResponsePayload, CO, ID, RpcType)
+            {send, encode_send(Args, RespCode, ResponsePayload, CO, ID, RpcType)}
     end;
 
 %%%
@@ -198,16 +267,16 @@ eval_payload(Args, {M, F}, Payload, simple, ID, RpcType) ->
     case catch M:F(Args#arg.state, Payload) of
         {'EXIT', Reason} ->
             ?ERROR_LOG({M, F, {'EXIT', Reason}}),
-            send(Args, 500);
+            {send, send(Args, 500)};
         {error, Reason} ->
             ?ERROR_LOG({M, F, Reason}),
-            send(Args, 500);
+            {send, send(Args, 500)};
         {false, ResponsePayload} ->
-            encode_send(Args, 200, ResponsePayload, [], ID, RpcType);
-        false -> % Soap notify !?
-            false;
+            {send, encode_send(Args, 200, ResponsePayload, [], ID, RpcType)};
+        false -> % Soap notify
+            {send, send(Args, 200, RpcType)};
         {true, _NewTimeout, _NewState, ResponsePayload} ->
-            encode_send(Args, 200, ResponsePayload, [], ID, RpcType)
+            {send, encode_send(Args, 200, ResponsePayload, [], ID, RpcType)}
     end.
 
 handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue, M, F) ->
@@ -243,85 +312,71 @@ get_expire(M, F) ->
         _                        -> false
     end.
 
-callback_fun(M, F, Args, Payload, SessionValue, RpcType) when RpcType==soap ->
+callback_fun(M, F, Args, Payload, SessionValue, soap) ->
     fun() -> yaws_soap_srv:handler(Args, {M,F}, Payload, SessionValue) end;
 callback_fun(M, F, Args, Payload, SessionValue, _RpcType) ->
     fun() -> M:F(Args#arg.state, Payload, SessionValue) end.
-
 
 %%% XXX compatibility with XMLRPC handlers
 %%% XXX - potential bug here?
 encode_send(Args, StatusCode, [Payload], AddOn, ID, RpcType) ->
     encode_send(Args, StatusCode, Payload, AddOn, ID, RpcType);
 
-encode_send(_Args, _StatusCode, Payload, _AddOn, ID, RpcType) ->
+encode_send(Args, StatusCode, Payload, _AddOn, ID, RpcType) ->
     ?Debug("rpc response ~p ~n", [Payload]),
     EncodedPayload = encode_handler_payload(Payload, ID, RpcType),
     ?Debug("rpc encoded response ~p ~n", [EncodedPayload]),
-    EncodedPayload.
+    send(Args, StatusCode, EncodedPayload, [], RpcType).
 
-send(Args, StatusCode) -> send(Args, StatusCode, json).
+send(Args, StatusCode) ->
+    send(Args, StatusCode, json).
 
-send(Args, StatusCode, RpcType) -> send(Args, StatusCode, "", [], RpcType).
+send(Args, StatusCode, RpcType) ->
+    send(Args, StatusCode, "", [], RpcType).
 
 send(_Args, StatusCode, Payload, AddOnData, RpcType) ->
-    A = [
-    {status, StatusCode},
-    content_hdr(RpcType, Payload),
-    {header, {content_length, lists:flatlength(Payload) }}
-    ] ++ AddOnData,
-    A.
+    [{status, StatusCode},
+     content_hdr(RpcType, Payload),
+     {header, {content_length, lists:flatlength(Payload)}}] ++ AddOnData.
 
 content_hdr(json, Payload) -> {content, "application/json", Payload};
-content_hdr(_, Payload)    -> {content, "text/xml", Payload}.
+content_hdr(_, Payload)    -> {content, "application/xml", Payload}.
 %% FIXME  would like to add charset info here !!
 
 encode_handler_payload({Xml,[]}, _ID, soap) ->
     Xml;
-
 encode_handler_payload(Xml, _ID, soap) ->
     Xml;
-
 encode_handler_payload({error, [ErlStruct]}, ID, RpcType) ->
     encode_handler_payload({error, ErlStruct}, ID, RpcType);
-
-
 encode_handler_payload({error, ErlStruct}, ID, RpcType) ->
     StructStr =
         case RpcType of
-            json -> json2:encode({struct, [{result, null}, {id, ID},
-                                           {error, ErlStruct}]});
+            json -> json2:encode({struct, [{id, ID}, {error, ErlStruct},
+                                           {"jsonrpc", "2.0"}]});
             haxe -> [$h, $x, $r | haxe:encode({exception, ErlStruct})]
         end,
     StructStr;
-
 encode_handler_payload({response, [ErlStruct]}, ID, RpcType) ->
     encode_handler_payload({response, ErlStruct}, ID, RpcType);
-
-
 encode_handler_payload({response, ErlStruct}, ID, RpcType) ->
     StructStr =
         case RpcType of
             json -> json2:encode({struct, [{result, ErlStruct}, {id, ID},
-                                           {error, null}]});
+                                           {"jsonrpc", "2.0"}]});
             haxe -> [$h, $x, $r | haxe:encode(ErlStruct)]
         end,
     StructStr.
 
-
 decode_handler_payload(json, JSonStr) ->
     try
         {ok, Obj} = json2:decode_string(JSonStr),
-        Method = list_to_atom(jsonrpc:s(Obj, method)),
-        {array, Args} = jsonrpc:s(Obj, params),
-        ID = jsonrpc:s(Obj, id),
-        {ok, {call, Method, Args}, ID}
+        decode_handler_payload_json(Obj)
     catch
         error:Err ->
-            ?ERROR_LOG({ json_decode , JSonStr , Err }),
-            {error, Err}
+            ?ERROR_LOG({json_decode, JSonStr, Err}),
+            {error, {-32700, Err}}
     end;
-
 decode_handler_payload(haxe, [$_, $_, $x, $= | HaxeStr]) ->
     try
         {done, {ok, {array, [MethodName | _]}}, Cont} = haxe:decode(HaxeStr),
@@ -338,5 +393,66 @@ decode_handler_payload(haxe, _HaxeStr) ->
 decode_handler_payload(soap, Payload) ->
     {ok, Payload, undefined}.
 
+decode_handler_payload_json({struct, _}=Obj) ->
+    case jsonrpc:s(Obj, method) of
+        undefined ->
+            {error, -32600};
+        Method0 when is_list(Method0) ->
+            Method = case jsonrpc:s(Obj, jsonrpc) of
+                         "2.0" ->
+                             try
+                                 list_to_existing_atom(Method0)
+                             catch
+                                 error:badarg ->
+                                     Method0
+                             end;
+                         undefined ->
+                             list_to_atom(Method0)
+                     end,
+            Args = jsonrpc:s(Obj, params),
+            ArgsOk = case Args of
+                         {struct, _} -> true;
+                         {array, _} -> true;
+                         undefined -> true;
+                         _ -> false
+                     end,
+            case ArgsOk of
+                true ->
+                    ID = jsonrpc:s(Obj, id),
+                    CallOrNotify = case ID of
+                                       undefined ->
+                                           notification;
+                                       _ ->
+                                           call
+                                   end,
+                    {ok, {CallOrNotify, Method, Args}, ID};
+                false ->
+                    {error, -32602}
+            end;
+        _ ->
+            {error, -32600}
+    end;
+decode_handler_payload_json({array, []}) ->
+    {error, -32600};
+decode_handler_payload_json({array, Batch}) ->
+    [decode_handler_payload_json(Obj) || Obj <- Batch];
+decode_handler_payload_json(_) ->
+    {error, -32600}.
 
+json_error(ErrCode) ->
+    json_error(ErrCode, null).
+json_error(ErrCode, Id) ->
+    Err = {struct, [{"jsonrpc", "2.0"},
+                    {"id", Id},
+                    {"error", {struct,
+                               [{"code", ErrCode},
+                                {"message", json_error_message(ErrCode)}]}}]},
+    json2:encode(Err).
 
+json_error_message(-32700) -> "parse error";
+json_error_message(-32600) -> "invalid request";
+json_error_message(-32601) -> "method not found";
+json_error_message(-32602) -> "invalid params";
+json_error_message(-32603) -> "internal error";
+json_error_message(Code) when Code >= -32099, Code =< -32000 -> "server error";
+json_error_message(_) -> "json error".
