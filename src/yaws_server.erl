@@ -1172,7 +1172,8 @@ handle_method_result(Res, CliSock, IP, GS, Req, H, Num) ->
             %% `is_delayed_redirect' flag is used to correctly identify the url
             %% type
             put(is_delayed_redirect, true),
-            put (sc, (get(sc))#sconf{appmods = []}),
+            SC = pick_sconf(GS#gs.gconf, H, GS#gs.group),
+            put(sc, SC#sconf{appmods = []}),
             check_keepalive_maxuses(GS, Num),
             Call = call_method(Req#http_request.method,
                                CliSock,
