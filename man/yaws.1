@@ -53,10 +53,12 @@ debug mode.
 
 .TP
 \fB\--conf file\fR
-Use a different configuration file than the default. The default configuration file
-when running as root is /etc/yaws/yaws.conf. When running as a non priviliged user, yaws
-will search for its configuration file in the following order. First in
-$HOME/yaws.conf, then in ./yaws.conf and finally in /etc/yaws/yaws.conf
+Use a different configuration file than the default. If the configuration
+parameter \fIconfig\fR is set, yaws use it as default configuration file. Else,
+The default configuration file when running as root is /etc/yaws/yaws.conf. When
+running as a non priviliged user, yaws will search for its configuration file in
+the following order. First in $HOME/yaws.conf, then in ./yaws.conf and finally
+in /etc/yaws/yaws.conf.
 .TP
 \fB\--runmod module\fR
 Tells yaws to call \fImodule:start/0\fR at startup. This makes it possible

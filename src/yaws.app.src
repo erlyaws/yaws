@@ -5,6 +5,7 @@
   {registered, []},
   {mod,{yaws_app,[]}},
   {env, [
+         % {config, undefined},           % undefined | filename()
          % {debug, false},                % true | false
          % {trace, false},                % http | traffic | false
          % {traceoutput, false},          % true | false

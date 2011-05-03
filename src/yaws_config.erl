@@ -29,13 +29,18 @@
 
 %% where to look for yaws.conf
 paths() ->
-    case yaws:getuid() of
-        {ok, "0"} ->    %% root
-            [yaws_generated:etcdir() ++ "/yaws/yaws.conf"];
-        _ -> %% developer
-            [filename:join([yaws:home(), "yaws.conf"]),
-             "./yaws.conf",
-             yaws_generated:etcdir() ++ "/yaws/yaws.conf"]
+    case application:get_env(yaws, config) of
+        undefined ->
+            case yaws:getuid() of
+                {ok, "0"} ->    %% root
+                    [yaws_generated:etcdir() ++ "/yaws/yaws.conf"];
+                _ -> %% developer
+                    [filename:join([yaws:home(), "yaws.conf"]),
+                     "./yaws.conf",
+                     yaws_generated:etcdir() ++ "/yaws/yaws.conf"]
+            end;
+        {ok, File} ->
+            [File]
     end.
 
 
