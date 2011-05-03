@@ -865,6 +865,8 @@ ssl_listen_opts(GC, SC, SSL) ->
     [binary,
      {ip, SC#sconf.listen},
      {packet, http},
+     {recbuf, 8192},
+     {reuseaddr, true},
      {active, false} | ssl_listen_opts(GC, SSL)] ++ InetType.
 
 ssl_listen_opts(GC, SSL) ->
