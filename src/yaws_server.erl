@@ -4415,6 +4415,8 @@ compressible_mime_type("application/pdf") ->
     true;
 compressible_mime_type("application/x-dvi") ->
     true;
+compressible_mime_type("application/javascript") ->
+    true;
 compressible_mime_type("application/x-javascript") ->
     true;
 compressible_mime_type(_) ->
