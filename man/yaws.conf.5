@@ -175,9 +175,11 @@ For example, we can specify
 
 .TP
 \fBphp_exe_path = Path\fR
-The name of (and possibly path to) the php executable used to
-interpret php scripts (if allowed).  Default is 
-\fIphp_exe_path = php-cgi\fR.
+\fBthis target is deprecated and useless. use 'php_handler' target in server
+part instead.\fR
+.br
+The name of (and possibly path to) the php executable used to interpret php
+scripts (if allowed).  Default is \fIphp_exe_path = php-cgi\fR.
 
 .TP
 \fBcopy_error_log  = true | false\fR
@@ -613,33 +615,59 @@ directive. This name doesn't necessarily have to be the same as the
 the name inside <server Name> in certain NAT scenarios. Rarely used feature.
 
 .TP
-\fBphpfcgi = Host:Port\fR
+\fBphp_handler = <Type, Spec>\fR
 
-Use the specified fastcgi server to interpret .php files.  This allows
-for faster execution than through the standard CGI interface, because
-the PHP interpreter does not have to be restarted for every
-request. It also makes it possible to use a separate PHP interpreter
-for each <server>, possibly running in different user contexts and
-with different memory and CPU restrictions.
+Set handler to interpret .php files. It can be one of the following definitions:
 
-Yaws does not start the PHP interpreter in fastcgi mode for you. To
-run PHP in fastcgi mode, call it with the -b option. For example:
+\fBphp_handler = <cgi, Filename>\fR - The name of (and possibly path to) the php
+executable used to interpret php scripts (if allowed).
+
+\fBphp_handler = <fcgi, Host:Port>\fR - Use the specified fastcgi server to
+interpret .php files (if allowed).
+
+.RS 12
+Yaws does not start the PHP interpreter in fastcgi mode for you. To run PHP in
+fastcgi mode, call it with the -b option. For example:
 
 \fBphp5-cgi -b '127.0.0.1:54321'\fR
 
-This starts a php5 in fastcgi mode listening on the local network
-interface. To make use of this PHP server from yaws, specify:
+This starts a php5 in fastcgi mode listening on the local network interface. To
+make use of this PHP server from yaws, specify:
 
-\fBphpfcgi = 127.0.0.1:54321\fR
+\fBphp_handler = <fcgi, 127.0.0.1:54321>\fR
 
-The PHP interpreter needs read access to the files it is to
-serve. Thus, if you run it in a different security context than yaws
-itself, make sure it has access to the .php files.
+The PHP interpreter needs read access to the files it is to serve. Thus, if you
+run it in a different security context than yaws itself, make sure it has access
+to the .php files.
 
-Please note that anyone who is able to connect to the php fastcgi
-server directly can use it to read any file to which it has read
-access. You should consider this when setting up a system with several
-mutually untrusted instances of php.
+Please note that anyone who is able to connect to the php fastcgi server
+directly can use it to read any file to which it has read access. You should
+consider this when setting up a system with several mutually untrusted instances
+of php.
+.RE
+.HP
+
+\fBphp_handler = <extern, Module:Function | Node:Module:Function>\fR - Use an
+external handler, possibly on another node, to interpret .php files (if
+allowed).
+
+.RS 12
+To interpret a .php file, the function \fIModule:Function(Arg)\fR will be
+invoked (Evaluated inside a rpc call if a \fINode\fR is specified), where Arg is
+a #arg{} record.
+
+The function must do the same things that a normal out/1 does.
+.RE
+.HP
+
+Default value is <cgi, "/usr/bin/php-cgi">.
+
+.TP
+\fBphpfcgi = Host:Port\fR
+\fBthis target is deprecated. use 'php_handler' target in server part
+instead.\fR
+.br
+Use this directive is same as: php_handler = <fcgi, Host:Port>.
 
 .TP
 \fB<ssl>  .... </ssl>\fR

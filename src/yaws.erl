@@ -297,7 +297,7 @@ setup_sconf(DocRoot, D, SL) ->
            stats = lkup(stats, SL, D#sconf.stats),
            fcgi_app_server = lkup(fcgi_app_server, SL,
                                   D#sconf.fcgi_app_server),
-           phpfcgi = lkup(phpfcgi, SL, D#sconf.phpfcgi)}.
+           php_handler = lkup(php_handler, SL, D#sconf.php_handler)}.
 
 setup_sconf_ssl(SL, DefaultSSL) ->
     case lkup(ssl, SL, undefined) of

@@ -490,6 +490,18 @@ string_to_host_and_port(String) ->
             {error, ?F("bad host and port specifier, expected HOST:PORT", [])}
     end.
 
+string_to_node_mod_fun(String) ->
+    case string:tokens(String, ":") of
+        [Node, Mod, Fun] ->
+            {ok, list_to_atom(Node), list_to_atom(Mod), list_to_atom(Fun)};
+        [Mod, Fun] ->
+            {ok, list_to_atom(Mod), list_to_atom(Fun)};
+        _ ->
+            {error, ?F("bad external module specifier, "
+                       "expected NODE:MODULE:FUNCTION or MODULE:FUNCTION", [])}
+    end.
+
+
 
 %% two states, global, server
 fload(FD, globals, GC, _C, Cs, _Lno, eof) ->
@@ -750,6 +762,9 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
             end;
 
         ["php_exe_path", '=' , PhpPath] ->
+            error_logger:format(
+              "'php_exe_path' is deprecated, use 'php_handler' instead\n",
+              []),
             case is_file(PhpPath) of
                 true ->
                     fload(FD, globals, GC#gconf{phpexe = PhpPath},
@@ -866,7 +881,9 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
             fload(FD, globals, GC#gconf{ysession_mod = Ysession_mod},
                   C, Cs, Lno+1, Next);
         ['<', "server", Server, '>'] ->  %% first server
-            fload(FD, server, GC, #sconf{servername = Server, listen = []},
+            PhpHandler = {cgi, GC#gconf.phpexe},
+            fload(FD, server, GC,
+                  #sconf{servername = Server, php_handler = PhpHandler},
                   Cs, Lno+1, Next);
 
         [H|_] ->
@@ -1194,14 +1211,27 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             end;
 
 	["phpfcgi", '=', HostPortSpec] ->
+            error_logger:format(
+              "'phpfcgi' is deprecated, use 'php_handler' instead\n", []),
 	    case string_to_host_and_port(HostPortSpec) of
 		{ok, Host, Port} ->
-		    C2 = C#sconf{phpfcgi = {Host, Port}},
+                C2 = C#sconf{php_handler = {fcgi, {Host, Port}}},
 		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 {error, Reason} ->
                     {error,
                      ?F("Invalid php fcgi server ~p at line ~w: ~s",
                         [HostPortSpec, Lno, Reason])}
+            end;
+
+        ["php_handler", '=' | PhpMod] ->
+            case parse_phpmod(PhpMod, GC#gconf.phpexe) of
+                {ok, I} ->
+                    C2 = C#sconf{php_handler = I},
+                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                {error, Reason} ->
+                    {error,
+                     ?F("Invalide php_handler configuration at line ~w: ~s",
+                        [Lno, Reason])}
             end;
 
         [H|T] ->
@@ -1683,7 +1713,7 @@ is_string_char([C|T]) ->
             %% FIXME check that [C, hd(T)] really is a char ?? how
             utf8;
         true ->
-            lists:member(C, [$., $/, $:, $_, $-, $+, $~])
+            lists:member(C, [$., $/, $:, $_, $-, $+, $~, $@])
     end.
 
 is_special(C) ->
@@ -1812,6 +1842,33 @@ parse_expires(['<', MimeType, ',' , Expire, '>' | Tail], Ack) ->
     end;
 parse_expires([], Ack)->
     {ok, Ack}.
+
+
+parse_phpmod(['<', "cgi", ',', DefaultPhpPath, '>'], DefaultPhpPath) ->
+    {ok, {cgi, DefaultPhpPath}};
+parse_phpmod(['<', "cgi", ',', PhpPath, '>'], _) ->
+    case is_file(PhpPath) of
+        true ->
+            {ok, {cgi, PhpPath}};
+        false ->
+            {error, ?F("~s is not a regular file", [PhpPath])}
+    end;
+parse_phpmod(['<', "fcgi", ',', HostPortSpec, '>'], _) ->
+    case string_to_host_and_port(HostPortSpec) of
+        {ok, Host, Port} ->
+            {ok, {fcgi, {Host, Port}}};
+        {error, Reason} ->
+            {error, Reason}
+    end;
+parse_phpmod(['<', "extern", ',', NodeModFunSpec, '>'], _) ->
+    case string_to_node_mod_fun(NodeModFunSpec) of
+        {ok, Node, Mod, Fun} ->
+            {ok, {extern, {Node,Mod,Fun}}};
+        {ok, Mod, Fun} ->
+            {ok, {extern, {Mod,Fun}}};
+        {error, Reason} ->
+            {error, Reason}
+    end.
 
 
 ssl_start() ->

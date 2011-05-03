@@ -2227,32 +2227,39 @@ handle_ut(CliSock, ARG, UT = #urltype{type = dav}, N) ->
 handle_ut(CliSock, ARG, UT = #urltype{type = php}, N) ->
     Req = ARG#arg.req,
     H = ARG#arg.headers,
-    GC=get(gc),
     SC=get(sc),
     yaws:outh_set_dyn_headers(Req, H, UT),
     maybe_set_page_options(),
-    Fun = case SC#sconf.phpfcgi of
-	      undefined ->
-		  fun(A)->yaws_cgi:call_cgi(
-			    A,
-			    GC#gconf.phpexe,
-			    flatten(UT#urltype.fullpath))
-		  end;
-	      _Else ->
-                  {PhpFcgiHost, PhpFcgiPort} = SC#sconf.phpfcgi,
-		  fun(A)->yaws_cgi:call_fcgi_responder(
-			    A,
-			    [{app_server_host, PhpFcgiHost},
-			     {app_server_port, PhpFcgiPort}])
-		  end
-	  end,
+    Fun = case SC#sconf.php_handler of
+              {cgi, Exe} ->
+                  fun(A)->
+                          yaws_cgi:call_cgi(
+                            A,Exe,flatten(UT#urltype.fullpath)
+                           )
+                  end;
+              {fcgi, {PhpFcgiHost, PhpFcgiPort}} ->
+                  fun(A)->
+                          yaws_cgi:call_fcgi_responder(
+                            A, [{app_server_host, PhpFcgiHost},
+                                {app_server_port, PhpFcgiPort}]
+                           )
+                  end;
+              {extern, {PhpMod, PhpFun}} ->
+                  fun(A) ->
+                          PhpMod:PhpFun(A)
+                  end;
+              {extern, {PhpNode,PhpMod,PhpFun}} ->
+                  fun(A) ->
+                          %% Mod:Fun must return
+                          rpc:call(PhpNode, PhpMod, PhpFun, [A], infinity)
+                  end
+          end,
     deliver_dyn_part(CliSock,
                      0, "php",
                      N,
                      ARG,UT,
-		     Fun,
-                     fun(A)->finish_up_dyn_file(A, CliSock)
-                     end
+                     Fun,
+                     fun(A)->finish_up_dyn_file(A, CliSock) end
                     ).
 
 done_or_continue() ->

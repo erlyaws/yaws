@@ -1746,7 +1746,7 @@ If you have a Php executable compiled for using CGI in the \verb+PATH+
 of the \Yaws\  server, you can enable Php support by adding \verb+php+ to
 \verb+allowed_scripts+.  Requests for pages ending in \verb+.php+ will
 then result in \Yaws\  executing \verb+php+ (configurable via
-\verb+php_exe_path+) and passing the name of the corresponding file to
+\verb+php_handler+) and passing the name of the corresponding file to
 it via the appropriate environment variable.
 
 These ways of calling CGI scripts are also available to \verb+.yaws+
@@ -2329,17 +2329,57 @@ The following directives are allowed inside a server definition.
               The \verb+Arg+ argument will have the missing path
               part supplied in its \verb+appmoddata+ field.
 
-\item       \verb+php_exe_path = Path+ -
-              The name of (and possibly path to) the php executable
-	      used to interpret php scripts (if allowed).  Default is
-	      \verb+php_exe_path = php+.
+\item       \verb+php_handler+ -
+              Set handler to interpret .php files. It can be one of the
+              following definitions:
+
+              \begin{itemize}
+              \item \verb+php_handler = <cgi, Filename>+ - The name of (and possibly
+                path to) the php executable used to interpret php scripts (if
+                allowed).
+              \item \verb+php_handler = <fcgi, Host:Port>+ - Use the specified
+                fastcgi server to interpret .php files (if allowed).
+
+                Yaws does not start the PHP interpreter in fastcgi mode for
+                you. To run PHP in fastcgi mode, call it with the -b option. For
+                example:
+\begin{verbatim}
+       php5-cgi -b '127.0.0.1:54321'
+\end{verbatim}
+                This starts a php5 in fastcgi mode listening on the local
+                network interface. To make use of this PHP server from yaws,
+                specify:
+\begin{verbatim}
+       php_handler = <fcgi, 127.0.0.1:54321>
+\end{verbatim}
+                The PHP interpreter needs read access to the files it is to
+                serve. Thus, if you run it in a different security context than
+                yaws itself, make sure it has access to the .php files.
+
+                Please note that anyone who is able to connect to the php
+                fastcgi server directly can use it to read any file to which it
+                has read access. You should consider this when setting up a
+                system with several mutually untrusted instances of php.
+
+              \item \verb+php_handler = <extern, Module:Function | Node:Module:Function>+
+                - Use an external handler, possibly on another node, to
+                interpret .php files (if allowed).
+
+                To interpret a .php file, the function
+                \verb+Module:Function(Arg)+ will be invoked (Evaluated inside a
+                rpc call if a \verb+Node+ is specified), where Arg is a \#arg{}
+                record.
+
+                The function must do the same things that a normal out/1 does.
+
+              \end{itemize}
+              Default value is \verb+<cgi, "/usr/bin/php-cgi">+.
 
 \item       \verb+phpfcgi = HostPortSpec+ -
-              The host and port of a PHP FCGI server for interpreting
-              \verb+.php+ files. If specified, it overrides the
-              \verb+php_exe_path+ setting. For all servers where
-              \verb+phpfcgi+ is not specified, the binary specified by
-              \verb+php_exe_path+ is invoked as normal CGI.
+              this target is deprecated. use \verb+php_handler+ target in server
+              part instead.
+
+              Use this directive is same as: \verb+php_handler = <fcgi, HostPortSpec>+.
 
 \item       \verb+fcgi_app_server = HostPortSpec+ -
               The hostname (or IP address) and TCP port of a

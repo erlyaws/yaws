@@ -232,7 +232,7 @@
          extra_cgi_vars = [],
 	 stats,                       %% raw traffic statistics
          fcgi_app_server,             %% FastCGI application server {host,port}
-         phpfcgi                      %% {host, port} of a FastCGI php server
+         php_handler = {cgi, "/usr/bin/php-cgi"}
         }).
 
 %% we cannot compare sconfs directly due to the ets
