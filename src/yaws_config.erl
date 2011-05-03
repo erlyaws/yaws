@@ -1041,6 +1041,14 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                 {error, Str} ->
                     {error, ?F("~s at line ~w", [Str, Lno])}
             end;
+        ["expires", '=' | Expires] ->
+            case parse_expires(Expires, []) of
+                {ok, L} ->
+                    C2 = C#sconf{expires = L ++ C#sconf.expires},
+                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
         ["errormod_404", '=' , Module] ->
             C2 = C#sconf{errormod_404 = list_to_atom(Module)},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
@@ -1649,7 +1657,7 @@ is_string_char([C|T]) ->
             %% FIXME check that [C, hd(T)] really is a char ?? how
             utf8;
         true ->
-            lists:member(C, [$., $/, $:, $_, $-, $~])
+            lists:member(C, [$., $/, $:, $_, $-, $+, $~])
     end.
 
 is_special(C) ->
@@ -1754,6 +1762,30 @@ parse_appmods([AppMod | Tail], Ack) ->
 parse_appmods([], Ack) ->
     {ok, Ack}.
 
+
+parse_expires(['<', MimeType, ',' , Expire, '>' | Tail], Ack) ->
+    {Type, Value} =
+        case string:tokens(Expire, "+") of
+            [Secs] ->
+                {access, (catch list_to_integer(Secs))};
+            ["access", Secs] ->
+                {access, (catch list_to_integer(Secs))};
+            ["modify", Secs] ->
+                {modify, (catch list_to_integer(Secs))};
+            _ ->
+                {error, "Bad expires syntax"}
+        end,
+    if
+        Type =:= error ->
+            {Type, Value};
+        not is_integer(Value) ->
+            {error, "Bad expires syntax"};
+        true ->
+            E = {MimeType, Type, Value},
+            parse_expires(Tail, [E |Ack])
+    end;
+parse_expires([], Ack)->
+    {ok, Ack}.
 
 
 ssl_start() ->

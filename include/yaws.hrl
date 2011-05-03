@@ -216,6 +216,7 @@
          %% 2 . A two tuple {Path, Mod}
          %% 3 A three tuple {Path, Mod, [ExcludeDir ....]}
 
+         expires = [],
          errormod_401 = yaws_outmod,     %% the default 401 error module
          errormod_404 = yaws_outmod,     %% the default 404 error module
          errormod_crash = yaws_outmod,   %% use the same module for crashes
@@ -296,6 +297,7 @@
           server,
           location,
           cache_control,
+          expires,
           date,
           allow,
           last_modified,

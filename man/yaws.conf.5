@@ -526,6 +526,26 @@ The function must return, \fI{content,MimeType,Cont}\fR or
 to the client. 
 
 .TP
+\fBexpires = ListOfExpires\fR
+Controls the setting of the \fIExpires\fR HTTP header and the \fImax-age\fR
+directive of the \fICache-Control\fR HTTP header in server responses for
+specific mime types. The expiration date can set to be relative to either the
+time the source file was last modified, or to the time of the client
+access. ListOfExpires is defined as follows:
+
+  expires = <MimeType1, access+Seconds> <MimeType2, modify+Seconds> ...
+
+These HTTP headers are an instruction to the client about the document's
+validity and persistence. If cached, the document may be fetched from the cache
+rather than from the source until this time has passed. After that, the cache
+copy is considered "expired" and invalid, and a new copy must be obtained from
+the source.
+Here is an example:
+
+  expires = <image/gif, access+2592000> <image/png, access+2592000>
+  expires = <image/jpeg, access+2592000> <text/css, access+2592000>
+
+.TP
 \fBarg_rewrite_mod = Module\fR
 It is possible to install a module that rewrites all the 
 Arg #arg{} records at an early stage in the yaws server.

@@ -2347,6 +2347,28 @@ The following directives are allowed inside a server definition.
               The function can and must do the same things
               that a normal \verb+out/1+ does.
 
+\item       \verb+expires = ListOfExpires+ -
+              Controls the setting of the \verb+Expires+ HTTP header and the
+              \verb+max-age+ directive of the \verb+Cache-Control+ HTTP header
+              in server responses for specific mime types. The expiration date
+              can set to be relative to either the time the source file was last
+              modified, or to the time of the client
+              access. \verb+ListOfExpires+ is defined as follows:
+\begin{verbatim}
+       expires = <MimeType1, access+Seconds> <MimeType2, modify+Seconds> ...
+\end{verbatim}
+              These HTTP headers are an instruction to the client about the
+              document's validity and persistence. If cached, the document may
+              be fetched from the cache rather than from the source until this
+              time has passed. After that, the cache copy is considered
+              "expired" and invalid, and a new copy must be obtained from the
+              source.
+              Here is an example:
+\begin{verbatim}
+       expires = <image/gif, access+2592000> <image/png, access+2592000>
+       expires = <image/jpeg, access+2592000> <text/css, access+2592000>
+\end{verbatim}
+
 \item       \verb+errormod_crash = Module+ -
               It  is possible to set a special module that
               handles the HTML generation of server  crash

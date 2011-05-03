@@ -1162,6 +1162,8 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
            date = make_date_header(),
            server = make_server_header(),
            last_modified = make_last_modified_header(UT#urltype.finfo),
+           expires = make_expires_header(UT#urltype.mime, UT#urltype.finfo),
+           cache_control = make_cache_control_header(UT#urltype.mime, UT#urltype.finfo),
            etag = make_etag_header(UT#urltype.finfo),
            content_range = make_content_range_header(Range),
            content_length = make_content_length_header(Length),
@@ -1183,6 +1185,8 @@ outh_set_304_headers(Req, UT, Headers) ->
            date = make_date_header(),
            server = make_server_header(),
            last_modified = make_last_modified_header(UT#urltype.finfo),
+           expires = make_expires_header(UT#urltype.mime, UT#urltype.finfo),
+           cache_control = make_cache_control_header(UT#urltype.mime, UT#urltype.finfo),
            etag = make_etag_header(UT#urltype.finfo),
            content_length = make_content_length_header(0),
            connection  = make_connection_close_header(DoClose),
@@ -1200,6 +1204,8 @@ outh_set_dyn_headers(Req, Headers, UT) ->
            server = make_server_header(),
            connection = make_connection_close_header(DoClose),
            content_type = make_content_type_header(UT#urltype.mime),
+           expires = make_expires_header(UT#urltype.mime, UT#urltype.finfo),
+           cache_control = make_cache_control_header(UT#urltype.mime, UT#urltype.finfo),
            doclose = DoClose,
            chunked = Chunked,
            transfer_encoding =
@@ -1348,6 +1354,60 @@ do_make_last_modified(FI) ->
     Then = FI#file_info.mtime,
     ["Last-Modified: ", local_time_as_gmt_string(Then), "\r\n"].
 
+
+make_expires_header(MimeType, FI) ->
+    N = element(2, now()),
+    case get({expire, MimeType}) of
+        {Str, Secs} when N < (Secs+10) ->
+            Str;
+        _ ->
+            SC = get(sc),
+            case lists:keysearch(MimeType, 1, SC#sconf.expires) of
+                {value, {MimeType, Type, TTL}} ->
+                    S1 = make_expires_header(Type, TTL, FI),
+                    S2 = make_cache_control_header(TTL),
+                    put({expire, MimeType}, {S1, N}),
+                    put({cache_control, MimeType}, {S2, N}),
+                    S1;
+                false ->
+                    undefined
+            end
+    end.
+
+make_expires_header(access, TTL, _FI) ->
+    DateTime = erlang:localtime(),
+    Secs = calendar:datetime_to_gregorian_seconds(DateTime) + TTL,
+    ExpireTime = calendar:gregorian_seconds_to_datetime(Secs),
+    ["Expires: ", local_time_as_gmt_string(ExpireTime), "\r\n"];
+make_expires_header(modify, TTL, FI) ->
+    DateTime = FI#file_info.mtime,
+    Secs = calendar:datetime_to_gregorian_seconds(DateTime) + TTL,
+    ExpireTime = calendar:gregorian_seconds_to_datetime(Secs),
+    ["Expires: ", local_time_as_gmt_string(ExpireTime), "\r\n"].
+
+
+make_cache_control_header(MimeType, FI) ->
+    N = element(2, now()),
+    case get({cache_control, MimeType}) of
+        {Str, Secs} when N < (Secs+10) ->
+            Str;
+        _ ->
+            SC = get(sc),
+            case lists:keysearch(MimeType, 1, SC#sconf.expires) of
+                {value, {MimeType, Type, TTL}} ->
+                    S1 = make_cache_control_header(TTL),
+                    S2 = make_expires_header(Type, TTL, FI),
+                    put({cache_control, MimeType}, {S1, N}),
+                    put({expire, MimeType}, {S2, N}),
+                    S1;
+                false ->
+                    undefined
+            end
+    end.
+
+
+make_cache_control_header(TTL) ->
+    ["Cache-Control: ", "max-age=", integer_to_list(TTL), "\r\n"].
 
 
 make_location_header(Where) ->
@@ -1509,6 +1569,7 @@ outh_serialize() ->
                noundef(H#outh.date),
                noundef(H#outh.allow),
                noundef(H#outh.last_modified),
+               noundef(H#outh.expires),
                noundef(H#outh.etag),
                noundef(H#outh.content_range),
                noundef(H#outh.content_length),
