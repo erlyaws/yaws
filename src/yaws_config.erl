@@ -885,6 +885,8 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
             Ysession_mod = list_to_atom(Mod_str),
             fload(FD, globals, GC#gconf{ysession_mod = Ysession_mod},
                   C, Cs, Lno+1, Next);
+        ["server_signature", '=', Signature] ->
+            fload(FD, globals, GC#gconf{yaws=Signature},C, Cs, Lno+1, Next);
         ['<', "server", Server, '>'] ->  %% first server
             PhpHandler = {cgi, GC#gconf.phpexe},
             fload(FD, server, GC,

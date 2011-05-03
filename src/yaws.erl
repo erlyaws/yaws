@@ -1331,7 +1331,7 @@ make_allow_header(Options) ->
     end.
 make_server_header() ->
     HasDav = ?sc_has_dav(get(sc)),
-    ["Server: Yaws/", yaws_generated:version(), " Yet Another Web Server\r\n" |
+    ["Server: ", (get(gc))#gconf.yaws, "\r\n" |
      if HasDav == true ->
              ["DAV: 1\r\n"];
         true ->

@@ -66,6 +66,11 @@ ${VARDIR}/run/yaws/ctl-${ID} which contain the port number where the server is
 listening for control commands. The default id is "default".
 
 .TP
+\fBserver_signature = String\fR
+This directive set the "Server: " output header to the custom value. The default
+value is "yaws/%VSN%, Yet Another Web Server".
+
+.TP
 \fBinclude_dir = Directory\fR
 This directive adds Directory to the path of directories where the Erlang
 compiler searches for include files. We need to use this if we want to 
