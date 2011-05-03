@@ -413,7 +413,8 @@ handle_info(_Msg, State) ->
 %% Purpose: Shutdown the server
 %% Returns: any (ignored by gen_server)
 %%----------------------------------------------------------------------
-terminate(_Reason, _State) ->
+terminate(_Reason, State) ->
+    foreach(fun({Pid, _GP}) -> gserv_stop(Pid) end, State#state.pairs),
     ok.
 
 do_listen(GC, SC) ->
@@ -615,8 +616,45 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             end;
         {From, stop} ->
             unlink(From),
-            {links, Ls} = process_info(self(), links),
-            foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
+
+            %% Close the socket and stop acceptors
+            stop_ready(Ready, Last),
+            if
+                GS#gs.ssl == nossl -> gen_tcp:close(GS#gs.l);
+                GS#gs.ssl == ssl   -> ssl:close(GS#gs.l)
+            end,
+
+            %% Stop yaws_stats processes, if needed
+            foreach(fun(#sconf{stats=Pid}) when is_pid(Pid) ->
+                            yaws_stats:stop(Pid);
+                       (_) ->
+                            ok
+                    end, GS#gs.group),
+
+            %% Close softly all opened connections
+            {links, Ls1} = process_info(self(), links),
+            foreach(fun(X) when is_pid(X) ->
+                            unlink(X),
+                            X ! {self(), suspend},
+                            exit(X, shutdown);
+                       (_) -> ok
+                    end, Ls1),
+            WaitFun = fun(_, 0, Pids)     -> Pids;
+                         (_, _, [])       -> [];
+                         (F, Secs, Pids0) ->
+                              timer:sleep(1000),
+                              Pids1 = lists:filter(fun(X) when is_pid(X) ->
+                                                           is_process_alive(X);
+                                                      (_) ->
+                                                           false
+                                                   end, Pids0),
+                              F(F, Secs-1, Pids1)
+                      end,
+            Ls2 = WaitFun(WaitFun, 60, Ls1),
+
+            %% Kill all remaining connections
+            foreach(fun(X) -> exit(X, kill) end, Ls2),
+
             From ! {self(), ok},
             exit(normal);
 
@@ -994,6 +1032,8 @@ acceptor0(GS, Top) ->
 
             %% we cache processes
             receive
+                {'EXIT', Top, Error} ->
+                    exit(Error);
                 {Top, stop} ->
                     exit(normal);
                 {Top, accept} ->
@@ -1043,9 +1083,11 @@ acceptor0(GS, Top) ->
 %%%----------------------------------------------------------------------
 
 aloop(CliSock, GS, Num) ->
+    process_flag(trap_exit, false),
     init_db(),
     SSL = GS#gs.ssl,
     Head = yaws:http_get_headers(CliSock, SSL),
+    process_flag(trap_exit, true),
     ?Debug("Head = ~p~n", [Head]),
     case Head of
         {Req0, H0} when Req0#http_request.method /= bad_request ->
@@ -1127,9 +1169,10 @@ init_db() ->
     put(init_db, lists:keydelete(init_db, 1, get())).
 
 erase_transients() ->
-    %% flush all messages
+    %% flush all messages. If exit message found, rethrow it
     Fun = fun(G) -> receive
-                       _X -> G(G)
+                        {'EXIT', _From, Reason} -> exit(Reason);
+                        _X -> G(G)
                     after 0 -> ok
                     end
           end,
@@ -3351,6 +3394,12 @@ deliver_accumulated(Sock) ->
 %%     Ret: opaque value to be threaded through
 %%                   send_streamcontent_chunk / end_streaming
 deliver_accumulated(Arg, Sock, Encoding, ContentLength, Mode) ->
+    %% See if we must close the connection
+    receive
+        {_From, suspend} -> yaws:outh_set_connection(true)
+    after 0 -> ok
+    end,
+
     Cont = case erase(acc_content) of
                undefined ->
                    [];

@@ -52,7 +52,7 @@ child_specs() ->
 
     YawsServArgs = [_Env = get_app_args()],
     YawsServ = {yaws_server, {yaws_server, start_link, YawsServArgs},
-                permanent, 5000, worker, [yaws_server]},
+                permanent, 120000, worker, [yaws_server]},
 
     %% and this guy will restart auxiliary procs that can fail
     Sup = {yaws_sup_restarts,
