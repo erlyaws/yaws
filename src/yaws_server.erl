@@ -1472,8 +1472,7 @@ body_method(CliSock, Req, Head) ->
               undefined ->
                   case Head#headers.transfer_encoding of
                       "chunked" ->
-                          get_chunked_client_data(CliSock, [],
-                                                  yaws:is_ssl(SC));
+                          get_chunked_client_data(CliSock, yaws:is_ssl(SC));
                       _ ->
                           <<>>
                               end;
@@ -2503,18 +2502,30 @@ get_client_data(CliSock, Len, Bs, SSlBool) ->
     end.
 
 %% not nice to support this for ssl sockets
-get_chunked_client_data(CliSock,Bs,SSL) ->
-    yaws:setopts(CliSock, [binary, {packet, line}],SSL),
-    N = yaws:get_chunk_num(CliSock,SSL),
-    yaws:setopts(CliSock, [binary, {packet, raw}],SSL),
+get_chunked_client_data(CliSock,SSL) ->
+    SC  = get(sc),
+    Val = erase(current_chunk_size),
+    Len = if
+              (Val =:= undefined orelse Val =:= 0) ->
+                  yaws:setopts(CliSock, [binary, {packet, line}],SSL),
+                  N = yaws:get_chunk_num(CliSock,SSL),
+                  yaws:setopts(CliSock, [binary, {packet, raw}],SSL),
+                  N;
+              true ->
+                  Val
+          end,
     if
-        N == 0 ->
+        Len == 0 ->
             _Tmp=yaws:do_recv(CliSock, 2, SSL),%% flush last crnl
-            list_to_binary(Bs);
-        true ->
-            B = yaws:get_chunk(CliSock, N, 0,SSL),
+            <<>>;
+        Len < SC#sconf.partial_post_size ->
+            B = yaws:get_chunk(CliSock, Len, 0, SSL),
             yaws:eat_crnl(CliSock,SSL),
-            get_chunked_client_data(CliSock, [Bs,B], SSL)
+            {partial, list_to_binary(B)};
+        true ->
+            B = yaws:get_chunk(CliSock, SC#sconf.partial_post_size, 0, SSL),
+            put(current_chunk_size, Len - SC#sconf.partial_post_size),
+            {partial, list_to_binary(B)}
     end.
 
 %% Return values:
@@ -3425,14 +3436,23 @@ deliver_accumulated(Arg, Sock, Encoding, ContentLength, Mode) ->
 get_more_post_data(PPS, ARG) ->
     SC = get(sc),
     N = SC#sconf.partial_post_size,
-    Len = list_to_integer((ARG#arg.headers)#headers.content_length),
-    if N + PPS < Len ->
-            Bin = get_client_data(ARG#arg.clisock, N,
-                                  yaws:is_ssl(SC)),
-            {partial, Bin};
-       true ->
-            get_client_data(ARG#arg.clisock, Len - PPS,
-                            yaws:is_ssl(SC))
+    case (ARG#arg.headers)#headers.content_length of
+        undefined ->
+            case (ARG#arg.headers)#headers.transfer_encoding of
+                "chunked" ->
+                    get_chunked_client_data(ARG#arg.clisock, yaws:is_ssl(SC));
+                _  ->
+                    <<>>
+            end;
+        Len ->
+            Int_len = list_to_integer(Len),
+            if N + PPS < Int_len ->
+                    Bin = get_client_data(ARG#arg.clisock, N, yaws:is_ssl(SC)),
+                    {partial, Bin};
+               true ->
+                    get_client_data(ARG#arg.clisock, Int_len - PPS,
+                                    yaws:is_ssl(SC))
+            end
     end.
 
 
