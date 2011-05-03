@@ -244,24 +244,16 @@ a_status() ->
     try
         {UpTime, L} = yaws_server:stats(),
         {Days, {Hours, Minutes, _Secs}} = UpTime,
-        H = f("~n Uptime: ~w Days, ~w Hours, ~w Minutes  ~n",
-              [Days, Hours, Minutes]),
+        UpStr = f("~n Uptime: ~w Days, ~w Hours, ~w Minutes  ~n",
+                  [Days, Hours, Minutes]),
 
-        T =lists:map(
-             fun({Host,IP,Hits}) ->
-                     L1= f("stats for ~p at ~p  ~n",
-                           [Host,IP]),
-                     T = "\n"
-                         "URL                  Number of hits\n",
-                     L2=lists:map(
-                          fun({Url, Hits2}) ->
-                                  f("~-30s ~-7w ~n",
-                                    [Url, Hits2])
-                          end, Hits),
-                     END = "\n",
-                     [L1, T, L2, END]
-             end, L),
-        [H, T]
+        Header = f("IP Port Connections Sessions Requests~n", []),
+        Lines  = lists:map(fun({IP0, Port, Conns, Sess, Reqs}) ->
+                                   IP = format_ip(IP0),
+                                   f("~s ~p ~p ~p ~p~n",
+                                     [IP, Port, Conns, Sess, Reqs])
+                           end, L),
+        [Header, Lines, UpStr]
     catch
         _:Err ->
             io_lib:format("Cannot get status ~p~n", [Err])

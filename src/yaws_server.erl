@@ -96,7 +96,13 @@ getconf() ->
 stats() ->
     {_S, Time} = status(),
     Diff = calendar:time_difference(Time, calendar:local_time()),
-    {Diff, []}.
+    L = [begin
+             SC = hd(GS#gs.group),
+             {SC#sconf.listen, SC#sconf.port,
+              GS#gs.connections, GS#gs.sessions, GS#gs.reqs}
+         end || GS <- gs_status()],
+    {Diff, L}.
+
 
 l2a(L) when is_list(L) -> list_to_atom(L);
 l2a(A) when is_atom(A) -> A.
