@@ -55,7 +55,7 @@ MODULES=yaws \
 
 
 
-EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app
+EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) ../ebin/yaws.app ../ebin/yaws.appup
 ERLC_FLAGS+=-W $(DEBUG_FLAGS) -pa ../../yaws -I ../include
 
 #
