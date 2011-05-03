@@ -47,6 +47,10 @@
                         status,
                         phrase}).
 
+-record(rewrite_response, {status,
+                           headers = [],
+                           content = <<>>}).
+
 -record(headers, {
           connection,
           accept,

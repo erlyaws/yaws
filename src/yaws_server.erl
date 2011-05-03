@@ -1490,6 +1490,22 @@ handle_extension_method(_Method, CliSock, Req, Head) ->
 %% Return values:
 %% continue, done, {page, Page}
 
+handle_request(CliSock, ARG, _N)
+  when is_record(ARG#arg.state, rewrite_response) ->
+    State = ARG#arg.state,
+    ?Debug("SrvReq=~s - RwResp=~s~n",[?format_record(ARG#arg.req, http_request),
+                                      ?format_record(State, rewrite_response)]),
+    yaws:outh_set_status_code(State#rewrite_response.status),
+    deepforeach(fun(X) ->
+                        case X of
+                            {header, H} -> yaws:accumulate_header(H);
+                            _           -> ok
+                        end
+                end, State#rewrite_response.headers),
+    accumulate_content(State#rewrite_response.content),
+    deliver_accumulated(ARG, CliSock, decide, undefined, final),
+    done_or_continue();
+
 handle_request(CliSock, ARG, N) ->
     Req = ARG#arg.req,
     ?Debug("SrvReq=~s~n",[?format_record(Req, http_request)]),
@@ -2279,7 +2295,6 @@ new_redir_h(OH, Loc, Status) ->
     OH2 = OH#outh{status = Status,
                   location = Loc},
     put(outh, OH2).
-
 
 
 %% we must deliver a 302 if the browser asks for a dir
