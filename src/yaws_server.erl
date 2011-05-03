@@ -1159,25 +1159,19 @@ handle_method_result(Res, CliSock, IP, GS, Req, H, Num) ->
             put(outh, #outh{}),
             case P of
                 {Options, Page} ->
-                    %% We got additional headers
-                    %% for the page to deliver.
+                    %% We got additional headers for the page to deliver.
                     %%
-                    %% Might be useful for
-                    %% `Vary' or
-                    %% `Content-Location'.
-                    deepforeach(
-                      fun(X) -> case X of
-                                    {header, Header} ->
-                                        yaws:accumulate_header(Header);
-                                    _Something ->
-                                        ?Debug("Got ~p in page option list.",
-                                               [_Something])
-                                end
-                      end,
-                      Options);
+                    %% Might be useful for `Vary' or `Content-Location'.
+                    %%
+                    %% These headers are stored to be set later to preserve
+                    %% it during the next loop.
+                    put(page_options, Options);
                 Page ->
                     ok
             end,
+            %% `is_delayed_redirect' flag is used to correctly identify the url
+            %% type
+            put(is_delayed_redirect, true),
             put (sc, (get(sc))#sconf{appmods = []}),
             check_keepalive_maxuses(GS, Num),
             Call = call_method(Req#http_request.method,
@@ -2000,6 +1994,20 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
             deliver_405(CliSock, Req, Regular_allowed)
     end;
 
+
+handle_ut(CliSock, ARG, UT = #urltype{type = delayed_regular}, _N) ->
+    Req = ARG#arg.req,
+    H   = ARG#arg.headers,
+    Do_deliver =
+        case Req#http_request.method of
+            'HEAD' -> fun() -> deliver_accumulated(CliSock), done end;
+            _      -> fun() -> deliver_file(CliSock, Req, UT, all) end
+        end,
+    yaws:outh_set_dyn_headers(Req, H, UT),
+    maybe_set_page_options(),
+    Do_deliver();
+
+
 handle_ut(CliSock, ARG, UT = #urltype{type = yaws}, N) ->
     Req = ARG#arg.req,
     H = ARG#arg.headers,
@@ -2011,6 +2019,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = yaws}, N) ->
         Req#http_request.method == 'POST';
         Req#http_request.method == 'HEAD' ->
             yaws:outh_set_dyn_headers(Req, H, UT),
+            maybe_set_page_options(),
             do_yaws(CliSock, ARG, UT, N);
         Req#http_request.method == 'OPTIONS' ->
             deliver_options(CliSock, Req, Yaws_allowed);
@@ -2099,6 +2108,22 @@ handle_ut(CliSock, ARG, UT = #urltype{type = directory}, N) ->
     end;
 
 
+handle_ut(CliSock, ARG, UT = #urltype{type = delayed_directory}, N) ->
+    Req = ARG#arg.req,
+    H   = ARG#arg.headers,
+    SC  = get(sc),
+    if (?sc_has_dir_listings(SC)) ->
+            yaws:outh_set_dyn_headers(Req, H, UT),
+            maybe_set_page_options(),
+            P = UT#urltype.fullpath,
+            yaws_ls:list_directory(ARG, CliSock, UT#urltype.data,
+                                   P, Req, ?sc_has_dir_all_zip(SC));
+       true ->
+            handle_ut(CliSock, ARG, #urltype{type = error}, N)
+    end;
+
+
+
 
 handle_ut(CliSock, ARG, UT = #urltype{type = redir}, _N) ->
     Req = ARG#arg.req,
@@ -2124,6 +2149,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = cgi}, N) ->
     Req = ARG#arg.req,
     H = ARG#arg.headers,
     yaws:outh_set_dyn_headers(Req, H, UT),
+    maybe_set_page_options(),
     deliver_dyn_part(CliSock,
                      0, "cgi",
                      N,
@@ -2139,6 +2165,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = fcgi}, N) ->
     Req = ARG#arg.req,
     H = ARG#arg.headers,
     yaws:outh_set_dyn_headers(Req, H, UT),
+    maybe_set_page_options(),
     deliver_dyn_part(CliSock,
                      0, "fcgi",
                      N,
@@ -2186,6 +2213,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = dav}, N) ->
                                                finfo = Finfo}, N);
         _ ->
             yaws:outh_set_dyn_headers(Req, H, UT),
+            maybe_set_page_options(),
             deliver_dyn_part(CliSock,
                              0, "dav",
                              N,
@@ -2201,6 +2229,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = php}, N) ->
     GC=get(gc),
     SC=get(sc),
     yaws:outh_set_dyn_headers(Req, H, UT),
+    maybe_set_page_options(),
     Fun = case SC#sconf.phpfcgi of
 	      undefined ->
 		  fun(A)->yaws_cgi:call_cgi(
@@ -4600,3 +4629,21 @@ fwdproxy_url(ARG) ->
          port = Port,
          path = Path}.
 
+
+
+maybe_set_page_options() ->
+    case erase(page_options) of
+        undefined ->
+            ok;
+        Options ->
+            deepforeach(
+              fun(X) -> case X of
+                            {header, Header} ->
+                                yaws:accumulate_header(Header);
+                            {status, Code} ->
+                                yaws:outh_set_status_code(Code);
+                            _Other ->
+                                ?Debug("Got ~p in page option list.", [_Other])
+                        end
+              end, Options)
+    end.
