@@ -506,7 +506,7 @@ gserv(Top, GC, Group0) ->
                      certinfo = CertInfo,
                      l = Listen},
             Last = initial_acceptor(GS),
-            gserv_loop(GS, [], 0, Last);
+            gserv_loop(GS#gs{sessions = 1}, [], 0, Last);
         {_,_,Err} ->
             error_logger:format("Yaws: Failed to listen ~s:~w  : ~p~n",
                                 [inet_parse:ntoa(SC#sconf.listen),
@@ -564,10 +564,11 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             From ! {self(), GS},
             gserv_loop(GS, Ready, Rnum, Last);
         {_From, next, Accepted} when Ready == [] ->
- 	    close_accepted_if_max(GS,Accepted),
- 	    New = acceptor(GS),
- 	    GS2 = GS#gs{connections=GS#gs.connections + 1},
-            gserv_loop(GS2#gs{sessions = GS2#gs.sessions + 1}, Ready, Rnum,New);
+            close_accepted_if_max(GS,Accepted),
+            New = acceptor(GS),
+            GS2 = GS#gs{sessions = GS#gs.sessions + 1,
+                        connections = GS#gs.connections + 1},
+            gserv_loop(GS2, Ready, Rnum, New);
         {_From, next, Accepted} ->
 	    close_accepted_if_max(GS,Accepted),
             [{_Then, R}|RS] = Ready,
@@ -579,11 +580,9 @@ gserv_loop(GS, Ready, Rnum, Last) ->
  	    gserv_loop(GS2, Ready, Rnum, Last);
         {From, done_client, Int} ->
             GS2 = if
-		      Int == 0 -> GS#gs{sessions = GS#gs.sessions - 1,
-                                        connections = GS#gs.connections - 1};
-		      Int > 0 -> GS#gs{sessions = GS#gs.sessions - 1,
-                                       reqs = GS#gs.reqs + Int,
-                                       connections = GS#gs.connections - 1}
+                      Int == 0 -> GS#gs{connections = GS#gs.connections - 1};
+                      Int > 0  -> GS#gs{reqs = GS#gs.reqs+Int,
+                                        connections = GS#gs.connections - 1}
                   end,
             if
                 Rnum == 8 ->
