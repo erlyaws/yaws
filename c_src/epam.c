@@ -349,7 +349,6 @@ static void do_auth(char *service, char*user, char*pwd, char* mode, int sid)
 
 int main(int argc, char *argv[])
 {
-    pam_handle_t *pamh=NULL;
     unsigned char lb[2];
     unsigned char buf[BUFSIZ];
     char *user;
@@ -376,7 +375,6 @@ int main(int argc, char *argv[])
         switch (buf[0]) {
         case 'a': 
             // auth a user
-            pamh = NULL;
             user = (char *)&buf[1];
             pwd = user + strlen(user) + 1;
             mode= pwd + strlen(pwd) + 1;
