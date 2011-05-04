@@ -499,10 +499,14 @@ It is possible to set a special module that handles
 401 Unauthorized messages. This can for example be used 
 to display a login page instead.
 
-The function \fIModule:out401(Arg)\fR will
+The function \fIModule:out401(Arg, Auth, Realm)\fR will
 be invoked. The arguments are
 
 Arg is a #arg{} record
+
+Auth is a #auth{} record
+
+Realm is a string
 
 The function can and must do the same things that a normal \fIout/1\fR does.
 
@@ -722,10 +726,19 @@ Defines an auth structure. The following items are allowed
 within a matching pair of <auth> and </auth> delimiters.
 
 .TP
+\fBdocroot = Docroot \fR
+If a docroot is defined, this auth structure will be tested only for requests in
+the specified docroot. No docroot configured means all docroots.  If two auth
+structures are defined, one with a docroot and one with no docroot, the first of
+both overrides the second one for requests in the configured docroot.
+
+.TP
 \fBdir = Dir\fR
 Makes Dir to be controlled by WWW-authenticate headers. In order for
 a user to have access to WWW-Authenticate controlled directory, the user
 must supply a password. The Dir must be specified relative to the docroot.
+Multiple dir can be used. If no dir is set, the default value, "/", will be
+used.
 
 .TP
 \fBrealm = Realm\fR
@@ -734,15 +747,16 @@ this value.
 
 .TP
 \fBauthmod = AuthMod\fR
-If an auth module is defined then AuthMod:auth(Arg, Auth) will
-be called for all access to the directory. The auth/2 function 
-should return one of: true, false, {false, Realm}, {appmod, Mod}.
-If {appmod, Mod} is returned then a call to Mod:out(Arg) will
-be used to deliver the content.
+If an auth module is defined then AuthMod:auth(Arg, Auth) will be called for all
+access to the directory. The auth/2 function should return one of: true, false,
+{false, Realm}, {appmod, Mod}.  If {appmod, Mod} is returned then a call to
+Mod:out401(Arg, Auth, Realm) will be used to deliver the content. If
+errormod_401 is defined, the call to Mod will be ignored. (Mod:out(Arg) is
+deprecated).
 
 This can, for example, be used to implement cookie authentication.
 The auth() callback would check if a valid cookie header is present,
-if not it would return {appmod, ?MODULE} and the out/1 function 
+if not it would return {appmod, ?MODULE} and the out401/1 function 
 in the same module would return {redirect_local, "/login.html"}.
 
 .TP
@@ -763,9 +777,8 @@ Each row of the file must contain terms on the form
 {User, Password}.
 .fi
 
-Where both User and Password should be strings.
-The .yaws_auth file mechanism is not (yet) recursive. Thus
-any subdirectories to Dir are not automatically also protected.
+Where both User and Password should be strings. The .yaws_auth file mechanism is
+recursive. Thus any subdirectories to Dir are automatically also protected.
 
 The .yaws_auth file is never visible in a dir listing
 
@@ -779,6 +792,76 @@ under /etc/pam.d. Usual values are "system-auth" etc.
 pam authentication is performed by an Erlang port program which is
 typically installed as suid root by the yaws install script.
 
+.TP
+\fBallow = all | ListOfHost\fR
+The \fIallow\fR directive affects which hosts can access an area of the
+server. Access can be controlled by IP address or IP address range. If all is
+specified, then all hosts are allowed access, subject to the configuration of
+the \fIdeny\fR and \fIorder\fR directives. To allow only particular hosts or
+groups of hosts to access the server, the host can be specified in any of the
+following formats:
+
+\fBA full IP address\fR
+.RS 12
+
+.nf
+allow = 10.1.2.3
+allow = 192.168.1.104, 192.168.1.205
+.fi
+.RE
+.HP
+
+\fBA network/netmask pair\fR
+.RS 12
+
+.nf
+allow = 10.1.0.0/255.255.0.0
+.fi
+.RE
+.HP
+
+\fBA network/nnn CIDR specification\fR
+.RS 12
+
+.nf
+allow = 10.1.0.0/16
+.fi
+.RE
+.HP
+
+.TP
+\fBdeny = all | ListOfHost\fR
+This directive allows access to the server to be restricted based on IP
+address. The arguments for the \fIdeny\fR directive are identical to the
+arguments for the \fIallow\fR directive.
+
+.TP
+\fBorder = Ordering\fR
+The \fIorder\fR directive, along with \fIallow\fR and \fIdeny\fR directives,
+controls a three-pass access control system. The first pass processes either all
+\fIallow\fR or all \fIdeny\fR directives, as specified by the \fIorder\fR
+directive. The second pass parses the rest of the directives (\fIdeny\fR or
+\fIallow\fR). The third pass applies to all requests which do not match either
+of the first two.
+
+Ordering is one of (Default value is deny,allow):
+
+\fBallow,deny\fR
+.RS 12
+First, all\fIallow\fR directives are evaluated; at least one must match, or the
+request is rejected. Next, \fIdeny\fR directives are evaluated. If any matches,
+the request is rejected. Last, any requests which do not match an \fIallow\fR or
+a \fIdeny\fR directive are denied by default.
+.RE
+.HP
+
+\fBdeny,allow\fR
+.RS 12
+First, all \fIdeny\fR directives are evaluated; if any match, the request is
+denied unless it also matches an \fIallow\fR directive. Any requests which do
+not match any \fIallow\fR or \fIdeny\fR directives are permitted.
+.RE
+.HP
 .TP
 \fB</auth>\fR
 Ends an auth definition

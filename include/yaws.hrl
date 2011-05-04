@@ -239,11 +239,15 @@
 % Auth conf - from server conf and .yaws_auth
 -record(auth,
          {dir = [],
+          docroot = [],
+          files = [],
           realm = "",
           type = "Basic",
           headers = [],  %% headers to send on 401
           users = [],   %% list of {User, Password} tuples
+          acl = none,    %% list of allowed/denies IPs or none
           mod = [],     %% authentication module callback
+          outmod = [],   %% module to handles 401 unauthorized messages
           pam = false   %% should we use pam to auth a user
          }).
 

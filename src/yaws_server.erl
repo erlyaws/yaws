@@ -1581,9 +1581,6 @@ handle_request(CliSock, ARG, N) ->
                                           QueryPart
                                   end,
 
-
-                    SC=get(sc),
-
                     %% by this stage, ARG#arg.docroot_mount is either "/" ,
                     %% or has been set by a rewrite module.
                     %%!todo - retrieve 'vdir' definitions from main part of
@@ -1629,80 +1626,33 @@ handle_request(CliSock, ARG, N) ->
                             ok
                     end,
 
-                    {IsAuth, ARG1} =
-                        case is_auth(ARG, DecPath,ARG#arg.headers,
-                                     SC#sconf.authdirs) of
-                            {true, User} ->
-                                {true, set_auth_user(ARG, User)};
-                            E ->
-                                {E, ARG}
-                        end,
 
-
+                    SC = get(sc),
                     IsRev = is_revproxy(ARG, DecPath, SC),
                     IsRedirect = is_redirect_map(DecPath,
                                                  SC#sconf.redirect_map),
 
-                    case {IsAuth, IsRev, IsRedirect} of
-                        {_, _, {true, Redir}} ->
-                            deliver_302_map(CliSock, Req, ARG1, Redir);
-                        {true, false, _} ->
-                            %%'main' branch so to speak. Most
-                            %% requests pass through here.
+                    case {IsRev, IsRedirect} of
+                        {_, {true, Redir}} ->
+                            deliver_302_map(CliSock, Req, ARG, Redir);
+                        {false, _} ->
+                            %%'main' branch so to speak. Most requests
+                            %% pass through here.
+                            UT = url_type(DecPath, ARG#arg.docroot,
+                                          ARG#arg.docroot_mount),
 
-                            UT   = url_type(DecPath, ARG1#arg.docroot,
-                                            ARG1#arg.docroot_mount),
-                            ARG2 = ARG1#arg{
-                                     server_path = DecPath,
-                                     querydata = QueryString,
-                                     fullpath = UT#urltype.fullpath,
-                                     prepath = UT#urltype.dir,
-                                     pathinfo = UT#urltype.pathinfo
-                                    },
-
-                            %%!todo - remove special treatment of
-                            %% appmod here.
-                            %% (after suitable deprecation period)
-                            %% - prepath & pathinfo are applicable to
-                            %% other types  of dynamic url too
-                            %%   replace: appmoddata with pathinfo &
-                            %% appmod_prepath with prepath.
-                            case UT#urltype.type of
-                                appmod ->
-                                    {_Mod, PathInfo} = UT#urltype.data,
-                                    ARG3 =
-                                        ARG2#arg{
-                                          appmoddata =
-                                          case PathInfo of
-                                              undefined ->
-                                                  undefined;
-                                              "/" ->
-                                                  "/";
-                                              _ ->
-                                                  lists:dropwhile(
-                                                    fun(C) -> C == $/
-                                                                  end,
-                                                    PathInfo)
-                                          end,
-                                          appmod_prepath =
-                                          UT#urltype.dir
-                                         };
-                                _ ->
-                                    ARG3 = ARG2
-                            end,
-
-                            handle_ut(CliSock, ARG3, UT, N);
-                        {true, {true, PP}, _} ->
-                            yaws_revproxy:init(CliSock, ARG1, DecPath,
-                                               QueryString, PP, N);
-                        {false_403, _, _} ->
-                            deliver_403(CliSock, Req);
-                        {{false, AuthMethods, Realm}, _, _} ->
-                            UT = #urltype{
-                              type = {unauthorized, AuthMethods, Realm},
-                              path = DecPath},
-                            handle_ut(CliSock, ARG, UT, N)
-
+                            ARG1 = ARG#arg{server_path = DecPath,
+                                           querydata   = QueryString,
+                                           fullpath    = UT#urltype.fullpath,
+                                           prepath     = UT#urltype.dir,
+                                           pathinfo    = UT#urltype.pathinfo},
+                            handle_normal_request(CliSock, ARG1, UT,
+                                                  SC#sconf.authdirs, N);
+                        {{true, PP}, _} ->
+                            ARG1 = ARG#arg{server_path = DecPath,
+                                           querydata   = QueryString},
+                            handle_revproxy_request(CliSock, ARG1, PP,
+                                                    SC#sconf.authdirs, N)
                     end
             end;
         {scheme, _Scheme, _RequestString} ->
@@ -1710,6 +1660,66 @@ handle_request(CliSock, ARG, N) ->
         _ ->                                    % for completeness
             deliver_400(CliSock, Req)
     end.
+
+
+handle_normal_request(CliSock, ARG, UT = #urltype{type=error}, _, N) ->
+    handle_ut(CliSock, ARG, UT, N);
+handle_normal_request(CliSock, ARG, UT, Authdirs, N) ->
+    {IsAuth, ARG1} = case is_auth(ARG, Authdirs) of
+                         {true, User} -> {true, set_auth_user(ARG, User)};
+                         E            -> {E, ARG}
+                     end,
+
+    case IsAuth of
+        true ->
+            %%!todo - remove special treatment of appmod here. (after suitable
+            %% deprecation period) - prepath & pathinfo are applicable to other
+            %% types of dynamic url too replace: appmoddata with pathinfo &
+            %% appmod_prepath with prepath.
+            case UT#urltype.type of
+                appmod ->
+                    {_Mod, PathInfo} = UT#urltype.data,
+                    Appmoddata = case PathInfo of
+                                     undefined ->
+                                         undefined;
+                                     "/" ->
+                                         "/";
+                                     _ ->
+                                         lists:dropwhile(fun(C) -> C == $/ end,
+                                                         PathInfo)
+                                 end,
+                    ARG2 = ARG1#arg{appmoddata     = Appmoddata,
+                                    appmod_prepath = UT#urltype.dir};
+                _ ->
+                    ARG2 = ARG1
+            end,
+            handle_ut(CliSock, ARG2, UT, N);
+        false_403 ->
+            deliver_403(CliSock, ARG1#arg.req);
+        {false, AuthMethods, Realm} ->
+            UT1 = #urltype{type = {unauthorized, AuthMethods, Realm},
+                           path = ARG1#arg.server_path},
+            handle_ut(CliSock, ARG1, UT1, N)
+    end.
+
+handle_revproxy_request(CliSock, ARG, PP, Authdirs, N) ->
+    {IsAuth, ARG1} = case is_auth(ARG, Authdirs) of
+                         {true, User} -> {true, set_auth_user(ARG, User)};
+                         E            -> {E, ARG}
+                     end,
+
+    case IsAuth of
+        true ->
+            yaws_revproxy:init(CliSock, ARG1, ARG1#arg.server_path,
+                               ARG1#arg.querydata, PP, N);
+        false_403 ->
+            deliver_403(CliSock, ARG1#arg.req);
+        {false, AuthMethods, Realm} ->
+            UT1 = #urltype{type = {unauthorized, AuthMethods, Realm},
+                           path = ARG1#arg.server_path},
+            handle_ut(CliSock, ARG1, UT1, N)
+    end.
+
 
 set_auth_user(ARG, User) ->
     H = ARG#arg.headers,
@@ -1725,72 +1735,171 @@ set_auth_user(ARG, User) ->
     H2 = H#headers{authorization = Auth},
     ARG#arg{headers = H2}.
 
+
+
+filter_auths(Auths, Req_dir) ->
+    filter_auths(Auths, Req_dir, {0, []}).
+
+filter_auths([], _, {_, Auths}) ->
+    Auths;
+filter_auths([A|T], Req_dir, {N, Auths}) ->
+    case lists:prefix(A#auth.dir, Req_dir) of
+        true ->
+            case length(A#auth.dir) of
+                N1 when N1 < N -> filter_auths(T, Req_dir, {N, Auths});
+                N1 when N1 > N -> filter_auths(T, Req_dir, {N1, [A]});
+                N1             -> filter_auths(T, Req_dir, {N1, [A|Auths]})
+            end;
+        false ->
+            filter_auths(T, Req_dir, {N, Auths})
+    end.
+
+
 %% Call is_auth(...)/5 with a default value.
-is_auth(ARG, Req_dir, H, L) ->
-    is_auth(ARG, Req_dir, H, L, {true, []}).
+is_auth(ARG, L) ->
+    Req_dir = ARG#arg.server_path,
+    H       = ARG#arg.headers,
+    case lists:keyfind(ARG#arg.docroot, 1, L) of
+        {_, Auths} ->
+            is_auth(ARG, Req_dir, H, filter_auths(Auths, Req_dir), {true, []});
+        false ->
+            {true, []}
+    end.
 
 %% Either no authentication was done or all methods returned false
 is_auth(_ARG, _Req_dir, _H, [], {Ret, Auth_headers}) ->
     yaws:outh_set_auth(Auth_headers),
     Ret;
 
-is_auth(ARG, Req_dir, H, [{Auth_dir, Auth_methods}|T], {Ret, Auth_headers}) ->
-    case lists:prefix(Auth_dir, Req_dir) of
-	true ->
-	    Auth_H = H#headers.authorization,
-	    case handle_auth(ARG, Auth_H, Auth_methods, false) of
-
+is_auth(ARG, Req_dir, H, [Auth_methods|T], {_Ret, Auth_headers}) ->
+    Auth_H = H#headers.authorization,
+    case handle_auth(ARG, Auth_H, Auth_methods, false) of
 		%% If we auth using an authmod we need to return User
 		%% so that we can set it in ARG.
-		{true, User} ->
-		    {true, User};
-		false ->
-		    L = Auth_methods#auth.headers,
-		    Realm = Auth_methods#auth.realm,
-		    is_auth(ARG, Req_dir, H, T, {{false, Auth_methods, Realm},
-						 L ++ Auth_headers});
-                {false, Realm} ->
-                    L = Auth_methods#auth.headers,
-                    is_auth(ARG, Req_dir, H, T, {{false, Auth_methods, Realm},
-                                                 L ++ Auth_headers});
-		Is_auth ->
+        {false, A} ->
+            L = A#auth.headers,
+            Auth_methods1 = Auth_methods#auth{realm = A#auth.realm,
+                                              outmod = A#auth.outmod},
+            is_auth(ARG, Req_dir, H, T,
+                    {{false, Auth_methods1, A#auth.realm}, L ++ Auth_headers});
+        Is_auth -> %% true, {true, User} or false_403
 		    Is_auth
-	    end;
-	false ->
-	    is_auth(ARG, Req_dir, H, T, {Ret, Auth_headers})
     end.
 
-handle_auth(ARG, _Auth_H, #auth{realm = Realm,
-                                users=[], pam=false, mod = []}, Ret) ->
-    maybe_auth_log({401, Realm}, ARG),
-    Ret;
+handle_auth(#arg{client_ip_port={IP,_}}=ARG, Auth_H,
+            #auth{acl={AllowIPs, DenyIPs, Order}}=Auth_methods, Ret) ->
+    %% Transform Client IP address in integer
+    IntIP =
+        case IP of
+            undefined ->
+                0;
+            {0,0,0,0,0,16#FFFF,N1,N2} ->
+                (N1 bsl 16) bor N2;
+            {N1,N2,N3,N4} ->
+                (N1 bsl 24) bor (N2 bsl 16) bor (N3 bsl 8) bor N4;
+            {N1,N2,N3,N4,N5,N6,N7,N8} ->
+                (N1 bsl 112) bor (N2 bsl 96) bor (N3 bsl 80) bor (N4 bsl 64) bor
+                    (N5 bsl 48) bor (N6 bsl 32) bor (N7 bsl 16) bor N8
+        end,
+
+    %% Build the match_spec to test ACLs
+    MHead = {'$1', '$2'},
+    Guard = {'andalso',
+             {'=<', '$1', {const, IntIP}},
+             {'>=', '$2', {const, IntIP}}},
+    MSpec = [{MHead, [Guard], [true]}],
+    CMSpec = ets:match_spec_compile(MSpec),
+
+    Ret1 = case Auth_methods of
+               #auth{users=[],pam=false,mod=[]} -> true;
+               _                                -> Ret
+           end,
+
+    case {AllowIPs, DenyIPs, Order} of
+        {_, all, deny_allow} ->
+            case ets:match_spec_run(AllowIPs, CMSpec) of
+                [true|_] ->
+                    handle_auth(ARG, Auth_H, Auth_methods#auth{acl=none}, Ret1);
+                _ ->
+                    false_403
+            end;
+        {all, _, deny_allow} ->
+            handle_auth(ARG, Auth_H, Auth_methods#auth{acl=none}, Ret1);
+        {_, _, deny_allow} ->
+            case ets:match_spec_run(DenyIPs, CMSpec) of
+                [true|_] ->
+                    case ets:match_spec_run(AllowIPs, CMSpec) of
+                        [true|_] ->
+                            handle_auth(ARG, Auth_H, Auth_methods#auth{acl=none},
+                                        Ret1);
+                        _ ->
+                            false_403
+                    end;
+                _ ->
+                    handle_auth(ARG, Auth_H, Auth_methods#auth{acl=none}, Ret1)
+            end;
+
+        {_, all, allow_deny} ->
+            false_403;
+        {all, _, allow_deny} ->
+            case ets:match_spec_run(DenyIPs, CMSpec) of
+                [true|_] ->
+                    false_403;
+                _ ->
+                    handle_auth(ARG, Auth_H, Auth_methods#auth{acl=none}, Ret1)
+            end;
+        {_, _, allow_deny} ->
+            case ets:match_spec_run(AllowIPs, CMSpec) of
+                [true|_] ->
+                    case ets:match_spec_run(DenyIPs, CMSpec) of
+                        [true|_] ->
+                            false_403;
+                        _ ->
+                            handle_auth(ARG, Auth_H, Auth_methods#auth{acl=none},
+                                        Ret1)
+                    end;
+                _ ->
+                    false_403
+            end
+    end;
+
+handle_auth(_ARG, _Auth_H, #auth{users=[],pam=false,mod=[]}, true) ->
+    true;
+
+handle_auth(ARG, _Auth_H, Auth_methods=#auth{users=[],pam=false,mod=[]}, Ret) ->
+    maybe_auth_log({401, Auth_methods#auth.realm}, ARG),
+    {Ret, Auth_methods};
 
 handle_auth(ARG, Auth_H, Auth_methods = #auth{mod = Mod}, Ret) when Mod /= [] ->
     case catch Mod:auth(ARG, Auth_methods) of
-	{'EXIT', Reason} ->
+        {'EXIT', Reason} ->
             L = ?F("authmod crashed ~n~p:auth(~p, ~n ~p) \n"
-		   "Reason: ~p~n"
+                   "Reason: ~p~n"
                    "Stack: ~p~n",
-		   [Mod, ARG, Auth_methods, Reason,
+                   [Mod, ARG, Auth_methods, Reason,
                     erlang:get_stacktrace()]),
             handle_crash(ARG, L),
             deliver_accumulated(ARG#arg.clisock),
             exit(normal);
 
-	%% appmod means the auth headers are undefined, i.e. false.
-	%% TODO: change so that authmods simply return true/false
-	{appmod, _AppMod} ->
-	    handle_auth(ARG, Auth_H, Auth_methods#auth{mod = []}, Ret);
-	{true, User} ->
-	    {true, User};
-	true ->
-	    true;
-	{false, Realm} ->
-	    handle_auth(ARG, Auth_H, Auth_methods#auth{mod = []},
-                        {false, Realm});
-	_ ->
-	    maybe_auth_log(403, ARG),
-	    false_403
+        %% appmod means the auth headers are undefined, i.e. false.
+        %% TODO: change so that authmods simply return true/false
+        {true, User} ->
+            {true, User};
+        true ->
+            true;
+        false ->
+            handle_auth(ARG, Auth_H, Auth_methods#auth{mod = []},
+                        Ret);
+        {false, Realm} ->
+            handle_auth(ARG, Auth_H, Auth_methods#auth{mod=[], realm=Realm},
+                        Ret);
+        {appmod, Mod} ->
+            handle_auth(ARG, Auth_H, Auth_methods#auth{mod=[], outmod=Mod},
+                        Ret);
+        _ ->
+            maybe_auth_log(403, ARG),
+            false_403
     end;
 
 %% if the headers are undefined we do not need to check Pam or Users
@@ -1855,27 +1964,17 @@ is_redirect_map(Path, [E={Prefix, _URL, _AppendMode}|Tail]) ->
 %% Find out what which module to call when urltype is unauthorized
 %% Precedence is:
 %% 1. SC#errormod401 if it's not default
-%% 2. First authdir which prefix the requested dir and has an authmod set
+%% 2. outmod if defined
 %% 3. yaws_outmod
 
-get_unauthorized_outmod(_Req_dir, _Auth_dirs, Errormod401)
+get_unauthorized_outmod(_Req_dir, _Auth, Errormod401)
   when Errormod401 /= yaws_outmod ->
     Errormod401;
 
-get_unauthorized_outmod(_Req_dir, [], Errormod401) ->
-    Errormod401;
-
-get_unauthorized_outmod(Req_dir, [{Auth_dir, Auth}|T], Errormod401) ->
-    case lists:prefix(Auth_dir, Req_dir) of
-	true ->
-	    case Auth#auth.mod /= [] of
-		true ->
-		    Auth#auth.mod;
-		false ->
-		    get_unauthorized_outmod(Req_dir, T, Errormod401)
-	    end;
-	false ->
-	    get_unauthorized_outmod(Req_dir, T, Errormod401)
+get_unauthorized_outmod(_Req_dir, Auth, Errormod401) ->
+    case Auth#auth.outmod /= [] of
+        true  -> Auth#auth.outmod;
+        false -> Errormod401
     end.
 
 
@@ -1994,7 +2093,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = {unauthorized, Auth, Realm}}, N) ->
     %% outh_set_dyn headers sets status to 200 by default
     %% so we need to set it 401
     yaws:outh_set_status_code(401),
-    Outmod = get_unauthorized_outmod(UT#urltype.path, SC#sconf.authdirs,
+    Outmod = get_unauthorized_outmod(UT#urltype.path, Auth,
                                      SC#sconf.errormod_401),
     OutFun = fun (A) ->
                      case catch Outmod:out401(A, Auth, Realm) of

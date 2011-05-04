@@ -106,13 +106,17 @@ add_yaws_auth(SCs) ->
 %% We search and setup www authenticate for each directory
 %% specified as an auth directory or containing a .yaws_auth file.
 %% These are merged with server conf.
-setup_auth(#sconf{docroot = Docroot, authdirs = Authdirs}=SC) ->
-    Authdirs1 = load_yaws_auth_from_docroot(Docroot, ?sc_auth_skip_docroot(SC)),
-    Authdirs2 = load_yaws_auth_from_authdirs(Authdirs, Docroot, Authdirs1),
-    Authdirs3 = ensure_auth_headers(Authdirs2),
-    Authdirs4 = [{Dir, A} || A = #auth{dir = [Dir]} <- Authdirs3], % A->{Dir, A}
-    start_pam(Authdirs4),
-    Authdirs4.
+setup_auth(#sconf{docroot = Docroot, xtra_docroots = XtraDocroots,
+                  authdirs = Authdirs}=SC) ->
+    [begin
+         Authdirs1 = load_yaws_auth_from_docroot(D, ?sc_auth_skip_docroot(SC)),
+         Authdirs2 = load_yaws_auth_from_authdirs(Authdirs, D, []),
+         Authdirs3 = [A || A <- Authdirs1,
+                           not lists:keymember(A#auth.dir,#auth.dir,Authdirs2)],
+         Authdirs4 = ensure_auth_headers(Authdirs3 ++ Authdirs2),
+         start_pam(Authdirs4),
+         {D, Authdirs4}
+     end || D <- [Docroot|XtraDocroots] ].
 
 
 load_yaws_auth_from_docroot(_, true) ->
@@ -121,37 +125,63 @@ load_yaws_auth_from_docroot(undefined, _) ->
     [];
 load_yaws_auth_from_docroot(Docroot, _) ->
     Fun = fun (Path, Acc) ->
-		  %% Strip Docroot and then filename
-		  SP  = string:sub_string(Path, length(Docroot)+1),
-		  Dir = filename:dirname(SP),
-		  case load_yaws_auth_file(Path, #auth{dir = [Dir]}) of
-		      Auth when is_record(Auth, auth)  ->
-                          [Auth| Acc];
-		      _Other ->
-                          Acc
-		  end
-	  end,
+                  %% Strip Docroot and then filename
+                  SP  = string:sub_string(Path, length(Docroot)+1),
+                  Dir = filename:dirname(SP),
+                  A = #auth{docroot=Docroot, dir=Dir},
+                  case catch load_yaws_auth_file(Path, A) of
+                      {ok, L} -> L ++ Acc;
+                      _Other  -> Acc
+                  end
+          end,
     filelib:fold_files(Docroot, "^.yaws_auth$", true, Fun, []).
 
 
 load_yaws_auth_from_authdirs([], _, Acc) ->
     lists:reverse(Acc);
-load_yaws_auth_from_authdirs([Auth = #auth{dir = [D]}| Rest], Docroot, Acc) ->
-    Dir     = case D of
-                  "/" ++ Rest -> Rest;	% strip leading slash
-                  _           -> D
-              end,
-    Path    = filename:join([Docroot, Dir, ".yaws_auth"]),
-    NewAuth = case catch load_yaws_auth_file(Path, Auth) of
-                  {ok, A} -> A;
-                  _       -> Auth
-              end,
-    load_yaws_auth_from_authdirs(Rest, Docroot, [NewAuth| Acc]);
-load_yaws_auth_from_authdirs([{_Dir, Auth}| Rest], Docroot, Acc) ->
-    %% handle {Dir, A} by stripping it
-    load_yaws_auth_from_authdirs([Auth| Rest], Docroot, Acc);
+load_yaws_auth_from_authdirs([Auth = #auth{dir=Dir}| Rest], Docroot, Acc) ->
+    if
+        Auth#auth.docroot /= [] andalso Auth#auth.docroot /= Docroot ->
+            load_yaws_auth_from_authdirs(Rest, Docroot, Acc);
+        Auth#auth.docroot == [] ->
+            Auth1 = Auth#auth{dir=filename:nativename(Dir)},
+            F = fun(A) ->
+                        (A#auth.docroot == Docroot andalso
+                         A#auth.dir == Auth1#auth.dir)
+                end,
+            case lists:any(F, Acc) of
+                true ->
+                    load_yaws_auth_from_authdirs(Rest, Docroot, Acc);
+                false ->
+                    Acc1 = Acc ++ load_yaws_auth_from_authdir(Docroot, Auth1),
+                    load_yaws_auth_from_authdirs(Rest, Docroot, Acc1)
+            end;
+        true -> %% #auth.docroot == Docroot
+            Auth1 = Auth#auth{docroot=Docroot, dir=filename:nativename(Dir)},
+            F = fun(A) ->
+                        not (A#auth.docroot == [] andalso
+                             A#auth.dir == Auth1#auth.dir)
+                end,
+            Acc1 = lists:filter(F, Acc),
+            Acc2 = Acc1 ++ load_yaws_auth_from_authdir(Docroot, Auth1),
+            load_yaws_auth_from_authdirs(Rest, Docroot, Acc2)
+    end;
+load_yaws_auth_from_authdirs([{Docroot, Auths}|_], Docroot, Acc) ->
+    load_yaws_auth_from_authdirs(Auths, Docroot, Acc);
 load_yaws_auth_from_authdirs([_| Rest], Docroot, Acc) ->
     load_yaws_auth_from_authdirs(Rest, Docroot, Acc).
+
+
+load_yaws_auth_from_authdir(Docroot, Auth) ->
+    Dir = case Auth#auth.dir of
+              "/" ++ R -> R;
+              _        -> Auth#auth.dir
+          end,
+    Path = filename:join([Docroot, Dir, ".yaws_auth"]),
+    case catch load_yaws_auth_file(Path, Auth) of
+        {ok, Auths} -> Auths;
+        _           -> [Auth]
+    end.
 
 
 load_yaws_auth_file(Path, Auth) ->
@@ -181,9 +211,9 @@ add_auth_headers(Auth) ->
 
 start_pam([]) ->
     ok;
-start_pam([{_Dir, #auth{pam = false}}|T]) ->
+start_pam([#auth{pam = false}|T]) ->
     start_pam(T);
-start_pam([{_Dir, A}|T]) ->
+start_pam([A|T]) ->
     case whereis(yaws_pam) of
 	undefined ->	% pam not started
             Spec = {yaws_pam, {yaws_pam, start_link,
@@ -195,8 +225,10 @@ start_pam([{_Dir, A}|T]) ->
     end.
 
 
-parse_yaws_auth_file([], Auth) ->
-    Auth;
+parse_yaws_auth_file([], Auth=#auth{files=[]}) ->
+    {ok, [Auth]};
+parse_yaws_auth_file([], Auth=#auth{dir=Dir, files=Files}) ->
+    {ok, [Auth#auth{dir=filename:join(Dir, F), files=[F]} || F <- Files]};
 
 parse_yaws_auth_file([{realm, Realm}|T], Auth0) ->
     parse_yaws_auth_file(T, Auth0#auth{realm = Realm});
@@ -218,14 +250,68 @@ parse_yaws_auth_file([{authmod, Authmod0}|T], Auth0)
     parse_yaws_auth_file(T, Auth0#auth{mod = Authmod0, headers = Headers});
 
 parse_yaws_auth_file([{file, File}|T], Auth0) ->
-    [Dir] = Auth0#auth.dir,
-    New_dir = [Dir ++ File],
-    parse_yaws_auth_file(T, Auth0#auth{dir = New_dir});
+    Files = case File of
+                "/" ++ F -> [F|Auth0#auth.files];
+                _        -> [File|Auth0#auth.files]
+            end,
+    parse_yaws_auth_file(T, Auth0#auth{files=Files});
 
 parse_yaws_auth_file([{User, Password}|T], Auth0)
   when is_list(User), is_list(Password) ->
-    Users = [{User, Password}|Auth0#auth.users],
-    parse_yaws_auth_file(T, Auth0#auth{users = Users}).
+    Users = case lists:member({User,Password}, Auth0#auth.users) of
+                true  -> Auth0#auth.users;
+                false -> [{User, Password} | Auth0#auth.users]
+            end,
+    parse_yaws_auth_file(T, Auth0#auth{users = Users});
+
+parse_yaws_auth_file([{allow, all}|T], Auth0) ->
+    Auth1 = case Auth0#auth.acl of
+                none    -> Auth0#auth{acl={all, [], deny_allow}};
+                {_,D,O} -> Auth0#auth{acl={all, D, O}}
+            end,
+    parse_yaws_auth_file(T, Auth1);
+
+parse_yaws_auth_file([{allow, IPs}|T], Auth0) when is_list(IPs) ->
+    Auth1 = case Auth0#auth.acl of
+                none ->
+                    AllowIPs = parse_auth_ips(IPs, []),
+                    Auth0#auth{acl={AllowIPs, [], deny_allow}};
+                {all, _, _} ->
+                    Auth0;
+                {AllowIPs, DenyIPs, Order} ->
+                    AllowIPs2 = parse_auth_ips(IPs, []) ++ AllowIPs,
+                    Auth0#auth{acl={AllowIPs2, DenyIPs, Order}}
+            end,
+    parse_yaws_auth_file(T, Auth1);
+
+parse_yaws_auth_file([{deny, all}|T], Auth0) ->
+    Auth1 = case Auth0#auth.acl of
+                none    -> Auth0#auth{acl={[], all, deny_allow}};
+                {A,_,O} -> Auth0#auth{acl={A, all, O}}
+            end,
+    parse_yaws_auth_file(T, Auth1);
+
+parse_yaws_auth_file([{deny, IPs}|T], Auth0) when is_list(IPs) ->
+    Auth1 = case Auth0#auth.acl of
+                none ->
+                    DenyIPs = parse_auth_ips(IPs, []),
+                    Auth0#auth{acl={[], DenyIPs, deny_allow}};
+                {_, all, _} ->
+                    Auth0;
+                {AllowIPs, DenyIPs, Order} ->
+                    DenyIPs2 = parse_auth_ips(IPs, []) ++ DenyIPs,
+                    Auth0#auth{acl={AllowIPs, DenyIPs2, Order}}
+            end,
+    parse_yaws_auth_file(T, Auth1);
+
+parse_yaws_auth_file([{order, O}|T], Auth0)
+  when O == allow_deny; O == deny_allow ->
+    Auth1 = case Auth0#auth.acl of
+                none    -> Auth0#auth{acl={[], [], O}};
+                {A,D,_} -> Auth0#auth{acl={A, D, O}}
+            end,
+    parse_yaws_auth_file(T, Auth1).
+
 
 
 %% This is the function that arranges sconfs into
@@ -1278,6 +1364,9 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
     case toks(Lno, Chars) of
         [] ->
             fload(FD, server_auth, GC, C, Cs, Lno+1, Next, Auth);
+        ["docroot", '=', Docroot] ->
+            A2 = Auth#auth{docroot = filename:absname(Docroot)},
+            fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
         ["dir", '=', Authdir] ->
             case file:list_dir(Authdir) of
                 {ok,_} when Authdir /= "/" ->
@@ -1313,6 +1402,54 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
                 _ ->
                     {error, ?F("Invalid user at line ~w", [Lno])}
             end;
+        ["allow", '=', "all"] ->
+            A2 = case Auth#auth.acl of
+                     none    -> Auth#auth{acl={all, [], deny_allow}};
+                     {_,D,O} -> Auth#auth{acl={all, D, O}}
+                 end,
+            fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
+        ["allow", '=' | IPs] ->
+            A2 = case Auth#auth.acl of
+                     none ->
+                         AllowIPs = parse_auth_ips(IPs, []),
+                         Auth#auth{acl={AllowIPs, [], deny_allow}};
+                     {all, _, _} ->
+                         Auth;
+                     {AllowIPs, DenyIPs, Order} ->
+                         AllowIPs2 = parse_auth_ips(IPs, []) ++ AllowIPs,
+                         Auth#auth{acl={AllowIPs2, DenyIPs, Order}}
+                 end,
+            fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
+        ["deny", '=', "all"] ->
+            A2 = case Auth#auth.acl of
+                     none    -> Auth#auth{acl={[], all, deny_allow}};
+                     {A,_,O} -> Auth#auth{acl={A, all, O}}
+                 end,
+            fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
+        ["deny", '=' | IPs] ->
+            A2 = case Auth#auth.acl of
+                     none ->
+                         DenyIPs = parse_auth_ips(IPs, []),
+                         Auth#auth{acl={[], DenyIPs, deny_allow}};
+                     {_, all, _} ->
+                         Auth;
+                     {AllowIPs, DenyIPs, Order} ->
+                         DenyIPs2 = parse_auth_ips(IPs, []) ++ DenyIPs,
+                         Auth#auth{acl={AllowIPs, DenyIPs2, Order}}
+                 end,
+            fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
+        ["order", '=', "allow", ',', "deny"] ->
+            A2 = case Auth#auth.acl of
+                     none    -> Auth#auth{acl={[], [], allow_deny}};
+                     {A,D,_} -> Auth#auth{acl={A, D, allow_deny}}
+                 end,
+            fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
+        ["order", '=', "deny", ',', "allow"] ->
+            A2 = case Auth#auth.acl of
+                     none    -> Auth#auth{acl={[], [], deny_allow}};
+                     {A,D,_} -> Auth#auth{acl={A, D, deny_allow}}
+                 end,
+            fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
         ["pam", "service", '=', Serv] ->
             A2 = Auth#auth{pam=Serv},
             fload(FD, server_auth, GC, C, Cs, Lno+1, Next, A2);
@@ -1328,7 +1465,11 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
                               yaws:make_www_authenticate_header({realm, Realm}),
                           Auth#auth{headers = H}
                   end,
-            C2 = C#sconf{authdirs = [A2|C#sconf.authdirs]},
+            Authdirs = case A2#auth.dir of
+                           [] -> [A2#auth{dir="/"}];
+                           Ds -> [A2#auth{dir=D} || D <- Ds]
+                       end,
+            C2 = C#sconf{authdirs = Authdirs ++ C#sconf.authdirs},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
         [H|T] ->
             {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
@@ -1955,3 +2096,79 @@ ip_list_parser([IP|IPs], Addrs) ->
         {ok, Addr} ->
             ip_list_parser(IPs, [Addr|Addrs])
     end.
+
+
+-define(MAXBITS_IPV4, 32).
+-define(MAXBITS_IPV6, 128).
+
+parse_auth_ips([], Result) ->
+    Result;
+parse_auth_ips([Str|Rest], Result) ->
+    try
+        parse_auth_ips(Rest, [parse_ip(Str)|Result])
+    catch
+        _:_ -> parse_auth_ips(Rest, Result)
+    end.
+
+parse_ip(Str) when is_list(Str) ->
+    [Ip|Rest] = string:tokens(Str, [$/]),
+    {Type, IpInt}  = ip_to_integer(Ip),
+    case Rest of
+        [] ->
+            {IpInt, IpInt};
+        [NetMask] ->
+            MaskInt  = netmask_to_integer(Type, NetMask),
+            WildCard = netmask_to_wildcard(Type, MaskInt),
+            NetAddr  = IpInt band MaskInt,
+            case Type of
+                ipv4 -> {NetAddr + 1, NetAddr + WildCard - 1};
+                ipv6 -> {NetAddr, NetAddr + WildCard}
+            end;
+        _ ->
+            throw({error, einval})
+    end;
+parse_ip(_) ->
+    throw({error, einval}).
+
+ip_to_integer(Str) when is_list(Str) ->
+    case inet_parse:ipv6_address(Str) of
+        {ok, {0,0,0,0,0,16#FFFF,N1,N2}} ->
+            {ipv4, (N1 bsl 16) bor N2};
+        {ok, Ip} ->
+            ip_to_integer(Ip);
+        {error, Reason} ->
+            throw({error, Reason})
+    end;
+ip_to_integer({N1,N2,N3,N4}) ->
+    Int = (N1 bsl 24) bor (N2 bsl 16) bor (N3 bsl 8) bor N4,
+    if
+        (Int bsr ?MAXBITS_IPV4) == 0 -> {ipv4, Int};
+        true -> throw({error, einval})
+    end;
+ip_to_integer({N1,N2,N3,N4,N5,N6,N7,N8}) ->
+    Int = (N1 bsl 112) bor (N2 bsl 96) bor (N3 bsl 80) bor (N4 bsl 64) bor
+        (N5 bsl 48) bor (N6 bsl 32) bor (N7 bsl 16) bor N8,
+    if
+        (Int bsr ?MAXBITS_IPV6) == 0 -> {ipv6, Int};
+        true -> throw({error, einval})
+    end;
+ip_to_integer(_) ->
+    throw({error, einval}).
+
+
+netmask_to_integer(Type, NetMask) ->
+    case catch list_to_integer(NetMask) of
+        I when is_integer(I) ->
+            case Type of
+                ipv4 -> (1 bsl ?MAXBITS_IPV4) - (1 bsl (?MAXBITS_IPV4 - I));
+                ipv6 -> (1 bsl ?MAXBITS_IPV6) - (1 bsl (?MAXBITS_IPV6 - I))
+            end;
+        _ ->
+            case ip_to_integer(NetMask) of
+                {Type, MaskInt} -> MaskInt;
+                _               -> throw({error, einval})
+            end
+    end.
+
+netmask_to_wildcard(ipv4, Mask) -> ((1 bsl ?MAXBITS_IPV4) - 1) bxor Mask;
+netmask_to_wildcard(ipv6, Mask) -> ((1 bsl ?MAXBITS_IPV6) - 1) bxor Mask.
