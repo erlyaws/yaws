@@ -71,8 +71,10 @@ log_resolve_hostname = false
 fail_on_bind_err = true
 
 # If HTTP auth is used, it is possible to have a specific
-# auth log.
-auth_log = true
+# auth log. As of release 1.90 the global auth_log is
+# deprecated and ignored. Now, this variable must be set in
+# server part
+#auth_log = true
 
 # When we're running multiple yaws systems on the same
 # host, we need to give each yaws system an individual
@@ -107,6 +109,7 @@ keepalive_timeout = 30000
         port = %port%
         listen = 0.0.0.0
         docroot = %docroot%
+        auth_log = true
         appmods = <cgi-bin, yaws_appmod_cgi>
 </server>
 
@@ -115,6 +118,7 @@ keepalive_timeout = 30000
         listen = 0.0.0.0
         docroot = /tmp
         dir_listings = true
+        auth_log = true
         statistics = true
         <auth>
                 realm = foobar
@@ -131,6 +135,7 @@ keepalive_timeout = 30000
         docroot = /tmp
         listen = 0.0.0.0
         dir_listings = true
+        auth_log = true
         <ssl>
                 keyfile = %certdir%/yaws-key.pem
                 certfile = %certdir%/yaws-cert.pem

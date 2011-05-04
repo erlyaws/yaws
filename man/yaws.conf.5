@@ -27,71 +27,20 @@ Log Format. (See http://en.wikipedia.org/wiki/Common_Log_Format for
 more details on Common Log Format.)
 
 .br
-\fBtrace.http\fR - this file contains the HTTP trace if that is enabled
+\fB<Host>.auth\fR - for each virtual host served by yaws, a file <Host>.auth
+will be written which contains all http auth related messages.
 
-.br 
-\fBauth.log\fR - If configured, all http auth related messages
-goes here.
+.br
+\fBtrace.http\fR - this file contains the HTTP trace if that is enabled
 
 .br
 \fBtrace.traffic\fR - this file contains the traffic trace if that is enabled
 
+
+Note that <Host>.access and <Host>.auth files will be used only if the directive
+\fBlogger_mod\fR is not set or set to yaws_log.
+
 The default value for logdir is "."
-
-.TP
-
-\fBlogger_mod = Module\fR
-This directive sets \fBModule\fR as the access logging module. The
-function \fBModule:accesslog/8\fR will be called. The arguments to
-this function are as follows:
-
-.br
-\fBServerName\fR - Name of the server that was accessed (as a
-string). If the server was accessed on a port other than the HTTP
-default port 80, the name also includes the port number,
-e.g. "server:8000". Implementations of the \fBaccesslog\fR function
-can use this argument to distinguish among different logging formats
-for different servers.
-
-.br
-\fBIpAddress\fR - IP address of the accessing client (as a tuple).
-
-.br
-\fBUser\fR - The username of the authenticated user (as a string).
-
-.br
-\fBReq\fR - The HTTP method, URI path, and HTTP version of the
-request (as a list of strings and characters).
-
-.br
-\fBStatus\fR - The HTTP status code returned to the client (as a
-string).
-
-.br
-\fBLength\fR - The content-length of the response returned to the
-client (as a string).
-
-.br
-\fBReferrer\fR - The URL of the web resource where the request
-originated (as a string); the value of the HTTP \fBReferer\fR header.
-
-.br
-\fBUserAgent\fR - The identification string of the user agent issuing
-the request (as a string); the value of the HTTP \fBUser-Agent\fR
-header.
-
-Arguments for values not available for a particular request, such as
-\fBUser\fR, are provided as the string "-".
-
-Because it's important to avoid blocking the caller, the default
-logging function in Yaws is a cast. You should strive to make your
-custom access logging function return to its caller as quickly as
-possible.
-
-Custom access logging functions can preprocess access logging data and
-then call \fByaws_log:accesslog/8\fR to send the data to the default
-log.
-
 
 .TP
 \fBebin_dir = Directory\fR
@@ -158,7 +107,7 @@ new ssl implementation.
  
 .TP
 \fBauth_log  = true | false\fR
-Enable or disable the auth log. Default is true.
+\fBDeprecated and ignored. Now, this target must be set in server part.\fR
 
 .TP
 \fBmax_connections = nolimit | Integer\fR
@@ -343,11 +292,76 @@ will also do this for you).
 This forces all local redirects issued by the server to use this 
 method. This is useful when an SSL off-loader, or stunnel, is used in 
 front of yaws.
-.TP
 
+.TP
+\fBauth_log  = true | false\fR
+Enable or disable the auth log for this virtual server. Default is true.
+
+.TP
 \fBaccess_log = true | false\fR
 Setting this directive to false turns of traffic logging for this
 virtual server. The default value is true. 
+
+.TP
+\fBlogger_mod = Module\fR
+It is possible to set a special module that handles access and auth logging. The
+default is to log all web server traffic to <Host>.access and <Host>.auth files
+in the configured or default logdir.
+
+This module must implement the behaviour \fIyaws_logger\fR. Default value is
+yaws_log.
+
+The following functions should be exported:
+
+\fBModule:open_log(ServerName, Type, LogDir)\fR
+.RS 12
+When yaws is started, this function is called for this virtual server. If the
+initialization is successful, the function must return \fI{true,State}\fR and if
+an error occurred, it must return \fIfalse\fR.
+.RE
+.HP
+
+\fBModule:close_log(ServerName, Type)\fR
+.RS 12
+This function is called for this virtual server when yaws is stopped.
+.RE
+.HP
+
+\fBModule:wrap_log(ServerName, Type, State, LogWrapSize)\fR
+.RS 12
+This function is used to rotate log files. It is regularly called by yaws and
+must return the possibly updated internal NewState.
+.RE
+.HP
+
+\fBModule:write_log(ServerName, Type, State, Infos)\fR
+.RS 12
+When it needs to log a message, \Yaws\ will call this function. The parameter
+Infos is \fI{Ip,Req,InHdrs,OutHdrs,Time}\fR for an access log and
+\fI{Ip,Path,Item}\fR for an auth log, where:
+
+\fBIp\fR - IP address of the accessing client (as a tuple).
+
+\fBReq\fR - the HTTP method, URI path, and HTTP version of the request (as a
+#http_request{} record).
+
+\fBInHdrs\fR - the HTTP headers which were sent from the WWW client (as a
+#headers{} record).
+
+\fBOutHdrs\fR - the HTTP headers sent to the WWW client (as a #outh{} record)
+
+\fBPath\fR - the URI path of the request (as a string).
+
+\fBItem\fR - the result of an authentication request. May be \fI{ok,User}\fR,
+\fI403\fR or \fI{401,Realm}\fR.
+
+\fBTime\fR - The time taken to serve the request, in microseconds.
+.RE
+.HP
+
+For all of these callbacks, \fBServerName\fR is the virtual server's name,
+\fIType\fR is the atom access or auth and \fIState\fR is the internal state of
+the logger.
 
 .TP
 \fBdir_listings = true | true_nozip | false\fR

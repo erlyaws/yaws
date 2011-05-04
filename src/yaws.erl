@@ -225,8 +225,6 @@ set_gc_flags([{tty_trace, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags,?GC_TTY_TRACE, Bool));
 set_gc_flags([{debug, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags, ?GC_DEBUG, Bool));
-set_gc_flags([{auth_log, Bool}|T], Flags) ->
-    set_gc_flags(T, flag(Flags, ?GC_AUTH_LOG, Bool));
 set_gc_flags([{copy_errlog, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags, ?GC_COPY_ERRLOG, Bool));
 set_gc_flags([{copy_error_log, Bool}|T], Flags) ->
@@ -330,6 +328,8 @@ setup_sconf_ssl(SL, DefaultSSL) ->
 
 set_sc_flags([{access_log, Bool}|T], Flags) ->
     set_sc_flags(T, flag(Flags, ?SC_ACCESS_LOG, Bool));
+set_sc_flags([{auth_log, Bool}|T], Flags) ->
+    set_sc_flags(T, flag(Flags, ?SC_AUTH_LOG, Bool));
 set_sc_flags([{add_port, Bool}|T], Flags) ->
     set_sc_flags(T, flag(Flags, ?SC_ADD_PORT, Bool));
 set_sc_flags([{statistics, Bool}|T], Flags) ->
@@ -380,7 +380,7 @@ dohup(Sock) ->
                   X
           end,
     gen_event:notify(yaws_event_manager, {yaws_hupped, Res}),
-    gen_event:notify(yaws_log, {yaws_hupped, Res}),
+    yaws_log:rotate(Res),
     gen_tcp:send(Sock, io_lib:format("hupped: ~p~n", [Res])),
     gen_tcp:close(Sock).
 
@@ -1911,6 +1911,9 @@ do_http_get_headers(CliSock, SSL) ->
         closed ->
             closed;
         R ->
+            %% Http request received. Store the current time. it will be usefull
+            %% to get the time taken to serve the request.
+            put(request_start_time, now()),
             H = http_collect_headers(CliSock, R,  #headers{}, SSL, 0),
             {R, H}
     end.

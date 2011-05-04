@@ -129,7 +129,7 @@ init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded, Id}) ->
                                                [?format_record(_SC, sconf)])
                                 end, Group)
                       end, Sconfs),
-                    yaws_log:setdir(Gconf, Sconfs),
+                    yaws_log:setup(Gconf, Sconfs),
                     case Gconf#gconf.trace of
                         {true, What} ->
                             yaws_log:open_trace(What),
@@ -148,7 +148,7 @@ init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded, Id}) ->
                         Dir ->
                             GC = yaws_config:make_default_gconf(true,
                                                                 Env#env.id),
-                            yaws_log:setdir(GC#gconf{logdir = Dir}, []),
+                            yaws_log:setup(GC#gconf{logdir = Dir}, []),
                             error_logger:error_msg("Yaws: bad conf: ~s "
                                                    "terminating~n",[E]),
                             init:stop(),
@@ -1273,82 +1273,23 @@ pick_host(GC, Host, [SC|T], Group) ->
     end.
 
 maybe_auth_log(Item, ARG) ->
-    GC=get(gc),
     SC=get(sc),
-    case ?gc_has_auth_log(GC) of
+    case ?sc_has_auth_log(SC) of
         false ->
             ok;
         true ->
             Req = ARG#arg.req,
             {IP,_} = ARG#arg.client_ip_port,
             Path = safe_decode_path(Req#http_request.path),
-            yaws_log:authlog(SC#sconf.servername, IP, Path, Item)
+            yaws_log:authlog(SC, IP, Path, Item)
     end.
 
 maybe_access_log(Ip, Req, H) ->
-    GC=get(gc),
     SC=get(sc),
     case ?sc_has_access_log(SC) of
         true ->
-            Status = case yaws:outh_get_status_code() of
-                         undefined -> "-";
-                         I -> integer_to_list(I)
-                     end,
-            Len = case Req#http_request.method of
-                      'HEAD' -> "-";
-                      _ -> case yaws:outh_get_contlen() of
-                               undefined ->
-                                   case yaws:outh_get_act_contlen() of
-                                       undefined -> "-";
-                                       Actlen -> integer_to_list(Actlen)
-                                   end;
-                               I2 -> integer_to_list(I2)
-                           end
-                  end,
-            Ver = case Req#http_request.version of
-                      {1,0} ->
-                          "HTTP/1.0";
-                      {1,1} ->
-                          "HTTP/1.1";
-                      {0,9} ->
-                          "HTTP/0.9"
-                  end,
-            Path = safe_decode_path(Req#http_request.path),
-            Meth = yaws:to_list(Req#http_request.method),
-            Referrer = optional_header(H#headers.referer),
-            UserAgent = optional_header(H#headers.user_agent),
-            User = case H#headers.authorization of
-                       {User0, _Pass, _OrigString} ->
-                           User0;
-                       _ ->
-                           "-"
-                   end,
-            RealIp = case GC#gconf.x_forwarded_for_log_proxy_whitelist of
-                         [] ->
-                             Ip;
-                         ProxyIps ->
-                             case lists:member(Ip, ProxyIps) of
-                                 false ->
-                                     Ip;
-                                 true ->
-                                     FwdFor = H#headers.x_forwarded_for,
-                                     case yaws:split_sep(FwdFor, $,) of
-                                         [] -> Ip;
-                                         IPs ->
-                                             LastIp = lists:last(IPs),
-                                             case inet_parse:address(LastIp) of
-                                                 {error, _} ->
-                                                     "invalid ip: " ++ LastIp;
-                                                 {ok, ClientIp} ->
-                                                     ClientIp
-                                             end
-                                     end
-                             end
-                     end,
-            LoggerMod = GC#gconf.logger_mod,
-            LoggerMod:accesslog(SC#sconf.servername, RealIp, User,
-                                [Meth, $\s, Path, $\s, Ver],
-                                Status, Len, Referrer, UserAgent);
+            Time = timer:now_diff(now(), get(request_start_time)),
+            yaws_log:accesslog(SC, Ip, Req, H, get(outh), Time);
         false ->
             ignore
     end.
@@ -1365,11 +1306,6 @@ safe_decode_path(Path) ->
 decode_path({abs_path, Path}) ->
     yaws_api:url_decode(Path).
 
-optional_header(Item) ->
-    case Item of
-        undefined -> "-";
-        Item -> Item
-    end.
 
 %% ret:  continue | done
 'GET'(CliSock, Req, Head) ->

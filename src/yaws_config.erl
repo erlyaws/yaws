@@ -431,13 +431,12 @@ make_default_gconf(Debug, Id) ->
                                         30
                                 end,
            flags = if Debug ->
-                           ?GC_DEBUG bor ?GC_AUTH_LOG bor
-                               ?GC_COPY_ERRLOG bor ?GC_FAIL_ON_BIND_ERR bor
+                           ?GC_DEBUG bor ?GC_COPY_ERRLOG
+                               bor ?GC_FAIL_ON_BIND_ERR bor
                                ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH;
 
                       true ->
-                           ?GC_AUTH_LOG bor ?GC_COPY_ERRLOG bor
-                               ?GC_FAIL_ON_BIND_ERR bor
+                           ?GC_COPY_ERRLOG bor ?GC_FAIL_ON_BIND_ERR bor
                                ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH
                    end,
 
@@ -615,10 +614,6 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                 false ->
                     {error, ?F("Expect directory at line ~w (logdir ~s)", [Lno, Dir])}
             end;
-
-        ["logger_mod", '=', LoggerMod] ->
-            fload(FD, globals, GC#gconf{logger_mod = list_to_atom(LoggerMod)},
-                  C, Cs, Lno+1, Next);
 
         ["ebin_dir", '=', Ebindir] ->
             Dir = filename:absname(Ebindir),
@@ -817,10 +812,12 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 
 
         ["auth_log", '=', Bool] ->
+            error_logger:format(
+              "'auth_log' global variable is deprecated and ignored."
+              " it is now a per-server variable", []),
             case is_bool(Bool) of
-                {true, Val} ->
-                    fload(FD, globals, ?gc_set_auth_log(GC, Val),
-                          C, Cs, Lno+1, Next);
+                {true, _Val} ->
+                    fload(FD, globals, GC, C, Cs, Lno+1, Next);
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
@@ -893,6 +890,17 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
+        ["auth_log", '=', Bool] ->
+            case is_bool(Bool) of
+                {true, Val} ->
+                    C2 = ?sc_set_auth_log(C, Val),
+                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
+            end;
+        ["logger_mod", '=', Module] ->
+            C2 = C#sconf{logger_mod = list_to_atom(Module)},
+            fload(FD, server, GC, C2, Cs, Lno+1, Next);
         ["dir_listings", '=', StrVal] ->
             case StrVal of
                 "true" ->
@@ -1944,7 +1952,7 @@ soft_setconf(GC, Groups, OLDGC, OldGroups) ->
 hard_setconf(GC, Groups) ->
     case gen_server:call(yaws_server,{setconf, GC, Groups},infinity) of
         ok ->
-            yaws_log:setdir(GC, Groups),
+            yaws_log:setup(GC, Groups),
             case GC#gconf.trace of
                 false ->
                     ok;
@@ -2107,14 +2115,14 @@ is_list_of_scs(_) ->
 
 add_sconf(SC) ->
     ok= gen_server:call(yaws_server, {add_sconf, SC}, infinity),
-    ok = gen_server:call(yaws_log, {soft_add_sc, SC}, infinity).
+    ok = yaws_log:add_sconf(SC).
 
 update_sconf(SC) ->
     ok = gen_server:call(yaws_server, {update_sconf, SC}, infinity).
 
 delete_sconf(SC) ->
     ok = gen_server:call(yaws_server, {delete_sconf, SC}, infinity),
-    ok = gen_server:call(yaws_log, {soft_del_sc, SC}, infinity).
+    ok = yaws_log:del_sconf(SC).
 
 update_gconf(GC) ->
     ok = gen_server:call(yaws_server, {update_gconf, GC}, infinity).

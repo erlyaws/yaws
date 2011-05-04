@@ -12,24 +12,22 @@
 %% flags for gconfs
 -define(GC_TTY_TRACE,                        1).
 -define(GC_DEBUG,                            2).
--define(GC_AUTH_LOG,                         4).
--define(GC_COPY_ERRLOG,                      8).
--define(GC_BACKWARDS_COMPAT_PARSE,          16).
--define(GC_LOG_RESOLVE_HOSTNAME,            32).
--define(GC_FAIL_ON_BIND_ERR,                64).
--define(GC_PICK_FIRST_VIRTHOST_ON_NOMATCH, 128).
--define(GC_USE_FDSRV,                      256).
--define(GC_USE_OLD_SSL,                    512).
+-define(GC_COPY_ERRLOG,                      4).
+-define(GC_BACKWARDS_COMPAT_PARSE,           8).
+-define(GC_LOG_RESOLVE_HOSTNAME,            16).
+-define(GC_FAIL_ON_BIND_ERR,                32).
+-define(GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,  64).
+-define(GC_USE_FDSRV,                      128).
+-define(GC_USE_OLD_SSL,                    256).
 
 
--define(GC_DEF, (?GC_AUTH_LOG bor ?GC_FAIL_ON_BIND_ERR)).
+
+-define(GC_DEF, ?GC_FAIL_ON_BIND_ERR).
 
 -define(gc_has_tty_trace(GC),
         ((GC#gconf.flags band ?GC_TTY_TRACE) /= 0)).
 -define(gc_has_debug(GC),
         ((GC#gconf.flags band ?GC_DEBUG) /= 0)).
--define(gc_has_auth_log(GC),
-        ((GC#gconf.flags band ?GC_AUTH_LOG) /= 0)).
 -define(gc_has_copy_errlog(GC),
         ((GC#gconf.flags band ?GC_COPY_ERRLOG) /= 0)).
 -define(gc_log_has_resolve_hostname(GC),
@@ -45,8 +43,6 @@
         GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_TTY_TRACE, Bool)}).
 -define(gc_set_debug(GC, Bool),
         GC#gconf{flags = yaws:flag(GC#gconf.flags, ?GC_DEBUG, Bool)}).
--define(gc_set_auth_log(GC, Bool),
-        GC#gconf{flags = yaws:flag(GC#gconf.flags, ?GC_AUTH_LOG, Bool)}).
 -define(gc_set_copy_errlog(GC, Bool),
         GC#gconf{flags = yaws:flag(GC#gconf.flags, ?GC_COPY_ERRLOG, Bool)}).
 -define(gc_log_set_resolve_hostname(GC, Bool),
@@ -67,7 +63,6 @@
                trace,              %% false | {true,http}|{true,traffic}
                flags = ?GC_DEF,    %% boolean flags
                logdir,
-               logger_mod = yaws_log, % access logging module
                ebin_dir = [],
                runmods = [],       %% runmods for entire server
                keepalive_timeout = 30000,
@@ -119,23 +114,27 @@
 
 %% flags for sconfs
 -define(SC_ACCESS_LOG,          1).
--define(SC_ADD_PORT,            2).
--define(SC_STATISTICS,          4).
--define(SC_TILDE_EXPAND,        8).
--define(SC_DIR_LISTINGS,        16).
--define(SC_DEFLATE,             32).
--define(SC_DIR_ALL_ZIP,         64).
--define(SC_DAV,                 128).
--define(SC_FCGI_TRACE_PROTOCOL, 512).
--define(SC_FCGI_LOG_APP_ERROR,  1024).
--define(SC_FORWARD_PROXY,       2048).
--define(SC_AUTH_SKIP_DOCROOT,   4096).
+-define(SC_AUTH_LOG,            2).
+-define(SC_ADD_PORT,            4).
+-define(SC_STATISTICS,          8).
+-define(SC_TILDE_EXPAND,        16).
+-define(SC_DIR_LISTINGS,        32).
+-define(SC_DEFLATE,             64).
+-define(SC_DIR_ALL_ZIP,         128).
+-define(SC_DAV,                 512).
+-define(SC_FCGI_TRACE_PROTOCOL, 1024).
+-define(SC_FCGI_LOG_APP_ERROR,  2048).
+-define(SC_FORWARD_PROXY,       4096).
+-define(SC_AUTH_SKIP_DOCROOT,   8192).
 
 
--define(SC_DEF, ?SC_ACCESS_LOG bor ?SC_ADD_PORT).
+
+-define(SC_DEF, ?SC_ACCESS_LOG bor ?SC_ADD_PORT bor ?SC_AUTH_LOG).
 
 -define(sc_has_access_log(SC),
         (((SC)#sconf.flags band ?SC_ACCESS_LOG) /= 0)).
+-define(sc_has_auth_log(SC),
+        (((SC)#sconf.flags band ?SC_AUTH_LOG) /= 0)).
 -define(sc_has_add_port(SC),
         (((SC)#sconf.flags band ?SC_ADD_PORT) /= 0)).
 -define(sc_has_statistics(SC),
@@ -162,6 +161,8 @@
 
 -define(sc_set_access_log(SC, Bool),
         SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_ACCESS_LOG, Bool)}).
+-define(sc_set_auth_log(SC, Bool),
+        SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_AUTH_LOG, Bool)}).
 -define(sc_set_add_port(SC, Bool),
         SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_ADD_PORT, Bool)}).
 -define(sc_set_statistics(SC, Bool),
@@ -221,6 +222,7 @@
          errormod_404 = yaws_outmod,     %% the default 404 error module
          errormod_crash = yaws_outmod,   %% use the same module for crashes
          arg_rewrite_mod = yaws,
+         logger_mod = yaws_log,          %% access/auth logging module
          opaque = [],                    %% useful in embedded mode
          start_mod,                      %% user provided module to be started
          allowed_scripts = [yaws,php,cgi,fcgi],

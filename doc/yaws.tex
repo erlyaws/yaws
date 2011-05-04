@@ -1719,6 +1719,11 @@ in the \textit{yaws.conf} file. If access\_log is turned on for a server,
 \Yaws\  will produce a log in Common Access Log Format called
 \textit{HostName:PortNumber.access}
 
+\item The auth log. Auth logging is turn on or off per server in the
+  \textit{yaws.conf} file. If auth\_log is turned on for a server, \Yaws\ will
+  produce a log called \textit{HostName:PortNumber.auth} which contains all http
+  auth related messages.
+
 \item \textit{report.log} This file contains all error and crash
 messages for all virtual servers in the same file.
 
@@ -2058,68 +2063,20 @@ part where options for each virtual host is supplied.
               \item \verb+<Host>.access+ - for each virtual host served by \Yaws\ ,
               a file \verb+<Host>.access+ will be written  which  contains
               an access log in Common Log Format.
-              \item \verb+auth.log+ - if configured, all HTTP
-              auth-related messages go here.
+              \item \verb+<Host>.auth+ - for each virtual host served by
+              \Yaws\ , a file \verb+<Host>.auth+ will be written which
+              contains all http auth related messages.
               \item \verb+trace.http+  -  this file contains the HTTP trace if
               that is enabled
               \item \verb+trace.traffic+ -  this  file  contains  the  traffic
               trace if that is enabled
               \end{itemize}
 
-\item       \verb+logger_mod = Module+ -
-              It is possible to set a special module that handles
-              access logging. The default is to log all web server
-              traffic to the \verb+<Host>.access+ file in the
-              configured or default \verb+logdir+.
+              Note that \verb+<Host>.access+ and \verb+<Host>.auth+ files will
+              be used only if the directive \verb+logger_mod+ is not set or set
+              to \verb+yaws_log+.
 
-              When it needs to log an access, \Yaws\ will invoke the
-              function \verb+Module:accesslog/8+. The arguments to
-              this function are as follows:
-
-\begin{itemize}
-\item \verb+ServerName+ - name of the server that was accessed (as a
-  string). If the server was accessed on a port other than the HTTP
-  default port 80, the name also includes the port number,
-  e.g. ``server:8000''. Implementations of the \verb+accesslog+
-  function can use this argument to distinguish among different
-  logging formats for different servers.
-
-\item \verb+IpAddress+ - IP address of the accessing client (as a
-  tuple).
-
-\item \verb+User+ - the username of the authenticated user (as a
-  string).
-
-\item \verb+Req+ - the HTTP method, URI path, and HTTP version of the
-  request (as a list of strings and characters).
-
-\item \verb+Status+ - the HTTP status code returned to the client (as
-  a string).
-
-\item \verb+Length+ - the content-length of the response returned to
-  the client (as a string).
-
-\item \verb+Referrer+ - the URL of the web resource where the request
-  originated (as a string); the value of the HTTP \verb+Referer+
-  header.
-
-\item \verb+UserAgent+ - the identification string of the client user
-  agent issuing the request (as a string); the value of the HTTP
-  \verb+User-Agent+ header.
-\end{itemize}
-
-              Arguments for values not available for a particular
-              request, such as \verb+User+, are provided as the string
-              ``-''.
-
-              Because it's important to avoid blocking the caller, the
-              default logging function in \Yaws\ is a cast. You should
-              strive to make your custom access logging function
-              return to its caller as quickly as possible.
-
-              Custom access logging functions can preprocess access
-              logging data and then call \verb+yaws_log:accesslog/8+
-              to send the data to the default log.
+              The default value for logdir is "."
 
 \item        \verb+ebin_dir = Directory+ -
               This  directive adds Directory to the \Erlang\  search
@@ -2230,7 +2187,7 @@ The following directives are allowed inside a server definition.
               the default provided by \verb+gen_tcp:listen/2+, which
               is 5.
 
-\item       \verb+rport = Port+
+\item       \verb+rport = Port+ -
               This forces  all  local  redirects  issued  by  the
               server  to  go  to  Port.  This is useful when \Yaws\
               listens to a port which is different from the  port
@@ -2242,16 +2199,86 @@ The following directives are allowed inside a server definition.
               used to redirect traffic to port 80  to  port  8000
               (most NAT:ing firewalls will also do this for you).
 
-\item       \verb+rscheme = http | https+
+\item       \verb+rscheme = http | https+ -
               This forces  all  local  redirects  issued  by  the
               server  to  use this method. This is useful when an
               SSL off-loader, or stunnel, is  used  in  front  of
               \Yaws\ .
 
+\item       \verb+auth_log = true | false+ -
+              Enable or disable the auth log for this virtual server.
+              Default is true.
+
 \item       \verb+access_log = true | false+
               Setting  this  directive  to  false turns off
               traffic logging for this virtual server. The
               default value is true.
+
+\item       \verb+logger_mod = Module+ -
+              It is possible to set a special module that handles access and
+              auth logging. The default is to log all web server traffic to
+              \verb+<Host>.access+ and \verb+<Host>.auth+ files in the
+              configured or default \verb+logdir+.
+
+              This module must implement the behaviour
+              \verb+yaws_logger+. Default value is \verb+yaws_log+.
+
+              The following functions should be exported:
+
+              \begin{itemize}
+
+              \item \verb+Module:open_log(ServerName, Type, LogDir)+ - When
+                \Yaws\ is started, this function is called for this virtual
+                server. If the initialization is successful, the function must
+                return \verb+{true, State}+ and if an error occurred, it must
+                return \verb+false+.
+
+              \item \verb+Module:close_log(ServerName, Type)+ - This function is
+                called for this virtual server when \Yaws\ is stopped.
+
+              \item \verb+Module:wrap_log(ServerName, Type, State, LogWrapSize)+
+                - This function is used to rotate log files. It is regularly
+                called by \Yaws\ and must return the possibly updated internal
+                \verb+NewState+.
+
+              \item \verb+Module:write_log(ServerName, Type, State, Infos)+ -
+                When it needs to log a message, \Yaws\ will call this
+                function. The parameter \verb+Infos+ is
+                \verb+{Ip, Req, InHdrs, OutHdrs, Time}+ for an access log and
+                \verb+{Ip, Path, Item}+ for an auth log, where:
+
+                        \begin{itemize}
+
+                        \item \verb+Ip+ - IP address of the accessing client (as
+                          a tuple).
+
+                        \item \verb+Req+ - the HTTP method, URI path, and HTTP
+                          version of the request (as a \#http\_request{}
+                          record).
+
+                        \item \verb+InHdrs+ - the HTTP headers which were sent
+                          from the WWW client (as a \#headers{} record).
+
+                        \item \verb+OutHdrs+ - the HTTP headers sent to the WWW
+                          client (as a \#outh{} record).
+
+                        \item \verb+Path+ - the URI path of the request (as a
+                          string).
+
+                        \item \verb+Item+ - the result of an authentication
+                          request. May be \verb+{ok, User}+, \verb+403+ or
+                          \verb+{401, Realm}+.
+
+                        \item \verb+Time+ - The time taken to serve the request,
+                          in microseconds.
+
+                        \end{itemize}
+
+              For all of these callbacks, \verb+ServerName+ is the virtual
+              server's name, \verb+Type+ is the atom \verb+access+ or
+              \verb+auth+ and \verb+State+ is the internal state of the logger.
+
+              \end{itemize}
 
 \item       \verb+docroot  =  Directory+ -
               This makes the server serve all its content from

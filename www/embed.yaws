@@ -213,8 +213,9 @@ yaws_api:setconf(GC, SCList),
                        [{servername, "sej"}, {listen, {0,0,0,0}}]).
 
 1> yaws:start_embedded("/home/tobbe/docroot",
-                       [{servername, "sej"}, {listen, {0,0,0,0}}],
-                       [{auth_log, false}, {copy_errlog, false}]).
+                       [{servername, "sej"}, {auth_log, false},
+                        {listen, {0,0,0,0}}],
+                       [{copy_errlog, false}]).
 
   </pre>
 </div>
