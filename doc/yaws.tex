@@ -2282,6 +2282,16 @@ The following directives are allowed inside a server definition.
 
               \end{itemize}
 
+\item       \verb+shaper = Module+ -
+              Defines a module to control access to this virtual server.
+
+              Access can be controlled based on the IP address of the client. It
+              is also possible to throttles HTTP requests based on the client's
+              download rate. This module must implement the behaviour
+              \verb+yaws_shaper+.
+
+              There is no such module configured by default.
+
 \item       \verb+docroot  =  Directory+ -
               This makes the server serve all its content from
               Directory.

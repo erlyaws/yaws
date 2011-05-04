@@ -1126,7 +1126,12 @@ aloop(CliSock, GS, Num) ->
             put(sc, SC),
             yaws_stats:hit(),
             check_keepalive_maxuses(GS, Num),
-            Call = call_method(Req#http_request.method, CliSock, Req, H),
+            Call = case yaws_shaper:check(SC, IP) of
+                       allow ->
+                           call_method(Req#http_request.method,CliSock,Req,H);
+                       {deny, Status, Msg} ->
+                           deliver_xxx(CliSock, Req, Status, Msg)
+                   end,
             Call2 = fix_keepalive_maxuses(Call),
             handle_method_result(Call2, CliSock, IP, GS, Req, H, Num);
         closed ->
@@ -1191,10 +1196,12 @@ erase_transients() ->
 handle_method_result(Res, CliSock, IP, GS, Req, H, Num) ->
     case Res of
         continue ->
+            yaws_shaper:update(get(sc), IP, Req),
             maybe_access_log(IP, Req, H),
             erase_transients(),
             aloop(CliSock, GS, Num+1);
         done ->
+            yaws_shaper:update(get(sc), IP, Req),
             maybe_access_log(IP, Req, H),
             erase_transients(),
             {ok, Num+1};

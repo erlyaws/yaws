@@ -1239,6 +1239,10 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                         [Lno, Reason])}
             end;
 
+        ["shaper", '=', Module] ->
+            C2 = C#sconf{shaper = list_to_atom(Module)},
+            fload(FD, server, GC, C2, Cs, Lno+1, Next);
+
         [H|T] ->
             {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
         Err ->
