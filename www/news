@@ -1,5 +1,8 @@
+Sun May 1 10:35 PM EDT 2011 JSON-RPC 2.0
+Updated Yaws JSON-RPC support to version 2.0 (Steve Vinoski)
+
 Sat Sep 25 13:39:29 CEST 2010 Yaws 1.89
-Maintenance release with a long series of fixes mostly from Steve Vinoski./yaws
+Maintenance release with a long series of fixes mostly from Steve Vinoski
 all.zip should not not include .yaws files, nor directories "protected" with an index file, nor directories protected by an auth directive. (Hans-Christian Esperer )
 adjust to R14B change in gen_tcp:recv for {packet,http} mode Where we handle the return value of gen_tcp:recv while reading headers from the socket (such as with calls to yaws:do_recv), handle new R14B return values as well as existing return values for previous releases. (Steve)
 for portability, use erlang:md5 rather than crypto md5  Since OpenSSL availability on Windows for working with the crypto module is apparently questionable, use the erlang:md5 function in place of the crypto md5 functions. (Steve)

@@ -13,7 +13,7 @@ out(A) ->
          separate modes of operations are supported:"},
         {ul,[],
          [{li,[],
-           {p,[],"Standalone mode where Yaws runs as a regular webserver " 
+           {p,[],"Standalone mode where Yaws runs as a regular webserver "
             "daemon. This is the default mode."}},
           {li,[],
            {p,[], "Embedded mode where Yaws runs as an embedded webserver in "
@@ -29,23 +29,27 @@ out(A) ->
          " processes in an efficent way. Its elegance comes from Erlang as "
          "well. Web applications don't have to be written in ugly ad hoc "
          "languages."},
-        
+
         {h2,[], "yaws.hyber.org"},
-        
+
         {p,[], ["The www page for Yaws is ",
                 {a ,[{href,"http://yaws.hyber.org"}], "yaws.hyber.org"},
-                " The documentation, examples as well as releases can be "
+                ". The documentation, examples as well as releases can be "
                 "found there, and of course, ",
                 {a ,[{href,"http://yaws.hyber.org"}],"yaws.hyber.org"},
                 " is itself powered by Yaws."]},
-        
+
         {p,[], ["A mailing list exists at: ",
                 {a,[{href,"https://lists.sourceforge.net/lists/listinfo/""erlyaws-list"}],
                  "https://lists.sourceforge.net/lists/listinfo/erlyaws-list"}]},
          {h2, [], "News"},
+         {p, [], ["To see all the most recent changes and activity in Yaws "
+                  "development, please visit the ",
+                  {a, [{href, "https://github.com/klacke/yaws"}],
+                   "Yaws github repository"}, "."]},
          gen_news(A)]}]},
      {ssi, "END2",[],[]}].
-    
+
 
 
 gen_news(A) ->
@@ -69,7 +73,7 @@ gen_news(Fd, Line) ->
            [{h3, [], Line},
             {ul, [], Items}]}
           ],
-          
+
     [X | gen_news(Fd, io:get_line(Fd,''))]
    end.
 
