@@ -1,0 +1,69 @@
+#!/bin/sh
+
+YAWS_DIR=`pwd`
+DEFAULT_YAWS_VSN=`sed -e 's/^.*=//' $YAWS_DIR/vsn.mk 2>/dev/null`
+YAWS_VSN=${VSN-$DEFAULT_YAWS_VSN}
+YAWS_VARDIR=${VARDIR-$YAWS_DIR/var}
+YAWS_ETCDIR=${ETCDIR-$YAWS_DIR/etc}
+ERL_BIN=`which erl`
+ERL_BIN_DIR=${ERL_BIN%/erl}
+YAWS_ERLBINDIR=${ERLBINDIR-$ERL_BIN_DIR}
+ERL_BIN=$YAWS_ERLBINDIR/erl
+WERL_BIN=$YAWS_ERLBINDIR/werl
+
+# For rebar, support only local install for the yaws script.
+YAWS_LOCALINSTALL=true
+
+# Use a function for error exit instead of set -e so we can conditionally
+# remove files before exiting. If this were bash we could trap ERR but
+# Bourne shell doesn't support that portably.
+fail() {
+    [ -n "$@" ] && rm -f "$@"
+    exit 1
+}
+
+cd src || fail
+
+if [ "$1" = clean ]; then
+    rm -f mime_types.erl charset.def yaws_configure.hrl yaws_generated.erl
+    exit 0
+fi
+
+CHARSET=${DEFAULT_CHARSET-""}
+need_mime=yes
+if [ -f mime_types.erl ]; then
+    need_mime=`find mime_type_c.erl -newer mime_types.erl -print`
+fi
+if [ -n "$need_mime" ]; then
+    echo ${CHARSET} > charset.def || fail
+    erlc -o ../ebin mime_type_c.erl || fail charset.def
+    erl -pa ../ebin -noshell -s mime_type_c compile || \
+        fail charset.def mime_types.erl
+fi
+
+if [ ! -f yaws_configure.hrl ]; then
+    echo '%% rebar sets HAVE_SENDFILE in erlc command line' > yaws_configure.hrl
+    [ $? -eq 0 ] || fail
+fi
+YAWS_VSN=$YAWS_VSN VARDIR="$YAWS_VARDIR" ETCDIR="$YAWS_ETCDIR" \
+    ../scripts/gen-yaws-generated $YAWS_LOCALINSTALL >yaws_generated.erl || fail
+[ -d "$YAWS_VARDIR" ] || mkdir "$YAWS_VARDIR" || fail
+[ -d "$YAWS_ETCDIR" ] || mkdir "$YAWS_ETCDIR" || fail
+
+cd ../scripts
+
+case $YAWS_LOCALINSTALL in
+    true)
+        VARDIR="${YAWS_VARDIR}" ERLBINDIR="${YAWS_ERLBINDIR}" \
+            ERL="${ERL_BIN}" WERL="${WERL_BIN}" ./gen-yaws > ../bin/yaws || fail
+        test -x ../bin/yaws || chmod +x ../bin/yaws || fail
+        VARDIR="${YAWS_VARDIR}" ./local-install || fail
+       ;;
+    *)
+       echo "ERROR: Configurations other than 'localinstall' not yet \
+            supported with rebar"
+       exit 1
+       ;;
+esac
+
+exit 0

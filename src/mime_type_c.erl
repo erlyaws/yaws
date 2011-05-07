@@ -16,7 +16,7 @@
 
 compile() ->
     R = (catch c()),
-    io:format("~p~n ",[R]),
+    io:format("~p~n",[R]),
     erlang:halt().
 
 

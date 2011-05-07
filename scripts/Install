@@ -84,9 +84,9 @@ elif [ "`uname -s`" = "FreeBSD" ]; then
     sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" freebsd/yaws.sh > ${destdir}${etcdir}/rc.d/yaws.sh
 elif [ "`uname -s`" = "NetBSD" ]; then
     sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" netbsd/yaws.sh > /etc/rc.d/yaws
-else    
-    install -d ${destdir}${etcdir} 
-    echo "Don't know how to make /etc/init scrips for this system"
+else
+    install -d ${destdir}${etcdir}
+    echo "Don't know how to make /etc/init scripts for this system"
     echo "possibly add ${prefix}/bin/yaws --daemon --heart to your /etc/rc.local manually"
 fi
 

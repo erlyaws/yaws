@@ -2,6 +2,8 @@
 /* author: vinoski@ieee.org                                  */
 /* Created : 09 Nov 2008 by Steve Vinoski <vinoski@ieee.org> */
 
+#ifdef HAVE_SENDFILE
+
 #include <errno.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -15,8 +17,6 @@
 #elif (defined(__APPLE__) && defined(__MACH__)) || defined(__FreeBSD__)
 #include <sys/socket.h>
 #include <sys/uio.h>
-#else
-#error "yaws_sendfile_drv not supported on this platform"
 #endif
 
 #include "erl_driver.h"
@@ -299,3 +299,9 @@ DRIVER_INIT(yaws_sendfile_drv)
 {
     return &yaws_sendfile_driver_entry;
 }
+
+#else
+
+#error "yaws_sendfile_drv not supported on this platform"
+
+#endif /* HAVE_SENDFILE */

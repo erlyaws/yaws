@@ -1,7 +1,7 @@
 %%%----------------------------------------------------------------------
 %%% File    : yaws_generated.template
 %%% Author  : Klacke <klacke@bluetail.com>
-%%% Purpose : 
+%%% Purpose :
 %%% Created : 10 Jun 2002 by Klacke <klacke@bluetail.com>
 %%%----------------------------------------------------------------------
 
@@ -19,5 +19,5 @@ vardir() ->  "%VARDIR%".
 etcdir() -> "%ETCDIR%".
 
 is_local_install() -> %localinstall%.
-                   
+
 

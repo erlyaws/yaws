@@ -1,138 +1,113 @@
 
 # conf for yaws
 
-
-# first we have a set of globals
-# That apply to all virtual servers
-
+# First we have a set of globals that apply to all virtual servers
 
 # This is the directory where all logfiles for
-# all virtual servers will be written
-
+# all virtual servers will be written.
 logdir = %logdir%
 
-# This the path to a directory where additional
-# beam code can be placed. The daemon will add this
-# directory to its search path
-
+# These are the paths to directories where additional
+# beam code can be placed. The daemon will add these
+# directories to its search path.
 ebin_dir = %yawsdir%/examples/ebin
 ebin_dir = %vardir%/yaws/ebin
 
-
 # This is a directory where application specific .hrl
-# files can be placed. application specifig .yaws code can
-# then include these .hrl files
-
+# files can be placed. Application-specific .yaws code can
+# then include these .hrl files.
 include_dir = %yawsdir%/examples/include
 
 # Set this to an integer value to control
-# max number of connections from clients into the server
+# max number of connections from clients into the server.
 max_connections = nolimit
 
 # Normally, yaws does not restrict the number of times a connection is
 # kept alive using keepalive. Setting this parameter to an integer X
 # will ensure that connections are closed once they have been used X times.
-# This can be a useful to guard against long running connections 
-# collecting too much garbage in the erlang VM.
+# This can be a useful to guard against long running connections
+# collecting too much garbage in the Erlang VM.
 keepalive_maxuses = nolimit
 
 # Override the garbage collection option parameters for processes
-# which handle new connections. Useful for systems which expect long lived
-# connections which handle a lot of data. The default value is erlangs
+# that handle new connections. Useful for systems expecting long-lived
+# connections that handle a lot of data. The default value is Erlang's
 # default. Valid options are {fullsweep_after, X} and/or {min_heap_size, Y} where
-# X and Y are integers. See erlangs erlang:spawn_opt/4 function for more details.
-# The value type is a quoted string containing an erlang proplist
+# X and Y are integers. See Erlang's erlang:spawn_opt/4 function for more
+# details. The value type is a quoted string containing an Erlang proplist.
 process_options = "[]"
 
 # This is a debug variable, possible values are http | traffic | false
 # It is also possible to set the trace (possibly to the tty) while
 # invoking yaws from the shell as in
-# yaws -i -T -x (see man yaws)
-
+# yaws -i -T -x (see man yaws).
 trace = false
 
 # Enable this if we want to use the old OTP ssl implementation
-# OTP R13B03 is known to work with this flag set         to false (default)
+# OTP R13B03 is known to work with this flag set to false (default).
 use_old_ssl = false
 
-
-# it is possible to have yaws start additional 
-# application specific code at startup
-# 
+# It is possible to have yaws start additional application-specific code at
+# startup. Set runmod to the name of the module you want yaws to start. It
+# assumes the module has an exported function start/0. To have multiple
+# runmods just add more "runmod = xyz" lines.
+#
 # runmod = mymodule
 
-
 # By default yaws will copy the erlang error_log and
-# end write it to a wrap log called report.log (in the logdir)
-# this feature can be turned off. This would typically
-# be the case when yaws runs within another larger app
-
+# append it to a wrap log called report.log (in the logdir).
+# This feature can be turned off. This would typically
+# be the case when yaws runs within another larger app.
 copy_error_log = true
 
-
 # Logs are wrap logs
-
 log_wrap_size = 1000000
-
 
 # Possibly resolve all hostnames in logfiles so webalizer
 # can produce the nice geography piechart
-
 log_resolve_hostname = false
 
-
-
-# fail completely or not if yaws fails 
-# to bind a listen socket
+# Fail completely or not if yaws fails to bind a listen socket.
 fail_on_bind_err = true
-
-
-
 
 # If HTTP auth is used, it is possible to have a specific
 # auth log.
-
 auth_log = true
 
-
-# When we're running multiple yaws systems on the same 
+# When we're running multiple yaws systems on the same
 # host, we need to give each yaws system an individual
 # name. Yaws will write a number of runtime files under
 # ${HOME}/.yaws/yaws/${id}
 # The default value is "default"
 # If we're not planning to run multiple webservers on the
-# same host it's mych better to leave this value unset since
+# same host it's much better to leave this value unset since
 # then all the ctl function (--stop et.el) work without having
 # to supply the id.
-
+#
 # id = myname
 
-
-# earlier versions of Yaws picked the first virtual host
+# Earlier versions of Yaws picked the first virtual host
 # in a list of hosts with the same IP/PORT when the Host:
-# header doesn't match any name on any Host
+# header doesn't match any name on any Host.
 # This is often nice in testing environments but not
-# acceptable in real live hosting scenarios
-# think http://suckmydick.bigcompany.com
-
+# acceptable in real-world hosting scenarios;
+# think http://porn.bigcompany.com
 pick_first_virthost_on_nomatch = true
 
 # If the HTTP client session is to be kept alive, wait this many
 # milliseconds for a new request before timing out the connection. Note
 # that infinity is a valid value but it's not recommended.
-
 keepalive_timeout = 30000
 
-
-# and then a set of virtual servers
-# First two virthosted servers on the same IP (0.0.0.0)
-# in this case, but an explicit IP can be given as well
+# Now, a set of virtual servers.
+# The examples below first show two virthosted servers on the same IP (0.0.0.0)
+# in this case, but an explicit IP can be given as well.
 
 <server %host%>
         port = %port%
         listen = 0.0.0.0
         docroot = %docroot%
-        appmods = <cgi-bin, yaws_appmod_cgi>        
+        appmods = <cgi-bin, yaws_appmod_cgi>
 </server>
 
 <server localhost>
@@ -149,26 +124,16 @@ keepalive_timeout = 30000
         </auth>
 </server>
 
-
-
-# And then an ssl server
+# Now an SSL server
 
 <server %host%>
         port = %sslport%
         docroot = /tmp
         listen = 0.0.0.0
         dir_listings = true
-        <ssl>  
+        <ssl>
                 keyfile = %certdir%/yaws-key.pem
                 certfile = %certdir%/yaws-cert.pem
                 depth = 0
         </ssl>
 </server>
-                                
-        
-
-
-
-
-
-

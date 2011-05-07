@@ -26,8 +26,8 @@ CFLAGS += -I/usr/include/pam/ $(EXTRAINCLUDE)
 # Targets
 #
 
-all: $(PRIV_FILES) 
-debug: 
+all: $(PRIV_FILES)
+debug:
 	CFLAGS="$(CFLAGS) -g" $(MAKE) all
 
 clean:

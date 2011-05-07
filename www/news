@@ -1,3 +1,6 @@
+Sat May 7 09:16:04 EDT 2011 added rebar support
+Yaws can now be built with rebar (Tuncer Ayaz and Steve Vinoski)
+
 Sun May 1 10:35 PM EDT 2011 JSON-RPC 2.0
 Updated Yaws JSON-RPC support to version 2.0 (Steve Vinoski)
 

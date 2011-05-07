@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# Used by scripts/Makefile and scripts/rebar-pre-script to do a local
+# install of yaws
+
+set -e
+
+if [ -z "$HOME" ]; then
+    if [ `id -u` = 0 -a -d /root ]; then
+        export HOME=/root
+    else
+        export HOME=/tmp
+    fi
+fi
+
+logdir="${HOME}/yaws_logs"
+[ -d $logdir ] || mkdir $logdir
+if [ -f "${HOME}/yaws.conf" ]; then
+    echo "--- Will not overwrite ${HOME}/yaws.conf"
+    target="${HOME}/yaws.conf.template"
+else
+    target="${HOME}/yaws.conf"
+fi
+echo "--- Installing local config file at $target"
+
+topdir=`cd .. && pwd`
+YAWSDIR="$topdir" LOGDIR="$logdir" VARDIR="$VARDIR" PORT=8000 \
+    DOCROOT="${topdir}/www" CERTDIR="${topdir}/ssl" SSLPORT=4443 \
+    ./gen-yaws-conf > $target
+[ -d "${HOME}/bin" ] || mkdir "${HOME}/bin"
+rm -f "${HOME}/bin/yaws"
+cp -f ../bin/yaws "${HOME}/bin/yaws"
+echo "--- Installed $HOME/bin/yaws"
+
+exit 0

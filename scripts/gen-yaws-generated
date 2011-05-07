@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# Used by src/Makefile and scripts/rebar-pre-script to create the
+# yaws_generated.erl file
+
+set -e
+
+cat yaws_generated.template | \
+    ../scripts/Subst %VSN% "${YAWS_VSN}" | \
+    ../scripts/Subst %VARDIR% "${VARDIR}" | \
+    ../scripts/Subst %localinstall% $1 | \
+    ../scripts/Subst %ETCDIR% "${ETCDIR}"
+
+exit 0

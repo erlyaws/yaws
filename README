@@ -5,88 +5,111 @@ This is yaws, a webserver for dynamic content written in Erlang.
 To build and install
 
 
-0. Get and install an erlang system (http://www.erlang.org)
+0. Get and install an Erlang system (http://www.erlang.org)
 
-1. If you've cloned the source from github, there is no ./configure
-   script in the source, create one:
+1. If you've cloned the source from github and you want to build using
+   configure and make, note there is no ./configure script in the
+   source, so create one:
 
 # autoconf
 
+1.b Install build-deps. On Ubuntu/debian this is pretty much equal to
+# apt-get build-dep yaws
 
-1.b Install build-deps. On Ubuntu/debian this is pretty much equal to 
-# apt-get build-dep yaws 
+2. You can build using rebar:
 
-:-)
+# rebar compile
 
+  or via configure and make:
 
+# ./configure --prefix=/usr/local
 
-2. ./configure --prefix=/usr/local
-   This will install everything under /usr/local including var files
-   in /usr/local/var/run/yaws and etc files in
-   /usr/local/etc/yaws.*
+  If using rebar, you'll get a local installation with yaws in
+  $HOME/bin and the yaws configuration file in $HOME/yaws.conf. If
+  using configuration and make, the build will be configured by
+  default for installation under /usr/local including var files in
+  /usr/local/var/run/yaws and etc files in /usr/local/etc/yaws.
 
-  A plain ./configure will install executables under 
-  /usr/local/bin and libs in /usr/local/lib/yaws etc and
-  var files will end up under /usr/local/etc and /usr/local/var
+  NOTE: With configure, you can also change the target directory for
+  etc and var directories by using:
 
-
-Note: We can also change the target directory for etc and var 
-      directories by using:
-
-  --localstatedir=DIR for files that should go in /var
-  --sysconfdir=DIR for files that should go in /etc
-  --disable-pam  If we for some reason do not want pam support
+  --localstatedir=DIR     for files that should go in /var
+  --sysconfdir=DIR        for files that should go in /etc
+  --disable-pam           If we for some reason do not want pam support
   --with-extrainclude=DIR Will add DIR to the include path
-                      May be useful if e.g. pam is installed
-		      somewhere where its usually not found
+                          May be useful if e.g. pam is installed
+		          somewhere where its usually not found
   --with-defaultcharset=String  Will set the default charset used
                         in generated page headers. Usually never needed.
-                        
-This way you can precisely control where you install Yaws (This is
-usefull for computers where you do not have right access to the 
-standard systemdirs). 
 
-For example:
-./configure --prefix=/home/install/yaws --localstatedir=/home/install/yaws/var --sysconfdir=/home/install/etc
+  This way you can precisely control where you install Yaws (This is
+  useful for computers where you do not have right access to the
+  standard systemdirs).
 
+  For example:
 
-2b. Note to packagers (rpm, deb ...) All install targets support the 
-    DESTDIR variable.
-    Thus, if we do ./configure --prefix=/usr; make
+    ./configure --prefix=/home/install/yaws --localstatedir=/home/install/yaws/var --sysconfdir=/home/install/etc
+
+2b. Note to packagers (rpm, deb ...) All install targets support the
+    DESTDIR variable. Thus, if we do
+
+    ./configure --prefix=/usr; make
+
     we can subsequently do:
-    DESTDIR=/foo/bar make install
-    All yaws files will be installed under DESTDIR, but all 
-    code will assume yaws should be installed under /usr
 
+    DESTDIR=/foo/bar make install
+
+    All yaws files will be installed under DESTDIR, but all
+    code will assume yaws should be installed under /usr.
 
 3. make
-     This will build the system
 
-  make docs 
-     (Optional) You can issue this command if you want to build Yaws
-     documentation.
+    This will build the system.
 
-  make local_install
-     and perform something we call a
-     local install. It will create an executable script in the $HOME/bin 
-     directory and a config file in $HOME/yaws.conf. This is for developers
-     only
+   make docs
 
-4.   To test the build, Start as bin/yaws -i 
-     This will start a webserver at http://0.0.0.0:8000
-     Terminate through ^C or 
-     > init:stop()
+    (Optional) You can issue this command if you want to build Yaws
+    documentation.
+
+   make local_install
+
+    This will create an executable script in the $HOME/bin directory
+    and a config file in $HOME/yaws.conf. This is for developers
+    only. This is the only type of installation "rebar compile"
+    supports.
+
+4. To test the build, start it as
+
+   ./bin/yaws -i
+
+   If you used rebar to compile yaws, you can alternatively start yaws
+   with
+
+   $HOME/bin/yaws -i
+
+   Either approach will start a webserver at http://0.0.0.0:8000 .
+   Terminate through ^C, or ^G followed by q, or
+
+   > init:stop()
+
+   NOTE: If you've used rebar to build the system, none of the
+   following directions apply. With rebar only local installations are
+   supported.
 
 5. as root make install
 
-6. as root start as /usr/local/bin/yaws -i 
-   (this starts an interactive system)
+6. as root start as
 
-7. This will create a webserver at http://${host} and one at https://${host}
+   /usr/local/bin/yaws -i
 
-8. as root edit /usr/local/etc/yaws/yaws.conf 
+   This starts an interactive system.
 
-9. Create content in /usr/local/var/yaws
+7. With the default yaws.conf file, this will create a webserver at
+   http://${host} and one at https://${host}
+
+8. as root edit /usr/local/etc/yaws/yaws.conf
+
+9. Create content in /usr/local/var/yaws/www
 
 10a. Start as /usr/local/bin/yaws --daemon --heart
      This will start a daemon (--daemon) which will be autorestarted when/if
@@ -95,7 +118,6 @@ For example:
      /etc/init.d (sysconfdir)
 
 10b. Or start interactive system as /usr/local/bin/yaws -i
-
 
 11.  Example: Here is how I compile/start the yaws system that runs
      at http://yaws.hyber.org (Ubuntu server system)

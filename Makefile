@@ -5,10 +5,12 @@ include ./vsn.mk
 
 PKGCONFIG_FILES = yaws.pc
 
-all debug clean: cleantests
+all debug clean:
 	@set -e ; \
 	  for d in $(SUBDIRS) ; do \
-	    if [ -f $$d/Makefile ]; then ( cd $$d && $(MAKE) $@ ) || exit 1 ; fi ; \
+	    if [ -f $$d/Makefile ]; \
+		then ( cd $$d && $(MAKE) $@ ) || exit 1 ; \
+	    fi ; \
 	  done
 	rm -rf yaws-${YAWS_VSN}.script yaws-${YAWS_VSN}.boot
 	rm -rf yaws-${YAWS_VSN}.rel yaws-${YAWS_VSN}.tar.gz
@@ -16,17 +18,21 @@ all debug clean: cleantests
 cleantests:
 	cd test && $(MAKE) clean
 
-install:	all 
+clean: cleantests
+
+install:	all
 	set -e ; \
 	for d in $(SUBDIRS) ; do \
-	    if [ -f $$d/Makefile ]; then ( cd $$d && $(MAKE) $@ ) || exit 1 ; fi ; \
+	    if [ -f $$d/Makefile ]; \
+		then ( cd $$d && $(MAKE) $@ ) || exit 1 ; \
+	    fi ; \
 	done
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/pkgconfig
 	$(INSTALL) -m 644 $(PKGCONFIG_FILES) $(DESTDIR)$(PREFIX)/lib/pkgconfig
 	@echo "-------------------------------"
 	@echo
-	@echo "** etc files went into        ${ETCDIR}"	
-	@echo "** executables went into      ${prefix}/bin"		
+	@echo "** etc files went into        ${ETCDIR}"
+	@echo "** executables went into      ${prefix}/bin"
 	@echo "** library files went into    ${prefix}/lib/yaws"
 	@echo "** var files went into        ${VARDIR}"
 	@echo "** default docroot went into  ${VARDIR}/yaws/www"
@@ -45,7 +51,7 @@ local_install: all
 
 
 # Target for folks that want to build a proper OTP release
-# to be used with regular OTP release management.  
+# to be used with regular OTP release management.
 release:	vsn.mk include.mk yaws.rel.src all
 	sed -e "s/%YAWS_VSN%/${YAWS_VSN}/g" \
 	       -e "s/%ERTS_VSN%/${ERTS_VSN}/" \
@@ -70,28 +76,15 @@ touch:
 	find . -name '*' -print | xargs touch -m
 	find . -name '*.erl' -print | xargs touch -m
 
-
-
-
-foo:
-	@echo "-------------------------------"
-	@echo
-	@echo "** etc files will go into     ${ETCDIR}"	
-	@echo "** executables will go into   ${prefix}/bin"		
-	@echo "** library file will go into  ${prefix}/lib/yaws"
-	@echo "** var files will go into     ${VARDIR}"
-	@echo
-	@echo "--------------------------------"
-
-yaws.plt:	
+yaws.plt:
 	dialyzer --build_plt -r . --output_plt yaws.plt \
 	   -r $(ERLDIR)/lib/sasl-$(SASL_VSN) \
 	   -r $(ERLDIR)/lib/kernel-$(KERNEL_VSN) \
 	   -r $(ERLDIR)/lib/stdlib-$(STDLIB_VSN) \
-	   -r $(ERLDIR)/lib/erts-$(ERTS_VSN) 
+	   -r $(ERLDIR)/lib/erts-$(ERTS_VSN)
 
 # Not debug compiled, let's just ignore it
-#   	   -r $(ERLDIR)/lib/ssl-$(SSL_VSN) 
+#   	   -r $(ERLDIR)/lib/ssl-$(SSL_VSN)
 
 dialyzer:	yaws.plt
 	dialyzer --plt yaws.plt -r .

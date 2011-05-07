@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# Used by scripts/Makefile and scripts/rebar-pre-script to create
+# the yaws.conf file
+
+set -e
+
+[ -d "${VARDIR}/yaws" ] || mkdir "${VARDIR}/yaws"
+[ -d "${VARDIR}/yaws/ebin" ] || mkdir "${VARDIR}/yaws/ebin"
+
+cat yaws.conf.template | \
+    ./Subst %yawsdir% "$YAWSDIR" | \
+    ./Subst %logdir% "$LOGDIR" | \
+    ./Subst %vardir% "$VARDIR" | \
+    ./Subst %host% `hostname` | \
+    ./Subst %port% $PORT | \
+    ./Subst %docroot% "$DOCROOT" | \
+    ./Subst %certdir% "$CERTDIR" | \
+    ./Subst %sslport% $SSLPORT
+
+exit 0

@@ -43,6 +43,9 @@ endif
 
 CC=@CC@
 CFLAGS=@CFLAGS@
+ifeq ($(HAVE_SENDFILE),true)
+CFLAGS += -DHAVE_SENDFILE
+endif
 LINKER=@LINKER@
 LDFLAGS=@LDFLAGS@
 WIN32=@WIN32@
@@ -88,14 +91,14 @@ endif
 
 
 # Hmm, don't know if you are supposed to like this better... ;-)
-APPSCRIPT = '$$vsn=shift; $$mods=""; while(@ARGV){ $$_=shift; s/^([A-Z].*)$$/\'\''$$1\'\''/; $$mods.=", " if $$mods; $$mods .= $$_; } while(<>) { s/%VSN%/$$vsn/; s/%MODULES%/$$mods/; print; }'
+APPSCRIPT = '$$vsn=shift; $$mods=""; while(@ARGV){ $$_=shift; s/^([A-Z].*)$$/\'\''$$1\'\''/; $$mods.=", " if $$mods; $$mods .= $$_; } while(<>) { s/\{vsn, git\}/\{vsn, $$vsn\}/; s/\{modules,\[\]\}/\{modules,\[$$mods\]\}/; print; }'
 
 # Targets
 
 ../ebin/%.app: %.app.src ../vsn.mk Makefile
 	perl -e $(APPSCRIPT) "$(VSN)" $(MODULES) < $< > $@
 
-../ebin/%.appup: %.appup 
+../ebin/%.appup: %.appup
 	cp $< $@
 
 ../ebin/%.$(EMULATOR): %.erl
@@ -103,6 +106,3 @@ APPSCRIPT = '$$vsn=shift; $$mods=""; while(@ARGV){ $$_=shift; s/^([A-Z].*)$$/\'\
 
 %.$(EMULATOR): %.erl
 	$(ERLC) $(ERLC_FLAGS) $<
-
-
-
