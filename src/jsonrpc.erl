@@ -38,7 +38,7 @@ s(List, ElemName) when is_list(List) ->
     case lists:keysearch(ElemName,1,List) of
         {value,{ElemName,Val}} ->
             Val;
-        ElemName when is_atom(ElemName) ->
+        false when is_atom(ElemName) ->
             ElemList = atom_to_list(ElemName),
             case lists:keysearch(ElemList,1,List) of
                 {value,{ElemList,Val}} ->
