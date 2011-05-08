@@ -14,12 +14,24 @@ WERL_BIN=$YAWS_ERLBINDIR/werl
 # For rebar, support only local install for the yaws script.
 YAWS_LOCALINSTALL=true
 
+script=`basename $0`
+
 # Use a function for error exit instead of set -e so we can conditionally
 # remove files before exiting. If this were bash we could trap ERR but
 # Bourne shell doesn't support that portably.
 fail() {
     [ -n "$@" ] && rm -f "$@"
     exit 1
+}
+
+keep_or_replace() {
+    if [ -f "$1" ] && cmp -s "$1" "$2"; then
+        rm -f "$2"
+        return 0
+    else
+        mv "$2" "$1" || fail "$2"
+        return 1
+    fi
 }
 
 cd src || fail
@@ -45,8 +57,10 @@ if [ ! -f yaws_configure.hrl ]; then
     echo '%% rebar sets HAVE_SENDFILE in erlc command line' > yaws_configure.hrl
     [ $? -eq 0 ] || fail
 fi
+tmpgen=`mktemp /tmp/${script}.XXXXXX` || fail
 YAWS_VSN=$YAWS_VSN VARDIR="$YAWS_VARDIR" ETCDIR="$YAWS_ETCDIR" \
-    ../scripts/gen-yaws-generated $YAWS_LOCALINSTALL >yaws_generated.erl || fail
+    ../scripts/gen-yaws-generated $YAWS_LOCALINSTALL >$tmpgen || fail
+keep_or_replace yaws_generated.erl $tmpgen
 [ -d "$YAWS_VARDIR" ] || mkdir "$YAWS_VARDIR" || fail
 [ -d "$YAWS_ETCDIR" ] || mkdir "$YAWS_ETCDIR" || fail
 
@@ -54,10 +68,16 @@ cd ../scripts
 
 case $YAWS_LOCALINSTALL in
     true)
+        tmpgen=`mktemp /tmp/${script}.XXXXXX` || fail
         VARDIR="${YAWS_VARDIR}" ERLBINDIR="${YAWS_ERLBINDIR}" \
-            ERL="${ERL_BIN}" WERL="${WERL_BIN}" ./gen-yaws > ../bin/yaws || fail
-        test -x ../bin/yaws || chmod +x ../bin/yaws || fail
-        VARDIR="${YAWS_VARDIR}" ./local-install || fail
+            ERL="${ERL_BIN}" WERL="${WERL_BIN}" ./gen-yaws > $tmpgen || fail
+        keep_or_replace ../bin/yaws $tmpgen
+        if [ $? -eq 0 ]; then
+            VARDIR="${YAWS_VARDIR}" ./local-install false || fail
+        else
+            chmod +x ../bin/yaws || fail
+            VARDIR="${YAWS_VARDIR}" ./local-install true || fail
+        fi
        ;;
     *)
        echo "ERROR: Configurations other than 'localinstall' not yet \

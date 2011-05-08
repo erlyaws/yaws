@@ -13,23 +13,35 @@ if [ -z "$HOME" ]; then
     fi
 fi
 
+script=`basename $0`
+tmpgen=`mktemp /tmp/${script}.XXXXXX`
+
 logdir="${HOME}/yaws_logs"
 [ -d $logdir ] || mkdir $logdir
+overwrite=true
 if [ -f "${HOME}/yaws.conf" ]; then
-    echo "--- Will not overwrite ${HOME}/yaws.conf"
+    overwrite=false
     target="${HOME}/yaws.conf.template"
 else
     target="${HOME}/yaws.conf"
 fi
-echo "--- Installing local config file at $target"
 
 topdir=`cd .. && pwd`
 YAWSDIR="$topdir" LOGDIR="$logdir" VARDIR="$VARDIR" PORT=8000 \
     DOCROOT="${topdir}/www" CERTDIR="${topdir}/ssl" SSLPORT=4443 \
-    ./gen-yaws-conf > $target
-[ -d "${HOME}/bin" ] || mkdir "${HOME}/bin"
-rm -f "${HOME}/bin/yaws"
-cp -f ../bin/yaws "${HOME}/bin/yaws"
-echo "--- Installed $HOME/bin/yaws"
+    ./gen-yaws-conf > $tmpgen
+if [ -f "$target" ] && cmp -s "$target" "$tmpgen"; then
+    rm -f "$tmpgen"
+else
+    mv -f "$tmpgen" "$target"
+    [ $overwrite = false ] && echo "--- Will not overwrite ${HOME}/yaws.conf"
+    echo "--- Installing local config file at $target"
+fi
+if [ "$1" = true ] || [ ! -f "${HOME}/bin/yaws" ]; then
+    [ -d "${HOME}/bin" ] || mkdir "${HOME}/bin"
+    rm -f "${HOME}/bin/yaws"
+    cp -f ../bin/yaws "${HOME}/bin/yaws"
+    echo "--- Installed $HOME/bin/yaws"
+fi
 
 exit 0
