@@ -27,6 +27,8 @@ else
 fi
 
 topdir=`cd .. && pwd`
+[ -d "${VARDIR}/yaws" ] || mkdir "${VARDIR}/yaws"
+[ -d "${VARDIR}/yaws/ebin" ] || mkdir "${VARDIR}/yaws/ebin"
 YAWSDIR="$topdir" LOGDIR="$logdir" VARDIR="$VARDIR" PORT=8000 \
     DOCROOT="${topdir}/www" CERTDIR="${topdir}/ssl" SSLPORT=4443 \
     ./gen-yaws-conf > $tmpgen

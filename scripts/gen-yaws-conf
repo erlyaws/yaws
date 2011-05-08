@@ -5,9 +5,6 @@
 
 set -e
 
-[ -d "${VARDIR}/yaws" ] || mkdir "${VARDIR}/yaws"
-[ -d "${VARDIR}/yaws/ebin" ] || mkdir "${VARDIR}/yaws/ebin"
-
 cat yaws.conf.template | \
     ./Subst %yawsdir% "$YAWSDIR" | \
     ./Subst %logdir% "$LOGDIR" | \

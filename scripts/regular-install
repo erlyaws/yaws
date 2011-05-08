@@ -15,7 +15,7 @@ if [ -f "$conffile" ]; then
     cp yaws.conf "${conffile}.template"
 else
     echo "Installing $conffile"
-    mkdir "$DESTDIR"
+    [ -n "$DESTDIR" ] && mkdir "$DESTDIR"
     mkdir "${DESTDIR}${ETCDIR}"
     mkdir "${DESTDIR}${ETCDIR}/yaws"
     cp yaws.conf "$conffile"
