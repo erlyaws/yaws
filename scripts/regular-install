@@ -15,9 +15,11 @@ if [ -f "$conffile" ]; then
     cp yaws.conf "${conffile}.template"
 else
     echo "Installing $conffile"
-    [ -n "$DESTDIR" ] && mkdir "$DESTDIR"
-    mkdir "${DESTDIR}${ETCDIR}"
-    mkdir "${DESTDIR}${ETCDIR}/yaws"
+    if [ -n "$DESTDIR" ]; then
+        [ -d "$DESTDIR" ] || mkdir "$DESTDIR"
+    fi
+    [ -d "${DESTDIR}${ETCDIR}" ] || mkdir "${DESTDIR}${ETCDIR}"
+    [ -d "${DESTDIR}${ETCDIR}/yaws" ] || mkdir "${DESTDIR}${ETCDIR}/yaws"
     cp yaws.conf "$conffile"
 fi
 cp ../ssl/yaws-cert.pem "${DESTDIR}${ETCDIR}/yaws"
