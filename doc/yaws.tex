@@ -2179,6 +2179,8 @@ The following directives are allowed inside a server definition.
               address, if the browser doesn't send a Host: field,
               \Yaws\   will  pick  the first server specified in the
               config file.
+              Multiple \verb+listen+ directives may be used to specify
+              several addresses to listen on.
 
 \item        \verb+listen_backlog = Integer+ -
               This sets the TCP listen backlog for the server to

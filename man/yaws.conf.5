@@ -270,6 +270,8 @@ servers on the same ip/port address, if the browser doesn't send a
 Host: field, yaws will pick the \fIfirst\fR server specified in the
 config file.  If the specified IP address is 0.0.0.0 yaws will listen
 on all local IP addresses on the specified port. Default is 0.0.0.0.
+Multiple \fBlisten\fR directives may be used to specify several addresses
+to listen on.
 
 .TP
 \fBlisten_backlog = Integer\fR

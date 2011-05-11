@@ -866,7 +866,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
             fload(FD, globals, GC#gconf{ysession_mod = Ysession_mod},
                   C, Cs, Lno+1, Next);
         ['<', "server", Server, '>'] ->  %% first server
-            fload(FD, server, GC, #sconf{servername = Server},
+            fload(FD, server, GC, #sconf{servername = Server, listen = []},
                   Cs, Lno+1, Next);
 
         [H|_] ->
@@ -971,7 +971,18 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                 {error, _} ->
                     {error, ?F("Expect IP address at line ~w:", [Lno])};
                 {ok,Addr} ->
-                    C2 = C#sconf{listen = Addr},
+                    Lstn = C#sconf.listen,
+                    C2 = if
+                             is_list(Lstn) ->
+                                 case lists:member(Addr, Lstn) of
+                                     false ->
+                                         C#sconf{listen = [Addr|Lstn]};
+                                     true ->
+                                         C
+                                 end;
+                             true ->
+                                 C#sconf{listen = [Addr, Lstn]}
+                         end,
                     fload(FD, server, GC, C2, Cs, Lno+1, Next)
             end;
         ["listen_backlog", '=', Val] ->
@@ -1083,7 +1094,14 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             end;
 
         ['<', "/server", '>'] ->
-            fload(FD, globals, GC, undefined, [C|Cs], Lno+1, Next);
+            case C#sconf.listen of
+                [] ->
+                    C2 = C#sconf{listen = {127,0,0,1}},
+                    fload(FD, globals, GC, undefined, [C2|Cs], Lno+1, Next);
+                Ls ->
+                    Cs2 = [C#sconf{listen=L} || L <- Ls] ++ Cs,
+                    fload(FD, globals, GC, undefined, Cs2, Lno+1, Next)
+            end;
 
         ['<', "opaque", '>'] ->
             fload(FD, opaque, GC, C, Cs, Lno+1, Next);
