@@ -1254,8 +1254,25 @@ parse_url(host, Strict, U, Str, Ack) ->
         [$:|T] ->
             U2 = U#url{host = lists:reverse(Ack)},
             parse_url(port, Strict, U2, T,[]);
+        [$[|T] ->
+            parse_url(ipv6, Strict, U, T, [$[]);
         [H|T] ->
             parse_url(host, Strict, U, T, [H|Ack])
+    end;
+parse_url(ipv6, Strict, U, Str, Ack) ->
+    case Str of
+        [$]] ->
+            U#url{host = lists:reverse([$]|Ack]),
+                  path = "/"
+                 };
+        [$], $/|T] ->
+            U2 = U#url{host = lists:reverse([$]|Ack])},
+            parse_url(path, Strict, U2, T,"/");
+        [$], $:|T] ->
+            U2 = U#url{host = lists:reverse([$]|Ack])},
+            parse_url(port, Strict, U2, T,[]);
+        [H|T] ->
+            parse_url(ipv6, Strict, U, T, [H|Ack])
     end;
 parse_url(port, Strict, U, Str, Ack) ->
     case Str of
