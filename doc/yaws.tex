@@ -346,8 +346,8 @@ We can now start to add static content in the form of
 HTML pages, dynamic content in the form of .yaws pages or
 \Erlang\ .beam code that can be used to generate the dynamic content.
 
-The load path will be set so that beam code in the directory \verb+~/test+
-will be automatically loaded when referenced.
+The load path will be set so that beam code in the directory
+\char`\~\verb+/test+ will be automatically loaded when referenced.
 
 It is best to run \Yaws\  interactively while developing the site.
 In order to start the \Yaws\  as a daemon, we give the flags:
@@ -1939,14 +1939,14 @@ larger application can be started individually under the application's
 supervisor(s).
 
 By default \Yaws\ reads its configuration data from a config file, the
-default is "/etc/yaws.conf". If \Yaws\ is integrated into a larger
-application, however, that application typically has its configuration
-data kept at some other centralized place. Sometimes we may not even
-have a file system to read the configuration from if we run a small
-embedded system.
+default is "/usr/local/etc/yaws/yaws.conf". If \Yaws\ is integrated
+into a larger application, however, that application typically has its
+configuration data kept at some other centralized place. Sometimes we
+may not even have a file system to read the configuration from if we
+run a small embedded system.
 
 \Yaws\  reads its application environment. If the environment key
-\verb+embedded+ is set to t\verb+true+, \Yaws\  starts in embedded mode.
+\verb+embedded+ is set to \verb+true+, \Yaws\  starts in embedded mode.
 Once started it must be fed a configuration, and that can be done
 after \Yaws\  has started by means of the function
 \verb+yaws_api:setconf/2+.
@@ -2272,11 +2272,12 @@ The following directives are allowed inside a server definition.
 \item       \verb+tilde_expand = true|false+ -
               If  this  value  is  set  to false \Yaws\  will
               never do tilde  expansion.  Tilde expansion takes a URL
-              of the form \verb+http://www.foo.com/~username+ and
+              of the form
+              \verb+http://www.foo.com/+\char`\~\verb+username+ and
               changes it into a request where the docroot for that
               particular request is set to the directory
-              \verb+~username/public_html/+. The default value is
-              false.
+              \char`\~\verb+username/public_html/+. The default value
+              is false.
 
 \item       \verb+allowed_scripts = [ListOfSuffixes]+ -
               The allowed script types for this server.  Recognized
