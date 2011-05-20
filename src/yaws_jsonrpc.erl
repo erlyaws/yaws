@@ -50,7 +50,7 @@
 -export([handler_session/2, handler_session/3]).
 
 %%-define(debug, 1).
--include("../../yaws/src/yaws_debug.hrl").
+-include("yaws_debug.hrl").
 
 -include("../include/yaws_api.hrl").
 
