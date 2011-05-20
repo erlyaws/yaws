@@ -203,6 +203,8 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
     case H#headers.authorization of
         undefined ->
             AuthEnv = [];
+        {undefined, _, _} ->
+            AuthEnv = [];
         {User, Password, "Basic " ++ Auth64} ->
             AuthEnv = [
                        {"HTTP_AUTHORIZATION", "Basic " ++ Auth64},

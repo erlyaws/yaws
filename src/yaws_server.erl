@@ -1728,6 +1728,8 @@ set_auth_user(ARG, User) ->
     H = ARG#arg.headers,
     Auth =
         case H#headers.authorization of
+            {undefined, _, _} ->
+                {User, undefined, undefined};
             {_User, Pass, Orig} ->
                 {User, Pass, Orig};
             undefined ->

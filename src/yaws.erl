@@ -41,7 +41,7 @@
          split_sep/2, join_sep/2,
          accepts_gzip/2, upto_char/2, deepmap/2,
          ticker/2, ticker/3,
-         parse_qvalue/1]).
+         parse_qvalue/1, parse_auth/1]).
 
 -export([outh_set_status_code/1,
          outh_set_non_cacheable/1,
@@ -2039,19 +2039,19 @@ http_collect_headers(_CliSock, _Req, _H, _SSL, _Count)  ->
 parse_auth(Orig = "Basic " ++ Auth64) ->
     case decode_base64(Auth64) of
         {error, _Err} ->
-            undefined;
+            {undefined, undefined, Orig};
         Auth ->
             case string:tokens(Auth, ":") of
                 [User, Pass] ->
                     {User, Pass, Orig};
                 _ ->
-                    undefined
+                    {undefined, undefined, Orig}
             end
     end;
 parse_auth(Orig = "Negotiate " ++ _Auth64) ->
     {undefined, undefined, Orig};
-parse_auth(_) ->
-    undefined.
+parse_auth(Orig) ->
+    {undefined, undefined, Orig}.
 
 
 decode_base64([]) ->
