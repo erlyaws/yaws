@@ -1,6 +1,6 @@
 Tue May 24 21:25:00 CEST 2011  Yaws 1.90
-Highlights in this release are the capflam patchset, a really long list of general improvements by Jean-Sébastien Pédron  and Christopher Faulet. Also rebar support has been added by Steve and Tuncur. Finally, Steve has added JSON 2.0 support. Thus this is a major release. Lot's of new little features and also lot's of bug fixes.
-always store a tuple in #headers.authorization (Jean-Sébastien Pédron)
+Highlights in this release are the capflam patchset, a really long list of general improvements by Jean-Sebastien Pedron  and Christopher Faulet. Also rebar support has been added by Steve and Tuncur. Finally, Steve has added JSON 2.0 support. Thus this is a major release. Lot's of new little features and also lot's of bug fixes.
+always store a tuple in #headers.authorization (Jean-Sebastien Pedron)
 improve daemon status output (capflam)
 allow Server header customization (capflam)
 add shaper directive to control access (capflam)

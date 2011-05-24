@@ -42,11 +42,18 @@ out(A) ->
         {p,[], ["A mailing list exists at: ",
                 {a,[{href,"https://lists.sourceforge.net/lists/listinfo/""erlyaws-list"}],
                  "https://lists.sourceforge.net/lists/listinfo/erlyaws-list"}]},
+         {p, [], ["A lot of excellent"
+                 " engineers have contributed to Yaws over the years, "
+                  "we keep a list of all "
+                  ,{a ,[{href,"contributors.txt"}], "contributors"}
+                ]},
+
          {h2, [], "News"},
          {p, [], ["To see all the most recent changes and activity in Yaws "
                   "development, please visit the ",
                   {a, [{href, "https://github.com/klacke/yaws"}],
                    "Yaws github repository"}, "."]},
+         
          gen_news(A)]}]},
      {ssi, "END2",[],[]}].
 
