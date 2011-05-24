@@ -1,4 +1,9 @@
-
+Jean-Sébastien Pédro
+Christopher Faulet
+James Lee
+Nicolas Thauvin
+Fabian Linzberger
+Per Andersson
 Dominique Boucher
 Christian Hennig
 Hans-Christian Esperer
