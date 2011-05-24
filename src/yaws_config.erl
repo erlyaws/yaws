@@ -890,7 +890,8 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
         ['<', "server", Server, '>'] ->  %% first server
             PhpHandler = {cgi, GC#gconf.phpexe},
             fload(FD, server, GC,
-                  #sconf{servername = Server, php_handler = PhpHandler},
+                  #sconf{servername = Server, php_handler = PhpHandler,
+                         listen = []},
                   Cs, Lno+1, Next);
 
         [H|_] ->
