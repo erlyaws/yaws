@@ -1,8 +1,46 @@
-Sat May 7 09:16:04 EDT 2011 added rebar support
+Tue May 24 21:25:00 CEST 2011  Yaws 1.90
+Highlights in this release are the capflam patchset, a really long list of general improvements by Jean-Sébastien Pédron  and Christopher Faulet. Also rebar support has been added by Steve and Tuncur. Finally, Steve has added JSON 2.0 support. Thus this is a major release. Lot's of new little features and also lot's of bug fixes.
+always store a tuple in #headers.authorization (Jean-Sébastien Pédron)
+improve daemon status output (capflam)
+allow Server header customization (capflam)
+add shaper directive to control access (capflam)
+allow conf file pathname config with app env var (capflam)
+soft yaws shutdown (capflam)
+arg_rewrite mods can now return HTTP responses (capflam)
+support external handler to interpret php scripts (capflam)
+add status option to page options (capflam)
+allow multiple listen directives per server (capflam)
+server-specific logger_mod and auth_mod (capflam)
+support parsing of literal IPv6 addresses (capflam)
+allow hard reload of conf without stopping (capflam)
+add control for "Expires" and "Cache-Control" response headers (capflam) Christopher Faulet
+add "application/javascript" as a compressible mime type (capflam)
+use "partial_post_size" for chunked requests (capflam) Christopher Faulet
+authorization improvements, including ACLs like apache mod_access (capflam) (Christopher Faulet)
 Yaws can now be built with rebar (Tuncer Ayaz and Steve Vinoski)
-
-Sun May 1 10:35 PM EDT 2011 JSON-RPC 2.0
 Updated Yaws JSON-RPC support to version 2.0 (Steve Vinoski)
+set HTTP_HOST properly for CGI (Steve)
+change sendfile driver handler to a gen_server (Steve)
+update mime.types from recent Apache web server sources (Steve)
+add binary option to multipart/form-data parsing (Steve)
+rewrite multipart/form-data POST handling, making memory consuption lower (Steve)
+add configurable access logging (Steve)
+Adding access functions for various Yaws records. (tobbe)
+yaws_session_server fixes for embedded mode (Tobbe)
+avoid keeping our own copy of ibrowse for testing (Steve)
+remove support for SOAP DIME attachments (Steve)
+fix EINTR handling in sendfile driver OSX related (Steve)
+A long series of dialyzer warnings fixed (klacke, Steve, Tuncer and Kostis)
+configure ERLBINDIR relative to ERLDIR (James Lee)
+teach linux build to distinguish 32- and 64-bit erlang (Steve)
+Pluggable ysession storage with mnesia sample in src/contrib (Nicolas Thauvin)
+add configure detection of erts bits support, required for websockets (Steve)
+security vulnerability for win32 reported at http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2010-4181
+bug in upload to file code found by Mojito Sorbet
+add implementation of X-Forwarded-For header + docs (Fabian Linzberger)
+--running-config flag to query a running yaws for its config (klacke)
+fix typos on soap intro page (reported by Wes James)
+Fixed and updated SSL verify options. Fixed documentation for verify values to correspond to Erlang's SSL implementation. Updated #ssl{} and yaws:ssl_listen_opts/2 to include fail_if_no_peer_cert. (Per Andersson)
 
 Sat Sep 25 13:39:29 CEST 2010 Yaws 1.89
 Maintenance release with a long series of fixes mostly from Steve Vinoski
