@@ -1,7 +1,6 @@
 
 Dominique Boucher
 Christian Hennig
-Joseph Wayne Norton
 Hans-Christian Esperer
 Alexander Simonov
 Brady McCary
@@ -28,7 +27,6 @@ Stu Bailey
 Michael Slaski
 John Fessenden
 Oleg Avdeev
-Bill Robtersson
 Vance Shipley
 Bill Robertsson
 Robert David
@@ -57,14 +55,12 @@ Sebasitian Strollo
 doccarcass
 Karel Ostrovsky
 Daniel Fabian
-Fredrik Linder
 Michael Arnoldus
 Lennart Ostman
 Jouni Ryno
 Mikael Karlsson
 Martin Björklund
 Paul Mahon
-Rob Schmersel
 Fredrik Linder
 David Welton
 Jimmy Olgeni
