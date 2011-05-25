@@ -408,7 +408,7 @@ actl(SID, Term) ->
         {error, eacces} ->
             io:format("Another user is using the yaws sid <~p>, ~n"
                       "You are not allowd to read the file <~s>, ~n"
-                      "specify by <-I id> which yaws system you want "
+                      "specify by <-I id> which yaws system you want"
                       " to control~n",
                       [SID, yaws:ctl_file(SID)]),
             timer:sleep(10),
@@ -420,7 +420,7 @@ actl(SID, Term) ->
         {error, Reason} ->
             io:format("You failed to read the ctlfile ~s~n"
                       "error was: <~p>~n"
-                      "specify by <-I id> which yaws system you want "
+                      "specify by <-I id> which yaws system you want"
                       " to control~n",
                       [yaws:ctl_file(SID), Reason]),
             timer:sleep(10),

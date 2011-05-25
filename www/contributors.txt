@@ -1,88 +1,109 @@
-Jean-Sébastien Pédro
-Christopher Faulet
-James Lee
-Nicolas Thauvin
-Fabian Linzberger
-Per Andersson
-Dominique Boucher
-Christian Hennig
-Hans-Christian Esperer
-Alexander Simonov
-Brady McCary
-Thomas O'Dowd 
-Andrei Soroker
-TBBle
-Colm Dougan
-Matt Stancliff
-Anders Dahlin
-Praveen Ray
-Per Hedeland
-Bruno Rijsman
-joe_e_e
-Fabian Alenius
-Tom McNulty
-Joseph Wayen Norton
-Liu Yubao 
-Olivier Girondel
-Davide Marques
-Phanikar.K 
-Haobu Yu
-Hans Ulrich Niedermann
-Stu Bailey
-Michael Slaski
-John Fessenden
-Oleg Avdeev
-Vance Shipley
-Bill Robertsson
-Robert David
-Steve Vinoski
-Willem de Jong
-Adam Boz
-Richard Bucker
-John Webb
-Igor goryachev.
-Brian Templeton
-Julian Noble
-Daniel Luna
-Michael Fig
-Jason Andersson
-Michael Leonhard
-Chris NewCombe
-Matthew Reilley
-Anders Nygren
-Kuzma Bartosz
-Bengt Kleberg
-Sergei Golovan
-yariv sedan
-Gaspar Chilingarov
-Mats Cronquist. 
-Sebasitian Strollo
-doccarcass
-Karel Ostrovsky
-Daniel Fabian
-Michael Arnoldus
-Lennart Ostman
-Jouni Ryno
-Mikael Karlsson
-Martin Björklund
-Paul Mahon
-Fredrik Linder
-David Welton
-Jimmy Olgeni
 Tomas Abrahamsson
-Chandru 
-Hal Snyder
-Joakim Grebenö
-Magnus Fröberg
-Rob Schmersel
-Leon Smith
+Manuel Durán Aguete
+Fabian Alenius
+Jason Andersson
+Per Andersson
+Joe Armstrong
+Michael Arnoldus
+Oleg Avdeev
+Tuncer Ayaz
+Stu Bailey
+Kuzma Bartosz
 Eric Baur
-Carsten Schultz
-Taavi Talvik
-Erik Pearson
-jcortner@cvol.net
-Sean Hinde
 Johan Bevemyr
-Joe Armstrong.
+Martin Björklund
+Dominique Boucher
+Adam Bozanich
+Richard Bucker
+Yinso Chen
+Gaspar Chilingarov
+Mats Cronqvist
+Anders Dahlin
+Robert David
+Willem de Jong
+François de Metz
+doccarcass
+dnz@bk.ru
+Colm Dougan
+Hans-Christian Esperer
+Daniel Fabian
+Christopher Faulet
+John Fessenden
+Michael Fig
+Bruce Fitzsimmons
+Magnus Fröberg
+Olivier Girondel
+Sergei Golovan
+Luke Gorrie
+Igor Goryachev
+Joakim Grebenö
+Paul Hampson
+Per Hedeland
+Christian Hennig
+Sean Hinde
+hun@n-dimensional.de
+Wes James
+jcortner@cvol.net
+joe_e_e
+Phanikar.K
+Dimitriy Kargapolov
+Mikael Karlsson
+Bengt Kleberg
+Petter Larsson
+James Lee
+Peter Lemenkov
+Michael Leonhard
+Eric Liang
+Fredrik Linder
+Fabian Linzberger
+Daniel Luna
+Paul Mahon
+Davide Marquês
+Brady McCary
+Tom McNulty
+Chandru Mullaparthi
+Hans Ulrich Niedermann
+Chris Newcombe
+Julian Noble
+Joseph Wayne Norton
+Anders Nygren
+Thomas O'Dowd
+Jimmy Olgeni
+Lennart Ostman
+Karel Ostrovsky
+Erik Pearson
+Jean-Sébastien Pédron
+Yurii Rashkovskii
+Praveen Ray
+Matthew Reilly
+Mickael Remond
+Bruno Rijsman
+Bill Robertsson
+Jouni Ryno
+Yariv Sadan
+Kostis Sagonas
+Rob Schmersel
+Carsten Schultz
+Yariv Sedan
+Vance Shipley
+Alexander Simonov
+Michael Slaski
+Leon Smith
+Hal Snyder
+Andrei Soroker
+Matt Stancliff
+Sebastian Stroll
+Taavi Talvik
+Brian Templeton
+Nicolas Thauvin
+Fredrik Thulin
 Torbjörn Törnqvist
+Steve Vinoski
+Lev Walkin
+wde
+John Webb
+David Welton
 Claes Wikström
+Dan Willemsen
+Haobu Yu
+Liu Yubao

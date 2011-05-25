@@ -168,13 +168,13 @@ while [ $# -gt 0 ]
           daemon=" -detached ";;
       --wait-started=*)
           call_wait_started=`echo $arg | sed -e 's/--wait-started=//'`
-          num=`expr "$call_wait_started" : "([0-9]*)"`
+          num=`expr "$call_wait_started" : "\([0-9]*\)"`
           if [ "$num" != "$call_wait_started" ]; then
               echo error: argument to --wait-started is $call_wait_started, not a number
               exit 1
           fi;;
       --wait-started)
-          call_wait_started=6;;
+          call_wait_started=30;;
       -d|--debug)
           debug=" -boot start_sasl -yaws debug ";;
       --nodebug)

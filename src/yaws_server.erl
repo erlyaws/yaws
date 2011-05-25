@@ -1696,7 +1696,19 @@ handle_normal_request(CliSock, ARG, UT, Authdirs, N) ->
                 _ ->
                     ARG2 = ARG1
             end,
-            handle_ut(CliSock, ARG2, UT, N);
+
+            %% In case of delayed redirect, we must handle the
+            %% request as a dynamic one.
+            UT2 = case erase(is_delayed_redirect) of
+                      true when UT#urltype.type =:= regular ->
+                          UT#urltype{type=delayed_regular};
+                      true when UT#urltype.type =:= directory ->
+                          UT#urltype{type=delayed_directory};
+                      _ ->
+                          UT
+                  end,
+
+            handle_ut(CliSock, ARG2, UT2, N);
         false_403 ->
             deliver_403(CliSock, ARG1#arg.req);
         {false, AuthMethods, Realm} ->
