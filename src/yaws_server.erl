@@ -2582,7 +2582,7 @@ get_chunked_client_data(CliSock,SSL) ->
         Len == 0 ->
             _Tmp=yaws:do_recv(CliSock, 2, SSL),%% flush last crnl
             <<>>;
-        Len < SC#sconf.partial_post_size ->
+        Len =< SC#sconf.partial_post_size ->
             B = yaws:get_chunk(CliSock, Len, 0, SSL),
             yaws:eat_crnl(CliSock,SSL),
             {partial, list_to_binary(B)};
