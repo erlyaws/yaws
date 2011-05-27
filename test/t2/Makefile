@@ -4,7 +4,7 @@ include ../support/include.mk
 
 #
 all:	conf setup app_test.beam streamtest.beam jsontest.beam posttest.beam \
-		reentranttest.beam
+		reentranttest.beam phptest.beam
 	@echo "all ok"
 
 
@@ -19,6 +19,7 @@ test:	conf start
 	dd if=/dev/zero of=../../www/2000.txt bs=1024 count=2000 >/dev/null 2>&1
 	dd if=/dev/zero of=../../www/3000.txt bs=1024 count=3000 >/dev/null 2>&1
 	dd if=/dev/zero of=../../www/10000.txt bs=1024 count=10000 >/dev/null 2>&1
+	echo '<? echo "Hello, world!"; ?>' > ../../www/test.php
 	ul=`ulimit -n` ; \
 	val=`expr $$ul '<' $(ULIMIT)` ; \
 	if [ $$val = 1 ] ; then \
@@ -35,4 +36,6 @@ debug:
 	$(ERL) $(PA)
 
 clean:	tclean
+	-rm -f ../../www/1000.txt ../../www/2000.txt ../../www/3000.txt ../../www/10000.txt
+	-rm -f ../../www/test.php
 	-rm -rf localhost:8000 logs yaws.conf

@@ -24,6 +24,7 @@ start() ->
     post_test(),
     expires_test(),
     reentrant_test(),
+    php_handler_test(),
     ibrowse:stop().
 
 
@@ -608,6 +609,14 @@ reentrant_test_delayed_headers() ->
     ok.
 
 
+
+php_handler_test() ->
+    io:format("php_handler_test\n", []),
+    Uri = "http://localhost:8006/test.php",
+    {ok, Binary} = file:read_file("../../www/test.php"),
+    Content = binary_to_list(Binary),
+    ?line {ok, "200", _, Content} = ibrowse:send_req(Uri, [], get),
+    ok.
 
 %% used for appmod tests
 %%
