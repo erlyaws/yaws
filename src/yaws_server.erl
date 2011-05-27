@@ -1560,8 +1560,13 @@ handle_request(CliSock, ARG, _N)
                             _           -> ok
                         end
                 end, State#rewrite_response.headers),
-    accumulate_content(State#rewrite_response.content),
-    deliver_accumulated(ARG, CliSock, decide, undefined, final),
+    case State#rewrite_response.content of
+        <<>> ->
+            deliver_accumulated(CliSock);
+        _ ->
+            accumulate_content(State#rewrite_response.content),
+            deliver_accumulated(ARG, CliSock, decide, undefined, final)
+    end,
     done_or_continue();
 
 handle_request(CliSock, ARG, N) ->
