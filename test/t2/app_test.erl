@@ -22,6 +22,7 @@ start() ->
     sendfile_get(),
     json_test(),
     post_test(),
+    expires_test(),
     ibrowse:stop().
 
 
@@ -561,6 +562,27 @@ large_chunked_post() ->
     ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, post, Bin, Opts2),
     ok.
 
+
+expires_test() ->
+    io:format("expires_test\n", []),
+    Uri = "http://localhost:8006/icons/yaws.gif",
+    ?line {ok, "200", Hdrs, _} = ibrowse:send_req(Uri, [], get),
+
+    %% Retrieve max-age value to test Expires header
+    ?line "max-age=" ++ Rest = proplists:get_value("Cache-Control", Hdrs),
+    ?line Secs = list_to_integer(Rest),
+
+    %% Convert Date and Expires into datetime()
+    ?line Date = proplists:get_value("Date", Hdrs),
+    ?line Expires = proplists:get_value("Expires", Hdrs),
+    Date_DT = httpd_util:convert_request_date(Date),
+    Expires_DT = httpd_util:convert_request_date(Expires),
+
+    %% Check if Expires value is equal to "Date + max-age"
+    Val1 = calendar:datetime_to_gregorian_seconds(Date_DT) + Secs,
+    Val2 = calendar:datetime_to_gregorian_seconds(Expires_DT),
+    ?line Val1 = Val2,
+    ok.
 
 %% used for appmod tests
 %%
