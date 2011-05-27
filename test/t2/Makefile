@@ -4,7 +4,7 @@ include ../support/include.mk
 
 #
 all:	conf setup app_test.beam streamtest.beam jsontest.beam posttest.beam \
-		reentranttest.beam phptest.beam
+		reentranttest.beam phptest.beam rewritetest.beam
 	@echo "all ok"
 
 

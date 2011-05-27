@@ -25,6 +25,7 @@ start() ->
     expires_test(),
     reentrant_test(),
     php_handler_test(),
+    arg_rewrite_test(),
     ibrowse:stop().
 
 
@@ -617,6 +618,41 @@ php_handler_test() ->
     Content = binary_to_list(Binary),
     ?line {ok, "200", _, Content} = ibrowse:send_req(Uri, [], get),
     ok.
+
+
+arg_rewrite_test() ->
+    io:format("arg_rewrite_test\n", []),
+    arg_rewrite_test_rewrite(),
+    arg_rewrite_test_redirect(),
+    arg_rewrite_test_response(),
+    ok.
+
+arg_rewrite_test_rewrite() ->
+    io:format("  rewrite\n", []),
+    Uri = "http://localhost:8006/rewrite",
+    ?line {ok, "200", Hdrs, _} = ibrowse:send_req(Uri, [], get),
+    ?line "image/gif" = proplists:get_value("Content-Type", Hdrs),
+    {ok, FI} = file:read_file_info("../../www/icons/yaws.gif"),
+    Etag = yaws:make_etag(FI),
+    ?line Etag = proplists:get_value("Etag", Hdrs),
+    ok.
+
+arg_rewrite_test_redirect() ->
+    io:format("  redirect\n", []),
+    Uri = "http://localhost:8006/redirect",
+    ?line {ok, "301", Hdrs, _} = ibrowse:send_req(Uri, [], get),
+    ?line "http://www.yakaz.com" = proplists:get_value("Location", Hdrs),
+    ok.
+
+
+arg_rewrite_test_response() ->
+    io:format("  response\n", []),
+    Uri = "http://localhost:8006/response",
+    ?line {ok, "200", Hdrs, Content} = ibrowse:send_req(Uri, [], get),
+    ?line "text/plain" = proplists:get_value("Content-Type", Hdrs),
+    ?line "Hello, World!" = Content,
+    ok.
+
 
 %% used for appmod tests
 %%
