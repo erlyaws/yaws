@@ -23,6 +23,7 @@ start() ->
     json_test(),
     post_test(),
     expires_test(),
+    reentrant_test(),
     ibrowse:stop().
 
 
@@ -583,6 +584,30 @@ expires_test() ->
     Val2 = calendar:datetime_to_gregorian_seconds(Expires_DT),
     ?line Val1 = Val2,
     ok.
+
+
+reentrant_test() ->
+    io:format("reentrant_test\n", []),
+    reentrant_test_status(),
+    reentrant_test_delayed_headers(),
+    ok.
+
+reentrant_test_status() ->
+    io:format("  status code\n", []),
+    Uri = "http://localhost:8006/reentranttest/status",
+    ?line {ok, "201", _, _} = ibrowse:send_req(Uri, [], post, <<"blob">>, []),
+    ok.
+
+reentrant_test_delayed_headers() ->
+    io:format("  delayed headers\n", []),
+    Uri = "http://localhost:8006/reentranttest/delayed_headers",
+    ?line {ok, "200", Hdrs, _} = ibrowse:send_req(Uri, [], get),
+    ?line "no-cache" = proplists:get_value("Cache-Control", Hdrs),
+    ?line "static-tag" = proplists:get_value("Etag", Hdrs),
+    ?line "true" = proplists:get_value("X-Delayed-Header", Hdrs),
+    ok.
+
+
 
 %% used for appmod tests
 %%
