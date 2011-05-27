@@ -3,7 +3,7 @@ include ../support/include.mk
 .PHONY: all test debug clean
 
 #
-all:	conf setup app_test.beam streamtest.beam jsontest.beam
+all:	conf setup app_test.beam streamtest.beam jsontest.beam posttest.beam
 	@echo "all ok"
 
 

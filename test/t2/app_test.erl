@@ -21,6 +21,7 @@ start() ->
     streamcontent_test(),
     sendfile_get(),
     json_test(),
+    post_test(),
     ibrowse:stop().
 
 
@@ -505,6 +506,61 @@ recv_hdrs(Sock, Len) ->
         Other ->
             {error, {"unexpected message", Other}}
     end.
+
+
+%% partial_post_size = 2048000
+post_test() ->
+    io:format("post_test\n",[]),
+    small_post(),
+    large_post(),
+    small_chunked_post(),
+    large_chunked_post(),
+    ok.
+
+small_post() ->
+    io:format("  small post\n",[]),
+    {ok, Bin} = file:read_file("../../www/1000.txt"),
+    Sz = size(Bin),
+    Uri = "http://localhost:8006/posttest/" ++ integer_to_list(Sz),
+    Hdrs = [{content_length, Sz}, {content_type, "binary/octet-stream"}],
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, post, Bin, []),
+    ok.
+
+large_post() ->
+    io:format("  large post\n",[]),
+    {ok, Bin} = file:read_file("../../www/10000.txt"),
+    Sz = size(Bin),
+    Uri = "http://localhost:8006/posttest/" ++ integer_to_list(Sz),
+    Hdrs = [{content_length, Sz}, {content_type, "binary/octet-stream"}],
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, post, Bin, []),
+    ok.
+
+small_chunked_post() ->
+    io:format("  small chunked post\n",[]),
+    {ok, Bin} = file:read_file("../../www/3000.txt"),
+    Sz = size(Bin),
+    Uri = "http://localhost:8006/posttest/chunked/" ++ integer_to_list(Sz),
+    Hdrs = [{content_type, "binary/octet-stream"}],
+    Opts = [{transfer_encoding, {chunked, 1000*1000}}],
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, post, Bin, Opts),
+    ok.
+
+large_chunked_post() ->
+    io:format("  large chunked post\n",[]),
+    {ok, Bin} = file:read_file("../../www/10000.txt"),
+    Sz = size(Bin),
+    Uri = "http://localhost:8006/posttest/chunked/" ++ integer_to_list(Sz),
+    Hdrs = [{content_type, "binary/octet-stream"}],
+
+    %% size of chunk _IS_NOT_ a multiple of partial_post_size
+    Opts1 = [{transfer_encoding, {chunked, 4000*1000}}],
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, post, Bin, Opts1),
+
+    %% size of chunk _IS_ a multiple of partial_post_size
+    Opts2 = [{transfer_encoding, {chunked, 4000*1024}}],
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, post, Bin, Opts2),
+    ok.
+
 
 %% used for appmod tests
 %%
