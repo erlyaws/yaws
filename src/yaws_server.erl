@@ -1760,21 +1760,21 @@ set_auth_user(ARG, User) ->
 
 
 filter_auths(Auths, Req_dir) ->
-    filter_auths(Auths, Req_dir, {0, []}).
-
-filter_auths([], _, {_, Auths}) ->
-    Auths;
-filter_auths([A|T], Req_dir, {N, Auths}) ->
-    case lists:prefix(A#auth.dir, Req_dir) of
-        true ->
-            case length(A#auth.dir) of
-                N1 when N1 < N -> filter_auths(T, Req_dir, {N, Auths});
-                N1 when N1 > N -> filter_auths(T, Req_dir, {N1, [A]});
-                N1             -> filter_auths(T, Req_dir, {N1, [A|Auths]})
-            end;
-        false ->
-            filter_auths(T, Req_dir, {N, Auths})
+    case filter_auths(Auths, Req_dir, []) of
+        [] when Req_dir =:= "/" ->
+            [];
+        [] ->
+            filter_auths(Auths, filename:dirname(Req_dir));
+        As ->
+            As
     end.
+
+filter_auths([], _, Auths) ->
+    lists:reverse(Auths);
+filter_auths([A=#auth{dir=Req_dir}|T], Req_dir, Auths) ->
+    filter_auths(T, Req_dir, [A|Auths]);
+filter_auths([_|T], Req_dir, Auths) ->
+    filter_auths(T, Req_dir, Auths).
 
 
 %% Call is_auth(...)/5 with a default value.
