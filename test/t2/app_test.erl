@@ -26,6 +26,7 @@ start() ->
     reentrant_test(),
     php_handler_test(),
     arg_rewrite_test(),
+    shaper_test(),
     ibrowse:stop().
 
 
@@ -651,6 +652,17 @@ arg_rewrite_test_response() ->
     ?line {ok, "200", Hdrs, Content} = ibrowse:send_req(Uri, [], get),
     ?line "text/plain" = proplists:get_value("Content-Type", Hdrs),
     ?line "Hello, World!" = Content,
+    ok.
+
+
+
+shaper_test() ->
+    io:format("shaper_test\n", []),
+    Uri = "http://localhost:8007/",
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri, [], get),
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri, [], get),
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri, [], get),
+    ?line {ok, "503", _, _} = ibrowse:send_req(Uri, [], get),
     ok.
 
 
