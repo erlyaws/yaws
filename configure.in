@@ -204,8 +204,12 @@ case "$host_os" in
            AC_LANG(Erlang)
            AC_RUN_IFELSE(
                [AC_LANG_PROGRAM([],[dnl
-                           halt(case erlang:system_info(wordsize) of
-                               8 -> 0; 4 -> 1 end)])],
+                   halt(try erlang:system_info({wordsize,external}) of
+                            8 -> 0; 4 -> 1
+                        catch _:badarg ->
+                            case erlang:system_info(wordsize) of
+                                8 -> 0; 4 -> 1
+                            end end)])],
 	       [AC_MSG_NOTICE(found 64-bit Erlang)
                    case "$host_cpu" in
                        x86_64) CBIT= ;;
@@ -259,8 +263,12 @@ case "$host_os" in
                    AC_LANG(Erlang)
                    AC_RUN_IFELSE(
                        [AC_LANG_PROGRAM([],[dnl
-                                   halt(case erlang:system_info(wordsize) of
-                                       8 -> 0; 4 -> 1 end)])],
+                           halt(try erlang:system_info({wordsize,external}) of
+                                    8 -> 0; 4 -> 1
+                                catch _:badarg ->
+                                    case erlang:system_info(wordsize) of
+                                        8 -> 0; 4 -> 1
+                                    end end)])],
 	               [AC_MSG_NOTICE(found 64-bit Erlang)
                            CBIT=-m64],
 	               [AC_MSG_NOTICE(found 32-bit Erlang)
