@@ -29,7 +29,71 @@
 -module(jsonrpc).
 -author("Gaspar Chilingarov <nm@web.am>, Gurgen Tumanyan <barbarian@armkb.com>").
 -vsn("3").
+-export([call/3]).
 -export([s/2]).        % extract element from proplist
+
+%%%
+%%% call function calls json-rpc method on remote host
+%%%
+%%% URL - remote server url (may use https)
+%%% Options - option list to be passed to http:request
+%%% (ssl options ot timeout, for example)
+%%% Payload -> {call, MethodName, Args} tuple
+%%% MethodName -> atom
+%%% Args -> list
+%%%
+call(URL, Options, Payload) ->
+    dbg:tracer(), dbg:p(all, call),
+    dbg:tpl(yaws_api, [{'$1',[],[{message,'$1'},{message,{caller}},{return_trace}]}]),
+    try
+        {ok, CallPayloadDeep} = encode_call_payload(Payload),
+        CallPayload = lists:flatten(CallPayloadDeep),
+        {ok, Response} = httpc:request(
+                           post,
+                           {URL,[{"Content-Length",length(CallPayload)}],
+                            "application/x-www-form-urlencoded",CallPayload},
+                           Options, []),
+
+        RespBody = if
+                       (size(Response) == 2) or (size(Response) == 3) ->
+                           element(size(Response), Response)
+                   end,
+        decode_call_payload(RespBody)
+    catch
+        error:Err->
+            error_logger:error_report([{'json_rpc:call', error},
+                                       {error, Err},
+                                       {stack, erlang:get_stacktrace()}]),
+            {error,Err}
+    end.
+
+%%%
+%%% json-rpc.org defines such structure for making call
+%%%
+encode_call_payload({call, Method, Args}) when is_list(Args) ->
+    %% id makes sense when there are many requests in same
+    %% communication channel and replies can come in random
+    %% order here it can be changed to something less expensive
+    ID = element(3, erlang:now()),
+    Struct =  json2:encode({struct, [{"jsonrpc", "2.0"},
+                                     {method, Method},
+                                     {params, {array, Args}},
+                                     {id, ID}]}),
+    {ok, Struct}.
+
+%%%
+%%% decode response structure
+%%%
+decode_call_payload(JSonStr) ->
+    {ok, JSON} = json2:decode_string(JSonStr),
+    Result = s(JSON, result),
+    Error = s(JSON, error),
+    case Error of
+        undefined ->
+            {ok,{response,[Result]}}; % make it compliant with xmlrpc response
+        Error ->
+            {error, Error}
+    end.
 
 %%% lookup element in proplist
 s({struct, List}, ElemName) ->

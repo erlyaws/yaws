@@ -273,6 +273,8 @@ streamcontent_test() ->
     gen_tcp:close(Sock),
     ok.
 
+-define(JSON_URI, "http://localhost:8005/jsontest").
+
 json_test() ->
     io:format("json_test\n",[]),
     io:format("  param array1\n", []),
@@ -291,6 +293,10 @@ json_test() ->
                        {struct, [{"jsonrpc", "2.0"},
                                  {"result", -19},
                                  {"id", 2}]}),
+    inets:start(),
+    io:format("  encode/decode\n", []),
+    ?line {ok,{response,[19]}} = jsonrpc:call(?JSON_URI, [],
+                                              {call, "subtract", [42, 23]}),
     io:format("  param obj1\n", []),
     ?line ok = do_json({struct, [{"jsonrpc", "2.0"},
                                  {"method", "subtract"},
@@ -489,7 +495,7 @@ json_send(Req) ->
 json_send(Req, encode) ->
     json_send(json2:encode(Req), no_encode);
 json_send(Req, no_encode) ->
-    Uri = "http://localhost:8005/jsontest",
+    Uri = ?JSON_URI,
     ReqHdrs = [{content_type, "application/json"}],
     ibrowse:send_req(Uri, ReqHdrs, post, Req).
 
