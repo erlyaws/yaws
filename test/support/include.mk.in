@@ -22,7 +22,7 @@ setup:
 	@rm -rf logs 2> /dev/null
 	@mkdir logs
 
-start:	stop setup
+start:	quiet_stop setup
 	set -e ; if [ -f ./yaws.conf ]; then \
 	  $(YTOP)/bin/yaws -sname test --daemon --id testid --conf ./yaws.conf; \
 	  $(YTOP)/bin/yaws --id testid --wait-started; \
@@ -46,6 +46,9 @@ status:
 	$(YTOP)/bin/yaws  --id testid --status
 stop:
 	$(YTOP)/bin/yaws --id testid --stop || true
+	@sleep 5
+quiet_stop:
+	$(YTOP)/bin/yaws --id testid --stop >/dev/null 2>&1 || true
 	@sleep 5
 
 stdconf:
