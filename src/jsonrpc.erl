@@ -43,8 +43,6 @@
 %%% Args -> list
 %%%
 call(URL, Options, Payload) ->
-    dbg:tracer(), dbg:p(all, call),
-    dbg:tpl(yaws_api, [{'$1',[],[{message,'$1'},{message,{caller}},{return_trace}]}]),
     try
         {ok, CallPayloadDeep} = encode_call_payload(Payload),
         CallPayload = lists:flatten(CallPayloadDeep),
