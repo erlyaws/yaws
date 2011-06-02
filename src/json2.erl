@@ -585,10 +585,15 @@ test() ->
 %% Legitimate changes to the encoding routines may require tweaks to
 %% the reference JSON strings in e2j_test_vec().
 
-test_e2j(E, _) when is_float(E) ->
+%% This clause handles floats specially due to the need for fuzzy matching
+%% to avoid slight differences due to conversions. Rather than direct
+%% comparison as done in the more general clause below, here we allow a
+%% small relative difference between expected and actual.
+test_e2j(E, J) when is_float(E) ->
     J2 = lists:flatten(encode(E)),
     E2 = list_to_float(J2),
-    Rel = abs(E2 - E)/E,
+    E1 = list_to_float(J),
+    Rel = abs(E2 - E1)/E,
     true = Rel < 0.005,
     ok;
 test_e2j(E, J) ->
