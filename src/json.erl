@@ -79,7 +79,6 @@
 %%% syntactically valid JSON floating-point numbers could silently
 %%% lose precision or noisily cause an overflow.  However, most
 %%% other JSON libraries are likely to behave in the same way.
-%%% The encoding precision defaults to 6 digits.
 %%%
 %%% Strings: If we represented JSON string data as Erlang binaries,
 %%% we would have to choose a particular unicode format.  Instead,
@@ -123,12 +122,12 @@ encode(null) -> "null";
 encode(undefined) -> "null";
 encode(B) when is_binary(B) -> encode_string(B);
 encode(I) when is_integer(I) -> integer_to_list(I);
-encode(F) when is_float(F) -> io_lib:format("~g", [F]);
+encode(F) when is_float(F) -> float_to_list(F);
 encode(L) when is_list(L) ->
     case is_string(L) of
 	yes -> encode_string(L);
 	unicode -> encode_string(xmerl_ucs:to_utf8(L));
-	no -> exit({json_encode, {not_string, L}})
+	no -> encode({array, L})
     end;
 encode({array, Props}) when is_list(Props) -> encode_array(Props);
 encode({struct, Props} = T) when is_list(Props) -> encode_object(T);
@@ -167,11 +166,16 @@ encode_string([C | Cs], Acc) ->
 encode_object({struct, _Props} = Obj) ->
     M = obj_fold(fun({Key, Value}, Acc) ->
 	S = case Key of
-            B when is_binary(B) -> encode_string(B);
-	    L when is_list(L) -> encode_string(L);
-	    A when is_atom(A) -> encode_string(atom_to_list(A));
-            _ -> exit({json_encode, {bad_key, Key}})
-	end,
+                B when is_binary(B) -> encode_string(B);
+                L when is_list(L) ->
+                    case is_string(L) of
+                        yes -> encode_string(L);
+                        unicode -> encode_string(xmerl_ucs:to_utf8(L));
+                        no -> exit({json_encode, {bad_key, Key}})
+                    end;
+                A when is_atom(A) -> encode_string(atom_to_list(A));
+                _ -> exit({json_encode, {bad_key, Key}})
+            end,
 	V = encode(Value),
 	case Acc of
 	    [] -> [S, $:, V];
@@ -309,7 +313,7 @@ scan_number([D | Ds], A, X) when A > 0, D >= $0, D =< $9 ->
     % Note that nonzero numbers can't start with "0".
     scan_number(Ds, 10 * A + (D - $0), X);
 scan_number([D | Ds], A, X) when D == $E; D == $e ->
-    scan_exponent_begin(Ds, float(A), X);
+    scan_exponent_begin(Ds, integer_to_list(A) ++ ".0", X);
 scan_number([D | _] = Ds, A, _X) when D < $0; D > $9 ->
     {done, {ok, A}, Ds}.
 
@@ -317,15 +321,15 @@ scan_fraction(Ds, I, X) -> scan_fraction(Ds, [], I, X).
 
 scan_fraction([], _Fs, _I, X) -> {more, X};
 scan_fraction(eof, Fs, I, _X) ->
-    R = I + list_to_float("0." ++ lists:reverse(Fs)),
+    R = list_to_float(lists:append([integer_to_list(I), ".", lists:reverse(Fs)])),
     {done, {ok, R}, eof};
 scan_fraction([D | Ds], Fs, I, X) when D >= $0, D =< $9 ->
     scan_fraction(Ds, [D | Fs], I, X);
 scan_fraction([D | Ds], Fs, I, X) when D == $E; D == $e ->
-    R = I + list_to_float("0." ++ lists:reverse(Fs)),
+    R = lists:append([integer_to_list(I), ".", lists:reverse(Fs)]),
     scan_exponent_begin(Ds, R, X);
 scan_fraction(Rest, Fs, I, _X) ->
-    R = I + list_to_float("0." ++ lists:reverse(Fs)),
+    R = list_to_float(lists:append([integer_to_list(I), ".", lists:reverse(Fs)])),
     {done, {ok, R}, Rest}.
 
 scan_exponent_begin(Ds, R, X) ->
@@ -340,12 +344,12 @@ scan_exponent_begin([D | Ds], Es, R, X) when D == $-;
 
 scan_exponent([], _Es, _R, X) -> {more, X};
 scan_exponent(eof, Es, R, _X) ->
-    X = R * math:pow(10, list_to_integer(lists:reverse(Es))),
+    X = list_to_float(lists:append([R, "e", lists:reverse(Es)])),
     {done, {ok, X}, eof};
 scan_exponent([D | Ds], Es, R, X) when D >= $0, D =< $9 ->
     scan_exponent(Ds, [D | Es], R, X);
 scan_exponent(Rest, Es, R, _X) ->
-    X = R * math:pow(10, list_to_integer(lists:reverse(Es))),
+    X = list_to_float(lists:append([R, "e", lists:reverse(Es)])),
     {done, {ok, X}, Rest}.
 
 scan_comment([]) -> {more, "/"};
@@ -573,7 +577,9 @@ obj_is_key(Key, {struct, Props}) ->
 %% Store a new member in an object.  Returns a new object.
 
 obj_store(KeyList, Value, {struct, Props}) when is_list(Props) ->
-	Key = list_to_atom(KeyList),
+	Key = try list_to_atom(KeyList)
+              catch error:badarg -> KeyList
+              end,
     {struct, [{Key, Value} | proplists:delete(Key, Props)]}.
 
 %% Create an object from a list of Key/Value pairs.
@@ -594,8 +600,8 @@ obj_fold(Fun, Acc, {struct, Props}) ->
 is_string([]) -> yes;
 is_string(List) -> is_string(List, non_unicode).
 
-is_string([C|Rest], non_unicode) when C >= 0, C =< 255 -> is_string(Rest, non_unicode);
-is_string([C|Rest], _) when C =< 65000 -> is_string(Rest, unicode);
+is_string([C|Rest], non_unicode) when is_integer(C), C >= 0, C =< 255 -> is_string(Rest, non_unicode);
+is_string([C|Rest], _) when is_integer(C), C>= 0, C =< 65000 -> is_string(Rest, unicode);
 is_string([], non_unicode) -> yes;
 is_string([], unicode) -> unicode;
 is_string(_, _) -> no.
