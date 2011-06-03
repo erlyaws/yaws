@@ -86,7 +86,7 @@ init([]) ->
     case erl_ddll:load_driver(Dir, Shlib) of
         ok -> ok;
         {error, already_loaded} -> ok;
-        _ -> exit({error, "could not load driver" ++ Shlib})
+        _ -> exit({error, "could not load driver " ++ Shlib})
     end,
     Port = open_port({spawn, Shlib}, [binary]),
     CallerTable = ets:new(yaws_sendfile, []),
