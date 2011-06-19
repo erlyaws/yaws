@@ -322,11 +322,11 @@ callback_fun(M, F, Args, Payload, SessionValue, _RpcType) ->
 encode_send(Args, StatusCode, [Payload], AddOn, ID, RpcType) ->
     encode_send(Args, StatusCode, Payload, AddOn, ID, RpcType);
 
-encode_send(Args, StatusCode, Payload, _AddOn, ID, RpcType) ->
+encode_send(Args, StatusCode, Payload, AddOn, ID, RpcType) ->
     ?Debug("rpc response ~p ~n", [Payload]),
     EncodedPayload = encode_handler_payload(Payload, ID, RpcType),
     ?Debug("rpc encoded response ~p ~n", [EncodedPayload]),
-    send(Args, StatusCode, EncodedPayload, [], RpcType).
+    send(Args, StatusCode, EncodedPayload, AddOn, RpcType).
 
 send(Args, StatusCode) ->
     send(Args, StatusCode, json).
@@ -334,6 +334,8 @@ send(Args, StatusCode) ->
 send(Args, StatusCode, RpcType) ->
     send(Args, StatusCode, "", [], RpcType).
 
+send(Args, StatusCode, Payload, AddOn, RpcType) when not is_list(AddOn) ->
+    send(Args, StatusCode, Payload, [AddOn], RpcType);
 send(_Args, StatusCode, Payload, AddOnData, RpcType) ->
     [{status, StatusCode},
      content_hdr(RpcType, Payload),
