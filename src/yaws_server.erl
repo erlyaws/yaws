@@ -1182,9 +1182,8 @@ init_db() ->
     put(init_db, lists:keydelete(init_db, 1, get())).
 
 erase_transients() ->
-    %% flush all messages. If exit message found, rethrow it
+    %% flush all messages
     Fun = fun(G) -> receive
-                        {'EXIT', _From, Reason} -> exit(Reason);
                         _X -> G(G)
                     after 0 -> ok
                     end
