@@ -210,12 +210,12 @@ result(_Model, false) ->   % soap notify !
 result(_Model, Error) ->
     srv_error(io_lib:format("Error processing message: ~p", [Error])).
 
-return(#wsdl{model = Model}, ResHeader, ResBody, ResCode, SessVal, undefined) ->
-    return(Model, ResHeader, ResBody, ResCode, SessVal, undefined);
-return(Model, ResHeader, ResBody, ResCode, SessVal, undefined)
+return(#wsdl{model = Model}, ResHeader, ResBody, ResCode, SessVal, Files) ->
+    return(Model, ResHeader, ResBody, ResCode, SessVal, Files);
+return(Model, ResHeader, ResBody, ResCode, SessVal, Files)
   when not is_list(ResBody) ->
-    return(Model, ResHeader, [ResBody], ResCode, SessVal, undefined);
-return(Model, ResHeader, ResBody, ResCode, SessVal, undefined) ->
+    return(Model, ResHeader, [ResBody], ResCode, SessVal, Files);
+return(Model, ResHeader, ResBody, ResCode, SessVal, Files) ->
     %% add envelope
     Header2 = case ResHeader of
                   undefined -> undefined;
@@ -225,7 +225,13 @@ return(Model, ResHeader, ResBody, ResCode, SessVal, undefined) ->
                                 'Header' = Header2},
     case catch erlsom:write(Envelope, Model) of
         {ok, XmlDoc} ->
-            {ok, XmlDoc, ResCode, SessVal};
+	    case Files of
+		undefined ->
+		    {ok, XmlDoc, ResCode, SessVal};
+		_ ->
+		    DIME = yaws_dime:encode(XmlDoc, Files),
+		    {ok, DIME, ResCode, SessVal}
+	    end;
         {error, WriteError} ->
             srv_error(f("Error writing XML: ~p", [WriteError]));
         OtherWriteError ->
