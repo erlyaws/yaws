@@ -48,6 +48,7 @@ applications/yapp/doc/yapp_mnesia_server.html
 applications/yapp/doc/yapp_registry.html
 applications/yapp/doc/yapp_server.html
 applications/yapp/doc/yapp_sup.html
+applications/yapp/ebin/yapp.app
 applications/wiki/scripts/addFile
 applications/wiki/scripts/getPassword
 applications/wiki/scripts/importFiles
