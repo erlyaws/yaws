@@ -54,6 +54,7 @@ MODULES=yaws \
 	yaws_multipart \
 	yaws_shaper \
 	yaws_dime \
+	yaws_exhtml \
 	$(BITSMODS)
 
 
