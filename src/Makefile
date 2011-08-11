@@ -24,6 +24,7 @@ MODULES=yaws \
 	yaws_sup \
 	yaws_api \
 	yaws_log \
+	yaws_trace \
 	yaws_logger \
 	yaws_ls \
 	yaws_debug \
