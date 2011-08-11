@@ -67,7 +67,7 @@ disable_trace(infinity) ->
         false ->
             error_logger:info_msg("Trace already disabled~n", []);
         {true, _} ->
-            yaws_config:hard_setconf(GC#gconf{trace=false}, Groups),
+            yaws_api:setconf(GC#gconf{trace=false}, Groups),
             error_logger:info_msg("Trace disabled~n", [])
     end;
 disable_trace(Time) ->
@@ -76,7 +76,7 @@ disable_trace(Time) ->
         false ->
             error_logger:info_msg("Trace already disabled~n", []);
         {true, CurType} ->
-            yaws_config:hard_setconf(GC#gconf{trace=false}, Groups),
+            yaws_api:setconf(GC#gconf{trace=false}, Groups),
             timer:apply_after(Time, ?MODULE, enable_trace, [CurType, infinity]),
             error_logger:info_msg("Trace disabled for ~w milliseconds~n",[Time])
     end.
@@ -88,10 +88,10 @@ enable_trace(Type, infinity) when Type =:= http; Type =:= traffic ->
         {true, Type} ->
             error_logger:info_msg("~p trace already enabled~n", [Type]);
         {true, _} ->
-            yaws_config:hard_setconf(GC#gconf{trace={true, Type}}, Groups),
+            yaws_api:setconf(GC#gconf{trace={true, Type}}, Groups),
             error_logger:info_msg("~p trace enabled~n", [Type]);
         false ->
-            yaws_config:hard_setconf(GC#gconf{trace={true, Type}}, Groups),
+            yaws_api:setconf(GC#gconf{trace={true, Type}}, Groups),
             error_logger:info_msg("~p trace enabled~n", [Type])
     end;
 enable_trace(Type, Time) when Type =:= http; Type =:= traffic ->
@@ -100,12 +100,12 @@ enable_trace(Type, Time) when Type =:= http; Type =:= traffic ->
         {true, Type} ->
             error_logger:info_msg("~p trace already enabled~n", [Type]);
         {true, CurType} ->
-            yaws_config:hard_setconf(GC#gconf{trace={true, Type}}, Groups),
+            yaws_api:setconf(GC#gconf{trace={true, Type}}, Groups),
             timer:apply_after(Time, ?MODULE, enable_trace, [CurType, infinity]),
             error_logger:info_msg("~p trace enabled for ~w milliseconds~n",
                                   [Type, Time]);
         false ->
-            yaws_config:hard_setconf(GC#gconf{trace={true, Type}}, Groups),
+            yaws_api:setconf(GC#gconf{trace={true, Type}}, Groups),
             timer:apply_after(Time, ?MODULE, disable_trace, [infinity]),
             error_logger:info_msg("~p trace enabled for ~w milliseconds~n",
                                   [Type, Time])

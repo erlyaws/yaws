@@ -2004,6 +2004,7 @@ eq_sconfs(S1,S2) ->
 soft_setconf(GC, Groups, OLDGC, OldGroups) ->
     if
         GC /= OLDGC ->
+            yaws_trace:setup(GC),
             update_gconf(GC);
         true ->
             ok
@@ -2085,7 +2086,6 @@ can_soft_setconf(NEWGC, NewGroups, OLDGC, OldGroups) ->
 
 can_soft_gc(G1, G2) ->
     if
-        G1#gconf.trace == G2#gconf.trace,
         G1#gconf.flags == G2#gconf.flags,
         G1#gconf.logdir == G2#gconf.logdir,
         G1#gconf.log_wrap_size == G2#gconf.log_wrap_size,
