@@ -138,13 +138,7 @@ init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded, Id}) ->
                                 end, Group)
                       end, Sconfs),
                     yaws_log:setup(Gconf, Sconfs),
-                    case Gconf#gconf.trace of
-                        {true, What} ->
-                            yaws_log:open_trace(What),
-                            yaws_api:set_tty_trace(?gc_has_tty_trace(Gconf));
-                        _ ->
-                            ok
-                    end,
+                    yaws_trace:setup(Gconf),
                     init2(Gconf, Sconfs, Env#env.runmod,
                           Env#env.embedded, true);
                 {error, E} ->
@@ -980,6 +974,7 @@ acceptor0(GS, Top) ->
     ?TC([{record, GS, gs}]),
     put(gserv_pid, Top),
     put(gc, GS#gs.gconf),
+    yaws_trace:open(),
     X = do_accept(GS),
     Top ! {self(), next, X},
     case X of
@@ -1009,14 +1004,6 @@ acceptor0(GS, Top) ->
                     ok
             end,
             {IP,Port} = peername(Client, GS#gs.ssl),
-            case (GS#gs.gconf)#gconf.trace of  %% traffic trace
-                {true, _} ->
-                    Str = ?F("New (~p) connection from ~s:~w~n",
-                             [GS#gs.ssl, inet_parse:ntoa(IP),Port]),
-                    yaws_log:trace_traffic(from_client, Str);
-                _ ->
-                    ok
-            end,
             Res = (catch aloop(Client, {IP,Port}, GS,  0)),
             %% Skip closing the socket, as required by web sockets & stream
             %% processes.
@@ -1116,6 +1103,19 @@ acceptor0(GS, Top) ->
 %%%----------------------------------------------------------------------
 
 aloop(CliSock, {IP,Port}, GS, Num) ->
+    case yaws_trace:get_type(GS#gs.gconf) of
+        undefined ->
+            ok;
+        _ when Num =:= 0 ->
+            yaws_trace:write(from_client,
+                             ?F("New (~p) connection from ~s:~w~n",
+                                [GS#gs.ssl,inet_parse:ntoa(IP),Port]));
+        _ ->
+            yaws_trace:write(from_client,
+                             ?F("Wait for next request (~w) from ~s:~w~n",
+                                [Num+1,inet_parse:ntoa(IP),Port]))
+    end,
+
     process_flag(trap_exit, false),
     init_db(),
     SSL = GS#gs.ssl,
@@ -3562,14 +3562,13 @@ deliver_accumulated(Arg, Sock, Encoding, ContentLength, Mode) ->
             All = [StatusLine, Headers, crnl(), Chunk]
     end,
     yaws:gen_tcp_send(Sock, All),
-    GC=get(gc),
-    if
-        GC#gconf.trace == false ->
-            ok;
-        GC#gconf.trace == {true, http} ->
-            yaws_log:trace_traffic(from_server, ["\n",StatusLine, Headers]);
-        GC#gconf.trace == {true, traffic} ->
-            yaws_log:trace_traffic(from_server, ["\n",All])
+    case yaws_trace:get_type(get(gc)) of
+        http ->
+            yaws_trace:write(from_server, [StatusLine, Headers]);
+        traffic ->
+            yaws_trace:write(from_server, All);
+        undefined ->
+            ok
     end,
     Ret.
 

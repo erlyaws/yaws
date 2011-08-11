@@ -63,7 +63,7 @@ load(E) ->
             GC2 = if E#env.traceoutput == undefined ->
                           GC;
                      true ->
-                          ?gc_set_tty_trace(GC,true)
+                          ?gc_set_tty_trace(GC, E#env.traceoutput)
                   end,
             GC3 =  ?gc_set_debug(GC2, E#env.debug),
             GC4 = GC3#gconf{trace = E#env.trace},
@@ -2025,12 +2025,7 @@ hard_setconf(GC, Groups) ->
     case gen_server:call(yaws_server,{setconf, GC, Groups},infinity) of
         ok ->
             yaws_log:setup(GC, Groups),
-            case GC#gconf.trace of
-                false ->
-                    ok;
-                {true, What} ->
-                    yaws_log:open_trace(What)
-            end;
+            yaws_trace:setup(GC);
         E ->
             erlang:error(E)
     end.
