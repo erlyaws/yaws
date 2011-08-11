@@ -39,14 +39,14 @@
          deliver_dyn_part/8, finish_up_dyn_file/2, gserv_loop/4
         ]).
 
--export(['GET'/3,
-         'POST'/3,
-         'HEAD'/3,
-         'TRACE'/3,
-         'OPTIONS'/3,
-         'PUT'/3,
-         'DELETE'/3,
-         'PATCH'/3]).
+-export(['GET'/4,
+         'POST'/4,
+         'HEAD'/4,
+         'TRACE'/4,
+         'OPTIONS'/4,
+         'PUT'/4,
+         'DELETE'/4,
+         'PATCH'/4]).
 
 -import(lists, [member/2, foreach/2, map/2,
                 flatten/1, flatmap/2, reverse/1]).
@@ -1008,21 +1008,16 @@ acceptor0(GS, Top) ->
                 true ->
                     ok
             end,
-
+            {IP,Port} = peername(Client, GS#gs.ssl),
             case (GS#gs.gconf)#gconf.trace of  %% traffic trace
                 {true, _} ->
-                    case peername(Client, GS#gs.ssl) of
-                        {ok, {IP, Port}} ->
-                            Str = ?F("New (~p) connection from ~s:~w~n",
-                                     [GS#gs.ssl, inet_parse:ntoa(IP),Port]),
-                            yaws_log:trace_traffic(from_client, Str);
-                        _ ->
-                            ignore
-                    end;
+                    Str = ?F("New (~p) connection from ~s:~w~n",
+                             [GS#gs.ssl, inet_parse:ntoa(IP),Port]),
+                    yaws_log:trace_traffic(from_client, Str);
                 _ ->
                     ok
             end,
-            Res = (catch aloop(Client, GS,  0)),
+            Res = (catch aloop(Client, {IP,Port}, GS,  0)),
             %% Skip closing the socket, as required by web sockets & stream
             %% processes.
             CloseSocket = (get(outh) =:= undefined) orelse
@@ -1120,7 +1115,7 @@ acceptor0(GS, Top) ->
 %%% Internal functions
 %%%----------------------------------------------------------------------
 
-aloop(CliSock, GS, Num) ->
+aloop(CliSock, {IP,Port}, GS, Num) ->
     process_flag(trap_exit, false),
     init_db(),
     SSL = GS#gs.ssl,
@@ -1136,40 +1131,19 @@ aloop(CliSock, GS, Num) ->
             ?TC([{record, SC, sconf}]),
             ?Debug("Headers = ~s~n", [?format_record(H, headers)]),
             ?Debug("Request = ~s~n", [?format_record(Req, http_request)]),
-            IP = case ?sc_has_access_log(SC) of
-                     true ->
-                         case peername(CliSock, SSL) of
-                             {ok, {Ip, _Port}}  ->
-                                 case ?gc_log_has_resolve_hostname(
-                                         (GS#gs.gconf)) of
-                                     true ->
-                                         case inet:gethostbyaddr(Ip) of
-                                             {ok, HE} ->
-                                                 HE#hostent.h_name;
-                                             _ ->
-                                                 Ip
-                                         end;
-                                     false ->
-                                         Ip
-                                 end;
-                             _ ->
-                                 undefined
-                         end;
-                     _ ->
-                         undefined
-                 end,
             put(outh, #outh{}),
             put(sc, SC),
             yaws_stats:hit(),
             check_keepalive_maxuses(GS, Num),
             Call = case yaws_shaper:check(SC, IP) of
                        allow ->
-                           call_method(Req#http_request.method,CliSock,Req,H);
+                           call_method(Req#http_request.method,CliSock,
+                                       {IP,Port},Req,H);
                        {deny, Status, Msg} ->
                            deliver_xxx(CliSock, Req, Status, Msg)
                    end,
             Call2 = fix_keepalive_maxuses(Call),
-            handle_method_result(Call2, CliSock, IP, GS, Req, H, Num);
+            handle_method_result(Call2, CliSock, {IP,Port}, GS, Req, H, Num);
         closed ->
             {ok, Num};
         _ ->
@@ -1234,13 +1208,13 @@ erase_transients() ->
     end.
 
 
-handle_method_result(Res, CliSock, IP, GS, Req, H, Num) ->
+handle_method_result(Res, CliSock, {IP,Port}, GS, Req, H, Num) ->
     case Res of
         continue ->
             yaws_shaper:update(get(sc), IP, Req),
             maybe_access_log(IP, Req, H),
             erase_transients(),
-            aloop(CliSock, GS, Num+1);
+            aloop(CliSock, {IP,Port}, GS, Num+1);
         done ->
             yaws_shaper:update(get(sc), IP, Req),
             maybe_access_log(IP, Req, H),
@@ -1269,18 +1243,24 @@ handle_method_result(Res, CliSock, IP, GS, Req, H, Num) ->
             put(sc, SC#sconf{appmods = []}),
             check_keepalive_maxuses(GS, Num),
             Call = call_method(Req#http_request.method,
-                               CliSock,
+                               CliSock, {IP,Port},
                                Req#http_request{path = {abs_path, Page}},
                                H#headers{content_length = undefined}),
             Call2 = fix_keepalive_maxuses(Call),
-            handle_method_result(Call2, CliSock, IP, GS, Req, H, Num)
+            handle_method_result(Call2, CliSock, {IP,Port}, GS, Req, H, Num)
     end.
 
 
 peername(CliSock, ssl) ->
-    ssl:peername(CliSock);
+    case ssl:peername(CliSock) of
+        {ok, Res} -> Res;
+        _         -> {unknown, unknown}
+    end;
 peername(CliSock, nossl) ->
-    inet:peername(CliSock).
+    case inet:peername(CliSock) of
+        {ok, Res} -> Res;
+        _         -> {unknown, unknown}
+    end.
 
 
 deepforeach(_F, []) ->
@@ -1373,11 +1353,21 @@ maybe_auth_log(Item, ARG) ->
     end.
 
 maybe_access_log(Ip, Req, H) ->
+    GC=get(gc),
     SC=get(sc),
     case ?sc_has_access_log(SC) of
         true ->
+            HName = case ?gc_log_has_resolve_hostname(GC) of
+                        true when Ip =/= unknown ->
+                            case inet:gethostbyaddr(Ip) of
+                                {ok, HE} -> HE#hostent.h_name;
+                                _        -> Ip
+                            end;
+                        _ ->
+                            Ip
+                    end,
             Time = timer:now_diff(now(), get(request_start_time)),
-            yaws_log:accesslog(SC, Ip, Req, H, get(outh), Time);
+            yaws_log:accesslog(SC, HName, Req, H, get(outh), Time);
         false ->
             ignore
     end.
@@ -1396,11 +1386,11 @@ decode_path({abs_path, Path}) ->
 
 
 %% ret:  continue | done
-'GET'(CliSock, Req, Head) ->
-    no_body_method(CliSock, Req, Head).
+'GET'(CliSock, IPPort, Req, Head) ->
+    no_body_method(CliSock, IPPort, Req, Head).
 
 
-'POST'(CliSock, Req, Head) ->
+'POST'(CliSock, IPPort, Req, Head) ->
     ?Debug("POST Req=~s~n H=~s~n", [?format_record(Req, http_request),
                                     ?format_record(Head, headers)]),
 
@@ -1415,9 +1405,9 @@ decode_path({abs_path, Path}) ->
     case yaws:to_lower(Continue) of
         "100-continue" ->
             deliver_100(CliSock),
-            body_method(CliSock, Req, Head);
+            body_method(CliSock, IPPort, Req, Head);
         _ ->
-            body_method(CliSock, Req, Head)
+            body_method(CliSock, IPPort, Req, Head)
     end.
 
 
@@ -1428,69 +1418,70 @@ un_partial(Bin) ->
     Bin.
 
 
-call_method(Method, CliSock, Req, H) ->
+call_method(Method, CliSock, IPPort, Req, H) ->
     case Method of
         F when is_atom(F) ->
-            ?MODULE:F(CliSock, Req, H);
+            ?MODULE:F(CliSock, IPPort, Req, H);
         L when is_list(L) ->
-            handle_extension_method(L, CliSock, Req, H)
+            handle_extension_method(L, CliSock, IPPort, Req, H)
     end.
 
 
-'HEAD'(CliSock, Req, Head) ->
+'HEAD'(CliSock, IPPort, Req, Head) ->
     put(acc_content, discard),
-    no_body_method(CliSock, Req, Head).
+    no_body_method(CliSock, IPPort, Req, Head).
 
-not_implemented(CliSock, Req, Head) ->
+not_implemented(CliSock, _IPPort, Req, Head) ->
     SC=get(sc),
     ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
     flush(CliSock, Head#headers.content_length),
     deliver_501(CliSock, Req).
 
 
-'TRACE'(CliSock, Req, Head) ->
-    not_implemented(CliSock, Req, Head).
+'TRACE'(CliSock, IPPort, Req, Head) ->
+    not_implemented(CliSock, IPPort, Req, Head).
 
-'OPTIONS'(CliSock, Req, Head) ->
+'OPTIONS'(CliSock, IPPort, Req, Head) ->
     case Req#http_request.path of
         '*' ->
             % Handle "*" as per RFC2616 section 5.1.2
             deliver_options(CliSock, Req, ['GET', 'HEAD', 'OPTIONS',
                                            'PUT', 'POST', 'DELETE']);
         _ ->
-            no_body_method(CliSock, Req, Head)
+            no_body_method(CliSock, IPPort, Req, Head)
     end.
 
-'PUT'(CliSock, Req, Head) ->
+'PUT'(CliSock, IPPort, Req, Head) ->
     ?Debug("PUT Req=~p~n H=~p~n", [?format_record(Req, http_request),
                                    ?format_record(Head, headers)]),
-    body_method(CliSock, Req, Head).
+    body_method(CliSock, IPPort, Req, Head).
 
-'DELETE'(CliSock, Req, Head) ->
-    no_body_method(CliSock, Req, Head).
 
-'PATCH'(CliSock, Req, Head) ->
+'DELETE'(CliSock, IPPort, Req, Head) ->
+    no_body_method(CliSock, IPPort, Req, Head).
+
+'PATCH'(CliSock, IPPort, Req, Head) ->
     ?Debug("PATCH Req=~p~n H=~p~n", [?format_record(Req, http_request),
                                      ?format_record(Head, headers)]),
-    body_method(CliSock, Req, Head).
+    body_method(CliSock, IPPort, Req, Head).
 
 %%%
 %%% WebDav specifics: PROPFIND, MKCOL,....
 %%%
-'PROPFIND'(CliSock, Req, Head) ->
+'PROPFIND'(CliSock, IPPort, Req, Head) ->
     %%?elog("PROPFIND Req=~p H=~p~n",
     %%                   [?format_record(Req, http_request),
     %%                    ?format_record(Head, headers)]),
-    body_method(CliSock, Req, Head).
+    body_method(CliSock, IPPort, Req, Head).
 
-'MOVE'(CliSock, Req, Head) ->
-    no_body_method(CliSock, Req, Head).
+'MOVE'(CliSock, IPPort, Req, Head) ->
+    no_body_method(CliSock, IPPort, Req, Head).
 
-'COPY'(CliSock, Req, Head) ->
-    no_body_method(CliSock, Req, Head).
+'COPY'(CliSock, IPPort, Req, Head) ->
+    no_body_method(CliSock, IPPort, Req, Head).
 
 
-body_method(CliSock, Req, Head) ->
+body_method(CliSock, IPPort, Req, Head) ->
     SC=get(sc),
     ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
     PPS = SC#sconf.partial_post_size,
@@ -1525,41 +1516,25 @@ body_method(CliSock, Req, Head) ->
                   end
           end,
     ?Debug("Request data = ~s~n", [binary_to_list(un_partial(Bin))]),
-    ARG = make_arg(CliSock, Head, Req, Bin),
+    ARG = make_arg(CliSock, IPPort, Head, Req, Bin),
     handle_request(CliSock, ARG, size(un_partial(Bin))).
 
 
-'MKCOL'(CliSock, Req, Head) ->
-    no_body_method(CliSock, Req, Head).
+'MKCOL'(CliSock, IPPort, Req, Head) ->
+    no_body_method(CliSock, IPPort, Req, Head).
 
-no_body_method(CliSock, Req, Head) ->
+no_body_method(CliSock, IPPort, Req, Head) ->
     SC=get(sc),
     ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
     flush(CliSock, Head#headers.content_length),
-    ARG = make_arg(CliSock, Head, Req, undefined),
+    ARG = make_arg(CliSock, IPPort, Head, Req, undefined),
     handle_request(CliSock, ARG, 0).
 
 
-make_arg(CliSock, Head, Req, Bin) ->
+make_arg(CliSock, IPPort, Head, Req, Bin) ->
     SC = get(sc),
-    IP = if
-             is_port(CliSock) ->
-                 case inet:peername(CliSock) of
-                     {ok, IpPort} ->
-                         IpPort;
-                     _ ->
-                         {unknown, unknown}
-                 end;
-             true ->
-                 case ssl:peername(CliSock) of
-                     {ok, IpPort} ->
-                         IpPort;
-                     _ ->
-                         {unknown, unknown}
-                 end
-         end,
     ARG = #arg{clisock = CliSock,
-               client_ip_port = IP,
+               client_ip_port = IPPort,
                headers = Head,
                req = Req,
                opaque = SC#sconf.opaque,
@@ -1577,18 +1552,18 @@ make_arg(CliSock, Head, Req, Bin) ->
 %% handle_extension_method. If and when the parser is updated to accept
 %% PATCH, we'll get it back as an atom and this following clause will be
 %% unnecessary.
-handle_extension_method("PATCH", CliSock, Req, Head) ->
-    'PATCH'(CliSock, Req#http_request{method = 'PATCH'}, Head);
-handle_extension_method("PROPFIND", CliSock, Req, Head) ->
-    'PROPFIND'(CliSock, Req, Head);
-handle_extension_method("MKCOL", CliSock, Req, Head) ->
-    'MKCOL'(CliSock, Req, Head);
-handle_extension_method("MOVE", CliSock, Req, Head) ->
-    'MOVE'(CliSock, Req, Head);
-handle_extension_method("COPY", CliSock, Req, Head) ->
-    'COPY'(CliSock, Req, Head);
-handle_extension_method(_Method, CliSock, Req, Head) ->
-    not_implemented(CliSock, Req, Head).
+handle_extension_method("PATCH", CliSock, IPPort, Req, Head) ->
+    'PATCH'(CliSock, IPPort, Req#http_request{method = 'PATCH'}, Head);
+handle_extension_method("PROPFIND", CliSock, IPPort, Req, Head) ->
+    'PROPFIND'(CliSock, IPPort, Req, Head);
+handle_extension_method("MKCOL", CliSock, IPPort, Req, Head) ->
+    'MKCOL'(CliSock, IPPort, Req, Head);
+handle_extension_method("MOVE", CliSock, IPPort, Req, Head) ->
+    'MOVE'(CliSock, IPPort, Req, Head);
+handle_extension_method("COPY", CliSock, IPPort, Req, Head) ->
+    'COPY'(CliSock, IPPort, Req, Head);
+handle_extension_method(_Method, CliSock, IPPort, Req, Head) ->
+    not_implemented(CliSock, IPPort, Req, Head).
 
 
 %% Return values:
