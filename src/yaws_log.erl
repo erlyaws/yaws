@@ -22,9 +22,6 @@
 %% API
 -export([accesslog/6,
          setup/2,
-         open_trace/1,
-         trace_traffic/2,
-         trace_tty/1,
          authlog/4,
          rotate/1,
          add_sconf/1,
@@ -51,9 +48,7 @@
           running,
           dir,
           now,
-          tracefd,
           log_wrap_size = ?WRAP_LOG_SIZE,
-          tty_trace = false,
           copy_errlog}).
 
 
@@ -80,15 +75,6 @@ authlog(SConf, IP, Path, Item) ->
 
 rotate(Res) ->
     gen_server:cast(?MODULE, {yaws_hupped, Res}).
-
-open_trace(What) ->
-    gen_server:call(?MODULE, {open_trace, What}, infinity).
-
-trace_traffic(ServerOrClient , Data) ->
-    gen_server:cast(?MODULE, {trace, ServerOrClient, Data}).
-
-trace_tty(Bool) ->
-    gen_server:call(?MODULE, {trace_tty, Bool}, infinity).
 
 %% Useful for embeddded yaws when we don't want yaws to
 %% automatically wrap the logs.
@@ -258,24 +244,6 @@ handle_call({soft_del_sc, SC}, _From, State) ->
     {reply, ok, State};
 
 
-handle_call({open_trace, What}, _From, State) ->
-    case State#state.tracefd of
-        undefined ->
-            ok;
-        Fd0 ->
-            file:close(Fd0)
-    end,
-    F = lists:concat(["trace.", What]),
-    case file:open(filename:join([State#state.dir, F]),[write, raw]) of
-        {ok, Fd} ->
-            {reply, ok, State#state{tracefd = Fd}};
-        Err ->
-            {reply,  Err, State}
-    end;
-
-
-handle_call({trace_tty, What}, _From, State) ->
-    {reply, ok, State#state{tty_trace = What}};
 handle_call(state, _From, State) ->
     {reply, State, State};
 
@@ -364,29 +332,8 @@ handle_cast({ServerName, auth, Fd, {Ip, Path, Item}}, State) ->
             {noreply,State}
     end;
 
-handle_cast({trace, from_server, Data}, State) ->
-    Str = ["*** SRV -> CLI *** ", Data],
-    file:write(State#state.tracefd, Str),
-    tty_trace(Str, State),
-    {noreply,  State};
-handle_cast({trace, from_client, Data}, State) ->
-    Str = ["*** CLI -> SRV *** ", Data],
-    file:write(State#state.tracefd, Str),
-    tty_trace(Str, State),
-    {noreply, State};
-
 handle_cast({yaws_hupped, _}, State) ->
     handle_info(minute10, State).
-
-
-tty_trace(Str, State) ->
-    case State#state.tty_trace of
-        false ->
-            ok;
-        true ->
-            io:format("~s", [binary_to_list(list_to_binary([Str]))])
-    end.
-
 
 
 %%----------------------------------------------------------------------
