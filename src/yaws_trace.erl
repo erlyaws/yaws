@@ -39,7 +39,7 @@ setup(GC) ->
 
 
 set_tty_trace(Bool) ->
-    gen_server:cast(?MODULE, {trace_tty, Bool}).
+    gen_server:cast(?MODULE, {tty_trace, Bool}).
 
 
 get_type(#gconf{trace={true, Type}}) ->
