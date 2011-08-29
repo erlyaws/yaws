@@ -1004,6 +1004,7 @@ acceptor0(GS, Top) ->
                     ok
             end,
             {IP,Port} = peername(Client, GS#gs.ssl),
+            put(trace_filter, yaws_trace:get_filter()),
             Res = (catch aloop(Client, {IP,Port}, GS,  0)),
             %% Skip closing the socket, as required by web sockets & stream
             %% processes.
@@ -1111,9 +1112,7 @@ aloop(CliSock, {IP,Port}, GS, Num) ->
                              ?F("New (~p) connection from ~s:~w~n",
                                 [GS#gs.ssl,inet_parse:ntoa(IP),Port]));
         _ ->
-            yaws_trace:write(from_client,
-                             ?F("Wait for next request (~w) from ~s:~w~n",
-                                [Num+1,inet_parse:ntoa(IP),Port]))
+            ok
     end,
 
     process_flag(trap_exit, false),
@@ -1131,6 +1130,7 @@ aloop(CliSock, {IP,Port}, GS, Num) ->
             ?TC([{record, SC, sconf}]),
             ?Debug("Headers = ~s~n", [?format_record(H, headers)]),
             ?Debug("Request = ~s~n", [?format_record(Req, http_request)]),
+            run_trace_filter(GS, IP, Req, H),
             put(outh, #outh{}),
             put(sc, SC),
             yaws_stats:hit(),
@@ -1145,10 +1145,36 @@ aloop(CliSock, {IP,Port}, GS, Num) ->
             Call2 = fix_keepalive_maxuses(Call),
             handle_method_result(Call2, CliSock, {IP,Port}, GS, Req, H, Num);
         closed ->
+            case yaws_trace:get_type(GS#gs.gconf) of
+                undefined -> ok;
+                _         -> yaws_trace:write(from_client, "closed\n")
+            end,
             {ok, Num};
         _ ->
             % not even HTTP traffic
             exit(normal)
+    end.
+
+
+run_trace_filter(GS, IP, Req, H) ->
+    case {yaws_trace:get_type(GS#gs.gconf), get(trace_filter)} of
+        {undefined, _} ->
+            ok;
+        {_, undefined} ->
+            RStr = yaws_api:reformat_request(Req),
+            HStr = yaws:headers_to_str(H),
+            yaws_trace:write(from_client, ?F("~s~n~s~n", [RStr, HStr])),
+            ok;
+        {_, FilterFun} ->
+            case FilterFun(inet_parse:ntoa(IP),Req,H) of
+                true  ->
+                    RStr = yaws_api:reformat_request(Req),
+                    HStr = yaws:headers_to_str(H),
+                    yaws_trace:write(from_client, ?F("~s~n~s~n", [RStr, HStr])),
+                    ok;
+                false ->
+                    put(gc, (GS#gs.gconf)#gconf{trace = false})
+            end
     end.
 
 %% Checks how many times keepalive has been used and updates the

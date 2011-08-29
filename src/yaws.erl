@@ -1872,26 +1872,7 @@ strip(Data) ->
 %%     or closed
 
 http_get_headers(CliSock, SSL) ->
-    Res = do_http_get_headers(CliSock, SSL),
-    case yaws_trace:get_type(get(gc)) of
-        undefined ->
-            Res;
-        _ when is_tuple(Res) ->
-            {RoR, Headers} = Res,
-            {Tag, RoRStr} =
-                case element(1, RoR) of
-                    http_request ->
-                        {from_client, yaws_api:reformat_request(RoR)};
-                    http_response ->
-                        {from_server, yaws_api:reformat_response(RoR)}
-                end,
-            HStr = headers_to_str(Headers),
-            yaws_trace:write(Tag, ?F("~s~n~s~n", [RoRStr, HStr])),
-            Res;
-        _ when Res == closed ->
-            yaws_trace:write(from_client, "closed\n"),
-            Res
-    end.
+    do_http_get_headers(CliSock, SSL).
 
 
 headers_to_str(Headers) ->
