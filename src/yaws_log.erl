@@ -13,7 +13,7 @@
 -behaviour(gen_server).
 
 %% External exports
--export([start_link/0]).
+-export([start_link/0, reopen_logs/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -90,10 +90,11 @@ trace_traffic(ServerOrClient , Data) ->
 trace_tty(Bool) ->
     gen_server:call(?MODULE, {trace_tty, Bool}, infinity).
 
-%% XXX: Dead code
-%% from external ctl prog
-%%actl_trace(What) ->
-%%    gen_server:call(?MODULE, {actl_trace, What}, infinity).
+%% Useful for embeddded yaws when we don't want yaws to
+%% automatically wrap the logs.
+reopen_logs() ->
+    {ok, _GC, SCs} = yaws_api:getconf(),
+    gen_server:call(?MODULE, {reopen, SCs}).
 
 
 %%%----------------------------------------------------------------------
@@ -194,7 +195,12 @@ handle_call({setup, GC, Sconfs}, _From, State)
                      copy_errlog = Copy},
 
     yaws:ticker(3000, secs3),
-    yaws:ticker(10 * 60 * 1000, minute10),
+
+    if is_integer(GC#gconf.log_wrap_size) ->
+            yaws:ticker(10 * 60 * 1000, minute10);
+       true ->
+            ok
+    end,
 
     {reply, ok, S2};
 
@@ -248,8 +254,6 @@ handle_call({soft_add_sc, SC}, _From, State) ->
 
 %% a virt server has been deleted
 handle_call({soft_del_sc, SC}, _From, State) ->
-    %%yaws_logger:close_log(SC#sconf.servername, auth),
-    %%yaws_logger:close_log(SC#sconf.servername, access),
     yaws_logger:close_log(SC, auth),
     yaws_logger:close_log(SC, access),
     {reply, ok, State};
@@ -274,8 +278,20 @@ handle_call({open_trace, What}, _From, State) ->
 handle_call({trace_tty, What}, _From, State) ->
     {reply, ok, State#state{tty_trace = What}};
 handle_call(state, _From, State) ->
-    {reply, State, State}.
+    {reply, State, State};
 
+handle_call({reopen, Sconfs}, _From, State) ->
+    Dir = State#state.dir,
+    %% close all files
+    yaws_logger:close_logs(),
+    
+    %% reopen logfiles
+    SCs = lists:flatten(Sconfs),
+    lists:foreach(fun(SC) ->
+                          yaws_logger:open_log(SC, auth, Dir),
+                          yaws_logger:open_log(SC, access, Dir)
+                  end, SCs),
+    {reply, ok, State}.
 
 %%----------------------------------------------------------------------
 %% Func: handle_cast/2
@@ -371,20 +387,6 @@ tty_trace(Str, State) ->
         true ->
             io:format("~s", [binary_to_list(list_to_binary([Str]))])
     end.
-
-%% XXX: yaws_log is not a gen_event and is not an event handler on
-%% yaws_event_manager.
-%%----------------------------------------------------------------------
-%% Func: handle_event/2
-%% Returns:
-%%----------------------------------------------------------------------
-%%handle_event({yaws_hupped, _Res}, State) ->
-%%    handle_info(minute10,State),
-%%    {ok, State};
-
-%%handle_event(_Event, State) ->
-%%    {ok, State}.
-
 
 
 
@@ -526,3 +528,6 @@ left_fill(N, Width, _Fill) when length(N) >= Width ->
     N;
 left_fill(N, Width, Fill) ->
     left_fill([Fill|N], Width, Fill).
+
+    
+ 

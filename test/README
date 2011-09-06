@@ -1,6 +1,7 @@
 
 To run all tests, do
 
+# make all
 # make test
 
 at the toplevel, i.e. here

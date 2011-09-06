@@ -2519,8 +2519,6 @@ deliver_416(CliSock, _Req, Tot) ->
 deliver_501(CliSock, Req) ->
     deliver_xxx(CliSock, Req, 501). % Not implemented
 
-
-
 do_yaws(CliSock, ARG, UT, N) ->
     Key = UT#urltype.getpath, %% always flat
     Mtime = mtime(UT#urltype.finfo),
@@ -3027,6 +3025,47 @@ handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  _UT, ARG) ->
           end,
     Res;
 
+handle_out_reply({exhtml, E}, _LineNo, _YawsFile,  _UT, A) ->
+    N = count_trailing_spaces(),
+    Res = case yaws_exhtml:format(E, N) of
+             {ok, Val} ->
+                 accumulate_content(Val);
+             {error, ErrStr} ->
+                 handle_crash(A,ErrStr)
+         end,
+    Res;
+
+handle_out_reply({exhtml, Value2StringF, E}, _LineNo, _YawsFile,  _UT, A) ->
+    N = count_trailing_spaces(),
+    Res = case yaws_exhtml:format(E, N, Value2StringF) of
+             {ok, Val} ->
+                 accumulate_content(Val);
+             {error, ErrStr} ->
+                 handle_crash(A,ErrStr)
+         end,
+    Res;
+
+handle_out_reply({sexhtml, E}, _LineNo, _YawsFile,  _UT, A) ->
+    Res = case yaws_exhtml:sformat(E) of
+             {ok, Val} ->
+                 accumulate_content(Val);
+             {error, ErrStr} ->
+                 handle_crash(A,ErrStr)
+         end,
+    Res;
+
+handle_out_reply({sexhtml, Value2StringF, E},
+                _LineNo, _YawsFile,  _UT, A) ->
+    Res = case yaws_exhtml:sformat(E, Value2StringF) of
+             {ok, Val} ->
+                 accumulate_content(Val);
+             {error, ErrStr} ->
+                 handle_crash(A,ErrStr)
+         end,
+    Res;
+
+
+
 handle_out_reply({content, MimeType, Cont}, _LineNo,_YawsFile, _UT, _ARG) ->
     yaws:outh_set_content_type(MimeType),
     accumulate_content(Cont);
@@ -3192,6 +3231,18 @@ handle_out_reply_l([Reply|T], LineNo, YawsFile, UT, ARG, _Res) ->
 handle_out_reply_l([], _LineNo, _YawsFile, _UT, _ARG, Res) ->
     Res.
 
+
+count_trailing_spaces() ->
+    case get(acc_content) of
+        undefined -> 0;
+        discard -> 0;
+        List ->
+            Binary = first_binary(List),
+            yaws_exhtml:count_trailing_spaces(Binary)
+    end.
+
+first_binary([Binary|_]) when is_binary(Binary) -> Binary;
+first_binary([List|_Rest]) when is_list(List) -> first_binary(List).
 
 
 
