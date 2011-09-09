@@ -1712,9 +1712,8 @@ We have the following log files:
 \item \textit{report.log} This file contains all error and crash
   messages for all virtual servers in the same file.
 
-\item \textit{trace.traffic} and \textit{trace.http} The two command
-  line flags \verb+-t+ and \verb+-T+ tells \Yaws\ to trace all traffic
-  or just all HTTP messages and write them to a file.
+\item Trace files. The two command line flags \verb+-t+ and \verb+-T+ tells
+\Yaws\ to trace all traffic or just all HTTP messages and write them to files.
 \end{itemize}
 
 
@@ -2050,10 +2049,16 @@ part where options for each virtual host is supplied.
               \item \verb+<Host>.auth+ --- for each virtual host served by
               \Yaws{}, a file \verb+<Host>.auth+ will be written which
               contains all HTTP auth related messages.
-              \item \verb+trace.http+  ---  this file contains the
-                HTTP trace if that is enabled
-              \item \verb+trace.traffic+ ---  this  file  contains
-                the  traffic trace if that is enabled
+              \item \verb+trace_<YYYYMMDD_hhmmss>+ - Trace files are written in
+              this subdirectory, suffixed by the creation date.
+              \begin{itemize}
+              \item \verb+trace.<Pid>.http+ - this file contains the HTTP
+              trace if that is enabled, where \verb+Pid+ is the process id
+              handling the TCP connection.
+              \item \verb+trace.<Pid>.traffic+ - this file contains the
+              traffic trace if that is enabled, where \verb+Pid+ is the
+              process id handling the TCP connection.
+              \end{itemize}
               \end{itemize}
 
               Note that \verb+<Host>.access+ and \verb+<Host>.auth+ files will
