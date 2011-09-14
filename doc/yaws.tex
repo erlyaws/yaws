@@ -80,7 +80,7 @@ performance.}
 
 \item{Beauty - Well this is subjective}
 
-\item{Scalability - due to the light weight processes of \Erlang\ , \Yaws\
+\item{Scalability - due to the lightweight processes of \Erlang{}, \Yaws\
 is able to handle a very large number of concurrent connections}
 
 \end{itemize}
@@ -107,6 +107,7 @@ generated pages.
 \item Application Modules where virtual directory hierarchies can
 be made.
 \item Embedded mode
+\item WebSockets
 \end{enumerate}
 
 \section{Prerequisites}
@@ -148,10 +149,11 @@ out(Arg) ->
 \caption{Example 1.1}
 \end{figure}
 
-It illustrates the basic idea behind \Yaws\ . The HTML code
-can contain <erl> and </erl> tags and inside these tags an \Erlang\  function
-called \verb+out/1+ gets called and the output of that function is inserted
-into the HTML document, dynamically.
+It illustrates the basic idea behind \Yaws{}. The HTML code, generally
+stored in a file ending with a ``.yaws'' suffix, can contain
+\verb+<erl>+ and \verb+</erl>+ tags and inside these tags an
+\Erlang\ function called \verb+out/1+ gets called and the output of
+that function is inserted into the HTML document, dynamically.
 
 It is possible to have several chunks of HTML code together with several
 chunks of \Erlang\  code in the same \Yaws\  page.
@@ -160,7 +162,7 @@ The \verb+Arg+ argument supplied to the automatically invoked \verb+out/1+
 function is an \Erlang\  record that contains various data which is interesting
 when generating dynamic pages. For example the HTTP headers which were sent
 from the WWW client, the actual TCP/IP socket leading to the WWW client.
-This will be elaborated on throughly in later chapters.
+This will be elaborated on thoroughly in later chapters.
 
 The \verb+out/1+ function returned the tuple \verb+{html, String}+ and
 \verb+String+ gets inserted into the HTML output. There are number
@@ -168,30 +170,22 @@ of different return values that can be returned from the \verb+out/1+ function
 in order to control the behavior and output from the \Yaws\  web server.
 
 
-
 \chapter{Compile, Install, Config and Run}
 
 This chapter is more of a ``Getting started'' guide than a full
-description of the \Yaws\  configuration.
-\Yaws\  is hosted on Sourceforge at
-\url{ http://sourceforge.net/projects/erlyaws/ }. This is where the source code
-resides in a CVS repository and the latest unreleased version is
-available through anonymous CVS through the following commands:
+description of the \Yaws\ configuration.  \Yaws\ is hosted on Github
+at \url{ https://github.com/klacke/yaws }. This is where the source
+code resides in a git repository and the latest unreleased version is
+available via git through the following commands:
 
 \begin{verbatim}
 
-# export CVS_RSH=ssh
-# export CVSROOT=:pserver:anonymous@cvs.erlyaws.sourceforge.net:/cvsroot/erlyaws
-# cvs  login
-# cvs -z3 co .
+$ git clone https://github.com/klacke/yaws
 
 \end{verbatim}
 
-
-Released version of \Yaws\  are available either at the Sourceforge site or
-at \url{http://yaws.hyber.org/download}.
-
-
+Released version of \Yaws\ are available at
+\url{http://yaws.hyber.org/download}.
 
 \subsection{Compile and Install}
 
@@ -209,8 +203,8 @@ Compile and install is straight forward:
 # make install
 \end{verbatim}
 
-The make command will compile the \Yaws\  web server with the \verb+erlc+
-compiler found by the configure script.
+The \verb+make+ command will compile the \Yaws\ web server with the
+\verb+erlc+ compiler found by the configure script.
 
 \begin{itemize}
 
@@ -259,10 +253,10 @@ The configuration consists of an initial set of global
 variables that are valid for all defined servers.
 
 The only global directive we need to care about for now is the logdir.
-\Yaws\  produces a number of log files and they will -
-using the Configuration from Figure 2.1 - end up in the current
-working directory.
-We start \Yaws\  interactively as
+\Yaws\ produces a number of log files and they will---using the
+Configuration from Figure 2.1---end up in the current working
+directory.  We start \Yaws\ interactively as
+
 \begin{verbatim}
 # ~/bin/yaws -i
 Erlang (BEAM) emulator version 5.1.2.b2 [source]
@@ -277,39 +271,39 @@ Listening to 127.0.0.1:8000 for servers ["localhost:8000"]
 1>
 \end{verbatim}
 
-By starting \Yaws\  in interactive mode (using the command switch \textit{-i}
-we get a regular \Erlang\  prompt. This is most convenient when developing
-\Yaws\ /http pages. For example we:
+By starting \Yaws\ in interactive mode (using the command switch
+\textit{-i}) we get a regular \Erlang\ prompt. This is most convenient
+when developing \Yaws\ pages. For example we:
+
 \begin{itemize}
 \item{Can dynamically compile and load optional helper modules we need.}
 \item{Get all the crash and error reports written directly to the
 terminal.}
 \end{itemize}
 
-The configuration in Example 2.1 defined one HTTP server on
-address 127.0.0.1:8000 called "localhost".
-It is important to understand the difference between the name and
-the address of a server. The name is the expected value in the
-client Host: header. That is typically the same as the fully qualified
-DNS name of the server whereas the address is the actual
-IP address of the server.
+The configuration in Example 2.1 defined one HTTP server on address
+127.0.0.1:8000 called "localhost".  It is important to understand the
+difference between the name and the address of a server. The name is
+the expected value in the client HTTP \verb+Host:+ header. That is
+typically the same as the fully-qualified DNS name of the server
+whereas the address is the actual IP address of the server.
 
 Since \Yaws\  support virtual hosting with several servers on the same
 IP address, this matters.
 
 Nevertheless, our server listens to \textit{127.0.0.1:8000} and
 has the name "localhost", thus the correct URL for this server
-is \textit{http://localhost:8000}.
+is \verb+http://localhost:8000+.
 
-The document root (docroot) for the server is set to the www directory in the
-\Yaws\  source code distribution. This directory contains a bunch of
-examples and we should be able to run all those example now on the
-URL  \textit{http://localhost:8000}.
+The document root (docroot) for the server is set to the \verb+www+
+directory in the \Yaws\ source code distribution. This directory
+contains a bunch of examples and we should be able to run all those
+ example now on the URL \verb+http://localhost:8000+.
 
-Instead of editing and adding files in the \Yaws\  www directory, we
-create yet another server on the same IP address but a different port
-number - and in particular a different document root where we can add
-our own files.
+Instead of editing and adding files in the \Yaws\ \verb+www+
+directory, we create yet another server on the same IP address but a
+different port number --- and in particular a different document root
+where we can add our own files.
 
 \begin{verbatim}
 # mkdir ~/test
@@ -342,9 +336,10 @@ include_dir = /home/klacke/test
 We define two servers, one being the original default
 and a new pointing to a document root in our home directory.
 
-We can now start to add static content in the form of
-HTML pages, dynamic content in the form of .yaws pages or
-\Erlang\ .beam code that can be used to generate the dynamic content.
+We can now start to add static content in the form of HTML pages,
+dynamic content in the form of \verb+.yaws+ pages or
+\Erlang\ \verb+.beam+ code that can be used to generate the dynamic
+content.
 
 The load path will be set so that beam code in the directory
 \char`\~\verb+/test+ will be automatically loaded when referenced.
@@ -373,7 +368,7 @@ with the daemon. It is possible to query the daemon using:
 # yaws -S
 \end{verbatim}
 
-This command produces a simple printout of Uptime and number of hits
+This command produces a simple printout of uptime and number of hits
 for each configured server.
 
 If we change the configuration, we can HUP the daemon using the
@@ -398,12 +393,14 @@ or even to turn it off completely.
 The following configuration directives control the caching behavior
 \begin{itemize}
 \item \textit{max\_num\_cached\_files = Integer}
+
 \Yaws\   will  cache  small  files  such  as  commonly
               accessed  GIF images in RAM.  This directive sets a
               maximum number on the number of cached files.   The
               default value is 400.
 
 \item\textit{max\_num\_cached\_bytes = Integer}
+
  This  directive  controls  the  total amount of RAM
              which can maximally be used for cached  RAM  files.
               The default value is 1000000, 1 megabyte.
@@ -412,8 +409,8 @@ The following configuration directives control the caching behavior
 \item\textit{max\_size\_cached\_file = Integer}
 
  This  directive  sets  a  maximum size on the files
-              that are RAM cached by \Yaws\ .  The default  value  i
-              8000, 8 batters.
+              that are RAM cached by \Yaws{}.  The default value is
+              8000 bytes, 8 batters.
 
 
 
@@ -429,31 +426,32 @@ and have defined 3 servers, we may actually use $3 * 1000000$ bytes.
 
 \chapter{Dynamic content}
 
-Dynamic content is what \Yaws\  is about. Most web servers are designed
-with HTTP and static content in mind whereas \Yaws\  is designed
-for dynamic pages from the start.
-Most large sites on the Web today make heavy use of dynamic pages.
-
+Dynamic content is what \Yaws\ is all about. Most web servers are
+designed with HTTP and static content in mind whereas \Yaws\ is
+designed for dynamic pages from the start.  Most large sites on the
+Web today make heavy use of dynamic pages.
 
 
 \section{Introduction}
 
-When the client GETs a page that has a .yaws suffix, the \Yaws\  server
-will read that page from the hard disk and divide it in parts
-that consist of HTML code and \Erlang\  code. Each chunk of \Erlang\  code
-will be compiled into a module. The chunk of \Erlang\  code must contain
-a function \verb+out/1+. If it doesn't the \Yaws\  server will insert a
-proper error message into the generated HTML output.
+When the client \verb+GET+s a page that has a ``.yaws'' suffix, the
+\Yaws\ server will read that page from the hard disk and divide it in
+parts that consist of HTML code and \Erlang\ code. Each chunk of
+\Erlang\ code will be compiled into a module. The chunk of
+\Erlang\ code must contain a function \verb+out/1+. If it doesn't the
+\Yaws\ server will insert a proper error message into the generated
+HTML output.
 
-When the \Yaws\  server ships a .yaws page it will process it chunk by chunk
-through the .yaws file. If it is HTML code, the server will ship that
-as is, whereas if it is \Erlang\  code, the \Yaws\  server will invoke the
-\verb+out/1+ function in that code and insert the output of that \verb+out/1+ function into the stream
-of HTML that is being shipped to the client.
+When the \Yaws\ server ships a \verb+.yaws+ page it will process it
+chunk by chunk through the \verb+.yaws+ file. If it is HTML code, the
+server will ship that as is, whereas if it is \Erlang\ code, the
+\Yaws\ server will invoke the \verb+out/1+ function in that code and
+insert the output of that \verb+out/1+ function into the stream of
+HTML that is being shipped to the client.
 
-\Yaws\  will (of course) cache the result of the compilation
-and the next time a client requests the same .yaws page \Yaws\  will
-be able to invoke the already compiled modules directly.
+\Yaws\ will (of course) cache the result of the compilation and the
+next time a client requests the same \verb+.yaws+ page \Yaws\ will be
+able to invoke the already-compiled modules directly.
 
 
 \section{EHTML}
@@ -500,8 +498,8 @@ $Value = string() | atom()$
 
 $Body  = EHTML$
 
-We give an example to show what we mean:
-The tuple
+We give an example to show what we mean. The tuple
+
 \begin{verbatim}
 {ehtml, {table, [{bgcolor, grey}],
          [
@@ -516,7 +514,8 @@ The tuple
            [{td, [{colspan, "3"}], "444"}]}]}}.
 \end{verbatim}
 
-Would be expanded into the following HTML code
+expands into the following HTML code:
+
 \begin{verbatim}
 <table bgcolor="grey">
   <tr>
@@ -538,32 +537,33 @@ case from a purely aesthetic point of view. However the
 that have syntax support for \Erlang\  (read Emacs). Furthermore, the \Erlang\
 code is easier to manipulate from an \Erlang\  program.
 
-As an example of some more interesting ehtml we could have
-an \verb+out/1+ function that prints some of the HTTP headers.
+As an example of some more interesting ehtml we could have an
+\verb+out/1+ function that prints some of the HTTP headers.  In the
+\verb+www+ directory of the \Yaws\ source code distribution we have a
+file called \verb+arg.yaws+. The file demonstrates the \verb+Arg+
+\verb+#arg+ record parameter which is passed to the \verb+out/1+
+function.
 
-In the www directory of the \Yaws\  source code distribution we have
-a file called \verb+arg.yaws+. The file demonstrates the Arg \#arg record
-parameter which is passed to the \verb+out/1+ function.
 
-
-But before we discuss that code, we describe the Arg record
+But before we discuss that code, we describe the \verb+Arg+ record
 in detail.
 
 Here is the \verb+yaws_api.hrl+ file which is in included by default
-in all \Yaws\ files. The \#arg{} record contains many fields that are
-useful when processing HTTP request dynamically.
-We have access to basically all the information which associated to the
-client request such as:
+in all \Yaws\ files. The \verb+#arg{}+ record contains many fields
+that are useful when processing HTTP request dynamically.  We have
+access to basically all the information which associated to the client
+request such as:
+
 \begin{itemize}
 
 \item The actual socket leading back to the HTTP client
-\item All the HTTP headers - parsed into a \#headers record.
-\item The HTTP request - parsed into a \#http\_request record
-\item clidata - Data which is POSTed by the client
-\item querydata - This is the remainder of the URL following the first
-occurrence of a ? character - if any.
-\item docroot - The absolute path to the docroot of the virtual server
-that is processing the request.
+\item All the HTTP headers -- parsed into a \verb+#headers+ record
+\item The HTTP request -- parsed into a \verb+#http_request+ record
+\item \verb+clidata+ -- data which is \verb+POST+ed by the client
+\item \verb+querydata+ -- this is the remainder of the URL following
+  the first occurrence of a '?' character, if any.
+\item \verb+docroot+ -- the absolute path to the docroot of the
+  virtual server that is processing the request.
 \end{itemize}
 
 
@@ -578,23 +578,28 @@ that is processing the request.
           req,            %% request
           clidata,        %% The client data (as a binary in POST requests)
           server_path,    %% The normalized server path
-          querydata,      %% Was the URL on the form of ...?query (GET reqs)
-          appmoddata,     %% the remainder of the path leading up to the querey
-          docroot,        %% where's the data
+                          %% (pre-querystring part of URI)
+          querydata,      %% For URIs of the form ...?querydata
+                          %%  equiv of cgi QUERY_STRING
+          appmoddata,     %% (deprecated - use pathinfo instead) the remainder
+                          %% of the path leading up to the query
+          docroot,        %% Physical base location of data for this request
           docroot_mount,  %% virtual directory e.g /myapp/ that the docroot
                           %%  refers to.
-          fullpath,       %% full path to yaws file
+          fullpath,       %% full deep path to yaws file
           cont,           %% Continuation for chunked multipart uploads
           state,          %% State for use by users of the out/1 callback
           pid,            %% pid of the yaws worker process
           opaque,         %% useful to pass static data
-          appmod_prepath, %% path in front of: <appmod><appmoddata>
-          prepath,        %% Path prior to 'dynamic' segment of URI. 
-                          %%  ie http://some.host/<prepath>/<script-point>/d/e 
-                          %% where <script-point> is an appmod mount point, 
+          appmod_prepath, %% (deprecated - use prepath instead) path in front
+                          %%of: <appmod><appmoddata>
+          prepath,        %% Path prior to 'dynamic' segment of URI.
+                          %%  ie http://some.host/<prepath>/<script-point>/d/e
+                          %% where <script-point> is an appmod mount point,
                           %% or .yaws,.php,.cgi,.fcgi etc script file.
-          pathinfo        %% Set to 'd/e' when calling c.yaws for the request
+          pathinfo        %% Set to '/d/e' when calling c.yaws for the request
                           %% http://some.host/a/b/c.yaws/d/e
+                          %%  equiv of cgi PATH_INFO
          }).
 
 
@@ -624,18 +629,21 @@ that is processing the request.
           content_encoding,
           authorization,
           transfer_encoding,
+          x_forwarded_for,
           other = []   %% misc other headers
          }).
 
 \end{verbatim}
 
 
-There are a number of \textit{advanced} fields in the \#arg record
-such as \verb+appmod+, \verb+opaque+ that will be discussed in later chapters.
+There are a number of \textit{advanced} fields in the \verb+#arg+
+record such as \verb+appmod+ and \verb+opaque+ that will be discussed
+in later chapters.
 
-Now, we show some code which displays the content of the Arg \#arg record.
-The code is available in yaws/www/arg.yaws and after a a \verb+local_install+
-a request to \textit{http://localhost:8000/arg.yaws} will run the code.
+Now, we show some code which displays the content of the \verb+Arg+
+\verb+#arg+ record.  The code is available in \verb+yaws/www/arg.yaws+
+and after a \verb+local_install+ a request to
+\url{http://localhost:8000/arg.yaws} will run the code.
 
 \begin{verbatim}
 
@@ -682,20 +690,21 @@ out(A) ->
 
 \end{verbatim}
 
-
-The code utilizes 4 functions from the \verb+yaws_api+ module.
-\verb+yaws_api+ is a general purpose www api module that contains various
-functions that are handy while developing \Yaws\  code. We will see many
-more of those functions during the examples in the following chapters.
+The code utilizes 4 functions from the \verb+yaws_api+ module.  The
+\verb+yaws_api+ module is a general purpose www API module that
+contains various functions that are handy while developing
+\Yaws\ code. We will see many more of those functions during the
+examples in the following chapters.
 
 The functions used are:
+
 \begin{itemize}
-\item \verb+yaws_api:f/2+ alias for \verb+io_lib:format/2+. The
+\item \verb+yaws_api:f/2+ --- alias for \verb+io_lib:format/2+. The
   \verb+f/2+ function is automatically \verb+-included+ in all
-  \Yaws\  code.
-\item \verb+yaws_api:reformat_header/1+ --- This function takes the \#headers record
-and unparses it, that is reproduces regular text.
-\item \verb+yaws_api:parse_query/1+ --- The topic of next section.
+  \Yaws\ code.
+\item \verb+yaws_api:reformat_header/1+ --- This function takes the
+  \#headers record and unparses it, that is reproduces regular text.
+\item \verb+yaws_api:parse_query/1+ --- The topic of the next section.
 \item \verb+yaws_api:parse_post/1+ --- Ditto.
 \end{itemize}
 
@@ -710,10 +719,10 @@ If we invoke:
 
 \verb+GET http://localhost:8000/arg.yaws?kalle=duck&goofy=unknown+
 
-we pass two parameters to the \textit{arg.yaws} page.
-That data is URL-encoded by the browser and the server can retrieve the
-data by looking at the remainder of the URL following the ? character.
-If we invoke the \verb+arg.yaws+ page with the above mentioned URL we get
+we pass two parameters to the \verb+arg.yaws+ page.  That data is
+URL-encoded by the browser and the server can retrieve the data by
+looking at the remainder of the URL following the '?' character.  If
+we invoke the \verb+arg.yaws+ page with the above mentioned URL we get
 as the result of \verb+yaws_parse_query/1+:
 
 $kalle = duck$
@@ -726,19 +735,17 @@ the list:
 [{kalle, "duck"}, {goofy, "unknown"}]
 \end{verbatim}
 
-Note that the first element is transformed into an atom, whereas the value
-is still a string.
-
-hence, a web page can contain URLs with a query and thus pass data to the
-web server. This scheme works both with GET and POST requests.
-It is the easiest way to pass data to the Web server since no FORM is required
-in the web page.
+Note that the first element is transformed into an atom, whereas the
+value is still a string. Hence, a web page can contain URLs with a
+query and thus pass data to the web server. This scheme works both
+with \verb+GET+ and \verb+POST+ requests.  It is the easiest way to
+pass data to the Web server since no form is required in the web page.
 
 
 \subsection{Forms}
 
-In order to POST data a FORM is required, say that we have a page called
-\verb+form.yaws+ that contain the following code:
+In order to \verb+POST+ data a form is required. Say that we have a
+page called \verb+form.yaws+ that contain the following code:
 
 \begin{verbatim}
 <html>
@@ -752,9 +759,7 @@ In order to POST data a FORM is required, say that we have a page called
 </html>
 \end{verbatim}
 
-This will produce a page with a simple input field and a Submit button.
-
-
+This will produce a page with a simple input field and a submit button.
 
 \begin{figure}[h]
 \begin{center}
@@ -765,14 +770,12 @@ This will produce a page with a simple input field and a Submit button.
 \end{figure}
 
 
-
-If we enter something - say ``Hello there `` -
-in the input field and click the Submit button the
-client will request the page indicated in the ``action'' attribute, namely
-\verb+post_form.yaws+.
-
+If we enter something---say, ``Hello there''---in the input field and
+click the submit button the client will request the page indicated in
+the ``action'' attribute, namely \verb+post_form.yaws+.
 
 If that \Yaws\  page has the following code:
+
 \begin{verbatim}
 out(A) ->
    L = yaws_api:parse_post(A),
@@ -780,32 +783,36 @@ out(A) ->
 \end{verbatim}
 
 The user will see the output
+
 \begin{verbatim}
 [{xyz, "Hello there"}]
 \end{verbatim}
 
 The differences between using the query part of the URL
 and a form are the following:
+
 \begin{itemize}
-\item Using the query arg only works in GET request. We parse the
-query argument with the function \verb+yaws_api:parse_query(Arg)+
+\item Using the query arg only works in a \verb+GET+ request. We parse
+  the query argument with the function
+  \verb+yaws_api:parse_query(Arg)+
 
-\item If we use a form and POST the user data the client will
-transmit the user data in the body of the request.
-That is - the client sends a request to get the page using the POST method
-and it then attaches the user data - encoded - into the body of the
-request.
+\item If we use a form and \verb+POST+ the user data the client will
+  transmit the user data in the body of the request.  That is, the
+  client sends a request to get the page using the \verb+POST+ method
+  and it then attaches the user data---encoded---into the body of the
+  request.
 
-A POST request can have a query part in its URL as well as user data
-in the body.
+A \verb+POST+ request can have a query part in its URL as well as user
+data in the body.
 \end{itemize}
 
 
 \section{POSTing files}
 
-It is possible to upload files from the client to the server by
-means of POST. We indicate this in the form by telling the browser that we
-want a different encoding. Here is an example form that does this:
+It is possible to upload files from the client to the server by means
+of \verb+POST+. We indicate this in the form by telling the browser
+that we want a different encoding. Here is an example form that does
+this:
 \begin{verbatim}
 
 out(A) ->
@@ -839,9 +846,9 @@ browser.
 
 The action field in the form states that the client shall POST to a
 page called \verb+file_upload_form.yaws+. This page will get the
-contents of the file in the body of the POST message. To read it, we
-use the \verb+yaws_multipart+ module, which provides the following
-capabilities:
+contents of the file in the body of the \verb+POST+ message. To read
+it, we use the \verb+yaws_multipart+ module, which provides the
+following capabilities:
 
 \begin{enumerate}
 \item It reads all parameters --- files uploaded and other simple
@@ -857,7 +864,7 @@ capabilities:
 \item \verb+{temp_dir, TempDir}+: specify \verb+TempDir+ as the
   directory to store the uploaded temp file; if this option is not
   provided, then by default an OS-specific temp directory such as
-  ``/tmp'' is used
+  \verb+/tmp+ is used
 \item \verb+list+: return file data in list form; this is the default
 \item \verb+binary+: return file data in binary form
 \end{enumerate}
@@ -873,9 +880,9 @@ set to one of these three atoms:
 
 \begin{itemize}
 \item \verb+get_more+: more data needs to be read; return this tuple
-  directly to \Yaws\  from your \verb+out/1+ function and it will call
-  your \verb+out/1+ function again when it has read more POST data, at
-  which point you must call \verb+read_multipart_form+ again
+  directly to \Yaws\ from your \verb+out/1+ function and it will call
+  your \verb+out/1+ function again when it has read more \verb+POST+
+  data, at which point you must call \verb+read_multipart_form+ again
 \item \verb+done+: multipart form reading is complete; a
   \verb+dict+ full of parameters is returned
 \item \verb+error+: an error occurred
@@ -933,17 +940,21 @@ out(Arg) ->
     end.
 \end{verbatim}
 
+Here, \verb+my_yaws_controller+ is a user-defined module compiled as
+usual with \verb+erlc+ with the resulting \verb+.beam+ file placed in
+the \Yaws\ load path. The module is then registered with \Yaws\ as an
+\emph{appmod} to allow it to receive and process requests---see
+section \ref{appmods} for more details.
 
 \chapter{Mode of operation}
 
-\section{On the fly compilation}
-When the client requests a \Yaws\  page, \Yaws\  will look in its caches
+\section{On-the-fly compilation}
+When the client requests a \Yaws\ page, \Yaws\ will look in its caches
 (there is one cache per virtual server) to see if it finds the
-requested page in the cache. If \Yaws\  doesn't find the page in the
+requested page in the cache. If \Yaws\ doesn't find the page in the
 cache, it will compile the page. This only happens the first time a
-page is requested.
-Say that the page is 400 bytes big and has the following layout:
-
+page is requested.  Say that the page is 400 bytes big and has the
+following layout:
 
 
 \begin{figure}[h]
@@ -954,9 +965,9 @@ Say that the page is 400 bytes big and has the following layout:
 \end{center}
 \end{figure}
 
-The \Yaws\  server will then parse the file and produce a structure
-which makes it possible to deliver the page in a readily fashion the
-next time the same page is requested.
+The \Yaws\ server will then parse the file and produce a structure
+which makes it possible to readily deliver the page without parsing
+the next time the same page is requested.
 
 When shipping the page it will
 \begin{enumerate}
@@ -970,10 +981,10 @@ ahead 60 bytes in the file.
 \item And finally ship 140 bytes of HTML code to the client
 \end{enumerate}
 
-\Yaws\  writes the source output of the compilation into a directory
+\Yaws\ writes the source output of the compilation into a directory
 \verb+/tmp/yaws/$UID+. The beam files are never written to a file.
-Sometimes it can be useful to look at the generated source code
-files, for example if the \Yaws\ /\Erlang\  code contains a compilation
+Sometimes it can be useful to look at the generated source code files,
+for example if the \Yaws{}\slash \Erlang\ code contains a compilation
 error which is hard to understand.
 
 
@@ -985,12 +996,11 @@ one \Erlang\  process listens for incoming requests.
 
 This process spawns acceptor processes for each incoming request.
 Each acceptor process reads and parses all the HTTP headers from the
-client. It then looks at the Host: header to figure out which
-virtual server to use, i.e. which docroot to use for this
-particular request. If the Host: header doesn't match
-any server from \textit{yaws.conf} with that IP:PORT pair, the first
-one from \textit{yaws.conf} is chosen.
-
+client. It then looks at the \verb+Host:+ header to figure out which
+virtual server to use, i.e. which docroot to use for this particular
+request. If the \verb+Host:+ header doesn't match any server from
+\textit{yaws.conf} with that IP:PORT pair, the first one from
+\textit{yaws.conf} is chosen.
 
 By default \Yaws\  will not ship any data at all to the client
 while evaluating a \Yaws\  page. The headers as well as the generated
@@ -998,26 +1008,24 @@ content are accumulated and not shipped to the client until the
 entire page has been processed.
 
 
-
 \chapter{SSL}
 
-SSL - Secure Socket Layer is a protocol used on the Web for
-delivering encrypted pages to the WWW client. SSL is widely deployed
-on the Internet and virtually all bank transactions as well as all
-on-line shopping today is done with SSL encryption. There are many
-good sources on the net that describes SSL in detail - and I will not
-try to do that here.
-There  is for example a good document at:
+Secure Socket Layer (SSL) is a protocol used on the Web for delivering
+encrypted pages to the WWW client. SSL is widely deployed on the
+Internet and virtually all bank transactions as well as all online
+shopping today is done with SSL encryption. There are many good
+sources on the net that describe SSL in detail, so we will not try to
+do that here.  There is for example a good document at:
 \url{http://www.tldp.org/HOWTO/SSL-Certificates-HOWTO/} which
 describes how to manage certificates and keys.
 
 In order to run an SSL server we must have a certificate. Either we
-can create a so called self-signed certificate ourselves or buy a
-certificate from one of the many CA's (Certificate Authority's) on the
-net. \Yaws\  use the otp interface to openssl.
+can create a so-called self-signed certificate ourselves or buy a
+certificate from one of the many CA's (Certificate Authorities) on the
+net. \Yaws\  uses the OTP interface to OpenSSL.
 
-To setup a \Yaws\  server with SSL we could have a \textit{yaws.conf} file that
-looks like:
+To setup a \Yaws\ server with SSL we could have a \textit{yaws.conf}
+file that looks like:
 
 \begin{verbatim}
 
@@ -1043,27 +1051,22 @@ The keyfile is the private key file and it is encrypted using
 the password "gazonk".
 
 
-
-
-
-
 \chapter{Applications}
 
 \Yaws\  is well suited for Web applications. In this chapter we will
 describe a number of application templates. Code and strategies that
 can be used to build Web applications.
 
-There are several ways of starting applications from
-\Yaws\  .
+There are several ways of starting applications from \Yaws{}.
 
 \begin{itemize}
-\item The first and most easy variant is to specify
-the \verb+-r Module+ flag to the \Yaws\  startup script.
-This will \verb+apply(Module,start,[])+
+\item The first and most easy variant is to specify the
+  \verb+-r Module+ flag to the \Yaws\ startup script.  This will
+  \verb+apply(Module,start,[])+
 
-\item We can also specify runmods in the \textit{yaws.conf} file.
-It is possible to have several modules specified if want
-the same \Yaws\  server to run several different applications.
+\item We can also specify \verb+runmods+ in the \textit{yaws.conf}
+  file.  It is possible to have several modules specified if want the
+  same \Yaws\ server to run several different applications.
 
 \begin{verbatim}
 
@@ -1072,9 +1075,9 @@ runmod = app_number2
 
 \end{verbatim}
 
-\item It is also possible to do it the other way around, let
-the main application start \Yaws\ . We call this embedded mode
-and that will be discussed in a later chapter,
+\item It is also possible to do it the other way around, let the main
+  application start \Yaws{}. We call this embedded mode, which we will
+  discuss in chapter \ref{embedded}.
 
 \end{itemize}
 
@@ -1083,43 +1086,42 @@ and that will be discussed in a later chapter,
 \section{Login scenarios}
 
 Many Web applications require the user to login. Once the user has
-logged in the server sets a Cookie and then the user will be
+logged in the server sets a cookie and then the user will be
 identified by help of the cookie in subsequent requests.
 
-  \subsection{The session server}
-The cookie is passed in the headers and is available to the \Yaws\
-programmer in the Arg \#arg record. The \Yaws\  session server
-can help us to maintain a state for a user while the user is
-logged in to the application. The session server has the following 5
-api functions to aid us:
+\subsection{The session server}
+The cookie is passed in the headers and is available to the
+\Yaws\ programmer in the \verb+Arg+ \verb+#arg+ record. The
+\Yaws\ session server can help us to maintain a state for a user while
+the user is logged in to the application. The session server has the
+following 5 API functions to aid us:
 
 \begin{enumerate}
+\item \verb+yaws_api:new_cookie_session(Opaque)+ --- This function
+  initiates a new cookie-based session. The \verb+Opaque+ data is
+  typically some application-specific structure which makes it
+  possible for the application to read a user state, or it can be the
+  actual user state itself.
 
-\item \verb+yaws_api:new_cookie_session(Opaque)+
-This function initiates a new cookie based session. The Opaque data
-is typically some application specific structure which makes it
-possible for the application to read a user state, or it can be the
-actual user state itself.
+\item \verb+yaws_api:cookieval_to_opaque(Cookie)+ --- This function
+  maps a cookie to a session.
 
-\item \verb+yaws_api:cookieval_to_opaque(Cookie)+
-This function maps a cookie to a session.
+\item \verb+yaws_api:replace_cookie_session(Cookie, NewOpaque)+ ---
+  Replace the opaque user state in the session server with
+  \verb+NewOpaque+.
 
-\item \verb+yaws_api:replace_cookie_session(Cookie, NewOpaque)+
-Replace the Opaque user state in the session server.
-
-\item \verb+yaws_api:delete_cookie_session(Cookie)+
-This function should typically be called when the user logs out
-or when our web application decides to auto logout the user.
+\item \verb+yaws_api:delete_cookie_session(Cookie)+ --- This function
+  should typically be called when the user logs out or when our web
+  application decides to automatically logout the user.
 
 \end{enumerate}
 
-
-All cookie based applications are different but they have
+All cookie-based applications are different but they have
 some things in common. In the example that follow we assume the
 existence of a function \verb+myapp:auth(UserName, Passwd)+ and it
 returns \verb+ok+ or \verb+{error, Reason}+.
 
-Furthermore - let's have a record:
+Let's assume the following record:
 
 \begin{verbatim}
 
@@ -1129,9 +1131,8 @@ Furthermore - let's have a record:
 
 \end{verbatim}
 
-The following function is a good template function to
-check the cookie.
-
+The following function is a good template function to check the
+cookie.
 
 \begin{verbatim}
 
@@ -1151,22 +1152,21 @@ check_cookie(A, CookieName) ->
 
 \end{verbatim}
 
+We need to check all requests and make sure the session\_server has
+our cookie registered as an active session. Also, if a request comes
+in without a working cookie we want to present a login page instead of
+the page the user requested. Another quirky issue is that the pages
+necessary for display of the login page must be shipped without
+checking the cookie. The next sections explain how these needs can be
+met.
 
-So what we need to do is the following: We want to check all
-requests and make sure the the session\_server has our cookie registered as
-an active session.
-
-If a request comes in without a working cookie we want to present
-a login page instead of the page the user requested.
-
-Another quirky issue is that the pages necessary for display of the
-login page must be shipped without checking the cookie.
-
-  \subsection{Arg rewrite}
+\subsection{Arg rewrite}
 
 In this section we describe a feature whereby the user is allowed to
-rewrite the Arg at an early stage in the \Yaws\  server.
-We do that by specifying an \verb+arg_rewrite_mod+ in the \textit{yaws.conf} file.
+rewrite the \verb+Arg+ at an early stage in the \Yaws\ server.  We do
+that by specifying an \verb+arg_rewrite_mod+ in the \textit{yaws.conf}
+file.
+
 \begin{verbatim}
 arg_rewrite_mod = myapp
 \end{verbatim}
@@ -1202,28 +1202,26 @@ do_rewrite(Arg) ->
 
 \end{verbatim}
 
-Our arg rewrite function lets all Args go through untouched
-that either have a good cookie or belong to a set of predefined
-pages that are acceptable to get without being logged in.
-If we decode that the user must log in,
- we change the path of the request,
- thereby making the \Yaws\  server ship a login page instead of the page the
-user requested. We also set the original path in the Arg state argument so
-that the login page can redirect the user to the original page - once the login procedure is finished.
+Our arg rewrite function lets all \verb+Arg+s go through untouched
+that either have a good cookie or belong to a set of predefined pages
+that are acceptable to get without being logged in.  If we decide that
+the user must log in, we change the path of the request, thereby
+making the \Yaws\ server ship a login page instead of the page the
+user requested. We also set the original path in the \verb+Arg+ state
+argument so that the login page can redirect the user to the original
+page once the login procedure is finished.
 
+\subsection{Authenticating}
 
+Now we're approaching the \verb+login.yaws+ page, the page that
+displays the login prompt to the user. The login page consists of two
+parts: one part that displays the login data as a form, and one form
+processing page that reads the data the user entered in the login
+fields and performs the actual authentication.
 
-  \subsection{Authenticating}
-
-
-Now we're approaching the \verb+login.yaws+ page, the page that displays
-the login prompt to the user. The login page consists of two parts,
-one part that displays the login data as a form and one form processing page
-that reads the data the user entered in the login fields and performs
-the actual authentication.
-
-The login page performs a tiny well known Web trick where it
-passes the original URL request in a hidden field in the login page and thereby passing that information to the form processing page.
+The login page performs a tiny well-known Web trick where it passes
+the original URL request in a hidden field in the login page and
+thereby passing that information to the form processing page.
 
 The page \verb+login.yaws+:
 
@@ -1249,8 +1247,9 @@ out(A) ->
 
 
 
-The form processing page which gets the POST data from the
-code above looks like:
+The form processing page which gets the \verb+POST+ data from the code
+above:
+
 \begin{verbatim}
 
 
@@ -1290,36 +1289,31 @@ out(A) ->
 
 \end{verbatim}
 
-The function returns a list of two new previously not discussed return
-values: Instead
-of returning HTML output as in \verb+{html, Str}+ or
-\verb+{ehtml,Term}+
-we return a list of two new values. There are many different possible
-return values from the \verb+out/1+ function and they will all be
-described later.
+The function returns a list of two new (not previously discussed)
+return values: instead of returning HTML output as in
+\verb+{html, Str}+ or \verb+{ehtml,Term}+ we return a list of two new
+values. (There are many different possible return values from the
+\verb+out/1+ function and they will all be described later.) The two
+new values are:
 
 \begin{enumerate}
 
-\item The tuple \verb+{redirect_local, Path}+.
-This particular redirect return value will make the
-\Yaws\  web server return a 302 redirect to the specified Path.
-Optionally a different status code can be supplied which will
-be used in place of 302, eg \verb+{redirect_local, Path, 307}+.
+\item The tuple \verb+{redirect_local, Path}+ makes the \Yaws\ web
+  server return a 302 redirect to the specified \verb+Path+.
+  Optionally a different status code can be supplied which will be
+  used in place of 302, e.g.  \verb+{redirect_local, Path, 307}+.
 
-\item \verb+yaws_api:setcookie("myapp_sid",Cookie)+ generates
-a \verb+Set-Cookie+ header
+\item \verb+yaws_api:setcookie("myapp_sid",Cookie)+ generates a
+  \verb+Set-Cookie+ header.
 \end{enumerate}
 
-
-
-Now if we put all this together we have a full blown cookie based
+Now if we put all this together we have a full-blown cookie-based
 login system. The last thing we did in the form processing code was
 to register the session with the session server thereby letting any
 future requests go straight through the \verb+Arg+ rewriter.
 
 This way both \Yaws\  pages as well as all or some static content
 is protected by the cookie login code.
-
 
 \subsection{Database driven applications}
 
@@ -1328,12 +1322,11 @@ a user session to entries in a database. Mnesia fits perfectly
 together with \Yaws\  and keeping user persistent state in Mnesia is
 both easy and convenient.
 
-Once the user has logged in we can typically use the user name
-as key into the database. We can mix ram\_tables and disc\_tables
-to our liking. The Mnesia database must be initialized by means
-of \verb+create_table/2+ before it
-can be used. This is typically done while installing the
-web application on a machine.
+Once the user has logged in we can typically use the user name as key
+into the database. We can mix \verb+ram_tables+ and \verb+disc_tables+
+to our liking. The Mnesia database must be initialized by means of
+ \verb+create_table/2+ before it can be used. This is typically done
+ while installing the web application on a machine.
 
 Another option is to let the application check that Mnesia
 is initialized whenever the application starts.
@@ -1342,13 +1335,15 @@ If we don't want or need to use Mnesia, it's of course possible
 to use a simple \verb+dets+ file or a text file as well.
 
 \section{Appmods}
+\label{appmods}
 
-Appmods is mechanism to invoke different applications
-based upon the URL. A URL - as presented to the web server in
-a request - has a path part and a query part.
+Appmods is mechanism to invoke different applications based upon the
+URL. A URL---as presented to the web server in a request---has a path
+part and a query part.
 
 It is possible to install several appmods in the \textit{yaws.conf}
-file as:
+file as shown below:
+
 \begin{verbatim}
 
 appmods = foo myapp
@@ -1361,39 +1356,40 @@ there and instead of reading the actual file from the disk, \Yaws\  will
 invoke the appmod with the remainder of the path inserted into
 \verb+Arg#arg.appmoddata+.
 
-Say the user requests the URL \textit{http://www.funky.org/myapp/xx/bar.html}.
-\Yaws\  will not ship the file \verb+bar.html+ to the client, instead it
-will invoke \verb+myapp:out(Arg)+ with \verb+Arg#arg.appmoddata+
-set to the string \verb+xx/bar.html+. Any optional query data - that
-is data that follows the first "?" character in the URL -
-is removed from the path and passed as \verb+Arg#arg.querydata+.
+Say the user requests the URL
+\url{http://www.funky.org/myapp/xx/bar.html}.  \Yaws\ will not ship
+the file \verb+bar.html+ to the client, instead it will invoke
+\verb+myapp:out(Arg)+ with \verb+Arg#arg.appmoddata+ set to the string
+\verb+xx/bar.html+. Any optional query data---that is, data that
+follows the first '?' character in the URL---is removed from the path
+and passed as \verb+Arg#arg.querydata+.
 
 Appmods can be used to run applications on a server. All requests
 to the server that has an appmod in the URL will be handled by that
 application. If the application decides that it want to
 ship a page from the disk to the client, it can return the
 tuple \verb+{page, Path}+. This return value will make \Yaws\  read
-the page from the disk, possibly add the page to it's cache of
+the page from the disk, possibly add the page to its cache of
 commonly accessed pages and ship it back to the client.
 
 The \verb+{page, Path}+ return value is equivalent to a
-redirect, but it removes an extra round trip - and is thus faster.
+redirect, but it removes an extra round trip, and is thus faster.
 
 Appmods can also be used to fake entire directory hierarchies
-that doesn't exists on the disk.
+that don't exist on disk.
 
 
 \section{The opaque data}
 
-Sometimes an application needs application specific data
-such as the location of its data files or whatever. There exists
-a mechanism to pass application specific configuration data from the
-\Yaws\  server to the application.
+Sometimes an application needs application-specific data such as the
+location of its data files. There exists a mechanism to pass
+application-specific configuration data from the \Yaws\ server to the
+application.
 
-When configuring a server we have an opaque field in the
-configuration file that can be used for this purpose.
-Say that we have the following fields in the
-config file:
+When configuring a server we have an opaque field in the configuration
+file that can be used for this purpose.  Say we have the following
+fields in the config file:
+
 \begin{verbatim}
 
 <server foo>
@@ -1408,10 +1404,10 @@ config file:
 
 This will create a normal server that listens to the specified IP address.
 An application has access to the opaque data that was specified
-in that particular server through \verb+Arg#arg.opaque+
+in that particular server through \verb+Arg#arg.opaque+.
 
-If we have the opaque data specified above, the Arg opaque field will
-have the value:
+If we have the opaque data specified above, the \verb+Arg+ opaque
+field will have the value:
 
 \begin{verbatim}
 
@@ -1423,25 +1419,21 @@ have the value:
 \end{verbatim}
 
 
-
-
-
 \section{Customizations}
 
-When actually deploying an application at a live site, some
-of the standard \Yaws\  behaviors are not acceptable. Many sites
-want to customize the web server behavior when a client requests
-a page that doesn't exists on the web server. The standard \Yaws\
-behavior
-is to reply with status code 404 and a message explaining that the
-page doesn't exist.
+When actually deploying an application at a live site, some of the
+standard \Yaws\ behaviors are not acceptable. Many sites want to
+customize the web server behavior when a client requests a page that
+doesn't exist on the web server. The standard \Yaws\ behavior is to
+reply with status code 404 and a message explaining that the page
+doesn't exist.
 
-Similarly, when \Yaws\  code crashes, the Reason for the crash is
+Similarly, when \Yaws\  code crashes, the reason for the crash is
 displayed in the Web browser. This is very convenient while
-developing a sit but not acceptable in production.
+developing a site but not acceptable in production.
 
 
-  \subsection{404 File not found}
+\subsection{404 File not found}
 
 We can install a special handler for 404 messages. We do that by
 specifying a \verb+errormod_404+ in the \textit{yaws.conf} file.
@@ -1459,72 +1451,69 @@ If we have:
 
 \end{verbatim}
 
-When \Yaws\  gets a request for  a file that doesn't exists
-on the hard disk, it invokes the errormod\_404 module
-to generate both the status code as well as the content of the
-message.
+When \Yaws\ gets a request for a file that doesn't exist, it invokes
+the \verb+errormod_404+ module to generate both the status code as
+well as the content of the message.
 
-        \verb+Module:out404(Arg, GC, SC)+ will
-                   be invoked by \Yaws\ . The arguments are
+If \verb+Module+ is specified as the \verb+errormod_404+ module,
+\Yaws\ will invoke \verb+Module:out404(Arg, GC, SC)+, passing the
+arguments as described below:
 
 \begin{itemize}
-\item              Arg is a \#arg{} record
+\item \verb+Arg+ is an \verb+#arg{}+ record
 
-\item              GC  is  a  \#gconf{}   record   (defined   in
-              yaws.hrl)
+\item \verb+GC+ is a \verb+#gconf{}+ record (defined in \verb+yaws.hrl+)
 
-\item              SC   is   a   \#sconf{}  record  (defined  in
-              yaws.hrl)
+\item \verb+SC+ is a \verb+#sconf{}+ record (defined in
+  \verb+yaws.hrl+)
 \end{itemize}
 
-              The function can and must do the same things
-              that a normal \verb+out/1+ does.
+The function can and must do the same things that a normal
+\verb+out/1+ function does.
 
 
+\subsection{Crash messages}
 
+We use a similar technique for generating the crash messages: we
+install a module in the \textit{yaws.conf} file and let that module
+generate the crash message.  We have:
 
-  \subsection{Crash messages}
-
-We use a similar technique for generating the crash messages, we
-install a module in the \textit{yaws.conf} file and let that module generate
-the crash message.
-We have:
 \begin{verbatim}
 errormod_crash = Module
 \end{verbatim}
 
-The  default  is  to  display the
-entire  formated  crash   message   in   the
-browser.  This is good for debugging but not
-in production.
+The default is to display the entire formatted crash message in the
+browser.  This is good for debugging but not good for production.
 
-The function \verb+Module:crashmsg(Arg,  SC,  Str)+
-will  be  called.  The Str is the real crash
-message formated as a string.
-
-
+If \verb+Module+ is specified as the \verb+errormod_crash+ module, the
+function \verb+Module:crashmsg(Arg, SC, Str)+ will be called.  The
+\verb+Str+ argument is the real crash message formatted as a string.
 
 \section{Stream content}
 
 If the \verb+out/1+ function returns the tuple
-\verb+{content, MimeType, Content}+ \Yaws\  will
-ship that data to the Client. This way we can
-deliver dynamically generated content to the client
-which is of a different mime type than "text/html".
+\verb+{content, MimeType, Content}+ \Yaws\ will ship that data to the
+Client. This way we can deliver dynamically generated content to the
+client which is of a different MIME type than "text/html".
 
-If the generated file is very large and it not
-possible to generate the entire file, we can
-return the value:
-\verb+{streamcontent, MimeType, FirstChunk}+ which delivers
-data back to the client using HTTP chunked transfer (see
-RFC 2616 section 3.6.1) and then from a different \Erlang\
-process deliver the remaining chunks by using the functions:
+If the generated response is very large and it not possible or
+practical to generate the whole thing, we can return the value:
+
+\begin{verbatim}
+{streamcontent, MimeType, FirstChunk}
+\end{verbatim}
+
+\noindent which delivers data back to the client using HTTP chunked
+transfer (see RFC 2616 section 3.6.1) and then from a different
+\Erlang\ process deliver the remaining chunks by using the functions
+described below:
+
 \begin{enumerate}
 \item \verb+yaws_api:stream_chunk_deliver(YawsPid, Data)+ where the
   \verb+YawsPid+ is the process id of the \Yaws\ worker process. That
   pid is available in \verb+Arg#arg.pid+.
 
-\item \verb+stream_chunk_end(YawsPid)+ This function must be called to
+\item \verb+stream_chunk_end(YawsPid)+ which must be called to
   indicate the end of the stream.
 \end{enumerate}
 
@@ -1534,11 +1523,15 @@ data too large to buffer in memory but not wishing to use chunked
 transfer, or applications that use long-polling (Comet) techniques
 that require them to hold client connections open for extended
 periods. For these situations we can return the value:
-\verb+{streamcontent_from_pid, MimeType, Pid}+ to tell \Yaws\ that we
-wish to deliver data of mime type \verb+MimeType+ to the client from
-process \verb+Pid+. In this case, \Yaws\ will prepare the socket for
-delivery from \verb+Pid+ and then send one of the following messages
-to \verb+Pid+:
+
+\begin{verbatim}
+{streamcontent_from_pid, MimeType, Pid}
+\end{verbatim}
+
+\noindent to tell \Yaws\ we wish to deliver data of mime type
+\verb+MimeType+ to the client from process \verb+Pid+. In this case,
+\Yaws\ will prepare the socket for delivery from \verb+Pid+ and then
+send one of the following messages to \verb+Pid+:
 \begin{itemize}
 \item \verb+{ok, YawsPid}+ tells \verb+Pid+ that it is now OK to
   proceed with sending data back to the client using the socket. The
@@ -1580,113 +1573,93 @@ though, it must pass the atom \verb+closed+ as the first argument to
 \Yaws\ that the socket has been closed and it should no longer attempt
 to use it.
 
-Applications using \verb+streamcontent_from_pid+ wanting to avoid
-chunked transfer encoding for their streams should be sure to include
-a setting for the \verb+Content-Length+ header in their \verb+out/1+
-return value. \Yaws\ automatically sets the \verb+Transfer-Encoding+
-header to \verb+chunked+ if it does not detect a \verb+Content-Length+
-header.
+App\-li\-ca\-tions that use \verb+streamcontent_from_pid+ that also
+want to a\-void chunked transfer encoding for their streams should be
+sure to include a setting for the \verb+Content-Length+ header in
+their \verb+out/1+ return value. \Yaws\ automatically sets
+the \verb+Transfer-Encoding+ header to \verb+chunked+ if it does not
+detect a \verb+Content-Length+ header.
 
 \section{All out/1 return values}
 
 \begin{itemize}
 
 
-\item       \verb+{html, DeepList}+
-              This  assumes that DeepList is formatted HTML code.
-              The code will be inserted in the page.
+\item \verb+{html, DeepList}+ This assumes that \verb+DeepList+ is
+  formatted HTML code.  The code will be inserted in the page.
 
-\item       \verb+{ehtml, Term}+
-              This will transform the \Erlang\   term  Term  into  a
-              stream of HTML content.
+\item \verb+{ehtml, Term}+ This will transform the \Erlang\ term
+  \verb+Term+ into a stream of HTML content.
 
-\item       \verb+{content, MimeType, Content}+
-              This function will make  the  web  server  generate
-              different  content  than HTML. This return value is
-              only allowed in a \Yaws\   file  which  has  only  one
-              <erl> </erl> part and no html parts at all.
+\item \verb+{content, MimeType, Content}+ This function will make the
+  web server generate different content than HTML. This return value
+  is only allowed in a \Yaws\ file which has only one
+  \verb+<erl> </erl>+ part and no html parts at all.
 
-\item       \verb+{streamcontent, MimeType, FirstChunk}+
-              This  return  value plays the same role as the
-              \verb+content+
-              return value above.  However it makes it  possible
-              to stream data to the client using HTTP chunked transfer
-              if the \Yaws\  code doesn't have access to all  the
-              data  in  one  go. (Typically  if  a  file  is  very
-              large or if data arrives from back end servers on the
-              network.)
+\item \verb+{streamcontent, MimeType, FirstChunk}+ This return value
+  plays the same role as the \verb+content+ return value above.
+  However it makes it possible to stream data to the client using HTTP
+  chunked transfer if the \Yaws\ code doesn't have access to all the
+  data in one go. (Typically if a file is very large or if data
+  arrives from back end servers on the network.)
 
-\item       \verb+{streamcontent_from_pid, MimeType, Pid}+
-              This  return  value  is  similar to the
-              \verb+streamcontent+ return value above.  However it
-              makes it possible to stream data to the client directly
-              from an application process to the socket. This
-              approach can be useful for applications that employ
-              long-polling (Comet) techniques, for example, and for
-              applications wanting to avoid buffering data or avoid
-              HTTP chunked mode transfer for streamed data.
+\item \verb+{streamcontent_from_pid, MimeType, Pid}+ This return value
+  is similar to the \verb+streamcontent+ return value above.  However
+  it makes it possible to stream data to the client directly from an
+  application process to the socket. This approach can be useful for
+  applications that employ long-polling (Comet) techniques, for
+  example, and for applications wanting to avoid buffering data or
+  avoid HTTP chunked mode transfer for streamed data.
 
-\item       \verb+{header, H}+
-              Accumulates a HTTP header. Used by for example  the
-              \verb+yaws_api:setcookie/2-6+ function.
+\item \verb+{header, H}+ Accumulates a HTTP header. Used by for
+  example the \verb+yaws_api:setcookie/2-6+ function.
 
-\item       \verb+{allheaders, HeaderList}+
-              Will  clear  all previously accumulated headers and
-              replace them.
+\item \verb+{allheaders, HeaderList}+ Will clear all previously
+  accumulated headers and replace them.
 
-\item       \verb+{status, Code}+
-              Will set another HTTP status code than 200.
+\item \verb+{status, Code}+ Sets the response HTTP status code to
+  \verb+Code+.
 
-\item       \verb+break+  Will stop processing of any consecutive  chunks  of
-              erl or html code in the \Yaws\  file.
+\item \verb+break+ Will stop processing of any consecutive chunks of
+  erl or HTML code in the \Yaws\ file.
 
-\item       \verb+ok+     Do nothing.
+\item \verb+ok+ Do nothing.
 
-\item       \verb+{redirect, Url}+
-              Erase  all previous headers and accumulate a single
-              Location header. Set the status code.
+\item \verb+{redirect, Url}+ Erase all previous headers and accumulate
+  a single HTTP \verb+Location+ header. Set the status code to 302.
 
-\item       \verb+{redirect, Url, Status}+
-              Same as redirect above with the additional
-	      option of supplying the status code. The default
-	      for a redirect is 302 but 301, 303 and 307 are also
-	      valid redirect status codes.
+\item \verb+{redirect, Url, Status}+ Same as redirect above with the
+  additional option of supplying the status code. The default for a
+  redirect is 302 but 301, 303 and 307 are also valid redirect status
+  codes.
 
-\item       \verb+{redirect_local, Path}+
-              Does a redirect to the same Scheme://Host:Port/Path in
-              which we are currently executing. Path can be either be
-              the path directly (equivalent to \verb+abs_path+), or
-              one of \verb+{{abs_path, Path}+ or
-              \verb+{{rel_path, RelativePath}}+
+\item \verb+{redirect_local, Path}+ Does a redirect to the same
+  \url{Scheme://Host:Port/Path} in which we are currently
+  executing. \verb+Path+ can be either be the path directly
+  (equivalent to \verb+abs_path+), or one of \verb+{{abs_path, Path}+
+  or \verb+{{rel_path, RelativePath}}+
 
-\item       \verb+{redirect_local, Path, Status}+
-              Same as \verb+redirect_local+ above with the additional
-	      option of supplying the status code. The default
-	      for a redirect is 302 but 301, 303 and 307 are also
-	      valid redirect status codes.
+\item \verb+{redirect_local, Path, Status}+ Same as
+  \verb+redirect_local+ above with the additional option of supplying
+  the status code. The default for a redirect is 302 but 301, 303 and
+  307 are also valid redirect status codes.
 
-\item       \verb+{get_more, Cont, State}+
-              When  we  are  receiving  large POSTs we can return
-              this value and be  invoked  again  when  more  Data
-              arrives.
+\item \verb+{get_more, Cont, State}+ When we are receiving large
+  \verb+POST+s we can return this value and be invoked again when more
+  data arrives.
 
-\item       \verb+{page, Page}+
-              Make \Yaws\  return a different page than the one being
-              requested.
+\item \verb+{page, Page}+ Make \Yaws\ return a different local page
+  than the one being requested.
 
-\item       \verb+{page, {Options, Page}}+
+\item \verb+{page, {Options, Page}}+ Like the above, but supplying an
+  additional deep list of options.  For now, the only type of option
+  is \verb+{header, H}+ with the effect of accumulating the HTTP
+  header \verb+H+ for page \verb+Page+.
 
-              Like the above, but supplying an additional deep list of
-              options.  For now, the only type of option is
-              \verb+{header, H}+ with the effect of accumulating the
-              HTTP header \verb+H+ for page \verb+Page+.
-
-\item       \verb+[ListOfValues]+
-
-              It is possible to return a list of the above defined
-              return values.  Any occurrence of \verb+stream_content+,
-              \verb+get_more+, or \verb+page+ in this list is legal
-              only if it is the last position of the list.
+\item \verb+[ListOfValues]+ It is possible to return a list of the
+  above defined return values.  Any occurrence of
+  \verb+stream_content+, \verb+get_more+, or \verb+page+ in this list
+  is legal only if it's in the last position of the list.
 
 \end{itemize}
 
@@ -1694,42 +1667,43 @@ header.
 
 \chapter{Debugging and Development}
 
-\Yaws\  has excellent debugging capabilities. First and foremost we
+\Yaws\ has excellent debugging capabilities. First and foremost we
 have the ability to run the web server in interactive mode by means of
-the command line switch \verb+-i+
+the command line switch \verb+-i+, which gives us a regular
+\Erlang\ command line prompt we can use to compile helper code or
+reload helper code. Furthermore all error messages are displayed
+there.  If a \verb+.yaws+ page producees any regular \Erlang\ I\slash
+O, that output will be displayed at the \Erlang\ prompt, assuming we
+are running in interactive mode.
 
-This gives us a regular \Erlang\  command line prompt and we can
-use that prompt to compile helper code or reload helper
-code. Furthermore all error messages are displayed there.
-If a .yaws page producees any regular \Erlang\ io, that output will
-be displayed at the \Erlang\ prompt - assuming that we are running in interactive mode.
-
-If we give the command line switch \verb+-d+ we get some
-additional error messages. Also \Yaws\  does some additional checking
-of user supplied data such as headers.
+If we give the command line switch \verb+-d+ we get some additional
+error messages. Also \Yaws\ does some additional checking of user
+supplied data such as headers.
 
 \section{Logs}
-\Yaws\  produces various logs. All log files are written into the
-\Yaws\  logdir directory. This directory is specified in the config file.
+\Yaws\ produces various logs. All log files are written into the
+\Yaws\ logdir directory. This directory is specified in the config
+file.
 
 We have the following log files:
-\begin{itemize}
-\item The access log. Access logging is turn on or off per server
-in the \textit{yaws.conf} file. If access\_log is turned on for a server,
-\Yaws\  will produce a log in Common Access Log Format called
-\textit{HostName:PortNumber.access}
 
-\item The auth log. Auth logging is turn on or off per server in the
-  \textit{yaws.conf} file. If auth\_log is turned on for a server, \Yaws\ will
-  produce a log called \textit{HostName:PortNumber.auth} which contains all http
-  auth related messages.
+\begin{itemize}
+\item The access log. Access logging is turned on or off per server in
+  the \textit{yaws.conf} file. If access\_log is turned on for a
+  server, \Yaws\ will produce a log in Common Access Log Format called
+  \textit{HostName:PortNumber.access}
+
+\item The auth log. Auth logging is turned on or off per server in the
+  \textit{yaws.conf} file. If auth\_log is turned on for a server,
+  \Yaws\ will produce a log called \textit{HostName:PortNumber.auth}
+  which contains all HTTP auth-related messages.
 
 \item \textit{report.log} This file contains all error and crash
-messages for all virtual servers in the same file.
+  messages for all virtual servers in the same file.
 
-\item \textit{trace.traffic} and \textit{trace.http} The two
-command line flags \verb+-t+ and \verb+-T+ tells \Yaws\  to trace
-all traffic or just all HTTP messages and write them to a file.
+\item \textit{trace.traffic} and \textit{trace.http} The two command
+  line flags \verb+-t+ and \verb+-T+ tells \Yaws\ to trace all traffic
+  or just all HTTP messages and write them to a file.
 \end{itemize}
 
 
@@ -1742,8 +1716,8 @@ explicitly enabled for a virtual host by listing \verb+cgi+ in the
 for a page ending in \verb+.cgi+ (or \verb+.CGI+) will then result in
 trying to execute the corresponding file.
 
-If you have a Php executable compiled for using CGI in the \verb+PATH+
-of the \Yaws\  server, you can enable Php support by adding \verb+php+ to
+If you have a PHP executable compiled for using CGI in the \verb+PATH+
+of the \Yaws\  server, you can enable PHP support by adding \verb+php+ to
 \verb+allowed_scripts+.  Requests for pages ending in \verb+.php+ will
 then result in \Yaws\  executing \verb+php+ (configurable via
 \verb+php_handler+) and passing the name of the corresponding file to
@@ -1777,7 +1751,7 @@ computer benefits scalability and security.
 \item The application server can be written in any language for
 which a FastCGI library is available. Existing applications
 which have been written for other web servers can be used with
-\Yaws\ .
+\Yaws{}.
 \item FastCGI can also be used to implement external authentication
 servers (in addition to generating dynamic content).
 \end{enumerate}
@@ -1794,7 +1768,7 @@ to generate dynamic content.
 The FastCGI protocol (which runs over TCP) is used to send the request
 information from \Yaws\  to the application server and to send the
 response information (e.g. the generated dynamic content) from
-the application server back to \Yaws\ .
+the application server back to \Yaws{}.
 
 FastCGI responders can be invoked in two ways:
 
@@ -1816,7 +1790,7 @@ file are not relevant.
 
 \item
 By creating an appmod which calls \verb+yaws_api:call_fcgi_responder+.
-See the \verb+yaws_api (5)+ man page for details.
+See the \verb+yaws_api(5)+ man page for details.
 
 \end{enumerate}
 
@@ -1826,19 +1800,18 @@ The FastCGI authorizer role allows \Yaws\  to communicate with an
 authentication server to authenticate requests.
 
 The FastCGI protocol is used to send the request information from
-\Yaws\  to the authentication server and the authentication respone back
-from the authentication server to \Yaws\ .
+\Yaws\ to the authentication server and the authentication response
+back from the authentication server to \Yaws{}.
 
-If access is allowed, \Yaws\  processing of the request proceeds
-normally.
+If access is allowed, \Yaws\ proceeds to process the request normally.
 
 If access is denied, the authentication server provides the
 response which is sent back to the client. This is typically
-a not authorized response or a redirect to a login page.
+a ``not authorized'' response or a redirect to a login page.
 
 FastCGI authorizers are invoked by creating an appmod which
 calls \verb+yaws_api:call_fcgi_authorizer+.
-See the \verb+yaws_api (5)+ man page for details.
+See the \verb+yaws_api(5)+ man page for details.
 
 \section{The FastCGI Filter Role}
 
@@ -1848,7 +1821,7 @@ FastCGI defines a third role, the filter role, which
 
 \section{FastCGI Configuration}
 
-The following commands in the \verb+yaws.conf+ file control the
+The following commands in the \textit{yaws.conf} file control the
 operation of FastCGI.
 
 If you use FastCGI, you \emph{must} include the \verb+fcgi_app_server+
@@ -1868,17 +1841,15 @@ environment variables to the application.
 \chapter{Security}
 
 \Yaws\  is of course susceptible to intrusions. \Yaws\  has the
-ability to run under a different user than root - Assuming we need
+ability to run under a different user than root, even if we need
 to listen to privileged port numbers. Running as root is generally a
 bad idea.
 
-Intrusions can happen basically at all places in \Yaws\  code where the
-\Yaws\  code calls either the BIF \verb+open_port+ or when \Yaws\  code
-does calls to \verb+os:cmd/1+.
-
-Both \verb+open_port+ and \verb+os:cmd/1+ invoke the \verb+/bin/sh+
-interpreter to execute its commands. If the commands are nastily
-crafted bad things can easily happen.
+Intrusions can happen basically at all places in \Yaws\ code where the
+\Yaws\ code calls either the BIF \verb+open_port+ or when \Yaws\ code
+calls \verb+os:cmd/1+. Both \verb+open_port+ and \verb+os:cmd/1+
+invoke the \verb+/bin/sh+ interpreter to execute its commands. If the
+commands are nastily crafted bad things can easily happen.
 
 All data that is passed to these two function must be carefully
 checked.
@@ -1890,14 +1861,14 @@ cracks on a \Yaws\  server. This is very good.
 
 Another possible point of entry to the system is by providing a URL
 which takes the client out from the docroot. This should not be
-possible - and the impossibility relies on the correctness of the URL
-parsing code in \Yaws\ .
+possible -- and the impossibility relies on the correctness of the URL
+parsing code in \Yaws{}.
 
 \section{WWW-Authenticate}
 \Yaws\  has support for WWW-Authentication.   WWW-Authenticate is a
 standard HTTP scheme for the basic protection of files with a username
 and password.  When a client browser wants a protected file, it must send a
-``Authenticate: username:password'' header in the request.  Note that
+\verb+Authenticate: username:password+ header in the request.  Note that
 this is plain text.   If there is no such header or the username and
 password is invalid the server will respond with status code 401 and
 the realm.  Browsers will then tell the user that a username and
@@ -1930,21 +1901,22 @@ many \textit{<auth>} directives as you desire:
 files in the \textit{/protected} and \textit{/anotherdir} directories.
 Note that these directories are specified as a server path,  that is,
 the filesystem path that is actually protected here is
-\textit{/var/yaws/www/protected}
+\textit{/var/yaws/www/protected} .
 
 
 \chapter {Embedded mode}
+\label{embedded}
 
 \Yaws\  is a normal OTP application. It is possible to integrate \Yaws\
-into another - larger - application. The \Yaws\  source tree must be
-integrated into the larger applications build environment. \Yaws\  is
+into another larger application. The \Yaws\  source tree must be
+integrated into the larger application's build environment. \Yaws\  is
 then simply started by \verb+application:start()+ from the larger
-applications boot script, or the \Yaws\  components needed for the
+application's boot script, or the \Yaws\  components needed for the
 larger application can be started individually under the application's
 supervisor(s).
 
 By default \Yaws\ reads its configuration data from a config file, the
-default is "/usr/local/etc/yaws/yaws.conf". If \Yaws\ is integrated
+default is \textit{/usr/local/etc/yaws/yaws.conf} . If \Yaws\ is integrated
 into a larger application, however, that application typically has its
 configuration data kept at some other centralized place. Sometimes we
 may not even have a file system to read the configuration from if we
@@ -1967,7 +1939,7 @@ section takes two arguments:
 \begin{itemize}
 
 \item a \verb+#gconf+ record instance, specifying global
-  \Yaws\  configuration
+  \Yaws\ configuration
 
 \item a list of lists of \verb+#sconf+ record instances, each
   specifying configuration for a particular server instance
@@ -1979,7 +1951,7 @@ normally intended for inclusion by applications. Instead,
 \Yaws\  provides the \verb+yaws_api:embedded_start_conf/1,2,3,4+
 functions that allow embedded mode applications to specify
 configuration data using property lists (lists of
-\verb+\{key, value\}+ pairs).
+\verb+{key, value}+ pairs).
 
 The \verb+yaws_api:embedded_start_conf+ functions all return a tuple
 containing the following four items:
@@ -2024,20 +1996,20 @@ An embedded mode application can start \Yaws\  in one of two ways:
   takes exactly the same arguments as the corresponding
   \verb+yaws_api:embedded_start_conf/1,2,3,4+ function. Instead of just
   returning start and configuration information, however,
-  \verb+yaws:start_embedded+ also starts and configures \Yaws\ , which
+  \verb+yaws:start_embedded+ also starts and configures \Yaws{}, which
   can be more convenient but does not allow the embedded mode
-  application any supervision control over \Yaws\ .
+  application any supervision control over \Yaws{}.
 
 \end{itemize}
 
 Both of these functions take care of setting the environment key
 \verb+embedded+ to \verb+true+. Neither approach requires any special
-settings in the embedded mode application's \verb+.app+ file nor any
+settings in the embedded mode application's \textit{.app} file nor any
 special command-line switches to the \Erlang\  runtime.
 
 For an example of how to use \verb+yaws_api:embedded_start_conf+ along
 with \verb+yaws_api:setconf+, please see the files
-\verb+www/ybed_sup.erl+ and \verb+www/ybed.erl+ in the
+\verb+www\slash ybed_sup.erl+ and \verb+www\slash ybed.erl+ in the
 \Yaws\  distribution.
 
 \chapter{The config file - yaws.conf}
@@ -2052,24 +2024,25 @@ part where options for each virtual host is supplied.
 \begin{itemize}
 
 
-\item       \verb+logdir = Directory+ -
+\item       \verb+logdir = Directory+ ---
               All \Yaws\  logs will be  written  to  files  in  this
               directory.  There  are  several different log files
-              written by \Yaws\ .
+              written by \Yaws{}.
 
               \begin{itemize}
-              \item \verb+report.log+ - this is a text file that contains  all
-              error logger printouts from \Yaws\ .
-              \item \verb+<Host>.access+ - for each virtual host served by \Yaws\ ,
-              a file \verb+<Host>.access+ will be written  which  contains
-              an access log in Common Log Format.
-              \item \verb+<Host>.auth+ - for each virtual host served by
-              \Yaws\ , a file \verb+<Host>.auth+ will be written which
-              contains all http auth related messages.
-              \item \verb+trace.http+  -  this file contains the HTTP trace if
-              that is enabled
-              \item \verb+trace.traffic+ -  this  file  contains  the  traffic
-              trace if that is enabled
+              \item \verb+report.log+ --- this is a text file that contains  all
+              error logger printouts from \Yaws{}.
+              \item \verb+<Host>.access+ --- for each virtual host
+                served by \Yaws{}, a file \verb+<Host>.access+ will be
+                written which contains an access log in Common Log
+                Format.
+              \item \verb+<Host>.auth+ --- for each virtual host served by
+              \Yaws{}, a file \verb+<Host>.auth+ will be written which
+              contains all HTTP auth related messages.
+              \item \verb+trace.http+  ---  this file contains the
+                HTTP trace if that is enabled
+              \item \verb+trace.traffic+ ---  this  file  contains
+                the  traffic trace if that is enabled
               \end{itemize}
 
               Note that \verb+<Host>.access+ and \verb+<Host>.auth+ files will
@@ -2078,38 +2051,38 @@ part where options for each virtual host is supplied.
 
               The default value for logdir is "."
 
-\item        \verb+server_signature = String+ -
+\item        \verb+server_signature = String+ ---
               This directive set the "Server: " output header to the custom
               value. The default value is "yaws/VSN, Yet Another Web Server".
 
-\item        \verb+ebin_dir = Directory+ -
+\item        \verb+ebin_dir = Directory+ ---
               This  directive adds Directory to the \Erlang\  search
               path. It is possible to have several of these  command
               in the configuration file.
 
-\item        \verb+include_dir = Directory+ -
+\item        \verb+include_dir = Directory+ ---
               This directive adds Directory to the path of directories
                where  the  \Erlang\   compiler  searches  for
               include  files.  We  need to use this if we want to
-              include .hrl files in our \Yaws\  \Erlang\  code.
+              include \textit{.hrl} files in our \Yaws\  \Erlang\  code.
 
-\item        \verb+max_num_cached_files = Integer+ -
+\item        \verb+max_num_cached_files = Integer+ ---
               \Yaws\   will  cache  small  files  such  as  commonly
               accessed  GIF images in RAM.  This directive sets a
               maximum number on the number of cached files.   The
               default value is 400.
 
-\item        \verb+max_num_cached_bytes = Integer+ -
+\item        \verb+max_num_cached_bytes = Integer+ ---
               This  directive  controls  the  total amount of RAM
               which can maximally be used for cached  RAM  files.
               The default value is 1000000, 1 megabyte.
 
-\item        \verb+max_size_cached_file = Integer+ -
+\item        \verb+max_size_cached_file = Integer+ ---
               This  directive  sets  a  maximum size on the files
-              that are RAM cached by \Yaws\ .  The default value is
-              8000, 8 kBytes.
+              that are RAM cached by \Yaws{}.  The default value is
+              8000 bytes.
 
-\item        \verb+cache_refresh_secs = Integer+ -
+\item        \verb+cache_refresh_secs = Integer+ ---
               The  RAM  cache  is used to serve pages that sit in
               the  cache.  An  entry  sits  in  cache   at   most
               cache\_refresh\_secs  number  of seconds. The default
@@ -2117,15 +2090,16 @@ part where options for each virtual host is supplied.
               under  the  docroot, that change doesn't show until
               30 seconds have passed.  While  developing  a  \Yaws\
               site,  it may be convenient to set this value to 0.
-              If the debug flag (-d) is passed to the \Yaws\   start
-              script, this value is automatically set to 0.
+              If the debug flag (\textit{-d}) is passed to the
+              \Yaws\   start script, this value is automatically set
+              to 0.
 
-\item        \verb+max_connections = nolimit | Integer+ -
+\item        \verb+max_connections = nolimit | Integer+ ---
               This value controls the maximum number of connections
               from HTTP clients into the server. This is implemented
               by closing the last socket if the threshold is reached.
 
-\item        \verb+keepalive_maxuses = nolimit | Integer+ -
+\item        \verb+keepalive_maxuses = nolimit | Integer+ ---
               Normally, \Yaws\ does not restrict the number of times a
               connection is kept alive using keepalive. Setting this
               parameter to an integer \verb+X+ will ensure that
@@ -2134,28 +2108,28 @@ part where options for each virtual host is supplied.
               long-running connections collecting too much garbage in
               the \Erlang\ VM.
 
-\item        \verb+keepalive_timeout = Integer | infinity+ -
+\item        \verb+keepalive_timeout = Integer | infinity+ ---
               If the HTTP session will be kept alive (i.e., not
               immediately closed) it will close after the specified
               number of milliseconds unless a new request is received
               in that time. The default value is 30000. The value
               \verb+infinity+ is legal but not recommended.
 
-\item        \verb+trace  = traffic | http+ -
-              This  enables  traffic  or http tracing. Tracing is
+\item        \verb+trace  = traffic | http+ ---
+              This  enables  traffic  or HTTP tracing. Tracing is
               also possible to enable with a command line flag to
-              \Yaws\ .
+              \Yaws{}.
 
-\item        \verb+username  = User+ -
+\item        \verb+username  = User+ ---
              When \Yaws\  is run as root, it can be configured to
              change userid once it has created the necessary
-             listen sockets on privilged ports.
+             listen sockets on privileged ports.
 
-\item        \verb+subconfig = File+ -
+\item        \verb+subconfig = File+ ---
              Load specified config file.
 
-\item        \verb+subconfigdir = Directory+ -
-             Load all config file in specified directory.
+\item        \verb+subconfigdir = Directory+ ---
+             Load all config files in specified directory.
 
 \end{itemize}
 
@@ -2174,26 +2148,25 @@ The following directives are allowed inside a server definition.
 
 \begin{itemize}
 
-\item       \verb+port = Port+ -
+\item       \verb+port = Port+ ---
               This makes the server listen on Port.
 
-\item        \verb+listen = IpAddress+ -
+\item        \verb+listen = IpAddress+ ---
               This makes the  server  listen  on  \verb+IpAddress+  when
               virthosting  several  servers  on  the same IP/port
-              address, if the browser doesn't send a Host: field,
+              address, if the browser doesn't send a \verb+Host:+ field,
               \Yaws\   will  pick  the first server specified in the
-              config file.
-              Multiple \verb+listen+ directives may be used to specify
-              several addresses to listen on.
+              config file. Multiple \verb+listen+ directives may be
+              used to specify several addresses to listen on.
 
-\item        \verb+listen_backlog = Integer+ -
+\item        \verb+listen_backlog = Integer+ ---
               This sets the TCP listen backlog for the server to
               define the maximum length the queue of pending
               connections may grow to. The default is the same as
               the default provided by \verb+gen_tcp:listen/2+, which
               is 5.
 
-\item       \verb+rport = Port+ -
+\item       \verb+rport = Port+ ---
               This forces  all  local  redirects  issued  by  the
               server  to  go  to  Port.  This is useful when \Yaws\
               listens to a port which is different from the  port
@@ -2205,22 +2178,22 @@ The following directives are allowed inside a server definition.
               used to redirect traffic to port 80  to  port  8000
               (most NAT:ing firewalls will also do this for you).
 
-\item       \verb+rscheme = http | https+ -
+\item       \verb+rscheme = http | https+ ---
               This forces  all  local  redirects  issued  by  the
               server  to  use this method. This is useful when an
               SSL off-loader, or stunnel, is  used  in  front  of
-              \Yaws\ .
+              \Yaws{}.
 
-\item       \verb+auth_log = true | false+ -
+\item       \verb+auth_log = true | false+ ---
               Enable or disable the auth log for this virtual server.
               Default is true.
 
-\item       \verb+access_log = true | false+
+\item       \verb+access_log = true | false+ ---
               Setting  this  directive  to  false turns off
               traffic logging for this virtual server. The
               default value is true.
 
-\item       \verb+logger_mod = Module+ -
+\item       \verb+logger_mod = Module+ ---
               It is possible to set a special module that handles access and
               auth logging. The default is to log all web server traffic to
               \verb+<Host>.access+ and \verb+<Host>.auth+ files in the
@@ -2233,21 +2206,22 @@ The following directives are allowed inside a server definition.
 
               \begin{itemize}
 
-              \item \verb+Module:open_log(ServerName, Type, LogDir)+ - When
+              \item \verb+Module:open_log(ServerName, Type, LogDir)+ --- When
                 \Yaws\ is started, this function is called for this virtual
                 server. If the initialization is successful, the function must
                 return \verb+{true, State}+ and if an error occurred, it must
                 return \verb+false+.
 
-              \item \verb+Module:close_log(ServerName, Type)+ - This function is
-                called for this virtual server when \Yaws\ is stopped.
+              \item \verb+Module:close_log(ServerName, Type)+ -- This
+                function is called for this virtual server when
+                \Yaws\ is stopped.
 
               \item \verb+Module:wrap_log(ServerName, Type, State, LogWrapSize)+
-                - This function is used to rotate log files. It is regularly
+                --- This function is used to rotate log files. It is regularly
                 called by \Yaws\ and must return the possibly updated internal
                 \verb+NewState+.
 
-              \item \verb+Module:write_log(ServerName, Type, State, Infos)+ -
+              \item \verb+Module:write_log(ServerName, Type, State, Infos)+ --
                 When it needs to log a message, \Yaws\ will call this
                 function. The parameter \verb+Infos+ is
                 \verb+{Ip, Req, InHdrs, OutHdrs, Time}+ for an access log and
@@ -2255,28 +2229,31 @@ The following directives are allowed inside a server definition.
 
                         \begin{itemize}
 
-                        \item \verb+Ip+ - IP address of the accessing client (as
-                          a tuple).
+                        \item \verb+Ip+ --- IP address of the
+                          accessing client (as a tuple).
 
-                        \item \verb+Req+ - the HTTP method, URI path, and HTTP
-                          version of the request (as a \#http\_request{}
+                        \item \verb+Req+ - the HTTP me\-thod, URI
+                          path, and HTTP version of the request (as a
+                          \verb+#http_request{}+ record).
+
+                        \item \verb+InHdrs+ --- the HTTP headers which
+                          were sent from the WWW client (as a
+                          \verb+#headers{}+ record).
+
+                        \item \verb+OutHdrs+ --- the HTTP headers sent
+                          to the WWW client (as a \verb+#outh{}+
                           record).
 
-                        \item \verb+InHdrs+ - the HTTP headers which were sent
-                          from the WWW client (as a \#headers{} record).
+                        \item \verb+Path+ --- the URI path of the
+                          request (as a string).
 
-                        \item \verb+OutHdrs+ - the HTTP headers sent to the WWW
-                          client (as a \#outh{} record).
-
-                        \item \verb+Path+ - the URI path of the request (as a
-                          string).
-
-                        \item \verb+Item+ - the result of an authentication
-                          request. May be \verb+{ok, User}+, \verb+403+ or
+                        \item \verb+Item+ -- the result of an
+                          authentication request. May be
+                          \verb+{ok, User}+, \verb+403+ or
                           \verb+{401, Realm}+.
 
-                        \item \verb+Time+ - The time taken to serve the request,
-                          in microseconds.
+                        \item \verb+Time+ --- The time taken to serve
+                          the request, in microseconds.
 
                         \end{itemize}
 
@@ -2286,33 +2263,33 @@ The following directives are allowed inside a server definition.
 
               \end{itemize}
 
-\item       \verb+shaper = Module+ -
+\item       \verb+shaper = Module+ ---
               Defines a module to control access to this virtual server.
 
               Access can be controlled based on the IP address of the client. It
-              is also possible to throttles HTTP requests based on the client's
+              is also possible to throttle HTTP requests based on the client's
               download rate. This module must implement the behaviour
               \verb+yaws_shaper+.
 
               There is no such module configured by default.
 
-\item       \verb+docroot  =  Directory+ -
+\item       \verb+docroot  =  Directory+ ---
               This makes the server serve all its content from
-              Directory.
+              \verb+Directory+.
 
-\item       \verb+auth_skip_docroot = true | false+ -
+\item       \verb+auth_skip_docroot = true | false+ ---
               If true, the docroot will not be searched for
-              \verb+.yaws_auth+ files. This is useful when the docroot
-              is quite large and the time to search it is prohibitive
-              when \Yaws\  starts up. Defaults to false.
+              \verb+.yaws_auth+ files. This is useful when the
+              docroot is quite large and the time to search it is
+              prohibitive when \Yaws\  starts up. Defaults to false.
 
-\item       \verb+partial_post_size = Integer+ -
-              When a \Yaws\  file receives large  POSTs,  the
+\item       \verb+partial_post_size = Integer+ ---
+              When a \Yaws\  file receives large  \verb+POST+s,  the
               amount  of  data  received  in each chunk is
               determined by the this parameter.  The default
               value is 10240.
 
-\item       \verb+tilde_expand = true|false+ -
+\item       \verb+tilde_expand = true|false+ ---
               If  this  value  is  set  to false \Yaws\  will
               never do tilde  expansion.  Tilde expansion takes a URL
               of the form
@@ -2322,19 +2299,19 @@ The following directives are allowed inside a server definition.
               \char`\~\verb+username/public_html/+. The default value
               is false.
 
-\item       \verb+allowed_scripts = [ListOfSuffixes]+ -
+\item       \verb+allowed_scripts = [ListOfSuffixes]+ ---
               The allowed script types for this server.  Recognized
-              are `yaws', `cgi', `php'.  Default is
-              \verb+allowed_scripts = yaws+.
+              are \textit{yaws}, \textit{cgi}, \textit{php}.  Default
+              is \verb+allowed_scripts = yaws+.
 
-\item       \verb+appmods = [ListOfModuleNames]+ -
+\item       \verb+appmods = [ListOfModuleNames]+ ---
               If any the names in \verb+ListOfModuleNames+ appear
               as components in the path for a request, the
               path request parsing will terminate and that
               module will be called.
 
               Assume  for  example  that  we  have  the  URL
-              \verb+http://www.hyber.org/myapp/foo/bar/baz?user=joe+
+              \url{http://www.hyber.org/myapp/foo/bar/baz?user=joe}
               while we have the module \verb+foo+ defined  as  an
               appmod,  the  function  \verb+foo:out(Arg)+ will be
               invoked instead of searching the file systems
@@ -2343,59 +2320,63 @@ The following directives are allowed inside a server definition.
               The \verb+Arg+ argument will have the missing path
               part supplied in its \verb+appmoddata+ field.
 
-\item       \verb+php_handler+ -
-              Set handler to interpret .php files. It can be one of the
-              following definitions:
+\item       \verb+php_handler+ ---
+              Set handler to interpret \textit{.php} files. It can be
+              one of the following definitions:
 
               \begin{itemize}
-              \item \verb+php_handler = <cgi, Filename>+ - The name of (and possibly
-                path to) the php executable used to interpret php scripts (if
-                allowed).
-              \item \verb+php_handler = <fcgi, Host:Port>+ - Use the specified
-                fastcgi server to interpret .php files (if allowed).
+              \item \verb+php_handler = <cgi, Filename>+ --- The name
+                of (and possibly path to) the PHP executable used to
+                interpret PHP scripts (if allowed).
+              \item \verb+php_handler = <fcgi, Host:Port>+ --- Use the
+                specified FastCGI server to interpret \textit{.php}
+                files (if allowed).
 
-                Yaws does not start the PHP interpreter in fastcgi mode for
-                you. To run PHP in fastcgi mode, call it with the -b option. For
-                example:
+                \Yaws\ does not start the PHP interpreter in FastCGI
+                mode for you. To run PHP in FastCGI mode, call it with
+                the \textit{-b} option. For example:
 \begin{verbatim}
        php5-cgi -b '127.0.0.1:54321'
 \end{verbatim}
-                This starts a php5 in fastcgi mode listening on the local
-                network interface. To make use of this PHP server from yaws,
-                specify:
+                This starts PHP5 in FastCGI mode listening on the local
+                network interface. To make use of this PHP server from
+                \Yaws{}, specify:
 \begin{verbatim}
        php_handler = <fcgi, 127.0.0.1:54321>
 \end{verbatim}
-                The PHP interpreter needs read access to the files it is to
-                serve. Thus, if you run it in a different security context than
-                yaws itself, make sure it has access to the .php files.
+                The PHP interpreter needs read access to the files it
+                is to serve. Thus, if you run it in a different
+                security context than \Yaws\ itself, make sure it has
+                access to the \textit{.php} files.
 
-                Please note that anyone who is able to connect to the php
-                fastcgi server directly can use it to read any file to which it
-                has read access. You should consider this when setting up a
-                system with several mutually untrusted instances of php.
+                Please note that anyone who is able to connect to the PHP
+                FastCGI server directly can use it to read any file to
+                which it has read access. You should consider this
+                when setting up a system with several mutually
+                untrusted instances of PHP.
 
               \item \verb+php_handler = <extern, Module:Function | Node:Module:Function>+
-                - Use an external handler, possibly on another node, to
-                interpret .php files (if allowed).
+                --- Use an external handler, possibly on another node, to
+                interpret \textit{.php} files (if allowed).
 
-                To interpret a .php file, the function
-                \verb+Module:Function(Arg)+ will be invoked (Evaluated inside a
-                rpc call if a \verb+Node+ is specified), where Arg is a \#arg{}
-                record.
+                To interpret a \textit{.php} file, the function
+                \verb+Module:Function(Arg)+ will be invoked (evaluated
+                inside an rpc call if a \verb+Node+ is specified),
+                where \verb+Arg+ is a \verb+#arg{}+ record.
 
-                The function must do the same things that a normal out/1 does.
+                The function must do the same things that a normal
+                \verb+out/1+ does.
 
               \end{itemize}
               Default value is \verb+<cgi, "/usr/bin/php-cgi">+.
 
-\item       \verb+phpfcgi = HostPortSpec+ -
+\item       \verb+phpfcgi = HostPortSpec+ ---
               this target is deprecated. use \verb+php_handler+ target in server
               part instead.
 
               Use this directive is same as: \verb+php_handler = <fcgi, HostPortSpec>+.
 
-\item       \verb+fcgi_app_server = HostPortSpec+ -
+\item       \verb+fcgi_app_server = HostPortSpec+ ---
               The hostname (or IP address) and TCP port of a
               FastCGI application server. This is separate from the
               \verb+phpfcgi+ setting and is used for normal FCGI
@@ -2404,15 +2385,15 @@ The following directives are allowed inside a server definition.
               the same server to allow it to serve both \verb+.fcgi+
               and \verb+.php+ files.
 
-\item       \verb+fcgi_trace_protocol = true | false+ -
+\item       \verb+fcgi_trace_protocol = true | false+ ---
               Enable or disable tracing of FastCGI protocol
               messages. This is useful for debugging.
 
-\item       \verb+fcgi_log_app_error = true | false+ -
+\item       \verb+fcgi_log_app_error = true | false+ ---
               Enable or disable logging FCGI application errors (any
               output to stderr and non-zero exit codes).
 
-\item     \verb+errormod_404 = Module+ -
+\item     \verb+errormod_404 = Module+ ---
               It is possible to set a special module  that
               handles 404 Not Found messages.
 
@@ -2422,18 +2403,18 @@ The following directives are allowed inside a server definition.
               \verb+Arg+ is an \verb+arg{}+ record
 
               \verb+GC+ is a \verb+gconf{}+ record (defined in
-              yaws.hrl)
+              \textit{yaws.hrl})
 
               \verb+SC+ is a \verb+sconf{}+ record (defined in
-              yaws.hrl)
+              \textit{yaws.hrl})
 
               The function can and must do the same things
               that a normal \verb+out/1+ does.
 
-\item       \verb+expires = ListOfExpires+ -
+\item       \verb+expires = ListOfExpires+ ---
               Controls the setting of the \verb+Expires+ HTTP header and the
               \verb+max-age+ directive of the \verb+Cache-Control+ HTTP header
-              in server responses for specific mime types. The expiration date
+              in server responses for specific MIME types. The expiration date
               can set to be relative to either the time the source file was last
               modified, or to the time of the client
               access. \verb+ListOfExpires+ is defined as follows:
@@ -2452,7 +2433,7 @@ The following directives are allowed inside a server definition.
        expires = <image/jpeg, access+2592000> <text/css, access+2592000>
 \end{verbatim}
 
-\item       \verb+errormod_crash = Module+ -
+\item       \verb+errormod_crash = Module+ ---
               It  is possible to set a special module that
               handles the HTML generation of server  crash
               messages.  The  default  is  to  display the
@@ -2464,9 +2445,9 @@ The following directives are allowed inside a server definition.
               will  be  called.  The \verb+Str+ is the real crash
               message formatted as a string.
 
-\item       \verb+arg_rewrite_mod = Module+ -
+\item       \verb+arg_rewrite_mod = Module+ ---
               It is possible  to  install  a  module  that
-              rewrites  all  the  Arg arg{} records at an
+              rewrites  all  the  \verb+Arg+ \verb+arg{}+ records at an
               early stage in the \Yaws\  server.  This can be
               used to do various things such as checking a
               cookie, rewriting paths etc.
@@ -2475,21 +2456,21 @@ The following directives are allowed inside a server definition.
               This begins and ends  an  SSL  configuration
               for this server.
 \begin{itemize}
-\item        \verb+keyfile = File+ -
+\item        \verb+keyfile = File+ ---
               Specifies  which  file  contains the private
               key for the certificate.
 
-\item        \verb+certfile = File+ -
+\item        \verb+certfile = File+ ---
               Specifies which file contains  the  certificate for the server.
 
-\item        \verb+cacertfile = File+
-              File  If  the  server  is  setup  to require
-              client certificates. This file needs to contain
+\item        \verb+cacertfile = File+ ---
+              If  the  server  is  setup  to require
+              client certificates, this file needs to contain
               all the certificates of the acceptable
               signers for the client certs.
 
 \item        \verb+verify = 0 | 1 | 2 | verify_none | verify_peer+
-              Specifies the level of verification the server does
+              --- Specifies the level of verification the server does
               on client certs. 0 means that the server will not
               ask for a cert (\verb+verify_none+), 1 means that
               the server will ask the client for a cert but not
@@ -2509,7 +2490,7 @@ The following directives are allowed inside a server definition.
               You might want to use \verb+fail_if_no_peer_cert+
               in combination with \verb+verify_peer+.
 
-\item        \verb+fail_if_no_peer_cert = true | false+
+\item        \verb+fail_if_no_peer_cert = true | false+ ---
               If verify is set to \verb+verify_peer+ and set
               to \verb+true+ the connection will fail if the
               client does not send a certificate (i.e. an empty
@@ -2517,70 +2498,65 @@ The following directives are allowed inside a server definition.
               fail only if an invalid certificate is supplied
               (an empty certificate is considered valid).
 
-\item        \verb+depth = Int+
+\item        \verb+depth = Int+ ---
               Specifies the depth  of  certificate  chains
               the  server is prepared to follow when verifying
               client certs.
 
-\item        \verb+password = String+ -
-              String If the private key  is  encrypted  on
+\item        \verb+password = String+ ---
+              If the private key  is  encrypted  on
               disk,  this  password  is  the  3des  key to
               decrypt it.
 
-\item        c\verb+ciphers = String+
-              This  string  specifies  the  ssl  cipher
-              string.  The syntax of the ssl cipher string
-              is a little horrible sub language of its own.
-              It  is  documented  in  the ssl man page for
+\item        c\verb+ciphers = String+ ---
+              This  string  specifies  the  SSL  cipher
+              string.  The syntax of the SSL cipher string
+              is a little horrible sub-language of its own.
+              It  is  documented  in  the SSL man page for
               "ciphers".
 
-\item        \verb+</ssl>+
+\item        \verb+</ssl>+ ---
               Ends an SSL definition
 \end{itemize}
 
 
-\item       \verb+<auth> ... </auth>+
+\item       \verb+<auth> ... </auth>+ ---
               Defines an  auth  structure.  The  following
               items  are allowed within a matching pair of
               <auth> and </auth> delimiters.
 
 \begin{itemize}
 
-\item       \verb+dir = Dir+
-              Makes Dir to be controlled bu  WWW-authenticate
+\item       \verb+dir = Dir+ ---
+              Makes \verb+Dir+ to be controlled bu  WWW-authenticate
               headers.  In  order for a user to have
               access to WWW-Authenticate controlled  directory,
               the user must supply a password.
 
-\item       \verb+realm = Realm+
+\item       \verb+realm = Realm+ ---
               In  the  directory  defined  here,  the WWW-Authenticate
               Realm is set to this value.
 
-\item       \verb+user = User:Password+
+\item       \verb+user = User:Password+ ---
               Inside this directory,  the  user  User  has
               access  if  the  user  supplies the password
               Password in the pop up dialog presented  by
               the  browser.  We can obviously have several
-              of  these  value  inside  a  single   <auth>
-              </auth> pair.
+              of  these  value  inside  a  single
+              \verb+<auth> </auth>+ pair.
 
-\item       \verb+</auth>+
-              Ends an auth definition
+\item       \verb+</auth>+ ---
+              Ends an auth definition.
 
 
 \end{itemize}
 
 \end{itemize}
-
-
-
 
 
 
 
 \section{Configuration Examples}
-
-
 
        The  following  example  defines a single server on
        port 80.
@@ -2592,10 +2568,10 @@ The following directives are allowed inside a server definition.
                listen = 192.168.128.31
                docroot = /var/yaws/www
        </server>
-
 \end{verbatim}
-       And this example shows a similar setup but two web­
-       servers on the same IP address
+
+       And this example shows a similar setup but two web
+       servers on the same IP address:
 
 \begin{verbatim}
        logdir = /var/log/yaws
@@ -2610,17 +2586,13 @@ The following directives are allowed inside a server definition.
                listen = 192.168.128.31
                docroot = /var/yaws/www_funky_org
        </server>
-
 \end{verbatim}
 
 
-
-When there are several
-virtual hosts defined for the same IP number and port,
-and an HTTP request arrives with a Host field that does
-not match any defined virtual host, then the one which
-defined ``first'' in the file is chosen.
-
+When there are several virtual hosts defined for the same IP number
+and port, and an HTTP request arrives with a \verb+Host+ field that
+does not match any defined virtual host, then the one which defined
+``first'' in the file is chosen.
 
 An example with www-authenticate and no access logging at all.
 
@@ -2643,12 +2615,12 @@ An example with www-authenticate and no access logging at all.
 \end{verbatim}
 
        And  finally  a  slightly more complex example with
-       two servers on the same IP, and one ssl server on a
+       two servers on the same IP, and one SSL server on a
        different IP.
 
        The \verb+is_default+ is used to select the funky server if
-       someone types in for example http://192.168.128.31/ in his/her
-       browser.
+       someone types in for example url{http://192.168.128.31/} in
+       his\slash her browser.
 
 
 \begin{verbatim}
