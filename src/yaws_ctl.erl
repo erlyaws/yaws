@@ -541,10 +541,8 @@ check([Id, File| IncludeDirs]) ->
     case yaws_compile:compile_file(atom_to_list(File)) of
         {ok, [{errors, 0}| _Spec]} ->
             timer:sleep(100),erlang:halt(0);
-                                                %            init:stop();
         _Other ->
             timer:sleep(100),erlang:halt(1)
-                                                %            init:stop()
     end.
 
 %% control a daemon http/traffic tracer

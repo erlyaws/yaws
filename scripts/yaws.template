@@ -67,16 +67,16 @@ help()
     echo ""
 
     echo "ctl functions ... "
-    echo "        yaws --hup [--id ID]                 -- hup the daemon, reload conf"
-    echo "        yaws --stop [--id ID]                -- stop the daemon "
-    echo "        yaws --debug-dump [--id ID]          -- produce a debug dump "
-    echo "        yaws --status [--id ID]              -- query the daemon status "
-    echo "        yaws --load Modules                  -- load modules "
-    echo "        yaws --ls                            -- list Yaws nodes and their status"
-    echo "        yaws --ctltrace traffic|http         -- toggle trace of running daemon"
-    echo "        yaws --check YawsFile [IncDirs]      -- test compile File "
-    echo "        yaws --wait-started[=secs] [--id ID] -- wait for daemon to be ready"
-    echo "        yaws --stats [--id ID]               -- show daemon statistics"
+    echo "        yaws --hup [--id ID]                                  -- hup the daemon, reload conf"
+    echo "        yaws --stop [--id ID]                                 -- stop the daemon "
+    echo "        yaws --debug-dump [--id ID]                           -- produce a debug dump "
+    echo "        yaws --status [--id ID]                               -- query the daemon status "
+    echo "        yaws --load Modules                                   -- load modules "
+    echo "        yaws --ls                                             -- list Yaws nodes and their status"
+    echo "        yaws --ctltrace traffic|http                          -- toggle trace of running daemon"
+    echo "        yaws --check [--verbose] [--id ID] YawsFile [IncDirs] -- test compile YawsFile"
+    echo "        yaws --wait-started[=secs] [--id ID]                  -- wait for daemon to be ready"
+    echo "        yaws --stats [--id ID]                                -- show daemon statistics"
     exit 1
 }
 
@@ -97,6 +97,9 @@ pdist=""
 erlarg=""
 kpoll=true
 call_wait_started=""
+check=""
+checkargs=""
+verbose=""
 program=$0
 
 wait_started() {
@@ -270,17 +273,9 @@ while [ $# -gt 0 ]
           erlarg="$erlarg $1 "
           shift;;
       -check|--check)
-          checkid=${id:-default}
-          mkdir ${HOME}/.yaws/yaws 2> /dev/null
-          mkdir ${HOME}/.yaws/yaws/$checkid 2> /dev/null
-          out=`exec $erl -noshell -pa ${yawsdir}${delim}ebin $xpath -s yaws_ctl check $checkid $*`
-          if [ "$?" = "0" ]; then
-              echo "$out"
-              echo "$1" ok
-              exit 0
-          fi
-          echo "$out"
-          exit 1;;
+          check="$erl -noshell -pa ${yawsdir}${delim}ebin $xpath -s yaws_ctl check";;
+      --verbose)
+          verbose=true;;
       --to_erl)
           TO_ERL=yes
           PIPE_DIR="${vardir}/run/yaws/pipe/$1"
@@ -295,7 +290,11 @@ while [ $# -gt 0 ]
           umask $1
           shift;;
       *)
-          help
+          if [ -z "$check" ]; then
+              help
+          else
+              checkargs="$checkargs $arg "
+          fi
   esac
 done
 YAWS_HEART_COUNT=${YAWS_HEART_COUNT:-5}
@@ -303,6 +302,26 @@ YAWS_HEART_SECS=${YAWS_HEART_SECS:-60}
 export YAWS_HEART_COUNT YAWS_HEART_SECS
 
 [ -n "$call_wait_started" ] && wait_started $call_wait_started
+
+if [ -n "$check" ]; then
+    checkid=${id:-default}
+    set $checkargs
+    check="$check $checkid $checkargs"
+    mkdir ${HOME}/.yaws/yaws 2> /dev/null
+    mkdir ${HOME}/.yaws/yaws/$checkid 2> /dev/null
+    if [ -n "$verbose" ]; then
+        out=`exec $check`
+        if [ "$?" = "0" ]; then
+            [ -n "$out" ] && echo "$out"
+            echo "$1" ok
+            exit 0
+        fi
+        echo "$out"
+        exit 1
+    else
+        exec $check
+    fi
+fi
 
 if [ -n "$ex" ]; then
     [ -n "$id" ] && execid=$id || execid=default

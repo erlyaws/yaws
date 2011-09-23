@@ -921,6 +921,13 @@ mime_type(FileName) ->
 stream_chunk_deliver(YawsPid, Data) ->
     YawsPid  ! {streamcontent, Data}.
 
+
+%% Use timeout here to guard against bug in the SSL application
+%% that apparently does not close the socket in between
+%% ssl_esock and erlang (FIN_WAIT2 resp. CLOSE_WAIT).
+%% Thus, the stream process hangs forever...
+-define(STREAM_GARBAGE_TIMEOUT, 3600000). % 1 hour
+
 %% Synchronous (on ultimate gen_tcp:send) delivery
 %% Returns: ok | {error, Rsn}
 stream_chunk_deliver_blocking(YawsPid, Data) ->
@@ -938,6 +945,16 @@ stream_chunk_deliver_blocking(YawsPid, Data) ->
             end;
         {'DOWN', Ref, _, _, Info} ->
             {error, {ypid_crash, Info}}
+    after ?STREAM_GARBAGE_TIMEOUT ->
+            %% Killing (unless this function is caught) process tree but
+            %% NOTE that as this is probably due to the OTP SSL application
+            %% not managing to close the socket (FIN_WAIT2
+            %% resp. CLOSE_WAIT) the SSL process is not killed (it traps
+            %% exit signals) and thus we will leak one file descriptor.
+	    error_logger:error_msg(
+	      "~p:stream_chunk_deliver_blocking/2 STREAM_GARBAGE_TIMEOUT "
+	      "(default 1 hour). Killing ~p", [?MODULE, YawsPid]),
+	    erlang:error(stream_garbage_timeout, [YawsPid, Data])
     end.
 
 stream_chunk_end(YawsPid) ->

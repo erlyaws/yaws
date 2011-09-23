@@ -21,6 +21,7 @@
 
 %% External exports
 -export([start_link/1]).
+-export([safe_decode_path/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -35,7 +36,7 @@
 %% internal exports
 -export([gserv/3,acceptor0/2, load_and_run/2, done_or_continue/0,
          accumulate_content/1, deliver_accumulated/5, setup_dirs/1,
-         deliver_dyn_part/8, finish_up_dyn_file/2
+         deliver_dyn_part/8, finish_up_dyn_file/2, gserv_loop/4
         ]).
 
 -export(['GET'/3,
@@ -569,22 +570,22 @@ gserv_loop(GS, Ready, Rnum, Last) ->
     receive
         {From , status} ->
             From ! {self(), GS},
-            gserv_loop(GS, Ready, Rnum, Last);
+            ?MODULE:gserv_loop(GS, Ready, Rnum, Last);
         {_From, next, Accepted} when Ready == [] ->
             close_accepted_if_max(GS,Accepted),
             New = acceptor(GS),
             GS2 = GS#gs{sessions = GS#gs.sessions + 1,
                         connections = GS#gs.connections + 1},
-            gserv_loop(GS2, Ready, Rnum, New);
+            ?MODULE:gserv_loop(GS2, Ready, Rnum, New);
         {_From, next, Accepted} ->
 	    close_accepted_if_max(GS,Accepted),
             [{_Then, R}|RS] = Ready,
             R ! {self(), accept},
  	    GS2 = GS#gs{connections=GS#gs.connections + 1},
-            gserv_loop(GS2, RS, Rnum-1, R);
+            ?MODULE:gserv_loop(GS2, RS, Rnum-1, R);
 	{_From, decrement} ->
  	    GS2 = GS#gs{connections=GS#gs.connections - 1},
- 	    gserv_loop(GS2, Ready, Rnum, Last);
+ 	    ?MODULE:gserv_loop(GS2, Ready, Rnum, Last);
         {From, done_client, Int} ->
             GS2 = if
                       Int == 0 -> GS#gs{connections = GS#gs.connections - 1};
@@ -594,10 +595,10 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             if
                 Rnum == 8 ->
                     From ! {self(), stop},
-                    gserv_loop(GS2, Ready, Rnum, Last);
+                    ?MODULE:gserv_loop(GS2, Ready, Rnum, Last);
                 Rnum < 8 ->
                     %% cache this process for 10 secs
-                    gserv_loop(GS2, [{now(), From} | Ready], Rnum+1, Last)
+                    ?MODULE:gserv_loop(GS2, [{now(), From} | Ready], Rnum+1, Last)
             end;
         {'EXIT', Pid, Reason} ->
             case get(top) of
@@ -617,8 +618,25 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
                     exit(noserver);
                 _ ->
-                    gserv_loop(GS#gs{sessions = GS#gs.sessions - 1},
-                               Ready, Rnum, Last)
+                    GS2 = GS#gs{sessions = GS#gs.sessions - 1},
+                    if
+                        Pid == Last ->
+                            %% probably died due to new code loaded; if we
+                            %% don't start a new acceptor here we end up with
+                            %% no active acceptor
+                            error_logger:format("Last acceptor died (~p), "
+                                                "restart it", [Reason]),
+                            New = acceptor(GS),
+                            ?MODULE:gserv_loop(GS2, Ready, Rnum, New);
+                       true ->
+                            case lists:keysearch(Pid, 2, Ready) of
+                                {value, _} ->
+                                    Ready1 = lists:keydelete(Pid, 2, Ready),
+                                    ?MODULE:gserv_loop(GS2, Ready1, Rnum-1, Last);
+                                false ->
+                                    ?MODULE:gserv_loop(GS2, Ready, Rnum, Last)
+                            end
+                    end
             end;
         {From, stop} ->
             unlink(From),
@@ -705,7 +723,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     error_logger:info_msg("Updating sconf for server ~s~n",
                                           [yaws:sconf_to_srvstr(NewSc2)]),
                     New = acceptor(GS2),
-                    gserv_loop(GS2, Ready2, 0, New)
+                    ?MODULE:gserv_loop(GS2, Ready2, 0, New)
             end;
 
         {delete_sconf, OldSc, From} ->
@@ -731,7 +749,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     error_logger:info_msg("Deleting sconf for server ~s~n",
                                           [yaws:sconf_to_srvstr(OldSc)]),
                     New = acceptor(GS2),
-                    gserv_loop(GS2, Ready2, 0, New)
+                    ?MODULE:gserv_loop(GS2, Ready2, 0, New)
             end;
 
         {add_sconf, From, SC0, Adder} ->
@@ -752,7 +770,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             error_logger:info_msg("Adding sconf for server ~s~n",
                                   [yaws:sconf_to_srvstr(SC)]),
             New = acceptor(GS2),
-            gserv_loop(GS2, Ready2, 0, New);
+            ?MODULE:gserv_loop(GS2, Ready2, 0, New);
         {check_cert_changed, From} ->
             Changed =
                 case GS#gs.ssl of
@@ -773,7 +791,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             if
                 Changed == no ->
                     From ! {self(), no},
-                    gserv_loop(GS, Ready, Rnum, Last);
+                    ?MODULE:gserv_loop(GS, Ready, Rnum, Last);
                 Changed == yes ->
                     error_logger:info_msg(
                       "Stopping ~s due to cert change\n",
@@ -793,7 +811,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             put(gc, GC),
             error_logger:info_msg("Updating gconf \n",[]),
             New = acceptor(GS2),
-            gserv_loop(GS2, Ready2, 0, New)
+            ?MODULE:gserv_loop(GS2, Ready2, 0, New)
     after (10 * 1000) ->
             %% collect old procs, to save memory
             {NowMega, NowSecs, _} = now(),
@@ -807,7 +825,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                                               true
                                       end
                               end, Ready),
-            gserv_loop(GS, R2, length(R2), Last)
+            ?MODULE:gserv_loop(GS, R2, length(R2), Last)
     end.
 
 
@@ -969,6 +987,13 @@ acceptor0(GS, Top) ->
                             ok;
                         {error, closed} ->
                             Top ! {self(), decrement},
+                            exit(normal);
+			{error, esslaccept} ->
+			    %% Don't log SSL esslaccept to error log since it
+			    %% seems this is what we get on portscans and
+			    %% similar
+			    ?Debug("SSL accept failed: ~p~n", [Reason]),
+			    Top ! {self(), decrement},
                             exit(normal);
                         {error, Reason} ->
                             error_logger:format("SSL accept failed: ~p~n",
@@ -1198,6 +1223,9 @@ erase_transients() ->
             ok;
        is_list(I) ->
             erase(),
+            %% Need to keep init_db in case we do not enter aloop (i.e. init:db)
+            %% again as R12B-5 requires proc_lib keys in dict while exiting...
+            put(init_db, I),
             lists:foreach(fun({K,V}) -> put(K,V) end, I)
     end.
 
@@ -3399,7 +3427,6 @@ delim_split(_,_,[],Ack,DAcc) ->
 handle_crash(ARG, L) ->
     ?Debug("handle_crash(~p)~n", [L]),
     SC=get(sc),
-    yaws:elog("~s", [L]),
     yaws:outh_set_status_code(500),
     case catch apply(SC#sconf.errormod_crash, crashmsg, [ARG, SC, L]) of
         {content,MimeType,Cont} ->
@@ -4629,37 +4656,33 @@ safe_ehtml_expand(X) ->
 err_pre(R) ->
     io_lib:format("<pre> ~n~p~n </pre>~n", [R]).
 
-
-%%mappath/3    (virtual-path to physical-path)
-%%- this returns physical path a URI would map to, taking into consideration
-%% vdirs and assuming each path segment of the URI represents a folder
-%% (or maybe filename at end).
-%% ie it does not (and is not intended to) take into account 'script points'
-%% in the path. (cgi,fcgi,php,appmod etc)
-%% The result may not actually exists as a path.
+%% mappath/3    (virtual-path to physical-path)
+%% - this returns physical path a URI would map to, taking into consideration
+%%   vdirs and assuming each path segment of the URI represents a folder
+%%   (or maybe filename at end).
+%%   ie it does not (and is not intended to) take into account 'script points'
+%%   in the path. (cgi,fcgi,php,appmod etc)
+%%   The result may not actually exists as a path.
 %%
 %% mappath/3 is analogous to the Microsoft ASP function Server.MapPath or
 %% the 'filename' array member of the result
 %% of the PHP function 'apache_lookup_uri'.
 %%
 mappath(SC, ARG, RequestPath) ->
-
     {VirtualDir, DR} = vdirpath(SC, ARG, RequestPath),
-
     PhysicalPath = construct_fullpath(DR, RequestPath, VirtualDir),
-
-    %%Resultant path might not exist - that's not the concern of the
-    %% 'mappath' function.
+    %% Resultant path might not exist - that's not the concern of the
+    %%  'mappath' function.
     PhysicalPath.
 
 
-%%vdirpath/3
-%%find longest "vdir" match.
-%% (ie a 'document-root mount-point' -> DOCUMENT_ROOT_MOUNT)
+%% vdirpath/3
+%% find longest "vdir" match.
+%%  (ie a 'document-root mount-point' -> DOCUMENT_ROOT_MOUNT)
 %%
-%%e.g if we have in our .conf:
-%%   vdir = "/app/  /path1/somewhere"
-%%   vdir = "/app/test/shared/ /path2/somewhere"
+%% e.g if we have in our .conf:
+%%    vdir = "/app/  /path1/somewhere"
+%%    vdir = "/app/test/shared/ /path2/somewhere"
 %%
 %% A request path of /app/test/doc.html  must be served from under
 %% /path1/somewhere
@@ -4667,20 +4690,20 @@ mappath(SC, ARG, RequestPath) ->
 %%
 %% Also must be able to handle:
 %%   vdir = "/somewhere/ /path3/has spaces/in path/docs"
-%%In this case, the 1st space separates the vdir from the physical path
-%% i.e subsequent spaces are part of the path.
+%% In this case, the 1st space separates the vdir from the physical path
+%%  i.e subsequent spaces are part of the path.
 
 vdirpath(SC, ARG, RequestPath) ->
     Opaquelist = ARG#arg.opaque,
-    %%!todo - move out of opaque.
-    %% We don't want to scan all opaque entries each time
-    %%- vdir directives should be pre-collated into a list somewhere.
-    %% (own field in sconf record)
+    %% !todo - move out of opaque.
+    %%  We don't want to scan all opaque entries each time
+    %%  - vdir directives should be pre-collated into a list somewhere.
+    %%  (own field in sconf record)
 
 
     RequestSegs = string:tokens(RequestPath,"/"),
 
-    %%Accumulator is of form {RequestSegs,{VdirMountPoint,VdirPhysicalPath}}
+    %% Accumulator is of form {RequestSegs,{VdirMountPoint,VdirPhysicalPath}}
     Matched =
         lists:foldl(
           fun(ListItem,Acc) ->
@@ -4695,7 +4718,7 @@ vdirpath(SC, ARG, RequestPath) ->
                               true ->
                                   {LongestSoFar,_} = VdirSpec,
                                   if length(Virt) > length(LongestSoFar) ->
-                                          %%reassemble (because physical
+                                          %% reassemble (because physical
                                           %% path may have spaces)
                                           Phys = yaws:join_sep(PhysParts, " "),
 
@@ -4707,7 +4730,7 @@ vdirpath(SC, ARG, RequestPath) ->
                                   Acc
                           end;
                       _Else ->
-                          %%irrelevant member of opaque list. no change in
+                          %% irrelevant member of opaque list. no change in
                           %% accumulator
                           Acc
                   end
@@ -4716,8 +4739,8 @@ vdirpath(SC, ARG, RequestPath) ->
 
     case Matched of
         {_RequestSegs, {"",""}} ->
-            %%no virtual dir corresponding to this http_request.path
-            %%NOTE - we *don't* know that the state of ARG#arg.docroot
+            %% no virtual dir corresponding to this http_request.path
+            %% NOTE - we *don't* know that the state of ARG#arg.docroot
             %% currently reflects the main docroot
             %% specified for the virtual server in the conf file.
             %% This is because we may be being called from a page that is
@@ -4741,7 +4764,7 @@ vdirpath(SC, ARG, RequestPath) ->
             Result = {VirtualDir, DR}
     end,
 
-    %%return {VdirURI, Physpath}  - i.e tuple representing the data
+    %% return {VdirURI, Physpath}  - i.e tuple representing the data
     %% specified in conf file for the 'vdir' directive.
     Result.
 
