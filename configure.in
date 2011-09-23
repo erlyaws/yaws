@@ -274,7 +274,7 @@ case "$host_os" in
            AC_LANG(C)
            AC_CHECK_LIB([c],[sendfile],[HAVE_SENDFILE=true])
            case "$host_os" in
-               darwin10*)
+               darwin1?*)
                    AC_LANG(Erlang)
                    AC_RUN_IFELSE(
                        [AC_LANG_PROGRAM([],[dnl
