@@ -139,6 +139,12 @@ value. Other process options are ignored. The proplist may also be
 empty. See \fBerlang:spawn_opt/4\fR for details on these options.
 
 .TP
+\fBacceptor_pool_size = Integer\fR
+Set the size of the pool of cached acceptor processes. The specified
+value must be greater than or equal to 0. The default value is
+8. Specifying a value of 0 effectively disables the process pool.
+
+.TP
 \fBlog_wrap_size = Integer\fR
 The logs written by yaws are all wrap logs, the default value at the
 size where they wrap around and the original gets renamed to File.old

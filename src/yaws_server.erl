@@ -592,11 +592,12 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                       Int > 0  -> GS#gs{reqs = GS#gs.reqs+Int,
                                         connections = GS#gs.connections - 1}
                   end,
+            PoolSize = (GS#gs.gconf)#gconf.acceptor_pool_size,
             if
-                Rnum == 8 ->
+                Rnum == PoolSize ->
                     From ! {self(), stop},
                     ?MODULE:gserv_loop(GS2, Ready, Rnum, Last);
-                Rnum < 8 ->
+                Rnum < PoolSize ->
                     %% cache this process for 10 secs
                     ?MODULE:gserv_loop(GS2, [{now(), From} | Ready], Rnum+1, Last)
             end;

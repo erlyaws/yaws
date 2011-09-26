@@ -87,14 +87,15 @@
                                     % ips we will replace with the last element
                                     % of the list in the X-Forwarded-For http
                                     % header in logs
-               yaws,                %% server string
-               id = "default",      %% string identifying this instance of yaws
-               enable_soap = false, %% start yaws_soap_srv iff true
-               soap_srv_mods = [],  %% a list of
-                                    %% {{Mod, Func}, WsdlFile, Prefix } |
-                                    %%        {{Mod, Func}, WsdlFile}
-                                    %% automatically setup in yaws_soap_srv init.
-               ysession_mod = yaws_session_server %% storage module for ysession
+               yaws,                % server string
+               id = "default",      % string identifying this instance of yaws
+               enable_soap = false, % start yaws_soap_srv iff true
+               soap_srv_mods = [],  % a list of
+                                    % {{Mod, Func}, WsdlFile, Prefix } |
+                                    %        {{Mod, Func}, WsdlFile}
+                                    % automatically setup in yaws_soap_srv init.
+               ysession_mod = yaws_session_server, % storage module for ysession
+               acceptor_pool_size = 8              % size of acceptor proc pool
               }).
 
 

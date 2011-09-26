@@ -661,6 +661,15 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("~s at line ~w", [Str, Lno])}
             end;
 
+        ["acceptor_pool_size", '=', Int] ->
+            case catch list_to_integer(Int) of
+                I when is_integer(I), I >= 0 ->
+                    fload(FD, globals, GC#gconf{acceptor_pool_size = I},
+                          C, Cs, Lno+1, Next);
+                _ ->
+                    {error, ?F("Expect integer >= 0 at line ~w", [Lno])}
+            end;
+
         ["log_wrap_size", '=', Int] ->
             case (catch list_to_integer(Int)) of
                 I when is_integer(I) ->

@@ -2149,6 +2149,12 @@ part where options for each virtual host is supplied.
               proplist may also be empty. See
               \verb+erlang:spawn_opt/4+ for details on these options.
 
+\item        \verb+acceptor_pool_size = Integer+
+              Set the size of the pool of cached acceptor
+              processes. The specified value must be greater than or
+              equal to 0. The default value is 8. Specifying a value
+              of 0 effectively disables the process pool.
+
 \end{itemize}
 
 
