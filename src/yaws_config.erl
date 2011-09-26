@@ -558,48 +558,22 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                                       fun(N) ->
                                               filename:absname(N, Dir)
                                       end, Names),
-                            case lists:foldl(
-                                   fun(File, Acc) ->
-                                           case Acc of
-                                               {error, _Err} ->
-                                                   Acc;
-                                               {ok, GCp, Csp} ->
-                                                   case is_file(File) of
-                                                       true ->
-                                                           error_logger:info_msg(
-                                                             "Yaws: Using subconfig file ~s~n",
-                                                             [File]),
-                                                           case file:open(File, [read]) of
-                                                               {ok, FD1} ->
-                                                                   R = (catch fload(FD1,
-                                                                                    globals,
-                                                                                    GCp,
-                                                                                    undefined,
-                                                                                    Csp,
-                                                                                    1,
-                                                                                    io:get_line(FD1, ''))),
-                                                                   ?Debug("FLOAD: ~p", [R]),
-                                                                   R;
-                                                               _ ->
-                                                                   {error, "Can't open config file " ++
-                                                                        File}
-                                                           end;
-                                                       false ->
-                                                           %% Ignore subdirectories
-                                                           Acc
-                                                   end
-                                           end
-                                   end, {ok, GC, Cs}, Paths) of
+                            Fold = lists:foldl(
+                                     fun subconfigdir_fold/2,
+                                     {ok, GC, Cs}, Paths),
+                            case Fold of
                                 {ok, GC1, Cs1} ->
                                     fload(FD, globals, GC1, C, Cs1, Lno+1, Next);
                                 Err ->
                                     Err
                             end;
                         {error, Error} ->
-                            {error, ?F("Directory ~s is not readable: ~s", [Name, Error])}
+                            {error, ?F("Directory ~s is not readable: ~s",
+                                       [Name, Error])}
                     end;
                 false ->
-                    {error, ?F("Expect directory at line ~w (subconfdir: ~s)", [Lno, Dir])}
+                    {error, ?F("Expect directory at line ~w (subconfdir: ~s)",
+                               [Lno, Dir])}
             end;
 
         ["trace", '=', Bstr] when GC#gconf.trace == false ->
@@ -1731,9 +1705,10 @@ is_string_char([C|T]) ->
 is_special(C) ->
     lists:member(C, [$=, $<, $>, $,]).
 
-%% parse the argument string PLString which can either be the undefined atom
-%% or a proplist. Currently the only supported keys are fullsweep_after and
-%% min_heap_size. Any other key/values are ignored.
+%% parse the argument string PLString which can either be the undefined
+%% atom or a proplist. Currently the only supported keys are
+%% fullsweep_after, min_heap_size, and min_bin_vheap_size. Any other
+%% key/values are ignored.
 parse_process_options(PLString) ->
     case erl_scan:string(PLString ++ ".") of
         {ok, PLTokens, _} ->
@@ -1745,7 +1720,8 @@ parse_process_options(PLString) ->
                 {ok, [Hd|_Tl]=PList} when is_atom(Hd); is_tuple(Hd) ->
                     %% create new safe proplist of desired options
                     {ok, proplists_int_copy([], PList, [fullsweep_after,
-                                                        min_heap_size])};
+                                                        min_heap_size,
+                                                        min_bin_vheap_size])};
                 _ ->
                     {error, "Expect undefined or proplist"}
             end;
@@ -2299,3 +2275,28 @@ netmask_to_integer(Type, NetMask) ->
 
 netmask_to_wildcard(ipv4, Mask) -> ((1 bsl ?MAXBITS_IPV4) - 1) bxor Mask;
 netmask_to_wildcard(ipv6, Mask) -> ((1 bsl ?MAXBITS_IPV6) - 1) bxor Mask.
+
+subconfigdir_fold(_File, {error, _Err}=Acc) ->
+    Acc;
+subconfigdir_fold(File, {ok, GCp, Csp}=Acc) ->
+    case is_file(File) of
+        true ->
+            error_logger:info_msg("Yaws: Using subconfig file ~s~n", [File]),
+            case file:open(File, [read]) of
+                {ok, FD1} ->
+                    R = (catch fload(FD1,
+                                     globals,
+                                     GCp,
+                                     undefined,
+                                     Csp,
+                                     1,
+                                     io:get_line(FD1, ''))),
+                    ?Debug("FLOAD: ~p", [R]),
+                    R;
+                _ ->
+                    {error, "Can't open config file " ++ File}
+            end;
+        false ->
+            %% Ignore subdirectories
+            Acc
+    end.
