@@ -2016,7 +2016,7 @@ special command-line switches to the \Erlang\  runtime.
 
 For an example of how to use \verb+yaws_api:embedded_start_conf+ along
 with \verb+yaws_api:setconf+, please see the files
-\verb+www\slash ybed_sup.erl+ and \verb+www\slash ybed.erl+ in the
+\verb+www/ybed_sup.erl+ and \verb+www/ybed.erl+ in the
 \Yaws\  distribution.
 
 \chapter{The config file - yaws.conf}
@@ -2137,6 +2137,17 @@ part where options for each virtual host is supplied.
 
 \item        \verb+subconfigdir = Directory+ ---
              Load all config files in specified directory.
+
+\item        \verb+process_options = undefined | Proplist+ ---
+              Set process spawn options for client acceptor processes.
+              Options must be specified as a quoted string of either
+              the atom \verb+undefined+ or as a proplist of valid
+              process options. The supported options are
+              \verb+fullsweep_after+, \verb+min_heap_size+, and
+              \verb+min_bin_vheap_size+, each taking an associated
+              integer value. Other process options are ignored. The
+              proplist may also be empty. See
+              \verb+erlang:spawn_opt/4+ for details on these options.
 
 \end{itemize}
 
