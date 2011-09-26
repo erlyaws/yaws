@@ -485,16 +485,18 @@ The second way to generate output is by returning a tuple
 following structure:
 
 $EHTML = [EHTML] | \{TAG, Attrs, Body\} |
-                   \{TAG, Attrs\} | \{TAG\} |
-        binary() | character()$
+               \{TAG, Attrs\} | \{TAG\} |\\*
+\hspace*{0.75 in} \{Module, Fun, [Args]\} | fun/0 |\\*
+\hspace*{0.75 in} binary() | character()$
 
-$TAG         = atom()$
+$TAG   = atom()$
 
 $Attrs = [\{HtmlAttribute, Value\}]$
 
-$HtmlAttribute   = atom()$
+$HtmlAttribute = atom()$
 
-$Value = string() | atom()$
+$Value = string() | atom() |
+         \{Module, Fun, [Args]\} | fun/0$
 
 $Body  = EHTML$
 
@@ -530,12 +532,17 @@ expands into the following HTML code:
 
 \end{verbatim}
 
-At a first glance it may appears as if the HTML code is more
-beautiful than the \Erlang\  tuple. That may very well be the
-case from a purely aesthetic point of view. However the
-\Erlang\  code has the advantage of being perfectly indented by editors
-that have syntax support for \Erlang\  (read Emacs). Furthermore, the \Erlang\
-code is easier to manipulate from an \Erlang\  program.
+At a first glance it may appears as if the HTML code is more beautiful
+than the \Erlang\ tuple. That may very well be the case from a purely
+aesthetic point of view. However the \Erlang\ code has the advantage
+of being perfectly indented by editors that have syntax support for
+\Erlang\ (read Emacs). Furthermore, the \Erlang\ code is easier to
+manipulate from an \Erlang\ program.
+
+Note that ehtml supports function calls as values. Functions can
+return any legal ehtml value, including other function
+values. \Yaws\ supports \verb+{M,F,A}+ and \verb+fun/0+ function value
+forms.
 
 As an example of some more interesting ehtml we could have an
 \verb+out/1+ function that prints some of the HTTP headers.  In the
@@ -544,14 +551,13 @@ file called \verb+arg.yaws+. The file demonstrates the \verb+Arg+
 \verb+#arg+ record parameter which is passed to the \verb+out/1+
 function.
 
-
 But before we discuss that code, we describe the \verb+Arg+ record
 in detail.
 
 Here is the \verb+yaws_api.hrl+ file which is in included by default
 in all \Yaws\ files. The \verb+#arg{}+ record contains many fields
 that are useful when processing HTTP request dynamically.  We have
-access to basically all the information which associated to the client
+access to basically all the information associated with the client
 request such as:
 
 \begin{itemize}
@@ -690,7 +696,7 @@ out(A) ->
 
 \end{verbatim}
 
-The code utilizes 4 functions from the \verb+yaws_api+ module.  The
+The code utilizes four functions from the \verb+yaws_api+ module.  The
 \verb+yaws_api+ module is a general purpose www API module that
 contains various functions that are handy while developing
 \Yaws\ code. We will see many more of those functions during the
@@ -904,10 +910,10 @@ or:
  {temp_file, "full pathname of the temp file"} | _T]
 \end{verbatim}
 
-Some multipart/form messages also include headers such as
-\verb+Content-Type+ and \verb+Content-Transfer-Encoding+ for different
-subparts of the message. If these headers are present in any subpart
-of a multipart/form message, they're also included in that subpart's
+Some multipart/form messages also headers such as \verb+Content-Type+
+and \verb+Content-Transfer-Encoding+ for different subparts of the
+message. If these headers are present in any subpart of a
+multipart/form message, they're also included in that subpart's
 parameter list, like this:
 
 \begin{verbatim}
@@ -1015,8 +1021,8 @@ encrypted pages to the WWW client. SSL is widely deployed on the
 Internet and virtually all bank transactions as well as all online
 shopping today is done with SSL encryption. There are many good
 sources on the net that describe SSL in detail, so we will not try to
-do that here.  There is for example a good document at:
-\url{http://www.tldp.org/HOWTO/SSL-Certificates-HOWTO/} which
+do that here.  See for example
+\url{http://www.tldp.org/HOWTO/SSL-Certificates-HOWTO/}, which
 describes how to manage certificates and keys.
 
 In order to run an SSL server we must have a certificate. Either we
@@ -1116,10 +1122,10 @@ following 5 API functions to aid us:
 
 \end{enumerate}
 
-All cookie-based applications are different but they have
-some things in common. In the example that follow we assume the
-existence of a function \verb+myapp:auth(UserName, Passwd)+ and it
-returns \verb+ok+ or \verb+{error, Reason}+.
+All cookie-based applications are different but they have some things
+in common. In the following examples we assume the existence of a
+function \verb+myapp:auth(UserName, Passwd)+ and it returns \verb+ok+
+or \verb+{error, Reason}+.
 
 Let's assume the following record:
 
@@ -1324,9 +1330,9 @@ both easy and convenient.
 
 Once the user has logged in we can typically use the user name as key
 into the database. We can mix \verb+ram_tables+ and \verb+disc_tables+
-to our liking. The Mnesia database must be initialized by means of
- \verb+create_table/2+ before it can be used. This is typically done
- while installing the web application on a machine.
+to our liking. The Mnesia database must be initialized via
+\verb+create_table/2+ before it can be used. This is typically done
+while installing the web application on a machine.
 
 Another option is to let the application check that Mnesia
 is initialized whenever the application starts.
@@ -1573,11 +1579,12 @@ though, it must pass the atom \verb+closed+ as the first argument to
 \Yaws\ that the socket has been closed and it should no longer attempt
 to use it.
 
-App\-li\-ca\-tions that use \verb+streamcontent_from_pid+ that also
-want to a\-void chunked transfer encoding for their streams should be
-sure to include a setting for the \verb+Content-Length+ header in
-their \verb+out/1+ return value. \Yaws\ automatically sets
-the \verb+Transfer-Encoding+ header to \verb+chunked+ if it does not
+App\-li\-ca\-tions that use the \verb+streamcontent_from_pid+
+directive that also want to a\-void chunked transfer encoding for
+their streams should be sure to include a set\-ting for the
+\verb+Content-Length+ header in their \verb+out/1+ return
+value. \Yaws\ au\-to\-mat\-i\-cal\-ly sets the
+\verb+Transfer-Encoding+ head\-er to \verb+chunked+ if it does not
 detect a \verb+Content-Length+ header.
 
 \section{All out/1 return values}
@@ -2233,8 +2240,8 @@ The following directives are allowed inside a server definition.
                           accessing client (as a tuple).
 
                         \item \verb+Req+ - the HTTP me\-thod, URI
-                          path, and HTTP version of the request (as a
-                          \verb+#http_request{}+ record).
+                          path, and HTTP ver\-sion of the\\*request
+                          (as a \verb+#http_request{}+ record).
 
                         \item \verb+InHdrs+ --- the HTTP headers which
                           were sent from the WWW client (as a
@@ -2310,7 +2317,7 @@ The following directives are allowed inside a server definition.
               path request parsing will terminate and that
               module will be called.
 
-              Assume  for  example  that  we  have  the  URL
+              Assume  for  example  we  have  the  URL
               \url{http://www.hyber.org/myapp/foo/bar/baz?user=joe}
               while we have the module \verb+foo+ defined  as  an
               appmod,  the  function  \verb+foo:out(Arg)+ will be
