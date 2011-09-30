@@ -16,7 +16,10 @@ html_body(WebSocketLocation) ->
 <head>
   <title>Basic WebSocket Example</title>
   <script type=\"text/javascript\">
-     if (!window.WebSocket)
+     var WS = false;
+     if (window.WebSocket) WS = WebSocket;
+     if (!WS && window.MozWebSocket) WS = MozWebSocket;
+     if (!WS)
         alert(\"WebSocket not supported by this browser\");
 
     // Get an Element
@@ -26,7 +29,7 @@ html_body(WebSocketLocation) ->
 
     var client = {
         connect: function(){
-         this._ws=new WebSocket(\"ws://" ++ WebSocketLocation ++ "\");
+         this._ws=new WS(\"ws://" ++ WebSocketLocation ++ "\");
          this._ws.onopen=this._onopen;
          this._ws.onmessage=this._onmessage;
          this._ws.onclose=this._onclose;
@@ -73,6 +76,9 @@ html_body(WebSocketLocation) ->
 </head>
 <body>
   <h1>Basic Echo Example</h1>
+  <ul><li>Sending \"bye\" closes the connection.</li>
+      <li>Sending \"say hi later\" sends \"hi there!\" asynchronously.</li>
+      <li>Sending \"something\" does nothing.</li></ul>
   <div id=\"msgs\"></div>
   <div id=\"connect\">
      <input id='cA' class='button' type='submit' name='connect' value='Connect'/>
@@ -85,7 +91,7 @@ html_body(WebSocketLocation) ->
 
   <script type='text/javascript'>
     $('cA').onclick = function(event) { client.connect(); return false; };
-    $('sendB').onclick = function(event) { client.chat($F('phrase')); $('phrase').value=''; return false; };
+    $('sendB').onclick = function(event) { client.chat($F('phrase')); $('phrase').value=''; $('phrase').focus(); return false; };
  </script>
   </body>
 </html>".

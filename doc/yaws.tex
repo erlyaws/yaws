@@ -107,13 +107,13 @@ generated pages.
 \item Application Modules where virtual directory hierarchies can
 be made.
 \item Embedded mode
-\item WebSockets
+\item WebSockets (RFC 6455)
 \end{enumerate}
 
 \section{Prerequisites}
 This document requires that the reader:
 \begin{itemize}
-\item Is well acquainted with the \Erlang\  programming language
+\item Is well acquainted with the \Erlang\  programming language.
 \item Understands basic Web technologies.
 \end{itemize}
 
@@ -1663,6 +1663,10 @@ detect a \verb+Content-Length+ header.
   is \verb+{header, H}+ with the effect of accumulating the HTTP
   header \verb+H+ for page \verb+Page+.
 
+\item \verb+{websocket, CallbackModule, Options}+ Tell \Yaws\  to use
+  \verb+CallbackModule+ as a WebSockets Protocol handler for traffic
+  on the client socket. See chapter \ref{websockets} for more details.
+
 \item \verb+[ListOfValues]+ It is possible to return a list of the
   above defined return values.  Any occurrence of
   \verb+stream_content+, \verb+get_more+, or \verb+page+ in this list
@@ -2672,5 +2676,142 @@ An example with www-authenticate and no access logging at all.
        </server>
 \end{verbatim}
 
+\chapter{WebSocket Protocol Support}
+\label{websockets}
+
+\Yaws\ supports the WebSocket Protocol (RFC 6455), which enables
+two-way communication between clients and web servers. \Yaws\ also
+provides support for working drafts of the WebSocket protocol,
+specifically drafts 10 to 17 of the hybi working group. No support for
+other drafts, such as those from the hixie working group, is provided.
+
+You can find example usage of the WebSocket Protocol in the file
+\verb+www/websockets_example.yaws+. This example, intended for use
+with any browser supporting RFC 6455, returns HTML and JavaScript that
+allow the client to establish a WebSocket connection to the
+server. These connections are handled by the code in
+\verb+www/websockets_example_endpoint.yaws+, which when invoked simply
+establishes \\ \verb+src/basic_echo_callback.erl+ as the WebSocket
+callback module for the connection.
+
+\section{WebSocket Callback Modules}
+
+A WebSocket callback module implements either the
+\verb+handle_message/1+ callback function or the
+\\ \verb+handle_message/2+ callback function, depending on whether
+it's a basic or advanced callback module.
+
+\subsection{Basic Callback Modules}
+
+The argument passed to \verb+handle_message/1+ callback function takes
+one of the following forms:
+
+\begin{itemize}
+
+\item \verb+{text, Text}+ --- the callback receives an unfragmented
+  text message.
+
+\item \verb+{binary, Message}+ --- the callback receives an
+  unfragmented binary message.
+
+\end{itemize}
+
+The \verb+handle_message/1+ callback function supplies one of the
+following as a return value:
+
+\begin{itemize}
+
+\item \verb+noreply+ --- do nothing, just wait for the next message.
+
+\item \verb+{reply, {Type, Data}}+ --- reply to the
+  message. \verb+Type+ must be either \verb+text+ or \verb+binary+ to
+  indicate the type of data in the reply message, and \verb+Data+ is
+  the reply message itself.
+
+\item \verb+{close, Reason}+ --- close the connection and exit the
+  handling process with \verb+Reason+. For a regular non-error close,
+  \verb+Reason+ should be the atom \verb+normal+.
+
+\end{itemize}
+
+To inform \Yaws\ of the details of your callback module, return
+\verb+{websocket, CallbackModule, Options}+ from your \verb+out/1+
+function, where \verb+CallbackModule+ is the name of your callback
+module and \verb+Options+ is a list of options. The following options
+are available:
+
+\begin{itemize}
+
+\item \verb+{callback, CallbackType}+ --- supply this atom to indicate
+  the type of the callback module. \\ \verb+CallbackType+ can be
+  either of the following:
+
+\begin{itemize}
+
+\item \verb+basic+ --- specify this to indicate your callback module
+  is the basic type. This is the default.
+
+\item \verb+{advanced, InitialState}+ --- specify this to indicate
+  your callback module is an advanced callback module. Here,
+  \verb+InitialState+ is the callback's initial state for handling
+  this client. See \ref{advanced_ws} for more details.
+
+\end{itemize}
+
+\item \verb+{origin, Origin}+ --- specify the \verb+Origin+ URL from
+  which messages will be accepted. This is useful for protecting
+  against cross-site attacks. This option defaults to \verb+any+,
+  meaning calls will be accepted from any origin.
+
+\end{itemize}
+
+\subsection{Advanced Callback Modules}
+\label{advanced_ws}
+
+Advanced callback modules---those that want to supply their own
+initial state and are prepared to handle fragmented messages
+themselves---supply a \verb+handle_message/2+ callback function.
+
+To indicate an advanced callback module, include
+\verb+{callback, {advanced, InitialState}}+ in the \verb+Options+ list
+when you return \verb+{websocket, CallbackModule, Options}+ from your
+\verb+out/1+ function, as described above.
+
+The arguments to the \verb+handle_message/2+ callback
+function are as follows:
+
+\begin{itemize}
+
+\item \verb+#ws_frame_info+ --- this record, defined in
+  \verb+include/yaws_api.hrl+, provides all details of a frame
+  section. See section 5 of RFC 6455 for details.
+
+\item \verb+State+ --- this is the callback module's current
+  state. The initial state is supplied when you return
+  \verb+{callback, {advanced, InitialState}}+ as part of the options
+  list you returned from your \verb+out/1+ function to establish the
+  WebSocket callback module.
+
+\end{itemize}
+
+The return values for the \verb+handle_message/2+ callback function
+can be any of the following:
+
+\begin{itemize}
+
+\item \verb+{noreply, State}+ --- do nothing, just wait for the next
+  message. \verb+State+ is the (possibly updated) state for the
+  callback module.
+
+\item \verb+{reply, Reply, State}+ --- reply to the received message
+  with \verb+Reply+, which is either \verb+{text, Data}+ or
+  \verb+{binary, Data}+. \verb+State+ is the (possibly updated) state
+  for the callback module.
+
+\item \verb+{close, Reason}+ --- close the connection and exit the
+  handling process with \verb+Reason+. For a regular non-error close,
+  \verb+Reason+ should be the atom \verb+normal+.
+
+\end{itemize}
 
 \end{document}

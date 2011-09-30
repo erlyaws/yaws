@@ -37,8 +37,7 @@
          stream_chunk_end/1]).
 -export([stream_process_deliver/2, stream_process_deliver_chunk/2,
          stream_process_deliver_final_chunk/2, stream_process_end/2]).
--export([websocket_send/2, websocket_receive/1,
-         websocket_unframe_data/1, websocket_setopts/2]).
+-export([websocket_send/2]).
 -export([new_cookie_session/1, new_cookie_session/2, new_cookie_session/3,
          cookieval_to_opaque/1, request_url/1,
          print_cookie_sessions/0,
@@ -995,37 +994,9 @@ stream_process_end(Sock, YawsPid) ->
     YawsPid ! endofstreamcontent.
 
 
-websocket_send(Socket, IoList) ->
-    DataFrame = [0, IoList, 255],
-    case Socket of
-	{sslsocket,_,_} ->
-	    ssl:send(Socket, DataFrame);
-	_ ->
-	    gen_tcp:send(Socket, DataFrame)
-    end.
-
-websocket_receive(Socket) ->
-    R = case Socket of
-	    {sslsocket,_,_} ->
-		ssl:recv(Socket, 0);
-	    _ ->
-		gen_tcp:recv(Socket, 0)
-	end,
-    case R of
-	{ok, DataFrames} ->
-	    ReceivedMsgs = yaws_websockets:unframe_all(DataFrames, []),
-	    {ok, ReceivedMsgs};
-	_ -> R
-    end.
-
-websocket_unframe_data(DataFrameBin) ->
-    {ok, Msg, <<>>} = yaws_websockets:unframe_one(DataFrameBin),
-    Msg.
-
-websocket_setopts({sslsocket,_,_}=Socket, Opts) ->
-    ssl:setopts(Socket, Opts);
-websocket_setopts(Socket, Opts) ->
-    inet:setopts(Socket, Opts).
+%% Pid must the the process in control of the websocket connection.
+websocket_send(Pid, {Type, Data}) ->
+    yaws_websockets:send(Pid, {Type, Data}).
 
 
 %% Return new cookie string
