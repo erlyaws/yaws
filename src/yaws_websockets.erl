@@ -18,6 +18,7 @@
 
 handshake(Arg, ContentPid, SocketMode) ->
     CliSock = Arg#arg.clisock,
+    %jdtodo io:format("CliSock ~p~n",[CliSock]),
     case get_origin_header(Arg#arg.headers) of
 	undefined ->
 	    %jdtodo io:format("No origin header.~n"),
@@ -110,13 +111,14 @@ ws_version(Headers) ->
 %% This should take care of all the Data Framing scenarios specified in
 %% http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-66#page-26
 unframe_one(DataFrames) ->
+    % Try to decode as a hybi 10 frame. 
+    % Fall back to the old way if it seems wrong.
     case unmask_one_hy10(DataFrames) of
 	undefined ->
+	    io:format("unframe_one falling back to hixie 76 format.~n", []),
 	    unmask_one_hi76(DataFrames);
 	Else -> Else
     end.
-
-    
 
 unmask_one_hy10(DataFrames) ->
     Frame = binary_to_list(DataFrames),
@@ -125,7 +127,7 @@ unmask_one_hy10(DataFrames) ->
     Second = lists:nth(2, Frame),
     Masked = 128 == 128 band Second,
     case Masked of
-	false -> undefined;
+	false -> undefined; % not guaranteed to be false if it's hixie 76 but it's a start
 	true ->
 	    Len = 127 band Second,
 	    MaskingKey = lists:sublist(Frame, 3, 4),
@@ -138,7 +140,7 @@ unmask_one_hy10(DataFrames) ->
 			  {payloaddata, PayloadData}, 
 			  {unmaskeddata, UnmaskedData}],
 	    io:format("~p~n", [JDUnframed]),
-	    {ok, UnmaskedData, <<>>} %jdtodo baaaaad
+	    {ok, list_to_binary(UnmaskedData), <<>>} %jdtodo baaaaad
     end.
 
 unmask_one_hi76(DataFrames) ->
