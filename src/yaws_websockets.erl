@@ -20,6 +20,7 @@ handshake(Arg, ContentPid, SocketMode) ->
     CliSock = Arg#arg.clisock,
     case get_origin_header(Arg#arg.headers) of
 	undefined ->
+	    %jdtodo io:format("No origin header.~n"),
 	    %% Yaws will take care of closing the socket
 	    ContentPid ! discard;
 	Origin ->
@@ -57,7 +58,18 @@ handshake(Arg, ContentPid, SocketMode) ->
     end,
     exit(normal).
 
+handshake(ws_hy10, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
+    io:format("ws_hy10!~n",[]),
+    Key = get_nonce_header(Arg#arg.headers),
+    AcceptHash = hash_nonce(Key), 
+    ["HTTP/1.1 101 Switching Protocols\r\n",
+     "Upgrade: websocket\r\n",
+     "Connection: Upgrade\r\n",
+     "Sec-WebSocket-Accept: ", AcceptHash , "\r\n",
+     "\r\n"];
+
 handshake(ws_76, Arg, CliSock, WebSocketLocation, Origin, Protocol) ->
+    io:format("ws_76!~n",[]),
     {ok, Challenge} = case CliSock of
                           {sslsocket, _, _} ->
                               ssl:recv(CliSock, 8);
@@ -76,6 +88,7 @@ handshake(ws_76, Arg, CliSock, WebSocketLocation, Origin, Protocol) ->
      "\r\n", ChallengeResponse];
 
 handshake(ws_75, _Arg, _CliSock, WebSocketLocation, Origin, _Protocol) ->
+    io:format("ws_75!~n",[]),
     ["HTTP/1.1 101 Web Socket Protocol Handshake\r\n",
      "Upgrade: WebSocket\r\n",
      "Connection: Upgrade\r\n",
@@ -84,14 +97,51 @@ handshake(ws_75, _Arg, _CliSock, WebSocketLocation, Origin, _Protocol) ->
      "\r\n"].
 
 ws_version(Headers) ->
+    %jdtodo io:format("IDing Websocket Version...~n~p~n",[Headers]),
     case query_header("sec-websocket-key1", Headers) of
-	undefined ->  ws_75;
-	_         ->  ws_76
+	undefined ->  
+	    case get_nonce_header(Headers) of
+		undefined -> ws_75;
+		_         -> ws_hy10
+	    end;
+	_                 -> ws_76
     end.
 
 %% This should take care of all the Data Framing scenarios specified in
 %% http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-66#page-26
 unframe_one(DataFrames) ->
+    case unmask_one_hy10(DataFrames) of
+	undefined ->
+	    unmask_one_hi76(DataFrames);
+	Else -> Else
+    end.
+
+    
+
+unmask_one_hy10(DataFrames) ->
+    Frame = binary_to_list(DataFrames),
+    First = lists:nth(1, Frame),
+    Opcode = First band 15,
+    Second = lists:nth(2, Frame),
+    Masked = 128 == 128 band Second,
+    case Masked of
+	false -> undefined;
+	true ->
+	    Len = 127 band Second,
+	    MaskingKey = lists:sublist(Frame, 3, 4),
+	    PayloadData = lists:sublist(Frame, 7, Len),
+	    UnmaskedData = mask(1, MaskingKey, PayloadData),
+	    JDUnframed = [{opcode,Opcode}, 
+			  {masked, Masked}, 
+			  {len, Len}, 
+			  {maskingkey, MaskingKey}, 
+			  {payloaddata, PayloadData}, 
+			  {unmaskeddata, UnmaskedData}],
+	    io:format("~p~n", [JDUnframed]),
+	    {ok, UnmaskedData, <<>>} %jdtodo baaaaad
+    end.
+
+unmask_one_hi76(DataFrames) ->
     <<Type, _/bitstring>> = DataFrames,
     case Type of
 	T when (T =< 127) ->
@@ -119,13 +169,27 @@ unframe_all(DataFramesBin, Acc) ->
     {ok, Msg, Rem} = unframe_one(DataFramesBin),
     unframe_all(Rem, [Msg|Acc]).
 
+%%  
+%% mask(Pos, Mask, Data)
+%%
+mask(_, _, []) -> [];
+mask(5, MaskingKey, Data) -> mask(1, MaskingKey, Data);
+mask(N, MaskingKey, [Head|Rest]) ->
+    Masked = lists:nth(N,MaskingKey) bxor Head,
+    [Masked | mask(N + 1, MaskingKey, Rest)].
 
 %% Internal functions
 get_origin_header(Headers) ->
-    query_header("origin", Headers).
+    case query_header("origin", Headers) of
+	undefined -> query_header("sec-websocket-origin", Headers);
+	Origin    -> Origin
+    end.
 
 get_protocol_header(Headers) ->
     query_header("sec-websocket-protocol", Headers, "unknown").
+
+get_nonce_header(Headers) ->
+    query_header("sec-websocket-key", Headers).
 
 query_header(HeaderName, Headers) ->
     query_header(HeaderName, Headers, undefined).
@@ -169,6 +233,11 @@ digits32(Num) ->
     Digit2 = Num3 rem 256,
     Digit1 = Num3 div 256,
     [Digit1, Digit2, Digit3, Digit4].
+
+hash_nonce(Nonce) ->
+    Salted = Nonce ++ "258EAFA5-E914-47DA-95CA-C5AB0DC85B11",
+    HashBin = crypto:sha(Salted),
+    base64:encode_to_string(HashBin).
 
 unpack_length(Binary, LenBytes, Length) ->
     <<_, _:LenBytes/bytes, B, _/bitstring>> = Binary,

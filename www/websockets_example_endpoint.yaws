@@ -4,9 +4,15 @@ out(A) ->
 	undefined ->
 	    {content, "text/plain", "You're not a web sockets client! Go away!"};
 	"WebSocket" ->
-	    WebSocketOwner = spawn(fun() -> websocket_owner() end),
-	    {websocket, WebSocketOwner, passive}
+	    spawn_ws_owner();
+	"websocket" ->
+	    spawn_ws_owner()
     end.
+
+spawn_ws_owner() ->
+    io:format("Spawning websocket owner~n",[]),
+    WebSocketOwner = spawn(fun() -> websocket_owner() end),
+    {websocket, WebSocketOwner, passive}.
 
 websocket_owner() ->
     receive
