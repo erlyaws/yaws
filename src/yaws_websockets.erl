@@ -14,13 +14,15 @@
 -include("yaws_debug.hrl").
 
 -include_lib("kernel/include/file.hrl").
--export([handshake/3, unframe_one/1, unframe_all/2]).
+-export([handshake/3, unframe_one/2, unframe_all/3, frame/2]).
 
 handshake(Arg, ContentPid, SocketMode) ->
     CliSock = Arg#arg.clisock,
     %jdtodo io:format("CliSock ~p~n",[CliSock]),
     case get_origin_header(Arg#arg.headers) of
 	undefined ->
+	    %% TODO: Lack of origin header is allowed for non-browser clients 
+            %% in hybi 17 but for simplicity the connection is closed for now.
 	    %jdtodo io:format("No origin header.~n"),
 	    %% Yaws will take care of closing the socket
 	    ContentPid ! discard;
@@ -51,7 +53,7 @@ handshake(Arg, ContentPid, SocketMode) ->
 	    end,
 	    case TakeOverResult of
 		ok ->
-		    ContentPid ! {ok, CliSock};
+		    ContentPid ! {ok, CliSock, ProtocolVersion};
 		{error, Reason} ->
 		    ContentPid ! discard,
 		    exit({websocket, Reason})
@@ -59,18 +61,8 @@ handshake(Arg, ContentPid, SocketMode) ->
     end,
     exit(normal).
 
-handshake(ws_hy10, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
-    io:format("ws_hy10!~n",[]),
-    Key = get_nonce_header(Arg#arg.headers),
-    AcceptHash = hash_nonce(Key), 
-    ["HTTP/1.1 101 Switching Protocols\r\n",
-     "Upgrade: websocket\r\n",
-     "Connection: Upgrade\r\n",
-     "Sec-WebSocket-Accept: ", AcceptHash , "\r\n",
-     "\r\n"];
-
-handshake(ws_76, Arg, CliSock, WebSocketLocation, Origin, Protocol) ->
-    io:format("ws_76!~n",[]),
+handshake(hi_76, Arg, CliSock, WebSocketLocation, Origin, Protocol) ->
+    io:format("hi_76!~n",[]),
     {ok, Challenge} = case CliSock of
                           {sslsocket, _, _} ->
                               ssl:recv(CliSock, 8);
@@ -88,39 +80,41 @@ handshake(ws_76, Arg, CliSock, WebSocketLocation, Origin, Protocol) ->
      "Sec-WebSocket-Protocol: ", Protocol, "\r\n",
      "\r\n", ChallengeResponse];
 
-handshake(ws_75, _Arg, _CliSock, WebSocketLocation, Origin, _Protocol) ->
-    io:format("ws_75!~n",[]),
+handshake(hi_75, _Arg, _CliSock, WebSocketLocation, Origin, _Protocol) ->
+    io:format("hi_75!~n",[]),
     ["HTTP/1.1 101 Web Socket Protocol Handshake\r\n",
      "Upgrade: WebSocket\r\n",
      "Connection: Upgrade\r\n",
      "WebSocket-Origin: ", Origin, "\r\n",
      "WebSocket-Location: ", WebSocketLocation, "\r\n",
+     "\r\n"];
+
+handshake(_Ver, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
+    io:format("10!~n",[]),
+    Key = get_nonce_header(Arg#arg.headers),
+    AcceptHash = hash_nonce(Key), 
+    ["HTTP/1.1 101 Switching Protocols\r\n",
+     "Upgrade: websocket\r\n",
+     "Connection: Upgrade\r\n",
+     "Sec-WebSocket-Accept: ", AcceptHash , "\r\n",
      "\r\n"].
 
 ws_version(Headers) ->
-    %jdtodo io:format("IDing Websocket Version...~n~p~n",[Headers]),
-    case query_header("sec-websocket-key1", Headers) of
-	undefined ->  
-	    case get_nonce_header(Headers) of
-		undefined -> ws_75;
-		_         -> ws_hy10
-	    end;
-	_                 -> ws_76
+    io:format("IDing Websocket Version...~n~p~n",[Headers]),
+    case query_header("sec-websocket-version", Headers) of
+	"8" -> 8;
+	"17" -> 17;
+	_ ->
+	    case query_header("sec-websocket-key1", Headers) of
+		undefined -> 
+		    %% might be hixie 75 but...
+		    %% TODO: should really negotiate a hybi version here
+		    hi_75; 
+		_ -> hi_76
+	    end
     end.
 
-%% This should take care of all the Data Framing scenarios specified in
-%% http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-66#page-26
-unframe_one(DataFrames) ->
-    % Try to decode as a hybi 10 frame. 
-    % Fall back to the old way if it seems wrong.
-    case unmask_one_hy10(DataFrames) of
-	undefined ->
-	    io:format("unframe_one falling back to hixie 76 format.~n", []),
-	    unmask_one_hi76(DataFrames);
-	Else -> Else
-    end.
-
-unmask_one_hy10(DataFrames) ->
+unframe_one(8, DataFrames) ->
     Frame = binary_to_list(DataFrames),
     First = lists:nth(1, Frame),
     Opcode = First band 15,
@@ -141,9 +135,12 @@ unmask_one_hy10(DataFrames) ->
 			  {unmaskeddata, UnmaskedData}],
 	    io:format("~p~n", [JDUnframed]),
 	    {ok, list_to_binary(UnmaskedData), <<>>} %jdtodo baaaaad
-    end.
+    end;
 
-unmask_one_hi76(DataFrames) ->
+%% This should take care of all the Data Framing scenarios specified in
+%% http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-66#page-26
+unframe_one(hi_75, DataFrames) -> unframe_one(hi_76, DataFrames);
+unframe_one(hi_76, DataFrames) ->
     <<Type, _/bitstring>> = DataFrames,
     case Type of
 	T when (T =< 127) ->
@@ -165,11 +162,26 @@ unmask_one_hi76(DataFrames) ->
 	    {ok, Data, NextFrame}
     end.
 
-unframe_all(<<>>, Acc) ->
+unframe_all(_, <<>>, Acc) ->
     lists:reverse(Acc);
-unframe_all(DataFramesBin, Acc) ->
-    {ok, Msg, Rem} = unframe_one(DataFramesBin),
-    unframe_all(Rem, [Msg|Acc]).
+unframe_all(ProtocolVersion, DataFramesBin, Acc) ->
+    {ok, Msg, Rem} = unframe_one(ProtocolVersion, DataFramesBin),
+    unframe_all(ProtocolVersion, Rem, [Msg|Acc]).
+
+frame(hi_75, IoList) ->
+    frame(hi_76, IoList);
+frame(hi_76, IoList) ->
+    [0, IoList, 255];
+frame(_, Data) ->
+    %FIN=true because we're not fragmenting.
+    %OPCODE=1 for text
+    FirstByte = 128 bor 1,
+    ByteList = binary_to_list(Data),
+    Length = length(ByteList),
+    SecondByte = Length, % server to client is not masked
+    << FirstByte, SecondByte, Data:Length/binary >>.
+    
+
 
 %%  
 %% mask(Pos, Mask, Data)

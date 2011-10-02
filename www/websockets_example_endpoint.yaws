@@ -16,9 +16,9 @@ spawn_ws_owner() ->
 
 websocket_owner() ->
     receive
-	{ok, WebSocket} ->
+	{ok, WebSocket, ProtocolVersion} ->
 	    %% This is how we read messages (plural!!) from websockets on passive mode
-	    case yaws_api:websocket_receive(WebSocket) of
+	    case yaws_api:websocket_receive(WebSocket, ProtocolVersion) of
 		{error,closed} ->
 		    io:format("The websocket got disconnected right from the start. "
 			      "This wasn't supposed to happen!!~n");
@@ -26,7 +26,7 @@ websocket_owner() ->
 		    case Messages of
 			[<<"client-connected">>] ->
 			    yaws_api:websocket_setopts(WebSocket, [{active, true}]),
-			    echo_server(WebSocket);
+			    echo_server(WebSocket, ProtocolVersion);
 			Other ->
 			    io:format("websocket_owner got: ~p. Terminating~n", [Other])
 		    end
@@ -34,18 +34,18 @@ websocket_owner() ->
 	_ -> ok
     end.
 
-echo_server(WebSocket) ->
+echo_server(WebSocket, ProtocolVersion) ->
     receive
 	{tcp, WebSocket, DataFrame} ->
-	    Data = yaws_api:websocket_unframe_data(DataFrame),
+	    Data = yaws_api:websocket_unframe_data(ProtocolVersion, DataFrame),
 	    io:format("Got data from Websocket: ~p~n", [Data]),
-            yaws_api:websocket_send(WebSocket, Data), 
-            echo_server(WebSocket);
+            yaws_api:websocket_send(WebSocket, ProtocolVersion, Data), 
+            echo_server(WebSocket, ProtocolVersion);
 	{tcp_closed, WebSocket} ->
 	    io:format("Websocket closed. Terminating echo_server...~n");
 	Any ->
 	    io:format("echo_server received msg:~p~n", [Any]),
-	    echo_server(WebSocket)
+	    echo_server(WebSocket, ProtocolVersion)
     end.
 
 get_upgrade_header(#headers{other=L}) ->
