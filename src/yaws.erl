@@ -218,7 +218,9 @@ setup_gconf(GL, GC) ->
            id = lkup(id, GL,
                      GC#gconf.id),
            enable_soap = lkup(enable_soap, GL,
-                              GC#gconf.enable_soap)
+                              GC#gconf.enable_soap),
+           soap_srv_mods = lkup(soap_srv_mods, GL,
+                              GC#gconf.soap_srv_mods)
           }.
 
 set_gc_flags([{tty_trace, Bool}|T], Flags) ->
