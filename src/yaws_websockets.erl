@@ -100,7 +100,7 @@ handshake(_Ver, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
      "\r\n"].
 
 ws_version(Headers) ->
-    io:format("IDing Websocket Version...~n~p~n",[Headers]),
+    %io:format("IDing Websocket Version...~n~p~n",[Headers]),
     case query_header("sec-websocket-version", Headers) of
 	"8" -> 8;
 	"17" -> 17;
@@ -115,27 +115,19 @@ ws_version(Headers) ->
     end.
 
 unframe_one(8, DataFrames) ->
-    Frame = binary_to_list(DataFrames),
-    First = lists:nth(1, Frame),
-    Opcode = First band 15,
-    Second = lists:nth(2, Frame),
-    Masked = 128 == 128 band Second,
-    case Masked of
-	false -> undefined; % not guaranteed to be false if it's hixie 76 but it's a start
-	true ->
-	    Len = 127 band Second,
-	    MaskingKey = lists:sublist(Frame, 3, 4),
-	    PayloadData = lists:sublist(Frame, 7, Len),
-	    UnmaskedData = mask(1, MaskingKey, PayloadData),
-	    JDUnframed = [{opcode,Opcode}, 
-			  {masked, Masked}, 
-			  {len, Len}, 
-			  {maskingkey, MaskingKey}, 
-			  {payloaddata, PayloadData}, 
-			  {unmaskeddata, UnmaskedData}],
-	    io:format("~p~n", [JDUnframed]),
-	    {ok, list_to_binary(UnmaskedData), <<>>} %jdtodo baaaaad
-    end;
+    <<1:1,_Rsv:3,_Opcode:4,1:1,Len1:7,Rest/binary>> = DataFrames,
+
+    case Len1 of
+	126 ->
+	    <<Len:16, MaskingKey:4/binary, Payload:Len/binary>> = Rest;
+	127 ->
+	    <<Len:64, MaskingKey:4/binary, Payload:Len/binary>> = Rest;
+	Len ->
+	    <<_:0, MaskingKey:4/binary, Payload:Len/binary>> = Rest
+    end,
+    UnmaskedData = mask(1, binary_to_list(MaskingKey), Payload),
+
+    {ok, list_to_binary(UnmaskedData), <<>>}; %jdtodo baaaaad
 
 %% This should take care of all the Data Framing scenarios specified in
 %% http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-66#page-26
@@ -178,19 +170,38 @@ frame(_, Data) ->
     FirstByte = 128 bor 1,
     ByteList = binary_to_list(Data),
     Length = length(ByteList),
-    SecondByte = Length, % server to client is not masked
-    << FirstByte, SecondByte, Data:Length/binary >>.
-    
-
+    if
+	Length =< 126 ->
+	    << FirstByte, 0:1, Length:7, Data:Length/binary >>;
+	Length =< 65535 ->
+	    << FirstByte, 0:1, 126:7, Length:16, Data:Length/binary >>;
+	true ->
+	    Defined = Length =< math:pow(2,64),
+	    % TODO: Is the correctness of this pow call 
+	    % better than the speed and danger of not checking?
+	    case Defined of
+		true ->
+		    << FirstByte, 0:1, 127:7, Length:16, Data:Length/binary >>;
+		_ ->
+		    undefined
+	    end
+    end.
 
 %%  
 %% mask(Pos, Mask, Data)
 %%
-mask(_, _, []) -> [];
+%% N: integer, the position in the masking key to use.
+%% MaskingKey: list of 8-bit integers
+%% Data: bit string divisible by 8
+%%
+%% This could probably be done better but seems to work for now.
+%%
+mask(_, _, <<>>) -> [];
 mask(5, MaskingKey, Data) -> mask(1, MaskingKey, Data);
-mask(N, MaskingKey, [Head|Rest]) ->
-    Masked = lists:nth(N,MaskingKey) bxor Head,
+mask(N, MaskingKey, <<Head:8/integer,Rest/binary>>) ->
+    Masked = lists:nth(N, MaskingKey) bxor Head,
     [Masked | mask(N + 1, MaskingKey, Rest)].
+
 
 %% Internal functions
 get_origin_header(Headers) ->
