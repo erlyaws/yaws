@@ -53,6 +53,8 @@ MODULES=yaws \
 	yaws_vdir \
 	yaws_multipart \
 	yaws_shaper \
+	yaws_dime \
+	yaws_exhtml \
 	$(BITSMODS)
 
 
@@ -79,7 +81,6 @@ yaws_generated.erl:	yaws_generated.template ../vsn.mk
 	    ../scripts/gen-yaws-generated true > yaws_generated.erl
 
 yaws_configure.hrl:	 ../vsn.mk ../include.mk
-	set -x; \
 	if [  $(HAVE_SENDFILE) = "true" ]; then \
 		echo "-define(HAVE_SENDFILE, true)." > yaws_configure.hrl; \
 	else touch yaws_configure.hrl; fi

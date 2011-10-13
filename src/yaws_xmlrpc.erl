@@ -108,8 +108,8 @@ handle_payload(Args, Handler, Type) ->
             %%        ?Debug("xmlrpc decoded call ~p ~n", [DecodedPayload]),
             eval_payload(Args, Handler, DecodedPayload, Type);
         {error, Reason} ->
-            ?ERROR_LOG({xmlrpc_decode, payload, Payload, Reason}),
-            send(Args, 400)
+	    ErrMsg = xmlrpc_http:handle_xmlprc_error(Payload, Reason),
+	    send(Args, 400, ErrMsg, [])
     end.
 
 %%%%%%

@@ -120,6 +120,9 @@ handle_payload(Args, Handler, Type) ->
 	    T when T==haxe; T==json ->
                 ?Debug("rpc ~p call ~p~n", [T, PL]),
 		{PL, yaws_api:url_decode(PL)};
+	    soap_dime ->
+		[{_,_,_,Req}|As] = yaws_dime:decode(Args#arg.clidata),
+		{Args#arg.clidata, {binary_to_list(Req), As}};
 	    _ ->
                 ?Debug("rpc plaintext call ~p~n", [PL]),
                 {PL, PL}
@@ -196,9 +199,13 @@ check_decoded_payload(Args, Handler, DecodedResult, Payload, Type, RpcType) ->
 %%% "X-Haxe-Remoting" HTTP header, then the "SOAPAction" header,
 %%% and if those are absent we assume the request is JSON.
 recognize_rpc_type(Args) ->
-    OtherHeaders = ((Args#arg.headers)#headers.other),
-    recognize_rpc_hdr(
-      [{X,Y,yaws:to_lower(Z),Q,W} || {X,Y,Z,Q,W} <- OtherHeaders]).
+    case (Args#arg.headers)#headers.content_type of
+	"application/dime" -> soap_dime;
+	_ ->
+	    OtherHeaders = ((Args#arg.headers)#headers.other),
+	    recognize_rpc_hdr([{X,Y,yaws:to_lower(Z),Q,W} ||
+                                  {X,Y,Z,Q,W} <- OtherHeaders])
+    end.
 
 recognize_rpc_hdr([{_,_,"x-haxe-remoting",_,_}|_]) -> haxe;
 recognize_rpc_hdr([{_,_,"soapaction",_,_}|_])      -> soap;
@@ -312,7 +319,8 @@ get_expire(M, F) ->
         _                        -> false
     end.
 
-callback_fun(M, F, Args, Payload, SessionValue, soap) ->
+callback_fun(M, F, Args, Payload, SessionValue, RpcType)
+  when RpcType =:= soap; RpcType =:= soap_dime ->
     fun() -> yaws_soap_srv:handler(Args, {M,F}, Payload, SessionValue) end;
 callback_fun(M, F, Args, Payload, SessionValue, _RpcType) ->
     fun() -> M:F(Args#arg.state, Payload, SessionValue) end.
@@ -322,11 +330,16 @@ callback_fun(M, F, Args, Payload, SessionValue, _RpcType) ->
 encode_send(Args, StatusCode, [Payload], AddOn, ID, RpcType) ->
     encode_send(Args, StatusCode, Payload, AddOn, ID, RpcType);
 
-encode_send(Args, StatusCode, Payload, _AddOn, ID, RpcType) ->
+encode_send(Args, StatusCode, Payload, AddOn, ID, RpcType) ->
     ?Debug("rpc response ~p ~n", [Payload]),
-    EncodedPayload = encode_handler_payload(Payload, ID, RpcType),
-    ?Debug("rpc encoded response ~p ~n", [EncodedPayload]),
-    send(Args, StatusCode, EncodedPayload, [], RpcType).
+    case encode_handler_payload(Payload, ID, RpcType) of
+        {ok, EncodedPayload, NewRpcType} ->
+            ?Debug("rpc encoded response ~p ~n", [EncodedPayload]),
+            send(Args, StatusCode, EncodedPayload, AddOn, NewRpcType);
+        {ok, EncodedPayload} ->
+            ?Debug("rpc encoded response ~p ~n", [EncodedPayload]),
+            send(Args, StatusCode, EncodedPayload, AddOn, RpcType)
+    end.
 
 send(Args, StatusCode) ->
     send(Args, StatusCode, json).
@@ -334,6 +347,8 @@ send(Args, StatusCode) ->
 send(Args, StatusCode, RpcType) ->
     send(Args, StatusCode, "", [], RpcType).
 
+send(Args, StatusCode, Payload, AddOn, RpcType) when not is_list(AddOn) ->
+    send(Args, StatusCode, Payload, [AddOn], RpcType);
 send(_Args, StatusCode, Payload, AddOnData, RpcType) ->
     [{status, StatusCode},
      content_hdr(RpcType, Payload),
@@ -343,10 +358,20 @@ content_hdr(json, Payload) -> {content, "application/json", Payload};
 content_hdr(_, Payload)    -> {content, "application/xml", Payload}.
 %% FIXME  would like to add charset info here !!
 
+encode_handler_payload({Xml,[]}, _ID, soap_dime) ->
+    {ok, Xml, soap};
+encode_handler_payload({Xml,As}, _ID, soap_dime) ->
+    EncodedPayload = yaws_dime:encode(Xml, As),
+    {ok, EncodedPayload};
+encode_handler_payload(Xml, _ID, soap_dime) ->
+    {ok, Xml, soap};
 encode_handler_payload({Xml,[]}, _ID, soap) ->
-    Xml;
+    {ok, Xml};
+encode_handler_payload({Xml,As}, _ID, soap) ->
+    EncodedPayload = yaws_dime:encode(Xml, As),
+    {ok, EncodedPayload, soap_dime};
 encode_handler_payload(Xml, _ID, soap) ->
-    Xml;
+    {ok, Xml};
 encode_handler_payload({error, [ErlStruct]}, ID, RpcType) ->
     encode_handler_payload({error, ErlStruct}, ID, RpcType);
 encode_handler_payload({error, ErlStruct}, ID, RpcType) ->
@@ -356,7 +381,7 @@ encode_handler_payload({error, ErlStruct}, ID, RpcType) ->
                                            {"jsonrpc", "2.0"}]});
             haxe -> [$h, $x, $r | haxe:encode({exception, ErlStruct})]
         end,
-    StructStr;
+    {ok, StructStr};
 encode_handler_payload({response, [ErlStruct]}, ID, RpcType) ->
     encode_handler_payload({response, ErlStruct}, ID, RpcType);
 encode_handler_payload({response, ErlStruct}, ID, RpcType) ->
@@ -366,7 +391,7 @@ encode_handler_payload({response, ErlStruct}, ID, RpcType) ->
                                            {"jsonrpc", "2.0"}]});
             haxe -> [$h, $x, $r | haxe:encode(ErlStruct)]
         end,
-    StructStr.
+    {ok, StructStr}.
 
 decode_handler_payload(json, JSonStr) ->
     try
@@ -390,6 +415,9 @@ decode_handler_payload(haxe, [$_, $_, $x, $= | HaxeStr]) ->
     end;
 decode_handler_payload(haxe, _HaxeStr) ->
     {error, missing_haxe_prefix};
+
+decode_handler_payload(soap_dime, Payload) ->
+    {ok, Payload, undefined};
 decode_handler_payload(soap, Payload) ->
     {ok, Payload, undefined}.
 

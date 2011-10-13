@@ -129,13 +129,20 @@ This can be a useful to guard against long running connections
 collecting too much garbage in the Erlang VM.
 
 .TP
-\fBprocess_options = "[]" | "[{fullsweep_after, int()} | {min_heap_size, int()}]"\fR
-Override the garbage collection option parameters for processes that
-handle new connections. Useful for systems that expect long-lived
-connections that handle a lot of data. The default value is Erlang's
-default which does minimal garbage collection until the process dies.
-The value type is a quoted string which contains an Erlang property
-list.  See Erlang's \fIerlang:spawn_opt/4\fR function for more details.
+\fBprocess_options = undefined | Proplist\fR
+Set process spawn options for client acceptor processes.  Options must
+be specified as a quoted string of either the atom \fIundefined\fR or
+as a proplist of valid process options. The supported options are
+\fIfullsweep_after\fR, \fImin_heap_size\fR, and
+\fImin_bin_vheap_size\fR, each taking an associated integer
+value. Other process options are ignored. The proplist may also be
+empty. See \fBerlang:spawn_opt/4\fR for details on these options.
+
+.TP
+\fBacceptor_pool_size = Integer\fR
+Set the size of the pool of cached acceptor processes. The specified
+value must be greater than or equal to 0. The default value is
+8. Specifying a value of 0 effectively disables the process pool.
 
 .TP
 \fBlog_wrap_size = Integer\fR

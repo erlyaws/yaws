@@ -921,6 +921,13 @@ mime_type(FileName) ->
 stream_chunk_deliver(YawsPid, Data) ->
     YawsPid  ! {streamcontent, Data}.
 
+
+%% Use timeout here to guard against bug in the SSL application
+%% that apparently does not close the socket in between
+%% ssl_esock and erlang (FIN_WAIT2 resp. CLOSE_WAIT).
+%% Thus, the stream process hangs forever...
+-define(STREAM_GARBAGE_TIMEOUT, 3600000). % 1 hour
+
 %% Synchronous (on ultimate gen_tcp:send) delivery
 %% Returns: ok | {error, Rsn}
 stream_chunk_deliver_blocking(YawsPid, Data) ->
@@ -938,6 +945,16 @@ stream_chunk_deliver_blocking(YawsPid, Data) ->
             end;
         {'DOWN', Ref, _, _, Info} ->
             {error, {ypid_crash, Info}}
+    after ?STREAM_GARBAGE_TIMEOUT ->
+            %% Killing (unless this function is caught) process tree but
+            %% NOTE that as this is probably due to the OTP SSL application
+            %% not managing to close the socket (FIN_WAIT2
+            %% resp. CLOSE_WAIT) the SSL process is not killed (it traps
+            %% exit signals) and thus we will leak one file descriptor.
+	    error_logger:error_msg(
+	      "~p:stream_chunk_deliver_blocking/2 STREAM_GARBAGE_TIMEOUT "
+	      "(default 1 hour). Killing ~p", [?MODULE, YawsPid]),
+	    erlang:error(stream_garbage_timeout, [YawsPid, Data])
     end.
 
 stream_chunk_end(YawsPid) ->
@@ -1373,11 +1390,12 @@ is_abs_URI1(_) ->
 %% ------------------------------------------------------------
 %% simple erlang term representation of HTML:
 %% EHTML = [EHTML] | {Tag, Attrs, Body} | {Tag, Attrs} | {Tag} |
+%%         {Module, Fun, [Args]} | fun/0
 %%         binary() | character()
-%% Tag          = atom()
+%% Tag   = atom()
 %% Attrs = [{Key, Value}]  or {EventTag, {jscall, FunName, [Args]}}
-%% Key          = atom()
-%% Value = string()
+%% Key   = atom()
+%% Value = string() | {Module, Fun, [Args]} | fun/0
 %% Body  = EHTML
 
 ehtml_expand(Ch) when Ch >= 0, Ch =< 255 -> Ch; %yaws_api:htmlize_char(Ch);
@@ -1391,7 +1409,6 @@ ehtml_expand({ssi,File, Del, Bs}) ->
             X
     end;
 
-
 %%!todo (low priority) - investigate whether tail-recursion would be of any
 %% benefit here instead of the current ehtml_expand(Body) recursion.
 %%                - provide a tail_recursive version & add a file in the
@@ -1400,6 +1417,9 @@ ehtml_expand({ssi,File, Del, Bs}) ->
 ehtml_expand({Tag}) ->
     ["<", atom_to_list(Tag), " />"];
 ehtml_expand({pre_html, X}) -> X;
+ehtml_expand({Mod, Fun, Args})
+  when is_atom(Mod), is_atom(Fun), is_list(Args) ->
+    ehtml_expand(Mod:Fun(Args));
 ehtml_expand({Tag, Attrs}) ->
     NL = ehtml_nl(Tag),
     [NL, "<", atom_to_list(Tag), ehtml_attrs(Attrs), "></",
@@ -1409,8 +1429,9 @@ ehtml_expand({Tag, Attrs, Body}) when is_atom(Tag) ->
     NL = ehtml_nl(Tag),
     [NL, "<", Ts, ehtml_attrs(Attrs), ">", ehtml_expand(Body), "</", Ts, ">"];
 ehtml_expand([H|T]) -> [ehtml_expand(H)|ehtml_expand(T)];
-ehtml_expand([]) -> [].
-
+ehtml_expand([]) -> [];
+ehtml_expand(Fun) when is_function(Fun) ->
+    ehtml_expand(Fun()).
 
 
 ehtml_attrs([]) -> [];
@@ -1418,26 +1439,37 @@ ehtml_attrs([Attribute|Tail]) when is_atom(Attribute) ->
     [[$ |atom_to_list(Attribute)]|ehtml_attrs(Tail)];
 ehtml_attrs([Attribute|Tail]) when is_list(Attribute) ->
     [" ", Attribute|ehtml_attrs(Tail)];
+ehtml_attrs([{Name, {Mod, Fun, Args}} | Tail])
+  when is_atom(Mod), is_atom(Fun), is_list(Args) ->
+    ehtml_attrs([{Name,  Mod:Fun(Args)} | Tail]);
+ehtml_attrs([{Name, Value} | Tail]) when is_function(Value) ->
+    ehtml_attrs([{Name, Value()} | Tail]);
 ehtml_attrs([{Name, Value} | Tail]) ->
-    ValueString = if is_atom(Value) -> [$",atom_to_list(Value),$"];
-                     is_list(Value) -> [$",Value,$"];
-                     is_integer(Value) -> [$",integer_to_list(Value),$"];
-                     is_float(Value) -> [$",float_to_list(Value),$"]
-                  end,
+    ValueString = [$", if
+                           is_atom(Value) -> atom_to_list(Value);
+                           is_list(Value) -> Value;
+                           is_integer(Value) -> integer_to_list(Value);
+                           is_float(Value) -> float_to_list(Value)
+                       end, $"],
     [[$ |atom_to_list(Name)], [$=|ValueString]|ehtml_attrs(Tail)];
+ehtml_attrs([{check, Name, {Mod, Fun, Args}} | Tail])
+  when is_atom(Mod), is_atom(Fun), is_list(Args) ->
+    ehtml_attrs([{check, Name,  Mod:Fun(Args)} | Tail]);
+ehtml_attrs([{check, Name, Value} | Tail]) when is_function(Value) ->
+    ehtml_attrs([{check, Name, Value()} | Tail]);
 ehtml_attrs([{check, Name, Value} | Tail]) ->
-    ValueString = if is_atom(Value) -> [$",atom_to_list(Value),$"];
-                     is_list(Value) ->
-                          Q = case deepmember($", Value) of
-                                  true -> $';
-                                  false -> $"
-                              end,
-                          [Q,Value,Q];
-                     is_integer(Value) -> [$",integer_to_list(Value),$"];
-                     is_float(Value) -> [$",float_to_list(Value),$"]
-                   end,
-                   [[$ |atom_to_list(Name)],
-                    [$=|ValueString]|ehtml_attrs(Tail)].
+    Val = if
+              is_atom(Value) -> atom_to_list(Value);
+              is_list(Value) -> Value;
+              is_integer(Value) -> integer_to_list(Value);
+              is_float(Value) -> float_to_list(Value)
+          end,
+    Q = case deepmember($", Val) of
+            true -> $';
+            false -> $"
+        end,
+    ValueString = [Q,Value,Q],
+    [[$ |atom_to_list(Name)], [$=|ValueString]|ehtml_attrs(Tail)].
 
 
 

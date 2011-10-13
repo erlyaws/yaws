@@ -44,7 +44,8 @@ docs:
 	( cd doc && $(MAKE) docs )
 
 conf_clean:
-	-rm include.mk config.cache config.status config.log 2> /dev/null
+	-rm include.mk config.cache config.status config.log yaws.pc \
+	test/support/include.mk test/support/include.sh 2> /dev/null
 
 local_install: all
 	(cd scripts && $(MAKE) local_install)

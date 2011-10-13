@@ -52,14 +52,29 @@ dnl
 dnl BT_ERL_LIB_VSN figures out version of an erlang application
 dnl and substitutes it as "APPNAME"_VSN
 dnl
+dnl Note that in the non-erts case, if checking ERLDIR for a versioned
+dnl directory fails, it could be because the user is using a git clone
+dnl of the Erlang/OTP repository. In that case, check for a vsn.mk file
+dnl in the application subdirectory under the repository lib directory,
+dnl and if found use the version found there.
 
 AC_DEFUN([BT_ERL_LIB_VSN],
 [
     AC_MSG_CHECKING([$1 version])
     AC_CACHE_VAL(bt_cv_$1_vsn,
-    [bt_cv_$1_vsn=`ls "${ERLDIR}" "${ERLDIR}/lib" | \
-                   awk -F- '/^$1-/ { if ([$]2 > v) v=[$]2; }
-                            END    { print v; }'`
+    [case "$1" in
+         erts)
+             bt_cv_$1_vsn=`"${ERL}" -noshell -eval 'io:format("~s~n",[[erlang:system_info(version)]]), erlang:halt().' | tail -1`
+             ;;
+         *)
+             bt_cv_$1_vsn=`ls -1 "${ERLDIR}" "${ERLDIR}/lib" | \
+                     awk -F- '/^$1-/ { if ([$]2 > v) v=[$]2; }
+                              END    { print v; }'`
+             if test -z "$bt_cv_$1_vsn" ; then
+                 bt_cv_$1_vsn=`sed -e 's/^.*= *//' "${ERLDIR}/lib/$1/vsn.mk" 2>/dev/null`
+             fi
+             ;;
+     esac
      case "$bt_cv_$1_vsn" in
          "")
              AC_MSG_ERROR("Could not figure out version Erlang library: $1")
@@ -87,9 +102,10 @@ AC_SUBST(ERLDIR)
 AC_SUBST(ERLBINDIR)
 AC_SUBST(ERL_DLL_LIB)
 
-erts_vsn=`ls "${ERLDIR}" | grep ^erts- | tail -1 | sed 's/erts-//'`
-ERTS_MINOR=`echo $erts_vsn | sed -e 's/^.\.//' -e 's/\..*//'`
-ERTS_MAJOR=`echo $erts_vsn | sed 's/\..*//'`
+BT_ERL_LIB_VSN(erts)
+
+ERTS_MINOR=`echo $bt_cv_erts_vsn | sed -e 's/^.\.//' -e 's/\..*//'`
+ERTS_MAJOR=`echo $bt_cv_erts_vsn | sed 's/\..*//'`
 AC_SUBST(ERTS_MINOR)
 AC_SUBST(ERTS_MAJOR)
 
@@ -98,7 +114,6 @@ if test $ERTS_MAJOR -gt 5 -o '(' $ERTS_MAJOR -eq 5 -a $ERTS_MINOR -gt 6 ')'; the
 fi
 AC_SUBST(BITS_SUPPORT)
 
-BT_ERL_LIB_VSN(erts)
 BT_ERL_LIB_VSN(kernel)
 BT_ERL_LIB_VSN(stdlib)
 BT_ERL_LIB_VSN(sasl)
@@ -259,7 +274,7 @@ case "$host_os" in
            AC_LANG(C)
            AC_CHECK_LIB([c],[sendfile],[HAVE_SENDFILE=true])
            case "$host_os" in
-               darwin10*)
+               darwin1?*)
                    AC_LANG(Erlang)
                    AC_RUN_IFELSE(
                        [AC_LANG_PROGRAM([],[dnl

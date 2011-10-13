@@ -34,8 +34,14 @@ keepalive_maxuses = nolimit
 # connections that handle a lot of data. The default value is Erlang's
 # default. Valid options are {fullsweep_after, X} and/or {min_heap_size, Y} where
 # X and Y are integers. See Erlang's erlang:spawn_opt/4 function for more
-# details. The value type is a quoted string containing an Erlang proplist.
+# details. The value type is a quoted string containing an Erlang proplist or
+# the atom undefined.
 process_options = "[]"
+
+# Set the size of the cached acceptor process pool. The value must be an
+# integer greater than or equal to 0. The default pool size is 8. Setting
+# the pool size to 0 effectively disables the pool.
+#acceptor_pool_size = 8
 
 # This is a debug variable, possible values are http | traffic | false
 # It is also possible to set the trace (possibly to the tty) while

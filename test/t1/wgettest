@@ -9,8 +9,10 @@ while [ $count -gt 0 ]; do
         sleep 3
     else
         # log file written, now check it
-        cat logs/report.log | grep -v www/arg.yaws | grep -v www/arg2.yaws | grep ERROR >/dev/null 2>&1
-        [ $? -eq 0 ] || exit 1
+        # count lines to work around grep exit status portability issues
+        total=`cat logs/report.log | grep -v www/arg.yaws | \
+            grep -v www/arg2.yaws | grep -v ^=ERROR | grep ERROR 2>&1 | wc -l`
+        [ "$total" -eq 0 ] || exit 1
     fi
     count=`expr $count - 1`
 done
