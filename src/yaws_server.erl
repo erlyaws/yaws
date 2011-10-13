@@ -199,10 +199,9 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
                        end,
                        GC#gconf.logdir]),
 
-    setup_dirs(GC),
-
     case Embedded of
         false ->
+            setup_dirs(GC),
             case yaws_ctl:start(GC, FirstTime) of
                 ok ->
                     ok;
