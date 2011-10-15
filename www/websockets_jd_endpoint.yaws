@@ -8,7 +8,6 @@ websocket_owner() ->
     receive
 	{ok, WebSocket} ->
 	    io:format("got here~n",[]),
-%	    yaws_api:websocket_setopts(WebSocket, [{active, true}]),
 	    yaws_api:websocket_send(WebSocket, <<"Welcome to my websocket server! äèöÖ">>),
 	    echo_server(WebSocket);
 	Any ->
