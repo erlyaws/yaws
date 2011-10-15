@@ -1,0 +1,35 @@
+<erl>
+out(A) -> 
+    io:format("Spawning websocket owner~n",[]),
+    WebSocketOwner = spawn(fun() -> websocket_owner() end),
+    {websocket, WebSocketOwner, {active,true}}.
+
+websocket_owner() ->
+    receive
+	{ok, WebSocket} ->
+	    io:format("got here~n",[]),
+%	    yaws_api:websocket_setopts(WebSocket, [{active, true}]),
+	    yaws_api:websocket_send(WebSocket, <<"Welcome to my websocket server! äèöÖ">>),
+	    echo_server(WebSocket);
+	Any ->
+	    io:format("websocket_owner received msg:~p~n", [Any])
+    end.
+
+echo_server(WebSocket = {Socket, ProtocolVersion}) ->
+    receive
+	{tcp, Socket, DataFrame} ->
+	    Data = yaws_api:websocket_unframe_data(ProtocolVersion, DataFrame),
+
+	    io:format("Got data from Websocket: ~p~n", [Data]),
+            yaws_api:websocket_send(WebSocket, Data), 
+
+            echo_server(WebSocket);
+	{tcp_closed, Socket} ->
+	    io:format("Websocket closed. Terminating echo_server...~n");
+	Any ->
+	    io:format("echo_server received msg:~p~n", [Any]),
+	    echo_server(WebSocket)
+    end.
+
+
+</erl>

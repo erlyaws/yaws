@@ -17,15 +17,16 @@
 -export([handshake/3, unframe_one/2, unframe_all/3, frame/2]).
 
 handshake(Arg, ContentPid, SocketMode) ->
+    io:format("~p~n",[SocketMode]),
     CliSock = Arg#arg.clisock,
     %jdtodo io:format("CliSock ~p~n",[CliSock]),
     case get_origin_header(Arg#arg.headers) of
-	undefined ->
+%	undefined ->
 	    %% TODO: Lack of origin header is allowed for non-browser clients 
             %% in hybi 17 but for simplicity the connection is closed for now.
 	    %jdtodo io:format("No origin header.~n"),
 	    %% Yaws will take care of closing the socket
-	    ContentPid ! discard;
+%	    ContentPid ! discard;
 	Origin ->
 	    ProtocolVersion = ws_version(Arg#arg.headers),
 	    Protocol = get_protocol_header(Arg#arg.headers),
@@ -42,18 +43,18 @@ handshake(Arg, ContentPid, SocketMode) ->
 	    case SC#sconf.ssl of
 		undefined ->
 		    gen_tcp:send(CliSock, Handshake),
-		    inet:setopts(CliSock, [{packet, raw},{active, SocketMode}]),
+		    inet:setopts(CliSock, [{packet, raw}, SocketMode]),
 		    TakeOverResult =
 			gen_tcp:controlling_process(CliSock, ContentPid);
 		_ ->
 		    ssl:send(CliSock, Handshake),
-		    ssl:setopts(CliSock, [{packet, raw}, {active, SocketMode}]),
+		    ssl:setopts(CliSock, [{packet, raw}, SocketMode]),
 		    TakeOverResult =
 			ssl:controlling_process(CliSock, ContentPid)
 	    end,
 	    case TakeOverResult of
 		ok ->
-		    ContentPid ! {ok, CliSock, ProtocolVersion};
+		    ContentPid ! {ok, {CliSock, ProtocolVersion}};
 		{error, Reason} ->
 		    ContentPid ! discard,
 		    exit({websocket, Reason})
