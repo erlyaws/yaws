@@ -172,7 +172,7 @@ frame(_, Data) ->
     ByteList = binary_to_list(Data),
     Length = length(ByteList),
     if
-	Length =< 126 ->
+	Length < 126 ->
 	    << FirstByte, 0:1, Length:7, Data:Length/binary >>;
 	Length =< 65535 ->
 	    << FirstByte, 0:1, 126:7, Length:16, Data:Length/binary >>;
