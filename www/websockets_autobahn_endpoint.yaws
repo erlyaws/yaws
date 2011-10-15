@@ -16,9 +16,18 @@ echo_server(WebSocket = {Socket, ProtocolVersion}) ->
     receive
 	{tcp, Socket, DataFrame} ->
 	    Data = yaws_api:websocket_unframe_data(ProtocolVersion, DataFrame),
-
-	    io:format("Got data from Websocket: ~p~n", [Data]),
+	    
+	    CharCount = length(binary_to_list(Data)),
+	    io:format("Text Chars Count = ~p~n", [CharCount]),
+	    if
+		CharCount < 1000 ->
+		    io:format("Got data from Websocket: ~p~n", [Data]);
+		true ->
+		    io:format("Too many chars to print easily...~n",[])
+	    end,
             yaws_api:websocket_send(WebSocket, Data), 
+
+	    io:format("Frame: ~p~n", [frame_info(DataFrame)]),
 
             echo_server(WebSocket);
 	{tcp_closed, Socket} ->
@@ -28,5 +37,7 @@ echo_server(WebSocket = {Socket, ProtocolVersion}) ->
 	    echo_server(WebSocket)
     end.
 
+frame_info(Frame = <<Fin:1,Rsv1:1,Rsv2:1,Rsv3:1,Opcode:4,Masked:1,Len1:7,Rest1/binary>>) ->
+    FrameInfo = [{fin, Fin},{rsv1,Rsv1},{rsv2,Rsv2},{rsv3,Rsv3},{opcode,Opcode},{masked,Masked},{len1,Len1}].
 
 </erl>

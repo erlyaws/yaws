@@ -115,14 +115,31 @@ ws_version(Headers) ->
 	    end
     end.
 
-unframe_one(8, DataFrames) ->
-    <<1:1,_Rsv:3,_Opcode:4,1:1,Len1:7,Rest/binary>> = DataFrames,
+buffer(Len, Buffered) ->
+    case Buffered of 
+	<<Payload:Len/binary>> ->
+	    Payload;
+	_ ->
+	    receive
+		{tcp, Socket, More} ->
+		    buffer(Len, <<Buffered/binary, More/binary>>)
+	    end
+    end.
 
+
+unframe_one(8, DataFrames) ->
+    debug(val, {"Frame bytes list length:",length(binary_to_list(DataFrames))}),
+    <<1:1,_Rsv:3,_Opcode:4,1:1,Len1:7,Rest/binary>> = DataFrames,
+    debug(val,{"Len",Len1}),
     case Len1 of
 	126 ->
 	    <<Len:16, MaskingKey:4/binary, Payload:Len/binary>> = Rest;
 	127 ->
-	    <<Len:64, MaskingKey:4/binary, Payload:Len/binary>> = Rest;
+	    <<Len:64, Rest2/binary>> = Rest,
+	    debug(val,{"Len",Len}),
+	    <<MaskingKey:4/binary, Rest3/binary>> = Rest2,
+	    debug(val, {"Payload bytes list length:",length(binary_to_list(Rest3))}),
+	    Payload = buffer(Len, Rest3);
 	Len ->
 	    <<_:0, MaskingKey:4/binary, Payload:Len/binary>> = Rest
     end,
@@ -182,7 +199,7 @@ frame(_, Data) ->
 	    % better than the speed and danger of not checking?
 	    case Defined of
 		true ->
-		    << FirstByte, 0:1, 127:7, Length:16, Data:Length/binary >>;
+		    << FirstByte, 0:1, 127:7, Length:64, Data:Length/binary >>;
 		_ ->
 		    undefined
 	    end
@@ -275,3 +292,6 @@ unpack_length(Binary, LenBytes, Length) ->
 	0 ->
 	    {NewLength, LenBytes + 1}
     end.
+
+debug(val, Val) ->
+    io:format("~p~n",[Val]).
