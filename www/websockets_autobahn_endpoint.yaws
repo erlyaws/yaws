@@ -15,7 +15,7 @@ websocket_owner() ->
 echo_server(WebSocket = {Socket, ProtocolVersion}) ->
     receive
 	{tcp, Socket, DataFrame} ->
-	    Data = yaws_api:websocket_unframe_data(ProtocolVersion, DataFrame),
+	    {Type, Data} = yaws_api:websocket_unframe_data(ProtocolVersion, DataFrame),
 	    
 	    CharCount = length(binary_to_list(Data)),
 	    io:format("Text Chars Count = ~p~n", [CharCount]),

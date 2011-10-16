@@ -91,8 +91,8 @@ buffer(Len, Buffered) ->
 
 unframe(8, DataFrames) ->
     debug(val, {"Frame bytes list length:",length(binary_to_list(DataFrames))}),
-    <<1:1,_Rsv:3,_Opcode:4,1:1,Len1:7,Rest/binary>> = DataFrames,
-    debug(val,{"Len",Len1}),
+    <<1:1,_Rsv:3,Opcode:4,1:1,Len1:7,Rest/binary>> = DataFrames,
+    debug(val,{"Len1",Len1}),
     case Len1 of
 	126 ->
 	    <<Len:16, MaskingKey:4/binary, Payload:Len/binary>> = Rest;
@@ -105,8 +105,35 @@ unframe(8, DataFrames) ->
 	Len ->
 	    <<_:0, MaskingKey:4/binary, Payload:Len/binary>> = Rest
     end,
-    UnmaskedData = mask(1, binary_to_list(MaskingKey), Payload),
-    {ok, list_to_binary(UnmaskedData)}.
+    UnmaskedData = list_to_binary(mask(1, binary_to_list(MaskingKey), Payload)),
+    
+    case opcode_to_atom(Opcode) of
+	text -> 
+	    case test_utf8(UnmaskedData) of
+		error -> exit(error, "not utf8");
+		_ -> 
+		    ok
+	    end
+    end,
+    {ok, opcode_to_atom, UnmaskedData}.
+
+opcode_to_atom(16#0) -> continuation;
+opcode_to_atom(16#1) -> text;
+opcode_to_atom(16#2) -> binary;
+opcode_to_atom(16#8) -> close;
+opcode_to_atom(16#9) -> ping;
+opcode_to_atom(16#A) -> pong;
+opcode_to_atom(_) -> exit("unsupported opcode").
+
+% http://www.erlang.org/doc/apps/stdlib/unicode_usage.html#id191467
+% Heuristic identification of UTF-8
+test_utf8(Bin) when is_binary(Bin) ->
+    case unicode:characters_to_binary(Bin,utf8,utf8) of
+	Bin ->
+	    ok;
+	_ ->
+	    error
+    end.
 
 frame(8, Data) ->
     %FIN=true because we're not fragmenting.

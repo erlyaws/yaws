@@ -993,15 +993,15 @@ websocket_receive({Socket, ProtocolVersion}) ->
 		gen_tcp:recv(Socket, 0)
 	end,
     case R of
-	{ok, DataFrames} ->
-	    ReceivedMsg = yaws_websockets:unframe(ProtocolVersion, DataFrames),
-	    {ok, ReceivedMsg};
+	{ok, Type, DataFrames} ->
+	    Msg = yaws_websockets:unframe(ProtocolVersion, DataFrames),
+	    {ok, Type, Msg};
 	_ -> R
     end.
 
 websocket_unframe_data(ProtocolVersion, DataFrameBin) ->
-    {ok, Msg} = yaws_websockets:unframe(ProtocolVersion, DataFrameBin),
-    Msg.
+    {ok, Type, Msg} = yaws_websockets:unframe(ProtocolVersion, DataFrameBin),
+    {Type, Msg}.
 
 websocket_setopts({{sslsocket,_,_}=Socket,_}, Opts) ->
     ssl:setopts(Socket, Opts);
