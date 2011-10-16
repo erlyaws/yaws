@@ -14,7 +14,7 @@
 -include("yaws_debug.hrl").
 
 -include_lib("kernel/include/file.hrl").
--export([handshake/3, unframe_one/2, unframe_all/3, frame/2]).
+-export([handshake/3, unframe/2, frame/2]).
 
 handshake(Arg, ContentPid, SocketMode) ->
     io:format("~p~n",[SocketMode]),
@@ -62,36 +62,8 @@ handshake(Arg, ContentPid, SocketMode) ->
     end,
     exit(normal).
 
-handshake(hi_76, Arg, CliSock, WebSocketLocation, Origin, Protocol) ->
-    io:format("hi_76!~n",[]),
-    {ok, Challenge} = case CliSock of
-                          {sslsocket, _, _} ->
-                              ssl:recv(CliSock, 8);
-                          _ ->
-                              gen_tcp:recv(CliSock, 8)
-                      end,
-    Key1 = secret_key("sec-websocket-key1", Arg#arg.headers),
-    Key2 = secret_key("sec-websocket-key2", Arg#arg.headers),
-    ChallengeResponse = challenge(Key1, Key2, binary_to_list(Challenge)),
-    ["HTTP/1.1 101 Web Socket Protocol Handshake\r\n",
-     "Upgrade: WebSocket\r\n",
-     "Connection: Upgrade\r\n",
-     "Sec-WebSocket-Origin: ", Origin, "\r\n",
-     "Sec-WebSocket-Location: ", WebSocketLocation, "\r\n",
-     "Sec-WebSocket-Protocol: ", Protocol, "\r\n",
-     "\r\n", ChallengeResponse];
-
-handshake(hi_75, _Arg, _CliSock, WebSocketLocation, Origin, _Protocol) ->
-    io:format("hi_75!~n",[]),
-    ["HTTP/1.1 101 Web Socket Protocol Handshake\r\n",
-     "Upgrade: WebSocket\r\n",
-     "Connection: Upgrade\r\n",
-     "WebSocket-Origin: ", Origin, "\r\n",
-     "WebSocket-Location: ", WebSocketLocation, "\r\n",
-     "\r\n"];
-
-handshake(_Ver, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
-    io:format("10!~n",[]),
+handshake(8, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
+    io:format("Version 8!~n",[]),
     Key = get_nonce_header(Arg#arg.headers),
     AcceptHash = hash_nonce(Key), 
     ["HTTP/1.1 101 Switching Protocols\r\n",
@@ -101,18 +73,8 @@ handshake(_Ver, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
      "\r\n"].
 
 ws_version(Headers) ->
-    %io:format("IDing Websocket Version...~n~p~n",[Headers]),
     case query_header("sec-websocket-version", Headers) of
-	"8" -> 8;
-	"17" -> 17;
-	_ ->
-	    case query_header("sec-websocket-key1", Headers) of
-		undefined -> 
-		    %% might be hixie 75 but...
-		    %% TODO: should really negotiate a hybi version here
-		    hi_75; 
-		_ -> hi_76
-	    end
+	"8" -> 8
     end.
 
 buffer(Len, Buffered) ->
@@ -121,13 +83,13 @@ buffer(Len, Buffered) ->
 	    Payload;
 	_ ->
 	    receive
-		{tcp, Socket, More} ->
+		{tcp, _Socket, More} ->
 		    buffer(Len, <<Buffered/binary, More/binary>>)
 	    end
     end.
 
 
-unframe_one(8, DataFrames) ->
+unframe(8, DataFrames) ->
     debug(val, {"Frame bytes list length:",length(binary_to_list(DataFrames))}),
     <<1:1,_Rsv:3,_Opcode:4,1:1,Len1:7,Rest/binary>> = DataFrames,
     debug(val,{"Len",Len1}),
@@ -144,45 +106,9 @@ unframe_one(8, DataFrames) ->
 	    <<_:0, MaskingKey:4/binary, Payload:Len/binary>> = Rest
     end,
     UnmaskedData = mask(1, binary_to_list(MaskingKey), Payload),
+    {ok, list_to_binary(UnmaskedData)}.
 
-    {ok, list_to_binary(UnmaskedData), <<>>}; %jdtodo baaaaad
-
-%% This should take care of all the Data Framing scenarios specified in
-%% http://tools.ietf.org/html/draft-hixie-thewebsocketprotocol-66#page-26
-unframe_one(hi_75, DataFrames) -> unframe_one(hi_76, DataFrames);
-unframe_one(hi_76, DataFrames) ->
-    <<Type, _/bitstring>> = DataFrames,
-    case Type of
-	T when (T =< 127) ->
-	    %% {ok, FF_Ended_Frame} = re:compile("^.(.*)\\xFF(.*?)", [ungreedy]),
-	    FF_Ended_Frame = {re_pattern,2,0,
-			      <<69,82,67,80,71,0,0,0,16,2,0,0,5,0,0,0,2,0,0,0,
-                                0,0,255,2,40,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,93,0,
-                                27,25,12,94,0,7,0,1,57,12,84,0,7,27,255,94,0,7,
-                                0,2,56,12,84,0,7,84,0,27,0>>},
-	    {match, [Data, NextFrame]} =
-		re:run(DataFrames, FF_Ended_Frame,
-		       [{capture, all_but_first, binary}]),
-	    {ok, Data, NextFrame};
-
-	_ -> %% Type band 16#80 =:= 16#80
-	    {Length, LenBytes} = unpack_length(DataFrames, 0, 0),
-	    <<_, _:LenBytes/bytes, Data:Length/bytes,
-              NextFrame/bitstring>> = DataFrames,
-	    {ok, Data, NextFrame}
-    end.
-
-unframe_all(_, <<>>, Acc) ->
-    lists:reverse(Acc);
-unframe_all(ProtocolVersion, DataFramesBin, Acc) ->
-    {ok, Msg, Rem} = unframe_one(ProtocolVersion, DataFramesBin),
-    unframe_all(ProtocolVersion, Rem, [Msg|Acc]).
-
-frame(hi_75, IoList) ->
-    frame(hi_76, IoList);
-frame(hi_76, IoList) ->
-    [0, IoList, 255];
-frame(_, Data) ->
+frame(8, Data) ->
     %FIN=true because we're not fragmenting.
     %OPCODE=1 for text
     FirstByte = 128 bor 1,
@@ -255,43 +181,10 @@ query_header(Header, #headers{other=L}, Default) ->
                         Acc
                 end, Default, L).
 
-secret_key(KeyName, Headers) ->
-    case query_header(KeyName, Headers) of
-	undefined ->
-	    0;
-	Key ->
-	    Digits = lists:filter(fun(C) -> C >= 48 andalso C =< 57 end, Key),
-	    NumberOfSpaces = length(lists:filter(fun(C) -> C == 32 end, Key)),
-	    list_to_integer(Digits) div NumberOfSpaces
-    end.
-
-challenge(Key1, Key2, Challenge) ->
-    erlang:md5(digits32(Key1) ++ digits32(Key2) ++ Challenge).
-
-digits32(Num) ->
-    Digit4 = Num rem 256,
-    Num2 = Num div 256,
-    Digit3 = Num2 rem 256,
-    Num3 = Num2 div 256,
-    Digit2 = Num3 rem 256,
-    Digit1 = Num3 div 256,
-    [Digit1, Digit2, Digit3, Digit4].
-
 hash_nonce(Nonce) ->
     Salted = Nonce ++ "258EAFA5-E914-47DA-95CA-C5AB0DC85B11",
     HashBin = crypto:sha(Salted),
     base64:encode_to_string(HashBin).
-
-unpack_length(Binary, LenBytes, Length) ->
-    <<_, _:LenBytes/bytes, B, _/bitstring>> = Binary,
-    B_v = B band 16#7F,
-    NewLength = (Length * 128) + B_v,
-    case B band 16#80 of
-	16#80 ->
-	    unpack_length(Binary, LenBytes + 1, NewLength);
-	0 ->
-	    {NewLength, LenBytes + 1}
-    end.
 
 debug(val, Val) ->
     io:format("~p~n",[Val]).

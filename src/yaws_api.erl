@@ -994,14 +994,13 @@ websocket_receive({Socket, ProtocolVersion}) ->
 	end,
     case R of
 	{ok, DataFrames} ->
-	    ReceivedMsgs = yaws_websockets:unframe_all(ProtocolVersion, 
-						       DataFrames, []),
-	    {ok, ReceivedMsgs};
+	    ReceivedMsg = yaws_websockets:unframe(ProtocolVersion, DataFrames),
+	    {ok, ReceivedMsg};
 	_ -> R
     end.
 
 websocket_unframe_data(ProtocolVersion, DataFrameBin) ->
-    {ok, Msg, <<>>} = yaws_websockets:unframe_one(ProtocolVersion, DataFrameBin),
+    {ok, Msg} = yaws_websockets:unframe(ProtocolVersion, DataFrameBin),
     Msg.
 
 websocket_setopts({{sslsocket,_,_}=Socket,_}, Opts) ->
