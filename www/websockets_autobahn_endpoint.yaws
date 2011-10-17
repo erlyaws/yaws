@@ -25,7 +25,7 @@ echo_server(WebSocket = {Socket, ProtocolVersion}) ->
 		true ->
 		    io:format("Too many chars to print easily...~n",[])
 	    end,
-            yaws_api:websocket_send(WebSocket, Data), 
+            yaws_api:websocket_send(WebSocket, {Type, Data}), 
 
 	    io:format("Frame: ~p~n", [frame_info(DataFrame)]),
 

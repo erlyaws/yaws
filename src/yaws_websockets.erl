@@ -14,7 +14,7 @@
 -include("yaws_debug.hrl").
 
 -include_lib("kernel/include/file.hrl").
--export([handshake/3, unframe/2, frame/2]).
+-export([handshake/3, unframe/2, frame/3]).
 
 handshake(Arg, ContentPid, SocketMode) ->
     io:format("~p~n",[SocketMode]),
@@ -93,6 +93,7 @@ unframe(8, DataFrames) ->
     debug(val, {"Frame bytes list length:",length(binary_to_list(DataFrames))}),
     <<1:1,_Rsv:3,Opcode:4,1:1,Len1:7,Rest/binary>> = DataFrames,
     debug(val,{"Len1",Len1}),
+    debug(val,{"Opcode",Opcode}),
     case Len1 of
 	126 ->
 	    <<Len:16, MaskingKey:4/binary, Payload:Len/binary>> = Rest;
@@ -113,9 +114,10 @@ unframe(8, DataFrames) ->
 		error -> exit(error, "not utf8");
 		_ -> 
 		    ok
-	    end
+	    end;
+	_ -> ok
     end,
-    {ok, opcode_to_atom, UnmaskedData}.
+    {ok, opcode_to_atom(Opcode), UnmaskedData}.
 
 opcode_to_atom(16#0) -> continuation;
 opcode_to_atom(16#1) -> text;
@@ -124,6 +126,9 @@ opcode_to_atom(16#8) -> close;
 opcode_to_atom(16#9) -> ping;
 opcode_to_atom(16#A) -> pong;
 opcode_to_atom(_) -> exit("unsupported opcode").
+
+atom_to_opcode(text) -> 16#1;
+atom_to_opcode(binary) -> 16#2.
 
 % http://www.erlang.org/doc/apps/stdlib/unicode_usage.html#id191467
 % Heuristic identification of UTF-8
@@ -135,10 +140,10 @@ test_utf8(Bin) when is_binary(Bin) ->
 	    error
     end.
 
-frame(8, Data) ->
+frame(8, Type, Data) ->
     %FIN=true because we're not fragmenting.
     %OPCODE=1 for text
-    FirstByte = 128 bor 1,
+    FirstByte = 128 bor atom_to_opcode(Type),
     ByteList = binary_to_list(Data),
     Length = length(ByteList),
     if

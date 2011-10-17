@@ -976,8 +976,8 @@ stream_process_end(Sock, YawsPid) ->
     YawsPid ! endofstreamcontent.
 
 
-websocket_send({Socket, ProtocolVersion}, IoList) ->
-    DataFrame = yaws_websockets:frame(ProtocolVersion, IoList),
+websocket_send({Socket, ProtocolVersion}, {Type, Data}) ->
+    DataFrame = yaws_websockets:frame(ProtocolVersion, Type,  Data),
     case Socket of
 	{sslsocket,_,_} ->
 	    ssl:send(Socket, DataFrame);
