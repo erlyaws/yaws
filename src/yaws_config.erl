@@ -2111,8 +2111,15 @@ can_soft_sconf([Sc|Scs], OldGroups) ->
                     can_soft_sconf(Scs, OldGroups);
                 {true, Old} when Old#sconf.start_mod /= Sc#sconf.start_mod ->
                     false;
-                {true, _Old} ->
-                    can_soft_sconf(Scs, OldGroups)
+                {true, Old} ->
+                    case
+                        {proplists:get_value(listen_opts, Old#sconf.soptions),
+                         proplists:get_value(listen_opts, Sc#sconf.soptions)} of
+                        {Opts, Opts} ->
+                            can_soft_sconf(Scs, OldGroups);
+                        _ ->
+                            false
+                    end
             end
     end;
 can_soft_sconf([], _) ->
