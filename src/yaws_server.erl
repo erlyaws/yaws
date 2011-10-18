@@ -891,7 +891,8 @@ ssl_listen_opts(GC, SC, SSL) ->
      {packet, http},
      {recbuf, 8192},
      {reuseaddr, true},
-     {active, false} | ssl_listen_opts(GC, SSL)] ++ InetType.
+     {active, false} | ssl_listen_opts(GC, SSL)] ++ InetType ++
+        proplists:get_value(listen_opts, SC#sconf.soptions, []).
 
 ssl_listen_opts(GC, SSL) ->
     L = [if SSL#ssl.keyfile /= undefined ->
