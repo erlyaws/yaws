@@ -10,7 +10,7 @@ arg_rewrite(Arg) ->
     case Url#url.path of
         "/rewrite" ->
             Req0 = Arg#arg.req,
-            Req1 = Req0#http_request{path={abs_path,"/icons/yaws.gif"}},
+            Req1 = Req0#http_request{path={abs_path,"/hello.txt"}},
             Arg#arg{req=Req1};
         "/redirect" ->
             L = "http://www.yakaz.com",
@@ -19,7 +19,7 @@ arg_rewrite(Arg) ->
             Arg#arg{state=RwResp};
         "/response" ->
             H = [{header, {content_type, "text/plain"}}],
-            C = <<"Hello, World!">>,
+            C = <<"Goodbye, Cruel World!">>,
             RwResp = #rewrite_response{status=200, headers=H, content=C},
             Arg#arg{state=RwResp};
         _ ->

@@ -19,7 +19,6 @@ test:	conf start
 	dd if=/dev/zero of=../../www/2000.txt bs=1024 count=2000 >/dev/null 2>&1
 	dd if=/dev/zero of=../../www/3000.txt bs=1024 count=3000 >/dev/null 2>&1
 	dd if=/dev/zero of=../../www/10000.txt bs=1024 count=10000 >/dev/null 2>&1
-	echo '<? echo "Hello, world!"; ?>' > ../../www/test.php
 	ul=`ulimit -n` ; \
 	val=`expr $$ul '<' $(ULIMIT)` ; \
 	if [ $$val = 1 ] ; then \

@@ -576,7 +576,7 @@ large_chunked_post() ->
 
 expires_test() ->
     io:format("expires_test\n", []),
-    Uri = "http://localhost:8006/icons/yaws.gif",
+    Uri = "http://localhost:8006/hello.txt",
     ?line {ok, "200", Hdrs, _} = ibrowse:send_req(Uri, [], get),
 
     %% Retrieve max-age value to test Expires header
@@ -627,7 +627,7 @@ cgi_redirect_test() ->
 php_handler_test() ->
     io:format("php_handler_test\n", []),
     Uri = "http://localhost:8006/test.php",
-    {ok, Binary} = file:read_file("../../www/test.php"),
+    {ok, Binary} = file:read_file("./www/test.php"),
     Content = binary_to_list(Binary),
     ?line {ok, "200", _, Content} = ibrowse:send_req(Uri, [], get),
     ok.
@@ -643,8 +643,8 @@ arg_rewrite_test_rewrite() ->
     io:format("  rewrite\n", []),
     Uri = "http://localhost:8006/rewrite",
     ?line {ok, "200", Hdrs, _} = ibrowse:send_req(Uri, [], get),
-    ?line "image/gif" = proplists:get_value("Content-Type", Hdrs),
-    {ok, FI} = file:read_file_info("../../www/icons/yaws.gif"),
+    ?line "text/plain" = proplists:get_value("Content-Type", Hdrs),
+    {ok, FI} = file:read_file_info("./www/hello.txt"),
     Etag = yaws:make_etag(FI),
     ?line Etag = proplists:get_value("Etag", Hdrs),
     ok.
@@ -662,7 +662,7 @@ arg_rewrite_test_response() ->
     Uri = "http://localhost:8006/response",
     ?line {ok, "200", Hdrs, Content} = ibrowse:send_req(Uri, [], get),
     ?line "text/plain" = proplists:get_value("Content-Type", Hdrs),
-    ?line "Hello, World!" = Content,
+    ?line "Goodbye, Cruel World!" = Content,
     ok.
 
 
