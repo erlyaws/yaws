@@ -24,6 +24,7 @@ start() ->
     post_test(),
     expires_test(),
     reentrant_test(),
+    cgi_redirect_test(),
     php_handler_test(),
     arg_rewrite_test(),
     shaper_test(),
@@ -616,7 +617,12 @@ reentrant_test_delayed_headers() ->
     ?line "true" = proplists:get_value("X-Delayed-Header", Hdrs),
     ok.
 
-
+cgi_redirect_test() ->
+    io:format("cgi_redirect_test\n", []),
+    Uri = "http://localhost:8008/cgi-bin/redirect_test.cgi",
+    ?line {ok, "302", Hdrs, _} = ibrowse:send_req(Uri, [], get),
+    ?line true = lists:any(fun({"Location", _}) -> true; (_) -> false end, Hdrs),
+    ok.
 
 php_handler_test() ->
     io:format("php_handler_test\n", []),
@@ -625,7 +631,6 @@ php_handler_test() ->
     Content = binary_to_list(Binary),
     ?line {ok, "200", _, Content} = ibrowse:send_req(Uri, [], get),
     ok.
-
 
 arg_rewrite_test() ->
     io:format("arg_rewrite_test\n", []),

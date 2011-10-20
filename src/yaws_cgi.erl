@@ -62,24 +62,64 @@ get_from_worker(Arg, WorkerPid) ->
             [{status, 500}, {html, io_lib:format("CGI failure: ~p", [Reason])}];
         {Headers, Data} ->
             AllResps = lists:map(fun(X)-> do_header(Arg, X, Data) end, Headers),
-            {ContentResps, Others} = filter2(fun iscontent/1, AllResps),
-            {RedirResps, OtherResps} = filter2(fun isredirect/1, Others),
-            case RedirResps of
-                [R|_] ->
-                    WorkerPid ! {self(), no_data},
-                    OtherResps ++ [R];
-                [] ->
-                    case ContentResps of
-                        [C={streamcontent, _, _}|_] ->
-                            WorkerPid ! {self(), stream_data},
-                            OtherResps++[C];
-                        [C={content, _, _}|_] ->
+            %%
+            %% The CGI 1.1 spec (RFC 3875) requires a worker response
+            %% consisting of only a location header and optional extension
+            %% headers to be augmented with a 302 status code. Any other
+            %% worker response with a location header is handled normally.
+            %% Technically a response of the latter type MUST have a status
+            %% code in it, but we don't enforce that.
+            %%
+            {LocHdr, ExtHdrs, TheRest} =
+                lists:foldl(
+                  fun({header, Line}=Hdr, {Loc, Ext, Rest}) ->
+                          {HdrLower, HdrVal} = do_lower_header(Line),
+                          case HdrLower of
+                              "location" ->
+                                  {[Hdr], Ext, Rest};
+                              "x-cgi-"++_ ->
+                                  {Loc, [Hdr|Ext], Rest};
+                              _ ->
+                                  {Loc, Ext, [Hdr|Rest]}
+                          end;
+                     (Hdr, {Loc, Ext, Rest}) ->
+                          {Loc, Ext, [Hdr|Rest]}
+                  end, {[], [], []}, AllResps),
+            Next = case LocHdr of
+                       [] ->
+                           normal;
+                       [{header, Location}] ->
+                           case TheRest of
+                               [] ->
+                                   location_add_302;
+                               _ ->
+                                   normal
+                           end
+                   end,
+            case Next of
+                normal ->
+                    {ContentResps, NotCtnt} = filter2(fun iscontent/1, AllResps),
+                    {RedirResps, Others} = filter2(fun isredirect/1, NotCtnt),
+                    case RedirResps of
+                        [R|_] ->
                             WorkerPid ! {self(), no_data},
-                            OtherResps++[C];
+                            Others ++ [R];
                         [] ->
-                            WorkerPid ! {self(), no_data},
-                            OtherResps
-                    end
+                            case ContentResps of
+                                [C={streamcontent, _, _}|_] ->
+                                    WorkerPid ! {self(), stream_data},
+                                    Others++[C];
+                                [C={content, _, _}|_] ->
+                                    WorkerPid ! {self(), no_data},
+                                    Others++[C];
+                                [] ->
+                                    WorkerPid ! {self(), no_data},
+                                    Others
+                            end
+                    end;
+                location_add_302 ->
+                    WorkerPid ! {self(), no_data},
+                    AllResps++[{status, 302}]
             end
     end.
 
@@ -105,12 +145,10 @@ iscontent({streamcontent, _, _}) ->
 iscontent(_) ->
     false.
 
-
-isredirect({status, I}) when is_integer(I) , I >301, I < 304 ->
+isredirect({status, I}) when is_integer(I) , I > 301, I < 304; I =:= 307 ->
     true;
 isredirect(_) ->
     false.
-
 
 checkdef(undefined) ->
     "";
@@ -383,9 +421,7 @@ exeof(F) ->
 do_header(_Arg, "HTTP/1."++[_,_,N1,N2,N3|_], _) ->
     {status, list_to_integer([N1,N2,N3])};
 do_header(Arg, Header, Data) when is_list(Header) ->
-    [HdrName | HdrVal] = yaws:split_sep(Header, $:),
-    HdrNmParts = [yaws:to_lower(H) || H <- yaws:split_sep(HdrName, $-)],
-    HdrLower = yaws:join_sep(HdrNmParts, "-"),
+    {HdrLower, HdrVal} = do_lower_header(Header),
     do_header(Arg, {HdrLower, yaws:join_sep(HdrVal, ":"), Header}, Data);
 do_header(_Arg, {"content-type", CT, _}, {partial_data, Data}) ->
     {streamcontent, CT, Data};
@@ -396,6 +432,10 @@ do_header(_Arg, {"status", [N1,N2,N3|_], _}, _) ->
 do_header(_Arg, {_, _, Line}, _) ->
     {header, Line}.
 
+do_lower_header(Header) ->
+    [HdrName | HdrVal] = yaws:split_sep(Header, $:),
+    HdrNmParts = [yaws:to_lower(H) || H <- yaws:split_sep(HdrName, $-)],
+    {yaws:join_sep(HdrNmParts, "-"), HdrVal}.
 
 get_resp(WorkerPid) ->
     get_resp([], WorkerPid).
