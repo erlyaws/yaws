@@ -516,7 +516,9 @@ hex_to_string(Hex) ->
 
 
 universal_time_as_string() ->
-    time_to_string(calendar:universal_time(), "GMT").
+    universal_time_as_string(calendar:universal_time()).
+universal_time_as_string(UTime) ->
+    time_to_string(UTime, "GMT").
 local_time_as_gmt_string(LocalTime) ->
     time_to_string(erlang:localtime_to_universaltime(LocalTime),"GMT").
 
@@ -1377,10 +1379,10 @@ make_expires_header(MimeType, FI) ->
     end.
 
 make_expires_header(access, TTL, _FI) ->
-    DateTime = erlang:localtime(),
+    DateTime = erlang:universaltime(),
     Secs = calendar:datetime_to_gregorian_seconds(DateTime) + TTL,
     ExpireTime = calendar:gregorian_seconds_to_datetime(Secs),
-    ["Expires: ", local_time_as_gmt_string(ExpireTime), "\r\n"];
+    ["Expires: ", universal_time_as_string(ExpireTime), "\r\n"];
 make_expires_header(modify, TTL, FI) ->
     DateTime = FI#file_info.mtime,
     Secs = calendar:datetime_to_gregorian_seconds(DateTime) + TTL,
