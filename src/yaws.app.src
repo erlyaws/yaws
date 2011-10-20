@@ -1,6 +1,6 @@
 {application,yaws,
  [{description,"yaws WWW server"},
-  {vsn, {cmd, "sed -e 's/^.*=//' vsn.mk 2>/dev/null"}},
+  {vsn, {cmd, "sed -ne '1,/^YAWS_VSN=/s/^YAWS_VSN=//p' vsn.mk 2>/dev/null"}},
   {modules,[]},
   {registered, []},
   {mod,{yaws_app,[]}},

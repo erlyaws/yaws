@@ -1,7 +1,7 @@
 #!/bin/sh
 
 YAWS_DIR=`pwd`
-DEFAULT_YAWS_VSN=`sed -e 's/^.*=//' $YAWS_DIR/vsn.mk 2>/dev/null`
+DEFAULT_YAWS_VSN=`sed -ne '1,/^YAWS_VSN=/s/^YAWS_VSN=//p' $YAWS_DIR/vsn.mk 2>/dev/null`
 YAWS_VSN=${VSN-$DEFAULT_YAWS_VSN}
 YAWS_VARDIR=${VARDIR-$YAWS_DIR/var}
 YAWS_ETCDIR=${ETCDIR-$YAWS_DIR/etc}
