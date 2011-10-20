@@ -70,10 +70,10 @@ get_from_worker(Arg, WorkerPid) ->
             %% Technically a response of the latter type MUST have a status
             %% code in it, but we don't enforce that.
             %%
-            {LocHdr, ExtHdrs, TheRest} =
+            {LocHdr, _ExtHdrs, TheRest} =
                 lists:foldl(
                   fun({header, Line}=Hdr, {Loc, Ext, Rest}) ->
-                          {HdrLower, HdrVal} = do_lower_header(Line),
+                          {HdrLower, _HdrVal} = do_lower_header(Line),
                           case HdrLower of
                               "location" ->
                                   {[Hdr], Ext, Rest};
@@ -88,7 +88,7 @@ get_from_worker(Arg, WorkerPid) ->
             Next = case LocHdr of
                        [] ->
                            normal;
-                       [{header, Location}] ->
+                       [{header, _Location}] ->
                            case TheRest of
                                [] ->
                                    location_add_302;
