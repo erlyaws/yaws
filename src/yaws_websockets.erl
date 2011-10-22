@@ -13,11 +13,12 @@
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
+-record(frame_info,{fin, rsv, opcode, masked, maskingKey, length, payload}).
+
 -include_lib("kernel/include/file.hrl").
 -export([handshake/3, unframe/2, frame/3]).
 
 handshake(Arg, ContentPid, SocketMode) ->
-    io:format("~p~n",[SocketMode]),
     CliSock = Arg#arg.clisock,
     %jdtodo io:format("CliSock ~p~n",[CliSock]),
     case get_origin_header(Arg#arg.headers) of
@@ -79,56 +80,95 @@ ws_version(Headers) ->
 
 buffer(Len, Buffered) ->
     case Buffered of 
-	<<Payload:Len/binary>> ->
-	    Payload;
+	<<_Expected:Len/binary>> = Return -> % exactly enough
+%	    debug(val, {buffering, "got:", Len}),
+	    Return;
+	<<_Expected:Len/binary,_Extra/binary>> = Return-> % more than expected
+%	    debug(val, {buffering, "got:", Len, "and more!"}),
+	    Return;
 	_ ->
+%	    debug(val, {buffering, "need:", Len, "waiting for more..."}),
+	    % TODO: take care of active and passive tcp and ssl sockets
 	    receive
 		{tcp, _Socket, More} ->
 		    buffer(Len, <<Buffered/binary, More/binary>>)
 	    end
     end.
 
+check_control_frame(Len, Opcode) ->
+    if
+	(Len > 125) and (Opcode > 7) ->
+	    % http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08#section-4.5
+	    {error, "control frame > 125 bytes"};
+	true ->
+	    ok
+    end.
 
-unframe(8, DataFrames) ->
-    debug(val, {"Frame bytes list length:",length(binary_to_list(DataFrames))}),
-    <<1:1,_Rsv:3,Opcode:4,1:1,Len1:7,Rest/binary>> = DataFrames,
-    debug(val,{"Len1",Len1}),
-    debug(val,{"Opcode",Opcode}),
+frame_info(<<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
+%    debug(val,"frame_info"),
+    case check_control_frame(Len1, Opcode) of
+	ok ->
+	    {frame_info_secondary, Length, MaskingKey, Payload} 
+		= frame_info_secondary(Len1, Rest),
+	    #frame_info{fin=Fin, 
+			rsv=Rsv, 
+			opcode=opcode_to_atom(Opcode),
+			masked=Masked, 
+			maskingKey=MaskingKey, 
+			length=Length, 
+			payload=Payload};
+	Other ->
+	    Other
+    end;
+
+frame_info(FirstPacket) ->
+%    debug(val, "frame_info input was short, buffering..."),
+    frame_info(buffer(2,FirstPacket)).
+	    
+frame_info_secondary(Len1, Rest) ->
     case Len1 of
 	126 ->
-	    <<Len:16, MaskingKey:4/binary, Payload:Len/binary>> = Rest;
+	    <<Len:16, MaskingKey:4/binary, Rest2/binary>> = buffer(6, Rest),
+	    Payload = buffer(Len, Rest2);
 	127 ->
-	    <<Len:64, Rest2/binary>> = Rest,
-	    debug(val,{"Len",Len}),
-	    <<MaskingKey:4/binary, Rest3/binary>> = Rest2,
-	    debug(val, {"Payload bytes list length:",length(binary_to_list(Rest3))}),
-	    Payload = buffer(Len, Rest3);
+	    <<Len:64, MaskingKey:4/binary, Rest2/binary>> = buffer(12, Rest),
+	    Payload = buffer(Len, Rest2);
 	Len ->
-	    <<_:0, MaskingKey:4/binary, Payload:Len/binary>> = Rest
+	    <<MaskingKey:4/binary, Payload:Len/binary>> = buffer(4+Len, Rest)
     end,
-    UnmaskedData = list_to_binary(mask(1, binary_to_list(MaskingKey), Payload)),
+    {frame_info_secondary, Len, MaskingKey, Payload}.
     
-    case opcode_to_atom(Opcode) of
+unframe(8, FirstPacket) ->
+    FrameInfo = frame_info(FirstPacket),
+%    debug(val, FrameInfo),
+    
+    UnmaskedData = list_to_binary(mask(1, binary_to_list(FrameInfo#frame_info.maskingKey), 
+				       FrameInfo#frame_info.payload)),
+    
+    case FrameInfo#frame_info.opcode of
 	text -> 
 	    case test_utf8(UnmaskedData) of
-		error -> exit(error, "not utf8");
+		error -> exit({error, "not utf8"});
 		_ -> 
 		    ok
 	    end;
 	_ -> ok
     end,
-    {ok, opcode_to_atom(Opcode), UnmaskedData}.
+    {ok, FrameInfo#frame_info.opcode, UnmaskedData}.
 
 opcode_to_atom(16#0) -> continuation;
 opcode_to_atom(16#1) -> text;
 opcode_to_atom(16#2) -> binary;
 opcode_to_atom(16#8) -> close;
 opcode_to_atom(16#9) -> ping;
-opcode_to_atom(16#A) -> pong;
-opcode_to_atom(_) -> exit("unsupported opcode").
+opcode_to_atom(16#A) -> pong.
 
+%atom_to_opcode(continuation) -> 16#0; commented out because I don't know what continuation is for.
 atom_to_opcode(text) -> 16#1;
-atom_to_opcode(binary) -> 16#2.
+atom_to_opcode(binary) -> 16#2;
+atom_to_opcode(close) -> 16#8;
+atom_to_opcode(ping) -> 16#9;
+atom_to_opcode(pong) -> 16#A.
 
 % http://www.erlang.org/doc/apps/stdlib/unicode_usage.html#id191467
 % Heuristic identification of UTF-8
