@@ -112,6 +112,16 @@
                        %%                 to append to the url
          }).
 
+-record(frame_info, {
+	  fin, 
+	  rsv, 
+	  opcode, 
+	  masked, 
+	  masking_key, 
+	  length, 
+	  payload,
+	  data}).
+
 
 
 

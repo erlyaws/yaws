@@ -13,8 +13,6 @@
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
--record(frame_info,{fin, rsv, opcode, masked, maskingKey, length, payload}).
-
 -include_lib("kernel/include/file.hrl").
 -export([handshake/3, unframe/2, frame/3]).
 
@@ -81,13 +79,13 @@ ws_version(Headers) ->
 buffer(Len, Buffered) ->
     case Buffered of 
 	<<_Expected:Len/binary>> = Return -> % exactly enough
-%	    debug(val, {buffering, "got:", Len}),
+	    %debug(val, {buffering, "got:", Len}),
 	    Return;
 	<<_Expected:Len/binary,_Extra/binary>> = Return-> % more than expected
-%	    debug(val, {buffering, "got:", Len, "and more!"}),
+	    %debug(val, {buffering, "got:", Len, "and more!"}),
 	    Return;
 	_ ->
-%	    debug(val, {buffering, "need:", Len, "waiting for more..."}),
+	    %debug(val, {buffering, "need:", Len, "waiting for more..."}),
 	    % TODO: take care of active and passive tcp and ssl sockets
 	    receive
 		{tcp, _Socket, More} ->
@@ -114,7 +112,7 @@ frame_info(<<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
 			rsv=Rsv, 
 			opcode=opcode_to_atom(Opcode),
 			masked=Masked, 
-			maskingKey=MaskingKey, 
+			masking_key=MaskingKey, 
 			length=Length, 
 			payload=Payload};
 	Other ->
@@ -134,27 +132,30 @@ frame_info_secondary(Len1, Rest) ->
 	    <<Len:64, MaskingKey:4/binary, Rest2/binary>> = buffer(12, Rest),
 	    Payload = buffer(Len, Rest2);
 	Len ->
+	    debug(val, {'Len', Len}),
 	    <<MaskingKey:4/binary, Payload:Len/binary>> = buffer(4+Len, Rest)
     end,
     {frame_info_secondary, Len, MaskingKey, Payload}.
-    
+
 unframe(8, FirstPacket) ->
     FrameInfo = frame_info(FirstPacket),
-%    debug(val, FrameInfo),
     
-    UnmaskedData = list_to_binary(mask(1, binary_to_list(FrameInfo#frame_info.maskingKey), 
-				       FrameInfo#frame_info.payload)),
+    Unframed = FrameInfo#frame_info{
+		 data = list_to_binary(mask(1, binary_to_list(FrameInfo#frame_info.masking_key), 
+					    FrameInfo#frame_info.payload))
+		},
     
-    case FrameInfo#frame_info.opcode of
+    case Unframed#frame_info.opcode of
 	text -> 
-	    case test_utf8(UnmaskedData) of
-		error -> exit({error, "not utf8"});
+	    case test_utf8(Unframed#frame_info.data) of
+		error ->
+		    exit({error, "not utf8"});
 		_ -> 
 		    ok
 	    end;
 	_ -> ok
     end,
-    {ok, FrameInfo#frame_info.opcode, UnmaskedData}.
+    Unframed.
 
 opcode_to_atom(16#0) -> continuation;
 opcode_to_atom(16#1) -> text;

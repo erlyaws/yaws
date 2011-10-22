@@ -1000,8 +1000,7 @@ websocket_receive({Socket, ProtocolVersion}) ->
     end.
 
 websocket_unframe_data(ProtocolVersion, DataFrameBin) ->
-    {ok, Type, Msg} = yaws_websockets:unframe(ProtocolVersion, DataFrameBin),
-    {Type, Msg}.
+    yaws_websockets:unframe(ProtocolVersion, DataFrameBin).
 
 websocket_setopts({{sslsocket,_,_}=Socket,_}, Opts) ->
     ssl:setopts(Socket, Opts);
