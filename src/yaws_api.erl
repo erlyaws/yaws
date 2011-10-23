@@ -2097,6 +2097,7 @@ embedded_start_conf(DocRoot, SL, GL, Id)
     %% (see for example the start of the yaws_session_server)
     ok = application:set_env(yaws, embedded_conf, [{sclist,SCList},{gc,GC}]),
 
+    yaws:mkdir(yaws:id_dir(Id)),
     {ok, SCList, GC, ChildSpecs ++ SoapChild}.
 
 
