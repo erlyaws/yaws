@@ -997,10 +997,15 @@ websocket_receive({Socket, ProtocolVersion}) ->
 	    Msg = yaws_websockets:unframe(ProtocolVersion, DataFrames),
 	    {ok, Type, Msg};
 	_ -> R
-    end.
+    end,
+    inet:setopts(Socket, {active, once}).
 
-websocket_unframe_data(ProtocolVersion, DataFrameBin) ->
-    yaws_websockets:unframe(ProtocolVersion, DataFrameBin).
+% Returns all the WebSocket frames fully or partially contained in FirstPacket,
+% reading exactly as many more bytes from Socket as are needed to finish unframing
+% the last frame partially included in FirstPacket, if needed.
+% -> [#frame_info,...,#frame_info]
+websocket_unframe_data(ProtocolVersion, FirstPacket) ->
+    yaws_websockets:unframe(ProtocolVersion, FirstPacket).
 
 websocket_setopts({{sslsocket,_,_}=Socket,_}, Opts) ->
     ssl:setopts(Socket, Opts);

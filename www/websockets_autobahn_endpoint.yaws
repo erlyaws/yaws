@@ -2,7 +2,7 @@
 out(A) -> 
     io:format("Spawning websocket owner~n",[]),
     WebSocketOwner = spawn(fun() -> websocket_owner() end),
-    {websocket, WebSocketOwner, {active,true}}.
+    {websocket, WebSocketOwner}.
 
 websocket_owner() ->
     receive
