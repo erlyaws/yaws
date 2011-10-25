@@ -985,27 +985,27 @@ websocket_send({Socket, ProtocolVersion}, {Type, Data}) ->
 	    gen_tcp:send(Socket, DataFrame)
     end.
 
-websocket_receive({Socket, ProtocolVersion}) ->
-    R = case Socket of
+% block until a packet is received on Socket, then
+% unframe and return the frame or frames unframed
+% by yaws_websockets:unframe.
+%
+% This is for WebSockets expected to be in {active, false} mode
+% when this function returns.
+websocket_receive({Socket, ProtocolVersion}=WebSocket) ->
+    FirstPacket = case Socket of
 	    {sslsocket,_,_} ->
 		ssl:recv(Socket, 0);
 	    _ ->
 		gen_tcp:recv(Socket, 0)
 	end,
-    case R of
-	{ok, Type, DataFrames} ->
-	    Msg = yaws_websockets:unframe(ProtocolVersion, DataFrames),
-	    {ok, Type, Msg};
-	_ -> R
-    end,
-    inet:setopts(Socket, {active, once}).
+    yaws_websockets:unframe(WebSocket, DataFrames).
 
-% Returns all the WebSocket frames fully or partially contained in FirstPacket,
-% reading exactly as many more bytes from Socket as are needed to finish unframing
-% the last frame partially included in FirstPacket, if needed.
-% -> [#frame_info,...,#frame_info]
-websocket_unframe_data(ProtocolVersion, FirstPacket) ->
-    yaws_websockets:unframe(ProtocolVersion, FirstPacket).
+% This is for WebSockets expected to be in {active, once} mode
+% when this function returns.
+websocket_unframe({Socket,ProtocolVersion}=WebSocket, FirstPacket) ->
+    Frames = yaws_websockets:unframe(WebSocket, FirstPacket),
+    websocket_setopts(Socket, {active, once}),
+    Frames.
 
 websocket_setopts({{sslsocket,_,_}=Socket,_}, Opts) ->
     ssl:setopts(Socket, Opts);

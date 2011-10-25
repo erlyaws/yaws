@@ -2,7 +2,7 @@
 out(A) -> 
     io:format("Spawning websocket owner~n",[]),
     WebSocketOwner = spawn(fun() -> websocket_owner() end),
-    {websocket, WebSocketOwner}.
+    {websocket, WebSocketOwner, {active, once}}.
 
 websocket_owner() ->
     receive
@@ -16,7 +16,7 @@ echo_server(WebSocket = {Socket, ProtocolVersion}) ->
     receive
 	{tcp, Socket, DataFrame} ->
 	    %io:format("Frame: ~p~n", [frame_info(DataFrame)]),
-	    Unframed = (catch yaws_api:websocket_unframe_data(ProtocolVersion, DataFrame)),
+	    Unframed = yaws_api:websocket_unframe_data(WebSocket, DataFrame),
 	    case Unframed of
 		#frame_info{} ->
 		    handle_message(WebSocket, Unframed)

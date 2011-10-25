@@ -76,7 +76,7 @@ ws_version(Headers) ->
 	"8" -> 8
     end.
 
-buffer(Len, Buffered) ->
+buffer(Socket, Len, Buffered) ->
     case Buffered of 
 	<<_Expected:Len/binary>> = Return -> % exactly enough
 	    %debug(val, {buffering, "got:", Len}),
@@ -84,14 +84,18 @@ buffer(Len, Buffered) ->
 	<<_Expected:Len/binary,_Extra/binary>> = Return-> % more than expected
 	    %debug(val, {buffering, "got:", Len, "and more!"}),
 	    Return;
-	_ ->
+	_ -> % not enough
 	    %debug(val, {buffering, "need:", Len, "waiting for more..."}),
-	    % TODO: take care of active and passive tcp and ssl sockets
-	    receive
-		{tcp, _Socket, More} ->
-		    buffer(Len, <<Buffered/binary, More/binary>>)
-	    end
+	    % TODO: take care of ssl sockets
+	    Needed = Len - binary_length(Buffered),
+	    {ok, More} = gen_tcp:recv(Socket, Needed),
+	    <<Buffered/binary, More/binary>>
     end.
+
+binary_length(<<>>) ->
+    0;
+binary_length(<<First:1/binary, Rest/binary>>) ->
+    1 + binary_Length(Rest).
 
 check_control_frame(Len, Opcode) ->
     if
@@ -102,43 +106,54 @@ check_control_frame(Len, Opcode) ->
 	    ok
     end.
 
-frame_info(<<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
+frame_info(Socket, <<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
 %    debug(val,"frame_info"),
     case check_control_frame(Len1, Opcode) of
 	ok ->
-	    {frame_info_secondary, Length, MaskingKey, Payload} 
+	    {frame_info_secondary, Length, MaskingKey, Payload, Excess} 
 		= frame_info_secondary(Len1, Rest),
-	    #frame_info{fin=Fin, 
-			rsv=Rsv, 
-			opcode=opcode_to_atom(Opcode),
-			masked=Masked, 
-			masking_key=MaskingKey, 
-			length=Length, 
-			payload=Payload};
+	    FrameInfo = #frame_info{fin=Fin, 
+				    rsv=Rsv, 
+				    opcode=opcode_to_atom(Opcode),
+				    masked=Masked, 
+				    masking_key=MaskingKey, 
+				    length=Length, 
+				    payload=Payload},
+	    {FrameInfo, Excess};
 	Other ->
 	    Other
     end;
 
-frame_info(FirstPacket) ->
+frame_info(Socket, FirstPacket) ->
 %    debug(val, "frame_info input was short, buffering..."),
-    frame_info(buffer(2,FirstPacket)).
+    frame_info(buffer(Socket, 2,FirstPacket)).
 	    
-frame_info_secondary(Len1, Rest) ->
+frame_info_secondary(Socket, Len1, Rest) ->
     case Len1 of
 	126 ->
-	    <<Len:16, MaskingKey:4/binary, Rest2/binary>> = buffer(6, Rest),
-	    Payload = buffer(Len, Rest2);
+	    <<Len:16, MaskingKey:4/binary, Rest2/binary>> = buffer(Socket, 6, Rest);
 	127 ->
-	    <<Len:64, MaskingKey:4/binary, Rest2/binary>> = buffer(12, Rest),
-	    Payload = buffer(Len, Rest2);
+	    <<Len:64, MaskingKey:4/binary, Rest2/binary>> = buffer(Socket, 12, Rest);
 	Len ->
 	    debug(val, {'Len', Len}),
-	    <<MaskingKey:4/binary, Payload:Len/binary>> = buffer(4+Len, Rest)
+	    <<MaskingKey:4/binary, Rest2/binary>> = buffer(Socket, 4, Rest)
     end,
-    {frame_info_secondary, Len, MaskingKey, Payload}.
+    <<Payload:Len/binary, Excess/binary>> = buffer(Socket, Len, Rest2)
+    {frame_info_secondary, Len, MaskingKey, Payload, Excess}.
 
-unframe(8, FirstPacket) ->
-    FrameInfo = frame_info(FirstPacket),
+% Returns all the WebSocket frames fully or partially contained in FirstPacket,
+% reading exactly as many more bytes from Socket as are needed to finish unframing
+% the last frame partially included in FirstPacket, if needed.
+% -> [#frame_info,...,#frame_info]
+unframe(_WebSocket, <<>>) ->
+    [];
+unframe(WebSocket, FirstPacket) ->
+    {#frame_info{}=FrameInfo, RestBin} = unframe_one(WebSocket, FirstPacket),
+    [FrameInfo | unframe(WebSocket, RestBin)].
+
+% -> {#frame_info, RestBin}
+unframe_one({Socket,8}=WebSocket, FirstPacket) ->
+    {FrameInfo, RestBin} = frame_info(Socket, FirstPacket),
     
     Unframed = FrameInfo#frame_info{
 		 data = list_to_binary(mask(1, binary_to_list(FrameInfo#frame_info.masking_key), 
@@ -155,7 +170,8 @@ unframe(8, FirstPacket) ->
 	    end;
 	_ -> ok
     end,
-    Unframed.
+    {Unframed, RestBin}.
+    
 
 opcode_to_atom(16#0) -> continuation;
 opcode_to_atom(16#1) -> text;
