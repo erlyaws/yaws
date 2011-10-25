@@ -97,18 +97,25 @@ binary_length(<<>>) ->
 binary_length(<<_First:1/binary, Rest/binary>>) ->
     1 + binary_length(Rest).
 
-check_control_frame(Len, Opcode) ->
+check_control_frame(WebSocket, Len, Opcode) ->
     if
 	(Len > 125) and (Opcode > 7) ->
 	    % http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08#section-4.5
-	    {error, "control frame > 125 bytes"};
+	    fail_connection(WebSocket, {error, "control frame > 125 bytes"});
 	true ->
 	    ok
     end.
 
-frame_info(Socket, <<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
+% no extensions are supported yet.
+% http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08#section-4.2
+check_reserved(_WebSocket, #frame_info{rsv=0}) ->
+    ok;
+check_reserved(WebSocket, #frame_info{rsv=RSV}) ->
+    fail_connection(WebSocket, "rsv bits were " ++ integer_to_list(RSV) ++ " but should be unset.").
+
+frame_info(WebSocket={Socket,_ProtocolVsn}, <<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
 %    debug(val,"frame_info"),
-    case check_control_frame(Len1, Opcode) of
+    case check_control_frame(WebSocket, Len1, Opcode) of
 	ok ->
 	    {frame_info_secondary, Length, MaskingKey, Payload, Excess} 
 		= frame_info_secondary(Socket, Len1, Rest),
@@ -124,9 +131,9 @@ frame_info(Socket, <<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
 	    Other
     end;
 
-frame_info(Socket, FirstPacket) ->
+frame_info(WebSocket={Socket, _ProtoVsn}, FirstPacket) ->
 %    debug(val, "frame_info input was short, buffering..."),
-    frame_info(Socket, buffer(Socket, 2,FirstPacket)).
+    frame_info(WebSocket, buffer(Socket, 2,FirstPacket)).
 	    
 frame_info_secondary(Socket, Len1, Rest) ->
     case Len1 of
@@ -152,22 +159,18 @@ unframe(WebSocket, FirstPacket) ->
     [FrameInfo | unframe(WebSocket, RestBin)].
 
 % -> {#frame_info, RestBin}
-unframe_one({Socket,8}=_WebSocket, FirstPacket) ->
-    {FrameInfo, RestBin} = frame_info(Socket, FirstPacket),
+unframe_one({_Socket,8}=WebSocket, FirstPacket) ->
+    {FrameInfo, RestBin} = frame_info(WebSocket, FirstPacket),
     
     Unframed = FrameInfo#frame_info{
 		 data = list_to_binary(mask(1, binary_to_list(FrameInfo#frame_info.masking_key), 
 					    FrameInfo#frame_info.payload))
 		},
-    
+
+    check_reserved(WebSocket, Unframed),
     case Unframed#frame_info.opcode of
 	text -> 
-	    case test_utf8(Unframed#frame_info.data) of
-		error ->
-		    exit({error, "not utf8"});
-		_ -> 
-		    ok
-	    end;
+	    check_utf8(WebSocket, Unframed#frame_info.data);
 	_ -> ok
     end,
     {Unframed, RestBin}.
@@ -189,12 +192,12 @@ atom_to_opcode(pong) -> 16#A.
 
 % http://www.erlang.org/doc/apps/stdlib/unicode_usage.html#id191467
 % Heuristic identification of UTF-8
-test_utf8(Bin) when is_binary(Bin) ->
+check_utf8(WebSocket, Bin) when is_binary(Bin) ->
     case unicode:characters_to_binary(Bin,utf8,utf8) of
 	Bin ->
 	    ok;
 	_ ->
-	    error
+	    fail_connection(WebSocket, {error, "not valid utf-8."})
     end.
 
 frame(8, Type, Data) ->
@@ -274,6 +277,19 @@ hash_nonce(Nonce) ->
     Salted = Nonce ++ "258EAFA5-E914-47DA-95CA-C5AB0DC85B11",
     HashBin = crypto:sha(Salted),
     base64:encode_to_string(HashBin).
+
+
+% Fail the WebSocket Connection
+%
+% Certain algorithms and specifications require an endpoint to _Fail
+%   the WebSocket Connection_.  To do so, the client MUST _Close the
+%   WebSocket Connection_, and MAY report the problem to the user
+%
+% http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08#section-7.1.7
+fail_connection(_WebSocket={Socket,_ProtocolVerion}, Reason) ->
+    gen_tcp:close(Socket),
+    io:format("Failing WebSocket connection. Reason: ~p.~n", [Reason]),
+    Reason.
 
 debug(val, Val) ->
     io:format("~p~n",[Val]).

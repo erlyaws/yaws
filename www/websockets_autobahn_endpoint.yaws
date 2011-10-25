@@ -60,7 +60,7 @@ handle_message(_WebSocket, #frame_info{opcode=pong}) ->
     ok;
 
 handle_message(WebSocket, FrameInfo) ->
-    io:format("WS Endpoint Unhandled message: ~p ~p~n", [FrameInfo]),
+    io:format("WS Endpoint Unhandled message: ~p~n", [FrameInfo]),
     exit(normal).
 
 </erl>
