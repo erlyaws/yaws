@@ -94,8 +94,8 @@ buffer(Socket, Len, Buffered) ->
 
 binary_length(<<>>) ->
     0;
-binary_length(<<First:1/binary, Rest/binary>>) ->
-    1 + binary_Length(Rest).
+binary_length(<<_First:1/binary, Rest/binary>>) ->
+    1 + binary_length(Rest).
 
 check_control_frame(Len, Opcode) ->
     if
@@ -111,7 +111,7 @@ frame_info(Socket, <<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
     case check_control_frame(Len1, Opcode) of
 	ok ->
 	    {frame_info_secondary, Length, MaskingKey, Payload, Excess} 
-		= frame_info_secondary(Len1, Rest),
+		= frame_info_secondary(Socket, Len1, Rest),
 	    FrameInfo = #frame_info{fin=Fin, 
 				    rsv=Rsv, 
 				    opcode=opcode_to_atom(Opcode),
@@ -126,7 +126,7 @@ frame_info(Socket, <<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
 
 frame_info(Socket, FirstPacket) ->
 %    debug(val, "frame_info input was short, buffering..."),
-    frame_info(buffer(Socket, 2,FirstPacket)).
+    frame_info(Socket, buffer(Socket, 2,FirstPacket)).
 	    
 frame_info_secondary(Socket, Len1, Rest) ->
     case Len1 of
@@ -138,7 +138,7 @@ frame_info_secondary(Socket, Len1, Rest) ->
 	    debug(val, {'Len', Len}),
 	    <<MaskingKey:4/binary, Rest2/binary>> = buffer(Socket, 4, Rest)
     end,
-    <<Payload:Len/binary, Excess/binary>> = buffer(Socket, Len, Rest2)
+    <<Payload:Len/binary, Excess/binary>> = buffer(Socket, Len, Rest2),
     {frame_info_secondary, Len, MaskingKey, Payload, Excess}.
 
 % Returns all the WebSocket frames fully or partially contained in FirstPacket,
@@ -152,7 +152,7 @@ unframe(WebSocket, FirstPacket) ->
     [FrameInfo | unframe(WebSocket, RestBin)].
 
 % -> {#frame_info, RestBin}
-unframe_one({Socket,8}=WebSocket, FirstPacket) ->
+unframe_one({Socket,8}=_WebSocket, FirstPacket) ->
     {FrameInfo, RestBin} = frame_info(Socket, FirstPacket),
     
     Unframed = FrameInfo#frame_info{

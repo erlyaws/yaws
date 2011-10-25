@@ -38,7 +38,7 @@
 -export([stream_process_deliver/2, stream_process_deliver_chunk/2,
          stream_process_deliver_final_chunk/2, stream_process_end/2]).
 -export([websocket_send/2, websocket_receive/1,
-         websocket_unframe_data/2, websocket_setopts/2]).
+         websocket_unframe/2, websocket_setopts/2]).
 -export([new_cookie_session/1, new_cookie_session/2, new_cookie_session/3,
          cookieval_to_opaque/1, request_url/1,
          print_cookie_sessions/0,
@@ -991,20 +991,20 @@ websocket_send({Socket, ProtocolVersion}, {Type, Data}) ->
 %
 % This is for WebSockets expected to be in {active, false} mode
 % when this function returns.
-websocket_receive({Socket, ProtocolVersion}=WebSocket) ->
+websocket_receive({Socket, _ProtocolVersion}=WebSocket) ->
     FirstPacket = case Socket of
 	    {sslsocket,_,_} ->
 		ssl:recv(Socket, 0);
 	    _ ->
 		gen_tcp:recv(Socket, 0)
 	end,
-    yaws_websockets:unframe(WebSocket, DataFrames).
+    yaws_websockets:unframe(WebSocket, FirstPacket).
 
 % This is for WebSockets expected to be in {active, once} mode
 % when this function returns.
-websocket_unframe({Socket,ProtocolVersion}=WebSocket, FirstPacket) ->
+websocket_unframe(WebSocket, FirstPacket) ->
     Frames = yaws_websockets:unframe(WebSocket, FirstPacket),
-    websocket_setopts(Socket, {active, once}),
+    websocket_setopts(WebSocket, [{active, once}]),
     Frames.
 
 websocket_setopts({{sslsocket,_,_}=Socket,_}, Opts) ->

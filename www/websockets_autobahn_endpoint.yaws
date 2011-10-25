@@ -14,13 +14,10 @@ websocket_owner() ->
 
 echo_server(WebSocket = {Socket, ProtocolVersion}) ->
     receive
-	{tcp, Socket, DataFrame} ->
+	{tcp, Socket, FirstPacket} ->
 	    %io:format("Frame: ~p~n", [frame_info(DataFrame)]),
-	    Unframed = yaws_api:websocket_unframe_data(WebSocket, DataFrame),
-	    case Unframed of
-		#frame_info{} ->
-		    handle_message(WebSocket, Unframed)
-	    end,
+	    FrameInfos = yaws_api:websocket_unframe(WebSocket, FirstPacket),
+	    [[ handle_message(WebSocket, FrameInfo) || FrameInfo <- FrameInfos]],
 	    echo_server(WebSocket);
 	{tcp_closed, Socket} ->
 	    io:format("Websocket closed. Terminating echo_server...~n");
