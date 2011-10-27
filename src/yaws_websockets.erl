@@ -97,6 +97,10 @@ binary_length(<<>>) ->
 binary_length(<<_First:1/binary, Rest/binary>>) ->
     1 + binary_length(Rest).
 
+
+checks(Unframed) ->
+    check_reserved(Unframed).
+
 check_control_frame(Len, Opcode) ->
     if
 	(Len > 125) and (Opcode > 7) ->
@@ -108,10 +112,23 @@ check_control_frame(Len, Opcode) ->
 
 % no extensions are supported yet.
 % http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08#section-4.2
-check_reserved(#frame_info{rsv=0}) ->
-    ok;
+check_reserved(Unframed = #frame_info{rsv=0}) ->
+    check_utf8(Unframed);
 check_reserved(#frame_info{rsv=RSV}) ->
     {fail_connection, "rsv bits were " ++ integer_to_list(RSV) ++ " but should be unset."}.
+
+% http://www.erlang.org/doc/apps/stdlib/unicode_usage.html#id191467
+% Heuristic identification of UTF-8
+check_utf8(Unframed = #frame_info{opcode = text, data=Bin}) when is_binary(Bin) ->
+    case unicode:characters_to_binary(Bin,utf8,utf8) of
+	Bin ->
+	    Unframed;
+	_ ->
+	    {fail_connection, "not valid utf-8."}
+    end;
+check_utf8(Unframed) ->
+    Unframed.
+
 
 frame_info({Socket,_ProtocolVsn}, <<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
 %    debug(val,"frame_info"),
@@ -162,32 +179,16 @@ unframe(WebSocket, FirstPacket) ->
 	    [Fail]
     end.
 
-% -> {#frame_info, RestBin}
+% -> {#frame_info, RestBin} | {fail_connection, Reason}
 unframe_one({_Socket,8}=WebSocket, FirstPacket) ->
-    case frame_info(WebSocket, FirstPacket) of
-	{FrameInfo = #frame_info{}, RestBin} ->    
-	    Unframed = FrameInfo#frame_info{
-		 data = list_to_binary(
-			  mask(1, binary_to_list(
-				    FrameInfo#frame_info.masking_key), 
-			       FrameInfo#frame_info.payload))},
-	    case check_reserved(Unframed) of
-		ok ->
-		    case Unframed#frame_info.opcode of
-			text -> 
-			    case check_utf8(Unframed#frame_info.data) of
-				ok ->
-				    {Unframed, RestBin};
-				Fail -> % utf-8 check failed
-				    Fail
-			    end;
-			_ -> % not a text frame
-			    {Unframed, RestBin}
-		    end;
-		Fail -> % check_reserved failed
-		    Fail
-	    end;
-	Fail -> % frame_info didn't return a #frame_info
+    {FrameInfo = #frame_info{}, RestBin} = frame_info(WebSocket, FirstPacket),
+    Unmasked = list_to_binary(mask(1, binary_to_list(FrameInfo#frame_info.masking_key), 
+				   FrameInfo#frame_info.payload)),
+    Unframed = FrameInfo#frame_info{data = Unmasked},
+    case checks(Unframed) of
+	#frame_info{} ->
+	    {Unframed, RestBin};
+	Fail ->
 	    Fail
     end.
     
@@ -206,15 +207,6 @@ atom_to_opcode(close) -> 16#8;
 atom_to_opcode(ping) -> 16#9;
 atom_to_opcode(pong) -> 16#A.
 
-% http://www.erlang.org/doc/apps/stdlib/unicode_usage.html#id191467
-% Heuristic identification of UTF-8
-check_utf8(Bin) when is_binary(Bin) ->
-    case unicode:characters_to_binary(Bin,utf8,utf8) of
-	Bin ->
-	    ok;
-	_ ->
-	    {fail_connection, "not valid utf-8."}
-    end.
 
 frame(8, Type, Data) ->
     %FIN=true because we're not fragmenting.
