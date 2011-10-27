@@ -17,6 +17,7 @@ echo_server(WebSocket = {Socket, ProtocolVersion}) ->
 	{tcp, Socket, FirstPacket} ->
 	    %io:format("Frame: ~p~n", [frame_info(DataFrame)]),
 	    FrameInfos = yaws_api:websocket_unframe(WebSocket, FirstPacket),
+%	    io:format("frameinfos: ~p~n", [FrameInfos]),
 	    [[ handle_message(WebSocket, FrameInfo) || FrameInfo <- FrameInfos]],
 	    echo_server(WebSocket);
 	{tcp_closed, Socket} ->
