@@ -12,7 +12,7 @@ websocket_owner() ->
 	    io:format("websocket_owner received msg:~p~n", [Any])
     end.
 
-echo_server(WebSocket = {Socket, ProtocolVersion}) ->
+echo_server(WebSocket = #ws_state{sock=Socket}) ->
     receive
 	{tcp, Socket, FirstPacket} ->
 	    %io:format("Frame: ~p~n", [frame_info(DataFrame)]),
@@ -30,7 +30,7 @@ echo_server(WebSocket = {Socket, ProtocolVersion}) ->
 frame_info(Frame = <<Fin:1,Rsv1:1,Rsv2:1,Rsv3:1,Opcode:4,Masked:1,Len1:7,Rest1/binary>>) ->
     FrameInfo = [{fin, Fin},{rsv1,Rsv1},{rsv2,Rsv2},{rsv3,Rsv3},{opcode,Opcode},{masked,Masked},{len1,Len1}].
 
-handle_message(WebSocket, #frame_info{opcode=text, data=Data}) ->
+handle_message(WebSocket, #ws_frame_info{opcode=text, data=Data}) ->
     io:format("echoing back text message~n",[]),
     CharCount = length(binary_to_list(Data)),
     io:format("Text Chars Count = ~p~n", [CharCount]),
@@ -44,17 +44,17 @@ handle_message(WebSocket, #frame_info{opcode=text, data=Data}) ->
     yaws_api:websocket_send(WebSocket, {text, Data}), 
     ok;
 
-handle_message(WebSocket, #frame_info{opcode=binary, data=Data}) ->
+handle_message(WebSocket, #ws_frame_info{opcode=binary, data=Data}) ->
     io:format("echoing back binary message~n",[]),
     yaws_api:websocket_send(WebSocket, {binary, Data}), 
     ok;
 
-handle_message(WebSocket, #frame_info{opcode=ping, data=Data}) ->
+handle_message(WebSocket, #ws_frame_info{opcode=ping, data=Data}) ->
     io:format("replying pong to ping~n",[]),
     yaws_api:websocket_send(WebSocket, {pong, Data}),
     ok;
 
-handle_message(_WebSocket, #frame_info{opcode=pong}) ->
+handle_message(_WebSocket, #ws_frame_info{opcode=pong}) ->
     % A response to an unsolicited pong frame is not expected.
     % http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08#section-4
     io:format("ignoring unsolicited pong~n",[]),

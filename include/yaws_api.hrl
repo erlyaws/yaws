@@ -112,7 +112,7 @@
                        %%                 to append to the url
          }).
 
--record(frame_info, {
+-record(ws_frame_info, {
 	  fin, 
 	  rsv, 
 	  opcode, 
@@ -122,6 +122,16 @@
 	  payload,
 	  data}).
 
-
-
-
+%----------------------------------------------------------------------
+% The state of a WebSocket connection.
+% This is held by the ws owner process and passed in calls to yaws_api.
+%----------------------------------------------------------------------
+-type frag_type() :: text
+		   | binary
+		   | none.  %% The WebSocket is not expecting continuation
+                            %% of any fragmented message.
+-record(ws_state, {
+	  vsn :: integer(),           % WebSocket version number
+	  sock,                     % gen_tcp or gen_ssl socket
+	  frag_type :: frag_type()
+	 }).

@@ -53,7 +53,10 @@ handshake(Arg, ContentPid, SocketMode) ->
 	    end,
 	    case TakeOverResult of
 		ok ->
-		    ContentPid ! {ok, {CliSock, ProtocolVersion}};
+		    WebSocket = #ws_state{ sock = CliSock, 
+					   vsn  = ProtocolVersion,
+					   frag_type = none },
+		    ContentPid ! {ok, WebSocket};
 		{error, Reason} ->
 		    ContentPid ! discard,
 		    exit({websocket, Reason})
@@ -101,25 +104,27 @@ binary_length(<<_First:1/binary, Rest/binary>>) ->
 checks(Unframed) ->
     check_reserved_bits(Unframed).
 
-check_control_frame(Len, Opcode) ->
+check_control_frame(Len, Opcode, Fin) ->
     if
 	(Len > 125) and (Opcode > 7) ->
 	    % http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08#section-4.5
 	    {fail_connection, "control frame > 125 bytes"};
+	(Fin == 0) and (Opcode > 7) ->
+	    {fail_connection, "control frame may not be fragmented"};
 	true ->
 	    ok
     end.
 
 % no extensions are supported yet.
 % http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08#section-4.2
-check_reserved_bits(Unframed = #frame_info{rsv=0}) ->
+check_reserved_bits(Unframed = #ws_frame_info{rsv=0}) ->
     check_utf8(Unframed);
-check_reserved_bits(#frame_info{rsv=RSV}) ->
+check_reserved_bits(#ws_frame_info{rsv=RSV}) ->
     {fail_connection, "rsv bits were " ++ integer_to_list(RSV) ++ " but should be unset."}.
 
 % http://www.erlang.org/doc/apps/stdlib/unicode_usage.html#id191467
 % Heuristic identification of UTF-8
-check_utf8(Unframed = #frame_info{opcode = text, data=Bin}) when is_binary(Bin) ->
+check_utf8(Unframed = #ws_frame_info{opcode = text, data=Bin}) when is_binary(Bin) ->
     case unicode:characters_to_binary(Bin,utf8,utf8) of
 	Bin ->
 	    Unframed;
@@ -129,19 +134,19 @@ check_utf8(Unframed = #frame_info{opcode = text, data=Bin}) when is_binary(Bin) 
 check_utf8(Unframed) ->
     check_reserved_opcode(Unframed).
 
-check_reserved_opcode(#frame_info{opcode = undefined}) ->
+check_reserved_opcode(#ws_frame_info{opcode = undefined}) ->
     {fail_connection, "Reserved opcode."};
 check_reserved_opcode(Unframed) ->
     Unframed.
 
 
-frame_info({Socket,_ProtocolVsn}, <<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
-%    debug(val,"frame_info"),
-    case check_control_frame(Len1, Opcode) of
+ws_frame_info(#ws_state{sock=Socket}, <<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
+%    debug(val,"ws_frame_info"),
+    case check_control_frame(Len1, Opcode, Fin) of
 	ok ->
-	    {frame_info_secondary, Length, MaskingKey, Payload, Excess} 
-		= frame_info_secondary(Socket, Len1, Rest),
-	    FrameInfo = #frame_info{fin=Fin, 
+	    {ws_frame_info_secondary, Length, MaskingKey, Payload, Excess} 
+		= ws_frame_info_secondary(Socket, Len1, Rest),
+	    FrameInfo = #ws_frame_info{fin=Fin, 
 				    rsv=Rsv, 
 				    opcode=opcode_to_atom(Opcode),
 				    masked=Masked, 
@@ -153,11 +158,11 @@ frame_info({Socket,_ProtocolVsn}, <<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Re
 	    Other
     end;
 
-frame_info(WebSocket={Socket, _ProtoVsn}, FirstPacket) ->
-%    debug(val, "frame_info input was short, buffering..."),
-    frame_info(WebSocket, buffer(Socket, 2,FirstPacket)).
+ws_frame_info(WebSocket = #ws_state{sock=Socket}, FirstPacket) ->
+%    debug(val, "ws_frame_info input was short, buffering..."),
+    ws_frame_info(WebSocket, buffer(Socket, 2,FirstPacket)).
 	    
-frame_info_secondary(Socket, Len1, Rest) ->
+ws_frame_info_secondary(Socket, Len1, Rest) ->
     case Len1 of
 	126 ->
 	    <<Len:16, MaskingKey:4/binary, Rest2/binary>> = buffer(Socket, 6, Rest);
@@ -168,35 +173,33 @@ frame_info_secondary(Socket, Len1, Rest) ->
 	    <<MaskingKey:4/binary, Rest2/binary>> = buffer(Socket, 4, Rest)
     end,
     <<Payload:Len/binary, Excess/binary>> = buffer(Socket, Len, Rest2),
-    {frame_info_secondary, Len, MaskingKey, Payload, Excess}.
+    {ws_frame_info_secondary, Len, MaskingKey, Payload, Excess}.
 
 % Returns all the WebSocket frames fully or partially contained in FirstPacket,
 % reading exactly as many more bytes from Socket as are needed to finish unframing
 % the last frame partially included in FirstPacket, if needed.
-% -> [#frame_info,...,#frame_info]
+% -> [#ws_frame_info,...,#ws_frame_info]
 unframe(_WebSocket, <<>>) ->
     [];
 unframe(WebSocket, FirstPacket) ->
     case unframe_one(WebSocket, FirstPacket) of
-	{#frame_info{}=FrameInfo, RestBin} ->
+	{FrameInfo = #ws_frame_info{}, RestBin} ->
 	    [FrameInfo | unframe(WebSocket, RestBin)];
 	Fail ->
 	    [Fail]
     end.
 
-% -> {#frame_info, RestBin} | {fail_connection, Reason}
-unframe_one({_Socket,8}=WebSocket, FirstPacket) ->
-    {FrameInfo = #frame_info{}, RestBin} = frame_info(WebSocket, FirstPacket),
-    Unmasked = list_to_binary(mask(1, binary_to_list(FrameInfo#frame_info.masking_key), 
-				   FrameInfo#frame_info.payload)),
-    Unframed = FrameInfo#frame_info{data = Unmasked},
+% -> {#ws_frame_info, RestBin} | {fail_connection, Reason}
+unframe_one(WebSocket = #ws_state{vsn=8}, FirstPacket) ->
+    {FrameInfo = #ws_frame_info{}, RestBin} = ws_frame_info(WebSocket, FirstPacket),
+    Unmasked = mask(FrameInfo#ws_frame_info.masking_key, FrameInfo#ws_frame_info.payload),
+    Unframed = FrameInfo#ws_frame_info{data = Unmasked},
     case checks(Unframed) of
-	#frame_info{} ->
+	#ws_frame_info{} ->
 	    {Unframed, RestBin};
 	Fail ->
 	    Fail
     end.
-    
 
 opcode_to_atom(16#0) -> continuation;
 opcode_to_atom(16#1) -> text;
@@ -237,6 +240,12 @@ frame(8, Type, Data) ->
 	    end
     end.
 
+
+
+%% unmask == mask. It's XOR of the four-byte masking key.
+mask(Mask, Data)->
+    AsList = mask(1, binary_to_list(Mask), Data),
+    list_to_binary(AsList).
 %%  
 %% mask(Pos, Mask, Data)
 %%

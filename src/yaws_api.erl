@@ -976,8 +976,8 @@ stream_process_end(Sock, YawsPid) ->
     YawsPid ! endofstreamcontent.
 
 
-websocket_send({Socket, ProtocolVersion}, {Type, Data}) ->
-    DataFrame = yaws_websockets:frame(ProtocolVersion, Type,  Data),
+websocket_send(#ws_state{sock=Socket, vsn=ProtoVsn}, {Type, Data}) ->
+    DataFrame = yaws_websockets:frame(ProtoVsn, Type,  Data),
     case Socket of
 	{sslsocket,_,_} ->
 	    ssl:send(Socket, DataFrame);
@@ -991,7 +991,7 @@ websocket_send({Socket, ProtocolVersion}, {Type, Data}) ->
 %
 % This is for WebSockets expected to be in {active, false} mode
 % when this function returns.
-websocket_receive({Socket, _ProtocolVersion}=WebSocket) ->
+websocket_receive(WebSocket = #ws_state{sock=Socket}) ->
     FirstPacket = case Socket of
 	    {sslsocket,_,_} ->
 		ssl:recv(Socket, 0);
@@ -1007,9 +1007,9 @@ websocket_unframe(WebSocket, FirstPacket) ->
     websocket_setopts(WebSocket, [{active, once}]),
     Frames.
 
-websocket_setopts({{sslsocket,_,_}=Socket,_}, Opts) ->
+websocket_setopts(#ws_state{sock=Socket={sslsocket,_,_}}, Opts) ->
     ssl:setopts(Socket, Opts);
-websocket_setopts({Socket,_}, Opts) ->
+websocket_setopts(#ws_state{sock=Socket}, Opts) ->
     inet:setopts(Socket, Opts).
 
 
