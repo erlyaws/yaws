@@ -99,7 +99,7 @@ binary_length(<<_First:1/binary, Rest/binary>>) ->
 
 
 checks(Unframed) ->
-    check_reserved(Unframed).
+    check_reserved_bits(Unframed).
 
 check_control_frame(Len, Opcode) ->
     if
@@ -112,9 +112,9 @@ check_control_frame(Len, Opcode) ->
 
 % no extensions are supported yet.
 % http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08#section-4.2
-check_reserved(Unframed = #frame_info{rsv=0}) ->
+check_reserved_bits(Unframed = #frame_info{rsv=0}) ->
     check_utf8(Unframed);
-check_reserved(#frame_info{rsv=RSV}) ->
+check_reserved_bits(#frame_info{rsv=RSV}) ->
     {fail_connection, "rsv bits were " ++ integer_to_list(RSV) ++ " but should be unset."}.
 
 % http://www.erlang.org/doc/apps/stdlib/unicode_usage.html#id191467
@@ -127,6 +127,11 @@ check_utf8(Unframed = #frame_info{opcode = text, data=Bin}) when is_binary(Bin) 
 	    {fail_connection, "not valid utf-8."}
     end;
 check_utf8(Unframed) ->
+    check_reserved_opcode(Unframed).
+
+check_reserved_opcode(#frame_info{opcode = undefined}) ->
+    {fail_connection, "Reserved opcode."};
+check_reserved_opcode(Unframed) ->
     Unframed.
 
 
@@ -198,7 +203,8 @@ opcode_to_atom(16#1) -> text;
 opcode_to_atom(16#2) -> binary;
 opcode_to_atom(16#8) -> close;
 opcode_to_atom(16#9) -> ping;
-opcode_to_atom(16#A) -> pong.
+opcode_to_atom(16#A) -> pong;
+opcode_to_atom(_) -> undefined.
 
 %atom_to_opcode(continuation) -> 16#0; commented out because I don't know what continuation is for.
 atom_to_opcode(text) -> 16#1;
