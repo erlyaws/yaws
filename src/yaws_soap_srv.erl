@@ -79,9 +79,14 @@ setup(Id, WsdlFile) when is_tuple(Id),size(Id)==2 ->
     Wsdl = yaws_soap_lib:initModel(WsdlFile),
     gen_server:call(?SERVER, {add_wsdl, Id, Wsdl}, infinity).
 
-
-setup(Id, WsdlFile, Prefix) when is_tuple(Id),size(Id)==2 ->
-    Wsdl = yaws_soap_lib:initModel(WsdlFile, Prefix),
+%% PrefixOrOptions can be either a prefix (a String) or a property 
+%% list. It is used to construct the options that are passed to Erlsom
+%% to compile the WSDL file. Passing a string ("Prefix") is equivalent 
+%% to [{prefix, "Prefix"}]. 
+%% If a list of erlsom options is passed, and this does not contain
+%% the {prefix, ...} option, the yaws_soap default ("p") will be used.
+setup(Id, WsdlFile, PrefixOrOptions) when is_tuple(Id),size(Id)==2 ->
+    Wsdl = yaws_soap_lib:initModel(WsdlFile, PrefixOrOptions),
     gen_server:call(?SERVER, {add_wsdl, Id, Wsdl}, infinity).
 
 
@@ -266,7 +271,3 @@ get_model(State, Id) ->
 uinsert({K,_} = E, [{K,_}|T]) -> [E|T];
 uinsert(E, [H|T])             -> [H|uinsert(E,T)];
 uinsert(E, [])                -> [E].
-
-
-
-
