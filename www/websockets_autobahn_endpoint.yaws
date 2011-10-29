@@ -16,10 +16,11 @@ echo_server(WebSocket = #ws_state{sock=Socket}) ->
     receive
 	{tcp, Socket, FirstPacket} ->
 	    %io:format("Frame: ~p~n", [frame_info(DataFrame)]),
-	    FrameInfos = yaws_api:websocket_unframe(WebSocket, FirstPacket),
+	    {NewWSState, FrameInfos} = yaws_api:websocket_unframe(WebSocket, FirstPacket),
 %	    io:format("frameinfos: ~p~n", [FrameInfos]),
+	    io:format("ws state: ~p~n", [NewWSState]),
 	    [[ handle_message(WebSocket, FrameInfo) || FrameInfo <- FrameInfos]],
-	    echo_server(WebSocket);
+	    echo_server(NewWSState);
 	{tcp_closed, Socket} ->
 	    io:format("Websocket closed. Terminating echo_server...~n");
 	Any ->

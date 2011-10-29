@@ -140,7 +140,8 @@ check_reserved_opcode(Unframed) ->
     Unframed.
 
 
-ws_frame_info(#ws_state{sock=Socket}, <<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
+ws_frame_info(#ws_state{sock=Socket}, 
+	      <<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
 %    debug(val,"ws_frame_info"),
     case check_control_frame(Len1, Opcode, Fin) of
 	ok ->
@@ -178,15 +179,23 @@ ws_frame_info_secondary(Socket, Len1, Rest) ->
 % Returns all the WebSocket frames fully or partially contained in FirstPacket,
 % reading exactly as many more bytes from Socket as are needed to finish unframing
 % the last frame partially included in FirstPacket, if needed.
-% -> [#ws_frame_info,...,#ws_frame_info]
-unframe(_WebSocket, <<>>) ->
-    [];
+%
+% The length of this list and depth of this recursion is limited by
+% the size of your socket receive buffer.
+%
+% -> { #ws_state, [#ws_frame_info,...,#ws_frame_info] }
+unframe(WebSocket, <<>>) ->
+    {WebSocket, []};
 unframe(WebSocket, FirstPacket) ->
     case unframe_one(WebSocket, FirstPacket) of
-	{FrameInfo = #ws_frame_info{}, RestBin} ->
-	    [FrameInfo | unframe(WebSocket, RestBin)];
+	{NewWSState, FrameInfo = #ws_frame_info{}, RestBin} ->
+	    %% Every new recursion uses the #ws_state from the calling recursion.
+	    %% The first call to this recursion should return the deepest
+	    %% returned #ws_state in NewWSState, plus the list of #frame_info's
+	    {DeepestWSState, FrameInfos} = unframe(NewWSState, RestBin),
+	    {DeepestWSState, [FrameInfo | FrameInfos]};
 	Fail ->
-	    [Fail]
+	    {WebSocket, [Fail]}
     end.
 
 % -> {#ws_frame_info, RestBin} | {fail_connection, Reason}
@@ -194,12 +203,64 @@ unframe_one(WebSocket = #ws_state{vsn=8}, FirstPacket) ->
     {FrameInfo = #ws_frame_info{}, RestBin} = ws_frame_info(WebSocket, FirstPacket),
     Unmasked = mask(FrameInfo#ws_frame_info.masking_key, FrameInfo#ws_frame_info.payload),
     Unframed = FrameInfo#ws_frame_info{data = Unmasked},
+
+    NewWSState = frag_state_machine(WebSocket, Unframed),
+
     case checks(Unframed) of
-	#ws_frame_info{} ->
-	    {Unframed, RestBin};
+	#ws_frame_info{} when is_record(NewWSState, ws_state) ->
+	    {NewWSState, Unframed, RestBin};
+	#ws_frame_info{} when not is_record(NewWSState, ws_state) ->
+	    NewWSState;  %% pass back the error details
 	Fail ->
 	    Fail
     end.
+
+
+%% Unfragmented message
+frag_state_machine(WSState = #ws_state{ frag_type = none },
+		   #ws_frame_info{ fin = 1 }) ->
+    WSState;
+
+%% Beginning of fragmented text message
+frag_state_machine(WSState = #ws_state{ frag_type = none },
+		   #ws_frame_info{ fin = 0,
+				   opcode = text }) ->
+    WSState#ws_state{ frag_type = text };
+
+%% Beginning of fragmented binary message
+frag_state_machine(WSState = #ws_state{ frag_type = none },
+		   #ws_frame_info{ fin = 0,
+				   opcode = binary }) ->
+    WSState#ws_state{ frag_type = binary };
+
+%% Expecting text continuation
+frag_state_machine(WSState = #ws_state{ frag_type = text },
+		   #ws_frame_info{ fin = 0,
+				   opcode = continuation }) ->
+    WSState;
+
+%% Expecting binary continuation
+frag_state_machine(WSState = #ws_state{ frag_type = binary },
+		   #ws_frame_info{ fin = 0,
+				   opcode = continuation }) ->
+    WSState;
+
+%% End of fragmented text message
+frag_state_machine(WSState = #ws_state{ frag_type = text },
+		   #ws_frame_info{ fin = 1,
+				   opcode = continuation }) ->
+    WSState#ws_state{ frag_type = none };
+
+%% End of fragmented binary message
+frag_state_machine(WSState = #ws_state{ frag_type = binary },
+		   #ws_frame_info{ fin = 1,
+				   opcode = continuation }) ->
+    WSState#ws_state{ frag_type = none };
+
+%% Everything else is wrong
+frag_state_machine(_, _) ->
+    {error, "fragmentation rules violated"}.
+
 
 opcode_to_atom(16#0) -> continuation;
 opcode_to_atom(16#1) -> text;
@@ -209,7 +270,7 @@ opcode_to_atom(16#9) -> ping;
 opcode_to_atom(16#A) -> pong;
 opcode_to_atom(_) -> undefined.
 
-%atom_to_opcode(continuation) -> 16#0; commented out because I don't know what continuation is for.
+atom_to_opcode(continuation) -> 16#0;
 atom_to_opcode(text) -> 16#1;
 atom_to_opcode(binary) -> 16#2;
 atom_to_opcode(close) -> 16#8;
