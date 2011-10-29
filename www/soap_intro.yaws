@@ -224,7 +224,15 @@ out(A) ->
             "functions above may as well be a local file, and thus written as \"file://....\". "},
            {li, [],
             "When we retrieve a HTTP located file, we will use 'ibrowse' if it exist "
-            "in the code path. Otherwise we will use the OTP 'http' client."}
+            "in the code path. Otherwise we will use the OTP 'http' client."},
+           {li, [], 
+            "The prefix ('foo' in the example above) is passed to erlsom - it is one of erlsom's "
+            "options. If you want to specify other options, you can also pass the regular erlsom "
+	    "options to yaws_soap_lib:initModel/2 and yaws_soap_lib:write_hrl/3. For example, to "
+	    "specify how files that the XSD inside the WSDL refers to via 'include' statements "
+	    "can be retrieved, you can pass it a function GetIncludes/4 by specifying "
+	    "[{include_fun, GetIncludes}]. See the erlsom documentation for other options that you "
+            "could specify."}
           ]}]},
 
        {h2, [], "The SOAP server side"},
@@ -346,7 +354,10 @@ out(A) ->
           ),
 
        {p,[],
-        "Now, in your Yaws shell, setup the Soap server as shown below:"
+        "Now, in your Yaws shell, setup the Soap server as shown below. (If required, for "
+	"example to specify a prefix or a function to retrieve included files, you can specify "
+	"options similar to what we saw above for yaws_soap_lib:initModel/2 and "
+	"yaws_soap_lib:write_hrl/3 , using yaws_soap_srv:setup/3.)" 
         },
 
        box("6> yaws:start_embedded(Docroot,SL,GL).\n"
@@ -395,10 +406,4 @@ out(A) ->
 
 
 </erl>
-
-
-
-
-
-
 

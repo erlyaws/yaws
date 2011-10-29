@@ -55,8 +55,9 @@ write_hrl(WsdlURL, Output) when is_list(WsdlURL) ->
 write_hrl(#wsdl{model = Model}, Output) when is_list(Output) ->
     erlsom:write_hrl(Model, Output).
 
-write_hrl(WsdlURL, Output, Prefix) when is_list(WsdlURL),is_list(Prefix) ->
-    write_hrl(initModel(WsdlURL, Prefix), Output).
+write_hrl(WsdlURL, Output, PrefixOrOptions) 
+  when is_list(WsdlURL),is_list(PrefixOrOptions) ->
+    write_hrl(initModel(WsdlURL, PrefixOrOptions), Output).
 
 
 
@@ -278,9 +279,22 @@ mk_envelope(Messages, Headers) when is_list(Messages),is_list(Headers) ->
 initModel(WsdlFile) ->
     initModel(WsdlFile, ?DefaultPrefix).
 
-initModel(WsdlFile, Prefix) ->
+%% PrefixOrOptions can be a property list that contains the options
+%% for Erlsom, or a String. If it is a string, this is used as the 
+%% Erlsom 'prefix' option (and the other options are left unspecified).
+initModel(WsdlFile, PrefixOrOptions) ->
+    Options = case is_string(PrefixOrOptions) of
+        no ->
+          %% It is an option list
+	  %% Add the default prefix at the end - it will only be used 
+	  %% if no other prefix is specified
+	  PrefixOrOptions ++ [{prefix, ?DefaultPrefix}];
+        _ ->
+          %% just the prefix
+          [{prefix, PrefixOrOptions}]
+    end,
     PrivDir = priv_dir(),
-    initModel2(WsdlFile, Prefix, PrivDir, undefined, undefined).
+    initModel2(WsdlFile, Options, PrivDir, undefined, undefined).
 
 initModelFile(ConfigFile) ->
     {ok, ConfigSchema} = erlsom:compile_xsd(config_file_xsd()),
@@ -290,7 +304,7 @@ initModelFile(ConfigFile) ->
 		      wsdl_file = Wsdl,
 		      add_files = AddFiles} = Config,
     #xsd_file{name = WsdlFile, prefix = Prefix, import_specs = Import} = Wsdl,
-    initModel2(WsdlFile, Prefix, XsdPath, Import, AddFiles).
+    initModel2(WsdlFile, [{prefix, Prefix}], XsdPath, Import, AddFiles).
 
 priv_dir() ->
     case code:priv_dir(yaws) of
@@ -300,7 +314,7 @@ priv_dir() ->
             A
     end.
 
-initModel2(WsdlFile, Prefix, Path, Import, AddFiles) ->
+initModel2(WsdlFile, ErlsomOptions, Path, Import, AddFiles) ->
     WsdlName = filename:join([Path, "wsdl.xsd"]),
     IncludeWsdl = {"http://schemas.xmlsoap.org/wsdl/", "wsdl", WsdlName},
     {ok, WsdlModel} = erlsom:compile_xsd_file(
@@ -309,9 +323,9 @@ initModel2(WsdlFile, Prefix, Path, Import, AddFiles) ->
                          {include_files, [IncludeWsdl]}]),
     %% add the xsd model (since xsd is also used in the wsdl)
     WsdlModel2 = erlsom:add_xsd_model(WsdlModel),
-    Options = makeOptions(Import),
+    Options = ErlsomOptions ++ makeOptions(Import),
     %% parse Wsdl
-    {Model, Operations} = parseWsdls([WsdlFile], Prefix, WsdlModel2,
+    {Model, Operations} = parseWsdls([WsdlFile], WsdlModel2,
                                      Options, {undefined, []}),
     %% TODO: add files as required
     %% now compile envelope.xsd, and add Model
@@ -327,21 +341,19 @@ initModel2(WsdlFile, Prefix, Path, Import, AddFiles) ->
 %%% Parse a list of WSDLs and import (recursively)
 %%% Returns {Model, Operations}
 %%% --------------------------------------------------------------------
-parseWsdls([], _Prefix, _WsdlModel, _Options, Acc) ->
+parseWsdls([], _WsdlModel, _Options, Acc) ->
     Acc;
-parseWsdls([WsdlFile | Tail], Prefix, WsdlModel, Options, {AccModel, AccOperations}) ->
+parseWsdls([WsdlFile | Tail], WsdlModel, Options, {AccModel, AccOperations}) ->
     {ok, WsdlFileContent} = get_url_file(rmsp(WsdlFile)),
     {ok, ParsedWsdl, _} = erlsom:scan(WsdlFileContent, WsdlModel),
     %% get the xsd elements from this model, and hand it over to erlsom_compile.
     Xsds = getXsdsFromWsdl(ParsedWsdl),
     %% Now we need to build a list: [{Namespace, Xsd, Prefix}, ...] for
     %% all the Xsds in the WSDL.
-    %% This list is used when a schema inlcudes one of the other schemas.
-    %% The AXIS java2wsdl
-    %% generates wsdls that depend on this feature.
+    %% This list is used when a schema includes one of the other schemas.
+    %% The AXIS java2wsdl tool generates wsdls that depend on this feature.
     ImportList = makeImportList(Xsds, []),
-    %% TODO: pass the right options here
-    Model2 = addSchemas(Xsds, AccModel, Prefix, Options, ImportList),
+    Model2 = addSchemas(Xsds, AccModel, Options, ImportList),
     Ports = getPorts(ParsedWsdl),
     Operations = getOperations(ParsedWsdl, Ports),
     Imports = getImports(ParsedWsdl),
@@ -350,14 +362,13 @@ parseWsdls([WsdlFile | Tail], Prefix, WsdlModel, Options, {AccModel, AccOperatio
     %% processed as well).
     %% For the moment, the namespace is ignored on operations etc.
     %% this makes it a bit easier to deal with imported wsdl's.
-    Acc3 = parseWsdls(Imports, Prefix, WsdlModel, Options, Acc2),
-    parseWsdls(Tail, Prefix, WsdlModel, Options, Acc3).
+    Acc3 = parseWsdls(Imports, WsdlModel, Options, Acc2),
+    parseWsdls(Tail, WsdlModel, Options, Acc3).
 
 %%% --------------------------------------------------------------------
 %%% build a list: [{Namespace, Xsd}, ...] for all the Xsds in the WSDL.
 %%% This list is used when a schema inlcudes one of the other schemas.
-%%% The AXIS java2wsdl
-%%% generates wsdls that depend on this feature.
+%%% The AXIS java2wsdl tool generates wsdls that depend on this feature.
 makeImportList([], Acc) ->
     Acc;
 makeImportList([ Xsd | Tail], Acc) ->
@@ -370,9 +381,9 @@ makeImportList([ Xsd | Tail], Acc) ->
 %%% Returns Model
 %%% (TODO: using the same prefix for all XSDS makes no sense)
 %%% --------------------------------------------------------------------
-addSchemas([], AccModel, _Prefix, _Options, _ImportList) ->
+addSchemas([], AccModel, _Options, _ImportList) ->
     AccModel;
-addSchemas([Xsd| Tail], AccModel, Prefix, Options, ImportList) ->
+addSchemas([Xsd| Tail], AccModel, Options, ImportList) ->
     Model2 = case Xsd of
                  undefined ->
                      AccModel;
@@ -380,14 +391,13 @@ addSchemas([Xsd| Tail], AccModel, Prefix, Options, ImportList) ->
                      {ok, Model} =
                          erlsom_compile:compile_parsed_xsd(
                            Xsd,
-                           [{prefix, Prefix},
-                            {include_files, ImportList} |Options]),
+                           [{include_files, ImportList} |Options]),
                      case AccModel of
                          undefined -> Model;
                          _ -> erlsom:add_model(AccModel, Model)
                      end
              end,
-    addSchemas(Tail, Model2, Prefix, Options, ImportList).
+    addSchemas(Tail, Model2, Options, ImportList).
 
 %%% --------------------------------------------------------------------
 %%% Get a file from an URL spec.
@@ -669,11 +679,20 @@ searchPorts(BindingName, [Port | Tail], Acc) ->
             searchPorts(BindingName, Tail, Acc)
     end.
 
+%% copied from yaws/json.erl
+is_string([]) -> yes;
+is_string(List) -> is_string(List, non_unicode).
+
+is_string([C|Rest], non_unicode) when C >= 0, C =< 255 -> is_string(Rest, non_unicode);
+is_string([C|Rest], _) when C =< 65000 -> is_string(Rest, unicode);
+is_string([], non_unicode) -> yes;
+is_string([], unicode) -> unicode;
+is_string(_, _) -> no.
 
 getXsdsFromWsdl(Definitions) ->
     case getTopLevelElements(Definitions, 'wsdl:tTypes') of
         [#'wsdl:tTypes'{choice = Xsds}] -> Xsds;
-        [] -> undefined
+        [] -> []
     end.
 
 config_file_xsd() ->
@@ -701,3 +720,5 @@ config_file_xsd() ->
         "    <xs:attribute name=\"location\" type=\"string\"/>"
         "  </xs:complexType>"
         "</xs:schema>".
+
+
