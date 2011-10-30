@@ -170,7 +170,7 @@ ws_frame_info_secondary(Socket, Len1, Rest) ->
 	127 ->
 	    <<Len:64, MaskingKey:4/binary, Rest2/binary>> = buffer(Socket, 12, Rest);
 	Len ->
-	    debug(val, {'Len', Len}),
+%	    debug(val, {'Len', Len}),
 	    <<MaskingKey:4/binary, Rest2/binary>> = buffer(Socket, 4, Rest)
     end,
     <<Payload:Len/binary, Excess/binary>> = buffer(Socket, Len, Rest2),
@@ -309,25 +309,29 @@ frame(8, Type, Data) ->
     end.
 
 
+mask(MaskBin, Data) ->
+    list_to_binary(rmask(MaskBin, Data)).
 
 %% unmask == mask. It's XOR of the four-byte masking key.
-mask(Mask, Data)->
-    AsList = mask(1, binary_to_list(Mask), Data),
-    list_to_binary(AsList).
-%%  
-%% mask(Pos, Mask, Data)
-%%
-%% N: integer, the position in the masking key to use.
-%% MaskingKey: list of 8-bit integers
-%% Data: bit string divisible by 8
-%%
-%% This could probably be done better but seems to work for now.
-%%
-mask(_, _, <<>>) -> [];
-mask(5, MaskingKey, Data) -> mask(1, MaskingKey, Data);
-mask(N, MaskingKey, <<Head:8/integer,Rest/binary>>) ->
-    Masked = lists:nth(N, MaskingKey) bxor Head,
-    [Masked | mask(N + 1, MaskingKey, Rest)].
+rmask(_,<<>>) ->
+    [<<>>];
+
+rmask(MaskBin = <<Mask:4/integer-unit:8>>, <<Data:4/integer-unit:8, Rest/binary>>) ->
+    Masked = Mask bxor Data,
+    MaskedRest = rmask(MaskBin, Rest),
+    [<<Masked:4/integer-unit:8>> | MaskedRest ];
+
+rmask(<<Mask:3/integer-unit:8, _Rest/binary>>, <<Data:3/integer-unit:8>>) ->
+    Masked = Mask bxor Data,
+    [<<Masked:3/integer-unit:8>>];
+
+rmask(<<Mask:2/integer-unit:8, _Rest/binary>>, <<Data:2/integer-unit:8>>) ->
+    Masked = Mask bxor Data,
+    [<<Masked:2/integer-unit:8>>];
+
+rmask(<<Mask:1/integer-unit:8, _Rest/binary>>, <<Data:1/integer-unit:8>>) ->
+    Masked = Mask bxor Data,
+    [<<Masked:1/integer-unit:8>>].
 
 
 %% Internal functions

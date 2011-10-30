@@ -7,6 +7,7 @@ out(A) ->
 websocket_owner() ->
     receive
 	{ok, WebSocket} ->
+%	    fprof:trace(start),
 	    echo_server(WebSocket, {none, <<>>});
 	Any ->
 	    io:format("websocket_owner received msg:~p~n", [Any])
@@ -27,6 +28,7 @@ echo_server(WebSocket = #ws_state{sock=Socket}, Acc) ->
 	    echo_server(NewWSState, NewAcc);
 	{tcp_closed, Socket} ->
 	    io:format("Websocket closed. Terminating echo_server...~n");
+%	    fprof:trace(stop);
 	Any ->
 	    io:format("echo_server received msg:~p~n", [Any]),
 	    echo_server(WebSocket, Acc)
@@ -99,18 +101,19 @@ handle_message(#ws_frame_info{opcode=pong, ws_state=WebSocket}, Acc) ->
 
 handle_message(FrameInfo=#ws_frame_info{}, Acc) ->
     io:format("WS Endpoint Unhandled message: ~p~n~p~n", [FrameInfo, Acc]),
+%    fprof:trace(stop),
     exit(normal).
 
 echo_text(WebSocket, Data) ->
     io:format("echoing back text message~n",[]),
-    CharCount = length(binary_to_list(Data)),
-    io:format("Text Chars Count = ~p~n", [CharCount]),
-    if
-	CharCount < 1000 ->
-	    io:format("Got data from Websocket: ~p~n", [Data]);
-	true ->
-	    io:format("Too many chars to print easily...~n",[])
-    end,
+%    CharCount = length(binary_to_list(Data)),
+%    io:format("Text Chars Count = ~p~n", [CharCount]),
+%    if
+%	CharCount < 1000 ->
+%	    io:format("Got data from Websocket: ~p~n", [Data]);
+%	true ->
+%	    io:format("Too many chars to print easily...~n",[])
+%    end,
 
     yaws_api:websocket_send(WebSocket, {text, Data}).
 
