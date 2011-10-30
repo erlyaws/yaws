@@ -48,7 +48,7 @@ stop() {
 
 reload() {
 	echo -n $"Reloading $prog: "
-	r=`$yaws ${yawsid_opts} --hup` 
+	r=`$yaws ${yawsid_opts} --hup`
 	RETVAL=$?
 	echo $r
 }

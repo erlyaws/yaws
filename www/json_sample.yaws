@@ -1,7 +1,7 @@
 <erl module=sample_mod>
 -compile(export_all).
 
-out(A) -> 
+out(A) ->
     Peer = if
                tuple(A#arg.clisock),
                element(1, A#arg.clisock) == sslsocket ->
@@ -9,18 +9,18 @@ out(A) ->
                true ->
                    inet:peername(A#arg.clisock)
            end,
-    
+
     {ok,{IP,_}} = Peer,
     A2=A#arg{state = [{ip, IP}]},
     yaws_rpc:handler_session(A2, {?MODULE, counter}).
 
 
 
-counter([{ip, IP}] = _State, {call, errortest, Value} = _Request, Session) ->  
+counter([{ip, IP}] = _State, {call, errortest, Value} = _Request, Session) ->
     io:format("Request = ~p~n", [_Request]),
     { false, { error, "Expected failure" } };
 
-counter([{ip, IP}] = _State, {call, test1, Value} = _Request, Session) ->  
+counter([{ip, IP}] = _State, {call, test1, Value} = _Request, Session) ->
     io:format("Request = ~p~n", [_Request]),
     IPStr = io_lib:format("Client ip is  ~p~n" , [ IP ]),
     OldSession = io_lib:format("Request is: ~p~nOld session value "
@@ -31,10 +31,10 @@ counter([{ip, IP}] = _State, {call, test1, Value} = _Request, Session) ->
             NewSession = 0;
         10 ->        % reset session after reaching 10
             NewSession = undefined;
-        N -> 
+        N ->
             NewSession = N + 1
     end,
-    
+
     NewVal = io_lib:format("New session value is ~p ~n", [ NewSession ]),
     Str = lists:flatten([IPStr,OldSession,NewVal]),
     {true, 0, NewSession, {response,  Str }}.

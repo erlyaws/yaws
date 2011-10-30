@@ -1,7 +1,7 @@
 
 <erl>
 
-out(A) -> 
+out(A) ->
        {ssi, "TAB.inc","%%",[{"contact", "choosen"}]}.
 
 </erl>
@@ -11,21 +11,21 @@ out(A) ->
   <h2>Contact</h2>
 
   <p>There is a mailinglist which is used to discuss yaws.
-  The list is called 
+  The list is called
   <a href="https://lists.sourceforge.net/lists/listinfo/erlyaws-list"> erlyaws-list </a>
   and it is run by Sourceforge.</p>
-  
+
   <p>
   The URL to the list is: <a href="https://lists.sourceforge.net/lists/listinfo/erlyaws-list">https://lists.sourceforge.net/lists/listinfo/erlyaws-list</a></p>
 
 
   <p>It is also possible to contact:</p>
-  <pre> 
+  <pre>
     klacke @ hyber . org
     Cell: +46 0702097763
   </pre>
 
-  
+
 </div>
 
 <erl>

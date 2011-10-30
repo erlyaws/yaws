@@ -20,7 +20,7 @@ start() {
 }
 
 stop() {
-    $yaws ${idarg} --stop 
+    $yaws ${idarg} --stop
 }
 
 reload() {

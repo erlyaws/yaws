@@ -6,5 +6,5 @@ out(A) ->
             Error ->
                  Error
          end.
- 
+
 </erl>

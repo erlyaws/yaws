@@ -8,18 +8,18 @@ out(A) -> {ssi, "HEAD.inc","%%",[{"remove", "choosen"}]}.
 get_value(K,P) ->
         case proplists:get_value(K,P) of
            undefined -> {"",""};
-           V -> 
+           V ->
              [ServId,Path|_] = string:tokens(string:strip(V),","),
              {string:strip(ServId), string:strip(Path)}
         end.
 
 format(P) ->
-        {SrvId,UrlPath} = get_value("srvidurlpath",P),        
+        {SrvId,UrlPath} = get_value("srvidurlpath",P),
         format(SrvId,UrlPath).
 
 format([],_) -> error(no_srv_id);
 format(_,[]) -> error(no_path);
-format(S,P) -> 
+format(S,P) ->
         case yapp_handler:remove(yapp_handler, S, P) of
            ok ->
                 ["Removed Server Id: ", S,", Path: ", P];
@@ -31,11 +31,11 @@ error(no_srv_id) ->   "<p>No Server Id selected!</p>";
 error(no_path) ->   "<p>No path given!</p>";
 error(E) ->       ["<p>Error removing yapp<pre>",E,"</pre></p>"].
 
-out(A) -> 
+out(A) ->
     P = yaws_api:parse_post(A),
-    Header = "Cache-Control:no-store", 
-   [{header, Header}, 
-     {html, ["<p>",format(P),"</p>", 
+    Header = "Cache-Control:no-store",
+   [{header, Header},
+     {html, ["<p>",format(P),"</p>",
       "<a href=\"remove.yaws\"> Return to remove page</a>"] },
     {ssi,"END.inc",[],[]}].
 

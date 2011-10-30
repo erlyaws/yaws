@@ -1,6 +1,6 @@
 <erl>
 
-out(A) -> 
+out(A) ->
     case shopcart:top(A) of
         ok ->
             shopcart:index(A);

@@ -1,7 +1,7 @@
 
 <erl>
 
-out(A) -> 
+out(A) ->
     L = case queryvar(A,"page") of
             {ok, Page} ->
                 %% only allow regular chars in Page
@@ -27,8 +27,8 @@ out(A) ->
             undefined ->
                 "no man page found in query arg "
         end,
-    {ehtml, 
-     {html,[], 
+    {ehtml,
+     {html,[],
       {'div',[{class,"man"}],
        {pre,[], L}}}}.
 

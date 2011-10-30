@@ -1,7 +1,7 @@
 
 <erl>
 
-out(A) -> 
+out(A) ->
        {ssi, "TAB.inc","%%",[{"redirect", "choosen"}]}.
 
 </erl>
@@ -10,8 +10,8 @@ out(A) ->
 
 <h2>Redirects</h2>
 
-<p> Redirs are a powerful tool in the webapp programmer toolbox. The 
-Webserver returns a specific status code (302) and adds a 
+<p> Redirs are a powerful tool in the webapp programmer toolbox. The
+Webserver returns a specific status code (302) and adds a
 "Location:" header
 to the responce headers to the Browser. The Browser then displays the new
 page as indicated in the "Location" header.</p>
@@ -34,8 +34,8 @@ out(_A) ->
 </p>
 
 <p> The code above redirects to an external URL. The HTTP RFC mandates
-  that the Loction header must contain complete URLs, including the 
-  the method, http, https etc. A very common case of redirection, is 
+  that the Loction header must contain complete URLs, including the
+  the method, http, https etc. A very common case of redirection, is
   a to redirect to another file on the same server. The code
   in <a href="redirect3.yaws"> redirect3.yaws </a> shows an example of
   a yaws redirect relative to the "current" server.
@@ -51,13 +51,13 @@ out(_A) ->
 
 
 <p> The code in <a href="redirect3.yaws"> redirect3.yaws </a> will
-  do a relative redirect to the code in  
-  <a href="redirect2.yaws"> redirect2.yaws </a> which in its turn 
+  do a relative redirect to the code in
+  <a href="redirect2.yaws"> redirect2.yaws </a> which in its turn
   redirects, once again, to google. Double redirects.
 </p>
 
-<p>While working with redirects, the tool <a href="http://curl.haxx.se/"> curl </a> 
-is an excellent way to troubleshoot the behaviour of your 
+<p>While working with redirects, the tool <a href="http://curl.haxx.se/"> curl </a>
+is an excellent way to troubleshoot the behaviour of your
 redirects. For example:</p>
 
 <div class="box">
@@ -84,7 +84,7 @@ redirects. For example:</p>
 
   <p> We show one additional version of redirect code. The code in
     <a href="redirect3.yaws"> redirect3.yaws </a> requires an absolute path.
-    If we want to supply a path relative to the current url, we can use 
+    If we want to supply a path relative to the current url, we can use
     either the Redirect modifier <tt>rel_path</tt> or <tt>any_path</tt>
     as in :
   </p>

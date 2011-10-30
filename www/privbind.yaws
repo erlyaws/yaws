@@ -1,6 +1,6 @@
 
 <erl>
-out(A) -> 
+out(A) ->
        {ssi, "TAB.inc", "%%",[{"privbind", "choosen"}]}.
 </erl>
 
@@ -10,9 +10,9 @@ out(A) ->
 <h1>Binding to privileged ports</h1>
 
 <p>
-  A common misfeature found on UN*X operating systems is the 
-  restriction that only root can bind to ports below 1024. 
-  Many a dollar has been wasted on workarounds and -often- the results are 
+  A common misfeature found on UN*X operating systems is the
+  restriction that only root can bind to ports below 1024.
+  Many a dollar has been wasted on workarounds and -often- the results are
   security holes.
 
 </p>
@@ -20,25 +20,25 @@ out(A) ->
   Both FreeBSD and Solaris have elegant configuration options to
   turn this feature off. On FreeBSD:
 
-<div class="box">        
+<div class="box">
       <verbatim>
 	$ sysctl net.inet.ip.portrange.reservedhigh=0
       </verbatim>
 </div>
 
-the above is best added to your /etc/sysctl.conf 
+the above is best added to your /etc/sysctl.conf
 </p>
 <p>
   Similarly on Solaris we can just configure away this misfeature.
-  Assuming we want to run Yaws/SSL under a non-root user "erlang" on 
+  Assuming we want to run Yaws/SSL under a non-root user "erlang" on
   ports 80/443.
 </p>
 <p>
-  On Solaris we can do that easily by granting the specific right to bind 
+  On Solaris we can do that easily by granting the specific right to bind
   privileged ports <1024 (and only that) to "erlang" using:
 </p>
 
-<div class="box">        
+<div class="box">
       <verbatim>
 $ /usr/sbin/usermod -K defaultpriv=basic,net_privaddr erlang
       </verbatim>
@@ -49,7 +49,7 @@ And check the we get what we want through:
 </p>
 
 
-<div class="box">        
+<div class="box">
       <verbatim>
 $ grep erlang /etc/user_attr
 erlang::::type=normal;defaultpriv=basic,net_privaddr
@@ -61,14 +61,14 @@ erlang::::type=normal;defaultpriv=basic,net_privaddr
 <p>
   On Linux, kernels later than 2.6.24, it's possible to do:
 </p>
-<div class="box">        
+<div class="box">
       <verbatim>
 $ setcap 'cap_net_bind_service=+ep' /usr/lib/erlang/erts-5.7.4/bin/beam
       </verbatim>
 </div>
 
 <p>
-  The above command grants the capability of binding 
+  The above command grants the capability of binding
   privileged ports to beam. Note, you have to grant the priviliges to the
   actual exectuable you are using.
 <p>
@@ -80,7 +80,7 @@ $ setcap 'cap_net_bind_service=+ep' /usr/lib/erlang/erts-5.7.4/bin/beam
   or privbind <em>http://sourceforge.net/projects/privbind/</em>
 </p>
 <p>
-  These programs are run by root. Yaws writes its temporary 
+  These programs are run by root. Yaws writes its temporary
   JIT compiled files in $HOME/.yaws and this doesn't work that
   well with authbind/privbind. A non root user will try to
   write in /root/.yaws. The solution to this is to set the
@@ -92,7 +92,7 @@ $ setcap 'cap_net_bind_service=+ep' /usr/lib/erlang/erts-5.7.4/bin/beam
 </p>
 
 
-<div class="box">        
+<div class="box">
       <verbatim>
 $ sudo YAWSHOME=/tmp/abc privbind -u klacke /home/klacke/bin/yaws \
     -c /home/klacke/yaws.conf -i
@@ -106,18 +106,18 @@ $ sudo YAWSHOME=/tmp/abc privbind -u klacke /home/klacke/bin/yaws \
 </p>
 
 <p>
-  Yet another option is to is to install fdsrv which is a standalone 
-  program that has the suid bit set, binds privileged ports and passes 
-  the filedescriptor to yaws. I have made a package out of the jungerl 
-  code that can be easily installed just through the usual cycle of 
+  Yet another option is to is to install fdsrv which is a standalone
+  program that has the suid bit set, binds privileged ports and passes
+  the filedescriptor to yaws. I have made a package out of the jungerl
+  code that can be easily installed just through the usual cycle of
   make && make install The code is at
 </p>
 <pre>
 http://yaws.hyber.org/download/fd_server-2.3.0.tgz
 </pre>
 <p>
-  One major drawback with fdsrv is that it doesn't work for SSL. With 
-  the case of SSL, one possible solution is to put ssltunnel in 
+  One major drawback with fdsrv is that it doesn't work for SSL. With
+  the case of SSL, one possible solution is to put ssltunnel in
   front of yaws and let yaws bind to 127.0.0.1
 </p>
 <p>
@@ -127,7 +127,7 @@ http://yaws.hyber.org/download/fd_server-2.3.0.tgz
 
 <p>
 Here is a description on how to do this on MacOs X. It's not exactly the same,
-since we're still binding to non privileged ports. However, 
+since we're still binding to non privileged ports. However,
 edit /etc/sysctl and add:
 </p>
 
@@ -167,7 +167,7 @@ Here is a patch I did for some version of the 2.6 series kernels .. you get the 
 --- af_inet.c~  Thu Feb 17 18:13:13 2005
 ***************
 *** 423,434 ****
-  
+
         snum = ntohs(addr->sin_port);
         err = -EACCES;
 - #if 0
@@ -175,8 +175,8 @@ Here is a patch I did for some version of the 2.6 series kernels .. you get the 
         if (snum && snum < PROT_SOCK && !capable(CAP_NET_BIND_SERVICE))
                 goto out;
 - #endif
-- 
-  
+-
+
         /*      We keep a pair of addresses. rcv_saddr is the one
          *      used by hash lookups, and saddr is used for transmit.
 --- 423,430 ----

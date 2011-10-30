@@ -56,12 +56,12 @@ ifneq "$(wildcard /usr/share/misc/config.guess)" ""
 endif
 
 
-	dh_clean 
+	dh_clean
 
 install: build
 	dh_testdir
 	dh_testroot
-	dh_clean -k 
+	dh_clean -k
 	dh_installdirs
 
 	# Add here commands to install the package into debian/yaws.
@@ -81,7 +81,7 @@ binary-arch: build install
 	dh_installexamples
 #	dh_install
 #	dh_installmenu
-#	dh_installdebconf	
+#	dh_installdebconf
 #	dh_installlogrotate
 #	dh_installemacsen
 #	dh_installpam
@@ -104,4 +104,4 @@ binary-arch: build install
 	dh_builddeb
 
 binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install 
+.PHONY: build clean binary-indep binary-arch binary install

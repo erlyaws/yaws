@@ -1,7 +1,7 @@
 
 <erl>
 
-out(A) -> 
+out(A) ->
     Self = self(),
     spawn(fun() ->
                   %% Create a random number
@@ -12,16 +12,16 @@ out(A) ->
                   Sz = random:uniform(100000),
 
                   %% Read random junk
-                  S="dd if=/dev/urandom count=1 bs=" ++ 
+                  S="dd if=/dev/urandom count=1 bs=" ++
                       integer_to_list(Sz) ++ " 2>/dev/null",
                   P = open_port({spawn, S}, [binary,stream, eof]),
 
                   rec_loop(Self, P)
           end),
-    
+
     {streamcontent, "application/octet-stream", <<>>}.
 
-      
+
 rec_loop(YawsPid, P) ->
     receive
         {P, {data, BinData}} ->

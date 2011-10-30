@@ -9,10 +9,10 @@ VARDIR             = ${prefix}/var
 DVILATEX = latex
 PDFLATEX = pdflatex
 DVIPS = dvips
-EPSTOPDF = 
+EPSTOPDF =
 
-COND_DVILATEX = 
-COND_PDFLATEX = 
+COND_DVILATEX =
+COND_PDFLATEX =
 
 ERL="erl"
 WERL=""
@@ -20,7 +20,7 @@ ERLC="erlc"
 EMULATOR=beam
 DEFAULT_CHARSET=
 EPAM = ../priv/epam
-EXTRAINCLUDE = 
+EXTRAINCLUDE =
 ERLBINDIR = /usr/lib/erlang/bin
 HAVE_SENDFILE = true
 
@@ -49,7 +49,7 @@ BSDI=
 EXE=
 DLL=so
 OBJ=o
-OUT=-o 
+OUT=-o
 FPIC=-fpic
 LIBS=
 
@@ -91,7 +91,7 @@ APPSCRIPT = '$$vsn=shift; $$mods=""; while(@ARGV){ $$_=shift; s/^([A-Z].*)$$/\'\
 ../ebin/%.app: %.app.src ../vsn.mk Makefile
 	perl -e $(APPSCRIPT) "$(VSN)" $(MODULES) < $< > $@
 
-../ebin/%.appup: %.appup 
+../ebin/%.appup: %.appup
 	cp $< $@
 
 ../ebin/%.$(EMULATOR): %.erl

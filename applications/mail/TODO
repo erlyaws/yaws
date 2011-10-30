@@ -5,9 +5,9 @@ Things to do
 	  need to select the text part for the quote if the email
 	  is of type multipart/alternative. We select text/html
 	  to display.
-	- page large inboxes with 20 emails per page (sorted in 
+	- page large inboxes with 20 emails per page (sorted in
 	  reverse order with most recently received emails first)
-	- write an attachement cache to limit the delays when 
+	- write an attachement cache to limit the delays when
 	  fetching an attachement
 	- code outgoing emails as quoted-printable (must limit max
 	  line length to 74 according to RFC ???)
@@ -17,5 +17,5 @@ Things to do
 	- Support imap mail backend system.
 	- Properly decode encoded attachments.
 
-	
+
 

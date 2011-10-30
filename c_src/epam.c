@@ -38,11 +38,11 @@ static int read_fill(int fd, unsigned char *buf, int len)
 }
 
 
-    
+
 static int write_fill(int fd, char *buf, int len)
 {
-    int i, done = 0; 
-    
+    int i, done = 0;
+
     do {
         if ((i = write(fd, buf+done, len-done)) < 0) {
             if (errno != EINTR)
@@ -201,7 +201,7 @@ failed_conversation:
             case PAM_TEXT_INFO:
                 /* should not actually be able to get here... */
                 free(reply[count].resp);
-            }                                            
+            }
             reply[count].resp = NULL;
         }
         /* forget reply too */
@@ -293,7 +293,7 @@ static struct session *del_session(struct session **sp, int sid)
     return NULL;
 }
 
-        
+
 static void do_auth(char *service, char*user, char*pwd, char* mode, int sid)
 {
     pam_handle_t *pamh=NULL;
@@ -302,20 +302,20 @@ static void do_auth(char *service, char*user, char*pwd, char* mode, int sid)
 
     conv.appdata_ptr = (void*)strdup(pwd);
     retval = pam_start(service, user, &conv, &pamh);
-    
+
     if (retval != PAM_SUCCESS) {
         werr(pamh, sid, retval, "start");
         return;
     }
     pam_set_item(pamh, PAM_RUSER, user);
 
-    retval = pam_authenticate(pamh, 0); 
+    retval = pam_authenticate(pamh, 0);
     if (retval != PAM_SUCCESS) {
         werr(pamh, sid, retval, "auth");
         return;
     }
     if (mode[0] == 'A') {
-        retval = pam_acct_mgmt(pamh, 0); 
+        retval = pam_acct_mgmt(pamh, 0);
         if (retval != PAM_SUCCESS) {
             werr(pamh, sid, retval, "accounting");
             return;
@@ -334,7 +334,7 @@ static void do_auth(char *service, char*user, char*pwd, char* mode, int sid)
         werr(pamh, sid, -1, "malloc");
         return;
     }
-    if (mode[1] == 'S') 
+    if (mode[1] == 'S')
         sessp->session_mode = 1;
     else
         sessp->session_mode = 0;
@@ -342,7 +342,7 @@ static void do_auth(char *service, char*user, char*pwd, char* mode, int sid)
     sessp->pamh = pamh;
     sessp->next = sessions;
     sessions = sessp;
-    
+
     wok(sid);
 }
 
@@ -373,27 +373,27 @@ int main(int argc, char *argv[])
         if (read_fill(0, buf, rval) != rval)
             exit(1);
         switch (buf[0]) {
-        case 'a': 
+        case 'a':
             // auth a user
             user = (char *)&buf[1];
             pwd = user + strlen(user) + 1;
             mode= pwd + strlen(pwd) + 1;
             sid = atoi(mode + strlen(mode) + 1);
-            
+
             do_auth(argv[1], user, pwd, mode, sid);
             break;
-        case 'c': 
+        case 'c':
             // close session
             sid = atoi((char *)&buf[1]);
             if ((sessp = del_session(&sessions, sid)) == NULL) {
-                fprintf(stderr, "Couldn't find session %d\r\n", sid); 
+                fprintf(stderr, "Couldn't find session %d\r\n", sid);
                 break;
             }
             if (sessp->session_mode == 1) {
                 pam_close_session(sessp->pamh, 0);
                 /*fprintf(stderr, "did ok close sess \n\r");*/
             }
-            pam_end(sessp->pamh, PAM_SUCCESS); 
+            pam_end(sessp->pamh, PAM_SUCCESS);
             free(sessp);
             break;
         default:

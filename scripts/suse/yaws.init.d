@@ -36,7 +36,7 @@ rc_reset
 # 5 - program is not installed
 # 6 - program is not configured
 # 7 - program is not running
-# 
+#
 # Note that starting an already running service, stopping
 # or restarting a not-running service as well as the restart
 # with force-reload (in case signalling is not supported) are
@@ -48,7 +48,7 @@ case "$1" in
 	## Start daemon with startproc(8). If this fails
 	## the echo return value is set appropriate.
 
-	# NOTE: startproc returns 0, even if service is 
+	# NOTE: startproc returns 0, even if service is
 	# already running to match LSB spec.
 	startproc $YAWS_BIN --daemon --heart  ${YAWS_ID_OPTS} ${conf}
 
@@ -66,7 +66,7 @@ case "$1" in
 	rc_status -v
 	;;
     try-restart)
-	## Stop the service and if this succeeds (i.e. the 
+	## Stop the service and if this succeeds (i.e. the
 	## service was running before), start it again.
 	## Note: try-restart is not (yet) part of LSB (as of 0.7.5)
 	$0 status >/dev/null &&  $0 restart
@@ -102,7 +102,7 @@ case "$1" in
 
 	startproc $YAWS_BIN  ${YAWS_ID_OPTS} --hup
 	rc_status -v
-	
+
 	;;
     status)
 	echo -n "Checking for service FOO: "

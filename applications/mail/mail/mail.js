@@ -1,5 +1,5 @@
-/*    -*- Java -*- 
- * 
+/*    -*- Java -*-
+ *
  *    File:         mail.js
  *    Author:         Johan Bevemyr
  *    Created:         Sun Feb 15 23:40:56 2004
@@ -35,7 +35,7 @@ function changeActive(depth) {
   }
 }
 
-function setComposeCmd(val) { 
+function setComposeCmd(val) {
    if (document.compose.to.value.length == 0) {
        alert('The To: field must not be empty.');
        document.compose.to.focus();
@@ -87,7 +87,7 @@ function setComposeCmd(val) {
    } else if (document.compose.file10.value.length > 0) {
      document.compose.attached.value="yes";
    }
-      
+
    document.compose.cmd.value=val;
    document.compose.submit();
 }

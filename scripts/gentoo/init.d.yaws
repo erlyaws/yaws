@@ -16,7 +16,7 @@ yaws=%prefix%/bin/yaws
 
 conf="--conf %etcdir%yaws/yaws.conf"
 
-opts="start stop reload restart query"  
+opts="start stop reload restart query"
 
 depend() {
        need net

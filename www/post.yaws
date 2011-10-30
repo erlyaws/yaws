@@ -8,10 +8,10 @@ box(Str) ->
 fpostvar(A, Key) ->
     case postvar(A,"lang") of
         undefined -> "None";
-        {ok, Val} -> 
+        {ok, Val} ->
             Val
     end.
-    
+
 
 out(A) ->
      [{ssi, "TAB.inc", [],[]},
@@ -21,18 +21,18 @@ out(A) ->
                "This yaws file gets invoked with POSTed client data. "
                "This is the data that is submitted from the forms page ",
                {a, [{href, "form.yaws"}], " form.yaws "}]},
-       
-       {p, [], ["POST data is naturally organized as a ", 
+
+       {p, [], ["POST data is naturally organized as a ",
                 {tt, [], "{Key, Value} "}, " list. A call to "
                 "the function ", {tt, [], "yaws_api:parse_post(A) "},
                 " will parse the POSTed data. and return a key/value list "]},
        box("
 out(A) ->
-    {ehtml, 
-     {pre, [], 
+    {ehtml,
+     {pre, [],
       io_lib:format('~p', [yaws_api:parse_post(A)])}}.
 "),
-       
+
        {p, [], "Produces the following output"},
 
        box(io_lib:format('~p', [yaws_api:parse_post(A)])),
@@ -53,7 +53,7 @@ out(A) ->
         {p,[], "Produces the following output:"},
         {hr,[],[]},
         {'div',[{class,"box"}],
-          {p,[], ["The favourite programming language is ", 
+          {p,[], ["The favourite programming language is ",
               case postvar(A,"lang") of
                   undefined -> "None";
                   {ok, Val} -> Val

@@ -13,18 +13,18 @@ format_srvid_radio([ServId|T]) ->
      "<input type=\"radio\" name=\"srvid\" value=\"", ServId, "\" />", ServId |
     format_srvid_radio(T)].
 
- 
+
 out(A) ->
-    Header = "Cache-Control:no-store", 
+    Header = "Cache-Control:no-store",
    [{header, Header},   {html, [ "Server id:  ", format_srvid_radio(yapp:get_server_ids())]}].
- 
+
 </erl>
 </p>
 <p>Application name: <input type="textfield" name="appname"></p>
 <p>Path (optional) : <input type="textfield" name="path"></p>
 <p><input type="submit" value="Add Yapp"></p>
 </form>
-<p><em>Note:</em> An added Yapp will always be stored in the registry, 
+<p><em>Note:</em> An added Yapp will always be stored in the registry,
 but if the application is not really in the load path of the Erlang system it will not
 be loaded into Yaws server configuration. In such case it will not show up the when listing
 the applications in the Yapp console, but it will show up in the Remove list.</p>

@@ -1,6 +1,6 @@
 <erl>
 
-out(A) -> 
+out(A) ->
        {ssi, "TAB.inc", "%%",[{"simple", "choosen"}]}.
 </erl>
 
@@ -9,7 +9,7 @@ out(A) ->
 
   <p>
     The absolutely most simple example is a HTML file which doesn't contain
-    any embedded erlang code at all. 
+    any embedded erlang code at all.
   </p>
 
   <p>
@@ -51,9 +51,9 @@ out(A) -> yaws_api:pre_ssi_files(A#arg.docroot, ["/simple_ex2.yaws"]).
 
 <h2> And yet again </h2>
 <p>
-  The file <a href="simple_ex2.yaws">simple_ex2.yaws</a> returns 
+  The file <a href="simple_ex2.yaws">simple_ex2.yaws</a> returns
   html embedded as a string. A tighter coupling to Erlang is
-  provided by a construct known as "ehtml". 
+  provided by a construct known as "ehtml".
   As in <a href="simple_ex3.yaws">simple_ex3.yaws as ehtml</a>
 </p>
 
@@ -83,7 +83,7 @@ out(A) -> yaws_api:pre_ssi_files(A#arg.docroot, ["/simple_ex4.yaws"]).
 <li>
 <p>
 The function <tt>f/1</tt> which is available in the <tt>yaws_api</tt>
-module. It's just a shortcut convenience to <tt>io_lib:format/2</tt>. The 
+module. It's just a shortcut convenience to <tt>io_lib:format/2</tt>. The
   <tt>yaws_api</tt> module contains many convenience functiond for yaws coders.</p></li>
 
 <li>
@@ -91,7 +91,7 @@ module. It's just a shortcut convenience to <tt>io_lib:format/2</tt>. The
 The second point is a printout of the #arg record which is passed
 to the <tt>out/1</tt> function. If you take the time to work with yaws,
 the Arg passed to the out/1 functions will become very familiar.
-It is the main mechanism which is used to pass data from the webserver to 
+It is the main mechanism which is used to pass data from the webserver to
   the application. </p></li>
 </ul>
 

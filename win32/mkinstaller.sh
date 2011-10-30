@@ -5,10 +5,10 @@
 set -x
 
 # If this script  runs on kisel@hyber.org we
-# have the installbuilder as below. 
+# have the installbuilder as below.
 # Developers can install installbuilder anywhere and invoke
 # as e.g
-# INSTALL_BUILDER=/home/luser/installbuilder-5.4.10 ./mkinstaller.sh 
+# INSTALL_BUILDER=/home/luser/installbuilder-5.4.10 ./mkinstaller.sh
 
 
 INSTALL_BUILDER=${INSTALL_BUILDER:=${HOME}/installbuilder-5.4.14}

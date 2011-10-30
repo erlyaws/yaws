@@ -9,7 +9,7 @@ $ pkg-config yaws --modversion
 1.80
 
 $ pkg-config yaws --cflags
--I/usr/local/lib/yaws/include  
+-I/usr/local/lib/yaws/include
 
 $ pkg-config yaws --libs
--pa /usr/local/lib/yaws/ebin  
+-pa /usr/local/lib/yaws/ebin

@@ -13,7 +13,7 @@ get_value(K,P) ->
         end.
 
 format(P) ->
-        SrvId = get_value("srvid",P),        
+        SrvId = get_value("srvid",P),
         AppName = get_value("appname",P),
         Path = get_value("path",P),
         format(SrvId,AppName,Path).
@@ -21,7 +21,7 @@ format(P) ->
 format([],_,_) -> error(no_srv_id);
 format(_,[],_) -> error(no_appname);
 format(S,A,[]) -> format(S,A,"/" ++ A);
-format(S,A,P) -> 
+format(S,A,P) ->
         case (catch yapp_handler:add(yapp_handler, S, P, list_to_atom(A))) of
            ok ->
                 ["Added Server Id: ", S,", AppName: ", A, ", Path: ", P];
@@ -33,10 +33,10 @@ error(no_srv_id) ->   "<p>No Server Id selected!</p>";
 error(no_appname) ->   "<p>No AppName given!</p>";
 error(E) ->       ["<p>Error adding yapp<pre>", io:format("~p",[E]),"</pre></p>"].
 
-out(A) -> 
+out(A) ->
 
     P = yaws_api:parse_post(A),
-        
+
    {html, ["<p>",format(P),"</p>"] }.
 
 </erl>

@@ -10,7 +10,7 @@ include ../vsn.mk
 VSN=$(YAWS_VSN)
 MODULES=mail attachment smtp mail_html
 
-EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) 
+EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR))
 
 ERLC_FLAGS+=-W +debug_info $(DEBUG_FLAGS) -I../../../include -pa ../../mail
 
@@ -18,7 +18,7 @@ ERLC_FLAGS+=-W +debug_info $(DEBUG_FLAGS) -I../../../include -pa ../../mail
 # Targets
 #
 
-all: $(EBIN_FILES) 
+all: $(EBIN_FILES)
 
 mail_vsn.erl:	mail_vsn.template
 	. ../vsn.mk; sed "s/%VSN%/${MAIL_VSN}/" < mail_vsn.template > mail_vsn.erl

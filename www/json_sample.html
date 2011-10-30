@@ -15,22 +15,22 @@ function test() {
     try {
      foo = document.getElementById('foo').value;
      bar = document.getElementById('bar').value;
-     document.getElementById('result').innerHTML = 
+     document.getElementById('result').innerHTML =
        "<PRE>" + service.test1(foo, bar) + "</PRE>";
      } catch(e) {
         alert(e);
-     } 
+     }
      return false;
 }
 
 function errortest() {
     try {
-     document.getElementById('failure').innerHTML = 
+     document.getElementById('failure').innerHTML =
        "<PRE>" + service.errortest() + "</PRE>";
      } catch(e) {
-     document.getElementById('failure').innerHTML = 
+     document.getElementById('failure').innerHTML =
         "<PRE>" + e + "</PRE>";
-     } 
+     }
      return false;
 }
 

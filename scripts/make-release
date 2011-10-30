@@ -13,7 +13,7 @@ fi
 
 . ../vsn.mk
 
-echo packing release ${YAWS_VSN} 
+echo packing release ${YAWS_VSN}
 
 TAG="yaws-${YAWS_VSN}"
 NAME_VERSION="yaws-${YAWS_VSN}"

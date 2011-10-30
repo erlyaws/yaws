@@ -1,11 +1,11 @@
-This Wiki was originally based on Joe Armstrongs wiki implementation. 
+This Wiki was originally based on Joe Armstrongs wiki implementation.
 It has been ported to yaws and hacked quite a bit in general by Johan
 Bevemyr.
 
 To Install
 ----------
 
-Edit include.mk (change the WIKIINSTALLDIR and EBININSTALLDIR) then 
+Edit include.mk (change the WIKIINSTALLDIR and EBININSTALLDIR) then
 
 make
 make install
@@ -13,11 +13,11 @@ make install
 
 Edit your /etc/yaws.conf and include /var/yaws/ebin in the
 ebin path ($EBININSTALLDIR), for example
-	
+
     ebin_dir = /var/yaws/ebin
 
-It is possible to have several Wiki instances on the same server. 
-Just install the wiki/* files in the directory where you want a 
+It is possible to have several Wiki instances on the same server.
+Just install the wiki/* files in the directory where you want a
 Wiki instance. This is easily done by running the updateWiki script
 and give a new directory as argument.
 
@@ -43,10 +43,10 @@ question marks to create the the page.
 Look and feel
 -------------
 
-The layout of the Wiki pages is to a large extent controlled by 
-two templates in WikiPreferences.files called template.html 
+The layout of the Wiki pages is to a large extent controlled by
+two templates in WikiPreferences.files called template.html
 and template_info.html. There is an alternative look and feel
-bundled, just copy template2.html to template.html and 
+bundled, just copy template2.html to template.html and
 template_info2.html  to template_info.html.
 
 To maintain
@@ -58,7 +58,7 @@ updateWiki    - takes a number of wiki directories and updates
 		the .yaws files etc
 
 getPassword   - takes a path to a wob file as argument. Will print
-		the password associated with that node. 
+		the password associated with that node.
 
 importFiles   - takes a path to a wob file as argument. Will add
 		any files in the corresponding .files directory

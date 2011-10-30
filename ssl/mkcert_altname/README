@@ -1,5 +1,5 @@
 This is a small README describing how to
-generate selfsigned certs with multiple 
+generate selfsigned certs with multiple
 subjectAltName which is required if we want to
 virthost several ssl servers on the same ip.
 
@@ -21,7 +21,7 @@ Create a new CA using
 
 # /usr/lib/ssl/misc/CA.pl -newca
 
-Create a CSR 
+Create a CSR
 
 # openssl req -new -config ./openssl.cnf -newkey rsa:1024 -nodes -keyout yaws.ppk -out yaws.csr
 

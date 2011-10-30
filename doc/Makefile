@@ -5,7 +5,7 @@ include ../vsn.mk
 IMG_EPS = $(wildcard *.eps)
 IMG_PDF = $(IMG_EPS:.eps=.pdf)
 
-all debug:	
+all debug:
 	echo "To build the docs, please use make docs before doing make install"
 
 docs:	check yaws.ps yaws.pdf
@@ -45,4 +45,4 @@ clean:
 install:
 	-install -d $(DESTDIR)$(PREFIX)/share/doc/yaws
 	-cp yaws.pdf $(DESTDIR)$(PREFIX)/share/doc/yaws
- 
+

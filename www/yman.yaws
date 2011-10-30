@@ -6,7 +6,7 @@ prebox(Str) ->
      {pre,[], yaws_api:htmlize(Str)}}.
 
 
-out(A) -> 
+out(A) ->
     H = {ssi, "TAB.inc", [],[]},
     L = case queryvar(A,"page") of
             {ok, Page} ->
@@ -34,7 +34,7 @@ out(A) ->
             undefined ->
                 "no man page found in query arg "
         end,
-        
+
     Man = {ehtml, {'div', [{id, "entry"}], prebox(L)}},
     Trail = {ssi, "END2",[],[]},
     [H, Man, Trail].
@@ -44,9 +44,9 @@ unesc([27 | T]) ->
     unesc(uptom(T));
 unesc([H|T]) ->
     [H|unesc(T)];
-unesc([]) ->	     
+unesc([]) ->
     [].
-	     
+
 uptom([$m|T]) ->
     T;
 uptom([H|T]) ->

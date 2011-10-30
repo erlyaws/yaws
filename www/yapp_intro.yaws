@@ -10,14 +10,14 @@ tbox(T) ->
     box(lists:flatten(io_lib:format("~p",[T]))).
 
 
-out(A) -> 
+out(A) ->
     [{ssi, "TAB.inc", "%%",[{"yapp_intro", "choosen"}]},
      {ehtml,
       {'div', [{id, "entry"}],
 
        [{h1, [], "Yaws applications - Yapps"},
-       
-        {p, [], 
+
+        {p, [],
          "Yaws applications, Yapps, are actually ordinary Erlang/OTP "
          "applications with some optional information in their "
          ".app files and the web pages in the priv/docroot directory "
@@ -26,20 +26,20 @@ out(A) ->
          " When anyone access the server with an URL that matches the path for an "
          " added application, the docroot will be temporarily switched to where the web "
          " pages for that application are located."},
-        
+
         {h2,[], "Using the application handler"},
         {h3,[], "Installing"},
         {p, [],
         ["The application handler is named just yapp and is located in the "
          "directory yaws/applications/yapp. Yaws itself should have been built first, "
          "then in the yapp directory we do",
-         {ol, [],[ 
+         {ol, [],[
           {li,[],{pre,[], "make"}},
           {li,[],[{pre,[], "make docs"}," - if we want documentation"]},
           {li,[],[{pre,[], "make install"}," - unless yaws was installed with make local_install"]}
                   ]
          }]},
-         
+
         {h3,[], "Setting up yaws.conf"},
         {p,[], "First we include the ebin directory of the yapp handler "
           "application by adding the line "
@@ -69,12 +69,12 @@ out(A) ->
          "The web applications that are configured in the Yapp registry will be loaded "
          "into Yaws configuration when the yapp application is started. A prerequisite "
          "is that the applications are found in the Erlang code loader path. There is "
-         "also an option to define yapps in yaws.conf for every server directly by using " 
+         "also an option to define yapps in yaws.conf for every server directly by using "
          "the opaque parameter bootstrap_yapps = webapp1, webapp2 etc. "},
         {p,[],
          "For instance the yapp handler application (named yapp) is a yapp in itself, "
-         "got it?, that provides a web gui to list active yapps and add/remove yapps " 
-         "from the registry. But since we can not add itself to the registry before it " 
+         "got it?, that provides a web gui to list active yapps and add/remove yapps "
+         "from the registry. But since we can not add itself to the registry before it "
          "is added we have to bootstrap into the server when Yaws is started. "},
         box("
 <server myinternalserver>
@@ -108,9 +108,9 @@ out(A) ->
         {p,[],
          [ "In order to make a \"yapp\" we need to know how to make an ordinary Erlang "
            "application, that is we will need a directory layout as specified by the ",
-      
+
            {a,[{href, "http://www.erlang.org/doc/design_principles/des_princ.html"     }],
-            "design principles"}, 
+            "design principles"},
            " and a proper appname.app file in the ebin directory. "
            "Yaws itself or yapp are standard applications and can serve as introductionary "
            "examples. "]},
@@ -142,8 +142,8 @@ out(A) ->
         {p,[],[
              "In a similar way the yapp handler adds \"private\" opaques for a yapp "
              "with the the environment variable yapp_opaque. "
-             "As an example ", {a,[{href,"http://erlyweb.org/"}], "ErlyWeb "}, 
-             "applications uses both appmods and opaques in yaws.conf. These can " 
+             "As an example ", {a,[{href,"http://erlyweb.org/"}], "ErlyWeb "},
+             "applications uses both appmods and opaques in yaws.conf. These can "
              "be put in the  .app file instead if one makes a yapp of it:"]},
          box("
  {application, myapp1,
@@ -169,7 +169,7 @@ out(A) ->
         {p,[],
          "It may look as an extra complexity to use Erlang applications but in this way "
          "we can benefit from Erlangs own framework for application handling. For instance, "
-         "in the future we hope to add features for release handling to " 
+         "in the future we hope to add features for release handling to "
          "add/remove/upgrade/downgrade yapps on a running Yaws server, or even many clustered "
          "servers. "}
        ]

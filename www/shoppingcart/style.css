@@ -13,27 +13,27 @@
   H1, H2,  H4, H5 {
       text-decoration: none;
       font-family: Verdana, Arial, Helvetica, sans-serif;
-      font-weight: bold; 
+      font-weight: bold;
       font-variant: small-caps
   }
 
 
   P { text-decoration: none;
       font-family: Verdana, Arial, Helvetica, sans-serif;
-      font-weight: normal; 
+      font-weight: normal;
       font-size: small;
   }
 
   .toprow  {
       text-decoration: none;
       font-family: Verdana, Arial, Helvetica, sans-serif;
-      font-weight: bold; 
+      font-weight: bold;
   }
 
   .pb {
       text-decoration: none;
       font-family: Verdana, Arial, Helvetica, sans-serif;
-      font-weight: bold; 
+      font-weight: bold;
       font-size: small;
   }
 
@@ -42,12 +42,12 @@
       text-decoration: none;
       font-family: Verdana, Arial, Helvetica, sans-serif;
       font-size: medium
-   }     
-  
+   }
+
 
   A { text-decoration: none;
       font-family: Verdana, Arial, Helvetica, sans-serif;
-      font-weight: normal; 
+      font-weight: normal;
       color: green;
   }
   A:link { color: #0000f0 }          /* unvisited link */
