@@ -184,7 +184,7 @@ ws_frame_info_secondary(Socket, Len1, Rest) ->
 % the size of your socket receive buffer.
 %
 % -> { #ws_state, [#ws_frame_info,...,#ws_frame_info] }
-unframe(WebSocket, <<>>) ->
+unframe(_WebSocket, <<>>) ->
     [];
 unframe(WebSocket, FirstPacket) ->
     case unframe_one(WebSocket, FirstPacket) of
@@ -212,6 +212,8 @@ unframe_one(WebSocket = #ws_state{vsn=8}, FirstPacket) ->
 	    Fail
     end.
 
+is_control_op(Op) ->
+    atom_to_opcode(Op) > 7.
 
 %% Unfragmented message
 frag_state_machine(WSState = #ws_state{ frag_type = none },
@@ -254,9 +256,17 @@ frag_state_machine(WSState = #ws_state{ frag_type = binary },
 				   opcode = continuation }) ->
     WSState#ws_state{ frag_type = none };
 
-%% Everything else is wrong
-frag_state_machine(_, _) ->
-    {error, "fragmentation rules violated"}.
+
+frag_state_machine(WSState, #ws_frame_info{ opcode = Op }) ->
+    IsControl = is_control_op(Op),
+    if 
+	IsControl == true ->
+	    %% Control message never changes fragmentation state
+	    WSState;
+	true ->
+	    %% Everything else is wrong
+	    {error, "fragmentation rules violated"}
+    end.
 
 
 opcode_to_atom(16#0) -> continuation;

@@ -41,7 +41,6 @@ handle_message( #ws_frame_info{ fin=0,
 				opcode=FragType, 
 				data=Data },
 		{none, <<>>}) ->
-    io:format("echoing back binary message~n",[]),
     {FragType, Data};
 
 %% non-final continuation of a fragmented message
