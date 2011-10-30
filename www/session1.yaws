@@ -29,7 +29,7 @@ out(A) ->
                               "Click ",
                               {a, [{href,"session1.yaws"}], " here "},
                               "to revisit",
-                              {p, [], f("You have been here ~p times", 
+                              {p, [], f("You have been here ~p times",
                                         [OP2#myopaque.times])},
                               {p, [], f("Your cookie is ~s", [Cookie])}]}},
                     Data;
@@ -42,12 +42,12 @@ out(A) ->
 new_session() ->
     M = #myopaque{},
     Cookie = yaws_api:new_cookie_session(M),
-    
+
     Data = {ehtml,
             {html,[],
              ["I just set your cookie to ", Cookie, "Click ",
               {a, [{href,"session1.yaws"}], " here "},
-              
+
               "to revisit"]}},
     CO = yaws_api:setcookie("baz",Cookie,"/"),
     [Data, CO].

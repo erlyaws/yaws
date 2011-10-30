@@ -1,7 +1,7 @@
 
 <erl>
 
-out(A) -> 
+out(A) ->
     yaws_api:ssi(A#arg.docroot, ["/HEAD", "/TOPTAB"]).
 
 </erl>
@@ -9,12 +9,12 @@ out(A) ->
 <H1>Yaws API</H1>
 
 <p>
-Here we describe the API avalable to Yaws applications. 
+Here we describe the API avalable to Yaws applications.
 First and foremost, the entire regular erlang API is available, this
 include mnesia and all other erlang applications that are part of the
 regular erlang system.
 <p>
-Here we describe the functions available in the yaws_api module 
+Here we describe the functions available in the yaws_api module
 
 
 <a href="yman.yaws?page=yaws_api"> man page for <tt>yaws_api (5)</tt> </a>

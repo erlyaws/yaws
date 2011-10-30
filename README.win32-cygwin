@@ -1,14 +1,14 @@
 
 <Note> This is now deprecated as we have a proper
 native win32 yaws now.
- 
+
 
 
 Yaws on Cygwin/Windows
 Written by Bill Robertsson (billrobertson42@yahoo.com)
 Thu May 22 13:24:48 CEST 2008
 
-To install. 
+To install.
 
 You must have cygwin installed.  This should include perl,
 autoconf and make.  There may be other packages that are
@@ -28,7 +28,7 @@ Extract the yaws archive, e.g.
 Change to the newly created directory, start bash and run
 configure.  I recommend you select something other than the
 default prefix, because you probably don't want YAWS in your
-cygwin directories. 
+cygwin directories.
 
 e.g.
 
@@ -81,13 +81,13 @@ There is also a section like this.
         docroot = c:/bill/erl/yaws/var/yaws/www
         listen = 0.0.0.0
         dir_listings = true
-        <ssl> 
+        <ssl>
                 keyfile = c:/bill/erl/yaws/etc/yaws-key.pem
                 certfile = c:/bill/erl/yaws/etc/yaws-cert.pem
         </ssl>
 </server>
 
-SSL ?? 
+SSL ??
 
 Untested:
 erlang in a directory with spaces in the name (e.g. "Program Files"

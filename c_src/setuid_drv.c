@@ -100,8 +100,8 @@ static ErlDrvData setuid_start(ErlDrvPort port, char *buf)
     }
     // In any case return error(?) for non void function
     return (ErlDrvData) -1;
-    
-        
+
+
 }
 
 

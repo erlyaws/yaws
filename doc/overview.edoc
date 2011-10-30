@@ -1,5 +1,5 @@
 @title Yaws -An Erlang Web Server
-@doc 
+@doc
 <p>
 This is a very rough import of Yaws into Erlware.
 In particular <i>-disable-pam</i> was used to create
@@ -13,7 +13,7 @@ It is unclear if they were intentionally left out or not.
 </p>
 <p>
 Finally some files, that normally is generated at build time
-was included <i>already generated</i>. 
+was included <i>already generated</i>.
 They were: <code>mime_types.erl, yaws_generated.erl</code>.
 </p>
 

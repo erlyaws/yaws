@@ -19,16 +19,16 @@ ss(A, File) ->
     {ok, B} = file:read_file(
                 filename:join([A#arg.docroot, File])),
     box(binary_to_list(B)).
-    
 
 
-out(A) -> 
+
+out(A) ->
     [{ssi, "TAB.inc", "%%",[{"haxe_intro", "choosen"}]},
      {ehtml,
       {'div', [{id, "entry"}],
 
       [{h1, [], "haXe remoting"},
-       
+
         {p, [],
         ["The yaws_rpc module has a haXe remoting adapter that enables "
          "Yaws to respond to respond to "
@@ -80,7 +80,7 @@ out(A) ->
          {li,[],
           {pre,[],"respond(State, {call, echo, Value} = _Request)"}}]},
 
-       {p,[], 
+       {p,[],
         "The first line tells Yaws to forward all RPC calls (this "
         "includes both haXe remoting and JSON RPC calls -- remember that "
         "the yaws_rpc module handles both RPC mechanisms transparently) "
@@ -95,7 +95,7 @@ out(A) ->
         "yaws_rpc optionally handles sessions for both JSON RPC and "
         "haXe remoting. To use sessions, invoke yaws_rpc:handler_session "
         "as shown in the JSON RPC documentation page."},
-      
+
        {p, [],
           "If the response is in the form of {exception, Obj}, "
           "where Obj is any valid haXe remoting type, then the haXe client "

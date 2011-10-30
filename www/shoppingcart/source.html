@@ -38,12 +38,12 @@ out(A) -&gt;
 </pre>
 </div>
 
-<p class=pp>All code, including the head containing the link 
+<p class=pp>All code, including the head containing the link
 to the stylesheet is dynamically
 generated. The first function in all code snippets in yaws files is always
 a call to <tt>shopcart:top(A)</tt></p>
 <p class=pp>The <tt>top/1</tt> function will check the cookie and if a cookie
-which is associated to an active session is found, the request is granted, 
+which is associated to an active session is found, the request is granted,
 otherwise the login page is displayed by the <tt>shopcart:login(A)</tt> function.</p>
 <p class=pp>The last item displayed by the login function is the atom <tt>break</tt>. When the
 yaws server sees the <tt>break</tt>, it will not process any more data from the
@@ -53,7 +53,7 @@ page and still have subsequent html/yaws code on the same page.</p>
 
 <h3>Redirect to the requested page</h3>
 
-<p class=pp>Since the <tt>login(A)</tt> function is supplied with the 
+<p class=pp>Since the <tt>login(A)</tt> function is supplied with the
 Arg of the requested page, the login function
 will set the path of the requested page in a hidden field in the login form.
 The code that processes the login form will then issue a redirect to the
@@ -67,20 +67,20 @@ generate structured content:</p>
 <ul>
 <li><p class=pp>
 It is easier to get the structure right,</p></li>
-<li><p class=pp>It 
+<li><p class=pp>It
 is easier to inject the dynamically generated parts in the structure,</p></li>
 <li><p class=pp>It is <em>much </em> more beautiful.</p></li>
 </ul>
- 
+
 <p class=pp>See the <a href="shopcart.erl">source</a> for a number of "proofs" for this.</p>
 
 <h3>The use of the <b>yaws_session_server</b> </h3>
 <p class=pp>The yaws_session_server is designed to facilitate server side
-state applications. The yaws application writer is supplied 
+state applications. The yaws application writer is supplied
 with the following capabilities and services:</p>
 
 <ol>
-<li><p class=pp>Truly random cookie generation. Each cookie can 
+<li><p class=pp>Truly random cookie generation. Each cookie can
 subsequently be used to uniquely identify a session.</p></li>
 
 <li><p class=pp>Maintenance of an opaque application state in an ets table.

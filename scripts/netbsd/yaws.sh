@@ -39,7 +39,7 @@ yaws_start() {
 }
 
 yaws_stop() {
-        $yaws_command $yaws_id --stop 
+        $yaws_command $yaws_id --stop
 }
 
 yaws_status() {

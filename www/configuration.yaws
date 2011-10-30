@@ -6,7 +6,7 @@ box(Str) ->
      {pre,[], yaws_api:htmlize(Str)}}.
 
 
-out(A) -> 
+out(A) ->
     [{ssi, "TAB.inc", "%%",[{"configuration", "choosen"}]}].
 
 </erl>
@@ -19,7 +19,7 @@ out(A) ->
     hosted at github.
   </p>
   <p>
-    The github page is <a href="http://github.com/klacke/yaws"> 
+    The github page is <a href="http://github.com/klacke/yaws">
     http://github.com/klacke/yaws</a>
   </p>
   <p>
@@ -27,7 +27,7 @@ out(A) ->
     at <a href="http://yaws.hyber.org/download" >http://yaws.hyber.org/download
   </a>
   </p>
-  
+
   <p>
     To check out the latest release and build a number of prerequisites
     are required. (All code example below on Ubuntu)
@@ -40,7 +40,7 @@ out(A) ->
       <div class="box">
         <pre>
 # apt-get build-dep erlang yaws
-# apt-get install erlang-nox erlang-src erlang-manpages erlang-mode 
+# apt-get install erlang-nox erlang-src erlang-manpages erlang-mode
 # apt-get install erlang-mode erlang-dev
         </pre>
       </div>
@@ -82,8 +82,8 @@ out(A) ->
         <li>
           Installbuilder. To build win32 installers we're using
           an install builder that is free to use free of charge
-          for opensource projects. 
-          Get the linux installer at 
+          for opensource projects.
+          Get the linux installer at
           <a href="http://www.bitrock.com/download_installbuilder_download.html">
             bitrock
           </a>
@@ -101,7 +101,7 @@ out(A) ->
   </p>
   <div class="box">
     <pre>
-# git clone git://github.com/klacke/yaws.git  
+# git clone git://github.com/klacke/yaws.git
     </pre>
   </div>
   <p>To build and to what is knows as a local install, e.g.
@@ -127,13 +127,13 @@ out(A) ->
   </div>
 
   <p>
-    The above commands will checkout the HEAD source, 
-    build it and install it at 
+    The above commands will checkout the HEAD source,
+    build it and install it at
     127.0.0.1:80 with the docroot set to the local documentation.
   </p>
   <p>
     <em>make</em> (without install) will build the yaws system and
-    make local_install 
+    make local_install
     does a local install at http://127.0.0.1:8000
   </p>
   <p>
@@ -143,24 +143,24 @@ out(A) ->
     If $HOME/yaws.conf exists, the old file will not be overwritten.
   </p>
   <p>
-    To run a locally installed system, we run the yaws script found in the 
+    To run a locally installed system, we run the yaws script found in the
     bin directory in the source code tree or $HOME/bin/yaws.
   </p>
 
   <p>
     <tt>make install</tt>
-    will also build the yaws system and also  
-    install it in /usr/local. A configuration file /etc/yaws/yaws.conf will 
-    also be installed unless the file already exists. The default config 
+    will also build the yaws system and also
+    install it in /usr/local. A configuration file /etc/yaws/yaws.conf will
+    also be installed unless the file already exists. The default config
     file will set up the system to listen on http://127.0.0.1:80
   </p>
-      
+
 
   <h2>Running yaws</h2>
   <p>
-    The yaws executable is a shell script which invokes the   
-    erlang system and instructs it to start yaws. 
-    The command line flags for yaws are documented in  
+    The yaws executable is a shell script which invokes the
+    erlang system and instructs it to start yaws.
+    The command line flags for yaws are documented in
     <a href="yman.yaws?page=yaws">
        man page for yaws(1)
     </a>
@@ -184,15 +184,15 @@ out(A) ->
        </pre>
      </div>
      <p>
-       All command line flags to yaws are described in the 
-       man page for yaws. 
+       All command line flags to yaws are described in the
+       man page for yaws.
      </p>
 
      <h2>Configuring Yaws</h2>
      <p>
        Web server configuration can be supplied to yaws  "
-       in either of two ways depending 
-       on whether we run yaws as a standalone daemon or if we run yaws as an 
+       in either of two ways depending
+       on whether we run yaws as a standalone daemon or if we run yaws as an
        embedded application inside another Erlang program.
      </p>
      <p>
@@ -204,22 +204,22 @@ out(A) ->
 
      <h3>Embedded mode</h3>
      <p>
-       It is possible to run yaws in embedded mode where yaws is part of a  
-       larger application. When running yaws in embedded mode, it is often not 
+       It is possible to run yaws in embedded mode where yaws is part of a
+       larger application. When running yaws in embedded mode, it is often not
        possible to let yaws read its configuration data from /etc/yaws/yaws.conf.
      </p>
 
      <p>
-       The function 
+       The function
        <tt>yaws_api:setconf(Gconf, Groups)</tt>
-       can be used by an other erlang process to explicitly set a yaws 
+       can be used by an other erlang process to explicitly set a yaws
        configuration at runtime.
-       To execute Yaws in embedded mode, it must be started with 
-       the environment 
+       To execute Yaws in embedded mode, it must be started with
+       the environment
        <tt>{embedded, true}</tt>
      </p>
      <p>
-       The embedded mode is fully described at 
+       The embedded mode is fully described at
        <a href="embed.yaws">embed.yaws</a>
      </p>
   </p>

@@ -6,15 +6,15 @@ out(A) -> file:read_file([A#arg.docroot, "/EXHEAD"]).
 
 Since we are running in the same process as the webserver itself, it is
 easy for us to interact with the webserver itself from a yaws script.
-The following is an example which produces a statistics report 
-from the webserver. We call the server 
+The following is an example which produces a statistics report
+from the webserver. We call the server
 
 The absoluteley most simple example is a HTML file which doesn't contain
-any embedded erlang code at all. 
+any embedded erlang code at all.
 
 
 <erl>
-out(A) -> 
+out(A) ->
   {ok, B} = file:read_file([A#arg.docroot, "/stats_ex1.yaws"]),
   {ok, ["<xmp> \n", B, "</xmp\n>"]}.
 </erl>
@@ -31,7 +31,7 @@ The file <a href="simple_ex2.yaws">simple_ex2.yaws</a> contains the following
 HTML code.
 <br>
 <erl>
-out(A) -> 
+out(A) ->
   {ok, B} = file:read_file([A#arg.docroot, "/simple_ex2.yaws"]),
   {ok, ["<xmp> \n", B, "</xmp\n>"]}.
 </erl>

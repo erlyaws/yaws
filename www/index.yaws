@@ -53,7 +53,7 @@ out(A) ->
                   "development, please visit the ",
                   {a, [{href, "https://github.com/klacke/yaws"}],
                    "Yaws github repository"}, "."]},
-         
+
          gen_news(A)]}]},
      {ssi, "END2",[],[]}].
 

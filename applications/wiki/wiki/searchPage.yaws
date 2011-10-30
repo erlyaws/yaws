@@ -4,7 +4,7 @@
 
 out(Arg) ->
     F = searchPages,
-    if 
+    if
         Arg#arg.clidata /= undefined ->
             %% io:format("post~n"),
             wiki_yaws:call_with_post(wiki, F, Arg);

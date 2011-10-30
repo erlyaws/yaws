@@ -343,7 +343,7 @@
 
 	* src/yaws.erl, www/embed.yaws: Reworked the start_embedded
 	functions into three functions.
-	
+
 	start_embedded(DocRoot).  start_embedded(DocRoot, SC_KeyValueList).
 	 start_embedded(DocRoot, SC_KeyValueList, GC_KeyValueList).
 
@@ -373,7 +373,7 @@
 2006-09-05 08:56  etnt
 
 	* src/yaws.erl: Added start_embedded/1 and start_embedded/4.
-	
+
 	Quick and easy way of starting Yaws in embedded mode.  No need for
 	any start-script switches and no dependencies to Yaws header files.
 	Just call either start_embedded/1 or start_embedded/4 and you are
@@ -594,7 +594,7 @@
 	src/yaws_ctl.erl, src/yaws_generated.template, www/code/Makefile,
 	www/shopingcart/Makefile: added support for 2 additional configure
 	flags, --disable-pam and --with-extrainclude=DIR
-	
+
 	Worked the Makefiles to properly support DESTDIR. This is useful
 	for packagers (deb, rpm ...)
 
@@ -1626,7 +1626,7 @@
 	connections, so that one SSL negotiation in progress does not
 	prevent other connections.  Also, for the similar reasons, have use
 	a timeout with SSL accepts.
-	
+
 	The values for the number of processes and the duration of the
 	timeout are quite arbitrary.  They are ok for my low traffic site.
 
@@ -1721,7 +1721,7 @@
 
 2004-06-11 14:33  klacke
 
-	* two-mode-mode.el, scripts/ntpath.sh: 
+	* two-mode-mode.el, scripts/ntpath.sh:
 	two-mode.el contributed by David Welton
 
 2004-06-10 22:23  jbevemyr
@@ -2339,7 +2339,7 @@
 	src/yaws_config.erl, src/yaws_server.erl: Support for
 	`Content-Encoding: deflate' using zlib.  This feature has to be
 	turned on in the server part of yaws.conf (`deflate = true').
-	
+
 	Still experimental and for static files only.  Cached files are
 	compressed just once.  Large files are compressed on the fly, and
 	only if the mime type makes it seem wothwhile (see
@@ -2404,35 +2404,35 @@
 	and within erl tags). In HTML source %%Key%% is expanded to Value
 	and within erl tags yaws_api:get_binding(Key) can be used to
 	extract Value.
-	
+
 	With this addition it is easier to write transparant yaws code
 	making it easier to to work together with Web people knowing little
 	or nothing about Erlang.
-	
+
 	A stupid example:
-	
+
 	----
-	
+
 	$ cat ex.yaws <erl> out(A) -> {bindings, [{"A", "foo"}, {"B",
 	"baz"}]}.  </erl> <html> <body> <p>%%A%%</p> <p><font
 	size="4">%%A%% != %%B%%</font></p> <p>An enormous amount of plain
 	html source here.</p> <erl> out(A) ->	  Value =
-	yaws_api:binding("A"),	   {ehtml, {ul, [],	     [{li, [],	   
+	yaws_api:binding("A"),	   {ehtml, {ul, [],	     [{li, [],
 	   Value},	  {li, [],	   "gazonk"}]}}.  </erl>
-	
+
 	%%A%% = %%A%% (hit me) </body> </html>
-	
+
 	----
-	
+
 	Which expands to:
-	
+
 	<html> <body> <p>foo</p> <p><font size="4">foo != baz</font></p>
 	<p>An enormous amount of plain html source here.</p>
-	
+
 	<ul> <li>foo</li> <li>gazonk</li></ul>
-	
+
 	foo = foo (hit me)
-	
+
 	</body> </html>
 
 2004-01-24 17:33  cschultz
@@ -2449,11 +2449,11 @@
 2004-01-18 07:59  lpsmith
 
 	* src/yaws_server.erl: Added #arg{} to the out/1 return values.
-	
+
 	Fixed redirect bug when adding a slash to a URL with a query.
-	
+
 	Returns a more informative 400 instead of 403 on malformed urls.
-	
+
 	Cleaned up a bit of debugging code that was left behind.
 
 2004-01-13 21:56  mbj
@@ -2502,8 +2502,8 @@
 
 2003-12-18 21:15  klacke
 
-	* ChangeLog: 
-	
+	* ChangeLog:
+
 	prepare for 1.40 release
 
 2003-12-18 17:23  klacke
@@ -2806,7 +2806,7 @@
 
 	* src/yaws_server.erl: We now return 403 on relative paths and
 	other malformed requests.
-	
+
 	Also some small code clean ups.  I really wish I had a visual
 	browser for dataflow analysis... it would make simplifing the code
 	much easier, as well as give one a quick rundown of code you aren't
@@ -2820,7 +2820,7 @@
 
 	* include/yaws.hrl, src/yaws_server.erl: Removed unused fields "q"
 	and "wwwauth" in the #urltype{} record.
-	
+
 	Removed unused function yaws_server:unflat().
 
 2003-09-09 21:07  jbevemyr
@@ -2845,28 +2845,28 @@
 
 2003-09-08 23:02  lpsmith
 
-	* src/yaws_config.erl: 
+	* src/yaws_config.erl:
 	Removed the code that checks that a directory exists in the case
 	of:
-	
+
 	<auth>	dir= ...  </auth>
-	
+
 	as www-authentication is now specified by server path and not
 	filesystem path.
 
 2003-09-08 22:37  lpsmith
 
-	* src/yaws_server.erl: 
+	* src/yaws_server.erl:
 	WWW-Authentication directories are now specified by server path and
 	not filesystem path.  Code cleanup for www-authentication.  Major
 	authentication enhancements to come.
-	
+
 	Numerous other code cleanups, focusing on reducing the number of
 	arguments passed to various functions.	The biggest change is that
 	the query part of a URL isn't passed through all the URL-parsing
 	functions.   #urltype.q is now unused, should remove it at some
 	point in the future.
-	
+
 	We update the ARG record a lot less now.
 
 2003-09-04 13:15  cschultz
@@ -2904,7 +2904,7 @@
 
 2003-08-25 12:06  cschultz
 
-	* doc/yaws.tex, man/yaws_api.5, src/yaws_api.erl: 
+	* doc/yaws.tex, man/yaws_api.5, src/yaws_api.erl:
 	Make call_cgi available in yaws_api.
 
 2003-08-25 11:31  cschultz
@@ -2913,7 +2913,7 @@
 
 2003-08-25 11:29  cschultz
 
-	* include/yaws_api.hrl: 
+	* include/yaws_api.hrl:
 	comment to arg record field `pathinfo'
 
 2003-08-24 22:09  cschultz
@@ -2977,26 +2977,26 @@
 
 2003-08-11 16:57  cschultz
 
-	* src/yaws_cgi.erl: 
-	
+	* src/yaws_cgi.erl:
+
 	Now works with partial_post_size set.
 
 2003-08-11 16:54  cschultz
 
-	* src/yaws_server.erl: 
-	
+	* src/yaws_server.erl:
+
 	Minor changes to get_client_data.
 
 2003-08-07 01:53  cschultz
 
-	* src/yaws_server.erl: 
-	
+	* src/yaws_server.erl:
+
 	Fixed yet another ssl related bug.
 
 2003-08-06 20:03  cschultz
 
-	* src/yaws_cgi.erl: 
-	
+	* src/yaws_cgi.erl:
+
 	Added variable HTTP_COOKIE.
 
 2003-08-05 22:27  cschultz
@@ -3005,8 +3005,8 @@
 
 2003-08-03 18:54  cschultz
 
-	* src/yaws_server.erl: 
-	
+	* src/yaws_server.erl:
+
 	Yaws files and appmods can return {page, {Options, Page}} instead
 	of {page, Page}.  Options is (an option or) a deep list of options.
 	 At the moment an option is {header, Header}.  I thought this might
@@ -3027,20 +3027,20 @@
 
 2003-07-30 23:13  cschultz
 
-	* src/yaws.erl: 
+	* src/yaws.erl:
 	Bug fix regarding my last ci: When sending partial content, set
 	status code to 206 accordingly.
 
 2003-07-30 22:55  cschultz
 
-	* src/yaws_server.erl: 
+	* src/yaws_server.erl:
 	More faithful access logs in connection with {page, ...}.
 
 2003-07-30 22:11  cschultz
 
-	* include/yaws.hrl, src/yaws.erl, src/yaws_server.erl: 
+	* include/yaws.hrl, src/yaws.erl, src/yaws_server.erl:
 	For GETs on regular files:
-	
+
 	Added support for Content-Range, If-Range, If-Match, expanded
 	support for If-None-Match.
 
@@ -3050,13 +3050,13 @@
 
 2003-07-26 00:14  cschultz
 
-	* src/: yaws_server.erl, yaws_ssl.erl: 
-	
+	* src/: yaws_server.erl, yaws_ssl.erl:
+
 	Answer bad requests.
 
 2003-07-23 22:59  cschultz
 
-	* src/yaws_ssl.erl: 
+	* src/yaws_ssl.erl:
 	Do not let SSL process die on unrecognized request.
 
 2003-07-23 22:58  cschultz
@@ -3065,13 +3065,13 @@
 
 2003-07-23 22:48  cschultz
 
-	* src/yaws_server.erl: 
+	* src/yaws_server.erl:
 	For forbidden script types return 403, not 404.
 
 2003-07-22 11:49  cschultz
 
-	* include/yaws.hrl, src/yaws_config.erl, src/yaws_server.erl: 
-	
+	* include/yaws.hrl, src/yaws_config.erl, src/yaws_server.erl:
+
 	Made allowed script types (yaws, php, cgi) configurable.
 
 2003-07-21 18:24  cschultz
@@ -3086,9 +3086,9 @@
 2003-07-17 01:16  cschultz
 
 	* include/yaws.hrl, include/yaws_api.hrl, src/Makefile,
-	src/mime_type_c.erl, src/yaws_cgi.erl, src/yaws_server.erl: 
-	
-	Added CGI and PHP support.  Also for a request like	
+	src/mime_type_c.erl, src/yaws_cgi.erl, src/yaws_server.erl:
+
+	Added CGI and PHP support.  Also for a request like
 	/a/b/c.xxx/d/e with xxx being one of `yaws', `cgi' or `php' and
 	c.xxx being a plain file, /a/b/c.xxx is called with
 	Arg#arg.pathinfo, respectively the environment variable PATH_INFO,
@@ -3096,18 +3096,18 @@
 
 2003-07-17 01:09  cschultz
 
-	* src/yaws_ls.erl: 
+	* src/yaws_ls.erl:
 	Do not show full path.
 
 2003-07-17 01:06  cschultz
 
-	* scripts/yaws.ss, src/yaws_ctl.erl: 
+	* scripts/yaws.ss, src/yaws_ctl.erl:
 	Added command `-load' to yaws script.
 
 2003-07-17 01:04  cschultz
 
-	* src/: yaws.erl, yaws_ticker.erl: 
-	
+	* src/: yaws.erl, yaws_ticker.erl:
+
 	Moved ticker function to separate module to ease purging of module
 	`yaws'.
 
@@ -3131,7 +3131,7 @@
 
 2003-07-13 01:31  cschultz
 
-	* include/yaws.hrl, src/yaws.erl, src/yaws_server.erl: 
+	* include/yaws.hrl, src/yaws.erl, src/yaws_server.erl:
 	Log file size for dynamic pages.
 
 2003-07-13 01:17  cschultz
@@ -3153,10 +3153,10 @@
 2003-07-12 05:25  lpsmith
 
 	* src/yaws_api.erl: Improved path handling:  path_norm/1 removes
-	all occurences of double slashes and the directories "." and "..". 
+	all occurences of double slashes and the directories "." and "..".
 	url_decode_q_split now calls this function on the path that it
 	returns.
-	
+
 	This is to fix a variety of www-authenticate related security bugs.
 	 Previously,  it was possible to access any www-auth protected
 	directory by inserting a "/./" before the directory, i.e. by
@@ -3164,7 +3164,7 @@
 
 2003-07-12 01:40  lpsmith
 
-	* src/yaws_404.erl: 
+	* src/yaws_404.erl:
 	Fixed Cross-Site Scripting vunerability by html-quoting the path
 	displayed in the error message.
 
@@ -3494,7 +3494,7 @@
 	user-agent to complete the "combined" log format. It will log - for
 	either field if it is not supplied. The old logging command has
 	been retained for backward compatibility.
-	
+
 	Also added code to log the time in localtime, and log the offset in
 	the apache/Common Log Format. This is significant for anyone using
 	the logs...
@@ -3810,7 +3810,7 @@
 2002-11-25 20:59  lukeg
 
 	* src/yaws_api.erl: Moved ehtml_expand in here.
-	
+
 	Added ehtml_expander/1 for fast reusable EHTML templates.
 
 2002-11-25 20:58  lukeg
@@ -4162,7 +4162,7 @@
 
 2002-10-23 14:20  etnt
 
-	* src/yaws_ls.erl: Fixed the indentation of directory listings. 
+	* src/yaws_ls.erl: Fixed the indentation of directory listings.
 	Also, when hoovering over a filename, the size in bytes is
 	displayed. Finally, a README file is inlined at the bottom, if it
 	exist.
@@ -4342,7 +4342,7 @@
 	The problem was that I skipped URL decoding, so you could e.g. read
 	the source to a Yaws file by saying "foo.yaw%73" instead of
 	"foo.yaws".
-	
+
 	Now we initially decode the URL but not the query part. The query
 	part is decoded in yaws_api:parse_query. It can't be done earlier,
 	because unescaping characters like '&' and '=' would break the
@@ -4548,14 +4548,14 @@
 	early, causes problems if it unescapes &'s in the query string. Has
 	to wait until the query is parsed (and it looks like
 	yaws_api:do_parse_spec does it for us already)
-	
+
 	For redirects, using 302 for HTTP 1.0 browsers because they don't
 	understand 303. This change is small but noisy since I had to pass
 	another arg to handle_out_reply (many clauses).
-	
+
 	Added an {ehtml, ...} return type for out/1 functions. It does very
 	basic tuple->HTML expansions.
-	
+
 	Chunked encoding: skip accumulating 0-length chunks, e.g. when
 	out/1 returns an empty result, because they look like terminators.
 
@@ -4679,17 +4679,17 @@
 	config parameter called partial_post_size which if set to an
 	integer value will cause the content of the post content to be sent
 	to the out/1 function in chunks of this size.
-	
+
 	Changed implementation of multipart form data. There is a new
 	config parameter called partial_post_size which if set to an
 	integer value will cause the content of the post content to be sent
 	to the out/1 function in chunks of this size.
-	
+
 	It is possible to get the server to maintain a state on behalf of
 	the out/1 user by returning {get_more, Cont, State}.
-	
+
 	yaws_api:parse_post_data/1 will return either:
-	
+
 	{cont, Cont, Res} where Res is new result(s) from this segment.
 	This indicates that there is more data to come and the out/1
 	function should return {get_more, Cont, User_state} where
@@ -4698,39 +4698,39 @@
 	parameter called partial_post_size which if set to an integer value
 	will cause the content of the post content to be sent to the out/1
 	function in chunks of this size.
-	
+
 	It is possible to get the server to maintain a state on behalf of
 	the out/1 user by returning {get_more, Cont, State}.
-	
+
 	yaws_api:parse_post_data/1 will now return either:
-	
+
 	{cont, Cont, Res} where Res is new result(s) from this segment.
 	This indicates that there is more data to come and the out/1
 	function should return {get_more, Cont, User_state} where
 	User_state might usefully be a File Descriptor.
-	
+
 	or {result, Res} if this is the last (or only) segment.
-	
+
 	Res is a list of {header, Header} | {part_body, Binary} | {body,
 	Binary}
-	
+
 	Example usage could be:
-	
+
 	<erl>
-	
-	out(A) ->	 case yaws_api:parse_post_data(A) of		
-	{cont, Cont, Res} ->			St = handle_res(A, Res),   
-			{get_more, Cont, St};		  {result, Res} -> 
+
+	out(A) ->	 case yaws_api:parse_post_data(A) of
+	{cont, Cont, Res} ->			St = handle_res(A, Res),
+			{get_more, Cont, St};		  {result, Res} ->
 			  handle_res(A, Res),			 {html,
 	f("<pre>Done </pre>",[])}	 end.
-	
-	handle_res(A, [{head, Name}|T]) ->     
+
+	handle_res(A, [{head, Name}|T]) ->
 	io:format("head:~p~n",[Name]),	    handle_res(A, T); handle_res(A,
-	[{part_body, Data}|T]) ->      io:format("part_body:~p~n",[Data]), 
-	    handle_res(A, T); handle_res(A, [{body, Data}|T]) ->     
+	[{part_body, Data}|T]) ->      io:format("part_body:~p~n",[Data]),
+	    handle_res(A, T); handle_res(A, [{body, Data}|T]) ->
 	io:format("body:~p~n",[Data]),	    handle_res(A, T); handle_res(A,
 	[]) ->	    io:format("End_res~n").
-	
+
 	</erl>
 
 2002-08-22 18:04  jbevemyr

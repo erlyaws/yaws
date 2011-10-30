@@ -9,7 +9,7 @@ body {font: 12px Verdana, Arial, Helvetica, sans-serif;
 h1 {font-size: 200%; text-transform: lowercase; letter-spacing: 3px;
    margin: 0.66em 0 0.33em 3%; padding: 0;}
 
-h3 {font-size: 133%; margin: 0; padding: 0; 
+h3 {font-size: 133%; margin: 0; padding: 0;
    border-bottom: 1px solid black;}
 
 h4 {font-size: 100%; margin: 0; padding: 0.33em 0 0;
@@ -39,17 +39,17 @@ div.links {
     background: green;
   }
 
-div.box { border: solid; border-width: thin; width: 96%; 
+div.box { border: solid; border-width: thin; width: 96%;
           background: rgb(211, 211, 211)  }
 
-div.news { border: solid; border-width: thin; width: 96%; 
+div.news { border: solid; border-width: thin; width: 96%;
 	   border-bottom: 3px solid black;
 	   margin: 18px 5px 2px 10px;
            background: rgb(211, 211, 211)  }
 
 div.box pre {margin: 0.66em 0 0.33em 1%; padding: 0;}
 
-div.man { border: solid; border-width: thin; width: 100%; 
+div.man { border: solid; border-width: thin; width: 100%;
           font-size: 90%;
           margin : 4;
           background: rgb(211,211,211)  }
@@ -62,7 +62,7 @@ div.none { }
 
 
 
-I {       font-size : 12px; 
+I {       font-size : 12px;
           font-family: Times, Verdana, Arial, Helvetica, sans-serif;}
 
 

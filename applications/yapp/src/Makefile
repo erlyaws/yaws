@@ -9,7 +9,7 @@ DEBUG=
 EINCLUDE=../include
 YAWS_INCL=$(YAWSDIRECTORY)/include
 
-ERLC_FLAGS+=-W $(DEBUG) -I$(EINCLUDE) -I$(YAWS_INCL) 
+ERLC_FLAGS+=-W $(DEBUG) -I$(EINCLUDE) -I$(YAWS_INCL)
 
 
 MODULES = yapp yapp_app yapp_sup yapp_handler yapp_server yapp_registry \

@@ -17,8 +17,8 @@ All yaws logs will be written to files in this directory. There are several
 different log files written by yaws.
 
 .br
-\fBreport.log\fR - this is a text file that contains all error logger 
-printouts from yaws. 
+\fBreport.log\fR - this is a text file that contains all error logger
+printouts from yaws.
 
 .br
 \fB<Host>.access\fR - for each virtual host served by yaws, a file
@@ -45,7 +45,7 @@ The default value for logdir is "."
 .TP
 \fBebin_dir = Directory\fR
 This directive adds Directory to the Erlang search path. It is possible to
-have several of these command in the configuration file. The default value 
+have several of these command in the configuration file. The default value
 is "yaws_dir"/examples/ebin
 
 
@@ -73,8 +73,8 @@ value is "yaws/%VSN%, Yet Another Web Server".
 .TP
 \fBinclude_dir = Directory\fR
 This directive adds Directory to the path of directories where the Erlang
-compiler searches for include files. We need to use this if we want to 
-include .hrl files in our yaws Erlang code. The default value is 
+compiler searches for include files. We need to use this if we want to
+include .hrl files in our yaws Erlang code. The default value is
 "yaws_dir"/examples/include.
 
 .TP
@@ -82,7 +82,7 @@ include .hrl files in our yaws Erlang code. The default value is
 Yaws will cache small files such as commonly accessed GIF images in RAM.
 This directive sets a maximum number on the number of cached files.
 The default value is 400.
-.TP 
+.TP
 \fBmax_num_cached_bytes = Integer\fR
 This directive controls the total amount of RAM which can maximally be
 used for cached RAM files. The default value is 1000000, 1 megabyte.
@@ -108,8 +108,8 @@ a command line flag to yaws. Default is false.
 .TP
 \fBuse_old_ssl = true | false\fR
 This re-enables the old OTP ssl implementation. By default we use the
-new ssl implementation. 
- 
+new ssl implementation.
+
 .TP
 \fBauth_log  = true | false\fR
 \fBDeprecated and ignored. Now, this target must be set in server part.\fR
@@ -125,7 +125,7 @@ the last socket if the limit threshold is reached.
 Normally, yaws does not restrict the number of times a connection is
 kept alive using keepalive. Setting this parameter to an integer X
 will ensure that connections are closed once they have been used X times.
-This can be a useful to guard against long running connections 
+This can be a useful to guard against long running connections
 collecting too much garbage in the Erlang VM.
 
 .TP
@@ -151,7 +151,7 @@ size where they wrap around and the original gets renamed to File.old
 is 1000000, 1 megabyte. This value can changed.
 
 If we set the value to \fI0\fR the logs will never wrap. If we want to use
-Yaws in combination with a more traditional log wrapper such as 
+Yaws in combination with a more traditional log wrapper such as
 logrotate, set the size to \fI0\fR and Yaws will reopen the logfiles
 once they have be renamed/removed.
 
@@ -173,12 +173,12 @@ Default is false.
 .TP
 \fBsoap_srv_mods = ListOfModuleSetting\fR
 If enable_soap is true, a startup yaws will invoke \fIyaws_soap_srv:setup()\fR
-to setup modules set here. 
-ModuleSetting is either a triad like \fI<Mod, HandlerFunc, WsdlFile>\fR 
-or a quadruple form like \fI<Mod, HandlerFunc, WsdlFile, Prefix>\fR which 
-specifies the \fIprefix\fR. A \fIprefix\fR will be used as argument of 
+to setup modules set here.
+ModuleSetting is either a triad like \fI<Mod, HandlerFunc, WsdlFile>\fR
+or a quadruple form like \fI<Mod, HandlerFunc, WsdlFile, Prefix>\fR which
+specifies the \fIprefix\fR. A \fIprefix\fR will be used as argument of
 \fIyaws_soap_lib:initModel()\fR and then be used as a XML namespace prefix.
-Note, the \fIWsdlFile\fR here should be an absolute-path file 
+Note, the \fIWsdlFile\fR here should be an absolute-path file
 in local file systems.
 
 For example, we can specify
@@ -204,12 +204,12 @@ Default value is true.
 
 .TP
 \fBysession_mod = Module\fR
-Allows to specify a different Yaws session storage mechanism instead of 
+Allows to specify a different Yaws session storage mechanism instead of
 an ETS table. One of the drawbacks of the default yaws_session_server
 implementation is that server side cookies are lost when the server
 restarts.
 Specifying a different module here will pass all writes/read
-operations to this module (it must implements appropriate callbacks). 
+operations to this module (it must implements appropriate callbacks).
 
 .TP
 \fBrunmod = ModuleName\fR
@@ -296,17 +296,17 @@ the same as the default provided by \fIgen_tcp:listen/2\fR, which is 5.
 .TP
 \fBrhost = Host[:Port]\fR
 This forces all local redirects issued by the server to go to Host.
-This is useful when yaws listens to a port which is different from 
+This is useful when yaws listens to a port which is different from
 the port that the user connects to. For example, running yaws as a
 non-privileged user makes it impossible to listen to port 80, since
 that port can only be opened by a privileged user. Instead yaws
-listens to a high port number port, 8000, and iptables are used to 
-redirect traffic to port 80 to port 8000 (most NAT:ing firewalls 
+listens to a high port number port, 8000, and iptables are used to
+redirect traffic to port 80 to port 8000 (most NAT:ing firewalls
 will also do this for you).
 .TP
 \fBrscheme = http | https\fR
-This forces all local redirects issued by the server to use this 
-method. This is useful when an SSL off-loader, or stunnel, is used in 
+This forces all local redirects issued by the server to use this
+method. This is useful when an SSL off-loader, or stunnel, is used in
 front of yaws.
 
 .TP
@@ -316,7 +316,7 @@ Enable or disable the auth log for this virtual server. Default is true.
 .TP
 \fBaccess_log = true | false\fR
 Setting this directive to false turns of traffic logging for this
-virtual server. The default value is true. 
+virtual server. The default value is true.
 
 .TP
 \fBlogger_mod = Module\fR
@@ -492,19 +492,19 @@ If any the names in ListOfModuleNames appear as components in the
 path for a request, the path request parsing will terminate and
 that module will be called. There is also an alternate syntax for
 specifying the appmods if we don't want our internal erlang module
-names to be exposed in the URL paths. 
+names to be exposed in the URL paths.
 We can specify
 
    appmods = <Path1, Module1> <Path2, Modules2> ...
 
 Assume for example that we have
-the URL http://www.hyber.org/myapp/foo/bar/baz?user=joe 
-while we have the module foo defined as an appmod, the 
+the URL http://www.hyber.org/myapp/foo/bar/baz?user=joe
+while we have the module foo defined as an appmod, the
 function foo:out(Arg) will be invoked
 instead of searching the filesystems below the point foo.
 
 The Arg argument will have the missing path part supplied in its
-appmoddata field. 
+appmoddata field.
 
 It is also possible to exclude certain directories from appmod
 processing. This is particulaly interesting for '/' appmods.
@@ -512,8 +512,8 @@ Here is an example:
 
    appmods = </, myapp exclude_paths icons js top/static>
 
-The above configuration will invoke the 'myapp' erlang module on everything 
-except any file found in directories, 'icons', 'js' and 'top/static' 
+The above configuration will invoke the 'myapp' erlang module on everything
+except any file found in directories, 'icons', 'js' and 'top/static'
 relative to the docroot.
 
 
@@ -535,7 +535,7 @@ The function can and must do the same things that a normal \fIout/1\fR does.
 .TP
 \fBerrormod_401 = Module\fR
 It is possible to set a special module that handles
-401 Unauthorized messages. This can for example be used 
+401 Unauthorized messages. This can for example be used
 to display a login page instead.
 
 The function \fIModule:out401(Arg, Auth, Realm)\fR will
@@ -562,7 +562,7 @@ called. The \fIStr\fR is the real crash message formated as a string.
 
 The function must return, \fI{content,MimeType,Cont}\fR or
 \fI{html, Str}\fR or \fI{ehtml, Term}\fR. That data will be shipped
-to the client. 
+to the client.
 
 .TP
 \fBexpires = ListOfExpires\fR
@@ -586,13 +586,13 @@ Here is an example:
 
 .TP
 \fBarg_rewrite_mod = Module\fR
-It is possible to install a module that rewrites all the 
+It is possible to install a module that rewrites all the
 Arg #arg{} records at an early stage in the yaws server.
 This can be used to do various things such as checking a cookie,
 rewriting paths etc.
 
 The module \fIyaws_vdir\fR can be used in case you want to serve static content
-that is not located in your docroot. See the example at the bottom of this man 
+that is not located in your docroot. See the example at the bottom of this man
 page for how to use the \fIopaque\fR + \fIvdir\fR elements to instruct the
 \fIyaws_vdir\fR module what paths to rewrite.
 
@@ -711,13 +711,13 @@ If not specified then the certificate file will be used.
 Specifies which file contains the certificate for the server.
 .TP
 \fBcacertfile = File\fR
-A file containing trusted certificates to use during client authentication 
-and to use when attempting to build the server certificate chain. 
+A file containing trusted certificates to use during client authentication
+and to use when attempting to build the server certificate chain.
 The list is also used in the list of acceptable client CAs passed to
 the client when a certificate is requested.
 .TP
 \fBverify = 0 | 1 | 2 | verify_none | verify_peer\fR
-Specifies the level of verification the server does on client certs. 
+Specifies the level of verification the server does on client certs.
 0 means that the server will not ask for a cert (verify_none), 1 means that the
 server will ask the client for a cert but not fail if the client does not
 supply a client cert (verify_peer, fail_if_no_peer_cert = false), 2 means that
@@ -737,20 +737,20 @@ the server will fail only if an invalid certificate is supplied (an empty
 certificate is considered valid).
 .TP
 \fBdepth = Int\fR
-Specifies the depth of certificate chains the server is prepared to follow 
+Specifies the depth of certificate chains the server is prepared to follow
 when verifying client certs. For the OTP new ssl implementation it
 is also used to specify how far the server, i.e. we, shall follow the
 SSL certificates we present to the clients. Hence, using self signed certs,
 we typically need to set this to 0.
 .TP
 \fBpassword = String\fR
-String If the private key is encrypted on disc, this password is the 
+String If the private key is encrypted on disc, this password is the
 3Dee key to decrypt it.
 .TP
 \fBciphers = String\fR
-This string specifies the SSL cipher string. The syntax of the SSL cipher 
-string is a little horrible sublanguage of its own. It is documented in the 
-ssl man page for "ciphers". 
+This string specifies the SSL cipher string. The syntax of the SSL cipher
+string is a little horrible sublanguage of its own. It is documented in the
+ssl man page for "ciphers".
 .TP
 \fB</ssl>\fR
 Ends an SSL definition
@@ -777,7 +777,7 @@ path is appended to the redirected url. So if we for example have:
 </redirect>
 .fi
 
-Asumming this config resides on a site called http://abc.com, 
+Asumming this config resides on a site called http://abc.com,
 We have the following redirects:
 
 http://abc.com/foo -> http://www.mysite.org/zapp/foo
@@ -828,7 +828,7 @@ used.
 .TP
 \fBrealm = Realm\fR
 In the directory defined here, the WWW-Authenticate Realm is set to
-this value. 
+this value.
 
 .TP
 \fBauthmod = AuthMod\fR
@@ -841,7 +841,7 @@ deprecated).
 
 This can, for example, be used to implement cookie authentication.
 The auth() callback would check if a valid cookie header is present,
-if not it would return {appmod, ?MODULE} and the out401/1 function 
+if not it would return {appmod, ?MODULE} and the out401/1 function
 in the same module would return {redirect_local, "/login.html"}.
 
 .TP
@@ -869,7 +869,7 @@ The .yaws_auth file is never visible in a dir listing
 
 .TP
 \fBpam service = \fIpam-service\fR\fR
-If the item \fBpam\fR is part of the auth structure, 
+If the item \fBpam\fR is part of the auth structure,
 Yaws will also try to authenticate the user using "pam" using
 the pam \fIservice\fR indicated. Usual services are typically found
 under /etc/pam.d. Usual values are "system-auth" etc.
@@ -957,7 +957,7 @@ This begins and ends an opaque configuration context for this server,
 where 'Key = Value' directives can be specified. These directives are
 ignored by yaws (hence the name opaque), but can be accessed as a list
 of tuples \fI{Key,Value}\fR stored in the #sconf.opaque record entry. See also
-the description of the \fIstart_mod\fR directive. 
+the description of the \fIstart_mod\fR directive.
 
 This mechanism can be used to pass data from a surrounding application
 into the individual .yaws pages.
@@ -1029,7 +1029,7 @@ logdir = /var/log/yaws
 .nf
 An example specifying  a user defined module to be called
 at startup, as well as some user specific configuration.
- 
+
 <server www.funky.org>
         port = 80
         listen = 192.168.128.31
@@ -1050,10 +1050,10 @@ or later available at http://www.hem.za.org/egssapi/.
 
 The Kerberos5 keytab is specified as 'keytab = File' directive in
 opaque. This keytab should contain the keys of the HTTP service
-principal, 'HTTP/www.funky.org' in this example. 
+principal, 'HTTP/www.funky.org' in this example.
 
 .nf
- 
+
 <server www.funky.org>
         port = 80
         listen = 192.168.128.31
@@ -1133,9 +1133,9 @@ Finally an example with virtual directories, vdirs.
 
 .fi
 
-The first defined vdir can then be accessed at or under 
-http://server.domain/virtual1/  or http://server.domain/virtual1 
- 
+The first defined vdir can then be accessed at or under
+http://server.domain/virtual1/  or http://server.domain/virtual1
+
 
 
 .SH AUTHOR

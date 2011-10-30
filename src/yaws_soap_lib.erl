@@ -55,7 +55,7 @@ write_hrl(WsdlURL, Output) when is_list(WsdlURL) ->
 write_hrl(#wsdl{model = Model}, Output) when is_list(Output) ->
     erlsom:write_hrl(Model, Output).
 
-write_hrl(WsdlURL, Output, PrefixOrOptions) 
+write_hrl(WsdlURL, Output, PrefixOrOptions)
   when is_list(WsdlURL),is_list(PrefixOrOptions) ->
     write_hrl(initModel(WsdlURL, PrefixOrOptions), Output).
 
@@ -280,13 +280,13 @@ initModel(WsdlFile) ->
     initModel(WsdlFile, ?DefaultPrefix).
 
 %% PrefixOrOptions can be a property list that contains the options
-%% for Erlsom, or a String. If it is a string, this is used as the 
+%% for Erlsom, or a String. If it is a string, this is used as the
 %% Erlsom 'prefix' option (and the other options are left unspecified).
 initModel(WsdlFile, PrefixOrOptions) ->
     Options = case is_string(PrefixOrOptions) of
         no ->
           %% It is an option list
-	  %% Add the default prefix at the end - it will only be used 
+	  %% Add the default prefix at the end - it will only be used
 	  %% if no other prefix is specified
 	  PrefixOrOptions ++ [{prefix, ?DefaultPrefix}];
         _ ->

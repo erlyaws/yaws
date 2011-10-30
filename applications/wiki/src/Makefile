@@ -21,7 +21,7 @@ MODULES=wiki \
 	wiki_plugin_menu \
 	utils
 
-EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) 
+EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR))
 
 ERLC_FLAGS+=-W +debug_info $(DEBUG_FLAGS) -I../../../include -pa ../../wiki
 
@@ -31,7 +31,7 @@ ERLC_FLAGS+=-W +debug_info $(DEBUG_FLAGS) -I../../../include -pa ../../wiki
 
 
 
-all: $(EBIN_FILES) 
+all: $(EBIN_FILES)
 
 wiki_vsn.erl:	wiki_vsn.template
 	. ../vsn.mk; sed "s/%VSN%/${WIKI_VSN}/" < wiki_vsn.template > wiki_vsn.erl

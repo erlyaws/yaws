@@ -240,7 +240,7 @@ yaws_api:setconf(GC, SCList),
   <verbatim>
 1> {ok, Sup} = ybed_sup:start_link().
 {ok,<0.40.0>}
-2> 
+2>
 =INFO REPORT==== 12-Apr-2010::02:42:09 ===
 Yaws: Listening to 0.0.0.0:8888 for <1> virtual servers:
  - http://foobar:8888 under /tmp

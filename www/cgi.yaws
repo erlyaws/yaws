@@ -1,6 +1,6 @@
 
 <erl>
-out(A) -> 
+out(A) ->
        {ssi, "TAB.inc", "%%",[{"cgi", "choosen"}]}.
 </erl>
 
@@ -14,7 +14,7 @@ out(A) ->
 </p>
 
 
-<div class="box">        
+<div class="box">
       <verbatim>
         php_exe_path = /usr/bin/php-cgi
       </verbatim>
@@ -24,7 +24,7 @@ out(A) ->
 </p>
 
 
-<div class="box">        
+<div class="box">
       <verbatim>
 
 <server www.hyber.org>
@@ -38,18 +38,18 @@ out(A) ->
 
 <p>
 
-Yaws will invoke the php-cgi binary and talk the CGI protocol to the binary. 
+Yaws will invoke the php-cgi binary and talk the CGI protocol to the binary.
 </p>
 <p>
-        
+
 Another common situation is that we write our CGI scripts in e.g. python and use python libraries to speak the CGI protocol. The easiest way forward here is to rename the python scripts with the extension ".cgi" as in this example:
 </p>
-<p>        
+<p>
 We have the following python file called foo.cgi:
 </p>
 
 
-<div class="box">        
+<div class="box">
       <verbatim>
 
 #!/usr/bin/python
@@ -70,7 +70,7 @@ Yet another common scenario is when have a set of CGI files not ending with the 
 </p>
 
 
-<div class="box">        
+<div class="box">
       <verbatim>
 
 out(Arg) ->
@@ -84,10 +84,10 @@ and then configure the appmod appropriately in yaws.conf. The default yaws.conf 
 
 
 
-<div class="box">        
+<div class="box">
       <verbatim>
 
-        appmods = <cgi-bin, yaws_appmod_cgi>        
+        appmods = <cgi-bin, yaws_appmod_cgi>
       </verbatim>
 </div>
 <p>

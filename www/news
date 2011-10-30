@@ -179,7 +179,7 @@ add ets-based yapp registry implementation for cases where mnesia is overkill (S
 Fixed so that the HTTP status is set to 401 explicitly in yaws_server:handle_ut(...), previously out401 needed to return    {status, ...} or status would default to 200.  (Fabian Alenius)
 
 Mon Mar  9 21:48:18 CET 2009 Yaws 1.81
-Moved the Yaws repository to http://www.github.som. See instructions at http://yaws.hyber.org/configuration.yaws on how to git clone Yaws. This is the first yaws release out of the github repo. The default Yaws wiki previously found at http://yaws.hyber.org/wiki has been moved to the wiki at github. New address of wiki is http://wiki.github.com/klacke/yaws. The previous (Erlang based wiki written by Johan Bevemyr) turned ... well unmodern, and was also plagued by spammers. 
+Moved the Yaws repository to http://www.github.som. See instructions at http://yaws.hyber.org/configuration.yaws on how to git clone Yaws. This is the first yaws release out of the github repo. The default Yaws wiki previously found at http://yaws.hyber.org/wiki has been moved to the wiki at github. New address of wiki is http://wiki.github.com/klacke/yaws. The previous (Erlang based wiki written by Johan Bevemyr) turned ... well unmodern, and was also plagued by spammers.
 Several cleanups by Hans Ulrich Niedermann, file perms, speling errors etc.
 remove leading slash in yapp_appmods examples (Tom McNulty)
 Add DIME support for SOAP Anders Nygren
@@ -191,8 +191,8 @@ cleaned up the redirect feature. It was poorly implemented and poorly documented
 Thu Feb 12 22:58:16 CET 2009 Yaws 1.80
 Full windows support with a proper .exe Windows installer (klacke)
 Added a timestamp check on the ssl cert/key files making it possible to just upload new cert/key files and do yaws --hup to automatically have the new cert/key files being used (klacke)
-Disgusting DOS attack discovered by Manuel Duran Aguete whereby if a neverendig series of headers are sent to yaws, we die of out of memory. Actual attack not described here. Contact me (klacke) if you're interested in the details and want a backport patch. I'm not really sure this is indeed the right procedure for announcing a DOS bug. (First time !!!) 
-init_db patch cleanup by Liu Yubao 
+Disgusting DOS attack discovered by Manuel Duran Aguete whereby if a neverendig series of headers are sent to yaws, we die of out of memory. Actual attack not described here. Contact me (klacke) if you're interested in the details and want a backport patch. I'm not really sure this is indeed the right procedure for announcing a DOS bug. (First time !!!)
+init_db patch cleanup by Liu Yubao
 patch by Liu Yubao to remove timeout in ssl accept
 add pkg-config support contributed by Olivier Girondel
 add --disable-sendfile option to configure, fix src/Makefile to clean yaws_configure.hrl (Steve)
@@ -208,7 +208,7 @@ stream content with a timeout patch from Davide Marques
 traffic trace was broken for certain types of requsts - found by wde
 
 Tue Jan 20 20:19:16 CET 2009 version 1.79
-This release fixes the completely broken 1.78 release. So at last, we have good sendfile support. 
+This release fixes the completely broken 1.78 release. So at last, we have good sendfile support.
 traffic trace was broken for certain types of requsts - found by wde
 Fixed several sendfile related bugs (vinoski)
 Improved yaws supervision structure (klacke)
@@ -217,12 +217,12 @@ apply case-insensitive servername comparison patch from John Webb
 Thu Jan  8 22:00:51 CET 2009 version 1.78
 Added --wait-started option to the yaws script (klacke)
 Added initial test suites (klacke)
-wrap log infinity bug found bt Phanikar.K 
+wrap log infinity bug found bt Phanikar.K
 allow keys with multiple values within opaque data
 fix handling of any existing listen_opts when reading listen_backlog conf variable (vinoski)
 incorporate Lev Walkin's patch for a configurable TCP listen backlog, adding yaws.conf support and documentation as well (vinoski)
 Added sendfile support, Works on Linux, FreeBSD and MacosX (vinoski)
-patch by wde@free.fr to let errormod_crash return {content, MimeType, Cont} 
+patch by wde@free.fr to let errormod_crash return {content, MimeType, Cont}
 added support/docs for authbind/privbind  (klacke)
 handle 100 continue with POST patch by Haobu Yu
 configure/latex support and also slightly nicer listdir output by Hans Ulrich Niedermann
@@ -251,12 +251,12 @@ added support for weird utf8 urlencoding
 Added the cygwin README by Bill Robtersson
 Added a 'make release' target in the top makefile. The release file picks up the versions of installed applications (erts,kernel, stdlib, sasl and mnesia). The product of this is a release package file (e.g. yaws-1.77.tar.gz) which can be installed on an embedded system using the SASL application release_handler. (Vance Shipley)
 added mnesia_dir support to the gconf record as per patch BY Richard Bucker
-The supervisor args were wrong, yaws shall have 1,0 restart strategy. This may break some backwards compat. Sites that ues yaws embedded need to check this. 
+The supervisor args were wrong, yaws shall have 1,0 restart strategy. This may break some backwards compat. Sites that ues yaws embedded need to check this.
 Added debug dump functionality (klacke)
 cygwin install patch by Bill Robertsson
 Adding files for Erlware. A very rough packaging of 1.76 has been released at erlware.org. See the doc/overview.edoc for more details. (tobbe)
 Major general code cleanup, finally got rid of all the export_all statements and in that process removed a bit of code that wasn't used (klacke)
-Better timeout support in yaws-session_server 
+Better timeout support in yaws-session_server
 {page, P} patch by Robert David that handles better the case with a browser POST request
 patch by oleg avdeev for CRNL in revproxy
 embedded startup problem solved by Anders Nygren
@@ -305,10 +305,10 @@ Revproxy bug found by igor goryachev.
 Started to use the new ssl:transport_accept()  function, when accept fails, We now fail yaws entirely and it needs to be restarted by its supervisor or heart. If we have filedescriptor leaks, even outside of  yaws, there is no good thing to do when accept fails. (klacke)
 A body message patch from Brian Templeton which cleaned up code and improved RFC 2616 compliance
 Added HTTPS env variable for trac (klacke)
-added x-javascript as a compressible mime type, patch by anthony shipman 
+added x-javascript as a compressible mime type, patch by anthony shipman
 added a dir_listing function in yaws_api (klacke)
 fixed yapp dependencies to vdir handling, added local stylesheet and updated yapp_intro documentation (mikaelk)
-Virtual Directory support. ARG record and CGI variable changes. This change by Julian Noble was quite extensive. The feature is still completely undocumented - thus it is still experimental. 
+Virtual Directory support. ARG record and CGI variable changes. This change by Julian Noble was quite extensive. The feature is still completely undocumented - thus it is still experimental.
 
 Thu Feb  8 16:45:47 CET 2007 version 1.68
 Forgot to update configure after the patch to configure.in for ubuntu edgy users in 1.67
@@ -341,7 +341,7 @@ pam fixes (made pam_wheel/pam_group work) (klacke)
 
 Tue Dec 12 10:51:18 CET 2006 version 1.66
 pam fixes, e.g make pam_group.so/pam_wheel.so work (klacke)
-Full SOAP server/client implementation in Yaws 
+Full SOAP server/client implementation in Yaws
 bug found in path handling for yaws_dir by CEAN guys
 suppress dead client error msgs (klacke)
 shutdown fixes from Danile Luna
@@ -378,7 +378,7 @@ Odd fix for MacOsX make behaviour. make install did not work.
 
 Wed Jun  7 22:10:44 CEST 2006 version 1.62
 JSON Ajax code from Gaspar Chilingarov, I added docs describing an example. (klacke)
-run_erl and to_erl support patch from Mats Cronquist. 
+run_erl and to_erl support patch from Mats Cronquist.
 yaws_zlib.erl: some bugs in non used code found by dialyzer.
 small fixes in the start script code (klacke)
 Fixes from Mikael Karlsson adding an event manager to Yaws whereby it is possible to add user defined gen_event handlers handling different "events" from Yaws. The only event sofar is config changes. This is needed for mikls "yapp" project which is a way to write yaws packages that can be "dropped" into an existing server. (No docs or anything released yet)
@@ -389,7 +389,7 @@ changed Yaws license to proper BSD (klacke)
 Added startup script for FreeBSD
 Worked the Makefiles to properly support DESTDIR. This is useful for packagers creating deb, rpm, portage ... packages  (klacke)
 Removed the ability to change userid. Also stopped writing to /tmp/yaws and started to write to ${HOME}/.yaws instead. This is much better since we cannot now ever get into the situations where file ownership and umask stop us from controlling a daemon. Note, this is a backwards incompatible change, all users that used the feature of letting Yaws change uid need to start using fdsrv instead. There is also a configurable in yaws.conf which makes it possible to write the tmp files to some other directory  (klacke)
-Cleaned up the start flags to the yaws script, all old flags are still there for backward compatibility. Updated docs and and help output from the yaws script to reflect all new flags. 
+Cleaned up the start flags to the yaws script, all old flags are still there for backward compatibility. Updated docs and and help output from the yaws script to reflect all new flags.
 Wiki fixes.  Fixed error printouts; handle https and        ftp links; updated READE (mbj)
 file descriptor leak bug found by Mats Cronqvist where each call to 'yaws -ls' left an unclosed descriptor in the server (klacke)
 Source code cleanup - added and #env record for environment passed to yaws. (klacke)
@@ -441,7 +441,7 @@ Fri Feb 18, 2005 Bugfix release
 Fatso bug found by Fredrik Linder where	yaws completely crash on bad URLs that for example contain space chars in the uri. This is the bug which provoked this imideate followup release. (klacke)
 Removed old broken URL decode code which was wrong. This code was added befor we actually understood how URLs are en/de coded (klacke, jb)
 Added example chat program (jb)
-Added new config opt fail_on_bind_err = Bool. The old behaviour was to silently accept (and log) server startup errors. This was due to a request from Tony Rogvall and the behaviour is bad, it's now back to the original behaviour where the entire yaws "application" fails if one virt server fails to gen_tcp:listen(). 
+Added new config opt fail_on_bind_err = Bool. The old behaviour was to silently accept (and log) server startup errors. This was due to a request from Tony Rogvall and the behaviour is bad, it's now back to the original behaviour where the entire yaws "application" fails if one virt server fails to gen_tcp:listen().
 
 Mon Feb 14 2005, Version 1.52 released
 Minor feature release
@@ -464,7 +464,7 @@ Updated both mail and wiki according to changed	APIs for parse_multipart. (jb)
 
 Sat Dec 11  2004 Version 1.50 released
 Bugfix and docs release
-Running the wiki at the yaws site. Use it !!. No passwords.... 
+Running the wiki at the yaws site. Use it !!. No passwords....
 <verbatim> tag added, this tag pretty much works as <pre> _should_ have worked. Nothing needs to be escaped,  and code containing <, >, & etc can be entered freely.  Writing code examples were driving me crazy. Inside both <pre> and <code> tags all HTML special chars have to be quoted, sucks. (klacke)
 Rewamped all docs with CSS and XHTML 1.0, beautiful and nice (klacke)
 Attach file problem in wiki (jb)
@@ -495,10 +495,10 @@ Fixed the appmod code so that users of yaws_api:setconf/1 doesn't have to bother
 Moved phpexe config variable from the sconf to the gconf, it doesn't make sence to have different phpexe paths for different virt servers. Users with old configs will get a warning when tying to specify a phpexe inside a virt server instead of inside the global config area. (klacke)
 New feature called "yssi". Yaws server side include. It's now possible to let the out/1 function return a tuple {yssi, PathToYawsFile.yaws"}.  The new yaws file will be fully expanded, compiled and in general handled as a yaws file. This feature can probably be used to build all kinds of different cool stuff. (klacke)
 yaws_session_server ttl patch from Rob.Schmersel
-Patch from  Fredrik Linder to make it easier to integrate yaws into apps that don't use the otp application framework at all. 
+Patch from  Fredrik Linder to make it easier to integrate yaws into apps that don't use the otp application framework at all.
 As usual updates both to the wiki and the webmail app by (jb)
 Patch from Jocke Grebeno which handles ssi support for ehtml code, not just ascii. We can now return  {ssi, "@@", file.html, [{"FOO", "bar"}, {"BAZ", {ehtml, {p, [], "saab"}}}]}  and it returns the expected. Documented is ssi.yaws.
-Security vulnerability in upload.yaws found by (mbj) 
+Security vulnerability in upload.yaws found by (mbj)
 
 Thu May 27, 2004 Version 1.47 released
 Appmods were slightly broken in 1.46
@@ -534,9 +534,9 @@ Added yaws_api:query_url(Arg) which reconstructs the url from the original GET r
 Added the "id = Key" configuration parameter. Earlier when we were running multiple yaws servers on the same machine, they had to run with different uid since yaws was writing temporary files under /tmp/yaws/${uid}. This is now changed and if we want 2 _different_ yaws servers on the same machine they must be given different "id" in their respective config files. The yaws ctl scripts, such as yaws -s and friends now have an extra (optional) "-j id" flag to control which specific instance of Yaws is ment.
 Added explicit support for Content-Length header from .yaws files for applications that require Content-Length instead of chunked encodings.
 Changed the #sconf{} and #gconf{} records so that all the booleans in those 2 records are now a bitmask flag. This is a slightly backwards incompatible change and it affects those that use Yaws in embedded mode where the #sconf and #gconf records are explicitly manipulated. It sholdn't be a big deal to change though.
-Workaround buggy otp error_logger_file_h which truncates the report file whenever it is reopened. 
-Removed the calls inside the server that were doing list_to_atom/1 We were suceptible to DOS attacks. This is unfortunately a backwards incompatible change since it affects the return value from API functions yaws_api:parse_query/1 and yaws_api:parse_post/1. They both used to return lists on the form of {Key, Val} tuples where Key was an atom. It is now a string. There is a configuration option for yaws.conf which keeps the old (broken) behaviour. 
-Optimized url parsing and removed at least one call to lists:flatten/1 in the fast path. 
+Workaround buggy otp error_logger_file_h which truncates the report file whenever it is reopened.
+Removed the calls inside the server that were doing list_to_atom/1 We were suceptible to DOS attacks. This is unfortunately a backwards incompatible change since it affects the return value from API functions yaws_api:parse_query/1 and yaws_api:parse_post/1. They both used to return lists on the form of {Key, Val} tuples where Key was an atom. It is now a string. There is a configuration option for yaws.conf which keeps the old (broken) behaviour.
+Optimized url parsing and removed at least one call to lists:flatten/1 in the fast path.
 Better support for old Netscape and the Connection: Keep-Alive header.
 More beautiful trace output. Try "yaws -i -x -T"
 More and better debug support.
@@ -597,8 +597,8 @@ Darwin MacOs X support (Eric Baur)
 Docs updated describing cgi and php support (Carsten Schultz)
 tty trace directly from command line for enhanced debugging
 
-Jun 1, 2003.  Version 1.22 released  
-This is bugfix release. 
+Jun 1, 2003.  Version 1.22 released
+This is bugfix release.
 cosmetic changes in ehtml output
 wiki install problems
 many fixes to the wiki
@@ -609,16 +609,16 @@ ebuild for gentoo added
 slideshow support added to the wiki
 cosmetic updates to the latex docs
 
-Mar 6, 2003.  Version 1.2 released  
-This is bugfix release. 
+Mar 6, 2003.  Version 1.2 released
+This is bugfix release.
 log fixes by  brucefitzsimons
 cache bugs for URLs with a query part
 erlang compiler bug workaround, The erlang compiler isn't reentrant !!!!!
 Makefile cleanup my mikl
 Bugs in listdir
 
-May 3, 2003.  Version 1.01 released 
-This is bugfix release. 
+May 3, 2003.  Version 1.01 released
+This is bugfix release.
 Bug in ssl config passord parse found by Eric Pearson
 Bug in arg rewrite handling found and fixed by Taavi Talvik
 Bug with redir for missing trailing slash together with a query part of the url fixed, found by Erik Pearson
@@ -630,21 +630,21 @@ Added proper support for 'if-none-match' with etag matching by Johan Bevemyr
 Skip empty space after an erl chunk in a .yaws file
 Handle http_error which is generated by the inet_drv.c code. This assumes a patch to the inet_drv.c that actually generates a http_error in this case. Default erl hangs there. Here is the inet_drv.c diff
 
-Jan 23, 2003.  Version 1.0 released 
+Jan 23, 2003.  Version 1.0 released
 This is major release. Yaws is now in production quality.
 Some minor fixes to yaws_api.
 security bug found by jcortner@cvol.net
 can compile yaws file produced on win32, that is files with \r\n terminaded lines.
 
-Dec 1, 2002.  Version 0.60 released 
+Dec 1, 2002.  Version 0.60 released
 This is minor maintenance release.
 Support to run Yaws first as root, then under a a non privileged user
 A bug in listdir together with ~username expansion fixed
 Bugs in wraplog fixed
 
-Nov 25, 2002.  Version 0.59 released  
+Nov 25, 2002.  Version 0.59 released
 Lots of fixes and new features in this release. This release of Yaws is fast, it delivers 3000 static/dynamic pages/sec on my 2Ghz home box.
-Many fixes in the wiki, 
+Many fixes in the wiki,
 ~username expansion now works
 embedded mode is now fully implemented and functional
 many new configuration directives
@@ -653,7 +653,7 @@ Arg rewrite, customized errors etc.
 Lots of new documentation and new examples
 Optimized ehtml generation
 
-Oct 7, version 0.56 released. 
+Oct 7, version 0.56 released.
 Improved file editing if in the wiki
 New returnvalue from out/1 <tt>break</tt>
 The wiki returns w3c compliant code
@@ -688,19 +688,19 @@ Made the Host: check to check for Host: host:port instead of just host when a se
 Tobbe added the -r flag to the startscript
 Changed yaws_api:parse_post_data/1 so that it takes an arg struct as argument instead of querydata and added support for multipart form data in the process.
 
-Jun 16, version 0.50 released. 
-A bug in setcookie fixed 
-a proper /etc/rc/init.d script written. 
+Jun 16, version 0.50 released.
+A bug in setcookie fixed
+a proper /etc/rc/init.d script written.
 New flag, yaws -S which query status of the daemon. bug in cache reload fixed.
 
-Jun 13, version 0.48 released. 
-It contains a complete rewrite of the API to generate dynamic content which makes it much easier  to use. 
+Jun 13, version 0.48 released.
+It contains a complete rewrite of the API to generate dynamic content which makes it much easier  to use.
 Furthermore this version accumulates output into larger chunks which makes it much faster the earlier versions. We can now serve 2500 dynamically generated HTML pages per second on a 2GhZ machine.
 A bug with  iso 8859 chars in urls has been fixed.
 Etag header for static content and Cache-Control header for dynamic.
 Additional docs in the form of man pages.
 
-Version 0.40 released. 
+Version 0.40 released.
 Contains bugfixes and full SSL support as well as an embryo to WWW-Authenticate support.
 
 

@@ -1,6 +1,6 @@
 ##
 ## Debian Linux mingw cross-compiler version:
-## To install 
+## To install
 # sudo apt-get install mingw32
 
 TARGET  = i586-mingw32msvc-
@@ -21,11 +21,11 @@ CFLAGS = -O2 -Wall
 INCLUDES = -I.
 
 
-## 
+##
 ## Global Makefile settings
 ##
 OBJS = \
-	yaws.o 
+	yaws.o
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(INCLUDES) -o $@ $<
@@ -37,7 +37,7 @@ all:	yaws.exe
 	./mkinstaller.sh
 
 
-yaws.exe:	$(OBJS) 
+yaws.exe:	$(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o yaws.exe
 
 

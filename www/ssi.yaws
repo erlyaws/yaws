@@ -16,13 +16,13 @@ ssi(File) ->
       {ssi, File,[],[]}}}.
 
 
-out(A) -> 
+out(A) ->
     [{ssi, "TAB.inc", "%%",[{"ssi", "choosen"}]},
      {ehtml,
-      {'div', [{id, "entry"}],        
-      [        
+      {'div', [{id, "entry"}],
+      [
       {h1, [], "Server side includes (with variable expansion)"},
-       
+
         {p, [],
         "This feature is useful when we are writing applications where "
         "basically the entire page is dynamically generated but we also "
@@ -39,13 +39,13 @@ out(A) ->
        {p, [], "The format of the ssi statement is:"},
        {br,[],[]},
        box("{ssi, File, Delimiter, Bindings}"),
-       
+
        {p, [],"The ssi structure can occur in two radically different places"
         " but with identical semantics. It can be a return value in the "
         " out/1 function and it is a specially treated return value "
         "in ehtml output, here is an example of an odd return value "
         "from out/1"},
-       
+
        tbox([{ssi, "ssi_ex1", "%", [{"a", "gazzonk"}]},
              {ehtml,
               [
@@ -66,14 +66,14 @@ out(A) ->
         " deep inside an ehtml structure, but the content isn't representable"
         " as ehtml. This is typically the case for dynamically generated "
         " javascript as well as dynamically generated java applets."},
-       
+
        {p, [], "In the above example, \"a\" can be seen as the Variable "
         "name whereas \"Godzilla\" can be vieved upon as the value "
         "of variable \"a\". It is also possible to have the variable "
         " value be a complete ehtml structure, not just plain ascii "
         "strings. Here is an example"},
 
-       box("out(A) -> 
+       box("out(A) ->
               E = {ehtml, {h1, [], \"Godzillas baby\"}},
               [{ssi, \"ssi_ex1\", \"%\", [{\"a\", E}]}]."),
 

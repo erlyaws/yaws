@@ -197,7 +197,7 @@ block_level("select") -> yes;
 %% The following elements may also be considered block-level elements since
 %% they may contain block-level elements:
 block_level("dd") -> yes;
-block_level("dt") -> yes;    
+block_level("dt") -> yes;
 block_level("frameset") -> yes;
 block_level("li") -> yes;
 block_level("td") -> yes;

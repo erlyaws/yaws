@@ -19,16 +19,16 @@ ss(A, File) ->
     {ok, B} = file:read_file(
                 filename:join([A#arg.docroot, File])),
     box(binary_to_list(B)).
-    
 
 
-out(A) -> 
+
+out(A) ->
     [{ssi, "TAB.inc", "%%",[{"soap_intro", "choosen"}]},
      {ehtml,
       {'div', [{id, "entry"}],
 
       [{h1, [], "SOAP with Yaws"},
-       
+
        {p, [],
         ["SOAP is an XML-based protocol for communication over a network "
          "connection. The main focus of SOAP is remote procedure calls (RPCs) "
@@ -54,8 +54,8 @@ out(A) ->
            "cd erlsom; chmod a+x configure; ./configure; make\n"
            "sudo make install        # iff you want to install as root\n"
           ),
-          
-          {p, [], 
+
+          {p, [],
            "<b>Important:</b> The SOAP-specific code that makes use of erlsom has some limitations "
            "that it is important to be aware of. Only the Soap <i>'document'</i> binding "
            "style is supported. There is no support for non-soap bindings, nor for the "
@@ -63,8 +63,8 @@ out(A) ->
            "There is no support for <i>'soap-encoding'</i>. For an explanation of the differences "
            "between these concepts, see this "
            "<a href=\"http://www-128.ibm.com/developerworks/webservices/library/ws-whichwsdl/\">description</a>."},
-          
-          
+
+
           {h2, [], "The SOAP client side"},
 
        {p, [],
@@ -81,7 +81,7 @@ out(A) ->
         ["As an example, lets have a look at a public SOAP service that "
          "returns some weather data for the location we send to it. "
          "The WSDL specification can be found here: ",
-         {a, [{href, "http://www.webservicex.net/WeatherForecast.asmx?WSDL"}], 
+         {a, [{href, "http://www.webservicex.net/WeatherForecast.asmx?WSDL"}],
           "http://www.webservicex.net/WeatherForecast.asmx?WSDL "}
          ]},
 
@@ -104,7 +104,7 @@ out(A) ->
        {p,[],
         ["Now, follow the reference to the message: ",
          {i, [], "tns:GetWeatherByPlaceNameSoapIn, "},
-         "to where it is defined: " 
+         "to where it is defined: "
         ]},
 
        box("<wsdl:message name=\"GetWeatherByPlaceNameSoapIn\">\n"
@@ -124,7 +124,7 @@ out(A) ->
            "</s:complexType>\n"
            "</s:sequence>\n"
            "</s:element>\n"),
-       
+
        {p,[],
         "This tells us that the function we want to call takes one argument "
         "of a string type (which apparently denotes a Name of a place in the US). "
@@ -225,7 +225,7 @@ out(A) ->
            {li, [],
             "When we retrieve a HTTP located file, we will use 'ibrowse' if it exist "
             "in the code path. Otherwise we will use the OTP 'http' client."},
-           {li, [], 
+           {li, [],
             "The prefix ('foo' in the example above) is passed to erlsom - it is one of erlsom's "
             "options. If you want to specify other options, you can also pass the regular erlsom "
 	    "options to yaws_soap_lib:initModel/2 and yaws_soap_lib:write_hrl/3. For example, to "
@@ -357,7 +357,7 @@ out(A) ->
         "Now, in your Yaws shell, setup the Soap server as shown below. (If required, for "
 	"example to specify a prefix or a function to retrieve included files, you can specify "
 	"options similar to what we saw above for yaws_soap_lib:initModel/2 and "
-	"yaws_soap_lib:write_hrl/3 , using yaws_soap_srv:setup/3.)" 
+	"yaws_soap_lib:write_hrl/3 , using yaws_soap_srv:setup/3.)"
         },
 
        box("6> yaws:start_embedded(Docroot,SL,GL).\n"

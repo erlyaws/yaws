@@ -22,13 +22,13 @@ format_yapps([]) ->
     [];
 format_yapps([{yapp, Urlpath, Docroot, Appname, Appmods, _Opaque}|T]) ->
     [{tr,[],[{td,[],atom_to_list(Appname)}, {td,[], Urlpath},{td,[],Docroot}]} |
-     format_yapps(T)]. 
-     
+     format_yapps(T)].
+
 out(A) ->
-    Header = "Cache-Control:no-store",  
+    Header = "Cache-Control:no-store",
    [{header, Header},
    {ehtml, format_yapp_tables(yapp:get_yapps())}].
- 
+
 </erl>
 
 <erl>
