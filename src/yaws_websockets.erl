@@ -185,30 +185,27 @@ ws_frame_info_secondary(Socket, Len1, Rest) ->
 %
 % -> { #ws_state, [#ws_frame_info,...,#ws_frame_info] }
 unframe(WebSocket, <<>>) ->
-    {WebSocket, []};
+    [];
 unframe(WebSocket, FirstPacket) ->
     case unframe_one(WebSocket, FirstPacket) of
-	{NewWSState, FrameInfo = #ws_frame_info{}, RestBin} ->
+	{FrameInfo = #ws_frame_info{ws_state = NewWSState}, RestBin} ->
 	    %% Every new recursion uses the #ws_state from the calling recursion.
-	    %% The first call to this recursion should return the deepest
-	    %% returned #ws_state in NewWSState, plus the list of #frame_info's
-	    {DeepestWSState, FrameInfos} = unframe(NewWSState, RestBin),
-	    {DeepestWSState, [FrameInfo | FrameInfos]};
+	    [FrameInfo | unframe(NewWSState, RestBin)];
 	Fail ->
-	    {WebSocket, [Fail]}
+	    [Fail]
     end.
 
 % -> {#ws_frame_info, RestBin} | {fail_connection, Reason}
 unframe_one(WebSocket = #ws_state{vsn=8}, FirstPacket) ->
     {FrameInfo = #ws_frame_info{}, RestBin} = ws_frame_info(WebSocket, FirstPacket),
     Unmasked = mask(FrameInfo#ws_frame_info.masking_key, FrameInfo#ws_frame_info.payload),
-    Unframed = FrameInfo#ws_frame_info{data = Unmasked},
-
-    NewWSState = frag_state_machine(WebSocket, Unframed),
+    NewWSState = frag_state_machine(WebSocket, FrameInfo),
+    Unframed = FrameInfo#ws_frame_info{ data = Unmasked,
+					ws_state = NewWSState },
 
     case checks(Unframed) of
 	#ws_frame_info{} when is_record(NewWSState, ws_state) ->
-	    {NewWSState, Unframed, RestBin};
+	    {Unframed, RestBin};
 	#ws_frame_info{} when not is_record(NewWSState, ws_state) ->
 	    NewWSState;  %% pass back the error details
 	Fail ->

@@ -112,6 +112,9 @@
                        %%                 to append to the url
          }).
 
+%% Corresponds to the frame sections as in 
+%% http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08#section-4
+%% plus 'data' and 'ws_state'
 -record(ws_frame_info, {
 	  fin, 
 	  rsv, 
@@ -120,7 +123,11 @@
 	  masking_key, 
 	  length, 
 	  payload,
-	  data}).
+	  data,        %% The unmasked payload. Makes payload redundant.
+	  ws_state     %% The ws_state after unframing this frame.
+                       %% This is useful for the endpoint to know what type of
+                       %% fragment a potentially fragmented message is.
+	 }).
 
 %----------------------------------------------------------------------
 % The state of a WebSocket connection.

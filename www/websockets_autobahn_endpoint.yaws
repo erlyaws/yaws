@@ -7,31 +7,102 @@ out(A) ->
 websocket_owner() ->
     receive
 	{ok, WebSocket} ->
-	    echo_server(WebSocket);
+	    echo_server(WebSocket, {none, <<>>});
 	Any ->
 	    io:format("websocket_owner received msg:~p~n", [Any])
     end.
 
-echo_server(WebSocket = #ws_state{sock=Socket}) ->
+echo_server(WebSocket = #ws_state{sock=Socket}, Acc) ->
     receive
 	{tcp, Socket, FirstPacket} ->
 	    %io:format("Frame: ~p~n", [frame_info(DataFrame)]),
-	    {NewWSState, FrameInfos} = yaws_api:websocket_unframe(WebSocket, FirstPacket),
+	    FrameInfos = yaws_api:websocket_unframe(WebSocket, FirstPacket),
 %	    io:format("frameinfos: ~p~n", [FrameInfos]),
-	    io:format("ws state: ~p~n", [NewWSState]),
-	    [[ handle_message(WebSocket, FrameInfo) || FrameInfo <- FrameInfos]],
-	    echo_server(NewWSState);
+%	    io:format("ws state: ~p~n", [NewWSState]),
+
+	    NewAcc = lists:foldl(fun handle_message/2, Acc, FrameInfos),
+	    Last = lists:last(FrameInfos),
+	    NewWSState = Last#ws_frame_info.ws_state,
+
+	    echo_server(NewWSState, NewAcc);
 	{tcp_closed, Socket} ->
 	    io:format("Websocket closed. Terminating echo_server...~n");
 	Any ->
 	    io:format("echo_server received msg:~p~n", [Any]),
-	    echo_server(WebSocket)
+	    echo_server(WebSocket, Acc)
     end.
 
 frame_info(Frame = <<Fin:1,Rsv1:1,Rsv2:1,Rsv3:1,Opcode:4,Masked:1,Len1:7,Rest1/binary>>) ->
     FrameInfo = [{fin, Fin},{rsv1,Rsv1},{rsv2,Rsv2},{rsv3,Rsv3},{opcode,Opcode},{masked,Masked},{len1,Len1}].
 
-handle_message(WebSocket, #ws_frame_info{opcode=text, data=Data}) ->
+
+%% start of a fragmented message
+handle_message( #ws_frame_info{ fin=0, 
+				opcode=FragType, 
+				data=Data },
+		{none, <<>>}) ->
+    io:format("echoing back binary message~n",[]),
+    {FragType, Data};
+
+%% non-final continuation of a fragmented message
+handle_message( #ws_frame_info{ fin=0,
+				data=Data,
+				opcode=continuation},
+		{FragType, Acc}) ->
+    {FragType, <<Acc/binary,Data/binary>>};
+
+%% end of text fragmented message
+handle_message( #ws_frame_info{ fin=1, 
+				opcode=continuation, 
+				data=Data,
+				ws_state=WebSocket},
+		{text, Acc}) ->
+    Unfragged = <<Acc/binary, Data/binary>>,
+    echo_text(WebSocket, Unfragged),
+    {none, <<>>};
+
+handle_message( #ws_frame_info{opcode=text, data=Data, ws_state=WebSocket}, Acc) ->
+    echo_text(WebSocket, Data),
+    Acc;
+
+%% end of binary fragmented message
+handle_message( #ws_frame_info{ fin=1, 
+				opcode=continuation, 
+				data=Data,
+				ws_state=WebSocket },
+		{binary, Acc}) ->
+    Unfragged = <<Acc/binary, Data/binary>>,
+    io:format("echoing back binary message~n",[]),
+    yaws_api:websocket_send(WebSocket, {binary, Unfragged}),
+    {none, <<>>};
+
+handle_message( #ws_frame_info{ opcode=binary, 
+				data=Data,
+				ws_state=WebSocket }, 
+		Acc) ->
+    io:format("echoing back binary message~n",[]),
+    yaws_api:websocket_send(WebSocket, {binary, Data}), 
+    Acc;
+
+handle_message( #ws_frame_info{ opcode=ping, 
+				data=Data,
+				ws_state=WebSocket}, 
+		Acc) ->
+    io:format("replying pong to ping~n",[]),
+    yaws_api:websocket_send(WebSocket, {pong, Data}),
+    Acc;
+
+handle_message(#ws_frame_info{opcode=pong, ws_state=WebSocket}, Acc) ->
+    % A response to an unsolicited pong frame is not expected.
+    % http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08#section-4
+    io:format("ignoring unsolicited pong~n",[]),
+    Acc;
+
+handle_message(FrameInfo=#ws_frame_info{}, Acc) ->
+    io:format("WS Endpoint Unhandled message: ~p~n~p~n", [FrameInfo, Acc]),
+    exit(normal).
+
+echo_text(WebSocket, Data) ->
     io:format("echoing back text message~n",[]),
     CharCount = length(binary_to_list(Data)),
     io:format("Text Chars Count = ~p~n", [CharCount]),
@@ -42,27 +113,7 @@ handle_message(WebSocket, #ws_frame_info{opcode=text, data=Data}) ->
 	    io:format("Too many chars to print easily...~n",[])
     end,
 
-    yaws_api:websocket_send(WebSocket, {text, Data}), 
-    ok;
+    yaws_api:websocket_send(WebSocket, {text, Data}).
 
-handle_message(WebSocket, #ws_frame_info{opcode=binary, data=Data}) ->
-    io:format("echoing back binary message~n",[]),
-    yaws_api:websocket_send(WebSocket, {binary, Data}), 
-    ok;
-
-handle_message(WebSocket, #ws_frame_info{opcode=ping, data=Data}) ->
-    io:format("replying pong to ping~n",[]),
-    yaws_api:websocket_send(WebSocket, {pong, Data}),
-    ok;
-
-handle_message(_WebSocket, #ws_frame_info{opcode=pong}) ->
-    % A response to an unsolicited pong frame is not expected.
-    % http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08#section-4
-    io:format("ignoring unsolicited pong~n",[]),
-    ok;
-
-handle_message(WebSocket, FrameInfo) ->
-    io:format("WS Endpoint Unhandled message: ~p~n", [FrameInfo]),
-    exit(normal).
 
 </erl>
