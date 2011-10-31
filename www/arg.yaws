@@ -1,9 +1,9 @@
 
 <erl>
 
-out(A) -> 
+out(A) ->
        {ssi, "TAB.inc", "%%",[{"arg", "choosen"}]}.
-            
+
 </erl>
 
 <div id="entry">
@@ -13,9 +13,9 @@ out(A) ->
   <p>This page displays the Arg #arg structure
     supplied to the out/1 function.
   </p>
-  <p> The #arg structure is a very important datastructure for the 
-    yaws programmer. It is the main mechanism whereby the server can pass 
-    data to the web application. There are several data items 
+  <p> The #arg structure is a very important datastructure for the
+    yaws programmer. It is the main mechanism whereby the server can pass
+    data to the web application. There are several data items
     which are of interest to the webapplication, such as which headers
     were sent from the client, etc.
     The #arg recored is defined in <tt>yaws_api.hrl</tt> and is defined as:
@@ -42,12 +42,12 @@ out(A) ->
           appmod_prepath, %% path in front of: &lt;appmod&gt;&lt;appmoddata&gt;
           pathinfo        %% Set to 'd/e' when calling c.yaws for the request
                           %% http://some.host/a/b/c.yaws/d/e
-         }).              
+         }).
 
     </pre>
   </div>
 
-  <p> As we have seen is several previous examples, 
+  <p> As we have seen is several previous examples,
     the <tt> out/1</tt> function
     defined in .yaws files, gets invoked with a single argument which is
     a #arg{} record, fitting the specific HTTP request being served.
@@ -91,8 +91,8 @@ out(A) ->
 
 </erl>
 
-        
-        
+
+
 
 
 </div>
@@ -102,4 +102,4 @@ out(A) ->
 out(A) -> {ssi, "END2",[],[]}.
 </erl>
 
-                                
+

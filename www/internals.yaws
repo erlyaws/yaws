@@ -1,20 +1,20 @@
 <erl>
-out(A) -> 
+out(A) ->
        {ssi, "TAB.inc", "%%",[{"internals", "choosen"}]}.
 </erl>
 
 
 <div id="entry">
-  
+
   <h1>Internals</h1>
 
   <h2>Introduction</h2>
-  
+
   <p>I'll try to describe some of the internal workings of Yaws in this page.
   The page is thus mostly interesting for people interested in either hacking Yaws
   or simply wanting to get a better understanding.
   </p>
-  
+
 
   <p>I'll describe how Yaws pages get compiled, the process structure
   and other things which can make it easier to understand the code. This page
@@ -42,7 +42,7 @@ out(A) ->
   function into the stream
   of HTML that is being shipped to the client.
   </p>
-  
+
   <p>Yaws  will cache the result of the compilation
   and the next time a client requests the same .yaws page Yaws  will
   be able to invoke the already compiled modules directly.
@@ -50,7 +50,7 @@ out(A) ->
 
 
   <p>This is best explained by an example:</p>
-  
+
   <p>Say that a file consists of 400 bytes, we have "foo.yaws"
   and it looks like:</p>
 
@@ -77,7 +77,7 @@ out(A) ->
 
     </verbatim>
   </div>
- 
+
 
   <p>In the particular case of our "foo.yaws" file above, the JIT
   compiler will return:
@@ -102,12 +102,12 @@ out(A) ->
   structure to do it. If the structure is not in the cache, the page
   gets JIT compiled and inserted into the cache.
   </p>
-  <p>To ship the above <tt>CodeSpec</tt> structure, the server 
+  <p>To ship the above <tt>CodeSpec</tt> structure, the server
   performs the following steps:</p>
   <ol>
-    <li>Create the Arg structure which is a #arg{} record, this 
+    <li>Create the Arg structure which is a #arg{} record, this
     structure is wellknown to all yaws programmers since it's the
-    main mechanism to pass data from the server to the .yaws 
+    main mechanism to pass data from the server to the .yaws
     page.</li>
     <li>Item (1) Invoke <tt>m1:out(Arg)</tt></li>
     <li>Look at the return value from <tt>m1:out(Arg)</tt> and
@@ -118,7 +118,7 @@ out(A) ->
     processing the first <tt>CodeSpec</tt> item.</li>
 
     <li>Item (2) Next <tt>CodeSpec</tt> is just plain data from the file,
-    thus we read 200 bytes from the file (or rather from the cache 
+    thus we read 200 bytes from the file (or rather from the cache
     since the data will be there) and ship to the client.</li>
 
     <li>Item (3) Yet another {mod structure which is handled
@@ -127,16 +127,16 @@ out(A) ->
   </ol>
 
   <p>Another thing that is worth mentioning is that yaws will
-  not ship (write on the socket) data until all content is generated. 
+  not ship (write on the socket) data until all content is generated.
   This is questionable
-  and different from what i.e. PHP does. This makes it possible to 
+  and different from what i.e. PHP does. This makes it possible to
   generate headers after content has been generated.
   </p>
 
 
 
   <h2>Process structure</h2>
-  
+
   <p>Before describing the process structure, I need to describe
   the two most important datastructures in Yaws. The <tt>#gconf{}</tt>
   and the <tt>#sconf{}</tt> records.
@@ -155,7 +155,7 @@ out(A) ->
       yaws_dir,           %% topdir of Yaws installation
       trace,              %% false | {true,http}|{true,traffic}
       flags = ?GC_DEF,    %% boolean flags
-      logdir,          
+      logdir,
       ebin_dir = [],
       runmods = [],       %% runmods for entire server
       keepalive_timeout = 15000,
@@ -166,13 +166,13 @@ out(A) ->
       mnesia_dir = [],
       log_wrap_size = 1000000,  % wrap logs after 1M
       cache_refresh_secs = 30,  % seconds  (auto zero when debug)
-      include_dir = [],    %% list of inc dirs for .yaws files 
+      include_dir = [],    %% list of inc dirs for .yaws files
       phpexe = "php",      %% cgi capable php executable
       yaws,                %% server string
       username,            %% maybe run as a different user than root
       uid,                 %% unix uid of user that started yaws
       id = "default"       %% string identifying this instance of yaws
-     }).  
+     }).
 
     </verbatim>
   </div>
@@ -180,9 +180,9 @@ out(A) ->
   <p>The structure is derived from the /etc/yaws/yaws.conf file and is passed
   around all through the functions in the server.
   </p>
-  
+
   <h3> The <tt>#sconf{}</tt> record</h3>
-  <p>The next important datastructure is the <tt>#sconf{}</tt> record. It 
+  <p>The next important datastructure is the <tt>#sconf{}</tt> record. It
   is used to describe a single virtual server.
   <p>Each:
   </p>
@@ -212,7 +212,7 @@ out(A) ->
        authdirs = [],
        partial_post_size = nolimit,
        appmods = [],                %% list of modules for this app
-       errormod_404 = yaws_404,     %% the default 404 error module 
+       errormod_404 = yaws_404,     %% the default 404 error module
        errormod_crash = yaws_404,   %% use the same module for crashes
        arg_rewrite_mod = yaws,
        opaque = [],                 %% useful in embedded mode
@@ -227,9 +227,9 @@ out(A) ->
   <p>Both of these two structures are defined in "yaws.hrl"</p>
 
   <p>Now we're ready to describe the process structure. We have:</p>
-  
+
   <img src="process_tree.png" />
-    
+
   <p>Thus, all the different "servers" defined in the configuration
   file are clumped together in groups. For HTTP (i.e. not HTTPS) servers
   there can be multiple virtual servers per IP address. Each group is
@@ -240,12 +240,12 @@ out(A) ->
   of virtual servers for a specific <tt>{Ip,Port}</tt> pair.
   </p>
 
-  <p>SSL servers are different, we cannot read the headers before we 
+  <p>SSL servers are different, we cannot read the headers before we
   decide which virtual server to choose because the certificate is connected
   to a server name. Thus, there can only be one HTTPS server per
   <tt>{Ip,Port}</tt> pair.
 
-  
+
 
 
 </div>

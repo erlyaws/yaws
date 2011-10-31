@@ -12,7 +12,7 @@ out(A) ->
 <script>
 
 function handleEnter(event) {
-   if (event == null) 
+   if (event == null)
       event = window.event;
 
    var keyCode = event.keyCode ? event.keyCode : event.which ?

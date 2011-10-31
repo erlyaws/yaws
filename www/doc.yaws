@@ -1,7 +1,7 @@
 
 <erl>
 
-out(A) -> 
+out(A) ->
        {ssi, "TAB.inc","%%",[{"doc", "choosen"}]}.
 </erl>
 
@@ -13,7 +13,7 @@ out(A) ->
 
 <h3> User manual </h3>
 
-<p> The version of the usermanual is currently getting a bit old. 
+<p> The version of the usermanual is currently getting a bit old.
 There are several features of yaws which are yet not properly described
 in the user manual, they are all described in the Example collection or
 man pages though.

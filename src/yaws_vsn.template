@@ -1,7 +1,7 @@
 %%%----------------------------------------------------------------------
 %%% File    : yaws_vsn.template
 %%% Author  : Klacke <klacke@bluetail.com>
-%%% Purpose : 
+%%% Purpose :
 %%% Created : 10 Jun 2002 by Klacke <klacke@bluetail.com>
 %%%----------------------------------------------------------------------
 
@@ -12,5 +12,5 @@
 
 version() -> "%VSN%".
 
-    
+
 

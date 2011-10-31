@@ -1,6 +1,6 @@
 <erl>
 
-out(A) -> 
+out(A) ->
        {ssi, "TAB.inc", "%%",[{"query", "choosen"}]}.
 
 
@@ -29,7 +29,7 @@ out(A) ->
 
   <div class="box">
     <pre>
-      div.box { border: solid; border-width: thin; width: 90%; 
+      div.box { border: solid; border-width: thin; width: 90%;
       background: rgb(211, 211, 211)  }
     </pre>
   </div>
@@ -66,13 +66,13 @@ ssi(File) ->
 </div>
 
 <p>The querypart of the URL is part as field in the Arg structure.
-  The function <tt>parse_query/1</tt> parses the raw data into 
+  The function <tt>parse_query/1</tt> parses the raw data into
   a key/value list. </p>
 
 
 <p>The <tt>queryvar(ARG,Key)</tt> function returns the value of the
 variable if it is found in the query part of the request. If the variable is not found
-or if the variable is unset, the <tt>queryvar(ARG,Key)</tt> function returns <tt>undefined</tt>. 
+or if the variable is unset, the <tt>queryvar(ARG,Key)</tt> function returns <tt>undefined</tt>.
 </p>
 
 

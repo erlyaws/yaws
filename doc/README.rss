@@ -7,10 +7,10 @@ Then go to an RSS-enabled site, e.g slashdot.org . Note the little orange
 icon down in the right corner of the browser window. Click on the icon
 and add the RSS-feed to you personal toolbar. Then click on your toolbar,
 on the RSS-bookmark and watch the nice menu of slashdot article-summarys
-popping up. 
+popping up.
 
 The module yaws_rss.erl provides an RSS store/interface so that
-you can RSS enable your application. More documentation can be 
+you can RSS enable your application. More documentation can be
 found in the yaws_rss.erl file (edoc).
 
 
@@ -24,9 +24,9 @@ index.html
 ==========
 <html>
 <head>
-<link rel="alternate" 
-      title="Example RSS" 
-      href="//localhost:3080/rss.yaws" 
+<link rel="alternate"
+      title="Example RSS"
+      href="//localhost:3080/rss.yaws"
       type="application/rss+xml>
 <title>Example</title>
 </head>
@@ -79,7 +79,7 @@ yaws_rss:insert(test, xml, "Yaws now support RSS feeds.",
                     "Bill Smith").
 ....
 
-First comes the application (RSSid) then a tag (these were used in 
+First comes the application (RSSid) then a tag (these were used in
 rss.yaws when we retrieved the RSS content). Then follows the
 Title, Link, Description and Creator.
 

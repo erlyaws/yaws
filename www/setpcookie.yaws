@@ -13,7 +13,7 @@ ensure_pcookie_server() ->
 pserv() ->
     catch begin
               register(pcookie_server, self()),
-              T = ets:new(pcookies, [set, public, 
+              T = ets:new(pcookies, [set, public,
                                      named_table]),
               ets:insert(T, {counter, 0})
           end,
@@ -28,7 +28,7 @@ pserv_loop() ->
 
 setcookie(A) ->
     Num = ets:update_counter(pcookies, counter, 1),
-    Data = {(A#arg.headers)#headers.user_agent, 
+    Data = {(A#arg.headers)#headers.user_agent,
             calendar:local_time(),
             inet:peername(A#arg.clisock)},
     ets:insert(pcookies, {{cookie, Num}, Data}),
@@ -75,12 +75,12 @@ out(A) -> {ssi, "TAB.inc", [],[]}.
 
 <h2> Set persistent cookie </h2>
 
-<p>This is the page that set a persistent cookie in 
-the browser. 
-<a href="readpcookie.yaws">readpcookie.yaws</a> will 
+<p>This is the page that set a persistent cookie in
+the browser.
+<a href="readpcookie.yaws">readpcookie.yaws</a> will
 read the cookie and report persistent information.
 
-                               
+
 
 </div>
 

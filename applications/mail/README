@@ -1,7 +1,7 @@
 
 
-This is a very basic WebMail application which is completely 
-stateless, by design. I didn't want any SQL databases etc 
+This is a very basic WebMail application which is completely
+stateless, by design. I didn't want any SQL databases etc
 for storing the emails.
 
 The reason for building it was that I needed a local WebMail
@@ -19,7 +19,7 @@ To install
 
 - Modify include.mk for your local paths
 
-Run 'make' and 'make install' 
+Run 'make' and 'make install'
 
 
 
@@ -32,7 +32,7 @@ Run 'make' and 'make install'
 
 Two things need to be edited in /etc/yaws.conf
 
-1. yaws must find the beam code for mail.beam, 
+1. yaws must find the beam code for mail.beam,
    By default (include.mk) that gets installed in
    /var/yaws/ebin
 

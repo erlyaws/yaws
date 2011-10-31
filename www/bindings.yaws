@@ -7,23 +7,23 @@ out(A) ->
 <div id="entry">
 <h2> Bindings </h2>
   <p>
-    Bindings are the opposite of 
+    Bindings are the opposite of
     <a href="ssi.yaws"> Server Side Includes (SSI)</a>.
     SSI is used when entire pages are written largely in EHTML and
-    snippets of HTML, or more typically javascript code is 
-    inserted into the EHTML 
+    snippets of HTML, or more typically javascript code is
+    inserted into the EHTML
     code.
   </p>
 
-  <p> Bindings are used the other way around. Essentially entire 
-    pages are written in regular HTML but parts of the HTML needs to be 
+  <p> Bindings are used the other way around. Essentially entire
+    pages are written in regular HTML but parts of the HTML needs to be
     dynamically generated.
   </p>
-  <p>The yaws callback out/1 can return 
+  <p>The yaws callback out/1 can return
   </p>
-  <div class="box"> 
+  <div class="box">
     <pre>
-      {bindings, [{Key1, Value2}, {Key2, Value2} .....]}. 
+      {bindings, [{Key1, Value2}, {Key2, Value2} .....]}.
     </pre>
   </div>
 
@@ -31,7 +31,7 @@ out(A) ->
   <p>All bindings can then be used in the rest of yaws code (in HTML source and
     within erl tags). In HTML source %%Key%% is expanded to Value and
     within erl tags yaws_api:get_binding(Key) can be used to extract Value.</p>
-  
+
   <p>With the binding feature it is easier to write transparent yaws code making
     it easier to to work together with Web people knowing little or
     nothing about Erlang.</p>
@@ -75,7 +75,7 @@ out(A) ->
 <p>
   Which expands to:</p>
 
-  <div class="box"> 
+  <div class="box">
     <verbatim>
 
 <html>
@@ -99,7 +99,7 @@ foo = foo (hit me)
 
   <p> And is rendered as:</p>
 
-  <div class="box"> 
+  <div class="box">
     <p>foo</p>
     <p><font size="4">foo != baz</font></p>
     <p>An enormous amount of plain html source here.</p>

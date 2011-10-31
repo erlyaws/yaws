@@ -11,7 +11,7 @@ runmod = yapp
          arg_rewrite_mod = yapp
          <opaque>
              yapp_server_id = external
-         </opaque>        
+         </opaque>
 
 %% add to second <server ..>, that is to <server localhost>
 %% note you will only be able to access the yapp admin interface from http://localhost[:port]/yapp/
@@ -19,5 +19,5 @@ runmod = yapp
          <opaque>
              yapp_server_id = internal
              bootstrap_yapps = yapp
-         </opaque>        
+         </opaque>
 

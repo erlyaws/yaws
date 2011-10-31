@@ -1,14 +1,14 @@
 
 <erl>
 
-out(A) -> 
+out(A) ->
     {Code, F} = case queryvar(A, "file") of
                     {ok, Fname} ->
-                        File = A#arg.docroot ++ 
+                        File = A#arg.docroot ++
                             yaws_api:sanitize_file_name(Fname),
                         case file:read_file(File) of
                             {ok, B} ->
-                                C = {'div', 
+                                C = {'div',
                                      [],
                                      {pre, [], B}},
                                 {C, Fname};
@@ -19,9 +19,9 @@ out(A) ->
                         {[], "Bad request"}
                 end,
     {ehtml, {html, [],
-             {'div', 
+             {'div',
               [],
-              [{h2, [], F}, 
+              [{h2, [], F},
                Code]}}}.
 
 

@@ -1,34 +1,34 @@
-<?xml version="1.0" encoding="UTF-8" ?> 
-<!-- 
- 
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+
 Copyright 2001 - 2005, International Business Machines Corporation and Microsoft Corporation
 All Rights Reserved
 
 License for WSDL Schema Files
 
-The Authors grant permission to copy and distribute the WSDL Schema 
-Files in any medium without fee or royalty as long as this notice and 
-license are distributed with them.  The originals of these files can 
+The Authors grant permission to copy and distribute the WSDL Schema
+Files in any medium without fee or royalty as long as this notice and
+license are distributed with them.  The originals of these files can
 be located at:
 
 http://schemas.xmlsoap.org/wsdl/soap/2003-02-11.xsd
 
-THESE SCHEMA FILES ARE PROVIDED "AS IS," AND THE AUTHORS MAKE NO REPRESENTATIONS 
-OR WARRANTIES, EXPRESS OR IMPLIED, REGARDING THESE FILES, INCLUDING, BUT NOT 
-LIMITED TO, WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, 
-NON-INFRINGEMENT OR TITLE.  THE AUTHORS WILL NOT BE LIABLE FOR ANY DIRECT, 
-INDIRECT, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR 
+THESE SCHEMA FILES ARE PROVIDED "AS IS," AND THE AUTHORS MAKE NO REPRESENTATIONS
+OR WARRANTIES, EXPRESS OR IMPLIED, REGARDING THESE FILES, INCLUDING, BUT NOT
+LIMITED TO, WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
+NON-INFRINGEMENT OR TITLE.  THE AUTHORS WILL NOT BE LIABLE FOR ANY DIRECT,
+INDIRECT, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR
 RELATING TO ANY USE OR DISTRIBUTION OF THESE FILES.
 
-The name and trademarks of the Authors may NOT be used in any manner, 
-including advertising or publicity pertaining to these files or any program 
-or service that uses these files, written prior permission.  Title to copyright 
+The name and trademarks of the Authors may NOT be used in any manner,
+including advertising or publicity pertaining to these files or any program
+or service that uses these files, written prior permission.  Title to copyright
 in these files will at all times remain with the Authors.
 
 No other rights are granted by implication, estoppel or otherwise.
 
 
---> 
+-->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
            xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
@@ -74,7 +74,7 @@ No other rights are granted by implication, estoppel or otherwise.
 
   <xs:element name="body" type="soap:tBody" />
   <xs:attributeGroup name="tBodyAttributes" >
-    <xs:attribute name="encodingStyle" type="soap:encodingStyle" use="optional" />	   
+    <xs:attribute name="encodingStyle" type="soap:encodingStyle" use="optional" />
     <xs:attribute name="use" type="soap:useChoice" use="optional" />
     <xs:attribute name="namespace" type="xs:anyURI" use="optional" />
   </xs:attributeGroup>
@@ -86,7 +86,7 @@ No other rights are granted by implication, estoppel or otherwise.
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
-  
+
   <xs:simpleType name="useChoice" >
     <xs:restriction base="xs:string" >
       <xs:enumeration value="literal" />
@@ -98,11 +98,11 @@ No other rights are granted by implication, estoppel or otherwise.
   <xs:complexType name="tFaultRes" abstract="true" >
     <xs:complexContent>
       <xs:restriction base="soap:tBody" >
-	    <xs:attribute ref="wsdl:required" use="optional" /> 
+	    <xs:attribute ref="wsdl:required" use="optional" />
         <xs:attribute name="parts" type="xs:NMTOKENS" use="prohibited" />
 		<xs:attributeGroup ref="soap:tBodyAttributes" />
       </xs:restriction>
-    </xs:complexContent>  	
+    </xs:complexContent>
   </xs:complexType>
   <xs:complexType name="tFault" >
     <xs:complexContent>
@@ -119,7 +119,7 @@ No other rights are granted by implication, estoppel or otherwise.
     <xs:attribute name="part" type="xs:NMTOKEN" use="required" />
     <xs:attribute name="use" type="soap:useChoice" use="required" />
     <xs:attribute name="encodingStyle" type="soap:encodingStyle" use="optional" />
-    <xs:attribute name="namespace" type="xs:anyURI" use="optional" />      
+    <xs:attribute name="namespace" type="xs:anyURI" use="optional" />
   </xs:attributeGroup>
   <xs:complexType name="tHeader" >
     <xs:complexContent>

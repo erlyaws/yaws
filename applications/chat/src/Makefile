@@ -12,7 +12,7 @@ MODULES=chat
 
 HDR_FILES=
 
-EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR)) 
+EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR))
 
 ERLC_FLAGS+=-W +debug_info $(DEBUG_FLAGS) -I../../../include -pa ../../chat
 
@@ -20,7 +20,7 @@ ERLC_FLAGS+=-W +debug_info $(DEBUG_FLAGS) -I../../../include -pa ../../chat
 # Targets
 #
 
-all: $(EBIN_FILES) 
+all: $(EBIN_FILES)
 
 $(EBIN_FILES) : $(HDR_FILES)
 

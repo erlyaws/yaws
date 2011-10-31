@@ -1,9 +1,9 @@
-//    -*- Fundamental -*- 
+//    -*- Fundamental -*-
 //    File:      chat.js  (/var/www/chat.js)
 //    Author:    Johan Bevemyr
 //    Created:   Thu Nov 18 18:25:53 2004
-//    Purpose:   
- 
+//    Purpose:
+
 
 // Uncomment this to get debug printouts in a separate window.
 
@@ -113,7 +113,7 @@ function create_xmlhttp() {
 
   if (!xmlhttp && typeof XMLHttpRequest!='undefined')
     xmlhttp = new XMLHttpRequest();
-  
+
   return xmlhttp;
 }
 
@@ -200,7 +200,7 @@ function reader_init() {
     xml_reader.onload=h;
   }
   else {
-    xml_reader.onreadystatechange=h; 
+    xml_reader.onreadystatechange=h;
   }
 
   xml_reader.send(null);

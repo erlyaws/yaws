@@ -1,7 +1,7 @@
 include ../../include.mk
 
 all:	shopcart.beam
-	cp -f shopcart.beam ../../examples/ebin 
+	cp -f shopcart.beam ../../examples/ebin
 debug:
 
 install:	all

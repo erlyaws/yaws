@@ -2,7 +2,7 @@
 <html>
 <erl>
 out(Arg) ->
-    F = storePage, 
+    F = storePage,
     wiki_yaws:call_with_multiquery(wiki, F, Arg).
 </erl>
 </html>
