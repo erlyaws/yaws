@@ -158,9 +158,9 @@ ws_frame_info(#ws_state{sock=Socket},
 	    Other
     end;
 
-ws_frame_info(WebSocket = #ws_state{sock=Socket}, FirstPacket) ->
+ws_frame_info(State = #ws_state{sock=Socket}, FirstPacket) ->
 %    debug(val, "ws_frame_info input was short, buffering..."),
-    ws_frame_info(WebSocket, buffer(Socket, 2,FirstPacket)).
+    ws_frame_info(State, buffer(Socket, 2,FirstPacket)).
 	    
 ws_frame_info_secondary(Socket, Len1, Rest) ->
     case Len1 of
@@ -183,30 +183,30 @@ ws_frame_info_secondary(Socket, Len1, Rest) ->
 % the size of your socket receive buffer.
 %
 % -> { #ws_state, [#ws_frame_info,...,#ws_frame_info] }
-unframe(_WebSocket, <<>>) ->
+unframe(_State, <<>>) ->
     [];
-unframe(WebSocket, FirstPacket) ->
-    case unframe_one(WebSocket, FirstPacket) of
-	{FrameInfo = #ws_frame_info{ws_state = NewWSState}, RestBin} ->
+unframe(State, FirstPacket) ->
+    case unframe_one(State, FirstPacket) of
+	{FrameInfo = #ws_frame_info{ws_state = NewState}, RestBin} ->
 	    %% Every new recursion uses the #ws_state from the calling recursion.
-	    [FrameInfo | unframe(NewWSState, RestBin)];
+	    [FrameInfo | unframe(NewState, RestBin)];
 	Fail ->
 	    [Fail]
     end.
 
 % -> {#ws_frame_info, RestBin} | {fail_connection, Reason}
-unframe_one(WebSocket = #ws_state{vsn=8}, FirstPacket) ->
-    {FrameInfo = #ws_frame_info{}, RestBin} = ws_frame_info(WebSocket, FirstPacket),
+unframe_one(State = #ws_state{vsn=8}, FirstPacket) ->
+    {FrameInfo = #ws_frame_info{}, RestBin} = ws_frame_info(State, FirstPacket),
     Unmasked = mask(FrameInfo#ws_frame_info.masking_key, FrameInfo#ws_frame_info.payload),
-    NewWSState = frag_state_machine(WebSocket, FrameInfo),
+    NewState = frag_state_machine(State, FrameInfo),
     Unframed = FrameInfo#ws_frame_info{ data = Unmasked,
-					ws_state = NewWSState },
+					ws_state = NewState },
 
     case checks(Unframed) of
-	#ws_frame_info{} when is_record(NewWSState, ws_state) ->
+	#ws_frame_info{} when is_record(NewState, ws_state) ->
 	    {Unframed, RestBin};
-	#ws_frame_info{} when not is_record(NewWSState, ws_state) ->
-	    NewWSState;  %% pass back the error details
+	#ws_frame_info{} when not is_record(NewState, ws_state) ->
+	    NewState;  %% pass back the error details
 	Fail ->
 	    Fail
     end.
@@ -215,53 +215,53 @@ is_control_op(Op) ->
     atom_to_opcode(Op) > 7.
 
 %% Unfragmented message
-frag_state_machine(WSState = #ws_state{ frag_type = none },
+frag_state_machine(State = #ws_state{ frag_type = none },
 		   #ws_frame_info{ fin = 1 }) ->
-    WSState;
+    State;
 
 %% Beginning of fragmented text message
-frag_state_machine(WSState = #ws_state{ frag_type = none },
+frag_state_machine(State = #ws_state{ frag_type = none },
 		   #ws_frame_info{ fin = 0,
 				   opcode = text }) ->
-    WSState#ws_state{ frag_type = text };
+    State#ws_state{ frag_type = text };
 
 %% Beginning of fragmented binary message
-frag_state_machine(WSState = #ws_state{ frag_type = none },
+frag_state_machine(State = #ws_state{ frag_type = none },
 		   #ws_frame_info{ fin = 0,
 				   opcode = binary }) ->
-    WSState#ws_state{ frag_type = binary };
+    State#ws_state{ frag_type = binary };
 
 %% Expecting text continuation
-frag_state_machine(WSState = #ws_state{ frag_type = text },
+frag_state_machine(State = #ws_state{ frag_type = text },
 		   #ws_frame_info{ fin = 0,
 				   opcode = continuation }) ->
-    WSState;
+    State;
 
 %% Expecting binary continuation
-frag_state_machine(WSState = #ws_state{ frag_type = binary },
+frag_state_machine(State = #ws_state{ frag_type = binary },
 		   #ws_frame_info{ fin = 0,
 				   opcode = continuation }) ->
-    WSState;
+    State;
 
 %% End of fragmented text message
-frag_state_machine(WSState = #ws_state{ frag_type = text },
+frag_state_machine(State = #ws_state{ frag_type = text },
 		   #ws_frame_info{ fin = 1,
 				   opcode = continuation }) ->
-    WSState#ws_state{ frag_type = none };
+    State#ws_state{ frag_type = none };
 
 %% End of fragmented binary message
-frag_state_machine(WSState = #ws_state{ frag_type = binary },
+frag_state_machine(State = #ws_state{ frag_type = binary },
 		   #ws_frame_info{ fin = 1,
 				   opcode = continuation }) ->
-    WSState#ws_state{ frag_type = none };
+    State#ws_state{ frag_type = none };
 
 
-frag_state_machine(WSState, #ws_frame_info{ opcode = Op }) ->
+frag_state_machine(State, #ws_frame_info{ opcode = Op }) ->
     IsControl = is_control_op(Op),
     if 
 	IsControl == true ->
 	    %% Control message never changes fragmentation state
-	    WSState;
+	    State;
 	true ->
 	    %% Everything else is wrong
 	    {error, "fragmentation rules violated"}
