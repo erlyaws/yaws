@@ -6,34 +6,35 @@ out(A) ->
 
 websocket_owner() ->
     receive
-	{ok, WebSocket} ->
+	{ok, State} ->
 %	    fprof:trace(start),
-	    echo_server(WebSocket, {none, <<>>});
+	    echo_server(State, {none, <<>>});
 	Any ->
 	    io:format("websocket_owner received msg:~p~n", [Any])
     end.
 
-echo_server(WebSocket = #ws_state{sock=Socket}, Acc) ->
+echo_server(State = #ws_state{sock=Socket}, Acc) ->
     receive
 	{tcp, Socket, FirstPacket} ->
 	    %io:format("Frame: ~p~n", [frame_info(DataFrame)]),
-	    FrameInfos = yaws_api:websocket_unframe(WebSocket, FirstPacket),
+	    FrameInfos = yaws_api:websocket_unframe(State, FirstPacket),
 %	    io:format("frameinfos: ~p~n", [FrameInfos]),
-%	    io:format("ws state: ~p~n", [NewWSState]),
+%	    io:format("ws state: ~p~n", [NewState]),
 
 	    NewAcc = lists:foldl(fun handle_message/2, Acc, FrameInfos),
 	    Last = lists:last(FrameInfos),
-	    NewWSState = Last#ws_frame_info.ws_state,
+	    NewState = Last#ws_frame_info.ws_state,
 
-	    echo_server(NewWSState, NewAcc);
+	    echo_server(NewState, NewAcc);
 	{tcp_closed, Socket} ->
 	    io:format("Websocket closed. Terminating echo_server...~n");
 %	    fprof:trace(stop);
 	Any ->
 	    io:format("echo_server received msg:~p~n", [Any]),
-	    echo_server(WebSocket, Acc)
+	    echo_server(State, Acc)
     end.
 
+% for debugging
 frame_info(Frame = <<Fin:1,Rsv1:1,Rsv2:1,Rsv3:1,Opcode:4,Masked:1,Len1:7,Rest1/binary>>) ->
     FrameInfo = [{fin, Fin},{rsv1,Rsv1},{rsv2,Rsv2},{rsv3,Rsv3},{opcode,Opcode},{masked,Masked},{len1,Len1}].
 
@@ -56,41 +57,41 @@ handle_message( #ws_frame_info{ fin=0,
 handle_message( #ws_frame_info{ fin=1, 
 				opcode=continuation, 
 				data=Data,
-				ws_state=WebSocket},
+				ws_state=State},
 		{text, Acc}) ->
     Unfragged = <<Acc/binary, Data/binary>>,
-    echo_text(WebSocket, Unfragged),
+    echo_text(State, Unfragged),
     {none, <<>>};
 
-handle_message( #ws_frame_info{opcode=text, data=Data, ws_state=WebSocket}, Acc) ->
-    echo_text(WebSocket, Data),
+handle_message( #ws_frame_info{opcode=text, data=Data, ws_state=State}, Acc) ->
+    echo_text(State, Data),
     Acc;
 
 %% end of binary fragmented message
 handle_message( #ws_frame_info{ fin=1, 
 				opcode=continuation, 
 				data=Data,
-				ws_state=WebSocket },
+				ws_state=State },
 		{binary, Acc}) ->
     Unfragged = <<Acc/binary, Data/binary>>,
     io:format("echoing back binary message~n",[]),
-    yaws_api:websocket_send(WebSocket, {binary, Unfragged}),
+    yaws_api:websocket_send(State, {binary, Unfragged}),
     {none, <<>>};
 
 handle_message( #ws_frame_info{ opcode=binary, 
 				data=Data,
-				ws_state=WebSocket }, 
+				ws_state=State }, 
 		Acc) ->
     io:format("echoing back binary message~n",[]),
-    yaws_api:websocket_send(WebSocket, {binary, Data}), 
+    yaws_api:websocket_send(State, {binary, Data}), 
     Acc;
 
 handle_message( #ws_frame_info{ opcode=ping, 
 				data=Data,
-				ws_state=WebSocket}, 
+				ws_state=State}, 
 		Acc) ->
     io:format("replying pong to ping~n",[]),
-    yaws_api:websocket_send(WebSocket, {pong, Data}),
+    yaws_api:websocket_send(State, {pong, Data}),
     Acc;
 
 handle_message(#ws_frame_info{opcode=pong, ws_state=WebSocket}, Acc) ->

@@ -991,20 +991,20 @@ websocket_send(#ws_state{sock=Socket, vsn=ProtoVsn}, {Type, Data}) ->
 %
 % This is for WebSockets expected to be in {active, false} mode
 % when this function returns.
-websocket_receive(WebSocket = #ws_state{sock=Socket}) ->
+websocket_receive(State = #ws_state{sock=Socket}) ->
     FirstPacket = case Socket of
 	    {sslsocket,_,_} ->
 		ssl:recv(Socket, 0);
 	    _ ->
 		gen_tcp:recv(Socket, 0)
 	end,
-    yaws_websockets:unframe(WebSocket, FirstPacket).
+    yaws_websockets:unframe(State, FirstPacket).
 
 % This is for WebSockets expected to be in {active, once} mode
 % when this function returns.
-websocket_unframe(WebSocket, FirstPacket) ->
-    Frames = yaws_websockets:unframe(WebSocket, FirstPacket),
-    websocket_setopts(WebSocket, [{active, once}]),
+websocket_unframe(State, FirstPacket) ->
+    Frames = yaws_websockets:unframe(State, FirstPacket),
+    websocket_setopts(State, [{active, once}]),
     Frames.
 
 websocket_setopts(#ws_state{sock=Socket={sslsocket,_,_}}, Opts) ->

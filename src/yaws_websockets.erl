@@ -18,7 +18,6 @@
 
 handshake(Arg, ContentPid, SocketMode) ->
     CliSock = Arg#arg.clisock,
-    %jdtodo io:format("CliSock ~p~n",[CliSock]),
     case get_origin_header(Arg#arg.headers) of
 %	undefined ->
 	    %% TODO: Lack of origin header is allowed for non-browser clients 
@@ -53,10 +52,10 @@ handshake(Arg, ContentPid, SocketMode) ->
 	    end,
 	    case TakeOverResult of
 		ok ->
-		    WebSocket = #ws_state{ sock = CliSock, 
-					   vsn  = ProtocolVersion,
-					   frag_type = none },
-		    ContentPid ! {ok, WebSocket};
+		    State = #ws_state{ sock = CliSock, 
+				       vsn  = ProtocolVersion,
+				       frag_type = none },
+		    ContentPid ! {ok, State};
 		{error, Reason} ->
 		    ContentPid ! discard,
 		    exit({websocket, Reason})
