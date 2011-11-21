@@ -14,7 +14,16 @@
 -include("yaws_debug.hrl").
 
 -include_lib("kernel/include/file.hrl").
--export([handshake/3, unframe/2, frame/3]).
+-export([handshake/3, unframe/2, frame/3, websocket_owner/0]).
+
+websocket_owner() ->
+    receive
+	{ok, State} ->
+%	    fprof:trace(start),
+	    echo_server(State, {none, <<>>});
+	Any ->
+	    io:format("websocket_owner received msg:~p~n", [Any])
+    end.
 
 handshake(Arg, ContentPid, SocketMode) ->
     CliSock = Arg#arg.clisock,
@@ -72,6 +81,27 @@ handshake(8, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
      "Connection: Upgrade\r\n",
      "Sec-WebSocket-Accept: ", AcceptHash , "\r\n",
      "\r\n"].
+
+echo_server(State = #ws_state{sock=Socket}, Acc) ->
+    receive
+	{tcp, Socket, FirstPacket} ->
+	    %io:format("Frame: ~p~n", [frame_info(DataFrame)]),
+	    FrameInfos = yaws_api:websocket_unframe(State, FirstPacket),
+%	    io:format("frameinfos: ~p~n", [FrameInfos]),
+%	    io:format("ws state: ~p~n", [NewState]),
+
+	    NewAcc = lists:foldl({echo_callback, handle_message}, Acc, FrameInfos),
+	    Last = lists:last(FrameInfos),
+	    NewState = Last#ws_frame_info.ws_state,
+
+	    echo_server(NewState, NewAcc);
+	{tcp_closed, Socket} ->
+	    io:format("Websocket closed. Terminating echo_server...~n");
+%	    fprof:trace(stop);
+	Any ->
+	    io:format("echo_server received msg:~p~n", [Any]),
+	    echo_server(State, Acc)
+    end.
 
 ws_version(Headers) ->
     case query_header("sec-websocket-version", Headers) of
