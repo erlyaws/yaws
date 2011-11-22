@@ -85,7 +85,7 @@ html_body(WebSocketLocation) ->
  
   <script type='text/javascript'> 
     $('cA').onclick = function(event) { client.connect(); return false; };
-    $('sendB').onclick = function(event) { client.chat($F('phrase')); $('phrase').value=''; return false; };	
+    $('sendB').onclick = function(event) { client.chat($F('phrase')); $('phrase').value=''; $('phrase').focus(); return false; };	
  </script> 
   </body> 
 </html>".

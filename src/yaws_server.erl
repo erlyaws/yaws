@@ -2648,10 +2648,10 @@ deliver_dyn_part(CliSock,                       % essential params
             Priv = deliver_accumulated(Arg, CliSock,
                                        no, undefined, stream),
             wait_for_streamcontent_pid(Priv, CliSock, Pid);
-        {websocket, OwnerPid, SocketMode} ->
+        {websocket, CallbackMod, Opts} ->
             %% The handshake passes control over the socket to OwnerPid
             %% and terminates the Yaws worker!
-            yaws_websockets:handshake(Arg, OwnerPid, SocketMode);
+            yaws_websockets:start(Arg, CallbackMod, Opts);
         _ ->
             DeliverCont(Arg)
     end.
@@ -3094,7 +3094,7 @@ handle_out_reply({streamcontent_from_pid, MimeType, Pid},
     yaws:outh_set_content_type(MimeType),
     {streamcontent_from_pid, MimeType, Pid};
 
-handle_out_reply({websocket, _OwnerPid, _SocketMode}=Reply,
+handle_out_reply({websocket, _CallbackMod, _Opts}=Reply,
                  _LineNo,_YawsFile, _UT, _ARG) ->
     yaws:accumulate_header({connection, erase}),
     Reply;

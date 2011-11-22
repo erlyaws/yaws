@@ -1,6 +1,6 @@
 <erl>
 out(A) -> 
-    io:format("Spawning websocket owner~n",[]),
-    WebSocketOwner = spawn(fun() -> yaws_websockets:websocket_owner() end),
-    {websocket, WebSocketOwner, {active, once}}.
+    CallbackMod = echo_callback,
+    Opts = [],
+    {websocket, CallbackMod, Opts}.
 </erl>

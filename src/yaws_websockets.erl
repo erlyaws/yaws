@@ -14,18 +14,46 @@
 -include("yaws_debug.hrl").
 
 -include_lib("kernel/include/file.hrl").
--export([handshake/3, unframe/2, frame/3, websocket_owner/0]).
 
-websocket_owner() ->
-    receive
-	{ok, State} ->
-%	    fprof:trace(start),
-	    echo_server(State, {none, <<>>});
-	Any ->
-	    io:format("websocket_owner received msg:~p~n", [Any])
+%% API
+-export([unframe/2, frame/3, start/3]).
+
+%% Exported for spawn
+-export([receive_control/4]).
+
+start(Arg, CallbackMod, Opts) ->
+    SC = get(sc),
+    CliSock = Arg#arg.clisock,
+    OwnerPid = spawn(?MODULE, receive_control, [Arg, SC, CallbackMod, Opts]),
+    CliSock = Arg#arg.clisock,
+    case SC#sconf.ssl of
+	undefined ->
+	    inet:setopts(CliSock, [{packet, raw}, {active, once}]),
+	    TakeOverResult =
+		gen_tcp:controlling_process(CliSock, OwnerPid);
+	_ ->
+	    ssl:setopts(CliSock, [{packet, raw}, {active, once}]),
+	    TakeOverResult =
+		ssl:controlling_process(CliSock, OwnerPid)
+    end,
+    case TakeOverResult of
+	ok ->
+	    OwnerPid ! ok,
+	    exit(normal);
+	{error, Reason} ->
+	    OwnerPid ! {error, Reason},
+	    exit({websocket, Reason})
     end.
 
-handshake(Arg, ContentPid, SocketMode) ->
+receive_control(Arg, SC, CallbackMod, Opts) ->
+    receive
+	ok ->
+	    handshake(Arg, SC, CallbackMod, Opts);
+	{error, Reason} ->
+	    exit(Reason)
+    end.
+
+handshake(Arg, SC, CallbackMod, Opts) ->
     CliSock = Arg#arg.clisock,
     case get_origin_header(Arg#arg.headers) of
 %	undefined ->
@@ -39,38 +67,24 @@ handshake(Arg, ContentPid, SocketMode) ->
 	    Protocol = get_protocol_header(Arg#arg.headers),
 	    Host = (Arg#arg.headers)#headers.host,
 	    {abs_path, Path} = (Arg#arg.req)#http_request.path,
-	    SC = get(sc),
+
 	    WebSocketLocation =
 		case SC#sconf.ssl of
                     undefined -> "ws://" ++ Host ++ Path;
                     _ -> "wss://" ++ Host ++ Path
 		end,
+
 	    Handshake = handshake(ProtocolVersion, Arg, CliSock,
                                   WebSocketLocation, Origin, Protocol),
-	    case SC#sconf.ssl of
-		undefined ->
-		    gen_tcp:send(CliSock, Handshake),
-		    inet:setopts(CliSock, [{packet, raw}, SocketMode]),
-		    TakeOverResult =
-			gen_tcp:controlling_process(CliSock, ContentPid);
-		_ ->
-		    ssl:send(CliSock, Handshake),
-		    ssl:setopts(CliSock, [{packet, raw}, SocketMode]),
-		    TakeOverResult =
-			ssl:controlling_process(CliSock, ContentPid)
-	    end,
-	    case TakeOverResult of
-		ok ->
-		    State = #ws_state{ sock = CliSock, 
-				       vsn  = ProtocolVersion,
-				       frag_type = none },
-		    ContentPid ! {ok, State};
-		{error, Reason} ->
-		    ContentPid ! discard,
-		    exit({websocket, Reason})
-	    end
-    end,
-    exit(normal).
+	    gen_tcp:send(CliSock, Handshake), % TODO: use the yaws way of supporting normal and ssl sockets
+%	    io:format("handshake response: ~p~n", [Handshake]),
+	    State = #ws_state{ sock = CliSock, 
+			       vsn  = ProtocolVersion,
+			       frag_type = none
+			     },
+	    server_loop(CallbackMod, State, {none, <<>>})
+	   
+    end.
 
 handshake(8, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
     io:format("Version 8!~n",[]),
@@ -82,7 +96,8 @@ handshake(8, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
      "Sec-WebSocket-Accept: ", AcceptHash , "\r\n",
      "\r\n"].
 
-echo_server(State = #ws_state{sock=Socket}, Acc) ->
+server_loop(CallbackMod, State = #ws_state{sock=Socket}, Acc) ->
+%    io:format("server loop~n",[]),
     receive
 	{tcp, Socket, FirstPacket} ->
 	    %io:format("Frame: ~p~n", [frame_info(DataFrame)]),
@@ -90,17 +105,17 @@ echo_server(State = #ws_state{sock=Socket}, Acc) ->
 %	    io:format("frameinfos: ~p~n", [FrameInfos]),
 %	    io:format("ws state: ~p~n", [NewState]),
 
-	    NewAcc = lists:foldl({echo_callback, handle_message}, Acc, FrameInfos),
+	    NewAcc = lists:foldl({CallbackMod, handle_message}, Acc, FrameInfos),
 	    Last = lists:last(FrameInfos),
 	    NewState = Last#ws_frame_info.ws_state,
 
-	    echo_server(NewState, NewAcc);
+	    server_loop(CallbackMod, NewState, NewAcc);
 	{tcp_closed, Socket} ->
 	    io:format("Websocket closed. Terminating echo_server...~n");
 %	    fprof:trace(stop);
 	Any ->
 	    io:format("echo_server received msg:~p~n", [Any]),
-	    echo_server(State, Acc)
+	    server_loop(CallbackMod, State, Acc)
     end.
 
 ws_version(Headers) ->
