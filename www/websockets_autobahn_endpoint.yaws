@@ -1,6 +1,6 @@
 <erl>
-out(A) -> 
-    CallbackMod = echo_callback,
-    Opts = [],
+out(A) ->
+    CallbackMod = advanced_echo_callback,
+    Opts = [{callback, advanced}],
     {websocket, CallbackMod, Opts}.
 </erl>

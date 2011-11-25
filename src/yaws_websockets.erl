@@ -24,7 +24,8 @@
 start(Arg, CallbackMod, Opts) ->
     SC = get(sc),
     CliSock = Arg#arg.clisock,
-    OwnerPid = spawn(?MODULE, receive_control, [Arg, SC, CallbackMod, Opts]),
+    PrepdOpts = preprocess_opts(Opts),
+    OwnerPid = spawn(?MODULE, receive_control, [Arg, SC, CallbackMod, PrepdOpts]),
     CliSock = Arg#arg.clisock,
     case SC#sconf.ssl of
 	undefined ->
@@ -45,6 +46,18 @@ start(Arg, CallbackMod, Opts) ->
 	    exit({websocket, Reason})
     end.
 
+preprocess_opts(GivenOpts) ->
+    Fun = fun({Key, Default}, Opts) ->
+		  case lists:keyfind(Key, 1, Opts) of
+		      false ->
+			  [{Key, Default}|Opts];
+		      _ -> Opts
+		  end
+	  end,
+    Defaults = [{origin, any},
+		{callback, basic}],
+    lists:foldl(Fun, GivenOpts, Defaults).
+
 receive_control(Arg, SC, CallbackMod, Opts) ->
     receive
 	ok ->
@@ -55,14 +68,13 @@ receive_control(Arg, SC, CallbackMod, Opts) ->
 
 handshake(Arg, SC, CallbackMod, Opts) ->
     CliSock = Arg#arg.clisock,
-    case get_origin_header(Arg#arg.headers) of
-%	undefined ->
-	    %% TODO: Lack of origin header is allowed for non-browser clients 
-            %% in hybi 17 but for simplicity the connection is closed for now.
-	    %jdtodo io:format("No origin header.~n"),
-	    %% Yaws will take care of closing the socket
-%	    ContentPid ! discard;
-	Origin ->
+    OriginOpt = lists:keyfind(origin, 1, Opts),
+    Origin = get_origin_header(Arg#arg.headers),
+    case origin_check(Origin, OriginOpt) of
+	{error, Error} ->
+	    error_logger:error_msg(Error),
+	    exit({error, Error});
+	ok ->
 	    ProtocolVersion = ws_version(Arg#arg.headers),
 	    Protocol = get_protocol_header(Arg#arg.headers),
 	    Host = (Arg#arg.headers)#headers.host,
@@ -76,18 +88,26 @@ handshake(Arg, SC, CallbackMod, Opts) ->
 
 	    Handshake = handshake(ProtocolVersion, Arg, CliSock,
                                   WebSocketLocation, Origin, Protocol),
-	    gen_tcp:send(CliSock, Handshake), % TODO: use the yaws way of supporting normal and ssl sockets
-%	    io:format("handshake response: ~p~n", [Handshake]),
+	    gen_tcp:send(CliSock, Handshake), % TODO: use the yaws way of supporting normal 
+                                              % and ssl sockets
+	    {callback, CallbackType} = lists:keyfind(callback, 1, Opts),
 	    State = #ws_state{ sock = CliSock, 
 			       vsn  = ProtocolVersion,
 			       frag_type = none
 			     },
-	    server_loop(CallbackMod, State, {none, <<>>})
-	   
+	    loop(CallbackMod, State, {none, <<>>}, CallbackType)
     end.
 
+origin_check(_Origin, {origin, any}) ->
+    ok;
+origin_check(Actual, {origin, _Expected=Actual}) ->
+    ok;
+origin_check(Actual, {origin, Expected}) ->
+    Error = io_lib:format("Expected origin ~p but found ~p.",
+			  [Expected, Actual]),
+    {error, Error}.
+
 handshake(8, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
-    io:format("Version 8!~n",[]),
     Key = get_nonce_header(Arg#arg.headers),
     AcceptHash = hash_nonce(Key), 
     ["HTTP/1.1 101 Switching Protocols\r\n",
@@ -96,31 +116,126 @@ handshake(8, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
      "Sec-WebSocket-Accept: ", AcceptHash , "\r\n",
      "\r\n"].
 
-server_loop(CallbackMod, State = #ws_state{sock=Socket}, Acc) ->
-%    io:format("server loop~n",[]),
+loop(CallbackMod, WSState = #ws_state{sock=Socket}, Acc, CallbackType) ->
     receive
 	{tcp, Socket, FirstPacket} ->
-	    %io:format("Frame: ~p~n", [frame_info(DataFrame)]),
-	    FrameInfos = yaws_api:websocket_unframe(State, FirstPacket),
-%	    io:format("frameinfos: ~p~n", [FrameInfos]),
-%	    io:format("ws state: ~p~n", [NewState]),
-
-	    NewAcc = lists:foldl({CallbackMod, handle_message}, Acc, FrameInfos),
+	    FrameInfos = yaws_api:websocket_unframe(WSState, FirstPacket),
+	    case CallbackType of
+		basic ->
+		    {BasicMessages, NewAcc} = basic_messages(FrameInfos, Acc),
+		    io:format("callback ~p messages ~p~n", [CallbackMod, BasicMessages]),
+		    %todo: use return from callback to reply or otherwise.
+		    % right now we just print it to stdout, we dont reply.
+		    CallbackResults = lists:map({CallbackMod, handle_message}, BasicMessages),
+		    lists:map(handle_result_fun(WSState), CallbackResults);
+		advanced ->
+		    % TODO: use return from callback to reply or otherwise,
+		    % instead of callback calling yaws_api:send
+		    NewAcc = lists:foldl({CallbackMod, handle_message}, Acc, FrameInfos)
+	    end,
 	    Last = lists:last(FrameInfos),
-	    NewState = Last#ws_frame_info.ws_state,
+	    NewWSState = Last#ws_frame_info.ws_state,
 
-	    server_loop(CallbackMod, NewState, NewAcc);
+	    loop(CallbackMod, NewWSState, NewAcc, CallbackType);
 	{tcp_closed, Socket} ->
 	    io:format("Websocket closed. Terminating echo_server...~n");
-%	    fprof:trace(stop);
 	Any ->
-	    io:format("echo_server received msg:~p~n", [Any]),
-	    server_loop(CallbackMod, State, Acc)
+	    io:format("websocket server loop received msg:~p~n", [Any]),
+	    loop(CallbackMod, WSState, Acc, CallbackType)
     end.
 
+handle_result_fun(WSState) ->
+    fun(Result) ->
+	    case Result of
+		{reply, {Type, Data}} ->
+		    yaws_api:websocket_send(WSState, {Type, Data});
+		{noreply} ->
+		    ok
+	    end
+    end.
+
+basic_messages(FrameInfos, {FragType, BuffRemainder}=Acc) ->
+    io:format("basic messages ~p~n~p~n", [FrameInfos,Acc]),
+    {Messages, NewFragType, NewBuffRemainder}
+	= lists:foldl(fun handle_message/2, {[], FragType, BuffRemainder}, FrameInfos),
+    {Messages, {NewFragType, NewBuffRemainder}}.
+
+%% start of a fragmented message
+handle_message( #ws_frame_info{ fin=0, 
+				opcode=FragType, 
+				data=Data },
+		{Messages, none, <<>>}) ->
+    {Messages, FragType, Data};
+
+%% non-final continuation of a fragmented message
+handle_message( #ws_frame_info{ fin=0,
+				data=Data,
+				opcode=continuation},
+		{Messages, FragType, Acc}) ->
+    {Messages, FragType, <<Acc/binary,Data/binary>>};
+
+%% end of text fragmented message
+handle_message( #ws_frame_info{ fin=1, 
+				opcode=continuation, 
+				data=Data
+			      },
+		{Messages, text, Acc}) ->
+    Unfragged = <<Acc/binary, Data/binary>>,
+    NewMessage = {text, Unfragged},
+    {[NewMessage | Messages], none, <<>>};
+
+%% unfragmented text message
+handle_message( #ws_frame_info{opcode=text, data=Data},
+		{Messages, none, <<>>}) ->
+    io:format("new message ~p~n", [Data]),
+    NewMessage = {text, Data},
+    {[NewMessage | Messages], none, <<>>};
+
+%% end of binary fragmented message
+handle_message( #ws_frame_info{ fin=1, 
+				opcode=continuation, 
+				data=Data
+			      },
+		{Messages, binary, Acc}) ->
+    Unfragged = <<Acc/binary, Data/binary>>,
+    NewMessage = {binary, Unfragged},
+    {[NewMessage|Messages], none, <<>>};
+
+handle_message( #ws_frame_info{ opcode=binary, 
+				data=Data
+			      }, 
+		{Messages, none, <<>>}) ->
+    NewMessage = {binary, Data},
+    {[NewMessage|Messages], none, <<>>};
+
+handle_message( #ws_frame_info{ opcode=ping, 
+				data=Data,
+				ws_state=State}, 
+		AccStuff) ->
+    io:format("Replying pong to ping on behalf of basic callback module.~n",[]),
+    yaws_api:websocket_send(State, {pong, Data}),
+    AccStuff;
+
+handle_message(#ws_frame_info{opcode=pong}, AccStuff) ->
+    % A response to an unsolicited pong frame is not expected.
+    % http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08#section-4
+    io:format("ignoring unsolicited pong~n",[]),
+    AccStuff;
+
+handle_message(FrameInfo=#ws_frame_info{}, AccStuff) ->
+    io:format("WS Endpoint Ignoring message for basic callback. ~p~n~p~n",
+	      [FrameInfo, AccStuff]),
+    AccStuff.
+
+    
+
 ws_version(Headers) ->
-    case query_header("sec-websocket-version", Headers) of
-	"8" -> 8
+    VersionVal = query_header("sec-websocket-version", Headers),
+    io:format("Version header value: ~s~n",[VersionVal]),
+    case VersionVal of
+	"8" -> 8;
+	"13" -> 8 % treat 13 like 8. Right now 13 support is as good as that of 8,
+                  % according to autobahn 0.4.3
     end.
 
 buffer(Socket, Len, Buffered) ->
