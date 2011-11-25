@@ -150,7 +150,10 @@ handle_result_fun(WSState) ->
 		{reply, {Type, Data}} ->
 		    yaws_api:websocket_send(WSState, {Type, Data});
 		{noreply} ->
-		    ok
+		    ok;
+		{close, Reason} ->
+		    exit(Reason)
+
 	    end
     end.
 

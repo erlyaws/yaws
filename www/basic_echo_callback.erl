@@ -6,7 +6,15 @@
 
 -export([handle_message/1]).
 
+handle_message({text, <<"bye">>}) ->
+    io:format("User said bye.~n",
+	      []),
+    {close, normal};
+handle_message({text, <<"something">>}) ->
+    io:format("Some action without a reply~n",
+	      []),
+    {noreply};
 handle_message({text, Message}) ->
     io:format("basic echo handler got ~p~n",
 	      [Message]),
-    {reply, <<"yaws says ",Message/binary>>}.
+    {reply, {text, <<"yaws says ",Message/binary>>}}.
