@@ -1,6 +1,7 @@
 <erl>
 out(A) ->
     CallbackMod = advanced_echo_callback,
-    Opts = [{callback, advanced}],
+    InitialState = {state, none, <<>>},
+    Opts = [{callback, {advanced, InitialState}}],
     {websocket, CallbackMod, Opts}.
 </erl>

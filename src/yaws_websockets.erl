@@ -91,11 +91,17 @@ handshake(Arg, SC, CallbackMod, Opts) ->
 	    gen_tcp:send(CliSock, Handshake), % TODO: use the yaws way of supporting normal 
                                               % and ssl sockets
 	    {callback, CallbackType} = lists:keyfind(callback, 1, Opts),
-	    State = #ws_state{ sock = CliSock, 
+	    WSState = #ws_state{ sock = CliSock, 
 			       vsn  = ProtocolVersion,
 			       frag_type = none
 			     },
-	    loop(CallbackMod, State, {none, <<>>}, CallbackType)
+	    CallbackState = case CallbackType of
+			       basic ->
+				    {none, <<>>};
+				{advanced, InitialState} ->
+				    InitialState
+			    end,
+	    loop(CallbackMod, WSState, CallbackState, CallbackType)
     end.
 
 origin_check(_Origin, {origin, any}) ->
@@ -116,29 +122,32 @@ handshake(8, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
      "Sec-WebSocket-Accept: ", AcceptHash , "\r\n",
      "\r\n"].
 
-loop(CallbackMod, WSState = #ws_state{sock=Socket}, Acc, CallbackType) ->
+loop(CallbackMod, WSState = #ws_state{sock=Socket}, CallbackState, CallbackType) ->
     receive
 	{tcp, Socket, FirstPacket} ->
 	    FrameInfos = yaws_api:websocket_unframe(WSState, FirstPacket),
 	    case CallbackType of
 		basic ->
-		    {BasicMessages, NewAcc} = basic_messages(FrameInfos, Acc),
+		    {BasicMessages, NewCallbackState} = 
+			basic_messages(FrameInfos, CallbackState),
 		    CallbackResults = lists:map({CallbackMod, handle_message}, BasicMessages),
 		    lists:map(handle_result_fun(WSState), CallbackResults);
-		advanced ->
+		{advanced,_} ->
 		    % TODO: use return from callback to reply or otherwise,
 		    % instead of callback calling yaws_api:send
-		    NewAcc = lists:foldl(do_callback_fun(WSState, CallbackMod), Acc, FrameInfos)
+		    NewCallbackState = lists:foldl(do_callback_fun(WSState, CallbackMod), 
+						   CallbackState, 
+						   FrameInfos)
 	    end,
 	    Last = lists:last(FrameInfos),
 	    NewWSState = Last#ws_frame_info.ws_state,
 
-	    loop(CallbackMod, NewWSState, NewAcc, CallbackType);
+	    loop(CallbackMod, NewWSState, NewCallbackState, CallbackType);
 	{tcp_closed, Socket} ->
 	    io:format("Websocket closed. Terminating echo_server...~n");
 	Any ->
 	    io:format("websocket server loop received msg:~p~n", [Any]),
-	    loop(CallbackMod, WSState, Acc, CallbackType)
+	    loop(CallbackMod, WSState, CallbackState, CallbackType)
     end.
 
 handle_result_fun(WSState) ->
@@ -155,23 +164,22 @@ handle_result_fun(WSState) ->
     end.
 
 do_callback_fun(WSState, CallbackMod) ->
-    fun(FrameInfo, AccStuff) ->
-	    case CallbackMod:handle_message(FrameInfo, AccStuff) of
-		{reply, {Type, Data}, NewAccStuff} ->
+    fun(FrameInfo, CallbackState) ->
+	    case CallbackMod:handle_message(FrameInfo, CallbackState) of
+		{reply, {Type, Data}, NewCallbackState} ->
 		    yaws_api:websocket_send(WSState, {Type, Data}),
-		    NewAccStuff;
-		{noreply, NewAccStuff} ->
-		    NewAccStuff;
+		    NewCallbackState;
+		{noreply, NewCallbackState} ->
+		    NewCallbackState;
 		{close, Reason} ->
 		    exit(Reason)
 	    end
     end.
 
-basic_messages(FrameInfos, {FragType, BuffRemainder}=Acc) ->
-    io:format("basic messages ~p~n~p~n", [FrameInfos,Acc]),
-    {Messages, NewFragType, NewBuffRemainder}
-	= lists:foldl(fun handle_message/2, {[], FragType, BuffRemainder}, FrameInfos),
-    {Messages, {NewFragType, NewBuffRemainder}}.
+basic_messages(FrameInfos, {FragType, FragAcc}) ->
+    {Messages, NewFragType, NewFragAcc}
+	= lists:foldl(fun handle_message/2, {[], FragType, FragAcc}, FrameInfos),
+    {Messages, {NewFragType, NewFragAcc}}.
 
 %% start of a fragmented message
 handle_message( #ws_frame_info{ fin=0, 
@@ -184,23 +192,22 @@ handle_message( #ws_frame_info{ fin=0,
 handle_message( #ws_frame_info{ fin=0,
 				data=Data,
 				opcode=continuation},
-		{Messages, FragType, Acc}) ->
-    {Messages, FragType, <<Acc/binary,Data/binary>>};
+		{Messages, FragType, FragAcc}) ->
+    {Messages, FragType, <<FragAcc/binary,Data/binary>>};
 
 %% end of text fragmented message
 handle_message( #ws_frame_info{ fin=1, 
 				opcode=continuation, 
 				data=Data
 			      },
-		{Messages, text, Acc}) ->
-    Unfragged = <<Acc/binary, Data/binary>>,
+		{Messages, text, FragAcc}) ->
+    Unfragged = <<FragAcc/binary, Data/binary>>,
     NewMessage = {text, Unfragged},
     {[NewMessage | Messages], none, <<>>};
 
 %% unfragmented text message
 handle_message( #ws_frame_info{opcode=text, data=Data},
 		{Messages, none, <<>>}) ->
-    io:format("new message ~p~n", [Data]),
     NewMessage = {text, Data},
     {[NewMessage | Messages], none, <<>>};
 
@@ -209,8 +216,8 @@ handle_message( #ws_frame_info{ fin=1,
 				opcode=continuation, 
 				data=Data
 			      },
-		{Messages, binary, Acc}) ->
-    Unfragged = <<Acc/binary, Data/binary>>,
+		{Messages, binary, FragAcc}) ->
+    Unfragged = <<FragAcc/binary, Data/binary>>,
     NewMessage = {binary, Unfragged},
     {[NewMessage|Messages], none, <<>>};
 
@@ -224,21 +231,21 @@ handle_message( #ws_frame_info{ opcode=binary,
 handle_message( #ws_frame_info{ opcode=ping, 
 				data=Data,
 				ws_state=State}, 
-		AccStuff) ->
+		Acc) ->
     io:format("Replying pong to ping on behalf of basic callback module.~n",[]),
     yaws_api:websocket_send(State, {pong, Data}),
-    AccStuff;
+    Acc;
 
-handle_message(#ws_frame_info{opcode=pong}, AccStuff) ->
+handle_message(#ws_frame_info{opcode=pong}, Acc) ->
     % A response to an unsolicited pong frame is not expected.
     % http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol-08#section-4
     io:format("ignoring unsolicited pong~n",[]),
-    AccStuff;
+    Acc;
 
-handle_message(FrameInfo=#ws_frame_info{}, AccStuff) ->
+handle_message(FrameInfo=#ws_frame_info{}, Acc) ->
     io:format("WS Endpoint Ignoring message for basic callback. ~p~n~p~n",
-	      [FrameInfo, AccStuff]),
-    AccStuff.
+	      [FrameInfo, Acc]),
+    Acc.
 
     
 
