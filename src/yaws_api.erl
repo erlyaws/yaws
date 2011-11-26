@@ -37,8 +37,7 @@
          stream_chunk_end/1]).
 -export([stream_process_deliver/2, stream_process_deliver_chunk/2,
          stream_process_deliver_final_chunk/2, stream_process_end/2]).
--export([websocket_send/2, websocket_receive/1,
-         websocket_unframe/2, websocket_setopts/2]).
+-export([websocket_send/2]).
 -export([new_cookie_session/1, new_cookie_session/2, new_cookie_session/3,
          cookieval_to_opaque/1, request_url/1,
          print_cookie_sessions/0,
@@ -976,41 +975,9 @@ stream_process_end(Sock, YawsPid) ->
     YawsPid ! endofstreamcontent.
 
 
-websocket_send(#ws_state{sock=Socket, vsn=ProtoVsn}, {Type, Data}) ->
-    DataFrame = yaws_websockets:frame(ProtoVsn, Type,  Data),
-    case Socket of
-	{sslsocket,_,_} ->
-	    ssl:send(Socket, DataFrame);
-	_ ->
-	    gen_tcp:send(Socket, DataFrame)
-    end.
-
-% block until a packet is received on Socket, then
-% unframe and return the frame or frames unframed
-% by yaws_websockets:unframe.
-%
-% This is for WebSockets expected to be in {active, false} mode
-% when this function returns.
-websocket_receive(State = #ws_state{sock=Socket}) ->
-    FirstPacket = case Socket of
-	    {sslsocket,_,_} ->
-		ssl:recv(Socket, 0);
-	    _ ->
-		gen_tcp:recv(Socket, 0)
-	end,
-    yaws_websockets:unframe(State, FirstPacket).
-
-% This is for WebSockets expected to be in {active, once} mode
-% when this function returns.
-websocket_unframe(State, FirstPacket) ->
-    Frames = yaws_websockets:unframe(State, FirstPacket),
-    websocket_setopts(State, [{active, once}]),
-    Frames.
-
-websocket_setopts(#ws_state{sock=Socket={sslsocket,_,_}}, Opts) ->
-    ssl:setopts(Socket, Opts);
-websocket_setopts(#ws_state{sock=Socket}, Opts) ->
-    inet:setopts(Socket, Opts).
+%% Pid must the the process in control of the websocket connection.
+websocket_send(Pid, {Type, Data}) ->
+    yaws_websockets:send(Pid, {Type, Data}).
 
 
 %% Return new cookie string

@@ -16,7 +16,7 @@
 -include_lib("kernel/include/file.hrl").
 
 %% API
--export([unframe/2, frame/3, start/3]).
+-export([start/3, send/2]).
 
 %% Exported for spawn
 -export([receive_control/4]).
@@ -45,6 +45,18 @@ start(Arg, CallbackMod, Opts) ->
 	    OwnerPid ! {error, Reason},
 	    exit({websocket, Reason})
     end.
+
+send(#ws_state{sock=Socket, vsn=ProtoVsn}, {Type, Data}) ->
+    DataFrame = frame(ProtoVsn, Type,  Data),
+    case Socket of
+	{sslsocket,_,_} ->
+	    ssl:send(Socket, DataFrame);
+	_ ->
+	    gen_tcp:send(Socket, DataFrame)
+    end;
+
+send(Pid, {Type, Data}) ->
+    Pid ! {send, {Type, Data}}.
 
 preprocess_opts(GivenOpts) ->
     Fun = fun({Key, Default}, Opts) ->
@@ -124,8 +136,11 @@ handshake(8, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
 
 loop(CallbackMod, WSState = #ws_state{sock=Socket}, CallbackState, CallbackType) ->
     receive
+	{send, {Type, Data}} ->
+	    send(WSState, {Type, Data}),
+	    loop(CallbackMod, WSState, CallbackState, CallbackType);
 	{tcp, Socket, FirstPacket} ->
-	    FrameInfos = yaws_api:websocket_unframe(WSState, FirstPacket),
+	    FrameInfos = unframe_active_once(WSState, FirstPacket),
 	    case CallbackType of
 		basic ->
 		    {BasicMessages, NewCallbackState} = 
@@ -133,8 +148,6 @@ loop(CallbackMod, WSState = #ws_state{sock=Socket}, CallbackState, CallbackType)
 		    CallbackResults = lists:map({CallbackMod, handle_message}, BasicMessages),
 		    lists:map(handle_result_fun(WSState), CallbackResults);
 		{advanced,_} ->
-		    % TODO: use return from callback to reply or otherwise,
-		    % instead of callback calling yaws_api:send
 		    NewCallbackState = lists:foldl(do_callback_fun(WSState, CallbackMod), 
 						   CallbackState, 
 						   FrameInfos)
@@ -154,7 +167,7 @@ handle_result_fun(WSState) ->
     fun(Result) ->
 	    case Result of
 		{reply, {Type, Data}} ->
-		    yaws_api:websocket_send(WSState, {Type, Data});
+		    send(WSState, {Type, Data});
 		{noreply} ->
 		    ok;
 		{close, Reason} ->
@@ -167,7 +180,7 @@ do_callback_fun(WSState, CallbackMod) ->
     fun(FrameInfo, CallbackState) ->
 	    case CallbackMod:handle_message(FrameInfo, CallbackState) of
 		{reply, {Type, Data}, NewCallbackState} ->
-		    yaws_api:websocket_send(WSState, {Type, Data}),
+		    send(WSState, {Type, Data}),
 		    NewCallbackState;
 		{noreply, NewCallbackState} ->
 		    NewCallbackState;
@@ -233,7 +246,7 @@ handle_message( #ws_frame_info{ opcode=ping,
 				ws_state=State}, 
 		Acc) ->
     io:format("Replying pong to ping on behalf of basic callback module.~n",[]),
-    yaws_api:websocket_send(State, {pong, Data}),
+    send(State, {pong, Data}),
     Acc;
 
 handle_message(#ws_frame_info{opcode=pong}, Acc) ->
@@ -355,6 +368,11 @@ ws_frame_info_secondary(Socket, Len1, Rest) ->
     <<Payload:Len/binary, Excess/binary>> = buffer(Socket, Len, Rest2),
     {ws_frame_info_secondary, Len, MaskingKey, Payload, Excess}.
 
+unframe_active_once(State, FirstPacket) ->
+    Frames = unframe(State, FirstPacket),
+    websocket_setopts(State, [{active, once}]),
+    Frames.
+
 % Returns all the WebSocket frames fully or partially contained in FirstPacket,
 % reading exactly as many more bytes from Socket as are needed to finish unframing
 % the last frame partially included in FirstPacket, if needed.
@@ -390,6 +408,11 @@ unframe_one(State = #ws_state{vsn=8}, FirstPacket) ->
 	Fail ->
 	    Fail
     end.
+
+websocket_setopts(#ws_state{sock=Socket={sslsocket,_,_}}, Opts) ->
+    ssl:setopts(Socket, Opts);
+websocket_setopts(#ws_state{sock=Socket}, Opts) ->
+    inet:setopts(Socket, Opts).
 
 is_control_op(Op) ->
     atom_to_opcode(Op) > 7.
