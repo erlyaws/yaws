@@ -123,15 +123,12 @@ loop(CallbackMod, WSState = #ws_state{sock=Socket}, Acc, CallbackType) ->
 	    case CallbackType of
 		basic ->
 		    {BasicMessages, NewAcc} = basic_messages(FrameInfos, Acc),
-		    io:format("callback ~p messages ~p~n", [CallbackMod, BasicMessages]),
-		    %todo: use return from callback to reply or otherwise.
-		    % right now we just print it to stdout, we dont reply.
 		    CallbackResults = lists:map({CallbackMod, handle_message}, BasicMessages),
 		    lists:map(handle_result_fun(WSState), CallbackResults);
 		advanced ->
 		    % TODO: use return from callback to reply or otherwise,
 		    % instead of callback calling yaws_api:send
-		    NewAcc = lists:foldl({CallbackMod, handle_message}, Acc, FrameInfos)
+		    NewAcc = lists:foldl(do_callback_fun(WSState, CallbackMod), Acc, FrameInfos)
 	    end,
 	    Last = lists:last(FrameInfos),
 	    NewWSState = Last#ws_frame_info.ws_state,
@@ -154,6 +151,19 @@ handle_result_fun(WSState) ->
 		{close, Reason} ->
 		    exit(Reason)
 
+	    end
+    end.
+
+do_callback_fun(WSState, CallbackMod) ->
+    fun(FrameInfo, AccStuff) ->
+	    case CallbackMod:handle_message(FrameInfo, AccStuff) of
+		{reply, {Type, Data}, NewAccStuff} ->
+		    yaws_api:websocket_send(WSState, {Type, Data}),
+		    NewAccStuff;
+		{noreply, NewAccStuff} ->
+		    NewAccStuff;
+		{close, Reason} ->
+		    exit(Reason)
 	    end
     end.
 
