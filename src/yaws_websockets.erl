@@ -15,6 +15,8 @@
 
 -include_lib("kernel/include/file.hrl").
 
+-define(MAX_PAYLOAD, 16777216). %16MB
+
 %% API
 -export([start/3, send/2]).
 
@@ -334,7 +336,6 @@ check_reserved_opcode(Unframed) ->
 
 ws_frame_info(#ws_state{sock=Socket}, 
               <<Fin:1, Rsv:3, Opcode:4, Masked:1, Len1:7, Rest/binary>>) ->
-%    debug(val,"ws_frame_info"),
     case check_control_frame(Len1, Opcode, Fin) of
         ok ->
             {ws_frame_info_secondary, Length, MaskingKey, Payload, Excess} 
@@ -352,7 +353,6 @@ ws_frame_info(#ws_state{sock=Socket},
     end;
 
 ws_frame_info(State = #ws_state{sock=Socket}, FirstPacket) ->
-%    debug(val, "ws_frame_info input was short, buffering..."),
     ws_frame_info(State, buffer(Socket, 2,FirstPacket)).
             
 ws_frame_info_secondary(Socket, Len1, Rest) ->
@@ -362,11 +362,18 @@ ws_frame_info_secondary(Socket, Len1, Rest) ->
         127 ->
             <<Len:64, MaskingKey:4/binary, Rest2/binary>> = buffer(Socket, 12, Rest);
         Len ->
-%           debug(val, {'Len', Len}),
             <<MaskingKey:4/binary, Rest2/binary>> = buffer(Socket, 4, Rest)
     end,
-    <<Payload:Len/binary, Excess/binary>> = buffer(Socket, Len, Rest2),
-    {ws_frame_info_secondary, Len, MaskingKey, Payload, Excess}.
+    if
+	Len > ?MAX_PAYLOAD ->
+	    Error = io_lib:format("Payload length ~p longer than max allowed of ~p",
+				  [Len, ?MAX_PAYLOAD]),
+	    io:format(Error, []),
+	    exit({error, Error});
+	true ->
+	    <<Payload:Len/binary, Excess/binary>> = buffer(Socket, Len, Rest2),
+	    {ws_frame_info_secondary, Len, MaskingKey, Payload, Excess}
+    end.
 
 unframe_active_once(State, FirstPacket) ->
     Frames = unframe(State, FirstPacket),
