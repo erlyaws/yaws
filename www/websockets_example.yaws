@@ -15,8 +15,11 @@ html_body(WebSocketLocation) ->
 "<html>
 <head> 
   <title>Basic WebSocket Example</title> 
-  <script type=\"text/javascript\"> 
-     if (!window.WebSocket)
+  <script type=\"text/javascript\">
+     var WS = false;
+     if (window.WebSocket) WS = WebSocket;
+     if (!WS && window.MozWebSocket) WS = MozWebSocket;
+     if (!WS)
         alert(\"WebSocket not supported by this browser\");
     
     // Get an Element
@@ -26,7 +29,7 @@ html_body(WebSocketLocation) ->
     
     var client = {
         connect: function(){
-         this._ws=new WebSocket(\"ws://" ++ WebSocketLocation ++ "\");
+         this._ws=new WS(\"ws://" ++ WebSocketLocation ++ "\");
          this._ws.onopen=this._onopen;
          this._ws.onmessage=this._onmessage;
          this._ws.onclose=this._onclose;
