@@ -101,7 +101,7 @@
 -export([sconf_to_srvstr/1,
          redirect_host/2, redirect_port/1,
          redirect_scheme_port/1, redirect_scheme/1,
-         tmpdir/0, tmpdir/1, split_at/2,
+         tmpdir/0, tmpdir/1, mktemp/1, split_at/2,
          id_dir/1, ctl_file/1]).
 
 
@@ -2249,6 +2249,53 @@ tmpdir(DefaultTmpDir) ->
         _ ->
 	    DefaultTmpDir
     end.
+
+%% mktemp function borrowed from Klacke's misc module
+%% Modified to use tmpdir/1 so it works on Windows too.
+%% Note that mktemp/2 could be exported too, but no Yaws
+%% code needs it, yet anyway.
+mktemp(Template) ->
+   mktemp(Template, file).
+
+mktemp(Template, Ret) ->
+   Tdir = tmpdir("/tmp"),
+   Max = 1000,
+   mktemp(Tdir, Template, Ret, 0, Max, "").
+
+mktemp(Dir, Template, Ret, I, Max, Suffix) when I < Max ->
+   {X,Y,Z} = now(),
+   PostFix = integer_to_list(X) ++ "-" ++ integer_to_list(Y) ++ "-" ++
+             integer_to_list(Z),
+   F = filename:join(Dir, Template ++ [$_ | PostFix] ++ Suffix),
+   filelib:ensure_dir(F),
+   case file:open(F, [read, raw]) of
+       {error, enoent} when Ret == file ->
+           {ok, F};
+       {error, enoent} when Ret == fd ->
+           case file:open(F, [read, write, raw]) of
+               {ok, Fd} ->
+                   file:delete(F),
+                   {ok, Fd};
+               Err ->
+                   Err
+           end;
+       {error, enoent} when Ret == binfd ->
+           case file:open(F, [read, write, raw, binary]) of
+               {ok, Fd} ->
+                   file:delete(F),
+                   {ok, Fd};
+               Err ->
+                   Err
+           end;
+       {ok, Fd} ->
+           file:close(Fd),
+           mktemp(Dir, Template, Ret, I+1, Max, Suffix);
+       _Err ->
+           mktemp(Dir, Template, Ret, I+1, Max, Suffix)
+   end;
+mktemp(_Dir, _Template, _Ret, _I, _Max, _Suffix) ->
+   {error, too_many}.
+
 
 %% This feature is usable together with
 %% privbind and authbind on linux

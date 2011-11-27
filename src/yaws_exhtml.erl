@@ -45,7 +45,7 @@ sformat() -> % test
 check_xhtml(XHTMLContent) when is_list(XHTMLContent) ->
     check_xhtml(list_to_binary(XHTMLContent));
 check_xhtml(XHTMLContent) when is_binary(XHTMLContent) ->
-    {ok, Filename} = misc:mktemp("confd"),
+    {ok, Filename} = yaws:mktemp("confd"),
     ok = file:write_file(Filename, XHTMLContent),
     DTD = filename:join(code:priv_dir(webgui), "xhtml1-strict.dtd"),
     Cmd = "xmllint --dtdvalid "++DTD++" -noout -nonet "++Filename++" 2>&1",
