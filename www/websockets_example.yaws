@@ -73,6 +73,9 @@ html_body(WebSocketLocation) ->
 </head> 
 <body> 
   <h1>Basic Echo Example</h1> 
+  <ul><li>Sending \"bye\" closes the connection.</li>
+      <li>Sending \"say hi later\" sends \"hi there!\" asynchronously.</li>
+      <li>Sending \"something\" does nothing.</li></ul>
   <div id=\"msgs\"></div> 
   <div id=\"connect\"> 
      <input id='cA' class='button' type='submit' name='connect' value='Connect'/> 
