@@ -349,14 +349,12 @@ handle_info(secs3, State) ->
 handle_info(minute10, State) ->
     yaws_logger:rotate(State#state.log_wrap_size),
 
-    Dir = State#state.dir,
-    E = filename:join([Dir, "report.log"]),
-    case file:read_file_info(E) of
-        {ok, FI} when  State#state.log_wrap_size > 0,
-                       FI#file_info.size > State#state.log_wrap_size,
+    case gen_event:call(error_logger, yaws_log_file_h, size, infinity) of
+        {ok, Size} when  State#state.log_wrap_size > 0,
+                       Size > State#state.log_wrap_size,
                        State#state.copy_errlog == true ->
             gen_event:call(error_logger, yaws_log_file_h, wrap, infinity);
-        {error,enoent} ->
+        {error, enoent} ->
             gen_event:call(error_logger, yaws_log_file_h, reopen, infinity);
         _ ->
             ok
