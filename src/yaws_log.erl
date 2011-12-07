@@ -351,8 +351,7 @@ handle_info(minute10, State) ->
 
     case gen_event:call(error_logger, yaws_log_file_h, size, infinity) of
         {ok, Size} when  State#state.log_wrap_size > 0,
-                       Size > State#state.log_wrap_size,
-                       State#state.copy_errlog == true ->
+                       Size > State#state.log_wrap_size ->
             gen_event:call(error_logger, yaws_log_file_h, wrap, infinity);
         {error, enoent} ->
             gen_event:call(error_logger, yaws_log_file_h, reopen, infinity);
