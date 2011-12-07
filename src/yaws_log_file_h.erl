@@ -14,6 +14,7 @@
 
 -module(yaws_log_file_h).
 -behaviour(gen_event).
+-include_lib("kernel/include/file.hrl").
 
 -export([init/1,
          handle_event/2, handle_call/2, handle_info/2,
@@ -46,6 +47,14 @@ handle_call(wrap, {Fd, File, Prev}) ->
     file:rename(File, Old),
     {ok, Fd2} = file:open(File, [write,append]),
     {ok, ok, {Fd2, File, Prev}};
+
+handle_call(size, {Fd, File, Prev}) ->
+    file:sync(Fd),
+    Return = case file:read_file_info(File) of
+        {ok, FI} -> {ok, FI#file_info.size};
+        Error -> Error
+    end,
+    {ok, Return, {Fd, File, Prev}};
 
 handle_call(X, S) ->
     error_logger_file_h:handle_call(X,S).
