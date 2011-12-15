@@ -10,7 +10,7 @@ all debug:	../bin/yaws yaws.conf
 
 
 local_install:	../bin/yaws
-	VARDIR='$(VARDIR)' ./local-install true
+	VARDIR="${HOME}/var" ./local-install true
 
 yaws.conf:
 	YAWSDIR='$(PREFIX)/lib/yaws' LOGDIR='$(PREFIX)/var/log/yaws' \
