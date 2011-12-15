@@ -139,10 +139,10 @@ typedef union {
     }* result;
 } Buffer;
 
-static size_t set_error_buffer(Buffer* b, int socket_fd, int err)
+static ErlDrvSizeT set_error_buffer(Buffer* b, int socket_fd, int err)
 {
     char* s, *t;
-    size_t result_size = sizeof *(b->result);
+    ErlDrvSizeT result_size = sizeof *(b->result);
     memset(b->result, 0, result_size);
     put_int32(socket_fd, &(b->result->out_fd));
     s = erl_errno_id(err);
