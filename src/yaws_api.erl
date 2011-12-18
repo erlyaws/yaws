@@ -354,7 +354,7 @@ parse_arg_value([C|Line], Key, Value, Quote, _) ->
 %%
 
 make_parse_line_reply(Key, Value, Rest) ->
-    {{list_to_atom(yaws:funreverse(Key, {yaws, to_lowerchar})),
+    {{list_to_atom(yaws:funreverse(Key, fun yaws:to_lowerchar/1)),
       lists:reverse(Value)}, Rest}.
 
 
