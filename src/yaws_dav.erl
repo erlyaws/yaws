@@ -60,8 +60,8 @@ put(SC, ARG) ->
                                 ok;
                             PPS < Int_len, CT == multipart ->
                                 %% FIXME: handle this
-                                {partial,
-                                 store_client_data(Fd,CliSock, PPS, SSL)};
+                                %% {partial,
+                                 store_client_data(Fd,CliSock, PPS, SSL); % };
                             true ->
                                 store_client_data(Fd, CliSock, Int_len, SSL)
                         end;
