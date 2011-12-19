@@ -67,3 +67,4 @@ doc/yaws_head.pdf
 ebin/yaws.appup
 etc
 yaws_logs
+rel/yaws
