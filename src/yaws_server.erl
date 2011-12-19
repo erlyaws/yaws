@@ -45,7 +45,8 @@
          'TRACE'/3,
          'OPTIONS'/3,
          'PUT'/3,
-         'DELETE'/3]).
+         'DELETE'/3,
+         'PATCH'/3]).
 
 -import(lists, [member/2, foreach/2, map/2,
                 flatten/1, flatmap/2, reverse/1]).
@@ -1463,10 +1464,13 @@ not_implemented(CliSock, Req, Head) ->
                                    ?format_record(Head, headers)]),
     body_method(CliSock, Req, Head).
 
-
 'DELETE'(CliSock, Req, Head) ->
     no_body_method(CliSock, Req, Head).
 
+'PATCH'(CliSock, Req, Head) ->
+    ?Debug("PATCH Req=~p~n H=~p~n", [?format_record(Req, http_request),
+                                     ?format_record(Head, headers)]),
+    body_method(CliSock, Req, Head).
 
 %%%
 %%% WebDav specifics: PROPFIND, MKCOL,....
@@ -1565,6 +1569,14 @@ make_arg(CliSock, Head, Req, Bin) ->
     apply(SC#sconf.arg_rewrite_mod, arg_rewrite, [ARG]).
 
 
+%% PATCH is not an extension method, but at this time the Erlang HTTP
+%% request line parser doesn't know about it so it comes back to us as a
+%% string rather than an atom, which causes call_method to call
+%% handle_extension_method. If and when the parser is updated to accept
+%% PATCH, we'll get it back as an atom and this following clause will be
+%% unnecessary.
+handle_extension_method("PATCH", CliSock, Req, Head) ->
+    'PATCH'(CliSock, Req#http_request{method = 'PATCH'}, Head);
 handle_extension_method("PROPFIND", CliSock, Req, Head) ->
     'PROPFIND'(CliSock, Req, Head);
 handle_extension_method("MKCOL", CliSock, Req, Head) ->
