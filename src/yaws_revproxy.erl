@@ -128,7 +128,8 @@ connect_url(URL, _SC) ->
     %% FIXME, do ssl:connect here if is_ssl(SC)
     %% as it is now, SSL doesn't work at all here
     gen_tcp:connect(URL#url.host, Port, [{active, false},
-                                         {packet, http}]).
+                                         {packet, http},
+                                         {packet_size, 16#4000}]).
 
 
 
@@ -205,7 +206,7 @@ set_sock_mode(PS) ->
     S = PS#psock.s,
     case PS#psock.mode of
         expectheaders ->
-            inet:setopts(S, [{packet, http}]);
+            inet:setopts(S, [{packet, http}, {packet_size, 16#4000}]);
         expectchunked ->
             inet:setopts(S, [binary, {packet, line}]);
         expect_nl_before_chunked ->
