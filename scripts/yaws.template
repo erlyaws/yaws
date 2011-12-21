@@ -10,10 +10,11 @@ to_erl="%to_erl%"
 # run /etc/rc scripts without HOME being set
 if [ -z "$HOME" ]; then
     if [ `id -u` = 0 -a -d /root ]; then
-        export HOME=/root
+        HOME=/root
     else
-        export HOME=/tmp
+        HOME=/tmp
     fi
+    export HOME
 fi
 
 case `uname` in
