@@ -4,7 +4,7 @@
 %%
 %% rebar: Erlang Build Tools
 %%
-%% Copyright (c) 2011 Dmitry Demeschuk
+%% Copyright (c) 2011 Dmitry Demeshchuk
 %% Copyright (c) 2011 Tuncer Ayaz
 %%
 %% Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -34,18 +34,15 @@
 %% ===================================================================
 
 pre_generate(_, _) ->
-    %% Create symlinks to the current directory in the ?FAKE_LIB_DIR
-    %% directory to include the root application to the release. Works
-    %% for UNIX systems only.
-    case os:type() of
-        {unix, _} -> maybe_symlink_root_dir();
-        _ -> ok
-    end.
+    maybe_symlink_root_dir().
 
 post_generate(_, _) ->
     case has_symlink_dir() of
-        {true, SymlinkDir} -> rebar_file_utils:rm_rf(SymlinkDir);
-        false -> ok
+        {true, SymlinkDir} ->
+            ok = rebar_file_utils:rm_rf(SymlinkDir),
+            ok = file:del_dir(fake_lib_dir());
+        false ->
+            ok
     end.
 
 %% ===================================================================
@@ -53,38 +50,53 @@ post_generate(_, _) ->
 %% ===================================================================
 
 -define(FMT(Str, Args), lists:flatten(io_lib:format(Str, Args))).
--define(FAKE_LIB_DIR, "fake_lib_dir").
--define(FAKE_LIB_DIR2, "../fake_lib_dir").
 
 maybe_symlink_root_dir() ->
     case rebar_app_utils:is_app_dir("..") of
-        {true, RootAppSrc} ->
-            RootApp = rebar_app_utils:app_name(RootAppSrc),
-            SymlinkDir = filename:join(["..", ?FAKE_LIB_DIR, RootApp]),
+        {true, RootAppFile} ->
+            RootApp = rebar_app_utils:app_name(RootAppFile),
+            LibDir = fake_lib_dir(),
+            SymlinkDir = filename:join([LibDir, RootApp]),
             case filelib:is_dir(SymlinkDir) of
                 false ->
-                    rebar_utils:sh(?FMT("mkdir -p ~s", [SymlinkDir]), []);
+                    ok = filelib:ensure_dir(filename:join(SymlinkDir, "dummy"));
                 true ->
                     ok
             end,
-            Files = [F || F <- filelib:wildcard("../*"), F =/= ?FAKE_LIB_DIR2],
-            [begin
-                 Filename = filename:basename(File),
-                 Source = filename:absname(filename:join([File])),
-                 Target = filename:join([SymlinkDir, Filename]),
-                 rebar_utils:sh(?FMT("ln -Fs ~s ~s", [Source, Target]), [])
-             end
-             || File <- Files],
+            Files = [F || F <- filelib:wildcard("../*"), F =/= LibDir],
+            make_links(SymlinkDir, Files),
             ok;
         false ->
             ok
     end.
 
+fake_lib_dir() ->
+    filename:join("..", "fake_lib_dir").
+
+make_links(SymlinkDir, Files) ->
+    lists:foreach(
+      fun(File) ->
+              Filename = filename:basename(File),
+              Existing = filename:absname(filename:join([File])),
+              New = filename:join([SymlinkDir, Filename]),
+              ok = make_symlink(Existing, New)
+      end, Files).
+
+make_symlink(Existing, New) ->
+    case filelib:is_dir(New) of
+        true ->
+            ok = file:delete(New);
+        false ->
+            ok
+    end,
+    file:make_symlink(Existing, New).
+
 has_symlink_dir() ->
     case rebar_app_utils:is_app_dir("..") of
-        {true, RootAppSrc} ->
-            RootApp = rebar_app_utils:app_name(RootAppSrc),
-            SymlinkDir = filename:join(["..", ?FAKE_LIB_DIR, RootApp]),
+        {true, RootAppFile} ->
+            RootApp = rebar_app_utils:app_name(RootAppFile),
+            LibDir = fake_lib_dir(),
+            SymlinkDir = filename:join([LibDir, RootApp]),
             case filelib:is_dir(SymlinkDir) of
                 true -> {true, SymlinkDir};
                 false -> false
