@@ -1,3 +1,22 @@
+Fri Dec 23 22:09:03 CET 2011 Yaws 1.92
+Minor release,
+changes for OS X Lion for build and test (steve)
+Incorporation of various fixes from Klarna and Rickard Carlsson, makeing  yaws_server upgrade-friendly and work with yaws --check (steve)
+allow functions to be specified as values in ehtml (steve)
+add config setting for acceptor pool size (steve)
+tex/doc work (steve)
+Populate soap_srv_mods field in yaws:setup_gconf/2 Essien Ita Essien
+don't setup dirs in embeddded mode (klacke)
+listen opts must be passed also to SSL sockets, Bug discovered and fixed by per Hedeland
+fix expires header time when crossing DST boundary (steve)
+fix CGI redirect HTTP status bug (steve)
+Lots of rebar/reltool work - steve/Tuncer
+Allow to pass options to erlsom - Willem de Jong 
+R15B compat work - Tuncer
+update WebSockets implementation to support RFC 6455 - JD Bothma
+add support for HTTP PATCH (RFC 5789) - steve
+handle long HTTP header lines in R15B - steve 
+
 Tue Aug  2 15:16:53 CEST 2011 Yaws 1.91
 Minor release, with mostly small bugfixes, many tests added.
 Added support to generate and check strict xhtml output (klacke)
