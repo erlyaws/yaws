@@ -79,27 +79,14 @@ format(Mode, [{Tag, Body}|Rest], Value2StringF, N, Indent) ->
 format(Mode, [{Tag, Attrs, Body}|Rest], Value2StringF, N, Indent) ->
     TagString = lowercase(tag_string(Tag)),
     case {Mode, block_level(TagString), Body} of
-	%% Empty block element in a block element.
-%	{_, yes, []} ->
-%	    %%io:format("EMPTY BLOCK IN BLOCK: ~p: ~p~n", [Tag, Mode]),
-%	    [$\n, Indent, $<, TagString,
-%	     format_attrs(Value2StringF, Attrs), $/, $>|
-%	     format(Mode, Rest, Value2StringF, N, Indent)];
-        %% Empty inline element first in block.
         {first_in_block, no, []} ->
-            %%io:format("EMPTY INLINE FIRST IN BLOCK: ~p: ~p~n", [Tag, Mode]),
-	    [$\n, Indent, $<, TagString, format_attrs(Value2StringF, Attrs), $>, $<, $/, TagString, $>|format(Mode, Rest, Value2StringF, N, Indent)];
-%          [$\n, Indent, $<, TagString, format_attrs(Value2StringF, Attrs),
-%           $/, $>|format(Mode, Rest, Value2StringF, N, Indent)];
-        %% Empty inline element in block.
+	    [$\n, Indent, $<, TagString, 
+             format_attrs(Value2StringF, Attrs), $>, $<, $/, 
+             TagString, $>|format(Mode, Rest, Value2StringF, N, Indent)];
         {block, no, []} ->
-            %%io:format("INLINE FIRST IN BLOCK: ~p: ~p~n", [Tag, Mode]),
-	    [$<, TagString, format_attrs(Value2StringF, Attrs), $>, $<, $/, TagString, $>|format(Mode, Rest, Value2StringF, N, Indent)];
-%          [$<, TagString, format_attrs(Value2StringF, Attrs), $/, $>|
-%           format(Mode, Rest, Value2StringF, N, Indent)];
-	%% Block element first in a block element.
+	    [$<, TagString, format_attrs(Value2StringF, Attrs), $>, $<, $/, 
+             TagString, $>|format(Mode, Rest, Value2StringF, N, Indent)];
 	{first_in_block, yes, _} ->
-	    %%io:format("BLOCK FIRST IN BLOCK: ~p: ~p~n", [Tag, Mode]),
 	    NextLevel = lists:duplicate(?INDENT_LEVEL, $ ),
 	    [$\n, Indent, $<, TagString,
 	     format_attrs(Value2StringF, Attrs), $>,
@@ -109,7 +96,6 @@ format(Mode, [{Tag, Attrs, Body}|Rest], Value2StringF, N, Indent) ->
 	     format(block, Rest, Value2StringF, N, Indent)];
 	%% Block element in a block element.
 	{block, yes, _} ->
-	    %%io:format("BLOCK IN BLOCK: ~p: ~p~n", [Tag, Mode]),
 	    NextLevel = lists:duplicate(?INDENT_LEVEL, $ ),
 	    [$\n, Indent, $<, TagString,
 	     format_attrs(Value2StringF, Attrs), $>,
@@ -119,7 +105,6 @@ format(Mode, [{Tag, Attrs, Body}|Rest], Value2StringF, N, Indent) ->
 	     format(block, Rest, Value2StringF, N, Indent)];
 	%% Inline element first in a block element.
 	{first_in_block, no, _} ->
-	    %%io:format("INLINE FIRST IN BLOCK: ~p: ~p~n", [Tag, Mode]),
 	    [$\n, Indent, $<, TagString, format_attrs(Value2StringF, Attrs),
 	     $>,
 	     format(inline, Body, Value2StringF, N, Indent),
@@ -127,7 +112,6 @@ format(Mode, [{Tag, Attrs, Body}|Rest], Value2StringF, N, Indent) ->
 	     format(block, Rest, Value2StringF, N, Indent)];
 	%% Inline element in a block or an inline element.
 	{_, no, _} ->
-	    %%io:format("INLINE IN INLINE/BLOCK: ~p: ~p~n", [Tag, Mode]),
 	    [$<, TagString, format_attrs(Value2StringF, Attrs), $>,
 	     format(inline, Body, Value2StringF, N, Indent),
 	     $<, $/, TagString, $>|
@@ -136,23 +120,18 @@ format(Mode, [{Tag, Attrs, Body}|Rest], Value2StringF, N, Indent) ->
 %% Inline data first in a block element.
 format(first_in_block, [String|Rest], Value2StringF, N, Indent)
   when is_list(String) ->
-    %%io:format("INLINE DATA FIRST IN BLOCK: ~p~n", [String]),
     [$\n, Indent, String|format(block, Rest, Value2StringF, N, Indent)];
 %% Inline data in a block/inline element.
 format(Mode, [String|Rest], Value2StringF, N, Indent) when is_list(String) ->
-    %%io:format("INLINE DATA IN BLOCK/INLINE: ~p~n", [String]),
     [String|format(Mode, Rest, Value2StringF, N, Indent)];
 %% PCDATA in first a block element.
 format(first_in_block, Value, Value2StringF, _N, Indent) ->
-    %%io:format("PCDATA FIRST IN BLOCK: ~p~n", [Value]),
     [$\n, Indent, Value2StringF(Value)];
 %% PCDATA in a block element.
 format(block, Value, Value2StringF, _N, _Indent) ->
-    %%io:format("PCDATA IN BLOCK: ~p~n", [Value]),
     [Value2StringF(Value)];
 %% PCDATA in an inline element.
 format(inline, Value, Value2StringF, _N, _Indent) ->
-    %%io:format("PCDATA IN INLINE: ~p~n", [Value]),
     Value2StringF(Value).
 
 tag_string(TagAtom) when is_atom(TagAtom) -> atom_to_list(TagAtom);
