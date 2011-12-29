@@ -47,6 +47,9 @@ out(A) ->
                   "we keep a list of all "
                   ,{a ,[{href,"contributors.txt"}], "contributors"}
                 ]},
+         {p, [], ["A high resolution logo created by Tomas Selander exists at ",
+                  {a, [{href, "yaws.eps"}],  "yaws.eps"}]},
+
 
          {h2, [], "News"},
          {p, [], ["To see all the most recent changes and activity in Yaws "
