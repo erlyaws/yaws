@@ -2,7 +2,7 @@
 /* author: vinoski@ieee.org                                  */
 /* Created : 09 Nov 2008 by Steve Vinoski <vinoski@ieee.org> */
 
-#ifdef HAVE_SENDFILE
+#ifdef HAVE_YAWS_SENDFILE
 
 #include <errno.h>
 #include <stdint.h>
@@ -328,4 +328,4 @@ DRIVER_INIT(yaws_sendfile_drv)
 
 #error "yaws_sendfile_drv not supported on this platform"
 
-#endif /* HAVE_SENDFILE */
+#endif /* HAVE_YAWS_SENDFILE */

@@ -11,15 +11,19 @@
 
 -include("yaws_configure.hrl").
 -include("../include/yaws.hrl").
+-include_lib("kernel/include/file.hrl").
 
--ifdef(HAVE_SENDFILE).
+-ifndef(HAVE_YAWS_SENDFILE).
+-ifndef(NO_FILE_SENDFILE).
+-define(HAVE_FILE_SENDFILE, 1).
+-endif.
+-endif.
 
+
+-ifdef(HAVE_YAWS_SENDFILE).
 -behavior(gen_server).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
-
--include_lib("kernel/include/file.hrl").
-
 -endif.
 
 send(Out, Filename) ->
@@ -27,7 +31,50 @@ send(Out, Filename) ->
 send(Out, Filename, Offset) ->
     send(Out, Filename, Offset, all).
 
--ifdef(HAVE_SENDFILE).
+bytes_to_transfer(Filename, Offset, Count) ->
+    case Count of
+        all ->
+            case file:read_file_info(Filename) of
+                {ok, #file_info{size = Size}} ->
+                    Size - Offset;
+                Error ->
+                    Error
+            end;
+        Count when is_integer(Count) ->
+            Count;
+        _ ->
+            {error, badarg}
+    end.
+
+-ifdef(HAVE_FILE_SENDFILE). %% OTP >= R15B; use file:sendfile/5
+
+enabled() ->
+    true.
+send(Out, Filename, Offset, Count) ->
+    Count1 = bytes_to_transfer(Filename, Offset, Count),
+    case Count1 of
+        {error, _}=Error1 ->
+            Error1;
+        _ ->
+            case file:open(Filename, [raw, read, binary]) of
+                {ok, RawFile} ->
+                    Res = file:sendfile(RawFile, Out, Offset, Count1, []),
+                    ok = file:close(RawFile),
+                    Res;
+                Error2 ->
+                    Error2
+            end
+    end.
+start_link() ->
+    ignore.
+start() ->
+    ignore.
+stop() ->
+    ok.
+
+-else.
+
+-ifdef(HAVE_YAWS_SENDFILE).
 
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -39,28 +86,16 @@ enabled() ->
     true.
 
 send(Out, Filename, Offset, Count) ->
-    Count1 = case Count of
-                 all ->
-                     case file:read_file_info(Filename) of
-                         {ok, #file_info{size = Size}} ->
-                             Size - Offset;
-                         Error ->
-                             Error
-                     end;
-                 Count when is_integer(Count) ->
-                     Count;
-                 _ ->
-                     {error, badarg}
-             end,
+    Count1 = bytes_to_transfer(Filename, Offset, Count),
     case Count1 of
-        {error, _}=Error2 ->
-            Error2;
+        {error, _}=Error ->
+            Error;
         _ ->
             case prim_inet:getfd(Out) of
                 {ok, SocketFd} ->
                     do_send(Out, SocketFd, Filename, Offset, Count1);
-                Error3 ->
-                    Error3
+                Error2 ->
+                    Error2
             end
     end.
 
@@ -149,14 +184,14 @@ do_send(Out, SocketFd, Filename, Offset, Count) ->
 
 enabled() ->
     false.
+send(Out, Filename, Offset, Count) ->
+    compat_send(Out, Filename, Offset, Count).
 start_link() ->
     ignore.
 start() ->
     ignore.
 stop() ->
     ok.
-send(Out, Filename, Offset, Count) ->
-    compat_send(Out, Filename, Offset, Count).
 
 -endif.
 
@@ -203,3 +238,5 @@ loop_send(Fd, ChunkSize, {ok, Bin}, Out, Count) ->
     end;
 loop_send(_Fd, _, Err, _,_) ->
     Err.
+
+-endif.

@@ -22,7 +22,7 @@ DEFAULT_CHARSET=
 EPAM = ../priv/epam
 EXTRAINCLUDE =
 ERLBINDIR = /usr/lib/erlang/bin
-HAVE_SENDFILE = true
+HAVE_YAWS_SENDFILE = true
 
 ifdef debug
   ERLC_FLAGS+=-Ddebug

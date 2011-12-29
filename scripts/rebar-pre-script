@@ -51,7 +51,8 @@ if [ -n "$need_mime" ]; then
 fi
 
 if [ ! -f yaws_configure.hrl ]; then
-    echo '%% rebar sets HAVE_SENDFILE in erlc command line' > yaws_configure.hrl
+    echo '%% rebar sets HAVE_YAWS_SENDFILE in erlc command line' \
+        > yaws_configure.hrl
     [ $? -eq 0 ] || fail
 fi
 tmpgen=`mktemp /tmp/${script}.XXXXXX` || fail
