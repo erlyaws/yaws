@@ -2668,29 +2668,47 @@ deliver_dyn_part(CliSock,                       % essential params
               A2, UT, YawsFun, DeliverCont
              );
         break ->
+            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
+                  (Arg#arg.headers)#headers.transfer_encoding),
             finish_up_dyn_file(Arg, CliSock);
         {page, Page} ->
+            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
+                  (Arg#arg.headers)#headers.transfer_encoding),
             {page, Page};
         Arg2 = #arg{} ->
+            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
+                  (Arg#arg.headers)#headers.transfer_encoding),
             DeliverCont(Arg2);
         {streamcontent, _, _} ->
+            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
+                  (Arg#arg.headers)#headers.transfer_encoding),
             Priv = deliver_accumulated(Arg, CliSock, decide, undefined, stream),
             stream_loop_send(Priv, CliSock, 30000);
         %% For other timeout values (other than 30 second)
         {streamcontent_with_timeout, _, _, TimeOut} ->
+            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
+                  (Arg#arg.headers)#headers.transfer_encoding),
             Priv = deliver_accumulated(Arg, CliSock, decide, undefined, stream),
             stream_loop_send(Priv, CliSock, TimeOut);
         {streamcontent_with_size, Sz, _, _} ->
+            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
+                  (Arg#arg.headers)#headers.transfer_encoding),
             Priv = deliver_accumulated(Arg, CliSock, decide, Sz, stream),
             stream_loop_send(Priv, CliSock, 30000);
         {streamcontent_from_pid, _, Pid} ->
+            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
+                  (Arg#arg.headers)#headers.transfer_encoding),
             Priv = deliver_accumulated(Arg, CliSock, no, undefined, stream),
             wait_for_streamcontent_pid(Priv, CliSock, Pid);
         {websocket, CallbackMod, Opts} ->
+            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
+                  (Arg#arg.headers)#headers.transfer_encoding),
             %% The handshake passes control over the socket to OwnerPid
             %% and terminates the Yaws worker!
             yaws_websockets:start(Arg, CallbackMod, Opts);
         _ ->
+            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
+                  (Arg#arg.headers)#headers.transfer_encoding),
             DeliverCont(Arg)
     end.
 
