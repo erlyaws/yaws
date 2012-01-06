@@ -1016,18 +1016,32 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
         ["docroot", '=', Rootdir | XtraDirs] ->
-            RootDirs = lists:map(
-                         fun(R) -> filename:absname(R)
-                         end, [Rootdir | XtraDirs]),
-            case lists:filter(
-                   fun(R) -> not is_dir(R) end, RootDirs) of
-                [] ->
+            RootDirs = lists:map(fun(R) -> filename:absname(R) end,
+                                 [Rootdir | XtraDirs]),
+            case lists:filter(fun(R) -> not is_dir(R) end, RootDirs) of
+                [] when C#sconf.docroot =:= undefined ->
                     C2 = C#sconf{docroot = hd(RootDirs),
                                  xtra_docroots = tl(RootDirs)},
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
-                _ ->
-                    {error, ?F("Expect directory at line ~w (docroot: ~s)",
-                               [Lno, hd(RootDirs)])}
+                [] ->
+                    XtraDocroots = RootDirs ++ C#sconf.xtra_docroots,
+                    C2 = C#sconf{xtra_docroots = XtraDocroots},
+                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                NoDirs ->
+                    error_logger:info_msg("Warning, Skip invalid docroots"
+                                          " at line ~w : ~s~n",
+                                          [Lno, string:join(NoDirs, ", ")]),
+                    case lists:subtract(RootDirs, NoDirs) of
+                        [] ->
+                            fload(FD, server, GC, C, Cs, Lno+1, Next);
+                        [H|T] when C#sconf.docroot =:= undefined ->
+                            C2 = C#sconf{docroot = H, xtra_docroots = T},
+                            fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                        Ds ->
+                            XtraDocroots = Ds ++ C#sconf.xtra_docroots,
+                            C2 = C#sconf{xtra_docroots = XtraDocroots},
+                            fload(FD, server, GC, C2, Cs, Lno+1, Next)
+                    end
             end;
 
         ["partial_post_size",'=',Size] ->
@@ -1101,6 +1115,10 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
 
+        ['<', "/server", '>'] when C#sconf.docroot =:= undefined ->
+            {error,
+             ?F("No valid docroot configured for virthost '~s' (port: ~w)",
+                [C#sconf.servername, C#sconf.port])};
         ['<', "/server", '>'] ->
             case C#sconf.listen of
                 [] ->
