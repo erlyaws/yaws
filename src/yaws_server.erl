@@ -2660,12 +2660,9 @@ deliver_dyn_part(CliSock,                       % essential params
     put(yaws_arg, Arg),
     Res = (catch YawsFun(Arg)),
     case handle_out_reply(Res, LineNo, YawsFile, UT, Arg) of
-        {get_more, Cont, State} when
-        element(1, Arg#arg.clidata) == partial  ->
+        {get_more, Cont, State} when element(1, Arg#arg.clidata) == partial  ->
             More = get_more_post_data(CliDataPos, Arg),
-            A2 = Arg#arg{clidata = More,
-                         cont = Cont,
-                         state = State},
+            A2 = Arg#arg{clidata=More, cont=Cont, state=State},
             deliver_dyn_part(
               CliSock, LineNo, YawsFile, CliDataPos+size(un_partial(More)),
               A2, UT, YawsFun, DeliverCont
@@ -2676,29 +2673,18 @@ deliver_dyn_part(CliSock,                       % essential params
             {page, Page};
         Arg2 = #arg{} ->
             DeliverCont(Arg2);
-        {streamcontent, MimeType, FirstChunk} ->
-            yaws:outh_set_content_type(MimeType),
-            accumulate_content(FirstChunk),
-            Priv = deliver_accumulated(Arg, CliSock,
-                                       decide, undefined, stream),
+        {streamcontent, _, _} ->
+            Priv = deliver_accumulated(Arg, CliSock, decide, undefined, stream),
             stream_loop_send(Priv, CliSock, 30000);
         %% For other timeout values (other than 30 second)
-        {streamcontent_with_timeout, MimeType, FirstChunk, TimeOut} ->
-            yaws:outh_set_content_type(MimeType),
-            accumulate_content(FirstChunk),
-            Priv = deliver_accumulated(Arg, CliSock,
-                                       decide, undefined, stream),
+        {streamcontent_with_timeout, _, _, TimeOut} ->
+            Priv = deliver_accumulated(Arg, CliSock, decide, undefined, stream),
             stream_loop_send(Priv, CliSock, TimeOut);
-        {streamcontent_with_size, Sz, MimeType, FirstChunk} ->
-            yaws:outh_set_content_type(MimeType),
-            accumulate_content(FirstChunk),
-            Priv = deliver_accumulated(Arg, CliSock,
-                                       decide, Sz, stream),
+        {streamcontent_with_size, Sz, _, _} ->
+            Priv = deliver_accumulated(Arg, CliSock, decide, Sz, stream),
             stream_loop_send(Priv, CliSock, 30000);
-        {streamcontent_from_pid, MimeType, Pid} ->
-            yaws:outh_set_content_type(MimeType),
-            Priv = deliver_accumulated(Arg, CliSock,
-                                       no, undefined, stream),
+        {streamcontent_from_pid, _, Pid} ->
+            Priv = deliver_accumulated(Arg, CliSock, no, undefined, stream),
             wait_for_streamcontent_pid(Priv, CliSock, Pid);
         {websocket, CallbackMod, Opts} ->
             %% The handshake passes control over the socket to OwnerPid
@@ -3066,12 +3052,14 @@ handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, ARG) ->
 
 
 handle_out_reply({html, Html}, _LineNo, _YawsFile,  _UT, _ARG) ->
-    accumulate_content(Html);
+    accumulate_content(Html),
+    ok;
 
 handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  _UT, ARG) ->
     Res = case safe_ehtml_expand(E) of
               {ok, Val} ->
-                  accumulate_content(Val);
+                  accumulate_content(Val),
+                  ok;
               {error, ErrStr} ->
                   handle_crash(ARG, ErrStr)
           end,
@@ -3080,56 +3068,63 @@ handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  _UT, ARG) ->
 handle_out_reply({exhtml, E}, _LineNo, _YawsFile,  _UT, A) ->
     N = count_trailing_spaces(),
     Res = case yaws_exhtml:format(E, N) of
-             {ok, Val} ->
-                 accumulate_content(Val);
-             {error, ErrStr} ->
-                 handle_crash(A,ErrStr)
-         end,
+              {ok, Val} ->
+                  accumulate_content(Val),
+                  ok;
+              {error, ErrStr} ->
+                  handle_crash(A,ErrStr)
+          end,
     Res;
 
 handle_out_reply({exhtml, Value2StringF, E}, _LineNo, _YawsFile,  _UT, A) ->
     N = count_trailing_spaces(),
     Res = case yaws_exhtml:format(E, N, Value2StringF) of
-             {ok, Val} ->
-                 accumulate_content(Val);
-             {error, ErrStr} ->
-                 handle_crash(A,ErrStr)
-         end,
+              {ok, Val} ->
+                  accumulate_content(Val),
+                  ok;
+              {error, ErrStr} ->
+                  handle_crash(A,ErrStr)
+          end,
     Res;
 
 handle_out_reply({sexhtml, E}, _LineNo, _YawsFile,  _UT, A) ->
     Res = case yaws_exhtml:sformat(E) of
-             {ok, Val} ->
-                 accumulate_content(Val);
-             {error, ErrStr} ->
-                 handle_crash(A,ErrStr)
-         end,
+              {ok, Val} ->
+                  accumulate_content(Val),
+                  ok;
+              {error, ErrStr} ->
+                  handle_crash(A,ErrStr)
+          end,
     Res;
 
 handle_out_reply({sexhtml, Value2StringF, E},
-                _LineNo, _YawsFile,  _UT, A) ->
+                 _LineNo, _YawsFile,  _UT, A) ->
     Res = case yaws_exhtml:sformat(E, Value2StringF) of
-             {ok, Val} ->
-                 accumulate_content(Val);
-             {error, ErrStr} ->
-                 handle_crash(A,ErrStr)
-         end,
+              {ok, Val} ->
+                  accumulate_content(Val),
+                  ok;
+              {error, ErrStr} ->
+                  handle_crash(A,ErrStr)
+          end,
     Res;
 
 
 
 handle_out_reply({content, MimeType, Cont}, _LineNo,_YawsFile, _UT, _ARG) ->
     yaws:outh_set_content_type(MimeType),
-    accumulate_content(Cont);
+    accumulate_content(Cont),
+    ok;
 
 handle_out_reply({streamcontent, MimeType, First},
                  _LineNo,_YawsFile, _UT, _ARG) ->
     yaws:outh_set_content_type(MimeType),
+    accumulate_content(First),
     {streamcontent, MimeType, First};
 
 handle_out_reply({streamcontent_with_timeout, MimeType, First, Timeout},
                  _LineNo,_YawsFile, _UT, _ARG) ->
     yaws:outh_set_content_type(MimeType),
+    accumulate_content(First),
     {streamcontent_with_timeout, MimeType, First, Timeout};
 
 handle_out_reply(Res = {page, _Page},
@@ -3139,6 +3134,7 @@ handle_out_reply(Res = {page, _Page},
 handle_out_reply({streamcontent_with_size, Sz, MimeType, First},
                  _LineNo,_YawsFile, _UT, _ARG) ->
     yaws:outh_set_content_type(MimeType),
+    accumulate_content(First),
     {streamcontent_with_size, Sz, MimeType, First};
 
 handle_out_reply({streamcontent_from_pid, MimeType, Pid},
@@ -3152,15 +3148,18 @@ handle_out_reply({websocket, _CallbackMod, _Opts}=Reply,
     Reply;
 
 handle_out_reply({header, H},  _LineNo, _YawsFile, _UT, _ARG) ->
-    yaws:accumulate_header(H);
+    yaws:accumulate_header(H),
+    ok;
 
 handle_out_reply({allheaders, Hs}, _LineNo, _YawsFile, _UT, _ARG) ->
     yaws:outh_clear_headers(),
-    foreach(fun({header, Head}) -> yaws:accumulate_header(Head) end, Hs);
+    foreach(fun({header, Head}) -> yaws:accumulate_header(Head) end, Hs),
+    ok;
 
 handle_out_reply({status, Code},_LineNo,_YawsFile,_UT,_ARG)
     when is_integer(Code) ->
-    yaws:outh_set_status_code(Code);
+    yaws:outh_set_status_code(Code),
+    ok;
 
 handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _UT, _ARG) ->
     exit(normal);
@@ -3172,7 +3171,8 @@ handle_out_reply({ssi, File, Delimiter, Bindings}, LineNo, YawsFile, UT, ARG) ->
                    [YawsFile, LineNo, Rsn]),
             handle_crash(ARG, L);
         OutData ->
-            accumulate_content(OutData)
+            accumulate_content(OutData),
+            ok
     end;
 
 
@@ -3271,13 +3271,28 @@ handle_out_reply(Reply, LineNo, YawsFile, _UT, ARG) ->
 
 
 
-handle_out_reply_l([Reply|T], LineNo, YawsFile, UT, ARG, _Res) ->
+handle_out_reply_l([Reply|T], LineNo, YawsFile, UT, ARG, Res) ->
     case handle_out_reply(Reply, LineNo, YawsFile, UT, ARG) of
         break ->
             break;
         {page, Page} ->
             {page, Page};
+        {get_more, Cont, State} ->
+            {get_more, Cont, State};
+        {streamcontent,_,_}=Reply ->
+            Reply;
+        {streamcontent_with_timeout,_,_,_}=Reply ->
+            Reply;
+        {streamcontent_with_size,_,_,_}=Reply ->
+            Reply;
+        {streamcontent_from_pid,_,_}=Reply ->
+            Reply;
+        {websocket,_,_}=Reply ->
+            Reply;
+        ok ->
+            handle_out_reply_l(T, LineNo, YawsFile, UT, ARG, Res);
         RetVal ->
+            %% XXX: if RetVal == #arg{}, replace ARG in recursion ?
             handle_out_reply_l(T, LineNo, YawsFile, UT, ARG, RetVal)
     end;
 handle_out_reply_l([], _LineNo, _YawsFile, _UT, _ARG, Res) ->
