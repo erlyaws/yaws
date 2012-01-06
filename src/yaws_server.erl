@@ -1444,7 +1444,7 @@ call_method(Method, CliSock, Req, H) ->
 not_implemented(CliSock, Req, Head) ->
     SC=get(sc),
     ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
-    flush(CliSock, Head#headers.content_length),
+    flush(CliSock, Head#headers.content_length, Head#headers.transfer_encoding),
     deliver_501(CliSock, Req).
 
 
@@ -1535,8 +1535,9 @@ body_method(CliSock, Req, Head) ->
 no_body_method(CliSock, Req, Head) ->
     SC=get(sc),
     ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
-    flush(CliSock, Head#headers.content_length),
-    ARG = make_arg(CliSock, Head, Req, undefined),
+    flush(CliSock, Head#headers.content_length, Head#headers.transfer_encoding),
+    Head1 = Head#headers{content_length=undefined, transfer_encoding=undefined},
+    ARG = make_arg(CliSock, Head1, Req, undefined),
     handle_request(CliSock, ARG, 0).
 
 
@@ -4589,12 +4590,30 @@ compressible_mime_type(_) ->
     false.
 
 
-flush(Sock, Sz) ->
-    case (get(sc))#sconf.ssl of
-        undefined ->
-            tcp_flush(Sock, Sz);
-        _ ->
-            ssl_flush(Sock, Sz)
+flush(Sock, Sz, TransferEncoding) ->
+    flush(Sock, 0, Sz, TransferEncoding).
+
+flush(Sock, Pos, undefined, "chunked") ->
+    SC = get(sc),
+    case get_chunked_client_data(Sock, yaws:is_ssl(SC)) of
+        {partial, _} -> flush(Sock, Pos, undefined, "chunked");
+        _            -> ok
+    end;
+flush(_Sock, _Pos, undefined, _) ->
+    ok;
+flush(Sock, Pos, Sz, TE) when is_list(Sz) ->
+    flush(Sock, Pos, strip_list_to_integer(Sz), TE);
+flush(Sock, Pos, Sz, _) ->
+    SC = get(sc),
+    flush(Sock, Pos, Sz, yaws:is_ssl(SC), SC#sconf.partial_post_size).
+
+
+flush(_Sock, Sz, Sz, _SSL, _PPS) ->
+    ok;
+flush(Sock, Pos, Sz, SSL, PPS) ->
+    case yaws:do_recv(Sock, erlang:min(Sz - Pos, PPS), SSL) of
+        {ok, Bin} -> flush(Sock, Pos + size(Bin), Sz, SSL, PPS);
+        _         -> ok
     end.
 
 
@@ -4606,30 +4625,6 @@ strip_list_to_integer(L) ->
             Int
     end.
 
-
-tcp_flush(_Sock, undefined) ->
-    ok;
-tcp_flush(_Sock, 0) ->
-    ok;
-tcp_flush(Sock, Sz) when is_list(Sz) ->
-    tcp_flush(Sock, strip_list_to_integer(Sz));
-tcp_flush(Sock, Sz) ->
-    gen_tcp:recv(Sock, Sz, 1000).
-
-
-ssl_flush(_Sock, undefined) ->
-    ok;
-ssl_flush(_Sock, 0) ->
-    ok;
-ssl_flush(Sock, Sz) when is_list(Sz) ->
-    ssl_flush(Sock, strip_list_to_integer(Sz));
-ssl_flush(Sock, Sz) ->
-    case ssl:recv(Sock, Sz, 1000) of
-        {ok, Bin} ->
-            ssl_flush(Sock, Sz - size(Bin));
-        _ ->
-            ok
-    end.
 
 mtime(F) ->
     F#file_info.mtime.
