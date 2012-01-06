@@ -1600,7 +1600,11 @@ handle_request(CliSock, ARG, _N)
     State = ARG#arg.state,
     ?Debug("SrvReq=~s - RwResp=~s~n",[?format_record(ARG#arg.req, http_request),
                                       ?format_record(State, rewrite_response)]),
-    yaws:outh_set_status_code(State#rewrite_response.status),
+    OutH = #outh{status  = State#rewrite_response.status,
+                 chunked = false,
+                 date    = yaws:make_date_header(),
+                 server  = yaws:make_server_header()},
+    put(outh, OutH),
     deepforeach(fun(X) ->
                         case X of
                             {header, H} -> yaws:accumulate_header(H);
@@ -1611,6 +1615,11 @@ handle_request(CliSock, ARG, _N)
         <<>> ->
             deliver_accumulated(CliSock);
         _ ->
+            %% Define a default content type if needed
+            case yaws:outh_get_content_type() of
+                undefined -> yaws:outh_set_content_type("text/plain");
+                _         -> ok
+            end,
             accumulate_content(State#rewrite_response.content),
             deliver_accumulated(ARG, CliSock, decide, undefined, final)
     end,
