@@ -2615,7 +2615,10 @@ get_chunked_client_data(CliSock,SSL) ->
     SC  = get(sc),
     Val = erase(current_chunk_size),
     Len = if
-              (Val =:= undefined orelse Val =:= 0) ->
+              Val =:= 0 ->
+                  %% Last chunk was already read.
+                  undefined;
+              Val =:= undefined ->
                   yaws:setopts(CliSock, [binary, {packet, line}],SSL),
                   N = yaws:get_chunk_num(CliSock,SSL),
                   yaws:setopts(CliSock, [binary, {packet, raw}],SSL),
@@ -2624,7 +2627,12 @@ get_chunked_client_data(CliSock,SSL) ->
                   Val
           end,
     if
+        Len =:= undefined ->
+            %% Do nothing
+            put(current_chunk_size, 0),
+            <<>>;
         Len == 0 ->
+            put(current_chunk_size, 0),
             _Tmp=yaws:do_recv(CliSock, 2, SSL),%% flush last crnl
             <<>>;
         Len =< SC#sconf.partial_post_size ->
