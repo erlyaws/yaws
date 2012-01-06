@@ -22,6 +22,7 @@ start() ->
     sendfile_get(),
     json_test(),
     post_test(),
+    flush_test(),
     expires_test(),
     reentrant_test(),
     cgi_redirect_test(),
@@ -571,6 +572,92 @@ large_chunked_post() ->
     %% size of chunk _IS_ a multiple of partial_post_size
     Opts2 = [{transfer_encoding, {chunked, 4000*1024}}],
     ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, post, Bin, Opts2),
+    ok.
+
+flush_test() ->
+    io:format("flush_test\n",[]),
+    flush_small_post(),
+    flush_large_post(),
+    flush_chunked_post(),
+    flush_small_get(),
+    flush_large_get(),
+    flush_chunked_get(),
+    ok.
+
+flush_small_post() ->
+    io:format("  flush small post\n",[]),
+    {ok, Bin} = file:read_file("../../www/1000.txt"),
+    Sz = size(Bin),
+    Uri1 = "http://localhost:8006/flushtest/" ++ integer_to_list(Sz),
+    Uri2 = "http://localhost:8006/hello.txt",
+    Hdrs = [{content_length, Sz}, {content_type, "binary/octet-stream"}],
+    {ok, ConnPid} = ibrowse:spawn_worker_process("localhost", 8006),
+    ?line {ok, "200", _, _} = ibrowse:send_req_direct(ConnPid, Uri1, Hdrs, post, Bin, []),
+    ?line {ok, "200", _, _} = ibrowse:send_req_direct(ConnPid, Uri2, [], get, [], []),
+    ibrowse:stop_worker_process(ConnPid),
+    ok.
+
+flush_large_post() ->
+    io:format("  flush large post\n",[]),
+    {ok, Bin} = file:read_file("../../www/10000.txt"),
+    Sz = size(Bin),
+    Uri1 = "http://localhost:8006/flushtest/" ++ integer_to_list(Sz),
+    Uri2 = "http://localhost:8006/hello.txt",
+    Hdrs = [{content_length, Sz}, {content_type, "binary/octet-stream"}],
+    {ok, ConnPid} = ibrowse:spawn_worker_process("localhost", 8006),
+    ?line {ok, "200", _, _} = ibrowse:send_req_direct(ConnPid, Uri1, Hdrs, post, Bin, []),
+    ?line {ok, "200", _, _} = ibrowse:send_req_direct(ConnPid, Uri2, [], get, [], []),
+    ibrowse:stop_worker_process(ConnPid),
+    ok.
+
+flush_chunked_post() ->
+    io:format("  flush chunked post\n",[]),
+    {ok, Bin} = file:read_file("../../www/10000.txt"),
+    Sz = size(Bin),
+    Uri1 = "http://localhost:8006/flushtest/chunked/" ++ integer_to_list(Sz),
+    Uri2 = "http://localhost:8006/hello.txt",
+    Hdrs = [{content_type, "binary/octet-stream"}],
+    Opts = [{transfer_encoding, {chunked, 4000*1000}}],
+    {ok, ConnPid} = ibrowse:spawn_worker_process("localhost", 8006),
+    ?line {ok, "200", _, _} = ibrowse:send_req_direct(ConnPid, Uri1, Hdrs, post, Bin, Opts),
+    ?line {ok, "200", _, _} = ibrowse:send_req_direct(ConnPid, Uri2, [], get, [], []),
+    ibrowse:stop_worker_process(ConnPid),
+    ok.
+
+flush_small_get() ->
+    io:format("  flush small get\n",[]),
+    {ok, Bin} = file:read_file("../../www/1000.txt"),
+    Sz = size(Bin),
+    Uri = "http://localhost:8006/hello.txt",
+    Hdrs = [{content_length, Sz}, {content_type, "binary/octet-stream"}],
+    {ok, ConnPid} = ibrowse:spawn_worker_process("localhost", 8006),
+    ?line {ok, "200", _, _} = ibrowse:send_req_direct(ConnPid, Uri, Hdrs, get, Bin, []),
+    ?line {ok, "200", _, _} = ibrowse:send_req_direct(ConnPid, Uri, [], get, [], []),
+    ibrowse:stop_worker_process(ConnPid),
+    ok.
+
+flush_large_get() ->
+    io:format("  flush large get\n",[]),
+    {ok, Bin} = file:read_file("../../www/10000.txt"),
+    Sz = size(Bin),
+    Uri = "http://localhost:8006/hello.txt",
+    Hdrs = [{content_length, Sz}, {content_type, "binary/octet-stream"}],
+    {ok, ConnPid} = ibrowse:spawn_worker_process("localhost", 8006),
+    ?line {ok, "200", _, _} = ibrowse:send_req_direct(ConnPid, Uri, Hdrs, get, Bin, []),
+    ?line {ok, "200", _, _} = ibrowse:send_req_direct(ConnPid, Uri, [], get, [], []),
+    ibrowse:stop_worker_process(ConnPid),
+    ok.
+
+flush_chunked_get() ->
+    io:format("  flush chunked post\n",[]),
+    {ok, Bin} = file:read_file("../../www/10000.txt"),
+    Uri = "http://localhost:8006/hello.txt",
+    Hdrs = [{content_type, "binary/octet-stream"}],
+    Opts = [{transfer_encoding, {chunked, 4000*1000}}],
+    {ok, ConnPid} = ibrowse:spawn_worker_process("localhost", 8006),
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, get, Bin, Opts),
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri, [], get, [], []),
+    ibrowse:stop_worker_process(ConnPid),
     ok.
 
 
