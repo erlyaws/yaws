@@ -1610,6 +1610,12 @@ detect a \verb+Content-Length+ header.
   data in one go. (Typically if a file is very large or if data
   arrives from back end servers on the network.)
 
+\item \verb+{streamcontent_with_timeout, MimeType, FirstChunk, Timeout}+ Similar
+  to above, but with an explicit timeout. The deafult timeout is 30 secs. I.e if
+  the application fails to deliver data to the Yaws process, the streaming will
+  stop. This is often not the desired behaviour in Comet/Ajax applications. It's
+  possible to provide 'infinity' as timeout.
+
 \item \verb+{streamcontent_from_pid, MimeType, Pid}+ This return value
   is similar to the \verb+streamcontent+ return value above.  However
   it makes it possible to stream data to the client directly from an
@@ -1617,6 +1623,13 @@ detect a \verb+Content-Length+ header.
   applications that employ long-polling (Comet) techniques, for
   example, and for applications wanting to avoid buffering data or
   avoid HTTP chunked mode transfer for streamed data.
+
+\item \verb+{streamcontent_with_size, Sz, MimeType, Pid}+ This return value is
+  similar to the \verb+streamcontent+ return value above. However it makes it
+  possible to stream data to the client by setting the content length of the
+  response. As the opposite of other ways to stream data, in this case, the
+  response is not chunked encoded.
+
 
 \item \verb+{header, H}+ Accumulates a HTTP header. Used by for
   example the \verb+yaws_api:setcookie/2-6+ function.
@@ -1667,10 +1680,12 @@ detect a \verb+Content-Length+ header.
   \verb+CallbackModule+ as a WebSockets Protocol handler for traffic
   on the client socket. See chapter \ref{websockets} for more details.
 
-\item \verb+[ListOfValues]+ It is possible to return a list of the
-  above defined return values.  Any occurrence of
-  \verb+stream_content+, \verb+get_more+, or \verb+page+ in this list
-  is legal only if it's in the last position of the list.
+\item \verb+[ListOfValues]+ It is possible to return a list of the above defined
+  return values. Any occurrence of \verb+streamcontent+,
+  \verb+streamcontent_with_timeout+, \verb+streamcontent_with_size+,
+  \verb+streamcontent_from_pid+, \verb+get_more+, \verb+page+ or \verb+break+ in
+  this list is legal only if it is the last position of the list. If not,
+  remaining values in the list are ignored.
 
 \end{itemize}
 
