@@ -436,7 +436,9 @@ It is possible to pass a space-separated list of directories as
 docroot. If this is the case, the various directories will be searched in
 order for the requested file. This also works with the ssi
 and yssi constructs where the full list of directories will be searched
-for files to ssi/yssi include.
+for files to ssi/yssi include. Multiple docroot directives can be used.
+You need at least one valid docroot, other invalid docroots are skipped with
+their associated auth structures.
 
 .TP
 \fBauth_skip_docroot = true | false\fR
