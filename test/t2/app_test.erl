@@ -28,6 +28,7 @@ start() ->
     php_handler_test(),
     arg_rewrite_test(),
     shaper_test(),
+    sslaccept_timeout_test(),
     ibrowse:stop().
 
 
@@ -675,6 +676,23 @@ shaper_test() ->
     ?line {ok, "200", _, _} = ibrowse:send_req(Uri, [], get),
     ?line {ok, "503", _, _} = ibrowse:send_req(Uri, [], get),
     ok.
+
+
+
+sslaccept_timeout_test() ->
+    io:format("sslaccept_tout_test\n", []),
+    {ok, Sock} = gen_tcp:connect("localhost", 8443, [binary, {active, true}]),
+    ?line ok = receive
+                   {tcp_closed, Sock} -> ok
+               after
+                   %% keepalive_timeout is set to 10 secs. So, wait 15 secs
+                   %% before returning an error
+                   15000 -> error
+               end,
+    gen_tcp:close(Sock),
+    ok.
+
+
 
 
 %% used for appmod tests
