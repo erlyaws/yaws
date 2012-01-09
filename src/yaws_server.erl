@@ -986,7 +986,9 @@ acceptor0(GS, Top) ->
         {ok, Client} ->
             if
                 GS#gs.ssl == ssl ->
-                    case ssl:ssl_accept(Client) of
+                    case ssl:ssl_accept(
+                           Client, (GS#gs.gconf)#gconf.keepalive_timeout
+                          ) of
                         ok ->
                             ok;
                         {error, closed} ->
