@@ -49,7 +49,7 @@
          'PATCH'/3]).
 
 -import(lists, [member/2, foreach/2, map/2,
-                flatten/1, flatmap/2, reverse/1]).
+                flatten/1, reverse/1]).
 
 -import(yaws_api, [ehtml_expand/1]).
 

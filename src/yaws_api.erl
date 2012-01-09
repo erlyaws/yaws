@@ -122,7 +122,7 @@
         ]).
 
 
--import(lists, [map/2, flatten/1, reverse/1]).
+-import(lists, [flatten/1, reverse/1]).
 
 %% these are a bunch of function that are useful inside
 %% yaws scripts
