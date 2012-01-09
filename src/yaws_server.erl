@@ -1345,7 +1345,7 @@ pick_sconf(GC, H, Group) ->
 
 %% Compare Host against [] in case caller sends an empty Host header
 pick_host(GC, Host, SCs, Group)
-  when Host == []; SCs == [] ->
+  when Host == []; Host == undefined; SCs == [] ->
     if
         ?gc_pick_first_virthost_on_nomatch(GC) ->
             hd(Group);
