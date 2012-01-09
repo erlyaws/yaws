@@ -1802,20 +1802,20 @@ do_recv(Sock, Num, ssl) ->
 
 cli_recv(S, Num, SslBool) ->
     Res = do_recv(S, Num, SslBool),
-    cli_recv_trace((get(gc))#gconf.trace, Res),
+    cli_recv_trace(yaws_trace:get_type(get(gc)), Res),
     Res.
 
-cli_recv_trace(false, _) -> ok;
+cli_recv_trace(undefined, _) -> ok;
 cli_recv_trace(Trace, Res) ->
     case Res of
         {ok, Val} when is_tuple(Val) ->
-            yaws_log:trace_traffic(from_client, ?F("~p~n", [Val]));
+            yaws_trace:write(from_client, ?F("~p~n", [Val]));
         {error, What} ->
-            yaws_log:trace_traffic(from_client, ?F("~n~p~n", [What]));
+            yaws_trace:write(from_client, ?F("~p~n", [What]));
         {ok, http_eoh} ->
             ok;
-        {ok, Val} when Trace == {true, traffic} ->
-            yaws_log:trace_traffic(from_client, Val);
+        {ok, Val} when Trace == traffic ->
+            yaws_trace:write(from_client, Val);
         _ ->
             ok
     end.
@@ -1872,34 +1872,12 @@ strip(Data) ->
 %%     or closed
 
 http_get_headers(CliSock, SSL) ->
-    Res = do_http_get_headers(CliSock, SSL),
-    GC = get(gc),
-    if
-        GC#gconf.trace == false ->
-            Res;
-        is_tuple(Res) ->
-            {RoR, Headers} = Res,
-            {RoRStr, From} = case element(1, RoR) of
-                                 http_request ->
-                                     {yaws_api:reformat_request(RoR),
-                                      from_client};
-                                 http_response ->
-                                     {yaws_api:reformat_response(RoR),
-                                      from_server}
-                             end,
-            HStr = headers_to_str(Headers),
-            yaws_log:trace_traffic(From, ?F("~n~s~n~s~n",[RoRStr, HStr])),
-            Res;
-        Res == closed ->
-            yaws_log:trace_traffic(from_client, "closed\n"),
-            closed
-    end.
+    do_http_get_headers(CliSock, SSL).
 
 
 headers_to_str(Headers) ->
-    lists:map(
-      fun(H) -> [H, "\r\n"] end,
-      yaws_api:reformat_header(Headers)).
+    lists:map(fun(H) -> [H, "\r\n"] end,
+              yaws_api:reformat_header(Headers)).
 
 
 setopts(Sock, Opts, nossl) ->

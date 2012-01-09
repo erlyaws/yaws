@@ -31,11 +31,19 @@ more details on Common Log Format.)
 will be written which contains all http auth related messages.
 
 .br
-\fBtrace.http\fR - this file contains the HTTP trace if that is enabled
+\fBtrace_<YYYYMMDD_hhmmss>\fR - Trace files are written in this subdirectory,
+suffixed by the creation date.
+
+.RS 12
+.br
+\fBtrace.<Pid>.http\fR - this file contains the HTTP trace if that is enabled,
+where <Pid> is the process id handling the TCP connection.
 
 .br
-\fBtrace.traffic\fR - this file contains the traffic trace if that is enabled
-
+\fBtrace.<Pid>.traffic\fR - this file contains the traffic trace if that is
+enabled, where <Pid> is the process id handling the TCP connection.
+.RE
+.HP
 
 Note that <Host>.access and <Host>.auth files will be used only if the directive
 \fBlogger_mod\fR is not set or set to yaws_log.
