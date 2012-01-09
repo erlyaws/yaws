@@ -175,7 +175,7 @@ a URL to ourselves.
           port_str     %% "" | ":<int>" - the optional port part
                        %%                 to append to the url
          }).
-.nf
+.fi
 
 
 .TP
@@ -577,7 +577,7 @@ Body  = EHTML
 
 
 For example, \fI{p, [], "Howdy"}\fR expands into
-"<p>Howdy</p> and
+"<p>Howdy</p>" and
 
 \fI
 .nf
@@ -624,6 +624,25 @@ is 30 secs. I.e if the application fails to deliver data to the
 Yaws process, the streaming will stop. This is often not the
 desired behaviour in Comet/Ajax applications.  It's possible to
 provide 'infinity' as timeout.
+
+.TP
+\fB{streamcontent_from_pid, MimeType, Pid}\fR
+This return value is similar to the \fIstreamcontent\fR return value above.
+
+However it makes it possible to stream data to the client directly from an
+application process to the socket. This approach can be useful for applications
+that employ long-polling (Comet) techniques, for example, and for applications
+wanting to avoid buffering data or avoid HTTP chunked mode transfer for streamed
+data.
+
+.TP
+\fB{streamcontent_with_size, Sz, MimeType, FirstChunk}\fR
+This return value is similar to the \fIstreamcontent\fR return value above.
+
+However it makes it possible to stream data to the client by setting the content
+length of the response. As the opposite of other ways to stream data, in this
+case, the response is not chunked encoded.
+
 
 .TP
 \fB{header, H}\fR
@@ -760,10 +779,11 @@ occured inline.
 
 .TP
 \fB[ListOfValues]\fR
-It is possible to return a deep list of the above defined
-return values.  Any occurrence of \fIstream_content\fR, \fIget_more\fR
-or \fIpage\fR in this list is legal only if it is the last position of
-the list.
+It is possible to return a deep list of the above defined return values. Any
+occurrence of \fIstreamcontent\fR, \fIstreamcontent_with_timeout\fR,
+\fIstreamcontent_with_size\fR, \fIstreamcontent_from_pid\fR, \fIget_more\fR,
+\fIpage\fR or \fIbreak\fR in this list is legal only if it is the last position
+of the list. If not, remaining values in the list are ignored.
 
 
 
