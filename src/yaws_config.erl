@@ -733,6 +733,9 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                 I when is_integer(I) ->
                     fload(FD, globals, GC#gconf{keepalive_timeout = I},
                           C, Cs, Lno+1, Next);
+                _ when Val == "infinity" ->
+                    fload(FD, globals, GC#gconf{keepalive_timeout = infinity},
+                          C, Cs, Lno+1, Next);
                 _ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
