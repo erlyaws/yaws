@@ -21,7 +21,7 @@ docs:
 	$(ERL) -noshell  -run edoc_run application "'$(APPNAME)'" '"."' '$(DOC_OPTS)' -s init stop
 
 cleandocs:
-	rm -rf doc/*.html doc/edoc-info doc/stylesheet.css
+	rm -rf doc/*.html doc/edoc-info doc/stylesheet.css doc/*.png
 
 install: all docs
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/$(APPNAME)/ebin

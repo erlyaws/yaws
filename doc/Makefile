@@ -41,6 +41,7 @@ yaws.dvi:	yaws.tex  $(IMG_EPS)
 
 clean:
 	rm  -f *.ps *.dvi *.log *.aux *.pdf *.toc *.beam 2> /dev/null || true
+	rm  -f *.out ../www/yaws.ps ../www/yaws.pdf 2> /dev/null || true
 
 install:
 	-install -d $(DESTDIR)$(PREFIX)/share/doc/yaws

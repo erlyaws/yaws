@@ -27,7 +27,7 @@ updateWiki : updateWiki.src
 	chmod +x $@
 
 clean:
-	rm importFiles getPassword updateWiki
+	rm -f $(SCRIPTS)
 
 
 install:
