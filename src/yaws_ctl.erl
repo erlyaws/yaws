@@ -397,6 +397,8 @@ connect_file(CtlFile) ->
                 Err ->
                     Err
             end;
+        {ok, Terms} ->
+            {error, {content, Terms}};
         Err ->
             Err
     end.
@@ -415,6 +417,13 @@ actl(SID, Term) ->
             erlang:halt(1);
         {error, econnrefused} ->
             io:format("No yaws system responds~n",[]),
+            timer:sleep(10),
+            erlang:halt(2);
+        {error, {content,Terms}} ->
+            io:format("The ctlfile ~s is readable but its content~n"
+                      "~p~n"
+                      "isn't in YAWS control file format~n",
+                      [yaws:ctl_file(SID),Terms]),
             timer:sleep(10),
             erlang:halt(2);
         {error, Reason} ->
