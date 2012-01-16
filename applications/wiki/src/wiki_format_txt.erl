@@ -99,8 +99,8 @@ format_txt([$=,$=,$=|T], Env, L, Doc) ->
 format_txt([$=,$=|T], Env, L, Doc) ->
     {Env1, L1} = char_style(h3, Env, L),
     format_txt(T, Env1, L1, Doc);
-format_txt([${,${|T], Env, L, Doc) ->
-    emb(T,Env,L, Doc);
+%format_txt([${,${|T], Env, L, Doc) ->
+%    emb(T,Env,L, Doc);
 format_txt("'''" ++ T, Env, L, Doc) ->
     {Env1, L1} = char_style(tt, Env, L),
     format_txt(T, Env1, L1, Doc);
@@ -126,13 +126,13 @@ format_txt("ftp://" ++ T, Env, L, Doc) ->
 format_txt("slideshow:" ++ T, Env, L, Doc) ->
     {X, T1} = collect_wiki_link(T),
     Txt = "<a href='slideShow.yaws?node="++wiki:str2urlencoded(Env#env.node)++
-        "&next=1'>"++X++ "</a>",
+        "&next=1'>"++yaws_api:htmlize(X)++ "</a>",
     format_txt(T1, Env, reverse(Txt, L), Doc);
 format_txt("mailto:" ++ T, Env, L, Doc) ->
     {X, T1} = collect_mail(T, []),
-    Txt = "<a href='mailto:" ++ X ++ "'>" ++
+    Txt = "<a href='mailto:" ++ wiki:str2urlencoded(X) ++ "'>" ++
         "<img border=0 src='WikiPreferences.files/mailto.png'>"
-        ++ X ++ "</a>",
+        ++ yaws_api:htmlize(X) ++ "</a>",
     format_txt(T1, Env, reverse(Txt, L), Doc);
 format_txt("mailtoall:" ++ T, Env, L, Doc) ->
     {Name, T1} = collect_wiki_link(T),
@@ -141,7 +141,7 @@ format_txt("mailtoall:" ++ T, Env, L, Doc) ->
             format_txt(T, Env, L, Doc);
         [F|Rs] ->
             Recipients = [F | [[$,|R] || R <- Rs]],
-            Txt = "<a href='mailto:" ++ Recipients ++ "'>" ++ Name ++ "</a>",
+            Txt = "<a href='mailto:" ++ wiki:str2urlencoded(Recipients) ++ "'>" ++ yaws_api:htmlize(Name) ++ "</a>",
             format_txt(T1, Env, reverse(Txt, L), Doc)
     end;
 format_txt("<?plugin " ++ T, Env, L, Doc) ->
@@ -149,7 +149,7 @@ format_txt("<?plugin " ++ T, Env, L, Doc) ->
     {Txt, T1} = plugin(T, Page),
     format_txt(T1, Env, reverse(Txt, L), Doc);
 format_txt([H|T], Env, L, Doc) ->
-    format_txt(T, Env, [H|L], Doc);
+    format_txt(T, Env, reverse(yaws_api:htmlize([H]))++L, Doc);
 format_txt([], Env, L, Doc) ->
     {_, L1} = clear_line(Env, L),
     {Env, reverse(L1)}.
@@ -199,18 +199,18 @@ format_external_url(F, Scheme) ->
     F1 = Scheme ++ F,
     case is_graphic(F) of
         true ->
-            "<img src=\"" ++  F1 ++ "\">";
+            "<img src=\"" ++  wiki:str2urlencoded(F1) ++ "\">";
         false ->
-            "<a href=\"" ++  F1 ++ "\">" ++
+            "<a href=\"" ++ wiki:str2urlencoded(F1) ++ "\">" ++
             "<img border=0 src='WikiPreferences.files/http.png'>"
-            ++ F1 ++ "</a> "
+            ++ yaws_api:htmlize(F1) ++ "</a> "
     end.
 
 is_graphic(F) ->
     member(filename:extension(F), [".gif", ".GIF", ".jpg", ".JPG"]).
 
 after_nl([${,$\n|T], Env, L, Doc)  -> pre(T, Env, L, Doc);
-after_nl([${,${|T], Env, L, Doc)   -> emb(T, Env, L, Doc);
+%after_nl([${,${|T], Env, L, Doc)   -> emb(T, Env, L, Doc);
 after_nl([${|T], Env, L, Doc)      -> pre(T, Env, L, Doc);
 after_nl("[expires:"++T, Env, L, Doc) -> eregion(T, Env, L, Doc);
 after_nl([$[|T], Env, L, Doc)      -> note(T, Env, L, Doc);

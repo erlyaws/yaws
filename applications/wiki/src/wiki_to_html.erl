@@ -21,7 +21,7 @@ format_wiki_files(Page, FileDir, Files, Root) ->
 
 format_wiki_files(Page, FileDir, Files, Root, Heading) ->
     LinkFun = fun(I) -> format_link(I, FileDir, Page, Root, show) end,
-    ("<hr><b><p>" ++ Heading ++ "</b><br>\n"
+    ("<hr><b><p>" ++ yaws_api:htmlize(Heading) ++ "</b><br>\n"
      "<table cellspacing=10 width = \"100%\">\n"
      ++ lists:map(LinkFun, lists:keysort(2,Files)) ++
      "</table></p>\n").
@@ -59,18 +59,18 @@ format_link({file, FileName, Description, _}, FileDir, Page, Root,_) ->
     ["<tr><td valign=top align=left><a href=\"",
      wiki:str2urlencoded(FileDir),
      "/", wiki:str2urlencoded(FileName),"\" title='",Size,"'>",
-     FileName,
+     yaws_api:htmlize(FileName),
      "</a></td><td align=left valign=top>",
-     Description, "</td></tr>\n"].
+     yaws_api:htmlize(Description), "</td></tr>\n"].
 
 wiki_link(LinkName, Page, Root) ->
     FullName = Root ++ "/" ++ Page ++ ".wob",
     case is_file(FullName) of
         true ->
             ["<a href=\"showPage.yaws?node=",
-             wiki:str2urlencoded(Page),"\">",LinkName,"</a> "];
+             wiki:str2urlencoded(Page),"\">",yaws_api:htmlize(LinkName),"</a> "];
         false ->
-            [" ",Page,"<a href=\"createNewPage.yaws?node=",
+            [" ",yaws_api:htmlize(Page),"<a href=\"createNewPage.yaws?node=",
              wiki:str2urlencoded(Page),"\">???</a>"]
     end.
 

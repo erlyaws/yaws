@@ -52,7 +52,7 @@
 % This should be -include:ed instead
 
 showPage(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
     if
         Page == undefined ->
             html_error(invalid_request);
@@ -101,7 +101,7 @@ create_thumb(SrcPath, DstPath) ->
            shell_quote(DstPath)++"'").
 
 getThumb(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
     Pict = getopt("pict", Params),
     if
         Page == undefined ->
@@ -121,7 +121,7 @@ getThumb(Params, Root, Prefix) ->
     end.
 
 getMidSize(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
     Pict = getopt("pict", Params),
     if
         Page == undefined ->
@@ -167,7 +167,7 @@ get_age(Path) ->
 
 
 fixupFiles(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
     if
         Page == undefined ->
             html_error(invalid_request);
@@ -280,7 +280,7 @@ addFile([WobFile, FileAtm], Halt) ->
     end.
 
 createNewPage(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
     Sid  = getopt("sid", Params),
 
 
@@ -295,11 +295,10 @@ createNewPage(Params, Root, Prefix) ->
     end.
 
 createNewPage1(Page, Root, Sid, Prefix, Content, Passwd, Email) ->
-    Txt = quote_lt(Content),
     wiki_templates:template2(
       Root,
       "New Page",
-      Page,
+      yaws_api:htmlize(Page),
       [p("Creating a new page. "
          "If you want a password protected page "
          "then fill in both the password fields - otherwise "
@@ -325,7 +324,7 @@ createNewPage1(Page, Root, Sid, Prefix, Content, Passwd, Email) ->
              "</td></tr>\n",
              "</table>\n",
              p(),
-             textarea("text", 25, 72,Txt),
+             textarea("text", 25, 72, Content),
              hr()
             ])],
       false).
@@ -333,7 +332,7 @@ createNewPage1(Page, Root, Sid, Prefix, Content, Passwd, Email) ->
 
 storePage(Params, Root, Prefix) ->
     Password = getopt("password", Params, ""),
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     Cancel   = getopt("cancel", Params),
     Edit     = getopt("edit", Params),
     Sid      = getopt("sid", Params),
@@ -363,7 +362,7 @@ storePage(Params, Root, Prefix) ->
 
 
 storePage1(Params, Root, Prefix) ->
-    Page     = getopt("node",Params),
+    Page     = getnode(Params),
     Txt0     = getopt("txt", Params),
     Sid      = getopt("sid", Params),
 
@@ -382,7 +381,7 @@ storePage1(Params, Root, Prefix) ->
 
 storeNewPage(Params, Root, Prefix) ->
 
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     Password = getopt("password", Params),
     Email0   = getopt("email", Params),
     Txt0     = getopt("txt", Params),
@@ -403,38 +402,42 @@ storeNewPage(Params, Root, Prefix) ->
 
 storeTagged(Params, Root, Prefix) ->
 
-    Page = getopt("node", Params),
+    Page = getnode(Params),
     Tag  = getopt("tag", Params),
     Txt0 = getopt("txt", Params),
 
-    Txt = zap_cr(urlencoded2str(Txt0)),
-    {File,FileDir} = page2filename(Page, Root),
-    case file:read_file(File) of
-        {ok, Bin} ->
-            Wik = {wik002,_Pwd,_Email,_Time,_Who,OldTxt,_Files,_Patches} =
-                bin_to_wik002(Bin),
-            W    = wiki_split:str2wiki(OldTxt),
-            ITag = list_to_integer(Tag),
-            {Type, Old} = wiki_split:getRegion(ITag, W),
-            W2 = case Type of
-                     open ->
-                         wiki_split:putRegion(ITag, W, Txt);
-                     write_append ->
-                         Time = format_time({date(), time()}),
-                         wiki_split:putRegion(ITag, W,
-                                              "''" ++ Time ++ "''\n\n" ++
-                                              Txt ++ "\n\n____\n" ++ Old)
-                   end,
-            Str2 = wiki_split:wiki2str(W2),
-            store_ok(Page, Root, Prefix, Str2, Wik);
-        _ ->
-            show({no_such_page,Page}, Root)
+    case catch list_to_integer(Tag) of
+        {'EXIT', Reason} ->
+	    show({no_such_tag, Tag}, Root);
+        ITag when integer(ITag) ->
+	    Txt = zap_cr(urlencoded2str(Txt0)),
+	    {File,FileDir} = page2filename(Page, Root),
+	    case file:read_file(File) of
+		{ok, Bin} ->
+		    Wik = {wik002,_Pwd,_Email,_Time,_Who,OldTxt,_Files,_Patches} =
+			bin_to_wik002(Bin),
+		    W    = wiki_split:str2wiki(OldTxt),
+		    {Type, Old} = wiki_split:getRegion(ITag, W),
+		    W2 = case Type of
+			     open ->
+				 wiki_split:putRegion(ITag, W, Txt);
+			     write_append ->
+				 Time = format_time({date(), time()}),
+				 wiki_split:putRegion(ITag, W,
+						      "''" ++ Time ++ "''\n\n" ++
+						      Txt ++ "\n\n____\n" ++ Old)
+			 end,
+		    Str2 = wiki_split:wiki2str(W2),
+		    store_ok(Page, Root, Prefix, Str2, Wik);
+		_ ->
+		    show({no_such_page,Page}, Root)
+	    end
    end.
 
 
 storeFiles(Params, Root, Prefix) ->
 
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     Password = getopt("password", Params),
     Add      = getopt("add", Params),
     Update   = getopt("update", Params),
@@ -465,7 +468,7 @@ storeFiles(Params, Root, Prefix) ->
     end.
 
 addFileInit(Params, Root, Prefix) ->
-    Page        = getopt("node", Params),
+    Page        = getnode(Params),
     Password    = getopt("password", Params),
     template2(Root, "Add File", Page,
              [form("POST", "addFile.yaws",
@@ -675,7 +678,7 @@ check_filename(FileName) ->
     end.
 
 updateFilesInit(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
 
     Descriptions = [{lists:nthtail(4,N),S} ||
                        {N,S,_} <- Params,
@@ -716,7 +719,7 @@ updateFilesInit(Params, Root, Prefix) ->
 
 deleteFilesInit(Params, Root, Prefix) ->
 
-    Page        = getopt("node", Params),
+    Page        = getnode(Params),
     Password    = getopt("password", Params),
 
     CheckedFiles = [lists:nthtail(3,N) ||
@@ -761,7 +764,7 @@ deleteFilesInit(Params, Root, Prefix) ->
 
 deleteFiles(Params, Root, Prefix) ->
     Password = getopt("password", Params, ""),
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     Cancel   = getopt("cancel", Params),
 
     if
@@ -779,7 +782,7 @@ deleteFiles(Params, Root, Prefix) ->
     end.
 
 deleteFiles1(Params, Root, Prefix) ->
-    Page        = getopt("node", Params),
+    Page        = getnode(Params),
 
     CheckedFiles = [lists:nthtail(4,N) ||
                        {N,_,_} <- Params,
@@ -823,7 +826,7 @@ deleteFiles1(Params, Root, Prefix) ->
 
 copyFilesInit(Params, Root, Prefix) ->
 
-    Page        = getopt("node", Params),
+    Page        = getnode(Params),
     Password    = getopt("password", Params),
 
     CheckedFiles = [lists:nthtail(3,N) ||
@@ -878,7 +881,7 @@ copyFilesInit(Params, Root, Prefix) ->
 
 copyFiles(Params, Root, Prefix) ->
     Password = getopt("password", Params, ""),
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     Cancel   = getopt("cancel", Params),
 
     if
@@ -896,7 +899,7 @@ copyFiles(Params, Root, Prefix) ->
     end.
 
 copyFiles1(Params, Root, Prefix) ->
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     Dest     = getopt("destination", Params),
 
     case checkPassword(Dest, "", Root, Prefix) of
@@ -909,7 +912,7 @@ copyFiles1(Params, Root, Prefix) ->
     end.
 
 copyFiles2(Params, Root, Prefix) ->
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     Dest     = getopt("destination", Params),
     Password = getopt("password", Params, ""),
 
@@ -923,7 +926,7 @@ copyFiles2(Params, Root, Prefix) ->
     end.
 
 copyFiles3(Params, Root, Prefix) ->
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     Dest     = getopt("destination", Params),
 
     {SrcWobFile, SrcFileDir} = page2filename(Page, Root),
@@ -955,7 +958,7 @@ store_ok(Page, Root, Prefix, NewTxt,
     redirect({node, Page}, Prefix).
 
 showHistory(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
@@ -1058,38 +1061,42 @@ last_edited_time(File) ->
     end.
 
 showOldPage(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
     Nt = getopt("index", Params),
 
-    Index = list_to_integer(Nt),
-    {File,FileDir} = page2filename(Page, Root),
-    case file:read_file(File) of
-        {ok, Bin} ->
-            Wik = {wik002,Pwd,_Email,_Time,_Who,Txt,Files,Patches} =
-                bin_to_wik002(Bin),
-            %% N = #patches to do
-            N = length(Patches) - Index + 1,
-            ThePatches = take(N, Patches),
-            TxtStr = wiki_diff:patchL(Txt, ThePatches),
-            W = wiki_split:str2wiki(TxtStr),
-            DeepStr = wiki_to_html:format_wiki(Page, W, Root),
-            DeepFiles = wiki_to_html:format_wiki_files(
-                          Page, FileDir,Files, Root),
-            Form = form("POST", "noop.yaws",
-                        [textarea("text", 25, 75, TxtStr)]),
-            wiki_templates:template2(Root, Page, Page,
-                                    [DeepStr,DeepFiles,"<hr>",
-                                     Form],
-                                   false);
-        _ ->
-            show({no_such_page, Page}, Root)
+    case catch list_to_integer(Nt) of
+        {'EXIT', Reason} ->
+            show({no_such_index, Nt}, Root);
+        Index when integer(Index) ->
+	    {File,FileDir} = page2filename(Page, Root),
+	    case file:read_file(File) of
+		{ok, Bin} ->
+		    Wik = {wik002,Pwd,_Email,_Time,_Who,Txt,Files,Patches} =
+			  bin_to_wik002(Bin),
+		    %% N = #patches to do
+		    N = length(Patches) - Index + 1,
+		    ThePatches = take(N, Patches),
+		    TxtStr = wiki_diff:patchL(Txt, ThePatches),
+		    W = wiki_split:str2wiki(TxtStr),
+		    DeepStr = wiki_to_html:format_wiki(Page, W, Root),
+		    DeepFiles = wiki_to_html:format_wiki_files(
+				  Page, FileDir,Files, Root),
+		    Form = form("POST", "noop.yaws",
+				[textarea("text", 25, 75, TxtStr)]),
+		    wiki_templates:template2(Root, Page, Page,
+					     [DeepStr,DeepFiles,"<hr>",
+					     Form],
+					     false);
+		_ ->
+		    show({no_such_page, Page}, Root)
+	    end
     end.
 
 take(0, _) -> [];
 take(N, [{P,_,_}|T]) -> [P|take(N-1, T)].
 
 deletePage(Params,  Root, Prefix) ->
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     Password = getopt("password", Params, ""),
 
     case checkPassword(Page, Password, Root, Prefix) of
@@ -1102,7 +1109,7 @@ deletePage(Params,  Root, Prefix) ->
     end.
 
 deletePage1(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
     Password = getopt("password", Params),
 
     {File,FileDir} = page2filename(Page, Root),
@@ -1111,7 +1118,6 @@ deletePage1(Params, Root, Prefix) ->
             {wik002, _Pwd,_Email,_Time,_Who,Content,_Files,_Patches} =
                 bin_to_wik002(Bin),
 
-            Txt = quote_lt(Content),
             template2(Root, "Delete", Page,
                      [p("Reconfirm deleting this page - hit the 'Delete' "
                         "button to permanently remove the page."),
@@ -1121,7 +1127,7 @@ deletePage1(Params, Root, Prefix) ->
                             input("hidden", "node", Page),
                             input("hidden", "password", Password),
                             p(),
-                            textarea("text", 25, 75, Txt),
+                            textarea("text", 25, 75, Content),
                             p(),
                             hr()])],
                      false);
@@ -1130,7 +1136,7 @@ deletePage1(Params, Root, Prefix) ->
     end.
 
 finalDeletePage(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
     Password = getopt("password", Params, ""),
     Cancel   = getopt("cancel", Params),
 
@@ -1149,7 +1155,7 @@ finalDeletePage(Params, Root, Prefix) ->
     end.
 
 finalDeletePage1(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
     Txt0 = getopt("text", Params),
 
     {File,FileDir} = page2filename(Page, Root),
@@ -1191,7 +1197,7 @@ getPassword(Page, Root, Prefix, Target, Values) ->
 putPassword(Params, Root, Prefix) ->
     Target = getopt("target", Params, "error"),
     Cancel = getopt("cancel", Params),
-    Page   = getopt("node", Params),
+    Page   = getnode(Params),
 
     if
         Cancel /= undefined ->
@@ -1207,7 +1213,7 @@ putPassword(Params, Root, Prefix) ->
 
 editPage(Params, Root, Prefix) ->
     Password = getopt("password", Params, ""),
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     Sid      = getopt("sid", Params),
 
     case checkPassword(Page, Password, Root, Prefix) of
@@ -1397,13 +1403,12 @@ editPage(Page, Password, Root, Prefix, Sid) ->
     end.
 
 edit1(Page, Root, Password, Content, Sid) ->
-    Txt = quote_lt(Content),
     template2(Root, "Edit", Page,
          [p("Edit this page - when you have finished hit the 'Preview' "
             "button to check your results."),
           form("POST", "previewPage.yaws?sid="++str2urlencoded(Sid),
                "f1",
-               [textarea("text", 25, 75, Txt),
+               [textarea("text", 25, 75, Content),
                 p(),
                 input("submit", "preview", "Preview"),
                 input("submit", "delete", "Delete"),
@@ -1415,7 +1420,7 @@ edit1(Page, Root, Password, Content, Sid) ->
           ], false).
 
 sendMeThePassword(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
     Email = getopt("email", Params),
 
     {File,FileDir} = page2filename(Page, Root),
@@ -1462,7 +1467,7 @@ checkPassword(Page, Password, Root, Prefix) ->
     end.
 
 editFiles(Params, Root, Prefix) ->
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     Password = getopt("password", Params, ""),
 
     case checkPassword(Page, Password, Root, Prefix) of
@@ -1484,7 +1489,7 @@ editFiles1(Page, Password, Root, Prefix) ->
                 lists:map(fun({file,Name,Description,_Content}) ->
                                   ["<tr><td align=left valign=top>",
                                    input("checkbox","cb_"++Name,"on", ""),
-                                   Name,
+                                   yaws_api:htmlize(Name),
                                    "</td><td width='70%' align=left "
                                    "valign=top>",
                                    textarea("cbt_"++Name, 2, 20, Description),
@@ -1492,7 +1497,7 @@ editFiles1(Page, Password, Root, Prefix) ->
                              ({file,Name,_Content})  ->
                                   ["<tr><td align=left valign=top>",
                                    input("checkbox","cb_"++Name,"on", ""),
-                                   Name,
+                                   yaws_api:htmlize(Name),
                                    "</td><td width='70%' align=left "
                                    "valign=top>",
                                    textarea("cbt_"++Name, 2, 20, ""),
@@ -1523,7 +1528,7 @@ editFiles1(Page, Password, Root, Prefix) ->
 
 
 slideShow(Params, Root, Prefix) ->
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     NextArg = getopt("next", Params, undefined),
     PrevArg = getopt("prev", Params, undefined),
     AutoArg = getopt("auto", Params, undefined),
@@ -1589,7 +1594,7 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
                          "</a> "
                          "</td></tr></table>"
                          "<p><b>",integer_to_list(NewIndex)," - ",
-                         Comment,"</b></p><p>",
+                         yaws_api:htmlize(Comment),"</b></p><p>",
                          "<a href=\"",
                          wiki:str2urlencoded(FileDir), "/",
                          wiki:str2urlencoded(FileName),"\" target=\"pict\">",
@@ -1609,7 +1614,7 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
                     TopHeader =
                         ["<a href='showPage.yaws?node=",
                          str2urlencoded(Page),
-                         "'>",F1,"</a>\n"],
+                         "'>",yaws_api:htmlize(F1),"</a>\n"],
                     Locked = Pwd /= "",
                     Link =
                         wiki_templates:template(Page, Root,
@@ -1622,7 +1627,7 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
     end.
 
 thumbIndex(Params, Root, Prefix) ->
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
@@ -1640,7 +1645,7 @@ thumbIndex(Params, Root, Prefix) ->
             F1 = add_blanks_nicely(Page),
             TopHeader =
                 ["<a href='showPage.yaws?node=",Node,"'>",
-                 F1,"</a>\n"],
+                 yaws_api:htmlize(F1),"</a>\n"],
             Locked = Pwd /= "",
             Link =
                 wiki_templates:template(Page, Root, DeepStr,
@@ -1672,19 +1677,19 @@ build_thumb_rows([{P,Num}|Pics], Node, Prefix, Root, FileDir, N, X, Acc) ->
                                     "<img src='",Img,
                                     "'></a></td>\n"])|Acc]).
 
-build_slide_list(Page, Index, Nr) when Nr =< 10 ->
+build_slide_list(Node, Index, Nr) when Nr =< 10 ->
     Interval = 1,
     lists:flatmap(
       fun(X) ->
               I = integer_to_list(X),
-              [" <a href=\"slideShow.yaws?node=",Page,"&next=",I,"\">",
+              [" <a href=\"slideShow.yaws?node=",Node,"&next=",I,"\">",
                I,"</a> "]
       end, lists:seq(1,Nr,Interval));
-build_slide_list(Page, Index, Nr) ->
+build_slide_list(Node, Index, Nr) ->
     lists:flatmap(
       fun(X) ->
               I = if X==0 -> "1" ; true -> integer_to_list(X) end,
-              [" <a href=\"slideShow.yaws?node=",Page,"&next=",I,"\">",
+              [" <a href=\"slideShow.yaws?node=",Node,"&next=",I,"\">",
                I,"</a> "]
       end, lists:seq(0,Nr,5)).
 
@@ -1722,37 +1727,42 @@ get_img(Index, Direction, Files) ->
 
 
 editTag(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
     Tag = getopt("tag", Params),
 
-    {File,FileDir} = page2filename(Page, Root),
-    case file:read_file(File) of
-        {ok, Bin} ->
-            {wik002,Pwd,_Email,_Time,_Who,OldTxt,_Files,_Patches} =
-                bin_to_wik002(Bin),
-            Wik = wiki_split:str2wiki(OldTxt),
-            {Type, Str} = wiki_split:getRegion(list_to_integer(Tag), Wik),
-            Str1 = case Type of
-                       open -> quote_lt(Str);
-                       write_append -> ""
-                   end,
-            wiki_templates:template2(Root, "Edit", Page,
-                     [p("Edit this page - when you have finished hit the "
-                        "'Preview' button to check your results."),
-                      form("POST", "previewTagged.yaws",
-                           [input("submit", "review", "preview"),
-                            input("hidden", "node", Page),
-                            input("hidden", "tag", Tag),
-                            p(),
-                            textarea("text", 25, 75, Str1),
-                            p(),
-                            hr()])], false);
-        Error ->
-            show({no_such_page, Page}, Root)
+    case catch list_to_integer(Tag) of
+        {'EXIT', Reason} ->
+	    show({no_such_tag, Tag}, Root);
+        ITag when integer(ITag) ->
+	    {File,FileDir} = page2filename(Page, Root),
+	    case file:read_file(File) of
+		{ok, Bin} ->
+		    {wik002,Pwd,_Email,_Time,_Who,OldTxt,_Files,_Patches} =
+			bin_to_wik002(Bin),
+		    Wik = wiki_split:str2wiki(OldTxt),
+		    {Type, Str} = wiki_split:getRegion(ITag, Wik),
+		    Str1 = case Type of
+			       open -> Str;
+			       write_append -> ""
+			   end,
+		    wiki_templates:template2(Root, "Edit", Page,
+			     [p("Edit this page - when you have finished hit the "
+			        "'Preview' button to check your results."),
+			      form("POST", "previewTagged.yaws",
+			           [input("submit", "review", "preview"),
+				    input("hidden", "node", Page),
+				    input("hidden", "tag", Tag),
+				    p(),
+				    textarea("text", 25, 75, Str1),
+				    p(),
+				    hr()])], false);
+		Error ->
+		    show({no_such_page, Page}, Root)
+	    end
     end.
 
 changePassword(Params, Root, Prefix) ->
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
 
     wiki_templates:template2(
       Root, "Edit", Page,
@@ -1779,7 +1789,7 @@ changePassword(Params, Root, Prefix) ->
 
 
 changePassword2(Params, Root, Prefix) ->
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     OldPw    = getopt("password", Params),
     Pw1      = getopt("password1", Params),
     Pw2      = getopt("password2", Params),
@@ -1808,7 +1818,7 @@ changePassword2(Params, Root, Prefix) ->
     end.
 
 previewPage(Params, Root, Prefix) ->
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     Cancel   = getopt("cancel", Params),
     Delete   = getopt("delete", Params),
     Change   = getopt("chpasswd", Params),
@@ -1829,7 +1839,7 @@ previewPage(Params, Root, Prefix) ->
     end.
 
 previewPage1(Params, Root, Prefix) ->
-    Page     = getopt("node", Params),
+    Page     = getnode(Params),
     Password = getopt("password", Params),
     Txt0     = getopt("text", Params),
     Sid      = getopt("sid", Params,"undefined"),
@@ -1856,7 +1866,7 @@ previewPage1(Params, Root, Prefix) ->
 %% We *dont* want any structure here
 
 previewTagged(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
     Tag = getopt("tag", Params),
     Txt0 = getopt("text", Params),
 
@@ -1867,7 +1877,7 @@ previewTagged(Params, Root, Prefix) ->
         true ->
             wiki_templates:template2(
               Root, "Preview",
-              p("If this region is ok hit the <i>Store</i> button "
+              p("If this region is ok hit the \"Store\" button "
                 "otherwise return to the editing phase by clicking "
                 "the back button in your browser."),
               [form("POST", "storeTagged.yaws",
@@ -1894,7 +1904,7 @@ legal_flat_text1([_|T])      -> legal_flat_text1(T);
 legal_flat_text1([])         -> true.
 
 previewNewPage(Params, Root, Prefix) ->
-    Page  = getopt("node", Params),
+    Page  = getnode(Params),
     P1    = getopt("password1", Params),
     P2    = getopt("password2", Params),
     Email = getopt("email", Params),
@@ -1930,7 +1940,7 @@ wikiZombies(_, Root, Prefix) ->
     wiki_utils:zombies(Root).
 
 allRefsToMe(Params, Root, Prefix) ->
-    Page = getopt("node", Params),
+    Page = getnode(Params),
 
     wiki_utils:findallrefsto(Page, Root).
 
@@ -2025,32 +2035,32 @@ create_wiki_files(Root, FileDir, Files) ->
 
 %%
 password_entry(Name, Size) ->
-    ["<INPUT TYPE=password name=", Name,"  SIZE=", i2s(Size),">\n"].
+    ["<INPUT TYPE=password name=", yaws_api:htmlize(Name),"  SIZE=", i2s(Size),">\n"].
 
 password_entry(Name, Size, Value) ->
-    ["<INPUT TYPE=password name=", Name,"  SIZE=", i2s(Size),
+    ["<INPUT TYPE=password name=", yaws_api:htmlize(Name),"  SIZE=", i2s(Size),
      " Value=\"", Value, "\">\n"].
 
 input(Type="button", Name, OnClick) ->
-    ["<INPUT TYPE=",Type,"  Value=\"",Name,"\" onClick=\"", OnClick, "\">\n"];
+    ["<INPUT TYPE=",Type,"  Value=\"",yaws_api:htmlize(Name),"\" onClick=\"", yaws_api:htmlize(OnClick), "\">\n"];
 input(Type="file", Name, Size) ->
-    ["<INPUT TYPE=",Type,"  Name=\"",Name,"\" Size=\"", Size, "\">\n"];
+    ["<INPUT TYPE=",Type,"  Name=\"",yaws_api:htmlize(Name),"\" Size=\"", yaws_api:htmlize(Size), "\">\n"];
 input(Type="checkbox", Name, Value) ->
-    ["<INPUT TYPE=",Type,"  Name=\"",Name,"\" Value=\"", Value,
+    ["<INPUT TYPE=",Type,"  Name=\"",yaws_api:htmlize(Name),"\" Value=\"", yaws_api:htmlize(Value),
      "\" checked>\n"];
 input("select", Name, Values) ->
-    Options = ["<option> " ++ Option || Option <- Values],
-    ["<select Name=\"",Name,"\">\n", Options,
+    Options = ["<option>" ++ yaws_api:htmlize(Option) ++ "</option>" || Option <- Values],
+    ["<select Name=\"",yaws_api:htmlize(Name),"\">\n", Options,
      "</select>\n"];
 input(Type, Name, Value) ->
-    ["<INPUT TYPE=",Type,"  Name=\"",Name,"\" Value=\"", Value, "\">\n"].
+    ["<INPUT TYPE=",yaws_api:htmlize(Type),"  Name=\"",yaws_api:htmlize(Name),"\" Value=\"", yaws_api:htmlize(Value), "\">\n"].
 
 input(Type="checkbox", Name, Value, State) ->
-    ["<INPUT TYPE=",Type,"  Name=\"",Name,"\" Value=\"", Value,
-     "\" " ++ State ++ ">\n"];
+    ["<INPUT TYPE=",Type,"  Name=\"",yaws_api:htmlize(Name),"\" Value=\"", yaws_api:htmlize(Value),
+     "\" " ++ yaws_api:htmlize(State) ++ ">\n"];
 input(Type, Name, Value, Size) ->
-    ["<INPUT TYPE=",Type,"  Name=\"",Name,"\" Value=\"", Value,"\"",
-     "Size=\"",Size, "\">\n"].
+    ["<INPUT TYPE=",yaws_api:htmlize(Type),"  Name=\"",yaws_api:htmlize(Name),"\" Value=\"", yaws_api:htmlize(Value),"\"",
+     "Size=\"",yaws_api:htmlize(Size), "\">\n"].
 
 script(Script) ->
     ["<script>\n", Script, "\n</script>\n"].
@@ -2058,48 +2068,48 @@ script(Script) ->
 form(Method, Action, Args) ->
     ["<FORM METHOD=", Method,
      " ENCTYPE=\"multipart/form-data\"",
-     " ACTION=\"", Action, "\">",
+     " ACTION=\"", yaws_api:htmlize(Action), "\">",
      Args, "</form>\n"].
 
 form(Method, Action, Name, Args) ->
     ["<FORM METHOD=", Method,
      " ENCTYPE=\"multipart/form-data\"",
-     " ACTION=\"", Action, "\" NAME=\"", Name, "\">",
+     " ACTION=\"", yaws_api:htmlize(Action), "\" NAME=\"", yaws_api:htmlize(Name), "\">",
      Args, "</form>\n"].
 
 
 textarea(Name, Row, Txt) ->
-     ["<textarea name=\"", Name, "\" rows=", i2s(Row),
-      " wrap=virtual>", Txt, "</textarea>\n"].
+     ["<textarea name=\"", yaws_api:htmlize(Name), "\" rows=", i2s(Row),
+      " wrap=virtual>", yaws_api:htmlize(Txt), "</textarea>\n"].
 
 textarea(Name, Row, Cols, Txt) ->
-     ["<textarea name=\"", Name, "\" rows=", i2s(Row),
+     ["<textarea name=\"", yaws_api:htmlize(Name), "\" rows=", i2s(Row),
       " cols=", i2s(Cols), " wrap=virtual>",
-      Txt, "</textarea>\n"].
+      yaws_api:htmlize(Txt), "</textarea>\n"].
 
-h1(X)   -> ["<h1>",X,"</h1>"].
+h1(X)   -> ["<h1>",yaws_api:htmlize(X),"</h1>"].
 
-b(X)    -> ["<b>",X,"</b>"].
+b(X)    -> ["<b>",yaws_api:htmlize(X),"</b>"].
 
 p() -> "<p>".
-p(X) -> ["<p>", X, "</p>\n"].
+p(X) -> ["<p>", yaws_api:htmlize(X), "</p>\n"].
 br() -> ["<br>\n"].
 hr() -> ["<hr>\n"].
-body(X) -> ["<body bgcolor=\"", X, "\">"].
-pre(X)  -> ["<pre>",X,"</pre>"].
+body(X) -> ["<body bgcolor=\"", yaws_api:htmlize(X), "\">"].
+pre(X)  -> ["<pre>",yaws_api:htmlize(X),"</pre>"].
 
 i2s(I) -> integer_to_list(I).
 
 initial_page_content() -> "\nEnter your text here\n".
 
 bgcolor(C) ->
-    ["<body bgcolor='", C, "'>\n"].
+    ["<body bgcolor='", yaws_api:htmlize(C), "'>\n"].
 
 
 top_header(Page) ->
     F1 = add_blanks_nicely(Page),
     ["<h1><a href='allRefsToMe.yaws?node=",str2urlencoded(Page),
-     "'>",F1,"</a></h1>\n"].
+     "'>",yaws_api:htmlize(F1),"</a></h1>\n"].
 
 add_blanks_nicely([H1,H2|T]) ->
     case {little_letter(H1),
@@ -2132,7 +2142,7 @@ show({bad_password, Page}, Root) ->
              [p("You have supplied an incorrect password"),
               p("To find out the the password fill "
                 "in your email address and click on "
-                "<i>Show password</i>. If you are "
+                "\"Show password\". If you are "
                 "the registered owner of this page "
                 "then I will tell you the password."),
               form("POST", "sendMeThePassword.yaws",
@@ -2151,16 +2161,11 @@ show({illegal_filename, FileName, Reason}, Root) ->
 
 show(X, Root) ->
     {html, [body("white"),"<pre>",
-            quote_lt(lists:flatten(io_lib:format("~p~n",[X]))),
+            yaws_api:htmlize(lists:flatten(io_lib:format("~p~n",[X]))),
             "</pre>"]}.
 
 show_error(Str) ->
     {html, [body("white"),"<pre>","Error: ",Str,"</pre>"]}.
-
-
-quote_lt([$<|T]) -> "&lt;" ++ quote_lt(T);
-quote_lt([H|T])  -> [H|quote_lt(T)];
-quote_lt([])     -> [].
 
 %%----------------------------
 %% Utilities
@@ -2366,6 +2371,19 @@ check_precon([F|Fs], Args) ->
     end.
 
 %%
+
+getnode(KeyList) ->
+    case getopt("node", KeyList) of
+	Node when is_list(Node)->
+	    case re:run(Node, "^[0-9A-Za-z]+$") of
+		{match, _} ->
+		    Node;
+		_ ->
+		    undefined
+	    end;
+	_ ->
+	    undefined
+    end.
 
 getopt(Key, KeyList) ->
     getopt(Key, KeyList, undefined).
