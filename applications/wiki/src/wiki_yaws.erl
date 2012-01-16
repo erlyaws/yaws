@@ -47,7 +47,7 @@ parse_post([{part_body, Data}|Rest], [{Name, Value, Opts}|Acc]) ->
 parse_post([{Name, Value}|Rest], Acc) ->
     parse_post(Rest, [{to_string(Name), Value, []}|Acc]).
 
-to_string(Atom) when atom(Atom) ->
+to_string(Atom) when is_atom(Atom) ->
     atom_to_list(Atom);
 to_string(String) ->
     String.

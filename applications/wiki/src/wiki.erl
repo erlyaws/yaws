@@ -55,7 +55,7 @@ showPage(Params, Root, Prefix) ->
     Page = getopt("node", Params),
     if
         Page == undefined ->
-            error(invalid_request);
+            html_error(invalid_request);
         true ->
             {WobFile, FileDir} = page2filename(Page, Root),
             case file:read_file(WobFile) of
@@ -105,7 +105,7 @@ getThumb(Params, Root, Prefix) ->
     Pict = getopt("pict", Params),
     if
         Page == undefined ->
-            error(invalid_request);
+            html_error(invalid_request);
         true ->
             {WobFile, FileDir} = page2filename(Page, Root),
             ThumbName = thumb_name(Pict),
@@ -125,7 +125,7 @@ getMidSize(Params, Root, Prefix) ->
     Pict = getopt("pict", Params),
     if
         Page == undefined ->
-            error(invalid_request);
+            html_error(invalid_request);
         true ->
             {WobFile, FileDir} = page2filename(Page, Root),
             Extension = filename:extension(Pict),
@@ -170,7 +170,7 @@ fixupFiles(Params, Root, Prefix) ->
     Page = getopt("node", Params),
     if
         Page == undefined ->
-            error(invalid_request);
+            html_error(invalid_request);
         true ->
             importFiles(Page, Root, Prefix)
     end.
@@ -182,7 +182,7 @@ importFiles(Page, Root, Prefix) ->
             {wik002, Pwd,Email,Time,Who,TxtStr,Files,Patches} =
                 bin_to_wik002(Root,FileDir,Bin),
 
-            CurFiles = files(Root++"/"++FileDir, "*"),
+            CurFiles = files(Root++"/"++FileDir, "^"),
 
             CurFileNames = [basename(CF) || CF <- CurFiles,
                                             string:str(CF,"_wiki_thb")==0,
@@ -215,7 +215,7 @@ importFiles([WobFile]) ->
             {wik002, Pwd, Email, Time, Who, TxtStr, Files, Patches} =
                 bin_to_wik002(Bin),
 
-            CurFiles = files(FileDir, "*"),
+            CurFiles = files(FileDir, "^"),
 
             CurFileNames = [basename(CF) || CF <- CurFiles],
 
@@ -854,7 +854,7 @@ copyFilesInit(Params, Root, Prefix) ->
     CpList = [input("hidden", "cp_"++Name, Name) ||
                  {file, Name, _, _} <- CpFiles],
 
-    PageFiles = sort(files(Root, "*.wob")),
+    PageFiles = sort(files(Root, "\\.wob$")),
     Pages = [filename:basename(P,".wob") || P <- PageFiles, P /= File],
 
     if
@@ -1005,7 +1005,7 @@ format_time({{Year,Month,Day},{Hour,Min,Sec}}) ->
      i2s(Hour),":",i2s(Min),":",i2s(Sec)].
 
 allPages(_, Root, Prefix) ->
-    Files = sort(files(Root, "*.wob")),
+    Files = sort(files(Root, "\\.wob$")),
     template2(Root, "All Pages", "All Pages",
              [p("This is a list of all pages known to the system."),
               lists:map(fun(I) ->
@@ -1016,7 +1016,7 @@ allPages(_, Root, Prefix) ->
                         Files)], false).
 
 lastEdited(_, Root, Prefix) ->
-    Files = sort(files(Root, "*.wob")),
+    Files = sort(files(Root, "\\.wob$")),
     S = lists:flatten(lists:map(fun(I) ->
                                   "~" ++ filename:basename(I, ".wob") ++"\n\n"
                           end, Files)),
@@ -1155,7 +1155,7 @@ finalDeletePage1(Params, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
     case file:delete(File) of
         ok ->
-            Files = files(Root++"/"++FileDir, "*"),
+            Files = files(Root++"/"++FileDir, "^"),
             [file:delete(F) || F <- Files],
             file:del_dir(Root++"/"++FileDir),
             redirect({node, "home"}, Prefix);
@@ -1533,19 +1533,19 @@ slideShow(Params, Root, Prefix) ->
         {undefined, undefined, _} ->
             Index = case catch list_to_integer(AutoArg) of
                         {'EXIT', Reason} -> 1;
-                        Num when integer(Num) -> Num
+                        Num when is_integer(Num) -> Num
                     end,
             nextSlide(Index, auto, Page, Root, Prefix);
         {undefined, _, undefined} ->
             Index = case catch list_to_integer(PrevArg) of
                         {'EXIT', Reason} -> 1;
-                        Num when integer(Num) -> Num
+                        Num when is_integer(Num) -> Num
                     end,
             nextSlide(Index, prev, Page, Root, Prefix);
         {_, undefined, undefined} ->
             Index = case catch list_to_integer(NextArg) of
                         {'EXIT', Reason} -> 1;
-                        Num when integer(Num) -> Num
+                        Num when is_integer(Num) -> Num
                     end,
             nextSlide(Index, next, Page, Root, Prefix)
     end.
@@ -1968,7 +1968,7 @@ open_tmp_file(N, RootName, Suffix) ->
 
 
 ls(Root) ->
-    Files = files(Root, "*.wob"),
+    Files = files(Root, "\\.wob$"),
     lists:map(fun(I) -> filename:basename(I, ".wob") end, Files).
 
 %%
@@ -1979,7 +1979,7 @@ page2filename(Page, Root) ->
 
 %%
 
-error(invalid_request) ->
+html_error(invalid_request) ->
     {html, "invalid request"}.
 
 %%
@@ -2008,7 +2008,7 @@ bin_to_wik002(Root, FileDir, Bin) ->
 
 get_wiki_files(Root, FileDir) ->
     Dir = Root ++ "/" ++ FileDir,
-    files(Dir, "*").
+    files(Dir, "^").
 
 %%
 
@@ -2278,8 +2278,12 @@ hex2dec($f) -> 15.
 %% MR: Is this really necessary ?
 %%     We can now use filelib:fold_files/5
 files(Dir, Re) ->
-    Re1 = regexp:sh_to_awk(Re),
-    find_files(Dir, Re1, []).
+    case re:compile(Re) of
+	{ok, Re1} ->
+	    find_files(Dir, Re1, []);
+	_ ->
+	    []
+    end.
 
 find_files(Dir, Re, L) ->
     case file:list_dir(Dir) of
@@ -2291,8 +2295,8 @@ find_files([File|T], Dir, Re, L) ->
     FullName = Dir ++  [$/|File],
     case file_type(FullName) of
         regular ->
-            case regexp:match(FullName, Re) of
-                {match, _, _}  ->
+            case re:run(FullName, Re) of
+                {match, _}  ->
                     find_files(T, Dir, Re, [FullName|L]);
                 _ ->
                     find_files(T, Dir, Re, L)
@@ -2380,7 +2384,7 @@ getopt(Key, KeyList, Default)  ->
             end
     end.
 
-getopt_options(Key, KeyList) when atom(Key) ->
+getopt_options(Key, KeyList) when is_atom(Key) ->
     getopt_options(atom_to_list(Key), KeyList);
 getopt_options(Key, KeyList) ->
     case lists:keysearch(Key, 1, KeyList) of
@@ -2419,7 +2423,7 @@ getPassword([File]) ->
 
 %%
 
-tostring(A) when atom(A) ->
+tostring(A) when is_atom(A) ->
     atom_to_list(A);
 tostring(S) ->
     S.
@@ -2443,7 +2447,7 @@ searchPara([Para|Paralist]) ->
         {"search", undefined, []} ->
             [];
         {"search", Search, []} ->
-            case regexp:parse(Search) of
+            case re:compile(Search) of
                 {ok, RE} ->
                     Search;
                 {error, Error} ->
@@ -2476,7 +2480,7 @@ searchPages(SearchPost, Root, Prefix) ->
                           [Error]))],
                       false);
         Search ->
-            Files = sort(files(Root, "*.wob")),
+            Files = sort(files(Root, "\\.wob$")),
             {Sres, _S} = lists:mapfoldl(fun(F, S) ->
                                                 {searchPage(F, S), S} end,
                                         Search, Files),
@@ -2501,7 +2505,7 @@ searchPage(File, Search) ->
         {ok, Bin} ->
             {wik002,_Pwd,_Email,_Time,_Who,Txt,_Files,_Patches} =
                 bin_to_wik002(Bin),
-            {match, Matches} = regexp:matches(Txt, Search),
+            {match, Matches} = re:run(Txt, Search),
             {length(Matches), File};
         _ ->
             io:format("Error - failed to open ~s\n", [File]),

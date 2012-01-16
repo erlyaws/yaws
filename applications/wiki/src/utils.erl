@@ -51,11 +51,11 @@ fold_files0(FullName, Tail, Dir, Fun, _, _, Acc) ->
 %% Wrapper for the original fold_files/5 behaviour.
 
 fold_files(Dir, RegExp, Recursive, Fun, InitialAcc) ->
-    {ok, CompiledRegExp} = regexp:parse(RegExp),
+    {ok, CompiledRegExp} = re:compile(RegExp),
     Wrapper = fun
                   (FullName, false, Acc) ->
-                      NewAcc = case regexp:match(FullName, CompiledRegExp) of
-                                   {match, _, _}  ->
+                      NewAcc = case re:run(FullName, CompiledRegExp) of
+                                   {match, _}  ->
                                        Fun(FullName, Acc);
                                    _ ->
                                        Acc

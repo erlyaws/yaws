@@ -716,7 +716,7 @@ list_msg(Session, Refresh, Sort, Count) ->
     end.
 
 
-sort_href(Sort, Cur, Text) when atom(Cur) ->
+sort_href(Sort, Cur, Text) when is_atom(Cur) ->
     sort_href(Sort, atom_to_list(Cur), Text);
 sort_href(Sort, Sort, Text) ->
     [{a, [{href,"mail.yaws?sort=rev_"++Sort}], Text},
@@ -1756,7 +1756,7 @@ dot_unescape([$.|Rest], true, Acc) ->
     dot_unescape(Rest, false, Acc);
 dot_unescape([$\n|Rest], _, Acc) ->
     dot_unescape(Rest, true, [$\n|Acc]);
-dot_unescape([L|Rest], NL, Acc) when list(L) ->
+dot_unescape([L|Rest], NL, Acc) when is_list(L) ->
     {NL2, L2} = dot_unescape(L, NL, []),
     dot_unescape(Rest, NL2, [L2|Acc]);
 dot_unescape([C|Rest], _, Acc) ->
@@ -1947,7 +1947,7 @@ e(X) when X >= 26, X < 52 -> X + $a - 26;
 e(X) when X >= 52, X < 62 -> X + $0 - 52;
 e(62) -> $+;
 e(63) -> $/;
-e(X) -> erlang:fault({badchar,X}).
+e(X) -> erlang:error({badchar,X}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2026,9 +2026,9 @@ check_diff(_) -> false.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-to_string(Atom) when atom(Atom) ->
+to_string(Atom) when is_atom(Atom) ->
     atom_to_list(Atom);
-to_string(Integer) when integer(Integer) ->
+to_string(Integer) when is_integer(Integer) ->
     integer_to_list(Integer);
 to_string(List) -> List.
 
@@ -2328,7 +2328,7 @@ include_quote(Text, From) ->
 
 include_quote([], Acc, Prefix, State) ->
     {Acc, State};
-include_quote([L|Text], Acc, Prefix, State) when list(L) ->
+include_quote([L|Text], Acc, Prefix, State) when is_list(L) ->
     {Acc1, State1} = include_quote(L, Acc, Prefix, State),
     include_quote(Text, Acc1, Prefix, State1);
 include_quote(Text, Acc, Prefix, nl) ->
@@ -2509,10 +2509,10 @@ wrap_text([], [], Unwrapped, Space, Col, Max, Acc) ->
 wrap_text([], Cont, Unwrapped, Space, Col, Max, Acc) ->
     wrap_text(Cont, [], Unwrapped, Space, Col, Max, Acc);
 
-wrap_text([L|Rest], [], Unwrapped, Space, Col, Max, Acc) when list(L) ->
+wrap_text([L|Rest], [], Unwrapped, Space, Col, Max, Acc) when is_list(L) ->
     wrap_text(L, Rest, Unwrapped, Space, Col, Max, Acc);
 
-wrap_text([L|Rest], Cont, Unwrapped, Space, Col, Max, Acc) when list(L) ->
+wrap_text([L|Rest], Cont, Unwrapped, Space, Col, Max, Acc) when is_list(L) ->
     wrap_text(L, [Rest|Cont], Unwrapped, Space, Col, Max, Acc);
 
 wrap_text([C|Rest], Cont, Unwrapped, Space, Col, Max, Acc) when Col < Max ->
@@ -2645,9 +2645,9 @@ parse_date([]) -> [];
 parse_date(Date) ->
     D = parse_date(Date, #date{}),
     if
-        integer(D#date.year),integer(D#date.month),
-        integer(D#date.day),integer(D#date.hours),
-        integer(D#date.minutes),integer(D#date.seconds) ->
+        is_integer(D#date.year),is_integer(D#date.month),
+        is_integer(D#date.day),is_integer(D#date.hours),
+        is_integer(D#date.minutes),is_integer(D#date.seconds) ->
             {{D#date.year, D#date.month, D#date.day},
              {D#date.hours, D#date.minutes, D#date.seconds}};
         true -> error
@@ -2739,9 +2739,9 @@ parse_time(Time) ->
                 {Hour, Minutes, Seconds, R3}
         end,
     case catch F() of
-        {Hour, Minutes, Seconds, Rest} when integer(Hour),
-                                      integer(Minutes),
-                                      integer(Seconds) ->
+        {Hour, Minutes, Seconds, Rest} when is_integer(Hour),
+                                      is_integer(Minutes),
+                                      is_integer(Seconds) ->
             {Hour, Minutes, Seconds, Rest};
         _ -> error
     end.
@@ -2750,7 +2750,7 @@ format_date({{Year,Month,Day},{Hour,Minutes,Seconds}}) ->
     M = enc_month(Month),
     io_lib:format("~2..0w ~s ~4..0w ~2..0w:~2..0w:~2..0w",
                   [Day, M, Year, Hour, Minutes, Seconds]);
-format_date(Seconds) when integer(Seconds) ->
+format_date(Seconds) when is_integer(Seconds) ->
     Zero = calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}}),
     Time = Zero + Seconds,
     Date = calendar:gregorian_seconds_to_datetime(Time),

@@ -256,7 +256,7 @@ e(X) when X >= 26, X < 52 -> X + $a - 26;
 e(X) when X >= 52, X < 62 -> X + $0 - 52;
 e(62) -> $+;
 e(63) -> $/;
-e(X) -> erlang:fault({badchar,X}).
+e(X) -> erlang:error({badchar,X}).
 
 
 %%

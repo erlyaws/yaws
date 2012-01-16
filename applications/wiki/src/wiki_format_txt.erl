@@ -300,7 +300,7 @@ parse_date(Date) ->
 
 parse_date([], D) ->
     Entries = tl(tuple_to_list(D)),
-    AllDone = lists:all(fun(X) -> if integer(X) -> true;
+    AllDone = lists:all(fun(X) -> if is_integer(X) -> true;
                                      true -> false
                                   end
                         end, Entries),
@@ -408,9 +408,9 @@ parse_time(Time) ->
                 {Hour, Minutes, Seconds, R3}
         end,
     case catch F() of
-        {Hour, Minutes, Seconds, Rest} when integer(Hour),
-                                      integer(Minutes),
-                                      integer(Seconds) ->
+        {Hour, Minutes, Seconds, Rest} when is_integer(Hour),
+                                      is_integer(Minutes),
+                                      is_integer(Seconds) ->
             {Hour, Minutes, Seconds, Rest};
         _ -> error
     end.
