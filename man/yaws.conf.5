@@ -276,11 +276,11 @@ For example, if there are two proxies with the IP addresses
 .SH SERVER PART
 Yaws can virthost several web servers on the same IP address as well
 as several web servers on different IP addresses. This includes SSL servers.
-.pp
+.PP
 Each virtual host is defined within a matching pair of \fB<server ServerName>\fR
 and \fB</server>\fR. The ServerName will be the name of the webserver.
 
-.pp
+.PP
 The following directives are allowed inside a server definition.
 .TP
 \fBport = Port\fR
@@ -360,7 +360,7 @@ must return the possibly updated internal NewState.
 
 \fBModule:write_log(ServerName, Type, State, Infos)\fR
 .RS 12
-When it needs to log a message, \Yaws\ will call this function. The parameter
+When it needs to log a message, Yaws will call this function. The parameter
 Infos is \fI{Ip,Req,InHdrs,OutHdrs,Time}\fR for an access log and
 \fI{Ip,Path,Item}\fR for an auth log, where:
 
@@ -409,7 +409,7 @@ Add additional CGI or FastCGI variables. For example:
 
 <extra_cgi_vars dir='/path/to/some/scripts'>
 var = val
-...
+\&...
 </extra_cgi_vars>
 .fi
 
@@ -612,7 +612,7 @@ Defines a user provided callback module.
 At startup of the server, Module:start/1 will be called.
 The #sconf{} record (defined in yaws.hrl) will be used
 as the input argument. This makes it possible for a user
-application to syncronize the startup with the yaws server
+application to synchronize the startup with the yaws server
 as well as getting hold of user specific configuration data,
 see the explanation for the <opaque> context.
 
@@ -988,7 +988,7 @@ logdir = /var/log/yaws
 </server>
 .fi
 
-.pp
+.PP
 And this example shows a similar setup but two web servers on the same
 IP address.
 

@@ -197,8 +197,8 @@ When a yaws function needs to deliver chunks of data which it gets
 from a process. The other process can call this function to deliver
 these chunks. It requires the \fBout/1\fR function to return the
 value \fB{streamcontent, MimeType, FirstChunk}\fR to work.
-YawsPid is the process identifier of the yaws process delivering the original
-.yaws file. That is self() in the yaws code.
+YawsPid is the process identifier of the yaws process delivering the
+original .yaws file. That is self() in the yaws code.
 The Pid must typically be passed (somehow) to the producer of the stream.
 
 .TP
@@ -619,7 +619,7 @@ if a file is very large or if data arrives from back end servers on the network.
 
 .TP
 \fB{streamcontent_with_timeout, MimeType, FirstChunk, Timeout}\fR
-Similar to above, but with an explicit timeout. The deafult timeout
+Similar to above, but with an explicit timeout. The default timeout
 is 30 secs. I.e if the application fails to deliver data to the
 Yaws process, the streaming will stop. This is often not the
 desired behaviour in Comet/Ajax applications.  It's possible to
