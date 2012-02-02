@@ -2083,7 +2083,7 @@ part where options for each virtual host is supplied.
               The default value for logdir is "."
 
 \item        \verb+server_signature = String+ ---
-              This directive set the "Server: " output header to the custom
+              This directive sets the "Server: " output header to the custom
               value. The default value is "yaws/VSN, Yet Another Web Server".
 
 \item        \verb+ebin_dir = Directory+ ---
@@ -2208,6 +2208,10 @@ The following directives are allowed inside a server definition.
               connections may grow to. The default is the same as
               the default provided by \verb+gen_tcp:listen/2+, which
               is 5.
+
+\item        \verb+server_signature = String+ ---
+              This directive sets the "Server: " output header to the custom
+              value and overloads the global one for this virtual server.
 
 \item       \verb+rport = Port+ ---
               This forces  all  local  redirects  issued  by  the

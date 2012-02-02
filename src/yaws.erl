@@ -265,6 +265,8 @@ setup_sconf(DocRoot, D, SL) ->
                          D#sconf.listen),
            servername = lkup(servername, SL,
                              D#sconf.servername),
+           yaws = lkup(yaws, SL,
+                       D#sconf.yaws),
            ets = lkup(ets, SL,
                       D#sconf.ets),
            ssl = setup_sconf_ssl(SL, D#sconf.ssl),
@@ -637,10 +639,14 @@ ticker(Time, To, Msg ) ->
 
 
 address() ->
+    Sc = get(sc),
     ?F("<address> ~s Server at ~s </address>",
        [
-        (get(gc))#gconf.yaws,
-        (get(sc))#sconf.servername]).
+        case Sc#sconf.yaws of
+            undefined -> (get(gc))#gconf.yaws;
+            Signature -> Signature
+        end,
+        Sc#sconf.servername]).
 
 
 
@@ -1334,8 +1340,13 @@ make_allow_header(Options) ->
              "\r\n"]
     end.
 make_server_header() ->
-    HasDav = ?sc_has_dav(get(sc)),
-    ["Server: ", (get(gc))#gconf.yaws, "\r\n" |
+    Sc = get(sc),
+    HasDav = ?sc_has_dav(Sc),
+    Signature = case Sc#sconf.yaws of
+                    undefined -> (get(gc))#gconf.yaws;
+                    S -> S
+                end,
+    ["Server: ", Signature, "\r\n" |
      if HasDav == true ->
              ["DAV: 1\r\n"];
         true ->

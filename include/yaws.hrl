@@ -207,6 +207,7 @@
          xtra_docroots = [],         %% if we have additional pseudo docroots
          listen = [{127,0,0,1}],     %% bind to this IP, {0,0,0,0} is possible
          servername = "localhost",   %% servername is what Host: header is
+         yaws,                       %% server string for this vhost
          ets,                        %% local store for this server
          ssl,                        %% undefined | #ssl{}
          authdirs = [],

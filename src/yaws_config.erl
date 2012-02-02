@@ -893,6 +893,8 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
         [] ->
             fload(FD, server, GC, C, Cs, Lno+1, Next);
 
+        ["server_signature", '=', Signature] ->
+            fload(FD, server, GC, C#sconf{yaws=Signature}, Cs, Lno+1, Next);
         ["access_log", '=', Bool] ->
             case is_bool(Bool) of
                 {true, Val} ->

@@ -75,7 +75,7 @@ listening for control commands. The default id is "default".
 
 .TP
 \fBserver_signature = String\fR
-This directive set the "Server: " output header to the custom value. The default
+This directive sets the "Server: " output header to the custom value. The default
 value is "yaws/%VSN%, Yet Another Web Server".
 
 .TP
@@ -300,6 +300,12 @@ to listen on.
 This sets the TCP listen backlog for the server to define the maximum
 length the queue of pending connections may grow to. The default is
 the same as the default provided by \fIgen_tcp:listen/2\fR, which is 5.
+
+.TP
+\fBserver_signature = String\fR
+This directive sets the "Server: " output header to the custom value and
+overloads the global one for this virtual server.
+
 
 .TP
 \fBrhost = Host[:Port]\fR
