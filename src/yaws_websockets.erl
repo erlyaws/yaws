@@ -177,8 +177,7 @@ handle_result_fun(WSState) ->
                 noreply ->
                     ok;
                 {close, Reason} ->
-                    exit(Reason)
-
+                    do_close(WSState, Reason)
             end
     end.
 
@@ -191,9 +190,18 @@ do_callback_fun(WSState, CallbackMod) ->
                 {noreply, NewCallbackState} ->
                     NewCallbackState;
                 {close, Reason} ->
-                    exit(Reason)
+                    %% the following does not return
+                    do_close(WSState, Reason)
             end
     end.
+
+do_close(WSState, Reason) ->
+    Status = case Reason of
+                 _ when is_integer(Reason) -> Reason;
+                 _ -> 1000
+             end,
+    send(WSState, {close, <<Status:16/big>>}),
+    exit(Reason).
 
 basic_messages(FrameInfos, {FragType, FragAcc}) ->
     {Messages, NewFragType, NewFragAcc}
@@ -221,13 +229,13 @@ handle_message(#ws_frame_info{fin=1,
                {Messages, text, FragAcc}) ->
     Unfragged = <<FragAcc/binary, Data/binary>>,
     NewMessage = {text, Unfragged},
-    {[NewMessage | Messages], none, <<>>};
+    {Messages ++ [NewMessage], none, <<>>};
 
 %% unfragmented text message
 handle_message(#ws_frame_info{opcode=text, data=Data},
                {Messages, none, <<>>}) ->
     NewMessage = {text, Data},
-    {[NewMessage | Messages], none, <<>>};
+    {Messages ++ [NewMessage], none, <<>>};
 
 %% end of binary fragmented message
 handle_message(#ws_frame_info{fin=1,
@@ -236,13 +244,13 @@ handle_message(#ws_frame_info{fin=1,
                {Messages, binary, FragAcc}) ->
     Unfragged = <<FragAcc/binary, Data/binary>>,
     NewMessage = {binary, Unfragged},
-    {[NewMessage|Messages], none, <<>>};
+    {Messages ++ [NewMessage], none, <<>>};
 
 handle_message(#ws_frame_info{opcode=binary,
                               data=Data},
                {Messages, none, <<>>}) ->
     NewMessage = {binary, Data},
-    {[NewMessage|Messages], none, <<>>};
+    {Messages ++ [NewMessage], none, <<>>};
 
 handle_message(#ws_frame_info{opcode=ping,
                               data=Data,
@@ -256,6 +264,25 @@ handle_message(#ws_frame_info{opcode=pong}, Acc) ->
     %% http://tools.ietf.org/html/\
     %%        draft-ietf-hybi-thewebsocketprotocol-08#section-4
     Acc;
+
+%% According to RFC 6455 section 5.4, control messages like close
+%% MAY be injected in the middle of a fragmented message, which is
+%% why we pass FragType and FragAcc along below. Whether any clients
+%% actually do this in practice, I don't know.
+handle_message(#ws_frame_info{opcode=close,
+                              length=Len,
+                              data=Data},
+               {Messages, FragType, FragAcc}) ->
+    NewMessage = case Len of
+                     0 ->
+                         %% RFC 6455 section 7.4.1:
+                         %% status code 1000 means "normal"
+                         {close, 1000, <<>>};
+                     _ ->
+                         <<Status:16/big, Msg/binary>> = Data,
+                         {close, Status, Msg}
+                 end,
+    {Messages ++ [NewMessage], FragType, FragAcc};
 
 handle_message(#ws_frame_info{}, Acc) ->
     Acc.

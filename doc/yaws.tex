@@ -2726,8 +2726,8 @@ with any browser supporting RFC 6455, returns HTML and JavaScript that
 allow the client to establish a WebSocket connection to the
 server. These connections are handled by the code in
 \verb+www/websockets_example_endpoint.yaws+, which when invoked simply
-establishes \\ \verb+src/basic_echo_callback.erl+ as the WebSocket
-callback module for the connection.
+establishes \\ \verb+examples/src/basic_echo_callback.erl+ as the
+WebSocket callback module for the connection.
 
 \section{WebSocket Callback Modules}
 
@@ -2749,6 +2749,14 @@ one of the following forms:
 \item \verb+{binary, Message}+ --- the callback receives an
   unfragmented binary message.
 
+\item \verb+{close, Status, Reason}+ --- the callback receives a
+  notification that the client has closed the socket. \verb+Status+ is
+  the numerical status code sent by the client or the value 1000 (as
+  suggested by RFC 6455 section 7.4.1) if the client sent no status
+  code. \verb+Reason+ is a binary containing any text the client sent
+  to indicate the reason for closing the socket; this binary may be
+  empty.
+
 \end{itemize}
 
 The \verb+handle_message/1+ callback function supplies one of the
@@ -2765,7 +2773,11 @@ following as a return value:
 
 \item \verb+{close, Reason}+ --- close the connection and exit the
   handling process with \verb+Reason+. For a regular non-error close,
-  \verb+Reason+ should be the atom \verb+normal+.
+  \verb+Reason+ should be the atom \verb+normal+. \verb+Reason+ may
+  alternatively be any allowed numerical value specified for
+  \verb+close+ frames in section 7.4 of RFC 6455. Callback handlers
+  for \verb+close+ messages from the client must always return
+  \verb+{close, Reason}+.
 
 \end{itemize}
 
@@ -2808,9 +2820,9 @@ initial state and are prepared to handle fragmented messages
 themselves---supply a \verb+handle_message/2+ callback function.
 
 To indicate an advanced callback module, include
-\verb+{callback, {advanced, InitialState}}+ in the \verb+Options+ list
-when you return \verb+{websocket, CallbackModule, Options}+ from your
-\verb+out/1+ function, as described above.
+\verb+{callback, {advanced, InitialState}}+ in the \\ \verb+Options+
+list when you return \verb+{websocket, CallbackModule, Options}+ from
+your \verb+out/1+ function, as described above.
 
 The arguments to the \verb+handle_message/2+ callback
 function are as follows:
@@ -2839,13 +2851,17 @@ can be any of the following:
   callback module.
 
 \item \verb+{reply, Reply, State}+ --- reply to the received message
-  with \verb+Reply+, which is either \verb+{text, Data}+ or
+  with \verb+Reply+, which is either \\ \verb+{text, Data}+ or
   \verb+{binary, Data}+. \verb+State+ is the (possibly updated) state
   for the callback module.
 
 \item \verb+{close, Reason}+ --- close the connection and exit the
   handling process with \verb+Reason+. For a regular non-error close,
-  \verb+Reason+ should be the atom \verb+normal+.
+  \verb+Reason+ should be the atom \verb+normal+. \verb+Reason+ may
+  alternatively be any allowed numerical value specified for
+  \verb+close+ frames in section 7.4 of RFC 6455. Callback handlers
+  for \verb+close+ frames from the client must always return
+  \verb+{close, Reason}+.
 
 \end{itemize}
 
