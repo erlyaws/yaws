@@ -317,7 +317,7 @@ check_reserved_bits(#ws_frame_info{rsv=RSV}) ->
 
 %% http://www.erlang.org/doc/apps/stdlib/unicode_usage.html#id191467
 %% Heuristic identification of UTF-8
-check_utf8(Unframed = #ws_frame_info{opcode = text, data=Bin})
+check_utf8(Unframed = #ws_frame_info{opcode=text, data=Bin})
   when is_binary(Bin) ->
     case unicode:characters_to_binary(Bin,utf8,utf8) of
         Bin ->
@@ -341,12 +341,12 @@ ws_frame_info(#ws_state{sock=Socket},
             {ws_frame_info_secondary, Length, MaskingKey, Payload, Excess}
                 = ws_frame_info_secondary(Socket, Len1, Rest),
             FrameInfo = #ws_frame_info{fin=Fin,
-                                    rsv=Rsv,
-                                    opcode=opcode_to_atom(Opcode),
-                                    masked=Masked,
-                                    masking_key=MaskingKey,
-                                    length=Length,
-                                    payload=Payload},
+                                       rsv=Rsv,
+                                       opcode=opcode_to_atom(Opcode),
+                                       masked=Masked,
+                                       masking_key=MaskingKey,
+                                       length=Length,
+                                       payload=Payload},
             {FrameInfo, Excess};
         Other ->
             Other

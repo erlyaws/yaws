@@ -1610,11 +1610,13 @@ detect a \verb+Content-Length+ header.
   data in one go. (Typically if a file is very large or if data
   arrives from back end servers on the network.)
 
-\item \verb+{streamcontent_with_timeout, MimeType, FirstChunk, Timeout}+ Similar
-  to above, but with an explicit timeout. The deafult timeout is 30 secs. I.e if
-  the application fails to deliver data to the Yaws process, the streaming will
-  stop. This is often not the desired behaviour in Comet/Ajax applications. It's
-  possible to provide 'infinity' as timeout.
+\item
+  \verb+{streamcontent_with_timeout, MimeType, FirstChunk, Timeout}+
+  Similar to above, but with an explicit timeout. The default timeout
+  is 30 secs, i.e. if the application fails to deliver data to the
+  \Yaws\ process, the streaming will stop. This is often not the
+  desired behaviour in Comet/Ajax applications. It's possible to
+  provide 'infinity' as timeout.
 
 \item \verb+{streamcontent_from_pid, MimeType, Pid}+ This return value
   is similar to the \verb+streamcontent+ return value above.  However
