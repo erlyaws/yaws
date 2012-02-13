@@ -17,6 +17,8 @@ EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR))
 ERLC_FLAGS+=-Werror $(DEBUG_FLAGS) -pa ../../yaws -I ../include
 
 all: $(EBIN_FILES)
+debug:
+	$(MAKE) TYPE=debug	
 
 clean:
 	rm -f $(EBIN_FILES)
