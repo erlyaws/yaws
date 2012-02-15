@@ -5,4 +5,4 @@
 -include("../../include/yaws_api.hrl").
 
 out(_Arg) ->
-    [{status, 200}, {html, "break"}, break].
+    [{status, 200}, {html, "break"}, flush, break].
