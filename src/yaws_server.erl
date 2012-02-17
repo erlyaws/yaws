@@ -2662,7 +2662,7 @@ get_chunked_client_data(CliSock,SSL) ->
 
 deliver_dyn_part(CliSock,                       % essential params
                  LineNo, YawsFile,              % for diagnostic output
-                 CliDataPos,                    % for `get_more'
+                 CliDataPos0,                   % for `get_more' and `flush'
                  Arg,UT,
                  YawsFun,                       % call YawsFun(Arg)
                  DeliverCont                    % call DeliverCont(Arg)
@@ -2670,57 +2670,41 @@ deliver_dyn_part(CliSock,                       % essential params
                 ) ->
     put(yaws_ut, UT),
     put(yaws_arg, Arg),
+    put(client_data_pos, CliDataPos0),
     Res = (catch YawsFun(Arg)),
     case handle_out_reply(Res, LineNo, YawsFile, UT, Arg) of
         {get_more, Cont, State} when element(1, Arg#arg.clidata) == partial  ->
-            More = get_more_post_data(CliDataPos, Arg),
+            CliDataPos1 = get(client_data_pos),
+            More = get_more_post_data(CliDataPos1, Arg),
             A2 = Arg#arg{clidata=More, cont=Cont, state=State},
             deliver_dyn_part(
-              CliSock, LineNo, YawsFile, CliDataPos+size(un_partial(More)),
+              CliSock, LineNo, YawsFile, CliDataPos1+size(un_partial(More)),
               A2, UT, YawsFun, DeliverCont
              );
         break ->
-            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
-                  (Arg#arg.headers)#headers.transfer_encoding),
             finish_up_dyn_file(Arg, CliSock);
         {page, Page} ->
-            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
-                  (Arg#arg.headers)#headers.transfer_encoding),
             {page, Page};
         Arg2 = #arg{} ->
-            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
-                  (Arg#arg.headers)#headers.transfer_encoding),
             DeliverCont(Arg2);
         {streamcontent, _, _} ->
-            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
-                  (Arg#arg.headers)#headers.transfer_encoding),
             Priv = deliver_accumulated(Arg, CliSock, decide, undefined, stream),
             stream_loop_send(Priv, CliSock, 30000);
         %% For other timeout values (other than 30 second)
         {streamcontent_with_timeout, _, _, TimeOut} ->
-            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
-                  (Arg#arg.headers)#headers.transfer_encoding),
             Priv = deliver_accumulated(Arg, CliSock, decide, undefined, stream),
             stream_loop_send(Priv, CliSock, TimeOut);
         {streamcontent_with_size, Sz, _, _} ->
-            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
-                  (Arg#arg.headers)#headers.transfer_encoding),
             Priv = deliver_accumulated(Arg, CliSock, decide, Sz, stream),
             stream_loop_send(Priv, CliSock, 30000);
         {streamcontent_from_pid, _, Pid} ->
-            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
-                  (Arg#arg.headers)#headers.transfer_encoding),
             Priv = deliver_accumulated(Arg, CliSock, no, undefined, stream),
             wait_for_streamcontent_pid(Priv, CliSock, Pid);
         {websocket, CallbackMod, Opts} ->
-            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
-                  (Arg#arg.headers)#headers.transfer_encoding),
             %% The handshake passes control over the socket to OwnerPid
             %% and terminates the Yaws worker!
             yaws_websockets:start(Arg, CallbackMod, Opts);
         _ ->
-            flush(CliSock, CliDataPos, (Arg#arg.headers)#headers.content_length,
-                  (Arg#arg.headers)#headers.transfer_encoding),
             DeliverCont(Arg)
     end.
 
@@ -3292,6 +3276,14 @@ handle_out_reply({get_more, Cont, State}, _LineNo, _YawsFile, _UT, _ARG) ->
 
 handle_out_reply(Arg = #arg{},  _LineNo, _YawsFile, _UT, _ARG) ->
     Arg;
+
+handle_out_reply(flush, _LineNo, _YawsFile, _UT, ARG) ->
+    CliDataPos0 = get(client_data_pos),
+    CliDataPos1 = flush(ARG#arg.clisock, CliDataPos0,
+                        (ARG#arg.headers)#headers.content_length,
+                        (ARG#arg.headers)#headers.transfer_encoding),
+    put(client_data_pos, CliDataPos1),
+    ok;
 
 handle_out_reply(Reply, LineNo, YawsFile, _UT, ARG) ->
     L =  ?F("yaws code at ~s:~p crashed or "
@@ -4649,11 +4641,11 @@ flush(Sock, Sz, TransferEncoding) ->
 flush(Sock, Pos, undefined, "chunked") ->
     SC = get(sc),
     case get_chunked_client_data(Sock, yaws:is_ssl(SC)) of
-        {partial, _} -> flush(Sock, Pos, undefined, "chunked");
-        _            -> ok
+        {partial, Bin} -> flush(Sock, Pos+size(Bin), undefined, "chunked");
+        _              -> Pos
     end;
-flush(_Sock, _Pos, undefined, _) ->
-    ok;
+flush(_Sock, Pos, undefined, _) ->
+    Pos;
 flush(Sock, Pos, Sz, TE) when is_list(Sz) ->
     flush(Sock, Pos, strip_list_to_integer(Sz), TE);
 flush(Sock, Pos, Sz, _) ->
@@ -4662,11 +4654,11 @@ flush(Sock, Pos, Sz, _) ->
 
 
 flush(_Sock, Sz, Sz, _SSL, _PPS) ->
-    ok;
+    Sz;
 flush(Sock, Pos, Sz, SSL, PPS) ->
     case yaws:do_recv(Sock, erlang:min(Sz - Pos, PPS), SSL) of
         {ok, Bin} -> flush(Sock, Pos + size(Bin), Sz, SSL, PPS);
-        _         -> ok
+        _         -> Pos
     end.
 
 
