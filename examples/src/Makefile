@@ -14,13 +14,15 @@ MODULES= advanced_echo_callback \
          basic_echo_callback
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR))
-ERLC_FLAGS+=-Werror $(DEBUG_FLAGS) -pa ../../yaws -I ../include
+ERLC_FLAGS+=-Werror $(DEBUG_FLAGS)
 
 all: $(EBIN_FILES)
+
 debug:
-	$(MAKE) TYPE=debug	
+	$(MAKE) TYPE=debug
 
 clean:
 	rm -f $(EBIN_FILES)
-install:	all
+
+install: all
 	cp -f ../ebin/*.beam $(DESTDIR)$(VARDIR)/yaws/ebin
