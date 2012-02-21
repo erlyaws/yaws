@@ -1623,6 +1623,11 @@ accumulate_header({connection, What}) ->
 accumulate_header({"Connection", What}) ->
     accumulate_header({connection, What});
 
+accumulate_header({server, What}) ->
+    put(outh, (get(outh))#outh{server = ["Server: " , What, "\r\n"]});
+accumulate_header({"Server", What}) ->
+    accumulate_header({server, What});
+
 accumulate_header({location, What}) ->
     put(outh, (get(outh))#outh{location = ["Location: " , What, "\r\n"]});
 accumulate_header({"Location", What}) ->
@@ -1634,6 +1639,32 @@ accumulate_header({cache_control, What}) ->
 accumulate_header({"Cache-Control", What}) ->
     accumulate_header({cache_control, What});
 
+accumulate_header({expires, What}) ->
+    put(outh, (get(outh))#outh{expires = ["Expires: " , What, "\r\n"]});
+accumulate_header({"Expires", What}) ->
+    accumulate_header({expires, What});
+
+accumulate_header({date, What}) ->
+    put(outh, (get(outh))#outh{date = ["Date: " , What, "\r\n"]});
+accumulate_header({"Date", What}) ->
+    accumulate_header({date, What});
+
+accumulate_header({allow, What}) ->
+    put(outh, (get(outh))#outh{date = ["Allow: " , What, "\r\n"]});
+accumulate_header({"Allow", What}) ->
+    accumulate_header({allow, What});
+
+accumulate_header({last_modified, What}) ->
+    put(outh, (get(outh))#outh{last_modified =
+                                   ["Last-Modified: " , What, "\r\n"]});
+accumulate_header({"Last-Modified", What}) ->
+    accumulate_header({last_modified, What});
+
+accumulate_header({etag, What}) ->
+    put(outh, (get(outh))#outh{etag = ["Etag: " , What, "\r\n"]});
+accumulate_header({"Etag", What}) ->
+    accumulate_header({etag, What});
+
 accumulate_header({set_cookie, What}) ->
     O = get(outh),
     Old = case O#outh.set_cookie of
@@ -1644,6 +1675,12 @@ accumulate_header({set_cookie, What}) ->
 accumulate_header({"Set-Cookie", What}) ->
     accumulate_header({set_cookie, What});
 
+accumulate_header({content_range, What}) ->
+    put(outh, (get(outh))#outh{content_range =
+                                   ["Content-Range: " , What, "\r\n"]});
+accumulate_header({"Content-Range", What}) ->
+    accumulate_header({content_range, What});
+
 accumulate_header({content_type, What}) ->
     put(outh, (get(outh))#outh{content_type = ["Content-Type: " ,
                                                What, "\r\n"]});
@@ -1651,7 +1688,8 @@ accumulate_header({"Content-Type", What}) ->
     accumulate_header({content_type, What});
 
 accumulate_header({content_encoding, What}) ->
-    put(outh, (get(outh))#outh{content_encoding =
+    put(outh, (get(outh))#outh{encoding = deflate,
+                               content_encoding =
                                ["Content-Encoding: " , What, "\r\n"]});
 accumulate_header({"Content-Encoding", What}) ->
     accumulate_header({content_encoding, What});
@@ -1662,6 +1700,7 @@ accumulate_header({content_length, Len}) when is_integer(Len) ->
                 chunked = false,
                 transfer_encoding = undefined,
                 contlen = Len,
+                act_contlen = 0,
                 content_length = make_content_length_header(Len)});
 accumulate_header({"Content-Length", Len}) ->
     case Len of
@@ -1670,6 +1709,20 @@ accumulate_header({"Content-Length", Len}) ->
         L when is_list(L) ->
             accumulate_header({content_length, list_to_integer(L)})
     end;
+
+accumulate_header({transfer_encoding, What}) ->
+    put(outh, (get(outh))#outh{chunked = true,
+                               contlen = 0,
+                               transfer_encoding =
+                                   ["Transfer-Encoding: " , What, "\r\n"]});
+accumulate_header({"Transfer-Encoding", What}) ->
+    accumulate_header({transfer_encoding, What});
+
+accumulate_header({www_authenticate, What}) ->
+    put(outh, (get(outh))#outh{www_authenticate =
+                                   ["WWW-Authenticate: " , What, "\r\n"]});
+accumulate_header({"WWW-Authenticate", What}) ->
+    accumulate_header({"WWW-Authenticate", What});
 
 %% non-special headers (which may be special in a future Yaws version)
 
@@ -1705,14 +1758,38 @@ split_header([C|S], A) ->
 
 erase_header(connection) ->
     put(outh, (get(outh))#outh{connection = undefined, doclose = false});
+erase_header(server) ->
+    put(outh, (get(outh))#outh{server = undefined});
 erase_header(cache_control) ->
     put(outh, (get(outh))#outh{cache_control = undefined});
+erase_header(expires) ->
+    put(outh, (get(outh))#outh{expires = undefined});
+erase_header(date) ->
+    put(outh, (get(outh))#outh{date = undefined});
+erase_header(allow) ->
+    put(outh, (get(outh))#outh{allow = undefined});
+erase_header(last_modified) ->
+    put(outh, (get(outh))#outh{last_modified = undefined});
+erase_header(etag) ->
+    put(outh, (get(outh))#outh{etag = undefined});
 erase_header(set_cookie) ->
     put(outh, (get(outh))#outh{set_cookie = undefined});
+erase_header(content_range) ->
+    put(outh, (get(outh))#outh{content_range = undefined});
+erase_header(content_length) ->
+    put(outh, (get(outh))#outh{contlen = 0,
+                               content_length = undefined});
 erase_header(content_type) ->
     put(outh, (get(outh))#outh{content_type = undefined});
 erase_header(content_encoding) ->
-    put(outh, (get(outh))#outh{content_encoding = undefined});
+    put(outh, (get(outh))#outh{encoding = identity,
+                               content_encoding = undefined});
+erase_header(transfer_encoding) ->
+    put(outh, (get(outh))#outh{chunked = false,
+                               act_contlen = 0,
+                               transfer_encoding = undefined});
+erase_header(www_authenticate) ->
+    put(outh, (get(outh))#outh{www_authenticate = undefined});
 erase_header(location) ->
     put(outh, (get(outh))#outh{location = undefined}).
 
@@ -1988,6 +2065,9 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
         {ok, {http_header, _Num, 'Content-Type', _, X}} ->
             http_collect_headers(CliSock, Req,
                                  H#headers{content_type = X},SSL, Count+1);
+        {ok, {http_header, _Num, 'Content-Encoding', _, X}} ->
+            http_collect_headers(CliSock, Req,
+                                 H#headers{content_encoding = X},SSL, Count+1);
         {ok, {http_header, _Num, 'Transfer-Encoding', _, X}} ->
             http_collect_headers(CliSock, Req,
                                  H#headers{transfer_encoding=X},SSL, Count+1);

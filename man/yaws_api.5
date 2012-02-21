@@ -652,9 +652,14 @@ The following list of headers are given special treatment.
 
 \fI{connection, What}\fR
 
-This sets the connection header. If \fIWhat\fR is the special value
+This sets the Connection: header. If \fIWhat\fR is the special value
 \fI"close"\fR, the connection will be closed once the yaws page is delivered
 to the client.
+
+\fI{server, What}\fR
+
+Sets the Server: header. By setting this header, the server's signature will be
+dynamically overloaded.
 
 \fI{location, Url}\fR
 
@@ -665,14 +670,43 @@ the \fI{status, 302}\fR return value.
 
 Sets the Cache-Control: header.
 
+\fI{expires, What}\fR
+
+Sets the Expires: header.
+
+\fI{date, What}\fR
+
+Sets the Date: header.
+
+\fI{allow, What}\fR
+
+Sets the Allow: header.
+
+\fI{last_modified, What}\fR
+
+Sets the Last-Modified: header.
+
+\fI{etag, What}\fR
+
+Sets the Etag: header.
+
 \fI{set_cookie, Cookie}\fR
 
-Prepends a a Set-Cookie: header to the list of previously
+Prepends a Set-Cookie: header to the list of previously
 set Set-Cookie: headers.
+
+\fI{content_range, What}\fR
+
+Sets the Content-Range: header.
 
 \fI{content_type, MimeType}\fR
 
-Sets the Content-Type header.
+Sets the Content-Type: header.
+
+\fI{content_encoding, What}\fR
+
+Sets the Content-Encoding: header. If this header is defined, no deflate is
+performed by Yaws. So you can compress data by yourself.
 
 \fI{content_length, Len}\fR
 
@@ -682,13 +716,19 @@ some reason want to force a Content-Length: header (and we actually do
 know the length of the content, we can force yaws to not ship the
 page chunked.
 
+\fI{transfer_encoding, What}\fR
+
+Sets the Transfer-Encoding: header.
+
+\fI{www_authenticate, What}\fR
+
+Sets the WWW-Authenticate: header.
+
 
 All other headers must be added using the normal HTTP syntax.
 Example:
 
-{header, "My-X-Header: gadong"}
-
-
+\fI{header, {"My-X-Header", "gadong"}}\fR  of \fI{header, "My-X-Header: gadong"}\fR
 
 
 .TP

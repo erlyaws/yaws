@@ -1148,6 +1148,11 @@ reformat_header(H) ->
                  true ->
                       {"Content-Type", H#headers.content_type}
               end,
+              if H#headers.content_encoding == undefined ->
+                      undefined;
+                 true ->
+                      {"Content-Encoding", H#headers.content_encoding}
+              end,
 
               if H#headers.authorization == undefined ->
                       undefined;
@@ -1163,6 +1168,11 @@ reformat_header(H) ->
                       undefined;
                  true ->
                       {"Location", H#headers.location}
+              end,
+              if H#headers.x_forwarded_for == undefined ->
+                      undefined;
+                 true ->
+                      {"X-Forwarded-For", H#headers.x_forwarded_for}
               end
 
              ]
