@@ -1716,10 +1716,13 @@ handle_request(CliSock, ARG, N) ->
                             handle_normal_request(CliSock, ARG1, UT,
                                                   SC#sconf.authdirs, N);
                         {{true, PP}, _} ->
+                            UT = #urltype{type = appmod,
+                                          data = {yaws_revproxy, []}},
                             ARG1 = ARG#arg{server_path = DecPath,
-                                           querydata   = QueryString},
-                            handle_revproxy_request(CliSock, ARG1, PP,
-                                                    SC#sconf.authdirs, N)
+                                           querydata   = QueryString,
+                                           state       = PP},
+                            handle_normal_request(CliSock, ARG1, UT,
+                                                  SC#sconf.authdirs, N)
                     end
             end;
         {scheme, _Scheme, _RequestString} ->
@@ -1773,24 +1776,6 @@ handle_normal_request(CliSock, ARG, UT, Authdirs, N) ->
                   end,
 
             handle_ut(CliSock, ARG2, UT2, N);
-        false_403 ->
-            deliver_403(CliSock, ARG1#arg.req);
-        {false, AuthMethods, Realm} ->
-            UT1 = #urltype{type = {unauthorized, AuthMethods, Realm},
-                           path = ARG1#arg.server_path},
-            handle_ut(CliSock, ARG1, UT1, N)
-    end.
-
-handle_revproxy_request(CliSock, ARG, PP, Authdirs, N) ->
-    {IsAuth, ARG1} = case is_auth(ARG, Authdirs) of
-                         {true, User} -> {true, set_auth_user(ARG, User)};
-                         E            -> {E, ARG}
-                     end,
-
-    case IsAuth of
-        true ->
-            yaws_revproxy:init(CliSock, ARG1, ARG1#arg.server_path,
-                               ARG1#arg.querydata, PP, N);
         false_403 ->
             deliver_403(CliSock, ARG1#arg.req);
         {false, AuthMethods, Realm} ->
