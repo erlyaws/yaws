@@ -56,3 +56,7 @@ stdconf:
 authconf:
 	cat ../conf/authconf.conf | \
 	../../scripts/Subst %YTOP% $(YTOP) > yaws.conf
+
+revproxyconf:
+	cat ../conf/revproxy.conf | \
+	../../scripts/Subst %YTOP% $(YTOP) > yaws.conf

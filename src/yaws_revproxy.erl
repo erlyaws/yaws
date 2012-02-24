@@ -38,7 +38,6 @@
 
 
 %% TODO: Activate proxy keep-alive with a new option ?
-%% FIXME: Improve connection caching to enable this option
 -define(proxy_keepalive, false).
 
 
@@ -203,7 +202,6 @@ out(Arg = #arg{state=RPState}) when RPState#revproxy.state == recvheaders ->
                 Resp#http_response.status =:= 205 orelse
                 Resp#http_response.status =:= 304 orelse
                 Resp#http_response.status =:= 406 ->
-                    %% FIXME: check all http codes
                     RPState2 = RPState1#revproxy{state=terminate},
                     out(Arg#arg{state=RPState2});
 
@@ -238,7 +236,7 @@ out(Arg = #arg{state=RPState}) when RPState#revproxy.state == recvheaders ->
 
 
 %% The reponse content is not chunked.
-%% FIXME: use partial_post_size to split huge content and avoid memory
+%% TODO: use partial_post_size to split huge content and avoid memory
 %% exhaustion.
 out(Arg = #arg{state=RPState}) when RPState#revproxy.state == recvcontent ->
     Len = list_to_integer((RPState#revproxy.headers)#headers.content_length),
@@ -377,7 +375,7 @@ recv_next_chunk(YawsPid, Arg = #arg{state=RPState}) ->
 
 
 %%==========================================================================
-%% FIXME: find a better way to cache connections to backend servers. Here we can
+%% TODO: find a better way to cache connections to backend servers. Here we can
 %% have 1 connection per gserv process for each backend server.
 get_cached_connection(URL) ->
     Key = lists:flatten(yaws_api:reformat_url(URL)),
@@ -446,7 +444,6 @@ do_connect(URL) ->
                 Err     -> Err
             end;
         _ ->
-            %% FIXME: catch this case in during config parsing
             {error, unsupported_protocol}
     end.
 
