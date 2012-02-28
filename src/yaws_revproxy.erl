@@ -382,14 +382,23 @@ get_cached_connection(URL) ->
     case erase(Key) of
         undefined ->
             undefined;
-        {Sock, Type} ->
-            case yaws:do_recv(Sock, 0, Type) of
-                {ok, _} ->
-                    ?Debug("Found cached connection to ~s~n", [Key]),
-                    {ok, Sock, Type};
-                _ ->
+        {Sock, nossl} ->
+            case gen_tcp:recv(Sock, 0, 1) of
+                {error, closed} ->
                     ?Debug("Invalid cached connection~n", []),
-                    undefined
+                    undefined;
+                _ ->
+                    ?Debug("Found cached connection to ~s~n", [Key]),
+                    {ok, Sock, nossl}
+            end;
+        {Sock, ssl} ->
+            case ssl:recv(Sock, 0, 1) of
+                {error, closed} ->
+                    ?Debug("Invalid cached connection~n", []),
+                    undefined;
+                _ ->
+                    ?Debug("Found cached connection to ~s~n", [Key]),
+                    {ok, Sock, ssl}
             end
     end.
 
