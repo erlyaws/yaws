@@ -26,8 +26,8 @@ test/ibrowse.tar.gz
 test/support/include.mk
 test/support/include.sh
 test/t1/localhost:8000/
-test/t[123]/logs/
-test/t[123]/yaws.conf
+test/t[1234]/logs/
+test/t[1234]/yaws.conf
 www/yaws.pdf
 www/yaws.ps
 www/*.txt
