@@ -1264,9 +1264,9 @@ handle_method_result(Res, CliSock, {IP,Port}, GS, Req, H, Num) ->
                 Page ->
                     ok
             end,
-            %% `is_delayed_redirect' flag is used to correctly identify the url
+            %% `is_reentrant_request' flag is used to correctly identify the url
             %% type
-            put(is_delayed_redirect, true),
+            put(is_reentrant_request, true),
             SC = pick_sconf(GS#gs.gconf, H, GS#gs.group),
             put(sc, SC#sconf{appmods = []}),
             check_keepalive_maxuses(GS, Num),
@@ -1763,19 +1763,7 @@ handle_normal_request(CliSock, ARG, UT, Authdirs, N) ->
                 _ ->
                     ARG2 = ARG1
             end,
-
-            %% In case of delayed redirect, we must handle the
-            %% request as a dynamic one.
-            UT2 = case erase(is_delayed_redirect) of
-                      true when UT#urltype.type =:= regular ->
-                          UT#urltype{type=delayed_regular};
-                      true when UT#urltype.type =:= directory ->
-                          UT#urltype{type=delayed_directory};
-                      _ ->
-                          UT
-                  end,
-
-            handle_ut(CliSock, ARG2, UT2, N);
+            handle_ut(CliSock, ARG2, UT, N);
         false_403 ->
             deliver_403(CliSock, ARG1#arg.req);
         {false, AuthMethods, Realm} ->
@@ -2052,8 +2040,11 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
     Req = ARG#arg.req,
     H = ARG#arg.headers,
 
-    Regular_allowed = ['GET', 'HEAD', 'OPTIONS'],
+    Regular_allowed   = ['GET', 'HEAD', 'OPTIONS'],
+    IsReentrantRequest = erase(is_reentrant_request),
     if
+        %% Do not check http method for reentrant requests
+        IsReentrantRequest == true;
         Req#http_request.method == 'GET';
         Req#http_request.method == 'HEAD' ->
             ETag = yaws:make_etag(UT#urltype.finfo),
@@ -2072,10 +2063,10 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
                 _ ->
                     Do_deliver =
                         case Req#http_request.method of
-                            'GET' -> fun() -> deliver_file(CliSock, Req,
-                                                           UT, Range) end;
                             'HEAD' -> fun() -> deliver_accumulated(CliSock),
-                                               done end
+                                               done end;
+                            _      -> fun() -> deliver_file(CliSock, Req,
+                                                            UT, Range) end
                         end,
                     case H#headers.if_none_match of
                         undefined ->
@@ -2085,6 +2076,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
                                         undefined ->
                                             yaws:outh_set_static_headers
                                               (Req, UT, H, Range),
+                                            maybe_set_page_options(),
                                             Do_deliver();
                                         UTC_string ->
                                             case yaws:is_modified_p(
@@ -2093,10 +2085,12 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
                                                 true ->
                                                     yaws:outh_set_static_headers
                                                       (Req, UT, H, Range),
+                                                    maybe_set_page_options(),
                                                     Do_deliver();
                                                 false ->
                                                     yaws:outh_set_304_headers(
                                                       Req, UT, H),
+                                                    maybe_set_page_options(),
                                                     deliver_accumulated(
                                                       CliSock),
                                                     done_or_continue()
@@ -2108,6 +2102,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
                                         true ->
                                             yaws:outh_set_static_headers(
                                               Req, UT, H, Range),
+                                            maybe_set_page_options(),
                                             Do_deliver();
                                         false ->
                                             deliver_xxx(CliSock, Req, 412)
@@ -2117,6 +2112,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
                             case member(ETag,yaws:split_sep(Line, $,)) of
                                 true ->
                                     yaws:outh_set_304_headers(Req, UT, H),
+                                    maybe_set_page_options(),
                                     deliver_accumulated(CliSock),
                                     done_or_continue();
                                 false ->
@@ -2131,19 +2127,6 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
         true ->
             deliver_405(CliSock, Req, Regular_allowed)
     end;
-
-
-handle_ut(CliSock, ARG, UT = #urltype{type = delayed_regular}, _N) ->
-    Req = ARG#arg.req,
-    H   = ARG#arg.headers,
-    Do_deliver =
-        case Req#http_request.method of
-            'HEAD' -> fun() -> deliver_accumulated(CliSock), done end;
-            _      -> fun() -> deliver_file(CliSock, Req, UT, all) end
-        end,
-    yaws:outh_set_dyn_headers(Req, H, UT),
-    maybe_set_page_options(),
-    Do_deliver();
 
 
 handle_ut(CliSock, ARG, UT = #urltype{type = yaws}, N) ->
@@ -2228,10 +2211,14 @@ handle_ut(CliSock, ARG, UT = #urltype{type = directory}, N) ->
 
     if (?sc_has_dir_listings(SC)) ->
             Directory_allowed = ['GET', 'HEAD', 'OPTIONS'],
+            IsReentrantRequest = erase(is_reentrant_request),
             if
+                %% Do not check http method for reentrant requests
+                IsReentrantRequest == true;
                 Req#http_request.method == 'GET';
                 Req#http_request.method == 'HEAD' ->
                     yaws:outh_set_dyn_headers(Req, H, UT),
+                    maybe_set_page_options(),
                     P = UT#urltype.fullpath,
                     yaws_ls:list_directory(ARG, CliSock, UT#urltype.data,
                                            P, Req,
@@ -2244,23 +2231,6 @@ handle_ut(CliSock, ARG, UT = #urltype{type = directory}, N) ->
        true ->
             handle_ut(CliSock, ARG, #urltype{type = error}, N)
     end;
-
-
-handle_ut(CliSock, ARG, UT = #urltype{type = delayed_directory}, N) ->
-    Req = ARG#arg.req,
-    H   = ARG#arg.headers,
-    SC  = get(sc),
-    if (?sc_has_dir_listings(SC)) ->
-            yaws:outh_set_dyn_headers(Req, H, UT),
-            maybe_set_page_options(),
-            P = UT#urltype.fullpath,
-            yaws_ls:list_directory(ARG, CliSock, UT#urltype.data,
-                                   P, Req, ?sc_has_dir_all_zip(SC));
-       true ->
-            handle_ut(CliSock, ARG, #urltype{type = error}, N)
-    end;
-
-
 
 
 handle_ut(CliSock, ARG, UT = #urltype{type = redir}, _N) ->
