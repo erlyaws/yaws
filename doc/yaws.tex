@@ -2009,6 +2009,21 @@ any servers, but rather it only returns the configuration information
 and child specifications needed for the embedded mode application to
 start and configure \Yaws\  itself.
 
+If you have difficulty figuring out how to set up your \verb+#gconf+
+or \verb+#sconf+ records for embedded mode, you should first consider
+getting something running in non-embedded mode using a
+\verb+yaws.conf+ file. Once you're satisfied with the setup and
+\Yaws\  is running, execute the following command:
+
+\begin{verbatim}
+yaws --running-config
+\end{verbatim}
+
+This command will show the \Yaws\ configuration from your
+\verb+yaws.conf+ file in terms of \verb+#gconf+ and \verb+#sconf+
+records, thus showing you how to set up those records for embedded
+mode.
+
 \section{Starting Yaws in Embedded Mode}
 
 An embedded mode application can start \Yaws\  in one of two ways:
