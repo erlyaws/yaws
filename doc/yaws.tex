@@ -1612,11 +1612,11 @@ detect a \verb+Content-Length+ header.
 
 \item
   \verb+{streamcontent_with_timeout, MimeType, FirstChunk, Timeout}+
-  Similar to above, but with an explicit timeout. The default timeout
-  is 30 secs, i.e. if the application fails to deliver data to the
-  \Yaws\ process, the streaming will stop. This is often not the
+  Similar to the above, but with an explicit timeout. The default
+  timeout is 30 secs, i.e. if the application fails to deliver data to
+  the \Yaws\ process, the streaming will stop. This is often not the
   desired behaviour in Comet/Ajax applications. It's possible to
-  provide 'infinity' as timeout.
+  provide 'infinity' as the timeout.
 
 \item \verb+{streamcontent_from_pid, MimeType, Pid}+ This return value
   is similar to the \verb+streamcontent+ return value above.  However
@@ -1626,11 +1626,11 @@ detect a \verb+Content-Length+ header.
   example, and for applications wanting to avoid buffering data or
   avoid HTTP chunked mode transfer for streamed data.
 
-\item \verb+{streamcontent_with_size, Sz, MimeType, Pid}+ This return value is
-  similar to the \verb+streamcontent+ return value above. However it makes it
-  possible to stream data to the client by setting the content length of the
-  response. As the opposite of other ways to stream data, in this case, the
-  response is not chunked encoded.
+\item \verb+{streamcontent_with_size, Sz, MimeType, Pid}+ This is
+  similar to the \verb+streamcontent+ return value above. However it
+  makes it possible to stream data to the client by setting the
+  content length of the response. As the opposite of other ways to
+  stream data, in this case, the response is not chunked encoded.
 
 
 \item \verb+{header, H}+ Accumulates a HTTP header. Used by for
@@ -1685,8 +1685,9 @@ detect a \verb+Content-Length+ header.
   on the client socket. See chapter \ref{websockets} for more details.
 
 \item \verb+[ListOfValues]+ It is possible to return a list of the above defined
-  return values. Any occurrence of \verb+streamcontent+,
-  \verb+streamcontent_with_timeout+, \verb+streamcontent_with_size+,
+  return values. Any occurrence of the atoms \verb+streamcontent+,
+  \verb+streamcontent_with_timeout+,
+  \verb+streamcontent_with_size+,\\ 
   \verb+streamcontent_from_pid+, \verb+get_more+, \verb+page+ or \verb+break+ in
   this list is legal only if it is the last position of the list. If not,
   remaining values in the list are ignored.
@@ -2798,7 +2799,7 @@ following as a return value:
 
 \end{itemize}
 
-To inform \Yaws\ of the details of your callback module, return
+To inform \Yaws\ of the details of the callback module, return
 \verb+{websocket, CallbackModule, Options}+ from your \verb+out/1+
 function, where \verb+CallbackModule+ is the name of your callback
 module and \verb+Options+ is a list of options. The following options
