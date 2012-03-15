@@ -275,8 +275,8 @@ setup_sconf(DocRoot, D, SL) ->
            ets = lkup(ets, SL,
                       D#sconf.ets),
            ssl = setup_sconf_ssl(SL, D#sconf.ssl),
-           authdirs = lkup(authdirs, SL,
-                           D#sconf.authdirs),
+           authdirs = lkup(authdirs, expand_auth(SL),
+			   D#sconf.authdirs),
            partial_post_size = lkup(partial_post_size, SL,
                                     D#sconf.partial_post_size),
            appmods = lkup(appmods, SL,
@@ -307,6 +307,22 @@ setup_sconf(DocRoot, D, SL) ->
            fcgi_app_server = lkup(fcgi_app_server, SL,
                                   D#sconf.fcgi_app_server),
            php_handler = lkup(php_handler, SL, D#sconf.php_handler)}.
+
+expand_auth(SL) ->
+    case [A || {auth, A} <- SL] of
+	[] ->
+	    SL;
+	As ->
+	    [{authdirs, [opts_to_auth(O) || O <- As]}|SL]
+    end.
+
+opts_to_auth(Opts) ->
+    {_, Auth} =
+	lists:foldl(
+	  fun(F, {P,A}) ->
+		  {P+1,setelement(P, A, proplists:get_value(F, Opts, element(P,A)))}
+	  end, {2, #auth{}}, record_info(fields, auth)),
+    Auth.
 
 setup_sconf_ssl(SL, DefaultSSL) ->
     case lkup(ssl, SL, undefined) of
