@@ -107,7 +107,7 @@ handshake(Arg, SC, CallbackMod, Opts, Params) ->
                                                 % and ssl sockets
             {callback, CallbackType} = lists:keyfind(callback, 1, Opts),
 
-            CallbackMod:handle_message(open, Params),
+            CallbackMod:handle_open(Params),
 
             WSState = #ws_state{sock = CliSock,
                                 vsn  = ProtocolVersion,
