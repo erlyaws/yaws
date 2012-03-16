@@ -10,7 +10,7 @@
 %% Export for apply
 -export([say_hi/1]).
 
-handle_message(open, Params) ->
+handle_message(open, _Params) ->
     noreply.
 
 handle_message({text, <<"bye">>}) ->
