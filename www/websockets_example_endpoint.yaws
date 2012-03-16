@@ -2,5 +2,5 @@
 out(A) ->
     CallbackMod = basic_echo_callback,
     Opts = [{origin, "http://" ++ (A#arg.headers)#headers.host}],
-    {websocket, CallbackMod, Opts}.
+    {websocket, CallbackMod, Opts, []}.
 </erl>
