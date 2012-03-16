@@ -5,10 +5,14 @@
 -module(basic_echo_callback).
 
 %% Export for websocket callbacks
--export([handle_message/1]).
+-export([handle_open/1, handle_message/1]).
 
 %% Export for apply
 -export([say_hi/1]).
+
+handle_open(_Params) ->
+    io:format("The connection was opened.~n", []),
+    noreply.
 
 handle_message({text, <<"bye">>}) ->
     io:format("User said bye.~n", []),

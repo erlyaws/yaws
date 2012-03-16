@@ -2738,6 +2738,9 @@ A WebSocket callback module implements either the
 \\ \verb+handle_message/2+ callback function, depending on whether
 it's a basic or advanced callback module.
 
+To be notified when the connection have been upgraded, you can implement,
+ \verb+handle_open/1+ callback.
+
 \subsection{Basic Callback Modules}
 
 The argument passed to \verb+handle_message/1+ callback function takes
@@ -2784,9 +2787,10 @@ following as a return value:
 \end{itemize}
 
 To inform \Yaws\ of the details of your callback module, return
-\verb+{websocket, CallbackModule, Options}+ from your \verb+out/1+
+\verb+{websocket, CallbackModule, Options, Params}+ from your \verb+out/1+
 function, where \verb+CallbackModule+ is the name of your callback
-module and \verb+Options+ is a list of options. The following options
+module, \verb+Options+ is a list of options and \verb+Params+ is an arbitrary
+param to be passed to \verb+handle_open/1+. The following options
 are available:
 
 \begin{itemize}
@@ -2823,7 +2827,7 @@ themselves---supply a \verb+handle_message/2+ callback function.
 
 To indicate an advanced callback module, include
 \verb+{callback, {advanced, InitialState}}+ in the \\ \verb+Options+
-list when you return \verb+{websocket, CallbackModule, Options}+ from
+list when you return \verb+{websocket, CallbackModule, Options, Params}+ from
 your \verb+out/1+ function, as described above.
 
 The arguments to the \verb+handle_message/2+ callback

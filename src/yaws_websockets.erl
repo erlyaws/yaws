@@ -18,17 +18,17 @@
 -define(MAX_PAYLOAD, 16777216). %16MB
 
 %% API
--export([start/3, send/2]).
+-export([start/4, send/2]).
 
 %% Exported for spawn
--export([receive_control/4]).
+-export([receive_control/5]).
 
-start(Arg, CallbackMod, Opts) ->
+start(Arg, CallbackMod, Opts, Params) ->
     SC = get(sc),
     CliSock = Arg#arg.clisock,
     PrepdOpts = preprocess_opts(Opts),
     OwnerPid = spawn(?MODULE, receive_control,
-                     [Arg, SC, CallbackMod, PrepdOpts]),
+                     [Arg, SC, CallbackMod, PrepdOpts, Params]),
     CliSock = Arg#arg.clisock,
     case SC#sconf.ssl of
         undefined ->
@@ -73,15 +73,15 @@ preprocess_opts(GivenOpts) ->
                 {callback, basic}],
     lists:foldl(Fun, GivenOpts, Defaults).
 
-receive_control(Arg, SC, CallbackMod, Opts) ->
+receive_control(Arg, SC, CallbackMod, Opts, Params) ->
     receive
         ok ->
-            handshake(Arg, SC, CallbackMod, Opts);
+            handshake(Arg, SC, CallbackMod, Opts, Params);
         {error, Reason} ->
             exit(Reason)
     end.
 
-handshake(Arg, SC, CallbackMod, Opts) ->
+handshake(Arg, SC, CallbackMod, Opts, Params) ->
     CliSock = Arg#arg.clisock,
     OriginOpt = lists:keyfind(origin, 1, Opts),
     Origin = get_origin_header(Arg#arg.headers),
@@ -100,13 +100,15 @@ handshake(Arg, SC, CallbackMod, Opts) ->
                     undefined -> "ws://" ++ Host ++ Path;
                     _ -> "wss://" ++ Host ++ Path
                 end,
-
             Handshake = handshake(ProtocolVersion, Arg, CliSock,
                                   WebSocketLocation, Origin, Protocol),
             gen_tcp:send(CliSock, Handshake),   % TODO: use the yaws way of
                                                 % supporting normal
                                                 % and ssl sockets
             {callback, CallbackType} = lists:keyfind(callback, 1, Opts),
+
+            CallbackMod:handle_open(Params),
+
             WSState = #ws_state{sock = CliSock,
                                 vsn  = ProtocolVersion,
                                 frag_type = none},
