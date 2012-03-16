@@ -282,7 +282,7 @@ parse_multipart_post(Arg, Options) ->
                         undefined ->
                             LineArgs = parse_arg_line(Line),
                             {value, {_, Boundary}} =
-                                lists:keysearch(boundary, 1, LineArgs),
+                                lists:keysearch("boundary", 1, LineArgs),
                             parse_multipart(
                               un_partial(Arg#arg.clidata),
                               Boundary, Options)
@@ -354,7 +354,7 @@ parse_arg_value([C|Line], Key, Value, Quote, _) ->
 %%
 
 make_parse_line_reply(Key, Value, Rest) ->
-    {{list_to_atom(yaws:funreverse(Key, fun yaws:to_lowerchar/1)),
+    {{yaws:funreverse(Key, fun yaws:to_lowerchar/1),
       lists:reverse(Value)}, Rest}.
 
 
@@ -502,7 +502,7 @@ parse_multi(Data, #mp_parse_state{state=header}=ParseState, Acc, Name, Hdrs) ->
                 "content-disposition" ->
                     "form-data"++Params = HdrValStr,
                     Parameters = parse_arg_line(Params),
-                    {value, {_, NewName}} = lists:keysearch(name, 1, Parameters),
+                    {value, {_, NewName}} = lists:keysearch("name", 1, Parameters),
                     parse_multi(Rest, ParseState, Acc,
                                 NewName, Parameters++Hdrs);
                 LowerHdr ->

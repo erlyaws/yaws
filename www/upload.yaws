@@ -74,7 +74,7 @@ addFileChunk(_A, [], State) ->
     {cont, State};
 
 addFileChunk(A, [{head, {_Name, Opts}}|Res], State ) ->
-    case lists:keysearch(filename, 1, Opts) of
+    case lists:keysearch("filename", 1, Opts) of
         {value, {_, Fname0}} ->
             Fname = yaws_api:sanitize_file_name(basename(Fname0)),
 
