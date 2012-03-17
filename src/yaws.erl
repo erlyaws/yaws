@@ -258,7 +258,12 @@ setup_sconf(DocRoot, D, SL) ->
                         D#sconf.rhost),
            rmethod = lkup(rmethod, SL,
                           D#sconf.rmethod),
-           docroot = DocRoot,
+           docroot = case lkup(docroot, SL, D#sconf.docroot) of
+                         undefined ->
+                             DocRoot;
+                         DR ->
+                             DR
+                     end,
            xtra_docroots = lkup(xtra_docroots, SL,
                                 D#sconf.xtra_docroots),
            listen = lkup(listen, SL,
