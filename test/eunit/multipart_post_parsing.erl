@@ -20,8 +20,8 @@ test_complete_parse(Opt) ->
     2 = length(Params),
     {"abc123", HeadParams} = proplists:get_value(head, Params),
     4 = length(HeadParams),
-    "abc123" = proplists:get_value(name, HeadParams),
-    "abc123" = proplists:get_value(filename, HeadParams),
+    "abc123" = proplists:get_value("name", HeadParams),
+    "abc123" = proplists:get_value("filename", HeadParams),
     "text/plain" = proplists:get_value(content_type, HeadParams),
     "sampledata" = proplists:get_value("test-header", HeadParams),
     proplists:get_value(body, Params).
@@ -53,14 +53,14 @@ test_incomplete_body(Opt) ->
     {"abc123", HeadParams1} = proplists:get_value(head, Res1),
     PB = proplists:get_value(part_body, Res1),
     2 = length(HeadParams1),
-    "abc123" = proplists:get_value(filename, HeadParams1),
-    "abc123" = proplists:get_value(name, HeadParams1),
+    "abc123" = proplists:get_value("filename", HeadParams1),
+    "abc123" = proplists:get_value("name", HeadParams1),
     3 = length(Res2),
     {"def456", HeadParams2} = proplists:get_value(head, Res2),
     BL = lists:sort([B || {K, _}=B <- Res2, K =:= body]),
     2 = length(HeadParams2),
-    "def456" = proplists:get_value(filename, HeadParams2),
-    "def456" = proplists:get_value(name, HeadParams2),
+    "def456" = proplists:get_value("filename", HeadParams2),
+    "def456" = proplists:get_value("name", HeadParams2),
     {PB, BL}.
 
 incomplete_body_list_test() ->
@@ -90,36 +90,40 @@ test_incomplete_head_list(Opt) ->
     {"abc123", HeadParams1} = proplists:get_value(head, Res1),
     Body1 = proplists:get_value(body, Res1),
     2 = length(HeadParams1),
-    "abc123" = proplists:get_value(filename, HeadParams1),
-    "abc123" = proplists:get_value(name, HeadParams1),
+    "abc123" = proplists:get_value("filename", HeadParams1),
+    "abc123" = proplists:get_value("name", HeadParams1),
     2 = length(Res2),
     {"ghi789", HeadParams2} = proplists:get_value(head, Res2),
     Body2 = proplists:get_value(body, Res2),
     2 = length(HeadParams1),
-    "ghi789" = proplists:get_value(filename, HeadParams2),
-    "ghi789" = proplists:get_value(name, HeadParams2),
+    "ghi789" = proplists:get_value("filename", HeadParams2),
+    "ghi789" = proplists:get_value("name", HeadParams2),
     {Body1, Body2}.
 
 incomplete_head_list_test() ->
-    {"sometext\n", "sometext\n"} = test_incomplete_head_list(list).
+    {"sometext\n", "sometext\n"} = test_incomplete_head_list(list),
+    ok.
 
 incomplete_head_binary_test() ->
-    {<<"sometext\n">>, <<"sometext\n">>} = test_incomplete_head_list(binary).
+    {<<"sometext\n">>, <<"sometext\n">>} = test_incomplete_head_list(binary),
+    ok.
 
 read_multipart_form_base(Opt) ->
     {done, Dict} = yaws_multipart:read_multipart_form(mk_arg(data_to_parse()),
                                                       [no_temp_file, Opt]),
     {ok, Params} = dict:find("abc123", Dict),
-    "abc123" = proplists:get_value(filename, Params),
+    "abc123" = proplists:get_value("filename", Params),
     "text/plain" = proplists:get_value(content_type, Params),
     "sampledata" = proplists:get_value("test-header", Params),
     proplists:get_value(value, Params).
 
 read_multipart_form_list_test() ->
-    "sometext\n" = read_multipart_form_base(list).
+    "sometext\n" = read_multipart_form_base(list),
+    ok.
 
 read_multipart_form_binary_test() ->
-    <<"sometext\n">> = read_multipart_form_base(binary).
+    <<"sometext\n">> = read_multipart_form_base(binary),
+    ok.
 
 mk_arg(Data) ->
     ContentType = "multipart/form-data; boundary=!!!",

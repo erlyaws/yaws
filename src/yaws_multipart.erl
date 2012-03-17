@@ -22,7 +22,7 @@
          }).
 
 read_multipart_form(A, Options) when A#arg.state == undefined ->
-    State     = #upload{params = dict:new()},
+    State = #upload{params = dict:new()},
     NewState = read_options(Options,State),
     multipart(A, NewState);
 read_multipart_form(A, _Options) ->
@@ -81,7 +81,7 @@ add_file_chunk(_A, [], State) ->
 add_file_chunk(A, [{head, {_Name, Opts}}|Res], State ) ->
     S1 = close_previous_param(State),
     S2 = lists:foldl(
-           fun({filename, Fname0}, RunningState) ->
+           fun({"filename", Fname0}, RunningState) ->
                    case create_temp_file(State) of
                        [undefined, undefined] ->
                            %% values will be stored in memory as
@@ -98,7 +98,7 @@ add_file_chunk(A, [{head, {_Name, Opts}}|Res], State ) ->
                              param_running_value = undefined,
                              running_file_size   = 0}
                    end;
-              ({name, ParamName}, RunningState) ->
+              ({"name", ParamName}, RunningState) ->
                    RunningState#upload{
                      param_name          = ParamName,
                      param_running_value = undefined};
@@ -171,7 +171,7 @@ close_previous_param(#upload{param_name = ParamName} = State) ->
                    params = dict:store(ParamName, ParamValue,
                                        State#upload.params)};
              _ ->
-                 ParamInfo = [{filename, State#upload.filename}],
+                 ParamInfo = [{"filename", State#upload.filename}],
                  ParamInfo2 = case State#upload.fd of
                                   undefined ->
                                       lists:append(
