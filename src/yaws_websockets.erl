@@ -107,7 +107,12 @@ handshake(Arg, SC, CallbackMod, Opts, Params) ->
                                                 % and ssl sockets
             {callback, CallbackType} = lists:keyfind(callback, 1, Opts),
 
-            CallbackMod:handle_open(Params),
+            case erlang:function_exported(CallbackMod, handle_open, 1) of
+                true ->
+                    CallbackMod:handle_open(Params);
+                false ->
+                    ok
+            end,
 
             WSState = #ws_state{sock = CliSock,
                                 vsn  = ProtocolVersion,
