@@ -17,6 +17,7 @@
          send/6, send/2, get_val/3, logout/1, base64_2_str/1, retr/4,
          delete/2, send_attachment/2, send_attachment_plain/2,
          wrap_text/2, getopt/3, decode/1]).
+-export([read_config/1]).
 
 -include("../../../include/yaws_api.hrl").
 -include("defs.hrl").
@@ -283,10 +284,10 @@ sendChunk([{head, {"message", _Opts}}|Rest], S) ->
 sendChunk([{head, {"attached", _Opts}}|Rest], State) ->
     sendChunk(Rest, State#send{param=attached});
 
-sendChunk([{head, {File, _Opts}}|Rest], S) when S#send.attached=="no" ->
+sendChunk([{head, {_File, _Opts}}|Rest], S) when S#send.attached=="no" ->
     sendChunk(Rest, S#send{param=ignore});
 
-sendChunk([{head, {File, Opts}}|Rest], S0) when S0#send.attached=="yes" ->
+sendChunk([{head, {_File, Opts}}|Rest], S0) when S0#send.attached=="yes" ->
     % io:format("attachment head\n"),
     if S0#send.estate /= "" ->
             smtp_send_b64_final(S0);
@@ -567,10 +568,9 @@ build_tab([T|Ts], N) ->
 showmail(Session, MailNr) ->
     showmail(Session, MailNr, ?RETRYCOUNT).
 
-showmail(Session, MailNr, 0) ->
+showmail(_Session, _MailNr, 0) ->
     {ehtml,format_error("Mailbox locked by other mail session.")} ;
 showmail(Session, MailNr, Count) ->
-    MailStr = integer_to_list(MailNr),
     tick_session(Session#session.cookie),
 
     Formated =
@@ -580,7 +580,7 @@ showmail(Session, MailNr, Count) ->
                 case string:str(lowercase(Reason), "lock") of
                     0 ->
                         format_error(to_string(Reason));
-                    N ->
+                    _N ->
                         sleep(?RETRYTIMEOUT),
                         showmail(Session, MailNr, Count-1)
                 end;
@@ -612,7 +612,7 @@ showmail(Session, MailNr, Count) ->
 list(Session, {Refresh,Sort}) ->
     list_msg(Session, Refresh, Sort, ?RETRYCOUNT).
 
-list_msg(Session, Refresh, Sort, 0) ->
+list_msg(_Session, _Refresh, _Sort, 0) ->
     {ehtml,format_error("Mailbox locked by other mail process.")};
 list_msg(Session, Refresh, Sort, Count) ->
     tick_session(Session#session.cookie),
@@ -638,7 +638,7 @@ list_msg(Session, Refresh, Sort, Count) ->
             case string:str(lowercase(Reason), "lock") of
                 0 ->
                     {ehtml,format_error(to_string(Reason))};
-                N ->
+                _N ->
                     sleep(?RETRYTIMEOUT),
                     list_msg(Session, Refresh, Sort, Count-1)
             end;
@@ -724,7 +724,7 @@ sort_href(Sort, Sort, Text) ->
 sort_href(Sort, "rev_"++Sort, Text) ->
     [{a, [{href,"mail.yaws?sort="++Sort}], Text},
      {img, [{src,"down.gif"}]}];
-sort_href(Sort, Cur, Text) ->
+sort_href(Sort, _Cur, Text) ->
     {a, [{href,"mail.yaws?sort="++Sort}], Text}.
 
 
@@ -842,7 +842,7 @@ parse_addr(AddrStr) ->
                         string:strip(From)
                 end
         end,
-    Fs = [Op(F) || F <- Addrs].
+    [Op(F) || F <- Addrs].
 
 token_addrs([], [], _) ->
     [];
@@ -852,7 +852,7 @@ token_addrs([C=$"|R], Acc, true) ->
     token_addrs(R, [C|Acc], false);
 token_addrs([C=$"|R], Acc, false) ->
     token_addrs(R, [C|Acc], true);
-token_addrs([C=$,|R], Acc, false) ->
+token_addrs([$,|R], Acc, false) ->
     [lists:reverse(Acc)|token_addrs(R, [], false)];
 token_addrs([C|R], Acc, InQuote) ->
     token_addrs(R, [C|Acc], InQuote).
@@ -920,7 +920,7 @@ quote([$"|Cs]) ->
 quote([C|Cs]) ->
     [C|quote(Cs)].
 
-display_login(A, Status) ->
+display_login(_A, Status) ->
     (dynamic_headers() ++
      [{ehtml,
        [{body, [{onload,"document.f.user.focus();"}],
@@ -1167,7 +1167,7 @@ add_att(Fname, Ctype, Data, Atts) ->
 
         {value, A} when A#satt.data == Data ->
             [A | lists:keydelete(A#satt.num, #satt.num, Atts)];
-        {value, A} ->
+        {value, _A} ->
             [#satt{num = length(Atts) + 1,
                    filename = Fname,
                    ctype = Ctype,
@@ -1176,7 +1176,7 @@ add_att(Fname, Ctype, Data, Atts) ->
 
 
 session_manager_gc(C, Cfg) ->
-    lists:zf(fun(Entry={Cookie,Session,Time}) ->
+    lists:zf(fun(Entry={_Cookie,_Session,Time}) ->
                      Diff = diff(Time,now()),
                      TTL = Cfg#cfg.ttl,
                      if Diff > TTL ->
@@ -1433,10 +1433,10 @@ ploop(Command, Server, User, Password, From) ->
 
 ploop(init, State) ->
     case receive_reply(State) of
-        {ok, Reply, State2} ->
+        {ok, _Reply, State2} ->
             psend("USER " ++ State#pstate.user, State#pstate.port),
             ploop(user, State2);
-        {error, Reason, State2} ->
+        {error, Reason, _State2} ->
             State#pstate.from ! {pop_response, {error, Reason}},
             pop_close(State#pstate.port);
         {more, State2} ->
@@ -1445,10 +1445,10 @@ ploop(init, State) ->
 
 ploop(user, State) ->
     case receive_reply(State) of
-        {ok, Reply, State2} ->
+        {ok, _Reply, State2} ->
             psend("PASS " ++ State#pstate.pass, State#pstate.port),
             ploop(pass, State2);
-        {error, Reason, State2} ->
+        {error, Reason, _State2} ->
             State#pstate.from ! {pop_response, {error, Reason}},
             pop_close(State#pstate.port);
         {more, State2} ->
@@ -1456,9 +1456,9 @@ ploop(user, State) ->
     end;
 ploop(pass, State) ->
     case receive_reply(State) of
-        {ok, Reply, State2} ->
+        {ok, _Reply, _State2} ->
             next_cmd(State);
-        {error, Reason, State2} ->
+        {error, Reason, _State2} ->
             State#pstate.from ! {pop_response, {error, Reason}},
             pop_close(State#pstate.port);
         {more, State2} ->
@@ -1476,7 +1476,7 @@ ploop(sl, State) ->
     end;
 ploop(close, State) ->
     case receive_reply(State) of
-        {ok, Reply, State2} ->
+        {ok, _Reply, State2} ->
             ploop(close, State2);
         {error, _, State2} ->
             next_cmd(State2);
@@ -1512,7 +1512,7 @@ ploop(sized_cont, State) ->
     end;
 ploop(ml, State) ->
     case receive_reply(State) of
-        {ok, Reply, State2} ->
+        {ok, _Reply, State2} ->
             ploop(ml_cont, State2#pstate{lines=[]});
         {error, Reason, State2} ->
             next_cmd(State2#pstate{reply=[{error,Reason}|
@@ -1561,8 +1561,8 @@ psend(Str, Port) ->
 
 %%
 
-receive_reply(State=#pstate{port=Port,acc=Acc,more=false}) ->
-    check_reply(State#pstate.acc, State);
+receive_reply(State=#pstate{acc=Acc,more=false}) ->
+    check_reply(Acc, State);
 receive_reply(State=#pstate{port=Port,acc=Acc,more=true}) ->
     Res = gen_tcp:recv(Port, 0),
     case Res of
@@ -1578,7 +1578,7 @@ receive_reply(State=#pstate{port=Port,acc=Acc,more=true}) ->
 
 %%
 
-receive_data(State=#pstate{port=Port,acc=Acc,more=false,remain=Remain}) ->
+receive_data(State=#pstate{acc=Acc,more=false,remain=Remain}) ->
     if
         Remain == dot ->
             %% look for .\r\n
@@ -1607,7 +1607,7 @@ receive_data(State=#pstate{port=Port,acc=Acc,more=false,remain=Remain}) ->
                                   remain=Rem, more=true},
             {more, State2}
     end;
-receive_data(State=#pstate{port=Port,acc=Acc,more=true}) when length(Acc)>0 ->
+receive_data(State=#pstate{acc=Acc,more=true}) when length(Acc)>0 ->
     receive_data(State#pstate{more=false});
 receive_data(State=#pstate{port=Port,acc=[],more=true,remain=Remain}) ->
     Res = gen_tcp:recv(Port, 0),
@@ -1677,7 +1677,7 @@ split_reply("\r\n"++Rest, Pre) ->
     {lists:reverse(Pre), Rest};
 split_reply([H|T], Pre) ->
     split_reply(T, [H|Pre]);
-split_reply("", Pre) ->
+split_reply("", _Pre) ->
     more.
 
 %%
@@ -1801,7 +1801,7 @@ smtp_send2(Server, Session, Recipients, Message) ->
     smtp_put("QUIT", Port),
     ok.
 
-send_recipients([], Port) ->
+send_recipients([], _Port) ->
     ok;
 send_recipients([R|Rs], Port) ->
     smtp_put("RCPT TO: " ++ R, Port),
@@ -1822,7 +1822,7 @@ smtp_expect(Code, Port, Acc, ErrorMsg) ->
             case string:chr(NAcc, $\n) of
                 0 ->
                     smtp_expect(Code, Port, NAcc, ErrorMsg);
-                N ->
+                _N ->
                     ResponseCode = to_int(NAcc),
                     if
                         ResponseCode == Code -> ok;
@@ -1883,16 +1883,16 @@ str2b64_line(S, Out, N) ->
 
 %
 
-str2b64_end({[C1,C2],Out,N}) ->
+str2b64_end({[C1,C2],Out,_N}) ->
     O1 = e(C1 bsr 2),
     O2 = e(((C1 band 16#03) bsl 4) bor (C2 bsr 4)),
     O3 = e((C2 band 16#0f) bsl 2),
     lists:reverse(Out, [O1,O2,O3,$=]);
-str2b64_end({[C1],Out,N}) ->
+str2b64_end({[C1],Out,_N}) ->
     O1 = e(C1 bsr 2),
     O2 = e((C1 band 16#03) bsl 4),
     lists:reverse(Out, [O1,O2,$=,$=]);
-str2b64_end({[],Out,N}) -> lists:reverse(Out);
+str2b64_end({[],Out,_N}) -> lists:reverse(Out);
 str2b64_end([]) -> [].
 
 %
@@ -1955,7 +1955,7 @@ e(X) -> erlang:error({badchar,X}).
 boundary_date() ->
     dat2str_boundary(yaws:date_and_time()).
 
-dat2str_boundary([Y1,Y2, Mo, D, H, M, S | Diff]) ->
+dat2str_boundary([Y1,Y2, Mo, D, H, M, S | _Diff]) ->
     lists:flatten(
       io_lib:format("~s_~2.2.0w_~s_~w_~2.2.0w:~2.2.0w:~2.2.0w_~w",
                     [weekday(Y1,Y2,Mo,D), D, int_to_mt(Mo),
@@ -2181,7 +2181,7 @@ select_alt_body([Prefered|Rest], Bodies) ->
             First
     end.
 
-has_body_type(Type, {H,B}) ->
+has_body_type(Type, {H,_B}) ->
     case H#mail.content_type of
         {CT, _Ops} ->
             CTL = lowercase(CT),
@@ -2202,7 +2202,7 @@ format_body(Session, H, Msg, Depth) ->
         {{"text/plain",_}, Encoding} ->
             Decoded = decode_message(Encoding, Msg),
             {pre, [], yaws_api:htmlize(wrap_text(Decoded, 80))};
-        {{"multipart/mixed",Opts}, Encoding} ->
+        {{"multipart/mixed",Opts}, _Encoding} ->
             {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
             [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
             PartHeaders =
@@ -2210,8 +2210,8 @@ format_body(Session, H, Msg, Depth) ->
                                     add_header(K,V,MH)
                             end, #mail{}, Headers),
             [format_body(Session, PartHeaders, Body, Depth++".1"),
-             format_attachements(Session, Parts, Depth)];
-        {{"multipart/alternative",Opts}, Encoding} ->
+             format_attachments(Session, Parts, Depth)];
+        {{"multipart/alternative",Opts}, _Encoding} ->
             {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
             Parts = parse_multipart(Msg, Boundary),
             HParts =
@@ -2225,18 +2225,18 @@ format_body(Session, H, Msg, Depth) ->
                   end, Parts),
             {H1,B1} = select_alt_body(["text/html","text/plain"],HParts),
             format_body(Session, H1,B1,Depth++".1");
-        {{"multipart/signed",Opts}, Encoding} ->
+        {{"multipart/signed",Opts}, _Encoding} ->
             {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
-            [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
+            [{Headers,Body}|_Parts] = parse_multipart(Msg, Boundary),
             PartHeaders =
                 lists:foldl(fun({K,V},MH) ->
                                     add_header(K,V,MH)
                             end, #mail{}, Headers),
             format_body(Session, PartHeaders, Body, Depth++".1");
-        {{"message/rfc822",Opts}, Encoding} ->
+        {{"message/rfc822",_Opts}, Encoding} ->
             Decoded = decode_message(Encoding, Msg),
             format_message(Session, Decoded, -1, Depth);
-        {{ContT="application/"++_,Opts},Encoding} ->
+        {{ContT="application/"++_,_Opts},Encoding} ->
             B1 = decode_message(Encoding, Msg),
             B = list_to_binary(B1),
             FileName = decode(extraxt_h_info(H)),
@@ -2284,15 +2284,15 @@ quote_format_body(Session, H,Msg) ->
         {{"text/plain",_}, Encoding} ->
             Decoded = decode_message(Encoding, Msg),
             wrap_text(Decoded, 78);
-        {{"multipart/mixed",Opts}, Encoding} ->
+        {{"multipart/mixed",Opts}, _Encoding} ->
             {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
-            [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
+            [{Headers,Body}|_Parts] = parse_multipart(Msg, Boundary),
             PartHeaders =
                 lists:foldl(fun({K,V},MH) ->
                                     add_header(K,V,MH)
                             end, #mail{}, Headers),
             quote_format_body(Session, PartHeaders, Body);
-        {{"multipart/alternative",Opts}, Encoding} ->
+        {{"multipart/alternative",Opts}, _Encoding} ->
             {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
             Parts = parse_multipart(Msg, Boundary),
             HParts =
@@ -2306,9 +2306,9 @@ quote_format_body(Session, H,Msg) ->
                   end, Parts),
             {H1,B1} = select_alt_body(["text/plain","text/html"], HParts),
             quote_format_body(Session, H1,B1);
-        {{"multipart/signed",Opts}, Encoding} ->
+        {{"multipart/signed",Opts}, _Encoding} ->
             {value, {_,Boundary}} = lists:keysearch("boundary",1,Opts),
-            [{Headers,Body}|Parts] = parse_multipart(Msg, Boundary),
+            [{Headers,Body}|_Parts] = parse_multipart(Msg, Boundary),
             PartHeaders =
                 lists:foldl(fun({K,V},MH) ->
                                     add_header(K,V,MH)
@@ -2316,7 +2316,7 @@ quote_format_body(Session, H,Msg) ->
             quote_format_body(Session, PartHeaders, Body);
         {{"message/rfc822",_},_} ->
             "";
-        {{ContT="application/"++_,_},_} ->
+        {{"application/"++_,_},_} ->
             "";
         {_,_} ->
             wrap_text(Msg, 78)
@@ -2326,7 +2326,7 @@ include_quote(Text, From) ->
     {Quoted, _} = include_quote(Text, [], ">", nl),
     From++" wrote: \n"++lists:reverse(Quoted).
 
-include_quote([], Acc, Prefix, State) ->
+include_quote([], Acc, _Prefix, State) ->
     {Acc, State};
 include_quote([L|Text], Acc, Prefix, State) when is_list(L) ->
     {Acc1, State1} = include_quote(L, Acc, Prefix, State),
@@ -2343,14 +2343,14 @@ include_quote([$\n|Text], Acc, Prefix, body) ->
 include_quote([C|Text], Acc, Prefix, body) ->
     include_quote(Text, [C|Acc], Prefix, body).
 
-format_attachements(S, [], _Depth) -> [];
-format_attachements(S, Bs, Depth) ->
+format_attachments(_S, [], _Depth) -> [];
+format_attachments(S, Bs, Depth) ->
     [{table,[{bgcolor, "lightgrey"}],
       [
        {tr,[], {td, [], {h5,[], "Attachments:"}}},
        {tr, [], {td, [], {table, [], format_attach(S, Bs, Depth)}}}]}].
 
-format_attach(_S, [], Depth) ->
+format_attach(_S, [], _Depth) ->
     [];
 format_attach(S, [{Headers,B0}|Bs], Depth) ->
     H = lists:foldl(fun({K,V},MH) -> add_header(K,V,MH) end, #mail{}, Headers),
@@ -2360,7 +2360,7 @@ format_attach(S, [{Headers,B0}|Bs], Depth) ->
         case H#mail.content_type of
             undefined ->
                 yaws_api:mime_type(FileName);
-            {ContType,Opts} ->
+            {ContType,_Opts} ->
                 case lowercase(ContType) of
                     "text/"++_ ->
                         yaws_api:mime_type(FileName);
@@ -2480,7 +2480,7 @@ process_parts([], [], [], Res) ->
     lists:reverse(Res);
 process_parts([{head,{Headers}}|Ps], [], [], Res) ->
     process_parts(Ps, Headers, [], Res);
-process_parts([{body,B}|Ps], [], Body, Res) ->  % ignore headless body
+process_parts([{body,_B}|Ps], [], _Body, Res) ->  % ignore headless body
     process_parts(Ps, [], [], Res);
 process_parts([{body,B}|Ps], Head, Body, Res) ->
     process_parts(Ps, [], [], [{Head, lists:reverse([B|Body])}|Res]);
@@ -2554,7 +2554,7 @@ char_class($\n) -> nl;
 char_class($\r) -> nl;
 char_class($ )  -> space;
 char_class($\t) -> tab;
-char_class(O)   -> text.
+char_class(_O)   -> text.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2592,13 +2592,13 @@ read_config(File) ->
     case file:open(File, [read]) of
         {ok, FD} ->
             read_config(FD, #cfg{}, 1, io:get_line(FD, ''));
-        Err ->
+        _Err ->
             error_logger:info_msg("Yaws webmail: Can't open config file ... "
                                   "using defaults",[]),
             #cfg{}
     end.
 
-read_config(FD, Cfg, Lno, eof) ->
+read_config(FD, Cfg, _Lno, eof) ->
     file:close(FD),
     Cfg;
 read_config(FD, Cfg, Lno, Chars) ->
@@ -2861,7 +2861,7 @@ content_type(FileName) ->
 find_dot(Data, State) ->
     find_dot(State, Data, []).
 
-find_dot(State, [], Acc) ->
+find_dot(State, [], _Acc) ->
     {more, State};
 
 find_dot(0, [$\r|R], Acc) ->

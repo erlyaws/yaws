@@ -19,7 +19,7 @@ out(A) ->
                 _ ->
                     err()
             end;
-        Error ->
+        _Error ->
             err()
     end.
 

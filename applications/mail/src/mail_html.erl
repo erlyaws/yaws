@@ -17,12 +17,12 @@ html_to_text(Input) ->
 
 ehtml_to_text([], Acc) ->
     Acc;
-ehtml_to_text([{Tag, Opts}|Rest], Acc) ->
+ehtml_to_text([{Tag, _Opts}|Rest], Acc) ->
     Acc2 = add_tag_space(Tag, Acc),
     ehtml_to_text(Rest, Acc2);
-ehtml_to_text([{script, Opts, Body}|Rest], Acc) ->
+ehtml_to_text([{script, _Opts, _Body}|Rest], Acc) ->
     ehtml_to_text(Rest, Acc);
-ehtml_to_text([{Tag, Opts, Body}|Rest], Acc) ->
+ehtml_to_text([{Tag, _Opts, Body}|Rest], Acc) ->
     Acc1 = add_tag_space(Tag, Acc),
     Acc2 = ehtml_to_text(Body, Acc1),
     ehtml_to_text(Rest, Acc2);
@@ -60,13 +60,13 @@ parse(Tokens) ->
 
 parse([], Acc) -> lists:reverse(Acc);
 
-parse([{begin_tag, T, A, L}|Rest], Acc) ->
+parse([{begin_tag, T, A, _L}|Rest], Acc) ->
     case tag_type(T) of
         leaf ->
             parse(Rest, [{T,A}|Acc]);
         node ->
             case find_body(T, Rest, []) of
-                {error, Reason} ->
+                {error, _Reason} ->
                     %% no body found, assume leaf
                     %% io:format("Error: ~s on line ~p\n", [Reason, L]),
                     parse(Rest, [{T,A}|Acc]);
@@ -75,13 +75,13 @@ parse([{begin_tag, T, A, L}|Rest], Acc) ->
                     parse(Rest2, [{T,A,ParsedBody}|Acc])
             end
     end;
-parse([{end_tag, T, A, L}|Rest], Acc) ->
+parse([{end_tag, _T, _A, _L}|Rest], Acc) ->
     %% errounous end tag, ignore
     parse(Rest, Acc);
-parse([{data, Data, L}|Rest], Acc) ->
+parse([{data, Data, _L}|Rest], Acc) ->
     parse(Rest, [Data|Acc]).
 
-find_body(Tag, [], Acc) ->
+find_body(Tag, [], _Acc) ->
     {error, "Missing end tag for "++atom_to_list(Tag)};
 find_body(Tag, [{end_tag,Tag,_,_}|Rest], Acc) ->
     {lists:reverse(Acc),Rest};
@@ -155,13 +155,13 @@ next_token(_Tag, R, Tokens, L) ->
 %% '<' <id> <sp>+ [<id><sp>*['='<val>]]* ['/'] '>'
 
 scan_tag([$/|I], L) ->
-    {R0,L0} = skip_space(I, L),
+    {_R0,L0} = skip_space(I, L),
     {Name,R1,L1} = scan_tag_name(I, L0),
     {R2,L2} = skip_space(R1, L1),
     {Args,R3,L3} = scan_tag_args(R2, L2),
     {{end_tag,list_to_atom(lowercase(Name)),Args,L0}, R3, L3};
 scan_tag(I, L) ->
-    {R0,L0} = skip_space(I, L),
+    {_R0,L0} = skip_space(I, L),
     {Name,R1,L1} = scan_tag_name(I, L0),
     {R2,L2} = skip_space(R1, L1),
     {Args,R3,L3} = scan_tag_args(R2, L2),
@@ -283,7 +283,7 @@ char_class($\t) -> space;
 char_class(C) when C >= $a, C =< $z -> alpha;
 char_class(C) when C >= $A, C =< $Z -> alpha;
 char_class(C) when C >= $0, C =< $9 -> digit;
-char_class(C)   -> other.
+char_class(_C)   -> other.
 
 %
 
@@ -305,7 +305,7 @@ skip_comment([], L) ->          {[], L};
 skip_comment([$-,$-,$>|R],L) -> {R,L};
 skip_comment([$\n|R],L) ->      skip_comment(R,L+1);
 skip_comment([$\r|R],L) ->      skip_comment(R,L+1);
-skip_comment([C|R],L) ->        skip_comment(R,L).
+skip_comment([_C|R],L) ->        skip_comment(R,L).
 
 %
 
