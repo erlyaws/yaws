@@ -2603,7 +2603,7 @@ read_config(FD, Cfg, _Lno, eof) ->
     Cfg;
 read_config(FD, Cfg, Lno, Chars) ->
     Next = io:get_line(FD, ''),
-    case yaws_config:toks(Chars) of
+    case yaws_config:toks(Lno, Chars) of
         [] ->
             read_config(FD, Cfg, Lno+1, Next);
         ["ttl", '=', IntList] ->

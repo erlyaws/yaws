@@ -25,7 +25,7 @@
          update_sconf/2, delete_sconf/2,
          eq_sconfs/2, soft_setconf/4, hard_setconf/2,
          can_hard_gc/2, can_soft_setconf/4,
-         can_soft_gc/2, verify_upgrade_args/2]).
+         can_soft_gc/2, verify_upgrade_args/2, toks/2]).
 
 %% where to look for yaws.conf
 paths() ->
