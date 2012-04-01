@@ -46,7 +46,7 @@ bytes_to_transfer(Filename, Offset, Count) ->
             {error, badarg}
     end.
 
--ifdef(HAVE_FILE_SENDFILE). %% OTP >= R15B; use file:sendfile/5
+-ifdef(HAVE_FILE_SENDFILE). %% OTP > R15B; use file:sendfile/5
 
 enabled() ->
     true.
