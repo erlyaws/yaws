@@ -106,8 +106,10 @@ AC_SUBST(ERL_DLL_LIB)
 
 BT_ERL_LIB_VSN(erts)
 
-ERTS_MINOR=`echo $bt_cv_erts_vsn | sed -e 's/^.\.//' -e 's/\..*//'`
-ERTS_MAJOR=`echo $bt_cv_erts_vsn | sed 's/\..*//'`
+set `echo $bt_cv_erts_vsn | sed 's/\./ /g'`
+ERTS_MAJOR=$1
+ERTS_MINOR=$2
+ERTS_MAINT=${3:-0}
 AC_SUBST(ERTS_MINOR)
 AC_SUBST(ERTS_MAJOR)
 
@@ -318,7 +320,10 @@ esac
 AC_ARG_ENABLE(sendfile, AS_HELP_STRING([--disable-sendfile], [disables use of sendfile system call]),
                         [ test "$enableval" = no && HAVE_YAWS_SENDFILE=false ])
 file_sendfile=`"${ERL}" -noshell -eval 'io:format("~p~n",[[erlang:function_exported(file, sendfile, 5)]]), erlang:halt().' | tail -1`
-if test "$file_sendfile" = true -a '(' $ERTS_MAJOR -gt 5 -o '(' $ERTS_MAJOR -eq 5 -a $ERTS_MINOR -gt 9 ')' ')' ; then
+if test "$file_sendfile" = true -a \
+   '(' $ERTS_MAJOR -gt 5 -o \
+     '(' $ERTS_MAJOR -eq 5 -a $ERTS_MINOR -gt 9 ')' -o \
+     '(' $ERTS_MAJOR -eq 5 -a $ERTS_MINOR -eq 9 -a $ERTS_MAINT -ge 1 ')' ')' ; then
    HAVE_YAWS_SENDFILE=false
    AC_MSG_NOTICE(found file:sendfile/5)
 fi
