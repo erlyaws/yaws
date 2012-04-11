@@ -265,6 +265,11 @@ a_debug_dump(Sock) ->
     yaws_debug:do_debug_dump(Sock).
 
 
+vsn(IP) when size(IP) =:= 4 ->
+    "(ipv4)";
+vsn(IP) when size(IP) =:= 8 ->
+    "(ipv6)".
+
 -define(IPV4_FMT, "~p.~p.~p.~p").
 -define(IPV6_FMT, "~2.16.0b~2.16.0b:~2.16.0b~2.16.0b:~2.16.0b~2.16.0b:~2.16.0b~2.16.0b").
 
@@ -318,8 +323,9 @@ a_stats() ->
 				      %% we don't use inet_parse:ntoa/1
 				      %% since it's not documented
 				      IP = format_ip(IP0),
-				      f("~s ~s ~p ~p ~p~n",
-					[Host, IP, Port, Hits, Sent])
+				      IPVsn = vsn(IP0),
+				      f("~s~s ~s ~p ~p ~p~n",
+					[Host, IPVsn, IP, Port, Hits, Sent])
 			      end, Stats),
 	    [Header, Lines]
     end.
