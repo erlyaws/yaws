@@ -116,7 +116,18 @@ arg_rewrite(Arg) ->
             SC = get(sc),
             AppMods = SC#sconf.appmods,
             Opaque = SC#sconf.opaque,
-            SC2 = SC#sconf{docroot=Docroot, appmods = AppMods ++ YappMods,
+            NYappPath = case YappPath of
+                            [$/|YPTail] ->
+                                YPTail;
+                            _ ->
+                                YappPath
+                        end,
+            RemappedYappMods = lists:map(fun({PE, Mod, Ex}) ->
+                                                 {PE, Mod, [[NYappPath] ++ X || X <- Ex]};
+                                            (AM) ->
+                                                 AM
+                                         end, YappMods),
+            SC2 = SC#sconf{docroot=Docroot, appmods = AppMods ++ RemappedYappMods,
                            opaque = AddOpaque ++ Opaque},
             put(sc, SC2),
 
