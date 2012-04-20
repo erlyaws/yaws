@@ -2192,8 +2192,8 @@ part where options for each virtual host is supplied.
               \Yaws{}.
 
 \item        \verb+use_old_ssl = true | false+ ---
-              This re-enables the old OTP ssl implementation. By default we use
-              the new ssl implementation.
+              This re-enables the old OTP SSL implementation. By default we use
+              the new SSL implementation.
 
 \item        \verb+auth_log  = true | false+ ---
               \textit{Deprecated and ignored. Now, this target must be set in
@@ -2903,7 +2903,7 @@ The following directives are allowed inside a server definition.
 
                \item \verb+depth = Int+ --- Specifies the depth of certificate
                  chains the server is prepared to follow when verifying client
-                 certs. For the OTP new ssl implementation it is also used to
+                 certs. For the OTP new SSL implementation it is also used to
                  specify how far the server, i.e. we, shall follow the SSL
                  certificates we present to the clients. Hence, using self
                  signed certs, we typically need to set this to 0.

@@ -468,6 +468,11 @@ character.
 \fBurl_encode(Str)\fR
 Url-encodes a string. All URLs in HTML documents must be URL encoded.
 
+.TP
+\fBget_sslsocket(Socket)\fR
+Returns a socket for SSL sockets or the atom \fIundefined\fR for non-SSL
+sockets. Useful for applications that have to deal with both SSL and
+non-SSL sockets.
 
 .TP
 \fBreformat_header(H)\fR

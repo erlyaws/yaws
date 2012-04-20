@@ -110,7 +110,7 @@ command line flag to Yaws. Default is \fIfalse\fR.
 
 .TP
 \fBuse_old_ssl = true | false\fR
-This re-enables the old OTP ssl implementation. By default we use the new ssl
+This re-enables the old OTP SSL implementation. By default we use the new SSL
 implementation.
 
 .TP
@@ -857,9 +857,9 @@ certificate is considered valid).
 \fBdepth = Int\fR
 .RS 12
 Specifies the depth of certificate chains the server is prepared to follow when
-verifying client certs. For the OTP new ssl implementation it is also used to
+verifying client certs. For the OTP new SSL implementation it is also used to
 specify how far the server, i.e. we, shall follow the SSL certificates we
-present to the clients. Hence, using self signed certs, we typically need to set
+present to the clients. Hence, using self-signed certs, we typically need to set
 this to 0.
 .RE
 .HP
@@ -874,7 +874,7 @@ decrypt it.
 \fBciphers = String\fR
 .RS 12
 This string specifies the SSL cipher string. The syntax of the SSL cipher string
-is a little horrible sublanguage of its own. It is documented in the ssl man
+is a little horrible sublanguage of its own. It is documented in the SSL man
 page for "ciphers".
 .RE
 .HP

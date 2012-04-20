@@ -17,7 +17,7 @@
 
 -include_lib("kernel/include/file.hrl").
 
--define(MAX_PAYLOAD, 16777216). %16MB
+-define(MAX_PAYLOAD, 16*1024*1024). % 16MB
 
 %% RFC 6455 section 7.4.1: status code 1000 means "normal"
 -define(NORMAL_WS_STATUS, 1000).
@@ -61,6 +61,14 @@ start(Arg, CallbackMod, Opts) ->
             exit({websocket, Reason})
     end.
 
+send(#ws_state{sock=Socket, vsn=ProtoVsn}, {Type, Data}) ->
+    DataFrame = frame(ProtoVsn, Type,  Data),
+    case yaws_api:get_sslsocket(Socket) of
+        {ok, SslSocket} ->
+            ssl:send(SslSocket, DataFrame);
+        _ ->
+            gen_tcp:send(Socket, DataFrame)
+    end;
 send(Pid, {Type, Data}) ->
     gen_server:cast(Pid, {send, {Type, Data}}).
 
@@ -95,9 +103,12 @@ handle_cast(ok, #state{arg=Arg, sconf=SC, opts=Opts}=State) ->
 
             Handshake = handshake(ProtocolVersion, Arg, CliSock,
                                   WebSocketLocation, Origin, Protocol),
-            gen_tcp:send(CliSock, Handshake),   % TODO: use the yaws way of
-                                                % supporting normal
-                                                % and ssl sockets
+            case yaws_api:get_sslsocket(CliSock) of
+                {ok, SslSocket} ->
+                    ssl:send(SslSocket, Handshake);
+                _ ->
+                    gen_tcp:send(CliSock, Handshake)
+            end,
             {callback, CallbackType} = lists:keyfind(callback, 1, Opts),
             WSState = #ws_state{sock = CliSock,
                                 vsn  = ProtocolVersion,
@@ -534,10 +545,13 @@ unframe_one(State = #ws_state{vsn=8}, FirstPacket) ->
             Fail
     end.
 
-websocket_setopts(#ws_state{sock=Socket={sslsocket,_,_}}, Opts) ->
-    ssl:setopts(Socket, Opts);
 websocket_setopts(#ws_state{sock=Socket}, Opts) ->
-    inet:setopts(Socket, Opts).
+    case yaws_api:get_sslsocket(Socket) of
+        {ok, SslSocket} ->
+            ssl:setopts(SslSocket, Opts);
+        _ ->
+            inet:setopts(Socket, Opts)
+    end.
 
 is_control_op(Op) ->
     atom_to_opcode(Op) > 7.

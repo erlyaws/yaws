@@ -304,7 +304,7 @@ davurl(A) ->
 
 davroot(A) ->
     Method = case A#arg.clisock of
-                 {sslsocket,_,_} -> "https";
+                 {ssl ,_} -> "https";
                  _ -> "http"
              end,
     Host = (A#arg.headers)#headers.host,

@@ -1570,8 +1570,14 @@ no_body_method(CliSock, IPPort, Req, Head) ->
     handle_request(CliSock, ARG, 0).
 
 
-make_arg(CliSock, IPPort, Head, Req, Bin) ->
+make_arg(CliSock0, IPPort, Head, Req, Bin) ->
     SC = get(sc),
+    CliSock = case yaws:is_ssl(SC) of
+                  nossl ->
+                      CliSock0;
+                  ssl ->
+                      {ssl, CliSock0}
+              end,
     ARG = #arg{clisock = CliSock,
                client_ip_port = IPPort,
                headers = Head,

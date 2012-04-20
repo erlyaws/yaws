@@ -38,6 +38,7 @@
 -export([stream_process_deliver/2, stream_process_deliver_chunk/2,
          stream_process_deliver_final_chunk/2, stream_process_end/2]).
 -export([websocket_send/2]).
+-export([get_sslsocket/1]).
 -export([new_cookie_session/1, new_cookie_session/2, new_cookie_session/3,
          cookieval_to_opaque/1, request_url/1,
          print_cookie_sessions/0,
@@ -887,8 +888,8 @@ stream_chunk_deliver_blocking(YawsPid, Data) ->
 stream_chunk_end(YawsPid) ->
     YawsPid ! endofstreamcontent.
 
-stream_process_deliver(Sock={sslsocket,_,_}, IoList) ->
-    ssl:send(Sock, IoList);
+stream_process_deliver({ssl, SslSock}, IoList) ->
+    ssl:send(SslSock, IoList);
 stream_process_deliver(Sock, IoList) ->
     gen_tcp:send(Sock, IoList).
 
@@ -912,8 +913,8 @@ stream_process_deliver_final_chunk(Sock, IoList) ->
 
 stream_process_end(closed, YawsPid) ->
     YawsPid ! {endofstreamcontent, closed};
-stream_process_end(Sock={sslsocket,_,_}, YawsPid) ->
-    ssl:controlling_process(Sock, YawsPid),
+stream_process_end({ssl, SslSock}, YawsPid) ->
+    ssl:controlling_process(SslSock, YawsPid),
     YawsPid ! endofstreamcontent;
 stream_process_end(Sock, YawsPid) ->
     gen_tcp:controlling_process(Sock, YawsPid),
@@ -924,6 +925,11 @@ stream_process_end(Sock, YawsPid) ->
 websocket_send(Pid, {Type, Data}) ->
     yaws_websockets:send(Pid, {Type, Data}).
 
+%% returns {ok, SSL socket} if an SSL socket, undefined otherwise
+get_sslsocket({ssl, SslSocket}) ->
+    {ok, SslSocket};
+get_sslsocket(_Socket) ->
+    undefined.
 
 %% Return new cookie string
 new_cookie_session(Opaque) ->

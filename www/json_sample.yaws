@@ -2,11 +2,10 @@
 -compile(export_all).
 
 out(A) ->
-    Peer = if
-               tuple(A#arg.clisock),
-               element(1, A#arg.clisock) == sslsocket ->
-                   ssl:peername(A#arg.clisock);
-               true ->
+    Peer = case yaws_api:get_sslsocket(A#arg.clisock) of
+               {ok, SslSocket} ->
+                   ssl:peername(SslSocket);
+               _ ->
                    inet:peername(A#arg.clisock)
            end,
 
