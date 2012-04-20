@@ -1,4 +1,3 @@
-
 <erl>
 
 
@@ -37,7 +36,7 @@ out(A) ->
 Type :: text|binary
 Data :: binary()
 HandlerResult :: {reply, {Type, Data}}
-               | {noreply}
+               | noreply
                | {close, Reason}"),
        {p, [], "When not replying to a message from a client, you can send messages using"},
        box("yaws_api:websocket_send(Pid, {Type, Data})"),
