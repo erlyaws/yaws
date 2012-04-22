@@ -476,7 +476,7 @@ get_header_value(authorization, Headers) ->
         {User, Pass, Orig}           -> lists:flatten([User,":",Pass,":",Orig])
     end;
 get_header_value(transfer_encoding, Headers) ->
-    case yaws_api:headers_encoding(Headers) of
+    case yaws_api:headers_transfer_encoding(Headers) of
         undefined -> [];
         Value     -> Value
     end;
