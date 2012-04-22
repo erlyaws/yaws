@@ -2768,12 +2768,13 @@ one of the following forms:
   unfragmented binary message.
 
 \item \verb+{close, Status, Reason}+ --- the callback receives a
-  notification that the client has closed the socket. \verb+Status+ is
-  the numerical status code sent by the client or the value 1000 (as
-  suggested by RFC 6455 section 7.4.1) if the client sent no status
-  code. \verb+Reason+ is a binary containing any text the client sent
-  to indicate the reason for closing the socket; this binary may be
-  empty.
+  notification that the client has closed the socket. \verb+Status+ is the
+  numerical status code sent by the client or the value 1000 (as suggested
+  by RFC 6455 section 7.4.1) if the client sent no status code. For an
+  abnormal client closure, the status code is 1006 (as specified by RFC
+  6455 section 7.1.5). \verb+Reason+ is a binary containing any text the
+  client sent to indicate the reason for closing the socket; this binary
+  may be empty.
 
 \end{itemize}
 

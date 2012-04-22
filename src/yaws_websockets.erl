@@ -17,6 +17,9 @@
 
 -define(MAX_PAYLOAD, 16777216). %16MB
 
+%% RFC 6455 section 7.4.1: status code 1000 means "normal"
+-define(NORMAL_WS_STATUS, 1000).
+
 %% API
 -export([start/3, send/2]).
 
@@ -164,6 +167,28 @@ loop(CallbackMod, #ws_state{sock=Socket}=WSState, CallbackState, CallbackType) -
             NewWSState = Last#ws_frame_info.ws_state,
             loop(CallbackMod, NewWSState, NewCallbackState, CallbackType);
         {tcp_closed, Socket} ->
+            %% The only way we should get here is due to an abnormal close.
+            %% Section 7.1.5 of RFC 6455 specifies 1006 as the connection
+            %% close code for abnormal closure. It's also described in
+            %% section 7.4.1.
+            CloseStatus = 1006,
+            case CallbackType of
+                basic ->
+                    CallbackMod:handle_message({close, CloseStatus, <<>>});
+                {advanced, _} ->
+                    ClosePayload = <<CloseStatus:16/big>>,
+                    CloseWSState = WSState#ws_state{sock=undefined,
+                                                    frag_type=none},
+                    CloseFrameInfo = #ws_frame_info{fin=1,
+                                                    rsv=0,
+                                                    opcode=close,
+                                                    masked=0,
+                                                    masking_key=0,
+                                                    length=byte_size(ClosePayload),
+                                                    payload=ClosePayload,
+                                                    ws_state=CloseWSState},
+                    CallbackMod:handle_message(CloseFrameInfo, CallbackState)
+            end,
             ok;
         _Any ->
             loop(CallbackMod, WSState, CallbackState, CallbackType)
@@ -198,7 +223,7 @@ do_callback_fun(WSState, CallbackMod) ->
 do_close(WSState, Reason) ->
     Status = case Reason of
                  _ when is_integer(Reason) -> Reason;
-                 _ -> 1000
+                 _ -> ?NORMAL_WS_STATUS
              end,
     send(WSState, {close, <<Status:16/big>>}),
     exit(Reason).
@@ -275,9 +300,7 @@ handle_message(#ws_frame_info{opcode=close,
                {Messages, FragType, FragAcc}) ->
     NewMessage = case Len of
                      0 ->
-                         %% RFC 6455 section 7.4.1:
-                         %% status code 1000 means "normal"
-                         {close, 1000, <<>>};
+                         {close, ?NORMAL_WS_STATUS, <<>>};
                      _ ->
                          <<Status:16/big, Msg/binary>> = Data,
                          {close, Status, Msg}
@@ -441,7 +464,7 @@ unframe_one(State = #ws_state{vsn=8}, FirstPacket) ->
         #ws_frame_info{} when is_record(NewState, ws_state) ->
             {Unframed, RestBin};
         #ws_frame_info{} when not is_record(NewState, ws_state) ->
-            NewState;  %% pass back the error details
+            NewState;   % pass back the error details
         Fail ->
             Fail
     end.
@@ -528,8 +551,7 @@ frame(8, Type, Data) ->
     %% FIN=true because we're not fragmenting.
     %% OPCODE=1 for text
     FirstByte = 128 bor atom_to_opcode(Type),
-    ByteList = binary_to_list(Data),
-    Length = length(ByteList),
+    Length = byte_size(Data),
     if
         Length < 126 ->
             << FirstByte, 0:1, Length:7, Data:Length/binary >>;

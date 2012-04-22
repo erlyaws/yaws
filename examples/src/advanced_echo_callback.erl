@@ -69,6 +69,10 @@ handle_message(#ws_frame_info{opcode=pong}, State) ->
     io:format("ignoring unsolicited pong~n",[]),
     {noreply, State};
 
+handle_message(#ws_frame_info{opcode=close}, _State) ->
+    io:format("got close~n",[]),
+    {close, normal};
+
 handle_message(#ws_frame_info{}=FrameInfo, State) ->
     io:format("WS Endpoint Unhandled message: ~p~n~p~n", [FrameInfo, State]),
     {close, {error, {unhandled_message, FrameInfo}}}.
