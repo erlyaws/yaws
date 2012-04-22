@@ -517,6 +517,8 @@ get_connection_status(Version, ReqHdrs, RespHdrs) ->
               end,
     ?Debug("Client Connection header: ~p~n", [CliConn]),
 
+    %% below, ignore dialyzer warning:
+    %% "The pattern 'true' can never match the type 'false'"
     SrvConn = case ?proxy_keepalive of
                   true ->
                       case RespHdrs#headers.connection of

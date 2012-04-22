@@ -139,9 +139,11 @@ set_filter(Filter) ->
                    {ok, E} -> E;
                    _       -> throw({error, {invalid_filter, parse_failed}})
                end,
-    Result = case erl_eval:exprs(ExprList, []) of
-                 {value, R, _} -> R;
-                 _             -> throw({error, {invalid_filter, eval_failed}})
+    Result = try
+                 erl_eval:exprs(ExprList, [])
+             catch
+                 _:_ ->
+                     throw({error, {invalid_filter, eval_failed}})
              end,
     gen_server:call(?MODULE, {set_filter, Result}, infinity).
 

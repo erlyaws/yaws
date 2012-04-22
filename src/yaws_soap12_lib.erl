@@ -339,7 +339,7 @@ priv_dir() ->
 
 initModel2(WsdlFile, ErlsomOptions, Path, Import, AddFiles) ->
     WsdlName = filename:join([Path, "wsdl.xsd"]),
-    IncludeWsdl = {"http://schemas.xmlsoap.org/wsdl/", "wsdl", WsdlName},    
+    IncludeWsdl = {"http://schemas.xmlsoap.org/wsdl/", "wsdl", WsdlName},
     {ok, WsdlModel} = erlsom:compile_xsd_file(
                         filename:join([Path, "wsdl11soap12.xsd"]),
                         [{prefix, "soap"},
@@ -392,7 +392,7 @@ parseWsdls([WsdlFile | Tail], WsdlModel, Options, {AccModel, AccOperations}) ->
     %% processed as well).
     %% For the moment, the namespace is ignored on operations etc.
     %% this makes it a bit easier to deal with imported wsdl's.
-    %% TODO uncomment if imports can be WSDL 
+    %% TODO uncomment if imports can be WSDL
     %%Acc3 = parseWsdls(Imports, WsdlModel, Options, Acc2),
     parseWsdls(Tail, WsdlModel, Options, Acc2).
 
@@ -438,18 +438,12 @@ addSchemas([Xsd| Tail], AccModel, Options, ImportList) ->
 addSchemaFiles([], AccModel, _Options, _ImportList) ->
     AccModel;
 addSchemaFiles([Xsd| Tail], AccModel, Options, ImportList) ->
-    Model2 = case Xsd of
-                 undefined ->
-                     AccModel;
-                 _ ->
-                     {ok, Model} =
-                         erlsom:compile_xsd_file(
-                           get_file_with_path(Xsd),
-                           [{include_files, ImportList} |Options]),
-                     case AccModel of
-                         undefined -> Model;
-                         _ -> erlsom:add_model(AccModel, Model)
-                     end
+    {ok, Model} =
+        erlsom:compile_xsd_file(get_file_with_path(Xsd),
+                                [{include_files, ImportList} |Options]),
+    Model2 = case AccModel of
+                 undefined -> Model;
+                 _ -> erlsom:add_model(AccModel, Model)
              end,
     addSchemaFiles(Tail, Model2, Options, ImportList).
 
@@ -494,7 +488,7 @@ http_request(URL, Action, Request, Options, Headers, ContentType) ->
     end.
 
 inets_request(URL, Action, Request, Options, Headers, ContentType) ->
-    case Action of 
+    case Action of
       undefined ->
 	NHeaders = Headers;
       _ ->
@@ -528,7 +522,7 @@ inets_request(URL, Action, Request, Options, Headers, ContentType) ->
 ibrowse_request(URL, Action, Request, Options, Headers, ContentType) ->
     case start_ibrowse() of
         ok ->
-	    case Action of 
+	    case Action of
 	      undefined ->
 		NewHeaders = [{"Content-Type", ContentType} | Headers];
               _ ->
@@ -670,7 +664,7 @@ getTopLevelElements([#'wsdl:anyTopLevelOptionalElement'{choice = Tuple}| Tail],
     end.
 
 get_file_with_path(Url) ->
-  case Url of 
+  case Url of
     "http://" ++ _ ->
       undefined;
     "file://" ++ FName ->
@@ -683,7 +677,7 @@ get_file_with_path(Url) ->
 getImports(WsdlDirname, Definitions) ->
     Imports = getTopLevelElements(Definitions, 'wsdl:tImport'),
     lists:map(fun(Import) ->
-		case WsdlDirname of 
+		case WsdlDirname of
 		  "http://" ++ _AbsDirname ->
 		    WsdlDirname ++ "/" ++ Import#'wsdl:tImport'.location;
 		  "file://" ++ _AbsDirname ->

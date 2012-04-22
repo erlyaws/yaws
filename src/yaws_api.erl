@@ -1046,7 +1046,7 @@ set_access_log(Bool) ->
 %% interactively turn on|off tracing to the tty (as well)
 %% typically useful in embedded mode
 set_tty_trace(Bool) ->
-    yaws_trace:set_trace_tty(Bool).
+    yaws_trace:set_tty_trace(Bool).
 
 
 

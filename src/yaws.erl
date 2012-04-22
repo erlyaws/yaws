@@ -1850,6 +1850,8 @@ uid_to_name(Uid) ->
     end.
 
 load_setuid_drv() ->
+    %% below, ignore dialyzer warning:
+    %% "The pattern 'false' can never match the type 'true'"
     Path = case yaws_generated:is_local_install() of
                true ->
                    filename:dirname(code:which(?MODULE)) ++ "/../priv/lib";

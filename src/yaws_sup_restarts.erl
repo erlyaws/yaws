@@ -39,6 +39,8 @@ init([]) ->
                         permanent, 5000, worker, [gen_event]},
 
 
+    %% below, ignore dialyzer warning:
+    %% "The pattern 'false' can never match the type 'true'"
     SendFile = case yaws_sendfile:enabled() of
                    true ->
                        [{yaws_sendfile,

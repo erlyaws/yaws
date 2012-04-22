@@ -454,6 +454,8 @@ make_default_sconf() ->
     #sconf{docroot = filename:join([Y, "www"])}.
 
 yaws_dir() ->
+    %% below, ignore dialyzer warning:
+    %% "The pattern 'false' can never match the type 'true'"
     case  yaws_generated:is_local_install() of
         true ->
             P = filename:split(code:which(?MODULE)),
