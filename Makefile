@@ -93,5 +93,5 @@ dialyzer:	yaws.plt
 	diff -U0 known_dialyzer_warnings dialyzer_warnings
 
 .PHONY: test
-test:
+test: all
 	cd test && $(MAKE) all setup test
