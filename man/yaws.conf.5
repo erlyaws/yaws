@@ -1,122 +1,117 @@
 .TH YAWS.CONF "5" "" "" "User Commands"
 .SH NAME
-/etc/yaws/yaws.conf \- Configuration file for the yaws web server
+/etc/yaws/yaws.conf \- Configuration file for the Yaws web server
 .SH DESCRIPTION
 .\" Add any additional description here
 .PP
 Yaws is fast lightweight web server. It reads a configuration file called
 yaws.conf to control its operations. The configuration contains two distinct
-parts a global part which affects all the virtual hosts and a server part
-where options for each virtual host is supplied.
+parts a global part which affects all the virtual hosts and a server part where
+options for each virtual host is supplied.
 
 .SH GLOBAL PART
+
 .TP
-
 \fBlogdir = Directory\fR
-All yaws logs will be written to files in this directory. There are several
-different log files written by yaws.
+All Yaws logs will be written to files in this directory. There are several
+different log files written by Yaws:
 
-.br
-\fBreport.log\fR - this is a text file that contains all error logger
-printouts from yaws.
+\fBreport.log\fR - this is a text file that contains all error logger printouts
+from Yaws.
 
-.br
-\fB<Host>.access\fR - for each virtual host served by yaws, a file
-<Host>.access will be written which contains an access log in Common
-Log Format. (See http://en.wikipedia.org/wiki/Common_Log_Format for
-more details on Common Log Format.)
+\fB<Host>.access\fR - for each virtual host served by Yaws, a file <Host>.access
+will be written which contains an access log in Common Log Format. (See
+http://en.wikipedia.org/wiki/Common_Log_Format for more details on Common Log
+Format.)
 
-.br
-\fB<Host>.auth\fR - for each virtual host served by yaws, a file <Host>.auth
+\fB<Host>.auth\fR - for each virtual host served by Yaws, a file <Host>.auth
 will be written which contains all http auth related messages.
 
-.br
 \fBtrace_<YYYYMMDD_hhmmss>\fR - Trace files are written in this subdirectory,
 suffixed by the creation date.
 
 .RS 12
-.br
 \fBtrace.<Pid>.http\fR - this file contains the HTTP trace if that is enabled,
 where <Pid> is the process id handling the TCP connection.
 
-.br
 \fBtrace.<Pid>.traffic\fR - this file contains the traffic trace if that is
 enabled, where <Pid> is the process id handling the TCP connection.
 .RE
 .HP
 
 Note that <Host>.access and <Host>.auth files will be used only if the directive
-\fBlogger_mod\fR is not set or set to yaws_log.
-
-The default value for logdir is "."
+\fBlogger_mod\fR is not set or set to yaws_log. The default value for logdir is
+\fI"."\fR
 
 .TP
 \fBebin_dir = Directory\fR
-This directive adds Directory to the Erlang search path. It is possible to
-have several of these command in the configuration file. The default value
-is "yaws_dir"/examples/ebin
+This directive adds Directory to the Erlang search path. It is possible to have
+several of these commands in the configuration file. The default value is
+\fI"yaws_dir"/examples/ebin\fR
 
 
 .TP
 \fBid = String\fR
-It is possible run multiple yaws servers on the same machine. We use the
-id of a yaws server to control it using the different control commands such
-as:
+It is possible run multiple Yaws servers on the same machine. We use the id of a
+Yaws server to control it using the different control commands such as:
+
 .nf
-
-# /usr/local/bin/yaws --id foobar --stop
-
+  # /usr/local/bin/yaws --id foobar --stop
 .fi
-To stop the Yaws server with id "foobar". Each Yaws server will write
-its internals data into a file called $HOME/.yaws/yaws/ID where ID the
-identity of the server. Yaws also creates a file called
-${VARDIR}/run/yaws/ctl-${ID} which contain the port number where the server is
-listening for control commands. The default id is "default".
+
+To stop the Yaws server with id "foobar". Each Yaws server will write its
+internals data into a file called $HOME/.yaws/yaws/ID where ID is the identity
+of the server. Yaws also creates a file called ${VARDIR}/run/yaws/ctl-${ID}
+which contain the port number where the server is listening for control
+commands. The default id is \fI"default"\fR.
 
 .TP
 \fBserver_signature = String\fR
-This directive sets the "Server: " output header to the custom value. The default
-value is "yaws/%VSN%, Yet Another Web Server".
+This directive sets the "Server: " output header to the custom value. The
+default value is \fI"yaws/%VSN%, Yet Another Web Server"\fR.
 
 .TP
 \fBinclude_dir = Directory\fR
 This directive adds Directory to the path of directories where the Erlang
 compiler searches for include files. We need to use this if we want to
-include .hrl files in our yaws Erlang code. The default value is
-"yaws_dir"/examples/include.
+include .hrl files in our Yaws Erlang code. It is possible to have several of
+these commands in the configuration file. The default value is
+\fI"yaws_dir"/examples/include\fR.
 
 .TP
 \fBmax_num_cached_files = Integer\fR
-Yaws will cache small files such as commonly accessed GIF images in RAM.
-This directive sets a maximum number on the number of cached files.
-The default value is 400.
+Yaws will cache small files such as commonly accessed GIF images in RAM.  This
+directive sets a maximum number on the number of cached files.  The default
+value is \fI400\fR.
+
 .TP
 \fBmax_num_cached_bytes = Integer\fR
-This directive controls the total amount of RAM which can maximally be
-used for cached RAM files. The default value is 1000000, 1 megabyte.
+This directive controls the total amount of RAM which can maximally be used for
+cached RAM files. The default value is \fI1000000\fR, 1 megabyte.
+
 .TP
 \fBmax_size_cached_file = Integer\fR
-This directive sets a maximum size on the files that are RAM cached by yaws.
-The default value i 8000, 8 kBytes.
+This directive sets a maximum size on the files that are RAM cached by Yaws.
+The default value is \fI8000\fR, 8 kBytes.
+
 .TP
 \fBcache_refresh_secs = Integer\fR
 The RAM cache is used to serve pages that sit in the cache. An entry sits in
 cache at most cache_refresh_secs number of seconds. The default is
-30. This means that when the content is updated under the docroot,
-that change doesn't show until 30 seconds have passed. While
-developing a yaws site, it may be convenient to set this value to
-0. If the debug flag (-d) is passed to the yaws start script, this
-value is automatically set to 0.
+\fI30\fR. This means that when the content is updated under the docroot, that
+change doesn't show until 30 seconds have passed. While developing a Yaws site,
+it may be convenient to set this value to 0. If the debug flag (-d) is passed to
+the Yaws start script, this value is automatically set to 0.
 
 .TP
 \fBtrace  = false | traffic | http\fR
-This enables traffic or http tracing. Tracing is also possible to enable with
-a command line flag to yaws. Default is false.
+This enables traffic or http tracing. Tracing is also possible to enable with a
+command line flag to Yaws. Default is \fIfalse\fR.
 
 .TP
 \fBuse_old_ssl = true | false\fR
-This re-enables the old OTP ssl implementation. By default we use the
-new ssl implementation.
+This re-enables the old OTP ssl implementation. By default we use the new ssl
+implementation.
 
 .TP
 \fBauth_log  = true | false\fR
@@ -124,44 +119,42 @@ new ssl implementation.
 
 .TP
 \fBmax_connections = nolimit | Integer\fR
-Set this value to control the maximum number of connections
-from HTTP clients into the server. This is implemented by closing
-the last socket if the limit threshold is reached.
+Set this value to control the maximum number of connections from HTTP clients
+into the server. This is implemented by closing the last socket if the limit
+threshold is reached.
 
 .TP
 \fBkeepalive_maxuses = nolimit | Integer\fR
-Normally, yaws does not restrict the number of times a connection is
-kept alive using keepalive. Setting this parameter to an integer X
-will ensure that connections are closed once they have been used X times.
-This can be a useful to guard against long running connections
-collecting too much garbage in the Erlang VM.
+Normally, Yaws does not restrict the number of times a connection is kept alive
+using keepalive. Setting this parameter to an integer X will ensure that
+connections are closed once they have been used X times.  This can be a useful
+to guard against long running connections collecting too much garbage in the
+Erlang VM.
 
 .TP
 \fBprocess_options = undefined | Proplist\fR
-Set process spawn options for client acceptor processes.  Options must
-be specified as a quoted string of either the atom \fIundefined\fR or
-as a proplist of valid process options. The supported options are
-\fIfullsweep_after\fR, \fImin_heap_size\fR, and
-\fImin_bin_vheap_size\fR, each taking an associated integer
-value. Other process options are ignored. The proplist may also be
+Set process spawn options for client acceptor processes.  Options must be
+specified as a quoted string of either the atom \fIundefined\fR or as a proplist
+of valid process options. The supported options are \fIfullsweep_after\fR,
+\fImin_heap_size\fR, and \fImin_bin_vheap_size\fR, each taking an associated
+integer value. Other process options are ignored. The proplist may also be
 empty. See \fBerlang:spawn_opt/4\fR for details on these options.
 
 .TP
 \fBacceptor_pool_size = Integer\fR
-Set the size of the pool of cached acceptor processes. The specified
-value must be greater than or equal to 0. The default value is
-8. Specifying a value of 0 effectively disables the process pool.
+Set the size of the pool of cached acceptor processes. The specified value must
+be greater than or equal to 0. The default value is \fI8\fR. Specifying a value
+of 0 effectively disables the process pool.
 
 .TP
 \fBlog_wrap_size = Integer\fR
-The logs written by yaws are all wrap logs, the default value at the
-size where they wrap around and the original gets renamed to File.old
-is 1000000, 1 megabyte. This value can changed.
-
-If we set the value to \fI0\fR the logs will never wrap. If we want to use
-Yaws in combination with a more traditional log wrapper such as
-logrotate, set the size to \fI0\fR and Yaws will reopen the logfiles
-once they have be renamed/removed.
+The logs written by Yaws are all wrap logs, the default value at the size where
+they wrap around and the original gets renamed to File.old is \fI1000000\fR, 1
+megabyte. This value can changed.
+.br
+If we set the value to 0 the logs will never wrap. If we want to use Yaws in
+combination with a more traditional log wrapper such as logrotate, set the size
+to 0 and Yaws will reopen the logfiles once they have be renamed/removed.
 
 .TP
 \fBlog_resolve_hostname = true | false\fR
@@ -170,28 +163,29 @@ By default the client host IP is not resolved in the access logs.
 
 .TP
 \fBfail_on_bind_err = true | false\fR
-Fail completely or not if yaws fails to bind a listen socket
-Default is true.
+Fail completely or not if Yaws fails to bind a listen socket Default is
+\fItrue\fR.
 
 .TP
 \fBenable_soap = true | false\fR
-If true, a soap server will be started at startup of Yaws.
-Default is false.
+If true, a soap server will be started at startup of Yaws.  Default is
+\fIfalse\fR.
 
 .TP
 \fBsoap_srv_mods = ListOfModuleSetting\fR
-If enable_soap is true, a startup yaws will invoke \fIyaws_soap_srv:setup()\fR
-to setup modules set here.
-ModuleSetting is either a triad like \fI<Mod, HandlerFunc, WsdlFile>\fR
-or a quadruple form like \fI<Mod, HandlerFunc, WsdlFile, Prefix>\fR which
-specifies the \fIprefix\fR. A \fIprefix\fR will be used as argument of
-\fIyaws_soap_lib:initModel()\fR and then be used as a XML namespace prefix.
-Note, the \fIWsdlFile\fR here should be an absolute-path file
+If enable_soap is true, a startup Yaws will invoke \fIyaws_soap_srv:setup()\fR
+to setup modules set here. ModuleSetting is either a triad like \fI<Mod,
+HandlerFunc, WsdlFile>\fR or a quadruple form like \fI<Mod, HandlerFunc,
+WsdlFile, Prefix>\fR which specifies the \fIprefix\fR. A \fIprefix\fR will be
+used as argument of \fIyaws_soap_lib:initModel()\fR and then be used as a XML
+namespace prefix.  Note, the \fIWsdlFile\fR here should be an absolute-path file
 in local file systems.
 
 For example, we can specify
 
-	soap_srv_mods=<Mod1, HandlerFunc, WsdlFile1><Mod2, HandlerFunc, WsdlFile2, SpecifiedPrefix>...
+.nf
+  soap_srv_mods=<Mod1, HandlerFunc, WsdlFile1> <Mod2, HandlerFunc, WsdlFile2, SpecifiedPrefix> ...
+.fi
 
 .TP
 \fBphp_exe_path = Path\fR
@@ -203,46 +197,41 @@ scripts (if allowed).  Default is \fIphp_exe_path = php-cgi\fR.
 
 .TP
 \fBcopy_error_log  = true | false\fR
-Enable or disable copying of the error log. When we run in
-embedded mode, there may very well be some other systems process
-that is responsible for writing the errorlog to a file whereas
-when we run in normal standalone mode, we typically want the
-Erlang errorlog written to a report.log file.
-Default value is true.
+Enable or disable copying of the error log. When we run in embedded mode, there
+may very well be some other systems process that is responsible for writing the
+errorlog to a file whereas when we run in normal standalone mode, we typically
+want the Erlang errorlog written to a report.log file.  Default value is
+\fItrue\fR.
 
 .TP
 \fBysession_mod = Module\fR
-Allows to specify a different Yaws session storage mechanism instead of
-an ETS table. One of the drawbacks of the default yaws_session_server
-implementation is that server side cookies are lost when the server
-restarts.
-Specifying a different module here will pass all writes/read
-operations to this module (it must implements appropriate callbacks).
+Allows to specify a different Yaws session storage mechanism instead of an ETS
+table. One of the drawbacks of the default yaws_session_server implementation is
+that server side cookies are lost when the server restarts. Specifying a
+different module here will pass all writes/read operations to this module (it
+must implements appropriate callbacks).
 
 .TP
 \fBrunmod = ModuleName\fR
-At startup yaws will invoke \fIModuleName:start()\fR in a separate
-process. It is possible to have several runmods.
-This is useful if we want to reuse the yaws startup shell script
-for our own application.
+At startup Yaws will invoke \fIModuleName:start()\fR in a separate process. It
+is possible to have several runmods.  This is useful if we want to reuse the
+Yaws startup shell script for our own application.
 
 .TP
 \fBpick_first_virthost_on_nomatch = true | false\fR
-When Yaws gets a request, it extracts the Host: header from the
-client request to choose a virtual server amongst all servers
-with the same IP/Port pair.
-This configuration parameter decides whether yaws should pick the
-first (as defined in the yaws.conf file) if no name match or not.
-In real live hosting scenarios we typically want this to be false
-whereas in testing/development scenarios it may be convenient to
-set it to true. Default is true.
+When Yaws gets a request, it extracts the Host: header from the client request
+to choose a virtual server amongst all servers with the same IP/Port pair.  This
+configuration parameter decides whether Yaws should pick the first (as defined
+in the yaws.conf file) if no name match or not.  In real live hosting scenarios
+we typically want this to be false whereas in testing/development scenarios it
+may be convenient to set it to true. Default is \fItrue\fR.
 
 .TP
 \fBkeepalive_timeout = TimeInMilliseconds | infinity\fR
-If the HTTP session will be kept alive (i.e., not immediately closed)
-it will close after keepalive_timeout milliseconds unless a new
-request is received in that time. The default value is 30000. The
-value \fIinfinity\fR is legal but not recommended.
+If the HTTP session will be kept alive (i.e., not immediately closed) it will
+close after keepalive_timeout milliseconds unless a new request is received in
+that time. The default value is \fI30000\fR. The value \fIinfinity\fR is legal
+but not recommended.
 
 
 .TP
@@ -255,27 +244,23 @@ Load all config file in specified directory.
 
 .TP
 \fBx_forwarded_for_log_proxy_whitelist = ListOfUpstreamProxyServerIps\fR
+In case Yaws is running behind a HTTP proxy or HTTP load balancer it may be
+desirable to configure this proxy to put the IP address of the originating
+client into the \fIX-Forwarded-For\fR header and have Yaws log this IP address
+as the request's source IP address instead of logging the proxy server's IP
+address over and over again. This setting determines which source IP addresses
+are rewritten in this manner.
 
-In case yaws is running behind a HTTP proxy or HTTP load balancer it
-may be desirable to configure this proxy to put the IP address of the
-originating client into the \fIX-Forwarded-For\fR header and have yaws
-log this IP address as the request's source IP address instead of
-logging the proxy server's IP address over and over again. This
-setting determines which source IP addresses are rewritten in this
-manner.
-
-For example, if there are two proxies with the IP addresses
-192.168.0.1 and 192.168.0.2 in front of yaws, we can specify:
+For example, if there are two proxies with the IP addresses 192.168.0.1 and
+192.168.0.2 in front of Yaws, we can specify:
 
 .nf
-
-    x_forwarded_for_log_proxy_whitelist = 192.168.0.1 192.168.0.2
-
+  x_forwarded_for_log_proxy_whitelist = 192.168.0.1 192.168.0.2
 .fi
 
 .SH SERVER PART
-Yaws can virthost several web servers on the same IP address as well
-as several web servers on different IP addresses. This includes SSL servers.
+Yaws can virthost several web servers on the same IP address as well as several
+web servers on different IP addresses. This includes SSL servers.
 .PP
 Each virtual host is defined within a matching pair of \fB<server ServerName>\fR
 and \fB</server>\fR. The ServerName will be the name of the webserver.
@@ -284,22 +269,21 @@ and \fB</server>\fR. The ServerName will be the name of the webserver.
 The following directives are allowed inside a server definition.
 .TP
 \fBport = Port\fR
-This makes the server listen on Port. Default is 8000.
+This makes the server listen on Port. Default is \fI8000\fR.
 .TP
 \fBlisten = IpAddress\fR
-This makes the server listen on IpAddress.  When virthosting several
-servers on the same ip/port address, if the browser doesn't send a
-Host: field, yaws will pick the \fIfirst\fR server specified in the
-config file.  If the specified IP address is 0.0.0.0 yaws will listen
-on all local IP addresses on the specified port. Default is 0.0.0.0.
-Multiple \fBlisten\fR directives may be used to specify several addresses
-to listen on.
+This makes the server listen on IpAddress.  When virthosting several servers on
+the same ip/port address, if the browser doesn't send a Host: field, Yaws will
+pick the \fIfirst\fR server specified in the config file.  If the specified IP
+address is 0.0.0.0 Yaws will listen on all local IP addresses on the specified
+port. Default is \fI0.0.0.0\fR.  Multiple \fBlisten\fR directives may be used to
+specify several addresses to listen on.
 
 .TP
 \fBlisten_backlog = Integer\fR
-This sets the TCP listen backlog for the server to define the maximum
-length the queue of pending connections may grow to. The default is
-the same as the default provided by \fIgen_tcp:listen/2\fR, which is 5.
+This sets the TCP listen backlog for the server to define the maximum length the
+queue of pending connections may grow to. The default is the same as the default
+provided by \fIgen_tcp:listen/2\fR, which is 5.
 
 .TP
 \fBserver_signature = String\fR
@@ -309,43 +293,42 @@ overloads the global one for this virtual server.
 
 .TP
 \fBrhost = Host[:Port]\fR
-This forces all local redirects issued by the server to go to Host.
-This is useful when yaws listens to a port which is different from
-the port that the user connects to. For example, running yaws as a
-non-privileged user makes it impossible to listen to port 80, since
-that port can only be opened by a privileged user. Instead yaws
-listens to a high port number port, 8000, and iptables are used to
-redirect traffic to port 80 to port 8000 (most NAT:ing firewalls
-will also do this for you).
+This forces all local redirects issued by the server to go to Host.  This is
+useful when Yaws listens to a port which is different from the port that the
+user connects to. For example, running Yaws as a non-privileged user makes it
+impossible to listen to port 80, since that port can only be opened by a
+privileged user. Instead Yaws listens to a high port number port, 8000, and
+iptables are used to redirect traffic to port 80 to port 8000 (most NAT:ing
+firewalls will also do this for you).
+
 .TP
 \fBrscheme = http | https\fR
-This forces all local redirects issued by the server to use this
-method. This is useful when an SSL off-loader, or stunnel, is used in
-front of yaws.
+This forces all local redirects issued by the server to use this method. This is
+useful when an SSL off-loader, or stunnel, is used in front of Yaws.
 
 .TP
 \fBauth_log  = true | false\fR
-Enable or disable the auth log for this virtual server. Default is true.
+Enable or disable the auth log for this virtual server. Default is \fItrue\fR.
 
 .TP
 \fBaccess_log = true | false\fR
-Setting this directive to false turns of traffic logging for this
-virtual server. The default value is true.
+Setting this directive to false turns of traffic logging for this virtual
+server. The default value is \fItrue\fR.
 
 .TP
 \fBlogger_mod = Module\fR
 It is possible to set a special module that handles access and auth logging. The
 default is to log all web server traffic to <Host>.access and <Host>.auth files
 in the configured or default logdir.
-
+.br
 This module must implement the behaviour \fIyaws_logger\fR. Default value is
-yaws_log.
+\fIyaws_log\fR.
 
 The following functions should be exported:
 
 \fBModule:open_log(ServerName, Type, LogDir)\fR
 .RS 12
-When yaws is started, this function is called for this virtual server. If the
+When Yaws is started, this function is called for this virtual server. If the
 initialization is successful, the function must return \fI{true,State}\fR and if
 an error occurred, it must return \fIfalse\fR.
 .RE
@@ -353,13 +336,13 @@ an error occurred, it must return \fIfalse\fR.
 
 \fBModule:close_log(ServerName, Type)\fR
 .RS 12
-This function is called for this virtual server when yaws is stopped.
+This function is called for this virtual server when Yaws is stopped.
 .RE
 .HP
 
 \fBModule:wrap_log(ServerName, Type, State, LogWrapSize)\fR
 .RS 12
-This function is used to rotate log files. It is regularly called by yaws and
+This function is used to rotate log files. It is regularly called by Yaws and
 must return the possibly updated internal NewState.
 .RE
 .HP
@@ -375,7 +358,7 @@ Infos is \fI{Ip,Req,InHdrs,OutHdrs,Time}\fR for an access log and
 \fBReq\fR - the HTTP method, URI path, and HTTP version of the request (as a
 #http_request{} record).
 
-\fBInHdrs\fR - the HTTP headers which were sent from the WWW client (as a
+\fBInHdrs\fR - the HTTP headers which were received from the WWW client (as a
 #headers{} record).
 
 \fBOutHdrs\fR - the HTTP headers sent to the WWW client (as a #outh{} record)
@@ -404,181 +387,174 @@ There is no such module configured by default.
 
 .TP
 \fBdir_listings = true | true_nozip | false\fR
-Setting this directive to false disallows the automatic
-dir listing feature of Yaws. A status code 403 Forbidden will be sent.
-Set to true_nozip to avoid the auto-generated all.zip entries. Default is false.
+Setting this directive to false disallows the automatic dir listing feature of
+Yaws. A status code 403 Forbidden will be sent.  Set to true_nozip to avoid the
+auto-generated all.zip entries. Default is \fIfalse\fR.
 
 .TP
 \fBextra_cgi_vars = .....\fR
 Add additional CGI or FastCGI variables. For example:
-.nf
 
-<extra_cgi_vars dir='/path/to/some/scripts'>
-var = val
-\&...
-</extra_cgi_vars>
+.nf
+  <extra_cgi_vars dir='/path/to/some/scripts'>
+    var = val
+    \&...
+  </extra_cgi_vars>
 .fi
 
 .TP
 \fBstatistics  = true | false\fR
-Turns on/off statistics gathering for a virtual server. Default is false.
+Turns on/off statistics gathering for a virtual server. Default is \fIfalse\fR.
 
 .TP
 \fBfcgi_app_server = Host:Port\fR
-The hostname and TCP port number of a FastCGI application server.
-The TCP port number is not optional. There is no default value.
+The hostname and TCP port number of a FastCGI application server. The TCP port
+number is not optional. There is no default value.
 
 .TP
 \fBfcgi_trace_protocol = true | false\fR
-Enable or disable tracing of FastCGI protocol messages as info
-log messages. Disabled by default.
+Enable or disable tracing of FastCGI protocol messages as info log
+messages. Disabled by default.
 
 .TP
 \fBfcgi_log_app_error = true | false\fR
-Enable or disable logging of application error messages (output
-to stderr and non-zero exit value). Disabled by default.
+Enable or disable logging of application error messages (output to stderr and
+non-zero exit value). Disabled by default.
 
 .TP
 \fBdeflate = true | false\fR
-Turns on or off deflate compression for a server. Default is false.
+Turns on or off deflate compression for a server. Default is \fIfalse\fR.
 
 .TP
 \fBdocroot = Directory ...\fR
 This makes the server serve all its content from Directory.
-
-It is possible to pass a space-separated list of directories as
-docroot. If this is the case, the various directories will be searched in
-order for the requested file. This also works with the ssi
-and yssi constructs where the full list of directories will be searched
-for files to ssi/yssi include. Multiple docroot directives can be used.
-You need at least one valid docroot, other invalid docroots are skipped with
-their associated auth structures.
+.br
+It is possible to pass a space-separated list of directories as docroot. If this
+is the case, the various directories will be searched in order for the requested
+file. This also works with the ssi and yssi constructs where the full list of
+directories will be searched for files to ssi/yssi include. Multiple docroot
+directives can be used.  You need at least one valid docroot, invalid docroots
+are skipped with their associated auth structures.
 
 .TP
 \fBauth_skip_docroot = true | false\fR
-If true, the docroot will not be searched for \fI.yaws_auth\fR
-files. This is useful when the docroot is quite large and the time to
-search it is prohibitive when yaws starts up. Defaults to false.
+If true, the docroot will not be searched for \fI.yaws_auth\fR files. This is
+useful when the docroot is quite large and the time to search it is prohibitive
+when Yaws starts up. Defaults to \fIfalse\fR.
 
 .TP
 \fBpartial_post_size = Integer | nolimit\fR
-When a yaws file receives large POSTs, the amount of data received
-in each chunk is determined by the this parameter.
-The default value is 10240.
+When a Yaws file receives large POSTs, the amount of data received in each chunk
+is determined by the this parameter.  The default value is \fI10240\fR.
 
 
 .TP
 \fBdav = true | false\fR
-Turns on the DAV protocol for this server. The dav support in yaws is
-highly limited. If dav is turned on, .yaws processing of .yaws pages
-is turned off. Default is false.  Setting it to nolimit is potentially
-dangerous. The socket read timeout is supplied by the
-keepalive_timeout setting.  If the read is not done within the
-timeout, the POST will fail.
+Turns on the DAV protocol for this server. The dav support in Yaws is highly
+limited. If dav is turned on, .yaws processing of .yaws pages is turned
+off. Default is \fIfalse\fR.  Setting it to nolimit is potentially
+dangerous. The socket read timeout is supplied by the keepalive_timeout setting.
+If the read is not done within the timeout, the POST will fail.
 
 .TP
 \fBtilde_expand = true|false\fR
-If this value is set to false yaws will never
-do tilde expansion. The default is false. tilde_expansion is the
-mechanism whereby a URL on the form http://www.foo.com/~username
-is changed into a request where the docroot for that
-particular request is set to the directory ~username/public_html/
-Default is false.
+If this value is set to false Yaws will never do tilde expansion. The default is
+\fIfalse\fR. tilde_expansion is the mechanism whereby a URL on the form
+http://www.foo.com/~username is changed into a request where the docroot for
+that particular request is set to the directory ~username/public_html/.
 
 .TP
 \fBallowed_scripts = ListOfSuffixes\fR
-The allowed script types for this server.  Recognized are `yaws',
-`cgi', `fcgi', `php'.  Default is \fIallowed_scripts = yaws php cgi fcgi\fR.
+The allowed script types for this server.  Recognized are `yaws', `cgi', `fcgi',
+`php'.  Default is \fIallowed_scripts = yaws php cgi fcgi\fR.
 
-Note: for fcgi scripts, the FastCGI application server is only
-called if a local file with the .fcgi extension exists. However,
-the contents of the local .fcgi file are ignored.
+Note: for fcgi scripts, the FastCGI application server is only called if a local
+file with the .fcgi extension exists. However, the contents of the local .fcgi
+file are ignored.
 
 .TP
 \fBtilde_allowed_scripts = ListOfSuffixes\fR
-The allowed script types for this server when executing files in
-a users public_html folder  Recognized are `yaws',
-`cgi', `fcgi', `php'.  Default is \fItilde_allowed_scripts =\fR
-i.e. empty
+The allowed script types for this server when executing files in a users
+public_html folder Recognized are `yaws', `cgi', `fcgi', `php'.  Default is
+\fItilde_allowed_scripts =\fR i.e. empty
 
 
 .TP
 \fBappmods = ListOfModuleNames\fR
-If any the names in ListOfModuleNames appear as components in the
-path for a request, the path request parsing will terminate and
-that module will be called. There is also an alternate syntax for
-specifying the appmods if we don't want our internal erlang module
-names to be exposed in the URL paths.
-We can specify
+If any the names in ListOfModuleNames appear as components in the path for a
+request, the path request parsing will terminate and that module will be
+called. There is also an alternate syntax for specifying the appmods if we don't
+want our internal erlang module names to be exposed in the URL paths.  We can
+specify
 
-   appmods = <Path1, Module1> <Path2, Modules2> ...
+.nf
+  appmods = <Path1, Module1> <Path2, Modules2> ...
+.fi
 
-Assume for example that we have
-the URL http://www.hyber.org/myapp/foo/bar/baz?user=joe
-while we have the module foo defined as an appmod, the
-function foo:out(Arg) will be invoked
-instead of searching the filesystems below the point foo.
+Assume for example that we have the URL
+http://www.hyber.org/myapp/foo/bar/baz?user=joe while we have the module foo
+defined as an appmod, the function foo:out(Arg) will be invoked instead of
+searching the filesystems below the point foo.
+.br
+The Arg argument will have the missing path part supplied in its appmoddata
+field.
 
-The Arg argument will have the missing path part supplied in its
-appmoddata field.
+It is also possible to exclude certain directories from appmod processing. This
+is particulaly interesting for '/' appmods.  Here is an example:
 
-It is also possible to exclude certain directories from appmod
-processing. This is particulaly interesting for '/' appmods.
-Here is an example:
-
-   appmods = </, myapp exclude_paths icons js top/static>
+.nf
+  appmods = </, myapp exclude_paths icons js top/static>
+.fi
 
 The above configuration will invoke the 'myapp' erlang module on everything
-except any file found in directories, 'icons', 'js' and 'top/static'
-relative to the docroot.
-
-
+except any file found in directories, 'icons', 'js' and 'top/static' relative to
+the docroot.
 
 .TP
 \fBerrormod_404 = Module\fR
-It is possible to set a special module that handles 404 Not Found messages.
+It is possible to set a special module that handles 404 Not Found messages. The
+function \fIModule:out404(Arg, GC, SC)\fR will be invoked. The arguments are
 
-The function \fIModule:out404(Arg, GC, SC)\fR will be invoked. The arguments are
+.RS 12
+\fBArg\fR - a #arg{} record
 
-Arg is a #arg{} record
+\fBGC\fR - a #gconf{} record (defined in yaws.hrl)
 
-GC is a #gconf{} record (defined in yaws.hrl)
-
-SC is a #sconf{} record (defined in yaws.hrl)
+\fBSC\fR - a #sconf{} record (defined in yaws.hrl)
+.RE
+.HP
 
 The function can and must do the same things that a normal \fIout/1\fR does.
 
 .TP
 \fBerrormod_401 = Module\fR
-It is possible to set a special module that handles
-401 Unauthorized messages. This can for example be used
-to display a login page instead.
+It is possible to set a special module that handles 401 Unauthorized
+messages. This can for example be used to display a login page instead. The
+function \fIModule:out401(Arg, Auth, Realm)\fR will be invoked. The arguments
+are
 
-The function \fIModule:out401(Arg, Auth, Realm)\fR will
-be invoked. The arguments are
+.RS 12
+\fBArg\fR - a #arg{} record
 
-Arg is a #arg{} record
+\fBAuth\fR - a #auth{} record
 
-Auth is a #auth{} record
-
-Realm is a string
+\fBRealm\fR - a string
+.RE
+.HP
 
 The function can and must do the same things that a normal \fIout/1\fR does.
 
-
 .TP
 \fBerrormod_crash = Module\fR
-It is possible to set a special module that handles
-the HTML generation of server crash messages. The default
-is to display the entire formated crash message in the
-browser. This is good for debugging but not in production.
-
-The function \fIModule:crashmsg(Arg, SC, Str)\fR will be
-called. The \fIStr\fR is the real crash message formated as a string.
-
-The function must return, \fI{content,MimeType,Cont}\fR or
-\fI{html, Str}\fR or \fI{ehtml, Term}\fR. That data will be shipped
-to the client.
+It is possible to set a special module that handles the HTML generation of
+server crash messages. The default is to display the entire formated crash
+message in the browser. This is good for debugging but not in production.
+.br
+The function \fIModule:crashmsg(Arg, SC, Str)\fR will be called. The \fIStr\fR
+is the real crash message formated as a string.
+.br
+The function must return, \fI{content,MimeType,Cont}\fR or \fI{html, Str}\fR or
+\fI{ehtml, Term}\fR. That data will be shipped to the client.
 
 .TP
 \fBexpires = ListOfExpires\fR
@@ -588,25 +564,27 @@ specific mime types. The expiration date can set to be relative to either the
 time the source file was last modified, or to the time of the client
 access. ListOfExpires is defined as follows:
 
+.nf
   expires = <MimeType1, access+Seconds> <MimeType2, modify+Seconds> ...
+.fi
 
 These HTTP headers are an instruction to the client about the document's
 validity and persistence. If cached, the document may be fetched from the cache
 rather than from the source until this time has passed. After that, the cache
 copy is considered "expired" and invalid, and a new copy must be obtained from
-the source.
-Here is an example:
+the source. Here is an example:
 
+.nf
   expires = <image/gif, access+2592000> <image/png, access+2592000>
   expires = <image/jpeg, access+2592000> <text/css, access+2592000>
+.fi
 
 .TP
 \fBarg_rewrite_mod = Module\fR
-It is possible to install a module that rewrites all the
-Arg #arg{} records at an early stage in the yaws server.
-This can be used to do various things such as checking a cookie,
-rewriting paths etc.
-
+It is possible to install a module that rewrites all the Arg #arg{} records at
+an early stage in the Yaws server.  This can be used to do various things such
+as checking a cookie, rewriting paths etc.
+.br
 The module \fIyaws_vdir\fR can be used in case you want to serve static content
 that is not located in your docroot. See the example at the bottom of this man
 page for how to use the \fIopaque\fR + \fIvdir\fR elements to instruct the
@@ -614,19 +592,17 @@ page for how to use the \fIopaque\fR + \fIvdir\fR elements to instruct the
 
 .TP
 \fBstart_mod = Module\fR
-Defines a user provided callback module.
-At startup of the server, Module:start/1 will be called.
-The #sconf{} record (defined in yaws.hrl) will be used
-as the input argument. This makes it possible for a user
-application to synchronize the startup with the yaws server
-as well as getting hold of user specific configuration data,
-see the explanation for the <opaque> context.
+Defines a user provided callback module.  At startup of the server,
+Module:start/1 will be called.  The #sconf{} record (defined in yaws.hrl) will
+be used as the input argument. This makes it possible for a user application to
+synchronize the startup with the Yaws server as well as getting hold of user
+specific configuration data, see the explanation for the <opaque> context.
 
 .TP
 \fBrevproxy = Prefix Url\fR
-Make yaws a reverse proxy. The Prefix is a path inside our own docroot
-and the Url argument is an url pointing to a website we want to "mount"
-under the path which is Prefix.
+Make Yaws a reverse proxy. The Prefix is a path inside our own docroot and the
+Url argument is an url pointing to a website we want to "mount" under the path
+which is Prefix.
 
 Example: revproxy = /tmp/foo http://yaws.hyber.org
 
@@ -638,22 +614,21 @@ WARNING, this feature is yet not in production quality.
 
 .TP
 \fBfwdproxy = true|false\fR
-Make yaws a forward proxy. By enabling this option you can use yaws
-as a proxy for outgoing web traffic, typically by configuring the proxy
-settings in a web-browser to explicitly target yaws as its proxy server.
+Make Yaws a forward proxy. By enabling this option you can use Yaws as a proxy
+for outgoing web traffic, typically by configuring the proxy settings in a
+web-browser to explicitly target Yaws as its proxy server.
 
 WARNING, this feature is yet not in production quality.
 
 .TP
 \fBservername = Name\fR
-If we're virthosting everal servers and want to force a server
-to match specific Host: headers we can do this with the "servername"
-directive. This name doesn't necessarily have to be the same as the
-the name inside <server Name> in certain NAT scenarios. Rarely used feature.
+If we're virthosting everal servers and want to force a server to match specific
+Host: headers we can do this with the "servername" directive. This name doesn't
+necessarily have to be the same as the the name inside <server Name> in certain
+NAT scenarios. Rarely used feature.
 
 .TP
 \fBphp_handler = <Type, Spec>\fR
-
 Set handler to interpret .php files. It can be one of the following definitions:
 
 \fBphp_handler = <cgi, Filename>\fR - The name of (and possibly path to) the php
@@ -666,23 +641,28 @@ interpret .php files (if allowed).
 Yaws does not start the PHP interpreter in fastcgi mode for you. To run PHP in
 fastcgi mode, call it with the -b option. For example:
 
-\fBphp5-cgi -b '127.0.0.1:54321'\fR
+.nf
+  php5-cgi -b '127.0.0.1:54321'
+.fi
 
 This starts a php5 in fastcgi mode listening on the local network interface. To
-make use of this PHP server from yaws, specify:
+make use of this PHP server from Yaws, specify:
 
-\fBphp_handler = <fcgi, 127.0.0.1:54321>\fR
+.nf
+  php_handler = <fcgi, 127.0.0.1:54321>
+.fi
 
 The PHP interpreter needs read access to the files it is to serve. Thus, if you
-run it in a different security context than yaws itself, make sure it has access
+run it in a different security context than Yaws itself, make sure it has access
 to the .php files.
-
+.br
 Please note that anyone who is able to connect to the php fastcgi server
 directly can use it to read any file to which it has read access. You should
 consider this when setting up a system with several mutually untrusted instances
 of php.
 .RE
 .HP
+
 
 \fBphp_handler = <extern, Module:Function | Node:Module:Function>\fR - Use an
 external handler, possibly on another node, to interpret .php files (if
@@ -692,12 +672,12 @@ allowed).
 To interpret a .php file, the function \fIModule:Function(Arg)\fR will be
 invoked (Evaluated inside a rpc call if a \fINode\fR is specified), where Arg is
 a #arg{} record.
-
+.br
 The function must do the same things that a normal out/1 does.
 .RE
 .HP
 
-Default value is <cgi, "/usr/bin/php-cgi">.
+Default value is \fI<cgi, "/usr/bin/php-cgi">\fR.
 
 .TP
 \fBphpfcgi = Host:Port\fR
@@ -707,147 +687,168 @@ instead.\fR
 Use this directive is same as: php_handler = <fcgi, Host:Port>.
 
 .TP
-\fB<ssl>  .... </ssl>\fR
-This begins and ends an SSL configuration for this server.
-It's possible to virthost several SSL servers on the same IP
-given that they all share the same certificate configuration.
-In general it is complicated to virthost several SSL servers on
-the same IP address since the certificate is typically
-bound to a domainname in the common name part of the certificate.
-One solution (the only?) to this problem is to have a certificate
-with multiple subjectAltNames. See
+\fB<ssl> ... </ssl>\fR
+This begins and ends an SSL configuration for this server.  It's possible to
+virthost several SSL servers on the same IP given that they all share the same
+certificate configuration.  In general it is complicated to virthost several SSL
+servers on the same IP address since the certificate is typically bound to a
+domainname in the common name part of the certificate.  One solution (the only?)
+to this problem is to have a certificate with multiple subjectAltNames. See
 http://wiki.cacert.org/VhostTaskForce#Interoperability_Test
 
-.TP
 \fBkeyfile = File\fR
-Specifies which file contains the private key for the certificate.
-If not specified then the certificate file will be used.
-.TP
+.RS 12
+Specifies which file contains the private key for the certificate. If not
+specified then the certificate file will be used.
+.RE
+.HP
+
 \fBcertfile = File\fR
+.RS 12
 Specifies which file contains the certificate for the server.
-.TP
+.RE
+.HP
+
 \fBcacertfile = File\fR
-A file containing trusted certificates to use during client authentication
-and to use when attempting to build the server certificate chain.
-The list is also used in the list of acceptable client CAs passed to
-the client when a certificate is requested.
-.TP
+.RS 12
+A file containing trusted certificates to use during client authentication and
+to use when attempting to build the server certificate chain.  The list is also
+used in the list of acceptable client CAs passed to the client when a
+certificate is requested.
+.RE
+.HP
+
 \fBverify = 0 | 1 | 2 | verify_none | verify_peer\fR
-Specifies the level of verification the server does on client certs.
-0 means that the server will not ask for a cert (verify_none), 1 means that the
-server will ask the client for a cert but not fail if the client does not
-supply a client cert (verify_peer, fail_if_no_peer_cert = false), 2 means that
-the server requires the client to supply a client cert (verify_peer,
-fail_if_no_peer_cert = true).
+.RS 12
+Specifies the level of verification the server does on client certs.  0 means
+that the server will not ask for a cert (verify_none), 1 means that the server
+will ask the client for a cert but not fail if the client does not supply a
+client cert (verify_peer, fail_if_no_peer_cert = false), 2 means that the server
+requires the client to supply a client cert (verify_peer, fail_if_no_peer_cert =
+true).
 
 Setting verify_none means that the x509 validation will be skipped (no
-certificate request is sent to the client), verify_peer means that a
-certificate request is sent to the client (x509 validation is performed.
+certificate request is sent to the client), verify_peer means that a certificate
+request is sent to the client (x509 validation is performed.
 
 You might want to use fail_if_no_peer_cert in combination with verify_peer.
-.TP
+.RE
+.HP
+
 \fBfail_if_no_peer_cert = true | false\fR
+.RS 12
 If verify is set to verify_peer and set to true the connection will fail if the
 client does not send a certificate (i.e. an empty certificate). If set to false
 the server will fail only if an invalid certificate is supplied (an empty
 certificate is considered valid).
-.TP
+.RE
+.HP
+
 \fBdepth = Int\fR
-Specifies the depth of certificate chains the server is prepared to follow
-when verifying client certs. For the OTP new ssl implementation it
-is also used to specify how far the server, i.e. we, shall follow the
-SSL certificates we present to the clients. Hence, using self signed certs,
-we typically need to set this to 0.
-.TP
+.RS 12
+Specifies the depth of certificate chains the server is prepared to follow when
+verifying client certs. For the OTP new ssl implementation it is also used to
+specify how far the server, i.e. we, shall follow the SSL certificates we
+present to the clients. Hence, using self signed certs, we typically need to set
+this to 0.
+.RE
+.HP
+
 \fBpassword = String\fR
-String If the private key is encrypted on disc, this password is the
-3Dee key to decrypt it.
-.TP
+.RS 12
+String If the private key is encrypted on disc, this password is the 3Dee key to
+decrypt it.
+.RE
+.HP
+
 \fBciphers = String\fR
-This string specifies the SSL cipher string. The syntax of the SSL cipher
-string is a little horrible sublanguage of its own. It is documented in the
-ssl man page for "ciphers".
-.TP
-\fB</ssl>\fR
-Ends an SSL definition
+.RS 12
+This string specifies the SSL cipher string. The syntax of the SSL cipher string
+is a little horrible sublanguage of its own. It is documented in the ssl man
+page for "ciphers".
+.RE
+.HP
 
 .TP
 \fB<redirect> ... </redirect>\fR
-Defines a redirect mapping. The following items are allowed
-within a matching pair of <redirect> and </redirect> delimiters.
+Defines a redirect mapping. The following items are allowed within a matching
+pair of <redirect> and </redirect> delimiters.
 
-We can have a series of
+We can have a series of \fBPath = URL\fR or \fBPath = file\fR
 
-\fBPath = URL\fR or
-
-\fBPath = file\fR
-
-All accesses to Path will be redirected to URL/Path or alternatively
-to scheme:host:port/file/Path if a file is used. Note that the original
-path is appended to the redirected url. So if we for example have:
+All accesses to Path will be redirected to URL/Path or alternatively to
+scheme:host:port/file/Path if a file is used. Note that the original path is
+appended to the redirected url. So if we for example have:
 
 .nf
-<redirect>
-  /foo = http://www.mysite.org/zapp
-  /bar = /tomato.html
-</redirect>
+  <redirect>
+    /foo = http://www.mysite.org/zapp
+    /bar = /tomato.html
+  </redirect>
 .fi
 
-Asumming this config resides on a site called http://abc.com,
-We have the following redirects:
+Asumming this config resides on a site called http://abc.com, We have the
+following redirects:
 
-http://abc.com/foo -> http://www.mysite.org/zapp/foo
+.nf
+  http://abc.com/foo -> http://www.mysite.org/zapp/foo
 
-http://abc.com/foo/test -> http://www.mysite.org/zapp/foo/test
+  http://abc.com/foo/test -> http://www.mysite.org/zapp/foo/test
 
-http://abc.com/bar -> http://abc.com/bar
+  http://abc.com/bar -> http://abc.com/bar
 
-http://abc.com/bar/x/y/z -> http://abc.com/bar/x/y/z
+  http://abc.com/bar/x/y/z -> http://abc.com/bar/x/y/z
+.fi
 
-Sometimes we do not want to have the original path
-appended to the redirected path. To get that behaviour we
-specify the config with '==' instead of '='.
+Sometimes we do not want to have the original path appended to the redirected
+path. To get that behaviour we specify the config with '==' instead of '='.
 
-<redirect>
-  /foo == http://www.mysite.org/zapp
-  /bar = /tomato.html
-</redirect>
+.nf
+  <redirect>
+    /foo == http://www.mysite.org/zapp
+    /bar = /tomato.html
+  </redirect>
+.fi
 
-Now a request for http://abc.com/foo/x/y/z simply gets redirected
-to http://www.mysite.org/zapp. This is typically used when we simply
-want a static redirect at some place in the docroot.
+Now a request for http://abc.com/foo/x/y/z simply gets redirected to
+http://www.mysite.org/zapp. This is typically used when we simply want a static
+redirect at some place in the docroot.
 
-When we specify a file as target for the redirect, the redir will
-be to the current http(s) server.
+When we specify a file as target for the redirect, the redir will be to the
+current http(s) server.
 
 
 .TP
 \fB<auth> ... </auth>\fR
-Defines an auth structure. The following items are allowed
-within a matching pair of <auth> and </auth> delimiters.
+Defines an auth structure. The following items are allowed within a matching
+pair of <auth> and </auth> delimiters.
 
-.TP
 \fBdocroot = Docroot \fR
+.RS 12
 If a docroot is defined, this auth structure will be tested only for requests in
 the specified docroot. No docroot configured means all docroots.  If two auth
 structures are defined, one with a docroot and one with no docroot, the first of
 both overrides the second one for requests in the configured docroot.
+.RE
+.HP
 
-.TP
 \fBdir = Dir\fR
-Makes Dir to be controlled by WWW-authenticate headers. In order for
-a user to have access to WWW-Authenticate controlled directory, the user
-must supply a password. The Dir must be specified relative to the docroot.
-Multiple dir can be used. If no dir is set, the default value, "/", will be
-used.
+.RS 12
+Makes Dir to be controlled by WWW-authenticate headers. In order for a user to
+have access to WWW-Authenticate controlled directory, the user must supply a
+password. The Dir must be specified relative to the docroot.  Multiple dir can
+be used. If no dir is set, the default value, \fI"/"\fR, will be used.
+.RE
+.HP
 
-.TP
 \fBrealm = Realm\fR
-In the directory defined here, the WWW-Authenticate Realm is set to
-this value.
+.RS 12
+In the directory defined here, the WWW-Authenticate Realm is set to this value.
+.RE
+.HP
 
-.TP
 \fBauthmod = AuthMod\fR
+.RS 12
 If an auth module is defined then AuthMod:auth(Arg, Auth) will be called for all
 access to the directory. The auth/2 function should return one of: true, false,
 {false, Realm}, {appmod, Mod}.  If {appmod, Mod} is returned then a call to
@@ -855,46 +856,51 @@ Mod:out401(Arg, Auth, Realm) will be used to deliver the content. If
 errormod_401 is defined, the call to Mod will be ignored. (Mod:out(Arg) is
 deprecated).
 
-This can, for example, be used to implement cookie authentication.
-The auth() callback would check if a valid cookie header is present,
-if not it would return {appmod, ?MODULE} and the out401/1 function
-in the same module would return {redirect_local, "/login.html"}.
+This can, for example, be used to implement cookie authentication.  The auth()
+callback would check if a valid cookie header is present, if not it would return
+{appmod, ?MODULE} and the out401/1 function in the same module would return
+{redirect_local, "/login.html"}.
+.RE
+.HP
 
-.TP
 \fBuser = User:Password\fR
-Inside this directory, the user User has access if the user supplies
-the password Password in the popup dialogue presented by the browser.
-We can obviously have several of these value inside a single <auth> </auth>
-pair.
+.RS 12
+Inside this directory, the user User has access if the user supplies the
+password Password in the popup dialogue presented by the browser.  We can
+obviously have several of these value inside a single <auth> </auth> pair.
 
-The usage of User:Password in the actual config file is deprecated
-as of release 1.51. It is preferred to have the users in a file called
-\fI.yaws_auth\fR in the actual directory. The .yaws_auth file has to be
-file parseable by \fIfile:consult/1\fR
+The usage of User:Password in the actual config file is deprecated as of release
+1.51. It is preferred to have the users in a file called \fI.yaws_auth\fR in the
+actual directory. The .yaws_auth file has to be file parseable by
+\fIfile:consult/1\fR
 
 Each row of the file must contain terms on the form
 
 .nf
-{User, Password}.
+    {User, Password}.
 .fi
 
 Where both User and Password should be strings. The .yaws_auth file mechanism is
 recursive. Thus any subdirectories to Dir are automatically also protected.
 
 The .yaws_auth file is never visible in a dir listing
+.RE
+.HP
 
-.TP
 \fBpam service = \fIpam-service\fR\fR
-If the item \fBpam\fR is part of the auth structure,
-Yaws will also try to authenticate the user using "pam" using
-the pam \fIservice\fR indicated. Usual services are typically found
-under /etc/pam.d. Usual values are "system-auth" etc.
+.RS 12
+If the item \fBpam\fR is part of the auth structure, Yaws will also try to
+authenticate the user using "pam" using the pam \fIservice\fR indicated. Usual
+services are typically found under /etc/pam.d. Usual values are "system-auth"
+etc.
 
-pam authentication is performed by an Erlang port program which is
-typically installed as suid root by the yaws install script.
+pam authentication is performed by an Erlang port program which is typically
+installed as suid root by the Yaws install script.
+.RE
+.HP
 
-.TP
 \fBallow = all | ListOfHost\fR
+.RS 12
 The \fIallow\fR directive affects which hosts can access an area of the
 server. Access can be controlled by IP address or IP address range. If all is
 specified, then all hosts are allowed access, subject to the configuration of
@@ -903,41 +909,34 @@ groups of hosts to access the server, the host can be specified in any of the
 following formats:
 
 \fBA full IP address\fR
-.RS 12
-
 .nf
-allow = 10.1.2.3
-allow = 192.168.1.104, 192.168.1.205
+  allow = 10.1.2.3
+  allow = 192.168.1.104, 192.168.1.205
 .fi
-.RE
-.HP
 
 \fBA network/netmask pair\fR
-.RS 12
-
 .nf
-allow = 10.1.0.0/255.255.0.0
+  allow = 10.1.0.0/255.255.0.0
 .fi
-.RE
-.HP
+
 
 \fBA network/nnn CIDR specification\fR
-.RS 12
-
 .nf
-allow = 10.1.0.0/16
+  allow = 10.1.0.0/16
 .fi
 .RE
 .HP
 
-.TP
 \fBdeny = all | ListOfHost\fR
+.RS 12
 This directive allows access to the server to be restricted based on IP
 address. The arguments for the \fIdeny\fR directive are identical to the
 arguments for the \fIallow\fR directive.
+.RE
+.HP
 
-.TP
 \fBorder = Ordering\fR
+.RS 12
 The \fIorder\fR directive, along with \fIallow\fR and \fIdeny\fR directives,
 controls a three-pass access control system. The first pass processes either all
 \fIallow\fR or all \fIdeny\fR directives, as specified by the \fIorder\fR
@@ -945,38 +944,33 @@ directive. The second pass parses the rest of the directives (\fIdeny\fR or
 \fIallow\fR). The third pass applies to all requests which do not match either
 of the first two.
 
-Ordering is one of (Default value is deny,allow):
+Ordering is one of (Default value is \fIdeny,allow\fR):
 
+.TP
 \fBallow,deny\fR
-.RS 12
 First, all\fIallow\fR directives are evaluated; at least one must match, or the
 request is rejected. Next, \fIdeny\fR directives are evaluated. If any matches,
 the request is rejected. Last, any requests which do not match an \fIallow\fR or
 a \fIdeny\fR directive are denied by default.
-.RE
-.HP
 
+.TP
 \fBdeny,allow\fR
-.RS 12
 First, all \fIdeny\fR directives are evaluated; if any match, the request is
 denied unless it also matches an \fIallow\fR directive. Any requests which do
 not match any \fIallow\fR or \fIdeny\fR directives are permitted.
 .RE
 .HP
-.TP
-\fB</auth>\fR
-Ends an auth definition
 
 .TP
-\fB<opaque>  .... </opaque>\fR
-This begins and ends an opaque configuration context for this server,
-where 'Key = Value' directives can be specified. These directives are
-ignored by yaws (hence the name opaque), but can be accessed as a list
-of tuples \fI{Key,Value}\fR stored in the #sconf.opaque record entry. See also
-the description of the \fIstart_mod\fR directive.
+\fB<opaque> ... </opaque>\fR
+This begins and ends an opaque configuration context for this server, where 'Key
+= Value' directives can be specified. These directives are ignored by Yaws
+(hence the name opaque), but can be accessed as a list of tuples
+\fI{Key,Value}\fR stored in the #sconf.opaque record entry. See also the
+description of the \fIstart_mod\fR directive.
 
-This mechanism can be used to pass data from a surrounding application
-into the individual .yaws pages.
+This mechanism can be used to pass data from a surrounding application into the
+individual .yaws pages.
 
 
 
@@ -984,44 +978,41 @@ into the individual .yaws pages.
 .SH EXAMPLES
 
 The following example defines a single server on port 80.
-.nf
 
-logdir = /var/log/yaws
-<server www.mydomain.org>
+.nf
+    logdir = /var/log/yaws
+    <server www.mydomain.org>
         port = 80
         listen = 192.168.128.31
         docroot = /var/yaws/www
-</server>
+    </server>
 .fi
 
 .PP
-And this example shows a similar setup but two web servers on the same
-IP address.
+And this example shows a similar setup but two web servers on the same IP
+address.
 
 .nf
-
-logdir = /var/log/yaws
-<server www.mydomain.org>
+    logdir = /var/log/yaws
+    <server www.mydomain.org>
         port = 80
         listen = 192.168.128.31
         docroot = /var/yaws/www
-</server>
+    </server>
 
-<server www.funky.org>
+    <server www.funky.org>
         port = 80
         listen = 192.168.128.31
         docroot = /var/yaws/www_funky_org
-</server>
-
-
+    </server>
 .fi
 
-
-.nf
+.PP
 An example with www-authenticate and no access logging at all.
 
-logdir = /var/log/yaws
-<server www.mydomain.org>
+.nf
+    logdir = /var/log/yaws
+    <server www.mydomain.org>
         port = 80
         listen = 192.168.128.31
         docroot = /var/yaws/www
@@ -1033,20 +1024,16 @@ logdir = /var/log/yaws
             user = benny:thequestion
             user = ronny:havinganamethatendswithy
        </auth>
-
-</server>
-
-
-
-
-
+    </server>
 .fi
 
-.nf
-An example specifying  a user defined module to be called
-at startup, as well as some user specific configuration.
 
-<server www.funky.org>
+.PP
+An example specifying a user defined module to be called at startup, as well as
+some user specific configuration.
+
+.nf
+    <server www.funky.org>
         port = 80
         listen = 192.168.128.31
         docroot = /var/yaws/www_funky_org
@@ -1055,22 +1042,21 @@ at startup, as well as some user specific configuration.
                 mydbdir = /tmp
                 mylogdir = /tmp/log
         </opaque>
-</server>
-
-
+    </server>
 .fi
 
-An example specifying the GSSAPI/SPNEGO module (authmod_gssapi) to be
-used for authentication. This module requires egssapi version 0.1~pre2
-or later available at http://www.hem.za.org/egssapi/.
 
-The Kerberos5 keytab is specified as 'keytab = File' directive in
-opaque. This keytab should contain the keys of the HTTP service
+.PP
+An example specifying the GSSAPI/SPNEGO module (authmod_gssapi) to be used for
+authentication. This module requires egssapi version 0.1~pre2 or later available
+at http://www.hem.za.org/egssapi/.
+
+The Kerberos5 keytab is specified as 'keytab = File' directive in opaque. This
+keytab should contain the keys of the HTTP service
 principal, 'HTTP/www.funky.org' in this example.
 
 .nf
-
-<server www.funky.org>
+    <server www.funky.org>
         port = 80
         listen = 192.168.128.31
         docroot = /var/yaws/www_funky_org
@@ -1082,42 +1068,36 @@ principal, 'HTTP/www.funky.org' in this example.
         <opaque>
                 keytab = /etc/yaws/http.keytab
         </opaque>
-</server>
-
+    </server>
 .fi
 
 
-
-And finally a slightly more complex example
-with two servers on the same IP, and one SSL server on a
-different IP.
+.PP
+And finally a slightly more complex example with two servers on the same IP, and
+one SSL server on a different IP.
 
 When there are more than one server on the same IP, and they have different
-names the server must be able to choose one of them if the client
-doesn't send a Host: header. yaws will choose the first one defined in the
-conf file.
+names the server must be able to choose one of them if the client doesn't send a
+Host: header. Yaws will choose the first one defined in the conf file.
 
 .nf
+    logdir = /var/log/yaws
+    max_num_cached_files = 8000
+    max_num_cached_bytes = 6000000
 
-logdir = /var/log/yaws
-max_num_cached_files = 8000
-max_num_cached_bytes = 6000000
-
-<server www.mydomain.org>
+    <server www.mydomain.org>
         port = 80
         listen = 192.168.128.31
         docroot = /var/yaws/www
-</server>
+    </server>
 
-
-
-<server www.funky.org>
+    <server www.funky.org>
         port = 80
         listen = 192.168.128.31
         docroot = /var/yaws/www_funky_org
-</server>
+    </server>
 
-<server www.funky.org>
+    <server www.funky.org>
         port = 443
         listen = 192.168.128.32
         docroot = /var/yaws/www_funky_org
@@ -1126,31 +1106,30 @@ max_num_cached_bytes = 6000000
            certfile = /etc/funky.cert
            password = gazonk
         </ssl>
-</server>
-
-
+    </server>
 .fi
 
+
+.PP
 Finally an example with virtual directories, vdirs.
 
 .nf
-
-<server server.domain>
+    <server server.domain>
         port = 80
         listen = 192.168.128.31
         docroot = /var/yaws/www
         arg_rewrite_mod = yaws_vdir
         <opaque>
-          vdir = "/virtual1/ /usr/local/somewhere/notrelated/to/main/docroot"
-          vdir = "/myapp/ /some/other/path can include/spaces"
-          vdir = "/icons/  /usr/local/www/yaws/icons"
+            vdir = "/virtual1/ /usr/local/somewhere/notrelated/to/main/docroot"
+            vdir = "/myapp/ /some/other/path can include/spaces"
+            vdir = "/icons/  /usr/local/www/yaws/icons"
         </opaque>
- </server>
-
+    </server>
 .fi
 
+.PP
 The first defined vdir can then be accessed at or under
-http://server.domain/virtual1/  or http://server.domain/virtual1
+http://server.domain/virtual1/ or http://server.domain/virtual1
 
 
 
