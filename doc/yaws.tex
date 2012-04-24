@@ -1687,7 +1687,7 @@ detect a \verb+Content-Length+ header.
 \item \verb+[ListOfValues]+ It is possible to return a list of the above defined
   return values. Any occurrence of the atoms \verb+streamcontent+,
   \verb+streamcontent_with_timeout+,
-  \verb+streamcontent_with_size+,\\ 
+  \verb+streamcontent_with_size+,\\
   \verb+streamcontent_from_pid+, \verb+get_more+, \verb+page+ or \verb+break+ in
   this list is legal only if it is the last position of the list. If not,
   remaining values in the list are ignored.
@@ -2102,14 +2102,28 @@ part where options for each virtual host is supplied.
 
               The default value for logdir is "."
 
-\item        \verb+server_signature = String+ ---
-              This directive sets the "Server: " output header to the custom
-              value. The default value is "yaws/VSN, Yet Another Web Server".
-
 \item        \verb+ebin_dir = Directory+ ---
               This  directive adds Directory to the \Erlang\  search
               path. It is possible to have several of these  command
               in the configuration file.
+
+\item        \verb+id = String+ ---
+              It is possible run multiple Yaws servers on the same machine. We
+              use the id of a Yaws server to control it using the different
+              control commands such as:
+\begin{verbatim}
+  # /usr/local/bin/yaws --id foobar --stop
+\end{verbatim}
+               To stop the Yaws server with id "foobar". Each \Yaws\ server will
+               write its internals data into a file called \$HOME/.yaws/yaws/ID
+               where ID is the identity of the server. Yaws also creates a file
+               called \${VARDIR}/run/yaws/ctl-\${ID} which contain the port
+               number where the server is listening for control commands. The
+               default id is "default".
+
+\item        \verb+server_signature = String+ ---
+              This directive sets the "Server: " output header to the custom
+              value. The default value is "yaws/VSN, Yet Another Web Server".
 
 \item        \verb+include_dir = Directory+ ---
               This directive adds Directory to the path of directories
@@ -2145,6 +2159,19 @@ part where options for each virtual host is supplied.
               \Yaws\   start script, this value is automatically set
               to 0.
 
+\item        \verb+trace  = traffic | http+ ---
+              This  enables  traffic  or HTTP tracing. Tracing is
+              also possible to enable with a command line flag to
+              \Yaws{}.
+
+\item        \verb+use_old_ssl = true | false+ ---
+              This re-enables the old OTP ssl implementation. By default we use
+              the new ssl implementation.
+
+\item        \verb+auth_log  = true | false+ ---
+              \textit{Deprecated and ignored. Now, this target must be set in
+                server part}.
+
 \item        \verb+max_connections = nolimit | Integer+ ---
               This value controls the maximum number of connections
               from HTTP clients into the server. This is implemented
@@ -2159,24 +2186,6 @@ part where options for each virtual host is supplied.
               long-running connections collecting too much garbage in
               the \Erlang\ VM.
 
-\item        \verb+keepalive_timeout = Integer | infinity+ ---
-              If the HTTP session will be kept alive (i.e., not
-              immediately closed) it will close after the specified
-              number of milliseconds unless a new request is received
-              in that time. The default value is 30000. The value
-              \verb+infinity+ is legal but not recommended.
-
-\item        \verb+trace  = traffic | http+ ---
-              This  enables  traffic  or HTTP tracing. Tracing is
-              also possible to enable with a command line flag to
-              \Yaws{}.
-
-\item        \verb+subconfig = File+ ---
-             Load specified config file.
-
-\item        \verb+subconfigdir = Directory+ ---
-             Load all config files in specified directory.
-
 \item        \verb+process_options = undefined | Proplist+ ---
               Set process spawn options for client acceptor processes.
               Options must be specified as a quoted string of either
@@ -2188,11 +2197,113 @@ part where options for each virtual host is supplied.
               proplist may also be empty. See
               \verb+erlang:spawn_opt/4+ for details on these options.
 
-\item        \verb+acceptor_pool_size = Integer+
+\item        \verb+acceptor_pool_size = Integer+ ---
               Set the size of the pool of cached acceptor
               processes. The specified value must be greater than or
               equal to 0. The default value is 8. Specifying a value
               of 0 effectively disables the process pool.
+
+\item        \verb+log_wrap_size = Integer+ ---
+              The logs written by \Yaws\ are all wrap logs, the default value at
+              the size where they wrap around and the original gets renamed to
+              File.old is 1000000, 1 megabyte. This value can changed.
+
+
+              If we set the value to 0 the logs will never wrap. If we want to
+              use \Yaws\ in combination with a more traditional log wrapper such
+              as logrotate, set the size to 0 and \Yaws\ will reopen the
+              logfiles once they have be renamed/removed.
+
+\item        \verb+log_resolve_hostname = true | false+ ---
+              By default the client host IP is not resolved in the access logs.
+
+\item        \verb+fail_on_bind_err = true | false+ ---
+              Fail completely or not if \Yaws\ fails to bind a listen socket
+              Default is true.
+
+\item        \verb+soap_srv_mods = ListOfModuleSetting+ ---
+              If enable\_soap is true, a startup \Yaws\ will invoke
+              \verb+yaws_soap_srv:setup()+ to setup modules set
+              here. \verb+ModuleSetting+ is either a triad like
+              \verb+<Mod, HandlerFunc, WsdlFile>+ or a quadruple form like
+              \verb+<Mod, HandlerFunc, WsdlFile, Prefix>+ which specifies the
+              prefix. A prefix will be used as argument of
+              \verb+yaws_soap_lib:initModel()+ and then be used as a XML
+              namespace prefix.  Note, the WsdlFile here should be an
+              absolute-path file in local file systems.
+
+              For example, we can specify
+\begin{verbatim}
+  soap_srv_mods=<Mod1, HandlerFunc, WsdlFile1> <Mod2, HandlerFunc, WsdlFile2, SpecifiedPrefix> ...
+\end{verbatim}
+
+\item        \verb+php_exe_path = Path+ ---
+              \textit{this target is deprecated and useless. use 'php\_handler'
+                target in server part instead}.
+
+              The name of (and possibly path to) the php executable used to
+              interpret php scripts (if allowed).  Default is php-cgi.
+
+\item        \verb+copy_error_log  = true | false+ ---
+              Enable or disable copying of the error log. When we run in
+              embedded mode, there may very well be some other systems process
+              that is responsible for writing the errorlog to a file whereas
+              when we run in normal standalone mode, we typically want the
+              Erlang errorlog written to a report.log file.  Default value is
+              true.
+
+\item        \verb+ysession_mod = Module+ ---
+               Allows to specify a different \Yaws\ session storage mechanism
+               instead of an ETS table. One of the drawbacks of the default
+               \verb+yaws_session_server+ implementation is that server side
+               cookies are lost when the server restarts. Specifying a different
+               module here will pass all writes/read operations to this module
+               (it must implements appropriate callbacks).
+
+\item        \verb+runmod = ModuleName+ ---
+               At startup \Yaws\ will invoke \verb+ModuleName:start()+ in a
+               separate process. It is possible to have several runmods.  This
+               is useful if we want to reuse the Yaws startup shell script for
+               our own application.
+
+\item        \verb+pick_first_virthost_on_nomatch = true | false+ ---
+              When \Yaws\ gets a request, it extracts the Host: header from the
+              client request to choose a virtual server amongst all servers with
+              the same IP/Port pair.  This configuration parameter decides
+              whether Yaws should pick the first (as defined in the yaws.conf
+              file) if no name match or not.  In real live hosting scenarios we
+              typically want this to be false whereas in testing/development
+              scenarios it may be convenient to set it to true. Default is true.
+
+
+\item        \verb+keepalive_timeout = Integer | infinity+ ---
+              If the HTTP session will be kept alive (i.e., not
+              immediately closed) it will close after the specified
+              number of milliseconds unless a new request is received
+              in that time. The default value is 30000. The value
+              \verb+infinity+ is legal but not recommended.
+
+\item        \verb+subconfig = File+ ---
+              Load specified config file.
+
+\item        \verb+subconfigdir = Directory+ ---
+              Load all config files in specified directory.
+
+\item        \verb+x_forwarded_for_log_proxy_whitelist = ListOfUpstreamProxyServerIps+ ---
+
+              In case \Yaws\ is running behind a HTTP proxy or HTTP load
+              balancer it may be desirable to configure this proxy to put the IP
+              address of the originating client into the
+              \textit{X-Forwarded-For} header and have \Yaws\ log this IP
+              address as the request's source IP address instead of logging the
+              proxy server's IP address over and over again. This setting
+              determines which source IP addresses are rewritten in this manner.
+
+              For example, if there are two proxies with the IP addresses
+              192.168.0.1 and 192.168.0.2 in front of Yaws, we can specify:
+\begin{verbatim}
+  x_forwarded_for_log_proxy_whitelist = 192.168.0.1 192.168.0.2
+\end{verbatim}
 
 \end{itemize}
 
@@ -2212,7 +2323,7 @@ The following directives are allowed inside a server definition.
 \begin{itemize}
 
 \item       \verb+port = Port+ ---
-              This makes the server listen on Port.
+              This makes the server listen on Port. Default is 8000.
 
 \item        \verb+listen = IpAddress+ ---
               This makes the  server  listen  on  \verb+IpAddress+  when
@@ -2233,17 +2344,15 @@ The following directives are allowed inside a server definition.
               This directive sets the "Server: " output header to the custom
               value and overloads the global one for this virtual server.
 
-\item       \verb+rport = Port+ ---
-              This forces  all  local  redirects  issued  by  the
-              server  to  go  to  Port.  This is useful when \Yaws\
-              listens to a port which is different from the  port
-              that  the  user  connects  to. For example, running
-              \Yaws\  as a non-privileged user makes  it  impossible
-              to  listen  to port 80, since that port can only be
-              opened by a privileged user. Instead  \Yaws\   listens
-              to  a high port number port, 8000, and iptables are
-              used to redirect traffic to port 80  to  port  8000
-              (most NAT:ing firewalls will also do this for you).
+\item       \verb+rhost = Host[:Port]+ ---
+             This forces all local redirects issued by the server to go to Host.
+             This is useful when \Yaws\ listens to a port which is different
+             from the port that the user connects to. For example, running
+             \Yaws\ as a non-privileged user makes it impossible to listen to
+             port 80, since that port can only be opened by a privileged
+             user. Instead \Yaws\ listens to a high port number port, 8000, and
+             iptables are used to redirect traffic to port 80 to port 8000 (most
+             NAT:ing firewalls will also do this for you).
 
 \item       \verb+rscheme = http | https+ ---
               This forces  all  local  redirects  issued  by  the
@@ -2294,35 +2403,30 @@ The following directives are allowed inside a server definition.
                 \verb+{Ip, Req, InHdrs, OutHdrs, Time}+ for an access log and
                 \verb+{Ip, Path, Item}+ for an auth log, where:
 
-                        \begin{itemize}
+                      \begin{itemize}
+                      \item \verb+Ip+ --- IP address of the accessing client (as
+                        a tuple).
 
-                        \item \verb+Ip+ --- IP address of the
-                          accessing client (as a tuple).
+                      \item \verb+Req+ --- The HTTP method, URI path, and HTTP
+                        version of the request (as a \verb+#http_request{}+
+                        record).
 
-                        \item \verb+Req+ - the HTTP me\-thod, URI
-                          path, and HTTP ver\-sion of the\\*request
-                          (as a \verb+#http_request{}+ record).
+                      \item \verb+InHdrs+ --- The HTTP headers which were sent
+                        from the WWW client (as a \verb+#headers{}+ record).
 
-                        \item \verb+InHdrs+ --- the HTTP headers which
-                          were sent from the WWW client (as a
-                          \verb+#headers{}+ record).
+                      \item \verb+OutHdrs+ --- The HTTP headers sent to the WWW
+                        client (as a \verb+#outh{}+ record).
 
-                        \item \verb+OutHdrs+ --- the HTTP headers sent
-                          to the WWW client (as a \verb+#outh{}+
-                          record).
+                      \item \verb+Path+ --- The URI path of the request (as a
+                        string).
 
-                        \item \verb+Path+ --- the URI path of the
-                          request (as a string).
+                      \item \verb+Item+ -- The result of an authentication
+                        request. May be \verb+{ok, User}+, \verb+403+ or
+                        \verb+{401, Realm}+.
 
-                        \item \verb+Item+ -- the result of an
-                          authentication request. May be
-                          \verb+{ok, User}+, \verb+403+ or
-                          \verb+{401, Realm}+.
-
-                        \item \verb+Time+ --- The time taken to serve
-                          the request, in microseconds.
-
-                        \end{itemize}
+                      \item \verb+Time+ --- The time taken to serve the request,
+                        in microseconds.
+                      \end{itemize}
 
               For all of these callbacks, \verb+ServerName+ is the virtual
               server's name, \verb+Type+ is the atom \verb+access+ or
@@ -2339,6 +2443,42 @@ The following directives are allowed inside a server definition.
               \verb+yaws_shaper+.
 
               There is no such module configured by default.
+
+\item       \verb+dir_listings = true | true_nozip | false+ ---
+             Setting this directive to false disallows the automatic dir listing
+             feature of \Yaws{}. A status code 403 Forbidden will be sent.  Set
+             to true\_nozip to avoid the auto-generated all.zip entries. Default
+             is false.
+
+\item       \verb+extra_cgi_vars = .....+ ---
+             Add additional CGI or FastCGI variables. For example:
+\begin{verbatim}
+  <extra_cgi_vars dir='/path/to/some/scripts'>
+    var = val
+    ...
+  </extra_cgi_vars>
+\end{verbatim}
+
+\item       \verb+statistics  = true | false+ ---
+             Turns on/off statistics gathering for a virtual server. Default is
+             false.
+
+\item       \verb+fcgi_app_server = Host:Port+ ---
+             The hostname and TCP port number of a FastCGI application
+             server. The TCP port number is not optional. There is no default
+             value.
+
+\item       \verb+fcgi_trace_protocol = true | false+ ---
+             Enable or disable tracing of FastCGI protocol messages as info log
+             messages. Disabled by default.
+
+\item       \verb+fcgi_log_app_error = true | false+ ---
+             Enable or disable logging of application error messages (output to
+             stderr and non-zero exit value). Disabled by default.
+
+\item       \verb+deflate = true | false+ ---
+             Turns on or off deflate compression for a server. Default is
+             false.
 
 \item       \verb+docroot  =  Directory ...+ ---
               This makes the server serve all its content from
@@ -2365,6 +2505,14 @@ The following directives are allowed inside a server definition.
               determined by the this parameter.  The default
               value is 10240.
 
+\item       \verb+dav = true | false+ ---
+              Turns on the DAV protocol for this server. The dav support in
+              \Yaws\ is highly limited. If dav is turned on, .yaws processing of
+              .yaws pages is turned off. Default is false. Setting it to nolimit
+              is potentially dangerous. The socket read timeout is supplied by
+              the keepalive\_timeout setting. If the read is not done within the
+              timeout, the POST will fail.
+
 \item       \verb+tilde_expand = true|false+ ---
               If  this  value  is  set  to false \Yaws\  will
               never do tilde  expansion.  Tilde expansion takes a URL
@@ -2375,26 +2523,156 @@ The following directives are allowed inside a server definition.
               \char`\~\verb+username/public_html/+. The default value
               is false.
 
-\item       \verb+allowed_scripts = [ListOfSuffixes]+ ---
-              The allowed script types for this server.  Recognized
-              are \textit{yaws}, \textit{cgi}, \textit{php}.  Default
-              is \verb+allowed_scripts = yaws+.
+\item       \verb+allowed_scripts = ListOfSuffixes+ ---
+              The allowed script types for this server.  Recognized are
+              \textit{yaws}, \textit{cgi}, \textit{fcgi}, \textit{php}.  Default
+              is \verb+allowed_scripts = yaws php cgi fcgi+.
 
-\item       \verb+appmods = [ListOfModuleNames]+ ---
-              If any the names in \verb+ListOfModuleNames+ appear
-              as components in the path for a request, the
-              path request parsing will terminate and that
-              module will be called.
+\item       \verb+tilde_allowed_scripts = ListOfSuffixes+ ---
+             The allowed script types for this server when executing files in a
+             users \verb+public_html+ folder Recognized are \textit{yaws},
+             \textit{cgi}, \textit{fcgi}, \textit{php}. Default is
+             \verb+tilde_allowed_scripts =+ i.e. empty
 
-              Assume  for  example  we  have  the  URL
-              \url{http://www.hyber.org/myapp/foo/bar/baz?user=joe}
-              while we have the module \verb+foo+ defined  as  an
-              appmod,  the  function  \verb+foo:out(Arg)+ will be
-              invoked instead of searching the file systems
-              below the point \verb+foo+.
+\item       \verb+appmods = ListOfModuleNames+ ---
+             If any the names in \verb+ListOfModuleNames+ appear as components
+             in the path for a request, the path request parsing will terminate
+             and that module will be called. There is also an alternate syntax
+             for specifying the appmods if we don't want our internal erlang
+             module names to be exposed in the URL paths.  We can specify
+\begin{verbatim}
+  appmods = <Path1, Module1> <Path2, Modules2> ...
+\end{verbatim}
+             Assume for example that we have the URL
+             \url{http://www.hyber.org/myapp/foo/bar/baz?user=joe+} while we
+             have the module \verb+foo+ defined as an appmod, the function
+             \verb+foo:out(Arg)+ will be invoked instead of searching the
+             filesystems below the point \verb+foo+.
 
-              The \verb+Arg+ argument will have the missing path
-              part supplied in its \verb+appmoddata+ field.
+             The \verb+Arg+ argument will have the missing path part supplied in
+             its \verb+appmoddata+ field.
+
+             It is also possible to exclude certain directories from appmod
+             processing. This is particulaly interesting for '/' appmods.  Here
+             is an example:
+\begin{verbatim}
+  appmods = </, myapp exclude_paths icons js top/static>
+\end{verbatim}
+             The above configuration will invoke the \verb+myapp+ erlang module
+             on everything except any file found in directories \verb+icons+,
+             \verb+js+ and \verb+top/static+ relative to the docroot.
+
+\item       \verb+errormod_404 = Module+ ---
+              It is possible to set a special module that handles 404 Not Found
+              messages. The function \verb+Module:out404(Arg, GC, SC)+ will be
+              invoked. The arguments are
+              \begin{itemize}
+              \item \verb+Arg+ --- a \verb+#arg{}+ record
+              \item \verb+GC+ --- a \verb+#gconf{}+ record (defined in yaws.hrl)
+              \item \verb+SC+ --- a \verb+#sconf{}+ record (defined in yaws.hrl)
+              \end{itemize}
+              The function can and must do the same things that a normal
+              \verb+out/1+ does.
+
+\item       \verb+errormod_401 = Module+ ---
+              It is possible to set a special module that handles 401
+              Unauthorized messages. This can for example be used to display a
+              login page instead. The function
+              \verb+Module:out401(Arg, Auth, Realm)+ will be invoked. The
+              arguments are
+              \begin{itemize}
+              \item \verb+Arg+ --- a \verb+#arg{}+ record
+              \item \verb+Auth+ --- a \verb+#auth{}+ record
+              \item \verb+Realm+ --- a string
+              \end{itemize}
+              The function can and must do the same things that a normal
+              \verb+out/1+ does.
+
+\item       \verb+errormod_crash = Module+ ---
+              It is possible to set a special module that handles the HTML
+              generation of server crash messages. The default is to display the
+              entire formated crash message in the browser. This is good for
+              debugging but not in production.
+
+              The function \verb+Module:crashmsg(Arg, SC, Str)+ will be
+              called. The \verb+Str+ is the real crash message formated as a
+              string.
+
+              The function must return, \verb+{content,MimeType,Cont}+ or
+              \verb+{html, Str}+ or \verb+{ehtml, Term}+. That data will be
+              shipped to the client.
+
+\item       \verb+expires = ListOfExpires+ ---
+              Controls the setting of the \verb+Expires+ HTTP header and the
+              \verb+max-age+ directive of the \verb+Cache-Control+ HTTP header
+              in server responses for specific MIME types. The expiration date
+              can set to be relative to either the time the source file was last
+              modified, or to the time of the client
+              access. \verb+ListOfExpires+ is defined as follows:
+\begin{verbatim}
+  expires = <MimeType1, access+Seconds> <MimeType2, modify+Seconds> ...
+\end{verbatim}
+              These HTTP headers are an instruction to the client about the
+              document's validity and persistence. If cached, the document may
+              be fetched from the cache rather than from the source until this
+              time has passed. After that, the cache copy is considered
+              "expired" and invalid, and a new copy must be obtained from the
+              source.
+              Here is an example:
+\begin{verbatim}
+  expires = <image/gif, access+2592000> <image/png, access+2592000>
+  expires = <image/jpeg, access+2592000> <text/css, access+2592000>
+\end{verbatim}
+
+\item       \verb+arg_rewrite_mod = Module+ ---
+              It is possible to install a module that rewrites all the
+              \verb+Arg+ \verb+#arg{}+ records at an early stage in the
+              \Yaws\ server.  This can be used to do various things such as
+              checking a cookie, rewriting paths etc.
+
+              The module \verb+yaws_vdir+ can be used in case you want to serve
+              static content that is not located in your docroot. See the
+              example at the bottom of this man page for how to use the
+              \verb+opaque+ + \verb+vdir+ elements to instruct the
+              \verb+yaws_vdir+ module what paths to rewrite.
+
+\item       \verb+start_mod = Module+ ---
+              Defines a user provided callback module. At startup of the server,
+              \verb+Module:start/1+ will be called.  The \verb+#sconf{}+ record
+              (defined in yaws.hrl) will be used as the input argument. This
+              makes it possible for a user application to synchronize the
+              startup with the \Yaws\ server as well as getting hold of user
+              specific configuration data, see the explanation for the
+              \verb+<opaque>+ context.
+
+\item       \verb+revproxy = true|false+ ---
+              Make \Yaws\ a reverse proxy. The Prefix is a path inside our own
+              docroot and the Url argument is an url pointing to a website we
+              want to "mount" under the path which is Prefix.
+
+              Example: \verb+revproxy = /tmp/foo http://yaws.hyber.org+
+
+              Makes the hyber website appear under /tmp/foo
+
+              It is possible to have multiple reverse proxies inside the same
+              server.
+
+              WARNING, this feature is yet not in production quality.
+
+\item       \verb+fwdproxy = true|false+ ---
+              Make \Yaws\ a forward proxy. By enabling this option you can use
+              \Yaws\ as a proxy for outgoing web traffic, typically by
+              configuring the proxy settings in a web-browser to explicitly
+              target \Yaws\ as its proxy server.
+
+              WARNING, this feature is yet not in production quality.
+
+\item       \verb+servername = Name+ ---
+              If we're virthosting everal servers and want to force a server to
+              match specific Host: headers we can do this with the "servername"
+              directive. This name doesn't necessarily have to be the same as
+              the the name inside <server Name> in certain NAT scenarios. Rarely
+              used feature.
 
 \item       \verb+php_handler+ ---
               Set handler to interpret \textit{.php} files. It can be
@@ -2412,13 +2690,13 @@ The following directives are allowed inside a server definition.
                 mode for you. To run PHP in FastCGI mode, call it with
                 the \textit{-b} option. For example:
 \begin{verbatim}
-       php5-cgi -b '127.0.0.1:54321'
+  php5-cgi -b '127.0.0.1:54321'
 \end{verbatim}
                 This starts PHP5 in FastCGI mode listening on the local
                 network interface. To make use of this PHP server from
                 \Yaws{}, specify:
 \begin{verbatim}
-       php_handler = <fcgi, 127.0.0.1:54321>
+  php_handler = <fcgi, 127.0.0.1:54321>
 \end{verbatim}
                 The PHP interpreter needs read access to the files it
                 is to serve. Thus, if you run it in a different
@@ -2447,186 +2725,246 @@ The following directives are allowed inside a server definition.
               Default value is \verb+<cgi, "/usr/bin/php-cgi">+.
 
 \item       \verb+phpfcgi = HostPortSpec+ ---
-              this target is deprecated. use \verb+php_handler+ target in server
-              part instead.
+              \textit{this target is deprecated. use php\_handler target in
+                server part instead}.
 
-              Use this directive is same as: \verb+php_handler = <fcgi, HostPortSpec>+.
-
-\item       \verb+fcgi_app_server = HostPortSpec+ ---
-              The hostname (or IP address) and TCP port of a
-              FastCGI application server. This is separate from the
-              \verb+phpfcgi+ setting and is used for normal FCGI
-              applications. Because they're separate, both
-              \verb+fcgi_app_server+ and \verb+phpfcgi+ can be set for
-              the same server to allow it to serve both \verb+.fcgi+
-              and \verb+.php+ files.
-
-\item       \verb+fcgi_trace_protocol = true | false+ ---
-              Enable or disable tracing of FastCGI protocol
-              messages. This is useful for debugging.
-
-\item       \verb+fcgi_log_app_error = true | false+ ---
-              Enable or disable logging FCGI application errors (any
-              output to stderr and non-zero exit codes).
-
-\item     \verb+errormod_404 = Module+ ---
-              It is possible to set a special module  that
-              handles 404 Not Found messages.
-
-              The function \verb+Module:out404(Arg, GC, SC)+ will
-              be invoked. The arguments are
-
-              \verb+Arg+ is an \verb+arg{}+ record
-
-              \verb+GC+ is a \verb+gconf{}+ record (defined in
-              \textit{yaws.hrl})
-
-              \verb+SC+ is a \verb+sconf{}+ record (defined in
-              \textit{yaws.hrl})
-
-              The function can and must do the same things
-              that a normal \verb+out/1+ does.
-
-\item       \verb+expires = ListOfExpires+ ---
-              Controls the setting of the \verb+Expires+ HTTP header and the
-              \verb+max-age+ directive of the \verb+Cache-Control+ HTTP header
-              in server responses for specific MIME types. The expiration date
-              can set to be relative to either the time the source file was last
-              modified, or to the time of the client
-              access. \verb+ListOfExpires+ is defined as follows:
-\begin{verbatim}
-       expires = <MimeType1, access+Seconds> <MimeType2, modify+Seconds> ...
-\end{verbatim}
-              These HTTP headers are an instruction to the client about the
-              document's validity and persistence. If cached, the document may
-              be fetched from the cache rather than from the source until this
-              time has passed. After that, the cache copy is considered
-              "expired" and invalid, and a new copy must be obtained from the
-              source.
-              Here is an example:
-\begin{verbatim}
-       expires = <image/gif, access+2592000> <image/png, access+2592000>
-       expires = <image/jpeg, access+2592000> <text/css, access+2592000>
-\end{verbatim}
-
-\item       \verb+errormod_crash = Module+ ---
-              It  is possible to set a special module that
-              handles the HTML generation of server  crash
-              messages.  The  default  is  to  display the
-              entire  formatted  crash   message   in   the
-              browser.  This is good for debugging but not
-              in production.
-
-              The function \verb+Module:crashmsg(Arg,  SC,  Str)+
-              will  be  called.  The \verb+Str+ is the real crash
-              message formatted as a string.
-
-\item       \verb+arg_rewrite_mod = Module+ ---
-              It is possible  to  install  a  module  that
-              rewrites  all  the  \verb+Arg+ \verb+arg{}+ records at an
-              early stage in the \Yaws\  server.  This can be
-              used to do various things such as checking a
-              cookie, rewriting paths etc.
+              Use this directive is same as:
+              \verb+php_handler = <fcgi, HostPortSpec>+.
 
 \item        \verb+<ssl>  .... </ssl>+
-              This begins and ends  an  SSL  configuration
-              for this server.
-\begin{itemize}
-\item        \verb+keyfile = File+ ---
-              Specifies  which  file  contains the private
-              key for the certificate.
+               This begins and ends an SSL configuration for this server. It's
+               possible to virthost several SSL servers on the same IP given
+               that they all share the same certificate configuration. In
+               general it is complicated to virthost several SSL servers on the
+               same IP address since the certificate is typically bound to a
+               domainname in the common name part of the certificate. One
+               solution (the only?)  to this problem is to have a certificate
+               with multiple subjectAltNames. See
+               \url{http://wiki.cacert.org/VhostTaskForce#Interoperability_Test}
 
-\item        \verb+certfile = File+ ---
-              Specifies which file contains  the  certificate for the server.
+               \begin{itemize}
+               \item \verb+keyfile = File+ --- Specifies which file contains the
+                 private key for the certificate.
 
-\item        \verb+cacertfile = File+ ---
-              If  the  server  is  setup  to require
-              client certificates, this file needs to contain
-              all the certificates of the acceptable
-              signers for the client certs.
+               \item \verb+certfile = File+ --- Specifies which file contains
+                 the certificate for the server.
 
-\item        \verb+verify = 0 | 1 | 2 | verify_none | verify_peer+
-              --- Specifies the level of verification the server does
-              on client certs. 0 means that the server will not
-              ask for a cert (\verb+verify_none+), 1 means that
-              the server will ask the client for a cert but not
-              fail if the client does not supply a client cert
-              (\verb+verify_peer+, \verb+fail_if_no_peer_cert+
-              = \verb+false+), 2 means that the server requires
-              the client to supply a client cert
-              (\verb+verify_peer+, \verb+fail_if_no_peer_cert+ =
-              \verb+true+).
+               \item \verb+cacertfile = File+ --- A file containing trusted
+                 certificates to use during client authentication and to use
+                 when attempting to build the server certificate chain. The list
+                 is also used in the list of acceptable client CAs passed to the
+                 client when a certificate is requested.
 
-              Setting \verb+verify_none+ means that the x509
-              validation will be skipped (no certificate request
-              is sent to the client), \verb+verify_peer+ means
-              that a certificate request is sent to the client
-              (x509 validation is performed.
+               \item \verb+verify = 0 | 1 | 2 | verify_none | verify_peer+ ---
+                 Specifies the level of verification the server does on client
+                 certs. 0 means that the server will not ask for a cert
+                 (\verb+verify_none+), 1 means that the server will ask the
+                 client for a cert but not fail if the client does not supply a
+                 client cert (\verb+verify_peer+, \verb+fail_if_no_peer_cert+ =
+                 \verb+false+), 2 means that the server requires the client to
+                 supply a client cert (\verb+verify_peer+,
+                 \verb+fail_if_no_peer_cert+ = \verb+true+).
 
-              You might want to use \verb+fail_if_no_peer_cert+
-              in combination with \verb+verify_peer+.
+                 Setting \verb+verify_none+ means that the x509 validation will
+                 be skipped (no certificate request is sent to the client),
+                 \verb+verify_peer+ means that a certificate request is sent to
+                 the client (x509 validation is performed.
 
-\item        \verb+fail_if_no_peer_cert = true | false+ ---
-              If verify is set to \verb+verify_peer+ and set
-              to \verb+true+ the connection will fail if the
-              client does not send a certificate (i.e. an empty
-              certificate). If set to false the server will
-              fail only if an invalid certificate is supplied
-              (an empty certificate is considered valid).
+                 You might want to use \verb+fail_if_no_peer_cert+ in
+                 combination with \verb+verify_peer+.
 
-\item        \verb+depth = Int+ ---
-              Specifies the depth  of  certificate  chains
-              the  server is prepared to follow when verifying
-              client certs.
+               \item \verb+fail_if_no_peer_cert = true | false+ --- If verify is
+                 set to \verb+verify_peer+ and set to \verb+true+ the connection
+                 will fail if the client does not send a certificate (i.e. an
+                 empty certificate). If set to false the server will fail only
+                 if an invalid certificate is supplied (an empty certificate is
+                 considered valid).
 
-\item        \verb+password = String+ ---
-              If the private key  is  encrypted  on
-              disk,  this  password  is  the  3des  key to
-              decrypt it.
+               \item \verb+depth = Int+ --- Specifies the depth of certificate
+                 chains the server is prepared to follow when verifying client
+                 certs. For the OTP new ssl implementation it is also used to
+                 specify how far the server, i.e. we, shall follow the SSL
+                 certificates we present to the clients. Hence, using self
+                 signed certs, we typically need to set this to 0.
 
-\item        c\verb+ciphers = String+ ---
-              This  string  specifies  the  SSL  cipher
-              string.  The syntax of the SSL cipher string
-              is a little horrible sub-language of its own.
-              It  is  documented  in  the SSL man page for
-              "ciphers".
+               \item \verb+password = String+ --- If the private key is
+                 encrypted on disk, this password is the 3des key to decrypt it.
 
-\item        \verb+</ssl>+ ---
-              Ends an SSL definition
-\end{itemize}
+               \item \verb+ciphers = String+ --- This string specifies the SSL
+                 cipher string.  The syntax of the SSL cipher string is a little
+                 horrible sub-language of its own.  It is documented in the SSL
+                 man page for "ciphers".
+               \end{itemize}
 
+\item       \verb+<redirect> ... </redirect>+ ---
+              Defines a redirect mapping. The following items are allowed within
+              a matching pair of <redirect> and </redirect> delimiters.
+
+              We can have a series of \verb+Path = URL+ or \verb+Path = file+
+
+              All accesses to \verb+Path+ will be redirected to \verb+URL/Path+
+              or alternatively to \verb+scheme:host:port/file/Path+ if a file is
+              used. Note that the original path is appended to the redirected
+              url. So if we for example have:
+\begin{verbatim}
+  <redirect>
+    /foo = http://www.mysite.org/zapp
+    /bar = /tomato.html
+  </redirect>
+\end{verbatim}
+              Asumming this config resides on a site called
+              \url{http://abc.com}, We have the following redirects:
+\begin{verbatim}
+  http://abc.com/foo -> http://www.mysite.org/zapp/foo
+
+  http://abc.com/foo/test -> http://www.mysite.org/zapp/foo/test
+
+  http://abc.com/bar -> http://abc.com/bar
+
+  http://abc.com/bar/x/y/z -> http://abc.com/bar/x/y/z
+\end{verbatim}
+              Sometimes we do not want to have the original path appended to the
+              redirected path. To get that behaviour we specify the config with
+              '==' instead of '='.
+\begin{verbatim}
+  <redirect>
+    /foo == http://www.mysite.org/zapp
+    /bar = /tomato.html
+  </redirect>
+\end{verbatim}
+              Now a request for \url{http://abc.com/foo/x/y/z} simply gets
+              redirected to \url{http://www.mysite.org/zapp}. This is typically
+              used when we simply want a static redirect at some place in the
+              docroot.
+
+              When we specify a file as target for the redirect, the redir will
+              be to the current http(s) server.
 
 \item       \verb+<auth> ... </auth>+ ---
-              Defines an  auth  structure.  The  following
-              items  are allowed within a matching pair of
-              <auth> and </auth> delimiters.
+              Defines an auth structure.  The following items are allowed within
+              a matching pair of <auth> and </auth> delimiters.
 
-\begin{itemize}
+              \begin{itemize}
+              \item \verb+docroot = Docroot+ --- If a \verb+Docroot+ is defined,
+                this auth structure will be tested only for requests in the
+                specified docroot. No docroot configured means all docroots.  If
+                two auth structures are defined, one with a docroot and one with
+                no docroot, the first of both overrides the second one for
+                requests in the configured docroot.
 
-\item       \verb+dir = Dir+ ---
-              Makes \verb+Dir+ to be controlled bu  WWW-authenticate
-              headers.  In  order for a user to have
-              access to WWW-Authenticate controlled  directory,
-              the user must supply a password.
+              \item \verb+dir = Dir+ --- Makes \verb+Dir+ to be controlled by
+                WWW\-authenticate headers. In order for a user to have access to
+                WWW\-Authenticate controlled directory, the user must supply a
+                password. The \verb+Dir+ must be specified relative to the
+                docroot. Multiple dir can be used. If no dir is set, the default
+                value, "/", will be used.
 
-\item       \verb+realm = Realm+ ---
-              In  the  directory  defined  here,  the WWW-Authenticate
-              Realm is set to this value.
+              \item \verb+realm = Realm+ --- In the directory defined here, the
+                WWW-Authenticate Realm is set to this value.
 
-\item       \verb+user = User:Password+ ---
-              Inside this directory,  the  user  User  has
-              access  if  the  user  supplies the password
-              Password in the pop up dialog presented  by
-              the  browser.  We can obviously have several
-              of  these  value  inside  a  single
-              \verb+<auth> </auth>+ pair.
+              \item \verb+authmod = AuthMod+ --- If an \verb+AuthMod+ is defined
+                then \verb+AuthMod:auth(Arg, Auth)+ will be called for all
+                access to the directory. The \verb+auth/2+ function should
+                return one of: \verb+true+, \verb+false+, \verb+{false, Realm}+,
+                \verb+{appmod, Mod}+. If \verb+{appmod, Mod}+ is returned then a
+                call to \verb+Mod:out401(Arg, Auth, Realm)+ will be used to
+                deliver the content. If \verb+errormod_401+ is defined, the call
+                to \verb+Mod+ will be ignored. (\verb+Mod:out(Arg)+ is
+                deprecated).
 
-\item       \verb+</auth>+ ---
-              Ends an auth definition.
+                This can, for example, be used to implement cookie
+                authentication. The \verb+auth()+ callback would check if a
+                valid cookie header is present, if not it would return
+                \verb+{appmod, ?MODULE}+ and the \verb+out401/1+ function in the
+                same module would return \verb+{redirect_local, "/login.html"}+.
 
+              \item \verb+user = User:Password+ --- Inside this directory, the
+                user \verb+User+ has access if the user supplies the password
+                \verb+Password+ in the popup dialogue presented by the browser.
+                We can obviously have several of these value inside a single
+                <auth> </auth> pair.
 
-\end{itemize}
+                The usage of User:Password in the actual config file is
+                deprecated as of release 1.51. It is preferred to have the users
+                in a file called \verb+.yaws_auth+ in the actual directory. The
+                \verb+.yaws_auth+ file has to be file parseable by
+                \verb+file:consult/1+.
 
+                Each row of the file must contain terms on the form.
+
+              \item \verb+pam service = pam-service+ --- If the item \verb+pam+
+                is part of the auth structure, Yaws will also try to
+                authenticate the user using "pam" using the pam \verb+service+
+                indicated. Usual services are typically found under
+                /etc/pam.d. Usual values are "system-auth" etc.
+
+                pam authentication is performed by an Erlang port program which
+                is typically installed as suid root by the Yaws install script.
+
+              \item \verb+allow = all | ListOfHost+ --- The \verb+allow+
+                directive affects which hosts can access an area of the
+                server. Access can be controlled by IP address or IP address
+                range. If all is specified, then all hosts are allowed access,
+                subject to the configuration of the \verb+deny+ and \verb+order+
+                directives. To allow only particular hosts or groups of hosts to
+                access the server, the host can be specified in any of the
+                following formats:
+
+                A full IP address
+\begin{verbatim}
+  allow = 10.1.2.3
+  allow = 192.168.1.104, 192.168.1.205
+\end{verbatim}
+                network/netmask pair
+\begin{verbatim}
+  allow = 10.1.0.0/255.255.0.0
+\end{verbatim}
+                network/nnn CIDR specification
+\begin{verbatim}
+  allow = 10.1.0.0/16
+\end{verbatim}
+
+              \item \verb+deny = all | ListOfHost+ --- This directive allows
+                access to the server to be restricted based on IP address. The
+                arguments for the \verb+deny+ directive are identical to the
+                arguments for the \verb+allow+ directive.
+
+              \item \verb+order = Ordering+ --- The \verb+order+ directive,
+                along with \verb+allow+ and \verb+deny+ directives, controls a
+                three-pass access control system. The first pass processes
+                either all \verb+allow+ or all \verb+deny+ directives, as
+                specified by the \verb+order+ directive. The second pass parses
+                the rest of the directives (\verb+deny+ or \verb+allow+). The
+                third pass applies to all requests which do not match either of
+                the first two.
+
+                Ordering is one of (Default value is \verb+deny,allow+):
+                \begin{itemize}
+                  \item \verb+allow,deny+ --- First, all \verb+allow+ directives
+                    are evaluated; at least one must match, or the request is
+                    rejected. Next, \verb+deny+ directives are evaluated. If any
+                    matches, the request is rejected. Last, any requests which
+                    do not match an \verb+allow+ or a \verb+deny+ directive are
+                    denied by default.
+
+                  \item \verb+deny,allaw+ --- First, all \verb+deny+ directives
+                    are evaluated; if any match, the request is denied unless it
+                    also matches an \verb+allow+ directive. Any requests which
+                    do not match any \verb+allow+ or \verb+deny+ directives are
+                    permitted.
+                \end{itemize}
+              \end{itemize}
+
+\item       \verb+<opaque> ... </opaque>+ ---
+              This begins and ends an opaque configuration context for this
+              server, where '\verb+Key = Value+' directives can be
+              specified. These directives are ignored by \Yaws\ (hence the name
+              opaque), but can be accessed as a list of tuples
+              \verb+{Key,Value}+ stored in the \verb+#sconf.opaque+ record
+              entry. See also the description of the \verb+start_mod+ directive.
+
+              This mechanism can be used to pass data from a surrounding
+              application into the individual .yaws pages.
 \end{itemize}
 
 
