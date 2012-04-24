@@ -79,7 +79,7 @@ touch:
 	find . -name '*.erl' -print | xargs touch -m
 
 yaws.plt:
-	dialyzer --build_plt -r . --output_plt yaws.plt \
+	dialyzer --build_plt -r ebin src --output_plt yaws.plt \
 	   -r $(ERLDIR)/lib/sasl-$(SASL_VSN) \
 	   -r $(ERLDIR)/lib/kernel-$(KERNEL_VSN) \
 	   -r $(ERLDIR)/lib/stdlib-$(STDLIB_VSN) \
@@ -89,7 +89,8 @@ yaws.plt:
 #   	   -r $(ERLDIR)/lib/ssl-$(SSL_VSN)
 
 dialyzer:	yaws.plt
-	dialyzer --plt yaws.plt -r .
+	-dialyzer -q --plt yaws.plt -r ebin src > dialyzer_warnings
+	diff -U0 known_dialyzer_warnings dialyzer_warnings
 
 .PHONY: test
 test:

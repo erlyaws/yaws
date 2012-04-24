@@ -68,3 +68,4 @@ ebin/yaws.appup
 etc
 yaws_logs
 rel/yaws
+dialyzer_warnings
