@@ -2,11 +2,20 @@
 -module(yaws_zlib).
 -author('carsten@codimi.de').
 
--export([gzipInit/1, gzipEnd/1, gzipDeflate/4, gzip/1]).
+
+-include("../include/yaws.hrl").
+
+
+-export([gzipInit/1, gzipInit/2, gzipEnd/1, gzipDeflate/4, gzip/1, gzip/2]).
 
 
 gzipInit(Z) ->
-    ok = zlib:deflateInit(Z, default, deflated, -15, 8, default),
+    gzipInit(Z, #deflate{}).
+
+gzipInit(Z, DOpts) ->
+    ok = zlib:deflateInit(Z, DOpts#deflate.compression_level, deflated,
+                          DOpts#deflate.window_size, DOpts#deflate.mem_level,
+                          DOpts#deflate.strategy),
     undefined.
 
 
@@ -52,17 +61,19 @@ gzipDeflate(Z, {Crc32,Size}, Bin, Flush) ->
 
 
 %% like zlib:gzip/1, but returns an io list
+gzip(Data) ->
+    gzip(Data, #deflate{}).
 
-gzip(Data) when is_binary(Data) ->
+gzip(Data, DOpts) when is_binary(Data) ->
     Z = zlib:open(),
-    {ok, _, D} = gzipDeflate(Z, gzipInit(Z), Data, finish),
+    {ok, _, D} = gzipDeflate(Z, gzipInit(Z, DOpts), Data, finish),
     gzipEnd(Z),
     zlib:close(Z),
     {ok, D};
 
-gzip(Data) ->
+gzip(Data, DOpts) ->
     Z = zlib:open(),
-    gzip_loop(Z, gzipInit(Z), Data, [], []).
+    gzip_loop(Z, gzipInit(Z, DOpts), Data, [], []).
 
 gzip_loop(Z, P, [], [], A) ->
     {ok, _, D} = gzipDeflate(Z, P, <<>>, finish),

@@ -3475,36 +3475,48 @@ handle_crash(ARG, L) ->
     end.
 
 %% Ret: true | false | {data, Data}
-decide_deflate(false, _, _, _, _) ->
+decide_deflate(false, _, _, _, _, _) ->
     false;
-decide_deflate(_, _, _, no, _) ->
+decide_deflate(_, _, _, _, no, _) ->
     false;
-decide_deflate(true, _, _, deflate, stream) ->
+decide_deflate(true, _, _, _, deflate, stream) ->
     true;
-decide_deflate(true, Arg, Data, decide, Mode) ->
-    case yaws:outh_get_content_encoding_header() of
-        undefined ->
+decide_deflate(true, SC, Arg, Data, decide, Mode) ->
+    Bin   = to_binary(Data),
+    DOpts = SC#sconf.deflate_options,
+    CE    = yaws:outh_get_content_encoding_header(),
+    if
+        size(Bin) == 0 ->
+            ?Debug("No data to be compressed~n",[]),
+            false;
+
+        DOpts#deflate.min_compress_size /= nolimit,
+        size(Bin) < DOpts#deflate.min_compress_size ->
+            ?Debug("Data too small to be compressed~n",[]),
+            false;
+
+        CE /= undefined ->
+            ?Debug("Content-Encoding already defined: ~p~n", [CE]),
+            false;
+
+        true ->
             ?Debug("No Content-Encoding defined~n",[]),
             Mime = yaws:outh_get_content_type(),
             ?Debug("Mime-Type: ~p~n", [Mime]),
-            case compressible_mime_type(Mime) of
+            case compressible_mime_type(Mime, DOpts) of
                 true ->
                     case yaws:accepts_gzip(Arg#arg.headers, Mime) of
-                        true ->
-                            case Mode of
-                                final ->
-                                    {ok, DB} = yaws_zlib:gzip(to_binary(Data)),
-                                    {data, DB};
-                                stream ->
-                                    true
-                            end;
-                        false -> false
+                        true when Mode =:= final ->
+                            {ok, DB} = yaws_zlib:gzip(to_binary(Data), DOpts),
+                            {data, DB};
+                        true when Mode =:= stream ->
+                            true;
+                        false ->
+                            false
                     end;
                 false ->
                     false
-            end;
-        _CE -> ?Debug("Content-Encoding: ~p~n",[_CE]),
-               false
+            end
     end.
 
 
@@ -3548,7 +3560,7 @@ deliver_accumulated(Arg, Sock, Encoding, ContentLength, Mode) ->
         _ ->
             SC = get(sc),
             case decide_deflate(?sc_has_deflate(SC),
-                                Arg, Cont, Encoding, Mode) of
+                                SC, Arg, Cont, Encoding, Mode) of
                 {data, Data} -> % implies Mode==final
                     yaws:outh_set_content_encoding(deflate),
                     Size = binary_size(Data),
@@ -3557,8 +3569,10 @@ deliver_accumulated(Arg, Sock, Encoding, ContentLength, Mode) ->
                     yaws:outh_set_content_encoding(deflate),
                     Z = zlib:open(),
                     {ok, Priv, Data} =
-                        yaws_zlib:gzipDeflate(Z, yaws_zlib:gzipInit(Z),
-                                              to_binary(Cont), none),
+                        yaws_zlib:gzipDeflate(
+                          Z, yaws_zlib:gzipInit(Z, SC#sconf.deflate_options),
+                          to_binary(Cont), none
+                         ),
                     Ret = {Z, Priv},
                     Size = undefined;
                 false ->
@@ -3637,6 +3651,7 @@ ut_read(UT) ->
                     B
             end;
         deflate ->
+            %% FIXME: be sure that UT#urltype.deflate cannot be undefined
             case UT#urltype.deflate of
                 B when is_binary(B) ->
                     ?Debug("ut_read using deflated binary of size ~p~n",
@@ -3742,7 +3757,8 @@ deliver_large_file(CliSock,  _Req, UT, Range) ->
                   end;
               _ -> no
           end,
-    case deliver_accumulated(undefined, CliSock, Enc, undefined, stream) of
+    Sz = (UT#urltype.finfo)#file_info.size,
+    case deliver_accumulated(undefined, CliSock, Enc, Sz, stream) of
         discard ->
             ok;
         Priv ->
@@ -3859,7 +3875,7 @@ file_changed(UT1, UT2) ->
 
 
 cache_size(UT) when is_binary(UT#urltype.deflate),
-is_binary(UT#urltype.data) ->
+                    is_binary(UT#urltype.data) ->
     size(UT#urltype.deflate) + size(UT#urltype.data);
 cache_size(UT) when is_binary(UT#urltype.data) ->
     size(UT#urltype.data);
@@ -3884,15 +3900,15 @@ cache_file(SC, GC, Path, UT)
     ?Debug("FI=~s\n", [?format_record(FI, file_info)]),
     if
         N + 1 > GC#gconf.max_num_cached_files ->
-            error_logger:info_msg("Max NUM cached files reached for server "
-                                  "~p", [SC#sconf.servername]),
+            error_logger:info_msg("Max NUM cached files reached for server ~p",
+                                  [SC#sconf.servername]),
             cleanup_cache(E, num),
             cache_file(SC, GC, Path, UT);
         FI#file_info.size < GC#gconf.max_size_cached_file,
         FI#file_info.size < GC#gconf.max_num_cached_bytes,
         B + FI#file_info.size > GC#gconf.max_num_cached_bytes ->
-            error_logger:info_msg("Max size cached bytes reached for server "
-                                  "~p", [SC#sconf.servername]),
+            error_logger:info_msg("Max size cached bytes reached for server ~p",
+                                  [SC#sconf.servername]),
             cleanup_cache(E, size),
             cache_file(SC, GC, Path, UT);
         true ->
@@ -3904,31 +3920,34 @@ cache_file(SC, GC, Path, UT)
                     UT;
                 true ->
                     ?Debug("File fits\n",[]),
-                    {ok, Bin} = prim_file:read_file(
-                                  UT#urltype.fullpath),
+                    {ok, Bin} = prim_file:read_file(UT#urltype.fullpath),
+                    DOpts = SC#sconf.deflate_options,
                     Deflated =
-                        case ?sc_has_deflate(SC)
-                            and (UT#urltype.type==regular) of
+                        if
+                            size(Bin) == 0 ->
+                                undefined;
+                            DOpts#deflate.min_compress_size /= nolimit,
+                            size(Bin) < DOpts#deflate.min_compress_size ->
+                                undefined;
+                            UT#urltype.deflate /= dynamic ->
+                                undefined;
                             true ->
-                                {ok, DBL} = yaws_zlib:gzip(Bin),
+                                {ok, DBL} = yaws_zlib:gzip(Bin, DOpts),
                                 DB = list_to_binary(DBL),
                                 if
-                                    size(DB)*10<size(Bin)*9 ->
+                                    (10 * size(DB)) < (9 * size(Bin)) ->
                                         ?Debug("storing deflated version "
-                                               "of ~p~n",
-                                               [UT#urltype.fullpath]),
+                                               "of ~p~n",[UT#urltype.fullpath]),
                                         DB;
-                                    true -> undefined
-                                end;
-                            false -> undefined
+                                    true ->
+                                        undefined
+                                end
                         end,
-                    UT2 = UT#urltype{data = Bin,
-                                     deflate = Deflated},
+                    UT2 = UT#urltype{data = Bin, deflate = Deflated},
                     ets:insert(E, {{url, Path}, now_secs(), UT2}),
                     ets:insert(E, {{urlc, Path}, 1}),
                     ets:update_counter(E, num_files, 1),
-                    ets:update_counter(E, num_bytes,
-                                       cache_size(UT2)),
+                    ets:update_counter(E, num_bytes, cache_size(UT2)),
                     UT2
             end
     end;
@@ -4018,7 +4037,7 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
                             #urltype{type=Type,
                                      finfo=FI,
                                      deflate=deflate_q(?sc_has_deflate(SC),
-                                                       Type, Mime),
+                                                       SC, Type, Mime),
                                      dir = conc_path(Comps),
                                      path = GetPath,
                                      getpath = GetPath,
@@ -4362,7 +4381,7 @@ maybe_return_path_info(SC, Comps, RevFile, DR, VirtualDir) ->
             #urltype{type = Type2,
                      finfo=FI,
                      deflate=deflate_q(?sc_has_deflate(SC),
-                                       Type, Mime),
+                                       SC, Type, Mime),
                      dir =  conc_path(HeadComps),
                      path = conc_path(HeadComps ++ [File]),
                      fullpath = FullPath,
@@ -4541,12 +4560,12 @@ parse_user_path(DR, [H|T], User) ->
     parse_user_path(DR, T, [H|User]).
 
 
-deflate_q(true, regular, Mime) ->
-    case compressible_mime_type(Mime) of
+deflate_q(true, SC, regular, Mime) ->
+    case compressible_mime_type(Mime, SC#sconf.deflate_options) of
         true -> dynamic;
         false -> undefined
     end;
-deflate_q(_, _, _) ->
+deflate_q(_, _, _, _) ->
     undefined.
 
 
@@ -4568,26 +4587,23 @@ suffix_type(L) ->
 
 
 
-%% Some silly heuristics.
+compressible_mime_type(Mime, #deflate{mime_types=MimeTypes}) ->
+    case yaws:split_sep(Mime, $/) of
+        [Type, SubType] -> compressible_mime_type(Type, SubType, MimeTypes);
+        _               -> false
+    end.
 
-compressible_mime_type("text/"++_) ->
+compressible_mime_type(_, _, all) ->
     true;
-compressible_mime_type("application/rtf") ->
+compressible_mime_type(_, _, []) ->
+    false;
+compressible_mime_type(Type, _, [{Type, all}|_]) ->
     true;
-compressible_mime_type("application/msword") ->
+compressible_mime_type(Type, SubType, [{Type, SubType}|_]) ->
     true;
-compressible_mime_type("application/postscript") ->
-    true;
-compressible_mime_type("application/pdf") ->
-    true;
-compressible_mime_type("application/x-dvi") ->
-    true;
-compressible_mime_type("application/javascript") ->
-    true;
-compressible_mime_type("application/x-javascript") ->
-    true;
-compressible_mime_type(_) ->
-    false.
+compressible_mime_type(Type, SubType, [_|Rest]) ->
+    compressible_mime_type(Type, SubType, Rest).
+
 
 
 flush(Sock, Sz, TransferEncoding) ->

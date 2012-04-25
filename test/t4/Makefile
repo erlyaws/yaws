@@ -13,7 +13,7 @@ all:	conf setup app_test.beam rewritetest.beam posttest.beam streamtest.beam
 
 ULIMIT = 768
 
-test:	conf start
+test:	all start
 	dd if=/dev/zero of=../../www/1000.txt bs=1024 count=1000 >/dev/null 2>&1
 	dd if=/dev/zero of=../../www/2000.txt bs=1024 count=2000 >/dev/null 2>&1
 	dd if=/dev/zero of=../../www/3000.txt bs=1024 count=3000 >/dev/null 2>&1

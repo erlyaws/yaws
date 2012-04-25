@@ -2480,6 +2480,58 @@ The following directives are allowed inside a server definition.
              Turns on or off deflate compression for a server. Default is
              false.
 
+\item       \verb+<deflate> ... </deflate>+ ---
+             This begins and ends the deflate compression configuration for this
+             server. The following items are allowed within a matching pair of
+             <deflate> and </deflate> delimiters.
+
+             \begin{itemize}
+             \item \verb+min_compress_size = nolimit | Integer+ --- Defines the
+               smallest response size that will be compressed. If nolimit is not
+               used, the specified value must be strictly positive. The default
+               value is nolimit.
+
+             \item \verb+compress_level = none | default | best_compression | best_speed | 0..9+ ---
+               Defines the compression level to be used. 0 (none), gives no
+               compression at all, 1 (best\_speed) gives best speed and 9
+               (best\_compression) gives best compression. The default value is
+               default.
+
+             \item \verb+window_size = 9..15+ --- Specifies the zlib compression
+               window size. It should be in the range 9 through 15. Larger
+               values of this parameter result in better compression at the
+               expense of memory usage. The default value is 15.
+
+             \item \verb+mem_level = 1..9+ --- Specifies how much memory should
+               be allocated for the internal compression
+               state. \verb+mem_level=1+ uses minimum memory but is slow and
+               reduces compression ratio; \verb+mem_level=9+ uses maximum memory
+               for optimal speed. The default value is 8.
+
+             \item \verb+strategy = default | filtered | huffman_only+ --- This
+               parameter is used to tune the compression algorithm. See
+               \verb+zlib(3erl)+ for more details on the \verb+strategy+
+               parameter. The default value is default.
+
+             \item \verb+mime_types = ListOfTypes | defaults | all+ ---
+               Restricts the deflate compression to particular mime types. The
+               special value all enable it for all types (It is a synonym of
+               `*/*'). Mime types into \verb+ListOfTypes+ must have the form
+               `type/subtype' or `type/*' (indicating all subtypes of that
+               type). Here is an example:
+\begin{verbatim}
+  mime_types = default image/*
+  mime_types = application/xml application/xhtml+xml application/rss+xml
+\end{verbatim}
+                    By default, following mime types are compressed (if
+                    \verb+deflate+ is set to true): \verb+text/*+,
+                    \verb+application/rtf+, \verb+application/msword+,
+                    \verb+application/pdf+, \verb+application/x-dvi+,
+                    \verb+application/javascript+,
+                    \verb+application/x-javascript+. Multiple \verb+mime_types+
+                    directive can be used.
+             \end{itemize}
+
 \item       \verb+docroot  =  Directory ...+ ---
               This makes the server serve all its content from
               \verb+Directory+.

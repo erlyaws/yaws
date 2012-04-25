@@ -60,3 +60,7 @@ authconf:
 revproxyconf:
 	cat ../conf/revproxy.conf | \
 	../../scripts/Subst %YTOP% $(YTOP) > yaws.conf
+
+deflateconf:
+	cat ../conf/deflate.conf | \
+	../../scripts/Subst %YTOP% $(YTOP) > yaws.conf

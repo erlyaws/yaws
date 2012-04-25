@@ -425,6 +425,77 @@ non-zero exit value). Disabled by default.
 \fBdeflate = true | false\fR
 Turns on or off deflate compression for a server. Default is \fIfalse\fR.
 
+
+.TP
+\fB<deflate> ... </deflate>\fR
+This begins and ends the deflate compression configuration for this server. The
+following items are allowed within a matching pair of <deflate> and </deflate>
+delimiters.
+
+\fBmin_compress_size = nolimit | Integer\fR
+.RS 12
+Defines the smallest response size that will be compressed. If nolimit is not
+used, the specified value must be strictly positive. The default value is
+\fInolimit\fR.
+.RE
+.HP
+
+\fBcompress_level = none | default | best_compression | best_speed | 0..9\fR
+.RS 12
+Defines the compression level to be used. 0 (none), gives no compression at all,
+1 (best_speed) gives best speed and 9 (best_compression) gives best
+compression. The default value is \fIdefault\fR.
+.RE
+.HP
+
+
+\fBwindow_size = 9..15\fR
+.RS 12
+Specifies the zlib compression window size. It should be in the range 9 through
+15. Larger values of this parameter result in better compression at the expense
+of memory usage. The default value is \fI15\fR.
+.RE
+.HP
+
+
+\fBmem_level = 1..9\fR
+.RS 12
+Specifies how much memory should be allocated for the internal compression
+state. \fImem_level=1\fR uses minimum memory but is slow and reduces compression
+ratio; \fImem_level=9\fR uses maximum memory for optimal speed. The default
+value is \fI8\fR.
+.RE
+.HP
+
+
+\fBstrategy = default | filtered | huffman_only\fR
+.RS 12
+This parameter is used to tune the compression algorithm. See \fBzlib(3erl)\fR
+for more details on the \fIstrategy\fR parameter. The default value is
+\fIdefault\fR.
+.RE
+.HP
+
+
+\fBmime_types = ListOfTypes | defaults | all\fR
+.RS 12
+Restricts the deflate compression to particular mime types. The special value
+\fIall\fR enable it for all types (It is a synonym of `*/*'). Mime types into
+\fIListOfTypes\fR must have the form `type/subtype' or `type/*' (indicating all
+subtypes of that type). Here is an example:
+
+.nf
+  mime_types = default image/*
+  mime_types = application/xml application/xhtml+xml application/rss+xml
+.fi
+
+By default, following mime types are compressed (if
+\fBdeflate\fR is set to true): \fItext/*, application/rtf, application/msword,
+application/pdf, application/x-dvi, application/javascript,
+application/x-javascript\fR. Multiple mime_types directive can be used.
+.RE
+.HP
+
 .TP
 \fBdocroot = Directory ...\fR
 This makes the server serve all its content from Directory.
@@ -948,7 +1019,7 @@ Ordering is one of (Default value is \fIdeny,allow\fR):
 
 .TP
 \fBallow,deny\fR
-First, all\fIallow\fR directives are evaluated; at least one must match, or the
+First, all \fIallow\fR directives are evaluated; at least one must match, or the
 request is rejected. Next, \fIdeny\fR directives are evaluated. If any matches,
 the request is rejected. Last, any requests which do not match an \fIallow\fR or
 a \fIdeny\fR directive are denied by default.

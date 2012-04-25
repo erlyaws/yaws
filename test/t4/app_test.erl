@@ -18,7 +18,7 @@ start([F]) ->
     end.
 
 start() ->
-    ?line ok,
+    io:format("\n ==== REVERSE PROXY TESTS ==== \n\n", []),
     ?line {ok, _} = ibrowse:start_link(),
     try
         deflate_revproxy_test1(),

@@ -938,7 +938,8 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
         ["deflate", '=', Bool] ->
             case is_bool(Bool) of
                 {true, Val} ->
-                    C2 = ?sc_set_deflate(C, Val),
+                    C2 = ?sc_set_deflate(C#sconf{deflate_options=#deflate{}},
+                                         Val),
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
@@ -1072,6 +1073,10 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
 
         ['<', "redirect", '>'] ->
             fload(FD, server_redirect, GC, C, Cs, Lno+1, Next, []);
+
+        ['<', "deflate", '>'] ->
+            fload(FD, server_deflate, GC, C, Cs, Lno+1, Next,
+                  #deflate{mime_types=[]});
 
         %% noop
         ["default_server_on_this_ip", '=', _Bool] ->
@@ -1597,6 +1602,98 @@ fload(FD, server_redirect, GC, C, Cs, Lno, Chars, RedirMap) ->
             Err
     end;
 
+fload(FD, server_deflate, _GC, _C, _Cs, Lno, eof, _Deflate) ->
+    file:close(FD),
+    {error, ?F("Unexpected end of file at line ~w", [Lno])};
+
+fload(FD, server_deflate, GC, C, Cs, Lno, Chars, Deflate) ->
+    Next = io:get_line(FD, ''),
+    case toks(Lno, Chars) of
+        [] ->
+            fload(FD, server_deflate, GC, C, Cs, Lno+1, Next, Deflate);
+        ["min_compress_size", '=', CSize] ->
+            case (catch list_to_integer(CSize)) of
+                I when is_integer(I), I > 0 ->
+                    D2 = Deflate#deflate{min_compress_size=I},
+                    fload(FD, server_deflate, GC, C, Cs, Lno+1, Next, D2);
+                _ when CSize == "nolimit" ->
+                    D2 = Deflate#deflate{min_compress_size=nolimit},
+                    fload(FD, server_deflate, GC, C, Cs, Lno+1, Next, D2);
+                _ ->
+                    {error, ?F("Expect integer > 0 at line ~w", [Lno])}
+            end;
+        ["mime_types", '=' | MimeTypes] ->
+            case parse_compressible_mime_types(MimeTypes,
+                                               Deflate#deflate.mime_types) of
+                {ok, L} ->
+                    D2 = Deflate#deflate{mime_types=L},
+                    fload(FD, server_deflate, GC, C, Cs, Lno+1, Next, D2);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+        ["compression_level", '=', CLevel] ->
+            L = try
+                    list_to_integer(CLevel)
+                catch error:badarg ->
+                        list_to_atom(CLevel)
+                end,
+            if
+                L =:= none; L =:= default;
+                L =:= best_compression; L =:= best_speed ->
+                    D2 = Deflate#deflate{compression_level=L},
+                    fload(FD, server_deflate, GC, C, Cs, Lno+1, Next, D2);
+                is_integer(L), L >= 0, L =< 9 ->
+                    D2 = Deflate#deflate{compression_level=L},
+                    fload(FD, server_deflate, GC, C, Cs, Lno+1, Next, D2);
+                true ->
+                    {error, ?F("Bad compression level at line ~w", [Lno])}
+            end;
+        ["window_size", '=', WSize] ->
+            case (catch list_to_integer(WSize)) of
+                I when is_integer(I), I > 8, I < 16 ->
+                    D2 = Deflate#deflate{window_size=I * -1},
+                    fload(FD, server_deflate, GC, C, Cs, Lno+1, Next, D2);
+                _ ->
+                    {error,
+                     ?F("Expect integer between 9..15 at line ~w",
+                        [Lno])}
+            end;
+        ["mem_level", '=', MLevel] ->
+            case (catch list_to_integer(MLevel)) of
+                I when is_integer(I), I >= 1, I =< 9 ->
+                    D2 = Deflate#deflate{mem_level=I},
+                    fload(FD, server_deflate, GC, C, Cs, Lno+1, Next, D2);
+                _ ->
+                    {error, ?F("Expect integer between 1..9 at line ~w", [Lno])}
+            end;
+        ["strategy", '=', Strategy] ->
+            if
+                Strategy =:= "default";
+                Strategy =:= "filtered";
+                Strategy =:= "huffman_only" ->
+                    D2 = Deflate#deflate{strategy=list_to_atom(Strategy)},
+                    fload(FD, server_deflate, GC, C, Cs, Lno+1, Next, D2);
+                true ->
+                    {error,
+                     ?F("Unknown strategy ~p at line ~w", [Strategy, Lno])}
+            end;
+        ['<', "/deflate", '>'] ->
+            D2 = case Deflate#deflate.mime_types of
+                     [] ->
+                         Deflate#deflate{
+                           mime_types = ?DEFAULT_COMPRESSIBLE_MIME_TYPES
+                          };
+                     _ ->
+                         Deflate
+                 end,
+            C2 = C#sconf{deflate_options = D2},
+            fload(FD, server, GC, C2, Cs, Lno+1, Next);
+        [H|T] ->
+            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
+        Err ->
+            Err
+    end;
+
 fload(FD, extra_cgi_vars, _GC, _C, _Cs, Lno, eof, _EVars) ->
     file:close(FD),
     {error, ?F("Unexpected end of file at line ~w", [Lno])};
@@ -1733,7 +1830,7 @@ is_string_char([C|T]) ->
             %% FIXME check that [C, hd(T)] really is a char ?? how
             utf8;
         true ->
-            lists:member(C, [$., $/, $:, $_, $-, $+, $~, $@])
+            lists:member(C, [$., $/, $:, $_, $-, $+, $~, $@, $*])
     end.
 
 is_special(C) ->
@@ -1891,6 +1988,31 @@ parse_phpmod(['<', "extern", ',', NodeModFunSpec, '>'], _) ->
         {error, Reason} ->
             {error, Reason}
     end.
+
+
+parse_compressible_mime_types(_, all) ->
+    {ok, all};
+parse_compressible_mime_types(["all"|_], _Acc) ->
+    {ok, all};
+parse_compressible_mime_types(["*/*"|_], _Acc) ->
+    {ok, all};
+parse_compressible_mime_types(["defaults"|Rest], Acc) ->
+    parse_compressible_mime_types(Rest, ?DEFAULT_COMPRESSIBLE_MIME_TYPES++Acc);
+parse_compressible_mime_types([',' | Rest], Acc) ->
+    parse_compressible_mime_types(Rest, Acc);
+parse_compressible_mime_types([MimeType | Rest], Acc) ->
+    Res = re:run(MimeType, "^([-\\w\+]+)/([-\\w\+\.]+|\\*)$",
+                 [{capture, all_but_first, list}]),
+    case Res of
+        {match, [Type,"*"]} ->
+            parse_compressible_mime_types(Rest, [{Type, all}|Acc]);
+        {match, [Type,SubType]} ->
+            parse_compressible_mime_types(Rest, [{Type, SubType}|Acc]);
+        nomatch ->
+            {error, "Invalid MimeType"}
+    end;
+parse_compressible_mime_types([], Acc) ->
+    {ok, Acc}.
 
 
 ssl_start() ->

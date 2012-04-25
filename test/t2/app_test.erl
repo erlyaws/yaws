@@ -11,7 +11,7 @@ start([F]) ->
     ibrowse:stop().
 
 start() ->
-    ?line ok,
+    io:format("\n ==== MAIN TESTS ==== \n\n", []),
     ?line {ok, _} = ibrowse:start_link(),
     server_options_test(),
     test1(),

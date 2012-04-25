@@ -243,9 +243,9 @@
           stats,                        % raw traffic statistics
           fcgi_app_server,              % FastCGI application server {host,port}
           php_handler = {cgi, "/usr/bin/php-cgi"},
-          shaper
+          shaper,
+          deflate_options
          }).
-
 
 
 %% Auth conf - from server conf and .yaws_auth
@@ -263,6 +263,32 @@
           pam     = false  % should we use pam to auth a user
          }).
 
+
+%% Macro used to list default compressible mime-types
+-define(DEFAULT_COMPRESSIBLE_MIME_TYPES, [
+                                          {"text", all},
+                                          {"application", "rtf"},
+                                          {"application", "msword"},
+                                          {"application", "postscript"},
+                                          {"application", "pdf"},
+                                          {"application", "x-dvi"},
+                                          {"application", "javascript"},
+                                          {"application", "x-javascript"}
+                                         ]).
+
+%% Internal record used to initialize a zlib stream for compression
+-record(deflate, {
+          min_compress_size = nolimit, % nolimit or non negative integer
+                                       % (in bytes)
+          compression_level = default, % none | default | best_compression |
+                                       % best_speed | 0..9
+          window_size       = -15,     % -15..-9
+          mem_level         = 8,       % 1..9
+          strategy          = default, % default | filtered | huffman_only
+
+          %% [{Type, undefined|SubType}] | all
+          mime_types = ?DEFAULT_COMPRESSIBLE_MIME_TYPES
+         }).
 
 
 %% this internal record is used and returned by the URL path parser
