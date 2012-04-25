@@ -745,9 +745,8 @@ setcookie(Name, Value, Path, Expire, Domain, Secure) ->
 %% to search for a specific cookie
 %% return [] if not found
 %%        Str if found
-%% if serveral cookies with the same name are passed fron the browser,
+%% if several cookies with the same name are passed fron the browser,
 %% only the first match is returned
-
 
 find_cookie_val(Cookie, A) when is_record(A, arg) ->
     find_cookie_val(Cookie,  (A#arg.headers)#headers.cookie);
@@ -777,11 +776,14 @@ eat_cookie(Cookie, Str) when is_list(Cookie),is_list(Str) ->
 %% Look for the Cookie and extract its value.
 eat_cookie2(_, [], _)    ->
     throw("not found");
-eat_cookie2([H|T], [H|R], C) ->
-    eat_cookie2(T, R, C);
-eat_cookie2([H|_], [X|R], C) when H =/= X ->
-    {_,Rest} = eat_until(R, $;),
-    eat_cookie(C, Rest);
+eat_cookie2([H1|T], [H2|R], C) ->
+    case string:to_lower(H1) =:= string:to_lower(H2) of
+        true ->
+            eat_cookie2(T, R, C);
+        false ->
+            {_,Rest} = eat_until(R, $;),
+            eat_cookie(C, Rest)
+    end;
 eat_cookie2([], L, _) ->
     {Meat,_} = eat_until(L, $;),
     Meat.
