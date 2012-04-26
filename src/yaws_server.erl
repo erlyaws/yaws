@@ -1513,7 +1513,7 @@ body_method(CliSock, IPPort, Req, Head) ->
     SC=get(sc),
     ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
     PPS = SC#sconf.partial_post_size,
-    Bin = case Head#headers.content_length of
+    Res = case Head#headers.content_length of
               undefined ->
                   case Head#headers.transfer_encoding of
                       "chunked" ->
@@ -1524,6 +1524,8 @@ body_method(CliSock, IPPort, Req, Head) ->
               Len when is_integer(PPS) ->
                   Int_len = list_to_integer(Len),
                   if
+                      Int_len < 0 ->
+                          {error, content_length_overflow};
                       Int_len == 0 ->
                           <<>>;
                       PPS < Int_len ->
@@ -1536,6 +1538,8 @@ body_method(CliSock, IPPort, Req, Head) ->
               Len when PPS == nolimit ->
                   Int_len = list_to_integer(Len),
                   if
+                      Int_len < 0 ->
+                          {error, content_length_overflow};
                       Int_len == 0 ->
                           <<>>;
                       true ->
@@ -1543,9 +1547,15 @@ body_method(CliSock, IPPort, Req, Head) ->
                                           yaws:is_ssl(SC))
                   end
           end,
-    ?Debug("Request data = ~s~n", [binary_to_list(un_partial(Bin))]),
-    ARG = make_arg(CliSock, IPPort, Head, Req, Bin),
-    handle_request(CliSock, ARG, size(un_partial(Bin))).
+    case Res of
+        {error, Reason} ->
+            error_logger:format("Invalid Request: ~p~n", [Reason]),
+            deliver_400(CliSock, Req);
+        Bin ->
+            ?Debug("Request data = ~s~n", [binary_to_list(un_partial(Bin))]),
+            ARG = make_arg(CliSock, IPPort, Head, Req, Bin),
+            handle_request(CliSock, ARG, size(un_partial(Bin)))
+    end.
 
 
 'MKCOL'(CliSock, IPPort, Req, Head) ->
