@@ -310,10 +310,11 @@ will supply more data. (The file was to big to come in one read)
 This indicates that there is more data to come and the out/1 function
 should return {get_more, Cont, User_state} where User_state might
 usefully be a File Descriptor.
-
-
 The Res value is a list of either:
-\fB{header, Header}\fR | \fB{part_body, Binary}\fR | \fB{body, Binary}\fR
+\fB{head, {Name, Headers}}\fR | \fB{part_body, Binary}\fR | \fB{body, Binary}\fR
+
+The function returns \fB{error, Reason}\fR when an error occurred during the
+parsing.
 
 
 Example usage could be:
@@ -328,10 +329,12 @@ Example usage could be:
                     {get_more, Cont, St};
              {result, Res} ->
                     handle_res(A, Res),
-                    {html, f("<pre>Done </pre>",[])}
+                    {html, f("<pre>Done </pre>",[])};
+             {error, Reason} ->
+                    {html, f("An error occured: ~p", [Reason])}
         end.
 
- handle_res(A, [{head, Name}|T]) ->
+ handle_res(A, [{head, {Name, _Hdrs}}|T]) ->
       io:format("head:~p~n",[Name]),
       handle_res(A, T);
  handle_res(A, [{part_body, Data}|T]) ->

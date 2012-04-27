@@ -65,7 +65,9 @@ multipart(A, State) ->
                     {done,S2#upload.params};
                 Error={error, _Reason} ->
                     Error
-            end
+            end;
+        Error={error, _Reason} ->
+            Error
     end.
 
 

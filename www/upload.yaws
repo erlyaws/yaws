@@ -35,7 +35,6 @@ err() ->
 multipart(A, State) ->
     Parse = yaws_api:parse_multipart_post(A),
     case Parse of
-        [] -> ok;
         {cont, Cont, Res} ->
             case addFileChunk(A, Res, State) of
                 {done, Result} ->
@@ -49,7 +48,9 @@ multipart(A, State) ->
                     Result;
                 {cont, _} ->
                     err()
-            end
+            end;
+        {error, _Reason} ->
+            err()
     end.
 
 
