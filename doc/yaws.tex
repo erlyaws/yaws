@@ -738,11 +738,11 @@ $goofy = unknown$
 In \Erlang\  terminology, the call \verb+yaws_api:parse_query(Arg)+ returns
 the list:
 \begin{verbatim}
-[{kalle, "duck"}, {goofy, "unknown"}]
+[{"kalle", "duck"}, {"goofy", "unknown"}]
 \end{verbatim}
 
-Note that the first element is transformed into an atom, whereas the
-value is still a string. Hence, a web page can contain URLs with a
+Both the key and the value are strings. 
+Hence, a web page can contain URLs with a
 query and thus pass data to the web server. This scheme works both
 with \verb+GET+ and \verb+POST+ requests.  It is the easiest way to
 pass data to the Web server since no form is required in the web page.
@@ -791,7 +791,7 @@ out(A) ->
 The user will see the output
 
 \begin{verbatim}
-[{xyz, "Hello there"}]
+[{"xyz", "Hello there"}]
 \end{verbatim}
 
 The differences between using the query part of the URL
