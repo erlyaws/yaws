@@ -293,7 +293,7 @@ handle_cast({_ServerName, access, Fd, {Ip, Req, InH, OutH, _}}, State) ->
                       {0,9} -> "HTTP/0.9"
                   end,
 
-            Path      = safe_decode_path(Req#http_request.path),
+            Path      = yaws_server:safe_decode_path(Req#http_request.path),
             Meth      = yaws:to_list(Req#http_request.method),
             Referer   = optional_header(InH#headers.referer),
             UserAgent = optional_header(InH#headers.user_agent),
@@ -314,11 +314,7 @@ handle_cast({_ServerName, access, Fd, {Ip, Req, InH, OutH, _}}, State) ->
 handle_cast({ServerName, auth, Fd, {Ip, Path, Item}}, State) ->
     case State#state.running of
         true ->
-            IpStr = case catch inet_parse:ntoa(Ip) of
-                        {'EXIT', _} -> "unknownip";
-                        Val -> Val
-                    end,
-            Msg = [IpStr, " ", State#state.now, " ", ServerName, " " ,
+            Msg = [fmt_ip(Ip), " ", State#state.now, " ", ServerName, " " ,
                    "\"", Path,"\"",
                    case Item of
                        {ok, User}       -> [" OK user=", User];
@@ -400,15 +396,6 @@ code_change(_OldVsn, Data, _Extra) ->
 %%%----------------------------------------------------------------------
 %%% Internal functions
 %%%----------------------------------------------------------------------
-safe_decode_path({abs_path, Path}) ->
-    case catch yaws_api:url_decode(Path) of
-        {'EXIT', _} -> "/undecodable_path";
-        Val         -> Val
-    end;
-safe_decode_path(_) ->
-    "/undecodable_path".
-
-
 optional_header(Item) ->
     case Item of
         undefined -> "-";
@@ -433,7 +420,10 @@ no_ctl([]) ->
 
 
 fmt_ip(IP) when is_tuple(IP) ->
-    inet_parse:ntoa(IP);
+    case catch inet_parse:ntoa(IP) of
+        {'EXIT', _} -> "unknownip";
+        Val -> Val
+    end;
 fmt_ip(undefined) ->
     "0.0.0.0";
 fmt_ip(HostName) ->
