@@ -57,6 +57,7 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <div class="%%websockets%%"> <a href="/websockets.yaws">Web Sockets</a> </div>
 <a href="/shoppingcart/index.yaws">Tiny shopping cart</a>
 <div class="%%yapp_intro%%"> <a href="/yapp_intro.yaws">Yaws applications</a></div>
+<div class="%%logger_mod%%"> <a href="/logger_mod.yaws">Write your own logger</a></div>
 
 <h4> Misc </h4>
 <div class="%%internals%%"> <a href="/internals.yaws">Internals</a> </div>

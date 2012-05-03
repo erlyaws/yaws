@@ -244,19 +244,7 @@ Load all config file in specified directory.
 
 .TP
 \fBx_forwarded_for_log_proxy_whitelist = ListOfUpstreamProxyServerIps\fR
-In case Yaws is running behind a HTTP proxy or HTTP load balancer it may be
-desirable to configure this proxy to put the IP address of the originating
-client into the \fIX-Forwarded-For\fR header and have Yaws log this IP address
-as the request's source IP address instead of logging the proxy server's IP
-address over and over again. This setting determines which source IP addresses
-are rewritten in this manner.
-
-For example, if there are two proxies with the IP addresses 192.168.0.1 and
-192.168.0.2 in front of Yaws, we can specify:
-
-.nf
-  x_forwarded_for_log_proxy_whitelist = 192.168.0.1 192.168.0.2
-.fi
+\fBthis target is deprecated and will be ignored.\fR
 
 .SH SERVER PART
 Yaws can virthost several web servers on the same IP address as well as several
@@ -334,7 +322,7 @@ an error occurred, it must return \fIfalse\fR.
 .RE
 .HP
 
-\fBModule:close_log(ServerName, Type)\fR
+\fBModule:close_log(ServerName, Type, State)\fR
 .RS 12
 This function is called for this virtual server when Yaws is stopped.
 .RE

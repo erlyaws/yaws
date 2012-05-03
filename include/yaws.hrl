@@ -86,10 +86,6 @@
           include_dir           = [],       % list of inc dirs for .yaws files
           phpexe = "/usr/bin/php-cgi",      % cgi capable php executable
 
-          %% list of proxy server ips we will replace with the last element of
-          %% the list in the X-Forwarded-For http header in logs
-          x_forwarded_for_log_proxy_whitelist = [],
-
           yaws,                % server string
           id = "default",      % string identifying this instance of yaws
 

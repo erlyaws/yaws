@@ -861,14 +861,10 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
             %% just ignore - not relevant any longer
             fload(FD, globals, GC,
                   C, Cs, Lno+1, Next);
-        ["x_forwarded_for_log_proxy_whitelist", '=' | Suffixes] ->
-            case ip_list_parser(Suffixes, []) of
-                error ->
-                    {error, ?F("Expect IP address at line ~w:", [Lno])};
-                {ok, Addrs} ->
-                    GC2 = GC#gconf{x_forwarded_for_log_proxy_whitelist = Addrs},
-                    fload(FD, globals, GC2, C, Cs, Lno+1, Next)
-            end;
+        ["x_forwarded_for_log_proxy_whitelist", '=' | _] ->
+            error_logger:info_msg("Warning, x_forwarded_for_log_proxy_whitelist"
+                                  " is deprecated and ignored~n", []),
+            fload(FD, globals, GC, C, Cs, Lno+1, Next);
         ["ysession_mod", '=', Mod_str] ->
             Ysession_mod = list_to_atom(Mod_str),
             fload(FD, globals, GC#gconf{ysession_mod = Ysession_mod},
@@ -2347,16 +2343,6 @@ delete_sconf(SC) ->
 
 update_gconf(GC) ->
     ok = gen_server:call(yaws_server, {update_gconf, GC}, infinity).
-
-ip_list_parser([], Addrs) ->
-    {ok,lists:reverse(Addrs)};
-ip_list_parser([IP|IPs], Addrs) ->
-    case inet_parse:address(IP) of
-        {error, _} ->
-            error;
-        {ok, Addr} ->
-            ip_list_parser(IPs, [Addr|Addrs])
-    end.
 
 
 -define(MAXBITS_IPV4, 32).
