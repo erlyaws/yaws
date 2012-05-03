@@ -8,6 +8,7 @@
 -module(yaws_log).
 -author('klacke@hyber.org').
 -include_lib("kernel/include/file.hrl").
+-include_lib("kernel/include/inet.hrl").
 
 
 -behaviour(gen_server).
@@ -44,12 +45,12 @@
 -define(WRAP_LOG_SIZE, 1000000).
 
 
--record(state, {
-          running,
-          dir,
-          now,
-          log_wrap_size = ?WRAP_LOG_SIZE,
-          copy_errlog}).
+-record(state, {running,
+                dir,
+                now,
+                log_wrap_size = ?WRAP_LOG_SIZE,
+                copy_errlog,
+                resolve_hostnames = false}).
 
 
 %%%----------------------------------------------------------------------
@@ -177,7 +178,8 @@ handle_call({setup, GC, Sconfs}, _From, State)
                      dir  = Dir,
                      now = fmtnow(),
                      log_wrap_size = GC#gconf.log_wrap_size,
-                     copy_errlog = Copy},
+                     copy_errlog = Copy,
+                     resolve_hostnames = ?gc_log_has_resolve_hostname(GC)},
 
     yaws:ticker(3000, secs3),
 
@@ -226,8 +228,17 @@ handle_call({setup, GC, Sconfs}, _From, State)
     S2 = State#state{running = true,
                      dir  = Dir,
                      now = fmtnow(),
-                     copy_errlog = Copy},
+                     log_wrap_size = GC#gconf.log_wrap_size,
+                     copy_errlog = Copy,
+                     resolve_hostnames = ?gc_log_has_resolve_hostname(GC)},
 
+    if
+        not is_integer(State#state.log_wrap_size),
+        is_integer(GC#gconf.log_wrap_size) ->
+            yaws:ticker(10 * 60 * 1000, minute10);
+       true ->
+            ok
+    end,
     {reply, ok, S2};
 
 
@@ -302,7 +313,7 @@ handle_cast({_ServerName, access, Fd, {Ip, Req, InH, OutH, _}}, State) ->
                             _              -> "-"
                         end,
 
-            Msg = fmt_access_log(State#state.now, Ip, User,
+            Msg = fmt_access_log(State#state.now, fmt_ip(Ip, State), User,
                                  [Meth, $\s, Path, $\s, Ver],
                                  Status,  Len, Referer, UserAgent),
             file:write(Fd, Msg),
@@ -314,8 +325,9 @@ handle_cast({_ServerName, access, Fd, {Ip, Req, InH, OutH, _}}, State) ->
 handle_cast({ServerName, auth, Fd, {Ip, Path, Item}}, State) ->
     case State#state.running of
         true ->
-            Msg = [fmt_ip(Ip), " ", State#state.now, " ", ServerName, " " ,
-                   "\"", Path,"\"",
+            Host = fmt_ip(Ip, State),
+            Msg  = [Host, " ", State#state.now, " ", ServerName, " " ,
+                    "\"", Path,"\"",
                    case Item of
                        {ok, User}       -> [" OK user=", User];
                        403              -> [" 403"];
@@ -402,8 +414,8 @@ optional_header(Item) ->
         Item -> Item
     end.
 
-fmt_access_log(Time, Ip, User, Req, Status,  Length, Referrer, UserAgent) ->
-    [fmt_ip(Ip), " - ", User, [$\s], Time, [$\s, $"], no_ctl(Req), [$",$\s],
+fmt_access_log(Time, Host, User, Req, Status,  Length, Referrer, UserAgent) ->
+    [Host, " - ", User, [$\s], Time, [$\s, $\"], no_ctl(Req), [$\",$\s],
      Status, [$\s], Length, [$\s,$"], Referrer, [$",$\s,$"], UserAgent,
      [$",$\n]].
 
@@ -419,14 +431,29 @@ no_ctl([]) ->
     [].
 
 
-fmt_ip(IP) when is_tuple(IP) ->
-    case catch inet_parse:ntoa(IP) of
-        {'EXIT', _} -> "unknownip";
-        Val -> Val
+fmt_ip(IP, State) when is_tuple(IP) ->
+    case State#state.resolve_hostnames of
+        true ->
+            case catch inet:gethostbyaddr(IP) of
+                {ok, HE} ->
+                    HE#hostent.h_name;
+                _ ->
+                    case catch inet_parse:ntoa(IP) of
+                        {'EXIT', _} -> "unknownip";
+                        Addr        -> Addr
+                    end
+            end;
+        false ->
+            case catch inet_parse:ntoa(IP) of
+                {'EXIT', _} -> "unknownip";
+                Addr        -> Addr
+            end
     end;
-fmt_ip(undefined) ->
+fmt_ip(unknown, _) ->
+    "unknownip";
+fmt_ip(undefined, _) ->
     "0.0.0.0";
-fmt_ip(HostName) ->
+fmt_ip(HostName, _) ->
     HostName.
 
 

@@ -14,7 +14,6 @@
 -include("yaws_debug.hrl").
 
 -include_lib("kernel/include/file.hrl").
--include_lib("kernel/include/inet.hrl").
 
 -export([mappath/3, vdirpath/3]).
 
@@ -1381,21 +1380,11 @@ maybe_auth_log(Item, ARG) ->
     end.
 
 maybe_access_log(Ip, Req, H) ->
-    GC=get(gc),
     SC=get(sc),
     case ?sc_has_access_log(SC) of
         true ->
-            HName = case ?gc_log_has_resolve_hostname(GC) of
-                        true when Ip =/= unknown ->
-                            case inet:gethostbyaddr(Ip) of
-                                {ok, HE} -> HE#hostent.h_name;
-                                _        -> Ip
-                            end;
-                        _ ->
-                            Ip
-                    end,
             Time = timer:now_diff(now(), get(request_start_time)),
-            yaws_log:accesslog(SC, HName, Req, H, get(outh), Time);
+            yaws_log:accesslog(SC, Ip, Req, H, get(outh), Time);
         false ->
             ignore
     end.
