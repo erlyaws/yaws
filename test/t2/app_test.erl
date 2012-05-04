@@ -30,6 +30,7 @@ start() ->
     arg_rewrite_test(),
     shaper_test(),
     sslaccept_timeout_test(),
+    throw_test(),
     ibrowse:stop().
 
 
@@ -779,7 +780,11 @@ sslaccept_timeout_test() ->
     gen_tcp:close(Sock),
     ok.
 
-
+throw_test() ->
+    io:format("throw test\n", []),
+    Uri = "http://localhost:8009/",
+    ?line {ok, "500", _, _} = ibrowse:send_req(Uri, [], get),
+    ok.
 
 
 %% used for appmod tests
