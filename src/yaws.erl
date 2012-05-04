@@ -14,10 +14,9 @@
 
 -include_lib("kernel/include/file.hrl").
 -export([start/0, stop/0, hup/1, restart/0, modules/0, load/0]).
--export([start_embedded/1, start_embedded/2, start_embedded/3,
-         start_embedded/4,
-	 add_server/2,
-	 create_gconf/2, create_sconf/2]).
+-export([start_embedded/1, start_embedded/2, start_embedded/3, start_embedded/4,
+         add_server/2, create_gconf/2, create_sconf/2]).
+
 -export([new_ssl/0,
          ssl_keyfile/1, ssl_keyfile/2,
          ssl_certfile/1, ssl_certfile/2,
@@ -29,18 +28,13 @@
          ssl_cachetimeout/1, ssl_cachetimeout/2]).
 
 -export([first/2, elog/2, filesize/1, upto/2, to_string/1, to_list/1,
-         integer_to_hex/1, hex_to_integer/1,
-         string_to_hex/1, hex_to_string/1,
-         is_modified_p/2, flag/3, dohup/1, is_ssl/1,
-         address/0, is_space/1, setopts/3,
-         eat_crnl/2, get_chunk_num/2, get_chunk/4,
-         list_to_uue/1, uue_to_list/1, printversion/0,
-         strip_spaces/1, strip_spaces/2,
-         month/1, mk2/1, home/0,
-         arg_rewrite/1, to_lowerchar/1, to_lower/1, funreverse/2, is_prefix/2,
-         split_sep/2, join_sep/2,
-         accepts_gzip/2, upto_char/2, deepmap/2,
-         ticker/2, ticker/3,
+         integer_to_hex/1, hex_to_integer/1, string_to_hex/1, hex_to_string/1,
+         is_modified_p/2, flag/3, dohup/1, is_ssl/1, address/0, is_space/1,
+         setopts/3, eat_crnl/2, get_chunk_num/2, get_chunk/4, list_to_uue/1,
+         uue_to_list/1, printversion/0, strip_spaces/1, strip_spaces/2,
+         month/1, mk2/1, home/0, arg_rewrite/1, to_lowerchar/1, to_lower/1,
+         funreverse/2, is_prefix/2, split_sep/2, join_sep/2, accepts_gzip/2,
+         upto_char/2, deepmap/2, ticker/2, ticker/3,
          parse_qvalue/1, parse_auth/1]).
 
 -export([outh_set_status_code/1,
@@ -48,8 +42,7 @@
          outh_set_content_type/1,
          outh_set_content_encoding/1,
          outh_set_cookie/1,
-         outh_clear_headers/0,
-         outh_set_static_headers/3,         outh_set_static_headers/4,
+         outh_set_static_headers/3, outh_set_static_headers/4,
          outh_set_304_headers/3,
          outh_set_dyn_headers/3,
          outh_set_connection/1,
@@ -57,11 +50,11 @@
          outh_set_dcc/2,
          outh_set_transfer_encoding_off/0,
          outh_set_auth/1,
+         outh_clear_headers/0,
          outh_fix_doclose/0,
          dcc/2]).
 
--export([make_allow_header/0,
-         make_allow_header/1,
+-export([make_allow_header/0, make_allow_header/1,
          make_server_header/0,
          make_last_modified_header/1,
          make_location_header/1,
@@ -105,11 +98,6 @@
          id_dir/1, ctl_file/1]).
 
 
-
-
--import(lists, [reverse/1, reverse/2]).
-
-
 start() ->
     application:start(yaws, permanent).
 
@@ -117,10 +105,9 @@ stop() ->
     application:stop(yaws).
 
 
-%%% Quick and easy way of starting Yaws in embedded mode.
-%%% No need for any start-script switches and no dependencies
-%%% to Yaws header files. Just call start_embedded/N and
-%%% you are in the air.
+%%% Quick and easy way of starting Yaws in embedded mode.  No need for any
+%%% start-script switches and no dependencies to Yaws header files. Just call
+%%% start_embedded/N and you are in the air.
 start_embedded(DocRoot) ->
     start_embedded(DocRoot, []).
 
@@ -142,11 +129,11 @@ add_server(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
     SC  = create_sconf(DocRoot, SL),
     %% Change #auth in authdirs to {Dir, #auth} if needed
     Fun = fun
-	      (A = #auth{dir = [Dir]}, Acc) -> [{Dir, A}| Acc];
-        (A, Acc)                      -> [A| Acc]
-                                                          end,
-Authdirs = lists:foldr(Fun, [], SC#sconf.authdirs),
-yaws_config:add_sconf(SC#sconf{authdirs = Authdirs}).
+              (A = #auth{dir = [Dir]}, Acc) -> [{Dir, A}| Acc];
+              (A, Acc)                      -> [A| Acc]
+          end,
+    Authdirs = lists:foldr(Fun, [], SC#sconf.authdirs),
+    yaws_config:add_sconf(SC#sconf{authdirs = Authdirs}).
 
 create_gconf(GL, Id) when is_list(GL) ->
     setup_gconf(GL, yaws_config:make_default_gconf(false, Id)).
@@ -156,29 +143,28 @@ create_sconf(DocRoot, SL) when is_list(DocRoot), is_list(SL) ->
 
 
 %%% Access functions for the SSL record.
-new_ssl()             -> #ssl{}.
-%%
-ssl_keyfile(S)              -> S#ssl.keyfile.
-ssl_certfile(S)             -> S#ssl.certfile.
-ssl_verify(S)               -> S#ssl.verify.
-%%ssl_fail_if_no_peer_cert(S) -> S#ssl.fail_if_no_peer_cert.
-ssl_depth(S)                -> S#ssl.depth.
-ssl_password(S)             -> S#ssl.password.
-ssl_cacertfile(S)           -> S#ssl.cacertfile.
-ssl_ciphers(S)              -> S#ssl.ciphers.
-ssl_cachetimeout(S)         -> S#ssl.cachetimeout.
-%%
-ssl_keyfile(S, Keyfile)                       -> S#ssl{keyfile = Keyfile}.
-ssl_certfile(S, Certfile)                     -> S#ssl{certfile = Certfile}.
-ssl_verify(S, Verify)                         -> S#ssl{verify = Verify}.
-%%ssl_fail_if_no_peer_cert(S, FailIfNoPeerCert) -> S#ssl{fail_if_no_peer_cert = FailIfNoPeerCert}.
-ssl_depth(S, Depth)                           -> S#ssl{depth = Depth}.
-ssl_password(S, Password)                     -> S#ssl{password = Password}.
-ssl_cacertfile(S, Cacertfile)                 -> S#ssl{cacertfile = Cacertfile}.
-ssl_ciphers(S, Ciphers)                       -> S#ssl{ciphers = Ciphers}.
-ssl_cachetimeout(S, Cachetimeout)             -> S#ssl{cachetimeout = Cachetimeout}.
+new_ssl() -> #ssl{}.
+
+ssl_keyfile(S)      -> S#ssl.keyfile.
+ssl_certfile(S)     -> S#ssl.certfile.
+ssl_verify(S)       -> S#ssl.verify.
+ssl_depth(S)        -> S#ssl.depth.
+ssl_password(S)     -> S#ssl.password.
+ssl_cacertfile(S)   -> S#ssl.cacertfile.
+ssl_ciphers(S)      -> S#ssl.ciphers.
+ssl_cachetimeout(S) -> S#ssl.cachetimeout.
+
+ssl_keyfile(S, Keyfile)           -> S#ssl{keyfile  = Keyfile}.
+ssl_certfile(S, Certfile)         -> S#ssl{certfile = Certfile}.
+ssl_verify(S, Verify)             -> S#ssl{verify = Verify}.
+ssl_depth(S, Depth)               -> S#ssl{depth = Depth}.
+ssl_password(S, Password)         -> S#ssl{password = Password}.
+ssl_cacertfile(S, Cacertfile)     -> S#ssl{cacertfile = Cacertfile}.
+ssl_ciphers(S, Ciphers)           -> S#ssl{ciphers = Ciphers}.
+ssl_cachetimeout(S, Cachetimeout) -> S#ssl{cachetimeout = Cachetimeout}.
 
 
+%% Setup global configuration
 setup_gconf([], GC) -> GC;
 setup_gconf(GL, GC) ->
     #gconf{yaws_dir              = lkup(yaws_dir, GL, GC#gconf.yaws_dir),
@@ -246,6 +232,7 @@ set_gc_flags([], Flags) ->
     Flags.
 
 
+%% Setup vhost configuration
 setup_sconf(DocRoot, D, SL) ->
     #sconf{port                  = lkup(port, SL, D#sconf.port),
            flags                 = set_sc_flags(lkup(flags, SL, []),
@@ -298,45 +285,43 @@ setup_sconf(DocRoot, D, SL) ->
 
 expand_auth(SL) ->
     case [A || {auth, A} <- SL] of
-	[] ->
-	    SL;
-	As ->
-	    [{authdirs, [opts_to_auth(O) || O <- As]}|SL]
+        [] -> SL;
+        As -> [{authdirs, [opts_to_auth(O) || O <- As]}|SL]
     end.
 
 opts_to_auth(Opts) ->
     {_, Auth} =
-	lists:foldl(
-	  fun(F, {P,A}) ->
-		  {P+1,setelement(P, A, proplists:get_value(F, Opts, element(P,A)))}
-	  end, {2, #auth{}}, record_info(fields, auth)),
+        lists:foldl(fun(F, {P,A}) ->
+                            Val = proplists:get_value(F, Opts, element(P,A)),
+                            {P+1, setelement(P, A, Val)}
+                    end, {2, #auth{}}, record_info(fields, auth)),
     Auth.
 
 setup_sconf_ssl(SL, DefaultSSL) ->
     case lkup(ssl, SL, undefined) of
-	undefined ->
-	    DefaultSSL;
-	SSL when is_record(SSL, ssl) ->
-	    SSL;
-	SSLProps when is_list(SSLProps) ->
-	    SSL1 = #ssl{
-	      keyfile = proplists:get_value(keyfile, SSLProps),
-	      certfile = proplists:get_value(certfile, SSLProps),
-	      password = proplists:get_value(password, SSLProps),
-	      cacertfile = proplists:get_value(cacertfile, SSLProps),
-	      ciphers = proplists:get_value(ciphers, SSLProps),
-	      cachetimeout = proplists:get_value(cachetimeout, SSLProps)
-	     },
-	    %% Prevent overriding the ssl record's default values!
-	    SSL2 =
-		case proplists:get_value(verify, SSLProps) of
-		    undefined -> SSL1;
-		    Verify -> SSL1#ssl{verify=Verify}
-		end,
-	    case proplists:get_value(depth, SSLProps) of
-		undefined -> SSL2;
-		Depth -> SSL2#ssl{depth=Depth}
-	    end
+        undefined ->
+            DefaultSSL;
+        SSL when is_record(SSL, ssl) ->
+            SSL;
+        SSLProps when is_list(SSLProps) ->
+            SSL1 = #ssl{
+              keyfile      = proplists:get_value(keyfile, SSLProps),
+              certfile     = proplists:get_value(certfile, SSLProps),
+              password     = proplists:get_value(password, SSLProps),
+              cacertfile   = proplists:get_value(cacertfile, SSLProps),
+              ciphers      = proplists:get_value(ciphers, SSLProps),
+              cachetimeout = proplists:get_value(cachetimeout, SSLProps)
+             },
+            %% Prevent overriding the ssl record's default values!
+            SSL2 =
+                case proplists:get_value(verify, SSLProps) of
+                    undefined -> SSL1;
+                    Verify    -> SSL1#ssl{verify=Verify}
+                end,
+            case proplists:get_value(depth, SSLProps) of
+                undefined -> SSL2;
+                Depth     -> SSL2#ssl{depth=Depth}
+            end
     end.
 
 set_sc_flags([{access_log, Bool}|T], Flags) ->
@@ -384,10 +369,8 @@ hup(Sock) ->
 dohup(Sock) ->
     Env = yaws_sup:get_app_args(),
     Res = try yaws_config:load(Env) of
-              {ok, Gconf, Sconfs} ->
-                  yaws_api:setconf(Gconf, Sconfs);
-              Err ->
-                  Err
+              {ok, Gconf, Sconfs} -> yaws_api:setconf(Gconf, Sconfs);
+              Err                 -> Err
           catch
               _:X ->
                   X
@@ -404,18 +387,14 @@ first(_F, []) ->
     false;
 first(F, [H|T]) ->
     case F(H) of
-        {ok, Val} ->
-            {ok, Val, H};
-        ok ->
-            {ok, ok, H};
-        _ ->
-            first(F, T)
+        {ok, Val} -> {ok, Val, H};
+        ok        -> {ok, ok, H};
+        _         -> first(F, T)
     end.
 
 
 elog(F, As) ->
     error_logger:format(F, As).
-
 
 
 filesize(Fname) ->
@@ -427,88 +406,51 @@ filesize(Fname) ->
         Err ->
             Err
     end.
-%%
-upto(0, []) ->
-    [];
-upto(_I, []) ->
-    [];
-upto(0, _) ->
-    " ....";
-upto(_I, [0|_]) ->
-    " ....";
-upto(I,[H|T]) ->
-    [H|upto(I-1, T)].
-
-int_to_wd(1) ->
-    "Mon";
-int_to_wd(2) ->
-    "Tue";
-int_to_wd(3) ->
-    "Wed";
-int_to_wd(4) ->
-    "Thu";
-int_to_wd(5) ->
-    "Fri";
-int_to_wd(6) ->
-    "Sat";
-int_to_wd(7) ->
-    "Sun".
 
 
-to_string(X) when is_float(X) ->
-    io_lib:format("~.2.0f",[X]);
-to_string(X) when is_integer(X) ->
-    integer_to_list(X);
-to_string(X) when is_atom(X) ->
-    atom_to_list(X);
-to_string(X) ->
-    lists:concat([X]).
-
-%%
+upto(_I, [])    -> [];
+upto(0,  _)     -> " ....";
+upto(_I, [0|_]) -> " ....";
+upto(I,  [H|T]) -> [H|upto(I-1, T)].
 
 
-to_list(L) when is_list(L) ->
-    L;
-to_list(A) when is_atom(A) ->
-    atom_to_list(A).
+to_string(X) when is_float(X)   -> io_lib:format("~.2.0f",[X]);
+to_string(X) when is_integer(X) -> integer_to_list(X);
+to_string(X) when is_atom(X)    -> atom_to_list(X);
+to_string(X)                    -> lists:concat([X]).
+
+
+to_list(L) when is_list(L) -> L;
+to_list(A) when is_atom(A) -> atom_to_list(A).
 
 
 integer_to_hex(I) ->
     case catch erlang:integer_to_list(I, 16) of
-        {'EXIT', _} ->
-            old_integer_to_hex(I);
-        Int ->
-            Int
+        {'EXIT', _} -> old_integer_to_hex(I);
+        Int         -> Int
     end.
 
 
-old_integer_to_hex(I) when I<10 ->
+old_integer_to_hex(I) when I < 10 ->
     integer_to_list(I);
-old_integer_to_hex(I) when I<16 ->
+old_integer_to_hex(I) when I < 16 ->
     [I-10+$A];
-old_integer_to_hex(I) when I>=16 ->
+old_integer_to_hex(I) when I >= 16 ->
     N = trunc(I/16),
     old_integer_to_hex(N) ++ old_integer_to_hex(I rem 16).
 
 
-%% hex_to_integer
-
 hex_to_integer(Hex) ->
     erlang:list_to_integer(Hex, 16).
 
-%% string_to_hex
 
 string_to_hex(String) ->
     HEXC = fun (D) when D > 9 -> $a + D - 10;
-               (D) ->            $0 + D
+               (D)            -> $0 + D
            end,
-    lists:foldr(fun (E, Acc) ->
-                        [HEXC(E div 16),HEXC(E rem 16)|Acc]
-                end, [],
-                String).
+    lists:foldr(fun(E, Acc) -> [HEXC(E div 16),HEXC(E rem 16)|Acc] end,
+                [], String).
 
-
-%% hex_to_string
 
 hex_to_string(Hex) ->
     DEHEX = fun (H) when H >= $a -> H - $a + 10;
@@ -516,12 +458,9 @@ hex_to_string(Hex) ->
                 (H) ->              H - $0
             end,
     {String, _} =
-        lists:foldr(fun (E, {Acc, nolow}) ->
-                            {Acc, DEHEX(E)};
-                        (E, {Acc, LO})  ->
-                            {[DEHEX(E)*16+LO|Acc], nolow}
-                    end, {[], nolow},
-                    Hex),
+        lists:foldr(fun (E, {Acc, nolow}) -> {Acc, DEHEX(E)};
+                        (E, {Acc, LO})    -> {[DEHEX(E)*16+LO|Acc], nolow}
+                    end, {[], nolow}, Hex),
     String.
 
 
@@ -531,7 +470,7 @@ universal_time_as_string() ->
 universal_time_as_string(UTime) ->
     time_to_string(UTime, "GMT").
 local_time_as_gmt_string(LocalTime) ->
-    time_to_string(erlang:localtime_to_universaltime(LocalTime),"GMT").
+    time_to_string(erlang:localtime_to_universaltime(LocalTime), "GMT").
 
 
 time_to_string({{Year, Month, Day}, {Hour, Min, Sec}}, Zone) ->
@@ -539,68 +478,45 @@ time_to_string({{Year, Month, Day}, {Hour, Min, Sec}}, Zone) ->
      mk2(Day), " ", month(Month), " ", integer_to_list(Year), " ",
      mk2(Hour), ":", mk2(Min), ":", mk2(Sec), " ", Zone].
 
-
-
-mk2(I) when I < 10 ->
-    [$0 | integer_to_list(I)];
-mk2(I) ->
-    integer_to_list(I).
+mk2(I) when I < 10 -> [$0 | integer_to_list(I)];
+mk2(I)             -> integer_to_list(I).
 
 day(Year, Month, Day) ->
     int_to_wd(calendar:day_of_the_week(Year, Month, Day)).
 
-month(1) ->
-    "Jan";
-month(2) ->
-    "Feb";
-month(3) ->
-    "Mar";
-month(4) ->
-    "Apr";
-month(5) ->
-    "May";
-month(6) ->
-    "Jun";
-month(7) ->
-    "Jul";
-month(8) ->
-    "Aug";
-month(9) ->
-    "Sep";
-month(10) ->
-    "Oct";
-month(11) ->
-    "Nov";
-month(12) ->
-    "Dec".
+int_to_wd(1) -> "Mon";
+int_to_wd(2) -> "Tue";
+int_to_wd(3) -> "Wed";
+int_to_wd(4) -> "Thu";
+int_to_wd(5) -> "Fri";
+int_to_wd(6) -> "Sat";
+int_to_wd(7) -> "Sun".
 
+month(1)  -> "Jan";
+month(2)  -> "Feb";
+month(3)  -> "Mar";
+month(4)  -> "Apr";
+month(5)  -> "May";
+month(6)  -> "Jun";
+month(7)  -> "Jul";
+month(8)  -> "Aug";
+month(9)  -> "Sep";
+month(10) -> "Oct";
+month(11) -> "Nov";
+month(12) -> "Dec".
 
-
-month_str_to_int("Jan") ->
-    1;
-month_str_to_int("Jun") ->
-    6;
-month_str_to_int("Jul") ->
-    7;
-month_str_to_int("Feb") ->
-    2;
-month_str_to_int("Mar") ->
-    3;
-month_str_to_int("Apr") ->
-    4;
-month_str_to_int("May") ->
-    5;
-month_str_to_int("Aug") ->
-    8;
-month_str_to_int("Sep") ->
-    9;
-month_str_to_int("Oct") ->
-    10;
-month_str_to_int("Nov") ->
-    11;
-month_str_to_int("Dec") ->
-    12.
-
+month_str_to_int("Jan") -> 1;
+month_str_to_int("Feb") -> 2;
+month_str_to_int("Mar") -> 3;
+month_str_to_int("Apr") -> 4;
+month_str_to_int("May") -> 5;
+month_str_to_int("Jun") -> 6;
+month_str_to_int("Jul") -> 7;
+month_str_to_int("Aug") -> 8;
+month_str_to_int("Sep") -> 9;
+month_str_to_int("Oct") -> 10;
+month_str_to_int("Nov") -> 11;
+month_str_to_int("Dec") -> 12.
 
 
 stringdate_to_datetime([$ |T]) ->
@@ -610,13 +526,10 @@ stringdate_to_datetime([_D1, _D2, _D3, $\,, $ |Tail]) ->
 
 stringdate_to_datetime1([A, B, $\s |T]) ->
     stringdate_to_datetime2(T, list_to_integer([A,B]));
-
 stringdate_to_datetime1([A, $\s |T]) ->
     stringdate_to_datetime2(T, list_to_integer([A])).
 
-
-
-stringdate_to_datetime2([M1, M2, M3, $\s , Y1, Y2, Y3, Y4, $\s ,
+stringdate_to_datetime2([M1, M2, M3, $\s , Y1, Y2, Y3, Y4, $\s,
                          H1, H2, $:, Min1, Min2,$:,
                          S1, S2,$\s ,$G, $M, $T|_], Day) ->
     {{list_to_integer([Y1,Y2,Y3,Y4]),
@@ -632,9 +545,8 @@ is_modified_p(FI, UTC_string) ->
         {'EXIT', _ } ->
             true;
         UTC ->
-            Mtime = FI#file_info.mtime,
-            MtimeUTC = erlang:localtime_to_universaltime(Mtime),
-            MtimeUTC > UTC
+            MtimeUTC = erlang:localtime_to_universaltime(FI#file_info.mtime),
+            (MtimeUTC > UTC)
     end.
 
 
@@ -650,25 +562,17 @@ ticker(Time, To, Msg ) ->
 address() ->
     Sc = get(sc),
     ?F("<address> ~s Server at ~s </address>",
-       [
-        case Sc#sconf.yaws of
+       [case Sc#sconf.yaws of
             undefined -> (get(gc))#gconf.yaws;
             Signature -> Signature
-        end,
-        Sc#sconf.servername]).
+        end, Sc#sconf.servername]).
 
 
-
-is_space($\s) ->
-    true;
-is_space($\r) ->
-    true;
-is_space($\n) ->
-    true;
-is_space($\t) ->
-    true;
-is_space(_) ->
-    false.
+is_space($\s) -> true;
+is_space($\r) -> true;
+is_space($\n) -> true;
+is_space($\t) -> true;
+is_space(_)   -> false.
 
 
 strip_spaces(String) ->
@@ -685,32 +589,29 @@ drop_spaces([]) ->
     [];
 drop_spaces(YS=[X|XS]) ->
     case is_space(X) of
-        true ->
-            drop_spaces(XS);
-        false ->
-            YS
+        true  -> drop_spaces(XS);
+        false -> YS
     end.
 
 
 %%% basic uuencode and decode functionality
-
 list_to_uue(L) -> list_to_uue(L, []).
 
 list_to_uue([], Out) ->
-    reverse([$\n,enc(0)|Out]);
+    lists:reverse([$\n,enc(0)|Out]);
 list_to_uue(L, Out) ->
     {L45, L1} = get_45(L),
     Encoded = encode_line(L45),
-    list_to_uue(L1, reverse(Encoded, Out)).
+    list_to_uue(L1, lists:reverse(Encoded, Out)).
 
 uue_to_list(L) ->
     uue_to_list(L, []).
 
 uue_to_list([], Out) ->
-    reverse(Out);
+    lists:reverse(Out);
 uue_to_list(L, Out) ->
     {Decoded, L1} = decode_line(L),
-    uue_to_list(L1, reverse(Decoded, Out)).
+    uue_to_list(L1, lists:reverse(Decoded, Out)).
 
 encode_line(L) ->
     [enc(length(L))|encode_line1(L)].
@@ -721,9 +622,12 @@ encode_line1([C0, C1, C2|T]) ->
     Char3 = enc((C1 bsl 2) band 8#74 bor (C2 bsr 6) band 8#3),
     Char4 = enc(C2 band 8#77),
     [Char1,Char2,Char3,Char4|encode_line1(T)];
-encode_line1([C1, C2]) -> encode_line1([C1, C2, 0]);
-encode_line1([C])      -> encode_line1([C,0,0]);
-encode_line1([])       -> [$\n].
+encode_line1([C1, C2]) ->
+    encode_line1([C1, C2, 0]);
+encode_line1([C]) ->
+    encode_line1([C,0,0]);
+encode_line1([]) ->
+    [$\n].
 
 decode_line([H|T]) ->
     case dec(H) of
@@ -739,37 +643,26 @@ decode_line([P0,P1,P2,P3|T], N, Out) when N >= 3->
 decode_line([P0,P1,P2,_|T], 2, Out) ->
     Char1  = 16#FF band ((dec(P0) bsl 2) bor (dec(P1) bsr 4)),
     Char2  = 16#FF band ((dec(P1) bsl 4) bor (dec(P2) bsr 2)),
-    {reverse([Char2,Char1|Out]), tl(T)};
+    {lists:reverse([Char2,Char1|Out]), tl(T)};
 decode_line([P0,P1,_,_|T], 1, Out) ->
     Char1  = 16#FF band ((dec(P0) bsl 2) bor (dec(P1) bsr 4)),
-    {reverse([Char1|Out]), tl(T)};
+    {lists:reverse([Char1|Out]), tl(T)};
 decode_line(T, 0, Out) ->
-    {reverse(Out), tl(T)}.
+    {lists:reverse(Out), tl(T)}.
 
 get_45(L) -> get_45(L, 45, []).
 
-get_45(L, 0, F)     -> {reverse(F), L};
-get_45([H|T], N, L) -> get_45(T, N-1, [H|L]);
-get_45([], _N, L)    -> {reverse(L), []}.
+get_45(L, 0, F)     -> {lists:reverse(F), L};
+get_45([], _N, L)   -> {lists:reverse(L), []};
+get_45([H|T], N, L) -> get_45(T, N-1, [H|L]).
+
 
 %% enc/1 is the basic 1 character encoding function to make a char printing
 %% dec/1 is the inverse
-
 enc(0) -> $`;
-              enc(C) -> (C band 8#77) + $ .
+enc(C) -> (C band 8#77) + $ .
 
 dec(Char) -> (Char - $ ) band 8#77.
-
-%% to_octal(I) -> reverse(to_octal1(I)).
-
-%% to_octal1(0) ->  [];
-%% to_octal1(I) ->  [$0 + I band 7|to_octal1(I bsr 3)].
-
-%% oct_to_dig(O) -> oct_to_dig(O, 0).
-
-%% oct_to_dig([], D)    -> D;
-%% oct_to_dig([H|T], D) -> oct_to_dig(T, D*8 + H - $0).
-
 
 
 printversion() ->
@@ -780,65 +673,40 @@ printversion() ->
 arg_rewrite(A) ->
     A.
 
-is_ssl(#sconf{ssl = undefined}) ->
-    nossl;
-is_ssl(#sconf{ssl = S}) when is_record(S, ssl) ->
-    ssl.
+is_ssl(#sconf{ssl = undefined})                -> nossl;
+is_ssl(#sconf{ssl = S}) when is_record(S, ssl) -> ssl.
 
 
-%% delall(H, [H|T]) ->
-%%     delall(H,T);
-%% delall(H,[H1|T]) ->
-%%     [H1 | delall(H, T)];
-%% delall(_,[]) ->
-%%     [].
+to_lowerchar(C) when C >= $A, C =< $Z -> C+($a-$A);
+to_lowerchar(C)                       -> C.
 
-
-
-to_lowerchar(C) when C >= $A, C =< $Z ->
-    C+($a-$A);
-to_lowerchar(C) ->
-    C.
-
-to_lower([C|Cs]) when C >= $A, C =< $Z ->
-    [C+($a-$A)|to_lower(Cs)];
-to_lower([C|Cs]) ->
-    [C|to_lower(Cs)];
-to_lower([]) ->
-    [];
-to_lower(A) when is_atom(A) ->
-    to_lower(atom_to_list(A)).
-
+to_lower([])                           -> [];
+to_lower([C|Cs]) when C >= $A, C =< $Z -> [C+($a-$A)|to_lower(Cs)];
+to_lower([C|Cs])                       -> [C|to_lower(Cs)];
+to_lower(A) when is_atom(A)            -> to_lower(atom_to_list(A)).
 
 
 funreverse(List, Fun) ->
     funreverse(List, Fun, []).
 
-funreverse([H|T], Fun, Ack) ->
-    funreverse(T, Fun, [Fun(H)|Ack]);
-funreverse([], _Fun, Ack) ->
-    Ack.
+funreverse([H|T], Fun, Ack) -> funreverse(T, Fun, [Fun(H)|Ack]);
+funreverse([], _Fun, Ack)   -> Ack.
 
 %% is arg1 a prefix of arg2
-is_prefix([H|T1], [H|T2]) ->
-    is_prefix(T1, T2);
-is_prefix([], T) ->
-    {true, T};
-is_prefix(_,_) ->
-    false.
+is_prefix([H|T1], [H|T2]) -> is_prefix(T1, T2);
+is_prefix([], T)          -> {true, T};
+is_prefix(_,_)            -> false.
 
 
 %% Split a string of words separated by Sep into a list of words and
 %% strip off white space.
 %%
 %% HTML semantics are used, such that empty words are omitted.
-
-
 split_sep(undefined, _Sep) ->
     [];
 split_sep(L, Sep) ->
     case drop_spaces(L) of
-        [] -> [];
+        []      -> [];
         [Sep|T] -> split_sep(T, Sep);
         [C|T]   -> split_sep(T, Sep, [C], [])
     end.
@@ -853,16 +721,13 @@ split_sep([C|T], Sep, AccL) ->
 split_sep([], _Sep, AccW, AccL) ->
     lists:reverse([lists:reverse(drop_spaces(AccW))|AccL]);
 split_sep([Sep|Tail], Sep, AccW, AccL) ->
-    split_sep(drop_spaces(Tail),
-              Sep,
-              [lists:reverse(drop_spaces(AccW))|AccL]);
+    split_sep(drop_spaces(Tail), Sep, [lists:reverse(drop_spaces(AccW))|AccL]);
 split_sep([C|Tail], Sep, AccW, AccL) ->
     split_sep(Tail, Sep, [C|AccW], AccL).
 
 
 %% Join strings with separator. Same as string:join in later
 %% versions of Erlang. Separator is expected to be a list.
-
 join_sep([], Sep) when is_list(Sep) ->
     [];
 join_sep([H|T], Sep) ->
@@ -870,62 +735,42 @@ join_sep([H|T], Sep) ->
 
 
 %% header parsing
-
 parse_qval(S) ->
     parse_qval([], S).
 
-parse_qval(A, ";q="++Q) ->
-    {lists:reverse(A), parse_qvalue(Q)};
-parse_qval(A, "") ->
-    {lists:reverse(A), 1000};
-parse_qval(A, [C|T]) ->
-    parse_qval([C|A], T).
+parse_qval(A, ";q="++Q) -> {lists:reverse(A), parse_qvalue(Q)};
+parse_qval(A, "")       -> {lists:reverse(A), 1000};
+parse_qval(A, [C|T])    -> parse_qval([C|A], T).
 
-
-parse_qvalue("0") ->
-    0;
-parse_qvalue("0.") ->
-    0;
-parse_qvalue("1") ->
-    1000;
-parse_qvalue("1.") ->
-    1000;
-parse_qvalue("1.0") ->
-    1000;
-parse_qvalue("1.00") ->
-    1000;
-parse_qvalue("1.000") ->
-    1000;
-parse_qvalue("0."++[D1]) ->
-    three_digits_to_integer(D1,$0,$0);
-parse_qvalue("0."++[D1,D2]) ->
-    three_digits_to_integer(D1,D2,$0);
-parse_qvalue("0."++[D1,D2,D3]) ->
-    three_digits_to_integer(D1,D2,D3);
-parse_qvalue(_) ->
-                                                % error
-    0.
+parse_qvalue("0")              -> 0;
+parse_qvalue("0.")             -> 0;
+parse_qvalue("1")              -> 1000;
+parse_qvalue("1.")             -> 1000;
+parse_qvalue("1.0")            -> 1000;
+parse_qvalue("1.00")           -> 1000;
+parse_qvalue("1.000")          -> 1000;
+parse_qvalue("0."++[D1])       -> three_digits_to_integer(D1,$0,$0);
+parse_qvalue("0."++[D1,D2])    -> three_digits_to_integer(D1,D2,$0);
+parse_qvalue("0."++[D1,D2,D3]) -> three_digits_to_integer(D1,D2,D3);
+parse_qvalue(_)                -> 0. %% error
 
 three_digits_to_integer(D1, D2, D3) ->
     100*(D1-$0)+10*(D2-$0)+D3-$0.
 
 
 %% Gzip encoding
-
 accepts_gzip(H, Mime) ->
     case [Val || {_,_,'Accept-Encoding',_,Val}<- H#headers.other] of
         [] ->
             false;
         [AcceptEncoding] ->
-            EncodingList = [parse_qval(X) ||
-                               X <- split_sep(AcceptEncoding, $,)],
-            case [Q || {"gzip", Q} <- EncodingList]
-                ++ [Q || {"*", Q} <- EncodingList] of
+            EncList = [parse_qval(X) || X <- split_sep(AcceptEncoding, $,)],
+            case [Q || {"gzip",Q} <- EncList] ++ [Q || {"*",Q} <- EncList] of
                 [] ->
                     false;
-                [Q|_] -> (Q > 100)  % just for fun
-                             and not has_buggy_gzip(
-                                       H#headers.user_agent, Mime)
+                [Q|_] ->
+                    (Q > 100) %% just for fun
+                        and not has_buggy_gzip(H#headers.user_agent, Mime)
             end;
         _ ->
             false
@@ -933,69 +778,55 @@ accepts_gzip(H, Mime) ->
 
 %%% Advice partly taken from Apache's documentation of `mod_deflate'.
 
-                                                % Only Netscape
-                                                % 4.06-4.08 is really
-                                                % broken.
+%% Only Netscape 4.06-4.08 is really broken.
 has_buggy_gzip("Mozilla/4.06"++_, _) ->
     true;
 has_buggy_gzip("Mozilla/4.07"++_, _) ->
     true;
 has_buggy_gzip("Mozilla/4.08"++_, _) ->
     true;
-                                                % Everything else
-                                                % handles at least
-                                                % HTML.
+
+%% Everything else handles at least HTML.
 has_buggy_gzip(_, "text/html") ->
     false;
 has_buggy_gzip(UserAgent, Mime) ->
     UA = parse_ua(UserAgent),
     in_ua(fun("Mozilla/4"++_) ->
-                                                % Netscape 4.x may
-                                                % choke on anything
-                                                % not HTML.
+                  %% Netscape 4.x may choke on anything not HTML.
                   case Mime of
-                                                % IE doesn't, but some
-                                                % versions are said to
-                                                % have issues with
-                                                % plugins.
+                      %% IE doesn't, but some versions are said to have issues
+                      %% with plugins.
                       "application/pdf" ->
                           true;
                       _ -> not in_comment(
-                                 fun("MSIE"++_) ->
-                                         true;
-                                    (_) -> false
-                                 end,
-                                 UA)
+                                 fun("MSIE"++_) -> true;
+                                    (_)         -> false
+                                 end, UA)
                   end;
              ("w3m"++_) ->
-                                                % W3m does not
-                                                % decompress when
-                                                % saving.
+                  %% W3m does not decompress when saving.
                   true;
              ("Opera") ->
-                                                % Opera 6 does not
-                                                % uncompress downloads.
+                  %% Opera 6 does not uncompress downloads.
                   in_ua(fun("6."++_) -> true;
-                           (_) -> false
+                           (_)       -> false
                         end, UA);
              ("Opera/6."++_) ->
                   true;
              (_) ->
                   false
-          end,
-          UA).
+          end, UA).
 
 
 %%% Parsing of User-Agent header.
 %%% Yes, this looks a bit like overkill.
-
 tokenize_ua([], Acc) ->
     lists:reverse(Acc);
 tokenize_ua([$\\ , C|T], Acc) ->
     tokenize_ua(T, [C|Acc]);
 tokenize_ua([$(|T], Acc) ->
-                   tokenize_ua(T, [popen | Acc]);
-            tokenize_ua([$)|T], Acc) ->
+    tokenize_ua(T, [popen | Acc]);
+tokenize_ua([$)|T], Acc) ->
     tokenize_ua(T, [pclose | Acc]);
 tokenize_ua([C|T], Acc) ->
     tokenize_ua(T, [C|Acc]).
@@ -1003,7 +834,7 @@ tokenize_ua([C|T], Acc) ->
 parse_ua(Line) ->
     case catch parse_ua_l(tokenize_ua(Line, [])) of
         {'EXIT', _} -> [];
-        Res -> Res
+        Res         -> Res
     end.
 
 parse_ua_l(Line) ->
@@ -1014,7 +845,7 @@ parse_ua_l(Line) ->
             {Comment, Tail} = parse_comment(T),
             [Comment | parse_ua_l(Tail)];
         [pclose|T] ->
-                                                % Error, ignore
+            %% Error, ignore
             parse_ua_l(T);
         L ->
             {UA, Tail} = parse_ua1(L),
@@ -1025,14 +856,13 @@ parse_comment(L) ->
     parse_comment(L, [], []).
 
 parse_comment([], _, _) ->
-                                                % Error
+    %% Error
     {error, []};
 parse_comment([pclose|T], CAcc, CsAcc) ->
     {{comment, lists:reverse([lists:reverse(CAcc)|CsAcc])}, T};
 parse_comment([popen|T], CAcc, CsAcc) ->
     {Comment, Tail} = parse_comment(T),
-    parse_comment(drop_spaces(Tail),
-                  [], [Comment, lists:reverse(CAcc) | CsAcc]);
+    parse_comment(drop_spaces(Tail), [], [Comment, lists:reverse(CAcc)|CsAcc]);
 parse_comment([$;|T], CAcc, CsAcc) ->
     parse_comment(drop_spaces(T), [], [lists:reverse(CAcc)|CsAcc]);
 parse_comment([C|T], CAcc, CsAcc) ->
@@ -1055,39 +885,29 @@ parse_ua1([C|T], Acc) ->
 
 
 in_ua(Pred, L) ->
-    lists:any(
-      fun(X) ->
-              case X of
-                  {ua, UA} -> Pred(UA);
-                  _ -> false
-              end
-      end, L).
+    lists:any(fun({ua, UA}) -> Pred(UA);
+                 (_)        -> false
+              end, L).
 
 in_comment(_Pred, []) ->
     false;
 in_comment(Pred, [{comment, Cs}|T]) ->
     case in_comment_l(Pred, Cs) of
-        true ->
-            true;
-        false ->
-            in_comment(Pred, T)
+        true  -> true;
+        false -> in_comment(Pred, T)
     end;
 in_comment(Pred, [_|T]) ->
     in_comment(Pred, T).
 
 
 in_comment_l(Pred, Cs) ->
-    lists:any(fun(X) ->
-                      case X of
-                          {comment, Cs1} ->
-                              in_comment_l(Pred, Cs1);
-                          error -> false;
-                          L -> Pred(L)
-                      end
+    lists:any(fun({comment, Cs1}) -> in_comment_l(Pred, Cs1);
+                 (error)          -> false;
+                 (L)              -> Pred(L)
               end, Cs).
 
-%% imperative out header management
 
+%% imperative out header management
 outh_set_status_code(Code) ->
     put(outh, (get(outh))#outh{status = Code}),
     ok.
@@ -1097,26 +917,25 @@ outh_set_non_cacheable(_Version) ->
     ok.
 
 outh_set_content_type(Mime) ->
-    put(outh, (get(outh))#outh{content_type =
-                               make_content_type_header(Mime)}),
+    put(outh, (get(outh))#outh{content_type = make_content_type_header(Mime)}),
     ok.
 
 outh_set_content_encoding(Encoding) ->
     put(outh, (get(outh))#outh{content_encoding =
-                               make_content_encoding_header(Encoding)}),
+                                   make_content_encoding_header(Encoding)}),
     ok.
 
 outh_set_cookie(C) ->
-    put(outh, (get(outh))#outh{set_cookie = ["Set-Cookie: " , C, "\r\n"]}),
+    put(outh, (get(outh))#outh{set_cookie = ["Set-Cookie: ", C, "\r\n"]}),
     ok.
 
 
 outh_clear_headers() ->
     H = get(outh),
-    put(outh, #outh{status = H#outh.status,
-                    doclose = true,
-                    chunked = false,
-                    connection  = make_connection_close_header(true)}),
+    put(outh, #outh{status     = H#outh.status,
+                    doclose    = true,
+                    chunked    = false,
+                    connection = make_connection_close_header(true)}),
     ok.
 
 
@@ -1133,65 +952,61 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
                   case UT#urltype.deflate of
                       DB when is_binary(DB) -> % cached
                           case accepts_gzip(Headers, UT#urltype.mime) of
-                              true -> {true, size(DB)};
+                              true  -> {true, size(DB)};
                               false -> {false, FIL}
                           end;
-                      undefined -> {false, FIL};
+                      undefined ->
+                          {false, FIL};
                       dynamic ->
                           case accepts_gzip(Headers, UT#urltype.mime) of
-                              true ->
-                                  {true, undefined};
-                              false ->
-                                  {false, FIL}
+                              true  -> {true, undefined};
+                              false -> {false, FIL}
                           end
                   end;
               {fromto, From, To, _} ->
                   {false, To - From + 1}
           end,
-    ContentEncoding = case DoDeflate of
-                          true -> deflate;
-                          false -> identity
-                      end,
+    Encoding = case DoDeflate of
+                   true  -> deflate;
+                   false -> identity
+               end,
     Chunked = Chunked0 and (Length == undefined),
-    DoClose =
-        if
-            DoClose0 == true ->
-                true;
-            ((Length == undefined) and not Chunked) ->
-                                                % We cannot keep the
-                                                % connection alive,
-                                                % because the client
-                                                % has no way of
-                                                % knowing the end of
-                                                % the content data.
-                true;
-            DoClose0 == keep_alive ->
-                keep_alive;
-            true ->
-                DoClose0
-        end,
+    DoClose = if
+                  DoClose0 == true ->
+                      true;
+                  ((Length == undefined) and not Chunked) ->
+                      %% We cannot keep the connection alive, because the client
+                      %% has no way of knowing the end of the content data.
+                      true;
+                  DoClose0 == keep_alive ->
+                      keep_alive;
+                  true ->
+                      DoClose0
+              end,
 
     H2 = H#outh{
-           status = case Range of
-                        all -> 200;
-                        {fromto, _, _, _} -> 206
-                    end,
-           chunked = Chunked,
-           encoding = ContentEncoding,
-           date = make_date_header(),
-           server = make_server_header(),
-           last_modified = make_last_modified_header(UT#urltype.finfo),
-           expires = make_expires_header(UT#urltype.mime, UT#urltype.finfo),
-           cache_control = make_cache_control_header(UT#urltype.mime, UT#urltype.finfo),
-           etag = make_etag_header(UT#urltype.finfo),
-           content_range = make_content_range_header(Range),
-           content_length = make_content_length_header(Length),
-           content_type = make_content_type_header(UT#urltype.mime),
-           content_encoding = make_content_encoding_header(ContentEncoding),
+           status            = case Range of
+                                   all               -> 200;
+                                   {fromto, _, _, _} -> 206
+                               end,
+           chunked           = Chunked,
+           encoding          = Encoding,
+           date              = make_date_header(),
+           server            = make_server_header(),
+           last_modified     = make_last_modified_header(UT#urltype.finfo),
+           expires           = make_expires_header(UT#urltype.mime,
+                                                   UT#urltype.finfo),
+           cache_control     = make_cache_control_header(UT#urltype.mime,
+                                                         UT#urltype.finfo),
+           etag              = make_etag_header(UT#urltype.finfo),
+           content_range     = make_content_range_header(Range),
+           content_length    = make_content_length_header(Length),
+           content_type      = make_content_type_header(UT#urltype.mime),
+           content_encoding  = make_content_encoding_header(Encoding),
            transfer_encoding = make_transfer_encoding_chunked_header(Chunked),
-           connection  = make_connection_close_header(DoClose),
-           doclose = DoClose,
-           contlen = Length
+           connection        = make_connection_close_header(DoClose),
+           doclose           = DoClose,
+           contlen           = Length
           },
     put(outh, H2).
 
@@ -1199,18 +1014,20 @@ outh_set_304_headers(Req, UT, Headers) ->
     H = get(outh),
     {DoClose, _Chunked} = dcc(Req, Headers),
     H2 = H#outh{
-           status = 304,
-           chunked = false,
-           date = make_date_header(),
-           server = make_server_header(),
-           last_modified = make_last_modified_header(UT#urltype.finfo),
-           expires = make_expires_header(UT#urltype.mime, UT#urltype.finfo),
-           cache_control = make_cache_control_header(UT#urltype.mime, UT#urltype.finfo),
-           etag = make_etag_header(UT#urltype.finfo),
+           status         = 304,
+           chunked        = false,
+           date           = make_date_header(),
+           server         = make_server_header(),
+           last_modified  = make_last_modified_header(UT#urltype.finfo),
+           expires        = make_expires_header(UT#urltype.mime,
+                                                UT#urltype.finfo),
+           cache_control  = make_cache_control_header(UT#urltype.mime,
+                                                      UT#urltype.finfo),
+           etag           = make_etag_header(UT#urltype.finfo),
            content_length = make_content_length_header(0),
-           connection  = make_connection_close_header(DoClose),
-           doclose = DoClose,
-           contlen = 0
+           connection     = make_connection_close_header(DoClose),
+           doclose        = DoClose,
+           contlen        = 0
           },
     put(outh, H2).
 
@@ -1218,17 +1035,18 @@ outh_set_dyn_headers(Req, Headers, UT) ->
     H = get(outh),
     {DoClose, Chunked} = dcc(Req, Headers),
     H2 = H#outh{
-           status = 200,
-           date = make_date_header(),
-           server = make_server_header(),
-           connection = make_connection_close_header(DoClose),
-           content_type = make_content_type_header(UT#urltype.mime),
-           expires = make_expires_header(UT#urltype.mime, UT#urltype.finfo),
-           cache_control = make_cache_control_header(UT#urltype.mime, UT#urltype.finfo),
-           doclose = DoClose,
-           chunked = Chunked,
-           transfer_encoding =
-           make_transfer_encoding_chunked_header(Chunked)},
+           status            = 200,
+           date              = make_date_header(),
+           server            = make_server_header(),
+           connection        = make_connection_close_header(DoClose),
+           content_type      = make_content_type_header(UT#urltype.mime),
+           expires           = make_expires_header(UT#urltype.mime,
+                                                   UT#urltype.finfo),
+           cache_control     = make_cache_control_header(UT#urltype.mime,
+                                                         UT#urltype.finfo),
+           doclose           = DoClose,
+           chunked           = Chunked,
+           transfer_encoding = make_transfer_encoding_chunked_header(Chunked)},
 
     put(outh, H2).
 
@@ -1236,15 +1054,17 @@ outh_set_dyn_headers(Req, Headers, UT) ->
 outh_set_connection(What) ->
     H = get(outh),
     H2 = H#outh{connection = make_connection_close_header(What),
-                doclose = What},
+                doclose    = What},
     put(outh, H2),
     ok.
 
 
 outh_set_content_length(Int) ->
-    H = get(outh),
-    H2 = H#outh{content_length = make_content_length_header(Int),
-                contlen=Int},
+    H  = get(outh),
+    H2 = H#outh{
+           content_length = make_content_length_header(Int),
+           contlen        = Int
+          },
     put(outh, H2).
 
 
@@ -1252,46 +1072,48 @@ outh_set_content_length(Int) ->
 outh_set_dcc(Req, Headers) ->
     H = get(outh),
     {DoClose, Chunked} = dcc(Req, Headers),
-    H2 = H#outh{connection = make_connection_close_header(DoClose),
-                doclose = DoClose,
-                chunked = Chunked,
-                transfer_encoding =
-                make_transfer_encoding_chunked_header(Chunked)},
+    H2 = H#outh{
+           connection        = make_connection_close_header(DoClose),
+           doclose           = DoClose,
+           chunked           = Chunked,
+           transfer_encoding = make_transfer_encoding_chunked_header(Chunked)
+          },
     put(outh, H2).
 
 
 %% can only turn if off, not on.
 %% if it allready is off, it's off because the cli headers forced us.
-
 outh_set_transfer_encoding_off() ->
-    H = get(outh),
-    H2 = H#outh{chunked = false,
-                transfer_encoding =
-                make_transfer_encoding_chunked_header(false)},
+    H  = get(outh),
+    H2 = H#outh{
+           chunked           = false,
+           transfer_encoding = make_transfer_encoding_chunked_header(false)
+          },
     put(outh, H2).
 
 outh_set_auth([]) ->
     ok;
 
 outh_set_auth(Headers) ->
-    H = get(outh),
-    L = H#outh.www_authenticate,
-    H2 = case L of
-	     undefined ->
-		 H#outh{www_authenticate = Headers};
-	     _ ->
-		 H#outh{www_authenticate = H#outh.www_authenticate ++ Headers}
-	 end,
+    H  = get(outh),
+    H2 = case H#outh.www_authenticate of
+             undefined ->
+                 H#outh{www_authenticate = Headers};
+             _ ->
+                 H#outh{www_authenticate = H#outh.www_authenticate ++ Headers}
+         end,
     put(outh, H2).
 
 outh_fix_doclose() ->
     H = get(outh),
     if
-        (H#outh.doclose /= true) and (H#outh.contlen==undefined) and
+        (H#outh.doclose /= true)    andalso
+        (H#outh.contlen==undefined) andalso
         (H#outh.chunked == false) ->
-            put(outh, H#outh{doclose=true,
-                             connection=make_connection_close_header(true)});
-        true -> ok
+            put(outh, H#outh{doclose    = true,
+                             connection = make_connection_close_header(true)});
+        true ->
+            ok
     end.
 
 
@@ -1302,9 +1124,9 @@ dcc(Req, Headers) ->
                       true; %% too many keepalives
                   {1, 0} ->
                       case Headers#headers.connection of
-                          "close" -> true;
+                          "close"      -> true;
                           "Keep-Alive" -> keep_alive;
-                          _ -> true
+                          _            -> true
                       end;
                   {1, 1} ->
                       Headers#headers.connection == "close";
@@ -1312,12 +1134,9 @@ dcc(Req, Headers) ->
                       true
               end,
     Chunked = case Req#http_request.version of
-                  {1, 0} ->
-                      false;
-                  {1,1} ->
-                      true;
-                  {0,9} ->
-                      false
+                  {1, 0} -> false;
+                  {1,1}  -> true;
+                  {0,9}  ->  false
               end,
     {DoClose, Chunked}.
 
@@ -1328,7 +1147,6 @@ dcc(Req, Headers) ->
 %%
 %% The following all make_ function return an actual header string
 %%
-
 make_allow_header() ->
     make_allow_header([]).
 make_allow_header(Options) ->
@@ -1336,16 +1154,14 @@ make_allow_header(Options) ->
         [] ->
             HasDav = ?sc_has_dav(get(sc)),
             ["Allow: GET, POST, OPTIONS, HEAD",
-             if HasDav == true ->
-                     ", PUT, PROPFIND, MKCOL, MOVE, COPY\r\n";
-                true ->
-                     "\r\n"
+             if HasDav == true -> ", PUT, PROPFIND, MKCOL, MOVE, COPY\r\n";
+                true           -> "\r\n"
              end];
         _ ->
             ["Allow: ",
              lists:foldl(fun(M, "") -> atom_to_list(M);
-                            (M, Acc) -> atom_to_list(M) ++ ", " ++ Acc end,
-                         "", lists:reverse(Options)),
+                            (M, Acc) -> atom_to_list(M) ++ ", " ++ Acc
+                         end, "", lists:reverse(Options)),
              "\r\n"]
     end.
 make_server_header() ->
@@ -1353,14 +1169,11 @@ make_server_header() ->
     HasDav = ?sc_has_dav(Sc),
     Signature = case Sc#sconf.yaws of
                     undefined -> (get(gc))#gconf.yaws;
-                    S -> S
+                    S         -> S
                 end,
-    ["Server: ", Signature, "\r\n" |
-     if HasDav == true ->
-             ["DAV: 1\r\n"];
-        true ->
-             []
-     end].
+    ["Server: ", Signature, "\r\n" | if HasDav == true -> ["DAV: 1\r\n"];
+                                        true           -> []
+                                     end].
 
 make_last_modified_header(FI) ->
     N = element(2, now()),
@@ -1397,6 +1210,7 @@ make_expires_header(MimeType, FI) ->
                     undefined
             end
     end.
+
 
 make_expires_header(access, TTL, _FI) ->
     DateTime = erlang:universaltime(),
@@ -1445,24 +1259,18 @@ make_etag_header(FI) ->
 make_etag(FI) ->
     {{Y,M,D}, {H,Min, S}}  = FI#file_info.mtime,
     Inode = FI#file_info.inode,
-    pack_bin( <<0:6,(Y band 2#11111111):8,M:4,D:5,H:5,Min:6,S:6,Inode:32>> ).
+    pack_bin(<<0:6,(Y band 2#11111111):8,M:4,D:5,H:5,Min:6,S:6,Inode:32>>).
 
 pack_bin(<<_:6,A:6,B:6,C:6,D:6,E:6,F:6,G:6,H:6,I:6,J:6,K:6>>) ->
-    [$",
-     pc(A),pc(B),pc(C),pc(D),pc(E),pc(F),pc(G),pc(H),pc(I),pc(J),pc(K),
-     $"].
+    [$", pc(A),pc(B),pc(C),pc(D),pc(E),pc(F),pc(G),pc(H),pc(I),pc(J),pc(K), $"].
+
 
 %% Like Base64 for no particular reason.
-pc(X) when X >= 0, X < 26 ->
-    X + $A;
-pc(X) when X >= 26, X < 52 ->
-    X - 26 + $a;
-pc(X) when X >= 52, X < 62 ->
-    X - 52 + $0;
-pc(62) ->
-    $+;
-pc(63) ->
-    $/.
+pc(X) when X >= 0,  X < 26 -> X + $A;
+pc(X) when X >= 26, X < 52 -> X - 26 + $a;
+pc(X) when X >= 52, X < 62 -> X - 52 + $0;
+pc(62)                     -> $+;
+pc(63)                     -> $/.
 
 
 make_content_type_header(no_content_type) ->
@@ -1527,7 +1335,6 @@ make_date_header() ->
 
 
 %% access functions into the outh record
-
 outh_get_status_code() ->
     (get(outh))#outh.status.
 
@@ -1540,10 +1347,8 @@ outh_get_act_contlen() ->
 outh_inc_act_contlen(Int) ->
     O = get(outh),
     L = case O#outh.act_contlen of
-            undefined ->
-                Int;
-            Len ->
-                Len+Int
+            undefined -> Int;
+            Len       -> Len+Int
         end,
     put(outh, O#outh{act_contlen = L}),
     L.
@@ -1561,31 +1366,25 @@ outh_get_content_encoding_header() ->
     (get(outh))#outh.content_encoding.
 
 outh_get_content_type() ->
-    case (get(outh))#outh.content_type of
-        [_, Mime, _] ->
-            Mime
-    end.
+    [_, Mime, _] = (get(outh))#outh.content_type,
+    Mime.
 
 outh_serialize() ->
     H = get(outh),
     Code = case H#outh.status of
                undefined -> 200;
-               Int -> Int
+               Int       -> Int
            end,
     StatusLine = ["HTTP/1.1 ", integer_to_list(Code), " ",
                   yaws_api:code_to_phrase(Code), "\r\n"],
     GC=get(gc),
-    if ?gc_has_debug(GC) ->
-            yaws_debug:check_headers(H);
-       true ->
-            ok
+    if ?gc_has_debug(GC) -> yaws_debug:check_headers(H);
+       true              -> ok
     end,
-    case H#outh.content_encoding of
-        undefined ->
-            ContentEncoding = make_content_encoding_header(H#outh.encoding);
-        ContentEncoding ->
-            ok
-    end,
+    ContentEnc = case H#outh.content_encoding of
+                     undefined -> make_content_encoding_header(H#outh.encoding);
+                     CE        -> CE
+                 end,
     Headers = [noundef(H#outh.connection),
                noundef(H#outh.server),
                noundef(H#outh.location),
@@ -1598,79 +1397,74 @@ outh_serialize() ->
                noundef(H#outh.content_range),
                noundef(H#outh.content_length),
                noundef(H#outh.content_type),
-               noundef(ContentEncoding),
+               noundef(ContentEnc),
                noundef(H#outh.set_cookie),
                noundef(H#outh.transfer_encoding),
                noundef(H#outh.www_authenticate),
-               noundef(H#outh.other)
-              ],
+               noundef(H#outh.other)],
     {StatusLine, Headers}.
 
 
-noundef(undefined) ->
-    [];
-noundef(Str) ->
-    Str.
+noundef(undefined) -> [];
+noundef(Str)       -> Str.
 
 
 
 accumulate_header({X, erase}) when is_atom(X) ->
     erase_header(X);
 
-%% special headers
 
+%% special headers
 accumulate_header({connection, What}) ->
     DC = case What of
-             "close" ->
-                 true;
-             _ ->
-                 false
+             "close" -> true;
+             _       -> false
          end,
     H = get(outh),
-    put(outh, (H#outh{connection = ["Connection: ", What, "\r\n"],
-                      doclose = DC}));
+    put(outh, H#outh{connection = ["Connection: ", What, "\r\n"],
+                     doclose    = DC});
 accumulate_header({"Connection", What}) ->
     accumulate_header({connection, What});
 
 accumulate_header({server, What}) ->
-    put(outh, (get(outh))#outh{server = ["Server: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{server = ["Server: ", What, "\r\n"]});
 accumulate_header({"Server", What}) ->
     accumulate_header({server, What});
 
 accumulate_header({location, What}) ->
-    put(outh, (get(outh))#outh{location = ["Location: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{location = ["Location: ", What, "\r\n"]});
 accumulate_header({"Location", What}) ->
     accumulate_header({location, What});
 
 accumulate_header({cache_control, What}) ->
-    put(outh, (get(outh))#outh{cache_control = ["Cache-Control: " ,
-                                                What, "\r\n"]});
+    put(outh, (get(outh))#outh{cache_control = ["Cache-Control: ", What,
+                                                "\r\n"]});
 accumulate_header({"Cache-Control", What}) ->
     accumulate_header({cache_control, What});
 
 accumulate_header({expires, What}) ->
-    put(outh, (get(outh))#outh{expires = ["Expires: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{expires = ["Expires: ", What, "\r\n"]});
 accumulate_header({"Expires", What}) ->
     accumulate_header({expires, What});
 
 accumulate_header({date, What}) ->
-    put(outh, (get(outh))#outh{date = ["Date: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{date = ["Date: ", What, "\r\n"]});
 accumulate_header({"Date", What}) ->
     accumulate_header({date, What});
 
 accumulate_header({allow, What}) ->
-    put(outh, (get(outh))#outh{date = ["Allow: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{date = ["Allow: ", What, "\r\n"]});
 accumulate_header({"Allow", What}) ->
     accumulate_header({allow, What});
 
 accumulate_header({last_modified, What}) ->
-    put(outh, (get(outh))#outh{last_modified =
-                                   ["Last-Modified: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{last_modified = ["Last-Modified: ", What,
+                                                "\r\n"]});
 accumulate_header({"Last-Modified", What}) ->
     accumulate_header({last_modified, What});
 
 accumulate_header({etag, What}) ->
-    put(outh, (get(outh))#outh{etag = ["Etag: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{etag = ["Etag: ", What, "\r\n"]});
 accumulate_header({"Etag", What}) ->
     accumulate_header({etag, What});
 
@@ -1678,39 +1472,39 @@ accumulate_header({set_cookie, What}) ->
     O = get(outh),
     Old = case O#outh.set_cookie of
               undefined -> "";
-              X -> X
+              X         -> X
           end,
-    put(outh, O#outh{set_cookie = ["Set-Cookie: " , What, "\r\n"|Old]});
+    put(outh, O#outh{set_cookie = ["Set-Cookie: ", What, "\r\n"|Old]});
 accumulate_header({"Set-Cookie", What}) ->
     accumulate_header({set_cookie, What});
 
 accumulate_header({content_range, What}) ->
-    put(outh, (get(outh))#outh{content_range =
-                                   ["Content-Range: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{content_range = ["Content-Range: ", What,
+                                                "\r\n"]});
 accumulate_header({"Content-Range", What}) ->
     accumulate_header({content_range, What});
 
 accumulate_header({content_type, What}) ->
-    put(outh, (get(outh))#outh{content_type = ["Content-Type: " ,
-                                               What, "\r\n"]});
+    put(outh, (get(outh))#outh{content_type = ["Content-Type: ", What,
+                                               "\r\n"]});
 accumulate_header({"Content-Type", What}) ->
     accumulate_header({content_type, What});
 
 accumulate_header({content_encoding, What}) ->
-    put(outh, (get(outh))#outh{encoding = deflate,
-                               content_encoding =
-                               ["Content-Encoding: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{encoding         = deflate,
+                               content_encoding = ["Content-Encoding: ", What,
+                                                   "\r\n"]});
 accumulate_header({"Content-Encoding", What}) ->
     accumulate_header({content_encoding, What});
 
 accumulate_header({content_length, Len}) when is_integer(Len) ->
     H = get(outh),
     put(outh, H#outh{
-                chunked = false,
+                chunked           = false,
                 transfer_encoding = undefined,
-                contlen = Len,
-                act_contlen = 0,
-                content_length = make_content_length_header(Len)});
+                contlen           = Len,
+                act_contlen       = 0,
+                content_length    = make_content_length_header(Len)});
 accumulate_header({"Content-Length", Len}) ->
     case Len of
         I when is_integer(I) ->
@@ -1720,28 +1514,25 @@ accumulate_header({"Content-Length", Len}) ->
     end;
 
 accumulate_header({transfer_encoding, What}) ->
-    put(outh, (get(outh))#outh{chunked = true,
-                               contlen = 0,
-                               transfer_encoding =
-                                   ["Transfer-Encoding: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{chunked           = true,
+                               contlen           = 0,
+                               transfer_encoding = ["Transfer-Encoding: ", What,
+                                                    "\r\n"]});
 accumulate_header({"Transfer-Encoding", What}) ->
     accumulate_header({transfer_encoding, What});
 
 accumulate_header({www_authenticate, What}) ->
-    put(outh, (get(outh))#outh{www_authenticate =
-                                   ["WWW-Authenticate: " , What, "\r\n"]});
+    put(outh, (get(outh))#outh{www_authenticate = ["WWW-Authenticate: ", What,
+                                                   "\r\n"]});
 accumulate_header({"WWW-Authenticate", What}) ->
     accumulate_header({"WWW-Authenticate", What});
 
 %% non-special headers (which may be special in a future Yaws version)
-
 accumulate_header({Name, What}) when is_list(Name) ->
     H = get(outh),
     Old = case H#outh.other of
-              undefined ->
-                  [];
-              V ->
-                  V
+              undefined -> [];
+              V         -> V
           end,
     H2 = H#outh{other = [Name, ": ", What, "\r\n", Old]},
     put(outh, H2);
@@ -1753,54 +1544,49 @@ accumulate_header(Data) when is_list(Data) ->
     Str = lists:flatten(Data),
     accumulate_header(split_header(Str)).
 
-split_header(Str) ->
+split_header(Str)           ->
     split_header(Str, []).
-split_header([], A) ->
-    {lists:reverse(A), ""};
-split_header([$:, $ |W], A) ->
-    {lists:reverse(A), W};
-split_header([$:|W], A) ->
-    {lists:reverse(A), W};
-split_header([C|S], A) ->
-    split_header(S, [C|A]).
+
+split_header([], A)         -> {lists:reverse(A), ""};
+split_header([$:, $ |W], A) -> {lists:reverse(A), W};
+split_header([$:|W], A)     -> {lists:reverse(A), W};
+split_header([C|S], A)      -> split_header(S, [C|A]).
 
 
 erase_header(connection) ->
-    put(outh, (get(outh))#outh{connection = undefined, doclose = false});
+    put(outh, (get(outh))#outh{connection=undefined, doclose=false});
 erase_header(server) ->
-    put(outh, (get(outh))#outh{server = undefined});
+    put(outh, (get(outh))#outh{server=undefined});
 erase_header(cache_control) ->
-    put(outh, (get(outh))#outh{cache_control = undefined});
+    put(outh, (get(outh))#outh{cache_control=undefined});
 erase_header(expires) ->
-    put(outh, (get(outh))#outh{expires = undefined});
+    put(outh, (get(outh))#outh{expires=undefined});
 erase_header(date) ->
-    put(outh, (get(outh))#outh{date = undefined});
+    put(outh, (get(outh))#outh{date=undefined});
 erase_header(allow) ->
-    put(outh, (get(outh))#outh{allow = undefined});
+    put(outh, (get(outh))#outh{allow=undefined});
 erase_header(last_modified) ->
-    put(outh, (get(outh))#outh{last_modified = undefined});
+    put(outh, (get(outh))#outh{last_modified=undefined});
 erase_header(etag) ->
-    put(outh, (get(outh))#outh{etag = undefined});
+    put(outh, (get(outh))#outh{etag=undefined});
 erase_header(set_cookie) ->
-    put(outh, (get(outh))#outh{set_cookie = undefined});
+    put(outh, (get(outh))#outh{set_cookie=undefined});
 erase_header(content_range) ->
-    put(outh, (get(outh))#outh{content_range = undefined});
+    put(outh, (get(outh))#outh{content_range=undefined});
 erase_header(content_length) ->
-    put(outh, (get(outh))#outh{contlen = 0,
-                               content_length = undefined});
+    put(outh, (get(outh))#outh{contlen=0, content_length=undefined});
 erase_header(content_type) ->
-    put(outh, (get(outh))#outh{content_type = undefined});
+    put(outh, (get(outh))#outh{content_type=undefined});
 erase_header(content_encoding) ->
-    put(outh, (get(outh))#outh{encoding = identity,
-                               content_encoding = undefined});
+    put(outh, (get(outh))#outh{encoding=identity, content_encoding=undefined});
 erase_header(transfer_encoding) ->
-    put(outh, (get(outh))#outh{chunked = false,
-                               act_contlen = 0,
+    put(outh, (get(outh))#outh{chunked           = false,
+                               act_contlen       = 0,
                                transfer_encoding = undefined});
 erase_header(www_authenticate) ->
-    put(outh, (get(outh))#outh{www_authenticate = undefined});
+    put(outh, (get(outh))#outh{www_authenticate=undefined});
 erase_header(location) ->
-    put(outh, (get(outh))#outh{location = undefined}).
+    put(outh, (get(outh))#outh{location=undefined}).
 
 getuid() ->
     case os:type() of
@@ -1878,13 +1664,15 @@ mkdir(Ack, [H|T]) ->
 
 ensure_exist(Path) ->
     case file:read_file_info(Path) of
-        {ok, _} -> ok;
-        _ -> case file:make_dir(Path) of
-                 ok -> ok;
-                 ERR ->
-                     error_logger:format("Failed to mkdir ~p: ~p~n",
-                                         [Path, ERR])
-             end
+        {ok, _} ->
+            ok;
+        _ ->
+            case file:make_dir(Path) of
+                ok ->
+                    ok;
+                ERR ->
+                    error_logger:format("Failed to mkdir ~p: ~p~n", [Path, ERR])
+            end
     end.
 
 
@@ -1893,7 +1681,6 @@ ensure_exist(Path) ->
 %% http/tcp send receive functions
 %%
 %%
-
 do_recv(Sock, Num, nossl) ->
     gen_tcp:recv(Sock, Num, (get(gc))#gconf.keepalive_timeout);
 do_recv(Sock, Num, ssl) ->
@@ -1904,7 +1691,8 @@ cli_recv(S, Num, SslBool) ->
     cli_recv_trace(yaws_trace:get_type(get(gc)), Res),
     Res.
 
-cli_recv_trace(undefined, _) -> ok;
+cli_recv_trace(undefined, _) ->
+    ok;
 cli_recv_trace(Trace, Res) ->
     case Res of
         {ok, Val} when is_tuple(Val) ->
@@ -1923,17 +1711,15 @@ cli_recv_trace(Trace, Res) ->
 
 gen_tcp_send(S, Data) ->
     Res = case (get(sc))#sconf.ssl of
-              undefined ->
-                  gen_tcp:send(S, Data);
-              _SSL ->
-                  ssl:send(S, Data)
+              undefined -> gen_tcp:send(S, Data);
+              _SSL      -> ssl:send(S, Data)
           end,
     Size = iolist_size(Data),
     case ?gc_has_debug((get(gc))) of
         false ->
             case Res of
                 ok ->
-		    yaws_stats:sent(Size),
+                    yaws_stats:sent(Size),
                     ok;
                 _Err ->
                     exit(normal)   %% keep quiet
@@ -1941,7 +1727,7 @@ gen_tcp_send(S, Data) ->
         true ->
             case Res of
                 ok ->
-		    yaws_stats:sent(Size),
+                    yaws_stats:sent(Size),
                     ?Debug("Sent ~p~n", [yaws_debug:nobin(Data)]),
                     ok;
                 Err ->
@@ -1969,14 +1755,12 @@ strip(Data) ->
 %% This is the api function
 %% return {Req, Headers}
 %%     or closed
-
 http_get_headers(CliSock, SSL) ->
     do_http_get_headers(CliSock, SSL).
 
 
 headers_to_str(Headers) ->
-    lists:map(fun(H) -> [H, "\r\n"] end,
-              yaws_api:reformat_header(Headers)).
+    lists:map(fun(H) -> [H, "\r\n"] end, yaws_api:reformat_header(Headers)).
 
 
 setopts(Sock, Opts, nossl) ->
@@ -1987,8 +1771,7 @@ setopts(Sock, Opts, ssl) ->
 do_http_get_headers(CliSock, SSL) ->
     case http_recv_request(CliSock,SSL) of
         bad_request ->
-            {#http_request{method=bad_request, version={0,9}},
-             #headers{}};
+            {#http_request{method=bad_request, version={0,9}}, #headers{}};
         closed ->
             closed;
         R ->
@@ -2015,7 +1798,8 @@ http_recv_request(CliSock, SSL) ->
             bad_request;
         {error, closed} ->
             closed;
-        {error, timeout} -> closed;
+        {error, timeout} ->
+            closed;
         _Other ->
             error_logger:format("Unhandled reply fr. do_recv() ~p~n", [_Other]),
             exit(normal)
@@ -2097,7 +1881,6 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
 
         %% these are here to be a little forgiving to
         %% bad (typically test script) clients
-
         {_, {http_error, "\r\n"}} ->
             http_collect_headers(CliSock, Req, H,SSL, Count+1);
         {_, {http_error, "\n"}} ->
@@ -2119,17 +1902,14 @@ http_collect_headers(_CliSock, _Req, _H, _SSL, _Count)  ->
 
 
 
-
 parse_auth(Orig = "Basic " ++ Auth64) ->
     case decode_base64(Auth64) of
         {error, _Err} ->
             {undefined, undefined, Orig};
         Auth ->
             case string:tokens(Auth, ":") of
-                [User, Pass] ->
-                    {User, Pass, Orig};
-                _ ->
-                    {undefined, undefined, Orig}
+                [User, Pass] -> {User, Pass, Orig};
+                _            -> {undefined, undefined, Orig}
             end
     end;
 parse_auth(Orig = "Negotiate " ++ _Auth64) ->
@@ -2145,48 +1925,42 @@ decode_base64(Auth64) ->
 decode_base64([], Acc) ->
     lists:reverse(Acc);
 decode_base64([Sextet1,Sextet2,$=,$=|Rest], Acc) ->
-    Bits2x6=
+    Bits2x6 =
         (d(Sextet1) bsl 18) bor
         (d(Sextet2) bsl 12),
-    Octet1=Bits2x6 bsr 16,
+    Octet1 = Bits2x6 bsr 16,
     decode_base64(Rest, [Octet1|Acc]);
 decode_base64([Sextet1,Sextet2,Sextet3,$=|Rest], Acc) ->
-    Bits3x6=
+    Bits3x6 =
         (d(Sextet1) bsl 18) bor
         (d(Sextet2) bsl 12) bor
         (d(Sextet3) bsl 6),
-    Octet1=Bits3x6 bsr 16,
-    Octet2=(Bits3x6 bsr 8) band 16#ff,
+    Octet1 = Bits3x6 bsr 16,
+    Octet2 = (Bits3x6 bsr 8) band 16#ff,
     decode_base64(Rest, [Octet2,Octet1|Acc]);
 decode_base64([Sextet1,Sextet2,Sextet3,Sextet4|Rest], Acc) ->
-    Bits4x6=
+    Bits4x6 =
         (d(Sextet1) bsl 18) bor
         (d(Sextet2) bsl 12) bor
         (d(Sextet3) bsl 6) bor
         d(Sextet4),
-    Octet1=Bits4x6 bsr 16,
-    Octet2=(Bits4x6 bsr 8) band 16#ff,
-    Octet3=Bits4x6 band 16#ff,
+    Octet1 = Bits4x6 bsr 16,
+    Octet2 = (Bits4x6 bsr 8) band 16#ff,
+    Octet3 = Bits4x6 band 16#ff,
     decode_base64(Rest, [Octet3,Octet2,Octet1|Acc]);
 decode_base64(_CatchAll, _Acc) ->
     {error, bad_base64}.
 
-d(X) when X >= $A, X =<$Z ->
-    X-65;
-d(X) when X >= $a, X =<$z ->
-    X-71;
-d(X) when X >= $0, X =<$9 ->
-    X+4;
-d($+) -> 62;
-d($/) -> 63;
-d(_) -> 63.
+d(X) when X >= $A, X =<$Z -> X-65;
+d(X) when X >= $a, X =<$z -> X-71;
+d(X) when X >= $0, X =<$9 -> X+4;
+d($+)                     -> 62;
+d($/)                     -> 63;
+d(_)                      -> 63.
 
 
-flag(CurFlag, Bit, true) ->
-    CurFlag bor Bit;
-flag(CurFlag, Bit, false) ->
-    CurFlag band (bnot Bit).
-
+flag(CurFlag, Bit, true)  -> CurFlag bor Bit;
+flag(CurFlag, Bit, false) -> CurFlag band (bnot Bit).
 
 
 %% misc debug funcs .... use from cli only
@@ -2201,10 +1975,8 @@ modules() ->
     M = case application:get_all_key(yaws) of
             {ok, L} ->
                 case lists:keysearch(modules, 1, L) of
-                    {value, {modules, Mods}} ->
-                        Mods;
-                    _ ->
-                        []
+                    {value, {modules, Mods}} -> Mods;
+                    _                        -> []
                 end;
             _ ->
                 []
@@ -2231,16 +2003,13 @@ upto_char(_, []) ->
 %% deep lists
 upto_char(Char, [H|T]) when is_list(H) ->
     case lists:member(Char ,H) of
-        true ->
-            upto_char(Char, H);
-        false ->
-            [H, upto_char(Char, T)]
+        true  -> upto_char(Char, H);
+        false -> [H, upto_char(Char, T)]
     end.
 
 
 %% map over deep list and maintain
 %% list structure as is
-
 deepmap(Fun, [H|T]) when is_list(H) ->
     [deepmap(Fun, H) | deepmap(Fun, T)];
 deepmap(Fun, [H|T]) ->
@@ -2250,31 +2019,24 @@ deepmap(_Fun, []) ->
 
 
 sconf_to_srvstr(SC) ->
-    redirect_scheme(SC) ++
-        redirect_host(SC,undefined).
+    redirect_scheme(SC) ++ redirect_host(SC,undefined).
 
 redirect_scheme(SC) ->
     case {SC#sconf.ssl,SC#sconf.rmethod} of
-        {_, Method} when is_list(Method) ->
-            Method++"://";
-        {undefined,_} ->
-            "http://";
-        {_SSl,_} ->
-            "https://"
+        {_, Method} when is_list(Method) -> Method++"://";
+        {undefined, _}                   -> "http://";
+        {_SSl, _}                        -> "https://"
     end.
 
 redirect_host(SC, HostHdr) ->
     case SC#sconf.rhost of
         undefined ->
             if HostHdr == undefined ->
-                    ServerName = SC#sconf.servername,
-                    SnameNoPort =
-                        case string:chr(ServerName, $:) of
-                            0 ->
-                                ServerName;
-                            N ->
-                                lists:sublist(ServerName, N-1)
-                        end,
+                    ServerName  = SC#sconf.servername,
+                    SnameNoPort = case string:chr(ServerName, $:) of
+                                      0 -> ServerName;
+                                      N -> lists:sublist(ServerName, N-1)
+                                  end,
                     SnameNoPort ++ redirect_port(SC);
                true ->
                     HostHdr
@@ -2285,19 +2047,16 @@ redirect_host(SC, HostHdr) ->
 
 redirect_port(SC) ->
     case {SC#sconf.rmethod, SC#sconf.ssl, SC#sconf.port} of
-        {"https", _, 443} -> "";
-        {"http", _, 80} -> "";
-        {_, undefined, 80} -> "";
-        {_, undefined, Port} ->
-            [$:|integer_to_list(Port)];
-        {_, _SSL, 443} ->
-            "";
-        {_, _SSL, Port} ->
-            [$:|integer_to_list(Port)]
+        {"https", _, 443}    -> "";
+        {"http", _, 80}      -> "";
+        {_, undefined, 80}   -> "";
+        {_, undefined, Port} -> [$:|integer_to_list(Port)];
+        {_, _SSL, 443}       -> "";
+        {_, _SSL, Port}      -> [$:|integer_to_list(Port)]
     end.
 
 redirect_scheme_port(SC) ->
-    Scheme = redirect_scheme(SC),
+    Scheme   = redirect_scheme(SC),
     PortPart = redirect_port(SC),
     {Scheme, PortPart}.
 
@@ -2315,10 +2074,8 @@ tmpdir(DefaultTmpDir) ->
                         %%
                         false ->
                             case file:read_file_info("C:/WINNT/Temp") of
-                                {error, _} ->
-                                    "C:/WINDOWS/Temp";
-                                {ok, _} ->
-                                    "C:/WINNT/Temp"
+                                {error, _} -> "C:/WINDOWS/Temp";
+                                {ok, _}    -> "C:/WINNT/Temp"
                             end;
                         PathTMP ->
                             PathTMP
@@ -2327,7 +2084,7 @@ tmpdir(DefaultTmpDir) ->
                     PathTEMP
             end;
         _ ->
-	    DefaultTmpDir
+            DefaultTmpDir
     end.
 
 %% mktemp function borrowed from Klacke's misc module
@@ -2335,61 +2092,59 @@ tmpdir(DefaultTmpDir) ->
 %% Note that mktemp/2 could be exported too, but no Yaws
 %% code needs it, yet anyway.
 mktemp(Template) ->
-   mktemp(Template, file).
+    mktemp(Template, file).
 
 mktemp(Template, Ret) ->
-   Tdir = tmpdir("/tmp"),
-   Max = 1000,
-   mktemp(Tdir, Template, Ret, 0, Max, "").
+    Tdir = tmpdir("/tmp"),
+    Max = 1000,
+    mktemp(Tdir, Template, Ret, 0, Max, "").
 
 mktemp(Dir, Template, Ret, I, Max, Suffix) when I < Max ->
-   {X,Y,Z} = now(),
-   PostFix = integer_to_list(X) ++ "-" ++ integer_to_list(Y) ++ "-" ++
-             integer_to_list(Z),
-   F = filename:join(Dir, Template ++ [$_ | PostFix] ++ Suffix),
-   filelib:ensure_dir(F),
-   case file:open(F, [read, raw]) of
-       {error, enoent} when Ret == file ->
-           {ok, F};
-       {error, enoent} when Ret == fd ->
-           case file:open(F, [read, write, raw]) of
-               {ok, Fd} ->
-                   file:delete(F),
-                   {ok, Fd};
-               Err ->
-                   Err
-           end;
-       {error, enoent} when Ret == binfd ->
-           case file:open(F, [read, write, raw, binary]) of
-               {ok, Fd} ->
-                   file:delete(F),
-                   {ok, Fd};
-               Err ->
-                   Err
-           end;
-       {ok, Fd} ->
-           file:close(Fd),
-           mktemp(Dir, Template, Ret, I+1, Max, Suffix);
-       _Err ->
-           mktemp(Dir, Template, Ret, I+1, Max, Suffix)
-   end;
+    {X,Y,Z}  = now(),
+    PostFix = integer_to_list(X) ++ "-" ++ integer_to_list(Y) ++ "-" ++
+        integer_to_list(Z),
+    F = filename:join(Dir, Template ++ [$_ | PostFix] ++ Suffix),
+    filelib:ensure_dir(F),
+    case file:open(F, [read, raw]) of
+        {error, enoent} when Ret == file ->
+            {ok, F};
+        {error, enoent} when Ret == fd ->
+            case file:open(F, [read, write, raw]) of
+                {ok, Fd} ->
+                    file:delete(F),
+                    {ok, Fd};
+                Err ->
+                    Err
+            end;
+        {error, enoent} when Ret == binfd ->
+            case file:open(F, [read, write, raw, binary]) of
+                {ok, Fd} ->
+                    file:delete(F),
+                    {ok, Fd};
+                Err ->
+                    Err
+            end;
+        {ok, Fd} ->
+            file:close(Fd),
+            mktemp(Dir, Template, Ret, I+1, Max, Suffix);
+        _Err ->
+            mktemp(Dir, Template, Ret, I+1, Max, Suffix)
+    end;
 mktemp(_Dir, _Template, _Ret, _I, _Max, _Suffix) ->
-   {error, too_many}.
+    {error, too_many}.
 
 
 %% This feature is usable together with
 %% privbind and authbind on linux
-
 home() ->
     case os:getenv("YAWSHOME") of
-	false ->
-	    os:getenv("HOME");
-	DIR ->
-	    DIR
+        false -> os:getenv("HOME");
+        DIR   -> DIR
     end.
 
 id_dir(Id) ->
     filename:join([tmpdir(), "yaws", to_list(Id)]).
+
 ctl_file(Id) ->
     filename:join([id_dir(Id), "CTL"]).
 
@@ -2397,12 +2152,9 @@ ctl_file(Id) ->
 eat_crnl(Fd,SSL) ->
     setopts(Fd, [{packet, line}],SSL),
     case do_recv(Fd,0, SSL) of
-        {ok, <<13,10>>} ->
-            ok;
-        {ok, [13,10]} ->
-            ok;
-        Err ->
-            {error, Err}
+        {ok, <<13,10>>} -> ok;
+        {ok, [13,10]}   -> ok;
+        Err             -> {error, Err}
     end.
 
 get_chunk_num(Fd,SSL) ->
@@ -2414,18 +2166,12 @@ get_chunk_num(Fd,SSL) ->
             exit(normal)
     end.
 
-nonl(B) when is_binary(B) ->
-    nonl(binary_to_list(B));
-nonl([10|T]) ->
-    nonl(T);
-nonl([13|T]) ->
-    nonl(T);
-nonl([32|T]) ->
-    nonl(T);
-nonl([H|T]) ->
-    [H|nonl(T)];
-nonl([]) ->
-    [].
+nonl(B) when is_binary(B) -> nonl(binary_to_list(B));
+nonl([10|T])              -> nonl(T);
+nonl([13|T])              -> nonl(T);
+nonl([32|T])              -> nonl(T);
+nonl([H|T])               -> [H|nonl(T)];
+nonl([])                  -> [].
 
 
 
