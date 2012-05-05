@@ -24,5 +24,5 @@ install:	.install
 
 .install:
 	PREFIX='$(PREFIX)' ETCDIR='$(ETCDIR)' VARDIR='$(VARDIR)' \
-	ERLBINDIR='$(ERLBINDIR)' DESTDIR='$(DESTDIR)' \
+	ERLBINDIR='$(ERLBINDIR)' DESTDIR='$(DESTDIR)' LIBDIR='$(LIBDIR)' \
 	ERL='$(subst ",,$(ERL))' WERL='$(subst ",,$(WERL))' ./regular-install

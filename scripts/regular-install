@@ -8,7 +8,7 @@ rm -rf /tmp/yaws 2>/dev/null
 set -e
 
 ./Install "${PREFIX}" "${ERL}" "${WERL}" "${ETCDIR}/" \
-    "${VARDIR}/" "${ERLBINDIR}/" "${DESTDIR}"
+    "${VARDIR}/" "${ERLBINDIR}/" "${DESTDIR}" "${LIBDIR}"
 
 conffile="${DESTDIR}${ETCDIR}/yaws/yaws.conf"
 if [ -f "$conffile" ]; then
