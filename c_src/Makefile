@@ -34,12 +34,12 @@ clean:
 	-rm -f $(PRIV_FILES) setuid_drv.$(OBJ) epam.$(OBJ) yaws_sendfile_drv.$(OBJ) hashtable.$(OBJ)
 
 install:	$(PRIV_FILES)
-	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/yaws/priv/lib
-	$(INSTALL) $(PRIV_FILES) $(DESTDIR)$(PREFIX)/lib/yaws/priv/lib
+	$(INSTALL) -d $(DESTDIR)$(LIBDIR)/yaws/priv/lib
+	$(INSTALL) $(PRIV_FILES) $(DESTDIR)$(LIBDIR)/yaws/priv/lib
 ifndef WIN32
-	if [ `id -u` = "0" -a -d $(DESTDIR)$(PREFIX)/lib/yaws/priv/epam ]; then \
-		chown root $(DESTDIR)$(PREFIX)/lib/yaws/priv/epam; \
-		chmod a+s $(DESTDIR)$(PREFIX)/lib/yaws/priv/epam; \
+	if [ `id -u` = "0" -a -d $(DESTDIR)$(LIBDIR)/yaws/priv/epam ]; then \
+		chown root $(DESTDIR)$(LIBDIR)/yaws/priv/epam; \
+		chmod a+s $(DESTDIR)$(LIBDIR)/yaws/priv/epam; \
 	fi
 endif
 

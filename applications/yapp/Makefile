@@ -24,8 +24,8 @@ cleandocs:
 	rm -rf doc/*.html doc/edoc-info doc/stylesheet.css doc/*.png
 
 install: all docs
-	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/$(APPNAME)/ebin
-	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/$(APPNAME)/priv/docroot
-	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/$(APPNAME)/doc
-	(tar cf - ebin priv doc) | (cd $(DESTDIR)$(PREFIX)/lib/yapp; tar xf - )
+	$(INSTALL) -d $(DESTDIR)$(LIBDIR)/$(APPNAME)/ebin
+	$(INSTALL) -d $(DESTDIR)$(LIBDIR)/$(APPNAME)/priv/docroot
+	$(INSTALL) -d $(DESTDIR)$(LIBDIR)/$(APPNAME)/doc
+	(tar cf - ebin priv doc) | (cd $(DESTDIR)$(LIBDIR)/yapp; tar xf - )
 

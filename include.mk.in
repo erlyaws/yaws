@@ -3,8 +3,10 @@
 
 PREFIX             = @prefix@
 prefix             = ${PREFIX}
+exec_prefix        = @exec_prefix@
 ETCDIR             = @sysconfdir@
 VARDIR             = @localstatedir@
+LIBDIR             = @libdir@
 
 DVILATEX = @DVILATEX@
 PDFLATEX = @PDFLATEX@
