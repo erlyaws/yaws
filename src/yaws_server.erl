@@ -2625,47 +2625,47 @@ deliver_dyn_part(CliSock,                       % essential params
     put(yaws_ut, UT),
     put(yaws_arg, Arg),
     put(client_data_pos, CliDataPos0),
-    try
-        Res = YawsFun(Arg),
-        case handle_out_reply(Res, LineNo, YawsFile, UT, Arg) of
-            {get_more, Cont, State} when element(1, Arg#arg.clidata) == partial  ->
-                CliDataPos1 = get(client_data_pos),
-                More = get_more_post_data(CliDataPos1, Arg),
-                A2 = Arg#arg{clidata=More, cont=Cont, state=State},
-                deliver_dyn_part(
-                  CliSock, LineNo, YawsFile, CliDataPos1+size(un_partial(More)),
-                  A2, UT, YawsFun, DeliverCont
-                 );
-            break ->
-                finish_up_dyn_file(Arg, CliSock);
-            {page, Page} ->
-                {page, Page};
-            Arg2 = #arg{} ->
-                DeliverCont(Arg2);
-            {streamcontent, _, _} ->
-                Priv = deliver_accumulated(Arg, CliSock, decide, undefined, stream),
-                stream_loop_send(Priv, CliSock, 30000);
-            %% For other timeout values (other than 30 second)
-            {streamcontent_with_timeout, _, _, TimeOut} ->
-                Priv = deliver_accumulated(Arg, CliSock, decide, undefined, stream),
-                stream_loop_send(Priv, CliSock, TimeOut);
-            {streamcontent_with_size, Sz, _, _} ->
-                Priv = deliver_accumulated(Arg, CliSock, decide, Sz, stream),
-                stream_loop_send(Priv, CliSock, 30000);
-            {streamcontent_from_pid, _, Pid} ->
-                Priv = deliver_accumulated(Arg, CliSock, no, undefined, stream),
-                wait_for_streamcontent_pid(Priv, CliSock, Pid);
-            {websocket, CallbackMod, Opts} ->
-                %% The handshake passes control over the socket to OwnerPid
-                %% and terminates the Yaws worker!
-                yaws_websockets:start(Arg, CallbackMod, Opts);
-            _ ->
-                DeliverCont(Arg)
-        end
-    catch
-        Class:Exc ->
-            handle_out_reply({throw, Class, Exc}, LineNo, YawsFile, UT, Arg),
-            finish_up_dyn_file(Arg, CliSock)
+    OutReply = try
+                   Res = YawsFun(Arg),
+                   handle_out_reply(Res, LineNo, YawsFile, UT, Arg)
+               catch
+                   Class:Exc ->
+                       handle_out_reply({throw, Class, Exc}, LineNo, YawsFile, UT, Arg)
+               end,
+    case OutReply of
+        {get_more, Cont, State} when element(1, Arg#arg.clidata) == partial  ->
+            CliDataPos1 = get(client_data_pos),
+            More = get_more_post_data(CliDataPos1, Arg),
+            A2 = Arg#arg{clidata=More, cont=Cont, state=State},
+            deliver_dyn_part(
+              CliSock, LineNo, YawsFile, CliDataPos1+size(un_partial(More)),
+              A2, UT, YawsFun, DeliverCont
+             );
+        break ->
+            finish_up_dyn_file(Arg, CliSock);
+        {page, Page} ->
+            {page, Page};
+        Arg2 = #arg{} ->
+            DeliverCont(Arg2);
+        {streamcontent, _, _} ->
+            Priv = deliver_accumulated(Arg, CliSock, decide, undefined, stream),
+            stream_loop_send(Priv, CliSock, 30000);
+        %% For other timeout values (other than 30 second)
+        {streamcontent_with_timeout, _, _, TimeOut} ->
+            Priv = deliver_accumulated(Arg, CliSock, decide, undefined, stream),
+            stream_loop_send(Priv, CliSock, TimeOut);
+        {streamcontent_with_size, Sz, _, _} ->
+            Priv = deliver_accumulated(Arg, CliSock, decide, Sz, stream),
+            stream_loop_send(Priv, CliSock, 30000);
+        {streamcontent_from_pid, _, Pid} ->
+            Priv = deliver_accumulated(Arg, CliSock, no, undefined, stream),
+            wait_for_streamcontent_pid(Priv, CliSock, Pid);
+        {websocket, CallbackMod, Opts} ->
+            %% The handshake passes control over the socket to OwnerPid
+            %% and terminates the Yaws worker!
+            yaws_websockets:start(Arg, CallbackMod, Opts);
+        _ ->
+            DeliverCont(Arg)
     end.
 
 finish_up_dyn_file(Arg, CliSock) ->
