@@ -281,6 +281,7 @@
           window_size       = -15,     % -15..-9
           mem_level         = 8,       % 1..9
           strategy          = default, % default | filtered | huffman_only
+          use_gzip_static   = false,
 
           %% [{Type, undefined|SubType}] | all
           mime_types = ?DEFAULT_COMPRESSIBLE_MIME_TYPES

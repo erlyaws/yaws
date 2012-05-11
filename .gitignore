@@ -31,6 +31,7 @@ test/t[12345]/yaws.conf
 www/yaws.pdf
 www/yaws.ps
 www/*.txt
+www/*.txt.*
 www/test.php
 applications/yapp/doc/edoc-info
 applications/yapp/doc/erlang.png

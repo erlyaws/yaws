@@ -2500,6 +2500,12 @@ The following directives are allowed inside a server definition.
                \verb+zlib(3erl)+ for more details on the \verb+strategy+
                parameter. The default value is default.
 
+             \item \verb+use_gzip_static = true | false+ --- If true,
+               \Yaws\ will try to serve precompressed versions of static
+               files. It will look for precompressed files in the same location
+               as original files that end in ".gz". Only files that do not fit
+               in the cache are concerned. The default value is false.
+
              \item \verb+mime_types = ListOfTypes | defaults | all+ ---
                Restricts the deflate compression to particular mime types. The
                special value all enable it for all types (It is a synonym of

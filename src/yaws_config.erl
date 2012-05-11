@@ -1673,6 +1673,14 @@ fload(FD, server_deflate, GC, C, Cs, Lno, Chars, Deflate) ->
                     {error,
                      ?F("Unknown strategy ~p at line ~w", [Strategy, Lno])}
             end;
+        ["use_gzip_static", '=', Bool] ->
+            case is_bool(Bool) of
+                {true, Val} ->
+                    D2 = Deflate#deflate{use_gzip_static=Val},
+                    fload(FD, server_deflate, GC, C, Cs, Lno+1, Next, D2);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
+            end;
         ['<', "/deflate", '>'] ->
             D2 = case Deflate#deflate.mime_types of
                      [] ->

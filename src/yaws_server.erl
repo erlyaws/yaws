@@ -3528,7 +3528,7 @@ decide_deflate(true, SC, Arg, Data, decide, Mode) ->
                             yaws:outh_set_content_encoding(deflate),
                             {ok, DB} = yaws_zlib:gzip(to_binary(Data), DOpts),
                             {data, DB};
-                        true when Mode =:= stream ->
+                        true -> %% Mode == stream | {file,_,_}
                             ?Debug("Compress streamed data~n", []),
                             yaws:outh_set_content_encoding(deflate),
                             true;
@@ -3555,8 +3555,8 @@ deliver_accumulated(Sock) ->
     deliver_accumulated(undefined, Sock, undefined, final).
 
 %% Arg           = #arg{} | undefined
-%% ContentLength = Int | undefined
-%% Mode          = final | stream
+%% ContentLength = Int    | undefined
+%% Mode          = final  | stream | {file, File, MTime}
 %%
 %% For Mode==final: (all content has been accumulated before calling
 %%                   deliver_accumulated)
@@ -3565,6 +3565,11 @@ deliver_accumulated(Sock) ->
 %% For Mode==stream:
 %%     Result: opaque value to be threaded through
 %%             send_streamcontent_chunk / end_streaming
+%%
+%% For Mode=={file,File,MTime}:
+%%     Result: {gzfile, GzFile} is gzip_static option is enabled and if
+%%     GzFile exists. Else, same result than for Mode==stream
+
 deliver_accumulated(Arg, Sock, ContentLength, Mode) ->
     %% See if we must close the connection
     receive
@@ -3595,39 +3600,58 @@ deliver_accumulated(Arg, Sock, ContentLength, Mode) ->
     Result.
 
 deflate_accumulated(Arg, Content, ContentLength, Mode) ->
-    SC  = get(sc),
-    Enc = yaws:outh_get_content_encoding(),
+    SC    = get(sc),
+    Enc   = yaws:outh_get_content_encoding(),
+    DOpts = SC#sconf.deflate_options,
     {Result, Data, Size} =
         case decide_deflate(?sc_has_deflate(SC), SC, Arg, Content, Enc, Mode) of
-            {data, Bin} -> % implies Mode==final
+            {data, Bin} ->
+                %% implies Mode==final
                 {undefined, Bin, binary_size(Bin)};
-            true -> % implies Mode==stream
+
+            true when Mode == stream; DOpts#deflate.use_gzip_static == false ->
                 Z = zlib:open(),
                 {ok, Priv, Bin} =
-                    yaws_zlib:gzipDeflate(
-                      Z, yaws_zlib:gzipInit(Z, SC#sconf.deflate_options),
-                      to_binary(Content), none
-                     ),
+                    yaws_zlib:gzipDeflate(Z,yaws_zlib:gzipInit(Z,DOpts),
+                                          to_binary(Content),none),
                 {{Z, Priv}, Bin, undefined};
+            true ->
+                %% implies Mode=={file,_,_} and use_gzip_static==true
+                {file, File, MTime} = Mode,
+                GzFile = File++".gz",
+                case prim_file:read_file_info(GzFile) of
+                    {ok, FI} when FI#file_info.type == regular,
+                                  FI#file_info.mtime >= MTime ->
+                        {{gzfile, GzFile}, <<>>, FI#file_info.size};
+                    _ ->
+                        Z = zlib:open(),
+                        {ok, Priv, Bin} =
+                            yaws_zlib:gzipDeflate(Z,yaws_zlib:gzipInit(Z,DOpts),
+                                                  to_binary(Content),none),
+                        {{Z, Priv}, Bin, undefined}
+                end;
+
+            false when Mode == final ->
+                {undefined, Content, binary_size(Content)};
             false ->
-                Sz = case Mode of
-                         final  -> binary_size(Content);
-                         stream -> ContentLength
-                     end,
-                {undefined, Content, Sz}
+                %% implies Mode=stream | {file,_,_}
+                {undefined, Content, ContentLength}
         end,
     case Size of
         undefined -> yaws:outh_fix_doclose();
         _         -> yaws:accumulate_header({content_length, Size})
     end,
-    case make_chunk(Data) of
-        empty ->
-            {Result, []};
-        {S, Chunk} when Mode =:= stream ->
-            yaws:outh_inc_act_contlen(S),
-            {Result, Chunk};
+    case Mode of
+        final ->
+            {Result, Data};
         _ ->
-            {Result, Data}
+            case make_chunk(Data) of
+                empty ->
+                    {Result, []};
+                {S, Chunk} ->
+                    yaws:outh_inc_act_contlen(S),
+                    {Result, Chunk}
+            end
     end.
 
 
@@ -3782,7 +3806,8 @@ deliver_large_file(CliSock,  _Req, UT, Range) ->
                  yaws:outh_set_content_encoding(identity),
                  (To - From + 1)
          end,
-    case deliver_accumulated(undefined, CliSock, Sz, stream) of
+    Mode = {file, UT#urltype.fullpath, mtime(UT#urltype.finfo)},
+    case deliver_accumulated(undefined, CliSock, Sz, Mode) of
         discard -> ok;
         Priv    -> send_file(CliSock, UT#urltype.fullpath, Range, Priv)
     end,
@@ -3791,16 +3816,26 @@ deliver_large_file(CliSock,  _Req, UT, Range) ->
 
 send_file(CliSock, Path, all, undefined) when is_port(CliSock) ->
     ?Debug("send_file(~p,~p,no ...)~n", [CliSock, Path]),
-    yaws_sendfile:send(CliSock, Path),
-    {ok, Size} = yaws:filesize(Path),
+    {ok, Size} = yaws_sendfile:send(CliSock, Path),
     yaws_stats:sent(Size);
+send_file(CliSock, Path, all, undefined) ->
+    ?Debug("send_file(~p,~p,no ...)~n", [CliSock, Path]),
+    {ok, Fd} = file:open(Path, [raw, binary, read]),
+    send_file(CliSock, Fd, undefined);
+send_file(CliSock, _, all, {gzfile, GzFile}) when is_port(CliSock) ->
+    ?Debug("send_file(~p,~p, ...)~n", [CliSock, GzFile]),
+    {ok, Size} = yaws_sendfile:send(CliSock, GzFile),
+    yaws_stats:sent(Size);
+send_file(CliSock, _, all, {gzfile, GzFile}) ->
+    ?Debug("send_file(~p,~p, ...)~n", [CliSock, GzFile]),
+    {ok, Fd} = file:open(GzFile, [raw, binary, read]),
+    send_file(CliSock, Fd, undefined);
 send_file(CliSock, Path, all, Priv) ->
     ?Debug("send_file(~p,~p, ...)~n", [CliSock, Path]),
     {ok, Fd} = file:open(Path, [raw, binary, read]),
     send_file(CliSock, Fd, Priv);
 send_file(CliSock, Path,  {fromto, From, To, _Tot}, _) when is_port(CliSock) ->
-    Size = To - From + 1,
-    yaws_sendfile:send(CliSock, Path, From, Size),
+    {ok, Size} = yaws_sendfile:send(CliSock, Path, From, (To-From+1)),
     yaws_stats:sent(Size);
 send_file(CliSock, Path,  {fromto, From, To, _Tot}, _) ->
     {ok, Fd} = file:open(Path, [raw, binary, read]),

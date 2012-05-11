@@ -464,6 +464,15 @@ for more details on the \fIstrategy\fR parameter. The default value is
 .RE
 .HP
 
+\fBuse_gzip_static = true | false\fR
+.RS 12
+If true, Yaws will try to serve precompressed versions of static files. It will
+look for precompressed files in the same location as original files that end in
+".gz". Only files that do not fit in the cache are concerned. The default value
+is \fIfalse\fR.
+.RE
+.HP
+
 
 \fBmime_types = ListOfTypes | defaults | all\fR
 .RS 12
