@@ -204,39 +204,47 @@ compat_send(Out, Filename, Offset, Count0) ->
         {ok, Fd} ->
             file:position(Fd, {bof, Offset}),
             ChunkSize = (get(gc))#gconf.large_file_chunk_size,
-            Ret = loop_send(Fd, ChunkSize, file:read(Fd, ChunkSize), Out, Count),
+            Ret = loop_send(Fd, ChunkSize, file:read(Fd, ChunkSize), Out,
+                            Count, 0),
             file:close(Fd),
             Ret;
         Err ->
             Err
     end.
 
-loop_send(Fd, ChunkSize, {ok, Bin}, Out, all) ->
+loop_send(Fd, ChunkSize, {ok, Bin}, Out, all, BytesSent) ->
     case gen_tcp:send(Out, Bin) of
         ok ->
-            loop_send(Fd, ChunkSize, file:read(Fd, ChunkSize), Out, all);
+            loop_send(Fd, ChunkSize, file:read(Fd, ChunkSize), Out, all,
+                      BytesSent+size(Bin));
         Err ->
             Err
     end;
-loop_send(_Fd, _ChunkSize, eof, _Out, _) ->
-    ok;
-loop_send(Fd, ChunkSize, {ok, Bin}, Out, Count) ->
+loop_send(_Fd, _ChunkSize, eof, _Out, _, BytesSent) ->
+    {ok, BytesSent};
+loop_send(Fd, ChunkSize, {ok, Bin}, Out, Count, BytesSent) ->
     Sz = size(Bin),
     if Sz < Count ->
             case gen_tcp:send(Out, Bin) of
                 ok ->
                     loop_send(Fd, ChunkSize, file:read(Fd, ChunkSize),
-                              Out, Count-Sz);
+                              Out, Count-Sz, BytesSent+Sz);
                 Err ->
                     Err
             end;
        Sz == Count ->
-            gen_tcp:send(Out, Bin);
+            case gen_tcp:send(Out, Bin) of
+                ok  -> {ok, BytesSent+Sz};
+                Err -> Err
+            end;
        Sz > Count ->
             <<Deliver:Count/binary , _/binary>> = Bin,
-            gen_tcp:send(Out, Deliver)
+            case gen_tcp:send(Out, Deliver) of
+                ok  -> {ok, BytesSent+Count};
+                Err -> Err
+            end
     end;
-loop_send(_Fd, _, Err, _,_) ->
+loop_send(_Fd, _, Err, _, _, _) ->
     Err.
 
 -endif.
