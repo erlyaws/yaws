@@ -314,7 +314,7 @@
           doclose,             % bool
           chunked,             % bool
           exceedmaxuses=false, % bool, true if hit keep-alive max uses
-          encoding=identity,   % identity, deflate
+          encoding=decide,     % decide, identity, deflate
           contlen,             % integer
           act_contlen,         % actual content length for dynamic pages
                                % and the total set of out headers we can have as

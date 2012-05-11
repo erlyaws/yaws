@@ -921,8 +921,12 @@ outh_set_content_type(Mime) ->
     ok.
 
 outh_set_content_encoding(Encoding) ->
-    put(outh, (get(outh))#outh{content_encoding =
-                                   make_content_encoding_header(Encoding)}),
+    ContentEncoding = case Encoding of
+                          identity -> undefined;
+                          deflate  -> make_content_encoding_header(Encoding)
+                      end,
+    put(outh, (get(outh))#outh{encoding         = Encoding,
+                               content_encoding = ContentEncoding}),
     ok.
 
 outh_set_cookie(C) ->
@@ -967,7 +971,7 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
                   {false, To - From + 1}
           end,
     Encoding = case DoDeflate of
-                   true  -> deflate;
+                   true  -> decide;
                    false -> identity
                end,
     Chunked = Chunked0 and (Length == undefined),
@@ -1294,10 +1298,10 @@ make_content_length_header(FI) when is_record(FI, file_info) ->
 make_content_length_header(_) ->
     undefined.
 
-make_content_encoding_header(identity) ->
-    undefined;
 make_content_encoding_header(deflate) ->
-    "Content-Encoding: gzip\r\n".
+    "Content-Encoding: gzip\r\n";
+make_content_encoding_header(_) ->
+    undefined.
 
 make_connection_close_header(true) ->
     "Connection: close\r\n";
@@ -1491,9 +1495,15 @@ accumulate_header({"Content-Type", What}) ->
     accumulate_header({content_type, What});
 
 accumulate_header({content_encoding, What}) ->
-    put(outh, (get(outh))#outh{encoding         = deflate,
-                               content_encoding = ["Content-Encoding: ", What,
-                                                   "\r\n"]});
+    case What of
+        "identity" ->
+            put(outh, (get(outh))#outh{encoding         = identity,
+                                       content_encoding = undefined});
+        _ ->
+            put(outh, (get(outh))#outh{encoding         = deflate,
+                                       content_encoding = ["Content-Encoding: ",
+                                                           What, "\r\n"]})
+    end;
 accumulate_header({"Content-Encoding", What}) ->
     accumulate_header({content_encoding, What});
 
@@ -1578,7 +1588,7 @@ erase_header(content_length) ->
 erase_header(content_type) ->
     put(outh, (get(outh))#outh{content_type=undefined});
 erase_header(content_encoding) ->
-    put(outh, (get(outh))#outh{encoding=identity, content_encoding=undefined});
+    put(outh, (get(outh))#outh{encoding=decide, content_encoding=undefined});
 erase_header(transfer_encoding) ->
     put(outh, (get(outh))#outh{chunked           = false,
                                act_contlen       = 0,

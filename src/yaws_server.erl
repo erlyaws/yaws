@@ -34,7 +34,7 @@
 
 %% internal exports
 -export([gserv/3,acceptor0/2, load_and_run/2, done_or_continue/0,
-         accumulate_content/1, deliver_accumulated/5, setup_dirs/1,
+         accumulate_content/1, deliver_accumulated/4, setup_dirs/1,
          deliver_dyn_part/8, finish_up_dyn_file/2, gserv_loop/4
         ]).
 
@@ -1623,7 +1623,7 @@ handle_request(CliSock, ARG, _N)
                 _         -> ok
             end,
             accumulate_content(State#rewrite_response.content),
-            deliver_accumulated(ARG, CliSock, decide, undefined, final)
+            deliver_accumulated(ARG, CliSock, undefined, final)
     end,
     done_or_continue();
 
@@ -2648,17 +2648,21 @@ deliver_dyn_part(CliSock,                       % essential params
         Arg2 = #arg{} ->
             DeliverCont(Arg2);
         {streamcontent, _, _} ->
-            Priv = deliver_accumulated(Arg, CliSock, decide, undefined, stream),
+            Priv = deliver_accumulated(Arg, CliSock, undefined, stream),
             stream_loop_send(Priv, CliSock, 30000);
         %% For other timeout values (other than 30 second)
         {streamcontent_with_timeout, _, _, TimeOut} ->
-            Priv = deliver_accumulated(Arg, CliSock, decide, undefined, stream),
+            Priv = deliver_accumulated(Arg, CliSock, undefined, stream),
             stream_loop_send(Priv, CliSock, TimeOut);
         {streamcontent_with_size, Sz, _, _} ->
-            Priv = deliver_accumulated(Arg, CliSock, decide, Sz, stream),
+            Priv = deliver_accumulated(Arg, CliSock, Sz, stream),
             stream_loop_send(Priv, CliSock, 30000);
         {streamcontent_from_pid, _, Pid} ->
-            Priv = deliver_accumulated(Arg, CliSock, no, undefined, stream),
+            case yaws:outh_get_content_encoding() of
+                decide -> yaws:outh_set_content_encoding(identity);
+                _      -> ok
+            end,
+            Priv = deliver_accumulated(Arg, CliSock, undefined, stream),
             wait_for_streamcontent_pid(Priv, CliSock, Pid);
         {websocket, CallbackMod, Opts} ->
             %% The handshake passes control over the socket to OwnerPid
@@ -2669,7 +2673,7 @@ deliver_dyn_part(CliSock,                       % essential params
     end.
 
 finish_up_dyn_file(Arg, CliSock) ->
-    deliver_accumulated(Arg, CliSock, decide, undefined, final),
+    deliver_accumulated(Arg, CliSock, undefined, final),
     done_or_continue().
 
 
@@ -2825,7 +2829,7 @@ make_final_chunk(Data) ->
 
 send_streamcontent_chunk(discard, _, _) ->
     discard;
-send_streamcontent_chunk(undeflated, CliSock, Data) ->
+send_streamcontent_chunk(undefined, CliSock, Data) ->
     case make_chunk(Data) of
         empty -> ok;
         {Size, Chunk} ->
@@ -2834,7 +2838,7 @@ send_streamcontent_chunk(undeflated, CliSock, Data) ->
             yaws:outh_inc_act_contlen(Size),
             yaws:gen_tcp_send(CliSock, Chunk)
     end,
-    undeflated;
+    undefined;
 send_streamcontent_chunk({Z, Priv}, CliSock, Data) ->
     ?Debug("send ~p bytes to ~p ~n",
            [binary_size(Data), CliSock]),
@@ -2850,8 +2854,8 @@ send_streamcontent_chunk({Z, Priv}, CliSock, Data) ->
 
 sync_streamcontent(discard, _CliSock) ->
     discard;
-sync_streamcontent(undeflated, _CliSock) ->
-    undeflated;
+sync_streamcontent(undefined, _CliSock) ->
+    undefined;
 sync_streamcontent({Z, Priv}, CliSock) ->
     ?Debug("syncing~n", []),
     {ok, P, D} = yaws_zlib:gzipDeflate(Z, Priv, <<>>, sync),
@@ -2866,7 +2870,7 @@ sync_streamcontent({Z, Priv}, CliSock) ->
 
 end_streaming(discard, _) ->
     done_or_continue();
-end_streaming(undeflated, CliSock) ->
+end_streaming(undefined, CliSock) ->
     ?Debug("end_streaming~n", []),
     {_, Chunk} = make_final_chunk(<<>>),
     yaws:gen_tcp_send(CliSock, Chunk),
@@ -3489,68 +3493,79 @@ handle_crash(ARG, L) ->
 
 %% Ret: true | false | {data, Data}
 decide_deflate(false, _, _, _, _, _) ->
+    ?Debug("Compression not supported by the server~n", []),
     false;
-decide_deflate(_, _, _, _, no, _) ->
+decide_deflate(_, _, _, _, identity, _) ->
+    ?Debug("No compression: Encoding=identity~n", []),
     false;
-decide_deflate(true, _, _, _, deflate, stream) ->
-    true;
+decide_deflate(_, _, _, _, deflate, _) ->
+    ?Debug("Compression already handled: Encoding=deflate~n", []),
+    false;
 decide_deflate(true, SC, Arg, Data, decide, Mode) ->
     Bin   = to_binary(Data),
     DOpts = SC#sconf.deflate_options,
-    CE    = yaws:outh_get_content_encoding_header(),
     if
-        size(Bin) == 0 ->
+        Mode == final andalso size(Bin) == 0 ->
             ?Debug("No data to be compressed~n",[]),
             false;
 
-        DOpts#deflate.min_compress_size /= nolimit,
+        Mode == final andalso
+        DOpts#deflate.min_compress_size /= nolimit andalso
         size(Bin) < DOpts#deflate.min_compress_size ->
             ?Debug("Data too small to be compressed~n",[]),
             false;
 
-        CE /= undefined ->
-            ?Debug("Content-Encoding already defined: ~p~n", [CE]),
-            false;
-
         true ->
-            ?Debug("No Content-Encoding defined~n",[]),
             Mime = yaws:outh_get_content_type(),
-            ?Debug("Mime-Type: ~p~n", [Mime]),
+            ?Debug("Check compression support: Mime-Type=~p~n", [Mime]),
             case compressible_mime_type(Mime, DOpts) of
                 true ->
-                    case yaws:accepts_gzip(Arg#arg.headers, Mime) of
+                    case (Arg =:= undefined
+                          orelse
+                          yaws:accepts_gzip(Arg#arg.headers, Mime)) of
                         true when Mode =:= final ->
+                            ?Debug("Compress data~n", []),
+                            yaws:outh_set_content_encoding(deflate),
                             {ok, DB} = yaws_zlib:gzip(to_binary(Data), DOpts),
                             {data, DB};
                         true when Mode =:= stream ->
+                            ?Debug("Compress streamed data~n", []),
+                            yaws:outh_set_content_encoding(deflate),
                             true;
                         false ->
+                            ?Debug("Compression not supported by the client~n",
+                                   []),
+                            yaws:outh_set_content_encoding(identity),
                             false
                     end;
                 false ->
+                    ?Debug("~p is not compressible~n", [Mime]),
+                    yaws:outh_set_content_encoding(identity),
                     false
             end
     end.
 
 
-deliver_accumulated(Sock) ->
-    deliver_accumulated(undefined, Sock, no, undefined, final).
 
-%% Mode = final | stream
-%% Encoding = deflate    (gzip content)
-%%          | no         (keep as is)
-%%          | decide     (do as you like)
+deliver_accumulated(Sock) ->
+    case yaws:outh_get_content_encoding() of
+        decide -> yaws:outh_set_content_encoding(identity);
+        _      -> ok
+    end,
+    deliver_accumulated(undefined, Sock, undefined, final).
+
+%% Arg           = #arg{} | undefined
 %% ContentLength = Int | undefined
-%% Mode = final | stream
+%% Mode          = final | stream
 %%
 %% For Mode==final: (all content has been accumulated before calling
 %%                   deliver_accumulated)
-%%     Ret: can be ignored
+%%     Result: can be ignored
 %%
 %% For Mode==stream:
-%%     Ret: opaque value to be threaded through
-%%                   send_streamcontent_chunk / end_streaming
-deliver_accumulated(Arg, Sock, Encoding, ContentLength, Mode) ->
+%%     Result: opaque value to be threaded through
+%%             send_streamcontent_chunk / end_streaming
+deliver_accumulated(Arg, Sock, ContentLength, Mode) ->
     %% See if we must close the connection
     receive
         {_From, suspend} -> yaws:outh_set_connection(true)
@@ -3558,73 +3573,62 @@ deliver_accumulated(Arg, Sock, Encoding, ContentLength, Mode) ->
     end,
 
     Cont = case erase(acc_content) of
-               undefined ->
-                   [];
-               Cont2 ->
-                   Cont2
+               undefined -> [];
+               Cont2     -> Cont2
            end,
-    case Cont of
-        discard ->
-            yaws:outh_set_transfer_encoding_off(),
-            {StatusLine, Headers} = yaws:outh_serialize(),
-            ?Debug("discard accumulated~n", []),
-            All = [StatusLine, Headers, crnl()],
-            Ret = discard;
-        _ ->
-            SC = get(sc),
-            case decide_deflate(?sc_has_deflate(SC),
-                                SC, Arg, Cont, Encoding, Mode) of
-                {data, Data} -> % implies Mode==final
-                    yaws:outh_set_content_encoding(deflate),
-                    Size = binary_size(Data),
-                    Ret = ok;
-                true -> % implies Mode==stream
-                    yaws:outh_set_content_encoding(deflate),
-                    Z = zlib:open(),
-                    {ok, Priv, Data} =
-                        yaws_zlib:gzipDeflate(
-                          Z, yaws_zlib:gzipInit(Z, SC#sconf.deflate_options),
-                          to_binary(Cont), none
-                         ),
-                    Ret = {Z, Priv},
-                    Size = undefined;
-                false ->
-                    Ret = undeflated,
-                    Data = Cont,
-                    Size = case Mode of
-                               final ->
-                                   binary_size(Data);
-                               stream ->
-                                   ContentLength
-                           end
-            end,
-            case Size of
-                undefined ->
-                    yaws:outh_fix_doclose();
-                _ -> yaws:accumulate_header({content_length, Size})
-            end,
-            {StatusLine, Headers} = yaws:outh_serialize(),
-            case make_chunk(Data) of
-                empty ->
-                    Chunk = [];
-                {S, Chunk} ->
-                    case Mode of
-                        stream -> yaws:outh_inc_act_contlen(S);
-                        _ -> ok
-                    end
-            end,
-            All = [StatusLine, Headers, crnl(), Chunk]
-    end,
+    {Result, Data} = case Cont of
+                         discard ->
+                             yaws:outh_set_transfer_encoding_off(),
+                             {discard, []};
+                         _ ->
+                             deflate_accumulated(Arg, Cont, ContentLength, Mode)
+                     end,
+
+    {StatusLine, Headers} = yaws:outh_serialize(),
+    All = [StatusLine, Headers, crnl(), Data],
     yaws:gen_tcp_send(Sock, All),
     case yaws_trace:get_type(get(gc)) of
-        http ->
-            yaws_trace:write(from_server, [StatusLine, Headers]);
-        traffic ->
-            yaws_trace:write(from_server, All);
-        undefined ->
-            ok
+        http      -> yaws_trace:write(from_server, [StatusLine, Headers]);
+        traffic   -> yaws_trace:write(from_server, All);
+        undefined -> ok
     end,
-    Ret.
+    Result.
+
+deflate_accumulated(Arg, Content, ContentLength, Mode) ->
+    SC  = get(sc),
+    Enc = yaws:outh_get_content_encoding(),
+    {Result, Data, Size} =
+        case decide_deflate(?sc_has_deflate(SC), SC, Arg, Content, Enc, Mode) of
+            {data, Bin} -> % implies Mode==final
+                {undefined, Bin, binary_size(Bin)};
+            true -> % implies Mode==stream
+                Z = zlib:open(),
+                {ok, Priv, Bin} =
+                    yaws_zlib:gzipDeflate(
+                      Z, yaws_zlib:gzipInit(Z, SC#sconf.deflate_options),
+                      to_binary(Content), none
+                     ),
+                {{Z, Priv}, Bin, undefined};
+            false ->
+                Sz = case Mode of
+                         final  -> binary_size(Content);
+                         stream -> ContentLength
+                     end,
+                {undefined, Content, Sz}
+        end,
+    case Size of
+        undefined -> yaws:outh_fix_doclose();
+        _         -> yaws:accumulate_header({content_length, Size})
+    end,
+    case make_chunk(Data) of
+        empty ->
+            {Result, []};
+        {S, Chunk} when Mode =:= stream ->
+            yaws:outh_inc_act_contlen(S),
+            {Result, Chunk};
+        _ ->
+            {Result, Data}
+    end.
 
 
 get_more_post_data(PPS, ARG) ->
@@ -3652,25 +3656,34 @@ get_more_post_data(PPS, ARG) ->
 
 ut_read(UT) ->
     ?Debug("ut_read() UT.fullpath = ~p~n", [UT#urltype.fullpath]),
-    case yaws:outh_get_content_encoding() of
-        identity ->
-            case UT#urltype.data of
-                undefined ->
-                    ?Debug("ut_read reading\n",[]),
-                    {ok, Bin} = file:read_file(UT#urltype.fullpath),
-                    ?Debug("ut_read read ~p\n",[size(Bin)]),
-                    Bin;
-                B when is_binary(B) ->
-                    B
-            end;
-        deflate ->
-            %% FIXME: be sure that UT#urltype.deflate cannot be undefined
-            case UT#urltype.deflate of
-                B when is_binary(B) ->
-                    ?Debug("ut_read using deflated binary of size ~p~n",
-                           [size(B)]),
-                    B
-            end
+    CE = yaws:outh_get_content_encoding(),
+    if
+
+        (CE =:= identity) andalso is_binary(UT#urltype.data) ->
+            UT#urltype.data;
+        CE =:= identity ->
+            ?Debug("ut_read reading\n",[]),
+            {ok, Bin} = file:read_file(UT#urltype.fullpath),
+            ?Debug("ut_read read ~p\n",[size(Bin)]),
+            Bin;
+
+        (CE =:= decide) andalso is_binary(UT#urltype.deflate) ->
+            ?Debug("ut_read using deflated binary of size ~p~n",
+                   [size(UT#urltype.deflate)]),
+            yaws:outh_set_content_encoding(deflate),
+            UT#urltype.deflate;
+        CE =:= decide andalso is_binary(UT#urltype.data) ->
+            UT#urltype.data;
+        CE =:= decide ->
+            ?Debug("ut_read reading\n",[]),
+            {ok, Bin} = file:read_file(UT#urltype.fullpath),
+            ?Debug("ut_read read ~p\n",[size(Bin)]),
+            Bin;
+
+        CE =:= deflate ->
+            ?Debug("ut_read using deflated binary of size ~p~n",
+                   [size(UT#urltype.deflate)]),
+            UT#urltype.deflate
     end.
 
 
@@ -3762,39 +3775,34 @@ deliver_small_file(CliSock, _Req, UT, Range) ->
     done_or_continue().
 
 deliver_large_file(CliSock,  _Req, UT, Range) ->
-    Enc = case Range of
-              all ->
-                  case yaws:outh_get_content_encoding() of
-                      identity -> no;
-                      D -> D
-                  end;
-              _ -> no
-          end,
-    Sz = (UT#urltype.finfo)#file_info.size,
-    case deliver_accumulated(undefined, CliSock, Enc, Sz, stream) of
-        discard ->
-            ok;
-        Priv ->
-            send_file(CliSock, UT#urltype.fullpath, Range, Priv, Enc)
+    Sz = case Range of
+             all ->
+                 (UT#urltype.finfo)#file_info.size;
+             {fromto, From, To, _Tot} ->
+                 yaws:outh_set_content_encoding(identity),
+                 (To - From + 1)
+         end,
+    case deliver_accumulated(undefined, CliSock, Sz, stream) of
+        discard -> ok;
+        Priv    -> send_file(CliSock, UT#urltype.fullpath, Range, Priv)
     end,
     done_or_continue().
 
 
-send_file(CliSock, Path, all, _Priv, no) when is_port(CliSock) ->
+send_file(CliSock, Path, all, undefined) when is_port(CliSock) ->
     ?Debug("send_file(~p,~p,no ...)~n", [CliSock, Path]),
     yaws_sendfile:send(CliSock, Path),
     {ok, Size} = yaws:filesize(Path),
     yaws_stats:sent(Size);
-send_file(CliSock, Path, all, Priv, _Enc) ->
+send_file(CliSock, Path, all, Priv) ->
     ?Debug("send_file(~p,~p, ...)~n", [CliSock, Path]),
     {ok, Fd} = file:open(Path, [raw, binary, read]),
     send_file(CliSock, Fd, Priv);
-send_file(CliSock, Path,  {fromto, From, To, _Tot}, undeflated, no)
-  when is_port(CliSock) ->
+send_file(CliSock, Path,  {fromto, From, To, _Tot}, _) when is_port(CliSock) ->
     Size = To - From + 1,
     yaws_sendfile:send(CliSock, Path, From, Size),
     yaws_stats:sent(Size);
-send_file(CliSock, Path,  {fromto, From, To, _Tot}, undeflated, _Enc) ->
+send_file(CliSock, Path,  {fromto, From, To, _Tot}, _) ->
     {ok, Fd} = file:open(Path, [raw, binary, read]),
     file:position(Fd, {bof, From}),
     send_file_range(CliSock, Fd, To - From + 1).
@@ -3817,11 +3825,11 @@ send_file_range(CliSock, Fd, Len) when Len > 0 ->
                               _ -> Len
                           end
                          ),
-    send_streamcontent_chunk(undeflated, CliSock, Bin),
+    send_streamcontent_chunk(undefined, CliSock, Bin),
     send_file_range(CliSock, Fd, Len - size(Bin));
 send_file_range(CliSock, Fd, 0) ->
     file:close(Fd),
-    end_streaming(undeflated, CliSock).
+    end_streaming(undefined, CliSock).
 
 crnl() ->
     "\r\n".
