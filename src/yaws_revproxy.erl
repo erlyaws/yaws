@@ -179,6 +179,11 @@ out(Arg = #arg{state=RPState}) when RPState#revproxy.state == recvheaders ->
     Res = yaws:http_get_headers(RPState#revproxy.srvsock,
                                 RPState#revproxy.type),
     case Res of
+        {error, {too_many_headers, _Resp}} ->
+            ?Debug("Response headers too large from backend server~n", []),
+            close(RPState),
+            outXXX(500, Arg);
+
         {Resp, RespHdrs} when is_record(Resp, http_response) ->
             ?Debug("Response headers received from backend server:~n"
                    " - ~s~n - ~s~n", [?format_record(Resp, http_response),

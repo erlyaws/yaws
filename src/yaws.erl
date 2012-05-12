@@ -1788,8 +1788,12 @@ do_http_get_headers(CliSock, SSL) ->
             %% Http request received. Store the current time. it will be usefull
             %% to get the time taken to serve the request.
             put(request_start_time, now()),
-            H = http_collect_headers(CliSock, R,  #headers{}, SSL, 0),
-            {R, H}
+            case http_collect_headers(CliSock, R,  #headers{}, SSL, 0) of
+                {error, _}=Error ->
+                    Error;
+                H ->
+                    {R, H}
+            end
     end.
 
 
@@ -1896,7 +1900,7 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
         {_, {http_error, "\n"}} ->
             http_collect_headers(CliSock, Req, H,SSL, Count+1);
 
-        %% auxilliary headers we don't have builtin support for
+        %% auxiliary headers we don't have builtin support for
         {ok, X} ->
             ?Debug("OTHER header ~p~n", [X]),
             http_collect_headers(CliSock, Req,
@@ -1906,9 +1910,8 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
             exit(normal)
 
     end;
-http_collect_headers(_CliSock, _Req, _H, _SSL, _Count)  ->
-    error_logger:format("Max num headers - DOS attack closing\n", []),
-    exit(normal).
+http_collect_headers(_CliSock, Req, _H, _SSL, _Count)  ->
+    {error, {too_many_headers, Req}}.
 
 
 

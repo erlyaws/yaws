@@ -1123,6 +1123,13 @@ aloop(CliSock, {IP,Port}, GS, Num) ->
     process_flag(trap_exit, true),
     ?Debug("Head = ~p~n", [Head]),
     case Head of
+        {error, {too_many_headers, ReqTooMany}} ->
+            %% RFC 6585 status code 431
+            ?Debug("Request headers too large~n", []),
+            SC = pick_sconf(GS#gs.gconf, #headers{}, GS#gs.group),
+            put(sc, SC),
+            put(outh, #outh{}),
+            deliver_431(CliSock, ReqTooMany);
         {Req0, H0} when Req0#http_request.method /= bad_request ->
             {Req, H} = fix_abs_uri(Req0, H0),
             ?Debug("{Req, H} = ~p~n", [{Req, H}]),
@@ -2525,6 +2532,9 @@ deliver_416(CliSock, _Req, Tot) ->
     accumulate_content(B),
     deliver_accumulated(CliSock),
     done.
+
+deliver_431(CliSock, Req) ->
+    deliver_xxx(CliSock, Req, 431).
 
 deliver_501(CliSock, Req) ->
     deliver_xxx(CliSock, Req, 501). % Not implemented

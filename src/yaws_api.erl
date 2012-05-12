@@ -588,12 +588,16 @@ code_to_phrase(414) -> "Request-URI Too Long";
 code_to_phrase(415) -> "Unsupported Media Type";
 code_to_phrase(416) -> "Requested Range Not Satisfiable";
 code_to_phrase(417) -> "Expectation Failed";
+code_to_phrase(428) -> "Precondition Required";
+code_to_phrase(429) -> "Too Many Requests";
+code_to_phrase(431) -> "Request Header Fields Too Large";
 code_to_phrase(500) -> "Internal Server Error";
 code_to_phrase(501) -> "Not Implemented";
 code_to_phrase(502) -> "Bad Gateway";
 code_to_phrase(503) -> "Service Unavailable";
 code_to_phrase(504) -> "Gateway Timeout";
 code_to_phrase(505) -> "HTTP Version Not Supported";
+code_to_phrase(511) -> "Network Authentication Required";
 
 %% Below are some non-HTTP status codes from other protocol standards that
 %% we've seen used with HTTP in the wild, so we include them here. HTTP 1.1

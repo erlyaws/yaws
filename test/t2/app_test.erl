@@ -31,6 +31,7 @@ start() ->
     shaper_test(),
     sslaccept_timeout_test(),
     throw_test(),
+    too_many_headers_test(),
     ibrowse:stop().
 
 
@@ -786,6 +787,12 @@ throw_test() ->
     ?line {ok, "500", _, _} = ibrowse:send_req(Uri, [], get),
     ok.
 
+too_many_headers_test() ->
+    io:format("too many request headers test\n", []),
+    Uri = "http://localhost:8009/",
+    Hdrs = [{link, "<compact.css>; rel=\"stylesheet\"; title=\"compact\""} || _ <- lists:seq(0, 1001)],
+    ?line {ok, "431", _, _} = ibrowse:send_req(Uri, Hdrs, get),
+    ok.
 
 %% used for appmod tests
 %%
