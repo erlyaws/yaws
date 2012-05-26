@@ -1535,7 +1535,7 @@ accumulate_header({www_authenticate, What}) ->
     put(outh, (get(outh))#outh{www_authenticate = ["WWW-Authenticate: ", What,
                                                    "\r\n"]});
 accumulate_header({"WWW-Authenticate", What}) ->
-    accumulate_header({"WWW-Authenticate", What});
+    accumulate_header({www_authenticate, What});
 
 %% non-special headers (which may be special in a future Yaws version)
 accumulate_header({Name, What}) when is_list(Name) ->
