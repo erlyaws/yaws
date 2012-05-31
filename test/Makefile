@@ -39,13 +39,19 @@ IBROWSE_VSN = ibrowse/.version
 
 .PHONY: fetch_ibrowse
 fetch_ibrowse:
+	nvsn=`git ls-remote -h $(IBROWSE_URI) master 2>/dev/null` ; \
+	git_ok=$$? ; \
 	set -e ; \
-	nvsn=`git ls-remote -h $(IBROWSE_URI) master | awk '{print $$1}'` ; \
-	if [ -f $(IBROWSE_VSN) ] ; then \
+	if [ -f $(IBROWSE_VSN) -a $$git_ok -eq 0 ] ; then \
+	  nvsn=`echo $$nvsn | awk '{print $$1}'` ; \
 	  vsn=`cat $(IBROWSE_VSN)` ; \
 	  [ "$$nvsn" = "$$vsn" ] || fetch=yes ; \
 	else \
-	  fetch=yes ; \
+	  if [ ! -f $(IBROWSE_VSN) -a $$git_ok -ne 0 ] ; then \
+	    echo error: ibrowse repository $(IBROWSE_URI) unreachable ; \
+	    exit 1 ; \
+	  fi ; \
+	  [ $$git_ok -eq 0 ] && fetch=yes ; \
 	fi ; \
 	if [ -n "$$fetch" ] ; then \
 	  rm -rf ibrowse ; \
