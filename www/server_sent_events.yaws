@@ -1,0 +1,112 @@
+<erl>
+
+out(A) ->
+       {ssi, "TAB.inc", "%%",[{"sse", "choosen"}]}.
+
+
+</erl>
+
+<div id="entry">
+
+<h1>Server-sent events</h1>
+
+  <p>HTTP is a client-server protocol &mdash; the client makes a request
+    and the server replies with a response. For some applications, though,
+    the request-reply model is limiting or unsuitable. These applications
+    tend to want server-to-client notification capabilities. While such
+    notifications can be simulated using polling, and web-based polling can
+    be much more efficient than one would think due to intermediary
+    caching, it's still less efficient and less timely than a notification
+    model.
+  </p>
+
+  <p>Yaws users have a few options for notification-oriented applications:</p>
+
+  <ul><li><p>Yaws supports an older technique called "long polling" or
+  "Comet" where the client sends a request that the server sits on and
+  doesn't answer until it actually has an event for the client. The problem
+  with long polling is that it requires the client and server applications
+  to be bound tightly to each other via the specialized ad hoc long-polling
+  protocol they share.</p></li>
+
+  <li><p><a href="websockets.yaws">The WebSockets protocol</a> (<a
+  href="http://tools.ietf.org/html/rfc6455">RFC 6455</a>) allows web client
+  and server to upgrade their TCP connection from using HTTP to using some
+  other protocol they agree on. The protocol they choose can be
+  bidirectional and can transmit whatever data transfer formats they wish
+  to use. WebSockets afford applications a great deal of freedom and
+  flexibility, but they also require client and server to agree on
+  specialized protocols, framing, and data formats to be able to
+  communicate successfully.</p></li>
+
+  <li><p><a href="http://www.w3.org/TR/eventsource/">Server-Sent Events</a>
+  (SSE) is a W3C working draft that unlike long polling is on a path to
+  standardization and unlike WebSockets is pretty simple. Despite being a
+  workng draft, it's already fairly widely used. With SSE, a client sends a
+  standard HTTP request asking for an event stream, and the server responds
+  initially with a standard HTTP response and holds the connection
+  open. When appropriate, the server sends standard text-based event data
+  back to the client as part of the initial response, and continues to do
+  so until either end closes the connection. Clients can disconnect and
+  later reconnect, indicate the last event they received, and pick up new
+  events from that point.</p></li> </ul>
+
+  <p>Currently, Chrome, Firefox, Opera, and Safari support SSE. Older
+  browsers do not support SSE directly, but they can be made to do so with
+  suitable JavaScript packages.</p>
+
+  <h2>Writing a Yaws SSE application</h2>
+
+  <p>Yaws supports SSE through its <a href="stream.yaws">streaming
+  capabilities</a>. SSE applications typically consist of an entry point
+  page and an appmod. The entry page returns HTML and JavaScript that acts
+  as the SSE client, with the JavaScript invoking the appmod's
+  <code>out/1</code> function that creates a streaming process responsible
+  for sending events back to the client. The appmod uses the
+  <code>yaws_sse</code> module to properly format and send its event
+  data.</p>
+
+  <p>Yaws supplies an example that uses SSE to return the server's time of
+  day clock to the client. Each second, the server sends a new event to the
+  client updating its time of day, which the client dynamically displays in
+  a web page.</p>
+
+  <p>First, the entry HTML page is here: <a
+  href="server_sent_events.html">server_sent_events.html</a>. It presents
+  a page title and a placeholder for the server date string. It also
+  supplies a bit of JavaScript that receives events from Yaws, using the
+  browser's <code>EventSource</code> JavaScript class to receive them. It
+  then pulls the data out of the event and displays it dynamically in the
+  HTML.</p>
+
+  <p>Next, the server appmod code is here: <a
+  href="https://github.com/klacke/yaws/blob/master/examples/src/server_sent_events.erl">server_sent_events.erl</a>. Its
+  <code>out/1</code> function create a gen_server event generation process,
+  returning the pid in a <code>streamcontent_from_pid</code> directive to
+  Yaws along with suitable headers. Note that it obtains the desired
+  <code>out/1</code> return value via the <code>yaws_sse:headers/1</code>
+  function. Its gen_server is fairly simple in that it creates a timer
+  that, once per second, generates a time of day string and sends it as an
+  event to the client formatted via the <code>yaws_sse:data/1</code>
+  function.</p>
+
+  <p>The <code>yaws_sse</code> module supplies all the SSE primitives
+  required for formatting event data, event identifiers, and event retry
+  settings. See the <a href="http://www.w3.org/TR/eventsource/">Server-Sent
+  Events</a> working draft for more details on using these features.</p>
+
+  <p>The <code>yaws_sse</code> module also supplies functions for
+  formatting and sending event data on a socket. If you're using the
+  <code>yaws_sse</code> module outside of a Yaws streaming application, you
+  should use the arity 3 version of <code>yaws_sse:send_events</code> and
+  pass <code>fun yaws:gen_tcp_send/2</code> as the third argument.</p>
+
+  <p><strong>Note:</strong> be aware that because the W3C Server-Sent
+  Events spec is still a working draft, any future changes in it might
+  cause API-incompatible changes in how Yaws supports it.</p>
+
+</div>
+
+<erl>
+out(A) -> {ssi, "END2",[],[]}.
+</erl>

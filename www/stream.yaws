@@ -42,7 +42,7 @@ out(A) ->
 
        {p, [],
         ["The above slightly bizarre code can be executed ",
-         {a, [{href, "urandom.yaws"}], "Here"},
+         {a, [{href, "urandom.yaws"}], "here"},
          ". The code creates a process which reads a random amount of bytes from /dev/urandom and sends them to the client, piece by piece. "]},
 
        {p,[], "There is also a version of the API that delivers the data in a blocking fashion. Whenever the producer of the stream is faster than the consumer, that is the WWW client, we must use a synchronous version of the code. The api function is called:"},
@@ -85,7 +85,7 @@ out(A) ->
 
        {p,[],"This informs yaws that Pid has not only finished with the socket, but has also closed it. Yaws will not attempt to use the socket anymore after the application calls this function."},
 
-       {p,[],"Applications using streamcontent_from_pid should be sure to set a Content-Length header in their out/1 return value if they want to avoid chunked transfer encoding for their return value. Yaws automatically sets the HTTP Transfer-Encoding header to chunked if it doesn't detect a Content-Length header."},
+       {p,[],"Applications using streamcontent_from_pid should be sure to set a Content-Length header in their out/1 return value if they want to avoid chunked transfer encoding for their return value. Yaws automatically sets the HTTP Transfer-Encoding header to chunked if it doesn't detect a Content-Length header. Another alternative is to return the {header, {transfer_encoding, erase}} header from out/1 in order to disable chunked encoding."},
 
        {p,[],"Here's an example of using streamcontent_from_pid:"},
 

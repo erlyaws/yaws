@@ -1520,7 +1520,7 @@ body_method(CliSock, IPPort, Req, Head) ->
                           get_chunked_client_data(CliSock, yaws:is_ssl(SC));
                       _ ->
                           <<>>
-                              end;
+                  end;
               Len when is_integer(PPS) ->
                   Int_len = list_to_integer(Len),
                   if

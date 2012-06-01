@@ -1563,9 +1563,16 @@ send one of the following messages to \verb+Pid+:
 
 We call one of the following functions to send data:
 \begin{itemize}
-\item \verb+yaws_api:stream_process_deliver(Socket, IoList)+ sends
-  data \verb+IoList+ using socket \verb+Socket+ without chunking the
-  data.
+\item \verb+yaws_api:stream_process_deliver(Socket, IoList)+ sends data
+  \verb+IoList+ using socket \verb+Socket+ without chunking the data. To
+  ensure chunking is not in effect, return
+
+\begin{verbatim}
+{header, {transfer_encoding, erase}}
+\end{verbatim}
+
+  in a list with the \verb+streamcontent_from_pid+ directive (which must
+  always be last in such a list).
 
 \item \verb+yaws_api:stream_process_deliver_chunk(Socket, IoList)+
   sends data \verb+IoList+ using socket \verb+Socket+ but converts
@@ -1648,6 +1655,13 @@ detect a \verb+Content-Length+ header.
 
 \item \verb+{header, H}+ Accumulates a HTTP header. Used by for
   example the \verb+yaws_api:setcookie/2-6+ function.
+
+\item \verb+{header, {H, erase}}+ A specific case of the previous
+  directive; use this to remove a specific header from a response. For
+  example, streaming applications and applications using server-sent events
+  (see \url{http://www.w3.org/TR/eventsource/ }) should use
+  \verb+{header, {transfer_encoding, erase}}+ to turn off chunked encoding
+  for their responses.
 
 \item \verb+{allheaders, HeaderList}+ Will clear all previously
   accumulated headers and replace them.
