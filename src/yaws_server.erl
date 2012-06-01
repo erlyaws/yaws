@@ -120,7 +120,7 @@ l2a(A) when is_atom(A) -> A.
 
 init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded, Id}) ->
     process_flag(trap_exit, true),
-    put(start_time, calendar:local_time ()),  %% for uptime
+    put(start_time, calendar:local_time()),  %% for uptime
     case Env#env.embedded of
         false ->
             Config = (catch yaws_config:load(Env)),
@@ -521,7 +521,7 @@ gserv(Top, GC, Group0) ->
 setup_dirs(GC) ->
     Dir = yaws:id_dir(GC#gconf.id),
     Ctl = yaws:ctl_file(GC#gconf.id),
-    filelib:ensure_dir(Ctl),
+    ok = filelib:ensure_dir(Ctl),
     case file:list_dir(Dir) of
         {ok, LL} ->
             foreach(
