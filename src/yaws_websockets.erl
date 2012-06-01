@@ -1,13 +1,15 @@
 %%%----------------------------------------------------------------------
 %%% File    : yaws_websockets.erl
 %%% Author  : Davide Marques <nesrait@gmail.com>
-%%% Purpose :
-%%% Created :  18 Dec 2009 by Davide Marques <nesrait@gmail.com>
-%%% Modified:
+%%% Purpose : support for WebSockets
+%%% Created : 18 Dec 2009 by Davide Marques <nesrait@gmail.com>
+%%% Modified: extensively revamped in 2011 by J.D. Bothma <jbothma@gmail.com>
 %%%----------------------------------------------------------------------
 
 -module(yaws_websockets).
 -author('nesrait@gmail.com').
+-author('jbothma@gmail.com').
+-behaviour(gen_server).
 
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
@@ -20,78 +22,65 @@
 %% RFC 6455 section 7.4.1: status code 1000 means "normal"
 -define(NORMAL_WS_STATUS, 1000).
 
-%% API
+-record(state, {
+          arg,
+          sconf,
+          cbmod,
+          opts,
+          wsstate,
+          cbstate,
+          cbtype
+         }).
+
 -export([start/3, send/2]).
-
-%% Exported for spawn
--export([receive_control/4]).
-
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2,
+         terminate/2, code_change/3]).
+%%
+%% API
+%%
 start(Arg, CallbackMod, Opts) ->
     SC = get(sc),
     CliSock = Arg#arg.clisock,
     PrepdOpts = preprocess_opts(Opts),
-    OwnerPid = spawn(?MODULE, receive_control,
-                     [Arg, SC, CallbackMod, PrepdOpts]),
+    {ok, OwnerPid} = gen_server:start(?MODULE, [Arg, SC, CallbackMod, PrepdOpts], []),
     CliSock = Arg#arg.clisock,
-    case SC#sconf.ssl of
-        undefined ->
-            inet:setopts(CliSock, [{packet, raw}, {active, once}]),
-            TakeOverResult =
-                gen_tcp:controlling_process(CliSock, OwnerPid);
-        _ ->
-            ssl:setopts(CliSock, [{packet, raw}, {active, once}]),
-            TakeOverResult =
-                ssl:controlling_process(CliSock, OwnerPid)
-    end,
+    TakeOverResult = case SC#sconf.ssl of
+                         undefined ->
+                             inet:setopts(CliSock, [{packet, raw}, {active, once}]),
+                             gen_tcp:controlling_process(CliSock, OwnerPid);
+                         _ ->
+                             ssl:setopts(CliSock, [{packet, raw}, {active, once}]),
+                             ssl:controlling_process(CliSock, OwnerPid)
+                     end,
     case TakeOverResult of
         ok ->
-            OwnerPid ! ok,
+            gen_server:cast(OwnerPid, ok),
             exit(normal);
-        {error, Reason} ->
-            OwnerPid ! {error, Reason},
+        {error, Reason}=Error ->
+            gen_server:cast(OwnerPid, Error),
             exit({websocket, Reason})
     end.
 
-send(#ws_state{sock=Socket, vsn=ProtoVsn}, {Type, Data}) ->
-    DataFrame = frame(ProtoVsn, Type,  Data),
-    case Socket of
-        {sslsocket,_,_} ->
-            ssl:send(Socket, DataFrame);
-        _ ->
-            gen_tcp:send(Socket, DataFrame)
-    end;
-
 send(Pid, {Type, Data}) ->
-    Pid ! {send, {Type, Data}}.
+    gen_server:cast(Pid, {send, {Type, Data}}).
 
-preprocess_opts(GivenOpts) ->
-    Fun = fun({Key, Default}, Opts) ->
-                  case lists:keyfind(Key, 1, Opts) of
-                      false ->
-                          [{Key, Default}|Opts];
-                      _ -> Opts
-                  end
-          end,
-    Defaults = [{origin, any},
-                {callback, basic}],
-    lists:foldl(Fun, GivenOpts, Defaults).
+%%
+%% gen_server functions
+%%
+init([Arg, SC, CallbackMod, Opts]) ->
+    {ok, #state{arg=Arg, sconf=SC, cbmod=CallbackMod, opts=Opts}}.
 
-receive_control(Arg, SC, CallbackMod, Opts) ->
-    receive
-        ok ->
-            handshake(Arg, SC, CallbackMod, Opts);
-        {error, Reason} ->
-            exit(Reason)
-    end.
+handle_call(_Req, _From, State) ->
+    {reply, ok, State}.
 
-handshake(Arg, SC, CallbackMod, Opts) ->
+handle_cast(ok, #state{arg=Arg, sconf=SC, opts=Opts}=State) ->
     CliSock = Arg#arg.clisock,
     OriginOpt = lists:keyfind(origin, 1, Opts),
     Origin = get_origin_header(Arg#arg.headers),
     case origin_check(Origin, OriginOpt) of
         {error, Error} ->
             error_logger:error_msg(Error),
-            exit({error, Error});
+            {stop, {error, Error}, State};
         ok ->
             ProtocolVersion = ws_version(Arg#arg.headers),
             Protocol = get_protocol_header(Arg#arg.headers),
@@ -119,8 +108,104 @@ handshake(Arg, SC, CallbackMod, Opts) ->
                                 {advanced, InitialState} ->
                                     InitialState
                             end,
-            loop(CallbackMod, WSState, CallbackState, CallbackType)
+            NState = State#state{wsstate=WSState,
+                                 cbstate=CallbackState,
+                                 cbtype=CallbackType},
+            {noreply, NState}
+    end;
+handle_cast({send, {Type, Data}}, #state{wsstate=WSState}=State) ->
+    do_send(WSState, {Type, Data}),
+    {noreply, State};
+handle_cast(_Msg, State) ->
+    {noreply, State}.
+
+handle_info({tcp, Socket, FirstPacket}, #state{wsstate=#ws_state{sock=Socket}}=State) ->
+    #state{cbmod=CallbackMod, wsstate=WSState,
+           cbstate=CallbackState, cbtype=CallbackType} = State,
+    FrameInfos = unframe_active_once(WSState, FirstPacket),
+    {Results, NewCallbackState} =
+        case CallbackType of
+            basic ->
+                {BasicMessages, NewCallbackState0} =
+                    basic_messages(FrameInfos, CallbackState),
+                CallbackResults = lists:map(
+                                    fun(M) ->
+                                            CallbackMod:handle_message(M)
+                                    end,
+                                    BasicMessages),
+                {catch lists:foldl(handle_result_fun(WSState), ok, CallbackResults),
+                 NewCallbackState0};
+            {advanced,_} ->
+                catch lists:foldl(do_callback_fun(WSState, CallbackMod),
+                                  {ok, CallbackState},
+                                  FrameInfos)
+        end,
+    case Results of
+        {close, Reason} ->
+            do_close(WSState, Reason),
+            {stop, Reason, State#state{cbstate=NewCallbackState}};
+        _ ->
+            Last = lists:last(FrameInfos),
+            NewWSState = Last#ws_frame_info.ws_state,
+            {noreply, State#state{wsstate=NewWSState, cbstate=NewCallbackState}}
+    end;
+handle_info({tcp_closed, Socket}, #state{wsstate=#ws_state{sock=Socket}}=State) ->
+    %% The only way we should get here is due to an abnormal close.
+    %% Section 7.1.5 of RFC 6455 specifies 1006 as the connection
+    %% close code for abnormal closure. It's also described in
+    %% section 7.4.1.
+    #state{cbmod=CallbackMod, wsstate=WSState,
+           cbstate=CallbackState, cbtype=CallbackType} = State,
+    CloseStatus = 1006,
+    case CallbackType of
+        basic ->
+            CallbackMod:handle_message({close, CloseStatus, <<>>});
+        {advanced, _} ->
+            ClosePayload = <<CloseStatus:16/big>>,
+            CloseWSState = WSState#ws_state{sock=undefined,
+                                            frag_type=none},
+            CloseFrameInfo = #ws_frame_info{fin=1,
+                                            rsv=0,
+                                            opcode=close,
+                                            masked=0,
+                                            masking_key=0,
+                                            length=byte_size(ClosePayload),
+                                            payload=ClosePayload,
+                                            ws_state=CloseWSState},
+            CallbackMod:handle_message(CloseFrameInfo, CallbackState)
+    end,
+    {stop, normal, State};
+handle_info(_Info, State) ->
+    {noreply, State}.
+
+terminate(_Reason, _State) ->
+    ok.
+
+code_change(_OldVsn, Data, _Extra) ->
+    {ok, Data}.
+
+%% internal functions
+
+do_send(#ws_state{sock=Socket, vsn=ProtoVsn}, {Type, Data}) ->
+    DataFrame = frame(ProtoVsn, Type,  Data),
+    case Socket of
+        {sslsocket,_,_} ->
+            ssl:send(Socket, DataFrame);
+        _ ->
+            gen_tcp:send(Socket, DataFrame)
     end.
+
+preprocess_opts(GivenOpts) ->
+    Fun = fun({Key, Default}, Opts) ->
+                  case lists:keyfind(Key, 1, Opts) of
+                      false ->
+                          [{Key, Default}|Opts];
+                      _ -> Opts
+                  end
+          end,
+    Defaults = [{origin, any},
+                {callback, basic}],
+    lists:foldl(Fun, GivenOpts, Defaults).
 
 origin_check(_Origin, {origin, any}) ->
     ok;
@@ -140,83 +225,29 @@ handshake(8, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
      "Sec-WebSocket-Accept: ", AcceptHash , "\r\n",
      "\r\n"].
 
-loop(CallbackMod, #ws_state{sock=Socket}=WSState, CallbackState, CallbackType) ->
-    receive
-        {send, {Type, Data}} ->
-            send(WSState, {Type, Data}),
-            loop(CallbackMod, WSState, CallbackState, CallbackType);
-        {tcp, Socket, FirstPacket} ->
-            FrameInfos = unframe_active_once(WSState, FirstPacket),
-            case CallbackType of
-                basic ->
-                    {BasicMessages, NewCallbackState} =
-                        basic_messages(FrameInfos, CallbackState),
-                    CallbackResults = lists:map(
-                                        fun(M) ->
-                                                CallbackMod:handle_message(M)
-                                        end,
-                                        BasicMessages),
-                    lists:map(handle_result_fun(WSState), CallbackResults);
-                {advanced,_} ->
-                    NewCallbackState = lists:foldl(
-                                         do_callback_fun(WSState, CallbackMod),
-                                         CallbackState,
-                                         FrameInfos)
-            end,
-            Last = lists:last(FrameInfos),
-            NewWSState = Last#ws_frame_info.ws_state,
-            loop(CallbackMod, NewWSState, NewCallbackState, CallbackType);
-        {tcp_closed, Socket} ->
-            %% The only way we should get here is due to an abnormal close.
-            %% Section 7.1.5 of RFC 6455 specifies 1006 as the connection
-            %% close code for abnormal closure. It's also described in
-            %% section 7.4.1.
-            CloseStatus = 1006,
-            case CallbackType of
-                basic ->
-                    CallbackMod:handle_message({close, CloseStatus, <<>>});
-                {advanced, _} ->
-                    ClosePayload = <<CloseStatus:16/big>>,
-                    CloseWSState = WSState#ws_state{sock=undefined,
-                                                    frag_type=none},
-                    CloseFrameInfo = #ws_frame_info{fin=1,
-                                                    rsv=0,
-                                                    opcode=close,
-                                                    masked=0,
-                                                    masking_key=0,
-                                                    length=byte_size(ClosePayload),
-                                                    payload=ClosePayload,
-                                                    ws_state=CloseWSState},
-                    CallbackMod:handle_message(CloseFrameInfo, CallbackState)
-            end,
-            ok;
-        _Any ->
-            loop(CallbackMod, WSState, CallbackState, CallbackType)
-    end.
-
 handle_result_fun(WSState) ->
-    fun(Result) ->
+    fun(Result, Acc) ->
             case Result of
                 {reply, {Type, Data}} ->
-                    send(WSState, {Type, Data});
+                    do_send(WSState, {Type, Data}),
+                    Acc;
                 noreply ->
-                    ok;
+                    Acc;
                 {close, Reason} ->
-                    do_close(WSState, Reason)
+                    throw({close, Reason})
             end
     end.
 
 do_callback_fun(WSState, CallbackMod) ->
-    fun(FrameInfo, CallbackState) ->
+    fun(FrameInfo, {Results, CallbackState}) ->
             case CallbackMod:handle_message(FrameInfo, CallbackState) of
                 {reply, {Type, Data}, NewCallbackState} ->
-                    send(WSState, {Type, Data}),
-                    NewCallbackState;
+                    do_send(WSState, {Type, Data}),
+                    {Results, NewCallbackState};
                 {noreply, NewCallbackState} ->
-                    NewCallbackState;
+                    {Results, NewCallbackState};
                 {close, Reason} ->
-                    %% the following does not return
-                    do_close(WSState, Reason)
+                    throw({{close, Reason}, CallbackState})
             end
     end.
 
@@ -225,12 +256,11 @@ do_close(WSState, Reason) ->
                  _ when is_integer(Reason) -> Reason;
                  _ -> ?NORMAL_WS_STATUS
              end,
-    send(WSState, {close, <<Status:16/big>>}),
-    exit(Reason).
+    do_send(WSState, {close, <<Status:16/big>>}).
 
 basic_messages(FrameInfos, {FragType, FragAcc}) ->
-    {Messages, NewFragType, NewFragAcc}
-        = lists:foldl(fun handle_message/2, {[], FragType, FragAcc}, FrameInfos),
+    {Messages, NewFragType, NewFragAcc} =
+        lists:foldl(fun handle_message/2, {[], FragType, FragAcc}, FrameInfos),
     {Messages, {NewFragType, NewFragAcc}}.
 
 %% start of a fragmented message
@@ -279,9 +309,9 @@ handle_message(#ws_frame_info{opcode=binary,
 
 handle_message(#ws_frame_info{opcode=ping,
                               data=Data,
-                              ws_state=State},
+                              ws_state=WSState},
                 Acc) ->
-    send(State, {pong, Data}),
+    do_send(WSState, {pong, Data}),
     Acc;
 
 handle_message(#ws_frame_info{opcode=pong}, Acc) ->
