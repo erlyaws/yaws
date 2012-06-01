@@ -355,7 +355,7 @@ send(_Args, StatusCode, Payload, AddOnData, RpcType) ->
      {header, {content_length, lists:flatlength(Payload)}}] ++ AddOnData.
 
 content_hdr(json, Payload) -> {content, "application/json", Payload};
-content_hdr(_, Payload)    -> {content, "application/xml", Payload}.
+content_hdr(_, Payload)    -> {content, "text/xml", Payload}.
 %% FIXME  would like to add charset info here !!
 
 encode_handler_payload({Xml,[]}, _ID, soap_dime) ->

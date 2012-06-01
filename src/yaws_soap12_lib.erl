@@ -522,17 +522,16 @@ inets_request(URL, Action, Request, Options, Headers, ContentType) ->
 ibrowse_request(URL, Action, Request, Options, Headers, ContentType) ->
     case start_ibrowse() of
         ok ->
-	    case Action of
-	      undefined ->
-		NewHeaders = [{"Content-Type", ContentType} | Headers];
-              _ ->
-		NewHeaders = [{"Content-Type", ContentType}, {"SOAPAction", Action} | Headers]
-	    end,
-            NewOptions = Options,
-            %%[{content_type, "text/xml; encoding=utf-8"} | Options],
-            case ibrowse:send_req(URL, NewHeaders, post, Request, NewOptions) of
+	    NewHeaders = [{"Content-Type", ContentType} |
+                          case Action of
+                             undefined ->
+                                  Headers;
+                              _ ->
+                                  [{"SOAPAction", Action} | Headers]
+                          end],
+            case ibrowse:send_req(URL, NewHeaders, post, Request, Options) of
                 {ok, Status, ResponseHeaders, ResponseBody} ->
-                    {ok, list_to_integer(Status), ResponseHeaders,ResponseBody};
+                    {ok, list_to_integer(Status), ResponseHeaders, ResponseBody};
                 {error, Reason} ->
                     {error, Reason}
             end;

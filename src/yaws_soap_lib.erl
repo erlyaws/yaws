@@ -471,11 +471,9 @@ ibrowse_request(URL, SoapAction, Request, Options, Headers, ContentType) ->
         ok ->
             NewHeaders = [{"Content-Type", ContentType},
                           {"SOAPAction", SoapAction} | Headers],
-            NewOptions = Options,
-            %%[{content_type, "text/xml; encoding=utf-8"} | Options],
-            case ibrowse:send_req(URL, NewHeaders, post, Request, NewOptions) of
+            case ibrowse:send_req(URL, NewHeaders, post, Request, Options) of
                 {ok, Status, ResponseHeaders, ResponseBody} ->
-                    {ok, list_to_integer(Status), ResponseHeaders,ResponseBody};
+                    {ok, list_to_integer(Status), ResponseHeaders, ResponseBody};
                 {error, Reason} ->
                     {error, Reason}
             end;
