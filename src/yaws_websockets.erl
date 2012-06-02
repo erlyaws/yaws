@@ -133,7 +133,8 @@ handle_info({tcp, Socket, FirstPacket}, #state{wsstate=#ws_state{sock=Socket}}=S
                                             CallbackMod:handle_message(M)
                                     end,
                                     BasicMessages),
-                {catch lists:foldl(handle_result_fun(WSState), ok, CallbackResults),
+                FoldFun = handle_result_fun(WSState),
+                {catch lists:foldl(FoldFun, ok, lists:zip(FrameInfos, CallbackResults)),
                  NewCallbackState0};
             {advanced,_} ->
                 catch lists:foldl(do_callback_fun(WSState, CallbackMod),
@@ -226,7 +227,7 @@ handshake(8, Arg, _CliSock, _WebSocketLocation, _Origin, _Protocol) ->
      "\r\n"].
 
 handle_result_fun(WSState) ->
-    fun(Result, Acc) ->
+    fun({FrameInfo, Result}, Acc) ->
             case Result of
                 {reply, {Type, Data}} ->
                     do_send(WSState, {Type, Data}),
@@ -234,7 +235,10 @@ handle_result_fun(WSState) ->
                 noreply ->
                     Acc;
                 {close, Reason} ->
-                    throw({close, Reason})
+                    %% check if client sent a close, and if so, verify that the
+                    %% close code is legal
+                    NReason = check_close_code(FrameInfo, Reason),
+                    throw({close, NReason})
             end
     end.
 
@@ -247,9 +251,40 @@ do_callback_fun(WSState, CallbackMod) ->
                 {noreply, NewCallbackState} ->
                     {Results, NewCallbackState};
                 {close, Reason} ->
-                    throw({{close, Reason}, CallbackState})
+                    %% check if client sent a close, and if so, verify that the
+                    %% close code is legal
+                    NReason = check_close_code(FrameInfo, Reason),
+                    throw({{close, NReason}, CallbackState})
             end
     end.
+
+%% The checks for close status codes here are based on RFC 6455 and on
+%% the autobahn testsuite (http://autobahn.ws/testsuite).
+check_close_code(#ws_frame_info{opcode=close, length=Len, data=Data}, Reason) ->
+    if
+        Len == 0 ->
+            Reason;
+        Len < 2 ->
+            1002;
+        true ->
+            <<Code:16/big, _/binary>> = Data,
+            if
+                Code >= 3000 andalso Code =< 4999 ->
+                    Reason;
+                Code < 1000 ->
+                    1002;
+                Code >= 1004 andalso Code =< 1006 ->
+                    1002;
+                Code >= 1012 andalso Code =< 1016 ->
+                    1002;
+                Code > 1016 ->
+                    1002;
+                true ->
+                    Reason
+            end
+    end;
+check_close_code(_, Reason) ->
+    Reason.
 
 do_close(WSState, Reason) ->
     Status = case Reason of
