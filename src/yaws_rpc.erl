@@ -349,14 +349,19 @@ send(Args, StatusCode, RpcType) ->
 
 send(Args, StatusCode, Payload, AddOn, RpcType) when not is_list(AddOn) ->
     send(Args, StatusCode, Payload, [AddOn], RpcType);
-send(_Args, StatusCode, Payload, AddOnData, RpcType) ->
+send(Args, StatusCode, Payload, AddOnData, RpcType) ->
     [{status, StatusCode},
-     content_hdr(RpcType, Payload),
+     content_hdr(RpcType, Args, Payload),
      {header, {content_length, lists:flatlength(Payload)}}] ++ AddOnData.
 
-content_hdr(json, Payload) -> {content, "application/json", Payload};
-content_hdr(_, Payload)    -> {content, "text/xml", Payload}.
-%% FIXME  would like to add charset info here !!
+content_hdr(json, _Args, Payload) -> {content, "application/json", Payload};
+content_hdr(soap, Args, Payload) ->
+    CallerContentType = (Args#arg.headers)#headers.content_type,
+    %% drop caller charset info if present, may not
+    %% be appropriate for the response
+    ContentType = hd(string:tokens(CallerContentType, ";")),
+    {content, ContentType, Payload};
+content_hdr(_, _Args, Payload) -> {content, "text/xml", Payload}.
 
 encode_handler_payload({Xml,[]}, _ID, soap_dime) ->
     {ok, Xml, soap};
