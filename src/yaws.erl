@@ -87,7 +87,7 @@
          exists/1,
          mkdir/1]).
 
--export([do_recv/3, cli_recv/3,
+-export([do_recv/3, do_recv/4, cli_recv/3,
          gen_tcp_send/2,
          http_get_headers/2]).
 
@@ -1695,6 +1695,10 @@ do_recv(Sock, Num, nossl) ->
     gen_tcp:recv(Sock, Num, (get(gc))#gconf.keepalive_timeout);
 do_recv(Sock, Num, ssl) ->
     ssl:recv(Sock, Num, (get(gc))#gconf.keepalive_timeout).
+do_recv(Sock, Num, nossl, Timeout) ->
+    gen_tcp:recv(Sock, Num, Timeout);
+do_recv(Sock, Num, ssl, Timeout) ->
+    ssl:recv(Sock, Num, Timeout).
 
 cli_recv(S, Num, SslBool) ->
     Res = do_recv(S, Num, SslBool),
