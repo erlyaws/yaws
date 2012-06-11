@@ -28,6 +28,7 @@ start() ->
         keepalive_revproxy_test(),
         rewrite_revproxy_test(),
         large_content_revproxy_test(),
+        no_content_length_revproxy_test(),
         fwdproxy_test(),
         ok
     catch
@@ -205,6 +206,18 @@ large_content_revproxy_test() ->
     Body = list_to_binary(Body0),
     ?line true = (size(Body) == 8388608),
     ?line Bin = Body,
+    ok.
+
+no_content_length_revproxy_test() ->
+    io:format("no_content_length_revproxy_test\n", []),
+    Uri = "http://localhost:8001/revproxy1/nolengthtest",
+    Res = lists:duplicate(512, $A),
+
+    ?line {ok, "200", Hdrs, Body} = ibrowse:send_req(Uri, [], get),
+    ?line undefined = proplists:get_value("Content-Length", Hdrs),
+    ?line undefined = proplists:get_value("Transfer-Encoding", Hdrs),
+    ?line "close"   = proplists:get_value("Connection", Hdrs),
+    ?line Res = Body,
     ok.
 
 fwdproxy_test() ->

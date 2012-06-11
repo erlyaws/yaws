@@ -220,7 +220,9 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvheaders ->
                                                []),
                                         RPState1#revproxy{state=recvchunk};
                                     _ ->
-                                        RPState1#revproxy{state=terminate}
+                                        RPState1#revproxy{cliconn_status="close",
+                                                          srvconn_status="close",
+                                                          state=recvcontent}
                                 end;
                             _ ->
                                 RPState1#revproxy{state=recvcontent}
@@ -242,10 +244,13 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvheaders ->
 
 %% The response content is not chunked.
 out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvcontent ->
-    Len = list_to_integer((RPState#revproxy.headers)#headers.content_length),
+    Len = case (RPState#revproxy.headers)#headers.content_length of
+              undefined -> undefined;
+              CLen      -> list_to_integer(CLen)
+          end,
     SC=get(sc),
     if
-        Len =< SC#sconf.partial_post_size ->
+        is_integer(Len) andalso Len =< SC#sconf.partial_post_size ->
             case read(RPState, Len) of
                 {ok, Data} ->
                     ?Debug("Response content received from the backend server : "
@@ -262,7 +267,9 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvcontent ->
                     end,
                     outXXX(500, Arg)
             end;
-        true ->
+
+        is_integer(Len) ->
+            %% Here partial_post_size is always an integer
             BlockSize  = SC#sconf.partial_post_size,
             BlockCount = Len div BlockSize,
             LastBlock  = Len rem BlockSize,
@@ -270,6 +277,13 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvcontent ->
             RPState1   = RPState#revproxy{state      = terminate,
                                           is_chunked = true,
                                           srvdata    = SrvData},
+            out(Arg#arg{state=RPState1});
+
+        true ->
+            SrvData  = {block, undefined, undefined, undefined},
+            RPState1 = RPState#revproxy{state      = terminate,
+                                        is_chunked = true,
+                                        srvdata    = SrvData},
             out(Arg#arg{state=RPState1})
     end;
 
@@ -407,6 +421,24 @@ recv_next_chunk(YawsPid, #arg{state=RPState}=Arg) ->
 
 %%==========================================================================
 %% This function reads blocks from the server and streams them to the client.
+recv_blocks(YawsPid, #arg{state=RPState}=Arg, undefined, undefined, undefined) ->
+    case read(RPState) of
+        {ok, <<>>} ->
+            %% no data, wait 100 msec to avoid time-consuming loop and retry
+            timer:sleep(100),
+            recv_blocks(YawsPid, Arg, undefined, undefined, undefined);
+        {ok, Data} ->
+            ?Debug("Response content received from the backend server : "
+                   "~p bytes~n", [size(Data)]),
+            ok = yaws_api:stream_process_deliver(Arg#arg.clisock, Data),
+            recv_blocks(YawsPid, Arg, undefined, undefined, undefined);
+        {error, closed} ->
+            yaws_api:stream_process_end(closed, YawsPid);
+        {error, _Reason} ->
+            ?Debug("TCP error: ~p~n", [_Reason]),
+            yaws_api:stream_process_end(closed, YawsPid),
+            close(RPState)
+    end;
 recv_blocks(YawsPid, #arg{state=RPState}=Arg, 0, _, 0) ->
     yaws_api:stream_process_end(Arg#arg.clisock, YawsPid),
     case RPState#revproxy.srvconn_status of
@@ -535,6 +567,11 @@ send(#revproxy{srvsock=Sock, type=ssl}, Data) ->
     ssl:send(Sock, Data);
 send(#revproxy{srvsock=Sock, type=nossl}, Data) ->
     gen_tcp:send(Sock, Data).
+
+
+read(#revproxy{srvsock=Sock, type=Type}) ->
+    yaws:setopts(Sock, [{packet, raw}, binary], Type),
+    yaws:do_recv(Sock, 0, Type).
 
 read(RPState, Len) ->
     yaws:setopts(RPState#revproxy.srvsock, [{packet, raw}, binary],
