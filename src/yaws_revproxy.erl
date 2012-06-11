@@ -263,31 +263,18 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvcontent ->
                     outXXX(500, Arg)
             end;
         true ->
-            BlockSize = SC#sconf.partial_post_size,
+            BlockSize  = SC#sconf.partial_post_size,
             BlockCount = Len div BlockSize,
-            LastBlock = Len rem BlockSize,
-            GC = get(gc),
-            Pid = spawn(
-                    fun() ->
-                            put(gc, GC),
-                            receive
-                                {ok, YawsPid} ->
-                                    recv_blocks(YawsPid, RPState, Arg,
-                                                BlockCount, BlockSize, LastBlock);
-                                {discard, YawsPid} ->
-                                    Socket = Arg#arg.clisock,
-                                    yaws_api:stream_process_end(Socket, YawsPid)
-                            end
-                    end),
-            RPState1 = RPState#revproxy{state = terminate,
-                                        is_chunked = false,
-                                        srvconn_status = "keep-alive",
-                                        srvdata = {streamcontent_from_pid, Pid}},
+            LastBlock  = Len rem BlockSize,
+            SrvData    = {block, BlockCount, BlockSize, LastBlock},
+            RPState1   = RPState#revproxy{state      = terminate,
+                                          is_chunked = true,
+                                          srvdata    = SrvData},
             out(Arg#arg{state=RPState1})
     end;
 
-%% The response content is chunked. Read the first chunk here and spawn a process
-%% to read others.
+%% The response content is chunked. Read the first chunk here and spawn a
+%% process to read others.
 out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvchunk ->
     case read_chunk(RPState) of
         {ok, Data} ->
@@ -346,7 +333,18 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == terminate ->
             MimeType = (RPState#revproxy.headers)#headers.content_type,
             Res ++ [{streamcontent, MimeType, Chunk}];
 
-        {streamcontent_from_pid, Pid} ->
+        {block, BlockCnt, BlockSz, LastBlock} ->
+            GC  = get(gc),
+            Pid = spawn(fun() ->
+                                put(gc, GC),
+                                receive
+                                    {ok, YawsPid} ->
+                                        recv_blocks(YawsPid, Arg, BlockCnt,
+                                                    BlockSz, LastBlock);
+                                    {discard, YawsPid} ->
+                                        recv_blocks(YawsPid, Arg, 0, BlockSz, 0)
+                                end
+                        end),
             MimeType = (RPState#revproxy.headers)#headers.content_type,
             Res ++ [{streamcontent_from_pid, MimeType, Pid}];
 
@@ -409,39 +407,45 @@ recv_next_chunk(YawsPid, #arg{state=RPState}=Arg) ->
 
 %%==========================================================================
 %% This function reads blocks from the server and streams them to the client.
-recv_blocks(YawsPid, RPState, #arg{clisock=Sock}=Arg, 0, _BlockSize, LastBlock) ->
+recv_blocks(YawsPid, #arg{state=RPState}=Arg, 0, _, 0) ->
+    yaws_api:stream_process_end(Arg#arg.clisock, YawsPid),
+    case RPState#revproxy.srvconn_status of
+        "close" -> close(RPState);
+        _       -> ok %% Cached by the main process
+    end;
+recv_blocks(YawsPid, #arg{state=RPState}=Arg, 0, _, LastBlock) ->
+    Sock = Arg#arg.clisock,
     case read(RPState, LastBlock) of
         {ok, Data} ->
             ?Debug("Response content received from the backend server : "
                    "~p bytes~n", [size(Data)]),
             ok = yaws_api:stream_process_deliver(Sock, Data),
-            yaws_api:stream_process_end(Sock, YawsPid);
+            yaws_api:stream_process_end(Sock, YawsPid),
+            case RPState#revproxy.srvconn_status of
+                "close" -> close(RPState);
+                _       -> ok %% Cached by the main process
+            end;
         {error, Reason} ->
             ?Debug("TCP error: ~p~n", [Reason]),
+            yaws_api:stream_process_end(closed, YawsPid),
             case Reason of
-                closed ->
-                    close(RPState),
-                    yaws_api:stream_process_end(closed, YawsPid);
-                _ ->
-                    yaws_api:stream_process_end(Arg#arg.clisock, YawsPid)
+                closed -> ok;
+                _      -> close(RPState)
             end
     end;
-recv_blocks(YawsPid, RPState, Arg, BlockCount, BlockSize, LastBlock) ->
-    Sock = Arg#arg.clisock,
-    case read(RPState, BlockSize) of
+recv_blocks(YawsPid, #arg{state=RPState}=Arg, BlockCnt, BlockSz, LastBlock) ->
+    case read(RPState, BlockSz) of
         {ok, Data} ->
             ?Debug("Response content received from the backend server : "
                    "~p bytes~n", [size(Data)]),
-            ok = yaws_api:stream_process_deliver(Sock, Data),
-            recv_blocks(YawsPid, RPState, Arg, BlockCount-1, BlockSize, LastBlock);
+            ok = yaws_api:stream_process_deliver(Arg#arg.clisock, Data),
+            recv_blocks(YawsPid, Arg, BlockCnt-1, BlockSz, LastBlock);
         {error, Reason} ->
             ?Debug("TCP error: ~p~n", [Reason]),
+            yaws_api:stream_process_end(closed, YawsPid),
             case Reason of
-                closed ->
-                    close(RPState),
-                    yaws_api:stream_process_end(closed, YawsPid);
-                _ ->
-                    yaws_api:stream_process_end(Sock, YawsPid)
+                closed -> ok;
+                _      -> close(RPState)
             end
     end.
 
