@@ -31,10 +31,10 @@
                    r_meth,          %% what req method are we processing
                    r_host,          %%   and value of Host: for the cli request
 
-                   resp,            %% response reveiced from the server
+                   resp,            %% response received from the server
                    headers,         %%   and associated headers
                    srvdata,         %% the server data
-                   is_chunked}).    %% true is the response is chunked
+                   is_chunked}).    %% true if the response is chunked
 
 
 %% TODO: Activate proxy keep-alive with a new option ?
@@ -43,7 +43,7 @@
 
 %% Initialize the connection to the backend server. If an error occured, return
 %% an error 404.
-out(Arg = #arg{req=Req, headers=Hdrs, state={Prefix,URL}}) ->
+out(#arg{req=Req, headers=Hdrs, state={Prefix,URL}}=Arg) ->
     case connect(URL) of
         {ok, Sock, Type} ->
             ?Debug("Connection established on ~p: Socket=~p, Type=~p~n",
@@ -64,7 +64,7 @@ out(Arg = #arg{req=Req, headers=Hdrs, state={Prefix,URL}}) ->
 
 %% Send the client request to the server then check if the request content is
 %% chunked or not
-out(Arg = #arg{state=RPState}) when RPState#revproxy.state == sendheaders ->
+out(#arg{state=RPState}=Arg) when RPState#revproxy.state == sendheaders ->
     ?Debug("Send request headers to backend server: ~n"
            " - ~s~n", [?format_record(Arg#arg.req, http_request)]),
 
@@ -95,7 +95,7 @@ out(Arg = #arg{state=RPState}) when RPState#revproxy.state == sendheaders ->
 
 %% Send the request content to the server. Here the content is not chunked. But
 %% it can be splitted because of 'partial_post_size' value.
-out(Arg = #arg{state=RPState}) when RPState#revproxy.state == sendcontent ->
+out(#arg{state=RPState}=Arg) when RPState#revproxy.state == sendcontent ->
     case Arg#arg.clidata of
         {partial, Bin} ->
             ?Debug("Send partial content to backend server: ~p bytes~n",
@@ -137,7 +137,7 @@ out(Arg = #arg{state=RPState}) when RPState#revproxy.state == sendcontent ->
 %% Send the request content to the server. Here the content is chunked, so we
 %% must rebuild the chunk before sending it. Chunks can have different size than
 %% the original request because of 'partial_post_size' value.
-out(Arg = #arg{state=RPState}) when RPState#revproxy.state == sendchunk ->
+out(#arg{state=RPState}=Arg) when RPState#revproxy.state == sendchunk ->
     case Arg#arg.clidata of
         {partial, Bin} ->
             ?Debug("Send chunked content to backend server: ~p bytes~n",
@@ -175,7 +175,7 @@ out(Arg = #arg{state=RPState}) when RPState#revproxy.state == sendchunk ->
 
 %% The request and its content were sent. Now, we try to read the response
 %% headers. Then we check if the response content is chunked or not.
-out(Arg = #arg{state=RPState}) when RPState#revproxy.state == recvheaders ->
+out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvheaders ->
     Res = yaws:http_get_headers(RPState#revproxy.srvsock,
                                 RPState#revproxy.type),
     case Res of
@@ -240,32 +240,55 @@ out(Arg = #arg{state=RPState}) when RPState#revproxy.state == recvheaders ->
     end;
 
 
-%% The reponse content is not chunked.
-%% TODO: use partial_post_size to split huge content and avoid memory
-%% exhaustion.
-out(Arg = #arg{state=RPState}) when RPState#revproxy.state == recvcontent ->
+%% The response content is not chunked.
+out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvcontent ->
     Len = list_to_integer((RPState#revproxy.headers)#headers.content_length),
-    case read(RPState, Len) of
-        {ok, Data} ->
-            ?Debug("Response content received from the backend server : "
-                   "~p bytes~n", [size(Data)]),
-            RPState1 = RPState#revproxy{state      = terminate,
+    SC=get(sc),
+    if
+        Len =< SC#sconf.partial_post_size ->
+            case read(RPState, Len) of
+                {ok, Data} ->
+                    ?Debug("Response content received from the backend server : "
+                           "~p bytes~n", [size(Data)]),
+                    RPState1 = RPState#revproxy{state      = terminate,
+                                                is_chunked = false,
+                                                srvdata    = {content, Data}},
+                    out(Arg#arg{state=RPState1});
+                {error, Reason} ->
+                    ?Debug("TCP error: ~p~n", [Reason]),
+                    case Reason of
+                        closed -> close(RPState);
+                        _      -> ok
+                    end,
+                    outXXX(500, Arg)
+            end;
+        true ->
+            BlockSize = SC#sconf.partial_post_size,
+            BlockCount = Len div BlockSize,
+            LastBlock = Len rem BlockSize,
+            GC = get(gc),
+            Pid = spawn(
+                    fun() ->
+                            put(gc, GC),
+                            receive
+                                {ok, YawsPid} ->
+                                    recv_blocks(YawsPid, RPState, Arg,
+                                                BlockCount, BlockSize, LastBlock);
+                                {discard, YawsPid} ->
+                                    Socket = Arg#arg.clisock,
+                                    yaws_api:stream_process_end(Socket, YawsPid)
+                            end
+                    end),
+            RPState1 = RPState#revproxy{state = terminate,
                                         is_chunked = false,
-                                        srvdata    = {content, Data}},
-            out(Arg#arg{state=RPState1});
-        {error, Reason} ->
-            ?Debug("TCP error: ~p~n", [Reason]),
-            case Reason of
-                closed -> close(RPState);
-                _      -> ok
-            end,
-            outXXX(500, Arg)
+                                        srvconn_status = "keep-alive",
+                                        srvdata = {streamcontent_from_pid, Pid}},
+            out(Arg#arg{state=RPState1})
     end;
 
-
-%% The reponse content is chunked. Read the first chunk here and spawn a process
+%% The response content is chunked. Read the first chunk here and spawn a process
 %% to read others.
-out(Arg = #arg{state=RPState}) when RPState#revproxy.state == recvchunk ->
+out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvchunk ->
     case read_chunk(RPState) of
         {ok, Data} ->
             ?Debug("First chunk received from the backend server : "
@@ -286,7 +309,7 @@ out(Arg = #arg{state=RPState}) when RPState#revproxy.state == recvchunk ->
 
 %% Now, we return the result and we let yaws_server deals with it. If it is
 %% possible, we try to cache the connection.
-out(Arg = #arg{state=RPState}) when RPState#revproxy.state == terminate ->
+out(#arg{state=RPState}=Arg) when RPState#revproxy.state == terminate ->
     case RPState#revproxy.srvconn_status of
         "close" when RPState#revproxy.is_chunked == false -> close(RPState);
         _  -> cache_connection(RPState)
@@ -321,13 +344,18 @@ out(Arg = #arg{state=RPState}) when RPState#revproxy.state == terminate ->
             spawn(fun() -> put(gc, GC), recv_next_chunk(Self, Arg) end),
             MimeType = (RPState#revproxy.headers)#headers.content_type,
             Res ++ [{streamcontent, MimeType, Chunk}];
+
+        {streamcontent_from_pid, Pid} ->
+            MimeType = (RPState#revproxy.headers)#headers.content_type,
+            Res ++ [{streamcontent_from_pid, MimeType, Pid}];
+
         _ ->
             Res
     end;
 
 
 %% Catch unexpected state by sending an error 500
-out(Arg = #arg{state=RPState}) ->
+out(#arg{state=RPState}=Arg) ->
     ?Debug("Unexpected revproxy state:~n - ~s~n",
            [?format_record(RPState, revproxy)]),
     case RPState#revproxy.srvsock of
@@ -355,7 +383,7 @@ outXXX(Code, _Arg) ->
 
 %%==========================================================================
 %% This function is used to read a chunk and to stream it to the client.
-recv_next_chunk(YawsPid, Arg = #arg{state=RPState}) ->
+recv_next_chunk(YawsPid, #arg{state=RPState}=Arg) ->
     case read_chunk(RPState) of
         {ok, <<>>} ->
             ?Debug("Last chunk received from the backend server~n", []),
@@ -378,6 +406,43 @@ recv_next_chunk(YawsPid, Arg = #arg{state=RPState}) ->
             outXXX(500, Arg)
     end.
 
+%%==========================================================================
+%% This function reads blocks from the server and streams them to the client.
+recv_blocks(YawsPid, RPState, #arg{clisock=Sock}=Arg, 0, _BlockSize, LastBlock) ->
+    case read(RPState, LastBlock) of
+        {ok, Data} ->
+            ?Debug("Response content received from the backend server : "
+                   "~p bytes~n", [size(Data)]),
+            ok = yaws_api:stream_process_deliver(Sock, Data),
+            yaws_api:stream_process_end(Sock, YawsPid);
+        {error, Reason} ->
+            ?Debug("TCP error: ~p~n", [Reason]),
+            case Reason of
+                closed ->
+                    close(RPState),
+                    yaws_api:stream_process_end(closed, YawsPid);
+                _ ->
+                    yaws_api:stream_process_end(Arg#arg.clisock, YawsPid)
+            end
+    end;
+recv_blocks(YawsPid, RPState, Arg, BlockCount, BlockSize, LastBlock) ->
+    Sock = Arg#arg.clisock,
+    case read(RPState, BlockSize) of
+        {ok, Data} ->
+            ?Debug("Response content received from the backend server : "
+                   "~p bytes~n", [size(Data)]),
+            ok = yaws_api:stream_process_deliver(Sock, Data),
+            recv_blocks(YawsPid, RPState, Arg, BlockCount-1, BlockSize, LastBlock);
+        {error, Reason} ->
+            ?Debug("TCP error: ~p~n", [Reason]),
+            case Reason of
+                closed ->
+                    close(RPState),
+                    yaws_api:stream_process_end(closed, YawsPid);
+                _ ->
+                    yaws_api:stream_process_end(Sock, YawsPid)
+            end
+    end.
 
 %%==========================================================================
 %% TODO: find a better way to cache connections to backend servers. Here we can
@@ -461,12 +526,10 @@ do_connect(URL) ->
             {error, unsupported_protocol}
     end.
 
-
 send(#revproxy{srvsock=Sock, type=ssl}, Data) ->
     ssl:send(Sock, Data);
 send(#revproxy{srvsock=Sock, type=nossl}, Data) ->
     gen_tcp:send(Sock, Data).
-
 
 read(RPState, Len) ->
     yaws:setopts(RPState#revproxy.srvsock, [{packet, raw}, binary],

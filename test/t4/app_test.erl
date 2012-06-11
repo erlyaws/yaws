@@ -27,6 +27,7 @@ start() ->
         streamcontent_revproxy_test(),
         keepalive_revproxy_test(),
         rewrite_revproxy_test(),
+        large_content_revproxy_test(),
         fwdproxy_test(),
         ok
     catch
@@ -194,6 +195,17 @@ rewrite_revproxy_test() ->
     ?line Res = Body2,
     ok.
 
+large_content_revproxy_test() ->
+    io:format("large_content_revproxy_test\n", []),
+    Uri = "http://localhost:8004/revproxy/8388608.bin",
+
+    ?line {ok, Bin} = file:read_file("www2/8388608.bin"),
+    ?line {ok, "200", Hdrs, Body0} = ibrowse:send_req(Uri, [], get),
+    ?line "8388608" = proplists:get_value("Content-Length", Hdrs),
+    Body = list_to_binary(Body0),
+    ?line true = (size(Body) == 8388608),
+    ?line Bin = Body,
+    ok.
 
 fwdproxy_test() ->
     io:format("fwdproxy_test\n", []),
@@ -208,7 +220,6 @@ fwdproxy_test() ->
     ?line {ok, "200", _, Body2} = ibrowse:send_req(Uri2, [], get, [], Opts),
     ?line Res = Body2,
     ok.
-
 
 recv_hdrs(Sock) ->
     inet:setopts(Sock, [{packet, http}]),
