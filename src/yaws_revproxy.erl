@@ -86,8 +86,8 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == sendheaders ->
         {error, Reason} ->
             ?Debug("TCP error: ~p~n", [Reason]),
             case Reason of
-                closed -> close(RPState);
-                _      -> ok
+                closed -> ok;
+                _      -> close(RPState)
             end,
             outXXX(500, Arg)
     end;
@@ -106,8 +106,8 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == sendcontent ->
                 {error, Reason} ->
                     ?Debug("TCP error: ~p~n", [Reason]),
                     case Reason of
-                        closed -> close(RPState);
-                        _      -> ok
+                        closed -> ok;
+                        _      -> close(RPState)
                     end,
                     outXXX(500, Arg)
             end;
@@ -121,8 +121,8 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == sendcontent ->
                 {error, Reason} ->
                     ?Debug("TCP error: ~p~n", [Reason]),
                     case Reason of
-                        closed -> close(RPState);
-                        _      -> ok
+                        closed -> ok;
+                        _      -> close(RPState)
                     end,
                     outXXX(500, Arg)
             end;
@@ -150,8 +150,8 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == sendchunk ->
                 {error, Reason} ->
                     ?Debug("TCP error: ~p~n", [Reason]),
                     case Reason of
-                        closed -> close(RPState);
-                        _      -> ok
+                        closed -> ok;
+                        _      -> close(RPState)
                     end,
                     outXXX(500, Arg)
             end;
@@ -165,8 +165,8 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == sendchunk ->
                 {error, Reason} ->
                     ?Debug("TCP error: ~p~n", [Reason]),
                     case Reason of
-                        closed -> close(RPState);
-                        _      -> ok
+                        closed -> ok;
+                        _      -> close(RPState)
                     end,
                     outXXX(500, Arg)
             end
@@ -257,8 +257,8 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvcontent ->
                 {error, Reason} ->
                     ?Debug("TCP error: ~p~n", [Reason]),
                     case Reason of
-                        closed -> close(RPState);
-                        _      -> ok
+                        closed -> ok;
+                        _      -> close(RPState)
                     end,
                     outXXX(500, Arg)
             end;
@@ -300,8 +300,8 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvchunk ->
         {error, Reason} ->
             ?Debug("TCP error: ~p~n", [Reason]),
             case Reason of
-                closed -> close(RPState);
-                _      -> ok
+                closed -> ok;
+                _      -> close(RPState)
             end,
             outXXX(500, Arg)
     end;
@@ -312,6 +312,7 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvchunk ->
 out(#arg{state=RPState}=Arg) when RPState#revproxy.state == terminate ->
     case RPState#revproxy.srvconn_status of
         "close" when RPState#revproxy.is_chunked == false -> close(RPState);
+        "close" -> ok;
         _  -> cache_connection(RPState)
     end,
 
@@ -399,11 +400,11 @@ recv_next_chunk(YawsPid, #arg{state=RPState}=Arg) ->
             recv_next_chunk(YawsPid, Arg);
         {error, Reason} ->
             ?Debug("TCP error: ~p~n", [Reason]),
+            yaws_api:stream_chunk_end(YawsPid),
             case Reason of
-                closed -> close(RPState);
-                _      -> ok
-            end,
-            outXXX(500, Arg)
+                closed -> ok;
+                _      -> close(RPState)
+            end
     end.
 
 %%==========================================================================
