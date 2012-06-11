@@ -85,30 +85,32 @@ is able to handle a very large number of concurrent connections}
 
 \end{itemize}
 
-\Yaws\  has a wide feature set, it supports:
+\Yaws\  has a wide feature set; it supports:
 
-\begin{enumerate}
+\begin{itemize}
 \item HTTP 1.0 and HTTP 1.1
 \item Static content page delivery
 \item Dynamic content generation using embedded \Erlang\  code in the
 HTML pages
 \item Common Log Format traffic logs
 \item Virtual hosting with several servers on the same IP address
-\item Multiple servers on multiple IP addresses.
+\item Multiple servers on multiple IP addresses
 \item HTTP tracing for debugging
-\item An interactive interpreter environment in the Web server while
-developing and debugging the web site.
-\item RAM caching of commonly accessed pages.
-\item Full streaming capabilities of both up and down load of dynamically
-generated pages.
+\item An interactive interpreter environment in the Web server for use while
+developing and debugging a web site
+\item RAM caching of commonly accessed pages
+\item Full streaming capabilities of both upload and download of dynamically
+generated pages
 \item SSL
-\item Support for WWW-Authenticated pages.
-\item Support API for cookie based sessions.
+\item Support for WWW-Authenticated pages
+\item Support API for cookie based sessions
 \item Application Modules where virtual directory hierarchies can
-be made.
+be made
 \item Embedded mode
 \item WebSockets (RFC 6455)
-\end{enumerate}
+\item Long polling (COMET) applications
+\item Forward and reverse proxying
+\end{itemize}
 
 \section{Prerequisites}
 This document requires that the reader:
@@ -578,36 +580,35 @@ request such as:
 
 
 -record(arg, {
-          clisock,        %% the socket leading to the peer client
-          client_ip_port, %% {ClientIp, ClientPort} tuple
-          headers,        %% headers
-          req,            %% request
-          clidata,        %% The client data (as a binary in POST requests)
-          server_path,    %% The normalized server path
-                          %% (pre-querystring part of URI)
-          querydata,      %% For URIs of the form ...?querydata
-                          %%  equiv of cgi QUERY_STRING
-          appmoddata,     %% (deprecated - use pathinfo instead) the remainder
-                          %% of the path leading up to the query
-          docroot,        %% Physical base location of data for this request
-          docroot_mount,  %% virtual directory e.g /myapp/ that the docroot
-                          %%  refers to.
-          fullpath,       %% full deep path to yaws file
-          cont,           %% Continuation for chunked multipart uploads
-          state,          %% State for use by users of the out/1 callback
-          pid,            %% pid of the yaws worker process
-          opaque,         %% useful to pass static data
-          appmod_prepath, %% (deprecated - use prepath instead) path in front
-                          %%of: <appmod><appmoddata>
-          prepath,        %% Path prior to 'dynamic' segment of URI.
-                          %%  ie http://some.host/<prepath>/<script-point>/d/e
-                          %% where <script-point> is an appmod mount point,
-                          %% or .yaws,.php,.cgi,.fcgi etc script file.
-          pathinfo        %% Set to '/d/e' when calling c.yaws for the request
-                          %% http://some.host/a/b/c.yaws/d/e
-                          %%  equiv of cgi PATH_INFO
+          clisock,        % the socket leading to the peer client
+          client_ip_port, % {ClientIp, ClientPort} tuple
+          headers,        % headers
+          req,            % request
+          clidata,        % The client data (as a binary in POST requests)
+          server_path,    % The normalized server path
+                          % (pre-querystring part of URI)
+          querydata,      % For URIs of the form ...?querydata
+                          %  equiv of cgi QUERY_STRING
+          appmoddata,     % (deprecated - use pathinfo instead) the remainder
+                          % of the path leading up to the query
+          docroot,        % Physical base location of data for this request
+          docroot_mount,  % virtual directory e.g /myapp/ that the docroot
+                          %  refers to.
+          fullpath,       % full deep path to yaws file
+          cont,           % Continuation for chunked multipart uploads
+          state,          % State for use by users of the out/1 callback
+          pid,            % pid of the yaws worker process
+          opaque,         % useful to pass static data
+          appmod_prepath, % (deprecated - use prepath instead) path in front
+                          %  of: <appmod><appmoddata>
+          prepath,        % Path prior to 'dynamic' segment of URI.
+                          %  ie http://some.host/<prepath>/<script-point>/d/e
+                          % where <script-point> is an appmod mount point,
+                          % or .yaws,.php,.cgi,.fcgi etc script file.
+          pathinfo        % Set to '/d/e' when calling c.yaws for the request
+                          % http://some.host/a/b/c.yaws/d/e
+                          %  equiv of cgi PATH_INFO
          }).
-
 
 -record(http_request, {method,
                        path,
@@ -636,7 +637,7 @@ request such as:
           authorization,
           transfer_encoding,
           x_forwarded_for,
-          other = []   %% misc other headers
+          other = []   % misc other headers
          }).
 
 \end{verbatim}
@@ -2222,11 +2223,11 @@ part where options for each virtual host is supplied.
               Default is true.
 
 \item        \verb+soap_srv_mods = ListOfModuleSetting+ ---
-              If enable\_soap is true, a startup \Yaws\ will invoke
+              If \verb+enable_soap+ is true, a startup \Yaws\ will invoke
               \verb+yaws_soap_srv:setup()+ to setup modules set
-              here. \verb+ModuleSetting+ is either a triad like
-              \verb+<Mod, HandlerFunc, WsdlFile>+ or a quadruple form like
-              \verb+<Mod, HandlerFunc, WsdlFile, Prefix>+ which specifies the
+              here. \verb+ModuleSetting+ is either a triad like\\
+              \verb+<Mod, HandlerFun, WsdlFile>+ or a tetrad like
+              \verb+<Mod, HandlerFun, WsdlFile, Prefix>+\\ which specifies the
               prefix. A prefix will be used as argument of
               \verb+yaws_soap_lib:initModel()+ and then be used as a XML
               namespace prefix.  Note, the WsdlFile here should be an
@@ -2234,7 +2235,7 @@ part where options for each virtual host is supplied.
 
               For example, we can specify
 \begin{verbatim}
-  soap_srv_mods=<Mod1, HandlerFunc, WsdlFile1> <Mod2, HandlerFunc, WsdlFile2, SpecifiedPrefix> ...
+  soap_srv_mods=<Mod1,Handler,WsdlFile1> <Mod2,Handler,Wsdl2,SpecifiedPrefix>
 \end{verbatim}
 
 \item        \verb+php_exe_path = Path+ ---
@@ -2395,7 +2396,7 @@ The following directives are allowed inside a server definition.
                         a tuple).
 
                       \item \verb+Req+ --- The HTTP method, URI path, and HTTP
-                        version of the request (as a \verb+#http_request{}+
+                        version of the request (as an\\ \verb+#http_request{}+
                         record).
 
                       \item \verb+InHdrs+ --- The HTTP headers which were sent
@@ -2408,7 +2409,7 @@ The following directives are allowed inside a server definition.
                         string).
 
                       \item \verb+Item+ -- The result of an authentication
-                        request. May be \verb+{ok, User}+, \verb+403+ or
+                        request. May be \verb+{ok, User}+, \verb+403+ or\\
                         \verb+{401, Realm}+.
 
                       \item \verb+Time+ --- The time taken to serve the request,
@@ -2478,7 +2479,7 @@ The following directives are allowed inside a server definition.
                used, the specified value must be strictly positive. The default
                value is nolimit.
 
-             \item \verb+compress_level = none | default | best_compression | best_speed | 0..9+ ---
+             \item \verb+compress_level = none | default | best_compression | best_speed | 0..9+ ---\\
                Defines the compression level to be used. 0 (none), gives no
                compression at all, 1 (best\_speed) gives best speed and 9
                (best\_compression) gives best compression. The default value is
@@ -2507,22 +2508,28 @@ The following directives are allowed inside a server definition.
                in the cache are concerned. The default value is false.
 
              \item \verb+mime_types = ListOfTypes | defaults | all+ ---
-               Restricts the deflate compression to particular mime types. The
+               Restricts the deflate compression to particular MIME types. The
                special value all enable it for all types (It is a synonym of
-               `*/*'). Mime types into \verb+ListOfTypes+ must have the form
+               `*/*'). MIME types into \verb+ListOfTypes+ must have the form
                `type/subtype' or `type/*' (indicating all subtypes of that
                type). Here is an example:
 \begin{verbatim}
   mime_types = default image/*
   mime_types = application/xml application/xhtml+xml application/rss+xml
 \end{verbatim}
-                    By default, following mime types are compressed (if
-                    \verb+deflate+ is set to true): \verb+text/*+,
-                    \verb+application/rtf+, \verb+application/msword+,
-                    \verb+application/pdf+, \verb+application/x-dvi+,
-                    \verb+application/javascript+,
-                    \verb+application/x-javascript+. Multiple \verb+mime_types+
-                    directive can be used.
+                    By default, the following MIME types are compressed (if
+                    \verb+deflate+ is set to true):
+
+                    \begin{itemize}
+                    \item \verb+text/*+
+                    \item \verb+application/rtf+
+                    \item \verb+application/msword+
+                    \item \verb+application/pdf+
+                    \item \verb+application/x-dvi+
+                    \item \verb+application/javascript+
+                    \item \verb+application/x-javascript+
+                    \end{itemize}
+                    Multiple \verb+mime_types+ directive can be used.
              \end{itemize}
 
 \item       \verb+docroot  =  Directory ...+ ---
@@ -2576,8 +2583,8 @@ The following directives are allowed inside a server definition.
 \item       \verb+tilde_allowed_scripts = ListOfSuffixes+ ---
              The allowed script types for this server when executing files in a
              users \verb+public_html+ folder Recognized are \textit{yaws},
-             \textit{cgi}, \textit{fcgi}, \textit{php}. Default is
-             \verb+tilde_allowed_scripts =+ i.e. empty
+             \textit{cgi}, \textit{fcgi}, \textit{php}. Default is\\
+             \verb+tilde_allowed_scripts =+ (i.e., empty).
 
 \item       \verb+appmods = ListOfModuleNames+ ---
              If any the names in \verb+ListOfModuleNames+ appear as components
@@ -2609,7 +2616,7 @@ The following directives are allowed inside a server definition.
 
 \item       \verb+errormod_404 = Module+ ---
               It is possible to set a special module that handles 404 Not Found
-              messages. The function \verb+Module:out404(Arg, GC, SC)+ will be
+              messages. The function\\ \verb+Module:out404(Arg, GC, SC)+ will be
               invoked. The arguments are
               \begin{itemize}
               \item \verb+Arg+ --- a \verb+#arg{}+ record
@@ -2622,7 +2629,7 @@ The following directives are allowed inside a server definition.
 \item       \verb+errormod_401 = Module+ ---
               It is possible to set a special module that handles 401
               Unauthorized messages. This can for example be used to display a
-              login page instead. The function
+              login page instead. The function \\
               \verb+Module:out401(Arg, Auth, Realm)+ will be invoked. The
               arguments are
               \begin{itemize}
@@ -2682,7 +2689,7 @@ The following directives are allowed inside a server definition.
               \verb+yaws_vdir+ module what paths to rewrite.
 
 \item       \verb+start_mod = Module+ ---
-              Defines a user provided callback module. At startup of the server,
+              Defines a user-provided callback module. At startup of the server,\\
               \verb+Module:start/1+ will be called.  The \verb+#sconf{}+ record
               (defined in yaws.hrl) will be used as the input argument. This
               makes it possible for a user application to synchronize the
@@ -2843,12 +2850,12 @@ The following directives are allowed inside a server definition.
 
 \item       \verb+<redirect> ... </redirect>+ ---
               Defines a redirect mapping. The following items are allowed within
-              a matching pair of <redirect> and </redirect> delimiters.
+              a matching pair of \verb+<redirect>+ and \verb+</redirect>+ delimiters.
 
               We can have a series of \verb+Path = URL+ or \verb+Path = file+
 
               All accesses to \verb+Path+ will be redirected to \verb+URL/Path+
-              or alternatively to \verb+scheme:host:port/file/Path+ if a file is
+              or to \verb+scheme:host:port/file/Path+ if a file is
               used. Note that the original path is appended to the redirected
               url. So if we for example have:
 \begin{verbatim}
@@ -2857,7 +2864,7 @@ The following directives are allowed inside a server definition.
     /bar = /tomato.html
   </redirect>
 \end{verbatim}
-              Asumming this config resides on a site called
+              Assuming this config resides on a site called
               \url{http://abc.com}, We have the following redirects:
 \begin{verbatim}
   http://abc.com/foo -> http://www.mysite.org/zapp/foo
@@ -2912,7 +2919,7 @@ The following directives are allowed inside a server definition.
                 access to the directory. The \verb+auth/2+ function should
                 return one of: \verb+true+, \verb+false+, \verb+{false, Realm}+,
                 \verb+{appmod, Mod}+. If \verb+{appmod, Mod}+ is returned then a
-                call to \verb+Mod:out401(Arg, Auth, Realm)+ will be used to
+                call to\\ \verb+Mod:out401(Arg, Auth, Realm)+ will be used to
                 deliver the content. If \verb+errormod_401+ is defined, the call
                 to \verb+Mod+ will be ignored. (\verb+Mod:out(Arg)+ is
                 deprecated).
