@@ -2296,6 +2296,8 @@ handle_ut(CliSock, ARG, UT = #urltype{type = dav}, N) ->
     SC=get(sc),
     Next =
         if
+            Req#http_request.method == 'OPTIONS' ->
+                options;
             Req#http_request.method == 'PUT' ->
                 fun(A) -> yaws_dav:put(SC, A) end;
             Req#http_request.method == 'DELETE' ->
@@ -2322,6 +2324,8 @@ handle_ut(CliSock, ARG, UT = #urltype{type = dav}, N) ->
     case Next of
         error ->
             handle_ut(CliSock, ARG, #urltype{type = error}, N);
+        options ->
+            deliver_options(CliSock, Req, []);
         {regular, Finfo} ->
             handle_ut(CliSock, ARG, UT#urltype{type = regular,
                                                finfo = Finfo}, N);

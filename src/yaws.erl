@@ -1158,9 +1158,9 @@ make_allow_header(Options) ->
         [] ->
             HasDav = ?sc_has_dav(get(sc)),
             ["Allow: GET, POST, OPTIONS, HEAD",
-             if HasDav == true -> ", PUT, PROPFIND, MKCOL, MOVE, COPY\r\n";
-                true           -> "\r\n"
-             end];
+             if HasDav == true -> ", PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY";
+                true           -> ""
+             end, "\r\n"];
         _ ->
             ["Allow: ",
              lists:foldl(fun(M, "") -> atom_to_list(M);
