@@ -864,15 +864,18 @@ listen_opts(SC) ->
                    true ->
                        []
                end,
-    [binary,
+    Opts = [binary,
      {ip, SC#sconf.listen},
      {packet, http},
      {packet_size, 16#4000},
      {recbuf, 8192},
      {reuseaddr, true},
+     {backlog, 1024},
      {active, false}
      | proplists:get_value(listen_opts, SC#sconf.soptions, [])
-    ] ++ InetType.
+    ] ++ InetType,
+    ?Debug("listen options: ~p", [Opts]),
+    Opts.
 
 ssl_listen_opts(GC, SC, SSL) ->
     InetType = if
