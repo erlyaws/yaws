@@ -316,7 +316,7 @@ handle_cast({_ServerName, access, Fd, {Ip, Req, InH, OutH, _}}, State) ->
             Msg = fmt_access_log(State#state.now, fmt_ip(Ip, State), User,
                                  [Meth, $\s, Path, $\s, Ver],
                                  Status,  Len, Referer, UserAgent),
-            file:write(Fd, Msg),
+            file:write(Fd, safe_log_data(Msg)),
             {noreply, State};
         false ->
             {noreply, State}
@@ -334,7 +334,7 @@ handle_cast({ServerName, auth, Fd, {Ip, Path, Item}}, State) ->
                        {401, Realm}     -> [" 401 realm=", Realm];
                        {401, User, PWD} -> [" 401 user=", User, " badpwd=", PWD]
                    end, "\n"],
-            file:write(Fd, Msg),
+            file:write(Fd, safe_log_data(Msg)),
             {noreply, State};
         false ->
             {noreply,State}
@@ -488,6 +488,9 @@ left_fill(N, Width, _Fill) when length(N) >= Width ->
     N;
 left_fill(N, Width, Fill) ->
     left_fill([Fill|N], Width, Fill).
+
+safe_log_data(Elements) ->
+    [ yaws:to_string(E) || E <- Elements ].
 
 
 
