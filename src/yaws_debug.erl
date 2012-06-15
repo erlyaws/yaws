@@ -33,7 +33,7 @@ typecheck([{record, Rec, X} | Tail], File, Line) when is_atom(X),
 typecheck([{int, Int} |Tail], File, Line) when is_integer(Int) ->
     typecheck(Tail, File, Line);
 typecheck([Err|_], File, Line) ->
-    io:format(user, "TC ERROR ~s:~w:~n~p",
+    debug_format(user, "TC ERROR ~s:~w:~n~p",
               [File, Line, Err]),
     erlang:error(tcerr);
 typecheck([], _,_) ->
@@ -119,11 +119,11 @@ assert(_,_,_,Failure) ->
     fail(Failure).
 
 fail({assert,File,Line,Message}) ->
-    io:format(user, "Assertion FAILED ~p:~p, pid ~w exiting: ~p~n",
+    debug_format(user, "Assertion FAILED ~p:~p, pid ~w exiting: ~p~n",
               [File, Line, self(), Message]),
     erlang:error(assertion_failed);
 fail({alert,File,Line,Message}) ->
-    io:format(user, "Assert WARNING ~p:~p, pid ~w: ~p~n",
+    debug_format(user, "Assert WARNING ~p:~p, pid ~w: ~p~n",
               [File, Line, self(), Message]),
     ok;
 fail({{debug,Fstr}, File,Line,Fmt, Args}) ->
@@ -132,30 +132,44 @@ fail({{debug,Fstr}, File,Line,Fmt, Args}) ->
                           [Fstr, node(), filename:basename(File),
                            Line, self()])),
 
-    case (catch io:format(user, Str ++ Fmt ++ "~n", Args)) of
+    case (catch debug_format(user, Str ++ Fmt ++ "~n", Args)) of
         ok -> ok;
-        _ -> io:format(user, "ERROR ~p:~p: Pid ~w: (bad format)~n~p,~p~n",
+        _ -> debug_format(user, "ERROR ~p:~p: Pid ~w: (bad format)~n~p,~p~n",
                        [File, Line, self(), Fmt, Args]),
 
              ok
     end;
 
 fail({format, File,Line,Fmt,Args}) ->
-    case (catch io:format(user, Fmt,Args)) of
+    case (catch debug_format(user, Fmt,Args)) of
         ok -> ok;
         _ ->
-            io:format(user, "ERROR ~p:~p: Pid ~w: (bad format)~n~p,~p~n",
+            debug_format(user, "ERROR ~p:~p: Pid ~w: (bad format)~n~p,~p~n",
                       [File, Line, self(), Fmt, Args]),
 
             ok
     end.
+
+debug_format(_, F, D) ->
+    debug_format(F, D).
+
+debug_format(F, A) ->
+    Str = case catch io_lib:format("yaws debug: " ++ F, A) of
+        {'EXIT', Reason} ->
+            io_lib:format("yaws debug: F=~s A=~p (failed to format: ~p)",
+                [F, A, Reason]);
+        Ok -> Ok
+    end,
+    error_logger:info_msg(Str),
+    catch io:format(F, A),
+    ok.
 
 format(F, A) ->
     format(get(gc), F, A).
 format(GC, F, A) ->
     case ?gc_has_debug(GC) of
         true ->
-            io:format("yaws:" ++ F, A);
+            error_logger:info_msg("yaws debug:" ++ F, A);
         false ->
             ok
     end.
@@ -184,7 +198,7 @@ mktags() ->
 
 
 xref([Dir]) ->
-    io:format("~p~n", [xref:d(Dir)]),
+    debug_format("~p~n", [xref:d(Dir)]),
     init:stop().
 
 
@@ -218,7 +232,7 @@ pids() ->
 eprof() ->
     eprof:start(),
     eprof:profile(pids()),
-    io:format("Ok run some traffic \n", []).
+    debug_format("Ok run some traffic \n", []).
 
 
 
