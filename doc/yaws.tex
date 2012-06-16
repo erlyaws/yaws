@@ -2596,7 +2596,7 @@ The following directives are allowed inside a server definition.
   appmods = <Path1, Module1> <Path2, Modules2> ...
 \end{verbatim}
              Assume for example that we have the URL
-             \url{http://www.hyber.org/myapp/foo/bar/baz?user=joe+} while we
+             \url{http://www.hyber.org/myapp/foo/bar?user=joe} while we
              have the module \verb+foo+ defined as an appmod, the function
              \verb+foo:out(Arg)+ will be invoked instead of searching the
              filesystems below the point \verb+foo+.
@@ -2691,25 +2691,23 @@ The following directives are allowed inside a server definition.
 \item       \verb+start_mod = Module+ ---
               Defines a user-provided callback module. At startup of the server,\\
               \verb+Module:start/1+ will be called.  The \verb+#sconf{}+ record
-              (defined in yaws.hrl) will be used as the input argument. This
+              (defined in \verb+yaws.hrl+) will be used as the input argument. This
               makes it possible for a user application to synchronize the
               startup with the \Yaws\ server as well as getting hold of user
               specific configuration data, see the explanation for the
               \verb+<opaque>+ context.
 
-\item       \verb+revproxy = true|false+ ---
-              Make \Yaws\ a reverse proxy. The Prefix is a path inside our own
-              docroot and the Url argument is an url pointing to a website we
-              want to "mount" under the path which is Prefix.
+\item       \verb+revproxy = Prefix Url+ ---
+              Make \Yaws\ a reverse proxy. \verb+Prefix+ is a path inside our own
+              docroot and \verb+Url+ is a URL pointing to a website we
+              want to "mount" under the path which is \verb+Prefix+.
 
               Example: \verb+revproxy = /tmp/foo http://yaws.hyber.org+
 
-              Makes the hyber website appear under /tmp/foo
+              This makes the hyber website appear under \verb+/tmp/foo+.
 
               It is possible to have multiple reverse proxies inside the same
               server.
-
-              WARNING, this feature is yet not in production quality.
 
 \item       \verb+fwdproxy = true|false+ ---
               Make \Yaws\ a forward proxy. By enabling this option you can use
@@ -2717,13 +2715,11 @@ The following directives are allowed inside a server definition.
               configuring the proxy settings in a web-browser to explicitly
               target \Yaws\ as its proxy server.
 
-              WARNING, this feature is yet not in production quality.
-
 \item       \verb+servername = Name+ ---
-              If we're virthosting everal servers and want to force a server to
-              match specific Host: headers we can do this with the "servername"
+              If we're virthosting several servers and want to force a server to
+              match specific \verb+Host:+ headers we can do this with the \verb+servername+
               directive. This name doesn't necessarily have to be the same as
-              the the name inside <server Name> in certain NAT scenarios. Rarely
+              the name inside \verb+<server Name>+ in certain NAT scenarios. Rarely
               used feature.
 
 \item       \verb+php_handler+ ---
@@ -2884,9 +2880,10 @@ The following directives are allowed inside a server definition.
     /bar = /tomato.html
   </redirect>
 \end{verbatim}
-              Now a request for \url{http://abc.com/foo/x/y/z} simply gets
-              redirected to \url{http://www.mysite.org/zapp}. This is typically
-              used when we simply want a static redirect at some place in the
+              With this configuration, a request for
+              \url{http://abc.com/foo/x/y/z} simply gets redirected to
+              \url{http://www.mysite.org/zapp}. This is typically used when
+              we simply want a static redirect at some place in the
               docroot.
 
               When we specify a file as target for the redirect, the redir will
