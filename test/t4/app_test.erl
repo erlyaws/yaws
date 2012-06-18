@@ -29,6 +29,9 @@ start() ->
         rewrite_revproxy_test(),
         large_content_revproxy_test(),
         no_content_length_revproxy_test(),
+        failed_req_interception_revproxy_test(),
+        failed_resp_interception_revproxy_test(),
+        good_interception_revproxy_test(),
         fwdproxy_test(),
         ok
     catch
@@ -218,6 +221,28 @@ no_content_length_revproxy_test() ->
     ?line undefined = proplists:get_value("Transfer-Encoding", Hdrs),
     ?line "close"   = proplists:get_value("Connection", Hdrs),
     ?line Res = Body,
+    ok.
+
+failed_req_interception_revproxy_test() ->
+    io:format("failed_req_interception_revproxy_test\n", []),
+    Uri = "http://localhost:8005/revproxy1/failedreqinterception",
+    ?line {ok, "500", _, _} = ibrowse:send_req(Uri, [], get),
+    ok.
+
+failed_resp_interception_revproxy_test() ->
+    io:format("failed_resp_interception_revproxy_test\n", []),
+    Uri = "http://localhost:8005/revproxy2/failedrespinterception",
+    ?line {ok, "500", _, _} = ibrowse:send_req(Uri, [], get),
+    ok.
+
+good_interception_revproxy_test() ->
+    io:format("good_interception_revproxy_test\n", []),
+    Uri = "http://localhost:8005/revproxy3/hello.txt",
+    Res = "Hello, World!\n",
+
+    ?line {ok, "200", Hdrs, Body} = ibrowse:send_req(Uri, [], get),
+    ?line Body = Res,
+    ?line "true"   = proplists:get_value("X-Test-Interception", Hdrs),
     ok.
 
 fwdproxy_test() ->

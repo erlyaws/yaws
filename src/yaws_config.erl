@@ -1161,21 +1161,17 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                                        Suffixes)},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
-        ["revproxy", '=', Prefix, Url] ->
-            case (catch yaws_api:parse_url(Url)) of
-                {'EXIT', _} ->
-                    {error, ?F("Bad url at line ~p",[Lno])};
-                URL when URL#url.path == "/" ->
-                    P = case lists:reverse(Prefix) of
-                            [$/|_Tail] ->
-                                Prefix;
-                            Other ->
-                                lists:reverse(Other)
-                        end,
-                    C2 = C#sconf{revproxy = [{P, URL} | C#sconf.revproxy]},
+        ["revproxy", '=' | Tail] ->
+            case parse_revproxy(Tail) of
+                {ok, RevProxy} ->
+                    C2 = C#sconf{revproxy = [RevProxy | C#sconf.revproxy]},
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
-                _URL ->
-                    {error, "Can't revproxy to an URL with a path "}
+                {error, url} ->
+                    {error, ?F("Bad url at line ~p",[Lno])};
+                {error, syntax} ->
+                    {error, ?F("Bad revproxy syntax at line ~p",[Lno])};
+                Error ->
+                    Error
             end;
 
         ["fwdproxy", '=', Bool] ->
@@ -1940,6 +1936,35 @@ parse_appmods([AppMod | Tail], Ack) ->
 
 parse_appmods([], Ack) ->
     {ok, Ack}.
+
+
+parse_revproxy([Prefix, Url]) ->
+    parse_revproxy_url(Prefix, Url);
+parse_revproxy([Prefix, Url, "intercept_mod", InterceptMod]) ->
+    case parse_revproxy_url(Prefix, Url) of
+        {ok, RP} ->
+            {ok, RP#proxy_cfg{intercept_mod = list_to_atom(InterceptMod)}};
+        Error ->
+            Error
+    end;
+parse_revproxy(_Other) ->
+    {error, syntax}.
+
+parse_revproxy_url(Prefix, Url) ->
+    case (catch yaws_api:parse_url(Url)) of
+        {'EXIT', _} ->
+            {error, url};
+        URL when URL#url.path == "/" ->
+            P = case lists:reverse(Prefix) of
+                    [$/|_Tail] ->
+                        Prefix;
+                    Other ->
+                        lists:reverse(Other)
+                end,
+            {ok, #proxy_cfg{prefix=P, url=URL}};
+        _URL ->
+            {error, "Can't revproxy to a URL with a path "}
+    end.
 
 
 parse_expires(['<', MimeType, ',' , Expire, '>' | Tail], Ack) ->

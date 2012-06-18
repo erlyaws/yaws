@@ -677,23 +677,8 @@ get_nonce_header(Headers) ->
 query_header(HeaderName, Headers) ->
     query_header(HeaderName, Headers, undefined).
 
-query_header(Header, #headers{other=L}, Default) ->
-    lists:foldl(fun({http_header,_,K0,_,V}, undefined) ->
-                        K = case is_atom(K0) of
-                                true ->
-                                    atom_to_list(K0);
-                                false ->
-                                    K0
-                            end,
-                        case string:to_lower(K) of
-                            Header ->
-                                V;
-                            _ ->
-                                Default
-                        end;
-                   (_, Acc) ->
-                        Acc
-                end, Default, L).
+query_header(Header, Headers, Default) ->
+    yaws_api:get_header(Headers, Header, Default).
 
 hash_nonce(Nonce) ->
     Salted = Nonce ++ "258EAFA5-E914-47DA-95CA-C5AB0DC85B11",

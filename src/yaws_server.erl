@@ -2002,15 +2002,15 @@ is_revproxy(ARG, Path, SC = #sconf{revproxy = RevConf}) ->
         {false, _} ->
             is_revproxy1(Path, RevConf);
         {true, _} ->
-            {true, {"/", fwdproxy_url(ARG)}}
+            {true, #proxy_cfg{prefix="/", url=fwdproxy_url(ARG)}}
     end.
 
 is_revproxy1(_,[]) ->
     false;
-is_revproxy1(Path, [{Prefix, URL} | Tail]) ->
+is_revproxy1(Path, [#proxy_cfg{prefix=Prefix}=RevConf | Tail]) ->
     case yaws:is_prefix(Prefix, Path) of
         {true,_} ->
-            {true, {Prefix,URL}};
+            {true, RevConf};
         false ->
             is_revproxy1(Path, Tail)
     end.

@@ -340,7 +340,12 @@
          }).
 
 
-
+%% forward and reverse proxy config info
+-record(proxy_cfg, {
+          prefix,
+          url,
+          intercept_mod
+         }).
 
 
 

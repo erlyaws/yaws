@@ -34,27 +34,30 @@
                    resp,            %% response received from the server
                    headers,         %%   and associated headers
                    srvdata,         %% the server data
-                   is_chunked}).    %% true if the response is chunked
+                   is_chunked,      %% true if the response is chunked
+                   intercept_mod    %% revproxy request/response intercept module
+                  }).
 
 
 %% TODO: Activate proxy keep-alive with a new option ?
 -define(proxy_keepalive, false).
 
 
-%% Initialize the connection to the backend server. If an error occured, return
+%% Initialize the connection to the backend server. If an error occurred, return
 %% an error 404.
-out(#arg{req=Req, headers=Hdrs, state={Prefix,URL}}=Arg) ->
+out(#arg{req=Req, headers=Hdrs, state=#proxy_cfg{url=URL}=State}=Arg) ->
     case connect(URL) of
         {ok, Sock, Type} ->
             ?Debug("Connection established on ~p: Socket=~p, Type=~p~n",
                    [URL, Sock, Type]),
-            RPState = #revproxy{srvsock= Sock,
-                                type   = Type,
-                                state  = sendheaders,
-                                prefix = Prefix,
-                                url    = URL,
-                                r_meth = Req#http_request.method,
-                                r_host = Hdrs#headers.host},
+            RPState = #revproxy{srvsock       = Sock,
+                                type          = Type,
+                                state         = sendheaders,
+                                prefix        = State#proxy_cfg.prefix,
+                                url           = URL,
+                                r_meth        = Req#http_request.method,
+                                r_host        = Hdrs#headers.host,
+                                intercept_mod = State#proxy_cfg.intercept_mod},
             out(Arg#arg{state=RPState});
         _ERR ->
             ?Debug("Connection failed: ~p~n", [_ERR]),
@@ -64,13 +67,29 @@ out(#arg{req=Req, headers=Hdrs, state={Prefix,URL}}=Arg) ->
 
 %% Send the client request to the server then check if the request content is
 %% chunked or not
-out(#arg{state=RPState}=Arg) when RPState#revproxy.state == sendheaders ->
+out(#arg{state=#revproxy{}=RPState}=Arg) when RPState#revproxy.state == sendheaders ->
     ?Debug("Send request headers to backend server: ~n"
            " - ~s~n", [?format_record(Arg#arg.req, http_request)]),
 
-    Hdrs    = Arg#arg.headers,
-    ReqStr  = yaws_api:reformat_request(rewrite_request(RPState,  Arg#arg.req)),
-    HdrsStr = yaws:headers_to_str(rewrite_client_headers(RPState, Hdrs)),
+    Req     = rewrite_request(RPState,  Arg#arg.req),
+    Hdrs0   = Arg#arg.headers,
+    Hdrs    = rewrite_client_headers(RPState, Hdrs0),
+    {NewReq, NewHdrs} = case RPState#revproxy.intercept_mod of
+                            undefined ->
+                                {Req, Hdrs};
+                            InterceptMod ->
+                                case catch InterceptMod:rewrite_request(Req, Hdrs) of
+                                    {ok, NewReq0, NewHdrs0} ->
+                                        {NewReq0, NewHdrs0};
+                                    InterceptError ->
+                                        error_logger:error_msg(
+                                          "revproxy intercept module ~p:rewrite_request failed: ~p~n",
+                                          [InterceptMod, InterceptError]),
+                                        exit({error, intercept_mod})
+                                end
+                        end,
+    ReqStr  = yaws_api:reformat_request(NewReq),
+    HdrsStr = yaws:headers_to_str(NewHdrs),
     case send(RPState, [ReqStr, "\r\n", HdrsStr, "\r\n"]) of
         ok ->
             RPState1 = if
@@ -94,7 +113,7 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == sendheaders ->
 
 
 %% Send the request content to the server. Here the content is not chunked. But
-%% it can be splitted because of 'partial_post_size' value.
+%% it can be split because of 'partial_post_size' value.
 out(#arg{state=RPState}=Arg) when RPState#revproxy.state == sendcontent ->
     case Arg#arg.clidata of
         {partial, Bin} ->
@@ -184,10 +203,25 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvheaders ->
             close(RPState),
             outXXX(500, Arg);
 
-        {Resp, RespHdrs} when is_record(Resp, http_response) ->
+        {Resp0, RespHdrs0} when is_record(Resp0, http_response) ->
             ?Debug("Response headers received from backend server:~n"
-                   " - ~s~n - ~s~n", [?format_record(Resp, http_response),
-                                      ?format_record(RespHdrs, headers)]),
+                   " - ~s~n - ~s~n", [?format_record(Resp0, http_response),
+                                      ?format_record(RespHdrs0, headers)]),
+
+            {Resp, RespHdrs} = case RPState#revproxy.intercept_mod of
+                                      undefined ->
+                                          {Resp0, RespHdrs0};
+                                      InterceptMod ->
+                                          case catch InterceptMod:rewrite_response(Resp0, RespHdrs0) of
+                                              {ok, NewResp, NewRespHdrs} ->
+                                                  {NewResp, NewRespHdrs};
+                                              InterceptError ->
+                                                  error_logger:error_msg(
+                                                    "revproxy intercept module ~p:rewrite_response failure: ~p~n",
+                                                    [InterceptMod, InterceptError]),
+                                                  exit({error, intercept_mod})
+                                          end
+                                  end,
 
             {CliConn, SrvConn} = get_connection_status(
                                    (Arg#arg.req)#http_request.version,

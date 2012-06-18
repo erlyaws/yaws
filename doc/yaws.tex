@@ -1218,6 +1218,18 @@ user requested. We also set the original path in the \verb+Arg+ state
 argument so that the login page can redirect the user to the original
 page once the login procedure is finished.
 
+Within an arg rewrite function, examining and modifying HTTP headers can be
+achieved using the following functions from the \verb+yaws_api+ module:
+
+\begin{itemize}
+\item \verb+set_header/2+, \verb+set_header/3+
+\item \verb+get_header/2+, \verb+get_header/3+
+\item \verb+delete_header/2+
+\end{itemize}
+
+All functions operate on instances of the \verb+#headers{}+ record type
+defined in the \verb+yaws_api.hrl+ include file.
+
 \subsection{Authenticating}
 
 Now we're approaching the \verb+login.yaws+ page, the page that
@@ -2697,17 +2709,64 @@ The following directives are allowed inside a server definition.
               specific configuration data, see the explanation for the
               \verb+<opaque>+ context.
 
-\item       \verb+revproxy = Prefix Url+ ---
+\item       \verb+revproxy = Prefix Url [intercept_mod Module]+ ---
               Make \Yaws\ a reverse proxy. \verb+Prefix+ is a path inside our own
               docroot and \verb+Url+ is a URL pointing to a website we
-              want to "mount" under the path which is \verb+Prefix+.
+              want to "mount" under the \verb+Prefix+ path. For example:
 
-              Example: \verb+revproxy = /tmp/foo http://yaws.hyber.org+
+              \verb+revproxy = /tmp/foo http://yaws.hyber.org+
 
               This makes the hyber website appear under \verb+/tmp/foo+.
 
               It is possible to have multiple reverse proxies inside the same
-              server.
+              server by supplying multiple \verb+revproxy+ directives.
+
+              If the optional keyword \verb+intercept_mod+ and
+              \verb+Module+ are supplied in the \verb+revproxy+ directive,
+              then \verb+Module+ indicates a proxy request and response
+              interception module. When the reverse proxy receives a
+              request from a client, it will first pass
+              \verb+#http_request{}+ and \verb+#headers{}+ records
+              representing the client request to the intercept module's
+              \verb+rewrite_request/2+ function. The function must return a
+              3-tuple of the following form:
+
+\begin{verbatim}
+{ok, #http_request{}, #headers{}}
+\end{verbatim}
+
+              where the record instances can be the original values passed
+              in or new values. The reverse proxy will use these record
+              instances when passing the request to the backend server.
+
+              Similarly, when the backend server returns a response, the
+              reverse proxy will call the intercept module's
+              \verb+rewrite_response/2+ function, passing it an
+              \verb+#http_response{}+ record and a \verb+#headers{}+
+              record. The function must return a 3-tuple of the following
+              form:
+
+\begin{verbatim}
+{ok, #http_response{}, #headers{}}
+\end{verbatim}
+
+              where the record instances can be the original values passed
+              in or new values. The reverse proxy will use these record
+              instances when returning the response to the client.
+
+              Any failure within an intercept module function results in
+              HTTP status code 500 (Internal Server Error) being returned
+              to the client.
+
+              Intercept modules can use the following functions from the
+              \verb+yaws_api+ module to retrieve, set, or delete HTTP
+              headers from \verb+#headers{}+ records:
+
+\begin{itemize}
+\item \verb+set_header/2+, \verb+set_header/3+
+\item \verb+get_header/2+, \verb+get_header/3+
+\item \verb+delete_header/2+
+\end{itemize}
 
 \item       \verb+fwdproxy = true|false+ ---
               Make \Yaws\ a forward proxy. By enabling this option you can use
