@@ -1,3 +1,37 @@
+Wed Jun 20 20:22:11 CEST 2012 Yaws 1.93
+Security release
+Use crypto:rand_bytes() instead of the cryptogrphicalli weak random module. Swedish security consultant and cryptographer Kalle Zetterlund discovered a way to - given a sequence of cokkies produced by yaws_session_server - predict the next session id. Thus providing a gaping security hole into yaws servers that yse the yaws_session_server to maintain cookie based HTTP sessions (klacke/kallez)
+A denial of service bug has been corrected. Multippart POST processing on the yaws server side contained a list_to_atom/1 call which potentially makes it possible for an attacker to craft a continous list of POSTs, each potentially generating a new atom. This is a backwards incompatible fix since the upload code on the server side is user code. That code now needs to look for strings instead of atoms. For example the upload.yaws code in the www examples is changed. It searches now for the field "filename" instead of 'filename' (klacke)
+make sure to always send proper strings to file:write() while logging  (Nicolas Adiba)
+default to a tcp queue backlog of 1024 (Nicolas Adiba)
+log debug messages to the error_logger for embedded mode (Nicolas Adiba)
+Add support of the 'OPTIONS' method when WebDav is enabled (Christopher Faulet)
+Several yaws_revproxy improvements and fixes. I think that finally, after many years of badness, Christopher Faulet has finally made the reverse proxy function as it shall. 
+use request content type for SOAP responses (Steve)
+websocket work (Steve)
+typo in WWW-Authenticate handling leading to infinite recursion (nicad)
+add new HTTP status codes from RFC 6585 (Steve)
+Add support for precompressed static files (Christopher Faulet)
+Improve how the responses compression is handled (Christopher Faulet)
+configure ignores --libdir (steve)
+report uncaught exception as server error 500 (steve)
+fix yapp exclude_dir paths (Mikael Karlsson)
+Fix bugs in yaws_api:parse_multipart_post/1,2 for chunked requests (Christopher Faulet)
+Add options to configure deflate compression behaviour (Christopher Faulet)
+make handling of cookie names case insensitive According to RFC 2109 (steve)
+add rebar dependencies needed for SOAP applications (steve)
+add callback for abnormal websocket close (steve)
+note IPv4 or IPv6 as appropriate in munin statistics (Olivier Girondel)
+fix configure's ERTS version checking for file:sendfile/5 (steve)
+rebar work (tuncer)
+added soap12 capability (Kaloyan Dimitrov)
+Added facility for specifying an #auth record when starting embedded (Ulf Wiger)
+Manage all 'special' headers of #headers{} and #outh{} records  (Christopher Faulet)
+Allow the server signature to be defined per virtual server (Christopher Faulet)
+fix log rotation on Windows, where fsync() is required to get the actual file size (Garret Smith)
+fixed wiki app XSS vulnerabilities (Sergei Golovan)
+Refactor flush/1 function to prevent DoS attack (Christopher Faulet)
+
 Fri Dec 23 22:09:03 CET 2011 Yaws 1.92
 Minor release,
 changes for OS X Lion for build and test (steve)
