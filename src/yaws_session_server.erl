@@ -133,8 +133,6 @@ delete_session(CookieVal) ->
 %%          {stop, Reason}
 %%----------------------------------------------------------------------
 init(Backend) ->
-    {X,Y,Z} = seed(),
-    random:seed(X, Y, Z),
     Backend:init_backend(record_info(fields, ysession)),
     start_long_timer(),
     {ok, #state{backend = Backend}, to()}.
@@ -153,8 +151,8 @@ handle_call({new_session, Opaque, undefined, Cleanup, Cookie}, From, State) ->
     handle_call({new_session, Opaque, ?TTL, Cleanup, Cookie}, From, State);
 
 handle_call({new_session, Opaque, TTL, Cleanup, undefined}, From, State) ->
-    N = random:uniform(16#ffffffffffffffff), %% 64 bits
-    Cookie = atom_to_list(node()) ++ [$-|integer_to_list(N)],
+    N = crypto:rand_bytes(16),
+    Cookie = atom_to_list(node()) ++ [$-|binary_to_list(N)],
     handle_call({new_session, Opaque, TTL, Cleanup, Cookie}, From, State);
 
 handle_call({new_session, Opaque, TTL, Cleanup, Cookie}, _From, State) ->
@@ -280,18 +278,7 @@ long_to() ->
 
 %% timeout if the server is idle for more than 2 minutes.
 to() ->
-    2 * 60 * 1000.
-
-%% pretty good seed, but non portable
-seed() ->
-    case (catch list_to_binary(
-                  os:cmd("dd if=/dev/urandom ibs=12 count=1 2>/dev/null"))) of
-        <<X:32, Y:32, Z:32>> ->
-            {X, Y, Z};
-        _ ->
-            now()
-    end.
-
+    2 * 60 * 1000.                              
 gnow() ->
     calendar:datetime_to_gregorian_seconds(
       calendar:local_time()).
