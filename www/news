@@ -1,6 +1,6 @@
 Wed Jun 20 20:22:11 CEST 2012 Yaws 1.93
 Security release
-Use crypto:rand_bytes() instead of the cryptogrphicalli weak random module. Swedish security consultant and cryptographer Kalle Zetterlund discovered a way to - given a sequence of cokkies produced by yaws_session_server - predict the next session id. Thus providing a gaping security hole into yaws servers that yse the yaws_session_server to maintain cookie based HTTP sessions (klacke/kallez)
+Use crypto:rand_bytes() instead of the cryptographically weak random module. Swedish security consultant and cryptographer Kalle Zetterlund discovered a way to - given a sequence of cokkies produced by yaws_session_server - predict the next session id. Thus providing a gaping security hole into yaws servers that yse the yaws_session_server to maintain cookie based HTTP sessions (klacke/kallez)
 A denial of service bug has been corrected. Multippart POST processing on the yaws server side contained a list_to_atom/1 call which potentially makes it possible for an attacker to craft a continous list of POSTs, each potentially generating a new atom. This is a backwards incompatible fix since the upload code on the server side is user code. That code now needs to look for strings instead of atoms. For example the upload.yaws code in the www examples is changed. It searches now for the field "filename" instead of 'filename' (klacke)
 make sure to always send proper strings to file:write() while logging  (Nicolas Adiba)
 default to a tcp queue backlog of 1024 (Nicolas Adiba)
@@ -31,6 +31,7 @@ Allow the server signature to be defined per virtual server (Christopher Faulet)
 fix log rotation on Windows, where fsync() is required to get the actual file size (Garret Smith)
 fixed wiki app XSS vulnerabilities (Sergei Golovan)
 Refactor flush/1 function to prevent DoS attack (Christopher Faulet)
+yaws now uses file:sendfile if available (R15B01 or newer) (tuncer/steve)
 
 Fri Dec 23 22:09:03 CET 2011 Yaws 1.92
 Minor release,
