@@ -19,7 +19,7 @@
 
 -define(FILE_LEN_SZ, 45).
 
-list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
+list_directory(_Arg, CliSock, List, DirName, Req, DoAllZip) ->
     {abs_path, Path} = Req#http_request.path,
     {DirStr, Pos, Direction, Qry} = parse_query(Path),
     ?Debug("List=~p Dirname~p~n", [List, DirName]),
@@ -69,7 +69,7 @@ list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
     B = list_to_binary(Body),
 
     yaws_server:accumulate_content(B),
-    yaws_server:deliver_accumulated(Arg, CliSock, decide, undefined, final),
+    yaws_server:deliver_accumulated(CliSock),
     yaws_server:done_or_continue().
 
 parse_query(Path) ->

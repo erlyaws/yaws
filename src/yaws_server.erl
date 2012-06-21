@@ -34,7 +34,8 @@
 
 %% internal exports
 -export([gserv/3,acceptor0/2, load_and_run/2, done_or_continue/0,
-         accumulate_content/1, deliver_accumulated/4, setup_dirs/1,
+         accumulate_content/1, deliver_accumulated/4, deliver_accumulated/1,
+         setup_dirs/1,
          deliver_dyn_part/8, finish_up_dyn_file/2, gserv_loop/4
         ]).
 
