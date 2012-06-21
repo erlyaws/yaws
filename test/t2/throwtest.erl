@@ -1,5 +1,5 @@
 -module(throwtest).
 -export([out/1]).
 
-out(Arg) ->
+out(_Arg) ->
     throw({status, 200}).

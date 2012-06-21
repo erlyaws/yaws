@@ -6,8 +6,10 @@ YTOP="@YTOP@"
 
 YAWS=$(YTOP)/bin/yaws
 
+COMPILER_PA = -pa $(YTOP)/ebin
+
 %.beam: %.erl
-	"$(ERLC)" -Ddebug $<
+	"$(ERLC)" -Ddebug $(COMPILER_PA) $<
 
 none:
 	echo "Do make clean|all|test"
