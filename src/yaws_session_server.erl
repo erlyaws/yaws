@@ -151,8 +151,8 @@ handle_call({new_session, Opaque, undefined, Cleanup, Cookie}, From, State) ->
     handle_call({new_session, Opaque, ?TTL, Cleanup, Cookie}, From, State);
 
 handle_call({new_session, Opaque, TTL, Cleanup, undefined}, From, State) ->
-    N = crypto:rand_bytes(16),
-    Cookie = atom_to_list(node()) ++ [$-|binary_to_list(N)],
+    N = bin2int(crypto:rand_bytes(16)),
+    Cookie = atom_to_list(node()) ++ [$-|integer_to_list(N)],
     handle_call({new_session, Opaque, TTL, Cleanup, Cookie}, From, State);
 
 handle_call({new_session, Opaque, TTL, Cleanup, Cookie}, _From, State) ->
@@ -268,6 +268,9 @@ code_change(_OldVsn, Data, _Extra) ->
 %%%----------------------------------------------------------------------
 %%% Internal functions
 %%%----------------------------------------------------------------------
+
+bin2int(Bin) ->
+    lists:foldl(fun(N, Acc) -> Acc * 256 + N end, 0, binary_to_list(Bin)).
 
 %% timeout once every hour even if the server handles traffic all the time.
 start_long_timer() ->

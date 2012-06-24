@@ -1053,8 +1053,6 @@ session_server() ->
     end.
 
 session_manager_init() ->
-    {X,Y,Z} = seed(),
-    random:seed(X, Y, Z),
     session_manager([], now(), read_config()).
 
 session_manager(C0, LastGC0, Cfg) ->
@@ -1078,7 +1076,7 @@ session_manager(C0, LastGC0, Cfg) ->
             end,
             session_manager(C, LastGC, Cfg);
         {new_session, Session, From} ->
-            Cookie = integer_to_list(random:uniform(1 bsl 50)),
+            Cookie = integer_to_list(bin2int(crypto:rand_bytes(16))),
             From ! {session_manager, Cookie},
             session_manager([{Cookie, Session#session{cookie=Cookie},
                               now()}|C], LastGC, Cfg);
@@ -1218,15 +1216,6 @@ sendtimeout() -> req(sendtimeout).
 
 diff({M1,S1,_}, {M2,S2,_}) ->
     (M2-M1)*1000000+(S2-S1).
-
-seed() ->
-    case (catch list_to_binary(
-                  os:cmd("dd if=/dev/urandom ibs=12 count=1 2>/dev/null"))) of
-        <<X:32, Y:32, Z:32>> ->
-            {X, Y, Z};
-        _ ->
-            now()
-    end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1959,7 +1948,10 @@ dat2str_boundary([Y1,Y2, Mo, D, H, M, S | _Diff]) ->
     lists:flatten(
       io_lib:format("~s_~2.2.0w_~s_~w_~2.2.0w:~2.2.0w:~2.2.0w_~w",
                     [weekday(Y1,Y2,Mo,D), D, int_to_mt(Mo),
-                     y(Y1,Y2),H,M,S,random:uniform(5000)])).
+                     y(Y1,Y2),H,M,S,bin2int(crypto:rand_bytes(4))])).
+
+bin2int(Bin) ->
+    lists:foldl(fun(N, Acc) -> Acc * 256 + N end, 0, binary_to_list(Bin)).
 
 date_and_time_to_string(DAT) ->
     case validate_date_and_time(DAT) of

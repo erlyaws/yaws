@@ -148,7 +148,7 @@ chat_server(Users0) ->
             end,
             chat_server(Users);
         {new_session, User, From} ->
-            Cookie = integer_to_list(random:uniform(1 bsl 50)),
+            Cookie = integer_to_list(bin2int(crypto:rand_bytes(16))),
             Session = #user{cookie=Cookie, user=User, color=pick_color()},
             From ! {session_manager, Cookie, Session},
             chat_server([Session|Users]);
@@ -187,6 +187,9 @@ chat_server(Users0) ->
         5000 ->
             chat_server(Users)
     end.
+
+bin2int(Bin) ->
+    lists:foldl(fun(N, Acc) -> Acc * 256 + N end, 0, binary_to_list(Bin)).
 
 
 %%
