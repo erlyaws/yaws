@@ -1,3 +1,8 @@
+Sun Jun 24 23:47:57 CEST 2012
+Bugfix release for bugs that sneaked into 1.93
+The random patch for 1.93 wasn't good enough as discovered by Sergei Golovan, we need to cater for non printable chars (Sergei Golovan)
+add reverse proxy intercept module capability (Steve)
+
 Wed Jun 20 20:22:11 CEST 2012 Yaws 1.93
 Security release
 Use crypto:rand_bytes() instead of the cryptographically weak random module. Swedish security consultant and cryptographer Kalle Zetterlund discovered a way to - given a sequence of cookies produced by yaws_session_server - predict the next session id. Thus providing a gaping security hole into yaws servers that use the yaws_session_server to maintain cookie based HTTP sessions (klacke/kallez)
