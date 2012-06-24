@@ -2,8 +2,17 @@ include ../support/include.mk
 
 .PHONY: all test debug clean
 
+T4BEAMS := app_test.beam \
+	rewritetest.beam \
+	posttest.beam \
+	streamtest.beam \
+	nolengthtest.beam \
+	intercept1.beam \
+	intercept2.beam \
+	intercept3.beam
+
 #
-all:	conf setup app_test.beam rewritetest.beam posttest.beam streamtest.beam nolengthtest.beam
+all:	conf setup $(T4BEAMS)
 	@echo "all ok"
 
 
@@ -18,7 +27,7 @@ test:	all start
 	dd if=/dev/zero of=../../www/2000.txt bs=1024 count=2000 >/dev/null 2>&1
 	dd if=/dev/zero of=../../www/3000.txt bs=1024 count=3000 >/dev/null 2>&1
 	dd if=/dev/zero of=../../www/10000.txt bs=1024 count=10000 >/dev/null 2>&1
-	dd if=/dev/urandom of=www2/8388608.bin bs=1 count=8388608 >/dev/null 2>&1
+	dd if=/dev/urandom of=www2/8388608.bin bs=1024 count=8192 >/dev/null 2>&1
 	ul=`ulimit -n` ; \
 	val=`expr $$ul '<' $(ULIMIT)` ; \
 	if [ $$val = 1 ] ; then \

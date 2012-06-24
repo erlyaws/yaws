@@ -69,63 +69,28 @@
 -export([binding/1,binding_exists/1,
          dir_listing/1, dir_listing/2, redirect_self/1]).
 
--export([arg_clisock/1
-         , arg_client_ip_port/1
-         , arg_headers/1
-         , arg_req/1
-         , arg_clidata/1
-         , arg_server_path/1
-         , arg_querydata/1
-         , arg_appmoddata/1
-         , arg_docroot/1
-         , arg_docroot_mount/1
-         , arg_fullpath/1
-         , arg_cont/1
-         , arg_state/1
-         , arg_pid/1
-         , arg_opaque/1
-         , arg_appmod_prepath/1
-         , arg_prepath/1
-         , arg_pathinfo/1
+-export([arg_clisock/1, arg_client_ip_port/1, arg_headers/1, arg_req/1,
+         arg_clidata/1, arg_server_path/1, arg_querydata/1, arg_appmoddata/1,
+         arg_docroot/1, arg_docroot_mount/1, arg_fullpath/1, arg_cont/1,
+         arg_state/1, arg_pid/1, arg_opaque/1, arg_appmod_prepath/1, arg_prepath/1,
+         arg_pathinfo/1]).
+-export([http_request_method/1, http_request_path/1, http_request_version/1,
+         http_response_version/1, http_response_status/1, http_response_phrase/1,
+         headers_connection/1, headers_accept/1, headers_host/1,
+         headers_if_modified_since/1, headers_if_match/1, headers_if_none_match/1,
+         headers_if_range/1, headers_if_unmodified_since/1, headers_range/1,
+         headers_referer/1, headers_user_agent/1, headers_accept_ranges/1,
+         headers_cookie/1, headers_keep_alive/1, headers_location/1,
+         headers_content_length/1, headers_content_type/1,
+         headers_content_encoding/1, headers_authorization/1,
+         headers_transfer_encoding/1, headers_x_forwarded_for/1, headers_other/1]).
 
-         , http_request_method/1
-         , http_request_path/1
-         , http_request_version/1
-
-         , http_response_version/1
-         , http_response_status/1
-         , http_response_phrase/1
-
-         , headers_connection/1
-         , headers_accept/1
-         , headers_host/1
-         , headers_if_modified_since/1
-         , headers_if_match/1
-         , headers_if_none_match/1
-         , headers_if_range/1
-         , headers_if_unmodified_since/1
-         , headers_range/1
-         , headers_referer/1
-         , headers_user_agent/1
-         , headers_accept_ranges/1
-         , headers_cookie/1
-         , headers_keep_alive/1
-         , headers_location/1
-         , headers_content_length/1
-         , headers_content_type/1
-         , headers_content_encoding/1
-         , headers_authorization/1
-         , headers_transfer_encoding/1
-         , headers_x_forwarded_for/1
-         , headers_other/1
-
-        ]).
-
+-export([set_header/2, set_header/3, get_header/2, get_header/3, delete_header/2]).
 
 -import(lists, [flatten/1, reverse/1]).
 
-%% these are a bunch of function that are useful inside
-%% yaws scripts
+%% These are a bunch of accessor functions that are useful inside
+%% yaws scripts.
 
 arg_clisock(#arg{clisock = X}) -> X.
 arg_client_ip_port(#arg{client_ip_port = X}) -> X.
@@ -1178,6 +1143,293 @@ reformat_header(H) ->
           end, H#headers.other).
 
 
+set_header(#headers{}=Hdrs, {Header, Value}) ->
+    set_header(Hdrs, Header, Value).
+
+set_header(#headers{}=Hdrs, connection, Value) ->
+    Hdrs#headers{connection = Value};
+set_header(#headers{}=Hdrs, {lower, "connection"}, Value) ->
+    Hdrs#headers{connection = Value};
+set_header(#headers{}=Hdrs, accept, Value) ->
+    Hdrs#headers{accept = Value};
+set_header(#headers{}=Hdrs, {lower, "accept"}, Value) ->
+    Hdrs#headers{accept = Value};
+set_header(#headers{}=Hdrs, host, Value) ->
+    Hdrs#headers{host = Value};
+set_header(#headers{}=Hdrs, {lower, "host"}, Value) ->
+    Hdrs#headers{host = Value};
+set_header(#headers{}=Hdrs, if_modified_since, Value) ->
+    Hdrs#headers{if_modified_since = Value};
+set_header(#headers{}=Hdrs, {lower, "if-modified-since"}, Value) ->
+    Hdrs#headers{if_modified_since = Value};
+set_header(#headers{}=Hdrs, if_match, Value) ->
+    Hdrs#headers{if_match = Value};
+set_header(#headers{}=Hdrs, {lower, "if-match"}, Value) ->
+    Hdrs#headers{if_match = Value};
+set_header(#headers{}=Hdrs, if_none_match, Value) ->
+    Hdrs#headers{if_none_match = Value};
+set_header(#headers{}=Hdrs, {lower, "if-none-match"}, Value) ->
+    Hdrs#headers{if_none_match = Value};
+set_header(#headers{}=Hdrs, if_range, Value) ->
+    Hdrs#headers{if_range = Value};
+set_header(#headers{}=Hdrs, {lower, "if-range"}, Value) ->
+    Hdrs#headers{if_range = Value};
+set_header(#headers{}=Hdrs, if_unmodified_since, Value) ->
+    Hdrs#headers{if_unmodified_since = Value};
+set_header(#headers{}=Hdrs, {lower, "if-unmodified-since"}, Value) ->
+    Hdrs#headers{if_unmodified_since = Value};
+set_header(#headers{}=Hdrs, range, Value) ->
+    Hdrs#headers{range = Value};
+set_header(#headers{}=Hdrs, {lower, "range"}, Value) ->
+    Hdrs#headers{range = Value};
+set_header(#headers{}=Hdrs, referer, Value) ->
+    Hdrs#headers{referer = Value};
+set_header(#headers{}=Hdrs, {lower, "referer"}, Value) ->
+    Hdrs#headers{referer = Value};
+set_header(#headers{}=Hdrs, user_agent, Value) ->
+    Hdrs#headers{user_agent = Value};
+set_header(#headers{}=Hdrs, {lower, "user-agent"}, Value) ->
+    Hdrs#headers{user_agent = Value};
+set_header(#headers{}=Hdrs, accept_ranges, Value) ->
+    Hdrs#headers{accept_ranges = Value};
+set_header(#headers{}=Hdrs, {lower, "accept-ranges"}, Value) ->
+    Hdrs#headers{accept_ranges = Value};
+set_header(#headers{}=Hdrs, cookie, Value) ->
+    Hdrs#headers{cookie = Value};
+set_header(#headers{}=Hdrs, {lower, "cookie"}, Value) ->
+    Hdrs#headers{cookie = Value};
+set_header(#headers{}=Hdrs, keep_alive, Value) ->
+    Hdrs#headers{keep_alive = Value};
+set_header(#headers{}=Hdrs, {lower, "keep-alive"}, Value) ->
+    Hdrs#headers{keep_alive = Value};
+set_header(#headers{}=Hdrs, location, Value) ->
+    Hdrs#headers{location = Value};
+set_header(#headers{}=Hdrs, {lower, "location"}, Value) ->
+    Hdrs#headers{location = Value};
+set_header(#headers{}=Hdrs, content_length, Value) ->
+    Hdrs#headers{content_length = Value};
+set_header(#headers{}=Hdrs, {lower, "content-length"}, Value) ->
+    Hdrs#headers{content_length = Value};
+set_header(#headers{}=Hdrs, content_type, Value) ->
+    Hdrs#headers{content_type = Value};
+set_header(#headers{}=Hdrs, {lower, "content-type"}, Value) ->
+    Hdrs#headers{content_type = Value};
+set_header(#headers{}=Hdrs, content_encoding, Value) ->
+    Hdrs#headers{content_encoding = Value};
+set_header(#headers{}=Hdrs, {lower, "content-encoding"}, Value) ->
+    Hdrs#headers{content_encoding = Value};
+set_header(#headers{}=Hdrs, authorization, Value) ->
+    Hdrs#headers{authorization = Value};
+set_header(#headers{}=Hdrs, {lower, "authorization"}, Value) ->
+    Hdrs#headers{authorization = Value};
+set_header(#headers{}=Hdrs, transfer_encoding, Value) ->
+    Hdrs#headers{transfer_encoding = Value};
+set_header(#headers{}=Hdrs, {lower, "transfer-encoding"}, Value) ->
+    Hdrs#headers{transfer_encoding = Value};
+set_header(#headers{}=Hdrs, x_forwarded_for, Value) ->
+    Hdrs#headers{x_forwarded_for = Value};
+set_header(#headers{}=Hdrs, {lower, "x-forwarded-for"}, Value) ->
+    Hdrs#headers{x_forwarded_for = Value};
+set_header(#headers{}=Hdrs, Header, Value) when is_atom(Header) ->
+    set_header(Hdrs, atom_to_list(Header), Value);
+set_header(#headers{}=Hdrs, Header, Value) when is_binary(Header) ->
+    set_header(Hdrs, binary_to_list(Header), Value);
+set_header(#headers{}=Hdrs, Header, Val) when is_binary(Val) ->
+    set_header(Hdrs, {lower, string:to_lower(Header)}, binary_to_list(Val));
+set_header(#headers{other=Other}=Hdrs, {lower, Header}, undefined) ->
+    Handler = fun(_, true, Acc) ->
+                      Acc;
+                 (HdrVal, false, Acc) ->
+                      [HdrVal|Acc]
+              end,
+    NewOther = fold_others(Header, Handler, Other, []),
+    Hdrs#headers{other = lists:reverse(NewOther)};
+set_header(#headers{other=Other}=Hdrs, {lower, Header}, Val) ->
+    HdrName = erlang_header_name(Header),
+    Handler = fun({http_header, Int, _, Rsv, _}, true, {Acc, _}) ->
+                      {[{http_header, Int, HdrName, Rsv, Val}|Acc],true};
+                 (HdrVal, false, {Acc, Found}) ->
+                      {[HdrVal|Acc], Found}
+              end,
+    {NewOther0, Found} = fold_others(Header, Handler, Other, {[], false}),
+    NewOther = case Found of
+                   true ->
+                       NewOther0;
+                   false ->
+                       [{http_header, 0, HdrName, undefined, Val}|NewOther0]
+               end,
+    Hdrs#headers{other = lists:reverse(NewOther)};
+set_header(#headers{}=Hdrs, Header, undefined) ->
+    set_header(Hdrs, {lower, string:to_lower(Header)}, undefined);
+set_header(#headers{}=Hdrs, Header, Value) ->
+    set_header(Hdrs, {lower, string:to_lower(Header)}, Value).
+
+get_header(#headers{}=Hdrs, connection) ->
+    Hdrs#headers.connection;
+get_header(#headers{}=Hdrs, {lower, "connection"}) ->
+    Hdrs#headers.connection;
+get_header(#headers{}=Hdrs, accept) ->
+    Hdrs#headers.accept;
+get_header(#headers{}=Hdrs, {lower, "accept"}) ->
+    Hdrs#headers.accept;
+get_header(#headers{}=Hdrs, host) ->
+    Hdrs#headers.host;
+get_header(#headers{}=Hdrs, {lower, "host"}) ->
+    Hdrs#headers.host;
+get_header(#headers{}=Hdrs, if_modified_since) ->
+    Hdrs#headers.if_modified_since;
+get_header(#headers{}=Hdrs, {lower, "if-modified-since"}) ->
+    Hdrs#headers.if_modified_since;
+get_header(#headers{}=Hdrs, if_match) ->
+    Hdrs#headers.if_match;
+get_header(#headers{}=Hdrs, {lower, "if-match"}) ->
+    Hdrs#headers.if_match;
+get_header(#headers{}=Hdrs, if_none_match) ->
+    Hdrs#headers.if_none_match;
+get_header(#headers{}=Hdrs, {lower, "if-none-match"}) ->
+    Hdrs#headers.if_none_match;
+get_header(#headers{}=Hdrs, if_range) ->
+    Hdrs#headers.if_range;
+get_header(#headers{}=Hdrs, {lower, "if-range"}) ->
+    Hdrs#headers.if_range;
+get_header(#headers{}=Hdrs, if_unmodified_since) ->
+    Hdrs#headers.if_unmodified_since;
+get_header(#headers{}=Hdrs, {lower, "if-unmodified-since"}) ->
+    Hdrs#headers.if_unmodified_since;
+get_header(#headers{}=Hdrs, range) ->
+    Hdrs#headers.range;
+get_header(#headers{}=Hdrs, {lower, "range"}) ->
+    Hdrs#headers.range;
+get_header(#headers{}=Hdrs, referer) ->
+    Hdrs#headers.referer;
+get_header(#headers{}=Hdrs, {lower, "referer"}) ->
+    Hdrs#headers.referer;
+get_header(#headers{}=Hdrs, user_agent) ->
+    Hdrs#headers.user_agent;
+get_header(#headers{}=Hdrs, {lower, "user-agent"}) ->
+    Hdrs#headers.user_agent;
+get_header(#headers{}=Hdrs, accept_ranges) ->
+    Hdrs#headers.accept_ranges;
+get_header(#headers{}=Hdrs, {lower, "accept-ranges"}) ->
+    Hdrs#headers.accept_ranges;
+get_header(#headers{}=Hdrs, cookie) ->
+    Hdrs#headers.cookie;
+get_header(#headers{}=Hdrs, {lower, "cookie"}) ->
+    Hdrs#headers.cookie;
+get_header(#headers{}=Hdrs, keep_alive) ->
+    Hdrs#headers.keep_alive;
+get_header(#headers{}=Hdrs, {lower, "keep-alive"}) ->
+    Hdrs#headers.keep_alive;
+get_header(#headers{}=Hdrs, location) ->
+    Hdrs#headers.location;
+get_header(#headers{}=Hdrs, {lower, "location"}) ->
+    Hdrs#headers.location;
+get_header(#headers{}=Hdrs, content_length) ->
+    Hdrs#headers.content_length;
+get_header(#headers{}=Hdrs, {lower, "content-length"}) ->
+    Hdrs#headers.content_length;
+get_header(#headers{}=Hdrs, content_type) ->
+    Hdrs#headers.content_type;
+get_header(#headers{}=Hdrs, {lower, "content-type"}) ->
+    Hdrs#headers.content_type;
+get_header(#headers{}=Hdrs, content_encoding) ->
+    Hdrs#headers.content_encoding;
+get_header(#headers{}=Hdrs, {lower, "content-encoding"}) ->
+    Hdrs#headers.content_encoding;
+get_header(#headers{}=Hdrs, authorization) ->
+    Hdrs#headers.authorization;
+get_header(#headers{}=Hdrs, {lower, "authorization"}) ->
+    Hdrs#headers.authorization;
+get_header(#headers{}=Hdrs, transfer_encoding) ->
+    Hdrs#headers.transfer_encoding;
+get_header(#headers{}=Hdrs, {lower, "transfer-encoding"}) ->
+    Hdrs#headers.transfer_encoding;
+get_header(#headers{}=Hdrs, x_forwarded_for) ->
+    Hdrs#headers.x_forwarded_for;
+get_header(#headers{}=Hdrs, {lower, "x-forwarded-for"}) ->
+    Hdrs#headers.x_forwarded_for;
+get_header(#headers{}=Hdrs, Header) when is_atom(Header) ->
+    get_header(Hdrs, atom_to_list(Header));
+get_header(#headers{}=Hdrs, Header) when is_binary(Header) ->
+    get_header(Hdrs, binary_to_list(Header));
+get_header(#headers{other = Other}, {lower, Header}) ->
+    Handler = fun({http_header, _, _, _, Value}, true, _Acc) ->
+                      throw(Value);
+                 (_, false, Acc) ->
+                      Acc
+              end,
+    catch fold_others(Header, Handler, Other, undefined);
+get_header(#headers{}=Hdrs, Header) ->
+    get_header(Hdrs, {lower, string:to_lower(Header)}).
+
+get_header(#headers{}=Hdrs, Header, Default) ->
+    case get_header(Hdrs, Header) of
+        undefined ->
+            Default;
+        Value ->
+            Value
+    end.
+
+delete_header(#headers{}=Hdrs, Header) ->
+    set_header(Hdrs, Header, undefined).
+
+%% assumes that LowerHdr is already downcased
+fold_others(LowerHdr, Handler, Other, StartAcc) ->
+    lists:foldl(fun({http_header, _, Hdr, _, _}=HdrVal, Acc) ->
+                        HdrNm = string:to_lower(
+                                  if
+                                      is_atom(Hdr) -> atom_to_list(Hdr);
+                                      is_binary(Hdr) -> binary_to_list(Hdr);
+                                      true -> Hdr
+                                  end),
+                        Handler(HdrVal, HdrNm == LowerHdr, Acc)
+                end, StartAcc, Other).
+
+erlang_header_name("cache-control")       -> 'Cache-Control';
+erlang_header_name("date")                -> 'Date';
+erlang_header_name("pragma")              -> 'Pragma';
+erlang_header_name("upgrade")             -> 'Upgrade';
+erlang_header_name("via")                 -> 'Via';
+erlang_header_name("accept-charset")      -> 'Accept-Charset';
+erlang_header_name("accept-encoding")     -> 'Accept-Encoding';
+erlang_header_name("accept-language")     -> 'Accept-Language';
+erlang_header_name("from")                -> 'From';
+erlang_header_name("max-forwards")        -> 'Max-Forwards';
+erlang_header_name("proxy-authorization") -> 'Proxy-Authorization';
+erlang_header_name("age")                 -> 'Age';
+erlang_header_name("proxy-authenticate")  -> 'Proxy-Authenticate';
+erlang_header_name("public")              -> 'Public';
+erlang_header_name("retry-after")         -> 'Retry-After';
+erlang_header_name("server")              -> 'Server';
+erlang_header_name("vary")                -> 'Vary';
+erlang_header_name("warning")             -> 'Warning';
+erlang_header_name("www-authenticate")    -> 'Www-Authenticate';
+erlang_header_name("allow")               -> 'Allow';
+erlang_header_name("content-base")        -> 'Content-Base';
+erlang_header_name("content-encoding")    -> 'Content-Encoding';
+erlang_header_name("content-language")    -> 'Content-Language';
+erlang_header_name("content-location")    -> 'Content-Location';
+erlang_header_name("content-md5")         -> 'Content-Md5';
+erlang_header_name("content-range")       -> 'Content-Range';
+erlang_header_name("etag")                -> 'Etag';
+erlang_header_name("expires")             -> 'Expires';
+erlang_header_name("last-modified")       -> 'Last-Modified';
+erlang_header_name("set-cookie")          -> 'Set-Cookie';
+erlang_header_name("set-cookie2")         -> 'Set-Cookie2';
+erlang_header_name("proxy-connection")    -> 'Proxy-Connection';
+erlang_header_name(Name)                  -> capitalize_header(Name).
+
+capitalize_header(Name) ->
+   capitalize_header2(Name, "").
+
+capitalize_header2([C | Rest], "") when C >= $a andalso C =< $z ->
+   capitalize_header2(Rest, [C - $a + $A]);
+capitalize_header2([$-, C | Rest], Result) when C >= $a andalso C =< $z ->
+   capitalize_header2(Rest, [C - $a + $A, $- | Result]);
+capitalize_header2([C | Rest], Result) ->
+   capitalize_header2(Rest, [C | Result]);
+capitalize_header2([], Result) ->
+   lists:reverse(Result).
 
 
 reformat_request(#http_request{method = bad_request}) ->

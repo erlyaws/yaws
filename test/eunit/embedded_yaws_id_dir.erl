@@ -12,8 +12,8 @@ id_dir_test() ->
                  {servername, Id},
                  {listen, {127,0,0,1}},
                  {docroot, Docroot}],
-    {ok, SCList, GC, ChildSpecs} = yaws_api:embedded_start_conf(
-                                     Docroot, SconfList, GconfList, Id),
+    {ok, _SCList, _GC, _ChildSpecs} = yaws_api:embedded_start_conf(
+                                        Docroot, SconfList, GconfList, Id),
     try
         {ok,
          {file_info, _, directory, read_write, _, _, _, _, _, _, _, _, _, _}} =

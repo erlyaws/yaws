@@ -232,7 +232,7 @@ deflate_gzip_static() ->
     ?line undefined = proplists:get_value("Transfer-Encoding", Hdrs2),
     ?line true = is_binary(zlib:gunzip(Body2)),
 
-    ?line zlib:gunzip(Body1) == zlib:gunzip(Body2),
+    ?line true = (zlib:gunzip(Body1) == zlib:gunzip(Body2)),
 
     %% if mtimes of compressed and uncompress files do not match, the compressed
     %% file is ignored

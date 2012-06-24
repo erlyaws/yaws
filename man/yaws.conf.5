@@ -150,7 +150,7 @@ of 0 effectively disables the process pool.
 \fBlog_wrap_size = Integer\fR
 The logs written by Yaws are all wrap logs, the default value at the size where
 they wrap around and the original gets renamed to File.old is \fI1000000\fR, 1
-megabyte. This value can changed.
+megabyte. This value can be changed.
 .br
 If we set the value to 0 the logs will never wrap. If we want to use Yaws in
 combination with a more traditional log wrapper such as logrotate, set the size
@@ -667,26 +667,68 @@ synchronize the startup with the Yaws server as well as getting hold of user
 specific configuration data, see the explanation for the <opaque> context.
 
 .TP
-\fBrevproxy = Prefix Url\fR
-Make Yaws a reverse proxy. The Prefix is a path inside our own docroot and the
-Url argument is an url pointing to a website we want to "mount" under the path
-which is Prefix.
+\fBrevproxy = Prefix Url [intercept_mod Module]\fR
+Make Yaws a reverse proxy. \fIPrefix\fR is a path inside our own docroot
+and \fIUrl\fB argument is a URL pointing to a website we want to "mount"
+under the \fIPrefix\fR path. This example:
 
-Example: revproxy = /tmp/foo http://yaws.hyber.org
+.nf
+  revproxy = /tmp/foo http://yaws.hyber.org
+.fi
 
-Makes the hyber website appear under /tmp/foo
+makes the hyber website appear under \fI/tmp/foo\fR.
 
 It is possible to have multiple reverse proxies inside the same server.
 
-WARNING, this feature is yet not in production quality.
+You can optionally configure an interception module for each reverse proxy,
+allowing your application to examine and modify requests and HTTP headers
+as they pass through the proxy from client to backend server and also
+examine and modify responses and HTTP headers as they return from the
+backend server through the proxy to the client.
+
+You specify an interception module by including the optional
+\fIintercept_mod\fR keyword followed by \fIModule\fR, which should be the
+name of your interception module.
+
+An interception module is expected to export two functions:
+\fIrewrite_request/2\fR and \fIrewrite_response/2\fR. The two arguments
+passed to \fIrewrite_request/2\fR function are a \fI#http_request{}\fR record
+and a \fI#headers{}\fR record, whereas \fIrewrite_response/2\fR function
+takes a \fI#http_response{}\fR record and also a \fI#headers{}\fR record. You
+can find definitions for these record types in the \fIyaws_api.hrl\fR
+header file. Each function can examine each record instance and can either
+return each original instance or can return a modified copy of each
+instance in its response. The \fIrewrite_request/2\fR function should
+return a tuple of the following form:
+
+.nf
+  \fI{ok, #http_request{}, #headers{}}\fR
+.fi
+
+and the \fIrewrite_response/2\fR function should similarly return a tuple
+of the following form:
+
+.nf
+  \fI{ok, #http_response{}, #headers{}}\fR
+.fi
+
+A \fI#headers{}\fR record can easily be manipulated in an interceptor using
+the functions listed below:
+
+.nf
+  \fIyaws_api:set_header/2\fR, \fIyaws_api:set_header/3\fR
+  \fIyaws_api:get_header/2\fR, \fIyaws_api:get_header/3\fR
+  \fIyaws_api:delete_header/2\fR
+.fi
+
+Any failures in your interception module's functions will result in HTTP
+status code 500, indicating an internal server error.
 
 .TP
 \fBfwdproxy = true|false\fR
 Make Yaws a forward proxy. By enabling this option you can use Yaws as a proxy
 for outgoing web traffic, typically by configuring the proxy settings in a
 web-browser to explicitly target Yaws as its proxy server.
-
-WARNING, this feature is yet not in production quality.
 
 .TP
 \fBservername = Name\fR

@@ -6,7 +6,7 @@
 connect([Host]) ->
     Node = list_to_atom("test@" ++ atom_to_list(Host)),
     io:format("Connectimng to ~p~n", [Node]),
-    X = (catch rpc:call(Node, shell, start, [])),
+    catch rpc:call(Node, shell, start, []),
     timer:sleep(infinity).
 
 
@@ -25,7 +25,3 @@ run(Eunits) ->
             end,
             erlang:halt(1)
     end.
-
-
-
-
