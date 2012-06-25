@@ -934,8 +934,8 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
         ["deflate", '=', Bool] ->
             case is_bool(Bool) of
                 {true, Val} ->
-                    C2 = ?sc_set_deflate(C#sconf{deflate_options=#deflate{}},
-                                         Val),
+                    C1 = C#sconf{deflate_options=#deflate{}},
+                    C2 = ?sc_set_deflate(C1, Val),
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
