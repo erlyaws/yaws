@@ -1123,18 +1123,43 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
 
-        ['<', "/server", '>'] when C#sconf.docroot =:= undefined ->
-            {error,
-             ?F("No valid docroot configured for virthost '~s' (port: ~w)",
-                [C#sconf.servername, C#sconf.port])};
         ['<', "/server", '>'] ->
-            case C#sconf.listen of
-                [] ->
-                    C2 = C#sconf{listen = {127,0,0,1}},
-                    fload(FD, globals, GC, undefined, [C2|Cs], Lno+1, Next);
-                Ls ->
-                    Cs2 = [C#sconf{listen=L} || L <- Ls] ++ Cs,
-                    fload(FD, globals, GC, undefined, Cs2, Lno+1, Next)
+            HasDocroot =
+                case C#sconf.docroot of
+                    undefined ->
+                        Tests = [fun() ->
+                                         lists:keymember("/", #proxy_cfg.prefix, C#sconf.revproxy)
+                                 end,
+                                 fun() ->
+                                         lists:keymember("/", 1, C#sconf.redirect_map)
+                                 end,
+                                 fun() ->
+                                         lists:foldl(fun(_, true) -> true;
+                                                        ({"/", _}, _Acc) -> true;
+                                                        (_, Acc) -> Acc
+                                                     end, false, C#sconf.appmods)
+                                 end,
+                                 fun() ->
+                                         ?sc_forward_proxy(C)
+                                 end],
+                        lists:any(fun(T) -> T() end, Tests);
+                    _ ->
+                        true
+                end,
+            case HasDocroot of
+                true ->
+                    case C#sconf.listen of
+                        [] ->
+                            C2 = C#sconf{listen = {127,0,0,1}},
+                            fload(FD, globals, GC, undefined, [C2|Cs], Lno+1, Next);
+                        Ls ->
+                            Cs2 = [C#sconf{listen=L} || L <- Ls] ++ Cs,
+                            fload(FD, globals, GC, undefined, Cs2, Lno+1, Next)
+                    end;
+                false ->
+                    {error,
+                     ?F("No valid docroot configured for virthost '~s' (port: ~w)",
+                        [C#sconf.servername, C#sconf.port])}
             end;
 
         ['<', "opaque", '>'] ->

@@ -6,6 +6,8 @@ YTOP="@YTOP@"
 
 YAWS=$(YTOP)/bin/yaws
 
+SUBST=../../scripts/Subst
+
 COMPILER_PA = -pa $(YTOP)/ebin
 
 %.beam: %.erl
@@ -51,18 +53,6 @@ stop:
 quiet_stop:
 	$(YTOP)/bin/yaws --id testid --stop >/dev/null 2>&1 && sleep 5 || true
 
-stdconf:
-	cat ../conf/stdconf.conf | \
-	../../scripts/Subst %YTOP% $(YTOP) > yaws.conf
-
-authconf:
-	cat ../conf/authconf.conf | \
-	../../scripts/Subst %YTOP% $(YTOP) > yaws.conf
-
-revproxyconf:
-	cat ../conf/revproxy.conf | \
-	../../scripts/Subst %YTOP% $(YTOP) > yaws.conf
-
-deflateconf:
-	cat ../conf/deflate.conf | \
-	../../scripts/Subst %YTOP% $(YTOP) > yaws.conf
+stdconf authconf revproxyconf deflateconf:
+	cat ../conf/$@.conf | \
+	$(SUBST) %YTOP% $(YTOP) > yaws.conf

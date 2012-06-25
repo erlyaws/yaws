@@ -1,8 +1,8 @@
 include support/include.mk
 
-SUBDIRS = t1 t2 t3 t4 t5 eunit
+SUBDIRS = t1 t2 t3 t4 t5 t6 eunit
 
-all:	conf ibrowse
+all:	ibrowse
 	@cd src; $(MAKE) all
 	@set -e ; \
           for d in $(SUBDIRS) ; do \

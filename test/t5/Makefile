@@ -1,6 +1,6 @@
 include ../support/include.mk
 
-.PHONY: all test debug clean
+.PHONY: all test conf debug clean
 
 #
 all: conf setup app_test.beam emptytest.beam streamtest.beam smalltest.beam bigtest.beam

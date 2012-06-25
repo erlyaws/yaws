@@ -1,6 +1,6 @@
 include ../support/include.mk
 
-.PHONY: all test newconf small_datafile t1 t2 t3 t4 t5 t6 t7 json
+.PHONY: all test conf newconf small_datafile t1 t2 t3 t4 t5 t6 t7 json
 
 all:	conf setup
 	@echo "all ok"

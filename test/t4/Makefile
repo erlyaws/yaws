@@ -1,6 +1,6 @@
 include ../support/include.mk
 
-.PHONY: all test debug clean
+.PHONY: all test conf debug clean
 
 T4BEAMS := app_test.beam \
 	rewritetest.beam \
