@@ -4,6 +4,8 @@ The random patch for 1.93 wasn't good enough as discovered by Sergei Golovan, we
 add support for W3C Server-Sent Events (Steve)
 add easy getter/setter functions for #headers records (Steve)
 add reverse proxy intercept module capability (Steve)
+add support for W3C Server-Sent Events (steve)
+Patch from Nico Kruber to fix compile issue on OTP R13
 
 Wed Jun 20 20:22:11 CEST 2012 Yaws 1.93
 Security release
