@@ -59,7 +59,7 @@ handle_info({discard, _YawsPid}, State) ->
     %% nothing to do
     {stop, normal, State};
 handle_info(tick, #state{sock=Socket}=State) ->
-    Time = erlang:universaltime(),
+    Time = erlang:localtime(),
     Data = yaws_sse:data(httpd_util:rfc1123_date(Time)),
     yaws_sse:send_events(Socket, Data),
     {noreply, State};
