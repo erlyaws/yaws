@@ -42,7 +42,7 @@ out(A) ->
   <li><p><a href="http://www.w3.org/TR/eventsource/">Server-Sent Events</a>
   (SSE) is a W3C working draft that unlike long polling is on a path to
   standardization and unlike WebSockets is pretty simple. Despite being a
-  workng draft, it's already fairly widely used. With SSE, a client sends a
+  working draft, it's already fairly widely used. With SSE, a client sends a
   standard HTTP request asking for an event stream, and the server responds
   initially with a standard HTTP response and holds the connection
   open. When appropriate, the server sends standard text-based event data
