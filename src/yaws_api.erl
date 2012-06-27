@@ -1555,14 +1555,14 @@ format_partial_url(Url, SC) ->
              yaws:to_string(Url#url.scheme) ++ "://"
      end,
      if
-         Url#url.host == undefined ->
+         Url#url.host == undefined orelse Url#url.host == [] ->
              yaws:redirect_host(SC, undefined);
          true ->
              Url#url.host
      end,
      if
          Url#url.port == undefined ->
-             yaws:redirect_port(SC);
+             [];
          true  ->
              [$: | integer_to_list(Url#url.port)]
      end,
