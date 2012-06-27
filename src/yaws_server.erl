@@ -4365,6 +4365,8 @@ split_at_segment(Seg,[H|Tail],Acc) ->
 %%
 %%i.e this is an inner function, so no sanity checks here.
 %%
+construct_fullpath(undefined,_,_) ->
+    undefined;
 construct_fullpath(DocRoot,GetPath,VirtualDir) ->
     case VirtualDir of
         [] ->
