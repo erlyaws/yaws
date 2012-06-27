@@ -71,6 +71,16 @@ out(A) ->
   client updating its time of day, which the client dynamically displays in
   a web page.</p>
 
+  <p><em>Note: if you're running this on your own Yaws installation, make
+  sure your server configuration includes the following appmod
+  entry:</em><p>
+
+  <p><code>appmods = &lt;"/sse", server_sent_events&gt;</code></p>
+
+  <p><em>and also make sure <code>server_sent_events.beam</code> is on the
+  Yaws load path, which it should be if you followed regular installation
+  procedures.</em></p>
+
   <p>First, the entry HTML page is here: <a
   href="server_sent_events.html">server_sent_events.html</a>. It presents
   a page title and a placeholder for the server date string. It also
@@ -80,15 +90,15 @@ out(A) ->
   HTML.</p>
 
   <p>Next, the server appmod code is here: <a
-  href="https://github.com/klacke/yaws/blob/master/examples/src/server_sent_events.erl">server_sent_events.erl</a>. Its
-  <code>out/1</code> function create a gen_server event generation process,
-  returning the pid in a <code>streamcontent_from_pid</code> directive to
-  Yaws along with suitable headers. Note that it obtains the desired
-  <code>out/1</code> return value via the <code>yaws_sse:headers/1</code>
-  function. Its gen_server is fairly simple in that it creates a timer
-  that, once per second, generates a time of day string and sends it as an
-  event to the client formatted via the <code>yaws_sse:data/1</code>
-  function.</p>
+  href="https://github.com/klacke/yaws/blob/master/examples/src/server_sent_events.erl">
+  server_sent_events.erl</a>. Its <code>out/1</code> function create a
+  gen_server event generation process, returning the pid in a
+  <code>streamcontent_from_pid</code> directive to Yaws along with suitable
+  headers. Note that it obtains the desired <code>out/1</code> return value
+  via the <code>yaws_sse:headers/1</code> function. Its gen_server is
+  fairly simple in that it creates a timer that, once per second, generates
+  a time of day string and sends it as an event to the client formatted via
+  the <code>yaws_sse:data/1</code> function.</p>
 
   <p>The <code>yaws_sse</code> module supplies all the SSE primitives
   required for formatting event data, event identifiers, and event retry
