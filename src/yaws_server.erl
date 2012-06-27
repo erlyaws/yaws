@@ -2007,22 +2007,26 @@ is_revproxy(ARG, Path, SC = #sconf{revproxy = RevConf}) ->
 
 is_revproxy1(_,[]) ->
     false;
-is_revproxy1(Path, [#proxy_cfg{prefix=Prefix}=RevConf | Tail]) ->
-    case yaws:is_prefix(Prefix, Path) of
-        {true,_} ->
-            {true, RevConf};
+is_revproxy1(Path, RevConf) ->
+    case lists:keyfind(Path, #proxy_cfg.prefix, RevConf) of
+        #proxy_cfg{}=R ->
+            {true, R};
+        false when Path == "/" ->
+            false;
         false ->
-            is_revproxy1(Path, Tail)
+            is_revproxy1(filename:dirname(Path), RevConf)
     end.
 
 is_redirect_map(_, []) ->
     false;
-is_redirect_map(Path, [E={Prefix, _URL, _AppendMode}|Tail]) ->
-    case yaws:is_prefix(Prefix, Path) of
-        {true, _} ->
+is_redirect_map(Path, RedirMap) ->
+    case lists:keyfind(Path, 1, RedirMap) of
+        {Path, _Url, _AppendMod}=E ->
             {true, E};
+        false when Path == "/" ->
+            false;
         false ->
-            is_redirect_map(Path, Tail)
+            is_redirect_map(filename:dirname(Path), RedirMap)
     end.
 
 %% Find out what which module to call when urltype is unauthorized
