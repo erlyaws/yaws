@@ -51,8 +51,7 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info({ok, YawsPid}, #state{sock=Socket}=State) ->
-    ok = inet:setopts(Socket, [{active, once}]),
+handle_info({ok, YawsPid}, State) ->
     {ok, Timer} = timer:send_interval(1000, self(), tick),
     {noreply, State#state{yaws_pid=YawsPid, timer=Timer}};
 handle_info({discard, _YawsPid}, State) ->
