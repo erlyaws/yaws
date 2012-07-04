@@ -131,16 +131,76 @@ Sets a cookie to the browser.
 \fBfind_cookie_val(Cookie, Header)\fR
 This function can be used to search for a cookie that was previously
 set by \fBsetcookie/2-6\fR. For example if we set a cookie
-as \fByaws_api:setcookie("sid",SomeRandomSid) \fR, then on subsequent requests
+as \fByaws_api:setcookie("sid",SomeRandomSid)\fR, then on subsequent requests
 from the browser we can call:
 \fBfind_cookie("sid",(Arg#arg.headers)#headers.cookie)\fR
 
 The function returns [] if no cookie was found, otherwise the actual cookie
 is returned as a string.
 
+.TP
+\fBparse_set_cookie(Str)\fR
+This function parses the value of a \fBSet-Cookie\fR header. Because multiple
+cookies can be set in a single \fBSet-Cookie\fR header, this function returns a
+list of \fI#setcookie{}\fR records. If no cookie was found or if an error
+occurred, it returns [].
+
+\fI#setcookie{}\fR record is defined in \fIyaws_api.hrl\fR:
+\fI
+.nf
+
+-record(setcookie, {
+          key,
+          value,
+          quoted = false,
+          comment,
+          comment_url,
+          discard = false,
+          domain,
+          max_age,
+          expires,
+          path,
+          port,
+          secure = false,
+          version
+         }).
+.fi
+\fR
 
 .TP
-\fBredirect(Url\fR
+\fBparse_cookie(Str)\fR
+This function does the same thing than \fBparse_set_cookie/1\fR but for the
+value of a \fBCookie\fR header. It returns a list of \fI#cookie{}\fR records. If
+no cookie was found or if an error occurred, it returns [].
+
+\fI#cookie{}\fR record is defined in \fIyaws_api.hrl\fR:
+\fI
+.nf
+
+-record(cookie, {
+          key,
+          value,
+          quoted = false,
+          version = "0",
+          domain,
+          path,
+          port}).
+         }).
+.fi
+\fR
+
+.TP
+\fBformat_set_cookie(Str)\fR
+Build a cookie string from a \fI#setcookie{}\fR record like returned by
+\fBparse_set_cookie/1\fR.
+
+.TP
+\fBformat_cookie(Str)\fR
+Build a cookie string from a \fI#cookie{}\fR record like returned by
+\fBparse_cookie/1\fR.
+
+.TP
+\fBredirect(Url)\fR
 This function generates a redirect to the browser.
 It will clear any previously set headers. So to generate
 a redirect \fBand\fR set a cookie, we need to set the cookie after

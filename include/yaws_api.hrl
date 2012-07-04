@@ -90,17 +90,27 @@
 -record(setcookie,{
             key,
             value,
-            quoted,
+            quoted = false,
             comment,
             comment_url,
-            discard,
+            discard = false,
             domain,
             max_age,
             expires,
             path,
             port,
-            secure,
+            secure = false,
             version}).
+
+
+-record(cookie,{
+            key,
+            value,
+            quoted = false,
+            version = "0",
+            domain,
+            path,
+            port}).
 
 
 -record(redir_self, {
