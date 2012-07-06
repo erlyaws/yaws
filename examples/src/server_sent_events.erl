@@ -38,7 +38,8 @@ out(A) ->
                     end
             end;
         _ ->
-            {status, 405}
+            [{status, 405},
+             {header, {"Allow", "GET"}}]
     end.
 
 init([Arg]) ->

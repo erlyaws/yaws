@@ -19,7 +19,7 @@
 headers(StreamPid) ->
     [{status, 200},
      {header, {"Cache-Control", "no-cache"}},
-     {header, {"Connection", "Keep-Alive"}},
+     {header, {connection, "close"}},
      {header, {transfer_encoding, erase}},
      {streamcontent_from_pid, "text/event-stream", StreamPid}].
 
