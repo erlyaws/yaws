@@ -4885,10 +4885,10 @@ close_accepted_if_max(GS,{ok, Socket}) ->
 	    ok;
         true ->
             S=case peername(Socket, GS#gs.ssl) of
-                  {ok, {IP, Port}} ->
-                      io_lib:format("~s:~w", [inet_parse:ntoa(IP), Port]);
-                  _ ->
-                      "unknown"
+                  {unknown, unknown} ->
+                      "unknown";
+                  {IP, Port} ->
+                      io_lib:format("~s:~w", [inet_parse:ntoa(IP), Port])
               end,
             error_logger:format(
               "Max connections reached - closing conn to ~s~n",[S]),
