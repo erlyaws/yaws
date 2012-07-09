@@ -179,10 +179,13 @@ call(Wsdl, Operation, Port, Service, Headers, Message) ->
     call_attach(Wsdl, Operation, Port, Service, Headers, Message, [], []).
 
 %%% --------------------------------------------------------------------
-%%% Make a SOAP request (with http headers)
+%%% Make a SOAP request (with http artifacts)
 %%% --------------------------------------------------------------------
 call(Wsdl, Operation, Port, Service, Headers, Message, http_headers, HttpHeaders) ->
-    call_attach(Wsdl, Operation, Port, Service, Headers, Message, [], HttpHeaders).
+    call_attach(Wsdl, Operation, Port, Service, Headers, Message, [], HttpHeaders);
+
+call(Wsdl, Operation, Port, Service, Headers, Message, http_details, HttpDetails) ->
+    call_attach(Wsdl, Operation, Port, Service, Headers, Message, [], http_details, HttpDetails).
 
 
 %%% --------------------------------------------------------------------
@@ -226,8 +229,13 @@ call_attach(Wsdl, Operation, Header, Msg, Attachments)
 %%% --------------------------------------------------------------------
 %%% Make a SOAP request (with attachments)
 %%% --------------------------------------------------------------------
+call_attach(Wsdl, Operation, Port, Service, Headers, Message, Attachments, HttpHeaders) ->
+    call_attach(Wsdl, Operation, Port, Service, Headers, Message, Attachments, http_details, [{headers, HttpHeaders}]).
+
 call_attach(#wsdl{operations = Operations, model = Model},
-            Operation, Port, Service, Headers, Message, Attachments, HttpHeaders) ->
+            Operation, Port, Service, Headers, Message, Attachments, http_details, HttpDetails) ->
+    HttpHeaders = findListValue(headers, HttpDetails),
+    HttpClientOptions = findListValue(client_options, HttpDetails),
     %% find the operation
     case findOperation(Operation, Port, Service, Operations) of
 	#operation{address = URL, action=Action, operation = Operation} ->
@@ -239,7 +247,6 @@ call_attach(#wsdl{operations = Operations, model = Model},
 
 		    {ContentType, Request} =
                         make_request_body(XmlMessage, Attachments, Action),
-		    HttpClientOptions = [],
                     ?dbg("+++ Request = ~p~n", [Request]),
 		    HttpRes = http_request(URL, Action, Request,
                                            HttpClientOptions, HttpHeaders,
@@ -260,6 +267,13 @@ call_attach(#wsdl{operations = Operations, model = Model},
 	    {error, {unknown_operation, Operation}}
     end.
 
+findListValue(Key, KeyVals) ->
+    case lists:keyfind(Key, 1, KeyVals) of
+        {Key, List} ->
+            List;
+        false ->
+            []
+    end.
 %%%
 %%% returns {ok, Header, Body} | {error, Error}
 %%%
