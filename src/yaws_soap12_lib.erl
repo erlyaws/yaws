@@ -593,7 +593,17 @@ ibrowse_request(URL, Action, Request, Options, Headers, ContentType) ->
                               _ ->
                                   [{"SOAPAction", Action} | Headers]
                           end],
-            case ibrowse:send_req(URL, NewHeaders, post, Request, Options) of
+            IbrowseF = case lists:keyfind(ibrowse_timeout, 1, Options) of
+                {_, Timeout} ->
+                    fun() ->
+                        ibrowse:send_req(URL, NewHeaders, post, Request, Options, Timeout)
+                    end;
+                false ->
+                    fun() ->
+                        ibrowse:send_req(URL, NewHeaders, post, Request, Options)
+                    end
+            end,
+            case IbrowseF() of
                 {ok, Status, ResponseHeaders, ResponseBody} ->
                     {ok, list_to_integer(Status), ResponseHeaders, ResponseBody};
                 {error, Reason} ->
