@@ -707,21 +707,17 @@ setcookie(Name, Value, Path, Expire, Domain, Secure) ->
 %% only the first match is returned
 find_cookie_val(Name, #arg{}=A) ->
     find_cookie_val(Name, (A#arg.headers)#headers.cookie);
-find_cookie_val(_, []) ->
-    [];
 find_cookie_val(Name, Cookies) ->
     find_cookie_val2(yaws:to_lower(Name), Cookies).
 
+find_cookie_val2(_, []) ->
+    [];
 find_cookie_val2(Name, [Cookie|Rest]) ->
-    case parse_cookie(Cookie) of
-        error ->
-            find_cookie_val(Name, Rest);
-        L ->
-            case lists:keyfind(Name, #cookie.key, L) of
-                #cookie{value=undefined} -> [];
-                #cookie{value=Value}     -> Value;
-                false                    -> find_cookie_val(Name, Rest)
-            end
+    L = parse_cookie(Cookie),
+    case lists:keyfind(Name, #cookie.key, L) of
+        #cookie{value=undefined} -> [];
+        #cookie{value=Value}     -> Value;
+        false                    -> find_cookie_val2(Name, Rest)
     end.
 
 %%
@@ -1964,46 +1960,56 @@ deepmember(C,[N|Cs]) when C /= N ->
     deepmember(C, Cs).
 
 
-%%  Parse a Set-Cookie(2)/Cookie header.
+%%  . Parse a Set-Cookie header, following the RFC6265:
 %%
-%%  RFC (2109) ports are from RFC 2965
+%% "Set-Cookie: " set-cookie-string
+%%    set-cookie-string = cookie-pair *( ";" SP cookie-av )
+%%    cookie-pair       = cookie-name "=" cookie-value
+%%    cookie-name       = token
+%%    cookie-value      = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )
+%%    cookie-octet      = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E
+%%    token             = <token, defined in [RFC2616], Section 2.2>
 %%
-%% "Set-Cookie:" cookies
-%% "Set-Cookie2:" cookies
-%%   cookies       = 1#cookie
-%%   cookie        = NAME "=" VALUE *(";" set-cookie-av)
-%%   NAME          = attr
-%%   VALUE         = value
-%%   set-cookie-av = "Comment" "=" value
-%%                 | "CommentURL" "=" <"> http_URL <">
-%%                 | "Discard"
-%%                 | "Domain" "=" value
-%%                 | "Max-Age" "=" value
-%%                 | "Path" "=" value
-%%                 | "Port" [ "=" <"> portlist <"> ]
-%%                 | "Secure"
-%%                 | "Version" "=" 1*DIGIT
+%%    cookie-av         = expires-av / max-age-av / domain-av / path-av /
+%%                        secure-av / httponly-av / extension-av
+%%    expires-av        = "Expires=" <rfc1123-date, defined in [RFC2616]>
+%%    max-age-av        = "Max-Age=" [1-9] *DIGIT
+%%    domain-av         = "Domain=" <subdomain> ; defined in [RFC1034]
+%%    path-av           = "Path=" <any CHAR except CTLs or ";">
+%%    secure-av         = "Secure"
+%%    httponly-av       = "HttpOnly"
+%%    extension-av      = <any CHAR except CTLs or ";">
+%%
+%% NOTE: in RFC2109 and RFC2965, multiple cookies, separated by comma, can be
+%% defined in a single header. So, To be backward compatible with these RFCs,
+%% comma is forbidden in 'path-av' and 'extension-av' except for double-quoted
+%% value.
 %%
 %%
-%% "Cookie:" cookie-version 1*((";" | ",") cookie-value)
-%%   cookie-value   = NAME "=" VALUE [";" path] [";" domain] [";" port]
-%%   cookie-version = "$Version" "=" value
-%%   NAME           = attr
-%%   VALUE          = value
-%%   path           = "$Path" "=" value
-%%   domain         = "$Domain" "=" value
-%%   port           = "$Port" [ "=" <"> value <"> ]
+%%  . Parse a Cookie header, following the RFC6265:
+%%
+%% "Cookie: " cookie-string
+%%    cookie-string = cookie-pair *( ";" SP cookie-pair )
+%%
+%% NOTE: To be backward compatible with RFCs, comma is considered as a cookie
+%% separator, like semicolon.
 %%
 parse_set_cookie(Str) ->
     parse_set_cookie(Str, []).
 
+parse_set_cookie([], [SetCookie]) ->
+    SetCookie;
 parse_set_cookie([], SetCookies) ->
     lists:reverse(SetCookies);
 parse_set_cookie(Str, SetCookies) ->
     case do_parse_set_cookie(Str) of
-        {C, Rest} -> parse_set_cookie(Rest, [C|SetCookies]);
-        error     -> []
+        {#setcookie{extensions=Exts}=C0, Rest} ->
+            C1 = C0#setcookie{extensions=lists:reverse(Exts)},
+            parse_set_cookie(Rest, [C1|SetCookies]);
+        error ->
+            []
     end.
+
 
 do_parse_set_cookie(Str) ->
     {Key, Rest0} = parse_cookie_key(skip_space(Str), []),
@@ -2014,17 +2020,11 @@ do_parse_set_cookie(Str) ->
             Cookie0 = #setcookie{key=K, quoted=false},
             case skip_space(Rest0) of
                 [$=|Rest1] ->
-                    {V, Q, Rest2} = parse_cookie_token(skip_space(Rest1)),
+                    {V, Q, Rest2} = parse_cookie_value(skip_space(Rest1)),
                     Cookie1 = Cookie0#setcookie{value=V, quoted=Q},
-                    case skip_space(Rest2) of
-                        [$;|Rest3] -> parse_set_cookie_options(Rest3, Cookie1);
-                        [$,|Rest3] -> {Cookie1, skip_space(Rest3)};
-                        []         -> {Cookie1, []};
-                        _          -> error
-                    end;
-
+                    parse_set_cookie_result(Cookie1, skip_space(Rest2));
                 [$;|Rest1] -> parse_set_cookie_options(Rest1, Cookie0);
-                [$,|Rest1] -> {Cookie0, skip_space(Rest1)};
+                [$,|Rest1] -> {Cookie0, Rest1};
                 []         -> {Cookie0, []};
                 _          -> error
             end
@@ -2033,131 +2033,174 @@ do_parse_set_cookie(Str) ->
 parse_set_cookie_options(Str, Cookie0) ->
     {Key, Rest0} = parse_cookie_key(skip_space(Str), []),
     case yaws:to_lower(Key) of
-        K when K == "secure"; K == "discard" ->
-            Cookie1 = add_cookie_opt(Cookie0, K, true),
-            case skip_space(Rest0) of
-                [$=|_]     -> error;
-                [$;|Rest1] -> parse_set_cookie_options(Rest1, Cookie1);
-                [$,|Rest1] -> {Cookie1, skip_space(Rest1)};
-                []         -> {Cookie1, []};
-                _          -> error
-            end;
-        K ->
+        [] ->
+            {Cookie0, Rest0};
+        "domain" ->
             case skip_space(Rest0) of
                 [$=|Rest1] ->
-                    {Value, _, Rest2} = parse_cookie_token(skip_space(Rest1)),
-                    Cookie1 = add_cookie_opt(Cookie0, K, Value),
-                    parse_set_cookie_options(Rest2, Cookie1);
-
+                    {V,_,Rest2} = parse_set_cookie_domain(skip_space(Rest1),[]),
+                    Cookie1 = Cookie0#setcookie{domain=V},
+                    parse_set_cookie_result(Cookie1, skip_space(Rest2));
                 [$;|Rest1] -> parse_set_cookie_options(Rest1, Cookie0);
-                [$,|Rest1] -> {Cookie0, skip_space(Rest1)};
+                [$,|Rest1] -> {Cookie0, Rest1};
                 []         -> {Cookie0, []};
                 _          -> error
+            end;
+        "max-age" ->
+            case skip_space(Rest0) of
+                [$=|Rest1] ->
+                    {V,_,Rest2} = parse_set_cookie_maxage(skip_space(Rest1),[]),
+                    Cookie1 = Cookie0#setcookie{max_age=V},
+                    parse_set_cookie_result(Cookie1, skip_space(Rest2));
+                [$;|Rest1] -> parse_set_cookie_options(Rest1, Cookie0);
+                [$,|Rest1] -> {Cookie0, Rest1};
+                []         -> {Cookie0, []};
+                _          -> error
+            end;
+        "expires" ->
+            case skip_space(Rest0) of
+                [$=|Rest1] ->
+                    {V, _, Rest2} = parse_set_cookie_expires(skip_space(Rest1)),
+                    Cookie1 = Cookie0#setcookie{expires=V},
+                    parse_set_cookie_result(Cookie1, skip_space(Rest2));
+                [$;|Rest1] -> parse_set_cookie_options(Rest1, Cookie0);
+                [$,|Rest1] -> {Cookie0, Rest1};
+                []         -> {Cookie0, []};
+                _          -> error
+            end;
+        "path" ->
+            case skip_space(Rest0) of
+                [$=|Rest1] ->
+                    {V, _, Rest2} = parse_cookie_value(skip_space(Rest1)),
+                    Cookie1 = Cookie0#setcookie{path=V},
+                    parse_set_cookie_result(Cookie1, skip_space(Rest2));
+                [$;|Rest1] -> parse_set_cookie_options(Rest1, Cookie0);
+                [$,|Rest1] -> {Cookie0, Rest1};
+                []         -> {Cookie0, []};
+                _          -> error
+            end;
+        "secure" ->
+            Cookie1 = Cookie0#setcookie{secure=true},
+            parse_set_cookie_result(Cookie1, skip_space(Rest0));
+        "httponly" ->
+            Cookie1 = Cookie0#setcookie{http_only=true},
+            parse_set_cookie_result(Cookie1, skip_space(Rest0));
+        K ->
+            Exts = Cookie0#setcookie.extensions,
+            case skip_space(Rest0) of
+                [$=|Rest1] ->
+                    {V, Q, Rest2} = parse_cookie_value(skip_space(Rest1)),
+                    Cookie1 = Cookie0#setcookie{extensions=[{K,V,Q}|Exts]},
+                    parse_set_cookie_result(Cookie1, skip_space(Rest2));
+                [$;|Rest1] ->
+                    Cookie1 = Cookie0#setcookie{
+                                extensions=[{K,undefined,false}|Exts]
+                               },
+                    parse_set_cookie_options(Rest1, Cookie1);
+                [$,|Rest1] ->
+                    Cookie1 = Cookie0#setcookie{
+                                extensions=[{K,undefined,false}|Exts]
+                               },
+                    {Cookie1, Rest1};
+                [] ->
+                    Cookie1 = Cookie0#setcookie{
+                                extensions=[{K,undefined,false}|Exts]
+                               },
+                    {Cookie1, []};
+                _ ->
+                    error
             end
     end.
+
+
+parse_set_cookie_domain([C|_]=Rest, []) when C < $A orelse C > $Z orelse
+                                             C < $a orelse C > $z orelse
+                                             C /= $. ->
+    parse_cookie_value(Rest);
+parse_set_cookie_domain([C|_]=Rest, [_|_]=Acc) when C < $0 orelse C > $9 orelse
+                                                    C < $A orelse C > $Z orelse
+                                                    C < $a orelse C > $z orelse
+                                                    C /= $. orelse C /= $- ->
+    {lists:reverse(Acc), false, Rest};
+parse_set_cookie_domain([], Acc) ->
+    {lists:reverse(Acc), false, []};
+parse_set_cookie_domain([C|T], Acc) ->
+    parse_set_cookie_domain(T, [C|Acc]).
+
+
+parse_set_cookie_maxage([C|_]=Rest, []) when C < $1 orelse C > $9 ->
+    parse_cookie_value(Rest);
+parse_set_cookie_maxage([C|_]=Rest, [_|_]=Acc) when C < $0 orelse C > $9 ->
+    {lists:reverse(Acc), false, Rest};
+parse_set_cookie_maxage([], Acc) ->
+    {lists:reverse(Acc), false, []};
+parse_set_cookie_maxage([C|T], Acc) ->
+    parse_set_cookie_maxage(T, [C|Acc]).
+
+
+%% First of all, try to parse valid rfc1123 date (faster), then use a regex
+%% (more permissive)
+parse_set_cookie_expires([D,A,Y,$,,$\s,D1,D2,SEP,M,O,N,SEP,Y1,Y2,Y3,Y4,$\s,
+                          H1,H2,$:,M1,M2,$:,S1,S2,$\s,Z1,Z2,Z3|Rest])
+  when SEP =:= $- orelse SEP =:= $\s ->
+    {[D,A,Y,$,,$\s,D1,D2,SEP,M,O,N,SEP,Y1,Y2,Y3,Y4,$\s,
+      H1,H2,$:,M1,M2,$:,S1,S2,$\s,Z1,Z2,Z3], false, Rest};
+parse_set_cookie_expires(Str) ->
+    RE = "^("
+        "(?:[a-zA-Z]+,\s+)?"                    %% Week day
+        "[0-9]+(?:\s|-)[a-zA-Z]+(?:\s|-)[0-9]+" %% DD Month YYYY
+        "\s+[0-9]+:[0-9]+:[0-9]+"               %% hh:mm:ss
+        "(?:\s+[a-zA-Z]+)?"                     %% timezone
+        ")"
+        "(.*)$",
+    case re:run(Str, RE, [{capture, all_but_first, list}, caseless]) of
+        {match, [Date, Rest]} -> {Date, false, Rest};
+        nomatch               -> parse_cookie_value(Str)
+    end.
+
+
+parse_set_cookie_result(Cookie, [$;|Rest]) ->
+    parse_set_cookie_options(Rest, Cookie);
+parse_set_cookie_result(Cookie, [$,|Rest]) ->
+    {Cookie, Rest};
+parse_set_cookie_result(Cookie, []) ->
+    {Cookie, []};
+parse_set_cookie_result(_, _) ->
+    error.
+
 
 %%
 parse_cookie(Str) ->
-    case parse_cookie_version(Str) of
-        {Vers, Rest} -> parse_cookie(Rest, Vers, []);
-        error        -> []
-    end.
+    parse_cookie(Str, []).
 
-parse_cookie([], _, Cookies) ->
+parse_cookie([], Cookies) ->
     lists:reverse(Cookies);
-parse_cookie(Str, Vers, Cookies) ->
-    case do_parse_cookie(Str) of
-        {C, Rest} -> parse_cookie(Rest, Vers, [C#cookie{version=Vers}|Cookies]);
-        error     -> []
-    end.
-
-parse_cookie_version(Str) ->
+parse_cookie(Str, Cookies) ->
     {Key, Rest0} = parse_cookie_key(skip_space(Str), []),
     case yaws:to_lower(Key) of
         [] ->
-            error;
-        "$version" ->
-            case skip_space(Rest0) of
-                [$=|Rest1] ->
-                    {V, _, Rest2} = parse_cookie_token(skip_space(Rest1)),
-                    case skip_space(Rest2) of
-                        [$;|Rest3] -> {V, Rest3};
-                        [$,|Rest3] -> {V, Rest3};
-                        _          -> error
-                    end;
-                _ ->
-                    error
-            end;
-        _ ->
-            {"0", Str}
-    end.
-
-do_parse_cookie(Str) ->
-    {Key, Rest0} = parse_cookie_key(skip_space(Str), []),
-    case yaws:to_lower(Key) of
-        [] ->
-            error;
+            [];
         K ->
-            Cookie0 = #cookie{key=K, quoted=false},
             case skip_space(Rest0) of
                 [$=|Rest1] ->
-                    {V, Q, Rest2} = parse_cookie_token(skip_space(Rest1)),
-                    Cookie1 = Cookie0#cookie{value=V, quoted=Q},
+                    {V, Q, Rest2} = parse_cookie_value(skip_space(Rest1)),
+                    C = #cookie{key=K, value=V, quoted=Q},
                     case skip_space(Rest2) of
-                        [$;|Rest3] -> parse_cookie_options(Rest3, Cookie1);
-                        [$,|Rest3] -> parse_cookie_options(Rest3, Cookie1);
-                        []         -> {Cookie1, []};
-                        _          -> error
+                        [$;|Rest3] -> parse_cookie(Rest3, [C|Cookies]);
+                        [$,|Rest3] -> parse_cookie(Rest3, [C|Cookies]);
+                        []         -> parse_cookie([], [C|Cookies]);
+                        _          -> []
                     end;
-
-                [$;|Rest1] -> parse_cookie_options(Rest1, Cookie0);
-                [$,|Rest1] -> parse_cookie_options(Rest1, Cookie0);
-                []         -> {Cookie0, []};
-                _          -> error
+                [$;|Rest1] -> parse_cookie(Rest1, [#cookie{key=K}|Cookies]);
+                [$,|Rest1] -> parse_cookie(Rest1, [#cookie{key=K}|Cookies]);
+                []         -> parse_cookie([], [#cookie{key=K}|Cookies]);
+                _          -> []
             end
     end.
 
-parse_cookie_options(Str, Cookie0) ->
-    {Key, Rest0} = parse_cookie_key(skip_space(Str), []),
-    case skip_space(Rest0) of
-        [$=|Rest1] ->
-            {Value, _, Rest2} = parse_cookie_token(skip_space(Rest1)),
-            case add_cookie_opt(Cookie0, yaws:to_lower(Key), Value) of
-                undefined ->
-                    {Cookie0, Str};
-                Cookie1 ->
-                    case skip_space(Rest2) of
-                        [$;|Rest3] -> parse_cookie_options(Rest3, Cookie1);
-                        [$,|Rest3] -> parse_cookie_options(Rest3, Cookie1);
-                        []         -> {Cookie1, []};
-                        _          -> error
-                    end
-            end;
-        _ ->
-            {Cookie0, Str}
-    end.
-
 
 %%
-add_cookie_opt(C=#setcookie{}, "comment",    V) -> C#setcookie{comment=V};
-add_cookie_opt(C=#setcookie{}, "commenturl", V) -> C#setcookie{comment_url=V};
-add_cookie_opt(C=#setcookie{}, "discard",    V) -> C#setcookie{discard=V};
-add_cookie_opt(C=#setcookie{}, "domain",     V) -> C#setcookie{domain=V};
-add_cookie_opt(C=#setcookie{}, "max-age",    V) -> C#setcookie{max_age=V};
-add_cookie_opt(C=#setcookie{}, "expires",    V) -> C#setcookie{expires=V};
-add_cookie_opt(C=#setcookie{}, "path",       V) -> C#setcookie{path=V};
-add_cookie_opt(C=#setcookie{}, "port",       V) -> C#setcookie{port=V};
-add_cookie_opt(C=#setcookie{}, "secure",     V) -> C#setcookie{secure=V};
-add_cookie_opt(C=#setcookie{}, "version",    V) -> C#setcookie{version=V};
-add_cookie_opt(C=#setcookie{}, _,            _) -> C;
-
-add_cookie_opt(C=#cookie{}, "$domain", V) -> C#cookie{domain=V};
-add_cookie_opt(C=#cookie{}, "$path",   V) -> C#cookie{path=V};
-add_cookie_opt(C=#cookie{}, "$port",   V) -> C#cookie{port=V};
-add_cookie_opt(#cookie{},   _,        _) -> undefined.
-
-
-%%
+%% All CHAR except ('=' | ';' | ',' | SP | HT | CRLF | LF)
 parse_cookie_key([], Acc) ->
     {lists:reverse(Acc), []};
 parse_cookie_key(T=[$=|_], Acc) ->
@@ -2166,53 +2209,60 @@ parse_cookie_key(T=[$;|_], Acc) ->
     {lists:reverse(Acc), T};
 parse_cookie_key(T=[$,|_], Acc) ->
     {lists:reverse(Acc), T};
-parse_cookie_key([C|T], Acc) when C  > 32 andalso C  < 127 andalso
-                                  C /= $( andalso C /= $)  andalso
-                                  C /= $< andalso C /= $>  andalso
-                                  C /= $[ andalso C /= $]  andalso
-                                  C /= $@ andalso C /= $,  andalso
-                                  C /= $; andalso C /= $:  andalso
-                                  C /= $/ andalso C /= $\\ andalso
-                                  C /= ${ andalso C /= $}  andalso
-                                  C /= $= andalso C /= $"  andalso
-                                  C /= $? ->
-    parse_cookie_key(T, [C|Acc]);
-parse_cookie_key(T, Acc) ->
-    {lists:reverse(Acc), T}.
+parse_cookie_key(T=[$\s|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_cookie_key(T=[$\t|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_cookie_key(T=[$\r,$\n|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_cookie_key(T=[$\n|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_cookie_key([C|T], Acc) ->
+    parse_cookie_key(T, [C|Acc]).
 
 
 %%
-parse_cookie_token([$"|T]) ->
+parse_cookie_value([$"|T]) ->
     parse_cookie_quoted(T,[]);
-parse_cookie_token(T) ->
-    parse_cookie_token(T,[]).
+parse_cookie_value(T) ->
+    parse_cookie_value(T,[]).
 
-parse_cookie_token([],Acc) ->
+%% All CHAR except (';' | ',' | SP | HT | CRLF | LF)
+parse_cookie_value([],Acc) ->
     {lists:reverse(Acc), false, []};
-parse_cookie_token([C|T], Acc) when C  > 32 andalso C  < 127 andalso
-                                    C /= $( andalso C /= $)  andalso
-                                    C /= $< andalso C /= $>  andalso
-                                    C /= $[ andalso C /= $]  andalso
-                                    C /= $@ andalso C /= $,  andalso
-                                    C /= $; andalso C /= $:  andalso
-                                    C /= ${ andalso C /= $}  andalso
-                                    C /= $= andalso C /= $"  andalso
-                                    C /= $? andalso C /= $\\ ->
-    parse_cookie_token(T, [C|Acc]);
-parse_cookie_token(T, Acc) ->
-    {lists:reverse(Acc), false, T}.
+parse_cookie_value(T=[$;|_], Acc) ->
+    {lists:reverse(Acc), false, T};
+parse_cookie_value(T=[$,|_], Acc) ->
+    {lists:reverse(Acc), false, T};
+parse_cookie_value(T=[$\s|_], Acc) ->
+    {lists:reverse(Acc), false, T};
+parse_cookie_value(T=[$\t|_], Acc) ->
+    {lists:reverse(Acc), false, T};
+parse_cookie_value(T=[$\r,$\n|_], Acc) ->
+    {lists:reverse(Acc), false, T};
+parse_cookie_value(T=[$\n|_], Acc) ->
+    {lists:reverse(Acc), false, T};
+parse_cookie_value([C|T], Acc) ->
+    parse_cookie_value(T, [C|Acc]).
 
 
+%% All CHAR except ('"' | CTLs) but including LWS and escape DQUOTEs
+%%   CTL = any US-ASCII control character (octets 0 - 31) and DEL (127)
+%%   LWS = [CRLF] 1*( SP | HT )
 parse_cookie_quoted([], Acc) ->
     {lists:reverse(Acc), true, []};
 parse_cookie_quoted([$"|T], Acc) ->
     {lists:reverse(Acc), true, T};
 parse_cookie_quoted([$\\,C|T], Acc) ->
     parse_cookie_quoted(T,[C,$\\|Acc]);
+parse_cookie_quoted([$\t|T], Acc) ->
+    parse_cookie_quoted(T,[$\t|Acc]);
+parse_cookie_quoted([$\r,$\n,$\s|T], Acc) ->
+    parse_cookie_quoted(T,[$\s,$\n,$\r|Acc]);
+parse_cookie_quoted([$\r,$\n,$\t|T], Acc) ->
+    parse_cookie_quoted(T,[$\t,$\n,$\r|Acc]);
 parse_cookie_quoted([C|T], Acc) when C > 31 andalso C < 127 ->
     parse_cookie_quoted(T,[C|Acc]);
-parse_cookie_quoted([$\r,$\n,C|T], Acc) when C == 32 orelse C == 9 ->
-    parse_cookie_quoted(T,[C,$\n,$\r|Acc]);
 parse_cookie_quoted(T, Acc) ->
     {lists:reverse(Acc), true, T}.
 
@@ -2226,47 +2276,43 @@ format_set_cookie(C) ->
     [C#setcookie.key,$=,C#setcookie.value|format_cookie_opts(C)].
 
 %%
-format_cookie(C) when C#cookie.value == undefined ->
-    ["$Version",$=,C#cookie.version,$;,$\ ,
-     C#cookie.key|format_cookie_opts(C)];
-format_cookie(C) when C#cookie.quoted ->
-    ["$Version",$=,C#cookie.version,$;,$\ ,
-     C#cookie.key,$=,$",C#cookie.value,$"|format_cookie_opts(C)];
-format_cookie(C) ->
-    ["$Version",$=,C#cookie.version,$;,$\ ,
-     C#cookie.key,$=,C#cookie.value|format_cookie_opts(C)].
+format_cookie([Cookie]) ->
+    format_cookie(Cookie);
+format_cookie([Cookie|Rest]) ->
+    [format_cookie(Cookie),$;,$\s|format_cookie(Rest)];
+format_cookie(#cookie{key=Key, value=undefined}) ->
+    Key;
+format_cookie(#cookie{key=Key, value=Value, quoted=true}) ->
+    [Key,$=,$",Value,$"];
+format_cookie(#cookie{key=Key, value=Value, quoted=false}) ->
+    [Key,$=,Value].
 
 %%
 format_cookie_opts(C=#setcookie{}) ->
-    [add_opt("Path",       C#setcookie.path),
-     add_opt("Port",       C#setcookie.port),
-     add_opt("Domain",     C#setcookie.domain),
-     add_opt("Secure",     C#setcookie.secure),
-     add_opt("Expires",    C#setcookie.expires),
-     add_opt("Max-Age",    C#setcookie.max_age),
-     add_opt("Discard",    C#setcookie.discard),
-     add_opt("Comment",    C#setcookie.comment),
-     add_opt("CommentURL", C#setcookie.comment_url),
-     add_opt("Version",    C#setcookie.version)];
-
-format_cookie_opts(C=#cookie{}) ->
-    [add_opt("$Path",   C#cookie.path),
-     add_opt("$Domain", C#cookie.domain),
-     add_opt("$Port",   C#cookie.port)].
+    [
+     add_opt("Domain",   C#setcookie.domain,    false),
+     add_opt("Max-Age",  C#setcookie.max_age,   false),
+     add_opt("Expires",  C#setcookie.expires,   false),
+     add_opt("Path",     C#setcookie.path,      false),
+     add_opt("Secure",   C#setcookie.secure,    false),
+     add_opt("HttpOnly", C#setcookie.http_only, false)
+    ] ++ [add_opt(K,V,Q) || {K,V,Q} <- C#setcookie.extensions].
 
 
-add_opt(_,   undefined) -> [];
-add_opt(_,   false)     -> [];
-add_opt(Key, true)      -> [$;,$\ ,Key];
-add_opt(Key, Opt)       -> [$;,$\ ,Key,$=,$",Opt,$"].
+add_opt(_, undefined, _) -> [];
+add_opt(_, false, _)     -> [];
+add_opt(Key, true, _)    -> [$;,$\s,Key];
+add_opt(Key, Opt, true)  -> [$;,$\s,Key,$=,$",Opt,$"];
+add_opt(Key, Opt, false)  -> [$;,$\s,Key,$=,Opt].
 
 
 %%
-skip_space([]) -> [];
-skip_space([$ |T]) -> skip_space(T);
-skip_space([$\t|T]) -> skip_space(T);
+skip_space([])          -> [];
+skip_space([$\s|T])     -> skip_space(T);
+skip_space([$\t|T])     -> skip_space(T);
 skip_space([$\r,$\n|T]) -> skip_space(T);
-skip_space(T) -> T.
+skip_space([$\n|T])     -> skip_space(T);
+skip_space(T)           -> T.
 
 
 %%
