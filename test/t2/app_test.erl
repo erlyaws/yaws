@@ -32,6 +32,7 @@ start() ->
     sslaccept_timeout_test(),
     throw_test(),
     too_many_headers_test(),
+    index_files_test(),
     ibrowse:stop().
 
 
@@ -792,6 +793,23 @@ too_many_headers_test() ->
     Uri = "http://localhost:8009/",
     Hdrs = [{link, "<compact.css>; rel=\"stylesheet\"; title=\"compact\""} || _ <- lists:seq(0, 1001)],
     ?line {ok, "431", _, _} = ibrowse:send_req(Uri, Hdrs, get),
+    ok.
+
+
+index_files_test() ->
+    io:format("index_files test\n", []),
+    %% "/" should be redirected to "/testdir", then to "/testdir/" and finally
+    %% get "/testdir/index.html"
+    Uri0 = "http://localhost:8010/",
+    ?line {ok, Bin} = file:read_file("../../www/testdir/index.html"),
+    Content = binary_to_list(Bin),
+    ?line {ok, "302", Hdrs1, _} = ibrowse:send_req(Uri0, [], get),
+    ?line Uri1 = proplists:get_value("Location", Hdrs1),
+    ?line "http://localhost:8010/testdir" = Uri1,
+    ?line {ok, "302", Hdrs2, _} = ibrowse:send_req(Uri1, [], get),
+    ?line Uri2 = proplists:get_value("Location", Hdrs2),
+    ?line "http://localhost:8010/testdir/" = Uri2,
+    ?line {ok, "200", _, Content} = ibrowse:send_req(Uri2, [], get),
     ok.
 
 %% used for appmod tests

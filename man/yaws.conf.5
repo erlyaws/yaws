@@ -546,6 +546,12 @@ The allowed script types for this server when executing files in a users
 public_html folder Recognized are `yaws', `cgi', `fcgi', `php'.  Default is
 \fItilde_allowed_scripts =\fR i.e. empty
 
+.TP
+\fBindex_files = ListOfResources\fR
+This directive sets the list of resources to look for, when a directory is
+requested by the client. If the last entry begins with a `/', and none of the
+earlier resources are found, Yaws will perform a redirect to this uri.
+Default is \fIindex_files = index.yaws index.html index.php\fR.
 
 .TP
 \fBappmods = ListOfModuleNames\fR

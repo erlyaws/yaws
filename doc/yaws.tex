@@ -2612,6 +2612,13 @@ The following directives are allowed inside a server definition.
              \textit{cgi}, \textit{fcgi}, \textit{php}. Default is\\
              \verb+tilde_allowed_scripts =+ (i.e., empty).
 
+\item       \verb+index_files = ListOfResources+ ---
+             This directive sets the list of resources to look for, when a
+             directory is requested by the client. If the last entry begins with
+             a `/', and none of the earlier resources are found, \Yaws\ will
+             perform a redirect to this uri.\\
+             Default is \verb+index_files = index.yaws index.html index.php+.
+
 \item       \verb+appmods = ListOfModuleNames+ ---
              If any the names in \verb+ListOfModuleNames+ appear as components
              in the path for a request, the path request parsing will terminate

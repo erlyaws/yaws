@@ -233,6 +233,7 @@
           start_mod,                    % user provided module to be started
           allowed_scripts = [yaws,php,cgi,fcgi],
           tilde_allowed_scripts = [],
+          index_files = ["index.yaws", "index.html", "index.php"],
           revproxy = [],
           soptions = [],
           extra_cgi_vars = [],

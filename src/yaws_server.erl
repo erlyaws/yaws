@@ -4392,45 +4392,40 @@ construct_fullpath(DocRoot,GetPath,VirtualDir) ->
 %%preconditions:
 %% - see 'construct_fullpath'
 %%
-try_index_file(DR, GetPath, VirtualDir) ->
-    FullPath = construct_fullpath(DR, GetPath, VirtualDir),
-
-    case prim_file:read_file_info([FullPath, "index.yaws"]) of
+try_index_file(_FullPath, _GetPath, []) ->
+    noindex;
+try_index_file(FullPath, GetPath, [[$/|_]=Idx|Rest]) ->
+    case (GetPath =:= Idx orelse GetPath =:= Idx++"/") of
+        true  -> try_index_file(FullPath, GetPath, Rest);
+        false -> {redir, Idx}
+    end;
+try_index_file(FullPath, GetPath, [Idx|Rest]) ->
+    case prim_file:read_file_info([FullPath, Idx]) of
         {ok, FI} when FI#file_info.type == regular ->
-            do_url_type(get(sc), GetPath ++ "index.yaws", DR, VirtualDir);
+            {index, Idx};
         _ ->
-            case prim_file:read_file_info([FullPath, "index.html"]) of
-                {ok, FI} when FI#file_info.type == regular ->
-                    do_url_type(get(sc), GetPath ++ "index.html", DR,
-                                VirtualDir);
-                _ ->
-                    case prim_file:read_file_info([FullPath, "index.php"]) of
-                        {ok, FI} when FI#file_info.type == regular ->
-                            do_url_type(get(sc), GetPath ++ "index.php", DR,
-                                        VirtualDir);
-                        _ ->
-                            noindex
-                    end
-            end
+            try_index_file(FullPath, GetPath, Rest)
     end.
 
 
 maybe_return_dir(DR, GetPath,VirtualDir) ->
-    case try_index_file(DR, GetPath,VirtualDir) of
+    SC = get(sc),
+    FullPath = construct_fullpath(DR, GetPath, VirtualDir),
+    case try_index_file(FullPath, GetPath, SC#sconf.index_files) of
+        {index, Idx} ->
+            do_url_type(SC, GetPath ++ Idx, DR, VirtualDir);
+        {redir, NewPath} ->
+            #urltype{type=redir, path=NewPath};
         noindex ->
-            FullPath = construct_fullpath(DR, GetPath, VirtualDir),
-
             case file:list_dir(FullPath) of
                 {ok, List} ->
-                    #urltype{type = directory,
+                    #urltype{type     = directory,
                              fullpath = FullPath,
-                             dir = GetPath,
-                             data = List -- [".yaws_auth"]};
+                             dir      = GetPath,
+                             data     = List -- [".yaws_auth"]};
                 _Err ->
                     #urltype{type=error}
-            end;
-        UT ->
-            UT
+            end
     end.
 
 

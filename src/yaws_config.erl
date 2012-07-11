@@ -1186,6 +1186,15 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                                        Suffixes)},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
+        ["index_files", '=' | Files] ->
+            case parse_index_files(Files) of
+                ok ->
+                    C2 = C#sconf{index_files = Files},
+                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+
         ["revproxy", '=' | Tail] ->
             case parse_revproxy(Tail) of
                 {ok, RevProxy} ->
@@ -2067,6 +2076,18 @@ parse_compressible_mime_types([MimeType | Rest], Acc) ->
     end;
 parse_compressible_mime_types([], Acc) ->
     {ok, Acc}.
+
+
+parse_index_files([]) ->
+    ok;
+parse_index_files([Idx|Rest]) ->
+    case Idx of
+        [$/|_] when Rest /= [] ->
+            {error, "Only the last index should be absolute"};
+        _ ->
+            parse_index_files(Rest)
+    end.
+
 
 
 ssl_start() ->
