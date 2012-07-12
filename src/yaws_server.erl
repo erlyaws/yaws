@@ -1479,8 +1479,16 @@ not_implemented(CliSock, _IPPort, Req, Head) ->
 'PUT'(CliSock, IPPort, Req, Head) ->
     ?Debug("PUT Req=~p~n H=~p~n", [?format_record(Req, http_request),
                                    ?format_record(Head, headers)]),
-    body_method(CliSock, IPPort, Req, Head).
-
+    SC=get(sc),
+    case ?sc_has_dav(SC) of
+        true ->
+            %% body is handled by yaws_dav:put/1
+            ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
+            ARG = make_arg(CliSock, IPPort, Head, Req, undefined),
+            handle_request(CliSock, ARG, 0);
+        false ->
+            body_method(CliSock, IPPort, Req, Head)
+    end.
 
 'DELETE'(CliSock, IPPort, Req, Head) ->
     no_body_method(CliSock, IPPort, Req, Head).
@@ -1498,6 +1506,9 @@ not_implemented(CliSock, _IPPort, Req, Head) ->
     %%                   [?format_record(Req, http_request),
     %%                    ?format_record(Head, headers)]),
     body_method(CliSock, IPPort, Req, Head).
+
+'PROPPATCH'(CliSock, IPPort, Req, Head) ->
+     body_method(CliSock, IPPort, Req, Head).
 
 'MOVE'(CliSock, IPPort, Req, Head) ->
     no_body_method(CliSock, IPPort, Req, Head).
@@ -1598,6 +1609,8 @@ handle_extension_method("PATCH", CliSock, IPPort, Req, Head) ->
     'PATCH'(CliSock, IPPort, Req#http_request{method = 'PATCH'}, Head);
 handle_extension_method("PROPFIND", CliSock, IPPort, Req, Head) ->
     'PROPFIND'(CliSock, IPPort, Req, Head);
+handle_extension_method("PROPPATCH", CliSock, IPPort, Req, Head) ->
+    'PROPPATCH'(CliSock, IPPort, Req, Head);
 handle_extension_method("MKCOL", CliSock, IPPort, Req, Head) ->
     'MKCOL'(CliSock, IPPort, Req, Head);
 handle_extension_method("MOVE", CliSock, IPPort, Req, Head) ->
@@ -2318,6 +2331,8 @@ handle_ut(CliSock, ARG, UT = #urltype{type = dav}, N) ->
                 fun(A) -> yaws_dav:delete(A) end;
             Req#http_request.method == "PROPFIND" ->
                 fun(A)-> yaws_dav:propfind(A) end;
+            Req#http_request.method == "PROPPATCH" ->
+                fun(A)-> yaws_dav:proppatch(A) end;
             Req#http_request.method == "MOVE" ->
                 fun(A)-> yaws_dav:move(A) end;
             Req#http_request.method == "COPY" ->
