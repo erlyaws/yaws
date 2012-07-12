@@ -1,3 +1,4 @@
+-module(yaws_dav).
 %%%-------------------------------------------------------------------
 %%% Created : 15 May 2005 by Tobbet <tobbe@tornkvist.org>
 %%% Modified: 21 Nov 2005 by <mbj@tail-f.com>
@@ -6,9 +7,8 @@
 %%%           RFC4918 class 1, 3 compliant
 %%%           To use, add a line dav = true in the <server>.
 %%% TODO: add locking (class 2 compliancy) using a DETS table
-%%%
+%%%   
 %%%-------------------------------------------------------------------
--module(yaws_dav).
 -export([propfind/1, proppatch/1, delete/1, put/2, mkcol/1, move/1, copy/1]).
 %-export([parse_propfind/1, xml_expand/1, xml_expand/2]).
 -compile(export_all).
@@ -33,7 +33,7 @@ delete(A) ->
     end.
 
 put(SC, ARG) ->
-    %% FIXME Check if allowed to PUT this resource
+    % FIXME Check if allowed to PUT this resource
     H = ARG#arg.headers,
     PPS = SC#sconf.partial_post_size,
     CT =
@@ -85,7 +85,7 @@ put(SC, ARG) ->
                         status(200);
                     Error ->
                         throw(Error)
-                        %% FIXME status(409)?
+                        % FIXME status(409)?
                 end
             catch
                 _:_Err ->
@@ -204,10 +204,6 @@ is_same(A, B) ->
     A == B.
 
 propfind(A) ->
-    %% Depth:
-    %%  If '0', then no members should be returned.
-    %%  If '1', then members one level down should be included in the reply.
-    %%  If 'infinity', then all members, recursively, should be included but is allowed to return 403.
     Req = binary_to_list(A#arg.clidata),
     Props = parse_propfind(Req),
     case depth(A) of
@@ -216,8 +212,8 @@ propfind(A) ->
             R = davresource0(A),
             case R of
                 404 ->
-                    status(404);
-                _ ->
+                    status(404); 
+                _ -> 
                     Response = {response, [{'xmlns',"DAV:"}], propfind_response(Props,A,R)},
                     MultiStatus = [{multistatus, [{'xmlns',"DAV:"}], [Response]}],
                     status(207,MultiStatus)
@@ -226,8 +222,8 @@ propfind(A) ->
             R = davresource0(A),
             case R of
                 404 ->
-                    status(404);
-                _ ->
+                    status(404); 
+                _ -> 
                     Response = {response, [{'xmlns',"DAV:"}], propfind_response(Props,A,R)},
                     R1 = davresource1(A),
                     ?elog("propfind: Depth=1 , entries=~p~n",
@@ -245,7 +241,7 @@ propfind(A) ->
 propfind_response(Props,A,R) ->
     Url = R#resource.name,
     case Props of
-        [allprop] ->
+        [allprop] -> 
             AllProp = [ get_prop(N,A,R) || N <- allprops(R) ],
             AllSorted = prop_sort(AllProp),
             {200, Results} = lists:keyfind(200,1,AllSorted),
@@ -269,11 +265,15 @@ propfind_response(Props,A,R) ->
             ]
     end.
 
-proppatch(_A) ->
-%%    Req = binary_to_list(A#arg.clidata),
-%%    Props = parse_proppatch(Req),
-%% FIXME Finish this
-    status(501).
+proppatch(A) ->
+    try
+        Req = binary_to_list(A#arg.clidata),
+        _Props = parse_proppatch(Req),
+        throw(501) % not yet implemented more here 
+    catch
+        Status -> status(Status);
+        _:Reason -> status(500,[{error,[{'xmlns',"DAV:"}],[Reason]}])
+    end.
 
 prop_sort(L) -> prop_sort(L,[]).
 prop_sort([H|T],R) ->
@@ -293,10 +293,10 @@ prop_status(409) -> {status, [{'xmlns',"DAV:"}],["HTTP/1.1 409 Conflict"]};
 prop_status(424) -> {status, [{'xmlns',"DAV:"}],["HTTP/1.1 424 Failed Dependency"]};
 prop_status(507) -> {status, [{'xmlns',"DAV:"}],["HTTP/1.1 507 Insufficient Storage"]}.
 
-%%----------------------------------------------------
-%%
-%% Available props include namespace
-%% TODO Available props can differ per resource
+%----------------------------------------------------
+%
+% Available props include namespace
+% TODO Available props can differ per resource
 allprops(_R) ->
     [{'DAV:',creationdate},
      {'DAV:',displayname},
@@ -305,15 +305,15 @@ allprops(_R) ->
      {'DAV:',getcontenttype},
      {'DAV:',getetag},
      {'DAV:',getlastmodified},
-     %%{'DAV:',lockdiscovery},
+     %{'DAV:',lockdiscovery},
      {'DAV:',resourcetype}
-     %%{'DAV:',supportedlock},
+     %{'DAV:',supportedlock},
     ].
 
 get_prop({'DAV:',displayname},_A,R) ->
     Name = filename:basename(R#resource.name),
     P = {displayname, [{'xmlns',"DAV:"}], [Name]},
-    {200, P};
+    {200, P}; 
 get_prop({'DAV:',creationdate},_A,R) ->
     F = R#resource.info,
     D = F#file_info.ctime,
@@ -337,9 +337,9 @@ get_prop({'DAV:',getcontentlength},_A,R) ->
 get_prop({'DAV:',getetag},_A,R) ->
     F = R#resource.info,
     E = yaws:make_etag(F),
-    %%?elog("ETAG: ~p~n",[E]),
+    %?elog("ETAG: ~p~n",[E]),
     P = {getetag, [{'xmlns',"DAV:"}], [E]},
-    {200, P};
+    {200, P}; 
 get_prop({'DAV:',resourcetype},_A,R) ->
     F = R#resource.info,
     P = case F#file_info.type of
@@ -349,13 +349,13 @@ get_prop({'DAV:',resourcetype},_A,R) ->
     {200, P};
 get_prop({NS,P},_A,_R) ->
     {404,{P,[{'xmlns',NS}],[]}}.
-
+    
 prop_set(P) ->
     {403,{P,[],[]}}.
-
+    
 prop_update(P) ->
     {403,{P,[],[]}}.
-
+    
 prop_remove(P) ->
     {403,{P,[],[]}}.
 
@@ -384,7 +384,7 @@ davresource0(A) ->
             case F#file_info.type of
                 directory ->
                     #resource{ name = Name ++ "/", info = F};
-                regular ->
+                regular -> 
                     #resource{ name = Name, info = F};
                 _ -> 404
             end;
@@ -399,7 +399,7 @@ davresource1(A) ->
             {ok, L} = file:list_dir(Path),
             davresource1(A,Path,Coll,L,[]);
         {ok, _Else} ->
-            %% TODO: not a collection, error?
+            % TODO: not a collection, error?
             []
     end.
 davresource1(_A,_Path,_Coll,[],Result) ->
@@ -407,15 +407,15 @@ davresource1(_A,_Path,_Coll,[],Result) ->
 davresource1(_A,Path,Coll,[Name|Rest],Result) ->
     if
         hd(Name) == 46 -> % dotted files
-            davresource1(_A,Path,Coll,Rest,Result); % skip
+            davresource1(_A,Path,Coll,Rest,Result); % skip 
         true ->
             {ok, Info} = file:read_file_info(Path++"/"++Name),
-            if
+            if 
                 Info#file_info.type == regular ; Info#file_info.type == directory ->
                     Resource = #resource {name = Coll++"/"++Name, info = Info},
                     davresource1(_A,Path,Coll,Rest,[Resource|Result]);
                 true ->
-                    davresource1(_A,Path,Coll,Rest,Result) % skip
+                    davresource1(_A,Path,Coll,Rest,Result) % skip 
             end
     end.
 
@@ -443,7 +443,7 @@ depth(A) ->
         {value, {_,_,"Depth",_,Depth}} ->
             to_depth(Depth);
         _ ->
-            %% was 0, RFC4918 strict is that if not found infinity is assumed
+                                         	% was 0, RFC4918 strict is that if not found infinity is assumed
             infinity
     end.
 
@@ -462,143 +462,102 @@ xml_expand(L, Cset) ->
     xmerl:export_simple(L,xmerl_xml,[{prolog,Prolog}]).
 
 
-parse_propfind([]) -> [allprops]; % RFC4918: no body then allprops
-parse_propfind(L) when is_list(L) ->
-    case catch xmerl_scan:string(L, [{namespace_conformant, true}]) of
-        {X,_} when is_record(X, xmlElement) ->
-            parse_dav(X);
-        _Z ->
-            ?elog("to_xml: error ~p~n", [_Z]),
-            {error, "xml scanner failed"}
-    end.
-
 -define(CONTENT(X), X#xmlElement.content).
 
-%%-define(IS_TEXT(X), #xmlText{} = X).
+%-define(IS_TEXT(X), #xmlText{} = X).
 -define(IS_PROPFIND(X), #xmlElement{expanded_name = {'DAV:',propfind}} = X).
 -define(IS_PROP(X), #xmlElement{expanded_name = {'DAV:',prop}} = X).
 -define(IS_PROPNAME(X), #xmlElement{expanded_name = {'DAV:',propname}} = X).
 -define(IS_ALLPROP(X), #xmlElement{expanded_name = {'DAV:',allprop}} = X).
-%%-define(IS_NAME(X), #xmlElement{expanded_name = {'DAV:',name}} = X).
-%%-define(IS_PARENTNAME(X), #xmlElement{expanded_name = {'DAV:',parentname}} = X).
-%%-define(IS_HREF(X), #xmlElement{expanded_name = {'DAV:',href}} = X).
-%%-define(IS_ISHIDDEN(X), #xmlElement{expanded_name = {'DAV:',ishidden}} = X).
-%%-define(IS_ISCOLLECTION(X), #xmlElement{expanded_name = {'DAV:',iscollection}} = X).
-%%-define(IS_ISREADONLY(X), #xmlElement{expanded_name = {'DAV:',isreadonly}} = X).
-%%-define(IS_GETCONTENTTYPE(X), #xmlElement{expanded_name = {'DAV:',getcontenttype}} = X).
-%%-define(IS_CONTENTCLASS(X), #xmlElement{expanded_name = {'DAV:',contentclass}} = X).
-%%-define(IS_GETCONTENTLANGUAGE(X), #xmlElement{expanded_name = {'DAV:',getcontentlanguage}} = X).
-%%-define(IS_CREATIONDATE(X), #xmlElement{expanded_name = {'DAV:',creationdate}} = X).
-%%-define(IS_LASTACCESSED(X), #xmlElement{expanded_name = {'DAV:',lastaccessed}} = X).
-%%-define(IS_GETLASTMODIFIED(X), #xmlElement{expanded_name = {'DAV:',getlastmodified}} = X).
-%%-define(IS_GETCONTENTLENGTH(X), #xmlElement{expanded_name = {'DAV:',getcontentlength}} = X).
-%%-define(IS_RESOURCETYPE(X), #xmlElement{expanded_name = {'DAV:',resourcetype}} = X).
-%%-define(IS_ISSTRUCTUREDDOCUMENT(X), #xmlElement{expanded_name = {'DAV:',isstructureddocument}} = X).
-%%-define(IS_DEFAULTDOCUMENT(X), #xmlElement{expanded_name = {'DAV:',defaultdocument}} = X).
-%%-define(IS_DISPLAYNAME(X), #xmlElement{expanded_name = {'DAV:',displayname}} = X).
-%%-define(IS_ISROOT(X), #xmlElement{expanded_name = {'DAV:',isroot}} = X).
+-define(IS_PROPERTYUPDATE(X), #xmlElement{expanded_name = {'DAV:',propertyupdate}} = X).
+-define(IS_PROPSET(X), #xmlElement{expanded_name = {'DAV:',set}} = X).
+-define(IS_PROPREMOVE(X), #xmlElement{expanded_name = {'DAV:',remove}} = X).
+%-define(IS_NAME(X), #xmlElement{expanded_name = {'DAV:',name}} = X).
+%-define(IS_PARENTNAME(X), #xmlElement{expanded_name = {'DAV:',parentname}} = X).
+%-define(IS_HREF(X), #xmlElement{expanded_name = {'DAV:',href}} = X).
+%-define(IS_ISHIDDEN(X), #xmlElement{expanded_name = {'DAV:',ishidden}} = X).
+%-define(IS_ISCOLLECTION(X), #xmlElement{expanded_name = {'DAV:',iscollection}} = X).
+%-define(IS_ISREADONLY(X), #xmlElement{expanded_name = {'DAV:',isreadonly}} = X).
+%-define(IS_GETCONTENTTYPE(X), #xmlElement{expanded_name = {'DAV:',getcontenttype}} = X).
+%-define(IS_CONTENTCLASS(X), #xmlElement{expanded_name = {'DAV:',contentclass}} = X).
+%-define(IS_GETCONTENTLANGUAGE(X), #xmlElement{expanded_name = {'DAV:',getcontentlanguage}} = X).
+%-define(IS_CREATIONDATE(X), #xmlElement{expanded_name = {'DAV:',creationdate}} = X).
+%-define(IS_LASTACCESSED(X), #xmlElement{expanded_name = {'DAV:',lastaccessed}} = X).
+%-define(IS_GETLASTMODIFIED(X), #xmlElement{expanded_name = {'DAV:',getlastmodified}} = X).
+%-define(IS_GETCONTENTLENGTH(X), #xmlElement{expanded_name = {'DAV:',getcontentlength}} = X).
+%-define(IS_RESOURCETYPE(X), #xmlElement{expanded_name = {'DAV:',resourcetype}} = X).
+%-define(IS_ISSTRUCTUREDDOCUMENT(X), #xmlElement{expanded_name = {'DAV:',isstructureddocument}} = X).
+%-define(IS_DEFAULTDOCUMENT(X), #xmlElement{expanded_name = {'DAV:',defaultdocument}} = X).
+%-define(IS_DISPLAYNAME(X), #xmlElement{expanded_name = {'DAV:',displayname}} = X).
+%-define(IS_ISROOT(X), #xmlElement{expanded_name = {'DAV:',isroot}} = X).
 
-
-parse_dav(?IS_PROPFIND(X)) ->
-    parse_propfind(?CONTENT(X), #propfind{});
-parse_dav(_X) ->
-    %%?elog("parse_dav: GOT ~p~n", [_X]),
-    {error, "parse_dav"}.  % FIXME , webdav (tobbe)
-
+% Parameter is always list
+parse_propfind([]) -> [allprop]; % RFC4918: no body then allprop, is [] no body?
+parse_propfind(L) ->
+    case catch xmerl_scan:string(L, [{namespace_conformant, true}]) of
+        {?IS_PROPFIND(X),_} ->
+            parse_propfind(?CONTENT(X),[]);
+        _Z ->
+            throw(400)
+    end.
 parse_propfind([?IS_PROPNAME(_H)|_T], _R) ->
     [propname];
 parse_propfind([?IS_ALLPROP(_H)|_T], _R) ->
-    [allprop];
+    [allprop]; %% include????
 parse_propfind([?IS_PROP(H)|T], _R) ->
     Props = parse_prop(?CONTENT(H)),
     parse_propfind(T, Props);
 parse_propfind([_H|T], R) ->
-    %%?elog("parse_propfind: ~p~n",[_H]),
+    %% skip #xmlText, #xmlComment and whatsoever
     parse_propfind(T, R);
 parse_propfind([], R) ->
     R.
 
-%%parse_proppatch()
-
-
+parse_proppatch(L) ->
+    case catch xmerl_scan:string(L, [{namespace_conformant, true}]) of
+        {?IS_PROPERTYUPDATE(X),_} ->
+            parse_proppatch(?CONTENT(X),[],[]);
+        _Z ->
+            throw(400)
+    end.
+parse_proppatch([?IS_PROPSET(H)|T],Rs,Rr) ->
+    Props = parse_prop(?CONTENT(H)),
+    parse_proppatch(T,[Props|Rs],Rr);
+parse_proppatch([?IS_PROPREMOVE(H)|T],Rs,Rr) ->
+    Props = parse_prop(?CONTENT(H)),
+    parse_proppatch(T,Rs,[Props|Rr]);
+parse_proppatch([],Rs,Rr) ->
+    {Rs,Rr}.
+    
 parse_prop(L) ->
     parse_prop(L, []).
 
 parse_prop([H|T],L) ->
-    case H of
+    case H of 
         H when is_record(H,xmlElement) ->
             parse_prop(T,[H#xmlElement.expanded_name|L]);
         _ ->
-            %% skip
+            % skip 
             parse_prop(T,L)
     end;
 
 
-%%parse_prop([?IS_TEXT(_H)|T], L) ->
-%%    parse_prop(T, L);
-%%parse_prop([?IS_NAME(_H)|T], L) ->
-%%    parse_prop(T, [name | L]);
-%%parse_prop([?IS_PARENTNAME(_H)|T], L) ->
-%%    parse_prop(T, [parentname | L]);
-%%parse_prop([?IS_HREF(_H)|T], L) ->
-%%    parse_prop(T, [href | L]);
-%%parse_prop([?IS_ISHIDDEN(_H)|T], L) ->
-%%    parse_prop(T, [ishidden | L]);
-%%parse_prop([?IS_ISCOLLECTION(_H)|T], L) ->
-%%    parse_prop(T, [iscollection | L]);
-%%parse_prop([?IS_ISREADONLY(_H)|T], L) ->
-%%    parse_prop(T, [isreadonly | L]);
-%%parse_prop([?IS_GETCONTENTTYPE(_H)|T], L) ->
-%%    parse_prop(T, [getcontenttype | L]);
-%%parse_prop([?IS_CONTENTCLASS(_H)|T], L) ->
-%%    parse_prop(T, [contentclass | L]);
-%%parse_prop([?IS_GETCONTENTLANGUAGE(_H)|T], L) ->
-%%    parse_prop(T, [getcontentlanguage | L]);
-%%parse_prop([?IS_CREATIONDATE(_H)|T], L) ->
-%%    parse_prop(T, [creationdate | L]);
-%%parse_prop([?IS_LASTACCESSED(_H)|T], L) ->
-%%    parse_prop(T, [lastaccessed | L]);
-%%parse_prop([?IS_GETLASTMODIFIED(_H)|T], L) ->
-%%    parse_prop(T, [getlastmodified | L]);
-%%parse_prop([?IS_GETCONTENTLENGTH(_H)|T], L) ->
-%%    parse_prop(T, [getcontentlength | L]);
-%%parse_prop([?IS_RESOURCETYPE(_H)|T], L) ->
-%%    parse_prop(T, [resourcetype | L]);
-%%parse_prop([?IS_ISSTRUCTUREDDOCUMENT(_H)|T], L) ->
-%%    parse_prop(T, [isstructureddocument | L]);
-%%parse_prop([?IS_DEFAULTDOCUMENT(_H)|T], L) ->
-%%    parse_prop(T, [defaultdocument | L]);
-%%parse_prop([?IS_DISPLAYNAME(_H)|T], L) ->
-%%    parse_prop(T, [displayname | L]);
-%%parse_prop([?IS_ISROOT(_H)|T], L) ->
-%%    parse_prop(T, [isroot | L]);
-%%parse_prop([H|T], L) ->
-%%    %%?elog("parse_propfind: NYI ~p~n",[H]),  % FIXME , webdav
-%%    X = H#xmlElement.expanded_name,
-%%    parse_prop(T, [{404,X}|L]);
 parse_prop([], L) ->
-%%    L1 = lists:flatten(L), % maybe not nescessary anymore when bug 2 lines above is removed
-    lists:reverse(L).  % preserve order?
+    L.  % no need to preserve order
 
 %% ----------------------
 %% output functions
-%% TODO Replace outXXX functions with status/1 or status/2
+%%
 
-status(Status) ->
-    %%?elog("STATUS: ~p~n",[Status]),
+status(Status) -> 
+    %?elog("STATUS: ~p~n",[Status]),
     [{status, Status}].
 status(Status,Response) ->
-    %%?elog("~nSTATUS: ~p~nOUTPUT: ~p~n",[Status,Response]),
+    %?elog("~nSTATUS: ~p~nOUTPUT: ~p~n",[Status,Response]),
     Xml = xml_expand(Response),
     [{status, Status},
      {content, "application/xml; charset=\"utf-8\"", Xml}
     ].
-
-%%outXXX(XXX, L) ->
-%%    [{status, XXX},
-%%     {header, {content_type, "text/xml; charset=\"utf-8\""}},
-%%     {html, L}].
-
 
 %%-------------------------------------------
 %% Functions needed within methods
@@ -696,12 +655,12 @@ universal_time_as_string(UTime) ->
     time_to_string(UTime, "GMT").
 local_time_as_gmt_string(LocalTime) ->
     time_to_string(erlang:localtime_to_universaltime(LocalTime),"GMT").
-
+    
 time_to_string({{Year, Month, Day}, {Hour, Min, Sec}}, Zone) ->
     [day(Year, Month, Day), ", ",
      mk2(Day), " ", month(Month), " ", integer_to_list(Year), " ",
      mk2(Hour), ":", mk2(Min), ":", mk2(Sec), " ", Zone].
-
+ 
 
 mk2(I) when I < 10 ->
     [$0 | integer_to_list(I)];
@@ -733,7 +692,7 @@ int_to_wd(5) -> "Fri";
 int_to_wd(6) -> "Sat";
 int_to_wd(7) -> "Sun".
 
-%% RFC4288
+% RFC4288
 %% use mime_types:t/1 instead?
 mediatype(Filename) ->
     Extension = filename:extension(Filename),
@@ -785,3 +744,4 @@ mediatype("install",_) -> "text-x-install";
 mediatype("makefile",_) -> "text-x-makefile";
 mediatype("readme",_) -> "text-x-readme";
 mediatype(_,_) -> "text/plain".
+
