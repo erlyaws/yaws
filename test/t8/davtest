@@ -1,0 +1,33 @@
+#!/bin/sh
+
+#
+#
+
+printf "\n === WebDAV tests ===\n\n"
+
+printf "check environment\n"
+
+cadaver=cadaver
+output=logs/cadaver.out
+command -v $cadaver >/dev/null 2>&1 || { echo >&2 "- test requires cadaver but it is not installed"; exit 1; }
+
+rm -f erl_crash.dump
+rm -f davtest.out
+
+printf "run the tests\n"
+
+$cadaver http://localhost:8000 <davtest.in > $output
+
+rm -rf www/locked
+if [ -f erl_crash.dump ]; then
+    echo "- yaws crashed, see logs/report.log and erl_crash.dump for details"
+    exit 1
+fi
+success=`grep -c succeeded. $output`
+if [ $success -ne 9 ]; then
+    echo "- not all cadaver actions succeeded, see $output for details"
+    exit 1
+fi
+printf "\n** All tests completed successfully.\n\n"
+exit 0
+

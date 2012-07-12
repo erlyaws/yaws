@@ -101,7 +101,8 @@
 -export([parse_ipmask/1, match_ipmask/2]).
 
 %% Internal
--export([local_time_as_gmt_string/1, universal_time_as_string/1]).
+-export([local_time_as_gmt_string/1, universal_time_as_string/1,
+         stringdate_to_datetime/1]).
 
 start() ->
     application:start(yaws, permanent).
@@ -1168,8 +1169,11 @@ make_allow_header(Options) ->
         [] ->
             HasDav = ?sc_has_dav(get(sc)),
             ["Allow: GET, POST, OPTIONS, HEAD",
-             if HasDav == true -> ", PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY";
-                true           -> ""
+             case HasDav of
+                 true ->
+                     ", PUT, DELETE, PROPFIND, PROPPATCH, MKCOL, MOVE, COPY";
+                 false ->
+                     ""
              end, "\r\n"];
         _ ->
             ["Allow: ",
@@ -1185,7 +1189,7 @@ make_server_header() ->
                     undefined -> (get(gc))#gconf.yaws;
                     S         -> S
                 end,
-    ["Server: ", Signature, "\r\n" | if HasDav == true -> ["DAV: 1\r\n"];
+    ["Server: ", Signature, "\r\n" | if HasDav == true -> ["DAV: 1, 2, 3\r\n"];
                                         true           -> []
                                      end].
 
