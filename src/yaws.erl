@@ -1158,8 +1158,11 @@ make_allow_header(Options) ->
         [] ->
             HasDav = ?sc_has_dav(get(sc)),
             ["Allow: GET, POST, OPTIONS, HEAD",
-             if HasDav == true -> ", PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY";
-                true           -> ""
+             case HasDav of
+                 true ->
+                     ", PUT, DELETE, PROPFIND, PROPPATCH, MKCOL, MOVE, COPY";
+                 false ->
+                     ""
              end, "\r\n"];
         _ ->
             ["Allow: ",
