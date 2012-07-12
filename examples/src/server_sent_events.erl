@@ -61,8 +61,14 @@ handle_info({discard, _YawsPid}, State) ->
 handle_info(tick, #state{sock=Socket}=State) ->
     Time = erlang:localtime(),
     Data = yaws_sse:data(httpd_util:rfc1123_date(Time)),
-    yaws_sse:send_events(Socket, Data),
-    {noreply, State};
+    case yaws_sse:send_events(Socket, Data) of
+        ok ->
+            {noreply, State};
+        {error, closed} ->
+            {stop, normal, State};
+        {error, Reason} ->
+            {stop, Reason, State}
+    end;
 handle_info({tcp_closed, _}, State) ->
     {stop, normal, State#state{sock=closed}};
 handle_info(_Info, State) ->
