@@ -13,7 +13,7 @@
 -export([initModel/1, initModel/2,
 	 initModelFile/1,
 	 config_file_xsd/0,
-	 call/3, call/4, call/5, call/6,
+	 call/3, call/4, call/5, call/6, call/8,
 	 call_attach/4, call_attach/5, call_attach/8,
 	 write_hrl/2, write_hrl/3,
 	 findHeader/2,
@@ -46,8 +46,11 @@
 -record(yaws_soap_config, {atts, xsd_path,  user_module, wsdl_file, add_files}).
 -record(xsd_file, {atts, name, prefix, import_specs}).
 -record(import_specs, {atts, namespace, prefix, location}).
+-record(namespace_spec, {namespace, prefix}).
+-record(namespace_registry, {specs = [], counter = 0}).
 
 -define(DefaultPrefix, "p").
+-define(CustomPrefix, "cp").
 
 
 %%%
@@ -176,10 +179,13 @@ call(Wsdl, Operation, Port, Service, Headers, Message) ->
     call_attach(Wsdl, Operation, Port, Service, Headers, Message, [], []).
 
 %%% --------------------------------------------------------------------
-%%% Make a SOAP request (with http headers)
+%%% Make a SOAP request (with http artifacts)
 %%% --------------------------------------------------------------------
 call(Wsdl, Operation, Port, Service, Headers, Message, http_headers, HttpHeaders) ->
-    call_attach(Wsdl, Operation, Port, Service, Headers, Message, [], HttpHeaders).
+    call_attach(Wsdl, Operation, Port, Service, Headers, Message, [], HttpHeaders);
+
+call(Wsdl, Operation, Port, Service, Headers, Message, http_details, HttpDetails) ->
+    call_attach(Wsdl, Operation, Port, Service, Headers, Message, [], http_details, HttpDetails).
 
 
 %%% --------------------------------------------------------------------
@@ -223,8 +229,13 @@ call_attach(Wsdl, Operation, Header, Msg, Attachments)
 %%% --------------------------------------------------------------------
 %%% Make a SOAP request (with attachments)
 %%% --------------------------------------------------------------------
+call_attach(Wsdl, Operation, Port, Service, Headers, Message, Attachments, HttpHeaders) ->
+    call_attach(Wsdl, Operation, Port, Service, Headers, Message, Attachments, http_details, [{headers, HttpHeaders}]).
+
 call_attach(#wsdl{operations = Operations, model = Model},
-            Operation, Port, Service, Headers, Message, Attachments, HttpHeaders) ->
+            Operation, Port, Service, Headers, Message, Attachments, http_details, HttpDetails) ->
+    HttpHeaders = findListValue(headers, HttpDetails),
+    HttpClientOptions = findListValue(client_options, HttpDetails),
     %% find the operation
     case findOperation(Operation, Port, Service, Operations) of
 	#operation{address = URL, action=Action, operation = Operation} ->
@@ -235,8 +246,7 @@ call_attach(#wsdl{operations = Operations, model = Model},
 		{ok, XmlMessage} ->
 
 		    {ContentType, Request} =
-                        make_request_body(XmlMessage, Attachments, Operation),
-		    HttpClientOptions = [],
+                        make_request_body(XmlMessage, Attachments, Action),
                     ?dbg("+++ Request = ~p~n", [Request]),
 		    HttpRes = http_request(URL, Action, Request,
                                            HttpClientOptions, HttpHeaders,
@@ -257,6 +267,13 @@ call_attach(#wsdl{operations = Operations, model = Model},
 	    {error, {unknown_operation, Operation}}
     end.
 
+findListValue(Key, KeyVals) ->
+    case lists:keyfind(Key, 1, KeyVals) of
+        {Key, List} ->
+            List;
+        false ->
+            []
+    end.
 %%%
 %%% returns {ok, Header, Body} | {error, Error}
 %%%
@@ -369,23 +386,30 @@ initModel2(WsdlFile, ErlsomOptions, Path, Import, AddFiles) ->
 %%% Parse a list of WSDLs and import (recursively)
 %%% Returns {Model, Operations}
 %%% --------------------------------------------------------------------
-parseWsdls([], _WsdlModel, _Options, Acc) ->
+parseWsdls(WsdlFiles, WsdlModel, Options, Acc) ->
+    parseWsdls(WsdlFiles, WsdlModel, Options, Acc, #namespace_registry{}).
+
+parseWsdls([], _WsdlModel, _Options, Acc, _NSRegistry) ->
     Acc;
-parseWsdls([WsdlFile | Tail], WsdlModel, Options, {AccModel, AccOperations}) ->
+parseWsdls([WsdlFile | Tail], WsdlModel, Options, {AccModel, AccOperations}, NSRegistry) ->
     WsdlFileNoSpaces = rmsp(WsdlFile),
     {ok, WsdlFileContent} = get_url_file(WsdlFileNoSpaces),
     {ok, ParsedWsdl, _} = erlsom:scan(WsdlFileContent, WsdlModel),
+    WsdlTargetNameSpace = getTargetNamespaceFromWsdl(ParsedWsdl),
+    {Prefix, PrefixlessOptions} = remove_prefix_option(Options),
+    TNSEnrichedNSRegistry = extend_namespace_registry(WsdlTargetNameSpace, Prefix, NSRegistry),
     %% get the xsd elements from this model, and hand it over to erlsom_compile.
     Xsds = getXsdsFromWsdl(ParsedWsdl),
     %% Now we need to build a list: [{Namespace, Xsd, Prefix}, ...] for
     %% all the Xsds in the WSDL.
     %% This list is used when a schema includes one of the other schemas.
     %% The AXIS java2wsdl tool generates wsdls that depend on this feature.
-    ImportList = makeImportList(Xsds, []),
-    Model2 = addSchemas(Xsds, AccModel, Options, ImportList),
+    {ImportsEnrichedNSRegistry, ImportList} = makeImportList(Xsds, TNSEnrichedNSRegistry, []),
+    Model2 = addSchemas(Xsds, AccModel, PrefixlessOptions, ImportList),
     Ports = getPorts(ParsedWsdl),
     Operations = getOperations(ParsedWsdl, Ports),
     Imports = getImports(filename:dirname(WsdlFileNoSpaces), ParsedWsdl),
+    %% use Options rather than PrefixlessOptions because imports come in the wsdl targetNamespace
     Model3 = addSchemaFiles(Imports, Model2, Options, []),
     Acc2 = {Model3, Operations ++ AccOperations},
     %% process imports (recursively, so that imports in the imported files are
@@ -393,42 +417,82 @@ parseWsdls([WsdlFile | Tail], WsdlModel, Options, {AccModel, AccOperations}) ->
     %% For the moment, the namespace is ignored on operations etc.
     %% this makes it a bit easier to deal with imported wsdl's.
     %% TODO uncomment if imports can be WSDL
-    %%Acc3 = parseWsdls(Imports, WsdlModel, Options, Acc2),
-    parseWsdls(Tail, WsdlModel, Options, Acc2).
+    %%Acc3 = parseWsdls(Imports, WsdlModel, Options, Acc2, ImportsEnrichedNSRegistry),
+    parseWsdls(Tail, WsdlModel, PrefixlessOptions, Acc2, ImportsEnrichedNSRegistry).
 
+remove_prefix_option(Options) ->
+    case lists:keytake(prefix, 1, Options) of
+        {value, {prefix, Prefix}, NewOptions} ->
+            {Prefix, NewOptions};
+        false ->
+            {undefined, Options}
+    end.
+
+%empty registry, initializing
+extend_namespace_registry(WsdlTargetNameSpace, undefined, #namespace_registry{specs = []} = NSRegistry) ->
+    {NewCounter, NewPrefix} = create_unique_prefix(NSRegistry),
+    NSRegistry#namespace_registry{specs = [#namespace_spec{namespace = WsdlTargetNameSpace, prefix = NewPrefix}], counter = NewCounter};
+extend_namespace_registry(WsdlTargetNameSpace, Prefix, #namespace_registry{specs = []} = NSRegistry) ->
+    NSRegistry#namespace_registry{specs = [#namespace_spec{namespace = WsdlTargetNameSpace, prefix = Prefix}]};
+extend_namespace_registry(WsdlTargetNameSpace, _Prefix, #namespace_registry{specs = Specs} = NSRegistry) ->
+    case lists:keyfind(WsdlTargetNameSpace, #namespace_spec.namespace, Specs) of
+        #namespace_spec{} ->
+            NSRegistry;
+        false ->
+            {NewCounter, NewPrefix} = create_unique_prefix(NSRegistry),
+            NSRegistry#namespace_registry{specs = [#namespace_spec{namespace = WsdlTargetNameSpace, prefix = NewPrefix}|Specs], counter = NewCounter}
+    end.
+
+
+create_unique_prefix(#namespace_registry{specs = Specs, counter = Counter} = NSRegistry) ->
+    NewCounter = Counter+1,
+    NewPrefix = ?CustomPrefix ++ integer_to_list(NewCounter),
+    case lists:keyfind(NewPrefix, #namespace_spec.prefix, Specs) of
+        #namespace_spec{} ->
+            create_unique_prefix(NSRegistry#namespace_registry{counter = Counter+1});
+        false ->
+            {NewCounter, NewPrefix}
+    end.
 %%% --------------------------------------------------------------------
 %%% build a list: [{Namespace, Xsd}, ...] for all the Xsds in the WSDL.
 %%% This list is used when a schema inlcudes one of the other schemas.
 %%% The AXIS java2wsdl tool generates wsdls that depend on this feature.
-makeImportList([], Acc) ->
-    Acc;
-makeImportList([ Xsd | Tail], Acc) ->
-    makeImportList(Tail, [{erlsom_lib:getTargetNamespaceFromXsd(Xsd),
-                           undefined, Xsd} | Acc]).
+makeImportList([], NSRegistry, Acc) ->
+    {NSRegistry, Acc};
+makeImportList([ Xsd | Tail], NSRegistry, Acc) ->
+    XsdNS = erlsom_lib:getTargetNamespaceFromXsd(Xsd),
+    NewNSRegistry = extend_namespace_registry(XsdNS, undefined, NSRegistry),
+    #namespace_spec{prefix = Prefix} = 
+        lists:keyfind(XsdNS, #namespace_spec.namespace, NewNSRegistry#namespace_registry.specs),
+    makeImportList(Tail, NewNSRegistry, [{XsdNS, Prefix, Xsd} | Acc]).
 
+getTargetNamespaceFromWsdl(#'wsdl:tDefinitions'{targetNamespace = TNS}) ->
+    TNS.
 
 %%% --------------------------------------------------------------------
 %%% compile each of the schemas, and add it to the model.
 %%% Returns Model
 %%% (TODO: using the same prefix for all XSDS makes no sense)
 %%% --------------------------------------------------------------------
-addSchemas([], AccModel, _Options, _ImportList) ->
+addSchemas([], AccModel, _PrefixlessOptions, _ImportList) ->
     AccModel;
-addSchemas([Xsd| Tail], AccModel, Options, ImportList) ->
+addSchemas([Xsd| Tail], AccModel, PrefixlessOptions, ImportList) ->
     Model2 = case Xsd of
                  undefined ->
                      AccModel;
                  _ ->
+                     {_, Prefix, _} = lists:keyfind(erlsom_lib:getTargetNamespaceFromXsd(Xsd), 1, ImportList), 
+                     NewOptions = [{prefix, Prefix}|PrefixlessOptions],
                      {ok, Model} =
                          erlsom_compile:compile_parsed_xsd(
                            Xsd,
-                           [{include_files, ImportList} |Options]),
+                           [{include_files, ImportList} |NewOptions]),
                      case AccModel of
                          undefined -> Model;
                          _ -> erlsom:add_model(AccModel, Model)
                      end
              end,
-    addSchemas(Tail, Model2, Options, ImportList).
+    addSchemas(Tail, Model2, PrefixlessOptions, ImportList).
 
 %%% --------------------------------------------------------------------
 %%% compile each of the schema files, and add it to the model.
@@ -529,7 +593,17 @@ ibrowse_request(URL, Action, Request, Options, Headers, ContentType) ->
                               _ ->
                                   [{"SOAPAction", Action} | Headers]
                           end],
-            case ibrowse:send_req(URL, NewHeaders, post, Request, Options) of
+            IbrowseF = case lists:keyfind(ibrowse_timeout, 1, Options) of
+                {_, Timeout} ->
+                    fun() ->
+                        ibrowse:send_req(URL, NewHeaders, post, Request, Options, Timeout)
+                    end;
+                false ->
+                    fun() ->
+                        ibrowse:send_req(URL, NewHeaders, post, Request, Options)
+                    end
+            end,
+            case IbrowseF() of
                 {ok, Status, ResponseHeaders, ResponseBody} ->
                     {ok, list_to_integer(Status), ResponseHeaders, ResponseBody};
                 {error, Reason} ->
