@@ -206,30 +206,28 @@ propfind(A) ->
     try
         Req = binary_to_list(A#arg.clidata),
         Props = parse_propfind(Req),
+        R = davresource0(A),
         case depth(A) of
             0 ->
-                ?elog("propfind: Depth=0~n", []),
-                R = davresource0(A),
+                ?elog("PROPFIND ~p (Depth=0)~n", [R#resource.name]),
                 Response = {'D:response', [], propfind_response(Props,A,R)},
                 MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], [Response]}],
                 status(207,MultiStatus);
             1 ->
-                R = davresource0(A),
-                Response = {'D:response', [], propfind_response(Props,A,R)},
                 R1 = davresource1(A),
-                ?elog("propfind: Depth=1, entries=~p~n", [length(R1)]),
+                ?elog("PROPFIND ~p (Depth=1, entries=~p)~n", [R#resource.name,length(R1)]),
+                Response = {'D:response', [], propfind_response(Props,A,R)},
                 Responses = [{'D:response', [], propfind_response(Props,A,Rx)} || Rx <- R1],
                 MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], [Response|Responses]}],
                 status(207,MultiStatus);
             infinity ->
-                ?elog("propfind: Depth=infinity~n", []),
+                ?elog("PROPFIND ~p (Depth=infinity)~n", [R#resource.name]),
                 Response = [{'D:error', [{'xmlns:D',"DAV:"}],[{'propfind-finite-depth'}]}],
                 status(403,Response)
         end
     catch
         Status -> status(Status);
         Error:Reason ->
-            io:format("catched ~p: ~p~n~p~n",[Error,Reason,erlang:get_stacktrace()]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
@@ -268,17 +266,13 @@ proppatch(A) ->
     try
         Req = binary_to_list(A#arg.clidata),
         R = davresource0(A),
-io:format("~nparse_proppatch(~p) <- ~p~n" ,[R,Req]),
         Update = parse_proppatch(Req),
-io:format("~nproppatch_response() <- ~p~n" ,[Update]),
         Response = proppatch_response(Update,A,R),
-io:format("~nproppatch_response() -> ~p~n" ,[Response]),
         MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], [Response]}],
         status(207,MultiStatus)
     catch
         Status -> status(Status);
         Error:Reason ->
-            io:format("catched ~p: ~p~n~p~n",[Error,Reason,erlang:get_stacktrace()]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
