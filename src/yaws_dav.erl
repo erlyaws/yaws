@@ -227,7 +227,7 @@ propfind(A) ->
         end
     catch
         Status -> status(Status);
-        Error:Reason ->
+        _Error:Reason ->
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
@@ -272,7 +272,7 @@ proppatch(A) ->
         status(207,MultiStatus)
     catch
         Status -> status(Status);
-        Error:Reason ->
+        _Error:Reason ->
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
@@ -383,7 +383,6 @@ prop_get({'DAV:',getetag},_A,R) ->
     {200, P}; 
 prop_get({'DAV:',ishidden},_A,R) ->
     N = filename:basename(R#resource.name),
-io:format(N),
     H = case hd(N) of
             46 -> "1";
             _ -> "0"
