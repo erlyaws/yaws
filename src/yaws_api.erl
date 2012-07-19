@@ -32,7 +32,7 @@
 -export([is_absolute_URI/1]).
 -export([path_norm/1, path_norm_reverse/1,
          sanitize_file_name/1]).
--export([get_line/1, mime_type/1]).
+-export([get_line/1, mime_type/1, mime_type/2]).
 -export([stream_chunk_deliver/2, stream_chunk_deliver_blocking/2,
          stream_chunk_end/1]).
 -export([stream_process_deliver/2, stream_process_deliver_chunk/2,
@@ -837,11 +837,12 @@ get_line([], _) ->
 
 
 mime_type(FileName) ->
+    mime_type(get(sc), FileName).
+
+mime_type(S, FileName) ->
     case filename:extension(FileName) of
-        [_|T] ->
-            element(2, mime_types:t(T));
-        [] ->
-            element(2, mime_types:t([]))
+        [_|T] -> element(2, mime_types:t(S, T));
+        []    -> element(2, mime_types:t(S, []))
     end.
 
 

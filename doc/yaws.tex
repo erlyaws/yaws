@@ -1547,7 +1547,7 @@ periods. For these situations we can return the value:
 {streamcontent_from_pid, MimeType, Pid}
 \end{verbatim}
 
-\noindent to tell \Yaws\ we wish to deliver data of mime type
+\noindent to tell \Yaws\ we wish to deliver data of MIME type
 \verb+MimeType+ to the client from process \verb+Pid+. In this case,
 \Yaws\ will prepare the socket for delivery from \verb+Pid+ and then
 send one of the following messages to \verb+Pid+:
@@ -2319,6 +2319,50 @@ part where options for each virtual host is supplied.
 \item        \verb+x_forwarded_for_log_proxy_whitelist = ListOfUpstreamProxyServerIps+ ---
               \textit{This target is deprecated and will be ignored}.
 
+\item        \verb+default_type = MimeType+ ---
+              Defines the default MIME type to be used where \Yaws\ cannot
+              determine it by its MIME types mappings. Default is
+              \textit{text/plain}.
+
+\item        \verb+default_charset = Charset+ ---
+              Defines the default charset to be added when a response
+              content-type is \textit{text/*}. By default, no charset is added.
+
+\item        \verb+mime_types_file = File+ ---
+              Overloads the default \textit{mime.types} file included with
+              \Yaws{}. This file must use the following format:
+\begin{verbatim}
+  # Lines beginning with a '#' or a whitespace are ignored
+  # blank lines are also ignored
+  <MIME type> <space separated file extensions>
+\end{verbatim}
+              The default file is located at
+              \textit{\${PREFIX}/lib/yaws/priv/mime.types}. You should not edit
+              this file because it may be replaced when you upgrade your server.
+
+\item        \verb+add_types = ListOfTypes+ ---
+              Specifies one or more mappings between MIME types and file
+              extensions. More than one extension can be assigned to a MIME
+              type. \textit{ListOfTypes} is defined as follows:
+\begin{verbatim}
+  add_types = <MimeType1, Ext> <MimeType2, Ext1 Ext2 ...> ...
+\end{verbatim}
+              The mappings defined using this directive will overload all other
+              definitions. If a file extension is defined several times, only
+              the last one is kept. Multiple \textit{add\_types} directives may
+              be used.
+
+\item        \verb+add_charsets = ListOfCharsets+ ---
+              Specifies one or more mappings between charsets and file
+              extensions. More than one extension can be assigned to a
+              charset. \textit{ListOfCharsets} is defined as follows:
+\begin{verbatim}
+  add_charsets = <Charset1, Ext> <Charset2, Ext1 Ext2 ...> ...
+\end{verbatim}
+              The mappings defined using this directive will overload all other
+              definitions. If a file extension is defined several times, only
+              the last one is kept. Multiple \textit{add\_charsets} directives
+              may be used.
 \end{itemize}
 
 
@@ -2858,6 +2902,31 @@ The following directives are allowed inside a server definition.
 
               Use this directive is same as:
               \verb+php_handler = <fcgi, HostPortSpec>+.
+
+\item        \verb+default_type = MimeType+ ---
+              Overloads the global \verb+default_type+ value for this virtual
+              server.
+
+\item        \verb+default_charset = Charset+ ---
+              Overloads the global \verb+default_charset+ value for this virtual
+              server.
+
+\item        \verb+mime_types_file = File+ ---
+              Overrides the global \verb+mime_type_file+ value for this virtual
+              server. Mappings defined in \textit{File} will not overload those
+              defined by \verb+add_types+ directives in the global part.
+
+\item        \verb+add_types = ListOfTypes+ ---
+               Overloads the global \verb+add_types+ values for this virtual
+               server. If a mapping is defined in the global part and redefined
+               in a server part using this directive, then it is replaced. Else
+               it is kept.
+
+\item        \verb+add_charsets = ListOfCharsets+ ---
+              Overloads the global \verb+add_charsets+ values for this virtual
+              server. If a mapping is defined in the global part and redefined
+              in a server part using this directive, then it is replaced. Else
+              it is kept.
 
 \item        \verb+<ssl>  .... </ssl>+
                This begins and ends an SSL configuration for this server. It's

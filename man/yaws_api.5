@@ -240,8 +240,23 @@ from a stream of data. It returns:
 The function handles multilines as defined in e.g. SMTP or HTTP
 
 .TP
+\fBmime_type(Scope, FileName)\fR
+Returns the MIME type as defined by the extension of \fIFileName\fR. \fIScope\fR
+can have following values:
+
+.RS 12
+\fBglobal\fR - returns the result obtained from the global context.
+.br
+\fB#sconf{} | {ServerName, Port}\fR - returns the result obtained from the
+virtual server's context. If no MIME type is found in this scope, it falls back
+on the global one.
+.RE
+.HP
+
+.TP
 \fBmime_type(FileName)\fR
-Returns the mime type as defined by the extension of FileName
+Tries to determine the right \fIScope\fR before calling mime_type/2.
+
 
 .TP
 \fBstream_chunk_deliver(YawsPid, Data)\fR
@@ -644,7 +659,7 @@ The code will be inserted in the page.
 .TP
 \fB{ehtml|exhtml, Term}\fR
 This will transform the erlang term Term into a
-stream of HTML content. The exhtml variant transforms into 
+stream of HTML content. The exhtml variant transforms into
 strict XHTML code. The basic syntax of Term
 is
 

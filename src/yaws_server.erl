@@ -178,11 +178,10 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
         _ ->
             ok
     end,
-    foreach(
-      fun(D) ->
-              yaws_debug:format("Add path ~p~n", [D]),
-              code:add_pathz(D)
-      end, GC#gconf.ebin_dir),
+    foreach(fun(D) ->
+                    yaws_debug:format("Add path ~p~n", [D]),
+                    code:add_pathz(D)
+            end, GC#gconf.ebin_dir),
     yaws_debug:format("Running with id=~p (localinstall=~p) ~n"
                       "~s"
                       "Logging to directory ~p~n",
@@ -213,13 +212,11 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
     end,
 
     runmod(RunMod, GC),
-
-    L2 = lists:zf(
-           fun(Group) -> start_group(GC, Group) end,
-           Sconfs),
-    {ok, #state{gc = GC,
-                pairs = L2,
-                mnum = 0,
+    L2 = lists:zf(fun(Group) -> start_group(GC, Group) end,
+                  yaws_config:load_mime_types_module(GC, Sconfs)),
+    {ok, #state{gc       = GC,
+                pairs    = L2,
+                mnum     = 0,
                 embedded = Embedded}}.
 
 
@@ -1636,8 +1633,11 @@ handle_request(CliSock, ARG, _N)
         _ ->
             %% Define a default content type if needed
             case yaws:outh_get_content_type() of
-                undefined -> yaws:outh_set_content_type("text/plain");
-                _         -> ok
+                undefined ->
+                    Mime = mime_types:default_type(get(sc)),
+                    yaws:outh_set_content_type(Mime);
+                _ ->
+                    ok
             end,
             accumulate_content(State#rewrite_response.content),
             deliver_accumulated(ARG, CliSock, undefined, final)
@@ -4072,7 +4072,7 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
     case GetPath of
         _ when ?sc_has_dav(SC) ->
             {Comps, RevFile} = comp_split(GetPath),
-            {_Type, _, Mime} = suffix_type(RevFile),
+            {_Type, Mime} = suffix_type(SC, RevFile),
 
             FullPath = construct_fullpath(ArgDocroot, GetPath, VirtualDir),
 
@@ -4432,7 +4432,7 @@ maybe_return_dir(DR, GetPath,VirtualDir) ->
 
 maybe_return_path_info(SC, Comps, RevFile, DR, VirtualDir) ->
 
-    case path_info_split(Comps, {DR, VirtualDir}) of
+    case path_info_split(SC, Comps, {DR, VirtualDir}) of
         {not_a_script, error} ->
             %%can we use urltype.data to return more info?
             %% - logging?
@@ -4492,21 +4492,21 @@ maybe_return_path_info(SC, Comps, RevFile, DR, VirtualDir) ->
 %% point', otherwise the Docroot that has been determined based on the full
 %%  request path becomes invalid!
 %%
-path_info_split(Comps,DR_Vdir) ->
-    path_info_split(lists:reverse(Comps), DR_Vdir, []).
+path_info_split(SC, Comps,DR_Vdir) ->
+    path_info_split(SC, lists:reverse(Comps), DR_Vdir, []).
 
-path_info_split([H|T], {DR, VirtualDir}, AccPathInfo) ->
+path_info_split(SC, [H|T], {DR, VirtualDir}, AccPathInfo) ->
     [$/|RevPath] = lists:reverse(H),
     case suffix_from_rev(RevPath) of
         [] ->   % shortcut clause, not necessary
-            path_info_split(T, {DR, VirtualDir}, [H|AccPathInfo]);
+            path_info_split(SC, T, {DR, VirtualDir}, [H|AccPathInfo]);
         Suff ->
-            {Type, Mime} = mime_types:t(Suff),
+            {Type, Mime} = mime_types:t(SC, Suff),
             case Type of
                 regular ->
                     %%Don't hit the filesystem to test components that
                     %%'mime_types' indicates can't possibly be scripts
-                    path_info_split(T, {DR, VirtualDir}, [H|AccPathInfo]);
+                    path_info_split(SC, T, {DR, VirtualDir}, [H|AccPathInfo]);
                 X ->
 
                     %%We may still be in the 'PATH_INFO' section
@@ -4527,11 +4527,11 @@ path_info_split([H|T], {DR, VirtualDir}, AccPathInfo) ->
                             {not_a_script, error};
                         _Err ->
                             %%just looked like a script - keep going.
-                            path_info_split(T, {DR, VirtualDir}, [H|AccPathInfo])
+                            path_info_split(SC, T, {DR, VirtualDir}, [H|AccPathInfo])
                     end
             end
     end;
-path_info_split([], _DR_Vdir, _Acc) ->
+path_info_split(_SC, [], _DR_Vdir, _Acc) ->
     {not_a_script, error}.
 
 
@@ -4651,21 +4651,15 @@ deflate_q(_, _, _, _) ->
 
 
 suffix_type(SC, L) ->
-    R=suffix_type(L),
-    case R of
+    case mime_types:revt(SC, yaws:upto_char($., L)) of
         {regular, _Ext, Mime} ->
             {regular, Mime};
         {X, _Ext, Mime} ->
             case member(X, SC#sconf.allowed_scripts) of
-                true -> {X, Mime};
-                false -> {regular, "text/plain"}
+                true  -> {X, Mime};
+                false -> {regular, mime_types:default_type(SC)}
             end
     end.
-
-suffix_type(L) ->
-    L2 = yaws:upto_char($., L),
-    mime_types:revt(L2).
-
 
 
 compressible_mime_type(Mime, #deflate{mime_types=MimeTypes}) ->

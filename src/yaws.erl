@@ -205,7 +205,9 @@ setup_gconf(GL, GC) ->
            ysession_mod          = lkup(ysession_mod, GL,
                                         GC#gconf.ysession_mod),
            acceptor_pool_size    = lkup(acceptor_pool_size, GL,
-                                        GC#gconf.acceptor_pool_size)
+                                        GC#gconf.acceptor_pool_size),
+           mime_types_info       = lkup(mime_types_info, GL,
+                                        GC#gconf.mime_types_info)
           }.
 
 set_gc_flags([{tty_trace, Bool}|T], Flags) ->
@@ -280,7 +282,9 @@ setup_sconf(DocRoot, D, SL) ->
            php_handler           = lkup(php_handler, SL, D#sconf.php_handler),
            shaper                = lkup(shaper, SL, D#sconf.shaper),
            deflate_options       = lkup(deflate_options, SL,
-                                        D#sconf.deflate_options)
+                                        D#sconf.deflate_options),
+           mime_types_info       = lkup(mime_types_info, SL,
+                                        D#sconf.mime_types_info)
           }.
 
 expand_auth(SL) ->
