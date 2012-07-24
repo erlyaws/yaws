@@ -1833,7 +1833,7 @@ is_auth(ARG, L) ->
         {_, Auths} ->
             is_auth(ARG, Req_dir, H, filter_auths(Auths, Req_dir), {true, []});
         false ->
-            {true, []}
+            true
     end.
 
 %% Either no authentication was done or all methods returned false
