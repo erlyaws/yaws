@@ -2688,80 +2688,15 @@ update_gconf(GC) ->
     ok = gen_server:call(yaws_server, {update_gconf, GC}, infinity).
 
 
--define(MAXBITS_IPV4, 32).
--define(MAXBITS_IPV6, 128).
-
 parse_auth_ips([], Result) ->
     Result;
 parse_auth_ips([Str|Rest], Result) ->
     try
-        parse_auth_ips(Rest, [parse_ip(Str)|Result])
+        parse_auth_ips(Rest, [yaws:parse_ipmask(Str)|Result])
     catch
         _:_ -> parse_auth_ips(Rest, Result)
     end.
 
-parse_ip(Str) when is_list(Str) ->
-    [Ip|Rest] = string:tokens(Str, [$/]),
-    {Type, IpInt}  = ip_to_integer(Ip),
-    case Rest of
-        [] ->
-            {IpInt, IpInt};
-        [NetMask] ->
-            MaskInt  = netmask_to_integer(Type, NetMask),
-            WildCard = netmask_to_wildcard(Type, MaskInt),
-            NetAddr  = IpInt band MaskInt,
-            case Type of
-                ipv4 -> {NetAddr + 1, NetAddr + WildCard - 1};
-                ipv6 -> {NetAddr, NetAddr + WildCard}
-            end;
-        _ ->
-            throw({error, einval})
-    end;
-parse_ip(_) ->
-    throw({error, einval}).
-
-ip_to_integer(Str) when is_list(Str) ->
-    case inet_parse:ipv6_address(Str) of
-        {ok, {0,0,0,0,0,16#FFFF,N1,N2}} ->
-            {ipv4, (N1 bsl 16) bor N2};
-        {ok, Ip} ->
-            ip_to_integer(Ip);
-        {error, Reason} ->
-            throw({error, Reason})
-    end;
-ip_to_integer({N1,N2,N3,N4}) ->
-    Int = (N1 bsl 24) bor (N2 bsl 16) bor (N3 bsl 8) bor N4,
-    if
-        (Int bsr ?MAXBITS_IPV4) == 0 -> {ipv4, Int};
-        true -> throw({error, einval})
-    end;
-ip_to_integer({N1,N2,N3,N4,N5,N6,N7,N8}) ->
-    Int = (N1 bsl 112) bor (N2 bsl 96) bor (N3 bsl 80) bor (N4 bsl 64) bor
-        (N5 bsl 48) bor (N6 bsl 32) bor (N7 bsl 16) bor N8,
-    if
-        (Int bsr ?MAXBITS_IPV6) == 0 -> {ipv6, Int};
-        true -> throw({error, einval})
-    end;
-ip_to_integer(_) ->
-    throw({error, einval}).
-
-
-netmask_to_integer(Type, NetMask) ->
-    case catch list_to_integer(NetMask) of
-        I when is_integer(I) ->
-            case Type of
-                ipv4 -> (1 bsl ?MAXBITS_IPV4) - (1 bsl (?MAXBITS_IPV4 - I));
-                ipv6 -> (1 bsl ?MAXBITS_IPV6) - (1 bsl (?MAXBITS_IPV6 - I))
-            end;
-        _ ->
-            case ip_to_integer(NetMask) of
-                {Type, MaskInt} -> MaskInt;
-                _               -> throw({error, einval})
-            end
-    end.
-
-netmask_to_wildcard(ipv4, Mask) -> ((1 bsl ?MAXBITS_IPV4) - 1) bxor Mask;
-netmask_to_wildcard(ipv6, Mask) -> ((1 bsl ?MAXBITS_IPV6) - 1) bxor Mask.
 
 subconfigdir_fold(_File, {error, _Err}=Acc) ->
     Acc;

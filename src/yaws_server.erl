@@ -1858,77 +1858,55 @@ is_auth(ARG, Req_dir, H, [Auth_methods|T], {_Ret, Auth_headers}) ->
 
 handle_auth(#arg{client_ip_port={IP,_}}=ARG, Auth_H,
             #auth{acl={AllowIPs, DenyIPs, Order}}=Auth_methods, Ret) ->
-    %% Transform Client IP address in integer
-    IntIP =
-        case IP of
-            undefined ->
-                0;
-            {0,0,0,0,0,16#FFFF,N1,N2} ->
-                (N1 bsl 16) bor N2;
-            {N1,N2,N3,N4} ->
-                (N1 bsl 24) bor (N2 bsl 16) bor (N3 bsl 8) bor N4;
-            {N1,N2,N3,N4,N5,N6,N7,N8} ->
-                (N1 bsl 112) bor (N2 bsl 96) bor (N3 bsl 80) bor (N4 bsl 64) bor
-                    (N5 bsl 48) bor (N6 bsl 32) bor (N7 bsl 16) bor N8
-        end,
-
-    %% Build the match_spec to test ACLs
-    MHead = {'$1', '$2'},
-    Guard = {'andalso',
-             {'=<', '$1', {const, IntIP}},
-             {'>=', '$2', {const, IntIP}}},
-    MSpec = [{MHead, [Guard], [true]}],
-    CMSpec = ets:match_spec_compile(MSpec),
-
+    Fun  = fun(IpMask) -> yaws:match_ipmask(IP, IpMask) end,
     Ret1 = case Auth_methods of
                #auth{users=[],pam=false,mod=[]} -> true;
                _                                -> Ret
            end,
-
     case {AllowIPs, DenyIPs, Order} of
         {_, all, deny_allow} ->
-            case ets:match_spec_run(AllowIPs, CMSpec) of
-                [true|_] ->
+            case lists:any(Fun, AllowIPs) of
+                true ->
                     handle_auth(ARG, Auth_H, Auth_methods#auth{acl=none}, Ret1);
-                _ ->
+                false ->
                     false_403
             end;
         {all, _, deny_allow} ->
             handle_auth(ARG, Auth_H, Auth_methods#auth{acl=none}, Ret1);
         {_, _, deny_allow} ->
-            case ets:match_spec_run(DenyIPs, CMSpec) of
-                [true|_] ->
-                    case ets:match_spec_run(AllowIPs, CMSpec) of
-                        [true|_] ->
+            case lists:any(Fun, DenyIPs) of
+                true ->
+                    case lists:any(Fun, AllowIPs) of
+                        true ->
                             handle_auth(ARG, Auth_H, Auth_methods#auth{acl=none},
                                         Ret1);
-                        _ ->
+                        false ->
                             false_403
                     end;
-                _ ->
+                false ->
                     handle_auth(ARG, Auth_H, Auth_methods#auth{acl=none}, Ret1)
             end;
 
         {_, all, allow_deny} ->
             false_403;
         {all, _, allow_deny} ->
-            case ets:match_spec_run(DenyIPs, CMSpec) of
-                [true|_] ->
+            case lists:any(Fun, DenyIPs) of
+                true ->
                     false_403;
-                _ ->
+                false ->
                     handle_auth(ARG, Auth_H, Auth_methods#auth{acl=none}, Ret1)
             end;
         {_, _, allow_deny} ->
-            case ets:match_spec_run(AllowIPs, CMSpec) of
-                [true|_] ->
-                    case ets:match_spec_run(DenyIPs, CMSpec) of
-                        [true|_] ->
+            case lists:any(Fun, AllowIPs) of
+                true ->
+                    case lists:any(Fun, DenyIPs) of
+                        true ->
                             false_403;
-                        _ ->
+                        false ->
                             handle_auth(ARG, Auth_H, Auth_methods#auth{acl=none},
                                         Ret1)
                     end;
-                _ ->
+                false ->
                     false_403
             end
     end;
