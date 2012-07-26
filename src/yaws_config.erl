@@ -17,7 +17,7 @@
 -include_lib("kernel/include/file.hrl").
 
 -export([load/1,
-         make_default_gconf/2, make_default_sconf/0,
+         make_default_gconf/2, make_default_sconf/0, make_default_sconf/2,
          add_sconf/1,
          add_yaws_auth/1,
          add_yaws_soap_srv/1, add_yaws_soap_srv/2,
@@ -105,6 +105,8 @@ add_yaws_soap_srv(_GC, _Start) ->
     [].
 
 
+add_yaws_auth(#sconf{}=SC) ->
+    SC#sconf{authdirs = setup_auth(SC)};
 add_yaws_auth(SCs) ->
     [SC#sconf{authdirs = setup_auth(SC)} || SC <- SCs].
 
@@ -516,9 +518,17 @@ make_default_gconf(Debug, Id) ->
            id = Id
           }.
 
+%% Keep this function for backward compatibility. But no one is supposed to use
+%% it (yaws_config is an internal module, its api is private).
 make_default_sconf() ->
-    Y = yaws_dir(),
-    #sconf{docroot = filename:join([Y, "www"])}.
+    make_default_gconf([], undefined).
+
+make_default_sconf([], Port) ->
+    make_default_sconf(filename:join([yaws_dir(), "www"]), Port);
+make_default_sconf(DocRoot, undefined) ->
+    make_default_sconf(DocRoot, 8000);
+make_default_sconf(DocRoot, Port) ->
+    set_server(#sconf{port=Port, listen={127,0,0,1}, docroot=DocRoot}).
 
 yaws_dir() ->
     %% below, ignore dialyzer warning:
