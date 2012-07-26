@@ -2425,24 +2425,37 @@ same_sconf(S, NewSc) ->
 eq_sconfs(S1,S2) ->
     (S1#sconf.port == S2#sconf.port andalso
      S1#sconf.flags == S2#sconf.flags andalso
+     S1#sconf.redirect_map == S2#sconf.redirect_map andalso
      S1#sconf.rhost == S2#sconf.rhost andalso
      S1#sconf.rmethod == S2#sconf.rmethod andalso
      S1#sconf.docroot == S2#sconf.docroot andalso
+     S1#sconf.xtra_docroots == S2#sconf.xtra_docroots andalso
      S1#sconf.listen == S2#sconf.listen andalso
      S1#sconf.servername == S2#sconf.servername andalso
+     S1#sconf.yaws == S2#sconf.yaws andalso
      S1#sconf.ssl == S2#sconf.ssl andalso
      S1#sconf.authdirs == S2#sconf.authdirs andalso
-     S1#sconf.appmods == S2#sconf.appmods andalso
      S1#sconf.partial_post_size == S2#sconf.partial_post_size andalso
+     S1#sconf.appmods == S2#sconf.appmods andalso
+     S1#sconf.expires == S2#sconf.expires andalso
+     S1#sconf.errormod_401 == S2#sconf.errormod_401 andalso
      S1#sconf.errormod_404 == S2#sconf.errormod_404 andalso
      S1#sconf.errormod_crash == S2#sconf.errormod_crash andalso
      S1#sconf.arg_rewrite_mod == S2#sconf.arg_rewrite_mod andalso
+     S1#sconf.logger_mod == S2#sconf.logger_mod andalso
      S1#sconf.opaque == S2#sconf.opaque andalso
      S1#sconf.start_mod == S2#sconf.start_mod andalso
      S1#sconf.allowed_scripts == S2#sconf.allowed_scripts andalso
+     S1#sconf.tilde_allowed_scripts == S2#sconf.tilde_allowed_scripts andalso
+     S1#sconf.index_files == S2#sconf.index_files andalso
      S1#sconf.revproxy == S2#sconf.revproxy andalso
      S1#sconf.soptions == S2#sconf.soptions andalso
+     S1#sconf.extra_cgi_vars == S2#sconf.extra_cgi_vars andalso
+     S1#sconf.stats == S2#sconf.stats andalso
      S1#sconf.fcgi_app_server == S2#sconf.fcgi_app_server andalso
+     S1#sconf.php_handler == S2#sconf.php_handler andalso
+     S1#sconf.shaper == S2#sconf.shaper andalso
+     S1#sconf.deflate_options == S2#sconf.deflate_options andalso
      S1#sconf.mime_types_info == S2#sconf.mime_types_info).
 
 
