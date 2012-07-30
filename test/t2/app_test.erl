@@ -33,6 +33,7 @@ start() ->
     throw_test(),
     too_many_headers_test(),
     index_files_test(),
+    websocket_test(),
     ibrowse:stop().
 
 
@@ -811,6 +812,40 @@ index_files_test() ->
     ?line "http://localhost:8010/testdir/" = Uri2,
     ?line {ok, "200", _, Content} = ibrowse:send_req(Uri2, [], get),
     ok.
+
+%% Do handshake, then send "hello" in a text frame
+%% and check that "hello" is echoed back.
+websocket_test() ->
+    OpenHeads = "GET /websockets_example_endpoint.yaws HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "Upgrade: websocket\r\n"
+        "Connection: Upgrade\r\n"
+        "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+        "Origin: http://localhost\r\n"
+        "Sec-WebSocket-Version: 13\r\n\r\n",
+    Opts = [{send_timeout, 2000},
+            binary,
+            {packet, 0},
+            {active, false}],
+    {ok, Sock} = gen_tcp:connect(localhost, 8000, Opts),
+    ok = gen_tcp:send(Sock, OpenHeads),
+    {ok, Packet} = gen_tcp:recv(Sock, 0, 2000),
+    AcceptLines = re:split(Packet, "[\r\n]+", [{return, list}, trim]),
+    %% Check that exactly the expected lines are there, in any order
+    4 = length(AcceptLines),
+    true = lists:member("HTTP/1.1 101 Switching Protocols", AcceptLines),
+    true = lists:member("Upgrade: websocket", AcceptLines),
+    true = lists:member("Connection: Upgrade", AcceptLines),
+    true = lists:member("Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=",
+                        AcceptLines),
+
+    %% Text frame "hello" with mask "aaaa"
+    Frame =
+        <<129, 133, "aaaa", 38722669838:5/integer-unit:8>>,
+    ok = gen_tcp:send(Sock, Frame),
+    ExpectFrame = <<129, 5, "hello">>,
+    {ok, ExpectFrame} = gen_tcp:recv(Sock, 0, 2000).
+
 
 %% used for appmod tests
 %%
