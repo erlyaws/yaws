@@ -8,7 +8,7 @@
 
 yaws=%prefix%/bin/yaws
 lockdir=/var/spool/lock
-yawsid_opts=--id myserverid
+yawsid_opts='--id myserverid'
 
 StartService ()
 {
