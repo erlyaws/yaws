@@ -97,7 +97,7 @@
          tmpdir/0, tmpdir/1, mktemp/1, split_at/2,
          id_dir/1, ctl_file/1]).
 
-
+-export([local_time_as_gmt_string/1]).
 start() ->
     application:start(yaws, permanent).
 
@@ -1160,7 +1160,7 @@ make_allow_header(Options) ->
             ["Allow: GET, POST, OPTIONS, HEAD",
              case HasDav of
                  true ->
-                     ", PUT, DELETE, PROPFIND, PROPPATCH, MKCOL, MOVE, COPY";
+                     ", PUT, DELETE, PROPFIND, PROPPATCH, LOCK, UNLOCK, MKCOL, MOVE, COPY";
                  false ->
                      ""
              end, "\r\n"];
@@ -1178,7 +1178,7 @@ make_server_header() ->
                     undefined -> (get(gc))#gconf.yaws;
                     S         -> S
                 end,
-    ["Server: ", Signature, "\r\n" | if HasDav == true -> ["DAV: 1\r\n"];
+    ["Server: ", Signature, "\r\n" | if HasDav == true -> ["DAV: 1, 2, 3\r\n"];
                                         true           -> []
                                      end].
 

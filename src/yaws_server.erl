@@ -1513,6 +1513,12 @@ not_implemented(CliSock, _IPPort, Req, Head) ->
 'PROPPATCH'(CliSock, IPPort, Req, Head) ->
      body_method(CliSock, IPPort, Req, Head).
 
+'LOCK'(CliSock, IPPort, Req, Head) ->
+     body_method(CliSock, IPPort, Req, Head).
+
+'UNLOCK'(CliSock, IPPort, Req, Head) ->
+     body_method(CliSock, IPPort, Req, Head).
+
 'MOVE'(CliSock, IPPort, Req, Head) ->
     no_body_method(CliSock, IPPort, Req, Head).
 
@@ -1614,6 +1620,10 @@ handle_extension_method("PROPFIND", CliSock, IPPort, Req, Head) ->
     'PROPFIND'(CliSock, IPPort, Req, Head);
 handle_extension_method("PROPPATCH", CliSock, IPPort, Req, Head) ->
     'PROPPATCH'(CliSock, IPPort, Req, Head);
+handle_extension_method("LOCK", CliSock, IPPort, Req, Head) ->
+    'LOCK'(CliSock, IPPort, Req, Head);
+handle_extension_method("UNLOCK", CliSock, IPPort, Req, Head) ->
+    'UNLOCK'(CliSock, IPPort, Req, Head);
 handle_extension_method("MKCOL", CliSock, IPPort, Req, Head) ->
     'MKCOL'(CliSock, IPPort, Req, Head);
 handle_extension_method("MOVE", CliSock, IPPort, Req, Head) ->
@@ -2333,6 +2343,10 @@ handle_ut(CliSock, ARG, UT = #urltype{type = dav}, N) ->
                 fun(A)-> yaws_dav:propfind(A) end;
             Req#http_request.method == "PROPPATCH" ->
                 fun(A)-> yaws_dav:proppatch(A) end;
+            Req#http_request.method == "LOCK" ->
+                fun(A)-> yaws_dav:lock(A) end;
+            Req#http_request.method == "UNLOCK" ->
+                fun(A)-> yaws_dav:unlock(A) end;
             Req#http_request.method == "MOVE" ->
                 fun(A)-> yaws_dav:move(A) end;
             Req#http_request.method == "COPY" ->
