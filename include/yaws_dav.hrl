@@ -1,8 +1,8 @@
 -ifndef(_YAWS_DAV).
 -define(_YAWS_DAV, true).
 
--define(LOCK_LIFETIME, 300000). % lock lifetime in milliseconds: 5 minutes
--define(CLEANUP_INTERVAL, 60000). % cleanup interval in milliseconds: 1 minute
+-define(LOCK_LIFETIME, 300). % lock lifetime in seconds: 5 minutes
+-define(CLEANUP_INTERVAL, 60). % cleanup interval in seconds: 1 minute
 
 -define(elog(X,Y), error_logger:info_msg("*elog ~p:~p: " X,
                                          [?MODULE, ?LINE | Y])).

@@ -40,14 +40,12 @@ lock(A) ->
         _If = h_if(A),
         Timeout = h_timeout(A),
         Depth = h_depth(A),
-        L1 = L#davlock{id=Id,timeout=Timeout,depth=Depth},
-        Rx = yaws_davlock:lock(R#resource.name,L1),
-        %case yaws_davlock:lock(R#resource.name,L#davlock{id=Id,timeout=Timeout,depth=Depth}) of
-        case Rx of
+        ?elog("LOCK ~p~n", [R#resource.name]),
+        case yaws_davlock:lock(R#resource.name,L#davlock{id=Id,timeout=Timeout,depth=Depth}) of
             {ok,Id1} -> 
                 {200,Result} = prop_get({'DAV:',lockdiscovery},A,R),
                 Response = [{'D:prop', [{'xmlns:D',"DAV:"}], [Result]}],
-                status(200,[{"Lock-Token","<urn:uuid:"++Id1++">"}],Response);
+                status(200,[{"Lock-Token","<opaquelocktoken:"++Id1++">"}],Response);
             {error,locked} ->
                 status(423);
             _ ->
@@ -57,7 +55,7 @@ lock(A) ->
         Status -> 
             case Status of
                 404 -> 
-                    status(501); % not implemented
+                    status(501); % for now not implemented
                     % TODO create and lock the resource
                 _ ->
                     ?elog("Status: ~p~n~p~n",[Status,erlang:get_stacktrace()]),
@@ -73,10 +71,9 @@ unlock(A) ->
         R = davresource0(A),
         Id = h_locktoken(A),
         _If = h_if(A),
-        case yaws_davlock:unlock(R#resource.name,Id) of
-            ok ->
-                status(204)
-        end
+        ?elog("UNLOCK ~p~n", [R#resource.name]),
+        yaws_davlock:unlock(R#resource.name,Id),
+        status(204)
     catch
         Status -> status(Status);
         _Error:Reason ->
@@ -190,7 +187,7 @@ copy_move(A, OpF) ->
             From = davpath(A),
             To = A#arg.docroot ++ "/" ++ Path,
             ?elog("move from ~p to ~p (~p)\n", [From, To, Url]),
-            DoOverwrite = get_overwrite(A),
+            DoOverwrite = h_overwrite(A),
             IsSame = is_same(From, To),
             ToExsist = exists(To),
             if IsSame == true ->
@@ -248,12 +245,6 @@ file_name(L) ->
     [Rname|_] = string:tokens(lists:reverse(L), "/"),
     lists:reverse(Rname).
 
-get_overwrite(A) ->
-    case lists:keysearch("Overwrite", 3, (A#arg.headers)#headers.other) of
-        {value, {http_header, _, _, _, "T"}} -> true;
-        _ -> false
-    end.
-
 exists(Path) ->
     case file:read_file_info(Path) of
         {ok, _} -> true;
@@ -261,6 +252,7 @@ exists(Path) ->
     end.
 
 %% FIXME: how to do this in a portable way?  on unix we could check inode...
+%% TODO use for etag?
 is_same(A, B) ->
     A == B.
 
@@ -331,7 +323,7 @@ proppatch(A) ->
         R = davresource0(A),
         Update = parse_proppatch(Req),
         Response = proppatch_response(Update,A,R),
-        MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], [Response]}],
+        MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], Response}],
         status(207,MultiStatus)
     catch
         Status -> status(Status);
@@ -377,10 +369,9 @@ prop_status(424) -> {'D:status', [],["HTTP/1.1 424 Failed Dependency"]};
 prop_status(507) -> {'D:status', [],["HTTP/1.1 507 Insufficient Storage"]}.
 
 %----------------------------------------------------
-%
 % Available props include namespace
-% TODO Available props can differ per resource
-% For Microsoft extensions see: draft-hopmann-collection-props-00.txt
+% Available props can differ per resource
+% For proposed Microsoft extensions see: draft-hopmann-collection-props-00.txt
 %
 allprops(R) ->
     F = R#resource.info,
@@ -391,7 +382,7 @@ allprops(R) ->
           _ -> []
         end,
     P2 = [
-            {'http://yaws.hyber.org/',access}, % Yaws sample extension
+            {'http://yaws.hyber.org/',access}, % sample Yaws extension
            %{'DAV:',childcount}, % Microsoft extension
             {'DAV:',creationdate},
             {'DAV:',displayname},
@@ -433,8 +424,21 @@ prop_get({'DAV:',getlastmodified},_A,R) ->
     P = {'D:getlastmodified', [], [lists:flatten(T)]},
     {200, P};
 prop_get({'DAV:',getcontenttype},_A,R) ->
-    Name = R#resource.name,
-    P = {'D:getcontenttype', [], [mediatype(Name)]},
+    F = R#resource.info,
+    Mediatype = case F#file_info.type of
+          directory -> 
+              "text/html"; % this represents the mediatype of a GET on a collection
+          _ -> 
+              Name = R#resource.name,
+              Ext = filename:extension(Name),
+              Ext1 = case Ext of
+                         [] -> "";
+                         _ -> tl(Ext)
+                     end,
+              {_Kind,Mimetype} = mime_types:t(Ext1),
+              Mimetype
+        end,
+    P = {'D:getcontenttype', [], [Mediatype]},
     {200, P};
 prop_get({'DAV:',getcontentlength},_A,R) ->
     F = R#resource.info,
@@ -449,7 +453,7 @@ prop_get({'DAV:',getetag},_A,R) ->
 prop_get({'DAV:',ishidden},_A,R) ->
     N = filename:basename(R#resource.name),
     H = case hd(N) of
-            46 -> "1";
+            46 -> "1"; % dotted file
             _ -> "0"
         end,
     P = {'D:ishidden', [], [H]},
@@ -470,13 +474,13 @@ prop_get({'DAV:',lockdiscovery},_A,R) ->
         _ ->
             ActiveLocks = [ 
                         {'D:activelock',[],[
-                            {'D:lockscope',[],[format(scope,Lock#davlock.scope)]},
-                            {'D:locktype',[],[format(type,Lock#davlock.type)]},
-                            {'D:depth',[],[format(depth,Lock#davlock.depth)]},
-                            %{'D:owner',[],[format(owner,Lock#davlock.owner)]},
-                            {'D:timeout',[],[format(timeout,Lock#davlock.timeout)]},
-                            {'D:locktoken',[],[format(locktoken,Lock#davlock.id)]},
-                            {'D:lockroot',[],[format(lockroot,R#resource.name)]}
+                            {'D:lockscope',[],[prop_get_format(scope,Lock#davlock.scope)]},
+                            {'D:locktype',[],[prop_get_format(type,Lock#davlock.type)]},
+                            {'D:depth',[],[prop_get_format(depth,Lock#davlock.depth)]},
+                            %{'D:owner',[],[prop_get_format(owner,Lock#davlock.owner)]}, % kept secret
+                            {'D:timeout',[],[prop_get_format(timeout,Lock#davlock.timeout)]},
+                            {'D:locktoken',[],[prop_get_format(locktoken,Lock#davlock.id)]},
+                            {'D:lockroot',[],[prop_get_format(lockroot,R#resource.name)]}
                         ]}            
                     || Lock <- Locks ],
             {200, {'D:lockdiscovery',[],ActiveLocks}}
@@ -501,38 +505,38 @@ prop_get({'http://apache.org/dav/props/',executable},_A,R) ->
     end;
 prop_get({NS,P},_A,_R) ->
     {404,{P,[{'xmlns',NS}],[]}}.
-    
+
+
 prop_set({'DAV:',getetag},_A,_R) ->
     P = {'D:getetag',[],[]},
-    {403,P}; % add precondition 'cannot-modify-protected-property'
+    {403,P}; % TODO add precondition 'cannot-modify-protected-property' using throw(403,...)?
 prop_set({P,NS},_A,_R) ->
     {403,{P,[{'xmlns',NS}],[]}}.
-    
+
+
 prop_remove({P,NS},_A,_R) ->
     {403,{P,[{'xmlns',NS}],[]}}.
 
 
-format(type,write) ->
+prop_get_format(type,write) -> 
     {'D:write',[],[]};
-format(scope,Scope) ->
-    case Scope of
-        exclusive -> {'D:exclusive',[],[]};
-        _ -> {'D:shared',[],[]}
-    end;
-format(depth,Depth) ->
-    case Depth of
-        infinity -> "infinity";
-        _ -> integer_to_list(Depth)
-    end;
-format(timeout,_Timeout) ->
-    lists:flatten(io_lib:format("Second-~p",[?LOCK_LIFETIME]));
-format(locktoken,Id) ->
-    {'D:href',[],["urn:uuid:"++Id]};
-format(lockroot,Ref) ->
+prop_get_format(scope,exclusive) -> 
+    {'D:exclusive',[],[]};
+prop_get_format(scope,_) -> 
+    {'D:shared',[],[]};
+prop_get_format(depth,infinity) -> 
+    "infinity";
+prop_get_format(depth,Depth) -> 
+    integer_to_list(Depth);
+prop_get_format(timeout,Timeout) ->
+    lists:flatten(io_lib:format("Second-~p",[Timeout]));
+prop_get_format(locktoken,Id) ->
+    {'D:href',[],["opaquelocktoken:"++Id]};
+prop_get_format(lockroot,Ref) ->
     {'D:href',[],[Ref]};
-format(owner,Owner) ->
+prop_get_format(owner,Owner) ->
     Owner;
-format(_,_) ->
+prop_get_format(_,_) ->
     throw(500).
    
 %% Former path routines, replace?
@@ -610,7 +614,6 @@ normalize([".."|T1],[_H2|T2]) -> normalize(T1,T2);
 normalize([H|T],R) -> normalize(T,[H|R]).
 
 
-
 is_collection(R) ->
     F = R#resource.info,
     case F#file_info.type of
@@ -624,29 +627,24 @@ is_collection(R) ->
 %%
     
 h_depth(A) ->
-    %%
-    %% Look for: {http_header,  _Num, 'Depth', _, Depth}
-    %%
     Hs = (A#arg.headers)#headers.other,
     case lists:keysearch("Depth", 3, Hs) of
         {value, {_,_,"Depth",_,Depth}} ->
             h_depth_interpret(Depth);
         _ ->
-            % RFC4918 strict is that if not found 'infinity' is assumed
             infinity
     end.
 h_depth_interpret("infinity") -> infinity;
-h_depth_interpret(L) ->
-    case catch list_to_integer(L) of
-        I when is_integer(I) -> I;
-        _                 -> 0
-    end.
+h_depth_interpret("1") -> 1;
+h_depth_interpret(_) -> 0.
 
 h_destination(A) ->
     Hs = (A#arg.headers)#headers.other,
     case lists:keysearch("Destination", 3, Hs) of
         {value, {http_header,_,_,_,Dest}} ->
-            davresource0(Dest);
+            {Dest1, _} = yaws_api:url_decode_q_split(Dest),
+            Path = normalize(Dest1 -- davroot(A)),
+            A#arg.docroot ++ "/" ++ Path;
         _ ->
             throw(501)
     end.
@@ -654,10 +652,9 @@ h_destination(A) ->
 h_overwrite(A) ->
     Hs = (A#arg.headers)#headers.other,
     case lists:keysearch("Overwrite", 3, Hs) of
-        {value, {_,_,"Overwrite",_,YesNo}} ->
-            YesNo;
+        {value, {http_header, _ , _, _, "T"}} ->
+            true;
         _ ->
-		    % RFC4918 strict is that if not found 'false' is assumed
             false
     end.
 
@@ -665,18 +662,22 @@ h_timeout(A) ->
     Hs = (A#arg.headers)#headers.other,
     case lists:keysearch("Timeout", 3, Hs) of
         {value, {_,_,"Timeout",_,T}} ->
-            % TODO Parse timeout
-            T;
+            case T of
+                "Second-"++TimeoutVal -> min(list_to_integer(TimeoutVal),?LOCK_LIFETIME);
+                _ -> ?LOCK_LIFETIME
+            end;
         _ ->
-            undefined
+            ?LOCK_LIFETIME
     end.
 
 h_locktoken(A) ->
     Hs = (A#arg.headers)#headers.other,
     case lists:keysearch("Lock-Token", 3, Hs) of
-        {value, {_,_,"Lock-Token",_,T}} ->
-            % TODO Parse and check for Lock-Token
-            T;
+        {value, {_,_,"Lock-Token",_,URL}} ->
+            case URL of
+                "<opaquelocktoken:"++Token -> string:left(Token,36);
+                _ -> URL
+            end;
         _ ->
             undefined
     end.
@@ -685,6 +686,7 @@ h_if(A) ->
     Hs = (A#arg.headers)#headers.other,
     case lists:keysearch("If", 3, Hs) of
         {value, {_,_,"If",_,If}} ->
+io:format("If: ~p~n",[If]),
             % TODO Check if If header is evaluated correctly
             If;
         _ ->
@@ -881,23 +883,21 @@ parse_locktype(_) ->
     throw(400).
 
 parse_owner(X) ->
-    X.
+    Xml = xmerl:export_simple_content(X,xmerl_xml),
+    lists:flatten(Xml).
 
 %% ----------------------
-%% output functions
+%% status output
 %%
 
 status(Status) -> 
-    %?elog("STATUS: ~p~n",[Status]),
-    {status, Status}.
+    [{status, Status}].
 status(Status,Response) ->
-    %?elog("~nSTATUS: ~p~nOUTPUT: ~p~n",[Status,Response]),
     Xml = xml_expand(Response),
     [{status, Status},
      {content, "application/xml; charset=\"utf-8\"", Xml}
     ].
 status(Status,Headers,Response) ->
-    %?elog("~nSTATUS: ~p~nOUTPUT: ~p~n",[Status,Response]),
     Xml = xml_expand(Response),
     Hdrs = [ {header,H} || H <- Headers],
     [{status, Status} | Hdrs] ++ [{content, "application/xml; charset=\"utf-8\"", Xml}].
@@ -989,6 +989,7 @@ store_client_data_len(Fd, CliSock, Len, SSlBool) ->
     end.
 
 store_client_data_all(Fd, CliSock, SSlBool) ->
+    % FIXME problem here with gvfs/davfs trying to PUT empty file
     case yaws:cli_recv(CliSock, 4000, SSlBool) of
         {ok, B} ->
             ok = file:write(Fd, B),
@@ -999,110 +1000,5 @@ store_client_data_all(Fd, CliSock, SSlBool) ->
             ?Debug("store_client_data_all: ~p~n", [_Other]),
             exit(normal)
     end.
-
-%%------------------------------------------------------------------------------------
-%% These functions are already part of yaws.erl but not exported
-%% and therefore repeated here
-%%
-%% universal_time_as_string/0, universal_time_as_string/1
-%% local_time_as_gmt_string/1
-%% time_to_string/3
-%% mediatype/1
-
-%universal_time_as_string() ->
-%    universal_time_as_string(calendar:universal_time()).
-%universal_time_as_string(UTime) ->
-%    time_to_string(UTime, "GMT").
-%local_time_as_gmt_string(LocalTime) ->
-%    time_to_string(erlang:localtime_to_universaltime(LocalTime),"GMT").
-%    
-%time_to_string({{Year, Month, Day}, {Hour, Min, Sec}}, Zone) ->
-%    [day(Year, Month, Day), ", ",
-%     mk2(Day), " ", month(Month), " ", integer_to_list(Year), " ",
-%     mk2(Hour), ":", mk2(Min), ":", mk2(Sec), " ", Zone].
-% 
-%
-%mk2(I) when I < 10 ->
-%    [$0 | integer_to_list(I)];
-%mk2(I) ->
-%    integer_to_list(I).
-%
-%day(Year, Month, Day) ->
-%    int_to_wd(calendar:day_of_the_week(Year, Month, Day)).
-%
-%month(1)  -> "Jan";
-%month(2)  -> "Feb";
-%month(3)  -> "Mar";
-%month(4)  -> "Apr";
-%month(5)  -> "May";
-%month(6)  -> "Jun";
-%month(7)  -> "Jul";
-%month(8)  -> "Aug";
-%month(9)  -> "Sep";
-%month(10) -> "Oct";
-%month(11) -> "Nov";
-%month(12) -> "Dec".
-%
-%int_to_wd(1) -> "Mon";
-%int_to_wd(2) -> "Tue";
-%int_to_wd(3) -> "Wed";
-%int_to_wd(4) -> "Thu";
-%int_to_wd(5) -> "Fri";
-%int_to_wd(6) -> "Sat";
-%int_to_wd(7) -> "Sun".
-
-% RFC4288
-%% use mime_types:t/1 instead?
-mediatype(Filename) ->
-    Extension = filename:extension(Filename),
-    Extension1 = string:to_lower(Extension),
-    Basename = filename:basename(Filename),
-    Basename1 = string:to_lower(Basename),
-    mediatype(Basename1,Extension1).
-mediatype(_,".abw") -> "application/abiword";
-mediatype(_,".avi") -> "video/x-msvideo";
-mediatype(_,".asf") -> "video/x-ms-asf";
-mediatype(_,".bmp") -> "image/bmp";
-mediatype(_,".css") -> "text/css";
-mediatype(_,".csv") -> "text/csv";
-mediatype(_,".desktop") -> "application/x-desktop";
-mediatype(_,".doc") -> "application/msword";
-mediatype(_,".docx") -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-mediatype(_,".eml") -> "message";
-mediatype(_,".eps") -> "image-x-eps";
-mediatype(_,".erl") -> "text/x-erlang";
-mediatype(_,".gif") -> "image/gif";
-mediatype(_,".gz") -> "application/x-tarz";
-mediatype(_,".html") -> "text/html";
-mediatype(_,".java") -> "application/x-java";
-mediatype(_,".jpeg") -> "image/jpeg";
-mediatype(_,".jpg") -> "image/jpeg";
-mediatype(_,".js") -> "application/javascript";
-mediatype(_,".log") -> "text/x-log";
-mediatype(_,".odf") -> "application/vnd.oasis.opendocument.formula";
-mediatype(_,".odg") -> "application/vnd.oasis.opendocument.graphics";
-mediatype(_,".odi") -> "application/vnd.oasis.opendocument.image";
-mediatype(_,".odp") -> "application/vnd.oasis.opendocument.presentation";
-mediatype(_,".ods") -> "application/vnd.oasis.opendocument.spreadsheet";
-mediatype(_,".odt") -> "application/vnd.oasis.opendocument.text";
-mediatype(_,".pdf") -> "application/pdf";
-mediatype(_,".php") -> "application/x-php";
-mediatype(_,".png") -> "image/png";
-mediatype(_,".ppt") -> "application/vnd.ms-powerpoint";
-mediatype(_,".ps") -> "application/postscript";
-mediatype(_,".rtf") -> "application/rtf";
-mediatype(_,".sql") -> "text/x-sql";
-mediatype(_,".tgz") -> "application/x-compressed-tar";
-mediatype(_,".txt") -> "text/plain";
-mediatype(_,".wmv") -> "video/x-ms-wmv";
-mediatype(_,".xls") -> "application/vnd.ms-excel";
-mediatype(_,".xml") -> "text/xml";
-mediatype(_,".xpm") -> "image/x-pixmap";
-mediatype(_,".zip") -> "application/zip";
-mediatype("install",_) -> "text-x-install";
-mediatype("makefile",_) -> "text-x-makefile";
-mediatype("readme",_) -> "text-x-readme";
-mediatype(_,_) -> "text/plain".
-
 
 

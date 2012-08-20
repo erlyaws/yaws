@@ -33,8 +33,6 @@
 %
 -export([lock/2, unlock/2, check/2, discover/1, report/0, dump/0, clear/0]).
 
--export([test/0]).
-
 start_link() -> gen_server:start_link({local,?MODULE},?MODULE,[],[]).
 stop() -> 
     gen_server:call(?MODULE,stop).
@@ -58,7 +56,7 @@ clear() ->
 init([]) ->
     %Table is a tree consisting of {Name, Locks, Children} tuples
     Table = [],
-    erlang:send_after(?CLEANUP_INTERVAL, self(), cleanup),
+    erlang:send_after(?CLEANUP_INTERVAL*1000, self(), cleanup),
     {ok, Table}.
 
 %% handle_call/3
@@ -77,6 +75,7 @@ handle_call({lock,Path,Lock}, _From, Table) ->
             {reply, {error, Reason}, Table}
     end;
 handle_call({unlock,Path,Id}, _From, Table) ->
+    % even if the lock is not found, its removal is succesfull
     Path1 = filename:split(Path),
     Table1 = do_unlock(Path1,Id,Table),
     {reply, ok, Table1};
@@ -105,7 +104,7 @@ handle_cast(_Msg, State) ->
 
 %% handle_info/2
 handle_info(cleanup, Table) ->
-    erlang:send_after(?CLEANUP_INTERVAL, self(), cleanup),
+    erlang:send_after(?CLEANUP_INTERVAL*1000, self(), cleanup),
     Table1 = do_cleanup(Table),
     {noreply, Table1}.
 
@@ -157,7 +156,7 @@ do_lock_check([],Result) ->
 do_lock_check([H|T],_Result) ->
     case H#davlock.depth of
         infinity -> {H#davlock.scope,infinity};
-        0 -> do_lock_check(T,{H#davlock.scope   ,0})
+        0 -> do_lock_check(T,{H#davlock.scope,0})
     end.
 
 %%----------------------------------------------------------------------
@@ -167,6 +166,11 @@ do_unlock([],_Id,Table) ->
     Table;
 do_unlock([_H|_T],_Id,[]) ->
     [];
+do_unlock([H],Id,Table) ->
+    case lists:keysearch(H,1,Table) of
+        {value,{H,Locks,_}} -> do_unlock_id(Locks,Id);
+        false -> ok
+    end;
 do_unlock([H|T],Id,Table) ->
     case lists:keysearch(H,1,Table) of
         {value,{H,Lock,Children}} -> 
@@ -180,6 +184,14 @@ do_unlock([H|T],Id,Table) ->
             end;
         false -> 
             Table
+    end.
+
+do_unlock_id([],_Id) ->
+    [];
+do_unlock_id([H|T],Id) ->
+    case H#davlock.id of
+        Id -> T;
+        _ -> [H|do_unlock_id(T,Id)]
     end.
 
 %%----------------------------------------------------------------------
@@ -261,7 +273,7 @@ do_cleanup_locks([H|T]) ->
     T1 = erlang:now(),
     Delta = timer:now_diff(T1,T0),
     if 
-        Delta > (?LOCK_LIFETIME*1000) -> 
+        Delta > (H#davlock.timeout*1000000) -> 
             ?elog("Discarded lock ~p~n",[H#davlock.id]),
             do_cleanup_locks(T);
         true -> 
@@ -270,7 +282,7 @@ do_cleanup_locks([H|T]) ->
 
 %%----------------------------------------------------------------------
 locktoken() ->
-    % v1 name based UUID
+    % RFC4122 section 3 based UUID
     Version = 1,
     Variant = 2#10,
     Now = {_, _, Micro} = now(),
@@ -281,7 +293,7 @@ locktoken() ->
     <<ClockseqHi:6, ClockseqLow:8>> = Clocksequence,
     %Node = "test",
     {ok,Ifs} = inet:getifaddrs(),
-    Addrs = [ lists:keysearch(hwaddr,1,Attr) || {If,Attr} <- Ifs ],
+    Addrs = [ lists:keysearch(hwaddr,1,Attr) || {_If,Attr} <- Ifs ],
     Addr = lists:max([ A || {value,{hwaddr,A}} <- Addrs ]),
     Node = list_to_binary(Addr),
     UUID = <<TimeLow:32, TimeMid:16, Version:4, TimeHi:12,

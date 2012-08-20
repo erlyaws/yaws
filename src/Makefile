@@ -41,6 +41,7 @@ MODULES=yaws \
 	yaws_log_file_h \
 	yaws_rss \
 	yaws_dav \
+	yaws_davlock \
 	yaws_pam \
 	json json2 jsonrpc yaws_jsonrpc yaws_xmlrpc\
 	haxe yaws_rpc \
