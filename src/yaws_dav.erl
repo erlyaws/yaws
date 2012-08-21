@@ -20,20 +20,33 @@
 -include_lib("kernel/include/file.hrl").
 
 %%------------------------------------------------------
-%% from where to call init?
-%%
-
-init() ->
-    % lock table must be ordered to check parent/child locks 
-    ets:new(davlocks,[ordered_set,named_table]).
-
-%%------------------------------------------------------
 %% methods
 %%
 
 lock(A) ->
     try 
-        R = davresource0(A),
+        Name = normalize(A#arg.server_path),
+        Path = A#arg.docroot ++ Name,
+        R = case file:read_file_info(Path) of
+                {ok, F} ->
+                    case F#file_info.type of
+                        directory ->
+                            #resource{ name = Name ++ "/", info = F};
+                        regular -> 
+                            #resource{ name = Name, info = F};
+                        _ -> throw(404)
+                    end;
+                {error,enoent} -> 
+                    case string:right(A#arg.server_path,1) of
+                        "/" -> 
+                            ok = file:make_dir(Path);
+                        _ ->
+                            ok = file:write_file(Path,"")
+                    end,
+                    {ok, F} = file:read_file_info(Path),
+                    #resource{ name = Name, info = F};
+                {error,_} -> throw(409)
+            end,
         Req = binary_to_list(A#arg.clidata),
         L = parse_lockinfo(Req),
         Id = h_locktoken(A),
@@ -53,14 +66,7 @@ lock(A) ->
         end
     catch
         Status -> 
-            case Status of
-                404 -> 
-                    status(501); % for now not implemented
-                    % TODO create and lock the resource
-                _ ->
-                    ?elog("Status: ~p~n~p~n",[Status,erlang:get_stacktrace()]),
-                    status(Status)
-            end;
+            status(Status);
         _Error:Reason ->
             ?elog("Unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
@@ -75,7 +81,8 @@ unlock(A) ->
         yaws_davlock:unlock(R#resource.name,Id),
         status(204)
     catch
-        Status -> status(Status);
+        Status -> 
+            status(Status);
         _Error:Reason ->
             ?elog("Unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
@@ -83,11 +90,20 @@ unlock(A) ->
 
 
 delete(A) ->
-    Path = davpath(A),
-    ?elog("DELETE Path=~p~n", [Path]),
-    case rmrf(Path) of
-        ok -> status(200);
-        _  -> status(403)
+    try
+        R = davresource0(A),
+        case yaws_davlock:lock(R#resource.name,#davlock{depth=infinity,scope=exclusive}) of
+            {ok,Id} ->
+                rmrf(A#arg.docroot++R#resource.name),
+                yaws_davlock:unlock(R#resource.name,Id);
+            _ -> throw(403)
+        end
+    catch
+        Status -> 
+            status(Status);
+        _Error:Reason ->
+            ?elog("Unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
+            status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
 put(SC, ARG) ->
@@ -160,10 +176,11 @@ put(SC, ARG) ->
     end.
 
 mkcol(A) ->
-    Path = davpath(A),
+    Name = normalize(A#arg.server_path),
+    Path = A#arg.docroot ++ Name,
     try
         file_do(make_dir,[Path]),
-        ?elog("MKCOL ~p~n", [Path]),
+        ?elog("MKCOL ~p~n", [Name]),
         status(201)
     catch
         Status -> status(Status);
@@ -263,13 +280,13 @@ propfind(A) ->
         R = davresource0(A),
         case h_depth(A) of
             0 ->
-                ?elog("PROPFIND ~p (Depth=0) ~p~n", [R#resource.name,Props]),
+                ?elog("PROPFIND ~p (Depth=0)~n", [R#resource.name]),
                 Response = {'D:response', [], propfind_response(Props,A,R)},
                 MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], [Response]}],
                 status(207,MultiStatus);
             1 ->
                 R1 = davresource1(A),
-                ?elog("PROPFIND ~p (Depth=1, entries=~p) ~p~n", [R#resource.name,length(R1),Props]),
+                ?elog("PROPFIND ~p (Depth=1, entries=~p)~n", [R#resource.name,length(R1)]),
                 Response = {'D:response', [], propfind_response(Props,A,R)},
                 Responses = [{'D:response', [], propfind_response(Props,A,Rx)} || Rx <- R1],
                 MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], [Response|Responses]}],
@@ -558,7 +575,7 @@ davroot(A) ->
 %% davresource0/1 - get resources with depth 0
 davresource0(A) ->
     Name = normalize(A#arg.server_path),
-    Path = normalize(A#arg.docroot) ++ Name,
+    Path = A#arg.docroot ++ Name,
     case file:read_file_info(Path) of
         {ok, F} ->
             case F#file_info.type of
@@ -573,7 +590,7 @@ davresource0(A) ->
 %% davresource1/1 - get additional resources for depth 1
 davresource1(A) ->
     Coll = normalize(A#arg.server_path),
-    Path = normalize(A#arg.docroot) ++ Coll,
+    Path = A#arg.docroot ++ Coll,
     case file:read_file_info(Path) of
         {ok, Dir} when Dir#file_info.type == directory ->
             {ok, L} = file:list_dir(Path),
@@ -663,7 +680,12 @@ h_timeout(A) ->
     case lists:keysearch("Timeout", 3, Hs) of
         {value, {_,_,"Timeout",_,T}} ->
             case T of
-                "Second-"++TimeoutVal -> min(list_to_integer(TimeoutVal),?LOCK_LIFETIME);
+                "Second-"++TimeoutVal -> 
+                    Val = case catch list_to_integer(TimeoutVal) of
+                              I when is_integer(I) -> I;
+                              _ -> ?LOCK_LIFETIME
+                          end,
+                    min(Val,?LOCK_LIFETIME);
                 _ -> ?LOCK_LIFETIME
             end;
         _ ->
@@ -909,50 +931,64 @@ xml_expand(L, Cset) ->
     Prolog = ["<?xml version=\"1.0\" encoding=\""++Cset++"\" ?>"],
     xmerl:export_simple(L,xmerl_xml,[{prolog,Prolog}]).
 
-%%-------------------------------------------
-%% Functions needed within methods
+%%-------------------------------------------------
+%% File function results are mapped to return codes
 %%
 
 file_do(Func,Params) ->
     Result = erlang:apply(file,Func,Params),
     case Result of
-        ok -> Result;
+        ok -> ok;
+        {ok,X} -> {ok,X};
+        {ok,X1,X2} -> {ok,X1,X2};
+        eof -> eof;
         {error,eexist} -> throw(405);
         {error,enoent} -> throw(409);
         {error,enospace} -> throw(507);
-        _ -> throw(500)
+        _Error -> ?elog("file function returned ~p~n",[_Error]),throw(500)
     end.
 
 rmrf(Path) ->
-    case file:read_file_info(Path) of
-        {ok, F} when F#file_info.type == directory ->
-            case file:list_dir(Path) of
-                {ok, Fs} ->
-                    case rmrf(Path, Fs) of
-                        ok ->
-                            file:del_dir(Path);
-                        _Err ->
-                            ok
-                    end;
-                Err ->
-                    Err
-            end;
-        {ok, _} ->
-            file:delete(Path);
-        Err ->
-            Err
+    {ok, F} = file_do(read_file_info,[Path]),
+    case F#file_info.type of
+        directory -> 
+            {ok, Dir} = file_do(list_dir,[Path]),
+            [ rmrf(filename:join(Path,File)) || File <- Dir],
+            file_do(del_dir,[Path]);
+        _ ->
+            file:delete(Path)
     end.
 
-rmrf(_Dir, []) ->
-    ok;
-rmrf(Dir, [H|T]) ->
-    F = filename:join(Dir, H),
-    case rmrf(F) of
-        ok ->
-            rmrf(Dir, T);
-        Err ->
-            Err
-    end.
+%rmrf(Path) ->
+%    case file:read_file_info(Path) of
+%        {ok, F} when F#file_info.type == directory ->
+%            case file:list_dir(Path) of
+%                {ok, Fs} ->
+%                    case rmrf(Path, Fs) of
+%                        ok ->
+%                            file:del_dir(Path);
+%                        _Err ->
+%                            ok
+%                    end;
+%                Err ->
+%                    Err
+%            end;
+%        {ok, _} ->
+%            file:delete(Path);
+%        Err ->
+%            Err
+%    end.
+
+%rmrf(_Dir, []) ->
+%    ok;
+%rmrf(Dir, [H|T]) ->
+%    F = filename:join(Dir, H),
+%    case rmrf(F) of
+%        ok ->
+%            rmrf(Dir, T);
+%        Err ->
+%            Err
+%    end.
 
 
 store_client_data(Fd, CliSock, all, SSlBool) ->

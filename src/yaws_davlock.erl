@@ -32,6 +32,7 @@
 % dump() -> Dump
 %
 -export([lock/2, unlock/2, check/2, discover/1, report/0, dump/0, clear/0]).
+-export([cleanup_manual/0]).
 
 start_link() -> gen_server:start_link({local,?MODULE},?MODULE,[],[]).
 stop() -> 
@@ -51,6 +52,8 @@ dump() ->
     gen_server:call(?MODULE,dump).
 clear() ->
     gen_server:call(?MODULE,clear).
+cleanup_manual() ->
+    erlang:send(?MODULE,cleanup).
 
 %% init/1
 init([]) ->
@@ -64,6 +67,7 @@ handle_call({lock,Path,Lock}, _From, Table) ->
     try 
         T0 = erlang:now(),
         Id = locktoken(),
+        ?elog("create lock ~p for ~p~n",[Id,Path]),
         Lock1 = Lock#davlock{id=Id,timestamp=T0}, 
         Path1 = filename:split(Path),
         Table1 = do_lock(Path1,Lock1,Table),
@@ -76,6 +80,7 @@ handle_call({lock,Path,Lock}, _From, Table) ->
     end;
 handle_call({unlock,Path,Id}, _From, Table) ->
     % even if the lock is not found, its removal is succesfull
+    ?elog("remove lock ~p for ~p~n",[Id,Path]),
     Path1 = filename:split(Path),
     Table1 = do_unlock(Path1,Id,Table),
     {reply, ok, Table1};
@@ -120,7 +125,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% do_lock(Lock,Path,Table) -> Table
 %%
 do_lock([],_Lock,Table) ->
-    % actually not needed, but fileaname:split/1 can return empty list
+    % fileaname:split/1 can return empty list
     Table;
 do_lock([H],Lock,Table) ->
     case lists:keysearch(H,1,Table) of
@@ -168,19 +173,28 @@ do_unlock([_H|_T],_Id,[]) ->
     [];
 do_unlock([H],Id,Table) ->
     case lists:keysearch(H,1,Table) of
-        {value,{H,Locks,_}} -> do_unlock_id(Locks,Id);
-        false -> ok
-    end;
-do_unlock([H|T],Id,Table) ->
-    case lists:keysearch(H,1,Table) of
-        {value,{H,Lock,Children}} -> 
-            C = do_unlock(T,Id,Children),
-            case C of
-                [] -> 
+        {value,{H,Locks,Children}} -> 
+            Locks1 = do_unlock_id(Locks,Id),
+            case {Locks1,Children} of
+                {[],[]} -> 
                     {_,_,Return} = lists:keytake(H,1,Table),
                     Return;
                 _ ->
-                    lists:keyreplace(H,1,Table,{H,Lock,C})
+                    lists:keyreplace(H,1,Table,{H,Locks1,Children})
+            end;
+        false -> 
+            Table
+    end;
+do_unlock([H|T],Id,Table) ->
+    case lists:keysearch(H,1,Table) of
+        {value,{H,Locks,Children}} -> 
+            Children1 = do_unlock(T,Id,Children),
+            case {Locks,Children1} of
+                {[],[]} -> 
+                    {_,_,Return} = lists:keytake(H,1,Table),
+                    Return;
+                _ ->
+                    lists:keyreplace(H,1,Table,{H,Locks,Children1})
             end;
         false -> 
             Table
@@ -253,7 +267,7 @@ do_report([{Name,Lock,Children}|T]) ->
 
 %%----------------------------------------------------------------------
 %% do_cleanup(Table) -> Table
-%% TODO Check for other timeouts?
+%% 
 do_cleanup([]) ->
     [];
 do_cleanup([{Name,Locks,Children}|T]) ->
@@ -274,7 +288,7 @@ do_cleanup_locks([H|T]) ->
     Delta = timer:now_diff(T1,T0),
     if 
         Delta > (H#davlock.timeout*1000000) -> 
-            ?elog("Discarded lock ~p~n",[H#davlock.id]),
+            ?elog("discarded lock ~p~n",[H#davlock.id]),
             do_cleanup_locks(T);
         true -> 
             [H|do_cleanup_locks(T)]
@@ -291,7 +305,6 @@ locktoken() ->
     <<TimeHi:12, TimeMid:16, TimeLow:32>> = <<Timestamp:60>>,
     Clocksequence = <<Micro:14>>,
     <<ClockseqHi:6, ClockseqLow:8>> = Clocksequence,
-    %Node = "test",
     {ok,Ifs} = inet:getifaddrs(),
     Addrs = [ lists:keysearch(hwaddr,1,Attr) || {_If,Attr} <- Ifs ],
     Addr = lists:max([ A || {value,{hwaddr,A}} <- Addrs ]),
