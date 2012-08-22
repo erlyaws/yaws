@@ -26,12 +26,13 @@
 %
 % lock(Path,Lock) -> {ok,Id}|{error,Reason}
 % unlock(Path,Id) -> ok|{error,Reason}
-% check(Path,Id) -> ok|{error,Reason}
+% locked(Path) -> true|false
+% check(Path,Id) -> ok|{error,Reason} 
 % discover(Path) -> [Lock]
 % report() -> Report
 % dump() -> Dump
 %
--export([lock/2, unlock/2, check/2, discover/1, report/0, dump/0, clear/0]).
+-export([lock/2, unlock/2, locked/1, check/2, discover/1, report/0, dump/0, clear/0]).
 -export([cleanup_manual/0]).
 
 start_link() -> gen_server:start_link({local,?MODULE},?MODULE,[],[]).
@@ -42,6 +43,8 @@ lock(Path,Lock) ->
     gen_server:call(?MODULE,{lock,Path,Lock}).
 unlock(Path,Id) ->
     gen_server:call(?MODULE,{unlock,Path,Id}).
+locked(Path) ->
+    gen_server:call(?MODULE,{locked,Path}).
 check(Path,Id) ->
     gen_server:call(?MODULE,{check,Path,Id}).
 discover(Path) ->
@@ -84,6 +87,10 @@ handle_call({unlock,Path,Id}, _From, Table) ->
     Path1 = filename:split(Path),
     Table1 = do_unlock(Path1,Id,Table),
     {reply, ok, Table1};
+handle_call({locked,Path}, _From, Table) ->
+    L = filename:split(Path),
+    Lock = do_locked(L,Table),
+    {reply, Lock, Table};
 handle_call({check,Path,Id}, _From, Table) ->
     L = filename:split(Path),
     Lock = do_check(L,Id,Table),
@@ -206,6 +213,22 @@ do_unlock_id([H|T],Id) ->
     case H#davlock.id of
         Id -> T;
         _ -> [H|do_unlock_id(T,Id)]
+    end.
+
+%%----------------------------------------------------------------------
+%% do_locked(Path,Table) -> Table
+%%
+do_locked([],_Table) ->
+    false;
+do_locked([H],Table) ->
+    case lists:keysearch(H,1,Table) of
+        {value,{H,Locks,_}} when length(Locks)>0 -> true;
+        _ -> false
+    end;
+do_locked([H|T],Table) ->
+    case lists:keysearch(H,1,Table) of
+        {value,{H,_Locks,Children}} -> do_locked(T,Children);
+        _ -> false
     end.
 
 %%----------------------------------------------------------------------
