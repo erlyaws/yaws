@@ -49,7 +49,7 @@
          embedded_start_conf/1, embedded_start_conf/2,
          embedded_start_conf/3, embedded_start_conf/4]).
 
--export([set_status_code/1, reformat_header/1,
+-export([set_status_code/1, reformat_header/1, reformat_header/2,
          reformat_request/1, reformat_response/1, reformat_url/1]).
 
 -export([set_trace/1,
@@ -991,8 +991,13 @@ set_status_code(Code) ->
 
 %% returns [ Header1, Header2 .....]
 reformat_header(H) ->
+    FormatFun = fun(Hname, Str) ->
+                        lists:flatten(io_lib:format("~s: ~s",[Hname, Str]))
+                end,
+    reformat_header(H, FormatFun).
+reformat_header(H, FormatFun) ->
     lists:zf(fun({Hname, Str}) ->
-                     I =  lists:flatten(io_lib:format("~s: ~s",[Hname, Str])),
+                     I =  FormatFun(Hname, Str),
                      {true, I};
                 (undefined) ->
                      false
@@ -1112,7 +1117,7 @@ reformat_header(H) ->
             ) ++
         lists:map(
           fun({http_header,_,K,_,V}) ->
-                  lists:flatten(io_lib:format("~s: ~s",[K,V]))
+                  FormatFun(K,V)
           end, H#headers.other).
 
 
