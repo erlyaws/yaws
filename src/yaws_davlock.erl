@@ -67,7 +67,7 @@ handle_call({lock,Path,Lock}, _From, Table) ->
     try 
         T0 = erlang:now(),
         Id = locktoken(),
-        ?elog("create lock ~p for ~p~n",[Id,Path]),
+        %?elog("create lock ~p for ~p~n",[Id,Path]),
         Lock1 = Lock#davlock{id=Id,timestamp=T0}, 
         Path1 = filename:split(Path),
         Table1 = do_lock(Path1,Lock1,Table),
@@ -80,7 +80,7 @@ handle_call({lock,Path,Lock}, _From, Table) ->
     end;
 handle_call({unlock,Path,Id}, _From, Table) ->
     % even if the lock is not found, its removal is succesfull
-    ?elog("remove lock ~p for ~p~n",[Id,Path]),
+    %?elog("remove lock ~p for ~p~n",[Id,Path]),
     Path1 = filename:split(Path),
     Table1 = do_unlock(Path1,Id,Table),
     {reply, ok, Table1};
