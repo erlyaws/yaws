@@ -25,17 +25,12 @@
 
 lock(A) ->
     try 
-        Name = normalize(A#arg.server_path),
-        Path = A#arg.docroot ++ Name,
+        Name = davname(A),
+        Path = davpath(A),
+        _Test = h_if(Name,A),
         R = case file:read_file_info(Path) of
-                {ok, F} ->
-                    case F#file_info.type of
-                        directory ->
-                            #resource{ name = Name ++ "/", info = F};
-                        regular -> 
-                            #resource{ name = Name, info = F};
-                        _ -> throw(404)
-                    end;
+                {ok, F} when (F#file_info.type == directory) or (F#file_info.type == regular) ->
+                    #resource{ name = Name, info = F};
                 {error,enoent} -> 
                     case string:right(A#arg.server_path,1) of
                         "/" -> 
@@ -50,7 +45,7 @@ lock(A) ->
         Req = binary_to_list(A#arg.clidata),
         L = parse_lockinfo(Req),
         Id = h_locktoken(A),
-        _If = h_if(A),
+        h_if(R#resource.name,A),
         Timeout = h_timeout(A),
         Depth = h_depth(A),
         ?elog("LOCK ~p~n", [R#resource.name]),
@@ -76,7 +71,7 @@ unlock(A) ->
     try 
         R = davresource0(A),
         Id = h_locktoken(A),
-        _If = h_if(A),
+        _Test = h_if(R#resource.name,A),
         ?elog("UNLOCK ~p~n", [R#resource.name]),
         yaws_davlock:unlock(R#resource.name,Id),
         status(204)
@@ -176,8 +171,8 @@ put(SC, ARG) ->
     end.
 
 mkcol(A) ->
-    Name = normalize(A#arg.server_path),
-    Path = A#arg.docroot ++ Name,
+    Name = davname(A),
+    Path = davpath(A),
     try
         file_do(make_dir,[Path]),
         ?elog("MKCOL ~p~n", [Name]),
@@ -556,13 +551,16 @@ prop_get_format(owner,Owner) ->
 prop_get_format(_,_) ->
     throw(500).
    
-%% Former path routines, replace?
+%% Resource mapping
+
+davname(A) ->
+    A#arg.server_path.
 
 davpath(A) ->
     A#arg.docroot ++ A#arg.server_path.
 
 davurl(A) ->
-    davroot(A) ++ A#arg.server_path ++ "/".
+    davroot(A) ++ A#arg.server_path. % FIXME: add / for collections?
 
 davroot(A) ->
     Method = case A#arg.clisock of
@@ -574,23 +572,17 @@ davroot(A) ->
 
 %% davresource0/1 - get resources with depth 0
 davresource0(A) ->
-    Name = normalize(A#arg.server_path),
-    Path = A#arg.docroot ++ Name,
+    Name = davname(A),
+    Path = davpath(A),
     case file:read_file_info(Path) of
-        {ok, F} ->
-            case F#file_info.type of
-                directory ->
-                    #resource{ name = Name ++ "/", info = F};
-                regular -> 
-                    #resource{ name = Name, info = F};
-                _ -> throw(404)
-            end;
+        {ok, F} when (F#file_info.type == directory) or (F#file_info.type == regular) ->
+            #resource{ name = Name, info = F};
         {error,_} -> throw(404)
     end.
 %% davresource1/1 - get additional resources for depth 1
 davresource1(A) ->
-    Coll = normalize(A#arg.server_path),
-    Path = A#arg.docroot ++ Coll,
+    Coll = davname(A),
+    Path = davpath(A),
     case file:read_file_info(Path) of
         {ok, Dir} when Dir#file_info.type == directory ->
             {ok, L} = file:list_dir(Path),
@@ -602,34 +594,16 @@ davresource1(A) ->
 davresource1(_A,_Path,_Coll,[],Result) ->
     Result;
 davresource1(_A,Path,Coll,[Name|Rest],Result) ->
-%    if
-%        hd(Name) == 46 -> % dotted files
-%            davresource1(_A,Path,Coll,Rest,Result); % skip 
-%        true ->
-            {ok, Info} = file:read_file_info(Path++"/"++Name),
-            if 
-                Info#file_info.type == regular ; Info#file_info.type == directory ->
-                    Resource = #resource {name = Coll++"/"++Name, info = Info},
-                    davresource1(_A,Path,Coll,Rest,[Resource|Result]);
-                true ->
-                    davresource1(_A,Path,Coll,Rest,Result) % skip 
-%            end
+    File = filename:join(Path,Name),
+    Ref = filename:join(Coll,Name),
+    {ok, Info} = file:read_file_info(File),
+    if 
+        (Info#file_info.type == regular) or (Info#file_info.type == directory) ->
+            Resource = #resource {name = Ref, info = Info},
+            davresource1(_A,Path,Coll,Rest,[Resource|Result]);
+        true ->
+            davresource1(_A,Path,Coll,Rest,Result) % skip 
     end.
-
-%% Additional function to normalize a Path in order to handle . and .. correctly
-%% A normalized path never ends with a / (root is an empty string)
-normalize(Path) ->
-    Tree = filename:split(Path),
-    Walk = normalize(Tree,[]),
-    NPath = lists:reverse(Walk),
-    lists:flatten([ ["/",Dir] || Dir <- NPath ]).
-normalize(["/"|T],R) ->  normalize(T,R);
-normalize([],R) -> R;
-normalize(["."|T],R) -> normalize(T,R);
-normalize([".."|T],[]) -> normalize(T,[]);
-normalize([".."|T1],[_H2|T2]) -> normalize(T1,T2);
-normalize([H|T],R) -> normalize(T,[H|R]).
-
 
 is_collection(R) ->
     F = R#resource.info,
@@ -660,7 +634,7 @@ h_destination(A) ->
     case lists:keysearch("Destination", 3, Hs) of
         {value, {http_header,_,_,_,Dest}} ->
             {Dest1, _} = yaws_api:url_decode_q_split(Dest),
-            Path = normalize(Dest1 -- davroot(A)),
+            Path = Dest1 -- davroot(A),
             A#arg.docroot ++ "/" ++ Path;
         _ ->
             throw(501)
@@ -704,15 +678,16 @@ h_locktoken(A) ->
             undefined
     end.
 
-h_if(A) ->
+h_if(Path,A) ->
     Hs = (A#arg.headers)#headers.other,
     case lists:keysearch("If", 3, Hs) of
         {value, {_,_,"If",_,If}} ->
-io:format("If: ~p~n",[If]),
-            % TODO Check if If header is evaluated correctly
-            If;
+            List = if_parse(If,untagged),
+            Q = if_eval(A,Path,List),
+            ?elog("If-header ~p evaluated to ~p~n",[List,Q]),
+            Q;
         _ ->
-            undefined
+            ok
     end.
 
 if_parse([],_Resource) ->
@@ -720,8 +695,8 @@ if_parse([],_Resource) ->
 if_parse(Line,Resource) when hd(Line)==32 ->
     if_parse(tl(Line),Resource);
 if_parse(Line,untagged) when hd(Line)==60 -> % <
-    {Resource,Rest} = if_parse_token(tl(Line),""),
-    if_parse(Rest,Resource);
+    {Url,Rest} = if_parse_token(tl(Line),""),
+    if_parse(Rest,Url);
 if_parse(Line,Resource) when hd(Line)==40 -> % (
     {Condition,Rest} = if_parse_condition(tl(Line),[],true),
     [{Resource,Condition}|if_parse(Rest,untagged)].
@@ -749,34 +724,33 @@ if_parse_etag(Line,Buffer) when hd(Line)==93 -> % ]
 if_parse_etag([H|T],Buffer) ->
     if_parse_etag(T,[H|Buffer]).
 
-if_eval(_R,[]) ->
-    false;
-if_eval(R,[{Resource,AndList}|T]) ->
-    Target = case Resource of
-                 untagged -> R;
-                 _ -> 
-                    Url = yaws_api:parse_url(Resource),
-                    try 
-                        davresource0(Url#url.path)
-                    catch
-                        _ -> throw(412)
-                    end 
-             end,
-    if_eval_condition(Target,AndList) orelse if_eval(R,T).
-
-if_eval_condition(_R,[]) ->
+if_eval(_A,_Path,[]) ->
     true;
-if_eval_condition(R,[{Negate,Kind,Ref}|T]) ->
+if_eval(A,Path,[{Resource,AndList}|More]) ->
+    Target = case Resource of
+                 untagged -> Path;
+                 _ -> Resource -- davroot(A)
+             end,
+    if_eval_condition(A,Target,AndList) orelse if_eval(A,Resource,More).
+
+if_eval_condition(_A,_Target,[]) ->
+    true;
+if_eval_condition(A,Target,[{Negate,Kind,Ref}|More]) ->
     Check = case Kind of
                 state ->
-                    davlock:check(R#resource.name,Ref);
+                    try 
+                        "opaquelocktoken:" ++ Token = Ref,
+                        (yaws_davlock:check(Target,Token)==ok)
+                    catch
+                        _ -> false
+                    end;
                 etag ->
-                    F = R#resource.info,
+                    F = file:read_info(A#arg.docroot++Target),
                     E = yaws:make_etag(F),
                     E==Ref
             end,
     This = if Negate -> Check; true -> not Check end,
-    This andalso if_eval_condition(R,T).
+    This andalso if_eval_condition(A,Target,More).
 
 %% XML elements of RFC4918
 %%
