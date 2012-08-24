@@ -3,7 +3,6 @@ include ../support/include.mk
 OBJ :=	multipart_post_parsing.beam \
 	yaws_session_server_test.beam \
 	ehtml_test.beam \
-	embedded_yaws_id_dir.beam \
 	cookies.beam \
 	headers.beam
 

@@ -72,3 +72,4 @@ yaws_logs
 rel/yaws
 dialyzer_warnings
 deps/*
+.eunit/*

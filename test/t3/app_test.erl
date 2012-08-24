@@ -1,6 +1,6 @@
 -module(app_test).
 -include("../include/tftest.hrl").
--include("../ibrowse/include/ibrowse.hrl").
+-include_lib("ibrowse/include/ibrowse.hrl").
 -compile(export_all).
 
 

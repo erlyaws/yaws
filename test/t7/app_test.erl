@@ -1,6 +1,6 @@
 -module(app_test).
 -include("../include/tftest.hrl").
--include("../ibrowse/include/ibrowse.hrl").
+-include_lib("ibrowse/include/ibrowse.hrl").
 -compile(export_all).
 
 
@@ -13,14 +13,14 @@ start([F]) ->
 start() ->
     io:format("\n ==== MIME-TYPES TESTS ==== \n\n", []),
     ?line {ok, _} = ibrowse:start_link(),
-    generated_module_test(),
-    default_type_test(),
-    yaws_type_test(),
-    erlang_type_test(),
+    test_generated_module(),
+    test_default_type(),
+    test_yaws_type(),
+    test_erlang_type(),
     ibrowse:stop().
 
 
-generated_module_test() ->
+test_generated_module() ->
     io:format("generated_module_test\n", []),
     {ok, Host} = inet:gethostname(),
     Node       = list_to_atom("test@" ++ Host),
@@ -87,7 +87,7 @@ generated_module_test() ->
 
     ok.
 
-default_type_test() ->
+test_default_type() ->
     io:format("default_type_test\n", []),
     Uri1 = "http://localhost:8000/news",
     Uri2 = "http://localhost:8001/news",
@@ -97,7 +97,7 @@ default_type_test() ->
     ?line "text/plain; charset=UTF-8" = proplists:get_value("Content-Type", Hdrs2),
     ok.
 
-yaws_type_test() ->
+test_yaws_type() ->
     io:format("yaws_type_test\n", []),
     Uri1 = "http://localhost:8000/index.yaws",
     Uri2 = "http://localhost:8001/index.yaws",
@@ -107,7 +107,7 @@ yaws_type_test() ->
     ?line "text/xhtml; charset=ISO-8859-1" = proplists:get_value("Content-Type", Hdrs2),
     ok.
 
-erlang_type_test() ->
+test_erlang_type() ->
     io:format("erlang_type_test\n", []),
     Uri1 = "http://localhost:8000/code/myappmod.erl",
     Uri2 = "http://localhost:8001/code/myappmod.erl",
