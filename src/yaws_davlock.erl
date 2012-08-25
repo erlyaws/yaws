@@ -71,7 +71,7 @@ handle_call({lock,Path,Lock}, _From, Table) ->
         T0 = erlang:now(),
         Id = locktoken(),
         %?elog("create lock ~p for ~p~n",[Id,Path]),
-        Lock1 = Lock#davlock{id=Id,timestamp=T0}, 
+        Lock1 = Lock#davlock{path=Path,id=Id,timestamp=T0}, 
         Path1 = filename:split(Path),
         Table1 = do_lock(Path1,Lock1,Table),
         {reply, {ok,Id}, Table1}
@@ -267,9 +267,19 @@ do_discover([H],Table) ->
     end;
 do_discover([H|T],Table) ->
     case lists:keysearch(H,1,Table) of
-        {value,{H,_Locks,Children}} -> do_discover(T,Children);
+        {value,{H,Locks,Children}} -> 
+            do_discover_depth_infinity(Locks)++do_discover(T,Children);
         false -> []
     end.
+
+do_discover_depth_infinity([]) ->
+    [];
+do_discover_depth_infinity([H|T]) ->
+    Take = case H#davlock.depth of
+               infinity -> [H];
+               _ -> []
+           end,
+    Take ++ do_discover_depth_infinity(T).
 
 %%----------------------------------------------------------------------
 %% do_report(Path) -> Report
