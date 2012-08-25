@@ -27,7 +27,9 @@ lock(A) ->
     try 
         Name = davname(A),
         Path = davpath(A),
-        _Test = h_if(Name,A),
+        Locks = yaws_davlock:discover(Path),
+        If = h_if(Name,A,Locks),
+        verify_protected(Locks,If),
         R = case file:read_file_info(Path) of
                 {ok, F} when (F#file_info.type == directory) or (F#file_info.type == regular) ->
                     #resource{ name = Name, info = F};
@@ -45,7 +47,6 @@ lock(A) ->
         Req = binary_to_list(A#arg.clidata),
         L = parse_lockinfo(Req),
         Id = h_locktoken(A),
-        h_if(R#resource.name,A),
         Timeout = h_timeout(A),
         Depth = h_depth(A),
         ?elog("LOCK ~p~n", [R#resource.name]),
@@ -71,7 +72,6 @@ unlock(A) ->
     try 
         R = davresource0(A),
         Id = h_locktoken(A),
-        _Test = h_if(R#resource.name,A),
         ?elog("UNLOCK ~p~n", [R#resource.name]),
         yaws_davlock:unlock(R#resource.name,Id),
         status(204)
@@ -102,22 +102,29 @@ delete(A) ->
     end.
 
 put(SC, ARG) ->
-    % FIXME Check if allowed to PUT this resource
-    H = ARG#arg.headers,
-    PPS = SC#sconf.partial_post_size,
-    CT =
-        case yaws:to_lower(H#headers.content_type) of
-            "multipart/form-data"++_ -> multipart;
-            _ -> urlencoded
+    try
+        H = ARG#arg.headers,
+        PPS = SC#sconf.partial_post_size,
+        CT = case yaws:to_lower(H#headers.content_type) of
+                 "multipart/form-data"++_ -> multipart;
+                 _ -> urlencoded
+             end,
+        SSL = yaws:is_ssl(SC),
+        Name = davname(ARG),
+        FName = davpath(ARG),
+        Locks = yaws_davlock:discover(Name),
+        If = h_if(FName,ARG,Locks),
+io:format(">>> ~p, ~p, ~p~n",[Name,If,Locks]),
+        verify_protected(Locks,If),
+        IsDir = filelib:is_dir(FName),
+        if 
+            IsDir-> throw(405); 
+            true -> ok 
         end,
-    SSL = yaws:is_ssl(SC),
-    FName = davpath(ARG),
-    CliSock = ARG#arg.clisock,
-    TmpName = FName ++ ".tmp",
-    %% FIXME: first check if we can write to original file??
-    case file:open(TmpName, [raw,write]) of
-        {ok, Fd} ->
-            try
+        CliSock = ARG#arg.clisock,
+        TmpName = FName ++ ".tmp",
+        case file:open(TmpName, [raw,write]) of
+            {ok, Fd} ->
                 case H#headers.content_length of
                     undefined ->
                         Chunked = H#headers.transfer_encoding == "chunked",
@@ -127,7 +134,8 @@ put(SC, ARG) ->
                             _ when Chunked == true ->
                                 store_chunked_client_data(Fd, CliSock, SSL);
                             _ ->
-                                store_client_data(Fd, CliSock, all, SSL)
+                                %store_client_data(Fd, CliSock, all, SSL)
+                                ok
                         end;
                     Len when is_integer(PPS) ->
                         Int_len = list_to_integer(Len),
@@ -157,17 +165,19 @@ put(SC, ARG) ->
                     Error ->
                         throw(Error)
                         % FIXME status(409)?
-                end
-            catch
-                _:_Err ->
-                    ?Debug("PUT error ~p\n", [_Err, TmpName]),
-                    file:close(Fd),
-                    file:delete(TmpName),
-                    status(409)
-            end;
-        _Error ->
-            ?Debug("PUT error ~p ~p\n", [_Error, TmpName]),
-            status(409)
+                end;
+            {error,eexist} -> throw(405);
+            {error,enoent} -> throw(409);
+            {error,eisdir} -> throw(409);
+            {error,enospace} -> throw(507);
+            _ -> status(500)
+        end
+    catch
+        Status -> 
+            status(Status);
+        _Error:Reason ->
+            ?elog("Unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
+            status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
 mkcol(A) ->
@@ -180,15 +190,33 @@ mkcol(A) ->
     catch
         Status -> status(Status);
         Error:Reason ->
-            ?elog("Create dir ~p failed: ~p with reason ~p~n", [Path,Error,Reason]),
+            ?elog("Move ~p failed: ~p with reason ~p~n", [Path,Error,Reason]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
 copy(A) ->
-    copy_move(A, fun do_copy/2).
+    Name = davname(A),
+    Path = davpath(A),
+    try
+        copy_move(A, fun do_copy/2)
+    catch
+        Status -> status(Status);
+        Error:Reason ->
+            ?elog("Copy ~p failed: ~p with reason ~p~n", [Path,Error,Reason]),
+            status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
+    end.
 
 move(A) ->
-    copy_move(A, fun do_move/2).
+    Name = davname(A),
+    Path = davpath(A),
+    try
+        copy_move(A, fun do_move/2)
+    catch
+        Status -> status(Status);
+        Error:Reason ->
+            ?elog("Create dir ~p failed: ~p with reason ~p~n", [Path,Error,Reason]),
+            status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
+    end.
 
 copy_move(A, OpF) ->
     case lists:keysearch("Destination", 3, (A#arg.headers)#headers.other) of
@@ -203,7 +231,7 @@ copy_move(A, OpF) ->
             IsSame = is_same(From, To),
             ToExsist = exists(To),
             if IsSame == true ->
-                    status(403);
+                    status(423);
                DoOverwrite == false,
                ToExsist == true ->
                     status(412);
@@ -377,6 +405,8 @@ prop_status(200) -> {'D:status', [],["HTTP/1.1 200 OK"]};
 prop_status(403) -> {'D:status', [],["HTTP/1.1 403 Forbidden"]};
 prop_status(404) -> {'D:status', [],["HTTP/1.1 404 Not Found"]};
 prop_status(409) -> {'D:status', [],["HTTP/1.1 409 Conflict"]};
+%prop_status(412) -> {'D:status', [],["HTTP/1.1 412 Precondition Failed"]};
+%prop_status(423) -> {'D:status', [],["HTTP/1.1 423 Locked"]};
 prop_status(424) -> {'D:status', [],["HTTP/1.1 424 Failed Dependency"]};
 prop_status(507) -> {'D:status', [],["HTTP/1.1 507 Insufficient Storage"]}.
 
@@ -492,7 +522,7 @@ prop_get({'DAV:',lockdiscovery},_A,R) ->
                             %{'D:owner',[],[prop_get_format(owner,Lock#davlock.owner)]}, % kept secret
                             {'D:timeout',[],[prop_get_format(timeout,Lock#davlock.timeout)]},
                             {'D:locktoken',[],[prop_get_format(locktoken,Lock#davlock.id)]},
-                            {'D:lockroot',[],[prop_get_format(lockroot,R#resource.name)]}
+                            {'D:lockroot',[],[prop_get_format(lockroot,Lock#davlock.path)]}
                         ]}            
                     || Lock <- Locks ],
             {200, {'D:lockdiscovery',[],ActiveLocks}}
@@ -551,7 +581,9 @@ prop_get_format(owner,Owner) ->
 prop_get_format(_,_) ->
     throw(500).
    
+%% --------------------------------------------------------
 %% Resource mapping
+%%
 
 davname(A) ->
     A#arg.server_path.
@@ -588,7 +620,6 @@ davresource1(A) ->
             {ok, L} = file:list_dir(Path),
             davresource1(A,Path,Coll,L,[]);
         {ok, _Else} ->
-            % TODO: not a collection, error?
             []
     end.
 davresource1(_A,_Path,_Coll,[],Result) ->
@@ -602,7 +633,7 @@ davresource1(_A,Path,Coll,[Name|Rest],Result) ->
             Resource = #resource {name = Ref, info = Info},
             davresource1(_A,Path,Coll,Rest,[Resource|Result]);
         true ->
-            davresource1(_A,Path,Coll,Rest,Result) % skip 
+            davresource1(_A,Path,Coll,Rest,Result)
     end.
 
 is_collection(R) ->
@@ -613,8 +644,15 @@ is_collection(R) ->
     end.
 
 %% --------------------------------------------------------
-%% http header 
-%%
+%% Check if resource is protected by locks
+%% is_protected(Locks,If) -> true|false
+
+verify_protected(Locks,false) when length(Locks)>0 -> throw(412);
+verify_protected(Locks,undefined) when length(Locks)>0 -> throw(423);
+verify_protected(_Lock,_If) -> ok.
+
+%% --------------------------------------------------------
+%% Parse additional HTTP headers
 %%
     
 h_depth(A) ->
@@ -678,16 +716,17 @@ h_locktoken(A) ->
             undefined
     end.
 
-h_if(Path,A) ->
+h_if(_Path,A,Locks) -> 
+    % FIXME must return not only true or false but both if a valid state and matching etag is found
     Hs = (A#arg.headers)#headers.other,
     case lists:keysearch("If", 3, Hs) of
         {value, {_,_,"If",_,If}} ->
             List = if_parse(If,untagged),
-            Q = if_eval(A,Path,List),
+            Q = if_eval(A,Locks,List),
             ?elog("If-header ~p evaluated to ~p~n",[List,Q]),
             Q;
         _ ->
-            ok
+            undefined
     end.
 
 if_parse([],_Resource) ->
@@ -715,7 +754,12 @@ if_parse_condition(Line,List,Bool) when hd(Line)==91 -> % [
     if_parse_condition(Rest,[{Bool,etag,Etag}|List],true).
 
 if_parse_token(Line,Buffer) when hd(Line)==62 -> % >
-    {lists:reverse(Buffer),tl(Line)};
+    Uri = lists:reverse(Buffer),
+    Token1 = case Uri of
+                 "opaquelocktoken:"++Token -> Token;
+                 _ -> Uri
+             end,
+    {Token1,tl(Line)};
 if_parse_token([H|T],Buffer) ->
     if_parse_token(T,[H|Buffer]).
 
@@ -724,34 +768,42 @@ if_parse_etag(Line,Buffer) when hd(Line)==93 -> % ]
 if_parse_etag([H|T],Buffer) ->
     if_parse_etag(T,[H|Buffer]).
 
-if_eval(_A,_Path,[]) ->
-    true;
-if_eval(A,Path,[{Resource,AndList}|More]) ->
+%if_eval(A,RequestPath,Conditions)
+if_eval(_A,_Locks,[]) ->
+    false;
+if_eval(A,Locks,[{Resource,AndList}|More]) ->
     Target = case Resource of
-                 untagged -> Path;
+                 untagged -> davname(A);
                  _ -> Resource -- davroot(A)
              end,
-    if_eval_condition(A,Target,AndList) orelse if_eval(A,Resource,More).
+    if_eval_condition(AndList,A,Target,Locks) orelse if_eval(A,Locks,More).
 
-if_eval_condition(_A,_Target,[]) ->
-    true;
-if_eval_condition(A,Target,[{Negate,Kind,Ref}|More]) ->
-    Check = case Kind of
-                state ->
-                    try 
-                        "opaquelocktoken:" ++ Token = Ref,
-                        (yaws_davlock:check(Target,Token)==ok)
-                    catch
-                        _ -> false
-                    end;
-                etag ->
-                    F = file:read_info(A#arg.docroot++Target),
-                    E = yaws:make_etag(F),
-                    E==Ref
-            end,
-    This = if Negate -> Check; true -> not Check end,
-    This andalso if_eval_condition(A,Target,More).
+if_eval_condition(AndList,A,Target,Locks) ->
+    if_eval_condition(AndList,true,false,A,Target,Locks).
 
+if_eval_condition([],Result,Valid,_A,_Target,_Locks) ->
+    Result and Valid;
+if_eval_condition([{false,Kind,Ref}|T],Result,Valid,A,Target,Locks) ->
+    not if_eval_condition([{true,Kind,Ref}|T],Result,Valid,A,Target,Locks);
+if_eval_condition([{true,state,Ref}|T],_Result,_Valid,A,Target,Locks) ->
+    Result1 = if_eval_locktoken(Target,Ref,Locks),
+    Valid1 = true,
+    Result1 andalso if_eval_condition(T,Result1,Valid1,A,Target,Locks);
+if_eval_condition([{true,etag,Ref}|T],_Result,Valid,A,Target,Locks) -> 
+    F = file:read_info(A#arg.docroot++Target),
+    E = yaws:make_etag(F),
+    Result1 = (E==Ref),
+    Valid1 = Valid,
+    Result1 andalso if_eval_condition(T,Result1,Valid1,A,Target,Locks).
+
+% if_eval_locktoken(Target,Token,Locktokens) -> true|false
+if_eval_locktoken(_Target,_Token,[]) ->
+    false;
+if_eval_locktoken(Target,Token,[H|T]) ->
+    ((H#davlock.path == Target) and (H#davlock.id == Token)) orelse if_eval_locktoken(Target,Token,T).
+
+
+%% --------------------------------------------------------
 %% XML elements of RFC4918
 %%
 % activelock
@@ -882,8 +934,8 @@ parse_owner(X) ->
     Xml = xmerl:export_simple_content(X,xmerl_xml),
     lists:flatten(Xml).
 
-%% ----------------------
-%% status output
+%% --------------------------------------------------------
+%% Status output
 %%
 
 status(Status) -> 
@@ -905,8 +957,8 @@ xml_expand(L, Cset) ->
     Prolog = ["<?xml version=\"1.0\" encoding=\""++Cset++"\" ?>"],
     xmerl:export_simple(L,xmerl_xml,[{prolog,Prolog}]).
 
-%%-------------------------------------------------
-%% File function results are mapped to return codes
+%% --------------------------------------------------------
+%% File function
 %%
 
 file_do(Func,Params) ->
@@ -918,6 +970,7 @@ file_do(Func,Params) ->
         eof -> eof;
         {error,eexist} -> throw(405);
         {error,enoent} -> throw(409);
+        {error,eisdir} -> throw(409);
         {error,enospace} -> throw(507);
         _Error -> ?elog("file function returned ~p~n",[_Error]),throw(500)
     end.
@@ -927,7 +980,7 @@ rmrf(Path) ->
     case F#file_info.type of
         directory -> 
             {ok, Dir} = file_do(list_dir,[Path]),
-            [ rmrf(filename:join(Path,File)) || File <- Dir],
+            [ rmrf(filename:join(Path,File)) || File <- Dir ],
             file_do(del_dir,[Path]);
         _ ->
             file:delete(Path)
