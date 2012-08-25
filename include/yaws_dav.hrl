@@ -13,6 +13,7 @@
         }).
         
 -record(davlock,{
+            path=undefined,     % resource path
             id=undefined,       % uid
             owner=anonymous,    % lock owner if submitted
             depth=infinity,     % 0|infinity
