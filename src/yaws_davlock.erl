@@ -257,7 +257,7 @@ do_check_locks([H|T],Id) ->
 
 %%----------------------------------------------------------------------
 %% do_discover(Path,Table) -> Locks
-%% TODO Add also lower locks with depth infinity?
+%% 
 do_discover([],_Table) ->
     [];
 do_discover([H],Table) ->
