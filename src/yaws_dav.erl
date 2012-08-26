@@ -296,7 +296,7 @@ propfind(A) ->
     end.
 
 propfind_response(Props,A,R) ->
-    Url = yaws_api:url_encode(R#resource.name),
+    Url = R#resource.name,
     case Props of
         [allprop] -> 
             AllProp = [ prop_get(N,A,R) || N <- allprops(R) ],
@@ -346,7 +346,7 @@ proppatch(A) ->
     end.
 
 proppatch_response(Update,A,R) -> 
-    Url = yaws_api:url_encode(R#resource.name),
+    Url = R#resource.name,
     Results = proppatch_response(Update,A,R,[]),
     ResultsSorted = prop_sort(lists:flatten(Results)),
     [{'D:href', [], [Url]}|
@@ -491,8 +491,8 @@ prop_get({'DAV:',isfolder},_A,R) ->
     {200, P};
 prop_get({'DAV:',ishidden},_A,R) ->
     N = filename:basename(R#resource.name),
-    H = case hd(N) of
-            46 -> "1"; % dotted file
+    H = case N of
+            "."++_Rest -> "1"; % dotted file
             _ -> "0"
         end,
     P = {'D:ishidden', [], [H]},
@@ -540,24 +540,41 @@ prop_get({NS,P},_A,_R) ->
     {404,{P,[{'xmlns',NS}],[]}}.
 
 
+prop_set({'DAV:',creationdate},A,R,V) ->
+    Path=davpath(A),
+    F0 = R#resource.info,
+    T = httpd_util:convert_request_date(V), % use httpd_util?
+    F1 = F0#file_info{ctime=T},
+    P = {'D:creationdate', [], []},
+    case file:write_file_info(Path,F1) of   
+        ok -> 
+            {200, P};
+        {error,_} ->
+            {409, P}    
+    end;
 prop_set({'DAV:',getlastmodified},A,R,V) ->
     Path=davpath(A),
     F0 = R#resource.info,
     T = httpd_util:convert_request_date(V), % use httpd_util?
     F1 = F0#file_info{mtime=T},
+    P = {'D:getlastmodified', [], []},
     case file:write_file_info(Path,F1) of   
         ok -> 
-            P = {'D:getlastmodified', [], []},
             {200, P};
         {error,_} ->
-            P = {'D:getlastmodified', [], []},
             {409, P}    
     end;
-prop_set({_P,_NS},_A,_R,_V) ->
-    throw({403,'cannot-modify-protected-property'}).    
+prop_set({'DAV:',getetag},_A,_R,_V) ->
+    {403,{'D:getetag',[],[{'cannot-modify-protected-property',[],[]}]}};
+prop_set({'DAV:',lockdiscovery},_A,_R,_V) ->
+    {403,{'D:lockdiscovery',[],[{'cannot-modify-protected-property',[],[]}]}};
+prop_set({'DAV:',resourcetype},_A,_R,_V) ->
+    {403,{'D:resourcetype',[],[{'cannot-modify-protected-property',[],[]}]}};
+prop_set({NS,P},_A,_R,_V) ->
+    {404,{P,[{'xmlns',NS}],[]}}.
 
-prop_remove({_P,_NS},_A,_R) ->
-    throw({403,'cannot-modify-protected-property'}).
+prop_remove({P,NS},_A,_R) ->
+    {403,{P,[{'xmlns',NS}],[]}}.
 
 
 prop_get_format(type,write) -> 
