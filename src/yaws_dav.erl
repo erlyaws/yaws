@@ -161,9 +161,8 @@ put(SC, ARG) ->
                 case file:rename(TmpName, FName) of
                     ok ->
                         status(200);
-                    Error ->
-                        throw(Error)
-                        % FIXME status(409)?
+                    _ ->
+                        status(409)
                 end;
             {error,eexist} -> throw(405);
             {error,enoent} -> throw(409);
@@ -282,11 +281,15 @@ propfind(A) ->
                 status(207,MultiStatus);
             infinity ->
                 %?elog("PROPFIND ~p (Depth=infinity)~n", [R#resource.name]),
-                Response = [{'D:error', [{'xmlns:D',"DAV:"}],[{'propfind-finite-depth'}]}],
+                Response = [{'D:error', [{'xmlns:D',"DAV:"}],[{'propfind-finite-depth',[],[]}]}],
                 status(403,Response)
         end
     catch
-        Status -> status(Status);
+        {Status,Precondition} ->
+            Response1 = [{'D:error', [{'xmlns:D',"DAV:"}],[{Precondition,[],[]}]}],
+            status(Status,Response1);
+        Status -> 
+            status(Status);
         _Error:Reason ->
             ?elog("unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
@@ -314,7 +317,7 @@ propfind_response(Props,A,R) ->
                 {'D:prop', [], Results},{status, [],["HTTP/1.1 200 OK"]}
             ]}];
         PropsRequested ->
-            Results = [ prop_get(N,A,R) || N <- PropsRequested ],
+            Results = [ prop_get(N,A,R) || {N,_} <- PropsRequested ],
             ResultsSorted = prop_sort(Results),
             [{'D:href', [], [Url]}|
              [{'D:propstat', [], [
@@ -332,7 +335,11 @@ proppatch(A) ->
         MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], Response}],
         status(207,MultiStatus)
     catch
-        Status -> status(Status);
+        {Status,Precondition} ->
+            Response1 = [{'D:error', [{'xmlns:D',"DAV:"}],[{Precondition,[],[]}]}],
+            status(Status,Response1);
+        Status -> 
+            status(Status);
         _Error:Reason ->
             ?elog("unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
@@ -349,8 +356,8 @@ proppatch_response(Update,A,R) ->
     ].
 proppatch_response([H|T],A,R,Results) -> 
     Result = case H of
-                 {set,Props} -> [ prop_set(P,A,R) || P <- Props];
-                 {remove,Props} -> [ prop_remove(P,A,R) || P <- Props]
+                 {set,Props} -> [ prop_set(P,A,R,V) || {P,V} <- Props];
+                 {remove,Props} -> [ prop_remove(P,A,R) || {P,_V} <- Props]
              end,
     proppatch_response(T,A,R,[Result|Results]);
 proppatch_response([],_A,_R,Results) -> 
@@ -533,15 +540,24 @@ prop_get({NS,P},_A,_R) ->
     {404,{P,[{'xmlns',NS}],[]}}.
 
 
-prop_set({'DAV:',getetag},_A,_R) ->
-    P = {'D:getetag',[],[]},
-    {403,P}; % TODO add precondition 'cannot-modify-protected-property' using throw(403,...)?
-prop_set({P,NS},_A,_R) ->
-    {403,{P,[{'xmlns',NS}],[]}}.
+prop_set({'DAV:',getlastmodified},A,R,V) ->
+    Path=davpath(A),
+    F0 = R#resource.info,
+    T = httpd_util:convert_request_date(V), % use httpd_util?
+    F1 = F0#file_info{mtime=T},
+    case file:write_file_info(Path,F1) of   
+        ok -> 
+            P = {'D:getlastmodified', [], []},
+            {200, P};
+        {error,_} ->
+            P = {'D:getlastmodified', [], []},
+            {409, P}    
+    end;
+prop_set({_P,_NS},_A,_R,_V) ->
+    throw({403,'cannot-modify-protected-property'}).    
 
-
-prop_remove({P,NS},_A,_R) ->
-    {403,{P,[{'xmlns',NS}],[]}}.
+prop_remove({_P,_NS},_A,_R) ->
+    throw({403,'cannot-modify-protected-property'}).
 
 
 prop_get_format(type,write) -> 
@@ -865,11 +881,14 @@ parse_prop(L) ->
 parse_prop([H|T],L) ->
     case H of 
         H when is_record(H,xmlElement) ->
-            parse_prop(T,[H#xmlElement.expanded_name|L]);
+            Value = case H#xmlElement.content of
+                        [C] when is_record(C,xmlText) -> C#xmlText.value;
+                        _ -> ""
+                    end,
+            parse_prop(T,[{H#xmlElement.expanded_name,Value}|L]);
         _ ->
             parse_prop(T,L)
     end;
-
 parse_prop([], L) ->
     lists:reverse(L).  % preserve order for PROPPATCH
 
@@ -934,7 +953,7 @@ xml_expand(L, Cset) ->
     xmerl:export_simple(L,xmerl_xml,[{prolog,Prolog}]).
 
 %% --------------------------------------------------------
-%% File function
+%% File functions
 %%
 
 file_do(Func,Params) ->
@@ -961,37 +980,6 @@ rmrf(Path) ->
         _ ->
             file:delete(Path)
     end.
-
-%rmrf(Path) ->
-%    case file:read_file_info(Path) of
-%        {ok, F} when F#file_info.type == directory ->
-%            case file:list_dir(Path) of
-%                {ok, Fs} ->
-%                    case rmrf(Path, Fs) of
-%                        ok ->
-%                            file:del_dir(Path);
-%                        _Err ->
-%                            ok
-%                    end;
-%                Err ->
-%                    Err
-%            end;
-%        {ok, _} ->
-%            file:delete(Path);
-%        Err ->
-%            Err
-%    end.
-
-%rmrf(_Dir, []) ->
-%    ok;
-%rmrf(Dir, [H|T]) ->
-%    F = filename:join(Dir, H),
-%    case rmrf(F) of
-%        ok ->
-%            rmrf(Dir, T);
-%        Err ->
-%            Err
-%    end.
 
 
 store_client_data(Fd, CliSock, all, SSlBool) ->
