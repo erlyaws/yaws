@@ -49,7 +49,6 @@ lock(A) ->
         Id = h_locktoken(A),
         Timeout = h_timeout(A),
         Depth = h_depth(A),
-        ?elog("LOCK ~p~n", [R#resource.name]),
         case yaws_davlock:lock(R#resource.name,L#davlock{id=Id,timeout=Timeout,depth=Depth}) of
             {ok,Id1} -> 
                 {200,Result} = prop_get({'DAV:',lockdiscovery},A,R),
@@ -64,7 +63,7 @@ lock(A) ->
         Status -> 
             status(Status);
         _Error:Reason ->
-            ?elog("Unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
+            ?elog("unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
@@ -78,7 +77,7 @@ unlock(A) ->
         Status -> 
             status(Status);
         _Error:Reason ->
-            ?elog("Unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
+            ?elog("unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
@@ -96,7 +95,7 @@ delete(A) ->
         Status -> 
             status(Status);
         _Error:Reason ->
-            ?elog("Unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
+            ?elog("unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
@@ -120,7 +119,8 @@ put(SC, ARG) ->
             true -> ok 
         end,
         CliSock = ARG#arg.clisock,
-        TmpName = FName ++ ".tmp",
+        TmpName = temp_name(FName),
+io:format("~p~n",[TmpName]),
         case file:open(TmpName, [raw,write]) of
             {ok, Fd} ->
                 case H#headers.content_length of
@@ -174,77 +174,52 @@ put(SC, ARG) ->
         Status -> 
             status(Status);
         _Error:Reason ->
-            ?elog("Unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
+            ?elog("unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
 mkcol(A) ->
-    Name = davname(A),
     Path = davpath(A),
     try
         file_do(make_dir,[Path]),
-        ?elog("MKCOL ~p~n", [Name]),
         status(201)
     catch
         Status -> status(Status);
         Error:Reason ->
-            ?elog("Move ~p failed: ~p with reason ~p~n", [Path,Error,Reason]),
+            ?elog("move ~p failed: ~p with reason ~p~n", [Path,Error,Reason]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
 copy(A) ->
-    Name = davname(A),
-    ?elog("COPY ~p~n", [Name]),
-    Path = davpath(A),
-    try
-        copy_move(A, fun do_copy/2)
-    catch
-        Status -> status(Status);
-        Error:Reason ->
-            ?elog("Copy ~p failed: ~p with reason ~p~n", [Path,Error,Reason]),
-            status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
-    end.
+    copy_move(A, fun do_copy/2).
 
 move(A) ->
-    Name = davname(A),
-    ?elog("MOVE ~p~n", [Name]),
-    Path = davpath(A),
+    copy_move(A, fun do_move/2).
+
+copy_move(A, OpF) ->
+    From = davpath(A),
     try
-        copy_move(A, fun do_move/2)
+        To = h_destination(A),
+        DoOverwrite = h_overwrite(A),
+        ToExists = exists(To),
+        if 
+            From == To ->
+                status(423);
+            DoOverwrite == false, ToExists == true ->
+                status(412);
+            true ->
+                if DoOverwrite == true ->
+                        rmrf(To);
+                   true ->
+                        ok
+                end,
+                OpF(From, To)
+        end
     catch
         Status -> status(Status);
         Error:Reason ->
-            ?elog("Create dir ~p failed: ~p with reason ~p~n", [Path,Error,Reason]),
+            ?elog("copy/move ~p failed: ~p with reason ~p~n", [From,Error,Reason]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
-    end.
-
-copy_move(A, OpF) ->
-    case lists:keysearch("Destination", 3, (A#arg.headers)#headers.other) of
-        {value, {http_header, _, _, _, Url}} ->
-            %% FIXME: check for weird paths
-            {Url1, _} = yaws_api:url_decode_q_split(Url),
-            Path = Url1 -- davroot(A),
-            From = davpath(A),
-            To = A#arg.docroot ++ "/" ++ Path,
-            ?elog("move from ~p to ~p (~p)\n", [From, To, Url]),
-            DoOverwrite = h_overwrite(A),
-            IsSame = is_same(From, To),
-            ToExsist = exists(To),
-            if IsSame == true ->
-                    status(423);
-               DoOverwrite == false,
-               ToExsist == true ->
-                    status(412);
-               true ->
-                    if DoOverwrite == true ->
-                            rmrf(To);
-                       true ->
-                            ok
-                    end,
-                    OpF(From, To)
-            end;
-        _ ->
-            status(501)
     end.
 
 do_move(From, To) ->
@@ -291,10 +266,12 @@ exists(Path) ->
         _ -> false
     end.
 
-%% FIXME: how to do this in a portable way?  on unix we could check inode...
-%% TODO use for etag?
-is_same(A, B) ->
-    A == B.
+temp_name(F) ->
+    {A,B,C} = erlang:now(),
+    Path = filename:dirname(F),
+    File = filename:basename(F),
+    T0 = io_lib:format("~s/.~s.~p-~p-~p",[Path,File,A,B,C]),
+    lists:flatten(T0).
 
 propfind(A) ->
     try
@@ -303,26 +280,26 @@ propfind(A) ->
         R = davresource0(A),
         case h_depth(A) of
             0 ->
-                ?elog("PROPFIND ~p (Depth=0)~n", [R#resource.name]),
+                %?elog("PROPFIND ~p (Depth=0)~n", [R#resource.name]),
                 Response = {'D:response', [], propfind_response(Props,A,R)},
                 MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], [Response]}],
                 status(207,MultiStatus);
             1 ->
                 R1 = davresource1(A),
-                ?elog("PROPFIND ~p (Depth=1, entries=~p)~n", [R#resource.name,length(R1)]),
+                %?elog("PROPFIND ~p (Depth=1, entries=~p)~n", [R#resource.name,length(R1)]),
                 Response = {'D:response', [], propfind_response(Props,A,R)},
                 Responses = [{'D:response', [], propfind_response(Props,A,Rx)} || Rx <- R1],
                 MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], [Response|Responses]}],
                 status(207,MultiStatus);
             infinity ->
-                ?elog("PROPFIND ~p (Depth=infinity)~n", [R#resource.name]),
+                %?elog("PROPFIND ~p (Depth=infinity)~n", [R#resource.name]),
                 Response = [{'D:error', [{'xmlns:D',"DAV:"}],[{'propfind-finite-depth'}]}],
                 status(403,Response)
         end
     catch
         Status -> status(Status);
         _Error:Reason ->
-            ?elog("Unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
+            ?elog("unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
@@ -368,7 +345,7 @@ proppatch(A) ->
     catch
         Status -> status(Status);
         _Error:Reason ->
-            ?elog("Unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
+            ?elog("unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
@@ -489,7 +466,6 @@ prop_get({'DAV:',getcontentlength},_A,R) ->
 prop_get({'DAV:',getetag},_A,R) ->
     F = R#resource.info,
     E = yaws:make_etag(F),
-    %?elog("ETAG: ~p~n",[E]),
     P = {'D:getetag', [], [E]},
     {200, P}; 
 prop_get({'DAV:',ishidden},_A,R) ->
@@ -592,7 +568,7 @@ davpath(A) ->
     A#arg.docroot ++ A#arg.server_path.
 
 davurl(A) ->
-    davroot(A) ++ A#arg.server_path. % FIXME: add / for collections?
+    davroot(A) ++ A#arg.server_path.
 
 davroot(A) ->
     Method = case A#arg.clisock of
@@ -717,13 +693,12 @@ h_locktoken(A) ->
     end.
 
 h_if(_Path,A,Locks) -> 
-    % FIXME must return not only true or false but both if a valid state and matching etag is found
     Hs = (A#arg.headers)#headers.other,
     case lists:keysearch("If", 3, Hs) of
         {value, {_,_,"If",_,If}} ->
             List = if_parse(If,untagged),
             Q = if_eval(A,Locks,List),
-            ?elog("If-header ~p evaluated to ~p~n",[List,Q]),
+            %?elog("If-header ~p evaluated to ~p~n",[List,Q]),
             Q;
         _ ->
             undefined
@@ -813,7 +788,7 @@ if_eval_locktoken(Target,Token,[H|T]) ->
 % error
 -define(IS_EXCLUSIVE(X), #xmlElement{expanded_name = {'DAV:',exclusive}} = X).
 -define(IS_HREF(X), #xmlElement{expanded_name = {'DAV:',href}} = X).
-% include TODO!!
+% include % TODO: add this tag
 % location
 % lockentry
 -define(IS_LOCKINFO(X), #xmlElement{expanded_name = {'DAV:',lockinfo}} = X).
@@ -851,7 +826,7 @@ parse_propfind(L) ->
 parse_propfind([?IS_PROPNAME(_H)|_T], _R) ->
     [propname];
 parse_propfind([?IS_ALLPROP(_H)|_T], _R) ->
-    [allprop]; %% TODO include
+    [allprop]; %% TODO add include tag
 parse_propfind([?IS_PROP(H)|T], _R) ->
     Props = parse_prop(?CONTENT(H)),
     parse_propfind(T, Props);
@@ -1052,7 +1027,6 @@ store_client_data_len(Fd, CliSock, Len, SSlBool) ->
     end.
 
 store_client_data_all(Fd, CliSock, SSlBool) ->
-    % FIXME problem here with gvfs/davfs trying to PUT empty file
     case yaws:cli_recv(CliSock, 4000, SSlBool) of
         {ok, B} ->
             ok = file:write(Fd, B),
