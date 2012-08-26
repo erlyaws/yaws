@@ -8,9 +8,8 @@
 %%%           To use, add a line dav = true in the <server>.
 %%%   
 %%%-------------------------------------------------------------------
--export([propfind/1, proppatch/1, delete/1, put/2, mkcol/1, move/1, copy/1]).
+-export([lock/1, unlock/1, propfind/1, proppatch/1, delete/1, put/2, mkcol/1, move/1, copy/1]).
 %-export([parse_propfind/1, xml_expand/1, xml_expand/2]).
--compile(export_all).
 
 -include("../include/yaws_dav.hrl").
 -include("../include/yaws_api.hrl").
@@ -113,12 +112,15 @@ put(SC, ARG) ->
                  "multipart/form-data"++_ -> multipart;
                  _ -> urlencoded
              end,
-        SSL = yaws:is_ssl(SC),
         if 
             IsDir-> throw(405); 
             true -> ok 
         end,
-        CliSock = ARG#arg.clisock,
+        SSL = yaws:is_ssl(SC),
+        CliSock = case SSL of
+                      ssl -> {ssl, X} = ARG#arg.clisock, X;
+                      _ -> ARG#arg.clisock
+                  end,
         TmpName = temp_name(FName),
         case file:open(TmpName, [raw,write]) of
             {ok, Fd} ->
@@ -142,7 +144,7 @@ put(SC, ARG) ->
                             PPS < Int_len, CT == multipart ->
                                 %% FIXME: handle this
                                 %% {partial,
-                                 store_client_data(Fd,CliSock, PPS, SSL); % };
+                                store_client_data(Fd,CliSock, PPS, SSL); % };
                             true ->
                                 store_client_data(Fd, CliSock, Int_len, SSL)
                         end;
@@ -246,18 +248,6 @@ do_copy(From, To) ->
                   [From, To, Error]),
             status(409)
     end.
-
-get_name("/") -> "/";
-get_name("")  -> "/";
-get_name(L) ->
-    [Rname|_] = string:tokens(lists:reverse(L), "/"),
-    lists:reverse(Rname).
-
-file_name("/") -> ".";
-file_name("")  -> ".";
-file_name(L) ->
-    [Rname|_] = string:tokens(lists:reverse(L), "/"),
-    lists:reverse(Rname).
 
 exists(Path) ->
     case file:read_file_info(Path) of
@@ -566,12 +556,12 @@ davname(A) ->
 davpath(A) ->
     A#arg.docroot ++ A#arg.server_path.
 
-davurl(A) ->
-    davroot(A) ++ A#arg.server_path.
+%davurl(A) ->
+%    davroot(A) ++ A#arg.server_path.
 
 davroot(A) ->
     Method = case A#arg.clisock of
-                 {sslsocket,_,_} -> "https";
+                 {ssl,_} -> "https";
                  _ -> "http"
              end,
     Host = (A#arg.headers)#headers.host,
@@ -609,13 +599,6 @@ davresource1(_A,Path,Coll,[Name|Rest],Result) ->
             davresource1(_A,Path,Coll,Rest,[Resource|Result]);
         true ->
             davresource1(_A,Path,Coll,Rest,Result)
-    end.
-
-is_collection(R) ->
-    F = R#resource.info,
-    case F#file_info.type of
-        directory -> true;
-        _ -> false
     end.
 
 %% --------------------------------------------------------
