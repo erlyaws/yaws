@@ -120,7 +120,6 @@ put(SC, ARG) ->
         end,
         CliSock = ARG#arg.clisock,
         TmpName = temp_name(FName),
-io:format("~p~n",[TmpName]),
         case file:open(TmpName, [raw,write]) of
             {ok, Fd} ->
                 case H#headers.content_length of
