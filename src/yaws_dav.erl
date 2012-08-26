@@ -385,22 +385,22 @@ allprops(R) ->
     F = R#resource.info,
     P1 = case F#file_info.type of
           directory -> [
-            {'http://apache.org/dav/props/',executable} % Apache extension
+            {'DAV:',childcount} % Microsoft extension
                 ];
-          _ -> []
+          _ -> [
+            {'http://apache.org/dav/props/',executable} % Apache extension
+                ]
         end,
     P2 = [
-            {'http://yaws.hyber.org/',access}, % sample Yaws extension
-           %{'DAV:',childcount}, % Microsoft extension
+           %{'http://yaws.hyber.org/',access}, % sample Yaws extension
             {'DAV:',creationdate},
             {'DAV:',displayname},
-            {'http://apache.org/dav/props/',executable}, % Apache extension
-            {'DAV:',getcontentlanguage},
+           %{'DAV:',getcontentlanguage}, % not supported in GET so omitted here as well
             {'DAV:',getcontentlength},
             {'DAV:',getcontenttype},
             {'DAV:',getetag},
             {'DAV:',getlastmodified},
-           %{'DAV:',isfolder}, % Microsoft extension
+            {'DAV:',isfolder}, % Microsoft extension
             {'DAV:',ishidden}, % Microsoft extension
             {'DAV:',lockdiscovery}, % class 2 compliancy
            %{'DAV:','quota-avialable-bytes'} % RFC4331
@@ -415,9 +415,13 @@ prop_get({'http://yaws.hyber.org/',access},_A,R) ->
     A = F#file_info.access,
     P = {access, [{xmlns,'http://yaws.hyber.org/'}], [atom_to_list(A)]},
     {200, P};
-prop_get({'DAV:',displayname},_A,R) ->
-    Name = filename:basename(R#resource.name),
-    P = {'D:displayname', [], [Name]},
+prop_get({'DAV:',childcount},A,_R) ->
+    Path=davpath(A),
+    L = case file:list_dir(Path) of
+            {ok, Files} -> length(Files);
+            _ -> 0
+        end,
+    P = {'D:childcount', [], [integer_to_list(L)]},
     {200, P};
 prop_get({'DAV:',creationdate},_A,R) ->
     F = R#resource.info,
@@ -425,11 +429,22 @@ prop_get({'DAV:',creationdate},_A,R) ->
     T = yaws:local_time_as_gmt_string(D),
     P = {'D:creationdate', [], [lists:flatten(T)]},
     {200, P};
-prop_get({'DAV:',getlastmodified},_A,R) ->
+prop_get({'DAV:',displayname},_A,R) ->
+    Name = filename:basename(R#resource.name),
+    P = {'D:displayname', [], [Name]},
+    {200, P};
+prop_get({'http://apache.org/dav/props/',executable},_A,R) ->
     F = R#resource.info,
-    D = F#file_info.mtime,
-    T = yaws:local_time_as_gmt_string(D),
-    P = {'D:getlastmodified', [], [lists:flatten(T)]},
+    case F#file_info.type of
+        directory -> {404,{executable, [{'xmlns',"http://apache.org/dav/props/"}], []}};
+        _ -> {200, {executable, [{'xmlns',"http://apache.org/dav/props/"}], ["F"]}}
+    end;
+prop_get({'DAV:',getcontentlanguage},_A,_R) ->
+    P = {'D:getcontentlanguage', [], []},
+    {200, P};
+prop_get({'DAV:',getcontentlength},_A,R) ->
+    F = R#resource.info,
+    P = {'D:getcontentlength', [], [integer_to_list(F#file_info.size)]},
     {200, P};
 prop_get({'DAV:',getcontenttype},_A,R) ->
     F = R#resource.info,
@@ -448,15 +463,25 @@ prop_get({'DAV:',getcontenttype},_A,R) ->
         end,
     P = {'D:getcontenttype', [], [Mediatype]},
     {200, P};
-prop_get({'DAV:',getcontentlength},_A,R) ->
-    F = R#resource.info,
-    P = {'D:getcontentlength', [], [integer_to_list(F#file_info.size)]},
-    {200, P};
 prop_get({'DAV:',getetag},_A,R) ->
     F = R#resource.info,
     E = yaws:make_etag(F),
     P = {'D:getetag', [], [E]},
     {200, P}; 
+prop_get({'DAV:',getlastmodified},_A,R) ->
+    F = R#resource.info,
+    D = F#file_info.mtime,
+    T = yaws:local_time_as_gmt_string(D),
+    P = {'D:getlastmodified', [], [lists:flatten(T)]},
+    {200, P};
+prop_get({'DAV:',isfolder},_A,R) ->
+    F = R#resource.info,
+    D = case F#file_info.type of
+            directory -> "1"; 
+            _ -> "0"
+        end,
+    P = {'D:isfolder', [], [D]},
+    {200, P};
 prop_get({'DAV:',ishidden},_A,R) ->
     N = filename:basename(R#resource.name),
     H = case hd(N) of
@@ -504,12 +529,6 @@ prop_get({'DAV:',supportedlock},_A,_R) ->
             ]}
         ]},
     {200, P};
-prop_get({'http://apache.org/dav/props/',executable},_A,R) ->
-    F = R#resource.info,
-    case F#file_info.type of
-        directory -> {404,{executable, [{'xmlns',"http://apache.org/dav/props/"}], []}};
-        _ -> {200, {executable, [{'xmlns',"http://apache.org/dav/props/"}], ["F"]}}
-    end;
 prop_get({NS,P},_A,_R) ->
     {404,{P,[{'xmlns',NS}],[]}}.
 
