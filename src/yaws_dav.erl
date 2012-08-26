@@ -72,7 +72,6 @@ unlock(A) ->
     try 
         R = davresource0(A),
         Id = h_locktoken(A),
-        ?elog("UNLOCK ~p~n", [R#resource.name]),
         yaws_davlock:unlock(R#resource.name,Id),
         status(204)
     catch
@@ -103,6 +102,12 @@ delete(A) ->
 
 put(SC, ARG) ->
     try
+        Name = davname(ARG),
+        FName = davpath(ARG),
+        Locks = yaws_davlock:discover(Name),
+        If = h_if(FName,ARG,Locks),
+        verify_protected(Locks,If),
+        IsDir = filelib:is_dir(FName),
         H = ARG#arg.headers,
         PPS = SC#sconf.partial_post_size,
         CT = case yaws:to_lower(H#headers.content_type) of
@@ -110,13 +115,6 @@ put(SC, ARG) ->
                  _ -> urlencoded
              end,
         SSL = yaws:is_ssl(SC),
-        Name = davname(ARG),
-        FName = davpath(ARG),
-        Locks = yaws_davlock:discover(Name),
-        If = h_if(FName,ARG,Locks),
-io:format(">>> ~p, ~p, ~p~n",[Name,If,Locks]),
-        verify_protected(Locks,If),
-        IsDir = filelib:is_dir(FName),
         if 
             IsDir-> throw(405); 
             true -> ok 
@@ -196,6 +194,7 @@ mkcol(A) ->
 
 copy(A) ->
     Name = davname(A),
+    ?elog("COPY ~p~n", [Name]),
     Path = davpath(A),
     try
         copy_move(A, fun do_copy/2)
@@ -208,6 +207,7 @@ copy(A) ->
 
 move(A) ->
     Name = davname(A),
+    ?elog("MOVE ~p~n", [Name]),
     Path = davpath(A),
     try
         copy_move(A, fun do_move/2)
