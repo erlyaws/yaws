@@ -185,7 +185,7 @@ mkcol(A) ->
     catch
         Status -> status(Status);
         Error:Reason ->
-            ?elog("move ~p failed: ~p with reason ~p~n", [Path,Error,Reason]),
+            ?elog("create directory ~p failed: ~p with reason ~p~n", [Path,Error,Reason]),
             status(500,[{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}])
     end.
 
