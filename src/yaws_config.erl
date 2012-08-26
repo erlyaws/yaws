@@ -556,10 +556,11 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                 true ->
                     case file:list_dir(Dir) of
                         {ok, Names} ->
+                            Sorted = lists:sort(Names),
                             Paths = lists:map(
                                       fun(N) ->
                                               filename:absname(N, Dir)
-                                      end, Names),
+                                      end, Sorted),
                             Fold = lists:foldl(
                                      fun subconfigdir_fold/2,
                                      {ok, GC, Cs}, Paths),
