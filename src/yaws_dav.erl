@@ -540,27 +540,35 @@ prop_get({NS,P},_A,_R) ->
     {404,{P,[{'xmlns',NS}],[]}}.
 
 
-prop_set({'DAV:',creationdate},A,R,V) ->
+prop_set({'DAV:',creationdate},A,_R,V) ->
     Path=davpath(A),
-    F0 = R#resource.info,
-    T = httpd_util:convert_request_date(V), % use httpd_util?
-    F1 = F0#file_info{ctime=T},
     P = {'D:creationdate', [], []},
-    case file:write_file_info(Path,F1) of   
-        ok -> 
-            {200, P};
+    case file:read_file_info(Path) of   
+        {ok,F0} ->
+            T = yaws:stringdate_to_datetime(V), 
+            F1 = F0#file_info{ctime=T},
+            case file:write_file_info(Path,F1) of   
+                ok -> 
+                    {200, P};
+            {error,_} ->
+                {409, P}
+            end;
         {error,_} ->
             {409, P}    
     end;
-prop_set({'DAV:',getlastmodified},A,R,V) ->
+prop_set({'DAV:',getlastmodified},A,_R,V) ->
     Path=davpath(A),
-    F0 = R#resource.info,
-    T = httpd_util:convert_request_date(V), % use httpd_util?
-    F1 = F0#file_info{mtime=T},
-    P = {'D:getlastmodified', [], []},
-    case file:write_file_info(Path,F1) of   
-        ok -> 
-            {200, P};
+    P = {'D:creationdate', [], []},
+    case file:read_file_info(Path) of   
+        {ok,F0} ->
+            T = yaws:stringdate_to_datetime(V), 
+            F1 = F0#file_info{mtime=T},
+            case file:write_file_info(Path,F1) of   
+                ok -> 
+                    {200, P};
+            {error,_} ->
+                {409, P}
+            end;
         {error,_} ->
             {409, P}    
     end;
