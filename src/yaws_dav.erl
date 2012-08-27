@@ -550,8 +550,8 @@ prop_set({'DAV:',creationdate},A,_R,V) ->
             case file:write_file_info(Path,F1) of   
                 ok -> 
                     {200, P};
-            {error,_} ->
-                {409, P}
+                {error,_} ->
+                    {409, P}
             end;
         {error,_} ->
             {409, P}    
@@ -566,8 +566,8 @@ prop_set({'DAV:',getlastmodified},A,_R,V) ->
             case file:write_file_info(Path,F1) of   
                 ok -> 
                     {200, P};
-            {error,_} ->
-                {409, P}
+                {error,_} ->
+                    {409, P}
             end;
         {error,_} ->
             {409, P}    
