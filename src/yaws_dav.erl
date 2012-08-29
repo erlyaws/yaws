@@ -171,6 +171,7 @@ put(SC, ARG) ->
             _ -> status(500)
         end
     catch
+        exit:normal -> exit(normal);
         Status -> 
             status(Status);
         _Error:Reason ->
@@ -296,7 +297,8 @@ propfind(A) ->
     end.
 
 propfind_response(Props,A,R) ->
-    Url = R#resource.name,
+    Url = yaws_api:url_encode(R#resource.name),
+    %Url = R#resource.name,
     case Props of
         [allprop] -> 
             AllProp = [ prop_get(N,A,R) || N <- allprops(R) ],
@@ -346,7 +348,8 @@ proppatch(A) ->
     end.
 
 proppatch_response(Update,A,R) -> 
-    Url = R#resource.name,
+    Url = yaws_api:url_encode(R#resource.name),
+    %Url = R#resource.name,
     Results = proppatch_response(Update,A,R,[]),
     ResultsSorted = prop_sort(lists:flatten(Results)),
     [{'D:href', [], [Url]}|
@@ -975,7 +978,9 @@ xml_expand(L) ->
 
 xml_expand(L, Cset) ->
     Prolog = ["<?xml version=\"1.0\" encoding=\""++Cset++"\" ?>"],
-    xmerl:export_simple(L,xmerl_xml,[{prolog,Prolog}]).
+    Xml = xmerl:export_simple(L,xmerl_xml,[{prolog,Prolog}]),
+    % MS requires \r\n at end of every XML response
+    [Xml|"\r\n"].
 
 %% --------------------------------------------------------
 %% File functions
