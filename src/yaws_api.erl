@@ -527,7 +527,7 @@ code_to_phrase(203) -> "Non-Authoritative Information";
 code_to_phrase(204) -> "No Content";
 code_to_phrase(205) -> "Reset Content";
 code_to_phrase(206) -> "Partial Content";
-code_to_phrase(207) -> "Multi Status";
+code_to_phrase(207) -> "Multi-Status";
 code_to_phrase(300) -> "Multiple Choices";
 code_to_phrase(301) -> "Moved Permanently";
 code_to_phrase(302) -> "Found";
@@ -554,6 +554,9 @@ code_to_phrase(414) -> "Request-URI Too Long";
 code_to_phrase(415) -> "Unsupported Media Type";
 code_to_phrase(416) -> "Requested Range Not Satisfiable";
 code_to_phrase(417) -> "Expectation Failed";
+code_to_phrase(422) -> "Unprocessable Entity";
+code_to_phrase(423) -> "Locked";
+code_to_phrase(424) -> "Failed Dependency";
 code_to_phrase(428) -> "Precondition Required";
 code_to_phrase(429) -> "Too Many Requests";
 code_to_phrase(431) -> "Request Header Fields Too Large";
@@ -563,6 +566,7 @@ code_to_phrase(502) -> "Bad Gateway";
 code_to_phrase(503) -> "Service Unavailable";
 code_to_phrase(504) -> "Gateway Timeout";
 code_to_phrase(505) -> "HTTP Version Not Supported";
+code_to_phrase(507) -> "Insufficient Storage";
 code_to_phrase(511) -> "Network Authentication Required";
 
 %% Below are some non-HTTP status codes from other protocol standards that

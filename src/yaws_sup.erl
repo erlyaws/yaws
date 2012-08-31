@@ -57,12 +57,15 @@ child_specs() ->
     YawsServ = {yaws_server, {yaws_server, start_link, YawsServArgs},
                 permanent, 120000, worker, [yaws_server]},
 
+    YawsDavLock = {yaws_davlock, {yaws_davlock, start_link, []},
+                 permanent, 5000, worker, [yaws_davlock]},
+
     %% and this guy will restart auxiliary procs that can fail
     Sup = {yaws_sup_restarts,
            {yaws_sup_restarts, start_link, []},
            transient, infinity, supervisor, [yaws_sup_restarts]},
 
-    [YawsLog, YawsTrace, YawsServ, Sup].
+    [YawsLog, YawsTrace, YawsServ, YawsDavLock, Sup].
 
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------

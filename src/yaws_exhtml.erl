@@ -74,8 +74,8 @@ format(Mode, [{'$html', HTML}|Rest], Value2StringF, N, Indent) ->
     [HTML|format(Mode, Rest, Value2StringF, N, Indent)];
 format(Mode, [{Tag}|Rest], Value2StringF, N, Indent) ->
     format(Mode, [{Tag, [], []}|Rest], Value2StringF, N, Indent);
-format(Mode, [{Tag, Body}|Rest], Value2StringF, N, Indent) ->
-    format(Mode, [{Tag, [], Body}|Rest], Value2StringF, N, Indent);
+format(Mode, [{Tag, Attrs}|Rest], Value2StringF, N, Indent) ->
+    format(Mode, [{Tag, Attrs, []}|Rest], Value2StringF, N, Indent);
 format(Mode, [{Tag, Attrs, Body}|Rest], Value2StringF, N, Indent) ->
     TagString = lowercase(tag_string(Tag)),
     case {Mode, block_level(TagString), Body} of
