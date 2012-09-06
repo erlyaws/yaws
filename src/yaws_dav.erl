@@ -445,6 +445,8 @@ prop_get({'DAV:',getetag},_A,R) ->
     %%?elog("ETAG: ~p~n",[E]),
     P = {'D:getetag', [], [E]},
     {200, P};
+prop_get({'DAV:',ishidden},_A,R) when R#resource.name =:= "/" ->
+    {200, {'D:ishidden', [], ["0"]}};
 prop_get({'DAV:',ishidden},_A,R) ->
     N = filename:basename(R#resource.name),
     H = case hd(N) of
