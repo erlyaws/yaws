@@ -85,8 +85,9 @@ handle_call({lock,Path,Lock}, _From, Table) ->
 handle_call({unlock,Path,Id}, _From, Table) ->
     %% even if the lock is not found, its removal is succesfull
     %%?elog("remove lock ~p for ~p~n",[Id,Path]),
+    StripId = strip_locktoken(Id),
     Path1 = filename:split(Path),
-    Table1 = do_unlock(Path1,Id,Table),
+    Table1 = do_unlock(Path1,StripId,Table),
     {reply, ok, Table1};
 handle_call({locked,Path}, _From, Table) ->
     L = filename:split(Path),
@@ -94,7 +95,8 @@ handle_call({locked,Path}, _From, Table) ->
     {reply, Lock, Table};
 handle_call({check,Path,Id}, _From, Table) ->
     L = filename:split(Path),
-    Lock = do_check(L,Id,Table),
+    StripId = strip_locktoken(Id),
+    Lock = do_check(L,StripId,Table),
     {reply, Lock, Table};
 handle_call({discover,Path}, _From, Table) ->
     L = filename:split(Path),
@@ -347,6 +349,12 @@ locktoken() ->
       Variant:2, ClockseqLow:8, ClockseqHi:6, Node/binary>>,
     <<U0:32, U1:16, U2:16, U3:16, U4:48>> = UUID,
     lists:flatten(io_lib:format("~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",[U0,U1,U2,U3,U4])).
+
+strip_locktoken([]) ->
+    [];
+strip_locktoken(Token) ->
+    Id = lists:last(string:tokens(Token, "<:>")),
+    Id.
 
 format([]) ->
     [];
