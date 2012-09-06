@@ -329,7 +329,7 @@ proppatch(A) ->
         Req = binary_to_list(A#arg.clidata),
         R = davresource0(A),
         Update = parse_proppatch(Req),
-        Response = proppatch_response(Update,A,R),
+        Response = {'D:response', [], proppatch_response(Update,A,R)},
         MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], [Response]}],
         status(207,MultiStatus)
     catch
