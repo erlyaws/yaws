@@ -329,7 +329,7 @@ proppatch(A) ->
         Req = binary_to_list(A#arg.clidata),
         R = davresource0(A),
         Update = parse_proppatch(Req),
-        Response = proppatch_response(Update,A,R),
+        Response = {'D:response', [], proppatch_response(Update,A,R)},
         MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], [Response]}],
         status(207,MultiStatus)
     catch
@@ -445,6 +445,8 @@ prop_get({'DAV:',getetag},_A,R) ->
     %%?elog("ETAG: ~p~n",[E]),
     P = {'D:getetag', [], [E]},
     {200, P};
+prop_get({'DAV:',ishidden},_A,R) when R#resource.name =:= "/" ->
+    {200, {'D:ishidden', [], ["0"]}};
 prop_get({'DAV:',ishidden},_A,R) ->
     N = filename:basename(R#resource.name),
     H = case hd(N) of
