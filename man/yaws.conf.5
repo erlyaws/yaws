@@ -880,8 +880,12 @@ decrypt it.
 \fBciphers = String\fR
 .RS 12
 This string specifies the SSL cipher string. The syntax of the SSL cipher string
-is a little horrible sublanguage of its own. It is documented in the SSL man
-page for "ciphers".
+is  an erlang term compliant with the output of ssl:cipher_suites().
+.nf
+
+ciphers = "[{dhe_rsa,aes_256_cbc,sha}, \\
+            {dhe_dss,aes_256_cbc,sha}]"
+.fi
 .RE
 .HP
 

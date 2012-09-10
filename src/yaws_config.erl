@@ -13,7 +13,6 @@
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
-
 -include_lib("kernel/include/file.hrl").
 
 -export([load/1,
@@ -1292,9 +1291,8 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
     end;
 
 
-
 fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
-    Next = io:get_line(FD, ''),
+    Next = io_get_line(FD, '', []),
     case toks(Lno, Chars) of
         [] ->
             fload(FD, ssl, GC, C, Cs, Lno+1, Next);
@@ -1386,13 +1384,28 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
                                [Lno])}
             end;
         ["ciphers", '=', Val] ->
-            if
-                is_record(C#sconf.ssl, ssl) ->
-                    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{ciphers = Val}},
-                    fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
-                true ->
-                    {error, ?F("Need to set option ssl to true before line ~w",
-                               [Lno])}
+            try
+                L = str2term(Val),
+                io:format("L = ~p~n",[L]),
+                Ciphers = ssl:cipher_suites(),
+                case check_ciphers(L, Ciphers) of
+                    ok ->
+                        if
+                            is_record(C#sconf.ssl, ssl) ->
+                                C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{
+                                                     ciphers = L}},
+                                fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
+                            true ->
+                                {error, ?F("Need to set option ssl to "
+                                           "true before line ~w",
+                                           [Lno])}
+                        end;
+                    Err ->
+                        Err
+                end
+            catch _:Err2 ->
+                    io:format("~p~n", [Err2]),
+                    {error, ?F("Bad cipherspec at line ~w", [Lno])}
             end;
         ['<', "/ssl", '>'] ->
             fload(FD, server, GC, C, Cs, Lno+1, Next);
@@ -1868,7 +1881,7 @@ is_string_char([C|T]) ->
     end.
 
 is_special(C) ->
-    lists:member(C, [$=, $<, $>, $,]).
+    lists:member(C, [$=, $[, $], ${, $}, $, ,$<, $>, $,]).
 
 %% parse the argument string PLString which can either be the undefined
 %% atom or a proplist. Currently the only supported keys are
@@ -2522,4 +2535,39 @@ subconfigdir_fold(File, {ok, GCp, Csp}=Acc) ->
         false ->
             %% Ignore subdirectories
             Acc
+    end.
+
+str2term(Str0) ->
+    Str=Str0++".",
+    {ok,Tokens,_EndLine} = erl_scan:string(Str),
+    {ok,AbsForm} = erl_parse:parse_exprs(Tokens),
+    {value,Value,_Bs} = erl_eval:exprs(AbsForm, erl_eval:new_bindings()),
+    Value.
+
+check_ciphers([], _) ->
+    ok;
+check_ciphers([Spec|Specs], L) ->
+    case lists:member(Spec, L) of
+        true ->
+            check_ciphers(Specs, L);
+        false ->
+            {error, ?F("Bad cipherspec ~p",[Spec])}
+    end;
+check_ciphers(X,_) ->
+    {error, ?F("Bad cipherspec ~p",[X])}.
+
+
+
+io_get_line(FD, Prompt, Acc) ->
+    Next = io:get_line(FD, Prompt),
+    if
+        is_list(Next) ->
+            case lists:reverse(Next) of
+                [$\n, $\\ |More] ->
+                    io_get_line(FD, Prompt, Acc ++ lists:reverse(More));
+                _ ->
+                    Acc ++ Next
+            end;
+        true ->
+            Next
     end.
