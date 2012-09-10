@@ -284,12 +284,24 @@ set_cookie_expires_test() ->
     ok.
 
 real_cookies_test() ->
-    {ok, Io} = file:open("cookies.dump", read),
+    {ok, Io} = case file:open("cookies.dump", read) of
+                   {error, _} ->
+                       %% handle eunit testing under rebar
+                       file:open("../test/eunit/cookies.dump", read);
+                   Else ->
+                       Else
+               end,
     ?assertEqual(ok, parse_cookies(Io, file:read_line(Io), 1)),
     ok.
 
 real_setcookies_test() ->
-    {ok, Io} = file:open("setcookies.dump", read),
+    {ok, Io} = case file:open("setcookies.dump", read) of
+                   {error, _} ->
+                       %% handle eunit testing under rebar
+                       file:open("../test/eunit/setcookies.dump", read);
+                   Else ->
+                       Else
+               end,
     ?assertEqual(ok, parse_set_cookies(Io, file:read_line(Io), 1)),
     ok.
 

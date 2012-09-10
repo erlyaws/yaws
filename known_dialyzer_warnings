@@ -1,9 +1,8 @@
 
-yaws.erl:1858: The pattern 'false' can never match the type 'true'
-yaws.erl:2366: Guard test Ret::'file' == 'fd' can never succeed
-yaws.erl:2374: Guard test Ret::'file' == 'binfd' can never succeed
-yaws_api.erl:470: The pattern <Data, ParseState = {'mp_parse_state', 'start_header', _, _, _, _}, Acc, [], []> can never match the type <_,#mp_parse_state{state::'header'},_,[any()],[{atom() | [any()],[any()]}]>
-yaws_config.erl:464: The pattern 'false' can never match the type 'true'
+yaws.erl:1645: The pattern 'false' can never match the type 'true'
+yaws.erl:2131: Guard test Ret::'file' == 'fd' can never succeed
+yaws.erl:2139: Guard test Ret::'file' == 'binfd' can never succeed
+yaws_config.erl:541: The pattern 'false' can never match the type 'true'
 yaws_ctl.erl:530: Function hup/1 has no local return
 yaws_ctl.erl:535: Function stop/1 has no local return
 yaws_ctl.erl:539: Function status/1 has no local return
@@ -12,5 +11,5 @@ yaws_ctl.erl:564: Function trace/1 has no local return
 yaws_ctl.erl:567: Function debug_dump/1 has no local return
 yaws_ctl.erl:570: Function stats/1 has no local return
 yaws_ctl.erl:572: Function running_config/1 has no local return
-yaws_revproxy.erl:523: The pattern 'true' can never match the type 'false'
+yaws_revproxy.erl:667: The pattern 'true' can never match the type 'false'
 yaws_sup_restarts.erl:49: The pattern 'false' can never match the type 'true'

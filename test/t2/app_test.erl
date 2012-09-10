@@ -1,6 +1,6 @@
 -module(app_test).
 -include("../include/tftest.hrl").
--include("../ibrowse/include/ibrowse.hrl").
+-include_lib("ibrowse/include/ibrowse.hrl").
 -compile(export_all).
 
 
@@ -13,26 +13,28 @@ start([F]) ->
 start() ->
     io:format("\n ==== MAIN TESTS ==== \n\n", []),
     ?line {ok, _} = ibrowse:start_link(),
-    server_options_test(),
+    test_server_options(),
     test1(),
     test2(),
     test3(),
-    appmod_test(),
-    streamcontent_test(),
+    test_appmod(),
+    test_streamcontent(),
     sendfile_get(),
-    json_test(),
-    post_test(),
-    flush_test(),
-    expires_test(),
-    reentrant_test(),
-    cgi_redirect_test(),
-    php_handler_test(),
-    arg_rewrite_test(),
-    shaper_test(),
-    sslaccept_timeout_test(),
-    throw_test(),
-    too_many_headers_test(),
-    index_files_test(),
+    test_json(),
+    test_post(),
+    test_flush(),
+    test_expires(),
+    test_reentrant(),
+    test_cgi_redirect(),
+    test_php_handler(),
+    test_arg_rewrite(),
+    test_shaper(),
+    test_sslaccept_timeout(),
+    test_throw(),
+    test_too_many_headers(),
+    test_index_files(),
+    test_websocket(),
+    test_embedded_id_dir(),
     ibrowse:stop().
 
 
@@ -136,7 +138,7 @@ test3() ->
                                                        [], head),
     ok.
 
-server_options_test() ->
+test_server_options() ->
     io:format("server_options_test\n",[]),
     {ok, S} = gen_tcp:connect("localhost", 8000, [{packet, raw}, list,
                                                   {active, false}]),
@@ -226,7 +228,7 @@ collect(L, Count, Tag) ->
 
 -define(APPMOD_HEADER, "Appmod-Called").
 
-appmod_test() ->
+test_appmod() ->
     io:format("appmod_test\n",[]),
     Uri1 = "http://localhost:8002/",
     ?line {ok, "200", Headers1, _} = ibrowse:send_req(Uri1, [], get),
@@ -242,7 +244,7 @@ appmod_test() ->
     ?line "true" = proplists:get_value(?APPMOD_HEADER, Headers4),
     ok.
 
-streamcontent_test() ->
+test_streamcontent() ->
     io:format("streamcontent_test\n",[]),
     Uri1 = "http://localhost:8000/streamtest/1",
     ?line {ok, "200", Headers1, Body1} = ibrowse:send_req(Uri1, [], get),
@@ -281,7 +283,7 @@ streamcontent_test() ->
 
 -define(JSON_URI, "http://localhost:8005/jsontest").
 
-json_test() ->
+test_json() ->
     io:format("json_test\n",[]),
     io:format("  param array1\n", []),
     ?line ok = do_json({struct, [{"jsonrpc", "2.0"},
@@ -526,7 +528,7 @@ recv_hdrs(Sock, Len) ->
 
 
 %% partial_post_size = 2048000
-post_test() ->
+test_post() ->
     io:format("post_test\n",[]),
     small_post(),
     large_post(),
@@ -578,7 +580,7 @@ large_chunked_post() ->
     ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, post, Bin, Opts2),
     ok.
 
-flush_test() ->
+test_flush() ->
     io:format("flush_test\n",[]),
     flush_small_post(),
     flush_large_post(),
@@ -665,7 +667,7 @@ flush_chunked_get() ->
     ok.
 
 
-expires_test() ->
+test_expires() ->
     io:format("expires_test\n", []),
     Uri = "http://localhost:8006/hello.txt",
     ?line {ok, "200", Hdrs, _} = ibrowse:send_req(Uri, [], get),
@@ -687,7 +689,7 @@ expires_test() ->
     ok.
 
 
-reentrant_test() ->
+test_reentrant() ->
     io:format("reentrant_test\n", []),
     reentrant_test_status(),
     reentrant_test_delayed_headers(),
@@ -708,14 +710,14 @@ reentrant_test_delayed_headers() ->
     ?line "true" = proplists:get_value("X-Delayed-Header", Hdrs),
     ok.
 
-cgi_redirect_test() ->
+test_cgi_redirect() ->
     io:format("cgi_redirect_test\n", []),
     Uri = "http://localhost:8008/cgi-bin/redirect_test.cgi",
     ?line {ok, "302", Hdrs, _} = ibrowse:send_req(Uri, [], get),
     ?line true = lists:any(fun({"Location", _}) -> true; (_) -> false end, Hdrs),
     ok.
 
-php_handler_test() ->
+test_php_handler() ->
     io:format("php_handler_test\n", []),
     Uri = "http://localhost:8006/test.php",
     {ok, Binary} = file:read_file("./www/test.php"),
@@ -723,7 +725,7 @@ php_handler_test() ->
     ?line {ok, "200", _, Content} = ibrowse:send_req(Uri, [], get),
     ok.
 
-arg_rewrite_test() ->
+test_arg_rewrite() ->
     io:format("arg_rewrite_test\n", []),
     arg_rewrite_test_rewrite(),
     arg_rewrite_test_redirect(),
@@ -758,7 +760,7 @@ arg_rewrite_test_response() ->
 
 
 
-shaper_test() ->
+test_shaper() ->
     io:format("shaper_test\n", []),
     Uri = "http://localhost:8007/",
     ?line {ok, "200", _, _} = ibrowse:send_req(Uri, [], get),
@@ -769,7 +771,7 @@ shaper_test() ->
 
 
 
-sslaccept_timeout_test() ->
+test_sslaccept_timeout() ->
     io:format("sslaccept_tout_test\n", []),
     {ok, Sock} = gen_tcp:connect("localhost", 8443, [binary, {active, true}]),
     ?line ok = receive
@@ -782,13 +784,13 @@ sslaccept_timeout_test() ->
     gen_tcp:close(Sock),
     ok.
 
-throw_test() ->
+test_throw() ->
     io:format("throw test\n", []),
     Uri = "http://localhost:8009/",
     ?line {ok, "500", _, _} = ibrowse:send_req(Uri, [], get),
     ok.
 
-too_many_headers_test() ->
+test_too_many_headers() ->
     io:format("too many request headers test\n", []),
     Uri = "http://localhost:8009/",
     Hdrs = [{link, "<compact.css>; rel=\"stylesheet\"; title=\"compact\""} || _ <- lists:seq(0, 1001)],
@@ -796,7 +798,7 @@ too_many_headers_test() ->
     ok.
 
 
-index_files_test() ->
+test_index_files() ->
     io:format("index_files test\n", []),
     %% "/" should be redirected to "/testdir", then to "/testdir/" and finally
     %% get "/testdir/index.html"
@@ -811,6 +813,60 @@ index_files_test() ->
     ?line "http://localhost:8010/testdir/" = Uri2,
     ?line {ok, "200", _, Content} = ibrowse:send_req(Uri2, [], get),
     ok.
+
+%% Do handshake, then send "hello" in a text frame
+%% and check that "hello" is echoed back.
+test_websocket() ->
+    OpenHeads = "GET /websockets_example_endpoint.yaws HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "Upgrade: websocket\r\n"
+        "Connection: Upgrade\r\n"
+        "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+        "Origin: http://localhost\r\n"
+        "Sec-WebSocket-Version: 13\r\n\r\n",
+    Opts = [{send_timeout, 2000},
+            binary,
+            {packet, 0},
+            {active, false}],
+    {ok, Sock} = gen_tcp:connect(localhost, 8000, Opts),
+    ok = gen_tcp:send(Sock, OpenHeads),
+    {ok, Packet} = gen_tcp:recv(Sock, 0, 2000),
+    AcceptLines = re:split(Packet, "[\r\n]+", [{return, list}, trim]),
+    %% Check that exactly the expected lines are there, in any order
+    4 = length(AcceptLines),
+    true = lists:member("HTTP/1.1 101 Switching Protocols", AcceptLines),
+    true = lists:member("Upgrade: websocket", AcceptLines),
+    true = lists:member("Connection: Upgrade", AcceptLines),
+    true = lists:member("Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=",
+                        AcceptLines),
+
+    %% Text frame "hello" with mask "aaaa"
+    Frame =
+        <<129, 133, "aaaa", 38722669838:5/integer-unit:8>>,
+    ok = gen_tcp:send(Sock, Frame),
+    ExpectFrame = <<129, 5, "hello">>,
+    {ok, ExpectFrame} = gen_tcp:recv(Sock, 0, 2000).
+
+test_embedded_id_dir() ->
+    Id = "id_dir_test",
+    GconfList = [{id, Id},
+                 {logdir, "./logs"},
+                 {ebin_dir, ["./ebin"]}],
+    Docroot = yaws:tmpdir(),
+    SconfList = [{port, 9999},
+                 {servername, Id},
+                 {listen, {127,0,0,1}},
+                 {docroot, Docroot}],
+    {ok, _SCList, _GC, _ChildSpecs} = yaws_api:embedded_start_conf(
+                                        Docroot, SconfList, GconfList, Id),
+    try
+        {ok,
+         {file_info, _, directory, read_write, _, _, _, _, _, _, _, _, _, _}} =
+            file:read_file_info(yaws:id_dir(Id)),
+        ok
+    after
+        ok = file:del_dir(yaws:id_dir(Id))
+    end.
 
 %% used for appmod tests
 %%

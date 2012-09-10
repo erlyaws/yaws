@@ -121,8 +121,7 @@ start_embedded(DocRoot, SL, GL, Id)
     {ok, SCList, GC, _} = yaws_api:embedded_start_conf(DocRoot, SL, GL, Id),
     ok = application:start(yaws),
     yaws_config:add_yaws_soap_srv(GC),
-    SCs = [yaws_config:add_yaws_auth(X) || X <- SCList],
-    yaws_api:setconf(GC, SCs),
+    yaws_api:setconf(GC, SCList),
     ok.
 
 add_server(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
@@ -133,13 +132,15 @@ add_server(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
               (A, Acc)                      -> [A| Acc]
           end,
     Authdirs = lists:foldr(Fun, [], SC#sconf.authdirs),
-    yaws_config:add_sconf(SC#sconf{authdirs = Authdirs}).
+    SC1 = yaws_config:add_yaws_auth(SC#sconf{authdirs = Authdirs}),
+    yaws_config:add_sconf(SC1).
 
 create_gconf(GL, Id) when is_list(GL) ->
     setup_gconf(GL, yaws_config:make_default_gconf(false, Id)).
 
 create_sconf(DocRoot, SL) when is_list(DocRoot), is_list(SL) ->
-    setup_sconf(DocRoot, #sconf{}, SL).
+    SC = yaws_config:make_default_sconf(DocRoot, lkup(port, SL, undefined)),
+    setup_sconf(SL, SC).
 
 
 %%% Access functions for the SSL record.
@@ -205,7 +206,9 @@ setup_gconf(GL, GC) ->
            ysession_mod          = lkup(ysession_mod, GL,
                                         GC#gconf.ysession_mod),
            acceptor_pool_size    = lkup(acceptor_pool_size, GL,
-                                        GC#gconf.acceptor_pool_size)
+                                        GC#gconf.acceptor_pool_size),
+           mime_types_info       = lkup(mime_types_info, GL,
+                                        GC#gconf.mime_types_info)
           }.
 
 set_gc_flags([{tty_trace, Bool}|T], Flags) ->
@@ -233,54 +236,54 @@ set_gc_flags([], Flags) ->
 
 
 %% Setup vhost configuration
-setup_sconf(DocRoot, D, SL) ->
-    #sconf{port                  = lkup(port, SL, D#sconf.port),
+setup_sconf(SL, SC) ->
+    #sconf{port                  = lkup(port, SL, SC#sconf.port),
            flags                 = set_sc_flags(lkup(flags, SL, []),
-                                                D#sconf.flags),
-           redirect_map          = lkup(redirect_map, SL, D#sconf.redirect_map),
-           rhost                 = lkup(rhost, SL, D#sconf.rhost),
-           rmethod               = lkup(rmethod, SL, D#sconf.rmethod),
-           docroot               = case lkup(docroot, SL, D#sconf.docroot) of
-                                       undefined -> DocRoot;
-                                       DR        -> DR
-                                   end,
+                                                SC#sconf.flags),
+           redirect_map          = lkup(redirect_map, SL, SC#sconf.redirect_map),
+           rhost                 = lkup(rhost, SL, SC#sconf.rhost),
+           rmethod               = lkup(rmethod, SL, SC#sconf.rmethod),
+           docroot               = lkup(docroot, SL, SC#sconf.docroot),
            xtra_docroots         = lkup(xtra_docroots, SL,
-                                        D#sconf.xtra_docroots),
-           listen                = lkup(listen, SL, D#sconf.listen),
-           servername            = lkup(servername, SL, D#sconf.servername),
-           yaws                  = lkup(yaws, SL, D#sconf.yaws),
-           ets                   = lkup(ets, SL, D#sconf.ets),
-           ssl                   = setup_sconf_ssl(SL, D#sconf.ssl),
+                                        SC#sconf.xtra_docroots),
+           listen                = lkup(listen, SL, SC#sconf.listen),
+           servername            = lkup(servername, SL, SC#sconf.servername),
+           yaws                  = lkup(yaws, SL, SC#sconf.yaws),
+           ets                   = lkup(ets, SL, SC#sconf.ets),
+           ssl                   = setup_sconf_ssl(SL, SC#sconf.ssl),
            authdirs              = lkup(authdirs, expand_auth(SL),
-                                        D#sconf.authdirs),
+                                        SC#sconf.authdirs),
            partial_post_size     = lkup(partial_post_size, SL,
-                                        D#sconf.partial_post_size),
-           appmods               = lkup(appmods, SL, D#sconf.appmods),
-           expires               = lkup(expires, SL, D#sconf.expires),
-           errormod_401          = lkup(errormod_401, SL, D#sconf.errormod_401),
-           errormod_404          = lkup(errormod_404, SL, D#sconf.errormod_404),
+                                        SC#sconf.partial_post_size),
+           appmods               = lkup(appmods, SL, SC#sconf.appmods),
+           expires               = lkup(expires, SL, SC#sconf.expires),
+           errormod_401          = lkup(errormod_401, SL, SC#sconf.errormod_401),
+           errormod_404          = lkup(errormod_404, SL, SC#sconf.errormod_404),
            errormod_crash        = lkup(errormod_crash, SL,
-                                        D#sconf.errormod_crash),
+                                        SC#sconf.errormod_crash),
            arg_rewrite_mod       = lkup(arg_rewrite_mod, SL,
-                                        D#sconf.arg_rewrite_mod),
-           logger_mod            = lkup(logger_mod, SL, D#sconf.logger_mod),
-           opaque                = lkup(opaque, SL, D#sconf.opaque),
-           start_mod             = lkup(start_mod, SL, D#sconf.start_mod),
+                                        SC#sconf.arg_rewrite_mod),
+           logger_mod            = lkup(logger_mod, SL, SC#sconf.logger_mod),
+           opaque                = lkup(opaque, SL, SC#sconf.opaque),
+           start_mod             = lkup(start_mod, SL, SC#sconf.start_mod),
            allowed_scripts       = lkup(allowed_scripts, SL,
-                                        D#sconf.allowed_scripts),
+                                        SC#sconf.allowed_scripts),
            tilde_allowed_scripts = lkup(tilde_allowed_scripts, SL,
-                                        D#sconf.tilde_allowed_scripts),
-           revproxy              = lkup(revproxy, SL, D#sconf.revproxy),
-           soptions              = lkup(soptions, SL, D#sconf.soptions),
+                                        SC#sconf.tilde_allowed_scripts),
+           index_files           = lkup(index_files, SL, SC#sconf.index_files),
+           revproxy              = lkup(revproxy, SL, SC#sconf.revproxy),
+           soptions              = lkup(soptions, SL, SC#sconf.soptions),
            extra_cgi_vars        = lkup(extra_cgi_vars, SL,
-                                        D#sconf.extra_cgi_vars),
-           stats                 = lkup(stats, SL, D#sconf.stats),
+                                        SC#sconf.extra_cgi_vars),
+           stats                 = lkup(stats, SL, SC#sconf.stats),
            fcgi_app_server       = lkup(fcgi_app_server, SL,
-                                        D#sconf.fcgi_app_server),
-           php_handler           = lkup(php_handler, SL, D#sconf.php_handler),
-           shaper                = lkup(shaper, SL, D#sconf.shaper),
+                                        SC#sconf.fcgi_app_server),
+           php_handler           = lkup(php_handler, SL, SC#sconf.php_handler),
+           shaper                = lkup(shaper, SL, SC#sconf.shaper),
            deflate_options       = lkup(deflate_options, SL,
-                                        D#sconf.deflate_options)
+                                        SC#sconf.deflate_options),
+           mime_types_info       = lkup(mime_types_info, SL,
+                                        SC#sconf.mime_types_info)
           }.
 
 expand_auth(SL) ->

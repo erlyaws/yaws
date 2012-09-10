@@ -246,6 +246,60 @@ Load all config file in specified directory.
 \fBx_forwarded_for_log_proxy_whitelist = ListOfUpstreamProxyServerIps\fR
 \fBthis target is deprecated and will be ignored.\fR
 
+.TP
+\fBdefault_type = MimeType\fR
+Defines the default MIME type to be used where Yaws cannot determine it by its
+MIME types mappings. Default is \fItext/plain\fR.
+
+.TP
+\fBdefault_charset = Charset\fR
+Defines the default charset to be added when a response content-type is
+\fItext/*\fR. By default, no charset is added.
+
+.TP
+\fBmime_types_file = File\fR
+Overrides the default \fImime.types\fR file included with Yaws. This file must
+use the following format:
+
+.nf
+  # Lines beginning with a '#' or a whitespace are ignored
+  # blank lines are also ignored
+  <MIME type> <space separated file extensions>
+.fi
+
+The default file is located at \fI${PREFIX}/lib/yaws/priv/mime.types\fR. You
+should not edit this file because it may be replaced when you upgrade your
+server.
+
+.TP
+\fBadd_types = ListOfTypes\fR
+Specifies one or more mappings between MIME types and file extensions. More than
+one extension can be assigned to a MIME type. \fIListOfTypes\fR is defined as
+follows:
+
+.nf
+  add_types = <MimeType1, Ext> <MimeType2, Ext1 Ext2 ...> ...
+.fi
+
+The mappings defined using this directive will overload all other
+definitions. If a file extension is defined several times, only the last one is
+kept. Multiple \fBadd_types\fR directives may be used.
+
+.TP
+\fBadd_charsets = ListOfCharsets\fR
+Specifies one or more mappings between charsets and file extensions. More than
+one extension can be assigned to a charset. \fIListOfCharsets\fR is defined as
+follows:
+
+.nf
+  add_charsets = <Charset1, Ext> <Charset2, Ext1 Ext2 ...> ...
+.fi
+
+The mappings defined using this directive will overload all other
+definitions. If a file extension is defined several times, only the last one is
+kept. Multiple \fBadd_charsets\fR directives may be used.
+
+
 .SH SERVER PART
 Yaws can virthost several web servers on the same IP address as well as several
 web servers on different IP addresses. This includes SSL servers.
@@ -476,8 +530,8 @@ is \fIfalse\fR.
 
 \fBmime_types = ListOfTypes | defaults | all\fR
 .RS 12
-Restricts the deflate compression to particular mime types. The special value
-\fIall\fR enable it for all types (It is a synonym of `*/*'). Mime types into
+Restricts the deflate compression to particular MIME types. The special value
+\fIall\fR enable it for all types (It is a synonym of `*/*'). MIME types into
 \fIListOfTypes\fR must have the form `type/subtype' or `type/*' (indicating all
 subtypes of that type). Here is an example:
 
@@ -486,10 +540,10 @@ subtypes of that type). Here is an example:
   mime_types = application/xml application/xhtml+xml application/rss+xml
 .fi
 
-By default, following mime types are compressed (if
+By default, following MIME types are compressed (if
 \fBdeflate\fR is set to true): \fItext/*, application/rtf, application/msword,
 application/pdf, application/x-dvi, application/javascript,
-application/x-javascript\fR. Multiple mime_types directive can be used.
+application/x-javascript\fR. Multiple \fBmime_types\fR directive can be used.
 .RE
 .HP
 
@@ -634,7 +688,7 @@ The function must return, \fI{content,MimeType,Cont}\fR or \fI{html, Str}\fR or
 \fBexpires = ListOfExpires\fR
 Controls the setting of the \fIExpires\fR HTTP header and the \fImax-age\fR
 directive of the \fICache-Control\fR HTTP header in server responses for
-specific mime types. The expiration date can set to be relative to either the
+specific MIME types. The expiration date can set to be relative to either the
 time the source file was last modified, or to the time of the client
 access. ListOfExpires is defined as follows:
 
@@ -801,6 +855,31 @@ Default value is \fI<cgi, "/usr/bin/php-cgi">\fR.
 instead.\fR
 .br
 Use this directive is same as: php_handler = <fcgi, Host:Port>.
+
+.TP
+\fBdefault_type = MimeType\fR
+Overloads the global \fBdefault_type\fR value for this virtual server.
+.TP
+\fBdefault_charset = Charset\fR
+Overloads the global \fBdefault_charset\fR value for this virtual server.
+
+.TP
+\fBmime_types_file = File\fR
+Overloads the global \fBmime_type_file\fR value for this virtual
+server. Mappings defined in \fIFile\fR will not overload those defined by
+\fBadd_types\fR directives in the global part.
+
+.TP
+\fBadd_types = ListOfTypes\fR
+Overloads the global \fBadd_types\fR values for this virtual server. If a
+mapping is defined in the global part and redefined in a server part using this
+directive, then it is replaced. Else it is kept.
+
+.TP
+\fBadd_charsets = ListOfCharsets\fR
+Overloads the global \fBadd_charsets\fR values for this virtual server. If a
+mapping is defined in the global part and redefined in a server part using this
+directive, then it is replaced. Else it is kept.
 
 .TP
 \fB<ssl> ... </ssl>\fR

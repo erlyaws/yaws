@@ -32,7 +32,7 @@
 -export([is_absolute_URI/1]).
 -export([path_norm/1, path_norm_reverse/1,
          sanitize_file_name/1]).
--export([get_line/1, mime_type/1]).
+-export([get_line/1, mime_type/1, mime_type/2]).
 -export([stream_chunk_deliver/2, stream_chunk_deliver_blocking/2,
          stream_chunk_end/1]).
 -export([stream_process_deliver/2, stream_process_deliver_chunk/2,
@@ -49,7 +49,7 @@
          embedded_start_conf/1, embedded_start_conf/2,
          embedded_start_conf/3, embedded_start_conf/4]).
 
--export([set_status_code/1, reformat_header/1,
+-export([set_status_code/1, reformat_header/1, reformat_header/2,
          reformat_request/1, reformat_response/1, reformat_url/1]).
 
 -export([set_trace/1,
@@ -837,11 +837,12 @@ get_line([], _) ->
 
 
 mime_type(FileName) ->
+    mime_type(get(sc), FileName).
+
+mime_type(S, FileName) ->
     case filename:extension(FileName) of
-        [_|T] ->
-            element(2, mime_types:t(T));
-        [] ->
-            element(2, mime_types:t([]))
+        [_|T] -> element(2, mime_types:t(S, T));
+        []    -> element(2, mime_types:t(S, []))
     end.
 
 
@@ -990,8 +991,13 @@ set_status_code(Code) ->
 
 %% returns [ Header1, Header2 .....]
 reformat_header(H) ->
+    FormatFun = fun(Hname, Str) ->
+                        lists:flatten(io_lib:format("~s: ~s",[Hname, Str]))
+                end,
+    reformat_header(H, FormatFun).
+reformat_header(H, FormatFun) ->
     lists:zf(fun({Hname, Str}) ->
-                     I =  lists:flatten(io_lib:format("~s: ~s",[Hname, Str])),
+                     I =  FormatFun(Hname, Str),
                      {true, I};
                 (undefined) ->
                      false
@@ -1111,7 +1117,7 @@ reformat_header(H) ->
             ) ++
         lists:map(
           fun({http_header,_,K,_,V}) ->
-                  lists:flatten(io_lib:format("~s: ~s",[K,V]))
+                  FormatFun(K,V)
           end, H#headers.other).
 
 
