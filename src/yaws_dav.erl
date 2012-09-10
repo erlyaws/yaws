@@ -111,7 +111,7 @@ put(SC, ARG) ->
             try
                 case H#headers.content_length of
                     undefined ->
-                        Chunked = H#headers.transfer_encoding == "chunked",
+                        Chunked = yaws:to_lower(H#headers.transfer_encoding) == "chunked",
                         case H#headers.connection of
                             "close" when Chunked == false->
                                 store_client_data(Fd, CliSock, all, SSL);
