@@ -8,8 +8,9 @@ out(Arg) ->
     Url = yaws_api:request_url(Arg),
     case Url#url.path of
         "/posttest/chunked/" ++ ExpectedSize ->
+            TE = yaws:to_lower((Arg#arg.headers)#headers.transfer_encoding),
             if
-                (Arg#arg.headers)#headers.transfer_encoding =:= "chunked" ->
+                TE =:= "chunked" ->
                     handle_post(list_to_integer(ExpectedSize), Arg);
                 true ->
                     Reason = io_lib:format("Expected a chunked transfer-encoding request\n~p",

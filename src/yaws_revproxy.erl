@@ -92,9 +92,10 @@ out(#arg{state=#revproxy{}=RPState}=Arg) when RPState#revproxy.state == sendhead
     HdrsStr = yaws:headers_to_str(NewHdrs),
     case send(RPState, [ReqStr, "\r\n", HdrsStr, "\r\n"]) of
         ok ->
+            TE = yaws:to_lower(Hdrs#headers.transfer_encoding),
             RPState1 = if
                            (Hdrs#headers.content_length == undefined andalso
-                            Hdrs#headers.transfer_encoding == "chunked") ->
+                            TE == "chunked") ->
                                ?Debug("Request content is chunked~n", []),
                                RPState#revproxy{state=sendchunk};
                            true ->
@@ -248,7 +249,8 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvheaders ->
                     RPState2 =
                         case RespHdrs#headers.content_length of
                             undefined ->
-                                case RespHdrs#headers.transfer_encoding of
+                                TE = yaws:to_lower(RespHdrs#headers.transfer_encoding),
+                                case TE of
                                     "chunked" ->
                                         ?Debug("Response content is chunked~n",
                                                []),

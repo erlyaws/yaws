@@ -1512,7 +1512,7 @@ body_method(CliSock, IPPort, Req, Head) ->
     PPS = SC#sconf.partial_post_size,
     Res = case Head#headers.content_length of
               undefined ->
-                  case Head#headers.transfer_encoding of
+                  case yaws:to_lower(Head#headers.transfer_encoding) of
                       "chunked" ->
                           get_chunked_client_data(CliSock, yaws:is_ssl(SC));
                       _ ->
@@ -3256,10 +3256,11 @@ handle_out_reply(Arg = #arg{},  _LineNo, _YawsFile, _UT, _ARG) ->
     Arg;
 
 handle_out_reply(flush, _LineNo, _YawsFile, _UT, ARG) ->
+    Hdrs = ARG#arg.headers,
     CliDataPos0 = get(client_data_pos),
     CliDataPos1 = flush(ARG#arg.clisock, CliDataPos0,
-                        (ARG#arg.headers)#headers.content_length,
-                        (ARG#arg.headers)#headers.transfer_encoding),
+                        Hdrs#headers.content_length,
+                        yaws:to_lower(Hdrs#headers.transfer_encoding)),
     put(client_data_pos, CliDataPos1),
     ok;
 
@@ -3666,7 +3667,7 @@ get_more_post_data(PPS, ARG) ->
     N = SC#sconf.partial_post_size,
     case (ARG#arg.headers)#headers.content_length of
         undefined ->
-            case (ARG#arg.headers)#headers.transfer_encoding of
+            case yaws:to_lower((ARG#arg.headers)#headers.transfer_encoding) of
                 "chunked" ->
                     get_chunked_client_data(ARG#arg.clisock, yaws:is_ssl(SC));
                 _  ->
