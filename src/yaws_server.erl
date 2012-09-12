@@ -1755,7 +1755,6 @@ handle_normal_request(CliSock, ARG, UT, Authdirs, N) ->
                          {true, User} -> {true, set_auth_user(ARG, User)};
                          E            -> {E, ARG}
                      end,
-
     case IsAuth of
         true ->
             %%!todo - remove special treatment of appmod here. (after suitable
@@ -2592,7 +2591,8 @@ get_chunked_client_data(CliSock,SSL) ->
                   undefined;
               Val =:= undefined ->
                   yaws:setopts(CliSock, [binary, {packet, line}],SSL),
-                  N = yaws:get_chunk_num(CliSock,SSL),
+                  %% Ignore chunk extentions
+                  {N, _Exts} = yaws:get_chunk_header(CliSock, SSL),
                   yaws:setopts(CliSock, [binary, {packet, raw}],SSL),
                   N;
               true ->
@@ -2605,7 +2605,8 @@ get_chunked_client_data(CliSock,SSL) ->
             <<>>;
         Len == 0 ->
             put(current_chunk_size, 0),
-            _Tmp=yaws:do_recv(CliSock, 2, SSL),%% flush last crnl
+            %% Ignore chunk trailer
+            yaws:get_chunk_trailer(CliSock, SSL),
             <<>>;
         Len =< SC#sconf.partial_post_size ->
             B = yaws:get_chunk(CliSock, Len, 0, SSL),

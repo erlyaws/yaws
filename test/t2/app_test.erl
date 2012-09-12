@@ -23,6 +23,7 @@ start() ->
     test_json(),
     test_post(),
     test_flush(),
+    test_te_trailer_and_extensions(),
     test_expires(),
     test_reentrant(),
     test_cgi_redirect(),
@@ -664,6 +665,29 @@ flush_chunked_get() ->
     ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, get, Bin, Opts),
     ?line {ok, "200", _, _} = ibrowse:send_req(Uri, [], get, [], []),
     ibrowse:stop_worker_process(ConnPid),
+    ok.
+
+test_te_trailer_and_extensions() ->
+    io:format("te_trailer_and_extensions_test\n",[]),
+    {ok, Sock} = gen_tcp:connect("localhost", 8006, [binary, {active, false}]),
+    Data = ["This is the data in the first chunk\n",
+            "and this is the second one\n",
+            "con", "sequence"],
+    Path = "/posttest/chunked/" ++ integer_to_list(length(lists:flatten(Data))),
+    ?line gen_tcp:send(Sock, "POST "++Path++" HTTP/1.1\r\n"
+                       "Host: localhost\r\n"
+                       "Trailer: Content-Type\r\n"
+                       "Trailer: Extra-Headers-WooHoo\r\n"
+                       "Transfer-Encoding: Chunked\r\n\r\n"),
+    Body = lists:flatten([[integer_to_list(length(X), 16),"; foo=bar\r\n",
+                           X,"\r\n"] || X <- Data]),
+    ?line gen_tcp:send(Sock, Body),
+    ?line gen_tcp:send(Sock, "0\r\n"
+                       "Extra-Headers-WooHoo: something\r\n"
+                       "Content-Type: text/plain\r\n\r\n"),
+    inet:setopts(Sock, [{packet, http}]),
+    ?line {ok, Len} = recv_hdrs(Sock),
+    gen_tcp:close(Sock),
     ok.
 
 

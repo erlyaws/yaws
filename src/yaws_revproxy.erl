@@ -625,15 +625,19 @@ read(RPState = #revproxy{srvsock=Sock, type=Type}, Len, Data) ->
 read_chunk(#revproxy{srvsock=Sock, type=Type}) ->
     try
         yaws:setopts(Sock, [binary, {packet, line}], Type),
-        Len = yaws:get_chunk_num(Sock, Type),
+        %% Ignore chunk extentions
+        {Len, _Exts} = yaws:get_chunk_header(Sock, Type),
         yaws:setopts(Sock, [binary, {packet, raw}], Type),
-
-        Data = if
-                   Len == 0 -> <<>>;
-                   true     -> yaws:get_chunk(Sock, Len, 0, Type)
-               end,
-        ok = yaws:eat_crnl(Sock, Type),
-        {ok, iolist_to_binary(Data)}
+        if
+            Len == 0 ->
+                %% Ignore chunk trailer
+                yaws:get_chunk_trailer(Sock, Type),
+                {ok, <<>>};
+            true ->
+                B = yaws:get_chunk(Sock, Len, 0, Type),
+                ok = yaws:eat_crnl(Sock, Type),
+                {ok, iolist_to_binary(B)}
+        end
     catch
         _:Reason ->
             {error, Reason}

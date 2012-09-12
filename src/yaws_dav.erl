@@ -509,11 +509,14 @@ store_client_data(Fd, CliSock, Len, SSlBool) ->
 %% not nice to support this for ssl sockets
 store_chunked_client_data(Fd, CliSock, SSL) ->
     yaws:setopts(CliSock, [binary, {packet, line}], SSL),
-    N = yaws:get_chunk_num(CliSock, SSL),
+    %% Ignore chunk extentions
+    {N, _Exts} = yaws:get_chunk_header(CliSock, SSL),
     yaws:setopts(CliSock, [binary, {packet, raw}], SSL),
     if
         N == 0 ->
-            _Tmp=yaws:do_recv(CliSock, 2, SSL);%% flush last crnl
+            %% Ignore chunk trailer
+            yaws:get_chunk_trailer(CliSock, SSL),
+            ok;
         true ->
             B = yaws:get_chunk(CliSock, N, 0,SSL),
             yaws:eat_crnl(CliSock,SSL),

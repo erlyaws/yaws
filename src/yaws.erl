@@ -30,8 +30,9 @@
 -export([first/2, elog/2, filesize/1, upto/2, to_string/1, to_list/1,
          integer_to_hex/1, hex_to_integer/1, string_to_hex/1, hex_to_string/1,
          is_modified_p/2, flag/3, dohup/1, is_ssl/1, address/0, is_space/1,
-         setopts/3, eat_crnl/2, get_chunk_num/2, get_chunk/4, list_to_uue/1,
-         uue_to_list/1, printversion/0, strip_spaces/1, strip_spaces/2,
+         setopts/3, eat_crnl/2, get_chunk_num/2, get_chunk_header/2,
+         get_chunk/4, get_chunk_trailer/2, list_to_uue/1, uue_to_list/1,
+         printversion/0, strip_spaces/1, strip_spaces/2,
          month/1, mk2/1, home/0, arg_rewrite/1, to_lowerchar/1, to_lower/1,
          funreverse/2, is_prefix/2, split_sep/2, join_sep/2, accepts_gzip/2,
          upto_char/2, deepmap/2, ticker/2, ticker/3,
@@ -2176,25 +2177,26 @@ eat_crnl(Fd,SSL) ->
     case do_recv(Fd,0, SSL) of
         {ok, <<13,10>>} -> ok;
         {ok, [13,10]}   -> ok;
-        Err             -> {error, Err}
+        _               -> exit(normal)
     end.
 
-get_chunk_num(Fd,SSL) ->
+
+get_chunk_num(Fd, SSL) ->
+    {N, _} = get_chunk_header(Fd, SSL),
+    N.
+
+get_chunk_header(Fd, SSL) ->
     case do_recv(Fd, 0, SSL) of
-        {ok, Line} ->
+        {ok, Data} ->
+            Line = if is_binary(Data) -> binary_to_list(Data);
+                      true            -> Data
+                   end,
             ?Debug("Get chunk num from line ~p~n",[Line]),
-            erlang:list_to_integer(nonl(Line),16);
+            {N, Exts} = split_at(Line, $;),
+            {list_to_integer(strip_spaces(N),16), strip_spaces(Exts)};
         {error, _Rsn} ->
             exit(normal)
     end.
-
-nonl(B) when is_binary(B) -> nonl(binary_to_list(B));
-nonl([10|T])              -> nonl(T);
-nonl([13|T])              -> nonl(T);
-nonl([32|T])              -> nonl(T);
-nonl([H|T])               -> [H|nonl(T)];
-nonl([])                  -> [].
-
 
 
 get_chunk(_Fd, N, N, _) ->
@@ -2206,6 +2208,14 @@ get_chunk(Fd, N, Asz,SSL) ->
             [Bin|get_chunk(Fd, N, SZ+Asz,SSL)];
         _ ->
             exit(normal)
+    end.
+
+get_chunk_trailer(Fd, SSL) ->
+    Hdrs = #headers{},
+    case http_collect_headers(Fd, undefined, Hdrs, SSL, 0) of
+        {error,_} -> exit(normal);
+        Hdrs      -> <<>>;
+        NewHdrs   -> {<<>>, NewHdrs}
     end.
 
 %% split inputstring at first occurrence of Char
