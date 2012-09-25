@@ -634,6 +634,32 @@ except any file found in directories, 'icons', 'js' and 'top/static' relative to
 the docroot.
 
 .TP
+\fBdispatchmod = DispatchModule\fR
+Set \fIDispatchModule\fR as a server-specific request dispatching
+module. Yaws expects \fIDispatchModule\fR to export a \fIdispatch/1\fR
+function. When it receives a request, Yaws passes an \fI#arg{}\fR record to
+the dispatch module's \fIdispatch/1\fR function, which returns one of the
+following atom results:
+
+.RS 12
+\fBdone\fR - this indicates the dispatch module handled the request itself
+and already sent the response, and Yaws should resume watching for new
+requests on the connection
+
+\fBclosed\fR - same as \fIdone\fR but the \fIDispatchModule\fR also closed
+the connection
+
+\fBcontinue\fR - the dispatch module has decided not to handle the request,
+and instead wants Yaws to perform its regular request dispatching
+.RE
+
+.IP
+Note that when \fIDispatchModule\fR handles a request itself, Yaws does not
+support tracing, increment statistics counters or allow traffic shaping for
+that request. It does however still keep track of maximum keepalive uses on
+the connection.
+
+.TP
 \fBerrormod_404 = Module\fR
 It is possible to set a special module that handles 404 Not Found messages. The
 function \fIModule:out404(Arg, GC, SC)\fR will be invoked. The arguments are

@@ -1105,7 +1105,7 @@ acceptor0(GS, Top) ->
 %%% Internal functions
 %%%----------------------------------------------------------------------
 
-aloop(CliSock, {IP,Port}, GS, Num) ->
+aloop(CliSock, {IP,Port}=IPPort, GS, Num) ->
     case yaws_trace:get_type(GS#gs.gconf) of
         undefined ->
             ok;
@@ -1135,24 +1135,45 @@ aloop(CliSock, {IP,Port}, GS, Num) ->
             {Req, H} = fix_abs_uri(Req0, H0),
             ?Debug("{Req, H} = ~p~n", [{Req, H}]),
             SC = pick_sconf(GS#gs.gconf, H, GS#gs.group),
-            ?Debug("SC: ~s", [?format_record(SC, sconf)]),
-            ?TC([{record, SC, sconf}]),
-            ?Debug("Headers = ~s~n", [?format_record(H, headers)]),
-            ?Debug("Request = ~s~n", [?format_record(Req, http_request)]),
-            run_trace_filter(GS, IP, Req, H),
             put(outh, #outh{}),
             put(sc, SC),
-            yaws_stats:hit(),
-            check_keepalive_maxuses(GS, Num),
-            Call = case yaws_shaper:check(SC, IP) of
-                       allow ->
-                           call_method(Req#http_request.method,CliSock,
-                                       {IP,Port},Req,H);
-                       {deny, Status, Msg} ->
-                           deliver_xxx(CliSock, Req, Status, Msg)
-                   end,
-            Call2 = fix_keepalive_maxuses(Call),
-            handle_method_result(Call2, CliSock, {IP,Port}, GS, Req, H, Num);
+            DispatchResult = case SC#sconf.dispatch_mod of
+                                 undefined ->
+                                     continue;
+                                 DispatchMod ->
+                                     Arg = make_arg(SC, CliSock, IPPort, H, Req, undefined),
+                                     ok = inet:setopts(CliSock, [{packet, raw}, {active, false}]),
+                                     DispatchMod:dispatch(Arg)
+                             end,
+            case DispatchResult of
+                done ->
+                    erase_transients(),
+                    case exceed_keepalive_maxuses(GS, Num) of
+                        true  -> {ok, Num+1};
+                        false -> aloop(CliSock, IPPort, GS, Num+1)
+                    end;
+                closed ->
+                    %% Dispatcher closed the socket
+                    erase_transients(),
+                    {ok, Num+1};
+                continue ->
+                    ?Debug("SC: ~s", [?format_record(SC, sconf)]),
+                    ?TC([{record, SC, sconf}]),
+                    ?Debug("Headers = ~s~n", [?format_record(H, headers)]),
+                    ?Debug("Request = ~s~n", [?format_record(Req, http_request)]),
+                    run_trace_filter(GS, IP, Req, H),
+                    yaws_stats:hit(),
+                    check_keepalive_maxuses(GS, Num),
+                    Call = case yaws_shaper:check(SC, IP) of
+                               allow ->
+                                   call_method(Req#http_request.method,CliSock,
+                                               IPPort,Req,H);
+                               {deny, Status, Msg} ->
+                                   deliver_xxx(CliSock, Req, Status, Msg)
+                           end,
+                    Call2 = fix_keepalive_maxuses(Call),
+                    handle_method_result(Call2, CliSock, IPPort, GS, Req, H, Num)
+            end;
         closed ->
             case yaws_trace:get_type(GS#gs.gconf) of
                 undefined -> ok;
@@ -1190,15 +1211,15 @@ run_trace_filter(GS, IP, Req, H) ->
 %% process dictionary outh variable if required to say that the
 %% connection has exceeded its maxuses.
 check_keepalive_maxuses(GS, Num) ->
+    Flag = exceed_keepalive_maxuses(GS, Num),
+    put(outh, (get(outh))#outh{exceedmaxuses=Flag}).
+
+exceed_keepalive_maxuses(GS, Num) ->
     case (GS#gs.gconf)#gconf.keepalive_maxuses of
-        nolimit ->
-            ok;
-        0 ->
-            ok;
-        N when Num+1 < N ->
-            ok;
-        _N ->
-            put(outh, (get(outh))#outh{exceedmaxuses=true})
+        nolimit          -> false;
+        0                -> false;
+        N when Num+1 < N -> false;
+        _N               -> true
     end.
 
 %% Change to Res to 'done' if we've exceeded our maxuses.
@@ -1207,7 +1228,7 @@ fix_keepalive_maxuses(Res) ->
         continue ->
             case (get(outh))#outh.exceedmaxuses of
                 true ->
-                    done; %% no keepalive this time!
+                    done;  % no keepalive this time!
                 _ ->
                     Res
             end;
@@ -1569,6 +1590,8 @@ no_body_method(CliSock, IPPort, Req, Head) ->
 
 make_arg(CliSock0, IPPort, Head, Req, Bin) ->
     SC = get(sc),
+    make_arg(SC, CliSock0, IPPort, Head, Req, Bin).
+make_arg(SC, CliSock0, IPPort, Head, Req, Bin) ->
     CliSock = case yaws:is_ssl(SC) of
                   nossl ->
                       CliSock0;

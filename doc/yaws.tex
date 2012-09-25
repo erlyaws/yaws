@@ -2692,6 +2692,30 @@ The following directives are allowed inside a server definition.
              on everything except any file found in directories \verb+icons+,
              \verb+js+ and \verb+top/static+ relative to the docroot.
 
+\item       \verb+dispatchmod = DispatchModule+ ---
+              Set \verb+DispatchModule+ as a server-specific request
+              dispatching module. \Yaws\  expects \verb+DispatchModule+ to
+              export a \verb+dispatch/1+ function. When it receives a
+              request, \Yaws\  passes an \verb+#arg{}+ record to the dispatch
+              module's \verb+dispatch/1+ function, which returns one of the
+              following atom results:
+              \begin{itemize}
+                \item \verb+done+ --- this indicates the dispatch module
+                  handled the request itself and already sent the response,
+                  and \Yaws\  should resume watching for new requests on the
+                  connection
+                \item \verb+closed+ --- same as \verb+done+ but the
+                  \verb+DispatchModule+ also closed the connection
+                \item \verb+continue+ --- the dispatch module has decided
+                  not to handle the request, and instead wants \Yaws\  to
+                  perform its regular request dispatching
+              \end{itemize}
+              Note that when \verb+DispatchModule+ handles a request itself,
+              \Yaws\  does not support tracing, increment statistics
+              counters or allow traffic shaping for that request. It does
+              however still keep track of maximum keepalive uses on the
+              connection.
+
 \item       \verb+errormod_404 = Module+ ---
               It is possible to set a special module that handles 404 Not Found
               messages. The function\\ \verb+Module:out404(Arg, GC, SC)+ will be

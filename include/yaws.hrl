@@ -242,7 +242,8 @@
           php_handler = {cgi, "/usr/bin/php-cgi"},
           shaper,
           deflate_options,
-          mime_types_info               % if undefined, global config is used
+          mime_types_info,              % if undefined, global config is used
+          dispatch_mod                  % custom dispatch module
          }).
 
 

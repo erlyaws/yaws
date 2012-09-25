@@ -1220,6 +1220,10 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                 {error, Str} ->
                     {error, ?F("~s at line ~w", [Str, Lno])}
             end;
+        ["dispatchmod", '=', DispatchMod] ->
+            C2 = C#sconf{dispatch_mod = list_to_atom(DispatchMod)},
+            fload(FD, server, GC, C2, Cs, Lno+1, Next);
+
         ["expires", '=' | Expires] ->
             case parse_expires(Expires, []) of
                 {ok, L} ->

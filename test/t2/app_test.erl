@@ -18,6 +18,7 @@ start() ->
     test2(),
     test3(),
     test_appmod(),
+    test_dispatchmod(),
     test_streamcontent(),
     sendfile_get(),
     test_json(),
@@ -244,6 +245,18 @@ test_appmod() ->
     Uri4 = "http://localhost:8004/non_root_appmod",
     ?line {ok, "200", Headers4, _} = ibrowse:send_req(Uri4, [], get),
     ?line "true" = proplists:get_value(?APPMOD_HEADER, Headers4),
+    ok.
+
+test_dispatchmod() ->
+    io:format("dispatchmod test\n", []),
+    Uri1 = "http://localhost:8011/done",
+    ?line {ok, "204", Headers1, _} = ibrowse:send_req(Uri1, [], get),
+    ?line "true" = proplists:get_value("X-DispatchMod", Headers1),
+    Uri2 = "http://localhost:8011/closed",
+    ?line {ok, "200", Headers2, _} = ibrowse:send_req(Uri2, [], get),
+    ?line "close" = proplists:get_value("Connection", Headers2),
+    Uri3 = "http://localhost:8011/index.yaws",
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri3, [], get),
     ok.
 
 test_streamcontent() ->
