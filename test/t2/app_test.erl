@@ -31,6 +31,7 @@ start() ->
     test_arg_rewrite(),
     test_shaper(),
     test_sslaccept_timeout(),
+    test_ssl_multipart_post(),
     test_throw(),
     test_too_many_headers(),
     test_index_files(),
@@ -807,6 +808,28 @@ test_sslaccept_timeout() ->
                end,
     gen_tcp:close(Sock),
     ok.
+
+test_ssl_multipart_post() ->
+    io:format("ssl_multipart_post_test\n", []),
+    ok = application:start(crypto),
+    ok = application:start(public_key),
+    ok = application:start(ssl),
+    Boundary = "----------------------------3e9876546ecf\r\n",
+    {ok, Bin0} = file:read_file("../../www/1000.txt"),
+    Data = list_to_binary([Boundary, Bin0]),
+    Size = size(Data),
+    Headers = [
+               {'Content-Type', "multipart/form-data; Boundary=" ++ Boundary},
+               {'Content-Length', Size}
+              ],
+    Uri = "https://localhost:8444/test_upload_ssl.yaws",
+    Options = [{is_ssl, true}, {ssl_options, [{verify, 0}]}],
+    ?line {ok, "200", _, _} = Reply = ibrowse:send_req(Uri, Headers, post, Data, Options),
+    ok = application:stop(ssl),
+    ok = application:stop(public_key),
+    ok = application:stop(crypto),
+    ok.
+
 
 test_throw() ->
     io:format("throw test\n", []),

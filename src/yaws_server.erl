@@ -1926,7 +1926,11 @@ handle_auth(ARG, Auth_H, Auth_methods = #auth{mod = Mod}, Ret) when Mod /= [] ->
                    [Mod, ARG, Auth_methods, Reason,
                     erlang:get_stacktrace()]),
             handle_crash(ARG, L),
-            deliver_accumulated(ARG#arg.clisock),
+            CliSock = case yaws_api:get_sslsocket(ARG#arg.clisock) of
+                          {ok, SslSock} -> SslSock;
+                          undefined     -> ARG#arg.clisock
+                      end,
+            deliver_accumulated(CliSock),
             exit(normal);
 
         %% appmod means the auth headers are undefined, i.e. false.
@@ -2642,7 +2646,7 @@ deliver_dyn_part(CliSock,                       % essential params
     case OutReply of
         {get_more, Cont, State} when element(1, Arg#arg.clidata) == partial  ->
             CliDataPos1 = get(client_data_pos),
-            More = get_more_post_data(CliDataPos1, Arg),
+            More = get_more_post_data(CliSock, CliDataPos1, Arg),
             A2 = Arg#arg{clidata=More, cont=Cont, state=State},
             deliver_dyn_part(
               CliSock, LineNo, YawsFile, CliDataPos1+size(un_partial(More)),
@@ -3008,7 +3012,10 @@ handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, ARG) ->
         yaws ->
             Mtime = mtime(UT2#urltype.finfo),
             Key = UT2#urltype.getpath,
-            CliSock = ARG#arg.clisock,
+            CliSock = case yaws_api:get_sslsocket(ARG#arg.clisock) of
+                          {ok, SslSock} -> SslSock;
+                          undefined     -> ARG#arg.clisock
+                      end,
             N = 0,
             case ets:lookup(SC#sconf.ets, Key) of
                 [{_Key, spec, Mtime1, Spec, Es}] when Mtime1 == Mtime,
@@ -3257,9 +3264,13 @@ handle_out_reply(Arg = #arg{},  _LineNo, _YawsFile, _UT, _ARG) ->
     Arg;
 
 handle_out_reply(flush, _LineNo, _YawsFile, _UT, ARG) ->
+    CliSock = case yaws_api:get_sslsocket(ARG#arg.clisock) of
+                  {ok, SslSock} -> SslSock;
+                  undefined     -> ARG#arg.clisock
+              end,
     Hdrs = ARG#arg.headers,
     CliDataPos0 = get(client_data_pos),
-    CliDataPos1 = flush(ARG#arg.clisock, CliDataPos0,
+    CliDataPos1 = flush(CliSock, CliDataPos0,
                         Hdrs#headers.content_length,
                         yaws:to_lower(Hdrs#headers.transfer_encoding)),
     put(client_data_pos, CliDataPos1),
@@ -3663,24 +3674,24 @@ deflate_accumulated(Arg, Content, ContentLength, Mode) ->
     end.
 
 
-get_more_post_data(PPS, ARG) ->
+get_more_post_data(CliSock, PPS, ARG) ->
     SC = get(sc),
     N = SC#sconf.partial_post_size,
     case (ARG#arg.headers)#headers.content_length of
         undefined ->
             case yaws:to_lower((ARG#arg.headers)#headers.transfer_encoding) of
                 "chunked" ->
-                    get_chunked_client_data(ARG#arg.clisock, yaws:is_ssl(SC));
+                    get_chunked_client_data(CliSock, yaws:is_ssl(SC));
                 _  ->
                     <<>>
             end;
         Len ->
             Int_len = list_to_integer(Len),
             if N + PPS < Int_len ->
-                    Bin = get_client_data(ARG#arg.clisock, N, yaws:is_ssl(SC)),
+                    Bin = get_client_data(CliSock, N, yaws:is_ssl(SC)),
                     {partial, Bin};
                true ->
-                    get_client_data(ARG#arg.clisock, Int_len - PPS,
+                    get_client_data(CliSock, Int_len - PPS,
                                     yaws:is_ssl(SC))
             end
     end.

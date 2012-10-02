@@ -38,7 +38,10 @@ put(SC, ARG) ->
         end,
     SSL = yaws:is_ssl(SC),
     FName = davpath(ARG),
-    CliSock = ARG#arg.clisock,
+    CliSock = case yaws_api:get_sslsocket(ARG#arg.clisock) of
+                  {ok, SslSock} -> SslSock;
+                  undefined     -> ARG#arg.clisock
+              end,
     TmpName = FName ++ ".tmp",
     %% FIXME: first check if we can write to original file??
     case file:open(TmpName, [raw,write]) of
