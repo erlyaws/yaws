@@ -318,7 +318,7 @@ This makes the server listen on IpAddress.  When virthosting several servers on
 the same ip/port address, if the browser doesn't send a Host: field, Yaws will
 pick the \fIfirst\fR server specified in the config file.  If the specified IP
 address is 0.0.0.0 Yaws will listen on all local IP addresses on the specified
-port. Default is \fI0.0.0.0\fR.  Multiple \fBlisten\fR directives may be used to
+port. Default is \fI127.0.0.1\fR.  Multiple \fBlisten\fR directives may be used to
 specify several addresses to listen on.
 
 .TP

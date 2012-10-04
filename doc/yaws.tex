@@ -2384,12 +2384,13 @@ The following directives are allowed inside a server definition.
               This makes the server listen on Port. Default is 8000.
 
 \item        \verb+listen = IpAddress+ ---
-              This makes the  server  listen  on  \verb+IpAddress+  when
-              virthosting  several  servers  on  the same IP/port
-              address, if the browser doesn't send a \verb+Host:+ field,
-              \Yaws\   will  pick  the first server specified in the
-              config file. Multiple \verb+listen+ directives may be
-              used to specify several addresses to listen on.
+              This makes the server listen on \verb+IpAddress+ when
+              virthosting several servers on the same IP/port address, if
+              the browser doesn't send a \verb+Host:+ field, \Yaws\ will
+              pick the first server specified in the config file. Multiple
+              \verb+listen+ directives may be used to specify several
+              addresses to listen on. The default listen interface is
+              127.0.0.1.
 
 \item        \verb+listen_backlog = Integer+ ---
               This sets the TCP listen backlog for the server to
@@ -3030,7 +3031,7 @@ The following directives are allowed inside a server definition.
   </redirect>
 \end{verbatim}
               With this configuration, a request for
-              \url{http://abc.com/foo/x/y/z} simply gets redirected to
+              \url{http://abc.com/foo/x/y/z} simply gets redirected to \\
               \url{http://www.mysite.org/zapp}. This is typically used when
               we simply want a static redirect at some place in the
               docroot.
