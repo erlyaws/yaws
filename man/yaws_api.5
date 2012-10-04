@@ -1,4 +1,4 @@
-.TH YAWS_API "5" "" "" "User API"
+.TH YAWS_API "5" "" "" "User API" -*- nroff -*-
 .SH NAME
 yaws_api \- api available to yaws web server programmers
 .SH SYNOPSIS
@@ -43,23 +43,34 @@ We have the following relevant record definitions:
 .nf
 
 -record(arg, {
-          clisock,        %% the socket leading to the peer client
-          client_ip_port, %% {ClientIp, ClientPort} tuple
-          headers,        %% headers
-          req,            %% request
-          clidata,        %% The client data (as a binary in POST requests)
-          server_path,    %% The normalized server path
-          querydata,      %% Was the URL on the form of ...?query (GET reqs)
-          appmoddata,     %% the remainder of the path up to the query
-          docroot,        %% where's the data
-          fullpath,       %% full path to yaws file
-          cont,                  %% Continuation for chunked multipart uploads
-          state,          %% State for use by users of the out/1 callback
-          pid,            %% pid of the yaws worker process
-          opaque,         %% useful to pass static data
-          appmod_prepath, %% path in front of: <appmod><appmoddata>
-          pathinfo        %% Set to 'd/e' when calling c.yaws for the request
-                          %% http://some.host/a/b/c.yaws/d/e
+          clisock,        % the socket leading to the peer client
+          client_ip_port, % {ClientIp, ClientPort} tuple
+          headers,        % headers
+          req,            % request
+          clidata,        % The client data (as a binary in POST requests)
+          server_path,    % The normalized server path
+                          % (pre-querystring part of URI)
+          querydata,      % For URIs of the form ...?querydata
+                          %  equiv of cgi QUERY_STRING
+          appmoddata,     % (deprecated - use pathinfo instead) the remainder
+                          % of the path leading up to the query
+          docroot,        % Physical base location of data for this request
+          docroot_mount,  % virtual directory e.g /myapp/ that the docroot
+                          %  refers to.
+          fullpath,       % full deep path to yaws file
+          cont,           % Continuation for chunked multipart uploads
+          state,          % State for use by users of the out/1 callback
+          pid,            % pid of the yaws worker process
+          opaque,         % useful to pass static data
+          appmod_prepath, % (deprecated - use prepath instead) path in front
+                          %  of: <appmod><appmoddata>
+          prepath,        % Path prior to 'dynamic' segment of URI.
+                          %  ie http://some.host/<prepath>/<script-point>/d/e
+                          % where <script-point> is an appmod mount point,
+                          % or .yaws,.php,.cgi,.fcgi etc script file.
+          pathinfo        % Set to '/d/e' when calling c.yaws for the request
+                          % http://some.host/a/b/c.yaws/d/e
+                          %  equiv of cgi PATH_INFO
          }).
 .fi
 \fR
@@ -83,15 +94,20 @@ The headers argument is also a record:
           accept_ranges,
           cookie = [],
           keep_alive,
+          location,
           content_length,
+          content_type,
+          content_encoding,
           authorization,
-          other = []   %% misc other headers
+          transfer_encoding,
+          x_forwarded_for,
+          other = []   % misc other headers
          }).
-
 .fi
 \fR
 
-.PP The \fBout/1\fR function can use the Arg to generate any content
+.PP
+The \fBout/1\fR function can use the Arg to generate any content
 it likes. We have the following functions to aid that generation.
 
 
@@ -105,7 +121,7 @@ will \fBnot\fR be parsed and searched for <erl> tags.
 
 .TP
 \fBpre_ssi_files(DocRoot, ListOfFiles) ->
-Server side include of pre indented code.  The data in Files
+Server side include of pre-indented code.  The data in Files
 will be included but contained in a <pre> tag. The data will be
 htmlized.
 
@@ -166,7 +182,6 @@ or if an error occurred, it returns [].
 
 .TP
 \fBparse_cookie(Str)\fR
-
 This function parses the value of \fBCookie\fR header, following the RFC6265. It
 returns a list of \fI#cookie{}\fR records. If no cookie was found or if an error
 occurred, it returns [].
@@ -220,12 +235,12 @@ a URL to ourselves.
 .nf
 
 -record(redir_self, {
-          host,        %% string() - our own host
-          scheme,      %% http | https
-          scheme_str,  %% "https://"  | "http://"
-          port,        %% integer()  - our own port
-          port_str     %% "" | ":<int>" - the optional port part
-                       %%                 to append to the url
+          host,        % string() - our own host
+          scheme,      % http | https
+          scheme_str,  % "https://"  | "http://"
+          port,        % integer()  - our own port
+          port_str     % "" | ":<int>" - the optional port part
+                       %                 to append to the url
          }).
 .fi
 
@@ -251,7 +266,6 @@ can have following values:
 virtual server's context. If no MIME type is found in this scope, it falls back
 on the global one.
 .RE
-.HP
 
 .TP
 \fBmime_type(FileName)\fR
@@ -362,11 +376,9 @@ and queryvar/2 if it is a GET request from the client.
 
 .TP
 \fBparse_multipart_post(Arg)\fR
-
 If the browser has set the Content-Type header to the value
 "multipart/form-data", which is the case when the browser
 wants to upload a file to the server the following happens:
-
 
 If the function returns \fB{result, Res}\fR no more data
 will come from the browser.

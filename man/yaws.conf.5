@@ -1,4 +1,4 @@
-.TH YAWS.CONF "5" "" "" "User Commands"
+.TH YAWS.CONF "5" "" "" "User Commands" -*- nroff -*-
 .SH NAME
 /etc/yaws/yaws.conf \- Configuration file for the Yaws web server
 .SH DESCRIPTION
@@ -37,8 +37,8 @@ where <Pid> is the process id handling the TCP connection.
 \fBtrace.<Pid>.traffic\fR - this file contains the traffic trace if that is
 enabled, where <Pid> is the process id handling the TCP connection.
 .RE
-.HP
 
+.IP
 Note that <Host>.access and <Host>.auth files will be used only if the directive
 \fBlogger_mod\fR is not set or set to yaws_log. The default value for logdir is
 \fI"."\fR
@@ -184,7 +184,7 @@ in local file systems.
 For example, we can specify
 
 .nf
-  soap_srv_mods=<Mod1, HandlerFunc, WsdlFile1> <Mod2, HandlerFunc, WsdlFile2, SpecifiedPrefix> ...
+  soap_srv_mods=<Mod1, Handler, Wsdl1> <Mod2, Handler, Wsdl2, Prefix> ...
 .fi
 
 .TP
@@ -374,21 +374,21 @@ When Yaws is started, this function is called for this virtual server. If the
 initialization is successful, the function must return \fI{true,State}\fR and if
 an error occurred, it must return \fIfalse\fR.
 .RE
-.HP
 
+.IP
 \fBModule:close_log(ServerName, Type, State)\fR
 .RS 12
 This function is called for this virtual server when Yaws is stopped.
 .RE
-.HP
 
+.IP
 \fBModule:wrap_log(ServerName, Type, State, LogWrapSize)\fR
 .RS 12
 This function is used to rotate log files. It is regularly called by Yaws and
 must return the possibly updated internal NewState.
 .RE
-.HP
 
+.IP
 \fBModule:write_log(ServerName, Type, State, Infos)\fR
 .RS 12
 When it needs to log a message, Yaws will call this function. The parameter
@@ -412,8 +412,8 @@ Infos is \fI{Ip,Req,InHdrs,OutHdrs,Time}\fR for an access log and
 
 \fBTime\fR - The time taken to serve the request, in microseconds.
 .RE
-.HP
 
+.IP
 For all of these callbacks, \fBServerName\fR is the virtual server's name,
 \fIType\fR is the atom access or auth and \fIState\fR is the internal state of
 the logger.
@@ -480,26 +480,24 @@ Defines the smallest response size that will be compressed. If nolimit is not
 used, the specified value must be strictly positive. The default value is
 \fInolimit\fR.
 .RE
-.HP
 
+.IP
 \fBcompress_level = none | default | best_compression | best_speed | 0..9\fR
 .RS 12
 Defines the compression level to be used. 0 (none), gives no compression at all,
 1 (best_speed) gives best speed and 9 (best_compression) gives best
 compression. The default value is \fIdefault\fR.
 .RE
-.HP
 
-
+.IP
 \fBwindow_size = 9..15\fR
 .RS 12
 Specifies the zlib compression window size. It should be in the range 9 through
 15. Larger values of this parameter result in better compression at the expense
 of memory usage. The default value is \fI15\fR.
 .RE
-.HP
 
-
+.IP
 \fBmem_level = 1..9\fR
 .RS 12
 Specifies how much memory should be allocated for the internal compression
@@ -507,17 +505,16 @@ state. \fImem_level=1\fR uses minimum memory but is slow and reduces compression
 ratio; \fImem_level=9\fR uses maximum memory for optimal speed. The default
 value is \fI8\fR.
 .RE
-.HP
 
-
+.IP
 \fBstrategy = default | filtered | huffman_only\fR
 .RS 12
 This parameter is used to tune the compression algorithm. See \fBzlib(3erl)\fR
 for more details on the \fIstrategy\fR parameter. The default value is
 \fIdefault\fR.
 .RE
-.HP
 
+.IP
 \fBuse_gzip_static = true | false\fR
 .RS 12
 If true, Yaws will try to serve precompressed versions of static files. It will
@@ -525,9 +522,8 @@ look for precompressed files in the same location as original files that end in
 ".gz". Only files that do not fit in the cache are concerned. The default value
 is \fIfalse\fR.
 .RE
-.HP
 
-
+.IP
 \fBmime_types = ListOfTypes | defaults | all\fR
 .RS 12
 Restricts the deflate compression to particular MIME types. The special value
@@ -545,7 +541,6 @@ By default, following MIME types are compressed (if
 application/pdf, application/x-dvi, application/javascript,
 application/x-javascript\fR. Multiple \fBmime_types\fR directive can be used.
 .RE
-.HP
 
 .TP
 \fBdocroot = Directory ...\fR
@@ -650,8 +645,8 @@ function \fIModule:out404(Arg, GC, SC)\fR will be invoked. The arguments are
 
 \fBSC\fR - a #sconf{} record (defined in yaws.hrl)
 .RE
-.HP
 
+.IP
 The function can and must do the same things that a normal \fIout/1\fR does.
 
 .TP
@@ -668,8 +663,8 @@ are
 
 \fBRealm\fR - a string
 .RE
-.HP
 
+.IP
 The function can and must do the same things that a normal \fIout/1\fR does.
 
 .TP
@@ -831,9 +826,8 @@ directly can use it to read any file to which it has read access. You should
 consider this when setting up a system with several mutually untrusted instances
 of php.
 .RE
-.HP
 
-
+.IP
 \fBphp_handler = <extern, Module:Function | Node:Module:Function>\fR - Use an
 external handler, possibly on another node, to interpret .php files (if
 allowed).
@@ -845,8 +839,8 @@ a #arg{} record.
 .br
 The function must do the same things that a normal out/1 does.
 .RE
-.HP
 
+.IP
 Default value is \fI<cgi, "/usr/bin/php-cgi">\fR.
 
 .TP
@@ -896,14 +890,14 @@ http://wiki.cacert.org/VhostTaskForce#Interoperability_Test
 Specifies which file contains the private key for the certificate. If not
 specified then the certificate file will be used.
 .RE
-.HP
 
+.IP
 \fBcertfile = File\fR
 .RS 12
 Specifies which file contains the certificate for the server.
 .RE
-.HP
 
+.IP
 \fBcacertfile = File\fR
 .RS 12
 A file containing trusted certificates to use during client authentication and
@@ -911,8 +905,8 @@ to use when attempting to build the server certificate chain.  The list is also
 used in the list of acceptable client CAs passed to the client when a
 certificate is requested.
 .RE
-.HP
 
+.IP
 \fBverify = 0 | 1 | 2 | verify_none | verify_peer\fR
 .RS 12
 Specifies the level of verification the server does on client certs.  0 means
@@ -928,8 +922,8 @@ request is sent to the client (x509 validation is performed.
 
 You might want to use fail_if_no_peer_cert in combination with verify_peer.
 .RE
-.HP
 
+.IP
 \fBfail_if_no_peer_cert = true | false\fR
 .RS 12
 If verify is set to verify_peer and set to true the connection will fail if the
@@ -937,8 +931,8 @@ client does not send a certificate (i.e. an empty certificate). If set to false
 the server will fail only if an invalid certificate is supplied (an empty
 certificate is considered valid).
 .RE
-.HP
 
+.IP
 \fBdepth = Int\fR
 .RS 12
 Specifies the depth of certificate chains the server is prepared to follow when
@@ -947,15 +941,15 @@ specify how far the server, i.e. we, shall follow the SSL certificates we
 present to the clients. Hence, using self-signed certs, we typically need to set
 this to 0.
 .RE
-.HP
 
+.IP
 \fBpassword = String\fR
 .RS 12
 String If the private key is encrypted on disc, this password is the 3Dee key to
 decrypt it.
 .RE
-.HP
 
+.IP
 \fBciphers = String\fR
 .RS 12
 This string specifies the SSL cipher string. The syntax of the SSL cipher string
@@ -966,7 +960,6 @@ ciphers = "[{dhe_rsa,aes_256_cbc,sha}, \\
             {dhe_dss,aes_256_cbc,sha}]"
 .fi
 .RE
-.HP
 
 .TP
 \fB<redirect> ... </redirect>\fR
@@ -986,7 +979,7 @@ appended to the redirected url. So if we for example have:
   </redirect>
 .fi
 
-Asumming this config resides on a site called http://abc.com, We have the
+Assuming this config resides on a site called http://abc.com, We have the
 following redirects:
 
 .nf
@@ -1029,8 +1022,8 @@ the specified docroot. No docroot configured means all docroots.  If two auth
 structures are defined, one with a docroot and one with no docroot, the first of
 both overrides the second one for requests in the configured docroot.
 .RE
-.HP
 
+.IP
 \fBdir = Dir\fR
 .RS 12
 Makes Dir to be controlled by WWW-authenticate headers. In order for a user to
@@ -1038,14 +1031,14 @@ have access to WWW-Authenticate controlled directory, the user must supply a
 password. The Dir must be specified relative to the docroot.  Multiple dir can
 be used. If no dir is set, the default value, \fI"/"\fR, will be used.
 .RE
-.HP
 
+.IP
 \fBrealm = Realm\fR
 .RS 12
 In the directory defined here, the WWW-Authenticate Realm is set to this value.
 .RE
-.HP
 
+.IP
 \fBauthmod = AuthMod\fR
 .RS 12
 If an auth module is defined then AuthMod:auth(Arg, Auth) will be called for all
@@ -1060,8 +1053,8 @@ callback would check if a valid cookie header is present, if not it would return
 {appmod, ?MODULE} and the out401/1 function in the same module would return
 {redirect_local, "/login.html"}.
 .RE
-.HP
 
+.IP
 \fBuser = User:Password\fR
 .RS 12
 Inside this directory, the user User has access if the user supplies the
@@ -1084,8 +1077,8 @@ recursive. Thus any subdirectories to Dir are automatically also protected.
 
 The .yaws_auth file is never visible in a dir listing
 .RE
-.HP
 
+.IP
 \fBpam service = \fIpam-service\fR\fR
 .RS 12
 If the item \fBpam\fR is part of the auth structure, Yaws will also try to
@@ -1096,8 +1089,8 @@ etc.
 pam authentication is performed by an Erlang port program which is typically
 installed as suid root by the Yaws install script.
 .RE
-.HP
 
+.IP
 \fBallow = all | ListOfHost\fR
 .RS 12
 The \fIallow\fR directive affects which hosts can access an area of the
@@ -1124,16 +1117,16 @@ following formats:
   allow = 10.1.0.0/16
 .fi
 .RE
-.HP
 
+.IP
 \fBdeny = all | ListOfHost\fR
 .RS 12
 This directive allows access to the server to be restricted based on IP
 address. The arguments for the \fIdeny\fR directive are identical to the
 arguments for the \fIallow\fR directive.
 .RE
-.HP
 
+.IP
 \fBorder = Ordering\fR
 .RS 12
 The \fIorder\fR directive, along with \fIallow\fR and \fIdeny\fR directives,
@@ -1158,7 +1151,6 @@ First, all \fIdeny\fR directives are evaluated; if any match, the request is
 denied unless it also matches an \fIallow\fR directive. Any requests which do
 not match any \fIallow\fR or \fIdeny\fR directives are permitted.
 .RE
-.HP
 
 .TP
 \fB<opaque> ... </opaque>\fR
@@ -1337,7 +1329,3 @@ Written by Claes Wikstrom
 .SH "SEE ALSO"
 .BR yaws (1)
 .BR erl (1)
-
-Comment] Local Variables:
-Comment] mode: nroff
-Comment] End:
