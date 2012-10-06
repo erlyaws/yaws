@@ -307,12 +307,20 @@ real_setcookies_test() ->
 
 set_cookie_test() ->
     ?assertEqual(
-        "a=bcd; Version=1; Comment=OK; Max-Age=1; "
+        "a=bcd; Version=1; Comment=OK; Domain=g.com; Path=/; Max-Age=1; "
         "Expires=Tue, 03 Jan 2012 10:00:05 GMT; HttpOnly; Secure",
         begin
             {header, {set_cookie, L}} = yaws_api:set_cookie("a", "bcd",
                 [{expires, {{2012,1,3},{10,0,5}}},
-                 {max_age, 1}, secure, http_only, {comment, "OK"}]),
+                 {max_age, 1}, secure, http_only,
+                 {path, "/"}, {domain, "g.com"}, {comment, "OK"}]),
+            lists:flatten(L)
+        end),
+    ?assertEqual(
+        "a=bcd; Version=1; Path=/home",
+        begin
+            {header, {set_cookie, L}} =
+                yaws_api:set_cookie("a", "bcd", [{path, "/home"}]),
             lists:flatten(L)
         end),
     ?assertEqual(
