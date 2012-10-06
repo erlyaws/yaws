@@ -22,6 +22,12 @@
          parse_multipart/2, parse_multipart/3]).
 -export([code_to_phrase/1, ssi/2, redirect/1]).
 -export([setcookie/2, setcookie/3, setcookie/4, setcookie/5, setcookie/6]).
+-deprecated([{setcookie, 2, eventually},
+             {setcookie, 3, eventually},
+             {setcookie, 4, eventually},
+             {setcookie, 5, eventually},
+             {setcookie, 6, eventually}]).
+-export([set_cookie/3]).
 -export([pre_ssi_files/2,  pre_ssi_string/1, pre_ssi_string/2,
          set_content_type/1,
          htmlize/1, htmlize_char/1, f/2, fl/1]).
@@ -683,7 +689,37 @@ secs() ->
     {MS, S, _} = now(),
     (MS * 1000000) + S.
 
+cookie_option(secure) ->
+    "; Secure";
+cookie_option(http_only) ->
+    "; HttpOnly";
+cookie_option(I) ->
+    throw({badarg, I}).
+cookie_option(expires, UTC) when is_tuple(UTC) ->
+    ["; Expires=" | yaws:universal_time_as_string(UTC)];
+cookie_option(max_age, Age) when is_integer(Age) ->
+    V = if Age < 0 -> "0"; true -> integer_to_list(Age) end,
+    ["; Max-Age=" | V];
+cookie_option(path, Path) when is_list(Path), Path =/= [] ->
+    ["; Path=" | Path];
+cookie_option(domain, Domain) when is_list(Domain), Domain =/= [] ->
+    ["; Domain=" | Domain];
+cookie_option(comment, Comment) when is_list(Comment), Comment=/= [] ->
+    ["; Comment=" | Comment];
+cookie_option(I, _) ->
+    throw({badarg, I}).
 
+%% @doc Generate a set_cookie header field tuple.
+%%      This function is more RFC6265 compliant than setcookie/6 and
+%%      therefore it deprecates setcookie/6 completely.
+set_cookie(Key, Value, Options)
+        when is_list(Key), is_list(Value), is_list(Options) ->
+    %% RFC6265 (4.1.1): Name=Value options must come first.
+    {NV,SV} = lists:foldl(fun
+        ({N,V}, {L1, L2}) -> {[cookie_option(N,V) | L1], L2};
+        (N,     {L1, L2}) -> {L1, [cookie_option(N) | L2]}
+    end, {[], []}, Options),
+    {header, {set_cookie, [Key, $=, Value, "; Version=1", NV | SV]}}.
 
 setcookie(Name, Value) ->
     {header, {set_cookie, f("~s=~s;", [Name, Value])}}.
