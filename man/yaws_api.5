@@ -140,8 +140,31 @@ The equivalent of io_lib:format/2. This function is automatically
 Htmlize an IO list object.
 
 .TP
+\fBset_cookie(Name, Value, Options])\fR
+Sets a cookie to the browser. Options are:
+\fI
+.nf
+
+{expires, UtcTime}  - Cookie expiration time, where UtcTime is
+                      a tuple returned by calendar:universal_time/0.
+{max_age, Age}      - Defines the lifetime of the cookie, in seconds,
+                      where age is an integer >= 0.
+{path, Path}        - Path is a string that specifies the subset of URLs to
+                      which this cookie applies.
+{domain, Domain}    - Domain is a string that specifies the domain for which
+                      the cookie is valid.
+{comment, Comment}  - Comment is a string that doccuments the server's
+                      intended use of the cookie.
+secure              - Directs the user agent to use only secure means to
+                      contact the origin server whenever it sends back this
+                      cookie.
+http_only           - Restricts cookie access from other non-HTTP APIs.
+.fi
+\fR
+
+.TP
 \fBsetcookie(Name, Value, [Path, [ Expire, [Domain , [Secure]]]])\fR
-Sets a cookie to the browser.
+Sets a cookie to the browser. This function is deprecated by set_cookie/3.
 
 .TP
 \fBfind_cookie_val(Cookie, Header)\fR

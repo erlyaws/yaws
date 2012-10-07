@@ -100,6 +100,8 @@
 
 -export([parse_ipmask/1, match_ipmask/2]).
 
+%% Internal
+-export([local_time_as_gmt_string/1, universal_time_as_string/1]).
 
 start() ->
     application:start(yaws, permanent).
