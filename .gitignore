@@ -16,8 +16,8 @@ config.status
 ebin/yaws.app
 include.mk
 priv/epam
+priv/charset.def
 scripts/yaws.conf
-src/charset.def
 src/mime_types.erl
 src/yaws_configure.hrl
 src/yaws_generated.erl
@@ -26,8 +26,8 @@ test/ibrowse.tar.gz
 test/support/include.mk
 test/support/include.sh
 test/t1/localhost:8000/
-test/t[123456]/logs/
-test/t[123456]/yaws.conf
+test/t[12345678]/logs/
+test/t[12345678]/yaws.conf
 test/t4/www2/8388608.bin
 www/yaws.pdf
 www/yaws.ps
@@ -72,3 +72,4 @@ yaws_logs
 rel/yaws
 dialyzer_warnings
 deps/*
+.eunit/*

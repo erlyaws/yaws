@@ -87,20 +87,21 @@
          querypart = []}).
 
 
--record(setcookie,{
-            key,
-            value,
-            quoted,
-            comment,
-            comment_url,
-            discard,
-            domain,
-            max_age,
-            expires,
-            path,
-            port,
-            secure,
-            version}).
+-record(setcookie, {key,
+                    value,
+                    quoted = false,
+                    domain,
+                    max_age,
+                    expires,
+                    path,
+                    secure = false,
+                    http_only = false,
+                    extensions = []}).
+
+
+-record(cookie, {key,
+                 value,
+                 quoted = false}).
 
 
 -record(redir_self, {

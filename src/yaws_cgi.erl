@@ -168,16 +168,16 @@ deep_drop_prefix(_, _) ->
     false.
 
 
-get_socket_peername(Socket={sslsocket,_,_}) ->
-    {ok, {IP, _Port}}=ssl:peername(Socket),
+get_socket_peername({ssl, SslSocket}) ->
+    {ok, {IP, _Port}}=ssl:peername(SslSocket),
     inet_parse:ntoa(IP);
 get_socket_peername(Socket) ->
     {ok, {IP, _Port}}=inet:peername(Socket),
     inet_parse:ntoa(IP).
 
 
-get_socket_sockname(Socket={sslsocket,_,_}) ->
-    {ok, {IP, _Port}}=ssl:sockname(Socket),
+get_socket_sockname({ssl, SslSocket}) ->
+    {ok, {IP, _Port}}=ssl:sockname(SslSocket),
     inet_parse:ntoa(IP);
 get_socket_sockname(Socket) ->
     {ok, {IP, _Port}}=inet:sockname(Socket),

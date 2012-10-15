@@ -38,7 +38,8 @@ out(A) ->
                     end
             end;
         _ ->
-            {status, 405}
+            [{status, 405},
+             {header, {"Allow", "GET"}}]
     end.
 
 init([Arg]) ->
@@ -51,8 +52,7 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
-handle_info({ok, YawsPid}, #state{sock=Socket}=State) ->
-    ok = inet:setopts(Socket, [{active, once}]),
+handle_info({ok, YawsPid}, State) ->
     {ok, Timer} = timer:send_interval(1000, self(), tick),
     {noreply, State#state{yaws_pid=YawsPid, timer=Timer}};
 handle_info({discard, _YawsPid}, State) ->
@@ -61,8 +61,14 @@ handle_info({discard, _YawsPid}, State) ->
 handle_info(tick, #state{sock=Socket}=State) ->
     Time = erlang:localtime(),
     Data = yaws_sse:data(httpd_util:rfc1123_date(Time)),
-    yaws_sse:send_events(Socket, Data),
-    {noreply, State};
+    case yaws_sse:send_events(Socket, Data) of
+        ok ->
+            {noreply, State};
+        {error, closed} ->
+            {stop, normal, State};
+        {error, Reason} ->
+            {stop, Reason, State}
+    end;
 handle_info({tcp_closed, _}, State) ->
     {stop, normal, State#state{sock=closed}};
 handle_info(_Info, State) ->

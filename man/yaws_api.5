@@ -1,4 +1,4 @@
-.TH YAWS_API "5" "" "" "User API"
+.TH YAWS_API "5" "" "" "User API" -*- nroff -*-
 .SH NAME
 yaws_api \- api available to yaws web server programmers
 .SH SYNOPSIS
@@ -43,23 +43,34 @@ We have the following relevant record definitions:
 .nf
 
 -record(arg, {
-          clisock,        %% the socket leading to the peer client
-          client_ip_port, %% {ClientIp, ClientPort} tuple
-          headers,        %% headers
-          req,            %% request
-          clidata,        %% The client data (as a binary in POST requests)
-          server_path,    %% The normalized server path
-          querydata,      %% Was the URL on the form of ...?query (GET reqs)
-          appmoddata,     %% the remainder of the path up to the query
-          docroot,        %% where's the data
-          fullpath,       %% full path to yaws file
-          cont,                  %% Continuation for chunked multipart uploads
-          state,          %% State for use by users of the out/1 callback
-          pid,            %% pid of the yaws worker process
-          opaque,         %% useful to pass static data
-          appmod_prepath, %% path in front of: <appmod><appmoddata>
-          pathinfo        %% Set to 'd/e' when calling c.yaws for the request
-                          %% http://some.host/a/b/c.yaws/d/e
+          clisock,        % the socket leading to the peer client
+          client_ip_port, % {ClientIp, ClientPort} tuple
+          headers,        % headers
+          req,            % request
+          clidata,        % The client data (as a binary in POST requests)
+          server_path,    % The normalized server path
+                          % (pre-querystring part of URI)
+          querydata,      % For URIs of the form ...?querydata
+                          %  equiv of cgi QUERY_STRING
+          appmoddata,     % (deprecated - use pathinfo instead) the remainder
+                          % of the path leading up to the query
+          docroot,        % Physical base location of data for this request
+          docroot_mount,  % virtual directory e.g /myapp/ that the docroot
+                          %  refers to.
+          fullpath,       % full deep path to yaws file
+          cont,           % Continuation for chunked multipart uploads
+          state,          % State for use by users of the out/1 callback
+          pid,            % pid of the yaws worker process
+          opaque,         % useful to pass static data
+          appmod_prepath, % (deprecated - use prepath instead) path in front
+                          %  of: <appmod><appmoddata>
+          prepath,        % Path prior to 'dynamic' segment of URI.
+                          %  ie http://some.host/<prepath>/<script-point>/d/e
+                          % where <script-point> is an appmod mount point,
+                          % or .yaws,.php,.cgi,.fcgi etc script file.
+          pathinfo        % Set to '/d/e' when calling c.yaws for the request
+                          % http://some.host/a/b/c.yaws/d/e
+                          %  equiv of cgi PATH_INFO
          }).
 .fi
 \fR
@@ -83,15 +94,20 @@ The headers argument is also a record:
           accept_ranges,
           cookie = [],
           keep_alive,
+          location,
           content_length,
+          content_type,
+          content_encoding,
           authorization,
-          other = []   %% misc other headers
+          transfer_encoding,
+          x_forwarded_for,
+          other = []   % misc other headers
          }).
-
 .fi
 \fR
 
-.PP The \fBout/1\fR function can use the Arg to generate any content
+.PP
+The \fBout/1\fR function can use the Arg to generate any content
 it likes. We have the following functions to aid that generation.
 
 
@@ -105,7 +121,7 @@ will \fBnot\fR be parsed and searched for <erl> tags.
 
 .TP
 \fBpre_ssi_files(DocRoot, ListOfFiles) ->
-Server side include of pre indented code.  The data in Files
+Server side include of pre-indented code.  The data in Files
 will be included but contained in a <pre> tag. The data will be
 htmlized.
 
@@ -124,23 +140,97 @@ The equivalent of io_lib:format/2. This function is automatically
 Htmlize an IO list object.
 
 .TP
+\fBset_cookie(Name, Value, Options])\fR
+Sets a cookie to the browser. Options are:
+\fI
+.nf
+
+{expires, UtcTime}  - Cookie expiration time, where UtcTime is
+                      a tuple returned by calendar:universal_time/0.
+{max_age, Age}      - Defines the lifetime of the cookie, in seconds,
+                      where age is an integer >= 0.
+{path, Path}        - Path is a string that specifies the subset of URLs to
+                      which this cookie applies.
+{domain, Domain}    - Domain is a string that specifies the domain for which
+                      the cookie is valid.
+{comment, Comment}  - Comment is a string that doccuments the server's
+                      intended use of the cookie.
+secure              - Directs the user agent to use only secure means to
+                      contact the origin server whenever it sends back this
+                      cookie.
+http_only           - Restricts cookie access from other non-HTTP APIs.
+.fi
+\fR
+
+.TP
 \fBsetcookie(Name, Value, [Path, [ Expire, [Domain , [Secure]]]])\fR
-Sets a cookie to the browser.
+Sets a cookie to the browser. This function is deprecated by set_cookie/3.
 
 .TP
 \fBfind_cookie_val(Cookie, Header)\fR
 This function can be used to search for a cookie that was previously
 set by \fBsetcookie/2-6\fR. For example if we set a cookie
-as \fByaws_api:setcookie("sid",SomeRandomSid) \fR, then on subsequent requests
+as \fByaws_api:setcookie("sid",SomeRandomSid)\fR, then on subsequent requests
 from the browser we can call:
 \fBfind_cookie("sid",(Arg#arg.headers)#headers.cookie)\fR
 
 The function returns [] if no cookie was found, otherwise the actual cookie
 is returned as a string.
 
+.TP
+\fBparse_set_cookie(Str)\fR
+This function parses the value of a \fBSet-Cookie\fR header, following the
+RFC6265. Because old RFCs (2109 and 2965) are still used, it is backward
+compatible. So this function returns a \fI#setcookie{}\fR record when only one
+cookie is found. If multiple cookies are set in a single \fBSet-Cookie\fR
+header, it returns a list of \fI#setcookie{}\fR records. If no cookie was found
+or if an error occurred, it returns [].
+
+\fI#setcookie{}\fR record is defined in \fIyaws_api.hrl\fR:
+\fI
+.nf
+
+-record(setcookie, {key,
+                    value,
+                    quoted = false,
+                    domain,
+                    max_age,
+                    expires,
+                    path,
+                    secure = false,
+                    http_only = false,
+                    extensions = []}).
+.fi
+\fR
 
 .TP
-\fBredirect(Url\fR
+\fBparse_cookie(Str)\fR
+This function parses the value of \fBCookie\fR header, following the RFC6265. It
+returns a list of \fI#cookie{}\fR records. If no cookie was found or if an error
+occurred, it returns [].
+
+\fI#cookie{}\fR record is defined in \fIyaws_api.hrl\fR:
+\fI
+.nf
+
+-record(cookie, {key,
+                 value,
+                 quoted = false}).
+.fi
+\fR
+
+.TP
+\fBformat_set_cookie(SetCookie)\fR
+Build a cookie string from a \fI#setcookie{}\fR record like returned by
+\fBparse_set_cookie/1\fR.
+
+.TP
+\fBformat_cookie(Cookie | [Cookie])\fR
+Build a cookie string from a \fI#cookie{}\fR record (or a list or records) like
+returned by \fBparse_cookie/1\fR.
+
+.TP
+\fBredirect(Url)\fR
 This function generates a redirect to the browser.
 It will clear any previously set headers. So to generate
 a redirect \fBand\fR set a cookie, we need to set the cookie after
@@ -168,12 +258,12 @@ a URL to ourselves.
 .nf
 
 -record(redir_self, {
-          host,        %% string() - our own host
-          scheme,      %% http | https
-          scheme_str,  %% "https://"  | "http://"
-          port,        %% integer()  - our own port
-          port_str     %% "" | ":<int>" - the optional port part
-                       %%                 to append to the url
+          host,        % string() - our own host
+          scheme,      % http | https
+          scheme_str,  % "https://"  | "http://"
+          port,        % integer()  - our own port
+          port_str     % "" | ":<int>" - the optional port part
+                       %                 to append to the url
          }).
 .fi
 
@@ -188,8 +278,22 @@ from a stream of data. It returns:
 The function handles multilines as defined in e.g. SMTP or HTTP
 
 .TP
+\fBmime_type(Scope, FileName)\fR
+Returns the MIME type as defined by the extension of \fIFileName\fR. \fIScope\fR
+can have following values:
+
+.RS 12
+\fBglobal\fR - returns the result obtained from the global context.
+.br
+\fB#sconf{} | {ServerName, Port}\fR - returns the result obtained from the
+virtual server's context. If no MIME type is found in this scope, it falls back
+on the global one.
+.RE
+
+.TP
 \fBmime_type(FileName)\fR
-Returns the mime type as defined by the extension of FileName
+Tries to determine the right \fIScope\fR before calling mime_type/2.
+
 
 .TP
 \fBstream_chunk_deliver(YawsPid, Data)\fR
@@ -295,11 +399,9 @@ and queryvar/2 if it is a GET request from the client.
 
 .TP
 \fBparse_multipart_post(Arg)\fR
-
 If the browser has set the Content-Type header to the value
 "multipart/form-data", which is the case when the browser
 wants to upload a file to the server the following happens:
-
 
 If the function returns \fB{result, Res}\fR no more data
 will come from the browser.
@@ -416,11 +518,23 @@ character.
 \fBurl_encode(Str)\fR
 Url-encodes a string. All URLs in HTML documents must be URL encoded.
 
+.TP
+\fBget_sslsocket(Socket)\fR
+Returns a socket for SSL sockets or the atom \fIundefined\fR for non-SSL
+sockets. Useful for applications that have to deal with both SSL and
+non-SSL sockets.
 
 .TP
 \fBreformat_header(H)\fR
 Returns a list of reformatted header values from a #headers{}
 record. The return list is suitable for retransmit.
+
+.TP
+\fBreformat_header(H, FormatFun)\fR
+Returns a list of reformatted header values from a #headers{} record, with
+each element of the list formatted via a call to \fIFormatFun\fR. This
+enables converting #headers{} records into various lists of headers and
+their values.
 
 .TP
 \fBset_header(Headers, {Header, Value})\fR
@@ -587,7 +701,7 @@ The code will be inserted in the page.
 .TP
 \fB{ehtml|exhtml, Term}\fR
 This will transform the erlang term Term into a
-stream of HTML content. The exhtml variant transforms into 
+stream of HTML content. The exhtml variant transforms into
 strict XHTML code. The basic syntax of Term
 is
 

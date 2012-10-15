@@ -8,7 +8,7 @@ YAWS=$(YTOP)/bin/yaws
 
 SUBST=../../scripts/Subst
 
-COMPILER_PA = -pa $(YTOP)/ebin
+COMPILER_PA = -pa $(YTOP)/ebin -pa $(YTOP)/test/ibrowse/ebin
 
 %.beam: %.erl
 	"$(ERLC)" -Ddebug $(COMPILER_PA) $<
@@ -53,6 +53,6 @@ stop:
 quiet_stop:
 	$(YTOP)/bin/yaws --id testid --stop >/dev/null 2>&1 && sleep 5 || true
 
-stdconf authconf revproxyconf deflateconf:
+stdconf authconf revproxyconf deflateconf davconf mimetypes:
 	cat ../conf/$@.conf | \
 	$(SUBST) %YTOP% $(YTOP) > yaws.conf

@@ -22,6 +22,12 @@
          parse_multipart/2, parse_multipart/3]).
 -export([code_to_phrase/1, ssi/2, redirect/1]).
 -export([setcookie/2, setcookie/3, setcookie/4, setcookie/5, setcookie/6]).
+-deprecated([{setcookie, 2, eventually},
+             {setcookie, 3, eventually},
+             {setcookie, 4, eventually},
+             {setcookie, 5, eventually},
+             {setcookie, 6, eventually}]).
+-export([set_cookie/3]).
 -export([pre_ssi_files/2,  pre_ssi_string/1, pre_ssi_string/2,
          set_content_type/1,
          htmlize/1, htmlize_char/1, f/2, fl/1]).
@@ -32,12 +38,13 @@
 -export([is_absolute_URI/1]).
 -export([path_norm/1, path_norm_reverse/1,
          sanitize_file_name/1]).
--export([get_line/1, mime_type/1]).
+-export([get_line/1, mime_type/1, mime_type/2]).
 -export([stream_chunk_deliver/2, stream_chunk_deliver_blocking/2,
          stream_chunk_end/1]).
 -export([stream_process_deliver/2, stream_process_deliver_chunk/2,
          stream_process_deliver_final_chunk/2, stream_process_end/2]).
 -export([websocket_send/2]).
+-export([get_sslsocket/1]).
 -export([new_cookie_session/1, new_cookie_session/2, new_cookie_session/3,
          cookieval_to_opaque/1, request_url/1,
          print_cookie_sessions/0,
@@ -48,7 +55,7 @@
          embedded_start_conf/1, embedded_start_conf/2,
          embedded_start_conf/3, embedded_start_conf/4]).
 
--export([set_status_code/1, reformat_header/1,
+-export([set_status_code/1, reformat_header/1, reformat_header/2,
          reformat_request/1, reformat_response/1, reformat_url/1]).
 
 -export([set_trace/1,
@@ -63,8 +70,8 @@
 -export([ehtml_expand/1, ehtml_expander/1, ehtml_apply/2,
          ehtml_expander_test/0]).
 
--export([parse_set_cookie/1, format_set_cookie/1,
-         postvar/2, queryvar/2, getvar/2]).
+-export([parse_set_cookie/1, parse_cookie/1, format_set_cookie/1,
+         format_cookie/1, postvar/2, queryvar/2, getvar/2]).
 
 -export([binding/1,binding_exists/1,
          dir_listing/1, dir_listing/2, redirect_self/1]).
@@ -519,6 +526,7 @@ do_parse_spec(QueryList, Last, Cur, State) when is_list(QueryList) ->
 
 code_to_phrase(100) -> "Continue";
 code_to_phrase(101) -> "Switching Protocols ";
+code_to_phrase(102) -> "Processing";
 code_to_phrase(200) -> "OK";
 code_to_phrase(201) -> "Created";
 code_to_phrase(202) -> "Accepted";
@@ -526,7 +534,9 @@ code_to_phrase(203) -> "Non-Authoritative Information";
 code_to_phrase(204) -> "No Content";
 code_to_phrase(205) -> "Reset Content";
 code_to_phrase(206) -> "Partial Content";
-code_to_phrase(207) -> "Multi Status";
+code_to_phrase(207) -> "Multi-Status";
+code_to_phrase(208) -> "Already Reported";
+code_to_phrase(226) -> "IM Used";
 code_to_phrase(300) -> "Multiple Choices";
 code_to_phrase(301) -> "Moved Permanently";
 code_to_phrase(302) -> "Found";
@@ -535,6 +545,7 @@ code_to_phrase(304) -> "Not Modified";
 code_to_phrase(305) -> "Use Proxy";
 code_to_phrase(306) -> "(Unused)";
 code_to_phrase(307) -> "Temporary Redirect";
+code_to_phrase(308) -> "Permanent Redirect";
 code_to_phrase(400) -> "Bad Request";
 code_to_phrase(401) -> "Unauthorized";
 code_to_phrase(402) -> "Payment Required";
@@ -553,6 +564,13 @@ code_to_phrase(414) -> "Request-URI Too Long";
 code_to_phrase(415) -> "Unsupported Media Type";
 code_to_phrase(416) -> "Requested Range Not Satisfiable";
 code_to_phrase(417) -> "Expectation Failed";
+code_to_phrase(418) -> "I'm a teapot";
+code_to_phrase(420) -> "Enhance Your Calm";
+code_to_phrase(422) -> "Unprocessable Entity";
+code_to_phrase(423) -> "Locked";
+code_to_phrase(424) -> "Failed Dependency";
+code_to_phrase(425) -> "Unordered Collection";
+code_to_phrase(426) -> "Upgrade Required";
 code_to_phrase(428) -> "Precondition Required";
 code_to_phrase(429) -> "Too Many Requests";
 code_to_phrase(431) -> "Request Header Fields Too Large";
@@ -562,6 +580,10 @@ code_to_phrase(502) -> "Bad Gateway";
 code_to_phrase(503) -> "Service Unavailable";
 code_to_phrase(504) -> "Gateway Timeout";
 code_to_phrase(505) -> "HTTP Version Not Supported";
+code_to_phrase(506) -> "Variant Also Negotiates";
+code_to_phrase(507) -> "Insufficient Storage";
+code_to_phrase(508) -> "Loop Detected";
+code_to_phrase(510) -> "Not Extended";
 code_to_phrase(511) -> "Network Authentication Required";
 
 %% Below are some non-HTTP status codes from other protocol standards that
@@ -667,7 +689,37 @@ secs() ->
     {MS, S, _} = now(),
     (MS * 1000000) + S.
 
+cookie_option(secure) ->
+    "; Secure";
+cookie_option(http_only) ->
+    "; HttpOnly";
+cookie_option(I) ->
+    throw({badarg, I}).
+cookie_option(expires, UTC) when is_tuple(UTC) ->
+    ["; Expires=" | yaws:universal_time_as_string(UTC)];
+cookie_option(max_age, Age) when is_integer(Age) ->
+    V = if Age < 0 -> "0"; true -> integer_to_list(Age) end,
+    ["; Max-Age=" | V];
+cookie_option(path, Path) when is_list(Path), Path =/= [] ->
+    ["; Path=" | Path];
+cookie_option(domain, Domain) when is_list(Domain), Domain =/= [] ->
+    ["; Domain=" | Domain];
+cookie_option(comment, Comment) when is_list(Comment), Comment=/= [] ->
+    ["; Comment=" | Comment];
+cookie_option(I, _) ->
+    throw({badarg, I}).
 
+%% @doc Generate a set_cookie header field tuple.
+%%      This function is more RFC6265 compliant than setcookie/6 and
+%%      therefore it deprecates setcookie/6 completely.
+set_cookie(Key, Value, Options)
+        when is_list(Key), is_list(Value), is_list(Options) ->
+    %% RFC6265 (4.1.1): Name=Value options must come first.
+    {NV,SV} = lists:foldl(fun
+        ({N,V}, {L1, L2}) -> {[cookie_option(N,V) | L1], L2};
+        (N,     {L1, L2}) -> {L1, [cookie_option(N) | L2]}
+    end, {[], []}, Options),
+    {header, {set_cookie, [Key, $=, Value, "; Version=1", NV | SV]}}.
 
 setcookie(Name, Value) ->
     {header, {set_cookie, f("~s=~s;", [Name, Value])}}.
@@ -705,56 +757,22 @@ setcookie(Name, Value, Path, Expire, Domain, Secure) ->
 %%        Str if found
 %% if several cookies with the same name are passed fron the browser,
 %% only the first match is returned
+find_cookie_val(Name, #arg{}=A) ->
+    find_cookie_val(Name, (A#arg.headers)#headers.cookie);
+find_cookie_val(Name, Cookies) ->
+    find_cookie_val2(yaws:to_lower(Name), Cookies).
 
-find_cookie_val(Cookie, A) when is_record(A, arg) ->
-    find_cookie_val(Cookie,  (A#arg.headers)#headers.cookie);
-%%
-find_cookie_val(_Cookie, []) ->
+find_cookie_val2(_, []) ->
     [];
-find_cookie_val(Cookie, [FullCookie | FullCookieList]) ->
-    case eat_cookie(Cookie, FullCookie) of
-        [] ->
-            find_cookie_val(Cookie, FullCookieList);
-        Val ->
-            Val
+find_cookie_val2(Name, [Cookie|Rest]) ->
+    L = parse_cookie(Cookie),
+    case lists:keyfind(Name, #cookie.key, L) of
+        #cookie{value=undefined} -> [];
+        #cookie{value=Value}     -> Value;
+        false                    -> find_cookie_val2(Name, Rest)
     end.
 
-%% Remove leading spaces before eating.
-eat_cookie([], _)           -> [];
-eat_cookie([$\s|T], Str)    -> eat_cookie(T, Str);
-eat_cookie(_, [])           -> [];
-eat_cookie(Cookie, [$\s|T]) -> eat_cookie(Cookie, T);
-eat_cookie(Cookie, Str) when is_list(Cookie),is_list(Str) ->
-    try
-        eat_cookie2(Cookie++"=", Str, Cookie)
-    catch
-        _:_ -> []
-    end.
-
-%% Look for the Cookie and extract its value.
-eat_cookie2(_, [], _)    ->
-    throw("not found");
-eat_cookie2([H1|T], [H2|R], C) ->
-    case string:to_lower(H1) =:= string:to_lower(H2) of
-        true ->
-            eat_cookie2(T, R, C);
-        false ->
-            {_,Rest} = eat_until(R, $;),
-            eat_cookie(C, Rest)
-    end;
-eat_cookie2([], L, _) ->
-    {Meat,_} = eat_until(L, $;),
-    Meat.
-
-eat_until(L, U) ->
-    eat_until(L, U, []).
-
-eat_until([H|T], H, Acc)              -> {lists:reverse(Acc), T};
-eat_until([H|T], U, Acc) when H =/= U -> eat_until(T, U, [H|Acc]);
-eat_until([], _, Acc)                 -> {lists:reverse(Acc), []}.
-
-
-
+%%
 url_decode([$%, Hi, Lo | Tail]) ->
             Hex = yaws:hex_to_integer([Hi, Lo]),
             [Hex | url_decode(Tail)];
@@ -870,11 +888,12 @@ get_line([], _) ->
 
 
 mime_type(FileName) ->
+    mime_type(get(sc), FileName).
+
+mime_type(S, FileName) ->
     case filename:extension(FileName) of
-        [_|T] ->
-            element(2, mime_types:t(T));
-        [] ->
-            element(2, mime_types:t([]))
+        [_|T] -> element(2, mime_types:t(S, T));
+        []    -> element(2, mime_types:t(S, []))
     end.
 
 
@@ -921,8 +940,8 @@ stream_chunk_deliver_blocking(YawsPid, Data) ->
 stream_chunk_end(YawsPid) ->
     YawsPid ! endofstreamcontent.
 
-stream_process_deliver(Sock={sslsocket,_,_}, IoList) ->
-    ssl:send(Sock, IoList);
+stream_process_deliver({ssl, SslSock}, IoList) ->
+    ssl:send(SslSock, IoList);
 stream_process_deliver(Sock, IoList) ->
     gen_tcp:send(Sock, IoList).
 
@@ -946,8 +965,8 @@ stream_process_deliver_final_chunk(Sock, IoList) ->
 
 stream_process_end(closed, YawsPid) ->
     YawsPid ! {endofstreamcontent, closed};
-stream_process_end(Sock={sslsocket,_,_}, YawsPid) ->
-    ssl:controlling_process(Sock, YawsPid),
+stream_process_end({ssl, SslSock}, YawsPid) ->
+    ssl:controlling_process(SslSock, YawsPid),
     YawsPid ! endofstreamcontent;
 stream_process_end(Sock, YawsPid) ->
     gen_tcp:controlling_process(Sock, YawsPid),
@@ -958,6 +977,11 @@ stream_process_end(Sock, YawsPid) ->
 websocket_send(Pid, {Type, Data}) ->
     yaws_websockets:send(Pid, {Type, Data}).
 
+%% returns {ok, SSL socket} if an SSL socket, undefined otherwise
+get_sslsocket({ssl, SslSocket}) ->
+    {ok, SslSocket};
+get_sslsocket(_Socket) ->
+    undefined.
 
 %% Return new cookie string
 new_cookie_session(Opaque) ->
@@ -1018,8 +1042,13 @@ set_status_code(Code) ->
 
 %% returns [ Header1, Header2 .....]
 reformat_header(H) ->
+    FormatFun = fun(Hname, Str) ->
+                        lists:flatten(io_lib:format("~s: ~s",[Hname, Str]))
+                end,
+    reformat_header(H, FormatFun).
+reformat_header(H, FormatFun) ->
     lists:zf(fun({Hname, Str}) ->
-                     I =  lists:flatten(io_lib:format("~s: ~s",[Hname, Str])),
+                     I =  FormatFun(Hname, Str),
                      {true, I};
                 (undefined) ->
                      false
@@ -1139,7 +1168,7 @@ reformat_header(H) ->
             ) ++
         lists:map(
           fun({http_header,_,K,_,V}) ->
-                  lists:flatten(io_lib:format("~s: ~s",[K,V]))
+                  FormatFun(K,V)
           end, H#headers.other).
 
 
@@ -1994,148 +2023,362 @@ deepmember(C,[N|Cs]) when C /= N ->
     deepmember(C, Cs).
 
 
-%%  Parse a Set-Cookie header.
+%%  . Parse a Set-Cookie header, following the RFC6265:
 %%
-%%  RFC (2109) ports are from RFC 2965
+%% "Set-Cookie: " set-cookie-string
+%%    set-cookie-string = cookie-pair *( ";" SP cookie-av )
+%%    cookie-pair       = cookie-name "=" cookie-value
+%%    cookie-name       = token
+%%    cookie-value      = *cookie-octet / ( DQUOTE *cookie-octet DQUOTE )
+%%    cookie-octet      = %x21 / %x23-2B / %x2D-3A / %x3C-5B / %x5D-7E
+%%    token             = <token, defined in [RFC2616], Section 2.2>
 %%
-%%  "Cookie:" cookie-version 1*((";" | ",") cookie-value)
-%%  "Set-Cookie:"  cookies
-%%  "Set-Cookie2:" cookies
-%%  cookie-value    =       NAME "=" VALUE [";" path] [";" domain] [";" port]
-%%  cookie          =       NAME "=" VALUE *( ";" cookie-av )
-%%  cookie-version  =       "$Version" "=" value
-%%  NAME            =       attr
-%%  VALUE           =       value
-%%  path            =       "$Path" "=" value
-%%  domain          =       "$Domain" "=" value
-%%  port            =       "$Port" "=" <"> value <">
+%%    cookie-av         = expires-av / max-age-av / domain-av / path-av /
+%%                        secure-av / httponly-av / extension-av
+%%    expires-av        = "Expires=" <rfc1123-date, defined in [RFC2616]>
+%%    max-age-av        = "Max-Age=" [1-9] *DIGIT
+%%    domain-av         = "Domain=" <subdomain> ; defined in [RFC1034]
+%%    path-av           = "Path=" <any CHAR except CTLs or ";">
+%%    secure-av         = "Secure"
+%%    httponly-av       = "HttpOnly"
+%%    extension-av      = <any CHAR except CTLs or ";">
 %%
-%%  cookie-av       = "Comment" "=" value
-%%                  | "CommentURL" "=" <"> http_URL <">
-%%                  | "Discard"
-%%                  | "Domain" "=" value
-%%                  | "Max-Age" "=" value
-%%                  | "Path" "=" value
-%%                  | "Port" [ "=" <"> portlist <"> ]
-%%                  | "Secure"
-%%                  | "Version" "=" 1*DIGIT
+%% NOTE: in RFC2109 and RFC2965, multiple cookies, separated by comma, can be
+%% defined in a single header. So, To be backward compatible with these RFCs,
+%% comma is forbidden in 'path-av' and 'extension-av' except for double-quoted
+%% value.
 %%
-
+%%
+%%  . Parse a Cookie header, following the RFC6265:
+%%
+%% "Cookie: " cookie-string
+%%    cookie-string = cookie-pair *( ";" SP cookie-pair )
+%%
+%% NOTE: To be backward compatible with RFCs, comma is considered as a cookie
+%% separator, like semicolon.
+%%
 parse_set_cookie(Str) ->
-    parse_set_cookie(Str, #setcookie{}).
+    parse_set_cookie(Str, []).
 
-parse_set_cookie([], Cookie) ->
-    Cookie;
-parse_set_cookie(Str, Cookie) ->
-    Rest00 = skip_space(Str),
-    {Key,Rest0} = parse_set_cookie_key(Rest00, []),
-    Rest1 = skip_space(Rest0),
-    case Rest1 of
-        [$=|Rest2] ->
-            {Value,Quoted,Rest3} = parse_set_cookie_value(Rest2),
-            NewC=add_set_cookie(Cookie,yaws:to_lower(Key),Value,Quoted),
-            parse_set_cookie(Rest3,NewC);
-        [$;|Rest2] ->
-            NewC =add_set_cookie(Cookie,yaws:to_lower(Key),undefined,false),
-            parse_set_cookie(Rest2,NewC);
-        _ ->
-            Cookie
+parse_set_cookie([], [SetCookie]) ->
+    SetCookie;
+parse_set_cookie([], SetCookies) ->
+    lists:reverse(SetCookies);
+parse_set_cookie(Str, SetCookies) ->
+    case do_parse_set_cookie(Str) of
+        {#setcookie{extensions=Exts}=C0, Rest} ->
+            C1 = C0#setcookie{extensions=lists:reverse(Exts)},
+            parse_set_cookie(Rest, [C1|SetCookies]);
+        error ->
+            []
     end.
 
-%%
 
-parse_set_cookie_key([], Acc) ->
-    {lists:reverse(Acc), []};
-parse_set_cookie_key(T=[$=|_], Acc) ->
-    {lists:reverse(Acc), T};
-parse_set_cookie_key(T=[$;|_], Acc) ->
-    {lists:reverse(Acc), T};
-parse_set_cookie_key([C|T], Acc) ->
-    parse_set_cookie_key(T, [C|Acc]).
+do_parse_set_cookie(Str) ->
+    {Key, Rest0} = parse_cookie_key(skip_space(Str), []),
+    case yaws:to_lower(Key) of
+        [] ->
+            error;
+        K ->
+            Cookie0 = #setcookie{key=K, quoted=false},
+            case skip_space(Rest0) of
+                [$=|Rest1] ->
+                    {V, Q, Rest2} = parse_cookie_value(skip_space(Rest1)),
+                    Cookie1 = Cookie0#setcookie{value=V, quoted=Q},
+                    parse_set_cookie_result(Cookie1, skip_space(Rest2));
+                [$;|Rest1] -> parse_set_cookie_options(Rest1, Cookie0);
+                [$,|Rest1] -> {Cookie0, Rest1};
+                []         -> {Cookie0, []};
+                _          -> error
+            end
+    end.
 
-%%
+parse_set_cookie_options(Str, Cookie0) ->
+    {Key, Rest0} = parse_cookie_key(skip_space(Str), []),
+    case yaws:to_lower(Key) of
+        [] ->
+            {Cookie0, Rest0};
+        "domain" ->
+            case skip_space(Rest0) of
+                [$=|Rest1] ->
+                    {V,_,Rest2} = parse_set_cookie_domain(skip_space(Rest1),[]),
+                    Cookie1 = Cookie0#setcookie{domain=V},
+                    parse_set_cookie_result(Cookie1, skip_space(Rest2));
+                [$;|Rest1] -> parse_set_cookie_options(Rest1, Cookie0);
+                [$,|Rest1] -> {Cookie0, Rest1};
+                []         -> {Cookie0, []};
+                _          -> error
+            end;
+        "max-age" ->
+            case skip_space(Rest0) of
+                [$=|Rest1] ->
+                    {V,_,Rest2} = parse_set_cookie_maxage(skip_space(Rest1),[]),
+                    Cookie1 = Cookie0#setcookie{max_age=V},
+                    parse_set_cookie_result(Cookie1, skip_space(Rest2));
+                [$;|Rest1] -> parse_set_cookie_options(Rest1, Cookie0);
+                [$,|Rest1] -> {Cookie0, Rest1};
+                []         -> {Cookie0, []};
+                _          -> error
+            end;
+        "expires" ->
+            case skip_space(Rest0) of
+                [$=|Rest1] ->
+                    {V, _, Rest2} = parse_set_cookie_expires(skip_space(Rest1)),
+                    Cookie1 = Cookie0#setcookie{expires=V},
+                    parse_set_cookie_result(Cookie1, skip_space(Rest2));
+                [$;|Rest1] -> parse_set_cookie_options(Rest1, Cookie0);
+                [$,|Rest1] -> {Cookie0, Rest1};
+                []         -> {Cookie0, []};
+                _          -> error
+            end;
+        "path" ->
+            case skip_space(Rest0) of
+                [$=|Rest1] ->
+                    {V, _, Rest2} = parse_cookie_value(skip_space(Rest1)),
+                    Cookie1 = Cookie0#setcookie{path=V},
+                    parse_set_cookie_result(Cookie1, skip_space(Rest2));
+                [$;|Rest1] -> parse_set_cookie_options(Rest1, Cookie0);
+                [$,|Rest1] -> {Cookie0, Rest1};
+                []         -> {Cookie0, []};
+                _          -> error
+            end;
+        "secure" ->
+            Cookie1 = Cookie0#setcookie{secure=true},
+            parse_set_cookie_result(Cookie1, skip_space(Rest0));
+        "httponly" ->
+            Cookie1 = Cookie0#setcookie{http_only=true},
+            parse_set_cookie_result(Cookie1, skip_space(Rest0));
+        K ->
+            Exts = Cookie0#setcookie.extensions,
+            case skip_space(Rest0) of
+                [$=|Rest1] ->
+                    {V, Q, Rest2} = parse_cookie_value(skip_space(Rest1)),
+                    Cookie1 = Cookie0#setcookie{extensions=[{K,V,Q}|Exts]},
+                    parse_set_cookie_result(Cookie1, skip_space(Rest2));
+                [$;|Rest1] ->
+                    Cookie1 = Cookie0#setcookie{
+                                extensions=[{K,undefined,false}|Exts]
+                               },
+                    parse_set_cookie_options(Rest1, Cookie1);
+                [$,|Rest1] ->
+                    Cookie1 = Cookie0#setcookie{
+                                extensions=[{K,undefined,false}|Exts]
+                               },
+                    {Cookie1, Rest1};
+                [] ->
+                    Cookie1 = Cookie0#setcookie{
+                                extensions=[{K,undefined,false}|Exts]
+                               },
+                    {Cookie1, []};
+                _ ->
+                    error
+            end
+    end.
 
-parse_set_cookie_value([$"|T]) ->
-    parse_quoted(T,[]);
-parse_set_cookie_value(T) ->
-    parse_set_cookie_value(T,[]).
 
-parse_set_cookie_value([],Acc) ->
+parse_set_cookie_domain([C|_]=Rest, []) when C < $A orelse C > $Z orelse
+                                             C < $a orelse C > $z orelse
+                                             C /= $. ->
+    parse_cookie_value(Rest);
+parse_set_cookie_domain([C|_]=Rest, [_|_]=Acc) when C < $0 orelse C > $9 orelse
+                                                    C < $A orelse C > $Z orelse
+                                                    C < $a orelse C > $z orelse
+                                                    C /= $. orelse C /= $- ->
+    {lists:reverse(Acc), false, Rest};
+parse_set_cookie_domain([], Acc) ->
     {lists:reverse(Acc), false, []};
-parse_set_cookie_value(T=[$;|_], Acc) ->
+parse_set_cookie_domain([C|T], Acc) ->
+    parse_set_cookie_domain(T, [C|Acc]).
+
+
+parse_set_cookie_maxage([C|_]=Rest, []) when C < $1 orelse C > $9 ->
+    parse_cookie_value(Rest);
+parse_set_cookie_maxage([C|_]=Rest, [_|_]=Acc) when C < $0 orelse C > $9 ->
+    {lists:reverse(Acc), false, Rest};
+parse_set_cookie_maxage([], Acc) ->
+    {lists:reverse(Acc), false, []};
+parse_set_cookie_maxage([C|T], Acc) ->
+    parse_set_cookie_maxage(T, [C|Acc]).
+
+
+%% First of all, try to parse valid rfc1123 date (faster), then use a regex
+%% (more permissive)
+parse_set_cookie_expires([D,A,Y,$,,$\s,D1,D2,SEP,M,O,N,SEP,Y1,Y2,Y3,Y4,$\s,
+                          H1,H2,$:,M1,M2,$:,S1,S2,$\s,Z1,Z2,Z3|Rest])
+  when SEP =:= $- orelse SEP =:= $\s ->
+    {[D,A,Y,$,,$\s,D1,D2,SEP,M,O,N,SEP,Y1,Y2,Y3,Y4,$\s,
+      H1,H2,$:,M1,M2,$:,S1,S2,$\s,Z1,Z2,Z3], false, Rest};
+parse_set_cookie_expires(Str) ->
+    RE = "^("
+        "(?:[a-zA-Z]+,\s+)?"                    %% Week day
+        "[0-9]+(?:\s|-)[a-zA-Z]+(?:\s|-)[0-9]+" %% DD Month YYYY
+        "\s+[0-9]+:[0-9]+:[0-9]+"               %% hh:mm:ss
+        "(?:\s+[a-zA-Z]+)?"                     %% timezone
+        ")"
+        "(.*)$",
+    case re:run(Str, RE, [{capture, all_but_first, list}, caseless]) of
+        {match, [Date, Rest]} -> {Date, false, Rest};
+        nomatch               -> parse_cookie_value(Str)
+    end.
+
+
+parse_set_cookie_result(Cookie, [$;|Rest]) ->
+    parse_set_cookie_options(Rest, Cookie);
+parse_set_cookie_result(Cookie, [$,|Rest]) ->
+    {Cookie, Rest};
+parse_set_cookie_result(Cookie, []) ->
+    {Cookie, []};
+parse_set_cookie_result(_, _) ->
+    error.
+
+
+%%
+parse_cookie(Str) ->
+    parse_cookie(Str, []).
+
+parse_cookie([], Cookies) ->
+    lists:reverse(Cookies);
+parse_cookie(Str, Cookies) ->
+    {Key, Rest0} = parse_cookie_key(skip_space(Str), []),
+    case yaws:to_lower(Key) of
+        [] ->
+            [];
+        K ->
+            case skip_space(Rest0) of
+                [$=|Rest1] ->
+                    {V, Q, Rest2} = parse_cookie_value(skip_space(Rest1)),
+                    C = #cookie{key=K, value=V, quoted=Q},
+                    case skip_space(Rest2) of
+                        [$;|Rest3] -> parse_cookie(Rest3, [C|Cookies]);
+                        [$,|Rest3] -> parse_cookie(Rest3, [C|Cookies]);
+                        []         -> parse_cookie([], [C|Cookies]);
+                        _          -> []
+                    end;
+                [$;|Rest1] -> parse_cookie(Rest1, [#cookie{key=K}|Cookies]);
+                [$,|Rest1] -> parse_cookie(Rest1, [#cookie{key=K}|Cookies]);
+                []         -> parse_cookie([], [#cookie{key=K}|Cookies]);
+                _          -> []
+            end
+    end.
+
+
+%%
+%% All CHAR except ('=' | ';' | ',' | SP | HT | CRLF | LF)
+parse_cookie_key([], Acc) ->
+    {lists:reverse(Acc), []};
+parse_cookie_key(T=[$=|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_cookie_key(T=[$;|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_cookie_key(T=[$,|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_cookie_key(T=[$\s|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_cookie_key(T=[$\t|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_cookie_key(T=[$\r,$\n|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_cookie_key(T=[$\n|_], Acc) ->
+    {lists:reverse(Acc), T};
+parse_cookie_key([C|T], Acc) ->
+    parse_cookie_key(T, [C|Acc]).
+
+
+%%
+parse_cookie_value([$"|T]) ->
+    parse_cookie_quoted(T,[]);
+parse_cookie_value(T) ->
+    parse_cookie_value(T,[]).
+
+%% All CHAR except (';' | ',' | SP | HT | CRLF | LF)
+parse_cookie_value([],Acc) ->
+    {lists:reverse(Acc), false, []};
+parse_cookie_value(T=[$;|_], Acc) ->
     {lists:reverse(Acc), false, T};
-parse_set_cookie_value([C|T], Acc) ->
-    parse_set_cookie_value(T, [C|Acc]).
+parse_cookie_value(T=[$,|_], Acc) ->
+    {lists:reverse(Acc), false, T};
+parse_cookie_value(T=[$\s|_], Acc) ->
+    {lists:reverse(Acc), false, T};
+parse_cookie_value(T=[$\t|_], Acc) ->
+    {lists:reverse(Acc), false, T};
+parse_cookie_value(T=[$\r,$\n|_], Acc) ->
+    {lists:reverse(Acc), false, T};
+parse_cookie_value(T=[$\n|_], Acc) ->
+    {lists:reverse(Acc), false, T};
+parse_cookie_value([C|T], Acc) ->
+    parse_cookie_value(T, [C|Acc]).
 
-parse_quoted([], Acc) ->
+
+%% All CHAR except ('"' | CTLs) but including LWS and escape DQUOTEs
+%%   CTL = any US-ASCII control character (octets 0 - 31) and DEL (127)
+%%   LWS = [CRLF] 1*( SP | HT )
+parse_cookie_quoted([], Acc) ->
     {lists:reverse(Acc), true, []};
-parse_quoted([$"|T], Acc) ->
+parse_cookie_quoted([$"|T], Acc) ->
     {lists:reverse(Acc), true, T};
-parse_quoted([$\\,C|T], Acc) ->
-    parse_quoted(T,[C,$\\|Acc]);
-parse_quoted([C|T], Acc) ->
-    parse_quoted(T,[C|Acc]).
-%%
+parse_cookie_quoted([$\\,C|T], Acc) ->
+    parse_cookie_quoted(T,[C,$\\|Acc]);
+parse_cookie_quoted([$\t|T], Acc) ->
+    parse_cookie_quoted(T,[$\t|Acc]);
+parse_cookie_quoted([$\r,$\n,$\s|T], Acc) ->
+    parse_cookie_quoted(T,[$\s,$\n,$\r|Acc]);
+parse_cookie_quoted([$\r,$\n,$\t|T], Acc) ->
+    parse_cookie_quoted(T,[$\t,$\n,$\r|Acc]);
+parse_cookie_quoted([C|T], Acc) when C > 31 andalso C < 127 ->
+    parse_cookie_quoted(T,[C|Acc]);
+parse_cookie_quoted(T, Acc) ->
+    {lists:reverse(Acc), true, T}.
 
-add_set_cookie(C, Key, Value, Quoted) when C#setcookie.key==undefined ->
-    C#setcookie{key=Key,value=Value,quoted=Quoted};
-add_set_cookie(C, "comment", Value, _Quoted) ->
-    C#setcookie{comment=Value};
-add_set_cookie(C, "commenturl", Value, _Quoted) ->
-    C#setcookie{comment_url=Value};
-add_set_cookie(C, "discard", Value, _Quoted) ->
-    C#setcookie{discard=Value};
-add_set_cookie(C, "domain", Value, _Quoted) ->
-    C#setcookie{domain=Value};
-add_set_cookie(C, "max-age", Value, _Quoted) ->
-    C#setcookie{max_age=Value};
-add_set_cookie(C, "path", Value, _Quoted) ->
-    C#setcookie{path=Value};
-add_set_cookie(C, "port", Value, _Quoted) ->
-    C#setcookie{port=Value};
-add_set_cookie(C, "secure", Value, _Quoted) ->
-    C#setcookie{secure=Value};
-add_set_cookie(C, "version", Value, _Quoted) ->
-    C#setcookie{version=Value};
-add_set_cookie(C, _Key, _Value, _Quoted) ->
-    C.
 
 %%
-
 format_set_cookie(C) when C#setcookie.value == undefined ->
-    [C#setcookie.key|format_set_cookie_opts(C)];
+    [C#setcookie.key|format_cookie_opts(C)];
 format_set_cookie(C) when C#setcookie.quoted ->
-    [C#setcookie.key,$=,$",C#setcookie.value,$"|
-     format_set_cookie_opts(C)];
+    [C#setcookie.key,$=,$",C#setcookie.value,$"|format_cookie_opts(C)];
 format_set_cookie(C) ->
-    [C#setcookie.key,$=,C#setcookie.value|
-     format_set_cookie_opts(C)].
-
-add_opt(_Key,undefined) -> [];
-add_opt(Key,Opt) -> [$;,Key,$=,Opt].
-
-format_set_cookie_opts(C) ->
-    [add_opt("Path",C#setcookie.path),
-     add_opt("Port",C#setcookie.port),
-     add_opt("Domain",C#setcookie.domain),
-     add_opt("Secure",C#setcookie.secure),
-     add_opt("Expires",C#setcookie.expires),
-     add_opt("Max-Age",C#setcookie.max_age),
-     add_opt("Discard",C#setcookie.discard),
-     add_opt("Comment",C#setcookie.comment),
-     add_opt("CommentURL",C#setcookie.comment_url),
-     add_opt("version",C#setcookie.version)].
+    [C#setcookie.key,$=,C#setcookie.value|format_cookie_opts(C)].
 
 %%
-
-skip_space([]) -> [];
-skip_space([$ |T]) -> skip_space(T);
-skip_space([$\t|T]) -> skip_space(T);
-skip_space(T) -> T.
+format_cookie([Cookie]) ->
+    format_cookie(Cookie);
+format_cookie([Cookie|Rest]) ->
+    [format_cookie(Cookie),$;,$\s|format_cookie(Rest)];
+format_cookie(#cookie{key=Key, value=undefined}) ->
+    Key;
+format_cookie(#cookie{key=Key, value=Value, quoted=true}) ->
+    [Key,$=,$",Value,$"];
+format_cookie(#cookie{key=Key, value=Value, quoted=false}) ->
+    [Key,$=,Value].
 
 %%
+format_cookie_opts(C=#setcookie{}) ->
+    [
+     add_opt("Domain",   C#setcookie.domain,    false),
+     add_opt("Max-Age",  C#setcookie.max_age,   false),
+     add_opt("Expires",  C#setcookie.expires,   false),
+     add_opt("Path",     C#setcookie.path,      false),
+     add_opt("Secure",   C#setcookie.secure,    false),
+     add_opt("HttpOnly", C#setcookie.http_only, false)
+    ] ++ [add_opt(K,V,Q) || {K,V,Q} <- C#setcookie.extensions].
 
 
+add_opt(_, undefined, _) -> [];
+add_opt(_, false, _)     -> [];
+add_opt(Key, true, _)    -> [$;,$\s,Key];
+add_opt(Key, Opt, true)  -> [$;,$\s,Key,$=,$",Opt,$"];
+add_opt(Key, Opt, false)  -> [$;,$\s,Key,$=,Opt].
+
+
+%%
+skip_space([])          -> [];
+skip_space([$\s|T])     -> skip_space(T);
+skip_space([$\t|T])     -> skip_space(T);
+skip_space([$\r,$\n|T]) -> skip_space(T);
+skip_space([$\n|T])     -> skip_space(T);
+skip_space(T)           -> T.
+
+
+%%
 getvar(ARG,Key) when is_atom(Key) ->
     getvar(ARG, atom_to_list(Key));
 getvar(ARG,Key) ->

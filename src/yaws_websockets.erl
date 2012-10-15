@@ -17,7 +17,7 @@
 
 -include_lib("kernel/include/file.hrl").
 
--define(MAX_PAYLOAD, 16777216). %16MB
+-define(MAX_PAYLOAD, 16*1024*1024). % 16MB
 
 %% RFC 6455 section 7.4.1: status code 1000 means "normal"
 -define(NORMAL_WS_STATUS, 1000).
@@ -40,18 +40,18 @@
 %%
 start(Arg, CallbackMod, Opts) ->
     SC = get(sc),
-    CliSock = Arg#arg.clisock,
     PrepdOpts = preprocess_opts(Opts),
     {ok, OwnerPid} = gen_server:start(?MODULE, [Arg, SC, CallbackMod, PrepdOpts], []),
     CliSock = Arg#arg.clisock,
-    TakeOverResult = case SC#sconf.ssl of
-                         undefined ->
-                             inet:setopts(CliSock, [{packet, raw}, {active, once}]),
-                             gen_tcp:controlling_process(CliSock, OwnerPid);
-                         _ ->
-                             ssl:setopts(CliSock, [{packet, raw}, {active, once}]),
-                             ssl:controlling_process(CliSock, OwnerPid)
-                     end,
+    TakeOverResult =
+        case yaws_api:get_sslsocket(CliSock) of
+            {ok, SslSocket} ->
+                ssl:setopts(SslSocket, [{packet, raw}, {active, once}]),
+                ssl:controlling_process(SslSocket, OwnerPid);
+            undefined ->
+                inet:setopts(CliSock, [{packet, raw}, {active, once}]),
+                gen_tcp:controlling_process(CliSock, OwnerPid)
+        end,
     case TakeOverResult of
         ok ->
             gen_server:cast(OwnerPid, ok),
@@ -61,6 +61,12 @@ start(Arg, CallbackMod, Opts) ->
             exit({websocket, Reason})
     end.
 
+send(#ws_state{sock=Socket, vsn=ProtoVsn}, {Type, Data}) ->
+    DataFrame = frame(ProtoVsn, Type,  Data),
+    case yaws_api:get_sslsocket(Socket) of
+        {ok, SslSocket} -> ssl:send(SslSocket, DataFrame);
+        undefined       -> gen_tcp:send(Socket, DataFrame)
+    end;
 send(Pid, {Type, Data}) ->
     gen_server:cast(Pid, {send, {Type, Data}}).
 
@@ -95,9 +101,10 @@ handle_cast(ok, #state{arg=Arg, sconf=SC, opts=Opts}=State) ->
 
             Handshake = handshake(ProtocolVersion, Arg, CliSock,
                                   WebSocketLocation, Origin, Protocol),
-            gen_tcp:send(CliSock, Handshake),   % TODO: use the yaws way of
-                                                % supporting normal
-                                                % and ssl sockets
+            case yaws_api:get_sslsocket(CliSock) of
+                {ok, SslSocket} -> ssl:send(SslSocket, Handshake);
+                undefined       -> gen_tcp:send(CliSock, Handshake)
+            end,
             {callback, CallbackType} = lists:keyfind(callback, 1, Opts),
             WSState = #ws_state{sock = CliSock,
                                 vsn  = ProtocolVersion,
@@ -189,11 +196,9 @@ code_change(_OldVsn, Data, _Extra) ->
 
 do_send(#ws_state{sock=Socket, vsn=ProtoVsn}, {Type, Data}) ->
     DataFrame = frame(ProtoVsn, Type,  Data),
-    case Socket of
-        {sslsocket,_,_} ->
-            ssl:send(Socket, DataFrame);
-        _ ->
-            gen_tcp:send(Socket, DataFrame)
+    case yaws_api:get_sslsocket(Socket) of
+        {ok, SslSocket} -> ssl:send(SslSocket, DataFrame);
+        undefined       -> gen_tcp:send(Socket, DataFrame)
     end.
 
 preprocess_opts(GivenOpts) ->
@@ -394,9 +399,11 @@ buffer(Socket, Len, Buffered) ->
         _ ->
             %% not enough
             %% debug(val, {buffering, "need:", Len, "waiting for more..."}),
-            %% TODO: take care of ssl sockets
             Needed = Len - binary_length(Buffered),
-            {ok, More} = gen_tcp:recv(Socket, Needed),
+            {ok, More} = case yaws_api:get_sslsocket(Socket) of
+                             {ok, SslSocket} -> ssl:recv(SslSocket, Needed);
+                             undefined       -> gen_tcp:recv(Socket, Needed)
+                         end,
             <<Buffered/binary, More/binary>>
     end.
 
@@ -534,10 +541,11 @@ unframe_one(State = #ws_state{vsn=8}, FirstPacket) ->
             Fail
     end.
 
-websocket_setopts(#ws_state{sock=Socket={sslsocket,_,_}}, Opts) ->
-    ssl:setopts(Socket, Opts);
 websocket_setopts(#ws_state{sock=Socket}, Opts) ->
-    inet:setopts(Socket, Opts).
+    case yaws_api:get_sslsocket(Socket) of
+        {ok, SslSocket} -> ssl:setopts(SslSocket, Opts);
+        undefined       -> inet:setopts(Socket, Opts)
+    end.
 
 is_control_op(Op) ->
     atom_to_opcode(Op) > 7.

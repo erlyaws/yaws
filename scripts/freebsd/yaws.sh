@@ -1,6 +1,6 @@
 #! /bin/sh
 #
-# Startup script for Yaws
+# Startup script for Yaws. Use this scripts for FreeBSD versions prior to 9.
 
 
 YAWS_BIN=%prefix%bin/yaws

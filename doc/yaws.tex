@@ -1547,7 +1547,7 @@ periods. For these situations we can return the value:
 {streamcontent_from_pid, MimeType, Pid}
 \end{verbatim}
 
-\noindent to tell \Yaws\ we wish to deliver data of mime type
+\noindent to tell \Yaws\ we wish to deliver data of MIME type
 \verb+MimeType+ to the client from process \verb+Pid+. In this case,
 \Yaws\ will prepare the socket for delivery from \verb+Pid+ and then
 send one of the following messages to \verb+Pid+:
@@ -2192,8 +2192,8 @@ part where options for each virtual host is supplied.
               \Yaws{}.
 
 \item        \verb+use_old_ssl = true | false+ ---
-              This re-enables the old OTP ssl implementation. By default we use
-              the new ssl implementation.
+              This re-enables the old OTP SSL implementation. By default we use
+              the new SSL implementation.
 
 \item        \verb+auth_log  = true | false+ ---
               \textit{Deprecated and ignored. Now, this target must be set in
@@ -2319,6 +2319,50 @@ part where options for each virtual host is supplied.
 \item        \verb+x_forwarded_for_log_proxy_whitelist = ListOfUpstreamProxyServerIps+ ---
               \textit{This target is deprecated and will be ignored}.
 
+\item        \verb+default_type = MimeType+ ---
+              Defines the default MIME type to be used where \Yaws\ cannot
+              determine it by its MIME types mappings. Default is
+              \textit{text/plain}.
+
+\item        \verb+default_charset = Charset+ ---
+              Defines the default charset to be added when a response
+              content-type is \textit{text/*}. By default, no charset is added.
+
+\item        \verb+mime_types_file = File+ ---
+              Overloads the default \textit{mime.types} file included with
+              \Yaws{}. This file must use the following format:
+\begin{verbatim}
+  # Lines beginning with a '#' or a whitespace are ignored
+  # blank lines are also ignored
+  <MIME type> <space separated file extensions>
+\end{verbatim}
+              The default file is located at
+              \textit{\${PREFIX}/lib/yaws/priv/mime.types}. You should not edit
+              this file because it may be replaced when you upgrade your server.
+
+\item        \verb+add_types = ListOfTypes+ ---
+              Specifies one or more mappings between MIME types and file
+              extensions. More than one extension can be assigned to a MIME
+              type. \textit{ListOfTypes} is defined as follows:
+\begin{verbatim}
+  add_types = <MimeType1, Ext> <MimeType2, Ext1 Ext2 ...> ...
+\end{verbatim}
+              The mappings defined using this directive will overload all other
+              definitions. If a file extension is defined several times, only
+              the last one is kept. Multiple \textit{add\_types} directives may
+              be used.
+
+\item        \verb+add_charsets = ListOfCharsets+ ---
+              Specifies one or more mappings between charsets and file
+              extensions. More than one extension can be assigned to a
+              charset. \textit{ListOfCharsets} is defined as follows:
+\begin{verbatim}
+  add_charsets = <Charset1, Ext> <Charset2, Ext1 Ext2 ...> ...
+\end{verbatim}
+              The mappings defined using this directive will overload all other
+              definitions. If a file extension is defined several times, only
+              the last one is kept. Multiple \textit{add\_charsets} directives
+              may be used.
 \end{itemize}
 
 
@@ -2340,12 +2384,13 @@ The following directives are allowed inside a server definition.
               This makes the server listen on Port. Default is 8000.
 
 \item        \verb+listen = IpAddress+ ---
-              This makes the  server  listen  on  \verb+IpAddress+  when
-              virthosting  several  servers  on  the same IP/port
-              address, if the browser doesn't send a \verb+Host:+ field,
-              \Yaws\   will  pick  the first server specified in the
-              config file. Multiple \verb+listen+ directives may be
-              used to specify several addresses to listen on.
+              This makes the server listen on \verb+IpAddress+ when
+              virthosting several servers on the same IP/port address, if
+              the browser doesn't send a \verb+Host:+ field, \Yaws\ will
+              pick the first server specified in the config file. Multiple
+              \verb+listen+ directives may be used to specify several
+              addresses to listen on. The default listen interface is
+              127.0.0.1.
 
 \item        \verb+listen_backlog = Integer+ ---
               This sets the TCP listen backlog for the server to
@@ -2612,6 +2657,13 @@ The following directives are allowed inside a server definition.
              \textit{cgi}, \textit{fcgi}, \textit{php}. Default is\\
              \verb+tilde_allowed_scripts =+ (i.e., empty).
 
+\item       \verb+index_files = ListOfResources+ ---
+             This directive sets the list of resources to look for, when a
+             directory is requested by the client. If the last entry begins with
+             a `/', and none of the earlier resources are found, \Yaws\ will
+             perform a redirect to this uri.\\
+             Default is \verb+index_files = index.yaws index.html index.php+.
+
 \item       \verb+appmods = ListOfModuleNames+ ---
              If any the names in \verb+ListOfModuleNames+ appear as components
              in the path for a request, the path request parsing will terminate
@@ -2639,6 +2691,30 @@ The following directives are allowed inside a server definition.
              The above configuration will invoke the \verb+myapp+ erlang module
              on everything except any file found in directories \verb+icons+,
              \verb+js+ and \verb+top/static+ relative to the docroot.
+
+\item       \verb+dispatchmod = DispatchModule+ ---
+              Set \verb+DispatchModule+ as a server-specific request
+              dispatching module. \Yaws\  expects \verb+DispatchModule+ to
+              export a \verb+dispatch/1+ function. When it receives a
+              request, \Yaws\  passes an \verb+#arg{}+ record to the dispatch
+              module's \verb+dispatch/1+ function, which returns one of the
+              following atom results:
+              \begin{itemize}
+                \item \verb+done+ --- this indicates the dispatch module
+                  handled the request itself and already sent the response,
+                  and \Yaws\  should resume watching for new requests on the
+                  connection
+                \item \verb+closed+ --- same as \verb+done+ but the
+                  \verb+DispatchModule+ also closed the connection
+                \item \verb+continue+ --- the dispatch module has decided
+                  not to handle the request, and instead wants \Yaws\  to
+                  perform its regular request dispatching
+              \end{itemize}
+              Note that when \verb+DispatchModule+ handles a request itself,
+              \Yaws\  does not support tracing, increment statistics
+              counters or allow traffic shaping for that request. It does
+              however still keep track of maximum keepalive uses on the
+              connection.
 
 \item       \verb+errormod_404 = Module+ ---
               It is possible to set a special module that handles 404 Not Found
@@ -2852,6 +2928,31 @@ The following directives are allowed inside a server definition.
               Use this directive is same as:
               \verb+php_handler = <fcgi, HostPortSpec>+.
 
+\item        \verb+default_type = MimeType+ ---
+              Overloads the global \verb+default_type+ value for this virtual
+              server.
+
+\item        \verb+default_charset = Charset+ ---
+              Overloads the global \verb+default_charset+ value for this virtual
+              server.
+
+\item        \verb+mime_types_file = File+ ---
+              Overrides the global \verb+mime_type_file+ value for this virtual
+              server. Mappings defined in \textit{File} will not overload those
+              defined by \verb+add_types+ directives in the global part.
+
+\item        \verb+add_types = ListOfTypes+ ---
+               Overloads the global \verb+add_types+ values for this virtual
+               server. If a mapping is defined in the global part and redefined
+               in a server part using this directive, then it is replaced. Else
+               it is kept.
+
+\item        \verb+add_charsets = ListOfCharsets+ ---
+              Overloads the global \verb+add_charsets+ values for this virtual
+              server. If a mapping is defined in the global part and redefined
+              in a server part using this directive, then it is replaced. Else
+              it is kept.
+
 \item        \verb+<ssl>  .... </ssl>+
                This begins and ends an SSL configuration for this server. It's
                possible to virthost several SSL servers on the same IP given
@@ -2903,7 +3004,7 @@ The following directives are allowed inside a server definition.
 
                \item \verb+depth = Int+ --- Specifies the depth of certificate
                  chains the server is prepared to follow when verifying client
-                 certs. For the OTP new ssl implementation it is also used to
+                 certs. For the OTP new SSL implementation it is also used to
                  specify how far the server, i.e. we, shall follow the SSL
                  certificates we present to the clients. Hence, using self
                  signed certs, we typically need to set this to 0.
@@ -2954,7 +3055,7 @@ The following directives are allowed inside a server definition.
   </redirect>
 \end{verbatim}
               With this configuration, a request for
-              \url{http://abc.com/foo/x/y/z} simply gets redirected to
+              \url{http://abc.com/foo/x/y/z} simply gets redirected to \\
               \url{http://www.mysite.org/zapp}. This is typically used when
               we simply want a static redirect at some place in the
               docroot.

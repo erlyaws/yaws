@@ -97,10 +97,10 @@
           soap_srv_mods = [],
 
           ysession_mod = yaws_session_server, % storage module for ysession
-          acceptor_pool_size = 8              % size of acceptor proc pool
+          acceptor_pool_size = 8,             % size of acceptor proc pool
+
+          mime_types_info
          }).
-
-
 
 -record(ssl, {
           keyfile,
@@ -233,6 +233,7 @@
           start_mod,                    % user provided module to be started
           allowed_scripts = [yaws,php,cgi,fcgi],
           tilde_allowed_scripts = [],
+          index_files = ["index.yaws", "index.html", "index.php"],
           revproxy = [],
           soptions = [],
           extra_cgi_vars = [],
@@ -240,7 +241,9 @@
           fcgi_app_server,              % FastCGI application server {host,port}
           php_handler = {cgi, "/usr/bin/php-cgi"},
           shaper,
-          deflate_options
+          deflate_options,
+          mime_types_info,              % if undefined, global config is used
+          dispatch_mod                  % custom dispatch module
          }).
 
 
@@ -285,6 +288,16 @@
 
           %% [{Type, undefined|SubType}] | all
           mime_types = ?DEFAULT_COMPRESSIBLE_MIME_TYPES
+         }).
+
+
+%% Internal record used to set information about mime-types
+-record(mime_types_info, {
+          mime_types_file, % an absolute filename path
+          types    = [],   % a map between mime-types and extensions
+          charsets = [],   % a map between charsets and extensions
+          default_type = "text/plain",
+          default_charset
          }).
 
 
@@ -346,7 +359,6 @@
           url,
           intercept_mod
          }).
-
 
 
 %% as read by application:get_env()

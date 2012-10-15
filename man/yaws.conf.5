@@ -1,4 +1,4 @@
-.TH YAWS.CONF "5" "" "" "User Commands"
+.TH YAWS.CONF "5" "" "" "User Commands" -*- nroff -*-
 .SH NAME
 /etc/yaws/yaws.conf \- Configuration file for the Yaws web server
 .SH DESCRIPTION
@@ -37,8 +37,8 @@ where <Pid> is the process id handling the TCP connection.
 \fBtrace.<Pid>.traffic\fR - this file contains the traffic trace if that is
 enabled, where <Pid> is the process id handling the TCP connection.
 .RE
-.HP
 
+.IP
 Note that <Host>.access and <Host>.auth files will be used only if the directive
 \fBlogger_mod\fR is not set or set to yaws_log. The default value for logdir is
 \fI"."\fR
@@ -110,7 +110,7 @@ command line flag to Yaws. Default is \fIfalse\fR.
 
 .TP
 \fBuse_old_ssl = true | false\fR
-This re-enables the old OTP ssl implementation. By default we use the new ssl
+This re-enables the old OTP SSL implementation. By default we use the new SSL
 implementation.
 
 .TP
@@ -184,7 +184,7 @@ in local file systems.
 For example, we can specify
 
 .nf
-  soap_srv_mods=<Mod1, HandlerFunc, WsdlFile1> <Mod2, HandlerFunc, WsdlFile2, SpecifiedPrefix> ...
+  soap_srv_mods=<Mod1, Handler, Wsdl1> <Mod2, Handler, Wsdl2, Prefix> ...
 .fi
 
 .TP
@@ -246,6 +246,60 @@ Load all config file in specified directory.
 \fBx_forwarded_for_log_proxy_whitelist = ListOfUpstreamProxyServerIps\fR
 \fBthis target is deprecated and will be ignored.\fR
 
+.TP
+\fBdefault_type = MimeType\fR
+Defines the default MIME type to be used where Yaws cannot determine it by its
+MIME types mappings. Default is \fItext/plain\fR.
+
+.TP
+\fBdefault_charset = Charset\fR
+Defines the default charset to be added when a response content-type is
+\fItext/*\fR. By default, no charset is added.
+
+.TP
+\fBmime_types_file = File\fR
+Overrides the default \fImime.types\fR file included with Yaws. This file must
+use the following format:
+
+.nf
+  # Lines beginning with a '#' or a whitespace are ignored
+  # blank lines are also ignored
+  <MIME type> <space separated file extensions>
+.fi
+
+The default file is located at \fI${PREFIX}/lib/yaws/priv/mime.types\fR. You
+should not edit this file because it may be replaced when you upgrade your
+server.
+
+.TP
+\fBadd_types = ListOfTypes\fR
+Specifies one or more mappings between MIME types and file extensions. More than
+one extension can be assigned to a MIME type. \fIListOfTypes\fR is defined as
+follows:
+
+.nf
+  add_types = <MimeType1, Ext> <MimeType2, Ext1 Ext2 ...> ...
+.fi
+
+The mappings defined using this directive will overload all other
+definitions. If a file extension is defined several times, only the last one is
+kept. Multiple \fBadd_types\fR directives may be used.
+
+.TP
+\fBadd_charsets = ListOfCharsets\fR
+Specifies one or more mappings between charsets and file extensions. More than
+one extension can be assigned to a charset. \fIListOfCharsets\fR is defined as
+follows:
+
+.nf
+  add_charsets = <Charset1, Ext> <Charset2, Ext1 Ext2 ...> ...
+.fi
+
+The mappings defined using this directive will overload all other
+definitions. If a file extension is defined several times, only the last one is
+kept. Multiple \fBadd_charsets\fR directives may be used.
+
+
 .SH SERVER PART
 Yaws can virthost several web servers on the same IP address as well as several
 web servers on different IP addresses. This includes SSL servers.
@@ -264,7 +318,7 @@ This makes the server listen on IpAddress.  When virthosting several servers on
 the same ip/port address, if the browser doesn't send a Host: field, Yaws will
 pick the \fIfirst\fR server specified in the config file.  If the specified IP
 address is 0.0.0.0 Yaws will listen on all local IP addresses on the specified
-port. Default is \fI0.0.0.0\fR.  Multiple \fBlisten\fR directives may be used to
+port. Default is \fI127.0.0.1\fR.  Multiple \fBlisten\fR directives may be used to
 specify several addresses to listen on.
 
 .TP
@@ -320,21 +374,21 @@ When Yaws is started, this function is called for this virtual server. If the
 initialization is successful, the function must return \fI{true,State}\fR and if
 an error occurred, it must return \fIfalse\fR.
 .RE
-.HP
 
+.IP
 \fBModule:close_log(ServerName, Type, State)\fR
 .RS 12
 This function is called for this virtual server when Yaws is stopped.
 .RE
-.HP
 
+.IP
 \fBModule:wrap_log(ServerName, Type, State, LogWrapSize)\fR
 .RS 12
 This function is used to rotate log files. It is regularly called by Yaws and
 must return the possibly updated internal NewState.
 .RE
-.HP
 
+.IP
 \fBModule:write_log(ServerName, Type, State, Infos)\fR
 .RS 12
 When it needs to log a message, Yaws will call this function. The parameter
@@ -358,8 +412,8 @@ Infos is \fI{Ip,Req,InHdrs,OutHdrs,Time}\fR for an access log and
 
 \fBTime\fR - The time taken to serve the request, in microseconds.
 .RE
-.HP
 
+.IP
 For all of these callbacks, \fBServerName\fR is the virtual server's name,
 \fIType\fR is the atom access or auth and \fIState\fR is the internal state of
 the logger.
@@ -426,26 +480,24 @@ Defines the smallest response size that will be compressed. If nolimit is not
 used, the specified value must be strictly positive. The default value is
 \fInolimit\fR.
 .RE
-.HP
 
+.IP
 \fBcompress_level = none | default | best_compression | best_speed | 0..9\fR
 .RS 12
 Defines the compression level to be used. 0 (none), gives no compression at all,
 1 (best_speed) gives best speed and 9 (best_compression) gives best
 compression. The default value is \fIdefault\fR.
 .RE
-.HP
 
-
+.IP
 \fBwindow_size = 9..15\fR
 .RS 12
 Specifies the zlib compression window size. It should be in the range 9 through
 15. Larger values of this parameter result in better compression at the expense
 of memory usage. The default value is \fI15\fR.
 .RE
-.HP
 
-
+.IP
 \fBmem_level = 1..9\fR
 .RS 12
 Specifies how much memory should be allocated for the internal compression
@@ -453,17 +505,16 @@ state. \fImem_level=1\fR uses minimum memory but is slow and reduces compression
 ratio; \fImem_level=9\fR uses maximum memory for optimal speed. The default
 value is \fI8\fR.
 .RE
-.HP
 
-
+.IP
 \fBstrategy = default | filtered | huffman_only\fR
 .RS 12
 This parameter is used to tune the compression algorithm. See \fBzlib(3erl)\fR
 for more details on the \fIstrategy\fR parameter. The default value is
 \fIdefault\fR.
 .RE
-.HP
 
+.IP
 \fBuse_gzip_static = true | false\fR
 .RS 12
 If true, Yaws will try to serve precompressed versions of static files. It will
@@ -471,13 +522,12 @@ look for precompressed files in the same location as original files that end in
 ".gz". Only files that do not fit in the cache are concerned. The default value
 is \fIfalse\fR.
 .RE
-.HP
 
-
+.IP
 \fBmime_types = ListOfTypes | defaults | all\fR
 .RS 12
-Restricts the deflate compression to particular mime types. The special value
-\fIall\fR enable it for all types (It is a synonym of `*/*'). Mime types into
+Restricts the deflate compression to particular MIME types. The special value
+\fIall\fR enable it for all types (It is a synonym of `*/*'). MIME types into
 \fIListOfTypes\fR must have the form `type/subtype' or `type/*' (indicating all
 subtypes of that type). Here is an example:
 
@@ -486,12 +536,11 @@ subtypes of that type). Here is an example:
   mime_types = application/xml application/xhtml+xml application/rss+xml
 .fi
 
-By default, following mime types are compressed (if
+By default, following MIME types are compressed (if
 \fBdeflate\fR is set to true): \fItext/*, application/rtf, application/msword,
 application/pdf, application/x-dvi, application/javascript,
-application/x-javascript\fR. Multiple mime_types directive can be used.
+application/x-javascript\fR. Multiple \fBmime_types\fR directive can be used.
 .RE
-.HP
 
 .TP
 \fBdocroot = Directory ...\fR
@@ -546,6 +595,12 @@ The allowed script types for this server when executing files in a users
 public_html folder Recognized are `yaws', `cgi', `fcgi', `php'.  Default is
 \fItilde_allowed_scripts =\fR i.e. empty
 
+.TP
+\fBindex_files = ListOfResources\fR
+This directive sets the list of resources to look for, when a directory is
+requested by the client. If the last entry begins with a `/', and none of the
+earlier resources are found, Yaws will perform a redirect to this uri.
+Default is \fIindex_files = index.yaws index.html index.php\fR.
 
 .TP
 \fBappmods = ListOfModuleNames\fR
@@ -579,6 +634,32 @@ except any file found in directories, 'icons', 'js' and 'top/static' relative to
 the docroot.
 
 .TP
+\fBdispatchmod = DispatchModule\fR
+Set \fIDispatchModule\fR as a server-specific request dispatching
+module. Yaws expects \fIDispatchModule\fR to export a \fIdispatch/1\fR
+function. When it receives a request, Yaws passes an \fI#arg{}\fR record to
+the dispatch module's \fIdispatch/1\fR function, which returns one of the
+following atom results:
+
+.RS 12
+\fBdone\fR - this indicates the dispatch module handled the request itself
+and already sent the response, and Yaws should resume watching for new
+requests on the connection
+
+\fBclosed\fR - same as \fIdone\fR but the \fIDispatchModule\fR also closed
+the connection
+
+\fBcontinue\fR - the dispatch module has decided not to handle the request,
+and instead wants Yaws to perform its regular request dispatching
+.RE
+
+.IP
+Note that when \fIDispatchModule\fR handles a request itself, Yaws does not
+support tracing, increment statistics counters or allow traffic shaping for
+that request. It does however still keep track of maximum keepalive uses on
+the connection.
+
+.TP
 \fBerrormod_404 = Module\fR
 It is possible to set a special module that handles 404 Not Found messages. The
 function \fIModule:out404(Arg, GC, SC)\fR will be invoked. The arguments are
@@ -590,8 +671,8 @@ function \fIModule:out404(Arg, GC, SC)\fR will be invoked. The arguments are
 
 \fBSC\fR - a #sconf{} record (defined in yaws.hrl)
 .RE
-.HP
 
+.IP
 The function can and must do the same things that a normal \fIout/1\fR does.
 
 .TP
@@ -608,8 +689,8 @@ are
 
 \fBRealm\fR - a string
 .RE
-.HP
 
+.IP
 The function can and must do the same things that a normal \fIout/1\fR does.
 
 .TP
@@ -628,7 +709,7 @@ The function must return, \fI{content,MimeType,Cont}\fR or \fI{html, Str}\fR or
 \fBexpires = ListOfExpires\fR
 Controls the setting of the \fIExpires\fR HTTP header and the \fImax-age\fR
 directive of the \fICache-Control\fR HTTP header in server responses for
-specific mime types. The expiration date can set to be relative to either the
+specific MIME types. The expiration date can set to be relative to either the
 time the source file was last modified, or to the time of the client
 access. ListOfExpires is defined as follows:
 
@@ -771,9 +852,8 @@ directly can use it to read any file to which it has read access. You should
 consider this when setting up a system with several mutually untrusted instances
 of php.
 .RE
-.HP
 
-
+.IP
 \fBphp_handler = <extern, Module:Function | Node:Module:Function>\fR - Use an
 external handler, possibly on another node, to interpret .php files (if
 allowed).
@@ -785,8 +865,8 @@ a #arg{} record.
 .br
 The function must do the same things that a normal out/1 does.
 .RE
-.HP
 
+.IP
 Default value is \fI<cgi, "/usr/bin/php-cgi">\fR.
 
 .TP
@@ -795,6 +875,31 @@ Default value is \fI<cgi, "/usr/bin/php-cgi">\fR.
 instead.\fR
 .br
 Use this directive is same as: php_handler = <fcgi, Host:Port>.
+
+.TP
+\fBdefault_type = MimeType\fR
+Overloads the global \fBdefault_type\fR value for this virtual server.
+.TP
+\fBdefault_charset = Charset\fR
+Overloads the global \fBdefault_charset\fR value for this virtual server.
+
+.TP
+\fBmime_types_file = File\fR
+Overloads the global \fBmime_type_file\fR value for this virtual
+server. Mappings defined in \fIFile\fR will not overload those defined by
+\fBadd_types\fR directives in the global part.
+
+.TP
+\fBadd_types = ListOfTypes\fR
+Overloads the global \fBadd_types\fR values for this virtual server. If a
+mapping is defined in the global part and redefined in a server part using this
+directive, then it is replaced. Else it is kept.
+
+.TP
+\fBadd_charsets = ListOfCharsets\fR
+Overloads the global \fBadd_charsets\fR values for this virtual server. If a
+mapping is defined in the global part and redefined in a server part using this
+directive, then it is replaced. Else it is kept.
 
 .TP
 \fB<ssl> ... </ssl>\fR
@@ -811,14 +916,14 @@ http://wiki.cacert.org/VhostTaskForce#Interoperability_Test
 Specifies which file contains the private key for the certificate. If not
 specified then the certificate file will be used.
 .RE
-.HP
 
+.IP
 \fBcertfile = File\fR
 .RS 12
 Specifies which file contains the certificate for the server.
 .RE
-.HP
 
+.IP
 \fBcacertfile = File\fR
 .RS 12
 A file containing trusted certificates to use during client authentication and
@@ -826,8 +931,8 @@ to use when attempting to build the server certificate chain.  The list is also
 used in the list of acceptable client CAs passed to the client when a
 certificate is requested.
 .RE
-.HP
 
+.IP
 \fBverify = 0 | 1 | 2 | verify_none | verify_peer\fR
 .RS 12
 Specifies the level of verification the server does on client certs.  0 means
@@ -843,8 +948,8 @@ request is sent to the client (x509 validation is performed.
 
 You might want to use fail_if_no_peer_cert in combination with verify_peer.
 .RE
-.HP
 
+.IP
 \fBfail_if_no_peer_cert = true | false\fR
 .RS 12
 If verify is set to verify_peer and set to true the connection will fail if the
@@ -852,32 +957,35 @@ client does not send a certificate (i.e. an empty certificate). If set to false
 the server will fail only if an invalid certificate is supplied (an empty
 certificate is considered valid).
 .RE
-.HP
 
+.IP
 \fBdepth = Int\fR
 .RS 12
 Specifies the depth of certificate chains the server is prepared to follow when
-verifying client certs. For the OTP new ssl implementation it is also used to
+verifying client certs. For the OTP new SSL implementation it is also used to
 specify how far the server, i.e. we, shall follow the SSL certificates we
-present to the clients. Hence, using self signed certs, we typically need to set
+present to the clients. Hence, using self-signed certs, we typically need to set
 this to 0.
 .RE
-.HP
 
+.IP
 \fBpassword = String\fR
 .RS 12
 String If the private key is encrypted on disc, this password is the 3Dee key to
 decrypt it.
 .RE
-.HP
 
+.IP
 \fBciphers = String\fR
 .RS 12
 This string specifies the SSL cipher string. The syntax of the SSL cipher string
-is a little horrible sublanguage of its own. It is documented in the ssl man
-page for "ciphers".
+is  an erlang term compliant with the output of ssl:cipher_suites().
+.nf
+
+ciphers = "[{dhe_rsa,aes_256_cbc,sha}, \\
+            {dhe_dss,aes_256_cbc,sha}]"
+.fi
 .RE
-.HP
 
 .TP
 \fB<redirect> ... </redirect>\fR
@@ -897,7 +1005,7 @@ appended to the redirected url. So if we for example have:
   </redirect>
 .fi
 
-Asumming this config resides on a site called http://abc.com, We have the
+Assuming this config resides on a site called http://abc.com, We have the
 following redirects:
 
 .nf
@@ -940,8 +1048,8 @@ the specified docroot. No docroot configured means all docroots.  If two auth
 structures are defined, one with a docroot and one with no docroot, the first of
 both overrides the second one for requests in the configured docroot.
 .RE
-.HP
 
+.IP
 \fBdir = Dir\fR
 .RS 12
 Makes Dir to be controlled by WWW-authenticate headers. In order for a user to
@@ -949,14 +1057,14 @@ have access to WWW-Authenticate controlled directory, the user must supply a
 password. The Dir must be specified relative to the docroot.  Multiple dir can
 be used. If no dir is set, the default value, \fI"/"\fR, will be used.
 .RE
-.HP
 
+.IP
 \fBrealm = Realm\fR
 .RS 12
 In the directory defined here, the WWW-Authenticate Realm is set to this value.
 .RE
-.HP
 
+.IP
 \fBauthmod = AuthMod\fR
 .RS 12
 If an auth module is defined then AuthMod:auth(Arg, Auth) will be called for all
@@ -971,8 +1079,8 @@ callback would check if a valid cookie header is present, if not it would return
 {appmod, ?MODULE} and the out401/1 function in the same module would return
 {redirect_local, "/login.html"}.
 .RE
-.HP
 
+.IP
 \fBuser = User:Password\fR
 .RS 12
 Inside this directory, the user User has access if the user supplies the
@@ -995,8 +1103,8 @@ recursive. Thus any subdirectories to Dir are automatically also protected.
 
 The .yaws_auth file is never visible in a dir listing
 .RE
-.HP
 
+.IP
 \fBpam service = \fIpam-service\fR\fR
 .RS 12
 If the item \fBpam\fR is part of the auth structure, Yaws will also try to
@@ -1007,8 +1115,8 @@ etc.
 pam authentication is performed by an Erlang port program which is typically
 installed as suid root by the Yaws install script.
 .RE
-.HP
 
+.IP
 \fBallow = all | ListOfHost\fR
 .RS 12
 The \fIallow\fR directive affects which hosts can access an area of the
@@ -1035,16 +1143,16 @@ following formats:
   allow = 10.1.0.0/16
 .fi
 .RE
-.HP
 
+.IP
 \fBdeny = all | ListOfHost\fR
 .RS 12
 This directive allows access to the server to be restricted based on IP
 address. The arguments for the \fIdeny\fR directive are identical to the
 arguments for the \fIallow\fR directive.
 .RE
-.HP
 
+.IP
 \fBorder = Ordering\fR
 .RS 12
 The \fIorder\fR directive, along with \fIallow\fR and \fIdeny\fR directives,
@@ -1069,7 +1177,6 @@ First, all \fIdeny\fR directives are evaluated; if any match, the request is
 denied unless it also matches an \fIallow\fR directive. Any requests which do
 not match any \fIallow\fR or \fIdeny\fR directives are permitted.
 .RE
-.HP
 
 .TP
 \fB<opaque> ... </opaque>\fR
@@ -1248,7 +1355,3 @@ Written by Claes Wikstrom
 .SH "SEE ALSO"
 .BR yaws (1)
 .BR erl (1)
-
-Comment] Local Variables:
-Comment] mode: nroff
-Comment] End:

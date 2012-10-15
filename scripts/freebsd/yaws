@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# Start up for the Yaws daemon. Use this script for FreeBSD versions 9 or greater.
+#
+
+# PROVIDE: yaws 
+# BEFORE:  DAEMON
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="yaws"
+yaws_id="default" # By default we run with the default id
+start_precmd="${name}_prestart"
+stop_cmd="yaws_stop"
+status_cmd="yaws_status"
+command="/usr/local/bin/${name}"
+rcvar="yaws_enable"
+command_args=""
+required_files="/etc/${name}/${name}.conf"
+
+yaws_prestart() {
+	rc_flags="--id ${yaws_id} --daemon --heart --conf /etc/${name}/${name}.conf ${rc_flags}"
+}
+
+yaws_stop() {
+	/usr/local/bin/yaws --id ${yaws_id} --stop
+}
+
+yaws_status() {
+	/usr/local/bin/yaws --id ${yaws_id} --status
+}
+
+load_rc_config $name
+run_rc_command "$1"

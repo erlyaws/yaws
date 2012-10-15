@@ -13,14 +13,14 @@
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
-
 -include_lib("kernel/include/file.hrl").
 
 -export([load/1,
-         make_default_gconf/2, make_default_sconf/0,
+         make_default_gconf/2, make_default_sconf/0, make_default_sconf/2,
          add_sconf/1,
          add_yaws_auth/1,
          add_yaws_soap_srv/1, add_yaws_soap_srv/2,
+         load_mime_types_module/2,
          search_sconf/2, search_group/2,
          update_sconf/2, delete_sconf/2,
          eq_sconfs/2, soft_setconf/4, hard_setconf/2,
@@ -104,6 +104,8 @@ add_yaws_soap_srv(_GC, _Start) ->
     [].
 
 
+add_yaws_auth(#sconf{}=SC) ->
+    SC#sconf{authdirs = setup_auth(SC)};
 add_yaws_auth(SCs) ->
     [SC#sconf{authdirs = setup_auth(SC)} || SC <- SCs].
 
@@ -319,6 +321,72 @@ parse_yaws_auth_file([{order, O}|T], Auth0)
 
 
 
+%% Create mime_types.erl, compile it and load it. If everything is ok,
+%% reload groups.
+%%
+%% If an error occured, the previously-loaded version (the first time, it's the
+%% static version) is kept.
+load_mime_types_module(GC, Groups) ->
+    GInfo  = GC#gconf.mime_types_info,
+    SInfos = [{{SC#sconf.servername, SC#sconf.port}, SC#sconf.mime_types_info}
+              || SC <- lists:flatten(Groups),
+                 SC#sconf.mime_types_info /= undefined],
+
+    case {is_dir(yaws:id_dir(GC#gconf.id)), is_dir(yaws:tmpdir("/tmp"))} of
+        {true, _} ->
+            File = filename:join(yaws:id_dir(GC#gconf.id), "mime_types.erl"),
+            load_mime_types_module(File, GInfo, SInfos);
+        {_, true} ->
+            File = filename:join(yaws:tmpdir("/tmp"), "mime_types.erl"),
+            load_mime_types_module(File, GInfo, SInfos);
+        _ ->
+            error_logger:format("Cannot write module mime_types.erl~n"
+                                "Keep the previously-loaded version~n", [])
+    end,
+    lists:map(fun(Gp) ->
+                      [begin
+                           F   = fun(X) when is_atom(X) -> X;
+                                    (X) -> element(1, mime_types:t(SC, X))
+                                 end,
+                           TAS = SC#sconf.tilde_allowed_scripts,
+                           AS  = SC#sconf.allowed_scripts,
+                           SC#sconf{tilde_allowed_scripts=lists:map(F, TAS),
+                                    allowed_scripts=lists:map(F, AS)}
+                       end || SC <- Gp]
+              end, Groups).
+
+load_mime_types_module(_, undefined, []) ->
+    ok;
+load_mime_types_module(File, undefined, SInfos) ->
+    load_mime_types_module(File, #mime_types_info{}, SInfos);
+load_mime_types_module(File, GInfo, SInfos) ->
+    case mime_type_c:generate(File, GInfo, SInfos) of
+        ok ->
+            case compile:file(File, [binary]) of
+                {ok, ModName, Binary} ->
+                    case code:load_binary(ModName, [], Binary) of
+                        {module, ModName} ->
+                            ok;
+                        {error, What} ->
+                            error_logger:format(
+                              "Cannot load module '~p': ~p~n"
+                              "Keep the previously-loaded version~n",
+                              [ModName, What]
+                             )
+                    end;
+                _ ->
+                    error_logger:format("Compilation of '~p' failed~n"
+                                        "Keep the previously-loaded version~n",
+                                        [File])
+            end;
+        {error, Reason} ->
+            error_logger:format("Cannot write module ~p: ~p~n"
+                                "Keep the previously-loaded version~n",
+                                [File, Reason])
+    end.
+
+
+
 %% This is the function that arranges sconfs into
 %% different server groups
 validate_cs(GC, Cs) ->
@@ -449,9 +517,17 @@ make_default_gconf(Debug, Id) ->
            id = Id
           }.
 
+%% Keep this function for backward compatibility. But no one is supposed to use
+%% it (yaws_config is an internal module, its api is private).
 make_default_sconf() ->
-    Y = yaws_dir(),
-    #sconf{docroot = filename:join([Y, "www"])}.
+    make_default_gconf([], undefined).
+
+make_default_sconf([], Port) ->
+    make_default_sconf(filename:join([yaws_dir(), "www"]), Port);
+make_default_sconf(DocRoot, undefined) ->
+    make_default_sconf(DocRoot, 8000);
+make_default_sconf(DocRoot, Port) ->
+    set_server(#sconf{port=Port, listen={127,0,0,1}, docroot=DocRoot}).
 
 yaws_dir() ->
     %% below, ignore dialyzer warning:
@@ -556,10 +632,11 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                 true ->
                     case file:list_dir(Dir) of
                         {ok, Names} ->
+                            Sorted = lists:sort(Names),
                             Paths = lists:map(
                                       fun(N) ->
                                               filename:absname(N, Dir)
-                                      end, Names),
+                                      end, Sorted),
                             Fold = lists:foldl(
                                      fun subconfigdir_fold/2,
                                      {ok, GC, Cs}, Paths),
@@ -871,6 +948,60 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                   C, Cs, Lno+1, Next);
         ["server_signature", '=', Signature] ->
             fload(FD, globals, GC#gconf{yaws=Signature},C, Cs, Lno+1, Next);
+
+
+        ["default_type", '=', MimeType] ->
+            case parse_mime_types_info(default_type, MimeType,
+                                       GC#gconf.mime_types_info,
+                                       #mime_types_info{}) of
+                {ok, Info} ->
+                    fload(FD, globals, GC#gconf{mime_types_info=Info},
+                          C, Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+        ["default_charset", '=', Charset] ->
+            case parse_mime_types_info(default_charset, Charset,
+                                       GC#gconf.mime_types_info,
+                                       #mime_types_info{}) of
+                {ok, Info} ->
+                    fload(FD, globals, GC#gconf{mime_types_info=Info},
+                          C, Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+        ["mime_types_file", '=', File] ->
+            case parse_mime_types_info(mime_types_file, File,
+                                       GC#gconf.mime_types_info,
+                                       #mime_types_info{}) of
+                {ok, Info} ->
+                    fload(FD, globals, GC#gconf{mime_types_info=Info},
+                          C, Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+        ["add_types", '=' | NewTypes] ->
+            case parse_mime_types_info(add_types, NewTypes,
+                                       GC#gconf.mime_types_info,
+                                       #mime_types_info{}) of
+                {ok, Info} ->
+                    fload(FD, globals, GC#gconf{mime_types_info=Info},
+                          C, Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+        ["add_charsets", '=' | NewCharsets] ->
+            case parse_mime_types_info(add_charsets, NewCharsets,
+                                       GC#gconf.mime_types_info,
+                                       #mime_types_info{}) of
+                {ok, Info} ->
+                    fload(FD, globals, GC#gconf{mime_types_info=Info},
+                          C, Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+
+
         ['<', "server", Server, '>'] ->  %% first server
             PhpHandler = {cgi, GC#gconf.phpexe},
             fload(FD, server, GC,
@@ -1090,6 +1221,10 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                 {error, Str} ->
                     {error, ?F("~s at line ~w", [Str, Lno])}
             end;
+        ["dispatchmod", '=', DispatchMod] ->
+            C2 = C#sconf{dispatch_mod = list_to_atom(DispatchMod)},
+            fload(FD, server, GC, C2, Cs, Lno+1, Next);
+
         ["expires", '=' | Expires] ->
             case parse_expires(Expires, []) of
                 {ok, L} ->
@@ -1175,16 +1310,21 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             fload(FD, rss, GC, C, Cs, Lno+1, Next);
 
         ["tilde_allowed_scripts", '=' | Suffixes] ->
-            C2 = C#sconf{tilde_allowed_scripts =
-                             lists:map(fun(X)->element(1,mime_types:t(X)) end,
-                                       Suffixes)},
+            C2 = C#sconf{tilde_allowed_scripts=Suffixes},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
         ["allowed_scripts", '=' | Suffixes] ->
-            C2 = C#sconf{allowed_scripts =
-                             lists:map(fun(X)->element(1,mime_types:t(X)) end,
-                                       Suffixes)},
+            C2 = C#sconf{allowed_scripts=Suffixes},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
+
+        ["index_files", '=' | Files] ->
+            case parse_index_files(Files) of
+                ok ->
+                    C2 = C#sconf{index_files = Files},
+                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
 
         ["revproxy", '=' | Tail] ->
             case parse_revproxy(Tail) of
@@ -1248,13 +1388,13 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
 
-	["phpfcgi", '=', HostPortSpec] ->
+        ["phpfcgi", '=', HostPortSpec] ->
             error_logger:format(
               "'phpfcgi' is deprecated, use 'php_handler' instead\n", []),
-	    case string_to_host_and_port(HostPortSpec) of
-		{ok, Host, Port} ->
-                C2 = C#sconf{php_handler = {fcgi, {Host, Port}}},
-		    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+            case string_to_host_and_port(HostPortSpec) of
+                {ok, Host, Port} ->
+                    C2 = C#sconf{php_handler = {fcgi, {Host, Port}}},
+                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 {error, Reason} ->
                     {error,
                      ?F("Invalid php fcgi server ~p at line ~w: ~s",
@@ -1276,6 +1416,58 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             C2 = C#sconf{shaper = list_to_atom(Module)},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
+
+        ["default_type", '=', MimeType] ->
+            case parse_mime_types_info(default_type, MimeType,
+                                       C#sconf.mime_types_info,
+                                       GC#gconf.mime_types_info) of
+                {ok, Info} ->
+                    fload(FD, server, GC, C#sconf{mime_types_info=Info},
+                          Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+        ["default_charset", '=', Charset] ->
+            case parse_mime_types_info(default_charset, Charset,
+                                       C#sconf.mime_types_info,
+                                       GC#gconf.mime_types_info) of
+                {ok, Info} ->
+                    fload(FD, server, GC, C#sconf{mime_types_info=Info},
+                          Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+        ["mime_types_file", '=', File] ->
+            case parse_mime_types_info(mime_types_file, File,
+                                       C#sconf.mime_types_info,
+                                       GC#gconf.mime_types_info) of
+                {ok, Info} ->
+                    fload(FD, server, GC, C#sconf{mime_types_info=Info},
+                          Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+        ["add_types", '=' | NewTypes] ->
+            case parse_mime_types_info(add_types, NewTypes,
+                                       C#sconf.mime_types_info,
+                                       GC#gconf.mime_types_info) of
+                {ok, Info} ->
+                    fload(FD, server, GC, C#sconf{mime_types_info=Info},
+                          Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+        ["add_charsets", '=' | NewCharsets] ->
+            case parse_mime_types_info(add_charsets, NewCharsets,
+                                       C#sconf.mime_types_info,
+                                       GC#gconf.mime_types_info) of
+                {ok, Info} ->
+                    fload(FD, server, GC, C#sconf{mime_types_info=Info},
+                          Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+
         [H|T] ->
             {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
         Err ->
@@ -1283,9 +1475,8 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
     end;
 
 
-
 fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
-    Next = io:get_line(FD, ''),
+    Next = io_get_line(FD, '', []),
     case toks(Lno, Chars) of
         [] ->
             fload(FD, ssl, GC, C, Cs, Lno+1, Next);
@@ -1377,13 +1568,28 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
                                [Lno])}
             end;
         ["ciphers", '=', Val] ->
-            if
-                is_record(C#sconf.ssl, ssl) ->
-                    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{ciphers = Val}},
-                    fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
-                true ->
-                    {error, ?F("Need to set option ssl to true before line ~w",
-                               [Lno])}
+            try
+                L = str2term(Val),
+                io:format("L = ~p~n",[L]),
+                Ciphers = ssl:cipher_suites(),
+                case check_ciphers(L, Ciphers) of
+                    ok ->
+                        if
+                            is_record(C#sconf.ssl, ssl) ->
+                                C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{
+                                                     ciphers = L}},
+                                fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
+                            true ->
+                                {error, ?F("Need to set option ssl to "
+                                           "true before line ~w",
+                                           [Lno])}
+                        end;
+                    Err ->
+                        Err
+                end
+            catch _:Err2 ->
+                    io:format("~p~n", [Err2]),
+                    {error, ?F("Bad cipherspec at line ~w", [Lno])}
             end;
         ['<', "/ssl", '>'] ->
             fload(FD, server, GC, C, Cs, Lno+1, Next);
@@ -1859,7 +2065,7 @@ is_string_char([C|T]) ->
     end.
 
 is_special(C) ->
-    lists:member(C, [$=, $<, $>, $,]).
+    lists:member(C, [$=, $[, $], ${, $}, $, ,$<, $>, $,]).
 
 %% parse the argument string PLString which can either be the undefined
 %% atom or a proplist. Currently the only supported keys are
@@ -2069,6 +2275,78 @@ parse_compressible_mime_types([], Acc) ->
     {ok, Acc}.
 
 
+parse_index_files([]) ->
+    ok;
+parse_index_files([Idx|Rest]) ->
+    case Idx of
+        [$/|_] when Rest /= [] ->
+            {error, "Only the last index should be absolute"};
+        _ ->
+            parse_index_files(Rest)
+    end.
+
+is_valid_mime_type(MimeType) ->
+    case re:run(MimeType, "^[-\\w\+]+/[-\\w\+\.]+$", [{capture, none}]) of
+        match   -> true;
+        nomatch -> false
+    end.
+
+parse_mime_types(['<', MimeType, ',' | Tail], Acc0) ->
+    Exts      = lists:takewhile(fun(X) -> X /= '>' end, Tail),
+    [_|Tail2] = lists:dropwhile(fun(X) -> X /= '>' end, Tail),
+    Acc1 = lists:foldl(fun(E, Acc) ->
+                               lists:keystore(E, 1, Acc, {E, MimeType})
+                       end, Acc0, Exts),
+    case is_valid_mime_type(MimeType) of
+        true  -> parse_mime_types(Tail2, Acc1);
+        false -> {error, ?F("Invalid mime-type '~p'", [MimeType])}
+    end;
+parse_mime_types([], Acc)->
+    {ok, lists:reverse(Acc)};
+parse_mime_types(_, _) ->
+    {error, "Unexpected tokens"}.
+
+parse_charsets(['<', Charset, ',' | Tail], Acc0) ->
+    Exts      = lists:takewhile(fun(X) -> X /= '>' end, Tail),
+    [_|Tail2] = lists:dropwhile(fun(X) -> X /= '>' end, Tail),
+    Acc1 = lists:foldl(fun(E, Acc) ->
+                               lists:keystore(E, 1, Acc, {E, Charset})
+                       end, Acc0, Exts),
+    parse_charsets(Tail2, Acc1);
+parse_charsets([], Acc)->
+    {ok, lists:reverse(Acc)};
+parse_charsets(_, _) ->
+    {error, "Unexpected tokens"}.
+
+
+parse_mime_types_info(Directive, Type, undefined, undefined) ->
+    parse_mime_types_info(Directive, Type, #mime_types_info{});
+parse_mime_types_info(Directive, Type, undefined, DefaultInfo) ->
+    parse_mime_types_info(Directive, Type, DefaultInfo);
+parse_mime_types_info(Directive, Type, Info, _) ->
+    parse_mime_types_info(Directive, Type, Info).
+
+parse_mime_types_info(default_type, Type, Info) ->
+    case is_valid_mime_type(Type) of
+        true  -> {ok, Info#mime_types_info{default_type=Type}};
+        false -> {error, ?F("Invalid mime-type '~p'", [Type])}
+    end;
+parse_mime_types_info(default_charset, Charset, Info) ->
+    {ok, Info#mime_types_info{default_charset=Charset}};
+parse_mime_types_info(mime_types_file, File, Info) ->
+    {ok, Info#mime_types_info{mime_types_file=File}};
+parse_mime_types_info(add_types, NewTypes, Info) ->
+    case parse_mime_types(NewTypes, Info#mime_types_info.types) of
+        {ok, Types} -> {ok, Info#mime_types_info{types=Types}};
+        Error       -> Error
+    end;
+parse_mime_types_info(add_charsets, NewCharsets, Info) ->
+    case parse_charsets(NewCharsets, Info#mime_types_info.charsets) of
+        {ok, Charsets} -> {ok, Info#mime_types_info{charsets=Charsets}};
+        Error          -> Error
+    end.
+
+
 ssl_start() ->
     case catch ssl:start() of
         ok ->
@@ -2172,30 +2450,41 @@ same_sconf(S, NewSc) ->
         S#sconf.servername == NewSc#sconf.servername.
 
 
-
-
-
 eq_sconfs(S1,S2) ->
     (S1#sconf.port == S2#sconf.port andalso
      S1#sconf.flags == S2#sconf.flags andalso
+     S1#sconf.redirect_map == S2#sconf.redirect_map andalso
      S1#sconf.rhost == S2#sconf.rhost andalso
      S1#sconf.rmethod == S2#sconf.rmethod andalso
      S1#sconf.docroot == S2#sconf.docroot andalso
+     S1#sconf.xtra_docroots == S2#sconf.xtra_docroots andalso
      S1#sconf.listen == S2#sconf.listen andalso
      S1#sconf.servername == S2#sconf.servername andalso
+     S1#sconf.yaws == S2#sconf.yaws andalso
      S1#sconf.ssl == S2#sconf.ssl andalso
      S1#sconf.authdirs == S2#sconf.authdirs andalso
-     S1#sconf.appmods == S2#sconf.appmods andalso
      S1#sconf.partial_post_size == S2#sconf.partial_post_size andalso
+     S1#sconf.appmods == S2#sconf.appmods andalso
+     S1#sconf.expires == S2#sconf.expires andalso
+     S1#sconf.errormod_401 == S2#sconf.errormod_401 andalso
      S1#sconf.errormod_404 == S2#sconf.errormod_404 andalso
      S1#sconf.errormod_crash == S2#sconf.errormod_crash andalso
      S1#sconf.arg_rewrite_mod == S2#sconf.arg_rewrite_mod andalso
+     S1#sconf.logger_mod == S2#sconf.logger_mod andalso
      S1#sconf.opaque == S2#sconf.opaque andalso
      S1#sconf.start_mod == S2#sconf.start_mod andalso
      S1#sconf.allowed_scripts == S2#sconf.allowed_scripts andalso
+     S1#sconf.tilde_allowed_scripts == S2#sconf.tilde_allowed_scripts andalso
+     S1#sconf.index_files == S2#sconf.index_files andalso
      S1#sconf.revproxy == S2#sconf.revproxy andalso
      S1#sconf.soptions == S2#sconf.soptions andalso
-     S1#sconf.fcgi_app_server == S2#sconf.fcgi_app_server).
+     S1#sconf.extra_cgi_vars == S2#sconf.extra_cgi_vars andalso
+     S1#sconf.stats == S2#sconf.stats andalso
+     S1#sconf.fcgi_app_server == S2#sconf.fcgi_app_server andalso
+     S1#sconf.php_handler == S2#sconf.php_handler andalso
+     S1#sconf.shaper == S2#sconf.shaper andalso
+     S1#sconf.deflate_options == S2#sconf.deflate_options andalso
+     S1#sconf.mime_types_info == S2#sconf.mime_types_info).
 
 
 
@@ -2210,8 +2499,9 @@ soft_setconf(GC, Groups, OLDGC, OldGroups) ->
         true ->
             ok
     end,
-    Rems = remove_old_scs(lists:flatten(OldGroups), Groups),
-    Adds = soft_setconf_scs(lists:flatten(Groups), OldGroups),
+    Grps = load_mime_types_module(GC, Groups),
+    Rems = remove_old_scs(lists:flatten(OldGroups), Grps),
+    Adds = soft_setconf_scs(lists:flatten(Grps), OldGroups),
     lists:foreach(
       fun({delete_sconf, SC}) ->
               delete_sconf(SC);
@@ -2403,80 +2693,15 @@ update_gconf(GC) ->
     ok = gen_server:call(yaws_server, {update_gconf, GC}, infinity).
 
 
--define(MAXBITS_IPV4, 32).
--define(MAXBITS_IPV6, 128).
-
 parse_auth_ips([], Result) ->
     Result;
 parse_auth_ips([Str|Rest], Result) ->
     try
-        parse_auth_ips(Rest, [parse_ip(Str)|Result])
+        parse_auth_ips(Rest, [yaws:parse_ipmask(Str)|Result])
     catch
         _:_ -> parse_auth_ips(Rest, Result)
     end.
 
-parse_ip(Str) when is_list(Str) ->
-    [Ip|Rest] = string:tokens(Str, [$/]),
-    {Type, IpInt}  = ip_to_integer(Ip),
-    case Rest of
-        [] ->
-            {IpInt, IpInt};
-        [NetMask] ->
-            MaskInt  = netmask_to_integer(Type, NetMask),
-            WildCard = netmask_to_wildcard(Type, MaskInt),
-            NetAddr  = IpInt band MaskInt,
-            case Type of
-                ipv4 -> {NetAddr + 1, NetAddr + WildCard - 1};
-                ipv6 -> {NetAddr, NetAddr + WildCard}
-            end;
-        _ ->
-            throw({error, einval})
-    end;
-parse_ip(_) ->
-    throw({error, einval}).
-
-ip_to_integer(Str) when is_list(Str) ->
-    case inet_parse:ipv6_address(Str) of
-        {ok, {0,0,0,0,0,16#FFFF,N1,N2}} ->
-            {ipv4, (N1 bsl 16) bor N2};
-        {ok, Ip} ->
-            ip_to_integer(Ip);
-        {error, Reason} ->
-            throw({error, Reason})
-    end;
-ip_to_integer({N1,N2,N3,N4}) ->
-    Int = (N1 bsl 24) bor (N2 bsl 16) bor (N3 bsl 8) bor N4,
-    if
-        (Int bsr ?MAXBITS_IPV4) == 0 -> {ipv4, Int};
-        true -> throw({error, einval})
-    end;
-ip_to_integer({N1,N2,N3,N4,N5,N6,N7,N8}) ->
-    Int = (N1 bsl 112) bor (N2 bsl 96) bor (N3 bsl 80) bor (N4 bsl 64) bor
-        (N5 bsl 48) bor (N6 bsl 32) bor (N7 bsl 16) bor N8,
-    if
-        (Int bsr ?MAXBITS_IPV6) == 0 -> {ipv6, Int};
-        true -> throw({error, einval})
-    end;
-ip_to_integer(_) ->
-    throw({error, einval}).
-
-
-netmask_to_integer(Type, NetMask) ->
-    case catch list_to_integer(NetMask) of
-        I when is_integer(I) ->
-            case Type of
-                ipv4 -> (1 bsl ?MAXBITS_IPV4) - (1 bsl (?MAXBITS_IPV4 - I));
-                ipv6 -> (1 bsl ?MAXBITS_IPV6) - (1 bsl (?MAXBITS_IPV6 - I))
-            end;
-        _ ->
-            case ip_to_integer(NetMask) of
-                {Type, MaskInt} -> MaskInt;
-                _               -> throw({error, einval})
-            end
-    end.
-
-netmask_to_wildcard(ipv4, Mask) -> ((1 bsl ?MAXBITS_IPV4) - 1) bxor Mask;
-netmask_to_wildcard(ipv6, Mask) -> ((1 bsl ?MAXBITS_IPV6) - 1) bxor Mask.
 
 subconfigdir_fold(_File, {error, _Err}=Acc) ->
     Acc;
@@ -2501,4 +2726,39 @@ subconfigdir_fold(File, {ok, GCp, Csp}=Acc) ->
         false ->
             %% Ignore subdirectories
             Acc
+    end.
+
+str2term(Str0) ->
+    Str=Str0++".",
+    {ok,Tokens,_EndLine} = erl_scan:string(Str),
+    {ok,AbsForm} = erl_parse:parse_exprs(Tokens),
+    {value,Value,_Bs} = erl_eval:exprs(AbsForm, erl_eval:new_bindings()),
+    Value.
+
+check_ciphers([], _) ->
+    ok;
+check_ciphers([Spec|Specs], L) ->
+    case lists:member(Spec, L) of
+        true ->
+            check_ciphers(Specs, L);
+        false ->
+            {error, ?F("Bad cipherspec ~p",[Spec])}
+    end;
+check_ciphers(X,_) ->
+    {error, ?F("Bad cipherspec ~p",[X])}.
+
+
+
+io_get_line(FD, Prompt, Acc) ->
+    Next = io:get_line(FD, Prompt),
+    if
+        is_list(Next) ->
+            case lists:reverse(Next) of
+                [$\n, $\\ |More] ->
+                    io_get_line(FD, Prompt, Acc ++ lists:reverse(More));
+                _ ->
+                    Acc ++ Next
+            end;
+        true ->
+            Next
     end.

@@ -30,8 +30,9 @@
 -export([first/2, elog/2, filesize/1, upto/2, to_string/1, to_list/1,
          integer_to_hex/1, hex_to_integer/1, string_to_hex/1, hex_to_string/1,
          is_modified_p/2, flag/3, dohup/1, is_ssl/1, address/0, is_space/1,
-         setopts/3, eat_crnl/2, get_chunk_num/2, get_chunk/4, list_to_uue/1,
-         uue_to_list/1, printversion/0, strip_spaces/1, strip_spaces/2,
+         setopts/3, eat_crnl/2, get_chunk_num/2, get_chunk_header/2,
+         get_chunk/4, get_chunk_trailer/2, list_to_uue/1, uue_to_list/1,
+         printversion/0, strip_spaces/1, strip_spaces/2,
          month/1, mk2/1, home/0, arg_rewrite/1, to_lowerchar/1, to_lower/1,
          funreverse/2, is_prefix/2, split_sep/2, join_sep/2, accepts_gzip/2,
          upto_char/2, deepmap/2, ticker/2, ticker/3,
@@ -97,6 +98,11 @@
          tmpdir/0, tmpdir/1, mktemp/1, split_at/2,
          id_dir/1, ctl_file/1]).
 
+-export([parse_ipmask/1, match_ipmask/2]).
+
+%% Internal
+-export([local_time_as_gmt_string/1, universal_time_as_string/1,
+         stringdate_to_datetime/1]).
 
 start() ->
     application:start(yaws, permanent).
@@ -121,8 +127,7 @@ start_embedded(DocRoot, SL, GL, Id)
     {ok, SCList, GC, _} = yaws_api:embedded_start_conf(DocRoot, SL, GL, Id),
     ok = application:start(yaws),
     yaws_config:add_yaws_soap_srv(GC),
-    SCs = [yaws_config:add_yaws_auth(X) || X <- SCList],
-    yaws_api:setconf(GC, SCs),
+    yaws_api:setconf(GC, SCList),
     ok.
 
 add_server(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
@@ -133,13 +138,15 @@ add_server(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
               (A, Acc)                      -> [A| Acc]
           end,
     Authdirs = lists:foldr(Fun, [], SC#sconf.authdirs),
-    yaws_config:add_sconf(SC#sconf{authdirs = Authdirs}).
+    SC1 = yaws_config:add_yaws_auth(SC#sconf{authdirs = Authdirs}),
+    yaws_config:add_sconf(SC1).
 
 create_gconf(GL, Id) when is_list(GL) ->
     setup_gconf(GL, yaws_config:make_default_gconf(false, Id)).
 
 create_sconf(DocRoot, SL) when is_list(DocRoot), is_list(SL) ->
-    setup_sconf(DocRoot, #sconf{}, SL).
+    SC = yaws_config:make_default_sconf(DocRoot, lkup(port, SL, undefined)),
+    setup_sconf(SL, SC).
 
 
 %%% Access functions for the SSL record.
@@ -205,7 +212,9 @@ setup_gconf(GL, GC) ->
            ysession_mod          = lkup(ysession_mod, GL,
                                         GC#gconf.ysession_mod),
            acceptor_pool_size    = lkup(acceptor_pool_size, GL,
-                                        GC#gconf.acceptor_pool_size)
+                                        GC#gconf.acceptor_pool_size),
+           mime_types_info       = lkup(mime_types_info, GL,
+                                        GC#gconf.mime_types_info)
           }.
 
 set_gc_flags([{tty_trace, Bool}|T], Flags) ->
@@ -233,54 +242,56 @@ set_gc_flags([], Flags) ->
 
 
 %% Setup vhost configuration
-setup_sconf(DocRoot, D, SL) ->
-    #sconf{port                  = lkup(port, SL, D#sconf.port),
+setup_sconf(SL, SC) ->
+    #sconf{port                  = lkup(port, SL, SC#sconf.port),
            flags                 = set_sc_flags(lkup(flags, SL, []),
-                                                D#sconf.flags),
-           redirect_map          = lkup(redirect_map, SL, D#sconf.redirect_map),
-           rhost                 = lkup(rhost, SL, D#sconf.rhost),
-           rmethod               = lkup(rmethod, SL, D#sconf.rmethod),
-           docroot               = case lkup(docroot, SL, D#sconf.docroot) of
-                                       undefined -> DocRoot;
-                                       DR        -> DR
-                                   end,
+                                                SC#sconf.flags),
+           redirect_map          = lkup(redirect_map, SL, SC#sconf.redirect_map),
+           rhost                 = lkup(rhost, SL, SC#sconf.rhost),
+           rmethod               = lkup(rmethod, SL, SC#sconf.rmethod),
+           docroot               = lkup(docroot, SL, SC#sconf.docroot),
            xtra_docroots         = lkup(xtra_docroots, SL,
-                                        D#sconf.xtra_docroots),
-           listen                = lkup(listen, SL, D#sconf.listen),
-           servername            = lkup(servername, SL, D#sconf.servername),
-           yaws                  = lkup(yaws, SL, D#sconf.yaws),
-           ets                   = lkup(ets, SL, D#sconf.ets),
-           ssl                   = setup_sconf_ssl(SL, D#sconf.ssl),
+                                        SC#sconf.xtra_docroots),
+           listen                = lkup(listen, SL, SC#sconf.listen),
+           servername            = lkup(servername, SL, SC#sconf.servername),
+           yaws                  = lkup(yaws, SL, SC#sconf.yaws),
+           ets                   = lkup(ets, SL, SC#sconf.ets),
+           ssl                   = setup_sconf_ssl(SL, SC#sconf.ssl),
            authdirs              = lkup(authdirs, expand_auth(SL),
-                                        D#sconf.authdirs),
+                                        SC#sconf.authdirs),
            partial_post_size     = lkup(partial_post_size, SL,
-                                        D#sconf.partial_post_size),
-           appmods               = lkup(appmods, SL, D#sconf.appmods),
-           expires               = lkup(expires, SL, D#sconf.expires),
-           errormod_401          = lkup(errormod_401, SL, D#sconf.errormod_401),
-           errormod_404          = lkup(errormod_404, SL, D#sconf.errormod_404),
+                                        SC#sconf.partial_post_size),
+           appmods               = lkup(appmods, SL, SC#sconf.appmods),
+           expires               = lkup(expires, SL, SC#sconf.expires),
+           errormod_401          = lkup(errormod_401, SL, SC#sconf.errormod_401),
+           errormod_404          = lkup(errormod_404, SL, SC#sconf.errormod_404),
            errormod_crash        = lkup(errormod_crash, SL,
-                                        D#sconf.errormod_crash),
+                                        SC#sconf.errormod_crash),
            arg_rewrite_mod       = lkup(arg_rewrite_mod, SL,
-                                        D#sconf.arg_rewrite_mod),
-           logger_mod            = lkup(logger_mod, SL, D#sconf.logger_mod),
-           opaque                = lkup(opaque, SL, D#sconf.opaque),
-           start_mod             = lkup(start_mod, SL, D#sconf.start_mod),
+                                        SC#sconf.arg_rewrite_mod),
+           logger_mod            = lkup(logger_mod, SL, SC#sconf.logger_mod),
+           opaque                = lkup(opaque, SL, SC#sconf.opaque),
+           start_mod             = lkup(start_mod, SL, SC#sconf.start_mod),
            allowed_scripts       = lkup(allowed_scripts, SL,
-                                        D#sconf.allowed_scripts),
+                                        SC#sconf.allowed_scripts),
            tilde_allowed_scripts = lkup(tilde_allowed_scripts, SL,
-                                        D#sconf.tilde_allowed_scripts),
-           revproxy              = lkup(revproxy, SL, D#sconf.revproxy),
-           soptions              = lkup(soptions, SL, D#sconf.soptions),
+                                        SC#sconf.tilde_allowed_scripts),
+           index_files           = lkup(index_files, SL, SC#sconf.index_files),
+           revproxy              = lkup(revproxy, SL, SC#sconf.revproxy),
+           soptions              = lkup(soptions, SL, SC#sconf.soptions),
            extra_cgi_vars        = lkup(extra_cgi_vars, SL,
-                                        D#sconf.extra_cgi_vars),
-           stats                 = lkup(stats, SL, D#sconf.stats),
+                                        SC#sconf.extra_cgi_vars),
+           stats                 = lkup(stats, SL, SC#sconf.stats),
            fcgi_app_server       = lkup(fcgi_app_server, SL,
-                                        D#sconf.fcgi_app_server),
-           php_handler           = lkup(php_handler, SL, D#sconf.php_handler),
-           shaper                = lkup(shaper, SL, D#sconf.shaper),
+                                        SC#sconf.fcgi_app_server),
+           php_handler           = lkup(php_handler, SL, SC#sconf.php_handler),
+           shaper                = lkup(shaper, SL, SC#sconf.shaper),
            deflate_options       = lkup(deflate_options, SL,
-                                        D#sconf.deflate_options)
+                                        SC#sconf.deflate_options),
+           mime_types_info       = lkup(mime_types_info, SL,
+                                        SC#sconf.mime_types_info),
+           dispatch_mod          = lkup(dispatchmod, SL,
+                                        SC#sconf.dispatch_mod)
           }.
 
 expand_auth(SL) ->
@@ -1158,8 +1169,11 @@ make_allow_header(Options) ->
         [] ->
             HasDav = ?sc_has_dav(get(sc)),
             ["Allow: GET, POST, OPTIONS, HEAD",
-             if HasDav == true -> ", PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY";
-                true           -> ""
+             case HasDav of
+                 true ->
+                     ", PUT, DELETE, PROPFIND, PROPPATCH, MKCOL, MOVE, COPY";
+                 false ->
+                     ""
              end, "\r\n"];
         _ ->
             ["Allow: ",
@@ -1175,7 +1189,7 @@ make_server_header() ->
                     undefined -> (get(gc))#gconf.yaws;
                     S         -> S
                 end,
-    ["Server: ", Signature, "\r\n" | if HasDav == true -> ["DAV: 1\r\n"];
+    ["Server: ", Signature, "\r\n" | if HasDav == true -> ["DAV: 1, 2, 3\r\n"];
                                         true           -> []
                                      end].
 
@@ -2171,25 +2185,26 @@ eat_crnl(Fd,SSL) ->
     case do_recv(Fd,0, SSL) of
         {ok, <<13,10>>} -> ok;
         {ok, [13,10]}   -> ok;
-        Err             -> {error, Err}
+        _               -> exit(normal)
     end.
 
-get_chunk_num(Fd,SSL) ->
+
+get_chunk_num(Fd, SSL) ->
+    {N, _} = get_chunk_header(Fd, SSL),
+    N.
+
+get_chunk_header(Fd, SSL) ->
     case do_recv(Fd, 0, SSL) of
-        {ok, Line} ->
+        {ok, Data} ->
+            Line = if is_binary(Data) -> binary_to_list(Data);
+                      true            -> Data
+                   end,
             ?Debug("Get chunk num from line ~p~n",[Line]),
-            erlang:list_to_integer(nonl(Line),16);
+            {N, Exts} = split_at(Line, $;),
+            {list_to_integer(strip_spaces(N),16), strip_spaces(Exts)};
         {error, _Rsn} ->
             exit(normal)
     end.
-
-nonl(B) when is_binary(B) -> nonl(binary_to_list(B));
-nonl([10|T])              -> nonl(T);
-nonl([13|T])              -> nonl(T);
-nonl([32|T])              -> nonl(T);
-nonl([H|T])               -> [H|nonl(T)];
-nonl([])                  -> [].
-
 
 
 get_chunk(_Fd, N, N, _) ->
@@ -2203,6 +2218,14 @@ get_chunk(Fd, N, Asz,SSL) ->
             exit(normal)
     end.
 
+get_chunk_trailer(Fd, SSL) ->
+    Hdrs = #headers{},
+    case http_collect_headers(Fd, undefined, Hdrs, SSL, 0) of
+        {error,_} -> exit(normal);
+        Hdrs      -> <<>>;
+        NewHdrs   -> {<<>>, NewHdrs}
+    end.
+
 %% split inputstring at first occurrence of Char
 split_at(String, Char) ->
     split_at(String, Char, []).
@@ -2212,3 +2235,136 @@ split_at([H|T], Char, Ack) ->
     split_at(T, Char, [H|Ack]);
 split_at([], _Char, Ack) ->
     {lists:reverse(Ack), []}.
+
+
+%% Parse an Ip address or an Ip address range
+%% Return Ip || {IpMin, IpMax} where:
+%%     Ip, IpMin, IpMax ::= ip_address()
+parse_ipmask(Str) when is_list(Str) ->
+    case string:tokens(Str, [$/]) of
+        [IpStr] ->
+            case inet_parse:address(IpStr) of
+                {ok, Ip}        -> Ip;
+                {error, Reason} -> throw({error, Reason})
+            end;
+        [IpStr, NetMask] ->
+            {Type, IpInt} = ip_to_integer(IpStr),
+            MaskInt       = netmask_to_integer(Type, NetMask),
+            case netmask_to_wildcard(Type, MaskInt) of
+                0 ->
+                    integer_to_ip(Type, IpInt);
+                Wildcard when Type =:= ipv4 ->
+                    NetAddr   = (IpInt band MaskInt),
+                    Broadcast = NetAddr + Wildcard,
+                    IpMin     = NetAddr + 1,
+                    IpMax     = Broadcast - 1,
+                    {integer_to_ip(ipv4, IpMin), integer_to_ip(ipv4, IpMax)};
+                Wildcard when Type =:= ipv6 ->
+                    NetAddr   = (IpInt band MaskInt),
+                    IpMin = NetAddr,
+                    IpMax = NetAddr + Wildcard,
+                    {integer_to_ip(ipv6, IpMin), integer_to_ip(ipv6, IpMax)}
+            end;
+        _ ->
+            throw({error, einval})
+    end;
+parse_ipmask(_) ->
+    throw({error, einval}).
+
+
+-define(MAXBITS_IPV4, 32).
+-define(MASK_IPV4,    16#FFFFFFFF).
+-define(MAXBITS_IPV6, 128).
+-define(MASK_IPV6,    16#FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF).
+
+ip_to_integer(Str) when is_list(Str) ->
+    case inet_parse:address(Str) of
+        {ok, Ip}        -> ip_to_integer(Ip);
+        {error, Reason} -> throw({error, Reason})
+    end;
+ip_to_integer({N1,N2,N3,N4}) ->
+    <<Int:32>> = <<N1:8, N2:8, N3:8, N4:8>>,
+    if
+        (Int bsr ?MAXBITS_IPV4) == 0 -> {ipv4, Int};
+        true -> throw({error, einval})
+    end;
+ip_to_integer({N1,N2,N3,N4,N5,N6,N7,N8}) ->
+    <<Int:128>> = <<N1:16, N2:16, N3:16, N4:16, N5:16, N6:16, N7:16, N8:16>>,
+    if
+        (Int bsr ?MAXBITS_IPV6) == 0 -> {ipv6, Int};
+        true -> throw({error, einval})
+    end;
+ip_to_integer(_) ->
+    throw({error, einval}).
+
+integer_to_ip(ipv4, I) when is_integer(I), I =< ?MASK_IPV4 ->
+    <<N1:8, N2:8, N3:8, N4:8>> = <<I:32>>,
+    {N1, N2, N3, N4};
+integer_to_ip(ipv6, I) when is_integer(I), I =< ?MASK_IPV6 ->
+    <<N1:16, N2:16, N3:16, N4:16, N5:16, N6:16, N7:16, N8:16>> = <<I:128>>,
+    {N1, N2, N3, N4, N5, N6, N7, N8};
+integer_to_ip(_, _) ->
+    throw({error, einval}).
+
+netmask_to_integer(Type, NetMask) ->
+    case catch list_to_integer(NetMask) of
+        I when is_integer(I) ->
+            case Type of
+                ipv4 -> (1 bsl ?MAXBITS_IPV4) - (1 bsl (?MAXBITS_IPV4 - I));
+                ipv6 -> (1 bsl ?MAXBITS_IPV6) - (1 bsl (?MAXBITS_IPV6 - I))
+            end;
+        _ ->
+            case ip_to_integer(NetMask) of
+                {Type, MaskInt} -> MaskInt;
+                _               -> throw({error, einval})
+            end
+    end.
+
+netmask_to_wildcard(ipv4, Mask) -> ((1 bsl ?MAXBITS_IPV4) - 1) bxor Mask;
+netmask_to_wildcard(ipv6, Mask) -> ((1 bsl ?MAXBITS_IPV6) - 1) bxor Mask.
+
+
+%% Compare an ip to another ip or a range of ips
+match_ipmask(Ip, Ip) ->
+    true;
+match_ipmask(Ip, {IpMin, IpMax}) ->
+    case compare_ips(Ip, IpMin) of
+        error -> false;
+        less  -> false;
+        _ ->
+            case compare_ips(Ip, IpMax) of
+                error   -> false;
+                greater -> false;
+                _       -> true
+            end
+    end;
+match_ipmask(_, _) ->
+    false.
+
+compare_ips({A,B,C,D},          {A,B,C,D})                       -> equal;
+compare_ips({A,B,C,D,E,F,G,H},  {A,B,C,D,E,F,G,H})               -> equal;
+compare_ips({A,B,C,D1},         {A,B,C,D2})         when D1 < D2 -> less;
+compare_ips({A,B,C,D1},         {A,B,C,D2})         when D1 > D2 -> greater;
+compare_ips({A,B,C1,_},         {A,B,C2,_})         when C1 < C2 -> less;
+compare_ips({A,B,C1,_},         {A,B,C2,_})         when C1 > C2 -> greater;
+compare_ips({A,B1,_,_},         {A,B2,_,_})         when B1 < B2 -> less;
+compare_ips({A,B1,_,_},         {A,B2,_,_})         when B1 > B2 -> greater;
+compare_ips({A1,_,_,_},         {A2,_,_,_})         when A1 < A2 -> less;
+compare_ips({A1,_,_,_},         {A2,_,_,_})         when A1 > A2 -> greater;
+compare_ips({A,B,C,D,E,F,G,H1}, {A,B,C,D,E,F,G,H2}) when H1 < H2 -> less;
+compare_ips({A,B,C,D,E,F,G,H1}, {A,B,C,D,E,F,G,H2}) when H1 > H2 -> greater;
+compare_ips({A,B,C,D,E,F,G1,_}, {A,B,C,D,E,F,G2,_}) when G1 < G2 -> less;
+compare_ips({A,B,C,D,E,F,G1,_}, {A,B,C,D,E,F,G2,_}) when G1 > G2 -> greater;
+compare_ips({A,B,C,D,E,F1,_,_}, {A,B,C,D,E,F2,_,_}) when F1 < F2 -> less;
+compare_ips({A,B,C,D,E,F1,_,_}, {A,B,C,D,E,F2,_,_}) when F1 > F2 -> greater;
+compare_ips({A,B,C,D,E1,_,_,_}, {A,B,C,D,E2,_,_,_}) when E1 < E2 -> less;
+compare_ips({A,B,C,D,E1,_,_,_}, {A,B,C,D,E2,_,_,_}) when E1 > E2 -> greater;
+compare_ips({A,B,C,D1,_,_,_,_}, {A,B,C,D2,_,_,_,_}) when D1 < D2 -> less;
+compare_ips({A,B,C,D1,_,_,_,_}, {A,B,C,D2,_,_,_,_}) when D1 > D2 -> greater;
+compare_ips({A,B,C1,_,_,_,_,_}, {A,B,C2,_,_,_,_,_}) when C1 < C2 -> less;
+compare_ips({A,B,C1,_,_,_,_,_}, {A,B,C2,_,_,_,_,_}) when C1 > C2 -> greater;
+compare_ips({A,B1,_,_,_,_,_,_}, {A,B2,_,_,_,_,_,_}) when B1 < B2 -> less;
+compare_ips({A,B1,_,_,_,_,_,_}, {A,B2,_,_,_,_,_,_}) when B1 > B2 -> greater;
+compare_ips({A1,_,_,_,_,_,_,_}, {A2,_,_,_,_,_,_,_}) when A1 < A2 -> less;
+compare_ips({A1,_,_,_,_,_,_,_}, {A2,_,_,_,_,_,_,_}) when A1 > A2 -> greater;
+compare_ips(_,                  _)                               -> error.
