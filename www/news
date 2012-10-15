@@ -1,4 +1,4 @@
-Sun Jun 24 23:47:57 CEST 2012
+Sun Jun 24 23:47:57 CEST 2012 Yaws 1.94
 Bugfix release for bugs that sneaked into 1.93
 The random patch for 1.93 wasn't good enough as discovered by Sergei Golovan, we need to cater for non printable chars (Sergei Golovan)
 add support for W3C Server-Sent Events (Steve)
