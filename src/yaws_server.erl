@@ -603,11 +603,13 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     {links, Ls} = process_info(self(), links),
                     foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
                     exit(normal);
-                _ when Reason == failaccept ->
+                Top when Reason == failaccept ->
                     error_logger:format(
                       "Accept proc died, terminate gserv",[]),
                     {links, Ls} = process_info(self(), links),
-                    foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
+                    %% do not send exit signal to yaws_server process
+                    Ls1 = Ls -- [Top],
+                    foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls1),
                     exit(noserver);
                 _ ->
                     GS2 = GS#gs{sessions = GS#gs.sessions - 1},
@@ -832,9 +834,13 @@ stop_ready(Ready, Last) ->
       end, Ready).
 
 gserv_stop(Gpid) ->
-    Gpid ! {self(), stop},
-    receive
-        {Gpid, ok} ->
+    case is_process_alive(Gpid) of
+        true ->
+            Gpid ! {self(), stop},
+            receive
+                {Gpid, ok} -> ok
+            end;
+        false ->
             ok
     end.
 
