@@ -1,3 +1,26 @@
+Wed Oct 17 19:57:05 CEST 2012 Yaws 1.95
+Feature relase, 
+The --heart option didn't work as expected when yaws ran out of filedescriptors - capflam
+Major webdav overhaul by Tjeerd van der Laan. Lot's of improvements and general bugfixes.
+Added sorting of subconfigdir - Tjeerd van der Laan
+Added a fast dispatch module. This is for applications that only want the HTTP portion of yaws, i.e applications with very high performance requirements. A lot of the normal book keeping, tracing etc is ignored.
+Added RFC6265 compliant variant of yaws_api:set_cookie/3 - serge
+Fix SSL socket wrapping - capflam/Jean-Charles Campagne
+Parse extensions and trailing headers of chunked transfer encoded requests - capflam
+Optimize the ACL checks during the request's authentication -capflam
+Added support to configure ciphers in ssl - klacke
+dialyzer cleanup/improvements - Kenji Rikitake
+makefile / mime_type_c.beam cleanup - Kenji Rikitake
+add startup script for FreeBSD 9 (Thomas Elsgaard)
+make sure "rebar eunit" passes - steve
+new yaws_api:reformat_header/2 function - steve
+support Raspberry Pi in configure.in (Anders Nygren)
+Add basic websocket test - JD Bothma
+Make the mime types mappings configurable - capflam
+Add index_files directive into the server part configuration - capflam
+Refactor Set-Cookie/Cookie header parsing to follow RFC6265 - capflam
+enabled http client library options customization - Kaloyan Dimitrov
+
 Sun Jun 24 23:47:57 CEST 2012 Yaws 1.94
 Bugfix release for bugs that sneaked into 1.93
 The random patch for 1.93 wasn't good enough as discovered by Sergei Golovan, we need to cater for non printable chars (Sergei Golovan)
