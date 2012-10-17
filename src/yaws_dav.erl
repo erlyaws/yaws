@@ -126,7 +126,7 @@ put(SC, ARG) ->
             {ok, Fd} ->
                 case H#headers.content_length of
                     undefined ->
-                        Chunked = H#headers.transfer_encoding == "chunked",
+                        Chunked = yaws:to_lower(H#headers.transfer_encoding) == "chunked",
                         case H#headers.connection of
                             "close" when Chunked == false->
                                 store_client_data(Fd, CliSock, all, SSL);
@@ -338,8 +338,8 @@ proppatch(A) ->
         Req = binary_to_list(A#arg.clidata),
         R = davresource0(A),
         Update = parse_proppatch(Req),
-        Response = proppatch_response(Update,A,R),
-        MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], Response}],
+        Response = {'D:response',[],proppatch_response(Update,A,R)},
+        MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], [Response]}],
         status(207,MultiStatus)
     catch
         {Status,Precondition} ->
@@ -562,7 +562,7 @@ prop_set({'DAV:',creationdate},A,_R,V) ->
     end;
 prop_set({'DAV:',getlastmodified},A,_R,V) ->
     Path=davpath(A),
-    P = {'D:creationdate', [], []},
+    P = {'D:getlastmodified', [], []},
     case file:read_file_info(Path) of
         {ok,F0} ->
             T = yaws:stringdate_to_datetime(V),
