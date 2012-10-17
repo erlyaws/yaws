@@ -47,7 +47,7 @@ echo release resides in `pwd`/$NAME_VERSION.tar.gz
 echo release resides in `pwd`/yaws/win32/Yaws-${YAWS_VSN}-windows-installer.exe
 
 echo "To push this do:"
-echo "git push origin revs/tags/yaws-${version}:revs/tags/yaws-${version}"
+#echo "git push origin revs/tags/yaws-${version}:revs/tags/yaws-${version}"
 echo "ehhh or git push --tags"
 
 

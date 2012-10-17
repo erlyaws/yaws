@@ -50,7 +50,10 @@ hit() ->
 	    gen_server:cast(Pid, {hit})
     end.
 
-
+sent({ok, Bytes}) ->
+    sent(Bytes);
+sent({error, _}) ->
+    ignore;
 sent(Bytes) ->
     case get_stats() of
 	undefined ->

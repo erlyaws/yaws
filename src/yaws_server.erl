@@ -3893,7 +3893,7 @@ deliver_large_file(CliSock,  _Req, UT, Range) ->
 
 send_file(CliSock, Path, all, undefined) when is_port(CliSock) ->
     ?Debug("send_file(~p,~p,no ...)~n", [CliSock, Path]),
-    {ok, Size} = yaws_sendfile:send(CliSock, Path),
+    Size = yaws_sendfile:send(CliSock, Path),
     yaws_stats:sent(Size);
 send_file(CliSock, Path, all, undefined) ->
     ?Debug("send_file(~p,~p,no ...)~n", [CliSock, Path]),
@@ -3901,7 +3901,7 @@ send_file(CliSock, Path, all, undefined) ->
     send_file(CliSock, Fd, undefined);
 send_file(CliSock, _, all, {gzfile, GzFile}) when is_port(CliSock) ->
     ?Debug("send_file(~p,~p, ...)~n", [CliSock, GzFile]),
-    {ok, Size} = yaws_sendfile:send(CliSock, GzFile),
+    Size = yaws_sendfile:send(CliSock, GzFile),
     yaws_stats:sent(Size);
 send_file(CliSock, _, all, {gzfile, GzFile}) ->
     ?Debug("send_file(~p,~p, ...)~n", [CliSock, GzFile]),
@@ -3912,7 +3912,7 @@ send_file(CliSock, Path, all, Priv) ->
     {ok, Fd} = file:open(Path, [raw, binary, read]),
     send_file(CliSock, Fd, Priv);
 send_file(CliSock, Path,  {fromto, From, To, _Tot}, _) when is_port(CliSock) ->
-    {ok, Size} = yaws_sendfile:send(CliSock, Path, From, (To-From+1)),
+    Size = yaws_sendfile:send(CliSock, Path, From, (To-From+1)),
     yaws_stats:sent(Size);
 send_file(CliSock, Path,  {fromto, From, To, _Tot}, _) ->
     {ok, Fd} = file:open(Path, [raw, binary, read]),
