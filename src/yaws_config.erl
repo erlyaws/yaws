@@ -527,7 +527,15 @@ make_default_sconf([], Port) ->
 make_default_sconf(DocRoot, undefined) ->
     make_default_sconf(DocRoot, 8000);
 make_default_sconf(DocRoot, Port) ->
-    set_server(#sconf{port=Port, listen={127,0,0,1}, docroot=DocRoot}).
+    AbsDocRoot = filename:absname(DocRoot),
+    case is_dir(AbsDocRoot) of
+        true ->
+            set_server(#sconf{port=Port,listen={127,0,0,1},docroot=AbsDocRoot});
+        false ->
+            throw({error, ?F("Invalid docroot: directory ~s does not exist",
+                             [AbsDocRoot])})
+    end.
+
 
 yaws_dir() ->
     %% below, ignore dialyzer warning:
