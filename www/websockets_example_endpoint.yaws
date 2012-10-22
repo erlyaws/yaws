@@ -1,6 +1,9 @@
 <erl>
 out(A) ->
     CallbackMod = basic_echo_callback,
+    %% NOTE: change the line below to
+    %%   Opts = [{origin, any}],
+    %% if you want to accept calls from any origin.
     Opts = [{origin, "http://" ++ (A#arg.headers)#headers.host}],
     {websocket, CallbackMod, Opts}.
 </erl>
