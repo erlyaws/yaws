@@ -466,7 +466,7 @@ ws_frame_info(#ws_state{sock=Socket},
     case check_control_frame(Len1, Opcode, Fin) of
         ok ->
             {ws_frame_info_secondary, Length, MaskingKey, Payload, Excess}
-                = ws_frame_info_secondary(Socket, Len1, Rest),
+                = ws_frame_info_secondary(Socket, Masked, Len1, Rest),
             FrameInfo = #ws_frame_info{fin=Fin,
                                        rsv=Rsv,
                                        opcode=opcode_to_atom(Opcode),
@@ -482,16 +482,21 @@ ws_frame_info(#ws_state{sock=Socket},
 ws_frame_info(State = #ws_state{sock=Socket}, FirstPacket) ->
     ws_frame_info(State, buffer(Socket, 2,FirstPacket)).
 
-ws_frame_info_secondary(Socket, Len1, Rest) ->
+
+ws_frame_info_secondary(Socket, Masked, Len1, Rest) ->
+    MaskLength = case Masked of
+        0 -> 0;
+        1 -> 4
+    end,
     case Len1 of
         126 ->
-            <<Len:16, MaskingKey:4/binary, Rest2/binary>> =
+            <<Len:16, MaskingKey:MaskLength/binary, Rest2/binary>> =
                 buffer(Socket, 6, Rest);
         127 ->
-            <<Len:64, MaskingKey:4/binary, Rest2/binary>> =
+            <<Len:64, MaskingKey:MaskLength/binary, Rest2/binary>> =
                 buffer(Socket, 12, Rest);
         Len ->
-            <<MaskingKey:4/binary, Rest2/binary>> = buffer(Socket, 4, Rest)
+            <<MaskingKey:MaskLength/binary, Rest2/binary>> = buffer(Socket, 4, Rest)
     end,
     if
 	Len > ?MAX_PAYLOAD ->
@@ -658,6 +663,9 @@ mask(MaskBin, Data) ->
 %% unmask == mask. It's XOR of the four-byte masking key.
 rmask(_,<<>>) ->
     [<<>>];
+
+rmask(<<>>, Data) ->
+    [Data];
 
 rmask(MaskBin = <<Mask:4/integer-unit:8>>,
       <<Data:4/integer-unit:8, Rest/binary>>) ->
