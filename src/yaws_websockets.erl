@@ -151,11 +151,16 @@ handle_info({tcp, Socket, FirstPacket}, #state{wsstate=#ws_state{sock=Socket}}=S
     case Results of
         {close, Reason} ->
             do_close(WSState, Reason),
-            {stop, Reason, State#state{cbstate=NewCallbackState}};
+            {stop, normal, State#state{cbstate=NewCallbackState}};
         _ ->
             Last = lists:last(FrameInfos),
-            NewWSState = Last#ws_frame_info.ws_state,
-            {noreply, State#state{wsstate=NewWSState, cbstate=NewCallbackState}}
+            if
+                is_record(Last, ws_frame_info) ->
+                    NewWSState = Last#ws_frame_info.ws_state,
+                    {noreply, State#state{wsstate=NewWSState, cbstate=NewCallbackState}};
+                true ->
+                    {stop, normal, State#state{cbstate=NewCallbackState}}
+            end
     end;
 handle_info({tcp_closed, Socket}, #state{wsstate=#ws_state{sock=Socket}}=State) ->
     %% The only way we should get here is due to an abnormal close.
@@ -525,20 +530,24 @@ unframe(State, FirstPacket) ->
 
 %% -> {#ws_frame_info, RestBin} | {fail_connection, Reason}
 unframe_one(State = #ws_state{vsn=8}, FirstPacket) ->
-    {FrameInfo = #ws_frame_info{}, RestBin} = ws_frame_info(State, FirstPacket),
-    Unmasked = mask(FrameInfo#ws_frame_info.masking_key,
-                    FrameInfo#ws_frame_info.payload),
-    NewState = frag_state_machine(State, FrameInfo),
-    Unframed = FrameInfo#ws_frame_info{data = Unmasked,
-                                       ws_state = NewState},
+    case ws_frame_info(State, FirstPacket) of
+        {FrameInfo = #ws_frame_info{}, RestBin} -> 
+            Unmasked = mask(FrameInfo#ws_frame_info.masking_key,
+                            FrameInfo#ws_frame_info.payload),
+            NewState = frag_state_machine(State, FrameInfo),
+            Unframed = FrameInfo#ws_frame_info{data = Unmasked,
+                                               ws_state = NewState},
 
-    case checks(Unframed) of
-        #ws_frame_info{} when is_record(NewState, ws_state) ->
-            {Unframed, RestBin};
-        #ws_frame_info{} when not is_record(NewState, ws_state) ->
-            NewState;   % pass back the error details
-        Fail ->
-            Fail
+            case checks(Unframed) of
+                #ws_frame_info{} when is_record(NewState, ws_state) ->
+                    {Unframed, RestBin};
+                #ws_frame_info{} when not is_record(NewState, ws_state) ->
+                    NewState;   % pass back the error details
+                Fail ->
+                    Fail
+            end;
+        Else ->
+            Else
     end.
 
 websocket_setopts(#ws_state{sock=Socket}, Opts) ->
