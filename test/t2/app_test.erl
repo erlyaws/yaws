@@ -905,6 +905,11 @@ test_websocket() ->
         <<129, 133, "aaaa", 38722669838:5/integer-unit:8>>,
     ok = gen_tcp:send(Sock, Frame),
     ExpectFrame = <<129, 5, "hello">>,
+    {ok, ExpectFrame} = gen_tcp:recv(Sock, 0, 2000),
+
+    %% Text frame "hello" without masking
+    UnmaskedFrame = <<129, 5, "hello">>,
+    ok = gen_tcp:send(Sock, UnmaskedFrame),
     {ok, ExpectFrame} = gen_tcp:recv(Sock, 0, 2000).
 
 test_embedded_id_dir() ->
