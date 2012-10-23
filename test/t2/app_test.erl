@@ -109,9 +109,7 @@ read_loop(C, I, Sz)  ->
 get_cont_len(C) ->
     ?line {value, {http_header, _,_,_, LenStr}} =
 	lists:keysearch('Content-Length', 3, tftest:get_headers(C)),
-    {ok, list_to_integer(LenStr)}.
-
-
+    {ok, erlang:list_to_integer(LenStr)}.
 
 
 test2() ->
@@ -532,7 +530,7 @@ recv_hdrs(Sock, Len) ->
         {http, Sock, {http_error, Error}} ->
             {error, Error};
         {http, Sock, {http_header, _, 'Content-Length', _, LenStr}} ->
-            recv_hdrs(Sock, list_to_integer(LenStr));
+            recv_hdrs(Sock, erlang:list_to_integer(LenStr));
         {http, Sock, {http_header, _, _, _, _}} ->
             recv_hdrs(Sock, Len);
         {http, Sock, {http_response, _, 200, "OK"}} ->
@@ -555,7 +553,7 @@ small_post() ->
     io:format("  small post\n",[]),
     {ok, Bin} = file:read_file("../../www/1000.txt"),
     Sz = size(Bin),
-    Uri = "http://localhost:8006/posttest/" ++ integer_to_list(Sz),
+    Uri = "http://localhost:8006/posttest/" ++ erlang:integer_to_list(Sz),
     Hdrs = [{content_length, Sz}, {content_type, "binary/octet-stream"}],
     ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, post, Bin, []),
     ok.
@@ -564,7 +562,7 @@ large_post() ->
     io:format("  large post\n",[]),
     {ok, Bin} = file:read_file("../../www/10000.txt"),
     Sz = size(Bin),
-    Uri = "http://localhost:8006/posttest/" ++ integer_to_list(Sz),
+    Uri = "http://localhost:8006/posttest/" ++ erlang:integer_to_list(Sz),
     Hdrs = [{content_length, Sz}, {content_type, "binary/octet-stream"}],
     ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, post, Bin, []),
     ok.
@@ -573,7 +571,7 @@ small_chunked_post() ->
     io:format("  small chunked post\n",[]),
     {ok, Bin} = file:read_file("../../www/3000.txt"),
     Sz = size(Bin),
-    Uri = "http://localhost:8006/posttest/chunked/" ++ integer_to_list(Sz),
+    Uri = "http://localhost:8006/posttest/chunked/" ++ erlang:integer_to_list(Sz),
     Hdrs = [{content_type, "binary/octet-stream"}],
     Opts = [{transfer_encoding, {chunked, 1000*1000}}],
     ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, post, Bin, Opts),
@@ -583,7 +581,7 @@ large_chunked_post() ->
     io:format("  large chunked post\n",[]),
     {ok, Bin} = file:read_file("../../www/10000.txt"),
     Sz = size(Bin),
-    Uri = "http://localhost:8006/posttest/chunked/" ++ integer_to_list(Sz),
+    Uri = "http://localhost:8006/posttest/chunked/" ++ erlang:integer_to_list(Sz),
     Hdrs = [{content_type, "binary/octet-stream"}],
 
     %% size of chunk _IS_NOT_ a multiple of partial_post_size
@@ -609,7 +607,7 @@ flush_small_post() ->
     io:format("  flush small post\n",[]),
     {ok, Bin} = file:read_file("../../www/1000.txt"),
     Sz = size(Bin),
-    Uri1 = "http://localhost:8006/flushtest/" ++ integer_to_list(Sz),
+    Uri1 = "http://localhost:8006/flushtest/" ++ erlang:integer_to_list(Sz),
     Uri2 = "http://localhost:8006/hello.txt",
     Hdrs = [{content_length, Sz}, {content_type, "binary/octet-stream"}],
     {ok, ConnPid} = ibrowse:spawn_worker_process("localhost", 8006),
@@ -622,7 +620,7 @@ flush_large_post() ->
     io:format("  flush large post\n",[]),
     {ok, Bin} = file:read_file("../../www/10000.txt"),
     Sz = size(Bin),
-    Uri1 = "http://localhost:8006/flushtest/" ++ integer_to_list(Sz),
+    Uri1 = "http://localhost:8006/flushtest/" ++ erlang:integer_to_list(Sz),
     Uri2 = "http://localhost:8006/hello.txt",
     Hdrs = [{content_length, Sz}, {content_type, "binary/octet-stream"}],
     {ok, ConnPid} = ibrowse:spawn_worker_process("localhost", 8006),
@@ -635,7 +633,7 @@ flush_chunked_post() ->
     io:format("  flush chunked post\n",[]),
     {ok, Bin} = file:read_file("../../www/10000.txt"),
     Sz = size(Bin),
-    Uri1 = "http://localhost:8006/flushtest/chunked/" ++ integer_to_list(Sz),
+    Uri1 = "http://localhost:8006/flushtest/chunked/" ++ erlang:integer_to_list(Sz),
     Uri2 = "http://localhost:8006/hello.txt",
     Hdrs = [{content_type, "binary/octet-stream"}],
     Opts = [{transfer_encoding, {chunked, 4000*1000}}],
@@ -687,20 +685,20 @@ test_te_trailer_and_extensions() ->
     Data = ["This is the data in the first chunk\n",
             "and this is the second one\n",
             "con", "sequence"],
-    Path = "/posttest/chunked/" ++ integer_to_list(length(lists:flatten(Data))),
+    Path = "/posttest/chunked/" ++ erlang:integer_to_list(length(lists:flatten(Data))),
     ?line gen_tcp:send(Sock, "POST "++Path++" HTTP/1.1\r\n"
                        "Host: localhost\r\n"
                        "Trailer: Content-Type\r\n"
                        "Trailer: Extra-Headers-WooHoo\r\n"
                        "Transfer-Encoding: Chunked\r\n\r\n"),
-    Body = lists:flatten([[integer_to_list(length(X), 16),"; foo=bar\r\n",
+    Body = lists:flatten([[erlang:integer_to_list(length(X), 16),"; foo=bar\r\n",
                            X,"\r\n"] || X <- Data]),
     ?line gen_tcp:send(Sock, Body),
     ?line gen_tcp:send(Sock, "0\r\n"
                        "Extra-Headers-WooHoo: something\r\n"
                        "Content-Type: text/plain\r\n\r\n"),
     inet:setopts(Sock, [{packet, http}]),
-    ?line {ok, Len} = recv_hdrs(Sock),
+    ?line {ok, _Len} = recv_hdrs(Sock),
     gen_tcp:close(Sock),
     ok.
 
@@ -712,7 +710,7 @@ test_expires() ->
 
     %% Retrieve max-age value to test Expires header
     ?line "max-age=" ++ Rest = proplists:get_value("Cache-Control", Hdrs),
-    ?line Secs = list_to_integer(Rest),
+    ?line Secs = erlang:list_to_integer(Rest),
 
     %% Convert Date and Expires into datetime()
     ?line Date = proplists:get_value("Date", Hdrs),
@@ -837,7 +835,7 @@ test_ssl_multipart_post() ->
               ],
     Uri = "https://localhost:8444/test_upload_ssl.yaws",
     Options = [{is_ssl, true}, {ssl_options, [{verify, 0}]}],
-    ?line {ok, "200", _, _} = Reply = ibrowse:send_req(Uri, Headers, post, Data, Options),
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Headers, post, Data, Options),
     ok = application:stop(ssl),
     ok = application:stop(public_key),
     ok = application:stop(crypto),

@@ -92,7 +92,7 @@ test_post_revproxy() ->
 small_post() ->
     io:format("  small post\n",[]),
     {ok, Bin} = file:read_file("../../www/1000.txt"),
-    Sz = integer_to_list(size(Bin)),
+    Sz = erlang:integer_to_list(size(Bin)),
     Uri = "http://localhost:8000/revproxy1/posttest/" ++ Sz,
     Hdrs = [{content_length, Sz}, {content_type, "binary/octet-stream"}],
     ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, post, Bin, []),
@@ -101,7 +101,7 @@ small_post() ->
 large_post() ->
     io:format("  large post\n",[]),
     {ok, Bin} = file:read_file("../../www/10000.txt"),
-    Sz   = integer_to_list(size(Bin)),
+    Sz   = erlang:integer_to_list(size(Bin)),
     Uri  = "http://localhost:8000/revproxy1/posttest/" ++ Sz,
     Hdrs = [{content_length, Sz}, {content_type, "binary/octet-stream"}],
     ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Hdrs, post, Bin, []),
@@ -111,7 +111,7 @@ small_chunked_post() ->
     %% Chunk size is less than partial_post_size
     io:format("  small chunked post\n",[]),
     {ok, Bin} = file:read_file("../../www/3000.txt"),
-    Sz   = integer_to_list(size(Bin)),
+    Sz   = erlang:integer_to_list(size(Bin)),
     Uri  = "http://localhost:8000/revproxy1/posttest/chunked/" ++ Sz,
     Hdrs = [{content_type, "binary/octet-stream"}],
     Opts = [{transfer_encoding, {chunked, 1000*1000}}],
@@ -122,7 +122,7 @@ large_chunked_post() ->
     %% Chunk size is greater than partial_post_size
     io:format("  large chunked post\n",[]),
     {ok, Bin} = file:read_file("../../www/10000.txt"),
-    Sz   = integer_to_list(size(Bin)),
+    Sz   = erlang:integer_to_list(size(Bin)),
     Uri  = "http://localhost:8000/revproxy1/posttest/chunked/" ++ Sz,
     Hdrs = [{content_type, "binary/octet-stream"}],
     Opts = [{transfer_encoding, {chunked, 4000*1000}}],
@@ -268,7 +268,7 @@ recv_hdrs(Sock, Len) ->
         {http, Sock, {http_error, Error}} ->
             {error, Error};
         {http, Sock, {http_header, _, 'Content-Length', _, LenStr}} ->
-            recv_hdrs(Sock, list_to_integer(LenStr));
+            recv_hdrs(Sock, erlang:list_to_integer(LenStr));
         {http, Sock, {http_header, _, _, _, _}} ->
             recv_hdrs(Sock, Len);
         {http, Sock, {http_response, _, 200, "OK"}} ->

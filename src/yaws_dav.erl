@@ -716,7 +716,7 @@ h_timeout(A) ->
                               I when is_integer(I) -> I;
                               _ -> ?LOCK_LIFETIME
                           end,
-                    min(Val,?LOCK_LIFETIME);
+                    erlang:min(Val,?LOCK_LIFETIME);
                 _ -> ?LOCK_LIFETIME
             end;
         _ ->

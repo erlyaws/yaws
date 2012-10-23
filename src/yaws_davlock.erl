@@ -338,10 +338,7 @@ locktoken() ->
     <<TimeHi:12, TimeMid:16, TimeLow:32>> = <<Timestamp:60>>,
     Clocksequence = <<Micro:14>>,
     <<ClockseqHi:6, ClockseqLow:8>> = Clocksequence,
-    {ok,Ifs} = inet:getifaddrs(),
-    Addrs = [ lists:keysearch(hwaddr,1,Attr) || {_If,Attr} <- Ifs ],
-    Addr = lists:max([ A || {value,{hwaddr,A}} <- Addrs ]),
-    Node = list_to_binary(Addr),
+    Node = get_hwaddr(),
     UUID = <<TimeLow:32, TimeMid:16, Version:4, TimeHi:12,
       Variant:2, ClockseqLow:8, ClockseqHi:6, Node/binary>>,
     <<U0:32, U1:16, U2:16, U3:16, U4:48>> = UUID,
@@ -353,3 +350,29 @@ format(["/"|T]) ->
     format(T);
 format([H|T]) ->
     lists:flatten(["/",H|format(T)]).
+
+get_hwaddr() ->
+    get_hwaddr(erlang:function_exported(inet, getifaddrs, 0)).
+get_hwaddr(true) ->
+    {ok,Ifs} = inet:getifaddrs(),
+    Addrs = [ lists:keysearch(hwaddr,1,Attr) || {_If,Attr} <- Ifs ],
+    Addr = lists:max([ A || {value,{hwaddr,A}} <- Addrs ]),
+    list_to_binary(Addr);
+get_hwaddr(false) ->
+    %% this clause is for backward compatibility to R13
+    {ok, Ifs} = inet:getiflist(),
+    Addrs = lists:foldl(fun([{hwaddr, HW}], Acc) -> [HW|Acc];
+                           ([], Acc) -> Acc
+                        end, [], [begin {ok, HW} = inet:ifget(If, [hwaddr]), HW end || If <- Ifs]),
+    HWAddrs = case Addrs of
+                  [] ->
+                      %% hwaddr doesn't work on Mac on R13. Fall back to ifconfig :(
+                      Ifconfig = os:cmd("/sbin/ifconfig -a"),
+                      {ok, Pat} = re:compile("ether\s+([0-9a-fA-F:]+)"),
+                      {match, Matches} = re:run(Ifconfig, Pat, [global, {capture, [1]}]),
+                      HWs = [string:substr(Ifconfig, At+1, Len) || [{At,Len}] <- Matches],
+                      [[erlang:list_to_integer(V, 16) || V <- string:tokens(S, ":")] || S <- HWs];
+                  _ ->
+                      Addrs
+              end,
+    list_to_binary(lists:max(HWAddrs)).

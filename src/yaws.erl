@@ -426,7 +426,7 @@ upto(I,  [H|T]) -> [H|upto(I-1, T)].
 
 
 to_string(X) when is_float(X)   -> io_lib:format("~.2.0f",[X]);
-to_string(X) when is_integer(X) -> integer_to_list(X);
+to_string(X) when is_integer(X) -> erlang:integer_to_list(X);
 to_string(X) when is_atom(X)    -> atom_to_list(X);
 to_string(X)                    -> lists:concat([X]).
 
@@ -486,11 +486,11 @@ local_time_as_gmt_string(LocalTime) ->
 
 time_to_string({{Year, Month, Day}, {Hour, Min, Sec}}, Zone) ->
     [day(Year, Month, Day), ", ",
-     mk2(Day), " ", month(Month), " ", integer_to_list(Year), " ",
+     mk2(Day), " ", month(Month), " ", erlang:integer_to_list(Year), " ",
      mk2(Hour), ":", mk2(Min), ":", mk2(Sec), " ", Zone].
 
-mk2(I) when I < 10 -> [$0 | integer_to_list(I)];
-mk2(I)             -> integer_to_list(I).
+mk2(I) when I < 10 -> [$0 | erlang:integer_to_list(I)];
+mk2(I)             -> erlang:integer_to_list(I).
 
 day(Year, Month, Day) ->
     int_to_wd(calendar:day_of_the_week(Year, Month, Day)).
@@ -536,18 +536,18 @@ stringdate_to_datetime([_D1, _D2, _D3, $\,, $ |Tail]) ->
     stringdate_to_datetime1(Tail).
 
 stringdate_to_datetime1([A, B, $\s |T]) ->
-    stringdate_to_datetime2(T, list_to_integer([A,B]));
+    stringdate_to_datetime2(T, erlang:list_to_integer([A,B]));
 stringdate_to_datetime1([A, $\s |T]) ->
-    stringdate_to_datetime2(T, list_to_integer([A])).
+    stringdate_to_datetime2(T, erlang:list_to_integer([A])).
 
 stringdate_to_datetime2([M1, M2, M3, $\s , Y1, Y2, Y3, Y4, $\s,
                          H1, H2, $:, Min1, Min2,$:,
                          S1, S2,$\s ,$G, $M, $T|_], Day) ->
-    {{list_to_integer([Y1,Y2,Y3,Y4]),
+    {{erlang:list_to_integer([Y1,Y2,Y3,Y4]),
       month_str_to_int([M1, M2, M3]), Day},
-     {list_to_integer([H1, H2]),
-      list_to_integer([Min1, Min2]),
-      list_to_integer([S1, S2])}}.
+     {erlang:list_to_integer([H1, H2]),
+      erlang:list_to_integer([Min1, Min2]),
+      erlang:list_to_integer([S1, S2])}}.
 
 
 %% used by If-Modified-Since header code
@@ -1263,7 +1263,7 @@ make_cache_control_header(MimeType, FI) ->
 
 
 make_cache_control_header(TTL) ->
-    ["Cache-Control: ", "max-age=", integer_to_list(TTL), "\r\n"].
+    ["Cache-Control: ", "max-age=", erlang:integer_to_list(TTL), "\r\n"].
 
 
 make_location_header(Where) ->
@@ -1301,14 +1301,14 @@ make_content_range_header(all) ->
     undefined;
 make_content_range_header({fromto, From, To, Tot}) ->
     ["Content-Range: bytes ",
-     integer_to_list(From), $-, integer_to_list(To),
-     $/, integer_to_list(Tot), $\r, $\n].
+     erlang:integer_to_list(From), $-, erlang:integer_to_list(To),
+     $/, erlang:integer_to_list(Tot), $\r, $\n].
 
 make_content_length_header(Size) when is_integer(Size) ->
-    ["Content-Length: ", integer_to_list(Size), "\r\n"];
+    ["Content-Length: ", erlang:integer_to_list(Size), "\r\n"];
 make_content_length_header(FI) when is_record(FI, file_info) ->
     Size = FI#file_info.size,
-    ["Content-Length: ", integer_to_list(Size), "\r\n"];
+    ["Content-Length: ", erlang:integer_to_list(Size), "\r\n"];
 make_content_length_header(_) ->
     undefined.
 
@@ -1393,7 +1393,7 @@ outh_serialize() ->
                undefined -> 200;
                Int       -> Int
            end,
-    StatusLine = ["HTTP/1.1 ", integer_to_list(Code), " ",
+    StatusLine = ["HTTP/1.1 ", erlang:integer_to_list(Code), " ",
                   yaws_api:code_to_phrase(Code), "\r\n"],
     GC=get(gc),
     if ?gc_has_debug(GC) -> yaws_debug:check_headers(H);
@@ -1534,7 +1534,7 @@ accumulate_header({"Content-Length", Len}) ->
         I when is_integer(I) ->
             accumulate_header({content_length, I});
         L when is_list(L) ->
-            accumulate_header({content_length, list_to_integer(L)})
+            accumulate_header({content_length, erlang:list_to_integer(L)})
     end;
 
 accumulate_header({transfer_encoding, What}) ->
@@ -1641,7 +1641,8 @@ user_to_home(User) ->
 
 uid_to_name(Uid) ->
     load_setuid_drv(),
-    P = open_port({spawn, "setuid_drv " ++ [$n|integer_to_list(Uid)]}, []),
+    P = open_port({spawn, "setuid_drv " ++
+                       [$n|erlang:integer_to_list(Uid)]}, []),
     receive
         {P, {data, "ok " ++ Name}} ->
             Name
@@ -2081,9 +2082,9 @@ redirect_port(SC) ->
         {"https", _, 443}    -> "";
         {"http", _, 80}      -> "";
         {_, undefined, 80}   -> "";
-        {_, undefined, Port} -> [$:|integer_to_list(Port)];
+        {_, undefined, Port} -> [$:|erlang:integer_to_list(Port)];
         {_, _SSL, 443}       -> "";
-        {_, _SSL, Port}      -> [$:|integer_to_list(Port)]
+        {_, _SSL, Port}      -> [$:|erlang:integer_to_list(Port)]
     end.
 
 redirect_scheme_port(SC) ->
@@ -2132,8 +2133,9 @@ mktemp(Template, Ret) ->
 
 mktemp(Dir, Template, Ret, I, Max, Suffix) when I < Max ->
     {X,Y,Z}  = now(),
-    PostFix = integer_to_list(X) ++ "-" ++ integer_to_list(Y) ++ "-" ++
-        integer_to_list(Z),
+    PostFix = erlang:integer_to_list(X) ++ "-" ++
+        erlang:integer_to_list(Y) ++ "-" ++
+        erlang:integer_to_list(Z),
     F = filename:join(Dir, Template ++ [$_ | PostFix] ++ Suffix),
     filelib:ensure_dir(F),
     case file:open(F, [read, raw]) of
@@ -2201,7 +2203,7 @@ get_chunk_header(Fd, SSL) ->
                    end,
             ?Debug("Get chunk num from line ~p~n",[Line]),
             {N, Exts} = split_at(Line, $;),
-            {list_to_integer(strip_spaces(N),16), strip_spaces(Exts)};
+            {erlang:list_to_integer(strip_spaces(N),16), strip_spaces(Exts)};
         {error, _Rsn} ->
             exit(normal)
     end.
@@ -2307,7 +2309,7 @@ integer_to_ip(_, _) ->
     throw({error, einval}).
 
 netmask_to_integer(Type, NetMask) ->
-    case catch list_to_integer(NetMask) of
+    case catch erlang:list_to_integer(NetMask) of
         I when is_integer(I) ->
             case Type of
                 ipv4 -> (1 bsl ?MAXBITS_IPV4) - (1 bsl (?MAXBITS_IPV4 - I));
