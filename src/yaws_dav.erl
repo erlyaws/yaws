@@ -520,7 +520,7 @@ prop_get({'DAV:',lockdiscovery},_A,R) ->
                             {'D:lockscope',[],[prop_get_format(scope,Lock#davlock.scope)]},
                             {'D:locktype',[],[prop_get_format(type,Lock#davlock.type)]},
                             {'D:depth',[],[prop_get_format(depth,Lock#davlock.depth)]},
-                            %{'D:owner',[],[prop_get_format(owner,Lock#davlock.owner)]}, % kept secret
+                          %%{'D:owner',[],[prop_get_format(owner,Lock#davlock.owner)]}, % kept secret
                             {'D:timeout',[],[prop_get_format(timeout,Lock#davlock.timeout)]},
                             {'D:locktoken',[],[prop_get_format(locktoken,Lock#davlock.id)]},
                             {'D:lockroot',[],[prop_get_format(lockroot,Lock#davlock.path)]}
@@ -605,8 +605,8 @@ prop_get_format(locktoken,Id) ->
     {'D:href',[],["opaquelocktoken:"++Id]};
 prop_get_format(lockroot,Ref) ->
     {'D:href',[],[Ref]};
-prop_get_format(owner,Owner) ->
-    Owner;
+%%prop_get_format(owner,Owner) ->
+%%    Owner;
 prop_get_format(_,_) ->
     throw(500).
 
