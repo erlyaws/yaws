@@ -808,7 +808,7 @@ if_eval_condition([{true,state,Ref}|T],_Result,_Valid,A,Target,Locks) ->
     Valid1 = true,
     Result1 andalso if_eval_condition(T,Result1,Valid1,A,Target,Locks);
 if_eval_condition([{true,etag,Ref}|T],_Result,Valid,A,Target,Locks) ->
-    F = file:read_info(A#arg.docroot++Target),
+    {ok, F} = file:read_file_info(filename:join(A#arg.docroot,Target)),
     E = yaws:make_etag(F),
     Result1 = (E==Ref),
     Valid1 = Valid,
