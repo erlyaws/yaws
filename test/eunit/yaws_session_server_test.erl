@@ -14,6 +14,8 @@
 -define(BACKEND, yaws_session_server).
 
 start() ->
+    %% starting crypto is required for these tests to pass on R13
+    application:start(crypto),
     application:load(yaws),
     Result = gen_server:start({local, yaws_session_server},
                               yaws_session_server, ?BACKEND, []),
