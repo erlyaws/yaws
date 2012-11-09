@@ -62,7 +62,6 @@
 -author('mikael@creado.se').
 
 -include("yaws_api.hrl").
--include("yaws.hrl").
 -export([arg_rewrite/1, start/0, prepath/1, insert/1, insert/2, remove/2,
          log/3,
          reset_yaws_conf/0, srv_id/1,
@@ -114,8 +113,8 @@ arg_rewrite(Arg) ->
 
             %% Add Yapp appmods, Yaws uses process dictionary.
             SC = get(sc),
-            AppMods = SC#sconf.appmods,
-            Opaque = SC#sconf.opaque,
+            AppMods = yaws:sconf_appmods(SC),
+            Opaque = yaws:sconf_opaque(SC),
             NYappPath = case YappPath of
                             [$/|YPTail] ->
                                 YPTail;
@@ -127,8 +126,9 @@ arg_rewrite(Arg) ->
                                             (AM) ->
                                                  AM
                                          end, YappMods),
-            SC2 = SC#sconf{docroot=Docroot, appmods = AppMods ++ RemappedYappMods,
-                           opaque = AddOpaque ++ Opaque},
+            SC2 = yaws:setup_sconf([{docroot, Docroot},
+                                    {appmods, AppMods ++ RemappedYappMods},
+                                    {opaque, AddOpaque ++ Opaque}], SC),
             put(sc, SC2),
 
             Opaque2 = Arg#arg.opaque,
@@ -246,7 +246,7 @@ insert_yapp_in_sconfgroups(SrvId, Yapp, [SCG|T]) ->
 
 insert_yapp_in_sconfgroup(_SrvId, _Yapp, []) ->
     [];
-insert_yapp_in_sconfgroup(SrvId, Yapp, [#sconf{}=SC|SCG]) ->
+insert_yapp_in_sconfgroup(SrvId, Yapp, [SC|SCG]) ->
     case srv_id(SC) of
         SrvId ->
             case insert_yapp_in_sconf(Yapp,SC) of
@@ -286,9 +286,10 @@ start_app([AppName|T]) ->
 start_app([]) -> ok;
 start_app(Error) -> Error.
 
-insert_yapp_in_sconf0({UrlPath, AppName}, #sconf{opaque = OP} = SC) ->
+insert_yapp_in_sconf0({UrlPath, AppName}, SC) ->
     log(info,"Inserting App ~p in Url ~p~n", [AppName, UrlPath]),
-    AppEnv = application:get_all_env(AppName),
+    OP         = yaws:sconf_opaque(SC),
+    AppEnv     = application:get_all_env(AppName),
     DocSubRoot = proplists:get_value(yapp_docroot, AppEnv, ?priv_docroot),
     YAppMods   = proplists:get_value(yapp_appmods, AppEnv, []),
     YOpaque    = proplists:get_value(yapp_opaque,  AppEnv, []),
@@ -305,7 +306,7 @@ insert_yapp_in_sconf0({UrlPath, AppName}, #sconf{opaque = OP} = SC) ->
                   YR2 = insert_yapp_in_yapp_list(Y, YR),
                   lists:keyreplace(?yapp_list, 1, OP, {?yapp_list, YR2})
           end,
-    SC#sconf{opaque = OP2}.
+    yaws:setup_sconf([{opaque, OP2}], SC).
 
 insert_yapp_in_yapp_list(#yapp{} = Y, []) ->
     [Y];
@@ -336,7 +337,8 @@ remove_yapp_from_sconfgroup(SrvId, RegPath, [ H | T ]) ->
             [ H | remove_yapp_from_sconfgroup(SrvId, RegPath,  T ) ]
     end.
 
-remove_yapp_from_sconf(RegPath, #sconf{opaque = OP} = SC) ->
+remove_yapp_from_sconf(RegPath, SC) ->
+    OP  = yaws:sconf_opaque(SC),
     OP2 = case proplists:get_value(?yapp_list, OP) of
               undefined ->
                   OP;
@@ -344,7 +346,7 @@ remove_yapp_from_sconf(RegPath, #sconf{opaque = OP} = SC) ->
                   YR2 = remove_yapp_from_yapp_list(RegPath, YR),
                   lists:keyreplace(?yapp_list, 1, OP, {?yapp_list, YR2})
           end,
-    SC#sconf{opaque = OP2}.
+    yaws:setup_sconf([{opaque, OP2}], SC).
 
 remove_yapp_from_yapp_list(_, [] ) ->
     [];
@@ -371,7 +373,8 @@ get_conf() ->
 %% @spec srv_id(Sconf) -> string() | undefined
 %%  Sconf = yawsSconf()
 %% @doc Get the server id from an Sconf if available
-srv_id(#sconf{opaque = OP}) ->
+srv_id(SC) ->
+    OP = yaws:sconf_opaque(SC),
     proplists:get_value(?srv_id, OP).
 
 %% @spec get_bootstrap_yapps() -> [{ ServerId, [ {Path, ApplicationName}]}]
@@ -387,9 +390,11 @@ get_bootstrap_yapps() ->
 
     {ok, _Gconf, Sconfs} = get_conf(),
 
-    YL = [ {proplists:get_value(?srv_id, OP),
-       make_yapp_tuples(proplists:get_value(?bootstrap_yapps, OP))}
-      || #sconf{opaque=OP} <- lists:flatten(Sconfs) ],
+    YL = [begin
+              OP = yaws:sconf_opaque(SC),
+              {proplists:get_value(?srv_id, OP),
+               make_yapp_tuples(proplists:get_value(?bootstrap_yapps, OP))}
+          end || SC <- lists:flatten(Sconfs) ],
 
     [{SrvId, Yapps} ||
         {SrvId, Yapps} <- YL, SrvId =/= undefined, Yapps =/= []].
@@ -413,16 +418,20 @@ make_yapp_tuple(A) ->
 %% @doc Gets all Yapps that are configured for the Yaws server.
 get_yapps() ->
     {ok, _Gconf, Sconfs} = yaws_api:getconf(),
-    Yapps1 = [{proplists:get_value("yapp_server_id", OP),
-               proplists:get_value(yapp_list, OP)} ||
-                 #sconf{opaque=OP} <- lists:flatten(Sconfs)],
+    Yapps1 = [begin
+                  OP = yaws:sconf_opaque(SC),
+                  {proplists:get_value("yapp_server_id", OP),
+                   proplists:get_value(yapp_list, OP)}
+              end || SC <- lists:flatten(Sconfs)],
     [{S,Y} || {S,Y} <- Yapps1, Y =/= undefined, S =/= undefined].
 
 %% @spec get_server_ids() -> [string()]
 %% @doc Lists all server ids.
 get_server_ids() ->
     {ok, _Gconf, Sconfs} = get_conf(),
-    SrvIds1 = [proplists:get_value("yapp_server_id", OP) ||
-                  #sconf{opaque=OP} <- lists:flatten(Sconfs)],
+    SrvIds1 = [begin
+                   OP = yaws:sconf_opaque(SC),
+                   proplists:get_value("yapp_server_id", OP)
+               end || SC <- lists:flatten(Sconfs)],
     [S|| S <- SrvIds1,  S =/= undefined].
 

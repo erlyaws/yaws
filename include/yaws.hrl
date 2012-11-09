@@ -99,7 +99,7 @@
           ysession_mod = yaws_session_server, % storage module for ysession
           acceptor_pool_size = 8,             % size of acceptor proc pool
 
-          mime_types_info
+          mime_types_info                     % undefined | #mime_types_info{}
          }).
 
 -record(ssl, {
@@ -211,7 +211,7 @@
           yaws,                         % server string for this vhost
           ets,                          % local store for this server
           ssl,                          % undefined | #ssl{}
-          authdirs = [],
+          authdirs = [],                % [{docroot, [#auth{}]}]
           partial_post_size = 10240,
 
           %% An item in the appmods list  can be either of the
@@ -239,8 +239,9 @@
           fcgi_app_server,              % FastCGI application server {host,port}
           php_handler = {cgi, "/usr/bin/php-cgi"},
           shaper,
-          deflate_options,
-          mime_types_info,              % if undefined, global config is used
+          deflate_options,              % undefined | #deflate{}
+          mime_types_info,              % undefined | #mime_types_info{}
+                                        % if undefined, global config is used
           dispatch_mod                  % custom dispatch module
          }).
 

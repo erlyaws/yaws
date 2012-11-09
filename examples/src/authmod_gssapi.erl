@@ -84,7 +84,6 @@
 	 out/1
         ]).
 
--include("yaws.hrl").
 -include("yaws_api.hrl").
 
 -define(SERVER, ?MODULE).
@@ -104,8 +103,8 @@
 -define(ERROR, io:format).
 
 
-start(Sconf) when is_record(Sconf, sconf) ->
-    Opaque = Sconf#sconf.opaque,
+start(Sconf) when is_tuple(Sconf), element(1, Sconf) == sconf ->
+    Opaque = yaws:sconf_opaque(Sconf),
     start_opaque(Opaque);
 
 
@@ -120,6 +119,7 @@ start(Keytab) when is_list(Keytab) ->
 
     supervisor:start_child(?SUPERVISOR, ChildSpec).
 
+
 stop() ->
     egssapi:stop(?SERVER),
     supervisor:terminate_child(?SUPERVISOR, ?SERVER),
@@ -128,8 +128,7 @@ stop() ->
 out(Arg) ->
     yaws_outmod:out(Arg).
 
-auth(Arg, Auth) when is_record(Arg, arg),
-                      is_record(Auth, auth) ->
+auth(Arg, _Auth) ->
 
     H = Arg#arg.headers,
 

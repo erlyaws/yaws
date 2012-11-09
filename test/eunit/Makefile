@@ -5,7 +5,9 @@ OBJ :=	multipart_post_parsing.beam \
 	ehtml_test.beam \
 	cookies.beam \
 	headers.beam \
-	ipmask.beam
+	ipmask.beam \
+    gconf.beam \
+    sconf.beam
 
 all:	$(OBJ)
 

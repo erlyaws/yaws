@@ -1,9 +1,9 @@
 
 mime_type_c.erl:69: The variable _ can never match since previous clauses completely covered the type 'true'
-yaws.erl:2138: Guard test Ret::'file' == 'fd' can never succeed
-yaws.erl:2146: Guard test Ret::'file' == 'binfd' can never succeed
-yaws.erl:2377: The pattern 'false' can never match the type 'true'
-yaws.erl:2384: The pattern 'false' can never match the type 'true'
+yaws.erl:2383: Guard test Ret::'file' == 'fd' can never succeed
+yaws.erl:2391: Guard test Ret::'file' == 'binfd' can never succeed
+yaws.erl:2622: The pattern 'false' can never match the type 'true'
+yaws.erl:2631: The pattern 'false' can never match the type 'true'
 yaws_ctl.erl:530: Function hup/1 has no local return
 yaws_ctl.erl:535: Function stop/1 has no local return
 yaws_ctl.erl:539: Function status/1 has no local return

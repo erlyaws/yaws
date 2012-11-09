@@ -8,15 +8,12 @@
 
 -export([run/2]).
 
--include("yaws.hrl").   %% Needed only if you want to manipulate
-                        %% Yaws configuration
-
 run(Page, ArgList) ->
     %% TODO: Fixme
     %% This is working if there is only one virtual server.
     %% A way to handle this cleanly is needed.
     {ok, Gconf, [[Sconf|Others]]} = yaws_api:getconf(),
-    Root = Sconf#sconf.docroot,
+    Root = yaws:sconf_docroot(Sconf),
 
     AllRefs = wiki_utils:getallrefs(Page, Root),
 

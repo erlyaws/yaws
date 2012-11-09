@@ -17,15 +17,69 @@
 -export([start_embedded/1, start_embedded/2, start_embedded/3, start_embedded/4,
          add_server/2, create_gconf/2, create_sconf/2]).
 
+-export([gconf_yaws_dir/1, gconf_trace/1, gconf_flags/1, gconf_logdir/1,
+         gconf_ebin_dir/1, gconf_runmods/1, gconf_keepalive_timeout/1,
+         gconf_keepalive_maxuses/1, gconf_max_num_cached_files/1,
+         gconf_max_num_cached_bytes/1, gconf_max_size_cached_file/1,
+         gconf_max_connections/1, gconf_process_options/1,
+         gconf_large_file_chunk_size/1, gconf_mnesia_dir/1,
+         gconf_log_wrap_size/1, gconf_cache_refresh_secs/1, gconf_include_dir/1,
+         gconf_phpexe/1, gconf_yaws/1, gconf_id/1, gconf_enable_soap/1,
+         gconf_soap_srv_mods/1, gconf_ysession_mod/1,
+         gconf_acceptor_pool_size/1, gconf_mime_types_info/1]).
+
+-export([sconf_port/1, sconf_flags/1, sconf_redirect_map/1, sconf_rhost/1,
+         sconf_rmethod/1, sconf_docroot/1, sconf_xtra_docroots/1,
+         sconf_listen/1, sconf_servername/1, sconf_yaws/1, sconf_ets/1,
+         sconf_ssl/1, sconf_authdirs/1, sconf_patial_post_size/1,
+         sconf_appmods/1, sconf_expires/1, sconf_errormod_401/1,
+         sconf_errormod_404/1, sconf_arg_rewrite_mode/1, sconf_logger_mod/1,
+         sconf_opaque/1, sconf_start_mod/1, sconf_allowed_scripts/1,
+         sconf_tilde_allowed_scripts/1, sconf_index_files/1, sconf_revproxy/1,
+         sconf_spotions/1, sconf_extra_cgi_vars/1, sconf_stats/1,
+         sconf_fcgi_app_server/1, sconf_php_handler/1, sconf_shaper/1,
+         sconf_deflate_options/1, sconf_mime_types_info/1,
+         sconf_dispatch_mod/1]).
+
+-export([new_auth/0,
+         auth_dir/1, auth_dir/2,
+         auth_docroot/1, auth_docroot/2,
+         auth_files/1, auth_files/2,
+         auth_realm/1, auth_realm/2,
+         auth_type/1, auth_type/2,
+         auth_headers/1, auth_headers/2,
+         auth_users/1, auth_users/2,
+         auth_acl/1, auth_acl/2,
+         auth_mod/1, auth_mod/2,
+         auth_outmod/1, auth_outmod/2,
+         auth_pam/1, auth_pam/2]).
+
 -export([new_ssl/0,
          ssl_keyfile/1, ssl_keyfile/2,
          ssl_certfile/1, ssl_certfile/2,
          ssl_verify/1, ssl_verify/2,
+         ssl_fail_if_no_peer_cert/1, ssl_fail_if_no_peer_cert/2,
          ssl_depth/1, ssl_depth/2,
          ssl_password/1, ssl_password/2,
          ssl_cacertfile/1, ssl_cacertfile/2,
          ssl_ciphers/1, ssl_ciphers/2,
          ssl_cachetimeout/1, ssl_cachetimeout/2]).
+
+-export([new_deflate/0,
+         deflate_min_compress_size/1, deflate_min_compress_size/2,
+         deflate_compression_level/1, deflate_compression_level/2,
+         deflate_window_size/1, deflate_window_size/2,
+         deflate_mem_level/1, deflate_mem_level/2,
+         deflate_strategy/1, deflate_strategy/2,
+         deflate_use_gzip_static/1, deflate_use_gzip_static/2,
+         deflate_mime_types/1, deflate_mime_types/2]).
+
+-export([new_mime_types_info/0,
+         mime_types_info_mime_types_file/1, mime_types_info_mime_types_file/2,
+         mime_types_info_types/1, mime_types_info_types/2,
+         mime_types_info_charsets/1, mime_types_info_charsets/2,
+         mime_types_info_default_type/1, mime_types_info_default_type/2,
+         mime_types_info_default_charset/1, mime_types_info_default_charset/2]).
 
 -export([first/2, elog/2, filesize/1, upto/2, to_string/1, to_list/1,
          integer_to_hex/1, hex_to_integer/1, string_to_hex/1, hex_to_string/1,
@@ -155,26 +209,259 @@ create_sconf(DocRoot, SL) when is_list(DocRoot), is_list(SL) ->
     setup_sconf(SL, SC).
 
 
-%%% Access functions for the SSL record.
+
+%% Access functions for the GCONF and SCONF records.
+gconf_yaws_dir             (#gconf{yaws_dir              = X}) -> X.
+gconf_trace                (#gconf{trace                 = X}) -> X.
+gconf_flags                (#gconf{flags                 = X}) -> X.
+gconf_logdir               (#gconf{logdir                = X}) -> X.
+gconf_ebin_dir             (#gconf{ebin_dir              = X}) -> X.
+gconf_runmods              (#gconf{runmods               = X}) -> X.
+gconf_keepalive_timeout    (#gconf{keepalive_timeout     = X}) -> X.
+gconf_keepalive_maxuses    (#gconf{keepalive_maxuses     = X}) -> X.
+gconf_max_num_cached_files (#gconf{max_num_cached_files  = X}) -> X.
+gconf_max_num_cached_bytes (#gconf{max_num_cached_bytes  = X}) -> X.
+gconf_max_size_cached_file (#gconf{max_size_cached_file  = X}) -> X.
+gconf_max_connections      (#gconf{max_connections       = X}) -> X.
+gconf_process_options      (#gconf{process_options       = X}) -> X.
+gconf_large_file_chunk_size(#gconf{large_file_chunk_size = X}) -> X.
+gconf_mnesia_dir           (#gconf{mnesia_dir            = X}) -> X.
+gconf_log_wrap_size        (#gconf{log_wrap_size         = X}) -> X.
+gconf_cache_refresh_secs   (#gconf{cache_refresh_secs    = X}) -> X.
+gconf_include_dir          (#gconf{include_dir           = X}) -> X.
+gconf_phpexe               (#gconf{phpexe                = X}) -> X.
+gconf_yaws                 (#gconf{yaws                  = X}) -> X.
+gconf_id                   (#gconf{id                    = X}) -> X.
+gconf_enable_soap          (#gconf{enable_soap           = X}) -> X.
+gconf_soap_srv_mods        (#gconf{soap_srv_mods         = X}) -> X.
+gconf_ysession_mod         (#gconf{ysession_mod          = X}) -> X.
+gconf_acceptor_pool_size   (#gconf{acceptor_pool_size    = X}) -> X.
+gconf_mime_types_info      (#gconf{mime_types_info       = X}) -> X.
+
+
+sconf_port                 (#sconf{port                  = X}) -> X.
+sconf_flags                (#sconf{flags                 = X}) -> X.
+sconf_redirect_map         (#sconf{redirect_map          = X}) -> X.
+sconf_rhost                (#sconf{rhost                 = X}) -> X.
+sconf_rmethod              (#sconf{rmethod               = X}) -> X.
+sconf_docroot              (#sconf{docroot               = X}) -> X.
+sconf_xtra_docroots        (#sconf{xtra_docroots         = X}) -> X.
+sconf_listen               (#sconf{listen                = X}) -> X.
+sconf_servername           (#sconf{servername            = X}) -> X.
+sconf_yaws                 (#sconf{yaws                  = X}) -> X.
+sconf_ets                  (#sconf{ets                   = X}) -> X.
+sconf_ssl                  (#sconf{ssl                   = X}) -> X.
+sconf_authdirs             (#sconf{authdirs              = X}) -> X.
+sconf_patial_post_size     (#sconf{partial_post_size     = X}) -> X.
+sconf_appmods              (#sconf{appmods               = X}) -> X.
+sconf_expires              (#sconf{expires               = X}) -> X.
+sconf_errormod_401         (#sconf{errormod_401          = X}) -> X.
+sconf_errormod_404         (#sconf{errormod_404          = X}) -> X.
+sconf_arg_rewrite_mode     (#sconf{arg_rewrite_mod       = X}) -> X.
+sconf_logger_mod           (#sconf{logger_mod            = X}) -> X.
+sconf_opaque               (#sconf{opaque                = X}) -> X.
+sconf_start_mod            (#sconf{start_mod             = X}) -> X.
+sconf_allowed_scripts      (#sconf{allowed_scripts       = X}) -> X.
+sconf_tilde_allowed_scripts(#sconf{tilde_allowed_scripts = X}) -> X.
+sconf_index_files          (#sconf{index_files           = X}) -> X.
+sconf_revproxy             (#sconf{revproxy              = X}) -> X.
+sconf_spotions             (#sconf{soptions              = X}) -> X.
+sconf_extra_cgi_vars       (#sconf{extra_cgi_vars        = X}) -> X.
+sconf_stats                (#sconf{stats                 = X}) -> X.
+sconf_fcgi_app_server      (#sconf{fcgi_app_server       = X}) -> X.
+sconf_php_handler          (#sconf{php_handler           = X}) -> X.
+sconf_shaper               (#sconf{shaper                = X}) -> X.
+sconf_deflate_options      (#sconf{deflate_options       = X}) -> X.
+sconf_mime_types_info      (#sconf{mime_types_info       = X}) -> X.
+sconf_dispatch_mod         (#sconf{dispatch_mod          = X}) -> X.
+
+
+%% Access functions for the AUTH record.
+new_auth() -> #auth{}.
+
+auth_dir    (#auth{dir     = X}) -> X.
+auth_docroot(#auth{docroot = X}) -> X.
+auth_files  (#auth{files   = X}) -> X.
+auth_realm  (#auth{realm   = X}) -> X.
+auth_type   (#auth{type    = X}) -> X.
+auth_headers(#auth{headers = X}) -> X.
+auth_users  (#auth{users   = X}) -> X.
+auth_acl    (#auth{acl     = X}) -> X.
+auth_mod    (#auth{mod     = X}) -> X.
+auth_outmod (#auth{outmod  = X}) -> X.
+auth_pam    (#auth{pam     = X}) -> X.
+
+auth_dir    (A, Dir)     -> A#auth{dir     = Dir}.
+auth_docroot(A, DocRoot) -> A#auth{docroot = DocRoot}.
+auth_files  (A, Files)   -> A#auth{files   = Files}.
+auth_realm  (A, Realm)   -> A#auth{realm   = Realm}.
+auth_type   (A, Type)    -> A#auth{type    = Type}.
+auth_headers(A, Headers) -> A#auth{headers = Headers}.
+auth_users  (A, Users)   -> A#auth{users   = Users}.
+auth_acl    (A, Acl)     -> A#auth{acl     = Acl}.
+auth_mod    (A, Mod)     -> A#auth{mod     = Mod}.
+auth_outmod (A, Outmod)  -> A#auth{outmod  = Outmod}.
+auth_pam    (A, Pam)     -> A#auth{pam     = Pam}.
+
+
+setup_authdirs(SL, DefaultAuthDirs) ->
+    case [A || {auth, A} <- SL] of
+        [] -> DefaultAuthDirs;
+        As -> [setup_auth(A) || A <- As]
+    end.
+
+setup_auth(#auth{}=Auth) ->
+    Auth;
+setup_auth(AuthProps) ->
+    Auth = #auth{},
+    #auth{dir     = lkup(dir,     AuthProps, Auth#auth.dir),
+          docroot = lkup(docroot, AuthProps, Auth#auth.docroot),
+          files   = lkup(files,   AuthProps, Auth#auth.files),
+          realm   = lkup(realm,   AuthProps, Auth#auth.realm),
+          type    = lkup(type,    AuthProps, Auth#auth.type),
+          headers = lkup(headers, AuthProps, Auth#auth.headers),
+          users   = lkup(users,   AuthProps, Auth#auth.users),
+          acl     = lkup(acl,     AuthProps, Auth#auth.acl),
+          mod     = lkup(mod,     AuthProps, Auth#auth.mod),
+          outmod  = lkup(outmod,  AuthProps, Auth#auth.outmod),
+          pam     = lkup(pam,     AuthProps, Auth#auth.pam)}.
+
+
+%% Access functions for the SSL record.
 new_ssl() -> #ssl{}.
 
-ssl_keyfile(S)      -> S#ssl.keyfile.
-ssl_certfile(S)     -> S#ssl.certfile.
-ssl_verify(S)       -> S#ssl.verify.
-ssl_depth(S)        -> S#ssl.depth.
-ssl_password(S)     -> S#ssl.password.
-ssl_cacertfile(S)   -> S#ssl.cacertfile.
-ssl_ciphers(S)      -> S#ssl.ciphers.
-ssl_cachetimeout(S) -> S#ssl.cachetimeout.
+ssl_keyfile             (#ssl{keyfile              = X}) -> X.
+ssl_certfile            (#ssl{certfile             = X}) -> X.
+ssl_verify              (#ssl{verify               = X}) -> X.
+ssl_fail_if_no_peer_cert(#ssl{fail_if_no_peer_cert = X}) -> X.
+ssl_depth               (#ssl{depth                = X}) -> X.
+ssl_password            (#ssl{password             = X}) -> X.
+ssl_cacertfile          (#ssl{cacertfile           = X}) -> X.
+ssl_ciphers             (#ssl{ciphers              = X}) -> X.
+ssl_cachetimeout        (#ssl{cachetimeout         = X}) -> X.
 
-ssl_keyfile(S, Keyfile)           -> S#ssl{keyfile  = Keyfile}.
-ssl_certfile(S, Certfile)         -> S#ssl{certfile = Certfile}.
-ssl_verify(S, Verify)             -> S#ssl{verify = Verify}.
-ssl_depth(S, Depth)               -> S#ssl{depth = Depth}.
-ssl_password(S, Password)         -> S#ssl{password = Password}.
-ssl_cacertfile(S, Cacertfile)     -> S#ssl{cacertfile = Cacertfile}.
-ssl_ciphers(S, Ciphers)           -> S#ssl{ciphers = Ciphers}.
-ssl_cachetimeout(S, Cachetimeout) -> S#ssl{cachetimeout = Cachetimeout}.
+ssl_keyfile             (S, File)    -> S#ssl{keyfile              = File}.
+ssl_certfile            (S, File)    -> S#ssl{certfile             = File}.
+ssl_verify              (S, Verify)  -> S#ssl{verify               = Verify}.
+ssl_fail_if_no_peer_cert(S, Bool)    -> S#ssl{fail_if_no_peer_cert = Bool}.
+ssl_depth               (S, Depth)   -> S#ssl{depth                = Depth}.
+ssl_password            (S, Pass)    -> S#ssl{password             = Pass}.
+ssl_cacertfile          (S, File)    -> S#ssl{cacertfile           = File}.
+ssl_ciphers             (S, Ciphers) -> S#ssl{ciphers              = Ciphers}.
+ssl_cachetimeout        (S, Timeout) -> S#ssl{cachetimeout         = Timeout}.
+
+
+setup_ssl(SL, DefaultSSL) ->
+    case lkup(ssl, SL, undefined) of
+        undefined ->
+            DefaultSSL;
+        SSL when is_record(SSL, ssl) ->
+            SSL;
+        SSLProps when is_list(SSLProps) ->
+            SSL = #ssl{},
+            #ssl{keyfile              = lkup(keyfile, SSLProps,
+                                             SSL#ssl.keyfile),
+                 certfile             = lkup(certfile, SSLProps,
+                                             SSL#ssl.certfile),
+                 verify               = lkup(verify, SSLProps, SSL#ssl.verify),
+                 fail_if_no_peer_cert = lkup(fail_if_no_peer_cert, SSLProps,
+                                             SSL#ssl.fail_if_no_peer_cert),
+                 depth                = lkup(depth, SSLProps, SSL#ssl.depth),
+                 password             = lkup(password, SSLProps,
+                                             SSL#ssl.password),
+                 cacertfile           = lkup(cacertfile, SSLProps,
+                                             SSL#ssl.cacertfile),
+                 ciphers              = lkup(ciphers, SSLProps,
+                                             SSL#ssl.ciphers),
+                 cachetimeout         = lkup(cachetimeout, SSLProps,
+                                             SSL#ssl.cachetimeout)}
+    end.
+
+
+%% Access functions for the DEFLATE record.
+new_deflate() -> #deflate{}.
+
+deflate_min_compress_size(#deflate{min_compress_size = X}) -> X.
+deflate_compression_level(#deflate{compression_level = X}) -> X.
+deflate_window_size      (#deflate{window_size       = X}) -> X.
+deflate_mem_level        (#deflate{mem_level         = X}) -> X.
+deflate_strategy         (#deflate{strategy          = X}) -> X.
+deflate_use_gzip_static  (#deflate{use_gzip_static   = X}) -> X.
+deflate_mime_types       (#deflate{mime_types        = X}) -> X.
+
+deflate_min_compress_size(D, Min)   -> D#deflate{min_compress_size = Min}.
+deflate_compression_level(D, Level) -> D#deflate{compression_level = Level}.
+deflate_window_size      (D, Size)  -> D#deflate{window_size       = Size}.
+deflate_mem_level        (D, Level) -> D#deflate{mem_level         = Level}.
+deflate_strategy         (D, Strat) -> D#deflate{strategy          = Strat}.
+deflate_use_gzip_static  (D, Bool)  -> D#deflate{use_gzip_static   = Bool}.
+deflate_mime_types       (D, Types) -> D#deflate{mime_types        = Types}.
+
+
+setup_deflate(SL, DefaultDeflate) ->
+    case lkup(deflate_options, SL, undefined) of
+        undefined ->
+            DefaultDeflate;
+        D when is_record(D, deflate) ->
+            D;
+        DProps when is_list(DProps) ->
+            D = #deflate{},
+            #deflate{min_compress_size = lkup(min_compress_size, DProps,
+                                              D#deflate.min_compress_size),
+                     compression_level = lkup(compression_level, DProps,
+                                              D#deflate.compression_level),
+                     window_size       = lkup(window_size, DProps,
+                                              D#deflate.window_size),
+                     mem_level         = lkup(mem_level, DProps,
+                                              D#deflate.mem_level),
+                     strategy          = lkup(strategy, DProps,
+                                              D#deflate.strategy),
+                     use_gzip_static   = lkup(use_gzip_static, DProps,
+                                              D#deflate.use_gzip_static),
+                     mime_types        = lkup(mime_types, DProps,
+                                              D#deflate.mime_types)}
+    end.
+
+%% Access functions to MIME_TYPES_INFO record.
+new_mime_types_info() -> #mime_types_info{}.
+
+mime_types_info_mime_types_file(#mime_types_info{mime_types_file = X}) -> X.
+mime_types_info_types          (#mime_types_info{types           = X}) -> X.
+mime_types_info_charsets       (#mime_types_info{charsets        = X}) -> X.
+mime_types_info_default_type   (#mime_types_info{default_type    = X}) -> X.
+mime_types_info_default_charset(#mime_types_info{default_charset = X}) -> X.
+
+mime_types_info_mime_types_file(M, File) ->
+    M#mime_types_info{mime_types_file = File}.
+mime_types_info_types(M, Types) ->
+    M#mime_types_info{types = Types}.
+mime_types_info_charsets(M, Charsets) ->
+    M#mime_types_info{charsets = Charsets}.
+mime_types_info_default_type(M, Type) ->
+    M#mime_types_info{default_type = Type}.
+mime_types_info_default_charset(M, Charset) ->
+    M#mime_types_info{default_charset = Charset}.
+
+
+setup_mime_types_info(SL, DefaultMTI) ->
+    case lkup(mime_types_info, SL, undefined) of
+        undefined ->
+            DefaultMTI;
+        M when is_record(M, mime_types_info) ->
+            M;
+        MProps when is_list(MProps) ->
+            M = #mime_types_info{},
+            #mime_types_info{mime_types_file = lkup(mime_types_file, MProps,
+                                                    M#mime_types_info.mime_types_file),
+                             types           = lkup(types, MProps,
+                                                    M#mime_types_info.types),
+                             charsets        = lkup(charsets, MProps,
+                                                    M#mime_types_info.charsets),
+                             default_type    = lkup(default_type, MProps,
+                                                    M#mime_types_info.default_type),
+                             default_charset = lkup(default_charset, MProps,
+                                                    M#mime_types_info.default_charset)}
+    end.
 
 
 %% Setup global configuration
@@ -219,8 +506,9 @@ setup_gconf(GL, GC) ->
                                         GC#gconf.ysession_mod),
            acceptor_pool_size    = lkup(acceptor_pool_size, GL,
                                         GC#gconf.acceptor_pool_size),
-           mime_types_info       = lkup(mime_types_info, GL,
-                                        GC#gconf.mime_types_info)
+           mime_types_info       = setup_mime_types_info(
+                                     GL, GC#gconf.mime_types_info
+                                    )
           }.
 
 set_gc_flags([{tty_trace, Bool}|T], Flags) ->
@@ -262,9 +550,8 @@ setup_sconf(SL, SC) ->
            servername            = lkup(servername, SL, SC#sconf.servername),
            yaws                  = lkup(yaws, SL, SC#sconf.yaws),
            ets                   = lkup(ets, SL, SC#sconf.ets),
-           ssl                   = setup_sconf_ssl(SL, SC#sconf.ssl),
-           authdirs              = lkup(authdirs, expand_auth(SL),
-                                        SC#sconf.authdirs),
+           ssl                   = setup_ssl(SL, SC#sconf.ssl),
+           authdirs              = setup_authdirs(SL, SC#sconf.authdirs),
            partial_post_size     = lkup(partial_post_size, SL,
                                         SC#sconf.partial_post_size),
            appmods               = lkup(appmods, SL, SC#sconf.appmods),
@@ -292,54 +579,12 @@ setup_sconf(SL, SC) ->
                                         SC#sconf.fcgi_app_server),
            php_handler           = lkup(php_handler, SL, SC#sconf.php_handler),
            shaper                = lkup(shaper, SL, SC#sconf.shaper),
-           deflate_options       = lkup(deflate_options, SL,
-                                        SC#sconf.deflate_options),
-           mime_types_info       = lkup(mime_types_info, SL,
-                                        SC#sconf.mime_types_info),
-           dispatch_mod          = lkup(dispatchmod, SL,
-                                        SC#sconf.dispatch_mod)
+           deflate_options       = setup_deflate(SL, SC#sconf.deflate_options),
+           mime_types_info       = setup_mime_types_info(
+                                     SL, SC#sconf.mime_types_info
+                                    ),
+           dispatch_mod          = lkup(dispatchmod, SL, SC#sconf.dispatch_mod)
           }.
-
-expand_auth(SL) ->
-    case [A || {auth, A} <- SL] of
-        [] -> SL;
-        As -> [{authdirs, [opts_to_auth(O) || O <- As]}|SL]
-    end.
-
-opts_to_auth(Opts) ->
-    {_, Auth} =
-        lists:foldl(fun(F, {P,A}) ->
-                            Val = proplists:get_value(F, Opts, element(P,A)),
-                            {P+1, setelement(P, A, Val)}
-                    end, {2, #auth{}}, record_info(fields, auth)),
-    Auth.
-
-setup_sconf_ssl(SL, DefaultSSL) ->
-    case lkup(ssl, SL, undefined) of
-        undefined ->
-            DefaultSSL;
-        SSL when is_record(SSL, ssl) ->
-            SSL;
-        SSLProps when is_list(SSLProps) ->
-            SSL1 = #ssl{
-              keyfile      = proplists:get_value(keyfile, SSLProps),
-              certfile     = proplists:get_value(certfile, SSLProps),
-              password     = proplists:get_value(password, SSLProps),
-              cacertfile   = proplists:get_value(cacertfile, SSLProps),
-              ciphers      = proplists:get_value(ciphers, SSLProps),
-              cachetimeout = proplists:get_value(cachetimeout, SSLProps)
-             },
-            %% Prevent overriding the ssl record's default values!
-            SSL2 =
-                case proplists:get_value(verify, SSLProps) of
-                    undefined -> SSL1;
-                    Verify    -> SSL1#ssl{verify=Verify}
-                end,
-            case proplists:get_value(depth, SSLProps) of
-                undefined -> SSL2;
-                Depth     -> SSL2#ssl{depth=Depth}
-            end
-    end.
 
 set_sc_flags([{access_log, Bool}|T], Flags) ->
     set_sc_flags(T, flag(Flags, ?SC_ACCESS_LOG, Bool));
@@ -361,8 +606,12 @@ set_sc_flags([{dav, Bool}|T], Flags) ->
     set_sc_flags(T, flag(Flags, ?SC_DAV, Bool));
 set_sc_flags([{fcgi_trace_protocol, Bool}|T], Flags) ->
     set_sc_flags(T, flag(Flags, ?SC_FCGI_TRACE_PROTOCOL, Bool));
+set_sc_flags([{fcgi_log_app_error, Bool}|T], Flags) ->
+    set_sc_flags(T, flag(Flags, ?SC_FCGI_LOG_APP_ERROR, Bool));
 set_sc_flags([{forward_proxy, Bool}|T], Flags) ->
     set_sc_flags(T, flag(Flags, ?SC_FORWARD_PROXY, Bool));
+set_sc_flags([{auth_skip_docroot, Bool}|T], Flags) ->
+    set_sc_flags(T, flag(Flags, ?SC_AUTH_SKIP_DOCROOT, Bool));
 set_sc_flags([_Unknown|T], Flags) ->
     error_logger:format("Unknown and unhandled flag ~p~n", [_Unknown]),
     set_sc_flags(T, Flags);
@@ -370,9 +619,9 @@ set_sc_flags([], Flags) ->
     Flags.
 
 lkup(Key, List, Def) ->
-    case lists:keysearch(Key, 1, List) of
-        {value,{_,Value}} -> Value;
-        _                 -> Def
+    case lists:keyfind(Key, 1, List) of
+        {_,Value} -> Value;
+        _         -> Def
     end.
 
 
