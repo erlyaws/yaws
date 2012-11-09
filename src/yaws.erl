@@ -931,6 +931,7 @@ outh_set_non_cacheable(_Version) ->
     ok.
 
 outh_set_content_type(Mime) ->
+    put(outh_mime_type, Mime),
     put(outh, (get(outh))#outh{content_type = make_content_type_header(Mime)}),
     ok.
 
@@ -1011,11 +1012,6 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
            encoding          = Encoding,
            date              = make_date_header(),
            server            = make_server_header(),
-           last_modified     = make_last_modified_header(UT#urltype.finfo),
-           expires           = make_expires_header(UT#urltype.mime,
-                                                   UT#urltype.finfo),
-           cache_control     = make_cache_control_header(UT#urltype.mime,
-                                                         UT#urltype.finfo),
            etag              = make_etag_header(UT#urltype.finfo),
            content_range     = make_content_range_header(Range),
            content_length    = make_content_length_header(Length),
@@ -1026,6 +1022,9 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
            doclose           = DoClose,
            contlen           = Length
           },
+    %% store finfo to set last_modified, expires and cache_control headers
+    %% during #outh{} serialization.
+    put(file_info, UT#urltype.finfo),
     put(outh, H2).
 
 outh_set_304_headers(Req, UT, Headers) ->
@@ -1036,17 +1035,15 @@ outh_set_304_headers(Req, UT, Headers) ->
            chunked        = false,
            date           = make_date_header(),
            server         = make_server_header(),
-           last_modified  = make_last_modified_header(UT#urltype.finfo),
-           expires        = make_expires_header(UT#urltype.mime,
-                                                UT#urltype.finfo),
-           cache_control  = make_cache_control_header(UT#urltype.mime,
-                                                      UT#urltype.finfo),
            etag           = make_etag_header(UT#urltype.finfo),
            content_length = make_content_length_header(0),
            connection     = make_connection_close_header(DoClose),
            doclose        = DoClose,
            contlen        = 0
           },
+    %% store finfo to set last_modified, expires and cache_control headers
+    %% during #outh{} serialization.
+    put(file_info, UT#urltype.finfo),
     put(outh, H2).
 
 outh_set_dyn_headers(Req, Headers, UT) ->
@@ -1058,14 +1055,12 @@ outh_set_dyn_headers(Req, Headers, UT) ->
            server            = make_server_header(),
            connection        = make_connection_close_header(DoClose),
            content_type      = make_content_type_header(UT#urltype.mime),
-           expires           = make_expires_header(UT#urltype.mime,
-                                                   UT#urltype.finfo),
-           cache_control     = make_cache_control_header(UT#urltype.mime,
-                                                         UT#urltype.finfo),
            doclose           = DoClose,
            chunked           = Chunked,
            transfer_encoding = make_transfer_encoding_chunked_header(Chunked)},
-
+    %% store finfo to set last_modified, expires and cache_control headers
+    %% during #outh{} serialization.
+    put(file_info, UT#urltype.finfo),
     put(outh, H2).
 
 
@@ -1197,76 +1192,31 @@ make_server_header() ->
                                      end].
 
 make_last_modified_header(FI) ->
-    N = element(2, now()),
-    Inode = FI#file_info.inode,  %% unix only
-    case get({last_modified, Inode}) of
-        {Str, Secs} when N < (Secs+10) ->
-            Str;
-        _ ->
-            S = do_make_last_modified(FI),
-            put({last_modified, Inode}, {S, N}),
-            S
-    end.
-
-do_make_last_modified(FI) ->
     Then = FI#file_info.mtime,
     ["Last-Modified: ", local_time_as_gmt_string(Then), "\r\n"].
 
 
 make_expires_header(MimeType, FI) ->
-    N = element(2, now()),
-    case get({expire, MimeType}) of
-        {Str, Secs} when N < (Secs+10) ->
-            Str;
-        _ ->
-            SC = get(sc),
-            case lists:keysearch(MimeType, 1, SC#sconf.expires) of
-                {value, {MimeType, Type, TTL}} ->
-                    S1 = make_expires_header(Type, TTL, FI),
-                    S2 = make_cache_control_header(TTL),
-                    put({expire, MimeType}, {S1, N}),
-                    put({cache_control, MimeType}, {S2, N}),
-                    S1;
-                false ->
-                    undefined
-            end
+    SC = get(sc),
+    case lists:keyfind(MimeType, 1, SC#sconf.expires) of
+        {MimeType, Type, TTL} -> make_expires_header(Type, TTL, FI);
+        false                 -> {undefined, undefined}
     end.
 
 
 make_expires_header(access, TTL, _FI) ->
-    DateTime = erlang:universaltime(),
-    Secs = calendar:datetime_to_gregorian_seconds(DateTime) + TTL,
-    ExpireTime = calendar:gregorian_seconds_to_datetime(Secs),
-    ["Expires: ", universal_time_as_string(ExpireTime), "\r\n"];
+    Secs = calendar:datetime_to_gregorian_seconds(erlang:universaltime()),
+    ExpireTime = calendar:gregorian_seconds_to_datetime(Secs+TTL),
+    {["Expires: ", universal_time_as_string(ExpireTime), "\r\n"],
+     ["Cache-Control: ", "max-age=", erlang:integer_to_list(TTL), "\r\n"]};
 make_expires_header(modify, TTL, FI) ->
-    DateTime = FI#file_info.mtime,
-    Secs = calendar:datetime_to_gregorian_seconds(DateTime) + TTL,
-    ExpireTime = calendar:gregorian_seconds_to_datetime(Secs),
-    ["Expires: ", local_time_as_gmt_string(ExpireTime), "\r\n"].
-
-
-make_cache_control_header(MimeType, FI) ->
-    N = element(2, now()),
-    case get({cache_control, MimeType}) of
-        {Str, Secs} when N < (Secs+10) ->
-            Str;
-        _ ->
-            SC = get(sc),
-            case lists:keysearch(MimeType, 1, SC#sconf.expires) of
-                {value, {MimeType, Type, TTL}} ->
-                    S1 = make_cache_control_header(TTL),
-                    S2 = make_expires_header(Type, TTL, FI),
-                    put({cache_control, MimeType}, {S1, N}),
-                    put({expire, MimeType}, {S2, N}),
-                    S1;
-                false ->
-                    undefined
-            end
-    end.
-
-
-make_cache_control_header(TTL) ->
-    ["Cache-Control: ", "max-age=", erlang:integer_to_list(TTL), "\r\n"].
+    %% mtime is local here
+    Secs1 = calendar:datetime_to_gregorian_seconds(FI#file_info.mtime),
+    Secs2 = calendar:datetime_to_gregorian_seconds(erlang:localtime()),
+    ExpireTime = calendar:gregorian_seconds_to_datetime(Secs1+TTL),
+    MaxAge     = erlang:max(0, TTL - (Secs2 - Secs1)),
+    {["Expires: ", local_time_as_gmt_string(ExpireTime), "\r\n"],
+     ["Cache-Control: ", "max-age=", erlang:integer_to_list(MaxAge), "\r\n"]}.
 
 
 make_location_header(Where) ->
@@ -1387,8 +1337,10 @@ outh_get_content_encoding_header() ->
     (get(outh))#outh.content_encoding.
 
 outh_get_content_type() ->
-    [_, Mime, _] = (get(outh))#outh.content_type,
-    Mime.
+    case (get(outh))#outh.content_type of
+        undefined    -> undefined;
+        [_, Mime, _] -> Mime
+    end.
 
 outh_serialize() ->
     H = get(outh),
@@ -1406,14 +1358,34 @@ outh_serialize() ->
                      undefined -> make_content_encoding_header(H#outh.encoding);
                      CE        -> CE
                  end,
+    {LastModified, Expires, CacheControl} =
+        case erase(file_info) of
+            undefined ->
+                {H#outh.last_modified, H#outh.expires, H#outh.cache_control};
+            FI ->
+                LM = case H#outh.last_modified of
+                         undefined ->
+                             make_last_modified_header(FI);
+                         _ ->
+                             H#outh.last_modified
+                     end,
+                {E, CC} = case {H#outh.expires, H#outh.cache_control} of
+                              {undefined, undefined} ->
+                                  CT = outh_get_content_type(),
+                                  make_expires_header(CT, FI);
+                              _ ->
+                                  {H#outh.expires, H#outh.cache_control}
+                          end,
+                {LM, E, CC}
+        end,
     Headers = [noundef(H#outh.connection),
                noundef(H#outh.server),
                noundef(H#outh.location),
-               noundef(H#outh.cache_control),
                noundef(H#outh.date),
                noundef(H#outh.allow),
-               noundef(H#outh.last_modified),
-               noundef(H#outh.expires),
+               noundef(LastModified),
+               noundef(Expires),
+               noundef(CacheControl),
                noundef(H#outh.etag),
                noundef(H#outh.content_range),
                noundef(H#outh.content_length),
