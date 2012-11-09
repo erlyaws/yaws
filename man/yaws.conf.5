@@ -562,16 +562,17 @@ when Yaws starts up. Defaults to \fIfalse\fR.
 .TP
 \fBpartial_post_size = Integer | nolimit\fR
 When a Yaws file receives large POSTs, the amount of data received in each chunk
-is determined by the this parameter.  The default value is \fI10240\fR.
+is determined by the this parameter.  The default value is \fI10240\fR. Setting
+it to nolimit is potentially dangerous.
 
 
 .TP
 \fBdav = true | false\fR
 Turns on the DAV protocol for this server. The dav support in Yaws is highly
 limited. If dav is turned on, .yaws processing of .yaws pages is turned
-off. Default is \fIfalse\fR.  Setting it to nolimit is potentially
-dangerous. The socket read timeout is supplied by the keepalive_timeout setting.
-If the read is not done within the timeout, the POST will fail.
+off. Default is \fIfalse\fR. The socket read timeout is supplied by the
+keepalive_timeout setting.  If the read is not done within the timeout, the POST
+will fail.
 
 .TP
 \fBtilde_expand = true|false\fR
@@ -813,10 +814,10 @@ web-browser to explicitly target Yaws as its proxy server.
 
 .TP
 \fBservername = Name\fR
-If we're virthosting everal servers and want to force a server to match specific
-Host: headers we can do this with the "servername" directive. This name doesn't
-necessarily have to be the same as the the name inside <server Name> in certain
-NAT scenarios. Rarely used feature.
+If we're virthosting several servers and want to force a server to match
+specific Host: headers we can do this with the "servername" directive. This name
+doesn't necessarily have to be the same as the the name inside <server Name> in
+certain NAT scenarios. Rarely used feature.
 
 .TP
 \fBphp_handler = <Type, Spec>\fR

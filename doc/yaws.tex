@@ -2623,18 +2623,17 @@ The following directives are allowed inside a server definition.
               prohibitive when \Yaws\  starts up. Defaults to false.
 
 \item       \verb+partial_post_size = Integer+ ---
-              When a \Yaws\  file receives large  \verb+POST+s,  the
-              amount  of  data  received  in each chunk is
-              determined by the this parameter.  The default
-              value is 10240.
+              When a \Yaws\ file receives large \verb+POST+s, the amount of data
+              received in each chunk is determined by the this parameter.  The
+              default value is 10240. Setting it to nolimit is potentially
+              dangerous.
 
 \item       \verb+dav = true | false+ ---
               Turns on the DAV protocol for this server. The dav support in
               \Yaws\ is highly limited. If dav is turned on, .yaws processing of
-              .yaws pages is turned off. Default is false. Setting it to nolimit
-              is potentially dangerous. The socket read timeout is supplied by
-              the keepalive\_timeout setting. If the read is not done within the
-              timeout, the POST will fail.
+              .yaws pages is turned off. Default is false. The socket read
+              timeout is supplied by the keepalive\_timeout setting. If the read
+              is not done within the timeout, the POST will fail.
 
 \item       \verb+tilde_expand = true|false+ ---
               If  this  value  is  set  to false \Yaws\  will
