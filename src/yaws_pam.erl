@@ -50,11 +50,29 @@ start_link(Service, UseAccounting, UseSess) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, Args, []).
 
 auth(User, Password) ->
-    gen_server:call(?MODULE, {auth, User, Password}, infinity).
+    case has_nul(User) or has_nul(Password) of
+        false ->
+            try  gen_server:call(pam_server, {auth, User, Password}, 10000) of
+                 Ret ->
+                    Ret
+            catch _:_ ->
+                    {no, {"auth", "timeout"}}
+            end;
+        true ->
+            %% PAM can't handle embedded NUL (nor can the "port protocol")
+            %% - and it's probably a DOS attempt anyway, do a delay
+            timer:sleep(1000),
+            {no, {"auth", "Authentication failure"}}
+    end.
+
 %% yaws never use close, ... no session mgmt in yaws
 close(Handle) ->
     gen_server:call(?MODULE, {close, Handle}, infinity).
 
+has_nul(<<B/binary>>) ->
+    lists:member(0, binary_to_list(B));
+has_nul(L) ->
+    lists:member(0, L).
 
 
 %%====================================================================
