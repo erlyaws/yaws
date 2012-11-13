@@ -993,11 +993,22 @@ ciphers = "[{dhe_rsa,aes_256_cbc,sha}, \\
 Defines a redirect mapping. The following items are allowed within a matching
 pair of <redirect> and </redirect> delimiters.
 
-We can have a series of \fBPath = URL\fR or \fBPath = file\fR
+We can have a series of redirect rules in one of formats below:
 
-All accesses to Path will be redirected to URL/Path or alternatively to
-scheme:host:port/file/Path if a file is used. Note that the original path is
-appended to the redirected url. So if we for example have:
+.nf
+  Path = URL
+  Path = code
+  Path = code URL
+.fi
+
+\fBPath\fR must begin with a slash. \fBURL\fR may be either a relative URL (a
+path beginning with a slash), or an absolute URL. In the first case, the
+\fIscheme:hostname:port\fR of the current server will be added. All accesses to
+\fBPath\fR will be redirected to \fBURL/Path\fR (or
+\fBscheme:hostname:port/URL/Path\fR if \fBURL\fR is relative). Note that the
+original path is appended to the redirected URL.
+
+For example, assume we have the following redirect configuration:
 
 .nf
   <redirect>
@@ -1006,19 +1017,33 @@ appended to the redirected url. So if we for example have:
   </redirect>
 .fi
 
-Assuming this config resides on a site called http://abc.com, We have the
+Assuming this config resides on a site called http://abc.com, we have the
 following redirects:
 
 .nf
   http://abc.com/foo -> http://www.mysite.org/zapp/foo
-
   http://abc.com/foo/test -> http://www.mysite.org/zapp/foo/test
-
-  http://abc.com/bar -> http://abc.com/bar
-
-  http://abc.com/bar/x/y/z -> http://abc.com/bar/x/y/z
+  http://abc.com/bar -> http://abc.com/tomato.html/bar
+  http://abc.com/bar/x/y/z -> http://abc.com/tomato.html/bar/x/y/z
 .fi
 
+By default, Yaws will perform a 302 redirect. The HTTP status code can be
+changed using the \fBcode\fR parameter. Note that the status code must be known
+by Yaws.
+.RS
+.IP \[bu] 3
+For 3xx status codes, the \fBURL\fR parameter must be present and will be used
+to build the new location.
+.IP \[bu]
+For other status codes (1xx, 2xx, 4xx and 5xx), it can be omitted. In the
+absence of \fBURL\fR, Yaws will return a generic response with the specified
+status code.
+.IP \[bu]
+Otherwise, the \fBURL\fR parameter must be a relative URL and will be
+used to customize the response.
+.RE
+
+.RS 7
 Sometimes we do not want to have the original path appended to the redirected
 path. To get that behaviour we specify the config with '==' instead of '='.
 
@@ -1033,9 +1058,9 @@ Now a request for http://abc.com/foo/x/y/z simply gets redirected to
 http://www.mysite.org/zapp. This is typically used when we simply want a static
 redirect at some place in the docroot.
 
-When we specify a file as target for the redirect, the redir will be to the
-current http(s) server.
-
+When we specify a relative URL as the target for the redirect, the redirect
+will be to the current http(s) server.
+.RE
 
 .TP
 \fB<auth> ... </auth>\fR
@@ -1174,7 +1199,7 @@ a \fIdeny\fR directive are denied by default.
 
 .TP
 \fBdeny,allow\fR
-First, all \fIdeny\fR directives are evaluated; if any match, the request is
+First, all \fIdeny\fR directives are evaluated; if any matched, the request is
 denied unless it also matches an \fIallow\fR directive. Any requests which do
 not match any \fIallow\fR or \fIdeny\fR directives are permitted.
 .RE

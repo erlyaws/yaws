@@ -1808,21 +1808,25 @@ fload(FD, server_redirect, GC, C, Cs, Lno, Chars, RedirMap) ->
     case Toks of
         [] ->
             fload(FD, server_redirect, GC, C, Cs, Lno+1, Next, RedirMap);
-        [Path, '=', URL] ->
-            try yaws_api:parse_url(URL, sloppy) of
-                U when is_record(U, url) ->
+        [Path, '=', '=' | Rest] ->
+            %% "Normalize" Path
+            Path1 = filename:join([yaws_api:path_norm(Path)]),
+            case parse_redirect(Path1, Rest, noappend, Lno) of
+                {error, Str} ->
+                    {error, Str};
+                Redir ->
                     fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
-                          [{Path, U, append}|RedirMap])
-            catch _:_ ->
-                    {error, ?F("bad redir ~p at line ~w", [URL, Lno])}
+                          [Redir|RedirMap])
             end;
-        [Path, '=', '=', URL] ->
-            try yaws_api:parse_url(URL, sloppy) of
-                U when is_record(U, url) ->
+        [Path, '=' | Rest] ->
+            %% "Normalize" Path
+            Path1 = filename:join([yaws_api:path_norm(Path)]),
+            case parse_redirect(Path1, Rest, append, Lno) of
+                {error, Str} ->
+                    {error, Str};
+                Redir ->
                     fload(FD, server_redirect, GC, C, Cs, Lno+1, Next,
-                          [{Path, U, noappend}|RedirMap])
-            catch _:_ ->
-                    {error, ?F("Bad redir ~p at line ~w", [URL, Lno])}
+                          [Redir|RedirMap])
             end;
         ['<', "/redirect", '>'] ->
             C2 = C#sconf{redirect_map = lists:reverse(RedirMap)},
@@ -2353,6 +2357,52 @@ parse_mime_types_info(add_charsets, NewCharsets, Info) ->
         {ok, Charsets} -> {ok, Info#mime_types_info{charsets=Charsets}};
         Error          -> Error
     end.
+
+
+parse_redirect(Path, [Code, URL], Mode, Lno) ->
+    case catch list_to_integer(Code) of
+        I when is_integer(I), I >= 300, I =< 399 ->
+            try yaws_api:parse_url(URL, sloppy) of
+                U when is_record(U, url) ->
+                    {Path, I, U, Mode}
+            catch _:_ ->
+                    {error, ?F("Bad redirect URL ~p at line ~w", [URL, Lno])}
+            end;
+        I when is_integer(I), I >= 100, I =< 599 ->
+            %% Only relative path are authorized here
+            try yaws_api:parse_url(URL, sloppy) of
+                #url{scheme=undefined, host=[], port=undefined, path=P} ->
+                    {Path, I, P, Mode};
+                #url{} ->
+                    {error, ?F("Bad redirect rule at line ~w: "
+                               " Absolute URL is forbidden here", [URL])}
+            catch _:_ ->
+                    {error, ?F("Bad redirect URL ~p at line ~w", [URL, Lno])}
+            end;
+        _ ->
+            {error, ?F("Bad status code ~p at line ~w", [Code, Lno])}
+    end;
+parse_redirect(Path, [CodeOrUrl], Mode, Lno) ->
+    case catch list_to_integer(CodeOrUrl) of
+        I when is_integer(I), I >= 300, I =< 399 ->
+            {error, ?F("Bad redirect rule at line ~w: "
+                       "URL to redirect to is missing ", [Lno])};
+        I when is_integer(I), I >= 100, I =< 599 ->
+            {Path, I, undefined, Mode};
+        I when is_integer(I) ->
+            {error, ?F("Bad status code ~p at line ~w", [CodeOrUrl, Lno])};
+        _ ->
+            try yaws_api:parse_url(CodeOrUrl, sloppy) of
+                #url{}=U ->
+                    {Path, 302, U, Mode}
+            catch _:_ ->
+                    {error, ?F("Bad redirect URL ~p at line ~w",
+                               [CodeOrUrl, Lno])}
+            end
+    end;
+parse_redirect(_Path, _, _Mode, Lno) ->
+    {error, ?F("Bad redirect rule at line ~w", [Lno])}.
+
 
 
 ssl_start() ->

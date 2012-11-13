@@ -1,0 +1,7 @@
+<erl>
+out(Arg) ->
+    case Arg#arg.pathinfo of
+        undefined -> {content, "text/plain", ""};
+        PathInfo  -> {content, "text/plain", PathInfo}
+    end.
+</erl>

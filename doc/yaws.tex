@@ -3019,14 +3019,25 @@ The following directives are allowed inside a server definition.
 
 \item       \verb+<redirect> ... </redirect>+ ---
               Defines a redirect mapping. The following items are allowed within
-              a matching pair of \verb+<redirect>+ and \verb+</redirect>+ delimiters.
+              a matching pair of \verb+<redirect>+ and \verb+</redirect>+
+              delimiters.
 
-              We can have a series of \verb+Path = URL+ or \verb+Path = file+
+              We can have a series of redirect rules in one of formats below:
+\begin{verbatim}
+  Path = URL
+  Path = code
+  Path = code URL
+\end{verbatim}
+              \verb+Path+ must begin with a slash. \verb+URL+ may be either a
+              relative URL (a path beginning with a slash), or an absolute
+              URL. In the first case, the \textit{scheme:hostname:port} of the
+              current server will be added. All accesses to \verb+Path+ will be
+              redirected to \verb+URL/Path+ (or
+              \verb+scheme:hostname:port/URL/Path+ if \verb+URL+ is
+              relative). Note that the original path is appended to the
+              redirected URL.
 
-              All accesses to \verb+Path+ will be redirected to \verb+URL/Path+
-              or to \verb+scheme:host:port/file/Path+ if a file is
-              used. Note that the original path is appended to the redirected
-              url. So if we for example have:
+              For example, assume we have the following redirect configuration:
 \begin{verbatim}
   <redirect>
     /foo = http://www.mysite.org/zapp
@@ -3034,16 +3045,28 @@ The following directives are allowed inside a server definition.
   </redirect>
 \end{verbatim}
               Assuming this config resides on a site called
-              \url{http://abc.com}, We have the following redirects:
+              \url{http://abc.com}, we have the following redirects:
 \begin{verbatim}
   http://abc.com/foo -> http://www.mysite.org/zapp/foo
-
   http://abc.com/foo/test -> http://www.mysite.org/zapp/foo/test
-
-  http://abc.com/bar -> http://abc.com/bar
-
-  http://abc.com/bar/x/y/z -> http://abc.com/bar/x/y/z
+  http://abc.com/bar -> http://abc.com/tomato.html/bar
+  http://abc.com/bar/x/y/z -> http://abc.com/tomato.html/bar/x/y/z
 \end{verbatim}
+
+              By default, \Yaws\ will perform a 302 redirect. The HTTP
+              status code can be changed using the \verb+code+
+              parameter. Note that \Yaws\ must have knowledge of the status
+              code value.
+              \begin{itemize}
+              \item For 3xx status codes, the \verb+URL+ parameter must be
+                present and will be used to build the new location.
+              \item For other status codes (1xx, 2xx, 4xx and 5xx), the
+                \verb+URL+ can be omitted. In the absence of \verb+URL+,
+                \Yaws\ will return a generic response with the specified
+                status code.
+              \item Otherwise, the \verb+URL+ parameter must be a relative
+                URL and will be used to customize the response.
+              \end{itemize}
               Sometimes we do not want to have the original path appended to the
               redirected path. To get that behaviour we specify the config with
               '==' instead of '='.
@@ -3059,8 +3082,8 @@ The following directives are allowed inside a server definition.
               we simply want a static redirect at some place in the
               docroot.
 
-              When we specify a file as target for the redirect, the redir will
-              be to the current http(s) server.
+              When we specify a relative URL as the target for the
+              redirect, the redirect will be to the current http(s) server.
 
 \item       \verb+<auth> ... </auth>+ ---
               Defines an auth structure.  The following items are allowed within
@@ -3170,10 +3193,10 @@ The following directives are allowed inside a server definition.
                     denied by default.
 
                   \item \verb+deny,allaw+ --- First, all \verb+deny+ directives
-                    are evaluated; if any match, the request is denied unless it
-                    also matches an \verb+allow+ directive. Any requests which
-                    do not match any \verb+allow+ or \verb+deny+ directives are
-                    permitted.
+                    are evaluated; if any matches, the request is denied unless
+                    it also matches an \verb+allow+ directive. Any requests
+                    which do not match any \verb+allow+ or \verb+deny+
+                    directives are permitted.
                 \end{itemize}
               \end{itemize}
 

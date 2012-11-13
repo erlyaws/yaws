@@ -1769,7 +1769,7 @@ handle_request(CliSock, ARG, N) ->
 
                     case {IsRev, IsRedirect} of
                         {_, {true, Redir}} ->
-                            deliver_302_map(CliSock, Req, ARG, Redir);
+                            deliver_redirect_map(CliSock, Req, ARG, Redir);
                         {false, _} ->
                             %%'main' branch so to speak. Most requests
                             %% pass through here.
@@ -2060,7 +2060,7 @@ is_redirect_map(_, []) ->
     false;
 is_redirect_map(Path, RedirMap) ->
     case lists:keyfind(Path, 1, RedirMap) of
-        {Path, _Url, _AppendMod}=E ->
+        {Path, _Code, _Url, _AppendMod}=E ->
             {true, E};
         false when Path == "/" ->
             false;
@@ -2454,66 +2454,69 @@ new_redir_h(OH, Loc, Status) ->
 %% we must deliver a 302 if the browser asks for a dir
 %% without a trailing / in the HTTP req
 %% otherwise the relative urls in /dir/index.html will be broken.
-
-%%!todo - review.
-%% Why is DecPath being tokenized around "?" - only to reassemble??
-%% What happens when Path is not flat?
-
 deliver_302(CliSock, _Req, Arg, Path) ->
     ?Debug("in redir 302 ",[]),
     H = get(outh),
     SC=get(sc),
-    Scheme = yaws:redirect_scheme(SC),
+    Scheme  = yaws:redirect_scheme(SC),
     Headers = Arg#arg.headers,
     DecPath = yaws_api:url_decode(Path),
     RedirHost = yaws:redirect_host(SC, Headers#headers.host),
-    Loc = case string:tokens(DecPath, "?") of
-              [P] ->
-                  ["Location: ", Scheme, RedirHost, P, "\r\n"];
-              [P, Q] ->
-                  ["Location: ", Scheme, RedirHost, P, "?", Q, "\r\n"]
-          end,
-
+    Loc = ["Location: ", Scheme, RedirHost, DecPath, "\r\n"],
     new_redir_h(H, Loc),
     deliver_accumulated(CliSock),
     done_or_continue().
 
 
-deliver_302_map(CliSock, Req, Arg,
-                {_Prefix,URL,Mode})  when is_record(URL,url) ->
-    ?Debug("in redir 302 ",[]),
+deliver_redirect_map(CliSock, Req, _Arg, {_Prefix, Code, undefined, _Mode}) ->
+    %% Here Code is 1xx, 2xx, 4xx or 5xx
+    ?Debug("in redir ~p", [Code]),
+    deliver_xxx(CliSock, Req, Code);
+deliver_redirect_map(_CliSock, Req, _Arg,
+                     {_Prefix, Code, Path, Mode}) when is_list(Path) ->
+    %% Here Code is 1xx, 2xx, 4xx or 5xx
+    ?Debug("in redir ~p", [Code]),
+    DecPath = safe_decode_path(Req#http_request.path),
+    Page = if
+               Mode == append ->
+                   filename:join([Path ++ DecPath]);
+               true -> %% noappend
+                   case yaws:split_at(DecPath, $?) of
+                       {_, []} -> Path;
+                       {_, Q}  -> Path ++ "?" ++ Q
+                   end
+           end,
+    {page, {[{status, Code}], Page}};
+deliver_redirect_map(CliSock, Req, Arg,
+                     {_Prefix, Code, URL, Mode}) when is_record(URL, url) ->
+    %% Here Code is 3xx
+    ?Debug("in redir ~p", [Code]),
     H = get(outh),
     DecPath = safe_decode_path(Req#http_request.path),
-    {P, Q} = yaws:split_at(DecPath, $?),
-    LocPath = yaws_api:format_partial_url(URL, get(sc)),
     Loc = if
               Mode == append ->
-                  Newpath = filename:join([URL#url.path ++ P]),
-                  NLocPath = yaws_api:format_partial_url(
-                               URL#url{path = Newpath}, get(sc)),
-                  case Q of
-                      [] ->
-                          ["Location: ", NLocPath, "\r\n"];
-                      _Q ->
-                          ["Location: ", NLocPath, "?", Q, "\r\n"]
-                  end;
-              Mode == noappend,Q == [] ->
+                  NPath   = filename:join([URL#url.path ++ DecPath]),
+                  LocPath = yaws_api:format_partial_url(URL#url{path=NPath},
+                                                        get(sc)),
                   ["Location: ", LocPath, "\r\n"];
-              Mode == noappend,Q /= [] ->
-                  ["Location: ", LocPath, "?", Q, "\r\n"]
+              true -> %% noappend
+                  LocPath = yaws_api:format_partial_url(URL, get(sc)),
+                  case yaws:split_at(DecPath, $?) of
+                      {_, []} -> ["Location: ", LocPath, "\r\n"];
+                      {_, Q}  -> ["Location: ", LocPath, "?", Q, "\r\n"]
+                  end
           end,
-    Headers = Arg#arg.headers,
-    {DoClose, _Chunked} = yaws:dcc(Req, Headers),
+    {DoClose, _Chunked} = yaws:dcc(Req, Arg#arg.headers),
     new_redir_h(H#outh{
-                  connection  = yaws:make_connection_close_header(DoClose),
-                  doclose = DoClose,
-                  server = yaws:make_server_header(),
-                  chunked = false,
-                  date = yaws:make_date_header()
-                 }, Loc),
-
+                  connection = yaws:make_connection_close_header(DoClose),
+                  doclose    = DoClose,
+                  server     = yaws:make_server_header(),
+                  chunked    = false,
+                  date       = yaws:make_date_header()
+                 }, Loc, Code),
     deliver_accumulated(CliSock),
     done_or_continue().
+
 
 deliver_options(CliSock, _Req, Options) ->
     H = #outh{status = 200,

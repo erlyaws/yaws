@@ -53,6 +53,6 @@ stop:
 quiet_stop:
 	$(YTOP)/bin/yaws --id testid --stop >/dev/null 2>&1 && sleep 5 || true
 
-stdconf authconf revproxyconf deflateconf davconf mimetypes:
+stdconf authconf revproxyconf deflateconf davconf mimetypes redirectconf:
 	cat ../conf/$@.conf | \
 	$(SUBST) %YTOP% $(YTOP) > yaws.conf
