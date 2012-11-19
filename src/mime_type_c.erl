@@ -57,7 +57,7 @@ generate(ModFile, GInfo, SInfoMap) ->
                       "-export([default_type/0, default_type/1]).~n"
                       "-export([t/1, revt/1]).~n"
                       "-export([t/2, revt/2]).~n~n"
-                      "-include_lib(\"yaws/include/yaws.hrl\").~n~n", []),
+                      "-include(\"yaws.hrl\").~n~n", []),
 
             %% Generate default_type/0, t/1 and revt/1
             io:format(Fd,
