@@ -858,11 +858,12 @@ test_too_many_headers() ->
 
 test_index_files() ->
     io:format("index_files test\n", []),
+    ?line {ok, Bin} = file:read_file("../../www/testdir/index.html"),
+    Content = binary_to_list(Bin),
+
     %% "/" should be redirected to "/testdir", then to "/testdir/" and finally
     %% get "/testdir/index.html"
     Uri0 = "http://localhost:8010/",
-    ?line {ok, Bin} = file:read_file("../../www/testdir/index.html"),
-    Content = binary_to_list(Bin),
     ?line {ok, "302", Hdrs1, _} = ibrowse:send_req(Uri0, [], get),
     ?line Uri1 = proplists:get_value("Location", Hdrs1),
     ?line "http://localhost:8010/testdir" = Uri1,
@@ -870,6 +871,16 @@ test_index_files() ->
     ?line Uri2 = proplists:get_value("Location", Hdrs2),
     ?line "http://localhost:8010/testdir/" = Uri2,
     ?line {ok, "200", _, Content} = ibrowse:send_req(Uri2, [], get),
+
+    %% Do the same thing but with a query-string
+    Uri3 = "http://localhost:8010/?a=1&b=2",
+    ?line {ok, "302", Hdrs3, _} = ibrowse:send_req(Uri3, [], get),
+    ?line Uri4 = proplists:get_value("Location", Hdrs3),
+    ?line "http://localhost:8010/testdir?a=1&b=2" = Uri4,
+    ?line {ok, "302", Hdrs4, _} = ibrowse:send_req(Uri4, [], get),
+    ?line Uri5 = proplists:get_value("Location", Hdrs4),
+    ?line "http://localhost:8010/testdir/?a=1&b=2" = Uri5,
+    ?line {ok, "200", _, Content} = ibrowse:send_req(Uri5, [], get),
     ok.
 
 %% Do handshake, then send "hello" in a text frame

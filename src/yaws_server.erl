@@ -2462,7 +2462,13 @@ deliver_302(CliSock, _Req, Arg, Path) ->
     Headers = Arg#arg.headers,
     DecPath = yaws_api:url_decode(Path),
     RedirHost = yaws:redirect_host(SC, Headers#headers.host),
-    Loc = ["Location: ", Scheme, RedirHost, DecPath, "\r\n"],
+
+    %% QueryString must be added
+    Loc = case Arg#arg.querydata of
+              undefined -> ["Location: ", Scheme, RedirHost, DecPath, "\r\n"];
+              [] -> ["Location: ", Scheme, RedirHost, DecPath, "\r\n"];
+              Q -> ["Location: ", Scheme, RedirHost, DecPath, "?", Q, "\r\n"]
+          end,
     new_redir_h(H, Loc),
     deliver_accumulated(CliSock),
     done_or_continue().
