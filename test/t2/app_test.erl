@@ -38,6 +38,7 @@ start() ->
     test_index_files(),
     test_websocket(),
     test_embedded_id_dir(),
+    test_chained_appmods(),
     ibrowse:stop().
 
 
@@ -891,6 +892,7 @@ test_index_files() ->
 %% Do handshake, then send "hello" in a text frame
 %% and check that "hello" is echoed back.
 test_websocket() ->
+    io:format("test_websocket\n", []),
     OpenHeads = "GET /websockets_example_endpoint.yaws HTTP/1.1\r\n"
         "Host: localhost\r\n"
         "Upgrade: websocket\r\n"
@@ -927,6 +929,7 @@ test_websocket() ->
     {ok, ExpectFrame} = gen_tcp:recv(Sock, 0, 2000).
 
 test_embedded_id_dir() ->
+    io:format("test_embedded_id_dir\n", []),
     Id = "id_dir_test",
     GconfList = [{id, Id},
                  {logdir, "./logs"},
@@ -946,6 +949,17 @@ test_embedded_id_dir() ->
     after
         ok = file:del_dir(yaws:id_dir(Id))
     end.
+
+test_chained_appmods() ->
+    io:format("test_chained_appmods\n", []),
+    {ok, Bin} = file:read_file("../../www/1000.txt"),
+    Content = binary_to_list(Bin),
+    Uri = "http://localhost:8012/",
+    ?line {ok, "200", Hdrs, Content} = ibrowse:send_req(Uri, [], get),
+    ?line "appmod1[/], appmod2[/appmod2], appmod1[/appmod1], appmod3[/1000.txt]" =
+        proplists:get_value("X-AppMods", Hdrs),
+    ok.
+
 
 %% used for appmod tests
 %%

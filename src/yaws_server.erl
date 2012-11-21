@@ -1301,8 +1301,12 @@ handle_method_result(Res, CliSock, {IP,Port}, GS, Req, H, Num) ->
             %% `is_reentrant_request' flag is used to correctly identify the url
             %% type
             put(is_reentrant_request, true),
-            SC = pick_sconf(GS#gs.gconf, H, GS#gs.group),
-            put(sc, SC#sconf{appmods = []}),
+
+            %% Renew #sconf{} to restore docroot/xtra_docroots fields
+            OldSC = get(sc),
+            NewSC = pick_sconf(GS#gs.gconf, H, GS#gs.group),
+            put(sc, NewSC#sconf{appmods = OldSC#sconf.appmods}),
+
             check_keepalive_maxuses(GS, Num),
             Call = call_method(Req#http_request.method,
                                CliSock, {IP,Port},
@@ -2296,6 +2300,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = appmod}, N) ->
     Req = ARG#arg.req,
     H = ARG#arg.headers,
     yaws:outh_set_dyn_headers(Req, H, UT),
+    maybe_set_page_options(),
     {Mod,_} = UT#urltype.data,
     deliver_dyn_part(CliSock,
                      0, "appmod",
@@ -4126,7 +4131,6 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
     ?Debug("do_url_type SC=~s~nGetPath=~p~nVirtualDir=~p~n",
            [?format_record(SC,sconf), GetPath,VirtualDir]),
 
-
     case GetPath of
         _ when ?sc_has_dav(SC) ->
             {Comps, RevFile} = comp_split(GetPath),
@@ -4148,6 +4152,12 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
         "/" -> %% special case
             case lists:keysearch("/", 1, SC#sconf.appmods) of
                 {value, AppmodDef} ->
+                    %% Remove appmod for this request to avoid an infinte loop
+                    %% in case of a reentrant call
+                    put(sc, SC#sconf{appmods=lists:delete(
+                                               AppmodDef, SC#sconf.appmods
+                                              )}),
+
                     %% AppmodDef can be either a 2-tuple or 3-tuple depending
                     %% on whether there are exclude paths present. We want
                     %% only the second element of the tuple in either case.
@@ -4203,6 +4213,12 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
                                                    ArgDocroot, VirtualDir)
                     end;
                 {ok, {Mount, Mod}} ->
+                    %% Remove appmod for this request to avoid an infinte loop
+                    %% in case of a reentrant call
+                    put(sc, SC#sconf{appmods=lists:keydelete(
+                                               Mount, 1, SC#sconf.appmods
+                                              )}),
+
                     %%active_appmod found the most specific appmod for this
                     %% request path
                     %% - now we need to determine the prepath & path_info
