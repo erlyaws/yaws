@@ -1786,7 +1786,9 @@ handle_request(CliSock, ARG, N) ->
 
                     case {IsRev, IsRedirect} of
                         {_, {true, Redir}} ->
-                            deliver_redirect_map(CliSock, Req, ARG, Redir, N);
+                            ARG1 = ARG#arg{server_path = DecPath,
+                                           querydata   = QueryString},
+                            deliver_redirect_map(CliSock, Req, ARG1, Redir, N);
                         {false, _} ->
                             %%'main' branch so to speak. Most requests
                             %% pass through here.
@@ -2472,20 +2474,21 @@ new_redir_h(OH, Loc, Status) ->
 %% we must deliver a 302 if the browser asks for a dir
 %% without a trailing / in the HTTP req
 %% otherwise the relative urls in /dir/index.html will be broken.
+%% Note: Here Path is always decoded, so we must encode it
 deliver_302(CliSock, _Req, Arg, Path) ->
     ?Debug("in redir 302 ",[]),
     H = get(outh),
     SC=get(sc),
     Scheme  = yaws:redirect_scheme(SC),
     Headers = Arg#arg.headers,
-    DecPath = yaws_api:url_decode(Path),
+    EncPath = yaws_api:url_encode(Path),
     RedirHost = yaws:redirect_host(SC, Headers#headers.host),
 
     %% QueryString must be added
     Loc = case Arg#arg.querydata of
-              undefined -> ["Location: ", Scheme, RedirHost, DecPath, "\r\n"];
-              [] -> ["Location: ", Scheme, RedirHost, DecPath, "\r\n"];
-              Q -> ["Location: ", Scheme, RedirHost, DecPath, "?", Q, "\r\n"]
+              undefined -> ["Location: ", Scheme, RedirHost, EncPath, "\r\n"];
+              [] -> ["Location: ", Scheme, RedirHost, EncPath, "\r\n"];
+              Q -> ["Location: ", Scheme, RedirHost, EncPath, "?", Q, "\r\n"]
           end,
     new_redir_h(H, Loc),
     deliver_accumulated(CliSock),
@@ -2501,15 +2504,17 @@ deliver_redirect_map(_CliSock, _Req, Arg,
                      {_Prefix, Code, Path, Mode}, N) when is_list(Path) ->
     %% Here Code is 1xx, 2xx, 4xx or 5xx
     ?Debug("in redir ~p", [Code]),
-    DecPath = safe_decode_path(Req#http_request.path),
-    Page = if
-               Mode == append ->
-                   filename:join([Path ++ DecPath]);
-               true -> %% noappend
-                   case yaws:split_at(DecPath, $?) of
-                       {_, []} -> Path;
-                       {_, Q}  -> Path ++ "?" ++ Q
-                   end
+    Path1 = if
+                Mode == append ->
+                    EncPath = yaws_api:url_encode(Arg#arg.server_path),
+                    filename:join([Path ++ EncPath]);
+                true -> %% noappend
+                    Path
+            end,
+    Page = case Arg#arg.querydata of
+               undefined -> Path1;
+               []        -> Path1;
+               Q         -> Path1 ++ "?" ++ Q
            end,
 
     %% Set variables used in handle_method_result/7
@@ -2521,20 +2526,23 @@ deliver_redirect_map(CliSock, Req, Arg,
     %% Here Code is 3xx
     ?Debug("in redir ~p", [Code]),
     H = get(outh),
-    DecPath = safe_decode_path(Req#http_request.path),
-    Loc = if
-              Mode == append ->
-                  NPath   = filename:join([URL#url.path ++ DecPath]),
-                  LocPath = yaws_api:format_partial_url(URL#url{path=NPath},
-                                                        get(sc)),
-                  ["Location: ", LocPath, "\r\n"];
-              true -> %% noappend
-                  LocPath = yaws_api:format_partial_url(URL, get(sc)),
-                  case yaws:split_at(DecPath, $?) of
-                      {_, []} -> ["Location: ", LocPath, "\r\n"];
-                      {_, Q}  -> ["Location: ", LocPath, "?", Q, "\r\n"]
-                  end
-          end,
+    QueryData = case Arg#arg.querydata of
+                    undefined -> [];
+                    Q         -> Q
+                end,
+    LocPath = if
+                  Mode == append ->
+                      EncPath = yaws_api:url_encode(Arg#arg.server_path),
+                      Path1   = filename:join([URL#url.path ++ EncPath]),
+                      yaws_api:format_partial_url(
+                        URL#url{path=Path1,querypart=QueryData}, get(sc)
+                       );
+                  true -> %% noappend
+                      yaws_api:format_partial_url(URL#url{querypart=QueryData},
+                                                  get(sc))
+              end,
+    Loc = ["Location: ", LocPath, "\r\n"],
+
     {DoClose, _Chunked} = yaws:dcc(Req, Arg#arg.headers),
     new_redir_h(H#outh{
                   connection = yaws:make_connection_close_header(DoClose),
