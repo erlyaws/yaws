@@ -2305,10 +2305,15 @@ handle_ut(CliSock, ARG, UT = #urltype{type = directory}, N) ->
     end;
 
 
-handle_ut(CliSock, ARG, UT = #urltype{type = redir}, _N) ->
+handle_ut(CliSock, ARG, UT = #urltype{type = redir}, N) ->
     Req = ARG#arg.req,
     H = ARG#arg.headers,
     yaws:outh_set_dyn_headers(Req, H, UT),
+    case yaws:outh_get_doclose() of
+        true  -> ok;
+        _     -> flush(CliSock, N, H#headers.content_length,
+                       yaws:to_lower(H#headers.transfer_encoding))
+    end,
     deliver_302(CliSock, Req, ARG, UT#urltype.path);
 
 handle_ut(CliSock, ARG, UT = #urltype{type = appmod}, N) ->
@@ -2522,7 +2527,7 @@ deliver_redirect_map(_CliSock, _Req, Arg,
     put(client_data_pos, N),
     {page, {[{status, Code}], Page}};
 deliver_redirect_map(CliSock, Req, Arg,
-                     {_Prefix, Code, URL, Mode}, _N) when is_record(URL, url) ->
+                     {_Prefix, Code, URL, Mode}, N) when is_record(URL, url) ->
     %% Here Code is 3xx
     ?Debug("in redir ~p", [Code]),
     H = get(outh),
@@ -2544,6 +2549,11 @@ deliver_redirect_map(CliSock, Req, Arg,
     Loc = ["Location: ", LocPath, "\r\n"],
 
     {DoClose, _Chunked} = yaws:dcc(Req, Arg#arg.headers),
+    case DoClose of
+        true  -> ok;
+        _     -> flush(CliSock, N, (Arg#arg.headers)#headers.content_length,
+                       (Arg#arg.headers)#headers.transfer_encoding)
+    end,
     new_redir_h(H#outh{
                   connection = yaws:make_connection_close_header(DoClose),
                   doclose    = DoClose,
