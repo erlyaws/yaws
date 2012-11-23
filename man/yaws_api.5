@@ -918,8 +918,9 @@ and be invoked again when more Data arrives.
 
 .TP
 \fB{page, Page}\fR
-Make Yaws return a different page than the one being
-requested.
+
+Make Yaws returns a different page than the one being requested. \fIPage\fR is a
+Request-URI, so it must be url-encoded and can contain a query-string.
 
 
 .TP

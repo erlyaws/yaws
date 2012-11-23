@@ -1,0 +1,17 @@
+<erl>
+out(Arg) ->
+    case Arg#arg.clidata of
+        undefined ->
+            {html, "no data"};
+        {partial, Bin} ->
+            case Arg#arg.cont of
+                undefined -> {get_more, [Bin], Arg#arg.state};
+                Cont     ->  {get_more, [Bin|Cont], Arg#arg.state}
+            end;
+        Bin ->
+            case Arg#arg.cont of
+                undefined -> {content, "text/plain", Bin};
+                Cont      -> {content, "text/plain", lists:reverse([Bin|Cont])}
+            end
+    end.
+</erl>

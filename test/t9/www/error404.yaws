@@ -1,0 +1,5 @@
+<erl>
+out(Arg) ->
+    {abs_path, Path} = (Arg#arg.req)#http_request.path,
+    {content, "text/plain", Path}.
+</erl>

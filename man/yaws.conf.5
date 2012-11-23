@@ -1001,12 +1001,12 @@ We can have a series of redirect rules in one of formats below:
   Path = code URL
 .fi
 
-\fBPath\fR must begin with a slash. \fBURL\fR may be either a relative URL (a
-path beginning with a slash), or an absolute URL. In the first case, the
-\fIscheme:hostname:port\fR of the current server will be added. All accesses to
-\fBPath\fR will be redirected to \fBURL/Path\fR (or
-\fBscheme:hostname:port/URL/Path\fR if \fBURL\fR is relative). Note that the
-original path is appended to the redirected URL.
+\fBPath\fR must be an url-decoded path beginning with a slash. \fBURL\fR may be
+either a relative URL (a path beginning with a slash), or an absolute URL. In
+the first case, the \fIscheme:hostname:port\fR of the current server will be
+added. All accesses to \fBPath\fR will be redirected to \fBURL/Path\fR (or
+\fBscheme:hostname:port/URL/Path\fR if \fBURL\fR is relative). \fBURL\fR must be
+url-encoded. Note that the original path is appended to the redirected URL.
 
 For example, assume we have the following redirect configuration:
 

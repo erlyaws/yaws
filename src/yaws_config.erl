@@ -2347,7 +2347,7 @@ parse_redirect(Path, [Code, URL], Mode, Lno) ->
                     {Path, I, P, Mode};
                 #url{} ->
                     {error, ?F("Bad redirect rule at line ~w: "
-                               " Absolute URL is forbidden here", [URL])}
+                               " Absolute URL is forbidden here", [Lno])}
             catch _:_ ->
                     {error, ?F("Bad redirect URL ~p at line ~w", [URL, Lno])}
             end;

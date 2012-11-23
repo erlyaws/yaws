@@ -1699,8 +1699,9 @@ detect a \verb+Content-Length+ header.
   \verb+POST+s we can return this value and be invoked again when more
   data arrives.
 
-\item \verb+{page, Page}+ Make \Yaws\ return a different local page
-  than the one being requested.
+\item \verb+{page, Page}+ Make \Yaws\ returns a different local page than the
+  one being requested. \verb+Page+ is a Request-URI, so it must be url-encoded
+  and can contain a query-string.
 
 \item \verb+{page, {Options, Page}}+ Like the above, but supplying an
   additional deep list of options.  For now, the only type of option
@@ -3028,14 +3029,14 @@ The following directives are allowed inside a server definition.
   Path = code
   Path = code URL
 \end{verbatim}
-              \verb+Path+ must begin with a slash. \verb+URL+ may be either a
-              relative URL (a path beginning with a slash), or an absolute
-              URL. In the first case, the \textit{scheme:hostname:port} of the
-              current server will be added. All accesses to \verb+Path+ will be
-              redirected to \verb+URL/Path+ (or
-              \verb+scheme:hostname:port/URL/Path+ if \verb+URL+ is
-              relative). Note that the original path is appended to the
-              redirected URL.
+              \verb+Path+ must be an url-decoded path beginning with a
+              slash. \verb+URL+ may be either a relative URL (a path beginning
+              with a slash), or an absolute URL. In the first case, the
+              \textit{scheme:hostname:port} of the current server will be
+              added. All accesses to \verb+Path+ will be redirected to
+              \verb+URL/Path+ (or \verb+scheme:hostname:port/URL/Path+ if
+              \verb+URL+ is relative). \verb+URL+ must be url-encoded. Note that
+              the original path is appended to the redirected URL.
 
               For example, assume we have the following redirect configuration:
 \begin{verbatim}
