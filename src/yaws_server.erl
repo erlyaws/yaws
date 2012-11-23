@@ -1283,7 +1283,8 @@ handle_method_result(Res, CliSock, {IP,Port}, GS, Req, H, Num) ->
             erase_transients(),
             {ok, Num+1};
         {page, P} ->
-            %% keep post_parse
+            %% Because the request is rewritten but the body is the same, we
+            %% keep post_parse and erase query_parse.
             erase(query_parse),
             put(outh, #outh{}),
             case P of
@@ -1307,13 +1308,25 @@ handle_method_result(Res, CliSock, {IP,Port}, GS, Req, H, Num) ->
             NewSC = pick_sconf(GS#gs.gconf, H, GS#gs.group),
             put(sc, NewSC#sconf{appmods = OldSC#sconf.appmods}),
 
-            check_keepalive_maxuses(GS, Num),
-            Call = call_method(Req#http_request.method,
-                               CliSock, {IP,Port},
-                               Req#http_request{path = {abs_path, Page}},
-                               H#headers{content_length = undefined}),
+            %% Rewrite the request
+            NextReq = Req#http_request{path = {abs_path, Page}},
+
+            %% Renew #arg{}: keep clidata, state and cont
+            Arg0 = case get(yaws_arg) of
+                       undefined -> #arg{};
+                       A         -> A
+                   end,
+            Arg1 = make_arg(CliSock, {IP,Port}, H, NextReq, Arg0#arg.clidata),
+            Arg2 = Arg1#arg{cont=Arg0#arg.cont, state=Arg0#arg.state},
+
+            %% Get the number of bytes already read and do the reentrant call
+            CliDataPos = case get(client_data_pos) of
+                             undefined -> 0;
+                             Pos       -> Pos
+                         end,
+            Call  = handle_request(CliSock, Arg2, CliDataPos),
             Call2 = fix_keepalive_maxuses(Call),
-            handle_method_result(Call2, CliSock, {IP,Port}, GS, Req, H, Num)
+            handle_method_result(Call2, CliSock, {IP,Port}, GS, NextReq, H, Num)
     end.
 
 
@@ -1773,7 +1786,7 @@ handle_request(CliSock, ARG, N) ->
 
                     case {IsRev, IsRedirect} of
                         {_, {true, Redir}} ->
-                            deliver_redirect_map(CliSock, Req, ARG, Redir);
+                            deliver_redirect_map(CliSock, Req, ARG, Redir, N);
                         {false, _} ->
                             %%'main' branch so to speak. Most requests
                             %% pass through here.
@@ -2479,12 +2492,13 @@ deliver_302(CliSock, _Req, Arg, Path) ->
     done_or_continue().
 
 
-deliver_redirect_map(CliSock, Req, _Arg, {_Prefix, Code, undefined, _Mode}) ->
+deliver_redirect_map(CliSock, Req, _Arg,
+                     {_Prefix, Code, undefined, _Mode}, _N) ->
     %% Here Code is 1xx, 2xx, 4xx or 5xx
     ?Debug("in redir ~p", [Code]),
     deliver_xxx(CliSock, Req, Code);
-deliver_redirect_map(_CliSock, Req, _Arg,
-                     {_Prefix, Code, Path, Mode}) when is_list(Path) ->
+deliver_redirect_map(_CliSock, _Req, Arg,
+                     {_Prefix, Code, Path, Mode}, N) when is_list(Path) ->
     %% Here Code is 1xx, 2xx, 4xx or 5xx
     ?Debug("in redir ~p", [Code]),
     DecPath = safe_decode_path(Req#http_request.path),
@@ -2497,9 +2511,13 @@ deliver_redirect_map(_CliSock, Req, _Arg,
                        {_, Q}  -> Path ++ "?" ++ Q
                    end
            end,
+
+    %% Set variables used in handle_method_result/7
+    put(yaws_arg, Arg),
+    put(client_data_pos, N),
     {page, {[{status, Code}], Page}};
 deliver_redirect_map(CliSock, Req, Arg,
-                     {_Prefix, Code, URL, Mode}) when is_record(URL, url) ->
+                     {_Prefix, Code, URL, Mode}, _N) when is_record(URL, url) ->
     %% Here Code is 3xx
     ?Debug("in redir ~p", [Code]),
     H = get(outh),
@@ -2705,6 +2723,8 @@ deliver_dyn_part(CliSock,                       % essential params
                  DeliverCont                    % call DeliverCont(Arg)
                                                 % to continue normally
                 ) ->
+    %% Note: yaws_arg and client_data_pos are also used in
+    %% handle_method_result/7 when `{page, Page}' is returned
     put(yaws_ut, UT),
     put(yaws_arg, Arg),
     put(client_data_pos, CliDataPos0),
