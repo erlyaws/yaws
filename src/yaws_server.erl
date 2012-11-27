@@ -4009,14 +4009,33 @@ url_type(GetPath, ArgDocroot, VirtualDir) ->
     SC=get(sc),
     GC=get(gc),
     E = SC#sconf.ets,
+
+    %% In reentrant call, the cache can be disabled. It could be useful in case
+    %% of "proxy" appmod.
+    NoCache = case get(is_reentrant_request) of
+                  true ->
+                      case get(page_options) of
+                          undefined -> false;
+                          Opts      ->  proplists:get_bool(disable_cache, Opts)
+                      end;
+                  _ ->
+                      false
+              end,
+
     case ets:lookup(E, {url, GetPath}) of
         [] ->
             UT = do_url_type(SC, GetPath, ArgDocroot, VirtualDir),
             ?TC([{record, UT, urltype}]),
             ?Debug("UT=~s\n", [?format_record(UT, urltype)]),
-            CF = cache_file(SC, GC, GetPath, UT),
-            ?Debug("CF=~s\n", [?format_record(CF, urltype)]),
-            CF;
+            if
+                NoCache ->
+                    ?Debug("Cache disabled\n", []),
+                    UT;
+                true ->
+                    CF = cache_file(SC, GC, GetPath, UT),
+                    ?Debug("CF=~s\n", [?format_record(CF, urltype)]),
+                    CF
+            end;
         [{_, When, UT}] ->
             N = now_secs(),
             Refresh = GC#gconf.cache_refresh_secs,

@@ -39,6 +39,7 @@ start() ->
     test_websocket(),
     test_embedded_id_dir(),
     test_chained_appmods(),
+    test_cache_appmod(),
     ibrowse:stop().
 
 
@@ -960,6 +961,24 @@ test_chained_appmods() ->
         proplists:get_value("X-AppMods", Hdrs),
     ok.
 
+test_cache_appmod() ->
+    io:format("test_cache_appmod\n", []),
+    Uri1 = "http://localhost:8013/index.yaws?no-cache=1",
+    Uri2 = "http://localhost:8013/index.yaws",
+
+    %% call cache_appmod_test and disable page cache
+    ?line {ok, "200", Hdrs1, _} = ibrowse:send_req(Uri1, [], get),
+    ?line "cache_appmod_test" = proplists:get_value("X-Appmod", Hdrs1),
+
+    %% check that index.yaws is not cached
+    ?line {ok, "200", Hdrs2, _} = ibrowse:send_req(Uri2, [], get),
+    ?line "cache_appmod_test" = proplists:get_value("X-Appmod", Hdrs2),
+
+    %% retrieve index.yaws from the cache, so cache_appmod_test is not called
+    ?line {ok, "200", Hdrs3, _} = ibrowse:send_req(Uri2, [], get),
+    ?line undefined = proplists:get_value("X-Appmod", Hdrs3),
+
+    ok.
 
 %% used for appmod tests
 %%

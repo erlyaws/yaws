@@ -1747,9 +1747,16 @@ detect a \verb+Content-Length+ header.
   and can contain a query-string.
 
 \item \verb+{page, {Options, Page}}+ Like the above, but supplying an
-  additional deep list of options.  For now, the only type of option
-  is \verb+{header, H}+ with the effect of accumulating the HTTP
-  header \verb+H+ for page \verb+Page+.
+  additional deep list of options.  Supported options types are:
+
+  \begin{itemize}
+    \item \verb+{status, C}+ - Set the HTTP response status code \verb+C+ for
+      page \verb+Page+.
+    \item \verb+{header, H}+ - Accumulate the HTTP header \verb+H+ for page
+      \verb+Page+.
+    \item \verb+{disable_cache, Bool}+ - if set to \verb+true+, disable the
+      cache of \verb+Page+ for this call.
+  \end{itemize}
 
 \item \verb+{websocket, CallbackModule, Options}+ Tell \Yaws\  to use
   \verb+CallbackModule+ as a WebSockets Protocol handler for traffic
