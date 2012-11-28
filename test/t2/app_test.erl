@@ -808,16 +808,21 @@ test_shaper() ->
 
 
 test_sslaccept_timeout() ->
-    io:format("sslaccept_tout_test\n", []),
-    {ok, Sock} = gen_tcp:connect("localhost", 8443, [binary, {active, true}]),
-    ?line ok = receive
-                   {tcp_closed, Sock} -> ok
-               after
-                   %% keepalive_timeout is set to 10 secs. So, wait 15 secs
-                   %% before returning an error
-                   15000 -> error
-               end,
-    gen_tcp:close(Sock),
+    case erlang:system_info(version) of
+        "5.9.3" ->
+            io:format("sslaccept_tout_test (skipping due to R15B03 bug)\n", []);
+        _ ->
+            io:format("sslaccept_tout_test\n", []),
+            {ok, Sock} = gen_tcp:connect("localhost", 8443, [binary, {active, true}]),
+            ?line ok = receive
+                           {tcp_closed, Sock} -> ok
+                       after
+                           %% keepalive_timeout is set to 10 secs. So, wait 15 secs
+                           %% before returning an error
+                           15000 -> error
+                       end,
+            gen_tcp:close(Sock)
+    end,
     ok.
 
 test_ssl_multipart_post() ->
