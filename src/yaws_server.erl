@@ -3645,13 +3645,14 @@ decide_deflate(true, SC, Arg, Data, decide, Mode) ->
             false;
 
         true ->
-            Mime = yaws:outh_get_content_type(),
-            ?Debug("Check compression support: Mime-Type=~p~n", [Mime]),
-            case compressible_mime_type(Mime, DOpts) of
+            Mime0     = yaws:outh_get_content_type(),
+            [Mime1|_] = yaws:split_sep(Mime0, $;), %% Remove charset
+            ?Debug("Check compression support: Mime-Type=~p~n", [Mime1]),
+            case compressible_mime_type(Mime1, DOpts) of
                 true ->
                     case (Arg =:= undefined
                           orelse
-                          yaws:accepts_gzip(Arg#arg.headers, Mime)) of
+                          yaws:accepts_gzip(Arg#arg.headers, Mime1)) of
                         true when Mode =:= final ->
                             ?Debug("Compress data~n", []),
                             yaws:outh_set_content_encoding(deflate),
@@ -3668,7 +3669,7 @@ decide_deflate(true, SC, Arg, Data, decide, Mode) ->
                             false
                     end;
                 false ->
-                    ?Debug("~p is not compressible~n", [Mime]),
+                    ?Debug("~p is not compressible~n", [Mime1]),
                     yaws:outh_set_content_encoding(identity),
                     false
             end
@@ -4753,8 +4754,9 @@ parse_user_path(DR, [H|T], User) ->
     parse_user_path(DR, T, [H|User]).
 
 
-deflate_q(true, SC, regular, Mime) ->
-    case compressible_mime_type(Mime, SC#sconf.deflate_options) of
+deflate_q(true, SC, regular, Mime0) ->
+    [Mime1|_] = yaws:split_sep(Mime0, $;), %% Remove charset
+    case compressible_mime_type(Mime1, SC#sconf.deflate_options) of
         true -> dynamic;
         false -> undefined
     end;

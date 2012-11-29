@@ -931,7 +931,6 @@ outh_set_non_cacheable(_Version) ->
     ok.
 
 outh_set_content_type(Mime) ->
-    put(outh_mime_type, Mime),
     put(outh, (get(outh))#outh{content_type = make_content_type_header(Mime)}),
     ok.
 
@@ -970,14 +969,18 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
               all ->
                   case UT#urltype.deflate of
                       DB when is_binary(DB) -> % cached
-                          case accepts_gzip(Headers, UT#urltype.mime) of
+                          %% Remove charset
+                          [Mime|_] = yaws:split_sep(UT#urltype.mime, $;),
+                          case accepts_gzip(Headers, Mime) of
                               true  -> {true, size(DB)};
                               false -> {false, FIL}
                           end;
                       undefined ->
                           {false, FIL};
                       dynamic ->
-                          case accepts_gzip(Headers, UT#urltype.mime) of
+                          %% Remove charset
+                          [Mime|_] = yaws:split_sep(UT#urltype.mime, $;),
+                          case accepts_gzip(Headers, Mime) of
                               true  -> {true, undefined};
                               false -> {false, FIL}
                           end
@@ -1196,11 +1199,12 @@ make_last_modified_header(FI) ->
     ["Last-Modified: ", local_time_as_gmt_string(Then), "\r\n"].
 
 
-make_expires_header(MimeType, FI) ->
+make_expires_header(MimeType0, FI) ->
     SC = get(sc),
-    case lists:keyfind(MimeType, 1, SC#sconf.expires) of
-        {MimeType, Type, TTL} -> make_expires_header(Type, TTL, FI);
-        false                 -> {undefined, undefined}
+    [MimeType1|_] = yaws:split_sep(MimeType0, $;), %% Remove charset
+    case lists:keyfind(MimeType1, 1, SC#sconf.expires) of
+        {MimeType1, Type, TTL} -> make_expires_header(Type, TTL, FI);
+        false                  -> {undefined, undefined}
     end.
 
 

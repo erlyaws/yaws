@@ -17,6 +17,7 @@ start() ->
     test_default_type(),
     test_yaws_type(),
     test_erlang_type(),
+    test_gzip_with_charset(),
     ibrowse:stop().
 
 
@@ -115,4 +116,14 @@ test_erlang_type() ->
     ?line {ok, "200", Hdrs2, _} = ibrowse:send_req(Uri2, [], get),
     ?line "text/html" = proplists:get_value("Content-Type", Hdrs1),
     ?line "text/x-erlang; charset=UTF-8" = proplists:get_value("Content-Type", Hdrs2),
+    ok.
+
+
+test_gzip_with_charset() ->
+    io:format("test_gzip_with_charset\n", []),
+    Uri = "http://localhost:8001/index.yaws",
+    ?line {ok, "200", Hdrs, _} =
+        ibrowse:send_req(Uri, [{"Accept-Encoding", "gzip, deflate"}], get),
+    ?line "text/xhtml; charset=ISO-8859-1" = proplists:get_value("Content-Type", Hdrs),
+    ?line "gzip" = proplists:get_value("Content-Encoding", Hdrs),
     ok.
