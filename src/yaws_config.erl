@@ -538,35 +538,7 @@ make_default_sconf(DocRoot, Port) ->
 
 
 yaws_dir() ->
-    %% below, ignore dialyzer warning:
-    %% "The pattern 'false' can never match the type 'true'"
-    case  yaws_generated:is_local_install() of
-        true ->
-            P = filename:split(code:which(?MODULE)),
-            P1 = del_tail(P),
-            filename:join(P1);
-        false ->
-            code:lib_dir(yaws)
-    end.
-
-del_tail(Parts) ->
-    del_tail(Parts,[]).
-%% Initial ".." should be preserved
-del_tail([".." |Tail], Acc) ->
-    del_tail(Tail, [".."|Acc]);
-del_tail(Parts, Acc) ->
-    del_tail2(Parts, Acc).
-
-%% Embedded ".." should be removed together with preceding dir
-del_tail2([_H, ".." |Tail], Acc) ->
-    del_tail2(Tail, Acc);
-del_tail2([".." |Tail], [_P|Acc]) ->
-    del_tail2(Tail, Acc);
-del_tail2([_X, _Y], Acc) ->
-    lists:reverse(Acc);
-del_tail2([H|T], Acc) ->
-    del_tail2(T, [H|Acc]).
-
+    yaws:get_app_dir().
 
 string_to_host_and_port(String) ->
     case string:tokens(String, ":") of

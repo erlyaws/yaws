@@ -100,6 +100,9 @@
 
 -export([parse_ipmask/1, match_ipmask/2]).
 
+-export([get_app_dir/0, get_ebin_dir/0, get_priv_dir/0,
+         get_inc_dir/0, get_src_dir/0]).
+
 %% Internal
 -export([local_time_as_gmt_string/1, universal_time_as_string/1,
          stringdate_to_datetime/1]).
@@ -1649,16 +1652,7 @@ uid_to_name(Uid) ->
     end.
 
 load_setuid_drv() ->
-    %% below, ignore dialyzer warning:
-    %% "The pattern 'false' can never match the type 'true'"
-    Path = case yaws_generated:is_local_install() of
-               true ->
-                   filename:dirname(code:which(?MODULE)) ++ "/../priv/lib";
-               false ->
-                   %% ignore dialyzer on this one
-                   PrivDir = code:priv_dir(yaws),
-                   filename:join(PrivDir,"lib")
-           end,
+    Path = filename:join(get_priv_dir(), "lib"),
     case erl_ddll:load_driver(Path, "setuid_drv") of
         ok ->
             ok;
@@ -2370,3 +2364,37 @@ compare_ips({A,B1,_,_,_,_,_,_}, {A,B2,_,_,_,_,_,_}) when B1 > B2 -> greater;
 compare_ips({A1,_,_,_,_,_,_,_}, {A2,_,_,_,_,_,_,_}) when A1 < A2 -> less;
 compare_ips({A1,_,_,_,_,_,_,_}, {A2,_,_,_,_,_,_,_}) when A1 > A2 -> greater;
 compare_ips(_,                  _)                               -> error.
+
+
+%% ----
+get_app_subdir(SubDir) when is_atom(SubDir) ->
+    %% below, ignore dialyzer warning:
+    %% "The pattern 'false' can never match the type 'true'"
+    case yaws_generated:is_local_install() of
+        true ->
+            EbinDir = get_ebin_dir(),
+            filename:join(filename:dirname(EbinDir), atom_to_list(SubDir));
+        false ->
+            code:lib_dir(yaws, SubDir)
+    end.
+
+get_app_dir() ->
+    %% below, ignore dialyzer warning:
+    %% "The pattern 'false' can never match the type 'true'"
+    case yaws_generated:is_local_install() of
+        true  -> filename:dirname(get_ebin_dir());
+        false -> code:lib_dir(yaws)
+    end.
+
+get_src_dir() ->
+    Info = ?MODULE:module_info(compile),
+    filename:dirname(proplists:get_value(source, Info)).
+
+get_ebin_dir() ->
+    filename:dirname(code:which(?MODULE)).
+
+get_priv_dir() ->
+    get_app_subdir(priv).
+
+get_inc_dir() ->
+    get_app_subdir(include).

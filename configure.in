@@ -333,6 +333,7 @@ AC_SUBST(HAVE_YAWS_SENDFILE)
 YTOP=`pwd`
 AC_SUBST(YTOP)
 AC_OUTPUT(include.mk)
+AC_OUTPUT(priv/charset.def)
 AC_OUTPUT(test/support/include.mk)
 AC_OUTPUT(test/support/include.sh)
 

@@ -110,14 +110,7 @@ stop() ->
 init([]) ->
     process_flag(trap_exit, true),
     Shlib = "yaws_sendfile_drv",
-    Dir = case yaws_generated:is_local_install() of
-	      true ->
-		  filename:dirname(code:which(?MODULE)) ++ "/../priv/lib";
-              false ->
-		  %% ignore dialyzer on this one
-		  PrivDir = code:priv_dir(yaws),
-		  filename:join(PrivDir,"lib")
-	  end,
+    Dir   = filename:join(yaws:get_priv_dir(), "lib"),
     case erl_ddll:load_driver(Dir, Shlib) of
         ok -> ok;
         {error, already_loaded} -> ok;

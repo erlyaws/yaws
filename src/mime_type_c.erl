@@ -13,7 +13,7 @@
 -include("../include/yaws.hrl").
 
 
--define(MIME_TYPES_FILE, filename:join(code:priv_dir(yaws), "mime.types")).
+-define(MIME_TYPES_FILE, filename:join(yaws:get_priv_dir(), "mime.types")).
 -define(DEFAULT_MIME_TYPE, "text/plain").
 
 %% This function is used during Yaws' compilation. To rebuild/reload mime_types
@@ -25,13 +25,14 @@ generate() ->
     SrcDir = filename:dirname(
                proplists:get_value(source, ?MODULE:module_info(compile))
               ),
-    PrivDir = filename:join(filename:dirname(SrcDir), "priv"),
-    Charset = read_charset_file(filename:join(PrivDir, "charset.def")),
+    EbinDir = filename:dirname(code:which(?MODULE)),
+    Charset = read_charset_file(filename:join(EbinDir, "../priv/charset.def")),
     GInfo   = #mime_types_info{
-      mime_types_file = filename:join(PrivDir, "mime.types"),
+      mime_types_file = filename:join(SrcDir, "../priv/mime.types"),
       default_charset = Charset
      },
     ModFile = filename:join(SrcDir,  "mime_types.erl"),
+
     case generate(ModFile, GInfo, []) of
         ok ->
             erlang:halt(0);
@@ -52,12 +53,29 @@ generate(ModFile, GInfo, SInfoMap) ->
                             {Name, Info} <- [{global, GInfo}|SInfoMap] ],
 
             %% Generate module Header
+            %%
+            %% We must make the difference between generation during Yaws
+            %% compilation and generation during Yaws startup.
+            %% below, ignore dialyzer warning:
+            %% "The pattern 'false' can never match the type 'true'"
+            Inc = case yaws_generated:is_local_install() of
+                      true ->
+                          Info   = ?MODULE:module_info(compile),
+                          SrcDir = filename:dirname(
+                                     proplists:get_value(source, Info)
+                                    ),
+                          F = filename:join([SrcDir, "../include/yaws.hrl"]),
+                          "-include(\""++F++"\").";
+                      _ ->
+                          "-include_lib(\"yaws/include/yaws.hrl\")."
+                  end,
             io:format(Fd,
                       "-module(mime_types).~n~n"
                       "-export([default_type/0, default_type/1]).~n"
                       "-export([t/1, revt/1]).~n"
                       "-export([t/2, revt/2]).~n~n"
-                      "-include_lib(\"yaws/include/yaws.hrl\").~n~n", []),
+                      "~s~n~n", [Inc]),
+
 
             %% Generate default_type/0, t/1 and revt/1
             io:format(Fd,
@@ -257,5 +275,4 @@ get_ext_type("php")  -> php;
 get_ext_type("cgi")  -> cgi;
 get_ext_type("fcgi") -> fcgi;
 get_ext_type(_)      -> regular.
-
 

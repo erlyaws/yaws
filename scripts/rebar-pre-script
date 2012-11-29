@@ -34,20 +34,8 @@ keep_or_replace() {
 cd src || fail
 
 if [ "$1" = clean ]; then
-    rm -f mime_types.erl ../priv/charset.def yaws_configure.hrl yaws_generated.erl
+    rm -f mime_types.erl yaws_configure.hrl yaws_generated.erl
     exit 0
-fi
-
-CHARSET=${DEFAULT_CHARSET-""}
-need_mime=yes
-if [ -f mime_types.erl ]; then
-    need_mime=`find mime_type_c.erl -newer mime_types.erl -print`
-fi
-if [ -n "$need_mime" ]; then
-    echo ${CHARSET} > ../priv/charset.def || fail
-    erlc -o ../ebin mime_type_c.erl || fail ../priv/charset.def
-    erl -pa ../ebin -noshell -s mime_type_c generate || \
-        fail ../priv/charset.def mime_types.erl
 fi
 
 if [ ! -f yaws_configure.hrl ]; then
@@ -61,6 +49,16 @@ YAWS_VSN=$YAWS_VSN VARDIR="$YAWS_VARDIR" ETCDIR="$YAWS_ETCDIR" \
 keep_or_replace yaws_generated.erl $tmpgen
 [ -d "$YAWS_VARDIR" ] || mkdir "$YAWS_VARDIR" || fail
 [ -d "$YAWS_ETCDIR" ] || mkdir "$YAWS_ETCDIR" || fail
+
+need_mime=yes
+if [ -f mime_types.erl ]; then
+    need_mime=`find mime_type_c.erl -newer mime_types.erl -print`
+fi
+if [ -n "$need_mime" ]; then
+    erlc -o ../ebin yaws_generated.erl || fail
+    erlc -o ../ebin mime_type_c.erl || fail
+    erl -pa ../ebin -noshell -s mime_type_c generate || fail mime_types.erl
+fi
 
 cd ../scripts
 

@@ -307,12 +307,7 @@ initModelFile(ConfigFile) ->
     initModel2(WsdlFile, [{prefix, Prefix}], XsdPath, Import, AddFiles).
 
 priv_dir() ->
-    case code:priv_dir(yaws) of
-        {error, bad_name} ->
-            filename:join([filename:dirname(code:which(yaws)),"..", "priv"]);
-        A ->
-            A
-    end.
+    yaws:get_priv_dir().
 
 initModel2(WsdlFile, ErlsomOptions, Path, Import, AddFiles) ->
     WsdlName = filename:join([Path, "wsdl.xsd"]),
