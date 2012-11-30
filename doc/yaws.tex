@@ -1653,8 +1653,51 @@ detect a \verb+Content-Length+ header.
   stream data, in this case, the response is not chunked encoded.
 
 
-\item \verb+{header, H}+ Accumulates a HTTP header. Used by for
-  example the \verb+yaws_api:setcookie/2-6+ function.
+\item \verb+{header, H}+ Accumulates a HTTP header. The trailing CRNL which is
+  supposed to end all HTTP headers must NOT be added. It is added by the server.
+  The following list of headers are given special treatment.
+
+  \begin{itemize}
+    \item \verb+{connection, What}+ - This sets the Connection: header. If
+      \textit{What} is the special value \textit{\"close\"}, the connection will
+      be closed once the yaws page is delivered to the client.
+    \item \verb+{server, What}+ - Sets the \textit{Server:} header. By setting
+      this header, the server's signature will be dynamically overloaded.
+    \item \verb+{location, What}+ - Sets the \textit{Location:} header. This
+      header is typically combined with the \textit{\{status, 302\}} return
+      value.
+    \item \verb+{cache_control, What}+ - Sets the \textit{Cache-Control:}
+      header.
+    \item \verb+{expires, What}+ - Sets the \textit{Expires:} header.
+    \item \verb+{date, What}+ - Sets the \textit{Date:} header.
+    \item \verb+{allow, What}+ - Sets the \textit{Allow:} header.
+    \item \verb+{last_modified, What}+ - Sets the \textit{Last-Modified:}
+      header.
+    \item \verb+{etag, What}+ - Sets the \textit{Etag:} header.
+    \item \verb+{set_cookie, What}+ - Prepends a \textit{Set-Cookie:} header to
+      the list of previously set \textit{Set-Cookie} headers.
+    \item \verb+{content_range, What}+ - Sets the \textit{Content-Range:}
+      header.
+    \item \verb+{content_type, What}+ - Sets the \textit{Content-Type:} header.
+    \item \verb+{content_encoding, What}+ - Sets the \textit{Content-Encoding:}
+      header. If this header is defined, no deflate is performed by \Yaws\. So
+      you can compress data by yourself.
+    \item \verb+{content_length, What}+ - Normally \Yaws\ will ship Yaws pages
+      using \textit{Transfer-Encoding: chunked}. This is because we generally
+      can't know how long a yaws page will be. If we for some reason want to
+      force a \textit{Content-Length:} header (and we actually do know the
+      length of the content, we can force yaws to not ship the page chunked.
+    \item \verb+{transfer_encoding, What}+ - Sets the
+      \textit{Transfer-Encoding:} header.
+    \item \verb+{www_authenticate, What}+ - Sets the \textit{WWW-Authenticate:}
+      header.
+    \item \verb+{vary, What}+ - Sets the \textit{Vary:} header.
+  \end{itemize}
+
+  All other headers must be added using the normal HTTP syntax. Example:
+\begin{verbatim}
+{header, {"My-X-Header", "gadong"}} or {header, "My-X-Header: gadong"}
+\end{verbatim}
 
 \item \verb+{header, {H, erase}}+ A specific case of the previous
   directive; use this to remove a specific header from a response. For

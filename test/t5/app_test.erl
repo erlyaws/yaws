@@ -24,17 +24,32 @@ start() ->
 deflate_disabled() ->
     io:format("deflate_disabled\n", []),
 
-    %% Static content (and cached)
+    %% Static content (and cached) - Not supported by server
     Uri1 = "http://localhost:8000/1000.txt",
     ?line {ok, "200", Hdrs1, _} =
         ibrowse:send_req(Uri1, [{"Accept-Encoding", "gzip, deflate"}], get),
     ?line undefined = proplists:get_value("Content-Encoding", Hdrs1),
+    ?line undefined = proplists:get_value("Vary", Hdrs1),
 
-    %% Dynamic content
+    %% Dynamic content - Not supported by server
     Uri2 = "http://localhost:8000/index.yaws",
     ?line {ok, "200", Hdrs2, _} =
         ibrowse:send_req(Uri2, [{"Accept-Encoding", "gzip, deflate"}], get),
     ?line undefined = proplists:get_value("Content-Encoding", Hdrs2),
+    ?line undefined = proplists:get_value("Vary", Hdrs2),
+
+    %% Static content (and cached) - Not supported by client
+    Uri3 = "http://localhost:8001/1000.txt",
+    ?line {ok, "200", Hdrs3, _} =
+        ibrowse:send_req(Uri3, [], get),
+    ?line undefined = proplists:get_value("Content-Encoding", Hdrs3),
+    ?line "Accept-Encoding" = proplists:get_value("Vary", Hdrs3),
+
+    %% Dynamic content - Not supported by client
+    Uri4 = "http://localhost:8001/index.yaws",
+    ?line {ok, "200", Hdrs4, _} = ibrowse:send_req(Uri4, [], get),
+    ?line undefined = proplists:get_value("Content-Encoding", Hdrs4),
+    ?line "Accept-Encoding" = proplists:get_value("Vary", Hdrs4),
     ok.
 
 deflate_enabled() ->
@@ -45,6 +60,7 @@ deflate_enabled() ->
     ?line {ok, "200", Hdrs1, Body1} =
         ibrowse:send_req(Uri1, [{"Accept-Encoding", "gzip, deflate"}], get),
     ?line "gzip" = proplists:get_value("Content-Encoding", Hdrs1),
+    ?line "Accept-Encoding" = proplists:get_value("Vary", Hdrs1),
     ?line true = is_binary(zlib:gunzip(Body1)),
 
     %% Partial content is not compressed for small (and catched) files
@@ -54,12 +70,14 @@ deflate_enabled() ->
                                 {"Range", "bytes=100-499"}], get),
     ?line undefined = proplists:get_value("Content-Encoding", Hdrs2),
     ?line "400" = proplists:get_value("Content-Length", Hdrs2),
+    ?line "Accept-Encoding" = proplists:get_value("Vary", Hdrs2),
 
     %% Dynamic content
     Uri3 = "http://localhost:8001/index.yaws",
     ?line {ok, "200", Hdrs3, Body3} =
         ibrowse:send_req(Uri3, [{"Accept-Encoding", "gzip, deflate"}], get),
     ?line "gzip" = proplists:get_value("Content-Encoding", Hdrs3),
+    ?line "Accept-Encoding" = proplists:get_value("Vary", Hdrs3),
     ?line true = is_binary(zlib:gunzip(Body3)),
     ok.
 
@@ -73,12 +91,14 @@ deflate_empty_response() ->
         ibrowse:send_req(Uri1, [{"Accept-Encoding", "gzip, deflate"}], get),
     ?line undefined = proplists:get_value("Content-Encoding", Hdrs1),
     ?line "0" = proplists:get_value("Content-Length", Hdrs1),
+    ?line undefined = proplists:get_value("Vary", Hdrs1),
 
     Uri2 = "http://localhost:8001/0.txt",
     ?line {ok, "200", Hdrs2, _} =
         ibrowse:send_req(Uri2, [{"Accept-Encoding", "gzip, deflate"}], get),
     ?line undefined = proplists:get_value("Content-Encoding", Hdrs2),
     ?line "0" = proplists:get_value("Content-Length", Hdrs2),
+    ?line undefined = proplists:get_value("Vary", Hdrs2),
 
     %% Dynamic content
     Uri3 = "http://localhost:8000/emptytest",
@@ -86,12 +106,14 @@ deflate_empty_response() ->
         ibrowse:send_req(Uri3, [{"Accept-Encoding", "gzip, deflate"}], get),
     ?line undefined = proplists:get_value("Content-Encoding", Hdrs3),
     ?line "0" = proplists:get_value("Content-Length", Hdrs3),
+    ?line undefined = proplists:get_value("Vary", Hdrs3),
 
     Uri4 = "http://localhost:8001/emptytest",
     ?line {ok, "200", Hdrs4, _} =
         ibrowse:send_req(Uri4, [{"Accept-Encoding", "gzip, deflate"}], get),
     ?line undefined = proplists:get_value("Content-Encoding", Hdrs4),
     ?line "0" = proplists:get_value("Content-Length", Hdrs4),
+    ?line undefined = proplists:get_value("Vary", Hdrs4),
     ok.
 
 
@@ -105,6 +127,7 @@ deflate_streamcontent() ->
     ?line "gzip" = proplists:get_value("Content-Encoding", Hdrs1),
     ?line "chunked" = proplists:get_value("Transfer-Encoding", Hdrs1),
     ?line undefined = proplists:get_value("Content-Length", Hdrs1),
+    ?line "Accept-Encoding" = proplists:get_value("Vary", Hdrs1),
 
     %% Partial content is not compressed for large files
     Uri2 = "http://localhost:8001/10000.txt",
@@ -114,6 +137,7 @@ deflate_streamcontent() ->
     ?line undefined = proplists:get_value("Content-Encoding", Hdrs2),
     ?line undefined = proplists:get_value("Transfer-Encoding", Hdrs2),
     ?line "100"     = proplists:get_value("Content-Length", Hdrs2),
+    ?line "Accept-Encoding" = proplists:get_value("Vary", Hdrs2),
 
     %% Dynamic content (chunked)
     Uri3 = "http://localhost:8001/streamtest",
@@ -122,6 +146,7 @@ deflate_streamcontent() ->
     ?line "gzip" = proplists:get_value("Content-Encoding", Hdrs3),
     ?line "chunked" = proplists:get_value("Transfer-Encoding", Hdrs3),
     ?line undefined = proplists:get_value("Content-Length", Hdrs3),
+    ?line "Accept-Encoding" = proplists:get_value("Vary", Hdrs3),
     ok.
 
 

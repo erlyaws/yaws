@@ -347,6 +347,7 @@
           content_encoding,
           transfer_encoding,
           www_authenticate,
+          vary,
           other                % misc other headers
          }).
 

@@ -51,6 +51,7 @@
          outh_set_dcc/2,
          outh_set_transfer_encoding_off/0,
          outh_set_auth/1,
+         outh_set_vary/1,
          outh_clear_headers/0,
          outh_fix_doclose/0,
          dcc/2]).
@@ -68,7 +69,8 @@
          make_www_authenticate_header/1,
          make_etag/1,
          make_content_type_header/1,
-         make_date_header/0]).
+         make_date_header/0,
+         make_vary_header/1]).
 
 -export([outh_get_status_code/0,
          outh_get_contlen/0,
@@ -79,6 +81,7 @@
          outh_get_content_encoding/0,
          outh_get_content_encoding_header/0,
          outh_get_content_type/0,
+         outh_get_vary_fields/0,
          outh_serialize/0]).
 
 -export([accumulate_header/1, headers_to_str/1,
@@ -1120,6 +1123,10 @@ outh_set_auth(Headers) ->
          end,
     put(outh, H2).
 
+outh_set_vary(Fields) ->
+    put(outh, (get(outh))#outh{vary = make_vary_header(Fields)}),
+    ok.
+
 outh_fix_doclose() ->
     H = get(outh),
     if
@@ -1307,6 +1314,12 @@ make_date_header() ->
             H
     end.
 
+make_vary_header(Fields) ->
+    case lists:member("*", Fields) of
+        true  -> ["Vary: ", "*", "\r\n"];
+        false -> ["Vary: ", join_sep(Fields, ", "), "\r\n"]
+    end.
+
 
 
 %% access functions into the outh record
@@ -1346,6 +1359,12 @@ outh_get_content_type() ->
         [_, Mime, _] -> Mime
     end.
 
+outh_get_vary_fields() ->
+    case (get(outh))#outh.vary of
+        undefined      -> [];
+        [_, Fields, _] -> split_sep(Fields, $,)
+    end.
+
 outh_serialize() ->
     H = get(outh),
     Code = case H#outh.status of
@@ -1382,6 +1401,26 @@ outh_serialize() ->
                           end,
                 {LM, E, CC}
         end,
+
+    %% Add 'Accept-Encoding' in the 'Vary:' header if the compression is enabled
+    %% or if the response is compressed _AND_ if the response has a non-empty
+    %% body.
+    SC=get(sc),
+    Vary = case (?sc_has_deflate(SC) orelse H#outh.encoding == deflate) of
+               true when H#outh.contlen /= undefined, H#outh.contlen /= 0;
+                         H#outh.act_contlen /= undefined, H#outh.act_contlen /= 0 ->
+                   Fields = outh_get_vary_fields(),
+                   Fun    = fun("*") -> true;
+                               (F)   -> (to_lower(F) == "accept-encoding")
+                            end,
+                   case lists:any(Fun, Fields) of
+                       true  -> H#outh.vary;
+                       false -> make_vary_header(["Accept-Encoding"|Fields])
+                   end;
+               _ ->
+                   H#outh.vary
+           end,
+
     Headers = [noundef(H#outh.connection),
                noundef(H#outh.server),
                noundef(H#outh.location),
@@ -1398,6 +1437,7 @@ outh_serialize() ->
                noundef(H#outh.set_cookie),
                noundef(H#outh.transfer_encoding),
                noundef(H#outh.www_authenticate),
+               noundef(Vary),
                noundef(H#outh.other)],
     {StatusLine, Headers}.
 
@@ -1530,6 +1570,11 @@ accumulate_header({www_authenticate, What}) ->
 accumulate_header({"WWW-Authenticate", What}) ->
     accumulate_header({www_authenticate, What});
 
+accumulate_header({vary, What}) ->
+    put(outh, (get(outh))#outh{vary = ["Vary: ", What, "\r\n"]});
+accumulate_header({"Vary", What}) ->
+    accumulate_header({vary, What});
+
 %% non-special headers (which may be special in a future Yaws version)
 accumulate_header({Name, What}) when is_list(Name) ->
     H = get(outh),
@@ -1589,7 +1634,9 @@ erase_header(transfer_encoding) ->
 erase_header(www_authenticate) ->
     put(outh, (get(outh))#outh{www_authenticate=undefined});
 erase_header(location) ->
-    put(outh, (get(outh))#outh{location=undefined}).
+    put(outh, (get(outh))#outh{location=undefined});
+erase_header(vary) ->
+    put(outh, (get(outh))#outh{vary=undefined}).
 
 getuid() ->
     case os:type() of
