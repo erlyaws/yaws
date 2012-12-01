@@ -217,8 +217,8 @@ escaped_parse_test() ->
     %% Support unescaped backslash (Firefox, Chrome, Konqueror, IE).
     "a\\b" = get_unescaped_name("a\\b"),
     "a\\\\b" = get_unescaped_name("a\\\\b"),
-    %% Current behaviour when backslash is last character.
-    "a\"" = get_unescaped_name("a\\"),
+    %% Support backslash at the end of name (for simple form values).
+    "a\\" = get_unescaped_name("a\\"),
     ok.
 
 mk_arg(Data) ->
