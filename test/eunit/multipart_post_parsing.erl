@@ -192,6 +192,35 @@ malformed_multipart_form_test() ->
     {error, no_multipart_form_data} = yaws_api:parse_multipart_post(A5),
     ok.
 
+escaped_data_to_parse(Name) ->
+    list_to_binary(
+      ["--!!!\r\n",
+       "Content-Disposition: form-data; name=\"" ++ Name ++ "\"\r\n\r\n"
+       "sometext\n\r\n--!!!--\r\n"]).
+
+get_unescaped_name(RawName) ->
+    Data = escaped_data_to_parse(RawName),
+    {result, Params} = yaws_api:parse_multipart_post(mk_arg(Data)),
+    2 = length(Params),
+    {Name, HeadParams} = proplists:get_value(head, Params),
+    [{"name", Name}] = HeadParams,
+    Name.
+
+escaped_parse_test() ->
+    %% Support both escaped (Firefox, Opera) and unescaped (Konqueror)
+    %% quotation mark.
+    "a\"b" = get_unescaped_name("a\\\"b"),
+    "a\"b" = get_unescaped_name("a\"b"),
+    %% Do not decode "%22" (IE, Chrome), user must deal with ambiguity
+    %% himself.
+    "a%22b" = get_unescaped_name("a%22b"),
+    %% Support unescaped backslash (Firefox, Chrome, Konqueror, IE).
+    "a\\b" = get_unescaped_name("a\\b"),
+    "a\\\\b" = get_unescaped_name("a\\\\b"),
+    %% Support backslash at the end of name (for simple form values).
+    "a\\" = get_unescaped_name("a\\"),
+    ok.
+
 mk_arg(Data) ->
     ContentType = "multipart/form-data; boundary=!!!",
     Req = #http_request{method = 'POST'},

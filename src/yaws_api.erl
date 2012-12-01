@@ -303,6 +303,8 @@ parse_arg_key([C|Line], Key, Value) ->
 
 parse_arg_value([], Key, Value, _, _) ->
     make_parse_line_reply(Key, Value, []);
+parse_arg_value([$\\,$"], Key, Value, _, _) ->
+    make_parse_line_reply(Key, [$\\|Value], []);
 parse_arg_value([$\\,$"|Line], Key, Value, Quote, Begun) ->
     parse_arg_value(Line, Key, [$"|Value], Quote, Begun);
 parse_arg_value([$"|Line], Key, Value, false, _) ->
