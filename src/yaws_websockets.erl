@@ -41,7 +41,8 @@
                  terminate_fun,
                  open_fun,
                  msg_fun_1,
-                 msg_fun_2}).
+                 msg_fun_2,
+		 info_fun}).
 
 -export([start/3, send/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -277,9 +278,25 @@ handle_info(timeout, #state{wsstate=WSState}=State) ->
             {stop, normal, State#state{reason={error,Reason}}}
     end;
 
-%% Skip all other messages
-handle_info(_Info, State) ->
-    {noreply, State, State#state.timeout}.
+%% handle info messages
+handle_info(Info, State) ->
+    case (CbInfo=State#state.cbinfo)#cbinfo.info_fun of
+	undefined ->
+	    {noreply, State, State#state.timeout};
+	InfoFun ->
+	    CbMod = CbInfo#cbinfo.module,
+	    {_, CbState} = State#state.cbstate,
+	    Res = CbMod:InfoFun(Info, CbState),
+		case Res of
+		    {noreply, NewCbState} ->
+			{noreply, State#state{cbstate=NewCbState}};
+		    {noreply, NewCbState, Timeout} ->
+			{noreply, State#state{cbstate=NewCbState}, Timeout};
+		    {close, Reason, NewCbState} ->
+			{stop, normal, State#state{reason=Reason, cbstate=NewCbState}}
+		    end
+    end.
+
 
 
 %% ----
@@ -334,12 +351,17 @@ get_callback_info(Mod) ->
                           true  -> handle_message;
                           false -> undefined
                       end,
+	    InfoFun = case erlang:function_exported(Mod, handle_info, 2) of
+                          true  -> handle_info;
+                          false -> undefined
+                      end,
             {ok, #cbinfo{module        = Mod,
                          init_fun      = InitFun,
                          terminate_fun = TerminateFun,
                          open_fun      = OpenFun,
                          msg_fun_1     = MsgFun1,
-                         msg_fun_2     = MsgFun2}};
+                         msg_fun_2     = MsgFun2,
+			 info_fun      = InfoFun}};
         {error, Reason} ->
             error_logger:error_msg("Cannot load callback module '~p': ~p",
                                    [Mod, Reason]),
