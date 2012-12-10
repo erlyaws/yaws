@@ -1,9 +1,54 @@
 <erl>
 out(A) ->
-    CallbackMod = basic_echo_callback,
+    %% To use the extended version of the basic echo callback, add
+    %% 'extversion=true' in the query string.
+    CallbackMod = case queryvar(A, "extversion") of
+                      {ok, "true"} -> basic_echo_callback_extended;
+                      _            -> basic_echo_callback
+                  end,
+
+    %% To enable keepalive timer add 'keepalive=true' in the query string.
+    KeepAlive = case queryvar(A, "keepalive") of
+                    {ok, "true"} -> true;
+                    _            -> false
+                end,
+
+    %% To define a keepalive timeout value, add 'timeout=Int' in the query
+    %% string.
+    Tout  = case queryvar(A, "timeout") of
+                {ok, Val} ->
+                    try
+                        list_to_integer(Val)
+                    catch
+                        _:_ -> infinity
+                    end;
+                _ ->
+                    infinity
+            end,
+
+    %% To drop connection when a timeout occured, add 'drop=true' in the query
+    %% string.
+    Drop = case queryvar(A, "drop") of
+               {ok, "true"} -> true;
+               _            -> false
+           end,
+
+    %% To reject unmasked frames , add 'close_unmasked=true' in the query
+    %% string.
+    CloseUnmasked = case queryvar(A, "close_unmasked") of
+                        {ok, "true"} -> true;
+                        _            -> false
+                    end,
+
     %% NOTE: change the line below to
     %%   Opts = [{origin, any}],
     %% if you want to accept calls from any origin.
-    Opts = [{origin, "http://" ++ (A#arg.headers)#headers.host}],
+    Opts = [
+            {origin,            "http://" ++ (A#arg.headers)#headers.host},
+            {keepalive,         KeepAlive},
+            {keepalive_timeout, Tout},
+            {drop_on_timeout,   Drop},
+            {close_if_unmasked, CloseUnmasked}
+           ],
     {websocket, CallbackMod, Opts}.
 </erl>

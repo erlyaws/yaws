@@ -3,8 +3,7 @@
 out(A) ->
     Host = (A#arg.headers)#headers.host,
     {abs_path, Path} = (A#arg.req)#http_request.path,
-    EndpointPath = filename:dirname(Path)
-	++ "websockets_example_endpoint.yaws",
+    EndpointPath = filename:dirname(Path) ++ "websockets_example_endpoint.yaws",
     WebSocketLocation = Host ++ EndpointPath,
     Body = html_body(WebSocketLocation),
     {content, "text/html", Body}.
@@ -29,14 +28,19 @@ html_body(WebSocketLocation) ->
 
     var client = {
         connect: function(){
-         this._ws=new WS(\"ws://" ++ WebSocketLocation ++ "\");
+         this._ws=new WS(\"ws://" ++ WebSocketLocation ++
+                          "?extversion=\"+$('extVersion').checked +
+                          \"&keepalive=\"+$('keepalive').checked +
+                          \"&timeout=\"+$('timeout').value);
          this._ws.onopen=this._onopen;
          this._ws.onmessage=this._onmessage;
          this._ws.onclose=this._onclose;
+         $('msgs').innerHTML='';
         },
         _onopen: function(){
           $('connect').className='hidden';
           $('connected').className='';
+          $('options').className='hidden';
           $('phrase').focus();
           client._send('client-connected');
        },
@@ -65,12 +69,13 @@ html_body(WebSocketLocation) ->
           this._ws=null;
           $('connect').className='';
           $('connected').className='hidden';
-          $('msg').innerHTML='';
+          $('options').className='';
         }
     };
   </script>
   <style type='text/css'>
     div.hidden { display: none; }
+    #msgs { margin-left: 25px; background-color: rgb(211, 211, 211); width: 500px;}
   </style>
 
 </head>
@@ -78,8 +83,14 @@ html_body(WebSocketLocation) ->
   <h1>Basic Echo Example</h1>
   <ul><li>Sending \"bye\" closes the connection.</li>
       <li>Sending \"say hi later\" sends \"hi there!\" asynchronously.</li>
-      <li>Sending \"something\" does nothing.</li></ul>
-  <div id=\"msgs\"></div>
+      <li>Sending \"fragmented message\" sends \"fag1frag2frag2\".</li>
+      <li>Sending \"something\" does nothing.</li>
+      <li>Other messages are echoed.</li></ul>
+  <div id=\"options\">
+    <input id='extVersion' type='checkbox'/> Use extended version<br/>
+    <input id='keepalive' type='checkbox'/> Enable keepalive timer<br/>
+    KeepAlive timeout (in milliseconds) <input id='timeout' type='text'  size='5'/>
+  </div>
   <div id=\"connect\">
      <input id='cA' class='button' type='submit' name='connect' value='Connect'/>
   </div>
@@ -88,6 +99,7 @@ html_body(WebSocketLocation) ->
     Say Something:&nbsp;<input id='phrase' type='text'/>
     <input id='sendB' class='button' type='submit' name='connect' value='Send'/>
   </div>
+  <div id=\"msgs\"></div>
 
   <script type='text/javascript'>
     $('cA').onclick = function(event) { client.connect(); return false; };

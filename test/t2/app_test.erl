@@ -36,7 +36,6 @@ start() ->
     test_throw(),
     test_too_many_headers(),
     test_index_files(),
-    test_websocket(),
     test_embedded_id_dir(),
     test_chained_appmods(),
     test_cache_appmod(),
@@ -890,44 +889,6 @@ test_index_files() ->
     ?line {ok, "200", _, Content} = ibrowse:send_req(Uri5, [], get),
     ok.
 
-%% Do handshake, then send "hello" in a text frame
-%% and check that "hello" is echoed back.
-test_websocket() ->
-    io:format("test_websocket\n", []),
-    OpenHeads = "GET /websockets_example_endpoint.yaws HTTP/1.1\r\n"
-        "Host: localhost\r\n"
-        "Upgrade: websocket\r\n"
-        "Connection: Upgrade\r\n"
-        "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
-        "Origin: http://localhost\r\n"
-        "Sec-WebSocket-Version: 13\r\n\r\n",
-    Opts = [{send_timeout, 2000},
-            binary,
-            {packet, 0},
-            {active, false}],
-    {ok, Sock} = gen_tcp:connect(localhost, 8000, Opts),
-    ok = gen_tcp:send(Sock, OpenHeads),
-    {ok, Packet} = gen_tcp:recv(Sock, 0, 2000),
-    AcceptLines = re:split(Packet, "[\r\n]+", [{return, list}, trim]),
-    %% Check that exactly the expected lines are there, in any order
-    4 = length(AcceptLines),
-    true = lists:member("HTTP/1.1 101 Switching Protocols", AcceptLines),
-    true = lists:member("Upgrade: websocket", AcceptLines),
-    true = lists:member("Connection: Upgrade", AcceptLines),
-    true = lists:member("Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=",
-                        AcceptLines),
-
-    %% Text frame "hello" with mask "aaaa"
-    Frame =
-        <<129, 133, "aaaa", 38722669838:5/integer-unit:8>>,
-    ok = gen_tcp:send(Sock, Frame),
-    ExpectFrame = <<129, 5, "hello">>,
-    {ok, ExpectFrame} = gen_tcp:recv(Sock, 0, 2000),
-
-    %% Text frame "hello" without masking
-    UnmaskedFrame = <<129, 5, "hello">>,
-    ok = gen_tcp:send(Sock, UnmaskedFrame),
-    {ok, ExpectFrame} = gen_tcp:recv(Sock, 0, 2000).
 
 test_embedded_id_dir() ->
     io:format("test_embedded_id_dir\n", []),

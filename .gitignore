@@ -28,6 +28,8 @@ test/support/include.sh
 test/t1/localhost:8000/
 test/t[1-9]/logs/
 test/t[1-9]/yaws.conf
+test/t10/logs/
+test/t10/yaws.conf
 test/t4/www2/8388608.bin
 www/yaws.pdf
 www/yaws.ps

@@ -742,7 +742,7 @@ the list:
 [{"kalle", "duck"}, {"goofy", "unknown"}]
 \end{verbatim}
 
-Both the key and the value are strings. 
+Both the key and the value are strings.
 Hence, a web page can contain URLs with a
 query and thus pass data to the web server. This scheme works both
 with \verb+GET+ and \verb+POST+ requests.  It is the easiest way to
@@ -3366,156 +3366,409 @@ An example with www-authenticate and no access logging at all.
 \chapter{WebSocket Protocol Support}
 \label{websockets}
 
-\Yaws\ supports the WebSocket Protocol (RFC 6455), which enables
-two-way communication between clients and web servers. \Yaws\ also
-provides support for working drafts of the WebSocket protocol,
-specifically drafts 10 to 17 of the hybi working group. No support for
-other drafts, such as those from the hixie working group, is provided.
+\Yaws\ supports the WebSocket Protocol (RFC 6455), which enables two-way
+communication between clients and web servers. \Yaws\ also provides support for
+working drafts of the WebSocket protocol, specifically drafts 10 to 17 of the
+hybi working group. No support for other drafts, such as those from the hixie
+working group, is provided.
 
 You can find example usage of the WebSocket Protocol in the file
-\verb+www/websockets_example.yaws+. This example, intended for use
-with any browser supporting RFC 6455, returns HTML and JavaScript that
-allow the client to establish a WebSocket connection to the
-server. These connections are handled by the code in
-\verb+www/websockets_example_endpoint.yaws+, which when invoked simply
-establishes \\ \verb+examples/src/basic_echo_callback.erl+ as the
+\verb+www/websockets_example.yaws+. This example, intended for use with any
+browser supporting RFC 6455, returns HTML and JavaScript that allow the client
+to establish a WebSocket connection to the server. These connections are handled
+by the code in \verb+www/websockets_example_endpoint.yaws+, which when invoked
+simply establishes \\ \verb+examples/src/basic_echo_callback.erl+ as the
 WebSocket callback module for the connection.
+
+
+\section{Establish a WebSocket connection}
+
+First of all, to establish a WebSocket connection, a client must send a valid
+HTTP Upgrade request. Then, from the server side, the \Yaws\ script (or the appmod
+or whatever) should return:
+
+\begin{verbatim}
+    {websocket, CallbackMod, Options}
+\end{verbatim}
+
+where \verb+CallbackMod+ is an atom identifying the WebSocket callback module,
+and \verb+Options+ is a (possibly empty) list (see below for details).
+
+
+From here, \Yaws\ spawns an Erlang process to manage the WebSocket
+connection. Once the handshake response is returned by \Yaws, the connection is
+established and the handling process is ready to send or receive data. If
+something goes wrong during this step, \Yaws\ returns an HTTP error (400, 403 or
+500 depending of the error type).
+
+\subsection{Supported options}
+
+The following options are available:
+
+\begin{itemize}
+  \item \verb+{callback, CallbackType}+ ---
+    Specify the type of the callback module. \verb+CallbackType+ can be either
+    of the following:
+    \begin{itemize}
+      \item \verb+basic+ --- Same as \verb+{basic, []}+. This is the default.
+      \item \verb+{basic, InitialState}+ --- Indicate your callback module
+        is a basic callback module. \\ \verb+InitialState+ is the callback's
+        initial state for handling this client.
+      \item \verb+{advanced, InitialState}+ --- Same as above but for an
+        advanced callback module.
+    \end{itemize}
+
+  \item \verb+{origin, Origin}+ ---
+    Specify the \verb+Origin+ URL from which messages will be accepted. This is
+    useful for protecting against cross-site attack. The option defaults to
+    \verb+any+, meaning calls will be accepted from any origin.
+
+    \item \verb+{keepalive, KeepAliveBoolean}+ ---
+      If true, \Yaws\ will automatically send a ping message every
+      \verb+keepAliveTimeout+ milliseconds. By default keepalive pings are
+      disabled.
+
+    \item \verb+{keepalive_timeout, keepAliveTimeout}+ ---
+      Specify the interval in milliseconds to send \\ keepalive pings, by
+      default 30000. Ignored if \verb+KeepAliveBoolean+ is false.
+
+    \item \verb+{keepalive_grace_period, KeepAliveGracePeriod}+ ---
+      Specify the amount of time, in milliseconds, to wait after sending a
+      keepalive ping. If no message is received within \\
+      \verb+KeepAliveGracePeriod+ milliseconds, a timeout will
+      occur. Depending on the \verb+DropBoolean+ value, a close frame is
+      sent with the status code 1006 (if \verb+DropBoolean+ is true) or the
+      callback module is notified (see \verb+Module:handle_info/2+
+      below). By default, \verb+KeepAliveGracePeriod+ is set to
+      2000. Ignored if \verb+KeelAliveBoolean+ is false.
+
+    \item \verb+{drop_on_timeout, DropBoolean}+ ---
+      If true, a close frame is sent with the status code 1006 when a timeout
+      occurs after a keepalive ping has been sent (see
+      \verb+KeepAliveGracePeriod+). Disabled by default. Ignored if
+      \verb+KeepAliveBoolean+ is false.
+
+    \item \verb+{close_timeout, CloseTimeout}+ ---
+      After sending a close frame to a client, \Yaws\ will wait for the client
+      acknowledgement for \verb+CloseTimeout+ milliseconds. Then it will
+      close the underlying TCP connection. By default \verb+CloseTimeout+ is set
+      to 5000.
+
+    \item \verb+{close_if_unmasked, CloseUnmaskedBoolean}+ ---
+      If true, \Yaws\ will reject any unmasked incoming frame by sending a close
+      frame with the status code 1002. Disabled by default. Note: According to
+      RFC 6455, a client must mask all frames that it sends to the server (see
+      RFC 6455 section 5.1).
+
+    \item \verb+{max_frame_size, MaxFrameSize}+ ---
+      Specify the maximum allowed size, in bytes, for received frames. By
+      default 16MB. It is also the maximum size for unfragmented
+      messages. This limit is checked for all types of callback module.
+
+    \item \verb+{max_message_size, MaxMsgSize}+ ---
+      Specify the maximum allowed message size in bytes, by default 16MB. This
+      limit is checked only for basic callback modules.
+
+    \item \verb+{auto_fragment_message, AutoFragBoolean}+ ---
+      If true, outgoing messages will be automatically fragmented if their
+      payload exceeds \verb+OutFragSize+ bytes. This flag is set to false by
+      default.
+
+    \item \verb+{auto_fragment_threshold, OutFragSize}+ ---
+      Specify the maximum payload size of each fragment if
+      \verb+AutoFragBoolean+ is true. \verb+OutFragSize+ is set to 1MB by
+      default. This setting is ignored if \verb+AutoFragBoolean+ is false.
+\end{itemize}
 
 \section{WebSocket Callback Modules}
 
-A WebSocket callback module implements either the
-\verb+handle_message/1+ callback function or the
-\\ \verb+handle_message/2+ callback function, depending on whether
-it's a basic or advanced callback module.
+
+All frames received on a WebSocket connection are passed to the callback
+modules specified during the connection establishment by calling
+\verb+Module:handle_message/1+ or \verb+Module:handle_message/2+.
+depending on whether it's a basic or an advanced callback module.
+
 
 \subsection{Basic Callback Modules}
+\label{basic-callback-modules}
 
-The argument passed to \verb+handle_message/1+ callback function takes
-one of the following forms:
+When a basic callback module is used, the messages defragmentation is handled by
+\Yaws. From the callback module point of view, all incoming messages are
+unfragmented. This implies that fragmented frames will be accumulated, thus
+basic callback modules does not support data streaming.
 
-\begin{itemize}
+A basic callback module \textbf{MUST} define the stateless function
+\verb+Module:handle_message/1+:
 
-\item \verb+{text, Text}+ --- the callback receives an unfragmented
-  text message.
+\begin{quote}
+  \textbf{Module:handle\_message(Message) -> Result}
+\begin{verbatim}
+    Message :: {Type, Data} | {close, Status, Reason}
+    Result  :: noreply | {reply, Reply} | {close, CloseReason}
+      Type        :: text | binary
+      Data        :: binary()
+      Reply       :: {Type, Data} | #ws_frame{} |
+                     [{Type, Data}] | [#ws_frame{}]
+      CloseReason :: Status | {Status, Reason}
+      Status      :: integer() %% RFC 6455 Status Code
+      Reason      :: binary()
+\end{verbatim}
 
-\item \verb+{binary, Message}+ --- the callback receives an
-  unfragmented binary message.
+  This function is called when a message is received. \verb+{text, Data}+ (or
+  \verb+{binary, Data}+) is the unfragmented text (or binary) message. When the
+  client closes the connection, the callback module is notified with the message
+  \verb+{close, Status, Reason}+, where \verb+Status+ is the numerical status
+  code sent by the client or the value 1000 (see RFC 6455 section 7.4.1) if the
+  client sent no status code. For an abnormal client closure, the status code is
+  1006 (as specified by RFC 6455 section 7.1.5). \verb+Reason+ is a binary
+  containing any text the client sent to indicate the reason for closing the
+  socket; this binary may be empty.
 
-\item \verb+{close, Status, Reason}+ --- the callback receives a
-  notification that the client has closed the socket. \verb+Status+ is the
-  numerical status code sent by the client or the value 1000 (as suggested
-  by RFC 6455 section 7.4.1) if the client sent no status code. For an
-  abnormal client closure, the status code is 1006 (as specified by RFC
-  6455 section 7.1.5). \verb+Reason+ is a binary containing any text the
-  client sent to indicate the reason for closing the socket; this binary
-  may be empty.
+  If the function returns \verb+{reply, Reply}+, \verb+Reply+ is sent to
+  the client. It is possible to send one or more unfragmented messages by
+  returning \verb+{Type, Data}+ or \verb+[{Type, Data}]+. It is also
+  possible to send one or more frames using the \verb+#ws_frame{}+ record
+  instead, defined in \verb+include/yaws_api.hrl+ (useful to fragment
+  messages by hand).
 
-\end{itemize}
+  If the function returns \verb+noreply+, nothing happens.
 
-The \verb+handle_message/1+ callback function supplies one of the
-following as a return value:
+  If the function returns \verb+{close, CloseReason}+, the handling process
+  closes the connection sending a close control frame to the
+  client. \verb+CloseReason+ is used to set the status code and the (optional)
+  close reason of the close control frame. Then the handling process terminates
+  calling \verb+Module:terminate(CloseReason, State)+ (if defined, see below).
+\end{quote}
 
-\begin{itemize}
 
-\item \verb+noreply+ --- do nothing, just wait for the next message.
+Because just handling messages is not enough for real applications, a basic
+callback module can define optional functions, mainly to manage a callback
+state. It can define one, some or all of the following functions:
 
-\item \verb+{reply, {Type, Data}}+ --- reply to the
-  message. \verb+Type+ must be either \verb+text+ or \verb+binary+ to
-  indicate the type of data in the reply message, and \verb+Data+ is
-  the reply message itself.
 
-\item \verb+{close, Reason}+ --- close the connection and exit the
-  handling process with \verb+Reason+. For a regular non-error close,
-  \verb+Reason+ should be the atom \verb+normal+. \verb+Reason+ may
-  alternatively be any allowed numerical value specified for
-  \verb+close+ frames in section 7.4 of RFC 6455. Callback handlers
-  for \verb+close+ messages from the client must always return
-  \verb+{close, Reason}+.
+\begin{quote}
+  \textbf{Module:init(Args) -> Result}
+\begin{verbatim}
+    Args   :: [ReqArg, InitialState]
+    Result :: {ok, State} | {ok, State, Timeout} | {error, Reason}
+      ReqArg       :: #arg{}
+      InitialState :: term()
+      State        :: term()
+      Timeout      :: integer() >= 0 | infinity
+      Reason       :: term()
+\end{verbatim}
 
-\end{itemize}
-
-To inform \Yaws\ of the details of the callback module, return
-\verb+{websocket, CallbackModule, Options}+ from your \verb+out/1+
-function, where \verb+CallbackModule+ is the name of your callback
-module and \verb+Options+ is a list of options. The following options
-are available:
-
-\begin{itemize}
-
-\item \verb+{callback, CallbackType}+ --- supply this atom to indicate
-  the type of the callback module. \\ \verb+CallbackType+ can be
-  either of the following:
-
-\begin{itemize}
-
-\item \verb+basic+ --- specify this to indicate your callback module
-  is the basic type. This is the default.
-
-\item \verb+{advanced, InitialState}+ --- specify this to indicate
-  your callback module is an advanced callback module. Here,
-  \verb+InitialState+ is the callback's initial state for handling
-  this client. See \ref{advanced_ws} for more details.
-
-\end{itemize}
-
-\item \verb+{origin, Origin}+ --- specify the \verb+Origin+ URL from
-  which messages will be accepted. This is useful for protecting
-  against cross-site attacks. This option defaults to \verb+any+,
-  meaning calls will be accepted from any origin.
-
-\end{itemize}
-
-\subsection{Advanced Callback Modules}
-\label{advanced_ws}
-
-Advanced callback modules---those that want to supply their own
-initial state and are prepared to handle fragmented messages
-themselves---supply a \verb+handle_message/2+ callback function.
-
-To indicate an advanced callback module, include
-\verb+{callback, {advanced, InitialState}}+ in the \\ \verb+Options+
-list when you return \verb+{websocket, CallbackModule, Options}+ from
-your \verb+out/1+ function, as described above.
-
-The arguments to the \verb+handle_message/2+ callback
-function are as follows:
-
-\begin{itemize}
-
-\item \verb+#ws_frame_info+ --- this record, defined in
-  \verb+include/yaws_api.hrl+, provides all details of a frame
-  section. See section 5 of RFC 6455 for details.
-
-\item \verb+State+ --- this is the callback module's current
-  state. The initial state is supplied when you return
-  \verb+{callback, {advanced, InitialState}}+ as part of the options
-  list you returned from your \verb+out/1+ function to establish the
-  WebSocket callback module.
-
-\end{itemize}
-
-The return values for the \verb+handle_message/2+ callback function
-can be any of the following:
-
-\begin{itemize}
-
-\item \verb+{noreply, State}+ --- do nothing, just wait for the next
-  message. \verb+State+ is the (possibly updated) state for the
+  If defined, this function is called to initialize the internal state of the
   callback module.
 
-\item \verb+{reply, Reply, State}+ --- reply to the received message
-  with \verb+Reply+, which is either \\ \verb+{text, Data}+ or
-  \verb+{binary, Data}+. \verb+State+ is the (possibly updated) state
-  for the callback module.
+  \verb+ReqArg+ is the \verb+#arg{}+ record supplied to the \verb+out/1+
+  function and \verb+InitialState+ is the term associated to the
+  \verb+CallbackType+ described above.
 
-\item \verb+{close, Reason}+ --- close the connection and exit the
-  handling process with \verb+Reason+. For a regular non-error close,
-  \verb+Reason+ should be the atom \verb+normal+. \verb+Reason+ may
-  alternatively be any allowed numerical value specified for
-  \verb+close+ frames in section 7.4 of RFC 6455. Callback handlers
-  for \verb+close+ frames from the client must always return
-  \verb+{close, Reason}+.
+  If an integer timeout value is provided, it will overload the next
+  keepalive timeout (see the \verb+keepalive_timeout+ option above). The
+  atom \verb+infinity+ can be used to wait indefinitely. If no value is
+  specified, the default keepalive timeout is used.
 
-\end{itemize}
+  If something goes wrong during initialization, the function should return
+  \verb+{error, Reason}+, where \verb+Reason+ is any term.
+\end{quote}
+
+
+\begin{quote}
+  \textbf{Module:handle\_open(WSState, State) -> Result}
+\begin{verbatim}
+    WSState :: #ws_state{}
+    State   :: term()
+    Result  :: {ok, NewState} {error, Reason}
+      NewState :: term()
+      Reason   :: term()
+\end{verbatim}
+
+  If defined, this function is called when the connection is upgraded from HTTP
+  to WebSocket.
+
+  \verb+WSState+ is the state of the WebSocket connection. It can be used to
+  send messages to the client using
+  \verb+yaws_api:websocket_send(WSState, Message)+.
+
+  \verb+State+ is the internal state of the callback module.
+
+  If the function returns \verb+{ok, NewState}+, the handling process will
+  continue executing with the possibly updated internal state \verb+NewState+.
+
+  If the function returns \verb+{error, Reason}+, the handling process closes
+  the connection and terminates calling
+  \verb+Module:terminate({error, Reason}, State)+ (if defined, see below).
+\end{quote}
+
+\begin{quote}
+  \textbf{Module:handle\_message(Message, State) -> Result}
+\begin{verbatim}
+    Message :: see Module:handle_message/1
+    State   :: term()
+    Result  :: {noreply, NewState} | {noreply, NewState, Timeout} |
+               {reply, Reply} | {reply, Reply, NewState} |
+               {reply, Reply, NewState, Timeout} |
+               {close, CloseReason, NewState} |
+               {close, CloseReason, Reply, NewState}
+      NewState    :: term()
+      Timeout     :: integer() >= 0 | infinity
+      Reply       :: see Module:handle_message/1
+      CloseReason :: see Module:handle_message/1
+\end{verbatim}
+
+  If defined, this function is called in place of
+  \verb+Module:handle_message/1+. The main difference with the previous version
+  is that this one handles the internal state of the callback module.
+
+  \verb+State+ is internal state of the callback module.
+
+  See \verb+Module:handle_message/1+ for a description of the other arguments
+  and possible return values.
+\end{quote}
+
+\begin{quote}
+  \textbf{Module:handle\_info(Info, State) -> Result}
+\begin{verbatim}
+    Info   :: timeout | term()
+    State  :: term()
+    Result :: {noreply, NewState} | {noreply, NewState, Timeout} |
+              {reply, Reply} | {reply, Reply, NewState} |
+              {reply, Reply, NewState, Timeout} |
+              {close, CloseReason, NewState} |
+              {close, CloseReason, Reply, NewState}
+      NewState    :: term()
+      Timeout     :: integer() >= 0 | infinity
+      Reply       :: see Module:handle_message/1
+      CloseReason :: see Module:handle_message/1
+\end{verbatim}
+
+  If defined, this function is called when a timeout occurs (see
+  \verb+drop_on_timeout+ option above) or when the handling process receives any
+  unknown message.
+
+  \verb+Info+ is either the atom \verb+timeout+, if a timeout has occurred, or
+  the received message.
+
+  See \verb+Module:handle_message/1+ for a description of the other arguments
+  and possible return values.
+\end{quote}
+
+\begin{quote}
+  \textbf{Module:terminate(Reason, State) -> ok}
+\begin{verbatim}
+    Reason :: Status | {Status, Text} | {error, Error}
+    State  :: term()
+      Status :: integer() %% RFC 6455 status code
+      Text   :: binary()
+      Error  :: term()
+\end{verbatim}
+
+  If defined, this function is called when the handling process is about to
+  terminate. it should be the opposite of \verb+Module:init/1+ and do any
+  necessary cleaning up.
+
+  \verb+Reason+ is a term denoting the stop reason and \verb+State+ is the
+  internal state of the callback module.
+\end{quote}
+
+
+\subsection{Advanced Callback Modules}
+
+Advanced callback modules should be used when automatic messages defragmentation
+done by \Yaws\ is not desirable or acceptable. One could be used for example to
+handle data streaming over WebSockets. So, such modules should be prepared to
+handle frames directly (fragmented or not).
+
+Unlike basic callback modules, Advanced ones \textbf{MUST} manage an internal
+state. So it \textbf{MUST} define the stateful function
+\verb+Module:handle_message/2+ :
+
+\begin{quote}
+  \textbf{Module:handle\_message(Frame, State) -> Result}
+\begin{verbatim}
+    Frame   :: #ws_frame_info{} | {fail_connection, Status, Reason}
+    State   :: term()
+    Result  :: {noreply, NewState} | {noreply, NewState, Timeout} |
+               {reply, Reply} | {reply, Reply, NewState} |
+               {reply, Reply, NewState, Timeout} |
+               {close, CloseReason, NewState} |
+               {close, CloseReason, Reply, NewState}
+      Status      :: integer() %% RFC 6455 status code
+      Reason      :: binary()
+      NewState    :: term()
+      Timeout     :: integer() >= 0 | infinity
+      Reply       :: see Module:handle_message/1
+      CloseReason :: see Module:handle_message/1
+\end{verbatim}
+
+  This function is called when a frame is received. The
+  \verb+#ws_frame_info{}+ record, defined in \verb+include/yaws_api.hrl+,
+  provides all details about this frame. \verb+State+ is the internal state
+  of the callback module.
+
+  If an error occurs during the frame parsing, the term
+  \verb+{fail_connection, Status, Reason}+ is passed, where \verb+Status+ is the
+  numerical status code corresponding to the error (see RFC 6455 section 7.4.1)
+  and \verb+Reason+ the binary containing optional information about it.
+
+  This function returns the same values as specified for the basic callback
+  module's \\ \verb+Module:handle_message/2+ function. See section
+  \ref{basic-callback-modules} for details.
+\end{quote}
+
+Advanced callback modules can also define the same optional functions as
+basic callback modules (except \verb+Module:handle_messages/2+ which is
+mandatory here, of course). See section \ref{basic-callback-modules} for
+details.
+
+
+\section{Record definitions}
+
+Here is the definition of records used in callback modules, defined in
+\verb+include/yaws_api.hrl+:
+
+\begin{verbatim}
+%% Corresponds to the frame sections as in
+%% http://tools.ietf.org/html/rfc6455#section-5.2
+%% plus 'data' and 'ws_state'. Used for incoming frames.
+-record(ws_frame_info, {
+          fin,
+          rsv,
+          opcode,
+          masked,
+          masking_key,
+          length,
+          payload,
+          data,        % The unmasked payload. Makes payload redundant.
+          ws_state     % The ws_state after unframing this frame.
+                       % This is useful for the endpoint to know what type of
+                       % fragment a potentially fragmented message is.
+         }).
+
+%% Used for outgoing frames. No checks are done on the validity of a frame. This
+%% is the application's responsability to send valid frames.
+-record(ws_frame, {
+          fin = true,
+          rsv = 0,
+          opcode,
+          payload = <<>>
+         }).
+
+%%----------------------------------------------------------------------
+%% The state of a WebSocket connection.
+%% This is held by the ws owner process and passed in calls to yaws_api.
+%%----------------------------------------------------------------------
+-type frag_type() :: text
+                   | binary
+                   | none.  % The WebSocket is not expecting continuation
+                            % of any fragmented message.
+-record(ws_state, {
+          vsn :: integer(),                     % WebSocket version number
+          sock,                                 % gen_tcp or gen_ssl socket
+          frag_type :: frag_type()
+         }).
+\end{verbatim}
 
 \end{document}

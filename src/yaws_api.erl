@@ -979,7 +979,10 @@ stream_process_end(Sock, YawsPid) ->
 
 %% Pid must the the process in control of the websocket connection.
 websocket_send(Pid, {Type, Data}) ->
-    yaws_websockets:send(Pid, {Type, Data}).
+    yaws_websockets:send(Pid, {Type, Data});
+websocket_send(Pid, #ws_frame{}=Frame) ->
+    yaws_websockets:send(Pid, Frame).
+
 
 %% returns {ok, SSL socket} if an SSL socket, undefined otherwise
 get_sslsocket({ssl, SslSocket}) ->
