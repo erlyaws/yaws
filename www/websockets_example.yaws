@@ -3,8 +3,7 @@
 out(A) ->
     Host = (A#arg.headers)#headers.host,
     {abs_path, Path} = (A#arg.req)#http_request.path,
-    EndpointPath = filename:dirname(Path)
-	++ "websockets_example_endpoint.yaws",
+    EndpointPath = filename:dirname(Path) ++ "websockets_example_endpoint.yaws",
     WebSocketLocation = Host ++ EndpointPath,
     Body = html_body(WebSocketLocation),
     {content, "text/html", Body}.
@@ -29,10 +28,11 @@ html_body(WebSocketLocation) ->
 
     var client = {
         connect: function(){
-         this._ws=new WS(\"ws://" ++ WebSocketLocation ++ "\");
+         this._ws=new WS(\"ws://" ++ WebSocketLocation ++ "?extversion=\"+$('extVersion').checked);
          this._ws.onopen=this._onopen;
          this._ws.onmessage=this._onmessage;
          this._ws.onclose=this._onclose;
+         $('msgs').innerHTML='';
         },
         _onopen: function(){
           $('connect').className='hidden';
@@ -65,7 +65,6 @@ html_body(WebSocketLocation) ->
           this._ws=null;
           $('connect').className='';
           $('connected').className='hidden';
-          $('msg').innerHTML='';
         }
     };
   </script>
@@ -79,6 +78,9 @@ html_body(WebSocketLocation) ->
   <ul><li>Sending \"bye\" closes the connection.</li>
       <li>Sending \"say hi later\" sends \"hi there!\" asynchronously.</li>
       <li>Sending \"something\" does nothing.</li></ul>
+  <div>
+    <input id='extVersion' type='checkbox'/> Use extended version
+  </div>
   <div id=\"msgs\"></div>
   <div id=\"connect\">
      <input id='cA' class='button' type='submit' name='connect' value='Connect'/>

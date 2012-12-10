@@ -30,8 +30,8 @@ handle_message({text, Message}) ->
 handle_message({binary, Message}) ->
     {reply, {binary, Message}};
 
-handle_message({close, _Status, _Reason}) ->
-    {close, normal}.
+handle_message({close, Status, _Reason}) ->
+    {close, Status}.
 
 
 say_hi(Pid) ->

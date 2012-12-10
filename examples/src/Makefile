@@ -10,9 +10,10 @@ endif
 
 
 MODULES= advanced_echo_callback \
-	 authmod_gssapi \
-         basic_echo_callback \
-	 server_sent_events
+	 	 authmod_gssapi \
+		 basic_echo_callback \
+		 basic_echo_callback_extended \
+		 server_sent_events
 
 EBIN_FILES=$(MODULES:%=../ebin/%.$(EMULATOR))
 ERLC_FLAGS+=-Werror $(DEBUG_FLAGS)

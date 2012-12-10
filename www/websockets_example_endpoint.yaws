@@ -1,9 +1,12 @@
 <erl>
 out(A) ->
-    CallbackMod = basic_echo_callback,
+    CallbackMod = case queryvar(A, "extversion") of
+                      {ok, "true"} -> basic_echo_callback_extended;
+                      _            -> basic_echo_callback
+                  end,
     %% NOTE: change the line below to
     %%   Opts = [{origin, any}],
     %% if you want to accept calls from any origin.
-    Opts = [{origin, "http://" ++ (A#arg.headers)#headers.host}],
+    Opts = [{origin, any}, {timeout, 10000}],
     {websocket, CallbackMod, Opts}.
 </erl>
