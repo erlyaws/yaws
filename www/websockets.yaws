@@ -111,7 +111,7 @@ out(A) ->
         <code>{keepalive_timeout, keepAliveTimeout}</code>
         <p>
           Specify the interval in milliseconds to send keepalive pings, by
-          default 30000. Ignored if <code>KeelAliveBoolean</code> is false.
+          default 30000. Ignored if <code>KeepAliveBoolean</code> is false.
         </p>
       </li>
       <li>
@@ -125,7 +125,7 @@ out(A) ->
           true) or the callback module is notified
           (see <code>Module:handle_info/2</code> below). <br/> By
           default, <code>KeepAliveGracePeriod</code> is set to 2000. Ignored
-          if <code>KeelAliveBoolean</code> is false.
+          if <code>KeepAliveBoolean</code> is false.
         </p>
       </li>
       <li>
