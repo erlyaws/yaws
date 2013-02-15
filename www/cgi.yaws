@@ -62,7 +62,7 @@ print "<h1>hi there </h1>"
 </div>
 <p>
 
-Since the file ends with the magic suffix ".cgi", Yaws will just invoke the file as an executable and speak CGI to it. Thus for this scheme to work we must also make the file exeutable.
+Since the file ends with the magic suffix ".cgi", Yaws will just invoke the file as an executable and speak CGI to it. Thus for this scheme to work we must also make the file executable.
 </p>
 
 <p>
