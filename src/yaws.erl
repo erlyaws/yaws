@@ -1457,11 +1457,15 @@ make_last_modified_header(FI) ->
 
 make_expires_header(MimeType0, FI) ->
     SC = get(sc),
-    [MimeType1|_] = yaws:split_sep(MimeType0, $;), %% Remove charset
+    case yaws:split_sep(MimeType0, $;) of
+      [] ->
+          {undefined, undefined};
+      [MimeType1|_] ->
     case lists:keyfind(MimeType1, 1, SC#sconf.expires) of
         {MimeType1, Type, TTL} -> make_expires_header(Type, TTL, FI);
         false                  -> {undefined, undefined}
-    end.
+    end
+end.
 
 
 make_expires_header(access, TTL, _FI) ->
