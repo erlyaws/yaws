@@ -616,7 +616,7 @@ collect(F, Sock, User) ->
 
 send_status(Sock) ->
     {InitStatus, _} = init:get_status(),
-    sock_format(Sock, ["vsn: ", yaws_generated:version(), "\n"], []),
+    sock_format(Sock, "vsn: ~s\n", [yaws_generated:version()]),
     sock_format(Sock, "status: ~p\n", [InitStatus]),
     ok.
 
