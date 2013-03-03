@@ -520,7 +520,7 @@ make_default_gconf(Debug, Id) ->
 %% Keep this function for backward compatibility. But no one is supposed to use
 %% it (yaws_config is an internal module, its api is private).
 make_default_sconf() ->
-    make_default_gconf([], undefined).
+    make_default_sconf([], undefined).
 
 make_default_sconf([], Port) ->
     make_default_sconf(filename:join([yaws_dir(), "www"]), Port);
