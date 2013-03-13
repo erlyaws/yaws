@@ -43,6 +43,18 @@ delete_headers_test() ->
                         end, {10, Headers}, lists:seq(1,10)),
     ok.
 
+merge_headers_test() ->
+    Hdrs0 = create_headers(10),
+    Hdrs1 = yaws_api:merge_header(Hdrs0, <<"x-header-7">>, <<"another-value">>),
+    Val1 = yaws_api:get_header(Hdrs1, 'x-header-7'),
+    Expected1 = lists:sort(["value7", "another-value"]),
+    Expected1 = lists:sort(string:tokens(Val1, ", ")),
+    Hdrs2 = yaws_api:set_header(Hdrs1, "set-cookie", "user=joe"),
+    Hdrs3 = yaws_api:merge_header(Hdrs2, "set-cookie", "domain=erlang.org"),
+    Val2 = yaws_api:get_header(Hdrs3, "set-cookie"),
+    {multi, ["user=joe", "domain=erlang.org"]} = Val2,
+    ok.
+
 create_headers(N) ->
     lists:foldl(fun({Hdr,Val}, Hdrs) ->
                         yaws_api:set_header(Hdrs, Hdr, Val)

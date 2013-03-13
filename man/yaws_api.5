@@ -534,7 +534,17 @@ record. The return list is suitable for retransmit.
 Returns a list of reformatted header values from a #headers{} record, with
 each element of the list formatted via a call to \fIFormatFun\fR. This
 enables converting #headers{} records into various lists of headers and
-their values.
+their values. Note that sometimes the \fISet-Cookie\fR header will contain
+a tuple value of the form \fI{multi, ValueList}\fR \[em] see
+\fImerge_header/2\fR below for details \[em] so formatting functions should
+be prepared to handle such a tuple. They should handle it by formatting
+each member of \fIValueList\fR as a separate \fISet-Cookie\fR header, then
+returning all such header-value pairs in a list. Note that this implies
+that sometimes the return values of \fIreformat_header/1\fR and
+\fIreformat_header/2\fR can be a multi-level list. The \fI{multi,
+ValueList}\fR construct results only from calls to \fImerge_header/2\fR or
+\fImerge_header/3\fR, where multiple values are set in separate calls for
+the same header.
 
 .TP
 \fBset_header(Headers, {Header, Value})\fR
@@ -545,10 +555,28 @@ Sets header \fIHeader\fR with value \fIValue\fR in the #headers{} record
 
 .TP
 \fBset_header(Headers, Header, Value)\fR
-Sets header \fIHeader\fR with value \fIValue\fR in the #headers{} record
-\fIHeaders\fR, and returns a new #headers{} record. Using the atom
-\fIundefined\fR for \fIValue\fR effectively deletes the header, same as
-\fIdelete_header/2\fR.
+Same as \fIset_header/2\fR above, except \fIHeader\fR and \fIValue\fR are
+not passed in a tuple.
+
+.TP
+\fBmerge_header(Headers, {Header, Value})\fR
+Merges value \fIValue\fR for header \fIHeader\fR with any existing value
+for that header in the #headers{} record \fIHeaders\fR, and returns a new
+#headers{} record. Using the atom \fIundefined\fR for \fIValue\fR simply
+returns \fIHeaders\fR. Otherwise, \fIValue\fR is merged with any existing
+value already present in the \fIHeaders\fR record for header \fIHeader\fR,
+comma-separated from that existing value. If no such value exists in the
+\fIHeaders\fR record, the effect is the same as \fIset_header/2\fR. Note
+that for the \fISet-Cookie\fR header, values are not comma-separated but
+are instead collected into a tuple \fI{multi, ValueList}\fR where
+\fIValueList\fR is the collection of \fISet-Cookie\fR values. This implies
+that any formatting fun passed to \fIreformat_header/2\fR must be prepared
+to handle such tuples.
+
+.TP
+\fBmerge_header(Headers, Header, Value)\fR
+Same as \fImerge_header/2\fR above, except \fIHeader\fR and \fIValue\fR are
+not passed in a tuple.
 
 .TP
 \fBget_header(Headers, Header)\fR

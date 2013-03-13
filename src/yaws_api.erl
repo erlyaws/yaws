@@ -92,7 +92,8 @@
          headers_content_encoding/1, headers_authorization/1,
          headers_transfer_encoding/1, headers_x_forwarded_for/1, headers_other/1]).
 
--export([set_header/2, set_header/3, get_header/2, get_header/3, delete_header/2]).
+-export([set_header/2, set_header/3, merge_header/2, merge_header/3,
+         get_header/2, get_header/3, delete_header/2]).
 
 -import(lists, [flatten/1, reverse/1]).
 
@@ -1049,8 +1050,11 @@ set_status_code(Code) ->
 
 %% returns [ Header1, Header2 .....]
 reformat_header(H) ->
-    FormatFun = fun(Hname, Str) ->
-                        lists:flatten(io_lib:format("~s: ~s",[Hname, Str]))
+    FormatFun = fun(Hname, {multi, Values}) ->
+                        [lists:flatten(io_lib:format("~s: ~s", [Hname, Val])) ||
+                            Val <- Values];
+                   (Hname, Str) ->
+                        lists:flatten(io_lib:format("~s: ~s", [Hname, Str]))
                 end,
     reformat_header(H, FormatFun).
 reformat_header(H, FormatFun) ->
@@ -1300,6 +1304,38 @@ set_header(#headers{}=Hdrs, Header, undefined) ->
 set_header(#headers{}=Hdrs, Header, Value) ->
     set_header(Hdrs, {lower, string:to_lower(Header)}, Value).
 
+merge_header(#headers{}=Hdrs, {Header, Value}) ->
+    merge_header(Hdrs, Header, Value).
+
+merge_header(#headers{}=Hdrs, _Header, undefined) ->
+    Hdrs;
+merge_header(#headers{}=Hdrs, Header, Value) when is_atom(Header) ->
+    merge_header(Hdrs, atom_to_list(Header), Value);
+merge_header(#headers{}=Hdrs, Header, Value) when is_binary(Header) ->
+    merge_header(Hdrs, binary_to_list(Header), Value);
+merge_header(#headers{}=Hdrs, Header, Value) when is_binary(Value) ->
+    merge_header(Hdrs, Header, binary_to_list(Value));
+merge_header(Hdrs, {lower, "set-cookie"}=LHdr, Value) ->
+    NewValue = case get_header(Hdrs, LHdr) of
+                   undefined ->
+                       {multi, [Value]};
+                   {multi, MultiVal} ->
+                       {multi, MultiVal ++ [Value]};
+                   ExistingValue ->
+                       {multi, [ExistingValue, Value]}
+               end,
+    set_header(Hdrs, LHdr, NewValue);
+merge_header(Hdrs, {lower, _Header}=LHdr, Value) ->
+    NewValue = case get_header(Hdrs, LHdr) of
+                   undefined ->
+                       Value;
+                   ExistingValue ->
+                       ExistingValue ++ ", " ++ Value
+               end,
+    set_header(Hdrs, LHdr, NewValue);
+merge_header(#headers{}=Hdrs, Header, Value) ->
+    merge_header(Hdrs, {lower, string:to_lower(Header)}, Value).
+
 get_header(#headers{}=Hdrs, connection) ->
     Hdrs#headers.connection;
 get_header(#headers{}=Hdrs, {lower, "connection"}) ->
@@ -1456,17 +1492,12 @@ erlang_header_name("proxy-connection")    -> 'Proxy-Connection';
 erlang_header_name(Name)                  -> capitalize_header(Name).
 
 capitalize_header(Name) ->
-   capitalize_header2(Name, "").
-
-capitalize_header2([C | Rest], "") when C >= $a andalso C =< $z ->
-   capitalize_header2(Rest, [C - $a + $A]);
-capitalize_header2([$-, C | Rest], Result) when C >= $a andalso C =< $z ->
-   capitalize_header2(Rest, [C - $a + $A, $- | Result]);
-capitalize_header2([C | Rest], Result) ->
-   capitalize_header2(Rest, [C | Result]);
-capitalize_header2([], Result) ->
-   lists:reverse(Result).
-
+    %% Before R16B Erlang capitalized words inside header names only for
+    %% headers less than 20 characters long. In R16B that length was raised
+    %% to 50. Using decode_packet lets us be portable.
+    {ok, {http_header, _, Result, _, _}, _} =
+        erlang:decode_packet(httph, list_to_binary([Name, <<": x\r\n\r\n">>]), []),
+    Result.
 
 reformat_request(#http_request{method = bad_request}) ->
     ["Bad request"];
