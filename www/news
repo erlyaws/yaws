@@ -1,3 +1,16 @@
+Tue Mar 19 17:53:00 CET 2013 Yaws 1.96
+Websocket release, lots of work nad rewrites of the websocket code which is now topnotch.
+Handle relative paths when Yaws is started in embedded mode  (capflam)
+ensure compatibility with Erlang R13B04 (steve)
+Handle case with DOS attack towards pam login with embedded NUL chars in username or password. The protocol cannot handle NUL chars and Yaws dies (klacke)
+Extend syntax of redirect block to allow an optional status code. (capflam)
+Support multipart/form-data "name" with backslash at the end. (Johannes Weißl)
+Make be possible to chain appmods (capflam)
+Flush remaining data in case of 3xx redirect (capflam)
+Add support of the 'Vary' header in response (capflam)
+Add access functions for #gconf{} and #sconf{} records (capflam)
+Refactor WebSockets and add support of optional callback functions (capflam)
+
 Wed Oct 17 19:57:05 CEST 2012 Yaws 1.95
 Feature relase, 
 The --heart option didn't work as expected when yaws ran out of filedescriptors - capflam
