@@ -50,7 +50,7 @@ paths() ->
 load(E = #env{conf = false}) ->
     case yaws:first(fun(F) -> yaws:exists(F) end, paths()) of
         false ->
-            {error, "Can't find config file "};
+            {error, "Can't find any config file "};
         {ok, _, File} ->
             load(E#env{conf = {file, File}})
     end;
@@ -79,8 +79,8 @@ load(E) ->
                 Err ->
                     Err
             end;
-        _ ->
-            {error, "Can't open config file " ++ File}
+        Err ->
+            {error, ?F("Can't open config file ~s: ~p", [File, Err])}
     end.
 
 
@@ -599,8 +599,9 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                                 Err ->
                                     Err
                             end;
-                        _ ->
-                            {error, "Can't open config file " ++ File}
+                        Err ->
+                            {error, ?F("Can't open config file ~s:~p",
+                                       [File,Err])}
                     end;
                 false ->
                     {error, ?F("Expect filename at line ~w", [Lno])}
