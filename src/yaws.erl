@@ -1424,14 +1424,7 @@ make_allow_header() ->
 make_allow_header(Options) ->
     case Options of
         [] ->
-            HasDav = ?sc_has_dav(get(sc)),
-            ["Allow: GET, POST, OPTIONS, HEAD",
-             case HasDav of
-                 true ->
-                     ", PUT, DELETE, PROPFIND, PROPPATCH, MKCOL, MOVE, COPY";
-                 false ->
-                     ""
-             end, "\r\n"];
+            ["Allow: GET, POST, OPTIONS, HEAD\r\n"];
         _ ->
             ["Allow: ",
              lists:foldl(fun(M, "") -> atom_to_list(M);
@@ -1441,14 +1434,11 @@ make_allow_header(Options) ->
     end.
 make_server_header() ->
     Sc = get(sc),
-    HasDav = ?sc_has_dav(Sc),
     Signature = case Sc#sconf.yaws of
                     undefined -> (get(gc))#gconf.yaws;
                     S         -> S
                 end,
-    ["Server: ", Signature, "\r\n" | if HasDav == true -> ["DAV: 1, 2, 3\r\n"];
-                                        true           -> []
-                                     end].
+    ["Server: ", Signature, "\r\n"].
 
 make_last_modified_header(FI) ->
     Then = FI#file_info.mtime,
