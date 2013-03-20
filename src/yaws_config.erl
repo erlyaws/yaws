@@ -1062,9 +1062,13 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             end;
         ["dav", '=', Bool] ->
             case is_bool(Bool) of
-                {true, Val} ->
-                    C2 = ?sc_set_dav(C, Val),
-                    fload(FD, server, GC, C2, Cs, Lno+1, Next);
+                {true, true} ->
+                    %C2 = ?sc_set_dav(C, Val),
+                    GC2 = GC#gconf{runmods = [yaws_runmod_lock|GC#gconf.runmods]},
+                    C2 = C#sconf{appmods = [{"/",yaws_appmod_dav}] ++ C#sconf.appmods},
+                    fload(FD, server, GC2, C2, Cs, Lno+1, Next);
+                {true,false} ->
+                    fload(FD, server, GC, C, Cs, Lno+1, Next);
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;

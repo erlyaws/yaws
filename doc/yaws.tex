@@ -483,8 +483,9 @@ out(A) ->
 
 
 The second way to generate output is by returning a tuple
-\verb+{ehtml, EHTML}+. The term \verb+EHTML+ must adhere to the
-following structure:
+\verb+{ehtml, EHTML}+ or \verb+{exhtml, EHTML}+. The  exhtml variant 
+transforms into strict XHTML code. The term \verb+EHTML+ must adhere 
+to the following structure:
 
 $EHTML = [EHTML] | \{TAG, Attrs, Body\} |
                \{TAG, Attrs\} | \{TAG\} |\\*
@@ -1619,6 +1620,9 @@ detect a \verb+Content-Length+ header.
 \item \verb+{ehtml, Term}+ This will transform the \Erlang\ term
   \verb+Term+ into a stream of HTML content.
 
+\item \verb+{exhtml, Term}+ This will transform the \Erlang\ term
+  \verb+Term+ into a stream of strict XHTML code.
+
 \item \verb+{content, MimeType, Content}+ This function will make the
   web server generate different content than HTML. This return value
   is only allowed in a \Yaws\ file which has only one
@@ -2681,11 +2685,28 @@ The following directives are allowed inside a server definition.
               dangerous.
 
 \item       \verb+dav = true | false+ ---
-              Turns on the DAV protocol for this server. The dav support in
-              \Yaws\ is highly limited. If dav is turned on, .yaws processing of
-              .yaws pages is turned off. Default is false. The socket read
-              timeout is supplied by the keepalive\_timeout setting. If the read
-              is not done within the timeout, the POST will fail.
+              Turns on the WebDAV protocol for this server. The WebDAV support adds 
+              class 1, 2 and 3 compliancy which includes:
+              \begin{itemize}
+                \item XML request body parsing and  multistatus responses
+                \item PROPFIND and PROPPATCH methods returning properties asked for 
+                \item all RFC4918 properties, the Apache executable property plus 
+                      some Microsoft extensions
+                \item locking mechanism (class 2 compliancy) on all destructive methods
+                \item If header parsing
+                \item Passes most litmus tests, except those concerning unknown 
+                      properties
+              \end{itemize}
+              If WebDAV is turned on, processing of \verb+.yaws+ pages is turned off. 
+              Default is false. This configuration option is short for:
+\begin{verbatim}
+  runmod = yaws_runmod_lock
+  ...
+  <server>
+      ...
+      appmods = </, yaws_appmod_dav>
+  <server>
+\end{verbatim}
 
 \item       \verb+tilde_expand = true|false+ ---
               If  this  value  is  set  to false \Yaws\  will
