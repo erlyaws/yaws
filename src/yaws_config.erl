@@ -1062,8 +1062,25 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             end;
         ["dav", '=', Bool] ->
             case is_bool(Bool) of
-                {true, Val} ->
-                    C2 = ?sc_set_dav(C, Val),
+                {true, true} ->
+                    %% Ever since WebDAV support was moved into an appmod,
+                    %% we must no longer set the dav flag in the
+                    %% sconf. Always turn it off instead.
+                    C2 = ?sc_set_dav(C, false),
+                    Runmods = GC#gconf.runmods,
+                    GC2 = case lists:member(yaws_runmod_lock, Runmods) of
+                              false ->
+                                  GC#gconf{runmods=[yaws_runmod_lock|Runmods]};
+                              true ->
+                                  GC
+                          end,
+                    DavAppmods = lists:keystore(yaws_appmod_dav, 2,
+                                                C2#sconf.appmods,
+                                                {"/",yaws_appmod_dav}),
+                    C3 = C2#sconf{appmods=DavAppmods},
+                    fload(FD, server, GC2, C3, Cs, Lno+1, Next);
+                {true,false} ->
+                    C2 = ?sc_set_dav(C, false),
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}

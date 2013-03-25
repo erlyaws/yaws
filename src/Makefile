@@ -41,8 +41,8 @@ MODULES=yaws \
 	yaws_html  \
 	yaws_log_file_h \
 	yaws_rss \
-	yaws_dav \
-	yaws_davlock \
+	yaws_appmod_dav \
+	yaws_runmod_lock \
 	yaws_pam \
 	json json2 jsonrpc yaws_jsonrpc yaws_xmlrpc\
 	haxe yaws_rpc \
@@ -72,7 +72,7 @@ ERLC_FLAGS+=-Werror $(DEBUG_FLAGS) -pa ../../yaws -I ../include
 all: yaws_generated.erl yaws_configure.hrl $(EBIN_FILES)
 
 dav:
-	$(MAKE) MODULES="$(MODULES) yaws_dav"
+	$(MAKE) MODULES="$(MODULES) yaws_appmod_dav yaws_runmod_lock"
 
 $(EBIN_FILES) : ../include/yaws.hrl ../include/yaws_api.hrl
 

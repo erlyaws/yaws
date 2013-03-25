@@ -1462,23 +1462,7 @@ decode_path({abs_path, Path}) ->
 'POST'(CliSock, IPPort, Req, Head) ->
     ?Debug("POST Req=~s~n H=~s~n", [?format_record(Req, http_request),
                                     ?format_record(Head, headers)]),
-
-    OtherHeaders = Head#headers.other,
-    Continue =
-        case lists:keysearch("Expect", 3, OtherHeaders) of
-            {value, {_,_,"Expect",_,Value}} ->
-                Value;
-            _ ->
-                ""
-        end,
-    case yaws:to_lower(Continue) of
-        "100-continue" ->
-            deliver_100(CliSock),
-            body_method(CliSock, IPPort, Req, Head);
-        _ ->
-            body_method(CliSock, IPPort, Req, Head)
-    end.
-
+    body_method(CliSock, IPPort, Req, Head).
 
 
 un_partial({partial, Bin}) ->
@@ -1542,35 +1526,19 @@ not_implemented(CliSock, _IPPort, Req, Head) ->
                                      ?format_record(Head, headers)]),
     body_method(CliSock, IPPort, Req, Head).
 
-%%%
-%%% WebDav specifics: PROPFIND, MKCOL,....
-%%%
-'PROPFIND'(CliSock, IPPort, Req, Head) ->
-    %%?elog("PROPFIND Req=~p H=~p~n",
-    %%                   [?format_record(Req, http_request),
-    %%                    ?format_record(Head, headers)]),
-    body_method(CliSock, IPPort, Req, Head).
-
-'PROPPATCH'(CliSock, IPPort, Req, Head) ->
-     body_method(CliSock, IPPort, Req, Head).
-
-'LOCK'(CliSock, IPPort, Req, Head) ->
-     body_method(CliSock, IPPort, Req, Head).
-
-'UNLOCK'(CliSock, IPPort, Req, Head) ->
-     body_method(CliSock, IPPort, Req, Head).
-
-'MOVE'(CliSock, IPPort, Req, Head) ->
-    no_body_method(CliSock, IPPort, Req, Head).
-
-'COPY'(CliSock, IPPort, Req, Head) ->
-    no_body_method(CliSock, IPPort, Req, Head).
-
-
 body_method(CliSock, IPPort, Req, Head) ->
     SC=get(sc),
     ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
     PPS = SC#sconf.partial_post_size,
+    case yaws_api:get_header(Head, {lower, "expect"}) of
+        undefined ->
+            ok;
+        Value ->
+            case yaws:to_lower(Value) of
+                "100-continue" -> deliver_100(CliSock);
+                _ -> ok
+            end
+    end,
     Res = case Head#headers.content_length of
               undefined ->
                   case yaws:to_lower(Head#headers.transfer_encoding) of
@@ -1616,8 +1584,6 @@ body_method(CliSock, IPPort, Req, Head) ->
     end.
 
 
-'MKCOL'(CliSock, IPPort, Req, Head) ->
-    no_body_method(CliSock, IPPort, Req, Head).
 
 no_body_method(CliSock, IPPort, Req, Head) ->
     SC=get(sc),
@@ -1659,23 +1625,8 @@ make_arg(SC, CliSock0, IPPort, Head, Req, Bin) ->
 %% unnecessary.
 handle_extension_method("PATCH", CliSock, IPPort, Req, Head) ->
     'PATCH'(CliSock, IPPort, Req#http_request{method = 'PATCH'}, Head);
-handle_extension_method("PROPFIND", CliSock, IPPort, Req, Head) ->
-    'PROPFIND'(CliSock, IPPort, Req, Head);
-handle_extension_method("PROPPATCH", CliSock, IPPort, Req, Head) ->
-    'PROPPATCH'(CliSock, IPPort, Req, Head);
-handle_extension_method("LOCK", CliSock, IPPort, Req, Head) ->
-    'LOCK'(CliSock, IPPort, Req, Head);
-handle_extension_method("UNLOCK", CliSock, IPPort, Req, Head) ->
-    'UNLOCK'(CliSock, IPPort, Req, Head);
-handle_extension_method("MKCOL", CliSock, IPPort, Req, Head) ->
-    'MKCOL'(CliSock, IPPort, Req, Head);
-handle_extension_method("MOVE", CliSock, IPPort, Req, Head) ->
-    'MOVE'(CliSock, IPPort, Req, Head);
-handle_extension_method("COPY", CliSock, IPPort, Req, Head) ->
-    'COPY'(CliSock, IPPort, Req, Head);
 handle_extension_method(_Method, CliSock, IPPort, Req, Head) ->
-    not_implemented(CliSock, IPPort, Req, Head).
-
+    body_method(CliSock, IPPort, Req, Head).
 
 %% Return values:
 %% continue, done, {page, Page}
