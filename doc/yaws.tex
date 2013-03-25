@@ -483,7 +483,8 @@ out(A) ->
 
 
 The second way to generate output is by returning a tuple
-\verb+{ehtml, EHTML}+. The term \verb+EHTML+ must adhere to the
+\verb+{ehtml, EHTML}+ or \verb+{exhtml, EHTML}+. The exhtml variant
+generates strict XHTML code. The term \verb+EHTML+ must adhere to the
 following structure:
 
 $EHTML = [EHTML] | \{TAG, Attrs, Body\} |
@@ -1618,6 +1619,9 @@ detect a \verb+Content-Length+ header.
 
 \item \verb+{ehtml, Term}+ This will transform the \Erlang\ term
   \verb+Term+ into a stream of HTML content.
+
+\item \verb+{exhtml, Term}+ This will transform the \Erlang\ term
+  \verb+Term+ into a stream of strict XHTML code.
 
 \item \verb+{content, MimeType, Content}+ This function will make the
   web server generate different content than HTML. This return value
