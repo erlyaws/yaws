@@ -30,8 +30,8 @@
 
 -export([sconf_port/1, sconf_flags/1, sconf_redirect_map/1, sconf_rhost/1,
          sconf_rmethod/1, sconf_docroot/1, sconf_xtra_docroots/1,
-         sconf_listen/1, sconf_servername/1, sconf_yaws/1, sconf_ets/1,
-         sconf_ssl/1, sconf_authdirs/1, sconf_partial_post_size/1,
+         sconf_listen/1, sconf_servername/1, sconf_serveralias/1, sconf_yaws/1,
+         sconf_ets/1, sconf_ssl/1, sconf_authdirs/1, sconf_partial_post_size/1,
          sconf_appmods/1, sconf_expires/1, sconf_errormod_401/1,
          sconf_errormod_404/1, sconf_arg_rewrite_mode/1, sconf_logger_mod/1,
          sconf_opaque/1, sconf_start_mod/1, sconf_allowed_scripts/1,
@@ -248,6 +248,7 @@ sconf_docroot              (#sconf{docroot               = X}) -> X.
 sconf_xtra_docroots        (#sconf{xtra_docroots         = X}) -> X.
 sconf_listen               (#sconf{listen                = X}) -> X.
 sconf_servername           (#sconf{servername            = X}) -> X.
+sconf_serveralias          (#sconf{serveralias           = X}) -> X.
 sconf_yaws                 (#sconf{yaws                  = X}) -> X.
 sconf_ets                  (#sconf{ets                   = X}) -> X.
 sconf_ssl                  (#sconf{ssl                   = X}) -> X.
@@ -552,6 +553,7 @@ setup_sconf(SL, SC) ->
                                         SC#sconf.xtra_docroots),
            listen                = lkup(listen, SL, SC#sconf.listen),
            servername            = lkup(servername, SL, SC#sconf.servername),
+           serveralias           = lkup(serveralias, SL, SC#sconf.serveralias),
            yaws                  = lkup(yaws, SL, SC#sconf.yaws),
            ets                   = lkup(ets, SL, SC#sconf.ets),
            ssl                   = setup_ssl(SL, SC#sconf.ssl),

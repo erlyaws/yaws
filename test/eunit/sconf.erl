@@ -116,6 +116,75 @@ setup_mime_types_info_test() ->
     ok.
 
 
+comp_sname_test() ->
+    ?assert(yaws_server:comp_sname("yaws.hyber.org",     "yaws.hyber.org")),
+    ?assert(yaws_server:comp_sname("yaws.hyber.org",     "YAWS.HYBER.ORG")),
+    ?assert(yaws_server:comp_sname("yaws.hyber.org:80",  "yaws.hyber.org")),
+    ?assert(yaws_server:comp_sname("yaws.hyber.org",     "yaws.hyber.org:80")),
+    ?assert(yaws_server:comp_sname("yaws.hyber.org:443", "yaws.hyber.org:80")),
+
+    ?assertNot(yaws_server:comp_sname("yaws.hyber.org",     "yaws.hyber.com")),
+    ?assertNot(yaws_server:comp_sname("yaws.hyber.org:80",  "yaws.hyber.org.bad")),
+    ?assertNot(yaws_server:comp_sname("yaws.hyber.org.bad", "yaws.hyber.org:80")),
+    ?assertNot(yaws_server:comp_sname("yaws.hyber.org",     "yaws.hyber.org.bad")),
+    ?assertNot(yaws_server:comp_sname("yaws.hyber.org.bad", "yaws.hyber.org")),
+    ok.
+
+wildcomp_salias_test() ->
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.org",     "yaws.hyber.org")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.org",     "YAWS.HYBER.ORG")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.org:80",  "yaws.hyber.org")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.org",     "yaws.hyber.org:80")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.org:443", "yaws.hyber.org:80")),
+
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.org",     "yaws.hyber.com")),
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.org:80",  "yaws.hyber.org.bad")),
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.org.bad", "yaws.hyber.org:80")),
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.org",     "yaws.hyber.org.bad")),
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.org.bad", "yaws.hyber.org")),
+
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.org",       "*.hyber.org")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.hyber.org", "*.hyber.org")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.org",       "yaws.*.org")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.hyber.org", "yaws.*.org")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.org.org",   "yaws.*.org")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.org",       "yaws.hyber.*")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.hyber.org", "yaws.hyber.*")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.org.org",   "yaws.hyber.*")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.org",       "*.hyber.*")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.hyber.org", "*.hyber.*")),
+    ?assert(yaws_server:wildcomp_salias("erlang.hyber.org",     "*.hyber.*")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.org",       "*.*.org")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.hyber.org", "*.*.org")),
+    ?assert(yaws_server:wildcomp_salias("..org",                "*.*.org")),
+    ?assert(yaws_server:wildcomp_salias("hyber.org",            "*hyber.org")),
+    ?assert(yaws_server:wildcomp_salias("yaws-hyber.org",       "*hyber.org")),
+
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.com",       "*.hyber.org")),
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.hyber.com", "*.hyber.org")),
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.org.org",   "*.hyber.org")),
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.org.com",   "*.hyber.org")),
+    ?assertNot(yaws_server:wildcomp_salias("erlang.hyber.org",     "yaws.*.org")),
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.com",       "yaws.*.org")),
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.hyber.com", "yaws.*.org")),
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.org.com",   "yaws.*.org")),
+    ?assertNot(yaws_server:wildcomp_salias("erlang.hyber.com",     "yaws.hyber.*")),
+    ?assertNot(yaws_server:wildcomp_salias("yaws.yaws.hyber.org",  "yaws.hyber.*")),
+
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.org", "?aws.hyber.org")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.org", "????.hyber.org")),
+    ?assert(yaws_server:wildcomp_salias("yaws-hyber.org", "yaws?hyber.org")),
+
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.com", "?aws.hyber.org")),
+    ?assertNot(yaws_server:wildcomp_salias("yaw.hyber.org",  "????.hyber.org")),
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.org", "???.hyber.org")),
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.org", "yaws?hyber.org")),
+
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.hyber.org", "yaws.*.hyber.???")),
+    ?assert(yaws_server:wildcomp_salias("yaws.hyber.hyber.com", "yaws.*.hyber.???")),
+
+    ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.hyber.fr", "yaws.*.hyber.???")),
+    ok.
 
 %% =======================================================================
 get_sconf_attr(Name, SConf) ->

@@ -1151,6 +1151,10 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             C2 = ?sc_set_add_port((C#sconf{servername = Name}),false),
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
 
+        ["serveralias", '=' | Names] ->
+            C2 = C#sconf{serveralias = Names ++ C#sconf.serveralias},
+            fload(FD, server, GC, C2, Cs, Lno+1, Next);
+
         ["docroot", '=', Rootdir | XtraDirs] ->
             RootDirs = lists:map(fun(R) -> filename:absname(R) end,
                                  [Rootdir | XtraDirs]),

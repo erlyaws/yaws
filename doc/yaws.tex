@@ -2944,6 +2944,24 @@ The following directives are allowed inside a server definition.
               the name inside \verb+<server Name>+ in certain NAT scenarios. Rarely
               used feature.
 
+\item       \verb+serveralias = ListOfNames+ ---
+              This directive sets the alternate names for a virtual host. A
+              server alias may contain wildcards:
+              \begin{itemize}
+                \item '*' matches any sequence of zero or more characters
+                \item '?' matches one character unless that character is a
+                  period ('.')
+              \end{itemize}
+              Multiple \verb+serveralias+ directives may be used. Here is an
+              example:
+\begin{verbatim}
+<server server.domain.com>
+  serveralias = server server2.domain.com server2
+  serveralias = *.server.domain.com *.server?.domain.com
+  ...
+</server>
+\end{verbatim}
+
 \item       \verb+php_handler+ ---
               Set handler to interpret \textit{.php} files. It can be
               one of the following definitions:

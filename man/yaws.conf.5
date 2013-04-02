@@ -820,6 +820,27 @@ doesn't necessarily have to be the same as the the name inside <server Name> in
 certain NAT scenarios. Rarely used feature.
 
 .TP
+\fBserveralias = ListOfNames\fR
+
+This directive sets the alternate names for a virtual host. A server alias may
+contain wildcards:
+.RS 12
+ '*' matches any sequence of zero or more characters
+ '?' matches one character unless that character is a period ('.')
+.RE
+.IP
+Multiple \fBserveralias\fR directives may be used. Here is an example:
+
+.nf
+  <server server.domain.com>
+    serveralias = server server2.domain.com server2
+    serveralias = *.server.domain.com *.server?.domain.com
+    ...
+  </server>
+.fi
+
+
+.TP
 \fBphp_handler = <Type, Spec>\fR
 Set handler to interpret .php files. It can be one of the following definitions:
 

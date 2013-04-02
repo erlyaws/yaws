@@ -40,6 +40,9 @@
          deliver_dyn_part/8, finish_up_dyn_file/2, gserv_loop/4
         ]).
 
+%% exports for eunit usage
+-export([comp_sname/2, wildcomp_salias/2]).
+
 -export(['GET'/4,
          'POST'/4,
          'HEAD'/4,
@@ -1422,10 +1425,45 @@ comp_sname(_, []) ->
     false;
 comp_sname([C1|T1], [C2|T2]) ->
     case string:to_lower(C1) == string:to_lower(C2) of
-        true ->
-            comp_sname(T1, T2);
-        false ->
-            false
+        true  -> comp_sname(T1, T2);
+        false -> false
+    end.
+
+%% Same thing than comp_sname but here we compare a pattern containing
+%% wildcards:
+%%   - '*' matches any sequence of zero or more characters
+%%   - '?' matches one character unless that character is a period ('.')
+wildcomp_salias([], []) ->
+    true;
+wildcomp_salias([$:|_], [$:|_]) ->
+    true;
+wildcomp_salias([$:|_], []) ->
+    true;
+wildcomp_salias([], [$:|_]) ->
+    true;
+wildcomp_salias([$:|_], _) ->
+    false;
+wildcomp_salias(_, [$:|_]) ->
+    false;
+wildcomp_salias([], _) ->
+    false;
+wildcomp_salias(_, []) ->
+    false;
+wildcomp_salias([$.|_], [$?|_]) ->
+    false;
+wildcomp_salias([_|T1], [$?|T2]) ->
+    wildcomp_salias(T1, T2);
+wildcomp_salias(_, [$*]) ->
+    true;
+wildcomp_salias([_|T1]=Str, [$*|T2]=Pattern) ->
+    case wildcomp_salias(Str, T2) of
+        true  -> true;
+        false -> wildcomp_salias(T1, Pattern)
+    end;
+wildcomp_salias([C1|T1], [C2|T2]) ->
+    case string:to_lower(C1) == string:to_lower(C2) of
+        true  -> wildcomp_salias(T1, T2);
+        false -> false
     end.
 
 pick_sconf(GC, H, Group) ->
@@ -1449,8 +1487,15 @@ pick_host(GC, Host, SCs, Group)
     end;
 pick_host(GC, Host, [SC|T], Group) ->
     case comp_sname(Host, SC#sconf.servername) of
-        true -> SC;
-        false -> pick_host(GC, Host, T, Group)
+        true  ->
+            SC;
+        false ->
+            Res = lists:any(fun(Alias) -> wildcomp_salias(Host, Alias) end,
+                            SC#sconf.serveralias),
+            case Res of
+                true  -> SC;
+                false -> pick_host(GC, Host, T, Group)
+            end
     end.
 
 maybe_auth_log(Item, ARG) ->
