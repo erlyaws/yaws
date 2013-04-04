@@ -8,11 +8,11 @@
 
 -export([run/2]).
 
-run(Page, ArgList) ->
+run(Page, _ArgList) ->
     %% TODO: Fixme
     %% This is working if there is only one virtual server.
     %% A way to handle this cleanly is needed.
-    {ok, Gconf, [[Sconf|Others]]} = yaws_api:getconf(),
+    {ok, _Gconf, [[Sconf|_Others]]} = yaws_api:getconf(),
     Root = yaws:sconf_docroot(Sconf),
 
     AllRefs = wiki_utils:getallrefs(Page, Root),

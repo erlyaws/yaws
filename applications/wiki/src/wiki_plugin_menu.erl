@@ -15,7 +15,7 @@ run(_Page, ArgList) ->
     %% TODO: Fixme
     %% This is working if there is only one virtual server.
     %% A way to handle this cleanly is needed.
-    {ok, Gconf, [[Sconf|Others]]} = yaws_api:getconf(),
+    {ok, _Gconf, [[Sconf|_Others]]} = yaws_api:getconf(),
     Root = yaws:sconf_docroot(Sconf),
 
     Prefix = get_prefix(ArgList),

@@ -8,5 +8,5 @@
 
 -export([run/2]).
 
-run(Page, ArgList) ->
+run(_Page, _ArgList) ->
     "<p>Using Dummy Wiki Plugin.</p>".

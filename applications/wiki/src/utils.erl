@@ -38,13 +38,13 @@ fold_files0([File | Tail], Dir, Fun, Acc) ->
     IsDir = filelib:is_dir(FullName),
     {Recurse, NewAcc} = Fun(FullName, IsDir, Acc),
     fold_files0(FullName, Tail, Dir, Fun, IsDir, Recurse, NewAcc);
-fold_files0([], Dir, Fun, Acc) ->
+fold_files0([], _Dir, _Fun, Acc) ->
     Acc.
 
 fold_files0(FullName, Tail, Dir, Fun, true, true, Acc) ->
     NewAcc = fold_files(FullName, Fun, Acc),
     fold_files0(Tail, Dir, Fun, NewAcc);
-fold_files0(FullName, Tail, Dir, Fun, _, _, Acc) ->
+fold_files0(_FullName, Tail, Dir, Fun, _, _, Acc) ->
     fold_files0(Tail, Dir, Fun, Acc).
 
 %% @spec fold_files(dir(), regexp(), bool(), fun(), term()) -> term()

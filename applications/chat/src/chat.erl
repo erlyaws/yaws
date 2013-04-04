@@ -35,11 +35,11 @@
                cookie}).
 
 
-login(User, Password) ->
+login(User, _Password) ->
     session_server(),
     erlang:send(chat_server, {new_session, User, self()}),
     receive
-        {session_manager, Cookie, Session} ->
+        {session_manager, Cookie, _Session} ->
             chat_server ! {join_message, User},
             {ok, Cookie};
         _ ->
@@ -76,7 +76,7 @@ check_cookie(Cookie) ->
 get_user(Session) ->
     Session#user.user.
 
-display_login(A, Status) ->
+display_login(_A, Status) ->
     (dynamic_headers() ++
      [{ehtml,
        [{body, [{onload,"document.f.user.focus();"},{bgcolor,?COLOR3}],
@@ -207,10 +207,10 @@ cancel_read([U|Us], Pid) ->
 user_read(Users, User, Pid) ->
     user_read(Users, User, Pid, Users).
 
-user_read([], User, Pid, All) ->
+user_read([], _User, _Pid, All) ->
     All;
 
-user_read([U|Users], User, Pid, All) when U#user.cookie == User#user.cookie ->
+user_read([U|Users], User, Pid, _All) when U#user.cookie == User#user.cookie ->
     if U#user.buffer /= [] ->
             Pid ! {msgs,lists:reverse(U#user.buffer)},
             [U#user{buffer=[]}|Users];
@@ -304,7 +304,7 @@ chat_read(A) ->
                     catch erlang:send(chat_server, {cancel_read, self()}),
                     dynamic_headers()++[{html, "timeout"}, break]
             end;
-        Error ->
+        _Error ->
             dynamic_headers()++[{html, "error"}, break]
     end.
 

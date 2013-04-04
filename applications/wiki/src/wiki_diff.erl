@@ -71,9 +71,9 @@ diff(Old = [{_,Str}|T], New, Patch) ->
             diff(T, New, [Str|Patch])
     end.
 
-match(X=[{Ln,Str}|T], [{L1,Str}|T1]) -> extend_match(T, T1, L1, L1);
-match(X, [_|T])                      -> match(X, T);
-match(X, [])                         -> no.
+match([{_Ln,Str}|T], [{L1,Str}|T1]) -> extend_match(T, T1, L1, L1);
+match(X, [_|T])                     -> match(X, T);
+match(_X, [])                       -> no.
 
 extend_match([{_,S}|T1], [{L2,S}|T2], L1, _) -> extend_match(T1, T2, L1, L2);
 extend_match(X, _, L1, L2)                   -> {yes, L1, L2, X}.
@@ -85,7 +85,7 @@ str2lines([H|T], Line, C, L) ->
         $\n -> str2lines(T, Line+1,[],[{Line,reverse([$\n|C])}|L]);
         _   -> str2lines(T, Line,  [H|C], L)
     end;
-str2lines([], Line, [], L) ->
+str2lines([], _Line, [], L) ->
     reverse(L);
 str2lines([], Line, C, L) ->
     reverse([{Line,reverse(C)}|L]).

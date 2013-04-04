@@ -66,7 +66,7 @@
 format(Str, F, Node) ->
     Env = #env{node=Node,f=F},
     Str1 = case Str of [$\n|_] -> Str; _ -> [$\n|Str] end,
-    {Env1, Txt} = format_txt(Str1, Env, [], Str1),
+    {_Env1, Txt} = format_txt(Str1, Env, [], Str1),
     Txt.
 
 blank_line(S=[$\n|_]) -> {yes, S};
@@ -150,7 +150,7 @@ format_txt("<?plugin " ++ T, Env, L, Doc) ->
     format_txt(T1, Env, reverse(Txt, L), Doc);
 format_txt([H|T], Env, L, Doc) ->
     format_txt(T, Env, reverse(yaws_api:htmlize([H]))++L, Doc);
-format_txt([], Env, L, Doc) ->
+format_txt([], Env, L, _Doc) ->
     {_, L1} = clear_line(Env, L),
     {Env, reverse(L1)}.
 
@@ -181,7 +181,7 @@ collect_mail(S=[$\n|_], L)     -> {reverse(L), S};
 collect_mail([H|T], L)         -> collect_mail(T, [H|L]);
 collect_mail([], L)            -> {reverse(L), []}.
 
-get_mailto([$\\,C|T], L) ->
+get_mailto([$\\,_C|T], L) ->
     get_mailto(T, L);
 get_mailto("mailto:"++T, L) ->
     {Link, T1} = collect_mail(T, []),
@@ -215,7 +215,7 @@ after_nl([${|T], Env, L, Doc)      -> pre(T, Env, L, Doc);
 after_nl("[expires:"++T, Env, L, Doc) -> eregion(T, Env, L, Doc);
 after_nl([$[|T], Env, L, Doc)      -> note(T, Env, L, Doc);
 after_nl("____" ++ T, Env, L, Doc) -> hr(T, Env, L, Doc);
-after_nl(S=[$-|T], Env, L, Doc)    -> mk_list(S, Env, L, Doc);
+after_nl(S=[$-|_T], Env, L, Doc)    -> mk_list(S, Env, L, Doc);
 after_nl(T, Env, L, Doc)           -> format_txt(T, Env, L, Doc).
 
 hr(T, Env, L, Doc) ->
@@ -542,7 +542,7 @@ collect_wiki_link(S=[H|T], L, Quoted) ->
         false ->
             {reverse(L), S}
     end;
-collect_wiki_link(T, L, Quoted) ->
+collect_wiki_link(T, L, _Quoted) ->
     {reverse(L), T}.
 
 %% Plugin implementation.

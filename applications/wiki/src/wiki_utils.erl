@@ -44,7 +44,7 @@ getallrefs(Page, Root) ->
 
 zombies(Root) ->
     All = wiki:ls(Root),
-    {Reached, Missing} = gc(["home"], [], [], Root),
+    {Reached, _Missing} = gc(["home"], [], [], Root),
     %% Missing = Pages refered to but do not exists at all
     %% This is not an error
     NotReached = sort(All -- Reached),
@@ -81,7 +81,7 @@ gc([H|T], Visited, Missing, Root) ->
 gc([], Visited, Missing, _Root) ->
     {Visited, Missing}.
 
-get_links([$\\,C|T], L) -> get_links(T, L);
+get_links([$\\,_C|T], L) -> get_links(T, L);
 get_links([$~|T], L) ->
     {Link, T1} = wiki_format_txt:collect_wiki_link(T),
     get_links(T1, [Link|L]);

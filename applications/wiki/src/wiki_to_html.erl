@@ -15,7 +15,7 @@
 
 -import(lists, [member/2, map/2]).
 
-format_wiki_files(Page, FileDir, [], Root) -> [];
+format_wiki_files(_Page, _FileDir, [], _Root) -> [];
 format_wiki_files(Page, FileDir, Files, Root) ->
     format_wiki_files(Page, FileDir, Files, Root, "Attached files:").
 
@@ -44,17 +44,17 @@ format_link(Page, Root) ->
 format_link({wikiLink, Page}, _, Root, _Mode) ->
     %% MR: I first need to extract the code here into a separate function:
     wiki_link(Page, Page, Root);
-format_link({editTag, Tag}, Page, Root, show) ->
+format_link({editTag, Tag}, Page, _Root, show) ->
     ["<a href=\"editTag.yaws?node=",wiki:str2urlencoded(Page),
      "&tag=",i2s(Tag),"\">",
      "<img border=0 src='WikiPreferences.files/edit.gif'></a> "];
-format_link({editTag, Tag}, _Page, _Root, preview) ->
+format_link({editTag, _Tag}, _Page, _Root, preview) ->
     ["<img border=0 src='WikiPreferences.files/edit.gif'>"].
 
 format_link({file, FileName, C}, FileDir, Page, Root, Mode) ->
     format_link({file, FileName, "", C}, FileDir, Page, Root, Mode);
 
-format_link({file, FileName, Description, _}, FileDir, Page, Root,_) ->
+format_link({file, FileName, Description, _}, FileDir, _Page, Root,_) ->
     Size = get_filesize(filename:join([Root,FileDir,FileName])),
     ["<tr><td valign=top align=left><a href=\"",
      wiki:str2urlencoded(FileDir),
@@ -99,13 +99,13 @@ i2s(X) ->
 
 pp({wik,L}, F, Node, Root) ->
     map(fun(I) -> pp(I, F, Node, Root) end, L);
-pp({txt,_,Str}, F, Node, Root) ->
+pp({txt,_,Str}, F, Node, _Root) ->
     wiki_format_txt:format(Str, F, Node);
 pp({open,Tag,Str}, F, Node, Root) ->
     open("#CCFFCC",Tag,F,pp({txt,9999,Str}, F, Node, Root));
 pp({write_append,Tag,Str}, F, Node, Root) ->
     open("#99FFFF",Tag,F,pp({txt,8888,Str}, F, Node, Root));
-pp(Other, F, Node, Root) ->
+pp(Other, _F, _Node, Root) ->
     wiki:show({cannot,format,Other}, Root).
 
 open(Color, Tag, F, Stuff) ->

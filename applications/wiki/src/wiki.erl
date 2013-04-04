@@ -107,7 +107,7 @@ getThumb(Params, Root, Prefix) ->
         Page == undefined ->
             html_error(invalid_request);
         true ->
-            {WobFile, FileDir} = page2filename(Page, Root),
+            {_WobFile, FileDir} = page2filename(Page, Root),
             ThumbName = thumb_name(Pict),
             SrcPath = Root ++ "/" ++ FileDir ++ "/" ++ Pict,
             DstPath = Root ++ "/" ++ FileDir ++ "/" ++ ThumbName,
@@ -127,7 +127,7 @@ getMidSize(Params, Root, Prefix) ->
         Page == undefined ->
             html_error(invalid_request);
         true ->
-            {WobFile, FileDir} = page2filename(Page, Root),
+            {_WobFile, FileDir} = page2filename(Page, Root),
             Extension = filename:extension(Pict),
             MidName = (filename:basename(Pict, Extension)++
                          "_wiki_mid"++Extension),
@@ -250,7 +250,7 @@ addFile([WobFile, FileAtm]) ->
     addFile([WobFile, FileAtm], halt).
 
 addFile([WobFile, FileAtm], Halt) ->
-    FileDir = wobfile_to_filedir(WobFile),
+    _FileDir = wobfile_to_filedir(WobFile),
     File = tostring(FileAtm),
     case file:read_file(WobFile) of
         {ok, Bin} ->
@@ -294,7 +294,7 @@ createNewPage(Params, Root, Prefix) ->
             redirect_create(Page, NewSid, Prefix)
     end.
 
-createNewPage1(Page, Root, Sid, Prefix, Content, Passwd, Email) ->
+createNewPage1(Page, Root, Sid, _Prefix, Content, Passwd, Email) ->
     wiki_templates:template2(
       Root,
       "New Page",
@@ -369,10 +369,10 @@ storePage1(Params, Root, Prefix) ->
     Txt = zap_cr(urlencoded2str(Txt0)),
 
     session_end(Sid),
-    {File,FileDir} = page2filename(Page, Root),
+    {File,_FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
-            Wik = {wik002,Pwd,_Email,_Time,_Who,_OldTxt,_Files,_Patches} =
+            Wik = {wik002,_Pwd,_Email,_Time,_Who,_OldTxt,_Files,_Patches} =
                 bin_to_wik002(Bin),
             store_ok(Page, Root, Prefix, Txt, Wik);
         _ ->
@@ -389,7 +389,7 @@ storeNewPage(Params, Root, Prefix) ->
     Txt = zap_cr(urlencoded2str(Txt0)),
     Email = urlencoded2str(Email0),
     %% Check the password
-    {File,FileDir} = page2filename(Page, Root),
+    {File,_FileDir} = page2filename(Page, Root),
     Time = {date(),time()},
     Who = "unknown",
     B = term_to_binary({wik002,Password,Email,Time,Who,Txt,[],[]}),
@@ -407,11 +407,11 @@ storeTagged(Params, Root, Prefix) ->
     Txt0 = getopt("txt", Params),
 
     case catch list_to_integer(Tag) of
-        {'EXIT', Reason} ->
+        {'EXIT', _Reason} ->
 	    show({no_such_tag, Tag}, Root);
-        ITag when integer(ITag) ->
+        ITag when is_integer(ITag) ->
 	    Txt = zap_cr(urlencoded2str(Txt0)),
-	    {File,FileDir} = page2filename(Page, Root),
+	    {File,_FileDir} = page2filename(Page, Root),
 	    case file:read_file(File) of
 		{ok, Bin} ->
 		    Wik = {wik002,_Pwd,_Email,_Time,_Who,OldTxt,_Files,_Patches} =
@@ -467,7 +467,7 @@ storeFiles(Params, Root, Prefix) ->
             show({no_such_page,Page}, Root)
     end.
 
-addFileInit(Params, Root, Prefix) ->
+addFileInit(Params, Root, _Prefix) ->
     Page        = getnode(Params),
     Password    = getopt("password", Params),
     template2(Root, "Add File", Page,
@@ -555,7 +555,7 @@ addFileChunk([], State) when State#addfile.last==true,
                              State#addfile.fd /= undefined ->
     file:close(State#addfile.fd),
     Page        = State#addfile.node,
-    {File,FileDir} = page2filename(Page, State#addfile.root),
+    {_File,FileDir} = page2filename(Page, State#addfile.root),
     FileName    = State#addfile.filename,
     case lists:reverse(FileName) of
         "piz."++_ ->
@@ -571,7 +571,7 @@ addFileChunk([], State) when State#addfile.last==true,
                              State#addfile.filename /= undefined,
                              State#addfile.fd /= undefined ->
     Page        = State#addfile.node,
-    {File,FileDir} = page2filename(Page, State#addfile.root),
+    {File,_FileDir} = page2filename(Page, State#addfile.root),
     {ok, Bin}   = file:read_file(File),
     {wik002,Pwd,Email,_,_,Txt,OldFiles,Patches} = bin_to_wik002(Bin),
     Description = State#addfile.text,
@@ -584,7 +584,7 @@ addFileChunk([], State) when State#addfile.last==true,
     Ds          = {wik002,Pwd, Email,Time,Who,Txt,NewFiles,Patches},
     B           = term_to_binary(Ds),
     file:write_file(File, B),
-    Res = file:close(State#addfile.fd),
+    file:close(State#addfile.fd),
     {done, redirect_files(Page, Pwd, State#addfile.prefix)};
 %    {done, redirect({node, Page}, State#addfile.prefix)};
 addFileChunk([], State) when State#addfile.last==true ->
@@ -595,7 +595,7 @@ addFileChunk([], State) ->
 
 addFileChunk([{head, {"add", _Opts}}|Res], State ) ->
     addFileChunk(Res, State#addfile{param = add});
-addFileChunk([{body, Data}|Res], State) when State#addfile.param == add ->
+addFileChunk([{body, _Data}|Res], State) when State#addfile.param == add ->
     addFileChunk(Res, State);
 
 addFileChunk([{head, {"node", _Opts}}|Res], State ) ->
@@ -619,7 +619,7 @@ addFileChunk([{body, Data}|Res], State) when State#addfile.param == password ->
     NewPW = merge_body(Password, Data),
     addFileChunk(Res, State#addfile{password = NewPW});
 
-addFileChunk([{head, {"cancel", _Opts}}|Res], State) ->
+addFileChunk([{head, {"cancel", _Opts}}|_Res], State) ->
     {done, redirect({node, State#addfile.node}, State#addfile.prefix)};
 
 addFileChunk([{head, {"text", _Opts}}|Res], State) ->
@@ -684,7 +684,7 @@ updateFilesInit(Params, Root, Prefix) ->
                        {N,S,_} <- Params,
                        lists:prefix("cbt_",N)],
 
-    {File,FileDir} = page2filename(Page, Root),
+    {File,_FileDir} = page2filename(Page, Root),
     {ok, Bin} = file:read_file(File),
     Wik = bin_to_wik002(Bin),
     {wik002,Pwd,Email,_Time, _Who,Txt,OldFiles,Patches} = Wik,
@@ -717,7 +717,7 @@ updateFilesInit(Params, Root, Prefix) ->
     redirect_files(Page, Pwd, Prefix).
 
 
-deleteFilesInit(Params, Root, Prefix) ->
+deleteFilesInit(Params, Root, _Prefix) ->
 
     Page        = getnode(Params),
     Password    = getopt("password", Params),
@@ -728,7 +728,7 @@ deleteFilesInit(Params, Root, Prefix) ->
 
     {File,FileDir} = page2filename(Page, Root),
     {ok, Bin} = file:read_file(File),
-    Wik = {wik002,Pwd,_Email,_Time, _Who,_Txt,Files,_Patches}
+    _Wik = {wik002,_Pwd,_Email,_Time, _Who,_Txt,Files,_Patches}
         = bin_to_wik002(Bin),
 
     Extend = fun({file, Name, Desc, _}) ->
@@ -790,7 +790,7 @@ deleteFiles1(Params, Root, Prefix) ->
 
     {File,FileDir} = page2filename(Page, Root),
     {ok, Bin} = file:read_file(File),
-    Wik = {wik002,Pwd,Email,_Time, _Who,Txt,Files,Patches}
+    _Wik = {wik002,Pwd,Email,_Time, _Who,Txt,Files,Patches}
         = bin_to_wik002(Bin),
 
     Extend = fun({file, Name, Desc, _}) ->
@@ -835,7 +835,7 @@ copyFilesInit(Params, Root, Prefix) ->
 
     {File,FileDir} = page2filename(Page, Root),
     {ok, Bin} = file:read_file(File),
-    Wik = {wik002,Pwd,_Email,_Time, _Who,_Txt,Files,Patches}
+    _Wik = {wik002,_Pwd,_Email,_Time, _Who,_Txt,Files,_Patches}
         = bin_to_wik002(Bin),
 
     Extend = fun({file, Name, Desc, _}) ->
@@ -929,11 +929,11 @@ copyFiles3(Params, Root, Prefix) ->
     Page     = getnode(Params),
     Dest     = getopt("destination", Params),
 
-    {SrcWobFile, SrcFileDir} = page2filename(Page, Root),
-    {DstWobFile, DstFileDir} = page2filename(Dest, Root),
+    {_SrcWobFile, SrcFileDir} = page2filename(Page, Root),
+    {_DstWobFile, DstFileDir} = page2filename(Dest, Root),
 
     SrcFileNames = [lists:nthtail(3,N) ||
-                       {N,S,_} <- Params,
+                       {N,_S,_} <- Params,
                        lists:prefix("cp_",N)],
 
     SrcDir = Root ++ "/" ++ SrcFileDir ++ "/",
@@ -942,8 +942,8 @@ copyFiles3(Params, Root, Prefix) ->
     [os:cmd("cp '"++SrcDir++F++"' '"++DstDir++"'") || F <- SrcFileNames],
     importFiles(Dest, Root, Prefix).
 
-store_ok(Page, Root, Prefix, OldTxt,
-         {wik002,Pwd,Email,Time,Who,OldTxt,Files,Patches}) ->
+store_ok(Page, _Root, Prefix, OldTxt,
+         {wik002,_Pwd,_Email,_Time,_Who,OldTxt,_Files,_Patches}) ->
     redirect({node, Page}, Prefix);
 store_ok(Page, Root, Prefix, NewTxt,
          {wik002,Pwd,Email,_Time,_Who,OldTxt,Files,Patches}) ->
@@ -953,16 +953,16 @@ store_ok(Page, Root, Prefix, NewTxt,
     Patches1 = [{Patch,Time,Who}|Patches],
     Ds = {wik002,Pwd, Email,Time,Who,NewTxt,Files,Patches1},
     B = term_to_binary(Ds),
-    {File,FileDir} = page2filename(Page, Root),
+    {File,_FileDir} = page2filename(Page, Root),
     file:write_file(File, B),
     redirect({node, Page}, Prefix).
 
-showHistory(Params, Root, Prefix) ->
+showHistory(Params, Root, _Prefix) ->
     Page = getnode(Params),
-    {File,FileDir} = page2filename(Page, Root),
+    {File,_FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
-            {wik002,Pwd,Email,_Time,_Who,OldTxt,_Files,Patches} =
+            {wik002,_Pwd,_Email,_Time,_Who,_OldTxt,_Files,Patches} =
                 bin_to_wik002(Bin),
             Links = reverse(mk_history_links(reverse(Patches), Page, 1)),
             template2(Root, "History", Page, Links, false);
@@ -994,7 +994,7 @@ redirect_change(Page, Prefix) ->
     {redirect_local, Prefix++"changePassword.yaws?node="++
      str2urlencoded(Page)}.
 
-mk_history_links([{C,Time,Who}|T], Page, N) ->
+mk_history_links([{C,Time,_Who}|T], Page, N) ->
     [["<li>",i2s(N)," modified on <a href='showOldPage.yaws?node=",
       str2urlencoded(Page),
       "&index=",i2s(N),
@@ -1007,7 +1007,7 @@ format_time({{Year,Month,Day},{Hour,Min,Sec}}) ->
     [i2s(Year),"-",i2s(Month),"-",i2s(Day)," ",
      i2s(Hour),":",i2s(Min),":",i2s(Sec)].
 
-allPages(_, Root, Prefix) ->
+allPages(_, Root, _Prefix) ->
     Files = sort(files(Root, "\\.wob$")),
     template2(Root, "All Pages", "All Pages",
              [p("This is a list of all pages known to the system."),
@@ -1018,11 +1018,11 @@ allPages(_, Root, Prefix) ->
                         end,
                         Files)], false).
 
-lastEdited(_, Root, Prefix) ->
+lastEdited(_, Root, _Prefix) ->
     Files = sort(files(Root, "\\.wob$")),
-    S = lists:flatten(lists:map(fun(I) ->
-                                  "~" ++ filename:basename(I, ".wob") ++"\n\n"
-                          end, Files)),
+    _S = lists:flatten(lists:map(fun(I) ->
+                                         "~" ++ filename:basename(I, ".wob") ++"\n\n"
+                                 end, Files)),
     V = reverse(sort(
                   lists:map(fun(I) -> {last_edited_time(I), I} end, Files))),
     Groups = group_by_day(V),
@@ -1040,12 +1040,12 @@ lastEdited(_, Root, Prefix) ->
 
 group_by_day([]) ->
     [];
-group_by_day([{{Day,Time}, File}|T]) ->
+group_by_day([{{Day,_Time}, File}|T]) ->
     {Stuff, T1} = collect_this_day(Day, T, [File]),
     T2 = group_by_day(T1),
     [Stuff|T2].
 
-collect_this_day(Day, [{{Day,Time},File}|T], L) ->
+collect_this_day(Day, [{{Day,_Time},File}|T], L) ->
     collect_this_day(Day, T, [File|L]);
 collect_this_day(Day, T, L) ->
     {{Day,reverse(L)}, T}.
@@ -1053,26 +1053,26 @@ collect_this_day(Day, T, L) ->
 last_edited_time(File) ->
     case file:read_file(File) of
         {ok, Bin} ->
-            {wik002,Pwd,_Email,Time,_Who,_Txt,_Files,_Patches} =
+            {wik002,_Pwd,_Email,Time,_Who,_Txt,_Files,_Patches} =
                 bin_to_wik002(Bin),
             Time;
         _ ->
             error
     end.
 
-showOldPage(Params, Root, Prefix) ->
+showOldPage(Params, Root, _Prefix) ->
     Page = getnode(Params),
     Nt = getopt("index", Params),
 
     case catch list_to_integer(Nt) of
-        {'EXIT', Reason} ->
+        {'EXIT', _Reason} ->
             show({no_such_index, Nt}, Root);
-        Index when integer(Index) ->
+        Index when is_integer(Index) ->
 	    {File,FileDir} = page2filename(Page, Root),
 	    case file:read_file(File) of
 		{ok, Bin} ->
-		    Wik = {wik002,Pwd,_Email,_Time,_Who,Txt,Files,Patches} =
-			  bin_to_wik002(Bin),
+		    _Wik = {wik002,_Pwd,_Email,_Time,_Who,Txt,Files,Patches} =
+                        bin_to_wik002(Bin),
 		    %% N = #patches to do
 		    N = length(Patches) - Index + 1,
 		    ThePatches = take(N, Patches),
@@ -1108,11 +1108,11 @@ deletePage(Params,  Root, Prefix) ->
             show({no_such_page,Page}, Root)
     end.
 
-deletePage1(Params, Root, Prefix) ->
+deletePage1(Params, Root, _Prefix) ->
     Page = getnode(Params),
     Password = getopt("password", Params),
 
-    {File,FileDir} = page2filename(Page, Root),
+    {File,_FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
             {wik002, _Pwd,_Email,_Time,_Who,Content,_Files,_Patches} =
@@ -1156,7 +1156,7 @@ finalDeletePage(Params, Root, Prefix) ->
 
 finalDeletePage1(Params, Root, Prefix) ->
     Page = getnode(Params),
-    Txt0 = getopt("text", Params),
+    _Txt0 = getopt("text", Params),
 
     {File,FileDir} = page2filename(Page, Root),
     case file:delete(File) of
@@ -1173,7 +1173,7 @@ finalDeletePage1(Params, Root, Prefix) ->
     end.
 
 
-getPassword(Page, Root, Prefix, Target, Values) ->
+getPassword(Page, Root, _Prefix, Target, Values) ->
     Vs = [{"target", atom_to_list(Target), []}|
           lists:keydelete("password", 1, Values)],
     Hidden = [[input("hidden", Name, Value),"\n"] ||
@@ -1289,7 +1289,7 @@ session_manager(N,Sessions) ->
                     From ! {unknown_sid, Sid}
             end,
             session_manager(N, Sessions);
-        Unknown ->
+        _Unknown ->
             session_manager(N, Sessions)
     end.
 
@@ -1385,10 +1385,10 @@ session_set_all(Sid, Txt, Passwd, Email) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 editPage(Page, Password, Root, Prefix, Sid) ->
-    {File,FileDir} = page2filename(Page, Root),
+    {File,_FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
-            {wik002, Pwd,_Email,_Time,_Who,TxtStr,Files,_Patches} =
+            {wik002, _Pwd,_Email,_Time,_Who,TxtStr,_Files,_Patches} =
                 bin_to_wik002(Bin),
             if
                 Sid /= undefined ->
@@ -1419,11 +1419,11 @@ edit1(Page, Root, Password, Content, Sid) ->
                 hr()])
           ], false).
 
-sendMeThePassword(Params, Root, Prefix) ->
+sendMeThePassword(Params, Root, _Prefix) ->
     Page = getnode(Params),
     Email = getopt("email", Params),
 
-    {File,FileDir} = page2filename(Page, Root),
+    {File,_FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
             {wik002,Pwd,EmailOwner,_Time,_Who,_OldTxt,_Files,_Patches} =
@@ -1441,7 +1441,7 @@ sendMeThePassword(Params, Root, Prefix) ->
                               Email,
                               p("Have a nice day")],
                              false);
-                Other ->
+                _Other ->
                     template2(Root, "Error", "Failure",
                              [p("Incorrect email address")],
                              false)
@@ -1451,11 +1451,11 @@ sendMeThePassword(Params, Root, Prefix) ->
     end.
 
 
-checkPassword(Page, Password, Root, Prefix) ->
-    {File,FileDir} = page2filename(Page, Root),
+checkPassword(Page, Password, Root, _Prefix) ->
+    {File,_FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
-            {wik002, Pwd,_Email,_Time,_Who,_TxtStr,Files,_Patches} =
+            {wik002, Pwd,_Email,_Time,_Who,_TxtStr,_Files,_Patches} =
                 bin_to_wik002(Bin),
             case Pwd of
                 ""       -> true;
@@ -1479,11 +1479,11 @@ editFiles(Params, Root, Prefix) ->
             show({no_such_page,Page}, Root)
     end.
 
-editFiles1(Page, Password, Root, Prefix) ->
-    {File,FileDir} = page2filename(Page, Root),
+editFiles1(Page, Password, Root, _Prefix) ->
+    {File,_FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
-            {wik002,Pwd,_Email,_Time,_Who,_OldTxt,Files,_Patches} =
+            {wik002,_Pwd,_Email,_Time,_Who,_OldTxt,Files,_Patches} =
                 bin_to_wik002(Bin),
             CheckBoxes =
                 lists:map(fun({file,Name,Description,_Content}) ->
@@ -1521,7 +1521,7 @@ editFiles1(Page, Password, Root, Prefix) ->
                             input("hidden", "node", Page),
                             input("hidden", "password", Password)
                            ])], false);
-        Error ->
+        _Error ->
             show({no_such_page, Page}, Root)
     end.
 
@@ -1537,19 +1537,19 @@ slideShow(Params, Root, Prefix) ->
             nextSlide(1, next, Page, Root, Prefix);
         {undefined, undefined, _} ->
             Index = case catch list_to_integer(AutoArg) of
-                        {'EXIT', Reason} -> 1;
+                        {'EXIT', _Reason} -> 1;
                         Num when is_integer(Num) -> Num
                     end,
             nextSlide(Index, auto, Page, Root, Prefix);
         {undefined, _, undefined} ->
             Index = case catch list_to_integer(PrevArg) of
-                        {'EXIT', Reason} -> 1;
+                        {'EXIT', _Reason} -> 1;
                         Num when is_integer(Num) -> Num
                     end,
             nextSlide(Index, prev, Page, Root, Prefix);
         {_, undefined, undefined} ->
             Index = case catch list_to_integer(NextArg) of
-                        {'EXIT', Reason} -> 1;
+                        {'EXIT', _Reason} -> 1;
                         Num when is_integer(Num) -> Num
                     end,
             nextSlide(Index, next, Page, Root, Prefix)
@@ -1559,7 +1559,7 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
-            {wik002, Pwd,_Email,Time,_Who,TxtStr,Files,_Patches} =
+            {wik002, Pwd,_Email,Time,_Who,_TxtStr,Files,_Patches} =
                 bin_to_wik002(Bin),
             case get_img(Index, Direction, lists:keysort(2,Files)) of
                 false ->
@@ -1611,12 +1611,12 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
                            true -> []
                         end,
                     F1 = add_blanks_nicely(Page),
-                    TopHeader =
+                    _TopHeader =
                         ["<a href='showPage.yaws?node=",
                          str2urlencoded(Page),
                          "'>",yaws_api:htmlize(F1),"</a>\n"],
                     Locked = Pwd /= "",
-                    Link =
+                    _Link =
                         wiki_templates:template(Page, Root,
                                                 [DeepStr, Auto],
                                                 utils:time_to_string(Time),
@@ -1631,7 +1631,7 @@ thumbIndex(Params, Root, Prefix) ->
     {File,FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
-            {wik002, Pwd,_Email,Time,_Who,TxtStr,Files,_Patches} =
+            {wik002, Pwd,_Email,Time,_Who,_TxtStr,Files,_Patches} =
                 bin_to_wik002(Bin),
             {NumFiles,_} = lists:mapfoldl(
                              fun(F,N) -> {{element(2,F),N}, N+1} end,
@@ -1643,11 +1643,11 @@ thumbIndex(Params, Root, Prefix) ->
                  build_thumb_table(Pics, Node, Prefix, Root, FileDir),
                  "</table>"],
             F1 = add_blanks_nicely(Page),
-            TopHeader =
+            _TopHeader =
                 ["<a href='showPage.yaws?node=",Node,"'>",
                  yaws_api:htmlize(F1),"</a>\n"],
             Locked = Pwd /= "",
-            Link =
+            _Link =
                 wiki_templates:template(Page, Root, DeepStr,
                                         utils:time_to_string(Time),
                                         Locked);
@@ -1677,7 +1677,7 @@ build_thumb_rows([{P,Num}|Pics], Node, Prefix, Root, FileDir, N, X, Acc) ->
                                     "<img src='",Img,
                                     "'></a></td>\n"])|Acc]).
 
-build_slide_list(Node, Index, Nr) when Nr =< 10 ->
+build_slide_list(Node, _Index, Nr) when Nr =< 10 ->
     Interval = 1,
     lists:flatmap(
       fun(X) ->
@@ -1685,7 +1685,7 @@ build_slide_list(Node, Index, Nr) when Nr =< 10 ->
               [" <a href=\"slideShow.yaws?node=",Node,"&next=",I,"\">",
                I,"</a> "]
       end, lists:seq(1,Nr,Interval));
-build_slide_list(Node, Index, Nr) ->
+build_slide_list(Node, _Index, Nr) ->
     lists:flatmap(
       fun(X) ->
               I = if X==0 -> "1" ; true -> integer_to_list(X) end,
@@ -1714,7 +1714,7 @@ get_img(Index, Direction, Files) ->
                     {ok, Index, PictFile};
                 "gpj."++_ ->
                     {ok, Index, PictFile};
-                Any ->
+                _Any ->
                     if Direction == next ->
                             get_img(Index+1, Direction, Files);
                        Direction == auto ->
@@ -1726,18 +1726,18 @@ get_img(Index, Direction, Files) ->
     end.
 
 
-editTag(Params, Root, Prefix) ->
+editTag(Params, Root, _Prefix) ->
     Page = getnode(Params),
     Tag = getopt("tag", Params),
 
     case catch list_to_integer(Tag) of
-        {'EXIT', Reason} ->
+        {'EXIT', _Reason} ->
 	    show({no_such_tag, Tag}, Root);
-        ITag when integer(ITag) ->
-	    {File,FileDir} = page2filename(Page, Root),
+        ITag when is_integer(ITag) ->
+	    {File,_FileDir} = page2filename(Page, Root),
 	    case file:read_file(File) of
 		{ok, Bin} ->
-		    {wik002,Pwd,_Email,_Time,_Who,OldTxt,_Files,_Patches} =
+		    {wik002,_Pwd,_Email,_Time,_Who,OldTxt,_Files,_Patches} =
 			bin_to_wik002(Bin),
 		    Wik = wiki_split:str2wiki(OldTxt),
 		    {Type, Str} = wiki_split:getRegion(ITag, Wik),
@@ -1756,12 +1756,12 @@ editTag(Params, Root, Prefix) ->
 				    textarea("text", 25, 75, Str1),
 				    p(),
 				    hr()])], false);
-		Error ->
+		_Error ->
 		    show({no_such_page, Page}, Root)
 	    end
     end.
 
-changePassword(Params, Root, Prefix) ->
+changePassword(Params, Root, _Prefix) ->
     Page     = getnode(Params),
 
     wiki_templates:template2(
@@ -1794,7 +1794,7 @@ changePassword2(Params, Root, Prefix) ->
     Pw1      = getopt("password1", Params),
     Pw2      = getopt("password2", Params),
 
-    {File,FileDir} = page2filename(Page, Root),
+    {File,_FileDir} = page2filename(Page, Root),
     case file:read_file(File) of
         {ok, Bin} ->
             {wik002,Pwd,Email,Time,Who,Txt,Files,Patches} =
@@ -1813,7 +1813,7 @@ changePassword2(Params, Root, Prefix) ->
                  true ->
                     show({bad_password, Page}, Root)
             end;
-        Error ->
+        _Error ->
             show({no_such_page, Page}, Root)
     end.
 
@@ -1838,7 +1838,7 @@ previewPage(Params, Root, Prefix) ->
             previewPage1(Params, Root, Prefix)
     end.
 
-previewPage1(Params, Root, Prefix) ->
+previewPage1(Params, Root, _Prefix) ->
     Page     = getnode(Params),
     Password = getopt("password", Params),
     Txt0     = getopt("text", Params),
@@ -1865,7 +1865,7 @@ previewPage1(Params, Root, Prefix) ->
 %% Tagged stuff is inside comment and append regions
 %% We *dont* want any structure here
 
-previewTagged(Params, Root, Prefix) ->
+previewTagged(Params, Root, _Prefix) ->
     Page = getnode(Params),
     Tag = getopt("tag", Params),
     Txt0 = getopt("text", Params),
@@ -1903,7 +1903,7 @@ legal_flat_text1("\n>" ++ _) -> false;
 legal_flat_text1([_|T])      -> legal_flat_text1(T);
 legal_flat_text1([])         -> true.
 
-previewNewPage(Params, Root, Prefix) ->
+previewNewPage(Params, Root, _Prefix) ->
     Page  = getnode(Params),
     P1    = getopt("password1", Params),
     P2    = getopt("password2", Params),
@@ -1936,10 +1936,10 @@ zap_cr([$\r,$\n|T]) -> [$\n|zap_cr(T)];
 zap_cr([H|T])       -> [H|zap_cr(T)];
 zap_cr([])          -> [].
 
-wikiZombies(_, Root, Prefix) ->
+wikiZombies(_, Root, _Prefix) ->
     wiki_utils:zombies(Root).
 
-allRefsToMe(Params, Root, Prefix) ->
+allRefsToMe(Params, Root, _Prefix) ->
     Page = getnode(Params),
 
     wiki_utils:findallrefsto(Page, Root).
@@ -2159,7 +2159,7 @@ show({illegal_filename, FileName, Reason}, Root) ->
                p(Reason)],
               false);
 
-show(X, Root) ->
+show(X, _Root) ->
     {html, [body("white"),"<pre>",
             yaws_api:htmlize(lists:flatten(io_lib:format("~p~n",[X]))),
             "</pre>"]}.
@@ -2327,7 +2327,7 @@ file_type(File) ->
 %%
 
 read_page(Page, Root) ->
-    {File,FileDir} = page2filename(Page, Root),
+    {File,_FileDir} = page2filename(Page, Root),
     %% io:format("Reading:~p~n",[Page]),
     case file:read_file(File) of
         {ok, Bin} ->
@@ -2430,7 +2430,7 @@ basename(FilePath) ->
 getPassword([File]) ->
     case file:read_file(File) of
         {ok, Bin} ->
-            {wik002,Pwd,Email,Time,Who,OldTxt,Files,Patches} =
+            {wik002,Pwd,_Email,_Time,_Who,_OldTxt,_Files,_Patches} =
                 bin_to_wik002(Bin),
             io:format("Password is: '~s'\n", [Pwd]),
             halt();
@@ -2466,7 +2466,7 @@ searchPara([Para|Paralist]) ->
             [];
         {"search", Search, []} ->
             case re:compile(Search) of
-                {ok, RE} ->
+                {ok, _RE} ->
                     Search;
                 {error, Error} ->
                     {error, Error}
@@ -2477,7 +2477,7 @@ searchPara([Para|Paralist]) ->
 searchPara([]) ->
     [].
 
-searchPages(SearchPost, Root, Prefix) ->
+searchPages(SearchPost, Root, _Prefix) ->
     case searchPara(SearchPost) of
         [] ->
             S0 = [forms("POST", "searchPage.yaws",

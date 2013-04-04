@@ -4,6 +4,7 @@ include ./include.mk
 
 all debug clean install:
 	@set -e ; \
+	  [ -d ebin ] || mkdir ebin ; \
 	  for d in $(SUBDIRS) ; do \
 	    if [ -f $$d/Makefile ]; then ( cd $$d && $(MAKE) $@ ) || exit 1 ; fi ; \
 	  done
