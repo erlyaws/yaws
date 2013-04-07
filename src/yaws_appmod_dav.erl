@@ -192,16 +192,16 @@ handle('GET',A) ->
 handle('POST',A) ->
     ?DEBUG("POST ~p",[A#arg.server_path]),
     _Path = davpath(A),
-    % TODO POST for collections: RFC5995
+    %% TODO POST for collections: RFC5995
     status(501);
 handle("LOCK",A) ->
-    % TODO Multi resource lock (lock on collection) returns 207
-    %      (multi-status) when failing
+    %% TODO Multi resource lock (lock on collection) returns 207
+    %%      (multi-status) when failing
     ?DEBUG("LOCK ~p",[A#arg.server_path]),
     Name = A#arg.server_path,
     Path = davpath(A),
-    % check if file/collection exists and create if not so
-    % RFC4918 - 9.10.4
+    %% check if file/collection exists and create if not so
+    %% RFC4918 - 9.10.4
     {Status,R} = case file:read_file_info(Path) of
             {ok, F} when (F#file_info.type == directory) or (F#file_info.type == regular) ->
                 {200,#resource{ name = Name, info = F}};
@@ -218,7 +218,7 @@ handle("LOCK",A) ->
         end,
     Req = binary_to_list(A#arg.clidata),
     L = parse_lockinfo(Req),
-    %Id = h_locktoken(A),
+    %%Id = h_locktoken(A),
     Timeout = h_timeout(A),
     Depth = h_depth(A),
     Id = h_if_refresh(A,Path),
@@ -236,7 +236,7 @@ handle("UNLOCK",A) ->
     ?DEBUG("UNLOCK ~p",[A#arg.server_path]),
     Path = davpath(A),
     Id = h_locktoken(A),
-    %?DEBUG(" Id=~p",[Id]),
+    %%?DEBUG(" Id=~p",[Id]),
     case yaws_runmod_lock:unlock(Path,Id) of
         ok -> status(204);
         not_found ->
@@ -248,7 +248,7 @@ handle('DELETE',A) ->
     Path = davpath(A),
     h_if(A,Path),
     R = davresource0(A),
-    % use intenal locking to be safe
+    %% use internal locking to be safe
     case yaws_runmod_lock:lock(R#resource.name,#lock{depth=infinity,scope=exclusive}) of
         {ok,Id} ->
             F = filename:join(A#arg.docroot,["./",R#resource.name]),
@@ -311,7 +311,7 @@ handle("MKCOL",A) ->
     ?DEBUG("MKCOL ~p",[A#arg.server_path]),
     Path = davpath(A),
     if
-        % RFC2518, 8.3.1
+        %% RFC2518, 8.3.1
         size(A#arg.clidata) > 0 -> throw(415);
         true -> ok
     end,
@@ -341,7 +341,7 @@ handle("COPY",A) ->
                true ->
                     fs_cp(From,To),
                     status(201)
-                    %status(201,[{'Location',To}],[])
+                    %%status(201,[{'Location',To}],[])
             end
     end;
 handle("MOVE",A) ->
@@ -458,16 +458,16 @@ fs_rmrf(Path) ->
             {ok, Dir} = file_do(list_dir,[Path]),
             [ fs_rmrf(filename:join(Path,File)) || File <- Dir ],
             ok = file:del_dir(Path);
-            %file_do(del_dir,[Path]);
+            %%file_do(del_dir,[Path]);
         _ ->
             ok = file:delete(Path)
-            %file_do(delete,[Path])
+            %%file_do(delete,[Path])
     end.
 
 %% recursive copy, equivalent of cp
 fs_cp(From,To) ->
-    % All checks on existence of the destination have to be done before
-    % so destination should not exist
+    %% All checks on existence of the destination have to be done before
+    %% so destination should not exist
     {ok, F} = file:read_file_info(From),
     case F#file_info.type of
         directory ->
@@ -571,48 +571,48 @@ prop_status(Status) ->
 allprops(R) ->
     F = R#resource.info,
     C = get(compatibility),
-    % default property set
+    %% default property set
     P1 = [
-                {'http://yaws.hyber.org/',access},  % sample Yaws extension
-                {'DAV:',creationdate},
-               %{'DAV:',getcontentlanguage},        % not supported in GET
-                                                    % so omitted here as well
-                {'DAV:',getcontentlength},
-                {'DAV:',getcontenttype},
-                {'DAV:',getetag},
-                {'DAV:',getlastmodified},
-                {'DAV:',lockdiscovery}, % class 2 compliancy
-               %{'DAV:','quota-avialable-bytes'} % RFC4331
-               %{'DAV:','quota-used-bytes'} % RFC4331
-                {'DAV:',resourcetype},
-                {'DAV:',supportedlock} % class 2 compliancy
-            ],
-    % properties depending on file type
+          {'http://yaws.hyber.org/',access},    % sample Yaws extension
+          {'DAV:',creationdate},
+          %%{'DAV:',getcontentlanguage},        % not supported in GET
+                                                % so omitted here as well
+          {'DAV:',getcontentlength},
+          {'DAV:',getcontenttype},
+          {'DAV:',getetag},
+          {'DAV:',getlastmodified},
+          {'DAV:',lockdiscovery}, % class 2 compliancy
+          %%{'DAV:','quota-avialable-bytes'}    % RFC4331
+                                                %{'DAV:','quota-used-bytes'} % RFC4331
+          {'DAV:',resourcetype},
+          {'DAV:',supportedlock} % class 2 compliancy
+         ],
+    %% properties depending on file type
     P2 = case F#file_info.type of
-          directory when C==windows -> [
-                {'DAV:',childcount} % Microsoft extension
-            ];
-          % The executable property is only shown for regular files
-          regular -> [
-                {'http://apache.org/dav/props/',executable} % Apache extension
-            ];
-          _ -> [
-            ]
-        end,
-    % comptibility properties
+             directory when C==windows -> [
+                                           {'DAV:',childcount} % Microsoft extension
+                                          ];
+             %% The executable property is only shown for regular files
+             regular -> [
+                         {'http://apache.org/dav/props/',executable} % Apache extension
+                        ];
+             _ -> [
+                  ]
+         end,
+    %% compatibility properties
     P3 = case C of
-          microsoft -> [
-               %{'DAV:',iscollection},
-                {'DAV:',isfolder},
-                {'DAV:',ishidden}
-               %{'DAV:',isreadonly},
-               %{'DAV:',isroot},
-               %{'DAV:',name},
-            ];
-          _ -> [
-                {'DAV:',displayname}
-            ]
-        end,
+             microsoft -> [
+                           %%{'DAV:',iscollection},
+                           {'DAV:',isfolder},
+                           {'DAV:',ishidden}
+                           %%{'DAV:',isreadonly},
+                           %%{'DAV:',isroot},
+                           %%{'DAV:',name},
+                          ];
+             _ -> [
+                   {'DAV:',displayname}
+                  ]
+         end,
     P1++P2++P3.
 
 prop_get({'http://yaws.hyber.org/',access},_A,R) ->
@@ -649,7 +649,7 @@ prop_get({'http://apache.org/dav/props/',executable},_A,R) ->
     case F#file_info.type of
         directory -> {404,{executable, [{'xmlns',"http://apache.org/dav/props/"}], []}};
         _ ->
-            % TODO check on extension for Windows?
+            %% TODO check on extension for Windows?
             X = case F of
                     #file_info{mode=Mode} when Mode band 8#111 =/= 0 -> "T";
                     _ -> "F"
@@ -668,7 +668,7 @@ prop_get({'DAV:',getcontenttype},_A,R) ->
     Mediatype = case F#file_info.type of
           directory ->
               "httpd/unix-directory";
-              %"text/html"; % this should represent the mediatype of a GET on a collection
+              %%"text/html"; % this should represent the mediatype of a GET on a collection
           _ ->
               Name = R#resource.name,
               Ext = filename:extension(Name),
@@ -943,7 +943,7 @@ h_locktoken(A) ->
     case lists:keysearch("Lock-Token", 3, Hs) of
         {value, {_,_,"Lock-Token",_,URL}} ->
             case URL of
-                %"<opaquelocktoken:"++Token -> string:left(Token,36);
+                %%"<opaquelocktoken:"++Token -> string:left(Token,36);
                 "<opaquelocktoken:"++Token ->
                     T = parse_locktoken(Token),
                     check_locktoken_format(T),
@@ -988,7 +988,7 @@ h_if_refresh(A,Path) ->
     case lists:keysearch("If", 3, Hs) of
         {value, {_,_,"If",_,If}} ->
             List = if_parse(If,untagged),
-            %?DEBUG(" ~p",[List]),
+            %%?DEBUG(" ~p",[List]),
             case List of
                 [{_Resource,[{true,state,Locktoken}]}] -> Locktoken;
                 _ -> throw(412)
@@ -1013,7 +1013,7 @@ h_if(A,Path) ->
     ?DEBUG(" If-header ~p (~p) evaluated to ~p~n",[_L,length(Locks),I]),
     case I of
         undefined when length(Locks)>0 -> throw(423);
-        %false when length(Locks)>0 -> throw(412);
+        %%false when length(Locks)>0 -> throw(412);
         false -> throw(412);
         _ -> ok
     end.
@@ -1187,12 +1187,12 @@ parse_prop([H|T],L) ->
             %% check on supported namespaces:
             %% - http://www.w3.org/TR/RC-xml-names#dt-prefix
             %% - although strict, not very forgiving towards clients
-            %NS = H#xmlElement.namespace,
-            %case NS#xmlNamespace.default of
-            %    "" ->
-            %        throw(400);
-            %    _ -> ok
-            %end,
+            %%NS = H#xmlElement.namespace,
+            %%case NS#xmlNamespace.default of
+            %%    "" ->
+            %%        throw(400);
+            %%    _ -> ok
+            %%end,
             Value = case H#xmlElement.content of
                         [C] when is_record(C,xmlText) -> C#xmlText.value;
                         _ -> ""
@@ -1268,8 +1268,8 @@ xml_expand(L) ->
     xml_expand(L, "utf-8").
 xml_expand(L, Cset) ->
     Prolog = ["<?xml version=\"1.0\" encoding=\"",Cset,"\" ?>"],
-    %Xml = xmerl:export_simple(L,xmerl_xml,[{prolog,Prolog}]),
-    % MS requires \r\n at end of every XML response
+    %%Xml = xmerl:export_simple(L,xmerl_xml,[{prolog,Prolog}]),
+    %% MS requires \r\n at end of every XML response
     case get(compatibility) of
         microsoft ->
             [Prolog,yaws_appmod_dav:export(L),"\r\n"];
