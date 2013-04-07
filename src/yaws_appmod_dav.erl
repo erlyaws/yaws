@@ -373,14 +373,15 @@ handle("MOVE",A) ->
                 ok ->
                     status(201);
                 _ ->
-                    case fs_cp(From, To) of
-                        {ok,_} ->
-                            fs_rmrf(From),
-                            status(201);
-                        {error, Reason} ->
-                            ?DEBUG(" move from ~p to ~p failed: ~p\n",[From, To, Reason]),
-                            Response = [{'D:error', [{'xmlns:D',"DAV:"}],[Reason]}],
-                            status(409,{xml,Response})
+                    try
+                        fs_cp(From, To),
+                        fs_rmrf(From),
+                        status(201)
+                    catch
+                        throw:Status ->
+                            ?DEBUG(" move from ~p to ~p failed: ~p\n",[From, To, Status]),
+                            Response = [{'D:error', [{'xmlns:D',"DAV:"}],[Status]}],
+                            status(Status,{xml,Response})
                     end
             end
     end;
@@ -1262,8 +1263,6 @@ status(Status,Headers,Response) ->
         end,
     [{status, Status},{header,{"DAV","1, 2, 3"}}|H] ++ [Response].
 
-xml_expand([]) ->
-    [];
 xml_expand(L) ->
     xml_expand(L, "utf-8").
 xml_expand(L, Cset) ->
