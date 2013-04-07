@@ -2316,38 +2316,29 @@ handle_ut(CliSock, ARG, UT = #urltype{type = fcgi}, N) ->
 handle_ut(CliSock, ARG, UT = #urltype{type = dav}, N) ->
     Req = ARG#arg.req,
     H = ARG#arg.headers,
-    SC=get(sc),
     Next =
-        if
-            Req#http_request.method == 'OPTIONS' ->
+        case Req#http_request.method of
+            'OPTIONS' ->
                 options;
-            Req#http_request.method == 'PUT' ->
-                fun(A) -> yaws_dav:put(SC, A) end;
-            Req#http_request.method == 'DELETE' ->
-                fun(A) -> yaws_dav:delete(A) end;
-            Req#http_request.method == "PROPFIND" ->
-                fun(A)-> yaws_dav:propfind(A) end;
-            Req#http_request.method == "PROPPATCH" ->
-                fun(A)-> yaws_dav:proppatch(A) end;
-            Req#http_request.method == "LOCK" ->
-                fun(A)-> yaws_dav:lock(A) end;
-            Req#http_request.method == "UNLOCK" ->
-                fun(A)-> yaws_dav:unlock(A) end;
-            Req#http_request.method == "MOVE" ->
-                fun(A)-> yaws_dav:move(A) end;
-            Req#http_request.method == "COPY" ->
-                fun(A)-> yaws_dav:copy(A) end;
-            Req#http_request.method == "MKCOL" ->
-                fun(A)-> yaws_dav:mkcol(A) end;
-            Req#http_request.method == 'GET';
-            Req#http_request.method == 'HEAD' ->
+            _ when Req#http_request.method == 'GET';
+                   Req#http_request.method == 'HEAD' ->
                 case prim_file:read_file_info(UT#urltype.fullpath) of
                     {ok, FI} when FI#file_info.type == regular ->
                         {regular, FI};
                     _ ->
                         error
                 end;
-            true ->
+            _Dav when Req#http_request.method == 'PUT';
+                      Req#http_request.method == 'DELETE';
+                      Req#http_request.method == "PROPFIND";
+                      Req#http_request.method == "PROPPATCH";
+                      Req#http_request.method == "LOCK";
+                      Req#http_request.method == "UNLOCK";
+                      Req#http_request.method == "MOVE";
+                      Req#http_request.method == "COPY";
+                      Req#http_request.method == "MKCOL" ->
+                dav;
+            _ ->
                 error
         end,
     case Next of
@@ -2358,7 +2349,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = dav}, N) ->
         {regular, Finfo} ->
             handle_ut(CliSock, ARG, UT#urltype{type = regular,
                                                finfo = Finfo}, N);
-        _ ->
+        dav ->
             yaws:outh_set_dyn_headers(Req, H, UT),
             maybe_set_page_options(),
             deliver_dyn_part(CliSock,
@@ -2366,7 +2357,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = dav}, N) ->
                              N,
                              ARG,UT,
                              Next,
-                             fun(A)->finish_up_dyn_file(A, CliSock)  end
+                             fun(A) -> finish_up_dyn_file(A, CliSock) end
                             )
     end;
 
