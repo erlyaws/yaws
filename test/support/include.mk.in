@@ -8,6 +8,8 @@ YAWS=$(YTOP)/bin/yaws
 
 SUBST=../../scripts/Subst
 
+STOP_WAIT_TIME=10
+
 COMPILER_PA = -pa $(YTOP)/ebin -pa $(YTOP)/test/ibrowse/ebin
 
 %.beam: %.erl
@@ -49,9 +51,9 @@ connect:
 status:
 	$(YTOP)/bin/yaws  --id testid --status
 stop:
-	$(YTOP)/bin/yaws --id testid --stop && sleep 5 || true
+	$(YTOP)/bin/yaws --id testid --stop && sleep $(STOP_WAIT_TIME) || true
 quiet_stop:
-	$(YTOP)/bin/yaws --id testid --stop >/dev/null 2>&1 && sleep 5 || true
+	$(YTOP)/bin/yaws --id testid --stop >/dev/null 2>&1 && sleep $(STOP_WAIT_TIME) || true
 
 stdconf authconf revproxyconf deflateconf davconf mimetypes redirectconf websocketconf:
 	cat ../conf/$@.conf | \
