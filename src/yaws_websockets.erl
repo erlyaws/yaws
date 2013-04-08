@@ -1133,7 +1133,8 @@ frag_state_machine(State, #ws_frame_info{opcode = Op}) ->
             State;
         true ->
             %% Everything else is wrong
-            {fail_connection, ?WS_STATUS_PROTO_ERROR, <<"fragmentation rules violated">>}
+            {fail_connection, ?WS_STATUS_PROTO_ERROR,
+             <<"fragmentation rules violated">>}
     end.
 
 

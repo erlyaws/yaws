@@ -338,19 +338,19 @@ do_debug_dump(Socket) ->
     %% keep proc status last, to report on hangs for the others
     CollectOS = gen_os(Socket),
     Collect = lists:foldl(fun({F, Str}, Acc) ->
-				  Ret = collect(F, Socket, Str),
-				  gen_sep(Socket),
-				  [Ret|Acc]
-			  end,
-			  CollectOS,
-			  [{fun send_status/1, "Yaws status"},
+                                  Ret = collect(F, Socket, Str),
+                                  gen_sep(Socket),
+                                  [Ret|Acc]
+                          end,
+                          CollectOS,
+                          [{fun send_status/1, "Yaws status"},
                            {fun send_inet/1,   "Inet status"},
-			   {proc_status_fun(), "process status"}]),
+                           {proc_status_fun(), "process status"}]),
     lists:foreach(fun(ok) ->
-			  ok;
-		     ({pid, Pid}) ->
-			  exit(Pid, shutdown)
-		  end, Collect),
+                          ok;
+                     ({pid, Pid}) ->
+                          exit(Pid, shutdown)
+                  end, Collect),
     ok.
 
 
@@ -366,8 +366,8 @@ gen_os(Socket) ->
 
 gen_oscmd(Socket, Cmd) ->
     F = fun(Sock) ->
-		sock_format(Sock, "~s:~n~s~n", [Cmd, os:cmd(Cmd)])
-	end,
+                sock_format(Sock, "~s:~n~s~n", [Cmd, os:cmd(Cmd)])
+        end,
     Ret = collect(F, Socket, Cmd),
     gen_sep(Socket),
     Ret.
@@ -395,8 +395,8 @@ gen_sep(Socket) ->
 
 proc_status_fun() ->
     fun(Fd) ->
-	    sock_format(Fd, "Process status:~n", []),
-	    i1(Fd, processes())
+            sock_format(Fd, "Process status:~n", []),
+            i1(Fd, processes())
     end.
 
 i1(Fd, Ps) ->
@@ -492,12 +492,12 @@ display_susp1(Fd, {Pid, Reds0, LM0}) ->
             Reds1 = fetch(reductions, Info),
             LM1 = fetch(message_queue_len, Info),
             Msgs = fetch(messages, Info),
-	    Bt = case process_info(Pid, backtrace) of
-		     {backtrace, Bin} ->
-			 binary_to_list(Bin);
-		     _ ->
-			 []
-		 end,
+            Bt = case process_info(Pid, backtrace) of
+                     {backtrace, Bin} ->
+                         binary_to_list(Bin);
+                     _ ->
+                         []
+                 end,
             if LM1 > 0 ->
                     %% still suspicious
                     sock_format(Fd,
@@ -508,7 +508,7 @@ display_susp1(Fd, {Pid, Reds0, LM0}) ->
                       fun(Msg) -> sock_format(Fd, "  ~p\n",[Msg]) end,
                       Msgs),
                     gen_sep(Fd),
-		    sock_format(Fd, "\n\n\n\n*** Backtrace *** for ~w\n~s\n",
+                    sock_format(Fd, "\n\n\n\n*** Backtrace *** for ~w\n~s\n",
                                 [Pid,Bt]);
                true ->
                     ok
@@ -517,44 +517,44 @@ display_susp1(Fd, {Pid, Reds0, LM0}) ->
 
 display_susp2(Fd, {Pid, Reds0}) ->
     case process_info(Pid, reductions) of
-	undefined ->
-	    ok;
-	{reductions, Reds0} ->
-	    %% it hasn't done any work... print bt
-	    case process_info(Pid, backtrace) of
-		{backtrace, Bin} ->
+        undefined ->
+            ok;
+        {reductions, Reds0} ->
+            %% it hasn't done any work... print bt
+            case process_info(Pid, backtrace) of
+                {backtrace, Bin} ->
                     gen_sep(Fd),
-		    sock_format(Fd, "\n\n\n\n*** Backtrace (gen_wait) "
+                    sock_format(Fd, "\n\n\n\n*** Backtrace (gen_wait) "
                                 "*** for ~w\n~s\n",
-				[Pid, binary_to_list(Bin)]);
-		_ ->
-		    ok
-	    end;
-	_ ->
-	    ok
+                                [Pid, binary_to_list(Bin)]);
+                _ ->
+                    ok
+            end;
+        _ ->
+            ok
     end.
 
 display_susp3(Fd, {Pid, _Mem}) ->
     case {process_info(Pid, memory), process_info(Pid, current_function)} of
-	{undefined, _} ->
-	    ok;
+        {undefined, _} ->
+            ok;
         {_, {current_function,{yaws_debug,display_susp3,2}}} ->
             ok;
-	{{memory, Mem2}, _} when Mem2 > ?MEM_LARGE ->
+        {{memory, Mem2}, _} when Mem2 > ?MEM_LARGE ->
             %% it's still too big
-	    case process_info(Pid, backtrace) of
-		{backtrace, Bin} ->
+            case process_info(Pid, backtrace) of
+                {backtrace, Bin} ->
                     gen_sep(Fd),
-		    sock_format(Fd,
+                    sock_format(Fd,
                                 "\n\n\n\n*** Backtrace (mem=~p) "
                                 "*** for ~w\n~p~n~s\n",
-				[Mem2, Pid, process_info(Pid),
+                                [Mem2, Pid, process_info(Pid),
                                  binary_to_list(Bin)]);
-		_ ->
-		    ok
-	    end;
-	_ ->
-	    ok
+                _ ->
+                    ok
+            end;
+        _ ->
+            ok
     end.
 
 
@@ -595,23 +595,23 @@ sock_format(Sock, Fmt, Args) ->
 collect(F, Sock, User) ->
     SELF = self(),
     Pid = spawn(fun() ->
-			F(Sock),
-			SELF ! {self(), ok},
-			timer:sleep(infinity)
-		end),
+                        F(Sock),
+                        SELF ! {self(), ok},
+                        timer:sleep(infinity)
+                end),
     Ref = erlang:monitor(process, Pid),
     receive
-	{Pid, ok} ->
-	    erlang:demonitor(Ref),
-	    exit(Pid, shutdown),
-	    ok;
-	Down = {'DOWN', Ref, _,_,_} ->
-	    sock_format(Sock, "*** Failed to collect ~s: ~p~n", [User, Down]),
-	    ok
+        {Pid, ok} ->
+            erlang:demonitor(Ref),
+            exit(Pid, shutdown),
+            ok;
+        Down = {'DOWN', Ref, _,_,_} ->
+            sock_format(Sock, "*** Failed to collect ~s: ~p~n", [User, Down]),
+            ok
     after ?COLLECT_TIMEOUT ->
-	    erlang:demonitor(Ref),
-	    sock_format(Sock, "*** Failed to collect ~s: timeout~n", [User]),
-	    {pid, Pid}	% Let it hang for proc status, exit after
+            erlang:demonitor(Ref),
+            sock_format(Sock, "*** Failed to collect ~s: timeout~n", [User]),
+            {pid, Pid}  % Let it hang for proc status, exit after
     end.
 
 send_status(Sock) ->

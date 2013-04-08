@@ -31,13 +31,13 @@
 %%%
 %%% This module translates JSON types into the following Erlang types:
 %%%
-%%%	JSON			Erlang
-%%%	----			------
-%%%	number			number
-%%%	string			string
-%%%	array			{array, ElementList}
-%%%	object			tagged proplist with string keys (i.e. {struct, PropList} )
-%%%	true, false, null	atoms 'true', 'false', and 'null'
+%%%     JSON                    Erlang
+%%%     ----                    ------
+%%%     number                  number
+%%%     string                  string
+%%%     array                   {array, ElementList}
+%%%     object                  tagged proplist with string keys (i.e. {struct, PropList} )
+%%%     true, false, null       atoms 'true', 'false', and 'null'
 %%%
 %%% Character Sets: the external representation, and the internal
 %%% representation of strings, are lists of UTF-8 code units.
@@ -84,9 +84,9 @@ encode(I) when is_integer(I) -> integer_to_list(I);
 encode(F) when is_float(F) -> float_to_list(F);
 encode(L) when is_list(L) ->
     case is_string(L) of
-	yes -> encode_string(L);
-	unicode -> encode_string(xmerl_ucs:to_utf8(L));
-	no -> encode({array, L})
+        yes -> encode_string(L);
+        unicode -> encode_string(xmerl_ucs:to_utf8(L));
+        no -> encode({array, L})
     end;
 encode({array, Props}) when is_list(Props) -> encode_array(Props);
 encode({struct, Props} = T) when is_list(Props) -> encode_object(T);
@@ -101,14 +101,14 @@ encode_string(S) -> encode_string(S, [$"]).
 encode_string([], Acc) -> lists:reverse([$" | Acc]);
 encode_string([C | Cs], Acc) ->
     case C of
-	$" -> encode_string(Cs, [$", $\\ | Acc]);
-	% (don't escape solidus on encode)
-	$\\ -> encode_string(Cs, [$\\, $\\ | Acc]);
-	$\b -> encode_string(Cs, [$b, $\\ | Acc]);	% note missing \
-	$\f -> encode_string(Cs, [$f, $\\ | Acc]);
-	$\n -> encode_string(Cs, [$n, $\\ | Acc]);
-	$\r -> encode_string(Cs, [$r, $\\ | Acc]);
-	$\t -> encode_string(Cs, [$t, $\\ | Acc]);
+        $" -> encode_string(Cs, [$", $\\ | Acc]);
+        % (don't escape solidus on encode)
+        $\\ -> encode_string(Cs, [$\\, $\\ | Acc]);
+        $\b -> encode_string(Cs, [$b, $\\ | Acc]);      % note missing \
+        $\f -> encode_string(Cs, [$f, $\\ | Acc]);
+        $\n -> encode_string(Cs, [$n, $\\ | Acc]);
+        $\r -> encode_string(Cs, [$r, $\\ | Acc]);
+        $\t -> encode_string(Cs, [$t, $\\ | Acc]);
         C when C >= 0, C < $\s ->
             % Control characters must be unicode-encoded.
             Hex = lists:flatten(io_lib:format("~4.16.0b", [C])),
@@ -124,7 +124,7 @@ encode_string([C | Cs], Acc) ->
 
 encode_object({struct, _Props} = Obj) ->
     M = obj_fold(fun({Key, Value}, Acc) ->
-	S = case Key of
+        S = case Key of
                 B when is_binary(B) -> encode_string(B);
                 L when is_list(L) ->
                     case is_string(L) of
@@ -135,11 +135,11 @@ encode_object({struct, _Props} = Obj) ->
                 A when is_atom(A) -> encode_string(atom_to_list(A));
                 _ -> exit({json_encode, {bad_key, Key}})
             end,
-	V = encode(Value),
-	case Acc of
-	    [] -> [S, $:, V];
-	    _ -> [Acc, $,, S, $:, V]
-	end
+        V = encode(Value),
+        case Acc of
+            [] -> [S, $:, V];
+            _ -> [Acc, $,, S, $:, V]
+        end
     end, [], Obj),
     [${, M, $}].
 
@@ -148,11 +148,11 @@ encode_object({struct, _Props} = Obj) ->
 
 encode_array(T) ->
     M = lists:foldl(fun(E, Acc) ->
-	V = encode(E),
-	case Acc of
-	    [] -> V;
-	    _ -> [Acc, $,, V]
-	end
+        V = encode(E),
+        case Acc of
+            [] -> V;
+            _ -> [Acc, $,, V]
+        end
     end, [], T),
     [$[, M, $]].
 
@@ -180,36 +180,36 @@ token([]) -> {more, []};
 token(eof) -> {done, eof, []};
 
 token("true" ++ Rest) -> {done, {ok, true}, Rest};
-token("tru")	-> {more, "tru"};
-token("tr")	-> {more, "tr"};
-token("t")	-> {more, "t"};
+token("tru")    -> {more, "tru"};
+token("tr")     -> {more, "tr"};
+token("t")      -> {more, "t"};
 
 token("false" ++ Rest) -> {done, {ok, false}, Rest};
-token("fals")	-> {more, "fals"};
-token("fal")	-> {more, "fal"};
-token("fa")	-> {more, "fa"};
-token("f")	-> {more, "f"};
+token("fals")   -> {more, "fals"};
+token("fal")    -> {more, "fal"};
+token("fa")     -> {more, "fa"};
+token("f")      -> {more, "f"};
 
 token("null" ++ Rest) -> {done, {ok, null}, Rest};
-token("nul")	-> {more, "nul"};
-token("nu")	-> {more, "nu"};
-token("n")	-> {more, "n"};
+token("nul")    -> {more, "nul"};
+token("nu")     -> {more, "nu"};
+token("n")      -> {more, "n"};
 
 token([C | Cs] = Input) ->
     case C of
-	$\s -> token(Cs);	% eat whitespace
-	$\t -> token(Cs);	% eat whitespace
-	$\n -> token(Cs);	% eat whitespace
-	$\r -> token(Cs);	% eat whitespace
-	$" -> scan_string(Input);
-	$- -> scan_number(Input);
-	D when D >= $0, D =< $9-> scan_number(Input);
-	${ -> {done, {ok, lcbrace}, Cs};
-	$} -> {done, {ok, rcbrace}, Cs};
-	$[ -> {done, {ok, lsbrace}, Cs};
-	$] -> {done, {ok, rsbrace}, Cs};
-	$: -> {done, {ok, colon}, Cs};
-	$, -> {done, {ok, comma}, Cs};
+        $\s -> token(Cs);       % eat whitespace
+        $\t -> token(Cs);       % eat whitespace
+        $\n -> token(Cs);       % eat whitespace
+        $\r -> token(Cs);       % eat whitespace
+        $" -> scan_string(Input);
+        $- -> scan_number(Input);
+        D when D >= $0, D =< $9-> scan_number(Input);
+        ${ -> {done, {ok, lcbrace}, Cs};
+        $} -> {done, {ok, rcbrace}, Cs};
+        $[ -> {done, {ok, lsbrace}, Cs};
+        $] -> {done, {ok, rsbrace}, Cs};
+        $: -> {done, {ok, colon}, Cs};
+        $, -> {done, {ok, comma}, Cs};
         _ -> {done, {error, {bad_char, C}}, Cs}
     end.
 
@@ -249,8 +249,8 @@ scan_number(eof) -> {done, {error, incomplete_number}, []};
 scan_number([$-, $- | _Ds]) -> {done, {error, invalid_number}, []};
 scan_number([$- | Ds] = Input) ->
     case scan_number(Ds) of
-	{more, _Cont} -> {more, Input};
-	{done, {ok, N}, CharList} -> {done, {ok, -1 * N}, CharList};
+        {more, _Cont} -> {more, Input};
+        {done, {ok, N}, CharList} -> {done, {ok, -1 * N}, CharList};
         {done, Other, Chars} -> {done, Other, Chars}
     end;
 scan_number([D | Ds] = Input) when D >= $0, D =< $9 ->
@@ -276,7 +276,8 @@ scan_fraction(Ds, I, X) -> scan_fraction(Ds, [], I, X).
 
 scan_fraction([], _Fs, _I, X) -> {more, X};
 scan_fraction(eof, Fs, I, _X) ->
-    R = list_to_float(lists:append([integer_to_list(I), ".", lists:reverse(Fs)])),
+    R = list_to_float(lists:append([integer_to_list(I), ".",
+                                    lists:reverse(Fs)])),
     {done, {ok, R}, eof};
 scan_fraction([D | Ds], Fs, I, X) when D >= $0, D =< $9 ->
     scan_fraction(Ds, [D | Fs], I, X);
@@ -284,7 +285,8 @@ scan_fraction([D | Ds], Fs, I, X) when D == $E; D == $e ->
     R = lists:append([integer_to_list(I), ".", lists:reverse(Fs)]),
     scan_exponent_begin(Ds, R, X);
 scan_fraction(Rest, Fs, I, _X) ->
-    R = list_to_float(lists:append([integer_to_list(I), ".", lists:reverse(Fs)])),
+    R = list_to_float(lists:append([integer_to_list(I), ".",
+                                    lists:reverse(Fs)])),
     {done, {ok, R}, Rest}.
 
 scan_exponent_begin(Ds, R, X) ->
@@ -360,16 +362,16 @@ first_continuation() ->
         (T, Cs) ->
             parse_value(T, Cs, fun(V, C2) ->
                 {done, {ok, V}, C2}
-	    end)
+            end)
     end}.
 
 %% Continuation Kt must accept (TokenOrEof, Chars)
 
 get_token(Chars, Kt) ->
     case token(Chars) of
-	{done, {ok, T}, Rest} -> Kt(T, Rest);
-	{done, eof, Rest} -> Kt(eof, Rest);
-	{done, {error, Reason}, Rest} -> {done, {error, Reason}, Rest};
+        {done, {ok, T}, Rest} -> Kt(T, Rest);
+        {done, eof, Rest} -> Kt(eof, Rest);
+        {done, {error, Reason}, Rest} -> {done, {error, Reason}, Rest};
         {more, X} -> {more, {X, Kt}}
     end.
 
@@ -389,11 +391,11 @@ parse_value(_, C, _Kv) -> {done, {error, syntax_error}, C}.
 
 parse_object(Chars, Kv) ->
     get_token(Chars, fun(T, C2) ->
-	Obj = obj_new(),
-	case T of
-	    rcbrace -> Kv(Obj, C2);		% empty object
-	    _ -> parse_object(Obj, T, C2, Kv)	% token must be string
-	end
+        Obj = obj_new(),
+        case T of
+            rcbrace -> Kv(Obj, C2);             % empty object
+            _ -> parse_object(Obj, T, C2, Kv)   % token must be string
+        end
     end).
 
 parse_object(_Obj, eof, C, _Kv) ->
@@ -415,13 +417,13 @@ parse_object2(Obj, S, C, Kv) ->
         (eof, C2) ->
             {done, {error, premature_eof}, C2};
         (T, C2) ->
-            parse_value(T, C2, fun(V, C3) ->	% V is member value
+            parse_value(T, C2, fun(V, C3) ->    % V is member value
                 Obj2 = obj_store(S, V, Obj),
                 get_token(C3, fun
                     (rcbrace, C4) ->    % "}" end of object
-						{struct, PropList1} = Obj2,
+                                                {struct, PropList1} = Obj2,
                         Kv({struct, lists:reverse(PropList1)}, C4);
-                    (comma, C4) ->		% "," another member follows
+                    (comma, C4) ->              % "," another member follows
                         get_token(C4, fun(T3, C5) ->
                             parse_object(Obj2, T3, C5, Kv)
                         end);
@@ -438,16 +440,16 @@ parse_object2(Obj, S, C, Kv) ->
 parse_array(C, Kv) ->
     get_token(C, fun
         (eof, C2) -> {done, {error, premature_eof}, C2};
-	(rsbrace, C2) -> Kv({array, []}, C2);  % empty array
+        (rsbrace, C2) -> Kv({array, []}, C2);  % empty array
         (T, C2) -> parse_array([], T, C2, Kv)
     end).
 
 parse_array(E, T, C, Kv) ->
     parse_value(T, C, fun(V, C2) ->
-	E2 = [V | E],
-	get_token(C2, fun
+        E2 = [V | E],
+        get_token(C2, fun
             (rsbrace, C3) ->        % "]" end of array
-	        Kv({array, lists:reverse(E2)}, C3);
+                Kv({array, lists:reverse(E2)}, C3);
 
             (comma, C3) ->          % "," another value follows
                 get_token(C3, fun(T3, C4) ->
@@ -533,7 +535,8 @@ is_string(List) -> is_string(List, non_unicode).
 
 is_string([C|Rest], non_unicode) when is_integer(C), C >= 0, C =< 255 ->
     is_string(Rest, non_unicode);
-is_string([C|Rest], _) when is_integer(C), C =< 65000 -> is_string(Rest, unicode);
+is_string([C|Rest], _) when is_integer(C), C =< 65000 ->
+    is_string(Rest, unicode);
 is_string([], non_unicode) -> yes;
 is_string([], unicode) -> unicode;
 is_string(_, _) -> no.
@@ -563,7 +566,8 @@ test() ->
                                       ok ->
                                           Fs;
                                       Reason ->
-                                          [{round_trip_one_char, E, Reason} | Fs]
+                                          [{round_trip_one_char, E, Reason} |
+                                           Fs]
                                   end;
                               Reason ->
                                   [{round_trip, E, Reason} | Fs]
@@ -575,8 +579,8 @@ test() ->
                   Fs
           end, [], E2Js),
     case Failures of
-	[] -> ok;
-	_ -> {failed, Failures}
+        [] -> ok;
+        _ -> {failed, Failures}
     end.
 
 %% Test for conversion from Erlang to JSON.  Note that unequal strings
@@ -598,7 +602,7 @@ test_e2j(E, J) when is_float(E) ->
     ok;
 test_e2j(E, J) ->
     J2 = lists:flatten(encode(E)),
-    J = J2,					% raises error if unequal
+    J = J2,                                     % raises error if unequal
     ok.
 
 %% Test that Erlang -> JSON -> Erlang round-trip yields equivalent term.
@@ -606,7 +610,7 @@ test_e2j(E, J) ->
 round_trip(E) ->
     J2 = lists:flatten(encode(E)),
     {ok, E2} = decode_string(J2),
-    true = equiv(E, E2),			% raises error if false
+    true = equiv(E, E2),                        % raises error if false
     ok.
 
 %% Round-trip with one character at a time to test all continuations.
@@ -619,7 +623,7 @@ round_trip_one_char(E) ->
             {more, Cont} -> decode(Cont, [C])
         end
     end, {more, first_continuation()}, J ++ [eof]),
-    true = equiv(E, E2),			% raises error if false
+    true = equiv(E, E2),                        % raises error if false
     ok.
 
 %% Test for equivalence of Erlang terms.
@@ -631,7 +635,7 @@ equiv({struct, Props1}, {struct, Props2}) ->
     equiv_object(Props1, Props2);
 equiv({array, ArrayList1}, {array, ArrayList2}) ->
     equiv_array(ArrayList1, ArrayList2);
-equiv(N1, N2) when is_number(N1), is_number(N2)	-> N1 == N2;
+equiv(N1, N2) when is_number(N1), is_number(N2) -> N1 == N2;
 equiv(S1, S2) when is_list(S1), is_list(S2) ->
     case {is_string(S1), is_string(S2)} of
         {unicode, unicode} ->
@@ -640,7 +644,7 @@ equiv(S1, S2) when is_list(S1), is_list(S2) ->
             xmerl_ucs:to_utf8(S1) == S2;
         {_, unicode} ->
             S1 == xmerl_ucs:to_utf8(S2);
-	_ ->
+        _ ->
             S1 == S2
     end;
 equiv(true, true) -> true;
@@ -655,7 +659,7 @@ equiv_object(Props1, Props2) ->
     L2 = lists:keysort(1, Props2),
     Pairs = lists:zip(L1, L2),
     true = lists:all(fun({{K1, V1}, {K2, V2}}) ->
-	equiv(K1, K2) and equiv(V1, V2)
+        equiv(K1, K2) and equiv(V1, V2)
     end, Pairs).
 
 %% Recursively compare array elements for equivalence.

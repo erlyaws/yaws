@@ -16,16 +16,16 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-	 terminate/2, code_change/3]).
+         terminate/2, code_change/3]).
 
 -export([hit/0, sent/1]).
 -export([get/1]).
 
 %% statistics
 -record(stats, {
-	  hits = 0,
-	  sent = 0
-	 }).
+          hits = 0,
+          sent = 0
+         }).
 
 %%====================================================================
 %% API
@@ -44,10 +44,10 @@ stop(Pid) ->
 
 hit() ->
     case get_stats() of
-	undefined ->
-	    ok;
-	Pid ->
-	    gen_server:cast(Pid, {hit})
+        undefined ->
+            ok;
+        Pid ->
+            gen_server:cast(Pid, {hit})
     end.
 
 sent({ok, Bytes}) ->
@@ -56,19 +56,19 @@ sent({error, _}) ->
     ignore;
 sent(Bytes) ->
     case get_stats() of
-	undefined ->
-	    ok;
-	Pid ->
-	    gen_server:cast(Pid, {sent, Bytes})
+        undefined ->
+            ok;
+        Pid ->
+            gen_server:cast(Pid, {sent, Bytes})
     end.
 
 
 get(Pid) ->
     case Pid of
-	undefined ->
-	    undefined;
-	Pid ->
-	    gen_server:call(Pid, {get})
+        undefined ->
+            undefined;
+        Pid ->
+            gen_server:call(Pid, {get})
     end.
 
 

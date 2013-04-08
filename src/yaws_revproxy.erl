@@ -35,7 +35,7 @@
                    headers,         %%   and associated headers
                    srvdata,         %% the server data
                    is_chunked,      %% true if the response is chunked
-                   intercept_mod    %% revproxy request/response intercept module
+                   intercept_mod   %% revproxy request/response intercept module
                   }).
 
 
@@ -67,7 +67,8 @@ out(#arg{req=Req, headers=Hdrs, state=#proxy_cfg{url=URL}=State}=Arg) ->
 
 %% Send the client request to the server then check if the request content is
 %% chunked or not
-out(#arg{state=#revproxy{}=RPState}=Arg) when RPState#revproxy.state == sendheaders ->
+out(#arg{state=#revproxy{}=RPState}=Arg)
+  when RPState#revproxy.state == sendheaders ->
     ?Debug("Send request headers to backend server: ~n"
            " - ~s~n", [?format_record(Arg#arg.req, http_request)]),
 
@@ -78,12 +79,14 @@ out(#arg{state=#revproxy{}=RPState}=Arg) when RPState#revproxy.state == sendhead
                             undefined ->
                                 {Req, Hdrs};
                             InterceptMod ->
-                                case catch InterceptMod:rewrite_request(Req, Hdrs) of
+                                case catch InterceptMod:rewrite_request(
+                                             Req, Hdrs) of
                                     {ok, NewReq0, NewHdrs0} ->
                                         {NewReq0, NewHdrs0};
                                     InterceptError ->
                                         error_logger:error_msg(
-                                          "revproxy intercept module ~p:rewrite_request failed: ~p~n",
+                                          "revproxy intercept module ~p:"
+                                          "rewrite_request failed: ~p~n",
                                           [InterceptMod, InterceptError]),
                                         exit({error, intercept_mod})
                                 end
@@ -209,20 +212,23 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvheaders ->
                    " - ~s~n - ~s~n", [?format_record(Resp0, http_response),
                                       ?format_record(RespHdrs0, headers)]),
 
-            {Resp, RespHdrs} = case RPState#revproxy.intercept_mod of
-                                      undefined ->
-                                          {Resp0, RespHdrs0};
-                                      InterceptMod ->
-                                          case catch InterceptMod:rewrite_response(Resp0, RespHdrs0) of
-                                              {ok, NewResp, NewRespHdrs} ->
-                                                  {NewResp, NewRespHdrs};
-                                              InterceptError ->
-                                                  error_logger:error_msg(
-                                                    "revproxy intercept module ~p:rewrite_response failure: ~p~n",
-                                                    [InterceptMod, InterceptError]),
-                                                  exit({error, intercept_mod})
-                                          end
-                                  end,
+            {Resp, RespHdrs} =
+                case RPState#revproxy.intercept_mod of
+                    undefined ->
+                        {Resp0, RespHdrs0};
+                    InterceptMod ->
+                        case catch InterceptMod:rewrite_response(
+                                     Resp0, RespHdrs0) of
+                            {ok, NewResp, NewRespHdrs} ->
+                                {NewResp, NewRespHdrs};
+                            InterceptError ->
+                                error_logger:error_msg(
+                                  "revproxy intercept module ~p:"
+                                  "rewrite_response failure: ~p~n",
+                                  [InterceptMod, InterceptError]),
+                                exit({error, intercept_mod})
+                        end
+                end,
 
             {CliConn, SrvConn} = get_connection_status(
                                    (Arg#arg.req)#http_request.version,
@@ -249,16 +255,18 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvheaders ->
                     RPState2 =
                         case RespHdrs#headers.content_length of
                             undefined ->
-                                TE = yaws:to_lower(RespHdrs#headers.transfer_encoding),
+                                TE = yaws:to_lower(
+                                       RespHdrs#headers.transfer_encoding),
                                 case TE of
                                     "chunked" ->
                                         ?Debug("Response content is chunked~n",
                                                []),
                                         RPState1#revproxy{state=recvchunk};
                                     _ ->
-                                        RPState1#revproxy{cliconn_status="close",
-                                                          srvconn_status="close",
-                                                          state=recvcontent}
+                                        RPState1#revproxy{
+                                          cliconn_status="close",
+                                          srvconn_status="close",
+                                          state=recvcontent}
                                 end;
                             _ ->
                                 RPState1#revproxy{state=recvcontent}
@@ -289,7 +297,7 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvcontent ->
         is_integer(Len) andalso Len =< SC#sconf.partial_post_size ->
             case read(RPState, Len) of
                 {ok, Data} ->
-                    ?Debug("Response content received from the backend server : "
+                    ?Debug("Response content received from the backend server: "
                            "~p bytes~n", [size(Data)]),
                     RPState1 = RPState#revproxy{state      = terminate,
                                                 is_chunked = false,
@@ -457,7 +465,8 @@ recv_next_chunk(YawsPid, #arg{state=RPState}=Arg) ->
 
 %%==========================================================================
 %% This function reads blocks from the server and streams them to the client.
-recv_blocks(YawsPid, #arg{state=RPState}=Arg, undefined, undefined, undefined) ->
+recv_blocks(YawsPid, #arg{state=RPState}=Arg,
+            undefined, undefined, undefined) ->
     case read(RPState) of
         {ok, <<>>} ->
             %% no data, wait 100 msec to avoid time-consuming loop and retry

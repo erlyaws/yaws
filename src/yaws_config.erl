@@ -193,14 +193,14 @@ load_yaws_auth_from_authdir(Docroot, Auth) ->
 
 load_yaws_auth_file(Path, Auth) ->
     case file:consult(Path) of
-	{ok, TermList} ->
-	    error_logger:info_msg("Reading .yaws_auth ~s~n", [Path]),
-	    parse_yaws_auth_file(TermList, Auth);
-	{error, enoent} ->
-	    {error, enoent};
-	Error ->
-	    error_logger:format("Bad .yaws_auth file ~s ~p~n", [Path, Error]),
-	    Error
+        {ok, TermList} ->
+            error_logger:info_msg("Reading .yaws_auth ~s~n", [Path]),
+            parse_yaws_auth_file(TermList, Auth);
+        {error, enoent} ->
+            {error, enoent};
+        Error ->
+            error_logger:format("Bad .yaws_auth file ~s ~p~n", [Path, Error]),
+            Error
     end.
 
 
@@ -222,13 +222,13 @@ start_pam([#auth{pam = false}|T]) ->
     start_pam(T);
 start_pam([A|T]) ->
     case whereis(yaws_pam) of
-	undefined ->	% pam not started
+        undefined ->    % pam not started
             Spec = {yaws_pam, {yaws_pam, start_link,
                                [yaws:to_list(A#auth.pam),undefined,undefined]},
                     permanent, 5000, worker, [yaws_pam]},
-	    spawn(fun() -> supervisor:start_child(yaws_sup, Spec) end);
-	_ ->
-	    start_pam(T)
+            spawn(fun() -> supervisor:start_child(yaws_sup, Spec) end);
+        _ ->
+            start_pam(T)
     end.
 
 
@@ -415,7 +415,7 @@ validate_group(List) ->
     %% all ssl servers with the same IP must share the same ssl  configuration
     %% check if one ssl server in the group
     case lists:any(fun(SC) -> SC#sconf.ssl  /= undefined end,List) of
-	true ->
+        true ->
             [SC0|SCs] = List,
             %% check if all servers in the group have the same ssl configuration
             case lists:filter(
@@ -427,7 +427,7 @@ validate_group(List) ->
                 _ ->
                     ok
             end;
-	_ ->
+        _ ->
             ok
     end,
     %% second all servernames in a group must be unique
@@ -542,14 +542,14 @@ yaws_dir() ->
 
 string_to_host_and_port(String) ->
     case string:tokens(String, ":") of
-	[Host, Port] ->
-	    case string:to_integer(Port) of
-		{Integer, []} when Integer >= 0, Integer =< 65535 ->
-		    {ok, Host, Integer};
-		_Else ->
+        [Host, Port] ->
+            case string:to_integer(Port) of
+                {Integer, []} when Integer >= 0, Integer =< 65535 ->
+                    {ok, Host, Integer};
+                _Else ->
                     {error, ?F("~p is not a valid port number", [Port])}
-	    end;
-	_Else ->
+            end;
+        _Else ->
             {error, ?F("bad host and port specifier, expected HOST:PORT", [])}
     end.
 
@@ -623,7 +623,8 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                                      {ok, GC, Cs}, Paths),
                             case Fold of
                                 {ok, GC1, Cs1} ->
-                                    fload(FD, globals, GC1, C, Cs1, Lno+1, Next);
+                                    fload(FD, globals, GC1, C, Cs1,
+                                          Lno+1, Next);
                                 Err ->
                                     Err
                             end;
@@ -663,7 +664,8 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     fload(FD, globals, GC#gconf{logdir = Dir},
                           C, Cs, Lno+1, Next);
                 false ->
-                    {error, ?F("Expect directory at line ~w (logdir ~s)", [Lno, Dir])}
+                    {error, ?F("Expect directory at line ~w (logdir ~s)",
+                               [Lno, Dir])}
             end;
 
         ["ebin_dir", '=', Ebindir] ->
@@ -1137,7 +1139,8 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                                               C#sconf.soptions]};
                              Opts ->
                                  C#sconf{soptions =
-                                             [{listen_opts, [{backlog, B} | Opts]} |
+                                             [{listen_opts, [{backlog, B} |
+                                                             Opts]} |
                                               C#sconf.soptions]}
                          end,
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
@@ -1260,21 +1263,24 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             HasDocroot =
                 case C#sconf.docroot of
                     undefined ->
-                        Tests = [fun() ->
-                                         lists:keymember("/", #proxy_cfg.prefix, C#sconf.revproxy)
-                                 end,
-                                 fun() ->
-                                         lists:keymember("/", 1, C#sconf.redirect_map)
-                                 end,
-                                 fun() ->
-                                         lists:foldl(fun(_, true) -> true;
-                                                        ({"/", _}, _Acc) -> true;
-                                                        (_, Acc) -> Acc
-                                                     end, false, C#sconf.appmods)
-                                 end,
-                                 fun() ->
-                                         ?sc_forward_proxy(C)
-                                 end],
+                        Tests =
+                            [fun() ->
+                                     lists:keymember("/", #proxy_cfg.prefix,
+                                                     C#sconf.revproxy)
+                             end,
+                             fun() ->
+                                     lists:keymember("/", 1,
+                                                     C#sconf.redirect_map)
+                             end,
+                             fun() ->
+                                     lists:foldl(fun(_, true) -> true;
+                                                    ({"/", _}, _Acc) -> true;
+                                                    (_, Acc) -> Acc
+                                                 end, false, C#sconf.appmods)
+                             end,
+                             fun() ->
+                                     ?sc_forward_proxy(C)
+                             end],
                         lists:any(fun(T) -> T() end, Tests);
                     _ ->
                         true
@@ -1284,14 +1290,16 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                     case C#sconf.listen of
                         [] ->
                             C2 = C#sconf{listen = {127,0,0,1}},
-                            fload(FD, globals, GC, undefined, [C2|Cs], Lno+1, Next);
+                            fload(FD, globals, GC, undefined, [C2|Cs],
+                                  Lno+1, Next);
                         Ls ->
                             Cs2 = [C#sconf{listen=L} || L <- Ls] ++ Cs,
                             fload(FD, globals, GC, undefined, Cs2, Lno+1, Next)
                     end;
                 false ->
                     {error,
-                     ?F("No valid docroot configured for virthost '~s' (port: ~w)",
+                     ?F("No valid docroot configured for virthost "
+                        "'~s' (port: ~w)",
                         [C#sconf.servername, C#sconf.port])}
             end;
 
@@ -1695,7 +1703,7 @@ fload(FD, server_auth, GC, C, Cs, Lno, Chars, Auth) ->
             Mod2 = list_to_atom(Mod),
             code:ensure_loaded(Mod2),
             %% Add the auth header for the mod
-	    H = try
+            H = try
                     Mod2:get_header() ++ Auth#auth.headers
                 catch _:_ ->
                         error_logger:format("Failed to ~p:get_header() \n",
@@ -1937,7 +1945,7 @@ fload(FD, extra_cgi_vars, GC, C, Cs, Lno, Chars, EVars = {Dir, Vars}) ->
         [] ->
             fload(FD, extra_cgi_vars, GC, C, Cs, Lno+1, Next, EVars);
         [Var, '=', Val] ->
-	    fload(FD, extra_cgi_vars, GC, C, Cs, Lno+1, Next,
+            fload(FD, extra_cgi_vars, GC, C, Cs, Lno+1, Next,
                   {Dir, [{Var, Val} | Vars]});
         ['<', "/extra_cgi_vars", '>'] ->
             C2 = C#sconf{extra_cgi_vars = [EVars | C#sconf.extra_cgi_vars]},

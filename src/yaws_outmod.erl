@@ -13,9 +13,9 @@
 -include("../include/yaws_api.hrl").
 
 -export([out401/3,
-	 out404/3,
+         out404/3,
          out404/1,
-	 out/1,
+         out/1,
          crashmsg/3]).
 
 
@@ -46,10 +46,10 @@ out401(_Arg, _Auth, _Realm) ->
     {ehtml,
      [{html,[],
        [
-	{body, [],
-	 [{h1,[], "401 authentication needed"}
-	 ]
-	}
+        {body, [],
+         [{h1,[], "401 authentication needed"}
+         ]
+        }
        ]
       }
      ]

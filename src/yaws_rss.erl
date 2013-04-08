@@ -324,7 +324,8 @@ set_counter(DB, N) ->
     dets:insert(DB, {counter, N}).
 
 do_insert(State, {App, {DbMod,Tag}, Title, Link, Desc, Creator, GregSecs}) ->
-    {State, catch apply(DbMod, insert, [App, Tag,Title,Link,Desc,Creator,GregSecs])};
+    {State, catch apply(DbMod, insert, [App, Tag,Title,Link,
+                                        Desc,Creator,GregSecs])};
 do_insert(State, {App, Tag, Title, Link, Desc, Creator, GregSecs}) ->
     case lists:member(App, State#s.open_apps) of
         true ->
@@ -347,7 +348,8 @@ do_retrieve(State, App, {DbMod,Tag}) ->
 do_retrieve(State, App, Tag) ->
     case lists:member(App, State#s.open_apps) of
         true ->
-            F = fun(?ITEM(Xa, Xt, _Counter, Item), Acc) when Xa == App, Xt == Tag ->
+            F = fun(?ITEM(Xa, Xt, _Counter, Item), Acc)
+                      when Xa == App, Xt == Tag ->
                         [Item|Acc];
                    (_, Acc) ->
                         Acc
@@ -409,29 +411,35 @@ to_xml([]) ->
 %%%
 w3cdtf(GregSecs) ->    Date = calendar:gregorian_seconds_to_datetime(GregSecs),
                        {{Y, Mo, D},{H, Mi, S}} = Date,
-                       [UDate|_] = calendar:local_time_to_universal_time_dst(Date),
-                       {DiffD,{DiffH,DiffMi,_}}=calendar:time_difference(UDate,Date),
+                       [UDate|_] = calendar:local_time_to_universal_time_dst(
+                                     Date),
+                       {DiffD,{DiffH,DiffMi,_}}=calendar:time_difference(
+                                                  UDate,Date),
                        w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi).
 
 %%%  w3cdtf's helper function
-w3cdtf_diff(Y, Mo, D, H, Mi, S, _DiffD, DiffH, DiffMi) when DiffH < 12,  DiffH /= 0 ->
+w3cdtf_diff(Y, Mo, D, H, Mi, S, _DiffD, DiffH, DiffMi)
+  when DiffH < 12,  DiffH /= 0 ->
     i2l(Y) ++ "-" ++ add_zero(Mo) ++ "-" ++ add_zero(D) ++ "T" ++
         add_zero(H) ++ ":" ++ add_zero(Mi) ++ ":"  ++
         add_zero(S) ++ "+" ++ add_zero(DiffH) ++ ":"  ++ add_zero(DiffMi);
 
-w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi) when DiffH > 12,  DiffD == 0 ->
+w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi)
+  when DiffH > 12,  DiffD == 0 ->
     i2l(Y) ++ "-" ++ add_zero(Mo) ++ "-" ++ add_zero(D) ++ "T" ++
         add_zero(H) ++ ":" ++ add_zero(Mi) ++ ":"  ++
         add_zero(S) ++ "+" ++ add_zero(DiffH) ++ ":"  ++
         add_zero(DiffMi);
 
-w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi) when DiffH > 12,  DiffD /= 0, DiffMi /= 0 ->
+w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi)
+  when DiffH > 12,  DiffD /= 0, DiffMi /= 0 ->
     i2l(Y) ++ "-" ++ add_zero(Mo) ++ "-" ++ add_zero(D) ++ "T" ++
         add_zero(H) ++ ":" ++ add_zero(Mi) ++ ":"  ++
         add_zero(S) ++ "-" ++ add_zero(23-DiffH) ++
         ":" ++ add_zero(60-DiffMi);
 
-w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi) when DiffH > 12,  DiffD /= 0, DiffMi == 0 ->
+w3cdtf_diff(Y, Mo, D, H, Mi, S, DiffD, DiffH, DiffMi)
+  when DiffH > 12,  DiffD /= 0, DiffMi == 0 ->
     i2l(Y) ++ "-" ++ add_zero(Mo) ++ "-" ++ add_zero(D) ++ "T" ++
         add_zero(H) ++ ":" ++ add_zero(Mi) ++ ":"  ++
         add_zero(S) ++ "-" ++ add_zero(24-DiffH) ++

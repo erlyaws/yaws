@@ -214,13 +214,19 @@ encode_object_rest(Props, Cache, Vsn) ->
           fun({Key, Value}, {Acc, Cache2}) ->
                   {EncodedKey, Cache3} =
                       case Key of
-                          L when is_list(L) -> encode_string(L, Cache2, Vsn);
-                          A when is_atom(A) -> encode_string(atom_to_list(A), Cache2, Vsn);
-                          _ -> exit({error, {haxe_encode, {bad_key, Key}}})
+                          L when is_list(L) ->
+                              encode_string(L, Cache2, Vsn);
+                          A when is_atom(A) ->
+                              encode_string(atom_to_list(A), Cache2, Vsn);
+                          _ ->
+                              exit({error, {haxe_encode, {bad_key, Key}}})
                       end,
                   {EncodedVal, Cache4} = encode(Value, Cache3, Vsn),
                   case Acc of
-                      [] -> {[[EncodedKey, EncodedVal]], Cache4};                                        _  -> {[[EncodedKey, EncodedVal] | Acc], Cache4}
+                      [] ->
+                          {[[EncodedKey, EncodedVal]], Cache4};
+                      _  ->
+                          {[[EncodedKey, EncodedVal] | Acc], Cache4}
                   end
           end,
 
@@ -395,7 +401,8 @@ scan_int(Chars) ->
 
 scan_number([], _Type) -> {more, []};
 scan_number(eof, _Type) -> {done, {error, incomplete_number}, []};
-scan_number([$-, $- | _Rest] = Input, _Type) -> {done, {error, invalid_number}, Input};
+scan_number([$-, $- | _Rest] = Input, _Type) ->
+    {done, {error, invalid_number}, Input};
 scan_number([$- | Ds] = Input, Type) ->
     case scan_number(Ds, Type) of
         {more, _Cont} -> {more, Input};
@@ -856,7 +863,8 @@ obj_fold(Fun, Acc, {struct, Props}) ->
 is_string([]) -> yes;
 is_string(List) -> is_string(List, non_unicode).
 
-is_string([C|Rest], non_unicode) when C >= 0, C =< 255 -> is_string(Rest, non_unicode);
+is_string([C|Rest], non_unicode) when C >= 0, C =< 255 ->
+    is_string(Rest, non_unicode);
 is_string([C|Rest], _) when C =< 65000 -> is_string(Rest, unicode);
 is_string([], non_unicode) -> yes;
 is_string([], unicode) -> unicode;
@@ -882,7 +890,9 @@ test() ->
              {{array, [3, 4, null, null, null, 5, null]}, "ai3i4u3i5nh"},
              {{struct, [{foo, "bar"}, {baz, "boing"}]},
               "oy3:fooy3:bary3:bazy5:boingg"},
-             {{array, ["foo", "bar", "foo", {struct, [{bar, "baz"}, {foo, 123}]}]}, "ay3:fooy3:bary3:foooy3:bary3:bazy3:fooi123gh"},
+             {{array, ["foo", "bar", "foo",
+                       {struct, [{bar, "baz"}, {foo, 123}]}]},
+              "ay3:fooy3:bary3:foooy3:bary3:bazy3:fooi123gh"},
              {{exception, "bad"}, "xy3:bad"}
             ],
 
@@ -891,7 +901,9 @@ test() ->
     Tests1 = [
               {{array, ["foo", "bar", "foo"]}, "ay3:fooy3:barR0h"},
               {{struct, [{foo, "bar"}, {bar, "foo"}]}, "oy3:fooy3:barR1R0g"},
-              {{array, ["foo", "bar", "foo", {struct, [{bar, "baz"}, {foo, 123}]}]}, "ay3:fooy3:barR0oR1y3:bazR0i123gh"}
+              {{array, ["foo", "bar", "foo",
+                        {struct, [{bar, "baz"}, {foo, 123}]}]},
+               "ay3:fooy3:barR0oR1y3:bazR0i123gh"}
              ],
     {Passed1, Failed1} = run_tests(Tests1, true),
 

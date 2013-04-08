@@ -16,30 +16,30 @@
 
 fformat() -> % test
     HTML =
-	format(
-	  [{table,
-	    [{tr,
-	      [{td,
-		["foo ", {em, ["bar"]}, " now.",
-		 {hr},
-		 {p, "foo"}]}]},
-	     {tr,
-	      [{td,
-		["foo ", {em, ["bar"]}, " now."]}]}]}]),
+        format(
+          [{table,
+            [{tr,
+              [{td,
+                ["foo ", {em, ["bar"]}, " now.",
+                 {hr},
+                 {p, "foo"}]}]},
+             {tr,
+              [{td,
+                ["foo ", {em, ["bar"]}, " now."]}]}]}]),
     io:format("~s~n", [lists:flatten(HTML)]).
 
 sformat() -> % test
     HTML =
-	sformat(
-	  [{table,
-	    [{tr,
-	      [{td,
-		["foo ", {em, ["bar"]}, " now.",
-		 {hr},
-		 {p, "foo"}]}]},
-	     {tr,
-	      [{td,
-		["foo ", {em, ["bar"]}, " now."]}]}]}]),
+        sformat(
+          [{table,
+            [{tr,
+              [{td,
+                ["foo ", {em, ["bar"]}, " now.",
+                 {hr},
+                 {p, "foo"}]}]},
+             {tr,
+              [{td,
+                ["foo ", {em, ["bar"]}, " now."]}]}]}]),
     io:format("~s~n", [lists:flatten(HTML)]).
 
 check_xhtml(XHTMLContent) when is_list(XHTMLContent) ->
@@ -50,12 +50,12 @@ check_xhtml(XHTMLContent) when is_binary(XHTMLContent) ->
     DTD = filename:join(code:priv_dir(webgui), "xhtml1-strict.dtd"),
     Cmd = "xmllint --dtdvalid "++DTD++" -noout -nonet "++Filename++" 2>&1",
     case os:cmd(Cmd) of
-	"" ->
-	    file:delete(Filename),
-	    ok;
-	Reason ->
-	    file:delete(Filename),
-	    {error, Reason}
+        "" ->
+            file:delete(Filename),
+            ok;
+        Reason ->
+            file:delete(Filename),
+            {error, Reason}
     end.
 
 format(Data) ->
@@ -80,42 +80,42 @@ format(Mode, [{Tag, Attrs, Body}|Rest], Value2StringF, N, Indent) ->
     TagString = lowercase(tag_string(Tag)),
     case {Mode, block_level(TagString), Body} of
         {first_in_block, no, []} ->
-	    [$\n, Indent, $<, TagString, 
-             format_attrs(Value2StringF, Attrs), $>, $<, $/, 
+            [$\n, Indent, $<, TagString,
+             format_attrs(Value2StringF, Attrs), $>, $<, $/,
              TagString, $>|format(Mode, Rest, Value2StringF, N, Indent)];
         {block, no, []} ->
-	    [$<, TagString, format_attrs(Value2StringF, Attrs), $>, $<, $/, 
+            [$<, TagString, format_attrs(Value2StringF, Attrs), $>, $<, $/,
              TagString, $>|format(Mode, Rest, Value2StringF, N, Indent)];
-	{first_in_block, yes, _} ->
-	    NextLevel = lists:duplicate(?INDENT_LEVEL, $ ),
-	    [$\n, Indent, $<, TagString,
-	     format_attrs(Value2StringF, Attrs), $>,
-	     format(first_in_block, Body, Value2StringF, N+?INDENT_LEVEL,
-		    [NextLevel, Indent]),
-	     $\n, Indent, $<, $/, TagString, $>|
-	     format(block, Rest, Value2StringF, N, Indent)];
-	%% Block element in a block element.
-	{block, yes, _} ->
-	    NextLevel = lists:duplicate(?INDENT_LEVEL, $ ),
-	    [$\n, Indent, $<, TagString,
-	     format_attrs(Value2StringF, Attrs), $>,
-	     format(first_in_block, Body, Value2StringF, N+?INDENT_LEVEL,
-		    [NextLevel, Indent]),
-	     $\n, Indent, $<, $/, TagString, $>|
-	     format(block, Rest, Value2StringF, N, Indent)];
-	%% Inline element first in a block element.
-	{first_in_block, no, _} ->
-	    [$\n, Indent, $<, TagString, format_attrs(Value2StringF, Attrs),
-	     $>,
-	     format(inline, Body, Value2StringF, N, Indent),
-	     $<, $/, TagString, $>|
-	     format(block, Rest, Value2StringF, N, Indent)];
-	%% Inline element in a block or an inline element.
-	{_, no, _} ->
-	    [$<, TagString, format_attrs(Value2StringF, Attrs), $>,
-	     format(inline, Body, Value2StringF, N, Indent),
-	     $<, $/, TagString, $>|
-	     format(Mode, Rest, Value2StringF, N, Indent)]
+        {first_in_block, yes, _} ->
+            NextLevel = lists:duplicate(?INDENT_LEVEL, $ ),
+            [$\n, Indent, $<, TagString,
+             format_attrs(Value2StringF, Attrs), $>,
+             format(first_in_block, Body, Value2StringF, N+?INDENT_LEVEL,
+                    [NextLevel, Indent]),
+             $\n, Indent, $<, $/, TagString, $>|
+             format(block, Rest, Value2StringF, N, Indent)];
+        %% Block element in a block element.
+        {block, yes, _} ->
+            NextLevel = lists:duplicate(?INDENT_LEVEL, $ ),
+            [$\n, Indent, $<, TagString,
+             format_attrs(Value2StringF, Attrs), $>,
+             format(first_in_block, Body, Value2StringF, N+?INDENT_LEVEL,
+                    [NextLevel, Indent]),
+             $\n, Indent, $<, $/, TagString, $>|
+             format(block, Rest, Value2StringF, N, Indent)];
+        %% Inline element first in a block element.
+        {first_in_block, no, _} ->
+            [$\n, Indent, $<, TagString, format_attrs(Value2StringF, Attrs),
+             $>,
+             format(inline, Body, Value2StringF, N, Indent),
+             $<, $/, TagString, $>|
+             format(block, Rest, Value2StringF, N, Indent)];
+        %% Inline element in a block or an inline element.
+        {_, no, _} ->
+            [$<, TagString, format_attrs(Value2StringF, Attrs), $>,
+             format(inline, Body, Value2StringF, N, Indent),
+             $<, $/, TagString, $>|
+             format(Mode, Rest, Value2StringF, N, Indent)]
     end;
 %% Inline data first in a block element.
 format(first_in_block, [String|Rest], Value2StringF, N, Indent)
@@ -243,19 +243,19 @@ count_trailing_spaces(Bin) ->
 
 count_trailing_spaces(Bin, Stop, N) ->
     Start = if Stop =< ?SZ ->
-		    1;
-	       true ->
-		    Stop - ?SZ + 1
-	    end,
+                    1;
+               true ->
+                    Stop - ?SZ + 1
+            end,
     L = binary_to_list(Bin, Start, Stop),
     case spaces_in_list(L) of
-	?SZ when Start == 1 ->
-	    N + ?SZ;
-	?SZ ->
-	    %% keep going
-	    count_trailing_spaces(Bin, Start-1, N + ?SZ);
-	M ->
-	    N + M
+        ?SZ when Start == 1 ->
+            N + ?SZ;
+        ?SZ ->
+            %% keep going
+            count_trailing_spaces(Bin, Start-1, N + ?SZ);
+        M ->
+            N + M
     end.
 
 spaces_in_list(L) ->

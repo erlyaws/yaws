@@ -451,16 +451,19 @@ setup_mime_types_info(SL, DefaultMTI) ->
             M;
         MProps when is_list(MProps) ->
             M = #mime_types_info{},
-            #mime_types_info{mime_types_file = lkup(mime_types_file, MProps,
-                                                    M#mime_types_info.mime_types_file),
+            #mime_types_info{mime_types_file =
+                                 lkup(mime_types_file, MProps,
+                                      M#mime_types_info.mime_types_file),
                              types           = lkup(types, MProps,
                                                     M#mime_types_info.types),
                              charsets        = lkup(charsets, MProps,
                                                     M#mime_types_info.charsets),
-                             default_type    = lkup(default_type, MProps,
-                                                    M#mime_types_info.default_type),
-                             default_charset = lkup(default_charset, MProps,
-                                                    M#mime_types_info.default_charset)}
+                             default_type    =
+                                 lkup(default_type, MProps,
+                                      M#mime_types_info.default_type),
+                             default_charset =
+                                 lkup(default_charset, MProps,
+                                      M#mime_types_info.default_charset)}
     end.
 
 
@@ -540,7 +543,8 @@ setup_sconf(SL, SC) ->
     #sconf{port                  = lkup(port, SL, SC#sconf.port),
            flags                 = set_sc_flags(lkup(flags, SL, []),
                                                 SC#sconf.flags),
-           redirect_map          = lkup(redirect_map, SL, SC#sconf.redirect_map),
+           redirect_map          = lkup(redirect_map, SL,
+                                        SC#sconf.redirect_map),
            rhost                 = lkup(rhost, SL, SC#sconf.rhost),
            rmethod               = lkup(rmethod, SL, SC#sconf.rmethod),
            docroot               = lkup(docroot, SL, SC#sconf.docroot),
@@ -556,8 +560,10 @@ setup_sconf(SL, SC) ->
                                         SC#sconf.partial_post_size),
            appmods               = lkup(appmods, SL, SC#sconf.appmods),
            expires               = lkup(expires, SL, SC#sconf.expires),
-           errormod_401          = lkup(errormod_401, SL, SC#sconf.errormod_401),
-           errormod_404          = lkup(errormod_404, SL, SC#sconf.errormod_404),
+           errormod_401          = lkup(errormod_401, SL,
+                                        SC#sconf.errormod_401),
+           errormod_404          = lkup(errormod_404, SL,
+                                        SC#sconf.errormod_404),
            errormod_crash        = lkup(errormod_crash, SL,
                                         SC#sconf.errormod_crash),
            arg_rewrite_mod       = lkup(arg_rewrite_mod, SL,
@@ -1651,7 +1657,8 @@ outh_serialize() ->
     SC=get(sc),
     Vary = case (?sc_has_deflate(SC) orelse H#outh.encoding == deflate) of
                true when H#outh.contlen /= undefined, H#outh.contlen /= 0;
-                         H#outh.act_contlen /= undefined, H#outh.act_contlen /= 0 ->
+                         H#outh.act_contlen /= undefined,
+                         H#outh.act_contlen /= 0 ->
                    Fields = outh_get_vary_fields(),
                    Fun    = fun("*") -> true;
                                (F)   -> (to_lower(F) == "accept-encoding")

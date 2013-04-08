@@ -23,9 +23,9 @@
 
 -export([cgi_worker/7, fcgi_worker/5]).
 
-%%%==============================================================================
+%%%=====================================================================
 %%% Code shared between CGI and FastCGI
-%%%==============================================================================
+%%%=====================================================================
 
 -define(ASCII_NEW_LINE, 10).
 -define(ASCII_CARRIAGE_RETURN, 13).
@@ -98,7 +98,8 @@ get_from_worker(Arg, WorkerPid) ->
                    end,
             case Next of
                 normal ->
-                    {ContentResps, NotCtnt} = filter2(fun iscontent/1, AllResps),
+                    {ContentResps, NotCtnt} =
+                        filter2(fun iscontent/1, AllResps),
                     {RedirResps, Others} = filter2(fun isredirect/1, NotCtnt),
                     case RedirResps of
                         [R|_] ->
@@ -259,12 +260,12 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
     end,
 
     Extra_CGI_Vars = lists:flatmap(fun({Dir, Vars}) ->
-					   case lists:prefix(Dir, Scriptname) of
-					       true -> Vars;
-					       false -> []
-					   end
-				   end,
-				   SC#sconf.extra_cgi_vars),
+                                           case lists:prefix(Dir, Scriptname) of
+                                               true -> Vars;
+                                               false -> []
+                                           end
+                                   end,
+                                   SC#sconf.extra_cgi_vars),
 
     %% Some versions of erlang:open_port can't handle query strings that
     %% end with an equal sign. This is because the broken versions treat
@@ -367,7 +368,7 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
            ]++lists:map(fun({http_header,_,Var,_,Val})->{tohttp(Var),Val} end,
                         H#headers.other)
           )) ++
-	Extra_CGI_Vars.
+        Extra_CGI_Vars.
 
 tohttp(X) ->
     "HTTP_"++lists:map(fun tohttp_c/1, yaws:to_list(X)).
@@ -467,9 +468,9 @@ get_opt(Key, List, Default) ->
     end.
 
 
-%%%==============================================================================
+%%%==========================================================================
 %%% Code specific to CGI
-%%%==============================================================================
+%%%==========================================================================
 
 %%%  TO DO:  Handle failure and timeouts.
 
@@ -652,9 +653,9 @@ cgi_add_resp(Bin, Port) ->
     end.
 
 
-%%%==============================================================================
+%%%===========================================================================
 %%% Code specific to FastCGI
-%%%==============================================================================
+%%%===========================================================================
 
 -define(FCGI_VERSION_1, 1).
 
@@ -1086,7 +1087,8 @@ fcgi_encode_name_value(Name, Value) when is_list(Name) and is_list(Value) ->
                         true ->
                             <<(ValueSize bor 16#80000000):32>>
                     end,
-    list_to_binary([<<NameSizeData/binary, ValueSizeData/binary>>, Name, Value]).
+    list_to_binary([<<NameSizeData/binary,
+                      ValueSizeData/binary>>, Name, Value]).
 
 
 fcgi_header_loop(WorkerState) ->

@@ -71,24 +71,24 @@ stop() ->
 get_yaws_session_server_backend() ->
     #gconf{ysession_mod = DefaultBackend} = #gconf{},
     case yaws_server:getconf() of
-	{ok, #gconf{ysession_mod = Backend}, _} -> Backend;
-	_ ->
-	    case application:get_env(yaws, embedded) of
-		{ok, true} ->
-		    case application:get_env(yaws, embedded_conf) of
-			{ok, L} when is_list(L) ->
-			    case lists:keysearch(gc, 1, L) of
-				{value, {_, #gconf{ysession_mod = Backend}}} ->
-				    Backend;
-				_ ->
-				    DefaultBackend
-			    end;
-			_ ->
-			    DefaultBackend
-		    end;
-		_ ->
-		    DefaultBackend
-	    end
+        {ok, #gconf{ysession_mod = Backend}, _} -> Backend;
+        _ ->
+            case application:get_env(yaws, embedded) of
+                {ok, true} ->
+                    case application:get_env(yaws, embedded_conf) of
+                        {ok, L} when is_list(L) ->
+                            case lists:keysearch(gc, 1, L) of
+                                {value, {_, #gconf{ysession_mod = Backend}}} ->
+                                    Backend;
+                                _ ->
+                                    DefaultBackend
+                            end;
+                        _ ->
+                            DefaultBackend
+                    end;
+                _ ->
+                    DefaultBackend
+            end
     end.
 
 
@@ -281,7 +281,7 @@ long_to() ->
 
 %% timeout if the server is idle for more than 2 minutes.
 to() ->
-    2 * 60 * 1000.                              
+    2 * 60 * 1000.
 gnow() ->
     calendar:datetime_to_gregorian_seconds(
       calendar:local_time()).

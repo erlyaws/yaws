@@ -103,7 +103,8 @@ handle_call({lock,Path,Lock}, _From, Table) ->
     catch
         Status -> {reply, {error, Status}, Table};
         _Error:Reason ->
-            error_logger:error_msg("Unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
+            error_logger:error_msg("Unexpected error: ~p~n~p~n",
+                                   [Reason,erlang:get_stacktrace()]),
             {reply, {error, Reason}, Table}
     end;
 handle_call({unlock,Path,Id}, _From, Table) ->
@@ -179,7 +180,8 @@ do_lock([H|T],Lock,Table) ->
                 {_,infinity} when Lock#lock.scope == exclusive ->
                     throw(locked);
                 _ ->
-                    lists:keyreplace(H,1,Table,{H,Locks,do_lock(T,Lock,Children)})
+                    lists:keyreplace(H,1,Table,{H,Locks,
+                                                do_lock(T,Lock,Children)})
             end;
         false ->
             lists:keystore(H,1,Table,{H,[],do_lock(T,Lock,[])})
@@ -334,7 +336,8 @@ do_report(Path,[{Name,Locks,Children}|T]) ->
 do_report_locks([]) ->
     ok;
 do_report_locks([H|T]) ->
-    io:format("... ~p lock with token ~p, scope ~p, depth ~p~n",[H#lock.type,H#lock.id,H#lock.scope,H#lock.depth]),
+    io:format("... ~p lock with token ~p, scope ~p, depth ~p~n",
+              [H#lock.type,H#lock.id,H#lock.scope,H#lock.depth]),
     do_report_locks(T).
 
 %%----------------------------------------------------------------------
@@ -381,7 +384,8 @@ locktoken() ->
     UUID = <<TimeLow:32, TimeMid:16, Version:4, TimeHi:12,
       Variant:2, ClockseqLow:8, ClockseqHi:6, Node/binary>>,
     <<U0:32, U1:16, U2:16, U3:16, U4:48>> = UUID,
-    lists:flatten(io_lib:format("~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b",[U0,U1,U2,U3,U4])).
+    lists:flatten(io_lib:format("~8.16.0b-~4.16.0b-~4.16.0b-~4.16.0b-~12.16.0b"
+                                ,[U0,U1,U2,U3,U4])).
 
 
 get_hwaddr() ->
@@ -394,17 +398,23 @@ get_hwaddr(true) ->
 get_hwaddr(false) ->
     %% this clause is for backward compatibility to R13
     {ok, Ifs} = inet:getiflist(),
-    Addrs = lists:foldl(fun([{hwaddr, HW}], Acc) -> [HW|Acc];
-                           ([], Acc) -> Acc
-                        end, [], [begin {ok, HW} = inet:ifget(If, [hwaddr]), HW end || If <- Ifs]),
+    Addrs = lists:foldl(
+              fun([{hwaddr, HW}], Acc) -> [HW|Acc];
+                 ([], Acc) -> Acc
+              end, [],
+              [begin {ok, HW} =inet:ifget(If, [hwaddr]), HW end || If <- Ifs]),
     HWAddrs = case Addrs of
                   [] ->
-                      %% hwaddr doesn't work on Mac on R13. Fall back to ifconfig :(
+                      %% hwaddr doesn't work on Mac on R13.
+                      %% Fall back to ifconfig :(
                       Ifconfig = os:cmd("/sbin/ifconfig -a"),
                       {ok, Pat} = re:compile("ether\s+([0-9a-fA-F:]+)"),
-                      {match, Matches} = re:run(Ifconfig, Pat, [global, {capture, [1]}]),
-                      HWs = [string:substr(Ifconfig, At+1, Len) || [{At,Len}] <- Matches],
-                      [[erlang:list_to_integer(V, 16) || V <- string:tokens(S, ":")] || S <- HWs];
+                      {match, Matches} =
+                          re:run(Ifconfig, Pat, [global, {capture, [1]}]),
+                      HWs = [string:substr(Ifconfig, At+1, Len) ||
+                                [{At,Len}] <- Matches],
+                      [[erlang:list_to_integer(V, 16) ||
+                           V <- string:tokens(S, ":")] || S <- HWs];
                   _ ->
                       Addrs
               end,

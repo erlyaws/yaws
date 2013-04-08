@@ -8,9 +8,6 @@
 -module(yaws_api).
 -author('klacke@hyber.org').
 
-%% -compile(export_all).
-
-
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
@@ -79,18 +76,22 @@
 -export([arg_clisock/1, arg_client_ip_port/1, arg_headers/1, arg_req/1,
          arg_clidata/1, arg_server_path/1, arg_querydata/1, arg_appmoddata/1,
          arg_docroot/1, arg_docroot_mount/1, arg_fullpath/1, arg_cont/1,
-         arg_state/1, arg_pid/1, arg_opaque/1, arg_appmod_prepath/1, arg_prepath/1,
+         arg_state/1, arg_pid/1, arg_opaque/1, arg_appmod_prepath/1,
+         arg_prepath/1,
          arg_pathinfo/1]).
 -export([http_request_method/1, http_request_path/1, http_request_version/1,
-         http_response_version/1, http_response_status/1, http_response_phrase/1,
+         http_response_version/1, http_response_status/1,
+         http_response_phrase/1,
          headers_connection/1, headers_accept/1, headers_host/1,
-         headers_if_modified_since/1, headers_if_match/1, headers_if_none_match/1,
+         headers_if_modified_since/1, headers_if_match/1,
+         headers_if_none_match/1,
          headers_if_range/1, headers_if_unmodified_since/1, headers_range/1,
          headers_referer/1, headers_user_agent/1, headers_accept_ranges/1,
          headers_cookie/1, headers_keep_alive/1, headers_location/1,
          headers_content_length/1, headers_content_type/1,
          headers_content_encoding/1, headers_authorization/1,
-         headers_transfer_encoding/1, headers_x_forwarded_for/1, headers_other/1]).
+         headers_transfer_encoding/1, headers_x_forwarded_for/1,
+         headers_other/1]).
 
 -export([set_header/2, set_header/3, merge_header/2, merge_header/3,
          get_header/2, get_header/3, delete_header/2]).
@@ -510,7 +511,7 @@ do_parse_spec(<<$=, Tail/binary>>, _Last, Cur, key) ->
     do_parse_spec(Tail, lists:reverse(Cur), [], value); %% change mode
 
 do_parse_spec(<<$%, $u, A:8, B:8,C:8,D:8, Tail/binary>>,
-	       Last, Cur, State) ->
+               Last, Cur, State) ->
     %% non-standard encoding for Unicode characters: %uxxxx,
     Hex = yaws:hex_to_integer([A,B,C,D]),
     do_parse_spec(Tail, Last, [ Hex | Cur],  State);
@@ -936,10 +937,10 @@ stream_chunk_deliver_blocking(YawsPid, Data) ->
             %% not managing to close the socket (FIN_WAIT2
             %% resp. CLOSE_WAIT) the SSL process is not killed (it traps
             %% exit signals) and thus we will leak one file descriptor.
-	    error_logger:error_msg(
-	      "~p:stream_chunk_deliver_blocking/2 STREAM_GARBAGE_TIMEOUT "
-	      "(default 1 hour). Killing ~p", [?MODULE, YawsPid]),
-	    erlang:error(stream_garbage_timeout, [YawsPid, Data])
+            error_logger:error_msg(
+              "~p:stream_chunk_deliver_blocking/2 STREAM_GARBAGE_TIMEOUT "
+              "(default 1 hour). Killing ~p", [?MODULE, YawsPid]),
+            erlang:error(stream_garbage_timeout, [YawsPid, Data])
     end.
 
 stream_chunk_end(YawsPid) ->
@@ -1496,7 +1497,8 @@ capitalize_header(Name) ->
     %% headers less than 20 characters long. In R16B that length was raised
     %% to 50. Using decode_packet lets us be portable.
     {ok, {http_header, _, Result, _, _}, _} =
-        erlang:decode_packet(httph, list_to_binary([Name, <<": x\r\n\r\n">>]), []),
+        erlang:decode_packet(httph, list_to_binary([Name, <<": x\r\n\r\n">>]),
+                             []),
     Result.
 
 reformat_request(#http_request{method = bad_request}) ->

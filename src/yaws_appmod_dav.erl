@@ -72,7 +72,8 @@ out(A) ->
         handle(Method,A)
     catch
         {Status,Precondition} ->
-            Response1 = [{'D:error', [{'xmlns:D',"DAV:"}],[{Precondition,[],[]}]}],
+            Response1 = [{'D:error', [{'xmlns:D',"DAV:"}],
+                          [{Precondition,[],[]}]}],
             status(Status,{xml,Response1});
         Status ->
             status(Status);
@@ -82,7 +83,8 @@ out(A) ->
             Response = [{'D:error',[{'xmlns:D',"DAV:"}],[Msg]}],
             status(500,{xml,Response});
         _Error:Reason ->
-            error_logger:info_msg("unexpected error: ~p~n~p~n",[Reason,erlang:get_stacktrace()]),
+            error_logger:info_msg("unexpected error: ~p~n~p~n",
+                                  [Reason,erlang:get_stacktrace()]),
             Response = [{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}],
             status(500,{xml,Response})
     end.
@@ -106,7 +108,10 @@ handle('OPTIONS',A) ->
               {_Kind,Mimetype} = mime_types:t(Ext1),
               Mimetype
         end,
-    Headers = [{header,{"Allow", "GET, POST, OPTIONS, HEAD, PUT, DELETE, PROPFIND, PROPPATCH, LOCK, UNLOCK, MKCOL, MOVE, COPY"}}],
+    Headers = [{header,{"Allow",
+                        "GET, POST, OPTIONS, HEAD, PUT, DELETE, "
+                        "PROPFIND, PROPPATCH, LOCK, UNLOCK, "
+                        "MKCOL, MOVE, COPY"}}],
     status(200,[{header,{"Content-Type",T}}|Headers],[]);
 handle('HEAD',A) ->
     ?DEBUG("HEAD ~p",[A#arg.server_path]),
@@ -138,14 +143,17 @@ handle('GET',A) ->
             {ok,Dir} = file:list_dir(Path),
             Listing = lists:foldl(
                         fun(Fname,L) ->
-                            {ok,Finfo} = file:read_file_info(filename:join(Path,Fname)),
+                            {ok,Finfo} = file:read_file_info(
+                                           filename:join(Path,Fname)),
                             Ftype = case Finfo#file_info.type of
                                         directory -> "Coll:";
                                         _         -> "     "
                                     end,
                             Fsize = integer_to_list(Finfo#file_info.size),
-                            Ftime = yaws:local_time_as_gmt_string(Finfo#file_info.mtime),
-                            Entry = io_lib:format("~s ~-20s ~10s  ~s~n",[Ftype,Fname,Fsize,Ftime]),
+                            Ftime = yaws:local_time_as_gmt_string(
+                                      Finfo#file_info.mtime),
+                            Entry = io_lib:format("~s ~-20s ~10s  ~s~n",
+                                                  [Ftype,Fname,Fsize,Ftime]),
                             L++Entry
                         end,"",lists:sort(Dir)),
             Response = {ehtml,[
@@ -203,7 +211,8 @@ handle("LOCK",A) ->
     %% check if file/collection exists and create if not so
     %% RFC4918 - 9.10.4
     {Status,R} = case file:read_file_info(Path) of
-            {ok, F} when (F#file_info.type == directory) or (F#file_info.type == regular) ->
+            {ok, F} when (F#file_info.type == directory) or
+                         (F#file_info.type == regular) ->
                 {200,#resource{ name = Name, info = F}};
             {error,enoent} ->
                 case string:right(A#arg.server_path,1) of
@@ -222,11 +231,14 @@ handle("LOCK",A) ->
     Timeout = h_timeout(A),
     Depth = h_depth(A),
     Id = h_if_refresh(A,Path),
-    case yaws_runmod_lock:lock(Path,L#lock{path=Path,id=Id,timeout=Timeout,depth=Depth}) of
+    case yaws_runmod_lock:lock(Path,L#lock{path=Path,id=Id,timeout=Timeout,
+                                           depth=Depth}) of
         {ok,Id1} ->
             {200,Result} = prop_get({'DAV:',lockdiscovery},A,R),
             Response = [{'D:prop', [{'xmlns:D',"DAV:"}], [Result]}],
-            status(Status,[{header,{"Lock-Token","<opaquelocktoken:"++Id1++">"}}],{xml,Response});
+            status(Status,[{header,
+                            {"Lock-Token","<opaquelocktoken:"++Id1++">"}}],
+                   {xml,Response});
         {error,locked} ->
             status(423);
         _ ->
@@ -240,7 +252,8 @@ handle("UNLOCK",A) ->
     case yaws_runmod_lock:unlock(Path,Id) of
         ok -> status(204);
         not_found ->
-            Response = [{'D:error', [{'xmlns:D',"DAV:"}],[{'lock-token-matches-request-uri',[],[]}]}],
+            Response = [{'D:error', [{'xmlns:D',"DAV:"}],
+                         [{'lock-token-matches-request-uri',[],[]}]}],
             status(409,{xml,Response})
     end;
 handle('DELETE',A) ->
@@ -249,7 +262,8 @@ handle('DELETE',A) ->
     h_if(A,Path),
     R = davresource0(A),
     %% use internal locking to be safe
-    case yaws_runmod_lock:lock(R#resource.name,#lock{depth=infinity,scope=exclusive}) of
+    case yaws_runmod_lock:lock(R#resource.name,
+                               #lock{depth=infinity,scope=exclusive}) of
         {ok,Id} ->
             F = filename:join(A#arg.docroot,["./",R#resource.name]),
             fs_rmrf(F),
@@ -379,8 +393,10 @@ handle("MOVE",A) ->
                         status(201)
                     catch
                         throw:Status ->
-                            ?DEBUG(" move from ~p to ~p failed: ~p\n",[From, To, Status]),
-                            Response = [{'D:error', [{'xmlns:D',"DAV:"}],[Status]}],
+                            ?DEBUG(" move from ~p to ~p failed: ~p\n",
+                                   [From, To, Status]),
+                            Response = [{'D:error', [{'xmlns:D',"DAV:"}],
+                                         [Status]}],
                             status(Status,{xml,Response})
                     end
             end
@@ -398,11 +414,14 @@ handle("PROPFIND",A) ->
         1 ->
             R1 = davresource1(A),
             Response = {'D:response', [], propfind_response(Props,A,R)},
-            Responses = [{'D:response', [], propfind_response(Props,A,Rx)} || Rx <- R1],
-            MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}], [Response|Responses]}],
+            Responses = [{'D:response', [],
+                          propfind_response(Props,A,Rx)} || Rx <- R1],
+            MultiStatus = [{'D:multistatus', [{'xmlns:D',"DAV:"}],
+                            [Response|Responses]}],
             status(207,{xml,MultiStatus});
         infinity ->
-            Response = [{'D:error', [{'xmlns:D',"DAV:"}],[{'propfind-finite-depth',[],[]}]}],
+            Response = [{'D:error', [{'xmlns:D',"DAV:"}],
+                         [{'propfind-finite-depth',[],[]}]}],
             status(403,{xml,Response})
     end;
 handle("PROPPATCH",A) ->
@@ -474,7 +493,8 @@ fs_cp(From,To) ->
         directory ->
             file_do(make_dir,[To]),
             {ok, Dir} = file:list_dir(From),
-            [ fs_cp(filename:join(From,File),filename:join(To,File)) || File <- Dir ];
+            [ fs_cp(filename:join(From,File),filename:join(To,File)) ||
+                File <- Dir ];
         _ ->
             file_do(copy,[From,To])
     end.
@@ -584,19 +604,21 @@ allprops(R) ->
           {'DAV:',getlastmodified},
           {'DAV:',lockdiscovery}, % class 2 compliancy
           %%{'DAV:','quota-avialable-bytes'}    % RFC4331
-                                                %{'DAV:','quota-used-bytes'} % RFC4331
+                                         %{'DAV:','quota-used-bytes'} % RFC4331
           {'DAV:',resourcetype},
           {'DAV:',supportedlock} % class 2 compliancy
          ],
     %% properties depending on file type
     P2 = case F#file_info.type of
-             directory when C==windows -> [
-                                           {'DAV:',childcount} % Microsoft extension
-                                          ];
+             directory when C==windows ->
+                 [
+                   {'DAV:',childcount} % Microsoft extension
+                 ];
              %% The executable property is only shown for regular files
-             regular -> [
-                         {'http://apache.org/dav/props/',executable} % Apache extension
-                        ];
+             regular ->
+                 [
+                  {'http://apache.org/dav/props/',executable} % Apache extension
+                 ];
              _ -> [
                   ]
          end,
@@ -648,7 +670,8 @@ prop_get({'DAV:',displayname},_A,R) ->
 prop_get({'http://apache.org/dav/props/',executable},_A,R) ->
     F = R#resource.info,
     case F#file_info.type of
-        directory -> {404,{executable, [{'xmlns',"http://apache.org/dav/props/"}], []}};
+        directory -> {404,{executable,
+                           [{'xmlns',"http://apache.org/dav/props/"}], []}};
         _ ->
             %% TODO check on extension for Windows?
             X = case F of
@@ -669,7 +692,8 @@ prop_get({'DAV:',getcontenttype},_A,R) ->
     Mediatype = case F#file_info.type of
           directory ->
               "httpd/unix-directory";
-              %%"text/html"; % this should represent the mediatype of a GET on a collection
+              %%"text/html";
+              %% this should represent the mediatype of a GET on a collection
           _ ->
               Name = R#resource.name,
               Ext = filename:extension(Name),
@@ -694,7 +718,11 @@ prop_get({'DAV:',getlastmodified},_A,R) ->
     X = lists:flatten(T),
     C = get(compatibility),
     P = case C of
-            microsoft -> {'getlastmodified',[{'xmlns:b',"urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/"},{'b:dt',"dateTime.rfc1123"}],[X]};
+            microsoft ->
+                {'getlastmodified',
+                 [{'xmlns:b',
+                   "urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/"},
+                  {'b:dt',"dateTime.rfc1123"}],[X]};
             _ -> {'D:getlastmodified',[],[X]}
         end,
     {200, P};
@@ -728,17 +756,17 @@ prop_get({'DAV:',lockdiscovery},A,_R) ->
         [] ->
             {404,{'D:lockdiscovery',[],[]}};
         _ ->
-            ActiveLocks = [
-                        {'D:activelock',[],[
-                            {'D:lockscope',[],[prop_get_format(scope,Lock#lock.scope)]},
-                            {'D:locktype',[],[prop_get_format(type,Lock#lock.type)]},
-                            {'D:depth',[],[prop_get_format(depth,Lock#lock.depth)]},
-                            {'D:owner',[],[prop_get_format(owner,Lock#lock.owner)]},
-                            {'D:timeout',[],[prop_get_format(timeout,Lock#lock.timeout)]},
-                            {'D:locktoken',[],[prop_get_format(locktoken,Lock#lock.id)]},
-                            {'D:lockroot',[],[prop_get_format(lockroot,Lock#lock.path)]}
-                        ]}
-                    || Lock <- Locks ],
+            ActiveLocks =
+                [{'D:activelock',[],
+                  [{'D:lockscope',[],[prop_get_format(scope,Lock#lock.scope)]},
+                   {'D:locktype',[],[prop_get_format(type,Lock#lock.type)]},
+                   {'D:depth',[],[prop_get_format(depth,Lock#lock.depth)]},
+                   {'D:owner',[],[prop_get_format(owner,Lock#lock.owner)]},
+                   {'D:timeout',[],[prop_get_format(timeout,Lock#lock.timeout)]},
+                   {'D:locktoken',[],[prop_get_format(locktoken,Lock#lock.id)]},
+                   {'D:lockroot',[],[prop_get_format(lockroot,Lock#lock.path)]}
+                  ]}
+                 || Lock <- Locks ],
             {200, {'D:lockdiscovery',[],ActiveLocks}}
     end;
 prop_get({'DAV:',supportedlock},_A,_R) ->
@@ -845,7 +873,8 @@ davresource0(A) ->
     Name = davname(A),
     Path = davpath(A),
     case file:read_file_info(Path) of
-        {ok, F} when (F#file_info.type == directory) or (F#file_info.type == regular) ->
+        {ok, F} when (F#file_info.type == directory) or
+                     (F#file_info.type == regular) ->
             #resource{ name = Name, info = F};
         {error,_} -> throw(404)
     end.
@@ -867,7 +896,8 @@ davresource1(_A,Path,Coll,[Name|Rest],Result) ->
     Ref = filename:join(Coll,Name),
     {ok, Info} = file:read_file_info(File),
     if
-        (Info#file_info.type == regular) or (Info#file_info.type == directory) ->
+        (Info#file_info.type == regular) or
+        (Info#file_info.type == directory) ->
             Resource = #resource {name = Ref, info = Info},
             davresource1(_A,Path,Coll,Rest,[Resource|Result]);
         true ->
@@ -1096,7 +1126,8 @@ if_eval_locktoken(_Target,_Token,[]) ->
 %%if_eval_locktoken(_Target,"DAV:no-lock",[]) ->
 %%    true;
 if_eval_locktoken(Target,Token,[H|T]) ->
-    ((H#lock.path == Target) and (H#lock.id == Token)) orelse if_eval_locktoken(Target,Token,T).
+    ((H#lock.path == Target) and (H#lock.id == Token))
+        orelse if_eval_locktoken(Target,Token,T).
 
 
 %% --------------------------------------------------------
@@ -1120,7 +1151,8 @@ if_eval_locktoken(Target,Token,[H|T]) ->
 %% multistatus
 -define(IS_OWNER(X), #xmlElement{expanded_name = {'DAV:',owner}} = X).
 -define(IS_PROP(X), #xmlElement{expanded_name = {'DAV:',prop}} = X).
--define(IS_PROPERTYUPDATE(X), #xmlElement{expanded_name = {'DAV:',propertyupdate}} = X).
+-define(IS_PROPERTYUPDATE(X),
+        #xmlElement{expanded_name = {'DAV:',propertyupdate}} = X).
 -define(IS_PROPFIND(X), #xmlElement{expanded_name = {'DAV:',propfind}} = X).
 -define(IS_PROPNAME(X), #xmlElement{expanded_name = {'DAV:',propname}} = X).
 %% propstat
@@ -1296,7 +1328,8 @@ export([{Name,Attrs,Content}|T]) when is_atom(Name)->
 export([{Tag,Attrs,[]}|T]) when is_list(Tag)->
     ["<",Tag,export_attrs(Attrs)," />",export(T)];
 export([{Tag,Attrs,Content}|T]) when is_list(Tag)->
-    ["<",Tag,export_attrs(Attrs),">",export_content(Content),"</",Tag,">",export(T)].
+    ["<",Tag,export_attrs(Attrs),">",
+     export_content(Content),"</",Tag,">",export(T)].
 
 export_content([]) ->
     "";
