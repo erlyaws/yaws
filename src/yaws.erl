@@ -1275,6 +1275,7 @@ outh_set_static_headers(Req, UT, Headers, Range) ->
            encoding          = Encoding,
            date              = make_date_header(),
            server            = make_server_header(),
+           last_modified     = make_last_modified_header(UT#urltype.finfo),
            etag              = make_etag_header(UT#urltype.finfo),
            content_range     = make_content_range_header(Range),
            content_length    = make_content_length_header(Length),
@@ -1298,6 +1299,7 @@ outh_set_304_headers(Req, UT, Headers) ->
            chunked        = false,
            date           = make_date_header(),
            server         = make_server_header(),
+           last_modified  = make_last_modified_header(UT#urltype.finfo),
            etag           = make_etag_header(UT#urltype.finfo),
            content_length = make_content_length_header(0),
            connection     = make_connection_close_header(DoClose),
@@ -1632,17 +1634,11 @@ outh_serialize() ->
                      undefined -> make_content_encoding_header(H#outh.encoding);
                      CE        -> CE
                  end,
-    {LastModified, Expires, CacheControl} =
+    {Expires, CacheControl} =
         case erase(file_info) of
             undefined ->
-                {H#outh.last_modified, H#outh.expires, H#outh.cache_control};
+                {H#outh.expires, H#outh.cache_control};
             FI ->
-                LM = case H#outh.last_modified of
-                         undefined ->
-                             make_last_modified_header(FI);
-                         _ ->
-                             H#outh.last_modified
-                     end,
                 {E, CC} = case {H#outh.expires, H#outh.cache_control} of
                               {undefined, undefined} ->
                                   CT = outh_get_content_type(),
@@ -1650,7 +1646,7 @@ outh_serialize() ->
                               _ ->
                                   {H#outh.expires, H#outh.cache_control}
                           end,
-                {LM, E, CC}
+                {E, CC}
         end,
 
     %% Add 'Accept-Encoding' in the 'Vary:' header if the compression is enabled
@@ -1678,7 +1674,7 @@ outh_serialize() ->
                noundef(H#outh.location),
                noundef(H#outh.date),
                noundef(H#outh.allow),
-               noundef(LastModified),
+               noundef(H#outh.last_modified),
                noundef(Expires),
                noundef(CacheControl),
                noundef(H#outh.etag),
