@@ -18,14 +18,14 @@
          add_server/2, create_gconf/2, create_sconf/2]).
 
 -export([gconf_yaws_dir/1, gconf_trace/1, gconf_flags/1, gconf_logdir/1,
-         gconf_ebin_dir/1, gconf_runmods/1, gconf_keepalive_timeout/1,
-         gconf_keepalive_maxuses/1, gconf_max_num_cached_files/1,
-         gconf_max_num_cached_bytes/1, gconf_max_size_cached_file/1,
-         gconf_max_connections/1, gconf_process_options/1,
-         gconf_large_file_chunk_size/1, gconf_mnesia_dir/1,
-         gconf_log_wrap_size/1, gconf_cache_refresh_secs/1, gconf_include_dir/1,
-         gconf_phpexe/1, gconf_yaws/1, gconf_id/1, gconf_enable_soap/1,
-         gconf_soap_srv_mods/1, gconf_ysession_mod/1,
+         gconf_ebin_dir/1, gconf_src_dir/1, gconf_runmods/1,
+         gconf_keepalive_timeout/1, gconf_keepalive_maxuses/1,
+         gconf_max_num_cached_files/1, gconf_max_num_cached_bytes/1,
+         gconf_max_size_cached_file/1, gconf_max_connections/1,
+         gconf_process_options/1, gconf_large_file_chunk_size/1,
+         gconf_mnesia_dir/1, gconf_log_wrap_size/1, gconf_cache_refresh_secs/1,
+         gconf_include_dir/1, gconf_phpexe/1, gconf_yaws/1, gconf_id/1,
+         gconf_enable_soap/1, gconf_soap_srv_mods/1, gconf_ysession_mod/1,
          gconf_acceptor_pool_size/1, gconf_mime_types_info/1]).
 
 -export([sconf_port/1, sconf_flags/1, sconf_redirect_map/1, sconf_rhost/1,
@@ -216,6 +216,7 @@ gconf_trace                (#gconf{trace                 = X}) -> X.
 gconf_flags                (#gconf{flags                 = X}) -> X.
 gconf_logdir               (#gconf{logdir                = X}) -> X.
 gconf_ebin_dir             (#gconf{ebin_dir              = X}) -> X.
+gconf_src_dir              (#gconf{src_dir               = X}) -> X.
 gconf_runmods              (#gconf{runmods               = X}) -> X.
 gconf_keepalive_timeout    (#gconf{keepalive_timeout     = X}) -> X.
 gconf_keepalive_maxuses    (#gconf{keepalive_maxuses     = X}) -> X.
@@ -477,6 +478,7 @@ setup_gconf(GL, GC) ->
                                                 GC#gconf.flags),
            logdir                = lkup(logdir, GL, GC#gconf.logdir),
            ebin_dir              = lkup(ebin_dir, GL, GC#gconf.ebin_dir),
+           src_dir               = lkup(src_dir, GL, GC#gconf.src_dir),
            runmods               = lkup(runmods, GL, GC#gconf.runmods),
            keepalive_timeout     = lkup(keepalive_timeout, GL,
                                         GC#gconf.keepalive_timeout),

@@ -2190,6 +2190,15 @@ part where options for each virtual host is supplied.
               path. It is possible to have several of these  command
               in the configuration file.
 
+\item        \verb+src_dir = Directory+ ---
+              This directive defines a Directory as a \textit{source} directory.
+              \Yaws\ will compile all erlang modules found in this directory and
+              all its subdirectories. The compilation occurs when the
+              configuration is loaded or reloaded. The \verb+include_dir+
+              directives are used to search for includes files. Multiple
+              \verb+src_dir+ directives may be used. There is no such directory
+              configured by default.
+
 \item        \verb+id = String+ ---
               It is possible run multiple Yaws servers on the same machine. We
               use the id of a Yaws server to control it using the different

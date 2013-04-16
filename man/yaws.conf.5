@@ -49,6 +49,15 @@ This directive adds Directory to the Erlang search path. It is possible to have
 several of these commands in the configuration file. The default value is
 \fI"yaws_dir"/examples/ebin\fR
 
+.TP
+\fBsrc_dir = Directory\fR
+This directive defines a Directory as a \fIsource\fR directory. Yaws will
+compile all erlang modules found in this directory and all its
+subdirectories. The compilation occurs when the configuration is loaded or
+reloaded. The \fBinclude_dir\fR directives are used to search for includes
+files. Multiple \fBsrc_dir\fR directives may be used. There is no such directory
+configured by default.
+
 
 .TP
 \fBid = String\fR

@@ -21,6 +21,7 @@
          add_yaws_auth/1,
          add_yaws_soap_srv/1, add_yaws_soap_srv/2,
          load_mime_types_module/2,
+         compile_and_load_src_dir/1,
          search_sconf/2, search_group/2,
          update_sconf/2, delete_sconf/2,
          eq_sconfs/2, soft_setconf/4, hard_setconf/2,
@@ -386,6 +387,87 @@ load_mime_types_module(File, GInfo, SInfos) ->
     end.
 
 
+%% Compile modules found in the configured source directories, recursively.
+compile_and_load_src_dir(GC) ->
+    Incs = lists:map(fun(Dir) -> {i, Dir} end, GC#gconf.include_dir),
+    Opts = [binary, return] ++ Incs,
+    lists:foreach(fun(D) -> compile_and_load_src_dir([], [D], Opts) end,
+                  GC#gconf.src_dir).
+
+compile_and_load_src_dir(_Dir, [], _Opts) ->
+    ok;
+compile_and_load_src_dir(Dir, [Entry0|Rest], Opts) ->
+    Entry1 = case Dir of
+                 [] -> Entry0;
+                 _  -> filename:join(Dir, Entry0)
+             end,
+    case filelib:is_dir(Entry1) of
+        true ->
+            case file:list_dir(Entry1) of
+                {ok, Files} ->
+                    compile_and_load_src_dir(Entry1, Files, Opts);
+                {error, Reason} ->
+                    error_logger:format("Failed to compile modules in ~p: ~s~n",
+                                        [Entry1, file:format_error(Reason)])
+            end;
+        false ->
+            case filename:extension(Entry0) of
+                ".erl" -> compile_module_src_dir(Entry1, Opts);
+                _      -> ok
+            end
+    end,
+    compile_and_load_src_dir(Dir, Rest, Opts).
+
+
+compile_module_src_dir(File, Opts) ->
+    case catch compile:file(File, Opts) of
+        {ok, Mod, Bin} ->
+            error_logger:format("Compiled ~p~n", [File]),
+            load_src_dir(File, Mod, Bin);
+        {ok, Mod, Bin, Warnings} ->
+            WsMsg = [format_compile_warns(W,[]) || W <- Warnings],
+            error_logger:format("Compiled ~p [~p Errors - ~p Warnings]~n~s",
+                                [File,0,length(WsMsg),WsMsg]),
+            load_src_dir(File, Mod, Bin);
+        {error, [], Warnings} ->
+            WsMsg = [format_compile_warns(W,[]) || W <- Warnings],
+            error_logger:format("Failed to compile ~p "
+                                "[~p Errors - ~p Warnings]~n~s"
+                                "*** warnings being treated as errors~n",
+                                [File,0,length(WsMsg),WsMsg]);
+        {error, Errors, Warnings} ->
+            WsMsg = [format_compile_warns(W,[]) || W <- Warnings],
+            EsMsg = [format_compile_errs(E,[])  || E <- Errors],
+            error_logger:format("Failed to compile ~p "
+                                "[~p Errors - ~p Warnings]~n~s~s",
+                                [File,length(EsMsg),length(WsMsg),EsMsg,WsMsg]);
+        error ->
+            error_logger:format("Failed to compile ~p~n", [File]);
+        {'EXIT', Reason} ->
+            error_logger:format("Failed to compile ~p: ~p~n", [File, Reason])
+    end.
+
+
+load_src_dir(File, Mod, Bin) ->
+    case code:load_binary(Mod, File, Bin) of
+        {module, Mod}   -> ok;
+        {error, Reason} -> error_logger:format("Cannot load module ~p: ~p~n",
+                                               [Mod, Reason])
+    end.
+
+format_compile_warns({_, []}, Acc) ->
+    lists:reverse(Acc);
+format_compile_warns({File, [{L,M,E}|Rest]}, Acc) ->
+    Msg = io_lib:format("    ~s:~w: Warning: ~s~n", [File,L,M:format_error(E)]),
+    format_compile_warns({File, Rest}, [Msg|Acc]).
+
+format_compile_errs({_, []}, Acc) ->
+    lists:reverse(Acc);
+format_compile_errs({File, [{L,M,E}|Rest]}, Acc) ->
+    Msg = io_lib:format("    ~s:~w: ~s~n", [File,L,M:format_error(E)]),
+    format_compile_errs({File, Rest}, [Msg|Acc]).
+
+
 
 %% This is the function that arranges sconfs into
 %% different server groups
@@ -677,7 +759,17 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                           C, Cs, Lno+1, Next);
                 false ->
                     fload(FD, globals, GC, C, Cs, Lno+1, Next)
+            end;
 
+        ["src_dir", '=', Srcdir] ->
+            Dir = filename:absname(Srcdir),
+            case warn_dir("src_dir", Dir) of
+                true ->
+                    fload(FD, globals, GC#gconf{src_dir =
+                                                    [Dir|GC#gconf.src_dir]},
+                          C, Cs, Lno+1, Next);
+                false ->
+                    fload(FD, globals, GC, C, Cs, Lno+1, Next)
             end;
 
         ["runmod", '=', Mod0] ->
@@ -2559,6 +2651,7 @@ soft_setconf(GC, Groups, OLDGC, OldGroups) ->
         true ->
             ok
     end,
+    compile_and_load_src_dir(GC),
     Grps = load_mime_types_module(GC, Groups),
     Rems = remove_old_scs(lists:flatten(OldGroups), Grps),
     Adds = soft_setconf_scs(lists:flatten(Grps), OldGroups),

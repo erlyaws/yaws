@@ -65,6 +65,7 @@
           flags = ?GC_DEF,                % boolean flags
           logdir,
           ebin_dir = [],
+          src_dir  = [],
           runmods  = [],                  % runmods for entire server
           keepalive_timeout    = 30000,
           keepalive_maxuses    = nolimit, % nolimit or non negative integer
