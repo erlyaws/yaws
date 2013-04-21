@@ -2541,18 +2541,17 @@ sanitize_file_name([]) ->
 setconf(GC0, Groups0) ->
     setconf(GC0, Groups0, true).
 setconf(GC0, Groups0, CheckCertsChanged) ->
-    CertsChanged = if CheckCertsChanged == true ->
-                           lists:member(yes,gen_server:call(
-                                              yaws_server,
-                                              check_certs, infinity));
-                      true ->
-                           false
-                   end,
-    if
-        CertsChanged ->
-            application:stop(ssl),
-            application:start(ssl);
+    case CheckCertsChanged of
         true ->
+            CertCheck = gen_server:call(yaws_server, check_certs, infinity),
+            case lists:member(yes, CertCheck) of
+                true ->
+                    application:stop(ssl),
+                    application:start(ssl);
+                false ->
+                    ok
+            end;
+        false ->
             ok
     end,
 
