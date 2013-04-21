@@ -31,7 +31,7 @@
 -export([sconf_port/1, sconf_flags/1, sconf_redirect_map/1, sconf_rhost/1,
          sconf_rmethod/1, sconf_docroot/1, sconf_xtra_docroots/1,
          sconf_listen/1, sconf_servername/1, sconf_yaws/1, sconf_ets/1,
-         sconf_ssl/1, sconf_authdirs/1, sconf_patial_post_size/1,
+         sconf_ssl/1, sconf_authdirs/1, sconf_partial_post_size/1,
          sconf_appmods/1, sconf_expires/1, sconf_errormod_401/1,
          sconf_errormod_404/1, sconf_arg_rewrite_mode/1, sconf_logger_mod/1,
          sconf_opaque/1, sconf_start_mod/1, sconf_allowed_scripts/1,
@@ -252,7 +252,7 @@ sconf_yaws                 (#sconf{yaws                  = X}) -> X.
 sconf_ets                  (#sconf{ets                   = X}) -> X.
 sconf_ssl                  (#sconf{ssl                   = X}) -> X.
 sconf_authdirs             (#sconf{authdirs              = X}) -> X.
-sconf_patial_post_size     (#sconf{partial_post_size     = X}) -> X.
+sconf_partial_post_size    (#sconf{partial_post_size     = X}) -> X.
 sconf_appmods              (#sconf{appmods               = X}) -> X.
 sconf_expires              (#sconf{expires               = X}) -> X.
 sconf_errormod_401         (#sconf{errormod_401          = X}) -> X.
