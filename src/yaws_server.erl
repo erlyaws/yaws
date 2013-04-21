@@ -29,6 +29,7 @@
          getconf/0,
          stats/0,
          gs_status/0,
+         listen_port/1,
          ssi/3,ssi/5,ssi/6
         ]).
 
@@ -94,6 +95,32 @@ gs_status() ->
       end, Pids).
 getconf() ->
     gen_server:call(?MODULE,getconf, infinity).
+
+%% Return the configured port number from the sconf or, if the port number
+%% is 0 indicating an ephemeral port, retrieve the actual port via sockname
+listen_port(#sconf{}=SC) ->
+    try
+        lists:foldl(fun(#gs{group=SCs, l=Sock}, Acc) ->
+                            case lists:member(SC, SCs) of
+                                true ->
+                                    {ok, {_, Port}} =
+                                        case SC#sconf.ssl of
+                                            undefined ->
+                                                inet:sockname(Sock);
+                                            _ ->
+                                                ssl:sockname(Sock)
+                                        end,
+                                    %% throw the result to end the fold early
+                                    throw(Port);
+                                false ->
+                                    Acc
+                            end
+                    end, [], gs_status()),
+        {error, not_found}
+    catch
+        throw:Port ->
+            Port
+    end.
 
 stats() ->
     {_S, Time} = status(),

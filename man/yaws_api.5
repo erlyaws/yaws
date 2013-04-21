@@ -525,6 +525,14 @@ sockets. Useful for applications that have to deal with both SSL and
 non-SSL sockets.
 
 .TP
+\fBget_listen_port(Sconf)\fR Return the actual port number used by the
+listen socket of the virtual server indicated by the function argument, an
+\fI#sconf{}\fR record instance. This function is useful for retrieving the
+actual port number when, e.g. for testing purposes, a virtual server is
+configured to use port 0, which will cause it to have an ephemeral port
+assigned by the operating system.
+
+.TP
 \fBreformat_header(H)\fR
 Returns a list of reformatted header values from a #headers{}
 record. The return list is suitable for retransmit.

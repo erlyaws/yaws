@@ -49,6 +49,7 @@
 
 -export([getconf/0,
          setconf/2,
+         get_listen_port/1,
          embedded_start_conf/1, embedded_start_conf/2,
          embedded_start_conf/3, embedded_start_conf/4]).
 
@@ -2568,13 +2569,15 @@ setconf(GC0, Groups0, CheckCertsChanged) ->
             {error, need_restart}
     end.
 
-
-
-
 %% return {ok, GC, Groups}.
 getconf() ->
     gen_server:call(yaws_server, getconf, infinity).
 
+%% return listen port number for the given sconf, useful if yaws is used in
+%% a test scenario where the configured port number is 0 (for requesting an
+%% ephemeral port)
+get_listen_port(SC) ->
+    yaws_server:listen_port(SC).
 
 embedded_start_conf(DocRoot) when is_list(DocRoot) ->
     embedded_start_conf(DocRoot, []).
