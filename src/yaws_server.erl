@@ -1600,7 +1600,7 @@ not_implemented(CliSock, _IPPort, Req, Head) ->
     end.
 
 'DELETE'(CliSock, IPPort, Req, Head) ->
-    no_body_method(CliSock, IPPort, Req, Head).
+    body_method(CliSock, IPPort, Req, Head).
 
 'PATCH'(CliSock, IPPort, Req, Head) ->
     ?Debug("PATCH Req=~p~n H=~p~n", [?format_record(Req, http_request),
