@@ -3,7 +3,7 @@ include ../support/include.mk
 .PHONY: all test conf debug clean
 
 #
-all:	conf setup app_test.beam authmodtest.beam outmodtest.beam
+all:	conf setup app_test.beam authmodtest.beam outmodtest.beam rewritetest.beam
 	@echo "all ok"
 
 

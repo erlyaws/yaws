@@ -75,9 +75,9 @@
          dir_listing/1, dir_listing/2, redirect_self/1]).
 
 -export([arg_clisock/1, arg_client_ip_port/1, arg_headers/1, arg_req/1,
-         arg_clidata/1, arg_server_path/1, arg_querydata/1, arg_appmoddata/1,
-         arg_docroot/1, arg_docroot_mount/1, arg_fullpath/1, arg_cont/1,
-         arg_state/1, arg_pid/1, arg_opaque/1, arg_appmod_prepath/1,
+         arg_orig_req/1, arg_clidata/1, arg_server_path/1, arg_querydata/1,
+         arg_appmoddata/1, arg_docroot/1, arg_docroot_mount/1, arg_fullpath/1,
+         arg_cont/1, arg_state/1, arg_pid/1, arg_opaque/1, arg_appmod_prepath/1,
          arg_prepath/1,
          arg_pathinfo/1]).
 -export([http_request_method/1, http_request_path/1, http_request_version/1,
@@ -106,6 +106,7 @@ arg_clisock(#arg{clisock = X}) -> X.
 arg_client_ip_port(#arg{client_ip_port = X}) -> X.
 arg_headers(#arg{headers = X}) -> X.
 arg_req(#arg{req = X}) -> X.
+arg_orig_req(#arg{orig_req = X}) -> X.
 arg_clidata(#arg{clidata = X}) -> X.
 arg_server_path(#arg{server_path = X}) -> X.
 arg_querydata(#arg{querydata = X}) -> X.

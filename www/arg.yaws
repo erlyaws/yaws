@@ -29,6 +29,7 @@ out(A) ->
           client_ip_port, %% {Ip, Port} for the client
           headers,        %% headers
           req,            %% request
+          orig_req,       %% original request
           clidata,        %% The client data (as a binary in POST requests)
           server_path,    %% The normalized server path
           querydata,      %% Was the URL on the form of ...?query (GET reqs)

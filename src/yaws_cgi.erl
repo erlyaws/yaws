@@ -186,13 +186,16 @@ get_socket_sockname(Socket) ->
 
 
 build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
-    H = Arg#arg.headers,
-    R = Arg#arg.req,
-    case R#http_request.path of
+    H       = Arg#arg.headers,
+    Req     = Arg#arg.req,
+    OrigReq = Arg#arg.orig_req,
+
+    %% Use the original request to set REQUEST_URI
+    case OrigReq#http_request.path of
         {abs_path, RequestURI} -> ok;
         _ -> RequestURI = undefined
     end,
-    {Maj,Min} = R#http_request.version,
+    {Maj,Min} = Req#http_request.version,
     {Hostname, Hosttail}=lists:splitwith(fun(X)->X /= $: end,
                                          checkdef(H#headers.host)),
     Hostport = case Hosttail of
@@ -312,7 +315,7 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
             {"SERVER_PROTOCOL", "HTTP/" ++ integer_to_list(Maj) ++
              "." ++ integer_to_list(Min)},
             {"SERVER_PORT", Hostport},
-            {"REQUEST_METHOD", yaws:to_list(R#http_request.method)},
+            {"REQUEST_METHOD", yaws:to_list(Req#http_request.method)},
             {"REQUEST_URI", RequestURI},
             {"DOCUMENT_ROOT",         Arg#arg.docroot},
             {"DOCUMENT_ROOT_MOUNT", Arg#arg.docroot_mount},
