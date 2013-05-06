@@ -91,6 +91,7 @@
           id = "default",      % string identifying this instance of yaws
 
           enable_soap = false, % start yaws_soap_srv iff true
+          soap_workers = 3,    % the number of soap workers to start
 
           %% a list of
           %% {{Mod, Func}, WsdlFile, Prefix} | {{Mod, Func}, WsdlFile}

@@ -398,6 +398,15 @@ out(A) ->
         "There you have it! "
         },
 
+       {h2, [], "Handling concurrent SOAP requests"},
+
+       {p,[],
+        "The Yaws SOAP server will start N worker processes to handle SOAP requests. Historically, the value
+         of N was 1, meaning that older versions of Yaws handled SOAP requests serially. In newer versions of Yaws,
+         starting with 1.97, the configuration file parameter <code>soap_workers</code> defines how many
+         worker processes are started. The default is 3. A value larger than 1 means that the SOAP server
+         will handle concurrent requests."},
+
 
      {ssi, "END2",[],[]}
     ]}}].
@@ -406,4 +415,3 @@ out(A) ->
 
 
 </erl>
-

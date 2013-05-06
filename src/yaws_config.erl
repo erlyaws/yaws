@@ -90,7 +90,8 @@ add_yaws_soap_srv(GC) when GC#gconf.enable_soap == true ->
 add_yaws_soap_srv(_GC) ->
     [].
 add_yaws_soap_srv(GC, false) when GC#gconf.enable_soap == true ->
-    [{yaws_soap_srv, {yaws_soap_srv, start_link, [GC#gconf.soap_srv_mods]},
+    [{yaws_soap_srv, {yaws_soap_srv, start_link,
+                      [GC#gconf.soap_srv_mods, GC#gconf.soap_workers]},
       permanent, 5000, worker, [yaws_soap_srv]}];
 add_yaws_soap_srv(GC, true) when GC#gconf.enable_soap == true ->
     Spec = add_yaws_soap_srv(GC, false),
@@ -794,6 +795,15 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                 {error, Str} ->
                     {error, ?F("~s at line ~w", [Str, Lno])}
             end;
+
+        ["soap_workers", '=', Int] ->
+             case catch list_to_integer(Int) of
+                 I when is_integer(I) ->
+                    fload(FD, globals, GC#gconf{soap_workers = I},
+                          C, Cs, Lno+1, Next);
+                _ ->
+                     {error, ?F("Expect integer at line ~w", [Lno])}
+             end;
 
         ["max_connections", '=', Int] ->
             case (catch list_to_integer(Int)) of

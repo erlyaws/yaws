@@ -9,7 +9,7 @@
 
 -behaviour(gen_server).
 
--include("yaws.hrl").
+-include("../include/yaws.hrl").
 
 %% API
 -export([start_link/0, stop/1]).

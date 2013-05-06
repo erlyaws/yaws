@@ -2313,15 +2313,24 @@ part where options for each virtual host is supplied.
               Fail completely or not if \Yaws\ fails to bind a listen socket
               Default is true.
 
+\item        \verb+enable_soap = true | false+ ---
+              If true, a SOAP server will be started when \Yaws\ is
+              started. Default is false.
+
+\item        \verb+soap_workers = integer+ ---
+              Number of SOAP worker processes to start. A value larger than 1
+              means that the SOAP server will handle concurrent requests.
+              Default value is 3.
+
 \item        \verb+soap_srv_mods = ListOfModuleSetting+ ---
-              If \verb+enable_soap+ is true, a startup \Yaws\ will invoke
+              If \verb+enable_soap+ is true, at startup \Yaws\ will invoke
               \verb+yaws_soap_srv:setup()+ to setup modules set
               here. \verb+ModuleSetting+ is either a triad like\\
               \verb+<Mod, HandlerFun, WsdlFile>+ or a tetrad like
               \verb+<Mod, HandlerFun, WsdlFile, Prefix>+\\ which specifies the
               prefix. A prefix will be used as argument of
-              \verb+yaws_soap_lib:initModel()+ and then be used as a XML
-              namespace prefix.  Note, the WsdlFile here should be an
+              \verb+yaws_soap_lib:initModel()+ and will also be used as a XML
+              namespace prefix.  Note, the \verb+WsdlFile+ here should be an
               absolute-path file in local file systems.
 
               For example, we can specify

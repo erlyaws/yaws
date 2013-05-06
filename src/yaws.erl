@@ -26,6 +26,7 @@
          gconf_mnesia_dir/1, gconf_log_wrap_size/1, gconf_cache_refresh_secs/1,
          gconf_include_dir/1, gconf_phpexe/1, gconf_yaws/1, gconf_id/1,
          gconf_enable_soap/1, gconf_soap_srv_mods/1, gconf_ysession_mod/1,
+         gconf_soap_workers/1,
          gconf_acceptor_pool_size/1, gconf_mime_types_info/1]).
 
 -export([sconf_port/1, sconf_flags/1, sconf_redirect_map/1, sconf_rhost/1,
@@ -235,6 +236,7 @@ gconf_yaws                 (#gconf{yaws                  = X}) -> X.
 gconf_id                   (#gconf{id                    = X}) -> X.
 gconf_enable_soap          (#gconf{enable_soap           = X}) -> X.
 gconf_soap_srv_mods        (#gconf{soap_srv_mods         = X}) -> X.
+gconf_soap_workers         (#gconf{soap_workers          = X}) -> X.
 gconf_ysession_mod         (#gconf{ysession_mod          = X}) -> X.
 gconf_acceptor_pool_size   (#gconf{acceptor_pool_size    = X}) -> X.
 gconf_mime_types_info      (#gconf{mime_types_info       = X}) -> X.
@@ -508,6 +510,8 @@ setup_gconf(GL, GC) ->
            enable_soap           = lkup(enable_soap, GL, GC#gconf.enable_soap),
            soap_srv_mods         = lkup(soap_srv_mods, GL,
                                         GC#gconf.soap_srv_mods),
+           soap_workers          = lkup(soap_workers, GL,
+                                        GC#gconf.soap_workers),
            ysession_mod          = lkup(ysession_mod, GL,
                                         GC#gconf.ysession_mod),
            acceptor_pool_size    = lkup(acceptor_pool_size, GL,

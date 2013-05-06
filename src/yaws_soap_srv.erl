@@ -8,8 +8,9 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, start_link/1,
+-export([start_link/0, start_link/1, start_link/2,
          setup/1, setup/2, setup/3,
+         worker/1,
          handler/4
         ]).
 
@@ -25,13 +26,19 @@
 
 %% State
 -record(s, {
-          wsdl_list = []  % list of {Id, WsdlModel} tuples, where Id == {M,F}
+          num_of_workers = 0,
+          workers = [],      % list of Pids
+          busy_workers = [], % list of {Pids, From} pairs.
+          queue = [],        % list of waiting jobs
+          wsdl_list = []     % list of {Id, WsdlModel} tuples, where Id == {M,F}
          }).
 
 -define(OK_CODE, 200).
 -define(BAD_MESSAGE_CODE, 400).
 %% -define(METHOD_NOT_ALLOWED_CODE, 405).
 -define(SERVER_ERROR_CODE, 500).
+
+-define(DEFAULT_NUM_OF_WORKERS, 3).
 
 %%====================================================================
 %% API
@@ -42,7 +49,13 @@
 %%--------------------------------------------------------------------
 start_link() ->
     start_link([]).
+%%
+start_link(N) when is_integer(N) ->
+    start_link([], N);
 start_link(L) ->
+    start_link(L, ?DEFAULT_NUM_OF_WORKERS).
+%%
+start_link(L, N) ->
     %% We are dependent on erlsom
     case code:ensure_loaded(erlsom) of
         {error, _} ->
@@ -51,7 +64,7 @@ start_link(L) ->
                                    [?MODULE, Emsg]),
             {error, Emsg};
         {module, erlsom} ->
-            gen_server:start_link({local, ?SERVER}, ?MODULE, L, [])
+            gen_server:start_link({local, ?SERVER}, ?MODULE, {L, N}, [])
     end.
 
 %%% To be called from yaws_rpc.erl
@@ -89,7 +102,9 @@ setup(Id, WsdlFile, PrefixOrOptions) when is_tuple(Id),size(Id)==2 ->
     Wsdl = yaws_soap_lib:initModel(WsdlFile, PrefixOrOptions),
     gen_server:call(?SERVER, {add_wsdl, Id, Wsdl}, infinity).
 
-
+%% Send message to worker
+worker(X) ->
+    gen_server:cast(?MODULE, {worker, X, self()}).
 
 %%====================================================================
 %% gen_server callbacks
@@ -102,11 +117,12 @@ setup(Id, WsdlFile, PrefixOrOptions) when is_tuple(Id),size(Id)==2 ->
 %%                         {stop, Reason}
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
-init(L) -> %% [ {{Mod,Handler}, WsdlFile} ]
-    WsdlList = lists:foldl( fun( SoapSrvMod, OldList) ->
-                                    setup_on_init( SoapSrvMod, OldList )
-                            end,[],L),
-    {ok, #s{wsdl_list = WsdlList}}.
+init({L, N}) -> % { [ {{Mod,Handler}, WsdlFile} ] , NumOfWorkers }
+    WsdlList = lists:foldl(fun(SoapSrvMod, OldList) ->
+                                   setup_on_init( SoapSrvMod, OldList )
+                           end,[],L),
+    gen_server:cast(?MODULE, complete_init),
+    {ok, #s{wsdl_list = WsdlList, num_of_workers = N}}.
 
 setup_on_init( {Id, WsdlFile}, OldList ) when is_tuple(Id),size(Id) == 2 ->
     Wsdl = yaws_soap_lib:initModel(WsdlFile),
@@ -126,12 +142,14 @@ setup_on_init( {Id, WsdlFile, Prefix}, OldList ) when is_tuple(Id),
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
 handle_call({add_wsdl, Id, WsdlModel}, _From, State) ->
+    yaws_soap_sup:setup({Id, WsdlModel}),
     NewWsdlList = uinsert({Id, WsdlModel}, State#s.wsdl_list),
     {reply, ok, State#s{wsdl_list = NewWsdlList}};
 %%
-handle_call( {request, Id, Payload, SessionValue, SoapAction}, _From, State) ->
-    Reply = request(State, Id, Payload, SessionValue, SoapAction),
-    {reply, Reply, State}.
+handle_call(Req = {request, _Id, _Payload, _SessionValue, _SoapAction}, From, State) ->
+    {noreply, call_worker({int_request, Req, From}, State)};
+handle_call(_, _, State) ->
+    {noreply, State}.
 
 %%--------------------------------------------------------------------
 %% Function: handle_cast(Msg, State) -> {noreply, State} |
@@ -139,6 +157,31 @@ handle_call( {request, Id, Payload, SessionValue, SoapAction}, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
+handle_cast(complete_init, State) ->
+    {ok, _} = supervisor:start_child(yaws_sup, yaws_soap_sup:child_spec()),
+    yaws_soap_sup:start_children(State#s.num_of_workers),
+    {noreply, State};
+%%
+handle_cast({worker, started, Pid}, State = #s{busy_workers = Busy}) ->
+    erlang:monitor(process, Pid),
+    case State#s.wsdl_list of
+        [] -> ok;
+        Wsdls -> yaws_soap_srv_worker:setup(Pid, init, Wsdls)
+    end,
+    {noreply, State#s{busy_workers = [{Pid, dummy} | Busy]}};
+%%
+handle_cast({worker, done, Pid}, State) ->
+    #s{workers = Workers,
+       busy_workers = Busy,
+       queue = Queue} = State,
+    State1 = State#s{workers = [Pid | Workers],
+                     busy_workers = lists:keydelete(Pid, 1, Busy)},
+    State2 = case Queue of
+                 [] -> State1;
+                 [Q | Qs] -> call_worker(Q, State1#s{queue = Qs})
+             end,
+    {noreply, State2};
+%%
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -148,6 +191,18 @@ handle_cast(_Msg, State) ->
 %%                                       {stop, Reason, State}
 %% Description: Handling all non call/cast messages
 %%--------------------------------------------------------------------
+handle_info({'DOWN', _, process, Pid, Info}, State) ->
+    #s{workers = Workers,
+       busy_workers = Busy} = State,
+    case lists:keysearch(Pid, 1, Busy) of
+        {value, {Pid, From}} ->
+            gen_server:reply(
+              From, srv_error(f("Process termination: ~p", [Info])));
+        _ -> ok
+    end,
+    {noreply, State#s{workers = lists:delete(Pid, Workers),
+                      busy_workers = lists:keydelete(Pid, 1, Busy)}};
+%%
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -172,86 +227,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%--------------------------------------------------------------------
 
-request(State, {M,F} = Id, {Req, Attachments}, SessionValue, Action) ->
-    {ok, Model} = get_model(State, Id),
-    %%error_logger:info_report([?MODULE, {payload, Req}]),
-    case catch yaws_soap_lib:parseMessage(Req, Model) of
-        {ok, Header, Body} ->
-            %% call function
-            result(Model, catch apply(M, F, [Header, Body,
-                                             Action, SessionValue,
-					     Attachments]));
-        {error, Error} ->
-            cli_error(Error);
-        OtherError ->
-            srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))
-    end;
-request(State, {M,F} = Id, Req, SessionValue, Action) ->
-    %%error_logger:info_report([?MODULE, {payload, Req}]),
-    {ok, Model} = get_model(State, Id),
-    Umsg = (catch erlsom_lib:toUnicode(Req)),
-    case catch yaws_soap_lib:parseMessage(Umsg, Model) of
-        {ok, Header, Body} ->
-            %% call function
-            result(Model, catch apply(M, F, [Header, Body,
-                                             Action, SessionValue]));
-        {error, Error} ->
-            cli_error(Error);
-        OtherError ->
-            srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))
-    end.
-
-%%% Analyse the result and produce some output
-result(Model, {ok, ResHeader, ResBody, ResCode, SessVal}) ->
-    return(Model, ResHeader, ResBody, ResCode, SessVal, undefined);
-result(Model, {ok, ResHeader, ResBody}) ->
-    return(Model, ResHeader, ResBody, ?OK_CODE, undefined, undefined);
-result(Model, {ok, ResHeader, ResBody, Files}) ->
-    return(Model, ResHeader, ResBody, ?OK_CODE, undefined, Files);
-result(_Model, {error, client, ClientMssg}) ->
-    cli_error(ClientMssg);
-result(_Model, false) ->   % soap notify !
-    false;
-result(_Model, Error) ->
-    srv_error(io_lib:format("Error processing message: ~p", [Error])).
-
-return(#wsdl{model = Model}, ResHeader, ResBody, ResCode, SessVal, Files) ->
-    return(Model, ResHeader, ResBody, ResCode, SessVal, Files);
-return(Model, ResHeader, ResBody, ResCode, SessVal, Files)
-  when not is_list(ResBody) ->
-    return(Model, ResHeader, [ResBody], ResCode, SessVal, Files);
-return(Model, ResHeader, ResBody, ResCode, SessVal, Files) ->
-    %% add envelope
-    Header2 = case ResHeader of
-                  undefined -> undefined;
-                  _         -> #'soap:Header'{choice = ResHeader}
-              end,
-    Envelope = #'soap:Envelope'{'Body' =  #'soap:Body'{choice = ResBody},
-                                'Header' = Header2},
-    case catch erlsom:write(Envelope, Model) of
-        {ok, XmlDoc} ->
-	    case Files of
-		undefined ->
-		    {ok, XmlDoc, ResCode, SessVal};
-		_ ->
-		    DIME = yaws_dime:encode(XmlDoc, Files),
-		    {ok, DIME, ResCode, SessVal}
-	    end;
-        {error, WriteError} ->
-            srv_error(f("Error writing XML: ~p", [WriteError]));
-        OtherWriteError ->
-            error_logger:error_msg("~p(~p): OtherWriteError=~p~n",
-                                   [?MODULE, ?LINE, OtherWriteError]),
-            srv_error(f("Error writing XML: ~p", [OtherWriteError]))
-    end.
-
 f(S,A) -> lists:flatten(io_lib:format(S,A)).
-
-cli_error(Error) ->
-    error_logger:error_msg("~p(~p): Cli Error: ~p~n",
-                           [?MODULE, ?LINE, Error]),
-    Fault = yaws_soap_lib:makeFault("Client", "Client error"),
-    {error, Fault, ?BAD_MESSAGE_CODE}.
 
 srv_error(Error) ->
     error_logger:error_msg("~p(~p): Srv Error: ~p~n",
@@ -259,15 +235,20 @@ srv_error(Error) ->
     Fault = yaws_soap_lib:makeFault("Server", "Server error"),
     {error, Fault, ?SERVER_ERROR_CODE}.
 
-
-
-
-get_model(State, Id) ->
-    case lists:keysearch(Id, 1, State#s.wsdl_list) of
-        {value, {_, Model}} -> {ok, Model};
-        _                   -> {error, "model not found"}
-    end.
-
 uinsert({K,_} = E, [{K,_}|T]) -> [E|T];
 uinsert(E, [H|T])             -> [H|uinsert(E,T)];
 uinsert(E, [])                -> [E].
+
+call_worker(Req = {int_request, _, From},
+            State = #s{workers = [Worker | Workers],
+                       busy_workers = Busy})->
+    case catch yaws_soap_srv_worker:call(Worker, Req) of
+        ok ->
+            State#s{workers = Workers,
+                    busy_workers = [{Worker, From} | Busy]};
+        {'EXIT',{noproc,_}} ->
+            call_worker(Req, State#s{workers = Workers})
+    end;
+%%
+call_worker(Req, State = #s{queue = Queue}) ->
+    State#s{queue = [Req | Queue]}.

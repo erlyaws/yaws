@@ -177,18 +177,24 @@ Fail completely or not if Yaws fails to bind a listen socket Default is
 
 .TP
 \fBenable_soap = true | false\fR
-If true, a soap server will be started at startup of Yaws.  Default is
+If true, a SOAP server will be started at startup of Yaws.  Default is
 \fIfalse\fR.
 
 .TP
+\fBsoap_workers = integer\fR
+Number of SOAP worker processes to start. A value larger than 1 means that
+the SOAP server will handle concurrent requests. Default value is \fI3\fR.
+
+.TP
 \fBsoap_srv_mods = ListOfModuleSetting\fR
-If enable_soap is true, a startup Yaws will invoke \fIyaws_soap_srv:setup()\fR
-to setup modules set here. ModuleSetting is either a triad like \fI<Mod,
-HandlerFunc, WsdlFile>\fR or a quadruple form like \fI<Mod, HandlerFunc,
-WsdlFile, Prefix>\fR which specifies the \fIprefix\fR. A \fIprefix\fR will be
-used as argument of \fIyaws_soap_lib:initModel()\fR and then be used as a XML
-namespace prefix.  Note, the \fIWsdlFile\fR here should be an absolute-path file
-in local file systems.
+If \fIenable_soap\fR is true, at startup Yaws will invoke
+\fIyaws_soap_srv:setup()\fR to setup modules set here. \fIModuleSetting\fR
+is either a triad like \fI<Mod, HandlerFunc, WsdlFile>\fR or a quadruple
+form like \fI<Mod, HandlerFunc, WsdlFile, Prefix>\fR which specifies the
+\fIprefix\fR. A \fIprefix\fR will be used as argument of
+\fIyaws_soap_lib:initModel()\fR and then be used as a XML namespace prefix.
+Note, the \fIWsdlFile\fR here should be an absolute-path file in local file
+systems.
 
 For example, we can specify
 
