@@ -2050,8 +2050,8 @@ handle_auth(ARG, Auth_H, Auth_methods = #auth{mod = Mod}, Ret) when Mod /= [] ->
         {false, Realm} ->
             handle_auth(ARG, Auth_H, Auth_methods#auth{mod=[], realm=Realm},
                         Ret);
-        {appmod, Mod} ->
-            handle_auth(ARG, Auth_H, Auth_methods#auth{mod=[], outmod=Mod},
+        {appmod, Module} ->
+            handle_auth(ARG, Auth_H, Auth_methods#auth{mod=[], outmod=Module},
                         Ret);
         _ ->
             maybe_auth_log(403, ARG),
