@@ -39,6 +39,12 @@ out(A) ->
                 {a ,[{href,"http://yaws.hyber.org"}],"yaws.hyber.org"},
                 " is itself powered by Yaws."]},
 
+
+        {p,[], ["Code is on : ",
+                {a,[{href,"http://github.com/klacke/yaws"}],
+                  "http://github.com/klacke/yaws"}]},
+
+
         {p,[], ["A mailing list exists at: ",
                 {a,[{href,"https://lists.sourceforge.net/lists/listinfo/""erlyaws-list"}],
                  "https://lists.sourceforge.net/lists/listinfo/erlyaws-list"}]},
