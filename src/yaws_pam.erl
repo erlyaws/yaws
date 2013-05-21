@@ -52,7 +52,7 @@ start_link(Service, UseAccounting, UseSess) ->
 auth(User, Password) ->
     case has_nul(User) or has_nul(Password) of
         false ->
-            try  gen_server:call(pam_server, {auth, User, Password}, 10000) of
+            try  gen_server:call(?MODULE, {auth, User, Password}, 15000) of
                  Ret ->
                     Ret
             catch _:_ ->
