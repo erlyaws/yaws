@@ -357,9 +357,9 @@ parse_multi(Data, #mp_parse_state{state=boundary}=ParseState, Acc) ->
         {Pos, Len} ->
             %% If Pos != 0, ignore data preceding the boundary
             case Data of
-                <<_:Pos/binary, Boundary:Len/binary>> ->
+                <<_:Pos/binary, Rest/binary>> when size(Rest) < Len+2 ->
                     %% Not enough data to tell if it is the last boundary or not
-                    {cont, ParseState#mp_parse_state{old_data=Boundary}, Acc};
+                    {cont, ParseState#mp_parse_state{old_data=Rest}, Acc};
                 <<_:Pos/binary, _:Len/binary, "\r\n", Rest/binary>> ->
                     %% It is not the last boundary, so parse the next part
                     NPState = ParseState#mp_parse_state{state=start_headers},
@@ -367,6 +367,9 @@ parse_multi(Data, #mp_parse_state{state=boundary}=ParseState, Acc) ->
                 <<_:Pos/binary, _:Len/binary, "--\r\n", _/binary>> ->
                     %% Match on the last boundary and ignore remaining data
                     {result, Acc};
+                <<_:Pos/binary, Boundary:Len/binary, "--", Rest/binary>> when size(Rest) < 2 ->
+                    %% Partial match on the last boundary; need more data
+		    {cont, ParseState#mp_parse_state{old_data = <<Boundary/binary, "--", Rest/binary>>}, Acc};
                 _ ->
                     {error, malformed_multipart_post}
             end;
