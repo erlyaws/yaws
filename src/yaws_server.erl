@@ -3585,9 +3585,9 @@ delim_split_file(Del, Data, State, Ack) ->
     case delim_split(Del, Del, Data, [], []) of
         {H, []} when State == data ->
             %% Ok, last chunk
-            lists:reverse([{data, H} | Ack]);
+            lists:reverse([{data, list_to_binary(H)} | Ack]);
         {H, T} when State == data ->
-            delim_split_file(Del, T, var, [{data, H}|Ack]);
+            delim_split_file(Del, T, var, [{data, list_to_binary(H)}|Ack]);
         {H, []} when State == var ->
             lists:reverse([{var, H} | Ack]);
         {H, T} when State == var ->
