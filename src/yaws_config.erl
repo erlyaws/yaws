@@ -659,6 +659,13 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
             Dir = filename:absname(Logdir),
             case is_dir(Dir) of
                 true ->
+                    ok;
+                false ->
+                    % try to make the log directory if it doesn't exist
+                    file:make_dir(Dir)
+            end,
+            case is_dir(Dir) of
+                true ->
                     put(logdir, Dir),
                     fload(FD, globals, GC#gconf{logdir = Dir},
                           C, Cs, Lno+1, Next);
