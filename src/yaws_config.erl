@@ -662,7 +662,7 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     ok;
                 false ->
                     % try to make the log directory if it doesn't exist
-                    file:make_dir(Dir)
+                    yaws:mkdir(Dir)
             end,
             case is_dir(Dir) of
                 true ->
