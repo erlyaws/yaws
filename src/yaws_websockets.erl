@@ -1248,5 +1248,5 @@ query_header(Header, Headers, Default) ->
 
 hash_nonce(Nonce) ->
     Salted = Nonce ++ "258EAFA5-E914-47DA-95CA-C5AB0DC85B11",
-    HashBin = crypto:sha(Salted),
+    HashBin = crypto:hash(sha, Salted),
     base64:encode_to_string(HashBin).
