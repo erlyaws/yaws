@@ -82,9 +82,10 @@ yaws_generated.erl:	yaws_generated.template ../vsn.mk
 	$(MAKE) IS_LOCAL_INSTALL=true gen_yaws_generated
 
 yaws_configure.hrl:	 ../vsn.mk ../include.mk
-	if [  $(HAVE_YAWS_SENDFILE) = "true" ]; then \
-		echo "-define(HAVE_YAWS_SENDFILE, true)." > yaws_configure.hrl; \
-	else touch yaws_configure.hrl; fi
+	rm -f $@
+	[ $(HAVE_YAWS_SENDFILE) = true ] && echo '-define(HAVE_YAWS_SENDFILE, true).' > $@; \
+	[ $(HAVE_CRYPTO_HASH) = true ] && echo '-define(HAVE_CRYPTO_HASH, true).' >> $@; \
+	[ -f $@ ] || touch $@
 
 mime_types.erl: ../priv/charset.def ../priv/mime.types \
 				../ebin/yaws_generated.$(EMULATOR) ../ebin/mime_type_c.$(EMULATOR)

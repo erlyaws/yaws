@@ -13,6 +13,7 @@
 
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
+-include("yaws_configure.hrl").
 
 -include_lib("kernel/include/file.hrl").
 
@@ -1246,7 +1247,13 @@ query_header(HeaderName, Headers) ->
 query_header(Header, Headers, Default) ->
     yaws_api:get_header(Headers, Header, Default).
 
+-ifdef(HAVE_CRYPTO_HASH).
+-define(CRYPTO_HASH(V), crypto:hash(sha,V)).
+-else.
+-define(CRYPTO_HASH(V), crypto:sha(V)).
+-endif.
+
 hash_nonce(Nonce) ->
     Salted = Nonce ++ "258EAFA5-E914-47DA-95CA-C5AB0DC85B11",
-    HashBin = crypto:hash(sha, Salted),
+    HashBin = ?CRYPTO_HASH(Salted),
     base64:encode_to_string(HashBin).
