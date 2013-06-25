@@ -17,7 +17,7 @@ Cfg0 = case os:getenv("YAWS_SOAP") of
                        CONFIG ++ [{deps, SoapDeps}]
                end
        end,
-code:load_file(crypto),
+code:ensure_loaded(crypto),
 case erlang:function_exported(crypto,hash,2) of
     true ->
         case lists:keysearch(erl_opts, 1, Cfg0) of
