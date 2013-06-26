@@ -270,7 +270,7 @@ case "$host_os" in
                     AC_SUBST(BSDI)
                     ;;
            esac
-           LD_SHARED="ld -Bshareable"
+           LD_SHARED="$CC -shared"
            AC_SUBST(LD_SHARED)
            FPIC=-fpic
            AC_SUBST(FPIC)
