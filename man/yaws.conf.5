@@ -12,9 +12,10 @@ options for each virtual host is supplied.
 .SH GLOBAL PART
 
 .TP
-\fBlogdir = Directory\fR
-All Yaws logs will be written to files in this directory. There are several
-different log files written by Yaws:
+\fBlogdir = [+]Directory\fR
+All Yaws logs will be written to files in this directory. If specified with
+\fB+\fR, Yaws will attempt to create the directory if it does not exist. There
+are several different log files written by Yaws:
 
 \fBreport.log\fR - this is a text file that contains all error logger printouts
 from Yaws.
