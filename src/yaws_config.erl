@@ -739,7 +739,15 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 
 
         ["logdir", '=', Logdir] ->
-            Dir = filename:absname(Logdir),
+            Dir = case Logdir of
+                      "+" ++ D ->
+                          D1 = filename:absname(D),
+                          %% try to make the log directory if it doesn't exist
+                          yaws:mkdir(D1),
+                          D1;
+                      _ ->
+                          filename:absname(Logdir)
+                  end,
             case is_dir(Dir) of
                 true ->
                     put(logdir, Dir),
