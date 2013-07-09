@@ -216,8 +216,8 @@ handle_call(stop, From, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-handle_cast(print_session, #state{backend = Backend} = State) ->
-    Ss = Backend:list(Backend),
+handle_cast(print_sessions, #state{backend = Backend} = State) ->
+    Ss = Backend:list(),
     io:format("** ~p sessions active ~n~n", [length(Ss)]),
     N = gnow(),
     lists:foreach(fun(S) ->
