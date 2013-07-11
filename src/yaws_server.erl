@@ -5055,7 +5055,11 @@ close_accepted_if_max(GS,{ok, Socket}) ->
               end,
             error_logger:format(
               "Max connections reached - closing conn to ~s~n",[S]),
-            gen_tcp:close(Socket)
+            if
+                GS#gs.ssl == nossl -> gen_tcp:close(Socket);
+                GS#gs.ssl == ssl   -> ssl:close(Socket)
+            end
+
     end;
 close_accepted_if_max(_,_) ->
     ok.
