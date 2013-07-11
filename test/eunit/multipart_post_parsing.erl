@@ -108,6 +108,37 @@ incomplete_head_binary_test() ->
     {<<"sometext1\n">>, <<"sometext2\n">>} = test_incomplete_head_list(binary),
     ok.
 
+boundary_markers_test() ->
+    Body = <<"------WebKitFormBoundaryUkx0KS47IKKfcF4z\r\n",
+             "Content-Disposition: form-data; name=upfile; filename=test.txt\r\n",
+             "Content-Type: text/plain\r\n",
+             "\r\n",
+             "Hello world\n",
+             "\r\n",
+             "------WebKitFormBoundaryUkx0KS47IKKfcF4z\r\n",
+             "Content-Disposition: form-data; name=note\r\n",
+             "\r\n",
+             "test\r\n",
+             "------WebKitFormBoundaryUkx0KS47IKKfcF4z--\r\n">>,
+    Results = lists:foldl(fun (N, {Ok, Errors, Done}) ->
+                                  <<BodyPart:N/binary, _/binary>> = Body,
+                                  case boundary_marker_parse(BodyPart) of
+                                      {cont, _, _} ->
+                                          {Ok+1, Errors, Done};
+                                      {result, _} ->
+                                          {Ok+1, Errors, Done+1};
+                                      _ ->
+                                          {Ok, Errors+1, Done}
+                                  end
+                          end, {0, 0, 0}, lists:seq(1, size(Body))),
+    ?assertMatch({_, 0, 1}, Results).
+
+boundary_marker_parse(Body) ->
+    Arg = #arg{headers=#headers{content_type="multipart/form-data; boundary=----WebKitFormBoundaryUkx0KS47IKKfcF4z"},
+               req=#http_request{method='POST'},
+               clidata=Body},
+    yaws_api:parse_multipart_post(Arg).
+
 test_incomplete_boundary_list(Opt) ->
     Data1 = list_to_binary(
               ["--!!!\r\n",

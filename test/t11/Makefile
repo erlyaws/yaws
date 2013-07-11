@@ -6,6 +6,7 @@ include ../support/include.mk
 all:	conf setup app_test.beam
 	@echo "all ok"
 
+start: all inc_v1
 
 # invoke as
 # TEST=test3 make test
@@ -13,7 +14,7 @@ all:	conf setup app_test.beam
 
 ULIMIT = 768
 
-test:	all inc_v1 start
+test:	start
 	$(ERL) -noinput $(PA) -s tftest
 	$(MAKE) stop
 

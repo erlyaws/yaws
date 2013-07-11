@@ -15,7 +15,7 @@
 -include_lib("kernel/include/file.hrl").
 -export([start/0, stop/0, hup/1, restart/0, modules/0, load/0]).
 -export([start_embedded/1, start_embedded/2, start_embedded/3, start_embedded/4,
-         add_server/2, create_gconf/2, create_sconf/2]).
+         add_server/2, create_gconf/2, create_sconf/2, setup_sconf/2]).
 
 -export([gconf_yaws_dir/1, gconf_trace/1, gconf_flags/1, gconf_logdir/1,
          gconf_ebin_dir/1, gconf_src_dir/1, gconf_runmods/1,

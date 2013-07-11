@@ -29,7 +29,7 @@
 out404(Arg) ->
     out404(Arg, get(gc), get(sc)).
 out404(Arg, GC, SC) ->
-    Req = Arg#arg.req,
+    Req = Arg#arg.orig_req,
     {abs_path, Path} = Req#http_request.path,
     B = not_found_body(Path, GC, SC),
     [{status, 404},

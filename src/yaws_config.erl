@@ -739,7 +739,15 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
 
 
         ["logdir", '=', Logdir] ->
-            Dir = filename:absname(Logdir),
+            Dir = case Logdir of
+                      "+" ++ D ->
+                          D1 = filename:absname(D),
+                          %% try to make the log directory if it doesn't exist
+                          yaws:mkdir(D1),
+                          D1;
+                      _ ->
+                          filename:absname(Logdir)
+                  end,
             case is_dir(Dir) of
                 true ->
                     put(logdir, Dir),
@@ -2786,50 +2794,38 @@ find_sc(_SC,[]) ->
 
 
 verify_upgrade_args(GC, Groups0) when is_record(GC, gconf) ->
-    case is_groups(Groups0) of
+    SCs0 = lists:flatten(Groups0),
+    case lists:all(fun(SC) -> is_record(SC, sconf) end, SCs0) of
         true ->
             %% Embedded code may give appmods as a list of strings, or
             %% appmods can be {StringPathElem,ModAtom} or
             %% {StringPathElem,ModAtom,ExcludePathsList} tuples. Handle
             %% all possible variants here.
-            Groups = yaws:deepmap(
-                       fun(SC) ->
-                               SC#sconf{appmods =
-                                            lists:map(
-                                              fun({PE, Mod}) ->
-                                                      {PE, Mod};
-                                                 ({PE,Mod,Ex}) ->
-                                                      {PE,Mod,Ex};
-                                                 (AM) when is_list(AM) ->
-                                                      {AM,list_to_atom(AM)};
-                                                 (AM) when is_atom(AM) ->
-                                                      {atom_to_list(AM), AM}
-                                              end,
-                                              SC#sconf.appmods)}
-                       end, Groups0),
-            {GC, Groups};
-        _ ->
+            SCs1 = lists:map(
+                     fun(SC) ->
+                             SC#sconf{appmods =
+                                          lists:map(
+                                            fun({PE, Mod}) ->
+                                                    {PE, Mod};
+                                               ({PE,Mod,Ex}) ->
+                                                    {PE,Mod,Ex};
+                                               (AM) when is_list(AM) ->
+                                                    {AM,list_to_atom(AM)};
+                                               (AM) when is_atom(AM) ->
+                                                    {atom_to_list(AM), AM}
+                                            end,
+                                            SC#sconf.appmods)}
+                     end, SCs0),
+            case catch validate_cs(GC, SCs1) of
+                {ok, GC, Groups1} -> {GC, Groups1};
+                {error, Reason}   -> erlang:error(Reason);
+                _                 -> erlang:error(badgroups)
+            end;
+        false ->
             erlang:error(badgroups)
     end.
 
 
-%% verify args to setconf
-is_groups([H|T]) ->
-    case is_list_of_scs(H) of
-        true ->
-            is_groups(T);
-        false ->
-            false
-    end;
-is_groups([]) ->
-    true.
-
-is_list_of_scs([H|T]) when is_record(H, sconf) ->
-    is_list_of_scs(T);
-is_list_of_scs([]) ->
-    true;
-is_list_of_scs(_) ->
-    false.
 
 add_sconf(SC) ->
     ok= gen_server:call(yaws_server, {add_sconf, SC}, infinity),

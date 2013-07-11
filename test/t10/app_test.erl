@@ -1627,6 +1627,7 @@ test_secure_websocket() ->
     WSPath = "/websockets_example_endpoint.yaws",
 
     ok = application:start(crypto),
+    ok = application:start(asn1),
     ok = application:start(public_key),
     ok = application:start(ssl),
 
@@ -1646,6 +1647,7 @@ test_secure_websocket() ->
 
     ok = application:stop(ssl),
     ok = application:stop(public_key),
+    ok = application:stop(asn1),
     ok = application:stop(crypto),
     ok.
 

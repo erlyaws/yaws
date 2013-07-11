@@ -5,15 +5,32 @@ SoapDeps = [{erlsom, ".*", {git, "git://github.com/willemdj/erlsom.git", {branch
             {ibrowse, ".*", {git, "git://github.com/cmullaparthi/ibrowse.git"}, {branch, "master"}},
             {xmlrpc, ".*", {git, "git://github.com/rwbr/exmlrpc.git", {branch, "master"}}}],
 
-case os:getenv("YAWS_SOAP") of
-    false ->
-        CONFIG;
-    _ ->
-        case lists:keysearch(deps, 1, CONFIG) of
-            {value, {deps, Deps}} ->
-                NDeps = Deps ++ SoapDeps,
-                lists:keyreplace(deps, 1, CONFIG, {deps, NDeps});
+Cfg0 = case os:getenv("YAWS_SOAP") of
+           false ->
+               CONFIG;
+           _ ->
+               case lists:keysearch(deps, 1, CONFIG) of
+                   {value, {deps, Deps}} ->
+                       NDeps = Deps ++ SoapDeps,
+                       lists:keyreplace(deps, 1, CONFIG, {deps, NDeps});
+                   false ->
+                       CONFIG ++ [{deps, SoapDeps}]
+               end
+       end,
+code:ensure_loaded(crypto),
+case erlang:function_exported(crypto,hash,2) of
+    true ->
+        case lists:keysearch(erl_opts, 1, Cfg0) of
+            {value, {erl_opts, Opts}} ->
+                case lists:any(fun({d,'HAVE_CRYPTO_HASH'}) -> true; (_) -> false end, Opts) of
+                    true ->
+                        Cfg0;
+                    false ->
+                        lists:keyreplace(erl_opts,1,Cfg0,{erl_opts,Opts++[{d,'HAVE_CRYPTO_HASH'}]})
+                end;
             false ->
-                CONFIG ++ [{deps, SoapDeps}]
-        end
+                Cfg0 ++ [{erl_opts,[{d,'HAVE_CRYPTO_HASH'}]}]
+        end;
+    false ->
+        Cfg0
 end.

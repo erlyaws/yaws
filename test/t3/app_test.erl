@@ -23,6 +23,7 @@ start() ->
     test8(),
     test9(),
     test10(),
+    test11(),
     ibrowse:stop().
 
 
@@ -128,3 +129,35 @@ test10() ->
     ?line {ok, "200", _, _} = ibrowse:send_req(Uri3, [], get),
     ok.
 
+test11() ->
+    io:format("test11\n", []),
+    Opts1 = [{basic_auth, {"foo", "bar"}}],
+    Opts2 = [{basic_auth, {"foo", "baz"}}],
+
+    Uri1 = "http://localhost:8000/test11_1/a.txt",
+    ?line {ok, "401", Hdrs1, _} = ibrowse:send_req(Uri1, [], get),
+    ?line "Basic realm=\"test1\"" = proplists:get_value("WWW-Authenticate", Hdrs1),
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri1, [], get, [], Opts1),
+
+    Uri2 = "http://localhost:8000/test11_2/a.txt",
+    ?line {ok, "401", Hdrs2, _} = ibrowse:send_req(Uri2, [], get),
+    ?line "Basic realm=\"test11_2\"" = proplists:get_value("WWW-Authenticate", Hdrs2),
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri2, [], get, [], Opts1),
+
+    Uri3 = "http://localhost:8000/test11_3/a.txt",
+    ?line {ok, "401", Hdrs3_1, _} = ibrowse:send_req(Uri3, [], get),
+    ?line "Basic realm=\"test11_3\"" = proplists:get_value("WWW-Authenticate", Hdrs3_1),
+    ?line {ok, "401", Hdrs3_2, _} = ibrowse:send_req(Uri3, [], get, [], Opts1),
+    ?line "Basic realm=\"test11_3\"" = proplists:get_value("WWW-Authenticate", Hdrs3_2),
+    ?line {ok, "401", Hdrs3_3, _} = ibrowse:send_req(Uri3, [], get, [], Opts2),
+    ?line "Basic realm=\"test1\"" = proplists:get_value("WWW-Authenticate", Hdrs3_3),
+
+    Uri4 = "http://localhost:8000/test11_4/a.txt",
+    ?line {ok, "403", _, _} = ibrowse:send_req(Uri4, [], get),
+
+    Uri5 = "http://localhost:8000/test11_4/b.txt",
+    ?line {ok, "401", Hdrs5, _} = ibrowse:send_req(Uri5, [], get),
+    ?line "Basic realm=\"test11_4\"" = proplists:get_value("WWW-Authenticate", Hdrs5),
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri5, [], get, [], Opts1),
+
+    ok.

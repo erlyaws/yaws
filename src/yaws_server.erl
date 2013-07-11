@@ -1600,7 +1600,7 @@ not_implemented(CliSock, _IPPort, Req, Head) ->
     end.
 
 'DELETE'(CliSock, IPPort, Req, Head) ->
-    no_body_method(CliSock, IPPort, Req, Head).
+    body_method(CliSock, IPPort, Req, Head).
 
 'PATCH'(CliSock, IPPort, Req, Head) ->
     ?Debug("PATCH Req=~p~n H=~p~n", [?format_record(Req, http_request),
@@ -1689,6 +1689,7 @@ make_arg(SC, CliSock0, IPPort, Head, Req, Bin) ->
                client_ip_port = IPPort,
                headers = Head,
                req = Req,
+               orig_req = Req,
                opaque = SC#sconf.opaque,
                pid = self(),
                docroot = SC#sconf.docroot,
@@ -1883,7 +1884,7 @@ handle_normal_request(CliSock, ARG, UT, Authdirs, N) ->
             end,
             handle_ut(CliSock, ARG2, UT, N);
         false_403 ->
-            deliver_403(CliSock, ARG1#arg.req);
+            deliver_403(CliSock, ARG1#arg.orig_req);
         {false, AuthMethods, Realm} ->
             UT1 = #urltype{type = {unauthorized, AuthMethods, Realm},
                            path = ARG1#arg.server_path},
@@ -1928,15 +1929,37 @@ filter_auths([_|T], Req_dir, Auths) ->
 
 
 %% Call is_auth(...)/5 with a default value.
-is_auth(ARG, L) ->
-    Req_dir = ARG#arg.server_path,
-    H       = ARG#arg.headers,
+is_auth(#arg{req=Req, orig_req=Req}=ARG, L) ->
     case lists:keyfind(ARG#arg.docroot, 1, L) of
-        {_, Auths} ->
-            is_auth(ARG, Req_dir, H, filter_auths(Auths, Req_dir), {true, []});
-        false ->
-            true
+        {_, Auths} -> is_req_auth(ARG, Auths, true);
+        false      -> true
+    end;
+is_auth(ARG, L) ->
+    case lists:keyfind(ARG#arg.docroot, 1, L) of
+        {_, Auths} -> is_req_auth(ARG, Auths, is_orig_req_auth(ARG,Auths,true));
+        false      -> true
     end.
+
+is_orig_req_auth(#arg{orig_req=OrigReq, headers=H}=ARG, Auths, Ret) ->
+    case OrigReq#http_request.path of
+        {abs_path, RawPath} ->
+            case (catch yaws_api:url_decode_q_split(RawPath)) of
+                {'EXIT', _} ->
+                    Ret;
+                {DecPath, _} ->
+                    is_auth(ARG, DecPath, H, filter_auths(Auths, DecPath),
+                            {true, []})
+            end;
+        _ ->
+            Ret
+    end.
+
+is_req_auth(#arg{server_path=Req_dir, headers=H}=ARG, Auths, Ret) ->
+    case is_auth(ARG, Req_dir, H, filter_auths(Auths, Req_dir), {true, []}) of
+        true -> Ret;
+        Else -> Else
+    end.
+
 
 %% Either no authentication was done or all methods returned false
 is_auth(_ARG, _Req_dir, _H, [], {Ret, Auth_headers}) ->
@@ -3585,9 +3608,9 @@ delim_split_file(Del, Data, State, Ack) ->
     case delim_split(Del, Del, Data, [], []) of
         {H, []} when State == data ->
             %% Ok, last chunk
-            lists:reverse([{data, H} | Ack]);
+            lists:reverse([{data, list_to_binary(H)} | Ack]);
         {H, T} when State == data ->
-            delim_split_file(Del, T, var, [{data, H}|Ack]);
+            delim_split_file(Del, T, var, [{data, list_to_binary(H)}|Ack]);
         {H, []} when State == var ->
             lists:reverse([{var, H} | Ack]);
         {H, T} when State == var ->
