@@ -39,6 +39,7 @@ start() ->
     test_embedded_id_dir(),
     test_chained_appmods(),
     test_cache_appmod(),
+    test_multi_forwarded_for(),
     ibrowse:stop().
 
 
@@ -942,6 +943,31 @@ test_cache_appmod() ->
     ?line undefined = proplists:get_value("X-Appmod", Hdrs3),
 
     ok.
+
+test_multi_forwarded_for() ->
+    io:format("test_multi_forwarded_for\n", []),
+    %% apparently ibrowse can't handle sending two separate headers with
+    %% the same name but different values, which is needed for this test
+    ?line {ok, S} = gen_tcp:connect(localhost, 8014, [{active,false},
+                                                      {packet,http}]),
+    ok = gen_tcp:send(S, ["GET / HTTP/1.1\r\nHost: localhost\r\n"
+                          "X-Forwarded-For: 192.168.1.1\r\n",
+                          "X-Forwarded-For: 192.168.1.2\r\n\r\n"]),
+    ?line ok = check_forwarded_for(S),
+    ok.
+
+check_forwarded_for(S) ->
+    inet:setopts(S, [{active,once}]),
+    receive
+        {http, S, {http_response, _, Code, _}} ->
+            gen_tcp:close(S),
+            case Code of
+                200 ->
+                    ok;
+                _ ->
+                    Code
+            end
+    end.
 
 %% used for appmod tests
 %%
