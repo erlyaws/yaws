@@ -2174,8 +2174,15 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
                                  H#headers{authorization = parse_auth(X)},
                                  SSL, Count+1);
         {ok, {http_header, _Num, 'X-Forwarded-For', _, X}} ->
-            http_collect_headers(CliSock, Req, H#headers{x_forwarded_for=X},
-                                 SSL, Count+1);
+            case H#headers.x_forwarded_for of
+                undefined ->
+                    http_collect_headers(CliSock, Req, H#headers{x_forwarded_for=X},
+                                        SSL, Count+1);
+                PrevXF ->
+                    NewXF = lists:flatten([PrevXF,", ",X]),
+                    http_collect_headers(CliSock, Req, H#headers{x_forwarded_for=NewXF},
+                                        SSL, Count+1)
+            end;
         {ok, http_eoh} ->
             H;
 
