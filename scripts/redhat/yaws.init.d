@@ -14,6 +14,8 @@
 
 yaws=%prefix%/bin/yaws
 prog=yaws
+heart=--heart
+
 #
 # Default yawsid is "default". If you change this to another ID,
 # be sure to also uncomment the yawsid_opts line just below.
@@ -24,7 +26,7 @@ conf="--conf %etcdir%yaws/yaws.conf"
 
 start() {
         echo -n $"Starting $prog: "
-        daemon $yaws ${yawsid_opts} --daemon --heart ${conf}
+        daemon $yaws ${yawsid_opts} --daemon ${heart} ${conf}
         RETVAL=$?
         echo
         [ $RETVAL = 0 ] && touch /var/lock/subsys/yaws
@@ -34,7 +36,7 @@ start() {
 stop() {
 	echo -n $"Stopping $prog: "
 	str=`$yaws ${yawsid_opts} --stop`
-	if [ "$str" = "stopping yaws with id=$yawsid" ]; then
+	if [ "$str" = "stopping yaws with id=\"$yawsid\"" ]; then
 	    echo_success
 	    RETVAL=0
 	else
