@@ -47,7 +47,8 @@ if [ -f /etc/gentoo-release ]; then
 elif [ -f /etc/redhat-release ]; then
     install -d ${destdir}${etcdir}/init.d
     sed -e "s;%prefix%;$p;g" \
-	-e "s;%etcdir%;$e;g" redhat/yaws.init.d >  ${destdir}${etcdir}/init.d/yaws
+	-e "s;%etcdir%;$e;g" redhat/yaws.init.d >  \
+         ${destdir}${etcdir}/init.d/yaws
     chmod +x ${destdir}${etcdir}/init.d/yaws
     install -d ${destdir}${vardir}/run/yaws
     chmod a+rwx ${destdir}${vardir}/run/yaws
@@ -61,7 +62,8 @@ elif [ -f /etc/suseservers ]; then
 elif [ -f /etc/debian_version ]; then
     install -d ${destdir}${etcdir}/init.d
     sed -e "s;%prefix%;$p;g" \
-	-e "s;%etcdir%;$e;g" debian/yaws.init.d >  ${destdir}${etcdir}/init.d/yaws
+	-e "s;%etcdir%;$e;g" debian/yaws.init.d >  \
+        ${destdir}${etcdir}/init.d/yaws
     chmod +x ${destdir}${etcdir}/init.d/yaws
     install -d ${destdir}${vardir}/run/yaws
     chmod a+rwx ${destdir}${vardir}/run/yaws
@@ -80,9 +82,11 @@ elif [ "`uname -s`" = "Darwin" -a `id -u` = 0 ]; then
       # MacOS is particular about the ownership of startup items.
      chown -R root:wheel ${startupdir}
 elif [ "`uname -s`" = "FreeBSD" ]; then
-    sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" freebsd/yaws.sh > ${destdir}${etcdir}/rc.d/yaws.sh
+    sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" \
+       freebsd/yaws > ${destdir}${etcdir}/rc.d/yaws
 elif [ "`uname -s`" = "NetBSD" ]; then
-    sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" netbsd/yaws.sh > /etc/rc.d/yaws
+    sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" \
+       netbsd/yaws.sh > /etc/rc.d/yaws
 else
     install -d ${destdir}${etcdir}
     echo "Don't know how to make /etc/init scripts for this system"
