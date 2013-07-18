@@ -6,7 +6,7 @@ include ../support/include.mk
 all:	conf setup app_test.beam streamtest.beam jsontest.beam posttest.beam \
 		reentranttest.beam phptest.beam rewritetest.beam shapertest.beam \
 		flushtest.beam throwtest.beam dispatchmod_tester.beam cache_appmod_test.beam \
-		appmod1.beam appmod2.beam appmod3.beam forwarded_for_test.beam
+		appmod1.beam appmod2.beam appmod3.beam forwarded_for_test.beam wrap_log.beam
 	@echo "all ok"
 
 

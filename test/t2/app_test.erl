@@ -40,6 +40,7 @@ start() ->
     test_chained_appmods(),
     test_cache_appmod(),
     test_multi_forwarded_for(),
+    test_log_rotation(),
     ibrowse:stop().
 
 
@@ -968,6 +969,31 @@ check_forwarded_for(S) ->
                     Code
             end
     end.
+
+test_log_rotation() ->
+    io:format("test_log_rotation\n", []),
+    %% Write 1M of data in .access and .auth log to check the log rotation
+    ?line {ok, Fd1} = file:open("./logs/localhost:8000.access", [write]),
+    ?line ok = file:write(Fd1, lists:duplicate(1000001, $a)),
+    file:close(Fd1),
+    file:sync(Fd1),
+
+    ?line {ok, Fd2} = file:open("./logs/localhost:8000.auth", [write]),
+    ?line ok = file:write(Fd2, lists:duplicate(1000001, $a)),
+    file:close(Fd2),
+    file:sync(Fd2),
+
+    ?line {ok, "200", _, _} =
+        ibrowse:send_req("http://localhost:8000/wrap_log", [], get),
+
+    timer:sleep(500),
+
+    ?line {ok, _} = file:read_file_info("./logs/localhost:8000.access.old"),
+    ?line {ok, _} = file:read_file_info("./logs/localhost:8000.auth.old"),
+    ?line {ok, _} = file:read_file_info("./logs/localhost:8000.access"),
+    ?line {ok, _} = file:read_file_info("./logs/localhost:8000.auth"),
+
+    ok.
 
 %% used for appmod tests
 %%

@@ -116,4 +116,5 @@ do_rotate('$end_of_table', _) ->
 do_rotate(Id, LogWrapSize) ->
     [#log{id={Type, Srv}, amod=Mod, data=Data}=AL] = ets:lookup(yaws_log, Id),
     Data1 = Mod:wrap_log(Srv, Type, Data, LogWrapSize),
-    ets:insert(yaws_log, AL#log{data=Data1}).
+    ets:insert(yaws_log, AL#log{data=Data1}),
+    do_rotate(ets:next(yaws_log, Id), LogWrapSize).
