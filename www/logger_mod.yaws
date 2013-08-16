@@ -26,7 +26,7 @@ target="_blank">X-Forwarded-For</a>" header.
 <p>
 It can easily be done by writting a simple module to handle access and auth
 logging on top of yaws_log. yaws_log is the default logger of Yaws and it can be
-override by using the directive "logger_mod" in yaws.conf:
+overridden by using the directive "logger_mod" in yaws.conf:
 </p>
 
 <div class="box">
