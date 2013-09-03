@@ -220,6 +220,26 @@ The \verb+make+ command will compile the \Yaws\ web server with the
 
 \end{itemize}
 
+Alternatively, you can compile yaws with \verb+rebar+ as follows:
+\begin{verbatim}
+# rebar get-deps compile
+\end{verbatim}
+
+If you want to build with SOAP support, run the following command:
+\begin{verbatim}
+# YAWS_SOAP=1 rebar get-deps compile
+\end{verbatim}
+
+To create a Yaws release with reltool, execute the following command:
+\begin{verbatim}
+# rebar generate
+\end{verbatim}
+Because it bundles Erlang/OTP and all of the application's dependencies,
+the generated release found in \verb+rel/+ is standalone and has no
+external requirements. A future release of \verb+rebar+ will allow you
+to create a slim release that doesn't bundle Erlang/OTP. This is not yet
+available.
+
 While developing a \Yaws\  site, it's typically most convenient to
 use the local\_install and run \Yaws\  as a non-privileged user.
 
