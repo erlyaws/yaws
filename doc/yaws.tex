@@ -205,7 +205,7 @@ Compile and install is straight forward:
 # make install
 \end{verbatim}
 
-The \verb+make+ command will compile the \Yaws\ web server with the
+The \verb+make+ command will compile the \Yaws\  web server with the
 \verb+erlc+ compiler found by the configure script.
 
 \begin{itemize}
@@ -220,20 +220,25 @@ The \verb+make+ command will compile the \Yaws\ web server with the
 
 \end{itemize}
 
-Alternatively, you can compile yaws with \verb+rebar+ as follows:
+Alternatively, you can compile \Yaws\  with \verb+rebar+ as follows:
+
 \begin{verbatim}
 # rebar get-deps compile
 \end{verbatim}
 
 If you want to build with SOAP support, run the following command:
+
 \begin{verbatim}
 # YAWS_SOAP=1 rebar get-deps compile
 \end{verbatim}
 
-To create a Yaws release with reltool, execute the following command:
+To create a \Yaws\  release with \verb+reltool+, execute the following
+command:
+
 \begin{verbatim}
 # rebar generate
 \end{verbatim}
+
 Because it bundles Erlang/OTP and all of the application's dependencies,
 the generated release found in \verb+rel/+ is standalone and has no
 external requirements. A future release of \verb+rebar+ will allow you
@@ -241,12 +246,12 @@ to create a slim release that doesn't bundle Erlang/OTP. This is not yet
 available.
 
 While developing a \Yaws\  site, it's typically most convenient to
-use the local\_install and run \Yaws\  as a non-privileged user.
+use the \verb+local_install+ and run \Yaws\  as a non-privileged user.
 
 
 \subsection{Configure}
-Let's take a look at the config file that gets written to \$HOME after
-a local\_install.
+Let's take a look at the config file that gets written to \verb+$HOME+ after
+a \verb+local_install+.
 
 
 \begin{figure}[h]
@@ -310,7 +315,7 @@ the expected value in the client HTTP \verb+Host:+ header. That is
 typically the same as the fully-qualified DNS name of the server
 whereas the address is the actual IP address of the server.
 
-Since \Yaws\  support virtual hosting with several servers on the same
+Since \Yaws\  supports virtual hosting with several servers on the same
 IP address, this matters.
 
 Nevertheless, our server listens to \textit{127.0.0.1:8000} and
