@@ -494,25 +494,30 @@ validate_groups([H|T]) ->
     end.
 
 validate_group(List) ->
-    %% all ssl servers with the same IP must share the same ssl  configuration
-    %% check if one ssl server in the group
-    case lists:any(fun(SC) -> SC#sconf.ssl  /= undefined end,List) of
+    [SC0|SCs] = List,
+
+    %% all servers with the same IP/Port must share the same tcp configuration
+    case lists:all(fun(SC) ->
+                           lists:keyfind(listen_opts, 1, SC#sconf.soptions) ==
+                               lists:keyfind(listen_opts, 1, SC0#sconf.soptions)
+                   end, SCs) of
         true ->
-            [SC0|SCs] = List,
-            %% check if all servers in the group have the same ssl configuration
-            case lists:filter(
-                   fun(SC) -> SC#sconf.ssl /= SC0#sconf.ssl end,SCs) of
-                L when length(L) > 1 ->
-                    throw({error, ?F("SSL server per IP must share the "
-                                     "same certificate : ~p",
-                                     [(hd(L))#sconf.servername])});
-                _ ->
-                    ok
-            end;
-        _ ->
-            ok
+            ok;
+        false ->
+            throw({error, ?F("Servers in the same group must share the same tcp"
+                             " configuration: ~p", [SC0#sconf.servername])})
     end,
-    %% second all servernames in a group must be unique
+
+    %% all servers with the same IP/Port must share the same ssl configuration
+    case lists:all(fun(SC) -> SC#sconf.ssl == SC0#sconf.ssl end, SCs) of
+        true ->
+            ok;
+        false ->
+            throw({error, ?F("Servers in the same group must share the same ssl"
+                             " configuration: ~p", [SC0#sconf.servername])})
+    end,
+
+    %% all servernames in a group must be unique
     SN = lists:sort([yaws:to_lower(X#sconf.servername) || X <- List]),
     no_two_same(SN).
 
@@ -1240,18 +1245,7 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
         ["listen_backlog", '=', Val] ->
             case (catch list_to_integer(Val)) of
                 B when is_integer(B) ->
-                    C2 = case proplists:get_value(listen_opts,
-                                                  C#sconf.soptions) of
-                             undefined ->
-                                 C#sconf{soptions =
-                                             [{listen_opts, [{backlog, B}]} |
-                                              C#sconf.soptions]};
-                             Opts ->
-                                 C#sconf{soptions =
-                                             [{listen_opts, [{backlog, B} |
-                                                             Opts]} |
-                                              C#sconf.soptions]}
-                         end,
+                    C2 = update_soptions(C, listen_opts, backlog, B),
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 _ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
@@ -1263,6 +1257,9 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
         ["serveralias", '=' | Names] ->
             C2 = C#sconf{serveralias = Names ++ C#sconf.serveralias},
             fload(FD, server, GC, C2, Cs, Lno+1, Next);
+
+        [ '<', "listen_opts", '>'] ->
+            fload(FD, listen_opts, GC, C, Cs, Lno+1, Next);
 
         ["docroot", '=', Rootdir | XtraDirs] ->
             RootDirs = lists:map(fun(R) -> filename:absname(R) end,
@@ -1586,6 +1583,111 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                 {error, Str} ->
                     {error, ?F("~s at line ~w", [Str, Lno])}
             end;
+
+        [H|T] ->
+            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
+        Err ->
+            Err
+    end;
+
+
+fload(FD, listen_opts, GC, C, Cs, Lno, Chars) ->
+    Next = io_get_line(FD, '', []),
+    case toks(Lno, Chars) of
+        [] ->
+            fload(FD, listen_opts, GC, C, Cs, Lno+1, Next);
+
+        ["buffer", '=', Int] ->
+            case (catch list_to_integer(Int)) of
+                B when is_integer(B) ->
+                    C2 = update_soptions(C, listen_opts, buffer, B),
+                    fload(FD, listen_opts, GC, C2, Cs, Lno+1, Next);
+                _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            end;
+
+        ["delay_send", '=', Bool] ->
+            case is_bool(Bool) of
+                {true, Val} ->
+                    C2 = update_soptions(C, listen_opts, delay_send, Val),
+                    fload(FD, listen_opts, GC, C2, Cs, Lno+1, Next);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
+            end;
+
+        ["linger", '=', Val] ->
+            case (catch list_to_integer(Val)) of
+                I when is_integer(I) ->
+                    C2 = update_soptions(C, listen_opts, linger, {true, I}),
+                    fload(FD, listen_opts, GC, C2, Cs, Lno+1, Next);
+                _ when Val == "false" ->
+                    C2 = update_soptions(C, listen_opts, linger, {false, 0}),
+                    fload(FD, listen_opts, GC, C2, Cs, Lno+1, Next);
+                _ ->
+                    {error, ?F("Expect integer|false at line ~w", [Lno])}
+            end;
+
+        ["nodelay", '=', Bool] ->
+            case is_bool(Bool) of
+                {true, Val} ->
+                    C2 = update_soptions(C, listen_opts, nodelay, Val),
+                    fload(FD, listen_opts, GC, C2, Cs, Lno+1, Next);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
+            end;
+
+        ["priority", '=', Int] ->
+            case (catch list_to_integer(Int)) of
+                P when is_integer(P) ->
+                    C2 = update_soptions(C, listen_opts, priority, P),
+                    fload(FD, listen_opts, GC, C2, Cs, Lno+1, Next);
+                _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            end;
+
+        ["sndbuf", '=', Int] ->
+            case (catch list_to_integer(Int)) of
+                I when is_integer(I) ->
+                    C2 = update_soptions(C, listen_opts, sndbuf, I),
+                    fload(FD, listen_opts, GC, C2, Cs, Lno+1, Next);
+                _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            end;
+
+        ["recbuf", '=', Int] ->
+            case (catch list_to_integer(Int)) of
+                I when is_integer(I) ->
+                    C2 = update_soptions(C, listen_opts, recbuf, I),
+                    fload(FD, listen_opts, GC, C2, Cs, Lno+1, Next);
+                _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            end;
+
+        ["send_timeout", '=', Val] ->
+            case (catch list_to_integer(Val)) of
+                I when is_integer(I) ->
+                    C2 = update_soptions(C, listen_opts, send_timeout, I),
+                    fload(FD, listen_opts, GC, C2, Cs, Lno+1, Next);
+                _ when Val == "infinity" ->
+                    C2 = update_soptions(C, listen_opts, send_timeout,
+                                         infinity),
+                    fload(FD, listen_opts, GC, C2, Cs, Lno+1, Next);
+                _ ->
+                    {error, ?F("Expect integer|infinity at line ~w", [Lno])}
+            end;
+
+        ["send_timeout_close", '=', Bool] ->
+            case is_bool(Bool) of
+                {true, Val} ->
+                    C2 = update_soptions(C, listen_opts, send_timeout_close,
+                                         Val),
+                    fload(FD, listen_opts, GC, C2, Cs, Lno+1, Next);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
+            end;
+
+        ['<', "/listen_opts", '>'] ->
+            fload(FD, server, GC, C, Cs, Lno+1, Next);
 
         [H|T] ->
             {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
@@ -2920,3 +3022,9 @@ io_get_line(FD, Prompt, Acc) ->
         true ->
             Next
     end.
+
+update_soptions(SC, Name, Key, Value) ->
+    Opts0 = proplists:get_value(Name, SC#sconf.soptions),
+    Opts1 = lists:keystore(Key, 1, Opts0, {Key, Value}),
+    SOpts = lists:keystore(Name, 1, SC#sconf.soptions, {Name, Opts1}),
+    SC#sconf{soptions = SOpts}.

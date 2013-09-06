@@ -339,8 +339,31 @@ specify several addresses to listen on.
 .TP
 \fBlisten_backlog = Integer\fR
 This sets the TCP listen backlog for the server to define the maximum length the
-queue of pending connections may grow to. The default is the same as the default
-provided by \fIgen_tcp:listen/2\fR, which is 5.
+queue of pending connections may grow to. The default is 1024.
+
+.TP
+\fB<listen_opts> ... </listen_opts>\fR
+Defines extra options to be set on the listen socket and, by inheritance, on
+accepted sockets. See \fIinet:setopts/2\fR for details. Supported options are:
+
+\fBbuffer = Integer\fR (default: same as \fIinet:setopts/2\fR)
+
+\fBdelay_send = true  | false \fR (default: same as \fIinet:setopts/2\fR)
+
+\fBlinger = Integer | false \fR (default: same as \fIinet:setopts/2\fR)
+
+\fBnodelay = true | false \fR (default: same as \fIinet:setopts/2\fR)
+
+\fBpriority = Integer\fR (default: same as \fIinet:setopts/2\fR)
+
+\fBsndbuf = Integer\fR (default: same as \fIinet:setopts/2\fR)
+
+\fBrecbuf = Integer\fR (default: 8196)
+
+\fBsend_timeout = Integer | infinity\fR (default: same as \fIinet:setopts/2\fR)
+
+\fBsend_timeout_close = true | false \fR (default: same as \fIinet:setopts/2\fR)
+.RE
 
 .TP
 \fBserver_signature = String\fR

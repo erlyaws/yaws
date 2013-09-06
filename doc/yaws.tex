@@ -2490,9 +2490,24 @@ The following directives are allowed inside a server definition.
 \item        \verb+listen_backlog = Integer+ ---
               This sets the TCP listen backlog for the server to
               define the maximum length the queue of pending
-              connections may grow to. The default is the same as
-              the default provided by \verb+gen_tcp:listen/2+, which
-              is 5.
+              connections may grow to. The default is 1024.
+
+
+\item        \verb+<listen_opts>  .... </listen_opts>+ ---
+              Defines extra options to be set on the listen socket and, by
+              inheritance, on accepted sockets. See \verb+inet:setopts/2+ for
+              details. Supported options are:
+              \begin{itemize}
+              \item \verb+Bbuffer = Integer+ (default: same as \verb+inet:setopts/2+)
+              \item \verb+delay_send = true  | false+ (default: same as \verb+inet:setopts/2+)
+              \item \verb+linger = Integer | false+ (default: same as \verb+inet:setopts/2+)
+              \item \verb+nodelay = true | false+ (default: same as \verb+inet:setopts/2+)
+              \item \verb+priority = Integer+ (default: same as \verb+inet:setopts/2+)
+              \item \verb+sndbuf = Integer+ (default: same as \verb+inet:setopts/2+)
+              \item \verb+recbuf = Integer+ (default: 8196)
+              \item \verb+send_timeout = Integer | infinity+ (default: same as \verb+inet:setopts/2+)
+              \item \verb+send_timeout_close = true | false+ (default: same as \verb+inet:setopts/2+)
+              \end{itemize}
 
 \item        \verb+server_signature = String+ ---
               This directive sets the "Server: " output header to the custom

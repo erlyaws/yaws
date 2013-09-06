@@ -452,7 +452,7 @@ do_listen(GC, SC) ->
             {nossl, undefined, gen_tcp_listen(SC#sconf.port, listen_opts(SC))};
         SSL ->
             {ssl, certinfo(SSL),
-             ssl:listen(SC#sconf.port, ssl_listen_opts(GC, SC, SSL))}
+             ssl_listen(SC#sconf.port, ssl_listen_opts(GC, SC, SSL))}
     end.
 
 certinfo(SSL) ->
@@ -490,9 +490,12 @@ certinfo(SSL) ->
          }.
 
 gen_tcp_listen(Port, Opts) ->
-    ?Debug("Listen ~p:~p~n", [Port, Opts]),
+    ?Debug("TCP Listen ~p:~p~n", [Port, Opts]),
     gen_tcp:listen(Port, Opts).
 
+ssl_listen(Port, Opts) ->
+    ?Debug("SSL Listen ~p:~p~n", [Port, Opts]),
+    ssl:listen(Port, Opts).
 
 gserv(_Top, _, []) ->
     proc_lib:init_ack(none);
@@ -902,16 +905,14 @@ listen_opts(SC) ->
                        []
                end,
     Opts = [binary,
-     {ip, SC#sconf.listen},
-     {packet, http},
-     {packet_size, 16#4000},
-     {recbuf, 8192},
-     {reuseaddr, true},
-     {backlog, 1024},
-     {active, false}
-     | proplists:get_value(listen_opts, SC#sconf.soptions, [])
-    ] ++ InetType,
-    ?Debug("listen options: ~p", [Opts]),
+            {ip, SC#sconf.listen},
+            {packet, http},
+            {packet_size, 16#4000},
+            {reuseaddr, true},
+            {active, false}
+            | proplists:get_value(listen_opts, SC#sconf.soptions, [])
+           ] ++ InetType,
+    ?Debug("tcp listen options: ~p", [Opts]),
     Opts.
 
 ssl_listen_opts(GC, SC, SSL) ->
@@ -921,14 +922,15 @@ ssl_listen_opts(GC, SC, SSL) ->
                    true ->
                        []
                end,
-    [binary,
-     {ip, SC#sconf.listen},
-     {packet, http},
-     {packet_size, 16#4000},
-     {recbuf, 8192},
-     {reuseaddr, true},
-     {active, false} | ssl_listen_opts(GC, SSL)] ++ InetType ++
-        proplists:get_value(listen_opts, SC#sconf.soptions, []).
+    Opts = [binary,
+            {ip, SC#sconf.listen},
+            {packet, http},
+            {packet_size, 16#4000},
+            {reuseaddr, true},
+            {active, false} | ssl_listen_opts(GC, SSL)] ++ InetType ++
+        proplists:get_value(listen_opts, SC#sconf.soptions, []),
+    ?Debug("ssl listen options: ~p", [Opts]),
+    Opts.
 
 ssl_listen_opts(GC, SSL) ->
     L = [if SSL#ssl.keyfile /= undefined ->
