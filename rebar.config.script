@@ -9,28 +9,70 @@ Cfg0 = case os:getenv("YAWS_SOAP") of
            false ->
                CONFIG;
            _ ->
-               case lists:keysearch(deps, 1, CONFIG) of
-                   {value, {deps, Deps}} ->
+               case lists:keyfindsearch(deps, 1, CONFIG) of
+                   {deps, Deps} ->
                        NDeps = Deps ++ SoapDeps,
                        lists:keyreplace(deps, 1, CONFIG, {deps, NDeps});
                    false ->
                        CONFIG ++ [{deps, SoapDeps}]
                end
        end,
+
+ErlOpts0 = case lists:keyfind(erl_opts, 1, Cfg0) of
+               {erl_opts, EOpts} -> EOpts;
+               false             -> []
+           end,
+PortEnv0 = case lists:keyfind(port_env, 1, Cfg0) of
+               {port_env, PEnv} -> PEnv;
+               false            -> []
+           end,
+PortSpecs0 = case lists:keyfind(port_specs, 1, Cfg0) of
+                 {port_specs, PSpecs} -> PSpecs;
+                 false                -> []
+             end,
+
+code:ensure_loaded(file),
+ErlOpts1 = case erlang:function_exported(file,sendfile,5) of
+               true  -> ErlOpts0 ++ [{d,'HAVE_ERLANG_SENDFILE'}];
+               false -> ErlOpts0
+           end,
+
 code:ensure_loaded(crypto),
-case erlang:function_exported(crypto,hash,2) of
-    true ->
-        case lists:keysearch(erl_opts, 1, Cfg0) of
-            {value, {erl_opts, Opts}} ->
-                case lists:any(fun({d,'HAVE_CRYPTO_HASH'}) -> true; (_) -> false end, Opts) of
-                    true ->
-                        Cfg0;
-                    false ->
-                        lists:keyreplace(erl_opts,1,Cfg0,{erl_opts,Opts++[{d,'HAVE_CRYPTO_HASH'}]})
-                end;
-            false ->
-                Cfg0 ++ [{erl_opts,[{d,'HAVE_CRYPTO_HASH'}]}]
-        end;
-    false ->
-        Cfg0
-end.
+ErlOpts2 = case erlang:function_exported(crypto,hash,2) of
+               true  -> ErlOpts1 ++ [{d,'HAVE_CRYPTO_HASH'}];
+               false -> ErlOpts1
+           end,
+
+HaveSendFile       = lists:keymember('HAVE_SENDFILE', 3, ErlOpts2),
+HaveErlangSendFile = lists:keymember('HAVE_ERLANG_SENDFILE', 2, ErlOpts2),
+EnableSendfile     = case os:getenv("ENABLE_SENDFILE") of
+                         false ->
+                             case os:getenv("DISABLE_SENDFILE") of
+                                 false -> erlang;
+                                 _     -> false
+                             end;
+                         "erlang" -> erlang;
+                         "yaws"   -> yaws;
+                         "no"     -> false
+                     end,
+
+{ErlOpts3, PortEnv1, PortSpecs1} =
+    if
+        EnableSendfile == erlang andalso HaveErlangSendFile ->
+            {ErlOpts2 ++ [{d, 'USE_ERLANG_SENDFILE'}], PortEnv0, PortSpecs0};
+
+        EnableSendfile == yaws andalso HaveSendFile ->
+            {ErlOpts2 ++ [{d, 'USE_YAWS_SENDFILE'}],
+             PortEnv0 ++ [{"DRV_CFLAGS", "$DRV_CFLAGS -DHAVE_YAWS_SENDFILE"}],
+             PortSpecs0 ++ [{"priv/lib/yaws_sendfile_drv.so",
+                             ["c_src/yaws_sendfile_drv.c", "c_src/hashtable.c"]}]};
+
+        true ->
+            {ErlOpts2, PortEnv0, PortSpecs0}
+    end,
+
+Cfg1 = lists:keyreplace(erl_opts, 1, Cfg0, {erl_opts, ErlOpts3}),
+Cfg2 = lists:keyreplace(port_env, 1, Cfg1, {port_env, PortEnv1}),
+Cfg3 = lists:keyreplace(port_specs, 1, Cfg2, {port_specs, PortSpecs1}),
+Cfg3.
+

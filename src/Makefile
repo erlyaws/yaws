@@ -83,7 +83,10 @@ yaws_generated.erl:	yaws_generated.template ../vsn.mk
 
 yaws_configure.hrl:	 ../vsn.mk ../include.mk
 	rm -f $@
-	[ $(HAVE_YAWS_SENDFILE) = true ] && echo '-define(HAVE_YAWS_SENDFILE, true).' > $@; \
+	[ $(HAVE_SENDFILE) = true ] && echo '-define(HAVE_SENDFILE, true).' > $@; \
+	[ $(HAVE_ERLANG_SENDFILE) = true ] && echo '-define(HAVE_ERLANG_SENDFILE, true).' >> $@; \
+	[ $(USE_YAWS_SENDFILE) = true ] && echo '-define(USE_YAWS_SENDFILE, true).' >> $@; \
+	[ $(USE_ERLANG_SENDFILE) = true ] && echo '-define(USE_ERLANG_SENDFILE, true).' >> $@; \
 	[ $(HAVE_CRYPTO_HASH) = true ] && echo '-define(HAVE_CRYPTO_HASH, true).' >> $@; \
 	[ -f $@ ] || touch $@
 

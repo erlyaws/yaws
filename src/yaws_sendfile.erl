@@ -13,17 +13,22 @@
 -include("../include/yaws.hrl").
 -include_lib("kernel/include/file.hrl").
 
--ifndef(HAVE_YAWS_SENDFILE).
--ifndef(NO_FILE_SENDFILE).
--define(HAVE_FILE_SENDFILE, 1).
--endif.
--endif.
 
+-ifndef(USE_ERLANG_SENDFILE).
 
--ifdef(HAVE_YAWS_SENDFILE).
+-ifdef(USE_YAWS_SENDFILE).
+
 -behavior(gen_server).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
+-else.
+
+%% export bytes_to_transfer to avoid warning when sendfile is disabled (or not
+%% supported)
+-export([bytes_to_transfer/3]).
+
+-endif.
+
 -endif.
 
 send(Out, Filename) ->
@@ -46,7 +51,7 @@ bytes_to_transfer(Filename, Offset, Count) ->
             {error, badarg}
     end.
 
--ifdef(HAVE_FILE_SENDFILE). %% OTP > R15B; use file:sendfile/5
+-ifdef(USE_ERLANG_SENDFILE). %% OTP > R15B; use file:sendfile/5
 
 enabled() ->
     true.
@@ -72,9 +77,10 @@ start() ->
 stop() ->
     ok.
 
+
 -else.
 
--ifdef(HAVE_YAWS_SENDFILE).
+-ifdef(USE_YAWS_SENDFILE).
 
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
