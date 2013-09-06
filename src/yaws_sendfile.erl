@@ -63,7 +63,9 @@ send(Out, Filename, Offset, Count) ->
         _ ->
             case file:open(Filename, [raw, read, binary]) of
                 {ok, RawFile} ->
-                    Res = file:sendfile(RawFile, Out, Offset, Count1, []),
+                    ChunkSize = (get(gc))#gconf.large_file_chunk_size,
+                    Res = file:sendfile(RawFile, Out, Offset, Count1,
+                                        [{chunk_size, ChunkSize}]),
                     ok = file:close(RawFile),
                     Res;
                 Error2 ->

@@ -823,6 +823,15 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("~s at line ~w", [Str, Lno])}
             end;
 
+        ["large_file_chunk_size", '=', Int] ->
+            case (catch list_to_integer(Int)) of
+                I when is_integer(I) ->
+                    fload(FD, globals, GC#gconf{large_file_chunk_size = I},
+                          C, Cs, Lno+1, Next);
+                _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            end;
+
         ["acceptor_pool_size", '=', Int] ->
             case catch list_to_integer(Int) of
                 I when is_integer(I), I >= 0 ->
