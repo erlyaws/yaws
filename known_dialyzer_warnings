@@ -1,16 +1,19 @@
 
 mime_type_c.erl:69: The variable _ can never match since previous clauses completely covered the type 'true'
-yaws.erl:2404: Guard test Ret::'file' == 'fd' can never succeed
-yaws.erl:2412: Guard test Ret::'file' == 'binfd' can never succeed
-yaws.erl:2643: The pattern 'false' can never match the type 'true'
-yaws.erl:2652: The pattern 'false' can never match the type 'true'
-yaws_ctl.erl:530: Function hup/1 has no local return
-yaws_ctl.erl:535: Function stop/1 has no local return
-yaws_ctl.erl:539: Function status/1 has no local return
-yaws_ctl.erl:542: Function load/1 has no local return
-yaws_ctl.erl:564: Function trace/1 has no local return
-yaws_ctl.erl:567: Function debug_dump/1 has no local return
-yaws_ctl.erl:570: Function stats/1 has no local return
-yaws_ctl.erl:572: Function running_config/1 has no local return
-yaws_revproxy.erl:673: The pattern 'true' can never match the type 'false'
+yaws.erl:2422: Guard test Ret::'file' == 'fd' can never succeed
+yaws.erl:2430: Guard test Ret::'file' == 'binfd' can never succeed
+yaws.erl:2661: The pattern 'false' can never match the type 'true'
+yaws.erl:2670: The pattern 'false' can never match the type 'true'
+yaws_api.erl:2559: The pattern 'false' can never match the type 'true'
+yaws_ctl.erl:532: Function hup/1 has no local return
+yaws_ctl.erl:537: Function stop/1 has no local return
+yaws_ctl.erl:541: Function status/1 has no local return
+yaws_ctl.erl:544: Function load/1 has no local return
+yaws_ctl.erl:566: Function trace/1 has no local return
+yaws_ctl.erl:569: Function debug_dump/1 has no local return
+yaws_ctl.erl:572: Function stats/1 has no local return
+yaws_ctl.erl:574: Function running_config/1 has no local return
+yaws_revproxy.erl:682: The pattern 'true' can never match the type 'false'
+yaws_sendfile.erl:52: The pattern 'false' can never match the type 'true'
+yaws_sendfile.erl:63: The pattern 'false' can never match the type 'true'
 yaws_sup_restarts.erl:49: The pattern 'false' can never match the type 'true'
