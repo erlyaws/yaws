@@ -316,15 +316,9 @@ esac
 dnl check sendfile support:
 dnl   - HAVE_SENDFILE: say if sendfile syscall is supported
 dnl   - HAVE_ERLANG_SENDFILE: say if file:sendfile/5 exists
-dnl
-dnl supported options about sendfile
-dnl   --enable-sendfile=erlang|yaws (default: erlang)
-dnl   --disable-sendfile
 
 HAVE_SENDFILE=false
 HAVE_ERLANG_SENDFILE=false
-USE_ERLANG_SENDFILE=false
-USE_YAWS_SENDFILE=false
 
 AC_LANG(C)
 AC_CHECK_LIB([c],[sendfile],[HAVE_SENDFILE=true])
@@ -338,29 +332,8 @@ if test "$file_sendfile" = true -a \
    HAVE_ERLANG_SENDFILE=true
 fi
 
-AC_ARG_ENABLE([sendfile],
-        AC_HELP_STRING([--enable-sendfile[=erlang|yaws]],
-            [enable use of sendfile [[default=erlang]]]),,
-        enable_sendfile="erlang")
-
-if test "x${enable_sendfile}" = "xerlang"; then
-    AC_MSG_NOTICE(use erlang sendfile)
-    USE_ERLANG_SENDFILE=true
-elif test "x${enable_sendfile}" = "xyaws"; then
-    if test ${HAVE_SENDFILE} = false; then
-        AC_MSG_NOTICE(disable sendfile support: sendfile syscall not found)
-    else
-        AC_MSG_NOTICE(use yaws sendfile)
-        USE_YAWS_SENDFILE=true
-    fi
-else
-    AC_MSG_NOTICE(disable sendfile support)
-fi
-
 AC_SUBST(HAVE_SENDFILE)
 AC_SUBST(HAVE_ERLANG_SENDFILE)
-AC_SUBST(USE_ERLANG_SENDFILE)
-AC_SUBST(USE_YAWS_SENDFILE)
 
 HAVE_CRYPTO_HASH=false
 crypto_hash=`"${ERL}" -noshell -eval 'code:ensure_loaded(crypto), io:format("~p~n",[[erlang:function_exported(crypto,hash,2)]]), erlang:halt().' | tail -1`

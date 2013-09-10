@@ -200,6 +200,7 @@ init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded, Id}) ->
 
 init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
     put(gc, GC),
+    yaws_sendfile:check_gc_flags(GC),
     case GC#gconf.mnesia_dir of
         MD when length(MD) > 0 ->
             yaws_debug:format("loading mnesia ~p~n", [MD]),

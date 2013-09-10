@@ -12,7 +12,7 @@ else
 	PRIV_FILES= ../priv/lib/setuid_drv.$(DLL)  $(EPAM)
 endif
 
-ifeq ($(USE_YAWS_SENDFILE),true)
+ifeq ($(HAVE_SENDFILE),true)
 	PRIV_FILES += ../priv/lib/yaws_sendfile_drv.$(DLL)
 endif
 

@@ -43,35 +43,20 @@ ErlOpts2 = case erlang:function_exported(crypto,hash,2) of
                false -> ErlOpts1
            end,
 
-HaveSendFile       = lists:keymember('HAVE_SENDFILE', 3, ErlOpts2),
-HaveErlangSendFile = lists:keymember('HAVE_ERLANG_SENDFILE', 2, ErlOpts2),
-EnableSendfile     = case os:getenv("ENABLE_SENDFILE") of
-                         false ->
-                             case os:getenv("DISABLE_SENDFILE") of
-                                 false -> erlang;
-                                 _     -> false
-                             end;
-                         "erlang" -> erlang;
-                         "yaws"   -> yaws;
-                         "no"     -> false
-                     end,
+HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts2),
 
-{ErlOpts3, PortEnv1, PortSpecs1} =
+{PortEnv1, PortSpecs1} =
     if
-        EnableSendfile == erlang andalso HaveErlangSendFile ->
-            {ErlOpts2 ++ [{d, 'USE_ERLANG_SENDFILE'}], PortEnv0, PortSpecs0};
-
-        EnableSendfile == yaws andalso HaveSendFile ->
-            {ErlOpts2 ++ [{d, 'USE_YAWS_SENDFILE'}],
-             PortEnv0 ++ [{"DRV_CFLAGS", "$DRV_CFLAGS -DHAVE_YAWS_SENDFILE"}],
+        HaveSendFile ->
+            {PortEnv0 ++ [{"DRV_CFLAGS", "$DRV_CFLAGS -DHAVE_SENDFILE"}],
              PortSpecs0 ++ [{"priv/lib/yaws_sendfile_drv.so",
                              ["c_src/yaws_sendfile_drv.c", "c_src/hashtable.c"]}]};
 
         true ->
-            {ErlOpts2, PortEnv0, PortSpecs0}
+            {PortEnv0, PortSpecs0}
     end,
 
-Cfg1 = lists:keyreplace(erl_opts, 1, Cfg0, {erl_opts, ErlOpts3}),
+Cfg1 = lists:keyreplace(erl_opts, 1, Cfg0, {erl_opts, ErlOpts2}),
 Cfg2 = lists:keyreplace(port_env, 1, Cfg1, {port_env, PortEnv1}),
 Cfg3 = lists:keyreplace(port_specs, 1, Cfg2, {port_specs, PortSpecs1}),
 Cfg3.

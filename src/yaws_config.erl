@@ -837,6 +837,14 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
+        ["large_file_sendfile", '=', Method] ->
+            case set_sendfile_flags(GC, Method) of
+                {ok, GC2} ->
+                    fload(FD, globals, GC2, C, Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+
         ["acceptor_pool_size", '=', Int] ->
             case catch list_to_integer(Int) of
                 I when is_integer(I), I >= 0 ->
@@ -3028,3 +3036,17 @@ update_soptions(SC, Name, Key, Value) ->
     Opts1 = lists:keystore(Key, 1, Opts0, {Key, Value}),
     SOpts = lists:keystore(Name, 1, SC#sconf.soptions, {Name, Opts1}),
     SC#sconf{soptions = SOpts}.
+
+
+set_sendfile_flags(GC, "erlang") ->
+    {ok, ?gc_set_use_yaws_sendfile(?gc_set_use_erlang_sendfile(GC, true),
+                                   false)};
+set_sendfile_flags(GC, "yaws") ->
+    {ok, ?gc_set_use_yaws_sendfile(?gc_set_use_erlang_sendfile(GC, false),
+                                   true)};
+set_sendfile_flags(GC, "disable") ->
+    {ok, ?gc_set_use_yaws_sendfile(?gc_set_use_erlang_sendfile(GC, false),
+                                   false)};
+set_sendfile_flags(_, _) ->
+    {error, "Expect erlang|yaws|disable"}.
+
