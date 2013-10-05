@@ -1,4 +1,3 @@
-
 This is yaws, a webserver for dynamic content written in Erlang.
 
 
@@ -18,7 +17,7 @@ To build and install
 
 2. You can build using rebar:
 
-# rebar compile
+# rebar get-deps compile
 
   or via configure and make:
 
