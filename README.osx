@@ -1,0 +1,8 @@
+# Homebrew on OSX
+
+If you develop on OSX (Snow Leopard, Lion, Mountain Lion), the yaws formula
+has been fixed for Erlang R16B01 and above users. To install please run:
+`brew install yaws`. To install the HEAD using Homebrew run:
+`brew install --HEAD yaws`.
+
+This was introduced with [this pull request merge](https://github.com/mxcl/homebrew/pull/23076).
