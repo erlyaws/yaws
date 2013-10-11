@@ -47,7 +47,6 @@ MODULES=yaws \
 	json json2 jsonrpc yaws_jsonrpc yaws_xmlrpc\
 	haxe yaws_rpc \
 	yaws_soap_srv yaws_soap_lib yaws_soap12_lib \
-	authmod_gssapi \
 	yaws_appmod_cgi \
 	yaws_appmod_fcgi \
 	yaws_sendfile \
