@@ -39,7 +39,7 @@ have_sendfile() -> false.
 have_erlang_sendfile() -> true.
 
 -else.
-false
+
 have_erlang_sendfile() -> false.
 
 -endif.
