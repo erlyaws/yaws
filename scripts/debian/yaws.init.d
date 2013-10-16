@@ -15,7 +15,7 @@ prog=yaws
 # idopts=--id myserverid
 
 conf="--conf %etcdir%/yaws/yaws.conf"
-heart="-- heart"
+heart="-heart"
 
 test -x $yaws || exit 1
 

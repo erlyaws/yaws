@@ -1,5 +1,24 @@
+Wed Oct 16 05:40:25 CEST 2013 Yaws 1.97
+Webdav work, all webdav is now an appmod (tjeerd)
+New serveralias directive.  Now it is possible to set alternate names for a virtual host. A server alias  may contain wildcards. Inside a server definition wecan now have e.g serveralias = *.server.domain.com *.server?.domain.com (capflam)
+pam bug found by Jari Hellman
+optimized ssi code by storing binaries as the data chunks instead of lists of chars (klacke)
+Support message body in DELETE requests  (capflam)
+Group automatically the server configurations in embedded mode. Now, Yaws groups the server configurations by itself when it is started    in embedded mode. This is done when yaws_api:setconf/2 is called. (capflam)
+Use crypto:hash instead of crypto:sha to be compatible with R16B1. (Karolis Petrauskas )
+Use proper linker command for drivers on OpenBSD (Francis Joanis )
+Try to make the log directory if it doesn't exist. This happens only if logdir has a plus sign in front of it. E.g         logdir = +path/to/log. (capflam, James Lee)
+Incorrect X-Forwarded-For header (Manuel Durán Aguete)
+Redhat /etc script bug fix by flavio-fernans
+Install procedure for FreeBSD wasn't correct (klacke)
+More rebar support (Steve, Tuncer)
+Fix option to enable/disable sendfile support in the configure script. file:sendfile/5 implementation is buggy (in R15 & R16). When async-threads are enabled, in efile driver, the tcp socket is set in blocking mode and thesendfile syscall is executed on an async-thread. So an unresponsive client could block it for a very long time and therefore block the async-thread. In this way, all async-threads could be easily blocked. So, by default, the use of sendfile is disable.  (capflam)
+Add support of many options for tcp/ssl sockets (capflam)
+Fix mime_types.erl generation for a local installation of Yaws,  (capflam)
+
+
 Tue Mar 19 17:53:00 CET 2013 Yaws 1.96
-Websocket release, lots of work nad rewrites of the websocket code which is now topnotch.
+Websocket release, lots of work and rewrites of the websocket code which is now topnotch.
 Handle relative paths when Yaws is started in embedded mode  (capflam)
 ensure compatibility with Erlang R13B04 (steve)
 Handle case with DOS attack towards pam login with embedded NUL chars in username or password. The protocol cannot handle NUL chars and Yaws dies (klacke)
