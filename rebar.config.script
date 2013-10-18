@@ -2,14 +2,13 @@
 %% ex: ft=erlang ts=4 sw=4 et
 
 SoapDeps = [{erlsom, ".*", {git, "git://github.com/willemdj/erlsom.git", {branch, "master"}}},
-            {ibrowse, ".*", {git, "git://github.com/cmullaparthi/ibrowse.git"}, {branch, "master"}},
             {xmlrpc, ".*", {git, "git://github.com/rwbr/exmlrpc.git", {branch, "master"}}}],
 
 Cfg0 = case os:getenv("YAWS_SOAP") of
            false ->
                CONFIG;
            _ ->
-               case lists:keyfindsearch(deps, 1, CONFIG) of
+               case lists:keyfind(deps, 1, CONFIG) of
                    {deps, Deps} ->
                        NDeps = Deps ++ SoapDeps,
                        lists:keyreplace(deps, 1, CONFIG, {deps, NDeps});
