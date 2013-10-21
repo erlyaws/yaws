@@ -12,11 +12,16 @@ setup_default_gconf_test() ->
     GC = yaws_config:make_default_gconf(false, "test"),
     GC = yaws:create_gconf([], "test"),
 
+    Flags = case yaws_sendfile:have_sendfile() of
+                true  -> 1124;
+                false -> 100
+            end,
+
     {yaws_dir,    Dir}       = get_gconf_attr(yaws_dir,    GC),
     {ebin_dir,    [EbinDir]} = get_gconf_attr(ebin_dir,    GC),
     {include_dir, [IncDir]}  = get_gconf_attr(include_dir, GC),
     {trace,       false}     = get_gconf_attr(trace,       GC),
-    {flags,       100}       = get_gconf_attr(flags,       GC),
+    {flags,       Flags}     = get_gconf_attr(flags,       GC),
     {id,          "test"}    = get_gconf_attr(id,          GC),
 
     ok.

@@ -579,6 +579,15 @@ add_port(SC, Port) ->
 
 make_default_gconf(Debug, Id) ->
     Y = yaws_dir(),
+    Flags = case yaws_sendfile:have_sendfile() of
+                true ->
+                    (?GC_COPY_ERRLOG bor ?GC_FAIL_ON_BIND_ERR bor
+                         ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH bor
+                         ?GC_USE_YAWS_SENDFILE);
+                false ->
+                    (?GC_COPY_ERRLOG bor ?GC_FAIL_ON_BIND_ERR bor
+                         ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH)
+            end,
     #gconf{yaws_dir = Y,
            ebin_dir = [filename:join([Y, "examples/ebin"])],
            include_dir = [filename:join([Y, "examples/include"])],
@@ -590,14 +599,8 @@ make_default_gconf(Debug, Id) ->
                                     true ->
                                         30
                                 end,
-           flags = if Debug ->
-                           ?GC_DEBUG bor ?GC_COPY_ERRLOG
-                               bor ?GC_FAIL_ON_BIND_ERR bor
-                               ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH;
-
-                      true ->
-                           ?GC_COPY_ERRLOG bor ?GC_FAIL_ON_BIND_ERR bor
-                               ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH
+           flags = if Debug -> Flags bor ?GC_DEBUG;
+                      true  -> Flags
                    end,
 
            yaws = "Yaws " ++ yaws_generated:version(),
