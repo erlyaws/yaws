@@ -301,7 +301,8 @@ handle_cast({_ServerName, access, Fd, {Ip, Req, InH, OutH, _}}, State) ->
             Ver = case Req#http_request.version of
                       {1,0} -> "HTTP/1.0";
                       {1,1} -> "HTTP/1.1";
-                      {0,9} -> "HTTP/0.9"
+                      {0,9} -> "HTTP/0.9";
+                      _     -> "HTTP/X.X"
                   end,
 
             Path      = yaws_server:safe_decode_path(Req#http_request.path),
@@ -332,7 +333,8 @@ handle_cast({ServerName, auth, Fd, {Ip, Path, Item}}, State) ->
                        {ok, User}       -> [" OK user=", User];
                        403              -> [" 403"];
                        {401, Realm}     -> [" 401 realm=", Realm];
-                       {401, User, PWD} -> [" 401 user=", User, " badpwd=", PWD]
+                       {401, User, PWD} -> [" 401 user=", User, " badpwd=",PWD];
+                       _                -> ""
                    end, "\n"],
             file:write(Fd, safe_log_data(Msg)),
             {noreply, State};
