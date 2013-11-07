@@ -3042,14 +3042,14 @@ update_soptions(SC, Name, Key, Value) ->
 
 
 set_sendfile_flags(GC, "erlang") ->
-    {ok, ?gc_set_use_yaws_sendfile(?gc_set_use_erlang_sendfile(GC, true),
-                                   false)};
+    GC1 = ?gc_set_use_erlang_sendfile(GC, true),
+    {ok, ?gc_set_use_yaws_sendfile(GC1, false)};
 set_sendfile_flags(GC, "yaws") ->
-    {ok, ?gc_set_use_yaws_sendfile(?gc_set_use_erlang_sendfile(GC, false),
-                                   true)};
+    GC1 = ?gc_set_use_erlang_sendfile(GC, false),
+    {ok, ?gc_set_use_yaws_sendfile(GC1, true)};
 set_sendfile_flags(GC, "disable") ->
-    {ok, ?gc_set_use_yaws_sendfile(?gc_set_use_erlang_sendfile(GC, false),
-                                   false)};
+    GC1 = ?gc_set_use_erlang_sendfile(GC, false),
+    {ok, ?gc_set_use_yaws_sendfile(GC1, false)};
 set_sendfile_flags(_, _) ->
     {error, "Expect erlang|yaws|disable"}.
 
