@@ -37,6 +37,7 @@ start() ->
     test_too_many_headers(),
     test_index_files(),
     test_embedded_id_dir(),
+    test_embedded_listen_ip(),
     test_chained_appmods(),
     test_cache_appmod(),
     test_multi_forwarded_for(),
@@ -915,6 +916,22 @@ test_embedded_id_dir() ->
     after
         ok = file:del_dir(yaws:id_dir(Id))
     end.
+
+test_embedded_listen_ip() ->
+    %% make sure we can specify a listen address as either
+    %% a list or a tuple
+    lists:map(fun(IP) ->
+		      DocRoot = ".",
+		      Id = "embedded_listen",
+		      SConf = [{servername, "embedded_listen:8000"},
+			       {docroot, DocRoot},
+			       {listen, IP},
+			       {port, 0},
+			       {appmods,[{"/", ?MODULE}]}],
+		      GConf = [{id, Id}],
+		      ok = yaws:start_embedded(DocRoot, SConf, GConf, Id),
+		      yaws:stop()
+	      end, [{0,0,0,0}, "0.0.0.0"]).
 
 test_chained_appmods() ->
     io:format("test_chained_appmods\n", []),

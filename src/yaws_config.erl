@@ -472,7 +472,16 @@ format_compile_errs({File, [{L,M,E}|Rest]}, Acc) ->
 %% This is the function that arranges sconfs into
 %% different server groups
 validate_cs(GC, Cs) ->
-    L = lists:map(fun(SC) -> {{SC#sconf.listen, SC#sconf.port}, SC} end, Cs),
+    L = lists:map(fun(#sconf{listen=IP0}=SC0) ->
+                          SC = case is_tuple(IP0) of
+                                   false ->
+                                       {ok, IP} = inet_parse:address(IP0),
+                                       SC0#sconf{listen=IP};
+                                   true ->
+                                       SC0
+                               end,
+                              {{SC#sconf.listen, SC#sconf.port}, SC}
+                  end, Cs),
     L2 = lists:map(fun(X) -> element(2, X) end, lists:keysort(1,L)),
     L3 = arrange(L2, start, [], []),
     case validate_groups(L3) of

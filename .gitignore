@@ -30,6 +30,7 @@ test/t[1-9]/logs/
 test/t[1-9]/yaws.conf
 test/t1[0-1]/logs/
 test/t1[0-1]/yaws.conf
+test/t2/embedded_listen:8000.auth
 test/t4/www2/8388608.bin
 test/t11/src/srcdir_test.hrl
 www/yaws.pdf
