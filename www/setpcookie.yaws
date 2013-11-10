@@ -32,7 +32,8 @@ setcookie(A) ->
             calendar:local_time(),
             inet:peername(A#arg.clisock)},
     ets:insert(pcookies, {{cookie, Num}, Data}),
-    yaws_api:setcookie("pfoobar",integer_to_list(Num), "/").
+    yaws_api:set_cookie("pfoobar",integer_to_list(Num),
+                        [{path,"/"}]).
 
 
 

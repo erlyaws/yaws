@@ -16,7 +16,7 @@ out(A) ->
                      ["I just set your cookie to ", Cookie, "Click ",
                       {a, [{href,"session1.yaws"}], " here "},
                       "to revisit"]}},
-            CO = yaws_api:setcookie("baz",Cookie,"/"),
+            CO = yaws_api:set_cookie("baz",Cookie,[{path,"/"}]),
             [Data, CO];
         Cookie ->
             case yaws_api:cookieval_to_opaque(Cookie) of
@@ -49,7 +49,7 @@ new_session() ->
               {a, [{href,"session1.yaws"}], " here "},
 
               "to revisit"]}},
-    CO = yaws_api:setcookie("baz",Cookie,"/"),
+    CO = yaws_api:set_cookie("baz",Cookie,[{path,"/"}]),
     [Data, CO].
 
 

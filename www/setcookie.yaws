@@ -1,7 +1,4 @@
-
-
 <erl>
-
 session(A, Visits) ->
     receive
         {From, tick} ->
@@ -12,7 +9,6 @@ session(A, Visits) ->
             exit(normal)
     end.
 
-
 out(A) ->
     H = A#arg.headers,
     C = H#headers.cookie,
@@ -20,8 +16,8 @@ out(A) ->
         [] ->
             Now = calendar:local_time(),
             P = spawn(fun() -> session(A, [Now]) end),
-            yaws_api:setcookie("foobar",
-                               pid_to_list(P), "/");
+            yaws_api:set_cookie("foobar",
+                                pid_to_list(P), [{path,"/"}]);
         PidStr ->
             Pid = list_to_pid(PidStr),
             case process_info(Pid, messages) of
@@ -30,32 +26,11 @@ out(A) ->
                     P = spawn(fun() ->
                                       session(A, [Now])
                               end),
-                    yaws_api:setcookie("foobar",
-                                       pid_to_list(P), "/");
+                    yaws_api:set_cookie("foobar",
+                                        pid_to_list(P),
+                                        [{path,"/"}]);
                 _ ->
                     ok
             end
     end.
-
 </erl>
-
-<html>
-
-
-<h2> set cookie </h2>
-
-<p>This is the page that set the cookie in the browser.
-<a href="readcookie.yaws">readcookie.yaws</a> will
-read the cookie and report persistent information as
-long as the browser session exists.
-
-<p> it will set the cookie
-<tt>foobar = &lt;x,y,z&gt;; </tt> where the
-x,y,z  string is the textual representation of an
-actual erlang pid which will be responsible for
-this session.
-
-</html>
-
-
-

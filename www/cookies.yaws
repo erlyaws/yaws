@@ -25,7 +25,11 @@ out(A) ->
   </p>
   <p>
     The yaws code in
-    <a href="setcookie.yaws">setcookie.yaws</a> sets the cookie in the browser.</p>
+    <a href="setcookie.yaws">setcookie.yaws</a> sets the cookie in the browser. Note that
+    the call to <code>yaws_api:set_cookie/3</code> in the example returns a header setting
+    (like <code>{header, HeaderNameAndValue}</code>) from the <code>out/1</code> function,
+    which directs Yaws to set the specified header in the response to the browser.
+  </p>
 
   <p>And the yaws code in <a href="readcookie.yaws">readcookie.yaws</a>
     will read the cookie
@@ -33,9 +37,11 @@ out(A) ->
   </p>
 
   <p>
-    A correct definition of cookies can be found at Netscapes
-    <a href="http://www.netscape.com/newsref/std/cookie_spec.html">cookie spec</a></p>
+    A correct definition of cookies can be found in
+    <a href="http://tools.ietf.org/html/rfc6265">RFC 6265</a></p>
 
+
+<h2>Set Cookie</h2>
 
   <p>The code to set the cookie looks like:</p>
 
@@ -48,8 +54,16 @@ out(A) ->
 
 </erl>
 
+<p>This is the page that set the cookie in the browser.
+<a href="readcookie.yaws">readcookie.yaws</a> will
+read the cookie and report persistent information as
+long as the browser session exists.
 
-
+<p> it will set the cookie
+<tt>foobar = &lt;x,y,z&gt;; </tt> where the
+x,y,z  string is the textual representation of an
+actual erlang pid which will be responsible for
+this session.
 
 </div>
 

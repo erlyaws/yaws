@@ -1323,7 +1323,7 @@ out(A) ->
             %% Now register the session to the session server
             Cookie = yaws_api:new_cookie_session(S),
             [{redirect_local, kv(url, L)},
-              yaws_api:setcookie("myapp_sid",Cookie)]
+              yaws_api:set_cookie("myapp_sid",Cookie,[])]
         Err ->
             {ehtml,
              {html, [],
@@ -1350,7 +1350,7 @@ new values are:
   Optionally a different status code can be supplied which will be
   used in place of 302, e.g.  \verb+{redirect_local, Path, 307}+.
 
-\item \verb+yaws_api:setcookie("myapp_sid",Cookie)+ generates a
+\item \verb+yaws_api:set_cookie("myapp_sid",Cookie,[])+ generates a
   \verb+Set-Cookie+ header.
 \end{enumerate}
 
