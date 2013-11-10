@@ -1559,7 +1559,7 @@ make_www_authenticate_header(Method) ->
     ["WWW-Authenticate: ", Method, ["\r\n"]].
 
 make_date_header() ->
-    N = element(2, now()),
+    N = element(2, os:timestamp()),
     case get(date_header) of
         {_Str, Secs} when (Secs+10) < N ->
             H = ["Date: ", universal_time_as_string(), "\r\n"],
@@ -2014,12 +2014,11 @@ gen_tcp_send(S, Data) ->
               undefined -> gen_tcp:send(S, Data);
               _SSL      -> ssl:send(S, Data)
           end,
-    Size = iolist_size(Data),
     case ?gc_has_debug((get(gc))) of
         false ->
             case Res of
                 ok ->
-                    yaws_stats:sent(Size),
+                    yaws_stats:sent(iolist_size(Data)),
                     ok;
                 _Err ->
                     exit(normal)   %% keep quiet
@@ -2027,7 +2026,7 @@ gen_tcp_send(S, Data) ->
         true ->
             case Res of
                 ok ->
-                    yaws_stats:sent(Size),
+                    yaws_stats:sent(iolist_size(Data)),
                     ?Debug("Sent ~p~n", [yaws_debug:nobin(Data)]),
                     ok;
                 Err ->
@@ -2077,7 +2076,7 @@ do_http_get_headers(CliSock, SSL) ->
         R ->
             %% Http request received. Store the current time. it will be usefull
             %% to get the time taken to serve the request.
-            put(request_start_time, now()),
+            put(request_start_time, os:timestamp()),
             case http_collect_headers(CliSock, R,  #headers{}, SSL, 0) of
                 {error, _}=Error ->
                     Error;
