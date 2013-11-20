@@ -6,8 +6,9 @@ OBJ :=	multipart_post_parsing.beam \
 	cookies.beam \
 	headers.beam \
 	ipmask.beam \
-    gconf.beam \
-    sconf.beam
+	gconf.beam \
+	sconf.beam \
+	yaws_rpc_test.beam
 
 all:	$(OBJ)
 
