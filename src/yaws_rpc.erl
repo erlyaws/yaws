@@ -115,7 +115,7 @@ parse_request(Args) ->
 handle_payload(Args, Handler, Type) ->
     RpcType = recognize_rpc_type(Args),
     %% haXe parameters are URL encoded
-    PL = binary_to_list(Args#arg.clidata),
+    PL = unicode:characters_to_list(Args#arg.clidata),
     {Payload,DecodedStr} =
         case RpcType of
             T when T==haxe; T==json ->
