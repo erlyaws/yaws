@@ -2903,72 +2903,33 @@ deliver_dyn_file(CliSock, _Bin, [], ARG,_UT,_N) ->
     finish_up_dyn_file(ARG, CliSock).
 
 
-stream_loop_send(Priv, CliSock, Timeout) ->
-    {ok, FlushTimer} = timer:send_after(300, flush_timer),
-    case Timeout of
-        infinity ->
-            untimed_stream_loop_send(Priv, CliSock, FlushTimer);
-        _ ->
-            {ok, TimeoutTimer} = timer:send_after(Timeout, timeout_timer),
-            stream_loop_send(Priv, CliSock, Timeout,
-                             FlushTimer, TimeoutTimer)
-    end.
+-define(unflushed_timeout, 300).
 
-untimed_stream_loop_send(Priv, CliSock, FlushTimer) ->
+stream_loop_send(Priv, CliSock, IdleTimeout) ->
+    stream_loop_send(Priv, CliSock, unflushed, ?unflushed_timeout, IdleTimeout).
+
+stream_loop_send(Priv, CliSock, FlushStatus, CurTimeout, IdleTimeout) ->
     receive
         {streamcontent, Cont} ->
             P = send_streamcontent_chunk(Priv, CliSock, Cont),
-            untimed_stream_loop_send(P, CliSock, FlushTimer) ;
-        {streamcontent_with_ack, From, Cont} ->        % acknowledge after send
+            stream_loop_send(P, CliSock, unflushed,
+                             ?unflushed_timeout, IdleTimeout);
+        {streamcontent_with_ack, From, Cont} -> % acknowledge after send
             P = send_streamcontent_chunk(Priv, CliSock, Cont),
             From ! {self(), streamcontent_ack},
-            untimed_stream_loop_send(P, CliSock, FlushTimer) ;
+            stream_loop_send(P, CliSock, unflushed,
+                             ?unflushed_timeout, IdleTimeout);
         endofstreamcontent ->
-            cancel_t(FlushTimer, flush_timer),
-            end_streaming(Priv, CliSock);
-        timeout_timer  ->
-            cancel_t(FlushTimer, flush_timer),
-            erlang:error(stream_timeout);
-        flush_timer  ->
-            P = sync_streamcontent(Priv, CliSock),
-            untimed_stream_loop_send(P, CliSock, FlushTimer)
-    end.
-
-cancel_t(T, Msg) ->
-    timer:cancel(T),
-    receive
-        Msg -> ok
-    after 0 -> ok
-    end.
-
-stream_loop_send(Priv, CliSock, Timeout,
-                 FlushTimer, TimeoutTimer) ->
-    receive
-        {streamcontent, Cont} ->
-            P = send_streamcontent_chunk(Priv, CliSock, Cont),
-            cancel_t(TimeoutTimer, timeout_timer),
-            {ok, TimeoutTimer2} = timer:send_after(Timeout, timeout_timer),
-            stream_loop_send(P, CliSock, Timeout,
-                             FlushTimer, TimeoutTimer2) ;
-        {streamcontent_with_ack, From, Cont} ->        % acknowledge after send
-            P = send_streamcontent_chunk(Priv, CliSock, Cont),
-            From ! {self(), streamcontent_ack},
-            cancel_t(TimeoutTimer, timeout_timer),
-            {ok, TimeoutTimer2} = timer:send_after(Timeout, timeout_timer),
-            stream_loop_send(P, CliSock, Timeout,
-                             FlushTimer, TimeoutTimer2) ;
-        endofstreamcontent ->
-            cancel_t(TimeoutTimer, timeout_timer),
-            cancel_t(FlushTimer, flush_timer),
-            end_streaming(Priv, CliSock);
-        timeout_timer  ->
-            cancel_t(TimeoutTimer, timeout_timer),
-            cancel_t(FlushTimer, flush_timer),
-            erlang:error(stream_timeout);
-        flush_timer  ->
-            P = sync_streamcontent(Priv, CliSock),
-            stream_loop_send(P, CliSock, Timeout,
-                             FlushTimer, TimeoutTimer)
+            end_streaming(Priv, CliSock)
+    after CurTimeout ->
+            case FlushStatus of
+                flushed ->
+                    erlang:error(stream_timeout);
+                unflushed ->
+                    P = sync_streamcontent(Priv, CliSock),
+                    stream_loop_send(P, CliSock, flushed,
+                                     IdleTimeout, IdleTimeout)
+            end
     end.
 
 make_chunk(Data) ->
