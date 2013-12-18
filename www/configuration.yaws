@@ -15,12 +15,9 @@ out(A) ->
 <div id="entry">
   <h1>Build and install Yaws</h1>
   <p>
-    Yaws used to be hosted at Sourceforge, but as of release 1.81 yaws is
-    hosted at github.
-  </p>
-  <p>
-    The github page is <a href="http://github.com/klacke/yaws">
-    http://github.com/klacke/yaws</a>
+    Yaws is hosted at <a
+    href="http://github.com/klacke/yaws">http://github.com/klacke/yaws</a>. (Prior
+    to release 1.81 Yaws was hosted at Sourceforge.)
   </p>
   <p>
     Tested releases are downloadable from the Yaws download directory
