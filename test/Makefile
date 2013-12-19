@@ -30,7 +30,7 @@ test:
           done
 
 ibrowse: fetch_ibrowse
-	@cd ibrowse; $(MAKE)
+	@cd ibrowse; ./rebar compile
 
 IBROWSE_URI = https://github.com/cmullaparthi/ibrowse.git
 IBROWSE_DOWNLOAD_URI = https://github.com/cmullaparthi/ibrowse/tarball/master
