@@ -134,6 +134,43 @@ out(A) ->
   </div>
   <br/>
 
+  <p>You can often determine the correct embedded server configuration by
+  first creating a <code>yaws.conf</code> file specifying the desired
+  configuration, running a stand-alone Yaws using it, and then dumping the
+  server's configuration by executing the command <code>yaws
+  --running-config</code>. Still, some elements of the embedded server
+  configuration list are non-obvious. For example, to enable basic auth,
+  you need to specify an <code>auth</code> proplist for each target
+  directory. For example, to enable basic auth on "/":</p>
+
+  <div class="box">
+    <pre>
+      Docroot = "/var/yaws/www",
+      Realm = "testrealm",
+      SConfList = [{docroot, Docroot},
+                   {port, 8080},
+                   {listen, {0,0,0,0}},
+                   {auth, [{docroot, Docroot},
+                           {dir, "/"},
+                           {realm, Realm},
+                           {type, "Basic"},
+                           {headers, ["WWW-Authenticate: Basic realm=\"", Realm,
+                                      ["\"\r\n"]]},
+                           {users, [{"foo","bar"}]}]}],
+    </pre>
+  </div>
+
+  <p>If you want to enable auth on multiple directories, specify a <code>
+  {auth, AuthProplist}</code> element for each one.</p>
+
+  <p>Other elements, such as <code>dir_listings</code>,
+  <code>access_log</code>, and <code>deflate</code>, are also non-obvious
+  for embedded configuration because they're specified as part of the
+  <code>#sconf.flags</code> element. You can find the server configuration
+  flags, along with preprocessor macros for setting them on an
+  <code>#sconf{}</code> record, in the <code>yaws.hrl</code> include
+  file.</p>
+
   <h3>Using embedded_start_conf</h3>
 
   <p>The <code>yaws_api:embedded_start_conf/1,2,3,4</code> functions return
