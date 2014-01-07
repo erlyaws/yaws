@@ -1,0 +1,49 @@
+<erl>
+out(_) -> {ssi, "TAB.inc","%%",[{"articles", "choosen"}]}.
+</erl>
+
+<div id="entry">
+
+<h2>Articles, Books, and Other Resources</h2>
+
+<ul>
+
+<li><p>The book <a
+href="http://shop.oreilly.com/product/0636920021452.do"><em>Building Web
+Applications with Erlang</em></a> by Zachary Kessin, published by <a
+href="http://www.oreilly.com">O'Reilly</a> in June 2012, provides quite a
+bit of information about using Yaws.</p></li>
+
+<li><p>In his "Functional Web" column in <a
+href="http://computer.org/internet/">IEEE Internet Computing magazine</a>,
+<a href="http://steve.vinoski.net/">Steve Vinoski</a> wrote a couple
+columns about Yaws. Both are available in PDF format:</p><ul> <li><a
+href="http://steve.vinoski.net/pdf/IC-Yaws.pdf">"Yaws: Yet Another Web
+Server"</a>, July/August 2011</li> <li><a
+href="http://steve.vinoski.net/pdf/IC-SSE_with_Yaws.pdf">"Server-Sent
+Events with Yaws"</a>, Sep/Oct 2012</li></ul></p></li>
+
+<li><p><a href="http://steve.vinoski.net/">Steve Vinoski</a> gave a talk
+entitled <a href="http://www.infoq.com/presentations/Erlang-Yaws">"Erlang
+Web Development with Yaws"</a> at the <a
+href="https://thestrangeloop.com/archive/2012">Strange Loop 2012
+conference</a>.</p></li>
+
+<li><p>There are a number of <a
+href="http://stackoverflow.com/questions/tagged/yaws">Yaws questions with
+answers on StackOverflow</a>.</p></li>
+
+<li><p><a href="http://steve.vinoski.net/">Steve Vinoski</a> wrote an
+article entitled <a
+href="http://www.infoq.com/articles/vinoski-erlang-rest">"RESTful Services
+with Erlang and Yaws"</a> for <a href="http://www.infoq.com">infoq.com</a>
+back in 2008. Despite being a few years old, the advice in the article
+remains relevant.</p></li>
+
+</ul>
+
+</div>
+
+<erl>
+out(_) -> {ssi, "END2", [],[]}.
+</erl>
