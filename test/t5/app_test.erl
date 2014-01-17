@@ -310,4 +310,15 @@ deflate_otheroptions() ->
     ?line "chunked" = proplists:get_value("Transfer-Encoding", Hdrs5),
     ?line undefined = proplists:get_value("Content-Length", Hdrs5),
     ?line true = is_binary(zlib:gunzip(Body5)),
+    ok,
+
+    %% Multiple Accept-Encoding headers
+    %% This test reuses Uri1 and Body1. It sends two Accept-Encoding
+    %% headers to make sure Yaws handles them correctly. The reply
+    %% should be the same as for the static content test at the beginning
+    %% of this test function.
+    ?line {ok, "200", Hdrs6, Body1} =
+        ibrowse:send_req(Uri1, [{"Accept-Encoding", "identity;q=0.5"},
+                                {"Accept-Encoding", "gzip, deflate"}], get),
+    ?line "gzip" = proplists:get_value("Content-Encoding", Hdrs6),
     ok.

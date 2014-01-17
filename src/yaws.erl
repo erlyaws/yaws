@@ -1043,7 +1043,8 @@ accepts_gzip(H, Mime) ->
     case [Val || {_,_,'Accept-Encoding',_,Val}<- H#headers.other] of
         [] ->
             false;
-        [AcceptEncoding] ->
+        [_|_]=AcceptEncoding0 ->
+            AcceptEncoding = join_sep(AcceptEncoding0, ","),
             EncList = [parse_qval(X) || X <- split_sep(AcceptEncoding, $,)],
             case [Q || {"gzip",Q} <- EncList] ++ [Q || {"*",Q} <- EncList] of
                 [] ->
