@@ -216,6 +216,10 @@ dnl a test that searches for the files, so hard coded for now...
 dnl or use --with-extrainclude=....
 CFLAGS="$CFLAGS -I/usr/include/security"
 
+if test "x$enable_pam" = "xyes"; then
+    AC_CHECK_HEADER([pam_appl.h], [], [AC_MSG_ERROR("Could not found pam_appl.h required to enable pam authentication")])
+fi
+
 case "$host_os" in
         *linux*)
            AC_DEFINE(LINUX)
