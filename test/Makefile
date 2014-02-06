@@ -33,7 +33,7 @@ ibrowse: fetch_ibrowse
 	@cd ibrowse; ./rebar compile
 
 IBROWSE_URI = https://github.com/cmullaparthi/ibrowse.git
-IBROWSE_DOWNLOAD_URI = https://github.com/cmullaparthi/ibrowse/tarball/master
+IBROWSE_DOWNLOAD_URI = https://github.com/cmullaparthi/ibrowse/tarball/v3.0.4
 IBROWSE_TGZ = ibrowse.tar.gz
 IBROWSE_VSN = ibrowse/.version
 
