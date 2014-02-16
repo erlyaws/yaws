@@ -16,7 +16,7 @@ ifeq ($(HAVE_SENDFILE),true)
 	PRIV_FILES += ../priv/lib/yaws_sendfile_drv.$(DLL)
 endif
 
-CFLAGS += -I"${ERLDIR}/usr/include"
+CFLAGS += -I"${ERLDIR}/erts/emulator/beam/" -I"${ERLDIR}/erts/include/x86_64-unknown-linux-gnu/"  
 
 #
 # Targets
