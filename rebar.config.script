@@ -6,8 +6,15 @@
 ok = file:write_file("test/t11/src/srcdir_test.hrl",
                      <<"-define(SRCDIR_VERSION, \"1.0\").\n">>),
 
-%% generate an empty priv/charset.def file
-ok = file:write_file("priv/charset.def", <<>>),
+%% generate a charset include file
+ok = file:write_file("src/yaws_charset.hrl",
+                     case os:getenv("YAWS_CHARSET") of
+                         false ->
+                             <<"-define(YAWS_CHARSET, undefined).\n">>;
+                         Charset ->
+                             [<<"-define(YAWS_CHARSET, \"">>,
+                               Charset, <<"\").\n">>]
+                     end),
 
 SoapDeps = [{erlsom, ".*", {git, "git://github.com/willemdj/erlsom.git", {branch, "master"}}},
             {xmlrpc, ".*", {git, "git://github.com/rwbr/exmlrpc.git", {branch, "master"}}}],

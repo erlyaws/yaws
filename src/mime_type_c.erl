@@ -11,6 +11,7 @@
 -export([generate/0, generate/3]).
 
 -include("../include/yaws.hrl").
+-include("yaws_charset.hrl").
 
 
 -define(MIME_TYPES_FILE, filename:join(yaws:get_priv_dir(), "mime.types")).
@@ -25,11 +26,9 @@ generate() ->
     SrcDir = filename:dirname(
                proplists:get_value(source, ?MODULE:module_info(compile))
               ),
-    EbinDir = filename:dirname(code:which(?MODULE)),
-    Charset = read_charset_file(filename:join(EbinDir, "../priv/charset.def")),
     GInfo   = #mime_types_info{
       mime_types_file = filename:join(SrcDir, "../priv/mime.types"),
-      default_charset = Charset
+      default_charset = ?YAWS_CHARSET
      },
     ModFile = filename:join(SrcDir,  "mime_types.erl"),
 
@@ -205,28 +204,6 @@ generate_revt(Fd, Name, [{Ext,ExtType,MimeType,Charset}|Rest],
                        Name, RUExt, ExtType, UExt, MimeType, Charset])
     end,
     generate_revt(Fd, Name, Rest, DefaultType, DefaultCharset).
-
-
-
-%% ----
-read_charset_file(File) ->
-    case file:read_file(File) of
-        {ok, B} ->
-            case string:tokens(binary_to_list(B),"\r\n\s\t\0\f") of
-                [] ->
-                    undefined;
-                [Charset] ->
-                    string:strip(Charset, both, 10);
-                _ ->
-                    error_logger:format("Ignoring bad charset in ~p\n", [File]),
-                    undefined
-            end;
-        {error, Reason} ->
-            error_logger:format("Cannot read ~p: ~p\n",
-                                [File, file:format_error(Reason)]),
-            undefined
-    end.
-
 
 %% ----
 read_mime_types_file(File) ->

@@ -776,7 +776,7 @@ arg_rewrite_test_rewrite() ->
     io:format("  rewrite\n", []),
     Uri = "http://localhost:8006/rewrite",
     ?line {ok, "200", Hdrs, _} = ibrowse:send_req(Uri, [], get),
-    ?line "text/plain" = proplists:get_value("Content-Type", Hdrs),
+    ?line "text/plain" = split_content_type(Hdrs),
     {ok, FI} = file:read_file_info("./www/hello.txt"),
     Etag = yaws:make_etag(FI),
     ?line Etag = proplists:get_value("Etag", Hdrs),
@@ -794,11 +794,13 @@ arg_rewrite_test_response() ->
     io:format("  response\n", []),
     Uri = "http://localhost:8006/response",
     ?line {ok, "200", Hdrs, Content} = ibrowse:send_req(Uri, [], get),
-    ?line "text/plain" = proplists:get_value("Content-Type", Hdrs),
+    ?line "text/plain" = split_content_type(Hdrs),
     ?line "Goodbye, Cruel World!" = Content,
     ok.
 
-
+%% split content type away from any charset info
+split_content_type(Hdrs) ->
+    hd(string:tokens(proplists:get_value("Content-Type", Hdrs), " ;")).
 
 test_shaper() ->
     io:format("shaper_test\n", []),

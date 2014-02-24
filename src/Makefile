@@ -87,8 +87,8 @@ yaws_configure.hrl:	 ../vsn.mk ../include.mk
 	[ $(HAVE_CRYPTO_HASH) = true ] && echo '-define(HAVE_CRYPTO_HASH, true).' >> $@; \
 	[ -f $@ ] || touch $@
 
-mime_types.erl: ../priv/charset.def ../priv/mime.types \
-				../ebin/yaws_generated.$(EMULATOR) ../ebin/mime_type_c.$(EMULATOR)
+mime_types.erl: yaws_charset.hrl ../priv/mime.types \
+		../ebin/yaws_generated.$(EMULATOR) ../ebin/mime_type_c.$(EMULATOR)
 	$(ERL) -noshell -pa ../ebin -s mime_type_c generate
 
 

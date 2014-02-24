@@ -21,9 +21,9 @@ AS_HELP_STRING([--with-defaultcharset=String], [specify default charset, i.e UTF
 
 
 if test "x$with_defaultcharset" = "x" ; then
-   DEFAULT_CHARSET=
+   DEFAULT_CHARSET=undefined
 else
-   DEFAULT_CHARSET=${with_defaultcharset}
+   DEFAULT_CHARSET="\"${with_defaultcharset}\""
 fi
 
 AC_SUBST(DEFAULT_CHARSET)
@@ -360,7 +360,7 @@ AC_SUBST(HAVE_CRYPTO_HASH)
 YTOP=`pwd`
 AC_SUBST(YTOP)
 AC_OUTPUT(include.mk)
-AC_OUTPUT(priv/charset.def)
+AC_OUTPUT(src/yaws_charset.hrl)
 AC_OUTPUT(test/support/include.mk)
 AC_OUTPUT(test/support/include.sh)
 
