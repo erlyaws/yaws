@@ -1052,9 +1052,7 @@ accepts_gzip(H, Mime) ->
                 [Q|_] ->
                     (Q > 100) %% just for fun
                         and not has_buggy_gzip(H#headers.user_agent, Mime)
-            end;
-        _ ->
-            false
+            end
     end.
 
 %%% Advice partly taken from Apache's documentation of `mod_deflate'.
