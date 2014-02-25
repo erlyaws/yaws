@@ -1726,88 +1726,63 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
 
         ["keyfile", '=', Val] ->
             case is_file(Val) of
-                true when  is_record(C#sconf.ssl, ssl) ->
+                true ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{keyfile = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
-                true ->
-                    {error, ?F("Need to set option ssl to true before line ~w",
-                               [Lno])};
                 _ ->
                     {error, ?F("Expect existing file at line ~w", [Lno])}
             end;
         ["certfile", '=', Val] ->
             case is_file(Val) of
-                true when  is_record(C#sconf.ssl, ssl) ->
+                true ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{certfile = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
-                true ->
-                    {error, ?F("Need to set option ssl to true before line ~w",
-                               [Lno])};
                 _ ->
                     {error, ?F("Expect existing file at line ~w", [Lno])}
             end;
         ["cacertfile", '=', Val] ->
             case is_file(Val) of
-                true when  is_record(C#sconf.ssl, ssl) ->
+                true ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{cacertfile = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
-                true ->
-                    {error, ?F("Need to set option ssl to true before line ~w",
-                               [Lno])};
                 _ ->
                     {error, ?F("Expect existing file at line ~w", [Lno])}
             end;
         ["verify", '=', Val0] ->
-            Val =
-                try
-                    list_to_integer(Val0)
-                catch error:badarg ->
-                        list_to_atom(Val0)
-                end,
+            Val = try
+                      list_to_integer(Val0)
+                  catch error:badarg ->
+                          list_to_atom(Val0)
+                  end,
             case lists:member(Val, [0,1,2,verify_peer,verify_none]) of
-                true when  is_record(C#sconf.ssl, ssl) ->
+                true ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{verify = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
-                true ->
-                    {error, ?F("Need to set option ssl to true before line ~w",
-                               [Lno])};
                 _ ->
                     {error, ?F("Expect integer or verify_none, "
                                "verify_peer at line ~w", [Lno])}
             end;
-        ["fail_if_no_peer_cert", '=', Val0] ->
-            Val = (catch list_to_atom(Val0)),
-            if
-                is_record(C#sconf.ssl, ssl) ->
+        ["fail_if_no_peer_cert", '=', Bool] ->
+            case is_bool(Bool) of
+                {true, Val} ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{
                                          fail_if_no_peer_cert = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
-                true ->
-                    {error, ?F("Need to set option fail_if_no_peer_cert "
-                               "to true before line ~w",
-                               [Lno])}
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
         ["depth", '=', Val0] ->
             Val = (catch list_to_integer(Val0)),
             case lists:member(Val, [0, 1,2,3,4,5,6,7]) of
-                true when  is_record(C#sconf.ssl, ssl) ->
+                true ->
                     C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{depth = Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
-                true ->
-                    {error, ?F("Need to set option ssl to true before line ~w",
-                               [Lno])};
                 _ ->
                     {error, ?F("Expect integer 0..7 at line ~w", [Lno])}
             end;
         ["password", '=', Val] ->
-            if
-                is_record(C#sconf.ssl, ssl) ->
-                    C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{password = Val}},
-                    fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
-                true ->
-                    {error, ?F("Need to set option ssl to true before line ~w",
-                               [Lno])}
-            end;
+            C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{password = Val}},
+            fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
         ["ciphers", '=', Val] ->
             try
                 L = str2term(Val),
@@ -1815,16 +1790,8 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
                 Ciphers = ssl:cipher_suites(),
                 case check_ciphers(L, Ciphers) of
                     ok ->
-                        if
-                            is_record(C#sconf.ssl, ssl) ->
-                                C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{
-                                                     ciphers = L}},
-                                fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
-                            true ->
-                                {error, ?F("Need to set option ssl to "
-                                           "true before line ~w",
-                                           [Lno])}
-                        end;
+                        C2 = C#sconf{ssl = (C#sconf.ssl)#ssl{ciphers = L}},
+                        fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
                     Err ->
                         Err
                 end
@@ -1834,12 +1801,9 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
             end;
         ["secure_renegotiate", '=', Bool] ->
             case is_bool(Bool) of
-                {true, Val} when  is_record(C#sconf.ssl, ssl) ->
+                {true, Val} ->
                     C2 = C#sconf{ssl=(C#sconf.ssl)#ssl{secure_renegotiate=Val}},
                     fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
-                {true, _} ->
-                    {error, ?F("Need to set option ssl to true before line ~w",
-                               [Lno])};
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
