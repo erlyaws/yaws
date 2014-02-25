@@ -1832,6 +1832,17 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
                     io:format("~p~n", [Err2]),
                     {error, ?F("Bad cipherspec at line ~w", [Lno])}
             end;
+        ["secure_renegotiate", '=', Bool] ->
+            case is_bool(Bool) of
+                {true, Val} when  is_record(C#sconf.ssl, ssl) ->
+                    C2 = C#sconf{ssl=(C#sconf.ssl)#ssl{secure_renegotiate=Val}},
+                    fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
+                {true, _} ->
+                    {error, ?F("Need to set option ssl to true before line ~w",
+                               [Lno])};
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
+            end;
         ['<', "/ssl", '>'] ->
             fload(FD, server, GC, C, Cs, Lno+1, Next);
 

@@ -121,7 +121,8 @@
           password,
           cacertfile,
           ciphers,
-          cachetimeout
+          cachetimeout,
+          secure_renegotiate = false
          }).
 
 

@@ -3175,6 +3175,13 @@ The following directives are allowed inside a server definition.
                  cipher string.  The syntax of the SSL cipher string is a little
                  horrible sub-language of its own.  It is documented in the SSL
                  man page for "ciphers".
+
+               \item \verb+secure_renegotiate = true | false+ --- Specifies if
+                 to reject renegotiation attempt that does not live up to RFC
+                 5746. By default \verb+secure_renegotiate+ is set to false
+                 i.e. secure renegotiation will be used if possible but it will
+                 fallback to unsecure renegotiation if the peer does not support
+                 RFC 5746.
                \end{itemize}
 
 \item       \verb+<redirect> ... </redirect>+ ---

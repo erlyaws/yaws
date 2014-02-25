@@ -63,7 +63,8 @@
          ssl_password/1, ssl_password/2,
          ssl_cacertfile/1, ssl_cacertfile/2,
          ssl_ciphers/1, ssl_ciphers/2,
-         ssl_cachetimeout/1, ssl_cachetimeout/2]).
+         ssl_cachetimeout/1, ssl_cachetimeout/2,
+         ssl_secure_renegotiate/1, ssl_secure_renegotiate/2]).
 
 -export([new_deflate/0,
          deflate_min_compress_size/1, deflate_min_compress_size/2,
@@ -341,6 +342,7 @@ ssl_password            (#ssl{password             = X}) -> X.
 ssl_cacertfile          (#ssl{cacertfile           = X}) -> X.
 ssl_ciphers             (#ssl{ciphers              = X}) -> X.
 ssl_cachetimeout        (#ssl{cachetimeout         = X}) -> X.
+ssl_secure_renegotiate  (#ssl{secure_renegotiate   = X}) -> X.
 
 ssl_keyfile             (S, File)    -> S#ssl{keyfile              = File}.
 ssl_certfile            (S, File)    -> S#ssl{certfile             = File}.
@@ -351,7 +353,7 @@ ssl_password            (S, Pass)    -> S#ssl{password             = Pass}.
 ssl_cacertfile          (S, File)    -> S#ssl{cacertfile           = File}.
 ssl_ciphers             (S, Ciphers) -> S#ssl{ciphers              = Ciphers}.
 ssl_cachetimeout        (S, Timeout) -> S#ssl{cachetimeout         = Timeout}.
-
+ssl_secure_renegotiate  (S, Bool)    -> S#ssl{secure_renegotiate   = Bool}.
 
 setup_ssl(SL, DefaultSSL) ->
     case lkup(ssl, SL, undefined) of
@@ -376,7 +378,9 @@ setup_ssl(SL, DefaultSSL) ->
                  ciphers              = lkup(ciphers, SSLProps,
                                              SSL#ssl.ciphers),
                  cachetimeout         = lkup(cachetimeout, SSLProps,
-                                             SSL#ssl.cachetimeout)}
+                                             SSL#ssl.cachetimeout),
+                 secure_renegotiate   = lkup(secure_renegotiate, SSLProps,
+                                             SSL#ssl.secure_renegotiate)}
     end.
 
 

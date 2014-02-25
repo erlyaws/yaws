@@ -979,6 +979,11 @@ ssl_listen_opts(GC, SSL) ->
             true ->
                  false
          end,
+         if SSL#ssl.secure_renegotiate /= undefined ->
+                 {secure_renegotiate, SSL#ssl.secure_renegotiate};
+            true ->
+                 false
+         end,
          if ?gc_use_old_ssl(GC) ->
                  {ssl_imp, old};
             true ->

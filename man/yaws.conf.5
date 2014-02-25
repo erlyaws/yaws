@@ -1059,6 +1059,15 @@ ciphers = "[{dhe_rsa,aes_256_cbc,sha}, \\
 .fi
 .RE
 
+.IP
+\fBsecure_renegotiate = true | false\fR
+.RS 12
+Specifies if to reject renegotiation attempt that does not live up to RFC
+5746. By default \fBsecure_renegotiate\fR is set to false i.e. secure
+renegotiation will be used if possible but it will fallback to unsecure
+renegotiation if the peer does not support RFC 5746.
+.RE
+
 .TP
 \fB<redirect> ... </redirect>\fR
 Defines a redirect mapping. The following items are allowed within a matching
