@@ -23,7 +23,7 @@
          load_mime_types_module/2,
          compile_and_load_src_dir/1,
          search_sconf/2, search_group/2,
-         update_sconf/2, delete_sconf/2,
+         update_sconf/3, delete_sconf/2,
          eq_sconfs/2, soft_setconf/4, hard_setconf/2,
          can_hard_gc/2, can_soft_setconf/4,
          can_soft_gc/2, verify_upgrade_args/2, toks/2]).
@@ -68,8 +68,7 @@ load(E) ->
                   end,
             GC3 =  ?gc_set_debug(GC2, E#env.debug),
             GC4 = GC3#gconf{trace = E#env.trace},
-            R = (catch fload(FD, globals, GC4, undefined,
-                             [], 1, io:get_line(FD, ''))),
+            R = fload(FD, GC4),
             ?Debug("FLOAD: ~p", [R]),
             case R of
                 {ok, GC5, Cs} ->
@@ -545,14 +544,14 @@ arrange([C|Tail], start, [], B) ->
 arrange([], _, [], B) ->
     B;
 arrange([], _, A, B) ->
-    [A | B];
+    [lists:reverse(A) | B];
 arrange([C1|Tail], {in, C0}, A, B) ->
     if
         C1#sconf.listen == C0#sconf.listen,
         C1#sconf.port == C0#sconf.port ->
             arrange(Tail, {in, C0}, [set_server(C1)|A], B);
         true ->
-            arrange(Tail, {in, C1}, [set_server(C1)], [A|B])
+            arrange(Tail, {in, C1}, [set_server(C1)], [lists:reverse(A)|B])
     end.
 
 
@@ -666,6 +665,14 @@ string_to_node_mod_fun(String) ->
 
 
 %% two states, global, server
+fload(FD, GC0) ->
+    R = (catch fload(FD, globals, GC0, undefined, [], 1, io:get_line(FD, ''))),
+    case R of
+        {ok, GC1, Cs} -> {ok, GC1, lists:reverse(Cs)};
+        Err           -> Err
+    end.
+
+
 fload(FD, globals, GC, _C, Cs, _Lno, eof) ->
     file:close(FD),
     {ok, GC, Cs};
@@ -2626,7 +2633,7 @@ ssl_start() ->
 
 
 %% search for an SC within Pairs that have the same, listen,port,ssl,severname
-%% Return {Pid, SC} or false
+%% Return {Pid, SC, Scs} or false
 %% Pairs is the pairs in yaws_server #state{}
 search_sconf(NewSC, Pairs) ->
     case lists:zf(
@@ -2669,19 +2676,17 @@ search_group(SC, Pairs) ->
 
 
 %% Return a new Pairs list with one SC updated
-update_sconf(NewSC, Pairs) ->
+update_sconf(NewSc, Pos, Pairs) ->
     lists:map(
       fun({Pid, Scs}) ->
-              {Pid,
-               lists:map(fun(SC) ->
-                                 case same_sconf(SC, NewSC) of
-                                     true ->
-                                         NewSC;
-                                     false ->
-                                         SC
-                                 end
-                         end, Scs)
-              }
+              case same_virt_srv(hd(Scs), NewSc) of
+                  true ->
+                      L2 = lists:keydelete(NewSc#sconf.servername,
+                                           #sconf.servername, Scs),
+                      {Pid, yaws:insert_at(NewSc, Pos, L2)};
+                  false ->
+                      {Pid, Scs}
+              end
       end, Pairs).
 
 
@@ -2709,11 +2714,6 @@ same_virt_srv(S, NewSc) when
     true;
 same_virt_srv(_,_) ->
     false.
-
-
-same_sconf(S, NewSc) ->
-    same_virt_srv(S, NewSc) andalso
-        S#sconf.servername == NewSc#sconf.servername.
 
 
 eq_sconfs(S1,S2) ->
@@ -2768,14 +2768,14 @@ soft_setconf(GC, Groups, OLDGC, OldGroups) ->
     compile_and_load_src_dir(GC),
     Grps = load_mime_types_module(GC, Groups),
     Rems = remove_old_scs(lists:flatten(OldGroups), Grps),
-    Adds = soft_setconf_scs(lists:flatten(Grps), OldGroups),
+    Adds = soft_setconf_scs(lists:flatten(Grps), 1, OldGroups),
     lists:foreach(
       fun({delete_sconf, SC}) ->
               delete_sconf(SC);
-         ({add_sconf, SC}) ->
-              add_sconf(SC);
-         ({update_sconf, SC}) ->
-              update_sconf(SC)
+         ({add_sconf, N, SC}) ->
+              add_sconf(N, SC);
+         ({update_sconf, N, SC}) ->
+              update_sconf(N, SC)
       end, Rems ++ Adds).
 
 
@@ -2806,19 +2806,19 @@ remove_old_scs([Sc|Scs], NewGroups) ->
 remove_old_scs([],_) ->
     [].
 
-soft_setconf_scs([Sc|Scs], OldGroups) ->
+soft_setconf_scs([Sc|Scs], N, OldGroups) ->
     case find_group(Sc, OldGroups) of
         false ->
-            [{add_sconf,Sc} | soft_setconf_scs(Scs, OldGroups)];
+            [{add_sconf,N,Sc} | soft_setconf_scs(Scs, N+1, OldGroups)];
         {true, G} ->
             case find_sc(Sc, G) of
                 false ->
-                    [{add_sconf, Sc} | soft_setconf_scs(Scs, OldGroups)];
+                    [{add_sconf,N,Sc} | soft_setconf_scs(Scs,N+1,OldGroups)];
                 {true, _OldSc} ->
-                    [{update_sconf,Sc} | soft_setconf_scs(Scs, OldGroups)]
+                    [{update_sconf,N,Sc} | soft_setconf_scs(Scs,N+1,OldGroups)]
             end
     end;
-soft_setconf_scs([],_) ->
+soft_setconf_scs([], _, _) ->
     [].
 
 
@@ -2934,11 +2934,14 @@ verify_upgrade_args(GC, Groups0) when is_record(GC, gconf) ->
 
 
 add_sconf(SC) ->
-    ok= gen_server:call(yaws_server, {add_sconf, SC}, infinity),
+    add_sconf(-1, SC).
+
+add_sconf(Pos, SC) ->
+    ok= gen_server:call(yaws_server, {add_sconf, Pos, SC}, infinity),
     ok = yaws_log:add_sconf(SC).
 
-update_sconf(SC) ->
-    ok = gen_server:call(yaws_server, {update_sconf, SC}, infinity).
+update_sconf(Pos, SC) ->
+    ok = gen_server:call(yaws_server, {update_sconf, Pos, SC}, infinity).
 
 delete_sconf(SC) ->
     ok = gen_server:call(yaws_server, {delete_sconf, SC}, infinity),

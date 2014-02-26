@@ -327,19 +327,20 @@ handle_call(check_certs, _From, State) ->
                   end, State#state.pairs),
     {reply, L, State};
 
-handle_call({update_sconf, NewSc}, From, State) ->
+handle_call({update_sconf, Pos, NewSc}, From, State) ->
     case yaws_config:search_sconf(NewSc, State#state.pairs) of
-        {Pid, OldSc, _Group} ->
-            case yaws_config:eq_sconfs(OldSc,NewSc) of
+        {Pid, OldSc, Group} ->
+            OldPos = string:str(Group, [OldSc]),
+            case (yaws_config:eq_sconfs(OldSc,NewSc) andalso OldPos == Pos) of
                 true ->
                     error_logger:info_msg("Keeping conf for ~s intact\n",
                                           [yaws:sconf_to_srvstr(OldSc)]),
-                    {reply, ok, State};
+                    {reply, ok,  State};
                 false ->
-                    Pid ! {update_sconf, NewSc, OldSc, From, self()},
+                    Pid ! {update_sconf, Pos, NewSc, OldSc, From, self()},
                     receive
                         {updated_sconf, Pid, NewSc2} ->
-                            P2 = yaws_config:update_sconf(NewSc2,
+                            P2 = yaws_config:update_sconf(NewSc2, Pos,
                                                           State#state.pairs),
                             {noreply, State#state{pairs = P2}}
                     after 2000 ->
@@ -351,8 +352,8 @@ handle_call({update_sconf, NewSc}, From, State) ->
     end;
 
 
-handle_call({delete_sconf, SC}, From, State) ->
-    case yaws_config:search_sconf(SC, State#state.pairs) of
+handle_call({delete_sconf, Sc}, From, State) ->
+    case yaws_config:search_sconf(Sc, State#state.pairs) of
         {Pid, OldSc, Group} when length(Group) == 1 ->
             error_logger:info_msg("Terminate whole ~s virt server group \n",
                                   [yaws:sconf_to_srvstr(OldSc)]),
@@ -367,14 +368,14 @@ handle_call({delete_sconf, SC}, From, State) ->
             {reply, {error, "No matching group"}, State}
     end;
 
-handle_call({add_sconf, SC}, From, State) ->
-    case yaws_config:search_group(SC, State#state.pairs) of
-        [{Pid, Group}] ->
-            Pid ! {add_sconf, From, SC, self()},
+handle_call({add_sconf, Pos, Sc}, From, State) ->
+    case yaws_config:search_group(Sc, State#state.pairs) of
+        [{Pid, _Group}] ->
+            Pid ! {add_sconf, From, Pos, Sc, self()},
             receive
-                {added_sconf, Pid, SC2} ->
-                    P2 = lists:keyreplace(Pid, 1, State#state.pairs,
-                                          {Pid, Group ++ [SC2]}),
+                {added_sconf, Pid, Sc2} ->
+                    P2 = yaws_config:update_sconf(Sc2, Pos,
+                                                  State#state.pairs),
                     {noreply, State#state{pairs = P2}}
             after 2000 ->
                     {reply, {error, "Failed to add new conf"}, State}
@@ -382,9 +383,9 @@ handle_call({add_sconf, SC}, From, State) ->
         [] ->
             %% Need to create a new group
             error_logger:info_msg("Creating new virt server ~s\n",
-                                  [yaws:sconf_to_srvstr(SC)]),
+                                  [yaws:sconf_to_srvstr(Sc)]),
             GC = State#state.gc,
-            case start_group(GC, [SC]) of
+            case start_group(GC, [Sc]) of
                 false ->
                     {reply, ok, State};
                 {true, Pair} ->
@@ -716,7 +717,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
 
         %% This code will shutdown all ready procs as well as the
         %% acceptor()
-        {update_sconf, NewSc, OldSc, From, Updater} ->
+        {update_sconf, Pos, NewSc, OldSc, From, Updater} ->
             case lists:member(OldSc, GS#gs.group) of
                 false ->
                     error_logger:error_msg("gserv: No found SC ~p/~p~n",
@@ -739,15 +740,10 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                              end,
                     stop_ready(Ready, Last),
                     NewSc2 = clear_ets_complete(NewSc1),
-                    %% Need to insert the sconf at the same position
-                    %% it previously was
-                    NewG = lists:map(fun(Sc) when Sc == OldSc->
-                                             NewSc2;
-                                        (Other) ->
-                                             Other
-                                     end, GS#gs.group),
-
-                    GS2 = GS#gs{group = NewG},
+                    GS2 = GS#gs{group = yaws:insert_at(
+                                          NewSc2, Pos,
+                                          lists:delete(OldSc, GS#gs.group)
+                                         )},
                     Ready2 = [],
                     Updater ! {updated_sconf, self(), NewSc2},
                     gen_server:reply(From, ok),
@@ -783,7 +779,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     ?MODULE:gserv_loop(GS2, Ready2, 0, New)
             end;
 
-        {add_sconf, From, SC0, Adder} ->
+        {add_sconf, From, Pos, SC0, Adder} ->
             SC = case ?sc_has_statistics(SC0) of
                      true ->
                          {ok, Pid} = yaws_stats:start_link(),
@@ -794,7 +790,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                  end,
             stop_ready(Ready, Last),
             SC2 = setup_ets(SC),
-            GS2 = GS#gs{group =  GS#gs.group ++ [SC2]},
+            GS2 = GS#gs{group =  yaws:insert_at(SC2, Pos, GS#gs.group)},
             Ready2 = [],
             Adder ! {added_sconf, self(), SC2},
             gen_server:reply(From, ok),

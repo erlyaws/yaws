@@ -153,7 +153,7 @@
 -export([sconf_to_srvstr/1,
          redirect_host/2, redirect_port/1,
          redirect_scheme_port/1, redirect_scheme/1,
-         tmpdir/0, tmpdir/1, mktemp/1, split_at/2,
+         tmpdir/0, tmpdir/1, mktemp/1, split_at/2, insert_at/3,
          id_dir/1, ctl_file/1]).
 
 -export([parse_ipmask/1, match_ipmask/2]).
@@ -2517,6 +2517,20 @@ split_at([H|T], Char, Ack) ->
     split_at(T, Char, [H|Ack]);
 split_at([], _Char, Ack) ->
     {lists:reverse(Ack), []}.
+
+%% insert an elemant at a given position into a list
+insert_at(Elm, 0, Ls) ->
+    Ls ++ [Elm];
+insert_at(Elm, Pos, Ls) ->
+    insert_at(Elm, Pos, Ls, []).
+
+insert_at(Elm, _, [], Res) ->
+    lists:reverse([Elm|Res]);
+insert_at(Elm, 1, Ls, Res) ->
+    lists:reverse([Elm|Res]) ++ Ls;
+insert_at(Elm, Pos, [H|T], Res) ->
+    insert_at(Elm, Pos-1, T, [H|Res]).
+
 
 
 %% Parse an Ip address or an Ip address range
