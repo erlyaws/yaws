@@ -1,4 +1,4 @@
-%% -*- coding: Latin-1 -*-
+%% -*- coding: latin-1 -*-
 %%%----------------------------------------------------------------------
 %%% File    : yaws_ls.erl
 %%% Author  : Claes Wikstrom <klacke@hyber.org>
@@ -69,6 +69,17 @@ list_directory(_Arg, CliSock, List, DirName, Req, DoAllZip) ->
 
     B = list_to_binary(Body),
 
+    %% Always use UTF-8 encoded file names. So, set the UTF-8 charset in the
+    %% Content-Type header
+    NewCT = case yaws:outh_get_content_type() of
+                undefined ->
+                    "text/html; charset=utf-8";
+                CT0 ->
+                    [CT|_] = yaws:split_sep(CT0, $;),
+                    CT++"; charset=utf-8"
+            end,
+    yaws:outh_set_content_type(NewCT),
+
     yaws_server:accumulate_content(B),
     yaws_server:deliver_accumulated(CliSock),
     yaws_server:done_or_continue().
@@ -100,7 +111,7 @@ parse_description(Line) ->
     {Filename,Description}.
 
 read_descriptions(DirName) ->
-    File = DirName ++ [$/ | "MANIFEST.txt"],
+    File = filename:join(DirName, "MANIFEST.txt"),
     case file:read_file(File) of
         {ok,Bin} -> Lines = string:tokens(binary_to_list(Bin),"\n"),
                     lists:map(fun parse_description/1,Lines);
@@ -388,14 +399,6 @@ stream_loop(YPid, P, FinishedFun) ->
             error_logger:error_msg("Could not deliver zip file: ~p\n", [Else])
     end.
 
-
-%% Removed code that appendended  Qry  to the file name.
-%% It might still be a good idea in case  type==directory.
-%% Was that the intention?
-%% Carsten
-%%
-%% yes, that was the intention.  fixed now (mbj)
-%% ... and maybe we should just remove this conversation in the next checkin :)
 file_entry({ok, FI}, _DirName, Name, Qry, Descriptions) ->
     ?Debug("file_entry(~p) ", [Name]),
     Ext = filename:extension(Name),
@@ -403,6 +406,15 @@ file_entry({ok, FI}, _DirName, Name, Qry, Descriptions) ->
     QryStr = if FI#file_info.type == directory -> Qry;
                 true -> ""
              end,
+
+    %% Assume that all file names are UTF-8 encoded. If the VM uses ISO-latin-1
+    %% encoding, then no conversion is needed (file already returns the byte
+    %% representation of file names). If the VM uses UTF-8, we need to do a
+    %% little conversion to return the byte representation of file names.
+    EncName = case file:native_name_encoding() of
+                  latin1 -> Name;
+                  utf8   -> binary_to_list(unicode:characters_to_binary(Name))
+              end,
 
     Description = get_description(Name,Descriptions),
 
@@ -415,15 +427,15 @@ file_entry({ok, FI}, _DirName, Name, Qry, Descriptions) ->
            "  </tr>\n",
            ["/icons/" ++ Gif,
             Alt,
-            yaws_api:url_encode(Name) ++ QryStr,
-            Name,
-            trim(Name,?FILE_LEN_SZ),
+            yaws_api:url_encode(EncName) ++ QryStr,
+            EncName,
+            trim(EncName,?FILE_LEN_SZ),
             datestr(FI),
             sizestr(FI),
             Description]),
     ?Debug("Entry:~p", [Entry]),
 
-    {true, {Name, FI#file_info.mtime, FI#file_info.size, Description, Entry}};
+    {true, {EncName, FI#file_info.mtime, FI#file_info.size, Description, Entry}};
 
 file_entry(_Err, _, _Name, _, _) ->
     ?Debug("no entry for ~p: ~p", [_Name, _Err]),

@@ -782,20 +782,41 @@ find_cookie_val2(Name, [Cookie|Rest]) ->
     end.
 
 %%
-url_decode([$%, Hi, Lo | Tail]) ->
-            Hex = yaws:hex_to_integer([Hi, Lo]),
-            [Hex | url_decode(Tail)];
-            url_decode([$?|T]) ->
-                   %% Don't decode the query string here, that is
-                   %% parsed separately.
-                   [$?|T];
-            url_decode([H|T]) when is_integer(H) ->
-                   [H |url_decode(T)];
-            url_decode([]) ->
-                   [];
-            %% deep lists
-            url_decode([H|T]) when is_list(H) ->
-                   [url_decode(H) | url_decode(T)].
+url_decode(Path) ->
+    {DecPath, QS} = url_decode(Path, []),
+    DecPath1 = case file:native_name_encoding() of
+                   latin1 ->
+                       DecPath;
+                   utf8 ->
+                       case unicode:characters_to_list(list_to_binary(DecPath)) of
+                           UTF8DecPath when is_list(UTF8DecPath) -> UTF8DecPath;
+                           _ -> DecPath
+                       end
+               end,
+    case QS of
+        [] -> lists:flatten(DecPath1);
+        _  -> lists:flatten([DecPath1, $?, QS])
+    end.
+
+url_decode([], Acc) ->
+    {lists:reverse(Acc), []};
+url_decode([$?|Tail], Acc) ->
+    %% Don't decode the query string here, that is parsed separately.
+    {lists:reverse(Acc), Tail};
+url_decode([$%, Hi, Lo | Tail], Acc) ->
+    Hex = yaws:hex_to_integer([Hi, Lo]),
+    url_decode(Tail, [Hex|Acc]);
+url_decode([H|T], Acc) when is_integer(H) ->
+    url_decode(T, [H|Acc]);
+%% deep lists
+url_decode([H|T], Acc) when is_list(H) ->
+    case url_decode(H, Acc) of
+        {P1, []} ->
+            {P2, QS} = url_decode(T, []),
+            {[P1,P2], QS};
+        {P1, QS} ->
+            {P1, QS++T}
+    end.
 
 
 path_norm(Path) ->
@@ -826,7 +847,16 @@ rest_dir (N, Path, [  _H | T ] ) -> rest_dir (N    ,        Path  , T).
 %% url decode the path and return {Path, QueryPart}
 
 url_decode_q_split(Path) ->
-    url_decode_q_split(Path, []).
+    {DecPath, QS} = url_decode_q_split(Path, []),
+    case file:native_name_encoding() of
+        latin1 ->
+            {DecPath, QS};
+        utf8 ->
+            case unicode:characters_to_list(list_to_binary(DecPath)) of
+                UTF8DecPath when is_list(UTF8DecPath) -> {UTF8DecPath, QS};
+                _ -> {DecPath, QS}
+            end
+    end.
 
 url_decode_q_split([$%, Hi, Lo | Tail], Ack) ->
     Hex = yaws:hex_to_integer([Hi, Lo]),
