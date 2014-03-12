@@ -100,6 +100,21 @@ out(_A) ->
 <p> <a href = "redirect4.yaws"> Clickable here </a>
 </p>
 
+<p>You can also redirect a whole site via virtual server configuration. For
+example, you can redirect all port 80 requests to port 443 like this:</p>
+
+<div class="box">
+  <verbatim>
+    <server vhost1.tld>
+       port   = 80
+       listen = 0.0.0.0
+       <redirect>
+         / = https://vhost2.tld:443
+       </redirect>
+    </server>
+  </verbatim>
+</div>
+
 </div>
 
 
