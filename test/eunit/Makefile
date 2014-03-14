@@ -8,7 +8,8 @@ OBJ :=	multipart_post_parsing.beam \
 	ipmask.beam \
 	gconf.beam \
 	sconf.beam \
-	yaws_rpc_test.beam
+	yaws_rpc_test.beam \
+	proc_cleanup.beam
 
 all:	$(OBJ)
 

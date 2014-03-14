@@ -33,6 +33,7 @@ test/t1[0-1]/yaws.conf
 test/t2/embedded_listen:8000.auth
 test/t4/www2/8388608.bin
 test/t11/src/srcdir_test.hrl
+test/eunit/localhost:8000.auth
 www/yaws.pdf
 www/yaws.ps
 www/*.txt

@@ -8,7 +8,7 @@
 
 ticker(Time, To, Msg) ->
     receive
-        {'EXIT', _} ->
+        {'EXIT', _, _} ->
             exit(normal)
     after Time ->
             To ! Msg
