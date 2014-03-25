@@ -41,7 +41,13 @@ PortEnv0 = case lists:keyfind(port_env, 1, Cfg0) of
                false            -> []
            end,
 PortSpecs0 = case lists:keyfind(port_specs, 1, Cfg0) of
-                 {port_specs, PSpecs} -> PSpecs;
+                 {port_specs, PSpecs} ->
+                     case os:getenv("YAWS_DISABLE_PAM") of
+                         false ->
+                             PSpecs;
+                         _ ->
+                             lists:keydelete("priv/lib/epam.so", 1, PSpecs)
+                     end;
                  false                -> []
              end,
 
