@@ -90,7 +90,9 @@ yaws.plt:
 
 dialyzer:	yaws.plt
 	-dialyzer -q --plt yaws.plt -r ebin > dialyzer_warnings
-	diff -U0 known_dialyzer_warnings dialyzer_warnings
+	@if diff -U0 known_dialyzer_warnings dialyzer_warnings ; then \
+	    echo dialyzer check passed ; exit 0 ; \
+	else exit 1 ; fi
 
 .PHONY: test
 test: all
