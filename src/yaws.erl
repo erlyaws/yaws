@@ -166,6 +166,7 @@
          stringdate_to_datetime/1]).
 
 start() ->
+    ok = start_app_deps(),
     application:start(yaws, permanent).
 
 stop() ->
@@ -185,8 +186,9 @@ start_embedded(DocRoot, SL, GL) when is_list(DocRoot),is_list(SL),is_list(GL) ->
     start_embedded(DocRoot, SL, GL, "default").
 start_embedded(DocRoot, SL, GL, Id)
   when is_list(DocRoot), is_list(SL), is_list(GL) ->
+    ok = start_app_deps(),
     {ok, SCList, GC, _} = yaws_api:embedded_start_conf(DocRoot, SL, GL, Id),
-    ok = application:start(yaws),
+    ok = application:start(yaws, permanent),
     yaws_config:add_yaws_soap_srv(GC),
     yaws_api:setconf(GC, SCList),
     ok.
@@ -209,7 +211,15 @@ create_sconf(DocRoot, SL) when is_list(DocRoot), is_list(SL) ->
     SC = yaws_config:make_default_sconf(DocRoot, lkup(port, SL, undefined)),
     setup_sconf(SL, SC).
 
-
+start_app_deps() ->
+    Deps = [crypto, compiler],                  % must match yaws.app app deps
+    catch lists:foldl(fun(App, Acc) ->
+                              case application:start(App, permanent) of
+                                  ok -> Acc;
+                                  {error,{already_started,App}} -> Acc;
+                                  Else -> throw(Else)
+                              end
+                      end, ok, Deps).
 
 %% Access functions for the GCONF and SCONF records.
 gconf_yaws_dir             (#gconf{yaws_dir              = X}) -> X.
