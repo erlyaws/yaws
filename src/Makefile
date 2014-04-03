@@ -76,6 +76,7 @@ dav:
 $(EBIN_FILES) : ../include/yaws.hrl ../include/yaws_api.hrl
 
 ../ebin/yaws_sendfile.$(EMULATOR): yaws_configure.hrl
+../ebin/yaws.$(EMULATOR): yaws_appdeps.hrl
 
 yaws_generated.erl:	yaws_generated.template ../vsn.mk
 	$(MAKE) IS_LOCAL_INSTALL=true gen_yaws_generated
@@ -90,7 +91,6 @@ yaws_configure.hrl:	 ../vsn.mk ../include.mk
 mime_types.erl: yaws_charset.hrl ../priv/mime.types \
 		../ebin/yaws_generated.$(EMULATOR) ../ebin/mime_type_c.$(EMULATOR)
 	$(ERL) -noshell -pa ../ebin -s mime_type_c generate
-
 
 debug:
 	$(MAKE) TYPE=debug

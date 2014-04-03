@@ -16,6 +16,26 @@ ok = file:write_file("src/yaws_charset.hrl",
                                Charset, <<"\").\n">>]
                      end),
 
+%% generate src/yaws.app.src file from src/yaws.app.src.in and
+%% src/yaws_appdeps.hrl from src/yaws_appdeps.hrl.in
+AppDeps = case os:getenv("YAWS_APPDEPS") of
+              false ->
+                  "";
+              AppDeps0 ->
+                  case string:tokens(AppDeps0, " ,") of
+                      [] ->
+                          "";
+                      AppDepsList ->
+                          ","++string:join(AppDepsList, ",")
+                  end
+          end,
+{ok, AppBin0} = file:read_file("src/yaws.app.src.in"),
+AppBin = binary:replace(AppBin0, <<"@APPDEPS@">>, list_to_binary(AppDeps)),
+ok = file:write_file("src/yaws.app.src", AppBin),
+{ok, AppHrl0} = file:read_file("src/yaws_appdeps.hrl.in"),
+AppHrl = binary:replace(AppHrl0, <<"@APPDEPS@">>, list_to_binary(AppDeps)),
+ok = file:write_file("src/yaws_appdeps.hrl", AppHrl),
+
 SoapDeps = [{erlsom, ".*", {git, "git://github.com/willemdj/erlsom.git", {branch, "master"}}},
             {xmlrpc, ".*", {git, "git://github.com/rwbr/exmlrpc.git", {branch, "master"}}}],
 
@@ -80,4 +100,3 @@ Cfg1 = lists:keyreplace(erl_opts, 1, Cfg0, {erl_opts, ErlOpts2}),
 Cfg2 = lists:keyreplace(port_env, 1, Cfg1, {port_env, PortEnv1}),
 Cfg3 = lists:keyreplace(port_specs, 1, Cfg2, {port_specs, PortSpecs1}),
 Cfg3.
-

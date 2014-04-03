@@ -54,6 +54,16 @@ fi
 AC_SUBST(EPAM)
 
 
+APPDEPS=
+AC_ARG_ENABLE(crypto, AS_HELP_STRING([--enable-crypto], [adds crypto application to yaws.app file]))
+if test "x$enable_crypto" = "xyes"; then
+    APPDEPS=',crypto'
+fi
+AC_ARG_ENABLE(compiler, AS_HELP_STRING([--enable-compiler], [adds compiler application to yaws.app file]))
+if test "x$enable_compiler" = "xyes"; then
+    APPDEPS="${APPDEPS},compiler"
+fi
+AC_SUBST(APPDEPS)
 
 dnl ----------------------------------------------------------------------
 dnl
@@ -359,12 +369,14 @@ AC_SUBST(HAVE_CRYPTO_HASH)
 
 YTOP=`pwd`
 AC_SUBST(YTOP)
-AC_OUTPUT(include.mk)
-AC_OUTPUT(src/yaws_charset.hrl)
-AC_OUTPUT(test/support/include.mk)
-AC_OUTPUT(test/support/include.sh)
 
 dnl pkg-config support
 . ./vsn.mk
 AC_SUBST(YAWS_VSN)
-AC_OUTPUT(yaws.pc)
+
+AC_CONFIG_FILES([include.mk])
+AC_CONFIG_FILES([src/yaws_charset.hrl src/yaws_appdeps.hrl src/yaws.app.src])
+AC_CONFIG_FILES([test/support/include.mk test/support/include.sh])
+AC_CONFIG_FILES([yaws.pc])
+
+AC_OUTPUT
