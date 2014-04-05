@@ -17,4 +17,4 @@
          % {pam_use_acct, true},          % true | false
          % {pam_use_sess, true}           % true | false
         ]},
-  {applications,[kernel,stdlib,crypto,compiler]}]}.
+  {applications,[kernel,stdlib@APPDEPS@]}]}.

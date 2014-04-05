@@ -10,6 +10,7 @@
 
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
+-include("yaws_appdeps.hrl").
 -include("yaws_debug.hrl").
 
 -include_lib("kernel/include/file.hrl").
@@ -212,8 +213,9 @@ create_sconf(DocRoot, SL) when is_list(DocRoot), is_list(SL) ->
     setup_sconf(SL, SC).
 
 start_app_deps() ->
-    Deps = [crypto, compiler],                  % must match yaws.app app deps
-    catch lists:foldl(fun(App, Acc) ->
+    Deps = split_sep(?YAWS_APPDEPS, $,),
+    catch lists:foldl(fun(App0, Acc) ->
+                              App = list_to_existing_atom(App0),
                               case application:start(App, permanent) of
                                   ok -> Acc;
                                   {error,{already_started,App}} -> Acc;

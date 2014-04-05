@@ -21,6 +21,8 @@ src/mime_types.erl
 src/yaws_configure.hrl
 src/yaws_generated.erl
 src/yaws_charset.hrl
+src/yaws_appdeps.hrl
+src/yaws.app.src
 test/ibrowse
 test/ibrowse.tar.gz
 test/support/include.mk
