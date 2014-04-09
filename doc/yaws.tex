@@ -2648,8 +2648,9 @@ The following directives are allowed inside a server definition.
 
 \item       \verb+fcgi_app_server = Host:Port+ ---
              The hostname and TCP port number of a FastCGI application
-             server. The TCP port number is not optional. There is no default
-             value.
+             server. To specify an IPv6 address, put it inside square
+             brackets (ex: "[::1]:9000"). The TCP port number is not
+             optional. There is no default value.
 
 \item       \verb+fcgi_trace_protocol = true | false+ ---
              Enable or disable tracing of FastCGI protocol messages as info log
@@ -3053,6 +3054,11 @@ The following directives are allowed inside a server definition.
                 \Yaws{}, specify:
 \begin{verbatim}
   php_handler = <fcgi, 127.0.0.1:54321>
+\end{verbatim}
+                If you need to specify an IPv6 address, use square
+                brackets:
+\begin{verbatim}
+  php_handler = <fcgi, [::1]:54321>
 \end{verbatim}
                 The PHP interpreter needs read access to the files it
                 is to serve. Thus, if you run it in a different

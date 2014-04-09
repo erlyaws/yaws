@@ -500,8 +500,10 @@ Turns on/off statistics gathering for a virtual server. Default is \fIfalse\fR.
 
 .TP
 \fBfcgi_app_server = Host:Port\fR
-The hostname and TCP port number of a FastCGI application server. The TCP port
-number is not optional. There is no default value.
+The hostname and TCP port number of a FastCGI application server.
+To specify an IPv6 address, put it inside square brackets (ex:
+"[::1]:9000"). The TCP port number is not optional. There is no default
+value.
 
 .TP
 \fBfcgi_trace_protocol = true | false\fR
@@ -913,6 +915,12 @@ make use of this PHP server from Yaws, specify:
 
 .nf
   php_handler = <fcgi, 127.0.0.1:54321>
+.fi
+
+If you need to specify an IPv6 address, use square brackets:
+
+.nf
+  php_handler = <fcgi, [::1]:54321>
 .fi
 
 The PHP interpreter needs read access to the files it is to serve. Thus, if you

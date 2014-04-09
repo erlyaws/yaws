@@ -639,16 +639,22 @@ yaws_dir() ->
     yaws:get_app_dir().
 
 string_to_host_and_port(String) ->
-    case string:tokens(String, ":") of
-        [Host, Port] ->
+    HostPortRE = "^(?:\\[([^\\]]+)\\]|([^:]+)):([0-9]+)$",
+    REOptions = [{capture, all_but_first, list}],
+    case re:run(String, HostPortRE, REOptions) of
+        {match, [IPv6, HostOrIPv4, Port]} ->
             case string:to_integer(Port) of
                 {Integer, []} when Integer >= 0, Integer =< 65535 ->
-                    {ok, Host, Integer};
+                    case IPv6 of
+                        "" -> {ok, HostOrIPv4, Integer};
+                        _  -> {ok, IPv6, Integer}
+                    end;
                 _Else ->
                     {error, ?F("~p is not a valid port number", [Port])}
             end;
-        _Else ->
-            {error, ?F("bad host and port specifier, expected HOST:PORT", [])}
+        nomatch ->
+            {error, ?F("bad host and port specifier, expected HOST:PORT; "
+                "use [IP]:PORT for IPv6 address", [])}
     end.
 
 string_to_node_mod_fun(String) ->
@@ -1503,14 +1509,18 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
 
-        ["fcgi_app_server", '=', Val] ->
-            case string_to_host_and_port(Val) of
+        ["fcgi_app_server", '=' | Val] ->
+            HostPortSpec = case Val of
+                [HPS]                    -> HPS;
+                ['[', HSpec, ']', PSpec] -> "[" ++ HSpec ++ "]" ++ PSpec
+            end,
+            case string_to_host_and_port(HostPortSpec) of
                 {ok, Host, Port} ->
                     C2 = C#sconf{fcgi_app_server = {Host, Port}},
                     fload(FD, server, GC, C2, Cs, Lno+1, Next);
                 {error, Reason} ->
                     {error, ?F("Invalid fcgi_app_server ~p at line ~w: ~s",
-                               [Val, Lno, Reason])}
+                               [HostPortSpec, Lno, Reason])}
             end;
 
         ["fcgi_trace_protocol", '=', Bool] ->
@@ -2405,6 +2415,12 @@ parse_revproxy([Prefix, Url, "intercept_mod", InterceptMod]) ->
         Error ->
             Error
     end;
+parse_revproxy([Prefix, Proto, '[', IPv6, ']', Rest, "intercept_mod", InterceptMod]) ->
+    Url = Proto ++ "[" ++ IPv6 ++ "]" ++ Rest,
+    parse_revproxy([Prefix, Url, "intercept_mod", InterceptMod]);
+parse_revproxy([Prefix, Proto, '[', IPv6, ']', Rest]) ->
+    Url = Proto ++ "[" ++ IPv6 ++ "]" ++ Rest,
+    parse_revproxy([Prefix, Url]);
 parse_revproxy(_Other) ->
     {error, syntax}.
 
@@ -2461,6 +2477,13 @@ parse_phpmod(['<', "cgi", ',', PhpPath, '>'], _) ->
     end;
 parse_phpmod(['<', "fcgi", ',', HostPortSpec, '>'], _) ->
     case string_to_host_and_port(HostPortSpec) of
+        {ok, Host, Port} ->
+            {ok, {fcgi, {Host, Port}}};
+        {error, Reason} ->
+            {error, Reason}
+    end;
+parse_phpmod(['<', "fcgi", ',', '[', HostSpec, ']', PortSpec, '>'], _) ->
+    case string_to_host_and_port("[" ++ HostSpec ++ "]" ++ PortSpec) of
         {ok, Host, Port} ->
             {ok, {fcgi, {Host, Port}}};
         {error, Reason} ->
