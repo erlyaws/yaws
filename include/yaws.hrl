@@ -109,7 +109,8 @@
           ysession_mod = yaws_session_server, % storage module for ysession
           acceptor_pool_size = 8,             % size of acceptor proc pool
 
-          mime_types_info                     % undefined | #mime_types_info{}
+          mime_types_info,                    % undefined | #mime_types_info{}
+          nslookup_pref = [inet]              % [inet | inet6]
          }).
 
 -record(ssl, {

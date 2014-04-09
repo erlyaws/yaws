@@ -1130,6 +1130,14 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                 {error, Str} ->
                     {error, ?F("~s at line ~w", [Str, Lno])}
             end;
+        ["nslookup_pref", '=' | Pref] ->
+            case parse_nslookup_pref(Pref) of
+                {ok, Families} ->
+                    fload(FD, globals, GC#gconf{nslookup_pref = Families},
+                          C, Cs, Lno+1, Next);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
 
 
         ['<', "server", Server, '>'] ->  %% first server
@@ -2595,6 +2603,45 @@ parse_mime_types_info(add_charsets, NewCharsets, Info) ->
         {ok, Charsets} -> {ok, Info#mime_types_info{charsets=Charsets}};
         Error          -> Error
     end.
+
+
+parse_nslookup_pref(Pref) ->
+    parse_nslookup_pref(Pref, []).
+
+parse_nslookup_pref(Empty, []) when Empty == [] orelse Empty == ['[', ']'] ->
+    %% Get default value, if nslookup_pref = [].
+    {ok, yaws:gconf_nslookup_pref(#gconf{})};
+parse_nslookup_pref([C, Family | Rest], Result)
+  when C == '[' orelse C == ',' ->
+    case Family of
+        "inet" ->
+            case lists:member(inet, Result) of
+                false -> parse_nslookup_pref(Rest, [inet | Result]);
+                true  -> parse_nslookup_pref(Rest, Result)
+            end;
+        "inet6" ->
+            case lists:member(inet6, Result) of
+                false -> parse_nslookup_pref(Rest, [inet6 | Result]);
+                true  -> parse_nslookup_pref(Rest, Result)
+            end;
+        _ ->
+            case Result of
+                [PreviousFamily | _] ->
+                    {error, ?F("Invalid nslookup_pref: invalid family or "
+                        "token '~s', after family '~s'",
+                        [Family, PreviousFamily])};
+                [] ->
+                    {error, ?F("Invalid nslookup_pref: invalid family or "
+                        "token '~s'", [Family])}
+            end
+    end;
+parse_nslookup_pref([']'], Result) ->
+    {ok, lists:reverse(Result)};
+parse_nslookup_pref([Invalid | _], []) ->
+    {error, ?F("Invalid nslookup_pref: unexpected token '~s'", [Invalid])};
+parse_nslookup_pref([Invalid | _], [Family | _]) ->
+    {error, ?F("Invalid nslookup_pref: unexpected token '~s', "
+        "after family '~s'", [Invalid, Family])}.
 
 
 parse_redirect(Path, [Code, URL], Mode, Lno) ->

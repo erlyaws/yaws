@@ -3118,6 +3118,13 @@ The following directives are allowed inside a server definition.
               in a server part using this directive, then it is replaced. Else
               it is kept.
 
+\item        \verb+nslookup_pref = [inet | inet6]+ ---
+              For fcgi servers and revproxy URLs, define the name
+              resolution preference. For example, to perform only IPv4
+              name resolution, use \textit{[inet]}. To do both IPv4
+              and IPv6 but try IPv6 first, use \textit{[inet6, inet]}.
+              Default value is \textit{[inet]}.
+
 \item        \verb+<ssl>  .... </ssl>+
                This begins and ends an SSL configuration for this server. It's
                possible to virthost several SSL servers on the same IP given

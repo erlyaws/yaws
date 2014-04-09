@@ -26,7 +26,8 @@
          gconf_mnesia_dir/1, gconf_log_wrap_size/1, gconf_cache_refresh_secs/1,
          gconf_include_dir/1, gconf_phpexe/1, gconf_yaws/1, gconf_id/1,
          gconf_enable_soap/1, gconf_soap_srv_mods/1, gconf_ysession_mod/1,
-         gconf_acceptor_pool_size/1, gconf_mime_types_info/1]).
+         gconf_acceptor_pool_size/1, gconf_mime_types_info/1,
+         gconf_nslookup_pref/1]).
 
 -export([sconf_port/1, sconf_flags/1, sconf_redirect_map/1, sconf_rhost/1,
          sconf_rmethod/1, sconf_docroot/1, sconf_xtra_docroots/1,
@@ -146,6 +147,8 @@
          exists/1,
          mkdir/1]).
 
+-export([tcp_connect/3, tcp_connect/4, ssl_connect/3, ssl_connect/4]).
+
 -export([do_recv/3, do_recv/4, cli_recv/3,
          gen_tcp_send/2,
          http_get_headers/2]).
@@ -239,6 +242,7 @@ gconf_soap_srv_mods        (#gconf{soap_srv_mods         = X}) -> X.
 gconf_ysession_mod         (#gconf{ysession_mod          = X}) -> X.
 gconf_acceptor_pool_size   (#gconf{acceptor_pool_size    = X}) -> X.
 gconf_mime_types_info      (#gconf{mime_types_info       = X}) -> X.
+gconf_nslookup_pref        (#gconf{nslookup_pref         = X}) -> X.
 
 
 sconf_port                 (#sconf{port                  = X}) -> X.
@@ -518,7 +522,9 @@ setup_gconf(GL, GC) ->
                                         GC#gconf.acceptor_pool_size),
            mime_types_info       = setup_mime_types_info(
                                      GL, GC#gconf.mime_types_info
-                                    )
+                                    ),
+           nslookup_pref         = lkup(nslookup_pref, GL,
+                                        GC#gconf.nslookup_pref)
           }.
 
 set_gc_flags([{tty_trace, Bool}|T], Flags) ->
@@ -1974,6 +1980,112 @@ ensure_exist(Path) ->
             end
     end.
 
+%%
+%%
+%% TCP/SSL connection with a configurable IPv4/IPv6 preference on NS lookup.
+%%
+%%
+
+tcp_connect(Host, Port, Options) ->
+    tcp_connect(Host, Port, Options, infinity).
+
+tcp_connect(Host, Port, Options, Timeout) ->
+    parse_ipaddr_and_connect(tcp, Host, Port, Options, Timeout).
+
+ssl_connect(Host, Port, Options) ->
+    ssl_connect(Host, Port, Options, infinity).
+
+ssl_connect(Host, Port, Options, Timeout) ->
+    parse_ipaddr_and_connect(ssl, Host, Port, Options, Timeout).
+
+parse_ipaddr_and_connect(Proto, IP, Port, Options, Timeout)
+when is_tuple(IP) ->
+    %% The caller handled name resolution himself.
+    filter_tcpoptions_and_connect(Proto, undefined,
+      IP, Port, Options, Timeout);
+parse_ipaddr_and_connect(Proto, [$[ | Rest], Port, Options, Timeout) ->
+    %% yaws_api:parse_url/1 keep the "[...]" enclosing an IPv6 address.
+    %% Remove them now, and parse the address.
+    IP = string:strip(Rest, right, $]),
+    parse_ipaddr_and_connect(Proto, IP, Port, Options, Timeout);
+parse_ipaddr_and_connect(Proto, Host, Port, Options, Timeout) ->
+    %% First, try to parse an IP address, because inet:getaddr/2 could
+    %% return nxdomain if the family doesn't match the IP address
+    %% format.
+    case inet:parse_strict_address(Host) of
+        {ok, IP} ->
+            filter_tcpoptions_and_connect(Proto, undefined,
+              IP, Port, Options, Timeout);
+        {error, einval} ->
+            NsLookupPref = get_nslookup_pref(Options),
+            filter_tcpoptions_and_connect(Proto, NsLookupPref,
+              Host, Port, Options, Timeout)
+    end.
+
+filter_tcpoptions_and_connect(Proto, NsLookupPref,
+  Host, Port, Options, Timeout) ->
+    %% Now that we have IP addresses, remove family from the TCP options,
+    %% because calling gen_tcp:connect/3 with {127,0,0,1} and [inet6]
+    %% would return {error, nxdomain otherwise}.
+    OptionsWithoutFamily = lists:filter(fun
+          (inet)  -> false;
+          (inet6) -> false;
+          (_)     -> true
+      end, Options),
+    resolve_and_connect(Proto, NsLookupPref, Host, Port, OptionsWithoutFamily, Timeout).
+
+resolve_and_connect(Proto, _, IP, Port, Options, Timeout)
+when is_tuple(IP) ->
+    do_connect(Proto, IP, Port, Options, Timeout);
+resolve_and_connect(Proto, [Family | Rest], Host, Port, Options, Timeout) ->
+    Result = case inet:getaddr(Host, Family) of
+        {ok, IP} -> do_connect(Proto, IP, Port, Options, Timeout);
+        R        -> R
+    end,
+    case Result of
+        {ok, Socket} ->
+            {ok, Socket};
+        {error, _} when length(Rest) >= 1 ->
+            %% If the connection fails here, ignore the error and
+            %% continue with the next address family.
+            resolve_and_connect(Proto, Rest, Host, Port, Options, Timeout);
+        {error, Reason} ->
+            %% This was the last IP address in the list, return the
+            %% connection error.
+            {error, Reason}
+    end.
+
+do_connect(Proto, IP, Port, Options, Timeout) ->
+    case Proto of
+        tcp -> gen_tcp:connect(IP, Port, Options, Timeout);
+        ssl -> ssl:connect(IP, Port, Options, Timeout)
+    end.
+
+%% If the caller specified inet or inet6 in the TCP options, prefer
+%% this to the global nslookup_pref parameter.
+%%
+%% This can be used in processes which can't use get(gc) to get the
+%% global conf: if they are given the global conf, they can get
+%% nslookup_pref value and add it the TCP options.
+%%
+%% If neither TCP options specify the family, nor the global conf is
+%% accessible, use default value declared in #gconf definition.
+get_nslookup_pref(TcpOptions) ->
+    get_nslookup_pref(TcpOptions, []).
+
+get_nslookup_pref([inet | Rest], Result) ->
+    get_nslookup_pref(Rest, [inet | Result]);
+get_nslookup_pref([inet6 | Rest], Result) ->
+    get_nslookup_pref(Rest, [inet6 | Result]);
+get_nslookup_pref([_ | Rest], Result) ->
+    get_nslookup_pref(Rest, Result);
+get_nslookup_pref([], []) ->
+    case get(gc) of
+        undefined -> gconf_nslookup_pref(#gconf{});
+        GC        -> gconf_nslookup_pref(GC)
+    end;
+get_nslookup_pref([], Result) ->
+    lists:reverse(Result).
 
 %%
 %%

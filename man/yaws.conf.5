@@ -982,6 +982,13 @@ mapping is defined in the global part and redefined in a server part using this
 directive, then it is replaced. Else it is kept.
 
 .TP
+\fBnslookup_pref = [inet | inet6]\fR
+For fcgi servers and revproxy URLs, define the name resolution
+preference. For example, to perform only IPv4 name resolution, use
+[inet]. To do both IPv4 and IPv6 but try IPv6 first, use [inet6, inet].
+Default value is [inet].
+
+.TP
 \fB<ssl> ... </ssl>\fR
 This begins and ends an SSL configuration for this server.  It's possible to
 virthost several SSL servers on the same IP given that they all share the same
