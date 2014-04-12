@@ -45,7 +45,8 @@
 -export([new_cookie_session/1, new_cookie_session/2, new_cookie_session/3,
          cookieval_to_opaque/1, request_url/1,
          print_cookie_sessions/0,
-         replace_cookie_session/2, delete_cookie_session/1]).
+         replace_cookie_session/2, replace_cookie_session/3,
+         delete_cookie_session/1]).
 
 -export([getconf/0,
          setconf/2,
@@ -1046,6 +1047,8 @@ print_cookie_sessions() ->
 
 replace_cookie_session(Cookie, NewOpaque) ->
     yaws_session_server:replace_session(Cookie, NewOpaque).
+replace_cookie_session(Cookie, NewOpaque, Cleanup) ->
+    yaws_session_server:replace_session(Cookie, NewOpaque, Cleanup).
 
 delete_cookie_session(Cookie) ->
     yaws_session_server:delete_session(Cookie).

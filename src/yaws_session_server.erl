@@ -24,7 +24,7 @@
 -export([new_session/1,new_session/2,new_session/3,new_session/4,
          cookieval_to_opaque/1,
          print_sessions/0,
-         replace_session/2,
+         replace_session/2, replace_session/3,
          delete_session/1]).
 
 %% Default ETS backend callbacks
@@ -116,7 +116,11 @@ print_sessions() ->
     gen_server:cast(?MODULE, print_sessions).
 
 replace_session(Cookie, NewOpaque) ->
-    gen_server:call(?MODULE, {replace_session, Cookie, NewOpaque}, infinity).
+    gen_server:call(?MODULE, {replace_session, Cookie, NewOpaque, undefined},
+                    infinity).
+replace_session(Cookie, NewOpaque, Cleanup) ->
+    gen_server:call(?MODULE, {replace_session, Cookie, NewOpaque, Cleanup},
+                    infinity).
 
 delete_session(CookieVal) ->
     gen_server:call(?MODULE, {delete_session, CookieVal}, infinity).
@@ -182,12 +186,20 @@ handle_call({cookieval_to_opaque, Cookie}, _From, State) ->
     {reply, Result, State, to()};
 
 handle_call({replace_session, Cookie, NewOpaque}, _From, State) ->
+    handle_call({replace_session, Cookie, NewOpaque, undefined}, _From, State);
+handle_call({replace_session, Cookie, NewOpaque, Cleanup}, _From, State) ->
     Backend = State#state.backend,
     Result =
         case Backend:lookup(Cookie) of
             [Y] ->
                 Y2 = Y#ysession{to = gnow() + Y#ysession.ttl,
-                                opaque = NewOpaque},
+                                opaque = NewOpaque,
+                                cleanup = case Cleanup of
+                                              undefined ->
+                                                  Y#ysession.cleanup;
+                                              _ ->
+                                                  Cleanup
+                                          end},
                 Backend:insert(Y2);
             [] ->
                 error

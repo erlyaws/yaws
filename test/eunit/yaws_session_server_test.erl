@@ -40,7 +40,7 @@ new_session_and_list_test() ->
     ?assertMatch([_, _, _], ?BACKEND:list()),
     yaws_session_server:stop().
 
-cookieval_to_opaque_test() ->
+replace_session_test() ->
     {ok, _} = start(),
     Opaque = {opaque, 1},
     Cookie1 = yaws_session_server:new_session(Opaque),
@@ -51,7 +51,36 @@ cookieval_to_opaque_test() ->
     ?assert(Session /= Session_updated),
     yaws_session_server:stop().
 
-replace_session_test() ->
+replace_session_cleanup_test() ->
+    Parent = self(),
+    Cleanup1 = spawn(fun() ->
+                             receive
+                                 stop -> ok;
+                                 Msg -> Parent ! {cleanup1, Msg}
+                             end
+                     end),
+    {ok, _} = start(),
+    Opaque = {opaque, 1},
+    Cookie = yaws_session_server:new_session(Opaque, 60, Cleanup1),
+    Cleanup2 = spawn(fun() ->
+                             receive
+                                 stop -> ok;
+                                 Msg -> Parent ! {cleanup2, Msg}
+                             end
+                     end),
+    Opaque2 = {opaque, 2},
+    true = yaws_session_server:replace_session(Cookie, Opaque2, Cleanup2),
+    yaws_session_server:delete_session(Cookie),
+    receive
+        {cleanup2, {yaws_session_end, normal, _, Opaque2}} ->
+            Cleanup1 ! stop,
+            yaws_session_server:stop()
+    after
+        5000 ->
+            exit({error, cleanup_failure})
+    end.
+
+cookieval_to_opaque_test() ->
     {ok, _} = start(),
     Opaque = {opaque, 1},
     Cookie1 = yaws_session_server:new_session(Opaque),
