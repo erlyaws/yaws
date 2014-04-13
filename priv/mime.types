@@ -2,8 +2,8 @@
 #
 # http://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types
 #
-# Updated 1 Sep 2012. Local modifications were also applied. The original text
-# from the top of the Apache source file is below.
+# Updated 13 Apr 2014. Local modifications were also applied. The original text
+# from the top of the Apache source file is below:
 #
 # This file maps Internet media types to unique file extension(s).
 # Although created for httpd, this file is used by many software systems
@@ -29,7 +29,6 @@ application/atomcat+xml				atomcat
 application/atomicmail
 application/atomsvc+xml				atomsvc
 application/auth-policy+xml
-application/batch-SMTP
 application/batch-smtp
 application/beep+xml
 application/cals-1840
@@ -905,7 +904,6 @@ application/x-font-sunos-news
 application/x-font-ttf				ttf ttc
 application/x-font-type1			pfa pfb pfm afm
 application/x-font-vfont
-application/x-font-woff				woff
 application/x-freearc				arc
 application/x-futuresplash			spl
 application/x-gca-compressed			gca
