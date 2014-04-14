@@ -82,6 +82,7 @@ elif [ "`uname -s`" = "Darwin" -a `id -u` = 0 ]; then
       # MacOS is particular about the ownership of startup items.
      chown -R root:wheel ${startupdir}
 elif [ "`uname -s`" = "FreeBSD" ]; then
+    install -d ${destdir}${etcdir}/rc.d
     sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" \
        freebsd/yaws > ${destdir}${etcdir}/rc.d/yaws
 elif [ "`uname -s`" = "NetBSD" ]; then
