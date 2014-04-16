@@ -33,6 +33,7 @@ start() ->
         test_failed_resp_interception_revproxy(),
         test_good_interception_revproxy(),
         test_fwdproxy(),
+        test_ipv6_address(),
         ok
     catch
         Error:Reason ->
@@ -255,6 +256,14 @@ test_fwdproxy() ->
 
     ?line {ok, "200", _, Body2} = ibrowse:send_req(Uri2, [], get, [], Opts),
     ?line Res = Body2,
+    ok.
+
+test_ipv6_address() ->
+    io:format("revproxy_url_ipv6\n", []),
+    Uri = "http://localhost:8000/revproxy3/hello.txt",
+    Res = "Hello, World!\n",
+
+    ?line {ok, "200", _, _} = ibrowse:send_req(Uri, [], get),
     ok.
 
 recv_hdrs(Sock) ->

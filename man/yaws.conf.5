@@ -500,8 +500,10 @@ Turns on/off statistics gathering for a virtual server. Default is \fIfalse\fR.
 
 .TP
 \fBfcgi_app_server = Host:Port\fR
-The hostname and TCP port number of a FastCGI application server. The TCP port
-number is not optional. There is no default value.
+The hostname and TCP port number of a FastCGI application server.
+To specify an IPv6 address, put it inside square brackets (ex:
+"[::1]:9000"). The TCP port number is not optional. There is no default
+value.
 
 .TP
 \fBfcgi_trace_protocol = true | false\fR
@@ -915,6 +917,12 @@ make use of this PHP server from Yaws, specify:
   php_handler = <fcgi, 127.0.0.1:54321>
 .fi
 
+If you need to specify an IPv6 address, use square brackets:
+
+.nf
+  php_handler = <fcgi, [::1]:54321>
+.fi
+
 The PHP interpreter needs read access to the files it is to serve. Thus, if you
 run it in a different security context than Yaws itself, make sure it has access
 to the .php files.
@@ -972,6 +980,13 @@ directive, then it is replaced. Else it is kept.
 Overloads the global \fBadd_charsets\fR values for this virtual server. If a
 mapping is defined in the global part and redefined in a server part using this
 directive, then it is replaced. Else it is kept.
+
+.TP
+\fBnslookup_pref = [inet | inet6]\fR
+For fcgi servers and revproxy URLs, define the name resolution
+preference. For example, to perform only IPv4 name resolution, use
+[inet]. To do both IPv4 and IPv6 but try IPv6 first, use [inet6, inet].
+Default value is [inet].
 
 .TP
 \fB<ssl> ... </ssl>\fR

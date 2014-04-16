@@ -21,7 +21,7 @@
 
 %%% TODO: Implement FastCGI filter role.
 
--export([cgi_worker/7, fcgi_worker/5]).
+-export([cgi_worker/7, fcgi_worker/6]).
 
 %%%=====================================================================
 %%% Code shared between CGI and FastCGI
@@ -802,8 +802,10 @@ call_fcgi(Role, Arg, Options) ->
                    [Role, fcgi_role_name(Role),
                     Options,
                     Arg]),
+            GlobalConf = get(gc),
             ServerConf = get(sc),
-            WorkerPid = fcgi_start_worker(Role, Arg, ServerConf, Options),
+            WorkerPid = fcgi_start_worker(Role, Arg, GlobalConf, ServerConf,
+              Options),
             handle_clidata(Arg, WorkerPid)
     end.
 
@@ -829,12 +831,12 @@ fcgi_worker_fail_if(true, WorkerState, Reason) ->
 fcgi_worker_fail_if(_Condition, _WorkerState, _Reason) ->
     ok.
 
-fcgi_start_worker(Role, Arg, ServerConf, Options) ->
+fcgi_start_worker(Role, Arg, GlobalConf, ServerConf, Options) ->
     proc_lib:spawn(?MODULE, fcgi_worker,
-                   [self(), Role, Arg, ServerConf, Options]).
+                   [self(), Role, Arg, GlobalConf, ServerConf, Options]).
 
 
-fcgi_worker(ParentPid, Role, Arg, ServerConf, Options) ->
+fcgi_worker(ParentPid, Role, Arg, GlobalConf, ServerConf, Options) ->
     {DefaultSvrHost, DefaultSvrPort} =
         case ServerConf#sconf.fcgi_app_server of
             undefined ->
@@ -857,9 +859,11 @@ fcgi_worker(ParentPid, Role, Arg, ServerConf, Options) ->
                             ?sc_fcgi_trace_protocol(ServerConf)),
     LogAppError = get_opt(log_app_error, Options,
                           ?sc_fcgi_log_app_error(ServerConf)),
+    TcpOptions = yaws:gconf_nslookup_pref(GlobalConf),
     AppServerSocket =
         fcgi_connect_to_application_server(PreliminaryWorkerState,
-                                           AppServerHost, AppServerPort),
+                                           AppServerHost, AppServerPort,
+                                           TcpOptions),
     ?Debug("Start FastCGI worker:~n"
            "  Role = ~p (~s)~n"
            "  AppServerHost = ~p~n"
@@ -910,9 +914,10 @@ fcgi_pass_through_client_data(WorkerState) ->
     end.
 
 
-fcgi_connect_to_application_server(WorkerState, Host, Port) ->
-    Options = [binary, {packet, 0}, {active, false}, {nodelay, true}],
-    case gen_tcp:connect(Host, Port, Options, ?FCGI_CONNECT_TIMEOUT_MSECS) of
+fcgi_connect_to_application_server(WorkerState, Host, Port, TcpOptions) ->
+    Options = [binary, {packet, 0}, {active, false}, {nodelay, true} |
+      TcpOptions],
+    case yaws:tcp_connect(Host, Port, Options, ?FCGI_CONNECT_TIMEOUT_MSECS) of
         {error, Reason} ->
             fcgi_worker_fail(WorkerState,
                              {"connect to application server failed", Reason});

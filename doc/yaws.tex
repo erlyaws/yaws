@@ -2648,8 +2648,9 @@ The following directives are allowed inside a server definition.
 
 \item       \verb+fcgi_app_server = Host:Port+ ---
              The hostname and TCP port number of a FastCGI application
-             server. The TCP port number is not optional. There is no default
-             value.
+             server. To specify an IPv6 address, put it inside square
+             brackets (ex: "[::1]:9000"). The TCP port number is not
+             optional. There is no default value.
 
 \item       \verb+fcgi_trace_protocol = true | false+ ---
              Enable or disable tracing of FastCGI protocol messages as info log
@@ -3054,6 +3055,11 @@ The following directives are allowed inside a server definition.
 \begin{verbatim}
   php_handler = <fcgi, 127.0.0.1:54321>
 \end{verbatim}
+                If you need to specify an IPv6 address, use square
+                brackets:
+\begin{verbatim}
+  php_handler = <fcgi, [::1]:54321>
+\end{verbatim}
                 The PHP interpreter needs read access to the files it
                 is to serve. Thus, if you run it in a different
                 security context than \Yaws\ itself, make sure it has
@@ -3111,6 +3117,13 @@ The following directives are allowed inside a server definition.
               server. If a mapping is defined in the global part and redefined
               in a server part using this directive, then it is replaced. Else
               it is kept.
+
+\item        \verb+nslookup_pref = [inet | inet6]+ ---
+              For fcgi servers and revproxy URLs, define the name
+              resolution preference. For example, to perform only IPv4
+              name resolution, use \textit{[inet]}. To do both IPv4
+              and IPv6 but try IPv6 first, use \textit{[inet6, inet]}.
+              Default value is \textit{[inet]}.
 
 \item        \verb+<ssl>  .... </ssl>+
                This begins and ends an SSL configuration for this server. It's
