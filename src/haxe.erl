@@ -30,8 +30,7 @@
 
 -author("Jim Larson <jalarson@amazon.com>, Robert Wai-Chi Chu <robchu@amazon.com>").
 -author("Gaspar Chilingarov <nm@web.am>, Gurgen Tumanyan <barbarian@armkb.com>").
--autor("Yariv Sadan <yarivvv@gmail.com>").
--vsn("1").
+-author("Yariv Sadan <yarivvv@gmail.com>").
 
 %%% This module translates haXe types into the following Erlang types:
 %%%

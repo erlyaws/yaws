@@ -22,7 +22,6 @@
 -author("Jim Larson <jalarson@amazon.com>, Robert Wai-Chi Chu <robchu@amazon.com>").
 -author("Gaspar Chilingarov <nm@web.am>, Gurgen Tumanyan <barbarian@armkb.com>").
 -author("Steve Vinoski <vinoski@ieee.org>").
--vsn("3").
 
 %%% JavaScript Object Notation ("JSON", http://www.json.org) is a simple
 %%% data syntax meant as a lightweight alternative to other representations,
