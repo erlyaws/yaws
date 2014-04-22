@@ -28,7 +28,6 @@
 
 -module(jsonrpc).
 -author("Gaspar Chilingarov <nm@web.am>, Gurgen Tumanyan <barbarian@armkb.com>").
--vsn("3").
 -export([call/3]).
 -export([s/2]).        % extract element from proplist
 
