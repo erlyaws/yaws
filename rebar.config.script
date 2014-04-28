@@ -83,7 +83,12 @@ ErlOpts2 = case erlang:function_exported(crypto,hash,2) of
                false -> ErlOpts1
            end,
 
-HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts2),
+ErlOpts3 = case code:which(xmerl) of
+               non_existing -> ErlOpts2;
+               _ -> ErlOpts2 ++ [{d,'HAVE_XMERL'}]
+           end,
+
+HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts3),
 
 {PortEnv1, PortSpecs1} =
     if
@@ -96,7 +101,7 @@ HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts2),
             {PortEnv0, PortSpecs0}
     end,
 
-Cfg1 = lists:keyreplace(erl_opts, 1, Cfg0, {erl_opts, ErlOpts2}),
+Cfg1 = lists:keyreplace(erl_opts, 1, Cfg0, {erl_opts, ErlOpts3}),
 Cfg2 = lists:keyreplace(port_env, 1, Cfg1, {port_env, PortEnv1}),
 Cfg3 = lists:keyreplace(port_specs, 1, Cfg2, {port_specs, PortSpecs1}),
 Cfg3.

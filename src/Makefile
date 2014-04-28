@@ -86,6 +86,7 @@ yaws_configure.hrl:	 ../vsn.mk ../include.mk
 	[ $(HAVE_SENDFILE) = true ] && echo '-define(HAVE_SENDFILE, true).' > $@; \
 	[ $(HAVE_ERLANG_SENDFILE) = true ] && echo '-define(HAVE_ERLANG_SENDFILE, true).' >> $@; \
 	[ $(HAVE_CRYPTO_HASH) = true ] && echo '-define(HAVE_CRYPTO_HASH, true).' >> $@; \
+	[ $(HAVE_XMERL) = true ] && echo '-define(HAVE_XMERL, true).' >> $@; \
 	[ -f $@ ] || touch $@
 
 mime_types.erl: yaws_charset.hrl ../priv/mime.types \

@@ -27,7 +27,8 @@
 %%%-------------------------------------------------------------------
 
 -module(yaws_appmod_dav).
-
+-include("yaws_configure.hrl").
+-ifdef(HAVE_XMERL).
 %% for appmod:
 -export([out/1]).
 
@@ -1356,4 +1357,4 @@ export_id(Id) when is_number(Id) ->
 export_id(Id) when is_list(Id) ->
     Id.
 
-
+-endif. %% HAVE_XMERL

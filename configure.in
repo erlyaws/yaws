@@ -95,7 +95,9 @@ AC_DEFUN([BT_ERL_LIB_VSN],
      esac
      case "$bt_cv_$1_vsn" in
          "")
-             AC_MSG_ERROR("Could not figure out version Erlang library: $1")
+             if test -z "$2" ; then
+                 AC_MSG_ERROR("Could not figure out version Erlang library: $1")
+             fi
              ;;
          *)
              ;;
@@ -140,6 +142,13 @@ BT_ERL_LIB_VSN(sasl)
 BT_ERL_LIB_VSN(ssl)
 BT_ERL_LIB_VSN(mnesia)
 
+HAVE_XMERL=true
+BT_ERL_LIB_VSN(xmerl, fail_ok)
+if test -z $bt_cv_xmerl_vsn; then
+    AC_MSG_WARN([xmerl not found, WebDAV will not be supported])
+    HAVE_XMERL=false
+fi
+AC_SUBST(HAVE_XMERL)
 
 AC_PROG_CC
 AC_PROG_GCC_TRADITIONAL

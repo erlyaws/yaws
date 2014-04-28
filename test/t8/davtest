@@ -11,6 +11,15 @@ cadaver=cadaver
 output=logs/cadaver.out
 command -v $cadaver >/dev/null 2>&1 || { echo >&2 "- test requires cadaver but it is not installed"; exit 1; }
 
+# make sure WebDAV support is present in the build
+dav=`erl -noinput -pa ../../ebin \
+       -eval 'code:ensure_loaded(yaws_appmod_dav),
+              io:format("~p~n", [erlang:function_exported(yaws_appmod_dav, out, 1)]).' -s init stop`
+if test "$dav" = false; then
+    echo "- WebDAV not supported in this build, skipping"
+    exit 0
+fi
+
 rm -f erl_crash.dump
 rm -f davtest.out
 
