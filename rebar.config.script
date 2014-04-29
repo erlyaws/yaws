@@ -1,13 +1,15 @@
 %% -*- mode: erlang;erlang-indent-level: 4;indent-tabs-mode: nil -*-
 %% ex: ft=erlang ts=4 sw=4 et
 
+Dir = filename:dirname(SCRIPT),
+
 %% generate a default test/t11/src/srcdir_test.hrl file so rebar can
 %% compile the tests
-ok = file:write_file("test/t11/src/srcdir_test.hrl",
+ok = file:write_file(filename:join(Dir, "test/t11/src/srcdir_test.hrl"),
                      <<"-define(SRCDIR_VERSION, \"1.0\").\n">>),
 
 %% generate a charset include file
-ok = file:write_file("src/yaws_charset.hrl",
+ok = file:write_file(filename:join(Dir, "src/yaws_charset.hrl"),
                      case os:getenv("YAWS_CHARSET") of
                          false ->
                              <<"-define(YAWS_CHARSET, undefined).\n">>;
@@ -15,26 +17,6 @@ ok = file:write_file("src/yaws_charset.hrl",
                              [<<"-define(YAWS_CHARSET, \"">>,
                                Charset, <<"\").\n">>]
                      end),
-
-%% generate src/yaws.app.src file from src/yaws.app.src.in and
-%% src/yaws_appdeps.hrl from src/yaws_appdeps.hrl.in
-AppDeps = case os:getenv("YAWS_APPDEPS") of
-              false ->
-                  "";
-              AppDeps0 ->
-                  case string:tokens(AppDeps0, " ,") of
-                      [] ->
-                          "";
-                      AppDepsList ->
-                          ","++string:join(AppDepsList, ",")
-                  end
-          end,
-{ok, AppBin0} = file:read_file("src/yaws.app.src.in"),
-AppBin = binary:replace(AppBin0, <<"@APPDEPS@">>, list_to_binary(AppDeps)),
-ok = file:write_file("src/yaws.app.src", AppBin),
-{ok, AppHrl0} = file:read_file("src/yaws_appdeps.hrl.in"),
-AppHrl = binary:replace(AppHrl0, <<"@APPDEPS@">>, list_to_binary(AppDeps)),
-ok = file:write_file("src/yaws_appdeps.hrl", AppHrl),
 
 SoapDeps = [{erlsom, ".*", {git, "git://github.com/willemdj/erlsom.git", {branch, "master"}}},
             {xmlrpc, ".*", {git, "git://github.com/rwbr/exmlrpc.git", {branch, "master"}}}],

@@ -78,6 +78,9 @@ $(EBIN_FILES) : ../include/yaws.hrl ../include/yaws_api.hrl
 ../ebin/yaws_sendfile.$(EMULATOR): yaws_configure.hrl
 ../ebin/yaws.$(EMULATOR): yaws_appdeps.hrl
 
+../ebin/yaws.app: yaws.app.src
+	perl -pe 's/\@APPDEPS\@/'$(APPDEPS)'/;' $< | perl -e $(APPSCRIPT) "$(VSN)" $(MODULES) > $@
+
 yaws_generated.erl:	yaws_generated.template ../vsn.mk
 	$(MAKE) IS_LOCAL_INSTALL=true gen_yaws_generated
 

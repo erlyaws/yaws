@@ -375,7 +375,7 @@ dnl pkg-config support
 AC_SUBST(YAWS_VSN)
 
 AC_CONFIG_FILES([include.mk])
-AC_CONFIG_FILES([src/yaws_charset.hrl src/yaws_appdeps.hrl src/yaws.app.src])
+AC_CONFIG_FILES([src/yaws_charset.hrl src/yaws_appdeps.hrl])
 AC_CONFIG_FILES([test/support/include.mk test/support/include.sh])
 AC_CONFIG_FILES([yaws.pc])
 

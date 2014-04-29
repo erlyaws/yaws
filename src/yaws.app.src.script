@@ -1,0 +1,30 @@
+%% -*- mode: erlang;erlang-indent-level: 4;indent-tabs-mode: nil -*-
+%% ex: ft=erlang ts=4 sw=4 et
+
+AppDeps = case os:getenv("YAWS_APPDEPS") of
+              false ->
+                  [];
+              AppDeps0 ->
+                  string:tokens(AppDeps0, " ,")
+          end,
+AppDepsList = ","++string:join(AppDeps, ","),
+
+%% generate src/yaws_appdeps.hrl from src/yaws_appdeps.hrl.in
+Dir = filename:dirname(SCRIPT),
+InFile = filename:join(Dir, "yaws_appdeps.hrl.in"),
+OutFile = filename:join(Dir, "yaws_appdeps.hrl"),
+{ok, AppHrl0} = file:read_file(InFile),
+AppHrl = binary:replace(AppHrl0, <<"@APPDEPS@">>, list_to_binary(AppDepsList)),
+ok = file:write_file(OutFile, AppHrl),
+
+%% replace @APPDEPS@ in application dependencies with any apps specified in
+%% the YAWS_APPDEPS OS env var
+[{application,yaws,Cfg}] = CONFIG,
+{applications,Apps0} = lists:keyfind(applications, 1, Cfg),
+Apps = lists:flatmap(fun('stdlib@APPDEPS@') ->
+                             [stdlib]++[list_to_atom(A) || A <- AppDeps];
+                        (A) ->
+                             [A]
+                     end, Apps0),
+[{application,yaws,lists:keyreplace(applications, 1, Cfg,
+                                    {applications, Apps})}].
