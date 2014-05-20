@@ -322,6 +322,9 @@ test_json() ->
     io:format("  encode/decode\n", []),
     ?line {ok,{response,[19]}} = jsonrpc:call(?JSON_URI, [],
                                               {call, "subtract", [42, 23]}),
+    UStr = "{ \"origfilename\":\"Acronyms \\u2013 April 2014.pptx\" }",
+    ?line {ok, {struct,[{"origfilename",US}]}} = json2:decode_string(UStr),
+    ?line iolist_to_binary(US),		% must not cause a badarg exception
     io:format("  param obj1\n", []),
     ?line ok = do_json({struct, [{"jsonrpc", "2.0"},
                                  {"method", "subtract"},

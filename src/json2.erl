@@ -222,7 +222,7 @@ scan_string(eof, _, X) -> {done, {error, missing_close_quote}, X};
 scan_string([$" | Rest], A, _) -> {done, {ok, lists:reverse(A)}, Rest};
 scan_string([$\\], _, X) -> {more, X};
 scan_string([$\\, $u, U1, U2, U3, U4 | Rest], A, X) ->
-    scan_string(Rest, [uni_char([U1, U2, U3, U4]) | A], X);
+    scan_string(Rest, lists:reverse(uni_char([U1, U2, U3, U4]))++A, X);
 scan_string([$\\, $u | _], _, X) -> {more, X};
 scan_string([$\\, C | Rest], A, X) ->
     scan_string(Rest, [esc_to_char(C) | A], X);
@@ -232,7 +232,8 @@ scan_string([C | Rest], A, X) ->
 %% Given a list of hex characters, convert to the corresponding integer.
 
 uni_char(HexList) ->
-    erlang:list_to_integer(HexList, 16).
+    UC = erlang:list_to_integer(HexList, 16),
+    binary_to_list(unicode:characters_to_binary([UC],utf8)).
 
 esc_to_char($") -> $";
 esc_to_char($/) -> $/;
