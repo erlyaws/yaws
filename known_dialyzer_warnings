@@ -1,10 +1,10 @@
 
 mime_type_c.erl:69: The variable _ can never match since previous clauses completely covered the type 'true'
-yaws.erl:2424: Guard test Ret::'file' == 'fd' can never succeed
-yaws.erl:2432: Guard test Ret::'file' == 'binfd' can never succeed
-yaws.erl:2677: The pattern 'false' can never match the type 'true'
-yaws.erl:2686: The pattern 'false' can never match the type 'true'
-yaws_api.erl:2589: The pattern 'false' can never match the type 'true'
+yaws.erl:2548: Guard test Ret::'file' == 'fd' can never succeed
+yaws.erl:2556: Guard test Ret::'file' == 'binfd' can never succeed
+yaws.erl:2801: The pattern 'false' can never match the type 'true'
+yaws.erl:2810: The pattern 'false' can never match the type 'true'
+yaws_api.erl:2592: The pattern 'false' can never match the type 'true'
 yaws_config.erl:595: The pattern 'false' can never match the type 'true'
 yaws_ctl.erl:532: Function hup/1 has no local return
 yaws_ctl.erl:537: Function stop/1 has no local return
@@ -14,7 +14,7 @@ yaws_ctl.erl:566: Function trace/1 has no local return
 yaws_ctl.erl:569: Function debug_dump/1 has no local return
 yaws_ctl.erl:572: Function stats/1 has no local return
 yaws_ctl.erl:574: Function running_config/1 has no local return
-yaws_revproxy.erl:682: The pattern 'true' can never match the type 'false'
+yaws_revproxy.erl:678: The pattern 'true' can never match the type 'false'
 yaws_sendfile.erl:52: The pattern 'false' can never match the type 'true'
 yaws_sendfile.erl:63: The pattern 'false' can never match the type 'true'
 yaws_sup_restarts.erl:49: The pattern 'false' can never match the type 'true'
