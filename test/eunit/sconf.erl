@@ -1,7 +1,9 @@
 -module(sconf).
 -compile(export_all).
--include("../../include/yaws.hrl").
 -include_lib("eunit/include/eunit.hrl").
+
+-include("yaws.hrl").
+-include("tftest.hrl").
 
 
 setup_default_sconf_test() ->

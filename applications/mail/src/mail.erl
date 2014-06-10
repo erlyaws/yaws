@@ -2561,14 +2561,18 @@ sleep(X) ->
 %%%%%%%%%%%%%%%%%%%%%% read cfg file %%%%%%%%%%%%%%%%%%
 %% def for root is: /etc/mail/yaws-webmail.conf
 
+-ifndef(ETCDIR).
+-define(ETCDIR, "/etc").
+-endif.
+
 read_config() ->
     Paths = case yaws:getuid() of
                 {ok, "0"} ->
-                    ["/etc/mail/yaws-webmail.conf"];
+                    [?ETCDIR++"/mail/yaws-webmail.conf"];
                 _ ->
                     [filename:join([os:getenv("HOME"),"yaws-webmail.conf"]),
                      "./yaws-webmail.conf",
-                     "/etc/mail/yaws-webmail.conf"]
+                     ?ETCDIR++"/mail/yaws-webmail.conf"]
             end,
     case yaws:first(fun(F) -> yaws:exists(F) end, Paths) of
         false ->

@@ -3,7 +3,9 @@
 -compile(export_all).
 
 -include_lib("eunit/include/eunit.hrl").
--include("../../include/yaws_api.hrl").
+
+-include("yaws_api.hrl").
+-include("tftest.hrl").
 
 -define(PARAMS, ["åäö","abc"]).
 

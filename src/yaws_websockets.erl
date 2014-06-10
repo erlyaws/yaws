@@ -13,7 +13,6 @@
 
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
--include("yaws_configure.hrl").
 
 -include_lib("kernel/include/file.hrl").
 

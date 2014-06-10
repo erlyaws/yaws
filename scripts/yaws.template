@@ -77,6 +77,7 @@ help()
     echo "        yaws --ctltrace traffic|http                          -- toggle trace of running daemon"
     echo "        yaws --check [--verbose] [--id ID] YawsFile [IncDirs] -- test compile YawsFile"
     echo "        yaws --wait-started[=secs] [--id ID]                  -- wait for daemon to be ready"
+    echo "        yaws --wait-stopped[=secs] [--id ID]                  -- wait for daemon to be stopped"
     echo "        yaws --stats [--id ID]                                -- show daemon statistics"
     exit 1
 }
@@ -98,6 +99,7 @@ pdist=""
 erlarg=""
 kpoll=true
 call_wait_started=""
+call_wait_stopped=""
 check=""
 checkargs=""
 verbose=""
@@ -114,6 +116,20 @@ wait_started() {
         [ $? = 0 ] && exit 0
     done
     echo "No yaws system responding for id=$id"
+    exit 1
+}
+
+wait_stopped() {
+    i=0
+    count=$1
+    while [ $i -lt $count ]; do
+        sleep 1
+        i=`expr $i + 1`
+        idarg="--id ${id:-default}"
+        ${program}  ${idarg} --status 2>&1 > /dev/null
+        [ $? != 0 ] && exit 0
+    done
+    echo "Yaws system still responding for id=$id"
     exit 1
 }
 
@@ -179,6 +195,15 @@ while [ $# -gt 0 ]
           fi;;
       --wait-started)
           call_wait_started=30;;
+      --wait-stopped=*)
+          call_wait_stopped=`echo $arg | sed -e 's/--wait-stopped=//'`
+          num=`expr "$call_wait_stopped" : "\([0-9]*\)"`
+          if [ "$num" != "$call_wait_stopped" ]; then
+              echo error: argument to --wait-stopped is $call_wait_stopped, not a number
+              exit 1
+          fi;;
+      --wait-stopped)
+          call_wait_stopped=30;;
       -d|--debug)
           debug=" -boot start_sasl -yaws debug ";;
       --nodebug)
@@ -303,6 +328,8 @@ YAWS_HEART_SECS=${YAWS_HEART_SECS:-60}
 export YAWS_HEART_COUNT YAWS_HEART_SECS
 
 [ -n "$call_wait_started" ] && wait_started $call_wait_started
+
+[ -n "$call_wait_stopped" ] && wait_stopped $call_wait_stopped
 
 if [ -n "$check" ]; then
     checkid=${id:-default}

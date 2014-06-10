@@ -5,11 +5,7 @@
 /*          posix interface                                  */
 
 
-#ifndef WIN32
 #include <unistd.h>
-#endif
-
-
 #include <sys/types.h>
 #include <stdio.h>
 #include <string.h>

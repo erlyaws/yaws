@@ -6,8 +6,8 @@
          update/3
         ]).
 
--include("../../include/yaws.hrl").
--include("../../include/yaws_api.hrl").
+-include("yaws.hrl").
+-include("yaws_api.hrl").
 
 -define(SHAPER_DB, shaper_db).
 

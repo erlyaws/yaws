@@ -1,7 +1,8 @@
 -module(app_test).
--include("../include/tftest.hrl").
--include_lib("ibrowse/include/ibrowse.hrl").
 -compile(export_all).
+
+-include_lib("ibrowse/include/ibrowse.hrl").
+-include("tftest.hrl").
 
 
 %% Way to invoke just one test

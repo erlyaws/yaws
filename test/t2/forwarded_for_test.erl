@@ -1,7 +1,7 @@
 -module(forwarded_for_test).
 -export([out/1]).
 
--include("../../include/yaws_api.hrl").
+-include("yaws_api.hrl").
 
 out(Arg) ->
     Fwd = yaws_api:headers_x_forwarded_for(Arg#arg.headers),

@@ -1,11 +1,11 @@
 <project>
     <shortName>Yaws</shortName>
-    <fullName>Yaws webserver @vsn@</fullName>
-    <version>@vsn@</version>
+    <fullName>Yaws webserver @YAWS_VSN@</fullName>
+    <version>@YAWS_VSN@</version>
     <installerFilename></installerFilename>
     <readmeFile></readmeFile>
-    <licenseFile>LICENSE.txt</licenseFile>
-    <splashImage>img/yaws_head.gif</splashImage>
+    <licenseFile>LICENSE</licenseFile>
+    <splashImage>@abs_srcdir@/img/yaws_head.gif</splashImage>
     <enableRollback>1</enableRollback>
     <saveRelativePaths>1</saveRelativePaths>
     <componentList>
@@ -63,15 +63,6 @@
                           <scope>system</scope>
                           <path>${installdir}/bin</path>
                         </addDirectoryToPath>
-                        <substitute>
-                          <files>${installdir}/README.txt</files>
-                          <substitutionList>
-                            <substitution>
-                              <pattern>%yawsdir%</pattern>
-                              <value>${installdir}</value>
-                            </substitution>
-                          </substitutionList>
-                        </substitute>
 
                         <substitute>
                           <files>${installdir}/yaws.conf</files>
@@ -89,9 +80,6 @@
                     <distributionFileList>
                         <distributionDirectory>
                             <origin>bin</origin>
-                        </distributionDirectory>
-                        <distributionDirectory>
-                            <origin>scripts</origin>
                         </distributionDirectory>
                         <distributionDirectory>
                             <origin>logs</origin>
@@ -118,7 +106,7 @@
                           <origin>priv</origin>
                         </distributionDirectory>
                         <distributionFile>
-                            <origin>LICENSE.txt</origin>
+                            <origin>LICENSE</origin>
                         </distributionFile>
                         <distributionFile>
                             <origin>yaws.conf</origin>
@@ -126,15 +114,15 @@
                         <distributionFile>
                             <origin>README.txt</origin>
                         </distributionFile>
-                        <distributionFile>
+                        <!-- distributionFile>
                             <origin>include.mk</origin>
-                        </distributionFile>
+                        </distributionFile -->
                         <distributionFile>
                             <origin>vsn.mk</origin>
                         </distributionFile>
-                        <distributionDirectory>
+                        <!-- distributionDirectory>
                             <origin>src</origin>
-                        </distributionDirectory>
+                        </distributionDirectory -->
                         <distributionDirectory>
                             <origin>examples</origin>
                         </distributionDirectory>

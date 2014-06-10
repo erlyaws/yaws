@@ -14,7 +14,7 @@ yaws=%prefix%/bin/yaws
 # By default we run with the default id
 # idopts="--id myserverid"
 
-conf="--conf %etcdir%yaws/yaws.conf"
+conf="--conf %etcdir%/yaws/yaws.conf"
 
 opts="start stop reload restart query"  
 

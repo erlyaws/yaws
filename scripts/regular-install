@@ -1,29 +1,71 @@
 #!/bin/sh
 
-# Used by scripts/Makefile and scripts/rebar-pre-script to
-# install yaws
-
-rm -rf /tmp/yaws 2>/dev/null
-
 set -e
 
-./Install "${PREFIX}" "${ERL}" "${WERL}" "${ETCDIR}/" \
-    "${VARDIR}/" "${ERLBINDIR}/" "${DESTDIR}" "${LIBDIR}"
+p=${PREFIX}
+e=${ETCDIR}
 
-conffile="${DESTDIR}${ETCDIR}/yaws/yaws.conf"
-if [ -f "$conffile" ]; then
-    echo "Keeping old config file $conffile"
-    cp yaws.conf "${conffile}.template"
+install -d ${DESTDIR}${ETCDIR}
+install -d ${DESTDIR}${VARDIR}/log/yaws
+
+## seems gentoo don't like to be installed in /usr/local/etc
+## since /sbin/runscript still reads /etc/conf.d
+if [ -f /etc/gentoo-release ]; then
+    install -d ${DESTDIR}${ETCDIR}/init.d/
+    install -d ${DESTDIR}${ETCDIR}/conf.d/
+    install -d ${DESTDIR}${VARDIR}/run/yaws
+    chmod a+rwx ${DESTDIR}${VARDIR}/run/yaws
+    sed -e  "s;%prefix%;$p;g"  -e "s;%etcdir%;$e;g" \
+        gentoo/init.d.yaws > ${DESTDIR}${ETCDIR}/init.d/yaws
+    chmod +x ${DESTDIR}${ETCDIR}/init.d/yaws
+elif [ -f /etc/redhat-release ]; then
+    install -d ${DESTDIR}${ETCDIR}/init.d
+    install -d ${DESTDIR}${VARDIR}/run/yaws
+    chmod a+rwx ${DESTDIR}${VARDIR}/run/yaws
+    sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" \
+        redhat/yaws.init.d >  ${DESTDIR}${ETCDIR}/init.d/yaws
+    chmod +x ${DESTDIR}${ETCDIR}/init.d/yaws
+elif [ -f /etc/SuSE-release -o -f /etc/suseservers ]; then
+    install -d ${DESTDIR}${ETCDIR}/init.d
+    install -d ${DESTDIR}${VARDIR}/run/yaws
+    chmod a+rwx ${DESTDIR}${VARDIR}/run/yaws
+    sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" \
+        suse/yaws.init.d > ${DESTDIR}${ETCDIR}/init.d/yaws
+    chmod +x ${DESTDIR}${ETCDIR}/init.d/yaws
+elif [ -f /etc/debian_version ]; then
+    install -d ${DESTDIR}${ETCDIR}/init.d
+    install -d ${DESTDIR}${VARDIR}/run/yaws
+    chmod a+rwx ${DESTDIR}${VARDIR}/run/yaws
+    sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" \
+        debian/yaws.init.d >  ${DESTDIR}${ETCDIR}/init.d/yaws
+    chmod +x ${DESTDIR}${ETCDIR}/init.d/yaws
+
+elif [ "`uname -s`" = "Darwin" -a `id -u` = 0 ]; then
+     startupdir="/Library/StartupItems/Yaws"
+     if [ ! -e ${startupdir} ]; then
+       mkdir ${startupdir};
+     elif [ ! -d ${startupdir} ]; then
+         echo "${startupdir} exists but is not a directory, bailing out ..."
+         exit 1
+     fi
+     sed -e "s;%prefix%;$p;g" darwin/Yaws.StartupItem > ${startupdir}/Yaws
+     chmod +x ${startupdir}/Yaws
+     cp darwin/Yaws.plist ${startupdir}/StartupParameters.plist
+      # MacOS is particular about the ownership of startup items.
+     chown -R root:wheel ${startupdir}
+elif [ "`uname -s`" = "FreeBSD" ]; then
+    install -d ${DESTDIR}${ETCDIR}/rc.d
+    sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" \
+        freebsd/yaws > ${DESTDIR}${ETCDIR}/rc.d/yaws
+    chmod +x ${DESTDIR}${ETCDIR}/rc.d/yaws
+elif [ "`uname -s`" = "NetBSD" ]; then
+    sed -e "s;%prefix%;$p;g" -e "s;%etcdir%;$e;g" \
+        netbsd/yaws.sh > ${DESTDIR}${ETCDIR}/rc.d/yaws
+    chmod +x /etc/rc.d/yaws
 else
-    echo "Installing $conffile"
-    if [ -n "$DESTDIR" ]; then
-        [ -d "$DESTDIR" ] || mkdir "$DESTDIR"
-    fi
-    [ -d "${DESTDIR}${ETCDIR}" ] || mkdir "${DESTDIR}${ETCDIR}"
-    [ -d "${DESTDIR}${ETCDIR}/yaws" ] || mkdir "${DESTDIR}${ETCDIR}/yaws"
-    cp yaws.conf "$conffile"
+    install -d ${DESTDIR}${ETCDIR}
+    echo "Don't know how to make /etc/init scripts for this system"
+    echo "possibly add ${PREFIX}/bin/yaws --daemon --heart to your /etc/rc.local manually"
 fi
-cp ../ssl/yaws-cert.pem "${DESTDIR}${ETCDIR}/yaws"
-cp ../ssl/yaws-key.pem "${DESTDIR}${ETCDIR}/yaws"
 
 exit 0

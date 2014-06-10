@@ -1,8 +1,9 @@
 -module(app_test).
--include("../include/tftest.hrl").
--include_lib("ibrowse/include/ibrowse.hrl").
--include("../../include/yaws.hrl").
 -compile(export_all).
+
+-include("yaws.hrl").
+-include_lib("ibrowse/include/ibrowse.hrl").
+-include("tftest.hrl").
 
 
 %% Way to invoke just one test
@@ -116,13 +117,13 @@ test_bad_redirect() ->
     Env = #env{debug=false, trace=false, id="test", embedded=false},
 
     ?line {error, _} =
-        yaws_config:load(Env#env{conf={file, "bad_redirect1.conf"}}),
+        yaws_config:load(Env#env{conf={file, ?srcdir ++ "/bad_redirect1.conf"}}),
     ?line {error, _} =
-        yaws_config:load(Env#env{conf={file, "bad_redirect2.conf"}}),
+        yaws_config:load(Env#env{conf={file, ?srcdir ++ "/bad_redirect2.conf"}}),
     ?line {error, _} =
-        yaws_config:load(Env#env{conf={file, "bad_redirect3.conf"}}),
+        yaws_config:load(Env#env{conf={file, ?srcdir ++ "/bad_redirect3.conf"}}),
     ?line {error, _} =
-        yaws_config:load(Env#env{conf={file, "bad_redirect4.conf"}}),
+        yaws_config:load(Env#env{conf={file, ?srcdir ++ "/bad_redirect4.conf"}}),
     ok.
 
 

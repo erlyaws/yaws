@@ -20,17 +20,12 @@
 %% This function is used during Yaws' compilation. To rebuild/reload mime_types
 %% module, generate/3 _MUST_ be used.
 generate() ->
-    %% By default, mime_types.erl is generated in the same directory than
-    %% mime_type_c.erl. The priv directory is supposed to be relative to this
-    %% source directory.
-    SrcDir = filename:dirname(
-               proplists:get_value(source, ?MODULE:module_info(compile))
-              ),
-    GInfo   = #mime_types_info{
-      mime_types_file = filename:join(SrcDir, "../priv/mime.types"),
-      default_charset = ?YAWS_CHARSET
-     },
-    ModFile = filename:join(SrcDir,  "mime_types.erl"),
+    AppDir = yaws:get_app_dir(),
+    GInfo  = #mime_types_info{
+                mime_types_file = filename:join(AppDir, "priv/mime.types"),
+                default_charset = ?YAWS_CHARSET
+               },
+    ModFile = filename:join(AppDir,  "src/mime_types.erl"),
 
     case generate(ModFile, GInfo, []) of
         ok ->
@@ -52,29 +47,15 @@ generate(ModFile, GInfo, SInfoMap) ->
                             {Name, Info} <- [{global, GInfo}|SInfoMap] ],
 
             %% Generate module Header
-            %%
-            %% We must make the difference between generation during Yaws
-            %% compilation and generation during Yaws startup.
-            %% below, ignore dialyzer warning:
-            %% "The pattern 'false' can never match the type 'true'"
-            Inc = case yaws_generated:is_local_install() of
-                      true ->
-                          EbinDir = filename:dirname(code:which(?MODULE)),
-                          IncDir  = filename:join(filename:dirname(EbinDir),
-                                                  "include"),
-                          F = filename:absname(
-                                filename:join([IncDir, "yaws.hrl"])
-                               ),
-                          "-include(\""++F++"\").";
-                      _ ->
-                          "-include_lib(\"yaws/include/yaws.hrl\")."
-                  end,
+            IncDir  = yaws:get_inc_dir(),
+            IncFile = filename:join(IncDir, "yaws.hrl"),
+            Include = "-include(\""++IncFile++"\").",
             io:format(Fd,
                       "-module(mime_types).~n~n"
                       "-export([default_type/0, default_type/1]).~n"
                       "-export([t/1, revt/1]).~n"
                       "-export([t/2, revt/2]).~n~n"
-                      "~s~n~n", [Inc]),
+                      "~s~n~n", [Include]),
 
 
             %% Generate default_type/0, t/1 and revt/1

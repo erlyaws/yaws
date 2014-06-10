@@ -1,0 +1,18 @@
+#!/bin/bash --
+
+progname=`basename $0`
+localstatedir=@localstatedir@
+
+function usage () {
+    cat <<EOF
+usage: $progname <wob file>
+EOF
+    exit 1
+}
+
+
+if test $# -ne 2 ; then
+	usage
+fi
+
+erl -noinput -pa @appsdir@/wiki/ebin -s wiki addFile $1 $2

@@ -536,7 +536,7 @@ collect_wiki_link([H|T], L, Quoted) when $a =< H, H =< $z ->
 collect_wiki_link([H|T], L, Quoted) when $0 =< H, H =< $9 ->
     collect_wiki_link(T, [H|L], Quoted);
 collect_wiki_link(S=[H|T], L, Quoted) ->
-    case member(H, "äÄöÖåÅ") of
+    case member(H, "Ã¤Ã„Ã¶Ã–Ã¥Ã…") of
         true ->
             collect_wiki_link(T, [H|L], Quoted);
         false ->

@@ -1,6 +1,7 @@
 -module(streamtest).
 -export([out/1, streamer/1, close_streamer/2]).
--include("../../include/yaws_api.hrl").
+
+-include("yaws_api.hrl").
 
 
 out(Arg) ->

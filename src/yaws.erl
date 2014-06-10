@@ -163,7 +163,7 @@
 -export([parse_ipmask/1, match_ipmask/2]).
 
 -export([get_app_dir/0, get_ebin_dir/0, get_priv_dir/0,
-         get_inc_dir/0, get_src_dir/0]).
+         get_inc_dir/0]).
 
 %% Internal
 -export([local_time_as_gmt_string/1, universal_time_as_string/1,
@@ -679,8 +679,13 @@ dohup(Sock) ->
           end,
     gen_event:notify(yaws_event_manager, {yaws_hupped, Res}),
     yaws_log:rotate(Res),
-    gen_tcp:send(Sock, io_lib:format("hupped: ~p~n", [Res])),
-    gen_tcp:close(Sock).
+    case Sock of
+        undefined ->
+            ok;
+        _  ->
+            gen_tcp:send(Sock, io_lib:format("hupped: ~p~n", [Res])),
+            gen_tcp:close(Sock)
+    end.
 
 
 
@@ -2792,30 +2797,22 @@ compare_ips(_,                  _)                               -> error.
 
 %% ----
 get_app_subdir(SubDir) when is_atom(SubDir) ->
-    %% below, ignore dialyzer warning:
-    %% "The pattern 'false' can never match the type 'true'"
-    case yaws_generated:is_local_install() of
-        true ->
-            EbinDir = get_ebin_dir(),
-            filename:join(filename:dirname(EbinDir), atom_to_list(SubDir));
-        false ->
-            code:lib_dir(yaws, SubDir)
-    end.
+    filename:join(get_app_dir(), atom_to_list(SubDir)).
 
 get_app_dir() ->
-    %% below, ignore dialyzer warning:
-    %% "The pattern 'false' can never match the type 'true'"
-    case yaws_generated:is_local_install() of
-        true  -> filename:dirname(get_ebin_dir());
-        false -> code:lib_dir(yaws)
+    case application:get_env(yaws, app_dir) of
+        {ok, AppDir} ->
+            AppDir;
+        undefined ->
+            AppDir = filename:absname(
+                       filename:dirname(filename:dirname(code:which(?MODULE)))
+                      ),
+            application:set_env(yaws, app_dir, AppDir),
+            AppDir
     end.
 
-get_src_dir() ->
-    Info = ?MODULE:module_info(compile),
-    filename:dirname(proplists:get_value(source, Info)).
-
 get_ebin_dir() ->
-    filename:dirname(code:which(?MODULE)).
+    get_app_subdir(ebin).
 
 get_priv_dir() ->
     get_app_subdir(priv).

@@ -1,0 +1,72 @@
+#!/bin/bash --
+#    -*- Shell-script -*- 
+#    File:	 updateWiki.sh
+#    Author:	 Johan Bevemyr
+#    Created:	 Fri May 16 22:06:00 2003
+#    Purpose:    Update existing Wiki installations
+
+progname=`basename $0`
+
+function usage () {
+    cat <<EOF
+usage: $progname [directories]
+EOF
+    exit 1
+}
+
+wikisrc=@top_srcdir@/applications/wiki/www
+suffix="."`date -I`
+
+updategifs=
+while [ x$updategifs = x ]; do
+   echo
+   echo -n "Do you want to replace the gifs in WikiPreferences.files?"\
+	   "(yes or no) [no] "
+   read reply leftover
+   case $reply in
+      y* | Y*)
+         updategifs=1
+	 ;;
+      n* | N*)
+         updategifs=0
+	 ;;
+   esac
+   if [ x$reply = x ] ; then
+      updategifs=0
+   fi
+done
+
+function updateDir () {
+    if test -d $udir ; then
+	echo "updating  $udir"
+	install -b -S $suffix $wikisrc/*.yaws $udir
+	install -b -S $suffix $wikisrc/*.wob $udir
+	if test '!' -d $udir/WikiPreferences.files ; then
+	    mkdir $udir/WikiPreferences.files
+	fi
+	install -b -S $suffix $wikisrc/WikiPreferences.files/*.css \
+	    $udir/WikiPreferences.files
+	install -b -S $suffix $wikisrc/WikiPreferences.files/*.html \
+	    $udir/WikiPreferences.files
+	if [ $updategifs = 1 ]; then
+	    install -b -S $suffix $wikisrc/WikiPreferences.files/*.gif \
+		$udir/WikiPreferences.files
+	    install -b -S $suffix $wikisrc/WikiPreferences.files/*.png \
+		$udir/WikiPreferences.files
+	fi
+    else
+	echo "$progname: $udir is not a directory"
+	usage
+    fi
+}
+
+if test $# -lt 1 ; then
+    usage
+fi
+
+while test $# -gt 0 ; do
+    udir=$1
+    shift 1
+    updateDir
+done
+

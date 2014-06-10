@@ -1,6 +1,7 @@
 -module(app_test).
--include("../include/tftest.hrl").
 -compile(export_all).
+
+-include("tftest.hrl").
 
 -record(frame, {fin     = true,
                 rsv     = 0,
@@ -22,6 +23,12 @@
 -define(WS_STATUS_INVALID_PAYLOAD,  1007).
 -define(WS_STATUS_MSG_TOO_BIG,      1009).
 -define(WS_STATUS_INTERNAL_ERROR,   1011).
+
+-ifdef(HAVE_CRYPTO_HASH).
+-define(CRYPTO_HASH(V), crypto:hash(sha,V)).
+-else.
+-define(CRYPTO_HASH(V), crypto:sha(V)).
+-endif.
 
 %% Way to invoke just one test
 start([F]) ->
@@ -1732,7 +1739,7 @@ wsflush(Sock, WithTcpClose, Acc) ->
 %% ----
 is_valid_handshake_hash(Key, Hash) ->
     Salted = Key ++ "258EAFA5-E914-47DA-95CA-C5AB0DC85B11",
-    HashBin = crypto:sha(Salted),
+    HashBin = ?CRYPTO_HASH(Salted),
     Hash == base64:encode_to_string(HashBin).
 
 

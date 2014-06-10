@@ -1,0 +1,24 @@
+NOTE1:
+
+  In latest version of cygwin, there is a known bug with make. It does
+  not handle windows paths properly. So you need to downgrade it to
+  get dos driver letter specification to work.  (i.e. c:/foo/bar.):
+
+  1. get a patched version of make 3.81: http://www.cmake.org/files/cygwin/make.exe
+  2. replace /usr/bin/make.exe by this new one
+  3. install libintl3
+
+
+NOTE2:
+
+  unix paths in configuration file (yaws.conf) are not supported,
+  because on windows, erlang is not aware of cygwin and understands
+  windows paths only. The generated file will be created using windows
+  paths but tests are written for unix systems. So they will fail on
+  cygwin.
+
+NOTE3:
+
+  Yaws is not tested on cygwin. If possible, use the windows
+  installer. See http://yaws.hyber.org/download.
+

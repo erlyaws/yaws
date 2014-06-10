@@ -5,14 +5,15 @@
 
 set -e
 
-cat yaws.conf.template | \
-    ./Subst %yawsdir% "$YAWSDIR" | \
-    ./Subst %logdir% "$LOGDIR" | \
-    ./Subst %vardir% "$VARDIR" | \
-    ./Subst %host% `hostname` | \
-    ./Subst %port% $PORT | \
-    ./Subst %docroot% "$DOCROOT" | \
-    ./Subst %certdir% "$CERTDIR" | \
+cat yaws.conf.template                  | \
+    ./Subst %yawsdir% "$YAWSDIR"        | \
+    ./Subst %logdir%  "$LOGDIR"         | \
+    ./Subst %vardir%  "$VARDIR"         | \
+    ./Subst %host%    `hostname`        | \
+    ./Subst %port%    $PORT             | \
+    ./Subst %docroot% "$DOCROOT"        | \
+    ./Subst %tmpdir%  "${TMPDIR:-/tmp}" | \
+    ./Subst %certdir% "$CERTDIR"        | \
     ./Subst %sslport% $SSLPORT
 
 exit 0

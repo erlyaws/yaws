@@ -2,6 +2,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-include("tftest.hrl").
+
 -export([mfa_fun/1, nested_mfa_fun/1, nested_mfa_attr_fun/1]).
 
 get_title() ->

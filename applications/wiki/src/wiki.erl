@@ -2126,15 +2126,15 @@ add_blanks_nicely([]) ->
 
 
 big_letter(H) when $A =< H, H =< $Z -> true;
-big_letter($Å) -> true;
-big_letter($Ä) -> true;
-big_letter($Ö) -> true;
+big_letter($Ã…) -> true;
+big_letter($Ã„) -> true;
+big_letter($Ã–) -> true;
 big_letter(_)  -> false.
 
 little_letter(H) when $a =< H, H =< $z -> true;
-little_letter($å) -> true;
-little_letter($ä) -> true;
-little_letter($ö) -> true;
+little_letter($Ã¥) -> true;
+little_letter($Ã¤) -> true;
+little_letter($Ã¶) -> true;
 little_letter(_)  -> false.
 
 show({bad_password, Page}, Root) ->

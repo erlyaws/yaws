@@ -34,7 +34,7 @@
 
 \usepackage[T1]{fontenc}
 \usepackage{xspace}
-\usepackage{html}
+%\usepackage{html}
 
 \makeatother
 \begin{document}
@@ -212,11 +212,7 @@ The \verb+make+ command will compile the \Yaws\  web server with the
 
 \item  \verb+make install+ - will install the executable called
          \verb+yaws+ in \verb+/usr/local/bin/+ and a working
-         configuration file in \verb+/etc/yaws.conf+
-
-\item  \verb+make local_install+ - will install the executable in
-         \verb+$HOME/bin+ and a working configuration file in
-         \verb+$HOME/yaws.conf+
+         configuration file in \verb+/usr/local/etc/yaws.conf+
 
 \end{itemize}
 
@@ -245,13 +241,18 @@ external requirements. A future release of \verb+rebar+ will allow you
 to create a slim release that doesn't bundle Erlang/OTP. This is not yet
 available.
 
-While developing a \Yaws\  site, it's typically most convenient to
-use the \verb+local_install+ and run \Yaws\  as a non-privileged user.
-
+While developing a \Yaws\ site, it's typically most convenient to do a
+\verb+local+ install and run \Yaws\ as a non-privileged user using
+\verb+--prefix+ option of the \verb+configure+ script:
+\begin{verbatim}
+# ./configure --prefix=/path/to/yaws && make install
+# /path/to/yaws/bin/yaws -i
+\end{verbatim}
 
 \subsection{Configure}
-Let's take a look at the config file that gets written to \verb+$HOME+ after
-a \verb+local_install+.
+Let's take a look at the config file that gets written after a \verb+local+
+install in \verb+/home/klacke/yaws/+. The file is
+\verb+/home/klacke/yaws/etc/yaws/yaws.conf+:
 
 
 \begin{figure}[h]
@@ -259,16 +260,18 @@ a \verb+local_install+.
 
 # first we have a set of globals
 
-logdir = .
-ebin_dir = /home/klacke/yaws/yaws/examples/ebin
-include_dir = /home/klacke/yaws/yaws/examples/include
+logdir = /home/klacke/yaws/var/log/yaws
+ebin_dir = /home/klacke/yaws/lib/yaws/examples/ebin
+include_dir = /home/klacke/yaws/lib/yaws/examples/include
+
+...
 
 # and then a set of servers
 
 <server localhost>
         port = 8000
         listen = 127.0.0.1
-        docroot = /home/klacke/yaws/yaws/scripts/../www
+        docroot = /home/klacke/yaws/var/yaws/www
 </server>
 
 
@@ -280,9 +283,7 @@ The configuration consists of an initial set of global
 variables that are valid for all defined servers.
 
 The only global directive we need to care about for now is the logdir.
-\Yaws\ produces a number of log files and they will---using the
-Configuration from Figure 2.1---end up in the current working
-directory.  We start \Yaws\ interactively as
+\Yaws\ produces a number of log files. We start \Yaws\ interactively as
 
 \begin{verbatim}
 # ~/bin/yaws -i
@@ -291,7 +292,7 @@ Erlang (BEAM) emulator version 5.1.2.b2 [source]
 Eshell V5.1.2.b2  (abort with ^G)
 1>
 =INFO REPORT==== 30-Oct-2002::01:38:22 ===
-Using config file /home/klacke/yaws.conf
+Using config file /home/klacke/yaws/etc/yaws/yaws.conf
 =INFO REPORT==== 30-Oct-2002::01:38:22 ===
 Listening to 127.0.0.1:8000 for servers ["localhost:8000"]
 
@@ -322,10 +323,10 @@ Nevertheless, our server listens to \textit{127.0.0.1:8000} and
 has the name "localhost", thus the correct URL for this server
 is \verb+http://localhost:8000+.
 
-The document root (docroot) for the server is set to the \verb+www+
-directory in the \Yaws\ source code distribution. This directory
-contains a bunch of examples and we should be able to run all those
- example now on the URL \verb+http://localhost:8000+.
+The document root (docroot) for the server is a copy of the \verb+www+ directory
+in the \Yaws\ source code distribution. This directory contains a bunch of
+examples and we should be able to run all those example now on the URL
+\verb+http://localhost:8000+.
 
 Instead of editing and adding files in the \Yaws\ \verb+www+
 directory, we create yet another server on the same IP address but a
@@ -348,7 +349,7 @@ include_dir = /home/klacke/test
 <server localhost>
         port = 8000
         listen = 127.0.0.1
-        docroot = /home/klacke/yaws/yaws/www
+        docroot = /home/klacke/yaws/var/yaws/www
 </server>
 
 <server localhost>

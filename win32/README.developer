@@ -1,12 +1,19 @@
+To cross-compile Yaws for windows, we need to install mingw32 compiler then run
+the configure script with --host option:
 
-To compile this stuff, two things in particular are required.
-One is a copy of the install-builder. Since yaws is an open
-source project. We have a free license of bitrock installer.
+  $> ./configure --host i586-mingw32msvc && make
 
-Download the bitrock installer and install it somewhere.
-http://www.bitrock.com/download_installbuilder_download.html
 
-Next is the mingw crosscompiler. On Ubuntu,debian,gentoo
-it's just a simple matter of installing mingw
+To create an installer, we need a copy of the install-builder. Since yaws is an
+open source project. We have a free license of bitrock installer. Download the
+bitrock installer and install it somewhere
+(http://www.bitrock.com/download_installbuilder_download.html), Then run:
 
+  $> make mkinstaller INSTALL_BUILDER=/path/to/installbuilder
+
+By default INSTALL_BUILDER variable points on '${HOME}/installbuilder-5.4.14'.
+
+Here, 'mkinstaller' target will use a distribution directory to build Yaws
+installer, so you don't need to run configure script with --host option. This
+will produce the installer 'Yaws-{VSN}-windows-installer.exe'
 

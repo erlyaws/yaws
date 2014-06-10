@@ -1,8 +1,8 @@
 
 Modify yaws.conf as:
 %% add path to yapp and yapp example - modify to your own installation directory
-ebin_dir = /home/mikael/local/yaws/applications/yapp/ebin
-ebin_dir = /home/mikael/local/src/yaws/applications/yapp/examples/yapp_ex_1/ebin
+ebin_dir = $(prefix)/lib/yapp/ebin
+ebin_dir = $(prefix)/lib/yapp/examples/yapp_ex_1/ebin
 
 %% add yapp runmod
 runmod = yapp

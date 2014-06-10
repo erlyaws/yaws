@@ -12,15 +12,12 @@
 
 -export([version/0,
          vardir/0,
-         etcdir/0,
-         is_local_install/0]).
+         etcdir/0]).
 
 version() -> "%VSN%".
 
 vardir() ->  "%VARDIR%".
 
 etcdir() -> "%ETCDIR%".
-
-is_local_install() -> %localinstall%.
 
 

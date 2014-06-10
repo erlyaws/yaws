@@ -1,0 +1,124 @@
+logdir = @abs_builddir@/logs
+
+ebin_dir = @abs_top_builddir@/test/ibrowse/ebin
+
+trace                          = false
+copy_error_log                 = true
+log_wrap_size                  = 1000000
+log_resolve_hostname           = false
+fail_on_bind_err               = true
+pick_first_virthost_on_nomatch = true
+use_fdsrv                      = false
+keepalive_timeout              = 10000
+
+
+<server localhost>
+        port = 8000
+        listen = 0.0.0.0
+        deflate = true
+        docroot = @abs_srcdir@/www @abs_builddir@/docroot-test
+        appmods = <cgi-bin, yaws_appmod_cgi> streamtest wrap_log
+</server>
+
+<server localhost>
+        port = 8002
+        listen = 0.0.0.0
+        appmods = </, app_test>
+</server>
+
+<server localhost>
+        port = 8003
+        listen = 0.0.0.0
+        docroot = @abs_top_srcdir@/www
+        appmods = </, app_test exclude_paths icons>
+</server>
+
+<server localhost>
+        port = 8004
+        listen = 0.0.0.0
+        docroot = @abs_builddir@/docroot-test
+        appmods = <non_root_appmod, app_test>
+</server>
+
+<server localhost>
+        port = 8005
+        listen = 0.0.0.0
+        appmods = </, jsontest>
+</server>
+
+<server localhost>
+        port = 8006
+        listen = 0.0.0.0
+        docroot = @abs_srcdir@/www
+        auth_log = true
+        partial_post_size = 2048000
+        php_handler = <extern, phptest:out>
+        arg_rewrite_mod = rewritetest
+        expires = <text/plain, access+2592000>
+        appmods = posttest reentranttest flushtest
+</server>
+
+<server localhost>
+        port = 8007
+        listen = 0.0.0.0
+        docroot = @abs_srcdir@/www
+        shaper = shapertest
+</server>
+
+<server localhost>
+        port = 8008
+        listen = 0.0.0.0
+        docroot = @abs_srcdir@/www
+        appmods = <cgi-bin, yaws_appmod_cgi>
+</server>
+
+<server localhost>
+        port = 8009
+        listen = 0.0.0.0
+        appmods = </, throwtest>
+</server>
+
+<server localhost>
+        port = 8010
+        listen = 0.0.0.0
+        docroot = @abs_top_srcdir@/www
+        index_files = index.html /testdir
+</server>
+
+<server localhost>
+        port = 8011
+        listen = 0.0.0.0
+        docroot = @abs_top_srcdir@/www
+        dispatchmod = dispatchmod_tester
+</server>
+
+<server localhost>
+        port = 8012
+        listen = 0.0.0.0
+        docroot = @abs_builddir@/docroot-test
+        appmods = </, appmod1> appmod1 </appmod2, appmod2> </1000.txt, appmod3>
+</server>
+
+<server localhost>
+        port = 8013
+        listen = 0.0.0.0
+        docroot = @abs_top_srcdir@/www
+        appmods = </index.yaws, cache_appmod_test>
+</server>
+
+<server localhost>
+        port = 8014
+        listen = 0.0.0.0
+        appmods = </, forwarded_for_test>
+</server>
+
+<server localhost>
+        port = 8443
+        listen = 0.0.0.0
+        docroot = @abs_srcdir@/www
+        <ssl>
+                keyfile = @abs_top_srcdir@/ssl/yaws-key.pem
+                certfile = @abs_top_srcdir@/ssl/yaws-cert.pem
+                depth = 0
+        </ssl>
+</server>

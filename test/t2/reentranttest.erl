@@ -1,8 +1,8 @@
 -module(reentranttest).
 -export([out/1]).
 
--include("../../include/yaws.hrl").
--include("../../include/yaws_api.hrl").
+-include("yaws.hrl").
+-include("yaws_api.hrl").
 
 out(Arg) ->
     Url = yaws_api:request_url(Arg),

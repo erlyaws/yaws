@@ -12,7 +12,7 @@ static unsigned char *fpath;
 
 static void readreg() {
     HKEY hKey;
-    unsigned int bsz = BSIZ;
+    DWORD bsz = BSIZ;
     // Check where yaws is installed, we need to -pa that path
     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,
                      "SOFTWARE\\Hyber\\Yaws",
@@ -22,18 +22,18 @@ static void readreg() {
             exit(1);
         }
     memset(path, 0, BSIZ);
-    int ret = RegQueryValueEx(hKey, "DIR", NULL, NULL, path, &bsz);
-    fpath = (unsigned char*)malloc(strlen(path));
+    /*int ret = */RegQueryValueEx(hKey, "DIR", NULL, NULL, path, &bsz);
+    fpath = (unsigned char*)malloc(strlen((char*)path));
     int i;
-    for(i = 0; i<strlen(path); i++ ) {
+    for(i = 0; i<strlen((char*)path); i++ ) {
         if (path[i] == '\\') {
             fpath[i] = '/';
         }
-        else 
+        else
             fpath[i] = path[i];
     }
     fpath[i] = 0;
-    
+
 }
 
 
@@ -45,7 +45,7 @@ int charg(char **argv, char *s1, char *s2, int p) {
 
 
 int runwait(char *execString) {
-    
+
     STARTUPINFO          si = { sizeof(si) };
     PROCESS_INFORMATION  pi;
 
@@ -54,7 +54,7 @@ int runwait(char *execString) {
     if(CreateProcess(0, execString, NULL, NULL, FALSE, 0, 0, 0, &si, &pi))
         {
             unsigned long ret = 0;
-            
+
             // wait for process to finish
             WaitForSingleObject(pi.hProcess, INFINITE);
             if (GetExitCodeProcess(pi.hProcess, &ret) == 0)
@@ -65,7 +65,7 @@ int runwait(char *execString) {
         }
     printf("Failed to create the process entirely\n");
     printf("Tried to invoke: <%s> \n", execString);
-    printf("Make sure you have <erl> in your environment PATH \n"); 
+    printf("Make sure you have <erl> in your environment PATH \n");
     return 1;
 }
 
@@ -109,7 +109,7 @@ int help() {
 "        yaws --load Modules                  -- load modules "
 "        yaws --ls                            -- list Yaws nodes and their status"
 "        yaws --ctltrace traffic|http         -- toggle trace of running daemon");
-    
+
     return(0);
 }
 
@@ -117,8 +117,8 @@ int help() {
 
 int main(int argc, char**argv) {
 
-    int interactive  = 1; 
-    int winteractive  = 0; 
+    int interactive  = 1;
+    int winteractive  = 0;
     int daemon = 0;
     char *conf = NULL;
     char *sname = NULL;
@@ -197,17 +197,17 @@ int main(int argc, char**argv) {
         else if (charg(argv, "--debug-dump", NULL, p)) {
             return nosh("-s yaws_ctl debug_dump default ");
         }
-        else   if (charg(argv, "--version", "-v", p)) {  
+        else   if (charg(argv, "--version", "-v", p)) {
             nosh("-s yaws printversion");
             exit(0);
         }
-        else   if (charg(argv, "--sname", "-sname", p)) {  
+        else   if (charg(argv, "--sname", "-sname", p)) {
              sname = argv[++p];
         }
-        else   if (charg(argv, "--name", "-name", p)) {  
+        else   if (charg(argv, "--name", "-name", p)) {
              name = argv[++p];
         }
-        else   if (charg(argv, "--erlarg", "-erlarg", p)) {  
+        else   if (charg(argv, "--erlarg", "-erlarg", p)) {
             sprintf(tbuf, " %s ", argv[++p]);
             strcat(erlarg, tbuf);
         }
@@ -226,17 +226,17 @@ int main(int argc, char**argv) {
         strcat(execString, " -boot start_sasl -yaws debug ");
     if ((interactive == 0 && winteractive == 0) || daemon == 1)
         strcat(execString, " -detached ");
-    
-    if (conf == NULL) 
+
+    if (conf == NULL)
         sprintf(tbuf, " -conf \"%s\\yaws.conf\" ", path);
-    else 
+    else
         sprintf(tbuf, " -conf \"%s\" ", conf);
     strcat(execString, tbuf);
     strcat(execString, " -run yaws -yaws id default ");
 
-    if (mnesia != NULL) 
+    if (mnesia != NULL)
         strcat(execString, mnesia);
-    if (trace != NULL) 
+    if (trace != NULL)
         strcat(execString, trace);
     if (traceoutput != NULL)
         strcat(execString, traceoutput);
@@ -247,7 +247,7 @@ int main(int argc, char**argv) {
     } else if (name != NULL) {
         sprintf(tbuf, " -name %s ", name);
         strcat(execString, tbuf);
-    } 
+    }
     if (runmod != NULL) {
         sprintf(tbuf, " -runmod %s ", runmod);
         strcat(execString, tbuf);
@@ -256,5 +256,5 @@ int main(int argc, char**argv) {
     return runwait(execString);
 }
 
-               
+
 

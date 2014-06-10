@@ -3,10 +3,10 @@
 # Startup script for Yaws. Use this scripts for FreeBSD versions prior to 9.
 
 
-YAWS_BIN=%prefix%bin/yaws
+YAWS_BIN=%prefix%/bin/yaws
 # By default we run with the default id
 # YAWS_ID=myserverid
-CONF=%etcdir%yaws/yaws.conf
+CONF=%etcdir%/yaws/yaws.conf
 
 
 if [ "x${YAWS_ID}" = x ]; then

@@ -11,7 +11,6 @@ logdir = %logdir%
 # beam code can be placed. The daemon will add these
 # directories to its search path.
 ebin_dir = %yawsdir%/examples/ebin
-ebin_dir = %vardir%/yaws/ebin
 
 # This is a directory where application specific .hrl
 # files can be placed. Application-specific .yaws code can
@@ -122,7 +121,7 @@ keepalive_timeout = 30000
 <server localhost>
         port = %port%
         listen = 0.0.0.0
-        docroot = /tmp
+        docroot = %tmpdir%
         dir_listings = true
         auth_log = true
         statistics = true
@@ -138,7 +137,7 @@ keepalive_timeout = 30000
 
 <server %host%>
         port = %sslport%
-        docroot = /tmp
+        docroot = %tmpdir%
         listen = 0.0.0.0
         dir_listings = true
         auth_log = true

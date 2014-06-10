@@ -1,7 +1,9 @@
 -module(headers).
 -compile(export_all).
--include("../../include/yaws_api.hrl").
 -include_lib("eunit/include/eunit.hrl").
+
+-include("yaws_api.hrl").
+-include("tftest.hrl").
 
 set_headers_test() ->
     Value = "test value",

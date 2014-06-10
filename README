@@ -1,130 +1,131 @@
-This is yaws, a webserver for dynamic content written in Erlang.
+This is Yaws, a webserver for dynamic content written in Erlang.
 
 
 To build and install
 
 
-0. Get and install an Erlang system (http://www.erlang.org)
+1. Prepare build
 
-1. If you've cloned the source from github and you want to build using
-   configure and make, note there is no ./configure script in the
-   source, so create one:
+  Get and install an Erlang system (http://www.erlang.org)
 
-# autoconf
+  If you've cloned the source from github and you want to build using autotools,
+  note there is no ./configure script in the source, so create one:
 
-1.b Install build-deps. On Ubuntu/debian this is pretty much equal to
-# apt-get build-dep yaws
+        $> autoconf
 
-2. You can build using rebar:
+  Install build-deps. On Ubuntu/debian this is pretty much equal to
 
-# rebar get-deps compile
+        $> apt-get build-dep yaws
 
-  or via configure and make:
+2. Build
 
-# ./configure --prefix=/usr/local
+  You can build using rebar:
 
-  If using rebar, you'll get a local installation with yaws in
-  $HOME/bin and the yaws configuration file in $HOME/yaws.conf. If
-  using configuration and make, the build will be configured by
-  default for installation under /usr/local including var files in
-  /usr/local/var/run/yaws and etc files in /usr/local/etc/yaws.
+        $> rebar get-deps compile
 
-  NOTE: With configure, you can also change the target directory for
-  etc and var directories by using:
+  or via autotools:
 
-  --localstatedir=DIR     for files that should go in /var
-  --sysconfdir=DIR        for files that should go in /etc
-  --disable-pam           If we for some reason do not want pam support
-  --with-extrainclude=DIR Will add DIR to the include path
-                          May be useful if e.g. pam is installed
-		          somewhere where its usually not found
-  --with-defaultcharset=String  Will set the default charset used
-                        in generated page headers. Usually never needed.
+        $> ./configure --prefix=/usr/local
 
-  This way you can precisely control where you install Yaws (This is
-  useful for computers where you do not have right access to the
-  standard systemdirs).
+  If using rebar, you'll get a "local installation" with Yaws script in ./bin
+  and the Yaws configuration file in ./etc/yaws.
 
-  For example:
+  If using autotools, the build will be configured by default for installation
+  under /usr/local. For more information about installation directories and
+  other supported options, see the configure help. Useful options are:
 
-    ./configure --prefix=/home/install/yaws --localstatedir=/home/install/yaws/var --sysconfdir=/home/install/etc
+    --with-defaultcharset=CHARSET specify default charset, i.e UTF-8
+    --with-extrainclude=DIR       dir to include if e.g. pam is installed in some odd place
+    --with-erlang=PREFIX          prefix where Erlang is installed (optional)
 
-2b. Note to packagers (rpm, deb ...) All install targets support the
-    DESTDIR variable. Thus, if we do
 
-    ./configure --prefix=/usr; make
+  Note to packagers (rpm, deb ...) All install targets support the DESTDIR
+  variable. Thus, if we do
 
-    we can subsequently do:
+        $> ./configure --prefix=/usr; make
 
-    DESTDIR=/foo/bar make install
+  we can subsequently do:
 
-    All yaws files will be installed under DESTDIR, but all
-    code will assume yaws should be installed under /usr.
+        $> make install DESTDIR=/foo/bar
 
-3. make
+  All Yaws files will be installed under DESTDIR, but all code will assume Yaws
+  should be installed under /usr.
 
-    This will build the system.
+  Main make targets:
 
-   make docs
+    * all           : compile Yaws
+    * debug         : compile Yaws with debug flags
+    * clean         : remove files produced by all or debug target
+    * install       : do a proper install of Yaws
+    * doc or docs   : build the documentation
+    * check or test : launch tests
+    * cleantest     : remove files produced by check target
+    * dialyzer      : run dialyzer on Yaws
+    * mkinstaller   : build an installer for windows
+    * cleaninstaller: remove files produced by mkinstaller target
+    * apps          : compile Yaws applications (chat,mail,wiki,yapp)
+    * cleanapps     : remove files produced by apps target
+    * installapps   : install Yaws applications
+    * fullinstall   : install + installapps
+    * fullclean     : clean + cleantest + cleanapps + cleaninstaller
 
-    (Optional) You can issue this command if you want to build Yaws
-    documentation.
+3. Test your build
 
-   make local_install
+  With autotools, to test the build, you should install it somewhere:
 
-    This will create an executable script in the $HOME/bin directory
-    and a config file in $HOME/yaws.conf. This is for developers
-    only. This is the only type of installation "rebar compile"
-    supports.
+        $> ./configure --prefix=$PWD/_inst && make install
+        $> $PWD/_inst/bin/yaws -i
 
-4. To test the build, start it as
+  If you used rebar to compile Yaws, you can alternatively start Yaws with
 
-   ./bin/yaws -i
+        $> ./bin/yaws -i
 
-   If you used rebar to compile yaws, you can alternatively start yaws
-   with
+  Either approach will start a webserver at http://0.0.0.0:8000
+  Terminate through ^C, or ^G followed by q, or
 
-   $HOME/bin/yaws -i
+        > init:stop()
 
-   Either approach will start a webserver at http://0.0.0.0:8000 .
-   Terminate through ^C, or ^G followed by q, or
+  NOTE: If you've used rebar to build the system, none of the following
+  directions apply. With rebar only "local installations" are supported.
 
-   > init:stop()
+4. Install and run
 
-   NOTE: If you've used rebar to build the system, none of the
-   following directions apply. With rebar only local installations are
-   supported.
+  NOTE: following commands may require root privileges, depending of the
+  installation prefix.
 
-5. as root make install
+  just run
 
-6. as root start as
+        $> make install
 
-   /usr/local/bin/yaws -i
+  Then, to run Yaws, you should use its script:
 
-   This starts an interactive system.
+        $> ${bindir}/yaws -i
 
-7. With the default yaws.conf file, this will create a webserver at
-   http://${host} and one at https://${host}
+  This starts an interactive system.
 
-8. as root edit /usr/local/etc/yaws/yaws.conf
+  With the default yaws.conf file, this will create a webserver at
+  http://${host} and one at https://${host}
 
-9. Create content in /usr/local/var/yaws/www
 
-10a. Start as /usr/local/bin/yaws --daemon --heart
-     This will start a daemon (--daemon) which will be autorestarted when/if
-     it crashes or hangs (--heart)
-     Also, for most unices, we create proper start scripts in
-     /etc/init.d (sysconfdir)
+  You can adapt Yaws configuration by editing '${sysconfig}/yaws/yaws.conf'.
 
-10b. Or start interactive system as /usr/local/bin/yaws -i
+5. Daemonize Yaws
 
-11.  Example: Here is how I compile/start the yaws system that runs
-     at http://yaws.hyber.org (Ubuntu server system)
+  Start it using '--daemon' and '--heart' options
 
-     # autoconf
-     # ./configure --sysconfdir=/etc
-     # make && make install
-     # /etc/init.d/yaws start
+        $> ${bindir}/yaws --daemon --heart
+
+  This will start a daemon (--daemon) which will be autorestarted when/if it
+  crashes or hangs (--heart).
+  Also, for most unices, we create proper start scripts in ${sysconfdir}/init.d
+
+  Example: Here is how I compile/start the yaws system that runs at
+  http://yaws.hyber.org (Ubuntu server system)
+
+        $> autoconf
+        $> ./configure --sysconfdir=/etc
+        $> make && make install
+        $> /etc/init.d/yaws start
 
 
 

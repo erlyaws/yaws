@@ -1,6 +1,7 @@
 -module(dispatchmod_tester).
 -export([dispatch/1]).
--include("../../include/yaws_api.hrl").
+
+-include("yaws_api.hrl").
 
 dispatch(#arg{clisock=Sock}=A) ->
     {abs_path, Path} = (A#arg.req)#http_request.path,

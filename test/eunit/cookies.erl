@@ -1,7 +1,10 @@
 -module(cookies).
 -compile(export_all).
--include("../../include/yaws_api.hrl").
+
 -include_lib("eunit/include/eunit.hrl").
+
+-include("yaws_api.hrl").
+-include("tftest.hrl").
 
 parse_set_cookies_test() ->
     %% Set-Cookie: value
@@ -284,24 +287,24 @@ set_cookie_expires_test() ->
     ok.
 
 real_cookies_test() ->
-    {ok, Io} = case file:open("cookies.dump", read) of
-                   {error, _} ->
-                       %% handle eunit testing under rebar
-                       file:open("../test/eunit/cookies.dump", read);
-                   Else ->
-                       Else
-               end,
+    {ok, Io} = file:open(?srcdir ++ "/cookies.dump", read),
+    %%     {error, _} ->
+    %%         %% handle eunit testing under rebar
+    %%         file:open("../test/eunit/cookies.dump", read);
+    %%     Else ->
+    %%         Else
+    %% end,
     ?assertEqual(ok, parse_cookies(Io, file:read_line(Io), 1)),
     ok.
 
 real_setcookies_test() ->
-    {ok, Io} = case file:open("setcookies.dump", read) of
-                   {error, _} ->
-                       %% handle eunit testing under rebar
-                       file:open("../test/eunit/setcookies.dump", read);
-                   Else ->
-                       Else
-               end,
+    {ok, Io} = file:open(?srcdir ++ "/setcookies.dump", read),
+    %%     {error, _} ->
+    %%         %% handle eunit testing under rebar
+    %%         file:open("../test/eunit/setcookies.dump", read);
+    %%     Else ->
+    %%         Else
+    %% end,
     ?assertEqual(ok, parse_set_cookies(Io, file:read_line(Io), 1)),
     ok.
 

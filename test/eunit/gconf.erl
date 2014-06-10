@@ -1,8 +1,9 @@
 -module(gconf).
 -compile(export_all).
--include("../../include/yaws.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
+-include("yaws.hrl").
+-include("tftest.hrl").
 
 setup_default_gconf_test() ->
     Dir     = yaws_dir(),
@@ -17,12 +18,13 @@ setup_default_gconf_test() ->
                 false -> 100
             end,
 
-    {yaws_dir,    Dir}       = get_gconf_attr(yaws_dir,    GC),
-    {ebin_dir,    [EbinDir]} = get_gconf_attr(ebin_dir,    GC),
-    {include_dir, [IncDir]}  = get_gconf_attr(include_dir, GC),
-    {trace,       false}     = get_gconf_attr(trace,       GC),
-    {flags,       Flags}     = get_gconf_attr(flags,       GC),
-    {id,          "test"}    = get_gconf_attr(id,          GC),
+    true = is_same_path(Dir,     get_gconf_attr(yaws_dir,    GC)),
+    true = is_same_path(EbinDir, get_gconf_attr(ebin_dir,    GC)),
+    true = is_same_path(IncDir,  get_gconf_attr(include_dir, GC)),
+
+    {trace, false}   = get_gconf_attr(trace, GC),
+    {flags, Flags}  = get_gconf_attr(flags,  GC),
+    {id,    "test"} = get_gconf_attr(id,     GC),
 
     ok.
 
@@ -81,6 +83,8 @@ check_gc_flags(Flag, Id, GConf0) ->
     {Flag,
      (not Val0 == ((Flags1 band Id) /= 0) andalso Flags2 == Flags0)}.
 
+is_same_path(Dir1, {_, Dir2}) ->
+    (real_dir_path(Dir1) == real_dir_path(Dir2)).
 
 yaws_dir() ->
     filename:dirname(     %% yaws_dir/
@@ -90,3 +94,11 @@ yaws_dir() ->
          )
        )
      ).
+
+real_dir_path(Path) ->
+    {ok, CurCwd} = file:get_cwd(),
+    ok = file:set_cwd(Path),
+    {ok, RealPath} = file:get_cwd(),
+    ok = file:set_cwd(CurCwd),
+    filename:absname(RealPath).
+

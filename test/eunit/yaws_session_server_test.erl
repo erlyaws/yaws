@@ -2,6 +2,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-include("tftest.hrl").
+
 -export ([mock_session_server/0]).
 
 %% Our test backend exports

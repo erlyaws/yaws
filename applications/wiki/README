@@ -5,19 +5,17 @@ Bevemyr.
 To Install
 ----------
 
-Edit include.mk (change the WIKIINSTALLDIR and EBININSTALLDIR) then
+- Yaws should be installed
 
-make
-make install
+- Run 'make install'
 
+- Edit your /etc/yaws.conf and include $(vardir)/yaws/wiki/ebin in the
+ebin path:
 
-Edit your /etc/yaws.conf and include /var/yaws/ebin in the
-ebin path ($EBININSTALLDIR), for example
-
-    ebin_dir = /var/yaws/ebin
+    ebin_dir = $(vardir)/yaws/wiki/ebin
 
 It is possible to have several Wiki instances on the same server.
-Just install the wiki/* files in the directory where you want a
+Just install the www/* files in the directory where you want a
 Wiki instance. This is easily done by running the updateWiki script
 and give a new directory as argument.
 

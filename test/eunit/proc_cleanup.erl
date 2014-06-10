@@ -2,13 +2,18 @@
 -author('kruber@zib.de').
 -behaviour(supervisor).
 -compile(export_all).
--include("../../include/yaws.hrl").
 -include_lib("eunit/include/eunit.hrl").
+
+%% Explicitly export supervisor's callback because of a "bug" in R15/16
+-export([init/1]).
+
+-include("yaws.hrl").
+-include("tftest.hrl").
 
 proc_cleanup_test() ->
     Old = get_processes(),
     process_flag(trap_exit, true),
-    {ok,P} = start_link(),
+    P = start_link(),
     erlang:exit(P, kill),
     timer:sleep(500),
     ?assertEqual([], [Proc || Proc <- get_processes(), not lists:member(Proc, Old)]),
@@ -34,11 +39,11 @@ start_link() ->
 
     {ok, SCList, GC, ChildSpecs} = yaws_api:embedded_start_conf(Docroot, SconfList, GconfList, Id),
 
-    X = supervisor:start_link(?MODULE, ChildSpecs),
+    {ok, Pid} = supervisor:start_link(?MODULE, ChildSpecs),
 
     %% now configure Yaws
     ok = yaws_api:setconf(GC, SCList),
-    X.
+    Pid.
 
 init(ChildSpecs) ->
     {ok, {{one_for_all, 10, 1}, ChildSpecs}}.

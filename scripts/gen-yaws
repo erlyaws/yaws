@@ -5,13 +5,12 @@
 
 set -e
 
-topdir=`cd .. && pwd`
-cat yaws.template | \
-    ./Subst %yawsdir% "${topdir}" | \
-    ./Subst %vardir% "${VARDIR}" | \
+cat yaws.template                            | \
+    ./Subst %yawsdir% "${YAWSDIR}"           | \
+    ./Subst %vardir%  "${VARDIR}"            | \
     ./Subst %run_erl% "${ERLBINDIR}/run_erl" | \
-    ./Subst %to_erl% "${ERLBINDIR}/to_erl" | \
-    ./Subst %erl% "${ERL}" | \
-    ./Subst %werl% "${WERL}"
+    ./Subst %to_erl%  "${ERLBINDIR}/to_erl"  | \
+    ./Subst %erl%     "${ERL}"               | \
+    ./Subst %werl%    "${WERL}"
 
 exit 0

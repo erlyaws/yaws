@@ -17,7 +17,7 @@ else
     if [ `uname -s` = Darwin ]; then
         proclimit=`ulimit -u`
         if [ $proclimit -lt $fdlimit ]; then
-            newproclimit=`expr $fdlimit \* 3`
+            newproclimit=`expr $fdlimit \* $#`
             ulimit -u $newproclimit
             if [ $? -ne 0 ]; then
                 echo unable to run enough processes for this test, skipping
@@ -33,19 +33,19 @@ trap "rm -rf $outdir" HUP INT EXIT
 mkdir -p $outdir
 i=0
 numcurls=`expr $fdlimit '*' $#`
-echo starting $numcurls background curl tasks
+echo "  starting $numcurls background curl tasks"
 while [ $i -lt $fdlimit ]; do
     for j in $sizes; do
         curlhdrs=curl-${j}-${i}.txt
         curl -D $outdir/$curlhdrs --connect-timeout 60 -s \
-            -o $outdir/${j}-${i}.dat http://localhost:8000/$j.dat >/dev/null 2>&1 &
+            -o $outdir/${j}-${i}.dat http://localhost:8002/$j.dat >/dev/null 2>&1 &
         p=$!
         ( cd $outdir ; rm -f ${p}.txt ; ln -s $curlhdrs ${p}.txt )
         curls="$curls $p"
     done
     i=`expr $i + 1`
 done
-echo waiting for curl tasks to complete
+echo "  waiting for curl tasks to complete"
 for job in $curls; do
     kill -0 $job 2>/dev/null
     if [ $? -eq 0 ]; then
@@ -62,7 +62,7 @@ for job in $curls; do
         fi
     fi
 done
-echo verifying all retrieved files
+echo "  verifying all retrieved files"
 # On some systems (e.g. MacBook Pro) it seems to take a bit for the
 # file writes to actually appear. The sleep and ls below help the loop
 # avoid failing due to files that just haven't appeared yet.

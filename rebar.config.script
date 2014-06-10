@@ -3,9 +3,10 @@
 
 Dir = filename:dirname(SCRIPT),
 
-%% generate a default test/t11/src/srcdir_test.hrl file so rebar can
+%% generate a default test/t11/include/srcdir_test.hrl file so rebar can
 %% compile the tests
-ok = file:write_file(filename:join(Dir, "test/t11/src/srcdir_test.hrl"),
+ok = filelib:ensure_dir(filename:join(Dir, "test/t11/include/srcdir_test.hrl")),
+ok = file:write_file(filename:join(Dir, "test/t11/include/srcdir_test.hrl"),
                      <<"-define(SRCDIR_VERSION, \"1.0\").\n">>),
 
 %% generate a charset include file

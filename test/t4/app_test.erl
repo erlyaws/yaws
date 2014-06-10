@@ -1,7 +1,8 @@
 -module(app_test).
--include("../include/tftest.hrl").
--include_lib("ibrowse/include/ibrowse.hrl").
 -compile(export_all).
+
+-include_lib("ibrowse/include/ibrowse.hrl").
+-include("tftest.hrl").
 
 
 %% Way to invoke just one test
@@ -46,7 +47,7 @@ start() ->
 deflate_revproxy_test1() ->
     io:format("deflate_revproxy_test1\n", []),
     Uri = "http://localhost:8000/revproxy1/hello.txt",
-    Res = "Hello, World!\n",
+    Res = "Hello World 1!\n",
 
     %% client: nodeflate - proxy: deflate - backend: deflate
     %%    ==> result: uncompressed
@@ -66,7 +67,7 @@ deflate_revproxy_test1() ->
 deflate_revproxy_test2() ->
     io:format("deflate_revproxy_test2\n", []),
     Uri = "http://localhost:8000/revproxy2/hello.txt",
-    Res = "Hello, World!\n",
+    Res = "Hello World 2!\n",
 
     %% client: nodeflate - proxy: deflate - backend: nodeflate
     %%    ==> result: uncompressed
@@ -92,7 +93,7 @@ test_post_revproxy() ->
 
 small_post() ->
     io:format("  small post\n",[]),
-    {ok, Bin} = file:read_file("../../www/1000.txt"),
+    {ok, Bin} = file:read_file(?builddir ++ "/docroot-test/1000.txt"),
     Sz = erlang:integer_to_list(size(Bin)),
     Uri = "http://localhost:8000/revproxy1/posttest/" ++ Sz,
     Hdrs = [{content_length, Sz}, {content_type, "binary/octet-stream"}],
@@ -101,7 +102,7 @@ small_post() ->
 
 large_post() ->
     io:format("  large post\n",[]),
-    {ok, Bin} = file:read_file("../../www/10000.txt"),
+    {ok, Bin} = file:read_file(?builddir ++ "/docroot-test/10000.txt"),
     Sz   = erlang:integer_to_list(size(Bin)),
     Uri  = "http://localhost:8000/revproxy1/posttest/" ++ Sz,
     Hdrs = [{content_length, Sz}, {content_type, "binary/octet-stream"}],
@@ -111,7 +112,7 @@ large_post() ->
 small_chunked_post() ->
     %% Chunk size is less than partial_post_size
     io:format("  small chunked post\n",[]),
-    {ok, Bin} = file:read_file("../../www/3000.txt"),
+    {ok, Bin} = file:read_file(?builddir ++ "/docroot-test/3000.txt"),
     Sz   = erlang:integer_to_list(size(Bin)),
     Uri  = "http://localhost:8000/revproxy1/posttest/chunked/" ++ Sz,
     Hdrs = [{content_type, "binary/octet-stream"}],
@@ -122,7 +123,7 @@ small_chunked_post() ->
 large_chunked_post() ->
     %% Chunk size is greater than partial_post_size
     io:format("  large chunked post\n",[]),
-    {ok, Bin} = file:read_file("../../www/10000.txt"),
+    {ok, Bin} = file:read_file(?builddir ++ "/docroot-test/10000.txt"),
     Sz   = erlang:integer_to_list(size(Bin)),
     Uri  = "http://localhost:8000/revproxy1/posttest/chunked/" ++ Sz,
     Hdrs = [{content_type, "binary/octet-stream"}],
@@ -155,7 +156,8 @@ test_keepalive_revproxy() ->
     Path1 = "/revproxy1/hello.txt",
     Path2 = "/",
     Path3 = "/revproxy2/hello.txt",
-    Res   = "Hello, World!\n",
+    Res1  = "Hello World 1!\n",
+    Res2  = "Hello World 2!\n",
 
     ?line {ok, Sock} = gen_tcp:connect("localhost", 8000,
                                        [list, {active, false}]),
@@ -165,7 +167,7 @@ test_keepalive_revproxy() ->
                             "Connection: Keep-Alive\r\n"
                             "\r\n"),
     ?line {ok, Len1} = recv_hdrs(Sock),
-    ?line {ok, Res}  = recv_body(Sock, Len1),
+    ?line {ok, Res1} = recv_body(Sock, Len1),
 
     ?line ok = gen_tcp:send(Sock, "GET " ++ Path2 ++ " HTTP/1.1\r\n"
                             "Host: localhost:8000\r\n"
@@ -179,7 +181,7 @@ test_keepalive_revproxy() ->
                             "Connection: Keep-Alive\r\n"
                             "\r\n"),
     ?line {ok, Len3} = recv_hdrs(Sock),
-    ?line {ok, Res}  = recv_body(Sock, Len3),
+    ?line {ok, Res2} = recv_body(Sock, Len3),
 
     gen_tcp:close(Sock),
     ok.
@@ -189,20 +191,21 @@ test_rewrite_revproxy() ->
     io:format("rewrite_revproxy_test\n", []),
     Uri1 = "http://localhost:8000/rewrite/revproxy1/hello.txt",
     Uri2 = "http://localhost:8000/rewrite/revproxy2/hello.txt",
-    Res  = "Hello, World!\n",
+    Res1 = "Hello World 1!\n",
+    Res2 = "Hello World 2!\n",
 
     ?line {ok, "200", _, Body1} = ibrowse:send_req(Uri1, [], get),
-    ?line Res = Body1,
+    ?line Res1 = Body1,
 
     ?line {ok, "200", _, Body2} = ibrowse:send_req(Uri2, [], get),
-    ?line Res = Body2,
+    ?line Res2 = Body2,
     ok.
 
 test_large_content_revproxy() ->
     io:format("large_content_revproxy_test\n", []),
-    Uri = "http://localhost:8004/revproxy/8388608.bin",
+    Uri = "http://localhost:8004/revproxy/8388608.txt",
 
-    ?line {ok, Bin} = file:read_file("www2/8388608.bin"),
+    ?line {ok, Bin} = file:read_file(?builddir ++ "/docroot-test2/8388608.txt"),
     ?line {ok, "200", Hdrs, Body0} = ibrowse:send_req(Uri, [], get),
     ?line "8388608" = proplists:get_value("Content-Length", Hdrs),
     Body = list_to_binary(Body0),
@@ -237,7 +240,7 @@ test_failed_resp_interception_revproxy() ->
 test_good_interception_revproxy() ->
     io:format("good_interception_revproxy_test\n", []),
     Uri = "http://localhost:8005/revproxy3/hello.txt",
-    Res = "Hello, World!\n",
+    Res = "Hello World 2!\n",
 
     ?line {ok, "200", Hdrs, Body} = ibrowse:send_req(Uri, [], get),
     ?line Body = Res,
@@ -248,22 +251,24 @@ test_fwdproxy() ->
     io:format("fwdproxy_test\n", []),
     Uri1 = "http://localhost:8001/rewrite/hello.txt",
     Uri2 = "http://localhost:8002/rewrite/hello.txt",
-    Res  = "Hello, World!\n",
+    Res1 = "Hello World 1!\n",
+    Res2 = "Hello World 2!\n",
 
     Opts = [{proxy_host, "localhost"}, {proxy_port, 8003}],
     ?line {ok, "200", _, Body1} = ibrowse:send_req(Uri1, [], get, [], Opts),
-    ?line Res = Body1,
+    ?line Res1 = Body1,
 
     ?line {ok, "200", _, Body2} = ibrowse:send_req(Uri2, [], get, [], Opts),
-    ?line Res = Body2,
+    ?line Res2 = Body2,
     ok.
 
 test_ipv6_address() ->
     io:format("revproxy_url_ipv6\n", []),
     Uri = "http://localhost:8000/revproxy3/hello.txt",
-    Res = "Hello, World!\n",
+    Res = "Hello World 1!\n",
 
-    ?line {ok, "200", _, _} = ibrowse:send_req(Uri, [], get),
+    ?line {ok, "200", _, Body} = ibrowse:send_req(Uri, [], get),
+    ?line Body = Res,
     ok.
 
 recv_hdrs(Sock) ->

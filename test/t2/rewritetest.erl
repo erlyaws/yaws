@@ -1,8 +1,8 @@
 -module(rewritetest).
 -export([arg_rewrite/1]).
 
--include("../../include/yaws.hrl").
--include("../../include/yaws_api.hrl").
+-include("yaws.hrl").
+-include("yaws_api.hrl").
 
 
 arg_rewrite(Arg) ->

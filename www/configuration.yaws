@@ -101,17 +101,17 @@ out(A) ->
 # git clone git://github.com/klacke/yaws.git
     </pre>
   </div>
-  <p>To build and to what is knows as a local install, e.g.
+  <p>To build and to what is knows as a <em>local</em> install, e.g.
   a developer install do:
   </p>
   <div class="box">
     <pre>
 # cd yaws
-# autoconf; ./configure; make; make local_install
+# autoconf; ./configure --prefix=/path/to/yaws; make; make install
     </pre>
   </div>
   <p>
-    Alternatively, to make a proper install
+    Alternatively, to make a <em>standard</em> install
   </p>
   <div class="box">
     <pre>
@@ -129,27 +129,26 @@ out(A) ->
     127.0.0.1:80 with the docroot set to the local documentation.
   </p>
   <p>
-    <em>make</em> (without install) will build the yaws system and
-    make local_install
-    does a local install at http://127.0.0.1:8000
+    A <em>local</em> install does install yaws at http://127.0.0.1:8000
   </p>
   <p>
-    This is the typical mode of operation
-    while either just trying out yaws, or hacking yaws. This will install
-    a template configuration file yaws.conf in $HOME.
-    If $HOME/yaws.conf exists, the old file will not be overwritten.
+    This is the typical mode of operation while either just trying out yaws, or
+    hacking yaws. This will install a template configuration file
+    <em>yaws.conf</em> in <em>${prefix}/etc/yaws</em> (<em>${prefix}</em> is the
+    value of the <em>--prefix</em> option passed during the execution of the
+    configure script).  If this file exists, the old file will not be
+    overwritten.
   </p>
   <p>
-    To run a locally installed system, we run the yaws script found in the
-    bin directory in the source code tree or $HOME/bin/yaws.
+    To run a locally installed system, we run the installed yaws script
+    <em>${prefix}/bin/yaws</em>.
   </p>
 
   <p>
-    <tt>make install</tt>
-    will also build the yaws system and also
-    install it in /usr/local. A configuration file /etc/yaws/yaws.conf will
-    also be installed unless the file already exists. The default config
-    file will set up the system to listen on http://127.0.0.1:80
+    A <em>standard</em> install will install yaws in <em>/usr/local</em>. A
+    configuration file <em>/etc/yaws/yaws.conf</em> will also be installed
+    unless the file already exists. The default config file will set up the
+    system to listen on http://127.0.0.1:80
   </p>
 
 
@@ -163,9 +162,8 @@ out(A) ->
     </a>
 
     <p>
-      When developing yaws code, the interactive mode is ideal. Typically "
-      yaws is then started as:
-
+      When developing yaws code, the interactive mode is ideal. Typically, yaws
+      is then started as:
     </p>
      <div class="box">
        <pre>
@@ -187,10 +185,9 @@ out(A) ->
 
      <h2>Configuring Yaws</h2>
      <p>
-       Web server configuration can be supplied to yaws  "
-       in either of two ways depending
-       on whether we run yaws as a standalone daemon or if we run yaws as an
-       embedded application inside another Erlang program.
+       Web server configuration can be supplied to yaws in either of two ways
+       depending on whether we run yaws as a standalone daemon or if we run yaws
+       as an embedded application inside another Erlang program.
      </p>
      <p>
        The yaws configuration is described in
@@ -203,7 +200,8 @@ out(A) ->
      <p>
        It is possible to run yaws in embedded mode where yaws is part of a
        larger application. When running yaws in embedded mode, it is often not
-       possible to let yaws read its configuration data from /etc/yaws/yaws.conf.
+       possible to let yaws read its configuration data from
+       <em>/etc/yaws/yaws.conf</em>.
      </p>
 
      <p>

@@ -3,6 +3,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-include("tftest.hrl").
+
 parse_ipmask_test() ->
     ?assertEqual({127,0,0,1},       yaws:parse_ipmask("127.0.0.1")),
     ?assertEqual({0,0,0,0,0,0,0,1}, yaws:parse_ipmask("::1")),

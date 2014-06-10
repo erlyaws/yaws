@@ -6,7 +6,6 @@
 -module(yaws_sendfile).
 -author('vinoski@ieee.org').
 
--include("yaws_configure.hrl").
 -include("../include/yaws.hrl").
 -include_lib("kernel/include/file.hrl").
 

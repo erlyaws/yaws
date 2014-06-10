@@ -1,7 +1,9 @@
 -module(multipart_post_parsing).
 -compile(export_all).
--include("../../include/yaws_api.hrl").
 -include_lib("eunit/include/eunit.hrl").
+
+-include("yaws_api.hrl").
+-include("tftest.hrl").
 
 data_to_parse() ->
     list_to_binary(

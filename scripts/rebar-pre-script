@@ -1,17 +1,22 @@
 #!/bin/sh
 
-YAWS_DIR=`pwd`
-DEFAULT_YAWS_VSN=`sed -ne '1,/^YAWS_VSN=/s/^YAWS_VSN=//p' $YAWS_DIR/vsn.mk 2>/dev/null`
-YAWS_VSN=${VSN-$DEFAULT_YAWS_VSN}
-YAWS_VARDIR=${VARDIR-$YAWS_DIR/var}
+SCRIPT=`basename $0`
+SCRIPTDIR=`dirname $0`
+YAWS_DIR=`cd ${SCRIPTDIR}/.. && pwd`
+
+. ${YAWS_DIR}/vsn.mk
+YAWS_VSN=${VSN-$YAWS_VSN}
+
 YAWS_ETCDIR=${ETCDIR-$YAWS_DIR/etc}
+YAWS_BINDIR=${EXECDIR-$YAWS_DIR/bin} # BINDIR is already set by rebar
+YAWS_VARDIR=${VARDIR-$YAWS_DIR/var}
+YAWS_LOGDIR=${LOGDIR-$YAWS_DIR/yaws_logs}
+
 ERL_BIN=`which erl`
 ERL_BIN_DIR=${ERL_BIN%/erl}
 YAWS_ERLBINDIR=${ERLBINDIR-$ERL_BIN_DIR}
 ERL_BIN=$YAWS_ERLBINDIR/erl
 WERL_BIN=$YAWS_ERLBINDIR/werl
-
-script=`basename $0`
 
 # Use a function for error exit instead of set -e so we can conditionally
 # remove files before exiting. If this were bash we could trap ERR but
@@ -31,46 +36,65 @@ keep_or_replace() {
     fi
 }
 
-cd src || fail
-
+## handle clean command and exit
 if [ "$1" = clean ]; then
-    rm -f mime_types.erl yaws_configure.hrl yaws_generated.erl
+    rm -f ${YAWS_DIR}/src/mime_types.erl     \
+          ${YAWS_DIR}/src/yaws_configure.hrl \
+          ${YAWS_DIR}/src/yaws_generated.erl
     exit 0
 fi
 
-if [ ! -f yaws_configure.hrl ]; then
-    echo '%% rebar sets *_SENDFILE in erlc command line' \
-        > yaws_configure.hrl
-    [ $? -eq 0 ] || fail
-fi
-tmpgen=`mktemp /tmp/${script}.XXXXXX` || fail
-YAWS_VSN=$YAWS_VSN VARDIR="$YAWS_VARDIR" ETCDIR="$YAWS_ETCDIR" \
-    ../scripts/gen-yaws-generated true >$tmpgen || fail
-keep_or_replace yaws_generated.erl $tmpgen
-[ -d "$YAWS_VARDIR" ] || mkdir "$YAWS_VARDIR" || fail
-[ -d "$YAWS_ETCDIR" ] || mkdir "$YAWS_ETCDIR" || fail
+## Create required directory
+[ -d "$YAWS_ETCDIR" ]             || mkdir "$YAWS_ETCDIR"             || fail
+[ -d "$YAWS_ETCDIR/yaws" ]        || mkdir "$YAWS_ETCDIR/yaws"        || fail
+[ -d "$YAWS_BINDIR" ]             || mkdir "$YAWS_BINDIR"             || fail
+[ -d "$YAWS_VARDIR" ]             || mkdir "$YAWS_VARDIR"             || fail
+[ -d "$YAWS_LOGDIR" ]             || mkdir "$YAWS_LOGDIR"             || fail
+[ -d "${YAWS_VARDIR}/yaws" ]      || mkdir "${YAWS_VARDIR}/yaws"      || fail
+[ -d "${YAWS_VARDIR}/yaws/ebin" ] || mkdir "${YAWS_VARDIR}/yaws/ebin" || fail
 
+## generate yaws_generated.erl module
+cd ${YAWS_DIR}/src || fail
+tmpgen=`mktemp /tmp/${SCRIPT}.XXXXXX` || fail
+YAWS_VSN="${YAWS_VSN}" VARDIR="${YAWS_VARDIR}" ETCDIR="${YAWS_ETCDIR}"  \
+    ${YAWS_DIR}/scripts/gen-yaws-generated >$tmpgen || fail
+keep_or_replace ${YAWS_DIR}/src/yaws_generated.erl $tmpgen
+
+## generate mime_types.erl module
+cd ${YAWS_DIR}/src || fail
 need_mime=yes
 if [ -f mime_types.erl ]; then
     need_mime=`find mime_type_c.erl -newer mime_types.erl -print`
 fi
 if [ -n "$need_mime" ]; then
-    erlc -o ../ebin yaws_generated.erl || fail
-    erlc -o ../ebin mime_type_c.erl || fail
-    erl -pa ../ebin -noshell -s mime_type_c generate || fail mime_types.erl
+    erlc -o ${YAWS_DIR}/ebin yaws.erl                         || fail
+    erlc -o ${YAWS_DIR}/ebin yaws_generated.erl               || fail
+    erlc -o ${YAWS_DIR}/ebin mime_type_c.erl                  || fail
+    erl -pa ${YAWS_DIR}/ebin -noshell -s mime_type_c generate || fail mime_types.erl
 fi
 
-cd ../scripts
+## generate yaws scripts
+cd ${YAWS_DIR}/scripts
+tmpgen=`mktemp /tmp/${SCRIPT}.XXXXXX` || fail
+YAWSDIR="${YAWS_DIR}" VARDIR="${YAWS_VARDIR}" ERLBINDIR="${YAWS_ERLBINDIR}"   \
+    ERL="${ERL_BIN}" WERL="${WERL_BIN}"                                       \
+    ${YAWS_DIR}/scripts/gen-yaws > $tmpgen || fail
+chmod +x $tmpgen
+echo "--- Installed yaws script at ${YAWS_BINDIR}"
+keep_or_replace ${YAWS_BINDIR}/yaws $tmpgen
 
-tmpgen=`mktemp /tmp/${script}.XXXXXX` || fail
-VARDIR="${YAWS_VARDIR}" ERLBINDIR="${YAWS_ERLBINDIR}" \
-    ERL="${ERL_BIN}" WERL="${WERL_BIN}" ./gen-yaws > $tmpgen || fail
-keep_or_replace ../bin/yaws $tmpgen
-if [ $? -eq 0 ]; then
-    VARDIR="${YAWS_VARDIR}" ./local-install false "${YAWS_DIR}" || fail
+## generate default yaws configuration
+cd ${YAWS_DIR}/scripts
+tmpgen=`mktemp /tmp/${SCRIPT}.XXXXXX` || fail
+YAWSDIR="${YAWS_DIR}" LOGDIR="${YAWS_LOGDIR}" VARDIR="${YAWS_VARDIR}"          \
+    PORT=8000 DOCROOT="${YAWS_DIR}/www" CERTDIR="${YAWS_DIR}/ssl" SSLPORT=4443 \
+    ${YAWS_DIR}/scripts/gen-yaws-conf > $tmpgen
+if [ -f "${YAWS_ETCDIR}/yaws/yaws.conf" ]; then
+    echo "--- Will not overwrite ${YAWS_ETCDIR}/yaws/yaws.conf"
+    keep_or_replace ${YAWS_ETCDIR}/yaws/yaws.conf.template $tmpgen
 else
-    chmod +x ../bin/yaws || fail
-    VARDIR="${YAWS_VARDIR}" ./local-install true "${YAWS_DIR}" || fail
+    echo "--- Installing local config file at ${YAWS_ETCDIR}/yaws"
+    keep_or_replace ${YAWS_ETCDIR}/yaws/yaws.conf $tmpgen
 fi
 
 exit 0

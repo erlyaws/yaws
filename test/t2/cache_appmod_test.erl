@@ -1,7 +1,7 @@
 -module(cache_appmod_test).
 -export([out/1]).
 
--include("../../include/yaws_api.hrl").
+-include("yaws_api.hrl").
 
 out(Arg) ->
     {abs_path, Path} = (Arg#arg.req)#http_request.path,

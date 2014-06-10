@@ -19,8 +19,8 @@ fi
 
 name="yaws"
 rcvar=$name
-yaws_command="%prefix%bin/${name}"
-required_files="%etcdir%yaws/yaws.conf"
+yaws_command="%prefix%/bin/${name}"
+required_files="%etcdir%/yaws/yaws.conf"
 
 start_cmd="yaws_start"
 stop_cmd="yaws_stop"

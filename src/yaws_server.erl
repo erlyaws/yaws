@@ -213,10 +213,10 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
                     yaws_debug:format("Add path ~p~n", [D]),
                     code:add_pathz(D)
             end, GC#gconf.ebin_dir),
-    yaws_debug:format("Running with id=~p (localinstall=~p) ~n"
+    yaws_debug:format("Running with id=~p ~n"
                       "~s"
                       "Logging to directory ~p~n",
-                      [GC#gconf.id, yaws_generated:is_local_install(),
+                      [GC#gconf.id,
                        if ?gc_has_debug(GC) ->
                                "Running with debug checks "
                                    "turned on (slower server) \n";
