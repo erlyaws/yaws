@@ -246,7 +246,7 @@
           tilde_allowed_scripts = [],
           index_files = ["index.yaws", "index.html", "index.php"],
           revproxy = [],
-          soptions = [{listen_opts, [{backlog, 1024}, {recbuf, 8192}]}],
+          soptions = [{listen_opts, [{backlog, 1024}]}],
           extra_cgi_vars = [],
           stats,                        % raw traffic statistics
           fcgi_app_server,              % FastCGI application server {host,port}

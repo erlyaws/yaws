@@ -578,7 +578,6 @@ do_connect(URL) ->
             binary,
             {packet,    raw},
             {active,    false},
-            {recbuf,    8192},
             {reuseaddr, true}
            ],
     case URL#url.scheme of
