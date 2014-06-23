@@ -20,6 +20,7 @@ uninstall-local:
 	$(AM_V_at)rm -f $(DESTDIR)$(bindir)/yaws
 	$(AM_V_at)rm -f $(DESTDIR)$(sysconfdir)/init.d/yaws
 	$(AM_V_at)rm -f $(DESTDIR)$(sysconfdir)/rc.d/yaws
+	$(AM_V_at)rm -f $(DESTDIR)$(sysconfdir)/systemd/system/yaws.service
 	$(AM_V_at)rm -f $(DESTDIR)$(confdir)/yaws.conf.template
 
 yaws_script:
@@ -68,6 +69,7 @@ yaws_init_script:
 	  DESTDIR='$(DESTDIR)'				\
 	  PREFIX='$(prefix)'				\
 	  ETCDIR='$(sysconfdir)'			\
+	  BINDIR='$(bindir)'				\
 	  VARDIR='$(localstatedir)'			\
 	  YAWSDIR='$(ERLANG_INSTALL_LIB_DIR_yaws)'	\
 	    ./regular-install)

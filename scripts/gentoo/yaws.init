@@ -9,14 +9,14 @@
 # use: rc-update add yaws default
 #
 
-yaws=%prefix%/bin/yaws
+yaws=%bindir%/yaws
 
 # By default we run with the default id
 # idopts="--id myserverid"
 
 conf="--conf %etcdir%/yaws/yaws.conf"
 
-opts="start stop reload restart query"  
+opts="start stop reload restart query"
 
 depend() {
        need net
@@ -26,26 +26,28 @@ depend() {
 start() {
        ebegin "Starting yaws "
        ${yaws} --daemon  --heart ${idopts} ${conf}
+       ${yaws} ${idopts} --wait-started=10
        eend $?
 }
 
 
 stop() {
        ebegin "Stopping yaws "
-       ${yaws} --stop ${idopts}
+       ${yaws} ${idopts} --stop
+       ${yaws} ${idopts} --wait-stopped=10
        eend $?
 }
 
 
 reload() {
        ebegin "Reloading yaws "
-       ${yaws}  --hup ${idopts}
+       ${yaws} ${idopts} --hup
        eend $?
 }
 
 query() {
        ebegin "Querying yaws "
-       ${yaws} --status ${idopts}
+       ${yaws} ${idopts} --status
        eend $?
 }
 

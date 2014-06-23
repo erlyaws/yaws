@@ -24,7 +24,7 @@ start() ->
 
 test_generated_module() ->
     io:format("generated_module_test\n", []),
-    {ok, Host} = inet:gethostname(),
+    [_, Host]  = string:tokens(atom_to_list(node()), "@"),
     Node       = list_to_atom("test@" ++ Host),
     Vhost1     = {"localhost:8000", 8000},
     Vhost2     = {"localhost:8001", 8001},

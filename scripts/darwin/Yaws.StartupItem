@@ -6,17 +6,19 @@
 
 . /etc/rc.common
 
-yaws=%prefix%/bin/yaws
+yaws=%bindir%/yaws
 lockdir=/var/spool/lock
-yawsid_opts='--id myserverid'
+#yawsid_opts='--id myserverid'
+conf="--conf %etcdir%/yaws/yaws.conf"
 
 StartService ()
 {
     if [ "${YAWS:=-NO-}" = "-YES-" ]; then
-	ConsoleMessage "Starting yaws http daemon"
-	HOME=/tmp $yaws  ${yawsid_opts} --daemon --heart
-	RETVAL=$?
-	[ $RETVAL = 0 ]
+        ConsoleMessage "Starting yaws http daemon"
+        HOME=/tmp $yaws ${yawsid_opts} --daemon --heart ${conf}
+        HOME=/tmp $yaws ${yawsid_opts} --wait-started=10 >/dev/null
+        RETVAL=$?
+        [ $RETVAL = 0 ]
     fi
 }
 
@@ -24,15 +26,16 @@ StopService ()
 {
     ConsoleMessage "Stopping yaws http daemon"
     HOME=/tmp $yaws  ${yawsid_opts} --stop
+        HOME=/tmp $yaws ${yawsid_opts} --wait-stopped=10 >/dev/null
 }
 
 RestartService ()
 {
     if [ "${YAWS:=-NO-}" = "-YES-" ]; then
-	ConsoleMessage "Restarting yaws http daemon"
-	HOME=/tmp $yaws  ${yawsid_opts} --hup
+        ConsoleMessage "Restarting yaws http daemon"
+        HOME=/tmp $yaws ${yawsid_opts} --hup
     else
-	StopService
+        StopService
     fi
 }
 

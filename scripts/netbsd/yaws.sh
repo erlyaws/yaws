@@ -12,14 +12,13 @@
 # yaws_id=""
 #
 
-if [ -f /etc/rc.subr ]
-then
-        . /etc/rc.subr
+if [ -f /etc/rc.subr ]; then
+    . /etc/rc.subr
 fi
 
 name="yaws"
 rcvar=$name
-yaws_command="%prefix%/bin/${name}"
+yaws_command="%bindir%/${name}"
 required_files="%etcdir%/yaws/yaws.conf"
 
 start_cmd="yaws_start"
@@ -35,25 +34,57 @@ fi
 : ${yaws_flags:=--heart}
 
 yaws_start() {
-        $yaws_command $yaws_id $yaws_flags --daemon
+    echo -n "Starting Yaws: "
+    $yaws_command $yaws_id $yaws_flags --daemon --conf %etcdir%/yaws/yaws.conf >/dev/null
+    $yaws_command $yaws_id --wait-started=10 >/dev/null
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        echo "OK"
+    else
+        echo "FAILED"
+    fi
+    return  $RETVAL
 }
 
 yaws_stop() {
-        $yaws_command $yaws_id --stop 
+    echo -n "Stopping Yaws: "
+    $yaws_command $yaws_id --stop >/dev/null
+    $yaws_command $yaws_id --wait-stopped=10 >/dev/null
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        echo "OK"
+    else
+        echo "FAILED"
+    fi
+    return  $RETVAL
 }
 
 yaws_status() {
-        $yaws_command $yaws_id --status
+    $yaws_command $yaws_id --status >/dev/null
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        echo "Yaws is running"
+    else
+        echo "Yaws is stopped"
+    fi
+    return  $RETVAL
 }
 
 yaws_reload() {
-        $yaws_command $yaws_id --hup
+    echo -n "Reloading Yaws: "
+    $yaws_command $yaws_id --hup >/dev/null
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        echo "OK"
+    else
+        echo "FAILED"
+    fi
+    return  $RETVAL
 }
 
-if [ -f /etc/rc.subr -a -f /etc/rc.conf ]
-then
-        load_rc_config $name
-        run_rc_command "$1"
+if [ -f /etc/rc.subr -a -f /etc/rc.conf ]; then
+    load_rc_config $name
+    run_rc_command "$1"
 else
-        yaws_start
+    yaws_start
 fi

@@ -20,7 +20,7 @@ SUBDIRS += examples/src	examples/ebin examples/include \
 	   test doc man scripts www/code www/shoppingcart
 
 EXTRA_DIST = ChangeLog known_dialyzer_warnings LICENSE			\
-	     README README.osx README.pkg-config 			\
+	     README.md README.osx README.pkg-config 			\
 	     rebar.config rebar.config.script two-mode-mode.el vsn.mk	\
 	     include.mk erlang_deps.mk ssl munin contrib www rel
 

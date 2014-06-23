@@ -16,19 +16,52 @@ else
 fi
 
 start() {
-    $yaws ${idarg} --daemon --heart --conf ${conf}
+    echo -n "Starting Yaws: "
+    $yaws ${idarg} --daemon --heart --conf ${conf} > /dev/null
+    $yaws  ${idarg} --wait-started=10 > /dev/null
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        echo "OK"
+    else
+        echo "FAILED"
+    fi
+    return  $RETVAL
 }
 
 stop() {
-    $yaws ${idarg} --stop 
+    echo -n "Stopping Yaws: "
+    $yaws ${idarg} --stop > /dev/null
+    $yaws  ${idarg} --wait-stopped=10 > /dev/null
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        echo "OK"
+    else
+        echo "FAILED"
+    fi
+    return  $RETVAL
 }
 
 reload() {
-    $yaws ${idarg} --hup
+    echo -n "Reloading Yaws: "
+    $yaws ${idarg} --hup > /dev/null
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        echo "OK"
+    else
+        echo "FAILED"
+    fi
+    return  $RETVAL
 }
 
 
 status() {
-   $yaws ${idarg} --status
+   $yaws ${idarg} --status > /dev/null
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        echo "Yaws is running"
+    else
+        echo "Yaws is stopped"
+    fi
+    return  $RETVAL
 }
 

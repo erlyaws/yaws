@@ -50,42 +50,62 @@ t2:
 	$(AM_V_at)$(SHELL) @srcdir@/runtest 131072 1048576 #8388608
 
 t3:
-	@echo "check-with-curl (max_num_cached_files = 0)"
-	$(AM_V_at)cp $(YAWS_CONF).orig $(YAWS_CONF)
-	$(AM_V_at)echo 'max_num_cached_files = 0' >> $(YAWS_CONF)
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --hup >/dev/null
-	$(AM_V_at)$(CHECK_WITH_CURL)
+	$(AM_V_at)if [ -z $(CURL) ]; then				\
+	  echo "SKIPPED - curl is required to run these tests";		\
+	else								\
+	  echo "check-with-curl (max_num_cached_files = 0)";		\
+	  cp $(YAWS_CONF).orig $(YAWS_CONF);				\
+	  echo 'max_num_cached_files = 0' >> $(YAWS_CONF);		\
+	  $(top_builddir)/test/bin/yaws --id testid --hup >/dev/null;	\
+	  $(CHECK_WITH_CURL);						\
+	fi
 
 t4:
-	@echo "check-with-curl (max_num_cached_bytes = 0)"
-	$(AM_V_at)cp $(YAWS_CONF).orig $(YAWS_CONF)
-	$(AM_V_at)echo 'max_num_cached_bytes = 0' >> $(YAWS_CONF)
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --hup >/dev/null
-	$(AM_V_at)$(CHECK_WITH_CURL)
+	$(AM_V_at)if [ -z $(CURL) ]; then				\
+	  echo "SKIPPED - curl is required to run these tests";		\
+	else								\
+	  echo "check-with-curl (max_num_cached_bytes = 0)";		\
+	  cp $(YAWS_CONF).orig $(YAWS_CONF);				\
+	  echo 'max_num_cached_bytes = 0' >> $(YAWS_CONF);		\
+	  $(top_builddir)/test/bin/yaws --id testid --hup >/dev/null;	\
+	  $(CHECK_WITH_CURL);						\
+	fi
 
 t5:
-	@echo "check-with-curl (max_size_cached_file = 0)"
-	$(AM_V_at)cp $(YAWS_CONF).orig $(YAWS_CONF)
-	$(AM_V_at)echo 'max_size_cached_file = 0' >> $(YAWS_CONF)
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --hup >/dev/null
-	$(AM_V_at)$(CHECK_WITH_CURL)
+	$(AM_V_at)if [ -z $(CURL) ]; then				\
+	  echo "SKIPPED - curl is required to run these tests";		\
+	else								\
+	  echo "check-with-curl (max_size_cached_file = 0)";		\
+	  cp $(YAWS_CONF).orig $(YAWS_CONF);				\
+	  echo 'max_size_cached_file = 0' >> $(YAWS_CONF);		\
+	  $(top_builddir)/test/bin/yaws --id testid --hup >/dev/null;	\
+	  $(CHECK_WITH_CURL);						\
+	fi
 
 t6:
-	@echo "check-with-curl (max_num_cached_bytes = 5 / max_size_cached_file = 50)"
-	$(AM_V_at)cp $(YAWS_CONF).orig $(YAWS_CONF)
-	$(AM_V_at)echo 'max_num_cached_bytes = 5'  >> $(YAWS_CONF)
-	$(AM_V_at)echo 'max_size_cached_file = 50' >> $(YAWS_CONF)
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --hup >/dev/null
-	$(AM_V_at)$(CHECK_WITH_CURL)
+	$(AM_V_at)if [ -z $(CURL) ]; then						\
+	  echo "SKIPPED - curl is required to run these tests";				\
+	else										\
+	  echo "check-with-curl (max_num_cached_bytes = 5 / max_size_cached_file = 50)";\
+	  cp $(YAWS_CONF).orig $(YAWS_CONF);						\
+	  echo 'max_num_cached_bytes = 5'  >> $(YAWS_CONF);				\
+	  echo 'max_size_cached_file = 50' >> $(YAWS_CONF);				\
+	  $(top_builddir)/test/bin/yaws --id testid --hup >/dev/null;			\
+	  $(CHECK_WITH_CURL);								\
+	fi
 
 # Verify redirection does not create URIs with multiple adjacent slashes Test
 # submitted by James Lee
 t7: newconf hup
-	@echo "redirect test"
-	$(AM_V_at)loc=`curl -s -m 5 -i http://localhost:8003/foo   |	\
-	  perl -ne 'print "$$1\n" if (m#Location:\s+http://(.+)#)' | 	\
-	  grep //`;							\
-	  [ "${loc}" = "" ] && exit 0 || exit 1
+	$(AM_V_at)if [ -z $(CURL) ]; then				\
+	  echo "SKIPPED - curl is required to run these tests";		\
+	else								\
+	  echo "redirect test";						\
+	  loc=`curl -s -m 5 -i http://localhost:8003/foo   |		\
+	    perl -ne 'print "$$1\n" if (m#Location:\s+http://(.+)#)' | 	\
+	    grep //`;							\
+	  [ "${loc}" = "" ] && exit 0 || exit 1;			\
+	fi
 
 json:
 	@echo "json test"

@@ -247,17 +247,19 @@ AC_ERLANG_CHECK_LIB([crypto],,   [AC_MSG_ERROR(["crypto" Erlang application not 
 AC_ERLANG_CHECK_LIB([xmerl],,    [AC_MSG_ERROR(["xmerl" Erlang application not found.])])
 
 AC_ERLANG_CHECK_LIB([public_key],,[AC_MSG_WARN(["public_key" Erlang application not found.
-It clould be required to run Yaws.])])
+It could be required to run Yaws or its testsuites.])])
 AC_ERLANG_CHECK_LIB([ssl],,       [AC_MSG_WARN(["ssl" Erlang application not found.
-It clould be required to run Yaws.])])
+It could be required to run Yaws or its testsuites.])])
 AC_ERLANG_CHECK_LIB([mnesia],,    [AC_MSG_WARN(["mnesia" Erlang application not found.
-It clould be required to run Yaws.])])
+It could be required to run Yaws or its testsuites.])])
 AC_ERLANG_CHECK_LIB([eunit],,     [AC_MSG_WARN(["eunit" Erlang application not found.
-It clould be required to run Yaws.])])
+It could be required to run Yaws or its testsuites.])])
 AC_ERLANG_CHECK_LIB([erlsom],,     [AC_MSG_WARN(["erlsom" Erlang application not found.
-It clould be required to run Yaws.])])
+It could be required to run Yaws or its testsuites.])])
 AC_ERLANG_CHECK_LIB([xmlrpc],,     [AC_MSG_WARN(["xmlrpc" Erlang application not found.
-It clould be required to run Yaws.])])
+It could be required to run Yaws or its testsuites.])])
+AC_ERLANG_CHECK_LIB([inets],,     [AC_MSG_WARN(["xmlrpc" Erlang application not found.
+It could be required to run Yaws or its testsuites.])])
 
 cross_compiling=$tmp_cross_compiling
 
@@ -399,6 +401,9 @@ AM_CONDITIONAL(CAN_BUILD_DOC,
 
 AC_ARG_VAR([CADAVER], [command-line WebDAV client for Unix])
 AC_CHECK_PROG([CADAVER], [cadaver], [cadaver])
+
+AC_ARG_VAR([CURL], [command-line tool for transferring data with URL syntax])
+AC_CHECK_PROG([CURL], [curl], [curl])
 
 AC_ARG_VAR([UNIX2DOS], [converts DOS <-> Unix text files])
 AC_CHECK_PROG([UNIX2DOS], [unix2dos], [unix2dos])

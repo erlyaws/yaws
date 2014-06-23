@@ -36,7 +36,7 @@ test_srcdir_v2() ->
     ?line ok = file:write_file(?builddir ++ "/include/srcdir_test.hrl",
                                <<"-define(SRCDIR_VERSION, \"2.0\").">>),
 
-    {ok, Host} = inet:gethostname(),
+    [_, Host]  = string:tokens(atom_to_list(node()), "@"),
     Node       = list_to_atom("test@" ++ Host),
     ?line Pid  = rpc:call(Node, yaws, hup, [undefined]),
     ?line Ref  = monitor(process, Pid),
@@ -58,7 +58,7 @@ test_srcdir_invalid() ->
     ?line ok = file:write_file(?builddir ++ "/include/srcdir_test.hrl",
                                <<"invalid_header">>),
 
-    {ok, Host} = inet:gethostname(),
+    [_, Host]  = string:tokens(atom_to_list(node()), "@"),
     Node       = list_to_atom("test@" ++ Host),
     ?line Pid  = rpc:call(Node, yaws, hup, [undefined]),
     ?line Ref  = monitor(process, Pid),

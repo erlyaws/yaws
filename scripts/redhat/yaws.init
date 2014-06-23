@@ -1,0 +1,103 @@
+#!/bin/bash
+#
+# Startup script for the Yaws Web Server
+#
+# config: /etc/yaws.conf
+#
+# chkconfig: 2345 65 35
+# description: yaws - Erlang enabled http server
+# use "/sbin/chkconfig --add yaws" to install
+
+# Source function library.
+
+. /etc/rc.d/init.d/functions
+
+yaws=%bindir%/yaws
+prog=yaws
+heart=--heart
+
+#
+# Default yawsid is "default". If you change this to another ID,
+# be sure to also uncomment the yawsid_opts line just below.
+#
+yawsid=default
+#yawsid_opts="--id $yawsid"
+conf="--conf %etcdir%/yaws/yaws.conf"
+
+start() {
+    echo -n $"Starting $prog: "
+    $yaws ${yawsid_opts} --daemon ${heart} ${conf}
+    $yaws ${yawsid_opts} --wait-started=10 >/dev/null
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        echo_success
+    else
+        echo_failure
+    fi
+    echo
+    return $RETVAL
+}
+
+stop() {
+    echo -n $"Stopping $prog: "
+    $yaws ${yawsid_opts} --stop >/dev/null
+    $yaws ${yawsid_opts} --wait-stopped=10 >/dev/null
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        echo_success
+    else
+        echo_failure
+    fi
+    echo
+    return  $RETVAL
+}
+
+
+reload() {
+    echo -n $"Reloading $prog: "
+    $yaws ${yawsid_opts} --hup >/dev/null
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        echo_success
+    else
+        echo_failure
+    fi
+    echo
+    return  $RETVAL
+}
+
+status() {
+    $yaws ${yawsid_opts} --status >/dev/null
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        echo "$prog is running..."
+    else
+        echo "$prog is stopped..."
+    fi
+    return  $RETVAL
+}
+
+# See how we were called.
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    reload)
+        reload
+        ;;
+    *)
+        echo $"Usage: $prog {start|stop|restart|reload|status}"
+        exit 1
+esac
+
+exit $RETVAL

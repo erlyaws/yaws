@@ -1,0 +1,72 @@
+#! /bin/sh
+
+### BEGIN INIT INFO
+# Provides:          yaws
+# Required-Start:    $remote_fs $network
+# Required-Stop:     $remote_fs $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Starts Yaws web server
+# Description:       Starts Yaws web server, a high perfomance
+#                    HTTP 1.1 webserver written in Erlang.
+### END INIT INFO
+
+DAEMON=%bindir%/yaws
+NAME=yaws
+DESC="Yaws web server"
+DAEMON_OPTS="--daemon --heart --conf %etcdir%/yaws/yaws.conf"
+
+## By default we run with the default id
+# YAWS_ID_OPTS=--id myserverid
+
+test -x $DAEMON || exit 0
+
+. /lib/lsb/init-functions
+
+start()
+{
+    start-stop-daemon --quiet --exec $DAEMON --start -- \
+        $DAEMON_OPTS $YAWS_ID_OPTS
+    $DAEMON $YAWS_ID_OPTS --wait-started=10 >/dev/null
+}
+
+stop()
+{
+    $DAEMON $YAWS_ID_OPTS --stop > /dev/null
+    $DAEMON $YAWS_ID_OPTS --wait-stopped=10 >/dev/null
+}
+
+case "$1" in
+    start)
+        log_daemon_msg "Starting $DESC" "$NAME"
+        start
+        log_end_msg $?
+        ;;
+    stop)
+        log_daemon_msg "Stopping $DESC" "$NAME"
+        stop
+        log_end_msg $?
+        ;;
+    status)
+        $DAEMON $YAWS_ID_OPTS --status > /dev/null &&   \
+            log_success_msg "Yaws is running" ||        \
+            log_failure_msg "Yaws is not running"
+        ;;
+    reload|force-reload)
+        log_daemon_msg "Reloading $DESC config" "$NAME"
+        $DAEMON $YAWS_ID_OPTS --hup >/dev/null && log_end_msg 0 || log_end_msg 1
+        ;;
+    restart)
+        log_daemon_msg "Restarting $DESC" "$NAME"
+        stop
+        start
+        log_end_msg $?
+        ;;
+    *)
+        N=%etcdir%/init.d/$NAME
+        echo "Usage: $N {start|stop|status|restart|reload|force-reload}" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

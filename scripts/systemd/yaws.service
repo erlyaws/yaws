@@ -1,0 +1,24 @@
+[Unit]
+Description=High performance HTTP 1.1 webserver written in Erlang
+After=network.target remote-fs.target
+
+[Service]
+Type=forking
+GuessMainPID=no
+
+Environment="YAWS_CONF=--conf %etcdir%/yaws/yaws.conf"
+#Environment="YAWS_ID=--id myserverid"
+
+ExecStart=%bindir%/yaws --daemon --heart $YAWS_CONF $YAWS_ID
+ExecStartPost=%bindir%/yaws $YAWS_ID --wait-started=10
+
+ExecReload=%bindir%/yaws $YAWS_ID --hup
+
+ExecStop=%bindir%/yaws $YAWS_ID --stop
+ExecStopPost=%bindir%/yaws $YAWS_ID --wait-stopped=10
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

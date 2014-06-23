@@ -21,7 +21,7 @@ ifeq ($(HAVE_ERLANG_SENDFILE),true)
 endif
 
 start: $(top_builddir)/test/bin/yaws quiet-stop prepare-test
-	$(AM_V_at)$(top_builddir)/test/bin/yaws -sname test --daemon --id testid --conf $(YAWS_CONF)
+	$(AM_V_at)$(top_builddir)/test/bin/yaws --sname test --daemon --id testid --conf $(YAWS_CONF)
 
 wait-started: $(top_builddir)/test/bin/yaws
 	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --wait-started=$(WAIT_TIME)
@@ -43,7 +43,7 @@ status: $(top_builddir)/test/bin/yaws
 	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --status >/dev/null
 
 i: $(top_builddir)/test/bin/yaws
-	$(AM_V_at)$(top_builddir)/test/bin/yaws -sname test -i --id testid --conf $(YAWS_CONF)
+	$(AM_V_at)$(top_builddir)/test/bin/yaws --sname test -i --id testid --conf $(YAWS_CONF)
 
 connect: $(top_builddir)/test/bin/yaws
 	$(AM_V_at)$(ERL) -sname client -remsh test@`hostname`
@@ -57,6 +57,7 @@ do-test:
 	  err=$$?;							\
 	  if test $$err -ne 0; then					\
 	    $(MAKE) quiet-stop;						\
+	    cat logs/report.log;					\
 	  fi;								\
 	  exit $$err
 

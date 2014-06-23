@@ -1,0 +1,43 @@
+language: erlang
+otp_release:
+  - 17.0
+  - R16B03-1
+  - R16B03
+  - R16B02
+  - R16B01
+  - R15B03
+  - R15B02
+  - R15B01
+  - R14B04
+  - R14B03
+  - R14B02
+
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -y autotools-dev libpam0g-dev texlive-latex-base texlive-latex-recommended texlive-fonts-recommended texlive-font-utils texlive-extra-utils ghostscript
+
+install:
+  - autoreconf -vfi
+
+before_script:
+  - ./configure
+
+script:
+  - make distcheck -j4 V=1
+
+after_script:
+  - rebar get-deps compile
+
+notifications:
+  email:
+    recipients:
+      - christopher.faulet@capflam.org
+      - vinoski@ieee.org
+      - klacke@hyber.org
+    on_success: change
+    on_failure: always
+
+
+
+
+
