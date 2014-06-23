@@ -2029,7 +2029,7 @@ parse_ipaddr_and_connect(Proto, Host, Port, Options, Timeout) ->
     %% First, try to parse an IP address, because inet:getaddr/2 could
     %% return nxdomain if the family doesn't match the IP address
     %% format.
-    case inet:parse_strict_address(Host) of
+    case parse_strict_address(Host) of
         {ok, IP} ->
             filter_tcpoptions_and_connect(Proto, undefined,
               IP, Port, Options, Timeout);
@@ -2038,6 +2038,23 @@ parse_ipaddr_and_connect(Proto, Host, Port, Options, Timeout) ->
             filter_tcpoptions_and_connect(Proto, NsLookupPref,
               Host, Port, Options, Timeout)
     end.
+
+-ifdef(HAVE_INET_PARSE_STRICT_ADDRESS).
+
+parse_strict_address(Host) ->
+    inet:parse_strict_address(Host).
+
+-else.
+
+parse_strict_address(Host) when is_list(Host) ->
+    case inet_parse:ipv4strict_address(Host) of
+        {ok,IP} -> {ok,IP};
+        _       -> inet_parse:ipv6strict_address(Host)
+    end;
+parse_strict_address(_) ->
+    {error, einval}.
+
+-endif.
 
 filter_tcpoptions_and_connect(Proto, NsLookupPref,
   Host, Port, Options, Timeout) ->

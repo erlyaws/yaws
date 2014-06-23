@@ -332,6 +332,18 @@ fi
 AM_CONDITIONAL(HAVE_CRYPTO_HASH, [test "x$HAVE_CRYPTO_HASH" = "xtrue"])
 AC_SUBST(HAVE_CRYPTO_HASH)
 
+AC_MSG_CHECKING([for inet:parse_strict_address/1])
+HAVE_INET_PARSE_STRICT_ADDRESS=false
+inet_parse_strict_address=`"${ERL}" -noshell -eval 'code:ensure_loaded(inet), io:format("~p~n",[[erlang:function_exported(inet, parse_strict_address,1)]]), erlang:halt().' | tail -1`
+if test "$inet_parse_strict_address" = true; then
+        HAVE_INET_PARSE_STRICT_ADDRESS=true
+        AC_MSG_RESULT([yes])
+else
+        AC_MSG_RESULT([no])
+fi
+AM_CONDITIONAL(HAVE_INET_PARSE_STRICT_ADDRESS, [test "x$INET_PARSE_STRICT_ADDRESS" = "xtrue"])
+AC_SUBST(HAVE_INET_PARSE_STRICT_ADDRESS)
+
 dnl ------------------------------------------------------------------
 dnl Check for programs used during Yaws compilation/installation
 dnl ------------------------------------------------------------------

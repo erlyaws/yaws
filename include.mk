@@ -20,6 +20,10 @@ ifeq ($(HAVE_CRYPTO_HASH),true)
   ERLC_GENERIC_FLAGS += -DHAVE_CRYPTO_HASH
 endif
 
+ifeq ($(HAVE_INET_PARSE_STRICT_ADDRESS),true)
+  ERLC_GENERIC_FLAGS += -DHAVE_INET_PARSE_STRICT_ADDRESS
+endif
+
 # Local Variables:
 #    tab-width: 8
 # End:
