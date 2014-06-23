@@ -24,6 +24,10 @@ ifeq ($(HAVE_INET_PARSE_STRICT_ADDRESS),true)
   ERLC_GENERIC_FLAGS += -DHAVE_INET_PARSE_STRICT_ADDRESS
 endif
 
+ifeq ($(HAVE_BAD_UNICODE),true)
+  ERLC_GENERIC_FLAGS += -DHAVE_BAD_UNICODE
+endif
+
 # Local Variables:
 #    tab-width: 8
 # End:

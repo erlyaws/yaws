@@ -184,11 +184,32 @@ ERLANG_CHECK_ERTS
 ERLANG_CHECK_RELEASE
 
 dnl Check for bitstring support, introduced in R12B-5 (ERTS 5.6.5)
+AC_MSG_CHECKING([for bits support])
 AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [5.6.5],
     [bits_support="yes"],
     [bits_support="no"])
-AM_CONDITIONAL(BITS_SUPPORT, [test "x${bits_support}" = "xyes"])
+AC_MSG_RESULT([${bits_support}])
 
+BITS_SUPPORT=false
+if test "x${bits_support}" = "xyes"; then
+        BITS_SUPPORT=true
+fi
+AM_CONDITIONAL(BITS_SUPPORT, [test "x${BITS_SUPPORT}" = "xtrue"])
+AC_SUBST(BITS_SUPPORT)
+
+dnl Unicode module was buggy for R14B04 and previous (ERTS <= 5.8.5)
+AC_MSG_CHECKING([for buggy unicode module])
+AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [le], [5.8.5],
+    [bad_unicode="yes"],
+    [bad_unicode="no"])
+AC_MSG_RESULT([${bad_unicode}])
+
+HAVE_BAD_UNICODE=false
+if test "x${bad_unicode}" = "xyes"; then
+        HAVE_BAD_UNICODE=true
+fi
+AM_CONDITIONAL(HAVE_BAD_UNICODE, [test "x$HAVE_BAD_UNICODE" = "xtrue"])
+AC_SUBST(HAVE_BAD_UNICODE)
 
 dnl Determine directories for installation.
 if test "x${prefix}" != "xNONE" -a "x${ERLANG_INSTALL_LIB_DIR}" = "x"; then

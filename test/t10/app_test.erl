@@ -976,6 +976,12 @@ test_advanced_unfragmented_valid_utf8_text(BlockSz) ->
     do_test_unfragmented_valid_utf8("/websockets_autobahn_endpoint.yaws",
                                     BlockSz).
 
+-ifdef(HAVE_BAD_UNICODE).
+-define(BAD_UNICODE, true).
+-else.
+-define(BAD_UNICODE, false).
+-endif.
+
 do_test_unfragmented_valid_utf8(WSPath, BlockSz) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
 
@@ -1004,7 +1010,12 @@ do_test_unfragmented_valid_utf8(WSPath, BlockSz) ->
     Fun(<<16#f0,16#90,16#80,16#80>>),
     Fun(<<16#7f>>),
     Fun(<<16#df,16#bf>>),
-    Fun(<<16#ef,16#bf,16#bf>>),
+
+    case ?BAD_UNICODE of
+        true  -> ok;
+        false -> Fun(<<16#ef,16#bf,16#bf>>)
+    end,
+
     Fun(<<16#f4,16#8f,16#bf,16#bf>>),
     Fun(<<16#ed,16#9f,16#bf>>),
     Fun(<<16#ee,16#80,16#80>>),
