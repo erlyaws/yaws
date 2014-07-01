@@ -1359,7 +1359,10 @@ handle_method_result(Res, CliSock, {IP,Port}, GS, Req, H, Num) ->
                        A         -> A
                    end,
             Arg1 = make_arg(CliSock, {IP,Port}, H, NextReq, Arg0#arg.clidata),
-            Arg2 = Arg1#arg{cont=Arg0#arg.cont, state=Arg0#arg.state},
+            Arg2 = Arg1#arg{orig_req = Arg0#arg.orig_req,
+                            cont     = Arg0#arg.cont,
+                            state    = Arg0#arg.state},
+
 
             %% Get the number of bytes already read and do the reentrant call
             CliDataPos = case get(client_data_pos) of
