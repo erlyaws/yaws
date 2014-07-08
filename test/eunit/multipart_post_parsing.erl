@@ -213,16 +213,13 @@ malformed_multipart_form_test() ->
                "sometext\n\r\n--!!!"]),
     A2 = mk_arg(Data2),
     {error, malformed_multipart_post} = yaws_api:parse_multipart_post(A2),
-    Req1  = #http_request{method = 'GET'},
-    Req2  = #http_request{method = 'POST'},
+    Req   = #http_request{method = 'POST'},
     Hdrs1 = #headers{},
     Hdrs2 = #headers{content_type = "text/plain"},
-    A3 = #arg{headers=Hdrs1, req=Req1},
-    {error, bad_method} = yaws_api:parse_multipart_post(A3),
-    A4 = #arg{headers=Hdrs1, req=Req2},
-    {error, no_content_type} = yaws_api:parse_multipart_post(A4),
-    A5 = #arg{headers=Hdrs2, req=Req2},
-    {error, no_multipart_form_data} = yaws_api:parse_multipart_post(A5),
+    A3 = #arg{headers=Hdrs1, req=Req},
+    {error, no_content_type} = yaws_api:parse_multipart_post(A3),
+    A4 = #arg{headers=Hdrs2, req=Req},
+    {error, no_multipart_form_data} = yaws_api:parse_multipart_post(A4),
     ok.
 
 escaped_data_to_parse(Name) ->

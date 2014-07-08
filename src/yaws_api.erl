@@ -157,30 +157,36 @@ headers_other(#headers{other = X}) -> X.
 
 %% parse the command line query data
 parse_query(Arg) ->
-    D = Arg#arg.querydata,
-    if
-        D == [] ->
-            [];
-        true ->
-            parse_post_data_urlencoded(D)
+    case get(query_parse) of
+        undefined ->
+            Res = case Arg#arg.querydata of
+                      [] -> [];
+                      D  -> parse_post_data_urlencoded(D)
+                  end,
+            put(query_parse, Res),
+            Res;
+        Res ->
+            Res
     end.
 
 %% parse url encoded POST data
 parse_post(Arg) ->
-    D = Arg#arg.clidata,
-    Req = Arg#arg.req,
-    case Req#http_request.method of
-        'POST' ->
-            case D of
-                [] -> [];
-                _ ->
-                    parse_post_data_urlencoded(D)
-            end;
-        Other ->
-            error_logger:error_msg(
-              "ERROR: Can't parse post body for ~p requests: URL: ~p",
-              [Other, Arg#arg.fullpath]),
-            []
+    case get(post_parse) of
+        undefined ->
+            H = Arg#arg.headers,
+            Res = case H#headers.content_type of
+                      "application/x-www-form-urlencoded" ->
+                          case Arg#arg.clidata of
+                              [] -> [];
+                              D  -> parse_post_data_urlencoded(D)
+                          end;
+                      _ ->
+                          []
+                  end,
+            put(post_parse, Res),
+            Res;
+        Res ->
+            Res
     end.
 
 
@@ -245,32 +251,22 @@ parse_multipart_post(Arg) ->
     parse_multipart_post(Arg, [list]).
 parse_multipart_post(Arg, Options) ->
     H = Arg#arg.headers,
-    CT = H#headers.content_type,
-    Req = Arg#arg.req,
-    case Req#http_request.method of
-        'POST' ->
-            case CT of
+    case H#headers.content_type of
+        undefined ->
+            {error, no_content_type};
+        "multipart/form-data"++Line ->
+            case Arg#arg.cont of
+                {cont, Cont} ->
+                    parse_multipart(un_partial(Arg#arg.clidata), {cont, Cont});
                 undefined ->
-                    {error, no_content_type};
-                "multipart/form-data"++Line ->
-                    case Arg#arg.cont of
-                        {cont, Cont} ->
-                            parse_multipart(
-                              un_partial(Arg#arg.clidata),
-                              {cont, Cont});
-                        undefined ->
-                            LineArgs = parse_arg_line(Line),
-                            {value, {_, Boundary}} =
-                                lists:keysearch("boundary", 1, LineArgs),
-                            parse_multipart(
-                              un_partial(Arg#arg.clidata),
-                              Boundary, Options)
-                    end;
-                _Other ->
-                    {error, no_multipart_form_data}
+                    LineArgs = parse_arg_line(Line),
+                    {value, {_, Boundary}} = lists:keysearch("boundary", 1,
+                                                             LineArgs),
+                    parse_multipart(un_partial(Arg#arg.clidata),
+                                    Boundary, Options)
             end;
         _Other ->
-            {error, bad_method}
+            {error, no_multipart_form_data}
     end.
 
 un_partial({partial, Bin}) ->
@@ -2460,53 +2456,27 @@ skip_space(T)           -> T.
 getvar(ARG,Key) when is_atom(Key) ->
     getvar(ARG, atom_to_list(Key));
 getvar(ARG,Key) ->
-    case (ARG#arg.req)#http_request.method of
-        'POST' -> postvar(ARG, Key);
-        'GET' -> queryvar(ARG, Key);
-        _ -> undefined
-    end.
+    filter_parse(Key, yaws_api:parse_query(ARG), yaws_api:parse_post(ARG)).
 
 
 queryvar(ARG,Key) when is_atom(Key) ->
     queryvar(ARG, atom_to_list(Key));
 queryvar(ARG, Key) ->
-    Parse = case get(query_parse) of
-                undefined ->
-                    Pval = yaws_api:parse_query(ARG),
-                    put(query_parse, Pval),
-                    Pval;
-                Val0 ->
-                    Val0
-            end,
-    filter_parse(Key, Parse).
+    filter_parse(Key, yaws_api:parse_query(ARG), []).
 
 postvar(ARG, Key) when is_atom(Key) ->
     postvar(ARG, atom_to_list(Key));
 postvar(ARG, Key) ->
-    Parse = case get(post_parse) of
-                undefined ->
-                    Pval = yaws_api:parse_post(ARG),
-                    put(post_parse, Pval),
-                    Pval;
-                Val0 ->
-                    Val0
-            end,
-    filter_parse(Key, Parse).
+    filter_parse(Key, [], yaws_api:parse_post(ARG)).
 
-filter_parse(Key, Parse) ->
-    case lists:filter(fun(KV) ->
-                              (Key == element(1, KV))
-                                  andalso
-                                    (element(2, KV) /= undefined)
-                      end,
-                      Parse) of
+filter_parse(Key, QueryParse, PostParse) ->
+    Fun = fun({K,V}) -> (Key == K andalso V /= undefined) end,
+    Values = lists:filter(Fun, QueryParse) ++ lists:filter(Fun, PostParse),
+    case Values of
         [] -> undefined;
         [{_, V}] -> {ok,V};
         %% Multivalued case - return list of values
-        Vs -> list_to_tuple(lists:map(fun(KV) ->
-                                              element(2, KV)
-                                      end,
-                                      Vs))
+        _  -> list_to_tuple(lists:map(fun({_,V}) -> V end, Values))
     end.
 
 

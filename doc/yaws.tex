@@ -758,7 +758,7 @@ we pass two parameters to the \verb+arg.yaws+ page.  That data is
 URL-encoded by the browser and the server can retrieve the data by
 looking at the remainder of the URL following the '?' character.  If
 we invoke the \verb+arg.yaws+ page with the above mentioned URL we get
-as the result of \verb+yaws_parse_query/1+:
+as the result of \verb+yaws_api:parse_query/1+:
 
 $kalle = duck$
 
@@ -770,11 +770,10 @@ the list:
 [{"kalle", "duck"}, {"goofy", "unknown"}]
 \end{verbatim}
 
-Both the key and the value are strings.
-Hence, a web page can contain URLs with a
-query and thus pass data to the web server. This scheme works both
-with \verb+GET+ and \verb+POST+ requests.  It is the easiest way to
-pass data to the Web server since no form is required in the web page.
+Both the key and the value are strings. Hence, a web page can contain URLs with
+a query and thus pass data to the web server. This scheme works with any kind of
+requests. It is the easiest way to pass data to the Web server since no form is
+required in the web page.
 
 
 \subsection{Forms}
@@ -827,9 +826,8 @@ The differences between using the query part of the URL
 and a form are the following:
 
 \begin{itemize}
-\item Using the query arg only works in a \verb+GET+ request. We parse
-  the query argument with the function
-  \verb+yaws_api:parse_query(Arg)+
+\item Using the query arg works with any kind of requests. We parse the query
+  argument with the function \verb+yaws_api:parse_query(Arg)+
 
 \item If we use a form and \verb+POST+ the user data the client will
   transmit the user data in the body of the request.  That is, the
