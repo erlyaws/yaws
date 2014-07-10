@@ -28,6 +28,10 @@ ifeq ($(HAVE_BAD_UNICODE),true)
   ERLC_GENERIC_FLAGS += -DHAVE_BAD_UNICODE
 endif
 
+ifeq ($(HAVE_BAD_WILDCARD),true)
+  ERLC_GENERIC_FLAGS += -DHAVE_BAD_WILDCARD
+endif
+
 # Local Variables:
 #    tab-width: 8
 # End:

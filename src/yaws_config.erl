@@ -15,6 +15,12 @@
 
 -include_lib("kernel/include/file.hrl").
 
+-ifndef(HAVE_BAD_WILDCARD).
+-define(WILDCARD_SUPPORTED, true).
+-else.
+-define(WILDCARD_SUPPORTED, false).
+-endif.
+
 -export([load/1,
          make_default_gconf/2, make_default_sconf/0, make_default_sconf/2,
          add_sconf/1,
@@ -707,15 +713,22 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
                             Err
                     end;
                 {false,true} ->
-                    Names = filelib:wildcard(Name, ConfPath),
-                    Files = [filename:absname(N, ConfPath)
-                             || N <- lists:sort(Names)],
-                    case subconfigfiles(Files, GC, Cs) of
-                        {ok, GC1, Cs1} ->
-                            fload(FD, globals, GC1, C, Cs1,
-                                  Lno+1, Next);
-                        Err ->
-                            Err
+                    %% below, ignore dialyzer warning:
+                    case ?WILDCARD_SUPPORTED of
+                        true ->
+                            Names = filelib:wildcard(Name, ConfPath),
+                            Files = [filename:absname(N, ConfPath)
+                                     || N <- lists:sort(Names)],
+                            case subconfigfiles(Files, GC, Cs) of
+                                {ok, GC1, Cs1} ->
+                                    fload(FD, globals, GC1, C, Cs1,
+                                          Lno+1, Next);
+                                Err ->
+                                    Err
+                            end;
+                        false ->
+                            {error, ?F("Unsupport wildcard at line ~w"
+                                       " [support by releases >= R16A ]",[Lno])}
                     end;
                 {false,false} ->
                     {error, ?F("Expect filename or wildcard at line ~w"

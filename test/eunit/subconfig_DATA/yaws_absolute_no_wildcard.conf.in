@@ -1,0 +1,2 @@
+subconfigdir = @abs_srcdir@/subconfigdir.d
+subconfig    = @abs_srcdir@/subconfig.conf

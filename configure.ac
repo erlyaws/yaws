@@ -211,6 +211,20 @@ fi
 AM_CONDITIONAL(HAVE_BAD_UNICODE, [test "x$HAVE_BAD_UNICODE" = "xtrue"])
 AC_SUBST(HAVE_BAD_UNICODE)
 
+dnl filelib:wildcard/2 was buggy for R15B03 and previous (ERTS <= 5.9.3)
+AC_MSG_CHECKING([for buggy filelib:wildcard/2 function])
+AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [le], [5.9.3],
+    [bad_wildcard="yes"],
+    [bad_wildcard="no"])
+AC_MSG_RESULT([${bad_wildcard}])
+
+HAVE_BAD_WILDCARD=false
+if test "x${bad_wildcard}" = "xyes"; then
+        HAVE_BAD_WILDCARD=true
+fi
+AM_CONDITIONAL(HAVE_BAD_WILDCARD, [test "x$HAVE_BAD_WILDCARD" = "xtrue"])
+AC_SUBST(HAVE_BAD_WILDCARD)
+
 dnl Determine directories for installation.
 if test "x${prefix}" != "xNONE" -a "x${ERLANG_INSTALL_LIB_DIR}" = "x"; then
         dnl Under $prefix
@@ -511,6 +525,7 @@ AC_CONFIG_FILES([
         src/yaws_appdeps.hrl
 
         test/eunit//subconfig_DATA/yaws_absolute.conf
+        test/eunit//subconfig_DATA/yaws_absolute_no_wildcard.conf
         test/support/yaws.conf
         test/t1/yaws.conf
         test/t2/yaws.conf
