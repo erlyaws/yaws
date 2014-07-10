@@ -1,5 +1,7 @@
 This is Yaws, a webserver for dynamic content written in Erlang.
 
+![Travis build status](https://api.travis-ci.org/klacke/yaws.svg)
+
 Prepare build
 -------------
 
@@ -20,6 +22,7 @@ debian packages):
  * erlang-compiler
  * erlang-crypto
  * erlang-xmerl
+* libpam0g-dev
 
 To build the documentation (optional), you also need to install:
 
