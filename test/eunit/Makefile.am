@@ -9,9 +9,10 @@ MODULES = multipart_post_parsing.erl	\
 	  gconf.erl			\
 	  sconf.erl			\
 	  yaws_rpc_test.erl		\
-	  proc_cleanup.erl
+	  proc_cleanup.erl		\
+	  subconfig.erl
 
-EXTRA_DIST = $(MODULES) cookies.dump setcookies.dump
+EXTRA_DIST = $(MODULES) cookies.dump setcookies.dump subconfig_DATA
 
 EBIN_FILES=$(MODULES:%.erl=%.beam)
 

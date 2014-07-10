@@ -263,11 +263,29 @@ but not recommended.
 
 .TP
 \fBsubconfig = File\fR
-Load specified config file.
+Load specified config file. Absolute paths or relative ones to the configuration
+location are allowed. Unix-style wildcard strings can be used to include several
+files at once. See \fIfilelib:wildcard/1\fR for details. Hidden files, starting
+by a dot, will be ignored. For example:
+
+.nf
+  subconfig = /etc/yaws/global.conf
+  subconfig = /etc/yaws/vhosts/*.conf
+.fi
+
+Or, relatively to the configuration localtion:
+
+.nf
+  subconfig = global.conf
+  subconfig = vhosts/*.conf
+.fi
+
 
 .TP
 \fBsubconfigdir = Directory\fR
-Load all config file in specified directory.
+Load all config files found in the specified directory. The given Directory can
+be an absolute path or relative to the configuration location. Hidden files,
+starting by a dot, will be ignored.
 
 .TP
 \fBx_forwarded_for_log_proxy_whitelist = ListOfUpstreamProxyServerIps\fR

@@ -2419,10 +2419,28 @@ part where options for each virtual host is supplied.
               \verb+infinity+ is legal but not recommended.
 
 \item        \verb+subconfig = File+ ---
-              Load specified config file.
+              Load specified config file.  Absolute paths or relative ones to
+              the configuration location are allowed. Unix-style wildcard
+              strings can be used to include several files at once. See
+              \verb+filelib:wildcard/1+ for details. Hidden files, starting by a
+              dot, will be ignored. For example:
+
+\begin{verbatim}
+  subconfig = /etc/yaws/global.conf
+  subconfig = /etc/yaws/vhosts/*.conf
+\end{verbatim}
+
+               Or, relatively to the configuration localtion:
+
+\begin{verbatim}
+  subconfig = global.conf
+  subconfig = vhosts/*.conf
+\end{verbatim}
 
 \item        \verb+subconfigdir = Directory+ ---
-              Load all config files in specified directory.
+              Load all config files found in the specified directory. The given
+              Directory can be an absolute path or relative to the configuration
+              location. Hidden files, starting by a dot, will be ignored.
 
 \item        \verb+x_forwarded_for_log_proxy_whitelist = ListOfUpstreamProxyServerIps+ ---
               \textit{This target is deprecated and will be ignored}.

@@ -510,6 +510,7 @@ AC_CONFIG_FILES([
         src/yaws_charset.hrl
         src/yaws_appdeps.hrl
 
+        test/eunit//subconfig_DATA/yaws_absolute.conf
         test/support/yaws.conf
         test/t1/yaws.conf
         test/t2/yaws.conf

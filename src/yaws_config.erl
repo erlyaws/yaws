@@ -695,45 +695,44 @@ fload(FD, globals, GC, C, Cs, Lno, Chars) ->
             fload(FD, globals, GC, C, Cs, Lno+1, Next);
 
         ["subconfig", '=', Name] ->
-            File = filename:absname(Name),
-            case is_file(File) of
-                true ->
-                    error_logger:info_msg(
-                      "Yaws: Using subconfig file ~s~n", [File]),
-                    case file:open(File, [read]) of
-                        {ok, FD1} ->
-                            R = (catch fload(FD1, globals, GC, undefined,
-                                             Cs, 1, io:get_line(FD1, ''))),
-                            ?Debug("FLOAD: ~p", [R]),
-                            case R of
-                                {ok, GC1, Cs1} ->
-                                    fload(FD, globals, GC1, C, Cs1, Lno+1,Next);
-                                Err ->
-                                    Err
-                            end;
+            {ok, Config} = file:pid2name(FD),
+            ConfPath = filename:dirname(filename:absname(Config)),
+            File = filename:absname(Name, ConfPath),
+            case {is_file(File), is_wildcard(Name)} of
+                {true,_} ->
+                    case subconfigfile(File, GC, Cs) of
+                        {ok, GC1, Cs1} ->
+                            fload(FD, globals, GC1, C, Cs1, Lno+1,Next);
                         Err ->
-                            {error, ?F("Can't open config file ~s:~p",
-                                       [File,Err])}
+                            Err
                     end;
-                false ->
-                    {error, ?F("Expect filename at line ~w", [Lno])}
+                {false,true} ->
+                    Names = filelib:wildcard(Name, ConfPath),
+                    Files = [filename:absname(N, ConfPath)
+                             || N <- lists:sort(Names)],
+                    case subconfigfiles(Files, GC, Cs) of
+                        {ok, GC1, Cs1} ->
+                            fload(FD, globals, GC1, C, Cs1,
+                                  Lno+1, Next);
+                        Err ->
+                            Err
+                    end;
+                {false,false} ->
+                    {error, ?F("Expect filename or wildcard at line ~w"
+                               " [subconfig: ~s]", [Lno, Name])}
             end;
 
         ["subconfigdir", '=', Name] ->
-            Dir = filename:absname(Name),
+            {ok, Config} = file:pid2name(FD),
+            ConfPath = filename:dirname(filename:absname(Config)),
+            Dir = filename:absname(Name, ConfPath),
             case is_dir(Dir) of
                 true ->
                     case file:list_dir(Dir) of
                         {ok, Names} ->
-                            Sorted = lists:sort(Names),
-                            Paths = lists:map(
-                                      fun(N) ->
-                                              filename:absname(N, Dir)
-                                      end, Sorted),
-                            Fold = lists:foldl(
-                                     fun subconfigdir_fold/2,
-                                     {ok, GC, Cs}, Paths),
-                            case Fold of
+                            Files = [filename:absname(N, Dir)
+                                     || N <- lists:sort(Names)],
+                            case subconfigfiles(Files, GC, Cs) of
                                 {ok, GC1, Cs1} ->
                                     fload(FD, globals, GC1, C, Cs1,
                                           Lno+1, Next);
@@ -2228,6 +2227,12 @@ is_file(Val) ->
             false
     end.
 
+is_wildcard(Val) ->
+    (lists:member($*, Val) orelse
+     lists:member($?, Val) orelse
+     (lists:member($[, Val) andalso lists:member($], Val)) orelse
+     (lists:member(${, Val) andalso lists:member($}, Val))).
+
 
 %% tokenizer
 toks(Lno, Chars) ->
@@ -3031,30 +3036,34 @@ parse_auth_ips([Str|Rest], Result) ->
     end.
 
 
-subconfigdir_fold(_File, {error, _Err}=Acc) ->
-    Acc;
-subconfigdir_fold(File, {ok, GCp, Csp}=Acc) ->
-    case is_file(File) of
-        true ->
-            error_logger:info_msg("Yaws: Using subconfig file ~s~n", [File]),
-            case file:open(File, [read]) of
-                {ok, FD1} ->
-                    R = (catch fload(FD1,
-                                     globals,
-                                     GCp,
-                                     undefined,
-                                     Csp,
-                                     1,
-                                     io:get_line(FD1, ''))),
-                    ?Debug("FLOAD: ~p", [R]),
-                    R;
-                _ ->
-                    {error, "Can't open config file " ++ File}
-            end;
-        false ->
-            %% Ignore subdirectories
-            Acc
+
+subconfigfiles([], GC, Cs) ->
+    {ok, GC, Cs};
+subconfigfiles([File|Files], GC, Cs) ->
+     case filename:basename(File) of
+        [$.|_] ->
+             error_logger:info_msg("Yaws: Ignore subconfig file ~s~n", [File]),
+             subconfigfiles(Files, GC, Cs);
+         _ ->
+             case subconfigfile(File, GC, Cs) of
+                 {ok, GC1, Cs1} -> subconfigfiles(Files, GC1, Cs1);
+                 Err            -> Err
+             end
+     end.
+
+subconfigfile(File, GC, Cs) ->
+    error_logger:info_msg("Yaws: Using subconfig file ~s~n", [File]),
+    case file:open(File, [read]) of
+        {ok, FD} ->
+            R = (catch fload(FD, globals, GC, undefined,
+                             Cs, 1, io:get_line(FD, ''))),
+            ?Debug("FLOAD: ~p", [R]),
+            R;
+        Err ->
+            {error, ?F("Can't open config file ~s: ~p", [File,Err])}
     end.
+
+
 
 str2term(Str0) ->
     Str=Str0++".",
