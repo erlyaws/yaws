@@ -64,7 +64,7 @@ deflate_enabled() ->
     ?line "Accept-Encoding" = proplists:get_value("Vary", Hdrs1),
     ?line true = is_binary(zlib:gunzip(Body1)),
 
-    %% Partial content is not compressed for small (and catched) files
+    %% Partial content is not compressed for small (and cached) files
     Uri2 = "http://localhost:8001/1000.txt",
     ?line {ok, "206", Hdrs2, _} =
         ibrowse:send_req(Uri2, [{"Accept-Encoding", "gzip, deflate"},
@@ -211,7 +211,7 @@ deflate_mime_types() ->
 deflate_compress_size() ->
     io:format("  deflate_compress_size\n", []),
 
-    %% Static content (cached)
+    %% Small static content (cached)
     Uri1 = "http://localhost:8005/1000.txt",
     ?line {ok, "200", Hdrs1, _} =
         ibrowse:send_req(Uri1, [{"Accept-Encoding", "gzip, deflate"}], get),
@@ -223,17 +223,29 @@ deflate_compress_size() ->
     ?line "gzip" = proplists:get_value("Content-Encoding", Hdrs2),
     ?line true = is_binary(zlib:gunzip(Body2)),
 
-    %% Dynamic content
-    Uri3 = "http://localhost:8005/smalltest",
-    ?line {ok, "200", Hdrs3, _} =
+    %% Large static content (cached)
+    Uri3 = "http://localhost:8005/10000.txt",
+    ?line {ok, "200", Hdrs3, Body3} =
         ibrowse:send_req(Uri3, [{"Accept-Encoding", "gzip, deflate"}], get),
-    ?line undefined = proplists:get_value("Content-Encoding", Hdrs3),
+    ?line "gzip" = proplists:get_value("Content-Encoding", Hdrs3),
+    ?line true = is_binary(zlib:gunzip(Body3)),
 
-    Uri4 = "http://localhost:8005/bigtest",
-    ?line {ok, "200", Hdrs4, Body4} =
+    Uri4 = "http://localhost:8008/10000.txt",
+    ?line {ok, "200", Hdrs4, _} =
         ibrowse:send_req(Uri4, [{"Accept-Encoding", "gzip, deflate"}], get),
-    ?line "gzip" = proplists:get_value("Content-Encoding", Hdrs4),
-    ?line true = is_binary(zlib:gunzip(Body4)),
+    ?line undefined = proplists:get_value("Content-Encoding", Hdrs4),
+
+    %% Dynamic content
+    Uri5 = "http://localhost:8005/smalltest",
+    ?line {ok, "200", Hdrs5, _} =
+        ibrowse:send_req(Uri5, [{"Accept-Encoding", "gzip, deflate"}], get),
+    ?line undefined = proplists:get_value("Content-Encoding", Hdrs5),
+
+    Uri6 = "http://localhost:8005/bigtest",
+    ?line {ok, "200", Hdrs6, Body6} =
+        ibrowse:send_req(Uri6, [{"Accept-Encoding", "gzip, deflate"}], get),
+    ?line "gzip" = proplists:get_value("Content-Encoding", Hdrs6),
+    ?line true = is_binary(zlib:gunzip(Body6)),
     ok.
 
 

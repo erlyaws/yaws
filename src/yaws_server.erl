@@ -3639,26 +3639,31 @@ handle_crash(ARG, L) ->
     end.
 
 %% Ret: true | false | {data, Data}
-decide_deflate(false, _, _, _, _, _) ->
+decide_deflate(false, _, _, _, _, _, _) ->
     ?Debug("Compression not supported by the server~n", []),
     false;
-decide_deflate(_, _, _, _, identity, _) ->
+decide_deflate(_, _, _, _, _, identity, _) ->
     ?Debug("No compression: Encoding=identity~n", []),
     false;
-decide_deflate(_, _, _, _, deflate, _) ->
+decide_deflate(_, _, _, _, _, deflate, _) ->
     ?Debug("Compression already handled: Encoding=deflate~n", []),
     false;
-decide_deflate(true, SC, Arg, Data, decide, Mode) ->
-    Bin   = to_binary(Data),
+decide_deflate(true, SC, Arg, Sz, Data, decide, Mode) ->
     DOpts = SC#sconf.deflate_options,
     if
-        Mode == final andalso size(Bin) == 0 ->
+        Mode == final andalso size(Data) == 0 ->
             ?Debug("No data to be compressed~n",[]),
             false;
 
         Mode == final andalso
         DOpts#deflate.min_compress_size /= nolimit andalso
-        size(Bin) < DOpts#deflate.min_compress_size ->
+        size(Data) < DOpts#deflate.min_compress_size ->
+            ?Debug("Data too small to be compressed~n",[]),
+            false;
+
+        is_integer(Sz) andalso
+        DOpts#deflate.min_compress_size /= nolimit andalso
+        Sz < DOpts#deflate.min_compress_size ->
             ?Debug("Data too small to be compressed~n",[]),
             false;
 
@@ -3674,7 +3679,7 @@ decide_deflate(true, SC, Arg, Data, decide, Mode) ->
                         true when Mode =:= final ->
                             ?Debug("Compress data~n", []),
                             yaws:outh_set_content_encoding(deflate),
-                            {ok, DB} = yaws_zlib:gzip(to_binary(Data), DOpts),
+                            {ok, DB} = yaws_zlib:gzip(Data, DOpts),
                             {data, DB};
                         true -> %% Mode == stream | {file,_,_}
                             ?Debug("Compress streamed data~n", []),
@@ -3734,7 +3739,8 @@ deliver_accumulated(Arg, Sock, ContentLength, Mode) ->
                              yaws:outh_set_transfer_encoding_off(),
                              {discard, []};
                          _ ->
-                             deflate_accumulated(Arg, Cont, ContentLength, Mode)
+                             deflate_accumulated(Arg, to_binary(Cont),
+                                                 ContentLength, Mode)
                      end,
 
     {StatusLine, Headers} = yaws:outh_serialize(),
@@ -3752,7 +3758,8 @@ deflate_accumulated(Arg, Content, ContentLength, Mode) ->
     Enc   = yaws:outh_get_content_encoding(),
     DOpts = SC#sconf.deflate_options,
     {Result, Data, Size} =
-        case decide_deflate(?sc_has_deflate(SC), SC, Arg, Content, Enc, Mode) of
+        case decide_deflate(?sc_has_deflate(SC), SC, Arg, ContentLength,
+                            Content, Enc, Mode) of
             {data, Bin} ->
                 %% implies Mode==final
                 {undefined, Bin, binary_size(Bin)};
@@ -3761,7 +3768,7 @@ deflate_accumulated(Arg, Content, ContentLength, Mode) ->
                 Z = zlib:open(),
                 {ok, Priv, Bin} =
                     yaws_zlib:gzipDeflate(Z,yaws_zlib:gzipInit(Z,DOpts),
-                                          to_binary(Content),none),
+                                          Content,none),
                 {{Z, Priv}, Bin, undefined};
             true ->
                 %% implies Mode=={file,_,_} and use_gzip_static==true
@@ -3775,7 +3782,7 @@ deflate_accumulated(Arg, Content, ContentLength, Mode) ->
                         Z = zlib:open(),
                         {ok, Priv, Bin} =
                             yaws_zlib:gzipDeflate(Z,yaws_zlib:gzipInit(Z,DOpts),
-                                                  to_binary(Content),none),
+                                                  Content,none),
                         {{Z, Priv}, Bin, undefined}
                 end;
 

@@ -97,3 +97,14 @@ max_size_cached_file = 5120000
                 use_gzip_static = true
         </deflate>
 </server>
+
+
+<server localhost>
+        port = 8008
+        listen = 0.0.0.0
+        deflate = true
+        docroot = @abs_builddir@/docroot-test @abs_top_srcdir@/www
+        <deflate>
+                min_compress_size = 20480000
+        </deflate>
+</server>
