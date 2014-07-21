@@ -1042,6 +1042,12 @@ fcgi_encode_record(WorkerState, Type, RequestId, NameValueList)
                        fcgi_encode_name_value_list(NameValueList));
 
 fcgi_encode_record(WorkerState, Type, RequestId, ContentData)
+  when is_binary(ContentData), size(ContentData) > 65535  ->
+    <<Bin:65535/binary, Rest/binary>> = ContentData,
+    [fcgi_encode_record(WorkerState, Type, RequestId, Bin),
+     fcgi_encode_record(WorkerState, Type, RequestId, Rest)];
+
+fcgi_encode_record(WorkerState, Type, RequestId, ContentData)
   when is_binary(ContentData) ->
     Version = 1,
     ContentLength = size(ContentData),
