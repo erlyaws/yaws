@@ -2645,18 +2645,16 @@ deliver_100(CliSock) ->
 deliver_xxx(CliSock, _Req, Code) ->
     deliver_xxx(CliSock, _Req, Code, "").
 deliver_xxx(CliSock, _Req, Code, ExtraHtml) ->
-    B = list_to_binary(["<html><h1>",
-                        integer_to_list(Code), $\ ,
-                        yaws_api:code_to_phrase(Code),
-                        "</h1></html>",
-                       ExtraHtml]),
+    B = ["<html><h1>", integer_to_list(Code), $\ ,
+         yaws_api:code_to_phrase(Code), "</h1></html>", ExtraHtml],
+    Sz = iolist_size(B),
     H = #outh{status = Code,
               doclose = true,
               chunked = false,
               server = yaws:make_server_header(),
               connection = yaws:make_connection_close_header(true),
-              content_length = yaws:make_content_length_header(size(B)),
-              contlen = size(B),
+              content_length = yaws:make_content_length_header(Sz),
+              contlen = Sz,
               content_type = yaws:make_content_type_header("text/html")},
     put(outh, H),
     accumulate_content(B),
@@ -2677,9 +2675,8 @@ deliver_405(CliSock, Req, Methods) ->
     deliver_xxx(CliSock, Req, 405, Methods_msg).
 
 deliver_416(CliSock, _Req, Tot) ->
-    B = list_to_binary(["<html><h1>416 ",
-                        yaws_api:code_to_phrase(416),
-                        "</h1></html>"]),
+    B = ["<html><h1>416 ", yaws_api:code_to_phrase(416), "</h1></html>"],
+    Sz = iolist_size(B),
     H = #outh{status = 416,
               doclose = true,
               chunked = false,
@@ -2687,8 +2684,8 @@ deliver_416(CliSock, _Req, Tot) ->
               connection = yaws:make_connection_close_header(true),
               content_range = ["Content-Range: */",
                                integer_to_list(Tot), $\r, $\n],
-              content_length = yaws:make_content_length_header(size(B)),
-              contlen = size(B),
+              content_length = yaws:make_content_length_header(Sz),
+              contlen = Sz,
               content_type = yaws:make_content_type_header("text/html")},
     put(outh, H),
     accumulate_content(B),
@@ -2939,7 +2936,7 @@ stream_loop_send(Priv, CliSock, FlushStatus, CurTimeout, IdleTimeout) ->
 make_chunk(Data) ->
     case yaws:outh_get_chunked() of
         true ->
-            case binary_size(Data) of
+            case iolist_size(Data) of
                 0 ->
                     empty;
                 S ->
@@ -2947,14 +2944,14 @@ make_chunk(Data) ->
                     {S, [yaws:integer_to_hex(S), CRNL, Data, CRNL]}
             end;
         false ->
-            {binary_size(Data), Data}
+            {iolist_size(Data), Data}
     end.
 
 make_final_chunk(Data) ->
     case yaws:outh_get_chunked() of
         true ->
             CRNL = crnl(),
-            case binary_size(Data) of
+            case iolist_size(Data) of
                 0 ->
                     {0, ["0",CRNL,CRNL]};
                 S ->
@@ -2962,7 +2959,7 @@ make_final_chunk(Data) ->
                          "0", CRNL, CRNL]}
             end;
         false ->
-            {binary_size(Data), Data}
+            {iolist_size(Data), Data}
     end.
 
 send_streamcontent_chunk(discard, _, _) ->
@@ -2979,8 +2976,8 @@ send_streamcontent_chunk(undefined, CliSock, Data) ->
     undefined;
 send_streamcontent_chunk({Z, Priv}, CliSock, Data) ->
     ?Debug("send ~p bytes to ~p ~n",
-           [binary_size(Data), CliSock]),
-    {ok, P, D} = yaws_zlib:gzipDeflate(Z, Priv, to_binary(Data), none),
+           [iolist_size(Data), CliSock]),
+    {ok, P, D} = yaws_zlib:gzipDeflate(Z, Priv, iolist_to_binary(Data), none),
     case make_chunk(D) of
         empty -> ok;
         {Size, Chunk} ->
@@ -3071,26 +3068,6 @@ skip_data(Bin, Sz) ->
     <<Head:Sz/binary, Tail/binary>> = Bin,
     {Head, Tail}.
 
-to_binary(B) when is_binary(B) ->
-    B;
-to_binary(L) when is_list(L) ->
-    list_to_binary(L).
-
-
-%% binary_size(X) -> size(to_binary(X)).
-
-binary_size(X) -> binary_size(0,X).
-
-binary_size(I, []) ->
-    I;
-binary_size(I, [H|T]) ->
-    J = binary_size(I, H),
-    binary_size(J, T);
-binary_size(I, B) when is_binary(B) ->
-    I + size(B);
-binary_size(I, _Int) when is_integer(_Int) ->
-    I+1.
-
 accumulate_content(Data) ->
     case get(acc_content) of
         undefined ->
@@ -3175,57 +3152,52 @@ handle_out_reply({html, Html}, _LineNo, _YawsFile,  _UT, _ARG) ->
     ok;
 
 handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  _UT, ARG) ->
-    Res = case safe_ehtml_expand(E) of
-              {ok, Val} ->
-                  accumulate_content(Val),
-                  ok;
-              {error, ErrStr} ->
-                  handle_crash(ARG, ErrStr)
-          end,
-    Res;
+    case safe_ehtml_expand(E) of
+        {ok, Val} ->
+            accumulate_content(Val),
+            ok;
+        {error, ErrStr} ->
+            handle_crash(ARG, ErrStr)
+    end;
 
 handle_out_reply({exhtml, E}, _LineNo, _YawsFile,  _UT, A) ->
     N = count_trailing_spaces(),
-    Res = case yaws_exhtml:format(E, N) of
-              {ok, Val} ->
-                  accumulate_content(Val),
-                  ok;
-              {error, ErrStr} ->
-                  handle_crash(A,ErrStr)
-          end,
-    Res;
+    case yaws_exhtml:format(E, N) of
+        {ok, Val} ->
+            accumulate_content(Val),
+            ok;
+        {error, ErrStr} ->
+            handle_crash(A,ErrStr)
+    end;
 
 handle_out_reply({exhtml, Value2StringF, E}, _LineNo, _YawsFile,  _UT, A) ->
     N = count_trailing_spaces(),
-    Res = case yaws_exhtml:format(E, N, Value2StringF) of
-              {ok, Val} ->
-                  accumulate_content(Val),
-                  ok;
-              {error, ErrStr} ->
-                  handle_crash(A,ErrStr)
-          end,
-    Res;
+    case yaws_exhtml:format(E, N, Value2StringF) of
+        {ok, Val} ->
+            accumulate_content(Val),
+            ok;
+        {error, ErrStr} ->
+            handle_crash(A,ErrStr)
+    end;
 
 handle_out_reply({sexhtml, E}, _LineNo, _YawsFile,  _UT, A) ->
-    Res = case yaws_exhtml:sformat(E) of
-              {ok, Val} ->
-                  accumulate_content(Val),
-                  ok;
-              {error, ErrStr} ->
-                  handle_crash(A,ErrStr)
-          end,
-    Res;
+    case yaws_exhtml:sformat(E) of
+        {ok, Val} ->
+            accumulate_content(Val),
+            ok;
+        {error, ErrStr} ->
+            handle_crash(A,ErrStr)
+    end;
 
 handle_out_reply({sexhtml, Value2StringF, E},
                  _LineNo, _YawsFile,  _UT, A) ->
-    Res = case yaws_exhtml:sformat(E, Value2StringF) of
-              {ok, Val} ->
-                  accumulate_content(Val),
-                  ok;
-              {error, ErrStr} ->
-                  handle_crash(A,ErrStr)
-          end,
-    Res;
+    case yaws_exhtml:sformat(E, Value2StringF) of
+        {ok, Val} ->
+            accumulate_content(Val),
+            ok;
+        {error, ErrStr} ->
+            handle_crash(A,ErrStr)
+    end;
 
 
 
@@ -3739,7 +3711,7 @@ deliver_accumulated(Arg, Sock, ContentLength, Mode) ->
                              yaws:outh_set_transfer_encoding_off(),
                              {discard, []};
                          _ ->
-                             deflate_accumulated(Arg, to_binary(Cont),
+                             deflate_accumulated(Arg, iolist_to_binary(Cont),
                                                  ContentLength, Mode)
                      end,
 
@@ -3762,7 +3734,7 @@ deflate_accumulated(Arg, Content, ContentLength, Mode) ->
                             Content, Enc, Mode) of
             {data, Bin} ->
                 %% implies Mode==final
-                {undefined, Bin, binary_size(Bin)};
+                {undefined, Bin, iolist_size(Bin)};
 
             true when Mode == stream; DOpts#deflate.use_gzip_static == false ->
                 Z = zlib:open(),
@@ -3787,7 +3759,7 @@ deflate_accumulated(Arg, Content, ContentLength, Mode) ->
                 end;
 
             false when Mode == final ->
-                {undefined, Content, binary_size(Content)};
+                {undefined, Content, iolist_size(Content)};
             false ->
                 %% implies Mode=stream | {file,_,_}
                 {undefined, Content, ContentLength}
