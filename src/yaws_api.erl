@@ -175,7 +175,7 @@ parse_post(Arg) ->
         undefined ->
             H = Arg#arg.headers,
             Res = case H#headers.content_type of
-                      "application/x-www-form-urlencoded" ->
+                      "application/x-www-form-urlencoded"++_ ->
                           case Arg#arg.clidata of
                               [] -> [];
                               D  -> parse_post_data_urlencoded(D)
