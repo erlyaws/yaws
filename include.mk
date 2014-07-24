@@ -32,6 +32,9 @@ ifeq ($(HAVE_BAD_WILDCARD),true)
   ERLC_GENERIC_FLAGS += -DHAVE_BAD_WILDCARD
 endif
 
+ifeq ($(HAVE_SSL_HONOR_CIPHER_ORDER),true)
+  ERLC_GENERIC_FLAGS += -DHAVE_SSL_HONOR_CIPHER_ORDER
+endif
 # Local Variables:
 #    tab-width: 8
 # End:

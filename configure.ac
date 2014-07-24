@@ -225,6 +225,20 @@ fi
 AM_CONDITIONAL(HAVE_BAD_WILDCARD, [test "x$HAVE_BAD_WILDCARD" = "xtrue"])
 AC_SUBST(HAVE_BAD_WILDCARD)
 
+dnl Check for support of honor_cipher_order SSL option (ERTS >= 6.0)
+AC_MSG_CHECKING([for support of honor_cipher_order SSL option])
+AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [6.0],
+    [ssl_honor_cipher_order="yes"],
+    [ssl_honor_cipher_order="no"])
+AC_MSG_RESULT([${ssl_honor_cipher_order}])
+
+HAVE_SSL_HONOR_CIPHER_ORDER=false
+if test "x${ssl_honor_cipher_order}" = "xyes"; then
+        HAVE_SSL_HONOR_CIPHER_ORDER=true
+fi
+AM_CONDITIONAL(HAVE_SSL_HONOR_CIPHER_ORDER, [test "x$HAVE_SSL_HONOR_CIPHER_ORDER" = "xtrue"])
+AC_SUBST(HAVE_SSL_HONOR_CIPHER_ORDER)
+
 dnl Determine directories for installation.
 if test "x${prefix}" != "xNONE" -a "x${ERLANG_INSTALL_LIB_DIR}" = "x"; then
         dnl Under $prefix

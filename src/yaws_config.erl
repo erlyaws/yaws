@@ -1844,6 +1844,25 @@ fload(FD, ssl, GC, C, Cs, Lno, Chars) ->
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
+        ["honor_cipher_order", '=', Bool] ->
+            %% below, ignore dialyzer warning:
+            case ?HONOR_CIPHER_ORDER of
+                true ->
+                    case is_bool(Bool) of
+                        {true, Val} ->
+                            C2 = C#sconf{
+                                   ssl=(C#sconf.ssl)#ssl{honor_cipher_order=Val}
+                                  },
+                            fload(FD, ssl, GC, C2, Cs, Lno+1, Next);
+                        false ->
+                            {error, ?F("Expect true|false at line ~w", [Lno])}
+                    end;
+                _ ->
+                    error_logger:info_msg("Warning, honor_cipher_order SSL "
+                                          "option is not supported "
+                                          "at line ~w~n", [Lno]),
+                    fload(FD, ssl, GC, C, Cs, Lno+1, Next)
+            end;
         ['<', "/ssl", '>'] ->
             fload(FD, server, GC, C, Cs, Lno+1, Next);
 

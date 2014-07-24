@@ -2438,7 +2438,7 @@ part where options for each virtual host is supplied.
 \end{verbatim}
 
             \textbf{WARNING: because of a bug in filelib:wildcard/2, wildcard
-              strings are forbidden for R15B03 and previous.}
+              strings are forbidden for Erlang/OTP R15B03 and previous.}
 
 \item        \verb+subconfigdir = Directory+ ---
               Load all config files found in the specified directory. The given
@@ -3215,6 +3215,14 @@ The following directives are allowed inside a server definition.
                  i.e. secure renegotiation will be used if possible but it will
                  fallback to unsecure renegotiation if the peer does not support
                  RFC 5746.
+
+               \item \verb+honor_cipher_order = true | false+ --- If true (the
+                 default), use the server's preference for cipher selection. If
+                 false, use the client's preference.
+
+                 \textbf{WARNING: This option was introduced in SSL application
+                   in Erlang/OTP 17.0, so it will be ignored by Yaws for
+                   previous releases.}
                \end{itemize}
 
 \item       \verb+<redirect> ... </redirect>+ ---

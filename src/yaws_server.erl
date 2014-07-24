@@ -980,6 +980,12 @@ ssl_listen_opts(GC, SSL) ->
             true ->
                  false
          end,
+         if SSL#ssl.honor_cipher_order /= undefined andalso
+            ?HONOR_CIPHER_ORDER == true ->
+                 {honor_cipher_order, SSL#ssl.honor_cipher_order};
+            true ->
+                 false
+         end,
          if ?gc_use_old_ssl(GC) ->
                  {ssl_imp, old};
             true ->

@@ -281,7 +281,7 @@ Or, relatively to the configuration localtion:
 .fi
 
 \fBWARNING: because of a bug in filelib:wildcard/2, wildcard strings are
-forbidden for R15B03 and previous.\fR
+forbidden for Erlang/OTP R15B03 and previous.\fR
 
 
 .TP
@@ -1102,6 +1102,16 @@ Specifies if to reject renegotiation attempt that does not live up to RFC
 5746. By default \fBsecure_renegotiate\fR is set to false i.e. secure
 renegotiation will be used if possible but it will fallback to unsecure
 renegotiation if the peer does not support RFC 5746.
+.RE
+
+.IP
+\fBhonor_cipher_order = true | false\fR
+.RS 12
+If true (the default), use the server's preference for cipher selection. If
+false, use the client's preference.
+
+\fBWARNING: This option was introduced in SSL application in Erlang/OTP 17.0, so
+it will be ignored by Yaws for previous releases.\fR
 .RE
 
 .TP
