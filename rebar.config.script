@@ -3,6 +3,13 @@
 
 Dir = filename:dirname(SCRIPT),
 
+ErtsVsn = case string:tokens(erlang:system_info(version), ".") of
+              [A,B] ->
+                  {list_to_integer(A), list_to_integer(B), 0};
+              [A,B,C|_] ->
+                  {list_to_integer(A), list_to_integer(B), list_to_integer(C)}
+          end.
+
 %% generate a default test/t11/include/srcdir_test.hrl file so rebar can
 %% compile the tests
 ok = filelib:ensure_dir(filename:join(Dir, "test/t11/include/srcdir_test.hrl")),
@@ -54,10 +61,13 @@ PortSpecs0 = case lists:keyfind(port_specs, 1, Cfg0) of
                  false                -> []
              end,
 
+%% yaws:sendfile/5 was buggy in R15B (ERTS = 5.9)
 code:ensure_loaded(file),
 ErlOpts1 = case erlang:function_exported(file,sendfile,5) of
-               true  -> ErlOpts0 ++ [{d,'HAVE_ERLANG_SENDFILE'}];
-               false -> ErlOpts0
+               true when ErtsVsn >= {5,9,1} ->
+                   ErlOpts0 ++ [{d,'HAVE_ERLANG_SENDFILE'}];
+               _ ->
+                   ErlOpts0
            end,
 
 code:ensure_loaded(crypto),
@@ -66,8 +76,32 @@ ErlOpts2 = case erlang:function_exported(crypto,hash,2) of
                false -> ErlOpts1
            end,
 
-HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts2),
+code:ensure_loaded(inet),
+ErlOpts3 = case erlang:function_exported(inet,parse_strict_address,1) of
+               true  -> ErlOpts2 ++ [{d,'HAVE_INET_PARSE_STRICT_ADDRESS'}];
+               false -> ErlOpts2
+           end,
 
+%% Unicode module was buggy for R14B04 and previous (ERTS <= 5.8.5)
+ErlOpts4 = if
+               ErtsVsn =< {5,8,3} -> ErlOpts3 ++ [{d,'HAVE_BAD_UNICODE'}];
+               true               -> ErlOpts3
+           end,
+
+%% filelib:wildcard/2 was buggy for R15B03 and previous (ERTS <= 5.9.3)
+ErlOpts5 = if
+               ErtsVsn =< {5,9,3} -> ErlOpts4 ++ [{d,'HAVE_BAD_WILDCARD'}];
+               true               -> ErlOpts4
+           end,
+
+
+%% Check for support of honor_cipher_order SSL option (ERTS >= 6.0)
+ErlOpts6 = if
+               ErtsVsn >= {6,0,0} -> ErlOpts5 ++ [{d,'HAVE_SSL_HONOR_CIPHER_ORDER'}];
+               true               -> ErlOpts5
+           end,
+
+HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts6),
 {PortEnv1, PortSpecs1} =
     if
         HaveSendFile ->
@@ -79,7 +113,7 @@ HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts2),
             {PortEnv0, PortSpecs0}
     end,
 
-Cfg1 = lists:keyreplace(erl_opts, 1, Cfg0, {erl_opts, ErlOpts2}),
-Cfg2 = lists:keyreplace(port_env, 1, Cfg1, {port_env, PortEnv1}),
+Cfg1 = lists:keyreplace(erl_opts,   1, Cfg0, {erl_opts,   ErlOpts6}),
+Cfg2 = lists:keyreplace(port_env,   1, Cfg1, {port_env,   PortEnv1}),
 Cfg3 = lists:keyreplace(port_specs, 1, Cfg2, {port_specs, PortSpecs1}),
 Cfg3.
