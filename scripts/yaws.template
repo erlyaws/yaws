@@ -76,6 +76,7 @@ help()
     echo "        yaws --ls                                             -- list Yaws nodes and their status"
     echo "        yaws --ctltrace traffic|http                          -- toggle trace of running daemon"
     echo "        yaws --check [--verbose] [--id ID] YawsFile [IncDirs] -- test compile YawsFile"
+    echo "        yaws --configtest File [--verbose]                    -- test config file"
     echo "        yaws --wait-started[=secs] [--id ID]                  -- wait for daemon to be ready"
     echo "        yaws --wait-stopped[=secs] [--id ID]                  -- wait for daemon to be stopped"
     echo "        yaws --stats [--id ID]                                -- show daemon statistics"
@@ -102,6 +103,8 @@ call_wait_started=""
 call_wait_stopped=""
 check=""
 checkargs=""
+configtest=""
+configtestcmd=""
 verbose=""
 program=$0
 
@@ -300,6 +303,10 @@ while [ $# -gt 0 ]
           shift;;
       -check|--check)
           check="$erl -noshell -pa ${yawsdir}${delim}ebin $xpath -s yaws_ctl check";;
+      -configtest|--configtest)
+          configtest="$erl -noshell -pa ${yawsdir}${delim}ebin $xpath"
+          configtestcmd=" -s yaws_ctl configtest $1";
+          shift;;
       --verbose)
           verbose=true;;
       --to_erl)
@@ -348,6 +355,14 @@ if [ -n "$check" ]; then
         exit 1
     else
         exec $check
+    fi
+fi
+
+if [ -n "$configtest" ]; then
+    if [ -n "$verbose" ]; then
+        exec $configtest $configtestcmd
+    else
+        exec $configtest -eval "error_logger:tty(false)" $configtestcmd
     fi
 fi
 
