@@ -540,6 +540,8 @@ AC_CONFIG_FILES([
 
         test/eunit//subconfig_DATA/yaws_absolute.conf
         test/eunit//subconfig_DATA/yaws_absolute_no_wildcard.conf
+        test/eunit//subconfig_DATA/global_absolute_subconfig.conf
+        test/eunit//subconfig_DATA/global_absolute_no_wildcard_subconfig.conf
         test/support/yaws.conf
         test/t1/yaws.conf
         test/t2/yaws.conf

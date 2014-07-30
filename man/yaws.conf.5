@@ -260,7 +260,6 @@ close after keepalive_timeout milliseconds unless a new request is received in
 that time. The default value is \fI30000\fR. The value \fIinfinity\fR is legal
 but not recommended.
 
-
 .TP
 \fBsubconfig = File\fR
 Load specified config file. Absolute paths or relative ones to the configuration
@@ -403,6 +402,16 @@ accepted sockets. See \fIinet:setopts/2\fR for details. Supported options are:
 This directive sets the "Server: " output header to the custom value and
 overloads the global one for this virtual server.
 
+.TP
+\fBsubconfig = File\fR
+Same as \fBsubconfig\fR directive of the global part, but here files should only
+contain directives allowed in the server part.
+
+
+.TP
+\fBsubconfigdir = Directory\fR
+Same as \fBsubconfigdir\fR directive of the global part, but here files should only
+contain directives allowed in server part.
 
 .TP
 \fBrhost = Host[:Port]\fR

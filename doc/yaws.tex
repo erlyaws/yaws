@@ -2547,6 +2547,14 @@ The following directives are allowed inside a server definition.
               This directive sets the "Server: " output header to the custom
               value and overloads the global one for this virtual server.
 
+\item        \verb+subconfig = File+ ---
+              Same as \verb+subconfig+ directive of the global part, but here
+              files should only contain directives allowed in the server part.
+
+\item        \verb+subconfigdir = Directory+ ---
+              Same as \verb+subconfigdir+ directive of the global part, but here
+              files should only contain directives allowed in the server part.
+
 \item       \verb+rhost = Host[:Port]+ ---
              This forces all local redirects issued by the server to go to Host.
              This is useful when \Yaws\ listens to a port which is different
