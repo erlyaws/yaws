@@ -656,6 +656,9 @@ collect_io(Pid, Mref, Ack) ->
         {io_request, From, Me, {put_chars, M, F, A}} ->
             From ! {io_reply, Me, ok},
             collect_io(Pid, Mref, [Ack, apply(M,F, A)]);
+        {io_request, From, Me, {put_chars, unicode, M, F, A}} ->
+            From ! {io_reply, Me, ok},
+            collect_io(Pid, Mref, [Ack, apply(M,F, A)]);
         capio_timeout ->
             {timeout, Ack}
     end.
