@@ -1748,15 +1748,14 @@ ehtml_expand({ssi,File, Del, Bs}) ->
 %% benchmarks folder to measure it.
                                                 %
 ehtml_expand({Tag}) ->
-    ["<", atom_to_list(Tag), " />"];
+    ["<", atom_to_list(Tag), ehtml_end_tag(Tag)];
 ehtml_expand({pre_html, X}) -> X;
 ehtml_expand({Mod, Fun, Args})
   when is_atom(Mod), is_atom(Fun), is_list(Args) ->
     ehtml_expand(Mod:Fun(Args));
 ehtml_expand({Tag, Attrs}) ->
     NL = ehtml_nl(Tag),
-    [NL, "<", atom_to_list(Tag), ehtml_attrs(Attrs), "></",
-     atom_to_list(Tag), ">"];
+    [NL, "<", atom_to_list(Tag), ehtml_attrs(Attrs), ehtml_end_tag(Tag)];
 ehtml_expand({Tag, Attrs, Body}) when is_atom(Tag) ->
     Ts = atom_to_list(Tag),
     NL = ehtml_nl(Tag),
@@ -1844,6 +1843,30 @@ ehtml_nl(object) -> [];
 ehtml_nl(_) -> "\n".
 
 
+%% Void elements must not have an end tag (</tag>) in HTML5, while for most
+%% elements a proper end tag (<tag></tag>, not <tag />) is mandatory.
+%%
+%% http://www.w3.org/TR/html5/syntax.html#void-elements
+%% http://www.w3.org/TR/html5/syntax.html#syntax-tag-omission
+
+-define(self_closing, " />"). % slash ignored in HTML5
+
+ehtml_end_tag(area) -> ?self_closing;
+ehtml_end_tag(base) -> ?self_closing;
+ehtml_end_tag(br) -> ?self_closing;
+ehtml_end_tag(col) -> ?self_closing;
+ehtml_end_tag(embed) -> ?self_closing;
+ehtml_end_tag(hr) -> ?self_closing;
+ehtml_end_tag(img) -> ?self_closing;
+ehtml_end_tag(input) -> ?self_closing;
+ehtml_end_tag(keygen) -> ?self_closing;
+ehtml_end_tag(link) -> ?self_closing;
+ehtml_end_tag(meta) -> ?self_closing;
+ehtml_end_tag(param) -> ?self_closing;
+ehtml_end_tag(source) -> ?self_closing;
+ehtml_end_tag(track) -> ?self_closing;
+ehtml_end_tag(wbr) -> ?self_closing;
+ehtml_end_tag(Tag) -> ["></", atom_to_list(Tag), ">"].
 
 
 %% ------------------------------------------------------------
@@ -1900,11 +1923,12 @@ ehtml_expander({pre_html, X}, Before, After) ->
     ehtml_expander_done(X, Before, After);
 %% Tags
 ehtml_expander({Tag}, Before, After) ->
-    ehtml_expander_done(["<", atom_to_list(Tag), " />"], Before, After);
+    ehtml_expander_done(["<", atom_to_list(Tag), ehtml_end_tag(Tag)],
+                        Before, After);
 ehtml_expander({Tag, Attrs}, Before, After) ->
     NL = ehtml_nl(Tag),
-    ehtml_expander_done([NL, "<", atom_to_list(Tag), ehtml_attrs(Attrs), "></",
-                         atom_to_list(Tag), ">"],
+    ehtml_expander_done([NL, "<", atom_to_list(Tag), ehtml_attrs(Attrs),
+                         ehtml_end_tag(Tag)],
                         Before,
                         After);
 ehtml_expander({Tag, Attrs, Body}, Before, After) ->

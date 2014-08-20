@@ -6,6 +6,21 @@
 
 -export([mfa_fun/1, nested_mfa_fun/1, nested_mfa_attr_fun/1]).
 
+void_element_test() ->
+    %% No end tag (</tag>) for void elements in HTML5.
+    {ehtml, E1} = {ehtml, [{img, [{src, "foo.png"}, {alt, "foo"}]}]},
+    Img = "<img src=\"foo.png\" alt=\"foo\" />",
+    Img = lists:flatten(yaws_api:ehtml_expand(E1)),
+    {ehtml, E2} = {ehtml, [{br}]},
+    Br = "<br />",
+    Br = lists:flatten(yaws_api:ehtml_expand(E2)).
+
+non_void_element_test() ->
+    %% No self-closing syntax (/>) for non-void elements in HTML5.
+    {ehtml, E} = {ehtml, [{p}]},
+    P = "<p></p>",
+    P = lists:flatten(yaws_api:ehtml_expand(E)).
+
 get_title() ->
     "Funtest Title".
 
