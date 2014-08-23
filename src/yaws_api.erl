@@ -1801,7 +1801,7 @@ ehtml_attrs([{check, Name, Value} | Tail]) ->
             true -> $';
             false -> $"
         end,
-    ValueString = [Q,Value,Q],
+    ValueString = [Q,Val,Q],
     [[$ |atom_to_list(Name)], [$=|ValueString]|ehtml_attrs(Tail)].
 
 
