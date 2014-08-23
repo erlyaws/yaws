@@ -1728,7 +1728,7 @@ is_abs_URI1(_) ->
 %% Tag   = atom()
 %% Attrs = [{Key, Value}]
 %% Key   = atom()
-%% Value = string() | atom() | integer() | float() |
+%% Value = string() | binary() | atom() | integer() | float() |
 %%         {Module, Fun, [Args]} | fun/0
 %% Body  = EHTML
 
@@ -1781,6 +1781,7 @@ ehtml_attrs([{Name, Value} | Tail]) ->
     ValueString = [$", if
                            is_atom(Value) -> atom_to_list(Value);
                            is_list(Value) -> Value;
+                           is_binary(Value) -> Value;
                            is_integer(Value) -> integer_to_list(Value);
                            is_float(Value) -> float_to_list(Value)
                        end, $"],
@@ -1794,6 +1795,7 @@ ehtml_attrs([{check, Name, Value} | Tail]) ->
     Val = if
               is_atom(Value) -> atom_to_list(Value);
               is_list(Value) -> Value;
+              is_binary(Value) -> Value;
               is_integer(Value) -> integer_to_list(Value);
               is_float(Value) -> float_to_list(Value)
           end,
@@ -2119,6 +2121,12 @@ deepmember(C,[L|Cs]) when is_list(L) ->
         false -> deepmember(C,Cs)
     end;
 deepmember(C,[N|Cs]) when C /= N ->
+    deepmember(C, Cs);
+deepmember(_C,<<>>) ->
+    false;
+deepmember(C, <<C,_Cs/binary>>) ->
+    true;
+deepmember(C, <<_,Cs/binary>>) ->
     deepmember(C, Cs).
 
 

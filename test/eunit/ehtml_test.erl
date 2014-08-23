@@ -22,12 +22,15 @@ non_void_element_test() ->
     P = lists:flatten(yaws_api:ehtml_expand(E)).
 
 attributes_test() ->
-    {ehtml, E} = {ehtml, [{img, [{check, src, "quote\".png"},
-                                 {check, width, 10},
-                                 {height, 20},
-                                 {check, alt, "quote\""}]}]},
-    Img = "<img src='quote\".png' width=\"10\" height=\"20\" alt='quote\"' />",
-    Img = lists:flatten(yaws_api:ehtml_expand(E)).
+    {ehtml, E1} = {ehtml, [{img, [{check, src, <<"quote\".png">>},
+                                  {check, width, 10},
+                                  {height, 20},
+                                  {check, alt, "quote\""}]}]},
+    Img = <<"<img src='quote\".png' width=\"10\" height=\"20\" alt='quote\"' />">>,
+    Img = iolist_to_binary(yaws_api:ehtml_expand(E1)),
+    {ehtml, E2} = {ehtml, [{a, [{href, <<"test">>}], <<"test link">>}]},
+    A = <<"<a href=\"test\">test link</a>">>,
+    A = iolist_to_binary(yaws_api:ehtml_expand(E2)).
 
 get_title() ->
     "Funtest Title".

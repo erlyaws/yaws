@@ -749,7 +749,7 @@ EHTML = [EHTML] | {Tag, Attrs, Body} | {Tag, Attrs} | {Tag} |
 Tag   = atom()
 Attrs = [{Key, Value}]
 Key   = atom()
-Value = string() | atom() | integer() | float() |
+Value = string() | binary() | atom() | integer() | float() |
         {Module, Fun, [Args]} | fun/0
 Body  = EHTML
 .fi
