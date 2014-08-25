@@ -1723,12 +1723,13 @@ is_abs_URI1(_) ->
 %% ------------------------------------------------------------
 %% simple erlang term representation of HTML:
 %% EHTML = [EHTML] | {Tag, Attrs, Body} | {Tag, Attrs} | {Tag} |
-%%         {Module, Fun, [Args]} | fun/0
+%%         {Module, Fun, [Args]} | fun/0 |
 %%         binary() | character()
 %% Tag   = atom()
-%% Attrs = [{Key, Value}]  or {EventTag, {jscall, FunName, [Args]}}
+%% Attrs = [{Key, Value}]
 %% Key   = atom()
-%% Value = string() | {Module, Fun, [Args]} | fun/0
+%% Value = string() | atom() | integer() | float() |
+%%         {Module, Fun, [Args]} | fun/0
 %% Body  = EHTML
 
 ehtml_expand(Ch) when Ch >= 0, Ch =< 255 -> Ch; %yaws_api:htmlize_char(Ch);

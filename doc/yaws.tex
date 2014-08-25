@@ -524,8 +524,8 @@ $Attrs = [\{HtmlAttribute, Value\}]$
 
 $HtmlAttribute = atom()$
 
-$Value = string() | atom() |
-         \{Module, Fun, [Args]\} | fun/0$
+$Value = string() | atom() | integer() | float() |\\*
+\hspace*{0.55 in} \{Module, Fun, [Args]\} | fun/0$
 
 $Body  = EHTML$
 
