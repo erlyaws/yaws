@@ -30,7 +30,9 @@ clean-local:
 
 post-build: $(bin_PROGRAMS) $(lib_LTLIBRARIES)
 	$(AM_V_at)$(INSTALL) -d @top_builddir@/priv/lib
+if WITH_EPAM
 	$(AM_V_at)$(INSTALL) -m 644 epam @top_builddir@/priv
+endif
 	$(AM_V_at)$(INSTALL) -m 644 .libs/setuid_drv.so @top_builddir@/priv/lib
 	$(AM_V_at)$(INSTALL) -m 644 .libs/yaws_sendfile_drv.so @top_builddir@/priv/lib
 
