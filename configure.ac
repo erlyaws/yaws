@@ -73,7 +73,7 @@ fi
 AC_SUBST(EXTRAINCLUDE)
 
 AC_ARG_ENABLE([pam],
-        AC_HELP_STRING([--disable_pam],
+        AC_HELP_STRING([--disable-pam],
             [disable pam auth]),
         enable_pam="$enableval",
         enable_pam="yes")
