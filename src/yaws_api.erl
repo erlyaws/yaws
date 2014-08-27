@@ -1723,12 +1723,13 @@ is_abs_URI1(_) ->
 %% ------------------------------------------------------------
 %% simple erlang term representation of HTML:
 %% EHTML = [EHTML] | {Tag, Attrs, Body} | {Tag, Attrs} | {Tag} |
-%%         {Module, Fun, [Args]} | fun/0
+%%         {Module, Fun, [Args]} | fun/0 |
 %%         binary() | character()
 %% Tag   = atom()
-%% Attrs = [{Key, Value}]  or {EventTag, {jscall, FunName, [Args]}}
+%% Attrs = [{Key, Value}]
 %% Key   = atom()
-%% Value = string() | {Module, Fun, [Args]} | fun/0
+%% Value = string() | binary() | atom() | integer() | float() |
+%%         {Module, Fun, [Args]} | fun/0
 %% Body  = EHTML
 
 ehtml_expand(Ch) when Ch >= 0, Ch =< 255 -> Ch; %yaws_api:htmlize_char(Ch);
@@ -1777,12 +1778,7 @@ ehtml_attrs([{Name, {Mod, Fun, Args}} | Tail])
 ehtml_attrs([{Name, Value} | Tail]) when is_function(Value) ->
     ehtml_attrs([{Name, Value()} | Tail]);
 ehtml_attrs([{Name, Value} | Tail]) ->
-    ValueString = [$", if
-                           is_atom(Value) -> atom_to_list(Value);
-                           is_list(Value) -> Value;
-                           is_integer(Value) -> integer_to_list(Value);
-                           is_float(Value) -> float_to_list(Value)
-                       end, $"],
+    ValueString = [$", value2string(Value), $"],
     [[$ |atom_to_list(Name)], [$=|ValueString]|ehtml_attrs(Tail)];
 ehtml_attrs([{check, Name, {Mod, Fun, Args}} | Tail])
   when is_atom(Mod), is_atom(Fun), is_list(Args) ->
@@ -1790,18 +1786,19 @@ ehtml_attrs([{check, Name, {Mod, Fun, Args}} | Tail])
 ehtml_attrs([{check, Name, Value} | Tail]) when is_function(Value) ->
     ehtml_attrs([{check, Name, Value()} | Tail]);
 ehtml_attrs([{check, Name, Value} | Tail]) ->
-    Val = if
-              is_atom(Value) -> atom_to_list(Value);
-              is_list(Value) -> Value;
-              is_integer(Value) -> integer_to_list(Value);
-              is_float(Value) -> float_to_list(Value)
-          end,
+    Val = value2string(Value),
     Q = case deepmember($", Val) of
             true -> $';
             false -> $"
         end,
-    ValueString = [Q,Value,Q],
+    ValueString = [Q,Val,Q],
     [[$ |atom_to_list(Name)], [$=|ValueString]|ehtml_attrs(Tail)].
+
+value2string(Atom) when is_atom(Atom) -> atom_to_list(Atom);
+value2string(String) when is_list(String) -> String;
+value2string(Binary) when is_binary(Binary) -> Binary;
+value2string(Integer) when is_integer(Integer) -> integer_to_list(Integer);
+value2string(Float) when is_float(Float) -> float_to_list(Float).
 
 
 
@@ -2118,6 +2115,12 @@ deepmember(C,[L|Cs]) when is_list(L) ->
         false -> deepmember(C,Cs)
     end;
 deepmember(C,[N|Cs]) when C /= N ->
+    deepmember(C, Cs);
+deepmember(_C,<<>>) ->
+    false;
+deepmember(C, <<C,_Cs/binary>>) ->
+    true;
+deepmember(C, <<_,Cs/binary>>) ->
     deepmember(C, Cs).
 
 

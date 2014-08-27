@@ -744,11 +744,13 @@ is
 \fI
 .nf
 EHTML = [EHTML] | {Tag, Attrs, Body} | {Tag, Attrs} | {Tag} |
+        {Module, Fun, [Args]} | fun/0 |
         binary() | character()
-Tag      = atom()
-Attrs = [{Key, Value}]  or {EventTag, {jscall, FunName, [Args]}}
-Key      = atom()
-Value = string()
+Tag   = atom()
+Attrs = [{Key, Value}]
+Key   = atom()
+Value = string() | binary() | atom() | integer() | float() |
+        {Module, Fun, [Args]} | fun/0
 Body  = EHTML
 .fi
 \fR
