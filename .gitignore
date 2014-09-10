@@ -47,6 +47,7 @@ test/t1/yaws.conf.orig
 test/t4/docroot-test1
 test/t4/docroot-test2
 test/t11/include
+test/eunit/subconfig_DATA/*
 www/yaws.pdf
 www/yaws.ps
 doc/a.pdf
