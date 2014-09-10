@@ -92,7 +92,7 @@ is able to handle a very large number of concurrent connections}
 \item Static content page delivery
 \item Dynamic content generation using embedded \Erlang\  code in the
 HTML pages
-\item Common Log Format traffic logs
+\item NCSA combined/XLF/ELF log format traffic logs
 \item Virtual hosting with several servers on the same IP address
 \item Multiple servers on multiple IP addresses
 \item HTTP tracing for debugging
@@ -2185,10 +2185,10 @@ part where options for each virtual host is supplied.
               \begin{itemize}
               \item \verb+report.log+ --- this is a text file that contains  all
               error logger printouts from \Yaws{}.
-              \item \verb+<Host>.access+ --- for each virtual host
-                served by \Yaws{}, a file \verb+<Host>.access+ will be
-                written which contains an access log in Common Log
-                Format.
+              \item \verb+<Host>.access+ --- for each virtual host served
+                by \Yaws{}, a file \verb+<Host>.access+ will be written
+                which contains an access log in NCSA combined/XLF/ELF log
+                format.
               \item \verb+<Host>.auth+ --- for each virtual host served by
               \Yaws{}, a file \verb+<Host>.auth+ will be written which
               contains all HTTP auth related messages.
