@@ -215,7 +215,11 @@ code_change(_OldVsn, Data, _Extra) ->
 
 do_send(_Out, _SocketFd, _Filename, _Offset, Count, _) when Count =< 0 ->
     {ok, 0};
-do_send(Out, SocketFd, Filename, Offset, Count, ChunkSize) ->
+do_send(Out, SocketFd, Filename0, Offset, Count, ChunkSize) ->
+    Filename = case file:native_name_encoding() of
+                   latin1 -> Filename0;
+                   utf8 -> unicode:characters_to_binary(Filename0)
+               end,
     Call = list_to_binary([<<Offset:64, Count:64, SocketFd:32>>,
                            Filename, <<0:8>>]),
     case gen_server:call(?MODULE, {send, SocketFd, Call}, infinity) of
