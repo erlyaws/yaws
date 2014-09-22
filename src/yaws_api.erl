@@ -1783,7 +1783,8 @@ ehtml_attrs([{Name, Value} | Tail]) ->
                            is_atom(Value) -> atom_to_list(Value);
                            is_list(Value) -> Value;
                            is_integer(Value) -> integer_to_list(Value);
-                           is_float(Value) -> float_to_list(Value)
+                           is_float(Value) -> float_to_list(Value);
+			   is_binary(Value) -> binary_to_list(Value)
                        end, $"],
     [[$ |atom_to_list(Name)], [$=|ValueString]|ehtml_attrs(Tail)];
 ehtml_attrs([{check, Name, {Mod, Fun, Args}} | Tail])
@@ -1796,7 +1797,8 @@ ehtml_attrs([{check, Name, Value} | Tail]) ->
               is_atom(Value) -> atom_to_list(Value);
               is_list(Value) -> Value;
               is_integer(Value) -> integer_to_list(Value);
-              is_float(Value) -> float_to_list(Value)
+              is_float(Value) -> float_to_list(Value);
+	      is_binary(Value) -> binary_to_list(Value)
           end,
     Q = case deepmember($", Val) of
             true -> $';
