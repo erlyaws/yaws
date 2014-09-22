@@ -88,14 +88,23 @@ authlog(#sconf{servername=Srv}, IP, Path, Item) ->
 %%%----------------------------------------------------------------------
 %%% Internal functions
 %%%----------------------------------------------------------------------
+
 do_open_log(#sconf{servername=Srv, logger_mod=Mod}, Type, Dir) ->
-    case catch Mod:open_log(Srv, Type, Dir) of
-        {true, Data} ->
-            AL = #log{id={Type, Srv}, amod=Mod, data=Data},
-            ets:insert(yaws_log, AL),
-            true;
+    Id = {Type, Srv},
+    case ets:lookup(yaws_log, Id) of
+        [] ->
+            case catch Mod:open_log(Srv, Type, Dir) of
+                {true, Data} ->
+                    AL = #log{id={Type, Srv}, amod=Mod, data=Data},
+                    ets:insert(yaws_log, AL),
+                    true;
+                _ ->
+                    false
+            end;
         _ ->
-            false
+            %% Already exists. Might be the case that both http and https
+            %% has been enabled and we don't want to open the same log twice.
+            true
     end.
 
 
