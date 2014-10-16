@@ -1870,7 +1870,6 @@ fload(FD, ssl, GC, C, Lno, Chars) ->
         ["ciphers", '=', Val] ->
             try
                 L = str2term(Val),
-                io:format("L = ~p~n",[L]),
                 Ciphers = ssl:cipher_suites(),
                 case check_ciphers(L, Ciphers) of
                     ok ->
@@ -1879,8 +1878,7 @@ fload(FD, ssl, GC, C, Lno, Chars) ->
                     Err ->
                         Err
                 end
-            catch _:Err2 ->
-                    io:format("~p~n", [Err2]),
+            catch _:_ ->
                     {error, ?F("Bad cipherspec at line ~w", [Lno])}
             end;
 
