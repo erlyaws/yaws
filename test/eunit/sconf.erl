@@ -67,6 +67,10 @@ setup_ssl_test() ->
     "/tmp/yaws-key.pem" = yaws:ssl_keyfile(
                             yaws:sconf_ssl(SC2)
                            ),
+
+    PVs = ['tlsv1.2', 'tlsv1.1', tlsv1],
+    SC3 = yaws:create_sconf(".", [{ssl, [{protocol_version, PVs}]}]),
+    ?assertMatch(#ssl{protocol_version=PVs}, yaws:sconf_ssl(SC3)),
     ok.
 
 

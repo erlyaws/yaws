@@ -1123,6 +1123,19 @@ false, use the client's preference.
 it will be ignored by Yaws for previous releases.\fR
 .RE
 
+.IP
+\fBprotocol_version = ProtocolList\fR
+.RS 12
+
+Specifies the list of SSL protocols that will be supported. If not set,
+defaults to all protocols supported by the erlang \fBssl\fR
+application. For example, to support only TLS versions 1.2, 1.1, and 1:
+.nf
+
+protocol_version = tlsv1.2, tlsv1.1, tlsv1
+.fi
+.RE
+
 .TP
 \fB<redirect> ... </redirect>\fR
 Defines a redirect mapping. The following items are allowed within a matching

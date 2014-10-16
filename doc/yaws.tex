@@ -3231,6 +3231,16 @@ The following directives are allowed inside a server definition.
                  \textbf{WARNING: This option was introduced in SSL application
                    in Erlang/OTP 17.0, so it will be ignored by Yaws for
                    previous releases.}
+
+                 \item \verb+protocol_version = ProtocolList+ ---
+                   Specifies the list of SSL protocols that will be
+                   supported. If not set, defaults to all protocols
+                   supported by the erlang \verb+ssl+ application. For
+                   example, to support only TLS versions 1.2, 1.1, and 1:
+
+\begin{verbatim}
+protocol_version = tlsv1.2, tlsv1.1, tlsv1
+\end{verbatim}
                \end{itemize}
 
 \item       \verb+<redirect> ... </redirect>+ ---
