@@ -1185,11 +1185,13 @@ fcgi_add_resp(WorkerState, OldData) ->
 
 fcgi_stream_data_loop(WorkerState) ->
     YawsWorkerPid = WorkerState#fcgi_worker_state.yaws_worker_pid,
-    case fcgi_get_output(WorkerState) of
+    case catch fcgi_get_output(WorkerState) of
         {data, Data} ->
             yaws_api:stream_chunk_deliver_blocking(YawsWorkerPid, Data),
             fcgi_stream_data_loop(WorkerState);
         {exit_status, _Status} ->
+            yaws_api:stream_chunk_end(YawsWorkerPid);
+        {'EXIT', _Reason} ->
             yaws_api:stream_chunk_end(YawsWorkerPid)
     end.
 
