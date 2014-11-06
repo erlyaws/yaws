@@ -11,7 +11,7 @@
          % {traceoutput, false},          % true | false
          % {conf, "/etc/yaws.conf"},      % string()
          % {runmod, mymodule},            % atom()
-         % {embedded, false},             % true | false
+         {embedded, true}             % true | false
          % {id, "default"},               % string()
          % {pam_service, "system-auth"},  % string()
          % {pam_use_acct, true},          % true | false
