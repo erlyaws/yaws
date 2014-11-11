@@ -1,3 +1,10 @@
+Tue Nov 11 17:17:37 CET 2014 Yaws 1.99
+Major release, many enhancenements and bugfixes. Too many to list actually, see the git logs. The major ones though:
+combine multiple Accept-Encoding headers (steve)
+Massive autotools refactoring & cleanup (Christopher Faulet)
+Add SSL protocol_version configuration element (steve)
+Add 'honor_cipher_order' option in ssl part (Christopher Faulet)
+
 Mon Nov  4 19:22:42 CET 2013 Yaws 1.98
 Bad HTTP 3.0 message sent to yaws, crashed the server entirely. Note this is crucial for yaws servers deployed on internet. (klacke)
 Use Yaws linked-in driver by default to send large file (capflam)

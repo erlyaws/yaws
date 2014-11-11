@@ -118,3 +118,5 @@ Kalle Zetterlund
 Tjeerd van der Laan
 Kaloyan Dimitrov
 Karolis Petrauskas 
+Johannes Weißl
+Jean-Sébastien Pédron
