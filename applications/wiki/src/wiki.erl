@@ -1,4 +1,5 @@
 %    -*- Erlang -*-
+%    coding: utf-8
 %    File:        wiki.erl  (~jb/work/wiki/src/wiki.erl)
 %    Author:    Joe Armstrong
 %    Author:        Johan Bevemyr
