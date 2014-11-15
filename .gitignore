@@ -25,6 +25,7 @@ Makefile.in
 .deps
 c_src/.libs
 c_src/epam
+c_src/*.d
 erl_crash.dump
 yaws.pc
 yaws.plt
@@ -91,6 +92,7 @@ applications/yapp/doc/yapp_registry.html
 applications/yapp/doc/yapp_server.html
 applications/yapp/doc/yapp_sup.html
 applications/yapp/ebin/yapp.app
+applications/yapp/ebin/yapp.appup
 applications/wiki/scripts/addFile
 applications/wiki/scripts/getPassword
 applications/wiki/scripts/importFiles
