@@ -151,6 +151,25 @@ out(A) ->
     system to listen on http://127.0.0.1:80
   </p>
 
+  <h2>Building with Rebar</h2>
+  <p>
+    Yaws can alternatively be built using <a
+    href="https://github.com/rebar/rebar">rebar</a>. Assuming you already
+    have <code>rebar</code> installed, simply type
+  </p>
+  <div class="box">
+    <pre>
+$ rebar get-deps compile
+    </pre>
+  </div>
+  <p>
+    This fetches all dependencies and builds Yaws.
+  </p>
+  <p>
+    The <a href="rebar_release.yaws">rebar_release page</a> explains how to
+    use <code>rebar</code> to create an Erlang release for an application
+    that depends on Yaws.
+  </p>
 
   <h2>Running yaws</h2>
   <p>

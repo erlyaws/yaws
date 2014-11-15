@@ -1,0 +1,26 @@
+%% -*- mode: erlang;erlang-indent-level: 4;indent-tabs-mode: nil -*-
+%% ex: ft=erlang ts=4 sw=4 et
+{variables,
+ [
+  {nodeid, "yawsnode"},
+  {appid, "yawsapp"}
+ ]}.
+{dir, "apps"}.
+{dir, "apps/{{appid}}"}.
+{dir, "rel"}.
+{dir, "rel/files"}.
+{template, "yawsnode.rebar.config", "rebar.config"}.
+{template, "yawsnode.install.sh", "rel/files/install.sh"}.
+{chmod, 8#744, "rel/files/install.sh"}.
+{template, "yawsnode.reltool.config", "rel/reltool.config"}.
+{file, "yawsnode.erl.script", "rel/files/erl"}.
+{chmod, 8#744, "rel/files/erl"}.
+{file, "yawsnode.nodetool", "rel/files/nodetool"}.
+{chmod, 8#744, "rel/files/nodetool"}.
+{file, "yawsnode.runner", "rel/files/{{nodeid}}"}.
+{chmod, 8#744, "rel/files/{{nodeid}}"}.
+{file, "yawsnode.sys.config", "rel/files/sys.config"}.
+{template, "yawsnode.vm.args", "rel/files/vm.args"}.
+{template, "yawsnode.yaws.conf", "rel/files/yaws.conf"}.
+
+
