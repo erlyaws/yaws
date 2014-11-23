@@ -110,6 +110,7 @@ dist-hook:
 	  (cd $$a && $(MAKE) top_distdir=../../$(distdir)	\
 	    distdir=../../$(distdir)/$$a distdir);		\
 	done
+	find $(distdir) -type d -name .deps | xargs rm -rf
 
 distclean-local:
 	$(AM_V_at)[ ! -h include/yaws.hrl ]     || rm -f include/yaws.hrl
