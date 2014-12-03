@@ -36,9 +36,8 @@ out(A) ->
       </p>
       <div class="box">
         <pre>
-# apt-get build-dep erlang yaws
-# apt-get install erlang-nox erlang-src erlang-manpages erlang-mode
-# apt-get install erlang-mode erlang-dev
+# sudo apt-get build-dep erlang yaws
+# sudo apt-get install erlang-nox erlang-src erlang-manpages erlang-mode erlang-dev libtool
         </pre>
       </div>
     </li>
@@ -48,7 +47,7 @@ out(A) ->
       </p>
       <div class="box">
         <pre>
-# apt-get install git-core
+# sudo apt-get install git-core
         </pre>
       </div>
     </li>
@@ -107,7 +106,9 @@ out(A) ->
   <div class="box">
     <pre>
 # cd yaws
-# autoconf; ./configure --prefix=/path/to/yaws; make; make install
+# autoreconf -fi
+# ./configure --prefix=/path/to/yaws
+# make install
     </pre>
   </div>
   <p>
@@ -116,10 +117,11 @@ out(A) ->
   <div class="box">
     <pre>
 # cd yaws
+# autoreconf -fi
 # ./configure --help
 # ./configure --localstatedir=/var --sysconfdir=/etc
 # make
-# make install
+# sudo make install
     </pre>
   </div>
 
