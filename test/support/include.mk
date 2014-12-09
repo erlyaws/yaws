@@ -24,7 +24,13 @@ start: $(top_builddir)/test/bin/yaws quiet-stop prepare-test
 	$(AM_V_at)$(top_builddir)/test/bin/yaws --sname test --daemon --id testid --conf $(YAWS_CONF)
 
 wait-started: $(top_builddir)/test/bin/yaws
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --wait-started=$(WAIT_TIME)
+	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --wait-started=$(WAIT_TIME);\
+	  err=$$?;									\
+	  if test $$err -ne 0; then							\
+	    cat logs/report.log;							\
+	  fi;										\
+	  exit $$err
+
 
 wait-stopped: $(top_builddir)/test/bin/yaws
 	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --wait-stopped=$(WAIT_TIME)
