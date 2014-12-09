@@ -1,7 +1,7 @@
 #!/bin/sh
 
 install -d ${DESTDIR}${ETCDIR}
-install -d ${DESTDIR}${VARDIR}/log/yaws
+install -d ${DESTDIR}${LOGDIR}
 
 # Start by detecting if systemd is used
 (which systemctl && systemctl list-units) >/dev/null 2>&1

@@ -70,7 +70,7 @@ yaws_init_script:
 	  PREFIX='$(prefix)'				\
 	  ETCDIR='$(sysconfdir)'			\
 	  BINDIR='$(bindir)'				\
-	  VARDIR='$(localstatedir)'			\
+	  LOGDIR='$(logdir)'				\
 	  YAWSDIR='$(ERLANG_INSTALL_LIB_DIR_yaws)'	\
 	    ./regular-install)
 
