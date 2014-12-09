@@ -10,7 +10,6 @@ otp_release:
   - R15B01
   - R14B04
   - R14B03
-  - R14B02
 
 before_install:
   - sudo apt-get update -qq
