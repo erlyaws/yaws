@@ -2586,6 +2586,8 @@ parse_revproxy_url(Prefix, Url) ->
 parse_expires(['<', MimeType, ',' , Expire, '>' | Tail], Ack) ->
     {Type, Value} =
         case string:tokens(Expire, "+") of
+            ["always"] ->
+                {always, 0};
             [Secs] ->
                 {access, (catch list_to_integer(Secs))};
             ["access", Secs] ->

@@ -1518,6 +1518,9 @@ make_expires_header(MimeType0, FI) ->
     end.
 
 
+make_expires_header(always, _TTL, _FI) ->
+    {["Expires: ", "Thu, 01 Jan 1970 00:00:00 GMT\r\n"],
+     ["Cache-Control: ", "private, no-cache, no-store, must-revalidate, max-age=0, proxy-revalidate, s-maxage=0\r\n"]};
 make_expires_header(access, TTL, _FI) ->
     Secs = calendar:datetime_to_gregorian_seconds(erlang:universaltime()),
     ExpireTime = calendar:gregorian_seconds_to_datetime(Secs+TTL),
