@@ -54,18 +54,18 @@ install-data-local: all
 	@echo "** man files went into        $(mandir)"
 	@echo "** default docroot went into  $(wwwdir)"
 
-	$(AM_V_at)if test $(yawsdir) != $(ERLANG_INSTALL_LIB_DIR_yaws); then    \
-	  echo;                                                                 \
-	  if test -d $(DESTDIR)$(yawsdir); then                             	\
-	      backupdir="$(DESTDIR)$(yawsdir).backup";                      	\
-	      echo "backup old yaws directory into $${backupdir}";              \
-	      mv $(DESTDIR)$(yawsdir) $${backupdir};                        	\
-	  else                                                                  \
-	      $(AM_V_at)$(INSTALL) -d `dirname $(yawsdir)`;			\
-	      rm -f $(DESTDIR)$(yawsdir);	                                \
-	  fi;                                                                   \
-	  $(LN_S) -f $(ERLANG_INSTALL_LIB_DIR_yaws) $(DESTDIR)$(yawsdir);   	\
-	  echo "create link $(ERLANG_INSTALL_LIB_DIR_yaws) -> $(yawsdir)";      \
+	$(AM_V_at)if test $(yawsdir) != $(ERLANG_INSTALL_LIB_DIR_yaws); then    	\
+	  echo;                                                                 	\
+	  if test -d $(DESTDIR)$(yawsdir) && test ! -h $(DESTDIR)$(yawsdir); then	\
+	      backupdir="$(DESTDIR)$(yawsdir).backup";                      		\
+	      echo "backup old yaws directory into $${backupdir}";              	\
+	      mv $(DESTDIR)$(yawsdir) $${backupdir};                        		\
+	  else                                                                  	\
+	      $(INSTALL) -d `dirname $(yawsdir)`;					\
+	      rm -f $(DESTDIR)$(yawsdir);	                                	\
+	  fi;                                                                   	\
+	  $(LN_S) -f $(ERLANG_INSTALL_LIB_DIR_yaws) $(DESTDIR)$(yawsdir);   		\
+	  echo "create link $(ERLANG_INSTALL_LIB_DIR_yaws) -> $(yawsdir)";      	\
 	fi
 
 	@echo
