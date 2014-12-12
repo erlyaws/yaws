@@ -67,6 +67,7 @@
          ssl_ciphers/1, ssl_ciphers/2,
          ssl_cachetimeout/1, ssl_cachetimeout/2,
          ssl_secure_renegotiate/1, ssl_secure_renegotiate/2,
+         ssl_protocol_version/1, ssl_protocol_version/2,
          ssl_honor_cipher_order/1, ssl_honor_cipher_order/2]).
 
 -export([new_deflate/0,
@@ -360,6 +361,7 @@ ssl_cacertfile          (#ssl{cacertfile           = X}) -> X.
 ssl_ciphers             (#ssl{ciphers              = X}) -> X.
 ssl_cachetimeout        (#ssl{cachetimeout         = X}) -> X.
 ssl_secure_renegotiate  (#ssl{secure_renegotiate   = X}) -> X.
+ssl_protocol_version    (#ssl{protocol_version     = X}) -> X.
 ssl_honor_cipher_order  (#ssl{honor_cipher_order   = X}) -> X.
 
 ssl_keyfile             (S, File)    -> S#ssl{keyfile              = File}.
@@ -372,6 +374,7 @@ ssl_cacertfile          (S, File)    -> S#ssl{cacertfile           = File}.
 ssl_ciphers             (S, Ciphers) -> S#ssl{ciphers              = Ciphers}.
 ssl_cachetimeout        (S, Timeout) -> S#ssl{cachetimeout         = Timeout}.
 ssl_secure_renegotiate  (S, Bool)    -> S#ssl{secure_renegotiate   = Bool}.
+ssl_protocol_version    (S, Vsns)    -> S#ssl{protocol_version     = Vsns}.
 
 -ifdef(HAVE_SSL_HONOR_CIPHER_ORDER).
 ssl_honor_cipher_order  (S, Bool)    -> S#ssl{honor_cipher_order   = Bool}.
@@ -384,21 +387,8 @@ setup_ssl(SL, DefaultSSL) ->
         undefined ->
             DefaultSSL;
         SSL when is_record(SSL, ssl) ->
-            #ssl{protocol_version=ProtocolVersion} = SSL,
-            case ProtocolVersion of
-                undefined -> ok;
-                _ ->
-                    ok = application:set_env(ssl, protocol_version, ProtocolVersion)
-            end,
             SSL;
         SSLProps when is_list(SSLProps) ->
-            ProtocolVersion = case lkup(protocol_version, SSLProps, undefined) of
-                                  undefined -> undefined;
-                                  PVList ->
-                                      ok = application:set_env(ssl, protocol_version,
-                                                               PVList),
-                                      PVList
-                              end,
             SSL = #ssl{},
             #ssl{keyfile              = lkup(keyfile, SSLProps,
                                              SSL#ssl.keyfile),
@@ -420,7 +410,8 @@ setup_ssl(SL, DefaultSSL) ->
                                              SSL#ssl.secure_renegotiate),
                  honor_cipher_order   = lkup(honor_cipher_order, SSLProps,
                                              SSL#ssl.honor_cipher_order),
-                 protocol_version     = ProtocolVersion}
+                 protocol_version     = lkup(protocol_version, SSLProps,
+                                             undefined)}
     end.
 
 
