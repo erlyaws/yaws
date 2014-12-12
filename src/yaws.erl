@@ -384,21 +384,8 @@ setup_ssl(SL, DefaultSSL) ->
         undefined ->
             DefaultSSL;
         SSL when is_record(SSL, ssl) ->
-            #ssl{protocol_version=ProtocolVersion} = SSL,
-            case ProtocolVersion of
-                undefined -> ok;
-                _ ->
-                    ok = application:set_env(ssl, protocol_version, ProtocolVersion)
-            end,
             SSL;
         SSLProps when is_list(SSLProps) ->
-            ProtocolVersion = case lkup(protocol_version, SSLProps, undefined) of
-                                  undefined -> undefined;
-                                  PVList ->
-                                      ok = application:set_env(ssl, protocol_version,
-                                                               PVList),
-                                      PVList
-                              end,
             SSL = #ssl{},
             #ssl{keyfile              = lkup(keyfile, SSLProps,
                                              SSL#ssl.keyfile),
@@ -420,7 +407,8 @@ setup_ssl(SL, DefaultSSL) ->
                                              SSL#ssl.secure_renegotiate),
                  honor_cipher_order   = lkup(honor_cipher_order, SSLProps,
                                              SSL#ssl.honor_cipher_order),
-                 protocol_version     = ProtocolVersion}
+                 protocol_version     = lkup(protocol_version, SSLProps,
+                                             undefined)}
     end.
 
 
