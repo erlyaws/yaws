@@ -970,6 +970,11 @@ ssl_listen_opts(GC, SSL) ->
             true ->
                  false
          end,
+         if SSL#ssl.protocol_version /= undefined ->
+                 {versions, SSL#ssl.protocol_version};
+            true ->
+                 false
+         end,
          if SSL#ssl.depth /= undefined ->
                  {depth, SSL#ssl.depth};
             true ->
