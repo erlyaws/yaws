@@ -67,7 +67,8 @@
          ssl_ciphers/1, ssl_ciphers/2,
          ssl_cachetimeout/1, ssl_cachetimeout/2,
          ssl_secure_renegotiate/1, ssl_secure_renegotiate/2,
-         ssl_honor_cipher_order/1, ssl_honor_cipher_order/2]).
+         ssl_honor_cipher_order/1, ssl_honor_cipher_order/2,
+         ssl_versions_opt/1]).
 
 -export([new_deflate/0,
          deflate_min_compress_size/1, deflate_min_compress_size/2,
@@ -377,6 +378,16 @@ ssl_secure_renegotiate  (S, Bool)    -> S#ssl{secure_renegotiate   = Bool}.
 ssl_honor_cipher_order  (S, Bool)    -> S#ssl{honor_cipher_order   = Bool}.
 -else.
 ssl_honor_cipher_order  (S, _)       -> S.
+-endif.
+
+-ifdef(HAVE_SSL_VERSIONS_OPT).
+ssl_versions_opt(_SSL) ->
+    ok.
+-else.
+ssl_versions_opt(#ssl{protocol_version = undefined} = _SSL) ->
+    ok;
+ssl_versions_opt(#ssl{protocol_version = ProtocolVersion} = _SSL) ->
+    application:set_env(ssl, protocol_version, ProtocolVersion).
 -endif.
 
 setup_ssl(SL, DefaultSSL) ->

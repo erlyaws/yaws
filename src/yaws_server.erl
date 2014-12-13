@@ -83,7 +83,6 @@
 -define(elog(X,Y), error_logger:info_msg("*elog ~p:~p: " X,
                                          [?MODULE, ?LINE | Y])).
 
-
 start_link(A) ->
     gen_server:start_link({local, yaws_server}, yaws_server, A, []).
 
@@ -453,6 +452,7 @@ do_listen(GC, SC) ->
         undefined ->
             {nossl, undefined, gen_tcp_listen(SC#sconf.port, listen_opts(SC))};
         SSL ->
+            yaws:ssl_versions_opt(SSL),
             {ssl, certinfo(SSL),
              ssl_listen(SC#sconf.port, ssl_listen_opts(GC, SC, SSL))}
     end.
