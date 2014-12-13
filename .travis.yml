@@ -1,5 +1,6 @@
 language: erlang
 otp_release:
+  - 17.1
   - 17.0
   - R16B03-1
   - R16B03
@@ -26,17 +27,3 @@ script:
 
 after_script:
   - rebar get-deps compile
-
-notifications:
-  email:
-    recipients:
-      - christopher.faulet@capflam.org
-      - vinoski@ieee.org
-      - klacke@hyber.org
-    on_success: change
-    on_failure: always
-
-
-
-
-
