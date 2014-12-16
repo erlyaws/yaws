@@ -183,19 +183,10 @@ dnl Get ERTS version.
 ERLANG_CHECK_ERTS
 ERLANG_CHECK_RELEASE
 
-dnl Check for bitstring support, introduced in R12B-5 (ERTS 5.6.5)
-AC_MSG_CHECKING([for bits support])
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [5.6.5],
-    [bits_support="yes"],
-    [bits_support="no"])
-AC_MSG_RESULT([${bits_support}])
-
-BITS_SUPPORT=false
-if test "x${bits_support}" = "xyes"; then
-        BITS_SUPPORT=true
-fi
-AM_CONDITIONAL(BITS_SUPPORT, [test "x${BITS_SUPPORT}" = "xtrue"])
-AC_SUBST(BITS_SUPPORT)
+dnl Require Erlang >=R14B02 (ERTS 5.8.3) is required.
+AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [5.8.3],
+    [],
+    [AC_MSG_ERROR([Erlang R14B02 or higher is required but only Erlang $ERLANG_RELEASE was found!])])
 
 dnl Unicode module was buggy for R14B04 and previous (ERTS <= 5.8.5)
 AC_MSG_CHECKING([for buggy unicode module])

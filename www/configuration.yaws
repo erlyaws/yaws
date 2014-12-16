@@ -29,6 +29,9 @@ out(A) ->
     To check out the latest release and build a number of prerequisites
     are required. (All code example below on Ubuntu)
   </p>
+  <p>
+  <strong>NOTE: Erlang/OTP R14B02 or higher is required.</strong>
+  </p>
   <ul>
     <li>
       <p>

@@ -5,7 +5,7 @@ This is Yaws, a webserver for dynamic content written in Erlang.
 Prepare build
 -------------
 
-Get and install an Erlang system (http://www.erlang.org)
+Get and install an Erlang system (http://www.erlang.org). **Erlang/OTP R14B02 or higher is required**
 
 If you've cloned the source from github and you want to build using autotools,
 note there is no ./configure script in the source, so create one:

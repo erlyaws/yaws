@@ -46,18 +46,12 @@ STATIC_MODULES = yaws.erl			\
 		 yaws_shaper.erl		\
 		 yaws_dime.erl			\
 		 yaws_exhtml.erl		\
-		 yaws_sse.erl
+		 yaws_sse.erl			\
+		 yaws_websockets.erl
 
 EXTRA_DIST = $(STATIC_MODULES) yaws_websockets.erl yaws_debug.hrl	\
 	     yaws_generated.template yaws.app.src yaws.app.src.script	\
 	     yaws.appup.src
-
-## the websocket code uses new modern bits stuff
-if BITS_SUPPORT
-BITSMODS = yaws_websockets.erl
-endif
-
-STATIC_MODULES += $(BITSMODS)
 
 GENERATED_MODULES = yaws_generated.erl mime_types.erl
 MODULES           = $(STATIC_MODULES) $(GENERATED_MODULES)
