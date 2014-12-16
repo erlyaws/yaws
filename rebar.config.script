@@ -101,7 +101,13 @@ ErlOpts6 = if
                true               -> ErlOpts5
            end,
 
-HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts6),
+%% Check for support of versions opt in SSL connect and listen (ERTS >= 5.10.2)
+ErlOpts7 = if
+               ErtsVsn >= {5,10,2} -> ErlOpts6 ++ [{d,'HAVE_SSL_VERSIONS_OPT'}];
+               true                -> ErlOpts6
+           end,
+
+HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts7),
 {PortEnv1, PortSpecs1} =
     if
         HaveSendFile ->
@@ -113,7 +119,7 @@ HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts6),
             {PortEnv0, PortSpecs0}
     end,
 
-Cfg1 = lists:keyreplace(erl_opts,   1, Cfg0, {erl_opts,   ErlOpts6}),
+Cfg1 = lists:keyreplace(erl_opts,   1, Cfg0, {erl_opts,   ErlOpts7}),
 Cfg2 = lists:keyreplace(port_env,   1, Cfg1, {port_env,   PortEnv1}),
 Cfg3 = lists:keyreplace(port_specs, 1, Cfg2, {port_specs, PortSpecs1}),
 Cfg3.

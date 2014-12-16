@@ -230,6 +230,20 @@ fi
 AM_CONDITIONAL(HAVE_SSL_HONOR_CIPHER_ORDER, [test "x$HAVE_SSL_HONOR_CIPHER_ORDER" = "xtrue"])
 AC_SUBST(HAVE_SSL_HONOR_CIPHER_ORDER)
 
+dnl Check for support of versions opt in SSL connect and listen (ERTS >= 5.10.2)
+AC_MSG_CHECKING([for support of versions opt in SSL connect and listen])
+AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [5.10.2],
+    [ssl_versions_opt="yes"],
+    [ssl_versions_opt="no"])
+AC_MSG_RESULT([${ssl_versions_opt}])
+
+HAVE_SSL_VERSIONS_OPT=false
+if test "x${ssl_versions_opt}" = "xyes"; then
+        HAVE_SSL_VERSIONS_OPT=true
+fi
+AM_CONDITIONAL(HAVE_SSL_VERSIONS_OPT, [test "x$HAVE_SSL_VERSIONS_OPT" = "xtrue"])
+AC_SUBST(HAVE_SSL_VERSIONS_OPT)
+
 dnl Determine directories for installation.
 if test "x${prefix}" != "xNONE" -a "x${ERLANG_INSTALL_LIB_DIR}" = "x"; then
         dnl Under $prefix

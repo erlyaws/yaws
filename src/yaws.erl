@@ -67,7 +67,8 @@
          ssl_ciphers/1, ssl_ciphers/2,
          ssl_cachetimeout/1, ssl_cachetimeout/2,
          ssl_secure_renegotiate/1, ssl_secure_renegotiate/2,
-         ssl_honor_cipher_order/1, ssl_honor_cipher_order/2]).
+         ssl_honor_cipher_order/1, ssl_honor_cipher_order/2,
+         ssl_versions_opt/1]).
 
 -export([new_deflate/0,
          deflate_min_compress_size/1, deflate_min_compress_size/2,
@@ -379,26 +380,23 @@ ssl_honor_cipher_order  (S, Bool)    -> S#ssl{honor_cipher_order   = Bool}.
 ssl_honor_cipher_order  (S, _)       -> S.
 -endif.
 
+-ifdef(HAVE_SSL_VERSIONS_OPT).
+ssl_versions_opt(_SSL) ->
+    ok.
+-else.
+ssl_versions_opt(#ssl{protocol_version = undefined} = _SSL) ->
+    ok;
+ssl_versions_opt(#ssl{protocol_version = ProtocolVersion} = _SSL) ->
+    application:set_env(ssl, protocol_version, ProtocolVersion).
+-endif.
+
 setup_ssl(SL, DefaultSSL) ->
     case lkup(ssl, SL, undefined) of
         undefined ->
             DefaultSSL;
         SSL when is_record(SSL, ssl) ->
-            #ssl{protocol_version=ProtocolVersion} = SSL,
-            case ProtocolVersion of
-                undefined -> ok;
-                _ ->
-                    ok = application:set_env(ssl, protocol_version, ProtocolVersion)
-            end,
             SSL;
         SSLProps when is_list(SSLProps) ->
-            ProtocolVersion = case lkup(protocol_version, SSLProps, undefined) of
-                                  undefined -> undefined;
-                                  PVList ->
-                                      ok = application:set_env(ssl, protocol_version,
-                                                               PVList),
-                                      PVList
-                              end,
             SSL = #ssl{},
             #ssl{keyfile              = lkup(keyfile, SSLProps,
                                              SSL#ssl.keyfile),
@@ -420,7 +418,8 @@ setup_ssl(SL, DefaultSSL) ->
                                              SSL#ssl.secure_renegotiate),
                  honor_cipher_order   = lkup(honor_cipher_order, SSLProps,
                                              SSL#ssl.honor_cipher_order),
-                 protocol_version     = ProtocolVersion}
+                 protocol_version     = lkup(protocol_version, SSLProps,
+                                             undefined)}
     end.
 
 
