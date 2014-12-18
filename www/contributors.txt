@@ -1,4 +1,5 @@
 Tomas Abrahamsson
+Nicolas Adiba
 Manuel Durán Aguete
 Fabian Alenius
 Jason Andersson
@@ -22,8 +23,9 @@ Anders Dahlin
 Robert David
 Willem de Jong
 François de Metz
-doccarcass
+Kaloyan Dimitrov
 dnz@bk.ru
+doccarcass
 Colm Dougan
 Hans-Christian Esperer
 Daniel Fabian
@@ -45,7 +47,6 @@ hun@n-dimensional.de
 Wes James
 jcortner@cvol.net
 joe_e_e
-Phanikar.K
 Dimitriy Kargapolov
 Mikael Karlsson
 Bengt Kleberg
@@ -63,8 +64,9 @@ Davide Marquês
 Brady McCary
 Tom McNulty
 Chandru Mullaparthi
-Hans Ulrich Niedermann
+Andrei Neculau
 Chris Newcombe
+Hans Ulrich Niedermann
 Julian Noble
 Joseph Wayne Norton
 Anders Nygren
@@ -74,6 +76,8 @@ Lennart Ostman
 Karel Ostrovsky
 Erik Pearson
 Jean-Sébastien Pédron
+Karolis Petrauskas
+Phanikar.K
 Yurii Rashkovskii
 Praveen Ray
 Matthew Reilly
@@ -86,9 +90,11 @@ Kostis Sagonas
 Rob Schmersel
 Carsten Schultz
 Yariv Sedan
+Tomas Selander
 Vance Shipley
 Alexander Simonov
 Michael Slaski
+Garret Smith
 Leon Smith
 Hal Snyder
 Andrei Soroker
@@ -105,18 +111,11 @@ Steve Vinoski
 Lev Walkin
 wde
 John Webb
+Johannes Weißl
 David Welton
+Ulf Wiger
 Claes Wikström
 Dan Willemsen
 Haobu Yu
 Liu Yubao
-Tomas Selander
-Ulf Wiger
-Garret Smith
-Nicolas Adiba
 Kalle Zetterlund
-Tjeerd van der Laan
-Kaloyan Dimitrov
-Karolis Petrauskas 
-Johannes Weißl
-Jean-Sébastien Pédron
