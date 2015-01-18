@@ -1,6 +1,16 @@
 %% -*- mode: erlang;erlang-indent-level: 4;indent-tabs-mode: nil -*-
 %% ex: ft=erlang ts=4 sw=4 et
 
+UpdateDeps = fun(Config, NewDeps) ->
+                     case lists:keyfind(deps, 1, Config) of
+                         {deps, Deps} ->
+                             NDeps = Deps ++ NewDeps,
+                             lists:keyreplace(deps, 1, Config, {deps, NDeps});
+                         false ->
+                             Config ++ [{deps, NewDeps}]
+                     end
+             end,
+
 Dir = filename:dirname(SCRIPT),
 
 ErtsVsn = case string:tokens(erlang:system_info(version), ".") of
@@ -28,18 +38,11 @@ ok = file:write_file(filename:join(Dir, "src/yaws_charset.hrl"),
 
 SoapDeps = [{erlsom, ".*", {git, "git://github.com/willemdj/erlsom.git", {branch, "master"}}},
             {xmlrpc, ".*", {git, "git://github.com/rwbr/exmlrpc.git", {branch, "master"}}}],
-
 Cfg0 = case os:getenv("YAWS_SOAP") of
            false ->
                CONFIG;
            _ ->
-               case lists:keyfind(deps, 1, CONFIG) of
-                   {deps, Deps} ->
-                       NDeps = Deps ++ SoapDeps,
-                       lists:keyreplace(deps, 1, CONFIG, {deps, NDeps});
-                   false ->
-                       CONFIG ++ [{deps, SoapDeps}]
-               end
+               UpdateDeps(CONFIG, SoapDeps)
        end,
 
 ErlOpts0 = case lists:keyfind(erl_opts, 1, Cfg0) of
@@ -116,4 +119,17 @@ HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts6),
 Cfg1 = lists:keyreplace(erl_opts,   1, Cfg0, {erl_opts,   ErlOpts6}),
 Cfg2 = lists:keyreplace(port_env,   1, Cfg1, {port_env,   PortEnv1}),
 Cfg3 = lists:keyreplace(port_specs, 1, Cfg2, {port_specs, PortSpecs1}),
-Cfg3.
+
+%% Check for the existence of a .rebar/YAWS_DEV_MODE file, and if found,
+%% add ibrowse as a dependency since it's used for testing. This avoids the
+%% need to specify ibrowse as a regular dependency, which is beneficial for
+%% projects that depend on Yaws as they don't need the ibrowse dependency.
+DevModeFile = filename:join([Dir, ".rebar", "YAWS_DEV_MODE"]),
+IbrowseDep = {ibrowse, ".*", {git,"git://github.com/cmullaparthi/ibrowse.git", {tag,"v3.0.4"}}},
+Cfg4 = case filelib:is_file(DevModeFile) of
+           true ->
+               UpdateDeps(Cfg3, [IbrowseDep]);
+           false ->
+               Cfg3
+       end,
+Cfg4.
