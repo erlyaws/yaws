@@ -1765,8 +1765,9 @@ ehtml_expand({Tag, Attrs, Body}) when is_atom(Tag) ->
 ehtml_expand([H|T]) -> [ehtml_expand(H)|ehtml_expand(T)];
 ehtml_expand([]) -> [];
 ehtml_expand(Fun) when is_function(Fun) ->
-    ehtml_expand(Fun()).
-
+    ehtml_expand(Fun());
+ehtml_expand(undefined) ->
+  "".
 
 ehtml_attrs([]) -> [];
 ehtml_attrs([Attribute|Tail]) when is_atom(Attribute) ->
