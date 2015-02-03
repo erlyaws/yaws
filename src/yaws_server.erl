@@ -1197,9 +1197,10 @@ aloop(CliSock, {IP,Port}=IPPort, GS, Num) ->
                                  DispatchMod ->
                                      Arg = make_arg(SC, CliSock, IPPort,
                                                     H, Req, undefined),
-                                     ok = inet:setopts(CliSock,
+                                     ok = yaws:setopts(CliSock,
                                                        [{packet, raw},
-                                                        {active, false}]),
+                                                        {active, false}],
+                                                       yaws:is_ssl(SC)),
                                      DispatchMod:dispatch(Arg)
                              end,
             case DispatchResult of
