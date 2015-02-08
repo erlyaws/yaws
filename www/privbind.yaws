@@ -88,7 +88,7 @@ $ setcap 'cap_net_bind_service=+ep' /usr/lib/erlang/erts-5.7.4/bin/beam
   be HOME rather that $HOME.
 </p>
 <p>
-  To start yaws under e.g authbind we can do:
+  To start yaws under e.g privbind we can do:
 </p>
 
 
@@ -105,24 +105,22 @@ $ sudo YAWSHOME=/tmp/abc privbind -u klacke /home/klacke/bin/yaws \
   to ports below 1024
 </p>
 
+
 <p>
-  Yet another option is to is to install fdsrv which is a standalone
-  program that has the suid bit set, binds privileged ports and passes
-  the filedescriptor to yaws. I have made a package out of the jungerl
-  code that can be easily installed just through the usual cycle of
-  make && make install The code is at
+  The authbind program is another option: Here is an example:
 </p>
-<pre>
-http://yaws.hyber.org/download/fd_server-2.3.0.tgz
-</pre>
-<p>
-  One major drawback with fdsrv is that it doesn't work for SSL. With
-  the case of SSL, one possible solution is to put ssltunnel in
-  front of yaws and let yaws bind to 127.0.0.1
-</p>
-<p>
-  All in all the fdsrv option is much worse that the authbind option.
-</p>
+<div class="box">
+      <verbatim>
+touch /etc/authbind/byport/80
+touch /etc/authbind/byport/443
+chmod 500 /etc/authbind/byport/80
+chmod 500 /etc/authbind/byport/443
+chown bob /etc/authbind/byport/80
+chown bob /etc/authbind/byport/443
+YAWSHOME=/home/bob authbind yaws -c /home/bob/yaws.conf -i
+      </verbatim>
+</div>
+
 
 
 <p>
