@@ -1257,6 +1257,31 @@ achieved using the following functions from the \verb+yaws_api+ module:
 All functions operate on instances of the \verb+#headers{}+ record type
 defined in the \verb+yaws_api.hrl+ include file.
 
+Should an arg rewrite function need to return a response for a particular
+request, it can do so by returning an \verb+#arg+ record instance with its
+\verb+state+ field set to an instance of a \verb+#rewrite_response+
+record. For example, below is an arg rewrite function that allows only
+\verb+GET+ and \verb+POST+ requests, returning a 405 \emph{Method Not
+  Allowed} for requests with any other HTTP method:
+
+\begin{verbatim}
+arg_rewrite(Arg) ->
+    Allowed = ['GET', 'POST'],
+    Req = yaws_api:arg_req(Arg),
+    Method = yaws_api:http_request_method(Req),
+    case lists:member(Method, Allowed) of
+        true ->
+            Arg;
+        false ->
+            AllowedStrs = string:join([atom_to_list(M) || M <- Allowed], ","),
+            Arg#arg{state=
+                        #rewrite_response{
+                           status=405,
+                           headers=[{header, {"Allow", AllowedStrs}},
+                                    {header, {connection, "close"}}]}}
+    end.
+\end{verbatim}
+
 \subsection{Authenticating}
 
 Now we're approaching the \verb+login.yaws+ page, the page that

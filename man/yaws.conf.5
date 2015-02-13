@@ -813,10 +813,14 @@ the source. Here is an example:
 
 .TP
 \fBarg_rewrite_mod = Module\fR
-It is possible to install a module that rewrites all the Arg #arg{} records at
-an early stage in the Yaws server.  This can be used to do various things such
-as checking a cookie, rewriting paths etc.
-.br
+It is possible to install a module that rewrites all the Arg #arg{} records
+at an early stage in the Yaws server.  This can be used to do various
+things such as checking a cookie, rewriting paths etc. An arg_rewrite_mod
+must export a \fIarg_rewrite/1\fR function taking and returning an #arg
+record. If the function wants to return a response, it must set the
+#arg.state field of its return value to an instance of the
+#rewrite_response{} record.
+
 The module \fIyaws_vdir\fR can be used in case you want to serve static content
 that is not located in your docroot. See the example at the bottom of this man
 page for how to use the \fIopaque\fR + \fIvdir\fR elements to instruct the
