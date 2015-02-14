@@ -250,7 +250,7 @@ parseMessage(Message, Model) ->
                               'Header' = #'soap:Header'{choice = Header}}, _} ->
             {ok, Header, Body};
         {error, ErrorMessage} ->
-            {error, {decoding, ErrorMessage}}
+            {error, {decoding, Message, ErrorMessage}}
     end.
 
 
