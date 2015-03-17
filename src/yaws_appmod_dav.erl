@@ -116,7 +116,7 @@ handle('OPTIONS',A) ->
 handle('HEAD',A) ->
     ?DEBUG("HEAD ~p",[A#arg.server_path]),
     Path = davpath(A),
-    case file:read_file_info(Path) of
+    case file:read_link_info(Path) of
         {ok, F} when (F#file_info.type == regular) ->
             E = yaws:make_etag(F),
             Name = A#arg.server_path,
@@ -138,12 +138,12 @@ handle('GET',A) ->
     Pid = self(),
     SC=get(sc),
     PPS = SC#sconf.partial_post_size,
-    case file:read_file_info(Path) of
+    case file:read_link_info(Path) of
         {ok,F} when F#file_info.type==directory ->
             {ok,Dir} = file:list_dir(Path),
             Listing = lists:foldl(
                         fun(Fname,L) ->
-                            {ok,Finfo} = file:read_file_info(
+                            {ok,Finfo} = file:read_link_info(
                                            filename:join(Path,Fname)),
                             Ftype = case Finfo#file_info.type of
                                         directory -> "Coll:";
@@ -210,7 +210,7 @@ handle("LOCK",A) ->
     Path = davpath(A),
     %% check if file/collection exists and create if not so
     %% RFC4918 - 9.10.4
-    {Status,R} = case file:read_file_info(Path) of
+    {Status,R} = case file:read_link_info(Path) of
             {ok, F} when (F#file_info.type == directory) or
                          (F#file_info.type == regular) ->
                 {200,#resource{ name = Name, info = F}};
@@ -221,7 +221,7 @@ handle("LOCK",A) ->
                     _ ->
                         ok = file:write_file(Path,"")
                 end,
-                {ok, F} = file:read_file_info(Path),
+                {ok, F} = file:read_link_info(Path),
                 {201,#resource{ name = Name, info = F}};
             {error,_} -> throw(409)
         end,
@@ -472,7 +472,7 @@ file_do(Func,Params) ->
 
 %% recursive remove, equivalent of rm -rf
 fs_rmrf(Path) ->
-    {ok, F} = file_do(read_file_info,[Path]),
+    {ok, F} = file_do(read_link_info,[Path]),
     case F#file_info.type of
         directory ->
             {ok, Dir} = file_do(list_dir,[Path]),
@@ -488,7 +488,7 @@ fs_rmrf(Path) ->
 fs_cp(From,To) ->
     %% All checks on existence of the destination have to be done before
     %% so destination should not exist
-    {ok, F} = file:read_file_info(From),
+    {ok, F} = file:read_link_info(From),
     case F#file_info.type of
         directory ->
             file_do(make_dir,[To]),
@@ -501,7 +501,7 @@ fs_cp(From,To) ->
 
 %% check existence
 exists(Path) ->
-    case file:read_file_info(Path) of
+    case file:read_link_info(Path) of
         {ok, _} -> true;
         _ -> false
     end.
@@ -790,7 +790,7 @@ prop_get({NS,P},_A,_R) ->
 prop_set({'DAV:',creationdate},A,_R,V) ->
     Path=davpath(A),
     P = {'D:creationdate', [], []},
-    case file:read_file_info(Path) of
+    case file:read_link_info(Path) of
         {ok,F0} ->
             T = yaws:stringdate_to_datetime(V),
             F1 = F0#file_info{ctime=T},
@@ -806,7 +806,7 @@ prop_set({'DAV:',creationdate},A,_R,V) ->
 prop_set({'DAV:',getlastmodified},A,_R,V) ->
     Path=davpath(A),
     P = {'D:getlastmodified', [], []},
-    case file:read_file_info(Path) of
+    case file:read_link_info(Path) of
         {ok,F0} ->
             T = yaws:stringdate_to_datetime(V),
             F1 = F0#file_info{mtime=T},
@@ -872,7 +872,7 @@ davpath(A) ->
 davresource0(A) ->
     Name = davname(A),
     Path = davpath(A),
-    case file:read_file_info(Path) of
+    case file:read_link_info(Path) of
         {ok, F} when (F#file_info.type == directory) or
                      (F#file_info.type == regular) ->
             #resource{ name = Name, info = F};
@@ -882,7 +882,7 @@ davresource0(A) ->
 davresource1(A) ->
     Coll = davname(A),
     Path = davpath(A),
-    case file:read_file_info(Path) of
+    case file:read_link_info(Path) of
         {ok, Dir} when Dir#file_info.type == directory ->
             {ok, L} = file:list_dir(Path),
             davresource1(A,Path,Coll,L,[]);
@@ -894,7 +894,7 @@ davresource1(_A,_Path,_Coll,[],Result) ->
 davresource1(_A,Path,Coll,[Name|Rest],Result) ->
     File = filename:join(Path,Name),
     Ref = filename:join(Coll,Name),
-    {ok, Info} = file:read_file_info(File),
+    {ok, Info} = file:read_link_info(File),
     if
         (Info#file_info.type == regular) or
         (Info#file_info.type == directory) ->
@@ -1003,7 +1003,7 @@ check_locktoken_format(_Token) ->
 %%    Hs = (A#arg.headers)#headers.other,
 %%    case lists:keysearch("If-Match", 3, Hs) of
 %%        {value, {_,_,"If-Match",_,Tag}} ->
-%%            F = file:read_file_info(Path),
+%%            F = file:read_link_info(Path),
 %%            case yaws:make_etag(F) of
 %%                Tag -> ok;
 %%                _ -> throw(412)
@@ -1114,7 +1114,7 @@ if_eval_condition([{true,state,Ref}|T],_Result,_Valid,A,Target,Locks) ->
     Valid1 = true,
     Result1 andalso if_eval_condition(T,Result1,Valid1,A,Target,Locks);
 if_eval_condition([{true,etag,Ref}|T],_Result,Valid,A,Target,Locks) ->
-    {ok, F} = file:read_file_info(filename:join(A#arg.docroot,Target)),
+    {ok, F} = file:read_link_info(filename:join(A#arg.docroot,Target)),
     E = yaws:make_etag(F),
     Result1 = (E==Ref),
     Valid1 = Valid,

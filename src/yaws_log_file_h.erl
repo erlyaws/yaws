@@ -50,7 +50,7 @@ handle_call(wrap, {Fd, File, Prev}) ->
 
 handle_call(size, {Fd, File, Prev}) ->
     file:sync(Fd),
-    Return = case file:read_file_info(File) of
+    Return = case file:read_link_info(File) of
         {ok, FI} -> {ok, FI#file_info.size};
         Error -> Error
     end,

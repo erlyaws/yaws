@@ -92,7 +92,7 @@ send(Out, Filename, Offset, Count) ->
 bytes_to_transfer(Filename, Offset, Count) ->
     case Count of
         all ->
-            case file:read_file_info(Filename) of
+            case file:read_link_info(Filename) of
                 {ok, #file_info{size = Size}} -> Size - Offset;
                 Error -> Error
             end;

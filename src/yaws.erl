@@ -723,7 +723,7 @@ elog(F, As) ->
 
 
 filesize(Fname) ->
-    case file:read_file_info(Fname) of
+    case file:read_link_info(Fname) of
         {ok, FI} when FI#file_info.type == regular ->
             {ok, FI#file_info.size};
         {ok, FI} ->

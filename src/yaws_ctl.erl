@@ -124,7 +124,7 @@ w_ctl_file(Sid, Port, Key) ->
                  F = yaws:ctl_file(Sid),
                  error_logger:info_msg("Ctlfile : ~s~n", [F]),
                  file:write_file(F, io_lib:format("~w.", [{Port,Key}])),
-                 {ok, FI} = file:read_file_info(F),
+                 {ok, FI} = file:read_link_info(F),
                  ok = file:write_file_info(F, FI#file_info{mode = 8#00600})
              end of
              {'EXIT', _} ->
@@ -500,7 +500,7 @@ ls(_) ->
 
 lls(IdDir) ->
     CtlFile = yaws:ctl_file(IdDir),
-    case {file:read_file_info(CtlFile),
+    case {file:read_link_info(CtlFile),
           file:read_file(CtlFile)} of
         {{ok, FI}, {error, eacces}} ->
             User = yaws:uid_to_name(FI#file_info.uid),

@@ -110,7 +110,7 @@ size_of(X) when is_list(X) ->
 size_of(X) when is_binary(X)->
     size(X);
 size_of({file, File}) ->
-    {ok,R} = file:read_file_info(File),
+    {ok,R} = file:read_link_info(File),
     R#file_info.size.
 
 get_data({file, File}) ->
