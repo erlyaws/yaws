@@ -45,7 +45,7 @@ static ErlDrvData setuid_start(ErlDrvPort port, char *buf)
                     (setreuid(pe->pw_uid, pe->pw_uid) != 0)) {
                     return (ErlDrvData) -1;
                 }
-                sprintf(xbuf, "ok %d", pe->pw_uid);
+                sprintf(xbuf, "ok %d", (int) pe->pw_uid);
                 endpwent();
                 driver_output(port,xbuf, strlen(xbuf));
                 return (ErlDrvData) port;
@@ -68,13 +68,13 @@ static ErlDrvData setuid_start(ErlDrvPort port, char *buf)
         return (ErlDrvData) port;
     }
     case 'g':   /* getuid */
-        sprintf(xbuf, "ok %d", getuid());
+        sprintf(xbuf, "ok %d", (int) getuid());
         driver_output(port,xbuf, strlen(xbuf));
         return (ErlDrvData) port;
     case 'u':
         while ((pe = getpwent())) {
             if (strcmp(pe->pw_name , t) == 0) {
-                sprintf(xbuf, "ok %d", pe->pw_uid);
+                sprintf(xbuf, "ok %d", (int) pe->pw_uid);
                 endpwent();
                 driver_output(port,xbuf, strlen(xbuf));
                 return (ErlDrvData) port;
