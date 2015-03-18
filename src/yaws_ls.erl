@@ -30,7 +30,7 @@ list_directory(_Arg, CliSock, List, DirName, Req, DoAllZip) ->
     L0 = lists:zf(
            fun(F) ->
                    File = DirName ++ [$/|F],
-                   FI = file:read_file_info(File),
+                   FI = file:read_link_info(File),
                    file_entry(FI, DirName, F, Qry,Descriptions)
            end, List),
 
@@ -335,7 +335,7 @@ accumulate_forbidden_paths() ->
 dir_contains_indexfile(_Dir, []) ->
     false;
 dir_contains_indexfile(Dir, [File|R]) ->
-    case file:read_file_info(filename:join(Dir, File)) of
+    case file:read_link_info(filename:join(Dir, File)) of
         {ok, _} ->
             true;
         _Else ->
@@ -358,7 +358,7 @@ dig_through_dir(Basedirlen, Dir, ForbiddenPaths, RE_ForbiddenNames) ->
             {ok, Files} = file:list_dir(Dir),
             lists:foldl(fun(I, Acc) ->
                                 Filename = filename:join(Dir, I),
-                                case {file:read_file_info(Filename),
+                                case {file:read_link_info(Filename),
                                       re:run(Filename, RE_ForbiddenNames)} of
                                     {_, {match, _}} ->
                                         Acc;

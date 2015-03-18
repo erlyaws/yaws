@@ -2340,7 +2340,7 @@ warn_dir(Type, Dir) ->
     end.
 
 is_dir(Val) ->
-    case file:read_file_info(Val) of
+    case file:read_link_info(Val) of
         {ok, FI} when FI#file_info.type == directory ->
             true;
         _ ->
@@ -2349,7 +2349,7 @@ is_dir(Val) ->
 
 
 is_file(Val) ->
-    case file:read_file_info(Val) of
+    case file:read_link_info(Val) of
         {ok, FI} when FI#file_info.type == regular ->
             true;
         _ ->

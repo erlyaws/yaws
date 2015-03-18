@@ -461,7 +461,7 @@ do_listen(GC, SC) ->
 certinfo(SSL) ->
     #certinfo{
           keyfile = if SSL#ssl.keyfile /= undefined ->
-                            case file:read_file_info(SSL#ssl.keyfile) of
+                            case file:read_link_info(SSL#ssl.keyfile) of
                                 {ok, FI} ->
                                     FI#file_info.mtime;
                                 _ ->
@@ -471,7 +471,7 @@ certinfo(SSL) ->
                             undefined
                     end,
           certfile = if SSL#ssl.certfile /= undefined ->
-                             case file:read_file_info(SSL#ssl.certfile) of
+                             case file:read_link_info(SSL#ssl.certfile) of
                                  {ok, FI} ->
                                      FI#file_info.mtime;
                                  _ ->
@@ -481,7 +481,7 @@ certinfo(SSL) ->
                              undefined
                      end,
           cacertfile = if SSL#ssl.cacertfile /= undefined ->
-                               case file:read_file_info(SSL#ssl.cacertfile) of
+                               case file:read_link_info(SSL#ssl.cacertfile) of
                                    {ok, FI} ->
                                        FI#file_info.mtime;
                                    _ ->
@@ -2449,7 +2449,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = dav}, N) ->
                 options;
             _ when Req#http_request.method == 'GET';
                    Req#http_request.method == 'HEAD' ->
-                case prim_file:read_file_info(UT#urltype.fullpath) of
+                case prim_file:read_link_info(UT#urltype.fullpath) of
                     {ok, FI} when FI#file_info.type == regular ->
                         {regular, FI};
                     _ ->
@@ -3524,7 +3524,7 @@ ssi(File, Delimiter, Bindings, UT, ARG, SC) ->
 
 
 path_to_mtime(FullPath) ->
-    case prim_file:read_file_info(FullPath) of
+    case prim_file:read_link_info(FullPath) of
         {ok, FI} ->
             mtime(FI);
         Err ->
@@ -3760,7 +3760,7 @@ deflate_accumulated(Arg, Content, ContentLength, Mode) ->
                 %% implies Mode=={file,_,_} and use_gzip_static==true
                 {file, File, MTime} = Mode,
                 GzFile = File++".gz",
-                case prim_file:read_file_info(GzFile) of
+                case prim_file:read_link_info(GzFile) of
                     {ok, FI} when FI#file_info.type == regular,
                                   FI#file_info.mtime >= MTime ->
                         {{gzfile, GzFile}, <<>>, FI#file_info.size};
@@ -4252,7 +4252,7 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
                 false ->
                     ?Debug("FullPath = ~p~n", [FullPath]),
 
-                    case prim_file:read_file_info(FullPath) of
+                    case prim_file:read_link_info(FullPath) of
                         {ok, FI} when FI#file_info.type == regular ->
                             {Type, Mime} = suffix_type(SC, RevFile),
                             #urltype{type=Type,
@@ -4544,7 +4544,7 @@ try_index_file(FullPath, GetPath, [[$/|_]=Idx|Rest]) ->
         false -> {redir, Idx}
     end;
 try_index_file(FullPath, GetPath, [Idx|Rest]) ->
-    case prim_file:read_file_info([FullPath, Idx]) of
+    case prim_file:read_link_info([FullPath, Idx]) of
         {ok, FI} when FI#file_info.type == regular ->
             {index, Idx};
         _ ->
@@ -4664,7 +4664,7 @@ path_info_split(SC, [H|T], {DR, VirtualDir}, AccPathInfo) ->
 
                     ?Debug("Testing for script at: ~p~n", [FullPath]),
 
-                    case prim_file:read_file_info(FullPath) of
+                    case prim_file:read_link_info(FullPath) of
                         {ok, FI} when FI#file_info.type == regular ->
                             {ok, FI, FullPath, lists:reverse(T),
                              string:strip(H,right,$/), AccPathInfo, X, Mime};

@@ -375,7 +375,7 @@ handle_info({'EXIT', _, _}, State) ->
 
 
 wrap_p(Filename, LogWrapSize) ->
-    case file:read_file_info(Filename) of
+    case file:read_link_info(Filename) of
         {ok, FI} when FI#file_info.size > LogWrapSize, LogWrapSize > 0 ->
             true;
         {ok, _FI} ->
