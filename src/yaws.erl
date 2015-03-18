@@ -1505,6 +1505,12 @@ make_last_modified_header(FI) ->
     ["Last-Modified: ", local_time_as_gmt_string(Then), "\r\n"].
 
 
+make_expires_header("*/*", FI) ->
+    SC = get(sc),
+    case lists:keyfind("*/*", 1, SC#sconf.expires) of
+        {_MimeType, Type, TTL} -> make_expires_header(Type, TTL, FI);
+        false                  -> {undefined, undefined}
+    end;
 make_expires_header(MimeType0, FI) ->
     SC = get(sc),
     %% Use split_sep to remove charset
@@ -1513,7 +1519,7 @@ make_expires_header(MimeType0, FI) ->
         [MimeType1|_] ->
             case lists:keyfind(MimeType1, 1, SC#sconf.expires) of
                 {MimeType1, Type, TTL} -> make_expires_header(Type, TTL, FI);
-                false                  -> {undefined, undefined}
+                false                  -> make_expires_header("*/*", FI)
             end
     end.
 
