@@ -99,5 +99,5 @@ crashmsg(_Arg, _SC, L) ->
      [{h2, [], "Internal error, yaws code crashed"},
       {br},
       {hr},
-      {pre, [], L},
+      {pre, [], yaws_api:htmlize(L)},
       {hr}]}.
