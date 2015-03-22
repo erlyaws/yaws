@@ -792,13 +792,17 @@ The function must return, \fI{content,MimeType,Cont}\fR or \fI{html, Str}\fR or
 \fBexpires = ListOfExpires\fR
 Controls the setting of the \fIExpires\fR HTTP header and the \fImax-age\fR
 directive of the \fICache-Control\fR HTTP header in server responses for
-specific MIME types. The expiration date can set to be relative to either the
-time the source file was last modified, or to the time of the client
-access. ListOfExpires is defined as follows:
+specific MIME types. The expiration date can be set as relative to either the
+time the source file was last modified; as the time of the client access; or as
+always in order to empty the cache altogether. ListOfExpires is defined as
+follows:
 
 .nf
-  expires = <MimeType1, access+Seconds> <MimeType2, modify+Seconds> ...
+  expires = <MimeType1, access+Seconds> <MimeType2, modify+Seconds> <MimeType3, always> ...
 .fi
+
+A MimeType can also have a wildcard as subtype or both as subtype and type,
+like type/* or */*.
 
 These HTTP headers are an instruction to the client about the document's
 validity and persistence. If cached, the document may be fetched from the cache
@@ -809,6 +813,13 @@ the source. Here is an example:
 .nf
   expires = <image/gif, access+2592000> <image/png, access+2592000>
   expires = <image/jpeg, access+2592000> <text/css, access+2592000>
+  expires = <text/*, always>
+.fi
+
+and here is another:
+
+.nf
+  expires = <*/*, always>
 .fi
 
 .TP
