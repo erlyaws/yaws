@@ -2586,6 +2586,8 @@ parse_revproxy_url(Prefix, Url) ->
 parse_expires(['<', MimeType, ',' , Expire, '>' | Tail], Ack) ->
     {Type, Value} =
         case string:tokens(Expire, "+") of
+            ["always"] ->
+                {always, 0};
             [Secs] ->
                 {access, (catch list_to_integer(Secs))};
             ["access", Secs] ->
@@ -2653,15 +2655,13 @@ parse_compressible_mime_types(["defaults"|Rest], Acc) ->
 parse_compressible_mime_types([',' | Rest], Acc) ->
     parse_compressible_mime_types(Rest, Acc);
 parse_compressible_mime_types([MimeType | Rest], Acc) ->
-    Res = re:run(MimeType, "^([-\\w\+]+)/([-\\w\+\.]+|\\*)$",
-                 [{capture, all_but_first, list}]),
-    case Res of
-        {match, [Type,"*"]} ->
+    case yaws:parse_mimetype(MimeType) of
+        {ok, Type, "*"} ->
             parse_compressible_mime_types(Rest, [{Type, all}|Acc]);
-        {match, [Type,SubType]} ->
+        {ok, Type, SubType} ->
             parse_compressible_mime_types(Rest, [{Type, SubType}|Acc]);
-        nomatch ->
-            {error, "Invalid MimeType"}
+        Error ->
+            Error
     end;
 parse_compressible_mime_types([], Acc) ->
     {ok, Acc}.

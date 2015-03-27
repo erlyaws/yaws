@@ -95,7 +95,7 @@
          month/1, mk2/1, home/0, arg_rewrite/1, to_lowerchar/1, to_lower/1,
          funreverse/2, is_prefix/2, split_sep/2, join_sep/2, accepts_gzip/2,
          upto_char/2, deepmap/2, ticker/2, ticker/3,
-         parse_qvalue/1, parse_auth/1]).
+         parse_qvalue/1, parse_auth/1, parse_mimetype/1]).
 
 -export([outh_set_status_code/1,
          outh_set_non_cacheable/1,
@@ -1505,19 +1505,41 @@ make_last_modified_header(FI) ->
     ["Last-Modified: ", local_time_as_gmt_string(Then), "\r\n"].
 
 
-make_expires_header(MimeType0, FI) ->
+make_expires_header("*/*", FI) ->
+    SC = get(sc),
+    case lists:keyfind("*/*", 1, SC#sconf.expires) of
+        {_MimeType, Type, TTL} -> make_expires_header(Type, TTL, FI);
+        false                  -> {undefined, undefined}
+    end;
+make_expires_header(MT0, FI) ->
     SC = get(sc),
     %% Use split_sep to remove charset
-    case yaws:split_sep(MimeType0, $;) of
+    case yaws:split_sep(MT0, $;) of
         [] -> {undefined, undefined};
-        [MimeType1|_] ->
-            case lists:keyfind(MimeType1, 1, SC#sconf.expires) of
-                {MimeType1, Type, TTL} -> make_expires_header(Type, TTL, FI);
-                false                  -> {undefined, undefined}
+        [MT1|_] ->
+            case lists:keyfind(MT1, 1, SC#sconf.expires) of
+                {MT1, Type, TTL} ->
+                    make_expires_header(Type, TTL, FI);
+                false ->
+                    case parse_mimetype(MT1) of
+                        {ok, Type, _Subtype} ->
+                            MT2 = Type ++ "/*",
+                            case lists:keyfind(MT2, 1, SC#sconf.expires) of
+                                {MT2, Type, TTL} ->
+                                    make_expires_header(Type, TTL, FI);
+                                false ->
+                                    make_expires_header("*/*", FI)
+                            end;
+                        _Error ->
+                            make_expires_header("*/*", FI)
+                    end
             end
     end.
 
 
+make_expires_header(always, _TTL, _FI) ->
+    {["Expires: ", "Thu, 01 Jan 1970 00:00:00 GMT\r\n"],
+     ["Cache-Control: ", "private, no-cache, no-store, must-revalidate, max-age=0, proxy-revalidate, s-maxage=0\r\n"]};
 make_expires_header(access, TTL, _FI) ->
     Secs = calendar:datetime_to_gregorian_seconds(erlang:universaltime()),
     ExpireTime = calendar:gregorian_seconds_to_datetime(Secs+TTL),
@@ -2392,6 +2414,17 @@ parse_auth(Orig = "Negotiate " ++ _Auth64) ->
     {undefined, undefined, Orig};
 parse_auth(Orig) ->
     {undefined, undefined, Orig}.
+
+
+parse_mimetype(MimeType) ->
+    Res = re:run(MimeType, "^([-\\w\+]+)/([-\\w\+\.]+|\\*)$",
+                 [{capture, all_but_first, list}]),
+    case Res of
+        {match, [Type,SubType]} ->
+            {ok, Type, SubType};
+        nomatch ->
+            {error, "Invalid MimeType"}
+    end.
 
 
 decode_base64([]) ->
