@@ -3807,7 +3807,7 @@ state. It can define one, some or all of the following functions:
 \begin{verbatim}
     WSState :: #ws_state{}
     State   :: term()
-    Result  :: {ok, NewState} {error, Reason}
+    Result  :: {ok, NewState} | {error, Reason}
       NewState :: term()
       Reason   :: term()
 \end{verbatim}
@@ -3815,8 +3815,8 @@ state. It can define one, some or all of the following functions:
   If defined, this function is called when the connection is upgraded from HTTP
   to WebSocket.
 
-  \verb+WSState+ is the state of the WebSocket connection. It can be used to
-  send messages to the client using
+  \verb+WSState+ is the state of the WebSocket connection. It can be used
+  to send messages to the client using
   \verb+yaws_api:websocket_send(WSState, Message)+.
 
   \verb+State+ is the internal state of the callback module.

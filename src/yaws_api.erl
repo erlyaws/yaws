@@ -40,7 +40,7 @@
          stream_chunk_end/1]).
 -export([stream_process_deliver/2, stream_process_deliver_chunk/2,
          stream_process_deliver_final_chunk/2, stream_process_end/2]).
--export([websocket_send/2]).
+-export([websocket_send/2, websocket_close/1, websocket_close/2]).
 -export([get_sslsocket/1]).
 -export([new_cookie_session/1, new_cookie_session/2, new_cookie_session/3,
          cookieval_to_opaque/1, request_url/1,
@@ -1015,11 +1015,20 @@ stream_process_end(Sock, YawsPid) ->
     YawsPid ! endofstreamcontent.
 
 
-%% Pid must the the process in control of the websocket connection.
-websocket_send(Pid, {Type, Data}) ->
+%% Pid must be the process in control of the websocket connection.
+websocket_send(Pid, {Type, Data}) when is_pid(Pid) ->
     yaws_websockets:send(Pid, {Type, Data});
-websocket_send(Pid, #ws_frame{}=Frame) ->
+websocket_send(Pid, #ws_frame{}=Frame) when is_pid(Pid) ->
     yaws_websockets:send(Pid, Frame).
+
+websocket_close(#ws_state{}=WSState) ->
+    yaws_websockets:close(WSState, normal);
+websocket_close(Pid) when is_pid(Pid) ->
+    yaws_websockets:close(Pid, normal).
+websocket_close(#ws_state{}=WSState, Reason) ->
+    yaws_websockets:close(WSState, Reason);
+websocket_close(Pid, Reason) when is_pid(Pid) ->
+    yaws_websockets:close(Pid, Reason).
 
 
 %% returns {ok, SSL socket} if an SSL socket, undefined otherwise

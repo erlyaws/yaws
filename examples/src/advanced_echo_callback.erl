@@ -102,14 +102,14 @@ handle_message(#ws_frame_info{opcode=close, length=Len,
                _State) ->
     Reason = case Len of
                  0  -> {1000, <<>>};
-                  1 -> {1002, <<"protocol error">>};
-                  _ ->
-                      <<Status:16/big, Msg/binary>> = Data,
-                      case unicode:characters_to_binary(Msg, utf8, utf8) of
-                          Msg -> {check_close_code(Status, WSState), Msg};
-                          _   -> {1007, <<"invalid utf-8">>}
-                      end
-              end,
+                 1 -> {1002, <<"protocol error">>};
+                 _ ->
+                     <<Status:16/big, Msg/binary>> = Data,
+                     case unicode:characters_to_binary(Msg, utf8, utf8) of
+                         Msg -> {check_close_code(Status, WSState), Msg};
+                         _   -> {1007, <<"invalid utf-8">>}
+                     end
+             end,
     io:format("got close. reply reason: ~p~n", [Reason]),
     {close, Reason};
 

@@ -83,7 +83,7 @@ html_body(WebSocketLocation) ->
   <h1>Basic Echo Example</h1>
   <ul><li>Sending \"bye\" closes the connection.</li>
       <li>Sending \"say hi later\" sends \"hi there!\" asynchronously.</li>
-      <li>Sending \"fragmented message\" sends \"fag1frag2frag2\".</li>
+      <li>Sending \"fragmented message\" sends \"frag1frag2frag2\".</li>
       <li>Sending \"something\" does nothing.</li>
       <li>Other messages are echoed.</li></ul>
   <div id=\"options\">
