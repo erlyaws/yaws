@@ -46,7 +46,7 @@
                  msg_fun_2,
                  info_fun}).
 
--export([start/3, send/2, close/2]).
+-export([start/3, send/2, close/1, close/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
@@ -131,6 +131,8 @@ send(Pid, {Type, Data}) ->
     gen_server:cast(Pid, {send, {Type, Data}});
 send(Pid, #ws_frame{}=Frame) ->
     gen_server:cast(Pid, {send, Frame}).
+
+close(Which) -> close(Which, normal).
 
 close(#ws_state{}=WSState, Reason) ->
     do_close(WSState, Reason);
