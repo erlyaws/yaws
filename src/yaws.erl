@@ -95,7 +95,7 @@
          month/1, mk2/1, home/0, arg_rewrite/1, to_lowerchar/1, to_lower/1,
          funreverse/2, is_prefix/2, split_sep/2, join_sep/2, accepts_gzip/2,
          upto_char/2, deepmap/2, ticker/2, ticker/3,
-         parse_qvalue/1, parse_auth/1, parse_mimetype/1]).
+         parse_qvalue/1, parse_auth/1]).
 
 -export([outh_set_status_code/1,
          outh_set_non_cacheable/1,
@@ -1505,11 +1505,23 @@ make_last_modified_header(FI) ->
     ["Last-Modified: ", local_time_as_gmt_string(Then), "\r\n"].
 
 
-make_expires_header("*/*", FI) ->
+make_expires_header(all, FI) ->
     SC = get(sc),
-    case lists:keyfind("*/*", 1, SC#sconf.expires) of
-        {_MimeType, Type, TTL} -> make_expires_header(Type, TTL, FI);
-        false                  -> {undefined, undefined}
+    case lists:keyfind(all, 1, SC#sconf.expires) of
+        {_, EType, TTL} -> make_expires_header(EType, TTL, FI);
+        false           -> {undefined, undefined}
+    end;
+make_expires_header({Type,all}, FI) ->
+    SC = get(sc),
+    case lists:keyfind({Type,all}, 1, SC#sconf.expires) of
+        {_, EType, TTL} -> make_expires_header(EType, TTL, FI);
+        false           -> make_expires_header(all, FI)
+    end;
+make_expires_header({Type,SubType}, FI) ->
+    SC = get(sc),
+    case lists:keyfind({Type,SubType}, 1, SC#sconf.expires) of
+        {_, EType, TTL} -> make_expires_header(EType, TTL, FI);
+        false           -> make_expires_header({Type,all}, FI)
     end;
 make_expires_header(MT0, FI) ->
     SC = get(sc),
@@ -1518,20 +1530,14 @@ make_expires_header(MT0, FI) ->
         [] -> {undefined, undefined};
         [MT1|_] ->
             case lists:keyfind(MT1, 1, SC#sconf.expires) of
-                {MT1, Type, TTL} ->
-                    make_expires_header(Type, TTL, FI);
+                {_, EType, TTL} ->
+                    make_expires_header(EType, TTL, FI);
                 false ->
-                    case parse_mimetype(MT1) of
-                        {ok, Type, _Subtype} ->
-                            MT2 = Type ++ "/*",
-                            case lists:keyfind(MT2, 1, SC#sconf.expires) of
-                                {MT2, Type, TTL} ->
-                                    make_expires_header(Type, TTL, FI);
-                                false ->
-                                    make_expires_header("*/*", FI)
-                            end;
-                        _Error ->
-                            make_expires_header("*/*", FI)
+                    case split_sep(MT1, $/) of
+                        [Type, SubType] ->
+                            make_expires_header({Type,SubType}, FI);
+                        false ->
+                            make_expires_header(all, FI)
                     end
             end
     end.
@@ -2414,17 +2420,6 @@ parse_auth(Orig = "Negotiate " ++ _Auth64) ->
     {undefined, undefined, Orig};
 parse_auth(Orig) ->
     {undefined, undefined, Orig}.
-
-
-parse_mimetype(MimeType) ->
-    Res = re:run(MimeType, "^([-\\w\+]+)/([-\\w\+\.]+|\\*)$",
-                 [{capture, all_but_first, list}]),
-    case Res of
-        {match, [Type,SubType]} ->
-            {ok, Type, SubType};
-        nomatch ->
-            {error, "Invalid MimeType"}
-    end.
 
 
 decode_base64([]) ->

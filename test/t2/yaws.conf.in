@@ -55,6 +55,8 @@ keepalive_timeout              = 10000
         php_handler = <extern, phptest:out>
         arg_rewrite_mod = rewritetest
         expires = <text/plain, access+2592000>
+        expires = <image/*, access+2592000>
+        expires = <*/*,  always>
         appmods = posttest reentranttest flushtest
 </server>
 

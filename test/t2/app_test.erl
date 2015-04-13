@@ -714,23 +714,39 @@ test_te_trailer_and_extensions() ->
 
 test_expires() ->
     io:format("expires_test\n", []),
-    Uri = "http://localhost:8006/hello.txt",
-    ?line {ok, "200", Hdrs, _} = ibrowse:send_req(Uri, [], get),
+    Uri1 = "http://localhost:8006/hello.txt",
+    ?line {ok, "200", Hdrs1, _} = ibrowse:send_req(Uri1, [], get),
 
-    %% Retrieve max-age value to test Expires header
-    ?line "max-age=" ++ Rest = proplists:get_value("Cache-Control", Hdrs),
-    ?line Secs = erlang:list_to_integer(Rest),
+    %% Test "text/plain" rule
+    %%   - Retrieve max-age value to test Expires header
+    ?line CCtrl1 = proplists:get_value("Cache-Control", Hdrs1),
+    ?line {match, ["2592000"]} =
+        re:run(CCtrl1, "max-age=(\\d+)", [{capture,all_but_first,list}]),
 
-    %% Convert Date and Expires into datetime()
-    ?line Date = proplists:get_value("Date", Hdrs),
-    ?line Expires = proplists:get_value("Expires", Hdrs),
-    Date_DT = httpd_util:convert_request_date(Date),
-    Expires_DT = httpd_util:convert_request_date(Expires),
+    %%   - Convert Date and Expires into datetime()
+    ?line Date    = proplists:get_value("Date",    Hdrs1),
+    ?line Expires = proplists:get_value("Expires", Hdrs1),
+    Date_DT       = httpd_util:convert_request_date(Date),
+    Expires_DT    = httpd_util:convert_request_date(Expires),
 
-    %% Check if Expires value is equal to "Date + max-age"
-    Val1 = calendar:datetime_to_gregorian_seconds(Date_DT) + Secs,
+    %%   - Check if Expires value is equal to "Date + max-age"
+    Val1 = calendar:datetime_to_gregorian_seconds(Date_DT) + 2592000,
     Val2 = calendar:datetime_to_gregorian_seconds(Expires_DT),
     ?line Val1 = Val2,
+
+    %% Test "*/*" rule
+    Uri2 = "http://localhost:8006/",
+    ?line {ok, "200", Hdrs2, _} = ibrowse:send_req(Uri2, [], get),
+    ?line CCtrl2 = proplists:get_value("Cache-Control", Hdrs2),
+    ?line {match, ["0"]} =
+        re:run(CCtrl2, "max-age=(\\d+)", [{capture,all_but_first,list}]),
+
+    %% Test "image/*" rule
+    Uri3 = "http://localhost:8006/yaws_head.gif",
+    ?line {ok, "200", Hdrs3, _} = ibrowse:send_req(Uri3, [], get),
+    ?line CCtrl3 = proplists:get_value("Cache-Control", Hdrs3),
+    ?line {match, ["2592000"]} =
+        re:run(CCtrl3, "max-age=(\\d+)", [{capture,all_but_first,list}]),
     ok.
 
 

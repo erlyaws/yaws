@@ -4816,20 +4816,22 @@ suffix_type(SC, L) ->
 
 compressible_mime_type(Mime, #deflate{mime_types=MimeTypes}) ->
     case yaws:split_sep(Mime, $/) of
-        [Type, SubType] -> compressible_mime_type(Type, SubType, MimeTypes);
+        [Type, SubType] -> compressible_mime_type(Mime,Type,SubType,MimeTypes);
         _               -> false
     end.
 
-compressible_mime_type(_, _, all) ->
+compressible_mime_type(_, _, _, all) ->
     true;
-compressible_mime_type(_, _, []) ->
+compressible_mime_type(_, _, _, []) ->
     false;
-compressible_mime_type(Type, _, [{Type, all}|_]) ->
+compressible_mime_type(_, Type, _, [{Type, all}|_]) ->
     true;
-compressible_mime_type(Type, SubType, [{Type, SubType}|_]) ->
+compressible_mime_type(_, Type, SubType, [{Type, SubType}|_]) ->
     true;
-compressible_mime_type(Type, SubType, [_|Rest]) ->
-    compressible_mime_type(Type, SubType, Rest).
+compressible_mime_type(Mime, _, _, [Mime|_]) ->
+    true;
+compressible_mime_type(Mime, Type, SubType, [_|Rest]) ->
+    compressible_mime_type(Mime, Type, SubType, Rest).
 
 
 

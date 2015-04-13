@@ -2583,8 +2583,8 @@ parse_revproxy_url(Prefix, Url) ->
     end.
 
 
-parse_expires(['<', MimeType, ',' , Expire, '>' | Tail], Ack) ->
-    {Type, Value} =
+parse_expires(['<', MimeType, ',' , Expire, '>' | Tail], Acc) ->
+    {EType, Value} =
         case string:tokens(Expire, "+") of
             ["always"] ->
                 {always, 0};
@@ -2598,16 +2598,27 @@ parse_expires(['<', MimeType, ',' , Expire, '>' | Tail], Ack) ->
                 {error, "Bad expires syntax"}
         end,
     if
-        Type =:= error ->
-            {Type, Value};
+        EType =:= error ->
+            {EType, Value};
         not is_integer(Value) ->
             {error, "Bad expires syntax"};
         true ->
-            E = {MimeType, Type, Value},
-            parse_expires(Tail, [E |Ack])
+            case parse_mime_type(MimeType) of
+                {ok, "*", "*"} ->
+                    E = {all, EType, Value},
+                    parse_expires(Tail, [E |Acc]);
+                {ok, Type, "*"} ->
+                    E = {{Type, all}, EType, Value},
+                    parse_expires(Tail, [E |Acc]);
+                {ok, _Type, _SubType} ->
+                    E = {MimeType, EType, Value},
+                    parse_expires(Tail, [E |Acc]);
+                Error ->
+                    Error
+            end
     end;
-parse_expires([], Ack)->
-    {ok, Ack}.
+parse_expires([], Acc)->
+    {ok, Acc}.
 
 
 parse_phpmod(['<', "cgi", ',', DefaultPhpPath, '>'], DefaultPhpPath) ->
@@ -2648,14 +2659,14 @@ parse_compressible_mime_types(_, all) ->
     {ok, all};
 parse_compressible_mime_types(["all"|_], _Acc) ->
     {ok, all};
-parse_compressible_mime_types(["*/*"|_], _Acc) ->
-    {ok, all};
 parse_compressible_mime_types(["defaults"|Rest], Acc) ->
     parse_compressible_mime_types(Rest, ?DEFAULT_COMPRESSIBLE_MIME_TYPES++Acc);
 parse_compressible_mime_types([',' | Rest], Acc) ->
     parse_compressible_mime_types(Rest, Acc);
 parse_compressible_mime_types([MimeType | Rest], Acc) ->
-    case yaws:parse_mimetype(MimeType) of
+    case parse_mime_type(MimeType) of
+        {ok, "*", "*"} ->
+            {ok, all};
         {ok, Type, "*"} ->
             parse_compressible_mime_types(Rest, [{Type, all}|Acc]);
         {ok, Type, SubType} ->
@@ -2665,6 +2676,17 @@ parse_compressible_mime_types([MimeType | Rest], Acc) ->
     end;
 parse_compressible_mime_types([], Acc) ->
     {ok, Acc}.
+
+
+parse_mime_type(MimeType) ->
+    Res = re:run(MimeType, "^([-\\w\+]+|\\*)/([-\\w\+\.]+|\\*)$",
+                 [{capture, all_but_first, list}]),
+    case Res of
+        {match, [Type,SubType]} ->
+            {ok, Type, SubType};
+        nomatch ->
+            {error, "Invalid MimeType"}
+    end.
 
 
 parse_index_files([]) ->
