@@ -3174,46 +3174,24 @@ handle_out_reply({ehtml, E}, _LineNo, _YawsFile,  _UT, ARG) ->
             handle_crash(ARG, ErrStr)
     end;
 
-handle_out_reply({exhtml, E}, _LineNo, _YawsFile,  _UT, A) ->
+handle_out_reply({exhtml, E}, _LineNo, _YawsFile,  _UT, _A) ->
     N = count_trailing_spaces(),
-    case yaws_exhtml:format(E, N) of
-        {ok, Val} ->
-            accumulate_content(Val),
-            ok;
-        {error, ErrStr} ->
-            handle_crash(A,ErrStr)
-    end;
+    accumulate_content(yaws_exhtml:format(E, N)),
+    ok;
 
-handle_out_reply({exhtml, Value2StringF, E}, _LineNo, _YawsFile,  _UT, A) ->
+handle_out_reply({exhtml, Value2StringF, E}, _LineNo, _YawsFile,  _UT, _A) ->
     N = count_trailing_spaces(),
-    case yaws_exhtml:format(E, N, Value2StringF) of
-        {ok, Val} ->
-            accumulate_content(Val),
-            ok;
-        {error, ErrStr} ->
-            handle_crash(A,ErrStr)
-    end;
+    accumulate_content(yaws_exhtml:format(E, N, Value2StringF)),
+    ok;
 
-handle_out_reply({sexhtml, E}, _LineNo, _YawsFile,  _UT, A) ->
-    case yaws_exhtml:sformat(E) of
-        {ok, Val} ->
-            accumulate_content(Val),
-            ok;
-        {error, ErrStr} ->
-            handle_crash(A,ErrStr)
-    end;
+handle_out_reply({sexhtml, E}, _LineNo, _YawsFile,  _UT, _A) ->
+    accumulate_content(yaws_exhtml:sformat(E)),
+    ok;
 
 handle_out_reply({sexhtml, Value2StringF, E},
-                 _LineNo, _YawsFile,  _UT, A) ->
-    case yaws_exhtml:sformat(E, Value2StringF) of
-        {ok, Val} ->
-            accumulate_content(Val),
-            ok;
-        {error, ErrStr} ->
-            handle_crash(A,ErrStr)
-    end;
-
-
+                 _LineNo, _YawsFile,  _UT, _A) ->
+    accumulate_content(yaws_exhtml:sformat(E, Value2StringF)),
+    ok;
 
 handle_out_reply({content, MimeType, Cont}, _LineNo,_YawsFile, _UT, _ARG) ->
     yaws:outh_set_content_type(MimeType),

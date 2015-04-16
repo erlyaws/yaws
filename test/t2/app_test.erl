@@ -43,6 +43,7 @@ start() ->
     test_cache_appmod(),
     test_multi_forwarded_for(),
     test_log_rotation(),
+    test_exhtml(),
     ibrowse:stop().
 
 
@@ -1033,6 +1034,14 @@ test_log_rotation() ->
     ?line {ok, _} = file:read_file_info(?builddir ++ "/logs/localhost:8000.access"),
     ?line {ok, _} = file:read_file_info(?builddir ++ "/logs/localhost:8000.auth"),
 
+    ok.
+
+test_exhtml() ->
+    io:format("test_exhtml\n", []),
+    %% See github issue #216
+    ?line {ok, "200", _, Body} = ibrowse:send_req("http://localhost:8000/exhtml.yaws", [], get),
+    Expected = "<p id=\"foo\">\n  bar\n</p>\n",
+    Body = Expected,
     ok.
 
 %% used for appmod tests
