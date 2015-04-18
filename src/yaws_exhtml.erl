@@ -1,4 +1,4 @@
-%% -*- coding: Latin-1 -*-
+%% -*- coding: latin-1 -*-
 %%%----------------------------------------------------------------------
 %%% File    : exhtml.erl
 %%% Author  : Joakim Grebenö <jocke@tail-f.com>
@@ -59,14 +59,20 @@ check_xhtml(XHTMLContent) when is_binary(XHTMLContent) ->
             {error, Reason}
     end.
 
+drop_lead_ws("\n"++Data) ->
+    drop_lead_ws(Data);
+drop_lead_ws(Data) ->
+    Data.
+
 format(Data) ->
-    tl(format(block, Data, fun value2string/1, 0, [])).
+    drop_lead_ws(format(block, Data, fun value2string/1, 0, [])).
 
 format(Data, N) ->
-    tl(format(block, Data,  fun value2string/1, N, lists:duplicate(N, $ ))).
+    Res = format(block, Data,  fun value2string/1, N, lists:duplicate(N, $ )),
+    drop_lead_ws(Res).
 
 format(Data, N, Value2StringF) ->
-    tl(format(block, Data, Value2StringF, N, lists:duplicate(N, $ ))).
+    drop_lead_ws(format(block, Data, Value2StringF, N, lists:duplicate(N, $ ))).
 
 format(Mode, Data, Value2StringF, N, Indent) when is_tuple(Data) ->
     format(Mode, [Data], Value2StringF, N, Indent);
@@ -77,7 +83,7 @@ format(Mode, [{Tag}|Rest], Value2StringF, N, Indent) ->
     format(Mode, [{Tag, [], []}|Rest], Value2StringF, N, Indent);
 format(Mode, [{Tag, Attrs}|Rest], Value2StringF, N, Indent) ->
     format(Mode, [{Tag, Attrs, []}|Rest], Value2StringF, N, Indent);
-format(Mode, [{Tag, Attrs, Body}|Rest], Value2StringF, N, Indent) ->
+format(Mode, [{Tag, Attrs, Body}|Rest]=Data, Value2StringF, N, Indent) ->
     TagString = lowercase(tag_string(Tag)),
     case {Mode, block_level(TagString), Body} of
         {first_in_block, no, []} ->
@@ -111,6 +117,9 @@ format(Mode, [{Tag, Attrs, Body}|Rest], Value2StringF, N, Indent) ->
              format(inline, Body, Value2StringF, N, Indent),
              $<, $/, TagString, $>|
              format(block, Rest, Value2StringF, N, Indent)];
+        %% Block element in an inline element.
+        {inline, yes, _} ->
+            format(block, Data, Value2StringF, N, Indent);
         %% Inline element in a block or an inline element.
         {_, no, _} ->
             [$<, TagString, format_attrs(Value2StringF, Attrs), $>,

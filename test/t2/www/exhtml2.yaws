@@ -1,0 +1,13 @@
+<erl>
+out(_Arg) ->
+    Struct = {html, [], [
+        {head, [], [
+            {meta, [{charset, <<"utf-8">>}]},
+            {title, [], <<"title">>}
+        ]},
+        {body, [], [
+            {p, [], <<"p">>}
+        ]}
+    ]},
+    {exhtml, Struct}.
+</erl>

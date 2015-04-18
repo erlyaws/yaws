@@ -1039,9 +1039,13 @@ test_log_rotation() ->
 test_exhtml() ->
     io:format("test_exhtml\n", []),
     %% See github issue #216
-    ?line {ok, "200", _, Body} = ibrowse:send_req("http://localhost:8000/exhtml.yaws", [], get),
-    Expected = "<p id=\"foo\">\n  bar\n</p>\n",
-    Body = Expected,
+    ?line {ok, "200", _, Body1} = ibrowse:send_req("http://localhost:8000/exhtml.yaws", [], get),
+    Expected1 = "<p id=\"foo\">\n  bar\n</p>\n",
+    Body1 = Expected1,
+    %% See github issue #217
+    ?line {ok, "200", _, Body2} = ibrowse:send_req("http://localhost:8000/exhtml2.yaws", [], get),
+    Expected2 = "<html><head><meta charset=\"utf-8\"></meta><title>title</title></head><body>\n<p>\n  p\n</p></body></html>\n",
+    Body2 = Expected2,
     ok.
 
 %% used for appmod tests
