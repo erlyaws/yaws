@@ -230,6 +230,20 @@ fi
 AM_CONDITIONAL(HAVE_SSL_HONOR_CIPHER_ORDER, [test "x$HAVE_SSL_HONOR_CIPHER_ORDER" = "xtrue"])
 AC_SUBST(HAVE_SSL_HONOR_CIPHER_ORDER)
 
+dnl Check for support of log_alert SSL option (ERTS >= 5.10.3)
+AC_MSG_CHECKING([for support of log_alert SSL option])
+AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [5.10.3],
+    [ssl_log_alert="yes"],
+    [ssl_log_alert="no"])
+AC_MSG_RESULT([${ssl_log_alert}])
+
+HAVE_SSL_LOG_ALERT=false
+if test "x${ssl_log_alert}" = "xyes"; then
+        HAVE_SSL_LOG_ALERT=true
+fi
+AM_CONDITIONAL(HAVE_SSL_LOG_ALERT, [test "x$HAVE_SSL_LOG_ALERT" = "xtrue"])
+AC_SUBST(HAVE_SSL_LOG_ALERT)
+
 dnl Determine directories for installation.
 if test "x${prefix}" != "xNONE" -a "x${ERLANG_INSTALL_LIB_DIR}" = "x"; then
         dnl Under $prefix

@@ -35,6 +35,10 @@ endif
 ifeq ($(HAVE_SSL_HONOR_CIPHER_ORDER),true)
   ERLC_GENERIC_FLAGS += -DHAVE_SSL_HONOR_CIPHER_ORDER
 endif
+
+ifeq ($(HAVE_SSL_LOG_ALERT),true)
+  ERLC_GENERIC_FLAGS += -DHAVE_SSL_LOG_ALERT
+endif
 # Local Variables:
 #    tab-width: 8
 # End:

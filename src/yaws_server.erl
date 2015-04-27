@@ -925,8 +925,8 @@ ssl_listen_opts(GC, SC, SSL) ->
             {packet, http},
             {packet_size, 16#4000},
             {reuseaddr, true},
-            {log_alert, false},
-            {active, false} | ssl_listen_opts(GC, SSL)] ++ InetType ++
+            {active, false}
+            | ssl_listen_opts(GC, SSL)] ++ InetType ++
         proplists:get_value(listen_opts, SC#sconf.soptions, []),
     ?Debug("ssl listen options: ~p", [Opts]),
     Opts.
@@ -993,6 +993,7 @@ ssl_listen_opts(GC, SSL) ->
             true ->
                  false
          end,
+         ?SSL_LOG_ALERT,
          if ?gc_use_old_ssl(GC) ->
                  {ssl_imp, old};
             true ->

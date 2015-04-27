@@ -120,6 +120,12 @@
 -define(HONOR_CIPHER_ORDER, undefined).
 -endif.
 
+-ifdef(HAVE_SSL_LOG_ALERT).
+-define(SSL_LOG_ALERT, {log_alert, false}).
+-else.
+-define(SSL_LOG_ALERT, false).
+-endif.
+
 -record(ssl, {
           keyfile,
           certfile,
