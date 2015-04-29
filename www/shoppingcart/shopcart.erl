@@ -85,7 +85,7 @@ head_status(User) ->
           [{tr, [], {td, [], pb("User: ~s", [User])}}
           ]}
         },
-        {td, [{align, right}], {img, [{src, "junk.jpg"}
+        {td, [{align, right}], {img, [{src, "junk.png"}
                                      ]}}
        ]
       }
