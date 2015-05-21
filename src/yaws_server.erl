@@ -1120,6 +1120,7 @@ acceptor0(GS, Top) ->
                 {'EXIT', Reason2} ->
                     error_logger:error_msg("Yaws process died: ~p~n",
                                            [Reason2]),
+                    Top ! {self(), decrement},
                     exit(shutdown)
             end,
 
