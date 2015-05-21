@@ -1095,6 +1095,9 @@ acceptor0(GS, Top) ->
                 {'EXIT', {{error, einval}, _}} ->
                     Top ! {self(), decrement},
                     exit(normal);
+                {'EXIT', {{badmatch, {error, einval}}, _}} ->
+                    Top ! {self(), decrement},
+                    exit(normal);
                 {'EXIT', {error, closed}} ->
                     Top ! {self(), decrement},
                     exit(normal);
