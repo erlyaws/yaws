@@ -360,7 +360,7 @@ scan_chars(Chars, Type) ->
                     scan_chars(Rest, [], NumBytes);
                 url_encoded ->
                     {S, Rest2} = split_str_after(Rest, NumBytes),
-                    S2 = xmerl_ucs:from_utf8(yaws_api:url_decode(S)),
+                    S2 = xmerl_ucs:from_utf8(yaws_api:url_decode_with_encoding(S, latin1)),
                     {done, {ok, S2}, Rest2};
                 base64_bytes ->
                     {S, Rest2} = split_str_after(Rest, NumBytes),

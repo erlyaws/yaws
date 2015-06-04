@@ -29,7 +29,7 @@
          set_content_type/1,
          htmlize/1, htmlize_char/1, f/2, fl/1]).
 -export([find_cookie_val/2, secs/0,
-         url_decode/1, url_decode_q_split/1,
+         url_decode/1, url_decode_q_split/1, url_decode_with_encoding/2,
          url_encode/1, parse_url/1, parse_url/2, format_url/1,
          format_partial_url/2]).
 -export([is_absolute_URI/1]).
@@ -778,10 +778,14 @@ find_cookie_val2(Name, [Cookie|Rest]) ->
         false                    -> find_cookie_val2(Name, Rest)
     end.
 
+
 %%
 url_decode(Path) ->
+    url_decode_with_encoding(Path, file:native_name_encoding()).
+
+url_decode_with_encoding(Path, Encoding) ->
     {DecPath, QS} = url_decode(Path, []),
-    DecPath1 = case file:native_name_encoding() of
+    DecPath1 = case Encoding of
                    latin1 ->
                        DecPath;
                    utf8 ->
