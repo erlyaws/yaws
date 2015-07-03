@@ -3249,6 +3249,18 @@ The following directives are allowed inside a server definition.
                  fallback to unsecure renegotiation if the peer does not support
                  RFC 5746.
 
+               \item \verb+client_renegotiation = true | false+ --- In protocols
+                 that support client-initiated renegotiation, the cost of
+                 resources of such an operation is higher for the server than
+                 the client. This can act as a vector for denial of service
+                 attacks. The SSL application already takes measures to
+                 counter-act such attempts, but client-initiated renegotiation
+                 can be strictly disabled by setting this option to false. The
+                 default value is true. Note that disabling renegotiation can
+                 result in long-lived connections becoming unusable due to
+                 limits on the number of messages the underlying cipher suite
+                 can encipher.
+
                \item \verb+honor_cipher_order = true | false+ --- If true (the
                  default), use the server's preference for cipher selection. If
                  false, use the client's preference.

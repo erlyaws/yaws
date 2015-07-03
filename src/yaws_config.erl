@@ -1891,6 +1891,15 @@ fload(FD, ssl, GC, C, Lno, Chars) ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
 
+        ["client_renegotiation", '=', Bool] ->
+            case is_bool(Bool) of
+                {true, Val} ->
+                    C1 = C#sconf{ssl=(C#sconf.ssl)#ssl{client_renegotiation=Val}},
+                    fload(FD, ssl, GC, C1, Lno+1, ?NEXTLINE);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
+            end;
+
         ["honor_cipher_order", '=', Bool] ->
             %% below, ignore dialyzer warning:
             case ?HONOR_CIPHER_ORDER of

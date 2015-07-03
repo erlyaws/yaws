@@ -1129,6 +1129,20 @@ renegotiation if the peer does not support RFC 5746.
 .RE
 
 .IP
+\fBclient_renegotiation = true | false\fR
+.RS 12
+In protocols that support client-initiated renegotiation, the cost of
+resources of such an operation is higher for the server than the
+client. This can act as a vector for denial of service attacks. The
+SSL application already takes measures to counter-act such attempts,
+but client-initiated renegotiation can be strictly disabled by setting
+this option to false. The default value is true. Note that disabling
+renegotiation can result in long-lived connections becoming unusable
+due to limits on the number of messages the underlying cipher suite
+can encipher.
+.RE
+
+.IP
 \fBhonor_cipher_order = true | false\fR
 .RS 12
 If true (the default), use the server's preference for cipher selection. If
