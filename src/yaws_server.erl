@@ -994,6 +994,12 @@ ssl_listen_opts(GC, SSL) ->
             true ->
                  false
          end,
+         if SSL#ssl.client_renegotiation /= undefined andalso
+            ?SSL_CLIENT_RENEGOTIATION == true ->
+                {client_renegotiation, SSL#ssl.client_renegotiation};
+            true ->
+                 false
+         end,
          if SSL#ssl.honor_cipher_order /= undefined andalso
             ?HONOR_CIPHER_ORDER == true ->
                  {honor_cipher_order, SSL#ssl.honor_cipher_order};

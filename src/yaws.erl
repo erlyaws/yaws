@@ -68,6 +68,7 @@
          ssl_ciphers/1, ssl_ciphers/2,
          ssl_cachetimeout/1, ssl_cachetimeout/2,
          ssl_secure_renegotiate/1, ssl_secure_renegotiate/2,
+         ssl_client_renegotiation/1, ssl_client_renegotiation/2,
          ssl_protocol_version/1, ssl_protocol_version/2,
          ssl_honor_cipher_order/1, ssl_honor_cipher_order/2]).
 
@@ -363,6 +364,7 @@ ssl_dhfile              (#ssl{dhfile               = X}) -> X.
 ssl_ciphers             (#ssl{ciphers              = X}) -> X.
 ssl_cachetimeout        (#ssl{cachetimeout         = X}) -> X.
 ssl_secure_renegotiate  (#ssl{secure_renegotiate   = X}) -> X.
+ssl_client_renegotiation(#ssl{client_renegotiation = X}) -> X.
 ssl_protocol_version    (#ssl{protocol_version     = X}) -> X.
 ssl_honor_cipher_order  (#ssl{honor_cipher_order   = X}) -> X.
 
@@ -383,6 +385,12 @@ ssl_protocol_version    (S, Vsns)    -> S#ssl{protocol_version     = Vsns}.
 ssl_honor_cipher_order  (S, Bool)    -> S#ssl{honor_cipher_order   = Bool}.
 -else.
 ssl_honor_cipher_order  (S, _)       -> S.
+-endif.
+
+-ifdef(HAVE_SSL_CLIENT_RENEGOTIATION).
+ssl_client_renegotiation(S, Bool)    -> S#ssl{client_renegotiation = Bool}.
+-else.
+ssl_client_renegotiation(S, _)       -> S.
 -endif.
 
 setup_ssl(SL, DefaultSSL) ->
@@ -413,6 +421,8 @@ setup_ssl(SL, DefaultSSL) ->
                                              SSL#ssl.cachetimeout),
                  secure_renegotiate   = lkup(secure_renegotiate, SSLProps,
                                              SSL#ssl.secure_renegotiate),
+                 client_renegotiation = lkup(client_renegotiation, SSLProps,
+                                             SSL#ssl.client_renegotiation),
                  honor_cipher_order   = lkup(honor_cipher_order, SSLProps,
                                              SSL#ssl.honor_cipher_order),
                  protocol_version     = lkup(protocol_version, SSLProps,

@@ -1900,6 +1900,24 @@ fload(FD, ssl, GC, C, Lno, Chars) ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
 
+        ["client_renegotiation", '=', Bool] ->
+            %% below, ignore dialyzer warning:
+            case ?SSL_CLIENT_RENEGOTIATION of
+                true ->
+                    case is_bool(Bool) of
+                        {true, Val} ->
+                            C1 = C#sconf{ssl=(C#sconf.ssl)#ssl{client_renegotiation=Val}},
+                            fload(FD, ssl, GC, C1, Lno+1, ?NEXTLINE);
+                        false ->
+                            {error, ?F("Expect true|false at line ~w", [Lno])}
+                    end;
+                _ ->
+                    error_logger:info_msg("Warning, client_renegotiation SSL "
+                                          "option is not supported "
+                                          "at line ~w~n", [Lno]),
+                    fload(FD, ssl, GC, C, Lno+1, ?NEXTLINE)
+            end;
+
         ["honor_cipher_order", '=', Bool] ->
             %% below, ignore dialyzer warning:
             case ?HONOR_CIPHER_ORDER of

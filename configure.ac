@@ -230,6 +230,20 @@ fi
 AM_CONDITIONAL(HAVE_SSL_HONOR_CIPHER_ORDER, [test "x$HAVE_SSL_HONOR_CIPHER_ORDER" = "xtrue"])
 AC_SUBST(HAVE_SSL_HONOR_CIPHER_ORDER)
 
+dnl Check for support of client_renegotiation SSL option (ERTS >= 7.0)
+AC_MSG_CHECKING([for support of client_renegotiation SSL option])
+AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [7.0],
+    [ssl_client_renegotiation="yes"],
+    [ssl_client_renegotiation="no"])
+AC_MSG_RESULT([${ssl_client_renegotiation}])
+
+HAVE_SSL_CLIENT_RENEGOTIATION=false
+if test "x${ssl_client_renegotiation}" = "xyes"; then
+        HAVE_SSL_CLIENT_RENEGOTIATION=true
+fi
+AM_CONDITIONAL(HAVE_SSL_CLIENT_RENEGOTIATION, [test "x$HAVE_SSL_CLIENT_RENEGOTIATION" = "xtrue"])
+AC_SUBST(HAVE_SSL_CLIENT_RENEGOTIATION)
+
 dnl Check for support of log_alert SSL option (ERTS >= 5.10.3)
 AC_MSG_CHECKING([for support of log_alert SSL option])
 AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [5.10.3],

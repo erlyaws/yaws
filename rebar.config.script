@@ -104,19 +104,25 @@ ErlOpts6 = if
                true               -> ErlOpts5
            end,
 
-%% Check for support of log_alert SSL option (ERTS >= 5.10.3)
+%% Check for support of client_renegotiation SSL option (ERTS >= 7.0)
 ErlOpts7 = if
-               ErtsVsn >= {5,10,3} -> ErlOpts6 ++ [{d,'HAVE_LOG_ALERT'}];
-               true                -> ErlOpts6
+               ErtsVsn >= {7,0,0} -> ErlOpts6 ++ [{d,'HAVE_SSL_CLIENT_RENEGOTIATION'}];
+               true               -> ErlOpts6
+           end,
+
+%% Check for support of log_alert SSL option (ERTS >= 5.10.3)
+ErlOpts8 = if
+               ErtsVsn >= {5,10,3} -> ErlOpts7 ++ [{d,'HAVE_LOG_ALERT'}];
+               true                -> ErlOpts7
            end,
 
 %% Check for erlang:now/0
-ErlOpts8 = if
-               ErtsVsn < {7,0,0} -> ErlOpts7 ++ [{d,'HAVE_ERLANG_NOW'}];
-               true              -> ErlOpts7
+ErlOpts9 = if
+               ErtsVsn < {7,0,0} -> ErlOpts8 ++ [{d,'HAVE_ERLANG_NOW'}];
+               true              -> ErlOpts8
            end,
 
-ErlOpts = ErlOpts8,
+ErlOpts = ErlOpts9,
 
 HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts),
 {PortEnv1, PortSpecs1} =
