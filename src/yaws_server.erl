@@ -627,7 +627,8 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     ?MODULE:gserv_loop(GS2, Ready, Rnum, Last);
                 Rnum < PoolSize ->
                     %% cache this process for 10 secs
-                    ?MODULE:gserv_loop(GS2, [{now(), From} | Ready],
+                    ?MODULE:gserv_loop(GS2,
+                                       [{yaws:get_time_tuple(), From} | Ready],
                                        Rnum+1, Last)
             end;
         {'EXIT', Pid, Reason} ->
@@ -842,7 +843,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             ?MODULE:gserv_loop(GS2, Ready2, 0, New)
     after (10 * 1000) ->
             %% collect old procs, to save memory
-            {NowMega, NowSecs, _} = now(),
+            {NowMega, NowSecs, _} = yaws:get_time_tuple(),
             R2 = lists:filter(fun({{ThenMega, ThenSecs, _}, Pid}) ->
                                       if
                                           NowMega > ThenMega;
@@ -1537,7 +1538,7 @@ maybe_access_log(Ip, Req, H) ->
     SC=get(sc),
     case ?sc_has_access_log(SC) of
         true ->
-            Time = timer:now_diff(now(), get(request_start_time)),
+            Time = timer:now_diff(yaws:get_time_tuple(), get(request_start_time)),
             yaws_log:accesslog(SC, Ip, Req, H, get(outh), Time);
         false ->
             ignore
@@ -3989,10 +3990,15 @@ send_file_range(CliSock, Fd, 0) ->
 crnl() ->
     "\r\n".
 
+-ifdef(HAVE_ERLANG_NOW).
 now_secs() ->
     {M,S,_}=now(),
     (M*1000000)+S.
-
+-else.
+now_secs() ->
+    {M,S,_} = erlang:timestamp(),
+    (M*1000000)+S.
+-endif.
 
 %% a file cache,
 url_type(GetPath, ArgDocroot, VirtualDir) ->

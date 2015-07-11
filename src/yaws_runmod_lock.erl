@@ -90,7 +90,7 @@ init([]) ->
 %% handle_call/3
 handle_call({lock,Path,Lock}, _From, Table) ->
     try
-        T0 = erlang:now(),
+        T0 = yaws:get_time_tuple(),
         Id = case Lock#lock.id of
                  undefined -> locktoken();
                  _ -> Lock#lock.id
@@ -359,7 +359,7 @@ do_cleanup_locks([]) ->
     [];
 do_cleanup_locks([H|T]) ->
     T0 = H#lock.timestamp,
-    T1 = erlang:now(),
+    T1 = yaws:get_time_tuple(),
     Delta = timer:now_diff(T1,T0),
     if
         Delta > (H#lock.timeout*1000000) ->
@@ -374,7 +374,7 @@ locktoken() ->
     % RFC4122 section 3 based UUID
     Version = 1,
     Variant = 2#10,
-    Now = {_, _, Micro} = now(),
+    Now = {_, _, Micro} = yaws:get_time_tuple(),
     Nowish = calendar:now_to_universal_time(Now),
     Timestamp = calendar:datetime_to_gregorian_seconds(Nowish) * 1000000000,
     <<TimeHi:12, TimeMid:16, TimeLow:32>> = <<Timestamp:60>>,

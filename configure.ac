@@ -400,6 +400,20 @@ fi
 AM_CONDITIONAL(HAVE_INET_PARSE_STRICT_ADDRESS, [test "x$INET_PARSE_STRICT_ADDRESS" = "xtrue"])
 AC_SUBST(HAVE_INET_PARSE_STRICT_ADDRESS)
 
+dnl erlang:now/0 is deprecated in erts 7.0 and newer
+AC_MSG_CHECKING([for erlang:now/0])
+AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [lt], [7.0],
+    [have_erlang_now="yes"],
+    [have_erlang_now="no"])
+AC_MSG_RESULT([${have_erlang_now}])
+
+HAVE_ERLANG_NOW=false
+if test "x${have_erlang_now}" = "xyes"; then
+        HAVE_ERLANG_NOW=true
+fi
+AM_CONDITIONAL(HAVE_ERLANG_NOW, [test "x$HAVE_ERLANG_NOW" = "xtrue"])
+AC_SUBST(HAVE_ERLANG_NOW)
+
 dnl ------------------------------------------------------------------
 dnl Check for programs used during Yaws compilation/installation
 dnl ------------------------------------------------------------------

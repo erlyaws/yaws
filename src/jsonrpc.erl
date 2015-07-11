@@ -71,7 +71,7 @@ encode_call_payload({call, Method, Args}) when is_list(Args) ->
     %% id makes sense when there are many requests in same
     %% communication channel and replies can come in random
     %% order here it can be changed to something less expensive
-    ID = element(3, erlang:now()),
+    ID = element(3, yaws:unique_triple()),
     Struct =  json2:encode({struct, [{"jsonrpc", "2.0"},
                                      {method, Method},
                                      {params, {array, Args}},

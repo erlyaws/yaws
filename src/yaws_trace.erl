@@ -315,7 +315,7 @@ write_trace(_Pid, Fd, Str, false) ->
 
 iso_8601_fmt() ->
     {{Year,Month,Day},{Hour,Min,Sec}} = erlang:localtime(),
-    {_,_,MicroSec} = now(),
+    {_,_,MicroSec} = yaws:get_time_tuple(),
     io_lib:format("~4.10.0B-~2.10.0B-~2.10.0B ~2.10.0B:~2.10.0B:~2.10.0B.~w",
                   [Year, Month, Day, Hour, Min, Sec, (MicroSec div 1000)]).
 

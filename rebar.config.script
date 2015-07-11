@@ -110,7 +110,15 @@ ErlOpts7 = if
                true                -> ErlOpts6
            end,
 
-HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts7),
+%% Check for erlang:now/0
+ErlOpts8 = if
+               ErtsVsn < {7,0,0} -> ErlOpts7 ++ [{d,'HAVE_ERLANG_NOW'}];
+               true              -> ErlOpts7
+           end,
+
+ErlOpts = ErlOpts8,
+
+HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts),
 {PortEnv1, PortSpecs1} =
     if
         HaveSendFile ->
@@ -122,7 +130,7 @@ HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts7),
             {PortEnv0, PortSpecs0}
     end,
 
-Cfg1 = lists:keyreplace(erl_opts,   1, Cfg0, {erl_opts,   ErlOpts7}),
+Cfg1 = lists:keyreplace(erl_opts,   1, Cfg0, {erl_opts,   ErlOpts}),
 Cfg2 = lists:keyreplace(port_env,   1, Cfg1, {port_env,   PortEnv1}),
 Cfg3 = lists:keyreplace(port_specs, 1, Cfg2, {port_specs, PortSpecs1}),
 

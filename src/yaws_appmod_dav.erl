@@ -508,7 +508,7 @@ exists(Path) ->
 
 %% generate a temporary filename as a dotted file with a timestamp
 temp_name(F) ->
-    {A,B,C} = erlang:now(),
+    {A,B,C} = yaws:get_time_tuple(),
     Path = filename:dirname(F),
     File = filename:basename(F),
     T0 = io_lib:format("~s/.~s.~p-~p-~p",[Path,File,A,B,C]),

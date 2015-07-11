@@ -39,6 +39,10 @@ endif
 ifeq ($(HAVE_SSL_LOG_ALERT),true)
   ERLC_GENERIC_FLAGS += -DHAVE_SSL_LOG_ALERT
 endif
+
+ifeq ($(HAVE_ERLANG_NOW),true)
+  ERLC_GENERIC_FLAGS += -DHAVE_ERLANG_NOW
+endif
 # Local Variables:
 #    tab-width: 8
 # End:

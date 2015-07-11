@@ -56,7 +56,7 @@ run(GC) ->
 rand() ->
     case os:type() of
         {win32, _} ->
-            {A1, A2, A3}=now(),
+            {A1, A2, A3}=yaws:get_time_tuple(),
             random:seed(A1, A2, A3),
             random:uniform(1 bsl 64);
         _ ->
@@ -66,7 +66,7 @@ rand() ->
             catch
                 _:_ ->
                     error_logger:warning_msg("Running without crypto app\n"),
-                    {A1, A2, A3}=now(),
+                    {A1, A2, A3}=yaws:get_time_tuple(),
                     random:seed(A1, A2, A3),
                     random:uniform(1 bsl 64)
             end

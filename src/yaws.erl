@@ -94,7 +94,7 @@
          printversion/0, strip_spaces/1, strip_spaces/2,
          month/1, mk2/1, home/0, arg_rewrite/1, to_lowerchar/1, to_lower/1,
          funreverse/2, is_prefix/2, split_sep/2, join_sep/2, accepts_gzip/2,
-         upto_char/2, deepmap/2, ticker/2, ticker/3,
+         upto_char/2, deepmap/2, ticker/2, ticker/3, unique_triple/0, get_time_tuple/0,
          parse_qvalue/1, parse_auth/1]).
 
 -export([outh_set_status_code/1,
@@ -1058,6 +1058,24 @@ join_sep([], Sep) when is_list(Sep) ->
 join_sep([H|T], Sep) ->
     H ++ lists:append([Sep ++ X || X <- T]).
 
+%% Provide a unique 3-tuple of positive integers.
+-ifdef(HAVE_ERLANG_NOW).
+unique_triple() -> now().
+-else.
+unique_triple() ->
+    {erlang:unique_integer([positive]),
+     erlang:unique_integer([positive]),
+     erlang:unique_integer([positive])}.
+-endif.
+
+%% Get a current time 3-tuple.
+-ifdef(HAVE_ERLANG_NOW).
+get_time_tuple() ->
+    now().
+-else.
+get_time_tuple() ->
+    erlang:timestamp().
+-endif.
 
 %% header parsing
 parse_qval(S) ->
@@ -2604,7 +2622,7 @@ mktemp(Template, Ret) ->
     mktemp(Tdir, Template, Ret, 0, Max, "").
 
 mktemp(Dir, Template, Ret, I, Max, Suffix) when I < Max ->
-    {X,Y,Z}  = now(),
+    {X,Y,Z} = unique_triple(),
     PostFix = erlang:integer_to_list(X) ++ "-" ++
         erlang:integer_to_list(Y) ++ "-" ++
         erlang:integer_to_list(Z),
