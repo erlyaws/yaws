@@ -1,3 +1,13 @@
+Mon Jul 13 19:27:06 CEST 2015 Yaws 2.0
+Fix Yaws build for Erlang 18.0 (now() deprecated)
+Renew self-signed ssl certificat to use the right signature algorithm
+support for the SSL 'log_alert' option
+expires fixes
+Fix possible XSS in yaws_outmod:crashmsg/3
+rebar work.
+Rework how SSL protocol_version is handled
+Many minor bugfixes, tests and also docs.
+ 
 Tue Nov 11 17:17:37 CET 2014 Yaws 1.99
 Major release, many enhancenements and bugfixes. Too many to list actually, see the git logs. The major ones though:
 combine multiple Accept-Encoding headers (steve)
