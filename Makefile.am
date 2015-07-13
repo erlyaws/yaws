@@ -128,13 +128,13 @@ distclean-local:
 
 
 mkinstaller: cleaninstaller
-	$(AM_V_at)if [ -z $(UNIX2DOS) -a -z $(TODOS) ]; then	\
-	  echo "No unix2dos/todos program found";		\
-	  echo "Run apt-get install dos2unix/tofrodos";		\
-	  exit 1;						\
+	$(AM_V_at)if [ -z "$(UNIX2DOS)" -a -z "$(TODOS)" ]; then \
+	  echo "No unix2dos/todos program found";		 \
+	  echo "Run apt-get install dos2unix/tofrodos";		 \
+	  exit 1;						 \
 	fi
 
-	$(AM_V_at)if [ ! -d $(INSTALL_BUILDER) ]; then			\
+	$(AM_V_at)if [ ! -d "$(INSTALL_BUILDER)" ]; then		\
 	  echo "No installer-builder found";				\
 	  echo "For more information, read win32/README.developer";	\
 	  exit 1;							\
