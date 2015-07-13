@@ -1,8 +1,8 @@
 
-yaws.erl:1539: The pattern 'false' can never match the type [[any()]]
-yaws.erl:2616: Guard test Ret::'file' == 'fd' can never succeed
-yaws.erl:2624: Guard test Ret::'file' == 'binfd' can never succeed
-yaws_api.erl:2589: The pattern 'false' can never match the type 'true'
+yaws.erl:1557: The pattern 'false' can never match the type [[any()]]
+yaws.erl:2634: Guard test Ret::'file' == 'fd' can never succeed
+yaws.erl:2642: Guard test Ret::'file' == 'binfd' can never succeed
+yaws_api.erl:2593: The pattern 'false' can never match the type 'true'
 yaws_config.erl:603: The pattern 'false' can never match the type 'true'
 yaws_config.erl:1907: The variable _ can never match since previous clauses completely covered the type 'true'
 yaws_config.erl:3205: The pattern 'false' can never match the type 'true'
