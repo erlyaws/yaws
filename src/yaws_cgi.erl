@@ -1083,26 +1083,20 @@ fcgi_encode_name_value_list(_NameValueList = [{Name, Value} | Tail]) ->
 
 fcgi_encode_name_value(Name, _Value = undefined) ->
     fcgi_encode_name_value(Name, "");
-fcgi_encode_name_value(Name, Value) when is_list(Name) and is_list(Value) ->
-    NameSize = iolist_size(Name),
-    %% If name size is < 128, encode it as one byte with the high bit clear.
-    %% If the name size >= 128, encoded it as 4 bytes with the high bit set.
+fcgi_encode_name_value(Name, Value) ->
+    Name2 = unicode:characters_to_binary(Name),
+    Value2 = unicode:characters_to_binary(Value),
+    NameSize = byte_size(Name2),
+    ValueSize = byte_size(Value2),
     NameSizeData = if
-                       NameSize < 128 ->
-                           <<NameSize:8>>;
-                       true ->
-                           <<(NameSize bor 16#80000000):32>>
-                   end,
-    %% Same encoding for the value size.
-    ValueSize = iolist_size(Value),
+        NameSize < 128 -> <<NameSize:8>>;
+        true           -> <<(NameSize bor 16#80000000):32>>
+    end,
     ValueSizeData = if
-                        ValueSize < 128 ->
-                            <<ValueSize:8>>;
-                        true ->
-                            <<(ValueSize bor 16#80000000):32>>
-                    end,
-    list_to_binary([<<NameSizeData/binary,
-                      ValueSizeData/binary>>, Name, Value]).
+        ValueSize < 128 -> <<ValueSize:8>>;
+        true            -> <<(ValueSize bor 16#80000000):32>>
+    end,
+    list_to_binary([<<NameSizeData/binary, ValueSizeData/binary>>, Name2, Value2]).
 
 
 fcgi_header_loop(WorkerState) ->
