@@ -533,8 +533,16 @@ cgi_start_worker(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
 
 
 
-cgi_worker(Parent, Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv,SC) ->
-    Env = build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv,SC),
+cgi_worker(Parent, Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv0, SC) ->
+    ExtraEnv = lists:map(fun({K,V}) when is_binary(K), is_binary(V) ->
+                                 {binary_to_list(K), binary_to_list(V)};
+                            ({K,V}) when is_binary(K) ->
+                                 {binary_to_list(K), V};
+                            ({K,V}) when is_binary(V) ->
+                                 {K, binary_to_list(V)};
+                            (KV) -> KV
+                         end, ExtraEnv0),
+    Env = build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC),
     ?Debug("~p~n", [Env]),
     CGIPort = open_port({spawn, Exefilename},
                         [{env, Env},
@@ -1083,8 +1091,10 @@ fcgi_encode_name_value_list(_NameValueList = [{Name, Value} | Tail]) ->
 
 fcgi_encode_name_value(Name, _Value = undefined) ->
     fcgi_encode_name_value(Name, "");
-fcgi_encode_name_value(Name, Value) when is_list(Name) and is_list(Value) ->
-    NameSize = iolist_size(Name),
+fcgi_encode_name_value(Name0, Value0) ->
+    Name = unicode:characters_to_binary(Name0),
+    Value = unicode:characters_to_binary(Value0),
+    NameSize = byte_size(Name),
     %% If name size is < 128, encode it as one byte with the high bit clear.
     %% If the name size >= 128, encoded it as 4 bytes with the high bit set.
     NameSizeData = if
@@ -1094,15 +1104,14 @@ fcgi_encode_name_value(Name, Value) when is_list(Name) and is_list(Value) ->
                            <<(NameSize bor 16#80000000):32>>
                    end,
     %% Same encoding for the value size.
-    ValueSize = iolist_size(Value),
+    ValueSize = byte_size(Value),
     ValueSizeData = if
                         ValueSize < 128 ->
                             <<ValueSize:8>>;
                         true ->
                             <<(ValueSize bor 16#80000000):32>>
                     end,
-    list_to_binary([<<NameSizeData/binary,
-                      ValueSizeData/binary>>, Name, Value]).
+    list_to_binary([<<NameSizeData/binary, ValueSizeData/binary>>, Name, Value]).
 
 
 fcgi_header_loop(WorkerState) ->

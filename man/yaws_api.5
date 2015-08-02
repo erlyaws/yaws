@@ -653,14 +653,15 @@ The TCP port number of the FastCGI application server.
 Override default pathinfo in Arg#arg.pathinfo.
 
 \fB{extra_env, ExtraEnv}\fR
-Override default pathinfo in Arg#arg.pathinfo.
+Extra environment variables to be passed to the FastCGI application server,
+as a list of name-value pairs.
 
 \fI
 .nf
 ExtraEnv = [Var]
 Var = {Name, Value}
-Name = string()
-Value = string()
+Name = string() | binary()
+Value = string() | binary()
 .fi
 \fR
 

@@ -2085,10 +2085,11 @@ call_cgi(Arg, Exefilename, Scriptfilename) ->
 %%
 %% {app_server_port, int()} : The TCP port number of the application server.
 %%
-%% {path_info, string()} : Override the patinfo string from Arg.
+%% {path_info, string()} : Override the pathinfo string from Arg.
 %%
-%% {extra_env, [{string(), string()}]} : Extra environment variables to be
-%% passed to the application server, as a list of name-value pairs.
+%% {extra_env, [{string()|binary(), string()|binary()}]} : Extra
+%% environment variables to be passed to the application server, as a list
+%% of name-value pairs.
 %%
 %% trace_protocol : Trace FastCGI protocol messages.
 %%
