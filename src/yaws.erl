@@ -64,6 +64,7 @@
          ssl_depth/1, ssl_depth/2,
          ssl_password/1, ssl_password/2,
          ssl_cacertfile/1, ssl_cacertfile/2,
+         ssl_dhfile/1, ssl_dhfile/2,
          ssl_ciphers/1, ssl_ciphers/2,
          ssl_cachetimeout/1, ssl_cachetimeout/2,
          ssl_secure_renegotiate/1, ssl_secure_renegotiate/2,
@@ -358,6 +359,7 @@ ssl_fail_if_no_peer_cert(#ssl{fail_if_no_peer_cert = X}) -> X.
 ssl_depth               (#ssl{depth                = X}) -> X.
 ssl_password            (#ssl{password             = X}) -> X.
 ssl_cacertfile          (#ssl{cacertfile           = X}) -> X.
+ssl_dhfile              (#ssl{dhfile               = X}) -> X.
 ssl_ciphers             (#ssl{ciphers              = X}) -> X.
 ssl_cachetimeout        (#ssl{cachetimeout         = X}) -> X.
 ssl_secure_renegotiate  (#ssl{secure_renegotiate   = X}) -> X.
@@ -371,6 +373,7 @@ ssl_fail_if_no_peer_cert(S, Bool)    -> S#ssl{fail_if_no_peer_cert = Bool}.
 ssl_depth               (S, Depth)   -> S#ssl{depth                = Depth}.
 ssl_password            (S, Pass)    -> S#ssl{password             = Pass}.
 ssl_cacertfile          (S, File)    -> S#ssl{cacertfile           = File}.
+ssl_dhfile              (S, File)    -> S#ssl{dhfile               = File}.
 ssl_ciphers             (S, Ciphers) -> S#ssl{ciphers              = Ciphers}.
 ssl_cachetimeout        (S, Timeout) -> S#ssl{cachetimeout         = Timeout}.
 ssl_secure_renegotiate  (S, Bool)    -> S#ssl{secure_renegotiate   = Bool}.
@@ -402,6 +405,8 @@ setup_ssl(SL, DefaultSSL) ->
                                              SSL#ssl.password),
                  cacertfile           = lkup(cacertfile, SSLProps,
                                              SSL#ssl.cacertfile),
+                 dhfile               = lkup(dhfile, SSLProps,
+                                             SSL#ssl.dhfile),
                  ciphers              = lkup(ciphers, SSLProps,
                                              SSL#ssl.ciphers),
                  cachetimeout         = lkup(cachetimeout, SSLProps,

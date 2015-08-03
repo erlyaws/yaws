@@ -951,6 +951,12 @@ ssl_listen_opts(GC, SSL) ->
                  false
          end,
 
+         if SSL#ssl.dhfile /= undefined  ->
+                 {dhfile, SSL#ssl.dhfile};
+            true ->
+                 false
+         end,
+
          if SSL#ssl.verify /= undefined ->
                  {verify, SSL#ssl.verify};
             true ->

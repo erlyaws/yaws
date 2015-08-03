@@ -121,6 +121,7 @@ keepalive_timeout              = 10000
         <ssl>
                 keyfile = @abs_top_srcdir@/ssl/yaws-key.pem
                 certfile = @abs_top_srcdir@/ssl/yaws-cert.pem
+                dhfile = @abs_top_srcdir@/ssl/dhparams.pem
                 depth = 0
         </ssl>
 </server>

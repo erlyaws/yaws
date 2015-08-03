@@ -1828,6 +1828,15 @@ fload(FD, ssl, GC, C, Lno, Chars) ->
                     {error, ?F("Expect existing file at line ~w", [Lno])}
             end;
 
+        ["dhfile", '=', Val] ->
+            case is_file(Val) of
+                true ->
+                    C1 = C#sconf{ssl = (C#sconf.ssl)#ssl{dhfile = Val}},
+                    fload(FD, ssl, GC, C1, Lno+1, ?NEXTLINE);
+                _ ->
+                    {error, ?F("Expect existing file at line ~w", [Lno])}
+            end;
+
         ["verify", '=', Val0] ->
             Val = try
                       list_to_integer(Val0)

@@ -144,6 +144,7 @@ keepalive_timeout = 30000
         <ssl>
                 keyfile = %certdir%/yaws-key.pem
                 certfile = %certdir%/yaws-cert.pem
+                dhfile = %certdir%/dhparams.pem
                 depth = 0
         </ssl>
 </server>

@@ -1065,6 +1065,14 @@ certificate is requested.
 .RE
 
 .IP
+\fBdhfile = File\fR
+.RS 12
+A file containing PEM-encoded Diffie-Hellman parameters to be used by
+the server if a cipher suite using Diffie-Hellman key exchange is
+negotiated. If not specified, default parameters are used.
+.RE
+
+.IP
 \fBverify = 0 | 1 | 2 | verify_none | verify_peer\fR
 .RS 12
 Specifies the level of verification the server does on client certs.  0 means
