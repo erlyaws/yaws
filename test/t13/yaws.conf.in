@@ -11,11 +11,6 @@ pick_first_virthost_on_nomatch = true
 use_fdsrv                      = false
 keepalive_timeout              = 10000
 
-<server localhost>
-        port = 8000
-        listen = 0.0.0.0
-        docroot = @abs_top_srcdir@/www
-</server>
 
 <server localhost>
         port = 8443
@@ -24,6 +19,7 @@ keepalive_timeout              = 10000
         <ssl>
                 keyfile = @abs_top_srcdir@/ssl/yaws-key.pem
                 certfile = @abs_top_srcdir@/ssl/yaws-cert.pem
+                dhfile = @abs_srcdir@/invalid-dhparams.pem
                 depth = 0
         </ssl>
 </server>
