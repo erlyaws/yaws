@@ -43,6 +43,7 @@ install-data-local: all
 	$(AM_V_at)$(INSTALL) -d $(DESTDIR)$(sysconfdir)/yaws
 	$(AM_V_at)$(INSTALL) -m 644 @srcdir@/ssl/yaws-cert.pem $(DESTDIR)$(sysconfdir)/yaws
 	$(AM_V_at)$(INSTALL) -m 644 @srcdir@/ssl/yaws-key.pem $(DESTDIR)$(sysconfdir)/yaws
+	$(AM_V_at)$(INSTALL) -m 644 @srcdir@/ssl/dhparams.pem $(DESTDIR)$(sysconfdir)/yaws
 
 	@echo "-------------------------------"
 	@echo
@@ -77,6 +78,7 @@ uninstall-local:
 	$(AM_V_at)[ ! -h $(yawsdir) ] || rm -f $(DESTDIR)$(libdir)/yaws
 	$(AM_V_at)rm -r $(DESTDIR)$(sysconfdir)/yaws/yaws-cert.pem
 	$(AM_V_at)rm -r $(DESTDIR)$(sysconfdir)/yaws/yaws-key.pem
+	$(AM_V_at)rm -r $(DESTDIR)$(sysconfdir)/yaws/dhparams.pem
 
 debug:
 	$(MAKE) DEBUG_ERLC_FLAGS=" -Ddebug" CFLAGS="-Werror -Wall -O0 -g"

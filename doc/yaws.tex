@@ -3202,6 +3202,12 @@ The following directives are allowed inside a server definition.
                  is also used in the list of acceptable client CAs passed to the
                  client when a certificate is requested.
 
+               \item \verb+dhfile = File+ --- A file containing
+                 PEM-encoded Diffie-Hellman parameters to be used by
+                 the server if a cipher suite using Diffie-Hellman key
+                 exchange is negotiated. If not specified, default
+                 parameters are used.
+
                \item \verb+verify = 0 | 1 | 2 | verify_none | verify_peer+ ---
                  Specifies the level of verification the server does on client
                  certs. 0 means that the server will not ask for a cert

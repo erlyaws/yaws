@@ -134,6 +134,7 @@
           depth = 1,
           password,
           cacertfile,
+          dhfile,
           ciphers,
           cachetimeout,
           secure_renegotiate = false,
