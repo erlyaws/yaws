@@ -24,11 +24,11 @@ out(A) ->
       [{h1, [], "Appmods (Application modules)"},
        
        {p, [],
-        ["Appmods are a way to let the application programmer take control over the URL path.  Or put in another way, to let the application programmer fake real paths in URLs where in reality an Erlang modules is executing. Possibly an example make this easy to understand. Say we have the folowing url"]},
+        ["Appmods are a way to let the application programmer take control over the URL path.  Or put in another way, to let the application programmer fake real paths in URLs where in reality an Erlang module is executing. Possibly an example will make this easy to understand. Say we have the following URL"]},
 
        box("http://yaws.hyber.org/pathelem/foo/bar/x.pdf"),
        
-       {p,[],["With the above url, the webserver would try to deliver the file \"/pathelem/foo/bar/x.pdf\" relative to the docroot. However if we had specified \"pathelem\" as an appmod, the server would stop processing the url after seeing the \"pathelem\" part of the URL. Say we had the following in our yaws.conf configuration file"]},
+       {p,[],["With the above URL, the webserver would try to deliver the file \"/pathelem/foo/bar/x.pdf\" relative to the docroot. However if we had specified \"pathelem\" as an appmod, the server would stop processing the URL after seeing the \"pathelem\" part of the URL. Say we had the following in our yaws.conf configuration file"]},
 
        
        box("
@@ -51,11 +51,11 @@ out(A) ->
 
        ssi("code/myappmod.erl"),
 
-       {p,[],"The #arg field called \"appmoddata\" contains the remainder of the path following the encountered appmod and the field \"appmod_prepath\" contains the part of the URL path leading upto the appmod."},
+       {p,[],"The #arg field called \"appmoddata\" contains the remainder of the path following the encountered appmod and the field \"appmod_prepath\" contains the part of the URL path leading up to the appmod."},
 
 
        {p,[],
-        "Thus the following url"},
+        "Thus the following URL"},
        box("http://yaws.hyber.org/zap/pathelem/foo/bar/x.pdf?a=b"),
        {p,[],
         "Produces the following output:"},
@@ -67,9 +67,9 @@ A#arg.querydata = \"a=b\""),
        {br,[],[]},
 
        {p, [],
-        "Appmods would typically be used by webapplications that want to provide the illusion of proper paths to the browser. "},
+        "Appmods would typically be used by web applications that want to provide the illusion of proper paths to the browser. "},
 
-       {p, [], "A special case of an appmod that is particularly interesting is the '/' appmod. This used when we want application code to handle all requests. This is common with web frameworks such as Nitrogen."},
+       {p, [], "A special case of an appmod that is particularly interesting is the '/' appmod. This is used when we want the application code to handle all requests. This is common with web frameworks such as Nitrogen."},
        
        box("
 <server tita>
@@ -90,7 +90,7 @@ A#arg.querydata = \"a=b\""),
         appmods = </, myappmod exclude_paths icons js top/static>
 </server>"),
 
-       {p, [], "The above configuration will invoke the 'myappmod' erlang module on everything except any file found in directories, 'icons', 'js' and 'top/static' relative to the docroot"}
+       {p, [], "The above configuration will invoke the 'myappmod' erlang module on everything except any file found in directories 'icons', 'js' and 'top/static' relative to the docroot"}
 
 
        ]
