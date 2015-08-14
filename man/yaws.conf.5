@@ -6,7 +6,7 @@
 .PP
 Yaws is fast lightweight web server. It reads a configuration file called
 yaws.conf to control its operations. The configuration contains two distinct
-parts a global part which affects all the virtual hosts and a server part where
+parts: a global part which affects all the virtual hosts and a server part where
 options for each virtual host is supplied.
 
 .SH GLOBAL PART
@@ -62,7 +62,7 @@ configured by default.
 
 .TP
 \fBid = String\fR
-It is possible run multiple Yaws servers on the same machine. We use the id of a
+It is possible to run multiple Yaws servers on the same machine. We use the id of a
 Yaws server to control it using the different control commands such as:
 
 .nf
@@ -70,9 +70,9 @@ Yaws server to control it using the different control commands such as:
 .fi
 
 To stop the Yaws server with id "foobar". Each Yaws server will write its
-internals data into a file called $HOME/.yaws/yaws/ID where ID is the identity
+internal data into a file called $HOME/.yaws/yaws/ID where ID is the identity
 of the server. Yaws also creates a file called $HOME/.yaws/yaws/ID/CTL
-which contain the port number where the server is listening for control
+which contains the port number where the server is listening for control
 commands. The default id is \fI"default"\fR.
 
 .TP
@@ -235,8 +235,8 @@ want the Erlang errorlog written to a report.log file.  Default value is
 Allows to specify a different Yaws session storage mechanism instead of an ETS
 table. One of the drawbacks of the default yaws_session_server implementation is
 that server side cookies are lost when the server restarts. Specifying a
-different module here will pass all writes/read operations to this module (it
-must implements appropriate callbacks).
+different module here will pass all write/read operations to this module (it
+must implement appropriate callbacks).
 
 .TP
 \fBrunmod = ModuleName\fR
@@ -272,7 +272,7 @@ by a dot, will be ignored. For example:
   subconfig = /etc/yaws/vhosts/*.conf
 .fi
 
-Or, relatively to the configuration localtion:
+Or, relatively to the configuration location:
 
 .nf
   subconfig = global.conf
@@ -434,7 +434,7 @@ Enable or disable the auth log for this virtual server. Default is \fItrue\fR.
 
 .TP
 \fBaccess_log = true | false\fR
-Setting this directive to false turns of traffic logging for this virtual
+Setting this directive to false turns off traffic logging for this virtual
 server. The default value is \fItrue\fR.
 
 .TP
@@ -502,7 +502,7 @@ the logger.
 \fBshaper = Module\fR
 Defines a module to control access to this virtual server. Access can be
 controlled based on the IP address of the client. It is also possible to
-throttles HTTP requests based on the client's download rate. This module must
+throttle HTTP requests based on the client's download rate. This module must
 implement the behaviour \fIyaws_shaper\fR.
 
 There is no such module configured by default.
@@ -618,7 +618,7 @@ subtypes of that type). Here is an example:
   mime_types = application/xml application/xhtml+xml application/rss+xml
 .fi
 
-By default, following MIME types are compressed (if
+By default, the following MIME types are compressed (if
 \fBdeflate\fR is set to true): \fItext/*, application/rtf, application/msword,
 application/pdf, application/x-dvi, application/javascript,
 application/x-javascript\fR. Multiple \fBmime_types\fR directive can be used.
@@ -644,7 +644,7 @@ when Yaws starts up. Defaults to \fIfalse\fR.
 .TP
 \fBpartial_post_size = Integer | nolimit\fR
 When a Yaws file receives large POSTs, the amount of data received in each chunk
-is determined by the this parameter.  The default value is \fI10240\fR. Setting
+is determined by this parameter.  The default value is \fI10240\fR. Setting
 it to nolimit is potentially dangerous.
 
 
@@ -687,7 +687,7 @@ Default is \fIindex_files = index.yaws index.html index.php\fR.
 
 .TP
 \fBappmods = ListOfModuleNames\fR
-If any the names in ListOfModuleNames appear as components in the path for a
+If any of the names in ListOfModuleNames appear as components in the path for a
 request, the path request parsing will terminate and that module will be
 called. There is also an alternate syntax for specifying the appmods if we don't
 want our internal erlang module names to be exposed in the URL paths.  We can
@@ -713,7 +713,7 @@ is particulaly interesting for '/' appmods.  Here is an example:
 .fi
 
 The above configuration will invoke the 'myapp' erlang module on everything
-except any file found in directories, 'icons', 'js' and 'top/static' relative to
+except any file found in directories 'icons', 'js' and 'top/static' relative to
 the docroot.
 
 .TP
@@ -779,11 +779,11 @@ The function can and must do the same things that a normal \fIout/1\fR does.
 .TP
 \fBerrormod_crash = Module\fR
 It is possible to set a special module that handles the HTML generation of
-server crash messages. The default is to display the entire formated crash
+server crash messages. The default is to display the entire formatted crash
 message in the browser. This is good for debugging but not in production.
 .br
 The function \fIModule:crashmsg(Arg, SC, Str)\fR will be called. The \fIStr\fR
-is the real crash message formated as a string.
+is the real crash message formatted as a string.
 .br
 The function must return, \fI{content,MimeType,Cont}\fR or \fI{html, Str}\fR or
 \fI{ehtml, Term}\fR. That data will be shipped to the client.
@@ -827,7 +827,7 @@ and here is another:
 It is possible to install a module that rewrites all the Arg #arg{} records
 at an early stage in the Yaws server.  This can be used to do various
 things such as checking a cookie, rewriting paths etc. An arg_rewrite_mod
-must export a \fIarg_rewrite/1\fR function taking and returning an #arg
+must export an \fIarg_rewrite/1\fR function taking and returning an #arg{}
 record. If the function wants to return a response, it must set the
 #arg.state field of its return value to an instance of the
 #rewrite_response{} record.
@@ -986,7 +986,7 @@ allowed).
 .RS 12
 To interpret a .php file, the function \fIModule:Function(Arg)\fR will be
 invoked (Evaluated inside a rpc call if a \fINode\fR is specified), where Arg is
-a #arg{} record.
+an #arg{} record.
 .br
 The function must do the same things that a normal out/1 does.
 .RE
@@ -999,7 +999,7 @@ Default value is \fI<cgi, "/usr/bin/php-cgi">\fR.
 \fBthis target is deprecated. use 'php_handler' target in server part
 instead.\fR
 .br
-Use this directive is same as: php_handler = <fcgi, Host:Port>.
+Using this directive is the same as: php_handler = <fcgi, Host:Port>.
 
 .TP
 \fBdefault_type = MimeType\fR
@@ -1111,7 +1111,7 @@ this to 0.
 .IP
 \fBpassword = String\fR
 .RS 12
-String If the private key is encrypted on disc, this password is the
+If the private key is encrypted on disc, this password is the
 3DES key to decrypt it.
 .RE
 
@@ -1130,8 +1130,8 @@ ciphers = "[{dhe_rsa,aes_256_cbc,sha}, \\
 .IP
 \fBsecure_renegotiate = true | false\fR
 .RS 12
-Specifies if to reject renegotiation attempt that does not live up to RFC
-5746. By default \fBsecure_renegotiate\fR is set to false i.e. secure
+Specifies whether to reject renegotiation attempt that does not live up to
+RFC 5746. By default \fBsecure_renegotiate\fR is set to false i.e. secure
 renegotiation will be used if possible but it will fallback to unsecure
 renegotiation if the peer does not support RFC 5746.
 .RE
@@ -1167,7 +1167,7 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
 Defines a redirect mapping. The following items are allowed within a matching
 pair of <redirect> and </redirect> delimiters.
 
-We can have a series of redirect rules in one of formats below:
+We can have a series of redirect rules in one of the formats below:
 
 .nf
   Path = URL
@@ -1289,19 +1289,19 @@ obviously have several of these value inside a single <auth> </auth> pair.
 
 The usage of User:Password in the actual config file is deprecated as of release
 1.51. It is preferred to have the users in a file called \fI.yaws_auth\fR in the
-actual directory. The .yaws_auth file has to be file parseable by
-\fIfile:consult/1\fR
+actual directory. The .yaws_auth file has to be parseable by \fIfile:consult/1\fR.
 
-Each row of the file must contain terms on the form
+Each row of the file must contain terms in this form:
 
 .nf
     {User, Password}.
 .fi
 
-Where both User and Password should be strings. The .yaws_auth file mechanism is
-recursive. Thus any subdirectories to Dir are automatically also protected.
+where both User and Password should be strings.
 
-The .yaws_auth file is never visible in a dir listing
+The .yaws_auth file mechanism is recursive, so any subdirectories of Dir
+are also automatically protected. The .yaws_auth file is never visible in a
+dir listing.
 .RE
 
 .IP
