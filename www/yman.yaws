@@ -35,7 +35,7 @@ out(A) ->
                 "no man page found in query arg "
         end,
 
-    Man = {ehtml, {'div', [{id, "entry"}], prebox(L)}},
+    Man = {ehtml, {'div', [{id, "entry"}], prebox(unicode:characters_to_binary(L))}},
     Trail = {ssi, "END2",[],[]},
     [H, Man, Trail].
 

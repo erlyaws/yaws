@@ -8,7 +8,7 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <head>
  <meta name="keywords" content="Yaws"/>
  <title>Yaws</title>
- <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"/>
+ <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
  <link rel="stylesheet" type="text/css" href="stil.css"/>
  <link rel="shortcut icon" href="/icons/yaws_y.gif" type="image/x-icon"/>
 </head>
