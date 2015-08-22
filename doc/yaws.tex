@@ -2250,16 +2250,16 @@ part where options for each virtual host is supplied.
               configured by default.
 
 \item        \verb+id = String+ ---
-              It is possible run multiple Yaws servers on the same machine. We
+              It is possible to run multiple Yaws servers on the same machine. We
               use the id of a Yaws server to control it using the different
               control commands such as:
 \begin{verbatim}
   # /usr/local/bin/yaws --id foobar --stop
 \end{verbatim}
                To stop the Yaws server with id "foobar". Each \Yaws\ server will
-               write its internals data into a file called \$HOME/.yaws/yaws/ID
+               write its internal data into a file called \$HOME/.yaws/yaws/ID
                where ID is the identity of the server. Yaws also creates a file
-               called \$HOME/.yaws/yaws/ID/CTL which contain the port
+               called \$HOME/.yaws/yaws/ID/CTL which contains the port
                number where the server is listening for control commands. The
                default id is "default".
 
@@ -2417,8 +2417,8 @@ part where options for each virtual host is supplied.
                instead of an ETS table. One of the drawbacks of the default
                \verb+yaws_session_server+ implementation is that server side
                cookies are lost when the server restarts. Specifying a different
-               module here will pass all writes/read operations to this module
-               (it must implements appropriate callbacks).
+               module here will pass all write/read operations to this module
+               (it must implement appropriate callbacks).
 
 \item        \verb+runmod = ModuleName+ ---
                At startup \Yaws\ will invoke \verb+ModuleName:start()+ in a
@@ -2455,7 +2455,7 @@ part where options for each virtual host is supplied.
   subconfig = /etc/yaws/vhosts/*.conf
 \end{verbatim}
 
-               Or, relatively to the configuration localtion:
+               Or, relatively to the configuration location:
 
 \begin{verbatim}
   subconfig = global.conf
@@ -2859,7 +2859,7 @@ The following directives are allowed inside a server definition.
              Default is \verb+index_files = index.yaws index.html index.php+.
 
 \item       \verb+appmods = ListOfModuleNames+ ---
-             If any the names in \verb+ListOfModuleNames+ appear as components
+             If any of the names in \verb+ListOfModuleNames+ appear as components
              in the path for a request, the path request parsing will terminate
              and that module will be called. There is also an alternate syntax
              for specifying the appmods if we don't want our internal erlang
@@ -2939,11 +2939,11 @@ The following directives are allowed inside a server definition.
 \item       \verb+errormod_crash = Module+ ---
               It is possible to set a special module that handles the HTML
               generation of server crash messages. The default is to display the
-              entire formated crash message in the browser. This is good for
+              entire formatted crash message in the browser. This is good for
               debugging but not in production.
 
               The function \verb+Module:crashmsg(Arg, SC, Str)+ will be
-              called. The \verb+Str+ is the real crash message formated as a
+              called. The \verb+Str+ is the real crash message formatted as a
               string.
 
               The function must return, \verb+{content,MimeType,Cont}+ or
@@ -2976,7 +2976,12 @@ The following directives are allowed inside a server definition.
               It is possible to install a module that rewrites all the
               \verb+Arg+ \verb+#arg{}+ records at an early stage in the
               \Yaws\ server.  This can be used to do various things such as
-              checking a cookie, rewriting paths etc.
+              checking a cookie, rewriting paths etc. An
+              \verb+arg_rewrite_mod+ must export an \verb+arg_rewrite/1+
+              function taking and returning an \verb+#arg{}+ record. If the
+              function wants to return a response, it must set the
+              \verb+#arg.state+ field of its return value to an instance of
+              the \verb+#rewrite_response{}+ record.
 
               The module \verb+yaws_vdir+ can be used in case you want to serve
               static content that is not located in your docroot. See the
@@ -3131,7 +3136,7 @@ The following directives are allowed inside a server definition.
                 To interpret a \textit{.php} file, the function
                 \verb+Module:Function(Arg)+ will be invoked (evaluated
                 inside an rpc call if a \verb+Node+ is specified),
-                where \verb+Arg+ is a \verb+#arg{}+ record.
+                where \verb+Arg+ is an \verb+#arg{}+ record.
 
                 The function must do the same things that a normal
                 \verb+out/1+ does.
@@ -3143,7 +3148,7 @@ The following directives are allowed inside a server definition.
               \textit{this target is deprecated. use php\_handler target in
                 server part instead}.
 
-              Use this directive is same as:
+              Using this directive is the same as:
               \verb+php_handler = <fcgi, HostPortSpec>+.
 
 \item        \verb+default_type = MimeType+ ---
@@ -3248,7 +3253,7 @@ The following directives are allowed inside a server definition.
                  horrible sub-language of its own.  It is documented in the SSL
                  man page for "ciphers".
 
-               \item \verb+secure_renegotiate = true | false+ --- Specifies if
+               \item \verb+secure_renegotiate = true | false+ --- Specifies whether
                  to reject renegotiation attempt that does not live up to RFC
                  5746. By default \verb+secure_renegotiate+ is set to false
                  i.e. secure renegotiation will be used if possible but it will
@@ -3283,7 +3288,7 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
               a matching pair of \verb+<redirect>+ and \verb+</redirect>+
               delimiters.
 
-              We can have a series of redirect rules in one of formats below:
+              We can have a series of redirect rules in one of the formats below:
 \begin{verbatim}
   Path = URL
   Path = code
@@ -3393,10 +3398,22 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
                 The usage of User:Password in the actual config file is
                 deprecated as of release 1.51. It is preferred to have the users
                 in a file called \verb+.yaws_auth+ in the actual directory. The
-                \verb+.yaws_auth+ file has to be file parseable by
+                \verb+.yaws_auth+ file has to be parseable by
                 \verb+file:consult/1+.
 
-                Each row of the file must contain terms on the form.
+                Each row of the file must contain terms in this form:
+
+\begin{verbatim}
+{User, Password}.
+\end{verbatim}
+
+                where both \verb+User+ and \verb+Password+ should be
+                strings.
+
+                The \verb+.yaws_auth+ file mechanism is recursive,so any
+                subdirectories of \verb+Dir+ are also automatically
+                protected. The \verb+.yaws_auth+ file is never visible in a
+                dir listing.
 
               \item \verb+pam service = pam-service+ --- If the item \verb+pam+
                 is part of the auth structure, Yaws will also try to
