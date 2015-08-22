@@ -46,7 +46,7 @@
                  msg_fun_2,
                  info_fun}).
 
--export([start/3, send/2]).
+-export([start/3, send/2, close/1, close/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
@@ -132,6 +132,12 @@ send(Pid, {Type, Data}) ->
 send(Pid, #ws_frame{}=Frame) ->
     gen_server:cast(Pid, {send, Frame}).
 
+close(Which) -> close(Which, normal).
+
+close(#ws_state{}=WSState, Reason) ->
+    do_close(WSState, Reason);
+close(Pid, Reason) ->
+    gen_server:cast(Pid, {close, Reason}).
 
 %%%----------------------------------------------------------------------
 %% gen_server functions
@@ -249,6 +255,9 @@ handle_cast({send, {Type, Data}}, #state{wsstate=WSState}=State) ->
     {noreply, State, State#state.timeout};
 handle_cast({send, #ws_frame{}=Frame}, #state{wsstate=WSState}=State) ->
     do_send(WSState, Frame),
+    {noreply, State, State#state.timeout};
+handle_cast({close, Reason}, #state{wsstate=WSState}=State) ->
+    do_close(WSState, Reason),
     {noreply, State, State#state.timeout};
 
 %% Skip all other async messages
