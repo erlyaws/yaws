@@ -1572,9 +1572,15 @@ test_too_big_frame() ->
 
     Payload2 = <<0, Payload1/binary>>,
     SndFrame2 = #frame{opcode=?WS_OPCODE_BINARY, payload=Payload2},
-    ?line ok   = send_frame(Sock, SndFrame2, all),
+    ?line {ok, Closed} = case send_frame(Sock, SndFrame2, all) of
+                             ok -> {ok, false};
+                             {error, closed} -> {ok, true}
+                         end,
     ?line {ok, Frames} = wsflush(Sock, true),
-    ?line true = is_valid_close_frame(Frames, [?WS_STATUS_MSG_TOO_BIG]),
+    ?line true = case Closed of
+                     false -> is_valid_close_frame(Frames, [?WS_STATUS_MSG_TOO_BIG]);
+                     true -> true
+                 end,
     ?line ok   = close(Sock),
     ok.
 
