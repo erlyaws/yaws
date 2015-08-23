@@ -34,7 +34,9 @@ if WITH_EPAM
 	$(AM_V_at)$(INSTALL) -m 644 epam @top_builddir@/priv
 endif
 	$(AM_V_at)$(INSTALL) -m 644 .libs/setuid_drv.so @top_builddir@/priv/lib
+if HAVE_SENDFILE
 	$(AM_V_at)$(INSTALL) -m 644 .libs/yaws_sendfile_drv.so @top_builddir@/priv/lib
+endif
 
 # Local Variables:
 #    tab-width: 8
