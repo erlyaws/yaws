@@ -2,7 +2,7 @@
 
 -export([arg_rewrite/1]).
 
--include_lib("../include/yaws_api.hrl").
+-include("../include/yaws_api.hrl").
 
 -export([join/2]).
 
