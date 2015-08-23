@@ -138,6 +138,7 @@
           ciphers,
           cachetimeout,
           secure_renegotiate = false,
+          client_renegotiation = true,
           honor_cipher_order = ?HONOR_CIPHER_ORDER,
           protocol_version
          }).
