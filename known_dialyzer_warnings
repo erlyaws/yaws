@@ -1,11 +1,12 @@
 
-yaws.erl:1557: The pattern 'false' can never match the type [[any()]]
-yaws.erl:2634: Guard test Ret::'file' == 'fd' can never succeed
-yaws.erl:2642: Guard test Ret::'file' == 'binfd' can never succeed
-yaws_api.erl:2593: The pattern 'false' can never match the type 'true'
+yaws.erl:1572: The pattern 'false' can never match the type [[any()]]
+yaws.erl:2649: Guard test Ret::'file' == 'fd' can never succeed
+yaws.erl:2657: Guard test Ret::'file' == 'binfd' can never succeed
+yaws_api.erl:2603: The pattern 'false' can never match the type 'true'
 yaws_config.erl:603: The pattern 'false' can never match the type 'true'
-yaws_config.erl:1907: The variable _ can never match since previous clauses completely covered the type 'true'
-yaws_config.erl:3205: The pattern 'false' can never match the type 'true'
+yaws_config.erl:1914: The variable _ can never match since previous clauses completely covered the type 'true'
+yaws_config.erl:1934: The variable _ can never match since previous clauses completely covered the type 'true'
+yaws_config.erl:3232: The pattern 'false' can never match the type 'true'
 yaws_ctl.erl:533: Function hup/1 has no local return
 yaws_ctl.erl:538: Function stop/1 has no local return
 yaws_ctl.erl:542: Function status/1 has no local return
