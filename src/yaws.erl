@@ -1603,20 +1603,8 @@ make_etag_header(FI) ->
     ["Etag: ", ETag, "\r\n"].
 
 make_etag(FI) ->
-    {{Y,M,D}, {H,Min, S}}  = FI#file_info.mtime,
-    Inode = FI#file_info.inode,
-    pack_bin(<<0:6,(Y band 2#11111111):8,M:4,D:5,H:5,Min:6,S:6,Inode:32>>).
-
-pack_bin(<<_:6,A:6,B:6,C:6,D:6,E:6,F:6,G:6,H:6,I:6,J:6,K:6>>) ->
-    [$", pc(A),pc(B),pc(C),pc(D),pc(E),pc(F),pc(G),pc(H),pc(I),pc(J),pc(K), $"].
-
-
-%% Like Base64 for no particular reason.
-pc(X) when X >= 0,  X < 26 -> X + $A;
-pc(X) when X >= 26, X < 52 -> X - 26 + $a;
-pc(X) when X >= 52, X < 62 -> X - 52 + $0;
-pc(62)                     -> $+;
-pc(63)                     -> $/.
+    Stamp = {FI#file_info.size, FI#file_info.mtime},
+    [$", integer_to_list(erlang:phash2(Stamp, 16#ffffffff)), $"].
 
 
 make_content_type_header(no_content_type) ->
