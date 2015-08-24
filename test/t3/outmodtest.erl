@@ -5,9 +5,9 @@
 -include("../../include/yaws_api.hrl").
 
 
-auth(_Arg, _Auth) ->
+auth(#arg{}, #auth{}) ->
     {appmod, ?MODULE}.
 
-out401(_Arg, _Auth, Realm) ->
+out401(#arg{}, #auth{}, Realm) ->
     [{status, 200}, {header, "X-Outmod-Test: true"},
      {content, "text/plain", Realm}].

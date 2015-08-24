@@ -5,7 +5,7 @@
 -include("../../include/yaws_api.hrl").
 
 
-auth(Arg, _Auth) ->
+auth(#arg{}=Arg, #auth{}) ->
     H = Arg#arg.headers,
     case H#headers.authorization of
         {"foo", "bar", _} ->
