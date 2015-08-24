@@ -193,7 +193,7 @@ Released version of \Yaws\ are available at
 
 To compile and install a \Yaws\  release
 one of the prerequisites is a properly installed \Erlang\  system. \Yaws\
-runs on \Erlang\  releases OTP R8 and later. Get \Erlang\  from
+runs on \Erlang\/OTP releases R14B02 and newer. Get \Erlang\  from
 \url{http://www.erlang.org/}
 
 Compile and install is straight forward:
@@ -3267,28 +3267,27 @@ The following directives are allowed inside a server definition.
                  http://www.erlang.org/doc/man/ssl.html for more details.
 
                  \textbf{WARNING: This option was introduced in the SSL application
-                   in Erlang/OTP 18.0, so Yaws ignores it for previous releases.}
+                   in Erlang/OTP 18.0, so \Yaws\  ignores it for previous releases.}
 
                \item \verb+honor_cipher_order = true | false+ --- If true (the
                  default), use the server's preference for cipher selection. If
                  false, use the client's preference.
 
                  \textbf{WARNING: This option was introduced in the SSL application
-                   in Erlang/OTP 17.0, so Yaws ignores it for previous releases.}
+                   in Erlang/OTP 17.0, so \Yaws\  ignores it for previous releases.}
 
                  \item \verb+protocol_version = ProtocolList+ ---
                    Specifies the list of SSL protocols that will be
                    supported. If not set, defaults to all protocols
-                   supported by the Erlang \verb+ssl+ application. For
+                   supported by the \Erlang\  \verb+ssl+ application. For
                    example, to support only TLS versions 1.2, 1.1, and 1:
 
 \begin{verbatim}
 protocol_version = tlsv1.2, tlsv1.1, tlsv1
 \end{verbatim}
 
-                 \textbf{WARNING: Erlang/OTP R16B01 or higher is required in
-                   order to let it work (because of a bug in previous
-                   releases).}
+                 \textbf{WARNING: Because of a bug in previous releases,
+                   Erlang/OTP R16B01 or newer is required for this to work.}
                \end{itemize}
 
 \item       \verb+<redirect> ... </redirect>+ ---

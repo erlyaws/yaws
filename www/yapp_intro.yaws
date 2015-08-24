@@ -163,15 +163,7 @@ out(A) ->
               "ErlyWeb applications."},
 
         {h2,[],"Problems"},
-        {p,[],"Embedded ssi directives in ehtml parts will not work for now."},
-
-        {h2,[],"Future"},
-        {p,[],
-         "It may look as an extra complexity to use Erlang applications but in this way "
-         "we can benefit from Erlangs own framework for application handling. For instance, "
-         "in the future we hope to add features for release handling to "
-         "add/remove/upgrade/downgrade yapps on a running Yaws server, or even many clustered "
-         "servers. "}
+        {p,[],"Embedded ssi directives in ehtml parts do not work."},
        ]
       }
      },
