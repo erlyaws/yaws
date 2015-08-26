@@ -2,7 +2,7 @@ include @top_srcdir@/include.mk
 
 MODULES = app_test.erl
 
-EXTRA_DIST = $(MODULES)
+EXTRA_DIST = $(MODULES) invalid-dhparams.pem
 
 EBIN_FILES=$(MODULES:%.erl=%.beam)
 

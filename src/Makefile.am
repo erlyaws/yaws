@@ -86,7 +86,8 @@ yaws_generated.erl: @srcdir@/yaws_generated.template @top_srcdir@/vsn.mk \
 	    @abs_top_srcdir@/scripts/gen-yaws-generated) > yaws_generated.erl
 
 
-mime_types.erl: @top_builddir@/priv/mime.types $(EBIN_DIR)/mime_type_c.beam
+mime_types.erl: @top_builddir@/priv/mime.types $(EBIN_DIR)/mime_type_c.beam \
+		$(EBIN_DIR)/yaws.beam
 	$(AM_V_GEN)$(ERL) -noshell -pa $(EBIN_DIR) -s mime_type_c generate
 
 $(EBIN_DIR)/yaws.app: @srcdir@/yaws.app.src
