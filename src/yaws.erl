@@ -213,7 +213,11 @@ add_server(DocRoot, SL) when is_list(DocRoot),is_list(SL) ->
     yaws_config:add_sconf(SC1).
 
 create_gconf(GL, Id) when is_list(GL) ->
-    setup_gconf(GL, yaws_config:make_default_gconf(false, Id)).
+    Debug = case application:get_env(yaws, debug) of
+                undefined -> false;
+                {ok, D}   -> D
+            end,
+    setup_gconf(GL, yaws_config:make_default_gconf(Debug, Id)).
 
 create_sconf(DocRoot, SL) when is_list(DocRoot), is_list(SL) ->
     SC = yaws_config:make_default_sconf(DocRoot, lkup(port, SL, undefined)),
