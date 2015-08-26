@@ -1,3 +1,5 @@
+sudo: false
+
 language: erlang
 otp_release:
   - 18.0
@@ -16,9 +18,17 @@ otp_release:
   - R14B04
   - R14B03
 
-before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -y autotools-dev libpam0g-dev texlive-latex-base texlive-latex-recommended texlive-fonts-recommended texlive-font-utils texlive-extra-utils ghostscript
+addons:
+  apt:
+    packages:
+      - autotools-dev
+      - libpam0g-dev
+      - texlive-latex-base
+      - texlive-latex-recommended
+      - texlive-fonts-recommended
+      - texlive-font-utils
+      - texlive-extra-utils
+      - ghostscript
 
 install:
   - autoreconf -vfi
