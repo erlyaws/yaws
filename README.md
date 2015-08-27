@@ -1,6 +1,6 @@
 This is Yaws, a webserver for dynamic content written in Erlang.
 
-[Travis build status](https://api.travis-ci.org/klacke/yaws.svg)
+[![Travis build Status](https://travis-ci.org/klacke/yaws.svg?branch=master)](https://travis-ci.org/klacke/yaws)
 
 Prepare build
 -------------
