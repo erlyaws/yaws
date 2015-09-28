@@ -27,34 +27,32 @@ init(File) ->
     init(File, []).
 
 init(File, PrevHandler) ->
-    process_flag(trap_exit, true),
-    case file:open(File, [write, append]) of
-        {ok,Fd} ->
+    case error_logger_file_h:init(File, PrevHandler) of
+        {ok, {Fd, File, PrevHandler}} -> %% Pre 18.1
+            file:position(Fd, eof),
             {ok, {Fd, File, PrevHandler}};
+        {ok,  {st, Fd, File, PrevHandler, Depth}} -> %% Post 18.1
+            file:position(Fd, eof),
+            {ok,  {st, Fd, File, PrevHandler, Depth}};
         Error ->
             Error
     end.
 
+%% Pre 18.1
 handle_call(reopen, {Fd, File, Prev}) ->
-    file:close(Fd),
-    {ok, Fd2} = file:open(File, [write,append]),
-    {ok, ok, {Fd2, File, Prev}};
-
+    {ok, ok, {reopen(Fd,File), File, Prev}};
 handle_call(wrap, {Fd, File, Prev}) ->
-    Old = File ++ ".old",
-    file:delete(Old),
-    file:close(Fd),
-    file:rename(File, Old),
-    {ok, Fd2} = file:open(File, [write,append]),
-    {ok, ok, {Fd2, File, Prev}};
-
+    {ok, ok, {wrap(Fd,File), File, Prev}};
 handle_call(size, {Fd, File, Prev}) ->
-    file:sync(Fd),
-    Return = case file:read_file_info(File) of
-        {ok, FI} -> {ok, FI#file_info.size};
-        Error -> Error
-    end,
-    {ok, Return, {Fd, File, Prev}};
+    {ok, size(Fd,File), {Fd, File, Prev}};
+
+%% Post 18.1
+handle_call(reopen, {st, Fd, File, Prev, Depth}) ->
+    {ok, ok, {st, reopen(Fd,File), File, Prev, Depth}};
+handle_call(wrap, {st, Fd, File, Prev, Depth}) ->
+    {ok, ok, {st, wrap(Fd,File), File, Prev, Depth}};
+handle_call(size, {st, Fd, File, Prev, Depth}) ->
+    {ok, size(Fd,File), {st, Fd, File, Prev, Depth}};
 
 handle_call(X, S) ->
     error_logger_file_h:handle_call(X,S).
@@ -71,3 +69,24 @@ terminate(Reason, State) ->
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
+
+reopen(Fd, File) ->
+    file:close(Fd),
+    {ok, Fd2} = file:open(File, [write,append]),
+    Fd2.
+
+wrap(Fd, File) ->
+    Old = File ++ ".old",
+    file:delete(Old),
+    file:close(Fd),
+    file:rename(File, Old),
+    {ok, Fd2} = file:open(File, [write,append]),
+    Fd2.
+
+size(Fd, File) ->
+    file:sync(Fd),
+    case file:read_file_info(File) of
+        {ok, FI} -> {ok, FI#file_info.size};
+        Error    -> Error
+    end.
