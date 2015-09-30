@@ -1,3 +1,11 @@
+Wed Sep 30 09:26:55 CEST 2015 Yaws 2.0.1
+OTP 18.1 broke the logging code in Yaws (capflam)
+use text/xml as SOAP MIME type (steve)
+travis is now working for Yaws
+cache refres bugs fixed (capflam)
+max_connection bugs fixed (steve, andrei)
+ssl client_renegotiation option supported
+
 Mon Jul 13 19:27:06 CEST 2015 Yaws 2.0
 Fix Yaws build for Erlang 18.0 (now() deprecated)
 Renew self-signed ssl certificat to use the right signature algorithm
