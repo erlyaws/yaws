@@ -163,7 +163,7 @@ out(A) ->
               "ErlyWeb applications."},
 
         {h2,[],"Problems"},
-        {p,[],"Embedded ssi directives in ehtml parts do not work."},
+        {p,[],"Embedded ssi directives in ehtml parts do not work."}
        ]
       }
      },
