@@ -246,12 +246,15 @@ Yaws startup shell script for our own application.
 
 .TP
 \fBpick_first_virthost_on_nomatch = true | false\fR
-When Yaws gets a request, it extracts the Host: header from the client request
-to choose a virtual server amongst all servers with the same IP/Port pair.  This
-configuration parameter decides whether Yaws should pick the first (as defined
-in the yaws.conf file) if no name match or not.  In real live hosting scenarios
-we typically want this to be false whereas in testing/development scenarios it
-may be convenient to set it to true. Default is \fItrue\fR.
+When Yaws gets a request, it extracts the Host header from the client
+request to choose a virtual server amongst all servers with the same
+IP/Port pair.  This configuration parameter decides whether Yaws should
+pick the first server (as defined in the yaws.conf file) if no name match
+or not. If this is false and no Host header is present in the request, Yaws
+returns a 400 Bad Request as required by the HTTP standard. In real live
+hosting scenarios we typically want this to be false, whereas in
+testing/development scenarios it may be convenient to set it to
+true. Default is \fItrue\fR.
 
 .TP
 \fBkeepalive_timeout = TimeInMilliseconds | infinity\fR

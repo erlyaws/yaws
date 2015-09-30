@@ -557,6 +557,7 @@ AC_CONFIG_FILES([
         test/t11/Makefile
         test/t12/Makefile
         test/t13/Makefile
+        test/t14/Makefile
         applications/chat/Makefile
         applications/chat/src/Makefile
         applications/chat/ebin/Makefile
@@ -594,6 +595,7 @@ AC_CONFIG_FILES([
         test/t11/yaws.conf
         test/t12/yaws.conf
         test/t13/yaws.conf
+        test/t14/yaws.conf
 ])
 AC_CONFIG_FILES([scripts/make-release],                  [chmod +x scripts/make-release])
 AC_CONFIG_FILES([applications/wiki/scripts/addFile],     [chmod +x applications/wiki/scripts/addFile])

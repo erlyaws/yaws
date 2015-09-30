@@ -1756,21 +1756,24 @@ outh_serialize() ->
     %% Add 'Accept-Encoding' in the 'Vary:' header if the compression is enabled
     %% or if the response is compressed _AND_ if the response has a non-empty
     %% body.
-    SC=get(sc),
-    Vary = case (?sc_has_deflate(SC) orelse H#outh.encoding == deflate) of
-               true when H#outh.contlen /= undefined, H#outh.contlen /= 0;
-                         H#outh.act_contlen /= undefined,
-                         H#outh.act_contlen /= 0 ->
-                   Fields = outh_get_vary_fields(),
-                   Fun    = fun("*") -> true;
-                               (F)   -> (to_lower(F) == "accept-encoding")
-                            end,
-                   case lists:any(Fun, Fields) of
-                       true  -> H#outh.vary;
-                       false -> make_vary_header(["Accept-Encoding"|Fields])
-                   end;
-               _ ->
-                   H#outh.vary
+    Vary = case get(sc) of
+               undefined -> undefined;
+               SC ->
+                   case (?sc_has_deflate(SC) orelse H#outh.encoding == deflate) of
+                       true when H#outh.contlen /= undefined, H#outh.contlen /= 0;
+                                 H#outh.act_contlen /= undefined,
+                                 H#outh.act_contlen /= 0 ->
+                           Fields = outh_get_vary_fields(),
+                           Fun    = fun("*") -> true;
+                                       (F)   -> (to_lower(F) == "accept-encoding")
+                                    end,
+                           case lists:any(Fun, Fields) of
+                               true  -> H#outh.vary;
+                               false -> make_vary_header(["Accept-Encoding"|Fields])
+                           end;
+                       _ ->
+                           H#outh.vary
+                   end
            end,
 
     Headers = [noundef(H#outh.connection),
@@ -2231,15 +2234,28 @@ cli_recv_trace(Trace, Res) ->
 
 
 gen_tcp_send(S, Data) ->
-    Res = case (get(sc))#sconf.ssl of
-              undefined -> gen_tcp:send(S, Data);
-              _SSL      -> ssl:send(S, Data)
+    SC = get(sc),
+    Res = case SC of
+              undefined ->
+                  case catch ssl:sockname(S) of
+                      {ok, _} -> ssl:send(S, Data);
+                      _ -> gen_tcp:send(S, Data)
+                  end;
+              _ ->
+                  case SC#sconf.ssl of
+                      undefined -> gen_tcp:send(S, Data);
+                      _SSL      -> ssl:send(S, Data)
+                  end
           end,
     case ?gc_has_debug((get(gc))) of
         false ->
             case Res of
                 ok ->
-                    yaws_stats:sent(iolist_size(Data)),
+                    case SC of
+                        undefined -> ok;
+                        _ ->
+                            yaws_stats:sent(iolist_size(Data))
+                    end,
                     ok;
                 _Err ->
                     exit(normal)   %% keep quiet
@@ -2247,7 +2263,11 @@ gen_tcp_send(S, Data) ->
         true ->
             case Res of
                 ok ->
-                    yaws_stats:sent(iolist_size(Data)),
+                    case SC of
+                        undefined -> ok;
+                        _ ->
+                            yaws_stats:sent(iolist_size(Data))
+                    end,
                     ?Debug("Sent ~p~n", [yaws_debug:nobin(Data)]),
                     ok;
                 Err ->
@@ -2334,8 +2354,15 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
     Recv = do_recv(CliSock, 0, SSL),
     case Recv of
         {ok, {http_header,  _Num, 'Host', _, Host}} ->
-            http_collect_headers(CliSock, Req, H#headers{host = Host},
-                                 SSL, Count+1);
+            NewHostH = case H#headers.host of
+                           undefined ->
+                               H#headers{host = Host};
+                           {Hosts} ->
+                               H#headers{host = {[Host | Hosts]}};
+                           CurrentHost ->
+                               H#headers{host = {[Host, CurrentHost]}}
+                       end,
+            http_collect_headers(CliSock, Req, NewHostH, SSL, Count+1);
         {ok, {http_header, _Num, 'Connection', _, Conn}} ->
             http_collect_headers(CliSock, Req,
                                  H#headers{connection = Conn},SSL, Count+1);
