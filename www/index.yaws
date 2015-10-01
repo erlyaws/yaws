@@ -63,9 +63,94 @@ out(A) ->
                   {a, [{href, "https://github.com/klacke/yaws"}],
                    "Yaws github repository"}, "."]},
 
-         gen_news(A)]}]},
+         gen_log(A)]}]},
      {ssi, "END2",[],[]}].
 
+
+is_proper(10) ->
+    false;
+is_proper(Tag) ->
+    case string:tokens(Tag, "-") of
+        ["yaws", Rel] -> 
+            IntList = string:tokens(Rel, "."),
+            case lists:filter(
+                   fun(IntStr) ->
+                           case catch list_to_integer(IntStr) of
+                               {'EXIT', _} ->
+                                   true;
+                               _ ->
+                                   false
+                           end
+                   end, IntList) of
+                [] ->
+                    true;
+                _ ->
+                    false
+            end;
+        _ ->
+            false
+    end.
+
+cd() ->
+    "cd /home/klacke/yaws;".
+
+head(Tag) ->
+
+    Date =
+        os:cmd([cd(), "git --no-pager show ", Tag, "  | grep Date | head -1"]),
+    Ret = ["Version " , Tag, " " , Date],
+    io:format("Head ~s~n", [Ret]),
+    Ret.
+    
+gen_log(A) ->
+    Tags = lists:filter(fun(Tag) ->
+                                is_proper(Tag) end,
+                 lists:reverse(
+                   string:tokens(
+                     os:cmd("cd /home/klacke/yaws; git tag -l"), [10]))),
+    io:format("Tags = ~p~n", [Tags]),
+    L = gen_log(A, Tags),
+    %io:format("~p~n", [L]),
+    L.
+
+dlog(Last, Prev) ->
+    Str = os:cmd([cd(), 
+            "git --no-pager log --abbrev-commit --no-merges --pretty=oneline ",
+                  Prev, "..", Last, " | cat"]),
+    Str2 = lists:zf(fun(I) ->
+                            if I == 10 ->
+                                    {true, "<br/>"};
+                               0<I, I<255 ->
+                                    {true, I};
+                               true ->
+                                    false
+                            end
+                        end, Str),
+
+    Str3 = lists:zf(fun(I) ->
+                            if
+                               0<I, I<255 ->
+                                    {true, I};
+                               true ->
+                                    false
+                            end
+                        end, Str),
+
+    %io:format("Str3: ~s~n", [Str3]),
+    Str2.
+
+gen_log(_, []) ->
+    [];
+gen_log(A, [Last, Prev | Tail]) ->
+    Head = head(Last),
+    Data = dlog(Last, Prev),
+    X = [{'div', [{class, "news"}],
+          [{h3, [], Head},
+           {p, [], ["<code>", Data, "</code>"]}]}
+        ],
+    [ X | gen_log(A, [Prev | Tail])];
+gen_log(A, [Last]) ->
+    [].
 
 
 gen_news(A) ->
