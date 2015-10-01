@@ -27,7 +27,7 @@ init(File) ->
     init(File, []).
 
 init(File, PrevHandler) ->
-    case error_logger_file_h:init(File, PrevHandler) of
+    case error_logger_file_h:init({File, PrevHandler}) of
         {ok, {Fd, File, PrevHandler}} -> %% Pre 18.1
             file:position(Fd, eof),
             {ok, {Fd, File, PrevHandler}};
