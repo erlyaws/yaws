@@ -24,10 +24,7 @@
 
 %% This one is used when we are started directly.
 init(File) ->
-    init(File, []).
-
-init(File, PrevHandler) ->
-    case error_logger_file_h:init({File, PrevHandler}) of
+    case error_logger_file_h:init(File) of
         {ok, {Fd, File, PrevHandler}} -> %% Pre 18.1
             file:position(Fd, eof),
             {ok, {Fd, File, PrevHandler}};
@@ -35,6 +32,9 @@ init(File, PrevHandler) ->
             file:position(Fd, eof),
             {ok,  {st, Fd, File, PrevHandler, Depth}};
         Error ->
+            error_logger:error_msg(
+              "Failed to set Yaws error report handler: ~p~n", [Error]
+             ),
             Error
     end.
 

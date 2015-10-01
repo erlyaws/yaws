@@ -10,7 +10,8 @@ MODULES = multipart_post_parsing.erl	\
 	  sconf.erl			\
 	  yaws_rpc_test.erl		\
 	  proc_cleanup.erl		\
-	  subconfig.erl
+	  subconfig.erl			\
+	  copy_error_log.erl
 
 EXTRA_DIST = $(MODULES) cookies.dump setcookies.dump subconfig_DATA
 
