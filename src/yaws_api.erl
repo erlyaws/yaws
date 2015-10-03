@@ -334,6 +334,7 @@ make_parse_line_reply(Key, Value, Rest) ->
 -record(mp_parse_state, {
           state,
           boundary_ctx,
+          boundary_len,
           hdr_end_ctx,
           old_data,
           data_type
@@ -351,7 +352,7 @@ parse_multipart(Data, St, Options) ->
 
 parse_multi(Data, #mp_parse_state{state=boundary}=ParseState, Acc) ->
     %% Find the beginning of the next part or the last boundary
-    case bm_find(Data, ParseState#mp_parse_state.boundary_ctx) of
+    case binary:match(Data, ParseState#mp_parse_state.boundary_ctx) of
         {Pos, Len} ->
             %% If Pos != 0, ignore data preceding the boundary
             case Data of
@@ -375,7 +376,7 @@ parse_multi(Data, #mp_parse_state{state=boundary}=ParseState, Acc) ->
             %% No boundary found, request more data. Here we keep just enough
             %% data to match on the boundary the next time
             DLen = size(Data),
-            BLen = bm_length(ParseState#mp_parse_state.boundary_ctx),
+            BLen = ParseState#mp_parse_state.boundary_len,
             SkipLen = erlang:max(DLen - BLen, 0),
             KeepLen = erlang:min(BLen, DLen),
             <<_:SkipLen/binary, OldData:KeepLen/binary>> = Data,
@@ -387,7 +388,7 @@ parse_multi(Data, #mp_parse_state{state=start_headers}=ParseState, Acc) ->
 
 parse_multi(Data, #mp_parse_state{state=body}=ParseState, Acc) ->
     %% Find the end of this part (i.e the next boundary)
-    case bm_find(Data, ParseState#mp_parse_state.boundary_ctx) of
+    case binary:match(Data, ParseState#mp_parse_state.boundary_ctx) of
         {Pos, _Len} ->
             %% Extract the body and keep the boundary
             <<Body:Pos/binary, Rest/binary>> = Data,
@@ -401,7 +402,7 @@ parse_multi(Data, #mp_parse_state{state=body}=ParseState, Acc) ->
         nomatch ->
             %% No boundary found, request more data.
             DLen = size(Data),
-            BLen = bm_length(ParseState#mp_parse_state.boundary_ctx),
+            BLen = ParseState#mp_parse_state.boundary_len,
             SkipLen = erlang:max(DLen - BLen, 0),
             KeepLen = erlang:min(BLen, DLen),
             <<PartData:SkipLen/binary, OldData:KeepLen/binary>> = Data,
@@ -421,15 +422,17 @@ parse_multi(Data, {cont, #mp_parse_state{old_data=OldData}=ParseState}, _) ->
 
 parse_multi(Data, Boundary, Options) ->
     %% Initial entry point
-    BoundaryCtx = bm_start("\r\n--"++Boundary),
-    HdrEndCtx   = bm_start("\r\n\r\n"),
-    DataType    = lists:foldl(fun(_,      list)      -> list;
-                                 (list,   _)         -> list;
-                                 (binary, undefined) -> binary;
-                                 (_,      Acc)       -> Acc
-                              end, undefined, Options),
+    FullBoundary = list_to_binary(["\r\n--", Boundary]),
+    BoundaryCtx  = binary:compile_pattern(FullBoundary),
+    HdrEndCtx    = binary:compile_pattern(<<"\r\n\r\n">>),
+    DataType     = lists:foldl(fun(_,      list)      -> list;
+				  (list,   _)         -> list;
+				  (binary, undefined) -> binary;
+				  (_,      Acc)       -> Acc
+			       end, undefined, Options),
     ParseState = #mp_parse_state{state        = boundary,
                                  boundary_ctx = BoundaryCtx,
+                                 boundary_len = size(FullBoundary),
                                  hdr_end_ctx  = HdrEndCtx,
                                  data_type    = DataType},
     parse_multi(<<"\r\n", Data/binary>>, ParseState, []).
@@ -438,7 +441,7 @@ parse_multi(Data, Boundary, Options) ->
 parse_multi(Data, #mp_parse_state{state=start_headers}=ParseState,
             Acc, [], []) ->
     %% Find the end of headers for this part
-    case bm_find(Data, ParseState#mp_parse_state.hdr_end_ctx) of
+    case binary:match(Data, ParseState#mp_parse_state.hdr_end_ctx) of
         {_Pos, _Len} ->
             %% We have all headers, we can parse it
             NParseState = ParseState#mp_parse_state{state=headers},
@@ -2724,39 +2727,3 @@ redirect_self(A) ->
                 scheme_str = SchemeStr,
                 port = Port,
                 port_str = PortStr}.
-
-%% Boyer-Moore searching, used for parsing multipart/form-data
-bm_start(Str) ->
-    Len = length(Str),
-    Tbl = bm_set_shifts(Str, Len),
-    {Tbl, list_to_binary(Str), lists:reverse(Str), Len}.
-
-bm_length({_,_,_,Len}) ->
-    Len.
-
-bm_find(Bin, SearchCtx) ->
-    bm_find(Bin, SearchCtx, 0).
-bm_find(Bin, {_, _, _, Len}, Pos) when size(Bin) < (Pos + Len) ->
-    nomatch;
-bm_find(Bin, {Tbl, BStr, RevStr, Len}=SearchCtx, Pos) ->
-    case Bin of
-        <<_:Pos/binary, BStr:Len/binary, _/binary>> ->
-            {Pos, Len};
-        <<_:Pos/binary, NoMatch:Len/binary, _/binary>> ->
-            RevNoMatch = lists:reverse(binary_to_list(NoMatch)),
-            Shift = bm_next_shift(RevNoMatch, RevStr, 0, Tbl),
-            bm_find(Bin, SearchCtx, Pos+Shift)
-    end.
-
-bm_set_shifts(Str, Len) ->
-    erlang:make_tuple(256, Len, bm_set_shifts(Str, 0, Len, [])).
-bm_set_shifts(_Str, Count, Len, Acc) when Count =:= Len-1 ->
-    lists:reverse(Acc);
-bm_set_shifts([H|T], Count, Len, Acc) ->
-    Shift = Len - Count - 1,
-    bm_set_shifts(T, Count+1, Len, [{H+1,Shift}|Acc]).
-
-bm_next_shift([H|T1], [H|T2], Comparisons, Tbl) ->
-    bm_next_shift(T1, T2, Comparisons+1, Tbl);
-bm_next_shift([H|_], _, Comparisons, Tbl) ->
-    erlang:max(element(H+1, Tbl) - Comparisons, 1).
