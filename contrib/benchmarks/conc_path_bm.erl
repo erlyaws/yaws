@@ -21,7 +21,7 @@
 -include("bench.hrl").
 
 -include("../../include/yaws_api.hrl").
--include("../yaws_debug.hrl").
+-include("../../src/yaws_debug.hrl").
 -include("../../include/yaws.hrl").
 
 
