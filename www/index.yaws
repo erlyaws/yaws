@@ -94,101 +94,70 @@ is_proper(Tag) ->
             false
     end.
 
-cd() ->
-    "cd /home/klacke/yaws;".
+cd(Git) ->
+    ["cd ", Git, "; "].
 
-head(Tag) ->
+git(Cd, Cmd) ->
+    os:cmd([cd(Cd), Cmd]).
 
+head(Tag, Dir) ->
     Date =
-        os:cmd([cd(), "git --no-pager show ", Tag, "  | grep Date | head -1"]),
+        git(Dir, ["git --no-pager show ", Tag, "  | grep Date | head -1"]),
     Ret = ["Version " , Tag, " " , Date],
-    io:format("Head ~s~n", [Ret]),
     Ret.
-    
+
 gen_log(A) ->
-    Tags = lists:filter(fun(Tag) ->
-                                is_proper(Tag) end,
-                 lists:reverse(
-                   string:tokens(
-                     os:cmd("cd /home/klacke/yaws; git tag -l"), [10]))),
-    io:format("Tags = ~p~n", [Tags]),
-    L = gen_log(A, Tags),
-    %io:format("~p~n", [L]),
-    L.
-
-dlog(Last, Prev) ->
-    Str = os:cmd([cd(), 
-            "git --no-pager log --abbrev-commit --no-merges --pretty=oneline ",
-                  Prev, "..", Last, " | cat"]),
-    Str2 = lists:zf(fun(I) ->
-                            if I == 10 ->
-                                    {true, "<br/>"};
-                               0<I, I<255 ->
-                                    {true, I};
-                               true ->
-                                    false
-                            end
-                        end, Str),
-
-    Str3 = lists:zf(fun(I) ->
-                            if
-                               0<I, I<255 ->
-                                    {true, I};
-                               true ->
-                                    false
-                            end
-                        end, Str),
-
-    %io:format("Str3: ~s~n", [Str3]),
-    Str2.
-
-gen_log(_, []) ->
-    [];
-gen_log(A, [Last, Prev | Tail]) ->
-    Head = head(Last),
-    Data = dlog(Last, Prev),
-    X = [{'div', [{class, "news"}],
-          [{h3, [], Head},
-           {p, [], ["<code>", Data, "</code>"]}]}
-        ],
-    [ X | gen_log(A, [Prev | Tail])];
-gen_log(A, [Last]) ->
-    [].
-
-
-gen_news(A) ->
-    case file:open(A#arg.docroot ++ "/news",[read]) of
-        {ok, Fd} ->
-            gen_news(Fd, io:get_line(Fd,''));
-        Err ->
-            {p,[], f("No news: ~p",[Err])}
+    case os:getenv("YAWS_GIT") of
+        false ->
+            [];
+        Dir ->
+            Tags = lists:filter(
+                     fun(Tag) ->
+                             is_proper(Tag) end,
+                     lists:reverse(
+                       string:tokens(
+                         git(Dir, "git tag -l"), [10]))),
+            gen_log(A, Tags, Dir)
     end.
 
-gen_news(Fd, eof) ->
-    file:close(Fd),
+dlog(Last, Prev, Dir) ->
+    Str = 
+        git(Dir,
+            ["git --no-pager log --abbrev-commit --no-merges --pretty=medium ",
+             Prev, "..", Last, " | cat"]),
+    Str2 = lists:zf(fun(I) ->
+                            if I == $< ->
+                                    %% XSS
+                                    false;
+                                0<I, I<255 ->
+                                    {true, I};
+                               true ->
+                                    false
+                            end
+                    end, Str),
+    Lines = string:tokens(Str2, "\n"),
+    lists:map(
+      fun(Line) ->
+              case Line of
+                  "commit " ++ _ ->
+                      ["<br/><h3>", Line, "</h3> <br/>"];
+                  _ ->
+                      [Line,  "<br/>"]
+              end
+      end,Lines).
+
+gen_log(_, [], _) ->
     [];
-gen_news(Fd, Line) ->
-    Items = gen_items(Fd, io:get_line(Fd, '')),
-    case Items of
-      [] ->
-         gen_news(Fd, io:get_line(Fd,''));
-      _ ->
-         X = [{'div', [{class, "news"}],
-           [{h3, [], Line},
-            {ul, [], Items}]}
-          ],
-
-    [X | gen_news(Fd, io:get_line(Fd,''))]
-   end.
-
-
-gen_items(Fd, [10]) ->
-    [];
-gen_items(Fd,eof) ->
-    [];
-gen_items(Fd,Line) ->
-    [{li, [], {p, [], Line}} |gen_items(Fd, io:get_line(Fd, ''))].
-
+gen_log(A, [Last, Prev | Tail], Dir) ->
+    Head = head(Last, Dir),
+    Data = dlog(Last, Prev, Dir),
+    X = [{'div', [{class, "news"}],
+          [{h3, [], Head},
+           {p, [], ["<pre>", Data, "</pre>"]}]}
+        ],
+    [ X | gen_log(A, [Prev | Tail], Dir)];
+gen_log(A, [Last],_) ->
+    [].
 
 
 </erl>
