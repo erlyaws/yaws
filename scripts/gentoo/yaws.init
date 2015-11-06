@@ -16,12 +16,11 @@ yaws=%bindir%/yaws
 
 conf="--conf %etcdir%/yaws/yaws.conf"
 
-opts="start stop reload restart query"
+extra_commands="reload query"
 
 depend() {
        need net
 }
-
 
 start() {
        ebegin "Starting yaws "
@@ -30,14 +29,12 @@ start() {
        eend $?
 }
 
-
 stop() {
        ebegin "Stopping yaws "
        ${yaws} ${idopts} --stop
        ${yaws} ${idopts} --wait-stopped=10
        eend $?
 }
-
 
 reload() {
        ebegin "Reloading yaws "
@@ -50,4 +47,3 @@ query() {
        ${yaws} ${idopts} --status
        eend $?
 }
-
