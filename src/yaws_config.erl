@@ -429,12 +429,15 @@ compile_and_load_src_dir(Dir, [Entry0|Rest], Opts) ->
 compile_module_src_dir(File, Opts) ->
     case catch compile:file(File, Opts) of
         {ok, Mod, Bin} ->
-            error_logger:format("Compiled ~p~n", [File]),
+            error_logger:info_msg("Compiled ~p~n", [File]),
+            load_src_dir(File, Mod, Bin);
+        {ok, Mod, Bin, []} ->
+            error_logger:info_msg("Compiled ~p [0 Errors - 0 Warnings]~n", [File]),
             load_src_dir(File, Mod, Bin);
         {ok, Mod, Bin, Warnings} ->
             WsMsg = [format_compile_warns(W,[]) || W <- Warnings],
-            error_logger:format("Compiled ~p [~p Errors - ~p Warnings]~n~s",
-                                [File,0,length(WsMsg),WsMsg]),
+            error_logger:warning_msg("Compiled ~p [~p Errors - ~p Warnings]~n~s",
+                                     [File,0,length(WsMsg),WsMsg]),
             load_src_dir(File, Mod, Bin);
         {error, [], Warnings} ->
             WsMsg = [format_compile_warns(W,[]) || W <- Warnings],
