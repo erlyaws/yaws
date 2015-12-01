@@ -239,6 +239,19 @@ different module here will pass all write/read operations to this module (it
 must implement appropriate callbacks).
 
 .TP
+\fBysession_idle_timeout = Integer\fR
+Controls Yaws session idle cleanup. If a server has been idle for
+\fIysession_idle_timeout\fR milliseconds, check all Yaws sessions and
+remove any that have timed out. The default \fIysession_idle_timeout\fR
+value is 2*60*1000 (2 minutes).
+
+.TP
+\fBysession_long_timeout = Integer\fR
+Controls Yaws session periodic cleanup. Every \fIysession_long_timeout\fR
+milliseconds, check all Yaws sessions and remove any that have timed
+out. The default \fIysession_long_timeout\fR value is 60*60*1000 (1 hour).
+
+.TP
 \fBrunmod = ModuleName\fR
 At startup Yaws will invoke \fIModuleName:start()\fR in a separate process. It
 is possible to have several runmods.  This is useful if we want to reuse the

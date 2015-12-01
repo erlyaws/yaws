@@ -28,7 +28,8 @@
          gconf_include_dir/1, gconf_phpexe/1, gconf_yaws/1, gconf_id/1,
          gconf_enable_soap/1, gconf_soap_srv_mods/1, gconf_ysession_mod/1,
          gconf_acceptor_pool_size/1, gconf_mime_types_info/1,
-         gconf_nslookup_pref/1]).
+         gconf_nslookup_pref/1,
+         gconf_ysession_idle_timeout/1, gconf_ysession_long_timeout/1]).
 
 -export([sconf_port/1, sconf_flags/1, sconf_redirect_map/1, sconf_rhost/1,
          sconf_rmethod/1, sconf_docroot/1, sconf_xtra_docroots/1,
@@ -263,6 +264,8 @@ gconf_ysession_mod         (#gconf{ysession_mod          = X}) -> X.
 gconf_acceptor_pool_size   (#gconf{acceptor_pool_size    = X}) -> X.
 gconf_mime_types_info      (#gconf{mime_types_info       = X}) -> X.
 gconf_nslookup_pref        (#gconf{nslookup_pref         = X}) -> X.
+gconf_ysession_idle_timeout(#gconf{ysession_idle_timeout = X}) -> X.
+gconf_ysession_long_timeout(#gconf{ysession_long_timeout = X}) -> X.
 
 
 sconf_port                 (#sconf{port                  = X}) -> X.

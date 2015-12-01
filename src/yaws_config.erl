@@ -1062,6 +1062,24 @@ fload(FD, GC, Cs, Lno, Chars) ->
             fload(FD, GC#gconf{ysession_mod = Ysession_mod}, Cs,
                   Lno+1, ?NEXTLINE);
 
+        ["ysession_idle_timeout", '=', YsessionIdle] ->
+            case (catch list_to_integer(YsessionIdle)) of
+                I when is_integer(I), I > 0 ->
+                    fload(FD, GC#gconf{ysession_idle_timeout = I}, Cs,
+                          Lno+1, ?NEXTLINE);
+                _ ->
+                    {error, ?F("Expect positive integer at line ~w",[Lno])}
+            end;
+
+        ["ysession_long_timeout", '=', YsessionLong] ->
+            case (catch list_to_integer(YsessionLong)) of
+                I when is_integer(I), I > 0 ->
+                    fload(FD, GC#gconf{ysession_long_timeout = I}, Cs,
+                          Lno+1, ?NEXTLINE);
+                _ ->
+                    {error, ?F("Expect positive integer at line ~w",[Lno])}
+            end;
+
         ["server_signature", '=', Signature] ->
             fload(FD, GC#gconf{yaws=Signature}, Cs, Lno+1, ?NEXTLINE);
 

@@ -110,7 +110,9 @@
           acceptor_pool_size = 8,             % size of acceptor proc pool
 
           mime_types_info,                    % undefined | #mime_types_info{}
-          nslookup_pref = [inet]              % [inet | inet6]
+          nslookup_pref = [inet],             % [inet | inet6]
+          ysession_idle_timeout = 2*60*1000,  % default 2 minutes
+          ysession_long_timeout = 60*60*1000  % default 1 hour
          }).
 
 

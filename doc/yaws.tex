@@ -2420,6 +2420,20 @@ part where options for each virtual host is supplied.
                module here will pass all write/read operations to this module
                (it must implement appropriate callbacks).
 
+\item       \verb+ysession_idle_timeout = Integer+ ---
+               Controls \Yaws\ session idle cleanup. If a server has been
+               idle for \verb+ysession_idle_timeout+ milliseconds, check
+               all \Yaws\ sessions and remove any that have timed out. The
+               default \verb+ysession_idle_timeout+ value is 2*60*1000 (2
+               minutes).
+
+\item       \verb+ysession_long_timeout = Integer+ ---
+               Controls \Yaws\ session periodic cleanup. Every \hfill \break
+               \verb+ysession_long_timeout+ milliseconds, check all
+               \Yaws\ sessions and remove any that have timed out. The
+               default \verb+ysession_long_timeout+ value is 60*60*1000 (1
+               hour).
+
 \item        \verb+runmod = ModuleName+ ---
                At startup \Yaws\ will invoke \verb+ModuleName:start()+ in a
                separate process. It is possible to have several runmods.  This
