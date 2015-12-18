@@ -167,11 +167,9 @@ init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded, Id}) ->
                                                [?format_record(_SC, sconf)])
                                 end, Group)
                       end, Sconfs),
-                    yaws_trace:setup(Gconf),
-                    Res = init2(Gconf, Sconfs, Env#env.runmod,
-                          Env#env.embedded, true),
                     yaws_log:setup(Gconf, Sconfs),
-                    Res;
+                    yaws_trace:setup(Gconf),
+                    init2(Gconf, Sconfs, Env#env.runmod, Env#env.embedded, true);
                 {error, E} ->
                     case erase(logdir) of
                         undefined ->
