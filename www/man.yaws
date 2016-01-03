@@ -1,37 +1,42 @@
 
 <erl>
 
+result(Status, Msg) ->
+    [{status, Status},
+     {ehtml,
+      {html,[],
+       {'div',[{class,"man"}],
+        {pre,[],Msg}}}}].
+
 out(A) ->
-    L = case queryvar(A,"page") of
-            {ok, Page} ->
-                %% only allow regular chars in Page
-                case lists:all(fun(C) ->
-                                       if
-                                           $a =< C, C =< $z ->
-                                               true;
-                                           $A =< C, C =< $Z ->
-                                               true;
-                                           C == $_ ->
-                                               true;
-                                           C == $. ->
-                                               true;
-                                           true ->
-                                               false
-                                       end
-                               end, Page) of
-                    true ->
-                        os:cmd("env LC_ALL=en_US.ISO-8859-1 man  " ++ Page ++ "  | col -b -p -x");
-                    false ->
-                        "illegal character detected in query arg"
-                end;
-            undefined ->
-                "no man page found in query arg "
-        end,
-    {ehtml,
-     {html,[],
-      {'div',[{class,"man"}],
-       {pre,[], L}}}}.
-
-
+    try queryvar(A,"page") of
+        {ok, Page} ->
+            %% only allow regular chars in Page
+            case lists:all(fun(C) ->
+                                   if
+                                       $a =< C, C =< $z ->
+                                           true;
+                                       $A =< C, C =< $Z ->
+                                           true;
+                                       C == $_ ->
+                                           true;
+                                       C == $. ->
+                                           true;
+                                       true ->
+                                           false
+                                   end
+                           end, Page) of
+                true ->
+                    L = os:cmd("env LC_ALL=en_US.ISO-8859-1 man  " ++ Page ++ "  | col -b -p -x"),
+                    result(200, L);
+                false ->
+                    result(400, "illegal character detected in query arg")
+            end;
+        undefined ->
+            result(400, "no man page found in query arg")
+    catch
+        _:_ ->
+            result(400, "illegal character detected in query arg")
+    end.
 
 </erl>
