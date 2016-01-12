@@ -301,7 +301,6 @@ handle_info(timeout, #state{close_timer=TRef}=State) when TRef /= undefined ->
 
 %% Keepalive timeout: send a ping frame and wait for any reply
 handle_info(timeout, #state{wait_pong_frame=false}=State) ->
-    error_logger:info_msg("Send ping frame", []),
     GracePeriod = get_opts(keepalive_grace_period, State#state.opts),
     do_send(State#state.wsstate, {ping, <<>>}),
     {noreply, State#state{wait_pong_frame=true}, GracePeriod};
