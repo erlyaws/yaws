@@ -2615,7 +2615,7 @@ setconf(GC0, Groups0, CheckCertsChanged) ->
         {true, true} ->
             yaws_config:soft_setconf(GC, Groups2, OLDGC, OldGroups);
         {true, false} ->
-            yaws_config:hard_setconf(GC, Groups2);
+            ok = yaws_config:hard_setconf(GC, Groups2);
         _ ->
             {error, need_restart}
     end.

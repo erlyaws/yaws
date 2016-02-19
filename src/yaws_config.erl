@@ -3055,14 +3055,7 @@ soft_setconf(GC, Groups, OLDGC, OldGroups) ->
 
 
 hard_setconf(GC, Groups) ->
-    yaws_trace:setup(GC),
-    case gen_server:call(yaws_server,{setconf, GC, Groups},infinity) of
-        ok ->
-            yaws_log:setup(GC, Groups);
-        E ->
-            erlang:error(E)
-    end.
-
+    gen_server:call(yaws_server,{setconf, GC, Groups}, infinity).
 
 
 remove_old_scs([Sc|Scs], NewGroups) ->
