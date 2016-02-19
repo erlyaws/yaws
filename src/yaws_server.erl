@@ -167,8 +167,6 @@ init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded, Id}) ->
                                                [?format_record(_SC, sconf)])
                                 end, Group)
                       end, Sconfs),
-                    yaws_log:setup(Gconf, Sconfs),
-                    yaws_trace:setup(Gconf),
                     init2(Gconf, Sconfs, Env#env.runmod, Env#env.embedded, true);
                 {error, E} ->
                     case erase(logdir) of
@@ -243,6 +241,8 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
 
     runmod(RunMod, GC),
     yaws_config:compile_and_load_src_dir(GC),
+    yaws_log:setup(GC, Sconfs),
+    yaws_trace:setup(GC),
     L2 = lists:zf(fun(Group) -> start_group(GC, Group) end,
                   yaws_config:load_mime_types_module(GC, Sconfs)),
     {ok, #state{gc       = GC,
