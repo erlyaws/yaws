@@ -168,7 +168,7 @@ compile_file(C, LineNo,  _Chars = "</erl>" ++ Tail, erl, NumChars, Ack, Es) ->
                     ok
             end,
             comp_warn(C, Warnings),
-            case code:load_binary(ModuleName, C#comp.outfile, Binary) of
+            case code:load_binary(ModuleName, "", Binary) of
                 {module, ModuleName} ->
                     C2 = C#comp{modnum = C#comp.modnum+1},
                     L2 = check_exported(C, LineNo, NumChars, ModuleName),
