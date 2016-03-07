@@ -1538,7 +1538,12 @@ make_server_header() ->
                     undefined -> (get(gc))#gconf.yaws;
                     S         -> S
                 end,
-    ["Server: ", Signature, "\r\n"].
+    case Signature of
+        "" ->
+            [];
+        _ ->
+            ["Server: ", Signature, "\r\n"]
+    end.
 
 make_last_modified_header(FI) ->
     Then = FI#file_info.mtime,
