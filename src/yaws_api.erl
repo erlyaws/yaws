@@ -583,6 +583,7 @@ code_to_phrase(426) -> "Upgrade Required";
 code_to_phrase(428) -> "Precondition Required";
 code_to_phrase(429) -> "Too Many Requests";
 code_to_phrase(431) -> "Request Header Fields Too Large";
+code_to_phrase(451) -> "Unavailable For Legal Reasons";
 code_to_phrase(500) -> "Internal Server Error";
 code_to_phrase(501) -> "Not Implemented";
 code_to_phrase(502) -> "Bad Gateway";
@@ -601,7 +602,6 @@ code_to_phrase(511) -> "Network Authentication Required";
 %% sticking with the HTTP status codes above for maximal portability and
 %% interoperability.
 %%
-code_to_phrase(451) -> "Requested Action Aborted";   % from FTP (RFC 959)
 code_to_phrase(452) -> "Insufficient Storage Space"; % from FTP (RFC 959)
 code_to_phrase(453) -> "Not Enough Bandwidth".       % from RTSP (RFC 2326)
 
