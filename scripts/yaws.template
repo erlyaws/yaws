@@ -224,15 +224,31 @@ while [ $# -gt 0 ]
           traceoutput=" -yaws traceoutput ";
           trace=" -yaws trace traffic ";;
       -M|--mnesiadir)
+          if [ -z "$1" ]; then
+              echo error: missing mnesia directory argument
+              help
+          fi
           mnesia=" -mnesia dir '\"$1\"' -run mnesia start"
           shift;;
       -c|--conf)
+          if [ -z "$1" ]; then
+              echo error: missing configuration file argument
+              help
+          fi
           conf=" -conf $1 "
           shift;;
       -pa|--pa)
+          if [ -z "$1" ]; then
+              echo error: missing path argument
+              help
+          fi
           xpath=" $xpath -pa $1 "
           shift;;
       -r|--runmod)
+          if [ -z "$1" ]; then
+              echo error: missing runmod argument
+              help
+          fi
           runmod=" -runmod $1 "
           shift;;
       -h|--hup)
@@ -256,15 +272,27 @@ while [ $# -gt 0 ]
           $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl debug_dump $ddid
           exit 0;;
       -j|--ctltrace)
+          if [ -z "$1" ]; then
+              echo error: missing trace argument
+              help
+          fi
           ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl trace $1"
           shift;;
       -v|--version)
           exec $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws printversion;
           exit 0;;
       --sname|-sname)
+          if [ -z "$1" ]; then
+              echo error: missing sname argument
+              help
+          fi
           sname=" -sname $1 "
           shift;;
       -name|--name)
+          if [ -z "$1" ]; then
+              echo error: missing name argument
+              help
+          fi
           sname=" -name $1 "
           shift;;
       --disable-kpoll)
@@ -293,27 +321,51 @@ while [ $# -gt 0 ]
           IFS="$saveifs"
           heart=" -heart ";;
       -proto_dist|--proto_dist)
+          if [ -z "$1" ]; then
+              echo error: missing proto_dist argument
+              help
+          fi
           pdist=" -proto_dist $1 "
           shift;;
       -setcookie|--setcookie)
+          if [ -z "$1" ]; then
+              echo error: missing setcookie argument
+              help
+          fi
           erlarg="$erlarg -setcookie $1 "
           shift;;
       -erlarg|--erlarg)
+          if [ -z "$1" ]; then
+              echo error: missing erlarg argument
+              help
+          fi
           erlarg="$erlarg $1 "
           shift;;
       -check|--check)
           check="$erl -noshell -pa ${yawsdir}${delim}ebin $xpath -s yaws_ctl check";;
       -configtest|--configtest)
+          if [ -z "$1" ]; then
+              echo error: missing configtest argument
+              help
+          fi
           configtest="$erl -noshell -pa ${yawsdir}${delim}ebin $xpath"
           configtestcmd=" -s yaws_ctl configtest $1";
           shift;;
       --verbose)
           verbose=true;;
       --to_erl)
+          if [ -z "$1" ]; then
+              echo error: missing to_erl argument
+              help
+          fi
           TO_ERL=yes
           PIPE_DIR="${vardir}/run/yaws/pipe/$1"
           shift;;
       --run_erl)
+          if [ -z "$1" ]; then
+              echo error: missing run_erl argument
+              help
+          fi
           RUN_ERL=yes
           daemon=""
           PIPE_DIR="${vardir}/run/yaws/pipe/$1"
@@ -340,6 +392,10 @@ export YAWS_HEART_COUNT YAWS_HEART_SECS
 
 if [ -n "$check" ]; then
     checkid=${id:-default}
+    if [ -z "$checkargs" ]; then
+        echo error: missing check argument
+        help
+    fi
     set $checkargs
     check="$check $checkid $checkargs"
     mkdir ${HOME}/.yaws/yaws 2> /dev/null
