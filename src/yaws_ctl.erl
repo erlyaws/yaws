@@ -271,23 +271,8 @@ vsn(IP) when size(IP) =:= 4 ->
 vsn(IP) when size(IP) =:= 8 ->
     "(ipv6)".
 
--define(IPV4_FMT, "~p.~p.~p.~p").
--define(IPV6_FMT,
-        "~2.16.0b~2.16.0b:~2.16.0b~2.16.0b:~2.16.0b~2.16.0b:~2.16.0b~2.16.0b").
-
 format_ip(IP) ->
-    case size(IP) of
-        4 ->
-            {A, B, C, D} = IP,
-            io_lib:format(?IPV4_FMT,
-                          [A, B, C, D]);
-
-        8 ->
-            {A, B, C, D, E, F, G, H} = IP,
-            io_lib:format(?IPV6_FMT,
-                          [A, B, C, D, E, F, G, H])
-    end.
-
+    inet_parse:ntoa(IP).
 
 a_running_config(Sock) ->
     gen_tcp:send(Sock, a_running_config()).
