@@ -201,31 +201,31 @@ actl_trace(What) ->
         true ->
             {ok, GC, SCs} = yaws_api:getconf(),
             case GC#gconf.trace of
-                false when What /= off->
+                false when What /= off ->
                     yaws_api:setconf(GC#gconf{trace = {true, What}},SCs),
                     io_lib:format(
-                      "Turning on trace of ~p to file ~s~n",
+                      "Turning on trace of ~p to directory ~s~n",
                       [What,
                        filename:join([GC#gconf.logdir,
-                                      "trace." ++ atom_to_list(What)])]);
+                                      yaws_trace:get_tracedir()])]);
                 false when What == off ->
                     io_lib:format("Tracing is already turned off ~n",[]);
                 {true, _} when What == off ->
                     yaws_api:setconf(GC#gconf{trace = false},SCs),
                     "Turning trace off \n";
                 {true, What} ->
-                    io_lib:format("Trace of ~p is already turned on, ose 'off' "
+                    io_lib:format("Trace of ~p is already turned on, use 'off' "
                                   "to turn off~n", [What]);
                 {true, _Other} ->
                     yaws_api:setconf(GC#gconf{trace = {true, What}},SCs),
                     io_lib:format(
-                      "Turning on trace of ~p to file ~s~n",
+                      "Turning on trace of ~p to directory ~s~n",
                       [What,
                        filename:join([GC#gconf.logdir,
-                                      "trace." ++ atom_to_list(What)])])
+                                      yaws_trace:get_tracedir()])])
             end;
         false ->
-            "Need either http | traffic | off  as argument\n"
+            "error: need one of http | traffic | off as argument\n"
     end.
 
 

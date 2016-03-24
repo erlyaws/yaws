@@ -74,7 +74,7 @@ help()
     echo "        yaws --status [--id ID]                               -- query the daemon status "
     echo "        yaws --load Modules                                   -- load modules "
     echo "        yaws --ls                                             -- list Yaws nodes and their status"
-    echo "        yaws --ctltrace traffic|http                          -- toggle trace of running daemon"
+    echo "        yaws --ctltrace traffic|http|off                      -- toggle trace of running daemon"
     echo "        yaws --check [--verbose] [--id ID] YawsFile [IncDirs] -- test compile YawsFile"
     echo "        yaws --configtest File [--verbose]                    -- test config file"
     echo "        yaws --wait-started[=secs] [--id ID]                  -- wait for daemon to be ready"
