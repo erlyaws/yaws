@@ -2742,11 +2742,11 @@ The following directives are allowed inside a server definition.
                used, the specified value must be strictly positive. The default
                value is nolimit.
 
-             \item \verb+compress_level = none | default | best_compression | best_speed | 0..9+ ---\\
-               Defines the compression level to be used. 0 (none), gives no
-               compression at all, 1 (best\_speed) gives best speed and 9
-               (best\_compression) gives best compression. The default value is
-               default.
+             \item \verb+compression_level = none | default | best_compression | best_speed | 0..9+ ---
+               Defines the compression level to be used. 0 (\verb+none+),
+               gives no compression at all, 1 (\verb+best_speed+) gives
+               best speed and 9 (\verb+best_compression+) gives best
+               compression. The default value is \verb+default+.
 
              \item \verb+window_size = 9..15+ --- Specifies the zlib compression
                window size. It should be in the range 9 through 15. Larger
