@@ -307,7 +307,6 @@ handle_info(timeout, #state{wait_pong_frame=false}=State) ->
 
 %% Grace period timeout
 handle_info(timeout, #state{wait_pong_frame=true}=State) ->
-    error_logger:error_msg("endpoint gone away !", []),
     State1 = State#state{wait_pong_frame=false},
     case get_opts(drop_on_timeout, State1#state.opts) of
         true  -> handle_abnormal_closure(State1);
