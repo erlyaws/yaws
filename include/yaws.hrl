@@ -165,11 +165,11 @@
 -define(SC_DIR_LISTINGS,          32).
 -define(SC_DEFLATE,               64).
 -define(SC_DIR_ALL_ZIP,          128).
--define(SC_DAV,                  512).
--define(SC_FCGI_TRACE_PROTOCOL, 1024).
--define(SC_FCGI_LOG_APP_ERROR,  2048).
--define(SC_FORWARD_PROXY,       4096).
--define(SC_AUTH_SKIP_DOCROOT,   8192).
+-define(SC_DAV,                  256).
+-define(SC_FCGI_TRACE_PROTOCOL,  512).
+-define(SC_FCGI_LOG_APP_ERROR,  1024).
+-define(SC_FORWARD_PROXY,       2048).
+-define(SC_AUTH_SKIP_DOCROOT,   4096).
 
 
 
