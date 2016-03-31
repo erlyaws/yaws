@@ -20,36 +20,82 @@ ifeq ($(HAVE_ERLANG_SENDFILE),true)
   DEPS += $(top_builddir)/priv/lib/yaws_sendfile_drv.so
 endif
 
+define start_yaws
+$(top_builddir)/test/bin/yaws --sname test --daemon --id testid --conf $(YAWS_CONF)
+endef
+
+define stop_yaws
+$(top_builddir)/test/bin/yaws --id testid --stop >/dev/null
+endef
+
+define quiet_stop_yaws
+($(top_builddir)/test/bin/yaws --id testid --stop >/dev/null || true); \
+($(top_builddir)/test/bin/yaws --id testid --wait-stopped=$(WAIT_TIME) >/dev/null || true)
+endef
+
+define wait_yaws_started
+$(top_builddir)/test/bin/yaws --id testid --wait-started=$(WAIT_TIME);\
+  err=$$?;									\
+  if test $$err -ne 0; then							\
+    cat logs/report.log;							\
+  fi;										\
+  exit $$err
+endef
+
+define wait_yaws_stopped
+$(top_builddir)/test/bin/yaws --id testid --wait-stopped=$(WAIT_TIME)
+endef
+
+define do_test
+$(ERL) -sname tftest -noinput $(ERL_FLAGS) -s tftest;	\
+  err=$$?;						\
+  if test $$err -ne 0; then				\
+    $(MAKE) quiet-stop;					\
+    cat logs/report.log;				\
+  fi;							\
+  exit $$err
+endef
+
+define reload_yaws
+$(top_builddir)/test/bin/yaws --id testid --hup >/dev/null
+endef
+
+define get_yaws_status
+$(top_builddir)/test/bin/yaws --id testid --status >/dev/null
+endef
+
+define print_yaws_info
+$(top_builddir)/test/bin/yaws --sname test -i --id testid --conf $(YAWS_CONF)
+endef
+
+define check_yaws_config
+$(top_builddir)/test/bin/yaws --configtest $(YAWS_CONF)
+endef
+
+
 start: $(top_builddir)/test/bin/yaws quiet-stop prepare-test
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --sname test --daemon --id testid --conf $(YAWS_CONF)
+	$(AM_V_at)$(start_yaws)
 
 wait-started: $(top_builddir)/test/bin/yaws
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --wait-started=$(WAIT_TIME);\
-	  err=$$?;									\
-	  if test $$err -ne 0; then							\
-	    cat logs/report.log;							\
-	  fi;										\
-	  exit $$err
-
+	$(AM_V_at)$(wait_yaws_started)
 
 wait-stopped: $(top_builddir)/test/bin/yaws
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --wait-stopped=$(WAIT_TIME)
+	$(AM_V_at)$(wait_yaws_stopped)
 
 stop: $(top_builddir)/test/bin/yaws
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --stop >/dev/null
+	$(AM_V_at)$(stop_yaws)
 
 quiet-stop: $(top_builddir)/test/bin/yaws
-	$(AM_V_at)($(top_builddir)/test/bin/yaws --id testid --stop >/dev/null || true)
-	$(AM_V_at)($(top_builddir)/test/bin/yaws --id testid --wait-stopped=$(WAIT_TIME) >/dev/null || true)
+	$(AM_V_at)$(quiet_stop_yaws)
 
 hup: $(top_builddir)/test/bin/yaws
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --hup >/dev/null
+	$(AM_V_at)$(reload_yaws)
 
 status: $(top_builddir)/test/bin/yaws
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --status >/dev/null
+	$(AM_V_at)$(get_yaws_status)
 
 i: $(top_builddir)/test/bin/yaws
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --sname test -i --id testid --conf $(YAWS_CONF)
+	$(AM_V_at)$(print_yaws_info)
 
 connect: $(top_builddir)/test/bin/yaws
 	$(AM_V_at)$(ERL) -sname client -remsh test@`hostname`
@@ -59,13 +105,7 @@ test: check
 app-test: $(DEPS) all start wait-started do-test stop wait-stopped
 
 do-test:
-	$(AM_V_at)$(ERL) -sname tftest -noinput $(ERL_FLAGS) -s tftest;	\
-	  err=$$?;							\
-	  if test $$err -ne 0; then					\
-	    $(MAKE) quiet-stop;						\
-	    cat logs/report.log;					\
-	  fi;								\
-	  exit $$err
+	$(AM_V_at)$(do_test)
 
 app_test.beam: $(top_builddir)/test/ibrowse/include/ibrowse.hrl $(top_builddir)/test/ibrowse/ebin/ibrowse.beam
 

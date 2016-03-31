@@ -20,13 +20,13 @@ gen_rule = $1: YAWS_CONF=$1.conf
 
 $(foreach r,$(NO_DOCROOT_TESTS), $(eval $(call gen_rule,$r)))
 
-$(NO_DOCROOT_TESTS): $(top_builddir)/test/bin/yaws
+$(NO_DOCROOT_TESTS): quiet-stop prepare-test
 	$(AM_V_at)$(INSTALL) -d logs
-	$(AM_V_at)$(top_builddir)/test/bin/yaws -sname test --daemon --id testid --conf $(YAWS_CONF)
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --wait-started=$(WAIT_TIME)
+	$(AM_V_at)$(start_yaws)
+	$(AM_V_at)$(wait_yaws_started)
 	@echo $@
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --stop >/dev/null
-	$(AM_V_at)$(top_builddir)/test/bin/yaws --id testid --wait-stopped=$(WAIT_TIME)
+	$(AM_V_at)$(stop_yaws)
+	$(AM_V_at)$(wait_yaws_stopped)
 
 distclean-local:
 	$(AM_V_at)rm -fr $(DEPDIR)
