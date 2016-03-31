@@ -494,7 +494,7 @@ validate_cs(GC, Cs) ->
                   end, Cs),
     L2 = lists:map(fun(X) -> element(2, X) end, lists:keysort(1,L)),
     L3 = arrange(L2, start, [], []),
-    case validate_groups(L3) of
+    case validate_groups(GC, L3) of
         ok ->
             {ok, GC, L3};
         Err ->
@@ -502,17 +502,17 @@ validate_cs(GC, Cs) ->
     end.
 
 
-validate_groups([]) ->
+validate_groups(_, []) ->
     ok;
-validate_groups([H|T]) ->
-    case (catch validate_group(H)) of
+validate_groups(GC, [H|T]) ->
+    case (catch validate_group(GC, H)) of
         ok ->
-            validate_groups(T);
+            validate_groups(GC, T);
         Err ->
             Err
     end.
 
-validate_group(List) ->
+validate_group(GC, List) ->
     [SC0|SCs] = List,
 
     %% all servers with the same IP/Port must share the same tcp configuration
@@ -527,13 +527,43 @@ validate_group(List) ->
                              " configuration: ~p", [SC0#sconf.servername])})
     end,
 
-    %% all servers with the same IP/Port must share the same ssl configuration
-    case lists:all(fun(SC) -> SC#sconf.ssl == SC0#sconf.ssl end, SCs) of
+    %% If the default servers (the first one) is not an SSL server:
+    %%    all servers  with the same IP/Port must be non-SSL server
+    %% If SNI is disabled or not supported:
+    %%    all servers with the same IP/Port must share the same SSL config
+    %% If SNI is enabled:
+    %%    TLS protocol must be supported by the default servers (the first one)
+    if
+        SC0#sconf.ssl == undefined ->
+            case lists:all(fun(SC) -> SC#sconf.ssl == SC0#sconf.ssl end, SCs) of
+                true  -> ok;
+                false ->
+                    throw({error, ?F("All servers in the same group than"
+                                     " ~p must have no SSL configuration",
+                                     [SC0#sconf.servername])})
+            end;
+        GC#gconf.sni == disable ->
+            case lists:all(fun(SC) -> SC#sconf.ssl == SC0#sconf.ssl end, SCs) of
+                true  -> ok;
+                false ->
+                    throw({error, ?F("SNI is disabled, all servers in the same"
+                                     " group than ~p must share the same ssl"
+                                     " configuration",
+                                     [SC0#sconf.servername])})
+            end;
+
         true ->
-            ok;
-        false ->
-            throw({error, ?F("Servers in the same group must share the same ssl"
-                             " configuration: ~p", [SC0#sconf.servername])})
+            Vs = case (SC0#sconf.ssl)#ssl.protocol_version of
+                     undefined -> proplists:get_value(available,ssl:versions());
+                     L         -> L
+                 end,
+            F = fun(V) -> lists:member(V, ['tlsv1.2','tlsv1.1',tlsv1]) end,
+            case lists:any(F, Vs) of
+                true -> ok;
+                false ->
+                    throw({error, ?F("SNI is enabled, the server ~p must enable"
+                                     " TLS protocol", [SC0#sconf.servername])})
+            end
     end,
 
     %% all servernames in a group must be unique
@@ -1145,6 +1175,25 @@ fload(FD, GC, Cs, Lno, Chars) ->
                           Lno+1, ?NEXTLINE);
                 {error, Str} ->
                     {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+
+        ["sni", '=', Sni] ->
+            if
+                Sni == "disable" ->
+                    fload(FD, GC#gconf{sni=disable}, Cs, Lno+1, ?NEXTLINE);
+
+                Sni == "enable" orelse Sni == "strict" ->
+                    case ?SSL_SNI of
+                        true ->
+                            fload(FD, GC#gconf{sni=list_to_atom(Sni)}, Cs, Lno+1,
+                                  ?NEXTLINE);
+                        _ ->
+                            error_logger:info_msg("Warning, sni option is not"
+                                                  " supported at line ~w~n", [Lno]),
+                            fload(FD, GC, Cs, Lno+1, ?NEXTLINE)
+                    end;
+                true ->
+                    {error, ?F("Expect disable|enable|strict at line ~w",[Lno])}
             end;
 
         ['<', "server", Server, '>'] ->
@@ -1968,6 +2017,17 @@ fload(FD, ssl, GC, C, Lno, Chars) ->
                 fload(FD, ssl, GC, C1, Lno+1, ?NEXTLINE)
             catch _:_ ->
                     {error, ?F("Bad ssl protocol_version at line ~w", [Lno])}
+            end;
+
+        ["require_sni", '=', Bool] ->
+            case is_bool(Bool) of
+                {true, Val} ->
+                    C1 = C#sconf{
+                           ssl=(C#sconf.ssl)#ssl{require_sni=Val}
+                          },
+                    fload(FD, ssl, GC, C1, Lno+1, ?NEXTLINE);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
 
         ['<', "/ssl", '>'] ->

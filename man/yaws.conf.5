@@ -362,6 +362,42 @@ The mappings defined using this directive will overload all other
 definitions. If a file extension is defined several times, only the last one is
 kept. Multiple \fBadd_charsets\fR directives may be used.
 
+.TP
+\fBsni = disable | enable | strict\fR
+Enables or disables the TLS SNI (Server Name Indication) support.
+
+When disabled (or not supported), all virtual servers in the same group (same
+IP/Port) must share the same SSL configuration, especially the same SSL
+certificate. Only the HTTP Host header will be considered to find the right
+virtual server.
+
+When enabled, SSL configuration can be different from a virtual server to
+another, each one can have its own SSL certificate. In this case, if a client
+provides a SNI hostname, it will be used to find the right virtual server. To
+accept the SNI information from the client, The first virtual server (the
+default one, see \fBpick_first_virthost_on_nomatch\fR) \fBmust\fR include TLS as
+a permitted protocol.
+
+If \fBsni\fR directive is set to \fIenable\fR, non SNI clients are allowed. For
+such clients, virtual servers are selected as if Yaws did not have SNI
+support. If it is set to \fIstrict\fR, SNI hostname is mandatary to access a SSL
+virtual server. But, in all cases, when SNI support is enabled, if a client
+provides a SNI hostname, it \fBmust\fR match the HTTP Host header (which is
+mandatory too).  Note that the first virutal server (the default one) will be
+used for any request where the provided SNI hostname doesn't match any of
+virtual server names. So, it is important that the first virtual server have the
+most restrictive access control, otherwise clients can access restricted
+resources by sending a request for any unknown hostname. (This isn't actually
+any different from using virtual servers without SNI support.)
+
+The \fBsni\fR directive is a global one, so if you set it to \fIstrict\fR, non
+SNI clients will be refused for \fBall\fR SSL groups. See \fBrequire_sni\fR
+directive from the server part to mitigate this requirement.
+
+Default is \fIdisable\fR.
+
+\fBWARNING: The SNI support was introduced in the SSL application in Erlang/OTP
+18.0, so Yaws ignores it for previous releases.\fR
 
 .SH SERVER PART
 Yaws can virthost several web servers on the same IP address as well as several
@@ -1052,13 +1088,23 @@ Default value is [inet].
 
 .TP
 \fB<ssl> ... </ssl>\fR
-This begins and ends an SSL configuration for this server.  It's possible to
-virthost several SSL servers on the same IP given that they all share the same
-certificate configuration.  In general it is complicated to virthost several SSL
-servers on the same IP address since the certificate is typically bound to a
-domainname in the common name part of the certificate.  One solution (the only?)
-to this problem is to have a certificate with multiple subjectAltNames. See
-http://wiki.cacert.org/VhostTaskForce#Interoperability_Test
+
+This begins and ends an SSL configuration for this server. It's possible to
+virthost several SSL servers on the same IP/Port. If SNI support is disabled or
+not supported, they must share the same certificate configuration. In this
+situation, it is complicated to virthost several SSL servers on the same IP/Port
+since the certificate is typically bound to a domainname in the common name part
+of the certificate. One solution to this problem is to have a certificate with
+multiple subjectAltNames. If SNI support is enabled, SSL servers on the same
+IP/Port can have their own SSL configuration with a different SSL certificate
+for each one. See the global \fBsni\fR directive.
+
+The SNI support was introduced in the SSL application in Erlang/OTP 18.0. It is
+an extension to the TLS protocol (RFC 4366), which allows the client to include
+the requested hostname in the first message of its SSL handshake.
+
+See also http://wiki.cacert.org/VhostTaskForce#Interoperability_Test for browser
+compatibility.
 
 \fBkeyfile = File\fR
 .RS 12
@@ -1187,7 +1233,17 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
 
 \fBWARNING: Erlang/OTP R16B01 or higher is required in order to let it work
 (because of a bug in previous releases).\fR
+.RE
 
+.IP
+\fBrequire_sni = true | false\fR
+.RS 12
+If \fItrue\fR,the server will reject non SNI clients and clients providing an
+unknown SNI hostname (this last remark is only relevant for the first virtual
+server of a SSL group). This directive is ignored is SNI support is disabled (or
+not supported).
+
+Default is \fIfalse\fR.
 .RE
 
 .TP

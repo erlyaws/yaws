@@ -258,6 +258,20 @@ fi
 AM_CONDITIONAL(HAVE_SSL_LOG_ALERT, [test "x$HAVE_SSL_LOG_ALERT" = "xtrue"])
 AC_SUBST(HAVE_SSL_LOG_ALERT)
 
+dnl Check for support of SNI on the server side (ERTS >= 7.0)
+AC_MSG_CHECKING([for support of SSL SNI option])
+AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [7.0],
+    [ssl_sni="yes"],
+    [ssl_sni="no"])
+AC_MSG_RESULT([${ssl_sni}])
+
+HAVE_SSL_SNI=false
+if test "x${ssl_sni}" = "xyes"; then
+        HAVE_SSL_SNI=true
+fi
+AM_CONDITIONAL(HAVE_SSL_SNI, [test "x$HAVE_SSL_SNI" = "xtrue"])
+AC_SUBST(HAVE_SSL_SNI)
+
 dnl Determine directories for installation.
 if test "x${prefix}" != "xNONE" -a "x${ERLANG_INSTALL_LIB_DIR}" = "x"; then
         dnl Under $prefix
@@ -558,6 +572,7 @@ AC_CONFIG_FILES([
         test/t12/Makefile
         test/t13/Makefile
         test/t14/Makefile
+        test/t15/Makefile
         applications/chat/Makefile
         applications/chat/src/Makefile
         applications/chat/ebin/Makefile
@@ -596,6 +611,13 @@ AC_CONFIG_FILES([
         test/t12/yaws.conf
         test/t13/yaws.conf
         test/t14/yaws.conf
+        test/t15/yaws_sni_disabled.conf
+        test/t15/yaws_sni_enabled.conf
+        test/t15/yaws_sni_strict.conf
+        test/t15/yaws_sni_required_on_vhost.conf
+        test/t15/yaws_sni_not_enabled.conf
+        test/t15/yaws_sni_not_available.conf
+        test/t15/yaws_sni_without_tls.conf
 ])
 AC_CONFIG_FILES([scripts/make-release],                  [chmod +x scripts/make-release])
 AC_CONFIG_FILES([applications/wiki/scripts/addFile],     [chmod +x applications/wiki/scripts/addFile])

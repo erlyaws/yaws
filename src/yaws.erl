@@ -29,7 +29,8 @@
          gconf_enable_soap/1, gconf_soap_srv_mods/1, gconf_ysession_mod/1,
          gconf_acceptor_pool_size/1, gconf_mime_types_info/1,
          gconf_nslookup_pref/1,
-         gconf_ysession_idle_timeout/1, gconf_ysession_long_timeout/1]).
+         gconf_ysession_idle_timeout/1, gconf_ysession_long_timeout/1,
+         gconf_sni/1]).
 
 -export([sconf_port/1, sconf_flags/1, sconf_redirect_map/1, sconf_rhost/1,
          sconf_rmethod/1, sconf_docroot/1, sconf_xtra_docroots/1,
@@ -71,7 +72,8 @@
          ssl_secure_renegotiate/1, ssl_secure_renegotiate/2,
          ssl_client_renegotiation/1, ssl_client_renegotiation/2,
          ssl_protocol_version/1, ssl_protocol_version/2,
-         ssl_honor_cipher_order/1, ssl_honor_cipher_order/2]).
+         ssl_honor_cipher_order/1, ssl_honor_cipher_order/2,
+         ssl_require_sni/1, ssl_require_sni/2]).
 
 -export([new_deflate/0,
          deflate_min_compress_size/1, deflate_min_compress_size/2,
@@ -266,6 +268,7 @@ gconf_mime_types_info      (#gconf{mime_types_info       = X}) -> X.
 gconf_nslookup_pref        (#gconf{nslookup_pref         = X}) -> X.
 gconf_ysession_idle_timeout(#gconf{ysession_idle_timeout = X}) -> X.
 gconf_ysession_long_timeout(#gconf{ysession_long_timeout = X}) -> X.
+gconf_sni                  (#gconf{sni                   = X}) -> X.
 
 
 sconf_port                 (#sconf{port                  = X}) -> X.
@@ -374,6 +377,7 @@ ssl_secure_renegotiate  (#ssl{secure_renegotiate   = X}) -> X.
 ssl_client_renegotiation(#ssl{client_renegotiation = X}) -> X.
 ssl_protocol_version    (#ssl{protocol_version     = X}) -> X.
 ssl_honor_cipher_order  (#ssl{honor_cipher_order   = X}) -> X.
+ssl_require_sni         (#ssl{require_sni          = X}) -> X.
 
 ssl_keyfile             (S, File)    -> S#ssl{keyfile              = File}.
 ssl_certfile            (S, File)    -> S#ssl{certfile             = File}.
@@ -387,6 +391,7 @@ ssl_ciphers             (S, Ciphers) -> S#ssl{ciphers              = Ciphers}.
 ssl_cachetimeout        (S, Timeout) -> S#ssl{cachetimeout         = Timeout}.
 ssl_secure_renegotiate  (S, Bool)    -> S#ssl{secure_renegotiate   = Bool}.
 ssl_protocol_version    (S, Vsns)    -> S#ssl{protocol_version     = Vsns}.
+ssl_require_sni         (S, Bool)    -> S#ssl{require_sni          = Bool}.
 
 -ifdef(HAVE_SSL_HONOR_CIPHER_ORDER).
 ssl_honor_cipher_order  (S, Bool)    -> S#ssl{honor_cipher_order   = Bool}.
@@ -433,7 +438,9 @@ setup_ssl(SL, DefaultSSL) ->
                  honor_cipher_order   = lkup(honor_cipher_order, SSLProps,
                                              SSL#ssl.honor_cipher_order),
                  protocol_version     = lkup(protocol_version, SSLProps,
-                                             undefined)}
+                                             undefined),
+                 require_sni          = lkup(require_sni, SSLProps,
+                                             SSL#ssl.require_sni)}
     end.
 
 
@@ -573,7 +580,8 @@ setup_gconf(GL, GC) ->
                                      GL, GC#gconf.mime_types_info
                                     ),
            nslookup_pref         = lkup(nslookup_pref, GL,
-                                        GC#gconf.nslookup_pref)
+                                        GC#gconf.nslookup_pref),
+           sni                   = lkup(sni, GL, GC#gconf.sni)
           }.
 
 set_gc_flags([{tty_trace, Bool}|T], Flags) ->

@@ -21,8 +21,8 @@ start1(DoHalt) ->
     Pid = spawn_link(fun() -> start2() end),
     receive
 	{'EXIT', Pid, tests_ok} ->
-	    {ok, Wd} = file:get_cwd(),
-	    io:format("\n** All ~s tests completed successfully.\n", [Wd]),
+	    %%{ok, Wd} = file:get_cwd(),
+        %%io:format("\n** All ~s tests completed successfully.\n", [Wd]),
 	    dohalt(DoHalt, 0);
 	{'EXIT', Pid, {tests_failed, M, Line, Error}} ->
 	    {ok, Wd} = file:get_cwd(),

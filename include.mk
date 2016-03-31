@@ -44,6 +44,10 @@ ifeq ($(HAVE_SSL_LOG_ALERT),true)
   ERLC_GENERIC_FLAGS += -DHAVE_SSL_LOG_ALERT
 endif
 
+ifeq ($(HAVE_SSL_SNI),true)
+  ERLC_GENERIC_FLAGS += -DHAVE_SSL_SNI
+endif
+
 ifeq ($(HAVE_ERLANG_NOW),true)
   ERLC_GENERIC_FLAGS += -DHAVE_ERLANG_NOW
 endif

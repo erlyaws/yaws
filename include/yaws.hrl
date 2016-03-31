@@ -112,7 +112,9 @@
           mime_types_info,                    % undefined | #mime_types_info{}
           nslookup_pref = [inet],             % [inet | inet6]
           ysession_idle_timeout = 2*60*1000,  % default 2 minutes
-          ysession_long_timeout = 60*60*1000  % default 1 hour
+          ysession_long_timeout = 60*60*1000, % default 1 hour
+
+          sni = disable % disable | enable | strict
          }).
 
 
@@ -134,6 +136,12 @@
 -define(SSL_LOG_ALERT, false).
 -endif.
 
+-ifdef(HAVE_SSL_SNI).
+-define(SSL_SNI, true).
+-else.
+-define(SSL_SNI, undefined).
+-endif.
+
 -record(ssl, {
           keyfile,
           certfile,
@@ -148,7 +156,8 @@
           secure_renegotiate = false,
           client_renegotiation = ?SSL_CLIENT_RENEGOTIATION,
           honor_cipher_order = ?HONOR_CIPHER_ORDER,
-          protocol_version
+          protocol_version,
+          require_sni = false
          }).
 
 

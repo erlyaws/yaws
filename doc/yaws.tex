@@ -1052,28 +1052,30 @@ do that here.  See for example
 \url{http://www.tldp.org/HOWTO/SSL-Certificates-HOWTO/}, which
 describes how to manage certificates and keys.
 
-In order to run an SSL server we must have a certificate. Either we
-can create a so-called self-signed certificate ourselves or buy a
-certificate from one of the many CA's (Certificate Authorities) on the
-net. \Yaws\  uses the OTP interface to OpenSSL.
+In order to run an SSL server we must have a certificate. Either we can
+create a so-called self-signed certificate ourselves or buy a certificate
+from one of the many CA's (Certificate Authorities) on the net. \Yaws\
+uses the SSL application provided by Erlang/OTP and depends on features
+supported by it. So, from an Erlang/OTP release to another, some SSL
+options may change, others may appear or disappear. Check the
+documentation of your Erlang/OTP releas for details.
 
 To setup a \Yaws\ server with SSL we could have a \textit{yaws.conf}
 file that looks like:
 
 \begin{verbatim}
-
- logdir = /var/log/yaws
+logdir = /var/log/yaws
 
 <server www.funky.org>
-               port = 443
-               listen = 192.168.128.32
-               docroot = /var/yaws/www.funky.org
-               <ssl>
-                  keyfile = /etc/funky.key
-                  certfile = /etc/funky.cert
-                  password = gazonk
-               </ssl>
-       </server>
+    port = 443
+    listen = 192.168.128.32
+    docroot = /var/yaws/www.funky.org
+    <ssl>
+        keyfile = /etc/funky.key
+        certfile = /etc/funky.cert
+        password = gazonk
+    </ssl>
+</server>
 \end{verbatim}
 
 This is the easiest possible SSL configuration. The configuration
@@ -1082,6 +1084,60 @@ must contain the name "www.funky.org" as it "Common Name".
 
 The keyfile is the private key file and it is encrypted using
 the password "gazonk".
+
+
+\section{Server Name Indication}
+
+\textbf{The SNI support was introduced in the SSL application in
+  Erlang/OTP 18.0}. It is an extension to the TLS protocol (RFC 4366),
+which allows the client to include the requested hostname in the first
+message of its SSL handshake.
+
+With SNI, you can have many virtual server sharing the same IP address
+and port, and each one can have its own unique certificate (and the rest
+of the configuration). If SNI is disabled or not supported, all virtual
+servers on the same IP/Port must share the same SSL configuration. In
+this situation, it is complicated for \Yaws\ to present a valid SSL
+certificate to clients. Possible solutions are listed here:
+\url{http://wiki.cacert.org/VhostTaskForce}.
+
+By default, SNI is disabled in \Yaws\ to be backward compatible with old
+Erlang/OTP releases. But it can be enabled and fine tuned for each SSL
+servers. Here is a basic example:
+
+
+\begin{verbatim}
+logdir = /var/log/yaws
+sni = enable
+
+<server www.example.com>
+    port = 443
+    listen = 192.168.128.32
+    docroot = /var/yaws/www.example.com
+    <ssl>
+        keyfile = /etc/ssl/www.example.com.key
+        certfile = /etc/ssl/www.example.com.cert
+    </ssl>
+</server>
+
+<server www.example.org>
+    port = 443
+    listen = 192.168.128.32
+    docroot = /var/yaws/www.example.org
+    <ssl>
+        keyfile = /etc/ssl/www.example.org.key
+        certfile = /etc/ssl/www.example.org.cert
+    </ssl>
+</server>
+\end{verbatim}
+
+Depending on the SNI hostname provided by the client, the first or the
+second virtual host will be chosen, and the corresponding SSL
+certificate will be presented to the client. In this example, non SNI
+clients are still supported. For such clients, the SSL certificate of
+the first virtual server will be presented and the HTTP Host header will
+be then used to find the correct virtual server. Otherwise, it is
+possible to refuse non SNI clients, globally or per server.
 
 
 \chapter{Applications}
@@ -2531,6 +2587,47 @@ part where options for each virtual host is supplied.
               definitions. If a file extension is defined several times, only
               the last one is kept. Multiple \textit{add\_charsets} directives
               may be used.
+
+\item        \verb+sni = disable | enable | strict+ ---
+              Enables or disables the TLS SNI (Server Name Indication) support.
+
+              When disabled (or not supported), all virtual servers in the same
+              group (same IP/Port) must share the same SSL configuration,
+              especially the same SSL certificate. Only the HTTP Host header
+              will be considered to find the right virtual server.
+
+              When enabled, SSL configuration can be different from a virtual
+              server to another, each one can have its own SSL certificate. In
+              this case, if a client provides a SNI hostname, it will be used to
+              find the right virtual server. To accept the SNI information from
+              the client, The first virtual server (the default one, see
+              \verb+pick_first_virthost_on_nomatch+) \textbf{must} include TLS
+              as a permitted protocol.
+
+              If \verb+sni+ directive is set to \textit{enable}, non SNI clients
+              are allowed. For such clients, virtual servers are selected as if
+              Yaws did not have SNI support. If it is set to \textit{strict},
+              SNI hostname is mandatary to access a SSL virtual server. But, in
+              all cases, when SNI support is enabled, if a client provides a SNI
+              hostname, it \textbf{must} match the HTTP Host header (which is
+              mandatory too). Note that the first virutal server (the default
+              one) will be used for any request where the provided SNI hostname
+              doesn't match any of virtual server names. So, it is important
+              that the first virtual server have the most restrictive access
+              control, otherwise clients can access restricted resources by
+              sending a request for any unknown hostname. (This isn't actually
+              any different from using virtual servers without SNI support.)
+
+              The \verb+sni+ directive is a global one, so if you set it to
+              \textit{strict}, non SNI clients will be refused for \textbf{all}
+              SSL groups. See \verb+require_sni+ directive from the server part
+              to mitigate this requirement.
+
+              Default is \textit{disable}.
+
+              \textbf{WARNING: The SNI support was introduced in the SSL
+                application in Erlang/OTP 18.0, so Yaws ignores it for previous
+                releases.}
 \end{itemize}
 
 
@@ -3197,16 +3294,27 @@ The following directives are allowed inside a server definition.
               and IPv6 but try IPv6 first, use \textit{[inet6, inet]}.
               Default value is \textit{[inet]}.
 
-\item        \verb+<ssl>  .... </ssl>+
+\item        \verb+<ssl>  .... </ssl>+ ---
                This begins and ends an SSL configuration for this server. It's
-               possible to virthost several SSL servers on the same IP given
-               that they all share the same certificate configuration. In
-               general it is complicated to virthost several SSL servers on the
-               same IP address since the certificate is typically bound to a
-               domainname in the common name part of the certificate. One
-               solution (the only?)  to this problem is to have a certificate
-               with multiple subjectAltNames. See
+               possible to virthost several SSL servers on the same IP/Port. If
+               SNI support is disabled or not supported, they must share the
+               same certificate configuration. In this situation, it is
+               complicated to virthost several SSL servers on the same IP/Port
+               since the certificate is typically bound to a domainname in the
+               common name part of the certificate. One solution to this problem
+               is to have a certificate with multiple subjectAltNames. If SNI
+               support is enabled, SSL servers on the same IP/Port can have
+               their own SSL configuration with a different SSL certificate for
+               each one. See the global \verb+sni+ directive.
+
+               The SNI support was introduced in the SSL application in
+               Erlang/OTP 18.0. It is an extension to the TLS protocol (RFC
+               4366), which allows the client to include the requested hostname
+               in the first message of its SSL handshake.
+
+               See also
                \url{http://wiki.cacert.org/VhostTaskForce#Interoperability_Test}
+               for browser compatibility.
 
                \begin{itemize}
                \item \verb+keyfile = File+ --- Specifies which file contains the
@@ -3302,6 +3410,14 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
 
                  \textbf{WARNING: Because of a bug in previous releases,
                    Erlang/OTP R16B01 or newer is required for this to work.}
+
+                 \item \verb+require_sni = true | false+ ---
+                   If \textit{true}, the server will reject non SNI clients and
+                   clients providing an unknown SNI hostname (this last remark
+                   is only relevant for the first virtual server of a SSL
+                   group). This directive is ignored is SNI support is disabled
+                   (or not supported).
+                   Default is \textit{false}.
                \end{itemize}
 
 \item       \verb+<redirect> ... </redirect>+ ---
