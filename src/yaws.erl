@@ -600,8 +600,6 @@ set_gc_flags([{fail_on_bind_err, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags,?GC_FAIL_ON_BIND_ERR,Bool));
 set_gc_flags([{pick_first_virthost_on_nomatch, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags, ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,Bool));
-set_gc_flags([{use_old_ssl, Bool}|T], Flags) ->
-    set_gc_flags(T, flag(Flags,?GC_USE_OLD_SSL,Bool));
 set_gc_flags([{use_erlang_sendfile, Bool}|T], Flags) ->
     set_gc_flags(T, flag(Flags,?GC_USE_ERLANG_SENDFILE,Bool));
 set_gc_flags([{use_yaws_sendfile, Bool}|T], Flags) ->

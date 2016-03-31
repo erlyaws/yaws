@@ -13,18 +13,21 @@ setup_default_gconf_test() ->
     GC = yaws_config:make_default_gconf(false, "test"),
     GC = yaws:create_gconf([], "test"),
 
+    DefFlags = ?GC_FAIL_ON_BIND_ERR bor
+        ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH bor
+        ?GC_COPY_ERRLOG,
     Flags = case yaws_sendfile:have_sendfile() of
-                true  -> 1124;
-                false -> 100
+                true  -> ?GC_USE_YAWS_SENDFILE bor DefFlags;
+                false -> DefFlags
             end,
 
     true = is_same_path(Dir,     get_gconf_attr(yaws_dir,    GC)),
     true = is_same_path(EbinDir, get_gconf_attr(ebin_dir,    GC)),
     true = is_same_path(IncDir,  get_gconf_attr(include_dir, GC)),
 
-    {trace, false}   = get_gconf_attr(trace, GC),
-    {flags, Flags}  = get_gconf_attr(flags,  GC),
-    {id,    "test"} = get_gconf_attr(id,     GC),
+    {trace, false}  = get_gconf_attr(trace, GC),
+    {flags, Flags}  = get_gconf_attr(flags, GC),
+    {id,    "test"} = get_gconf_attr(id,    GC),
 
     ok.
 
@@ -45,8 +48,6 @@ set_gc_flags_test() ->
     {pick_first_virthost_on_nomatch, true} =
         check_gc_flags(pick_first_virthost_on_nomatch,
                        ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH, GC),
-    {use_old_ssl, true} =
-        check_gc_flags(use_old_ssl, ?GC_USE_OLD_SSL, GC),
     ok.
 
 
@@ -101,4 +102,3 @@ real_dir_path(Path) ->
     {ok, RealPath} = file:get_cwd(),
     ok = file:set_cwd(CurCwd),
     filename:absname(RealPath).
-

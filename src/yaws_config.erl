@@ -1063,14 +1063,12 @@ fload(FD, GC, Cs, Lno, Chars) ->
              ),
             fload(FD, GC, Cs, Lno+1, ?NEXTLINE);
 
-        ["use_old_ssl", '=',  Bool] ->
-            case is_bool(Bool) of
-                {true, Val} ->
-                    fload(FD, ?gc_set_use_old_ssl(GC,Val), Cs,
-                          Lno+1, ?NEXTLINE);
-                false ->
-                    {error, ?F("Expect true|false at line ~w", [Lno])}
-            end;
+        ["use_old_ssl", '=',  _Bool] ->
+            %% feature removed
+            error_logger:format(
+              "use_old_ssl in yaws.conf is no longer supported - ignoring\n",[]
+             ),
+            fload(FD, GC, Cs, Lno+1, ?NEXTLINE);
 
         ["use_large_ssl_pool", '=',  _Bool] ->
             %% just ignore - not relevant any longer

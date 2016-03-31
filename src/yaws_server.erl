@@ -908,9 +908,9 @@ check_sni_servername(SN, [{SC,Opts}|Rest], Default) ->
             end
     end.
 
-ssl_sni_opts(GC, Group, DefaultSSLOpts) ->
-    SniOpts = lists:foldl(fun(#sconf{ssl=SSL}=SC, Acc) ->
-                                  [{SC, ssl_listen_opts(GC, SSL)}|Acc]
+ssl_sni_opts(Group, DefaultSSLOpts) ->
+    SniOpts = lists:foldl(fun(SC, Acc) ->
+                                  [{SC, ssl_listen_opts(SC)}|Acc]
                           end, [], Group),
     SniFun = fun(SN) ->
                      check_sni_servername(SN, lists:reverse(SniOpts),
@@ -919,15 +919,16 @@ ssl_sni_opts(GC, Group, DefaultSSLOpts) ->
     [{sni_fun, SniFun}].
 
 ssl_listen_opts(GC, [SC0|_]=Group) ->
-    DefaultSSLOpts = ssl_listen_opts(GC, SC0#sconf.ssl),
+    DefaultSSLOpts = ssl_listen_opts(SC0),
     Opts0 = listen_opts(SC0) ++ DefaultSSLOpts,
     Opts = case GC#gconf.sni of
                disable -> Opts0;
-               _       -> Opts0 ++ ssl_sni_opts(GC, Group, DefaultSSLOpts)
+               _       -> Opts0 ++ ssl_sni_opts(Group, DefaultSSLOpts)
            end,
     ?Debug("ssl listen options: ~p", [Opts]),
-    Opts;
-ssl_listen_opts(GC, SSL) ->
+    Opts.
+
+ssl_listen_opts(#sconf{ssl=SSL}) ->
     L = [if SSL#ssl.keyfile /= undefined ->
                  {keyfile, SSL#ssl.keyfile};
             true ->
@@ -1001,17 +1002,8 @@ ssl_listen_opts(GC, SSL) ->
             true ->
                  false
          end,
-         ?SSL_LOG_ALERT,
-         if ?gc_use_old_ssl(GC) ->
-                 {ssl_imp, old};
-            true ->
-                 {ssl_imp, new}
-         end
+         ?SSL_LOG_ALERT
         ],
-    filter_false(L).
-
-
-filter_false(L) ->
     [X || X <- L, X /= false].
 
 do_accept(GS) when GS#gs.ssl == nossl ->

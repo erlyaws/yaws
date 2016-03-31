@@ -18,9 +18,8 @@
 -define(GC_FAIL_ON_BIND_ERR,                32).
 -define(GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,  64).
 -define(GC_USE_FDSRV,                      128).
--define(GC_USE_OLD_SSL,                    256).
--define(GC_USE_ERLANG_SENDFILE,            512).
--define(GC_USE_YAWS_SENDFILE,             1024).
+-define(GC_USE_ERLANG_SENDFILE,            256).
+-define(GC_USE_YAWS_SENDFILE,              512).
 
 
 
@@ -38,8 +37,6 @@
         ((GC#gconf.flags band ?GC_FAIL_ON_BIND_ERR) /= 0)).
 -define(gc_pick_first_virthost_on_nomatch(GC),
         ((GC#gconf.flags band ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH) /= 0)).
--define(gc_use_old_ssl(GC),
-        ((GC#gconf.flags band ?GC_USE_OLD_SSL) /= 0)).
 -define(gc_use_erlang_sendfile(GC),
         ((GC#gconf.flags band ?GC_USE_ERLANG_SENDFILE) /= 0)).
 -define(gc_use_yaws_sendfile(GC),
@@ -59,8 +56,6 @@
 -define(gc_set_pick_first_virthost_on_nomatch(GC, Bool),
         GC#gconf{flags = yaws:flag(GC#gconf.flags,
                                    ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,Bool)}).
--define(gc_set_use_old_ssl(GC, Bool),
-        GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_USE_OLD_SSL,Bool)}).
 -define(gc_set_use_erlang_sendfile(GC, Bool),
         GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_USE_ERLANG_SENDFILE,Bool)}).
 -define(gc_set_use_yaws_sendfile(GC, Bool),
