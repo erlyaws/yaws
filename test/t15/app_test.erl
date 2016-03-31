@@ -154,8 +154,8 @@ check_good_request(HttpHost, SniHost, SN) ->
     Uri = "https://localhost:8443/index.yaws",
     Hdrs = [{connection, "close"}],
     SSLOpts = case SniHost of
-                  undefined -> [{verify, 0}, {server_name_indication, disable}];
-                  H         -> [{verify, 0}, {server_name_indication, H}]
+                  undefined -> [{verify, verify_none}, {server_name_indication, disable}];
+                  H         -> [{verify, verify_none}, {server_name_indication, H}]
               end,
     Opts = [{host_header, HttpHost}, {is_ssl, true}, {ssl_options, SSLOpts}],
     ?line {ok, "200", _, Body} = ibrowse:send_req(Uri, Hdrs, get, <<>>, Opts),
@@ -166,8 +166,8 @@ check_bad_request(HttpHost, SniHost) ->
     Uri = "https://localhost:8443/index.yaws",
     Hdrs = [{connection, "close"}],
     SSLOpts = case SniHost of
-                  undefined -> [{verify, 0}, {server_name_indication, disable}];
-                  H         -> [{verify, 0}, {server_name_indication, H}]
+                  undefined -> [{verify, verify_none}, {server_name_indication, disable}];
+                  H         -> [{verify, verify_none}, {server_name_indication, H}]
               end,
     Opts = [{host_header, HttpHost}, {is_ssl, true}, {ssl_options, SSLOpts}],
     ?line {ok, "400", _, _} = ibrowse:send_req(Uri, Hdrs, get, <<>>, Opts),
@@ -175,8 +175,8 @@ check_bad_request(HttpHost, SniHost) ->
 
 check_ssl_cert(SniHost, Issuer) ->
     SSLOpts = case SniHost of
-                  undefined -> [{verify, 0}, {server_name_indication, disable}];
-                  H         -> [{verify, 0}, {server_name_indication, H}]
+                  undefined -> [{verify, verify_none}, {server_name_indication, disable}];
+                  H         -> [{verify, verify_none}, {server_name_indication, H}]
               end,
     ?line {ok, Sock} = ssl:connect("localhost", 8443, SSLOpts),
     ?line Issuer = get_issuer(Sock),
@@ -220,7 +220,7 @@ get_attr_value(OTPCert, Id) ->
 check_good_request(HttpHost, _SniHost, SN) ->
     Uri = "https://localhost:8443/index.yaws",
     Hdrs = [{connection, "close"}],
-    SSLOpts = [{verify, 0}],
+    SSLOpts = [{verify, verify_none}],
     Opts = [{host_header, HttpHost}, {is_ssl, true}, {ssl_options, SSLOpts}],
     ?line {ok, "200", _, Body} = ibrowse:send_req(Uri, Hdrs, get, <<>>, Opts),
     ?line Body = "servername: "++SN++"\n",

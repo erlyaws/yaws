@@ -41,7 +41,7 @@ test_ssl_with_valid_dhfile() ->
     %% with ephemeral DH and see if it works.
     Uri = "https://localhost:8443/index.yaws",
     Options = [ {is_ssl, true}
-              , {ssl_options, [ {verify, 0}
+              , {ssl_options, [ {verify, verify_none}
                               , {ciphers, [C || {dhe_rsa, _, _}=C
                                                     <- ssl:cipher_suites()]}
                               ] }
@@ -59,7 +59,7 @@ test_ssl_with_invalid_dhfile() ->
     %% ssl:listen/2 but that's how it works anyway.
     Uri = "https://localhost:8444/index.yaws",
     Options = [ {is_ssl, true}
-              , {ssl_options, [ {verify, 0}
+              , {ssl_options, [ {verify, verify_none}
                               , {ciphers, [C || {dhe_rsa, _, _}=C
                                                     <- ssl:cipher_suites()]}
                               ] }

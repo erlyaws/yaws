@@ -1906,18 +1906,30 @@ fload(FD, ssl, GC, C, Lno, Chars) ->
             end;
 
         ["verify", '=', Val0] ->
-            Val = try
-                      list_to_integer(Val0)
-                  catch error:badarg ->
-                          list_to_atom(Val0)
-                  end,
-            case lists:member(Val, [0,1,2,verify_peer,verify_none]) of
-                true ->
-                    C1 = C#sconf{ssl = (C#sconf.ssl)#ssl{verify = Val}},
-                    fload(FD, ssl, GC, C1, Lno+1, ?NEXTLINE);
-                _ ->
+            Fail0 = (C#sconf.ssl)#ssl.fail_if_no_peer_cert,
+            {Val, Fail} = try
+                              case list_to_integer(Val0) of
+                                  0 -> {verify_none, Fail0};
+                                  1 -> {verify_peer, false};
+                                  2 -> {verify_peer, true};
+                                  _ -> {error, Fail0}
+                              end
+                          catch error:badarg ->
+                                  case list_to_atom(Val0) of
+                                      verify_none -> {verify_none, Fail0};
+                                      verify_peer -> {verify_peer, Fail0};
+                                      _           -> {error, Fail0}
+                                  end
+                          end,
+            case Val of
+                error ->
                     {error, ?F("Expect integer or verify_none, "
-                               "verify_peer at line ~w", [Lno])}
+                               "verify_peer at line ~w", [Lno])};
+                _ ->
+                    SSL = (C#sconf.ssl)#ssl{verify=Val,
+                                            fail_if_no_peer_cert=Fail},
+                    C1 = C#sconf{ssl=SSL},
+                    fload(FD, ssl, GC, C1, Lno+1, ?NEXTLINE)
             end;
 
         ["fail_if_no_peer_cert", '=', Bool] ->

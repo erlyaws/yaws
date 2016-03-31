@@ -868,7 +868,7 @@ test_ssl_multipart_post() ->
                {'Content-Length', Size}
               ],
     Uri = "https://localhost:8443/test_upload_ssl.yaws",
-    Options = [{is_ssl, true}, {ssl_options, [{verify, 0}]}],
+    Options = [{is_ssl, true}, {ssl_options, [{verify, verify_none}]}],
     ?line {ok, "200", _, _} = ibrowse:send_req(Uri, Headers, post, Data, Options),
     ok = application:stop(ssl),
     ok = application:stop(public_key),

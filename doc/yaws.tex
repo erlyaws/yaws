@@ -3331,20 +3331,12 @@ The following directives are allowed inside a server definition.
                  exchange is negotiated. If not specified, default
                  parameters are used.
 
-               \item \verb+verify = 0 | 1 | 2 | verify_none | verify_peer+ ---
+               \item \verb+verify = verify_none | verify_peer+ ---
                  Specifies the level of verification the server does on client
-                 certs. 0 means that the server will not ask for a cert
-                 (\verb+verify_none+), 1 means that the server will ask the
-                 client for a cert but not fail if the client does not supply a
-                 client cert (\verb+verify_peer+, \verb+fail_if_no_peer_cert+ =
-                 \verb+false+), 2 means that the server requires the client to
-                 supply a client cert (\verb+verify_peer+,
-                 \verb+fail_if_no_peer_cert+ = \verb+true+).
-
-                 Setting \verb+verify_none+ means that the x509 validation will
-                 be skipped (no certificate request is sent to the client),
-                 \verb+verify_peer+ means that a certificate request is sent to
-                 the client (x509 validation is performed.
+                 certs. Setting \verb+verify_none+ means that the x509
+                 validation will be skipped (no certificate request is sent to
+                 the client), \verb+verify_peer+ means that a certificate
+                 request is sent to the client (x509 validation is performed).
 
                  You might want to use \verb+fail_if_no_peer_cert+ in
                  combination with \verb+verify_peer+.

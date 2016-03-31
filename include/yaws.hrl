@@ -140,7 +140,7 @@
 -record(ssl, {
           keyfile,
           certfile,
-          verify = 0,
+          verify = verify_none,
           fail_if_no_peer_cert,
           depth = 1,
           password,
