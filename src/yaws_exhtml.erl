@@ -1,4 +1,4 @@
-%% -*- coding: Latin-1 -*-
+%% -*- coding: latin-1 -*-
 %%%----------------------------------------------------------------------
 %%% File    : exhtml.erl
 %%% Author  : Joakim Grebenö <jocke@tail-f.com>
