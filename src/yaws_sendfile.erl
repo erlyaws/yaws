@@ -33,16 +33,7 @@ have_sendfile() -> false.
 
 -endif.
 
--ifdef(HAVE_ERLANG_SENDFILE).
-
-have_erlang_sendfile() -> true.
-
--else.
-
-have_erlang_sendfile() -> false.
-
--endif.
-
+have_erlang_sendfile() -> yaws_dynopts:have_erlang_sendfile().
 
 check_gc_flags(GC) ->
     %% below, ignore dialyzer warning:
@@ -103,32 +94,27 @@ bytes_to_transfer(Filename, Offset, Count) ->
     end.
 
 
-
--ifdef(HAVE_ERLANG_SENDFILE).
-
 erlang_sendfile(Out, Filename, Offset, Count, ChunkSize) ->
-    Count1 = bytes_to_transfer(Filename, Offset, Count),
-    case Count1 of
-        {error, _}=Error1 ->
-            Error1;
-        _ ->
-            case file:open(Filename, [raw, read, binary]) of
-                {ok, RawFile} ->
-                    Res = file:sendfile(RawFile, Out, Offset, Count1,
-                                        [{chunk_size, ChunkSize}]),
-                    ok = file:close(RawFile),
-                    Res;
-                Error2 ->
-                    Error2
-            end
-    end.
-
--else.
-
-erlang_sendfile(Out, Filename, Offset, Count, ChunkSize) ->
-    compat_send(Out, Filename, Offset, Count, ChunkSize).
-
--endif.
+    case have_erlang_sendfile() of
+        true ->
+            Count1 = bytes_to_transfer(Filename, Offset, Count),
+            case Count1 of
+                {error, _}=Error1 ->
+                    Error1;
+                _ ->
+                    case file:open(Filename, [raw, read, binary]) of
+                        {ok, RawFile} ->
+                            Res = file:sendfile(RawFile, Out, Offset, Count1,
+                                                [{chunk_size, ChunkSize}]),
+                            ok = file:close(RawFile),
+                            Res;
+                        Error2 ->
+                            Error2
+                    end
+            end;
+        false ->
+            compat_send(Out, Filename, Offset, Count, ChunkSize)
+     end.
 
 
 -ifdef(HAVE_SENDFILE).

@@ -45,10 +45,10 @@ Cfg0 = case os:getenv("YAWS_SOAP") of
                UpdateDeps(CONFIG, SoapDeps)
        end,
 
-ErlOpts0 = case lists:keyfind(erl_opts, 1, Cfg0) of
-               {erl_opts, EOpts} -> EOpts;
-               false             -> []
-           end,
+ErlOpts = case lists:keyfind(erl_opts, 1, Cfg0) of
+              {erl_opts, EOpts} -> EOpts;
+              false             -> []
+          end,
 PortEnv0 = case lists:keyfind(port_env, 1, Cfg0) of
                {port_env, PEnv} -> PEnv;
                false            -> []
@@ -63,71 +63,6 @@ PortSpecs0 = case lists:keyfind(port_specs, 1, Cfg0) of
                      end;
                  false                -> []
              end,
-
-%% yaws:sendfile/5 was buggy in R15B (ERTS = 5.9)
-code:ensure_loaded(file),
-ErlOpts1 = case erlang:function_exported(file,sendfile,5) of
-               true when ErtsVsn >= {5,9,1} ->
-                   ErlOpts0 ++ [{d,'HAVE_ERLANG_SENDFILE'}];
-               _ ->
-                   ErlOpts0
-           end,
-
-code:ensure_loaded(crypto),
-ErlOpts2 = case erlang:function_exported(crypto,hash,2) of
-               true  -> ErlOpts1 ++ [{d,'HAVE_CRYPTO_HASH'}];
-               false -> ErlOpts1
-           end,
-
-code:ensure_loaded(inet),
-ErlOpts3 = case erlang:function_exported(inet,parse_strict_address,1) of
-               true  -> ErlOpts2 ++ [{d,'HAVE_INET_PARSE_STRICT_ADDRESS'}];
-               false -> ErlOpts2
-           end,
-
-%% Unicode module was buggy for R14B04 and previous (ERTS <= 5.8.5)
-ErlOpts4 = if
-               ErtsVsn =< {5,8,3} -> ErlOpts3 ++ [{d,'HAVE_BAD_UNICODE'}];
-               true               -> ErlOpts3
-           end,
-
-%% filelib:wildcard/2 was buggy for R15B03 and previous (ERTS <= 5.9.3)
-ErlOpts5 = if
-               ErtsVsn =< {5,9,3} -> ErlOpts4 ++ [{d,'HAVE_BAD_WILDCARD'}];
-               true               -> ErlOpts4
-           end,
-
-
-%% Check for support of honor_cipher_order SSL option (ERTS >= 6.0)
-ErlOpts6 = if
-               ErtsVsn >= {6,0,0} -> ErlOpts5 ++ [{d,'HAVE_SSL_HONOR_CIPHER_ORDER'}];
-               true               -> ErlOpts5
-           end,
-
-%% Check for support of client_renegotiation SSL option (ERTS >= 7.0)
-ErlOpts7 = if
-               ErtsVsn >= {7,0,0} -> ErlOpts6 ++ [{d,'HAVE_SSL_CLIENT_RENEGOTIATION'}];
-               true               -> ErlOpts6
-           end,
-
-%% Check for support of log_alert SSL option (ERTS >= 5.10.3)
-ErlOpts8 = if
-               ErtsVsn >= {5,10,3} -> ErlOpts7 ++ [{d,'HAVE_LOG_ALERT'}];
-               true                -> ErlOpts7
-           end,
-%% Check for support of SNI on the server side (ERTS >= 7.0)
-ErlOpts9 = if
-               ErtsVsn >= {7,0,0} -> ErlOpts8 ++ [{d,'HAVE_SSL_SNI'}];
-               true               -> ErlOpts8
-           end,
-
-%% Check for erlang:now/0
-ErlOpts10 = if
-               ErtsVsn < {7,0,0} -> ErlOpts9 ++ [{d,'HAVE_ERLANG_NOW'}];
-               true              -> ErlOpts9
-           end,
-
-ErlOpts = ErlOpts10,
 
 HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts),
 {PortEnv1, PortSpecs1} =

@@ -112,31 +112,6 @@
           sni = disable % disable | enable | strict
          }).
 
-
--ifdef(HAVE_SSL_HONOR_CIPHER_ORDER).
--define(HONOR_CIPHER_ORDER, true).
--else.
--define(HONOR_CIPHER_ORDER, undefined).
--endif.
-
--ifdef(HAVE_SSL_CLIENT_RENEGOTIATION).
--define(SSL_CLIENT_RENEGOTIATION, true).
--else.
--define(SSL_CLIENT_RENEGOTIATION, undefined).
--endif.
-
--ifdef(HAVE_SSL_LOG_ALERT).
--define(SSL_LOG_ALERT, {log_alert, false}).
--else.
--define(SSL_LOG_ALERT, false).
--endif.
-
--ifdef(HAVE_SSL_SNI).
--define(SSL_SNI, true).
--else.
--define(SSL_SNI, undefined).
--endif.
-
 -record(ssl, {
           keyfile,
           certfile,
@@ -149,8 +124,14 @@
           ciphers,
           cachetimeout,
           secure_renegotiate = false,
-          client_renegotiation = ?SSL_CLIENT_RENEGOTIATION,
-          honor_cipher_order = ?HONOR_CIPHER_ORDER,
+          client_renegotiation = case yaws_dynopts:have_ssl_client_renegotiation() of
+                                     true  -> true;
+                                     false -> undefined
+                                 end,
+          honor_cipher_order = case yaws_dynopts:have_ssl_honor_cipher_order() of
+                                   true  -> true;
+                                   false -> undefined
+                               end,
           protocol_version,
           require_sni = false
          }).

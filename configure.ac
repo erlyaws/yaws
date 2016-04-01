@@ -188,90 +188,6 @@ AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [5.8.3],
     [],
     [AC_MSG_ERROR([Erlang R14B02 or higher is required but only Erlang $ERLANG_RELEASE was found!])])
 
-dnl Unicode module was buggy for R14B04 and previous (ERTS <= 5.8.5)
-AC_MSG_CHECKING([for buggy unicode module])
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [le], [5.8.5],
-    [bad_unicode="yes"],
-    [bad_unicode="no"])
-AC_MSG_RESULT([${bad_unicode}])
-
-HAVE_BAD_UNICODE=false
-if test "x${bad_unicode}" = "xyes"; then
-        HAVE_BAD_UNICODE=true
-fi
-AM_CONDITIONAL(HAVE_BAD_UNICODE, [test "x$HAVE_BAD_UNICODE" = "xtrue"])
-AC_SUBST(HAVE_BAD_UNICODE)
-
-dnl filelib:wildcard/2 was buggy for R15B03 and previous (ERTS <= 5.9.3)
-AC_MSG_CHECKING([for buggy filelib:wildcard/2 function])
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [le], [5.9.3],
-    [bad_wildcard="yes"],
-    [bad_wildcard="no"])
-AC_MSG_RESULT([${bad_wildcard}])
-
-HAVE_BAD_WILDCARD=false
-if test "x${bad_wildcard}" = "xyes"; then
-        HAVE_BAD_WILDCARD=true
-fi
-AM_CONDITIONAL(HAVE_BAD_WILDCARD, [test "x$HAVE_BAD_WILDCARD" = "xtrue"])
-AC_SUBST(HAVE_BAD_WILDCARD)
-
-dnl Check for support of honor_cipher_order SSL option (ERTS >= 6.0)
-AC_MSG_CHECKING([for support of honor_cipher_order SSL option])
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [6.0],
-    [ssl_honor_cipher_order="yes"],
-    [ssl_honor_cipher_order="no"])
-AC_MSG_RESULT([${ssl_honor_cipher_order}])
-
-HAVE_SSL_HONOR_CIPHER_ORDER=false
-if test "x${ssl_honor_cipher_order}" = "xyes"; then
-        HAVE_SSL_HONOR_CIPHER_ORDER=true
-fi
-AM_CONDITIONAL(HAVE_SSL_HONOR_CIPHER_ORDER, [test "x$HAVE_SSL_HONOR_CIPHER_ORDER" = "xtrue"])
-AC_SUBST(HAVE_SSL_HONOR_CIPHER_ORDER)
-
-dnl Check for support of client_renegotiation SSL option (ERTS >= 7.0)
-AC_MSG_CHECKING([for support of client_renegotiation SSL option])
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [7.0],
-    [ssl_client_renegotiation="yes"],
-    [ssl_client_renegotiation="no"])
-AC_MSG_RESULT([${ssl_client_renegotiation}])
-
-HAVE_SSL_CLIENT_RENEGOTIATION=false
-if test "x${ssl_client_renegotiation}" = "xyes"; then
-        HAVE_SSL_CLIENT_RENEGOTIATION=true
-fi
-AM_CONDITIONAL(HAVE_SSL_CLIENT_RENEGOTIATION, [test "x$HAVE_SSL_CLIENT_RENEGOTIATION" = "xtrue"])
-AC_SUBST(HAVE_SSL_CLIENT_RENEGOTIATION)
-
-dnl Check for support of log_alert SSL option (ERTS >= 5.10.3)
-AC_MSG_CHECKING([for support of log_alert SSL option])
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [5.10.3],
-    [ssl_log_alert="yes"],
-    [ssl_log_alert="no"])
-AC_MSG_RESULT([${ssl_log_alert}])
-
-HAVE_SSL_LOG_ALERT=false
-if test "x${ssl_log_alert}" = "xyes"; then
-        HAVE_SSL_LOG_ALERT=true
-fi
-AM_CONDITIONAL(HAVE_SSL_LOG_ALERT, [test "x$HAVE_SSL_LOG_ALERT" = "xtrue"])
-AC_SUBST(HAVE_SSL_LOG_ALERT)
-
-dnl Check for support of SNI on the server side (ERTS >= 7.0)
-AC_MSG_CHECKING([for support of SSL SNI option])
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [7.0],
-    [ssl_sni="yes"],
-    [ssl_sni="no"])
-AC_MSG_RESULT([${ssl_sni}])
-
-HAVE_SSL_SNI=false
-if test "x${ssl_sni}" = "xyes"; then
-        HAVE_SSL_SNI=true
-fi
-AM_CONDITIONAL(HAVE_SSL_SNI, [test "x$HAVE_SSL_SNI" = "xtrue"])
-AC_SUBST(HAVE_SSL_SNI)
-
 dnl Determine directories for installation.
 if test "x${prefix}" != "xNONE" -a "x${ERLANG_INSTALL_LIB_DIR}" = "x"; then
         dnl Under $prefix
@@ -292,8 +208,6 @@ AC_ERLANG_SUBST_INSTALL_LIB_SUBDIR(AC_PACKAGE_NAME, ${YAWS_VSN})
 . ${srcdir}/applications/yapp/vsn.mk
 AC_SUBST(YAPP_VSN)
 AC_ERLANG_SUBST_INSTALL_LIB_SUBDIR(yapp, ${YAPP_VSN})
-
-
 
 
 dnl ------------------------------------------------------------------
@@ -374,10 +288,8 @@ AM_CONDITIONAL(WINDOWS, [test "x$MINGW" = "xtrue" -o "x$CYGWIN" = "xtrue"])
 
 dnl check sendfile support:
 dnl   - HAVE_SENDFILE: say if sendfile syscall is supported
-dnl   - HAVE_ERLANG_SENDFILE: say if file:sendfile/5 exists
 
 HAVE_SENDFILE=false
-HAVE_ERLANG_SENDFILE=false
 
 dnl Disabled because the yaws driver is not compiled for windows
 if test "$WINDOWS" = true; then
@@ -388,59 +300,8 @@ else
         AC_CHECK_LIB([c],[sendfile],[HAVE_SENDFILE=true])
 fi
 
-
-AC_MSG_CHECKING([for file:sendfile/5])
-file_sendfile=`"${ERL}" -noshell -eval 'code:ensure_loaded(file), io:format("~p~n",[[erlang:function_exported(file,sendfile,5)]]), erlang:halt().' | tail -1`
-if test "$file_sendfile" = true; then
-        AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [5.9.1],
-            [AC_MSG_RESULT([yes])
-             HAVE_ERLANG_SENDFILE=true],
-            [AC_MSG_RESULT([no])])
-else
-        AC_MSG_RESULT([no])
-fi
 AM_CONDITIONAL(HAVE_SENDFILE, [test "x$HAVE_SENDFILE" = "xtrue"])
-AM_CONDITIONAL(HAVE_ERLANG_SENDFILE, [test "x$HAVE_ERLANG_SENDFILE" = "xtrue"])
 AC_SUBST(HAVE_SENDFILE)
-AC_SUBST(HAVE_ERLANG_SENDFILE)
-
-AC_MSG_CHECKING([for crypto:hash/2])
-HAVE_CRYPTO_HASH=false
-crypto_hash=`"${ERL}" -noshell -eval 'code:ensure_loaded(crypto), io:format("~p~n",[[erlang:function_exported(crypto,hash,2)]]), erlang:halt().' | tail -1`
-if test "$crypto_hash" = true; then
-        HAVE_CRYPTO_HASH=true
-        AC_MSG_RESULT([yes])
-else
-        AC_MSG_RESULT([no])
-fi
-AM_CONDITIONAL(HAVE_CRYPTO_HASH, [test "x$HAVE_CRYPTO_HASH" = "xtrue"])
-AC_SUBST(HAVE_CRYPTO_HASH)
-
-AC_MSG_CHECKING([for inet:parse_strict_address/1])
-HAVE_INET_PARSE_STRICT_ADDRESS=false
-inet_parse_strict_address=`"${ERL}" -noshell -eval 'code:ensure_loaded(inet), io:format("~p~n",[[erlang:function_exported(inet, parse_strict_address,1)]]), erlang:halt().' | tail -1`
-if test "$inet_parse_strict_address" = true; then
-        HAVE_INET_PARSE_STRICT_ADDRESS=true
-        AC_MSG_RESULT([yes])
-else
-        AC_MSG_RESULT([no])
-fi
-AM_CONDITIONAL(HAVE_INET_PARSE_STRICT_ADDRESS, [test "x$INET_PARSE_STRICT_ADDRESS" = "xtrue"])
-AC_SUBST(HAVE_INET_PARSE_STRICT_ADDRESS)
-
-dnl erlang:now/0 is deprecated in erts 7.0 and newer
-AC_MSG_CHECKING([for erlang:now/0])
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [lt], [7.0],
-    [have_erlang_now="yes"],
-    [have_erlang_now="no"])
-AC_MSG_RESULT([${have_erlang_now}])
-
-HAVE_ERLANG_NOW=false
-if test "x${have_erlang_now}" = "xyes"; then
-        HAVE_ERLANG_NOW=true
-fi
-AM_CONDITIONAL(HAVE_ERLANG_NOW, [test "x$HAVE_ERLANG_NOW" = "xtrue"])
-AC_SUBST(HAVE_ERLANG_NOW)
 
 dnl ------------------------------------------------------------------
 dnl Check for programs used during Yaws compilation/installation

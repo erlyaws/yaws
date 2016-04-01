@@ -26,7 +26,10 @@ start_link() ->
     SconfList = [{docroot, Docroot}],
 
     %% load yaws application (required by yaws_api:embedded_start_conf)
-    ok = application:unload(yaws),
+    case lists:keymember(yaws, 1, application:which_applications()) of
+        true  -> ok = application:unload(yaws);
+        false -> ok
+    end,
     ok = application:load(
            {application, yaws,
             [{description, "yaws WWW server"},
@@ -55,9 +58,8 @@ get_processes() ->
                  false -> element(2, lists:keyfind(initial_call, 1, Data));
                  {Module, Function, Args} -> {Module, Function, length(Args)}
              end,
-         CurFun = element(2, lists:keyfind(current_function, 1, Data)),
-         {X, InitCall, CurFun}
+         {X, InitCall}
      end
      || X <- processes(),
-        Data <- [process_info(X, [current_function, initial_call, registered_name])],
+        Data <- [process_info(X, [initial_call])],
         Data =/= undefined].

@@ -241,6 +241,7 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
 
     runmod(RunMod, GC),
     yaws_config:compile_and_load_src_dir(GC),
+    yaws_dynopts:generate(GC),
     yaws_log:setup(GC, Sconfs),
     yaws_trace:setup(GC),
     L2 = lists:zf(fun(Group) -> start_group(GC, Group) end,
@@ -990,19 +991,20 @@ ssl_listen_opts(#sconf{ssl=SSL}) ->
             true ->
                  false
          end,
-         if SSL#ssl.client_renegotiation /= undefined andalso
-            ?SSL_CLIENT_RENEGOTIATION == true ->
-                {client_renegotiation, SSL#ssl.client_renegotiation};
+         if SSL#ssl.client_renegotiation /= undefined ->
+                 {client_renegotiation, SSL#ssl.client_renegotiation};
             true ->
                  false
          end,
-         if SSL#ssl.honor_cipher_order /= undefined andalso
-            ?HONOR_CIPHER_ORDER == true ->
+         if SSL#ssl.honor_cipher_order /= undefined ->
                  {honor_cipher_order, SSL#ssl.honor_cipher_order};
             true ->
                  false
          end,
-         ?SSL_LOG_ALERT
+         case yaws_dynopts:have_ssl_log_alert() of
+             true  -> {log_alert, false};
+             false -> false
+         end
         ],
     [X || X <- L, X /= false].
 
@@ -4072,15 +4074,7 @@ send_file_range(CliSock, Fd, 0) ->
 crnl() ->
     "\r\n".
 
--ifdef(HAVE_ERLANG_NOW).
-now_secs() ->
-    {M,S,_}=now(),
-    (M*1000000)+S.
--else.
-now_secs() ->
-    {M,S,_} = erlang:timestamp(),
-    (M*1000000)+S.
--endif.
+now_secs() -> yaws_dynopts:now_secs().
 
 %% a file cache,
 url_type(GetPath, ArgDocroot, VirtualDir) ->

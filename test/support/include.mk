@@ -16,7 +16,7 @@ DEPS =  $(top_builddir)/test/src/tftest.beam		\
 	$(top_builddir)/ebin/yaws.beam
 
 
-ifeq ($(HAVE_ERLANG_SENDFILE),true)
+ifeq ($(HAVE_SENDFILE),true)
   DEPS += $(top_builddir)/priv/lib/yaws_sendfile_drv.so
 endif
 

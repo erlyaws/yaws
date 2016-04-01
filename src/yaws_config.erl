@@ -15,12 +15,6 @@
 
 -include_lib("kernel/include/file.hrl").
 
--ifndef(HAVE_BAD_WILDCARD).
--define(WILDCARD_SUPPORTED, true).
--else.
--define(WILDCARD_SUPPORTED, false).
--endif.
-
 -define(NEXTLINE, io_get_line(FD, '', [])).
 
 -export([load/1,
@@ -1181,7 +1175,7 @@ fload(FD, GC, Cs, Lno, Chars) ->
                     fload(FD, GC#gconf{sni=disable}, Cs, Lno+1, ?NEXTLINE);
 
                 Sni == "enable" orelse Sni == "strict" ->
-                    case ?SSL_SNI of
+                    case yaws_dynopts:have_ssl_sni() of
                         true ->
                             fload(FD, GC#gconf{sni=list_to_atom(Sni)}, Cs, Lno+1,
                                   ?NEXTLINE);
@@ -1981,8 +1975,7 @@ fload(FD, ssl, GC, C, Lno, Chars) ->
             end;
 
         ["client_renegotiation", '=', Bool] ->
-            %% below, ignore dialyzer warning:
-            case ?SSL_CLIENT_RENEGOTIATION of
+            case yaws_dynopts:have_ssl_client_renegotiation() of
                 true ->
                     case is_bool(Bool) of
                         {true, Val} ->
@@ -1999,8 +1992,7 @@ fload(FD, ssl, GC, C, Lno, Chars) ->
             end;
 
         ["honor_cipher_order", '=', Bool] ->
-            %% below, ignore dialyzer warning:
-            case ?HONOR_CIPHER_ORDER of
+            case yaws_dynopts:have_ssl_honor_cipher_order() of
                 true ->
                     case is_bool(Bool) of
                         {true, Val} ->
@@ -3306,16 +3298,15 @@ subconfigfiles(FD, Name, Lno) ->
         {true,_} ->
             {ok, [File]};
         {false,true} ->
-            %% below, ignore dialyzer warning:
-            case ?WILDCARD_SUPPORTED of
+            case yaws_dynopts:have_bad_wildcard() of
                 true ->
+                    {error, ?F("Unsupport wildcard at line ~w"
+                               " [support by releases >= R16A ]",[Lno])};
+                false ->
                     Names = filelib:wildcard(Name, ConfPath),
                     Files = [filename:absname(N, ConfPath)
                              || N <- lists:sort(Names)],
-                    {ok, lists:filter(fun filter_subconfigfile/1, Files)};
-                false ->
-                    {error, ?F("Unsupport wildcard at line ~w"
-                               " [support by releases >= R16A ]",[Lno])}
+                    {ok, lists:filter(fun filter_subconfigfile/1, Files)}
             end;
         {false,false} ->
             {error, ?F("Expect filename or wildcard at line ~w"

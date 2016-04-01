@@ -392,18 +392,16 @@ ssl_cachetimeout        (S, Timeout) -> S#ssl{cachetimeout         = Timeout}.
 ssl_secure_renegotiate  (S, Bool)    -> S#ssl{secure_renegotiate   = Bool}.
 ssl_protocol_version    (S, Vsns)    -> S#ssl{protocol_version     = Vsns}.
 ssl_require_sni         (S, Bool)    -> S#ssl{require_sni          = Bool}.
-
--ifdef(HAVE_SSL_HONOR_CIPHER_ORDER).
-ssl_honor_cipher_order  (S, Bool)    -> S#ssl{honor_cipher_order   = Bool}.
--else.
-ssl_honor_cipher_order  (S, _)       -> S.
--endif.
-
--ifdef(HAVE_SSL_CLIENT_RENEGOTIATION).
-ssl_client_renegotiation(S, Bool)    -> S#ssl{client_renegotiation = Bool}.
--else.
-ssl_client_renegotiation(S, _)       -> S.
--endif.
+ssl_honor_cipher_order  (S, Bool) ->
+    case yaws_dynopts:have_ssl_honor_cipher_order() of
+        true  -> S#ssl{honor_cipher_order   = Bool};
+        false -> S
+    end.
+ssl_client_renegotiation(S, Bool) ->
+    case yaws_dynopts:have_ssl_client_renegotiation() of
+        true  -> S#ssl{client_renegotiation = Bool};
+        false -> S
+    end.
 
 setup_ssl(SL, DefaultSSL) ->
     case lkup(ssl, SL, undefined) of
@@ -1087,23 +1085,10 @@ join_sep([H|T], Sep) ->
     H ++ lists:append([Sep ++ X || X <- T]).
 
 %% Provide a unique 3-tuple of positive integers.
--ifdef(HAVE_ERLANG_NOW).
-unique_triple() -> now().
--else.
-unique_triple() ->
-    {erlang:unique_integer([positive]),
-     erlang:unique_integer([positive]),
-     erlang:unique_integer([positive])}.
--endif.
+unique_triple() -> yaws_dynopts:unique_triple().
 
 %% Get a current time 3-tuple.
--ifdef(HAVE_ERLANG_NOW).
-get_time_tuple() ->
-    now().
--else.
-get_time_tuple() ->
-    erlang:timestamp().
--endif.
+get_time_tuple() -> yaws_dynopts:get_time_tuple().
 
 %% header parsing
 parse_qval(S) ->
@@ -2118,32 +2103,15 @@ parse_ipaddr_and_connect(Proto, Host, Port, Options, Timeout) ->
     %% First, try to parse an IP address, because inet:getaddr/2 could
     %% return nxdomain if the family doesn't match the IP address
     %% format.
-    case parse_strict_address(Host) of
+    case yaws_dynopts:parse_strict_address(Host) of
         {ok, IP} ->
             filter_tcpoptions_and_connect(Proto, undefined,
-              IP, Port, Options, Timeout);
+                                          IP, Port, Options, Timeout);
         {error, einval} ->
             NsLookupPref = get_nslookup_pref(Options),
             filter_tcpoptions_and_connect(Proto, NsLookupPref,
-              Host, Port, Options, Timeout)
+                                          Host, Port, Options, Timeout)
     end.
-
--ifdef(HAVE_INET_PARSE_STRICT_ADDRESS).
-
-parse_strict_address(Host) ->
-    inet:parse_strict_address(Host).
-
--else.
-
-parse_strict_address(Host) when is_list(Host) ->
-    case inet_parse:ipv4strict_address(Host) of
-        {ok,IP} -> {ok,IP};
-        _       -> inet_parse:ipv6strict_address(Host)
-    end;
-parse_strict_address(_) ->
-    {error, einval}.
-
--endif.
 
 filter_tcpoptions_and_connect(Proto, NsLookupPref,
   Host, Port, Options, Timeout) ->

@@ -12,15 +12,12 @@ ERL_FLAGS  = $(ERL_GENERIC_FLAGS)
 include @top_srcdir@/erlang_deps.mk
 include @top_srcdir@/test/support/include.mk
 
-SNI_GOOD_TESTS = sni_disabled
-SNI_BAD_TESTS  = sni_not_enabled
+HAVE_SSL_SNI := $(shell $(ERL) +B -noshell -pa $(top_builddir)/ebin -eval 'io:format("~p~n", [yaws_dynopts:have_ssl_sni()])' -s init stop)
 
-if HAVE_SSL_SNI
-SNI_GOOD_TESTS += sni_enabled sni_strict sni_required_on_vhost
-SNI_BAD_TESTS  += sni_without_tls
-else
-SNI_BAD_TESTS  += sni_not_available
-endif
+SNI_GOOD_TESTS  = sni_disabled
+SNI_GOOD_TESTS += $(if $(filter $(HAVE_SSL_SNI),true), sni_enabled sni_strict sni_required_on_vhost)
+SNI_BAD_TESTS   = sni_not_enabled
+SNI_BAD_TESTS  += $(if $(filter $(HAVE_SSL_SNI),true),sni_without_tls,sni_not_available)
 
 gen_rule = $1: YAWS_CONF=yaws_$1.conf
 
@@ -33,7 +30,7 @@ clean-local: clean-test
 	$(AM_V_at)rm -f $(EBIN_FILES)
 log:
 	@echo
-	@echo " ==== SSL SNI TESTS ==== "
+	@echo " ==== SSL SNI TESTS (SNI support: $(HAVE_SSL_SNI)) ==== "
 	@echo
 
 $(SNI_GOOD_TESTS): quiet-stop prepare-test

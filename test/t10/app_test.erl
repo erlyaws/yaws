@@ -24,12 +24,6 @@
 -define(WS_STATUS_MSG_TOO_BIG,      1009).
 -define(WS_STATUS_INTERNAL_ERROR,   1011).
 
--ifdef(HAVE_CRYPTO_HASH).
--define(CRYPTO_HASH(V), crypto:hash(sha,V)).
--else.
--define(CRYPTO_HASH(V), crypto:sha(V)).
--endif.
-
 %% Way to invoke just one test
 start([F]) ->
     apply(app_test, F, []),
@@ -976,12 +970,6 @@ test_advanced_unfragmented_valid_utf8_text(BlockSz) ->
     do_test_unfragmented_valid_utf8("/websockets_autobahn_endpoint.yaws",
                                     BlockSz).
 
--ifdef(HAVE_BAD_UNICODE).
--define(BAD_UNICODE, true).
--else.
--define(BAD_UNICODE, false).
--endif.
-
 do_test_unfragmented_valid_utf8(WSPath, BlockSz) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
 
@@ -1011,7 +999,7 @@ do_test_unfragmented_valid_utf8(WSPath, BlockSz) ->
     Fun(<<16#7f>>),
     Fun(<<16#df,16#bf>>),
 
-    case ?BAD_UNICODE of
+    case yaws_dynopts:have_bad_unicode() of
         true  -> ok;
         false -> Fun(<<16#ef,16#bf,16#bf>>)
     end,
@@ -1756,7 +1744,7 @@ wsflush(Sock, WithTcpClose, Acc) ->
 %% ----
 is_valid_handshake_hash(Key, Hash) ->
     Salted = Key ++ "258EAFA5-E914-47DA-95CA-C5AB0DC85B11",
-    HashBin = ?CRYPTO_HASH(Salted),
+    HashBin = yaws_dynopts:hash(Salted),
     Hash == base64:encode_to_string(HashBin).
 
 
