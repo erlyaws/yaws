@@ -378,7 +378,7 @@ such clients, virtual servers are selected as if Yaws did not have SNI
 support. If it is set to \fIstrict\fR, SNI hostname is mandatary to access a SSL
 virtual server. But, in all cases, when SNI support is enabled, if a client
 provides a SNI hostname, it \fBmust\fR match the HTTP Host header (which is
-mandatory too).  Note that the first virutal server (the default one) will be
+mandatory too).  Note that the first virtual server (the default one) will be
 used for any request where the provided SNI hostname doesn't match any of
 virtual server names. So, it is important that the first virtual server have the
 most restrictive access control, otherwise clients can access restricted
@@ -1230,7 +1230,7 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
 .RS 12
 If \fItrue\fR,the server will reject non SNI clients and clients providing an
 unknown SNI hostname (this last remark is only relevant for the first virtual
-server of a SSL group). This directive is ignored is SNI support is disabled (or
+server of a SSL group). This directive is ignored if SNI support is disabled (or
 not supported).
 
 Default is \fIfalse\fR.

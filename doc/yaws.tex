@@ -1058,7 +1058,7 @@ from one of the many CA's (Certificate Authorities) on the net. \Yaws\
 uses the SSL application provided by Erlang/OTP and depends on features
 supported by it. So, from an Erlang/OTP release to another, some SSL
 options may change, others may appear or disappear. Check the
-documentation of your Erlang/OTP releas for details.
+documentation of your Erlang/OTP release for details.
 
 To setup a \Yaws\ server with SSL we could have a \textit{yaws.conf}
 file that looks like:
@@ -2606,7 +2606,7 @@ part where options for each virtual host is supplied.
               SNI hostname is mandatary to access a SSL virtual server. But, in
               all cases, when SNI support is enabled, if a client provides a SNI
               hostname, it \textbf{must} match the HTTP Host header (which is
-              mandatory too). Note that the first virutal server (the default
+              mandatory too). Note that the first virtual server (the default
               one) will be used for any request where the provided SNI hostname
               doesn't match any of virtual server names. So, it is important
               that the first virtual server have the most restrictive access
@@ -3403,7 +3403,7 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
                    If \textit{true}, the server will reject non SNI clients and
                    clients providing an unknown SNI hostname (this last remark
                    is only relevant for the first virtual server of a SSL
-                   group). This directive is ignored is SNI support is disabled
+                   group). This directive is ignored if SNI support is disabled
                    (or not supported).
                    Default is \textit{false}.
                \end{itemize}
