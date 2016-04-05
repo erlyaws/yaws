@@ -232,7 +232,9 @@ int main(int argc, char**argv) {
     else
         sprintf(tbuf, " -conf \"%s\" ", conf);
     strcat(execString, tbuf);
-    strcat(execString, " -run yaws -yaws id default ");
+
+    sprintf(tbuf, " -run yaws -yaws id %s ", id);
+    strcat(execString, tbuf);
 
     if (mnesia != NULL)
         strcat(execString, mnesia);
