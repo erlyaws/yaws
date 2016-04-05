@@ -1053,15 +1053,15 @@ session_server() ->
     end.
 
 session_manager_init() ->
-    session_manager([], now(), read_config()).
+    session_manager([], yaws:get_time_tuple(), read_config()).
 
 session_manager(C0, LastGC0, Cfg) ->
     %% Check GC first to avoid GC starvation.
-    GCDiff = diff(LastGC0,now()),
+    GCDiff = diff(LastGC0,yaws:get_time_tuple()),
     {LastGC, C} =
         if GCDiff > 5000 ->
                 C2 = session_manager_gc(C0, Cfg),
-                {now(), C2};
+                {yaws:get_time_tuple(), C2};
            true ->
                 {LastGC0, C0}
         end,
@@ -1079,13 +1079,13 @@ session_manager(C0, LastGC0, Cfg) ->
             Cookie = integer_to_list(bin2int(crypto:rand_bytes(16))),
             From ! {session_manager, Cookie},
             session_manager([{Cookie, Session#session{cookie=Cookie},
-                              now()}|C], LastGC, Cfg);
+                              yaws:get_time_tuple()}|C], LastGC, Cfg);
         {tick_session, Cookie} ->
             case lists:keysearch(Cookie, 1, C) of
                 {value, {Cookie,Session,_}} ->
                     session_manager(
                       lists:keyreplace(Cookie,1,C,
-                                       {Cookie,Session,now()}), LastGC, Cfg);
+                                       {Cookie,Session,yaws:get_time_tuple()}), LastGC, Cfg);
                 false ->
                     session_manager(C, LastGC, Cfg)
             end;
@@ -1101,7 +1101,7 @@ session_manager(C0, LastGC0, Cfg) ->
                     S2 = Session#session{listing=Listing},
                     From ! {session_manager, listing_added},
                     session_manager(lists:keyreplace(
-                                      Cookie, 1, C, {Cookie, S2, now()}),
+                                      Cookie, 1, C, {Cookie, S2, yaws:get_time_tuple()}),
                                     LastGC, Cfg);
                 false ->
                     io:format("Error, no session found! ~p\n", [Cookie]),
@@ -1114,7 +1114,7 @@ session_manager(C0, LastGC0, Cfg) ->
                     S2 = Session#session{sorting=Sorting},
                     From ! {session_manager, sorting_added},
                     session_manager(lists:keyreplace(
-                                      Cookie, 1, C, {Cookie, S2, now()}),
+                                      Cookie, 1, C, {Cookie, S2, yaws:get_time_tuple()}),
                                     LastGC, Cfg);
                 false ->
                     io:format("Error, no session found! ~p\n", [Cookie]),
@@ -1130,7 +1130,7 @@ session_manager(C0, LastGC0, Cfg) ->
                     S2 = Session#session{attachments = [A|As]},
                     session_manager(lists:keyreplace(
                                       Cookie,1,C,
-                                      {Cookie,S2,now()}), LastGC, Cfg);
+                                      {Cookie,S2,yaws:get_time_tuple()}), LastGC, Cfg);
                 false ->
                     session_manager(C, LastGC, Cfg)
             end;
@@ -1152,7 +1152,7 @@ session_manager(C0, LastGC0, Cfg) ->
         5000 ->
             %% garbage collect sessions
             C3 = session_manager_gc(C, Cfg),
-            session_manager(C3, now(), Cfg)
+            session_manager(C3, yaws:get_time_tuple(), Cfg)
     end.
 
 add_att(Fname, Ctype, Data, Atts) ->
@@ -1175,7 +1175,7 @@ add_att(Fname, Ctype, Data, Atts) ->
 
 session_manager_gc(C, Cfg) ->
     lists:zf(fun(Entry={_Cookie,_Session,Time}) ->
-                     Diff = diff(Time,now()),
+                     Diff = diff(Time,yaws:get_time_tuple()),
                      TTL = Cfg#cfg.ttl,
                      if Diff > TTL ->
                              false;

@@ -197,7 +197,7 @@ bin2int(Bin) ->
 cancel_read([], _Pid) ->
     [];
 cancel_read([U|Us], Pid) when U#user.pid == Pid ->
-    Now = inow(now()),
+    Now = inow(yaws:get_time_tuple()),
     [U#user{pid=undefined,last_read=Now}|Us];
 cancel_read([U|Us], Pid) ->
     [U|cancel_read(Us, Pid)].
@@ -224,7 +224,7 @@ user_read([U|Users], User, Pid, All) ->
 %%
 
 send_to_all(Type, Msg, Users) ->
-    Now = inow(now()),
+    Now = inow(yaws:get_time_tuple()),
     F = fun(U) ->
                 if U#user.pid /= undefined ->
                         %% io:format("Sending ~p to ~p\n", [Msg, U#user.user]),
@@ -239,7 +239,7 @@ send_to_all(Type, Msg, Users) ->
 %%
 
 send_to_one(Type, Msg, Users, User) ->
-    Now = inow(now()),
+    Now = inow(yaws:get_time_tuple()),
     F = fun(U) when U#user.cookie == User#user.cookie  ->
                 if U#user.pid /= undefined ->
                         %% io:format("Sending ~p to ~p\n", [Msg, U#user.user]),
@@ -257,7 +257,7 @@ send_to_one(Type, Msg, Users, User) ->
 
 
 gc_users(Users) ->
-    Now = inow(now()),
+    Now = inow(yaws:get_time_tuple()),
     gc_users(Users, Now).
 
 gc_users([], _Now) ->
