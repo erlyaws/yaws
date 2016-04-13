@@ -71,6 +71,7 @@ yaws_logs/
 .eunit/*
 .rebar/*
 .idea
+_build/*
 yaws-*.tar.gz
 compile_commands.json
 applications/yapp/doc/edoc-info
