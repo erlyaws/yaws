@@ -507,16 +507,8 @@ gserv(Top, GC, Group0) ->
     ?TC([{record, GC, gconf}]),
     put(gc, GC),
     put(top, Top),
-    Group1 = map(fun(SC) -> setup_ets(SC)
-                 end, Group0),
-    Group = map(fun(SC) ->
-                        case ?sc_has_statistics(SC) of
-                            true ->
-                                start_stats(SC);
-                            false ->
-                                SC
-                        end
-                end, Group1),
+    Group1 = map(fun(SC) -> setup_ets(SC) end, Group0),
+    Group = map(fun(SC) -> start_stats(SC) end, Group1),
     SC = hd(Group),
     case do_listen(GC, SC) of
         {SSLBOOL, CertInfo, {ok, Listen}} ->
@@ -588,9 +580,25 @@ clear_ets_complete(SC) ->
 
 
 start_stats(SC) ->
-    {ok, Pid} = yaws_stats:start_link(),
-    SC#sconf{stats = Pid}.
+    case ?sc_has_statistics(SC) of
+        true ->
+            {ok, Pid} = yaws_stats:start_link(),
+            SC#sconf{stats = Pid};
+        false ->
+            SC
+    end.
 
+stop_stats(SC) ->
+    case SC#sconf.stats of
+        undefined ->
+            SC;
+        Pid when is_pid(Pid) ->
+            %% Unlink the stats process before stopping it to be sure to not
+            %% receive the {'EXIT..} message in gserv_loop.
+            unlink(Pid),
+            yaws_stats:stop(Pid),
+            SC#sconf{stats = undefined}
+    end.
 
 gserv_loop(GS, Ready, Rnum, Last) ->
     receive
@@ -681,11 +689,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             end,
 
             %% Stop yaws_stats processes, if needed
-            foreach(fun(#sconf{stats=Pid}) when is_pid(Pid) ->
-                            yaws_stats:stop(Pid);
-                       (_) ->
-                            ok
-                    end, GS#gs.group),
+            foreach(fun(SC) -> stop_stats(SC) end, GS#gs.group),
 
             %% Close softly all opened connections
             {links, Ls1} = process_info(self(), links),
@@ -724,20 +728,8 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                                            [OldSc, GS#gs.group]),
                     erlang:error(nosc);
                 true ->
-                    Pid = OldSc#sconf.stats,
-                    error_logger:info_msg("update_sconf: Stats pid ~p~n",[Pid]),
-                    case Pid of
-                        undefined ->
-                            ok;
-                        Pid when is_pid(Pid) ->
-                            yaws_stats:stop(Pid)
-                    end,
-                    NewSc1 = case ?sc_has_statistics(NewSc) of
-                                 true ->
-                                     start_stats(NewSc);
-                                 false ->
-                                     NewSc
-                             end,
+                    stop_stats(OldSc),
+                    NewSc1 = start_stats(NewSc),
                     stop_ready(Ready, Last),
                     NewSc2 = clear_ets_complete(NewSc1),
                     GS2 = GS#gs{group = yaws:insert_at(
@@ -759,18 +751,10 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     error_logger:error_msg("gserv: No found SC ~n",[]),
                     erlang:error(nosc);
                 true ->
-                    Pid = OldSc#sconf.stats,
                     stop_ready(Ready, Last),
                     GS2 = GS#gs{group =  lists:delete(OldSc,GS#gs.group)},
                     Ready2 = [],
-                    case ?sc_has_statistics(OldSc) of
-                        true ->
-                            error_logger:info_msg("delete_sconf: Pid= ~p~n",
-                                                  [Pid]),
-                            yaws_stats:stop(Pid);
-                        false ->
-                            ok
-                    end,
+                    stop_stats(OldSc),
                     ets:delete(OldSc#sconf.ets),
                     gen_server:reply(From, ok),
                     error_logger:info_msg("Deleting sconf for server ~s~n",
@@ -780,14 +764,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             end;
 
         {add_sconf, From, Pos, SC0, Adder} ->
-            SC = case ?sc_has_statistics(SC0) of
-                     true ->
-                         {ok, Pid} = yaws_stats:start_link(),
-                         error_logger:info_msg("add_sconf: Pid= ~p~n", [Pid]),
-                         SC0#sconf{stats=Pid};
-                     false ->
-                         SC0
-                 end,
+            SC = start_stats(SC0),
             stop_ready(Ready, Last),
             SC2 = setup_ets(SC),
             GS2 = GS#gs{group =  yaws:insert_at(SC2, Pos, GS#gs.group)},
