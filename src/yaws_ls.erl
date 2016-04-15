@@ -427,7 +427,7 @@ file_entry({ok, FI}, _DirName, Name, Qry, Descriptions) ->
            "  </tr>\n",
            ["/icons/" ++ Gif,
             Alt,
-            yaws_api:url_encode(EncName) ++ QryStr,
+            yaws_api:url_encode(Name) ++ QryStr,
             EncName,
             trim(EncName,?FILE_LEN_SZ),
             datestr(FI),
