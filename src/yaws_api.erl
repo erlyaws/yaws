@@ -792,7 +792,7 @@ url_decode_with_encoding(Path, Encoding) ->
                    latin1 ->
                        DecPath;
                    utf8 ->
-                       case unicode:characters_to_list(list_to_binary(DecPath)) of
+                       case unicode:characters_to_binary(DecPath) of
                            UTF8DecPath when is_list(UTF8DecPath) -> UTF8DecPath;
                            _ -> DecPath
                        end
@@ -878,32 +878,25 @@ url_decode_q_split([], Ack) ->
     {path_norm_reverse(Ack), []}.
 
 
+url_encode(URL) when is_list(URL) ->
+    Bin = unicode:characters_to_binary(URL),
+    %% ReservedChars = "!*'();:@&=+$,/?%#[]",
+    UnreservedChars = sets:from_list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                     "abcdefghijklmnopqrstuvwxyz"
+                                     "0123456789-_.~"),
+    flatten([url_encode_byte(Byte, UnreservedChars) || <<Byte>> <= Bin]).
 
-url_encode([H|T]) when is_list(H) ->
-    [url_encode(H) | url_encode(T)];
-url_encode([H|T]) ->
-    if
-        H >= $a, $z >= H ->
-            [H|url_encode(T)];
-        H >= $A, $Z >= H ->
-            [H|url_encode(T)];
-        H >= $0, $9 >= H ->
-            [H|url_encode(T)];
-        H == $_; H == $.; H == $-; H == $/; H == $: -> % FIXME: more..
-            [H|url_encode(T)];
-        true ->
-            case yaws:integer_to_hex(H) of
-                [X, Y] ->
-                    [$%, X, Y | url_encode(T)];
-                [X] ->
-                    [$%, $0, X | url_encode(T)]
+url_encode_byte($:, _) -> $:;  % FIXME: both : and / should be encoded, but
+url_encode_byte($/, _) -> $/;  % too much code currently assumes they're not
+url_encode_byte(Byte, UnreservedChars) ->
+    case sets:is_element(Byte, UnreservedChars) of
+        true -> Byte;
+        false ->
+            case yaws:integer_to_hex(Byte) of
+                [X, Y] -> [$%, X, Y];
+                [X]    -> [$%, $0, X]
             end
-     end;
-
-url_encode([]) ->
-    [].
-
-
+    end.
 
 redirect(Url) -> [{redirect, Url}].
 
