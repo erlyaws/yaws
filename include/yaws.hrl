@@ -277,7 +277,7 @@
           realm   = "",
           type    = "Basic",
           headers = [],    % headers to send on 401
-          users   = [],    % list of {User, Password} tuples
+          usertab = none,  % ETS table of {User, Password}, or none
           acl     = none,  % list of allowed/denies IPs or none
           mod     = [],    % authentication module callback
           outmod  = [],    % module to handles 401 unauthorized messages

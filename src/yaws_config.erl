@@ -23,6 +23,7 @@
          add_yaws_auth/1,
          add_yaws_soap_srv/1, add_yaws_soap_srv/2,
          load_mime_types_module/2,
+         new_usertab/0,
          compile_and_load_src_dir/1,
          search_sconf/2, search_group/2,
          update_sconf/3, delete_sconf/2,
@@ -127,6 +128,8 @@ setup_auth(#sconf{docroot = Docroot, xtra_docroots = XtraDocroots,
          {D, Authdirs4}
      end || D <- [Docroot|XtraDocroots] ].
 
+new_usertab() ->
+    ets:new(yaws_docroot_auth, [protected]).
 
 load_yaws_auth_from_docroot(_, true) ->
     [];
@@ -267,11 +270,8 @@ parse_yaws_auth_file([{file, File}|T], Auth0) ->
 
 parse_yaws_auth_file([{User, Password}|T], Auth0)
   when is_list(User), is_list(Password) ->
-    Users = case lists:member({User,Password}, Auth0#auth.users) of
-                true  -> Auth0#auth.users;
-                false -> [{User, Password} | Auth0#auth.users]
-            end,
-    parse_yaws_auth_file(T, Auth0#auth{users = Users});
+    Auth1 = store_user_and_password(Auth0, {User, Password}),
+    parse_yaws_auth_file(T, Auth1);
 
 parse_yaws_auth_file([{allow, all}|T], Auth0) ->
     Auth1 = case Auth0#auth.acl of
@@ -322,6 +322,13 @@ parse_yaws_auth_file([{order, O}|T], Auth0)
     parse_yaws_auth_file(T, Auth1).
 
 
+store_user_and_password(Auth = #auth{usertab = none}, UandP) ->
+    Tab = new_usertab(),
+    store_user_and_password(Auth#auth{usertab = Tab}, UandP);
+
+store_user_and_password(Auth = #auth{usertab = Tab}, UandP) ->
+    ets:insert(Tab, UandP),
+    Auth.
 
 %% Create mime_types.erl, compile it and load it. If everything is ok,
 %% reload groups.
@@ -2088,7 +2095,7 @@ fload(FD, server_auth, GC, C, Lno, Chars) ->
         ["user", '=', User] ->
             case (catch string:tokens(User, ":")) of
                 [Name, Passwd] ->
-                    Auth1 = Auth#auth{users = [{Name, Passwd}|Auth#auth.users]},
+                    Auth1 = store_user_and_password(Auth, {Name, Passwd}),
                     C1 = C#sconf{authdirs=[Auth1|AuthDirs]},
                     fload(FD, server_auth, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
@@ -2162,10 +2169,10 @@ fload(FD, server_auth, GC, C, Lno, Chars) ->
 
         ['<', "/auth", '>'] ->
             Pam = Auth#auth.pam,
-            Users = Auth#auth.users,
+            Usertab = Auth#auth.usertab,
             Realm = Auth#auth.realm,
-            Auth1 =  case {Pam, Users} of
-                         {false, []} ->
+            Auth1 =  case {Pam, Usertab} of
+                         {false, none} ->
                              Auth;
                          _ ->
                              H = Auth#auth.headers ++

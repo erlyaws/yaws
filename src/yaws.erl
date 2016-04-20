@@ -52,7 +52,7 @@
          auth_realm/1, auth_realm/2,
          auth_type/1, auth_type/2,
          auth_headers/1, auth_headers/2,
-         auth_users/1, auth_users/2,
+         auth_usertab/1, auth_usertab/2,
          auth_acl/1, auth_acl/2,
          auth_mod/1, auth_mod/2,
          auth_outmod/1, auth_outmod/2,
@@ -318,7 +318,7 @@ auth_files  (#auth{files   = X}) -> X.
 auth_realm  (#auth{realm   = X}) -> X.
 auth_type   (#auth{type    = X}) -> X.
 auth_headers(#auth{headers = X}) -> X.
-auth_users  (#auth{users   = X}) -> X.
+auth_usertab(#auth{usertab = X}) -> X.
 auth_acl    (#auth{acl     = X}) -> X.
 auth_mod    (#auth{mod     = X}) -> X.
 auth_outmod (#auth{outmod  = X}) -> X.
@@ -330,7 +330,7 @@ auth_files  (A, Files)   -> A#auth{files   = Files}.
 auth_realm  (A, Realm)   -> A#auth{realm   = Realm}.
 auth_type   (A, Type)    -> A#auth{type    = Type}.
 auth_headers(A, Headers) -> A#auth{headers = Headers}.
-auth_users  (A, Users)   -> A#auth{users   = Users}.
+auth_usertab(A, Usertab) -> A#auth{usertab = Usertab}.
 auth_acl    (A, Acl)     -> A#auth{acl     = Acl}.
 auth_mod    (A, Mod)     -> A#auth{mod     = Mod}.
 auth_outmod (A, Outmod)  -> A#auth{outmod  = Outmod}.
@@ -347,18 +347,27 @@ setup_auth(#auth{}=Auth) ->
     Auth;
 setup_auth(AuthProps) ->
     Auth = #auth{},
+    Usertab = possibly_populate_usertab(lkup(users, AuthProps, [])),
+
     #auth{dir     = lkup(dir,     AuthProps, Auth#auth.dir),
           docroot = lkup(docroot, AuthProps, Auth#auth.docroot),
           files   = lkup(files,   AuthProps, Auth#auth.files),
           realm   = lkup(realm,   AuthProps, Auth#auth.realm),
           type    = lkup(type,    AuthProps, Auth#auth.type),
           headers = lkup(headers, AuthProps, Auth#auth.headers),
-          users   = lkup(users,   AuthProps, Auth#auth.users),
+          usertab = Usertab,
           acl     = lkup(acl,     AuthProps, Auth#auth.acl),
           mod     = lkup(mod,     AuthProps, Auth#auth.mod),
           outmod  = lkup(outmod,  AuthProps, Auth#auth.outmod),
           pam     = lkup(pam,     AuthProps, Auth#auth.pam)}.
 
+possibly_populate_usertab([]) ->
+    none;
+possibly_populate_usertab(List) ->
+    Usertab = yaws_config:new_usertab(),
+    F = fun(UP = {_User, _Password}) ->  ets:insert(Usertab, UP) end,
+    lists:foreach(F, List),
+    Usertab.
 
 %% Access functions for the SSL record.
 new_ssl() -> #ssl{}.
