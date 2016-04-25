@@ -18,6 +18,9 @@
 -include_lib("kernel/include/file.hrl").
 -export([list_directory/6, out/1]).
 
+%% Exports for EUNIT.
+-export([trim/2]).
+
 -define(FILE_LEN_SZ, 45).
 
 list_directory(_Arg, CliSock, List, DirName, Req, DoAllZip) ->
@@ -445,8 +448,14 @@ trim(L,N) ->
     trim(L,N,[]).
 trim([_H1,_H2,_H3]=[H|T], 3=I, Acc) ->
     trim(T, I-1, [H|Acc]);
-trim([_H1,_H2,_H3|_T], 3=_I, Acc) ->
+trim([H1,H2,H3|_T], 3=_I, Acc) when H1 < 128, H2 < 128, H3 < 128 ->
     lists:reverse(Acc) ++ "..&gt;";
+trim([H1,H2,H3|_T], 3=_I, [H0|Acc]) ->
+    %% Drop UTF8 continuation bytes: 10xxxxxx
+    Hs0 = lists:dropwhile(fun(Byte) -> Byte bsr 6 == 2#10 end, [H3,H2,H1,H0]),
+    %% Drop UTF8 leading byte: 11xxxxxx
+    Hs = lists:dropwhile(fun(Byte) -> Byte bsr 6 == 2#11 end, Hs0),
+    lists:reverse(Hs++Acc) ++ "..&gt;";
 trim([H|T], I, Acc) ->
     trim(T, I-1, [H|Acc]);
 trim([], _I, Acc) ->
