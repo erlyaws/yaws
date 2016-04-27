@@ -3520,26 +3520,6 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
                 We can obviously have several of these value inside a single
                 <auth> </auth> pair.
 
-                The usage of User:Password in the actual config file is
-                deprecated as of release 1.51. It is preferred to have the users
-                in a file called \verb+.yaws_auth+ in the actual directory. The
-                \verb+.yaws_auth+ file has to be parseable by
-                \verb+file:consult/1+.
-
-                Each row of the file must contain terms in this form:
-
-\begin{verbatim}
-{User, Password}.
-\end{verbatim}
-
-                where both \verb+User+ and \verb+Password+ should be
-                strings.
-
-                The \verb+.yaws_auth+ file mechanism is recursive,so any
-                subdirectories of \verb+Dir+ are also automatically
-                protected. The \verb+.yaws_auth+ file is never visible in a
-                dir listing.
-
               \item \verb+pam service = pam-service+ --- If the item \verb+pam+
                 is part of the auth structure, Yaws will also try to
                 authenticate the user using "pam" using the pam \verb+service+
@@ -3616,6 +3596,37 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
 \end{itemize}
 
 
+\section{Directives included from .yaws\_auth files}
+
+        By default, \Yaws\ searches each directory in the docroot for files
+        named \verb+.yaws_auth+. Each file is parsed by \verb+file:consult/1+.
+        This mechanism can be disabled by setting \verb+auth_skip_docroot+ to
+        \verb+true+ in the \Yaws\ configuration.
+
+        Each row in the \verb+.yaws_auth+ file must contain a term. 
+        The terms correspond to the auth structure in the \Yaws\ config 
+        file. The allowed forms are:
+
+\begin{verbatim}
+{User, Password}.
+{realm, String}.
+{pam, Atom}.
+{authmod, Atom}.
+{file, String}.
+{allow, all|IP_list}.
+{deny, all|IP_list}.
+{order, allow_deny|deny_allow}.
+\end{verbatim}
+
+        where \verb+User+ and \verb+Password+ are strings with double quotes.
+
+        The \verb+.yaws_auth+ file mechanism is recursive, so any
+        subdirectories of \verb+Dir+ are also automatically
+        protected.
+
+        The \verb+.yaws_auth+ file is never visible in a dir
+        listing, but editor backup files such as
+        \verb+.yaws_auth~+ \emph{will} be visible.
 
 
 \section{Configuration Examples}
