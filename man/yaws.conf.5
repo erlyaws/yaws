@@ -1360,22 +1360,6 @@ callback would check if a valid cookie header is present, if not it would return
 Inside this directory, the user User has access if the user supplies the
 password Password in the popup dialogue presented by the browser.  We can
 obviously have several of these value inside a single <auth> </auth> pair.
-
-The usage of User:Password in the actual config file is deprecated as of release
-1.51. It is preferred to have the users in a file called \fI.yaws_auth\fR in the
-actual directory. The .yaws_auth file has to be parseable by \fIfile:consult/1\fR.
-
-Each row of the file must contain terms in this form:
-
-.nf
-    {User, Password}.
-.fi
-
-where both User and Password should be strings.
-
-The .yaws_auth file mechanism is recursive, so any subdirectories of Dir
-are also automatically protected. The .yaws_auth file is never visible in a
-dir listing.
 .RE
 
 .IP
