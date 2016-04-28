@@ -2447,8 +2447,14 @@ parse_auth(Orig = "Basic " ++ Auth64) ->
             {undefined, undefined, Orig};
         Auth ->
             case string:tokens(Auth, ":") of
-                [User, Pass] -> {User, Pass, Orig};
-                _            -> {undefined, undefined, Orig}
+                [User, Pass ] ->
+                    {User, Pass, Orig};
+                [User, Pass0 | Extra] ->
+                    %% password can contain :
+                    Pass = join_sep([Pass0 | Extra], ":"),
+                    {User, Pass, Orig};
+                _ ->
+                    {undefined, undefined, Orig}
             end
     end;
 parse_auth(Orig = "Negotiate " ++ _Auth64) ->
