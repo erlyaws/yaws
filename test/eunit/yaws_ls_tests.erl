@@ -15,3 +15,14 @@ trim_test_() ->
                           [19990,30028,26479,36275,29699,36187],
                           11)),
      ?_assert(trim_helper("xxxxxxxx..&gt;", "xxxxxxxxxxxx", 11))].
+
+parse_query_test_() ->
+    [
+        ?_assertEqual({"/", 1, normal,  "/?z=x"}, yaws_ls:parse_query("/?z=x")),
+        ?_assertEqual({"/", 2, reverse, "/?m=r"}, yaws_ls:parse_query("/?m=r")),
+        ?_assertEqual({"/", 2, reverse, "/?M=r"}, yaws_ls:parse_query("/?M=r")),
+        ?_assertEqual({"/", 3, normal,  "/?s=n"}, yaws_ls:parse_query("/?s=n")),
+        ?_assertEqual({"/", 3, normal,  "/?S=n"}, yaws_ls:parse_query("/?S=n")),
+        ?_assertEqual({"/", 4, reverse, "/?d=r"}, yaws_ls:parse_query("/?d=r")),
+        ?_assertEqual({"/", 4, reverse, "/?D=r"}, yaws_ls:parse_query("/?D=r"))
+    ].

@@ -19,7 +19,7 @@
 -export([list_directory/6, out/1]).
 
 %% Exports for EUNIT.
--export([trim/2]).
+-export([parse_query/1, trim/2]).
 
 -define(FILE_LEN_SZ, 45).
 
@@ -91,10 +91,13 @@ parse_query(Path) ->
     case string:tokens(Path, [$?]) of
         [DirStr, [PosC, $=, DirC] = Q] ->
             Pos = case PosC of
-                      $N -> 1; % name
+                      $m -> 2;
                       $M -> 2; % last modified
+                      $s -> 3;
                       $S -> 3; % size
-                      $D -> 4  % Description
+                      $d -> 4;
+                      $D -> 4; % description
+                      _  -> 1  % name (default)
                   end,
             Dir = case DirC of
                       $r -> reverse;
