@@ -57,10 +57,11 @@ start_link(L) ->
 %%% To be called from yaws_rpc.erl
 %%% Return according to yaws_rpc:eval_payload/6
 handler(Args, Id, Payload, SessionValue) ->
+    {ok, WsdlModel} = gen_server:call(?SERVER, {get_wsdl, Id}, infinity),
     Headers = Args#arg.headers,
     SoapAction = yaws_soap_lib:findHeader("SOAPAction", Headers#headers.other),
-    case gen_server:call(?SERVER, {request, Id, Payload,
-                                   SessionValue, SoapAction}, infinity) of
+    Res = request(WsdlModel, Id, Payload, SessionValue, SoapAction),
+    case Res of
         {ok, XmlDoc, ResCode, undefined} ->
             {false, XmlDoc, ResCode};
         {ok, XmlDoc, ResCode, SessVal} ->
@@ -128,10 +129,8 @@ setup_on_init( {Id, WsdlFile, Prefix}, OldList ) when is_tuple(Id),
 handle_call({add_wsdl, Id, WsdlModel}, _From, State) ->
     NewWsdlList = uinsert({Id, WsdlModel}, State#s.wsdl_list),
     {reply, ok, State#s{wsdl_list = NewWsdlList}};
-%%
-handle_call( {request, Id, Payload, SessionValue, SoapAction}, _From, State) ->
-    Reply = request(State, Id, Payload, SessionValue, SoapAction),
-    {reply, Reply, State}.
+handle_call({get_wsdl, Id}, _From, State) ->
+    {reply, get_model(State, Id), State}.
 
 %%--------------------------------------------------------------------
 %% Function: handle_cast(Msg, State) -> {noreply, State} |
@@ -172,8 +171,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%--------------------------------------------------------------------
 
-request(State, {M,F} = Id, {Req, Attachments}, SessionValue, Action) ->
-    {ok, Model} = get_model(State, Id),
+request(Model, {M,F}, {Req, Attachments}, SessionValue, Action) ->
     %%error_logger:info_report([?MODULE, {payload, Req}]),
     case catch yaws_soap_lib:parseMessage(Req, Model) of
         {ok, Header, Body} ->
@@ -186,9 +184,8 @@ request(State, {M,F} = Id, {Req, Attachments}, SessionValue, Action) ->
         OtherError ->
             srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))
     end;
-request(State, {M,F} = Id, Req, SessionValue, Action) ->
+request(Model, {M,F}, Req, SessionValue, Action) ->
     %%error_logger:info_report([?MODULE, {payload, Req}]),
-    {ok, Model} = get_model(State, Id),
     Umsg = (catch erlsom_lib:toUnicode(Req)),
     case catch yaws_soap_lib:parseMessage(Umsg, Model) of
         {ok, Header, Body} ->
