@@ -2012,7 +2012,7 @@ set_auth_user(ARG, User) ->
 
 filter_auths(Auths, Req_dir) ->
     case filter_auths(Auths, Req_dir, []) of
-        [] when Req_dir =:= "/" ->
+        [] when Req_dir =:= "/" orelse Req_dir =:= "." ->
             [];
         [] ->
             filter_auths(Auths, filename:dirname(Req_dir));
@@ -2229,7 +2229,7 @@ is_revproxy1(Path, RevConf) ->
     case lists:keyfind(Path, #proxy_cfg.prefix, RevConf) of
         #proxy_cfg{}=R ->
             {true, R};
-        false when Path == "/" ->
+        false when Path =:= "/" orelse Path =:= "." ->
             false;
         false ->
             is_revproxy1(filename:dirname(Path), RevConf)
@@ -2241,7 +2241,7 @@ is_redirect_map(Path, RedirMap) ->
     case lists:keyfind(Path, 1, RedirMap) of
         {Path, _Code, _Url, _AppendMod}=E ->
             {true, E};
-        false when Path == "/" ->
+        false when Path =:= "/" orelse Path =:= "." ->
             false;
         false ->
             is_redirect_map(filename:dirname(Path), RedirMap)
