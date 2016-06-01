@@ -792,7 +792,7 @@ url_decode_with_encoding(Path, Encoding) ->
                    latin1 ->
                        DecPath;
                    utf8 ->
-                       case unicode:characters_to_binary(DecPath) of
+                       case unicode:characters_to_list(list_to_binary(DecPath)) of
                            UTF8DecPath when is_list(UTF8DecPath) -> UTF8DecPath;
                            _ -> DecPath
                        end
@@ -879,7 +879,10 @@ url_decode_q_split([], Ack) ->
 
 
 url_encode(URL) when is_list(URL) ->
-    Bin = unicode:characters_to_binary(URL),
+    Bin = case file:native_name_encoding() of
+              latin1 -> list_to_binary(URL);
+              utf8   -> unicode:characters_to_binary(URL)
+          end,
     %% ReservedChars = "!*'();:@&=+$,/?%#[]",
     UnreservedChars = sets:from_list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                      "abcdefghijklmnopqrstuvwxyz"

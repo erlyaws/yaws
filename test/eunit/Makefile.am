@@ -14,7 +14,8 @@ MODULES = multipart_post_parsing.erl	\
 	  copy_error_log.erl		\
 	  dynopts.erl			\
 	  yaws_ls_tests.erl		\
-	  json2_decode.erl
+	  json2_decode.erl		\
+	  yaws_api_test.erl
 
 EXTRA_DIST = $(MODULES) cookies.dump setcookies.dump subconfig_DATA
 
