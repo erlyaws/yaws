@@ -20,7 +20,7 @@
 
 %% External exports
 -export([start_link/1]).
--export([safe_decode_path/1]).
+-export([safe_path/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -1607,7 +1607,7 @@ maybe_auth_log(Item, ARG) ->
         true ->
             Req = ARG#arg.req,
             {IP,_} = ARG#arg.client_ip_port,
-            Path = safe_decode_path(Req#http_request.path),
+            Path = safe_path(Req#http_request.path),
             yaws_log:authlog(SC, IP, Path, Item)
     end.
 
@@ -1621,17 +1621,8 @@ maybe_access_log(Ip, Req, H) ->
             ignore
     end.
 
-safe_decode_path(Path) ->
-    case (catch decode_path(Path)) of
-        {'EXIT', _} ->
-            "/undecodable_path";
-        Val ->
-            Val
-    end.
-
-
-decode_path({abs_path, Path}) ->
-    yaws_api:url_decode(Path).
+safe_path({abs_path, Path}) -> Path;
+safe_path(_)                -> "/undecodable_path".
 
 
 %% ret:  continue | done

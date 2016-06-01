@@ -305,7 +305,7 @@ handle_cast({_ServerName, access, Fd, {Ip, Req, InH, OutH, _}}, State) ->
                       _     -> "HTTP/X.X"
                   end,
 
-            Path      = yaws_server:safe_decode_path(Req#http_request.path),
+            Path      = yaws_server:safe_path(Req#http_request.path),
             Meth      = yaws:to_list(Req#http_request.method),
             Referer   = optional_header(InH#headers.referer),
             UserAgent = optional_header(InH#headers.user_agent),
