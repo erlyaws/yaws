@@ -1014,7 +1014,7 @@ stream_process_end(Sock, YawsPid) ->
 websocket_send(#ws_state{}=WSState, {Type, Data}) ->
     yaws_websockets:send(WSState, {Type, Data});
 websocket_send(#ws_state{}=WSState, #ws_frame{}=Frame) ->
-    yaws_websockets:send(WSState, #ws_frame{}=Frame);
+    yaws_websockets:send(WSState, Frame);
 %% Pid must be the process in control of the websocket connection.
 websocket_send(Pid, {Type, Data}) when is_pid(Pid) ->
     yaws_websockets:send(Pid, {Type, Data});
