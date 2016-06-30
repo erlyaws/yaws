@@ -88,7 +88,7 @@ dat2str_boundary({{Y, Mo, D}, {H, M, S}}) ->
     lists:flatten(
       io_lib:format("~s_~2.2.0w_~s_~w_~2.2.0w:~2.2.0w:~2.2.0w_~w",
                     [weekday(Y,Mo,D), D, int_to_mt(Mo),
-                     Y,H,M,S,bin2int(crypto:rand_bytes(4))])).
+                     Y,H,M,S,bin2int(yaws_dynopts:rand_bytes(4))])).
 
 bin2int(Bin) ->
     lists:foldl(fun(N, Acc) -> Acc * 256 + N end, 0, binary_to_list(Bin)).

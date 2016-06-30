@@ -155,7 +155,7 @@ handle_call({new_session, Opaque, undefined, Cleanup, Cookie}, From, State) ->
     handle_call({new_session, Opaque, ?TTL, Cleanup, Cookie}, From, State);
 
 handle_call({new_session, Opaque, TTL, Cleanup, undefined}, From, State) ->
-    N = bin2int(crypto:rand_bytes(16)),
+    N = bin2int(yaws_dynopts:rand_bytes(16)),
     Cookie = atom_to_list(node()) ++ [$-|integer_to_list(N)],
     handle_call({new_session, Opaque, TTL, Cleanup, Cookie}, From, State);
 

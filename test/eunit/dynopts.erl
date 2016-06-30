@@ -17,8 +17,10 @@ default_dynopts_test() ->
     ?assertEqual(ok, check_ssl_log_alert()),
     ?assertEqual(ok, check_erlang_sendfile()),
     ?assertEqual(ok, check_crypto_hash()),
+    ?assertEqual(ok, check_crypto_strong_rand_bytes()),
     ?assertEqual(ok, check_inet_parse_strict_address()),
     ?assertEqual(ok, check_erlang_now()),
+    ?assertEqual(ok, check_rand()),
     ?assertEqual(ok, stop_ssl_app()),
     ok.
 
@@ -32,8 +34,10 @@ generated_dynopts_test() ->
               yaws_dynopts:have_ssl_log_alert(),
               yaws_dynopts:have_erlang_sendfile(),
               yaws_dynopts:have_crypto_hash(),
+              yaws_dynopts:have_crypto_strong_rand_bytes(),
               yaws_dynopts:have_inet_parse_strict_address(),
-              yaws_dynopts:have_erlang_now()],
+              yaws_dynopts:have_erlang_now(),
+              yaws_dynopts:have_rand()],
     GC = yaws_config:make_default_gconf(false, "dummy_id"),
     ?assertEqual(ok, yaws_dynopts:generate(GC)),
 
@@ -46,8 +50,10 @@ generated_dynopts_test() ->
                           yaws_dynopts:have_ssl_log_alert(),
                           yaws_dynopts:have_erlang_sendfile(),
                           yaws_dynopts:have_crypto_hash(),
+                          yaws_dynopts:have_crypto_strong_rand_bytes(),
                           yaws_dynopts:have_inet_parse_strict_address(),
-                          yaws_dynopts:have_erlang_now()]),
+                          yaws_dynopts:have_erlang_now(),
+                          yaws_dynopts:have_rand()]),
     ok.
 
 
@@ -156,6 +162,14 @@ check_crypto_hash() ->
     end,
     ok.
 
+check_crypto_strong_rand_bytes() ->
+    Funs = crypto:module_info(exports),
+    case yaws_dynopts:have_crypto_strong_rand_bytes() of
+        true  -> true  = lists:member({strong_rand_bytes, 1}, Funs);
+        false -> false = lists:member({strong_rand_bytes, 1}, Funs)
+    end,
+    ok.
+
 check_inet_parse_strict_address() ->
     Funs = inet:module_info(exports),
     case yaws_dynopts:have_inet_parse_strict_address() of
@@ -169,5 +183,12 @@ check_erlang_now() ->
     case yaws_dynopts:have_erlang_now() of
         true  -> false = lists:member({unique_integer, 1}, Funs);
         false -> true  = lists:member({unique_integer, 1}, Funs)
+    end,
+    ok.
+
+check_rand() ->
+    case yaws_dynopts:have_rand() of
+        true  -> {module, rand} = code:ensure_loaded(rand);
+        false -> {error, _}     = code:ensure_loaded(rand)
     end,
     ok.

@@ -1076,7 +1076,7 @@ session_manager(C0, LastGC0, Cfg) ->
             end,
             session_manager(C, LastGC, Cfg);
         {new_session, Session, From} ->
-            Cookie = integer_to_list(bin2int(crypto:rand_bytes(16))),
+            Cookie = integer_to_list(bin2int(yaws_dynopts:rand_bytes(16))),
             From ! {session_manager, Cookie},
             session_manager([{Cookie, Session#session{cookie=Cookie},
                               yaws:get_time_tuple()}|C], LastGC, Cfg);
@@ -1948,7 +1948,7 @@ dat2str_boundary([Y1,Y2, Mo, D, H, M, S | _Diff]) ->
     lists:flatten(
       io_lib:format("~s_~2.2.0w_~s_~w_~2.2.0w:~2.2.0w:~2.2.0w_~w",
                     [weekday(Y1,Y2,Mo,D), D, int_to_mt(Mo),
-                     y(Y1,Y2),H,M,S,bin2int(crypto:rand_bytes(4))])).
+                     y(Y1,Y2),H,M,S,bin2int(yaws_dynopts:rand_bytes(4))])).
 
 bin2int(Bin) ->
     lists:foldl(fun(N, Acc) -> Acc * 256 + N end, 0, binary_to_list(Bin)).

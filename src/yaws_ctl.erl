@@ -57,8 +57,8 @@ rand() ->
     case os:type() of
         {win32, _} ->
             {A1, A2, A3}=yaws:get_time_tuple(),
-            random:seed(A1, A2, A3),
-            random:uniform(1 bsl 64);
+            yaws_dynopts:random_seed(A1, A2, A3),
+            yaws_dynopts:random_uniform(1 bsl 64);
         _ ->
             try
                 crypto:start(),
@@ -67,8 +67,8 @@ rand() ->
                 _:_ ->
                     error_logger:warning_msg("Running without crypto app\n"),
                     {A1, A2, A3}=yaws:get_time_tuple(),
-                    random:seed(A1, A2, A3),
-                    random:uniform(1 bsl 64)
+                    yaws_dynopts:random_seed(A1, A2, A3),
+                    yaws_dynopts:random_uniform(1 bsl 64)
             end
     end.
 

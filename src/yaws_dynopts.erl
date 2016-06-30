@@ -12,14 +12,19 @@
          have_ssl_log_alert/0,
          have_erlang_sendfile/0,
          have_crypto_hash/0,
+         have_crypto_strong_rand_bytes/0,
          have_inet_parse_strict_address/0,
          have_erlang_now/0,
+         have_rand/0,
 
+         rand_bytes/1,
          hash/1,
          unique_triple/0,
          get_time_tuple/0,
          now_secs/0,
          parse_strict_address/1,
+         random_seed/3,
+         random_uniform/1,
 
          generate/1,
          is_generated/0
@@ -57,6 +62,10 @@ have_erlang_sendfile() ->
 have_crypto_hash() ->
     erlang:function_exported(crypto, hash, 2).
 
+%% crypto:rand_bytes/1 is deprecated since releases 19 (ERTS >= 8.0)
+have_crypto_strong_rand_bytes() ->
+    erlang:function_exported(crypto, strong_rand_bytes, 1).
+
 %% inet:parse_strict_address was exported in R16A (ERTS >= 5.10)
 have_inet_parse_strict_address() ->
     erlang:function_exported(inet, parse_strict_address, 1).
@@ -65,6 +74,15 @@ have_inet_parse_strict_address() ->
 have_erlang_now() ->
     is_less(erlang:system_info(version), "7.0").
 
+%% random module is deprecated since releases 19 (ERTS >= 8.0)
+have_rand() ->
+    (code:which(rand) /= non_existing).
+
+rand_bytes(N) ->
+    case have_crypto_strong_rand_bytes() of
+        true  -> crypto:strong_rand_bytes(N);
+        false -> (fun crypto:rand_bytes/1)(N)
+    end.
 
 hash(V) ->
     case have_crypto_hash() of
@@ -112,6 +130,17 @@ parse_strict_address(Host) ->
             end
     end.
 
+random_seed(A,B,C) ->
+    case have_rand() of
+        true  -> rand:seed(exsplus, {A,B,C});
+        false -> randome:seed(A,B,C)
+    end.
+
+random_uniform(N) ->
+    case have_rand() of
+        true  -> rand:uniform(N);
+        false -> randome:uniform(N)
+    end.
 
 is_greater         (Vsn1, Vsn2) -> compare_version(Vsn1, Vsn2) == greater.
 is_less            (Vsn1, Vsn2) -> compare_version(Vsn1, Vsn2) == less.
@@ -221,6 +250,11 @@ compile_options() ->
             false -> []
         end
         ++
+        case have_crypto_strong_rand_bytes() of
+            true  -> [{d, 'HAVE_CRYPTO_STRONG_RAND_BYTES'}];
+            false -> []
+        end
+        ++
         case have_inet_parse_strict_address() of
             true  -> [{d, 'HAVE_INET_PARSE_STRICT_ADDRESS'}];
             false -> []
@@ -228,6 +262,11 @@ compile_options() ->
         ++
         case have_erlang_now() of
             true  -> [{d, 'HAVE_ERLANG_NOW'}];
+            false -> []
+        end
+        ++
+        case have_rand() of
+            true  -> [{d, 'HAVE_RAND'}];
             false -> []
         end.
 
@@ -248,14 +287,19 @@ source() ->
            "    have_ssl_log_alert/0,",
            "    have_erlang_sendfile/0,",
            "    have_crypto_hash/0,",
+           "    have_crypto_strong_rand_bytes/0,",
            "    have_inet_parse_strict_address/0,",
            "    have_erlang_now/0,",
+           "    have_rand/0,"
            "",
+           "    rand_bytes/1,",
            "    hash/1,",
            "    unique_triple/0,",
            "    get_time_tuple/0,",
            "    now_secs/0,",
            "    parse_strict_address/1,",
+           "    random_seed/3,",
+           "    random_uniform/1,",
            "",
            "    generate/1,",
            "    is_generated/0",
@@ -279,6 +323,14 @@ source() ->
            "-else.",
            "have_crypto_hash() -> false.",
            "hash(V) -> crypto:sha(V).",
+           "-endif.",
+           "",
+           "-ifdef(HAVE_CRYPTO_STRONG_RAND_BYTES).",
+           "have_crypto_strong_rand_bytes() -> true.",
+           "rand_bytes(N) -> crypto:strong_rand_bytes(N).",
+           "-else.",
+           "have_crypto_strong_rand_bytes() -> false.",
+           "hash(N) -> crypto:rand_bytes(N).",
            "-endif.",
            ""
            "-ifdef(HAVE_ERLANG_NOW).",
@@ -316,6 +368,16 @@ source() ->
            "    end;",
            "parse_strict_address(_) ->",
            "    {error, einval}.",
+           "-endif.",
+           "",
+           "-ifdef(HAVE_RAND).",
+           "have_rand() -> true.",
+           "random_seed(A,B,C) -> rand:seed(exsplus, {A,B,C}).",
+           "random_uniform(N)  -> rand:uniform(N).",
+           "-else.",
+           "have_rand() -> false.",
+           "random_seed(A,B,C) -> random:seed(A,B,C).",
+           "random_uniform(N)  -> random:uniform(N).",
            "-endif.",
            ""
           ],

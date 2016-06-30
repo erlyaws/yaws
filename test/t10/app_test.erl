@@ -1551,7 +1551,7 @@ test_too_big_frame() ->
     ?line {ok, Sock}     = open("localhost", 8000),
     ?line {ok, {101, _}} = wsopen(Sock, Key, WSPath, "http://localhost", 13),
 
-    Payload1 = crypto:rand_bytes(16*1024*1024),
+    Payload1 = yaws_dynopts:rand_bytes(16*1024*1024),
     SndFrame1 = #frame{opcode=?WS_OPCODE_BINARY, payload=Payload1},
     ?line ok  = send_frame(Sock, SndFrame1, all),
     ?line {ok, RcvFrame} = read_frame(Sock),
@@ -1600,7 +1600,7 @@ test_too_big_message() ->
     ?line {ok, Sock}     = open("localhost", 8000),
     ?line {ok, {101, _}} = wsopen(Sock, Key, WSPath, "http://localhost", 13),
 
-    Payload1 = crypto:rand_bytes(16*1024*1024),
+    Payload1 = yaws_dynopts:rand_bytes(16*1024*1024),
     <<Frag1:(4*1024)/binary, Frag2:(4*1024)/binary,
       Frag3:(4*1024)/binary, Frag4/binary>> = Payload1,
     SndFrame1 = #frame{fin=false, opcode=?WS_OPCODE_BINARY, payload=Frag1},

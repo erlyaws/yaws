@@ -270,12 +270,12 @@ out(A) ->
 
 
 generate_random_fn() ->
-    Bytes = try crypto:rand_bytes(64) of
+    Bytes = try yaws_dynopts:rand_bytes(64) of
                 B when is_bitstring(B) ->
                     B
             catch _:_ ->
                     %% for installations without crypto
-                    << <<(random:uniform(256) - 1)>> || _ <- lists:seq(1,64) >>
+                    << <<(yaws_dynopt:random_uniform(256) - 1)>> || _ <- lists:seq(1,64) >>
             end,
     << Int:512/unsigned-big-integer >> = << Bytes/binary >>,
     integer_to_list(Int).
