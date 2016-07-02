@@ -3691,9 +3691,11 @@ An example with www-authenticate and no access logging at all.
        two servers on the same IP, and one SSL server on a
        different IP.
 
-       The \verb+is_default+ is used to select the funky server if
-       someone types in for example url{http://192.168.128.31/} in
-       his\slash her browser.
+       To force selection of the funky server if you type in for example
+       \url{http://192.168.128.31/} in your browser, you can set
+       \verb+pick_first_virthost_on_nomatch = true+ in your global
+       configuration and rearrange the virtual server configuration order
+       so that \verb+www.funky.org:80+ is defined first.
 
 
 \begin{verbatim}
@@ -3709,7 +3711,6 @@ An example with www-authenticate and no access logging at all.
 
        <server www.funky.org>
                port = 80
-               is_default = true
                listen = 192.168.128.31
                docroot = /var/yaws/www_funky_org
        </server>
