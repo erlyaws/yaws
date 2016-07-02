@@ -32,6 +32,20 @@
          gconf_ysession_idle_timeout/1, gconf_ysession_long_timeout/1,
          gconf_sni/1]).
 
+-export([gconf_yaws_dir/2, gconf_trace/2, gconf_flags/2, gconf_logdir/2,
+         gconf_ebin_dir/2, gconf_src_dir/2, gconf_runmods/2,
+         gconf_keepalive_timeout/2, gconf_keepalive_maxuses/2,
+         gconf_max_num_cached_files/2, gconf_max_num_cached_bytes/2,
+         gconf_max_size_cached_file/2, gconf_max_connections/2,
+         gconf_process_options/2, gconf_large_file_chunk_size/2,
+         gconf_mnesia_dir/2, gconf_log_wrap_size/2, gconf_cache_refresh_secs/2,
+         gconf_include_dir/2, gconf_phpexe/2, gconf_yaws/2, gconf_id/2,
+         gconf_enable_soap/2, gconf_soap_srv_mods/2, gconf_ysession_mod/2,
+         gconf_acceptor_pool_size/2, gconf_mime_types_info/2,
+         gconf_nslookup_pref/2,
+         gconf_ysession_idle_timeout/2, gconf_ysession_long_timeout/2,
+         gconf_sni/2]).
+
 -export([sconf_port/1, sconf_flags/1, sconf_redirect_map/1, sconf_rhost/1,
          sconf_rmethod/1, sconf_docroot/1, sconf_xtra_docroots/1,
          sconf_listen/1, sconf_servername/1, sconf_serveralias/1, sconf_yaws/1,
@@ -44,6 +58,19 @@
          sconf_fcgi_app_server/1, sconf_php_handler/1, sconf_shaper/1,
          sconf_deflate_options/1, sconf_mime_types_info/1,
          sconf_dispatch_mod/1]).
+
+-export([sconf_port/2, sconf_flags/2, sconf_redirect_map/2, sconf_rhost/2,
+         sconf_rmethod/2, sconf_docroot/2, sconf_xtra_docroots/2,
+         sconf_listen/2, sconf_servername/2, sconf_serveralias/2, sconf_yaws/2,
+         sconf_ets/2, sconf_ssl/2, sconf_authdirs/2, sconf_partial_post_size/2,
+         sconf_appmods/2, sconf_expires/2, sconf_errormod_401/2,
+         sconf_errormod_404/2, sconf_arg_rewrite_mode/2, sconf_logger_mod/2,
+         sconf_opaque/2, sconf_start_mod/2, sconf_allowed_scripts/2,
+         sconf_tilde_allowed_scripts/2, sconf_index_files/2, sconf_revproxy/2,
+         sconf_spotions/2, sconf_extra_cgi_vars/2, sconf_stats/2,
+         sconf_fcgi_app_server/2, sconf_php_handler/2, sconf_shaper/2,
+         sconf_deflate_options/2, sconf_mime_types_info/2,
+         sconf_dispatch_mod/2]).
 
 -export([new_auth/0,
          auth_dir/1, auth_dir/2,
@@ -237,7 +264,8 @@ start_app_deps() ->
                               end
                       end, ok, Deps).
 
-%% Access functions for the GCONF and SCONF records.
+%%% Access functions for the GCONF and SCONF records.
+%% Getters
 gconf_yaws_dir             (#gconf{yaws_dir              = X}) -> X.
 gconf_trace                (#gconf{trace                 = X}) -> X.
 gconf_flags                (#gconf{flags                 = X}) -> X.
@@ -270,7 +298,40 @@ gconf_ysession_idle_timeout(#gconf{ysession_idle_timeout = X}) -> X.
 gconf_ysession_long_timeout(#gconf{ysession_long_timeout = X}) -> X.
 gconf_sni                  (#gconf{sni                   = X}) -> X.
 
+%% Setters
+gconf_yaws_dir             (S, X) -> S#gconf{yaws_dir              = X}.
+gconf_trace                (S, X) -> S#gconf{trace                 = X}.
+gconf_flags                (S, X) -> S#gconf{flags                 = X}.
+gconf_logdir               (S, X) -> S#gconf{logdir                = X}.
+gconf_ebin_dir             (S, X) -> S#gconf{ebin_dir              = X}.
+gconf_src_dir              (S, X) -> S#gconf{src_dir               = X}.
+gconf_runmods              (S, X) -> S#gconf{runmods               = X}.
+gconf_keepalive_timeout    (S, X) -> S#gconf{keepalive_timeout     = X}.
+gconf_keepalive_maxuses    (S, X) -> S#gconf{keepalive_maxuses     = X}.
+gconf_max_num_cached_files (S, X) -> S#gconf{max_num_cached_files  = X}.
+gconf_max_num_cached_bytes (S, X) -> S#gconf{max_num_cached_bytes  = X}.
+gconf_max_size_cached_file (S, X) -> S#gconf{max_size_cached_file  = X}.
+gconf_max_connections      (S, X) -> S#gconf{max_connections       = X}.
+gconf_process_options      (S, X) -> S#gconf{process_options       = X}.
+gconf_large_file_chunk_size(S, X) -> S#gconf{large_file_chunk_size = X}.
+gconf_mnesia_dir           (S, X) -> S#gconf{mnesia_dir            = X}.
+gconf_log_wrap_size        (S, X) -> S#gconf{log_wrap_size         = X}.
+gconf_cache_refresh_secs   (S, X) -> S#gconf{cache_refresh_secs    = X}.
+gconf_include_dir          (S, X) -> S#gconf{include_dir           = X}.
+gconf_phpexe               (S, X) -> S#gconf{phpexe                = X}.
+gconf_yaws                 (S, X) -> S#gconf{yaws                  = X}.
+gconf_id                   (S, X) -> S#gconf{id                    = X}.
+gconf_enable_soap          (S, X) -> S#gconf{enable_soap           = X}.
+gconf_soap_srv_mods        (S, X) -> S#gconf{soap_srv_mods         = X}.
+gconf_ysession_mod         (S, X) -> S#gconf{ysession_mod          = X}.
+gconf_acceptor_pool_size   (S, X) -> S#gconf{acceptor_pool_size    = X}.
+gconf_mime_types_info      (S, X) -> S#gconf{mime_types_info       = X}.
+gconf_nslookup_pref        (S, X) -> S#gconf{nslookup_pref         = X}.
+gconf_ysession_idle_timeout(S, X) -> S#gconf{ysession_idle_timeout = X}.
+gconf_ysession_long_timeout(S, X) -> S#gconf{ysession_long_timeout = X}.
+gconf_sni                  (S, X) -> S#gconf{sni                   = X}.
 
+%% Getters
 sconf_port                 (#sconf{port                  = X}) -> X.
 sconf_flags                (#sconf{flags                 = X}) -> X.
 sconf_redirect_map         (#sconf{redirect_map          = X}) -> X.
@@ -307,6 +368,44 @@ sconf_shaper               (#sconf{shaper                = X}) -> X.
 sconf_deflate_options      (#sconf{deflate_options       = X}) -> X.
 sconf_mime_types_info      (#sconf{mime_types_info       = X}) -> X.
 sconf_dispatch_mod         (#sconf{dispatch_mod          = X}) -> X.
+
+%% Setters
+sconf_port                 (S, X) -> S#sconf{port                  = X}.
+sconf_flags                (S, X) -> S#sconf{flags                 = X}.
+sconf_redirect_map         (S, X) -> S#sconf{redirect_map          = X}.
+sconf_rhost                (S, X) -> S#sconf{rhost                 = X}.
+sconf_rmethod              (S, X) -> S#sconf{rmethod               = X}.
+sconf_docroot              (S, X) -> S#sconf{docroot               = X}.
+sconf_xtra_docroots        (S, X) -> S#sconf{xtra_docroots         = X}.
+sconf_listen               (S, X) -> S#sconf{listen                = X}.
+sconf_servername           (S, X) -> S#sconf{servername            = X}.
+sconf_serveralias          (S, X) -> S#sconf{serveralias           = X}.
+sconf_yaws                 (S, X) -> S#sconf{yaws                  = X}.
+sconf_ets                  (S, X) -> S#sconf{ets                   = X}.
+sconf_ssl                  (S, X) -> S#sconf{ssl                   = X}.
+sconf_authdirs             (S, X) -> S#sconf{authdirs              = X}.
+sconf_partial_post_size    (S, X) -> S#sconf{partial_post_size     = X}.
+sconf_appmods              (S, X) -> S#sconf{appmods               = X}.
+sconf_expires              (S, X) -> S#sconf{expires               = X}.
+sconf_errormod_401         (S, X) -> S#sconf{errormod_401          = X}.
+sconf_errormod_404         (S, X) -> S#sconf{errormod_404          = X}.
+sconf_arg_rewrite_mode     (S, X) -> S#sconf{arg_rewrite_mod       = X}.
+sconf_logger_mod           (S, X) -> S#sconf{logger_mod            = X}.
+sconf_opaque               (S, X) -> S#sconf{opaque                = X}.
+sconf_start_mod            (S, X) -> S#sconf{start_mod             = X}.
+sconf_allowed_scripts      (S, X) -> S#sconf{allowed_scripts       = X}.
+sconf_tilde_allowed_scripts(S, X) -> S#sconf{tilde_allowed_scripts = X}.
+sconf_index_files          (S, X) -> S#sconf{index_files           = X}.
+sconf_revproxy             (S, X) -> S#sconf{revproxy              = X}.
+sconf_spotions             (S, X) -> S#sconf{soptions              = X}.
+sconf_extra_cgi_vars       (S, X) -> S#sconf{extra_cgi_vars        = X}.
+sconf_stats                (S, X) -> S#sconf{stats                 = X}.
+sconf_fcgi_app_server      (S, X) -> S#sconf{fcgi_app_server       = X}.
+sconf_php_handler          (S, X) -> S#sconf{php_handler           = X}.
+sconf_shaper               (S, X) -> S#sconf{shaper                = X}.
+sconf_deflate_options      (S, X) -> S#sconf{deflate_options       = X}.
+sconf_mime_types_info      (S, X) -> S#sconf{mime_types_info       = X}.
+sconf_dispatch_mod         (S, X) -> S#sconf{dispatch_mod          = X}.
 
 
 %% Access functions for the AUTH record.
