@@ -40,7 +40,7 @@ check_cookie(A) ->
     end.
 
 
-%% this function is calle first in all out yaws files,
+%% this function is called first in all out yaws files,
 %% it will autologin users that are not logged in
 top(A) ->
     case check_cookie(A) of
@@ -127,7 +127,7 @@ bot() ->
 %% This function displays the login page
 login(A) ->
     CSS = css_head("Shopcart"),
-    Head = head_status("Not lgged in"),
+    Head = head_status("Not logged in"),
     Top = toprow(),
     Login =
         {ehtml,
@@ -259,7 +259,7 @@ buy(A) ->
                   {p , [{class, toprow}],
                    io_lib:format(
                      "Items are at this very moment being shipped to the"
-                     " residens of the computer with IP: ~s~n", [ip(A)])}
+                     " residence of the computer with IP: ~s~n", [ip(A)])}
                  ]
                 };
             true ->
@@ -424,7 +424,7 @@ junk() ->
     [{"Toothbrush in rainbow colours", 18},
      {"Twinset of extra soft towels", 66},
      {"Hangover pill - guaranteed to work", 88},
-     {"Worlk-out kit that fits under your bed", 1900},
+     {"Work-out kit that fits under your bed", 1900},
      {"100 pack of headache pills", 7},
      {"Free subscription to MS update packs", 999},
      {"Toilet cleaner", 1111},
