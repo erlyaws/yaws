@@ -368,10 +368,20 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
             {"HTTP_IF_NONE_MATCH", H#headers.if_none_match},
             {"HTTP_IF_UNMODIFIED_SINCE", H#headers.if_unmodified_since},
             {"HTTP_COOKIE", flatten_val(make_cookie_val(H#headers.cookie))}
-           ]++lists:map(fun({http_header,_,Var,_,Val})->{tohttp(Var),Val} end,
-                        H#headers.other)
+           ]++ other_headers(H#headers.other)
           )) ++
         Extra_CGI_Vars.
+
+other_headers(Headers) ->
+    lists:zf(fun({http_header,_,Var,_,Val}) ->
+                     case tohttp(Var) of
+                         "HTTP_PROXY" ->
+                             %% See http://httpoxy.org/
+                             false;
+                         HTTP ->
+                             {true, {HTTP,Val}}
+                     end
+             end, Headers).
 
 tohttp(X) ->
     "HTTP_"++lists:map(fun tohttp_c/1, yaws:to_list(X)).
