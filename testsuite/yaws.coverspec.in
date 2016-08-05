@@ -1,0 +1,43 @@
+% -*-erlang-*-
+% vim:ft=erlang:
+
+%% List of Nodes on which cover will be active during test.
+%% Nodes = [atom()]
+{nodes, []}.
+
+%% Files with previously exported cover data to include in analysis.
+%% CoverDataFiles = [string()]
+%%{import, CoverDataFiles}.
+
+%% Cover data file to export from this session.
+%% CoverDataFile = string()
+{export, "@abs_builddir@/logs/@PACKAGE_NAME@.coverdata"}.
+
+%% Cover analysis level.
+%% Level = details | overview
+{level, details}.
+
+%% Directories to include in cover.
+%% Dirs = [string()]
+{incl_dirs, ["@abs_top_builddir@/ebin"]}.
+
+%% Directories, including subdirectories, to include.
+{incl_dirs_r, []}.
+
+%% Specific modules to include in cover.
+%% Mods = [atom()]
+{incl_mods, []}.
+
+%% Directories to exclude in cover.
+{excl_dirs, []}.
+
+%% Directories, including subdirectories, to exclude.
+{excl_dirs_r, []}.
+
+%% Specific modules to exclude in cover.
+{excl_mods, []}.
+
+%% Cross cover compilation
+%% Tag = atom(), an identifier for a test run
+%% Mod = [atom()], modules to compile for accumulated analysis
+%%{cross,[{Tag,Mods}]}.

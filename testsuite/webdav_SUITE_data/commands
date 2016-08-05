@@ -1,0 +1,13 @@
+unset tolerant
+set namespace DAV:
+ls
+propnames test
+put tst-file
+rm tst-file
+mkcol locked
+lock locked
+cd locked
+put tst-file
+cd ..
+unlock locked
+rmcol locked

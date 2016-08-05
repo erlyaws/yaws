@@ -38,8 +38,9 @@ keep_or_replace() {
 
 ## handle clean command and exit
 if [ "$1" = clean ]; then
-    rm -f ${YAWS_DIR}/src/mime_types.erl     \
-          ${YAWS_DIR}/src/yaws_generated.erl
+    rm -f ${YAWS_DIR}/src/mime_types.erl  \
+       ${YAWS_DIR}/src/yaws_generated.erl \
+       ${YAWS_DIR}/src/yaws_charset.hrl
     exit 0
 fi
 

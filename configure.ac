@@ -172,6 +172,28 @@ dialyzer(1) not found. Fill the DIALYZER variable with dialyzer(1) path if
 you want to use it.])
 fi
 
+dnl ct_run(1).
+AC_ARG_VAR([CT_RUN], [Erlang/OTP Program used for starting Common Test [autodetected]])
+
+if test "x${CT_RUN}" = "x"; then
+   if test "x${with_erlang}" = "x"; then
+      AC_PATH_PROG([CT_RUN], [ct_run],,)
+   else
+        erl_path="${with_erlang}/bin"
+        AC_PATH_PROG([CT_RUN], [ct_run],,
+            [$erl_path$PATH_SEPARATOR$PATH])
+   fi
+else
+    AC_MSG_CHECKING([for ct_run])
+    AC_MSG_RESULT([$CT_RUN])
+fi
+
+if test "x${CT_RUN}" = "x"; then
+    AC_MSG_WARN([
+ct_run(1) not found. Fill the CT_RUN variable with ct_run(1) path if
+you want to use it.])
+fi
+
 dnl Declare ERL_LIBS as precious.
 AC_ARG_VAR([ERL_LIBS], [Erlang/OTP applications search path [none]])
 
@@ -221,19 +243,23 @@ AC_ERLANG_CHECK_LIB([compiler],, [AC_MSG_ERROR(["compiler" Erlang application no
 AC_ERLANG_CHECK_LIB([crypto],,   [AC_MSG_ERROR(["crypto" Erlang application not found.])])
 AC_ERLANG_CHECK_LIB([xmerl],,    [AC_MSG_ERROR(["xmerl" Erlang application not found.])])
 
-AC_ERLANG_CHECK_LIB([public_key],,[AC_MSG_WARN(["public_key" Erlang application not found.
+AC_ERLANG_CHECK_LIB([public_key],, [AC_MSG_WARN(["public_key" Erlang application not found.
 It could be required to run Yaws or its testsuites.])])
-AC_ERLANG_CHECK_LIB([ssl],,       [AC_MSG_WARN(["ssl" Erlang application not found.
+AC_ERLANG_CHECK_LIB([ssl],,        [AC_MSG_WARN(["ssl" Erlang application not found.
 It could be required to run Yaws or its testsuites.])])
-AC_ERLANG_CHECK_LIB([mnesia],,    [AC_MSG_WARN(["mnesia" Erlang application not found.
+AC_ERLANG_CHECK_LIB([mnesia],,     [AC_MSG_WARN(["mnesia" Erlang application not found.
 It could be required to run Yaws or its testsuites.])])
-AC_ERLANG_CHECK_LIB([eunit],,     [AC_MSG_WARN(["eunit" Erlang application not found.
+AC_ERLANG_CHECK_LIB([eunit],,      [AC_MSG_WARN(["eunit" Erlang application not found.
 It could be required to run Yaws or its testsuites.])])
 AC_ERLANG_CHECK_LIB([erlsom],,     [AC_MSG_WARN(["erlsom" Erlang application not found.
 It could be required to run Yaws or its testsuites.])])
 AC_ERLANG_CHECK_LIB([xmlrpc],,     [AC_MSG_WARN(["xmlrpc" Erlang application not found.
 It could be required to run Yaws or its testsuites.])])
-AC_ERLANG_CHECK_LIB([inets],,     [AC_MSG_WARN(["xmlrpc" Erlang application not found.
+AC_ERLANG_CHECK_LIB([inets],,      [AC_MSG_WARN(["inets" Erlang application not found.
+It could be required to run Yaws or its testsuites.])])
+AC_ERLANG_CHECK_LIB([tools],,      [AC_MSG_WARN(["tools" Erlang application not found.
+It could be required to run Yaws or its testsuites.])])
+AC_ERLANG_CHECK_LIB([common_test],,[AC_MSG_WARN(["common_test" Erlang application not found.
 It could be required to run Yaws or its testsuites.])])
 
 cross_compiling=$tmp_cross_compiling
@@ -355,6 +381,11 @@ fi
 dnl ------------------------------------------------------------------
 dnl Final path substitutions
 dnl ------------------------------------------------------------------
+AM_CONDITIONAL(HAVE_TS_TOOLS, [(test "x${CT_RUN}"                    != "x")         &&
+                               (test "${ERLANG_LIB_DIR_common_test}" != "not found") &&
+                               (test "${ERLANG_LIB_DIR_eunit}"       != "not found") &&
+                               (test "${ERLANG_LIB_DIR_inets}"       != "not found") &&
+                               (test "${ERLANG_LIB_DIR_tools}"       != "not found")])
 
 AC_ARG_VAR([confdir], [Default Yaws configuration directory ['$(sysconfdir)/yaws']])
 if test "x${confdir}" = "x"; then
@@ -397,7 +428,15 @@ fi
 dnl ------------------------------------------------------------------
 dnl Autoconf output.
 dnl ------------------------------------------------------------------
-AC_SUBST([CONFIG_STATUS_DEPENDENCIES], ['$(top_srcdir)/vsn.mk $(top_srcdir)/applications/yapp/vsn.mk'])
+AC_SUBST([CONFIG_STATUS_DEPENDENCIES],
+    ['$(top_srcdir)/vsn.mk                              \
+      $(top_srcdir)/erlang_deps.mk                      \
+      $(top_srcdir)/include.mk                          \
+      $(top_srcdir)/applications/yapp/vsn.mk            \
+      $(top_srcdir)/testsuite/run_common_test.in        \
+      $(top_srcdir)/testsuite/yaws.coverspec.in         \
+      $(top_srcdir)/testsuite/cover_to_html.sh.in       \
+      $(top_srcdir)/testsuite/analyze_coverdata.escript.in'])
 
 AC_CONFIG_FILES([
         yaws.pc
@@ -416,24 +455,11 @@ AC_CONFIG_FILES([
         examples/include/Makefile
         www/code/Makefile
         www/shoppingcart/Makefile
-        test/Makefile
-        test/src/Makefile
-        test/eunit/Makefile
-        test/t1/Makefile
-        test/t2/Makefile
-        test/t3/Makefile
-        test/t4/Makefile
-        test/t5/Makefile
-        test/t6/Makefile
-        test/t7/Makefile
-        test/t8/Makefile
-        test/t9/Makefile
-        test/t10/Makefile
-        test/t11/Makefile
-        test/t12/Makefile
-        test/t13/Makefile
-        test/t14/Makefile
-        test/t15/Makefile
+
+        testsuite/Makefile
+        testsuite/${PACKAGE_NAME}.coverspec
+        testsuite/testsuite.hrl
+
         applications/chat/Makefile
         applications/chat/src/Makefile
         applications/chat/ebin/Makefile
@@ -449,37 +475,12 @@ AC_CONFIG_FILES([
 
         src/yaws_charset.hrl
         src/yaws_appdeps.hrl
-
-        test/eunit//subconfig_DATA/yaws_absolute.conf
-        test/eunit//subconfig_DATA/yaws_absolute_no_wildcard.conf
-        test/eunit//subconfig_DATA/global_absolute_subconfig.conf
-        test/eunit//subconfig_DATA/global_absolute_no_wildcard_subconfig.conf
-        test/support/yaws.conf
-        test/t1/yaws.conf
-        test/t2/yaws.conf
-        test/t3/yaws.conf
-        test/t4/yaws.conf
-        test/t5/yaws.conf
-        test/t6/no_docroot_appmod.conf
-        test/t6/no_docroot_fwdproxy.conf
-        test/t6/no_docroot_redirect.conf
-        test/t6/no_docroot_revproxy.conf
-        test/t7/yaws.conf
-        test/t8/yaws.conf
-        test/t9/yaws.conf
-        test/t10/yaws.conf
-        test/t11/yaws.conf
-        test/t12/yaws.conf
-        test/t13/yaws.conf
-        test/t14/yaws.conf
-        test/t15/yaws_sni_disabled.conf
-        test/t15/yaws_sni_enabled.conf
-        test/t15/yaws_sni_strict.conf
-        test/t15/yaws_sni_required_on_vhost.conf
-        test/t15/yaws_sni_not_enabled.conf
-        test/t15/yaws_sni_not_available.conf
-        test/t15/yaws_sni_without_tls.conf
 ])
+
+AC_CONFIG_FILES([testsuite/run_common_test],           [chmod +x testsuite/run_common_test])
+AC_CONFIG_FILES([testsuite/cover_to_html.sh],          [chmod +x testsuite/cover_to_html.sh])
+AC_CONFIG_FILES([testsuite/analyze_coverdata.escript], [chmod +x testsuite/analyze_coverdata.escript])
+
 AC_CONFIG_FILES([scripts/make-release],                  [chmod +x scripts/make-release])
 AC_CONFIG_FILES([applications/wiki/scripts/addFile],     [chmod +x applications/wiki/scripts/addFile])
 AC_CONFIG_FILES([applications/wiki/scripts/getPassword], [chmod +x applications/wiki/scripts/getPassword])
@@ -526,4 +527,7 @@ COLORED_ECHO([ %BErlang lib dir%b:           ${ERLANG_LIB_DIR}])
 COLORED_ECHO([ %BErlang compiler%b:          ${ERLC}])
 COLORED_ECHO([ %BErlang emulator%b:          ${ERL}])
 COLORED_ECHO([ %BWindows Erlang emulator%b:  ${WERL}])
+COLORED_ECHO([ %BErlang interpreter%b:       ${ESCRIPT}])
+COLORED_ECHO([ %BErlang dialyzer tool%b:     ${DIALYZER}])
+COLORED_ECHO([ %BErlang ct_run tool%b:       ${CT_RUN}])
 echo
