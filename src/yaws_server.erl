@@ -1658,7 +1658,8 @@ call_method(Method, CliSock, IPPort, Req, H) ->
 not_implemented(CliSock, _IPPort, Req, Head) ->
     SC=get(sc),
     ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
-    flush(CliSock, Head#headers.content_length, Head#headers.transfer_encoding),
+    flush(CliSock, Head#headers.content_length,
+          yaws:to_lower(Head#headers.transfer_encoding)),
     deliver_501(CliSock, Req).
 
 
@@ -1711,38 +1712,23 @@ body_method(CliSock, IPPort, Req, Head) ->
                 _ -> ok
             end
     end,
-    Res = case Head#headers.content_length of
-              undefined ->
-                  case yaws:to_lower(Head#headers.transfer_encoding) of
-                      "chunked" ->
-                          get_chunked_client_data(CliSock, yaws:is_ssl(SC));
-                      _ ->
-                          <<>>
-                  end;
-              Len when is_integer(PPS) ->
+    Res = case {yaws:to_lower(Head#headers.transfer_encoding),
+                Head#headers.content_length} of
+              {"chunked", _} ->
+                  get_chunked_client_data(CliSock, yaws:is_ssl(SC));
+              {_, undefined} ->
+                  <<>>;
+              {_, Len} ->
                   Int_len = list_to_integer(Len),
                   if
                       Int_len < 0 ->
                           {error, content_length_overflow};
                       Int_len == 0 ->
                           <<>>;
-                      PPS < Int_len ->
-                          {partial, get_client_data(CliSock, PPS,
-                                                    yaws:is_ssl(SC))};
+                      PPS /= nolimit andalso PPS < Int_len ->
+                          {partial, get_client_data(CliSock, PPS, yaws:is_ssl(SC))};
                       true ->
-                          get_client_data(CliSock, Int_len,
-                                          yaws:is_ssl(SC))
-                  end;
-              Len when PPS == nolimit ->
-                  Int_len = list_to_integer(Len),
-                  if
-                      Int_len < 0 ->
-                          {error, content_length_overflow};
-                      Int_len == 0 ->
-                          <<>>;
-                      true ->
-                          get_client_data(CliSock, Int_len,
-                                          yaws:is_ssl(SC))
+                          get_client_data(CliSock, Int_len, yaws:is_ssl(SC))
                   end
           end,
     case Res of
@@ -1760,7 +1746,8 @@ body_method(CliSock, IPPort, Req, Head) ->
 no_body_method(CliSock, IPPort, Req, Head) ->
     SC=get(sc),
     ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
-    flush(CliSock, Head#headers.content_length, Head#headers.transfer_encoding),
+    flush(CliSock, Head#headers.content_length,
+          yaws:to_lower(Head#headers.transfer_encoding)),
     Head1 = Head#headers{content_length=undefined, transfer_encoding=undefined},
     ARG = make_arg(CliSock, IPPort, Head1, Req, undefined),
     handle_request(CliSock, ARG, 0).
@@ -2694,7 +2681,7 @@ deliver_redirect_map(CliSock, Req, Arg,
     case DoClose of
         true  -> ok;
         _     -> flush(CliSock, N, (Arg#arg.headers)#headers.content_length,
-                       (Arg#arg.headers)#headers.transfer_encoding)
+                       yaws:to_lower((Arg#arg.headers)#headers.transfer_encoding))
     end,
     new_redir_h(H#outh{
                   connection = yaws:make_connection_close_header(DoClose),
@@ -3857,22 +3844,19 @@ deflate_accumulated(Arg, Content, ContentLength, Mode) ->
 get_more_post_data(CliSock, PPS, ARG) ->
     SC = get(sc),
     N = SC#sconf.partial_post_size,
-    case (ARG#arg.headers)#headers.content_length of
-        undefined ->
-            case yaws:to_lower((ARG#arg.headers)#headers.transfer_encoding) of
-                "chunked" ->
-                    get_chunked_client_data(CliSock, yaws:is_ssl(SC));
-                _  ->
-                    <<>>
-            end;
-        Len ->
+    case {yaws:to_lower((ARG#arg.headers)#headers.transfer_encoding),
+          (ARG#arg.headers)#headers.content_length} of
+        {"chunked", _} ->
+            get_chunked_client_data(CliSock, yaws:is_ssl(SC));
+        {_, undefined} ->
+            <<>>;
+        {_, Len} ->
             Int_len = list_to_integer(Len),
             if N + PPS < Int_len ->
                     Bin = get_client_data(CliSock, N, yaws:is_ssl(SC)),
                     {partial, Bin};
                true ->
-                    get_client_data(CliSock, Int_len - PPS,
-                                    yaws:is_ssl(SC))
+                    get_client_data(CliSock, Int_len - PPS, yaws:is_ssl(SC))
             end
     end.
 
@@ -4893,10 +4877,10 @@ compressible_mime_type(Mime, Type, SubType, [_|Rest]) ->
 flush(Sock, Sz, TransferEncoding) ->
     flush(Sock, 0, Sz, TransferEncoding).
 
-flush(Sock, Pos, undefined, "chunked") ->
+flush(Sock, Pos, Sz, "chunked") ->
     SC = get(sc),
     case get_chunked_client_data(Sock, yaws:is_ssl(SC)) of
-        {partial, Bin} -> flush(Sock, Pos+size(Bin), undefined, "chunked");
+        {partial, Bin} -> flush(Sock, Pos+size(Bin), Sz, "chunked");
         _              -> Pos
     end;
 flush(_Sock, Pos, undefined, _) ->
