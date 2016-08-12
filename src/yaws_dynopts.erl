@@ -60,15 +60,15 @@ have_erlang_sendfile() ->
 
 %% crypto:sha/1 is deprecated since R16B01 (ERTS >= 5.10.2)
 have_crypto_hash() ->
-    erlang:function_exported(crypto, hash, 2).
+    lists:member({hash, 2}, crypto:module_info(exports)).
 
 %% crypto:rand_bytes/1 is deprecated since releases 19 (ERTS >= 8.0)
 have_crypto_strong_rand_bytes() ->
-    erlang:function_exported(crypto, strong_rand_bytes, 1).
+    lists:member({strong_rand_bytes, 1}, crypto:module_info(exports)).
 
 %% inet:parse_strict_address was exported in R16A (ERTS >= 5.10)
 have_inet_parse_strict_address() ->
-    erlang:function_exported(inet, parse_strict_address, 1).
+    lists:member({parse_strict_address, 1}, inet:module_info(exports)).
 
 %% erlang:now/0 is deprecated since releases 18 (ERTS >= 7.0)
 have_erlang_now() ->
