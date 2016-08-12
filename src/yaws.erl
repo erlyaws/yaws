@@ -194,7 +194,7 @@
          tmpdir/0, tmpdir/1, mktemp/1, split_at/2, insert_at/3,
          id_dir/1, ctl_file/1]).
 
--export([parse_ipmask/1, match_ipmask/2]).
+-export([parse_ipmask/1, match_ipmask/2, find_private_port/0]).
 
 -export([get_app_dir/0, get_ebin_dir/0, get_priv_dir/0,
          get_inc_dir/0]).
@@ -250,8 +250,11 @@ create_gconf(GL, Id) when is_list(GL) ->
     setup_gconf(GL, yaws_config:make_default_gconf(Debug, Id)).
 
 create_sconf(DocRoot, SL) when is_list(DocRoot), is_list(SL) ->
-    SC = yaws_config:make_default_sconf(DocRoot, lkup(port, SL, undefined)),
-    setup_sconf(SL, SC).
+    SC = yaws_config:make_default_sconf(DocRoot,
+                                        lkup(servername, SL, undefined),
+                                        lkup(port, SL, undefined)),
+    SL1 = lists:keydelete(port, 1, lists:keydelete(servername, 1, SL)),
+    setup_sconf(SL1, SC).
 
 start_app_deps() ->
     Deps = split_sep(?YAWS_APPDEPS, $,),
@@ -3007,6 +3010,27 @@ compare_ips({A1,_,_,_,_,_,_,_}, {A2,_,_,_,_,_,_,_}) when A1 > A2 -> greater;
 compare_ips(_,                  _)                               -> error.
 
 
+%% Use  IANA range for dynamic or private ports (49152 -> 65535)
+find_private_port() ->
+    Start = case application:get_env(kernel, next_yaws_private_port) of
+                {ok, Port} -> Port;
+                undefined  -> 49152
+            end,
+    End = 65535,
+    find_private_port(Start, End).
+
+find_private_port(Port, End) when Port > End ->
+    {error, notfound};
+find_private_port(Port, End) ->
+    case gen_tcp:listen(Port, [{ip, {0,0,0,0}}]) of
+        {ok, Sock} ->
+            gen_tcp:close(Sock),
+            application:set_env(kernel, next_yaws_private_port, Port+1),
+            {ok, Port};
+        {error, _} ->
+            find_private_port(Port+1, End)
+    end.
+
 %% ----
 get_app_subdir(SubDir) when is_atom(SubDir) ->
     filename:join(get_app_dir(), atom_to_list(SubDir)).
@@ -3016,9 +3040,11 @@ get_app_dir() ->
         {ok, AppDir} ->
             AppDir;
         undefined ->
-            AppDir = filename:absname(
-                       filename:dirname(filename:dirname(code:which(?MODULE)))
-                      ),
+            Path = case code:which(?MODULE) of
+                       cover_compiled -> code:where_is_file("yaws.beam");
+                       Dir            -> Dir
+                   end,
+            AppDir = filename:absname(filename:dirname(filename:dirname(Path))),
             application:set_env(yaws, app_dir, AppDir),
             AppDir
     end.

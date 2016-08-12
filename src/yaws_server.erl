@@ -387,10 +387,10 @@ handle_call({add_sconf, Pos, Sc}, From, State) ->
             GC = State#state.gc,
             case start_group(GC, [Sc]) of
                 false ->
-                    {reply, ok, State};
-                {true, Pair} ->
+                    {reply, {ok, Sc}, State};
+                {true, {_,[Sc2]}=Pair} ->
                     P2 = [Pair | State#state.pairs],
-                    {reply, ok, State#state{pairs = P2}}
+                    {reply, {ok, Sc2}, State#state{pairs = P2}}
             end
     end;
 
@@ -742,7 +742,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                                          )},
                     Ready2 = [],
                     Updater ! {updated_sconf, self(), NewSc2},
-                    gen_server:reply(From, ok),
+                    gen_server:reply(From, {ok, NewSc2}),
                     error_logger:info_msg("Updating sconf for server ~s~n",
                                           [yaws:sconf_to_srvstr(NewSc2)]),
                     New = acceptor(GS2),
@@ -774,7 +774,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             GS2 = GS#gs{group =  yaws:insert_at(SC2, Pos, GS#gs.group)},
             Ready2 = [],
             Adder ! {added_sconf, self(), SC2},
-            gen_server:reply(From, ok),
+            gen_server:reply(From, {ok, SC2}),
             error_logger:info_msg("Adding sconf for server ~s~n",
                                   [yaws:sconf_to_srvstr(SC)]),
             New = acceptor(GS2),

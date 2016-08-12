@@ -18,7 +18,7 @@
 -define(NEXTLINE, io_get_line(FD, '', [])).
 
 -export([load/1,
-         make_default_gconf/2, make_default_sconf/0, make_default_sconf/2,
+         make_default_gconf/2, make_default_sconf/0, make_default_sconf/3,
          add_sconf/1,
          add_yaws_auth/1,
          add_yaws_soap_srv/1, add_yaws_soap_srv/2,
@@ -582,33 +582,42 @@ no_two_same([]) ->
 
 
 arrange([C|Tail], start, [], B) ->
-    arrange(Tail, {in, C}, [set_server(C)], B);
+    C1 = set_server(C),
+    arrange(Tail, {in, C1}, [C1], B);
 arrange([], _, [], B) ->
     B;
 arrange([], _, A, B) ->
     [lists:reverse(A) | B];
-arrange([C1|Tail], {in, C0}, A, B) ->
+arrange([C|Tail], {in, C0}, A, B) ->
+    C1 = set_server(C),
     if
         C1#sconf.listen == C0#sconf.listen,
         C1#sconf.port == C0#sconf.port ->
-            arrange(Tail, {in, C0}, [set_server(C1)|A], B);
+            arrange(Tail, {in, C0}, [C1|A], B);
         true ->
-            arrange(Tail, {in, C1}, [set_server(C1)], [lists:reverse(A)|B])
+            arrange(Tail, {in, C1}, [C1], [lists:reverse(A)|B])
     end.
 
 
 set_server(SC) ->
-    case {SC#sconf.ssl, SC#sconf.port, ?sc_has_add_port(SC)} of
+    SC1 = if
+              SC#sconf.port == 0 ->
+                  {ok, P} = yaws:find_private_port(),
+                  SC#sconf{port=P};
+              true ->
+                  SC
+          end,
+    case {SC1#sconf.ssl, SC1#sconf.port, ?sc_has_add_port(SC1)} of
         {undefined, 80, _} ->
-            SC;
+            SC1;
         {undefined, Port, true} ->
-            add_port(SC, Port);
+            add_port(SC1, Port);
         {_SSL, 443, _} ->
-            SC;
+            SC1;
         {_SSL, Port, true} ->
-            add_port(SC, Port);
+            add_port(SC1, Port);
         {_,_,_} ->
-            SC
+            SC1
     end.
 
 
@@ -660,17 +669,20 @@ make_default_gconf(Debug, Id) ->
 %% Keep this function for backward compatibility. But no one is supposed to use
 %% it (yaws_config is an internal module, its api is private).
 make_default_sconf() ->
-    make_default_sconf([], undefined).
+    make_default_sconf([], undefined, undefined).
 
-make_default_sconf([], Port) ->
-    make_default_sconf(filename:join([yaws_dir(), "www"]), Port);
-make_default_sconf(DocRoot, undefined) ->
-    make_default_sconf(DocRoot, 8000);
-make_default_sconf(DocRoot, Port) ->
+make_default_sconf([], Servername, Port) ->
+    make_default_sconf(filename:join([yaws_dir(), "www"]), Servername, Port);
+make_default_sconf(DocRoot, undefined, Port) ->
+    make_default_sconf(DocRoot, "localhost", Port);
+make_default_sconf(DocRoot, Servername, undefined) ->
+    make_default_sconf(DocRoot, Servername, 8000);
+make_default_sconf(DocRoot, Servername, Port) ->
     AbsDocRoot = filename:absname(DocRoot),
     case is_dir(AbsDocRoot) of
         true ->
-            set_server(#sconf{port=Port,listen={127,0,0,1},docroot=AbsDocRoot});
+            set_server(#sconf{port=Port, servername=Servername,
+                              listen={127,0,0,1},docroot=AbsDocRoot});
         false ->
             throw({error, ?F("Invalid docroot: directory ~s does not exist",
                              [AbsDocRoot])})
@@ -3272,12 +3284,13 @@ verify_upgrade_args(GC, Groups0) when is_record(GC, gconf) ->
 add_sconf(SC) ->
     add_sconf(-1, SC).
 
-add_sconf(Pos, SC) ->
-    ok= gen_server:call(yaws_server, {add_sconf, Pos, SC}, infinity),
-    ok = yaws_log:add_sconf(SC).
+add_sconf(Pos, SC0) ->
+    {ok, SC1} = gen_server:call(yaws_server, {add_sconf, Pos, SC0}, infinity),
+    ok = yaws_log:add_sconf(SC1),
+    {ok, SC1}.
 
 update_sconf(Pos, SC) ->
-    ok = gen_server:call(yaws_server, {update_sconf, Pos, SC}, infinity).
+    gen_server:call(yaws_server, {update_sconf, Pos, SC}, infinity).
 
 delete_sconf(SC) ->
     ok = gen_server:call(yaws_server, {delete_sconf, SC}, infinity),
