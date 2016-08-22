@@ -923,6 +923,9 @@ fcgi_worker(ParentPid, Role, Arg, GlobalConf, ServerConf, Options) ->
 fcgi_pass_through_client_data(WorkerState) ->
     ParentPid = WorkerState#fcgi_worker_state.parent_pid,
     receive
+        {ParentPid, clidata, <<>>} ->
+            ParentPid ! {self(), clidata_receipt},
+            fcgi_pass_through_client_data(WorkerState);
         {ParentPid, clidata, ClientData} ->
             ParentPid ! {self(), clidata_receipt},
             fcgi_send_stdin(WorkerState, ClientData),
