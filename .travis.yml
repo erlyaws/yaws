@@ -23,6 +23,10 @@ otp_release:
   - R14B04
   - R14B03
 
+env:
+  global:
+      - secure: "Jk1W4GtZ8rIg0fBsPepNMwipt1m6wkgYGJbuDiGUAXp8o0HD92aBCO95z4YvcYM9TxnAgpgxtUrlDXrZe5WhyAapJTW7HVm3JcsMpAfJAnGDrDeDrkI+A5V/I+ynFZ1F6F/2dKNQWJV3ieuwRojjH/dc3AVqYMWND0oAD/YWwkg="
+
 addons:
   apt:
     packages:
@@ -34,6 +38,7 @@ addons:
       - texlive-font-utils
       - texlive-extra-utils
       - ghostscript
+      - cadaver
 
 install:
   - autoreconf -vfi
@@ -42,7 +47,7 @@ before_script:
   - ./configure
 
 script:
-  - make distcheck -j4 V=1
+  - make check -j4 V=1
 
 after_script:
-  - rebar get-deps compile
+  - ./scripts/upload-travis-build-artifacts
