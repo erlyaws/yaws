@@ -328,7 +328,7 @@ handle_call(check_certs, _From, State) ->
     {reply, L, State};
 
 handle_call({update_sconf, Pos, NewSc}, From, State) ->
-    case yaws_config:search_sconf(NewSc, State#state.pairs) of
+    case yaws_config:search_sconf(State#state.gc, NewSc, State#state.pairs) of
         {Pid, OldSc, Group} ->
             OldPos = string:str(Group, [OldSc]),
             case (yaws_config:eq_sconfs(OldSc,NewSc) andalso OldPos == Pos) of
@@ -340,7 +340,8 @@ handle_call({update_sconf, Pos, NewSc}, From, State) ->
                     Pid ! {update_sconf, Pos, NewSc, OldSc, From, self()},
                     receive
                         {updated_sconf, Pid, NewSc2} ->
-                            P2 = yaws_config:update_sconf(NewSc2, Pos,
+                            P2 = yaws_config:update_sconf(State#state.gc,
+                                                          NewSc2, Pos,
                                                           State#state.pairs),
                             {noreply, State#state{pairs = P2}}
                     after 2000 ->
@@ -353,7 +354,7 @@ handle_call({update_sconf, Pos, NewSc}, From, State) ->
 
 
 handle_call({delete_sconf, Sc}, From, State) ->
-    case yaws_config:search_sconf(Sc, State#state.pairs) of
+    case yaws_config:search_sconf(State#state.gc, Sc, State#state.pairs) of
         {Pid, OldSc, Group} when length(Group) == 1 ->
             error_logger:info_msg("Terminate whole ~s virt server group \n",
                                   [yaws:sconf_to_srvstr(OldSc)]),
@@ -362,19 +363,21 @@ handle_call({delete_sconf, Sc}, From, State) ->
             {reply, ok, State#state{pairs = NewPairs}};
         {Pid, OldSc, _Group} ->
             Pid ! {delete_sconf, OldSc, From},
-            P2 = yaws_config:delete_sconf(OldSc, State#state.pairs),
+            P2 = yaws_config:delete_sconf(State#state.gc, OldSc,
+                                          State#state.pairs),
             {noreply, State#state{pairs = P2}};
         false ->
             {reply, {error, "No matching group"}, State}
     end;
 
 handle_call({add_sconf, Pos, Sc}, From, State) ->
-    case yaws_config:search_group(Sc, State#state.pairs) of
+    case yaws_config:search_group(State#state.gc, Sc, State#state.pairs) of
         [{Pid, _Group}] ->
             Pid ! {add_sconf, From, Pos, Sc, self()},
             receive
                 {added_sconf, Pid, Sc2} ->
-                    P2 = yaws_config:update_sconf(Sc2, Pos,
+                    P2 = yaws_config:update_sconf(State#state.gc,
+                                                  Sc2, Pos,
                                                   State#state.pairs),
                     {noreply, State#state{pairs = P2}}
             after 2000 ->

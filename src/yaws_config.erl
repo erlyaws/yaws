@@ -25,8 +25,8 @@
          load_mime_types_module/2,
          new_usertab/0,
          compile_and_load_src_dir/1,
-         search_sconf/2, search_group/2,
-         update_sconf/3, delete_sconf/2,
+         search_sconf/3, search_group/3,
+         update_sconf/4, delete_sconf/3,
          eq_sconfs/2, soft_setconf/4, hard_setconf/2,
          can_hard_gc/2, can_soft_setconf/4,
          can_soft_gc/2, verify_upgrade_args/2, toks/2]).
@@ -2990,10 +2990,10 @@ ssl_start() ->
 %% search for an SC within Pairs that have the same, listen,port,ssl,severname
 %% Return {Pid, SC, Scs} or false
 %% Pairs is the pairs in yaws_server #state{}
-search_sconf(NewSC, Pairs) ->
+search_sconf(GC, NewSC, Pairs) ->
     case lists:zf(
            fun({Pid, Scs = [SC|_]}) ->
-                   case same_virt_srv(NewSC, SC) of
+                   case same_virt_srv(GC, NewSC, SC) of
                        true ->
                            case lists:keysearch(NewSC#sconf.servername,
                                                 #sconf.servername, Scs) of
@@ -3017,9 +3017,9 @@ search_sconf(NewSC, Pairs) ->
     end.
 
 %% find the group a new SC would belong to
-search_group(SC, Pairs) ->
+search_group(GC, SC, Pairs) ->
     Fun =  fun({Pid, [S|Ss]}) ->
-                   case same_virt_srv(S, SC) of
+                   case same_virt_srv(GC, S, SC) of
                        true ->
                            {true, {Pid, [S|Ss]}};
                        false ->
@@ -3031,10 +3031,10 @@ search_group(SC, Pairs) ->
 
 
 %% Return a new Pairs list with one SC updated
-update_sconf(NewSc, Pos, Pairs) ->
+update_sconf(Gc, NewSc, Pos, Pairs) ->
     lists:map(
       fun({Pid, Scs}) ->
-              case same_virt_srv(hd(Scs), NewSc) of
+              case same_virt_srv(Gc, hd(Scs), NewSc) of
                   true ->
                       L2 = lists:keydelete(NewSc#sconf.servername,
                                            #sconf.servername, Scs),
@@ -3046,10 +3046,10 @@ update_sconf(NewSc, Pos, Pairs) ->
 
 
 %% return a new pairs list with SC removed
-delete_sconf(OldSc, Pairs) ->
+delete_sconf(Gc, OldSc, Pairs) ->
     lists:zf(
       fun({Pid, Scs}) ->
-              case same_virt_srv(hd(Scs), OldSc) of
+              case same_virt_srv(Gc, hd(Scs), OldSc) of
                   true ->
                       L2 = lists:keydelete(OldSc#sconf.servername,
                                            #sconf.servername, Scs),
@@ -3062,12 +3062,17 @@ delete_sconf(OldSc, Pairs) ->
 
 
 
-same_virt_srv(S, NewSc) when
-      S#sconf.listen == NewSc#sconf.listen,
-      S#sconf.port == NewSc#sconf.port,
-      S#sconf.ssl == NewSc#sconf.ssl ->
-    true;
-same_virt_srv(_,_) ->
+same_virt_srv(Gc, S, NewSc) when S#sconf.listen == NewSc#sconf.listen,
+                                 S#sconf.port == NewSc#sconf.port ->
+    if
+        Gc#gconf.sni == disable orelse
+        S#sconf.ssl == undefined orelse
+        NewSc#sconf.ssl == undefined ->
+            (S#sconf.ssl == NewSc#sconf.ssl);
+        true ->
+            true
+    end;
+same_virt_srv(_,_,_) ->
     false.
 
 
@@ -3122,8 +3127,8 @@ soft_setconf(GC, Groups, OLDGC, OldGroups) ->
     end,
     compile_and_load_src_dir(GC),
     Grps = load_mime_types_module(GC, Groups),
-    Rems = remove_old_scs(lists:flatten(OldGroups), Grps),
-    Adds = soft_setconf_scs(lists:flatten(Grps), 1, OldGroups),
+    Rems = remove_old_scs(GC, lists:flatten(OldGroups), Grps),
+    Adds = soft_setconf_scs(GC, lists:flatten(Grps), 1, OldGroups),
     lists:foreach(
       fun({delete_sconf, SC}) ->
               delete_sconf(SC);
@@ -3139,34 +3144,34 @@ hard_setconf(GC, Groups) ->
     gen_server:call(yaws_server,{setconf, GC, Groups}, infinity).
 
 
-remove_old_scs([Sc|Scs], NewGroups) ->
-    case find_group(Sc, NewGroups) of
+remove_old_scs(Gc, [Sc|Scs], NewGroups) ->
+    case find_group(Gc, Sc, NewGroups) of
         false ->
-            [{delete_sconf, Sc} |remove_old_scs(Scs, NewGroups)];
+            [{delete_sconf, Sc} |remove_old_scs(Gc, Scs, NewGroups)];
         {true, G} ->
             case find_sc(Sc, G) of
                 false ->
-                    [{delete_sconf, Sc} | remove_old_scs(Scs, NewGroups)];
+                    [{delete_sconf, Sc} | remove_old_scs(Gc, Scs, NewGroups)];
                 _ ->
-                    remove_old_scs(Scs, NewGroups)
+                    remove_old_scs(Gc, Scs, NewGroups)
             end
     end;
-remove_old_scs([],_) ->
+remove_old_scs(_, [],_) ->
     [].
 
-soft_setconf_scs([Sc|Scs], N, OldGroups) ->
-    case find_group(Sc, OldGroups) of
+soft_setconf_scs(Gc, [Sc|Scs], N, OldGroups) ->
+    case find_group(Gc, Sc, OldGroups) of
         false ->
-            [{add_sconf,N,Sc} | soft_setconf_scs(Scs, N+1, OldGroups)];
+            [{add_sconf,N,Sc} | soft_setconf_scs(Gc, Scs, N+1, OldGroups)];
         {true, G} ->
             case find_sc(Sc, G) of
                 false ->
-                    [{add_sconf,N,Sc} | soft_setconf_scs(Scs,N+1,OldGroups)];
+                    [{add_sconf,N,Sc} | soft_setconf_scs(Gc, Scs,N+1,OldGroups)];
                 {true, _OldSc} ->
-                    [{update_sconf,N,Sc} | soft_setconf_scs(Scs,N+1,OldGroups)]
+                    [{update_sconf,N,Sc} | soft_setconf_scs(Gc, Scs,N+1,OldGroups)]
             end
     end;
-soft_setconf_scs([], _, _) ->
+soft_setconf_scs(_,[], _, _) ->
     [].
 
 
@@ -3188,13 +3193,14 @@ can_hard_gc(New, Old) ->
 
 can_soft_setconf(NEWGC, NewGroups, OLDGC, OldGroups) ->
     can_soft_gc(NEWGC, OLDGC) andalso
-        can_soft_sconf(lists:flatten(NewGroups), OldGroups).
+        can_soft_sconf(NEWGC, lists:flatten(NewGroups), OldGroups).
 
 can_soft_gc(G1, G2) ->
     if
         G1#gconf.flags == G2#gconf.flags,
         G1#gconf.logdir == G2#gconf.logdir,
         G1#gconf.log_wrap_size == G2#gconf.log_wrap_size,
+        G1#gconf.sni == G2#gconf.sni,
         G1#gconf.id == G2#gconf.id ->
             true;
         true ->
@@ -3202,14 +3208,14 @@ can_soft_gc(G1, G2) ->
     end.
 
 
-can_soft_sconf([Sc|Scs], OldGroups) ->
-    case find_group(Sc, OldGroups) of
+can_soft_sconf(Gc, [Sc|Scs], OldGroups) ->
+    case find_group(Gc, Sc, OldGroups) of
         false ->
-            can_soft_sconf(Scs, OldGroups);
+            can_soft_sconf(Gc, Scs, OldGroups);
         {true, G} ->
             case find_sc(Sc, G) of
                 false ->
-                    can_soft_sconf(Scs, OldGroups);
+                    can_soft_sconf(Gc, Scs, OldGroups);
                 {true, Old} when Old#sconf.start_mod /= Sc#sconf.start_mod ->
                     false;
                 {true, Old} ->
@@ -3217,24 +3223,24 @@ can_soft_sconf([Sc|Scs], OldGroups) ->
                         {proplists:get_value(listen_opts, Old#sconf.soptions),
                          proplists:get_value(listen_opts, Sc#sconf.soptions)} of
                         {Opts, Opts} ->
-                            can_soft_sconf(Scs, OldGroups);
+                            can_soft_sconf(Gc, Scs, OldGroups);
                         _ ->
                             false
                     end
             end
     end;
-can_soft_sconf([], _) ->
+can_soft_sconf(_, [], _) ->
     true.
 
 
-find_group(SC, [G|Gs]) ->
-    case same_virt_srv(SC, hd(G)) of
+find_group(GC, SC, [G|Gs]) ->
+    case same_virt_srv(GC, SC, hd(G)) of
         true ->
             {true, G};
         false ->
-            find_group(SC, Gs)
+            find_group(GC, SC, Gs)
     end;
-find_group(_,[]) ->
+find_group(_,_,[]) ->
     false.
 
 find_sc(SC, [S|Ss]) ->
