@@ -267,9 +267,10 @@ parse_yaws_auth_file([{file, File}|T], Auth0) ->
 
 parse_yaws_auth_file([{User, Password}|T], Auth0)
   when is_list(User), is_list(Password) ->
-    Users = case lists:member({User,Password}, Auth0#auth.users) of
+    Hash = crypto:hash(sha256, Password),
+    Users = case lists:member({User, sha256, Hash}, Auth0#auth.users) of
                 true  -> Auth0#auth.users;
-                false -> [{User, Password} | Auth0#auth.users]
+                false -> [{User, sha256, Hash} | Auth0#auth.users]
             end,
     parse_yaws_auth_file(T, Auth0#auth{users = Users});
 
@@ -2100,7 +2101,10 @@ fload(FD, server_auth, GC, C, Lno, Chars) ->
         ["user", '=', User] ->
             case (catch string:tokens(User, ":")) of
                 [Name, Passwd] ->
-                    Auth1 = Auth#auth{users = [{Name, Passwd}|Auth#auth.users]},
+                    Hash = crypto:hash(sha256, Passwd),
+                    Auth1 = Auth#auth{
+                              users = [{Name, sha256, Hash}|Auth#auth.users]
+                             },
                     C1 = C#sconf{authdirs=[Auth1|AuthDirs]},
                     fload(FD, server_auth, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->

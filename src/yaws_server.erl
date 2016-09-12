@@ -2172,10 +2172,16 @@ handle_auth(ARG, {User, Password, OrigString},
 
 handle_auth(ARG, {User, Password, OrigString},
             Auth_methods = #auth{users = Users}, Ret) when Users /= [] ->
-    case member({User, Password}, Users) of
-        true ->
-            maybe_auth_log({ok, User}, ARG),
-            true;
+    case lists:keyfind(User, 1, Users) of
+        {User, Algo, Hash} ->
+            case crypto:hash(Algo, Password) of
+                Hash ->
+                    maybe_auth_log({ok, User}, ARG),
+                    true;
+                _ ->
+                    handle_auth(ARG, {User, Password, OrigString},
+                                Auth_methods#auth{users = []}, Ret)
+            end;
         false ->
             handle_auth(ARG, {User, Password, OrigString},
                         Auth_methods#auth{users = []}, Ret)
