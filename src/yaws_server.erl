@@ -729,7 +729,9 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     stop_stats(OldSc),
                     NewSc1 = start_stats(NewSc),
                     stop_ready(Ready, Last),
-                    NewSc2 = clear_ets_complete(NewSc1),
+                    NewSc2 = clear_ets_complete(
+                               NewSc1#sconf{ets = OldSc#sconf.ets}
+                              ),
                     GS2 = GS#gs{group = yaws:insert_at(
                                           NewSc2, Pos,
                                           lists:delete(OldSc, GS#gs.group)
