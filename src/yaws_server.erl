@@ -2056,12 +2056,11 @@ is_auth(ARG, Req_dir, H, [Auth_methods|T], {_Ret, Auth_headers}) ->
     end.
 
 handle_auth(#arg{client_ip_port={IP,_}}=ARG, Auth_H,
-            #auth{acl={AllowIPs, DenyIPs, Order}, usertab=Usertab}=Auth_methods,
-            Ret) ->
+            #auth{acl={AllowIPs, DenyIPs, Order}}=Auth_methods, Ret) ->
     Fun  = fun(IpMask) -> yaws:match_ipmask(IP, IpMask) end,
     Ret1 = case Auth_methods of
-               #auth{pam=false,mod=[]} when Usertab == none -> true;
-               _                                            -> Ret
+               #auth{users=[],pam=false,mod=[]} -> true;
+               _                                -> Ret
            end,
     case {AllowIPs, DenyIPs, Order} of
         {_, all, deny_allow} ->
@@ -2113,11 +2112,10 @@ handle_auth(#arg{client_ip_port={IP,_}}=ARG, Auth_H,
             end
     end;
 
-handle_auth(_ARG, _Auth_H, #auth{usertab=none,pam=false,mod=[]}, true) ->
+handle_auth(_ARG, _Auth_H, #auth{users=[],pam=false,mod=[]}, true) ->
     true;
 
-handle_auth(ARG, _Auth_H,
-            Auth_methods=#auth{usertab=none,pam=false,mod=[]}, Ret) ->
+handle_auth(ARG, _Auth_H, Auth_methods=#auth{users=[],pam=false,mod=[]}, Ret) ->
     maybe_auth_log({401, Auth_methods#auth.realm}, ARG),
     {Ret, Auth_methods};
 
@@ -2159,8 +2157,7 @@ handle_auth(ARG, Auth_H, Auth_methods = #auth{mod = Mod}, Ret) when Mod /= [] ->
 
 %% if the headers are undefined we do not need to check Pam or Users
 handle_auth(ARG, undefined, Auth_methods, Ret) ->
-    handle_auth(ARG, undefined,
-                Auth_methods#auth{pam = false, usertab=none}, Ret);
+    handle_auth(ARG, undefined, Auth_methods#auth{pam = false, users= []}, Ret);
 
 handle_auth(ARG, {User, Password, OrigString},
             Auth_methods = #auth{pam = Pam}, Ret) when Pam /= false ->
@@ -2174,14 +2171,14 @@ handle_auth(ARG, {User, Password, OrigString},
     end;
 
 handle_auth(ARG, {User, Password, OrigString},
-            Auth_methods = #auth{usertab = Users}, Ret) when Users /= none ->
-    case ets:match(Users, {User, Password}) of
-        [_|_] ->
+            Auth_methods = #auth{users = Users}, Ret) when Users /= [] ->
+    case member({User, Password}, Users) of
+        true ->
             maybe_auth_log({ok, User}, ARG),
             true;
-        [] ->
+        false ->
             handle_auth(ARG, {User, Password, OrigString},
-                        Auth_methods#auth{usertab = none}, Ret)
+                        Auth_methods#auth{users = []}, Ret)
     end.
 
 
