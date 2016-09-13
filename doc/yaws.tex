@@ -3514,9 +3514,16 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
                 \verb+{appmod, ?MODULE}+ and the \verb+out401/1+ function in the
                 same module would return \verb+{redirect_local, "/login.html"}+.
 
-              \item \verb+user = User:Password+ --- Inside this directory, the
-                user \verb+User+ has access if the user supplies the password
-                \verb+Password+ in the popup dialogue presented by the browser.
+              \item \verb+user = User:Password | "User:{Algo}Hash"+ --- Inside
+                this directory, the user \verb+User+ has access if the user
+                supplies the password \verb+Password+ in the popup dialogue
+                presented by the browser. It is also possible to provide a
+                hashed password, encoded in base64. In that case, the algorithm
+                used to hash the password must be set. \verb+Algo+ must be a one
+                of the following algorithms:
+\begin{verbatim}
+  md5 | ripemd160 | sha | sha224 | sha256 | sha384 | sha512
+\end{verbatim}
                 We can obviously have several of these value inside a single
                 <auth> </auth> pair.
 
@@ -3609,6 +3616,7 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
 
 \begin{verbatim}
 {User, Password}.
+{User, Algo, Hash}.
 {realm, String}.
 {pam, Atom}.
 {authmod, Atom}.
@@ -3618,7 +3626,8 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
 {order, allow_deny|deny_allow}.
 \end{verbatim}
 
-        where \verb+User+ and \verb+Password+ are strings with double quotes.
+        where \verb+User+, \verb+Password+, \verb+Algo+ and \verb+Hash+ are
+        strings with double quotes.
 
         The \verb+.yaws_auth+ file mechanism is recursive, so any
         subdirectories of \verb+Dir+ are also automatically

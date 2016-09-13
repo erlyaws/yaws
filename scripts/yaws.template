@@ -80,6 +80,7 @@ help()
     echo "        yaws --wait-started[=secs] [--id ID]                  -- wait for daemon to be ready"
     echo "        yaws --wait-stopped[=secs] [--id ID]                  -- wait for daemon to be stopped"
     echo "        yaws --stats [--id ID]                                -- show daemon statistics"
+    echo "        yaws --auth USER [--algo ALGO]                        -- generate credential for a user"
     exit 1
 }
 
@@ -106,6 +107,9 @@ checkargs=""
 configtest=""
 configtestcmd=""
 verbose=""
+auth=""
+auth_user=""
+auth_algo="sha256"
 program=$0
 
 wait_started() {
@@ -374,6 +378,21 @@ while [ $# -gt 0 ]
       --umask)
           umask $1
           shift;;
+      -auth|--auth)
+          if [ -z "$1" ]; then
+              echo error: missing user argument
+              help
+          fi
+          auth="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl auth"
+          auth_user=$1
+          shift;;
+      -algo|--algo)
+          if [ -z "$1" ]; then
+              echo error: missing algo argument
+              help
+          fi
+          auth_algo="$1"
+          shift;;
       *)
           if [ -z "$check" ]; then
               help
@@ -418,6 +437,16 @@ if [ -n "$configtest" ]; then
     else
         exec $configtest -eval "error_logger:tty(false)" $configtestcmd
     fi
+fi
+
+if [ -n "$auth" ]; then
+    echo "Enter user password:"
+    read passwd
+    if [ -z $passwd ]; then
+        echo error: empty password
+        exit 1
+    fi
+    exec $auth $auth_user $auth_algo $passwd
 fi
 
 if [ -n "$ex" ]; then

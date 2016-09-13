@@ -3,3 +3,5 @@
 {file, "a.txt"}.
 {file, "b.txt"}.
 {"foo", "bar"}.
+{"foo", "sha256", "szTXjROUAlPTDWcL0pxczKpZCGFPK0W5qa0EAkp8l5Q="}. %% sha256baz
+{"foo", "md5", "C5GxiXRrcq9Eih5W1CqNaA=="}. %% md5baz

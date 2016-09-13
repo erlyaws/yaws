@@ -58,14 +58,17 @@ basic_auth(Config) ->
     Url   = testsuite:make_url(http, "127.0.0.1", Port, "/test1/a.txt"),
     Auth1 = auth_header("foo", "baz"),
     Auth2 = auth_header("foo", "bar"),
+    Auth3 = auth_header("foo", "sha256baz"),
+    Auth4 = auth_header("foo", "md5baz"),
 
     {ok, {StatusLine, Hdrs, _}} = testsuite:http_get(Url),
     ?assertMatch({_, 401, _}, StatusLine),
     ?assertEqual("Basic realm=\"test1\"", proplists:get_value("www-authenticate", Hdrs)),
 
     ?assertMatch({ok, {{_,401,_}, _, _}}, testsuite:http_get(Url, [Auth1])),
-
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url, [Auth2])),
+    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url, [Auth3])),
+    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url, [Auth4])),
     ok.
 
 basic_auth_with_docroot(Config) ->
@@ -169,20 +172,28 @@ yaws_auth_hidden_file(Config) ->
     Url1  = testsuite:make_url(http, "127.0.0.1", Port, "/test10/a.txt"),
     Url2  = testsuite:make_url(http, "127.0.0.1", Port, "/test10/b.txt"),
     Url3 = testsuite:make_url(http, "127.0.0.1", Port, "/test10/c.txt"),
-    Auth1 = auth_header("foo", "bar"),
+    Auth1 = auth_header("foo", "baz"),
     Auth2 = auth_header("foo", "bar"),
+    Auth3 = auth_header("foo", "sha256baz"),
+    Auth4 = auth_header("foo", "md5baz"),
 
     {ok, {StatusLine1, Hdrs1, _}} = testsuite:http_get(Url1),
     ?assertMatch({_, 401, _}, StatusLine1),
     ?assertEqual("Basic realm=\"test10\"", proplists:get_value("www-authenticate", Hdrs1)),
 
-    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url1, [Auth1])),
+    ?assertMatch({ok, {{_,401,_}, _, _}}, testsuite:http_get(Url1, [Auth1])),
+    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url1, [Auth2])),
+    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url1, [Auth3])),
+    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url1, [Auth4])),
 
     {ok, {StatusLine2, Hdrs2, _}} = testsuite:http_get(Url2),
     ?assertMatch({_, 401, _}, StatusLine2),
     ?assertEqual("Basic realm=\"test10\"", proplists:get_value("www-authenticate", Hdrs2)),
 
+    ?assertMatch({ok, {{_,401,_}, _, _}}, testsuite:http_get(Url2, [Auth1])),
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url2, [Auth2])),
+    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url2, [Auth3])),
+    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url2, [Auth4])),
 
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url3)),
     ok.

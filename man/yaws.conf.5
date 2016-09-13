@@ -1355,11 +1355,21 @@ callback would check if a valid cookie header is present, if not it would return
 .RE
 
 .IP
-\fBuser = User:Password\fR
+\fBuser = User:Password | "User:{Algo}Hash"\fR
 .RS 12
-Inside this directory, the user User has access if the user supplies the
-password Password in the popup dialogue presented by the browser.  We can
-obviously have several of these value inside a single <auth> </auth> pair.
+Inside this directory, the user \fIUser\fR has access if the user supplies the
+password \fIPassword\fR in the popup dialogue presented by the browser. It is
+also possible to provide a hashed password, encoded in base64. In that case, the
+algorithm used to hash the password must be set. \fIAlgo\fR must be a one of the
+following algorithms:
+
+.nf
+    md5 | ripemd160 | sha | sha224 | sha256 | sha384 | sha512
+.fi
+
+We can obviously have several of these value inside a single <auth> </auth>
+pair.
+
 .RE
 
 .IP

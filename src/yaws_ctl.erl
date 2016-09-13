@@ -19,7 +19,7 @@
 -export([start/2, actl_trace/1]).
 -export([ls/1,hup/1,stop/1,status/1,load/1,
          check/1,trace/1, debug_dump/1, stats/1, running_config/1,
-         configtest/1]).
+         configtest/1, auth/1]).
 %% internal
 -export([run/1, aloop/3, handle_a/3]).
 
@@ -557,7 +557,6 @@ running_config([SID]) ->
     actl(SID, running_config).
 
 configtest([File]) ->
-
     Env = #env{debug = false, conf  = {file, File}},
     case catch yaws_config:load(Env) of
         {ok, _GC, _SCs} ->
@@ -568,5 +567,27 @@ configtest([File]) ->
             timer:sleep(100),erlang:halt(1);
         Other ->
             io:format("Syntax error in file ~p:~n~p~n", [File, Other]),
+            timer:sleep(100),erlang:halt(1)
+    end.
+
+auth([User, Algo, Passwd]) ->
+    if
+        Algo == md5    orelse Algo == sha    orelse
+        Algo == sha224 orelse Algo == sha256 orelse
+        Algo == sha384 orelse Algo == sha512 orelse
+        Algo == ripemd160 ->
+            Hash = crypto:hash(Algo, atom_to_list(Passwd)),
+            B64Hash = base64:encode(Hash),
+            io:format("~nUser's credential successfully generated:~n", []),
+            io:format("\tPut this line in your Yaws config (in <auth> section):"
+                      " user = \"~s:{~s}~s\"~n~n",
+                      [atom_to_list(User), atom_to_list(Algo), B64Hash]),
+            io:format("\tOr in a .yaws_auth file:"
+                      " {\"~s\", \"~s\", \"~s\"}.~n",
+                      [atom_to_list(User), atom_to_list(Algo), B64Hash]),
+            timer:sleep(100),erlang:halt(0);
+        true ->
+            io:format("Unsupported Hash algorithm ~p~n"
+                      "\tUse: md5 | ripemd160 | sha | sha224 | sha256 | sha384 | sha512 ~n", [Algo]),
             timer:sleep(100),erlang:halt(1)
     end.

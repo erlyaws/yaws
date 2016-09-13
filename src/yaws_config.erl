@@ -274,6 +274,21 @@ parse_yaws_auth_file([{User, Password}|T], Auth0)
             end,
     parse_yaws_auth_file(T, Auth0#auth{users = Users});
 
+parse_yaws_auth_file([{User, Algo, B64Hash}|T], Auth0)
+  when is_list(User), is_list(Algo), is_list(B64Hash) ->
+    case parse_auth_user(User, Algo, B64Hash) of
+        {ok, Res} ->
+            Users = case lists:member(Res, Auth0#auth.users) of
+                        true  -> Auth0#auth.users;
+                        false -> [Res | Auth0#auth.users]
+                    end,
+            parse_yaws_auth_file(T, Auth0#auth{users = Users});
+        {error, Reason} ->
+            error_logger:format("Failed to parse user line ~p: ~p~n",
+                                [{User, Algo, B64Hash}, Reason]),
+            parse_yaws_auth_file(T, Auth0)
+    end;
+
 parse_yaws_auth_file([{allow, all}|T], Auth0) ->
     Auth1 = case Auth0#auth.acl of
                 none    -> Auth0#auth{acl={all, [], deny_allow}};
@@ -2099,16 +2114,15 @@ fload(FD, server_auth, GC, C, Lno, Chars) ->
             fload(FD, server_auth, GC, C1, Lno+1, ?NEXTLINE);
 
         ["user", '=', User] ->
-            case (catch string:tokens(User, ":")) of
-                [Name, Passwd] ->
-                    Hash = crypto:hash(sha256, Passwd),
+            case parse_auth_user(User, Lno) of
+                {Name, Algo, Hash} ->
                     Auth1 = Auth#auth{
-                              users = [{Name, sha256, Hash}|Auth#auth.users]
+                              users = [{Name, Algo, Hash}|Auth#auth.users]
                              },
                     C1 = C#sconf{authdirs=[Auth1|AuthDirs]},
                     fload(FD, server_auth, GC, C1, Lno+1, ?NEXTLINE);
-                _ ->
-                    {error, ?F("Invalid user at line ~w", [Lno])}
+                {error, Str} ->
+                    {error, Str}
             end;
 
         ["allow", '=', "all"] ->
@@ -2971,7 +2985,6 @@ parse_redirect(_Path, _, _Mode, Lno) ->
     {error, ?F("Bad redirect rule at line ~w", [Lno])}.
 
 
-
 ssl_start() ->
     case catch ssl:start() of
         ok ->
@@ -3310,6 +3323,44 @@ parse_auth_ips([Str|Rest], Result) ->
         parse_auth_ips(Rest, [yaws:parse_ipmask(Str)|Result])
     catch
         _:_ -> parse_auth_ips(Rest, Result)
+    end.
+
+parse_auth_user(User, Lno) ->
+    try
+        [Name, Passwd] = string:tokens(User, ":"),
+        case re:run(Passwd, "{([^}]+)}(.+)", [{capture,all_but_first,list}]) of
+            {match, [Algo, B64Hash]} ->
+                case parse_auth_user(Name, Algo, B64Hash) of
+                    {ok, Res} ->
+                        Res;
+                    {error, bad_algo} ->
+                        {error, ?F("Unsupported hash algorithm '~p' at line ~w",
+                                   [Algo, Lno])};
+                    {error, bad_user} ->
+                        {error, ?F("Invalid user at line ~w", [Lno])}
+                end;
+            _ ->
+                {Name, sha256, crypto:hash(sha256, Passwd)}
+        end
+    catch
+        _:_ ->
+            {error, ?F("Invalid user at line ~w", [Lno])}
+    end.
+
+parse_auth_user(User, Algo, B64Hash) ->
+    try
+        if
+            Algo == "md5"    orelse Algo == "sha"    orelse
+            Algo == "sha224" orelse Algo == "sha256" orelse
+            Algo == "sha384" orelse Algo == "sha512" orelse
+            Algo == "ripemd160" ->
+                Hash = base64:decode(B64Hash),
+                {ok, {User, list_to_atom(Algo), Hash}};
+            true ->
+                {error, unsupported_algo}
+        end
+    catch
+        _:_ -> {error, bad_user}
     end.
 
 
