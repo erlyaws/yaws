@@ -60,6 +60,7 @@ basic_auth(Config) ->
     Auth2 = auth_header("foo", "bar"),
     Auth3 = auth_header("foo", "sha256baz"),
     Auth4 = auth_header("foo", "md5baz"),
+    Auth5 = auth_header("foo", "sha256baz_with_salt"),
 
     {ok, {StatusLine, Hdrs, _}} = testsuite:http_get(Url),
     ?assertMatch({_, 401, _}, StatusLine),
@@ -69,6 +70,7 @@ basic_auth(Config) ->
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url, [Auth2])),
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url, [Auth3])),
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url, [Auth4])),
+    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url, [Auth5])),
     ok.
 
 basic_auth_with_docroot(Config) ->
@@ -176,6 +178,7 @@ yaws_auth_hidden_file(Config) ->
     Auth2 = auth_header("foo", "bar"),
     Auth3 = auth_header("foo", "sha256baz"),
     Auth4 = auth_header("foo", "md5baz"),
+    Auth5 = auth_header("foo", "sha256baz_with_salt"),
 
     {ok, {StatusLine1, Hdrs1, _}} = testsuite:http_get(Url1),
     ?assertMatch({_, 401, _}, StatusLine1),
@@ -185,6 +188,7 @@ yaws_auth_hidden_file(Config) ->
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url1, [Auth2])),
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url1, [Auth3])),
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url1, [Auth4])),
+    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url1, [Auth5])),
 
     {ok, {StatusLine2, Hdrs2, _}} = testsuite:http_get(Url2),
     ?assertMatch({_, 401, _}, StatusLine2),
@@ -194,6 +198,7 @@ yaws_auth_hidden_file(Config) ->
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url2, [Auth2])),
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url2, [Auth3])),
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url2, [Auth4])),
+    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url2, [Auth5])),
 
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url3)),
     ok.

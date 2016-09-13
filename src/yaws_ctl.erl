@@ -576,15 +576,17 @@ auth([User, Algo, Passwd]) ->
         Algo == sha224 orelse Algo == sha256 orelse
         Algo == sha384 orelse Algo == sha512 orelse
         Algo == ripemd160 ->
-            Hash = crypto:hash(Algo, atom_to_list(Passwd)),
+            Salt    = yaws_dynopts:rand_bytes(32),
+            B64Salt = base64:encode(Salt),
+            Hash    = crypto:hash(Algo, [Salt, atom_to_list(Passwd)]),
             B64Hash = base64:encode(Hash),
             io:format("~nUser's credential successfully generated:~n", []),
             io:format("\tPut this line in your Yaws config (in <auth> section):"
-                      " user = \"~s:{~s}~s\"~n~n",
-                      [atom_to_list(User), atom_to_list(Algo), B64Hash]),
+                      " user = \"~s:{~s}$~s$~s\"~n~n",
+                      [atom_to_list(User),atom_to_list(Algo),B64Salt,B64Hash]),
             io:format("\tOr in a .yaws_auth file:"
-                      " {\"~s\", \"~s\", \"~s\"}.~n",
-                      [atom_to_list(User), atom_to_list(Algo), B64Hash]),
+                      " {\"~s\", \"~s\", \"~s\", \"~s\"}.~n",
+                      [atom_to_list(User),atom_to_list(Algo),B64Salt,B64Hash]),
             timer:sleep(100),erlang:halt(0);
         true ->
             io:format("Unsupported Hash algorithm ~p~n"

@@ -267,16 +267,17 @@ parse_yaws_auth_file([{file, File}|T], Auth0) ->
 
 parse_yaws_auth_file([{User, Password}|T], Auth0)
   when is_list(User), is_list(Password) ->
-    Hash = crypto:hash(sha256, Password),
-    Users = case lists:member({User, sha256, Hash}, Auth0#auth.users) of
+    Salt = yaws_dynopts:rand_bytes(32),
+    Hash = crypto:hash(sha256, [Salt, Password]),
+    Users = case lists:member({User, sha256, Salt, Hash}, Auth0#auth.users) of
                 true  -> Auth0#auth.users;
-                false -> [{User, sha256, Hash} | Auth0#auth.users]
+                false -> [{User, sha256, Salt, Hash} | Auth0#auth.users]
             end,
     parse_yaws_auth_file(T, Auth0#auth{users = Users});
 
 parse_yaws_auth_file([{User, Algo, B64Hash}|T], Auth0)
   when is_list(User), is_list(Algo), is_list(B64Hash) ->
-    case parse_auth_user(User, Algo, B64Hash) of
+    case parse_auth_user(User, Algo, "", B64Hash) of
         {ok, Res} ->
             Users = case lists:member(Res, Auth0#auth.users) of
                         true  -> Auth0#auth.users;
@@ -286,6 +287,21 @@ parse_yaws_auth_file([{User, Algo, B64Hash}|T], Auth0)
         {error, Reason} ->
             error_logger:format("Failed to parse user line ~p: ~p~n",
                                 [{User, Algo, B64Hash}, Reason]),
+            parse_yaws_auth_file(T, Auth0)
+    end;
+
+parse_yaws_auth_file([{User, Algo, B64Salt, B64Hash}|T], Auth0)
+  when is_list(User), is_list(Algo), is_list(B64Salt), is_list(B64Hash) ->
+    case parse_auth_user(User, Algo, B64Salt, B64Hash) of
+        {ok, Res} ->
+            Users = case lists:member(Res, Auth0#auth.users) of
+                        true  -> Auth0#auth.users;
+                        false -> [Res | Auth0#auth.users]
+                    end,
+            parse_yaws_auth_file(T, Auth0#auth{users = Users});
+        {error, Reason} ->
+            error_logger:format("Failed to parse user line ~p: ~p~n",
+                                [{User, Algo, B64Hash, B64Hash}, Reason]),
             parse_yaws_auth_file(T, Auth0)
     end;
 
@@ -2115,9 +2131,9 @@ fload(FD, server_auth, GC, C, Lno, Chars) ->
 
         ["user", '=', User] ->
             case parse_auth_user(User, Lno) of
-                {Name, Algo, Hash} ->
+                {Name, Algo, Salt, Hash} ->
                     Auth1 = Auth#auth{
-                              users = [{Name, Algo, Hash}|Auth#auth.users]
+                              users = [{Name, Algo, Salt, Hash}|Auth#auth.users]
                              },
                     C1 = C#sconf{authdirs=[Auth1|AuthDirs]},
                     fload(FD, server_auth, GC, C1, Lno+1, ?NEXTLINE);
@@ -3328,9 +3344,9 @@ parse_auth_ips([Str|Rest], Result) ->
 parse_auth_user(User, Lno) ->
     try
         [Name, Passwd] = string:tokens(User, ":"),
-        case re:run(Passwd, "{([^}]+)}(.+)", [{capture,all_but_first,list}]) of
-            {match, [Algo, B64Hash]} ->
-                case parse_auth_user(Name, Algo, B64Hash) of
+        case re:run(Passwd, "{([^}]+)}(?:\\$([^$]+)\\$)?(.+)", [{capture,all_but_first,list}]) of
+            {match, [Algo, B64Salt, B64Hash]} ->
+                case parse_auth_user(Name, Algo, B64Salt, B64Hash) of
                     {ok, Res} ->
                         Res;
                     {error, bad_algo} ->
@@ -3340,22 +3356,24 @@ parse_auth_user(User, Lno) ->
                         {error, ?F("Invalid user at line ~w", [Lno])}
                 end;
             _ ->
-                {Name, sha256, crypto:hash(sha256, Passwd)}
+                Salt = yaws_dynopts:rand_bytes(32),
+                {Name, sha256, Salt, crypto:hash(sha256, [Salt, Passwd])}
         end
     catch
         _:_ ->
             {error, ?F("Invalid user at line ~w", [Lno])}
     end.
 
-parse_auth_user(User, Algo, B64Hash) ->
+parse_auth_user(User, Algo, B64Salt, B64Hash) ->
     try
         if
             Algo == "md5"    orelse Algo == "sha"    orelse
             Algo == "sha224" orelse Algo == "sha256" orelse
             Algo == "sha384" orelse Algo == "sha512" orelse
             Algo == "ripemd160" ->
+                Salt = base64:decode(B64Salt),
                 Hash = base64:decode(B64Hash),
-                {ok, {User, list_to_atom(Algo), Hash}};
+                {ok, {User, list_to_atom(Algo), Salt, Hash}};
             true ->
                 {error, unsupported_algo}
         end

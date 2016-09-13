@@ -2205,7 +2205,7 @@ parse_ipaddr_and_connect(Proto, Host, Port, Options, Timeout) ->
     %% First, try to parse an IP address, because inet:getaddr/2 could
     %% return nxdomain if the family doesn't match the IP address
     %% format.
-    case yaws_dynopts:parse_strict_address(Host) of
+    case inet:parse_strict_address(Host) of
         {ok, IP} ->
             filter_tcpoptions_and_connect(Proto, undefined,
                                           IP, Port, Options, Timeout);

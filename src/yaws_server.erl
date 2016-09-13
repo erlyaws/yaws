@@ -2172,7 +2172,9 @@ handle_auth(ARG, {User, Password, OrigString},
 
 handle_auth(ARG, {User, Password, OrigString},
             Auth_methods = #auth{users = Users}, Ret) when Users /= [] ->
-    F = fun({U, A, H}) -> (U == User andalso H == crypto:hash(A, Password)) end,
+    F = fun({U, A, S, H}) ->
+                (U == User andalso H == crypto:hash(A, [S,Password]))
+        end,
     case lists:any(F, Users) of
         true ->
             maybe_auth_log({ok, User}, ARG),
