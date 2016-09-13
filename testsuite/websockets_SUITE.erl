@@ -985,11 +985,7 @@ unfragmented_valid_utf8(Config, WSPath, BlockSz) ->
     Fun(<<16#f0,16#90,16#80,16#80>>),
     Fun(<<16#7f>>),
     Fun(<<16#df,16#bf>>),
-
-    case yaws_dynopts:have_bad_unicode() of
-        true  -> ok;
-        false -> Fun(<<16#ef,16#bf,16#bf>>)
-    end,
+    Fun(<<16#ef,16#bf,16#bf>>),
 
     Fun(<<16#f4,16#8f,16#bf,16#bf>>),
     Fun(<<16#ed,16#9f,16#bf>>),
@@ -1642,7 +1638,7 @@ wsflush(Sock, WithTcpClose, Acc) ->
 %% ----
 is_valid_handshake_hash(Key, Hash) ->
     Salted = Key ++ "258EAFA5-E914-47DA-95CA-C5AB0DC85B11",
-    HashBin = yaws_dynopts:hash(Salted),
+    HashBin = crypto:hash(sha, Salted),
     Hash == base64:encode_to_string(HashBin).
 
 

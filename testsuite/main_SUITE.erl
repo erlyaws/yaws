@@ -534,22 +534,17 @@ shaper(Config) ->
     ok.
 
 sslaccept_timeout(Config) ->
-    case erlang:system_info(version) of
-        "5.9.3" ->
-            {skip, "sslaccept_tout_test (skipping due to R15B03 bug)"};
-        _ ->
-            Port = testsuite:get_yaws_port(7, Config),
-            {ok, Sock} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, true}]),
-            ?assertEqual(ok, receive
-                                 {tcp_closed, Sock} -> ok
-                             after
-                                 %% keepalive_timeout is set to 10 secs. So,
-                                 %% wait 15 secs before returning an error
-                                 15000 -> error
-                             end),
-            ?assertEqual(ok, gen_tcp:close(Sock)),
-            ok
-    end.
+    Port = testsuite:get_yaws_port(7, Config),
+    {ok, Sock} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, true}]),
+    ?assertEqual(ok, receive
+                         {tcp_closed, Sock} -> ok
+                     after
+                         %% keepalive_timeout is set to 10 secs. So,
+                         %% wait 15 secs before returning an error
+                         15000 -> error
+                     end),
+    ?assertEqual(ok, gen_tcp:close(Sock)),
+    ok.
 
 ssl_multipart_post(Config) ->
     File      = filename:join(?tempdir(?MODULE), "www/1000.txt"),

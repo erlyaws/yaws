@@ -290,10 +290,6 @@ Or, relatively to the configuration location:
   subconfig = vhosts/*.conf
 .fi
 
-\fBWARNING: because of a bug in filelib:wildcard/2, wildcard strings are
-forbidden for Erlang/OTP R15B03 and previous.\fR
-
-
 .TP
 \fBsubconfigdir = Directory\fR
 Load all config files found in the specified directory. The given Directory can
@@ -1220,9 +1216,6 @@ application. For example, to support only TLS versions 1.2, 1.1, and 1:
 
 protocol_version = tlsv1.2, tlsv1.1, tlsv1
 .fi
-
-\fBWARNING: Erlang/OTP R16B01 or higher is required in order to let it work
-(because of a bug in previous releases).\fR
 .RE
 
 .IP

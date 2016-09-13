@@ -193,7 +193,7 @@ Released version of \Yaws\ are available at
 
 To compile and install a \Yaws\  release
 one of the prerequisites is a properly installed \Erlang\  system. \Yaws\
-runs on \Erlang\/OTP releases R14B02 and newer. Get \Erlang\  from
+runs on \Erlang\/OTP releases R16B01 and newer. Get \Erlang\  from
 \url{http://www.erlang.org/}
 
 Compile and install is straight forward:
@@ -2528,9 +2528,6 @@ part where options for each virtual host is supplied.
   subconfig = vhosts/*.conf
 \end{verbatim}
 
-            \textbf{WARNING: because of a bug in filelib:wildcard/2, wildcard
-              strings are forbidden for Erlang/OTP R15B03 and previous.}
-
 \item        \verb+subconfigdir = Directory+ ---
               Load all config files found in the specified directory. The given
               Directory can be an absolute path or relative to the configuration
@@ -3395,9 +3392,6 @@ The following directives are allowed inside a server definition.
 \begin{verbatim}
 protocol_version = tlsv1.2, tlsv1.1, tlsv1
 \end{verbatim}
-
-                 \textbf{WARNING: Because of a bug in previous releases,
-                   Erlang/OTP R16B01 or newer is required for this to work.}
 
                  \item \verb+require_sni = true | false+ ---
                    If \textit{true}, the server will reject non SNI clients and

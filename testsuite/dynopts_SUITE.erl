@@ -39,32 +39,24 @@ end_per_testcase(_Test, _Config) ->
 %%====================================================================
 default_dynopts(_Config) ->
     ?assertNot(yaws_dynopts:is_generated()),
-    ?assertEqual(ok, check_bad_unicode()),
-    ?assertEqual(ok, check_bad_wildcard()),
     ?assertEqual(ok, check_ssl_honor_cipher_order()),
     ?assertEqual(ok, check_ssl_client_renegotiation()),
     ?assertEqual(ok, check_ssl_sni()),
     ?assertEqual(ok, check_ssl_log_alert()),
     ?assertEqual(ok, check_erlang_sendfile()),
-    ?assertEqual(ok, check_crypto_hash()),
     ?assertEqual(ok, check_crypto_strong_rand_bytes()),
-    ?assertEqual(ok, check_inet_parse_strict_address()),
     ?assertEqual(ok, check_erlang_now()),
     ?assertEqual(ok, check_rand()),
     ok.
 
 generated_dynopts(_Config) ->
     ?assertNot(yaws_dynopts:is_generated()),
-    BadUnicode          = yaws_dynopts:have_bad_unicode(),
-    BadWildcard         = yaws_dynopts:have_bad_wildcard(),
     SSLHonorCipherOrder = yaws_dynopts:have_ssl_honor_cipher_order(),
     SSLCliReneg         = yaws_dynopts:have_ssl_client_renegotiation(),
     SSLSni              = yaws_dynopts:have_ssl_sni(),
     SSLLogAlert         = yaws_dynopts:have_ssl_log_alert(),
     ErlSendfile         = yaws_dynopts:have_erlang_sendfile(),
-    CryptoHash          = yaws_dynopts:have_crypto_hash(),
     CryptoRnd           = yaws_dynopts:have_crypto_strong_rand_bytes(),
-    InetParseAddr       = yaws_dynopts:have_inet_parse_strict_address(),
     ErlNow              = yaws_dynopts:have_erlang_now(),
     Rand                = yaws_dynopts:have_rand(),
 
@@ -72,44 +64,17 @@ generated_dynopts(_Config) ->
     ?assertEqual(ok, yaws_dynopts:generate(GC)),
 
     ?assert(yaws_dynopts:is_generated()),
-    ?assertEqual(BadUnicode,          yaws_dynopts:have_bad_unicode()),
-    ?assertEqual(BadWildcard,         yaws_dynopts:have_bad_wildcard()),
     ?assertEqual(SSLHonorCipherOrder, yaws_dynopts:have_ssl_honor_cipher_order()),
     ?assertEqual(SSLCliReneg,         yaws_dynopts:have_ssl_client_renegotiation()),
     ?assertEqual(SSLSni,              yaws_dynopts:have_ssl_sni()),
     ?assertEqual(SSLLogAlert,         yaws_dynopts:have_ssl_log_alert()),
     ?assertEqual(ErlSendfile,         yaws_dynopts:have_erlang_sendfile()),
-    ?assertEqual(CryptoHash,          yaws_dynopts:have_crypto_hash()),
     ?assertEqual(CryptoRnd,           yaws_dynopts:have_crypto_strong_rand_bytes()),
-    ?assertEqual(InetParseAddr,       yaws_dynopts:have_inet_parse_strict_address()),
     ?assertEqual(ErlNow,              yaws_dynopts:have_erlang_now()),
     ?assertEqual(Rand,                yaws_dynopts:have_rand()),
     ok.
 
 %%====================================================================
-check_bad_unicode() ->
-    %% TODO
-    case yaws_dynopts:have_bad_unicode() of
-        true  -> ok;
-        false -> ok
-    end,
-    ok.
-
-check_bad_wildcard() ->
-    File = filename:basename(code:which(?MODULE)),
-    Dir  = filename:dirname(code:which(?MODULE)),
-    Path = filename:dirname(Dir),
-    Pattern = filename:join(filename:basename(Dir), "*.beam"),
-    case yaws_dynopts:have_bad_wildcard() of
-        true ->
-            [] = filelib:wildcard(Pattern, Path);
-        false ->
-            Res = filelib:wildcard(Pattern, Path),
-            true = (length(Res) > 0),
-            true = lists:member(filename:join(filename:basename(Dir), File), Res)
-    end,
-    ok.
-
 check_ssl_honor_cipher_order() ->
     case yaws_dynopts:have_ssl_honor_cipher_order() of
         true ->
@@ -168,27 +133,11 @@ check_erlang_sendfile() ->
     end,
     ok.
 
-check_crypto_hash() ->
-    Funs = crypto:module_info(exports),
-    case yaws_dynopts:have_crypto_hash() of
-        true  -> true  = lists:member({hash, 2}, Funs);
-        false -> false = lists:member({hash, 2}, Funs)
-    end,
-    ok.
-
 check_crypto_strong_rand_bytes() ->
     Funs = crypto:module_info(exports),
     case yaws_dynopts:have_crypto_strong_rand_bytes() of
         true  -> true  = lists:member({strong_rand_bytes, 1}, Funs);
         false -> false = lists:member({strong_rand_bytes, 1}, Funs)
-    end,
-    ok.
-
-check_inet_parse_strict_address() ->
-    Funs = inet:module_info(exports),
-    case yaws_dynopts:have_inet_parse_strict_address() of
-        true  -> true  = lists:member({parse_strict_address, 1}, Funs);
-        false -> false = lists:member({parse_strict_address, 1}, Funs)
     end,
     ok.
 

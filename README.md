@@ -7,9 +7,7 @@ Prepare build
 
 Get and install an Erlang system (http://www.erlang.org).
 
-**To compile Yaws, Erlang/OTP R14B02 or higher is required.**
-
-**For SSL-enabled instances, Erlang/OTP R16B01 or higher is required in order to allow only specific protocol versions.**
+**To compile Yaws, Erlang/OTP R16B01 or higher is required.**
 
 If you've cloned the source from github and you want to build using autotools,
 note there is no ./configure script in the source, so create one:

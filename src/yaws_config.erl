@@ -3372,16 +3372,9 @@ subconfigfiles(FD, Name, Lno) ->
         {true,_} ->
             {ok, [File]};
         {false,true} ->
-            case yaws_dynopts:have_bad_wildcard() of
-                true ->
-                    {error, ?F("Unsupport wildcard at line ~w"
-                               " [support by releases >= R16A ]",[Lno])};
-                false ->
-                    Names = filelib:wildcard(Name, ConfPath),
-                    Files = [filename:absname(N, ConfPath)
-                             || N <- lists:sort(Names)],
-                    {ok, lists:filter(fun filter_subconfigfile/1, Files)}
-            end;
+            Names = filelib:wildcard(Name, ConfPath),
+            Files = [filename:absname(N, ConfPath) || N <- lists:sort(Names)],
+            {ok, lists:filter(fun filter_subconfigfile/1, Files)};
         {false,false} ->
             {error, ?F("Expect filename or wildcard at line ~w"
                        " (subconfig: ~s)", [Lno, Name])}
