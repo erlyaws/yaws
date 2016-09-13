@@ -24,13 +24,13 @@
 
 %% This one is used when we are started directly.
 init(File) ->
-    case error_logger_file_h:init(File) of
-        {ok, {Fd, File, PrevHandler}} -> %% Pre 18.1
-            file:position(Fd, eof),
-            {ok, {Fd, File, PrevHandler}};
-        {ok,  {st, Fd, File, PrevHandler, Depth}} -> %% Post 18.1
-            file:position(Fd, eof),
-            {ok,  {st, Fd, File, PrevHandler, Depth}};
+    process_flag(trap_exit, true),
+    {ok, [Version], _} = io_lib:fread("~d", erlang:system_info(version)),
+    case file:open(File, [append]) of
+        {ok, Fd} when Version < 7 ->  %% Pre 18.1
+            {ok, {Fd, File, []}};
+        {ok, Fd} ->                   %% Post 18.1
+            {ok, {st, Fd, File, [], unlimited}};
         Error ->
             error_logger:error_msg(
               "Failed to set Yaws error report handler: ~p~n", [Error]
