@@ -542,7 +542,7 @@ check([Id, File| IncludeDirs]) ->
     put(gc, GC2),
     put(use_yfile_name, true),
     case yaws_compile:compile_file(atom_to_list(File)) of
-        {ok, [{errors, 0}| _Spec]} ->
+        {ok, 0, _Spec} ->
             timer:sleep(100),erlang:halt(0);
         _Other ->
             timer:sleep(100),erlang:halt(1)

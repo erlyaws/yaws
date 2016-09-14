@@ -62,7 +62,6 @@
              ssl,           %% ssl | nossl
              certinfo,      %% undefined | [{string(), #certinfo{}}]
              l,             %% listen socket
-             mnum = 0,
              connections = 0, %% number of TCP connections opened now
              sessions = 0,  %% number of active HTTP sessions
              reqs = 0}).    %% total number of processed HTTP requests
@@ -70,7 +69,6 @@
 
 -record(state, {gc,         %% Global conf #gc{} record
                 pairs,      %% [{GservPid, ScList}]
-                mnum = 0,   %% dyn compiled erl module  number
                 embedded    %% true if in embedded mode, false otherwise
                }).
 
@@ -190,8 +188,7 @@ init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded, Id}) ->
         true ->
             {ok, #state{gc = undefined,
                         embedded = Env#env.embedded,
-                        pairs = [],
-                        mnum = 0}}
+                        pairs = []}}
     end.
 
 
@@ -248,7 +245,6 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
                   yaws_config:load_mime_types_module(GC, Sconfs)),
     {ok, #state{gc       = GC,
                 pairs    = L2,
-                mnum     = 0,
                 embedded = Embedded}}.
 
 
@@ -296,11 +292,6 @@ handle_call(id, _From, State) ->
 handle_call(pids, _From, State) ->  %% for gprof
     L = map(fun(X) ->element(1, X) end, State#state.pairs),
     {reply, [self() | L], State};
-
-handle_call(mnum, _From, State) ->
-    Mnum = State#state.mnum +1,
-    {reply, Mnum, State#state{mnum = Mnum}};
-
 
 
 %% This is a brutal restart of everything
@@ -2789,10 +2780,9 @@ do_yaws(CliSock, ARG, UT, N) ->
             deliver_dyn_file(CliSock, Spec, ARG, UT, N);
         Other  ->
             del_old_files(get(gc),Other),
-            {ok, [{errors, Errs}| Spec]} =
-                yaws_compile:compile_file(UT#urltype.fullpath),
+            {ok, NbErrs, Spec} = yaws_compile:compile_file(UT#urltype.fullpath),
             ?Debug("Spec for file ~s is:~n~p~n",[UT#urltype.fullpath, Spec]),
-            ets:insert(SC#sconf.ets, {Key, spec, Mtime, Spec, Errs}),
+            ets:insert(SC#sconf.ets, {Key, spec, Mtime, Spec, NbErrs}),
             deliver_dyn_file(CliSock, Spec, ARG, UT, N)
     end.
 
@@ -3208,11 +3198,11 @@ handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, ARG) ->
                     deliver_dyn_file(CliSock, Spec ++ [yssi], ARG, UT2, N);
                 Other  ->
                     del_old_files(get(gc), Other),
-                    {ok, [{errors, Errs}| Spec]} =
+                    {ok, NbErrs, Spec} =
                         yaws_compile:compile_file(UT2#urltype.fullpath),
                     ?Debug("Spec for file ~s is:~n~p~n",
                            [UT2#urltype.fullpath, Spec]),
-                    ets:insert(SC#sconf.ets, {Key, spec, Mtime, Spec, Errs}),
+                    ets:insert(SC#sconf.ets, {Key, spec, Mtime, Spec, NbErrs}),
                     deliver_dyn_file(CliSock, Spec ++ [yssi], ARG, UT2, N)
             end;
         error when SC#sconf.xtra_docroots /= [] ->

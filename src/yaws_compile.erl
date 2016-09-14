@@ -1,10 +1,3 @@
-%%%----------------------------------------------------------------------
-%%% File    : yaws_compile.erl
-%%% Author  : Claes Wikstrom <klacke@hyber.org>
-%%% Purpose :
-%%% Created : 20 Feb 2002 by Claes Wikstrom <klacke@hyber.org>
-%%%----------------------------------------------------------------------
-
 -module(yaws_compile).
 -author('klacke@hyber.org').
 
@@ -12,468 +5,665 @@
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
-
-
-%%  tada !!
-%% returns a CodeSpec which is:
-%% a list  {data, NumChars} |
-%%         {mod, LineNo, YawsFile, NumSkipChars,  Mod, Func} |
-%%         {error, NumSkipChars, E}}
-
-%% each erlang fragment inside <erl> .... </erl> is compiled into
-%% its own module
-
-
--record(comp, {
-          gc,     %% global conf
-          sc,     %% server conf
-          startline = 0,
-          modnum = 1,
-          infile,
-          infd,
-          outfile,
-          outfd}).
-
 -export([compile_file/1]).
-%% internal exports
--export([compiler_proc/3]).
 
-comp_opts(GC) ->
-    ?Debug("I=~p~n", [GC#gconf.include_dir]),
+-record(comp, {gc, %% global conf
+               script,
+               hash,
+               line = 1,
+               nummod = 1,
+               use_yfile_name = false,
+               nberrors = 0,
+               numchars = 0,
+               verbatim,
+               erlcode,
+               comp_opts = []}).
+
+-spec compile_file(File) -> {ok, NbErrors, CodeSpec} when
+      File         :: file:filename(),
+      NbErrors     :: non_neg_integer(),
+      CodeSpec     :: [Data | Binding | YawsMod | Verbatim | Skip | Error],
+      Data         :: {data, NumChars},
+      Binding      :: {binding, NumSkipChars},
+      YawsMod      :: {mod, LineNo, YawsFile, NumSkipChars,  Mod, Func},
+      Verbatim     :: {verbatim, NumSkipChars, Html},
+      Skip         :: {skip, NumSkipChars},
+      Error        :: {error, NumSkipChars, Reason},
+      NumChars     :: non_neg_integer(),
+      NumSkipChars :: non_neg_integer(),
+      LineNo       :: non_neg_integer(),
+      YawsFile     :: file:filename(),
+      Mod          :: atom(),
+      Func         :: atom(),
+      Html         :: iolist(),
+      Reason       :: iolist().
+
+-define(IS_SPACE(C), (C =:= $\s orelse C =:= $\t orelse
+                      C =:= $\r orelse C =:= $\n)).
+
+-define(IS_BINDING_CHAR(C), ((C >= $a andalso C =< $z) orelse
+                             (C >= $A andalso C =< $Z) orelse
+                             (C >= $0 andalso C =< $9) orelse
+                             C =:= $_ orelse C =:= $- orelse C =:= $.)).
+
+compile_file(File) ->
+    case file:read_file(File) of
+        {ok, Bin} ->
+            GC = get(gc),
+            Comp = #comp{gc             = GC,
+                         script         = File,
+                         hash           = integer_to_list(erlang:phash2(File)),
+                         use_yfile_name = (get(use_yfile_name) =:= true),
+                         comp_opts      = compile_opts(GC)},
+            global:trans({{yaws, Comp#comp.hash}, self()},
+                         fun() -> compile_file(Bin, Comp) end,
+                         [node()], infinity);
+        {error, Reason} ->
+            Str = ?F("failed to open '~s': ~p~n",
+                     [File, file:format_error(Reason)]),
+            yaws:elog("~s~n", [Str]),
+            {ok, 1, [{error, 0, Str}]}
+    end.
+
+compile_file(Bin, Comp) ->
+    ?Debug("Compile ~s~n", [Comp#comp.script]),
+    {ok, Spec0, NewComp} = compile_file(Bin, Comp, init, []),
+    Spec1 = join_data(Spec0),
+    ?Debug("NbErrors: ~p - Spec: ~p~n", [NewComp#comp.nberrors, Spec1]),
+    {ok, NewComp#comp.nberrors, Spec1}.
+
+
+%% Possible states:
+%%   * init,
+%%   * html_tag, html, html_close_tag,
+%%   * verbatim_tag, verbatim, verbatim_close_tag
+%%   * erl_tag, erl, erl_string, erl_atom, erl_close_tag
+compile_file(<<>>, Comp, erl, Spec) ->
+    compile_erl(0, <<>>, Comp, Spec);
+compile_file(<<>>, Comp, _State, Spec) ->
+    NewComp = Comp#comp{numchars = 0,
+                        verbatim = undefined,
+                        erlcode  = undefined},
+    NewSpec = if
+                  Comp#comp.numchars == 0 -> lists:reverse(Spec);
+                  true -> lists:reverse([{data, Comp#comp.numchars}|Spec])
+              end,
+    {ok, NewSpec, NewComp};
+
+%% init state
+compile_file(<<$\n,Bin/binary>>, Comp, init, Spec) ->
+    NewComp = Comp#comp{line     = Comp#comp.line+1,
+                        numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, init, Spec);
+compile_file(<<C,Bin/binary>>, Comp, init, Spec) when ?IS_SPACE(C) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, init, Spec);
+compile_file(<<"<erl>",Bin/binary>>, Comp, init, Spec) ->
+    %% accumulate all spaces and skip it iff erl tag if found.
+    ?Debug("Start parsing erlang block at line ~p", [Comp#comp.line]),
+    ErlCode = {Comp#comp.line, Comp#comp.line, undefined, []},
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+5,
+                        erlcode  = ErlCode},
+    compile_file(Bin, NewComp, erl, Spec);
+compile_file(<<"<erl",C,Bin/binary>>, Comp, init, Spec) when ?IS_SPACE(C) ->
+    %% accumulate all spaces and skip it iff erl tag if found.
+    ?Debug("Start parsing erlang block at line ~p", [Comp#comp.line]),
+    ErlCode = {Comp#comp.line, Comp#comp.line, undefined, []},
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+4,
+                        erlcode  = ErlCode},
+    compile_file(<<C,Bin/binary>>, NewComp, erl_tag, Spec);
+compile_file(Bin, Comp, init, Spec) ->
+    compile_file(Bin, Comp, html, Spec);
+
+%% html_tag state
+compile_file(<<"%%",Bin/binary>>, Comp, html_tag, Spec) ->
+    case parse_binding(Bin) of
+        {ok, Skipped, Rest} ->
+            NewComp = Comp#comp{numchars = 0},
+            compile_file(Rest, NewComp, html_tag,
+                         [{binding, Skipped+2}, {data, Comp#comp.numchars}|Spec]);
+        not_found ->
+            NewComp = Comp#comp{numchars = Comp#comp.numchars+2},
+            compile_file(Bin, NewComp, html_tag, Spec)
+    end;
+compile_file(<<$>,Bin/binary>>, Comp, html_tag, Spec) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, html, Spec);
+compile_file(<<$\n,Bin/binary>>, Comp, html_tag, Spec) ->
+    NewComp = Comp#comp{line     = Comp#comp.line+1,
+                        numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, html_tag, Spec);
+compile_file(<<_,Bin/binary>>, Comp, html_tag, Spec) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, html_tag, Spec);
+
+%% html state
+compile_file(<<"<erl>",Bin/binary>>, Comp, html, Spec) ->
+    ?Debug("Start parsing erlang block at line ~p", [Comp#comp.line]),
+    ErlCode = {Comp#comp.line, Comp#comp.line, undefined, []},
+    NewComp = Comp#comp{numchars = 5,
+                        erlcode  = ErlCode},
+    compile_file(Bin, NewComp, erl, [{data, Comp#comp.numchars}|Spec]);
+compile_file(<<"<erl",C,Bin/binary>>, Comp, html, Spec) when ?IS_SPACE(C) ->
+    ?Debug("Start parsing erlang block at line ~p", [Comp#comp.line]),
+    ErlCode = {Comp#comp.line, Comp#comp.line, undefined, []},
+    NewComp = Comp#comp{numchars = 4,
+                        erlcode  = ErlCode},
+    compile_file(<<C, Bin/binary>>, NewComp, erl_tag,
+                 [{data, Comp#comp.numchars}|Spec]);
+compile_file(<<"<verbatim>",Bin/binary>>, Comp, html, Spec) ->
+    ?Debug("Start parsing verbatim block at line ~p", [Comp#comp.line]),
+    NewComp = Comp#comp{numchars = 10,
+                        verbatim = {[], []}},
+    compile_file(Bin, NewComp, verbatim, [{data, Comp#comp.numchars}|Spec]);
+compile_file(<<"<verbatim",C,Bin/binary>>, Comp, html, Spec) when ?IS_SPACE(C) ->
+    ?Debug("Start parsing verbatim block at line ~p", [Comp#comp.line]),
+    NewComp = Comp#comp{numchars = 9,
+                        verbatim = {[], []}},
+    compile_file(<<C, Bin/binary>>, NewComp, verbatim_tag,
+                 [{data, Comp#comp.numchars}|Spec]);
+compile_file(<<"</",Bin/binary>>, Comp, html, Spec) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+2},
+    compile_file(Bin, NewComp, html_close_tag, Spec);
+compile_file(<<$<,Bin/binary>>, Comp, html, Spec) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, html_tag, Spec);
+compile_file(<<"%%",Bin/binary>>, Comp, html, Spec) ->
+    case parse_binding(Bin) of
+        {ok, Skipped, Rest} ->
+            ?Debug("Binding key '~s' parsed at line ~p",
+                   [binary:part(Bin, 0, Skipped), Comp#comp.line]),
+            NewComp = Comp#comp{numchars = 0},
+            compile_file(Rest, NewComp, html,
+                         [{binding, Skipped+2}, {data, Comp#comp.numchars}|Spec]);
+        not_found ->
+            NewComp = Comp#comp{numchars = Comp#comp.numchars+2},
+            compile_file(Bin, NewComp, html, Spec)
+    end;
+compile_file(<<$\n,Bin/binary>>, Comp, html, Spec) ->
+    NewComp = Comp#comp{line     = Comp#comp.line+1,
+                        numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, html, Spec);
+compile_file(<<_,Bin/binary>>, Comp, html, Spec) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, html, Spec);
+
+%% html_close_tag state
+compile_file(<<"%%",Bin/binary>>, Comp, html_close_tag, Spec) ->
+    case parse_binding(Bin) of
+        {ok, Skipped, Rest} ->
+            NewComp = Comp#comp{numchars = 0},
+            compile_file(Rest, NewComp, html_close_tag,
+                         [{binding, Skipped+2}, {data, Comp#comp.numchars}|Spec]);
+        not_found ->
+            NewComp = Comp#comp{numchars = Comp#comp.numchars+2},
+            compile_file(Bin, NewComp, html_close_tag, Spec)
+    end;
+compile_file(<<$\n,Bin/binary>>, Comp, html_close_tag, Spec) ->
+    NewComp = Comp#comp{line     = Comp#comp.line+1,
+                        numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, html_close_tag, Spec);
+compile_file(<<$>,Bin/binary>>, Comp, html_close_tag, Spec) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, html, Spec);
+compile_file(<<_,Bin/binary>>, Comp, html_close_tag, Spec) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, html_close_tag, Spec);
+
+%% verbatim_tag state
+compile_file(<<"/>",Bin/binary>>, Comp, verbatim_tag, Spec) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+2,
+                        verbatim = undefined},
+    %% TODO: empty verbatim ?
+    compile_file(Bin, NewComp, html, Spec);
+compile_file(<<$>,Bin/binary>>, Comp, verbatim_tag, Spec) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, verbatim, Spec);
+compile_file(<<$\n,Bin/binary>>, Comp, verbatim_tag, Spec) ->
+    {Attrs, Data} = Comp#comp.verbatim,
+    NewComp = Comp#comp{line     = Comp#comp.line+1,
+                        numchars = Comp#comp.numchars+1,
+                        verbatim = {[$\n|Attrs], Data}},
+    compile_file(Bin, NewComp, verbatim_tag, Spec);
+compile_file(<<C,Bin/binary>>, Comp, verbatim_tag, Spec) ->
+    {Attrs, Data} = Comp#comp.verbatim,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1,
+                        verbatim = {[C|Attrs], Data}},
+    compile_file(Bin, NewComp, verbatim_tag, Spec);
+
+%% verbatim state
+compile_file(<<"</verbatim>",Bin/binary>>, Comp, verbatim, Spec) ->
+    compile_verbatim(11, Bin, Comp, Spec);
+compile_file(<<"</verbatim",C,Bin/binary>>, Comp, verbatim, Spec) when ?IS_SPACE(C) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+10},
+    compile_file(<<C,Bin/binary>>, NewComp, verbatim_close_tag, Spec);
+compile_file(<<$\n,Bin/binary>>, Comp, verbatim, Spec) ->
+    {Attrs, Data} = Comp#comp.verbatim,
+    NewComp = Comp#comp{line     = Comp#comp.line+1,
+                        numchars = Comp#comp.numchars+1,
+                        verbatim = {Attrs, [$\n|Data]}},
+    compile_file(Bin, NewComp, verbatim, Spec);
+compile_file(<<C,Bin/binary>>, Comp, verbatim, Spec) ->
+    {Attrs, Data} = Comp#comp.verbatim,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1,
+                        verbatim = {Attrs, [yaws_api:htmlize_char(C)|Data]}},
+    compile_file(Bin, NewComp, verbatim, Spec);
+
+%% verbatim_close_tag state
+compile_file(<<$\n,Bin/binary>>, Comp, verbatim_close_tag, Spec) ->
+    NewComp = Comp#comp{line     = Comp#comp.line+1,
+                        numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, verbatim_close_tag, Spec);
+compile_file(<<$>,Bin/binary>>, Comp, verbatim_close_tag, Spec) ->
+    compile_verbatim(1, Bin, Comp, Spec);
+compile_file(<<_,Bin/binary>>, Comp, verbatim_close_tag, Spec) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, verbatim_close_tag, Spec);
+
+%% erl_tag state
+compile_file(<<"/>",Bin/binary>>, Comp, erl_tag, Spec) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+2,
+                        erlcode  = undefined},
+    %% TODO: empty erl ?
+    compile_file(Bin, NewComp, html, Spec);
+compile_file(<<$>,Bin/binary>>, Comp, erl_tag, Spec) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, erl, Spec);
+compile_file(<<C,"module",Bin/binary>>, Comp, erl_tag, Spec) when ?IS_SPACE(C) ->
+    case parse_tag_attribute(Bin) of
+        {ok, Lines, Skipped, ModName, Data} ->
+            {SLine, ELine, _, _} = Comp#comp.erlcode,
+            NewComp = Comp#comp{line     = Comp#comp.line+Lines,
+                                numchars = Comp#comp.numchars+Skipped+7,
+                                erlcode  = {SLine, ELine+Lines, ModName, []}},
+            compile_file(Data, NewComp, erl_tag, Spec);
+        not_found ->
+            %% ignore malformed module attribute
+            NewComp = Comp#comp{numchars = Comp#comp.numchars+7},
+            compile_file(Bin, NewComp, erl_tag, Spec)
+    end;
+compile_file(<<$\n,Bin/binary>>, Comp, erl_tag, Spec) ->
+    NewComp = Comp#comp{line     = Comp#comp.line+1,
+                        numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, erl_tag, Spec);
+compile_file(<<_,Bin/binary>>, Comp, erl_tag, Spec) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, erl_tag, Spec);
+
+%% erl state
+compile_file(<<"</erl>",Bin/binary>>, Comp, erl, Spec) ->
+    compile_erl(6, Bin, Comp, Spec);
+compile_file(<<"</erl",C,Bin/binary>>, Comp, erl, Spec) when ?IS_SPACE(C) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+5},
+    compile_file(<<C,Bin/binary>>, NewComp, erl_close_tag, Spec);
+compile_file(<<$",Bin/binary>>, Comp, erl, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1,
+                        erlcode  = {SLine, ELine, ModName, [$"|Code]}},
+    compile_file(Bin, NewComp, erl_string, Spec);
+compile_file(<<$',Bin/binary>>, Comp, erl, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1,
+                        erlcode  = {SLine, ELine, ModName, [$'|Code]}},
+    compile_file(Bin, NewComp, erl_atom, Spec);
+compile_file(<<$\n,Bin/binary>>, Comp, erl, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{line     = Comp#comp.line+1,
+                        numchars = Comp#comp.numchars+1,
+                        erlcode  = {SLine, ELine+1, ModName, [$\n|Code]}},
+    compile_file(Bin, NewComp, erl, Spec);
+compile_file(<<C,Bin/binary>>, Comp, erl, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1,
+                        erlcode  = {SLine, ELine, ModName, [C|Code]}},
+    compile_file(Bin, NewComp, erl, Spec);
+
+%% erl_string state
+compile_file(<<$\n,Bin/binary>>, Comp, erl_string, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{line     = Comp#comp.line+1,
+                        numchars = Comp#comp.numchars+1,
+                        erlcode  = {SLine, ELine+1, ModName, [$\n|Code]}},
+    compile_file(Bin, NewComp, erl_string, Spec);
+compile_file(<<$\\,$",Bin/binary>>, Comp, erl_string, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+2,
+                        erlcode  = {SLine, ELine, ModName, [$",$\\|Code]}},
+    compile_file(Bin, NewComp, erl_string, Spec);
+compile_file(<<$",Bin/binary>>, Comp, erl_string, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1,
+                        erlcode  = {SLine, ELine, ModName, [$"|Code]}},
+    compile_file(Bin, NewComp, erl, Spec);
+compile_file(<<C,Bin/binary>>, Comp, erl_string, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1,
+                        erlcode  = {SLine, ELine, ModName, [C|Code]}},
+    compile_file(Bin, NewComp, erl_string, Spec);
+
+%% erl_atom state
+compile_file(<<$\n,Bin/binary>>, Comp, erl_atom, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{line     = Comp#comp.line+1,
+                        numchars = Comp#comp.numchars+1,
+                        erlcode  = {SLine, ELine+1, ModName, [$\n|Code]}},
+    compile_file(Bin, NewComp, erl_atom, Spec);
+compile_file(<<$\\,$',Bin/binary>>, Comp, erl_atom, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+2,
+                        erlcode  = {SLine, ELine, ModName, [$',$\\|Code]}},
+    compile_file(Bin, NewComp, erl_atom, Spec);
+compile_file(<<$',Bin/binary>>, Comp, erl_atom, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1,
+                        erlcode  = {SLine, ELine, ModName, [$'|Code]}},
+    compile_file(Bin, NewComp, erl, Spec);
+compile_file(<<C,Bin/binary>>, Comp, erl_atom, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1,
+                        erlcode  = {SLine, ELine, ModName, [C|Code]}},
+    compile_file(Bin, NewComp, erl_atom, Spec);
+
+%% erl_close_tag state
+compile_file(<<$\n,Bin/binary>>, Comp, erl_close_tag, Spec) ->
+    NewComp = Comp#comp{line     = Comp#comp.line+1,
+                        numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, erl_close_tag, Spec);
+compile_file(<<$>,Bin/binary>>, Comp, erl_close_tag, Spec) ->
+    compile_erl(1, Bin, Comp, Spec);
+compile_file(<<_,Bin/binary>>, Comp, erl_close_tag, Spec) ->
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1},
+    compile_file(Bin, NewComp, erl_close_tag, Spec).
+
+compile_verbatim(N, Bin, Comp, Spec) ->
+    ?Debug("Stop parsing verbatim block at line ~p", [Comp#comp.line]),
+    {Attrs, Data} = Comp#comp.verbatim,
+    NewComp = Comp#comp{numchars=0, verbatim=undefined},
+    Html = case Attrs of
+               [] ->
+                   ["<pre>", lists:reverse(Data), "</pre>"];
+               _ ->
+                   ["<pre ",lists:reverse(Attrs),$>,lists:reverse(Data),"</pre>"]
+           end,
+    NewSpec = [{verbatim,Comp#comp.numchars+N,Html}|Spec],
+    compile_file(Bin, NewComp, html, NewSpec).
+
+compile_erl(N, Bin, Comp, Spec) ->
+    ?Debug("Stop parsing erlang block at line ~p", [Comp#comp.line]),
+    NewComp = Comp#comp{nummod   = Comp#comp.nummod+1,
+                        numchars = 0,
+                        erlcode  = undefined},
+    case handle_erlang_block(Comp) of
+        {ok, Mod, Fun} ->
+            {Line, _, _, _} = Comp#comp.erlcode,
+            S = {mod, Line, Comp#comp.script, Comp#comp.numchars+N,  Mod, Fun},
+            compile_file(Bin, NewComp, html, [S|Spec]);
+        {error, Reason} ->
+            S = case Comp#comp.use_yfile_name of
+                    true  ->
+                        {error, Comp#comp.numchars+N, Reason};
+                    false ->
+                        Str = ?F("~n<pre>~nDynamic compile error: ~s~n</pre>~n",
+                                 [Reason]),
+                        {error, Comp#comp.numchars+N, Str}
+                end,
+            NewComp1 = NewComp#comp{nberrors=NewComp#comp.nberrors+1},
+            compile_file(Bin, NewComp1, html, [S|Spec])
+    end.
+
+join_data([])                          -> [];
+join_data([{data, I}, {data, J}|Tail]) -> join_data([{data, I+J}|Tail]);
+join_data([H|T])                       -> [H|join_data(T)].
+
+parse_binding(<<>>) ->
+    not_found;
+parse_binding(<<"%%",_/binary>>) ->
+    not_found;
+parse_binding(Bin) ->
+    parse_binding(Bin, 0).
+
+parse_binding(<<"%%",Bin/binary>>, NumChars) ->
+    {ok, NumChars+2, Bin};
+parse_binding(<<C,Bin/binary>>, NumChars) when ?IS_BINDING_CHAR(C) ->
+    parse_binding(Bin, NumChars+1);
+parse_binding(_, _) ->
+    not_found.
+
+parse_tag_attribute(<<>>) ->
+    not_found;
+parse_tag_attribute(Bin) ->
+    case skip_space(Bin) of
+        {ok, Lines, Skipped, <<$=,Data/binary>>} ->
+            parse_tag_attribute(Data, Lines, Skipped+1);
+        _ ->
+            not_found
+    end.
+
+parse_tag_attribute(Bin, Lines, NumChars) ->
+    case skip_space(Bin) of
+        {ok, N, Skipped, <<$",Data/binary>>} ->
+            parse_tag_attribute(Data, $", [], Lines+N, NumChars+Skipped+1);
+        {ok, N, Skipped, <<$',Data/binary>>} ->
+            parse_tag_attribute(Data, $', [], Lines+N, NumChars+Skipped+1);
+         _ ->
+            not_found
+    end.
+
+parse_tag_attribute(<<>>, _Sep, _Value, _Lines, _NumChars) ->
+    not_found;
+parse_tag_attribute(<<Sep,Bin/binary>>, Sep, Value, Lines, NumChars) ->
+    {ok, Lines, NumChars+1, lists:reverse(Value), Bin};
+parse_tag_attribute(<<$\\,Sep,Bin/binary>>, Sep, Value, Lines, NumChars) ->
+    parse_tag_attribute(Bin, Sep, [Sep,$\\|Value], Lines, NumChars+2);
+parse_tag_attribute(<<C,Bin/binary>>, Sep, Value, Lines, NumChars) ->
+    parse_tag_attribute(Bin, Sep, [C|Value], Lines, NumChars+1).
+
+skip_space(Bin) ->
+    skip_space(Bin, 0, 0).
+
+skip_space(<<$\n,Bin/binary>>, Lines, NumChars) ->
+    skip_space(Bin, Lines+1, NumChars);
+skip_space(<<C,Bin/binary>>, Lines, NumChars) when ?IS_SPACE(C) ->
+    skip_space(Bin, Lines, NumChars+1);
+skip_space(Bin, Lines, NumChars) ->
+    {ok, Lines, NumChars, Bin}.
+
+
+handle_erlang_block(Comp) ->
+    {Line, _, ModName, _} = Comp#comp.erlcode,
+    case check_module_name(ModName, Comp) of
+        ok ->
+            {Module, File} = get_module_info(ModName, Comp),
+            ?Debug("Writting module ~s in file ~s~n", [Module,File]),
+            case file:open(File, [write]) of
+                {ok, Fd} ->
+                    dump_erlang_block(Fd, Module, Comp),
+                    file:close(Fd),
+                    case compile_erlang_block(File, Comp) of
+                        {ok, Mod, Binary, Warnings} ->
+                            report_compile_warnings(Comp, Warnings),
+                            load_erlang_block(Mod, Binary, Comp);
+                        {error, Errors, Warnings} ->
+                            {error, format_compile_error(Comp, Errors, Warnings)}
+                    end;
+                {error, Reason} ->
+                    S = io_lib:format("Error in File ~s at line ~p~n"
+                                      "    Failed to create file '~s': ~s~n",
+                                      [Comp#comp.script, Line,
+                                       File, file:format_error(Reason)]),
+                    case Comp#comp.use_yfile_name of
+                        true  -> io:put_chars(S);
+                        false  -> ok
+                    end,
+                    {error, lists:flatten(S)}
+            end;
+        {error, Reason} ->
+            S = io_lib:format("Error in File ~s at line ~p~n"
+                              "    Cannot create module '~s': ~s~n",
+                              [Comp#comp.script, Line,
+                               ModName, Reason]),
+            case Comp#comp.use_yfile_name of
+                true  -> io:put_chars(S);
+                false  -> ok
+            end,
+            {error, lists:flatten(S)}
+    end.
+
+get_module_info(undefined, Comp) ->
+    N = integer_to_list(Comp#comp.nummod),
+    case Comp#comp.use_yfile_name of
+        true  ->
+            YFile   = filename:rootname(Comp#comp.script),
+            ModName = lists:flatten([YFile, "_yaws_", N]),
+            {ModName, ModName++".erl"};
+        false ->
+            Dir     = yaws:id_dir((Comp#comp.gc)#gconf.id),
+            ModName = lists:flatten(["m_", Comp#comp.hash, $_, N]),
+            {ModName, filename:join([Dir, ModName++".erl"])}
+    end;
+get_module_info(ModName, Comp) ->
+    case Comp#comp.use_yfile_name of
+        true  ->
+            Dir = filename:dirname(Comp#comp.script),
+            {ModName, filename:join([Dir, ModName++".erl"])};
+        false ->
+            Dir = yaws:id_dir((Comp#comp.gc)#gconf.id),
+            {ModName, filename:join([Dir, ModName++".erl"])}
+    end.
+
+check_module_name(undefined, _) ->
+    ok;
+check_module_name("", _) ->
+    {error, "empty module name"};
+check_module_name(ModName, Comp) ->
+    Mod = list_to_atom(ModName),
+    case code:is_loaded(Mod) of
+        {file, _} ->
+            case lists:keyfind(yawsfile, 1, Mod:module_info(attributes)) of
+                {yawsfile, Script} when Script =:= Comp#comp.script ->
+                    ok;
+                {yawsfile, OtherSript} ->
+                    Str = io_lib:format("try to override yaws module "
+                                        "owned by script ~s", [OtherSript]),
+                    {error, Str};
+                false ->
+                    {error, "try to override existing module"}
+            end;
+        false ->
+            ok
+    end.
+
+dump_erlang_block(Fd, Module, Comp) ->
+    GC = Comp#comp.gc,
+    {SLine, ELine, _, Code} = Comp#comp.erlcode,
+    io:format(Fd, "-module(\'~s\').~n~n", [Module]),
+    io:format(Fd, "-export([out/1]).~n~n", []),
+
+    io:format(Fd, "-yawsfile(\"~s\").~n~n",[Comp#comp.script]),
+    io:format(Fd, "%%~n%% code between lines ~p and ~p from file ~s~n%%~n~n",
+              [SLine, ELine, Comp#comp.script]),
+
+    io:format(Fd, "-import(yaws_api, [f/2, fl/1, postvar/2, queryvar/2]).~n~n",
+              []),
+    io:format(Fd, "-include(\"~s/include/yaws_api.hrl\").~n",
+              [GC#gconf.yaws_dir]),
+
+    io:format(Fd, "~n~s~n", [lists:reverse(Code)]),
+    ok.
+
+compile_erlang_block(File, Comp) ->
+    case compile:file(File, Comp#comp.comp_opts) of
+        {ok, Module, Binary} ->
+            {ok, Module, Binary, []};
+        {ok, Module, Binary, Warnings} ->
+            {ok, Module, Binary, Warnings};
+        {error, Errors, Warnings} ->
+            {error, Errors, Warnings}
+    end.
+
+load_erlang_block(Mod, Bin, Comp) ->
+    {Line, _, _, _} = Comp#comp.erlcode,
+    case code:load_binary(Mod, "", Bin) of
+        {module, Mod} ->
+            case lists:member({out,1}, Mod:module_info(exports)) of
+                true ->
+                    {ok, Mod, out};
+                false ->
+                    S = io_lib:format("Error in File ~s at line ~p~n"
+                                      "    out/1 is not defined~n",
+                                      [Comp#comp.script, Line]),
+                    yaws:elog("~s~n", [S]),
+                    {error, lists:flatten(S)}
+            end;
+        Err ->
+            S = io_lib:format("Error in File ~s at line ~p~n"
+                              "    Cannot load module ~p: ~p~n",
+                              [Comp#comp.script, Line, Mod, Err]),
+            yaws:elog("~s~n", [S]),
+            {error, lists:flatten(S)}
+    end.
+
+compile_opts(GC) ->
+    ?Debug("Includes = ~p~n", [GC#gconf.include_dir]),
     I = lists:map(fun(Dir) -> {i, Dir} end, GC#gconf.include_dir),
     Warnings = case get(use_yfile_name) of
                    true  -> [return_warnings, debug_info];
                    _     -> []
                end,
     Opts = [binary, return_errors] ++ Warnings ++ I,
-    ?Debug("Compile opts = ~p~n", [Opts]),
+    ?Debug("Compile options = ~p~n", [Opts]),
     Opts.
 
-
-compile_file(File) ->
-    GC=get(gc), SC=get(sc),
-    case get(use_yfile_name) of
+format_compile_error(Comp, Errors, Warnings) ->
+    case Comp#comp.use_yfile_name of
         true ->
-            %% Run by 'yaws -check'
-            put(yfile,filename:rootname(yaws:to_list(File)));
-        _ ->
-            put(yfile,yaws:to_list(File))
-    end,
-    %% broken erlang compiler isn't
-    %% reentrant, can only have one erlang compiler at a time running
-    global:trans({yaws, self()},
-                 fun() ->
-                         ?Debug("Compile ~s~n", [File]),
-                         case file_open(File) of
-                             {ok, Fd} ->
-                                 Spec = compile_file(
-                                          #comp{infile = File,
-                                                infd = Fd, gc = GC, sc = SC},
-                                          1,
-                                          get_line(), init, 0, [], 0),
-                                 erase(yfile),
-                                 erase(yfile_data),
-                                 erase(yfile_data_orig),
-                                 ?Debug("Spec: ~p~n", [Spec]),
-                                 Spec;
-                             _Err ->
-                                 yaws:elog("can't open ~s~n", [File]),
-                                 exit(normal)
-                         end
-                 end,
-                 [node()], infinity).
-
-
-clump_data([{data, I}, {data, J} | Tail]) ->
-    clump_data([{data, I+J}|Tail]);
-clump_data([H|T]) ->
-    [H|clump_data(T)];
-clump_data([]) ->
-    [].
-
-
-compile_file(C,  _LineNo, eof, _Mode, NumChars, Ack, Errors) ->
-    file_close(C#comp.infd),
-    {ok, [{errors, Errors} |
-          clump_data(lists:reverse([{data, NumChars} |Ack]))]};
-
-
-%% skip initial space if first thing is <erl> otherwise not
-compile_file(C, LineNo,  Chars, init, NumChars, Ack, Errs) ->
-    case Chars -- [$\s, $\t, $\n, $\r] of
-        [] ->
-            ?Debug("SKIP ~p~n", [Chars]),
-            L=length(Chars),
-            compile_file(C, LineNo+1, line(), init, NumChars-L, Ack, Errs);
-        "<erl" ++ _ ->  %% first chunk is erl, skip whistespace
-            compile_file(C, LineNo,  Chars, html, NumChars, Ack, Errs);
-        _ ->
-            %% first chunk is html, keep whitespace
-            file_position_bof(),
-            compile_file(C,1,line(),html,0,[], Errs)
-    end;
-
-compile_file(C, LineNo,  Chars = "<erl" ++ Tail, html,  NumChars, Ack,Es) ->
-    ?Debug("start erl:~p",[LineNo]),
-    C2 = new_out_file(LineNo, C, Tail, C#comp.gc),
-    C3 = C2#comp{startline = LineNo},
-    L = length(Chars),
-    if
-        NumChars > 0 ->
-            compile_file(C3, LineNo+1, line() , erl,L,
-                         [{data, NumChars} | Ack], Es);
-        true -> %% just ignore zero byte data segments
-            compile_file(C3, LineNo+1, line() , erl, L + (-NumChars),
-                         Ack, Es) %hack
-    end;
-
-compile_file(C, LineNo,  Chars = "<verbatim>" ++ _Tail, html,
-             NumChars, Ack,Es) ->
-    ?Debug("start verbatim:~p",[LineNo]),
-    Len = length(Chars),
-    C2 = C#comp{outfile = ["<pre>\n"]},  %% use as accumulator
-    compile_file(C2,  LineNo+1, line() , verbatim , Len,
-                 [{data, NumChars} | Ack], Es);
-
-compile_file(C, LineNo,  Chars = "</verbatim>" ++ _Tail, verbatim,
-             NumChars, Ack, Es) ->
-    Data = list_to_binary(lists:reverse(["</pre>\n" | C#comp.outfile])),
-    Len = length(Chars),
-    compile_file(C#comp{outfile = undefined}, LineNo, line(), html, 0,
-                 [{verbatim, NumChars+Len, Data} |Ack], Es);
-
-compile_file(C, LineNo,  Chars, verbatim, NumChars, Ack,Es) ->
-    case has_str(Chars, ["</verbatim>"]) of
-        {ok, Skipped, Chars2} ->
-            compile_file(C, LineNo,  Chars2, verbatim,
-                         NumChars + Skipped, Ack,Es);
+            report_errors(Comp,   Errors),
+            report_warnings(Comp, Warnings),
+            "compile error";
         false ->
-            C2 = C#comp{outfile = [yaws_api:htmlize(Chars) | C#comp.outfile]},
-            compile_file(C2, LineNo+1, line(), verbatim, NumChars +
-                             length(Chars), Ack,Es)
-    end;
-
-compile_file(C, LineNo,  _Chars = "</erl>" ++ Tail, erl, NumChars, Ack, Es) ->
-    ?Debug("stop erl:~p",[LineNo]),
-    file:close(C#comp.outfd),
-    case proc_compile_file(C#comp.outfile, comp_opts(C#comp.gc)) of
-        {ok, ModuleName, Binary, Warnings} ->
-            case get(use_yfile_name) of
-                true ->
-                    file:write_file("../../ebin/" ++
-                                        filename:rootname(
-                                          C#comp.outfile)++".beam",
-                                    Binary);
+            case Errors of
+                [{FileName, [{Line0, Mod, E}|_]}|_] when is_integer(Line0) ->
+                    {StartLine, _, _, _} = Comp#comp.erlcode,
+                    Line = line(Line0 + StartLine),
+                    Str = io_lib:format("~s:~w:~n ~s\ngenerated file at: ~s~n",
+                                        [Comp#comp.script, Line,
+                                         Mod:format_error(E),
+                                         FileName]),
+                    yaws:elog("Dynamic compile error: ~s", [Str]),
+                    lists:flatten(Str);
                 _ ->
-                    ok
-            end,
-            comp_warn(C, Warnings),
-            case code:load_binary(ModuleName, "", Binary) of
-                {module, ModuleName} ->
-                    C2 = C#comp{modnum = C#comp.modnum+1},
-                    L2 = check_exported(C, LineNo, NumChars, ModuleName),
-                    compile_file(C2, LineNo, Tail, html, 0,
-                                 L2++[{skip, 6}|Ack], Es);
-                Err ->
-                    A2 = gen_err(C, LineNo, NumChars,
-                                 ?F("Cannot load module ~p: ~p",
-                                    [ModuleName, Err])),
-                    compile_file(C, LineNo, Tail, html, 0,
-                                 [A2, {skip, 6}|Ack], Es+1)
-            end;
-        {error, Errors, Warnings} ->
-            %% FIXME remove outfile here ... keep while debuging
-            A2 = comp_err(C, LineNo, NumChars, Errors, Warnings),
-            compile_file(C, LineNo, Tail, html, 0, [A2, {skip, 6}|Ack], Es+1);
-        {error, Str} ->
-            %% this is boring but does actually happen
-            %% in order to get proper user errors here we need to catch i/o
-            %% or hack compiler/parser
-            yaws:elog("Dynamic compile error in file ~s (~s), line ~w~n~s",
-                      [C#comp.infile, C#comp.outfile,LineNo, Str]),
-            A2 = {error, NumChars, ?F("<pre> Dynamic compile error in file "
-                                      " ~s line ~w~n~s </pre>",
-                                      [C#comp.infile, LineNo, Str])},
-            compile_file(C, LineNo, Tail, html, 0, [A2, {skip, 6}|Ack], Es+1)
-    end;
-
-compile_file(C, LineNo,  Chars, erl, NumChars, Ack,Es) ->
-    case has_str(Chars, ["</erl>"]) of
-        {ok, Skipped, Chars2} ->
-            compile_file(C, LineNo,  Chars2, erl, NumChars + Skipped, Ack,Es);
-        false ->
-            ?Debug("Gen: ~s", [Chars]),
-            io:format(C#comp.outfd, "~s", [Chars]),
-            compile_file(C, LineNo+1, line(), erl, NumChars +
-                             length(Chars), Ack,Es)
-    end;
-
-compile_file(C, LineNo, [], html, NumChars, Ack, Es) ->
-    compile_file(C, LineNo+1, line(), html, NumChars, Ack, Es);
-
-compile_file(C, LineNo,  Chars, html, NumChars, Ack,Es) ->
-    case has_str(Chars, ["<erl", "%%", "<verbatim>"]) of
-        {ok, Skipped, "<erl"++_ = Chars2} ->
-            compile_file(C, LineNo, Chars2, html, NumChars+Skipped, Ack, Es);
-        {ok, Skipped, "<verbatim>"++_ = Chars2} ->
-            compile_file(C, LineNo, Chars2, html, NumChars+Skipped, Ack, Es);
-        {ok, Skipped, "%%"++Chars2} ->
-            compile_file(C, LineNo, Chars2, binding, 2,
-                         [{data, NumChars+Skipped}|Ack], Es);
-        false ->
-            compile_file(C, LineNo, tl(Chars), html, NumChars+1, Ack, Es)
-    end;
-
-compile_file(C, LineNo, [], binding, NumChars, Ack, Es) ->
-    compile_file(C, LineNo+1, line(), html, NumChars, Ack, Es);
-
-compile_file(C, LineNo, "%%"++Chars, binding, NumChars, Ack, Es) ->
-    compile_file(C, LineNo, Chars, html, 0, [{binding, NumChars+2}|Ack], Es);
-
-compile_file(C, LineNo, [_H|T], binding, NumChars, Ack, Es) ->
-    compile_file(C, LineNo, T, binding, NumChars+1, Ack, Es).
-
-
-has_str(L, Strs) -> has_str(L, Strs, 0).
-has_str([H|T], Strs, Num) ->
-    case yaws:is_space(H) of
-        true -> has_str(T, Strs, Num+1);
-        false ->
-            case lists:any(fun(Str) -> lists:prefix(Str, [H|T]) end, Strs) of
-                true -> {ok, Num, [H|T]};
-                false -> false
-            end
-    end;
-has_str(_,_,_) -> false.
-
-
-check_exported(C, LineNo, NumChars, Mod) ->
-    case is_exported(out, 1, Mod) of
-        true ->
-            [{mod, C#comp.startline, C#comp.infile,
-              NumChars,Mod,out}];
-        false ->
-            ?Debug("XX ~p~n", [C]),
-            [gen_err(C, LineNo, NumChars,
-                     "out/1 is not defined ")]
-    end.
-
-line() ->
-    get_line().
-
-is_exported(Fun, A, Mod) ->
-    case (catch Mod:module_info()) of
-        List when is_list(List) ->
-            case lists:keysearch(exports, 1, List) of
-                {value, {exports, Exp}} ->
-                    lists:member({Fun, A}, Exp);
-                _ ->
-                    false
-            end;
-        _ ->
-            false
-    end.
-
-
-new_out_file_module(Tail) ->
-    case Tail of
-        ">" ++ _ ->
-            Mnum = case catch gen_server:call(yaws_server, mnum, infinity) of
-                       {'EXIT', _} ->
-                           1;
-                       Other ->
-                           Other
-                   end,
-            Prefix = case get(use_yfile_name) of
-                         true -> filename:rootname(get(yfile))++"_yaws";
-                         _    -> "m"
-                     end,
-            Prefix ++ integer_to_list(Mnum);
-        _ ->
-            case string:tokens(Tail, " =>\r\n\"") of
-                ["module", Module] ->
-                    Module
+                    Str = io_lib:format("Unexpected error: ~p~n", [Errors]),
+                    yaws:elog("Dynamic compile error: ~s", [Str]),
+                    lists:flatten(Str)
             end
     end.
 
-new_out_file_name(Module, GC) ->
-    case get(use_yfile_name) of
-        true ->
-            Module ++ ".erl";
-        _ ->
-            filename:join([yaws:id_dir(GC#gconf.id), Module ++ ".erl"])
+report_compile_warnings(Comp, Warnings) ->
+    case Comp#comp.use_yfile_name of
+        true  -> report_warnings(Comp, Warnings);
+        false -> ok
     end.
 
-%% this will generate 10 lines
-new_out_file(Line, C, Tail, GC) ->
-    Module = new_out_file_module(Tail),
-    OutFile = new_out_file_name(Module, GC),
-    ?Debug("Writing outout file~s~n", [OutFile]),
-    {ok, Out} = file:open(OutFile, [write]),
-    ok = io:format(Out, "-module(\'~s\').~n-export([out/1]).~n~n", [Module]),
-    ok = io:format(Out, "-yawsfile(\'~s\').~n",[get(yfile)]),
-    io:format(Out, "%%~n%% code at line ~w from file ~s~n%%~n",
-              [Line, C#comp.infile]),
-    io:format(Out, "-import(yaws_api, [f/2, fl/1, postvar/2, queryvar/2])."
-              " ~n~n", []),
-    io:format(Out, '-include("~s/include/yaws_api.hrl").~n',
-              [GC#gconf.yaws_dir]),
-    C#comp{outfd = Out,
-           outfile = OutFile}.
-
-
-gen_err(C, _LineNo, NumChars, Err) ->
-    S = io_lib:format("<p> Error in File ~s Erlang code beginning "
-                      "at line ~w~n"
-                      "Error is: ~p~n", [C#comp.infile, C#comp.startline,
-                                         Err]),
-    yaws:elog("~s~n", [S]),
-    {error, NumChars, S}.
-
-
-comp_err(C, LineNo, NumChars, Err, Warns) ->
-    case get(use_yfile_name) of
-        true ->
-            report_errors(C, Err),
-            report_warnings(C, Warns),
-            {error, NumChars,  ""};
-        _ ->
-            comp_err(C, LineNo, NumChars, Err)
-    end.
-
-comp_err(C, _LineNo, NumChars, Err) ->
-    case Err of
-        [{_FileName, [ {Line0, Mod, E} |_]} |_] when is_integer(Line0) ->
-            Line = Line0 + C#comp.startline - 10,
-            ?Debug("XX ~p~n", [{_LineNo, Line0}]),
-            Str = io_lib:format("~s:~w:~n ~s\ngenerated file at: ~s~n",
-                                [C#comp.infile, Line,
-                                 apply(Mod, format_error, [E]),
-                                 C#comp.outfile
-                                ]),
-            HtmlStr = ?F("~n<pre>~nDynamic compile error: ~s~n</pre>~n",
-                         [Str]),
-            yaws:elog("Dynamic compiler err ~s", [Str]),
-            {error, NumChars,  HtmlStr};
-        _Other ->
-            yaws:elog("Dynamic compile error ~p", [Err]),
-            {error, NumChars, ?F("<pre> Compile error - "
-                                 "Other err ~p</pre>~n", [Err])}
-    end.
-
-comp_warn(C, Warnings) ->
-    case get(use_yfile_name) of
-        true ->
-            report_warnings(C, Warnings);
-        _ ->
-            ok
-    end.
-
-%% due to compiler not producing proper error
-%% we NEED to catch all io produced by the compiler
-
-proc_compile_file(F, Opts) ->
-    G = group_leader(),
-    group_leader(self(), self()),
-    P = proc_lib:spawn(?MODULE, compiler_proc, [self(), F, Opts]),
-    Res = get_compiler_data(P, []),
-    group_leader(G, self()),
-    Res.
-
-compiler_proc(Top, F, Opts) ->
-    R = (catch compile:file(F, Opts)),
-    Top ! {self(), result, R}.
-
-
-get_compiler_data(P, Ack) ->
-    receive
-        {P, result, {ok, Mod, Bin}} ->
-            {ok, Mod, Bin, []};
-        {P, result, {ok, Mod, Bin, Warnings}} ->
-            {ok, Mod, Bin, Warnings};
-        {io_request, P1, P2, {put_chars, M, F, A}} ->
-            P1 ! {io_reply, P2, ok},
-            Str = apply(M, F, A),
-            get_compiler_data(P, [Str|Ack]);
-        {P, result, {error, Errors, Warnings}} ->
-            {error, Errors, Warnings};
-        {P, result, error} ->
-            S = lists:map(
-                  fun(S) -> S ++ "\n" end, lists:reverse(Ack)),
-            {error, S};
-        {P, result, {'EXIT', Reason}} ->
-            S = lists:flatten(io_lib:format("~p", [Reason])),
-            {error, S}
-    end.
-
-
-
-%% This code is so that we get the \r in the line
-%% when we're parsing msdos files.
-
-file_open(Fname) ->
-    case file:read_file(Fname) of
-        {ok, Bin} ->
-            put(yfile_data, binary_to_list(Bin)),
-            put(yfile_data_orig, Bin),
-            {ok, yfile_data};
-        Err ->
-            Err
-    end.
-
-file_close(Key) ->
-    erase(Key).
-
-file_position_bof() ->
-    put(yfile_data, binary_to_list(get(yfile_data_orig))).
-
-get_line() ->
-    case get (yfile_data) of
-        [] ->
-            eof;
-        Chars ->
-            case get_line_from_chars(Chars, []) of
-                {ok, Line, Tail} ->
-                    put (yfile_data, Tail),
-                    Line;
-                need_more ->
-                    put(yfile_data, []),
-                    Chars
-            end
-    end.
-
-get_line_from_chars([$\r, $\n | Tail], Line) ->
-    {ok, lists:reverse([$\n, $\r|Line]), Tail};
-
-get_line_from_chars([$\n | Tail], Line) ->
-    {ok, lists:reverse([$\n|Line]), Tail};
-
-get_line_from_chars([], _Line) ->
-    need_more;
-get_line_from_chars([H|T], Line) ->
-    get_line_from_chars(T, [H|Line]).
-
-
+line(N) -> N - 15.
 
 %% -----------------------------------------------------------------
 %% From compile.erl in order to print proper error/warning messages
 %% if compiled with check option.
 report_errors(C, Errors) ->
-    File = "./" ++ filename:basename(C#comp.infile),
-    SLine = C#comp.startline - 10,
+    File = C#comp.script,
+    {StartLine, _, _, _} = C#comp.erlcode,
+    SLine = line(StartLine),
     lists:foreach(fun ({{_F,_L},Eds}) -> list_errors(File, SLine, Eds);
                       ({_F,Eds})      -> list_errors(File, SLine, Eds)
                   end, Errors).
 
 report_warnings(C, Ws0) ->
-    File = "./" ++ filename:basename(C#comp.infile),
-    SLine = C#comp.startline - 10,
-    Ws1 = lists:flatmap(fun({{_F,_L},Eds}) ->
-                                format_message(File, SLine, Eds);
-                           ({_F,Eds}) ->
-                                format_message(File, SLine, Eds)
-                        end,
-                        Ws0),
+    File = C#comp.script,
+    {StartLine, _, _, _} = C#comp.erlcode,
+    SLine = line(StartLine),
+    Ws1 = lists:flatmap(fun({{_F,_L},Eds}) -> format_message(File, SLine, Eds);
+                           ({_F,Eds})      -> format_message(File, SLine, Eds)
+                        end, Ws0),
     Ws = ordsets:from_list(Ws1),
     lists:foreach(fun({_,Str}) -> io:put_chars(Str) end, Ws).
 
@@ -490,7 +680,7 @@ format_message(_, _, []) -> [].
 %% list_errors(File, StartLine, ErrorDescriptors) -> ok
 
 list_errors(F, SLine, [{Line0,Mod,E}|Es]) ->
-    Line = Line0 + SLine,
+    Line = erlang:max(0, Line0 + SLine),
     io:fwrite("~s:~w: ~s\n", [F,Line,Mod:format_error(E)]),
     list_errors(F, SLine, Es);
 list_errors(F, SLine, [{Mod,E}|Es]) ->
@@ -498,4 +688,3 @@ list_errors(F, SLine, [{Mod,E}|Es]) ->
     list_errors(F, SLine, Es);
 list_errors(_F, _SLine, []) ->
     ok.
-

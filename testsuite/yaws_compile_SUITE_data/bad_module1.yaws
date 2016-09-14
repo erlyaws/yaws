@@ -1,0 +1,5 @@
+<erl module="yaws">
+%% yaws module already exists !
+out(_A) ->
+    ok.
+</erl>

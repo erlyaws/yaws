@@ -1,0 +1,24 @@
+
+<verbatim>
+<verbatim_tag#test1>
+</verbatim>
+
+<verbatim><verbatim_tag#test2></verbatim>
+
+<verbatim><verbatim_tag#test3>
+</verbatim>
+
+<b><verbatim>
+<verbatim_tag#test4>
+</verbatim></b>
+
+<verbatim
+  >
+<verbatim_tag#test5>
+</verbatim
+  >
+
+<verbatim
+  class = "code" id="test6" >
+<verbatim_tag#test6>
+</verbatim>

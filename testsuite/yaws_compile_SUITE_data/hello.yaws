@@ -1,0 +1,4 @@
+<erl module="hello">
+out(_A) ->
+    {html, "Hello World!"}.
+</erl>
