@@ -10,7 +10,7 @@ all() ->
      generated_dynopts
     ].
 
-group() ->
+groups() ->
     [
     ].
 

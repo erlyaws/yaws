@@ -12,7 +12,7 @@ all() ->
      wrong_host_header
     ].
 
-group() ->
+groups() ->
     [
     ].
 

@@ -2,11 +2,6 @@
 
 -include("testsuite.hrl").
 
--export([all/0, group/0]).
--export([init_per_suite/1, end_per_suite/1]).
--export([init_per_group/2, end_per_group/2]).
--export([init_per_testcase/2, end_per_testcase/2]).
-
 -compile(export_all).
 
 all() ->
@@ -17,7 +12,7 @@ all() ->
      no_docroot_appmod
     ].
 
-group() ->
+groups() ->
     [
     ].
 

@@ -12,7 +12,7 @@ all() ->
      relative_subconfig
     ].
 
-group() ->
+groups() ->
     [
     ].
 

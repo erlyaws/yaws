@@ -19,7 +19,7 @@ all() ->
      nested_mfa_attr
     ].
 
-group() ->
+groups() ->
 [
 ].
 

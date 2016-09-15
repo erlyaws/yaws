@@ -21,7 +21,7 @@ all() ->
      auth_on_redirect
     ].
 
-group() ->
+groups() ->
     [
     ].
 

@@ -16,7 +16,7 @@ all() ->
      sni_not_available
     ].
 
-group() ->
+groups() ->
     [
     ].
 

@@ -13,7 +13,7 @@ all() ->
      gzip_with_charset
     ].
 
-group() ->
+groups() ->
     [
     ].
 

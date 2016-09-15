@@ -25,7 +25,7 @@ all() ->
      ipv6_address
     ].
 
-group() ->
+groups() ->
     [
     ].
 

@@ -9,7 +9,7 @@ all() ->
      unicode
     ].
 
-group() ->
+groups() ->
     [
     ].
 

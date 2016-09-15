@@ -23,7 +23,7 @@ all() ->
      all_notification_batch
     ].
 
-group() ->
+groups() ->
     [
     ].
 

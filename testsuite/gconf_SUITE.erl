@@ -11,7 +11,7 @@ all() ->
      setup_mime_types_info
     ].
 
-group() ->
+groups() ->
     [
     ].
 

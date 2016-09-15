@@ -15,7 +15,7 @@ all() ->
      bad_redirect
     ].
 
-group() ->
+groups() ->
     [
     ].
 

@@ -10,7 +10,7 @@ all() ->
      parse_query
     ].
 
-group() ->
+groups() ->
     [
     ].
 

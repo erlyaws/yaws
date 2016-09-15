@@ -21,7 +21,7 @@ all() ->
      escaped_parse
     ].
 
-group() ->
+groups() ->
     [
     ].
 

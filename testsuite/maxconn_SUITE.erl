@@ -10,7 +10,7 @@ all() ->
      max_connections
     ].
 
-group() ->
+groups() ->
     [
     ].
 

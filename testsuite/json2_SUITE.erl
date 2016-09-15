@@ -11,7 +11,7 @@ all() ->
      json2_decode_invalid_utf8
     ].
 
-group() ->
+groups() ->
     [
     ].
 

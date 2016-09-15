@@ -45,7 +45,7 @@ all() ->
      exhtml
     ].
 
-group() ->
+groups() ->
     [
     ].
 

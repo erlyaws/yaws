@@ -9,7 +9,7 @@ all() ->
      error_log_handler
     ].
 
-group() ->
+groups() ->
     [
     ].
 

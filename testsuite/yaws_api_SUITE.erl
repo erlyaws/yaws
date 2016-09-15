@@ -9,7 +9,7 @@ all() ->
      url_encode_decode
     ].
 
-group() ->
+groups() ->
     [
     ].
 

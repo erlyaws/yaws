@@ -15,7 +15,7 @@ all() ->
      timeout
     ].
 
-group() ->
+groups() ->
     [
     ].
 

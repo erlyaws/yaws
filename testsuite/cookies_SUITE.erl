@@ -19,7 +19,7 @@ all() ->
      set_cookie
     ].
 
-group() ->
+groups() ->
     [
     ].
 

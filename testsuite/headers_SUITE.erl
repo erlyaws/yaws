@@ -12,7 +12,7 @@ all() ->
      merge_headers
     ].
 
-group() ->
+groups() ->
     [
     ].
 

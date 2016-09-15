@@ -10,7 +10,7 @@ all() ->
      match_ipmask
     ].
 
-group() ->
+groups() ->
     [
     ].
 

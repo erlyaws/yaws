@@ -16,7 +16,7 @@ all() ->
      wildcomp_salias
     ].
 
-group() ->
+groups() ->
     [
     ].
 

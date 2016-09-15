@@ -11,7 +11,7 @@ all() ->
      ssl_with_invalid_dhfile
     ].
 
-group() ->
+groups() ->
     [
     ].
 

@@ -12,7 +12,7 @@ all() ->
      srcdir_invalid
     ].
 
-group() ->
+groups() ->
     [
     ].
 

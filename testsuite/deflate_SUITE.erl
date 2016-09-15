@@ -17,7 +17,7 @@ all() ->
      deflate_options_otheroptions
     ].
 
-group() ->
+groups() ->
     [
     ].
 
