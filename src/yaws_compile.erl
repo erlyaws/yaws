@@ -5,7 +5,7 @@
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
--export([compile_file/1]).
+-export([compile_file/1, compile_file/2]).
 
 -record(comp, {gc, %% global conf
                script,
@@ -47,6 +47,9 @@
                              C =:= $_ orelse C =:= $- orelse C =:= $.)).
 
 compile_file(File) ->
+    compile_file(File, []).
+
+compile_file(File, Opts) ->
     case file:read_file(File) of
         {ok, Bin} ->
             GC = get(gc),
@@ -54,9 +57,9 @@ compile_file(File) ->
                          script         = File,
                          hash           = integer_to_list(erlang:phash2(File)),
                          use_yfile_name = (get(use_yfile_name) =:= true),
-                         comp_opts      = compile_opts(GC)},
+                         comp_opts      = compile_opts(GC, Opts)},
             global:trans({{yaws, Comp#comp.hash}, self()},
-                         fun() -> compile_file(Bin, Comp) end,
+                         fun() -> do_compile_file(Bin, Comp) end,
                          [node()], infinity);
         {error, Reason} ->
             Str = ?F("failed to open '~s': ~p~n",
@@ -65,7 +68,7 @@ compile_file(File) ->
             {ok, 1, [{error, 0, Str}]}
     end.
 
-compile_file(Bin, Comp) ->
+do_compile_file(Bin, Comp) ->
     ?Debug("Compile ~s~n", [Comp#comp.script]),
     {ok, Spec0, NewComp} = compile_file(Bin, Comp, init, []),
     Spec1 = join_data(Spec0),
@@ -603,14 +606,14 @@ load_erlang_block(Mod, Bin, Comp) ->
             {error, lists:flatten(S)}
     end.
 
-compile_opts(GC) ->
+compile_opts(GC, Opts0) ->
     ?Debug("Includes = ~p~n", [GC#gconf.include_dir]),
     I = lists:map(fun(Dir) -> {i, Dir} end, GC#gconf.include_dir),
     Warnings = case get(use_yfile_name) of
                    true  -> [return_warnings, debug_info];
                    _     -> []
                end,
-    Opts = [binary, return_errors] ++ Warnings ++ I,
+    Opts = [binary, return_errors] ++ Warnings ++ I ++ Opts0,
     ?Debug("Compile options = ~p~n", [Opts]),
     Opts.
 
