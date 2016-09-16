@@ -471,24 +471,17 @@ skip_space(<<C,Bin/binary>>, Lines, NumChars) when ?IS_SPACE(C) ->
 skip_space(Bin, Lines, NumChars) ->
     {ok, Lines, NumChars, Bin}.
 
-
 handle_erlang_block(Comp) ->
     {Line, _, ModName, _} = Comp#comp.erlcode,
     case check_module_name(ModName, Comp) of
         ok ->
             {Module, File} = get_module_info(ModName, Comp),
             ?Debug("Writting module ~s in file ~s~n", [Module,File]),
-            case file:open(File, [write]) of
-                {ok, Fd} ->
-                    dump_erlang_block(Fd, Module, Comp),
-                    file:close(Fd),
-                    case compile_erlang_block(File, Comp) of
-                        {ok, Mod, Binary, Warnings} ->
-                            report_compile_warnings(Comp, Warnings),
-                            load_erlang_block(Mod, Binary, Comp);
-                        {error, Errors, Warnings} ->
-                            {error, format_compile_error(Comp, Errors, Warnings)}
-                    end;
+            case dump_erlang_block(File, Module, Comp) of
+                ok ->
+                    Res = compile_and_load_erlang_block(File, Comp),
+                    file:delete(File),
+                    Res;
                 {error, Reason} ->
                     S = io_lib:format("Error in File ~s at line ~p~n"
                                       "    Failed to create file '~s': ~s~n",
@@ -518,7 +511,7 @@ get_module_info(undefined, Comp) ->
         true  ->
             YFile   = filename:rootname(Comp#comp.script),
             ModName = lists:flatten([YFile, "_yaws_", N]),
-            {ModName, ModName++".erl"};
+            {filename:basename(ModName), ModName++".erl"};
         false ->
             Dir     = yaws:id_dir((Comp#comp.gc)#gconf.id),
             ModName = lists:flatten(["m_", Comp#comp.hash, $_, N]),
@@ -556,23 +549,44 @@ check_module_name(ModName, Comp) ->
             ok
     end.
 
-dump_erlang_block(Fd, Module, Comp) ->
-    GC = Comp#comp.gc,
-    {SLine, ELine, _, Code} = Comp#comp.erlcode,
-    io:format(Fd, "-module(\'~s\').~n~n", [Module]),
-    io:format(Fd, "-export([out/1]).~n~n", []),
+dump_erlang_block(File, Module, Comp) ->
+    case file:open(File, [write]) of
+        {ok, Fd} ->
+            GC = Comp#comp.gc,
+            {SLine, ELine, _, Code} = Comp#comp.erlcode,
+            Data = [
+                    "-module('",Module,"').\n",
+                    "\n",
+                    "-export([out/1]).\n",
+                    "\n",
+                    "-yawsfile(\"",Comp#comp.script,"\").\n",
+                    "\n",
+                    "%%\n",
+                    "%% code between lines ",integer_to_list(SLine)," and ",
+                    integer_to_list(ELine),"\n",
+                    "%%\n",
+                    "\n",
+                    "-import(yaws_api, [f/2, fl/1, postvar/2, queryvar/2]).\n",
+                    "\n",
+                    "-include(\"",GC#gconf.yaws_dir,"/include/yaws_api.hrl\").\n",
+                    "\n",
+                    lists:reverse(Code)
+                   ],
+            file:write(Fd, Data),
+            file:close(Fd),
+            ok;
+        Else ->
+            Else
+    end.
 
-    io:format(Fd, "-yawsfile(\"~s\").~n~n",[Comp#comp.script]),
-    io:format(Fd, "%%~n%% code between lines ~p and ~p from file ~s~n%%~n~n",
-              [SLine, ELine, Comp#comp.script]),
-
-    io:format(Fd, "-import(yaws_api, [f/2, fl/1, postvar/2, queryvar/2]).~n~n",
-              []),
-    io:format(Fd, "-include(\"~s/include/yaws_api.hrl\").~n",
-              [GC#gconf.yaws_dir]),
-
-    io:format(Fd, "~n~s~n", [lists:reverse(Code)]),
-    ok.
+compile_and_load_erlang_block(File, Comp) ->
+    case compile_erlang_block(File, Comp) of
+        {ok, Mod, Bin, Ws} ->
+            report_compile_warnings(Comp, Ws),
+            load_erlang_block(Mod, Bin, Comp);
+        {error, Es, Ws} ->
+            {error, format_compile_error(Comp, Es, Ws)}
+    end.
 
 compile_erlang_block(File, Comp) ->
     case compile:file(File, Comp#comp.comp_opts) of

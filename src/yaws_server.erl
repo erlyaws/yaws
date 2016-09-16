@@ -2779,7 +2779,7 @@ do_yaws(CliSock, ARG, UT, N) ->
                                               Es == 0 ->
             deliver_dyn_file(CliSock, Spec, ARG, UT, N);
         Other  ->
-            del_old_files(get(gc),Other),
+            purge_old_mods(get(gc),Other),
             {ok, NbErrs, Spec} = yaws_compile:compile_file(UT#urltype.fullpath),
             ?Debug("Spec for file ~s is:~n~p~n",[UT#urltype.fullpath, Spec]),
             ets:insert(SC#sconf.ets, {Key, spec, Mtime, Spec, NbErrs}),
@@ -2787,16 +2787,13 @@ do_yaws(CliSock, ARG, UT, N) ->
     end.
 
 
-del_old_files(_, []) ->
+purge_old_mods(_, []) ->
     ok;
-del_old_files(_GC, [{_FileAtom, spec, _Mtime1, Spec, _}]) ->
+purge_old_mods(_GC, [{_FileAtom, spec, _Mtime1, Spec, _}]) ->
     foreach(
       fun({mod, _, _, _,  Mod, _Func}) ->
-              F=filename:join([yaws:tmpdir(), "yaws",
-                               yaws:to_list(Mod) ++ ".erl"]),
               code:purge(Mod),
-              code:purge(Mod),
-              file:delete(F);
+              code:purge(Mod);
          (_) ->
               ok
       end, Spec).
@@ -3197,7 +3194,7 @@ handle_out_reply({yssi, Yfile}, LineNo, YawsFile, UT, ARG) ->
                                                       Es == 0 ->
                     deliver_dyn_file(CliSock, Spec ++ [yssi], ARG, UT2, N);
                 Other  ->
-                    del_old_files(get(gc), Other),
+                    purge_old_mods(get(gc), Other),
                     {ok, NbErrs, Spec} =
                         yaws_compile:compile_file(UT2#urltype.fullpath),
                     ?Debug("Spec for file ~s is:~n~p~n",
