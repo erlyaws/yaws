@@ -397,6 +397,9 @@ compile_erl(N, Bin, Comp, Spec) ->
                         numchars = 0,
                         erlcode  = undefined},
     case handle_erlang_block(Comp) of
+        skip ->
+            S = {skip, Comp#comp.numchars+N},
+            compile_file(Bin, NewComp, html, [S|Spec]);
         {ok, Mod, Fun} ->
             {Line, _, _, _} = Comp#comp.erlcode,
             S = {mod, Line, Comp#comp.script, Comp#comp.numchars+N,  Mod, Fun},
@@ -590,14 +593,20 @@ compile_and_load_erlang_block(File, Comp) ->
 
 compile_erlang_block(File, Comp) ->
     case compile:file(File, Comp#comp.comp_opts) of
-        {ok, Module, Binary} ->
+        {ok, Module} ->
+            {ok, Module, <<>>, []};
+        {ok, Module, Binary} when is_binary(Binary) ->
             {ok, Module, Binary, []};
+        {ok, Module, Warnings} ->
+            {ok, Module, <<>>, Warnings};
         {ok, Module, Binary, Warnings} ->
             {ok, Module, Binary, Warnings};
         {error, Errors, Warnings} ->
             {error, Errors, Warnings}
     end.
 
+load_erlang_block(_Mod, <<>>, _Comp) ->
+    skip;
 load_erlang_block(Mod, Bin, Comp) ->
     {Line, _, _, _} = Comp#comp.erlcode,
     case code:load_binary(Mod, "", Bin) of
