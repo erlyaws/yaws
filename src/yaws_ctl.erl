@@ -532,15 +532,11 @@ load(X) ->
     actl(SID, {load, Modules}).
 
 check([Id, File| IncludeDirs]) ->
-    GC = yaws_config:make_default_gconf(false, undefined),
+    GC = yaws_config:make_default_gconf(false, atom_to_list(Id)),
     GC2 = GC#gconf{include_dir = lists:map(fun(X) -> atom_to_list(X) end,
-                                           IncludeDirs),
-                   id = atom_to_list(Id)
-                  },
-    yaws_server:setup_dirs(GC2),
-    put(sc, #sconf{}),
+                                           IncludeDirs)},
     put(gc, GC2),
-    put(use_yfile_name, true),
+    put(check_yaws_script, true),
     case yaws_compile:compile_file(atom_to_list(File)) of
         {ok, 0, _Spec} ->
             timer:sleep(100),erlang:halt(0);

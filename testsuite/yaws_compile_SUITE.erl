@@ -182,9 +182,7 @@ request_empty_verbatim(Config) ->
 
 request_bad_yaws_dir(Config) ->
     {ok, {{_,200,_}, _, Error}} = request_script(Config, "/hello.yaws"),
-    ?assertEqual(match, re:run(Error, <<"Dynamic compile error">>,
-                               [caseless, {capture, none}])),
-    ?assertEqual(match, re:run(Error, <<"Failed to create file">>,
+    ?assertEqual(match, re:run(Error, <<"Failed to create temp file">>,
                                [caseless, {capture, none}])),
     ok.
 
@@ -207,8 +205,6 @@ request_compilation_error(Config) ->
     {ok, {{_,200,_}, _, Error}} = request_script(Config, "/compilation_error.yaws"),
     ?assertEqual(match, re:run(Error, <<"Dynamic compile error">>,
                                [caseless, {capture, none}])),
-    ?assertEqual(match, re:run(Error, <<"generated file at">>,
-                               [caseless, {capture, none}])),
     ?assertEqual(match, re:run(Error, <<"function function_not_found/0 undefined">>,
                                [caseless, {capture, none}])),
     ok.
@@ -218,23 +214,17 @@ request_bad_module_name(Config) ->
     {ok, {{_,200,_}, _, Error1}} = request_script(Config, "/bad_module1.yaws"),
     {ok, {{_,200,_}, _, Error2}} = request_script(Config, "/bad_module2.yaws"),
     {ok, {{_,200,_}, _, Error3}} = request_script(Config, "/bad_module3.yaws"),
-    ?assertEqual(match, re:run(Error1, <<"Dynamic compile error">>,
-                               [caseless, {capture, none}])),
-    ?assertEqual(match, re:run(Error1, <<"Cannot create module 'yaws'">>,
+    ?assertEqual(match, re:run(Error1, <<"Cannot create generated module 'yaws'">>,
                                [caseless, {capture, none}])),
     ?assertEqual(match, re:run(Error1, <<"try to override existing module">>,
                                [caseless, {capture, none}])),
 
-    ?assertEqual(match, re:run(Error2, <<"Dynamic compile error">>,
+    ?assertEqual(match, re:run(Error2, <<"Cannot create generated module 'hello'">>,
                                [caseless, {capture, none}])),
-    ?assertEqual(match, re:run(Error2, <<"Cannot create module 'hello'">>,
-                               [caseless, {capture, none}])),
-    ?assertEqual(match, re:run(Error2, <<"try to override yaws module owned by script">>,
+    ?assertEqual(match, re:run(Error2, <<"try to override generated module owned by script">>,
                                [caseless, {capture, none}])),
 
-    ?assertEqual(match, re:run(Error3, <<"Dynamic compile error">>,
-                               [caseless, {capture, none}])),
-    ?assertEqual(match, re:run(Error3, <<"Cannot create module ''">>,
+    ?assertEqual(match, re:run(Error3, <<"Cannot create generated module ''">>,
                                [caseless, {capture, none}])),
     ?assertEqual(match, re:run(Error3, <<"empty module name">>,
                                [caseless, {capture, none}])),

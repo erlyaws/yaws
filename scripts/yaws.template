@@ -398,8 +398,6 @@ if [ -n "$check" ]; then
     fi
     set $checkargs
     check="$check $checkid $checkargs"
-    mkdir ${HOME}/.yaws/yaws 2> /dev/null
-    mkdir ${HOME}/.yaws/yaws/$checkid 2> /dev/null
     if [ -n "$verbose" ]; then
         out=`exec $check`
         if [ "$?" = "0" ]; then

@@ -12,7 +12,7 @@
                hash,
                line = 1,
                nummod = 1,
-               use_yfile_name = false,
+               check_script = false,
                nberrors = 0,
                numchars = 0,
                verbatim,
@@ -53,19 +53,23 @@ compile_file(File, Opts) ->
     case file:read_file(File) of
         {ok, Bin} ->
             GC = get(gc),
+            CheckFlag = (get(check_yaws_script) =:= true),
             Comp = #comp{gc             = GC,
                          script         = File,
                          hash           = integer_to_list(erlang:phash2(File)),
-                         use_yfile_name = (get(use_yfile_name) =:= true),
-                         comp_opts      = compile_opts(GC, Opts)},
+                         check_script   = CheckFlag,
+                         comp_opts      = compile_opts(GC, Opts, CheckFlag)},
             global:trans({{yaws, Comp#comp.hash}, self()},
                          fun() -> do_compile_file(Bin, Comp) end,
                          [node()], infinity);
         {error, Reason} ->
-            Str = ?F("failed to open '~s': ~p~n",
-                     [File, file:format_error(Reason)]),
-            yaws:elog("~s~n", [Str]),
-            {ok, 1, [{error, 0, Str}]}
+            S = ?F("failed to open '~s': ~p~n",
+                   [File, file:format_error(Reason)]),
+            case get(check_yaws_script) of
+                true  -> io:put_chars(S);
+                _     -> yaws:elog("~s", [S])
+            end,
+            {ok, 1, [{error, 0, S}]}
     end.
 
 do_compile_file(Bin, Comp) ->
@@ -405,16 +409,16 @@ compile_erl(N, Bin, Comp, Spec) ->
             S = {mod, Line, Comp#comp.script, Comp#comp.numchars+N,  Mod, Fun},
             compile_file(Bin, NewComp, html, [S|Spec]);
         {error, Reason} ->
-            S = case Comp#comp.use_yfile_name of
+            S = case Comp#comp.check_script of
                     true  ->
-                        {error, Comp#comp.numchars+N, Reason};
+                        io:put_chars(Reason),
+                        Reason;
                     false ->
-                        Str = ?F("~n<pre>~nDynamic compile error: ~s~n</pre>~n",
-                                 [Reason]),
-                        {error, Comp#comp.numchars+N, Str}
+                        yaws:elog("~s", [Reason]),
+                        ?F("~n<pre>~n~s~n</pre>~n", [Reason])
                 end,
-            NewComp1 = NewComp#comp{nberrors=NewComp#comp.nberrors+1},
-            compile_file(Bin, NewComp1, html, [S|Spec])
+            compile_file(Bin, NewComp#comp{nberrors=NewComp#comp.nberrors+1},
+                         html, [{error, Comp#comp.numchars+N, S}|Spec])
     end.
 
 join_data([])                          -> [];
@@ -479,38 +483,30 @@ handle_erlang_block(Comp) ->
     case check_module_name(ModName, Comp) of
         ok ->
             {Module, File} = get_module_info(ModName, Comp),
-            ?Debug("Writting module ~s in file ~s~n", [Module,File]),
+            ?Debug("Writting generated module ~s in file ~s~n", [Module, File]),
             case dump_erlang_block(File, Module, Comp) of
                 ok ->
                     Res = compile_and_load_erlang_block(File, Comp),
                     file:delete(File),
                     Res;
                 {error, Reason} ->
-                    S = io_lib:format("Error in File ~s at line ~p~n"
-                                      "    Failed to create file '~s': ~s~n",
+                    S = io_lib:format("Error in file ~s at line ~p~n"
+                                      "    Failed to create temp file '~s': ~s~n",
                                       [Comp#comp.script, Line,
                                        File, file:format_error(Reason)]),
-                    case Comp#comp.use_yfile_name of
-                        true  -> io:put_chars(S);
-                        false  -> ok
-                    end,
                     {error, lists:flatten(S)}
             end;
         {error, Reason} ->
-            S = io_lib:format("Error in File ~s at line ~p~n"
-                              "    Cannot create module '~s': ~s~n",
+            S = io_lib:format("Error in file ~s at line ~p~n"
+                              "    Cannot create generated module '~s': ~s~n",
                               [Comp#comp.script, Line,
                                ModName, Reason]),
-            case Comp#comp.use_yfile_name of
-                true  -> io:put_chars(S);
-                false  -> ok
-            end,
             {error, lists:flatten(S)}
     end.
 
 get_module_info(undefined, Comp) ->
     N = integer_to_list(Comp#comp.nummod),
-    case Comp#comp.use_yfile_name of
+    case Comp#comp.check_script of
         true  ->
             YFile   = filename:rootname(Comp#comp.script),
             ModName = lists:flatten([YFile, "_yaws_", N]),
@@ -521,7 +517,7 @@ get_module_info(undefined, Comp) ->
             {ModName, filename:join([Dir, ModName++".erl"])}
     end;
 get_module_info(ModName, Comp) ->
-    case Comp#comp.use_yfile_name of
+    case Comp#comp.check_script of
         true  ->
             Dir = filename:dirname(Comp#comp.script),
             {ModName, filename:join([Dir, ModName++".erl"])};
@@ -542,11 +538,12 @@ check_module_name(ModName, Comp) ->
                 {yawsfile, Script} when Script =:= Comp#comp.script ->
                     ok;
                 {yawsfile, OtherSript} ->
-                    Str = io_lib:format("try to override yaws module "
-                                        "owned by script ~s", [OtherSript]),
-                    {error, Str};
+                    S = io_lib:format("try to override generated module "
+                                      "owned by script ~s", [OtherSript]),
+                    {error, S};
                 false ->
-                    {error, "try to override existing module"}
+                    S = io_lib:format("try to override existing module", []),
+                    {error, S}
             end;
         false ->
             ok
@@ -615,102 +612,76 @@ load_erlang_block(Mod, Bin, Comp) ->
                 true ->
                     {ok, Mod, out};
                 false ->
-                    S = io_lib:format("Error in File ~s at line ~p~n"
+                    S = io_lib:format("Error in file ~s at line ~p~n"
                                       "    out/1 is not defined~n",
                                       [Comp#comp.script, Line]),
-                    yaws:elog("~s~n", [S]),
                     {error, lists:flatten(S)}
             end;
         Err ->
-            S = io_lib:format("Error in File ~s at line ~p~n"
-                              "    Cannot load module ~p: ~p~n",
+            S = io_lib:format("Error in file ~s at line ~p~n"
+                              "    Cannot load generated module ~p: ~p~n",
                               [Comp#comp.script, Line, Mod, Err]),
-            yaws:elog("~s~n", [S]),
             {error, lists:flatten(S)}
     end.
 
-compile_opts(GC, Opts0) ->
+compile_opts(GC, Opts0, CheckFlag) ->
     ?Debug("Includes = ~p~n", [GC#gconf.include_dir]),
     I = lists:map(fun(Dir) -> {i, Dir} end, GC#gconf.include_dir),
-    Warnings = case get(use_yfile_name) of
-                   true  -> [return_warnings, debug_info];
-                   _     -> []
+    Warnings = if
+                   CheckFlag == true -> [return_warnings];
+                   true              -> []
                end,
     Opts = [binary, return_errors] ++ Warnings ++ I ++ Opts0,
     ?Debug("Compile options = ~p~n", [Opts]),
     Opts.
 
 format_compile_error(Comp, Errors, Warnings) ->
-    case Comp#comp.use_yfile_name of
-        true ->
-            report_errors(Comp,   Errors),
-            report_warnings(Comp, Warnings),
-            "compile error";
-        false ->
-            case Errors of
-                [{FileName, [{Line0, Mod, E}|_]}|_] when is_integer(Line0) ->
-                    {StartLine, _, _, _} = Comp#comp.erlcode,
-                    Line = line(Line0 + StartLine),
-                    Str = io_lib:format("~s:~w:~n ~s\ngenerated file at: ~s~n",
-                                        [Comp#comp.script, Line,
-                                         Mod:format_error(E),
-                                         FileName]),
-                    yaws:elog("Dynamic compile error: ~s", [Str]),
-                    lists:flatten(Str);
-                _ ->
-                    Str = io_lib:format("Unexpected error: ~p~n", [Errors]),
-                    yaws:elog("Dynamic compile error: ~s", [Str]),
-                    lists:flatten(Str)
-            end
-    end.
+    S1 = report_errors(Comp,   Errors),
+    S2 = report_warnings(Comp, Warnings),
+    S = io_lib:format("Dynamic compile error:~n~s~s", [S1, S2]),
+    lists:flatten(S).
 
-report_compile_warnings(Comp, Warnings) ->
-    case Comp#comp.use_yfile_name of
-        true  -> report_warnings(Comp, Warnings);
-        false -> ok
-    end.
+report_compile_warnings(#comp{check_script=true}=Comp, Warnings) ->
+    io:put_chars(report_warnings(Comp, Warnings));
+report_compile_warnings(_, _) ->
+    ok.
 
 line(N) -> N - 15.
 
 %% -----------------------------------------------------------------
-%% From compile.erl in order to print proper error/warning messages
-%% if compiled with check option.
-report_errors(C, Errors) ->
+%% Adapted from compile.erl.
+report_errors(C, Es0) ->
     File = C#comp.script,
     {StartLine, _, _, _} = C#comp.erlcode,
     SLine = line(StartLine),
-    lists:foreach(fun ({{_F,_L},Eds}) -> list_errors(File, SLine, Eds);
-                      ({_F,Eds})      -> list_errors(File, SLine, Eds)
-                  end, Errors).
+    lists:flatmap(fun ({{_F,_L},Eds}) -> format_errors(File, SLine, Eds);
+                      ({_F,Eds})      -> format_errors(File, SLine, Eds)
+                  end, Es0).
 
 report_warnings(C, Ws0) ->
     File = C#comp.script,
     {StartLine, _, _, _} = C#comp.erlcode,
     SLine = line(StartLine),
-    Ws1 = lists:flatmap(fun({{_F,_L},Eds}) -> format_message(File, SLine, Eds);
-                           ({_F,Eds})      -> format_message(File, SLine, Eds)
-                        end, Ws0),
-    Ws = ordsets:from_list(Ws1),
-    lists:foreach(fun({_,Str}) -> io:put_chars(Str) end, Ws).
+    lists:flatmap(fun({{_F,_L},Eds}) -> format_warnings(File, SLine, Eds);
+                     ({_F,Eds})      -> format_warnings(File, SLine, Eds)
+                  end, Ws0).
 
-format_message(F, SLine, [{Line0,Mod,E}|Es]) ->
+format_warnings(F, SLine, [{Line0,Mod,E}|Es]) ->
     Line = Line0 + SLine,
-    M = {{F,Line},io_lib:format("~s:~w: Warning: ~s\n",
-                                [F,Line,Mod:format_error(E)])},
-    [M|format_message(F, SLine, Es)];
-format_message(F, SLine, [{Mod,E}|Es]) ->
-    M = {none,io_lib:format("~s: Warning: ~s\n", [F,Mod:format_error(E)])},
-    [M|format_message(F, SLine, Es)];
-format_message(_, _, []) -> [].
+    M = io_lib:format("~s:~w: Warning: ~s~n", [F,Line,Mod:format_error(E)]),
+    [M|format_warnings(F, SLine, Es)];
+format_warnings(F, SLine, [{Mod,E}|Es]) ->
+    M = io_lib:format("~s: Warning: ~s~n", [F,Mod:format_error(E)]),
+    [M|format_warnings(F, SLine, Es)];
+format_warnings(_, _, []) ->
+    [].
 
-%% list_errors(File, StartLine, ErrorDescriptors) -> ok
-
-list_errors(F, SLine, [{Line0,Mod,E}|Es]) ->
+format_errors(F, SLine, [{Line0,Mod,E}|Es]) ->
     Line = erlang:max(0, Line0 + SLine),
-    io:fwrite("~s:~w: ~s\n", [F,Line,Mod:format_error(E)]),
-    list_errors(F, SLine, Es);
-list_errors(F, SLine, [{Mod,E}|Es]) ->
-    io:fwrite("~s: ~s\n", [F,Mod:format_error(E)]),
-    list_errors(F, SLine, Es);
-list_errors(_F, _SLine, []) ->
-    ok.
+    M = io_lib:format("~s:~w: ~s~n", [F,Line,Mod:format_error(E)]),
+    [M|format_errors(F, SLine, Es)];
+format_errors(F, SLine, [{Mod,E}|Es]) ->
+    M = io_lib:format("~s: ~s~n", [F,Mod:format_error(E)]),
+    [M|format_errors(F, SLine, Es)];
+format_errors(_F, _SLine, []) ->
+    [].
