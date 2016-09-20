@@ -53,7 +53,13 @@ max_connections(Config) ->
     ?assertMatch({ok, {{_,204,_}, _, _}}, testsuite:http_get(Url, [ConnHdr])),
 
     {ok, Sock2} = gen_tcp:connect("127.0.0.1", Port, []),
-    ?assertMatch({error, _}, testsuite:http_get(Url)),
+    {ok, Sock3} = gen_tcp:connect("127.0.0.1", Port, [{active, once}]),
+    Res = receive
+              {tcp_closed, Sock3} -> ok
+          after
+              1000 -> {error, timeout}
+          end,
+    ?assertEqual(Res, ok),
 
     ?assertEqual(ok, gen_tcp:close(Sock1)),
     ?assertMatch({ok, {{_,204,_}, _, _}}, testsuite:http_get(Url, [ConnHdr])),

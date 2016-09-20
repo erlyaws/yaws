@@ -526,11 +526,37 @@ arg_rewrite_response(Config) ->
 
 shaper(Config) ->
     Port = testsuite:get_yaws_port(4, Config),
-    Url = testsuite:make_url(http, "127.0.0.1", Port, "/"),
-    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url)),
-    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url)),
-    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url)),
-    ?assertMatch({ok, {{_,503,_}, _, _}}, testsuite:http_get(Url)),
+    {ok, Sock} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
+
+    ?assertEqual(ok,
+                 testsuite:send_http_request(
+                   Sock, {get, "/", "HTTP/1.1"},
+                   [{"Host", "127.0.0.1:"++integer_to_list(Port)}]
+                  )),
+    {ok, {{_,200,_}, _, _}} = testsuite:receive_http_response(Sock),
+
+    ?assertEqual(ok,
+                 testsuite:send_http_request(
+                   Sock, {get, "/", "HTTP/1.1"},
+                   [{"Host", "127.0.0.1:"++integer_to_list(Port)}]
+                  )),
+    {ok, {{_,200,_}, _, _}} = testsuite:receive_http_response(Sock),
+
+    ?assertEqual(ok,
+                 testsuite:send_http_request(
+                   Sock, {get, "/", "HTTP/1.1"},
+                   [{"Host", "127.0.0.1:"++integer_to_list(Port)}]
+                  )),
+    {ok, {{_,200,_}, _, _}} = testsuite:receive_http_response(Sock),
+
+    ?assertEqual(ok,
+                 testsuite:send_http_request(
+                   Sock, {get, "/", "HTTP/1.1"},
+                   [{"Host", "127.0.0.1:"++integer_to_list(Port)}]
+                  )),
+    {ok, {{_,503,_}, _, _}} = testsuite:receive_http_response(Sock),
+
+    ?assertEqual(ok, gen_tcp:close(Sock)),
     ok.
 
 sslaccept_timeout(Config) ->

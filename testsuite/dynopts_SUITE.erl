@@ -37,16 +37,16 @@ end_per_testcase(_Test, _Config) ->
     ok.
 
 %%====================================================================
-default_dynopts(_Config) ->
+default_dynopts(Config) ->
     ?assertNot(yaws_dynopts:is_generated()),
-    ?assertEqual(ok, check_ssl_honor_cipher_order()),
-    ?assertEqual(ok, check_ssl_client_renegotiation()),
-    ?assertEqual(ok, check_ssl_sni()),
-    ?assertEqual(ok, check_ssl_log_alert()),
-    ?assertEqual(ok, check_erlang_sendfile()),
-    ?assertEqual(ok, check_crypto_strong_rand_bytes()),
-    ?assertEqual(ok, check_erlang_now()),
-    ?assertEqual(ok, check_rand()),
+    ?assertEqual(ok, check_ssl_honor_cipher_order(Config)),
+    ?assertEqual(ok, check_ssl_client_renegotiation(Config)),
+    ?assertEqual(ok, check_ssl_sni(Config)),
+    ?assertEqual(ok, check_ssl_log_alert(Config)),
+    ?assertEqual(ok, check_erlang_sendfile(Config)),
+    ?assertEqual(ok, check_crypto_strong_rand_bytes(Config)),
+    ?assertEqual(ok, check_erlang_now(Config)),
+    ?assertEqual(ok, check_rand(Config)),
     ok.
 
 generated_dynopts(_Config) ->
@@ -75,51 +75,55 @@ generated_dynopts(_Config) ->
     ok.
 
 %%====================================================================
-check_ssl_honor_cipher_order() ->
+check_ssl_honor_cipher_order(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
     case yaws_dynopts:have_ssl_honor_cipher_order() of
         true ->
-            {ok, Sock} = ssl:listen(8443, [{honor_cipher_order, true}]),
+            {ok, Sock} = ssl:listen(Port, [{reuseaddr, true}, {honor_cipher_order, true}]),
             ok = ssl:close(Sock);
         false ->
             {'EXIT', badarg} =
-                (catch ssl:listen(8443, [{honor_cipher_order, true}]))
+                (catch ssl:listen(Port, [{reuseaddr, true}, {honor_cipher_order, true}]))
     end,
     ok.
 
-check_ssl_client_renegotiation() ->
+check_ssl_client_renegotiation(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
     case yaws_dynopts:have_ssl_client_renegotiation() of
         true ->
-            {ok, Sock} = ssl:listen(8443, [{client_renegotiation, true}]),
+            {ok, Sock} = ssl:listen(Port, [{reuseaddr, true}, {client_renegotiation, true}]),
             ok = ssl:close(Sock);
         false ->
             {'EXIT',badarg} =
-                (catch ssl:listen(8443, [{client_renegotiation, true}]))
+                (catch ssl:listen(Port, [{reuseaddr, true}, {client_renegotiation, true}]))
     end,
     ok.
 
-check_ssl_sni() ->
+check_ssl_sni(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
     case yaws_dynopts:have_ssl_sni() of
         true ->
-            {ok, Sock} = ssl:listen(8443, [{sni_fun, fun(_) -> [] end}]),
+            {ok, Sock} = ssl:listen(Port, [{reuseaddr, true}, {sni_fun, fun(_) -> [] end}]),
             ok = ssl:close(Sock);
         false ->
             {'EXIT', badarg} =
-                (catch ssl:listen(8443, [{sni_fun, fun(_) -> [] end}]))
+                (catch ssl:listen(Port, [{reuseaddr, true}, {sni_fun, fun(_) -> [] end}]))
     end,
     ok.
 
-check_ssl_log_alert() ->
+check_ssl_log_alert(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
     case yaws_dynopts:have_ssl_log_alert() of
         true ->
-            {ok, Sock} = ssl:listen(8443, [{log_alert, true}]),
+            {ok, Sock} = ssl:listen(Port, [{reuseaddr, true}, {log_alert, true}]),
             ok = ssl:close(Sock);
         false ->
             {'EXIT', badarg} =
-                (catch ssl:listen(8443, [{log_alert, true}]))
+                (catch ssl:listen(Port, [{reuseaddr, true}, {log_alert, true}]))
     end,
     ok.
 
-check_erlang_sendfile() ->
+check_erlang_sendfile(_Config) ->
     Funs = file:module_info(exports),
     case yaws_dynopts:have_erlang_sendfile() of
         true ->
@@ -133,7 +137,7 @@ check_erlang_sendfile() ->
     end,
     ok.
 
-check_crypto_strong_rand_bytes() ->
+check_crypto_strong_rand_bytes(_Config) ->
     Funs = crypto:module_info(exports),
     case yaws_dynopts:have_crypto_strong_rand_bytes() of
         true  -> true  = lists:member({strong_rand_bytes, 1}, Funs);
@@ -141,7 +145,7 @@ check_crypto_strong_rand_bytes() ->
     end,
     ok.
 
-check_erlang_now() ->
+check_erlang_now(_Config) ->
     Funs = erlang:module_info(exports),
     case yaws_dynopts:have_erlang_now() of
         true  -> false = lists:member({unique_integer, 1}, Funs);
@@ -149,7 +153,7 @@ check_erlang_now() ->
     end,
     ok.
 
-check_rand() ->
+check_rand(_Config) ->
     case yaws_dynopts:have_rand() of
         true  -> {module, rand} = code:ensure_loaded(rand);
         false -> {error, _}     = code:ensure_loaded(rand)
