@@ -124,10 +124,26 @@ get_app_args() ->
              {ok, Id0} ->
                  Id0
          end,
+    Enc = case application:get_env(yaws, encoding) of
+              undefined ->
+                  case {member({yaws, ["encoding", "latin1"]}, AS),
+                        member({yaws, ["encoding", "unicode"]}, AS)} of
+                      {true, _} -> latin1;
+                      {_, true} -> unicode;
+                      _         -> latin1
+                  end;
+              {ok, latin1} ->
+                  latin1;
+              {ok, unicode} ->
+                  unicode;
+              _ ->
+                  latin1
+          end,
 
     #env{debug = Debug, trace = Trace,
          traceoutput = TraceOutput, conf = Conf,
-         runmod = RunMod, embedded = Embedded, id = Id}.
+         runmod = RunMod, embedded = Embedded, id = Id,
+         encoding = Enc}.
 
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------

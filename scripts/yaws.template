@@ -43,28 +43,29 @@ help()
 
     echo ""
     echo "       Auxiliary flags for the daemon: "
-    echo "            --id Id             --  set system id"
-    echo "            --debug             --  debug mode"
-    echo "            --nodebug           --  turn off debug mode"
-    echo "            --conf File         --  set config file"
-    echo "            --tracetraf         --  trace traffic"
-    echo "            --tracehttp         --  trace http traffic"
-    echo "            --traceout          --  trace output to stdout"
-    echo "            --version           --  print version"
-    echo "            --pa path           --  add load path"
-    echo "            --mnesiadir dir     --  start Mnesia in dir"
-    echo "            --proto_dist Mod    --  use Mod for distrib"
-    echo "            --sname xxx         --  start with sname xxx"
-    echo "            --name xxx          --  start with name xxx"
-    echo "            --runmod mod        --  call mod:start/0 at startup"
-    echo "            --heart             --  auto restart yaws if it crashes"
-    echo "            --heart-restart=C,T --  allow C heart restarts in T seconds"
-    echo "            --erlarg X          --  pass argument X to $erl"
-    echo "            --setcookie X       --  set an erlang cookie"
-    echo "            --run_erl X         --  use run_erl with pipe-id X"
-    echo "            --to_erl X          --  connect to pipe-id X"
-    echo "            --disable-kpoll     --  pass +K false to erlang"
-    echo "            --umask umaskval    --  set process umask to umaskval"
+    echo "            --id Id                   --  set system id"
+    echo "            --debug                   --  debug mode"
+    echo "            --nodebug                 --  turn off debug mode"
+    echo "            --conf File               --  set config file"
+    echo "            --tracetraf               --  trace traffic"
+    echo "            --tracehttp               --  trace http traffic"
+    echo "            --traceout                --  trace output to stdout"
+    echo "            --version                 --  print version"
+    echo "            --pa path                 --  add load path"
+    echo "            --mnesiadir dir           --  start Mnesia in dir"
+    echo "            --proto_dist Mod          --  use Mod for distrib"
+    echo "            --sname xxx               --  start with sname xxx"
+    echo "            --name xxx                --  start with name xxx"
+    echo "            --runmod mod              --  call mod:start/0 at startup"
+    echo "            --heart                   --  auto restart yaws if it crashes"
+    echo "            --heart-restart=C,T       --  allow C heart restarts in T seconds"
+    echo "            --erlarg X                --  pass argument X to $erl"
+    echo "            --setcookie X             --  set an erlang cookie"
+    echo "            --run_erl X               --  use run_erl with pipe-id X"
+    echo "            --to_erl X                --  connect to pipe-id X"
+    echo "            --disable-kpoll           --  pass +K false to erlang"
+    echo "            --umask umaskval          --  set process umask to umaskval"
+    echo "            --encoding latin1|unicode --  set the config file encoding (default: latin1)"
     echo ""
 
     echo "ctl functions ... "
@@ -110,6 +111,7 @@ verbose=""
 auth=""
 auth_user=""
 auth_algo="sha256"
+encoding="latin1"
 program=$0
 
 wait_started() {
@@ -393,6 +395,19 @@ while [ $# -gt 0 ]
           fi
           auth_algo="$1"
           shift;;
+      --encoding)
+          if [ -z "$1" ]; then
+              echo error: missing encoding argument
+              help
+          elif [ "$1" == "latin1" ]; then
+              encoding="latin1";
+          elif [ "$1" == "unicode" ]; then
+              encoding="unicode";
+          else
+              echo error: unsupported encoding argument
+              help
+          fi
+          shift;;
       *)
           if [ -z "$check" ]; then
               help
@@ -477,10 +492,12 @@ if [ -n "$id" ]; then
 fi
 
 trace="$trace $traceoutput"
+encoding="-yaws encoding $encoding"
 
 [ "$run_erl" = "eval" ] && [ -z "$daemon" ] && [ -z "$interactive" ] && help
 
-XEC="$daemon $heart +K $kpoll -pa ${yawsdir}${delim}ebin $xpath $sname $pdist $erlarg $debug -run yaws $trace $conf $runmod $mnesia $id"
+XEC="$daemon $heart +K $kpoll -pa ${yawsdir}${delim}ebin $xpath $sname $pdist $erlarg $debug \
+ -run yaws $trace $conf $runmod $mnesia $id $encoding"
 
 if [ -z "$heart" ] || [ -z "$daemon" ]; then
     unset HEART_COMMAND

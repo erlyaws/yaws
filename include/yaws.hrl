@@ -392,7 +392,8 @@
           conf,
           runmod,
           embedded,
-          id
+          id,
+          encoding=latin1
          }).
 
 %% Typically used in error printouts as in:

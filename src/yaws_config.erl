@@ -60,7 +60,7 @@ load(E = #env{conf = false}) ->
 load(E) ->
     {file, File} = E#env.conf,
     error_logger:info_msg("Yaws: Using config file ~s~n", [File]),
-    case file:open(File, [read]) of
+    case file:open(File, [read, {encoding, E#env.encoding}]) of
         {ok, FD} ->
             GC = make_default_gconf(E#env.debug, E#env.id),
             GC1 = if E#env.traceoutput == undefined ->
@@ -2496,6 +2496,7 @@ warn_dir(Type, Dir) ->
     end.
 
 is_dir(Val) ->
+    io:format("~p: ~p~n", [Val, file:read_file_info(Val)]),
     case file:read_file_info(Val) of
         {ok, FI} when FI#file_info.type == directory ->
             true;
