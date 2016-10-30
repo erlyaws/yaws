@@ -2496,7 +2496,6 @@ warn_dir(Type, Dir) ->
     end.
 
 is_dir(Val) ->
-    io:format("~p: ~p~n", [Val, file:read_file_info(Val)]),
     case file:read_file_info(Val) of
         {ok, FI} when FI#file_info.type == directory ->
             true;
