@@ -6,6 +6,7 @@
 
 all() ->
     [
+     compare_version,
      default_dynopts,
      generated_dynopts
     ].
@@ -37,6 +38,19 @@ end_per_testcase(_Test, _Config) ->
     ok.
 
 %%====================================================================
+compare_version(_Config) ->
+    ?assert(yaws_dynopts:is_greater("2",         "1")),
+    ?assert(yaws_dynopts:is_greater("2.0",       "1.0")),
+    ?assert(yaws_dynopts:is_greater("1.1",       "1.0")),
+    ?assert(yaws_dynopts:is_greater("1.1",       "1.0.0")),
+    ?assert(yaws_dynopts:is_greater("1.1.0",     "1.0.1")),
+    ?assert(yaws_dynopts:is_greater("1.0.2",     "1.0.1")),
+    ?assert(yaws_dynopts:is_greater("1.0.2-rc1", "1.0.1")),
+    ?assert(yaws_dynopts:is_greater("1.0.2",     "1.0.1-rc1")),
+    ?assert(yaws_dynopts:is_greater("1.0.2-rc1", "1.0.1-rc1")),
+    ?assert(yaws_dynopts:is_greater("1.0.2-rc1", "1.0-rc1")),
+    ok.
+
 default_dynopts(Config) ->
     ?assertNot(yaws_dynopts:is_generated()),
     ?assertEqual(ok, check_ssl_honor_cipher_order(Config)),

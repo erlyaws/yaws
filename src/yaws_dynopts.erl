@@ -107,13 +107,31 @@ compare_version(Vsn1, Vsn2) ->
 
 compare_version1([], []) ->
     equal;
-compare_version1([X|Rest1], [X|Rest2]) ->
-    compare_version1(Rest1, Rest2);
+compare_version1(_X, []) ->
+    greater;
+compare_version1([], _X) ->
+    less;
 compare_version1([X1], [X2]) ->
     %% For last digit ignore everything after the "-", if any
     Y1 = lists:takewhile(fun(X) -> X /= $- end, X1),
     Y2 = lists:takewhile(fun(X) -> X /= $- end, X2),
     compare_digit(Y1, Y2);
+compare_version1([X1], [X2|_]) ->
+    %% For last digit ignore everything after the "-", if any
+    Y1 = lists:takewhile(fun(X) -> X /= $- end, X1),
+    case compare_digit(Y1, X2) of
+        equal -> less;
+        Else  -> Else
+    end;
+compare_version1([X1|_], [X2]) ->
+    %% For last digit ignore everything after the "-", if any
+    Y2 = lists:takewhile(fun(X) -> X /= $- end, X2),
+    case compare_digit(X1, Y2) of
+        equal -> greater;
+        Else  -> Else
+    end;
+compare_version1([X|Rest1], [X|Rest2]) ->
+    compare_version1(Rest1, Rest2);
 compare_version1([X1|Rest1], [X2|Rest2]) ->
     case compare_digit(X1, X2) of
         equal -> compare_version1(Rest1, Rest2);
@@ -278,7 +296,7 @@ source() ->
            "",
            "-ifdef(HAVE_SSL_SNI).",
            "connection_information(Sock, Items) -> ",
-           "    ssl:connection_information(Sock, Items)."
+           "    ssl:connection_information(Sock, Items).",
            "-else.",
            "connection_information(_, _) -> undefined.",
            "-endif."
