@@ -44,7 +44,6 @@ default_dynopts(Config) ->
     ?assertEqual(ok, check_ssl_sni(Config)),
     ?assertEqual(ok, check_ssl_log_alert(Config)),
     ?assertEqual(ok, check_erlang_sendfile(Config)),
-    ?assertEqual(ok, check_crypto_strong_rand_bytes(Config)),
     ?assertEqual(ok, check_erlang_now(Config)),
     ?assertEqual(ok, check_rand(Config)),
     ok.
@@ -56,7 +55,6 @@ generated_dynopts(_Config) ->
     SSLSni              = yaws_dynopts:have_ssl_sni(),
     SSLLogAlert         = yaws_dynopts:have_ssl_log_alert(),
     ErlSendfile         = yaws_dynopts:have_erlang_sendfile(),
-    CryptoRnd           = yaws_dynopts:have_crypto_strong_rand_bytes(),
     ErlNow              = yaws_dynopts:have_erlang_now(),
     Rand                = yaws_dynopts:have_rand(),
 
@@ -69,7 +67,6 @@ generated_dynopts(_Config) ->
     ?assertEqual(SSLSni,              yaws_dynopts:have_ssl_sni()),
     ?assertEqual(SSLLogAlert,         yaws_dynopts:have_ssl_log_alert()),
     ?assertEqual(ErlSendfile,         yaws_dynopts:have_erlang_sendfile()),
-    ?assertEqual(CryptoRnd,           yaws_dynopts:have_crypto_strong_rand_bytes()),
     ?assertEqual(ErlNow,              yaws_dynopts:have_erlang_now()),
     ?assertEqual(Rand,                yaws_dynopts:have_rand()),
     ok.
@@ -134,14 +131,6 @@ check_erlang_sendfile(_Config) ->
                 true  -> true = ($R == hd(erlang:system_info(otp_release)));
                 false -> ok
             end
-    end,
-    ok.
-
-check_crypto_strong_rand_bytes(_Config) ->
-    Funs = crypto:module_info(exports),
-    case yaws_dynopts:have_crypto_strong_rand_bytes() of
-        true  -> true  = lists:member({strong_rand_bytes, 1}, Funs);
-        false -> false = lists:member({strong_rand_bytes, 1}, Funs)
     end,
     ok.
 

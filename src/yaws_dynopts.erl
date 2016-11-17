@@ -9,11 +9,9 @@
          have_ssl_sni/0,
          have_ssl_log_alert/0,
          have_erlang_sendfile/0,
-         have_crypto_strong_rand_bytes/0,
          have_erlang_now/0,
          have_rand/0,
 
-         rand_bytes/1,
          unique_triple/0,
          get_time_tuple/0,
          now_secs/0,
@@ -47,10 +45,6 @@ have_ssl_log_alert() ->
 have_erlang_sendfile() ->
     is_greater_or_equal(erlang:system_info(version), "6.0").
 
-%% crypto:rand_bytes/1 is deprecated since releases 19 (ERTS >= 8.0)
-have_crypto_strong_rand_bytes() ->
-    lists:member({strong_rand_bytes, 1}, crypto:module_info(exports)).
-
 %% erlang:now/0 is deprecated since releases 18 (ERTS >= 7.0)
 have_erlang_now() ->
     is_less(erlang:system_info(version), "7.0").
@@ -58,12 +52,6 @@ have_erlang_now() ->
 %% random module is deprecated since releases 19 (ERTS >= 8.0)
 have_rand() ->
     (code:which(rand) /= non_existing).
-
-rand_bytes(N) ->
-    case have_crypto_strong_rand_bytes() of
-        true  -> crypto:strong_rand_bytes(N);
-        false -> (fun crypto:rand_bytes/1)(N)
-    end.
 
 unique_triple() ->
     case have_erlang_now() of
@@ -201,11 +189,6 @@ compile_options() ->
      {d, 'HAVE_ERLANG_SENDFILE',           have_erlang_sendfile()}
     ]
         ++
-        case have_crypto_strong_rand_bytes() of
-            true  -> [{d, 'HAVE_CRYPTO_STRONG_RAND_BYTES'}];
-            false -> []
-        end
-        ++
         case have_erlang_now() of
             true  -> [{d, 'HAVE_ERLANG_NOW'}];
             false -> []
@@ -230,11 +213,9 @@ source() ->
            "    have_ssl_sni/0,",
            "    have_ssl_log_alert/0,",
            "    have_erlang_sendfile/0,",
-           "    have_crypto_strong_rand_bytes/0,",
            "    have_erlang_now/0,",
            "    have_rand/0,"
            "",
-           "    rand_bytes/1,",
            "    unique_triple/0,",
            "    get_time_tuple/0,",
            "    now_secs/0,",
@@ -255,14 +236,6 @@ source() ->
            "have_ssl_log_alert()            -> ?HAVE_SSL_LOG_ALERT.",
            "have_erlang_sendfile()          -> ?HAVE_ERLANG_SENDFILE.",
            "",
-           "-ifdef(HAVE_CRYPTO_STRONG_RAND_BYTES).",
-           "have_crypto_strong_rand_bytes() -> true.",
-           "rand_bytes(N) -> crypto:strong_rand_bytes(N).",
-           "-else.",
-           "have_crypto_strong_rand_bytes() -> false.",
-           "rand_bytes(N) -> crypto:rand_bytes(N).",
-           "-endif.",
-           ""
            "-ifdef(HAVE_ERLANG_NOW).",
            "have_erlang_now() -> true.",
            "unique_triple() ->",

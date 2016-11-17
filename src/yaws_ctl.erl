@@ -576,7 +576,7 @@ auth([User, Algo, Passwd]) ->
         Algo == sha224 orelse Algo == sha256 orelse
         Algo == sha384 orelse Algo == sha512 orelse
         Algo == ripemd160 ->
-            Salt    = yaws_dynopts:rand_bytes(32),
+            Salt    = crypto:strong_rand_bytes(32),
             B64Salt = base64:encode(Salt),
             Hash    = crypto:hash(Algo, [Salt, atom_to_list(Passwd)]),
             B64Hash = base64:encode(Hash),

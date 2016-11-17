@@ -267,7 +267,7 @@ parse_yaws_auth_file([{file, File}|T], Auth0) ->
 
 parse_yaws_auth_file([{User, Password}|T], Auth0)
   when is_list(User), is_list(Password) ->
-    Salt = yaws_dynopts:rand_bytes(32),
+    Salt = crypto:strong_rand_bytes(32),
     Hash = crypto:hash(sha256, [Salt, Password]),
     Users = case lists:member({User, sha256, Salt, Hash}, Auth0#auth.users) of
                 true  -> Auth0#auth.users;
@@ -3356,7 +3356,7 @@ parse_auth_user(User, Lno) ->
                         {error, ?F("Invalid user at line ~w", [Lno])}
                 end;
             _ ->
-                Salt = yaws_dynopts:rand_bytes(32),
+                Salt = crypto:strong_rand_bytes(32),
                 {Name, sha256, Salt, crypto:hash(sha256, [Salt, Passwd])}
         end
     catch

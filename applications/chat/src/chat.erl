@@ -148,7 +148,7 @@ chat_server(Users0) ->
             end,
             chat_server(Users);
         {new_session, User, From} ->
-            Cookie = integer_to_list(bin2int(yaws_dynopts:rand_bytes(16))),
+            Cookie = integer_to_list(bin2int(crypto:strong_rand_bytes(16))),
             Session = #user{cookie=Cookie, user=User, color=pick_color()},
             From ! {session_manager, Cookie, Session},
             chat_server([Session|Users]);
