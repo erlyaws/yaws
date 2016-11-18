@@ -237,8 +237,8 @@ dnl Erlang applicatons.
 dnl ------------------------------------------------------------------
 AC_ERLANG_CHECK_LIB([kernel],,   [AC_MSG_ERROR(["kernel" Erlang application not found.])])
 AC_ERLANG_CHECK_LIB([stdlib],,   [AC_MSG_ERROR(["stdlib" Erlang application not found.])])
-AC_ERLANG_CHECK_LIB([sasl],,     [AC_MSG_ERROR(["compiler" Erlang application not found.])])
-AC_ERLANG_CHECK_LIB([erts],,     [AC_MSG_ERROR(["compiler" Erlang application not found.])])
+AC_ERLANG_CHECK_LIB([sasl],,     [AC_MSG_ERROR(["sasl" Erlang application not found.])])
+AC_ERLANG_CHECK_LIB([erts],,     [AC_MSG_ERROR(["erts" Erlang application not found.])])
 AC_ERLANG_CHECK_LIB([compiler],, [AC_MSG_ERROR(["compiler" Erlang application not found.])])
 AC_ERLANG_CHECK_LIB([crypto],,   [AC_MSG_ERROR(["crypto" Erlang application not found.])])
 AC_ERLANG_CHECK_LIB([xmerl],,    [AC_MSG_ERROR(["xmerl" Erlang application not found.])])

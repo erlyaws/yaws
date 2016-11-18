@@ -97,14 +97,19 @@ cleantest:
 	$(AM_V_at)( cd testsuite && $(MAKE) clean )
 
 yaws.plt:
-	$(AM_V_GEN)dialyzer --build_plt -r ebin --output_plt yaws.plt	\
+	$(AM_V_GEN)$(DIALYZER) --build_plt -r ebin --output_plt yaws.plt\
 	  -r $(ERLANG_LIB_DIR_kernel) 					\
 	  -r $(ERLANG_LIB_DIR_stdlib) 					\
 	  -r $(ERLANG_LIB_DIR_sasl) 					\
 	  -r $(ERLANG_LIB_DIR_erts)					\
 	  -r $(ERLANG_LIB_DIR_compiler)					\
 	  -r $(ERLANG_LIB_DIR_crypto)					\
-	  -r $(ERLANG_LIB_DIR_xmerl)
+	  -r $(ERLANG_LIB_DIR_xmerl)					\
+	  -r $$(echo $(ERLANG_LIB_DIR_ssl)    | sed "s/not found//")	\
+	  -r $$(echo $(ERLANG_LIB_DIR_mnesia) | sed "s/not found//")	\
+	  -r $$(echo $(ERLANG_LIB_DIR_inets)  | sed "s/not found//")	\
+	  -r $$(echo $(ERLANG_LIB_DIR_xmlrpc) | sed "s/not found//")	\
+	  -r $$(echo $(ERLANG_LIB_DIR_erlsom) | sed "s/not found//")
 
 dialyzer: all yaws.plt
 	$(AM_V_at)$(DIALYZER) -q --plt yaws.plt -r ebin > dialyzer_warnings || true
