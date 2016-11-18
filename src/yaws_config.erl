@@ -3375,7 +3375,7 @@ parse_auth_user(User, Algo, B64Salt, B64Hash) ->
                 Hash = base64:decode(B64Hash),
                 {ok, {User, list_to_atom(Algo), Salt, Hash}};
             true ->
-                {error, unsupported_algo}
+                {error, bad_algo}
         end
     catch
         _:_ -> {error, bad_user}
