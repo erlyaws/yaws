@@ -279,7 +279,7 @@ generate_random_fn() ->
                     B
             catch _:_ ->
                     %% for installations without crypto
-                    << <<(yaws_dynopt:random_uniform(256) - 1)>> || _ <- lists:seq(1,64) >>
+                    << <<(yaws_dynopts:random_uniform(256) - 1)>> || _ <- lists:seq(1,64) >>
             end,
     << Int:512/unsigned-big-integer >> = << Bytes/binary >>,
     integer_to_list(Int).
