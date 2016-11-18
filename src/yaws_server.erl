@@ -1513,7 +1513,7 @@ pick_sconf({nossl, _}, GC, H, Group) ->
 pick_sconf({ssl, _}, #gconf{sni=disable}=GC, H, Group) ->
     pick_sconf(GC, H, Group);
 pick_sconf({ssl, Sock}, GC, H, Group) ->
-    SniHost = case ssl:connection_information(Sock, [sni_hostname]) of
+    SniHost = case yaws_dynopts:connection_information(Sock, [sni_hostname]) of
                   {ok, [{sni_hostname, SN}]} -> SN;
                   _                          -> undefined
               end,

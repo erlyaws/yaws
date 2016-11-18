@@ -17,6 +17,7 @@
          now_secs/0,
          random_seed/3,
          random_uniform/1,
+         connection_information/2,
 
          generate/1,
          is_generated/0
@@ -86,6 +87,12 @@ random_uniform(N) ->
     case have_rand() of
         true  -> rand:uniform(N);
         false -> (fun random:uniform/1)(N)
+    end.
+
+connection_information(Sock, Items) ->
+    case have_ssl_sni() of
+        true  -> ssl:connection_information(Sock, Items);
+        false -> undefined
     end.
 
 is_greater         (Vsn1, Vsn2) -> compare_version(Vsn1, Vsn2) == greater.
@@ -221,6 +228,7 @@ source() ->
            "    now_secs/0,",
            "    random_seed/3,",
            "    random_uniform/1,",
+           "    connection_information/2,",
            "",
            "    generate/1,",
            "    is_generated/0",
@@ -267,6 +275,12 @@ source() ->
            "random_seed(A,B,C) -> random:seed(A,B,C).",
            "random_uniform(N)  -> random:uniform(N).",
            "-endif.",
-           ""
+           "",
+           "-ifdef(HAVE_SSL_SNI).",
+           "connection_information(Sock, Items) -> ",
+           "    ssl:connection_information(Sock, Items)."
+           "-else.",
+           "connection_information(_, _) -> undefined.",
+           "-endif."
           ],
     string:join(Src, "\n").
