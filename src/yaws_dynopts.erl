@@ -59,21 +59,20 @@ unique_triple() ->
         true ->
             (fun erlang:now/0)();
         false ->
-            {erlang:unique_integer([positive]),
-             erlang:unique_integer([positive]),
-             erlang:unique_integer([positive])}
+            F = fun erlang:unique_integer/1,
+            {F([positive]), F([positive]), F([positive])}
     end.
 
 get_time_tuple() ->
     case have_erlang_now() of
         true  -> (fun erlang:now/0)();
-        false -> erlang:timestamp()
+        false -> (fun erlang:timestamp/0)()
     end.
 
 now_secs() ->
     {M,S,_} = case have_erlang_now() of
                   true  -> (fun erlang:now/0)();
-                  false -> erlang:timestamp()
+                  false -> (fun erlang:timestamp/0)()
               end,
     (M*1000000)+S.
 
@@ -91,7 +90,7 @@ random_uniform(N) ->
 
 connection_information(Sock, Items) ->
     case have_ssl_sni() of
-        true  -> ssl:connection_information(Sock, Items);
+        true  -> (fun ssl:connection_information/2)(Sock, Items);
         false -> undefined
     end.
 
