@@ -39,21 +39,22 @@ end_per_testcase(_Test, _Config) ->
     ok.
 
 %%====================================================================
-proc_cleanup(_Config) ->
+proc_cleanup(Config) ->
     Old = get_processes(),
     process_flag(trap_exit, true),
-    P = start_link(),
+    P = start_link(Config),
     ?assert(is_process_alive(P)),
     erlang:exit(P, kill),
     timer:sleep(500),
     ?assertEqual([], [Pid || Pid <- get_processes(), not lists:member(Pid, Old)]),
     ok.
 
-start_link() ->
+start_link(Config) ->
     Id = "yaws",
     Docroot = ".",
+    Port    = testsuite:get_yaws_port(1, Config),
     GconfList = [{id, Id}],
-    SconfList = [{docroot, Docroot}],
+    SconfList = [{docroot, Docroot}, {port, Port}],
 
     %% load yaws application (required by yaws_api:embedded_start_conf)
     case lists:keymember(yaws, 1, application:which_applications()) of
