@@ -20,6 +20,7 @@
          connection_information/2,
 
          generate/1,
+         purge_old_code/0,
          is_generated/0
         ]).
 
@@ -152,6 +153,8 @@ compare_digit(X1, X2) ->
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 is_generated() -> false.
 
+purge_old_code() -> not_necessary.
+
 generate(GC) ->
     code:ensure_loaded(crypto),
     code:ensure_loaded(inet),
@@ -248,11 +251,13 @@ source() ->
            "    connection_information/2,",
            "",
            "    generate/1,",
+           "    purge_old_code/0,",
            "    is_generated/0",
            "   ]).",
            "",
            "",
            "generate(_) -> ok.",
+           "purge_old_code() -> code:soft_purge(?MODULE).",
            "is_generated() -> true.",
            "",
            "have_ssl_honor_cipher_order()   -> ?HAVE_SSL_HONOR_CIPHER_ORDER.",

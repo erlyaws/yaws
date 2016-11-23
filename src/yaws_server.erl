@@ -239,6 +239,7 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
     runmod(RunMod, GC),
     yaws_config:compile_and_load_src_dir(GC),
     yaws_dynopts:generate(GC),
+    yaws_dynopts:purge_old_code(),
     yaws_log:setup(GC, Sconfs),
     yaws_trace:setup(GC),
     L2 = lists:zf(fun(Group) -> start_group(GC, Group) end,
