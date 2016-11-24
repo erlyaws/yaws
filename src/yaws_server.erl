@@ -656,7 +656,13 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls1),
                     exit(noserver);
                 _ ->
-                    GS2 = GS#gs{sessions = GS#gs.sessions - 1},
+                    GS2 = if (Reason == normal) orelse (Reason == shutdown) ->
+                                  %% connections already decremented
+                                  GS#gs{sessions = GS#gs.sessions - 1};
+                             true ->
+                                  GS#gs{sessions = GS#gs.sessions - 1,
+                                        connections = GS#gs.connections - 1}
+                          end,
                     if
                         Pid == Last ->
                             %% probably died due to new code loaded; if we
