@@ -3001,25 +3001,18 @@ compare_ips({A1,_,_,_,_,_,_,_}, {A2,_,_,_,_,_,_,_}) when A1 > A2 -> greater;
 compare_ips(_,                  _)                               -> error.
 
 
-%% Use  IANA range for dynamic or private ports (49152 -> 65535)
+%% Find a free port, so that it can be stored during the configuration parsing.
+%% This is not perfect, as the port could be taken by another application
+%% before the next call of gen_tcp:listen/2, but works well enough if the
+%% dynamic port range of the system is large enough.
 find_private_port() ->
-    Start = case application:get_env(kernel, next_yaws_private_port) of
-                {ok, Port} -> Port;
-                undefined  -> 49152
-            end,
-    End = 65535,
-    find_private_port(Start, End).
-
-find_private_port(Port, End) when Port > End ->
-    {error, notfound};
-find_private_port(Port, End) ->
-    case gen_tcp:listen(Port, [{ip, {0,0,0,0}}]) of
+    case gen_tcp:listen(0, [{ip, {0,0,0,0}}]) of
         {ok, Sock} ->
+            Result = inet:port(Sock),
             gen_tcp:close(Sock),
-            application:set_env(kernel, next_yaws_private_port, Port+1),
-            {ok, Port};
-        {error, _} ->
-            find_private_port(Port+1, End)
+            Result;
+        {error, _} = Error ->
+            Error
     end.
 
 %% ----
