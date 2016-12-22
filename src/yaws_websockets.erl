@@ -46,7 +46,7 @@
                  msg_fun_2,
                  info_fun}).
 
--export([start/3, send/2, close/2]).
+-export([start/3, start_link/3, send/2, close/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
@@ -91,7 +91,7 @@ start(Arg, CallbackMod, Opts) ->
 
     %% Start websocket process
     OwnerPid =
-        case gen_server:start(?MODULE, [Arg, CallbackMod, PrepdOpts], []) of
+        case supervisor:start_child(yaws_ws_sup, [Arg, CallbackMod, PrepdOpts]) of
             {ok, Pid} ->
                 Pid;
             {error, Reason1} ->
@@ -122,6 +122,8 @@ start(Arg, CallbackMod, Opts) ->
     end,
     exit(normal).
 
+start_link(Arg, CallbackMod, PrepdOpts) ->
+    gen_server:start_link(?MODULE, [Arg, CallbackMod, PrepdOpts], []).
 
 send(#ws_state{}=WSState, {Type, Data}) ->
     do_send(WSState, {Type, Data});

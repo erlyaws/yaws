@@ -33,7 +33,6 @@ start_link() ->
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------
 init([]) ->
-
     ChildSpecs = child_specs(),
 
     %% The idea behind this is if we're running in an embedded env,
@@ -62,7 +61,12 @@ child_specs() ->
            {yaws_sup_restarts, start_link, []},
            transient, infinity, supervisor, [yaws_sup_restarts]},
 
-    [YawsLog, YawsTrace, YawsServ, Sup].
+    %% supervisor for websocket callback processes
+    WSSup = {yaws_ws_sup,
+             {yaws_ws_sup, start_link, []},
+             transient, infinity, supervisor, [yaws_ws_sup]},
+
+    [YawsLog, YawsTrace, YawsServ, Sup, WSSup].
 
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------
