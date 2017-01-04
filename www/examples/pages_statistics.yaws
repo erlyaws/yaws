@@ -1,0 +1,18 @@
+<erl>
+  %% Just update page counters for the current page
+  out(A) ->
+      {yssi, "../examples/visit_counter.yaws"}.
+</erl>
+
+<p>
+  <ul>
+    <erl>
+      out(A) ->
+          Counters = visit_counter:get_counters(),
+          EHtml    = [{li, [],
+                       [{strong, [], P}," was visited ",integer_to_list(C)," times."]}
+                      || {P,C} <- Counters],
+          {ehtml, EHtml}.
+    </erl>
+  </ul>
+</p>

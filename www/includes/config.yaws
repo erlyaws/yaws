@@ -1,0 +1,17 @@
+<erl>
+-define(WEBROOT,  "").
+-define(SITEROOT, A#arg.docroot ++ "/").
+
+out(A) ->
+    WebRoot = case get("WEBROOT") of
+                  undefined -> ?WEBROOT;
+                  WR -> string:strip(filename:join("/", WR), right, $/)
+              end,
+    SiteRoot = case get("SITEROOT") of
+                   undefined -> ?SITEROOT;
+                   SR -> string:strip(filename:join("/", SR), right, $/) ++ "/"
+               end,
+    put("WEBROOT",  WebRoot),
+    put("SITEROOT", SiteRoot),
+    [{bindings, [{"webroot", WebRoot}, {"siteroot", SiteRoot}]}].
+</erl>

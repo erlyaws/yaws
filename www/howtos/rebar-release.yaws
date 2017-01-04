@@ -1,0 +1,146 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  One way to create an Erlang release for a project that depends on Yaws, or a
+  set of applications that includes Yaws, is to use the
+  <a href="https://github.com/rebar/rebar">rebar</a> build tool. This page
+  details the steps required to set up the proper directory structure for such a
+  project, create and generate the necessary release configuration files, and
+  how to package a release for later installation and deployment.
+</p>
+
+<h2>Rebar Templates</h2>
+<p class="text-justify">
+  The easiest way to build a release that uses Yaws is to use the rebar template
+  files found under the rebar-templates directory found at the top-level of the
+  Yaws repository. To do this, first copy all the files in the rebar-templates
+  directory into your <code>$HOME/.rebar/templates</code> directory, creating it
+  if necessary:
+</p>
+<verbatim class="code bash">
+  $> mkdir -p ~/.rebar/templates
+  $> cp rebar-templates/* ~/.rebar/templates
+</verbatim>
+<br/>
+<p class="text-justify">
+  Next, run rebar in your <code>foo</code> project directory to create a release
+  project skeleton, specifying the yawsnode template so rebar knows what to
+  create. Note also that we specify <code>foo</code> as the nodeid and
+  <code>myapp</code> as the appid:
+</p>
+<verbatim class="code bash">
+  $> cd /path/to/foo
+  $> rebar create template=yawsnode nodeid=foo appid=myapp
+</verbatim>
+<br/>
+<p class="text-justify">
+  This creates two subdirectories and a <code>rebar.config</code> file, described below:
+  <ul>
+    <li>
+      <p class="text-justify">
+        <code>apps</code> holds directories for the applications that comprise the
+        <code>foo</code> project
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>rebar.config</code> build configuration for the <code>foo</code>
+        project
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>rel</code> provides support files for creating project releases
+      </p>
+    </li>
+  </ul>
+</p>
+
+<h3>The apps Directory</h3>
+<p class="text-justify">
+  Let's assume we have a single application named <code>myapp</code> that
+  depends on Yaws, and <code>myapp</code> and Yaws together comprise the
+  <code>foo</code> project. The <code>apps</code> directory therefore contains a
+  <code>myapp</code> subdirectory, which is a normal Erlang project directory
+  that should contain its own <code>rebar.config</code> file, a
+  <code>src</code> directory containing Erlang source code, etc. Since
+  <code>myapp</code> depends on Yaws, its <code>rebar.config</code> file should
+  specify Yaws as a dependency. Note that the yawsnode rebar template does not
+  create any of this for you; you're expected to create your own application
+  files yourself.
+</p>
+
+<h2>Building the Project</h2>
+<p class="text-justify">
+  To build the <code>foo</code> project, use rebar:
+</p>
+<verbatim class="code bash">
+  $> rebar get-deps compile
+</verbatim>
+<br/>
+<p class="text-justify">
+  This first fetches all dependencies for all the applications under the
+  <code>apps</code> directory, and the compiles them along with all the apps.
+</p>
+
+<h2>Creating a Release</h2>
+<p class="text-justify">
+  Once everything is compiled, you can change to the <code>rel</code> directory
+  and generate a release. Prior to that, though, you might want to edit the
+  <code>rel/files/yaws.conf</code> file to ensure Yaws will be configured
+  properly for your project when you run the generated release. That file is
+  copied into the generated release. Once you've done that, run
+  <code>rebar generate</code> in the <code>rel</code> directory:
+</p>
+<verbatim class="code bash">
+  $> cd rel
+  $> rebar generate
+</verbatim>
+<br/>
+<p class="text-justify">
+  Because we specified the nodeid as <code>foo</code> when we created the
+  project, the generation step creates a <code>foo</code> directory under rel
+  that holds the generated release. It contains an Erlang runtime along with all
+  the standard and application-specific modules and support files needed to run
+  your project, all in a relocatable directory structure. To package it for
+  deployment, just tar it up:
+</p>
+<verbatim class="code bash">
+  $> cd foo
+  $> tar zcf ../foo.tar.gz *
+</verbatim>
+<br/>
+<p class="text-justify">
+  This packs up the whole release into the file <code>rel/foo.tar.gz</code>.
+</p>
+
+<h2>Deploying the Project</h2>
+<p class="text-justify">
+  To deploy your project release, copy the tar file onto the target host, unpack
+  it into an installation directory of your choice, and then run the
+  <code>install.sh</code> script to ensure any absolute paths in the release
+  reflect the chosen installation directory. You can then run the node using
+  the <code>bin/foo</code> script:
+</p>
+<verbatim class="code bash">
+  < login to target host, copy foo.tar.gz over >
+  $> cd /install/path
+  $> tar zxf foo.tar.gz
+  $> ./install.sh
+  $> ./bin/foo console
+</verbatim>
+<br/>
+<p class="text-justify">
+  The final command above starts the node with an interactive shell. Once it's
+  running, Yaws and all the other applications that comprise the project will be
+  executing. You can alternatively start the node as a daemon by running
+  <code>./bin/foo start</code> and later stop it with
+  <code>./bin/foo stop</code>. Run <code>./bin/foo</code> with no arguments to
+  see all its other command-line arguments.
+</p>

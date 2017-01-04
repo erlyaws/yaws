@@ -1,11 +1,7 @@
 <erl>
-
 out(A) ->
     case shopcart:top(A) of
-        ok ->
-            shopcart:index(A);
-        X ->
-            X
+        ok -> shopcart:index(A);
+        X  -> X
     end.
-
 </erl>

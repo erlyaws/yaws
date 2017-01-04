@@ -1,0 +1,112 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  This feature is useful when we are writing applications where basically the
+  entire page is dynamically generated but we also want to include snippets of
+  either HTML or, even more typically, javascript which is almost static, but
+  not quite.
+</p>
+<br/>
+<p class="text-justify">
+  In particular the case with dynamically generated javascript can get
+  syntactically ugly. So instead of generating strings in the erlang code for
+  the javascripts and returning them as <code>{html, Data}</code> tuples,
+  it is more beautiful to keep the javascript functions in separate files and
+  include them with the <code>{ssi ...}</code> return value.
+</p>
+<br/>
+<p class="text-justify">
+  The format of the SSI statement is:
+</p>
+<verbatim class="code erlang">
+  {ssi, File, Delimiter, Bindings}
+</verbatim>
+<br/>
+<p class="text-justify">
+  The SSI structure can occur in two radically different places but with
+  identical semantics. It can be a return value in the <code>out/1</code>
+  function and it is a specially treated return value in EHTML output.
+</p>
+<p class="text-justify">
+  Here is an example of an odd return value from <code>out/1</code>:
+</p>
+<verbatim class="code erlang">
+  [{ssi, "examples/ssi_ex1","%",[{"a","gazzonk"}]},
+   {ehtml,[{h1,"a Header"},{ssi, "examples/ssi_ex1","%",[{"a","zippo"}]}]}]
+</verbatim>
+<br/>
+<p class="text-justify">
+  The file <code>%%webroot%%/examples/ssi_ex1</code> contains the following text:
+</p>
+<erl>
+out(A) ->
+    {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/ssi_ex1"]),
+    {ehtml, {pre, [{class, "code erlang"}], yaws_api:htmlize(L)}}.
+</erl>
+<br/>
+<p class="text-justify">
+  And the following EHTML output:
+</p>
+<verbatim class="code erlang">
+  {ehtml,[{ssi, "examples/ssi_ex1", "%", [{"a", "Godzilla"}]}]}
+</verbatim>
+<br/>
+<p class="text-justify">
+  Generates the following output:
+</p>
+<erl>
+  out(A) ->
+      L = yaws_api:ehtml_expand({ssi, "../examples/ssi_ex1", "%", [{"a", "Godzilla"}]}),
+      {ehtml, {pre, [{class, "code erlang"}], yaws_api:htmlize(L)}}.
+</erl>
+<br/>
+<p class="text-justify">
+  And so does the following <code>out/1</code> function:
+</p>
+<verbatim class="code erlang">
+  out(A) -> [{ssi, "examples/ssi_ex1", "%", [{"a", "Godzilla"}]}].
+</verbatim>
+<br/>
+<p class="text-justify">
+  So this is the way to do when we want to embed dynamic content deep inside an
+  EHTML structure, but the content isn't representable as EHTML. This is
+  typically the case for dynamically generated javascript as well as dynamically
+  generated java applets.
+</p>
+<p class="text-justify">
+  In the above example, <code>"a"</code> can be seen as the variable name
+  whereas <code>"Godzilla"</code> can be viewed upon as the value of variable
+  <code>"a"</code>. It is also possible to have the variable value be a complete
+  EHTML structure, not just plain ASCII strings. Here is an example:
+</p>
+<verbatim class="code erlang">
+  out(A) ->
+      E = {ehtml, {h1, [], "Godzillas baby"}},
+      [{ssi, "examples/ssi_ex1", "%", [{"a", E}]}].
+</verbatim>
+<br/>
+<h2>YSSI, Yaws Server Side Includes</h2>
+<p class="text-justify">
+  We have a special version of server side includes that we call YSSI, yaws
+  server side includes. The syntax for this is:
+</p>
+<verbatim class="code erlang">
+  {yssi, YawsFile}
+</verbatim>
+<br/>
+<p class="text-justify">
+  YSSI can only be used as a return value from the <code>out/1</code> function,
+  never nested into a deep EHTML structure. YSSI, will perform full Yaws
+  expansion on the file named <code>YawsFile</code>, i.e (possibly on the fly)
+  compile it, execute it and subsequently inject the generated output from the
+  <code>YawsFile</code>. YSSI statements can be arbitrarily deeply recursively
+  nested, that is a .yaws file which has been included through an
+  <code>yssi</code> statement, may itself contain <code>yssi</code> return
+  values in its <code>out/1</code> function(s).
+</p>

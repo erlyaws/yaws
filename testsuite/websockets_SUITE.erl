@@ -187,7 +187,7 @@ end_per_testcase(_Test, _Config) ->
 
 %%====================================================================
 valid_opening_handshake(Config) ->
-    WSPath = "/websockets_example_endpoint.yaws",
+    WSPath = "/examples/websockets_example_endpoint.yaws",
     Key    = "dGhlIHNhbXBsZSBub25jZQ==",
 
     %% Send the handshake and retrieve the response
@@ -209,7 +209,7 @@ valid_opening_handshake(Config) ->
     ok.
 
 bad_version_handshake(Config) ->
-    WSPath = "/websockets_example_endpoint.yaws",
+    WSPath = "/examples/websockets_example_endpoint.yaws",
     Key    = "dGhlIHNhbXBsZSBub25jZQ==",
 
     %% Send the handshake and retrieve the response
@@ -225,7 +225,7 @@ bad_version_handshake(Config) ->
     ok.
 
 bad_origin_handshake(Config) ->
-    WSPath = "/websockets_example_endpoint.yaws",
+    WSPath = "/examples/websockets_example_endpoint.yaws",
     Key    = "dGhlIHNhbXBsZSBub25jZQ==",
 
     %% Send the handshake and retrieve the response
@@ -236,7 +236,7 @@ bad_origin_handshake(Config) ->
     ok.
 
 noconnection_handshake(Config) ->
-    WSPath = "/websockets_example_endpoint.yaws",
+    WSPath = "/examples/websockets_example_endpoint.yaws",
     Key    = "dGhlIHNhbXBsZSBub25jZQ==",
 
     %% Send the handshake and retrieve the response
@@ -259,7 +259,7 @@ noconnection_handshake(Config) ->
     ok.
 
 bad_connection_handshake(Config) ->
-    WSPath = "/websockets_example_endpoint.yaws",
+    WSPath = "/examples/websockets_example_endpoint.yaws",
     Key    = "dGhlIHNhbXBsZSBub25jZQ==",
 
     %% Send the handshake and retrieve the response
@@ -283,7 +283,7 @@ bad_connection_handshake(Config) ->
     ok.
 
 noupgrade_handshake(Config) ->
-    WSPath = "/websockets_example_endpoint.yaws",
+    WSPath = "/examples/websockets_example_endpoint.yaws",
     Key    = "dGhlIHNhbXBsZSBub25jZQ==",
 
     %% Send the handshake and retrieve the response
@@ -306,7 +306,7 @@ noupgrade_handshake(Config) ->
     ok.
 
 bad_upgrade_handshake(Config) ->
-    WSPath = "/websockets_example_endpoint.yaws",
+    WSPath = "/examples/websockets_example_endpoint.yaws",
     Key    = "dGhlIHNhbXBsZSBub25jZQ==",
 
     %% Send the handshake and retrieve the response
@@ -375,22 +375,22 @@ advanced_unfragmented_binary(Config) ->
 
 basic_unfragmented_text(Config, Sz, BlockSz) ->
     Payload = list_to_binary(lists:duplicate(Sz, $*)),
-    unfragmented_msg(Config, "/websockets_example_endpoint.yaws",
+    unfragmented_msg(Config, "/examples/websockets_example_endpoint.yaws",
                      ?WS_OPCODE_TEXT, Payload, BlockSz).
 
 advanced_unfragmented_text(Config, Sz, BlockSz) ->
     Payload = list_to_binary(lists:duplicate(Sz, $*)),
-    unfragmented_msg(Config, "/websockets_autobahn_endpoint.yaws",
+    unfragmented_msg(Config, "/examples/websockets_autobahn_endpoint.yaws",
                      ?WS_OPCODE_TEXT, Payload, BlockSz).
 
 basic_unfragmented_binary(Config, Sz, BlockSz) ->
     Payload = list_to_binary(lists:duplicate(Sz, 16#fe)),
-    unfragmented_msg(Config, "/websockets_example_endpoint.yaws",
+    unfragmented_msg(Config, "/examples/websockets_example_endpoint.yaws",
                      ?WS_OPCODE_BINARY, Payload, BlockSz).
 
 advanced_unfragmented_binary(Config, Sz, BlockSz) ->
     Payload = list_to_binary(lists:duplicate(Sz, 16#fe)),
-    unfragmented_msg(Config, "/websockets_autobahn_endpoint.yaws",
+    unfragmented_msg(Config, "/examples/websockets_autobahn_endpoint.yaws",
                      ?WS_OPCODE_BINARY, Payload, BlockSz).
 
 unfragmented_msg(Config, WSPath, Type, Payload, BlockSz) ->
@@ -441,19 +441,19 @@ advanced_ping_binary(Config) ->
 
 basic_ping_text(Config, Sz, BlockSz) ->
     Payload = list_to_binary(lists:duplicate(Sz, $*)),
-    ping_msg(Config, "/websockets_example_endpoint.yaws", Payload, BlockSz).
+    ping_msg(Config, "/examples/websockets_example_endpoint.yaws", Payload, BlockSz).
 
 advanced_ping_text(Config, Sz, BlockSz) ->
     Payload = list_to_binary(lists:duplicate(Sz, $*)),
-    ping_msg(Config, "/websockets_autobahn_endpoint.yaws", Payload, BlockSz).
+    ping_msg(Config, "/examples/websockets_autobahn_endpoint.yaws", Payload, BlockSz).
 
 basic_ping_binary(Config, Sz, BlockSz) ->
     Payload = list_to_binary(lists:duplicate(Sz, 16#fe)),
-    ping_msg(Config, "/websockets_example_endpoint.yaws", Payload, BlockSz).
+    ping_msg(Config, "/examples/websockets_example_endpoint.yaws", Payload, BlockSz).
 
 advanced_ping_binary(Config, Sz, BlockSz) ->
     Payload = list_to_binary(lists:duplicate(Sz, 16#fe)),
-    ping_msg(Config, "/websockets_autobahn_endpoint.yaws", Payload, BlockSz).
+    ping_msg(Config, "/examples/websockets_autobahn_endpoint.yaws", Payload, BlockSz).
 
 ping_msg(Config, WSPath, Payload, BlockSz) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -482,7 +482,7 @@ ping_msg(Config, WSPath, Payload, BlockSz) ->
     ok.
 
 toolong_payload_ping(Config) ->
-    WSPath  = "/websockets_example_endpoint.yaws",
+    WSPath  = "/examples/websockets_example_endpoint.yaws",
     Key     = "dGhlIHNhbXBsZSBub25jZQ==",
     Payload = list_to_binary(lists:duplicate(126, 16#fe)),
 
@@ -510,11 +510,11 @@ advanced_unsolicited_pong(Config) ->
 
 basic_unsolicited_pong(Config, Sz) ->
     Payload = list_to_binary(lists:duplicate(Sz, 16#fe)),
-    unsolicited_pong_msg(Config, "/websockets_example_endpoint.yaws", Payload).
+    unsolicited_pong_msg(Config, "/examples/websockets_example_endpoint.yaws", Payload).
 
 advanced_unsolicited_pong(Config, Sz) ->
     Payload = list_to_binary(lists:duplicate(Sz, 16#fe)),
-    unsolicited_pong_msg(Config, "/websockets_autobahn_endpoint.yaws", Payload).
+    unsolicited_pong_msg(Config, "/examples/websockets_autobahn_endpoint.yaws", Payload).
 
 unsolicited_pong_msg(Config, WSPath, Payload) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -532,10 +532,10 @@ unsolicited_pong_msg(Config, WSPath, Payload) ->
     ok.
 
 basic_unsolicited_pong_ping_pong(Config) ->
-    unsolicited_pong_ping_pong(Config, "/websockets_example_endpoint.yaws").
+    unsolicited_pong_ping_pong(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_unsolicited_pong_ping_pong(Config) ->
-    unsolicited_pong_ping_pong(Config, "/websockets_autobahn_endpoint.yaws").
+    unsolicited_pong_ping_pong(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 unsolicited_pong_ping_pong(Config, WSPath) ->
     Key      = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -571,10 +571,10 @@ advanced_10_pings(Config) ->
     ok.
 
 basic_10_pings(Config, BlockSz) ->
-    send_10_pings(Config, "/websockets_example_endpoint.yaws", BlockSz).
+    send_10_pings(Config, "/examples/websockets_example_endpoint.yaws", BlockSz).
 
 advanced_10_pings(Config, BlockSz) ->
-    send_10_pings(Config, "/websockets_autobahn_endpoint.yaws", BlockSz).
+    send_10_pings(Config, "/examples/websockets_autobahn_endpoint.yaws", BlockSz).
 
 send_10_pings(Config, WSPath, BlockSz) ->
     Key     = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -597,16 +597,16 @@ send_10_pings(Config, WSPath, BlockSz) ->
     ok.
 
 badrsv_text(Config) ->
-    badrsv(Config, "/websockets_example_endpoint.yaws", ?WS_OPCODE_TEXT, 1).
+    badrsv(Config, "/examples/websockets_example_endpoint.yaws", ?WS_OPCODE_TEXT, 1).
 
 badrsv_binary(Config) ->
-    badrsv(Config, "/websockets_example_endpoint.yaws", ?WS_OPCODE_BINARY, 2).
+    badrsv(Config, "/examples/websockets_example_endpoint.yaws", ?WS_OPCODE_BINARY, 2).
 
 badrsv_ping(Config) ->
-    badrsv(Config, "/websockets_example_endpoint.yaws", ?WS_OPCODE_PING, 3).
+    badrsv(Config, "/examples/websockets_example_endpoint.yaws", ?WS_OPCODE_PING, 3).
 
 badrsv_close(Config) ->
-    badrsv(Config, "/websockets_example_endpoint.yaws", ?WS_OPCODE_CLOSE, 4).
+    badrsv(Config, "/examples/websockets_example_endpoint.yaws", ?WS_OPCODE_CLOSE, 4).
 
 badrsv(Config, WSPath, Type, Rsv) ->
     Key     = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -630,7 +630,7 @@ badrsv_complex(Config) ->
     ok.
 
 badrsv_complex(Config, BlockSz) ->
-    WSPath  = "/websockets_example_endpoint.yaws",
+    WSPath  = "/examples/websockets_example_endpoint.yaws",
     Key     = "dGhlIHNhbXBsZSBub25jZQ==",
     Payload = <<"small payload">>,
 
@@ -658,7 +658,7 @@ badopcodes(Config) ->
     ok.
 
 badopcodes(Config, Opcode) ->
-    WSPath  = "/websockets_example_endpoint.yaws",
+    WSPath  = "/examples/websockets_example_endpoint.yaws",
     Key     = "dGhlIHNhbXBsZSBub25jZQ==",
 
     {ok, Sock} = open("localhost", testsuite:get_yaws_port(1, Config)),
@@ -674,10 +674,10 @@ badopcodes(Config, Opcode) ->
     ok.
 
 basic_fragmented_empty(Config) ->
-    fragmented_empty(Config, "/websockets_example_endpoint.yaws").
+    fragmented_empty(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_fragmented_empty(Config) ->
-    fragmented_empty(Config, "/websockets_autobahn_endpoint.yaws").
+    fragmented_empty(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 fragmented_empty(Config, WSPath) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -702,19 +702,19 @@ fragmented_empty(Config, WSPath) ->
     ok.
 
 basic_fragmented_text_1(Config) ->
-    valid_fragmented_1(Config, "/websockets_example_endpoint.yaws",
+    valid_fragmented_1(Config, "/examples/websockets_example_endpoint.yaws",
                        ?WS_OPCODE_TEXT).
 
 advanced_fragmented_text_1(Config) ->
-    valid_fragmented_1(Config, "/websockets_autobahn_endpoint.yaws",
+    valid_fragmented_1(Config, "/examples/websockets_autobahn_endpoint.yaws",
                        ?WS_OPCODE_TEXT).
 
 basic_fragmented_binary_1(Config) ->
-    valid_fragmented_1(Config, "/websockets_example_endpoint.yaws",
+    valid_fragmented_1(Config, "/examples/websockets_example_endpoint.yaws",
                        ?WS_OPCODE_BINARY).
 
 advanced_fragmented_binary_1(Config) ->
-    valid_fragmented_1(Config, "/websockets_autobahn_endpoint.yaws",
+    valid_fragmented_1(Config, "/examples/websockets_autobahn_endpoint.yaws",
                        ?WS_OPCODE_BINARY).
 
 valid_fragmented_1(Config, WSPath, Type) ->
@@ -744,19 +744,19 @@ valid_fragmented_1(Config, WSPath, Type) ->
     ok.
 
 basic_fragmented_text_2(Config) ->
-    valid_fragmented_2(Config, "/websockets_example_endpoint.yaws",
+    valid_fragmented_2(Config, "/examples/websockets_example_endpoint.yaws",
                        ?WS_OPCODE_TEXT).
 
 advanced_fragmented_text_2(Config) ->
-    valid_fragmented_2(Config, "/websockets_autobahn_endpoint.yaws",
+    valid_fragmented_2(Config, "/examples/websockets_autobahn_endpoint.yaws",
                        ?WS_OPCODE_TEXT).
 
 basic_fragmented_binary_2(Config) ->
-    valid_fragmented_2(Config, "/websockets_example_endpoint.yaws",
+    valid_fragmented_2(Config, "/examples/websockets_example_endpoint.yaws",
                        ?WS_OPCODE_BINARY).
 
 advanced_fragmented_binary_2(Config) ->
-    valid_fragmented_2(Config, "/websockets_autobahn_endpoint.yaws",
+    valid_fragmented_2(Config, "/examples/websockets_autobahn_endpoint.yaws",
                        ?WS_OPCODE_BINARY).
 
 
@@ -784,27 +784,27 @@ valid_fragmented_2(Config, WSPath, Type) ->
     ok.
 
 basic_fragmented_ping(Config) ->
-    invalid_fragmented(Config, "/websockets_example_endpoint.yaws",
+    invalid_fragmented(Config, "/examples/websockets_example_endpoint.yaws",
                                ?WS_OPCODE_PING).
 
 advanced_fragmented_ping(Config) ->
-    invalid_fragmented(Config, "/websockets_autobahn_endpoint.yaws",
+    invalid_fragmented(Config, "/examples/websockets_autobahn_endpoint.yaws",
                        ?WS_OPCODE_PING).
 
 basic_fragmented_pong(Config) ->
-    invalid_fragmented(Config, "/websockets_example_endpoint.yaws",
+    invalid_fragmented(Config, "/examples/websockets_example_endpoint.yaws",
                        ?WS_OPCODE_PONG).
 
 advanced_fragmented_pong(Config) ->
-    invalid_fragmented(Config, "/websockets_autobahn_endpoint.yaws",
+    invalid_fragmented(Config, "/examples/websockets_autobahn_endpoint.yaws",
                        ?WS_OPCODE_PONG).
 
 basic_fragmented_close(Config) ->
-    invalid_fragmented(Config, "/websockets_example_endpoint.yaws",
+    invalid_fragmented(Config, "/examples/websockets_example_endpoint.yaws",
                        ?WS_OPCODE_CLOSE).
 
 advanced_fragmented_close(Config) ->
-    invalid_fragmented(Config, "/websockets_autobahn_endpoint.yaws",
+    invalid_fragmented(Config, "/examples/websockets_autobahn_endpoint.yaws",
                        ?WS_OPCODE_CLOSE).
 
 invalid_fragmented(Config, WSPath, Type) ->
@@ -828,10 +828,10 @@ invalid_fragmented(Config, WSPath, Type) ->
     ok.
 
 basic_fragmented_text_with_ping(Config) ->
-    fragmented_with_ping(Config, "/websockets_example_endpoint.yaws").
+    fragmented_with_ping(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_fragmented_text_with_ping(Config) ->
-    fragmented_with_ping(Config, "/websockets_autobahn_endpoint.yaws").
+    fragmented_with_ping(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 fragmented_with_ping(Config, WSPath) ->
     Key      = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -860,10 +860,10 @@ fragmented_with_ping(Config, WSPath) ->
     ok.
 
 basic_fragmented_text_with_pong(Config) ->
-    fragmented_with_pong(Config, "/websockets_example_endpoint.yaws").
+    fragmented_with_pong(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_fragmented_text_with_pong(Config) ->
-    fragmented_with_pong(Config, "/websockets_autobahn_endpoint.yaws").
+    fragmented_with_pong(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 fragmented_with_pong(Config, WSPath) ->
     Key      = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -891,16 +891,16 @@ fragmented_with_pong(Config, WSPath) ->
     ok.
 
 basic_badfragmented_1(Config) ->
-    badfragmented(Config, "/websockets_example_endpoint.yaws", true).
+    badfragmented(Config, "/examples/websockets_example_endpoint.yaws", true).
 
 basic_badfragmented_2(Config) ->
-    badfragmented(Config, "/websockets_example_endpoint.yaws", false).
+    badfragmented(Config, "/examples/websockets_example_endpoint.yaws", false).
 
 advanced_badfragmented_1(Config) ->
-    badfragmented(Config, "/websockets_autobahn_endpoint.yaws", true).
+    badfragmented(Config, "/examples/websockets_autobahn_endpoint.yaws", true).
 
 advanced_badfragmented_2(Config) ->
-    badfragmented(Config, "/websockets_autobahn_endpoint.yaws", false).
+    badfragmented(Config, "/examples/websockets_autobahn_endpoint.yaws", false).
 
 badfragmented(Config, WSPath, Fin) ->
     Key     = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -922,10 +922,10 @@ badfragmented(Config, WSPath, Fin) ->
     ok.
 
 basic_badfragmented_nocontinuation(Config) ->
-    badfragmented_nocontinuation(Config, "/websockets_example_endpoint.yaws").
+    badfragmented_nocontinuation(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_badfragmented_nocontinuation(Config) ->
-    badfragmented_nocontinuation(Config, "/websockets_autobahn_endpoint.yaws").
+    badfragmented_nocontinuation(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 badfragmented_nocontinuation(Config, WSPath) ->
     Key      = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -948,13 +948,13 @@ badfragmented_nocontinuation(Config, WSPath) ->
     ok.
 
 basic_unfragmented_valid_utf8_text(Config) ->
-    unfragmented_valid_utf8(Config, "/websockets_example_endpoint.yaws", all),
-    unfragmented_valid_utf8(Config, "/websockets_example_endpoint.yaws", 1),
+    unfragmented_valid_utf8(Config, "/examples/websockets_example_endpoint.yaws", all),
+    unfragmented_valid_utf8(Config, "/examples/websockets_example_endpoint.yaws", 1),
     ok.
 
 advanced_unfragmented_valid_utf8_text(Config) ->
-    unfragmented_valid_utf8(Config, "/websockets_autobahn_endpoint.yaws", all),
-    unfragmented_valid_utf8(Config, "/websockets_autobahn_endpoint.yaws", 1),
+    unfragmented_valid_utf8(Config, "/examples/websockets_autobahn_endpoint.yaws", all),
+    unfragmented_valid_utf8(Config, "/examples/websockets_autobahn_endpoint.yaws", 1),
     ok.
 
 unfragmented_valid_utf8(Config, WSPath, BlockSz) ->
@@ -1000,13 +1000,13 @@ unfragmented_valid_utf8(Config, WSPath, BlockSz) ->
     ok.
 
 basic_fragmented_valid_utf8_text(Config) ->
-    fragmented_valid_utf8(Config, "/websockets_example_endpoint.yaws", all),
-    fragmented_valid_utf8(Config, "/websockets_example_endpoint.yaws", 1),
+    fragmented_valid_utf8(Config, "/examples/websockets_example_endpoint.yaws", all),
+    fragmented_valid_utf8(Config, "/examples/websockets_example_endpoint.yaws", 1),
     ok.
 
 advanced_fragmented_valid_utf8_text(Config) ->
-    fragmented_valid_utf8(Config, "/websockets_autobahn_endpoint.yaws", all),
-    fragmented_valid_utf8(Config, "/websockets_autobahn_endpoint.yaws", 1),
+    fragmented_valid_utf8(Config, "/examples/websockets_autobahn_endpoint.yaws", all),
+    fragmented_valid_utf8(Config, "/examples/websockets_autobahn_endpoint.yaws", 1),
     ok.
 
 fragmented_valid_utf8(Config, WSPath, FragSz) ->
@@ -1047,13 +1047,13 @@ fragmented_valid_utf8(Config, WSPath, FragSz) ->
     ok.
 
 basic_unfragmented_invalid_utf8_text(Config) ->
-    unfragmented_invalid_utf8(Config, "/websockets_example_endpoint.yaws", all),
-    unfragmented_invalid_utf8(Config, "/websockets_example_endpoint.yaws", 1),
+    unfragmented_invalid_utf8(Config, "/examples/websockets_example_endpoint.yaws", all),
+    unfragmented_invalid_utf8(Config, "/examples/websockets_example_endpoint.yaws", 1),
     ok.
 
 advanced_unfragmented_invalid_utf8_text(Config) ->
-    unfragmented_invalid_utf8(Config, "/websockets_autobahn_endpoint.yaws", all),
-    unfragmented_invalid_utf8(Config, "/websockets_autobahn_endpoint.yaws", 1),
+    unfragmented_invalid_utf8(Config, "/examples/websockets_autobahn_endpoint.yaws", all),
+    unfragmented_invalid_utf8(Config, "/examples/websockets_autobahn_endpoint.yaws", 1),
     ok.
 
 unfragmented_invalid_utf8(Config, WSPath, BlockSz) ->
@@ -1102,13 +1102,13 @@ unfragmented_invalid_utf8(Config, WSPath, BlockSz) ->
     ok.
 
 basic_fragmented_invalid_utf8_text(Config) ->
-    fragmented_invalid_utf8(Config, "/websockets_example_endpoint.yaws", all),
-    fragmented_invalid_utf8(Config, "/websockets_example_endpoint.yaws", 1),
+    fragmented_invalid_utf8(Config, "/examples/websockets_example_endpoint.yaws", all),
+    fragmented_invalid_utf8(Config, "/examples/websockets_example_endpoint.yaws", 1),
     ok.
 
 advanced_fragmented_invalid_utf8_text(Config) ->
-    fragmented_invalid_utf8(Config, "/websockets_autobahn_endpoint.yaws", all),
-    fragmented_invalid_utf8(Config, "/websockets_autobahn_endpoint.yaws", 1),
+    fragmented_invalid_utf8(Config, "/examples/websockets_autobahn_endpoint.yaws", all),
+    fragmented_invalid_utf8(Config, "/examples/websockets_autobahn_endpoint.yaws", 1),
     ok.
 
 fragmented_invalid_utf8(Config, WSPath, FragSz) ->
@@ -1146,10 +1146,10 @@ fragmented_invalid_utf8(Config, WSPath, FragSz) ->
     ok.
 
 basic_2_closes(Config) ->
-    send_2_closes(Config, "/websockets_example_endpoint.yaws").
+    send_2_closes(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_2_closes(Config) ->
-    send_2_closes(Config, "/websockets_autobahn_endpoint.yaws").
+    send_2_closes(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 send_2_closes(Config, WSPath) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -1166,10 +1166,10 @@ send_2_closes(Config, WSPath) ->
     ok.
 
 basic_close_ping(Config) ->
-    close_ping(Config, "/websockets_example_endpoint.yaws").
+    close_ping(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_close_ping(Config) ->
-    close_ping(Config, "/websockets_autobahn_endpoint.yaws").
+    close_ping(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 close_ping(Config, WSPath) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -1186,10 +1186,10 @@ close_ping(Config, WSPath) ->
     ok.
 
 basic_close_text(Config) ->
-    close_text(Config, "/websockets_example_endpoint.yaws").
+    close_text(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_close_text(Config) ->
-    close_text(Config, "/websockets_autobahn_endpoint.yaws").
+    close_text(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 close_text(Config, WSPath) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -1206,10 +1206,10 @@ close_text(Config, WSPath) ->
     ok.
 
 basic_fragtext_close_fragtext(Config) ->
-    close_fragtext(Config, "/websockets_example_endpoint.yaws").
+    close_fragtext(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_fragtext_close_fragtext(Config) ->
-    close_fragtext(Config, "/websockets_autobahn_endpoint.yaws").
+    close_fragtext(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 close_fragtext(Config, WSPath) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -1227,10 +1227,10 @@ close_fragtext(Config, WSPath) ->
     ok.
 
 basic_close_empty(Config) ->
-    close_empty(Config, "/websockets_example_endpoint.yaws").
+    close_empty(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_close_empty(Config) ->
-    close_empty(Config, "/websockets_autobahn_endpoint.yaws").
+    close_empty(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 close_empty(Config, WSPath) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -1246,10 +1246,10 @@ close_empty(Config, WSPath) ->
     ok.
 
 basic_close_toosmall(Config) ->
-    close_toosmall(Config, "/websockets_example_endpoint.yaws").
+    close_toosmall(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_close_toosmall(Config) ->
-    close_toosmall(Config, "/websockets_autobahn_endpoint.yaws").
+    close_toosmall(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 close_toosmall(Config, WSPath) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -1265,10 +1265,10 @@ close_toosmall(Config, WSPath) ->
     ok.
 
 basic_close_statusonly(Config) ->
-    close_statusonly(Config, "/websockets_example_endpoint.yaws").
+    close_statusonly(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_close_statusonly(Config) ->
-    close_statusonly(Config, "/websockets_autobahn_endpoint.yaws").
+    close_statusonly(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 close_statusonly(Config, WSPath) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -1284,10 +1284,10 @@ close_statusonly(Config, WSPath) ->
     ok.
 
 basic_close_with_reason(Config) ->
-    close_with_reason(Config, "/websockets_example_endpoint.yaws").
+    close_with_reason(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_close_with_reason(Config) ->
-    close_with_reason(Config, "/websockets_autobahn_endpoint.yaws").
+    close_with_reason(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 close_with_reason(Config, WSPath) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -1303,10 +1303,10 @@ close_with_reason(Config, WSPath) ->
     ok.
 
 basic_close_limit_size(Config) ->
-    close_limit_size(Config, "/websockets_example_endpoint.yaws").
+    close_limit_size(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_close_limit_size(Config) ->
-    close_limit_size(Config, "/websockets_autobahn_endpoint.yaws").
+    close_limit_size(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 close_limit_size(Config, WSPath) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -1323,10 +1323,10 @@ close_limit_size(Config, WSPath) ->
     ok.
 
 basic_close_toolong(Config) ->
-    close_toolong(Config, "/websockets_example_endpoint.yaws").
+    close_toolong(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_close_toolong(Config) ->
-    close_toolong(Config, "/websockets_autobahn_endpoint.yaws").
+    close_toolong(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 close_toolong(Config, WSPath) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -1343,10 +1343,10 @@ close_toolong(Config, WSPath) ->
     ok.
 
 basic_close_invalid_utf8(Config) ->
-    close_invalid_utf8(Config, "/websockets_example_endpoint.yaws").
+    close_invalid_utf8(Config, "/examples/websockets_example_endpoint.yaws").
 
 advanced_close_invalid_utf8(Config) ->
-    close_invalid_utf8(Config, "/websockets_autobahn_endpoint.yaws").
+    close_invalid_utf8(Config, "/examples/websockets_autobahn_endpoint.yaws").
 
 close_invalid_utf8(Config, WSPath) ->
     Key = "dGhlIHNhbXBsZSBub25jZQ==",
@@ -1366,7 +1366,7 @@ close_invalid_utf8(Config, WSPath) ->
 basic_close_valid_codes(Config) ->
     lists:foreach(
       fun(Code) ->
-              close_valid_code(Config, "/websockets_example_endpoint.yaws", Code)
+              close_valid_code(Config, "/examples/websockets_example_endpoint.yaws", Code)
       end,
       [1000,1001,1002,1003,1007,1008,1009,1010,1011,3000,3999,4000,4999]
      ).
@@ -1374,7 +1374,7 @@ basic_close_valid_codes(Config) ->
 advanced_close_valid_codes(Config) ->
     lists:foreach(
       fun(Code) ->
-              close_valid_code(Config, "/websockets_autobahn_endpoint.yaws", Code)
+              close_valid_code(Config, "/examples/websockets_autobahn_endpoint.yaws", Code)
       end,
       [1000,1001,1002,1003,1007,1008,1009,1010,1011,3000,3999,4000,4999]
      ).
@@ -1394,7 +1394,7 @@ close_valid_code(Config, WSPath, Code) ->
 basic_close_invalid_codes(Config) ->
     lists:foreach(
       fun(Code) ->
-              close_invalid_code(Config, "/websockets_example_endpoint.yaws", Code)
+              close_invalid_code(Config, "/examples/websockets_example_endpoint.yaws", Code)
       end,
       [0,999,1004,1005,1006,1012,1013,1014,1015,1016,1100,2000,2999,5000,65536]
      ).
@@ -1402,7 +1402,7 @@ basic_close_invalid_codes(Config) ->
 advanced_close_invalid_codes(Config) ->
     lists:foreach(
       fun(Code) ->
-              close_invalid_code(Config, "/websockets_autobahn_endpoint.yaws", Code)
+              close_invalid_code(Config, "/examples/websockets_autobahn_endpoint.yaws", Code)
       end,
       [0,999,1004,1005,1006,1012,1013,1014,1015,1016,1100,2000,2999,5000,65536]
      ).
@@ -1421,7 +1421,7 @@ close_invalid_code(Config, WSPath, Code) ->
 
 close_timeout(Config) ->
     Key    = "dGhlIHNhbXBsZSBub25jZQ==",
-    WSPath = "/websockets_example_endpoint.yaws?extversion=true",
+    WSPath = "/examples/websockets_example_endpoint.yaws?extversion=true",
 
     {ok, Sock} = open("localhost", testsuite:get_yaws_port(1, Config)),
     ?assertMatch({ok, {101, _}}, wsopen(Sock, Key, WSPath, "http://localhost", 13)),
@@ -1438,7 +1438,7 @@ close_timeout(Config) ->
 
 keepalive_timeout(Config) ->
     Key    = "dGhlIHNhbXBsZSBub25jZQ==",
-    WSPath = "/websockets_example_endpoint.yaws?keepalive=true&timeout=5000&drop=true",
+    WSPath = "/examples/websockets_example_endpoint.yaws?keepalive=true&timeout=5000&drop=true",
 
     {ok, Sock} = open("localhost", testsuite:get_yaws_port(1, Config)),
     ?assertMatch({ok, {101, _}}, wsopen(Sock, Key, WSPath, "http://localhost", 13)),
@@ -1459,7 +1459,7 @@ keepalive_timeout(Config) ->
 
 too_big_frame(Config) ->
     Key    = "dGhlIHNhbXBsZSBub25jZQ==",
-    WSPath = "/websockets_example_endpoint.yaws",
+    WSPath = "/examples/websockets_example_endpoint.yaws",
 
     {ok, Sock} = open("localhost", testsuite:get_yaws_port(1, Config)),
     ?assertMatch({ok, {101, _}}, wsopen(Sock, Key, WSPath, "http://localhost", 13)),
@@ -1487,7 +1487,7 @@ too_big_frame(Config) ->
 
 close_unmasked_frame(Config) ->
     Key    = "dGhlIHNhbXBsZSBub25jZQ==",
-    WSPath = "/websockets_example_endpoint.yaws?close_unmasked=true",
+    WSPath = "/examples/websockets_example_endpoint.yaws?close_unmasked=true",
 
     {ok, Sock} = open("localhost", testsuite:get_yaws_port(1, Config)),
     ?assertMatch({ok, {101, _}}, wsopen(Sock, Key, WSPath, "http://localhost", 13)),
@@ -1502,7 +1502,7 @@ close_unmasked_frame(Config) ->
 
 too_big_message(Config) ->
     Key    = "dGhlIHNhbXBsZSBub25jZQ==",
-    WSPath = "/websockets_example_endpoint.yaws",
+    WSPath = "/examples/websockets_example_endpoint.yaws",
 
     {ok, Sock} = open("localhost", testsuite:get_yaws_port(1, Config)),
     ?assertMatch({ok, {101, _}}, wsopen(Sock, Key, WSPath, "http://localhost", 13)),
@@ -1541,7 +1541,7 @@ too_big_message(Config) ->
 
 secure_websocket(Config) ->
     Key    = "dGhlIHNhbXBsZSBub25jZQ==",
-    WSPath = "/websockets_example_endpoint.yaws",
+    WSPath = "/examples/websockets_example_endpoint.yaws",
 
     {ok, Sock} = sslopen("localhost", testsuite:get_yaws_port(1, Config)),
     ?assertMatch({ok, {101, _}}, wsopen(Sock, Key, WSPath, "http://localhost", 13)),

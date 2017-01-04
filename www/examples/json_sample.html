@@ -1,0 +1,48 @@
+<html>
+  <head>
+    <title>Testing html-json library</title>
+  </head>
+  <script src="js/jsolait/jsolait.js"></script>
+  <script>
+   var serviceURL = document.URL.substr(0,document.URL.lastIndexOf('/')) + "/examples/json_sample.yaws";
+   var methods = [ "test1", "errortest" ];
+
+   var jsonrpc = imprt("jsonrpc");
+   var service = new jsonrpc.ServiceProxy(serviceURL, methods);
+
+   function test() {
+     try {
+       foo = document.getElementById('foo').value;
+       bar = document.getElementById('bar').value;
+       document.getElementById('result').innerHTML =
+       "<PRE>" + service.test1(foo, bar) + "</PRE>";
+     } catch(e) {
+       alert(e);
+     }
+     return false;
+   }
+
+   function errortest() {
+     try {
+       document.getElementById('failure').innerHTML =
+       "<PRE>" + service.errortest() + "</PRE>";
+     } catch(e) {
+       document.getElementById('failure').innerHTML =
+       "<PRE>" + e + "</PRE>";
+     }
+     return false;
+   }
+  </script>
+  <body>
+    <form action="" method="post" onSubmit="return test()">
+      <div id="result"></div>
+      <p>First Argument:  <input id="foo" /></p>
+      <p>Second Argument: <input id="bar"/></p>
+      <p><input type="submit" value="Do JSON-RPC call"/></p>
+    </form>
+    <form action="" method="post" onSubmit="return errortest()">
+      <p><input type="submit" value="Do JSON-RPC call expected to fail"/></p>
+      <div id="failure"></div>
+    </form>
+  </body>
+</html>

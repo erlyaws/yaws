@@ -1,0 +1,84 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<erl>
+-export([pserv/0]).
+
+ensure_pcookie_server() ->
+    case whereis(pcookie_server) of
+        undefined ->
+            proc_lib:start(?MODULE, pserv,[]);
+        _ ->
+            ok
+    end.
+
+pserv() ->
+    catch begin
+              register(pcookie_server, self()),
+              T = ets:new(pcookies, [set, public,
+                                     named_table]),
+              ets:insert(T, {counter, 0})
+          end,
+    proc_lib:init_ack(ok),
+    pserv_loop().
+
+pserv_loop() ->
+    receive
+        X ->
+            pserv_loop()
+    end.
+
+setcookie(A) ->
+    Num = ets:update_counter(pcookies, counter, 1),
+    Data = {(A#arg.headers)#headers.user_agent,
+            calendar:local_time(),
+            inet:peername(A#arg.clisock)},
+    ets:insert(pcookies, {{cookie, Num}, Data}),
+    yaws_api:set_cookie("pfoobar",integer_to_list(Num),
+                        [{path,"/"}]).
+
+
+
+out(A) ->
+    ensure_pcookie_server(),
+    H = A#arg.headers,
+    C = H#headers.cookie,
+    case C of
+        [Cookie|_] ->
+            case string:tokens(Cookie, [$=]) of
+                ["pfoobar", NumStr] ->
+                    Num = list_to_integer(NumStr),
+                    %% cookie allready set
+                    case ets:lookup(pcookies, {c, Num}) of
+                        [{cookie, Data}] ->
+                            ok;  %% cookie already set
+                        [] ->
+                            setcookie(A)
+                    end;
+                _ ->
+                    setcookie(A)
+            end;
+        _ ->
+            setcookie(A)
+    end.
+</erl>
+
+<p class="text-justify">
+  This is the page that set a persistent cookie in the browser.
+</p>
+<p class="text-justify">
+  <a href="javascript:load_readpcookie();">%%webroot%%/examples/readpcookie.yaws</a> will
+  read it and report persistent information.
+</p>
+
+<script>
+ function load_readpcookie() {
+   if (document.getElementById('yawsModal') != null != 0) {
+     load_modal('Read persistent cookie', '%%webroot%%/examples/readpcookie.yaws')
+   }
+   else {
+     window.location = '%%webroot%%/examples/readpcookie.yaws';
+   }
+ }
+</script>

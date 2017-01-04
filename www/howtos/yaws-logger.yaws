@@ -1,0 +1,114 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  To illustrate how to write a module that handles auth and access logging in
+  Yaws, we will get a concrete example: How to log the original client IP behind
+  a HTTP reverse proxy.
+</p>
+<br/>
+<p class="text-justify">
+  When Yaws is running behind a HTTP reverse proxy, the source IP of a
+  connection is always the proxy's IP address. It is also this IP address that
+  you will find in your log files. In this situation, it may be desirable to log
+  the real client IP address by extracting it from the
+  "<a href="http://en.wikipedia.org/wiki/X-Forwarded-For" target="_blank">X-Forwarded-For</a>"
+  header.
+</p>
+<br/>
+<p class="text-justify">
+  It can easily be done by writting a simple module to handle access and auth
+  logging on top of <code>yaws_log</code>. <code>yaws_log</code> is the default
+  logger of Yaws and it can be overridden by using the directive
+  <code>logger_mod</code> in <code>yaws.conf</code>:
+</p>
+<verbatim class="code apache">
+  <server www.hyber.org>
+      port       = 80
+      listen     = 0.0.0.0
+      logger_mod = simple_logger
+      ...
+  </server>
+</verbatim>
+<br/>
+<p class="text-justify">
+  In this example, <code>simple_logger</code> will be used in place of
+  <code>yaws_log</code>. This module must implement the behaviour
+  <code>yaws_logger</code> by exporting the following functions:
+</p>
+<verbatim class="code erlang">
+  Module:open_log(ServerName, Type, LogDir) -> {true, State} | false.
+      ServerName :: string()
+      Type       :: access | auth
+      LogDir     :: string()
+      State      :: term()
+
+
+  Module:close_log(ServerName, Type, State) -> ok.
+      ServerName :: string()
+      Type       :: access | auth
+      State      :: term()
+
+
+  Module:wrap_log(ServerName, Type, State, LogWrapSize) -> NewState.
+      ServerName      :: string()
+      Type            :: access | auth
+      State, NewState :: term()
+
+
+  Module:write_log(ServerName, Type, State, Infos) -> ok.
+      ServerName :: string()
+      Type       :: access | auth
+      State      :: term()
+      Infos      :: {Ip,Req,InHdrs,OutHdrs,Time} | %% when type =:= access
+                    {Ip,Path,Item}                 %% when type =:= auth
+
+          Ip      :: inet:ip_address() | inet:hostname() | unknown
+          Req     :: #http_request{}                 %% defined in yaws_api.hrl
+          InHdrs  :: #headers{}                      %% defined in yaws_api.hrl
+          OutHdrs :: #outh{}                         %% defined in yaws.hrl
+          Time    :: non_neg_integer()               %% The time taken to serve the request, in microseconds
+          Path    :: string()                        %% the URI path of the request
+          Item    :: {ok, User} | 403 | {401, Realm} %% the result of an auth request
+</verbatim>
+<br/>
+<p class="text-justify">
+  Back to our example. The only thing we want to do is read the
+  <code>X-Forwarded-For</code> header to extract the real client IP address. The
+  logging will be delegated to <code>yaws_log</code>.
+</p>
+<br/>
+<p class="text-justify">
+  If the <code>X-Forwarded-For</code> header is defined, then the originating IP
+  address of a client is the left-most IP address. But, because this header can
+  be falsified, we will define a list of trustworthy proxies. For simplicity, we
+  will use a macro. Here is our logger:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/yaws_revproxy_logger.erl"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/yaws_revproxy_logger.erl"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  Now, we just need to compile this module and update yaws.conf accordingly.
+</p>
+<br/>
+<p class="text-justify">
+  <ul class="alert-info">
+    <br/>
+    <li class="list-unstyled">
+      <strong>Note:</strong> In previous version of Yaws, we could use
+      <code>x_forwarded_for_log_proxy_whitelist</code> to do the same
+      thing. This parameter is now deprecated.
+    </li>
+    <br/>
+  </ul>
+</p>

@@ -1,0 +1,63 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  Cookies are the means in HTTP to assign data to a session. A HTTP session
+  typically consists of many (and sometimes concurrent) TCP connections from
+  the client to the web server. The first time a client arrives to our
+  webserver, we issue the HTTP header<code>Set-Cookie: var=someval</code>. The
+  browser will then in subsequent connections to the same server pass this
+  cookie <code>var=someval</code> in its client side
+  <code>Cookie: var=someval</code> header. We can thereby assign state to a
+  session, either through data actualy encoded into the cookie value itself,
+  or by associating server side session data to the cookie.
+</p>
+<p class="text-justify">
+  Let's do an example where we set a simple cookie, and create a specific erlang
+  process which is then responsible for that session.  The cookie value will be
+  a string encoding of the pid handling the session.
+</p>
+<p class="text-justify">
+  The Yaws code in
+  <a class="btn-link"
+     onclick="load_modal('Set cookie', '%%webroot%%/examples/setcookie.yaws');"
+     data-toggle="modal" data-target="#yawsModal">%%webroot%%/examples/setcookie.yaws</a>
+  sets the cookie in the browser. Note that the call to
+  <code>yaws_api:set_cookie/3</code> in the example returns a header setting
+  (like <code>{header, HeaderNameAndValue}</code>) from the <code>out/1</code>
+  function, which directs Yaws to set the specified header in the response to
+  the browser.
+</p>
+<p class="text-justify">
+  And the yaws code in
+  <a class="btn-link"
+     onclick="load_modal('Read cookie', '%%webroot%%/examples/readcookie.yaws');"
+     data-toggle="modal" data-target="#yawsModal">%%webroot%%/examples/readcookie.yaws</a>
+  will read the cookie and report some uninteresting session data.
+</p>
+<p class="text-justify">
+  A correct definition of cookies can be found in
+  <a href="http://tools.ietf.org/html/rfc6265">RFC 6265</a>.
+</p>
+<h2>Set Cookie</h2>
+<p class="text-justify">
+  The code to set the cookie looks like:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/setcookie.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/setcookie.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  It will set the cookie<code>foobar = &lt;x,y,z&gt;; </code> where the
+  <code>x,y,z</code> string is the textual representation of an actual erlang
+  pid which will be responsible for this session.
+</p>

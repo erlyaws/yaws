@@ -11,12 +11,15 @@
 -author('klacke@bluetail.com').
 
 -export([version/0,
+         mandir/0,
          vardir/0,
          etcdir/0]).
 
 version() -> "%VSN%".
 
 vardir() ->  "%VARDIR%".
+
+mandir() ->  "%MANDIR%".
 
 etcdir() -> "%ETCDIR%".
 

@@ -1,0 +1,66 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<h2>POST example </h2>
+<p class="text-justify">
+  This is a simple example where we get to fill in a series of fields and POST
+  the data by hitting the Submit button at the end.
+</p>
+<p class="text-justify">
+  The action is set to the yaws file
+  <a class="btn-link"
+     onclick="load_modal('Code', 'code.yaws?file=%%webroot%%/examples/post.yaws&type=html');"
+     data-toggle="modal" data-target="#yawsModal">%%webroot%%/examples/post.yaws</a> which
+  gets POSTed data in its <code>ARG#arg.clidata</code> field.
+</p>
+
+<form id="form-data" method="post">
+  This is a serious poll.
+  <p>
+    Your favourite programming language?
+  </p>
+  <input name="lang" type="text" size="48" />
+
+  <p>Imperative ? <input name="imperative" type="checkbox"/></p>
+
+  <p>How many tabs to you indent? <input name="tabs" type="text" /></p>
+
+  <p>Which OS do you use?</p>
+
+  <ol>
+    <li>Windows 95 pro ultra
+      <input name="os1" type="checkbox" value="w95"/></li>
+      <li>Windows XP beta cracked <input name="os2" type="checkbox" value="xpbeta"/></li>
+      <li>Windows <input name="os3" type="checkbox" value="windows"/></li>
+      <li>Other<input name="other" size="40"/></li>
+  </ol>
+
+  <p>Your email <input name="contact" size="42" /></p>
+
+  <p class="text-justify">
+    Submit this POST to get an explanation of how to process the POSTed data.
+  </p>
+
+  <p>
+    <input type="submit" data-toggle="modal" data-target="#yawsModal" />
+    <input type="reset" />
+  </p>
+</form>
+
+<script>
+ $('#form-data').on('submit', function(e) {
+   e.preventDefault();
+   $('.modal-title').html('Post result');
+   $('.modal-body').load('%%webroot%%/examples/post.yaws', $(this).serializeArray(),
+                         function() {
+       $('pre.code').each(function(i, block) {
+         hljs.highlightBlock(block);
+       });
+     });
+ });
+</script>

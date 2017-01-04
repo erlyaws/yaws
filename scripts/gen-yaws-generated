@@ -8,6 +8,7 @@ set -e
 cat yaws_generated.template                       | \
     ../scripts/Subst %VSN%          "${YAWS_VSN}" | \
     ../scripts/Subst %VARDIR%       "${VARDIR}"   | \
+    ../scripts/Subst %MANDIR%       "${MANDIR}"   | \
     ../scripts/Subst %ETCDIR%       "${ETCDIR}"
 
 exit 0

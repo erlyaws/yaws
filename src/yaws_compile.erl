@@ -5,6 +5,8 @@
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 
+-include_lib("kernel/include/file.hrl").
+
 -export([compile_file/1, compile_file/2]).
 
 -record(comp, {gc, %% global conf
@@ -535,12 +537,16 @@ check_module_name(ModName, Comp) ->
     case code:is_loaded(Mod) of
         {file, _} ->
             case lists:keyfind(yawsfile, 1, Mod:module_info(attributes)) of
-                {yawsfile, Script} when Script =:= Comp#comp.script ->
-                    ok;
-                {yawsfile, OtherSript} ->
-                    S = io_lib:format("try to override generated module "
-                                      "owned by script ~s", [OtherSript]),
-                    {error, S};
+                {yawsfile, Script} ->
+                    {ok, FI} = file:read_file_info(Comp#comp.script),
+                    case file:read_file_info(Script) of
+                        {ok, FI} ->
+                            ok;
+                        _ ->
+                            S = io_lib:format("try to override generated module "
+                                              "owned by script ~s", [Script]),
+                            {error, S}
+                    end;
                 false ->
                     S = io_lib:format("try to override existing module", []),
                     {error, S}

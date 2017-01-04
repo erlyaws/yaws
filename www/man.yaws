@@ -1,42 +1,54 @@
-
 <erl>
+prebox(Str) ->
+    {'div',[{class,"man"}],
+     {pre,[], yaws_api:htmlize(Str)}}.
 
-result(Status, Msg) ->
-    [{status, Status},
-     {ehtml,
-      {html,[],
-       {'div',[{class,"man"}],
-        {pre,[],Msg}}}}].
 
 out(A) ->
-    try queryvar(A,"page") of
-        {ok, Page} ->
-            %% only allow regular chars in Page
-            case lists:all(fun(C) ->
-                                   if
-                                       $a =< C, C =< $z ->
-                                           true;
-                                       $A =< C, C =< $Z ->
-                                           true;
-                                       C == $_ ->
-                                           true;
-                                       C == $. ->
-                                           true;
-                                       true ->
-                                           false
-                                   end
-                           end, Page) of
-                true ->
-                    L = os:cmd("env LC_ALL=en_US.ISO-8859-1 man  " ++ Page ++ "  | col -b -p -x"),
-                    result(200, L);
-                false ->
-                    result(400, "illegal character detected in query arg")
-            end;
-        undefined ->
-            result(400, "no man page found in query arg")
-    catch
-        _:_ ->
-            result(400, "illegal character detected in query arg")
-    end.
+    Paths = [
+             filename:join(yaws_generated:mandir(), "man1"),
+             filename:join(yaws_generated:mandir(), "man5"),
+             yaws_generated:mandir(),
+             filename:join(yaws:get_app_dir(), "man")
+            ],
+    L = case queryvar(A,"page") of
+            {ok, Page} ->
+                Page1 = yaws_api:sanitize_file_name(Page),
+                Files = lists:filter(fun(Path) ->
+                                             F = Path ++ "/" ++ Page1,
+                                             filelib:is_regular(F)
+                                     end, Paths),
+                case Files of
+                    [Dir|_] ->
+                        try
+                            ManPage = Dir ++ "/" ++ Page1,
+                            unesc(os:cmd("man " ++ ManPage ++ " | col -b"))
+                        catch
+                            _:_ ->
+                                "Failed to process manual entry"
+                        end;
+                    _ ->
+                        "No manual entry for "++Page
+                end;
+            undefined ->
+                "No man page found in query arg"
+        end,
+
+    {ehtml, {'div', [{id, "entry"}], prebox(unicode:characters_to_binary(L))}}.
+
+
+unesc([27 | T]) ->
+    unesc(uptom(T));
+unesc([H|T]) ->
+    [H|unesc(T)];
+unesc([]) ->
+    [].
+
+uptom([$m|T]) ->
+    T;
+uptom([H|T]) ->
+    uptom(T);
+uptom([]) ->
+    [].
 
 </erl>

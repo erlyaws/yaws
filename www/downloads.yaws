@@ -1,0 +1,76 @@
+<erl>
+out(A) -> [{yssi, "includes/config.yaws"}, {ssi, "includes/header.inc","%%",[]}].
+</erl>
+
+<erl>
+out(A) -> [{ssi, "includes/page_title.inc","%%",[{"title", "Downloads"}]}].
+</erl>
+
+
+<div class="container">
+  <div class="row">
+    <div id="leftnav" class="col-xs-3">
+      <ul class="nav">
+        <li><h3>Available releases</h3></li>
+<erl>
+get_versions([Changelog|Rest], Acc) ->
+    {match, [_Date, Vsn]} = re:run(Changelog,
+                                  "([0-9]+-[0-9]+-[0-9]+)-yaws-([0-9.]*).inc",
+                                  [{capture, all_but_first, list}]),
+    get_versions(Rest, [Vsn|Acc]);
+get_versions([], Acc) ->
+    Acc.
+
+out(A) ->
+    Vsn = case queryvar(A, "vsn") of
+              {ok, V}   -> V;
+              undefined -> yaws_generated:version()
+          end,
+    Changelogs = lists:sort(
+                   filelib:wildcard(get("SITEROOT") ++ "changelogs/*.inc")
+                  ),
+    EHtml = [begin
+                 Attrs = [
+                          {id,      "yaws-"++V},
+                          {class,   "btn-link"},
+                          {onclick, "showReleaseInfo('"++V++"')"}
+                         ],
+                 {li, [], [{a, Attrs, "Yaws " ++ V}]}
+             end || V <- get_versions(Changelogs, [])],
+    {ehtml, EHtml}.
+</erl>
+      </ul>
+    </div>
+
+    <div id="yaws-release-info" class="col-xs-9"></div>
+
+  </div>
+</div>
+
+<erl>
+out(A) -> [{ssi, "includes/footer.inc","%%",[]}, {yssi, "examples/visit_counter.yaws"}].
+</erl>
+
+<script>
+ function toggleVisibility(id) {
+   var flag = $(id).is(':hidden');
+   $('.git-body-msg').hide();
+   if (flag == true)
+   $(id).show();
+ }
+
+ function showReleaseInfo(Vsn) {
+   $('#yaws-release-info').load('%%webroot%%/download.yaws?vsn='+Vsn);
+ }
+
+<erl>
+out(A) ->
+    Vsn = case queryvar(A, "vsn") of
+              {ok, V}   -> V;
+              undefined -> yaws_generated:version()
+          end,
+    Html = "showReleaseInfo('"++Vsn++"');",
+    {html, Html}.
+</erl>
+
+</script>

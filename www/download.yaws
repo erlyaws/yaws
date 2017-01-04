@@ -1,0 +1,95 @@
+<erl>
+out(A) -> [{yssi, "includes/config.yaws"}].
+</erl>
+
+<erl>
+sha256(File) ->
+    {ok, Bin} = file:read_file(File),
+    <<X:256/big-unsigned-integer>> = crypto:hash(sha256, Bin),
+    integer_to_list(X, 16).
+
+find_yaws_releases(WantedVsn, [Changelog|Rest]) ->
+    {match, [Date, Vsn]} = re:run(Changelog,
+                                  "([0-9]+-[0-9]+-[0-9]+)-yaws-([0-9.]*).inc",
+                                  [{capture, all_but_first, list}]),
+    case Vsn of
+        WantedVsn ->
+            put(yaws_vsn, Vsn),
+            {ok, Vsn, Date};
+        _ ->
+            find_yaws_releases(WantedVsn, Rest)
+    end;
+find_yaws_releases(_, []) ->
+    not_found.
+
+
+out(A) ->
+    WantedVsn = case queryvar(A, "vsn") of
+                    {ok, V}   -> V;
+                    undefined -> yaws_generated:version()
+                end,
+    Changelogs = lists:sort(
+                   filelib:wildcard(get("SITEROOT") ++ "changelogs/*.inc")
+                  ),
+    {ok, Vsn, Date} = find_yaws_releases(WantedVsn, Changelogs),
+
+    Tag  = "yaws-"++Vsn,
+    Vars0 = [{"vsn", Vsn}, {"tag", Tag}, {"date", Date}],
+
+    Tar     = "downloads/yaws-"++Vsn++".tar.gz",
+    TarFile = get("SITEROOT") ++ Tar,
+    Vars1   = case filelib:is_file(TarFile) of
+                  true  ->
+                      TarSha256   = sha256(TarFile),
+                      {ok, TarFI} = file:read_file_info(TarFile),
+                      [
+                       {"tar_show_cls", "show"},
+                       {"tar_hide_cls", "hide"},
+                       {"tar_link",     Tar},
+                       {"tar_size",     integer_to_list(element(2, TarFI))},
+                       {"tar_sha256",   TarSha256}
+                      ];
+                  false ->
+                      [
+                       {"tar_show_cls", "hide"},
+                       {"tar_hide_cls", "show"},
+                       {"tar_link",     ""},
+                       {"tar_size",     ""},
+                       {"tar_sha256",   ""}
+                      ]
+              end,
+
+    Exe     = "downloads/Yaws-"++Vsn++"-windows-installer.exe",
+    ExeFile = get("SITEROOT") ++ Exe,
+    Vars2   = case filelib:is_file(ExeFile) of
+                  true  ->
+                      ExeSha256   = sha256(ExeFile),
+                      {ok, ExeFI} = file:read_file_info(ExeFile),
+                      [
+                       {"exe_show_cls", "show"},
+                       {"exe_hide_cls", "hide"},
+                       {"exe_link",     Exe},
+                       {"exe_size",     integer_to_list(element(2, ExeFI))},
+                       {"exe_sha256",   ExeSha256}
+                      ];
+                  false ->
+                      [
+                       {"exe_show_cls", "hide"},
+                       {"exe_hide_cls", "show"},
+                       {"exe_link",     ""},
+                       {"exe_size",     ""},
+                       {"exe_sha256",   ""}
+                      ]
+              end,
+
+    Vars = Vars0 ++ Vars1 ++ Vars2,
+    [{ssi, "includes/download.inc","%%", Vars}].
+</erl>
+      <h2>Changelog</h2>
+      <hr/>
+<erl>
+out(A) ->
+    Vsn = get(yaws_vsn),
+    [File] = filelib:wildcard(get("SITEROOT") ++ "changelogs/*-yaws-"++Vsn++".inc"),
+    [{ssi, lists:subtract(File, get("SITEROOT")),"%#%#",[]}].
+</erl>

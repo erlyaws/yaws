@@ -1,0 +1,26 @@
+<erl module="sample_mod">
+-compile(export_all).
+
+out(A) ->
+    {ok, {IP,_}} = case yaws_api:get_sslsocket(A#arg.clisock) of
+                       {ok, SslSocket} -> ssl:peername(SslSocket);
+                       _               -> inet:peername(A#arg.clisock)
+                   end,
+    A2 = A#arg{state = [{ip, IP}]},
+    yaws_rpc:handler_session(A2, {?MODULE, counter}).
+
+counter([{ip, IP}] = _State, {call, errortest, _}, _Session) ->
+    {false, {error, "Expected failure"}};
+counter([{ip, IP}] = _State, {call, test1, Value} = Request, Session) ->
+    IPStr      = io_lib:format("Client ip is  ~p~n" , [ IP ]),
+    OldSession = io_lib:format("Request is: ~p~n Old session value is ~p~n",
+                               [Request, Session]),
+    NewSession =  case Session of
+                      undefined -> 0;         % create new session
+                      10        -> undefined; % reset session after reaching 10
+                      N         -> N + 1
+                  end,
+    NewVal = io_lib:format("New session value is ~p~n", [NewSession]),
+    Str    = lists:flatten([IPStr, OldSession, NewVal]),
+    {true, 0, NewSession, {response, Str}}.
+</erl>

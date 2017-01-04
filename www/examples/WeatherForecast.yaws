@@ -1,0 +1,4 @@
+<erl>
+out(A) ->
+    yaws_rpc:handler_session(A, {my_soap, handler}).
+</erl>

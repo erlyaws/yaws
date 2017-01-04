@@ -1,0 +1,54 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  We saw in the first <a href="#howto_cookies">cookie</a> example, how we
+  assigned a special erlang process to handle each session. The cookie has an
+  expiry date, and the correct thing would be to let the handling process live
+  as long as the cookie is valid. This is not a good option.  A better option is
+  to store cookie in a persistant storage. This can be an ets table or a dets
+  table. If we choose an ets table, the cookies will disappear when the Yaws
+  server is restarted, whereas if we choose a dets table, the cookies will
+  survive daemon restarts. What to choose depends on the type of cookie
+  information we have.
+</p>
+<br/>
+<p class="text-justify">
+  The yaws code in
+  <a class="btn-link"
+     onclick="load_modal('Set persistent cookie', '%%webroot%%/examples/setpcookie.yaws');"
+     data-toggle="modal" data-target="#yawsModal">%%webroot%%/examples/setpcookie.yaws</a>
+  sets the cookie in the browser. And the yaws code in
+  <a class="btn-link"
+     onclick="load_modal('Read persistent cookie', '%%webroot%%/examples/readpcookie.yaws');"
+     data-toggle="modal" data-target="#yawsModal">%%webroot%%/examples/readpcookie.yaws</a>
+  will read the cookie.
+</p>
+<br/>
+<p class="text-justify">
+  Let's show some code. To set the cookie we have:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/setpcookie.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/setpcookie.yaws"},
+                                           {"lang", "html"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  And to read the cookie, we have the following code:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/readpcookie.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/readpcookie.yaws"},
+                                           {"lang", "html"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+

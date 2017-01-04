@@ -1,0 +1,53 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<erl>
+session(A, Visits) ->
+    receive
+        {From, tick} ->
+            N = calendar:local_time(),
+            From ! {self(), [N|Visits]},
+            session(A, [N|Visits])
+    after 60000 ->    %% keep state for 60 secs only
+            exit(normal)
+    end.
+
+out(A) ->
+    H = A#arg.headers,
+    C = H#headers.cookie,
+    case yaws_api:find_cookie_val("foobar", C) of
+        [] ->
+            Now = calendar:local_time(),
+            P = spawn(fun() -> session(A, [Now]) end),
+            Hdr = yaws_api:set_cookie("foobar", pid_to_list(P), [{path,"/"}]),
+            {header, {set_cookie, NewC}} = Hdr,
+            [Hdr, {ehtml, {p, [], f("New cookie set: ~s", [NewC])}}];
+        PidStr ->
+            Pid = list_to_pid(PidStr),
+            case process_info(Pid, messages) of
+                undefined ->
+                    Now = calendar:local_time(),
+                    P = spawn(fun() -> session(A, [Now]) end),
+                    Hdr = yaws_api:set_cookie("foobar", pid_to_list(P), [{path,"/"}]),
+                    {header, {set_cookie, NewC}} = Hdr,
+                    [Hdr, {ehtml, {p, [], f("New cookie set: ~s", [NewC])}}];
+                _ ->
+                    {ehtml, {p, [], f("Cookie already exists: ~s", [C])}}
+            end
+    end.
+</erl>
+
+<a href="javascript:load_readcookie();">%%webroot%%/examples/readcookie.yaws</a> will read
+it.
+
+<script>
+ function load_readcookie() {
+   if (document.getElementById('yawsModal') != null != 0) {
+     load_modal('Read cookie', '%%webroot%%/examples/readcookie.yaws')
+   }
+   else {
+     window.location = '%%webroot%%/examples/readcookie.yaws';
+   }
+ }
+</script>

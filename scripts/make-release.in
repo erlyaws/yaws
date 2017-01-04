@@ -1,30 +1,104 @@
-#!/bin/sh
+#!/bin/bash
+
+# To create a new release of Yaws :
+#
+#     1) Be sure to have committed all your changes
+#     2) Update Yaws version in vsn.mk. The new version must not match an existing tag
+#     3) Execute this script
 
 SRCDIR=@abs_top_srcdir@
 BUILDDIR=@abs_top_builddir@
-YAWS_VSN=@YAWS_VSN@
-INSTALL_BUILDER=${INSTALL_BUILDER:-@INSTALL_BUILDER@}
 
-
-echo packing release ${YAWS_VSN}
-
+. ${SRCDIR}/vsn.mk
 TAG="yaws-${YAWS_VSN}"
-NAME_VERSION="yaws-${YAWS_VSN}"
 
-# Add/update release tag
-(cd ${SRCDIR} && git tag -f -a -m "version ${YAWS_VSN}" "$TAG")
+echo "packing release ${YAWS_VSN}"
 
-# Create windows installer
-(cd ${BUILDDIR} && make mkinstaller INSTALL_BUILDER=${INSTALL_BUILDER} >/dev/null)
+BRANCH=$(cd ${SRCDIR} && git rev-parse --abbrev-ref HEAD)
+if test "${BRANCH}" != "master"; then
+    echo "ERROR: You need to be in the master branch to create a release";
+    exit 1;
+fi
 
-# Create distribution tarball
-(cd ${BUILDDIR} && make dist > /dev/null)
+(cd ${SRCDIR} && git status --porcelain | grep vsn.mk)
+if test $? -ne 0; then
+    echo "ERROR: vsn.mk file has not changed. Upgrade yaws version to proceed"
+    exit 1
+fi
 
-echo release resides in ${BUILDDIR}/$NAME_VERSION.tar.gz
-echo release resides in ${BUILDDIR}/Yaws-${YAWS_VSN}-windows-installer.exe
+(cd ${SRCDIR} && git show-ref --quiet ${TAG})
+if test $? -eq 0; then
+    echo "ERROR: tag ${TAG} already exists"
+    exit 1
+fi
 
-echo "To push this do:"
-#echo "git push origin revs/tags/yaws-${version}:revs/tags/yaws-${version}"
-echo "ehhh or git push --tags"
+(cd ${SRCDIR} && git status --porcelain | grep -v vsn.mk)
+if test $? -eq 0; then
+    echo "ERROR: you have unstaged/uncommitted changes"
+    exit 1
+fi
+
+# Prepare release: Add vsn.mk and commit
+(cd ${SRCDIR} && git add vsn.mk)
+(cd ${SRCDIR} && git commit -m "Prepare release ${YAWS_VSN}")
+if test $? -ne 0; then
+    echo "ERROR: failed to commit vsn.mk for ${YAWS_VSN}"
+    exit 1
+fi
+echo "   * prepare release ${TAG}                   [OK]"
+# create release tags
+(cd ${SRCDIR} && git tag -f -a -m "version ${YAWS_VSN}" ${TAG})
+if test $? -ne 0; then
+    echo "ERROR: failed to create tag ${TAG}"
+    exit 1
+fi
+
+# generate the release changelog/news
+(cd ${SRCDIR}/scripts && make changelog)
+if test $? -ne 0; then
+    echo "ERROR: failed to generate changelogs for ${TAG}"
+    exit 1
+fi
+echo "   * Generate changelogs for ${TAG}           [OK]"
+
+(cd ${SRCDIR}/scripts && make news)
+if test $? -ne 0; then
+    echo "ERROR: failed to generate news for ${TAG}"
+    exit 1
+fi
+echo "   * Generate news for ${TAG}                 [OK]"
+
+(cd ${SRCDIR}/scripts && make gh-contributors)
+if test $? -ne 0; then
+    echo "ERROR: failed to generate gh-contributor list for ${TAG}"
+    exit 1
+fi
+echo "   * Generate gh-contributor list for ${TAG}  [OK]"
+
+(cd ${SRCDIR} && git add www/changelogs www/news www/gh-contributors.txt)
+(cd ${SRCDIR} && git commit -m "release ${YAWS_VSN}")
+if test $? -ne 0; then
+    echo "ERROR: failed to commit changelogs and news for ${TAG}"
+    exit 1
+fi
+
+# update release tags
+(cd ${SRCDIR} && git tag -f -a -m "version ${YAWS_VSN}" ${TAG})
+if test $? -ne 0; then
+    echo "ERROR: failed to update tag ${TAG}"
+    exit 1
+fi
+echo "   * release ${TAG}                           [OK]"
+echo
+echo
+echo "====================================================================="
+echo
+echo "Yaws ${YAWS_VSN} is released:"
+echo "  - To create a dist tarball: make dist"
+echo "  - To create a windows installer: make mkinstall INSTALL_BUILDER=..."
+echo "  - To publish the release: git push --follow-tags"
+echo
+echo "====================================================================="
+echo
 
 exit 0

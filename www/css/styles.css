@@ -1,0 +1,235 @@
+/*
+A Bootstrap 3.1 affix sidebar template
+from http://bootply.com
+
+This CSS code should follow the 'bootstrap.css'
+in your HTML file.
+
+license: MIT
+author: bootply.com
+*/
+
+body {
+    position: relative;
+    min-width: 1024px  !important;
+}
+
+.container {
+    min-width: 1024px !important;
+}
+
+.navbar-nav {
+    float: left !important;
+    margin: 0 !importajs/nt;
+}
+.navbar-nav > li {
+    float: left !important;
+}
+.navbar-nav > li > a {
+    padding-top: 15px !important;
+    padding-bottom: 15px !important;
+}
+.navbar-nav.navbar-right:last-child {
+    margin-right: -15px !important;
+}
+
+.btn-transparent:hover {
+    background: rgba(2O0, 200, 200, 0.75);
+}
+
+.btn-transparent {
+    background: rgba(255, 255, 255, 0.75);
+    color: #000;
+}
+
+.btn-link {
+    cursor: pointer;
+}
+
+#main-page {
+    background-image: url('../images/banner.jpg');
+    background-repeat: no-repeat;
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    background-size: cover;
+    -o-background-size: cover;
+    min-height:250px;
+    margin-top: -20px;
+    margin-bottom: 50px;
+}
+
+#page {
+    text-shadow: 0.1em 0.1em 0.05em #333;
+    font-family: "Open Sans",verdana,sans-serif;
+    margin-top: -20px;
+}
+
+#main-page h1, #page h1 {
+    font-size: 30px;
+    line-height: 1;
+    padding-top: 20px;
+}
+
+/*#main-page .well, #page h1 {
+    margin-top:8%;
+}*/
+
+@media screen and (min-width: 768px) {
+    #main-page h1, #page h1 {
+        font-size: 50px;
+    }
+}
+
+#yawsModal .modal-body {
+    height: calc(100vh - 200px);
+    overflow-x: auto;
+    overflow-y: auto;
+}
+
+.layer-light {
+    padding-bottom: 25px;
+}
+
+.layer-dark {
+    background-color: #f5f5f5;
+    border-top: 2px solid #eee;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 25px;
+}
+
+.text-icon {
+    display: inline-block;
+    vertical-align: middle;
+    width: 16% !important;
+    float: none !important;
+}
+.text-content {
+    display: inline-block;
+    vertical-align: middle;
+    width: 80% !important;
+    float: none !important;
+}
+
+.nav > li > a:focus {
+    color: #428bca !important;
+    text-decoration: none !important;
+    background-color: inherit !important;
+    border: none !important;
+    outline: none !important;
+}
+
+.nav:not(.navbar-nav) > li > a:hover {
+    color: #fff !important;
+    background-color: #5bc0de !important;
+    border: 1px solid #46b8da !important;
+    outline: none !important;
+}
+
+.nav > li.active {
+    border: 0 solid #46b8da;
+    border-right-width:5px;
+}
+
+.nav > li.level1 {
+    padding-left: 20px;
+}
+.nav > li.level2 {
+    padding-left: 40px;
+}
+.nav > li.level3 {
+    padding-left: 60px;
+}
+
+#leftnav > ul.nav {
+    overflow-y: auto;
+    height: calc(100vh - 175px);
+    width: 240px;
+}
+
+footer .container {
+    padding-bottom: 10px;
+    margin-top: 20px;
+    border: 0;
+    border-top: 1px solid #eee;
+}
+
+.big {
+    margin-bottom: 5px;
+    font-size: 14px;
+    font-weight: 200;
+    line-height: 1.4;
+}
+@media (min-width: 768px) {
+    .big {
+        font-size: 16px;
+        margin-bottom: 15px;
+    }
+}
+
+div.code > h4 {
+    background-color: #3f3f3f;
+    color: #dcdcdc;
+    margin: 0px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-bottom: 0px none !important;
+    border-radius: 4px 4px 0px 0px !important;
+}
+div.code > pre.code {
+    border-top: 0px none !important;
+    border-radius: 0px 0px 4px 4px !important;
+}
+
+pre.code {
+    padding: 0px 0px 0px 10px;
+}
+pre.code:before {
+    content: "\A";
+}
+pre.code:after {
+    content: " ";
+}
+
+.sha256 {
+    margin-left: 25px;
+}
+
+.git-tag {
+    padding-left: 50px;
+    padding-top: 25px;
+}
+.git-log {
+    padding-bottom: 3px;
+}
+.git-commit {
+    float: left;
+    font-family: monospace;
+    font-size: 14px;
+}
+.git-title-msg {
+    float: left;
+    font-weight: bold;
+    text-overflow: ellipsis;
+    width: 600px;
+    white-space: nowrap;
+    overflow: hidden;
+    padding-right: 10px;
+    padding-left: 10px;
+    cursor: pointer;
+}
+.git-info {
+    font-family: monospace;
+    font-size: 14px;
+    cursor: pointer;
+    color: #767676;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.git-body-msg {
+    color: #767676;
+    width: 750px;
+}
+.git-body-msg pre {
+    white-space: pre-wrap;
+}

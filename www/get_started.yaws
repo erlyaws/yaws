@@ -1,0 +1,504 @@
+<erl>
+out(A) -> [{yssi, "includes/config.yaws"}, {ssi, "includes/header.inc","%%",[]}].
+</erl>
+
+<erl>
+out(A) -> [{ssi, "includes/page_title.inc","%%",[{"title", "Get started"}]}].
+</erl>
+
+
+<div class="container">
+  <div class="row">
+
+    <div id="leftnav" class="col-xs-3">
+      <ul class="nav">
+        <li><a href="#prepare">Prepare build</a></li>
+        <li><a href="#build_and_install">Build and install Yaws</a></li>
+        <li class="level1"><a href="#get_sources">Retrieve Yaws sources</a></li>
+        <li class="level1"><a href="#using_autotools">Using Autotools</a></li>
+        <li class="level1"><a href="#using_rebar">Using Rebar</a></li>
+        <li><a href="#configure">Configure Yaws</a></li>
+        <li><a href="#run">Run Yaws</a></li>
+        <li><a href="#first_script">Your first script</a></li>
+        <li><a href="#first_appmod">Your first appmod</a></li>
+      </ul>
+    </div>
+
+    <div class="col-xs-9 content">
+      <h2 id="prepare">Prepare Build</h2>
+      <hr>
+      <p class="text-justify">
+        First of all, you will have to get and install an
+        <a href="http://www.erlang.org/downloads" target="_blank">Erlang/OTP release</a>.
+        <ul class="alert-danger">
+          <br/>
+          <li class="list-unstyled"><strong>To compile Yaws, Erlang/OTP R16B01 or higher is required.</strong></li>
+          <br/>
+        </ul>
+      </p>
+      <br/>
+      <p class="text-justify">
+        Next, you must install build dependencies. Here are the required
+        packages to compile Yaws (based on debian packages):
+        <ul>
+          <li>build-essential</li>
+          <li>autoconf/automake/libtool</li>
+          <li>erlang - Required apps:</li>
+          <ul>
+            <li>erlang-{kernel/stdlib/sasl/erts}</li>
+            <li>erlang-compiler</li>
+            <li>erlang-crypto</li>
+            <li>erlang-xmerl</li>
+            <li>libpam0g-dev</li>
+          </ul>
+        </ul>
+      </p>
+      <br/>
+      <p class="text-justify">
+        To build the documentation (optional), you also need to install:
+        <ul>
+          <li>texlive-latex-base</li>
+          <li>texlive-latex-recommended</li>
+          <li>texlive-fonts-recommended</li>
+          <li>texlive-font-utils</li>
+          <li>texlive-extra-utils</li>
+          <li>ghostscript</li>
+        </ul>
+      </p>
+      <br/>
+      <p class="text-justify">
+        On Ubuntu/debian this is pretty much equal to:
+        <verbatim class="code">
+  $> apt-get build-dep yaws
+        </verbatim>
+      </p>
+      <br/>
+      <p class="text-justify">
+        Finally, to run the testsuites, you need to install:
+        <ul>
+          <li>git</li>
+          <li>wget</li>
+          <li>curl</li>
+          <li>erlang-eunit</li>
+          <li>erlang-inets</li>
+          <li>erlang-mnesia</li>
+          <li>erlang-ssl</li>
+          <li>cadaver</li>
+        </ul>
+      </p>
+
+      <h2 id="build_and_install">Build and install Yaws</h2>
+      <hr>
+      <h3 id="get_sources">Retrieve Yaws sources</h3>
+      <p class="text-justify">
+        The source code can be downloaded from the official site or GitHub:
+        <ul>
+          <li><a href="http://yaws.hyber.org">http://yaws.hyber.org</a></li>
+          <li><a href="https://github.com/klacke/yaws">https://github.com/klacke/yaws</a></li>
+        </ul>
+      </p>
+      <h3 id="using_autotools">Using Autotools</h3>
+      <p class="text-justify">
+        If you've cloned the source code from GitHub and you want to build using
+        autotools, note there is no <code>./configure</code> script in the
+        source. So, you must generate it:
+        <verbatim class="code">
+  /path/to/yaws> autoreconf -fi
+        </verbatim>
+      </p>
+      <br/>
+      <p class="text-justify">
+        Next, you must configure the build:
+        <verbatim class="code">
+  /path/to/yaws> ./configure [ options ]
+        </verbatim>
+      </p>
+      <br/>
+      <p class="text-justify">
+        By default, Yaws will be installed in<code>/usr/local</code>. But,
+        you can change the installation directory using the
+        <code>--prefix=PATH</code> option.
+        For more information about installation directories and other supported
+        options, see the configure help. Useful options are:
+        <verbatim class="code">
+  --disable-pam           disable pam auth
+  --enable-crypto         adds crypto application to yaws.app file
+  --enable-compiler       adds compiler application to yaws.app file
+
+  --with-defaultcharset=CHARSET specify default charset, i.e UTF-8
+  --with-extrainclude=DIR       dir to include if e.g. pam is installed in some odd place
+  --with-erlang=PREFIX          prefix where Erlang is installed (optional)
+        </verbatim>
+      </p>
+      <br/>
+      <p class="text-justify">
+        Then, to build and install Yaws:
+        <verbatim class="code">
+  /path/to/yaws> make && make install
+        </verbatim>
+        <br/>
+        <ul class="alert-info">
+          <br/>
+          <li class="list-unstyled"><strong>Note to packagers (rpm, deb ...): All
+            install targets support the<code>DESTDIR</code> variable.</strong></li>
+          <br/>
+        </ul>
+      </p>
+      <br/>
+      <p class="text-justify">
+        Alternatively, you may be interested to do a developer install for
+        testing purpose. Here is how you should proceed:
+        <verbatim class="code">
+  /path/to/yaws> ./configure --prefix=/local/install/path
+  /path/to/yaws> make && make install
+        </verbatim>
+      </p>
+      <br/>
+      <p class="text-justify">
+        Here is the main make targets:
+        <ul>
+          <li><strong>all</strong>: compile Yaws</li>
+          <li><strong>debug</strong>: compile Yaws with debug flags</li>
+          <li><strong>clean</strong>: remove files produced by all or debug target</li>
+          <li><strong>install</strong>: do a proper install of Yaws</li>
+          <li><strong>doc or docs</strong>: build the documentation</li>
+          <li><strong>check or test</strong>: launch tests</li>
+          <li><strong>cleantest</strong>: remove files produced by check target</li>
+          <li><strong>dialyzer</strong>: run dialyzer on Yaws</li>
+          <li><strong>mkinstaller</strong>: build an installer for windows [see <a href="https://github.com/klacke/yaws/blob/master/win32/README.developer">win32/README.developer</a> for details]</li>
+          <li><strong>cleaninstaller</strong>: remove files produced by mkinstaller target</li>
+          <li><strong>apps</strong>: compile Yaws applications (chat,mail,wiki,yapp)</li>
+          <li><strong>cleanapps</strong>: remove files produced by apps target</li>
+          <li><strong>installapps</strong>: install Yaws applications</li>
+          <li><strong>fullinstall</strong>: install + installapps</li>
+          <li><strong>fullclean</strong>: clean + cleantest + cleanapps + cleaninstaller</li>
+        </ul>
+      </p>
+      <br/>
+
+      <h3 id="using_rebar">Using Rebar</h3>
+      <p class="text-justify">
+        Yaws can alternatively be built using <a href="https://github.com/rebar/rebar">rebar</a>. Assuming
+        you already have rebar installed, simply type:
+        <verbatim class="code">
+  /path/to/yaws> rebar get-deps compile
+        </verbatim>
+        This fetches all dependencies and builds Yaws. There is nothing much more to do.
+      </p>
+      <br/>
+      <p class="text-justify">
+        Once everything is compiled, you can change to the <code>rel</code>
+        directory and generate a release. Prior to that, though, you might
+        want to edit the <code>etc/yaws/yaws.conf</code> file to ensure Yaws
+        will be configured properly for your project when you run the
+        generated release. That file is copied into the generated release.
+        <verbatim class="code">
+  /path/to/yaws> cd rel && rebar generate
+        </verbatim
+      </p>
+      <br/>
+      <p class="text-justify">
+        This creates a <code>yaws</code> directory under <code>rel</code> that
+        holds the generated release. It contains an Erlang runtime along with
+        all the standard and application-specific modules and support files
+        needed to run Yaws, all in a relocatable directory structure. To
+        package it for deployment, just tar it up:
+        <verbatim class="code">
+  /path/to/yaws/rel> cd yaws && tar zcf ../yaws.tar.gz *
+        </verbatim>
+      </p>
+      <br/>
+      <p class="text-justify">
+        To deploy Yaws release, copy the tar file onto the target host and
+        unpack it into an installation directory of your choice. You can then
+        run the node using the <code>bin/yaws</code> script:
+        <verbatim class="code">
+  < login to target host, copy yaws.tar.gz over >
+  $> cd /install/path && tar zxf yaws.tar.gz
+  $> ./bin/yaws console
+        </verbatim>
+      </p>
+      <br/>
+      <p class="text-justify">
+        The final command above starts the node with an interactive shell.
+        Once it's running, Yaws will be executing. You can alternatively
+        start the node as a daemon by running <code>./bin/yaws start</code>
+        and later stop it with <code>./bin/yaws stop</code>. Run
+        <code>./bin/yaws</code> with no arguments to see all its
+        other command-line arguments.
+      </p>
+
+      <h2 id="configure">Configure Yaws</h2>
+      <hr>
+      <p class="text-justify">
+        Web server configuration can be supplied to yaws in either of two ways
+        depending on whether we run Yaws as a standalone daemon or if we run
+        yaws as an embedded application inside another Erlang program.
+      </p>
+      <br/>
+      <p class="text-justify">
+        The Yaws configuration is described in man page for
+        <a href="%%webroot%%/documentation.yaws?manpage=yaws.conf">yaws.conf (5)</a>
+      </p>
+
+      <h2 id="run">Run Yaws</h2>
+      <hr>
+      <p class="text-justify">
+        The main way to start Yaws is to use the script shipped with
+        releases. It provides many options:
+      </p>
+      <verbatim class="code">
+  $> ${bindir}/yaws --help
+  usage:
+
+
+       yaws -i | --interactive       -- interactive (no daemon) mode
+       yaws -w | --winteractive      -- cygwin interactive (werl)
+       yaws --daemon                 -- daemon mode
+
+
+       Auxiliary flags for the daemon:
+            --id Id             --  set system id
+            --debug             --  debug mode
+            --nodebug           --  turn off debug mode
+            --conf File         --  set config file
+            --tracetraf         --  trace traffic
+            --tracehttp         --  trace http traffic
+            --traceout          --  trace output to stdout
+            --version           --  print version
+            --pa path           --  add load path
+            --mnesiadir dir     --  start Mnesia in dir
+            --proto_dist Mod    --  use Mod for distrib
+            --sname xxx         --  start with sname xxx
+            --name xxx          --  start with name xxx
+            --runmod mod        --  call mod:start/0 at startup
+            --heart             --  auto restart yaws if it crashes
+            --heart-restart=C,T --  allow C heart restarts in T seconds
+            --erlarg X          --  pass argument X to /usr/bin/erl
+            --setcookie X       --  set an erlang cookie
+            --run_erl X         --  use run_erl with pipe-id X
+            --to_erl X          --  connect to pipe-id X
+            --disable-kpoll     --  pass +K false to erlang
+            --umask umaskval    --  set process umask to umaskval
+
+  ctl functions ...
+        yaws --hup [--id ID]                                  -- hup the daemon, reload conf
+        yaws --stop [--id ID]                                 -- stop the daemon
+        yaws --debug-dump [--id ID]                           -- produce a debug dump
+        yaws --status [--id ID]                               -- query the daemon status
+        yaws --load Modules                                   -- load modules
+        yaws --ls                                             -- list Yaws nodes and their status
+        yaws --ctltrace traffic|http|off                      -- toggle trace of running daemon
+        yaws --check [--verbose] [--id ID] YawsFile [IncDirs] -- test compile YawsFile
+        yaws --configtest File [--verbose]                    -- test config file
+        yaws --wait-started[=secs] [--id ID]                  -- wait for daemon to be ready
+        yaws --wait-stopped[=secs] [--id ID]                  -- wait for daemon to be stopped
+        yaws --stats [--id ID]                                -- show daemon statistics
+        yaws --auth USER [--algo ALGO]                        -- generate credential for a user
+
+      </verbatim>
+      <br/>
+      <p class="text-justify">
+        So to daemonize Yaws, you should use the command <code>yaws --daemon</code>.
+        It is also possible to use the provided start/stop script corrsponding
+        to you operating systems (systemd, SysV or BSD-style init system).
+      </p>
+      <br/>
+      <p class="text-justify">
+        Another way to start a Yaws instance is to embed it inside another
+        Erlang application. See <a href="%%webroot%%/howtos.yaws#howto_embedded">here</a> for
+        details.
+      </p>
+
+      <h2 id="first_script">Your first (not so naive) Yaws script</h2>
+      <hr>
+      <p class="text-justify">
+        One of the powerful feature of Yaws is the ability to generate dynamic
+        content on the fly by executing embedded Erlang code in HTML pages. So
+        with this feature, Erlang become a server-side scripting language as PHP
+        but with all the power of Erlang/OTP.
+      </p>
+      <br/>
+      <p class="text-justify">
+        Yaws scripts are HTML pages that contains embedded Erlang code enclosed
+        in <code>&lt;erl&gt;</code> and <code>&lt;/erl&gt;</code> special tags.
+        This code is compiled and executed on the server. The result is then
+        sent to the client. Yaws scripts must have a <code>.yaws</code>
+        extension. Here is a very simple example:
+      </p>
+      <verbatim class="code html">
+  <!DOCTYPE HTML>
+  <html>
+    <head>
+      <title>Example</title>
+    </head>
+    <body>
+      <erl>
+        out(Arg) ->
+            {html, "Hi, I'm a Yaws script!"}.
+      </erl>
+    </body>
+  </html>
+      </verbatim>
+      <br/>
+      <p class="text-justify">
+        For all details about Yaws scripts, see the
+        <a href="%%webroot%%/howtos.yaws#howto_dynamic">Dynamic Content</a> and
+        <a href="%%webroot%%/howtos.yaws#howto_bindings">Bindings</a> articles. Here we
+        just try to write a Yaws script to have a quick preview. It will be an
+        "advanced" example, so jump to howtos to have explaination when needed.
+      </p>
+      <br/>
+      <p class="text-justify">
+        In our example, we will write a script that counting the number of
+        visits on pages since the Yaws startup. This script will be able to be
+        used to get or update counters, for the current page or a specific one
+        passed in the query-string. Idea is to include this script in other Yaws
+        scripts to count visits.
+      </p>
+      <br/>
+      <p class="text-justify">
+        The counters will be stored in an ETS table, so the script must check if
+        the table exists and create it if necessary. Then it must increment
+        appropriate counters. Of course, we need to care about the concurrency
+        because many requests can be processed in same time.
+      </p>
+      <p class="text-justify">
+        Here is the script:
+      </p>
+      <erl>
+        out(A) ->
+            {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/visit_counter.yaws"]),
+            [{ssi, "includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/visit_counter.yaws"},
+                                              {"lang", "erlang"},
+                                              {"code", yaws_api:htmlize(L)}]}].
+      </erl>
+      <br/>
+      <p class="text-justify">
+        This script has no output, it should be included in other Yaws
+        script. It is composed of one Erlang block that updates the counter of a
+        web page, by the default the one which includes the script. This can be
+        done using <code>yssi</code> directive in <code>out/1</code> result:
+      </p>
+      <verbatim class="code erlang">
+  <erl>
+    %% Just update counters for the current page
+    out(A) ->
+        {yssi, "examples/visit_counter.yaws"}.
+  </erl>
+      </verbatim>
+      <br/>
+      <p class="text-justify">
+        Each Erlang block in a Yaws script is translated to a specific Erlang
+        module with, by default, an automatically generated name. In our
+        example, you may have noticed the <code>module</code> attribute in the
+        <code>&lt;erl&gt;</code> tag. This is a way to specify a module name for
+        the corresponding Erlang block. So, it is possible to do calls to this
+        module from other Erlang blocks or other Yaws scripts. Here, this is
+        used to retrieve all counters or the counter for a page by calling,
+        respectivaly, <code>visit_counter:get_counters/0</code> and
+        <code>visit_counter:get_counter/1</code>. For example:
+      </p>
+      <erl>
+        out(A) ->
+            {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/pages_statistics.yaws"]),
+            [{ssi, "includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/pages_statistics.yaws"},
+                                              {"lang", "html"},
+                                              {"code", yaws_api:htmlize(L)}]}].
+      </erl>
+      <br/>
+      <p class="text-justify">
+        The above script can be executed
+        <a class="btn-link"
+           onclick="load_modal('Pages statistics', '%%webroot%%/examples/pages_statistics.yaws');"
+           data-toggle="modal" data-target="#yawsModal">here</a>.
+      </p>
+      <br/>
+      <p class="text-justify">
+        As you have just seen, Yaws scripting is a powerful feature pretty easy
+        to use.
+      </p>
+      <h2 id="first_appmod">Your first appmod</h2>
+      <hr>
+      <p class="text-justify">
+        Yaws scripting is mainly designed to produce HTML outputs. Yaws scripts
+        are not plain Erlang modules and to an URL pointing to a Yaws script
+        matches a real file on your disk. Some times you might want to take the
+        control over the URLs. Or you might also want to integrate one of your
+        applications into Yaws. In these cases, you should use an
+        <a href="%%webroot%%/howtos.yaws#howto_appmods">Appmod</a>.
+      </p>
+      <br/>
+      <p class="text-justify">
+        Unlike Yaws script, an appmod is an Erlang module. So it must be
+        compiled, there is no <i>on-the-fly</i> compilation. And to be used, it
+        must be explicitly bound to a path in a server section with this kind of
+        configuration:
+      </p>
+      <verbatim class="code apache">
+  <server ...>
+    ...
+    appmods = <path1, appmod1> <path2, appmod2> ...
+    ...
+  </server>
+      </verbatim>
+      <br/>
+      <p class="text-justify">
+        When a Yaws script is requested, a physical file must be found in one of
+        the configured document root, at the right place. With appmods, you just
+        need to have it in the Erlang search path. So it is easy to integrate
+        external Erlang/OTP application in Yaws. To be called, an appmod must
+        export <code>out/1</code> function, taking a <code>#arg{}</code> as
+        argument. See
+        <a href="%%webroot%%/howtos.yaws#howto_dynamic">Dynamic Content</a> for
+        details about return values of <code>out/1</code> function. Here is a
+        very simple appmod example:
+      </p>
+      <verbatim class="code erlang">
+  -module(simple_appmod).
+
+  -include_lib("yaws/include/yaws_api.hrl").
+  -compile([out/1]).
+
+  out(A) ->
+      {html, io_lib:format("Hi, I'm the Yaws appmod '~p'!", [?MODULE])}.
+      </verbatim>
+      <br/>
+      <p class="text-justify">
+        There are many way to configure an appmod. Here, as an example, we will
+        <i>proxify</i> all the Yaws website to provide some statistics about
+        file types served. The appmod is name <code>myproxyapp</code> and it
+        is bound on the <code>/myproxyapp</code>. all URLs starting with this
+        prefix will be handled by this appmod. Then, inside the appmod, we will
+        retrieve the path suffix (same as the <code>PATH_INFO</code> variable
+        for a CGI script). We will extract the file extension from it to update
+        statistics before internally redirecting the processing to the
+        requested ressource.
+      </p>
+      <p class="text-justify">
+        Here is the appmod:
+      </p>
+      <erl>
+        out(A) ->
+            {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/myproxyapp.erl"]),
+            [{ssi, "includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/myproxyapp.erl"},
+                                              {"lang", "erlang"},
+                                              {"code", yaws_api:htmlize(L)}]}].
+      </erl>
+      <br/>
+      <p class="text-justify">
+        You can now experienced it by browsing the Yaws website, prefixing all
+        URLs with <code>/myproxyapp</code> or you can click
+        <a href="/myproxyapp" target="_blank">here</a>. Then, you can take a
+        look on the collected statistics by <code>myproxyapp</code>
+        <a class="btn-link"
+           onclick="load_modal('Files statistics', '%%webroot%%/examples/files_statistics.yaws');"
+           data-toggle="modal" data-target="#yawsModal">here</a>.
+      </p>
+    </div>
+  </div>
+</div>
+
+<erl>
+out(A) -> [{ssi, "includes/footer.inc","%%",[]}, {yssi, "examples/visit_counter.yaws"}].
+</erl>

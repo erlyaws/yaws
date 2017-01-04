@@ -74,6 +74,25 @@ yaws_init_script:
 	  YAWSDIR='$(ERLANG_INSTALL_LIB_DIR_yaws)'	\
 	    ./regular-install)
 
+changelog:
+	$(AM_V_GEN)
+	$(AM_V_at)DATE="$(shell date +%Y-%m-%d)";	\
+	  TAG="yaws-@YAWS_VSN@";			\
+	  FILE="$${DATE}-$${TAG}.inc";			\
+	  (cd @srcdir@ &&				\
+	    ./gitlog-to-changelog $${TAG}  > @top_srcdir@/www/changelogs/$${FILE})
+
+news:
+	$(AM_V_GEN)
+	$(AM_V_at)DATE="$(shell date +%Y-%m-%d-%H%M%S)";\
+	  TAG="yaws-@YAWS_VSN@";			\
+	  FILE="$${DATE}-$${TAG}.inc";			\
+	  (cd @srcdir@ &&				\
+	    ./gen-release-news $${TAG}  > @top_srcdir@/www/news/$${FILE})
+
+gh-contributors:
+	$(AM_V_GEN)
+	$(AM_V_at)git log --format='%aN' | sort -u >@top_srcdir@/www/$@.txt
 endif
 
 # Local Variables:

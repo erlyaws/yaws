@@ -1,0 +1,83 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  Yaws supports plain CGI just fine. The two most common ways to run yaws cgi
+  script is either as regular cgi scripts or as php scripts through the typical
+  <code>php-cgi</code> binary. Yaws chooses how to ship a file based on file
+  extension. Let's start with the php-cgi example. PHP files have the extension
+  <code>.php</code> and if we enable php by indicating it in <code>yaws.conf</code>:
+</p>
+<verbatim class="code apache">
+  <server www.hyber.org>
+      port = 80
+      listen = 0.0.0.0
+      allowed_scripts = php yaws cgi
+      php_handler = <cgi, "/usr/bin/php-cgi">
+      ....
+  </server>
+</verbatim>
+<br/>
+<p class="text-justify">
+  Yaws will invoke the <code>php-cgi</code> binary and talk the CGI protocol to
+  the binary. It is also possible to call a
+  <a href="https://en.wikipedia.org/wiki/FastCGI">FastCGI</a> server:
+</p>
+<verbatim class="code apache">
+  <server www.hyber.org>
+      port = 80
+      listen = 0.0.0.0
+      allowed_scripts = php yaws cgi
+      php_handler = <fcgi, 127.0.0.1:54321>
+      ....
+  </server>
+</verbatim>
+<br/>
+<p class="text-justify">
+  Another common situation is that we write our CGI scripts in e.g. python and
+  use python libraries to speak the CGI protocol. The easiest way forward here
+  is to rename the python scripts with the extension <code>.cgi</code>. For
+  example, the following python file called<code>foo.cgi</code>:
+</p>
+<verbatim class="code">
+#!/usr/bin/python
+
+import cgi
+
+print "Content-type: text/html\n\n"
+print "<h1>hi there </h1>"
+</verbatim>
+<br/>
+<p class="text-justify">
+  Since the file ends with the magic suffix <code>.cgi</code>, Yaws will just
+  invoke the file as an executable and speak CGI to it. Thus for this scheme to
+  work we must also make the file executable.
+</p>
+<br/>
+<p class="text-justify">
+  Yet another common scenario is when have a set of CGI files not ending with
+  the <code>.cgi</code> file extension. We can put all the CGI files in a common
+  directory and define an appmod as follows:
+</p>
+<verbatim class="code erlang">
+out(Arg) ->
+    yaws_cgi:call_cgi(Arg,  lists:flatten(Arg#arg.fullpath)).
+</verbatim>
+<br/>
+<p class="text-justify">
+  and then configure the appmod appropriately in <code>yaws.conf</code>. The default
+  configuration file contains an entry:
+</p>
+<verbatim class="code apache">
+  appmods = <cgi-bin, yaws_appmod_cgi>
+</verbatim>
+<br/>
+<p class="text-justify">
+  Thus if we put put any executable files in the <code>cgi-bin</code> directory
+   under the docroot, Yaws will speak CGI to those executables.
+</p>

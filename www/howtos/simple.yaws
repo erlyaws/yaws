@@ -1,0 +1,112 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<h2>Hello world</h2>
+<p class="text-justify">
+  The absolutely most simple example is a HTML file which doesn't contain any
+  embedded Erlang code at all.
+</p>
+<p class="text-justify">
+  The
+  <a class="btn-link"
+     onclick="load_modal('Simple example n°1', '%%webroot%%/examples/simple_ex1.yaws');"
+     data-toggle="modal" data-target="#yawsModal">first example</a>
+  contains the following HTML code:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/simple_ex1.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT")++"/examples/simple_ex1.yaws"},
+                                           {"lang", "html"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  Since the file has the suffix <code>.yaws</code>, the file will be processed
+  by the Yaws dynamic compiler, but since no embeddded erlang code is found,
+  the data from the file will be delivered untouched.
+</p>
+
+<h2> Hello world again </h2>
+<p class="text-justify">
+  Now, let's see the
+  <a class="btn-link"
+     onclick="load_modal('Simple example n°2', '%%webroot%%/examples/simple_ex2.yaws');"
+     data-toggle="modal" data-target="#yawsModal">second example</a>
+  which contains a dynamic part:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/simple_ex2.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT")++"/examples/simple_ex2.yaws"},
+                                           {"lang", "html"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  This file has one very simple Erlang function which just returns a tuple
+  <code>{ok, String}</code>. The <code>String</code> will be substituted
+  into the delivered HTML data instead of the Erlang code.
+</p>
+
+<h2>And yet again</h2>
+<p class="text-justify">
+  Previous example returns HTML embedded as a string. A tighter coupling to
+  Erlang is provided by a construct known as EHTML. As in
+  <a class="btn-link"
+     onclick="load_modal('Simple example n°3', '%%webroot%%/examples/simple_ex3.yaws');"
+     data-toggle="modal" data-target="#yawsModal">third example</a>
+  as EHTML:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/simple_ex3.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT")++"/examples/simple_ex3.yaws"},
+                                           {"lang", "html"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<h2>Print the <code>#arg{}</code> record</h2>
+<p class="text-justify">
+  When writing Yaws code, all classic erlang libraries are available,
+  however, the module <code>yaws_api</code> which is included in the load path
+  for Yaws modules contains a number of usefule functions, here is a small
+  example in
+  <a class="btn-link"
+     onclick="load_modal('Simple example n°4', '%%webroot%%/examples/simple_ex4.yaws');"
+     data-toggle="modal" data-target="#yawsModal">forth example</a>:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/simple_ex4.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT")++"/examples/simple_ex4.yaws"},
+                                           {"lang", "html"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  The above code illustrates two points:
+  <ul>
+    <li>
+      <p class="text-justify">
+        The function <code>f/1</code> which is available in the
+        <code>yaws_api</code> module. It's just a shortcut convenience to
+        <code>io_lib:format/2</code>. The <code>yaws_api</code> module contains
+        many convenience functiond for Yaws coders.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        The second point is a printout of the <code>#arg{}</code> record which
+        is passed to the<code>out/1</code> function. If you take the time to
+        work with Yaws, the Arg passed to the<code>out/1</code> functions will
+        become very familiar. It is the main mechanism which is used to pass
+        data from the webserver to the application.</p>
+    </li>
+  </ul>
+</p>

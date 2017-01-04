@@ -1,0 +1,74 @@
+<erl>
+out(A) -> [{yssi, "includes/config.yaws"}, {ssi, "includes/header.inc","%%",[]}].
+</erl>
+
+<erl>
+out(A) -> [{ssi, "includes/page_title.inc","%%",[{"title", "Overview"}]}].
+</erl>
+
+
+<div class="container">
+  <div class="row">
+
+    <div id="leftnav" class="col-xs-3">
+      <ul class="nav">
+        <li><a id="overview" class="hide">Overview</a></li>
+        <li><a id="simple" href="#howto_simple">Simple "Hello world" examples</a></li>
+        <li><a id="arg" href="#howto_arg">The <code>#arg{}</code> record</a></li>
+        <li><a id="query-string" href="#howto_query-string">Query Part of URL</a></li>
+        <li><a id="dynamic" href="#howto_dynamic">Dynamic Content</a></li>
+        <li><a id="bindings" href="#howto_bindings">Bindings</a></li>
+        <li><a id="forms" href="#howto_forms">Forms</a></li>
+        <li><a id="ssi" href="#howto_ssi">Server Side Includes</a></li>
+        <li><a id="upload" href="#howto_upload">File Upload</a></li>
+        <li><a id="sessions" href="#howto_sessions">Cookie Sessions</a></li>
+        <li><a id="cookies" href="#howto_cookies">Cookies</a></li>
+        <li><a id="pcookies" href="#howto_pcookies">Persistent Cookies</a></li>
+        <li><a id="appmods" href="#howto_appmods">Appmods</a></li>
+        <li><a id="streaming" href="#howto_streaming">Streaming Data</a></li>
+        <li><a id="json-rpc" href="#howto_json-rpc">Ajax/JSON RPC</a></li>
+        <li><a id="haxe" href="#howto_haxe">haXe Remoting</a></li>
+        <li><a id="cgi" href="#howto_cgi">CGI</a></li>
+        <li><a id="soap" href="#howto_soap">SOAP with Yaws</a></li>
+        <li><a id="websockets" href="#howto_websockets">Web Sockets</a></li>
+        <li><a id="sse" href="#howto_sse">Server-Sent Events</a></li>
+        <li><a id="yaws-logger" href="#howto_yaws-logger">Write Your Own Logger</a></li>
+        <li><a id="shopping-cart" href="#howto_shopping-cart">Tiny Shopping Cart</a></li>
+        <li><a id="yapps" href="#howto_yapps">Yaws Applications (yapps)</a></li>
+        <li><a id="redirects" href="#howto_redirects">Redirect</a></li>
+        <li><a id="embedded" href="#howto_embedded">Embedding Yaws</a></li>
+        <li><a id="privbind" href="#howto_privbind">Binding to Privileged Ports</a></li>
+        <li><a id="rebar-release" href="#howto_rebar-release">Rebar Releases</a></li>
+      </ul>
+    </div>
+
+    <div id="yaws-howtos" class="col-xs-9"></div>
+
+  </div>
+</div>
+
+<erl>
+out(A) -> [{ssi, "includes/footer.inc","%%",[]}, {yssi, "examples/visit_counter.yaws"}].
+</erl>
+
+<script>
+ function showHowto(Howto) {
+   $('#page-title').html($('#'+Howto).html());
+   $('#yaws-howtos').load('%%webroot%%/howtos/'+Howto+'.yaws', function() {
+     $(document).scrollTop(0);
+     $('pre.code').each(function(i, block) {
+       hljs.highlightBlock(block);
+     });
+   });
+ }
+
+ $(window).on('hashchange', function(e) {
+   var hash = 'overview';
+   if (location.hash) {
+     hash = location.hash.replace(/^#howto_/, '');
+   }
+   showHowto(hash);
+ });
+
+ $(window).trigger('hashchange');
+</script>

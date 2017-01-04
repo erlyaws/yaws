@@ -1,0 +1,8 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<erl>
+out(_Arg) ->
+    {redirect_local, get("WEBROOT") ++ "/examples/redirect1.yaws"}.
+</erl>

@@ -1,0 +1,186 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  Sometimes we want to stream data to the client. Maybe we don't know or cannot
+  compute the size of the data. Maybe data are too big to be sent in one
+  time. Regardless of the reason, we do not want to keep all data in memory
+  until it's shipped to the client.
+</p>
+<p class="text-justify">
+  To stream data, the first step is to inform Yaws that data will be
+  streamed. This is done by returning one of these values from
+  <code>out/1</code> function:
+  <ul>
+    <li>
+      <p class="text-justify">
+        <code>{streamcontent, MimeType, FirstChunk}</code> to send data to client
+        using chunked transfer encoding. This is useful when data length cannot be
+        dertermined when the first chunk is sent.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>{streamcontent_with_size, Size, MimeType, FirstChunk}</code> to send
+        data to client by setting the content length.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>{streamcontent_with_timeout, MimeType, FirstChunk, Timeout}</code>.
+        Same as the first one, but by setting an explicit timeout. Else, by
+        default, Yaws will wait 30 seconds between each chunk before timing out.
+      </p>
+    </li>
+  </ul>
+</p>
+<br/>
+<p class="text-justify">
+  The Yaws process that handles the request will wait data in a receive
+  loop. Somehow, another process in the Erlang system must then deliver data to
+  it. There are three API functions that should be used to deliver that data:
+  <ul>
+    <li>
+      <p class="text-justify">
+        <code>yaws_api:stream_chunk_deliver(YawsPid, Data)</code> to deliver
+        chunks of data asynchronously. Yaws will take care to create the chunk
+        envelope if data must be chunked encoded.</p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>yaws_api:stream_chunk_deliver_blocking(YawsPid, Data)</code> to
+        deliver chunks in a blocking fashion. Whenever the producer of the
+        stream is faster than the consumer, i.e. client, it is preferable to use
+        synchronous calls.</p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>yaws_api:stream_chunk_end(YawsPid)</code> to inform Yaws to finish
+        up the HTTP transaction.
+      </p>
+    </li>
+    </li>
+  </ul>
+  The <code>YawsPid</code> argument is the Yaws process that handles the request.
+</p>
+<br/>
+<p class="text-justify">
+  Maybe an example will help clear things up:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/urandom.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/urandom.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  The above code can be executed
+  <a class="btn-link"
+     onclick="load_modal('Urandom', '%%webroot%%/examples/urandom.yaws');"
+     data-toggle="modal" data-target="#yawsModal">here</a>. The code creates a
+  process which reads a random amount of bytes from <code>/dev/urandom</code>,
+  encodes them into base64 and sends the result to the client, piece by piece.
+</p>
+<br/>
+<p class="text-justify">
+  Sometime, applications need to send data directly to the client, taking the
+  control of the socket. This approach can be useful for applications that
+  employ long-polling (Comet) techniques, for example. Such applications should
+  first return <code>{streamcontent_from_pid, MimeType, Pid}</code> from their
+  <code>out/1</code> function, where the <code>Pid</code> argument is the pid of
+  the application process that will send the data.
+</p>
+<p class="text-justify">
+  When ready, Yaws will send back an acknowledgement to <code>Pid</code>. It
+  can be one of the following messages to it:
+  <ul>
+    <li>
+      <p class="text-justify">
+        <code>{ok, YawsPid}</code> to indicate to <code>Pid</code> that it can
+        send data over the socket, which is available as
+        <code>Arg#arg.clisock</code>. <code>YawsPid</code> will be used later to
+        tell Yaws that <code>Pid</code> has finished streaming.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>{discard, YawsPid}</code> to indicate to <code>Pid</code> that it
+        should avoid sending data to the socket. This is needed when the client
+        invokes an HTTP request such as HEAD that has no response body.
+      </p>
+    </li>
+  </ul>
+</p>
+<br/>
+<p class="text-justify">
+  Application should use following API functions to send data over the socket:
+  <ul>
+    <li>
+      <p class="text-justify">
+        <code>yaws_api:stream_process_deliver(Socket, IoList)</code> to deliver
+        data directly to the client, without any processing.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>yaws_api:stream_process_deliver_chunk(Socket, IoList)</code> to
+        deliver data using HTTP chunked transfer format. <code>IoList</code>
+        must have a size greater than zero.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>yaws_api:stream_process_deliver_final_chunk(Socket, IoList)</code>
+        to deliver the final chunk. <code>IoList</code> may be empty, but if its
+        size is greater than zero, that data will be sent as a separate chunk
+        before the final chunk.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>yaws_api:stream_process_end(Socket, YawsPid)</code> to inform Yaws
+        to finish up the HTTP transaction. Yaws expects <code>Socket</code> to
+        be open. If the application closes it, then it should use
+        <code>yaws_api:stream_process_end(closed, YawsPid)</code> instead.
+      </p>
+    </li>
+  </ul>
+</p>
+<p class="text-justify">
+  Applications using<code>streamcontent_from_pid</code> should be sure to set a
+  <code>Content-Length</code> header in their <code>out/1</code> return value if
+  they want to avoid chunked transfer encoding for their return value. Yaws
+  automatically sets the HTTP <code>Transfer-Encoding</code> header to
+  <code>chunked</code> if it doesn't detect a <code>Content-Length</code> header.
+  Another alternative is to return the
+  <code>{header, {transfer_encoding, erase}}</code> header from <code>out/1</code> in
+  order to disable chunked encoding.
+</p>
+<br/>
+<p class="text-justify">
+  Here's an example:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/urandom_from_pid.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/urandom_from_pid.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  The above code can be executed
+  <a class="btn-link"
+     onclick="load_modal('Urandom from PID', '%%webroot%%/examples/urandom_from_pid.yaws');"
+     data-toggle="modal" data-target="#yawsModal">here</a>.
+  The code creates a process which reads a random amount of bytes from
+  <code>/dev/urandom</code>, encodes them into base64 and sends the result to
+  the client via the socket.
+</p>

@@ -1,0 +1,47 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<erl>
+out(A) ->
+    H = A#arg.headers,
+    C = H#headers.cookie,
+    L = case yaws_api:find_cookie_val("foobar", C) of
+            [] ->
+                f("<p class=\"text-justify\">No cookie set from the browser.</p>~n", []);
+            PidStr ->
+                Pid = list_to_pid(PidStr),
+                Pid ! {self(), tick},
+                receive
+                    {Pid, VisitList} ->
+                        f("<p class=\"text-justify\">Yes, I read your cookie. "
+                          "You have vistited this page ~w times. They were~n"
+                          "<ol>~n~s~n</ol>~n"
+                          "Reloading this page will show the session state.</p>",
+                          [length(VisitList),
+                           lists:map(fun(D) -> f("<li> ~p~n", [D])  end,
+                                     VisitList)])
+                after 500 ->
+                        f("<p class=\"text-justify\">You had a cookie, "
+                          "but the pid handling your sess timed out...</p>", [])
+                end
+        end,
+    {html, L}.
+</erl>
+
+<p class="text-justify">
+  The code to read the cookie, is simple, we get the cookie passed to the yaws
+  code in the <code>#arg{}</code> structure which is the argument supplied to
+  the <code>out/1</code> function.
+</p>
+<p class="text-justify">
+  We use the <code>yaws_api:find_cookie_val/2</code> function to parse the raw
+  cookie string passed to us from the browser. The code is:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/readcookie.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/readcookie.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>

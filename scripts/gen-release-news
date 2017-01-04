@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# The list of blacklisted tags
+blacklisted_tags=(
+    yaws-erlang-18
+);
+
+# Get current tag name: Use $1 if defined else the last one
+curtag=$(git describe --abbrev=0 --tags ${1:-HEAD^} 2>/dev/null)
+if [[ $? != 0 ]]; then
+    echo "Tag ${curtag} not found"
+    exit -1
+elif [[ "${blacklisted_tags[@]}" =~ "${curtag}" ]]; then
+    echo "Tag ${curtag} is blacklisted"
+    exit -1
+fi
+
+# Get the tag name preceding the current one. If not defined, because the
+# current one is the first tag, we get the first commit hash
+prevtag=${curtag}
+while [[ ${prevtag} = ${curtag} || "${blacklisted_tags[@]}" =~ "${prevtag}" ]]; do
+    prevtag=$(git describe --abbrev=0 --tags ${prevtag}^ 2>/dev/null)
+    if test $? -ne 0; then
+        prevtag=$(git rev-list --max-parents=0 HEAD 2>/dev/null)
+        if [[ $? != 0 ]]; then
+            echo "Previous tag of ${curtag} not found"
+            exit -1
+        fi
+        break
+    fi
+done
+
+vsn=${curtag/yaws-/}
+title="Yaws ${vsn}"
+newsdate=$(git show ${curtag}^{commit} -s --format="%ad" --date=format:'%B %d, %Y')
+author="Yaws team"
+
+cat <<EOF
+<h3>${title}</h3>
+<h4><small>${newsdate}</small></h4>
+<p>Yaws ${vsn} has been released! Many thanks to following contributors for their work:</p>
+<ul>
+EOF
+
+IFS_save=$IFS
+IFS=$'\n'
+for line in $(git shortlog -s  -n ${prevtag}..${curtag}); do
+    commit=$(echo $line | tr -s ' ' | cut  -f1)
+    name=$(echo $line | tr -s ' ' | cut  -f2)
+    if test $commit > 1; then
+        plural="s"
+    fi
+    cat <<EOF
+  <ol>${name} <small class="text-muted">${commit} commit${plural}</small></ol>
+EOF
+done
+IFS=$IFS_save
+
+cat <<EOF
+</ul>
+<p>
+  You can find more information or download it from
+  <a href="%%webroot%%/downloads.yaws?vsn=${vsn}">the downloads page</a>
+</p>
+<p class="text-right text-muted">-- ${author}</p>
+<hr/>
+EOF

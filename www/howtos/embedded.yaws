@@ -1,0 +1,380 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  Yaws is ideal for embedding within another larger erlang application. Many
+  typical erlang applications are control applications in need of a webgui
+  specific to the actual application.
+</p>
+<br/>
+<p class="text-justify">
+  In order to run Yaws inside another application, we need to perform the
+  following steps.
+  <ul>
+    <li>
+      <p class="text-justify">
+        Either integrate Yaws into the build system of the larger application,
+        or specifically provide the<code>ebin</code> path to Yaws
+        for the larger application.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        Provide the application environment<code>{embedded, true}</code> to Yaws.
+      </p>
+    </li>
+  </ul>
+</p>
+<br/>
+<p class="text-justify">
+  Since the containing application typically has its configuration data fed from
+  internal databases or other sources, it's usually not feasible to let Yaws
+  read its configuration data from <code>/etc/yaws/yaws.conf</code> when it's
+  running in embedded mode.
+</p>
+<br/>
+<p class="text-justify">
+  To solve this, when Yaws is started in embedded mode, it doesn't read its
+  configuration from <code>/etc/yaws/yaws.conf</code>, but rather it
+  expects the larger application to feed its configuration through the
+  function call <code>yaws_api:setconf(GC, Groups)</code>. The two
+  arguments to this function are:
+  <ul>
+    <li><code>GC</code>, which is a <code>#gconf{}</code> record</li>
+    <li><code>Groups</code>, which is a list of lists of <code>#sconf</code> records</li>
+  </ul>
+</p>
+<br/>
+<p class="text-justify">
+  The details of these records are unimportant, and we'll talk more about the
+  <code>yaws_api:setconf</code> function later. First, let's discuss two ways
+  applications can start Yaws in embedded mode.
+</p>
+
+<h2>Starting under your own supervisor</h2>
+<p class="text-justify">
+  When not embedded, Yaws starts and runs as a regular application, but
+  typically an application embedding Yaws wants to control it under its own
+  supervisor(s). This means that an embedding application requires access to the
+  Yaws supervisor child specifications. The exact list of Yaws child
+  specifications depends on how the application intends to configure Yaws.
+</p>
+<br/>
+<p class="text-justify">
+  The <code>yaws_api:embedded_start_conf/1,2,3,4</code> functions return the
+  information an application needs to configure Yaws and start it under
+  application supervisors. There are four variants of this function:
+  <ul>
+    <li>
+      <p class="text-justify">
+        <code>yaws_api:embedded_start_conf/1</code> takes a single argument,
+        which is the document root path for the web server. This variant uses
+        default values for the <code>#gconf{}</code> and <code>#sconf{}</code>
+        records.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>yaws_api:embedded_start_conf/2</code> takes a document root, same
+        as the first variant above, and also a server configuration list. Such a
+        list is either a list of properties for a single web server, or a list
+        of property lists for multiple servers. We'll explain more about server
+        configuration lists later, but for now note that they're used to create
+        suitable <code>#sconf{}</code> record values. This variant uses a default
+        value of the <code>#gconf{}</code> record.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>yaws_api:embedded_start_conf/3</code> takes a document root and a
+        server configuration list, same as the second variant above, and also a
+        global configuration list. Such a list is a property list that provides
+        global configuration settings for the embedded Yaws instance, and is
+        used to create a suitable <code>#gconf{}</code> record value. We'll
+        explain more about global configuration lists later.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>yaws_api:embedded_start_conf/4</code>, the final variant, takes
+        the same 3 arguments as the previous variant and also takes a string to
+        identify the embedded Yaws instance.
+      </p>
+    </li>
+  </ul>
+</p>
+<br/>
+<p class="text-justify">
+  The values returned from these functions are described later.
+</p>
+
+<h3>Global configuration list</h3>
+<p class="text-justify">
+  A global configuration list is a property list that provides global
+  configuration settings for an embedded Yaws instance. Each property is a tuple
+  consisting of property name and value. Allowed property names are those of the
+  field names of the <code>#gconf{}</code> record type; see <code>yaws.hrl</code> for
+  more details. An example global configuration list is shown below:
+</p>
+<verbatim class="code erlang">
+  [{logdir, "/var/log/my_server"},
+   {ebin_dir, ["/example1/ebin", "/example2/ebin"]},
+   {id, "my_server"}].
+</verbatim>
+
+<h3>Server configuration list</h3>
+<p class="text-justify">
+  A server configuration list is a property list that provides configuration
+  settings for a given web server instance. Because Yaws supports multiple
+  servers simultaneously listening for requests, it's possible to supply a list
+  of server configuration lists so that multiple servers can be configured in a
+  single <code>yaws_api:setconf</code> function call. Each element in a server
+  configuration list is a tuple consisting of property name and value. Allowed
+  property names are those of the field names of the <code>#sconf{}</code> record
+  type; see <code>yaws.hrl</code> for more details. An example server
+  configuration list is shown below:
+</p>
+<verbatim class="code erlang">
+  [{docroot, "/var/yaws/www"},
+   {port, 8080},
+   {listen, {127,0,0,1}},
+   {appmods, [{"/", my_appmod}]}].
+</verbatim>
+<br/>
+<p class="text-justify">
+  You can often determine the correct embedded server configuration by first
+  creating a <code>yaws.conf</code> file specifying the desired configuration,
+  running a stand-alone Yaws using it, and then dumping the server's
+  configuration by executing the command <code>yaws --running-config</code>.
+  Still, some elements of the embedded server configuration list are
+  non-obvious. For example, to enable basic auth, you need to specify an
+  <code>auth</code> proplist for each target directory. For example, to enable
+  basic auth on <code>"/"</code>:
+</p>
+<verbatim class="code erlang">
+  Docroot = "/var/yaws/www",
+  Realm = "testrealm",
+  SConfList = [{docroot, Docroot},
+               {port, 8080},
+               {listen, {0,0,0,0}},
+               {auth, [{docroot, Docroot},
+                       {dir, "/"},
+                       {realm, Realm},
+                       {type, "Basic"},
+                       {headers, ["WWW-Authenticate: Basic realm=\"",Realm,"\"\r\n"]},
+               {users, [{"foo","bar"}]}]}],
+</verbatim>
+<br/>
+<p class="text-justify">
+  If you want to enable auth on multiple directories, specify a
+  <code>{auth, AuthProplist}</code> element for each one.
+</p>
+<br/>
+<p class="text-justify">
+  Other elements, such as <code>dir_listings</code>, <code>access_log</code>,
+  and <code>deflate</code>, are also non-obvious for embedded configuration
+  because they're specified as part of the <code>#sconf.flags</code> element. You
+  can find the server configuration flags, along with preprocessor macros for
+  setting them on an <code>#sconf{}</code> record, in the <code>yaws.hrl</code>
+  include file.
+</p>
+
+<h3>Using embedded_start_conf</h3>
+<p class="text-justify">
+  The <code>yaws_api:embedded_start_conf/1,2,3,4</code> functions return
+  <code>{ok, SCList, GC, ChildSpecs}</code>. The latter three elements of this
+  tuple are described below.
+  <ul>
+    <li>
+      <p class="text-justify">
+        <code>SCList</code> is a list of <code>#sconf{}</code> records created
+        using the values from the passed-in server configuration lists
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>GC</code> is a <code>#gconf{}</code> record created using the
+        values from the passed-in global configuration list
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        <code>ChildSpecs</code> is a list of supervisor child specifications for
+        the components of Yaws the application wants to start
+      </p>
+    </li>
+  </ul>
+</p>
+<br/>
+<p class="text-justify">
+  Below is an example of using the <code>yaws_api:embedded_start_conf/1,2,3,4</code>
+  functions. It follows the steps of obtaining the embedded configuration and
+  child specifications, starting the Yaws children under its own supervisor, and
+  then setting the Yaws configuration.
+</p>
+<verbatim class="code erlagn">
+  Id = "my_server",
+  GconfList = [{logdir, "/var/log/my_server"},
+               {ebin_dir, ["/example1/ebin", "/example2/ebin"]},
+               {id, Id}],
+  Docroot = "/var/yaws/www",
+  SconfList = [{docroot, Docroot},
+               {port, 8080},
+               {listen, {127,0,0,1}},
+               {appmods, [{"/", my_appmod}]}],
+  {ok, SCList, GC, ChildSpecs} = yaws_api:embedded_start_conf(Docroot, SconfList,
+                                                              GconfList, Id),
+
+  %% assume our supervisor is registered as my_sup
+  [supervisor:start_child(my_sup, Ch) || Ch <- ChildSpecs],
+
+  %% now configure Yaws
+  yaws_api:setconf(GC, SCList),
+</verbatim>
+
+<h2>Starting yaws as an embedded application</h2>
+<p class="text-justify">
+  The four functions <code>yaws:start_embedded/1,2,3,4</code> start Yaws in
+  embedded mode using <code>application:start</code>. This approach differs from
+  the one above in that the embedding application need not start any Yaws
+  components under its own supervisors, nor does it need to explicitly call
+  <code>yaws:setconf</code> to set the Yaws configuration. This approach is
+  slightly simpler but also gives the embedding application less control over
+  Yaws.
+</p>
+<br/>
+<p class="text-justify">
+  The arguments for these four functions are identical to those for the
+  <code>yaws_api:embedded_start_conf/1,2,3,4</code> functions described earlier.
+</p>
+<br/>
+<p class="text-justify">See the example below:</p>
+<verbatim class="code erlang-repl">
+  %%
+  %% Check with inet:i(). that you are listening to port 8000!
+  %%
+  1> yaws:start_embedded("/home/tobbe/docroot").
+
+  %%
+  %% Alternative ways
+  %%
+  2> yaws:start_embedded("/home/tobbe/docroot", [{servername, "sej"}, {listen, {0,0,0,0}}]).
+
+  3> yaws:start_embedded("/home/tobbe/docroot",
+                         [{servername, "sej"}, {auth_log, false}, {listen, {0,0,0,0}}],
+                         [{copy_errlog, false}]).
+</verbatim>
+<br/>
+<p class="text-justify">
+  If you need more control on how to setup Yaws in embedded mode, use the
+  <code>yaws_api:embedded_start_conf</code> functions instead.
+</p>
+
+<h2>A very small example</h2>
+<p class="text-justify">
+  We provide a minimal example that embeds Yaws in a small Erlang function.
+</p>
+<br/>
+<p class="text-justify">
+  The <code>ybed</code> module is very small and is named
+  <a class="btn-link"
+     onclick="load_modal('Code', 'code.yaws?file=%%webroot%%/examples/ybed.erl&type=erlang');"
+     data-toggle="modal" data-target="#yawsModal">ybed.erl</a>. It has an
+  accompanying simple supervisor named
+  <a class="btn-link"
+     onclick="load_modal('Code', 'code.yaws?file=%%webroot%%/examples/ybed_sup.erl&type=erlang');"
+     data-toggle="modal" data-target="#yawsModal">ybed_sup.erl</a>.
+</p>
+<br/>
+<p class="text-justify">
+  If you compile both modules, you can run them as shown below:
+</p>
+<verbatim class="code erlang-repl">
+  1> {ok, Sup} = ybed_sup:start_link().
+  {ok,<0.40.0>}
+  2>
+  =INFO REPORT==== 12-Apr-2010::02:42:09 ===
+  Yaws: Listening to 0.0.0.0:8888 for <1> virtual servers:
+  - http://foobar:8888 under /tmp
+</verbatim>
+<br/>
+<p class="text-justify">
+  The actual web server runs inside the larger application. The configuration of
+  the web server was programmatically fed into Yaws from the surrounding
+  application, in this case, the <code>ybed.erl</code> module. Note also how the
+  Yaws children are started under the same <code>ybed_sup.erl</code> supervisor
+  as the code in the <code>ybed</code> module itself. The <code>ybed</code> serves
+  only to start the Yaws children that need to be run under its supervisor,
+  after which it exits normally. For this reason, its child specification uses
+  the <code>temporary</code> restart strategy, since it need run only once in
+  the lifetime of its supervisor.
+</p>
+
+<h2>The opaque field in the sconf structure </h2>
+<p class="text-justify">
+  The <code>#sconf{}</code> record, which is constructed by the program that
+  starts and configures Yaws, contains a field, <code>SC#sconf.opaque</code>.
+</p>
+<br/>
+<p class="text-justify">
+  This field is passed into the <code>#arg{}</code> record, so that any
+  application specific configuration data which is needed by the
+  <code>.yaws</code> pages that make up the web GUI application, is easily
+  available there.
+</p>
+<br/>
+<p class="text-justify">
+  In essence, if we construct the <code>#sconf</code> as
+</p>
+<verbatim class="code erlang">
+  SC#sconf{opaque = {mystruct, foobar},
+  .....
+</verbatim>
+<br/>
+<p class="text-justify">
+  A <code>.yaws</code> web page can then do:
+</p>
+<verbatim class="code erlang">
+  out(Arg) ->
+      MyStruct = Arg#arg.opaque
+      .....
+</verbatim>
+<br/>
+<p class="text-justify">
+  thus passing data from the surrounding applications configuration routines
+  down to each <code>.yaws</code> web page.
+</p>
+<br/>
+<p class="text-justify">
+  Another important fact to consider when choosing whether to run your Yaws
+  application as an embedded yaws app or not is that all the Yaws control
+  functions are disabled when we use Yaws as an embedded web server, including
+  capabilities such as <code>yaws --ls</code> and <code> yaws --stop</code>.
+  Embedding thusassumes that you already have support for this type of
+  functionality in your application.
+</p>
+<br/>
+<p class="text-justify">
+  Finally, an interesting appmod definition that may apply to many embedded yaws
+  installations is the <code>/</code> appmod with a set of exclude dirs. Here is
+  an example server configuration list:
+</p>
+<verbatim class="code erlang">
+  [...
+   {appmods, [{"/", myapp, [["js"], ["top", "static"], ["icons"]]}]},
+   ...].
+</verbatim>
+<br/>
+<p class="text-justify">
+  or in <code>#sconf{}</code> record terms:
+</p>
+<verbatim class="code erlang">
+  SC#sconf{.....
+           appmods = {"/", myapp, [["js"], ["top", "static"], ["icons"]]},
+           ....}
+</verbatim>

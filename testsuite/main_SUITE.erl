@@ -122,7 +122,7 @@ appmod(Config) ->
     Port3 = testsuite:get_yaws_port(1, Config),
     Url1  = testsuite:make_url(http, "127.0.0.1", Port1, "/"),
     Url2  = testsuite:make_url(http, "127.0.0.1", Port2, "/"),
-    Url3  = testsuite:make_url(http, "127.0.0.1", Port2, "/icons/layout.gif"),
+    Url3  = testsuite:make_url(http, "127.0.0.1", Port2, "/images/yaws_logo.png"),
     Url4  = testsuite:make_url(http, "127.0.0.1", Port3, "/non_root_appmod"),
 
     {ok, {{_,200,_}, Hdrs1, _}} = testsuite:http_get(Url1),

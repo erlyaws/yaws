@@ -1,0 +1,119 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  The <code>yaws_rpc</code> module has a haXe remoting adapter that enables Yaws
+  to respond to respond to RPC requests from a client written in
+  <a href="http://haxe.org/">haXe</a>. haXe is a versatile open source
+  language that compiles to Flash, Javascript and NekoVM. For more information
+  on haXe, visit <a href="http://haxe.org/documentation/introduction/">haXe documentation</a>.
+</p>
+<br/>
+<p class="text-justify">
+  Implementing the server side of a haXe remoting interaction in Yaws is very
+  similar to the one described in the <a href="#howto_json-rpc">Ajax/JSON RPC</a>
+  page. Most of the action takes place behind the scenes inside the the
+  <code>yaws_rpc</code> module. The same types (array, struct, number and
+  string) work for haXe remoting as for JSON RPC. There are just a few new
+  things to keep in mind when using haXe remoting:
+  <ul>
+    <li>
+      <p class="text-justify">
+        Class objects and enums work with standard haXe remoting, but are not
+        supported in Yaws. You should therefore rely on anonymous objects and
+        signatures when designing your haXe remoting calls.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        A Yaws RPC handler can "throw an exception" by returning
+        <code>{exception, Obj}</code>, where <code>Obj</code> is any valid haXe
+        remoting value.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        haXe remoting has a few extra values, expressed by the atoms
+        <code>infinity</code>, <code>neg_infinity</code> and <code>nan</code>.
+      </p>
+    </li>
+  </ul>
+</p>
+<br/>
+<p class="text-justify">
+  Following is an example demonstrating the use of haXe remoting in yaws. The
+  first code segment is the haXe client code, which invokes the 'echo' method in
+  haxe_sample.yaws and displays the result:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/haxe_sample.html"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/haxe_sample.html"},
+                                           {"lang", "haxe"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  On the server side, we have the file haxe_sample.yaws with the following code:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/haxe_sample.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/haxe_sample.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  The two important lines on the server side are:
+  <ul>
+    <li><code>yaws_rpc:handler(A1, {haxe_sample, respond}).</code></li>
+    <li><code>respond(State, {call, echo, Value} = _Request)</code></li>
+  </ul>
+</p>
+<br/>
+<p class="text-justify">
+  The first line tells Yaws to forward all RPC calls (this includes both haXe
+  remoting and JSON RPC calls -- remember that the yaws_rpc module handles both
+  RPC mechanisms transparently) to the <code>respond</code> function in the
+  <code>haxe_sample</code> module.
+</p>
+<br/>
+<p class="text-justify">
+  The second line tells Yaws to invoke this <code>respond</code> function when
+  the client requests the method <code>echo</code>, while passing the new state
+  variable as the first argument to <code>respond</code>. You should duplicate
+  this line for every RPC method you wish to implement, replacing <code>echo</code>
+  with the method's name.
+</p>
+<br/>
+<p class="text-justify">
+  <code>yaws_rpc</code> optionally handles sessions for both JSON RPC and haXe
+  remoting. To use sessions, invoke <code>yaws_rpc:handler_session</code> as
+  shown in the JSON RPC documentation page.
+</p>
+<br/>
+<p class="text-justify">
+  If the response is in the form of <code>{exception, Obj}</code>, where
+  <code>Obj</code> is any valid haXe remoting type, then the haXe client will
+  invoke the <code>onError</code> handler, with <code>Obj</code> passed as the
+  parameter.
+</p>
+<br/>
+<p class="text-justify">
+  As with JSON RPC, both request and response values can be composed of nested
+  tuples of the form:
+  <ul>
+    <li><code>{array, [Obj,...]}</code></li>
+    <li>and/or <code>{struct, [{prop, Val}...]}</code></li>
+  </ul>
+</p>
+<br/>
+<p class="text-justify">
+  Now go have fun! :)
+</p>

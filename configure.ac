@@ -453,8 +453,6 @@ AC_CONFIG_FILES([
         examples/src/Makefile
         examples/ebin/Makefile
         examples/include/Makefile
-        www/code/Makefile
-        www/shoppingcart/Makefile
 
         testsuite/Makefile
         testsuite/${PACKAGE_NAME}.coverspec

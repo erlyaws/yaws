@@ -1,0 +1,53 @@
+<erl module="ex1">
+out(A) ->
+    L = yaws_api:parse_query(A),
+    dispatch(lkup("op", L, false), A, L).
+
+dispatch("ex1", A, L) ->
+    ex1(A, L).
+
+ex1(_A, L) ->
+    J = json2:encode(array(what(lkup("what", L, false)))),
+    return_json(J).
+
+what("one")   -> one();
+what("two")   -> one() ++ two();
+what("three") -> one() ++ two() ++ three().
+
+array(L) -> {array, L}.
+
+one()   -> obj("one").
+two()   -> obj("two").
+three() -> obj("three").
+
+obj(M) ->
+    obj(M, "r").
+
+%%%
+%%% How ::= "r" | "a"  , r=replace, a=append
+%%%
+obj(M, How) ->
+    C = now2str(),
+    [{struct,
+      [{"who", M},
+       {"how", How},
+       {"what", C ++" "++M++" content"}]}].
+
+return_json(Json) ->
+    {content,
+     "application/json; charset=iso-8859-1",
+     Json}.
+
+now2str() ->
+    {A,B,C} = erlang:now(),
+    i2l(A)++"-"++i2l(B)++"-"++i2l(C).
+
+i2l(I) when is_integer(I) -> integer_to_list(I);
+i2l(L) when is_list(L)    -> L.
+
+lkup(Key, List, Def) ->
+    case lists:keysearch(Key, 1, List) of
+        {value,{_,Value}} -> Value;
+        _                 -> Def
+    end.
+</erl>

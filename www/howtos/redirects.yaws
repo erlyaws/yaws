@@ -1,0 +1,104 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  Redirects are a powerful tool in the webapp programmer toolbox. The Webserver
+  returns a specific status code (302) and adds a <code>Location</code> header
+  to the responce headers to the Browser. The Browser then displays the new page
+  as indicated in the <code>Location</code> header.
+</p>
+<br/>
+<p class="text-justify">
+  Yaws supports a number of different forms of redirect return values from the
+  <code>out/1</code> function. For example:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/redirect1.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/redirect1.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  A click <a href="%%webroot%%/examples/redirect1.yaws" target="_blank">on this link</a> will
+  execute the above redirect code.
+</p>
+<br/>
+<p class="text-justify">
+  The code above redirects to an external URL. The HTTP RFC mandates that the
+  <code>Loction</code> header must contain complete URLs, including the the
+  method, http, https etc. A very common case of redirection, is a to redirect
+  to another file on the same server. The code in
+  <a href="%%webroot%%/examples/redirect2.yaws" target="_blank">%%webroot%%/examples/redirect2.yaws</a>
+  shows an example of a yaws redirect relative to the "current" server.
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/redirect2.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/redirect2.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">It will do a relative redirect to
+  <code>%%webroot%%/examples/redirect1.yaws</code> which in its turn redirects, once again,
+  to google. Double redirects.
+</p>
+<br/>
+<p class="text-justify">
+  While working with redirects, the tool <a href="http://curl.haxx.se/">curl</a>
+  is an excellent way to troubleshoot the behaviour of your redirects. For
+  example:
+</p>
+<verbatim class="code bash">
+  $> curl -I http://rubin.hyber.org:8000/examples/redirect2.yaws
+  HTTP/1.1 302 Found
+  Server: Yaws/1.49 Yet Another Web Server
+  Location: http://rubin.hyber.org:8000/examples/redirect1.yaws
+  Date: Tue, 16 Nov 2004 20:16:01 GMT
+  Content-Type: text/html
+</verbatim>
+<br/>
+<p class="text-justify">
+  Where <code>http://rubin.hyber.org:8000</code> is where I am currently testing
+    the <code>%%webroot%%/examples/redirect3.yaws</code> code. Learn and use the curl web
+  client, it may not render pictures pretty, but it sure displays headers.
+</p>
+<br/>
+<p class="text-justify">
+  We show one additional version of redirect code. The code in
+  <code>%%webroot%%/examples/redirect1.yaws</code> requires an absolute path. If we want to
+  supply a path relative to the current url, we can use either the Redirect modifier
+  <code>rel_path</code> or <code>any_path</code> as in:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/redirect3.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/redirect3.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  <a href="%%webroot%%/examples/redirect3.yaws" target="_blank">Clickable here</a>.
+</p>
+<br/>
+<p class="text-justify">
+  You can also redirect a whole site via virtual server configuration. For
+  example, you can redirect all port 80 requests to port 443 like this:
+</p>
+<verbatim class="code apache">
+  <server vhost1.tld>
+    port   = 80
+    listen = 0.0.0.0
+    <redirect>
+      / = https://vhost2.tld:443
+    </redirect>
+  </server>
+</verbatim>

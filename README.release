@@ -1,0 +1,22 @@
+To create a new release, you need to follow these steps:
+
+    * You must be in the master branch
+
+    * Be sure to have commit all your changes or stashed them
+
+    * Increment the Yaws version in vsn.mk file without commiting it
+
+    * Do not create corresponding tag, the script will do it
+
+    * Run ./script/make-release
+
+
+make-release script will do everything for you:
+
+    - Commit vsn.mk file with the right commit log
+    - Create the corresponding tag
+    - Generate changelog file for the website
+    - Generate news file for the website
+    - Update the github contributors list for the website
+    - Commit all these new files
+    - Recreate the tag to finalize the release

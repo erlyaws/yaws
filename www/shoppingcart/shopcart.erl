@@ -7,7 +7,7 @@
 -module(shopcart).
 -author('klacke@hyber.org').
 
--include("../../include/yaws_api.hrl").
+-include_lib("yaws/include/yaws_api.hrl").
 -include_lib("kernel/include/inet.hrl").
 
 -export([top/1, buy/1, index/1, loginpost/1, login/1, logout/1, formupdate/1]).
@@ -109,7 +109,6 @@ toprow() ->
        {tr, [],
         [{td, [], {a, [{href, "buy.yaws"}] , {p, [{class, toprow}], "Buy"}}},
          {td, [], {a, [{href, "logout.yaws"}], {p, [{class, toprow}], "Logout"}}},
-         {td, [], {a, [{href, "source.html"}], {p, [{class, toprow}], "The Source"}}},
          {td, [{width, "70%"}], ""}
         ]}
       ]

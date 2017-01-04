@@ -1,0 +1,42 @@
+<style>
+ .title {
+   float: left;
+   width: 120px;
+   font-weight: bold;
+   padding-left: 20px;
+ }
+ .bar {
+   background-color: lightgrey;
+   float: left;
+   height: 11px;
+ }
+ .percent {
+   display: inline-block;
+   padding-left: 10px;
+ }
+</style>
+<erl>
+    out(A) ->
+        case myproxyapp:get_counters() of
+            [] ->
+                Title = {p, [], ["No files served through ",
+                                 {strong, [], "myproxyapp"}, " application"]},
+                {ehtml, [Title]};
+            [{all, All}|Counters] ->
+                myproxyapp:get_counters(),
+                Title = {p, [], [integer_to_list(All), " files served through ",
+                                 {strong, [], "myproxyapp"}, " application: "]},
+                Content = [begin
+                               N = 100 * C / All,
+                               Width   = integer_to_list(round(10 * N)),
+                               Percent = float_to_list(N, [{decimals, 2}, compact]),
+                               {'div', [],
+                                [
+                                 {'div', [{class, "title"}], [atom_to_list(P)]},
+                                 {'div', [{class, "bar"}, {style, "width:"++Width++"px;"}], []},
+                                 {'div', [{class, "percent"}], [Percent++"%"]}
+                                ]}
+                           end || {P,C} <- Counters],
+                {ehtml, [Title, Content]}
+        end.
+</erl>

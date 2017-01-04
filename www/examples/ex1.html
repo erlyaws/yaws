@@ -1,0 +1,30 @@
+<html>
+  <head>
+    <script type="text/javascript" src="/jquery-1.2.3.js"></script>
+  </head>
+  <body>
+    <script language="javascript" type="text/javascript">
+     function ex1(what) {
+       $.getJSON("/ex1.yaws",
+                 {'op': "ex1", 'what': what},
+                 function(x) { do_ex1(what, x) });
+     }
+
+     function do_ex1(what, x) {
+       jQuery.each(x, doit);
+     }
+
+     function doit() {
+       $('#'+this.who).html(this.what);
+     }
+    </script>
+
+    <button onclick="ex1('one')">Update one!</button>
+    <button onclick="ex1('two')">Update two!</button>
+    <button onclick="ex1('three')">Update three!</button>
+
+    <div id="one">This is one</div>
+    <div id="two">This is two</div>
+    <div id="three">This is three</div>
+  </body>
+</html>

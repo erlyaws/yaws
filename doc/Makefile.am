@@ -11,14 +11,14 @@ install-data-local: doc
 	$(AM_V_at)$(INSTALL) -d $(DESTDIR)$(docdir)
 	$(AM_V_at)$(INSTALL) -m 644 yaws.pdf $(DESTDIR)$(docdir)
 
-	$(AM_V_at)$(INSTALL) -d $(DESTDIR)$(wwwdir)
-	$(AM_V_at)$(INSTALL) -m 644 yaws.ps $(DESTDIR)$(wwwdir)
-	$(AM_V_at)$(INSTALL) -m 644 yaws.pdf $(DESTDIR)$(wwwdir)
+	$(AM_V_at)$(INSTALL) -d $(DESTDIR)$(wwwdir)/documentation/
+	$(AM_V_at)$(INSTALL) -m 644 yaws.ps $(DESTDIR)$(wwwdir)/documentation/
+	$(AM_V_at)$(INSTALL) -m 644 yaws.pdf $(DESTDIR)$(wwwdir)/documentation/
 
 uninstall-local:
 	$(AM_V_at)rm -f $(DESTDIR)$(docdir)/yaws.pdf
-	$(AM_V_at)rm -f $(DESTDIR)$(wwwdir)/yaws.ps
-	$(AM_V_at)rm -f $(DESTDIR)$(wwwdir)/yaws.pdf
+	$(AM_V_at)rm -f $(DESTDIR)$(wwwdir)/documentation/yaws.ps
+	$(AM_V_at)rm -f $(DESTDIR)$(wwwdir)/documentation/yaws.pdf
 
 clean-local:
 	$(AM_V_at)rm -f *.ps *.dvi *.log *.aux *.pdf *.toc *.out

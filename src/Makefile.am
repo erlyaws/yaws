@@ -83,6 +83,7 @@ yaws_generated.erl: @srcdir@/yaws_generated.template @top_srcdir@/vsn.mk \
 	$(AM_V_at)(cd @srcdir@ &&	\
 	  YAWS_VSN='@YAWS_VSN@'		\
 	  VARDIR='@localstatedir@'	\
+	  MANDIR='@mandir@'		\
 	  ETCDIR='@sysconfdir@'		\
 	    @abs_top_srcdir@/scripts/gen-yaws-generated) > yaws_generated.erl
 

@@ -1,0 +1,109 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  Appmods are a way to let the application programmer take control over the URL
+  path. Or put in another way, to let the application programmer fake real paths
+  in URLs where in reality an Erlang module is executing. Possibly an example
+  will make this easy to understand. Say we have the following URL:
+</p>
+<verbatim class="code http">
+  http://yaws.hyber.org/pathelem/foo/bar/x.pdf
+</verbatim>
+<br/>
+<p class="text-justify">
+  With the above URL, the webserver would try to deliver the file
+  <code>/pathelem/foo/bar/x.pdf</code> relative to the docroot. However if we
+  had specified <code>pathelem</code> as an Appmod, the server would stop
+  processing the URL after seeing the <code>pathelem</code> part of the URL. Say
+  we had the following in our <code>yaws.conf</code> configuration file:
+</p>
+<verbatim class="code apache">
+  <server tita>
+      port    = 8001
+      listen  = 0.0.0.0
+      docroot = /var/yaws/www
+      appmods = <pathelem, myappmod>
+  </server>
+</verbatim>
+<br/>
+<p class="text-justify">
+  Then the webserver would invoke <code>myappmod:out(A)</code> instead of trying
+  to deliver the actual file. When shipping such an
+  <a href="/pathelem/foo/bar/x.pdf">Url</a> there are 2 fields in the
+  <code>#arg{}</code> record which are especially interesting. If we have the
+  following code:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/myappmod.erl"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/myappmod.erl"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  The <code>#arg{}</code> field called <code>pathinfo</code> contains the
+  remainder of the path following the encountered Appmod and the field
+  <code>prepath</code> contains the part of the URL path leading up to the
+  Appmod.
+</p>
+<p class="text-justify">
+  Thus the following URL:
+</p>
+<verbatim class="code http">
+  http://yaws.hyber.org/zap/pathelem/foo/bar/x.pdf?a=b"
+</verbatim>
+<p class="text-justify">
+  Produces the following output:
+</p>
+<verbatim class="code erlang">
+  A#arg.pathinfo  = "/foo/bar/x.pdf"
+  A#arg.prepath   = "/zap/"
+  A#arg.querydata = "a=b"
+</verbatim>
+<br/>
+<p class="text-justify">
+  Appmods would typically be used by web applications that want to provide the
+  illusion of proper paths to the browser.
+</p>
+<p class="text-justify">
+  A special case of an Appmod that is particularly interesting is the
+  <code>/</code> Appmod. This is used when we want the application code to
+  handle all requests. This is common with web frameworks such as Nitrogen.
+</p>
+<verbatim class="code apache">
+  <server tita>
+      port    = 8001
+      listen  = 0.0.0.0
+      docroot = /var/yaws/www
+      appmods = </, myappmod>
+  </server>
+</verbatim>
+<br/>
+<p class="text-justify">
+  The above configuration snippet is an example of a slash Appmod. One
+  complication with the slash Appmod is that usually we have a set of folders
+  containing static data, images and java script, and we want yaws to just
+  deliver those files without intervention from the slash Appmod. This can be
+  achieved by excluding a set of directories:
+</p>
+<verbatim class="code apache">
+  <server tita>
+      port = 8001
+      listen = 0.0.0.0
+      docroot = /var/yaws/www
+      appmods = </, myappmod exclude_paths icons js top/static>
+  </server>
+</verbatim>
+<br/>
+<p class="text-justify">
+  The above configuration will invoke the <code>myappmod</code> Erlang module on
+  everything except any file found in directories <code>icons</code>,
+  <code>js</code> and <code>top/static</code> relative to the docroot.
+</p>

@@ -1,0 +1,30 @@
+<erl>
+to_integer(S) ->
+    list_to_integer(string:strip(S, both)).
+
+out(A) ->
+    H = A#arg.headers,
+    C = H#headers.cookie,
+    L = case yaws_api:find_cookie_val("pfoobar", C) of
+            [] ->
+                f("<p class=\"text-justify\">No cookie set from the browser.</p>~n", []);
+            NumStr ->
+                Num = to_integer(NumStr),
+                case ets:lookup(pcookies, {cookie,Num}) of
+                    [{{cookie, Num}, Data}] ->
+                        f("<p  class=\"text-justify\"> Yes, I read your cookie. "
+                          "It is ~p. Your persistent info are: ~n"
+                          "<pre>~n~p~n</pre> </p>~n", [NumStr, Data]);
+                    [] ->
+                        f("<p class=\"text-justify\">You had a cookie, "
+                          "but the data is gone.</p>", [])
+                end
+        end,
+    {html, L}.
+</erl>
+
+<p class="text-justify">
+  The code to read the cookie is simple. We get the cookie passed to the yaws
+  code in the <code>#arg{}</code> record which is the argument supplied to the
+  <code>out/1</code> function.
+</p>

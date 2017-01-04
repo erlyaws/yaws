@@ -1,166 +1,87 @@
 <erl>
-
-
-out(A) ->
-    [{ssi, "TAB.inc","%%",[{"index", "choosen"}]},
-     {ehtml,
-      [{'div', [{id, "entry"}],
-        [{h1,[],"Yaws"},
-
-
-        {p,[],"Yaws is a HTTP high perfomance 1.1 webserver particularly"
-         " well suited for dynamic-content web applications. Two
-         separate modes of operations are supported:"},
-        {ul,[],
-         [{li,[],
-           {p,[],"Standalone mode where Yaws runs as a regular webserver "
-            "daemon. This is the default mode."}},
-          {li,[],
-           {p,[], "Embedded mode where Yaws runs as an embedded webserver in "
-            "another Erlang application."}}
-         ]},
-        {p,[], ["Yaws is entirely written in ",
-                {a, [{href, "http://www.erlang.org"}],  "Erlang"},
-                ", and furthermore it is a multithreaded webserver where one "
-                "Erlang lightweight process is used to handle each client."]},
-        {p,[], "The main advantages of Yaws compared to other Web technologies"
-         " are performance and elegance. The performance comes from the "
-         " underlying Erlang system and its ability to handle concurrent "
-         " processes in an efficent way. Its elegance comes from Erlang as "
-         "well. Web applications don't have to be written in ugly ad hoc "
-         "languages."},
-
-        {h2,[], "yaws.hyber.org"},
-
-        {p,[], ["The www page for Yaws is ",
-                {a ,[{href,"http://yaws.hyber.org"}], "yaws.hyber.org"},
-                ". The documentation, examples as well as releases can be "
-                "found there, and of course, ",
-                {a ,[{href,"http://yaws.hyber.org"}],"yaws.hyber.org"},
-                " is itself powered by Yaws."]},
-
-
-        {p,[], ["Code is on : ",
-                {a,[{href,"http://github.com/klacke/yaws"}],
-                  "http://github.com/klacke/yaws"}]},
-
-        {p, [], ["Travis test results at :",
-                 {a, [{href, "https://travis-ci.org/klacke/yaws"}],
-                 "https://travis-ci.org/klacke/yaws"}]},
-
-        {p,[], ["A mailing list exists at: ",
-                {a,[{href,"https://lists.sourceforge.net/lists/listinfo/""erlyaws-list"}],
-                 "https://lists.sourceforge.net/lists/listinfo/erlyaws-list"}]},
-         {p, [], ["A lot of excellent"
-                 " engineers have contributed to Yaws over the years, "
-                  "we keep a list of all "
-                  ,{a ,[{href,"contributors.txt"}], "contributors"}
-                ]},
-         {p, [], ["A high resolution logo created by Tomas Selander exists at ",
-                  {a, [{href, "yaws.eps"}],  "yaws.eps"}]},
-
-
-         {h2, [], "News"},
-         {p, [], ["To see all the most recent changes and activity in Yaws "
-                  "development, please visit the ",
-                  {a, [{href, "https://github.com/klacke/yaws"}],
-                   "Yaws github repository"}, "."]},
-
-         gen_log(A)]}]},
-     {ssi, "END2",[],[]}].
-
-
-is_proper(10) ->
-    false;
-is_proper(Tag) ->
-    case string:tokens(Tag, "-") of
-        ["yaws", Rel] -> 
-            IntList = string:tokens(Rel, "."),
-            case lists:filter(
-                   fun(IntStr) ->
-                           case catch list_to_integer(IntStr) of
-                               {'EXIT', _} ->
-                                   true;
-                               _ ->
-                                   false
-                           end
-                   end, IntList) of
-                [] ->
-                    true;
-                _ ->
-                    false
-            end;
-        _ ->
-            false
-    end.
-
-cd(Git) ->
-    ["cd ", Git, "; "].
-
-git(Cd, Cmd) ->
-    os:cmd([cd(Cd), Cmd]).
-
-head(Tag, Dir) ->
-    Date =
-        git(Dir, ["git --no-pager show ", Tag, "  | grep Date | head -1"]),
-    Ret = ["Version " , Tag, " " , Date],
-    Ret.
-
-gen_log(A) ->
-    case os:getenv("YAWS_GIT") of
-        false ->
-            [];
-        Dir ->
-            Tags = lists:filter(
-                     fun(Tag) ->
-                             is_proper(Tag) end,
-                     lists:reverse(
-                       string:tokens(
-                         git(Dir, "git tag -l"), [10]))),
-            gen_log(A, Tags, Dir)
-    end.
-
-dlog(Last, Prev, Dir) ->
-    Str = 
-        git(Dir,
-            ["git --no-pager log --abbrev-commit --no-merges --pretty=medium ",
-             Prev, "..", Last, " | cat"]),
-    Str2 = lists:zf(fun(I) ->
-                            if I == $< ->
-                                    %% XSS
-                                    false;
-                                0<I, I<255 ->
-                                    {true, I};
-                               true ->
-                                    false
-                            end
-                    end, Str),
-    Lines = string:tokens(Str2, "\n"),
-    lists:map(
-      fun(Line) ->
-              case Line of
-                  "commit " ++ _ ->
-                      ["<br/><h3>", Line, "</h3> <br/>"];
-                  _ ->
-                      [Line,  "<br/>"]
-              end
-      end,Lines).
-
-gen_log(_, [], _) ->
-    [];
-gen_log(A, [Last, Prev | Tail], Dir) ->
-    Head = head(Last, Dir),
-    Data = dlog(Last, Prev, Dir),
-    X = [{'div', [{class, "news"}],
-          [{h3, [], Head},
-           {p, [], ["<pre>", Data, "</pre>"]}]}
-        ],
-    [ X | gen_log(A, [Prev | Tail], Dir)];
-gen_log(A, [Last],_) ->
-    [].
-
-
+out(A) -> [{yssi, "includes/config.yaws"}, {ssi, "includes/header.inc","%%",[]}].
 </erl>
 
+<erl>
+out(A) ->
+    Vsn = yaws_generated:version(),
+    [{ssi, "includes/banner.inc","%%",[{"version", Vsn}]}].
+</erl>
 
+<div class="layer-light">
+  <div class="container">
+    <div class="row text-justify">
+      <p class="big">
+        Yaws is a HTTP high perfomance 1.1 webserver particularly well suited
+        for dynamic-content web applications. Two separate modes of operations
+        are supported:
+      </p>
+      <ul>
+        <li>
+          <p class="big">Standalone mode where Yaws runs as a regular
+            webserver daemon. This is the default mode.</p>
+        </li>
+        <li>
+          <p class="big">Embedded mode where Yaws runs as an embedded webserver in
+            another Erlang application.</p>
+        </li>
+      </ul>
+      <p class="big">
+        Yaws is entirely written in Erlang, and furthermore it is a
+        multithreaded webserver where one Erlang lightweight process is used
+        to handle each client.
+      </p>
+      <p class="big">
+        The main advantages of Yaws compared to other Web technologies are
+        performance and elegance. The performance comes from the underlying
+        Erlang system and its ability to handle concurrent processes in an
+        efficent way. Its elegance comes from Erlang as well. Web applications
+        don't have to be written in ugly ad hoc languages.
+      </p>
+    </div>
+  </div>
+</div>
+<div class="layer-dark">
+  <div class="container">
+    <div class="row">
+      <br/>
+      <div class="text-icon">
+        <img src="%%webroot%%/images/contribs.png" alt="contributions">
+      </div>
+      <div class="text-content text-justify">
+        If you have any questions, feel free to contact us on the Yaws
+        <a href="https://lists.sourceforge.net/lists/listinfo/erlyaws-list">mailing list</a>.
+        To report bugs or suggest features, please use the
+        <a href="https://github.com/klacke/yaws/issues">Github issues</a>.
+        <br/>
+        You are also welcome to submit <a href="https://github.com/klacke/yaws/pulls">pull requests</a>.
+        A lot of <a href="%%webroot%%/contributors.yaws">excellent engineers</a> have
+        already contributed to Yaws over the years.
+        <br/>
+        A high resolution logo created by Tomas Selander exists at <a href="%%webroot%%/images/yaws.eps">yaws.eps</a>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="layer-light">
+  <div class="container">
+    <h1 class="text-center">News</h1>
+    <hr/>
+    <div class="col-xs-10 col-xs-push-1">
+<erl>
+out(A) ->
+    News = lists:reverse(
+             lists:sort(
+               filelib:wildcard(get("SITEROOT") ++ "news/*.inc")
+              )
+            ),
+    [{ssi, lists:subtract(F, get("SITEROOT")),"%%",[]} || F <- News].
+</erl>
+    </div>
+  </div>
+  </div>
+</div>
 
+<erl>
+out(A) -> [{ssi, "includes/footer.inc","%%",[]}, {yssi, "examples/visit_counter.yaws"}].
+</erl>

@@ -7,6 +7,12 @@
 # all virtual servers will be written.
 logdir = %logdir%
 
+# These are the paths to directories where additional source code can be
+# placed. The daemon will add these directories to its search path and will
+# compile all modules dynamically.
+src_dir = %docroot%/shoppingcart
+src_dir = %docroot%/examples
+
 # These are the paths to directories where additional
 # beam code can be placed. The daemon will add these
 # directories to its search path.
@@ -111,7 +117,8 @@ keepalive_timeout = 30000
         listen = 0.0.0.0
         docroot = %docroot%
         auth_log = true
-        appmods = <cgi-bin, yaws_appmod_cgi>
+        appmods = <myproxyapp, myproxyapp>
+        appmods = <cgi-bin, yaws_appmod_cgi> <sse, server_sent_events> <myappmod, myappmod>
 </server>
 
 <server localhost>

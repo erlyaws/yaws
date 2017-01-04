@@ -1,0 +1,7 @@
+<html>
+  <h1> Yesssssss </h1>
+  <erl>
+      out(Arg) ->
+          {ehtml, [{h2, [{class, "foo"}],  "Hello yet again"}]}.
+  </erl>
+</html>

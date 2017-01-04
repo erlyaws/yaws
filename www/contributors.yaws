@@ -1,0 +1,56 @@
+<erl>
+out(A) -> [{yssi, "includes/config.yaws"}, {ssi, "includes/header.inc","%%",[]}].
+</erl>
+
+<erl>
+out(A) -> [{ssi, "includes/page_title.inc","%%",[{"title", "Contributors"}]}].
+</erl>
+
+<br/><br/>
+
+<div class="container">
+  <div class="row">
+    <erl>
+
+split_list([], {L1, L2, L3}) ->
+    {lists:reverse(L1), lists:reverse(L2), lists:reverse(L3)};
+split_list([A], {L1, L2, L3}) ->
+    {lists:reverse([A|L1]), lists:reverse(L2), lists:reverse(L3)};
+split_list([A,B], {L1, L2, L3}) ->
+    {lists:reverse([A|L1]), lists:reverse([B|L2]), lists:reverse(L3)};
+split_list([A,B,C|Rest], {L1, L2, L3}) ->
+    split_list(Rest, {[A|L1], [B|L2], [C|L3]}).
+
+merge_list([], []) ->
+    [];
+merge_list([A|Rest], []) ->
+    [A|merge_list(Rest, [])];
+merge_list(L1, [N|Rest]) ->
+    case lists:member(N, L1) of
+        true  -> merge_list(L1, Rest);
+        false -> [N|merge_list(L1, Rest)]
+    end.
+
+comp_name(A, B) ->
+    [N1|_] = lists:reverse(binary:split(A, <<" ">>, [global, trim])),
+    [N2|_] = lists:reverse(binary:split(B, <<" ">>, [global, trim])),
+    (N1 =< N2).
+
+out(A) ->
+    {ok, Bin1} = file:read_file(get("SITEROOT") ++ "contributors.txt"),
+    {ok, Bin2} = file:read_file(get("SITEROOT") ++ "gh-contributors.txt"),
+    Contribs   = merge_list(binary:split(Bin1, <<"\n">>, [global, trim]),
+                            binary:split(Bin2, <<"\n">>, [global, trim])),
+    SortedContribs = lists:sort(fun comp_name/2, Contribs),
+    L = [{p, [{class, "text-center"}], C} || C <- SortedContribs],
+    {L1,L2,L3} = split_list(L, {[], [], []}),
+    {ehtml, [{'div', [{class, "col-xs-4"}], L1},
+             {'div', [{class, "col-xs-4"}], L2},
+             {'div', [{class, "col-xs-4"}], L3}]}.
+    </erl>
+  </div>
+</div>
+
+<erl>
+out(A) -> [{ssi, "includes/footer.inc","%%",[]}, {yssi, "examples/visit_counter.yaws"}].
+</erl>

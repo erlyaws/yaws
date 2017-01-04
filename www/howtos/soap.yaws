@@ -1,0 +1,348 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  SOAP is an XML-based protocol for communication over a network connection. The
+  main focus of SOAP is remote procedure calls (RPCs) transported via HTTP. SOAP
+  is similar to XML-RPC but makes use of XML Schema to define the data types it
+  uses.
+</p>
+
+<h2>Preparations</h2>
+<p class="text-justify">
+  Yaws uses the <a href="http://github.com/willemdj/erlsom.git">erlsom</a> XML
+  Schema parser and some SOAP specific library code. Thus, to be able to use
+  SOAP with Yaws you need to have erlsom installed. Currently, the easiest way
+  of installing it is to check out the library from github.com and install it
+  from there (you can also download a released version of erlsom and install
+  it):
+</p>
+<verbatim class="code bash">
+  $> git clone http://github.com/willemdj/erlsom.git
+  $> cd erlsom; chmod a+x configure; ./configure; make
+  $> sudo make install        # iff you want to install as root
+</verbatim>
+<br/>
+<p class="text-justify">
+  <ul class="alert-danger">
+    <br/>
+    <li class="list-unstyled">
+      <strong>Important:</strong> The SOAP-specific code that makes use of
+      erlsom has some limitations that it is important to be aware of. Only the
+      Soap<code>document</code> binding style is supported. There is no support
+      for non-soap bindings, nor for the RPC binding style. Also, only the
+      <code>literal</code> encoding is supported There is no support for
+      <code>soap-encoding</code>. For an explanation of the differences
+      between these concepts, see this
+      <a href="https://www.ibm.com/developerworks/library/ws-whichwsdl/">description</a>.
+    </li>
+    <br/>
+  </ul>
+</p>
+
+<h2>The SOAP client side</h2>
+<p class="text-justify">
+  The SOAP interface is defined by a WSDL specification, which simply is a
+  (rather verbose) piece of XML document that specifies the public interface for
+  a web service. As a client, we don't need to understand everything in the WSDL
+  specification The parts that are most interesting is the name of the operation
+  we want to perform (i.e the function we want to call) and what input data it
+  expects.
+</p>
+<br/>
+<p class="text-justify">
+  As an example, lets have a look at a public SOAP service that returns some
+  weather data for the location we send to it. The WSDL specification can be found
+  <a href="http://www.webservicex.net/WeatherForecast.asmx?WSDL">here</a>.
+</p>
+<br/>
+<p class="text-justify">
+  We start by finding the operation named: <code>GetWeatherByPlaceName</code>,
+  which is the operation we want to invoke. As can be seen, we have one input
+  message and one output message defined. The input message is the one we (as a
+  client) will send to the server.
+</p>
+<verbatim class="code xml">
+  <wsdl:operation name="GetWeatherByPlaceName">
+    <documentation>
+      Get one week  weather forecast for a place name(USA)
+    </documentation>
+    <wsdl:input message="tns:GetWeatherByPlaceNameSoapIn"/>
+    <wsdl:output message="tns:GetWeatherByPlaceNameSoapOut"/>
+  </wsdl:operation>
+</verbatim>
+<br/>
+<p class="text-justify">
+  Now, follow the reference to the message
+  <code>tns:GetWeatherByPlaceNameSoapIn</code>, to where it is defined:
+</p>
+<verbatim class="code xml">
+  <wsdl:message name="GetWeatherByPlaceNameSoapIn">
+    <wsdl:part name="parameters" element="tns:GetWeatherByPlaceName"/>
+  </wsdl:message>
+</verbatim>
+<br/>
+<p class="text-justify">
+  Continue by following the reference to
+  <code>tns:GetWeatherByPlaceName</code>, and you will end up with an XML Schema
+  type definition:
+</p>
+<verbatim class="code xml">
+  <s:element name="GetWeatherByPlaceName">
+    <s:complexType>
+      <s:sequence>
+        <s:element minOccurs="0" maxOccurs="1" name="PlaceName" type="s:string"/>
+      </s:sequence>
+    </s:complexType>
+  </s:element>
+</verbatim>
+<br/>
+<p class="text-justify">
+  This tells us that the function we want to call takes one argument of a string
+  type (which apparently denotes a <code>Name</code> of a place in the US). Left
+  for us is just to call the function from an Erlang shell which has got the
+  Yaws ebin directory in the path:
+</p>
+<verbatim class="code erlang-repl">
+  1> inets:start().
+  ok
+  2> yaws_soap_lib:call("http://www.webservicex.net/WeatherForecast.asmx?WSDL",
+                        "GetWeatherByPlaceName",
+                        ["Boston"]).
+  {ok,undefined,
+   [{'p:GetWeatherByPlaceNameResponse',
+     [],
+     {'p:WeatherForecasts',[],
+      "40.3044128",
+      "79.81284",
+      "0.000453",
+      "42",
+      "BOSTON",
+      "PA",
+      undefined,
+      {'p:ArrayOfWeatherData',
+       [],
+        [{'p:WeatherData',
+        [],
+        "Friday, December 08, 2006"|...},
+        .....
+</verbatim>
+<br/>
+<p class="text-justify">
+  So what happened here? We specified the URL to the WSDL file. The
+  <code>yaws_soap_lib:call/3</code> function then went to retrieve the file,
+  parsed it, created a proper message, sent off the message, waited for the
+  reply and finally returned a parsed reply as Erlang records.
+</p>
+<br/>
+<p class="text-justify">
+  Even though this is very convenient, we probably want do more than just one
+  call to the web service. So to avoid retrieving and parsing the WSDL file for
+  every call. We can do it in two steps:
+</p>
+<verbatim class="code erlang-repl">
+  1> inets:start().
+  ok
+  2> Wsdl = yaws_soap_lib:initModel("http://www.webservicex.net/WeatherForecast.asmx?WSDL").
+  ...
+  3> yaws_soap_lib:call(Wsdl, "GetWeatherByPlaceName", ["Boston"]).
+</verbatim>
+<br/>
+<p class="text-justify">
+  To be able to work with the records that we get in the response, we can create
+  a header file that we can include in our source code. In our example the
+  generated <code>.hrl</code> file will look like this:
+</p>
+<verbatim class="code erlang-repl">
+  4> yaws_soap_lib:write_hrl(Wsdl, "/tmp/wfc.hrl").
+  ...
+  5> {ok,Bin}=file:read_file("/tmp/wfc.hrl"),io:fwrite(binary_to_list(Bin)).
+  -record('soap:detail', {anyAttribs, choice}).
+  -record('soap:Fault', {anyAttribs, 'faultcode', 'faultstring', 'faultactor', 'detail'}).
+  -record('soap:Body', {anyAttribs, choice}).
+  -record('soap:Header', {anyAttribs, choice}).
+  -record('soap:Envelope', {anyAttribs, 'Header', 'Body', choice}).
+  -record('p:GetWeatherByPlaceNameResponse', {anyAttribs, 'GetWeatherByPlaceNameResult'}).
+  -record('p:GetWeatherByPlaceName', {anyAttribs, 'PlaceName'}).
+  -record('p:WeatherData', {anyAttribs, 'Day', 'WeatherImage', 'MaxTemperatureF',
+                            'MinTemperatureF', 'MaxTemperatureC', 'MinTemperatureC'}).
+  -record('p:ArrayOfWeatherData', {anyAttribs, 'WeatherData'}).
+  -record('p:WeatherForecasts', {anyAttribs, 'Latitude', 'Longitude', 'AllocationFactor',
+                                 'FipsCode', 'PlaceName', 'StateCode', 'Status', 'Details'}).
+  -record('p:GetWeatherByZipCodeResponse', {anyAttribs, 'GetWeatherByZipCodeResult'}).
+  -record('p:GetWeatherByZipCode', {anyAttribs, 'ZipCode'}).
+</verbatim>
+<br/>
+<p class="text-justify">
+  As you can see, every record in our header has an XML namespace prefix
+  prepended in the name of the record. The prefix <code>p</code> as shown above
+  is the default prefix you'll get if you don't specify a prefix yourself. This
+  is probably good enough, but if you want to set it to something else, you can
+  do it as shown below:
+</p>
+<verbatim class="code erlang-repl">
+  6> yaws_soap_lib:initModel(... , "foo").           % foo is my prefix
+  7> yaws_soap_lib:write_hrl(... , ... , "foo").
+</verbatim>
+<br/>
+<p class="text-justify">
+  Some final notes:
+  <ul>
+    <li>
+      <p class="text-justify">
+        The <code>http://...</code> URL given as the first argument to the
+        functions above may as well be a local file, and thus written as
+        <code>file://....</code>.
+      </p>
+    </li>
+
+    <li>
+      <p class="text-justify">
+        When we retrieve a HTTP located file, we will use
+        <a href="https://github.com/cmullaparthi/ibrowse">ibrowse</a>
+        if it exist in the code path. Otherwise we will use the OTP <code>http</code>
+        client.
+      </p>
+    </li>
+
+    <li>
+      <p class="text-justify">
+        The prefix (<code>foo</code> in the example above) is passed to erlsom
+        - it is one of its options. If you want to specify other options, you
+        can also pass the regular erlsom options to <code>yaws_soap_lib:initModel/2</code>
+        and <code>yaws_soap_lib:write_hrl/3</code>. For example, to specify how
+        files that the XSD inside the WSDL refers to via <code>include</code>
+        statements can be retrieved, you can pass it a function <code>GetIncludes/4</code>
+        by specifying <code>[{include_fun, GetIncludes}]</code>. See the erlsom
+        documentation for other options that you could specify.
+      </p>
+    </li>
+  </ul>
+</p>
+
+<h2>The SOAP server side</h2>
+<p class="text-justify">
+  If we want to run our own weather service we need to take the WSDL and add our
+  own location to it. Either we can just study the WSDL file to see which URL we
+  need to change in the <code>service</code> part of the document, or we can
+  make use of some nice access functions that work on the <code>#wsdl{}</code>
+  record that <code>yaws_soap_lib:initModel/2</code> returned, as shown below:
+</p>
+<verbatim class="code erlang-repl">
+  8> Ops = yaws_soap_lib:wsdl_operations(Wsdl).
+  9> {ok,Op} = yaws_soap_lib:get_operation(Ops, "GetWeatherByPlaceName").
+  10> yaws_soap_lib:wsdl_op_address(Op).
+  "http://www.webservicex.net/WeatherForecast.asmx"
+</verbatim>
+<br/>
+<p class="text-justify">
+  Now, edit the WSDL file and change the above URL to something like this:
+</p>
+<verbatim class="code xml">
+  <wsdl:service name="WeatherForecast">
+    <documentation xmlns=......
+      <wsdl:port name="WeatherForecastSoap".....
+        <soap:address location="http://localhost:8181/WeatherForecast.yaws" />
+      </wsdl:port>
+   .....
+</verbatim>
+<br/>
+<p class="text-justify">
+  Next, start an Erlang shell and start Yaws with SOAP enabled. We need to write
+  the code that returns the weather info. This is done in a callback module that
+  the Yaws SOAP code will call with the incoming message. The message will be an
+  Erlang record and what we return must also be an Erlang record. So we will
+  need to create a <code>.hrl</code> containing the record definitions that we
+  can include:
+</p>
+<verbatim class="code erlang-repl">
+  1> Docroot = "/tmp".
+
+  2> GL = [{enable_soap,true},   % <== THIS WILL ENABLE SOAP IN A YAWS SERVER!!
+           {trace, false},
+           {tmpdir,Docroot},{logdir,Docroot},
+           {flags,[{tty_trace, false},{copy_errlog, true}]}].
+
+  3> SL = [{port,8181},{servername,"localhost"},{dir_listings, true},
+           {listen,{127,0,0,1}},{flags,[{auth_log,false},{access_log,false}]}].
+
+  % BELOW, WE CREATE THE .hrl FILE!!
+  4> yaws_soap_lib:write_hrl("file:///tmp/MyWeatherService.wsdl", "/tmp/my_soap.hrl").
+
+  % WE MUST ADD A PATH TO OUR CALLBACK CODE!!
+  5> code:add_path(Docroot).
+</verbatim>
+<br/>
+<p class="text-justify">
+  We continue by writing our weather forecast callback module:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/my_soap.erl"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", "/tmp/my_soap.erl"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  The final piece on the server side is the <code>.yaws</code> file that invokes
+  the Yaws SOAP server (note that we are using the same way of hooking in our
+  callback module as for Json and HaXe):
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/WeatherForecast.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", "/tmp/WeatherForecast.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  Now, in your Yaws shell, setup the Soap server as shown below (If required,
+  for example to specify a prefix or a function to retrieve included files, you
+  can specify options similar to what we saw above for
+  <code>yaws_soap_lib:initModel/2</code> and <code>yaws_soap_lib:write_hrl/3</code>,
+  <code>using yaws_soap_srv:setup/3</code>).
+</p>
+<verbatim class="code erlang-repl">
+  6> yaws:start_embedded(Docroot,SL,GL).
+  =INFO REPORT==== 29-Nov-2008::20:03:50 ===
+  Yaws: Listening to 127.0.0.1:8181 for servers
+   - http://localhost:8181 under /tmp
+  ok
+  7> yaws_soap_srv:setup({my_soap, handler}, "file:///tmp/MyWeatherService.wsdl").
+  ok
+</verbatim>
+<br/>
+<p class="text-justify">
+  We are now ready to try it out. Start another Erlang shell and call it:
+</p>
+<verbatim class="code erlang-repl">
+  1> inets:start().
+  ok
+  2> yaws_soap_lib:call("file:///tmp/MyWeatherService.wsdl",
+                        "GetWeatherByPlaceName",
+                        ["Stockholm"]).
+  {ok,undefined,
+    [{'p:GetWeatherByPlaceNameResponse', [],
+       {'p:WeatherForecasts',[],
+         "40.3044128",
+         "79.81284",
+         "0.000453",
+         "42",
+         "Stockholm",           % <=== Yippie, it works !!
+         "PA",
+         undefined,
+         {'p:ArrayOfWeatherData', [],
+           [{'p:WeatherData', [],
+             "Sunday, December 10, 2006"|...}]}}}]}
+</verbatim>
+<br/>
+<p class="text-justify">
+  There you have it!
+</p>

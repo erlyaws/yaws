@@ -82,7 +82,7 @@ end_per_testcase(_Test, _Config) ->
 compile_www_scripts(Config) ->
     [begin
          ?assertMatch({ok, 0, _}, compile_script(Config, S))
-     end || S <- get_scripts()],
+     end || {S,_} <- get_scripts()],
     ok.
 
 compile_erl_tag(Config) ->
@@ -131,9 +131,8 @@ compile_bad_module_name(Config) ->
 
 request_www_scripts(Config) ->
     [begin
-         Path = "/"++filename:basename(S),
-         ?assertMatch({ok, {{_,200,_}, _, _}}, request_script(Config, Path))
-     end || S <- get_scripts()],
+         ?assertMatch({ok, {{_,200,_}, _, _}}, request_script(Config, P))
+     end || {_,P} <- get_scripts()],
     ok.
 
 request_erl_tag(Config) ->
@@ -246,11 +245,7 @@ request_script(Config, Path) ->
     testsuite:http_get(Url).
 
 get_scripts() ->
-    TabFile = filename:join([?wwwdir, "TAB.inc"]),
-    {ok, Content} = file:read_file(TabFile),
-    {match, Scripts} = re:run(Content, "href=\"([^\"]+\\.yaws)\"",
-                              [global, {capture, all_but_first, list}]),
-    [case S of
-         [$/|_] -> ?wwwdir ++ S;
-         _      -> filename:join([?wwwdir, S])
-     end || [S] <- Scripts].
+    L1 = filelib:wildcard(?wwwdir ++ "*.yaws"),
+    L2 = filelib:wildcard(?wwwdir ++ "/howtos/*.yaws"),
+    [{F, "/"++filename:basename(F)} || F <- L1] ++
+        [{F, "/howtos/"++filename:basename(F)} || F <- L2].

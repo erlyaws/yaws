@@ -1,0 +1,38 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  The code that parses the multipart form data resides in
+  <a class="btn-link"
+     onclick="load_modal('Code', 'code.yaws?file=%%webroot%%/examples/upload.yaws&type=erlang');"
+     data-toggle="modal" data-target="#yawsModal">%%webroot%%/examples/upload.yaws</a>:
+</p>
+<hr/>
+<form id="form-data" method="post" enctype="multipart/form-data">
+  <input type="submit" data-toggle="modal" data-target="#yawsModal" />
+  <input type="file" width="50" name="foo" />
+</form>
+
+<script>
+ $('#form-data').on('submit', function (e) {
+   e.preventDefault();
+
+   var $form = $(this);
+   var formdata = (window.FormData) ? new FormData($form[0]) : null;
+   var data = (formdata !== null) ? formdata : $form.serialize();
+
+   $('.modal-title').html('Upload result');
+   $.ajax({url        : '%%webroot%%/examples/upload.yaws',
+           type       : $form.attr('method'),
+           contentType: false,
+           processData: false,
+           data       : data,
+           success    : function (response) { $('.modal-body').html(response); }
+           });
+ });
+</script>

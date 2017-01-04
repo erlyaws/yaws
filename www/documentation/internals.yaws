@@ -1,0 +1,369 @@
+<erl>
+out(A) -> [{yssi, "../includes/config.yaws"}, {ssi, "../includes/header.inc","%%",[]}].
+</erl>
+
+<erl>
+out(A) -> [{ssi, "../includes/page_title.inc","%%",[{"title", "Internals"}]}].
+</erl>
+
+<br/><br/>
+
+<div class="container">
+  <div class="row">
+    <h2>Introduction</h2>
+    <p class="text-justify">
+      We will try to describe some of the internal workings of Yaws in this
+      page.  The page is thus mostly interesting for people interested in either
+      hacking Yaws or simply wanting to get a better understanding.
+    </p>
+    <br/>
+    <p class="text-justify">
+      We will describe how Yaws pages get compiled, the process structure and
+      other things which can make it easier to understand the code. This page is
+      ment to be read by programmers that wish to either work on Yaws or just
+      get a better understanding.
+    </p>
+
+    <h2> JIT Compiling a .yaws page</h2>
+    <p class="text-justify">
+      When the client requests a page that has a <code>.yaws</code> suffix, Yaws
+      will read it from the hard disk and divide it in parts that consist of HTML
+      code and Erlang code. Each chunk of Erlang code will be compiled into a
+      module. The chunk of Erlang code must contain a function <code>out/1</code>.
+      If it doesn't Yaws will insert a proper error message into the generated
+      HTML output.
+    </p>
+    <br/>
+    <p class="text-justify">
+      When Yaws ships a <code>.yaws</code> page it will process it chunk by
+      chunk through the <code>.yaws</code> file. If it is HTML code, the server
+      will ship that as is, whereas if it is Erlang code, the Yaws server will
+      invoke the <code>out/1</code> function in that code and insert the output
+      into the stream of HTML that is being shipped to the client
+      .</p>
+    <br/>
+    <p class="text-justify">
+      Yaws will cache the result of the compilation and the next time a client
+      requests the same <code>.yaws</code> page, it will be able to invoke the
+      already compiled modules directly.
+    </p>
+    <br/>
+    <p class="text-justify">
+      This is best explained by an example. Say that the file <code>foo.yaws</code>
+      consists of 400 bytes:
+    </p>
+    <div class="center-block" style="width:75%;">
+      <table class="table table-striped table-bordered">
+        <tr>
+          <td>
+            <verbatim>
+  <erl>
+    out(A) ->
+        ...
+        %% 100 bytes of Erlang code include the
+        %% <erl> and </erl> tags
+  </erl>
+            </verbatim>
+          </td>
+          <td class="text-center" style="vertical-align:middle;">100 bytes</td>
+        </tr>
+        <tr>
+          <td>
+            <verbatim>
+  <h2>My HYML code come here</h2>
+  Altogether 200 bytes of HTML code
+            </verbatim>
+          </td>
+          <td class="text-center" style="vertical-align:middle;">200 bytes</td>
+        </tr>
+        <tr>
+          <td>
+            <verbatim>
+  <erl>
+    out(A) ->
+        ...
+        %% 100 more bytes of Erlang code include the
+        %% <erl> and </erl> tags
+  </erl>
+            </verbatim>
+          </td>
+          <td class="text-center" style="vertical-align:middle;">100 bytes</td>
+        </tr>
+      </table>
+    </div>
+    <br/>
+    <p class="text-justify">
+      When a client requests the file <code>foo.yaws</code>, Yaws will look in
+      its cache for the file, (more on that later). For the sake of argument, we
+      assume the file is not in the cache.
+    </p>
+   <br/>
+   <p class="text-justify">
+     The file will be processes by the code in <code>yaws_compile.erl</code> and
+     the result will be a structure that looks like:
+   </p>
+   <verbatim class="code erlang">
+  [CodeSpec]
+    CodeSpec :: Data | Binding | Code | Verbatim | Skip | Error
+    Data     :: {data, NumChars}
+    Binding  :: {binding, NumSkipChars},
+    Code     :: {mod, LineNo, YawsFile, NumSkipChars, Mod, Func}
+    Verbatim :: {verbatim, NumSkipChars, Html},
+    Skip     :: {skip, NumSkipChars},
+    Error    :: {error, NumSkipChars, E}
+   </verbatim>
+   <br/>
+   <p class="text-justify">
+     In the particular case of our <code>foo.yaws</code> file above, the JIT
+     compiler will return:
+   </p>
+   <br/>
+  <verbatim class="code erlang">
+  [{mod, 1, "/foo.yaws", 100, m1, out},
+   {data, 200},
+   {mod, 30, "/foo.yaws", 100, m2, out}]
+  </verbatim>
+  <br/>
+  <p class="text-justify">
+    This structure gets stored in the cache and will continue to be associated
+    to the file "foo.yaws".
+  </p>
+  <br/>
+  <p class="text-justify">
+    When the server "ships" a <code>.yaws</code> page, it needs the
+    <code>CodeSpec</code> structure to do it. If the structure is not in the
+    cache, the page gets JIT compiled and inserted into the cache.
+  </p>
+  <br/>
+  <p class="text-justify">
+    To ship the above <code>CodeSpec</code> structure, the server
+    performs the following steps:
+    <ul>
+      <li>
+        <p class="text-justify">
+          Create the <code>Arg</code> structure which is a <code>#arg{}</code>
+          record. This structure is wellknown to all yaws programmers since it's
+          the main mechanism to pass data from the server to the
+          <code>.yaws</code> page.
+        </p>
+      </li>
+      <li>
+        <p class="text-justify">Item (1) Invoke <code>m1:out(Arg)</code></p>
+      </li>
+      <li>
+        <p class="text-justify">
+          Look at the return value from <code>m1:out(Arg)</code> and
+          perform whatever is requested. This typically involves generating
+          some dynamic EHTML code, generate headers or whatever.
+        </p>
+      </li>
+      <li>
+        <p class="text-justify">
+          Finally jump ahead 100 bytes in the file as a result of processing
+          the first <code>CodeSpec</code> item.
+        </p>
+      </li>
+      <li>
+        <p class="text-justify">
+          Item (2) Next <code>CodeSpec</code> is just plain data from the file,
+          thus we read 200 bytes from the file (or rather from the cache since
+          the data will be there) and ship to the client.
+        </p>
+      </li>
+      <li>
+        <p class="text-justify">
+          Item (3) Yet another {mod structure which is handled the same way as
+          Item (1) above except that the erlang module is <code>m2</code>
+          instead of <code>m1</code>
+        </p>
+      </li>
+  </ul>
+  </p>
+  <br/>
+  <p class="text-justify">
+    Another thing that is worth mentioning is that Yaws will not ship (write on
+    the socket) data until all content is generated.  This is questionable and
+    different from what i.e. PHP does. This makes it possible to generate
+    headers after content has been generated.
+  </p>
+
+
+  <h2>Process structure</h2>
+  <p class="text-justify">
+    Before describing the process structure, I need to describe the two most
+    important datastructures in Yaws. The <code>#gconf{}</code> and the
+    <code>#sconf{}</code> records.
+  </p>
+  <br/>
+  <p class="text-justify">
+        <ul class="alert-info">
+          <br/>
+          <li class="list-unstyled">
+            <strong>Note:</strong> To retrieve information from these records,
+            <code>yaws:gconf_*/1</code> and <code>yaws:sconf_*/1</code>
+            (e.g. <code>yaws:gconf_id/1</code> or <code>yaws:sconf_docroot/1</code>)
+            should be used in preference to a direct access to reduce the
+            dependence of your code on it.
+          </li>
+          <br/>
+        </ul>
+  </p>
+
+  <h3>The <code>#gconf{}</code> record</h3>
+  <p class="text-justify">
+    This record is used to hold all global state, i.e. state and configuration
+    data which is valid for all Virtual servers. The record looks like:
+  </p>
+  <verbatim class="code erlang">
+    -record(gconf,{
+          yaws_dir,                       % topdir of Yaws installation
+          trace,                          % false | {true,http} | {true,traffic}
+          flags = ?GC_DEF,                % boolean flags
+          logdir,
+          ebin_dir = [],
+          src_dir  = [],
+          runmods  = [],                  % runmods for entire server
+          keepalive_timeout    = 30000,
+          keepalive_maxuses    = nolimit, % nolimit or non negative integer
+          max_num_cached_files = 400,
+          max_num_cached_bytes = 1000000, % 1 MEG
+          max_size_cached_file = 8000,
+          max_connections      = nolimit, % max number of TCP connections
+
+          %% Override default connection handler processes spawn options for
+          %% performance/memory tuning.
+          %% [] | [{fullsweep_after,Number}, {min_heap_size, Size}]
+          %% other options such as monitor, link are ignored.
+          process_options = [],
+
+          large_file_chunk_size = 10240,
+          mnesia_dir            = [],
+          log_wrap_size         = 10000000, % wrap logs after 10M
+          cache_refresh_secs    = 30,       % seconds  (auto zero when debug)
+          include_dir           = [],       % list of inc dirs for .yaws files
+          phpexe = "/usr/bin/php-cgi",      % cgi capable php executable
+
+          yaws,                % server string
+          id = "default",      % string identifying this instance of yaws
+
+          enable_soap = false, % start yaws_soap_srv iff true
+
+          %% a list of
+          %% {{Mod, Func}, WsdlFile, Prefix} | {{Mod, Func}, WsdlFile}
+          %% automatically setup in yaws_soap_srv init.
+          soap_srv_mods = [],
+
+          ysession_mod = yaws_session_server, % storage module for ysession
+          acceptor_pool_size = 8,             % size of acceptor proc pool
+
+          mime_types_info,                    % undefined | #mime_types_info{}
+          nslookup_pref = [inet],             % [inet | inet6]
+          ysession_idle_timeout = 2*60*1000,  % default 2 minutes
+          ysession_long_timeout = 60*60*1000, % default 1 hour
+
+          sni = disable % disable | enable | strict
+         }).
+  </verbatim>
+  <br/>
+  <p class="text-justify">
+    The structure is derived from the <code>/etc/yaws/yaws.conf</code> file and
+    is passed around all through the functions in the server.
+  </p>
+
+  <h3> The <code>#sconf{}</code> record</h3>
+  <p class="text-justify">
+    The next important datastructure is the <code>#sconf{}</code> record. It is
+    used to describe a single virtual server. Each:
+  </p>
+  <verbatim class="code apache">
+    <server>
+      .....
+    </server>
+  </verbatim>
+  <br/>
+  <p class="text-justify">
+    In the <code>/etc/yaws/yaws.conf</code> file corresponds to one
+    <code>#sconf{}</code> record. We have:
+  </p>
+  <verbatim class="code erlang">
+    -record(sconf, {
+          port = 8000,                  % which port is this server listening to
+          flags = ?SC_DEF,
+          redirect_map=[],              % a list of
+                                        % {Prefix, #url{}, append|noappend}
+                                        % #url{} can be partially populated
+
+          rhost,                        % forced redirect host (+ optional port)
+          rmethod,                      % forced redirect method
+          docroot,                      % path to the docs
+          xtra_docroots = [],           % if we have additional pseudo docroots
+          listen = [{127,0,0,1}],       % bind to this IP, {0,0,0,0} is possible
+          servername = "localhost",     % servername is what Host: header is
+          serveralias = [],             % Alternate names for this vhost
+          yaws,                         % server string for this vhost
+          ets,                          % local store for this server
+          ssl,                          % undefined | #ssl{}
+          authdirs = [],                % [{docroot, [#auth{}]}]
+          partial_post_size = 10240,
+
+          %% An item in the appmods list  can be either of the
+          %% following, this is all due to backwards compat issues.
+          %% 1.  an atom - this is the equivalent to {atom, atom}
+          %% 2 . A two tuple {Path, Mod}
+          %% 3 A three tuple {Path, Mod, [ExcludeDir ....]}
+          appmods = [],
+
+          expires = [],
+          errormod_401 = yaws_outmod,   % the default 401 error module
+          errormod_404 = yaws_outmod,   % the default 404 error module
+          errormod_crash = yaws_outmod, % use the same module for crashes
+          arg_rewrite_mod = yaws,
+          logger_mod = yaws_log,        % access/auth logging module
+          opaque = [],                  % useful in embedded mode
+          start_mod,                    % user provided module to be started
+          allowed_scripts = [yaws,php,cgi,fcgi],
+          tilde_allowed_scripts = [],
+          index_files = ["index.yaws", "index.html", "index.php"],
+          revproxy = [],
+          soptions = [{listen_opts, [{backlog, 1024}]}],
+          extra_cgi_vars = [],
+          stats,                        % raw traffic statistics
+          fcgi_app_server,              % FastCGI application server {host,port}
+          php_handler = {cgi, "/usr/bin/php-cgi"},
+          shaper,
+          deflate_options,              % undefined | #deflate{}
+          mime_types_info,              % undefined | #mime_types_info{}
+                                        % if undefined, global config is used
+          dispatch_mod                  % custom dispatch module
+         }).
+  </verbatim>
+  <br/>
+  <p class="text-justify">
+    Both of these two structures are defined in
+    <a href="https://github.com/klacke/yaws/blob/master/include/yaws.hrl">yaws.hrl</a>.
+  </p>
+
+  <h3>Supervision tree</h3>
+  <p class="text-justify">
+    Now we're ready to describe the process structure. We have:
+  </p>
+  <img src="%%webroot%%/images/process_tree.png" class="img-responsive center-block"/>
+  <br/>
+  <p class="text-justify">
+    Thus, all the different "servers" defined in the configuration file are
+    clumped together in groups. There can be multiple virtual servers per IP
+    address. Each group is defined by the pair <code>{IpAddr, Port}</code> and
+    they all need to have different server names.
+  </p>
+  <br/>
+  <p class="text-justify">
+    The client will send the server name in the <code>Host:</code> header and
+    that header is used to pick a <code>#sconf{}</code> record out of the list
+    of virtual servers for a specific <code>{Ip,Port}</code> pair.
+  </p>
+  </div>
+</div>
+
+<erl>
+out(A) -> [{ssi, "../includes/footer.inc","%%",[]}, {yssi, "../examples/visit_counter.yaws"}].
+</erl>

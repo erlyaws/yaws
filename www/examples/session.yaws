@@ -1,0 +1,53 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<erl>
+-record(myopaque, {udata,
+                   times = 0,
+                   foobar}).
+
+out(A) ->
+    H = A#arg.headers,
+    C = H#headers.cookie,
+    case yaws_api:find_cookie_val("baz", C) of
+        [] ->
+            new_session();
+        Cookie ->
+            case yaws_api:cookieval_to_opaque(Cookie) of
+                {ok, OP} when OP#myopaque.times < 19 ->
+                    OP2 = OP#myopaque{times = OP#myopaque.times + 1},
+                    yaws_api:replace_cookie_session(Cookie, OP2),
+                    Data = {ehtml,
+                            [{p, [], f("You have been here ~p times (reset in ~p clicks)",
+                                       [OP2#myopaque.times, 20 - OP2#myopaque.times])},
+                             {p, [], f("Your cookie is ~s", [Cookie])}]},
+                    Data;
+                {ok, OP} ->
+                    yaws_api:delete_cookie_session(Cookie),
+                    new_session();
+                {error, no_session} ->
+                    new_session()
+            end
+    end.
+
+new_session() ->
+    M      = #myopaque{},
+    Cookie = yaws_api:new_cookie_session(M),
+    Data   = {ehtml, {p,[], ["I just set your cookie to ", Cookie, "."]}},
+    CO     = yaws_api:set_cookie("baz",Cookie,[{path,"/"}]),
+    [Data, CO].
+
+</erl>
+Click <a href="javascript:revisit()">here</a> to revisit.
+
+<script>
+ function revisit() {
+   if (document.getElementById('yawsModal') != null != 0) {
+     load_modal('Session', '%%webroot%%/examples/session.yaws')
+   }
+   else {
+     window.location.reload(true);
+   }
+ }
+</script>

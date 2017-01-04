@@ -1,0 +1,276 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<h2>Simple "Hello world" examples</h2>
+<p class="text-justify">
+  Simple "Hello world" examples
+</p>
+<div class="text-right">
+  <a href="#howto_simple">Read article</a>
+</div>
+
+<h2>The <code>#arg{}</code> record</h2>
+<p class="text-justify">
+  This page displays the Arg <code>#arg{}</code> structure supplied to the out/1 function.
+</p>
+<div class="text-right">
+  <a href="#howto_arg">Read article</a>
+</div>
+
+<h2>The query part of the url</h2>
+<p class="text-justify">
+   A url can have an optional query part. This part is passed in the
+  <code>A#arg.querydata</code> which is passed as an argument to the
+  <code>out/1</code> function.
+</p>
+<div class="text-right">
+  <a href="#howto_query-string">Read article</a>
+</div>
+
+<h2>Generating Dynamic Content</h2>
+<p class="text-justify">
+  Yaws has very nice support for generating dynamic content on the fly. We use
+  embedded erlang code to generate the content. The Erlang code is separated
+  from the HTML code by <code>&lt;erl&gt;</code> and <code>&lt;/erl&gt;</code>
+  markers.
+</p>
+<div class="text-right">
+  <a href="#howto_dynamic">Read article</a>
+</div>
+
+<h2>Bindings</h2>
+<p class="text-justify">
+  Bindings are the opposite of
+  <a href="#howto_ssi">Server Side Includes (SSI)</a>.
+  SSI is used when entire pages are written largely in EHTML and snippets of
+  HTML, or more typically javascript code is inserted into the EHTML code.
+</p>
+<div class="text-right">
+  <a href="#howto_bindings">Read article</a>
+</div>
+
+<h2>POST example </h2>
+<p class="text-justify">
+  This is a simple example where we get to fill in a series of fields and POST
+  the data by hitting the Submit button at the end.
+</p>
+<div class="text-right">
+  <a href="#howto_forms">Read article</a>
+</div>
+
+<h2>Server side includes (with variable expansion)</h2>
+<p class="text-justify">
+  This feature is useful when we are writing applications where basically the
+  entire page is dynamically generated but we also want to include snippets of
+  either html or, even more typically, javascript which is almost static, but
+  not quite.
+</p>
+<div class="text-right">
+  <a href="#howto_ssi">Read article</a>
+</div>
+
+<h2>Upload a file to the webserver</h2>
+<p class="text-justify">
+  The code that parses the multipart form data resides in
+  <code>/examples/upload.yaws</code>.
+</p>
+<div class="text-right">
+  <a href="#howto_upload">Read article</a>
+</div>
+
+<h2>The session server</h2>
+<p class="text-justify">
+  The Yaws session server is ideal (and recommended) for maintaining cookie
+  state in a server side application.
+</p>
+<div class="text-right">
+  <a href="#howto_sessions">Read article</a>
+</div>
+
+<h2>Yaws and Cookies</h2>
+<p class="text-justify">
+  Cookies are the means in HTTP to assign data to a session. A HTTP session
+  typically consists of many (and sometimes concurrent) TCP connections from the
+  client to the web server. The first time a client arrives to our webserver, we
+  issue the HTTP header <code>Set-Cookie: var=someval</code>. The browser will
+  then in subsequent connections to the same server pass this cookie
+  <code>"var=someval"</code> in its client side <code>Cookie: var=someval</code>
+  header. We can thereby assign state to a session, either through data actualy
+  encoded into the cookie value itself, or by associating server side session
+  data to the cookie.
+</p>
+<div class="text-right">
+  <a href="#howto_cookies">Read article</a>
+</div>
+
+<h2>Persistent Cookies</h2>
+<p class="text-justify">
+  We saw in the first
+  <a href="#howto_cookies">cookie</a> example,
+  how we assigned a special erlang process to handle each session. The cookie
+  has an expiry date, and the correct thing would be to let the handling process
+  live as long as the cookie is valid. This is not a good option. A better
+  option is to store cookie in a persistant storage.
+</p>
+<div class="text-right">
+  <a href="#howto_pcookies">Read article</a>
+</div>
+
+<h2>Appmods (Application modules)</h2>
+<p class="text-justify">
+  Appmods are a way to let the application programmer take control over the URL
+  path. Or put in another way, to let the application programmer fake real paths
+  in URLs where in reality an Erlang module is executing.
+</p>
+<div class="text-right">
+  <a href="#howto_appmods">Read article</a>
+</div>
+
+<h2>Streaming data to the client</h2>
+<p class="text-justify">
+  Sometimes we want to stream data to the client. Maybe we don't know or cannot
+  compute the size of the data. Maybe data are too big to be sent in one
+  time. Regardless of the reason, we do not want to keep all data in memory
+  until it's shipped to the client.
+</p>
+<div class="text-right">
+  <a href="#howto_streaming">Read article</a>
+</div>
+
+<h2>AJAX through JSON RPC</h2>
+<p class="text-justify">
+  The Yaws JSON-RPC binding is a way to have JavaScript code in the browser
+  evaluate a remote procedure call (RPC) in the Yaws server.
+</p>
+<div class="text-right">
+  <a href="#howto_json-rpc">Read article</a>
+</div>
+
+<h2>haXe remoting</h2>
+<p class="text-justify">
+  The yaws_rpc module has a haXe remoting adapter that enables Yaws to respond
+  to respond to RPC requests from a client written in
+  <a href="http://haxe.org">haXe</a>. haXe is a versatile open source language
+  that compiles to Flash, Javascript and NekoVM. For more information on haXe, visit
+  <a href="http://haxe.org/documentation/introduction/">haXe documentation</a>.
+</p>
+<div class="text-right">
+  <a href="#howto_haxe">Read article</a>
+</div>
+
+<h2>Plain CGI and PHP</h2>
+<p class="text-justify">
+  Yaws supports plain CGI just fine. The two most common ways to run yaws cgi
+  script is either as regular cgi scripts or as php scripts through the typical
+  php-cgi binary.
+</p>
+<div class="text-right">
+  <a href="#howto_cgi">Read article</a>
+</div>
+
+<h2>SOAP with Yaws</h2>
+<p class="text-justify">
+  SOAP is an XML-based protocol for communication over a network connection. The
+  main focus of SOAP is remote procedure calls (RPCs) transported via HTTP. SOAP
+  is similar to XML-RPC but makes use of XML Schema to define the data types it
+  uses.
+</p>
+<div class="text-right">
+  <a href="#howto_soap">Read article</a>
+</div>
+
+<h2>WebSockets in Yaws</h2>
+<p class="text-justify">
+  WebSockets allow for real two-way communication between the browser and Yaws
+  without the overhead and latency that come with polling/long-polling
+  solutions. That should be enough for an introduction. Now... how to use it?
+</p>
+<div class="text-right">
+  <a href="#howto_websockets">Read article</a>
+</div>
+
+<h2>Server-sent events</h2>
+<p class="text-justify">
+  HTTP is a client-server protocol — the client makes a request and the server
+  replies with a response. For some applications, though, the request-reply
+  model is limiting or unsuitable. These applications tend to want
+  server-to-client notification capabilities.
+</p>
+<div class="text-right">
+  <a href="#howto_sse">Read article</a>
+</div>
+
+<h2>Write your own logger</h2>
+<p class="text-justify">
+  To illustrate how to write a module that handles auth and access logging in
+  Yaws, we will get a concrete example: How to log the original client IP behind
+  a HTTP reverse proxy.
+</p>
+<div class="text-right">
+  <a href="#howto_yaws-logger">Read article</a>
+</div>
+
+<h2>Tiny shopping cart example</h2>
+<p class="text-justify">
+  The shoppingcart contains a number of tricks and "preferred" ways to code
+  different typical solutions to servers side state applications.
+</p>
+<div class="text-right">
+  <a href="#howto_shopping-cart">Read article</a>
+</div>
+
+<h2>Yaws applications - Yapps</h2>
+<p class="text-justify">
+  Yaws applications, Yapps, are actually ordinary Erlang/OTP applications with
+  some optional information in their <code>.app</code> files and the web pages
+  in the <code>priv/docroot</code> directory as default. The Yaws applications
+  handler takes care of adding, and removing, the applications into a running
+  server. When anyone access the server with an URL that matches the path for an
+  added application, the docroot will be temporarily switched to where the web
+  pages for that application are located.
+</p>
+<div class="text-right">
+  <a href="#howto_yapps">Read article</a>
+</div>
+
+<h2>Redirects</h2>
+<p class="text-justify">
+  Redirects are a powerful tool in the webapp programmer toolbox. The Webserver
+  returns a specific status code (302) and adds a <code>Location</code> header
+  to the responce headers to the Browser. The Browser then displays the new
+  page as indicated in the <code>Location</code> header.
+</p>
+<div class="text-right">
+  <a href="#howto_redirects">Read article</a>
+</div>
+
+<h2>Running yaws embedded in another application</h2>
+<p class="text-justify">
+  Yaws is ideal for embedding within another larger erlang application. Many
+  typical erlang applications are control applications in need of a webgui
+  specific to the actual application.
+</p>
+<div class="text-right">
+  <a href="#howto_embedded">Read article</a>
+</div>
+
+<h2>Binding to privileged ports</h2>
+<p class="text-justify">
+  A common misfeature found on UN*X operating systems is the restriction that
+  only root can bind to ports below 1024. Many a dollar has been wasted on
+  workarounds and -often- the results are security holes.
+</p>
+<div class="text-right">
+  <a href="#howto_privbind">Read article</a>
+</div>
+
+<h2>Creating a Release with Rebar</h2>
+<p class="text-justify">
+  One way to create an Erlang release for a project that depends on Yaws, or a
+  set of applications that includes Yaws, is to use the
+  <a href="https://github.com/rebar/rebar">rebar</a> build tool.
+</p>
+<div class="text-right">
+  <a href="#howto_rebar-release">Read article</a>
+</div>

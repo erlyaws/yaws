@@ -1,0 +1,23 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  The Yaws session server is ideal (and recommended) for maintaining cookie
+  state in a server side application. The code in
+  <a class="btn-link"
+     onclick="load_modal('Code', 'code.yaws?file=%%webroot%%/examples/session.yaws&type=erlang');"
+     data-toggle="modal" data-target="#yawsModal">%%webroot%%/examples/session.yaws</a>
+  shows a minimalistic way to handle sessions. To run it click
+  <a class="btn-link"
+     onclick="load_modal('Session', '%%webroot%%/examples/session.yaws');"
+     data-toggle="modal" data-target="#yawsModal">here</a>
+</p>
+<p class="text-justify">
+  The actual session API is documented in
+  <a href="%%webroot%%/documentation.yaws?manpage=yaws_api">yaws_api (5)</a>.
+</p>

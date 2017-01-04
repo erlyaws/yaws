@@ -180,13 +180,13 @@ deflate_options_mime_types(Config) ->
     Port2 = testsuite:get_yaws_port(3, Config),
     Port3 = testsuite:get_yaws_port(4, Config),
     Port4 = testsuite:get_yaws_port(5, Config),
-    Url1  = testsuite:make_url(http, "127.0.0.1", Port1, "/icons/yaws.gif"),
+    Url1  = testsuite:make_url(http, "127.0.0.1", Port1, "/images/yaws_pb.gif"),
     Url2  = testsuite:make_url(http, "127.0.0.1", Port2, "/1000.txt"),
-    Url3  = testsuite:make_url(http, "127.0.0.1", Port2, "/yaws.eps"),
+    Url3  = testsuite:make_url(http, "127.0.0.1", Port2, "/images/yaws.eps"),
     Url4  = testsuite:make_url(http, "127.0.0.1", Port3, "/1000.txt"),
-    Url5  = testsuite:make_url(http, "127.0.0.1", Port3, "/yaws.eps"),
+    Url5  = testsuite:make_url(http, "127.0.0.1", Port3, "/images/yaws.eps"),
     Url6  = testsuite:make_url(http, "127.0.0.1", Port4, "/1000.txt"),
-    Url7  = testsuite:make_url(http, "127.0.0.1", Port4, "/yaws.eps"),
+    Url7  = testsuite:make_url(http, "127.0.0.1", Port4, "/images/yaws.eps"),
     GzHdr = {"Accept-Encoding", "gzip, deflate"},
 
 

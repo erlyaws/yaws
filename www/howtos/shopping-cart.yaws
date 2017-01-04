@@ -1,0 +1,113 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  The shoppingcart contains a number of tricks and "preferred" ways to code
+ different typical solutions to servers side state applications. The source
+  itself resides in the <code>www/shoppingcart</code> directory in the source
+  code tree. Everything is done in
+  <a class="btn-link"
+     onclick="load_modal('Code', 'code.yaws?file=%%webroot%%/shoppingcart/shopcart.erl&type=erlang');"
+     data-toggle="modal" data-target="#yawsModal">shopcart.erl</a>.
+</p>
+<h2>The first trick, the <code>break</code> statement</h2>
+<p class="text-justify">
+  The source of all yaws pages (including example <code>index.yaws</code>) look
+  very similar in this application, specifically
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["shoppingcart/index.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", "shoppingcart/index.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  All code, including the head containing the link to the stylesheet is
+  dynamically generated. The first function in all code snippets in yaws files
+  is always a call to<code>shopcart:top/1</code>. This function will check the
+  cookie and if a cookie which is associated to an active session is found, the
+  request is granted, otherwise the login page is displayed by the
+  <code>shopcart:login/1</code> function. The last item displayed by the
+  <code>shopcart:login/1</code> is the atom <code>break</code>. When the yaws
+  server sees it, it will not process any more data from the yaws page being
+  requested. Thus, we can have the login call at the top of a yaws page and
+  still have subsequent html/yaws code on the same page.
+</p>
+
+<h2>Redirect to the requested page</h2>
+<p class="text-justify">
+  Since the <code>shopcart:login/1</code> function is supplied with the
+  <code>Arg</code> of the requested page, it will set the path of the requested
+  page in a hidden field in the login form.  The code that processes the login
+  form will then issue a redirect to the value of this hidden field if the login
+  in successful.
+</p>
+
+<h2>EHTML</h2>
+<p class="text-justify">
+  The use of the EHTML output syntax makes it more convenient to dynamically
+  generate structured content:
+  <ul>
+    <li>
+      <p class="text-justify">
+        It is easier to get the structure right,
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        It is easier to inject the dynamically generated parts in the structure,
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        It is <em>much</em> more beautiful.
+      </p>
+    </li>
+  </ul>
+</p>
+<br/>
+<p class="text-justify">
+  See
+  <a class="btn-link"
+     onclick="load_modal('Code', 'code.yaws?file=%%webroot%%/shoppingcart/shopcart.erl&type=erlang');"
+     data-toggle="modal" data-target="#yawsModal">shopcart.erl</a>
+  for a number of "proofs" for this.
+</p>
+
+<h2>The use of the <code>yaws_session_server</code></h2>
+<p class="text-justify">
+  The <code>yaws_session_server</code> module is designed to facilitate server
+  side state applications. The yaws application writer is supplied with the
+  following capabilities and services:
+  <ul>
+    <li>
+      <p class="text-justify">
+        Truly random cookie generation. Each cookie can subsequently be used to
+        uniquely identify a session.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        Maintenance of an opaque application state in an ets table.  This state
+        is readily available to the yaws page by means of the cookie.
+      </p>
+    </li>
+    <li>
+      <p class="text-justify">
+        Old idle sessions are garbage collected.
+      </p>
+    </li>
+  </ul>
+</p>
+
+<h2>Let's go for the fun!</h2>
+<p class="text-justify">
+  Now, you can <a href="%%webroot%%/shoppingcart/" target="_blank">try it</a>.
+</p>

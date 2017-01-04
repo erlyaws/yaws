@@ -1,0 +1,78 @@
+<erl module="visit_counter">
+%% The Erlang block is named. It can be requested as any other module. 2
+%% functions are exported. So from anywhere, you can call one of these
+%% functions.
+-export([get_counters/0, get_counter/1]).
+
+-define(TABLE, visit_counter).
+
+%% Return all counters sorted.
+get_counters() ->
+    create_table(),
+    Counters = ets:tab2list(?TABLE),
+    lists:sort(fun({_,N1}, {_,N2}) -> (N1 > N2) end, Counters).
+
+%% Return counter for the specified page.
+get_counter(Page) ->
+    create_table(),
+    case ets:lookup(?TABLE, Page) of
+        [{Page, Counter}] -> Counter;
+        _                 -> 0
+    end.
+
+%% Increment counter for the specified page (or set it to 1 of update_counter
+%% failed)
+incr_counter(Page) ->
+    try
+        ets:update_counter(?TABLE, Page, 1)
+    catch
+        _:_ ->
+            ets:insert(?TABLE, {Page, 1}),
+            1
+    end.
+
+%% Create the ETS table using a lock to be handle concurrency. It will be
+%% attached to 'yaws_server' process to prevent its removal when the request
+%% process will die.
+do_create_table() ->
+    global:trans({?TABLE, self()},
+                 fun() ->
+                         case ets:info(?TABLE) of
+                             undefined ->
+                                 Opts = [set, public, named_table,
+                                         {heir, whereis(yaws_server), []}],
+                                 ets:new(?TABLE, Opts);
+                             _ ->
+                                 ok
+                         end
+                 end, [node()], infinity).
+
+%% Check if the table exists and create it if necessary
+create_table() ->
+    case ets:info(?TABLE, size) of
+        undefined -> do_create_table();
+        _         -> ok
+    end.
+
+%% In this erlang Block, we just update counters. No HTML is generated
+%% here. This function returns bindings.
+out(Arg) ->
+    create_table(),
+
+    %% Get the page. Look for "page" attribute in the query-string. If not
+    %% found, we use the current page.
+    Page = case queryvar(Arg, "page") of
+               {ok, P} -> P;
+               _       -> Arg#arg.server_path
+           end,
+
+    %% Update the page counter and get its new value
+    Counter = incr_counter(Page),
+
+    %% Define bindings that will be used later in the HTML code
+    Bindings = {bindings, [{"page",    Page},
+                           {"counter", integer_to_list(Counter)}]},
+    Bindings.
+
+%% Do not close the <erl> tag to avoid extra newline when included in other
+%% pages

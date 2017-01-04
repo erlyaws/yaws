@@ -10,6 +10,7 @@ YAWS_VSN=${VSN-$YAWS_VSN}
 YAWS_ETCDIR=${ETCDIR-$YAWS_DIR/etc}
 YAWS_BINDIR=${EXECDIR-$YAWS_DIR/bin} # BINDIR is already set by rebar
 YAWS_VARDIR=${VARDIR-$YAWS_DIR/var}
+YAWS_MANDIR=${MANDIR-$YAWS_DIR/man}
 YAWS_LOGDIR=${LOGDIR-$YAWS_DIR/yaws_logs}
 
 ERL_BIN=`which erl`
@@ -38,9 +39,8 @@ keep_or_replace() {
 
 ## handle clean command and exit
 if [ "$1" = clean ]; then
-    rm -f ${YAWS_DIR}/src/mime_types.erl  \
-       ${YAWS_DIR}/src/yaws_generated.erl \
-       ${YAWS_DIR}/src/yaws_charset.hrl
+    rm -f ${YAWS_DIR}/src/mime_types.erl     \
+          ${YAWS_DIR}/src/yaws_generated.erl
     exit 0
 fi
 
@@ -49,6 +49,7 @@ fi
 [ -d "$YAWS_ETCDIR/yaws" ]        || mkdir "$YAWS_ETCDIR/yaws"        || fail
 [ -d "$YAWS_BINDIR" ]             || mkdir "$YAWS_BINDIR"             || fail
 [ -d "$YAWS_VARDIR" ]             || mkdir "$YAWS_VARDIR"             || fail
+[ -d "$YAWS_MANDIR" ]             || mkdir "$YAWS_MANDIR"             || fail
 [ -d "$YAWS_LOGDIR" ]             || mkdir "$YAWS_LOGDIR"             || fail
 [ -d "${YAWS_VARDIR}/yaws" ]      || mkdir "${YAWS_VARDIR}/yaws"      || fail
 [ -d "${YAWS_VARDIR}/yaws/ebin" ] || mkdir "${YAWS_VARDIR}/yaws/ebin" || fail
@@ -56,7 +57,7 @@ fi
 ## generate yaws_generated.erl module
 cd ${YAWS_DIR}/src || fail
 tmpgen=`mktemp /tmp/${SCRIPT}.XXXXXX` || fail
-YAWS_VSN="${YAWS_VSN}" VARDIR="${YAWS_VARDIR}" ETCDIR="${YAWS_ETCDIR}"  \
+YAWS_VSN="${YAWS_VSN}" VARDIR="${YAWS_VARDIR}" ETCDIR="${YAWS_ETCDIR}" MANDIR="${YAWS_MANDIR}" \
     ${YAWS_DIR}/scripts/gen-yaws-generated >$tmpgen || fail
 keep_or_replace ${YAWS_DIR}/src/yaws_generated.erl $tmpgen
 

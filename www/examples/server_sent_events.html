@@ -1,0 +1,20 @@
+<!-- HTML document served to start the Server Side Events demo
+See examples/src/server_side_events.erl for the server -->
+<html>
+  <head>
+    <script type="text/javascript">
+     var es = new EventSource('/sse');
+     es.onmessage = function(event) {
+       var h2 = document.querySelector('#date-time');
+       h2.innerHTML = event.data;
+     }
+    </script>
+  </head>
+  <body>
+    <center>
+      <h1>Yaws Server-Sent Events Time of Day</h1>
+      <h2 id="date-time" name="date-time">
+      </h2>
+    </center>
+  </body>
+</html>

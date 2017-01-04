@@ -1,28 +1,24 @@
-
 <erl>
-
 out(A) ->
-    {Code, F} = case queryvar(A, "file") of
-                    {ok, Fname} ->
-                        File = A#arg.docroot ++
-                            yaws_api:sanitize_file_name(Fname),
-                        case file:read_file(File) of
-                            {ok, B} ->
-                                C = {'div',
-                                     [],
-                                     {pre, [], B}},
-                                {C, Fname};
-                            _ ->
-                                {[], "Can't read " ++ Fname }
-                        end;
-                    undefined ->
-                        {[], "Bad request"}
-                end,
-    {ehtml, {html, [],
-             {'div',
-              [],
-              [{h2, [], F},
-               Code]}}}.
-
-
+    CodeCls = case queryvar(A, "type") of
+                  {ok, Type} -> "code "++Type;
+                  undefined  -> "code"
+              end,
+    {Code, F} =
+        case queryvar(A, "file") of
+            {ok, Fname} ->
+                Fname1 = yaws_api:sanitize_file_name(Fname),
+                File = A#arg.docroot ++ Fname1,
+                case file:read_file(File) of
+                    {ok, B} ->
+                        Content = yaws_api:htmlize(B),
+                        C = {'div', [], {pre, [{class, CodeCls}], Content}},
+                        {C, Fname};
+                    _ ->
+                        {[], "Can't read " ++ Fname }
+                end;
+            undefined ->
+                {[], "Bad request"}
+        end,
+    {ehtml, {'div', [], [{h2, [], F}, Code]}}.
 </erl>

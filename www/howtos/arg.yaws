@@ -1,0 +1,76 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  This page displays the Arg <code>#arg{}</code> structure supplied to the
+  <code>out/1</code> function.
+</p>
+<br/>
+<p class="text-justify">
+  The <code>#arg{}</code> structure is a very important data structure for
+  the Yaws programmer. It is the main mechanism whereby the server can pass
+  data to the web application. There are several data items which are of
+  interest to the web application, such as which headers were sent from the
+  client, etc.  The <code>#arg{}</code> recored is defined in
+  <code>yaws_api.hrl</code> and is defined as:
+</p>
+<verbatim class="code erlang">
+    -record(arg, {
+          clisock,        % the socket leading to the peer client
+          client_ip_port, % {ClientIp, ClientPort} tuple
+          headers,        % headers
+          req,            % request (possibly rewritten)
+          orig_req,       % original request
+          clidata,        % The client data (as a binary in POST requests)
+          server_path,    % The normalized server path
+                          % (pre-querystring part of URI)
+          querydata,      % For URIs of the form ...?querydata
+                          %  equiv of cgi QUERY_STRING
+          appmoddata,     % (deprecated - use pathinfo instead) the remainder
+                          % of the path leading up to the query
+          docroot,        % Physical base location of data for this request
+          docroot_mount,  % virtual directory e.g /myapp/ that the docroot
+                          %  refers to.
+          fullpath,       % full deep path to yaws file
+          cont,           % Continuation for chunked multipart uploads
+          state,          % State for use by users of the out/1 callback
+          pid,            % pid of the yaws worker process
+          opaque,         % useful to pass static data
+          appmod_prepath, % (deprecated - use prepath instead) path in front
+                          %  of: <appmod><appmoddata>
+          prepath,        % Path prior to 'dynamic' segment of URI.
+                          %  ie http://some.host/<prepath>/<script-point>/d/e
+                          % where <script-point> is an appmod mount point,
+                          % or .yaws,.php,.cgi,.fcgi etc script file.
+          pathinfo        % Set to '/d/e' when calling c.yaws for the request
+                          % http://some.host/a/b/c.yaws/d/e
+                          %  equiv of cgi PATH_INFO
+         }).
+
+</verbatim>
+<br/>
+<p class="text-justify">
+  As we have seen is several previous examples, the <code>out/1</code>
+  function defined in <code>.yaws</code> files, gets invoked with a single
+  argument which is a <code>#arg{}</code> record, fitting the specific HTTP
+  request being served.
+</p>
+<br/>
+<p class="text-justify">
+  The following code displays the <code>#arg{}</code> record and can be executed
+  <a class="btn-link"
+     onclick="load_modal('#arg{}', '%%webroot%%/examples/arg.yaws');"
+     data-toggle="modal" data-target="#yawsModal">here</a>:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/arg.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT")++"/examples/arg.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>

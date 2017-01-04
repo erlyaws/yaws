@@ -1,0 +1,183 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  <dfn><small>
+    Note: this documentation used to refer to the module
+    <code>yaws_jsonrpc</code>, but that module was deprecated in favor of
+    <code>yaws_rpc</code>, which handles JSON RPC, haXe and SOAP remoting.
+    For more specific information about SOAP, refer to the
+    <a href="#howto_soap">SOAP page</a>.
+  </small></dfn>
+</p>
+<br/>
+<p class="text-justify">
+  The Yaws JSON-RPC binding is a way to have JavaScript code in the browser
+  evaluate a remote procedure call (RPC) in the Yaws server. JSON itself, as
+  described at <a href="http://www.json.org/">http://www.json.org</a>, is
+  basically a simple marshaling format which can be used from a variety of
+  different programming languages, and naturally it's completely straightforward
+  to implement in JavaScript itself. JSON-RPC version 2.0, the version Yaws
+  supports, is described <a href="http://www.jsonrpc.org/specification">here</a>.
+</p>
+<br/>
+<p class="text-justify">
+  The Yaws JSON-RPC implementation consist of JavaScript clients and a server
+  side library that must be explicitly invoked by Erlang code in a
+  <code>.yaws</code> page, appmod, etc. It is not particularly easy to show and
+  explain an AJAX setup through JSON-RPC, but here is an attempt.
+</p>
+<p class="text-justify">
+  First we have an HTML page which:
+  <ol>
+    <li>
+      Includes the client side of the JSON library. The library is included
+      in the Yaws distribution and it is found under
+      <a href="https://github.com/klacke/yaws/blob/master/www/js/jsolait/jsolait.js">www/js/jsolait/jsolait.js</a>.
+    </li>
+    <li>
+      Second, the HTML code defines the name of a method, i.e. the name of a
+      server-side function that shall be called by the client side JavaScript
+      code.
+    </li>
+    <li>
+      Finally the HTML code defines a FORM that's used to invoke the RPC. This
+      is just a really simple example, really any JavaScript code can invoke
+      any RPC in more interesting scenarios than submitting a form.
+    </li>
+  </ol>
+  The HTML code appears as shown below:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/json_sample.html"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/json_sample.html"},
+                                           {"lang", "html"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  This HTML code above is the AJAX GUI. It can be executed
+  <a class="btn-link"
+     onclick="load_modal('json_sample', '%%webroot%%/examples/json_sample.html');"
+     data-toggle="modal" data-target="#yawsModal">here</a>.
+</p>
+<br/>
+<p class="text-justify">
+  Following that we need to take a look at <code>examples/json_sample.yaws</code>
+  (see below), which is the <code>serviceURL</code> according to the JavaScript
+  code. This code defines the function to be called. Remember that the JavaScript
+  code defined one method, called <code>test1</code>; this information will be
+  passed to the <code>serviceURL</code>. The code looks like:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/json_sample.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/json_sample.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  The two important lines on the server side are:
+  <ol>
+    <li><code>yaws_rpc:handler_session(A2, {sample_mod, counter})</code></li>
+    <li><code>counter([{ip, IP}] = _State, {call, test1, Value} = _Request, Session)</code></li>
+  </ol>
+</p>
+<br/>
+<p class="text-justify">
+  The first line tells Yaws to forward all JSON-RPC methods to the
+  <code>counter</code> function in the <code>sample_mod</code> module.
+  The second line is the head of the <code>counter</code> function that will be
+  called when the client invokes a method called <code>test1</code>. We would
+  duplicate this line with a different name than <code>test1</code> for each
+  RPC function we wish to implement. Note that the first atom in the request
+  tuple will either be <code>call</code> or <code>notification</code> to
+  indicate the type of request. As per the
+  <a href="http://www.jsonrpc.org/specification">JSON-RPC 2.0</a> specification,
+  a <code>call</code> is a regular request-reply while a <code>notification</code>
+  is a one-way message that does not have a corresponding reply.
+</p>
+<br/>
+<p class="text-justify">
+  On the client side we have
+</p>
+<verbatim class="code javascript">
+  var methods = [ "test1" ];
+  var jsonrpc = import("jsonrpc");
+  var service = new jsonrpc.ServiceProxy(serviceURL, methods);
+</verbatim>
+<br/>
+<p class="text-justify">
+  This registers the Yaws page with the JSON-RPC handler and gives it a list of
+  methods that the Yaws page can satisfy. In this case, the only method called
+  <code>test1</code>.
+</p>
+<br/>
+<p class="text-justify">
+  When we wish to return structured data, we simply let the user-defined RPC
+  function returns JSON structures such as
+  <code>{struct, [{field1, "foo"}, {field2, "bar"}]}</code> for a structure
+  and <code>{array, ["foo", "bar"]}</code> for an array. We can nest arrays
+  and structs in each other.
+</p>
+<br/>
+<p class="text-justify">
+  Finally, we must stress that this example is extremely simple. In order to
+  build a proper AJAX application in Yaws, a lot of client side work is
+  required, all Yaws provides is the basic mechanism whereby the client side
+  JavaScript code can RPC the web server for data which can be subsequently used
+  to populate the DOM. Also required to build a good AJAX application is good
+  knowledge of how the DOM in the browser works
+</p>
+<br/>
+<p class="text-justify">
+  The <code>yaws_rpc:handler</code> will also call
+  <code>Mod:Fun(cookie_expire)</code> which is expected to return a proper
+  cookie expire string. This makes it possible to setup the cookie lifetime.
+  If this callback function is non-existent, the default behaviour is to not set
+  a cookie expiration time, i.e., it will live for this session only.
+</p>
+<h2>One more example</h2>
+Here is yet another example, stolen from "Red Hot Erlang" blog, written by
+Torbjörn Törnkvist.
+
+<h3>Setup the DOM</h3>
+<p class="text-justify">
+  In the file <code>ex1.html</code> we create the DOM with a little HTML and add
+  some JavaScript that will talk with the Erlang server side.
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/ex1.html"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/ex1.html"},
+                                           {"lang", "html"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+
+<h3>The erlang server side</h3>
+<p class="text-justify">
+  This is the code that needs to be installed and execute on the server side. It
+  nicely illustrates how to return JSON structs to the client.
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/ex1.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/ex1.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+
+<h2>The JSON library</h2>
+<p class="text-justify">
+  The Yaws JSON library contains 3 simple functions, one for encoding and two
+  for decoding. See source code
+  <a href="https://github.com/klacke/yaws/blob/master/src/json2.erl">json2.erl</a>
+  for detailed instructions on usage.
+</p>

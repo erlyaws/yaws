@@ -1,0 +1,52 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  A url can have an optional query part. This part is passed in the
+  <code>A#arg.querydata</code> which is passed as an argument to the
+  <code>out/1</code> function.
+</p>
+<br/>
+<p class="text-justify">
+  We show how to work with the query part of the url through an example, if we
+  have an url on the form of
+  <a class="btn-link"
+     onclick="load_modal('URL %%webroot%%/man.yaws?page=yaws.conf.5', '%%webroot%%/man.yaws?page=yaws.conf.5');"
+     data-toggle="modal" data-target="#yawsModal">http://yaws.hyber.org/man.yaws?page=yaws.conf.5</a>
+  a key/value pair is passed to the page.  In the above example, we have
+  <code>key=page</code> and <code>value=yaws.conf.5</code>.
+  The previous script reads these key/value pairs in the
+  <code>A#arg.querydata</code> and display the man page:
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["man.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT")++"/man.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  This fairly convenient way of getting at the query (or POST) is equivalent of
+  the code:
+</p>
+<verbatim class="code erlang">
+P = yaws_api:parse_query(A),
+L = case lists:keyfind(page, 1, P) of
+        {page, Page} ->
+            ...
+</verbatim>
+<br/>
+<p class="text-justify">
+  The query part of the url is a field of the <code>#arg{}</code> record. The
+  function<code>yaws_api:parse_query/1</code> parses the raw data into a
+  key/value list. While the function <code>yaws_api:queryvar(ARG, Key)</code>
+  returns the value of the variable if found in the query part of the request.
+  If multiple occurrences of the variable is found, a list of value is returned.
+  Otherwise, when not found, it returns <code>undefined</code>.
+</p>

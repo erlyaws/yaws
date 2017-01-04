@@ -17,7 +17,7 @@ if MINGW
 endif
 
 SUBDIRS += examples/src	examples/ebin examples/include \
-	   testsuite doc man scripts www/code www/shoppingcart
+	   testsuite doc man scripts
 
 EXTRA_DIST = ChangeLog known_dialyzer_warnings LICENSE			\
 	     README.md README.osx README.pkg-config 			\

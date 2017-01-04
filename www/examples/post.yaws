@@ -1,0 +1,46 @@
+<p class="text-justify">
+  POST data is naturally organized as a <code>{Key, Value}</code> list. A call
+  to the function <code>yaws_api:parse_post(A)</code> will parse the POSTed
+  data. and return a key/value list:
+</p>
+<verbatim class="code erlang">
+out(A) ->
+    {ehtml, {pre, [], io_lib:format("~p~n", [yaws_api:parse_post(A)])}}.
+</verbatim>
+<br/>
+<p class="text-justify">
+  Produces the following output:
+</p>
+<erl>
+out(A) ->
+    Txt = yaws_api:htmlize(io_lib:format("~n~p~n", [yaws_api:parse_post(A)])),
+    {ehtml, {pre, [{class, "code erlang"}], Txt}}.
+</erl>
+<br/>
+<p class="text-justify">
+  The natural way to extract the <code>Variables</code> from the posted data is
+  to use the function (defined in <code>yaws_api</code>) called
+  <code>postvar(Arg,Key)</code>. Thus the following erlang code:
+</p>
+<verbatim class="code erlang">
+out(A) ->
+    {ehtml,
+      {p,[], ["The favourite programming language is ",
+              case postvar(A,"lang") of
+                  undefined -> "None";
+                  {ok, Val} -> yaws_api:htmlize(Val)
+              end]}}.
+</verbatim>
+<br/>
+<p class="text-justify">
+  Produces the following output:
+</p>
+<erl>
+out(A) ->
+    Lang = case postvar(A,"lang") of
+               undefined -> "None";
+               {ok, Val} -> yaws_api:htmlize(Val)
+           end,
+    Txt = yaws_api:htmlize("\n<p>The favourite programming language is "++Lang++"</p>\n"),
+    {ehtml, {pre, [{class, "code"}], Txt}}.
+</erl>

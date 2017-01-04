@@ -1,0 +1,534 @@
+<erl>
+  out(A) -> [{yssi, "../includes/config.yaws"}].
+</erl>
+
+<div class="text-right">
+  <a href="#howto_overview">&#10143; Overview</a>
+</div>
+<br/>
+<p class="text-justify">
+  WebSockets! The new kid in town! Joe
+  <a href="http://armstrongonsoftware.blogspot.com/2009/12/comet-is-dead-long-live-websockets.html">loves it</a>,
+  maybe you should too?
+</p>
+<br/>
+<p class="text-justify">
+  WebSockets allow for <strong>real</strong> two-way communication between the
+  browser and Yaws without the overhead and latency that come with
+  polling/long-polling solutions. That should be enough for an
+  introduction. Now... how to use it?
+</p>
+<h2>A simple example</h2>
+<p class="text-justify">
+  First of all, here is a simple example. It shows how to upgrade connections
+  from HTTP to WebSocket.
+</p>
+<erl>
+  out(A) ->
+      {html, L} = yaws_api:ssi(get("SITEROOT"), ["examples/websockets_example_endpoint.yaws"]),
+      [{ssi, "../includes/code.inc","%%", [{"title", get("WEBROOT") ++ "/examples/websockets_example_endpoint.yaws"},
+                                           {"lang", "erlang"},
+                                           {"code", yaws_api:htmlize(L)}]}].
+</erl>
+<br/>
+<p class="text-justify">
+  The above code can be executed
+  <a class="btn-link"
+     onclick="load_modal('Websockets example', '%%webroot%%/examples/websockets_example.yaws');"
+     data-toggle="modal" data-target="#yawsModal">here</a>.
+</p>
+
+<h2>Establish a WebSocket connection</h2>
+<p class="text-justify">
+  To establish a WebSocket connection, a client must send a valid HTTP Upgrade
+  request. Then, from the server side, the Yaws script (or the appmod or
+  whatever) should return:
+</p>
+<verbatim class="code erlang">
+  {websocket, CallbackMod, Options}
+</verbatim>
+<br/>
+<p class="text-justify">
+  where <code>CallbackMod</code> is an atom identifying the WebSocket callback
+  module, and <code>Options</code> is a (possibly empty) list (see below for
+  details).
+</p>
+<br/>
+<p class="text-justify">
+  From here, Yaws spawns an Erlang process to manage the WebSocket
+  connection. Once the handshake response is returned by Yaws, the connection is
+  established and the handling process is ready to send or receive data. If
+  something goes wrong during this step, Yaws returns an HTTP error (400, 403 or
+  500 depending of the error type).
+</p>
+
+<h3>Supported Options</h3>
+<p class="text-justify">
+  The following options are available:
+  <ul>
+    <li>
+      <code>{callback, CallbackType}</code>
+      <p class="text-justify">
+        Specify the type of the callback module. <code>CallbackType</code> can
+        be either of the following:
+        <ul>
+          <li style="margin-bottom: 10px;">
+            <code>basic</code> - Same as <code>{basic, []}</code>. This is the
+            default.
+          </li>
+          <li style="margin-bottom: 10px;">
+            <code>{basic, InitialState}</code> - Indicate your callback module
+            is a basic callback module. <code>InitialState</code> is the
+            callback's initial state for handling this client.
+          </li>
+          <li style="margin-bottom: 10px;">
+            <code>{advanced, InitialState}</code> - Same as above but for an
+            advanced callback module.
+          </li>
+        </ul>
+      </p>
+    </li>
+    <li>
+      <code>{origin, Origin}</code>
+      <p class="text-justify">
+        Specify the <code>Origin</code> URL from which messages will be
+        accepted. This is useful for protecting against cross-site attack. The
+        option defaults to <code>any</code>, meaning calls will be accepted
+        from any origin.
+      </p>
+    </li>
+    <li>
+      <code>{keepalive, KeepAliveBoolean}</code>
+      <p class="text-justify">
+        If true, Yaws will automatically send a ping message every
+        <code>keepAliveTimeout</code> milliseconds. By default keepalive
+        pings are disabled.
+      </p>
+    </li>
+    <li>
+      <code>{keepalive_timeout, keepAliveTimeout}</code>
+      <p class="text-justify">
+        Specify the interval in milliseconds to send keepalive pings, by
+        default <code>30000</code>. Ignored if <code>KeepAliveBoolean</code>
+        is <code>false</code>.
+      </p>
+    </li>
+    <li>
+      <code>{keepalive_grace_period, KeepAliveGracePeriod}</code>
+      <p class="text-justify">
+        Specify the amount of time, in milliseconds, to wait after sending a
+        keepalive ping. If no message is received within
+        <code>KeepAliveGracePeriod</code> milliseconds, a timeout will occur.
+        Depending on the <code>DropBoolean</code> value, a close frame is sent
+        with the status code 1006 (if <code>DropBoolean</code> is <code>true</code>)
+        or the callback module is notified (see <code>Module:handle_info/2</code> below).
+        <br/>By default, <code>KeepAliveGracePeriod</code> is set to <code>2000</code>.
+        Ignored if <code>KeepAliveBoolean</code> is <code>false</code>.
+      </p>
+    </li>
+    <li>
+      <code>{drop_on_timeout, DropBoolean}</code>
+      <p class="text-justify">
+        If true, a close frame is sent with the status code 1006 when a timeout
+        occurs after a keepalive ping has been sent (see <code>KeepAliveGracePeriod</code>).
+        Disabled by default. Ignored if <code>KeepAliveBoolean</code> is <code>false</code>.
+      </p>
+    </li>
+    <li>
+      <code>{close_timeout, CloseTimeout}</code>
+      <p class="text-justify">
+        After sending a close frame to a client, Yaws will wait for the client
+        acknowledgement for <code>CloseTimeout</code> milliseconds. Then it will
+        close the underlying TCP connection. By default <code>CloseTimeout</code>
+        is set to <code>5000</code>.
+      </p>
+    </li>
+    <li>
+      <code>{close_if_unmasked, CloseUnmaskedBoolean}</code>
+      <p class="text-justify">
+        If true, Yaws will reject any unmasked incoming frame by sending a
+        close frame with the status code 1002. Disabled by default.<br/>
+        Note: According to RFC 6455, a client must mask all frames that it
+        sends to the server
+        (See <a href="https://tools.ietf.org/html/rfc6455#section-5.1">RFC
+        6455 - Section 5.1</a>).
+      </p>
+    </li>
+    <li>
+      <code>{max_frame_size, MaxFrameSize}</code>
+      <p class="text-justify">
+        Specify the maximum allowed size, in bytes, for received frames. By
+        default <code>16MB</code>. It is also the maximum size for unfragmented
+        messages.<br/>This limit is checked for all types of callback module.
+      </p>
+    </li>
+    <li>
+      <code>{max_message_size, MaxMsgSize}</code>
+      <p class="text-justify">
+        Specify the maximum allowed message size in bytes, by default
+        <code>16MB</code>.<br/> This limit is checked only for basic callback
+        modules.
+      </p>
+    </li>
+    <li>
+      <code>{auto_fragment_message, AutoFragBoolean}</code>
+      <p class="text-justify">
+        If <code>true</code>, outgoing messages will be automatically fragmented
+        if their payload exceeds <code>OutFragSize</code> bytes. This flag is set
+        to <code>false</code> by default.
+      </p>
+    </li>
+    <li>
+      <code>{auto_fragment_threshold, OutFragSize}</code>
+      <p class="text-justify">
+        Specify the maximum payload size of each fragment if
+        <code>AutoFragBoolean</code> is true. <code>OutFragSize</code> is set to
+        <code>1MB</code> by default. Ignored is <code>AutoFragBoolean</code> is
+        <code>false</code>.
+      </p>
+    </li>
+  </ul>
+</p>
+
+<h2>WebSocket callback modules</h2>
+<p class="text-justify">
+  All frames received on a WebSocket connection are passed to the callback
+  modules specified during the connection establishment by calling
+  <code>Module:handle_message/1</code> or <code>Module:handle_message/2</code>,
+  depending on whether it’s a basic or an advanced callback module.
+</p>
+
+<h3>Basic callback modules</h3>
+<p class="text-justify">
+  When a basic callback module is used, the messages defragmentation is handled
+  by Yaws. From the callback module point of view, all incoming messages are
+  unfragmented. This implies that fragmented frames will be accumulated, thus
+  basic callback modules does not support data streaming.
+</p>
+<br/>
+<p class="text-justify">
+  A basic callback module <strong>MUST</strong> define the stateless
+  function <code>Module:handle_message/1</code>:
+</p>
+<div class="row">
+  <div class="col-xs-11 col-xs-push-1">
+    <p><strong>Module:handle_message(Message) -> Result</strong></p>
+    <verbatim class="code erlang">
+      Message :: {Type, Data} | {close, Status, Reason}
+      Result  :: noreply | {reply, Reply} | {close, CloseReason}
+      Type        :: text | binary
+      Data        :: binary()
+      Reply       :: {Type, Data} | #ws_frame{} |
+                     [{Type, Data}] | [#ws_frame{}]
+      CloseReason :: Status | {Status, Reason}
+      Status      :: integer() %% RFC 6455 Status Code
+      Reason      :: binary()
+    </verbatim>
+    <p class="text-justify">
+      This function is called when a message is received. <code>{text,
+      Data}</code> (or <code>{binary, Data}</code>) is the unfragmented text (or
+      binary) message. When the client closes the connection, the callback
+      module is notified with the message <code>{close, Status, Reason}</code>,
+      where <code>Status</code> is the numerical status code sent by the client
+      or the value 1000
+      (see <a href="http://tools.ietf.org/html/rfc6455#section-7.4.1">RFC 6455 -
+      Section 7.4.1</a>) if the client sent no status code. For an abnormal
+      client closure, the status code is 1006 (as specified
+      by <a href="http://tools.ietf.org/html/rfc6455#section-7.1.5">RFC 6455 -
+      Section 7.1.5</a>). <code>Reason</code> is a binary containing any text
+      the client sent to indicate the reason for closing the socket; this binary
+      may be empty.
+    </p>
+    <p class="text-justify">
+      If the function returns <code>{reply, Reply}</code>, <code>Reply</code> is
+      sent to the client. It is possible to send one or more unfragmentated
+      messages by returning <code>{Type, Data}</code> or <code>[{Type,
+      Data}]</code>. It is also possible to send one or more frames
+      using the <code>#ws_frame{}</code> record instead, defined
+      in <code>include/yaws_api.hrl</code> (useful to fragment messages by
+      hand).
+    </p>
+    <p class="text-justify">
+      If the function returns <code>noreply</code>, nothing happens.
+    </p>
+    <p class="text-justify">
+      If the function returns <code>{close, CloseReason}</code>, the handling
+      process closes the connection sending a close control frame to the
+      client. <code>CloseReason</code> is used to set the status code and the
+      (optional) close reason of the close control frame. Then the handling
+      process terminates calling <code>Module:terminate(CloseReason,
+      State)</code> (if defined, see below).
+    </p>
+  </div>
+</div>
+<br/>
+<p class="text-justify">
+  Because just handling messages is not enough for real applications, a basic
+  callback module can define optional functions, mainly to manage a callback
+  state. It can define one, some or all of the following functions:
+</p>
+<br/>
+<div class="row">
+  <div class="col-xs-11 col-xs-push-1">
+    <p><strong>Module:init(Args) -> Result</strong></p>
+    <verbatim class="code erlang">
+      Args   :: [ReqArg, InitialState]
+      Result :: {ok, State} | {ok, State, Timeout} | {error, Reason}
+      ReqArg       :: #arg{}
+      InitialState :: term()
+      State        :: term()
+      Timeout      :: integer() >= 0 | infinity
+      Reason       :: term()
+    </verbatim>
+    <p class="text-justify">
+      If defined, this function is called to initialize the internal state of
+      the callback module.
+    </p>
+    <p class="text-justify">
+      <code>ReqArg</code> is the #arg{} record supplied to
+      the <code>out/1</code> function and <code>InitialState</code> is the term
+      associated to the <code>CallbackType</code> described above.
+    </p>
+    <p class="text-justify">
+      If an integer timeout value is provided, it will overload the next
+      keepalive timeout (see <code>keepalive_timeout</code> option above). The
+      atom <code>infinity</code> can be used to wait indefinitely. If no value
+      is specified, the default keepalive timeout is used.
+    </p>
+    <p class="text-justify">
+      If something goes wrong during initialization, the function should
+      return <code>{error, Reason}</code>, where <code>Reason</code> is any
+      term.
+    </p>
+  </div>
+</div>
+<br/>
+
+<div class="row">
+  <div class="col-xs-11 col-xs-push-1">
+    <p><strong>Module:handle_open(WSState, State) -> Result</strong></p>
+    <verbatim class="code erlang">
+      WSState :: #ws_state{}
+      State   :: term()
+      Result  :: {ok, NewState} {error, Reason}
+      NewState :: term()
+      Reason   :: term()
+    </verbatim>
+    <p class="text-justify">
+      If defined, this function is called when the connection is upgraded from
+      HTTP to WebSocket.
+    </p>
+    <p class="text-justify">
+      <code>WSState</code> is the state of the WebSocket connection. It can be
+      used to send messages to the client
+      using <code>yaws_api:websocket_send(WSState, Message)</code>.
+    </p>
+    <p class="text-justify">
+      <code>State</code> is the internal state of the callback module.
+    </p>
+    <p class="text-justify">
+      If the function returns <code>{ok, NewState}</code>, the handling process
+      will continue executing with the possibly updated internal
+      state <code>NewState</code>.
+    </p>
+    <p class="text-justify">
+      If the function returns <code>{error, Reason}</code>, the handling
+      process closes the connection and terminates
+      calling <code>Module:terminate({error, Reason}, State)</code> (if defined,
+      see below).
+    </p>
+  </div>
+</div>
+<br/>
+<div class="row">
+  <div class="col-xs-11 col-xs-push-1">
+    <p><strong>Module:handle_message(Message, State) -> Result</strong></p>
+    <verbatim class="code erlang">
+      Message :: see Module:handle_message/1
+      State   :: term()
+      Result  :: {noreply, NewState} | {noreply, NewState, Timeout} |
+                 {reply, Reply} | {reply, Reply, NewState} |
+                 {reply, Reply, NewState, Timeout} |
+                 {close, CloseReason, NewState} |
+                 {close, CloseReason, Reply, NewState}
+      NewState    :: term()
+      Timeout     :: integer() >= 0 | infinity
+      Reply       :: see Module:handle_message/1
+      CloseReason :: see Module:handle_message/1
+    </verbatim>
+    <p class="text-justify">
+      If defined, this function is called in place
+      of <code>Module:handle_message/1</code>. The main difference with the
+      previous version is that this one handles the internal state of the
+      callback module.
+    </p>
+    <p class="text-justify">
+      <code>State</code> is internal state of the callback module.
+    </p>
+    <p class="text-justify">
+      See <code>Module:handle_message/1</code> for a description of the other
+      arguments and possible return values.
+    </p>
+  </div>
+</div>
+<br/>
+<div class="row">
+  <div class="col-xs-11 col-xs-push-1">
+    <p><strong>Module:handle_info(Info, State) -> Result</strong></p>
+    <verbatim class="code erlang">
+      Info   :: timeout | term()
+      State  :: term()
+      Result :: {noreply, NewState} | {noreply, NewState, Timeout} |
+                {reply, Reply} | {reply, Reply, NewState} |
+                {reply, Reply, NewState, Timeout} |
+                {close, CloseReason, NewState} |
+                {close, CloseReason, Reply, NewState}
+      NewState    :: term()
+      Timeout     :: integer() >= 0 | infinity
+      Reply       :: see Module:handle_message/1
+      CloseReason :: see Module:handle_message/1
+    </verbatim>
+    <p class="text-justify">
+      If defined, this function is called when a timeout occurs
+      (see <code>drop_on_timeout</code> option above) or when the handling
+      process receives any unknown message.
+    </p>
+    <p class="text-justify">
+      <code>Info</code> is either the atom <code>timeout</code>, if a timeout
+      has occurred, or the received message.
+    </p>
+    <p class="text-justify">
+      See <code>Module:handle_message/1</code> for a description of the other
+      arguments and possible return values.
+    </p>
+  </div>
+</div>
+<br/>
+<div class="row">
+  <div class="col-xs-11 col-xs-push-1">
+    <p><strong>Module:terminate(Reason, State) -> ok</strong></p>
+    <verbatim class="code erlang">
+      Reason :: Status | {Status, Text} | {error, Error}
+      State  :: term()
+      Status :: integer() %% RFC 6455 status code
+      Text   :: binary()
+      Error  :: term()
+    </verbatim>
+    <p class="text-justify">
+      If defined, this function is called when the handling process is about to
+      terminate. it should be the opposite of <code>Module:init/1</code> and do
+      any necessary cleaning up.
+    </p>
+    <p class="text-justify">
+      <code>Reason</code> is a term denoting the stop reason
+      and <code>State</code> is the internal state of the callback module.
+    </p>
+  </div>
+</div>
+
+<h3>Advanced callback modules</h3>
+<p class="text-justify">
+  Advanced callback modules should be used when automatic messages
+  defragmentation done by Yaws is not desirable or acceptable. One could be used
+  for example to handle data streaming over WebSockets. So, such modules should
+  be prepared to handle frames directly (fragmented or not).
+</p>
+<br/>
+<p class="text-justify">
+  Unlike basic callback modules, Advanced ones <strong>MUST</strong> manage an
+  internal state. So it <strong>MUST</strong> define the stateful
+  function <code>Module:handle_message/2</code> :
+</p>
+<br/>
+<div class="row">
+  <div class="col-xs-11 col-xs-push-1">
+    <p><strong>Module:handle_message(Frame, State) -> Result</strong></p>
+    <verbatim class="code erlang">
+      Frame   :: #ws_frame_info{} | {fail_connection, Status, Reason}
+      State   :: term()
+      Result  :: {noreply, NewState} | {noreply, NewState, Timeout} |
+                 {reply, Reply} | {reply, Reply, NewState} |
+                 {reply, Reply, NewState, Timeout} |
+                 {close, CloseReason, NewState} |
+                 {close, CloseReason, Reply, NewState}
+      Status      :: integer() %% RFC 6455 status code
+      Reason      :: binary()
+      NewState    :: term()
+      Timeout     :: integer() >= 0 | infinity
+      Reply       :: see Module:handle_message/1
+      CloseReason :: see Module:handle_message/1
+    </verbatim>
+    <p class="text-justify">
+      This function is called when a frame is
+      received. The <code>#ws_frame_info{}</code> record, defined
+      in <code>include/yaws_api.hrl</code>, provides all details about this
+      frame. <code>State</code> it the internal state of the callback module.
+    </p>
+    <p class="text-justify">
+      If an error occurs during the frame parsing, the
+      term <code>{fail_connection, Status, Reason}</code> is passed,
+      where <code>Status</code> is the numerical status code corresponding to
+      the error
+      (see <a href="http://tools.ietf.org/html/rfc6455#section-7.4.1">RFC 6455 -
+      Section 7.4.1</a>) and <code>Reason</code> the binary containing optional
+      information about it.
+    </p>
+    <p class="text-justify">
+      This function returns the same values as specified for the basic callback
+      module's <code>Module:handle_message/2</code>. See above for details.
+    </p>
+  </div>
+</div>
+<br/>
+<p class="text-justify">
+  Advanced callback modules can also define the same optional functions as
+  basic callback modules (except <code>Module:handle_messages/2</code> which
+  is mandatory here, of course). See above for details.
+</p>
+
+<h2>Record definitions</h2>
+<p class="text-justify">
+  Here is the definition of records used in callback modules, defined
+  in <code>include/yaws_api.hrl</code>:
+</p>
+<verbatim class="code erlang">
+  %% Corresponds to the frame sections as in
+  %% http://tools.ietf.org/html/rfc6455#section-5.2
+  %% plus 'data' and 'ws_state'. Used for incoming frames.
+  -record(ws_frame_info, {
+            fin,
+            rsv,
+            opcode,
+            masked,
+            masking_key,
+            length,
+            payload,
+            data,        % The unmasked payload. Makes payload redundant.
+            ws_state     % The ws_state after unframing this frame.
+                         % This is useful for the endpoint to know what type of
+                         % fragment a potentially fragmented message is.
+           }).
+
+  %% Used for outgoing frames. No checks are done on the validity of a frame. This
+  %% is the application's responsability to send valid frames.
+  -record(ws_frame, {
+            fin = true,
+            rsv = 0,
+            opcode,
+            payload = &lt;&lt;&gt;&gt;
+           }).
+
+  %%----------------------------------------------------------------------
+  %% The state of a WebSocket connection.
+  %% This is held by the ws owner process and passed in calls to yaws_api.
+  %%----------------------------------------------------------------------
+  -type frag_type() :: text
+                     | binary
+                     | none.  % The WebSocket is not expecting continuation
+                              % of any fragmented message.
+  -record(ws_state, {
+            vsn :: integer(),                     % WebSocket version number
+            sock,                                 % gen_tcp or gen_ssl socket
+            frag_type :: frag_type()
+           }).
+</verbatim>

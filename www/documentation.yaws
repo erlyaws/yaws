@@ -1,0 +1,161 @@
+<erl>
+out(A) -> [{yssi, "includes/config.yaws"}, {ssi, "includes/header.inc","%%",[]}].
+</erl>
+
+<erl>
+out(A) -> [{ssi, "includes/page_title.inc","%%",[{"title", "Documentation"}]}].
+</erl>
+
+<br/><br/>
+
+<div class="layer-dark">
+  <div class="container">
+    <div class="row">
+      <div class="col-xs-3"></div>
+
+      <div class="col-xs-9">
+        <h2>User manual</h2>
+        <p class="text-justify">
+          The version of the user manual is currently getting a bit old. There are
+          several features of yaws which are yet not properly described in the user
+          manual, they are all described in the Example collection or man pages
+          though.
+        </p>
+        <div class="col-xs-9 col-xs-push-1">
+          <ul class="list-unstyled">
+            <li><a href="%%webroot%%/documentation/yaws.pdf">yaws.pdf</a></li>
+            <li><a href="%%webroot%%/documentation/yaws.ps">yaws.ps</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layer-light">
+  <div class="container">
+    <div class="row">
+      <div class="col-xs-3"></div>
+
+      <div class="col-xs-9">
+        <h2>Man pages</h2>
+        <div class="col-xs-9 col-xs-push-1">
+          <ul class="list-unstyled">
+            <li>
+              <a class="btn-link" onclick="load_modal('yaws (1)','%%webroot%%/man.yaws?page=yaws.1');"
+                 data-toggle="modal" data-target="#yawsModal">Yaws start/stop script</a>
+            </li>
+            <li>
+              <a class="btn-link" onclick="load_modal('yaws.conf (5)', '%%webroot%%/man.yaws?page=yaws.conf.5');"
+                 data-toggle="modal" data-target="#yawsModal">Yaws config file</a>
+            </li>
+            <li>
+              <a class="btn-link" onclick="load_modal('yaws_api (5)', '%%webroot%%/man.yaws?page=yaws_api.5');"
+                 data-toggle="modal" data-target="#yawsModal">Yaws API</a>
+            </li>
+            <li>
+              <a class="btn-link" onclick="load_modal('yaws_soap_lib (5)', '%%webroot%%/man.yaws?page=yaws_soap_lib.5');"
+                 data-toggle="modal" data-target="#yawsModal">Yaws SOAP API</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layer-dark">
+  <div class="container">
+    <div class="row">
+      <div class="col-xs-3"></div>
+
+      <div class="col-xs-9">
+        <h2>Misc</h2>
+        <div class="col-xs-9 col-xs-push-1">
+          <ul class="list-unstyled">
+            <li><a href="%%webroot%%/documentation/internals.yaws">Internals</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="layer-light">
+  <div class="container">
+    <div class="row">
+      <div class="col-xs-3"></div>
+
+      <div class="col-xs-9">
+        <h2>Articles, Books and Other Resources</h2>
+        <ul>
+
+          <li>
+            <p class="text-justify">The book <a href="http://shop.oreilly.com/product/0636920021452.do">
+            <em>Building Web Applications with Erlang</em></a> by Zachary
+            Kessin, published by <a href="http://www.oreilly.com">O'Reilly</a> in June 2012,
+            provides quite a bit of information about using Yaws.</p>
+          </li>
+
+          <li>
+            <p class="text-justify">In his "Functional Web" column in
+            <a href="http://computer.org/internet/">IEEE Internet Computing magazine</a>,
+            <a href="http://steve.vinoski.net/">Steve Vinoski</a> wrote a couple
+            columns about Yaws. Both are available in PDF format:
+            <ul>
+              <li><a href="http://steve.vinoski.net/pdf/IC-Yaws.pdf">
+                "Yaws: Yet Another Web Server"</a>, July/August 2011</li>
+              <li><a href="http://steve.vinoski.net/pdf/IC-SSE_with_Yaws.pdf">
+                "Server-Sent Events with Yaws"</a>, Sep/Oct 2012</li>
+            </ul></p>
+          </li>
+
+          <li>
+            <p class="text-justify"><a href="http://steve.vinoski.net/">Steve Vinoski</a> gave a talk entitled
+            <a href="http://www.infoq.com/presentations/Erlang-Yaws">"Erlang Web Development with Yaws"</a>
+            at the <a href="http://www.thestrangeloop.com/2012/sessions.html">Strange Loop 2012 conference</a>.</p>
+          </li>
+
+          <li>
+            <p class="text-justify">There are a number of
+            <a href="http://stackoverflow.com/questions/tagged/yaws">Yaws questions with answers on StackOverflow</a>.</p>
+          </li>
+
+          <li>
+            <p class="text-justify"><a href="http://steve.vinoski.net/">Steve Vinoski</a> wrote an article entitled
+            <a href="http://www.infoq.com/articles/vinoski-erlang-rest">"RESTful Services with Erlang and Yaws"</a>
+            for <a href="http://www.infoq.com">infoq.com</a> back in 2008. Despite being a
+            few years old, the advice in the article remains relevant.</p>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<erl>
+out(A) -> [{ssi, "includes/footer.inc","%%",[]}, {yssi, "examples/visit_counter.yaws"}].
+</erl>
+
+<script>
+<erl>
+out(A) ->
+    Html = case queryvar(A, "manpage") of
+               {ok, "yaws"} ->
+                   ["$('#yawsModal').modal();",
+                    "load_modal('yaws (1)', 'man.yaws?page=yaws.1');"];
+               {ok, "yaws.conf"} ->
+                   ["$('#yawsModal').modal();",
+                    "load_modal('yaws.conf (5)', 'man.yaws?page=yaws.conf.5');"];
+               {ok, "yaws_api"} ->
+                   ["$('#yawsModal').modal();",
+                    "load_modal('yaws_api (5)', 'man.yaws?page=yaws_api.5');"];
+               {ok, "yaws_soap_lib"} ->
+                   ["$('#yawsModal').modal();",
+                    "load_modal('yaws_soap_lib (5)', 'man.yaws?page=yaws_soap_lib.5');"];
+               _ ->
+                   []
+           end,
+    {html, Html}.
+</erl>
+</script>

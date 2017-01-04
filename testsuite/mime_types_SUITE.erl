@@ -93,8 +93,8 @@ generated_module(Config) ->
 default_type(Config) ->
     Port1 = testsuite:get_yaws_port(1, Config),
     Port2 = testsuite:get_yaws_port(2, Config),
-    Url1  = testsuite:make_url(http, "127.0.0.1", Port1, "/news"),
-    Url2  = testsuite:make_url(http, "127.0.0.1", Port2, "/news"),
+    Url1  = testsuite:make_url(http, "127.0.0.1", Port1, "/examples/ssi_ex1"),
+    Url2  = testsuite:make_url(http, "127.0.0.1", Port2, "/examples/ssi_ex1"),
 
     {ok, {{_,200,_}, Hdrs1, _}} = testsuite:http_get(Url1),
     ?assertEqual("text/html", proplists:get_value("content-type", Hdrs1)),
@@ -119,8 +119,8 @@ yaws_type(Config) ->
 erlang_type(Config) ->
     Port1 = testsuite:get_yaws_port(1, Config),
     Port2 = testsuite:get_yaws_port(2, Config),
-    Url1  = testsuite:make_url(http, "127.0.0.1", Port1, "/code/myappmod.erl"),
-    Url2  = testsuite:make_url(http, "127.0.0.1", Port2, "/code/myappmod.erl"),
+    Url1  = testsuite:make_url(http, "127.0.0.1", Port1, "/examples/myappmod.erl"),
+    Url2  = testsuite:make_url(http, "127.0.0.1", Port2, "/examples/myappmod.erl"),
 
     {ok, {{_,200,_}, Hdrs1, _}} = testsuite:http_get(Url1),
     ?assertEqual("text/html", proplists:get_value("content-type", Hdrs1)),
