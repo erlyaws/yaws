@@ -2540,33 +2540,24 @@ binding_exists(Key) ->
 
 %% Return the parsed url that the client requested.
 request_url(ARG) ->
-    SC = get(sc),
-    Headers = ARG#arg.headers,
-    {abs_path, Path} = (ARG#arg.req)#http_request.path,
-    DecPath = url_decode(Path),
-    {P,Q} = yaws:split_at(DecPath, $?),
-    #url{scheme = case SC#sconf.ssl of
-                      undefined ->
-                          "http";
-                      _ ->
-                          "https"
-                  end,
-         host = case Headers#headers.host of
+    SC        = get(sc),
+    Headers   = ARG#arg.headers,
+    {_, Path} = (ARG#arg.req)#http_request.path,
+    DecPath   = url_decode(Path),
+    {P,Q}     = yaws:split_at(DecPath, $?),
+    Url       = case Headers#headers.host of
                     undefined ->
-                        yaws:upto_char($:, SC#sconf.servername);
+                        parse_url(SC#sconf.servername, sloppy);
                     HostHdr ->
-                        yaws:upto_char($:, HostHdr)
+                        try          parse_url(HostHdr, sloppy)
+                        catch _:_ -> parse_url(SC#sconf.servername, sloppy)
+                        end
                 end,
-         port = case {SC#sconf.ssl, SC#sconf.port} of
-                    {_, 80} ->
-                        undefined;
-                    {_, 443} ->
-                        undefined;
-                    {_, Port} ->
-                        Port
-                end,
-         path = P,
-         querypart = Q}.
+    Url#url{scheme = case SC#sconf.ssl of
+                         undefined -> "http";
+                         _         -> "https"
+                     end,
+            path = P, querypart = Q}.
 
 
 
