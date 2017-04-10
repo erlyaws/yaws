@@ -198,14 +198,7 @@ generate1(ModFile) ->
     end.
 
 write_module(ModFile) ->
-    case file:open(ModFile, [write]) of
-        {ok, Fd} ->
-            io:format(Fd, source(), []),
-            file:close(Fd),
-            ok;
-        {error, Reason} ->
-            {error, Reason}
-    end.
+    file:write_file(ModFile, source()).
 
 compile_options() ->
     [binary, report,
