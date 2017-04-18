@@ -3,7 +3,20 @@
 -include("testsuite.hrl").
 -include_lib("kernel/include/file.hrl").
 
--compile(export_all).
+-export([
+    ssl_with_valid_dhfile/1,
+    ssl_with_invalid_dhfile/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
 
 all() ->
     [

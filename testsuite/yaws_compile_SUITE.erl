@@ -2,7 +2,41 @@
 
 -include("testsuite.hrl").
 
--compile(export_all).
+-export([
+    compile_www_scripts/1,
+    compile_erl_tag/1,
+    compile_verbatim_tag/1,
+    compile_bindings/1,
+    compile_unknown/1,
+    compile_empty_erl/1,
+    compile_empty_verbatim/1,
+    compile_bad_yaws_dir/1,
+    compile_not_out_fun/1,
+    compile_compilation_error/1,
+    compile_bad_module_name/1
+]).
+-export([
+    request_www_scripts/1,
+    request_erl_tag/1,
+    request_verbatim_tag/1,
+    request_bindings/1,
+    request_empty_erl/1,
+    request_empty_verbatim/1,
+    request_bad_yaws_dir/1,
+    request_not_out_fun/1,
+    request_compilation_error/1,
+    request_bad_module_name/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
 
 all() ->
     [
