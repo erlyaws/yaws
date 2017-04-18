@@ -3,7 +3,34 @@
 -include("testsuite.hrl").
 -include_lib("kernel/include/file.hrl").
 
--compile(export_all).
+-export([
+    deflate_test1/1,
+    deflate_test2/1,
+    small_post/1,
+    large_post/1,
+    small_chunked_post/1,
+    large_chunked_post/1,
+    chunked_response/1,
+    keepalive/1,
+    rewrite_request/1,
+    large_response/1,
+    no_content_length/1,
+    failed_req_interception/1,
+    failed_resp_interception/1,
+    good_interception/1,
+    fwdproxy/1,
+    ipv6_address/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
 
 all() ->
     [

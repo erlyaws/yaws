@@ -2,7 +2,20 @@
 
 -include("testsuite.hrl").
 
--compile(export_all).
+-export([
+    bad_encoding/1,
+    good_encoding/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
 
 all() ->
     [

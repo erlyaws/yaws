@@ -2,7 +2,22 @@
 
 -include("testsuite.hrl").
 
--compile(export_all).
+-export([
+    no_docroot_revproxy/1,
+    no_docroot_fwdproxy/1,
+    no_docroot_redirect/1,
+    no_docroot_appmod/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
 
 all() ->
     [
