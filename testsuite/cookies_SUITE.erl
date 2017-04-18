@@ -2,7 +2,29 @@
 
 -include("testsuite.hrl").
 
--compile(export_all).
+-export([
+    parse_set_cookies/1,
+    parse_cookies/1,
+    parse_invalid_set_cookies/1,
+    parse_invalid_cookies/1,
+    format_cookies/1,
+    get_multiple_cookies/1,
+    cookie_key_case_insensitive/1,
+    set_cookie_expires/1,
+    real_cookies/1,
+    real_setcookies/1,
+    set_cookie/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
 
 all() ->
     [

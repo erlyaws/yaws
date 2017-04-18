@@ -2,7 +2,7 @@
 -author('klacke@bluetail.com').
 
 -include("../../include/yaws_api.hrl").
--compile(export_all).
+-export([out/1]).
 
 box(Str) ->
     {'div',[{class,"box"}],

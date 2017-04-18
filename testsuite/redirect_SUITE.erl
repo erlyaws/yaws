@@ -2,7 +2,25 @@
 
 -include("testsuite.hrl").
 
--compile(export_all).
+-export([
+    redirect_default/1,
+    redirect_301/1,
+    redirect_404/1,
+    redirect_url_encode/1,
+    redirect_querystring/1,
+    redirect_post/1,
+    bad_redirect/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
 
 all() ->
     [

@@ -3,7 +3,54 @@
 -include("testsuite.hrl").
 -include_lib("kernel/include/file.hrl").
 
--compile(export_all).
+-export([
+    http_options/1,
+    http_head/1,
+    slow_get/1,
+    appmod/1,
+    dispatchmod/1,
+    chunked_response/1,
+    small_post/1,
+    large_post/1,
+    small_chunked_post/1,
+    large_chunked_post/1,
+    flush_small_post/1,
+    flush_large_post/1,
+    flush_chunked_post/1,
+    flush_small_get/1,
+    flush_large_get/1,
+    flush_chunked_get/1,
+    te_trailer_and_extensions/1,
+    expires/1,
+    reentrant/1,
+    cgi_redirect/1,
+    php_handler/1,
+    arg_rewrite_rewrite/1,
+    arg_rewrite_redirect/1,
+    arg_rewrite_response/1,
+    shaper/1,
+    sslaccept_timeout/1,
+    ssl_multipart_post/1,
+    throw_appmod/1,
+    too_many_headers/1,
+    index_files/1,
+    embedded_id_dir/1,
+    chained_appmods/1,
+    cache_appmod/1,
+    multi_forwarded_for/1,
+    log_rotation/1,
+    exhtml/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
 
 all() ->
     [

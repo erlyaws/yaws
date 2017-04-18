@@ -2,7 +2,26 @@
 
 -include("testsuite.hrl").
 
--compile(export_all).
+-export([
+    setup_default_sconf/1,
+    set_sc_flags/1,
+    setup_ssl/1,
+    setup_authdirs/1,
+    setup_deflate/1,
+    setup_mime_types_info/1,
+    comp_sname/1,
+    wildcomp_salias/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
 
 all() ->
     [

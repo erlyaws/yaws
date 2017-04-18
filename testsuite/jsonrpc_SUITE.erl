@@ -3,7 +3,32 @@
 -include("testsuite.hrl").
 -include_lib("kernel/include/file.hrl").
 
--compile(export_all).
+-export([
+    param_array/1,
+    encode_decode/1,
+    param_object/1,
+    notification/1,
+    missing_method/1,
+    invalid_json/1,
+    invalid_request/1,
+    invalid_params/1,
+    invalid_batch_json/1,
+    empty_batch/1,
+    invalid_batch1/1,
+    invalid_batch2/1,
+    mixed_batch/1,
+    all_notification_batch/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
 
 all() ->
     [
