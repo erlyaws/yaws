@@ -2,7 +2,31 @@
 
 -include("testsuite.hrl").
 
--compile(export_all).
+-export([
+    basic_auth/1,
+    basic_auth_with_docroot/1,
+    basic_auth_subdirs/1,
+    auth_with_authmod/1,
+    auth_with_authmod_and_out401/1,
+    auth_ip_deny_all_but_allow_loopback/1,
+    auth_ip_allow_loopback_but_deny_all/1,
+    auth_ip_allow_loopback_and_deny_nothing/1,
+    auth_ip_nomatch_allow_deny/1,
+    auth_ip_nomatch_deny_allow/1,
+    auth_ip_and_basic_auth_or_auth_mod/1,
+    yaws_auth_hidden_file/1,
+    auth_on_redirect/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
 
 all() ->
     [

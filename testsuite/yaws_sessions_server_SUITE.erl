@@ -2,7 +2,38 @@
 
 -include("testsuite.hrl").
 
--compile(export_all).
+-export([
+    init/1,
+    new_session_and_list/1,
+    replace_session/1,
+    replace_session_cleanup/1,
+    cookieval_to_opaque/1,
+    delete_session/1,
+    timeout/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
+-export([
+    init_backend/1,
+    insert/1,
+    lookup/1,
+    list/0,
+    delete/1,
+    cleanup/0,
+    traverse/1,
+    stop_backend/0,
+    mock_session_server/0,
+    mock_loop/0,
+    sessions/0
+]).
 
 all() ->
     [

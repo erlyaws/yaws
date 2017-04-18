@@ -2,7 +2,34 @@
 
 -include("testsuite.hrl").
 
--compile(export_all).
+-export([
+    void_element/1,
+    non_void_element/1,
+    attributes/1,
+    simple_fun/1,
+    mfa/1,
+    nested_fun/1,
+    nested_mfa/1,
+    simple_attr/1,
+    mfa_attr/1,
+    nested_attr/1,
+    nested_mfa_attr/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
+-export([
+    mfa_fun/1,
+    nested_mfa_fun/1,
+    nested_mfa_attr_fun/1
+]).
 
 all() ->
     [

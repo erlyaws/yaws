@@ -2,7 +2,31 @@
 
 -include("testsuite.hrl").
 
--compile(export_all).
+-export([
+    complete_parse_list/1,
+    complete_parse_binary/1,
+    incomplete_body_list/1,
+    incomplete_body_binary/1,
+    incomplete_head_list/1,
+    incomplete_head_binary/1,
+    boundary_markers/1,
+    incomplete_boundary_list/1,
+    incomplete_boundary_binary/1,
+    read_multipart_form_list/1,
+    read_multipart_form_binary/1,
+    malformed_multipart_form/1,
+    escaped_parse/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
 
 all() ->
     [

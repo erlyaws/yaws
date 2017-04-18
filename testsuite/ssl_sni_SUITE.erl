@@ -3,7 +3,25 @@
 -include("testsuite.hrl").
 -include_lib("kernel/include/file.hrl").
 
--compile(export_all).
+-export([
+    sni_disabled/1,
+    sni_enabled/1,
+    sni_strict/1,
+    sni_required_on_vhost/1,
+    sni_not_enabled/1,
+    sni_without_tls/1,
+    sni_not_available/1
+]).
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
 
 all() ->
     [
