@@ -61,8 +61,7 @@ rand() ->
             yaws_dynopts:random_uniform(1 bsl 64);
         _ ->
             try
-                crypto:start(),
-                crypto:rand_uniform(0, 1 bsl 64)
+                rand:uniform(1 bsl 64) - 1
             catch
                 _:_ ->
                     error_logger:warning_msg("Running without crypto app\n"),
