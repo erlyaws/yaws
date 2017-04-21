@@ -21,7 +21,6 @@
 
 -module('wiki').
 -author('jb@son.bevemyr.com').
--compile(export_all).
 
 -export([showPage/3, createNewPage/3, showHistory/3, allPages/3,
          lastEdited/3, wikiZombies/3, editPage/3, editFiles/3,
@@ -41,6 +40,13 @@
 
 -export([getPassword/1]).
 -export([importFiles/1]).
+
+%% Function exported to avoid warnings
+-export([copyFiles2/3, session_proc/2, textarea/3, b/1, br/0,
+         pre/1, bgcolor/1, top_header/1, add_blanks_nicely/1,
+         big_letter/1, little_letter/1, show_error/1,
+         str2fileencoded/1, fileencoded2str/1, mime_type/1,
+         check_precon/2, getopt_options/2]).
 
 -import(lists, [reverse/1, map/2, sort/1]).
 

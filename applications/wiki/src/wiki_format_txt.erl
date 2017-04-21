@@ -45,8 +45,8 @@
 %%                                       and the * (or Header) and Text
 %%                                       are not significant.
 
--export([format/3, collect_wiki_link/1]).
--compile(export_all).
+-export([format/3, format_url/2, collect_wiki_link/1, emb/4,
+         enc_month/1, enc_day/1]).
 
 -import(lists, [member/2, map/2, reverse/1, reverse/2]).
 

@@ -6,7 +6,8 @@
 %%% Created :  4 Feb 2004 by  <klacke@hyber.org>
 %%%-------------------------------------------------------------------
 -module(attachment).
--compile(export_all).
+
+-export([out/1]).
 
 out(A) ->
     case mail:check_session(A) of

@@ -7,10 +7,10 @@
 -module(shopcart).
 -author('klacke@hyber.org').
 
--compile(export_all).
 -include("../../include/yaws_api.hrl").
 -include_lib("kernel/include/inet.hrl").
 
+-export([top/1, buy/1, index/1, loginpost/1, login/1, logout/1, formupdate/1]).
 
 %% this is the opaque structure we pass to the
 %% yaws cookie session server
