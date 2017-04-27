@@ -1505,7 +1505,9 @@ fold_others(LowerHdr, Handler, Other, StartAcc) ->
                                       is_binary(Hdr) -> binary_to_list(Hdr);
                                       true -> Hdr
                                   end),
-                        Handler(HdrVal, HdrNm == LowerHdr, Acc)
+                        Handler(HdrVal, HdrNm == LowerHdr, Acc);
+		   (_, Acc) ->
+			Acc
                 end, StartAcc, Other).
 
 erlang_header_name("cache-control")       -> 'Cache-Control';
