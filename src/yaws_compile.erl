@@ -319,6 +319,16 @@ compile_file(<<$\n,Bin/binary>>, Comp, erl, Spec) ->
                         numchars = Comp#comp.numchars+1,
                         erlcode  = {SLine, ELine+1, ModName, [$\n|Code]}},
     compile_file(Bin, NewComp, erl, Spec);
+compile_file(<<$%, $%, Bin/binary>>, Comp, erl, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+2,
+                        erlcode  = {SLine, ELine, ModName, [$%,$%|Code]}},
+    compile_file(Bin, NewComp, erl_comment, Spec);
+compile_file(<<$%, Bin/binary>>, Comp, erl, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1,
+                        erlcode  = {SLine, ELine, ModName, [$%|Code]}},
+    compile_file(Bin, NewComp, erl_comment, Spec);
 compile_file(<<C,Bin/binary>>, Comp, erl, Spec) ->
     {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
     NewComp = Comp#comp{numchars = Comp#comp.numchars+1,
@@ -370,6 +380,18 @@ compile_file(<<C,Bin/binary>>, Comp, erl_atom, Spec) ->
     NewComp = Comp#comp{numchars = Comp#comp.numchars+1,
                         erlcode  = {SLine, ELine, ModName, [C|Code]}},
     compile_file(Bin, NewComp, erl_atom, Spec);
+
+%% erl_comment state
+compile_file(<<$\n,Bin/binary>>, Comp, erl_comment, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1,
+                        erlcode  = {SLine, ELine, ModName, [$\n|Code]}},
+    compile_file(Bin, NewComp, erl, Spec);
+compile_file(<<C,Bin/binary>>, Comp, erl_comment, Spec) ->
+    {SLine, ELine, ModName, Code} = Comp#comp.erlcode,
+    NewComp = Comp#comp{numchars = Comp#comp.numchars+1,
+                        erlcode  = {SLine, ELine, ModName, [C|Code]}},
+    compile_file(Bin, NewComp, erl_comment, Spec);
 
 %% erl_close_tag state
 compile_file(<<$\n,Bin/binary>>, Comp, erl_close_tag, Spec) ->

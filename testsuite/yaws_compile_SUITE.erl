@@ -22,7 +22,8 @@ groups() ->
                           compile_bad_yaws_dir,
                           compile_not_out_fun,
                           compile_compilation_error,
-                          compile_bad_module_name]},
+                          compile_bad_module_name,
+                          compile_erl_comments]},
      {request_tests, [], [request_www_scripts,
                           request_erl_tag,
                           request_verbatim_tag,
@@ -32,7 +33,8 @@ groups() ->
                           request_bad_yaws_dir,
                           request_not_out_fun,
                           request_compilation_error,
-                          request_bad_module_name]}
+                          request_bad_module_name,
+                          request_erl_comments]}
     ].
 
 %%====================================================================
@@ -127,6 +129,10 @@ compile_bad_module_name(Config) ->
     ?assertMatch({ok, 1, [{error, _, _}|_]}, compile_script(Config, "bad_module1.yaws")),
     ?assertMatch({ok, 1, [{error, _, _}|_]}, compile_script(Config, "bad_module2.yaws")),
     ?assertMatch({ok, 1, [{error, _, _}|_]}, compile_script(Config, "bad_module3.yaws")),
+    ok.
+
+compile_erl_comments(Config) ->
+    ?assertMatch({ok, 0, _}, compile_script(Config, "comments.yaws")),
     ok.
 
 request_www_scripts(Config) ->
@@ -228,6 +234,11 @@ request_bad_module_name(Config) ->
                                [caseless, {capture, none}])),
     ?assertEqual(match, re:run(Error3, <<"empty module name">>,
                                [caseless, {capture, none}])),
+    ok.
+
+request_erl_comments(Config) ->
+    Res = <<"Hello World! % this is not a comment %\n">>,
+    ?assertMatch({ok, {{_,200,_}, _, Res}}, request_script(Config, "/comments.yaws")),
     ok.
 
 
