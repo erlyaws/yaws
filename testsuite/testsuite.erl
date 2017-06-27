@@ -457,7 +457,13 @@ set_default_sockopts(https, SockOpts) ->
                     {verify, _} -> SockOpts;
                     false       -> [{verify, verify_none}|SockOpts]
                 end,
-    set_default_sockopts(http, SockOpts1);
+    %% Explicitly disable SNI if not set because in Erlang/OTP 20.0, it is set
+    %% by default to the Host value used in ssl:connect/4.
+    SockOpts2 = case lists:keyfind(server_name_indication, 1, SockOpts1) of
+                    {server_name_indication, _} -> SockOpts1;
+                    false -> [{server_name_indication, disable}|SockOpts1]
+                end,
+    set_default_sockopts(http, SockOpts2);
 set_default_sockopts(http, SockOpts) ->
     [binary, {active, false}|SockOpts].
 
