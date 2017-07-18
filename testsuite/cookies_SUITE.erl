@@ -176,6 +176,29 @@ parse_cookies(_Config) ->
         #cookie{key="value2"}, #cookie{key="name", value="value"}],
        yaws_api:parse_cookie("$version=1, value1, value2; name=value")
       ),
+
+    %% Cookies with trailing spaces
+    ?assertEqual(
+       [#cookie{key="value"}],
+       yaws_api:parse_cookie("value ")
+      ),
+    ?assertEqual(
+       [#cookie{key="name", value="value"}],
+       yaws_api:parse_cookie("name=value  ")
+      ),
+    ?assertEqual(
+       [#cookie{key="name", value="value"}],
+       yaws_api:parse_cookie("name=value;  ")
+      ),
+    ?assertEqual(
+       [#cookie{key="name", value="value [quoted]", quoted=true}],
+       yaws_api:parse_cookie("name=\"value [quoted]\" \n")
+      ),
+    ?assertEqual(
+       [#cookie{key="$version", value="1"}, #cookie{key="value1"},
+        #cookie{key="value2"}, #cookie{key="name", value="value"}],
+       yaws_api:parse_cookie("  $version  =  1\n ,   value1\t  ,   value2\r\n; name  =\n\t  value  ;  ")
+      ),
     ok.
 
 parse_invalid_set_cookies(_Config) ->

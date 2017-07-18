@@ -2354,32 +2354,34 @@ parse_set_cookie_result(_, _) ->
 
 %%
 parse_cookie(Str) ->
-    parse_cookie(Str, []).
+    parse_cookie(skip_space(Str), []).
 
 parse_cookie([], Cookies) ->
     lists:reverse(Cookies);
 parse_cookie(Str, Cookies) ->
-    {Key, Rest0} = parse_cookie_key(skip_space(Str), []),
-    case yaws:to_lower(Key) of
-        [] ->
-            [];
-        K ->
-            case skip_space(Rest0) of
-                [$=|Rest1] ->
-                    {V, Q, Rest2} = parse_cookie_value(skip_space(Rest1)),
-                    C = #cookie{key=K, value=V, quoted=Q},
-                    case skip_space(Rest2) of
-                        [$;|Rest3] -> parse_cookie(Rest3, [C|Cookies]);
-                        [$,|Rest3] -> parse_cookie(Rest3, [C|Cookies]);
-                        []         -> parse_cookie([], [C|Cookies]);
-                        _          -> []
-                    end;
-                [$;|Rest1] -> parse_cookie(Rest1, [#cookie{key=K}|Cookies]);
-                [$,|Rest1] -> parse_cookie(Rest1, [#cookie{key=K}|Cookies]);
-                []         -> parse_cookie([], [#cookie{key=K}|Cookies]);
-                _          -> []
-            end
+    case parse_cookie_key(Str, []) of
+        {[], _}   -> [];
+        {K, Rest} -> parse_cookie(yaws:to_lower(K), skip_space(Rest), Cookies)
     end.
+
+parse_cookie(Key, [], Cookies) ->
+    lists:reverse([#cookie{key=Key}|Cookies]);
+parse_cookie(Key, [$=|Str], Cookies) ->
+    {Val, QVal, Rest0} = parse_cookie_value(skip_space(Str)),
+    C = #cookie{key=Key, value=Val, quoted=QVal},
+    case skip_space(Rest0) of
+        [$;|Rest1] -> parse_cookie(skip_space(Rest1), [C|Cookies]);
+        [$,|Rest1] -> parse_cookie(skip_space(Rest1), [C|Cookies]);
+        []         -> lists:reverse([C|Cookies]);
+        _          -> []
+    end;
+parse_cookie(Key, [$;|Str], Cookies) ->
+    parse_cookie(skip_space(Str), [#cookie{key=Key}|Cookies]);
+parse_cookie(Key, [$,|Str], Cookies) ->
+    parse_cookie(skip_space(Str), [#cookie{key=Key}|Cookies]);
+parse_cookie(_, _, _) ->
+    [].
+
 
 
 %%
