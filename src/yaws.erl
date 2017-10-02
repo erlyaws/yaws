@@ -1946,7 +1946,7 @@ accumulate_header({"Date", What}) ->
     accumulate_header({date, What});
 
 accumulate_header({allow, What}) ->
-    put(outh, (get(outh))#outh{date = ["Allow: ", What, "\r\n"]});
+    put(outh, (get(outh))#outh{allow = ["Allow: ", What, "\r\n"]});
 accumulate_header({"Allow", What}) ->
     accumulate_header({allow, What});
 
