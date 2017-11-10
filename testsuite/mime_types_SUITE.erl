@@ -10,7 +10,8 @@ all() ->
      default_type,
      yaws_type,
      erlang_type,
-     gzip_with_charset
+     gzip_with_charset,
+     multiple_accept_headers
     ].
 
 groups() ->
@@ -137,4 +138,62 @@ gzip_with_charset(Config) ->
     {ok, {{_,200,_}, Hdrs, _}} = testsuite:http_get(Url, [GzHdr]),
     ?assertEqual("text/xhtml; charset=ISO-8859-1", proplists:get_value("content-type", Hdrs)),
     ?assertEqual("gzip", proplists:get_value("content-encoding", Hdrs)),
+    ok.
+
+multiple_accept_headers(Config) ->
+    Port1  = testsuite:get_yaws_port(1, Config),
+    Url1  = testsuite:make_url(http, "127.0.0.1", Port1, "/multiple_accept_headers.yaws"),
+
+    AcceptHdrs1 = [{"Accept", "text/html"}, {"Accept", "text/plain"}],
+    {ok, {{_,200,_}, Hdrs1, _}} = testsuite:http_get(Url1, AcceptHdrs1),
+    ?assertEqual("text/html", proplists:get_value("content-type", Hdrs1)),
+    ?assertEqual("text/html, text/plain",
+                 proplists:get_value("x-test-request-accept", Hdrs1)),
+
+    AcceptHdrs2 = [{"Accept", "text/plain"}, {"Accept", "text/html"}],
+    {ok, {{_,200,_}, Hdrs2, _}} = testsuite:http_get(Url1, AcceptHdrs2),
+    ?assertEqual("text/plain", proplists:get_value("content-type", Hdrs2)),
+    ?assertEqual("text/plain, text/html",
+                 proplists:get_value("x-test-request-accept", Hdrs2)),
+
+    AcceptHdrs3 = [{"Accept", "text/html, text/plain"}],
+    {ok, {{_,200,_}, Hdrs3, _}} = testsuite:http_get(Url1, AcceptHdrs3),
+    ?assertEqual("text/html", proplists:get_value("content-type", Hdrs3)),
+    ?assertEqual("text/html, text/plain",
+                 proplists:get_value("x-test-request-accept", Hdrs3)),
+
+    AcceptHdrs4 = [{"Accept", "text/plain, text/html"}],
+    {ok, {{_,200,_}, Hdrs4, _}} = testsuite:http_get(Url1, AcceptHdrs4),
+    ?assertEqual("text/plain", proplists:get_value("content-type", Hdrs4)),
+    ?assertEqual("text/plain, text/html",
+                 proplists:get_value("x-test-request-accept", Hdrs4)),
+
+    AcceptHdrs5 = [{"Accept", "text/plain, application/json"},
+                   {"Accept", "text/html, text/*"}],
+    {ok, {{_,200,_}, Hdrs5, _}} = testsuite:http_get(Url1, AcceptHdrs5),
+    ?assertEqual("text/plain", proplists:get_value("content-type", Hdrs5)),
+    ?assertEqual("text/plain, application/json, text/html, text/*",
+                 proplists:get_value("x-test-request-accept", Hdrs5)),
+
+    AcceptHdrs6 = [{"Accept", ",text/plain"}],
+    {ok, {{_,200,_}, Hdrs6, _}} = testsuite:http_get(Url1, AcceptHdrs6),
+    ?assertEqual("text/plain", proplists:get_value("content-type", Hdrs6)),
+    ?assertEqual("text/plain",
+                 proplists:get_value("x-test-request-accept", Hdrs6)),
+
+    AcceptHdrs7 = [{"Accept", ",text/plain"}],
+    {ok, {{_,200,_}, Hdrs7, _}} = testsuite:http_get(Url1, AcceptHdrs7),
+    ?assertEqual("text/plain", proplists:get_value("content-type", Hdrs7)),
+    ?assertEqual("text/plain",
+                 proplists:get_value("x-test-request-accept", Hdrs7)),
+
+    AcceptHdrs8 = [{"Accept", "text/plain, ,text/html"}],
+    {ok, {{_,200,_}, Hdrs8, _}} = testsuite:http_get(Url1, AcceptHdrs8),
+    ?assertEqual("text/plain", proplists:get_value("content-type", Hdrs8)),
+    ?assertEqual("text/plain, text/html",
+                 proplists:get_value("x-test-request-accept", Hdrs8)),
+
+    AcceptHdrs9 = [{"Accept", ","}],
+    {ok, {{_,400,_}, _, _}} = testsuite:http_get(Url1, AcceptHdrs9),
+
     ok.

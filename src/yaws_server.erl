@@ -1197,6 +1197,17 @@ aloop(CliSock, {IP,Port}=IPPort, GS, Num) ->
     process_flag(trap_exit, true),
     ?Debug("Head = ~p~n", [Head]),
     case Head of
+        {error, {empty_accept_header_list, ReqEmptyAccept}} ->
+            ?Debug("Request's Accept headers all empty~n", []),
+            case pick_sconf(GS#gs.gconf, #headers{}, GS#gs.group) of
+                undefined ->
+                    deliver_400(CliSock, ReqEmptyAccept);
+                SC ->
+                    put(sc, SC),
+                    put(outh, #outh{}),
+                    deliver_400(CliSock, ReqEmptyAccept)
+            end,
+            {ok, Num+1};
         {error, {too_many_headers, ReqTooMany}} ->
             %% RFC 6585 status code 431
             ?Debug("Request headers too large~n", []),

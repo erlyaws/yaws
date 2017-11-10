@@ -2474,8 +2474,13 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
             http_collect_headers(CliSock, Req,
                                  H#headers{connection = Conn},SSL, Count+1);
         {ok, {http_header, _Num, 'Accept', _, Accept}} ->
-            http_collect_headers(CliSock, Req, H#headers{accept = Accept},
-                                 SSL, Count+1);
+            %% Here we just collect all Accept headers, at http_eoh we verify
+            %% and build one Accept header.
+            NewAcceptH = case H#headers.accept of
+                             undefined -> H#headers{accept = [Accept]};
+                             AcceptL   -> H#headers{accept = [Accept|AcceptL]}
+                         end,
+            http_collect_headers(CliSock, Req, NewAcceptH, SSL, Count+1);
         {ok, {http_header, _Num, 'If-Modified-Since', _, X}} ->
             http_collect_headers(CliSock, Req,
                                  H#headers{if_modified_since = X},SSL, Count+1);
@@ -2542,7 +2547,13 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
                                          SSL, Count+1)
             end;
         {ok, http_eoh} ->
-            H;
+            %% NOTE empty Accept headers will be stripped!
+            case build_accept_hdr(H#headers.accept) of
+                {error, empty_accept_header_list = Err} ->
+                    {error, {Err, Req#http_request{method = bad_request}}};
+                AcceptHdrs ->
+                    H#headers{accept = AcceptHdrs}
+            end;
 
         %% these are here to be a little forgiving to
         %% bad (typically test script) clients
@@ -2564,6 +2575,28 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
 http_collect_headers(_CliSock, Req, _H, _SSL, _Count)  ->
     {error, {too_many_headers, Req}}.
 
+
+%% @doc Filter out empty accept headers from list.
+-spec split_accept_hdrs([string()]) -> [string()].
+split_accept_hdrs([]) ->
+    [];
+split_accept_hdrs([Hdr|AcceptHdrs]) ->
+    [H || H <- [string:strip(S) || S <- string:tokens(Hdr, ",")], H /= [] ]
+        ++ split_accept_hdrs(AcceptHdrs).
+
+
+%% @doc Build one Accept header from the collected Accept headers.
+-spec build_accept_hdr([string()] | undefined) ->
+    string() | undefined | {error, empty_accept_header_list}.
+build_accept_hdr(undefined) ->
+    undefined;
+build_accept_hdr(AcceptHdrs) ->
+    AcceptHdrsReqOrder = lists:reverse(AcceptHdrs),
+    case split_accept_hdrs(AcceptHdrsReqOrder) of
+        []  -> {error, empty_accept_header_list};
+        [Hdr] -> Hdr;
+        Hdrs  -> string:join(Hdrs, ", ")
+    end.
 
 
 parse_auth(Orig = "Basic " ++ Auth64) ->
