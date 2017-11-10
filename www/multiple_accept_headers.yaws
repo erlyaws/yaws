@@ -1,0 +1,11 @@
+<erl>
+%% @doc Extract the first mime-type from the Accept header list and respond
+%%      with it as Content-Type header.
+out(A) ->
+    AcceptHdr = yaws_api:headers_accept(yaws_api:arg_headers(A)),
+    [ContentType|_] = string:tokens(AcceptHdr, ","),
+
+    [{status, 200},
+     {header, {"Content-Type", ContentType}},
+     {header, {"X-Test-Request-Accept", AcceptHdr}}].
+</erl>
