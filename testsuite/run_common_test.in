@@ -106,11 +106,22 @@ echo "==========================================================================
 echo
 
 case $estatus in
-    0) ;;
+    0)
+        # Success
+        ;;
     *)
-        echo "============================ [ yaws.log] ==================================="
-        cat ${LOG_FILE}
-        echo "============================================================================"
+        init_failures=$(grep -c "_SUITE:init_per_suite_failed failed" ${LOG_FILE})
+        ts_failures=$(grep -c "RESULT: Failed" ${LOG_FILE})
+        failures=$((init_failures+ts_failures))
+        if test $failures == 0; then
+            # No failure: This means there are skipped testcases
+            estatus=0
+        else
+            # Only show the log file if failures are found.
+            echo "============================ [ yaws.log] ==================================="
+            cat ${LOG_FILE}
+            echo "============================================================================"
+        fi
         ;;
 esac
 exit $estatus
