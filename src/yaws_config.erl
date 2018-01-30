@@ -1723,7 +1723,7 @@ fload(FD, server, GC, C, Lno, Chars) ->
                     fload(FD, server, GC, C1, Lno+1, ?NEXTLINE);
                 {error, Reason} ->
                     {error,
-                     ?F("Invalide php_handler configuration at line ~w: ~s",
+                     ?F("Invalid php_handler configuration at line ~w: ~s",
                         [Lno, Reason])}
             end;
 
