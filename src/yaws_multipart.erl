@@ -18,7 +18,8 @@
           temp_dir = yaws:tmpdir("/tmp"),
           temp_file,
           headers = [],
-          data_type = list
+          data_type = list,
+          return_error_file_path = false
          }).
 
 read_multipart_form(A, Options) when A#arg.state == undefined ->
@@ -43,7 +44,9 @@ read_options([Option|Rest], State) ->
                    list ->
                        State#upload{data_type = list};
                    binary ->
-                       State#upload{data_type = binary}
+                       State#upload{data_type = binary};
+                  return_error_file_path ->
+                       State#upload{return_error_file_path = true}
                end,
     read_options(Rest, NewState).
 
@@ -215,10 +218,14 @@ check_param_size(State, NewSize) ->
         MaxSizeInBytes ->
             case NewSize > MaxSizeInBytes of
                 true ->
-                    {error, io_lib:format("~p is too large",
-                                          [State#upload.param_name])};
+                   case State#upload.return_error_file_path =:= true andalso State#upload.temp_file=/= undefined of
+                      true ->
+                              {error,State#upload.temp_file};
+                      false ->
+                         {error, io_lib:format("~p is too large",[State#upload.param_name])}
+                   end;
                 false ->
-                    ok
+                   ok
             end
     end.
 
