@@ -18,7 +18,8 @@ all() ->
      read_multipart_form_list,
      read_multipart_form_binary,
      malformed_multipart_form,
-     escaped_parse
+     escaped_parse,
+     return_error_file_path
     ].
 
 groups() ->
@@ -284,6 +285,27 @@ get_unescaped_name(RawName) ->
     {Name, HeadParams} = proplists:get_value(head, Params),
     ?assertEqual([{"name", Name}], HeadParams),
     Name.
+
+return_error_file_path(_)->
+    Data = <<"Hello world12313123132133423421341dda2341234123412341241241223412421adsfsdfasdfaaaaaaaaa\n">>,
+    Body = <<"------WebKitFormBoundaryUkx0KS47IKKfcF4z\r\n",
+             "Content-Disposition: form-data; name=upfile; filename=test.txt\r\n",
+             "\r\n",
+	     Data/binary,
+             "\r\n",
+             "------WebKitFormBoundaryUkx0KS47IKKfcF4z\r\n",
+             "Content-Disposition: form-data; name=note\r\n",
+             "\r\n",
+             "testing\r\n",
+             "------WebKitFormBoundaryUkx0KS47IKKfcF4z--\r\n">>,
+    Arg = #arg{headers=#headers{content_type="multipart/form-data; boundary=----WebKitFormBoundaryUkx0KS47IKKfcF4z"},
+               req=#http_request{method='POST'}, clidata=Body},
+    MaxFileSize = byte_size(Data) div 2,
+    {error, Error} = yaws_multipart:read_multipart_form(Arg, [list, return_error_file_path,
+							      {max_file_size, MaxFileSize}]),
+    {max_file_size_exceeded, _, FilePath} = Error,
+    FileSize = filelib:file_size(FilePath),
+    ?assert(FileSize < MaxFileSize).
 
 escaped_parse(_Config) ->
     %% Support both escaped (Firefox, Opera) and unescaped (Konqueror)

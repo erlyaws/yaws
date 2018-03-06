@@ -900,6 +900,9 @@ following capabilities:
   \verb+/tmp+ is used
 \item \verb+list+: return file data in list form; this is the default
 \item \verb+binary+: return file data in binary form
+\item \verb+return_error_file_path+: if an error occurs writing to a
+  file or if \verb+max_file_size+ is exceeded, return the file
+  pathname as part of the error (more on this below).
 \end{enumerate}
 \end{enumerate}
 
@@ -907,9 +910,9 @@ Note that the \verb+list+ and \verb+binary+ options affect only file
 data, not filenames, headers, or other parameters associated with each
 file. These are always returned as strings.
 
-Just call \verb+yaws_multipart:read_multipart_form+ from your
-\verb+out/1+ function and it'll return a tuple with the first element
-set to one of these three atoms:
+Call \verb+yaws_multipart:read_multipart_form+ from your \verb+out/1+
+function and it returns a tuple with the first element set to one of
+these three atoms:
 
 \begin{itemize}
 \item \verb+get_more+: more data needs to be read; return this tuple
@@ -950,9 +953,28 @@ parameter list, like this:
 \end{verbatim}
 
 Note that for the temporary file case, it's your responsibility to
-delete the file when you're done with it.
+delete the file when you're done with it. To ensure that you can do
+this even when errors occur, include \verb+return_error_file_path+ in
+the options you pass to
+\verb+yaws_multipart:read_multipart_form/2+. Should an error occur,
+the returned error tuple will be of this form:
 
-Here's an example:
+\begin{verbatim}
+{error, {Reason, ParamName, FileName}}
+\end{verbatim}
+
+If you supplied the \verb+{temp_file, FullFilePath}+ option,
+\verb+FileName+ in the error tuple is the same as \verb+FullFilePath+,
+otherwise it's the name of a temporary file \Yaws\ generated.
+
+If the \verb+return_error_file_path+ option is not included, the
+returned error tuple will instead be:
+
+\begin{verbatim}
+{error, {Reason, ParamName}}
+\end{verbatim}
+
+Here's an example of calling \verb+yaws_multipart:read_multipart_form/2+:
 
 \begin{verbatim}
 -module(my_yaws_controller).
@@ -968,7 +990,7 @@ out(Arg) ->
             AnotherParam = dict:find("another_param", Params);
         %% do something with FileName, FileContent and AnotherParam
         {error, Reason} ->
-            io:format("Error reading multipart form: ~s~n", [Reason]);
+            io:format("Error reading multipart form: ~p~n", [Reason]);
         Other -> Other
     end.
 \end{verbatim}
