@@ -1791,13 +1791,13 @@ detect a \verb+Content-Length+ header.
       header.
     \item \verb+{content_type, What}+ - Sets the \textit{Content-Type:} header.
     \item \verb+{content_encoding, What}+ - Sets the \textit{Content-Encoding:}
-      header. If this header is defined, no deflate is performed by \Yaws\. So
-      you can compress data by yourself.
-    \item \verb+{content_length, What}+ - Normally \Yaws\ will ship Yaws pages
+      header. If this header is defined, no deflate is performed by \Yaws\ ,
+      allowing you to compress data yourself if you wish to do so.
+    \item \verb+{content_length, What}+ - Normally \Yaws\ will ship \verb+.yaws+ pages
       using \textit{Transfer-Encoding: chunked}. This is because we generally
       can't know how long a yaws page will be. If we for some reason want to
       force a \textit{Content-Length:} header (and we actually do know the
-      length of the content, we can force yaws to not ship the page chunked.
+      length of the content, we can force \Yaws\ to not ship the page chunked.
     \item \verb+{transfer_encoding, What}+ - Sets the
       \textit{Transfer-Encoding:} header.
     \item \verb+{www_authenticate, What}+ - Sets the \textit{WWW-Authenticate:}

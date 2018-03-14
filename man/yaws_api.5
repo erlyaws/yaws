@@ -887,14 +887,14 @@ Sets the Content-Type: header.
 \fI{content_encoding, What}\fR
 
 Sets the Content-Encoding: header. If this header is defined, no deflate is
-performed by Yaws. So you can compress data by yourself.
+performed by Yaws, allowing you to compress data yourself if you wish to do so.
 
 \fI{content_length, Len}\fR
 
 Normally yaws will ship Yaws pages using Transfer-Encoding: chunked. This
 is because we generally can't know how long a yaws page will be. If we for
 some reason want to force a Content-Length: header (and we actually do
-know the length of the content, we can force yaws to not ship the
+know the length of the content, we can force Yaws to not ship the
 page chunked.
 
 \fI{transfer_encoding, What}\fR
