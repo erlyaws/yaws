@@ -1,0 +1,6 @@
+<erl>
+
+out(A) ->
+    {header, "x-yssi: " ++ f("state=~p", [A#arg.state])}.
+
+</erl>

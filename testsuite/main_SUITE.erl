@@ -39,6 +39,7 @@ all() ->
      index_files,
      embedded_id_dir,
      chained_appmods,
+     appmod_with_yssi,
      cache_appmod,
      multi_forwarded_for,
      log_rotation,
@@ -662,6 +663,14 @@ chained_appmods(Config) ->
     {ok, {{_,200,_}, Hdrs, Res}} = testsuite:http_get(Url),
     ?assertEqual("appmod1[/chained], appmod2[/appmod2], appmod1[/appmod1], appmod3[/chained.txt]",
                  proplists:get_value("x-appmods", Hdrs)),
+    ok.
+
+appmod_with_yssi(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
+    Url  = testsuite:make_url(http, "127.0.0.1", Port, "/appmod_with_yssi"),
+
+    {ok, {{_,200,_}, Hdrs, _}} = testsuite:http_get(Url),
+    ?assertEqual("state=yssi", proplists:get_value("x-yssi", Hdrs)),
     ok.
 
 cache_appmod(Config) ->

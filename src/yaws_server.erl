@@ -3459,8 +3459,9 @@ handle_out_reply_l([Reply|T], LineNo, YawsFile, UT, ARG, Res) ->
             Reply;
         ok ->
             handle_out_reply_l(T, LineNo, YawsFile, UT, ARG, Res);
+        #arg{}=NewArg ->
+            handle_out_reply_l(T, LineNo, YawsFile, UT, NewArg, Res);
         RetVal ->
-            %% XXX: if RetVal == #arg{}, replace ARG in recursion ?
             handle_out_reply_l(T, LineNo, YawsFile, UT, ARG, RetVal)
     end;
 handle_out_reply_l([], _LineNo, _YawsFile, _UT, _ARG, Res) ->
