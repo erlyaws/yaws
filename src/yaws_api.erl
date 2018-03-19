@@ -2523,7 +2523,7 @@ filter_parse(Key, QueryParse, PostParse) ->
     case Values of
         [] -> undefined;
         [{_, V}] -> {ok,V};
-        %% Multivalued case - return list of values
+        %% Multivalued case - return a list of values as a tuple
         _  -> list_to_tuple(lists:map(fun({_,V}) -> V end, Values))
     end.
 
