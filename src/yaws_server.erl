@@ -2723,7 +2723,7 @@ deliver_xxx(CliSock, _Req, Code) ->
     deliver_xxx(CliSock, _Req, Code, "").
 deliver_xxx(CliSock, _Req, Code, ExtraHtml) ->
     B = ["<html><h1>", integer_to_list(Code), $\ ,
-         yaws_api:code_to_phrase(Code), "</h1></html>", ExtraHtml],
+         yaws_api:code_to_phrase(Code), "</h1>", ExtraHtml, "</html>"],
     Sz = iolist_size(B),
     Server = case get(sc) of
                  undefined -> undefined;
