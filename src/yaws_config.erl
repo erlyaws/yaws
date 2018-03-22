@@ -1128,6 +1128,11 @@ fload(FD, GC, Cs, Lno, Chars) ->
             fload(FD, GC#gconf{ysession_mod = Ysession_mod}, Cs,
                   Lno+1, ?NEXTLINE);
 
+        ["ysession_cookiegen", '=', Mod_str] ->
+            Ysession_cookiegen = list_to_atom(Mod_str),
+            fload(FD, GC#gconf{ysession_cookiegen = Ysession_cookiegen}, Cs,
+                  Lno+1, ?NEXTLINE);
+
         ["ysession_idle_timeout", '=', YsessionIdle] ->
             case (catch list_to_integer(YsessionIdle)) of
                 I when is_integer(I), I > 0 ->

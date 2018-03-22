@@ -6,17 +6,20 @@
 
 all() ->
     [
-     init,
-     new_session_and_list,
-     replace_session,
-     replace_session_cleanup,
-     cookieval_to_opaque,
-     delete_session,
-     timeout
+     {group, basic_tests},
+     {group, cookiegen_tests}
     ].
 
 groups() ->
     [
+     {basic_tests, [], [init,
+                        new_session_and_list,
+                        replace_session,
+                        replace_session_cleanup,
+                        cookieval_to_opaque,
+                        delete_session,
+                        timeout]},
+     {cookiegen_tests, [], [new_cookiegen_session]}
     ].
 
 %%====================================================================
@@ -28,9 +31,23 @@ end_per_suite(_Config) ->
     application:unload(yaws),
     ok.
 
+init_per_group(cookiegen_tests, Config) ->
+    Id       = "testsuite-server",
+    YConf    = filename:join(?tempdir(?MODULE), "yaws.conf"),
+    YawsHome = ?tempdir(?MODULE),
+    os:putenv("YAWSHOME", YawsHome),
+    application:load(yaws),
+    application:set_env(yaws, id,   Id),
+    application:set_env(yaws, conf, YConf),
+    ok = yaws:start(),
+    {ok, GConf, SCs} = yaws_api:getconf(),
+    yaws_api:setconf(yaws:gconf_ysession_cookiegen(GConf, ?MODULE), SCs),
+    Config;
 init_per_group(_Group, Config) ->
     Config.
 
+end_per_group(cookiegen_tests, _Config) ->
+    ok = application:stop(yaws);
 end_per_group(_Group, _Config) ->
     ok.
 
@@ -257,3 +274,18 @@ sessions() ->
     lists:foldl(fun({{session, _}, Session}, Acc) -> [Session | Acc];
                     (_, Acc) -> Acc
                  end, [], get()).
+
+%%====================================================================
+
+-define(SPECIAL_COOKIE, "my special cookie").
+new_cookie() ->
+    ?SPECIAL_COOKIE.
+
+new_cookiegen_session(_Config) ->
+    Cookie1 = yaws_session_server:new_session({opaque, 1}),
+    Cookie2 = yaws_session_server:new_session({opaque, 2}, 1, self()),
+    Cookie3 = yaws_session_server:new_session({opaque, 3}, 1, self(), "cookie"),
+    ?assertEqual(?SPECIAL_COOKIE, Cookie1),
+    ?assertEqual(Cookie1, Cookie2),
+    ?assertEqual("cookie", Cookie3),
+    ok.

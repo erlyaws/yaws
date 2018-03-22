@@ -453,10 +453,11 @@ Example usage could be:
 
 .TP
 \fBnew_cookie_session(Opaque)\fR
-Create a new cookie based session, the yaws system will set the
-cookie. The new random generated cookie is returned from this
-function. The Opaque argument will typically contain user data
-such as user name and password
+Create a new cookie-based session. Yaws will either generate the cookie
+itself or, if a \fIysession_cookiegen\fR module is configured, call
+\fInew_cookie()\fR on that module to get a new cookie. The new cookie is
+returned from this function. The \fIOpaque\fR argument will typically
+contain user data such as user name and password
 
 .TP
 \fBnew_cookie_session(Opaque, TTL)\fR
@@ -465,12 +466,12 @@ overriding the system specified time-out value.
 
 .TP
 \fBnew_cookie_session(Opaque, TTL, CleanupPid)\fR
-As above, but also sends a message
-\fI{yaws_session_end, Reason, Cookie, Opaque}\fR to the provided CleanuPid where
-Reason can be either of \fItimeout\fR or \fInormal\fR. The \fICookie\fR
-is the HTTP cookie as returned by \fInew_session()\fR and the Opaque
-is the user provided Opaque parameter to \fInew_session()\fR.
-The purpose of the feature is to cleanup resources assigned to the session.
+As above, but also sends a message \fI{yaws_session_end, Reason, Cookie,
+Opaque}\fR to the provided \fICleanupPid\fR where Reason can be either of
+\fItimeout\fR or \fInormal\fR. The \fICookie\fR is the HTTP cookie as
+returned by \fInew_session()\fR and \fIOpaque\fR is the user-provided
+\fIOpaque\fR parameter to \fInew_session()\fR.  The purpose of the feature
+is to cleanup resources assigned to the session.
 
 
 .TP

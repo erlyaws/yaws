@@ -227,11 +227,19 @@ want the Erlang errorlog written to a report.log file.  Default value is
 
 .TP
 \fBysession_mod = Module\fR
-Allows to specify a different Yaws session storage mechanism instead of an ETS
+Allows specifying a different Yaws session storage mechanism instead of an ETS
 table. One of the drawbacks of the default yaws_session_server implementation is
 that server side cookies are lost when the server restarts. Specifying a
 different module here will pass all write/read operations to this module (it
 must implement appropriate callbacks).
+
+.TP
+\fBysession_cookiegen = Module\fR
+Allows specifying a different Yaws session cookie generator than the
+built-in default. \fIModule\fR is expected to provide a \fInew_cookie/0\fR
+function that returns a session cookie in the form of a list. Such a cookie
+generator module must be careful to return a unique cookie each time it's
+called.
 
 .TP
 \fBysession_idle_timeout = Integer\fR

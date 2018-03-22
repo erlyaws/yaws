@@ -28,12 +28,12 @@
          delete_session/1]).
 
 %% Default ETS backend callbacks
--export ([init_backend/1, stop_backend/0,
-          list/0, lookup/1, insert/1, delete/1,
-          traverse/1, cleanup/0]).
+-export([init_backend/1, stop_backend/0,
+         list/0, lookup/1, insert/1, delete/1,
+         traverse/1, cleanup/0]).
 
 %% Utility functions for callbacks
--export ([has_timedout/2, report_timedout_sess/1, cookie/1]).
+-export([has_timedout/2, report_timedout_sess/1, cookie/1]).
 
 -define(TTL, (30 * 60)).  % 30 minutes
 
@@ -155,8 +155,14 @@ handle_call({new_session, Opaque, undefined, Cleanup, Cookie}, From, State) ->
     handle_call({new_session, Opaque, ?TTL, Cleanup, Cookie}, From, State);
 
 handle_call({new_session, Opaque, TTL, Cleanup, undefined}, From, State) ->
-    N = bin2int(crypto:strong_rand_bytes(16)),
-    Cookie = atom_to_list(node()) ++ [$-|integer_to_list(N)],
+    Cookie = case catch yaws_server:getconf() of
+                 {ok, #gconf{ysession_cookiegen = CookieGen}, _}
+                   when CookieGen =/= undefined ->
+                     CookieGen:new_cookie();
+                 _ ->
+                     N = bin2int(crypto:strong_rand_bytes(16)),
+                     atom_to_list(node()) ++ [$-|integer_to_list(N)]
+             end,
     handle_call({new_session, Opaque, TTL, Cleanup, Cookie}, From, State);
 
 handle_call({new_session, Opaque, TTL, Cleanup, Cookie}, _From, State) ->

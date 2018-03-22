@@ -1205,6 +1205,15 @@ following 5 API functions to aid us:
 
 \end{enumerate}
 
+In addition, \verb+yaws_session_server+ allows you to create your own
+cookies if you prefer not to use its built-in cookie generator. To supply
+your own session cookie generator, set the global configuration variable
+\verb+ysession_cookiegen+ to the name of a module that provides a
+\verb+new_cookie/0+ function that returns a cookie as a list. If you
+specify a cookie generator module in your configuration, please be sure
+that its \verb+new_cookie/0+ function returns a unique cookie each time
+it's called.
+
 All cookie-based applications are different but they have some things
 in common. In the following examples we assume the existence of a
 function \verb+myapp:auth(UserName, Passwd)+ and it returns \verb+ok+
@@ -2465,12 +2474,20 @@ part where options for each virtual host is supplied.
               true.
 
 \item        \verb+ysession_mod = Module+ ---
-               Allows to specify a different \Yaws\ session storage mechanism
+               Allows specifying a different \Yaws\ session storage mechanism
                instead of an ETS table. One of the drawbacks of the default
                \verb+yaws_session_server+ implementation is that server side
                cookies are lost when the server restarts. Specifying a different
                module here will pass all write/read operations to this module
                (it must implement appropriate callbacks).
+
+\item        \verb+ysession_cookiegen = Module+ ---
+               Allows specifying a different \Yaws\ session cookie
+               generator than the built-in default. \verb+Module+ is
+               expected to provide a \verb+new_cookie/0+ function that
+               returns a session cookie in the form of a list. Such a
+               cookie generator module must be careful to return a unique
+               cookie each time it's called.
 
 \item       \verb+ysession_idle_timeout = Integer+ ---
                Controls \Yaws\ session idle cleanup. If a server has been

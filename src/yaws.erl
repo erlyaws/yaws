@@ -26,9 +26,10 @@
          gconf_process_options/1, gconf_large_file_chunk_size/1,
          gconf_mnesia_dir/1, gconf_log_wrap_size/1, gconf_cache_refresh_secs/1,
          gconf_include_dir/1, gconf_phpexe/1, gconf_yaws/1, gconf_id/1,
-         gconf_enable_soap/1, gconf_soap_srv_mods/1, gconf_ysession_mod/1,
+         gconf_enable_soap/1, gconf_soap_srv_mods/1,
          gconf_acceptor_pool_size/1, gconf_mime_types_info/1,
          gconf_nslookup_pref/1,
+         gconf_ysession_mod/1, gconf_ysession_cookiegen/1,
          gconf_ysession_idle_timeout/1, gconf_ysession_long_timeout/1,
          gconf_sni/1]).
 
@@ -40,9 +41,10 @@
          gconf_process_options/2, gconf_large_file_chunk_size/2,
          gconf_mnesia_dir/2, gconf_log_wrap_size/2, gconf_cache_refresh_secs/2,
          gconf_include_dir/2, gconf_phpexe/2, gconf_yaws/2, gconf_id/2,
-         gconf_enable_soap/2, gconf_soap_srv_mods/2, gconf_ysession_mod/2,
+         gconf_enable_soap/2, gconf_soap_srv_mods/2,
          gconf_acceptor_pool_size/2, gconf_mime_types_info/2,
          gconf_nslookup_pref/2,
+         gconf_ysession_mod/2,  gconf_ysession_cookiegen/2,
          gconf_ysession_idle_timeout/2, gconf_ysession_long_timeout/2,
          gconf_sni/2]).
 
@@ -293,10 +295,11 @@ gconf_yaws                 (#gconf{yaws                  = X}) -> X.
 gconf_id                   (#gconf{id                    = X}) -> X.
 gconf_enable_soap          (#gconf{enable_soap           = X}) -> X.
 gconf_soap_srv_mods        (#gconf{soap_srv_mods         = X}) -> X.
-gconf_ysession_mod         (#gconf{ysession_mod          = X}) -> X.
 gconf_acceptor_pool_size   (#gconf{acceptor_pool_size    = X}) -> X.
 gconf_mime_types_info      (#gconf{mime_types_info       = X}) -> X.
 gconf_nslookup_pref        (#gconf{nslookup_pref         = X}) -> X.
+gconf_ysession_mod         (#gconf{ysession_mod          = X}) -> X.
+gconf_ysession_cookiegen   (#gconf{ysession_cookiegen    = X}) -> X.
 gconf_ysession_idle_timeout(#gconf{ysession_idle_timeout = X}) -> X.
 gconf_ysession_long_timeout(#gconf{ysession_long_timeout = X}) -> X.
 gconf_sni                  (#gconf{sni                   = X}) -> X.
@@ -326,10 +329,11 @@ gconf_yaws                 (S, X) -> S#gconf{yaws                  = X}.
 gconf_id                   (S, X) -> S#gconf{id                    = X}.
 gconf_enable_soap          (S, X) -> S#gconf{enable_soap           = X}.
 gconf_soap_srv_mods        (S, X) -> S#gconf{soap_srv_mods         = X}.
-gconf_ysession_mod         (S, X) -> S#gconf{ysession_mod          = X}.
 gconf_acceptor_pool_size   (S, X) -> S#gconf{acceptor_pool_size    = X}.
 gconf_mime_types_info      (S, X) -> S#gconf{mime_types_info       = X}.
 gconf_nslookup_pref        (S, X) -> S#gconf{nslookup_pref         = X}.
+gconf_ysession_mod         (S, X) -> S#gconf{ysession_mod          = X}.
+gconf_ysession_cookiegen   (S, X) -> S#gconf{ysession_cookiegen    = X}.
 gconf_ysession_idle_timeout(S, X) -> S#gconf{ysession_idle_timeout = X}.
 gconf_ysession_long_timeout(S, X) -> S#gconf{ysession_long_timeout = X}.
 gconf_sni                  (S, X) -> S#gconf{sni                   = X}.
@@ -672,8 +676,6 @@ setup_gconf(GL, GC) ->
            enable_soap           = lkup(enable_soap, GL, GC#gconf.enable_soap),
            soap_srv_mods         = lkup(soap_srv_mods, GL,
                                         GC#gconf.soap_srv_mods),
-           ysession_mod          = lkup(ysession_mod, GL,
-                                        GC#gconf.ysession_mod),
            acceptor_pool_size    = lkup(acceptor_pool_size, GL,
                                         GC#gconf.acceptor_pool_size),
            mime_types_info       = setup_mime_types_info(
@@ -681,6 +683,14 @@ setup_gconf(GL, GC) ->
                                     ),
            nslookup_pref         = lkup(nslookup_pref, GL,
                                         GC#gconf.nslookup_pref),
+           ysession_mod          = lkup(ysession_mod, GL,
+                                        GC#gconf.ysession_mod),
+           ysession_cookiegen    = lkup(ysession_cookiegen, GL,
+                                        GC#gconf.ysession_cookiegen),
+           ysession_idle_timeout = lkup(ysession_idle_timeout, GL,
+                                        GC#gconf.ysession_idle_timeout),
+           ysession_long_timeout = lkup(ysession_long_timeout, GL,
+                                        GC#gconf.ysession_long_timeout),
            sni                   = lkup(sni, GL, GC#gconf.sni)
           }.
 
