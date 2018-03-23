@@ -980,13 +980,18 @@ option types are:
 \fI{disable_cache, Bool}\fR - if set to \fItrue\fR, disable the cache of
 \fIPage\fR for this call.
 
+.TP
+\fB{websocket, CallbackModule, Options}\fR
+Tell Yaws to use \fICallbackModule\fR as a WebSocket Protocol handler for
+traffic on the client socket. See the Yaws websocket documentation for more
+details.
 
 .TP
 \fB{ssi, File, Delimiter, Bindings}\fR
-Server side include File and  macro expansion in File.
-Each occurrence of a string, say "xyz", inside File which
-is inside Delimiters is replaced with the corresponding
-value in Bindings.
+Server side include \fIFile\fR and macro expansion in \fIFile\fR.
+Each occurrence of a string, say "xyz", inside \fIFile\fR that's
+within a \fIDelimiter\fR pair is replaced with the corresponding
+value in \fIBindings\fR.
 
 Example:
 Delimiter = %%
@@ -999,7 +1004,7 @@ The occurrence of %%xyz%% in File will be replaced with "Dingbat"
 in the Server side included output.
 
 The {ssi, File, Delimiter, Bindings} statement can also
-occur inside a deep ehtml structure.
+occur within a deep ehtml structure.
 
 
 .TP
@@ -1017,6 +1022,16 @@ the existence of a binding.
 \fB{yssi, YawsFile}\fR
 Include a yaws file. Compile it and expand as if it had
 occured inline.
+
+.TP
+\fB#arg{}\fR
+Return an instance of an \fI#arg{}\fR record. This can be useful when used
+as part of a \fI[ListOfValues]\fR return value, so that any subsequent
+elements in the return list that require an #arg{} get the returned
+instance rather than the original. For example, an \fIout/1\fR function
+might set the \fIstate\fR field of an #arg{}, then return both it and
+\fI{yssi, YawsFile}\fR in a list, in which case Yaws will pass the returned
+#arg{}, rather than the original instance, to the yaws file out/1 function.
 
 .TP
 \fB[ListOfValues]\fR

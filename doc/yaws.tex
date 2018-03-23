@@ -1724,7 +1724,7 @@ value. \Yaws\ au\-to\-mat\-i\-cal\-ly sets the
 \verb+Transfer-Encoding+ head\-er to \verb+chunked+ if it does not
 detect a \verb+Content-Length+ header.
 
-\section{All out/1 return values}
+\section{All out/1 Return Values}
 
 \begin{itemize}
 
@@ -1879,8 +1879,49 @@ detect a \verb+Content-Length+ header.
   \end{itemize}
 
 \item \verb+{websocket, CallbackModule, Options}+ Tell \Yaws\  to use
-  \verb+CallbackModule+ as a WebSockets Protocol handler for traffic
+  \verb+CallbackModule+ as a WebSocket Protocol handler for traffic
   on the client socket. See chapter \ref{websockets} for more details.
+
+\item \verb+{ssi, File, Delimiter, Bindings}+ Server-side include \verb+File+ and
+  macro expansion in \verb+File+. Each occurrence of a string, say "xyz", inside
+  \verb+File+ that's within a \verb+Delimiter+ pair is replaced with the
+  corresponding value in \verb+Bindings+. For example:
+
+   \begin{itemize}
+     \item \verb+Delimiter = %%+
+
+     \item File contains the string \verb+.... %%xyz%%  .....+
+
+     \item Bindings contain the tuple \verb+{"xyz", "Dingbat"}+
+   \end{itemize}
+
+  The occurrence of \verb+%%xyz%%+ in \verb+File+ will be replaced with
+  \verb+"Dingbat"+ in the server-side included output.
+
+  The \verb+{ssi, File, Delimiter, Bindings}+ statement can also occur
+  within a deep ehtml structure.
+
+
+\item \verb+{bindings, [{Key1, Value2}, {Key2, Value2} .....]}+ Establish variable
+  bindings that can be used in the page. All bindings can then be used in the
+  rest of \Yaws\ code (in HTML source and within \verb+erl+ tags).
+  In HTML source \verb+%%Key%%+ is expanded to \verb+Value+ and within \verb+erl+ tags \\
+  \verb+yaws_api:binding(Key)+ can be used to extract \verb+Value+
+  and \verb+yaws_api:binding_exists(Key)+ can be used to check for
+  the existence of a binding.
+
+\item \verb+{yssi, YawsFile}+ Include a yaws file. Compile it and expand as if it had
+occured inline.
+
+\item \verb+#arg{}+
+Return an instance of an \verb+#arg{}+ record. This can be useful when used
+as part of a \verb+[ListOfValues]+ return value, so that any subsequent
+elements in the return list that require an \verb+#arg{}+ get the returned
+instance rather than the original. For example, an \verb+out/1+ function
+might set the \verb+state+ field of an \verb+#arg{}+, then return both it and
+\verb+{yssi, YawsFile}+ in a list, in which case \Yaws\ will pass the returned
+\verb+#arg{}+, rather than the original instance, to the yaws file
+\verb+out/1+ function.
 
 \item \verb+[ListOfValues]+ It is possible to return a list of the above defined
   return values. Any occurrence of the atoms \verb+streamcontent+,
