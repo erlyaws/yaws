@@ -2601,7 +2601,7 @@ is_string_char([C|T]) ->
             %% FIXME check that [C, hd(T)] really is a char ?? how
             utf8;
         true ->
-            lists:member(C, [$., $/, $:, $_, $-, $+, $~, $@, $*])
+            lists:member(C, [$., $/, $:, $_, $-, $+, $~, $@, $*, $?])
     end.
 
 is_special(C) ->
