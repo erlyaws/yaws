@@ -3313,7 +3313,7 @@ handle_out_reply({'EXIT', normal}, _LineNo, _YawsFile, _UT, _ARG) ->
 handle_out_reply({ssi, File, Delimiter, Bindings}, LineNo, YawsFile, UT, ARG) ->
     case ssi(File, Delimiter, Bindings, UT, ARG) of
         {error, Rsn} ->
-            L = ?F("yaws code at~s:~p had the following err:~n~p",
+            L = ?F("yaws code at ~s:~p had the following err:~n~p",
                    [YawsFile, LineNo, Rsn]),
             handle_crash(ARG, L);
         OutData ->
