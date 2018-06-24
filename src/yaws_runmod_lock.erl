@@ -102,10 +102,12 @@ handle_call({lock,Path,Lock}, _From, Table) ->
         {reply, {ok,Id}, Table1}
     catch
         Status -> {reply, {error, Status}, Table};
-        _Error:Reason ->
-            error_logger:error_msg("Unexpected error: ~p~n~p~n",
-                                   [Reason,erlang:get_stacktrace()]),
-            {reply, {error, Reason}, Table}
+        ?MAKE_ST(_Error:Reason,ST,
+                 begin
+                     error_logger:error_msg("Unexpected error: ~p~n~p~n",
+                                            [Reason, ST]),
+                     {reply, {error, Reason}, Table}
+                 end)
     end;
 handle_call({unlock,Path,Id}, _From, Table) ->
     % even if the lock is not found, its removal is succesfull

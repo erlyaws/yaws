@@ -1043,11 +1043,13 @@ acceptor0(GS, Top) ->
         {ok, Client} ->
             if
                 GS#gs.ssl == ssl ->
-                    case ssl:ssl_accept(
-                           Client, (GS#gs.gconf)#gconf.keepalive_timeout
-                          ) of
-                        ok ->
-                            ok;
+                    SslTimeout = (GS#gs.gconf)#gconf.keepalive_timeout,
+                    %% TODO: the following should call the portability
+                    %% function yaws_dynopts:ssl_handshake/2 instead
+                    %% of performing a masked call to ssl_accept/2,
+                    %% since the latter is deprecated.
+                    case (fun ssl:ssl_accept/2)(Client, SslTimeout) of
+                        ok -> ok;
                         {error, closed} ->
                             Top ! {self(), decrement},
                             exit(normal);
@@ -2147,19 +2149,20 @@ handle_auth(ARG, Auth_H, Auth_methods = #auth{mod = Mod}, Ret) when Mod /= [] ->
             maybe_auth_log(403, ARG),
             false_403
     catch
-        _:Reason ->
-            L = ?F("authmod crashed ~n~p:auth(~p, ~n ~p) \n"
-                   "Reason: ~p~n"
-                   "Stack: ~p~n",
-                   [Mod, ARG, Auth_methods, Reason,
-                    erlang:get_stacktrace()]),
-            handle_crash(ARG, L),
-            CliSock = case yaws_api:get_sslsocket(ARG#arg.clisock) of
-                          {ok, SslSock} -> SslSock;
-                          undefined     -> ARG#arg.clisock
-                      end,
-            deliver_accumulated(CliSock),
-            exit(normal)
+        ?MAKE_ST(_:Reason,ST,
+                 begin
+                     L = ?F("authmod crashed ~n~p:auth(~p, ~n ~p) \n"
+                            "Reason: ~p~n"
+                            "Stack: ~p~n",
+                            [Mod, ARG, Auth_methods, Reason, ST]),
+                     handle_crash(ARG, L),
+                     CliSock = case yaws_api:get_sslsocket(ARG#arg.clisock) of
+                                   {ok, SslSock} -> SslSock;
+                                   undefined     -> ARG#arg.clisock
+                               end,
+                     deliver_accumulated(CliSock),
+                     exit(normal)
+                 end)
     end;
 
 %% if the headers are undefined we do not need to check Pam or Users
@@ -3400,7 +3403,7 @@ handle_out_reply({'EXIT', Err}, LineNo, YawsFile, _UT, ARG) ->
            "File: ~s:~w~n"
            "Reason: ~p~nReq: ~p~n"
            "Stack: ~p~n",
-           [YawsFile, LineNo, Err, ARG#arg.req, erlang:get_stacktrace()]),
+           [YawsFile, LineNo, Err, ARG#arg.req, ?stack()]),
     handle_crash(ARG, L);
 
 handle_out_reply({throw, Class, Exc}, LineNo, YawsFile, _UT, ARG) ->
@@ -3408,8 +3411,7 @@ handle_out_reply({throw, Class, Exc}, LineNo, YawsFile, _UT, ARG) ->
            "File: ~s:~w~n"
            "Class: ~p~nException: ~p~nReq: ~p~n"
            "Stack: ~p~n",
-           [YawsFile, LineNo, Class, Exc, ARG#arg.req,
-            erlang:get_stacktrace()]),
+           [YawsFile, LineNo, Class, Exc, ARG#arg.req, ?stack()]),
     handle_crash(ARG, L);
 
 handle_out_reply({get_more, Cont, State}, _LineNo, _YawsFile, _UT, _ARG) ->

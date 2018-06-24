@@ -8,9 +8,11 @@
          have_ssl_client_renegotiation/0,
          have_ssl_sni/0,
          have_ssl_log_alert/0,
+         have_ssl_handshake/0,
          have_erlang_sendfile/0,
          have_erlang_now/0,
          have_rand/0,
+         have_start_error_logger/0,
 
          unique_triple/0,
          get_time_tuple/0,
@@ -18,6 +20,8 @@
          random_seed/3,
          random_uniform/1,
          connection_information/2,
+         ssl_handshake/2,
+         start_error_logger/0,
 
          generate/1,
          purge_old_code/0,
@@ -43,6 +47,10 @@ have_ssl_sni() ->
 have_ssl_log_alert() ->
     is_greater_or_equal(erlang:system_info(version), "5.10.3").
 
+%% ssl:ssl_accept/2 is deprecated since release 21 (ERTS >= 10.0)
+have_ssl_handshake() ->
+    is_greater_or_equal(erlang:system_info(version), "10.0").
+
 %% erlang:sendfile/5 is buggy for R15 & R16 releases (ERTS < 6.0)
 have_erlang_sendfile() ->
     is_greater_or_equal(erlang:system_info(version), "6.0").
@@ -54,6 +62,10 @@ have_erlang_now() ->
 %% random module is deprecated since releases 19 (ERTS >= 8.0)
 have_rand() ->
     (code:which(rand) /= non_existing).
+
+%% error_logger is legacy as of release 21 (ERTS >= 10.0)
+have_start_error_logger() ->
+    is_greater_or_equal(erlang:system_info(version), "10.0").
 
 unique_triple() ->
     case have_erlang_now() of
@@ -93,6 +105,32 @@ connection_information(Sock, Items) ->
     case have_ssl_sni() of
         true  -> (fun ssl:connection_information/2)(Sock, Items);
         false -> undefined
+    end.
+
+ssl_handshake(Sock, Timeout) ->
+    case have_ssl_handshake() of
+        true -> (fun ssl:handshake/2)(Sock, Timeout);
+        false ->
+            case (fun ssl:ssl_accept/2)(Sock, Timeout) of
+                ok -> {ok, Sock};
+                Error -> Error
+            end
+    end.
+
+start_error_logger() ->
+    case have_start_error_logger() of
+        true ->
+            case (fun logger:get_handler_config/1)(error_logger) of
+                {ok, _} -> ok;
+                {error, _} ->
+                    LoggerArgs = (fun maps:from_list/1)([{level, info},
+                                                         {filter_default, log},
+                                                         {filters, []}]),
+                    (fun logger:add_handler/3)(error_logger, error_logger,
+                                               LoggerArgs)
+            end;
+        false ->
+            ok
     end.
 
 is_greater         (Vsn1, Vsn2) -> compare_version(Vsn1, Vsn2) == greater.
@@ -167,6 +205,7 @@ generate(GC) ->
             File = filename:join(yaws:tmpdir("/tmp"), "yaws_dynopts.erl"),
             generate1(File);
         _ ->
+            start_error_logger(),
             error_logger:format("Cannot write yaws_dynopts.erl~n"
                                 "Use the default version~n", [])
     end.
@@ -181,6 +220,7 @@ generate1(ModFile) ->
                         {module, ModName} ->
                             ok;
                         {error, What} ->
+                            start_error_logger(),
                             error_logger:format(
                               "Cannot load module '~p': ~p~n"
                               "Use the default version~n",
@@ -188,11 +228,13 @@ generate1(ModFile) ->
                              )
                     end;
                 _ ->
+                    start_error_logger(),
                     error_logger:format("Compilation of '~p' failed: ~p~n"
                                         "Use the default version~n",
                                         [ModFile])
             end;
         {error, Reason} ->
+            start_error_logger(),
             error_logger:format("Cannot write ~p: ~p~n"
                                 "Use the default version~n", [ModFile, Reason])
     end.
@@ -206,7 +248,9 @@ compile_options() ->
      {d, 'HAVE_SSL_CLIENT_RENEGOTIATION',  have_ssl_client_renegotiation()},
      {d, 'HAVE_SSL_SNI',                   have_ssl_sni()},
      {d, 'HAVE_SSL_LOG_ALERT',             have_ssl_log_alert()},
-     {d, 'HAVE_ERLANG_SENDFILE',           have_erlang_sendfile()}
+     {d, 'HAVE_SSL_HANDSHAKE',             have_ssl_handshake()},
+     {d, 'HAVE_ERLANG_SENDFILE',           have_erlang_sendfile()},
+     {d, 'HAVE_START_ERROR_LOGGER',        have_start_error_logger()}
     ]
         ++
         case have_erlang_now() of
@@ -232,9 +276,11 @@ source() ->
            "    have_ssl_client_renegotiation/0,",
            "    have_ssl_sni/0,",
            "    have_ssl_log_alert/0,",
+           "    have_ssl_handshake/0,",
            "    have_erlang_sendfile/0,",
            "    have_erlang_now/0,",
            "    have_rand/0,"
+           "    have_start_error_logger/0,"
            "",
            "    unique_triple/0,",
            "    get_time_tuple/0,",
@@ -242,6 +288,8 @@ source() ->
            "    random_seed/3,",
            "    random_uniform/1,",
            "    connection_information/2,",
+           "    ssl_handshake/2,"
+           "    start_error_logger/0,",
            "",
            "    generate/1,",
            "    purge_old_code/0,",
@@ -257,7 +305,9 @@ source() ->
            "have_ssl_client_renegotiation() -> ?HAVE_SSL_CLIENT_RENEGOTIATION.",
            "have_ssl_sni()                  -> ?HAVE_SSL_SNI.",
            "have_ssl_log_alert()            -> ?HAVE_SSL_LOG_ALERT.",
+           "have_ssl_handshake()            -> ?HAVE_SSL_HANDSHAKE.",
            "have_erlang_sendfile()          -> ?HAVE_ERLANG_SENDFILE.",
+           "have_start_error_logger()       -> ?HAVE_START_ERROR_LOGGER.",
            "",
            "-ifdef(HAVE_ERLANG_NOW).",
            "have_erlang_now() -> true.",
@@ -296,6 +346,29 @@ source() ->
            "    ssl:connection_information(Sock, Items).",
            "-else.",
            "connection_information(_, _) -> undefined.",
+           "-endif.",
+           "",
+           "-ifdef(HAVE_SSL_HANDSHAKE).",
+           "ssl_handshake(Sock, Timeout) ->",
+           "    ssl:handshake(Sock, Timeout).",
+           "-else.",
+           "ssl_handshake(Sock, Timeout) ->",
+           "    case ssl:ssl_accept(Sock, Timeout) of"
+           "        ok -> {ok, Sock};",
+           "        Error -> Error",
+           "    end.",
+           "-endif.",
+           "-ifdef(HAVE_ERROR_LOGGER_START).",
+           "start_error_logger() ->",
+           "    case logger:get_handler_config(error_logger) of",
+           "        {ok, _} -> ok;",
+           "        {error, _} ->",
+           "            logger:add_handler(error_logger, error_logger,",
+           "                               #{level => info, filter_default => log,"
+           "                                 filters => []})",
+           "    end.",
+           "-else.",
+           "start_error_logger() -> ok.",
            "-endif."
           ],
     string:join(Src, "\n").

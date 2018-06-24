@@ -145,6 +145,7 @@ write_log(ServerName, Type, {Fd, _FileName}, Infos) ->
 init([]) ->
     process_flag(trap_exit, true),
     ets:new(yaws_log, [named_table, set, protected, {keypos, 2}]),
+    yaws_dynopts:start_error_logger(),
     {ok, #state{running = false, now = fmtnow()}}.
 
 %%----------------------------------------------------------------------

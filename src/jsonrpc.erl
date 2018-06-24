@@ -31,6 +31,8 @@
 -export([call/3]).
 -export([s/2]).        % extract element from proplist
 
+-include("../include/yaws.hrl").
+
 %%%
 %%% call function calls json-rpc method on remote host
 %%%
@@ -57,11 +59,13 @@ call(URL, Options, Payload) ->
                    end,
         decode_call_payload(RespBody)
     catch
-        error:Err->
-            error_logger:error_report([{'json_rpc:call', error},
-                                       {error, Err},
-                                       {stack, erlang:get_stacktrace()}]),
-            {error,Err}
+        ?MAKE_ST(error:Err,St,
+                 begin
+                     error_logger:error_report([{'json_rpc:call', error},
+                                                {error, Err},
+                                                {stack, St}]),
+                     {error,Err}
+                 end)
     end.
 
 %%%
