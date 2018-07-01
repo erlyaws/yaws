@@ -2882,9 +2882,9 @@ deliver_dyn_part(CliSock,                       % essential params
                    Res = YawsFun(Arg),
                    handle_out_reply(Res, LineNo, YawsFile, UT, Arg)
                catch
-                   Class:Exc ->
-                       handle_out_reply({throw, Class, Exc}, LineNo,
-                                        YawsFile, UT, Arg)
+                   ?MAKE_ST(Class:Exc,St,
+                            handle_out_reply({throw, Class, Exc, St}, LineNo,
+                                             YawsFile, UT, Arg))
                end,
     case OutReply of
         {get_more, Cont, State} when element(1, Arg#arg.clidata) == partial  ->
@@ -3406,12 +3406,12 @@ handle_out_reply({'EXIT', Err}, LineNo, YawsFile, _UT, ARG) ->
            [YawsFile, LineNo, Err, ARG#arg.req, ?stack()]),
     handle_crash(ARG, L);
 
-handle_out_reply({throw, Class, Exc}, LineNo, YawsFile, _UT, ARG) ->
+handle_out_reply({throw, Class, Exc, St}, LineNo, YawsFile, _UT, ARG) ->
     L = ?F("~n~nERROR erlang code threw an uncaught exception:~n "
            "File: ~s:~w~n"
            "Class: ~p~nException: ~p~nReq: ~p~n"
            "Stack: ~p~n",
-           [YawsFile, LineNo, Class, Exc, ARG#arg.req, ?stack()]),
+           [YawsFile, LineNo, Class, Exc, ARG#arg.req, St]),
     handle_crash(ARG, L);
 
 handle_out_reply({get_more, Cont, State}, _LineNo, _YawsFile, _UT, _ARG) ->
