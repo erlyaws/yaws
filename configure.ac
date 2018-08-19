@@ -74,10 +74,8 @@ AC_SUBST(EXTRAINCLUDE)
 
 AC_ARG_ENABLE([pam],
         AC_HELP_STRING([--disable-pam],
-            [disable pam auth]),
-        enable_pam="$enableval",
-        enable_pam="yes")
-AM_CONDITIONAL(WITH_EPAM, [test "x${enable_pam}" = "xyes"])
+            [disable pam auth]))
+AM_CONDITIONAL(WITH_EPAM, [test "x${enable_pam}" != "xno"])
 
 APPDEPS=
 AC_ARG_ENABLE(crypto,

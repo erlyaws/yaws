@@ -39,6 +39,12 @@ On Ubuntu/debian this is pretty much equal to:
 
     $> apt-get build-dep yaws
 
+On MacOS and OS X, be sure the necessary Xcode command-line tools and
+development environment are set up correctly by running the following
+command:
+
+    xcode-select --install
+
 Finally, to run the testsuites, yaws need to install:
 
 * git
