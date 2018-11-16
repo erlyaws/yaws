@@ -536,6 +536,7 @@ do_parse_spec(QueryList, Last, Cur, State) when is_list(QueryList) ->
 code_to_phrase(100) -> "Continue";
 code_to_phrase(101) -> "Switching Protocols ";
 code_to_phrase(102) -> "Processing";
+code_to_phrase(103) -> "Early Hints";
 code_to_phrase(200) -> "OK";
 code_to_phrase(201) -> "Created";
 code_to_phrase(202) -> "Accepted";
