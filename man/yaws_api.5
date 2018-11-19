@@ -540,20 +540,24 @@ record. The return list is suitable for retransmit.
 
 .TP
 \fBreformat_header(H, FormatFun)\fR
-Returns a list of reformatted header values from a #headers{} record, with
-each element of the list formatted via a call to \fIFormatFun\fR. This
-enables converting #headers{} records into various lists of headers and
-their values. Note that sometimes the \fISet-Cookie\fR header will contain
-a tuple value of the form \fI{multi, ValueList}\fR \[em] see
-\fImerge_header/2\fR below for details \[em] so formatting functions should
-be prepared to handle such a tuple. They should handle it by formatting
-each member of \fIValueList\fR as a separate \fISet-Cookie\fR header, then
-returning all such header-value pairs in a list. Note that this implies
-that sometimes the return values of \fIreformat_header/1\fR and
-\fIreformat_header/2\fR can be a multi-level list. The \fI{multi,
-ValueList}\fR construct results only from calls to \fImerge_header/2\fR or
-\fImerge_header/3\fR, where multiple values are set in separate calls for
-the same header.
+Returns a list of reformatted header values from a #headers{} record,
+with each element of the list formatted via a call to
+\fIFormatFun\fR. This enables converting #headers{} records into
+various lists of headers and their values. Note that sometimes the
+\fISet-Cookie\fR header or other headers will contain a tuple value of
+the form \fI{multi, ValueList}\fR. (The \fI{multi, ValueList}\fR
+construct typically results from calls to \fImerge_header/2\fR or
+\fImerge_header/3\fR, where multiple values are set in separate calls
+for the same header; see \fImerge_header/2\fR below for details.)
+Formatting functions should therefore be capable of handling a
+\fI{multi, ValueList}\fR tuple. They should handle it by formatting
+each member of \fIValueList\fR as a separate header string, storing
+all such header strings in a list, and returning that list in a
+\fI{multi, HdrList}\fR tuple. Note that in versions of Yaws 2.0.6 and
+older, formatting functions returned such header lists directly, which
+implies that sometimes the return values of \fIreformat_header/1\fR
+and \fIreformat_header/2\fR can be a multi-level list if constructed
+by one of these older formatting functions.
 
 .TP
 \fBset_header(Headers, {Header, Value})\fR

@@ -9,7 +9,8 @@ all() ->
      set_headers,
      get_headers,
      delete_headers,
-     merge_headers
+     merge_headers,
+     reformat_headers
     ].
 
 groups() ->
@@ -97,6 +98,32 @@ merge_headers(_Config) ->
     Val2 = yaws_api:get_header(Hdrs3, "set-cookie"),
     Expected2 = {multi, ["user=joe", "domain=erlang.org"]},
     ?assertEqual(Expected2, Val2),
+    ok.
+
+reformat_headers(_Config) ->
+    Hdrs0 = create_headers(10),
+    Hdrs1 = yaws_api:set_header(Hdrs0, "set-cookie", "user=joe"),
+    Hdrs2 = yaws_api:set_header(Hdrs1, "Connection", "close"),
+    Hdrs3 = yaws_api:merge_header(Hdrs2, "set-cookie", "domain=erlang.org"),
+    Hdrs4 = yaws_api:reformat_header(Hdrs3),
+    ?assert(lists:all(fun(T) -> T end, [lists:flatten(H) == H || H <- Hdrs4])),
+    %% Verify that a user-defined FormatFun that doesn't handle
+    %% {multi, ValueList} as documented in yaws_api.5 still works
+    Hdrs5 = yaws_api:reformat_header(Hdrs3,
+                                     fun(H, {multi, Vals}) ->
+                                             %% return a list of strings
+                                             [lists:flatten(
+                                                io_lib:format("~s: ~s", [H, V])) ||
+                                                    V <- Vals];
+                                        (H, V) ->
+                                             %% return a binary
+                                             list_to_binary(
+                                               io_lib:format("~s: ~s", [H, V]))
+                                     end),
+    %% Only one element of the Hdrs5 list should be a list: the one
+    %% returned for the {multi, ValueList} tuple.
+    Expected = [["Set-Cookie: user=joe", "Set-Cookie: domain=erlang.org"]],
+    ?assertEqual(Expected, lists:filter(fun(V) -> is_list(V) end, Hdrs5)),
     ok.
 
 create_headers(N) ->
