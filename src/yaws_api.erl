@@ -729,7 +729,7 @@ set_cookie(Key, Value, Options)
         ({N,V}, {L1, L2}) -> {[cookie_option(N,V) | L1], L2};
         (N,     {L1, L2}) -> {L1, [cookie_option(N) | L2]}
     end, {[], []}, Options),
-    {header, {set_cookie, [Key, $=, Value, "; Version=1", NV | SV]}}.
+    {header, {set_cookie, [Key, $=, Value, NV | SV]}}.
 
 setcookie(Name, Value) ->
     {header, {set_cookie, f("~s=~s;", [Name, Value])}}.
