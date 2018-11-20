@@ -32,8 +32,9 @@
          list/0, lookup/1, insert/1, delete/1,
          traverse/1, cleanup/0]).
 
-%% Utility functions for callbacks
--export([has_timedout/2, report_timedout_sess/1, cookie/1]).
+%% Utility functions for callbacks and backends
+-export([has_timedout/2, report_timedout_sess/1, cookie/1,
+         opaque/1]).
 
 -define(TTL, (30 * 60)).  % 30 minutes
 
@@ -66,7 +67,7 @@ stop() ->
     gen_server:call(?MODULE, stop, infinity).
 
 
-%% We are bending over here in our pursuit of finding a
+%% We are bending over backwards here in our pursuit of finding a
 %% proper ysession_server backend.
 get_yaws_session_server_backend() ->
     #gconf{ysession_mod = DefaultBackend} = #gconf{},
@@ -373,9 +374,12 @@ has_timedout(Y, Time) ->
 cookie(Y) ->
     Y#ysession.cookie.
 
+opaque(Y) ->
+    Y#ysession.opaque.
+
 %% Backend callbacks (ETS as default)
 
-init_backend (_) ->
+init_backend(_) ->
     ets:new(?MODULE, [set, named_table, public, {keypos, 2}]).
 
 stop_backend() ->
