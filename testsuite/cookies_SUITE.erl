@@ -304,7 +304,7 @@ real_setcookies(_Config) ->
 
 set_cookie(_Config) ->
     ?assertEqual(
-        "a=bcd; Version=1; Comment=OK; Domain=g.com; Path=/; Max-Age=1; "
+        "a=bcd; Comment=OK; Domain=g.com; Path=/; Max-Age=1; "
         "Expires=Tue, 03 Jan 2012 10:00:05 GMT; HttpOnly; Secure",
         begin
             {header, {set_cookie, L}} = yaws_api:set_cookie("a", "bcd",
@@ -314,14 +314,14 @@ set_cookie(_Config) ->
             lists:flatten(L)
         end),
     ?assertEqual(
-        "a=bcd; Version=1; Path=/home",
+        "a=bcd; Path=/home",
         begin
             {header, {set_cookie, L}} =
                 yaws_api:set_cookie("a", "bcd", [{path, "/home"}]),
             lists:flatten(L)
         end),
     ?assertEqual(
-        "a=bcd; Version=1",
+        "a=bcd",
         begin
             {header, {set_cookie, L}} = yaws_api:set_cookie("a", "bcd", []),
             lists:flatten(L)
