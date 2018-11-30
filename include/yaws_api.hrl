@@ -5,8 +5,6 @@
 %%% Created : 24 Jan 2002 by Claes Wikstrom <klacke@hyber.org>
 %%%----------------------------------------------------------------------
 
--author('klacke@hyber.org').
-
 -record(arg, {
           clisock,        % the socket leading to the peer client
           client_ip_port, % {ClientIp, ClientPort} tuple
