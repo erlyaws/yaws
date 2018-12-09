@@ -373,6 +373,7 @@
           transfer_encoding,
           www_authenticate,
           vary,
+          accept_ranges,
           other                % misc other headers
          }).
 

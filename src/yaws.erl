@@ -2041,6 +2041,11 @@ accumulate_header({vary, What}) ->
 accumulate_header({"Vary", What}) ->
     accumulate_header({vary, What});
 
+accumulate_header({accept_ranges, What}) ->
+    put(outh, (get(outh))#outh{accept_ranges = ["Accept-Ranges: ", What, "\r\n"]});
+accumulate_header({"Accept-Ranges", What}) ->
+    accumulate_header({accept_ranges, What});
+
 %% non-special headers (which may be special in a future Yaws version)
 accumulate_header({Name, What}) when is_list(Name) ->
     H = get(outh),
@@ -2102,7 +2107,9 @@ erase_header(www_authenticate) ->
 erase_header(location) ->
     put(outh, (get(outh))#outh{location=undefined});
 erase_header(vary) ->
-    put(outh, (get(outh))#outh{vary=undefined}).
+    put(outh, (get(outh))#outh{vary=undefined});
+erase_header(accept_ranges) ->
+    put(outh, (get(outh))#outh{accept_ranges=undefined}).
 
 getuid() ->
     case os:type() of
