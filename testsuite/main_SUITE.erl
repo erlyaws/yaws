@@ -43,7 +43,8 @@ all() ->
      cache_appmod,
      multi_forwarded_for,
      log_rotation,
-     exhtml
+     exhtml,
+     accept_ranges
     ].
 
 groups() ->
@@ -737,6 +738,16 @@ exhtml(Config) ->
     Res  = <<"<p id=\"foo\">\n  bar\n</p>\n">>,
 
     ?assertMatch({ok, {{_,200,_}, _, Res}}, testsuite:http_get(Url)),
+    ok.
+
+accept_ranges(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
+    Url1  = testsuite:make_url(http, "127.0.0.1", Port, "/accept_ranges1.yaws"),
+    {ok, {{_,200,_}, Hdrs1, _}} = testsuite:http_get(Url1),
+    ?assertEqual("bytes", proplists:get_value("accept-ranges", Hdrs1)),
+    Url2  = testsuite:make_url(http, "127.0.0.1", Port, "/accept_ranges2.yaws"),
+    {ok, {{_,200,_}, Hdrs2, _}} = testsuite:http_get(Url2),
+    ?assertEqual("bytes", proplists:get_value("accept-ranges", Hdrs2)),
     ok.
 
 %%====================================================================

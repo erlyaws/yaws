@@ -1,0 +1,4 @@
+<erl>
+out(_Arg) ->
+    {header, {"Accept-Ranges", <<"bytes">>}}.
+</erl>

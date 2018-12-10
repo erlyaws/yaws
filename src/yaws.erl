@@ -1904,6 +1904,7 @@ outh_serialize() ->
                noundef(H#outh.transfer_encoding),
                noundef(H#outh.www_authenticate),
                noundef(Vary),
+               noundef(H#outh.accept_ranges),
                noundef(H#outh.other)],
     {StatusLine, Headers}.
 
