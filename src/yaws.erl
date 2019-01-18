@@ -102,7 +102,8 @@
          ssl_client_renegotiation/1, ssl_client_renegotiation/2,
          ssl_protocol_version/1, ssl_protocol_version/2,
          ssl_honor_cipher_order/1, ssl_honor_cipher_order/2,
-         ssl_require_sni/1, ssl_require_sni/2]).
+         ssl_require_sni/1, ssl_require_sni/2,
+         ssl_eccs/1, ssl_eccs/2]).
 
 -export([new_deflate/0,
          deflate_min_compress_size/1, deflate_min_compress_size/2,
@@ -484,6 +485,7 @@ ssl_client_renegotiation(#ssl{client_renegotiation = X}) -> X.
 ssl_protocol_version    (#ssl{protocol_version     = X}) -> X.
 ssl_honor_cipher_order  (#ssl{honor_cipher_order   = X}) -> X.
 ssl_require_sni         (#ssl{require_sni          = X}) -> X.
+ssl_eccs                (#ssl{eccs                 = X}) -> X.
 
 ssl_keyfile             (S, File)    -> S#ssl{keyfile              = File}.
 ssl_certfile            (S, File)    -> S#ssl{certfile             = File}.
@@ -498,6 +500,7 @@ ssl_cachetimeout        (S, Timeout) -> S#ssl{cachetimeout         = Timeout}.
 ssl_secure_renegotiate  (S, Bool)    -> S#ssl{secure_renegotiate   = Bool}.
 ssl_protocol_version    (S, Vsns)    -> S#ssl{protocol_version     = Vsns}.
 ssl_require_sni         (S, Bool)    -> S#ssl{require_sni          = Bool}.
+ssl_eccs                (S, ECCS)    -> S#ssl{eccs                 = ECCS}.
 ssl_honor_cipher_order  (S, Bool) ->
     case yaws_dynopts:have_ssl_honor_cipher_order() of
         true  -> S#ssl{honor_cipher_order   = Bool};
@@ -544,7 +547,9 @@ setup_ssl(SL, DefaultSSL) ->
                  protocol_version     = lkup(protocol_version, SSLProps,
                                              undefined),
                  require_sni          = lkup(require_sni, SSLProps,
-                                             SSL#ssl.require_sni)}
+                                             SSL#ssl.require_sni),
+                 eccs                 = lkup(eccs, SSLProps, SSL#ssl.eccs)
+                }
     end.
 
 

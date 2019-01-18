@@ -3419,6 +3419,18 @@ The following directives are allowed inside a server definition.
                  horrible sub-language of its own.  It is documented in the SSL
                  man page for "ciphers".
 
+               \item \verb+eccs = String+ --- This string specifies the
+                 supported Elliptic Curve Cryptography (ECC).
+                 It must be a subset of \textit{ssl:eccs()}.
+                 For PCI DSS compliance (which is the main reason why you
+                 would want to change this), set it on a single line to:
+\begin{verbatim}
+eccs = "[sect571r1, sect571k1, secp521r1, brainpoolP512r1, sect409k1,
+         sect409r1, brainpoolP384r1, secp384r1, sect283k1, sect283r1,
+         brainpoolP256r1, secp256k1, secp256r1, sect239k1, xsect233k1,
+         sect233r1, secp224k1, secp224r1]"
+\end{verbatim}
+
                \item \verb+secure_renegotiate = true | false+ --- Specifies whether
                  to reject renegotiation attempt that does not live up to RFC
                  5746. By default \verb+secure_renegotiate+ is set to false
@@ -3430,6 +3442,7 @@ The following directives are allowed inside a server definition.
                  disables the Erlang/OTP SSL application client
                  renegotiation option.  Defaults to true. See the
                  \verb+ssl+ manual page at
+                 
                  http://www.erlang.org/doc/man/ssl.html for more details.
 
                  \textbf{WARNING: This option was introduced in the SSL application
