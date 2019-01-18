@@ -2013,7 +2013,20 @@ fload(FD, ssl, GC, C, Lno, Chars) ->
             catch _:_ ->
                     {error, ?F("Bad cipherspec at line ~w", [Lno])}
             end;
-
+        ["eccs", '=', Val] ->
+            try
+                L = str2term(Val),
+                Curves = ssl:eccs(),
+                case check_eccs(L, Curves) of
+                    ok ->
+                        C1 = C#sconf{ssl = (C#sconf.ssl)#ssl{eccs = L}},
+                        fload(FD, ssl, GC, C1, Lno+1, ?NEXTLINE);
+                    Err ->
+                        Err
+                end
+            catch _:_ ->
+                    {error, ?F("Bad elliptic curves at line ~w", [Lno])}
+            end;
         ["secure_renegotiate", '=', Bool] ->
             case is_bool(Bool) of
                 {true, Val} ->
@@ -3487,6 +3500,11 @@ check_ciphers([Spec|Specs], L) ->
 check_ciphers(X,_) ->
     {error, ?F("Bad cipherspec ~p",[X])}.
 
+check_eccs(From_conf, Available) ->
+    case From_conf -- Available of
+        [] -> ok;
+        Bad -> {error, ?F("Bad elliptic curves ~p",[Bad])}
+    end.
 
 io_get_line(FD, Prompt, Acc) ->
     Next = io:get_line(FD, Prompt),

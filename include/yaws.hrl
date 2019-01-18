@@ -134,7 +134,8 @@
                                    false -> undefined
                                end,
           protocol_version,
-          require_sni = false
+          require_sni = false,
+          eccs
          }).
 
 

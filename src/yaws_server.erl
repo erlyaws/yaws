@@ -1004,6 +1004,11 @@ ssl_listen_opts(#sconf{ssl=SSL}) ->
             true ->
                  false
          end,
+         if SSL#ssl.eccs /= undefined ->
+                 {eccs, SSL#ssl.eccs};
+            true ->
+                 false
+         end,
          case yaws_dynopts:have_ssl_log_alert() of
              true  -> {log_alert, false};
              false -> false
