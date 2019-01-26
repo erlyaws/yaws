@@ -227,10 +227,19 @@ generate1(ModFile) ->
                               [ModName, What]
                              )
                     end;
-                _ ->
+                {error, Errors, _} ->
                     start_error_logger(),
-                    error_logger:format("Compilation of '~p' failed: ~p~n"
-                                        "Use the default version~n",
+                    lists:foreach(
+                      fun({File,FileErrors}) ->
+                              lists:foreach(
+                                fun({Line,ErrorMod,ErrorDesc}) ->
+                                        error_logger:format(
+                                          "~s:~w: ~s~n",
+                                          [File, Line,
+                                           ErrorMod:format_error(ErrorDesc)])
+                                end, FileErrors)
+                      end, Errors),
+                    error_logger:format("Use the default version of ~s~n",
                                         [ModFile])
             end;
         {error, Reason} ->
@@ -243,7 +252,7 @@ write_module(ModFile) ->
     file:write_file(ModFile, source()).
 
 compile_options() ->
-    [binary, report,
+    [binary, report, return_errors,
      {d, 'HAVE_SSL_HONOR_CIPHER_ORDER',    have_ssl_honor_cipher_order()},
      {d, 'HAVE_SSL_CLIENT_RENEGOTIATION',  have_ssl_client_renegotiation()},
      {d, 'HAVE_SSL_SNI',                   have_ssl_sni()},
