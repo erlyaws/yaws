@@ -1689,7 +1689,7 @@ make_expires_header(MT0, FI) ->
                     case split_sep(MT1, $/) of
                         [Type, SubType] ->
                             make_expires_header({Type,SubType}, FI);
-                        false ->
+                        [] ->
                             make_expires_header(all, FI)
                     end
             end
