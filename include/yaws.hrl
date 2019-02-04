@@ -86,7 +86,7 @@
 
           large_file_chunk_size = 10240,
           mnesia_dir            = [],
-          log_wrap_size         = 10000000, % wrap logs after 10M
+          log_wrap_size         = 1000000,  % wrap logs after 1M
           cache_refresh_secs    = 30,       % seconds  (auto zero when debug)
           include_dir           = [],       % list of inc dirs for .yaws files
           phpexe = "/usr/bin/php-cgi",      % cgi capable php executable
