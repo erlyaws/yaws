@@ -52,11 +52,6 @@
          'DELETE'/4,
          'PATCH'/4]).
 
--import(lists, [member/2, foreach/2, map/2,
-                flatten/1, reverse/1]).
-
--import(yaws_api, [ehtml_expand/1]).
-
 -record(gs, {gconf,
              group,         %% list of #sconf{} s
              ssl,           %% ssl | nossl
@@ -203,10 +198,10 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
         _ ->
             ok
     end,
-    foreach(fun(D) ->
-                    yaws_debug:format("Add path ~p~n", [D]),
-                    code:add_pathz(D)
-            end, GC#gconf.ebin_dir),
+    lists:foreach(fun(D) ->
+                          yaws_debug:format("Add path ~p~n", [D]),
+                          code:add_pathz(D)
+                  end, GC#gconf.ebin_dir),
     yaws_debug:format("Running with id=~p ~n"
                       "~s"
                       "Logging to directory ~p~n",
@@ -291,22 +286,22 @@ handle_call(id, _From, State) ->
     {reply, (State#state.gc)#gconf.id, State};
 
 handle_call(pids, _From, State) ->  %% for gprof
-    L = map(fun(X) ->element(1, X) end, State#state.pairs),
+    L = lists:map(fun(X) ->element(1, X) end, State#state.pairs),
     {reply, [self() | L], State};
 
 
 %% This is a brutal restart of everything
 handle_call({setconf, GC, Groups}, _From, State) ->
     %% First off, terminate all currently running processes
-    Curr = map(fun(X) ->element(1, X) end, State#state.pairs),
-    foreach(fun(Pid) ->
-                    gserv_stop(Pid)
-            end, Curr),
+    Curr = lists:map(fun(X) ->element(1, X) end, State#state.pairs),
+    lists:foreach(fun(Pid) ->
+                          gserv_stop(Pid)
+                  end, Curr),
     {ok, State2} = init2(GC, Groups, undef, State#state.embedded, false),
     {reply, ok, State2};
 
 handle_call(getconf, _From, State) ->
-    Groups = map(fun({_Pid, SCs}) -> SCs end, State#state.pairs),
+    Groups = lists:map(fun({_Pid, SCs}) -> SCs end, State#state.pairs),
     {reply, {ok, State#state.gc, Groups}, State};
 
 %% If cert has changed, server will stop implicitly
@@ -440,7 +435,7 @@ handle_info(_Msg, State) ->
 %% Returns: any (ignored by gen_server)
 %%----------------------------------------------------------------------
 terminate(_Reason, State) ->
-    foreach(fun({Pid, _GP}) -> gserv_stop(Pid) end, State#state.pairs),
+    lists:foreach(fun({Pid, _GP}) -> gserv_stop(Pid) end, State#state.pairs),
     ok.
 
 do_listen(GC, [SC0|_]=Group) ->
@@ -507,8 +502,8 @@ gserv(Top, GC, Group0) ->
     ?TC([{record, GC, gconf}]),
     put(gc, GC),
     put(top, Top),
-    Group1 = map(fun(SC) -> setup_ets(SC) end, Group0),
-    Group = map(fun(SC) -> start_stats(SC) end, Group1),
+    Group1 = lists:map(fun(SC) -> setup_ets(SC) end, Group0),
+    Group = lists:map(fun(SC) -> start_stats(SC) end, Group1),
     case do_listen(GC, Group) of
         {SSLBOOL, CertInfo, {ok, Listen}} ->
             lists:foreach(fun(SC) -> call_start_mod(SC) end, Group),
@@ -517,7 +512,7 @@ gserv(Top, GC, Group0) ->
               [inet_parse:ntoa((hd(Group))#sconf.listen),
                (hd(Group))#sconf.port,
                length(Group),
-               catch map(
+               catch lists:map(
                        fun(S) ->
                                io_lib:format("~n - ~s under ~s",
                                              [yaws:sconf_to_srvstr(S),
@@ -548,7 +543,7 @@ setup_dirs(GC) ->
     ok = filelib:ensure_dir(Ctl),
     case file:list_dir(Dir) of
         {ok, LL} ->
-            foreach(
+            lists:foreach(
               fun(F) ->
                       file:delete(filename:join([Dir, F]))
               end, LL -- ["CTL"]);
@@ -641,11 +636,11 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                 Pid when Reason /= shutdown ->
                     error_logger:format("Top proc died, terminate gserv",[]),
                     {links, Ls} = process_info(self(), links),
-                    foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
+                    lists:foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
                     exit(noserver);
                 Pid ->
                     {links, Ls} = process_info(self(), links),
-                    foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
+                    lists:foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
                     exit(normal);
                 Top when Reason == failaccept ->
                     error_logger:format(
@@ -653,7 +648,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                     {links, Ls} = process_info(self(), links),
                     %% do not send exit signal to yaws_server process
                     Ls1 = Ls -- [Top],
-                    foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls1),
+                    lists:foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls1),
                     exit(noserver);
                 _ ->
                     GS2 = if (Reason == normal) orelse (Reason == shutdown) ->
@@ -694,16 +689,16 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             end,
 
             %% Stop yaws_stats processes, if needed
-            foreach(fun(SC) -> stop_stats(SC) end, GS#gs.group),
+            lists:foreach(fun(SC) -> stop_stats(SC) end, GS#gs.group),
 
             %% Close softly all opened connections
             {links, Ls1} = process_info(self(), links),
-            foreach(fun(X) when is_pid(X) ->
-                            unlink(X),
-                            X ! {self(), suspend},
-                            exit(X, shutdown);
-                       (_) -> ok
-                    end, Ls1),
+            lists:foreach(fun(X) when is_pid(X) ->
+                                  unlink(X),
+                                  X ! {self(), suspend},
+                                  exit(X, shutdown);
+                             (_) -> ok
+                          end, Ls1),
             WaitFun = fun(_, 0, Pids)     -> Pids;
                          (_, _, [])       -> [];
                          (F, Secs, Pids0) ->
@@ -718,7 +713,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             Ls2 = WaitFun(WaitFun, 60, Ls1),
 
             %% Kill all remaining connections
-            foreach(fun(X) -> exit(X, kill) end, Ls2),
+            lists:foreach(fun(X) -> exit(X, kill) end, Ls2),
 
             From ! {self(), ok},
             exit(normal);
@@ -807,7 +802,7 @@ gserv_loop(GS, Ready, Rnum, Last) ->
                       [yaws:sconf_to_srvstr(hd(GS#gs.group))]),
                     {links, Ls0} = process_info(self(), links),
                     Ls = Ls0 -- [get(top)],
-                    foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
+                    lists:foreach(fun(X) -> unlink(X), exit(X, shutdown) end, Ls),
                     From ! {self(), yes},
                     unlink(get(top)),
                     get(top) ! {self(), certchanged},
@@ -2329,8 +2324,8 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
                                             end
                                     end;
                                 Line ->
-                                    case member(ETag,
-                                                yaws:split_sep(Line, $,)) of
+                                    case lists:member(ETag,
+                                                      yaws:split_sep(Line, $,)) of
                                         true ->
                                             yaws:outh_set_static_headers(
                                               Req, UT, H, Range),
@@ -2341,7 +2336,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
                                     end
                             end;
                         Line ->
-                            case member(ETag,yaws:split_sep(Line, $,)) of
+                            case lists:member(ETag,yaws:split_sep(Line, $,)) of
                                 true ->
                                     yaws:outh_set_304_headers(Req, UT, H),
                                     maybe_set_page_options(),
@@ -2501,7 +2496,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = cgi}, N) ->
                      N,
                      ARG,UT,
                      fun(A)->yaws_cgi:call_cgi(
-                               A,flatten(UT#urltype.fullpath))
+                               A,lists:flatten(UT#urltype.fullpath))
                      end,
                      fun(A)->finish_up_dyn_file(A, CliSock) end
                     );
@@ -2580,7 +2575,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = php}, N) ->
               {cgi, Exe} ->
                   fun(A)->
                           yaws_cgi:call_cgi(
-                            A,Exe,flatten(UT#urltype.fullpath)
+                            A,Exe,lists:flatten(UT#urltype.fullpath)
                            )
                   end;
               {fcgi, {PhpFcgiHost, PhpFcgiPort}} ->
@@ -2818,7 +2813,7 @@ do_yaws(CliSock, ARG, UT, N) ->
 purge_old_mods(_, []) ->
     ok;
 purge_old_mods(_GC, [{_FileAtom, spec, _Mtime1, Spec, _}]) ->
-    foreach(
+    lists:foreach(
       fun({mod, _, _, _,  Mod, _Func}) ->
               code:purge(Mod),
               code:purge(Mod);
@@ -3318,7 +3313,7 @@ handle_out_reply({header, H},  _LineNo, _YawsFile, _UT, _ARG) ->
 
 handle_out_reply({allheaders, Hs}, _LineNo, _YawsFile, _UT, _ARG) ->
     yaws:outh_clear_headers(),
-    foreach(fun({header, Head}) -> yaws:accumulate_header(Head) end, Hs),
+    lists:foreach(fun({header, Head}) -> yaws:accumulate_header(Head) end, Hs),
     ok;
 
 handle_out_reply({status, Code},_LineNo,_YawsFile,_UT,_ARG)
@@ -3408,7 +3403,7 @@ handle_out_reply({redirect, URL, Status}, _LineNo, _YawsFile, _UT, _ARG) ->
     ok;
 
 handle_out_reply({bindings, L}, _LineNo, _YawsFile, _UT, _ARG) ->
-    foreach(fun({Key, Value}) -> put({binding, Key}, Value) end, L),
+    lists:foreach(fun({Key, Value}) -> put({binding, Key}, Value) end, L),
     ok;
 
 handle_out_reply(ok, _LineNo, _YawsFile, _UT, _ARG) ->
@@ -3669,7 +3664,7 @@ handle_crash(ARG, L) ->
                     %% Aghhh, yet another user crash :-(
                     T2 = [{h2, [], "Internal error"}, {hr},
                           {p, [], "Customized crash display code crashed !!!"}],
-                    accumulate_content(ehtml_expand(T2)),
+                    accumulate_content(yaws_api:ehtml_expand(T2)),
                     break;
                 {ok, Out} ->
                     accumulate_content(Out),
@@ -3679,7 +3674,7 @@ handle_crash(ARG, L) ->
             yaws:elog("Bad return value from errmod_crash ~n~p~n",[Other]),
             T2 = [{h2, [], "Internal error"}, {hr},
                   {p, [], "Customized crash display code returned bad val"}],
-            accumulate_content(ehtml_expand(T2)),
+            accumulate_content(yaws_api:ehtml_expand(T2)),
             break
 
     end.
@@ -4643,7 +4638,7 @@ maybe_return_path_info(SC, Comps, RevFile, DR, VirtualDir) ->
             %% without trailing "/"
 
             {Type2, Mime2} =
-                case member(Type, SC#sconf.allowed_scripts) of
+                case lists:member(Type, SC#sconf.allowed_scripts) of
                     true ->
                         {Type, Mime};
                     false ->
@@ -4840,11 +4835,11 @@ redir_user(UT, User) ->
 
 
 parse_user_path(_DR, [], User) ->
-    {redir_dir, reverse(User)};
+    {redir_dir, lists:reverse(User)};
 parse_user_path(_DR, [$/], User) ->
-    {ok, reverse(User), [$/]};
+    {ok, lists:reverse(User), [$/]};
 parse_user_path(_DR, [$/|Tail], User) ->
-    {ok, reverse(User), [$/|Tail]};
+    {ok, lists:reverse(User), [$/|Tail]};
 parse_user_path(DR, [H|T], User) ->
     parse_user_path(DR, T, [H|User]).
 
@@ -4864,7 +4859,7 @@ suffix_type(SC, L) ->
         {regular, _Ext, Mime} ->
             {regular, Mime};
         {X, _Ext, Mime} ->
-            case member(X, SC#sconf.allowed_scripts) of
+            case lists:member(X, SC#sconf.allowed_scripts) of
                 true  -> {X, Mime};
                 false -> {regular, mime_types:default_type(SC)}
             end
@@ -4937,11 +4932,10 @@ runmod(_, GC) ->
     runmod2(GC, GC#gconf.runmods).
 
 runmod2(GC, Mods) ->
-    foreach(fun(M) ->
-                    proc_lib:spawn(?MODULE, load_and_run,
-                                   [M, ?gc_has_debug(GC)])
-            end, Mods).
-
+    lists:foreach(fun(M) ->
+                          proc_lib:spawn(?MODULE, load_and_run,
+                                         [M, ?gc_has_debug(GC)])
+                  end, Mods).
 
 
 load_and_run(Mod, Debug) ->
@@ -4958,7 +4952,7 @@ load_and_run(Mod, Debug) ->
 
 
 safe_ehtml_expand(X) ->
-    case (catch ehtml_expand(X)) of
+    case (catch yaws_api:ehtml_expand(X)) of
         {'EXIT', R} ->
             {error, err_pre(R)};
         Val ->

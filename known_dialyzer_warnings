@@ -1,7 +1,7 @@
 
 yaws.erl:2815: Guard test Ret::'file' == 'fd' can never succeed
 yaws.erl:2823: Guard test Ret::'file' == 'binfd' can never succeed
-yaws_api.erl:2603: The pattern 'false' can never match the type 'true'
+yaws_api.erl:2601: The pattern 'false' can never match the type 'true'
 yaws_config.erl:671: The pattern 'false' can never match the type 'true'
 yaws_ctl.erl:504: Function hup/1 has no local return
 yaws_ctl.erl:509: Function stop/1 has no local return

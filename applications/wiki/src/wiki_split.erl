@@ -29,8 +29,6 @@
 -export([str2wiki/1, wiki2str/1,
          getRegion/2, putRegion/3, writeAppendRegion/3]).
 
--import(lists, [reverse/1]).
-
 str2wiki(Str) ->
     Blocks = str2wiki(Str, []),
     {wik, number_blocks(Blocks, 1)}.
@@ -49,7 +47,7 @@ str2wiki(Str, L) ->
             {In, Str3} = collect_open_region([$\n|T], []),
             str2wiki(Str3, [{open,In},{txt,Before}|L]);
         [] ->
-            reverse([{txt,Before}|L])
+            lists:reverse([{txt,Before}|L])
     end.
 
 %% collect_str(Str) -> {Str1, Str2}
@@ -57,21 +55,21 @@ str2wiki(Str, L) ->
 
 collect_str(Str) -> collect_after_nl(Str, []).
 
-collect_after_nl(S = "<<\n" ++ _, L) -> {reverse(L), S};
-collect_after_nl(S = "<\n" ++ _, L)  -> {reverse(L), S};
+collect_after_nl(S = "<<\n" ++ _, L) -> {lists:reverse(L), S};
+collect_after_nl(S = "<\n" ++ _, L)  -> {lists:reverse(L), S};
 collect_after_nl(X, L)               -> collect_str(X, L).
 
 collect_str([$\n|T], L) -> collect_after_nl(T, [$\n|L]);
 collect_str([H|T], L)   -> collect_str(T, [H|L]);
-collect_str([], L)      -> {reverse(L), []}.
+collect_str([], L)      -> {lists:reverse(L), []}.
 
-collect_write_append("\n>>\n" ++ T, L) -> {reverse([$\n|L]), [$\n|T]};
+collect_write_append("\n>>\n" ++ T, L) -> {lists:reverse([$\n|L]), [$\n|T]};
 collect_write_append([H|T], L)         -> collect_write_append(T, [H|L]);
-collect_write_append([], L)            -> {reverse(L), []}.
+collect_write_append([], L)            -> {lists:reverse(L), []}.
 
-collect_open_region("\n>\n" ++ T, L) -> {reverse([$\n|L]), [$\n|T]};
+collect_open_region("\n>\n" ++ T, L) -> {lists:reverse([$\n|L]), [$\n|T]};
 collect_open_region([H|T], L)        -> collect_open_region(T, [H|L]);
-collect_open_region([], L)           -> {reverse(L), []}.
+collect_open_region([], L)           -> {lists:reverse(L), []}.
 
 %% wiki2str.
 

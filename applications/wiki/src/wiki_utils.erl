@@ -12,49 +12,47 @@
 -export([getallrefs/2]).
 -export([getpages_by_prefix/2]).
 
--import(lists,  [filter/2, member/2, reverse/1, sort/1, map/2]).
--import(wiki, [p/1, h1/1, show/1]).
--import(wiki_templates, [template2/5]).
-
 %% HTML structure of the backlink list
 findallrefsto(Page, Root) ->
     Pages = getallrefs(Page, Root),
-    template2(Root, "References",  "References",
-         ["<p>The following pages contain references to ",
-          wiki_to_html:format_link(Page, Root),".",
-          "<ul>",
-          map(fun(F) ->
-                      [wiki_to_html:format_link(F, Root),"<br>"] end,
-              Pages),
-          "</ul>"], false).
+    wiki_templates:template2(
+      Root, "References",  "References",
+      ["<p>The following pages contain references to ",
+       wiki_to_html:format_link(Page, Root),".",
+       "<ul>",
+       lists:map(fun(F) ->
+                         [wiki_to_html:format_link(F, Root),"<br>"] end,
+                 Pages),
+       "</ul>"], false).
 
 %% Backlinks list
 getallrefs(Page, Root) ->
     All = wiki:ls(Root),
-    Pages = filter(fun(I) ->
-                           case wiki:read_page(I, Root) of
-                               {ok, Str} ->
-                                   Links = get_links(Str, []),
-                                   member(Page, Links);
-                               error ->
-                                   false
-                           end
-                   end, All),
-    sort(Pages).
+    Pages = lists:filter(fun(I) ->
+                                 case wiki:read_page(I, Root) of
+                                     {ok, Str} ->
+                                         Links = get_links(Str, []),
+                                         lists:member(Page, Links);
+                                     error ->
+                                         false
+                                 end
+                         end, All),
+    lists:sort(Pages).
 
 zombies(Root) ->
     All = wiki:ls(Root),
     {Reached, _Missing} = gc(["home"], [], [], Root),
     %% Missing = Pages refered to but do not exists at all
     %% This is not an error
-    NotReached = sort(All -- Reached),
-    template2(Root, "Zombies", "Zombies",
-         [p("These pages have no links to them."),
-          "<ul>",
-          map(fun(F) ->
-                      [wiki_to_html:format_link(F, Root),"<br>"] end,
-              NotReached),
-          "</ul>"], false).
+    NotReached = lists:sort(All -- Reached),
+    wiki_templates:template2(
+      Root, "Zombies", "Zombies",
+      [wiki:p("These pages have no links to them."),
+       "<ul>",
+       lists:map(fun(F) ->
+                         [wiki_to_html:format_link(F, Root),"<br>"] end,
+                 NotReached),
+       "</ul>"], false).
 
 %% Return page name that match a specific prefix
 getpages_by_prefix(Prefix, Root) ->
@@ -62,11 +60,11 @@ getpages_by_prefix(Prefix, Root) ->
                          fun(F, AccIn)-> [F|AccIn] end, []),
     Pages = lists:map(fun(I) -> filename:basename(I, ".wob") end,
                       Files),
-    sort(Pages).
+    lists:sort(Pages).
 
 
 gc([H|T], Visited, Missing, Root) ->
-    case member(H, Visited) or member(H, Missing) of
+    case lists:member(H, Visited) or lists:member(H, Missing) of
         true ->
             gc(T, Visited, Missing, Root);
         false ->

@@ -18,8 +18,6 @@
 -export([init/1]).
 -export([get_app_args/0, child_specs/0]).
 
--import(lists, [member/2]).
-
 %%%----------------------------------------------------------------------
 %%% API
 %%%----------------------------------------------------------------------
@@ -74,14 +72,14 @@ get_app_args() ->
     AS=init:get_arguments(),
     Debug = case application:get_env(yaws, debug) of
                 undefined ->
-                    member({yaws, ["debug"]}, AS);
+                    lists:member({yaws, ["debug"]}, AS);
                 {ok, Val}  ->
                     Val
             end,
     Trace = case application:get_env(yaws, trace) of
                 undefined ->
-                    case {member({yaws, ["trace", "http"]}, AS),
-                          member({yaws, ["trace", "traffic"]}, AS)} of
+                    case {lists:member({yaws, ["trace", "http"]}, AS),
+                          lists:member({yaws, ["trace", "traffic"]}, AS)} of
                         {true, _} ->
                             {true, http};
                         {_, true} ->
@@ -98,7 +96,7 @@ get_app_args() ->
             end,
     TraceOutput = case application:get_env(yaws, traceoutput) of
                       undefined ->
-                          member({yaws, ["traceoutput"]}, AS);
+                          lists:member({yaws, ["traceoutput"]}, AS);
                       {ok, Val3}  ->
                           Val3
                   end,
@@ -130,8 +128,8 @@ get_app_args() ->
          end,
     Enc = case application:get_env(yaws, encoding) of
               undefined ->
-                  case {member({yaws, ["encoding", "latin1"]}, AS),
-                        member({yaws, ["encoding", "unicode"]}, AS)} of
+                  case {lists:member({yaws, ["encoding", "latin1"]}, AS),
+                        lists:member({yaws, ["encoding", "unicode"]}, AS)} of
                       {true, _} -> latin1;
                       {_, true} -> unicode;
                       _         -> latin1

@@ -98,8 +98,6 @@
 -export([set_header/2, set_header/3, merge_header/2, merge_header/3,
          get_header/2, get_header/3, delete_header/2]).
 
--import(lists, [flatten/1, reverse/1]).
-
 %% These are a bunch of accessor functions that are useful inside
 %% yaws scripts.
 
@@ -888,7 +886,7 @@ url_encode(URL) when is_list(URL) ->
     UnreservedChars = sets:from_list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                      "abcdefghijklmnopqrstuvwxyz"
                                      "0123456789-_.~"),
-    flatten([url_encode_byte(Byte, UnreservedChars) || <<Byte>> <= Bin]).
+    lists:flatten([url_encode_byte(Byte, UnreservedChars) || <<Byte>> <= Bin]).
 
 url_encode_byte($:, _) -> $:;  % FIXME: both : and / should be encoded, but
 url_encode_byte($/, _) -> $/;  % too much code currently assumes they're not
@@ -1917,7 +1915,7 @@ ehtml_end_tag(Tag) -> ["></", atom_to_list(Tag), ">"].
 %% I don't really know :-) -luke)
 
 ehtml_expander(X) ->
-    ehtml_expander_compress(flatten(ehtml_expander(X, [], [])), []).
+    ehtml_expander_compress(lists:flatten(ehtml_expander(X, [], [])), []).
 
 %% Returns a deep list of text and variable references (atoms)
 
@@ -1956,7 +1954,7 @@ ehtml_expander({Tag, Attrs, Body}, Before, After) ->
                    ["</", atom_to_list(Tag), ">"|After]);
 %% Variable references
 ehtml_expander(Var, Before, After) when is_atom(Var) ->
-    [reverse(Before), {ehtml, ehtml_var_name(Var)}, After];
+    [lists:reverse(Before), {ehtml, ehtml_var_name(Var)}, After];
 %% Lists
 ehtml_expander([H|T], Before, After) ->
     ehtml_expander(T, [ehtml_expander(H, [], [])|Before], After);
@@ -1988,15 +1986,15 @@ ehtml_attr_part_expander(A) when is_atom(A) ->
 ehtml_attr_part_expander(I) when is_integer(I) -> integer_to_list(I);
 ehtml_attr_part_expander(S) when is_list(S) -> S.
 
-ehtml_expander_done(X, Before, After) -> [reverse([X|Before]), After].
+ehtml_expander_done(X, Before, After) -> [lists:reverse([X|Before]), After].
 
 %% Compress an EHTML expander, converting all adjacent bits of text into
 %% binaries.
 %% Returns: [binary() | {ehtml, Var} | {preformatted, Var}, {ehtml_attrs, Var}]
 %% Var = atom()
 ehtml_expander_compress([Tag|T], Acc) when is_tuple(Tag) ->
-    [list_to_binary(reverse(Acc)), Tag | ehtml_expander_compress(T, [])];
-ehtml_expander_compress([], Acc) -> [list_to_binary(reverse(Acc))];
+    [list_to_binary(lists:reverse(Acc)), Tag | ehtml_expander_compress(T, [])];
+ehtml_expander_compress([], Acc) -> [list_to_binary(lists:reverse(Acc))];
 ehtml_expander_compress([H|T], Acc) when is_integer(H) ->
     ehtml_expander_compress(T, [H|Acc]).
 

@@ -33,7 +33,6 @@
 
 %% for replacement xmerl_xml:
 -export([export/1]).
--import(xmerl_lib, [markup/3, empty_tag/2, export_text/1]).
 
 
 -ifdef(debug).
@@ -1319,7 +1318,7 @@ export([]) ->
 export([#xmlComment{}|T]) -> % for now I skip comments
     export(T);
 export([#xmlText{type=text, value=Text}|T]) ->
-    [export_text(Text),export(T)];
+    [xmerl_lib:export_text(Text),export(T)];
 export([#xmlText{type=cdata, value=Text}|T]) ->
     ["<![CDATA[",Text,"]]>",export(T)];
 export([#xmlElement{name=Name,attributes=Attrs,content=Content}|T]) ->
