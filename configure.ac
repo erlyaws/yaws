@@ -288,20 +288,43 @@ case "$host_os" in
         AC_MSG_RESULT([$host_os])
 
         dnl Sigh, pam headers do not seem to have a standard place. On FreeBSD and
-        dnl Linuces I've seen they are in /usr/include/security, but MacOS has them
-        dnl in /usr/include/pam.
+        dnl Linuxes I've seen they are in /usr/include/security, but MacOS has them
+        dnl in /usr/include/pam, /usr/include/security, or under a special SDK directory.
         EPAM_CFLAGS=
+        EPAM_INCLUDE=
         if test "x$enable_pam" != "xno"; then
             AC_CHECK_HEADERS([security/pam_appl.h pam/pam_appl.h pam_appl.h],[break])
+            case "$host_os" in
+                 darwin*)
+                    if ! test -d /usr/include; then
+                       AC_CHECK_PROGS([XCRUN], [xcrun])
+                       if test "x$XCRUN" != "x"; then
+                          AC_MSG_CHECKING([for $XCRUN --show-sdk-platform-path])
+                          platform_dir=`$XCRUN --show-sdk-platform-path`
+                          sdk_dir=`find $platform_dir -type d -name MacOSX.sdk 2>/dev/null`
+                          if test "x$sdk_dir" != "x"; then
+                             AC_MSG_RESULT([$sdk_dir])
+                             EPAM_INCLUDE="$sdk_dir"
+                          else
+                             AC_MSG_RESULT([no])
+                          fi
+                       fi
+                    fi
+                    ;;
+
+                 *)
+                    ;;
+            esac
             if test "x$ac_cv_header_security_pam_appl_h" = "xyes" ; then
-                EPAM_CFLAGS="-I/usr/include/security"
+                EPAM_CFLAGS='-I$(EPAM_INCLUDE)/usr/include/security'
             elif test "x$ac_cv_header_pam_pam_appl_h" = "xyes" ; then
-                EPAM_CFLAGS="-I/usr/include/pam"
+                EPAM_CFLAGS='-I$(EPAM_INCLUDE)/usr/include/pam'
             elif test "x$ac_cv_header_pam_appl_h" = "xno" ; then
                 AC_MSG_ERROR("Could not find pam_appl.h required for pam authentication")
             fi
             AC_CHECK_LIB(pam,pam_start,[],[AC_MSG_ERROR("Could not find pam library")])
         fi
+        AC_SUBST(EPAM_INCLUDE)
         AC_SUBST(EPAM_CFLAGS)
         ;;
 esac
