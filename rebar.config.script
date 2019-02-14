@@ -55,7 +55,7 @@ PortSpecs0 = case lists:keyfind(port_specs, 1, Cfg0) of
                          _ ->
                              lists:keydelete("priv/lib/epam.so", 1, PSpecs)
                      end;
-                 false                -> []
+                 false -> []
              end,
 
 HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts),
@@ -70,32 +70,35 @@ HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts),
             {PortEnv0, PortSpecs0}
     end,
 
+OS = os:type(),
+
 DefaultUsrIncludeSecurity = "/usr/include/security",
-NeedMacosSdkDir = lists:keymember('NEED_MACOS_SDK_DIR', 3, ErlOpts),
 UsrIncludeSecurity =
-    if
-        NeedMacosSdkDir ->
-            Result = fun R(Port, Acc) ->
-                             receive
-                                 {Port, {data, L}} ->
-                                     R(Port, [L|Acc]);
-                                 {Port, {exit_status, 0}} ->
-                                     {ok, lists:flatten(lists:reverse(Acc))};
-                                 {Port, {exit_status, Fail}} ->
-                                     {error, {Fail, lists:flatten(lists:reverse(Acc))}}
-                             end
-                     end,
-            Run = fun(Cmd) ->
-                          Port = open_port({spawn, Cmd}, [exit_status, stderr_to_stdout]),
-                          Result(Port, [])
-                  end,
+    case OS of
+        {unix, darwin} ->
+            Result =
+                fun R(Port, Acc) ->
+                        receive
+                            {Port, {data, L}} ->
+                                R(Port, [L|Acc]);
+                            {Port, {exit_status, 0}} ->
+                                {ok, lists:flatten(lists:reverse(Acc))};
+                            {Port, {exit_status, Fail}} ->
+                                {error, {Fail, lists:flatten(lists:reverse(Acc))}}
+                        end
+                end,
+            Run =
+                fun(Cmd) ->
+                        Port = open_port({spawn, Cmd}, [exit_status, stderr_to_stdout]),
+                        Result(Port, [])
+                end,
             {ok, PlatDir} = Run("/usr/bin/xcrun --show-sdk-platform-path"),
             FindCmd = "/usr/bin/find " ++ string:strip(PlatDir, right, $\n) ++
                 " -type d -name MacOSX.sdk",
             {ok, FindResult} = Run(FindCmd),
             SdkDir = string:strip(FindResult, right, $\n),
             SdkDir ++ DefaultUsrIncludeSecurity;
-        true ->
+        _ ->
             DefaultUsrIncludeSecurity
     end,
 PortEnv2 = PortEnv1 ++ [{"CFLAGS", "$CFLAGS -I" ++ UsrIncludeSecurity}],
