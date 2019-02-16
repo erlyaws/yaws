@@ -367,7 +367,7 @@ source() ->
            "        Error -> Error",
            "    end.",
            "-endif.",
-           "-ifdef(HAVE_ERROR_LOGGER_START).",
+           "-ifdef(HAVE_START_ERROR_LOGGER).",
            "start_error_logger() ->",
            "    case logger:get_handler_config(error_logger) of",
            "        {ok, _} -> ok;",
