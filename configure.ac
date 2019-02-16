@@ -333,23 +333,6 @@ AM_CONDITIONAL(CYGWIN, [test "x$CYGWIN" = "xtrue"])
 AM_CONDITIONAL(MINGW, [test "x$MINGW" = "xtrue"])
 AM_CONDITIONAL(WINDOWS, [test "x$MINGW" = "xtrue" -o "x$CYGWIN" = "xtrue"])
 
-dnl check sendfile support:
-dnl   - HAVE_SENDFILE: say if sendfile syscall is supported
-
-HAVE_SENDFILE=false
-
-dnl Disabled because the yaws driver is not compiled for windows
-if test "$WINDOWS" = true; then
-        AC_MSG_CHECKING([for sendfile])
-        AC_MSG_RESULT([no])
-else
-        AC_LANG(C)
-        AC_CHECK_LIB([c],[sendfile],[HAVE_SENDFILE=true])
-fi
-
-AM_CONDITIONAL(HAVE_SENDFILE, [test "x$HAVE_SENDFILE" = "xtrue"])
-AC_SUBST(HAVE_SENDFILE)
-
 dnl ------------------------------------------------------------------
 dnl Check for programs used during Yaws compilation/installation
 dnl ------------------------------------------------------------------

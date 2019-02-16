@@ -19,8 +19,6 @@
 -define(GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,  64).
 -define(GC_USE_FDSRV,                      128).
 -define(GC_USE_ERLANG_SENDFILE,            256).
--define(GC_USE_YAWS_SENDFILE,              512).
-
 
 
 -define(GC_DEF, ?GC_FAIL_ON_BIND_ERR).
@@ -39,8 +37,6 @@
         ((GC#gconf.flags band ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH) /= 0)).
 -define(gc_use_erlang_sendfile(GC),
         ((GC#gconf.flags band ?GC_USE_ERLANG_SENDFILE) /= 0)).
--define(gc_use_yaws_sendfile(GC),
-        ((GC#gconf.flags band ?GC_USE_YAWS_SENDFILE) /= 0)).
 
 -define(gc_set_tty_trace(GC, Bool),
         GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_TTY_TRACE, Bool)}).
@@ -58,9 +54,6 @@
                                    ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,Bool)}).
 -define(gc_set_use_erlang_sendfile(GC, Bool),
         GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_USE_ERLANG_SENDFILE,Bool)}).
--define(gc_set_use_yaws_sendfile(GC, Bool),
-        GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_USE_YAWS_SENDFILE,Bool)}).
-
 
 %% global conf
 -record(gconf,{

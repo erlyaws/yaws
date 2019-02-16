@@ -57,7 +57,6 @@ default_dynopts(Config) ->
     ?assertEqual(ok, check_ssl_client_renegotiation(Config)),
     ?assertEqual(ok, check_ssl_sni(Config)),
     ?assertEqual(ok, check_ssl_log_alert(Config)),
-    ?assertEqual(ok, check_erlang_sendfile(Config)),
     ?assertEqual(ok, check_erlang_now(Config)),
     ?assertEqual(ok, check_rand(Config)),
     ok.
@@ -68,7 +67,6 @@ generated_dynopts(_Config) ->
     SSLCliReneg         = yaws_dynopts:have_ssl_client_renegotiation(),
     SSLSni              = yaws_dynopts:have_ssl_sni(),
     SSLLogAlert         = yaws_dynopts:have_ssl_log_alert(),
-    ErlSendfile         = yaws_dynopts:have_erlang_sendfile(),
     ErlNow              = yaws_dynopts:have_erlang_now(),
     Rand                = yaws_dynopts:have_rand(),
 
@@ -80,7 +78,6 @@ generated_dynopts(_Config) ->
     ?assertEqual(SSLCliReneg,         yaws_dynopts:have_ssl_client_renegotiation()),
     ?assertEqual(SSLSni,              yaws_dynopts:have_ssl_sni()),
     ?assertEqual(SSLLogAlert,         yaws_dynopts:have_ssl_log_alert()),
-    ?assertEqual(ErlSendfile,         yaws_dynopts:have_erlang_sendfile()),
     ?assertEqual(ErlNow,              yaws_dynopts:have_erlang_now()),
     ?assertEqual(Rand,                yaws_dynopts:have_rand()),
     ok.
@@ -131,20 +128,6 @@ check_ssl_log_alert(Config) ->
         false ->
             {'EXIT', badarg} =
                 (catch ssl:listen(Port, [{reuseaddr, true}, {log_alert, true}]))
-    end,
-    ok.
-
-check_erlang_sendfile(_Config) ->
-    Funs = file:module_info(exports),
-    case yaws_dynopts:have_erlang_sendfile() of
-        true ->
-            true = lists:member({sendfile, 5}, Funs),
-            true = ($R /= hd(erlang:system_info(otp_release)));
-        false ->
-            case lists:member({sendfile, 5}, Funs) of
-                true  -> true = ($R == hd(erlang:system_info(otp_release)));
-                false -> ok
-            end
     end,
     ok.
 

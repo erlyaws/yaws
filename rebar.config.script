@@ -47,28 +47,16 @@ PortEnv0 = case lists:keyfind(port_env, 1, Cfg0) of
                {port_env, PEnv} -> PEnv;
                false            -> []
            end,
-PortSpecs0 = case lists:keyfind(port_specs, 1, Cfg0) of
-                 {port_specs, PSpecs} ->
-                     case os:getenv("YAWS_DISABLE_PAM") of
-                         false ->
-                             PSpecs;
-                         _ ->
-                             lists:keydelete("priv/lib/epam.so", 1, PSpecs)
-                     end;
-                 false -> []
-             end,
-
-HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts),
-{PortEnv1, PortSpecs1} =
-    if
-        HaveSendFile ->
-            {PortEnv0 ++ [{"DRV_CFLAGS", "$DRV_CFLAGS -DHAVE_SENDFILE"}],
-             PortSpecs0 ++ [{"priv/lib/yaws_sendfile_drv.so",
-                             ["c_src/yaws_sendfile_drv.c", "c_src/hashtable.c"]}]};
-
-        true ->
-            {PortEnv0, PortSpecs0}
-    end,
+PortSpecs = case lists:keyfind(port_specs, 1, Cfg0) of
+                {port_specs, PSpecs} ->
+                    case os:getenv("YAWS_DISABLE_PAM") of
+                        false ->
+                            PSpecs;
+                        _ ->
+                            lists:keydelete("priv/lib/epam.so", 1, PSpecs)
+                    end;
+                false                -> []
+            end,
 
 OS = os:type(),
 
@@ -101,10 +89,10 @@ UsrIncludeSecurity =
         _ ->
             DefaultUsrIncludeSecurity
     end,
-PortEnv2 = PortEnv1 ++ [{"CFLAGS", "$CFLAGS -I" ++ UsrIncludeSecurity}],
+PortEnv1 = PortEnv0 ++ [{"CFLAGS", "$CFLAGS -I" ++ UsrIncludeSecurity}],
 
 Cfg1 = lists:keyreplace(erl_opts,   1, Cfg0, {erl_opts,   ErlOpts}),
-Cfg2 = lists:keyreplace(port_env,   1, Cfg1, {port_env,   PortEnv2}),
-Cfg3 = lists:keyreplace(port_specs, 1, Cfg2, {port_specs, PortSpecs1}),
+Cfg2 = lists:keyreplace(port_env,   1, Cfg1, {port_env,   PortEnv1}),
+Cfg3 = lists:keyreplace(port_specs, 1, Cfg2, {port_specs, PortSpecs}),
 
 Cfg3.

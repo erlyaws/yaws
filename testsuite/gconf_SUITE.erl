@@ -43,13 +43,9 @@ setup_default_gconf(_Config) ->
     GC = yaws_config:make_default_gconf(false, "test"),
     GC = yaws:create_gconf([], "test"),
 
-    DefFlags = ?GC_FAIL_ON_BIND_ERR bor
+    Flags = ?GC_FAIL_ON_BIND_ERR bor
         ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH bor
         ?GC_COPY_ERRLOG,
-    Flags = case yaws_sendfile:have_sendfile() of
-                true  -> ?GC_USE_YAWS_SENDFILE bor DefFlags;
-                false -> DefFlags
-            end,
 
     {yaws_dir,    YDir} = get_gconf_attr(yaws_dir,    GC),
     {ebin_dir,    EDir} = get_gconf_attr(ebin_dir,    GC),

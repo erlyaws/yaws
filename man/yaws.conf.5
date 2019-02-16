@@ -147,20 +147,18 @@ empty. See \fBerlang:spawn_opt/4\fR for details on these options.
 
 .TP
 \fBlarge_file_chunk_size = Integer\fR
-Set the chunk size used by Yaws to send large files when sendfile is not
-supported or disabled. The default value is \fI10240\fR.
+Set the chunk size used by Yaws to send large files. The default value
+is \fI10240\fR.
 
 .TP
-\fBlarge_file_sendfile = erlang | yaws | disable\fR
-Set the version of sendfile method to use to send large files (if supported):
+\fBlarge_file_sendfile = erlang | disable\fR
+Set the version of sendfile method to use to send large files:
 
-\fBerlang\fR - use \fIfile:sendfile/5\fR, if supported.
+\fBerlang\fR - use \fIfile:sendfile/5\fR.
 
-\fByaws\fR - use Yaws sendfile linked-in driver, if supported.
+\fBdisable\fR - use \fIgen_tcp:send/2\fR.
 
-\fBdisable\fR - do not use any sendfile method, but \fIgen_tcp:send/2\fR.
-
-The default value is \fIyaws\fR.
+The default value is \fIerlang\fR.
 
 .TP
 \fBacceptor_pool_size = Integer\fR

@@ -8,10 +8,6 @@ ERLC_GENERIC_FLAGS = -Werror  +debug_info $(DEBUG_ERLC_FLAGS)				\
 		     -I $(top_srcdir)/include -I $(srcdir)/../include 			\
 		     -I $(top_builddir)/include -I $(builddir)/../include
 
-ifeq ($(HAVE_SENDFILE),true)
-  ERLC_GENERIC_FLAGS += -DHAVE_SENDFILE
-endif
-
 # Local Variables:
 #    tab-width: 8
 # End:

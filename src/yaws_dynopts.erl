@@ -9,7 +9,6 @@
          have_ssl_sni/0,
          have_ssl_log_alert/0,
          have_ssl_handshake/0,
-         have_erlang_sendfile/0,
          have_erlang_now/0,
          have_rand/0,
          have_start_error_logger/0,
@@ -50,10 +49,6 @@ have_ssl_log_alert() ->
 %% ssl:ssl_accept/2 is deprecated since release 21 (ERTS >= 10.0)
 have_ssl_handshake() ->
     is_greater_or_equal(erlang:system_info(version), "10.0").
-
-%% erlang:sendfile/5 is buggy for R15 & R16 releases (ERTS < 6.0)
-have_erlang_sendfile() ->
-    is_greater_or_equal(erlang:system_info(version), "6.0").
 
 %% erlang:now/0 is deprecated since releases 18 (ERTS >= 7.0)
 have_erlang_now() ->
@@ -258,7 +253,6 @@ compile_options() ->
      {d, 'HAVE_SSL_SNI',                   have_ssl_sni()},
      {d, 'HAVE_SSL_LOG_ALERT',             have_ssl_log_alert()},
      {d, 'HAVE_SSL_HANDSHAKE',             have_ssl_handshake()},
-     {d, 'HAVE_ERLANG_SENDFILE',           have_erlang_sendfile()},
      {d, 'HAVE_START_ERROR_LOGGER',        have_start_error_logger()}
     ]
         ++
@@ -286,7 +280,6 @@ source() ->
            "    have_ssl_sni/0,",
            "    have_ssl_log_alert/0,",
            "    have_ssl_handshake/0,",
-           "    have_erlang_sendfile/0,",
            "    have_erlang_now/0,",
            "    have_rand/0,"
            "    have_start_error_logger/0,"
@@ -315,7 +308,6 @@ source() ->
            "have_ssl_sni()                  -> ?HAVE_SSL_SNI.",
            "have_ssl_log_alert()            -> ?HAVE_SSL_LOG_ALERT.",
            "have_ssl_handshake()            -> ?HAVE_SSL_HANDSHAKE.",
-           "have_erlang_sendfile()          -> ?HAVE_ERLANG_SENDFILE.",
            "have_start_error_logger()       -> ?HAVE_START_ERROR_LOGGER.",
            "",
            "-ifdef(HAVE_ERLANG_NOW).",
