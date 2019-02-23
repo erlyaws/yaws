@@ -1051,6 +1051,8 @@ strip_spaces(String, both) ->
 
 drop_spaces([]) ->
     [];
+drop_spaces(X) when is_binary(X) ->
+    drop_spaces(binary_to_list(X));
 drop_spaces(YS=[X|XS]) ->
     case is_space(X) of
         true  -> drop_spaces(XS);

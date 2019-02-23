@@ -187,6 +187,7 @@ deflate_options_mime_types(Config) ->
     Url5  = testsuite:make_url(http, "127.0.0.1", Port3, "/yaws.eps"),
     Url6  = testsuite:make_url(http, "127.0.0.1", Port4, "/1000.txt"),
     Url7  = testsuite:make_url(http, "127.0.0.1", Port4, "/yaws.eps"),
+    Url8  = testsuite:make_url(http, "127.0.0.1", Port4, "/binary_header/foo"),
     GzHdr = {"Accept-Encoding", "gzip, deflate"},
 
 
@@ -219,6 +220,10 @@ deflate_options_mime_types(Config) ->
     {ok, {{_,200,_}, Hdrs7, Body7}} = testsuite:http_get(Url7, [GzHdr]),
     ?assertEqual("gzip", proplists:get_value("content-encoding", Hdrs7)),
     ?assert(is_binary(zlib:gunzip(Body7))),
+
+    {ok, {{_,200,_}, Hdrs8, Body8}} = testsuite:http_get(Url8, [GzHdr]),
+    ?assertEqual("gzip", proplists:get_value("content-encoding", Hdrs8)),
+    ?assert(is_binary(zlib:gunzip(Body8))),
     ok.
 
 deflate_options_compress_size(Config) ->
