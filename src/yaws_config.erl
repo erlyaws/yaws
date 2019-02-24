@@ -1794,6 +1794,9 @@ fload(FD, server, GC, C, Lno, Chars) ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
 
+        ['<', "extra_response_headers", '>'] ->
+            fload(FD, extra_response_headers, GC, C, Lno+1, ?NEXTLINE);
+
         ['<', "/server", '>'] ->
             {ok, GC, C, Lno, ['<', "/server", '>']};
 
@@ -2487,6 +2490,38 @@ fload(FD, opaque, GC, C, Lno, Chars) ->
             fload(FD, opaque, GC, C1, Lno+1, ?NEXTLINE);
 
         ['<', "/opaque", '>'] ->
+            fload(FD, server, GC, C, Lno+1, ?NEXTLINE);
+
+        [H|T] ->
+            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
+        Err ->
+            Err
+    end;
+
+fload(FD, extra_response_headers, GC, C, Lno, Chars) ->
+    case toks(Lno, Chars) of
+        [] ->
+            fload(FD, extra_response_headers, GC, C, Lno+1, ?NEXTLINE);
+
+        [Hdr, '=', Value] ->
+            ExtraResponseHdrs = C#sconf.extra_response_headers,
+            C1 = C#sconf{extra_response_headers = [[Hdr,": ",Value,"\r\n"]|
+                                                   ExtraResponseHdrs]},
+            fload(FD, extra_response_headers, GC, C1, Lno+1, ?NEXTLINE);
+
+        [Hdr, '='| Value] ->
+            StringVal = lists:flatten(
+                          yaws:join_sep(
+                            lists:map(fun(V) when is_atom(V) ->
+                                              atom_to_list(V);
+                                         (V) -> V
+                                      end, Value), " ")),
+            ExtraResponseHdrs = C#sconf.extra_response_headers,
+            C1 = C#sconf{extra_response_headers = [[Hdr,": ",StringVal,"\r\n"]|
+                                                   ExtraResponseHdrs]},
+            fload(FD, extra_response_headers, GC, C1, Lno+1, ?NEXTLINE);
+
+        ['<', "/extra_response_headers", '>'] ->
             fload(FD, server, GC, C, Lno+1, ?NEXTLINE);
 
         [H|T] ->

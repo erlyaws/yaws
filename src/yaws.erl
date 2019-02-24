@@ -1877,9 +1877,10 @@ outh_serialize() ->
     %% Add 'Accept-Encoding' in the 'Vary:' header if the compression is enabled
     %% or if the response is compressed _AND_ if the response has a non-empty
     %% body.
-    Vary = case get(sc) of
+    SC = get(sc),
+    Vary = case SC of
                undefined -> undefined;
-               SC ->
+               _ ->
                    case (?sc_has_deflate(SC) orelse H#outh.encoding == deflate) of
                        true when H#outh.contlen /= undefined, H#outh.contlen /= 0;
                                  H#outh.act_contlen /= undefined,
@@ -1896,6 +1897,11 @@ outh_serialize() ->
                            H#outh.vary
                    end
            end,
+
+    ExtraResponseHdrs = case SC of
+                            undefined -> [];
+                            _ -> SC#sconf.extra_response_headers
+                        end,
 
     Headers = [noundef(H#outh.connection),
                noundef(H#outh.server),
@@ -1915,7 +1921,7 @@ outh_serialize() ->
                noundef(H#outh.www_authenticate),
                noundef(Vary),
                noundef(H#outh.accept_ranges),
-               noundef(H#outh.other)],
+               noundef(H#outh.other) | ExtraResponseHdrs],
     {StatusLine, Headers}.
 
 

@@ -1486,6 +1486,12 @@ bindings are ignored and their text is left as is in returned content.
 This setting applies only for \fIout/1\fR content, not to static pages
 or other returned content.
 
+.TP
+\fB<extra_response_headers> ... </extra_response_headers>\fR
+This begins and ends a configuration context for extra response headers for this
+server, where 'Header = Value' directives can be specified. Each such response
+header and value is appended to all outgoing responses except for those returned
+directly by any \fIDispatchModule\fR.
 
 .SH EXAMPLES
 

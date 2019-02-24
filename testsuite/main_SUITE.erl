@@ -46,7 +46,8 @@ all() ->
      multi_forwarded_for,
      log_rotation,
      exhtml,
-     accept_ranges
+     accept_ranges,
+     extra_response_headers
     ].
 
 groups() ->
@@ -773,6 +774,14 @@ accept_ranges(Config) ->
     Url2  = testsuite:make_url(http, "127.0.0.1", Port, "/accept_ranges2.yaws"),
     {ok, {{_,200,_}, Hdrs2, _}} = testsuite:http_get(Url2),
     ?assertEqual("bytes", proplists:get_value("accept-ranges", Hdrs2)),
+    ok.
+
+extra_response_headers(Config) ->
+    Port = testsuite:get_yaws_port(8, Config),
+    Url = testsuite:make_url(http, "127.0.0.1", Port, "/"),
+    {ok, {{_,200,_}, Hdrs, _}} = testsuite:http_get(Url),
+    ?assertEqual("Bar", proplists:get_value("x-foo", Hdrs)),
+    ?assertEqual("multiple words", proplists:get_value("x-bar", Hdrs)),
     ok.
 
 %%====================================================================

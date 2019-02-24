@@ -3686,7 +3686,7 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
                     do not match an \verb+allow+ or a \verb+deny+ directive are
                     denied by default.
 
-                  \item \verb+deny,allaw+ --- First, all \verb+deny+ directives
+                  \item \verb+deny,allow+ --- First, all \verb+deny+ directives
                     are evaluated; if any matches, the request is denied unless
                     it also matches an \verb+allow+ directive. Any requests
                     which do not match any \verb+allow+ or \verb+deny+
@@ -3717,6 +3717,14 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
 
               This setting applies only for \verb+out/1+ content, not
               to static pages or other returned content.
+
+\item       \verb+<extra_response_headers> ... </extra_response_headers>+ ---
+              This begins and ends a configuration context for extra
+              response headers for this server, where
+              '\verb+Header = Value+' directives can be
+              specified. Each such response header and value is
+              appended to all outgoing responses except for those
+              returned directly by any \verb+DispatchModule+.
 \end{itemize}
 
 
@@ -3727,8 +3735,8 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
         This mechanism can be disabled by setting \verb+auth_skip_docroot+ to
         \verb+true+ in the \Yaws\ configuration.
 
-        Each row in the \verb+.yaws_auth+ file must contain a term. 
-        The terms correspond to the auth structure in the \Yaws\ config 
+        Each row in the \verb+.yaws_auth+ file must contain a term.
+        The terms correspond to the auth structure in the \Yaws\ config
         file. The allowed forms are:
 
 \begin{verbatim}
