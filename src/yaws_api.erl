@@ -83,7 +83,7 @@
          arg_pathinfo/1]).
 -export([http_request_method/1, http_request_path/1, http_request_version/1,
          http_response_version/1, http_response_status/1,
-         http_response_phrase/1,
+         http_response_phrase/1, http_extra_response_headers_add_status_codes/0,
          headers_connection/1, headers_accept/1, headers_host/1,
          headers_if_modified_since/1, headers_if_match/1,
          headers_if_none_match/1,
@@ -128,6 +128,12 @@ http_request_version(#http_request{version = X}) -> X.
 http_response_version(#http_response{version = X}) -> X.
 http_response_status(#http_response{status = X}) -> X.
 http_response_phrase(#http_response{phrase = X}) -> X.
+
+%% A server conf can specify directives to add extra response
+%% headers. This function returns the list of status codes that the
+%% "add" directive applies to.
+http_extra_response_headers_add_status_codes() ->
+    [200, 201, 204, 206, 301, 302, 303, 304, 307, 308].
 
 headers_connection(#headers{connection = X}) -> X.
 headers_accept(#headers{accept = X}) -> X.
@@ -2553,19 +2559,22 @@ binding_exists(Key) ->
 
 %% Return the parsed url that the client requested.
 request_url(ARG) ->
-    SC        = get(sc),
-    Headers   = ARG#arg.headers,
-    {_, Path} = (ARG#arg.req)#http_request.path,
-    DecPath   = url_decode(Path),
-    {P,Q}     = yaws:split_at(DecPath, $?),
-    Url       = case Headers#headers.host of
-                    undefined ->
-                        parse_url(SC#sconf.servername, sloppy);
-                    HostHdr ->
-                        try          parse_url(HostHdr, sloppy)
-                        catch _:_ -> parse_url(SC#sconf.servername, sloppy)
-                        end
-                end,
+    SC      = get(sc),
+    Headers = ARG#arg.headers,
+    {P,Q} = case (ARG#arg.req)#http_request.path of
+		'*' -> {"*",[]};
+		{_, Path} ->
+		    DecPath   = url_decode(Path),
+		    yaws:split_at(DecPath, $?)
+	    end,
+    Url = case Headers#headers.host of
+	      undefined ->
+		  parse_url(SC#sconf.servername, sloppy);
+	      HostHdr ->
+		  try          parse_url(HostHdr, sloppy)
+		  catch _:_ -> parse_url(SC#sconf.servername, sloppy)
+		  end
+	  end,
     Url#url{scheme = case SC#sconf.ssl of
                          undefined -> "http";
                          _         -> "https"

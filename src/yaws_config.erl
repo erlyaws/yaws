@@ -1296,6 +1296,67 @@ fload(FD, server, GC, C, Cs, Lno, Chars) ->
             Err
     end.
 
+fload(FD, extra_response_headers, GC, C, Lno, Chars) ->
+    case toks(Lno, Chars) of
+        [] ->
+            fload(FD, extra_response_headers, GC, C, Lno+1, ?NEXTLINE);
+
+        ["extramod", '=', Mod] ->
+            ExtraResponseHdrs = C#sconf.extra_response_headers,
+            C1 = C#sconf{extra_response_headers = [{extramod, list_to_atom(Mod)}|
+                                                   ExtraResponseHdrs]},
+            fload(FD, extra_response_headers, GC, C1, Lno+1, ?NEXTLINE);
+
+        ["add", Hdr, '=', Value] ->
+            ExtraResponseHdrs = C#sconf.extra_response_headers,
+            C1 = C#sconf{extra_response_headers = [{add,Hdr,Value}|
+                                                   ExtraResponseHdrs]},
+            fload(FD, extra_response_headers, GC, C1, Lno+1, ?NEXTLINE);
+
+        ["always", "add", Hdr, '=', Value] ->
+            ExtraResponseHdrs = C#sconf.extra_response_headers,
+            C1 = C#sconf{extra_response_headers = [{always_add,Hdr,Value}|
+                                                   ExtraResponseHdrs]},
+            fload(FD, extra_response_headers, GC, C1, Lno+1, ?NEXTLINE);
+
+        ["add", Hdr, '='| Value] ->
+            StringVal = lists:flatten(
+                          yaws:join_sep(
+                            lists:map(fun(V) when is_atom(V) ->
+                                              atom_to_list(V);
+                                         (V) -> V
+                                      end, Value), " ")),
+            ExtraResponseHdrs = C#sconf.extra_response_headers,
+            C1 = C#sconf{extra_response_headers = [{add,Hdr,StringVal}|
+                                                   ExtraResponseHdrs]},
+            fload(FD, extra_response_headers, GC, C1, Lno+1, ?NEXTLINE);
+
+        ["always", "add", Hdr, '='| Value] ->
+            StringVal = lists:flatten(
+                          yaws:join_sep(
+                            lists:map(fun(V) when is_atom(V) ->
+                                              atom_to_list(V);
+                                         (V) -> V
+                                      end, Value), " ")),
+            ExtraResponseHdrs = C#sconf.extra_response_headers,
+            C1 = C#sconf{extra_response_headers = [{always_add,Hdr,StringVal}|
+                                                   ExtraResponseHdrs]},
+            fload(FD, extra_response_headers, GC, C1, Lno+1, ?NEXTLINE);
+
+        ["erase", Hdr] ->
+            ExtraResponseHdrs = C#sconf.extra_response_headers,
+            C1 = C#sconf{extra_response_headers = [{erase,Hdr}|
+                                                   ExtraResponseHdrs]},
+            fload(FD, extra_response_headers, GC, C1, Lno+1, ?NEXTLINE);
+
+        ['<', "/extra_response_headers", '>'] ->
+            fload(FD, server, GC, C, Lno+1, ?NEXTLINE);
+
+        [H|T] ->
+            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
+        Err ->
+            Err
+    end;
 
 fload(FD, server, GC, C, Lno, eof) ->
     file:close(FD),
@@ -1793,6 +1854,9 @@ fload(FD, server, GC, C, Lno, Chars) ->
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
+
+        ['<', "extra_response_headers", '>'] ->
+            fload(FD, extra_response_headers, GC, C, Lno+1, ?NEXTLINE);
 
         ['<', "/server", '>'] ->
             {ok, GC, C, Lno, ['<', "/server", '>']};
@@ -2495,7 +2559,6 @@ fload(FD, opaque, GC, C, Lno, Chars) ->
             Err
     end.
 
-
 is_bool("true") ->
     {true, true};
 is_bool("false") ->
@@ -3156,12 +3219,11 @@ eq_sconfs(S1,S2) ->
      S1#sconf.php_handler == S2#sconf.php_handler andalso
      S1#sconf.shaper == S2#sconf.shaper andalso
      S1#sconf.deflate_options == S2#sconf.deflate_options andalso
-     S1#sconf.mime_types_info == S2#sconf.mime_types_info).
+     S1#sconf.mime_types_info == S2#sconf.mime_types_info andalso
+     S1#sconf.dispatch_mod == S2#sconf.dispatch_mod andalso
+     S1#sconf.extra_response_headers == S2#sconf.extra_response_headers).
 
-
-
-
-%% This the version of setconf that perform a
+%% This is the version of setconf that performs a
 %% soft reconfig, it requires the args to be checked.
 soft_setconf(GC, Groups, OLDGC, OldGroups) ->
     if

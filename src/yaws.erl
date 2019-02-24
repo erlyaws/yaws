@@ -59,7 +59,7 @@
          sconf_spotions/1, sconf_extra_cgi_vars/1, sconf_stats/1,
          sconf_fcgi_app_server/1, sconf_php_handler/1, sconf_shaper/1,
          sconf_deflate_options/1, sconf_mime_types_info/1,
-         sconf_dispatch_mod/1]).
+         sconf_dispatch_mod/1, sconf_extra_resp_headers/1]).
 
 -export([sconf_port/2, sconf_flags/2, sconf_redirect_map/2, sconf_rhost/2,
          sconf_rmethod/2, sconf_docroot/2, sconf_xtra_docroots/2,
@@ -72,7 +72,7 @@
          sconf_spotions/2, sconf_extra_cgi_vars/2, sconf_stats/2,
          sconf_fcgi_app_server/2, sconf_php_handler/2, sconf_shaper/2,
          sconf_deflate_options/2, sconf_mime_types_info/2,
-         sconf_dispatch_mod/2]).
+         sconf_dispatch_mod/2, sconf_extra_resp_headers/2]).
 
 -export([new_auth/0,
          auth_dir/1, auth_dir/2,
@@ -176,7 +176,7 @@
          outh_get_content_encoding_header/0,
          outh_get_content_type/0,
          outh_get_vary_fields/0,
-         outh_serialize/0]).
+         outh_serialize/1]).
 
 -export([accumulate_header/1, headers_to_str/1,
          getuid/0,
@@ -376,6 +376,7 @@ sconf_shaper               (#sconf{shaper                = X}) -> X.
 sconf_deflate_options      (#sconf{deflate_options       = X}) -> X.
 sconf_mime_types_info      (#sconf{mime_types_info       = X}) -> X.
 sconf_dispatch_mod         (#sconf{dispatch_mod          = X}) -> X.
+sconf_extra_resp_headers   (#sconf{extra_response_headers= X}) -> X.
 
 %% Setters
 sconf_port                 (S, X) -> S#sconf{port                  = X}.
@@ -414,7 +415,7 @@ sconf_shaper               (S, X) -> S#sconf{shaper                = X}.
 sconf_deflate_options      (S, X) -> S#sconf{deflate_options       = X}.
 sconf_mime_types_info      (S, X) -> S#sconf{mime_types_info       = X}.
 sconf_dispatch_mod         (S, X) -> S#sconf{dispatch_mod          = X}.
-
+sconf_extra_resp_headers   (S, X) -> S#sconf{extra_response_headers= X}.
 
 %% Access functions for the AUTH record.
 new_auth() -> #auth{}.
@@ -778,7 +779,9 @@ setup_sconf(SL, SC) ->
            mime_types_info       = setup_mime_types_info(
                                      SL, SC#sconf.mime_types_info
                                     ),
-           dispatch_mod          = lkup(dispatchmod, SL, SC#sconf.dispatch_mod)
+           dispatch_mod          = lkup(dispatchmod, SL, SC#sconf.dispatch_mod),
+           extra_response_headers= lkup(extra_response_headers, SL,
+                                        SC#sconf.extra_response_headers)
           }.
 
 set_sc_flags([{access_log, Bool}|T], Flags) ->
@@ -1775,7 +1778,7 @@ make_www_authenticate_header({realm, Realm}) ->
     ["WWW-Authenticate: Basic realm=\"", Realm, ["\"\r\n"]];
 
 make_www_authenticate_header(Method) ->
-    ["WWW-Authenticate: ", Method, ["\r\n"]].
+    ["WWW-Authenticate: ", Method, "\r\n"].
 
 make_date_header() ->
     N = element(2, os:timestamp()),
@@ -1843,12 +1846,14 @@ outh_get_vary_fields() ->
         [_, Fields, _] -> split_sep(Fields, $,)
     end.
 
-outh_serialize() ->
+outh_serialize(Arg) ->
     H = get(outh),
     Code = case H#outh.status of
                undefined -> 200;
                Int       -> Int
            end,
+    %% FIXME: Version 1.1 is hardcoded here
+    HttpVersion = {1,1},
     StatusLine = ["HTTP/1.1 ", erlang:integer_to_list(Code), " ",
                   yaws_api:code_to_phrase(Code), "\r\n"],
     GC=get(gc),
@@ -1877,9 +1882,10 @@ outh_serialize() ->
     %% Add 'Accept-Encoding' in the 'Vary:' header if the compression is enabled
     %% or if the response is compressed _AND_ if the response has a non-empty
     %% body.
-    Vary = case get(sc) of
+    SC = get(sc),
+    Vary = case SC of
                undefined -> undefined;
-               SC ->
+               _ ->
                    case (?sc_has_deflate(SC) orelse H#outh.encoding == deflate) of
                        true when H#outh.contlen /= undefined, H#outh.contlen /= 0;
                                  H#outh.act_contlen /= undefined,
@@ -1907,40 +1913,163 @@ outh_serialize() ->
                         Code >= 100, Code < 200 -> undefined;
                         Code == 204 -> undefined;
                         Code == 304 -> undefined;
-                        H#outh.transfer_encoding /= undefined -> undefined;
-                        true -> H#outh.content_length
+                        H#outh.transfer_encoding /= undefined ->
+                            undefined;
+                        true ->
+                            H#outh.content_length
                     end,
 
-    Headers = [noundef(H#outh.connection),
-               noundef(H#outh.server),
-               noundef(H#outh.location),
-               noundef(H#outh.date),
-               noundef(H#outh.allow),
-               noundef(H#outh.last_modified),
-               noundef(Expires),
-               noundef(CacheControl),
-               noundef(H#outh.etag),
-               noundef(H#outh.content_range),
-               noundef(ContentLength),
-               noundef(H#outh.content_type),
-               noundef(ContentEnc),
-               noundef(H#outh.set_cookie),
-               noundef(H#outh.transfer_encoding),
-               noundef(H#outh.www_authenticate),
-               noundef(Vary),
-               noundef(H#outh.accept_ranges),
-               noundef(H#outh.other)],
+    NewOutH0 = H#outh{expires=Expires,
+                      content_length=ContentLength,
+                      cache_control=CacheControl,
+                      content_encoding=ContentEnc,
+                      vary=Vary},
+    NewOutH = case ContentLength of
+                  undefined -> NewOutH0#outh{contlen=0};
+                  _ -> NewOutH0
+              end,
+
+    NewH = case SC of
+               undefined -> NewOutH;
+               _ ->
+                   put(outh, NewOutH),
+                   extra_response_headers(SC#sconf.extra_response_headers, Arg, {Code,HttpVersion})
+              end,
+
+    Headers = [noundef(NewH#outh.connection),
+               noundef(NewH#outh.server),
+               noundef(NewH#outh.location),
+               noundef(NewH#outh.date),
+               noundef(NewH#outh.allow),
+               noundef(NewH#outh.last_modified),
+               noundef(NewH#outh.expires),
+               noundef(NewH#outh.cache_control),
+               noundef(NewH#outh.etag),
+               noundef(NewH#outh.content_range),
+               noundef(NewH#outh.content_length),
+               noundef(NewH#outh.content_type),
+               noundef(NewH#outh.content_encoding),
+               noundef(NewH#outh.set_cookie),
+               noundef(NewH#outh.transfer_encoding),
+               noundef(NewH#outh.www_authenticate),
+               noundef(NewH#outh.vary),
+               noundef(NewH#outh.accept_ranges),
+               noundef(NewH#outh.other)],
     {StatusLine, Headers}.
 
+
+extra_response_headers([], _Arg, _Status) ->
+    get(outh);
+extra_response_headers(Extras, Arg, Status) ->
+    %% convert #outh{} to map
+    OutH = get(outh),
+    OuthHdrs = [OutH#outh.connection,
+                OutH#outh.server,
+                OutH#outh.location,
+                OutH#outh.date,
+                OutH#outh.allow,
+                OutH#outh.last_modified,
+                OutH#outh.expires,
+                OutH#outh.cache_control,
+                OutH#outh.etag,
+                OutH#outh.content_range,
+                OutH#outh.content_length,
+                OutH#outh.content_type,
+                OutH#outh.content_encoding,
+                OutH#outh.set_cookie,
+                OutH#outh.transfer_encoding,
+                OutH#outh.www_authenticate,
+                OutH#outh.vary,
+                OutH#outh.accept_ranges,
+                {other, OutH#outh.other}],
+    Hdrs = lists:foldl(fun({other, undefined}, Acc) ->
+                               Acc;
+                          ({other, Other}, Acc) ->
+                               lists:foldl(fun(HdrVal, Acc2) ->
+                                                   {H,V} = split_header(strip_spaces(HdrVal)),
+                                                   maps:put(H, V, Acc2)
+                                           end,
+                                           Acc,
+                                           string:tokens(lists:flatten(Other), "\r\n"));
+                          (undefined, Acc) ->
+                               Acc;
+                          (Hdr, Acc) ->
+                               {H,V} = split_header(strip_spaces(lists:flatten(Hdr))),
+                               maps:put(H, V, Acc)
+                       end, #{}, OuthHdrs),
+    extra_response_headers(Extras, Arg, Status, Hdrs).
+extra_response_headers([], _Arg, _Status, Acc) ->
+    %% convert back to #outh{}
+    OuthHdrs = [{"Connection", connection},
+                {"Server", server},
+                {"Location", location},
+                {"Date", date},
+                {"Allow", allow},
+                {"Last-Modified", last_modified},
+                {"Expires", expires},
+                {"Cache-Control", cache_control},
+                {"Etag", etag},
+                {"Content-Range", content_range},
+                {"Content-Length", "Content-Length"},
+                {"Content-Type", content_type},
+                {"Content-Encoding", content_encoding},
+                {"Set-Cookie", set_cookie},
+                {"Transfer-Encoding", transfer_encoding},
+                {"WWW-Authenticate", www_authenticate},
+                {"Vary", vary},
+                {"Accept-Ranges", accept_ranges}],
+    HdrMap = lists:foldl(fun({Hdr, Nm}, Map) ->
+                                 case maps:is_key(Hdr, Map) of
+                                     true ->
+                                         accumulate_header({Nm, maps:get(Hdr, Map)}),
+                                         maps:remove(Hdr, Map);
+                                     false ->
+                                         erase_header(Nm),
+                                         Map
+                                 end
+                         end, Acc, OuthHdrs),
+    %% Anything remaining in HdrMap is in the #outh{} other
+    %% field. Grab what's there, clear outh.other, and then rebuild it
+    %% from the accumulated map.
+    OutH = get(outh),
+    HdrMap2 = case OutH#outh.other of
+                  undefined -> HdrMap;
+                  Other ->
+                      put(outh, OutH#outh{other=undefined}),
+                      lists:foldl(fun(HdrVal, Map) ->
+                                          {H,_} = split_header(strip_spaces(HdrVal)),
+                                          case maps:is_key(H, Map) of
+                                              true ->
+                                                  accumulate_header({H, maps:get(H, Map)}),
+                                                  maps:remove(H, Map);
+                                              false ->
+                                                  erase_header(H),
+                                                  Map
+                                          end
+                                  end,
+                                  HdrMap,
+                                  string:tokens(lists:flatten(Other), "\r\n"))
+              end,
+    %% Accumulate everything left in HdrMap2
+    lists:foreach(fun accumulate_header/1, maps:to_list(HdrMap2)),
+    get(outh);
+extra_response_headers([{extramod,Mod}|Extras], Arg, Status, Acc) ->
+    extra_response_headers(Extras, Arg, Status, Mod:extra_response_headers(Acc, Arg, Status));
+extra_response_headers([{add,Hdr,Value}|Extras], Arg, {Code,_}=Status, Acc) ->
+    case lists:member(Code, yaws_api:http_extra_response_headers_add_status_codes()) of
+        true -> extra_response_headers(Extras, Arg, Status, maps:put(Hdr, Value, Acc));
+        false -> extra_response_headers(Extras, Arg, Status, Acc)
+    end;
+extra_response_headers([{always_add,Hdr,Value}|Extras], Arg, Status, Acc) ->
+    extra_response_headers(Extras, Arg, Status, maps:put(Hdr, Value, Acc));
+extra_response_headers([{erase,Hdr}|Extras], Arg, Status, Acc) ->
+    extra_response_headers(Extras, Arg, Status, maps:remove(Hdr, Acc)).
 
 noundef(undefined) -> [];
 noundef(Str)       -> Str.
 
-
-
-accumulate_header({X, erase}) when is_atom(X) ->
+accumulate_header({X, erase}) ->
     erase_header(X);
-
 
 %% special headers
 accumulate_header({connection, What}) ->
@@ -1996,13 +2125,18 @@ accumulate_header({etag, What}) ->
 accumulate_header({"Etag", What}) ->
     accumulate_header({etag, What});
 
+%% Per RFC7230, multiple Set-Cookie values result in multiple
+%% Set-Cookie headers. The values are not collapsed into a single
+%% header.
+accumulate_header({set_cookie, {multi, Values}}) ->
+    lists:foreach(fun(V) -> accumulate_header({set_cookie,V}) end, Values);
 accumulate_header({set_cookie, What}) ->
     O = get(outh),
     Old = case O#outh.set_cookie of
               undefined -> "";
               X         -> X
           end,
-    put(outh, O#outh{set_cookie = ["Set-Cookie: ", What, "\r\n"|Old]});
+    put(outh, O#outh{set_cookie = [Old, "Set-Cookie: ", What, "\r\n"]});
 accumulate_header({"Set-Cookie", What}) ->
     accumulate_header({set_cookie, What});
 
@@ -2071,7 +2205,8 @@ accumulate_header({accept_ranges, What}) ->
 accumulate_header({"Accept-Ranges", What}) ->
     accumulate_header({accept_ranges, What});
 
-%% non-special headers (which may be special in a future Yaws version)
+accumulate_header({Name, {multi, Values}}) when is_list(Name) ->
+    accumulate_header({Name, join_sep(Values, ",")});
 accumulate_header({Name, What}) when is_list(Name) ->
     H = get(outh),
     Old = case H#outh.other of
@@ -2101,6 +2236,8 @@ erase_header(connection) ->
     put(outh, (get(outh))#outh{connection=undefined, doclose=false});
 erase_header(server) ->
     put(outh, (get(outh))#outh{server=undefined});
+erase_header(location) ->
+    put(outh, (get(outh))#outh{location=undefined});
 erase_header(cache_control) ->
     put(outh, (get(outh))#outh{cache_control=undefined});
 erase_header(expires) ->
@@ -2129,12 +2266,52 @@ erase_header(transfer_encoding) ->
                                transfer_encoding = undefined});
 erase_header(www_authenticate) ->
     put(outh, (get(outh))#outh{www_authenticate=undefined});
-erase_header(location) ->
-    put(outh, (get(outh))#outh{location=undefined});
 erase_header(vary) ->
     put(outh, (get(outh))#outh{vary=undefined});
 erase_header(accept_ranges) ->
-    put(outh, (get(outh))#outh{accept_ranges=undefined}).
+    put(outh, (get(outh))#outh{accept_ranges=undefined});
+erase_header(X) when is_atom(X) ->
+    erase_header(atom_to_list(X));
+erase_header(X) when is_binary(X) ->
+    erase_header(binary_to_list(X));
+erase_header(X) when is_list(X) ->
+    case string:to_lower(X) of
+        "connection" -> erase_header(connection);
+        "server" -> erase_header(server);
+        "location" -> erase_header(location);
+        "cache-control" -> erase_header(cache_control);
+        "expires" -> erase_header(expires);
+        "date" -> erase_header(date);
+        "allow" -> erase_header(allow);
+        "last-modified" -> erase_header(last_modified);
+        "etag" -> erase_header(etag);
+        "set-cookie" -> erase_header(set_cookie);
+        "content-range" -> erase_header(content_range);
+        "content-length" -> erase_header(content_length);
+        "content-type" -> erase_header(content_type);
+        "content-encoding" -> erase_header(content_encoding);
+        "transfer-encoding" -> erase_header(transfer_encoding);
+        "www-authenticate" -> erase_header(www_authenticate);
+        "vary" -> erase_header(vary);
+        "accept-ranges" -> erase_header(accept_ranges);
+        Hdr -> erase_header({other, Hdr})
+    end;
+erase_header({other, Hdr}) ->
+    Outh = get(outh),
+    case Outh#outh.other of
+        undefined -> Outh;
+        Other ->
+            NewOther = lists:reverse(
+                         lists:foldl(
+                           fun(HdrVal, Acc) ->
+                                   {OtherHdr,_} = split_header(strip_spaces(HdrVal)),
+                                   case string:to_lower(OtherHdr) of
+                                       Hdr -> Acc;
+                                       _ -> [[HdrVal, "\r\n"]|Acc]
+                                   end
+                           end, [], string:tokens(lists:flatten(Other), "\r\n"))),
+            put(outh, Outh#outh{other = NewOther})
+    end.
 
 getuid() ->
     case os:type() of

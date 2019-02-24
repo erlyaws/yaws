@@ -3,11 +3,12 @@
 input=$data_srcdir$/commands
 output=$tempdir$/output
 
-cd $tempdir$ && cadaver http://127.0.0.1:$yaws_port1$ < $input > $output
+cd $tempdir$ && cadaver http://127.0.0.1:$yaws_port1$ < $input > $output 2>&1
 
 success=`grep -c succeeded. $output`
 if [ $success -ne 9 ]; then
     echo "- not all cadaver actions succeeded, see $output for details"
+    cat $output
     exit 1
 fi
 printf "\n** All "`pwd`" tests completed successfully.\n\n"

@@ -1816,7 +1816,7 @@ detect a \verb+Content-Length+ header.
     \item \verb+{last_modified, What}+ - Sets the \textit{Last-Modified:}
       header.
     \item \verb+{etag, What}+ - Sets the \textit{Etag:} header.
-    \item \verb+{set_cookie, What}+ - Prepends a \textit{Set-Cookie:} header to
+    \item \verb+{set_cookie, What}+ - Appends a \textit{Set-Cookie:} header to
       the list of previously set \textit{Set-Cookie} headers.
     \item \verb+{content_range, What}+ - Sets the \textit{Content-Range:}
       header.
@@ -3686,7 +3686,7 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
                     do not match an \verb+allow+ or a \verb+deny+ directive are
                     denied by default.
 
-                  \item \verb+deny,allaw+ --- First, all \verb+deny+ directives
+                  \item \verb+deny,allow+ --- First, all \verb+deny+ directives
                     are evaluated; if any matches, the request is denied unless
                     it also matches an \verb+allow+ directive. Any requests
                     which do not match any \verb+allow+ or \verb+deny+
@@ -3717,8 +3717,86 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
 
               This setting applies only for \verb+out/1+ content, not
               to static pages or other returned content.
-\end{itemize}
 
+\item       \verb+<extra_response_headers> ... </extra_response_headers>+ ---
+              This begins and ends a configuration context for extra
+              response headers for this server, where directives for
+              adding headers, erasing headers, and modules for
+              handling extra response headers can be specified as follows:
+
+              \begin{itemize}
+                \item \verb+add Hdr = Value+ --- Add \verb+Hdr+ with
+                  value \verb+Value+ to the response, but only if the
+                  response status code is one of these values:
+                  \begin{itemize}
+                    \item \verb+200 OK+
+                    \item \verb+201 Created+
+                    \item \verb+204 No Content+
+                    \item \verb+206 Partial Content+
+                    \item \verb+301 Moved Permanently+
+                    \item \verb+302 Found+
+                    \item \verb+303 See Other+
+                    \item \verb+304 Not Modified+
+                    \item \verb+307 Temporary Redirect+
+                    \item \verb+308 Permanent Redirect+
+                  \end{itemize}
+                  For any other status code, \verb+Hdr+ is not added.
+
+                \item \verb+always add Hdr = Value+ ---
+                  Unconditionally add \verb+Hdr+ with value
+                  \verb+Value+ to the response, regardless of the
+                  response status code.
+
+                \item \verb+erase Hdr+ --- Remove \verb+Hdr+ and its
+                  associated value from the response.
+
+                \item \verb+extramod = Module+ --- Specifies a module
+                  to call to process extra response
+                  headers. \Yaws\ calls
+                  \verb+Module:extra_response_headers/3+ passing the
+                  following arguments:
+                  \begin{itemize}
+                    \item Response headers --- an Erlang map holding
+                      the response headers with header name strings as
+                      keys and strings as header values
+
+                    \item \verb+Arg+ --- an \verb+#arg{}+ record
+                      representing the request
+
+                    \item \verb+{StatusCode,Version}+ --- a tuple
+                      where \verb+StatusCode+ is the numeric HTTP
+                      status code for the response, and \verb+Version+
+                      is a tuple specifying the HTTP version,
+                      e.g. \verb+{1,1}+ for HTTP 1.1.
+                  \end{itemize}
+
+                  The \verb+Module:extra_response_headers/3+ function
+                  should return either the original header map or a
+                  modified map where headers have been added, changed,
+                  or deleted. Added headers are not subject to the
+                  status code restrictions for the \verb+add+ extra
+                  response header directive, but the function can call
+                  \verb+yaws_api:http_extra_response_headers_add_status_codes/0+
+                  to retrieve the list of the status codes for which
+                  adding headers is normally allowed.
+
+                  For response headers that can have multiple
+                  settings, such as \verb+Set-Cookie+, multiple values
+                  can be specified in the extra response header map by
+                  using a value of \verb+{multi, [Value]}+ where
+                  \verb+[Value]+ is a list of one or more header
+                  values. The \verb+Set-Cookie+ header is a standard
+                  special case for which \Yaws\ converts a
+                  \verb+multi+ header into a separate
+                  \verb+Set-Cookie+ header for each value; for other
+                  headers, \Yaws\ converts a \verb+multi+ header into
+                  a single HTTP header with a comma-separated value.
+              \end{itemize}
+
+              Note that extra response headers do not apply to
+              responses returned directly by any
+              \verb+DispatchModule+.
+\end{itemize}
 
 \section{Directives included from .yaws\_auth files}
 
@@ -3727,8 +3805,8 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
         This mechanism can be disabled by setting \verb+auth_skip_docroot+ to
         \verb+true+ in the \Yaws\ configuration.
 
-        Each row in the \verb+.yaws_auth+ file must contain a term. 
-        The terms correspond to the auth structure in the \Yaws\ config 
+        Each row in the \verb+.yaws_auth+ file must contain a term.
+        The terms correspond to the auth structure in the \Yaws\ config
         file. The allowed forms are:
 
 \begin{verbatim}

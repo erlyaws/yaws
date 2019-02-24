@@ -49,7 +49,8 @@ all() ->
      accept_ranges,
      status_and_content_length,
      encoded_url,
-     header_order
+     header_order,
+     extra_response_headers
     ].
 
 groups() ->
@@ -830,6 +831,27 @@ header_order(Config) ->
     ?assert(IndexX1 < IndexX2),
     {Index1, "cache-control", _} = lists:keyfind("cache-control", 2, IndexedHdrs),
     ?assert(Index1 < IndexX1),
+    ok.
+
+extra_response_headers(Config) ->
+    SetCookieVals = ["cookie1=ABCDEFG",
+                     "cookie2=1234567"],
+    Port = testsuite:get_yaws_port(8, Config),
+    Url1 = testsuite:make_url(http, "127.0.0.1", Port, "/"),
+    {ok, {{_,200,_}, Hdrs1, _}} = testsuite:http_get(Url1),
+    ?assertEqual("Bar", proplists:get_value("x-foo", Hdrs1)),
+    ?assertEqual("multiple words", proplists:get_value("x-bar", Hdrs1)),
+    ?assertEqual("extra_resp_hdrs", proplists:get_value("x-extramod", Hdrs1)),
+    ?assertEqual(SetCookieVals, proplists:get_all_values("set-cookie", Hdrs1)),
+    ?assertEqual("value1,value2", proplists:get_value("x-multi", Hdrs1)),
+    ?assertNot(proplists:is_defined("etag", Hdrs1)),
+    %% Verify always add directive
+    ?assertNot(lists:member(202, yaws_api:http_extra_response_headers_add_status_codes())),
+    Url2 = testsuite:make_url(http, "127.0.0.1", Port, "/status?code=202"),
+    {ok, {{_,202,_}, Hdrs2, _}} = testsuite:http_get(Url2),
+    ?assertNot(proplists:is_defined("x-foo", Hdrs2)),
+    ?assertEqual("multiple words", proplists:get_value("x-bar", Hdrs2)),
+    ?assertEqual(SetCookieVals, proplists:get_all_values("set-cookie", Hdrs2)),
     ok.
 
 %%====================================================================

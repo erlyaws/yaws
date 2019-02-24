@@ -1486,6 +1486,90 @@ bindings are ignored and their text is left as is in returned content.
 This setting applies only for \fIout/1\fR content, not to static pages
 or other returned content.
 
+.TP
+\fB<extra_response_headers> ... </extra_response_headers>\fR
+This begins and ends a configuration context for extra response
+headers for this server, where directives for adding headers, erasing
+headers, and modules for handling extra response headers can be
+specified as follows:
+
+.RS 12
+.TP
+\fBadd Hdr = Value\fR
+Add \fIHdr\fR with value \fIValue\fR to the response, but only if the
+response status code is one of these values:
+
+.RS 12
+.nf
+200 OK
+201 Created
+204 No Content
+206 Partial Content
+301 Moved Permanently
+302 Found
+303 See Other
+304 Not Modified
+307 Temporary Redirect
+308 Permanent Redirect
+.fi
+.RE
+
+For any other status code, \fIHdr\fR is not added.
+
+.TP
+\fBalways add Hdr = Value\fR
+Unconditionally add \fIHdr\fR with value \fIValue\fR to the response,
+regardless of the response status code.
+
+.TP
+\fBerase Hdr\fR
+Remove \fIHdr\Fr and its associated value from the response.
+
+.TP
+\fBextramod = Module\fR
+Specifies a module to call to process extra response headers. Yaws
+calls \fIModule:extra_response_headers/3\fR passing the following
+arguments:
+
+.RS 12
+.TP
+\fBResponse headers\fR
+An Erlang map holding the response headers with header name strings as
+keys and strings as header values
+
+.TP
+\fBArg\Fr
+An \fI#arg{}\fR record representing the request
+
+.TP
+\fB{StatusCode,Version}\fR
+A tuple where \fIStatusCode\fR is the numeric HTTP status code for the
+response, and \fIVersion\fR is a tuple specifying the HTTP version,
+e.g. \fI{1,1}\fR for HTTP 1.1.
+.RE
+
+The \fIModule:extra_response_headers/3\fR function should return
+either the original header map or a modified map where headers have
+been added, changed, or deleted. Added headers are not subject to the
+status code restrictions for the \fIadd\fR extra response header
+directive, but the function can call
+\fByaws_api:http_extra_response_headers_add_status_codes/0\fR to
+retrieve the list of the status codes for which adding headers is
+normally allowed.
+
+For response headers that can have multiple settings, such as
+\fISet-Cookie\fR, multiple values can be specified in the extra
+response header map by using a value of \fI{multi, [Value]}\fR where
+\fI[Value]\fR is a list of one or more header values. The
+\fISet-Cookie\fR header is a standard special case for which Yaws
+converts a \fImulti\fR header into a separate Set-Cookie header for
+each value; for other headers, Yaws converts a \fImulti\fR header into
+a single HTTP header with a comma-separated value.
+.RE
+
+Note that extra response headers do not apply to responses returned
+directly by any \fIDispatchModule\fR.
+.RE
 
 .SH EXAMPLES
 

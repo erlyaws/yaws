@@ -35,7 +35,7 @@
 
 %% internal exports
 -export([gserv/3,acceptor0/2, load_and_run/2, done_or_continue/0,
-         accumulate_content/1, deliver_accumulated/4, deliver_accumulated/1,
+         accumulate_content/1, deliver_accumulated/4, deliver_accumulated/2,
          setup_dirs/1,
          deliver_dyn_part/8, finish_up_dyn_file/2, gserv_loop/4
         ]).
@@ -1190,16 +1190,17 @@ aloop(CliSock, {IP,Port}=IPPort, GS, Num) ->
     Head = yaws:http_get_headers(CliSock, SSL),
     process_flag(trap_exit, true),
     ?Debug("Head = ~p~n", [Head]),
+    NoArg = undefined,
     case Head of
         {error, {empty_accept_header_list, ReqEmptyAccept}} ->
             ?Debug("Request's Accept headers all empty~n", []),
             case pick_sconf(GS#gs.gconf, #headers{}, GS#gs.group) of
                 undefined ->
-                    deliver_400(CliSock, ReqEmptyAccept);
+                    deliver_400(CliSock, ReqEmptyAccept, NoArg);
                 SC ->
                     put(sc, SC),
                     put(outh, #outh{}),
-                    deliver_400(CliSock, ReqEmptyAccept)
+                    deliver_400(CliSock, ReqEmptyAccept, NoArg)
             end,
             {ok, Num+1};
         {error, {too_many_headers, ReqTooMany}} ->
@@ -1207,11 +1208,11 @@ aloop(CliSock, {IP,Port}=IPPort, GS, Num) ->
             ?Debug("Request headers too large~n", []),
             case pick_sconf(GS#gs.gconf, #headers{}, GS#gs.group) of
                 undefined ->
-                    deliver_400(CliSock, ReqTooMany);
+                    deliver_400(CliSock, ReqTooMany, NoArg);
                 SC ->
                     put(sc, SC),
                     put(outh, #outh{}),
-                    deliver_431(CliSock, ReqTooMany)
+                    deliver_431(CliSock, ReqTooMany, NoArg)
             end,
             {ok, Num+1};
         {Req0, H0} when Req0#http_request.method /= bad_request ->
@@ -1219,7 +1220,7 @@ aloop(CliSock, {IP,Port}=IPPort, GS, Num) ->
             ?Debug("{Req, H} = ~p~n", [{Req, H}]),
             case pick_sconf({GS#gs.ssl, CliSock}, GS#gs.gconf, H, GS#gs.group) of
                 undefined ->
-                    deliver_400(CliSock, Req),
+                    deliver_400(CliSock, Req, NoArg),
                     {ok, Num+1};
                 SC ->
                     put(outh, #outh{}),
@@ -1228,13 +1229,13 @@ aloop(CliSock, {IP,Port}=IPPort, GS, Num) ->
                                          undefined ->
                                              continue;
                                          DispatchMod ->
-                                             Arg = make_arg(SC, CliSock, IPPort,
+                                             ARG = make_arg(SC, CliSock, IPPort,
                                                             H, Req, undefined),
                                              ok = yaws:setopts(CliSock,
                                                                [{packet, raw},
                                                                 {active, false}],
                                                                yaws:is_ssl(SC)),
-                                             DispatchMod:dispatch(Arg)
+                                             DispatchMod:dispatch(ARG)
                                      end,
                     case DispatchResult of
                         done ->
@@ -1261,7 +1262,7 @@ aloop(CliSock, {IP,Port}=IPPort, GS, Num) ->
                                            call_method(Req#http_request.method,CliSock,
                                                        IPPort,Req,H);
                                        {deny, Status, Msg} ->
-                                           deliver_xxx(CliSock, Req, Status, Msg)
+                                           deliver_xxx(CliSock, Req, NoArg, Status, Msg)
                                    end,
                             Call2 = fix_keepalive_maxuses(Call),
                             handle_method_result(Call2, CliSock, IPPort,
@@ -1675,7 +1676,7 @@ not_implemented(CliSock, _IPPort, Req, Head) ->
     ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
     flush(CliSock, Head#headers.content_length,
           yaws:to_lower(Head#headers.transfer_encoding)),
-    deliver_501(CliSock, Req).
+    deliver_501(CliSock, Req, undefined).
 
 
 'TRACE'(CliSock, IPPort, Req, Head) ->
@@ -1684,9 +1685,10 @@ not_implemented(CliSock, _IPPort, Req, Head) ->
 'OPTIONS'(CliSock, IPPort, Req, Head) ->
     case Req#http_request.path of
         '*' ->
+            ARG = make_arg(CliSock, IPPort, Head, Req, undefined),
             % Handle "*" as per RFC2616 section 5.1.2
-            deliver_options(CliSock, Req, ['GET', 'HEAD', 'OPTIONS',
-                                           'PUT', 'POST', 'DELETE']);
+            deliver_options(CliSock, Req, ARG, ['GET', 'HEAD', 'OPTIONS',
+                                                'PUT', 'POST', 'DELETE']);
         _ ->
             no_body_method(CliSock, IPPort, Req, Head)
     end.
@@ -1723,7 +1725,9 @@ body_method(CliSock, IPPort, Req, Head) ->
             ok;
         Value ->
             case yaws:to_lower(Value) of
-                "100-continue" -> deliver_100(CliSock);
+                "100-continue" ->
+                    Arg = make_arg(CliSock, IPPort, Head, Req, undefined),
+                    deliver_100(CliSock, Arg);
                 _ -> ok
             end
     end,
@@ -1749,7 +1753,7 @@ body_method(CliSock, IPPort, Req, Head) ->
     case Res of
         {error, Reason} ->
             error_logger:format("Invalid Request: ~p~n", [Reason]),
-            deliver_400(CliSock, Req);
+            deliver_400(CliSock, Req, undefined);
         Bin ->
             ?Debug("Request data = ~s~n", [binary_to_list(un_partial(Bin))]),
             ARG = make_arg(CliSock, IPPort, Head, Req, Bin),
@@ -1824,7 +1828,7 @@ handle_request(CliSock, ARG, _N)
                 end, State#rewrite_response.headers),
     case State#rewrite_response.content of
         <<>> ->
-            deliver_accumulated(CliSock);
+            deliver_accumulated(CliSock, ARG);
         _ ->
             %% Define a default content type if needed
             case yaws:outh_get_content_type() of
@@ -1846,7 +1850,7 @@ handle_request(CliSock, ARG, N) ->
         {abs_path, RawPath} ->
             case (catch yaws_api:url_decode_q_split(RawPath)) of
                 {'EXIT', _} ->   %% weird broken cracker requests
-                    deliver_400(CliSock, Req);
+                    deliver_400(CliSock, Req, ARG);
                 {DecPath, QueryPart} ->
                     %% http://<server><port><DecPath>?<QueryPart>
                     %% DecPath is stored in arg.server_path and is equiv to
@@ -1898,7 +1902,7 @@ handle_request(CliSock, ARG, N) ->
                             %%!todo - log somewhere?
                             error_logger:format(
                               "BAD arg.docroot_mount data: '~p'\n",[ARGvdir]),
-                            deliver_xxx(CliSock, Req, 500),
+                            deliver_xxx(CliSock, Req, ARG, 500),
                             exit(normal);
                         _ ->
                             ok
@@ -1939,9 +1943,9 @@ handle_request(CliSock, ARG, N) ->
                     end
             end;
         {scheme, _Scheme, _RequestString} ->
-            deliver_501(CliSock, Req);
+            deliver_501(CliSock, Req, ARG);
         _ ->                                    % for completeness
-            deliver_400(CliSock, Req)
+            deliver_400(CliSock, Req, ARG)
     end.
 
 
@@ -1977,7 +1981,7 @@ handle_normal_request(CliSock, ARG, UT, Authdirs, N) ->
             end,
             handle_ut(CliSock, ARG2, UT, N);
         false_403 ->
-            deliver_403(CliSock, ARG1#arg.orig_req);
+            deliver_403(CliSock, ARG1#arg.orig_req, ARG1);
         {false, AuthMethods, Realm} ->
             UT1 = #urltype{type = {unauthorized, AuthMethods, Realm},
                            path = ARG1#arg.server_path},
@@ -2170,7 +2174,7 @@ handle_auth(ARG, Auth_H, Auth_methods = #auth{mod = Mod}, Ret) when Mod /= [] ->
                                    {ok, SslSock} -> SslSock;
                                    undefined     -> ARG#arg.clisock
                                end,
-                     deliver_accumulated(CliSock),
+                     deliver_accumulated(CliSock, ARG),
                      exit(normal)
                  end)
     end;
@@ -2284,14 +2288,14 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
                     end,
             case Range of
                 error -> deliver_416(
-                           CliSock, Req,
+                           CliSock, Req, ARG,
                            (UT#urltype.finfo)#file_info.size);
                 _ ->
                     Do_deliver =
                         case Req#http_request.method of
-                            'HEAD' -> fun() -> deliver_accumulated(CliSock),
+                            'HEAD' -> fun() -> deliver_accumulated(CliSock, ARG),
                                                done end;
-                            _      -> fun() -> deliver_file(CliSock, Req,
+                            _      -> fun() -> deliver_file(CliSock, Req, ARG,
                                                             UT, Range) end
                         end,
                     case H#headers.if_none_match of
@@ -2318,7 +2322,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
                                                       Req, UT, H),
                                                     maybe_set_page_options(),
                                                     deliver_accumulated(
-                                                      CliSock),
+                                                      CliSock, ARG),
                                                     done_or_continue()
                                             end
                                     end;
@@ -2331,7 +2335,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
                                             maybe_set_page_options(),
                                             Do_deliver();
                                         false ->
-                                            deliver_xxx(CliSock, Req, 412)
+                                            deliver_xxx(CliSock, Req, ARG, 412)
                                     end
                             end;
                         Line ->
@@ -2339,7 +2343,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
                                 true ->
                                     yaws:outh_set_304_headers(Req, UT, H),
                                     maybe_set_page_options(),
-                                    deliver_accumulated(CliSock),
+                                    deliver_accumulated(CliSock, ARG),
                                     done_or_continue();
                                 false ->
                                     yaws:outh_set_static_headers
@@ -2349,9 +2353,9 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
                     end
             end;
         Req#http_request.method == 'OPTIONS' ->
-            deliver_options(CliSock, Req, Regular_allowed);
+            deliver_options(CliSock, Req, ARG, Regular_allowed);
         true ->
-            deliver_405(CliSock, Req, Regular_allowed)
+            deliver_405(CliSock, Req, ARG, Regular_allowed)
     end;
 
 
@@ -2369,9 +2373,9 @@ handle_ut(CliSock, ARG, UT = #urltype{type = yaws}, N) ->
             maybe_set_page_options(),
             do_yaws(CliSock, ARG, UT, N);
         Req#http_request.method == 'OPTIONS' ->
-            deliver_options(CliSock, Req, Yaws_allowed);
+            deliver_options(CliSock, Req, ARG, Yaws_allowed);
         true ->
-            deliver_405(CliSock, Req, Yaws_allowed)
+            deliver_405(CliSock, Req, ARG, Yaws_allowed)
     end;
 
 handle_ut(CliSock, ARG, UT = #urltype{type = {unauthorized, Auth, Realm}}, N) ->
@@ -2450,9 +2454,9 @@ handle_ut(CliSock, ARG, UT = #urltype{type = directory}, N) ->
                                            P, Req,
                                            ?sc_has_dir_all_zip(SC));
                 Req#http_request.method == 'OPTIONS' ->
-                    deliver_options(CliSock, Req, Directory_allowed);
+                    deliver_options(CliSock, Req, ARG, Directory_allowed);
                 true ->
-                    deliver_405(CliSock, Req, Directory_allowed)
+                    deliver_405(CliSock, Req, ARG, Directory_allowed)
             end;
        true ->
             handle_ut(CliSock, ARG, #urltype{type = error}, N)
@@ -2548,7 +2552,7 @@ handle_ut(CliSock, ARG, UT = #urltype{type = dav}, N) ->
         error ->
             handle_ut(CliSock, ARG, #urltype{type = error}, N);
         options ->
-            deliver_options(CliSock, Req, []);
+            deliver_options(CliSock, Req, ARG, []);
         {regular, Finfo} ->
             handle_ut(CliSock, ARG, UT#urltype{type = regular,
                                                finfo = Finfo}, N);
@@ -2640,15 +2644,15 @@ deliver_302(CliSock, _Req, Arg, Path) ->
               Q -> ["Location: ", Scheme, RedirHost, Path, "?", Q, "\r\n"]
           end,
     new_redir_h(H, Loc),
-    deliver_accumulated(CliSock),
+    deliver_accumulated(CliSock, Arg),
     done_or_continue().
 
 
-deliver_redirect_map(CliSock, Req, _Arg,
+deliver_redirect_map(CliSock, Req, Arg,
                      {_Prefix, Code, undefined, _Mode}, _N) ->
     %% Here Code is 1xx, 2xx, 4xx or 5xx
     ?Debug("in redir ~p", [Code]),
-    deliver_xxx(CliSock, Req, Code);
+    deliver_xxx(CliSock, Req, Arg, Code);
 deliver_redirect_map(_CliSock, _Req, Arg,
                      {_Prefix, Code, Path, Mode}, N) when is_list(Path) ->
     %% Here Code is 1xx, 2xx, 4xx or 5xx
@@ -2703,11 +2707,11 @@ deliver_redirect_map(CliSock, Req, Arg,
                   chunked    = false,
                   date       = yaws:make_date_header()
                  }, Loc, Code),
-    deliver_accumulated(CliSock),
+    deliver_accumulated(CliSock, Arg),
     done_or_continue().
 
 
-deliver_options(CliSock, _Req, Options) ->
+deliver_options(CliSock, _Req, Arg, Options) ->
     H = #outh{status = 200,
               doclose = false,
               chunked = false,
@@ -2715,23 +2719,23 @@ deliver_options(CliSock, _Req, Options) ->
               date = yaws:make_date_header(),
               allow = yaws:make_allow_header(Options)},
     put(outh, H),
-    deliver_accumulated(CliSock),
+    deliver_accumulated(CliSock, Arg),
     continue.
 
-deliver_100(CliSock) ->
+deliver_100(CliSock, Arg) ->
     H = #outh{status = 100,
               doclose = false,
               chunked = false,
               server = yaws:make_server_header(),
               allow = yaws:make_allow_header()},
     put(outh, H),
-    deliver_accumulated(CliSock),
+    deliver_accumulated(CliSock, Arg),
     continue.
 
 
-deliver_xxx(CliSock, _Req, Code) ->
-    deliver_xxx(CliSock, _Req, Code, "").
-deliver_xxx(CliSock, _Req, Code, ExtraHtml) ->
+deliver_xxx(CliSock, _Req, Arg, Code) ->
+    deliver_xxx(CliSock, _Req, Arg, Code, "").
+deliver_xxx(CliSock, _Req, Arg, Code, ExtraHtml) ->
     B = ["<html><h1>", integer_to_list(Code), $\ ,
          yaws_api:code_to_phrase(Code), "</h1>", ExtraHtml, "</html>"],
     Sz = iolist_size(B),
@@ -2749,23 +2753,23 @@ deliver_xxx(CliSock, _Req, Code, ExtraHtml) ->
               content_type = yaws:make_content_type_header("text/html")},
     put(outh, H),
     accumulate_content(B),
-    deliver_accumulated(CliSock),
+    deliver_accumulated(CliSock, Arg),
     done.
 
-deliver_400(CliSock, Req) ->
-    deliver_xxx(CliSock, Req, 400).% Bad Request
+deliver_400(CliSock, Req, Arg) ->
+    deliver_xxx(CliSock, Req, Arg, 400).% Bad Request
 
-deliver_403(CliSock, Req) ->
-    deliver_xxx(CliSock, Req, 403).        % Forbidden
+deliver_403(CliSock, Req, Arg) ->
+    deliver_xxx(CliSock, Req, Arg, 403).        % Forbidden
 
-deliver_405(CliSock, Req, Methods) ->
+deliver_405(CliSock, Req, Arg, Methods) ->
     Methods_msg = lists:flatten(
                     ["<p>This resource allows ",
                      yaws:join_sep([atom_to_list(M) || M <- Methods], ", "),
                      "</p>"]),
-    deliver_xxx(CliSock, Req, 405, Methods_msg).
+    deliver_xxx(CliSock, Req, Arg, 405, Methods_msg).
 
-deliver_416(CliSock, _Req, Tot) ->
+deliver_416(CliSock, _Req, Arg, Tot) ->
     B = ["<html><h1>416 ", yaws_api:code_to_phrase(416), "</h1></html>"],
     Sz = iolist_size(B),
     H = #outh{status = 416,
@@ -2780,14 +2784,14 @@ deliver_416(CliSock, _Req, Tot) ->
               content_type = yaws:make_content_type_header("text/html")},
     put(outh, H),
     accumulate_content(B),
-    deliver_accumulated(CliSock),
+    deliver_accumulated(CliSock, Arg),
     done.
 
-deliver_431(CliSock, Req) ->
-    deliver_xxx(CliSock, Req, 431).
+deliver_431(CliSock, Req, Arg) ->
+    deliver_xxx(CliSock, Req, Arg, 431).
 
-deliver_501(CliSock, Req) ->
-    deliver_xxx(CliSock, Req, 501). % Not implemented
+deliver_501(CliSock, Req, Arg) ->
+    deliver_xxx(CliSock, Req, Arg, 501). % Not implemented
 
 do_yaws(CliSock, ARG, UT, N) ->
     Key = UT#urltype.getpath, %% always flat
@@ -3750,12 +3754,12 @@ decide_deflate(true, SC, Arg, Sz, Data, decide, Mode) ->
 
 
 
-deliver_accumulated(Sock) ->
+deliver_accumulated(Sock, Arg) ->
     case yaws:outh_get_content_encoding() of
         decide -> yaws:outh_set_content_encoding(identity);
         _      -> ok
     end,
-    deliver_accumulated(undefined, Sock, undefined, final).
+    deliver_accumulated(Arg, Sock, undefined, final).
 
 %% Arg           = #arg{} | undefined
 %% ContentLength = Int    | undefined
@@ -3793,7 +3797,7 @@ deliver_accumulated(Arg, Sock, ContentLength, Mode) ->
                                                  ContentLength, Mode)
                      end,
 
-    {StatusLine, Headers} = yaws:outh_serialize(),
+    {StatusLine, Headers} = yaws:outh_serialize(Arg),
     All = [StatusLine, Headers, crnl(), Data],
     yaws:gen_tcp_send(Sock, All),
     case yaws_trace:get_type(get(gc)) of
@@ -3980,16 +3984,16 @@ requested_range(RangeHeader, TotalSize) ->
     end.
 
 
-deliver_file(CliSock, Req, UT, Range) ->
+deliver_file(CliSock, Req, Arg, UT, Range) ->
     if
         is_binary(UT#urltype.data) ->
             %% cached
-            deliver_small_file(CliSock, Req, UT, Range);
+            deliver_small_file(CliSock, Req, Arg, UT, Range);
         true ->
-            deliver_large_file(CliSock, Req, UT, Range)
+            deliver_large_file(CliSock, Req, Arg, UT, Range)
     end.
 
-deliver_small_file(CliSock, _Req, UT, Range) ->
+deliver_small_file(CliSock, _Req, Arg, UT, Range) ->
     Bin0 = ut_read(UT),
     Bin = case Range of
               all ->
@@ -4000,10 +4004,10 @@ deliver_small_file(CliSock, _Req, UT, Range) ->
                   Bin1
           end,
     accumulate_content(Bin),
-    deliver_accumulated(CliSock),
+    deliver_accumulated(CliSock, Arg),
     done_or_continue().
 
-deliver_large_file(CliSock,  _Req, UT, Range) ->
+deliver_large_file(CliSock,  _Req, Arg, UT, Range) ->
     Sz = case Range of
              all ->
                  (UT#urltype.finfo)#file_info.size;
@@ -4012,7 +4016,7 @@ deliver_large_file(CliSock,  _Req, UT, Range) ->
                  (To - From + 1)
          end,
     Mode = {file, UT#urltype.fullpath, mtime(UT#urltype.finfo)},
-    case deliver_accumulated(undefined, CliSock, Sz, Mode) of
+    case deliver_accumulated(Arg, CliSock, Sz, Mode) of
         discard -> ok;
         Priv    -> send_file(CliSock, UT#urltype.fullpath, Range, Priv)
     end,
