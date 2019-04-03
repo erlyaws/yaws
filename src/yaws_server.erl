@@ -1734,7 +1734,7 @@ body_method(CliSock, IPPort, Req, Head) ->
               {_, undefined} ->
                   <<>>;
               {_, Len} ->
-                  Int_len = list_to_integer(Len),
+                  Int_len = strip_list_to_integer(Len),
                   if
                       Int_len < 0 ->
                           {error, content_length_overflow};
