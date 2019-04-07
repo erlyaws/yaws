@@ -573,6 +573,10 @@ deflate_use_gzip_static  (D, Bool)  -> D#deflate{use_gzip_static   = Bool}.
 deflate_mime_types       (D, Types) -> D#deflate{mime_types        = Types}.
 
 
+setup_deflate(SL, undefined, true) ->
+    setup_deflate(SL, #deflate{});
+setup_deflate(SL, DefaultDeflate, _) ->
+    setup_deflate(SL, DefaultDeflate).
 setup_deflate(SL, DefaultDeflate) ->
     case lkup(deflate_options, SL, undefined) of
         undefined ->
@@ -723,9 +727,9 @@ set_gc_flags([], Flags) ->
 
 %% Setup vhost configuration
 setup_sconf(SL, SC) ->
+    Flags = set_sc_flags(lkup(flags, SL, []), SC#sconf.flags),
     #sconf{port                  = lkup(port, SL, SC#sconf.port),
-           flags                 = set_sc_flags(lkup(flags, SL, []),
-                                                SC#sconf.flags),
+           flags                 = Flags,
            redirect_map          = lkup(redirect_map, SL,
                                         SC#sconf.redirect_map),
            rhost                 = lkup(rhost, SL, SC#sconf.rhost),
@@ -769,7 +773,8 @@ setup_sconf(SL, SC) ->
                                         SC#sconf.fcgi_app_server),
            php_handler           = lkup(php_handler, SL, SC#sconf.php_handler),
            shaper                = lkup(shaper, SL, SC#sconf.shaper),
-           deflate_options       = setup_deflate(SL, SC#sconf.deflate_options),
+           deflate_options       = setup_deflate(SL, SC#sconf.deflate_options,
+                                                 Flags band ?SC_DEFLATE /= 0),
            mime_types_info       = setup_mime_types_info(
                                      SL, SC#sconf.mime_types_info
                                     ),
