@@ -288,8 +288,7 @@
                                           {"application", "postscript"},
                                           {"application", "pdf"},
                                           {"application", "x-dvi"},
-                                          {"application", "javascript"},
-                                          {"application", "x-javascript"}
+                                          {"application", "javascript"}
                                          ]).
 
 %% Internal record used to initialize a zlib stream for compression

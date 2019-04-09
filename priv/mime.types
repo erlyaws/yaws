@@ -916,7 +916,6 @@ application/x-hdf				hdf
 application/x-install-instructions		install
 application/x-iso9660-image			iso
 application/x-java-jnlp-file			jnlp
-application/x-javascript			js
 application/x-kchart				chrt
 application/x-killustrator			kil
 application/x-koan				skp skd skt skm

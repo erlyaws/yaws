@@ -14,7 +14,7 @@ html_body(WebSocketLocation) ->
 "<html>
 <head>
   <title>Basic WebSocket Example</title>
-  <script type=\"text/javascript\">
+  <script type=\"application/javascript\">
      var WS = false;
      if (window.WebSocket) WS = WebSocket;
      if (!WS && window.MozWebSocket) WS = MozWebSocket;
@@ -101,7 +101,7 @@ html_body(WebSocketLocation) ->
   </div>
   <div id=\"msgs\"></div>
 
-  <script type='text/javascript'>
+  <script type='application/javascript'>
     $('cA').onclick = function(event) { client.connect(); return false; };
     $('sendB').onclick = function(event) { client.chat($F('phrase')); $('phrase').value=''; $('phrase').focus(); return false; };
  </script>

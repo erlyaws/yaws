@@ -380,17 +380,17 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
          "A:active  { color: 0;text-decoration: none}\n"
          "textarea { background-color: #fff; border: 1px solid 00f; }\n"
          "DIV.tag-body { background: white; }\n"},
-%         {script, [{type,"text/javascript"}],
+%         {script, [{type,"application/javascript"}],
 %          "_editor_url='/htmlarea/';\n"
 %          "_editor_lagn='se';\n"},
-%         {script, [{type,"text/javascript"},{src,"/htmlarea/htmlarea.js"}],""},
-%         {script, [{type,"text/javascript"}],
+%         {script, [{type,"application/javascript"},{src,"/htmlarea/htmlarea.js"}],""},
+%         {script, [{type,"application/javascript"}],
 %          "var editor = null;\n"
 %          "function initEditor() {\n"
 %          "editor = new HTMLArea('html_message');\n"
 %          "editor.generate();\n"
 %          "return false;\n}"},
-%        {script,[{type,"text/javascript"},{defer,"1"}],
+%        {script,[{type,"application/javascript"},{defer,"1"}],
 %%         "HTMLArea.replace('html_message');\n"},
 %         "HTMLArea.replaceAll();\n"},
         {body,[{bgcolor,silver},{marginheight,0},{link,"#000000"},
@@ -527,7 +527,7 @@ file_attachement(N) ->
 
 
 build_tabs(Tabs) ->
-    [{script,[{type,"text/javascript"}],
+    [{script,[{type,"application/javascript"}],
       ["tabCount = ",integer_to_list(length(Tabs)),";\n"]},
      {'div',
       [{align,"left"}],

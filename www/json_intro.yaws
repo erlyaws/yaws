@@ -165,12 +165,12 @@ box("{array, [\"foo\", \"bar\"]}"),
 
 <html>
 <head>
-<script type=\"text/javascript\"
+<script type=\"application/javascript\"
            src=\"/jquery-1.2.3.js\"></script>
 </head>
 <body>
 
-<script language=\"javascript\" type=\"text/javascript\">
+<script language=\"javascript\" type=\"application/javascript\">
 
 function ex1(what) {
    $.getJSON(\"/ex1.yaws\",
