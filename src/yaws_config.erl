@@ -1785,6 +1785,15 @@ fload(FD, server, GC, C, Lno, Chars) ->
                     {error, ?F("~s at line ~w", [Str, Lno])}
             end;
 
+        ["strip_undefined_bindings", '=', Bool] ->
+            case is_bool(Bool) of
+                {true, Val} ->
+                    C1 = ?sc_set_strip_undef_bindings(C, Val),
+                    fload(FD, server, GC, C1, Lno+1, ?NEXTLINE);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
+            end;
+
         ['<', "/server", '>'] ->
             {ok, GC, C, Lno, ['<', "/server", '>']};
 

@@ -2973,7 +2973,11 @@ deliver_dyn_file(CliSock, Bin, [H|T], Arg, UT, N) ->
             "%%"++Key = binary_to_list(Send),
             Chunk =
                 case get({binding, Key--"%%"}) of
-                    undefined -> Send;
+                    undefined ->
+                        case strip_undefined_bindings(get(sc)) of
+                            true -> <<>>;
+                            _ -> Send
+                        end;
                     Value -> Value
                 end,
             accumulate_content(Chunk),
@@ -2993,6 +2997,9 @@ deliver_dyn_file(CliSock, _Bin, [], ARG,_UT,_N) ->
     ?Debug("deliver_dyn: done~n", []),
     finish_up_dyn_file(ARG, CliSock).
 
+strip_undefined_bindings(SC) ->
+    get(yaws_strip_undefined_bindings) =:= true orelse
+        ?sc_strip_undef_bindings(SC).
 
 -define(unflushed_timeout, 300).
 
@@ -3402,7 +3409,12 @@ handle_out_reply({redirect, URL, Status}, _LineNo, _YawsFile, _UT, _ARG) ->
     ok;
 
 handle_out_reply({bindings, L}, _LineNo, _YawsFile, _UT, _ARG) ->
-    lists:foreach(fun({Key, Value}) -> put({binding, Key}, Value) end, L),
+    erase(yaws_strip_undefined_bindings),
+    lists:foreach(fun({Key, Value}) ->
+                          put({binding, Key}, Value);
+                     (strip_undefined) ->
+                          put(yaws_strip_undefined_bindings, true) end,
+                  L),
     ok;
 
 handle_out_reply(ok, _LineNo, _YawsFile, _UT, _ARG) ->
@@ -3499,21 +3511,22 @@ first_binary([List|_Rest]) when is_list(List) -> first_binary(List).
 
 
 ssi(File, Delimiter, Bindings) ->
-    ssi(File, Delimiter, Bindings, get(yaws_ut), get(yaws_arg), get (sc)).
+    ssi(File, Delimiter, Bindings, get(yaws_ut), get(yaws_arg), get(sc)).
 
 
 ssi(File, Delimiter, Bindings, UT, ARG) ->
     ssi(File, Delimiter, Bindings, UT, ARG, get(sc)).
 
 
-ssi(File, Delimiter, Bindings, UT, ARG, SC) ->
-
+ssi(File, Delimiter, Bindings0, UT, ARG, SC) ->
     Dir = UT#urltype.dir,
     %%Dir here should be equiv to arg.prepath
 
     Docroot = ARG#arg.docroot,
     VirtualDir = ARG#arg.docroot_mount,
 
+    %% Ignore strip_undefined directive, as it's the default for ssi
+    Bindings = [B || B <- Bindings0, B /= strip_undefined],
 
     %%JMN - line below looks suspicious, why are we not keying on
     %% {ssi, File, Dir} ???

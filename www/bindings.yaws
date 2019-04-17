@@ -29,8 +29,16 @@ out(A) ->
 
 
   <p>All bindings can then be used in the rest of yaws code (in HTML source and
-    within erl tags). In HTML source %%Key%% is expanded to Value and
-    within erl tags yaws_api:get_binding(Key) can be used to extract Value.</p>
+    within erl tags). In HTML source <code>%%Key%%</code> is expanded to Value and
+    within erl tags <code>yaws_api:binding(Key)</code> or
+    <code>yaws_api:binding_find(Key)</code> can be used to extract Value.</p>
+
+  <p>By default, text that looks like <code>%%Key%%</code> is left as
+    is if Key is not included in the bindings list. To force Yaws to
+    treat all undefined bindings as empty strings, so it strips out
+    any text like <code>%%Key%%</code> when Key is not specified,
+    include the special directive <code>strip_undefined</code> in the
+    bindings list.</p>
 
   <p>With the binding feature it is easier to write transparent yaws code making
     it easier to to work together with Web people knowing little or

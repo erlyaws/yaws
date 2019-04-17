@@ -1015,6 +1015,11 @@ in the Server side included output.
 The {ssi, File, Delimiter, Bindings} statement can also
 occur within a deep ehtml structure.
 
+The special directive \fIstrip_undefined\fR can be specified in
+the \fIBindings\fR list, just as it can for the \fI{bindings, ....}\fR
+directive, but it's ignored because treating undefined variables
+as empty is the default for \fIssi\fR bindings.
+
 
 .TP
 \fB{bindings, [{Key1, Value2}, {Key2, Value2} .....]}\fR
@@ -1023,9 +1028,20 @@ Establish variable bindings that can be used in the page.
 All bindings can then be used in the rest of yaws code
 (in HTML source and within erl tags).
 In HTML source %%Key%% is expanded to Value and within erl
-tags \fIyaws_api:binding(Key)\fR can be used to extract Value
-and \fIyaws_api:binding_exists(Key)\fR can be used to check for
-the existence of a binding.
+tags \fIyaws_api:binding(Key)\fR (which calls \fIerror\fR if
+no such binding exists) or \fIyaws_api:binding_find(Key)\fR
+(which returns \fIundefined\fR if no such binding exists)
+can be used to extract Value, and \fIyaws_api:binding_exists(Key)\fR
+can be used to check for the existence of a binding.
+
+If a page happens to contains text that looks like a binding, e.g.
+%%SomeText%%, but no key \fISomeText\fR is supplied, then by default
+the original text is left as is.  If you prefer that anything parsed
+as a binding gets stripped out of a page whenever the \fBbindings\fR
+directive does not specify its key, include the special directive
+\fIstrip_undefined\fR in the bindings list:
+
+{bindings, [{Key1, Value1}, strip_undefined]}
 
 .TP
 \fB{yssi, YawsFile}\fR

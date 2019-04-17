@@ -1924,14 +1924,36 @@ detect a \verb+Content-Length+ header.
   The \verb+{ssi, File, Delimiter, Bindings}+ statement can also occur
   within a deep ehtml structure.
 
+  The special directive \verb+strip_undefined+ can be specified in the
+  \verb+Bindings+ list, just as it can for the \verb+{bindings, ....}+
+  directive, but it's ignored because treating undefined variables as
+  empty is the default for \verb+ssi+ bindings.
 
 \item \verb+{bindings, [{Key1, Value2}, {Key2, Value2} .....]}+ Establish variable
-  bindings that can be used in the page. All bindings can then be used in the
-  rest of \Yaws\ code (in HTML source and within \verb+erl+ tags).
-  In HTML source \verb+%%Key%%+ is expanded to \verb+Value+ and within \verb+erl+ tags \\
-  \verb+yaws_api:binding(Key)+ can be used to extract \verb+Value+
-  and \verb+yaws_api:binding_exists(Key)+ can be used to check for
-  the existence of a binding.
+  bindings that can be used in the content returned from
+  \verb+out/1+. All bindings can then be used in the rest of
+  \Yaws\ code (in HTML source and within \verb+erl+ tags).  In HTML
+  source \verb+%%Key%%+ is expanded to \verb+Value+ and within
+  \verb+erl+ tags \\ \verb+yaws_api:binding(Key)+ (which calls
+  \verb+error+ if no such binding exists) or
+  \verb+yaws_api:binding_find(Key)+ (which returns \verb+undefined+ if
+  no such binding exists) can be used to extract \verb+Value+, and
+  \verb+yaws_api:binding_exists(Key)+ can be used to check for the
+  existence of a binding.
+
+  If content to be returned happens to contains text that looks like a
+  binding, e.g.  \verb+%%SomeText%%+, but no key \verb+SomeText+ is
+  supplied, then by default the original text is left as is. If you
+  prefer that anything parsed as a binding gets stripped out of
+  content whenever the \verb+bindings+ directive does not specify its
+  key, include the special directive \verb+strip_undefined+ in the
+  bindings list:
+
+  \verb+{bindings, [{Key1, Value1}, strip_undefined]}+
+
+  The same result of stripping undefined bindings out of returned
+  \verb+out/1+ content can be achieved by setting
+  \verb+strip_undefined_bindings = true+ in the server configuration.
 
 \item \verb+{yssi, YawsFile}+ Include a yaws file. Compile it and expand as if it had
 occured inline.
@@ -3457,7 +3479,7 @@ eccs = "[sect571r1, sect571k1, secp521r1, brainpoolP512r1, sect409k1,
                  disables the Erlang/OTP SSL application client
                  renegotiation option.  Defaults to true. See the
                  \verb+ssl+ manual page at
-                 
+
                  http://www.erlang.org/doc/man/ssl.html for more details.
 
                  \textbf{WARNING: This option was introduced in the SSL application
@@ -3682,6 +3704,19 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
 
               This mechanism can be used to pass data from a surrounding
               application into the individual .yaws pages.
+
+\item       \verb+strip_undefined_bindings = true|false+ ---
+              Change the behavior of the \verb+{bindings, [...]}+
+              directive to treat all undefined keys found in returned
+              \verb+out/1+ content as if they were defined with an
+              empty value, resulting in all undefined bindings
+              effectively being stripped out of returned content. By
+              default, \verb+strip_undefined_bindings+ is false, which
+              means undefined bindings are ignored and their text is
+              left as is in returned content.
+
+              This setting applies only for \verb+out/1+ content, not
+              to static pages or other returned content.
 \end{itemize}
 
 

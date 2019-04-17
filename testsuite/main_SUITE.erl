@@ -40,6 +40,8 @@ all() ->
      embedded_id_dir,
      chained_appmods,
      appmod_with_yssi,
+     appmod_with_yssi_strip_undefined_bindings,
+     appmod_strip_undefined_bindings,
      cache_appmod,
      multi_forwarded_for,
      log_rotation,
@@ -672,6 +674,29 @@ appmod_with_yssi(Config) ->
 
     {ok, {{_,200,_}, Hdrs, _}} = testsuite:http_get(Url),
     ?assertEqual("state=yssi", proplists:get_value("x-yssi", Hdrs)),
+    ok.
+
+appmod_with_yssi_strip_undefined_bindings(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
+    Url  = testsuite:make_url(http, "127.0.0.1", Port, "/appmod_with_yssi_strip_undefined_bindings"),
+
+    {ok, {{_,200,_}, _, Body}} = testsuite:http_get(Url),
+    ?assertEqual(<<"<p></p>\n<p>hello world!</p>\n">>, Body),
+    ok.
+
+appmod_strip_undefined_bindings(Config) ->
+    Port = testsuite:get_yaws_port(8, Config),
+    Url1 = testsuite:make_url(http, "127.0.0.1", Port, "/appmod_strip_undefined_bindings"),
+    Url2 = testsuite:make_url(http, "127.0.0.1", Port, "/variables.html"),
+
+    %% verify undefined bindings are stripped
+    {ok, {{_,200,_}, _, Body}} = testsuite:http_get(Url1),
+    ?assertEqual(<<"<p></p>\n<p>hello world!</p>\n">>, Body),
+
+    %% verify that text in regular pages that happens to look like a
+    %% binding is not stripped
+    {ok, Res} = file:read_file(filename:join(?data_srcdir(?MODULE), "www/variables.html")),
+    {ok, {{_,200,_}, _, Res}} = testsuite:http_get(Url2),
     ok.
 
 cache_appmod(Config) ->

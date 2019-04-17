@@ -133,21 +133,20 @@
 
 
 %% flags for sconfs
--define(SC_ACCESS_LOG,             1).
--define(SC_AUTH_LOG,               2).
--define(SC_ADD_PORT,               4).
--define(SC_STATISTICS,             8).
--define(SC_TILDE_EXPAND,          16).
--define(SC_DIR_LISTINGS,          32).
--define(SC_DEFLATE,               64).
--define(SC_DIR_ALL_ZIP,          128).
--define(SC_DAV,                  256).
--define(SC_FCGI_TRACE_PROTOCOL,  512).
--define(SC_FCGI_LOG_APP_ERROR,  1024).
--define(SC_FORWARD_PROXY,       2048).
--define(SC_AUTH_SKIP_DOCROOT,   4096).
-
-
+-define(SC_ACCESS_LOG,              (1 bsl 0)).
+-define(SC_AUTH_LOG,                (1 bsl 1)).
+-define(SC_ADD_PORT,                (1 bsl 2)).
+-define(SC_STATISTICS,              (1 bsl 3)).
+-define(SC_TILDE_EXPAND,            (1 bsl 4)).
+-define(SC_DIR_LISTINGS,            (1 bsl 5)).
+-define(SC_DEFLATE,                 (1 bsl 6)).
+-define(SC_DIR_ALL_ZIP,             (1 bsl 7)).
+-define(SC_DAV,                     (1 bsl 8)).
+-define(SC_FCGI_TRACE_PROTOCOL,     (1 bsl 9)).
+-define(SC_FCGI_LOG_APP_ERROR,      (1 bsl 10)).
+-define(SC_FORWARD_PROXY,           (1 bsl 11)).
+-define(SC_AUTH_SKIP_DOCROOT,       (1 bsl 12)).
+-define(SC_STRIP_UNDEF_BINDINGS,    (1 bsl 13)).
 
 -define(SC_DEF, ?SC_ACCESS_LOG bor ?SC_ADD_PORT bor ?SC_AUTH_LOG).
 
@@ -177,7 +176,8 @@
         (((SC)#sconf.flags band ?SC_FORWARD_PROXY) /= 0)).
 -define(sc_auth_skip_docroot(SC),
         (((SC)#sconf.flags band ?SC_AUTH_SKIP_DOCROOT) /= 0)).
-
+-define(sc_strip_undef_bindings(SC),
+        (((SC)#sconf.flags band ?SC_STRIP_UNDEF_BINDINGS) /= 0)).
 
 -define(sc_set_access_log(SC, Bool),
         SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_ACCESS_LOG, Bool)}).
@@ -206,7 +206,11 @@
 -define(sc_set_forward_proxy(SC, Bool),
         SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_FORWARD_PROXY, Bool)}).
 -define(sc_set_auth_skip_docroot(SC, Bool),
-        SC#sconf{flags = yaws:flag(SC#sconf.flags,?SC_AUTH_SKIP_DOCROOT,Bool)}).
+        SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_AUTH_SKIP_DOCROOT,
+                                   Bool)}).
+-define(sc_set_strip_undef_bindings(SC, Bool),
+        SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_STRIP_UNDEF_BINDINGS,
+                                   Bool)}).
 
 
 %% server conf

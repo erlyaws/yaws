@@ -72,7 +72,7 @@
 -export([parse_set_cookie/1, parse_cookie/1, format_set_cookie/1,
          format_cookie/1, postvar/2, queryvar/2, getvar/2]).
 
--export([binding/1,binding_exists/1,
+-export([binding/1,binding_find/1,binding_exists/1,
          dir_listing/1, dir_listing/2, redirect_self/1]).
 
 -export([arg_clisock/1, arg_client_ip_port/1, arg_headers/1, arg_req/1,
@@ -2534,11 +2534,11 @@ binding(Key) ->
         Value -> Value
     end.
 
+binding_find(Key) ->
+    get({binding, Key}).
+
 binding_exists(Key) ->
-    case get({binding, Key}) of
-        undefined -> false;
-        _ -> true
-    end.
+    get({binding, Key}) =/= undefined.
 
 
 
