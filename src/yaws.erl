@@ -59,7 +59,7 @@
          sconf_spotions/1, sconf_extra_cgi_vars/1, sconf_stats/1,
          sconf_fcgi_app_server/1, sconf_php_handler/1, sconf_shaper/1,
          sconf_deflate_options/1, sconf_mime_types_info/1,
-         sconf_dispatch_mod/1]).
+         sconf_dispatch_mod/1, sconf_extra_resp_headers/1]).
 
 -export([sconf_port/2, sconf_flags/2, sconf_redirect_map/2, sconf_rhost/2,
          sconf_rmethod/2, sconf_docroot/2, sconf_xtra_docroots/2,
@@ -72,7 +72,7 @@
          sconf_spotions/2, sconf_extra_cgi_vars/2, sconf_stats/2,
          sconf_fcgi_app_server/2, sconf_php_handler/2, sconf_shaper/2,
          sconf_deflate_options/2, sconf_mime_types_info/2,
-         sconf_dispatch_mod/2]).
+         sconf_dispatch_mod/2, sconf_extra_resp_headers/2]).
 
 -export([new_auth/0,
          auth_dir/1, auth_dir/2,
@@ -376,6 +376,7 @@ sconf_shaper               (#sconf{shaper                = X}) -> X.
 sconf_deflate_options      (#sconf{deflate_options       = X}) -> X.
 sconf_mime_types_info      (#sconf{mime_types_info       = X}) -> X.
 sconf_dispatch_mod         (#sconf{dispatch_mod          = X}) -> X.
+sconf_extra_resp_headers   (#sconf{extra_response_headers= X}) -> X.
 
 %% Setters
 sconf_port                 (S, X) -> S#sconf{port                  = X}.
@@ -414,7 +415,7 @@ sconf_shaper               (S, X) -> S#sconf{shaper                = X}.
 sconf_deflate_options      (S, X) -> S#sconf{deflate_options       = X}.
 sconf_mime_types_info      (S, X) -> S#sconf{mime_types_info       = X}.
 sconf_dispatch_mod         (S, X) -> S#sconf{dispatch_mod          = X}.
-
+sconf_extra_resp_headers   (S, X) -> S#sconf{extra_response_headers= X}.
 
 %% Access functions for the AUTH record.
 new_auth() -> #auth{}.
@@ -778,7 +779,9 @@ setup_sconf(SL, SC) ->
            mime_types_info       = setup_mime_types_info(
                                      SL, SC#sconf.mime_types_info
                                     ),
-           dispatch_mod          = lkup(dispatchmod, SL, SC#sconf.dispatch_mod)
+           dispatch_mod          = lkup(dispatchmod, SL, SC#sconf.dispatch_mod),
+           extra_response_headers= lkup(extra_response_headers, SL,
+                                        SC#sconf.extra_response_headers)
           }.
 
 set_sc_flags([{access_log, Bool}|T], Flags) ->
@@ -1900,7 +1903,12 @@ outh_serialize() ->
 
     ExtraResponseHdrs = case SC of
                             undefined -> [];
-                            _ -> SC#sconf.extra_response_headers
+                            _ ->
+                                OutH = H#outh{expires=Expires,
+                                              cache_control=CacheControl,
+                                              content_encoding=ContentEnc,
+                                              vary=Vary},
+                                extra_response_headers(SC, OutH)
                         end,
 
     Headers = [noundef(H#outh.connection),
@@ -1924,15 +1932,22 @@ outh_serialize() ->
                noundef(H#outh.other) | ExtraResponseHdrs],
     {StatusLine, Headers}.
 
+extra_response_headers(SC, OutH) ->
+    extra_response_headers(SC#sconf.extra_response_headers, OutH, []).
+extra_response_headers([], _, Acc) ->
+    lists:reverse(Acc);
+extra_response_headers([{extramod, Mod}|Extras], OutH, Acc) ->
+    NewExtras = lists:reverse([[Hdr,": ",Value,"\r\n"] ||
+                                  {Hdr, Value} <- Mod:extra_response_headers(OutH)]),
+    extra_response_headers(Extras, OutH, NewExtras ++ Acc);
+extra_response_headers([Extra|Extras], OutH, Acc) ->
+    extra_response_headers(Extras, OutH, [Extra|Acc]).
 
 noundef(undefined) -> [];
 noundef(Str)       -> Str.
 
-
-
 accumulate_header({X, erase}) when is_atom(X) ->
     erase_header(X);
-
 
 %% special headers
 accumulate_header({connection, What}) ->

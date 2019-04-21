@@ -782,6 +782,7 @@ extra_response_headers(Config) ->
     {ok, {{_,200,_}, Hdrs, _}} = testsuite:http_get(Url),
     ?assertEqual("Bar", proplists:get_value("x-foo", Hdrs)),
     ?assertEqual("multiple words", proplists:get_value("x-bar", Hdrs)),
+    ?assertEqual("extra_resp_hdrs", proplists:get_value("x-extramod", Hdrs)),
     ok.
 
 %%====================================================================

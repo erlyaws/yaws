@@ -2503,6 +2503,12 @@ fload(FD, extra_response_headers, GC, C, Lno, Chars) ->
         [] ->
             fload(FD, extra_response_headers, GC, C, Lno+1, ?NEXTLINE);
 
+        ['<', "extramod", Mod, '>'] ->
+            ExtraResponseHdrs = C#sconf.extra_response_headers,
+            C1 = C#sconf{extra_response_headers = [{extramod, list_to_atom(Mod)}|
+                                                   ExtraResponseHdrs]},
+            fload(FD, extra_response_headers, GC, C1, Lno+1, ?NEXTLINE);
+
         [Hdr, '=', Value] ->
             ExtraResponseHdrs = C#sconf.extra_response_headers,
             C1 = C#sconf{extra_response_headers = [[Hdr,": ",Value,"\r\n"]|
@@ -3191,12 +3197,11 @@ eq_sconfs(S1,S2) ->
      S1#sconf.php_handler == S2#sconf.php_handler andalso
      S1#sconf.shaper == S2#sconf.shaper andalso
      S1#sconf.deflate_options == S2#sconf.deflate_options andalso
-     S1#sconf.mime_types_info == S2#sconf.mime_types_info).
+     S1#sconf.mime_types_info == S2#sconf.mime_types_info andalso
+     S1#sconf.dispatch_mod == S2#sconf.dispatch_mod andalso
+     S1#sconf.extra_response_headers == S2#sconf.extra_response_headers).
 
-
-
-
-%% This the version of setconf that perform a
+%% This is the version of setconf that performs a
 %% soft reconfig, it requires the args to be checked.
 soft_setconf(GC, Groups, OLDGC, OldGroups) ->
     if
