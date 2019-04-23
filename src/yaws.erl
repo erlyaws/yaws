@@ -2456,8 +2456,10 @@ http_recv_request(CliSock, SSL) ->
             closed;
         {error, timeout} ->
             closed;
-        _Other ->
-            error_logger:format("Unhandled reply fr. do_recv() ~p~n", [_Other]),
+        {error, etimedout} ->
+            closed;
+        Other ->
+            error_logger:format("Unhandled reply from yaws:do_recv(): ~p~n", [Other]),
             exit(normal)
     end.
 
