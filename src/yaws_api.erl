@@ -783,14 +783,14 @@ find_cookie_val2(Name, [Cookie|Rest]) ->
 
 %%
 url_decode(Path) ->
-    url_decode_with_encoding(Path, file:native_name_encoding()).
+    url_decode_with_encoding(Path, undefined).
 
 url_decode_with_encoding(Path, Encoding) ->
     {DecPath, QS} = url_decode(Path, []),
     DecPath1 = case Encoding of
                    latin1 ->
                        DecPath;
-                   utf8 ->
+		   _ ->
                        case unicode:characters_to_list(list_to_binary(DecPath)) of
                            UTF8DecPath when is_list(UTF8DecPath) -> UTF8DecPath;
                            _ -> DecPath
@@ -851,10 +851,10 @@ rest_dir (N, Path, [  _H | T ] ) -> rest_dir (N    ,        Path  , T).
 
 url_decode_q_split(Path) ->
     {DecPath, QS} = url_decode_q_split(Path, []),
-    case file:native_name_encoding() of
-        latin1 ->
+    case io_lib:latin1_char_list(Path) of
+        true ->
             {DecPath, QS};
-        utf8 ->
+        false ->
             case unicode:characters_to_list(list_to_binary(DecPath)) of
                 UTF8DecPath when is_list(UTF8DecPath) -> {UTF8DecPath, QS};
                 _ -> {DecPath, QS}
@@ -878,15 +878,17 @@ url_decode_q_split([], Ack) ->
 
 
 url_encode(URL) when is_list(URL) ->
-    Bin = case file:native_name_encoding() of
-              latin1 -> list_to_binary(URL);
-              utf8   -> unicode:characters_to_binary(URL)
+    Bin = case io_lib:latin1_char_list(URL) of
+              true  -> list_to_binary(URL);
+              false -> unicode:characters_to_binary(URL)
           end,
+    url_encode(Bin);
+url_encode(URL) when is_binary(URL) ->
     %% ReservedChars = "!*'();:@&=+$,/?%#[]",
     UnreservedChars = sets:from_list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                      "abcdefghijklmnopqrstuvwxyz"
                                      "0123456789-_.~"),
-    lists:flatten([url_encode_byte(Byte, UnreservedChars) || <<Byte>> <= Bin]).
+    lists:flatten([url_encode_byte(Byte, UnreservedChars) || <<Byte>> <= URL]).
 
 url_encode_byte($:, _) -> $:;  % FIXME: both : and / should be encoded, but
 url_encode_byte($/, _) -> $/;  % too much code currently assumes they're not
