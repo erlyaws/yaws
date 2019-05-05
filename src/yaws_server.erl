@@ -2631,14 +2631,13 @@ deliver_302(CliSock, _Req, Arg, Path) ->
     SC=get(sc),
     Scheme  = yaws:redirect_scheme(SC),
     Headers = Arg#arg.headers,
-    EncPath = yaws_api:url_encode(Path),
     RedirHost = yaws:redirect_host(SC, Headers#headers.host),
 
     %% QueryString must be added
     Loc = case Arg#arg.querydata of
-              undefined -> ["Location: ", Scheme, RedirHost, EncPath, "\r\n"];
-              [] -> ["Location: ", Scheme, RedirHost, EncPath, "\r\n"];
-              Q -> ["Location: ", Scheme, RedirHost, EncPath, "?", Q, "\r\n"]
+              undefined -> ["Location: ", Scheme, RedirHost, Path, "\r\n"];
+              [] -> ["Location: ", Scheme, RedirHost, Path, "\r\n"];
+              Q -> ["Location: ", Scheme, RedirHost, Path, "?", Q, "\r\n"]
           end,
     new_redir_h(H, Loc),
     deliver_accumulated(CliSock),
@@ -2656,8 +2655,7 @@ deliver_redirect_map(_CliSock, _Req, Arg,
     ?Debug("in redir ~p", [Code]),
     Path1 = if
                 Mode == append ->
-                    EncPath = yaws_api:url_encode(Arg#arg.server_path),
-                    filename:join([Path ++ EncPath]);
+                    filename:join([Path ++ Arg#arg.server_path]);
                 true -> %% noappend
                     Path
             end,
@@ -2682,8 +2680,7 @@ deliver_redirect_map(CliSock, Req, Arg,
                 end,
     LocPath = if
                   Mode == append ->
-                      EncPath = yaws_api:url_encode(Arg#arg.server_path),
-                      Path1   = filename:join([URL#url.path ++ EncPath]),
+                      Path1   = filename:join([URL#url.path ++ Arg#arg.server_path]),
                       yaws_api:format_partial_url(
                         URL#url{path=Path1,querypart=QueryData}, get(sc)
                        );

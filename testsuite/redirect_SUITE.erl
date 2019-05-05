@@ -134,12 +134,12 @@ redirect_url_encode(Config) ->
     Url1 = testsuite:make_url(http, "127.0.0.1", Port, "/redirect%3Furl%3Fencode1/index.html"),
     Url2 = testsuite:make_url(http, "127.0.0.1", Port, "/redirect%3Furl%3Fencode2/index.html"),
 
-    %% /redirect?url?encode1 -> /redir? (append)
+    %% /redirect%3Furl%3Fencode1 -> /redir%3F (append)
     {ok, {{_,302,_}, Hdrs1, _}} = testsuite:http_get(Url1),
     ?assertEqual(testsuite:make_url(http, "127.0.0.1", Port, "/redir%3F/redirect%3Furl%3Fencode1/index.html"),
                  proplists:get_value("location", Hdrs1)),
 
-    %% /redirect?url?encode2 -> /redir? (noappend)
+    %% /redirect%3Furl%3Fencode2 -> /redir%3F (noappend)
     {ok, {{_,302,_}, Hdrs2, _}} = testsuite:http_get(Url2),
     ?assertEqual(testsuite:make_url(http, "127.0.0.1", Port, "/redir%3F"),
                  proplists:get_value("location", Hdrs2)),

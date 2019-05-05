@@ -521,7 +521,7 @@ temp_name(F) ->
 
 %% propfind response
 propfind_response(Props,A,R) ->
-    Url = yaws_api:url_encode(R#resource.name),
+    Url = R#resource.name,
     case Props of
         [allprop] ->
             AllProp = [ prop_get(N,A,R) || N <- allprops(R) ],
@@ -553,7 +553,7 @@ propfind_response(Props,A,R) ->
 
 %% proppatch response/
 proppatch_response(Update,A,R) ->
-    Url = yaws_api:url_encode(R#resource.name),
+    Url = R#resource.name,
     Results = proppatch_response(Update,A,R,[]),
     ResultsSorted = prop_sort(lists:flatten(Results)),
     [{'D:href', [], [Url]}|
