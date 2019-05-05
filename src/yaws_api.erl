@@ -863,10 +863,19 @@ url_decode_q_split(Path) ->
 
 url_decode_q_split([$%, Hi, Lo | Tail], Ack) ->
     Hex = yaws:hex_to_integer([Hi, Lo]),
-    if Hex  == 0 -> exit(badurl);
-       true -> ok
-    end,
-    url_decode_q_split(Tail, [Hex|Ack]);
+    if Hex == 0 -> exit(badurl);
+       %% RFC 3986 section 2.2 says that encoded reserved characters
+       %% should not be decoded, otherwise the meaning of the URL data
+       %% changes
+       Hex == $:; Hex == $/; Hex == $?; Hex == $#;
+       Hex == $[; Hex == $]; Hex == $@;
+       Hex == $!; Hex == $$; Hex == $&; Hex == $';
+       Hex == $(; Hex == $); Hex == $*; Hex == $+;
+       Hex == $,; Hex == $;; Hex == $= ->
+	    url_decode_q_split(Tail, [Lo, Hi, $%|Ack]);
+       true ->
+	    url_decode_q_split(Tail, [Hex|Ack])
+    end;
 url_decode_q_split([$?|T], Ack) ->
     %% Don't decode the query string here,
     %% that is parsed separately.
@@ -890,8 +899,6 @@ url_encode(URL) when is_binary(URL) ->
                                      "0123456789-_.~"),
     lists:flatten([url_encode_byte(Byte, UnreservedChars) || <<Byte>> <= URL]).
 
-url_encode_byte($:, _) -> $:;  % FIXME: both : and / should be encoded, but
-url_encode_byte($/, _) -> $/;  % too much code currently assumes they're not
 url_encode_byte(Byte, UnreservedChars) ->
     case sets:is_element(Byte, UnreservedChars) of
         true -> Byte;

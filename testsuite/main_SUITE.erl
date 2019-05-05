@@ -47,7 +47,8 @@ all() ->
      log_rotation,
      exhtml,
      accept_ranges,
-     status_and_content_length
+     status_and_content_length,
+     encoded_url
     ].
 
 groups() ->
@@ -790,6 +791,18 @@ status_and_content_length(Config) ->
     Url4 = testsuite:make_url(http, "127.0.0.1", Port, "/status?code=304"),
     {ok, {{_,304,_}, Hdrs4, _}} = testsuite:http_get(Url4),
     ?assertNot(proplists:is_defined("content-length", Hdrs4)),
+    ok.
+
+encoded_url(Config) ->
+    PathInfo = "/%2F/HA",
+    UrlPath = "/policies" ++ PathInfo,
+    Port = testsuite:get_yaws_port(1, Config),
+    Url  = testsuite:make_url(http, "127.0.0.1", Port, UrlPath),
+    {ok, {{_,200,_}, Hdrs, _}} = testsuite:http_get(Url),
+    ?assertEqual(UrlPath, proplists:get_value("x-origreqpath", Hdrs)),
+    ?assertEqual(UrlPath, proplists:get_value("x-reqpath", Hdrs)),
+    ?assertEqual(UrlPath, proplists:get_value("x-serverpath", Hdrs)),
+    ?assertEqual(PathInfo, proplists:get_value("x-pathinfo", Hdrs)),
     ok.
 
 %%====================================================================
