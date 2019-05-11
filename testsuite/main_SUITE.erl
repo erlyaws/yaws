@@ -787,6 +787,9 @@ status_and_content_length(Config) ->
     Url3 = testsuite:make_url(http, "127.0.0.1", Port, "/status?code=204"),
     {ok, {{_,204,_}, Hdrs3, _}} = testsuite:http_get(Url3),
     ?assertNot(proplists:is_defined("content-length", Hdrs3)),
+    Url4 = testsuite:make_url(http, "127.0.0.1", Port, "/status?code=304"),
+    {ok, {{_,304,_}, Hdrs4, _}} = testsuite:http_get(Url4),
+    ?assertNot(proplists:is_defined("content-length", Hdrs4)),
     ok.
 
 %%====================================================================

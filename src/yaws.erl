@@ -1898,13 +1898,15 @@ outh_serialize() ->
            end,
 
     %% RFC7230 section 3.3.2 disallows returning a Content-Length
-    %% header with 1xx status codes, with the 204 status code, or if a
-    %% Transfer-Encoding header is present. Check these conditions and
-    %% drop any Content-Length header if necessary. For more details
-    %% see https://tools.ietf.org/html/rfc7230#section-3.3.2 .
+    %% header with 1xx status codes, with the 204 or 304 status code,
+    %% or if a Transfer-Encoding header is present. Check these
+    %% conditions and drop any Content-Length header if necessary. For
+    %% more details see
+    %% https://tools.ietf.org/html/rfc7230#section-3.3.2 .
     ContentLength = if
                         Code >= 100, Code < 200 -> undefined;
                         Code == 204 -> undefined;
+                        Code == 304 -> undefined;
                         H#outh.transfer_encoding /= undefined -> undefined;
                         true -> H#outh.content_length
                     end,
