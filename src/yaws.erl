@@ -2078,7 +2078,7 @@ accumulate_header({Name, What}) when is_list(Name) ->
               undefined -> [];
               V         -> V
           end,
-    H2 = H#outh{other = [Name, ": ", What, "\r\n", Old]},
+    H2 = H#outh{other = [Old, Name, ": ", What, "\r\n"]},
     put(outh, H2);
 
 

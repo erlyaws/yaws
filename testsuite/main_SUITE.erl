@@ -48,7 +48,8 @@ all() ->
      exhtml,
      accept_ranges,
      status_and_content_length,
-     encoded_url
+     encoded_url,
+     header_order
     ].
 
 groups() ->
@@ -803,6 +804,32 @@ encoded_url(Config) ->
     ?assertEqual(UrlPath, proplists:get_value("x-reqpath", Hdrs)),
     ?assertEqual(UrlPath, proplists:get_value("x-serverpath", Hdrs)),
     ?assertEqual(PathInfo, proplists:get_value("x-pathinfo", Hdrs)),
+    ok.
+
+%% RFC 7230 section 3.3.2 discusses header order, and its opening
+%% statement says that header order is not significant. But it then
+%% says that it's good practice to order general headers and control
+%% headers first. Yaws typically follows this good practice through
+%% its use of its #outh record, which contains "known" common headers
+%% and an "others" list for uncommon or unknown headers.
+%%
+%% This test verifies that Yaws doesn't unnecessarily reorder headers
+%% returned by an appmod. We use a header known to Yaws in the #outh
+%% record, Cache-Control, along with fabricated user headers, which
+%% are stored in the #outh "other" field, to verify ordering between
+%% "known" and "other" and also ordering among "other" headers.
+header_order(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
+    Url  = testsuite:make_url(http, "127.0.0.1", Port, "/header_order"),
+    {ok, {{_,200,_}, Hdrs, _}} = testsuite:http_get(Url),
+    {_, IndexedHdrs} = lists:foldl(fun({Hdr,Val}, {Index,Acc}) ->
+                                           {Index+1, [{Index,Hdr,Val}|Acc]}
+                                   end, {1,[]}, Hdrs),
+    {IndexX1, "x-test-header1", "1"} = lists:keyfind("x-test-header1", 2, IndexedHdrs),
+    {IndexX2, "x-test-header2", "2"} = lists:keyfind("x-test-header2", 2, IndexedHdrs),
+    ?assert(IndexX1 < IndexX2),
+    {Index1, "cache-control", _} = lists:keyfind("cache-control", 2, IndexedHdrs),
+    ?assert(Index1 < IndexX1),
     ok.
 
 %%====================================================================
