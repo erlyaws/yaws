@@ -250,10 +250,7 @@ compile_options() ->
     [binary, report, return_errors,
      {d, 'HAVE_SSL_HONOR_CIPHER_ORDER',    have_ssl_honor_cipher_order()},
      {d, 'HAVE_SSL_CLIENT_RENEGOTIATION',  have_ssl_client_renegotiation()},
-     {d, 'HAVE_SSL_SNI',                   have_ssl_sni()},
-     {d, 'HAVE_SSL_LOG_ALERT',             have_ssl_log_alert()},
-     {d, 'HAVE_SSL_HANDSHAKE',             have_ssl_handshake()},
-     {d, 'HAVE_START_ERROR_LOGGER',        have_start_error_logger()}
+     {d, 'HAVE_SSL_LOG_ALERT',             have_ssl_log_alert()}
     ]
         ++
         case have_erlang_now() of
@@ -263,6 +260,21 @@ compile_options() ->
         ++
         case have_rand() of
             true  -> [{d, 'HAVE_RAND'}];
+            false -> []
+        end
+        ++
+        case have_ssl_sni() of
+            true  -> [{d, 'HAVE_SSL_SNI'}];
+            false -> []
+        end
+        ++
+        case have_ssl_handshake() of
+            true  -> [{d, 'HAVE_SSL_HANDSHAKE'}];
+            false -> []
+        end
+        ++
+        case have_start_error_logger() of
+            true  -> [{d, 'HAVE_START_ERROR_LOGGER'}];
             false -> []
         end.
 
@@ -305,10 +317,7 @@ source() ->
            "",
            "have_ssl_honor_cipher_order()   -> ?HAVE_SSL_HONOR_CIPHER_ORDER.",
            "have_ssl_client_renegotiation() -> ?HAVE_SSL_CLIENT_RENEGOTIATION.",
-           "have_ssl_sni()                  -> ?HAVE_SSL_SNI.",
            "have_ssl_log_alert()            -> ?HAVE_SSL_LOG_ALERT.",
-           "have_ssl_handshake()            -> ?HAVE_SSL_HANDSHAKE.",
-           "have_start_error_logger()       -> ?HAVE_START_ERROR_LOGGER.",
            "",
            "-ifdef(HAVE_ERLANG_NOW).",
            "have_erlang_now() -> true.",
@@ -343,16 +352,20 @@ source() ->
            "-endif.",
            "",
            "-ifdef(HAVE_SSL_SNI).",
+           "have_ssl_sni() -> true.",
            "connection_information(Sock, Items) -> ",
            "    ssl:connection_information(Sock, Items).",
            "-else.",
+           "have_ssl_sni() -> false.",
            "connection_information(_, _) -> undefined.",
            "-endif.",
            "",
            "-ifdef(HAVE_SSL_HANDSHAKE).",
+           "have_ssl_handshake() -> true.",
            "ssl_handshake(Sock, Timeout) ->",
            "    ssl:handshake(Sock, Timeout).",
            "-else.",
+           "have_ssl_handshake() -> false.",
            "ssl_handshake(Sock, Timeout) ->",
            "    case ssl:ssl_accept(Sock, Timeout) of"
            "        ok -> {ok, Sock};",
@@ -360,6 +373,7 @@ source() ->
            "    end.",
            "-endif.",
            "-ifdef(HAVE_START_ERROR_LOGGER).",
+           "have_start_error_logger() -> true.",
            "start_error_logger() ->",
            "    case logger:get_handler_config(error_logger) of",
            "        {ok, _} -> ok;",
@@ -369,6 +383,7 @@ source() ->
            "                                 filters => []})",
            "    end.",
            "-else.",
+           "have_start_error_logger() -> false.",
            "start_error_logger() -> ok.",
            "-endif."
           ],
