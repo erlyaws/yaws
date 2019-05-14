@@ -176,7 +176,7 @@
          outh_get_content_encoding_header/0,
          outh_get_content_type/0,
          outh_get_vary_fields/0,
-         outh_serialize/0]).
+         outh_serialize/1]).
 
 -export([accumulate_header/1, headers_to_str/1,
          getuid/0,
@@ -1846,7 +1846,7 @@ outh_get_vary_fields() ->
         [_, Fields, _] -> split_sep(Fields, $,)
     end.
 
-outh_serialize() ->
+outh_serialize(Arg) ->
     H = get(outh),
     Code = case H#outh.status of
                undefined -> 200;
@@ -1908,7 +1908,7 @@ outh_serialize() ->
                                               cache_control=CacheControl,
                                               content_encoding=ContentEnc,
                                               vary=Vary},
-                                extra_response_headers(SC, OutH)
+                                extra_response_headers(Arg, SC, OutH)
                         end,
 
     Headers = [noundef(H#outh.connection),
@@ -1932,16 +1932,18 @@ outh_serialize() ->
                noundef(H#outh.other) | ExtraResponseHdrs],
     {StatusLine, Headers}.
 
-extra_response_headers(SC, OutH) ->
-    extra_response_headers(SC#sconf.extra_response_headers, OutH, []).
-extra_response_headers([], _, Acc) ->
+extra_response_headers(Arg, SC, OutH) ->
+    extra_response_headers(Arg, SC#sconf.extra_response_headers, OutH, []).
+
+extra_response_headers(_Arg, [], _, Acc) ->
     lists:reverse(Acc);
-extra_response_headers([{extramod, Mod}|Extras], OutH, Acc) ->
-    NewExtras = lists:reverse([[Hdr,": ",Value,"\r\n"] ||
-                                  {Hdr, Value} <- Mod:extra_response_headers(OutH)]),
-    extra_response_headers(Extras, OutH, NewExtras ++ Acc);
-extra_response_headers([Extra|Extras], OutH, Acc) ->
-    extra_response_headers(Extras, OutH, [Extra|Acc]).
+extra_response_headers(Arg, [{extramod, Mod}|Extras], OutH, Acc) ->
+    NewExtras = lists:reverse(
+                  [[Hdr,": ",Value,"\r\n"] ||
+                      {Hdr, Value} <- Mod:extra_response_headers(Arg, OutH)]),
+    extra_response_headers(Arg, Extras, OutH, NewExtras ++ Acc);
+extra_response_headers(Arg, [Extra|Extras], OutH, Acc) ->
+    extra_response_headers(Arg, Extras, OutH, [Extra|Acc]).
 
 noundef(undefined) -> [];
 noundef(Str)       -> Str.
