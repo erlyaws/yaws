@@ -1719,7 +1719,7 @@ not_implemented(CliSock, _IPPort, Req, Head) ->
 
 body_method(CliSock, IPPort, Req, Head) ->
     SC=get(sc),
-    ARG = make_arg(CliSock, IPPort, Head, Req, undefined),
+    ARG0 = make_arg(CliSock, IPPort, Head, Req, undefined),
     ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
     PPS = SC#sconf.partial_post_size,
     case yaws_api:get_header(Head, {lower, "expect"}) of
@@ -1727,7 +1727,7 @@ body_method(CliSock, IPPort, Req, Head) ->
             ok;
         Value ->
             case yaws:to_lower(Value) of
-                "100-continue" -> deliver_100(CliSock, ARG);
+                "100-continue" -> deliver_100(CliSock, ARG0);
                 _ -> ok
             end
     end,
