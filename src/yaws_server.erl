@@ -4338,9 +4338,18 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
                                   path = [GetPath, "/"]}
                             end;
                         _Err ->
-                            %% non-optimal, on purpose
-                            maybe_return_path_info(SC, Comps, RevFile,
-                                                   ArgDocroot, VirtualDir)
+                            %% Perhaps we have an encoded filename?
+                            DecodedPath = yaws_api:url_decode_with_encoding(
+                                            GetPath,
+                                            file:native_name_encoding()),
+                            case DecodedPath of
+                                GetPath ->
+                                    %% non-optimal, on purpose
+                                    maybe_return_path_info(SC, Comps, RevFile,
+                                                           ArgDocroot, VirtualDir);
+                                _ ->
+                                    do_url_type(SC, DecodedPath, ArgDocroot, VirtualDir)
+                            end
                     end;
                 {ok, {Mount, Mod}} ->
                     %% Remove appmod for this request to avoid an infinte loop
