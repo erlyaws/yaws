@@ -7,6 +7,7 @@
 all() ->
     [
      url_encode_decode,
+     parse_query,
      request_url
     ].
 
@@ -64,6 +65,23 @@ url_encode_decode(_Config) ->
                                  Decoded -> Decoded
                              end)
      end || {From, To} <- Tests],
+    ok.
+
+parse_query(_Config) ->
+    Arg1 = #arg{querydata = "",
+                req = #http_request{method = 'GET',
+                                    path = {abs_path, "/foo"},
+                                    version = {1,1}}},
+    ?assertEqual(yaws_api:parse_query(Arg1), []),
+    ParamName = "param",
+    ParamVal = "42",
+    Param = ParamName ++ "=" ++ ParamVal,
+    Arg2 = #arg{querydata = Param,
+                req = #http_request{method = 'GET',
+                                    path = {abs_path,
+                                            "/foo?" ++ Param},
+                                    version = {1,1}}},
+    ?assertEqual(yaws_api:parse_query(Arg2), [{ParamName,ParamVal}]),
     ok.
 
 %% ----

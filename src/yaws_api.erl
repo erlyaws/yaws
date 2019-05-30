@@ -162,14 +162,14 @@ headers_other(#headers{other = X}) -> X.
 %% parse the command line query data
 parse_query(Arg) ->
     case get(query_parse) of
-        undefined ->
+        {QueryData, Res} when Arg#arg.querydata == QueryData ->
+            Res;
+        _ ->
             Res = case Arg#arg.querydata of
                       [] -> [];
                       D  -> parse_post_data_urlencoded(D)
                   end,
-            put(query_parse, Res),
-            Res;
-        Res ->
+            put(query_parse, {Arg#arg.querydata, Res}),
             Res
     end.
 
