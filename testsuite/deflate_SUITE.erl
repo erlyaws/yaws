@@ -180,6 +180,7 @@ deflate_options_mime_types(Config) ->
     Port2 = testsuite:get_yaws_port(3, Config),
     Port3 = testsuite:get_yaws_port(4, Config),
     Port4 = testsuite:get_yaws_port(5, Config),
+    Port10 = testsuite:get_yaws_port(10, Config),
     Url1  = testsuite:make_url(http, "127.0.0.1", Port1, "/icons/yaws.gif"),
     Url2  = testsuite:make_url(http, "127.0.0.1", Port2, "/1000.txt"),
     Url3  = testsuite:make_url(http, "127.0.0.1", Port2, "/yaws.eps"),
@@ -188,8 +189,9 @@ deflate_options_mime_types(Config) ->
     Url6  = testsuite:make_url(http, "127.0.0.1", Port4, "/1000.txt"),
     Url7  = testsuite:make_url(http, "127.0.0.1", Port4, "/yaws.eps"),
     Url8  = testsuite:make_url(http, "127.0.0.1", Port4, "/binary_header/foo"),
+    Url10 = testsuite:make_url(http, "127.0.0.1", Port10, "/1000.txt"),
+    Url11  = testsuite:make_url(http, "127.0.0.1", Port10, "/yaws.eps"),
     GzHdr = {"Accept-Encoding", "gzip, deflate"},
-
 
     %% image/gif not compressed on localhost:yaws_port2
     {ok, {{_,200,_}, Hdrs1, _}} = testsuite:http_get(Url1, [GzHdr]),
@@ -224,6 +226,15 @@ deflate_options_mime_types(Config) ->
     {ok, {{_,200,_}, Hdrs8, Body8}} = testsuite:http_get(Url8, [GzHdr]),
     ?assertEqual("gzip", proplists:get_value("content-encoding", Hdrs8)),
     ?assert(is_binary(zlib:gunzip(Body8))),
+
+    %% Verify no Vary header from localhost:yaws_port10 when response
+    %% is txt, but Vary is present when response is eps.
+    {ok, {{_,200,_}, Hdrs10, _}} = testsuite:http_get(Url10, [GzHdr]),
+    ?assertNot(proplists:is_defined("content-encoding", Hdrs10)),
+    ?assertNot(proplists:is_defined("vary", Hdrs10)),
+    {ok, {{_,200,_}, Hdrs11, _}} = testsuite:http_get(Url11, [GzHdr]),
+    ?assertEqual("gzip", proplists:get_value("content-encoding", Hdrs11)),
+    ?assertEqual("Accept-Encoding", proplists:get_value("vary", Hdrs11)),
     ok.
 
 deflate_options_compress_size(Config) ->

@@ -3725,7 +3725,7 @@ decide_deflate(true, SC, Arg, Sz, Data, decide, Mode) ->
             Mime0     = yaws:outh_get_content_type(),
             [Mime1|_] = yaws:split_sep(Mime0, $;), %% Remove charset
             ?Debug("Check compression support: Mime-Type=~p~n", [Mime1]),
-            case compressible_mime_type(Mime1, DOpts) of
+            case yaws:compressible_mime_type(Mime1, DOpts) of
                 true ->
                     case (Arg =:= undefined
                           orelse
@@ -4868,7 +4868,7 @@ parse_user_path(DR, [H|T], User) ->
 
 deflate_q(true, SC, regular, Mime0) ->
     [Mime1|_] = yaws:split_sep(Mime0, $;), %% Remove charset
-    case compressible_mime_type(Mime1, SC#sconf.deflate_options) of
+    case yaws:compressible_mime_type(Mime1, SC#sconf.deflate_options) of
         true -> dynamic;
         false -> undefined
     end;
@@ -4886,27 +4886,6 @@ suffix_type(SC, L) ->
                 false -> {regular, mime_types:default_type(SC)}
             end
     end.
-
-
-compressible_mime_type(Mime, #deflate{mime_types=MimeTypes}) ->
-    case yaws:split_sep(Mime, $/) of
-        [Type, SubType] -> compressible_mime_type(Mime,Type,SubType,MimeTypes);
-        _               -> false
-    end.
-
-compressible_mime_type(_, _, _, all) ->
-    true;
-compressible_mime_type(_, _, _, []) ->
-    false;
-compressible_mime_type(_, Type, _, [{Type, all}|_]) ->
-    true;
-compressible_mime_type(_, Type, SubType, [{Type, SubType}|_]) ->
-    true;
-compressible_mime_type(Mime, _, _, [Mime|_]) ->
-    true;
-compressible_mime_type(Mime, Type, SubType, [_|Rest]) ->
-    compressible_mime_type(Mime, Type, SubType, Rest).
-
 
 
 flush(Sock, Sz, TransferEncoding) ->

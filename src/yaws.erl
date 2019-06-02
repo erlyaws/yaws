@@ -178,7 +178,8 @@
          outh_get_vary_fields/0,
          outh_serialize/1]).
 
--export([accumulate_header/1, headers_to_str/1,
+-export([compressible_mime_type/2,
+         accumulate_header/1, headers_to_str/1,
          getuid/0,
          user_to_home/1,
          uid_to_name/1,
@@ -1881,7 +1882,8 @@ outh_serialize(Arg) ->
 
     %% Add 'Accept-Encoding' in the 'Vary:' header if the compression is enabled
     %% or if the response is compressed _AND_ if the response has a non-empty
-    %% body.
+    %% body. If only certain mime types are specified in deflate_options, add the
+    %% Vary header only if the  response Content-Type is one of those mime types.
     SC = get(sc),
     Vary = case SC of
                undefined -> undefined;
@@ -1896,7 +1898,24 @@ outh_serialize(Arg) ->
                                     end,
                            case lists:any(Fun, Fields) of
                                true  -> H#outh.vary;
-                               false -> make_vary_header(["Accept-Encoding"|Fields])
+                               false ->
+                                   case noundef(H#outh.content_type) of
+                                       [] ->
+                                           make_vary_header(["Accept-Encoding"|Fields]);
+                                       ["Content-Type: ", ContentType|_] ->
+                                           case SC#sconf.deflate_options of
+                                               undefined ->
+                                                   make_vary_header(["Accept-Encoding"|Fields]);
+                                               DOpts ->
+                                                   [Mime|_] = yaws:split_sep(ContentType, $;),
+                                                   case compressible_mime_type(Mime, DOpts) of
+                                                       true ->
+                                                           make_vary_header(["Accept-Encoding"|Fields]);
+                                                       false ->
+                                                           H#outh.vary
+                                                   end
+                                           end
+                                   end
                            end;
                        _ ->
                            H#outh.vary
@@ -2067,6 +2086,25 @@ extra_response_headers([{erase,Hdr}|Extras], Arg, Status, Acc) ->
 
 noundef(undefined) -> [];
 noundef(Str)       -> Str.
+
+compressible_mime_type(Mime, #deflate{mime_types=MimeTypes}) ->
+    case yaws:split_sep(Mime, $/) of
+        [Type, SubType] -> compressible_mime_type(Mime,Type,SubType,MimeTypes);
+        _               -> false
+    end.
+
+compressible_mime_type(_, _, _, all) ->
+    true;
+compressible_mime_type(_, _, _, []) ->
+    false;
+compressible_mime_type(_, Type, _, [{Type, all}|_]) ->
+    true;
+compressible_mime_type(_, Type, SubType, [{Type, SubType}|_]) ->
+    true;
+compressible_mime_type(Mime, _, _, [Mime|_]) ->
+    true;
+compressible_mime_type(Mime, Type, SubType, [_|Rest]) ->
+    compressible_mime_type(Mime, Type, SubType, Rest).
 
 accumulate_header({X, erase}) ->
     erase_header(X);
