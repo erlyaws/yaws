@@ -7,6 +7,7 @@
 all() ->
     [
      url_encode_decode,
+     url_decode_with_encoding,
      parse_query,
      request_url
     ].
@@ -45,7 +46,7 @@ url_encode_decode(_Config) ->
              %% Reserved characters
              {"!*'();:@&=+$,/?%#[]", "%21%2A%27%28%29%3B%3A%40%26%3D%2B%24%2C%2F%3F%25%23%5B%5D"},
 
-             %% UTF-8 characters (/d/你好)
+             %% UTF-8 characters ("/d/你好")
              {[47,100,47,20320,22909], "%2Fd%2F%E4%BD%A0%E5%A5%BD"},
              {unicode:characters_to_binary([47,100,47,20320,22909]), "%2Fd%2F%E4%BD%A0%E5%A5%BD"}
             ],
@@ -66,6 +67,12 @@ url_encode_decode(_Config) ->
                              end)
      end || {From, To} <- Tests],
     ok.
+
+url_decode_with_encoding(_Config) ->
+    %% USTF-8 characters "디지털기기"
+    Input = [46356,51648,53560,44592,44592],
+    Result = yaws_api:url_decode_with_encoding(Input, utf8),
+    ?assertEqual(Input, Result).
 
 parse_query(_Config) ->
     Arg1 = #arg{querydata = "",

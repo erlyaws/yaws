@@ -796,8 +796,13 @@ url_decode_with_encoding(Path, Encoding) ->
     DecPath1 = case Encoding of
                    latin1 ->
                        DecPath;
-		   _ ->
+		   undefined ->
                        case unicode:characters_to_list(list_to_binary(DecPath)) of
+                           UTF8DecPath when is_list(UTF8DecPath) -> UTF8DecPath;
+                           _ -> DecPath
+                       end;
+		   _ ->
+                       case unicode:characters_to_list(DecPath, Encoding) of
                            UTF8DecPath when is_list(UTF8DecPath) -> UTF8DecPath;
                            _ -> DecPath
                        end

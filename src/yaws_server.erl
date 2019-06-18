@@ -4649,7 +4649,6 @@ maybe_return_dir(DR, GetPath,VirtualDir) ->
 
 
 maybe_return_path_info(SC, Comps, RevFile, DR, VirtualDir) ->
-
     case path_info_split(SC, Comps, {DR, VirtualDir}) of
         {not_a_script, error} ->
             %%can we use urltype.data to return more info?
