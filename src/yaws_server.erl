@@ -1215,6 +1215,18 @@ aloop(CliSock, {IP,Port}=IPPort, GS, Num) ->
                     deliver_431(CliSock, ReqTooMany, NoArg)
             end,
             {ok, Num+1};
+        {error, {multiple_content_length_headers, ReqMultiCL}} ->
+            %% RFC 7230 status code 400
+            ?Debug("Multiple Content-Length headers~n", []),
+            case pick_sconf(GS#gs.gconf, #headers{}, GS#gs.group) of
+                undefined ->
+                    deliver_400(CliSock, ReqMultiCL, NoArg);
+                SC ->
+                    put(sc, SC),
+                    put(outh, #outh{}),
+                    deliver_400(CliSock, ReqMultiCL, NoArg)
+            end,
+            {ok, Num+1};
         {Req0, H0} when Req0#http_request.method /= bad_request ->
             {Req, H} = fix_abs_uri(Req0, H0),
             ?Debug("{Req, H} = ~p~n", [{Req, H}]),

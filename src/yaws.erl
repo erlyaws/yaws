@@ -2753,9 +2753,17 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
             http_collect_headers(CliSock, Req, H#headers{keep_alive = X},
                                  SSL, Count+1);
         {ok, {http_header, _Num, 'Content-Length', _, X}} ->
-            http_collect_headers(CliSock, Req,
-                                 H#headers{content_length = X},SSL,
-                                 Count+1);
+            case H#headers.content_length of
+                undefined ->
+                    http_collect_headers(CliSock, Req,
+                                         H#headers{content_length = X},SSL,
+                                         Count+1);
+                PrevCL when PrevCL == X ->
+                    http_collect_headers(CliSock, Req, H, SSL, Count+1);
+                _ ->
+                    {error, {multiple_content_length_headers,
+                             Req#http_request{method=bad_request}}}
+            end;
         {ok, {http_header, _Num, 'Content-Type', _, X}} ->
             http_collect_headers(CliSock, Req,
                                  H#headers{content_type = X},SSL, Count+1);

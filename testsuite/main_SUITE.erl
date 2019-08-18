@@ -20,6 +20,8 @@ all() ->
      flush_small_post,
      flush_large_post,
      flush_chunked_post,
+     post_multi_different_content_length,
+     post_multi_same_content_length,
      flush_small_get,
      flush_large_get,
      flush_chunked_get,
@@ -319,6 +321,32 @@ flush_chunked_post(Config) ->
                   )),
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:receive_http_response(Sock)),
     ?assertEqual(ok, gen_tcp:close(Sock)),
+    ok.
+
+post_multi_different_content_length(Config) ->
+    Body = "body doesn't matter for this test",
+    Sz = integer_to_list(length(Body)),
+
+    Port  = testsuite:get_yaws_port(1, Config),
+    Url   = testsuite:make_url(http, "127.0.0.1", Port, "/posttest/"++Sz),
+    BadCL = "42",
+    ClHdr1 = {"Content-Length", Sz},
+    ClHdr2 = {"Content-Length", BadCL},
+    CT     = "binary/octet-stream",
+    ?assertMatch({ok, {{_,400,_}, _, _}}, testsuite:http_post(Url, [ClHdr1,ClHdr2], {CT, Body})),
+    ok.
+
+post_multi_same_content_length(Config) ->
+    File = filename:join(?tempdir(?MODULE), "www/1000.txt"),
+    {ok, FI}  = file:read_file_info(File),
+    Sz = integer_to_list(FI#file_info.size),
+
+    Port  = testsuite:get_yaws_port(1, Config),
+    Url   = testsuite:make_url(http, "127.0.0.1", Port, "/posttest/"++Sz),
+    ClHdr = {"Content-Length", Sz},
+    CT    = "binary/octet-stream",
+    Body  = {fun testsuite:post_file/1, {File,1024000}},
+    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_post(Url, [ClHdr,ClHdr], {CT, Body})),
     ok.
 
 flush_small_get(Config) ->
