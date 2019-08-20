@@ -2012,6 +2012,8 @@ extra_response_headers(Extras, Arg, Status) ->
                                            string:tokens(lists:flatten(Other), "\r\n"));
                           (undefined, Acc) ->
                                Acc;
+                          ([], Acc) ->
+                               Acc;
                           (Hdr, Acc) ->
                                {H,V} = split_header(strip_spaces(lists:flatten(Hdr))),
                                maps:put(H, V, Acc)
