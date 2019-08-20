@@ -2812,7 +2812,8 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
             http_collect_headers(CliSock, Req,
                                  H#headers{other=[X|H#headers.other]},
                                  SSL, Count+1);
-        _Err ->
+        Err ->
+            error_logger:format("Unhandled reply from yaws:do_recv(): ~p~n", [Err]),
             exit(normal)
 
     end;
