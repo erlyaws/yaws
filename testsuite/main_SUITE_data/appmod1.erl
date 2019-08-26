@@ -1,7 +1,9 @@
 -module(appmod1).
 -export([out/1]).
 
-out(Arg) ->
+-include("yaws_api.hrl").
+
+out(#arg{appmod_name=?MODULE}=Arg) ->
     case yaws_api:arg_server_path(Arg) of
         "/chained" ->
             put(appmod_stack, "appmod1[/chained]"),
