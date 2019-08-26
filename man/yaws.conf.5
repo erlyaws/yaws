@@ -1539,7 +1539,11 @@ keys and strings as header values
 
 .TP
 \fBArg\Fr
-An \fI#arg{}\fR record representing the request
+An \fI#arg{}\fR record representing the request. In cases where an
+\fIextramod\fR module is called following the invocation of an appmod,
+the \fI#arg{}\fR record field \fIappmod_name\fR indicates the name of
+the appmod that serviced the request, allowing the \fIextramod\fR to
+return extra HTTP headers appropriate for that appmod.
 
 .TP
 \fB{StatusCode,Version}\fR
