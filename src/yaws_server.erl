@@ -1743,10 +1743,22 @@ body_method(CliSock, IPPort, Req, Head) ->
                 _ -> ok
             end
     end,
-    Res = case {yaws:to_lower(Head#headers.transfer_encoding),
-                Head#headers.content_length} of
-              {"chunked", _} ->
+    TEHdrs = lists:reverse(yaws:split_sep(
+                             yaws:to_lower(Head#headers.transfer_encoding), $,)),
+    Res = case {TEHdrs, Head#headers.content_length} of
+              {["chunked"|_], _} ->
                   get_chunked_client_data(CliSock, yaws:is_ssl(SC));
+              {TE, _} when Head#headers.transfer_encoding /= undefined ->
+                  TEHdr = yaws:join_sep(lists:reverse(TE),","),
+                  case lists:member("chunked", TE) of
+                      true ->
+                          {error,
+                           "Transfer-Encoding header must specify \"chunked\" last: " ++
+                               TEHdr};
+                      false ->
+                          {error, "Unimplemented Transfer-Encoding: " ++ TEHdr,
+                           fun deliver_501/3}
+                  end;
               {_, undefined} ->
                   <<>>;
               {_, Len} ->
@@ -1763,6 +1775,9 @@ body_method(CliSock, IPPort, Req, Head) ->
                   end
           end,
     case Res of
+        {error, Reason, DeliverStatus} ->
+            error_logger:format("Invalid Request: ~p~n", [Reason]),
+            DeliverStatus(CliSock, Req, undefined);
         {error, Reason} ->
             error_logger:format("Invalid Request: ~p~n", [Reason]),
             deliver_400(CliSock, Req, undefined);
@@ -3882,9 +3897,11 @@ deflate_accumulated(Arg, Content, ContentLength, Mode) ->
 get_more_post_data(CliSock, PPS, ARG) ->
     SC = get(sc),
     N = SC#sconf.partial_post_size,
-    case {yaws:to_lower((ARG#arg.headers)#headers.transfer_encoding),
-          (ARG#arg.headers)#headers.content_length} of
-        {"chunked", _} ->
+    Hdrs = ARG#arg.headers,
+    TEHdrs = lists:reverse(yaws:split_sep(yaws:to_lower(
+                                            Hdrs #headers.transfer_encoding), $,)),
+    case {TEHdrs, Hdrs#headers.content_length} of
+        {["chunked"|_], _} ->
             get_chunked_client_data(CliSock, yaws:is_ssl(SC));
         {_, undefined} ->
             <<>>;
@@ -3903,7 +3920,6 @@ ut_read(UT) ->
     ?Debug("ut_read() UT.fullpath = ~p~n", [UT#urltype.fullpath]),
     CE = yaws:outh_get_content_encoding(),
     if
-
         (CE =:= identity) andalso is_binary(UT#urltype.data) ->
             UT#urltype.data;
         CE =:= identity ->

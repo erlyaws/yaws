@@ -95,14 +95,15 @@ out(#arg{state=#revproxy{}=RPState}=Arg)
     HdrsStr = yaws:headers_to_str(NewHdrs),
     case send(RPState, [ReqStr, "\r\n", HdrsStr, "\r\n"]) of
         ok ->
-            case yaws:to_lower(Hdrs#headers.transfer_encoding) of
-                "chunked" ->
+            TEHdrs = lists:reverse(yaws:split_sep(
+                                     yaws:to_lower(Hdrs#headers.transfer_encoding), $,)),
+            case TEHdrs of
+                ["chunked"|_] ->
                     ?Debug("Request content is chunked~n", []),
                     out(Arg#arg{state=RPState#revproxy{state=sendchunk}});
                 _ ->
                     out(Arg#arg{state=RPState#revproxy{state=sendcontent}})
             end;
-
         {error, Reason} ->
             ?Debug("TCP error: ~p~n", [Reason]),
             case Reason of

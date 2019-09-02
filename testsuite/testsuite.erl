@@ -22,7 +22,9 @@
          post_file/1,
 
          add_yaws_server/2, delete_yaws_server/1, reset_yaws_servers/0,
-         yaws_servers/0, make_url/4, get_yaws_port/2
+         yaws_servers/0, make_url/4, get_yaws_port/2,
+
+         sock_connect/5, sock_close/1
         ]).
 
 
