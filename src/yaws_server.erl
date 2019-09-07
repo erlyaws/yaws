@@ -1964,7 +1964,8 @@ handle_request(CliSock, ARG, N) ->
                                           data = {yaws_revproxy, []}},
                             ARG1 = ARG#arg{server_path = DecPath,
                                            querydata   = QueryString,
-                                           state       = PP},
+                                           state       = PP,
+                                           appmod_name = yaws_revproxy},
                             handle_normal_request(CliSock, ARG1, UT,
                                                   SC#sconf.authdirs, N)
                     end
@@ -1991,7 +1992,7 @@ handle_normal_request(CliSock, ARG, UT, Authdirs, N) ->
             %% appmod_prepath with prepath.
             case UT#urltype.type of
                 appmod ->
-                    {_Mod, PathInfo} = UT#urltype.data,
+                    {Mod, PathInfo} = UT#urltype.data,
                     Appmoddata = case PathInfo of
                                      undefined ->
                                          undefined;
@@ -2002,7 +2003,8 @@ handle_normal_request(CliSock, ARG, UT, Authdirs, N) ->
                                                          PathInfo)
                                  end,
                     ARG2 = ARG1#arg{appmoddata     = Appmoddata,
-                                    appmod_prepath = UT#urltype.dir};
+                                    appmod_prepath = UT#urltype.dir,
+                                    appmod_name    = Mod};
                 _ ->
                     ARG2 = ARG1
             end,
@@ -2014,7 +2016,6 @@ handle_normal_request(CliSock, ARG, UT, Authdirs, N) ->
                            path = ARG1#arg.server_path},
             handle_ut(CliSock, ARG1, UT1, N)
     end.
-
 
 set_auth_user(ARG, User) ->
     H = ARG#arg.headers,

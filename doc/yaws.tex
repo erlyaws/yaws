@@ -605,12 +605,11 @@ request such as:
 
 \begin{verbatim}
 
-
 -record(arg, {
           clisock,        % the socket leading to the peer client
           client_ip_port, % {ClientIp, ClientPort} tuple
           headers,        % headers
-          req,            % request
+          req,            % request (possibly rewritten)
           orig_req,       % original request
           clidata,        % The client data (as a binary in POST requests)
           server_path,    % The normalized server path
@@ -633,9 +632,11 @@ request such as:
                           %  ie http://some.host/<prepath>/<script-point>/d/e
                           % where <script-point> is an appmod mount point,
                           % or .yaws,.php,.cgi,.fcgi etc script file.
-          pathinfo        % Set to '/d/e' when calling c.yaws for the request
+          pathinfo,       % Set to '/d/e' when calling c.yaws for the request
                           % http://some.host/a/b/c.yaws/d/e
                           %  equiv of cgi PATH_INFO
+          appmod_name     % name of the appmod handling a request,
+                          % or undefined if not applicable
          }).
 
 -record(http_request, {method,
@@ -1934,7 +1935,7 @@ detect a \verb+Content-Length+ header.
   \verb+out/1+. All bindings can then be used in the rest of
   \Yaws\ code (in HTML source and within \verb+erl+ tags).  In HTML
   source \verb+%%Key%%+ is expanded to \verb+Value+ and within
-  \verb+erl+ tags \\ \verb+yaws_api:binding(Key)+ (which calls
+  \verb+erl+ tags \verb+yaws_api:binding(Key)+ (which calls
   \verb+error+ if no such binding exists) or
   \verb+yaws_api:binding_find(Key)+ (which returns \verb+undefined+ if
   no such binding exists) can be used to extract \verb+Value+, and
@@ -3761,7 +3762,13 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
                       keys and strings as header values
 
                     \item \verb+Arg+ --- an \verb+#arg{}+ record
-                      representing the request
+                      representing the request. In cases where an
+                      \verb+extramod+ module is called following the
+                      invocation of an appmod, the \verb+#arg{}+
+                      record field \verb+appmod_name+ indicates the
+                      name of the appmod that serviced the request,
+                      allowing the \verb+extramod+ to return extra
+                      HTTP headers appropriate for that appmod.
 
                     \item \verb+{StatusCode,Version}+ --- a tuple
                       where \verb+StatusCode+ is the numeric HTTP
