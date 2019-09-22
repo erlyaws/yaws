@@ -47,49 +47,64 @@ PortEnv0 = case lists:keyfind(port_env, 1, Cfg0) of
                {port_env, PEnv} -> PEnv;
                false            -> []
            end,
+DisablePam = os:getenv("YAWS_DISABLE_PAM"),
 PortSpecs = case lists:keyfind(port_specs, 1, Cfg0) of
                 {port_specs, PSpecs} ->
-                    case os:getenv("YAWS_DISABLE_PAM") of
+                    case DisablePam of
                         false ->
                             PSpecs;
                         _ ->
                             lists:keydelete("priv/lib/epam.so", 1, PSpecs)
                     end;
-                false                -> []
+                false -> []
             end,
 
 OS = os:type(),
 
 DefaultUsrIncludeSecurity = "/usr/include/security",
 UsrIncludeSecurity =
-    case OS of
-        {unix, darwin} ->
-            Result =
-                fun R(Port, Acc) ->
-                        receive
-                            {Port, {data, L}} ->
-                                R(Port, [L|Acc]);
-                            {Port, {exit_status, 0}} ->
-                                {ok, lists:flatten(lists:reverse(Acc))};
-                            {Port, {exit_status, Fail}} ->
-                                {error, {Fail, lists:flatten(lists:reverse(Acc))}}
-                        end
-                end,
-            Run =
-                fun(Cmd) ->
-                        Port = open_port({spawn, Cmd}, [exit_status, stderr_to_stdout]),
-                        Result(Port, [])
-                end,
-            {ok, PlatDir} = Run("/usr/bin/xcrun --show-sdk-platform-path"),
-            FindCmd = "/usr/bin/find " ++ string:strip(PlatDir, right, $\n) ++
-                " -type d -name MacOSX.sdk",
-            {ok, FindResult} = Run(FindCmd),
-            SdkDir = string:strip(FindResult, right, $\n),
-            SdkDir ++ DefaultUsrIncludeSecurity;
-        _ ->
-            DefaultUsrIncludeSecurity
+    case DisablePam of
+        false ->
+            case OS of
+                {unix, darwin} ->
+                    case filelib:is_dir(DefaultUsrIncludeSecurity) of
+                        true ->
+                            DefaultUsrIncludeSecurity;
+                        false ->
+                            Result =
+                                fun R(Port, Acc) ->
+                                        receive
+                                            {Port, {data, L}} ->
+                                                R(Port, [L|Acc]);
+                                            {Port, {exit_status, 0}} ->
+                                                {ok, lists:flatten(lists:reverse(Acc))};
+                                            {Port, {exit_status, Fail}} ->
+                                                {error, {Fail,
+                                                         lists:flatten(lists:reverse(Acc))}}
+                                        end
+                                end,
+                            Run =
+                                fun(Cmd) ->
+                                        Port = open_port({spawn, Cmd},
+                                                         [exit_status, stderr_to_stdout]),
+                                        Result(Port, [])
+                                end,
+                            {ok, PlatDir} = Run("/usr/bin/xcrun --show-sdk-platform-path"),
+                            FindCmd = "/usr/bin/find " ++ string:strip(PlatDir, right, $\n) ++
+                                " -type d -name MacOSX.sdk",
+                            {ok, FindResult} = Run(FindCmd),
+                            SdkDir = string:strip(FindResult, right, $\n),
+                            SdkDir ++ DefaultUsrIncludeSecurity
+                    end;
+                _ ->
+                    DefaultUsrIncludeSecurity
+            end;
+        _ -> ""
     end,
-PortEnv1 = PortEnv0 ++ [{"CFLAGS", "$CFLAGS -I" ++ UsrIncludeSecurity}],
+PortEnv1 = case UsrIncludeSecurity of
+               "" -> PortEnv0;
+               _ -> PortEnv0 ++ [{"CFLAGS", "$CFLAGS -I" ++ UsrIncludeSecurity}]
+           end,
 
 Cfg1 = lists:keyreplace(erl_opts,   1, Cfg0, {erl_opts,   ErlOpts}),
 Cfg2 = lists:keyreplace(port_env,   1, Cfg1, {port_env,   PortEnv1}),

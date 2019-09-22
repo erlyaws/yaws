@@ -70,6 +70,7 @@ yaws_logs/
 .eunit/*
 .rebar/*
 yaws-*.tar.gz
+compile_commands.json
 applications/yapp/doc/edoc-info
 applications/yapp/doc/erlang.png
 applications/yapp/doc/index.html
