@@ -12,5 +12,5 @@ start_link() ->
 
 init([]) ->
     YBed = {ybed, {ybed,start,[]},
-            permanent,2000,worker,[ybed]},
+            temporary,2000,worker,[ybed]},
     {ok,{{one_for_all,0,1}, [YBed]}}.

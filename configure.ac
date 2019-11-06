@@ -74,10 +74,8 @@ AC_SUBST(EXTRAINCLUDE)
 
 AC_ARG_ENABLE([pam],
         AC_HELP_STRING([--disable-pam],
-            [disable pam auth]),
-        enable_pam="$enableval",
-        enable_pam="yes")
-AM_CONDITIONAL(WITH_EPAM, [test "x${enable_pam}" = "xyes"])
+            [disable pam auth]))
+AM_CONDITIONAL(WITH_EPAM, [test "x${enable_pam}" != "xno"])
 
 APPDEPS=
 AC_ARG_ENABLE(crypto,
@@ -172,6 +170,28 @@ dialyzer(1) not found. Fill the DIALYZER variable with dialyzer(1) path if
 you want to use it.])
 fi
 
+dnl ct_run(1).
+AC_ARG_VAR([CT_RUN], [Erlang/OTP Program used for starting Common Test [autodetected]])
+
+if test "x${CT_RUN}" = "x"; then
+   if test "x${with_erlang}" = "x"; then
+      AC_PATH_PROG([CT_RUN], [ct_run],,)
+   else
+        erl_path="${with_erlang}/bin"
+        AC_PATH_PROG([CT_RUN], [ct_run],,
+            [$erl_path$PATH_SEPARATOR$PATH])
+   fi
+else
+    AC_MSG_CHECKING([for ct_run])
+    AC_MSG_RESULT([$CT_RUN])
+fi
+
+if test "x${CT_RUN}" = "x"; then
+    AC_MSG_WARN([
+ct_run(1) not found. Fill the CT_RUN variable with ct_run(1) path if
+you want to use it.])
+fi
+
 dnl Declare ERL_LIBS as precious.
 AC_ARG_VAR([ERL_LIBS], [Erlang/OTP applications search path [none]])
 
@@ -183,80 +203,10 @@ dnl Get ERTS version.
 ERLANG_CHECK_ERTS
 ERLANG_CHECK_RELEASE
 
-dnl Require Erlang >=R14B02 (ERTS 5.8.3) is required.
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [5.8.3],
-    [],
-    [AC_MSG_ERROR([Erlang R14B02 or higher is required but only Erlang $ERLANG_RELEASE was found!])])
-
-dnl Unicode module was buggy for R14B04 and previous (ERTS <= 5.8.5)
-AC_MSG_CHECKING([for buggy unicode module])
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [le], [5.8.5],
-    [bad_unicode="yes"],
-    [bad_unicode="no"])
-AC_MSG_RESULT([${bad_unicode}])
-
-HAVE_BAD_UNICODE=false
-if test "x${bad_unicode}" = "xyes"; then
-        HAVE_BAD_UNICODE=true
-fi
-AM_CONDITIONAL(HAVE_BAD_UNICODE, [test "x$HAVE_BAD_UNICODE" = "xtrue"])
-AC_SUBST(HAVE_BAD_UNICODE)
-
-dnl filelib:wildcard/2 was buggy for R15B03 and previous (ERTS <= 5.9.3)
-AC_MSG_CHECKING([for buggy filelib:wildcard/2 function])
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [le], [5.9.3],
-    [bad_wildcard="yes"],
-    [bad_wildcard="no"])
-AC_MSG_RESULT([${bad_wildcard}])
-
-HAVE_BAD_WILDCARD=false
-if test "x${bad_wildcard}" = "xyes"; then
-        HAVE_BAD_WILDCARD=true
-fi
-AM_CONDITIONAL(HAVE_BAD_WILDCARD, [test "x$HAVE_BAD_WILDCARD" = "xtrue"])
-AC_SUBST(HAVE_BAD_WILDCARD)
-
-dnl Check for support of honor_cipher_order SSL option (ERTS >= 6.0)
-AC_MSG_CHECKING([for support of honor_cipher_order SSL option])
+dnl Require Erlang >=R17 (ERTS 6.0) is required.
 AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [6.0],
-    [ssl_honor_cipher_order="yes"],
-    [ssl_honor_cipher_order="no"])
-AC_MSG_RESULT([${ssl_honor_cipher_order}])
-
-HAVE_SSL_HONOR_CIPHER_ORDER=false
-if test "x${ssl_honor_cipher_order}" = "xyes"; then
-        HAVE_SSL_HONOR_CIPHER_ORDER=true
-fi
-AM_CONDITIONAL(HAVE_SSL_HONOR_CIPHER_ORDER, [test "x$HAVE_SSL_HONOR_CIPHER_ORDER" = "xtrue"])
-AC_SUBST(HAVE_SSL_HONOR_CIPHER_ORDER)
-
-dnl Check for support of client_renegotiation SSL option (ERTS >= 7.0)
-AC_MSG_CHECKING([for support of client_renegotiation SSL option])
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [7.0],
-    [ssl_client_renegotiation="yes"],
-    [ssl_client_renegotiation="no"])
-AC_MSG_RESULT([${ssl_client_renegotiation}])
-
-HAVE_SSL_CLIENT_RENEGOTIATION=false
-if test "x${ssl_client_renegotiation}" = "xyes"; then
-        HAVE_SSL_CLIENT_RENEGOTIATION=true
-fi
-AM_CONDITIONAL(HAVE_SSL_CLIENT_RENEGOTIATION, [test "x$HAVE_SSL_CLIENT_RENEGOTIATION" = "xtrue"])
-AC_SUBST(HAVE_SSL_CLIENT_RENEGOTIATION)
-
-dnl Check for support of log_alert SSL option (ERTS >= 5.10.3)
-AC_MSG_CHECKING([for support of log_alert SSL option])
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [5.10.3],
-    [ssl_log_alert="yes"],
-    [ssl_log_alert="no"])
-AC_MSG_RESULT([${ssl_log_alert}])
-
-HAVE_SSL_LOG_ALERT=false
-if test "x${ssl_log_alert}" = "xyes"; then
-        HAVE_SSL_LOG_ALERT=true
-fi
-AM_CONDITIONAL(HAVE_SSL_LOG_ALERT, [test "x$HAVE_SSL_LOG_ALERT" = "xtrue"])
-AC_SUBST(HAVE_SSL_LOG_ALERT)
+    [],
+    [AC_MSG_ERROR([Erlang R17 or higher is required but only Erlang $ERLANG_RELEASE was found!])])
 
 dnl Determine directories for installation.
 if test "x${prefix}" != "xNONE" -a "x${ERLANG_INSTALL_LIB_DIR}" = "x"; then
@@ -280,32 +230,34 @@ AC_SUBST(YAPP_VSN)
 AC_ERLANG_SUBST_INSTALL_LIB_SUBDIR(yapp, ${YAPP_VSN})
 
 
-
-
 dnl ------------------------------------------------------------------
 dnl Erlang applicatons.
 dnl ------------------------------------------------------------------
 AC_ERLANG_CHECK_LIB([kernel],,   [AC_MSG_ERROR(["kernel" Erlang application not found.])])
 AC_ERLANG_CHECK_LIB([stdlib],,   [AC_MSG_ERROR(["stdlib" Erlang application not found.])])
-AC_ERLANG_CHECK_LIB([sasl],,     [AC_MSG_ERROR(["compiler" Erlang application not found.])])
-AC_ERLANG_CHECK_LIB([erts],,     [AC_MSG_ERROR(["compiler" Erlang application not found.])])
+AC_ERLANG_CHECK_LIB([sasl],,     [AC_MSG_ERROR(["sasl" Erlang application not found.])])
+AC_ERLANG_CHECK_LIB([erts],,     [AC_MSG_ERROR(["erts" Erlang application not found.])])
 AC_ERLANG_CHECK_LIB([compiler],, [AC_MSG_ERROR(["compiler" Erlang application not found.])])
 AC_ERLANG_CHECK_LIB([crypto],,   [AC_MSG_ERROR(["crypto" Erlang application not found.])])
 AC_ERLANG_CHECK_LIB([xmerl],,    [AC_MSG_ERROR(["xmerl" Erlang application not found.])])
 
-AC_ERLANG_CHECK_LIB([public_key],,[AC_MSG_WARN(["public_key" Erlang application not found.
+AC_ERLANG_CHECK_LIB([public_key],, [AC_MSG_WARN(["public_key" Erlang application not found.
 It could be required to run Yaws or its testsuites.])])
-AC_ERLANG_CHECK_LIB([ssl],,       [AC_MSG_WARN(["ssl" Erlang application not found.
+AC_ERLANG_CHECK_LIB([ssl],,        [AC_MSG_WARN(["ssl" Erlang application not found.
 It could be required to run Yaws or its testsuites.])])
-AC_ERLANG_CHECK_LIB([mnesia],,    [AC_MSG_WARN(["mnesia" Erlang application not found.
+AC_ERLANG_CHECK_LIB([mnesia],,     [AC_MSG_WARN(["mnesia" Erlang application not found.
 It could be required to run Yaws or its testsuites.])])
-AC_ERLANG_CHECK_LIB([eunit],,     [AC_MSG_WARN(["eunit" Erlang application not found.
+AC_ERLANG_CHECK_LIB([eunit],,      [AC_MSG_WARN(["eunit" Erlang application not found.
 It could be required to run Yaws or its testsuites.])])
 AC_ERLANG_CHECK_LIB([erlsom],,     [AC_MSG_WARN(["erlsom" Erlang application not found.
 It could be required to run Yaws or its testsuites.])])
 AC_ERLANG_CHECK_LIB([xmlrpc],,     [AC_MSG_WARN(["xmlrpc" Erlang application not found.
 It could be required to run Yaws or its testsuites.])])
-AC_ERLANG_CHECK_LIB([inets],,     [AC_MSG_WARN(["xmlrpc" Erlang application not found.
+AC_ERLANG_CHECK_LIB([inets],,      [AC_MSG_WARN(["inets" Erlang application not found.
+It could be required to run Yaws or its testsuites.])])
+AC_ERLANG_CHECK_LIB([tools],,      [AC_MSG_WARN(["tools" Erlang application not found.
+It could be required to run Yaws or its testsuites.])])
+AC_ERLANG_CHECK_LIB([common_test],,[AC_MSG_WARN(["common_test" Erlang application not found.
 It could be required to run Yaws or its testsuites.])])
 
 cross_compiling=$tmp_cross_compiling
@@ -336,20 +288,43 @@ case "$host_os" in
         AC_MSG_RESULT([$host_os])
 
         dnl Sigh, pam headers do not seem to have a standard place. On FreeBSD and
-        dnl Linuces I've seen they are in /usr/include/security, but MacOS has them
-        dnl in /usr/include/pam.
+        dnl Linuxes I've seen they are in /usr/include/security, but MacOS has them
+        dnl in /usr/include/pam, /usr/include/security, or under a special SDK directory.
         EPAM_CFLAGS=
+        EPAM_INCLUDE=
         if test "x$enable_pam" != "xno"; then
             AC_CHECK_HEADERS([security/pam_appl.h pam/pam_appl.h pam_appl.h],[break])
+            case "$host_os" in
+                 darwin*)
+                    if ! test -d /usr/include; then
+                       AC_CHECK_PROGS([XCRUN], [xcrun])
+                       if test "x$XCRUN" != "x"; then
+                          AC_MSG_CHECKING([for $XCRUN --show-sdk-platform-path])
+                          platform_dir=`$XCRUN --show-sdk-platform-path`
+                          sdk_dir=`find $platform_dir -type d -name MacOSX.sdk 2>/dev/null`
+                          if test "x$sdk_dir" != "x"; then
+                             AC_MSG_RESULT([$sdk_dir])
+                             EPAM_INCLUDE="$sdk_dir"
+                          else
+                             AC_MSG_RESULT([no])
+                          fi
+                       fi
+                    fi
+                    ;;
+
+                 *)
+                    ;;
+            esac
             if test "x$ac_cv_header_security_pam_appl_h" = "xyes" ; then
-                EPAM_CFLAGS="-I/usr/include/security"
+                EPAM_CFLAGS='-I$(EPAM_INCLUDE)/usr/include/security'
             elif test "x$ac_cv_header_pam_pam_appl_h" = "xyes" ; then
-                EPAM_CFLAGS="-I/usr/include/pam"
+                EPAM_CFLAGS='-I$(EPAM_INCLUDE)/usr/include/pam'
             elif test "x$ac_cv_header_pam_appl_h" = "xno" ; then
                 AC_MSG_ERROR("Could not find pam_appl.h required for pam authentication")
             fi
             AC_CHECK_LIB(pam,pam_start,[],[AC_MSG_ERROR("Could not find pam library")])
         fi
+        AC_SUBST(EPAM_INCLUDE)
         AC_SUBST(EPAM_CFLAGS)
         ;;
 esac
@@ -357,76 +332,6 @@ esac
 AM_CONDITIONAL(CYGWIN, [test "x$CYGWIN" = "xtrue"])
 AM_CONDITIONAL(MINGW, [test "x$MINGW" = "xtrue"])
 AM_CONDITIONAL(WINDOWS, [test "x$MINGW" = "xtrue" -o "x$CYGWIN" = "xtrue"])
-
-dnl check sendfile support:
-dnl   - HAVE_SENDFILE: say if sendfile syscall is supported
-dnl   - HAVE_ERLANG_SENDFILE: say if file:sendfile/5 exists
-
-HAVE_SENDFILE=false
-HAVE_ERLANG_SENDFILE=false
-
-dnl Disabled because the yaws driver is not compiled for windows
-if test "$WINDOWS" = true; then
-        AC_MSG_CHECKING([for sendfile])
-        AC_MSG_RESULT([no])
-else
-        AC_LANG(C)
-        AC_CHECK_LIB([c],[sendfile],[HAVE_SENDFILE=true])
-fi
-
-
-AC_MSG_CHECKING([for file:sendfile/5])
-file_sendfile=`"${ERL}" -noshell -eval 'code:ensure_loaded(file), io:format("~p~n",[[erlang:function_exported(file,sendfile,5)]]), erlang:halt().' | tail -1`
-if test "$file_sendfile" = true; then
-        AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [5.9.1],
-            [AC_MSG_RESULT([yes])
-             HAVE_ERLANG_SENDFILE=true],
-            [AC_MSG_RESULT([no])])
-else
-        AC_MSG_RESULT([no])
-fi
-AM_CONDITIONAL(HAVE_SENDFILE, [test "x$HAVE_SENDFILE" = "xtrue"])
-AM_CONDITIONAL(HAVE_ERLANG_SENDFILE, [test "x$HAVE_ERLANG_SENDFILE" = "xtrue"])
-AC_SUBST(HAVE_SENDFILE)
-AC_SUBST(HAVE_ERLANG_SENDFILE)
-
-AC_MSG_CHECKING([for crypto:hash/2])
-HAVE_CRYPTO_HASH=false
-crypto_hash=`"${ERL}" -noshell -eval 'code:ensure_loaded(crypto), io:format("~p~n",[[erlang:function_exported(crypto,hash,2)]]), erlang:halt().' | tail -1`
-if test "$crypto_hash" = true; then
-        HAVE_CRYPTO_HASH=true
-        AC_MSG_RESULT([yes])
-else
-        AC_MSG_RESULT([no])
-fi
-AM_CONDITIONAL(HAVE_CRYPTO_HASH, [test "x$HAVE_CRYPTO_HASH" = "xtrue"])
-AC_SUBST(HAVE_CRYPTO_HASH)
-
-AC_MSG_CHECKING([for inet:parse_strict_address/1])
-HAVE_INET_PARSE_STRICT_ADDRESS=false
-inet_parse_strict_address=`"${ERL}" -noshell -eval 'code:ensure_loaded(inet), io:format("~p~n",[[erlang:function_exported(inet, parse_strict_address,1)]]), erlang:halt().' | tail -1`
-if test "$inet_parse_strict_address" = true; then
-        HAVE_INET_PARSE_STRICT_ADDRESS=true
-        AC_MSG_RESULT([yes])
-else
-        AC_MSG_RESULT([no])
-fi
-AM_CONDITIONAL(HAVE_INET_PARSE_STRICT_ADDRESS, [test "x$INET_PARSE_STRICT_ADDRESS" = "xtrue"])
-AC_SUBST(HAVE_INET_PARSE_STRICT_ADDRESS)
-
-dnl erlang:now/0 is deprecated in erts 7.0 and newer
-AC_MSG_CHECKING([for erlang:now/0])
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [lt], [7.0],
-    [have_erlang_now="yes"],
-    [have_erlang_now="no"])
-AC_MSG_RESULT([${have_erlang_now}])
-
-HAVE_ERLANG_NOW=false
-if test "x${have_erlang_now}" = "xyes"; then
-        HAVE_ERLANG_NOW=true
-fi
-AM_CONDITIONAL(HAVE_ERLANG_NOW, [test "x$HAVE_ERLANG_NOW" = "xtrue"])
-AC_SUBST(HAVE_ERLANG_NOW)
 
 dnl ------------------------------------------------------------------
 dnl Check for programs used during Yaws compilation/installation
@@ -480,6 +385,11 @@ fi
 dnl ------------------------------------------------------------------
 dnl Final path substitutions
 dnl ------------------------------------------------------------------
+AM_CONDITIONAL(HAVE_TS_TOOLS, [(test "x${CT_RUN}"                    != "x")         &&
+                               (test "${ERLANG_LIB_DIR_common_test}" != "not found") &&
+                               (test "${ERLANG_LIB_DIR_eunit}"       != "not found") &&
+                               (test "${ERLANG_LIB_DIR_inets}"       != "not found") &&
+                               (test "${ERLANG_LIB_DIR_tools}"       != "not found")])
 
 AC_ARG_VAR([confdir], [Default Yaws configuration directory ['$(sysconfdir)/yaws']])
 if test "x${confdir}" = "x"; then
@@ -522,7 +432,15 @@ fi
 dnl ------------------------------------------------------------------
 dnl Autoconf output.
 dnl ------------------------------------------------------------------
-AC_SUBST([CONFIG_STATUS_DEPENDENCIES], ['$(top_srcdir)/vsn.mk $(top_srcdir)/applications/yapp/vsn.mk'])
+AC_SUBST([CONFIG_STATUS_DEPENDENCIES],
+    ['$(top_srcdir)/vsn.mk                              \
+      $(top_srcdir)/erlang_deps.mk                      \
+      $(top_srcdir)/include.mk                          \
+      $(top_srcdir)/applications/yapp/vsn.mk            \
+      $(top_srcdir)/testsuite/run_common_test.in        \
+      $(top_srcdir)/testsuite/yaws.coverspec.in         \
+      $(top_srcdir)/testsuite/cover_to_html.sh.in       \
+      $(top_srcdir)/testsuite/analyze_coverdata.escript.in'])
 
 AC_CONFIG_FILES([
         yaws.pc
@@ -541,23 +459,11 @@ AC_CONFIG_FILES([
         examples/include/Makefile
         www/code/Makefile
         www/shoppingcart/Makefile
-        test/Makefile
-        test/src/Makefile
-        test/eunit/Makefile
-        test/t1/Makefile
-        test/t2/Makefile
-        test/t3/Makefile
-        test/t4/Makefile
-        test/t5/Makefile
-        test/t6/Makefile
-        test/t7/Makefile
-        test/t8/Makefile
-        test/t9/Makefile
-        test/t10/Makefile
-        test/t11/Makefile
-        test/t12/Makefile
-        test/t13/Makefile
-        test/t14/Makefile
+
+        testsuite/Makefile
+        testsuite/${PACKAGE_NAME}.coverspec
+        testsuite/testsuite.hrl
+
         applications/chat/Makefile
         applications/chat/src/Makefile
         applications/chat/ebin/Makefile
@@ -573,30 +479,12 @@ AC_CONFIG_FILES([
 
         src/yaws_charset.hrl
         src/yaws_appdeps.hrl
-
-        test/eunit//subconfig_DATA/yaws_absolute.conf
-        test/eunit//subconfig_DATA/yaws_absolute_no_wildcard.conf
-        test/eunit//subconfig_DATA/global_absolute_subconfig.conf
-        test/eunit//subconfig_DATA/global_absolute_no_wildcard_subconfig.conf
-        test/support/yaws.conf
-        test/t1/yaws.conf
-        test/t2/yaws.conf
-        test/t3/yaws.conf
-        test/t4/yaws.conf
-        test/t5/yaws.conf
-        test/t6/no_docroot_appmod.conf
-        test/t6/no_docroot_fwdproxy.conf
-        test/t6/no_docroot_redirect.conf
-        test/t6/no_docroot_revproxy.conf
-        test/t7/yaws.conf
-        test/t8/yaws.conf
-        test/t9/yaws.conf
-        test/t10/yaws.conf
-        test/t11/yaws.conf
-        test/t12/yaws.conf
-        test/t13/yaws.conf
-        test/t14/yaws.conf
 ])
+
+AC_CONFIG_FILES([testsuite/run_common_test],           [chmod +x testsuite/run_common_test])
+AC_CONFIG_FILES([testsuite/cover_to_html.sh],          [chmod +x testsuite/cover_to_html.sh])
+AC_CONFIG_FILES([testsuite/analyze_coverdata.escript], [chmod +x testsuite/analyze_coverdata.escript])
+
 AC_CONFIG_FILES([scripts/make-release],                  [chmod +x scripts/make-release])
 AC_CONFIG_FILES([applications/wiki/scripts/addFile],     [chmod +x applications/wiki/scripts/addFile])
 AC_CONFIG_FILES([applications/wiki/scripts/getPassword], [chmod +x applications/wiki/scripts/getPassword])
@@ -643,4 +531,7 @@ COLORED_ECHO([ %BErlang lib dir%b:           ${ERLANG_LIB_DIR}])
 COLORED_ECHO([ %BErlang compiler%b:          ${ERLC}])
 COLORED_ECHO([ %BErlang emulator%b:          ${ERL}])
 COLORED_ECHO([ %BWindows Erlang emulator%b:  ${WERL}])
+COLORED_ECHO([ %BErlang interpreter%b:       ${ESCRIPT}])
+COLORED_ECHO([ %BErlang dialyzer tool%b:     ${DIALYZER}])
+COLORED_ECHO([ %BErlang ct_run tool%b:       ${CT_RUN}])
 echo

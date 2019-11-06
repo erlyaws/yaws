@@ -1,7 +1,23 @@
 sudo: false
 
+dist: trusty
 language: erlang
 otp_release:
+  - 22.0
+  - 21.3
+  - 21.2
+  - 21.1
+  - 21.0
+  - 20.2
+  - 20.1
+  - 20.0
+  - 19.3
+  - 19.2
+  - 19.1
+  - 19.0
+  - 18.3
+  - 18.2.1
+  - 18.2
   - 18.1
   - 18.0
   - 17.5
@@ -9,15 +25,10 @@ otp_release:
   - 17.3
   - 17.1
   - 17.0
-  - R16B03-1
-  - R16B03
-  - R16B02
-  - R16B01
-  - R15B03
-  - R15B02
-  - R15B01
-  - R14B04
-  - R14B03
+
+env:
+  global:
+      - secure: "Jk1W4GtZ8rIg0fBsPepNMwipt1m6wkgYGJbuDiGUAXp8o0HD92aBCO95z4YvcYM9TxnAgpgxtUrlDXrZe5WhyAapJTW7HVm3JcsMpAfJAnGDrDeDrkI+A5V/I+ynFZ1F6F/2dKNQWJV3ieuwRojjH/dc3AVqYMWND0oAD/YWwkg="
 
 addons:
   apt:
@@ -30,6 +41,7 @@ addons:
       - texlive-font-utils
       - texlive-extra-utils
       - ghostscript
+      - cadaver
 
 install:
   - autoreconf -vfi
@@ -38,7 +50,7 @@ before_script:
   - ./configure
 
 script:
-  - make distcheck -j4 V=1
+  - make check -j4 V=1
 
 after_script:
-  - rebar get-deps compile
+  - ./scripts/upload-travis-build-artifacts

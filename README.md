@@ -7,9 +7,7 @@ Prepare build
 
 Get and install an Erlang system (http://www.erlang.org).
 
-**To compile Yaws, Erlang/OTP R14B02 or higher is required.**
-
-**For SSL-enabled instances, Erlang/OTP R16B01 or higher is required in order to allow only specific protocol versions.**
+**To compile Yaws, Erlang/OTP R17 or higher is required.**
 
 If you've cloned the source from github and you want to build using autotools,
 note there is no ./configure script in the source, so create one:
@@ -40,6 +38,12 @@ To build the documentation (optional), you also need to install:
 On Ubuntu/debian this is pretty much equal to:
 
     $> apt-get build-dep yaws
+
+On MacOS and OS X, be sure the necessary Xcode command-line tools and
+development environment are set up correctly by running the following
+command:
+
+    xcode-select --install
 
 Finally, to run the testsuites, yaws need to install:
 

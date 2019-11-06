@@ -45,10 +45,8 @@
 %%                                       and the * (or Header) and Text
 %%                                       are not significant.
 
--export([format/3, collect_wiki_link/1]).
--compile(export_all).
-
--import(lists, [member/2, map/2, reverse/1, reverse/2]).
+-export([format/3, format_url/2, collect_wiki_link/1, emb/4,
+         enc_month/1, enc_day/1]).
 
 -record(env, {node,
               f,
@@ -77,7 +75,7 @@ blank_line(_)         -> no.
 format_txt([$\n|T], Env, L, Doc) ->
     case blank_line(T) of
         {yes, T1} ->
-            {Env1, L1} = clear_line(Env, reverse("<p>\n", L)),
+            {Env1, L1} = clear_line(Env, lists:reverse("<p>\n", L)),
             format_txt(T1, Env1, L1, Doc);
         no ->
             after_nl(T, Env, [$\n|L], Doc)
@@ -110,30 +108,30 @@ format_txt("''" ++ T, Env, L, Doc) ->
 format_txt("~" ++ T, Env, L, Doc) ->
     {Word, T1} = collect_wiki_link(T),
     Link = format_wiki_word(Word, Env),
-    format_txt(T1, Env, reverse(Link, L), Doc);
+    format_txt(T1, Env, lists:reverse(Link, L), Doc);
 format_txt("http://" ++ T, Env, L, Doc) ->
     {Url, T1} = collect_url(T, []),
     Txt = format_external_url(Url),
-    format_txt(T1, Env, reverse(Txt, L), Doc);
+    format_txt(T1, Env, lists:reverse(Txt, L), Doc);
 format_txt("https://" ++ T, Env, L, Doc) ->
     {Url, T1} = collect_url(T, []),
     Txt = format_external_url(Url, "https://"),
-    format_txt(T1, Env, reverse(Txt, L), Doc);
+    format_txt(T1, Env, lists:reverse(Txt, L), Doc);
 format_txt("ftp://" ++ T, Env, L, Doc) ->
     {Url, T1} = collect_url(T, []),
     Txt = format_external_url(Url, "ftp://"),
-    format_txt(T1, Env, reverse(Txt, L), Doc);
+    format_txt(T1, Env, lists:reverse(Txt, L), Doc);
 format_txt("slideshow:" ++ T, Env, L, Doc) ->
     {X, T1} = collect_wiki_link(T),
     Txt = "<a href='slideShow.yaws?node="++wiki:str2urlencoded(Env#env.node)++
         "&next=1'>"++yaws_api:htmlize(X)++ "</a>",
-    format_txt(T1, Env, reverse(Txt, L), Doc);
+    format_txt(T1, Env, lists:reverse(Txt, L), Doc);
 format_txt("mailto:" ++ T, Env, L, Doc) ->
     {X, T1} = collect_mail(T, []),
     Txt = "<a href='mailto:" ++ wiki:str2urlencoded(X) ++ "'>" ++
         "<img border=0 src='WikiPreferences.files/mailto.png'>"
         ++ yaws_api:htmlize(X) ++ "</a>",
-    format_txt(T1, Env, reverse(Txt, L), Doc);
+    format_txt(T1, Env, lists:reverse(Txt, L), Doc);
 format_txt("mailtoall:" ++ T, Env, L, Doc) ->
     {Name, T1} = collect_wiki_link(T),
     case get_mailto(Doc, []) of
@@ -142,44 +140,44 @@ format_txt("mailtoall:" ++ T, Env, L, Doc) ->
         [F|Rs] ->
             Recipients = [F | [[$,|R] || R <- Rs]],
             Txt = "<a href='mailto:" ++ wiki:str2urlencoded(Recipients) ++ "'>" ++ yaws_api:htmlize(Name) ++ "</a>",
-            format_txt(T1, Env, reverse(Txt, L), Doc)
+            format_txt(T1, Env, lists:reverse(Txt, L), Doc)
     end;
 format_txt("<?plugin " ++ T, Env, L, Doc) ->
     Page = Env#env.node,
     {Txt, T1} = plugin(T, Page),
-    format_txt(T1, Env, reverse(Txt, L), Doc);
+    format_txt(T1, Env, lists:reverse(Txt, L), Doc);
 format_txt([H|T], Env, L, Doc) ->
-    format_txt(T, Env, reverse(yaws_api:htmlize([H]))++L, Doc);
+    format_txt(T, Env, lists:reverse(yaws_api:htmlize([H]))++L, Doc);
 format_txt([], Env, L, _Doc) ->
     {_, L1} = clear_line(Env, L),
-    {Env, reverse(L1)}.
+    {Env, lists:reverse(L1)}.
 
 format_wiki_word(Str, Env) ->
     F = Env#env.f,
     F({wikiLink, Str}).
 
-collect_url(S=[$ |_], L)      -> {reverse(L), S};
-collect_url(S=[$,|_], L)      -> {reverse(L), S};
-collect_url(S=[$)|_], L)      -> {reverse(L), S};
-collect_url(S=[$.,$ |_], L)   -> {reverse(L), S};
-collect_url(S=[$.,$\n|_], L)  -> {reverse(L), S};
-collect_url(S=[$.,$\r|_], L)  -> {reverse(L), S};
-collect_url(S=[$.,$\t|_], L)  -> {reverse(L), S};
-collect_url(S=[$\n|_], L)     -> {reverse(L), S};
+collect_url(S=[$ |_], L)      -> {lists:reverse(L), S};
+collect_url(S=[$,|_], L)      -> {lists:reverse(L), S};
+collect_url(S=[$)|_], L)      -> {lists:reverse(L), S};
+collect_url(S=[$.,$ |_], L)   -> {lists:reverse(L), S};
+collect_url(S=[$.,$\n|_], L)  -> {lists:reverse(L), S};
+collect_url(S=[$.,$\r|_], L)  -> {lists:reverse(L), S};
+collect_url(S=[$.,$\t|_], L)  -> {lists:reverse(L), S};
+collect_url(S=[$\n|_], L)     -> {lists:reverse(L), S};
 collect_url([H|T], L)         -> collect_url(T, [H|L]);
-collect_url([], L)            -> {reverse(L), []}.
+collect_url([], L)            -> {lists:reverse(L), []}.
 
-collect_mail(S=[$ |_], L)      -> {reverse(L), S};
-collect_mail(S=[$)|_], L)      -> {reverse(L), S};
-collect_mail(S=[$<|_], L)      -> {reverse(L), S};
-collect_mail(S=[$>|_], L)      -> {reverse(L), S};
-collect_mail(S=[$.,$ |_], L)   -> {reverse(L), S};
-collect_mail(S=[$.,$\n|_], L)  -> {reverse(L), S};
-collect_mail(S=[$.,$\r|_], L)  -> {reverse(L), S};
-collect_mail(S=[$.,$\t|_], L)  -> {reverse(L), S};
-collect_mail(S=[$\n|_], L)     -> {reverse(L), S};
+collect_mail(S=[$ |_], L)      -> {lists:reverse(L), S};
+collect_mail(S=[$)|_], L)      -> {lists:reverse(L), S};
+collect_mail(S=[$<|_], L)      -> {lists:reverse(L), S};
+collect_mail(S=[$>|_], L)      -> {lists:reverse(L), S};
+collect_mail(S=[$.,$ |_], L)   -> {lists:reverse(L), S};
+collect_mail(S=[$.,$\n|_], L)  -> {lists:reverse(L), S};
+collect_mail(S=[$.,$\r|_], L)  -> {lists:reverse(L), S};
+collect_mail(S=[$.,$\t|_], L)  -> {lists:reverse(L), S};
+collect_mail(S=[$\n|_], L)     -> {lists:reverse(L), S};
 collect_mail([H|T], L)         -> collect_mail(T, [H|L]);
-collect_mail([], L)            -> {reverse(L), []}.
+collect_mail([], L)            -> {lists:reverse(L), []}.
 
 get_mailto([$\\,_C|T], L) ->
     get_mailto(T, L);
@@ -207,7 +205,7 @@ format_external_url(F, Scheme) ->
     end.
 
 is_graphic(F) ->
-    member(filename:extension(F), [".gif", ".GIF", ".jpg", ".JPG"]).
+    lists:member(filename:extension(F), [".gif", ".GIF", ".jpg", ".JPG"]).
 
 after_nl([${,$\n|T], Env, L, Doc)  -> pre(T, Env, L, Doc);
 %after_nl([${,${|T], Env, L, Doc)   -> emb(T, Env, L, Doc);
@@ -220,25 +218,25 @@ after_nl(T, Env, L, Doc)           -> format_txt(T, Env, L, Doc).
 
 hr(T, Env, L, Doc) ->
     {Env1, L1} = clear_line(Env, L),
-    L2 = reverse("<hr>\n", L1),
+    L2 = lists:reverse("<hr>\n", L1),
     format_txt(T, Env1, L2, Doc).
 
 pre(T, Env, L, Doc) ->
     {Env1, L1} = clear_line(Env, L),
-    L2 = reverse("<pre>\n", L1),
+    L2 = lists:reverse("<pre>\n", L1),
     pre1(T, Env1, L2, Doc).
 
 pre1([$\r,$}|T], Env, L, Doc) ->
-    L1 = reverse("\n</pre>\n", L),
+    L1 = lists:reverse("\n</pre>\n", L),
     format_txt(T, Env, L1, Doc);
 pre1([$\n,$}|T], Env, L, Doc) ->
-    L1 = reverse("\n</pre>\n", L),
+    L1 = lists:reverse("\n</pre>\n", L),
     format_txt(T, Env, L1, Doc);
 pre1([$<|T], Env, L, Doc) ->
-    L1 = reverse("&lt;", L),
+    L1 = lists:reverse("&lt;", L),
     pre1(T, Env, L1, Doc);
 pre1([$>|T], Env, L, Doc) ->
-    L1 = reverse("&gt;", L),
+    L1 = lists:reverse("&gt;", L),
     pre1(T, Env, L1, Doc);
 pre1([H|T], Env, L, Doc) ->
     pre1(T, Env, [H|L], Doc);
@@ -259,15 +257,15 @@ eregion(T0, Env, L, Doc) ->
     {Region, T2} = collect_region($], T1, []),
     case Expired of
         error ->
-            L1 = reverse("ERROR: bad expires date entry - "++DateStr++". "
-                         "The date should be on the form \"3 Jan 2003 "
-                         "00:00:00\".", L),
+            L1 = lists:reverse("ERROR: bad expires date entry - "++DateStr++". "
+                               "The date should be on the form \"3 Jan 2003 "
+                               "00:00:00\".", L),
             format_txt(T2, Env, L1, Doc);
         true ->
             format_txt(T2, Env, L, Doc);
         false ->
             {Env1, RTxt} = format_txt(Region, Env, [], Doc),
-            L1 = reverse(RTxt, L),
+            L1 = lists:reverse(RTxt, L),
             format_txt(T2, Env1, L1, Doc)
     end.
 
@@ -417,11 +415,11 @@ parse_time(Time) ->
 
 note(T, Env, L, Doc) ->
     {Env1, L1} = clear_line(Env, L),
-    L2 = reverse(note_start(), L1),
+    L2 = lists:reverse(note_start(), L1),
     note1(T, Env1, L2, Doc).
 
 note1([$\n,$]|T], Env, L, Doc) ->
-    L1 = reverse(note_end(), L),
+    L1 = lists:reverse(note_end(), L),
     format_txt(T, Env, L1, Doc);
 note1([H|T], Env, L, Doc) ->
     note1(T, Env, [H|L], Doc);
@@ -441,10 +439,10 @@ mk_list(T, Env, L, Doc) ->
     T2 = skip_blanks(T1),
     case T2 of
         [$*|T3] ->
-            format_txt(T3,Env1,reverse("<li>", L1), Doc);
+            format_txt(T3,Env1,lists:reverse("<li>", L1), Doc);
         [$[|T4] ->
             {Env2, L2} = open_dl(Env1, L1),
-            add_dl(T4, Env2, reverse("<dt>", L2), Doc);
+            add_dl(T4, Env2, lists:reverse("<dt>", L2), Doc);
         _ ->
            format_txt(T2,Env1,L1, Doc)
     end.
@@ -455,17 +453,17 @@ skip_blanks([$\t|T]) -> skip_blanks(T);
 skip_blanks(X)       -> X.
 
 open_dl(Env, L) when Env#env.dl == false ->
-    {Env#env{dl=true}, reverse("<dl>", L)};
+    {Env#env{dl=true}, lists:reverse("<dl>", L)};
 open_dl(Env, L) -> {Env, L}.
 
 add_dl([$]|T], Env, L, Doc) ->
-    format_txt(T, Env, reverse("</dt><dd>", L), Doc);
+    format_txt(T, Env, lists:reverse("</dt><dd>", L), Doc);
 add_dl([$\n|T], Env, L, Doc) ->
-    format_txt(T, Env, reverse("</dt><dd>", L), Doc);
+    format_txt(T, Env, lists:reverse("</dt><dd>", L), Doc);
 add_dl([H|T], Env, L, Doc) ->
     add_dl(T, Env, [H|L], Doc);
 add_dl([], Env, L, Doc) ->
-    format_txt([], Env, reverse("</dt>", L), Doc).
+    format_txt([], Env, lists:reverse("</dt>", L), Doc).
 
 count_indent_levels([$-|T], N) -> count_indent_levels(T, N+1);
 count_indent_levels(T, N)      -> {N, T}.
@@ -473,18 +471,18 @@ count_indent_levels(T, N)      -> {N, T}.
 adjust_indents(Env, K, L) when Env#env.n == K ->
     {Env, L};
 adjust_indents(Env, K, L) when Env#env.n > K ->
-    adjust_indents(Env#env{n=Env#env.n-1}, K, reverse("</ul>", L));
+    adjust_indents(Env#env{n=Env#env.n-1}, K, lists:reverse("</ul>", L));
 adjust_indents(Env, K, L) when K > Env#env.n ->
-    adjust_indents(Env#env{n=Env#env.n+1}, K, reverse("<ul>", L)).
+    adjust_indents(Env#env{n=Env#env.n+1}, K, lists:reverse("<ul>", L)).
 
 clear_line(Env, L) when Env#env.f1==true ->
-    clear_line(Env#env{f1=false}, reverse("</b>", L));
+    clear_line(Env#env{f1=false}, lists:reverse("</b>", L));
 clear_line(Env,  L) when Env#env.f2==true ->
-    clear_line(Env#env{f2=false}, reverse("</i>", L));
+    clear_line(Env#env{f2=false}, lists:reverse("</i>", L));
 clear_line(Env,  L) when Env#env.f3==true ->
-    clear_line(Env#env{f3=false}, reverse("</tt>", L));
+    clear_line(Env#env{f3=false}, lists:reverse("</tt>", L));
 clear_line(Env, L) when Env#env.dl==true->
-    clear_line(Env#env{dl=false}, reverse("</dl>", L));
+    clear_line(Env#env{dl=false}, lists:reverse("</dl>", L));
 clear_line(Env, L) when Env#env.n /= 0 ->
     {Env1, L1} = adjust_indents(Env,0,L),
     clear_line(Env1, L1);
@@ -492,33 +490,33 @@ clear_line(Env, L) ->
     {Env, L}.
 
 char_style(u, Env, L) when Env#env.u == false ->
-    {Env#env{u=true},reverse("<u>", L)};
+    {Env#env{u=true},lists:reverse("<u>", L)};
 char_style(u, Env, L) when Env#env.u == true ->
-    {Env#env{u=false},reverse("</u>", L)};
+    {Env#env{u=false},lists:reverse("</u>", L)};
 char_style(b, Env, L) when Env#env.f1 == false ->
-    {Env#env{f1=true},reverse("<b>", L)};
+    {Env#env{f1=true},lists:reverse("<b>", L)};
 char_style(b, Env, L) when Env#env.f1 == true ->
-    {Env#env{f1=false},reverse("</b>", L)};
+    {Env#env{f1=false},lists:reverse("</b>", L)};
 char_style(i, Env, L) when Env#env.f2 == false ->
-    {Env#env{f2=true},reverse("<i>", L)};
+    {Env#env{f2=true},lists:reverse("<i>", L)};
 char_style(i, Env, L) when Env#env.f2 == true ->
-    {Env#env{f2=false},reverse("</i>", L)};
+    {Env#env{f2=false},lists:reverse("</i>", L)};
 char_style(tt, Env, L) when Env#env.f3==false ->
-    {Env#env{f3=true},reverse("<tt>", L)};
+    {Env#env{f3=true},lists:reverse("<tt>", L)};
 char_style(tt, Env, L) when Env#env.f3==true ->
-    {Env#env{f3=false},reverse("</tt>", L)};
+    {Env#env{f3=false},lists:reverse("</tt>", L)};
 char_style(h1, Env, L) when Env#env.h1==true ->
-    {Env#env{h1=false},reverse("</h1>", L)};
+    {Env#env{h1=false},lists:reverse("</h1>", L)};
 char_style(h2, Env, L) when Env#env.h2==true ->
-    {Env#env{h2=false},reverse("</h2>", L)};
+    {Env#env{h2=false},lists:reverse("</h2>", L)};
 char_style(h3, Env, L) when Env#env.h3==true ->
-    {Env#env{h3=false},reverse("</h3>", L)};
+    {Env#env{h3=false},lists:reverse("</h3>", L)};
 char_style(h1, Env, L) when Env#env.h1==false ->
-    {Env#env{h1=true},reverse("<h1>", L)};
+    {Env#env{h1=true},lists:reverse("<h1>", L)};
 char_style(h2, Env, L) when Env#env.h2==false ->
-    {Env#env{h2=true},reverse("<h2>", L)};
+    {Env#env{h2=true},lists:reverse("<h2>", L)};
 char_style(h3, Env, L) when Env#env.h3==false ->
-    {Env#env{h3=true},reverse("<h3>", L)}.
+    {Env#env{h3=true},lists:reverse("<h3>", L)}.
 
 collect_wiki_link([$"|X]) ->
     collect_wiki_link(X, [], true);
@@ -526,7 +524,7 @@ collect_wiki_link(X) ->
     collect_wiki_link(X, [], false).
 
 collect_wiki_link([$"|T], L, true) ->
-    {reverse(L), T};
+    {lists:reverse(L), T};
 collect_wiki_link([Any|T], L, true) ->
     collect_wiki_link(T, [Any|L], true);
 collect_wiki_link([H|T], L, Quoted) when $A =< H, H =< $Z ->
@@ -536,14 +534,14 @@ collect_wiki_link([H|T], L, Quoted) when $a =< H, H =< $z ->
 collect_wiki_link([H|T], L, Quoted) when $0 =< H, H =< $9 ->
     collect_wiki_link(T, [H|L], Quoted);
 collect_wiki_link(S=[H|T], L, Quoted) ->
-    case member(H, "äÄöÖåÅ") of
+    case lists:member(H, "äÄöÖåÅ") of
         true ->
             collect_wiki_link(T, [H|L], Quoted);
         false ->
-            {reverse(L), S}
+            {lists:reverse(L), S}
     end;
 collect_wiki_link(T, L, _Quoted) ->
-    {reverse(L), T}.
+    {lists:reverse(L), T}.
 
 %% Plugin implementation.
 %% The plugin is a special syntaxe in Wiki pages:

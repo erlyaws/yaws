@@ -1,2 +1,0 @@
-subconfigdir = @abs_srcdir@/global_subconfigdir.d
-subconfig    = @abs_builddir@/global_absolute_no_wildcard_subconfig.conf

@@ -13,8 +13,6 @@
 
 -include_lib("kernel/include/file.hrl").
 
--import(lists, [member/2, map/2]).
-
 format_wiki_files(_Page, _FileDir, [], _Root) -> [];
 format_wiki_files(Page, FileDir, Files, Root) ->
     format_wiki_files(Page, FileDir, Files, Root, "Attached files:").
@@ -98,7 +96,7 @@ i2s(X) ->
     integer_to_list(X).
 
 pp({wik,L}, F, Node, Root) ->
-    map(fun(I) -> pp(I, F, Node, Root) end, L);
+    lists:map(fun(I) -> pp(I, F, Node, Root) end, L);
 pp({txt,_,Str}, F, Node, _Root) ->
     wiki_format_txt:format(Str, F, Node);
 pp({open,Tag,Str}, F, Node, Root) ->

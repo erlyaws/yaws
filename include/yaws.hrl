@@ -18,10 +18,7 @@
 -define(GC_FAIL_ON_BIND_ERR,                32).
 -define(GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,  64).
 -define(GC_USE_FDSRV,                      128).
--define(GC_USE_OLD_SSL,                    256).
--define(GC_USE_ERLANG_SENDFILE,            512).
--define(GC_USE_YAWS_SENDFILE,             1024).
-
+-define(GC_USE_ERLANG_SENDFILE,            256).
 
 
 -define(GC_DEF, ?GC_FAIL_ON_BIND_ERR).
@@ -38,12 +35,8 @@
         ((GC#gconf.flags band ?GC_FAIL_ON_BIND_ERR) /= 0)).
 -define(gc_pick_first_virthost_on_nomatch(GC),
         ((GC#gconf.flags band ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH) /= 0)).
--define(gc_use_old_ssl(GC),
-        ((GC#gconf.flags band ?GC_USE_OLD_SSL) /= 0)).
 -define(gc_use_erlang_sendfile(GC),
         ((GC#gconf.flags band ?GC_USE_ERLANG_SENDFILE) /= 0)).
--define(gc_use_yaws_sendfile(GC),
-        ((GC#gconf.flags band ?GC_USE_YAWS_SENDFILE) /= 0)).
 
 -define(gc_set_tty_trace(GC, Bool),
         GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_TTY_TRACE, Bool)}).
@@ -59,13 +52,8 @@
 -define(gc_set_pick_first_virthost_on_nomatch(GC, Bool),
         GC#gconf{flags = yaws:flag(GC#gconf.flags,
                                    ?GC_PICK_FIRST_VIRTHOST_ON_NOMATCH,Bool)}).
--define(gc_set_use_old_ssl(GC, Bool),
-        GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_USE_OLD_SSL,Bool)}).
 -define(gc_set_use_erlang_sendfile(GC, Bool),
         GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_USE_ERLANG_SENDFILE,Bool)}).
--define(gc_set_use_yaws_sendfile(GC, Bool),
-        GC#gconf{flags = yaws:flag(GC#gconf.flags,?GC_USE_YAWS_SENDFILE,Bool)}).
-
 
 %% global conf
 -record(gconf,{
@@ -91,7 +79,7 @@
 
           large_file_chunk_size = 10240,
           mnesia_dir            = [],
-          log_wrap_size         = 10000000, % wrap logs after 10M
+          log_wrap_size         = 1000000,  % wrap logs after 1M
           cache_refresh_secs    = 30,       % seconds  (auto zero when debug)
           include_dir           = [],       % list of inc dirs for .yaws files
           phpexe = "/usr/bin/php-cgi",      % cgi capable php executable
@@ -106,38 +94,22 @@
           %% automatically setup in yaws_soap_srv init.
           soap_srv_mods = [],
 
-          ysession_mod = yaws_session_server, % storage module for ysession
           acceptor_pool_size = 8,             % size of acceptor proc pool
 
           mime_types_info,                    % undefined | #mime_types_info{}
           nslookup_pref = [inet],             % [inet | inet6]
+          ysession_mod = yaws_session_server, % storage module for ysession
+          ysession_cookiegen,                 % ysession cookie generation module
           ysession_idle_timeout = 2*60*1000,  % default 2 minutes
-          ysession_long_timeout = 60*60*1000  % default 1 hour
+          ysession_long_timeout = 60*60*1000, % default 1 hour
+
+          sni = disable % disable | enable | strict
          }).
-
-
--ifdef(HAVE_SSL_HONOR_CIPHER_ORDER).
--define(HONOR_CIPHER_ORDER, true).
--else.
--define(HONOR_CIPHER_ORDER, undefined).
--endif.
-
--ifdef(HAVE_SSL_CLIENT_RENEGOTIATION).
--define(SSL_CLIENT_RENEGOTIATION, true).
--else.
--define(SSL_CLIENT_RENEGOTIATION, undefined).
--endif.
-
--ifdef(HAVE_SSL_LOG_ALERT).
--define(SSL_LOG_ALERT, {log_alert, false}).
--else.
--define(SSL_LOG_ALERT, false).
--endif.
 
 -record(ssl, {
           keyfile,
           certfile,
-          verify = 0,
+          verify = verify_none,
           fail_if_no_peer_cert,
           depth = 1,
           password,
@@ -146,28 +118,35 @@
           ciphers,
           cachetimeout,
           secure_renegotiate = false,
-          client_renegotiation = ?SSL_CLIENT_RENEGOTIATION,
-          honor_cipher_order = ?HONOR_CIPHER_ORDER,
-          protocol_version
+          client_renegotiation = case yaws_dynopts:have_ssl_client_renegotiation() of
+                                     true  -> true;
+                                     false -> undefined
+                                 end,
+          honor_cipher_order = case yaws_dynopts:have_ssl_honor_cipher_order() of
+                                   true  -> true;
+                                   false -> undefined
+                               end,
+          protocol_version,
+          require_sni = false,
+          eccs
          }).
 
 
 %% flags for sconfs
--define(SC_ACCESS_LOG,             1).
--define(SC_AUTH_LOG,               2).
--define(SC_ADD_PORT,               4).
--define(SC_STATISTICS,             8).
--define(SC_TILDE_EXPAND,          16).
--define(SC_DIR_LISTINGS,          32).
--define(SC_DEFLATE,               64).
--define(SC_DIR_ALL_ZIP,          128).
--define(SC_DAV,                  512).
--define(SC_FCGI_TRACE_PROTOCOL, 1024).
--define(SC_FCGI_LOG_APP_ERROR,  2048).
--define(SC_FORWARD_PROXY,       4096).
--define(SC_AUTH_SKIP_DOCROOT,   8192).
-
-
+-define(SC_ACCESS_LOG,              (1 bsl 0)).
+-define(SC_AUTH_LOG,                (1 bsl 1)).
+-define(SC_ADD_PORT,                (1 bsl 2)).
+-define(SC_STATISTICS,              (1 bsl 3)).
+-define(SC_TILDE_EXPAND,            (1 bsl 4)).
+-define(SC_DIR_LISTINGS,            (1 bsl 5)).
+-define(SC_DEFLATE,                 (1 bsl 6)).
+-define(SC_DIR_ALL_ZIP,             (1 bsl 7)).
+-define(SC_DAV,                     (1 bsl 8)).
+-define(SC_FCGI_TRACE_PROTOCOL,     (1 bsl 9)).
+-define(SC_FCGI_LOG_APP_ERROR,      (1 bsl 10)).
+-define(SC_FORWARD_PROXY,           (1 bsl 11)).
+-define(SC_AUTH_SKIP_DOCROOT,       (1 bsl 12)).
+-define(SC_STRIP_UNDEF_BINDINGS,    (1 bsl 13)).
 
 -define(SC_DEF, ?SC_ACCESS_LOG bor ?SC_ADD_PORT bor ?SC_AUTH_LOG).
 
@@ -197,7 +176,8 @@
         (((SC)#sconf.flags band ?SC_FORWARD_PROXY) /= 0)).
 -define(sc_auth_skip_docroot(SC),
         (((SC)#sconf.flags band ?SC_AUTH_SKIP_DOCROOT) /= 0)).
-
+-define(sc_strip_undef_bindings(SC),
+        (((SC)#sconf.flags band ?SC_STRIP_UNDEF_BINDINGS) /= 0)).
 
 -define(sc_set_access_log(SC, Bool),
         SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_ACCESS_LOG, Bool)}).
@@ -226,7 +206,11 @@
 -define(sc_set_forward_proxy(SC, Bool),
         SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_FORWARD_PROXY, Bool)}).
 -define(sc_set_auth_skip_docroot(SC, Bool),
-        SC#sconf{flags = yaws:flag(SC#sconf.flags,?SC_AUTH_SKIP_DOCROOT,Bool)}).
+        SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_AUTH_SKIP_DOCROOT,
+                                   Bool)}).
+-define(sc_set_strip_undef_bindings(SC, Bool),
+        SC#sconf{flags = yaws:flag(SC#sconf.flags, ?SC_STRIP_UNDEF_BINDINGS,
+                                   Bool)}).
 
 
 %% server conf
@@ -280,7 +264,8 @@
           deflate_options,              % undefined | #deflate{}
           mime_types_info,              % undefined | #mime_types_info{}
                                         % if undefined, global config is used
-          dispatch_mod                  % custom dispatch module
+          dispatch_mod,                 % custom dispatch module
+          extra_response_headers = []   % configured extra response headers
          }).
 
 
@@ -308,8 +293,7 @@
                                           {"application", "postscript"},
                                           {"application", "pdf"},
                                           {"application", "x-dvi"},
-                                          {"application", "javascript"},
-                                          {"application", "x-javascript"}
+                                          {"application", "javascript"}
                                          ]).
 
 %% Internal record used to initialize a zlib stream for compression
@@ -387,6 +371,7 @@
           transfer_encoding,
           www_authenticate,
           vary,
+          accept_ranges,
           other                % misc other headers
          }).
 
@@ -407,12 +392,20 @@
           conf,
           runmod,
           embedded,
-          id
+          id,
+          encoding=latin1
          }).
 
 %% Typically used in error printouts as in:
 %% error_logger:format("Err ~p at ~p~n", [Reason, ?stack()])
--define(stack(), try throw(1) catch _:_ -> erlang:get_stacktrace() end).
+-ifdef(OTP_RELEASE).
+-define(stack(), try throw(1) catch _:_:ST -> ST end).
+-define(MAKE_ST(CATCH,STVAR,BODY), CATCH:STVAR -> BODY).
+-else.
+-define(stack(), try throw(1) catch _:_ -> (fun erlang:get_stacktrace/0)() end).
+-define(MAKE_ST(CATCH,STVAR,BODY),
+        CATCH -> STVAR = (fun erlang:get_stacktrace/0)(), BODY).
+-endif.
 
 
 %%% The following is for emacs, do not remove

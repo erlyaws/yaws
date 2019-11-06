@@ -119,11 +119,6 @@ This enables traffic or http tracing. Tracing is also possible to enable with a
 command line flag to Yaws. Default is \fIfalse\fR.
 
 .TP
-\fBuse_old_ssl = true | false\fR
-This re-enables the old OTP SSL implementation. By default we use the new SSL
-implementation.
-
-.TP
 \fBauth_log  = true | false\fR
 \fBDeprecated and ignored. Now, this target must be set in server part.\fR
 
@@ -152,20 +147,18 @@ empty. See \fBerlang:spawn_opt/4\fR for details on these options.
 
 .TP
 \fBlarge_file_chunk_size = Integer\fR
-Set the chunk size used by Yaws to send large files when sendfile is not
-supported or disabled. The default value is \fI10240\fR.
+Set the chunk size used by Yaws to send large files. The default value
+is \fI10240\fR.
 
 .TP
-\fBlarge_file_sendfile = erlang | yaws | disable\fR
-Set the version of sendfile method to use to send large files (if supported):
+\fBlarge_file_sendfile = erlang | disable\fR
+Set the version of sendfile method to use to send large files:
 
-\fBerlang\fR - use \fIfile:sendfile/5\fR, if supported.
+\fBerlang\fR - use \fIfile:sendfile/5\fR.
 
-\fByaws\fR - use Yaws sendfile linked-in driver, if supported.
+\fBdisable\fR - use \fIgen_tcp:send/2\fR.
 
-\fBdisable\fR - do not use any sendfile method, but \fIgen_tcp:send/2\fR.
-
-The default value is \fIyaws\fR.
+The default value is \fIerlang\fR.
 
 .TP
 \fBacceptor_pool_size = Integer\fR
@@ -232,11 +225,19 @@ want the Erlang errorlog written to a report.log file.  Default value is
 
 .TP
 \fBysession_mod = Module\fR
-Allows to specify a different Yaws session storage mechanism instead of an ETS
+Allows specifying a different Yaws session storage mechanism instead of an ETS
 table. One of the drawbacks of the default yaws_session_server implementation is
 that server side cookies are lost when the server restarts. Specifying a
 different module here will pass all write/read operations to this module (it
 must implement appropriate callbacks).
+
+.TP
+\fBysession_cookiegen = Module\fR
+Allows specifying a different Yaws session cookie generator than the
+built-in default. \fIModule\fR is expected to provide a \fInew_cookie/0\fR
+function that returns a session cookie in the form of a list. Such a cookie
+generator module must be careful to return a unique cookie each time it's
+called.
 
 .TP
 \fBysession_idle_timeout = Integer\fR
@@ -294,10 +295,6 @@ Or, relatively to the configuration location:
   subconfig = global.conf
   subconfig = vhosts/*.conf
 .fi
-
-\fBWARNING: because of a bug in filelib:wildcard/2, wildcard strings are
-forbidden for Erlang/OTP R15B03 and previous.\fR
-
 
 .TP
 \fBsubconfigdir = Directory\fR
@@ -362,6 +359,42 @@ The mappings defined using this directive will overload all other
 definitions. If a file extension is defined several times, only the last one is
 kept. Multiple \fBadd_charsets\fR directives may be used.
 
+.TP
+\fBsni = disable | enable | strict\fR
+Enables or disables the TLS SNI (Server Name Indication) support.
+
+When disabled (or not supported), all virtual servers in the same group (same
+IP/Port) must share the same SSL configuration, especially the same SSL
+certificate. Only the HTTP Host header will be considered to find the right
+virtual server.
+
+When enabled, SSL configuration can be different from a virtual server to
+another, each one can have its own SSL certificate. In this case, if a client
+provides a SNI hostname, it will be used to find the right virtual server. To
+accept the SNI information from the client, The first virtual server (the
+default one, see \fBpick_first_virthost_on_nomatch\fR) \fBmust\fR include TLS as
+a permitted protocol.
+
+If \fBsni\fR directive is set to \fIenable\fR, non SNI clients are allowed. For
+such clients, virtual servers are selected as if Yaws did not have SNI
+support. If it is set to \fIstrict\fR, SNI hostname is mandatary to access a SSL
+virtual server. But, in all cases, when SNI support is enabled, if a client
+provides a SNI hostname, it \fBmust\fR match the HTTP Host header (which is
+mandatory too).  Note that the first virtual server (the default one) will be
+used for any request where the provided SNI hostname doesn't match any of
+virtual server names. So, it is important that the first virtual server have the
+most restrictive access control, otherwise clients can access restricted
+resources by sending a request for any unknown hostname. (This isn't actually
+any different from using virtual servers without SNI support.)
+
+The \fBsni\fR directive is a global one, so if you set it to \fIstrict\fR, non
+SNI clients will be refused for \fBall\fR SSL groups. See \fBrequire_sni\fR
+directive from the server part to mitigate this requirement.
+
+Default is \fIdisable\fR.
+
+\fBWARNING: The SNI support was introduced in the SSL application in Erlang/OTP
+18.0, so Yaws ignores it for previous releases.\fR
 
 .SH SERVER PART
 Yaws can virthost several web servers on the same IP address as well as several
@@ -580,11 +613,12 @@ used, the specified value must be strictly positive. The default value is
 .RE
 
 .IP
-\fBcompress_level = none | default | best_compression | best_speed | 0..9\fR
+\fBcompression_level = none | default | best_compression | best_speed | 0..9\fR
 .RS 12
-Defines the compression level to be used. 0 (none), gives no compression at all,
-1 (best_speed) gives best speed and 9 (best_compression) gives best
-compression. The default value is \fIdefault\fR.
+Defines the compression level to be used. 0 (\fInone\fR), gives no
+compression at all, 1 (\fIbest_speed\fR) gives best speed and 9
+(\fIbest_compression\fR) gives best compression. The default value is
+\fIdefault\fR.
 .RE
 
 .IP
@@ -636,8 +670,8 @@ subtypes of that type). Here is an example:
 
 By default, the following MIME types are compressed (if
 \fBdeflate\fR is set to true): \fItext/*, application/rtf, application/msword,
-application/pdf, application/x-dvi, application/javascript,
-application/x-javascript\fR. Multiple \fBmime_types\fR directive can be used.
+application/pdf, application/x-dvi, application/javascript\fR. Multiple
+\fBmime_types\fR directives can be used.
 .RE
 
 .TP
@@ -1051,13 +1085,23 @@ Default value is [inet].
 
 .TP
 \fB<ssl> ... </ssl>\fR
-This begins and ends an SSL configuration for this server.  It's possible to
-virthost several SSL servers on the same IP given that they all share the same
-certificate configuration.  In general it is complicated to virthost several SSL
-servers on the same IP address since the certificate is typically bound to a
-domainname in the common name part of the certificate.  One solution (the only?)
-to this problem is to have a certificate with multiple subjectAltNames. See
-http://wiki.cacert.org/VhostTaskForce#Interoperability_Test
+
+This begins and ends an SSL configuration for this server. It's possible to
+virthost several SSL servers on the same IP/Port. If SNI support is disabled or
+not supported, they must share the same certificate configuration. In this
+situation, it is complicated to virthost several SSL servers on the same IP/Port
+since the certificate is typically bound to a domainname in the common name part
+of the certificate. One solution to this problem is to have a certificate with
+multiple subjectAltNames. If SNI support is enabled, SSL servers on the same
+IP/Port can have their own SSL configuration with a different SSL certificate
+for each one. See the global \fBsni\fR directive.
+
+The SNI support was introduced in the SSL application in Erlang/OTP 18.0. It is
+an extension to the TLS protocol (RFC 4366), which allows the client to include
+the requested hostname in the first message of its SSL handshake.
+
+See also http://wiki.cacert.org/VhostTaskForce#Interoperability_Test for browser
+compatibility.
 
 \fBkeyfile = File\fR
 .RS 12
@@ -1089,29 +1133,24 @@ negotiated. If not specified, default parameters are used.
 .RE
 
 .IP
-\fBverify = 0 | 1 | 2 | verify_none | verify_peer\fR
+\fBverify = verify_none | verify_peer\fR
 .RS 12
-Specifies the level of verification the server does on client certs.  0 means
-that the server will not ask for a cert (verify_none), 1 means that the server
-will ask the client for a cert but not fail if the client does not supply a
-client cert (verify_peer, fail_if_no_peer_cert = false), 2 means that the server
-requires the client to supply a client cert (verify_peer, fail_if_no_peer_cert =
-true).
-
-Setting verify_none means that the x509 validation will be skipped (no
-certificate request is sent to the client), verify_peer means that a certificate
+Specifies the level of verification the server does on client certs. Setting
+\fIverify_none\fR means that the x509 validation will be skipped (no certificate
+request is sent to the client), \fIverify_peer\fR means that a certificate
 request is sent to the client (x509 validation is performed.
 
-You might want to use fail_if_no_peer_cert in combination with verify_peer.
+You might want to use \fBfail_if_no_peer_cert\fR in combination with
+\fIverify_peer\fB.
 .RE
 
 .IP
 \fBfail_if_no_peer_cert = true | false\fR
 .RS 12
-If verify is set to verify_peer and set to true the connection will fail if the
-client does not send a certificate (i.e. an empty certificate). If set to false
-the server will fail only if an invalid certificate is supplied (an empty
-certificate is considered valid).
+If \fBverify\fR is set to \fIverify_peer\fR and set to \fItrue\fR the connection
+will fail if the client does not send a certificate (i.e. an empty
+certificate). If set to \fIfalse\fR the server will fail only if an invalid
+certificate is supplied (an empty certificate is considered valid).
 .RE
 
 .IP
@@ -1140,6 +1179,23 @@ is  an erlang term compliant with the output of ssl:cipher_suites().
 
 ciphers = "[{dhe_rsa,aes_256_cbc,sha}, \\
             {dhe_dss,aes_256_cbc,sha}]"
+.fi
+.RE
+
+.IP
+\fBeccs = String\fR
+.RS 12
+This string specifies the supported Elliptic Curve Cryptography (ECC).
+It must be a subset of \fBssl:eccs()\fR.  For PCI DSS compliance
+(which is the main reason why you would want to change this), set it
+on a single line to:
+.nf
+
+eccs = "[sect571r1, sect571k1, secp521r1, brainpoolP512r1, \\
+         sect409k1, sect409r1, brainpoolP384r1, secp384r1, \\
+         sect283k1, sect283r1, brainpoolP256r1, secp256k1, \\
+         secp256r1, sect239k1, xsect233k1, sect233r1, \\
+         secp224k1, secp224r1]"
 .fi
 .RE
 
@@ -1183,10 +1239,17 @@ application. For example, to support only TLS versions 1.2, 1.1, and 1:
 
 protocol_version = tlsv1.2, tlsv1.1, tlsv1
 .fi
+.RE
 
-\fBWARNING: Erlang/OTP R16B01 or higher is required in order to let it work
-(because of a bug in previous releases).\fR
+.IP
+\fBrequire_sni = true | false\fR
+.RS 12
+If \fItrue\fR,the server will reject non SNI clients and clients providing an
+unknown SNI hostname (this last remark is only relevant for the first virtual
+server of a SSL group). This directive is ignored if SNI support is disabled (or
+not supported).
 
+Default is \fIfalse\fR.
 .RE
 
 .TP
@@ -1308,27 +1371,22 @@ callback would check if a valid cookie header is present, if not it would return
 .RE
 
 .IP
-\fBuser = User:Password\fR
+\fBuser = User:Password | "User:{Algo}Hash" | "User:{Algo}$Salt$Hash"\fR
 .RS 12
-Inside this directory, the user User has access if the user supplies the
-password Password in the popup dialogue presented by the browser.  We can
-obviously have several of these value inside a single <auth> </auth> pair.
-
-The usage of User:Password in the actual config file is deprecated as of release
-1.51. It is preferred to have the users in a file called \fI.yaws_auth\fR in the
-actual directory. The .yaws_auth file has to be parseable by \fIfile:consult/1\fR.
-
-Each row of the file must contain terms in this form:
+Inside this directory, the user \fIUser\fR has access if the user supplies the
+password \fIPassword\fR in the popup dialogue presented by the browser. It is
+also possible to provide a hashed password, encoded in base64. In that case, the
+algorithm used to hash the password must be set. \fIAlgo\fR must be a one of the
+following algorithms:
 
 .nf
-    {User, Password}.
+    md5 | ripemd160 | sha | sha224 | sha256 | sha384 | sha512
 .fi
 
-where both User and Password should be strings.
+It is possible to use salted hashes. If so, the \fISalt\fR must be provided,
+encoded in base64. We can obviously have several of these value inside a single
+<auth> </auth> pair.
 
-The .yaws_auth file mechanism is recursive, so any subdirectories of Dir
-are also automatically protected. The .yaws_auth file is never visible in a
-dir listing.
 .RE
 
 .IP
@@ -1416,8 +1474,106 @@ description of the \fIstart_mod\fR directive.
 This mechanism can be used to pass data from a surrounding application into the
 individual .yaws pages.
 
+.TP
+\fBstrip_undefined_bindings = true | false\fR
+Change the behavior of the \fI{bindings, [...]}\fR directive to treat
+all undefined keys found in returned \fIout/1\fR content as if they
+were defined with an empty value, resulting in all undefined bindings
+effectively being stripped out of returned content. By default,
+\fIstrip_undefined_bindings\fR is false, which means undefined
+bindings are ignored and their text is left as is in returned content.
 
+This setting applies only for \fIout/1\fR content, not to static pages
+or other returned content.
 
+.TP
+\fB<extra_response_headers> ... </extra_response_headers>\fR
+This begins and ends a configuration context for extra response
+headers for this server, where directives for adding headers, erasing
+headers, and modules for handling extra response headers can be
+specified as follows:
+
+.RS 12
+.TP
+\fBadd Hdr = Value\fR
+Add \fIHdr\fR with value \fIValue\fR to the response, but only if the
+response status code is one of these values:
+
+.RS 12
+.nf
+200 OK
+201 Created
+204 No Content
+206 Partial Content
+301 Moved Permanently
+302 Found
+303 See Other
+304 Not Modified
+307 Temporary Redirect
+308 Permanent Redirect
+.fi
+.RE
+
+For any other status code, \fIHdr\fR is not added.
+
+.TP
+\fBalways add Hdr = Value\fR
+Unconditionally add \fIHdr\fR with value \fIValue\fR to the response,
+regardless of the response status code.
+
+.TP
+\fBerase Hdr\fR
+Remove \fIHdr\Fr and its associated value from the response.
+
+.TP
+\fBextramod = Module\fR
+Specifies a module to call to process extra response headers. Yaws
+calls \fIModule:extra_response_headers/3\fR passing the following
+arguments:
+
+.RS 12
+.TP
+\fBResponse headers\fR
+An Erlang map holding the response headers with header name strings as
+keys and strings as header values
+
+.TP
+\fBArg\Fr
+An \fI#arg{}\fR record representing the request. In cases where an
+\fIextramod\fR module is called following the invocation of an appmod,
+the \fI#arg{}\fR record field \fIappmod_name\fR indicates the name of
+the appmod that serviced the request, allowing the \fIextramod\fR to
+return extra HTTP headers appropriate for that appmod.
+
+.TP
+\fB{StatusCode,Version}\fR
+A tuple where \fIStatusCode\fR is the numeric HTTP status code for the
+response, and \fIVersion\fR is a tuple specifying the HTTP version,
+e.g. \fI{1,1}\fR for HTTP 1.1.
+.RE
+
+The \fIModule:extra_response_headers/3\fR function should return
+either the original header map or a modified map where headers have
+been added, changed, or deleted. Added headers are not subject to the
+status code restrictions for the \fIadd\fR extra response header
+directive, but the function can call
+\fByaws_api:http_extra_response_headers_add_status_codes/0\fR to
+retrieve the list of the status codes for which adding headers is
+normally allowed.
+
+For response headers that can have multiple settings, such as
+\fISet-Cookie\fR, multiple values can be specified in the extra
+response header map by using a value of \fI{multi, [Value]}\fR where
+\fI[Value]\fR is a list of one or more header values. The
+\fISet-Cookie\fR header is a standard special case for which Yaws
+converts a \fImulti\fR header into a separate Set-Cookie header for
+each value; for other headers, Yaws converts a \fImulti\fR header into
+a single HTTP header with a comma-separated value.
+.RE
+
+Note that extra response headers do not apply to responses returned
+directly by any \fIDispatchModule\fR.
+.RE
 
 .SH EXAMPLES
 

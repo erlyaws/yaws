@@ -1,8 +1,8 @@
 include @top_srcdir@/include.mk
 
-EXTRA_DIST = darwin debian freebsd gentoo netbsd openbsd redhat suse 	\
-	     gen-yaws gen-yaws-conf gen-yaws-generated Subst		\
-	     regular-install make-release make-upload			\
+EXTRA_DIST = darwin debian freebsd gentoo netbsd openbsd redhat suse systemd 	\
+	     gen-yaws gen-yaws-conf gen-yaws-generated Subst			\
+	     regular-install make-release make-upload				\
 	     rebar-pre-script yaws.conf.template yaws.template
 
 if !MINGW

@@ -174,6 +174,23 @@ encode_array(T) ->
 %%% JSON number -> erlang number
 %%% true, false, null -> erlang atoms
 %%% { } [ ] : , -> lcbrace rcbrace lsbrace rsbrace colon comma
+-define(is_hex(X), ((X >= $a andalso X =< $f) orelse
+                    (X >= $A andalso X =< $F) orelse
+                    (X >= $0 andalso X =< $9))).
+
+-define(is_high_surrogate(U1, U2, U3, U4), (U1 == $d orelse U1 == $D) andalso
+                                           (U2 == $8 orelse U2 == $9 orelse
+                                            U2 == $a orelse U2 == $A orelse
+                                            U2 == $b orelse U2 == $B) andalso
+                                           ?is_hex(U3) andalso ?is_hex(U4)).
+
+-define(is_low_surrogate(U1, U2, U3, U4), (U1 == $d orelse U1 == $D) andalso
+                                          (U2 == $c orelse U2 == $C orelse
+                                           U2 == $d orelse U2 == $D orelse
+                                           U2 == $e orelse U2 == $E orelse
+                                           U2 == $f orelse U2 == $F) andalso
+                                          ?is_hex(U3) andalso ?is_hex(U4)).
+
 
 token([]) -> {more, []};
 token(eof) -> {done, eof, []};
@@ -216,24 +233,91 @@ scan_string([$" | Cs] = Input) ->
     scan_string(Cs, [], Input).
 
 %% Accumulate in reverse order, save original start-of-string for continuation.
+scan_string([], _, X) ->
+    {more, X};
+scan_string(eof, _, X) ->
+    {done, {error, missing_close_quote}, X};
+scan_string([$" | Rest], A, _) ->
+    {done, {ok, lists:reverse(A)}, Rest};
+scan_string([$\\], _, X) ->
+    {more, X};
+scan_string([$\\,$u,U1,U2,U3,U4|Rest0],  A, X)
+  when ?is_high_surrogate(U1,U2,U3,U4) ->
+    case Rest0 of
+        [$\\,$u,V1,V2,V3,V4|Rest] when ?is_low_surrogate(V1,V2,V3,V4) ->
+            High = erlang:list_to_integer([U1,U2,U3,U4], 16),
+            Low  = erlang:list_to_integer([V1,V2,V3,V4], 16),
+            Codepoint = (High - 16#d800) * 16#400 + (Low - 16#dc00) + 16#10000,
+            scan_string(Rest, [Codepoint|A], X);
 
-scan_string([], _, X) -> {more, X};
-scan_string(eof, _, X) -> {done, {error, missing_close_quote}, X};
-scan_string([$" | Rest], A, _) -> {done, {ok, lists:reverse(A)}, Rest};
-scan_string([$\\], _, X) -> {more, X};
-scan_string([$\\, $u, U1, U2, U3, U4 | Rest], A, X) ->
-    scan_string(Rest, lists:reverse(uni_char([U1, U2, U3, U4]))++A, X);
-scan_string([$\\, $u | _], _, X) -> {more, X};
-scan_string([$\\, C | Rest], A, X) ->
-    scan_string(Rest, [esc_to_char(C) | A], X);
-scan_string([C | Rest], A, X) ->
-    scan_string(Rest, [C | A], X).
+        [$\\,$u,V1,V2,V3,V4|_] ->
+            Bad = [$\\,$u,U1,U2,U3,U4,$\\,$u,V1,V2,V3,V4],
+            {done, {error, {bad_surrogate_pair, Bad}}, X};
 
-%% Given a list of hex characters, convert to the corresponding integer.
+        [$\\,$u,_,_,_|eof] -> {done, {error, missing_close_quote}, X};
+        [$\\,$u,_,_|eof]   -> {done, {error, missing_close_quote}, X};
+        [$\\,$u,_|eof]     -> {done, {error, missing_close_quote}, X};
+        [$\\,$u|eof]       -> {done, {error, missing_close_quote}, X};
+        [$\\|eof]          -> {done, {error, missing_close_quote}, X};
+        eof                -> {done, {error, missing_close_quote}, X};
+        [$\\,$u|_]         -> {more, X};
+        [$\\]              -> {more, X};
+        []                 -> {more, X};
 
-uni_char(HexList) ->
-    UC = erlang:list_to_integer(HexList, 16),
-    binary_to_list(unicode:characters_to_binary([UC],utf8)).
+        _ ->
+            Bad = [$\\,$u,U1,U2,U3,U4],
+            {done, {error, {bad_utf8_char, Bad}}, X}
+    end;
+scan_string([$\\,$u,U1,U2,U3,U4|Rest], A, X)
+  when ?is_hex(U1) andalso ?is_hex(U2) andalso ?is_hex(U3) andalso ?is_hex(U4) ->
+    case erlang:list_to_integer([U1,U2,U3,U4], 16) of
+        Codepoint when Codepoint > 0 andalso
+                       (Codepoint < 16#d800 orelse Codepoint > 16#dfff) ->
+            C = binary_to_list(unicode:characters_to_binary([Codepoint],utf8)),
+            scan_string(Rest, lists:reverse(C)++A, X);
+        _ ->
+            Bad = [$\\,$u,U1,U2,U3,U4],
+            {done, {error, {bad_utf8_char, Bad}}, X}
+    end;
+scan_string([$\\,$u|Rest], _, X) ->
+    case Rest of
+        [U1,U2,U3,U4|_] ->
+            Bad = [$\\,$u,U1,U2,U3,U4],
+            {done, {error, {bad_utf8_char, Bad}}, X};
+
+        [_,_,_|eof] -> {done, {error, missing_close_quote}, X};
+        [_,_|eof]   -> {done, {error, missing_close_quote}, X};
+        [_|eof]     -> {done, {error, missing_close_quote}, X};
+        eof         -> {done, {error, missing_close_quote}, X};
+
+        _           -> {more, X}
+    end;
+scan_string([$\\,C|Rest], A, X) ->
+    case esc_to_char(C) of
+        {error, E} -> {done, {error, E}, X};
+        C1         -> scan_string(Rest, [C1|A], X)
+    end;
+
+scan_string([C|Rest0], A, X) when C >= 16#d800 andalso C =< 16#dfff ->
+    case Rest0 of
+        [D|Rest1] when D >= 16#dc00 andalso D =< 16#dfff ->
+            Codepoint = (C - 16#d800) * 16#400 + (D - 16#dc00) + 16#10000,
+            scan_string(Rest1, [Codepoint|A], X);
+        [D|_] ->
+            {done, {error, {bad_surrogate_pair, [C,D]}}, X};
+        _ ->
+            scan_string(Rest0, [C|A], X)
+    end;
+
+
+scan_string([C|Rest], A, X) when C == 16#20 orelse C == 16#21 orelse
+                                 (C >= 16#23 andalso C =< 16#5B) orelse
+                                 (C >= 16#5D andalso C =< 16#10FFFF) ->
+    scan_string(Rest, [C|A], X);
+scan_string(_, _, X) ->
+    {done, {error, invalid_string}, X}.
+
+
 
 esc_to_char($") -> $";
 esc_to_char($/) -> $/;
@@ -242,7 +326,8 @@ esc_to_char($b) -> $\b;
 esc_to_char($f) -> $\f;
 esc_to_char($n) -> $\n;
 esc_to_char($r) -> $\r;
-esc_to_char($t) -> $\t.
+esc_to_char($t) -> $\t;
+esc_to_char(C) -> {error, {bad_char, C}}.
 
 scan_number([]) -> {more, []};
 scan_number(eof) -> {done, {error, incomplete_number}, []};
@@ -254,7 +339,10 @@ scan_number([$- | Ds] = Input) ->
         {done, Other, Chars} -> {done, Other, Chars}
     end;
 scan_number([D | Ds] = Input) when D >= $0, D =< $9 ->
-    scan_number(Ds, D - $0, Input).
+    scan_number(Ds, D - $0, Input);
+scan_number(Input) ->
+    {done, {error, invalid_number}, Input}.
+
 
 %% Numbers don't have a terminator, so stop at the first non-digit,
 %% and ask for more if we run out.
@@ -270,24 +358,34 @@ scan_number([D | Ds], A, X) when A > 0, D >= $0, D =< $9 ->
 scan_number([D | Ds], A, X) when D == $E; D == $e ->
     scan_exponent_begin(Ds, integer_to_list(A) ++ ".0", X);
 scan_number([D | _] = Ds, A, _X) when D < $0; D > $9 ->
-    {done, {ok, A}, Ds}.
+    {done, {ok, A}, Ds};
+scan_number(_, _, X) ->
+    {done, {error, invalid_number}, X}.
 
 scan_fraction(Ds, I, X) -> scan_fraction(Ds, [], I, X).
 
 scan_fraction([], _Fs, _I, X) -> {more, X};
 scan_fraction(eof, Fs, I, _X) ->
-    R = list_to_float(lists:append([integer_to_list(I), ".",
-                                    lists:reverse(Fs)])),
-    {done, {ok, R}, eof};
+    try
+        R = list_to_float(lists:append([integer_to_list(I), ".",
+                                        lists:reverse(Fs)])),
+        {done, {ok, R}, eof}
+    catch
+        _:_ -> {done, {error, number_overflow}, eof}
+    end;
 scan_fraction([D | Ds], Fs, I, X) when D >= $0, D =< $9 ->
     scan_fraction(Ds, [D | Fs], I, X);
 scan_fraction([D | Ds], Fs, I, X) when D == $E; D == $e ->
     R = lists:append([integer_to_list(I), ".", lists:reverse(Fs)]),
     scan_exponent_begin(Ds, R, X);
 scan_fraction(Rest, Fs, I, _X) ->
-    R = list_to_float(lists:append([integer_to_list(I), ".",
-                                    lists:reverse(Fs)])),
-    {done, {ok, R}, Rest}.
+    try
+        R = list_to_float(lists:append([integer_to_list(I), ".",
+                                        lists:reverse(Fs)])),
+        {done, {ok, R}, Rest}
+    catch
+        _:_ -> {done, {error, number_overflow}, []}
+    end.
 
 scan_exponent_begin(Ds, R, X) ->
     scan_exponent_begin(Ds, [], R, X).
@@ -297,17 +395,27 @@ scan_exponent_begin(eof, _Es, _R, X) -> {done, {error, missing_exponent}, X};
 scan_exponent_begin([D | Ds], Es, R, X) when D == $-;
                                              D == $+;
                                              D >= $0, D =< $9 ->
-    scan_exponent(Ds, [D | Es], R, X).
+    scan_exponent(Ds, [D | Es], R, X);
+scan_exponent_begin(_, _Es, _R, X) -> {done, {error, invalid_exponent}, X}.
+
 
 scan_exponent([], _Es, _R, X) -> {more, X};
 scan_exponent(eof, Es, R, _X) ->
-    X = list_to_float(lists:append([R, "e", lists:reverse(Es)])),
-    {done, {ok, X}, eof};
+    try
+        X = list_to_float(lists:append([R, "e", lists:reverse(Es)])),
+        {done, {ok, X}, eof}
+    catch
+        _:_ -> {done, {error, number_overflow}, eof}
+    end;
 scan_exponent([D | Ds], Es, R, X) when D >= $0, D =< $9 ->
     scan_exponent(Ds, [D | Es], R, X);
 scan_exponent(Rest, Es, R, _X) ->
-    X = list_to_float(lists:append([R, "e", lists:reverse(Es)])),
-    {done, {ok, X}, Rest}.
+    try
+        X = list_to_float(lists:append([R, "e", lists:reverse(Es)])),
+        {done, {ok, X}, Rest}
+    catch
+        _:_ -> {done, {error, number_overflow}, Rest}
+    end.
 
 %%% PARSING
 %%%
@@ -357,12 +465,15 @@ decode(Continuation, CharList) ->
 
 first_continuation() ->
     {[], fun
-        (eof, Cs) ->
-                {done, eof, Cs};
-        (T, Cs) ->
-            parse_value(T, Cs, fun(V, C2) ->
-                {done, {ok, V}, C2}
-            end)
+             (eof, Cs) ->
+                 {done, eof, Cs};
+             (T, Cs) ->
+                 Fun = fun(V, eof)   -> {done, {ok, V}, eof};
+                          (V, [])    -> {done, {ok, V}, []};
+                          (V, [eof]) -> {done, {ok, V}, [eof]};
+                          (_, Cs2)   -> {done, {error, invalid_trailing_data}, Cs2}
+                       end,
+                 parse_value(T, Cs, Fun)
     end}.
 
 %% Continuation Kt must accept (TokenOrEof, Chars)

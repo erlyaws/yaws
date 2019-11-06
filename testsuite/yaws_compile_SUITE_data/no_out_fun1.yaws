@@ -1,0 +1,5 @@
+<erl>
+-export([test/0]).
+
+test() -> ok.
+</erl>

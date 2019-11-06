@@ -21,7 +21,6 @@
 
 -module('wiki').
 -author('jb@son.bevemyr.com').
--compile(export_all).
 
 -export([showPage/3, createNewPage/3, showHistory/3, allPages/3,
          lastEdited/3, wikiZombies/3, editPage/3, editFiles/3,
@@ -42,9 +41,12 @@
 -export([getPassword/1]).
 -export([importFiles/1]).
 
--import(lists, [reverse/1, map/2, sort/1]).
-
--import(wiki_templates, [template/5, template2/5]).
+%% Function exported to avoid warnings
+-export([copyFiles2/3, session_proc/2, textarea/3, b/1, br/0,
+         pre/1, bgcolor/1, top_header/1, add_blanks_nicely/1,
+         big_letter/1, little_letter/1, show_error/1,
+         str2fileencoded/1, fileencoded2str/1, mime_type/1,
+         check_precon/2, getopt_options/2]).
 
 -include("../../../include/yaws_api.hrl").
 -include_lib("kernel/include/file.hrl").
@@ -470,32 +472,33 @@ storeFiles(Params, Root, Prefix) ->
 addFileInit(Params, Root, _Prefix) ->
     Page        = getnode(Params),
     Password    = getopt("password", Params),
-    template2(Root, "Add File", Page,
-             [form("POST", "addFile.yaws",
-                   [
-                    input("hidden", "node", Page),
-                    input("hidden", "password", Password),
-                    "<table width=\"100%\">",
-                    "<tr><th align=left>Attach new file: </th>",
-                    "<th align=left>",
-                    input("file","attached","30"),"</th></tr>",
-                    "<tr><td colspan=2 align=left>",
-                    input("checkbox","unzip","on",""),
-                    "Upload multiple files using zip archive</th></tr>"
-                    "<tr><th colspan=2 align=left>",
-                    "Description: ","</th></tr>",
-                    "<tr><td colspan=2 align=left>",
-                    textarea("text", 10, 72,""),"</td></tr>",
-                    "</table>",
-                    input("submit", "add", "Add"),
-                    input("button", "Cancel",
-                          "parent.location='editFiles.yaws?node="++
-                          str2urlencoded(Page)++"&password="++
-                          str2urlencoded(Password)++"'")]),
-              "To upload multiple files at one time place them in a zip archive and upload "
-              "the zip file and check the 'unzip' checkbox above."
-             ],
-            false).
+    wiki_templates:template2(
+      Root, "Add File", Page,
+      [form("POST", "addFile.yaws",
+	    [
+	     input("hidden", "node", Page),
+	     input("hidden", "password", Password),
+	     "<table width=\"100%\">",
+	     "<tr><th align=left>Attach new file: </th>",
+	     "<th align=left>",
+	     input("file","attached","30"),"</th></tr>",
+	     "<tr><td colspan=2 align=left>",
+	     input("checkbox","unzip","on",""),
+	     "Upload multiple files using zip archive</th></tr>"
+	     "<tr><th colspan=2 align=left>",
+	     "Description: ","</th></tr>",
+	     "<tr><td colspan=2 align=left>",
+	     textarea("text", 10, 72,""),"</td></tr>",
+	     "</table>",
+	     input("submit", "add", "Add"),
+	     input("button", "Cancel",
+		   "parent.location='editFiles.yaws?node="++
+		       str2urlencoded(Page)++"&password="++
+		       str2urlencoded(Password)++"'")]),
+       "To upload multiple files at one time place them in a zip archive and upload "
+       "the zip file and check the 'unzip' checkbox above."
+      ],
+      false).
 
 -record(addfile, {
           root,
@@ -751,16 +754,17 @@ deleteFilesInit(Params, Root, _Prefix) ->
     DelList = [input("hidden", "del_"++Name, Name) ||
                   {file, Name, _, _} <- DelFiles],
 
-    template2(Root, "Confirm", Page,
-             [List,
-              form("POST", "deleteFiles.yaws",
-                   [DelList,
-                    input("submit", "delete", "Delete"),
-                    input("submit", "cancel", "Cancel"),
-                    input("hidden", "node", Page),
-                    input("hidden", "password", Password)])
-             ],
-            false).
+    wiki_templates:template2(
+      Root, "Confirm", Page,
+      [List,
+       form("POST", "deleteFiles.yaws",
+	    [DelList,
+	     input("submit", "delete", "Delete"),
+	     input("submit", "cancel", "Cancel"),
+	     input("hidden", "node", Page),
+	     input("hidden", "password", Password)])
+      ],
+      false).
 
 deleteFiles(Params, Root, Prefix) ->
     Password = getopt("password", Params, ""),
@@ -857,25 +861,26 @@ copyFilesInit(Params, Root, Prefix) ->
     CpList = [input("hidden", "cp_"++Name, Name) ||
                  {file, Name, _, _} <- CpFiles],
 
-    PageFiles = sort(files(Root, "\\.wob$")),
+    PageFiles = lists:sort(files(Root, "\\.wob$")),
     Pages = [filename:basename(P,".wob") || P <- PageFiles, P /= File],
 
     if
         length(CheckedFiles) == 0 ->
             editFiles(Params, Root, Prefix);
         true ->
-            template2(Root, "Confirm", Page,
-                     [List,
-                      form("POST", "copyFiles.yaws",
-                           [CpList,
-                            "Destination: ",
-                            input("select","destination",Pages),
-                            input("submit", "copy", "Copy"),
-                            input("submit", "cancel", "Cancel"),
-                            input("hidden", "node", Page),
-                            input("hidden", "password", Password)])
-                     ],
-                    false)
+            wiki_templates:template2(
+	      Root, "Confirm", Page,
+	      [List,
+	       form("POST", "copyFiles.yaws",
+		    [CpList,
+		     "Destination: ",
+		     input("select","destination",Pages),
+		     input("submit", "copy", "Copy"),
+		     input("submit", "cancel", "Cancel"),
+		     input("hidden", "node", Page),
+		     input("hidden", "password", Password)])
+	      ],
+	      false)
     end.
 
 
@@ -964,8 +969,9 @@ showHistory(Params, Root, _Prefix) ->
         {ok, Bin} ->
             {wik002,_Pwd,_Email,_Time,_Who,_OldTxt,_Files,Patches} =
                 bin_to_wik002(Bin),
-            Links = reverse(mk_history_links(reverse(Patches), Page, 1)),
-            template2(Root, "History", Page, Links, false);
+            Links = lists:reverse(mk_history_links(
+				    lists:reverse(Patches), Page, 1)),
+            wiki_templates:template2(Root, "History", Page, Links, false);
         _ ->
             show({no_such_page, Page}, Root)
     end.
@@ -1008,23 +1014,25 @@ format_time({{Year,Month,Day},{Hour,Min,Sec}}) ->
      i2s(Hour),":",i2s(Min),":",i2s(Sec)].
 
 allPages(_, Root, _Prefix) ->
-    Files = sort(files(Root, "\\.wob$")),
-    template2(Root, "All Pages", "All Pages",
-             [p("This is a list of all pages known to the system."),
-              lists:map(fun(I) ->
-                                F = filename:basename(I, ".wob"),
-                                [wiki_to_html:format_link(F, Root),
-                                 "<br>"]
-                        end,
-                        Files)], false).
+    Files = lists:sort(files(Root, "\\.wob$")),
+    wiki_templates:template2(
+      Root, "All Pages", "All Pages",
+      [p("This is a list of all pages known to the system."),
+       lists:map(fun(I) ->
+			 F = filename:basename(I, ".wob"),
+			 [wiki_to_html:format_link(F, Root),
+			  "<br>"]
+		 end,
+		 Files)], false).
 
 lastEdited(_, Root, _Prefix) ->
-    Files = sort(files(Root, "\\.wob$")),
+    Files = lists:sort(files(Root, "\\.wob$")),
     _S = lists:flatten(lists:map(fun(I) ->
                                          "~" ++ filename:basename(I, ".wob") ++"\n\n"
                                  end, Files)),
-    V = reverse(sort(
-                  lists:map(fun(I) -> {last_edited_time(I), I} end, Files))),
+    V = lists:reverse(
+	  lists:sort(
+	    lists:map(fun(I) -> {last_edited_time(I), I} end, Files))),
     Groups = group_by_day(V),
     S1 = lists:map(fun({{Year,Month,Day},Fx}) ->
                      [p(),i2s(Year),"-",i2s(Month),"-",i2s(Day),"<p>",
@@ -1035,8 +1043,9 @@ lastEdited(_, Root, _Prefix) ->
                                   [J,"<br>"] end, Fx),
                       "</ul>"]
              end, Groups),
-    template2(Root,"Last Edited", "These are the last edited files",
-              S1, false).
+    wiki_templates:template2(
+      Root,"Last Edited", "These are the last edited files",
+      S1, false).
 
 group_by_day([]) ->
     [];
@@ -1048,7 +1057,7 @@ group_by_day([{{Day,_Time}, File}|T]) ->
 collect_this_day(Day, [{{Day,_Time},File}|T], L) ->
     collect_this_day(Day, T, [File|L]);
 collect_this_day(Day, T, L) ->
-    {{Day,reverse(L)}, T}.
+    {{Day,lists:reverse(L)}, T}.
 
 last_edited_time(File) ->
     case file:read_file(File) of
@@ -1118,19 +1127,20 @@ deletePage1(Params, Root, _Prefix) ->
             {wik002, _Pwd,_Email,_Time,_Who,Content,_Files,_Patches} =
                 bin_to_wik002(Bin),
 
-            template2(Root, "Delete", Page,
-                     [p("Reconfirm deleting this page - hit the 'Delete' "
-                        "button to permanently remove the page."),
-                      form("POST", "finalDeletePage.yaws",
-                           [input("submit", "finaldelete", "Delete"),
-                            input("submit", "cancel", "Cancel"),
-                            input("hidden", "node", Page),
-                            input("hidden", "password", Password),
-                            p(),
-                            textarea("text", 25, 75, Content),
-                            p(),
-                            hr()])],
-                     false);
+            wiki_templates:template2(
+	      Root, "Delete", Page,
+	      [p("Reconfirm deleting this page - hit the 'Delete' "
+		 "button to permanently remove the page."),
+	       form("POST", "finalDeletePage.yaws",
+		    [input("submit", "finaldelete", "Delete"),
+		     input("submit", "cancel", "Cancel"),
+		     input("hidden", "node", Page),
+		     input("hidden", "password", Password),
+		     p(),
+		     textarea("text", 25, 75, Content),
+		     p(),
+		     hr()])],
+	      false);
         _ ->
             show({no_such_page,Page}, Root)
     end.
@@ -1178,21 +1188,22 @@ getPassword(Page, Root, _Prefix, Target, Values) ->
           lists:keydelete("password", 1, Values)],
     Hidden = [[input("hidden", Name, Value),"\n"] ||
                  {Name, Value, _} <- Vs],
-    template2(Root, "Password", Page,
-             [p("This page is password protected - provide a password "
-                "and hit the 'Continue' button."),
-              form("POST", "putPassword.yaws","f",
-                   (Hidden ++
-                    [input("hidden", "target", atom_to_list(Target)),
-                     "Password: ",
-                     password_entry("password",8),
-                     input("submit","continue","Continue"),
-                     input("submit","cancel","Cancel"),
-                     script("document.f.password.focus();")
-                     ]
-                   )
-                  )
-             ], false).
+    wiki_templates:template2(
+      Root, "Password", Page,
+      [p("This page is password protected - provide a password "
+	 "and hit the 'Continue' button."),
+       form("POST", "putPassword.yaws","f",
+	    (Hidden ++
+		 [input("hidden", "target", atom_to_list(Target)),
+		  "Password: ",
+		  password_entry("password",8),
+		  input("submit","continue","Continue"),
+		  input("submit","cancel","Cancel"),
+		  script("document.f.password.focus();")
+		 ]
+	    )
+	   )
+      ], false).
 
 putPassword(Params, Root, Prefix) ->
     Target = getopt("target", Params, "error"),
@@ -1403,21 +1414,22 @@ editPage(Page, Password, Root, Prefix, Sid) ->
     end.
 
 edit1(Page, Root, Password, Content, Sid) ->
-    template2(Root, "Edit", Page,
-         [p("Edit this page - when you have finished hit the 'Preview' "
-            "button to check your results."),
-          form("POST", "previewPage.yaws?sid="++str2urlencoded(Sid),
-               "f1",
-               [textarea("text", 25, 75, Content),
-                p(),
-                input("submit", "preview", "Preview"),
-                input("submit", "delete", "Delete"),
-                input("submit", "cancel", "Cancel"),
-                input("submit", "chpasswd", "Password"),
-                input("hidden", "node", Page),
-                input("hidden", "password", Password),
-                hr()])
-          ], false).
+    wiki_templates:template2(
+      Root, "Edit", Page,
+      [p("Edit this page - when you have finished hit the 'Preview' "
+	 "button to check your results."),
+       form("POST", "previewPage.yaws?sid="++str2urlencoded(Sid),
+	    "f1",
+	    [textarea("text", 25, 75, Content),
+	     p(),
+	     input("submit", "preview", "Preview"),
+	     input("submit", "delete", "Delete"),
+	     input("submit", "cancel", "Cancel"),
+	     input("submit", "chpasswd", "Password"),
+	     input("hidden", "node", Page),
+	     input("hidden", "password", Password),
+	     hr()])
+      ], false).
 
 sendMeThePassword(Params, Root, _Prefix) ->
     Page = getnode(Params),
@@ -1431,20 +1443,23 @@ sendMeThePassword(Params, Root, _Prefix) ->
             %% io:format("Here Email=~p EMailOwner=~p~n",[Email,EmailOwner]),
             case Email of
                 "" ->
-                    template2(Root, "Error", "Failure",
-                             [p("This page has no associated email address")],
-                             false);
+                    wiki_templates:template2(
+		      Root, "Error", "Failure",
+		      [p("This page has no associated email address")],
+		      false);
                 EmailOwner ->
                     mail(Page, Email, Pwd),
-                    template2(Root, "Ok", "Success",
-                             [p("The password has been mailed to "),
-                              Email,
-                              p("Have a nice day")],
-                             false);
+                    wiki_templates:template2(
+		      Root, "Ok", "Success",
+		      [p("The password has been mailed to "),
+		       Email,
+		       p("Have a nice day")],
+		      false);
                 _Other ->
-                    template2(Root, "Error", "Failure",
-                             [p("Incorrect email address")],
-                             false)
+                    wiki_templates:template2(
+		      Root, "Error", "Failure",
+		      [p("Incorrect email address")],
+		      false)
             end;
         _ ->
             show({no_such_file,Page}, Root)
@@ -1610,11 +1625,6 @@ nextSlide(Index, Direction, Page, Root, Prefix) ->
                                  "\">"];
                            true -> []
                         end,
-                    F1 = add_blanks_nicely(Page),
-                    _TopHeader =
-                        ["<a href='showPage.yaws?node=",
-                         str2urlencoded(Page),
-                         "'>",yaws_api:htmlize(F1),"</a>\n"],
                     Locked = Pwd /= "",
                     _Link =
                         wiki_templates:template(Page, Root,
@@ -1642,10 +1652,6 @@ thumbIndex(Params, Root, Prefix) ->
                 ["<table>",
                  build_thumb_table(Pics, Node, Prefix, Root, FileDir),
                  "</table>"],
-            F1 = add_blanks_nicely(Page),
-            _TopHeader =
-                ["<a href='showPage.yaws?node=",Node,"'>",
-                 yaws_api:htmlize(F1),"</a>\n"],
             Locked = Pwd /= "",
             _Link =
                 wiki_templates:template(Page, Root, DeepStr,
@@ -1847,19 +1853,20 @@ previewPage1(Params, Root, _Prefix) ->
     Txt = zap_cr(Txt0),
     Wik = wiki_split:str2wiki(Txt),
     session_set_text(Sid, Txt),
-    template2(Root, "Preview", Page,
-             [p("If this page is ok hit the \"Store\" button "
-                "otherwise return to the editing phase by clicking the edit "
-                "button."),
-              form("POST", "storePage.yaws?sid="++str2urlencoded(Sid),
-                   [input("submit", "store", "Store"),
-                    input("submit", "cancel", "Cancel"),
-                    input("submit", "edit", "Edit"),
-                    input("hidden", "node", Page),
-                    input("hidden", "password", Password),
-                    input("hidden", "txt", str2formencoded(Txt))]),
-              p(),hr(),h1(Page),
-              wiki_to_html:format_wiki(Page, Wik, Root, preview)], false).
+    wiki_templates:template2(
+      Root, "Preview", Page,
+      [p("If this page is ok hit the \"Store\" button "
+	 "otherwise return to the editing phase by clicking the edit "
+	 "button."),
+       form("POST", "storePage.yaws?sid="++str2urlencoded(Sid),
+	    [input("submit", "store", "Store"),
+	     input("submit", "cancel", "Cancel"),
+	     input("submit", "edit", "Edit"),
+	     input("hidden", "node", Page),
+	     input("hidden", "password", Password),
+	     input("hidden", "txt", str2formencoded(Txt))]),
+       p(),hr(),h1(Page),
+       wiki_to_html:format_wiki(Page, Wik, Root, preview)], false).
 
 %% Preview Tagged
 %% Tagged stuff is inside comment and append regions
@@ -1917,17 +1924,18 @@ previewNewPage(Params, Root, _Prefix) ->
     if
         P1 == P2 ->
             session_set_all(Sid,Txt,P1,Email),
-            template2(Root, "Preview",
-                      p("If this page is ok hit the \"Store\" button "
-                        "otherwise return to the editing phase by clicking "
-                        "the back button in your browser."),
-                     [form("POST", "storeNewPage.yaws",
-                           [input("submit", "store", "Store"),
-                            input("hidden", "node", Page),
-                            input("hidden", "password", P1),
-                            input("hidden", "email", str2formencoded(Email)),
-                            input("hidden", "txt", str2formencoded(Txt))]),
-                      wiki_to_html:format_wiki(Page, Wik, Root)], false);
+            wiki_templates:template2(
+	      Root, "Preview",
+	      p("If this page is ok hit the \"Store\" button "
+		"otherwise return to the editing phase by clicking "
+		"the back button in your browser."),
+	      [form("POST", "storeNewPage.yaws",
+		    [input("submit", "store", "Store"),
+		     input("hidden", "node", Page),
+		     input("hidden", "password", P1),
+		     input("hidden", "email", str2formencoded(Email)),
+		     input("hidden", "txt", str2formencoded(Txt))]),
+	       wiki_to_html:format_wiki(Page, Wik, Root)], false);
         true ->
             show({passwords_differ,P1,P2}, Root)
     end.
@@ -1966,7 +1974,7 @@ open_tmp_file(RootName, Suffix) ->
 open_tmp_file(0, _, Suffix) ->
     exit({cannot_open_a_temporay_file, Suffix});
 open_tmp_file(N, RootName, Suffix) ->
-    {_,_,M} = erlang:now(),
+    {_,_,M} = yaws:get_time_tuple(),
     FileName = RootName ++ "/" ++ integer_to_list(M) ++ Suffix,
     %% io:format("trying to open:~p~n", [FileName]),
     case file:open(FileName, write) of
@@ -2138,26 +2146,28 @@ little_letter($ö) -> true;
 little_letter(_)  -> false.
 
 show({bad_password, Page}, Root) ->
-    template2(Root, "Error", "Incorrect password",
-             [p("You have supplied an incorrect password"),
-              p("To find out the the password fill "
-                "in your email address and click on "
-                "\"Show password\". If you are "
-                "the registered owner of this page "
-                "then I will tell you the password."),
-              form("POST", "sendMeThePassword.yaws",
-                   [input("hidden", "node", Page),
-                    "email address:",
-                    input("text", "email", ""),
-                    input("submit", "send",
-                          "Show password")])
-             ], false);
+    wiki_templates:template2(
+      Root, "Error", "Incorrect password",
+      [p("You have supplied an incorrect password"),
+       p("To find out the the password fill "
+	 "in your email address and click on "
+	 "\"Show password\". If you are "
+	 "the registered owner of this page "
+	 "then I will tell you the password."),
+       form("POST", "sendMeThePassword.yaws",
+	    [input("hidden", "node", Page),
+	     "email address:",
+	     input("text", "email", ""),
+	     input("submit", "send",
+		   "Show password")])
+      ], false);
 
 show({illegal_filename, FileName, Reason}, Root) ->
-    template2(Root, "Error", "Illegal filename",
-              [p("You have supplied an illegal filename: " ++ FileName ++ "."),
-               p(Reason)],
-              false);
+    wiki_templates:template2(
+      Root, "Error", "Illegal filename",
+      [p("You have supplied an illegal filename: " ++ FileName ++ "."),
+       p(Reason)],
+      false);
 
 show(X, _Root) ->
     {html, [body("white"),"<pre>",
@@ -2483,26 +2493,28 @@ searchPages(SearchPost, Root, _Prefix) ->
             S0 = [forms("POST", "searchPage.yaws",
                         [input("submit", "searchstart", "Search"),
                          input("text", "search", "")])],
-            template2(Root,"Search", "Wiki page search",
-                      [S0, "<hr>",
-                       h1("Nothing to find")],
-                      false);
+            wiki_templates:template2(
+	      Root,"Search", "Wiki page search",
+	      [S0, "<hr>",
+	       h1("Nothing to find")],
+	      false);
         {error, Error} ->
             S0 = [forms("POST", "searchPage.yaws",
                         [input("submit", "searchstart", "Search"),
                          input("text", "search", "")])],
-            template2(Root,"Search", "Wiki page search",
-                      [S0, "<hr>",
-                       h1(io_lib:format("Error in the regular "
-                                        "expression \"~p\"",
-                          [Error]))],
-                      false);
+            wiki_templates:template2(
+	      Root,"Search", "Wiki page search",
+	      [S0, "<hr>",
+	       h1(io_lib:format("Error in the regular "
+				"expression \"~p\"",
+				[Error]))],
+	      false);
         Search ->
-            Files = sort(files(Root, "\\.wob$")),
+            Files = lists:sort(files(Root, "\\.wob$")),
             {Sres, _S} = lists:mapfoldl(fun(F, S) ->
                                                 {searchPage(F, S), S} end,
                                         Search, Files),
-            Sres_sort = reverse(sort(Sres)),
+            Sres_sort = lists:reverse(lists:sort(Sres)),
             S1 = lists:map(fun({Matches, Fx}) ->
                                    [p(),i2s(Matches),"  ",
                                     wiki_to_html:format_link(
@@ -2512,10 +2524,11 @@ searchPages(SearchPost, Root, _Prefix) ->
             S0 = [forms("POST", "searchPage.yaws",
                         [input("submit", "searchstart", "Search"),
                          input("text", "search", Search)])],
-            template2(Root,"Search", "Wiki page search",
-                      [S0, "<hr>",
-                       h1("Number of matches found per page"), S1],
-                      false)
+            wiki_templates:template2(
+	      Root,"Search", "Wiki page search",
+	      [S0, "<hr>",
+	       h1("Number of matches found per page"), S1],
+	      false)
     end.
 
 searchPage(File, Search) ->

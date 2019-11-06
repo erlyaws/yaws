@@ -30,7 +30,7 @@ out(A) ->
     are required. (All code example below on Ubuntu)
   </p>
   <p>
-  <strong>NOTE: Erlang/OTP R14B02 or higher is required.</strong>
+  <strong>NOTE: Erlang/OTP R17 or higher is required.</strong>
   </p>
   <ul>
     <li>

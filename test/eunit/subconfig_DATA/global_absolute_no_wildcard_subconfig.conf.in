@@ -1,8 +1,0 @@
-<server vhost_subconfig>
-        port    = 8000
-        listen  = 0.0.0.0
-        docroot = /tmp
-
-        subconfigdir = @abs_srcdir@/server_subconfigdir.d
-        subconfig    = @abs_srcdir@/server_subconfig.conf
-</server>

@@ -38,8 +38,9 @@ keep_or_replace() {
 
 ## handle clean command and exit
 if [ "$1" = clean ]; then
-    rm -f ${YAWS_DIR}/src/mime_types.erl     \
-          ${YAWS_DIR}/src/yaws_generated.erl
+    rm -f ${YAWS_DIR}/src/mime_types.erl  \
+       ${YAWS_DIR}/src/yaws_generated.erl \
+       ${YAWS_DIR}/src/yaws_charset.hrl
     exit 0
 fi
 
@@ -66,11 +67,14 @@ if [ -f mime_types.erl ]; then
     need_mime=`find mime_type_c.erl -newer mime_types.erl -print`
 fi
 if [ -n "$need_mime" ]; then
-    erlc -o ${YAWS_DIR}/ebin yaws.erl                         || fail
-    erlc -o ${YAWS_DIR}/ebin yaws_generated.erl               || fail
-    erlc -o ${YAWS_DIR}/ebin mime_type_c.erl                  || fail
+    set yaws yaws_generated mime_type_c
+    for f; do
+        erlc +debug_info -o ${YAWS_DIR}/ebin ${f}.erl || fail
+    done
     erl -pa ${YAWS_DIR}/ebin -noshell -s mime_type_c generate || fail mime_types.erl
-    rm ${YAWS_DIR}/ebin/yaws.beam ${YAWS_DIR}/ebin/yaws_generated.beam ${YAWS_DIR}/ebin/mime_type_c.beam
+    for f; do
+        rm ${YAWS_DIR}/ebin/${f}.beam
+    done
 fi
 
 ## generate yaws scripts

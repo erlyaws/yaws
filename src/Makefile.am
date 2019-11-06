@@ -46,7 +46,9 @@ STATIC_MODULES = yaws.erl			\
 		 yaws_dime.erl			\
 		 yaws_exhtml.erl		\
 		 yaws_sse.erl			\
-		 yaws_websockets.erl
+		 yaws_websockets.erl		\
+		 yaws_dynopts.erl		\
+		 yaws_ws_sup.erl
 
 EXTRA_DIST = $(STATIC_MODULES) yaws_websockets.erl yaws_debug.hrl	\
 	     yaws_generated.template yaws.app.src yaws.app.src.script	\

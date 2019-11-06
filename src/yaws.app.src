@@ -16,5 +16,6 @@
          % {pam_service, "system-auth"},  % string()
          % {pam_use_acct, true},          % true | false
          % {pam_use_sess, true}           % true | false
+         % {encoding, latin1}             % latin1 | unicode
         ]},
   {applications,[kernel,stdlib@APPDEPS@]}]}.

@@ -29,8 +29,6 @@
 
 -export([out/1]).
 
--import(lists, [map/2, foldl/3, reverse/1]).
-
 -include("../include/yaws_api.hrl").
 
 
@@ -76,7 +74,7 @@ select_fields([])                  -> [].
 
 select_pattern(Name, Ls) ->
     Wp = ?MNESIA(table_info, [l2a(Name), wild_pattern]),
-    mk_select_pattern(map(fun(A) -> a2l(A) end,get_attributes(l2a(Name))),
+    mk_select_pattern(lists:map(fun(A) -> a2l(A) end,get_attributes(l2a(Name))),
                       Ls, Wp, 2).
 
 mk_select_pattern([A|As], [{A,V}|T], Wp, N) ->
@@ -149,7 +147,7 @@ style() ->
 table(Cbox, Sp, Table) when is_atom(Table) ->
     case catch ?MNESIA(table_info, [Table, attributes]) of
         Headers when is_list(Headers) ->
-            Vp = view_pattern(Cbox, map(fun(X) -> a2l(X) end, Headers)),
+            Vp = view_pattern(Cbox, lists:map(fun(X) -> a2l(X) end, Headers)),
             {Q, Result} = do_query(Sp),
             {ehtml,
              [{head, [],
@@ -180,29 +178,28 @@ mk_table_tab() ->
     Rows = get_tables(),
     [{'div', [],
       [{table, [],
-        map(fun(Row) ->
-                    {tr, [],
-                     {form, [{action, "table.yaws"},
-                             {method, "post"},
-                             {name, Row}],
-                      [{td, [], sublnk(a2l(Row))} |
-                       mk_input_fields(Row)]}}
-            end, Rows)}]}].
+        lists:map(fun(Row) ->
+                          {tr, [],
+                           {form, [{action, "table.yaws"},
+                                   {method, "post"},
+                                   {name, Row}],
+                            [{td, [], sublnk(a2l(Row))} |
+                             mk_input_fields(Row)]}}
+                  end, Rows)}]}].
 
 %%% Create each table cell; consisting of the attribute name and an input field.
 mk_input_fields(Table) ->
     As = get_attributes(Table),
     Max = max_noof_attrs(),
-    map(fun(0) ->
-                {td, [], []};
-           (Attribute) ->
-                A = a2l(Attribute),
-                {td, [],
-                 [{input, [{type, "checkbox"}, {name, "cbox_"++A}]},
-                  {span, [{class, "attribute"}], A},
-                  {input, [{type, "text"}, {name, A}]}]}
-        end, As ++ lists:duplicate(Max-length(As), 0)).
-
+    lists:map(fun(0) ->
+                      {td, [], []};
+                 (Attribute) ->
+                      A = a2l(Attribute),
+                      {td, [],
+                       [{input, [{type, "checkbox"}, {name, "cbox_"++A}]},
+                        {span, [{class, "attribute"}], A},
+                        {input, [{type, "text"}, {name, A}]}]}
+              end, As ++ lists:duplicate(Max-length(As), 0)).
 
 extract_cbox(L) ->
     extract_cbox(L, [], []).
@@ -212,7 +209,7 @@ extract_cbox([{"cbox_"++Cbox,_}|T], Cs, Rs) ->
 extract_cbox([H|T], Cs, Rs) ->
     extract_cbox(T, Cs, [H|Rs]);
 extract_cbox([], Cs, Rs) ->
-    {reverse(Cs), reverse(Rs)}.
+    {lists:reverse(Cs), lists:reverse(Rs)}.
 
 
 %%% Build the result table.
@@ -221,10 +218,10 @@ mk_tab(Vp, Headers, Rows) ->
       [{table, [],
         [{tr, [],
           [{th, [], a2l(X)} || X <- vp(Vp,Headers)]} |
-         map(fun(Row) ->
-                     {tr, [],
-                      [{td, [], massage(W)} || W <- vp(Vp,Row)]}
-             end, Rows)]}]}].
+         lists:map(fun(Row) ->
+                           {tr, [],
+                            [{td, [], massage(W)} || W <- vp(Vp,Row)]}
+                   end, Rows)]}]}].
 
 %%% Match the view pattern to select which entries to let through.
 vp([], L) -> L;
@@ -262,9 +259,9 @@ get_attributes(Table) ->
     ?MNESIA(table_info, [Table, attributes]).
 
 max_noof_attrs() ->
-    foldl(fun(Table, Max) ->
-                  erlang:max(length(get_attributes(Table)), Max)
-          end, 0, get_tables()).
+    lists:foldl(fun(Table, Max) ->
+                        erlang:max(length(get_attributes(Table)), Max)
+                end, 0, get_tables()).
 
 
 a2l(A) when is_atom(A) -> atom_to_list(A);
@@ -278,7 +275,7 @@ lk(Key, L) ->
     Val.
 
 t2l(L) ->
-    map(fun(T) -> tail(tuple_to_list(T)) end, L).
+    lists:map(fun(T) -> tail(tuple_to_list(T)) end, L).
 
 tail([]) -> [];
 tail(L)  -> tl(L).

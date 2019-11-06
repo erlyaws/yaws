@@ -145,6 +145,7 @@ write_log(ServerName, Type, {Fd, _FileName}, Infos) ->
 init([]) ->
     process_flag(trap_exit, true),
     ets:new(yaws_log, [named_table, set, protected, {keypos, 2}]),
+    yaws_dynopts:start_error_logger(),
     {ok, #state{running = false, now = fmtnow()}}.
 
 %%----------------------------------------------------------------------
@@ -305,7 +306,7 @@ handle_cast({_ServerName, access, Fd, {Ip, Req, InH, OutH, _}}, State) ->
                       _     -> "HTTP/X.X"
                   end,
 
-            Path      = yaws_server:safe_decode_path(Req#http_request.path),
+            Path      = yaws_server:safe_path(Req#http_request.path),
             Meth      = yaws:to_list(Req#http_request.method),
             Referer   = optional_header(InH#headers.referer),
             UserAgent = optional_header(InH#headers.user_agent),

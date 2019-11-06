@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+
+import re
+
+count = 0
+with open('dialyzer_warnings') as dw:
+   with open('known_dialyzer_warnings') as kw:
+      for warn in dw:
+         warn = warn.strip()
+         pat = kw.readline().strip()
+         if not pat:
+            continue
+         if not re.match(pat, warn):
+            print '%s' % warn
+            count += 1
+exit(count)

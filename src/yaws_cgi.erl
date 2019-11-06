@@ -368,10 +368,20 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
             {"HTTP_IF_NONE_MATCH", H#headers.if_none_match},
             {"HTTP_IF_UNMODIFIED_SINCE", H#headers.if_unmodified_since},
             {"HTTP_COOKIE", flatten_val(make_cookie_val(H#headers.cookie))}
-           ]++lists:map(fun({http_header,_,Var,_,Val})->{tohttp(Var),Val} end,
-                        H#headers.other)
+           ]++ other_headers(H#headers.other)
           )) ++
         Extra_CGI_Vars.
+
+other_headers(Headers) ->
+    lists:zf(fun({http_header,_,Var,_,Val}) ->
+                     case tohttp(Var) of
+                         "HTTP_PROXY" ->
+                             %% See http://httpoxy.org/
+                             false;
+                         HTTP ->
+                             {true, {HTTP,Val}}
+                     end
+             end, Headers).
 
 tohttp(X) ->
     "HTTP_"++lists:map(fun tohttp_c/1, yaws:to_list(X)).
@@ -913,6 +923,9 @@ fcgi_worker(ParentPid, Role, Arg, GlobalConf, ServerConf, Options) ->
 fcgi_pass_through_client_data(WorkerState) ->
     ParentPid = WorkerState#fcgi_worker_state.parent_pid,
     receive
+        {ParentPid, clidata, <<>>} ->
+            ParentPid ! {self(), clidata_receipt},
+            fcgi_pass_through_client_data(WorkerState);
         {ParentPid, clidata, ClientData} ->
             ParentPid ! {self(), clidata_receipt},
             fcgi_send_stdin(WorkerState, ClientData),

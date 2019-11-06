@@ -1,0 +1,92 @@
+<erl>
+%% inspired from upload.yaws, slightly simplified.
+
+-record(state, {acc,
+                last
+               }).
+
+out(A) ->
+    %% make sure it is post method
+    'POST' = yaws_api:http_request_method(yaws_api:arg_req(A)),
+    case catch get_props(A) of
+        {ok, AllParts} ->
+            Boundary = "3e9876546ecf",
+            RspCType = "multipart/form-data; boundary=" ++ Boundary,
+            case catch format_output(AllParts, Boundary, []) of
+                {ok, Html} ->
+                    [{content,RspCType,Html},break];
+                Else ->
+                    [{status,400},{html,io_lib:format("Error: ~p~n", [Else])}]
+            end;
+        {get_more, Cont, NewState} = GetMore ->
+            GetMore;
+        Else ->
+            [{status,400},{html,io_lib:format("Error: ~p~n", [Else])}]
+    end.
+
+format_output([], Boundary, Acc) ->
+    Part = ["--", Boundary, "--\r\n"],
+    {ok, lists:reverse([iolist_to_binary(Part)|Acc])};
+format_output([{head, {Name, Hdrs}}|Rest], Boundary, Acc0) ->
+    {_, Name}  = lists:keyfind("name", 1, Hdrs),
+    Acc1 = case lists:keyfind("filename", 1, Hdrs) of
+               {_, FName} ->
+                   {_, CType} = lists:keyfind(content_type, 1, Hdrs),
+                   Part = ["--", Boundary, "\r\n",
+                           "Content-Disposition: form-data; name=\"",Name,"\"; filename=\"",FName,"\"\r\n",
+                           "Content-Type: ",CType,"\r\n\r\n"],
+                   [iolist_to_binary(Part)|Acc0];
+               false ->
+                   Part = ["--", Boundary, "\r\n",
+                           "Content-Disposition: form-data; name=\"",Name,"\"",
+                           "\r\n\r\n"],
+                   [iolist_to_binary(Part)|Acc0]
+           end,
+    format_output(Rest, Boundary, Acc1);
+format_output([{part_body, Body}|Rest], Boundary, Acc) ->
+    format_output(Rest, Boundary, [Body|Acc]);
+format_output([{body, Body}|Rest], Boundary, Acc) ->
+    Part = [Body, "\r\n"],
+    format_output(Rest, Boundary, [iolist_to_binary(Part)|Acc]);
+format_output([H|_], _, _) ->
+    {error, {invalid_multipart_element, H}}.
+
+
+
+
+get_state(A) ->
+    case A#arg.state of
+        undefined -> #state{acc = [], last = false};
+        State0    -> State0
+    end.
+
+
+get_props(A) ->
+    Parse = yaws_api:parse_multipart_post(A),
+    State = get_state(A),
+    case Parse of
+        {cont, Cont, Res} ->
+            case add_file_chunk(A, Res, State) of
+                {done, Result}   -> {ok, Result};
+                {cont, NewState} -> {get_more, Cont, NewState}
+            end;
+        {result, Res} ->
+            case add_file_chunk(A, Res, State#state{last = true}) of
+                {done, Result} -> {ok, Result};
+                {cont, _}      -> {error, multipart_parsing_error}
+            end;
+        {error, Reason} = Error ->
+            Error
+    end.
+
+
+add_file_chunk(A, [H | Tail], #state{acc = Acc0} = State0) ->
+    Acc1 = [H | Acc0],
+    State1 = State0#state{acc = Acc1},
+    add_file_chunk(A, Tail, State1);
+add_file_chunk(A, [], #state{last = false} = State) ->
+    {cont, State};
+add_file_chunk(A, [], #state{last = true, acc = RAcc} = State) ->
+    Data = lists:reverse(RAcc),
+    {done, Data}.
+</erl>

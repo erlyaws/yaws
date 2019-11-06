@@ -1,5 +1,0 @@
-%% only check authorization for a.txt and b.txt
-{realm, "test10"}.
-{file, "a.txt"}.
-{file, "b.txt"}.
-{"foo", "bar"}.

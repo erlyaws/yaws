@@ -2,7 +2,7 @@
 -compile(export_all).
 
 start() ->
-    {ok, spawn(?MODULE, run, [])}.
+    {ok, spawn_link(?MODULE, run, [])}.
 
 run() ->
     Id = "embedded",
@@ -16,4 +16,4 @@ run() ->
         yaws_api:embedded_start_conf(Docroot, SconfList, GconfList, Id),
     [supervisor:start_child(ybed_sup, Ch) || Ch <- ChildSpecs],
     yaws_api:setconf(GC, SCList),
-    {ok, self()}.
+    exit(normal).

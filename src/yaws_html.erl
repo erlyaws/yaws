@@ -7,7 +7,7 @@
 -module('yaws_html').
 -author('jb@bevemyr.com').
 
--export([parse/1,parse/2,h2e/1]).
+-export([parse/1,parse/2,h2e/1,tag_type/1]).
 
 parse(Name) ->
     {ok, B} = file:read_file(Name),
@@ -71,15 +71,22 @@ parse([{data, Data, _Line}|Tokens], CTag, Stack, Acc) ->
     end.
 %%
 
-tag_type(p)          -> leaf;
-tag_type(hr)         -> leaf;
-tag_type(input)      -> leaf;
+tag_type(area)       -> leaf;
 tag_type(base)       -> leaf;
-tag_type(img)        -> leaf;
-tag_type('!doctype') -> leaf;
-tag_type(meta)       -> leaf;
-tag_type(link)       -> leaf;
 tag_type(br)         -> leaf;
+tag_type(col)        -> leaf;
+tag_type(embed)      -> leaf;
+tag_type(hr)         -> leaf;
+tag_type(img)        -> leaf;
+tag_type(input)      -> leaf;
+tag_type(keygen)     -> leaf;
+tag_type(link)       -> leaf;
+tag_type(meta)       -> leaf;
+tag_type(param)      -> leaf;
+tag_type(source)     -> leaf;
+tag_type(track)      -> leaf;
+tag_type(wbr)        -> leaf;
+tag_type('!doctype') -> leaf;
 tag_type(_)          -> node.
 
 %% tokenize(Input, DataAcc, TokenAcc, LineNr)

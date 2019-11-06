@@ -1,0 +1,8 @@
+<erl>
+out(_A) ->
+    %% Simple comment 1
+    %  Simple comment 2
+    %% Comment with special characters or string: ', ", <, >, <erl>, </erl>
+    %  Comment with special characters or string: ', ", <, >, <erl>, </erl>
+    {html, "Hello World! % this is not a comment %"}.
+</erl>

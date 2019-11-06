@@ -18,9 +18,12 @@
 -include_lib("kernel/include/file.hrl").
 -export([list_directory/6, out/1]).
 
+%% Exports for EUNIT.
+-export([parse_query/1, trim/2]).
+
 -define(FILE_LEN_SZ, 45).
 
-list_directory(_Arg, CliSock, List, DirName, Req, DoAllZip) ->
+list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
     {abs_path, Path} = Req#http_request.path,
     {DirStr, Pos, Direction, Qry} = parse_query(Path),
     ?Debug("List=~p Dirname~p~n", [List, DirName]),
@@ -67,7 +70,7 @@ list_directory(_Arg, CliSock, List, DirName, Req, DoAllZip) ->
              doc_tail()
            ],
 
-    B = list_to_binary(Body),
+    B = unicode:characters_to_binary(Body),
 
     %% Always use UTF-8 encoded file names. So, set the UTF-8 charset in the
     %% Content-Type header
@@ -81,17 +84,20 @@ list_directory(_Arg, CliSock, List, DirName, Req, DoAllZip) ->
     yaws:outh_set_content_type(NewCT),
 
     yaws_server:accumulate_content(B),
-    yaws_server:deliver_accumulated(CliSock),
+    yaws_server:deliver_accumulated(CliSock, Arg),
     yaws_server:done_or_continue().
 
 parse_query(Path) ->
     case string:tokens(Path, [$?]) of
         [DirStr, [PosC, $=, DirC] = Q] ->
             Pos = case PosC of
-                      $N -> 1; % name
+                      $m -> 2;
                       $M -> 2; % last modified
+                      $s -> 3;
                       $S -> 3; % size
-                      $D -> 4  % Description
+                      $d -> 4;
+                      $D -> 4; % description
+                      _  -> 1  % name (default)
                   end,
             Dir = case DirC of
                       $r -> reverse;
@@ -99,7 +105,7 @@ parse_query(Path) ->
                   end,
             {DirStr, Pos, Dir, "/?"++Q};
         _ ->
-            {Path, 1, normal, ""}
+            {Path, 1, normal, "/"}
     end.
 
 parse_description(Line) ->
@@ -125,12 +131,13 @@ get_description(Name,Descriptions) ->
     end.
 
 doc_head(DirName) ->
-    HtmlDirName = yaws_api:htmlize(yaws_api:url_decode(DirName)),
-    ?F("<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>\n"
-       "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n"
+    EncDirName = file_display_name(yaws_api:url_decode(DirName)),
+    HtmlDirName = yaws_api:htmlize(EncDirName),
+    ?F("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n"
        "<html>\n"
        " <head>\n"
-       "  <title>Index of ~s</title>\n"
+       "  <meta charset=\"utf-8\">"
+       "  <title>Index of ~ts</title>\n"
        "  <style type=\"text/css\">\n"
        "    img { border: 0; padding: 0 2px; vertical-align: text-bottom; }\n"
        "    td  { font-family: monospace; padding: 2px 3px; text-align:left;\n"
@@ -140,7 +147,7 @@ doc_head(DirName) ->
        "  </style>\n"
        "</head> \n"
        "<body>\n",
-       [HtmlDirName]
+       [list_to_binary(HtmlDirName)]
       ).
 
 doc_tail() ->
@@ -175,9 +182,12 @@ dir_footer(DirName) ->
 dir_header(DirName,DirStr) ->
     File = DirName ++ [$/ | "HEADER.txt"],
     case file:read_file(File) of
-        {ok,Bin} -> "<pre>\n" ++ binary_to_list(Bin) ++ "</pre>\n";
-        _ ->     HtmlDirName = yaws_api:htmlize(yaws_api:url_decode(DirStr)),
-                 "<h1>Index of " ++ HtmlDirName ++ "</h1>\n"
+        {ok,Bin} ->
+            "<pre>\n" ++ binary_to_list(Bin) ++ "</pre>\n";
+        _ ->
+            EncDirStr   = file_display_name(yaws_api:url_decode(DirStr)),
+            HtmlDirName = yaws_api:htmlize(EncDirStr),
+            ?F("<h1>Index of ~ts</h1>\n", [list_to_binary(HtmlDirName)])
     end.
 
 parent_dir() ->
@@ -264,12 +274,12 @@ out(A) ->
 
 
 generate_random_fn() ->
-    Bytes = try crypto:rand_bytes(64) of
+    Bytes = try crypto:strong_rand_bytes(64) of
                 B when is_bitstring(B) ->
                     B
             catch _:_ ->
                     %% for installations without crypto
-                    << <<(random:uniform(256) - 1)>> || _ <- lists:seq(1,64) >>
+                    << <<(yaws_dynopts:random_uniform(256) - 1)>> || _ <- lists:seq(1,64) >>
             end,
     << Int:512/unsigned-big-integer >> = << Bytes/binary >>,
     integer_to_list(Int).
@@ -293,11 +303,11 @@ mktempfilename() ->
     mktempfilename(PossibleDirs).
 
 zip(YPid, Dir, ForbiddenPaths) ->
-    {ok, RE_ForbiddenNames} = re:compile("\\.yaws\$"),
+    {ok, RE_ForbiddenNames} = re:compile("\\.yaws\$", [unicode]),
     Files = dig_through_dir(Dir, ForbiddenPaths, RE_ForbiddenNames),
     {ok, {Tempfile, TempfileH}} = mktempfilename(),
     file:write(TempfileH, lists:foldl(fun(I, Acc) ->
-                                              Acc ++ I ++ "\n"
+                                              [Acc, list_to_binary(file_display_name(I)), "\n"]
                                       end, [], Files)),
     file:close(TempfileH),
     process_flag(trap_exit, true),
@@ -407,29 +417,21 @@ file_entry({ok, FI}, _DirName, Name, Qry, Descriptions) ->
                 true -> ""
              end,
 
-    %% Assume that all file names are UTF-8 encoded. If the VM uses ISO-latin-1
-    %% encoding, then no conversion is needed (file already returns the byte
-    %% representation of file names). If the VM uses UTF-8, we need to do a
-    %% little conversion to return the byte representation of file names.
-    EncName = case file:native_name_encoding() of
-                  latin1 -> Name;
-                  utf8   -> binary_to_list(unicode:characters_to_binary(Name))
-              end,
-
+    EncName  = file_display_name(Name),
     Description = get_description(Name,Descriptions),
 
     Entry =
         ?F("  <tr>\n"
-           "    <td><img src=~p alt=~p/><a href=~p title=~p>~s</a></td>\n"
+           "    <td><img src=~p alt=~p/><a href=~p title=\"~ts\">~ts</a></td>\n"
            "    <td>~s</td>\n"
            "    <td>~s</td>\n"
            "    <td>~s</td>\n"
            "  </tr>\n",
            ["/icons/" ++ Gif,
             Alt,
-            yaws_api:url_encode(EncName) ++ QryStr,
-            EncName,
-            trim(EncName,?FILE_LEN_SZ),
+            yaws_api:url_encode(Name) ++ QryStr,
+            list_to_binary(EncName),
+            list_to_binary(trim(EncName,?FILE_LEN_SZ)),
             datestr(FI),
             sizestr(FI),
             Description]),
@@ -445,8 +447,14 @@ trim(L,N) ->
     trim(L,N,[]).
 trim([_H1,_H2,_H3]=[H|T], 3=I, Acc) ->
     trim(T, I-1, [H|Acc]);
-trim([_H1,_H2,_H3|_T], 3=_I, Acc) ->
+trim([H1,H2,H3|_T], 3=_I, Acc) when H1 < 128, H2 < 128, H3 < 128 ->
     lists:reverse(Acc) ++ "..&gt;";
+trim([H1,H2,H3|_T], 3=_I, [H0|Acc]) ->
+    %% Drop UTF8 continuation bytes: 10xxxxxx
+    Hs0 = lists:dropwhile(fun(Byte) -> Byte bsr 6 == 2#10 end, [H3,H2,H1,H0]),
+    %% Drop UTF8 leading byte: 11xxxxxx
+    Hs = lists:dropwhile(fun(Byte) -> Byte bsr 6 == 2#11 end, Hs0),
+    lists:reverse(Hs++Acc) ++ "..&gt;";
 trim([H|T], I, Acc) ->
     trim(T, I-1, [H|Acc]);
 trim([], _I, Acc) ->
@@ -486,3 +494,14 @@ list_gif(zip, _) ->
     {"compressed.gif", "[DIR]"};
 list_gif(_, _) ->
     {"unknown.gif", "[OTH]"}.
+
+
+%% Assume that all file names are UTF-8 encoded. If the VM uses ISO-latin-1
+%% encoding, then no conversion is needed (file already returns the byte
+%% representation of file names). If the VM uses UTF-8, we need to do a little
+%% conversion to return the byte representation of file names.
+file_display_name(Name) ->
+    case file:native_name_encoding() of
+        latin1 -> Name;
+        utf8   -> binary_to_list(unicode:characters_to_binary(Name))
+    end.

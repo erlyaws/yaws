@@ -1,3 +1,0 @@
-subconfigdir = @abs_srcdir@/global_subconfigdir.d
-subconfig    = @abs_builddir@/global_absolute_subconfig.conf
-subconfig    = @abs_srcdir@/global_subconfig.d/*.conf

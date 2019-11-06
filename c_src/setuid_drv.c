@@ -132,7 +132,6 @@ DRIVER_INIT(setuid_drv)
     setuid_driver_entry.ready_async     = NULL;
     setuid_driver_entry.flush           = NULL;
     setuid_driver_entry.call            = NULL;
-    setuid_driver_entry.event           = NULL;
     setuid_driver_entry.extended_marker = ERL_DRV_EXTENDED_MARKER;
     setuid_driver_entry.major_version   = ERL_DRV_EXTENDED_MAJOR_VERSION;
     setuid_driver_entry.minor_version   = ERL_DRV_EXTENDED_MINOR_VERSION;

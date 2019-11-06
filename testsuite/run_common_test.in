@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+
+CT_RUN=@CT_RUN@
+COVER_TO_HTML=@abs_builddir@/cover_to_html.sh
+LABEL=@PACKAGE_NAME@
+LOG_DIR=@abs_builddir@/logs
+LOG_FILE=${LOG_DIR}/${LABEL}.log
+CUR_DIR=@abs_builddir@
+EBIN_DIR=@abs_top_builddir@/ebin
+INC_DIR=@abs_top_builddir@/include
+COVERSPEC=@abs_builddir@/@PACKAGE_NAME@.coverspec
+
+LABEL_BRANCH=$(test -d @abs_top_srcdir@/.git && git rev-parse --abbrev-ref HEAD || echo "master")
+LABEL_VSN=$(test -d @abs_top_srcdir@/.git && git log -1 --pretty=%h --abbrev=8 || echo "@YAWS_VSN@")
+
+ALL_SUITES=$1
+SUITES=$2
+GRPS=$3
+CASES=$4
+
+if (test x"$SUITES" = xall) || (test x"$SUITES" = x); then
+    SUITES=$ALL_SUITES
+    GRPS=
+    CASES=
+fi
+
+nb_suites=$(echo $SUITES | wc -w)
+if (test x"$GRPS" = xall) || (test x"$GRPS" = x) ||  (test $nb_suites -gt 1); then
+    GRPS=
+fi
+
+nb_groups=$(echo $GRPS | wc -w)
+if (test x"$CASES" = xall) || (test $nb_suites -gt 1) ||  (test $nb_groups -gt 1); then
+    CASES=
+fi
+
+suites_groups_and_cases=
+if (test x"$SUITES" != x); then
+    suites_groups_and_cases="-suite $SUITES"
+fi
+if (test x"$GRPS" != x); then
+    suites_groups_and_cases="$suites_groups_and_cases -group $GRPS"
+fi
+if (test x"$CASES" != x); then
+    suites_groups_and_cases="$suites_groups_and_cases -case $CASES"
+fi
+
+cover_opt=
+if test x"$USE_COVER" = xyes; then
+    cover_opt="-cover $COVERSPEC"
+fi
+
+debugger_opt=
+if test x"$USE_DEBUGGER" = xyes; then
+    debugger_opt="-step [config]"
+fi
+
+traces_opt=
+if test x"$TRACES" != x; then
+    traces_opt="{traces, $TRACES}"
+fi
+
+COLORS=$(tput colors 2> /dev/null)
+if (test $? = 0) && (test $COLORS -gt 2); then
+    red='[0;31m'
+    green='[0;32m'
+    bold='[0;1m'
+    std='[m'
+else
+    red= green= bold= std=
+fi
+
+export RED_COLOR=$red
+export GREEN_COLOR=$green
+export STD_COLOR=$std
+export BOLD_COLOR=$bold
+
+$CT_RUN -label ${LABEL}-${LABEL_BRANCH}-${LABEL_VSN}            \
+        -logdir $LOG_DIR -dir $CUR_DIR $cover_opt               \
+        $suites_groups_and_cases -no_auto_compile               \
+        -ct_hooks testsuite ["$traces_opt"] $debugger_opt       \
+        -pa $EBIN_DIR -pa $CUR_DIR -include $INC_DIR > $LOG_FILE
+estatus=$?
+case $estatus in
+    0) col=$green res=PASS;;
+    *) col=$red   res=FAIL;;
+esac
+
+
+if test x"$USE_COVER" = xyes; then
+    echo
+    echo "${bold}Coverage analysis${std}..."
+    $COVER_TO_HTML
+fi
+
+
+TEST_PATH=$(grep "^CWD set to: " ${LOG_FILE} | sed -e 's/^.*"\(.*\)".*$/\1/')
+echo "============================================================================${std}"
+echo " see ${LOG_FILE} for details${std}"
+echo
+echo " common_test result: ${TEST_PATH}/index.html${std}"
+if test x"$USE_COVER" = xyes; then
+    echo " coverage result:    ${LOG_DIR}/cover.html${std}"
+fi
+echo "============================================================================${std}"
+echo
+
+case $estatus in
+    0)
+        # Success
+        ;;
+    *)
+        init_failures=$(grep -c "_SUITE:init_per_suite_failed failed" ${LOG_FILE})
+        ts_failures=$(grep -c "RESULT: Failed" ${LOG_FILE})
+        failures=$((init_failures+ts_failures))
+        if test $failures == 0; then
+            # No failure: This means there are skipped testcases
+            estatus=0
+        else
+            # Only show the log file if failures are found.
+            echo "============================ [ yaws.log] ==================================="
+            cat ${LOG_FILE}
+            echo "============================================================================"
+        fi
+        ;;
+esac
+exit $estatus

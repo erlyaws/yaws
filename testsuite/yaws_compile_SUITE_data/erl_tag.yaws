@@ -1,0 +1,66 @@
+
+<erl>
+out(_A) ->
+    {html, "erl_tag#test1"}.
+</erl>
+
+<erl> out(_A) -> {html, "erl_tag#test2"}. </erl>
+
+<erl>out(_A) ->
+    {html, "erl_tag#test3"}. </erl>
+
+<b><erl>
+out(_A) ->
+    {html, "erl_tag#test4"}.
+</erl></b>
+
+<erl module="erl_tag_test5">
+-export([test/0]).
+
+test() ->
+    "erl_tag#test5".
+
+out(_A) ->
+    ok.
+</erl>
+<erl>
+out(_A) ->
+    {html, erl_tag_test5:test()}.
+</erl>
+
+<erl
+  >
+out(_A) ->
+    {html, "erl_tag#test6"}.
+</erl
+  >
+
+<erl unknown_attr="value" skip_module="value" module_skip="value"
+  module  =  'erl_tag_test7'
+>
+-export([test/0]).
+
+test() ->
+    "erl_tag#test7".
+out(_A) ->
+    ok.
+</erl
+>
+<erl>
+out(_A) ->
+    {html, erl_tag_test7:test()}.
+</erl>
+
+<erl>
+out(_A) ->
+    {html, yaws_api:htmlize("<erl>\"erl_tag#test8\"</erl>")}.
+</erl>
+
+<erl>
+out(_A) ->
+    {html, yaws_api:htmlize(atom_to_list('<erl>\'erl_tag#test9\'</erl>'))}.
+</erl>
+
+<erl>
+out(_A) ->
+    {html, "erl_tag#test10"}.

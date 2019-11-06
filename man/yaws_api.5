@@ -46,7 +46,7 @@ We have the following relevant record definitions:
           clisock,        % the socket leading to the peer client
           client_ip_port, % {ClientIp, ClientPort} tuple
           headers,        % headers
-          req,            % request
+          req,            % request (possibly rewritten)
           orig_req,       % original request
           clidata,        % The client data (as a binary in POST requests)
           server_path,    % The normalized server path
@@ -69,9 +69,11 @@ We have the following relevant record definitions:
                           %  ie http://some.host/<prepath>/<script-point>/d/e
                           % where <script-point> is an appmod mount point,
                           % or .yaws,.php,.cgi,.fcgi etc script file.
-          pathinfo        % Set to '/d/e' when calling c.yaws for the request
+          pathinfo,       % Set to '/d/e' when calling c.yaws for the request
                           % http://some.host/a/b/c.yaws/d/e
                           %  equiv of cgi PATH_INFO
+          appmod_name     % name of the appmod handling a request,
+                          % or undefined if not applicable
          }).
 .fi
 \fR
@@ -453,10 +455,11 @@ Example usage could be:
 
 .TP
 \fBnew_cookie_session(Opaque)\fR
-Create a new cookie based session, the yaws system will set the
-cookie. The new random generated cookie is returned from this
-function. The Opaque argument will typically contain user data
-such as user name and password
+Create a new cookie-based session. Yaws will either generate the cookie
+itself or, if a \fIysession_cookiegen\fR module is configured, call
+\fInew_cookie()\fR on that module to get a new cookie. The new cookie is
+returned from this function. The \fIOpaque\fR argument will typically
+contain user data such as user name and password
 
 .TP
 \fBnew_cookie_session(Opaque, TTL)\fR
@@ -465,12 +468,12 @@ overriding the system specified time-out value.
 
 .TP
 \fBnew_cookie_session(Opaque, TTL, CleanupPid)\fR
-As above, but also sends a message
-\fI{yaws_session_end, Reason, Cookie, Opaque}\fR to the provided CleanuPid where
-Reason can be either of \fItimeout\fR or \fInormal\fR. The \fICookie\fR
-is the HTTP cookie as returned by \fInew_session()\fR and the Opaque
-is the user provided Opaque parameter to \fInew_session()\fR.
-The purpose of the feature is to cleanup resources assigned to the session.
+As above, but also sends a message \fI{yaws_session_end, Reason, Cookie,
+Opaque}\fR to the provided \fICleanupPid\fR where Reason can be either of
+\fItimeout\fR or \fInormal\fR. The \fICookie\fR is the HTTP cookie as
+returned by \fInew_session()\fR and \fIOpaque\fR is the user-provided
+\fIOpaque\fR parameter to \fInew_session()\fR.  The purpose of the feature
+is to cleanup resources assigned to the session.
 
 
 .TP
@@ -512,8 +515,9 @@ hex values of the least respective most significant 4 bits in the 8 bit
 character.
 
 .TP
-\fBurl_encode(Str)\fR
-Url-encodes a string. All URLs in HTML documents must be URL encoded.
+\fBurl_encode(URL)\fR
+URL-encodes a string or binary, and returns a string. All URLs in HTML
+documents must be URL encoded.
 
 .TP
 \fBget_sslsocket(Socket)\fR
@@ -539,20 +543,24 @@ record. The return list is suitable for retransmit.
 
 .TP
 \fBreformat_header(H, FormatFun)\fR
-Returns a list of reformatted header values from a #headers{} record, with
-each element of the list formatted via a call to \fIFormatFun\fR. This
-enables converting #headers{} records into various lists of headers and
-their values. Note that sometimes the \fISet-Cookie\fR header will contain
-a tuple value of the form \fI{multi, ValueList}\fR \[em] see
-\fImerge_header/2\fR below for details \[em] so formatting functions should
-be prepared to handle such a tuple. They should handle it by formatting
-each member of \fIValueList\fR as a separate \fISet-Cookie\fR header, then
-returning all such header-value pairs in a list. Note that this implies
-that sometimes the return values of \fIreformat_header/1\fR and
-\fIreformat_header/2\fR can be a multi-level list. The \fI{multi,
-ValueList}\fR construct results only from calls to \fImerge_header/2\fR or
-\fImerge_header/3\fR, where multiple values are set in separate calls for
-the same header.
+Returns a list of reformatted header values from a #headers{} record,
+with each element of the list formatted via a call to
+\fIFormatFun\fR. This enables converting #headers{} records into
+various lists of headers and their values. Note that sometimes the
+\fISet-Cookie\fR header or other headers will contain a tuple value of
+the form \fI{multi, ValueList}\fR. (The \fI{multi, ValueList}\fR
+construct typically results from calls to \fImerge_header/2\fR or
+\fImerge_header/3\fR, where multiple values are set in separate calls
+for the same header; see \fImerge_header/2\fR below for details.)
+Formatting functions should therefore be capable of handling a
+\fI{multi, ValueList}\fR tuple. They should handle it by formatting
+each member of \fIValueList\fR as a separate header string, storing
+all such header strings in a list, and returning that list in a
+\fI{multi, HdrList}\fR tuple. Note that in versions of Yaws 2.0.6 and
+older, formatting functions returned such header lists directly, which
+implies that sometimes the return values of \fIreformat_header/1\fR
+and \fIreformat_header/2\fR can be a multi-level list if constructed
+by one of these older formatting functions.
 
 .TP
 \fBset_header(Headers, {Header, Value})\fR
@@ -887,14 +895,14 @@ Sets the Content-Type: header.
 \fI{content_encoding, What}\fR
 
 Sets the Content-Encoding: header. If this header is defined, no deflate is
-performed by Yaws. So you can compress data by yourself.
+performed by Yaws, allowing you to compress data yourself if you wish to do so.
 
 \fI{content_length, Len}\fR
 
 Normally yaws will ship Yaws pages using Transfer-Encoding: chunked. This
 is because we generally can't know how long a yaws page will be. If we for
 some reason want to force a Content-Length: header (and we actually do
-know the length of the content, we can force yaws to not ship the
+know the length of the content, we can force Yaws to not ship the
 page chunked.
 
 \fI{transfer_encoding, What}\fR
@@ -908,6 +916,11 @@ Sets the WWW-Authenticate: header.
 \fI{vary, What}\fR
 
 Sets the Vary: header.
+
+
+\fI{accept_ranges, What}\fR
+
+Sets the Accept-Ranges: header.
 
 
 All other headers must be added using the normal HTTP syntax.
@@ -979,13 +992,18 @@ option types are:
 \fI{disable_cache, Bool}\fR - if set to \fItrue\fR, disable the cache of
 \fIPage\fR for this call.
 
+.TP
+\fB{websocket, CallbackModule, Options}\fR
+Tell Yaws to use \fICallbackModule\fR as a WebSocket Protocol handler for
+traffic on the client socket. See the Yaws websocket documentation for more
+details.
 
 .TP
 \fB{ssi, File, Delimiter, Bindings}\fR
-Server side include File and  macro expansion in File.
-Each occurrence of a string, say "xyz", inside File which
-is inside Delimiters is replaced with the corresponding
-value in Bindings.
+Server side include \fIFile\fR and macro expansion in \fIFile\fR.
+Each occurrence of a string, say "xyz", inside \fIFile\fR that's
+within a \fIDelimiter\fR pair is replaced with the corresponding
+value in \fIBindings\fR.
 
 Example:
 Delimiter = %%
@@ -998,7 +1016,12 @@ The occurrence of %%xyz%% in File will be replaced with "Dingbat"
 in the Server side included output.
 
 The {ssi, File, Delimiter, Bindings} statement can also
-occur inside a deep ehtml structure.
+occur within a deep ehtml structure.
+
+The special directive \fIstrip_undefined\fR can be specified in
+the \fIBindings\fR list, just as it can for the \fI{bindings, ....}\fR
+directive, but it's ignored because treating undefined variables
+as empty is the default for \fIssi\fR bindings.
 
 
 .TP
@@ -1008,14 +1031,35 @@ Establish variable bindings that can be used in the page.
 All bindings can then be used in the rest of yaws code
 (in HTML source and within erl tags).
 In HTML source %%Key%% is expanded to Value and within erl
-tags \fIyaws_api:binding(Key)\fR can be used to extract Value
-and \fIyaws_api:binding_exists(Key)\fR can be used to check for
-the existence of a binding.
+tags \fIyaws_api:binding(Key)\fR (which calls \fIerror\fR if
+no such binding exists) or \fIyaws_api:binding_find(Key)\fR
+(which returns \fIundefined\fR if no such binding exists)
+can be used to extract Value, and \fIyaws_api:binding_exists(Key)\fR
+can be used to check for the existence of a binding.
+
+If a page happens to contains text that looks like a binding, e.g.
+%%SomeText%%, but no key \fISomeText\fR is supplied, then by default
+the original text is left as is.  If you prefer that anything parsed
+as a binding gets stripped out of a page whenever the \fBbindings\fR
+directive does not specify its key, include the special directive
+\fIstrip_undefined\fR in the bindings list:
+
+{bindings, [{Key1, Value1}, strip_undefined]}
 
 .TP
 \fB{yssi, YawsFile}\fR
 Include a yaws file. Compile it and expand as if it had
 occured inline.
+
+.TP
+\fB#arg{}\fR
+Return an instance of an \fI#arg{}\fR record. This can be useful when used
+as part of a \fI[ListOfValues]\fR return value, so that any subsequent
+elements in the return list that require an #arg{} get the returned
+instance rather than the original. For example, an \fIout/1\fR function
+might set the \fIstate\fR field of an #arg{}, then return both it and
+\fI{yssi, YawsFile}\fR in a list, in which case Yaws will pass the returned
+#arg{}, rather than the original instance, to the yaws file out/1 function.
 
 .TP
 \fB[ListOfValues]\fR

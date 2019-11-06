@@ -18,7 +18,8 @@
           temp_dir = yaws:tmpdir("/tmp"),
           temp_file,
           headers = [],
-          data_type = list
+          data_type = list,
+          return_error_file_path = false
          }).
 
 read_multipart_form(A, Options) when A#arg.state == undefined ->
@@ -43,7 +44,9 @@ read_options([Option|Rest], State) ->
                    list ->
                        State#upload{data_type = list};
                    binary ->
-                       State#upload{data_type = binary}
+                       State#upload{data_type = binary};
+                   return_error_file_path ->
+                       State#upload{return_error_file_path = true}
                end,
     read_options(Rest, NewState).
 
@@ -83,7 +86,9 @@ add_file_chunk(_A, [], State) ->
 add_file_chunk(A, [{head, {_Name, Opts}}|Res], State ) ->
     S1 = close_previous_param(State),
     S2 = lists:foldl(
-           fun({"filename", Fname0}, RunningState) ->
+           fun(_, Error={error, _Reason}) ->
+                   Error;
+              ({"filename", Fname0}, RunningState) ->
                    case create_temp_file(State) of
                        [undefined, undefined] ->
                            %% values will be stored in memory as
@@ -98,7 +103,9 @@ add_file_chunk(A, [{head, {_Name, Opts}}|Res], State ) ->
                              filename            = Fname0,
                              temp_file           = Fname,
                              param_running_value = undefined,
-                             running_file_size   = 0}
+                             running_file_size   = 0};
+                       Error={error, _Reason} ->
+                           Error
                    end;
               ({"name", ParamName}, RunningState) ->
                    RunningState#upload{
@@ -110,21 +117,32 @@ add_file_chunk(A, [{head, {_Name, Opts}}|Res], State ) ->
            end,
            S1,
            Opts),
-    add_file_chunk(A,Res,S2);
+    case S2 of
+        Error={error, _Reason} ->
+            Error;
+        _ ->
+            add_file_chunk(A,Res,S2)
+    end;
 
 add_file_chunk(A, [{body, Data}|Res],State) when State#upload.fd /= undefined ->
-    NewSize = compute_new_size(State,Data),
+    NewSize = compute_new_size(State, Data),
     Check   = check_param_size(State, NewSize),
     case Check of
         ok ->
-            ok = file:write(State#upload.fd, Data),
-            add_file_chunk(A, Res, State#upload{running_file_size = NewSize});
+            Fd = State#upload.fd,
+            case file:write(Fd, Data) of
+                ok ->
+                    add_file_chunk(A, Res, State#upload{running_file_size = NewSize});
+                {error, Reason} ->
+                    file:close(Fd),
+                    {error, make_error_reason(Reason, State)}
+            end;
         Error={error, _Reason} ->
             Error
     end;
 
 add_file_chunk(A, [{body, Data}|Res], State) ->
-    NewSize = compute_new_size(State,Data),
+    NewSize = compute_new_size(State, Data),
     Check   = check_param_size(State, NewSize),
     case Check of
         ok ->
@@ -143,7 +161,9 @@ add_file_chunk(A, [{body, Data}|Res], State) ->
 
 create_temp_file(State) ->
     case State#upload.no_temp_file of
-        undefined ->
+        true ->
+            [undefined, undefined];
+        _ ->
             FilePath =
                 case State#upload.fixed_filename of
                     undefined ->
@@ -156,12 +176,12 @@ create_temp_file(State) ->
                     Filename ->
                         Filename
                 end,
-            {ok,Fd} = file:open(FilePath, [write,binary]),
-            [FilePath, Fd];
-        true ->
-            [undefined, undefined]
-    end
-        .
+            case file:open(FilePath, [write,binary]) of
+                {ok, Fd} -> [FilePath, Fd];
+                {error, Reason} ->
+                    {error, make_error_reason(Reason, State)}
+            end
+    end.
 
 close_previous_param(#upload{param_name = undefined} = State) ->
     State;
@@ -208,17 +228,16 @@ compute_new_size(State, Data) ->
             State#upload.running_file_size + iolist_size(Data)
     end.
 
-
 check_param_size(State, NewSize) ->
     case State#upload.max_file_size of
         undefined -> ok;
         MaxSizeInBytes ->
             case NewSize > MaxSizeInBytes of
-                true ->
-                    {error, io_lib:format("~p is too large",
-                                          [State#upload.param_name])};
                 false ->
-                    ok
+                    ok;
+                true ->
+                    file:close(State#upload.fd),
+                    {error, make_error_reason(max_file_size_exceeded, State)}
             end
     end.
 
@@ -229,3 +248,13 @@ compute_new_value(PrevValue, NewData) ->
         Data when is_list(NewData) ->
             PrevValue ++ Data
     end.
+
+make_error_reason(Reason, State) ->
+    Elements = [Reason, State#upload.param_name |
+                case State#upload.return_error_file_path of
+                    true ->
+                        [State#upload.fixed_filename, State#upload.temp_file];
+                    false ->
+                        []
+                end],
+    list_to_tuple([E || E <- Elements, E /= undefined]).

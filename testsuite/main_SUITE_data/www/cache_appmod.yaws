@@ -1,0 +1,4 @@
+<erl>
+out(A) ->
+    {html, "Cache Appmod!"}.
+</erl>

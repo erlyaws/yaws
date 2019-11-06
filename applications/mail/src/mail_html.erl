@@ -101,20 +101,8 @@ find_body(Tag, [X|Rest], Acc) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-
-
-%tag_type(option)       -> leaf;
-tag_type(p)          -> leaf;
-tag_type(hr)         -> leaf;
-tag_type(input)      -> leaf;
-tag_type(base)       -> leaf;
-tag_type(img)        -> leaf;
-tag_type('!doctype') -> leaf;
-tag_type(meta)       -> leaf;
-tag_type(link)       -> leaf;
-tag_type(br)         -> leaf;
-tag_type(param)      -> leaf;
-tag_type(_)          -> node.
+tag_type(Tag) ->
+    yaws_html:tag_type(Tag).
 
 % tokenize(Input, DataAcc, TokenAcc, LineNr)
 

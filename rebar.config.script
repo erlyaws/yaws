@@ -20,12 +20,6 @@ ErtsVsn = case string:tokens(erlang:system_info(version), ".") of
                   {list_to_integer(A), list_to_integer(B), list_to_integer(C)}
           end.
 
-%% generate a default test/t11/include/srcdir_test.hrl file so rebar can
-%% compile the tests
-ok = filelib:ensure_dir(filename:join(Dir, "test/t11/include/srcdir_test.hrl")),
-ok = file:write_file(filename:join(Dir, "test/t11/include/srcdir_test.hrl"),
-                     <<"-define(SRCDIR_VERSION, \"1.0\").\n">>),
-
 %% generate a charset include file
 ok = file:write_file(filename:join(Dir, "src/yaws_charset.hrl"),
                      case os:getenv("YAWS_CHARSET") of
@@ -45,111 +39,75 @@ Cfg0 = case os:getenv("YAWS_SOAP") of
                UpdateDeps(CONFIG, SoapDeps)
        end,
 
-ErlOpts0 = case lists:keyfind(erl_opts, 1, Cfg0) of
-               {erl_opts, EOpts} -> EOpts;
-               false             -> []
-           end,
+ErlOpts = case lists:keyfind(erl_opts, 1, Cfg0) of
+              {erl_opts, EOpts} -> EOpts;
+              false             -> []
+          end,
 PortEnv0 = case lists:keyfind(port_env, 1, Cfg0) of
                {port_env, PEnv} -> PEnv;
                false            -> []
            end,
-PortSpecs0 = case lists:keyfind(port_specs, 1, Cfg0) of
-                 {port_specs, PSpecs} ->
-                     case os:getenv("YAWS_DISABLE_PAM") of
-                         false ->
-                             PSpecs;
-                         _ ->
-                             lists:keydelete("priv/lib/epam.so", 1, PSpecs)
-                     end;
-                 false                -> []
-             end,
+DisablePam = os:getenv("YAWS_DISABLE_PAM"),
+PortSpecs = case lists:keyfind(port_specs, 1, Cfg0) of
+                {port_specs, PSpecs} ->
+                    case DisablePam of
+                        false ->
+                            PSpecs;
+                        _ ->
+                            lists:keydelete("priv/lib/epam.so", 1, PSpecs)
+                    end;
+                false -> []
+            end,
 
-%% yaws:sendfile/5 was buggy in R15B (ERTS = 5.9)
-code:ensure_loaded(file),
-ErlOpts1 = case erlang:function_exported(file,sendfile,5) of
-               true when ErtsVsn >= {5,9,1} ->
-                   ErlOpts0 ++ [{d,'HAVE_ERLANG_SENDFILE'}];
-               _ ->
-                   ErlOpts0
-           end,
+OS = os:type(),
 
-code:ensure_loaded(crypto),
-ErlOpts2 = case erlang:function_exported(crypto,hash,2) of
-               true  -> ErlOpts1 ++ [{d,'HAVE_CRYPTO_HASH'}];
-               false -> ErlOpts1
-           end,
-
-code:ensure_loaded(inet),
-ErlOpts3 = case erlang:function_exported(inet,parse_strict_address,1) of
-               true  -> ErlOpts2 ++ [{d,'HAVE_INET_PARSE_STRICT_ADDRESS'}];
-               false -> ErlOpts2
-           end,
-
-%% Unicode module was buggy for R14B04 and previous (ERTS <= 5.8.5)
-ErlOpts4 = if
-               ErtsVsn =< {5,8,3} -> ErlOpts3 ++ [{d,'HAVE_BAD_UNICODE'}];
-               true               -> ErlOpts3
-           end,
-
-%% filelib:wildcard/2 was buggy for R15B03 and previous (ERTS <= 5.9.3)
-ErlOpts5 = if
-               ErtsVsn =< {5,9,3} -> ErlOpts4 ++ [{d,'HAVE_BAD_WILDCARD'}];
-               true               -> ErlOpts4
-           end,
-
-
-%% Check for support of honor_cipher_order SSL option (ERTS >= 6.0)
-ErlOpts6 = if
-               ErtsVsn >= {6,0,0} -> ErlOpts5 ++ [{d,'HAVE_SSL_HONOR_CIPHER_ORDER'}];
-               true               -> ErlOpts5
-           end,
-
-%% Check for support of client_renegotiation SSL option (ERTS >= 7.0)
-ErlOpts7 = if
-               ErtsVsn >= {7,0,0} -> ErlOpts6 ++ [{d,'HAVE_SSL_CLIENT_RENEGOTIATION'}];
-               true               -> ErlOpts6
-           end,
-
-%% Check for support of log_alert SSL option (ERTS >= 5.10.3)
-ErlOpts8 = if
-               ErtsVsn >= {5,10,3} -> ErlOpts7 ++ [{d,'HAVE_LOG_ALERT'}];
-               true                -> ErlOpts7
-           end,
-
-%% Check for erlang:now/0
-ErlOpts9 = if
-               ErtsVsn < {7,0,0} -> ErlOpts8 ++ [{d,'HAVE_ERLANG_NOW'}];
-               true              -> ErlOpts8
-           end,
-
-ErlOpts = ErlOpts9,
-
-HaveSendFile = lists:keymember('HAVE_SENDFILE', 3, ErlOpts),
-{PortEnv1, PortSpecs1} =
-    if
-        HaveSendFile ->
-            {PortEnv0 ++ [{"DRV_CFLAGS", "$DRV_CFLAGS -DHAVE_SENDFILE"}],
-             PortSpecs0 ++ [{"priv/lib/yaws_sendfile_drv.so",
-                             ["c_src/yaws_sendfile_drv.c", "c_src/hashtable.c"]}]};
-
-        true ->
-            {PortEnv0, PortSpecs0}
+DefaultUsrIncludeSecurity = "/usr/include/security",
+UsrIncludeSecurity =
+    case DisablePam of
+        false ->
+            case OS of
+                {unix, darwin} ->
+                    case filelib:is_dir(DefaultUsrIncludeSecurity) of
+                        true ->
+                            DefaultUsrIncludeSecurity;
+                        false ->
+                            Result =
+                                fun R(Port, Acc) ->
+                                        receive
+                                            {Port, {data, L}} ->
+                                                R(Port, [L|Acc]);
+                                            {Port, {exit_status, 0}} ->
+                                                {ok, lists:flatten(lists:reverse(Acc))};
+                                            {Port, {exit_status, Fail}} ->
+                                                {error, {Fail,
+                                                         lists:flatten(lists:reverse(Acc))}}
+                                        end
+                                end,
+                            Run =
+                                fun(Cmd) ->
+                                        Port = open_port({spawn, Cmd},
+                                                         [exit_status, stderr_to_stdout]),
+                                        Result(Port, [])
+                                end,
+                            {ok, PlatDir} = Run("/usr/bin/xcrun --show-sdk-platform-path"),
+                            FindCmd = "/usr/bin/find " ++ string:strip(PlatDir, right, $\n) ++
+                                " -type d -name MacOSX.sdk",
+                            {ok, FindResult} = Run(FindCmd),
+                            SdkDir = string:strip(FindResult, right, $\n),
+                            SdkDir ++ DefaultUsrIncludeSecurity
+                    end;
+                _ ->
+                    DefaultUsrIncludeSecurity
+            end;
+        _ -> ""
     end,
+PortEnv1 = case UsrIncludeSecurity of
+               "" -> PortEnv0;
+               _ -> PortEnv0 ++ [{"CFLAGS", "$CFLAGS -I" ++ UsrIncludeSecurity}]
+           end,
 
 Cfg1 = lists:keyreplace(erl_opts,   1, Cfg0, {erl_opts,   ErlOpts}),
 Cfg2 = lists:keyreplace(port_env,   1, Cfg1, {port_env,   PortEnv1}),
-Cfg3 = lists:keyreplace(port_specs, 1, Cfg2, {port_specs, PortSpecs1}),
+Cfg3 = lists:keyreplace(port_specs, 1, Cfg2, {port_specs, PortSpecs}),
 
-%% Check for the existence of a .rebar/YAWS_DEV_MODE file, and if found,
-%% add ibrowse as a dependency since it's used for testing. This avoids the
-%% need to specify ibrowse as a regular dependency, which is beneficial for
-%% projects that depend on Yaws as they don't need the ibrowse dependency.
-DevModeFile = filename:join([Dir, ".rebar", "YAWS_DEV_MODE"]),
-IbrowseDep = {ibrowse, ".*", {git,"git://github.com/cmullaparthi/ibrowse.git", {tag,"v3.0.4"}}},
-Cfg4 = case filelib:is_file(DevModeFile) of
-           true ->
-               UpdateDeps(Cfg3, [IbrowseDep]);
-           false ->
-               Cfg3
-       end,
-Cfg4.
+Cfg3.

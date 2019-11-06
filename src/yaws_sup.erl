@@ -18,8 +18,6 @@
 -export([init/1]).
 -export([get_app_args/0, child_specs/0]).
 
--import(lists, [member/2]).
-
 %%%----------------------------------------------------------------------
 %%% API
 %%%----------------------------------------------------------------------
@@ -33,7 +31,6 @@ start_link() ->
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------
 init([]) ->
-
     ChildSpecs = child_specs(),
 
     %% The idea behind this is if we're running in an embedded env,
@@ -62,7 +59,12 @@ child_specs() ->
            {yaws_sup_restarts, start_link, []},
            transient, infinity, supervisor, [yaws_sup_restarts]},
 
-    [YawsLog, YawsTrace, YawsServ, Sup].
+    %% supervisor for websocket callback processes
+    WSSup = {yaws_ws_sup,
+             {yaws_ws_sup, start_link, []},
+             transient, infinity, supervisor, [yaws_ws_sup]},
+
+    [YawsLog, YawsTrace, YawsServ, Sup, WSSup].
 
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------
@@ -70,14 +72,14 @@ get_app_args() ->
     AS=init:get_arguments(),
     Debug = case application:get_env(yaws, debug) of
                 undefined ->
-                    member({yaws, ["debug"]}, AS);
+                    lists:member({yaws, ["debug"]}, AS);
                 {ok, Val}  ->
                     Val
             end,
     Trace = case application:get_env(yaws, trace) of
                 undefined ->
-                    case {member({yaws, ["trace", "http"]}, AS),
-                          member({yaws, ["trace", "traffic"]}, AS)} of
+                    case {lists:member({yaws, ["trace", "http"]}, AS),
+                          lists:member({yaws, ["trace", "traffic"]}, AS)} of
                         {true, _} ->
                             {true, http};
                         {_, true} ->
@@ -94,7 +96,7 @@ get_app_args() ->
             end,
     TraceOutput = case application:get_env(yaws, traceoutput) of
                       undefined ->
-                          member({yaws, ["traceoutput"]}, AS);
+                          lists:member({yaws, ["traceoutput"]}, AS);
                       {ok, Val3}  ->
                           Val3
                   end,
@@ -124,10 +126,26 @@ get_app_args() ->
              {ok, Id0} ->
                  Id0
          end,
+    Enc = case application:get_env(yaws, encoding) of
+              undefined ->
+                  case {lists:member({yaws, ["encoding", "latin1"]}, AS),
+                        lists:member({yaws, ["encoding", "unicode"]}, AS)} of
+                      {true, _} -> latin1;
+                      {_, true} -> unicode;
+                      _         -> latin1
+                  end;
+              {ok, latin1} ->
+                  latin1;
+              {ok, unicode} ->
+                  unicode;
+              _ ->
+                  latin1
+          end,
 
     #env{debug = Debug, trace = Trace,
          traceoutput = TraceOutput, conf = Conf,
-         runmod = RunMod, embedded = Embedded, id = Id}.
+         runmod = RunMod, embedded = Embedded, id = Id,
+         encoding = Enc}.
 
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------

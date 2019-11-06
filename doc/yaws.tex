@@ -193,14 +193,14 @@ Released version of \Yaws\ are available at
 
 To compile and install a \Yaws\  release
 one of the prerequisites is a properly installed \Erlang\  system. \Yaws\
-runs on \Erlang\/OTP releases R14B02 and newer. Get \Erlang\  from
+runs on \Erlang\/OTP releases R17 and newer. Get \Erlang\  from
 \url{http://www.erlang.org/}
 
 Compile and install is straight forward:
 \begin{verbatim}
 # cd /usr/local/src
 # tar xfz yaws-X.XX.tar.gz
-# cd yaws
+# cd yaws-X.XX
 # ./configure && make
 # make install
 \end{verbatim}
@@ -605,12 +605,11 @@ request such as:
 
 \begin{verbatim}
 
-
 -record(arg, {
           clisock,        % the socket leading to the peer client
           client_ip_port, % {ClientIp, ClientPort} tuple
           headers,        % headers
-          req,            % request
+          req,            % request (possibly rewritten)
           orig_req,       % original request
           clidata,        % The client data (as a binary in POST requests)
           server_path,    % The normalized server path
@@ -633,9 +632,11 @@ request such as:
                           %  ie http://some.host/<prepath>/<script-point>/d/e
                           % where <script-point> is an appmod mount point,
                           % or .yaws,.php,.cgi,.fcgi etc script file.
-          pathinfo        % Set to '/d/e' when calling c.yaws for the request
+          pathinfo,       % Set to '/d/e' when calling c.yaws for the request
                           % http://some.host/a/b/c.yaws/d/e
                           %  equiv of cgi PATH_INFO
+          appmod_name     % name of the appmod handling a request,
+                          % or undefined if not applicable
          }).
 
 -record(http_request, {method,
@@ -900,6 +901,9 @@ following capabilities:
   \verb+/tmp+ is used
 \item \verb+list+: return file data in list form; this is the default
 \item \verb+binary+: return file data in binary form
+\item \verb+return_error_file_path+: if an error occurs writing to a
+  file or if \verb+max_file_size+ is exceeded, return the file
+  pathname as part of the error (more on this below).
 \end{enumerate}
 \end{enumerate}
 
@@ -907,9 +911,9 @@ Note that the \verb+list+ and \verb+binary+ options affect only file
 data, not filenames, headers, or other parameters associated with each
 file. These are always returned as strings.
 
-Just call \verb+yaws_multipart:read_multipart_form+ from your
-\verb+out/1+ function and it'll return a tuple with the first element
-set to one of these three atoms:
+Call \verb+yaws_multipart:read_multipart_form+ from your \verb+out/1+
+function and it returns a tuple with the first element set to one of
+these three atoms:
 
 \begin{itemize}
 \item \verb+get_more+: more data needs to be read; return this tuple
@@ -950,9 +954,28 @@ parameter list, like this:
 \end{verbatim}
 
 Note that for the temporary file case, it's your responsibility to
-delete the file when you're done with it.
+delete the file when you're done with it. To ensure that you can do
+this even when errors occur, include \verb+return_error_file_path+ in
+the options you pass to
+\verb+yaws_multipart:read_multipart_form/2+. Should an error occur,
+the returned error tuple will be of this form:
 
-Here's an example:
+\begin{verbatim}
+{error, {Reason, ParamName, FileName}}
+\end{verbatim}
+
+If you supplied the \verb+{temp_file, FullFilePath}+ option,
+\verb+FileName+ in the error tuple is the same as \verb+FullFilePath+,
+otherwise it's the name of a temporary file \Yaws\ generated.
+
+If the \verb+return_error_file_path+ option is not included, the
+returned error tuple will instead be:
+
+\begin{verbatim}
+{error, {Reason, ParamName}}
+\end{verbatim}
+
+Here's an example of calling \verb+yaws_multipart:read_multipart_form/2+:
 
 \begin{verbatim}
 -module(my_yaws_controller).
@@ -968,7 +991,7 @@ out(Arg) ->
             AnotherParam = dict:find("another_param", Params);
         %% do something with FileName, FileContent and AnotherParam
         {error, Reason} ->
-            io:format("Error reading multipart form: ~s~n", [Reason]);
+            io:format("Error reading multipart form: ~p~n", [Reason]);
         Other -> Other
     end.
 \end{verbatim}
@@ -1052,28 +1075,30 @@ do that here.  See for example
 \url{http://www.tldp.org/HOWTO/SSL-Certificates-HOWTO/}, which
 describes how to manage certificates and keys.
 
-In order to run an SSL server we must have a certificate. Either we
-can create a so-called self-signed certificate ourselves or buy a
-certificate from one of the many CA's (Certificate Authorities) on the
-net. \Yaws\  uses the OTP interface to OpenSSL.
+In order to run an SSL server we must have a certificate. Either we can
+create a so-called self-signed certificate ourselves or buy a certificate
+from one of the many CA's (Certificate Authorities) on the net. \Yaws\
+uses the SSL application provided by Erlang/OTP and depends on features
+supported by it. So, from an Erlang/OTP release to another, some SSL
+options may change, others may appear or disappear. Check the
+documentation of your Erlang/OTP release for details.
 
 To setup a \Yaws\ server with SSL we could have a \textit{yaws.conf}
 file that looks like:
 
 \begin{verbatim}
-
- logdir = /var/log/yaws
+logdir = /var/log/yaws
 
 <server www.funky.org>
-               port = 443
-               listen = 192.168.128.32
-               docroot = /var/yaws/www.funky.org
-               <ssl>
-                  keyfile = /etc/funky.key
-                  certfile = /etc/funky.cert
-                  password = gazonk
-               </ssl>
-       </server>
+    port = 443
+    listen = 192.168.128.32
+    docroot = /var/yaws/www.funky.org
+    <ssl>
+        keyfile = /etc/funky.key
+        certfile = /etc/funky.cert
+        password = gazonk
+    </ssl>
+</server>
 \end{verbatim}
 
 This is the easiest possible SSL configuration. The configuration
@@ -1082,6 +1107,60 @@ must contain the name "www.funky.org" as it "Common Name".
 
 The keyfile is the private key file and it is encrypted using
 the password "gazonk".
+
+
+\section{Server Name Indication}
+
+\textbf{The SNI support was introduced in the SSL application in
+  Erlang/OTP 18.0}. It is an extension to the TLS protocol (RFC 4366),
+which allows the client to include the requested hostname in the first
+message of its SSL handshake.
+
+With SNI, you can have many virtual server sharing the same IP address
+and port, and each one can have its own unique certificate (and the rest
+of the configuration). If SNI is disabled or not supported, all virtual
+servers on the same IP/Port must share the same SSL configuration. In
+this situation, it is complicated for \Yaws\ to present a valid SSL
+certificate to clients. Possible solutions are listed here:
+\url{http://wiki.cacert.org/VhostTaskForce}.
+
+By default, SNI is disabled in \Yaws\ to be backward compatible with old
+Erlang/OTP releases. But it can be enabled and fine tuned for each SSL
+servers. Here is a basic example:
+
+
+\begin{verbatim}
+logdir = /var/log/yaws
+sni = enable
+
+<server www.example.com>
+    port = 443
+    listen = 192.168.128.32
+    docroot = /var/yaws/www.example.com
+    <ssl>
+        keyfile = /etc/ssl/www.example.com.key
+        certfile = /etc/ssl/www.example.com.cert
+    </ssl>
+</server>
+
+<server www.example.org>
+    port = 443
+    listen = 192.168.128.32
+    docroot = /var/yaws/www.example.org
+    <ssl>
+        keyfile = /etc/ssl/www.example.org.key
+        certfile = /etc/ssl/www.example.org.cert
+    </ssl>
+</server>
+\end{verbatim}
+
+Depending on the SNI hostname provided by the client, the first or the
+second virtual host will be chosen, and the corresponding SSL
+certificate will be presented to the client. In this example, non SNI
+clients are still supported. For such clients, the SSL certificate of
+the first virtual server will be presented and the HTTP Host header will
+be then used to find the correct virtual server. Otherwise, it is
+possible to refuse non SNI clients, globally or per server.
 
 
 \chapter{Applications}
@@ -1148,6 +1227,15 @@ following 5 API functions to aid us:
   application decides to automatically logout the user.
 
 \end{enumerate}
+
+In addition, \verb+yaws_session_server+ allows you to create your own
+cookies if you prefer not to use its built-in cookie generator. To supply
+your own session cookie generator, set the global configuration variable
+\verb+ysession_cookiegen+ to the name of a module that provides a
+\verb+new_cookie/0+ function that returns a cookie as a list. If you
+specify a cookie generator module in your configuration, please be sure
+that its \verb+new_cookie/0+ function returns a unique cookie each time
+it's called.
 
 All cookie-based applications are different but they have some things
 in common. In the following examples we assume the existence of a
@@ -1659,7 +1747,7 @@ value. \Yaws\ au\-to\-mat\-i\-cal\-ly sets the
 \verb+Transfer-Encoding+ head\-er to \verb+chunked+ if it does not
 detect a \verb+Content-Length+ header.
 
-\section{All out/1 return values}
+\section{All out/1 Return Values}
 
 \begin{itemize}
 
@@ -1729,24 +1817,25 @@ detect a \verb+Content-Length+ header.
     \item \verb+{last_modified, What}+ - Sets the \textit{Last-Modified:}
       header.
     \item \verb+{etag, What}+ - Sets the \textit{Etag:} header.
-    \item \verb+{set_cookie, What}+ - Prepends a \textit{Set-Cookie:} header to
+    \item \verb+{set_cookie, What}+ - Appends a \textit{Set-Cookie:} header to
       the list of previously set \textit{Set-Cookie} headers.
     \item \verb+{content_range, What}+ - Sets the \textit{Content-Range:}
       header.
     \item \verb+{content_type, What}+ - Sets the \textit{Content-Type:} header.
     \item \verb+{content_encoding, What}+ - Sets the \textit{Content-Encoding:}
-      header. If this header is defined, no deflate is performed by \Yaws\. So
-      you can compress data by yourself.
-    \item \verb+{content_length, What}+ - Normally \Yaws\ will ship Yaws pages
+      header. If this header is defined, no deflate is performed by \Yaws\ ,
+      allowing you to compress data yourself if you wish to do so.
+    \item \verb+{content_length, What}+ - Normally \Yaws\ will ship \verb+.yaws+ pages
       using \textit{Transfer-Encoding: chunked}. This is because we generally
       can't know how long a yaws page will be. If we for some reason want to
       force a \textit{Content-Length:} header (and we actually do know the
-      length of the content, we can force yaws to not ship the page chunked.
+      length of the content, we can force \Yaws\ to not ship the page chunked.
     \item \verb+{transfer_encoding, What}+ - Sets the
       \textit{Transfer-Encoding:} header.
     \item \verb+{www_authenticate, What}+ - Sets the \textit{WWW-Authenticate:}
       header.
     \item \verb+{vary, What}+ - Sets the \textit{Vary:} header.
+    \item \verb+{accept_ranges, What}+ - Sets the \textit{Accept-Ranges:} header.
   \end{itemize}
 
   All other headers must be added using the normal HTTP syntax. Example:
@@ -1814,8 +1903,71 @@ detect a \verb+Content-Length+ header.
   \end{itemize}
 
 \item \verb+{websocket, CallbackModule, Options}+ Tell \Yaws\  to use
-  \verb+CallbackModule+ as a WebSockets Protocol handler for traffic
+  \verb+CallbackModule+ as a WebSocket Protocol handler for traffic
   on the client socket. See chapter \ref{websockets} for more details.
+
+\item \verb+{ssi, File, Delimiter, Bindings}+ Server-side include \verb+File+ and
+  macro expansion in \verb+File+. Each occurrence of a string, say "xyz", inside
+  \verb+File+ that's within a \verb+Delimiter+ pair is replaced with the
+  corresponding value in \verb+Bindings+. For example:
+
+   \begin{itemize}
+     \item \verb+Delimiter = %%+
+
+     \item File contains the string \verb+.... %%xyz%%  .....+
+
+     \item Bindings contain the tuple \verb+{"xyz", "Dingbat"}+
+   \end{itemize}
+
+  The occurrence of \verb+%%xyz%%+ in \verb+File+ will be replaced with
+  \verb+"Dingbat"+ in the server-side included output.
+
+  The \verb+{ssi, File, Delimiter, Bindings}+ statement can also occur
+  within a deep ehtml structure.
+
+  The special directive \verb+strip_undefined+ can be specified in the
+  \verb+Bindings+ list, just as it can for the \verb+{bindings, ....}+
+  directive, but it's ignored because treating undefined variables as
+  empty is the default for \verb+ssi+ bindings.
+
+\item \verb+{bindings, [{Key1, Value2}, {Key2, Value2} .....]}+ Establish variable
+  bindings that can be used in the content returned from
+  \verb+out/1+. All bindings can then be used in the rest of
+  \Yaws\ code (in HTML source and within \verb+erl+ tags).  In HTML
+  source \verb+%%Key%%+ is expanded to \verb+Value+ and within
+  \verb+erl+ tags \verb+yaws_api:binding(Key)+ (which calls
+  \verb+error+ if no such binding exists) or
+  \verb+yaws_api:binding_find(Key)+ (which returns \verb+undefined+ if
+  no such binding exists) can be used to extract \verb+Value+, and
+  \verb+yaws_api:binding_exists(Key)+ can be used to check for the
+  existence of a binding.
+
+  If content to be returned happens to contains text that looks like a
+  binding, e.g.  \verb+%%SomeText%%+, but no key \verb+SomeText+ is
+  supplied, then by default the original text is left as is. If you
+  prefer that anything parsed as a binding gets stripped out of
+  content whenever the \verb+bindings+ directive does not specify its
+  key, include the special directive \verb+strip_undefined+ in the
+  bindings list:
+
+  \verb+{bindings, [{Key1, Value1}, strip_undefined]}+
+
+  The same result of stripping undefined bindings out of returned
+  \verb+out/1+ content can be achieved by setting
+  \verb+strip_undefined_bindings = true+ in the server configuration.
+
+\item \verb+{yssi, YawsFile}+ Include a yaws file. Compile it and expand as if it had
+occured inline.
+
+\item \verb+#arg{}+
+Return an instance of an \verb+#arg{}+ record. This can be useful when used
+as part of a \verb+[ListOfValues]+ return value, so that any subsequent
+elements in the return list that require an \verb+#arg{}+ get the returned
+instance rather than the original. For example, an \verb+out/1+ function
+might set the \verb+state+ field of an \verb+#arg{}+, then return both it and
+\verb+{yssi, YawsFile}+ in a list, in which case \Yaws\ will pass the returned
+\verb+#arg{}+, rather than the original instance, to the yaws file
+\verb+out/1+ function.
 
 \item \verb+[ListOfValues]+ It is possible to return a list of the above defined
   return values. Any occurrence of the atoms \verb+streamcontent+,
@@ -2306,10 +2458,6 @@ part where options for each virtual host is supplied.
               also possible to enable with a command line flag to
               \Yaws{}.
 
-\item        \verb+use_old_ssl = true | false+ ---
-              This re-enables the old OTP SSL implementation. By default we use
-              the new SSL implementation.
-
 \item        \verb+auth_log  = true | false+ ---
               \textit{Deprecated and ignored. Now, this target must be set in
                 server part}.
@@ -2340,21 +2488,16 @@ part where options for each virtual host is supplied.
               \verb+erlang:spawn_opt/4+ for details on these options.
 
 \item        \verb+large_file_chunk_size = Integer+ ---
-              Set the chunk size used by \Yaws\ to send large files when
-              sendfile is not supported or disabled. The default value is 10240.
+              Set the chunk size used by \Yaws\ to send large
+              files. The default value is 10240.
 
-\item        \verb+large_file_sendfile = erlang | yaws | disable+ ---
-              Set the version of sendfile method to use to send large files (if
-              supported):
+\item        \verb+large_file_sendfile = erlang | disable+ ---
+              Set the version of sendfile method to use to send large files:
               \begin{itemize}
-              \item \verb+erlang+ --- use \textit{file:sendfile/5}, if
-                supported.
-              \item \verb+yaws+ --- use Yaws sendfile linked-in driver, if
-                supported.
-              \item \verb+disable+ --- do not use any sendfile method, but
-                \textit{gen\_tcp:send/2}.
+              \item \verb+erlang+ --- use \textit{file:sendfile/5}.
+              \item \verb+disable+ --- use \textit{gen\_tcp:send/2}.
               \end{itemize}
-              The default value is yaws.
+              The default value is \verb+erlang+.
 
 
 \item        \verb+acceptor_pool_size = Integer+ ---
@@ -2366,8 +2509,7 @@ part where options for each virtual host is supplied.
 \item        \verb+log_wrap_size = Integer+ ---
               The logs written by \Yaws\ are all wrap logs, the default value at
               the size where they wrap around and the original gets renamed to
-              File.old is 1000000, 1 megabyte. This value can changed.
-
+              File.old is 1000000, 1 megabyte. This value can be changed.
 
               If we set the value to 0 the logs will never wrap. If we want to
               use \Yaws\ in combination with a more traditional log wrapper such
@@ -2413,12 +2555,20 @@ part where options for each virtual host is supplied.
               true.
 
 \item        \verb+ysession_mod = Module+ ---
-               Allows to specify a different \Yaws\ session storage mechanism
+               Allows specifying a different \Yaws\ session storage mechanism
                instead of an ETS table. One of the drawbacks of the default
                \verb+yaws_session_server+ implementation is that server side
                cookies are lost when the server restarts. Specifying a different
                module here will pass all write/read operations to this module
                (it must implement appropriate callbacks).
+
+\item        \verb+ysession_cookiegen = Module+ ---
+               Allows specifying a different \Yaws\ session cookie
+               generator than the built-in default. \verb+Module+ is
+               expected to provide a \verb+new_cookie/0+ function that
+               returns a session cookie in the form of a list. Such a
+               cookie generator module must be careful to return a unique
+               cookie each time it's called.
 
 \item       \verb+ysession_idle_timeout = Integer+ ---
                Controls \Yaws\ session idle cleanup. If a server has been
@@ -2476,9 +2626,6 @@ part where options for each virtual host is supplied.
   subconfig = vhosts/*.conf
 \end{verbatim}
 
-            \textbf{WARNING: because of a bug in filelib:wildcard/2, wildcard
-              strings are forbidden for Erlang/OTP R15B03 and previous.}
-
 \item        \verb+subconfigdir = Directory+ ---
               Load all config files found in the specified directory. The given
               Directory can be an absolute path or relative to the configuration
@@ -2531,6 +2678,47 @@ part where options for each virtual host is supplied.
               definitions. If a file extension is defined several times, only
               the last one is kept. Multiple \textit{add\_charsets} directives
               may be used.
+
+\item        \verb+sni = disable | enable | strict+ ---
+              Enables or disables the TLS SNI (Server Name Indication) support.
+
+              When disabled (or not supported), all virtual servers in the same
+              group (same IP/Port) must share the same SSL configuration,
+              especially the same SSL certificate. Only the HTTP Host header
+              will be considered to find the right virtual server.
+
+              When enabled, SSL configuration can be different from a virtual
+              server to another, each one can have its own SSL certificate. In
+              this case, if a client provides a SNI hostname, it will be used to
+              find the right virtual server. To accept the SNI information from
+              the client, The first virtual server (the default one, see
+              \verb+pick_first_virthost_on_nomatch+) \textbf{must} include TLS
+              as a permitted protocol.
+
+              If \verb+sni+ directive is set to \textit{enable}, non SNI clients
+              are allowed. For such clients, virtual servers are selected as if
+              Yaws did not have SNI support. If it is set to \textit{strict},
+              SNI hostname is mandatary to access a SSL virtual server. But, in
+              all cases, when SNI support is enabled, if a client provides a SNI
+              hostname, it \textbf{must} match the HTTP Host header (which is
+              mandatory too). Note that the first virtual server (the default
+              one) will be used for any request where the provided SNI hostname
+              doesn't match any of virtual server names. So, it is important
+              that the first virtual server have the most restrictive access
+              control, otherwise clients can access restricted resources by
+              sending a request for any unknown hostname. (This isn't actually
+              any different from using virtual servers without SNI support.)
+
+              The \verb+sni+ directive is a global one, so if you set it to
+              \textit{strict}, non SNI clients will be refused for \textbf{all}
+              SSL groups. See \verb+require_sni+ directive from the server part
+              to mitigate this requirement.
+
+              Default is \textit{disable}.
+
+              \textbf{WARNING: The SNI support was introduced in the SSL
+                application in Erlang/OTP 18.0, so Yaws ignores it for previous
+                releases.}
 \end{itemize}
 
 
@@ -2742,11 +2930,11 @@ The following directives are allowed inside a server definition.
                used, the specified value must be strictly positive. The default
                value is nolimit.
 
-             \item \verb+compress_level = none | default | best_compression | best_speed | 0..9+ ---\\
-               Defines the compression level to be used. 0 (none), gives no
-               compression at all, 1 (best\_speed) gives best speed and 9
-               (best\_compression) gives best compression. The default value is
-               default.
+             \item \verb+compression_level = none | default | best_compression | best_speed | 0..9+ ---
+               Defines the compression level to be used. 0 (\verb+none+),
+               gives no compression at all, 1 (\verb+best_speed+) gives
+               best speed and 9 (\verb+best_compression+) gives best
+               compression. The default value is \verb+default+.
 
              \item \verb+window_size = 9..15+ --- Specifies the zlib compression
                window size. It should be in the range 9 through 15. Larger
@@ -2790,9 +2978,8 @@ The following directives are allowed inside a server definition.
                     \item \verb+application/pdf+
                     \item \verb+application/x-dvi+
                     \item \verb+application/javascript+
-                    \item \verb+application/x-javascript+
                     \end{itemize}
-                    Multiple \verb+mime_types+ directive can be used.
+                    Multiple \verb+mime_types+ directives can be used.
              \end{itemize}
 
 \item       \verb+docroot  =  Directory ...+ ---
@@ -3197,16 +3384,27 @@ The following directives are allowed inside a server definition.
               and IPv6 but try IPv6 first, use \textit{[inet6, inet]}.
               Default value is \textit{[inet]}.
 
-\item        \verb+<ssl>  .... </ssl>+
+\item        \verb+<ssl>  .... </ssl>+ ---
                This begins and ends an SSL configuration for this server. It's
-               possible to virthost several SSL servers on the same IP given
-               that they all share the same certificate configuration. In
-               general it is complicated to virthost several SSL servers on the
-               same IP address since the certificate is typically bound to a
-               domainname in the common name part of the certificate. One
-               solution (the only?)  to this problem is to have a certificate
-               with multiple subjectAltNames. See
+               possible to virthost several SSL servers on the same IP/Port. If
+               SNI support is disabled or not supported, they must share the
+               same certificate configuration. In this situation, it is
+               complicated to virthost several SSL servers on the same IP/Port
+               since the certificate is typically bound to a domainname in the
+               common name part of the certificate. One solution to this problem
+               is to have a certificate with multiple subjectAltNames. If SNI
+               support is enabled, SSL servers on the same IP/Port can have
+               their own SSL configuration with a different SSL certificate for
+               each one. See the global \verb+sni+ directive.
+
+               The SNI support was introduced in the SSL application in
+               Erlang/OTP 18.0. It is an extension to the TLS protocol (RFC
+               4366), which allows the client to include the requested hostname
+               in the first message of its SSL handshake.
+
+               See also
                \url{http://wiki.cacert.org/VhostTaskForce#Interoperability_Test}
+               for browser compatibility.
 
                \begin{itemize}
                \item \verb+keyfile = File+ --- Specifies which file contains the
@@ -3227,20 +3425,12 @@ The following directives are allowed inside a server definition.
                  exchange is negotiated. If not specified, default
                  parameters are used.
 
-               \item \verb+verify = 0 | 1 | 2 | verify_none | verify_peer+ ---
+               \item \verb+verify = verify_none | verify_peer+ ---
                  Specifies the level of verification the server does on client
-                 certs. 0 means that the server will not ask for a cert
-                 (\verb+verify_none+), 1 means that the server will ask the
-                 client for a cert but not fail if the client does not supply a
-                 client cert (\verb+verify_peer+, \verb+fail_if_no_peer_cert+ =
-                 \verb+false+), 2 means that the server requires the client to
-                 supply a client cert (\verb+verify_peer+,
-                 \verb+fail_if_no_peer_cert+ = \verb+true+).
-
-                 Setting \verb+verify_none+ means that the x509 validation will
-                 be skipped (no certificate request is sent to the client),
-                 \verb+verify_peer+ means that a certificate request is sent to
-                 the client (x509 validation is performed.
+                 certs. Setting \verb+verify_none+ means that the x509
+                 validation will be skipped (no certificate request is sent to
+                 the client), \verb+verify_peer+ means that a certificate
+                 request is sent to the client (x509 validation is performed).
 
                  You might want to use \verb+fail_if_no_peer_cert+ in
                  combination with \verb+verify_peer+.
@@ -3267,6 +3457,18 @@ The following directives are allowed inside a server definition.
                  horrible sub-language of its own.  It is documented in the SSL
                  man page for "ciphers".
 
+               \item \verb+eccs = String+ --- This string specifies the
+                 supported Elliptic Curve Cryptography (ECC).
+                 It must be a subset of \textit{ssl:eccs()}.
+                 For PCI DSS compliance (which is the main reason why you
+                 would want to change this), set it on a single line to:
+\begin{verbatim}
+eccs = "[sect571r1, sect571k1, secp521r1, brainpoolP512r1, sect409k1,
+         sect409r1, brainpoolP384r1, secp384r1, sect283k1, sect283r1,
+         brainpoolP256r1, secp256k1, secp256r1, sect239k1, xsect233k1,
+         sect233r1, secp224k1, secp224r1]"
+\end{verbatim}
+
                \item \verb+secure_renegotiate = true | false+ --- Specifies whether
                  to reject renegotiation attempt that does not live up to RFC
                  5746. By default \verb+secure_renegotiate+ is set to false
@@ -3278,6 +3480,7 @@ The following directives are allowed inside a server definition.
                  disables the Erlang/OTP SSL application client
                  renegotiation option.  Defaults to true. See the
                  \verb+ssl+ manual page at
+
                  http://www.erlang.org/doc/man/ssl.html for more details.
 
                  \textbf{WARNING: This option was introduced in the SSL application
@@ -3300,8 +3503,13 @@ The following directives are allowed inside a server definition.
 protocol_version = tlsv1.2, tlsv1.1, tlsv1
 \end{verbatim}
 
-                 \textbf{WARNING: Because of a bug in previous releases,
-                   Erlang/OTP R16B01 or newer is required for this to work.}
+                 \item \verb+require_sni = true | false+ ---
+                   If \textit{true}, the server will reject non SNI clients and
+                   clients providing an unknown SNI hostname (this last remark
+                   is only relevant for the first virtual server of a SSL
+                   group). This directive is ignored if SNI support is disabled
+                   (or not supported).
+                   Default is \textit{false}.
                \end{itemize}
 
 \item       \verb+<redirect> ... </redirect>+ ---
@@ -3410,31 +3618,19 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
                 \verb+{appmod, ?MODULE}+ and the \verb+out401/1+ function in the
                 same module would return \verb+{redirect_local, "/login.html"}+.
 
-              \item \verb+user = User:Password+ --- Inside this directory, the
-                user \verb+User+ has access if the user supplies the password
-                \verb+Password+ in the popup dialogue presented by the browser.
-                We can obviously have several of these value inside a single
-                <auth> </auth> pair.
-
-                The usage of User:Password in the actual config file is
-                deprecated as of release 1.51. It is preferred to have the users
-                in a file called \verb+.yaws_auth+ in the actual directory. The
-                \verb+.yaws_auth+ file has to be parseable by
-                \verb+file:consult/1+.
-
-                Each row of the file must contain terms in this form:
-
+              \item \verb+user = User:Password | "User:{Algo}Hash" | "User:{Algo}$Salt$Hash"+ ---
+                Inside this directory, the user \verb+User+ has access if the
+                user supplies the password \verb+Password+ in the popup dialogue
+                presented by the browser. It is also possible to provide a
+                hashed password, encoded in base64. In that case, the algorithm
+                used to hash the password must be set. \verb+Algo+ must be a one
+                of the following algorithms:
 \begin{verbatim}
-{User, Password}.
+  md5 | ripemd160 | sha | sha224 | sha256 | sha384 | sha512
 \end{verbatim}
-
-                where both \verb+User+ and \verb+Password+ should be
-                strings.
-
-                The \verb+.yaws_auth+ file mechanism is recursive,so any
-                subdirectories of \verb+Dir+ are also automatically
-                protected. The \verb+.yaws_auth+ file is never visible in a
-                dir listing.
+                It is possible to use salted hashes. If so, the \verb+Salt+ must
+                be provided, encoded in base64. We can obviously have several of
+                these value inside a single <auth> </auth> pair.
 
               \item \verb+pam service = pam-service+ --- If the item \verb+pam+
                 is part of the auth structure, Yaws will also try to
@@ -3491,7 +3687,7 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
                     do not match an \verb+allow+ or a \verb+deny+ directive are
                     denied by default.
 
-                  \item \verb+deny,allaw+ --- First, all \verb+deny+ directives
+                  \item \verb+deny,allow+ --- First, all \verb+deny+ directives
                     are evaluated; if any matches, the request is denied unless
                     it also matches an \verb+allow+ directive. Any requests
                     which do not match any \verb+allow+ or \verb+deny+
@@ -3509,9 +3705,140 @@ protocol_version = tlsv1.2, tlsv1.1, tlsv1
 
               This mechanism can be used to pass data from a surrounding
               application into the individual .yaws pages.
+
+\item       \verb+strip_undefined_bindings = true|false+ ---
+              Change the behavior of the \verb+{bindings, [...]}+
+              directive to treat all undefined keys found in returned
+              \verb+out/1+ content as if they were defined with an
+              empty value, resulting in all undefined bindings
+              effectively being stripped out of returned content. By
+              default, \verb+strip_undefined_bindings+ is false, which
+              means undefined bindings are ignored and their text is
+              left as is in returned content.
+
+              This setting applies only for \verb+out/1+ content, not
+              to static pages or other returned content.
+
+\item       \verb+<extra_response_headers> ... </extra_response_headers>+ ---
+              This begins and ends a configuration context for extra
+              response headers for this server, where directives for
+              adding headers, erasing headers, and modules for
+              handling extra response headers can be specified as follows:
+
+              \begin{itemize}
+                \item \verb+add Hdr = Value+ --- Add \verb+Hdr+ with
+                  value \verb+Value+ to the response, but only if the
+                  response status code is one of these values:
+                  \begin{itemize}
+                    \item \verb+200 OK+
+                    \item \verb+201 Created+
+                    \item \verb+204 No Content+
+                    \item \verb+206 Partial Content+
+                    \item \verb+301 Moved Permanently+
+                    \item \verb+302 Found+
+                    \item \verb+303 See Other+
+                    \item \verb+304 Not Modified+
+                    \item \verb+307 Temporary Redirect+
+                    \item \verb+308 Permanent Redirect+
+                  \end{itemize}
+                  For any other status code, \verb+Hdr+ is not added.
+
+                \item \verb+always add Hdr = Value+ ---
+                  Unconditionally add \verb+Hdr+ with value
+                  \verb+Value+ to the response, regardless of the
+                  response status code.
+
+                \item \verb+erase Hdr+ --- Remove \verb+Hdr+ and its
+                  associated value from the response.
+
+                \item \verb+extramod = Module+ --- Specifies a module
+                  to call to process extra response
+                  headers. \Yaws\ calls
+                  \verb+Module:extra_response_headers/3+ passing the
+                  following arguments:
+                  \begin{itemize}
+                    \item Response headers --- an Erlang map holding
+                      the response headers with header name strings as
+                      keys and strings as header values
+
+                    \item \verb+Arg+ --- an \verb+#arg{}+ record
+                      representing the request. In cases where an
+                      \verb+extramod+ module is called following the
+                      invocation of an appmod, the \verb+#arg{}+
+                      record field \verb+appmod_name+ indicates the
+                      name of the appmod that serviced the request,
+                      allowing the \verb+extramod+ to return extra
+                      HTTP headers appropriate for that appmod.
+
+                    \item \verb+{StatusCode,Version}+ --- a tuple
+                      where \verb+StatusCode+ is the numeric HTTP
+                      status code for the response, and \verb+Version+
+                      is a tuple specifying the HTTP version,
+                      e.g. \verb+{1,1}+ for HTTP 1.1.
+                  \end{itemize}
+
+                  The \verb+Module:extra_response_headers/3+ function
+                  should return either the original header map or a
+                  modified map where headers have been added, changed,
+                  or deleted. Added headers are not subject to the
+                  status code restrictions for the \verb+add+ extra
+                  response header directive, but the function can call
+                  \verb+yaws_api:http_extra_response_headers_add_status_codes/0+
+                  to retrieve the list of the status codes for which
+                  adding headers is normally allowed.
+
+                  For response headers that can have multiple
+                  settings, such as \verb+Set-Cookie+, multiple values
+                  can be specified in the extra response header map by
+                  using a value of \verb+{multi, [Value]}+ where
+                  \verb+[Value]+ is a list of one or more header
+                  values. The \verb+Set-Cookie+ header is a standard
+                  special case for which \Yaws\ converts a
+                  \verb+multi+ header into a separate
+                  \verb+Set-Cookie+ header for each value; for other
+                  headers, \Yaws\ converts a \verb+multi+ header into
+                  a single HTTP header with a comma-separated value.
+              \end{itemize}
+
+              Note that extra response headers do not apply to
+              responses returned directly by any
+              \verb+DispatchModule+.
 \end{itemize}
 
+\section{Directives included from .yaws\_auth files}
 
+        By default, \Yaws\ searches each directory in the docroot for files
+        named \verb+.yaws_auth+. Each file is parsed by \verb+file:consult/1+.
+        This mechanism can be disabled by setting \verb+auth_skip_docroot+ to
+        \verb+true+ in the \Yaws\ configuration.
+
+        Each row in the \verb+.yaws_auth+ file must contain a term.
+        The terms correspond to the auth structure in the \Yaws\ config
+        file. The allowed forms are:
+
+\begin{verbatim}
+{User, Password}.
+{User, Algo, Hash}.
+{User, Algo, Salt, Hash}.
+{realm, String}.
+{pam, Atom}.
+{authmod, Atom}.
+{file, String}.
+{allow, all|IP_list}.
+{deny, all|IP_list}.
+{order, allow_deny|deny_allow}.
+\end{verbatim}
+
+        where \verb+User+, \verb+Password+, \verb+Algo+, \verb+Salt+ and
+        \verb+Hash+ are strings with double quotes.
+
+        The \verb+.yaws_auth+ file mechanism is recursive, so any
+        subdirectories of \verb+Dir+ are also automatically
+        protected.
+
+        The \verb+.yaws_auth+ file is never visible in a dir
+        listing, but editor backup files such as
+        \verb+.yaws_auth~+ \emph{will} be visible.
 
 
 \section{Configuration Examples}
@@ -3576,9 +3903,11 @@ An example with www-authenticate and no access logging at all.
        two servers on the same IP, and one SSL server on a
        different IP.
 
-       The \verb+is_default+ is used to select the funky server if
-       someone types in for example url{http://192.168.128.31/} in
-       his\slash her browser.
+       To force selection of the funky server if you type in for example
+       \url{http://192.168.128.31/} in your browser, you can set
+       \verb+pick_first_virthost_on_nomatch = true+ in your global
+       configuration and rearrange the virtual server configuration order
+       so that \verb+www.funky.org:80+ is defined first.
 
 
 \begin{verbatim}
@@ -3594,7 +3923,6 @@ An example with www-authenticate and no access logging at all.
 
        <server www.funky.org>
                port = 80
-               is_default = true
                listen = 192.168.128.31
                docroot = /var/yaws/www_funky_org
        </server>

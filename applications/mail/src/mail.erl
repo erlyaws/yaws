@@ -380,17 +380,17 @@ compose(Session, Reason, To, Cc, Bcc, Subject, Msg) ->
          "A:active  { color: 0;text-decoration: none}\n"
          "textarea { background-color: #fff; border: 1px solid 00f; }\n"
          "DIV.tag-body { background: white; }\n"},
-%         {script, [{type,"text/javascript"}],
+%         {script, [{type,"application/javascript"}],
 %          "_editor_url='/htmlarea/';\n"
 %          "_editor_lagn='se';\n"},
-%         {script, [{type,"text/javascript"},{src,"/htmlarea/htmlarea.js"}],""},
-%         {script, [{type,"text/javascript"}],
+%         {script, [{type,"application/javascript"},{src,"/htmlarea/htmlarea.js"}],""},
+%         {script, [{type,"application/javascript"}],
 %          "var editor = null;\n"
 %          "function initEditor() {\n"
 %          "editor = new HTMLArea('html_message');\n"
 %          "editor.generate();\n"
 %          "return false;\n}"},
-%        {script,[{type,"text/javascript"},{defer,"1"}],
+%        {script,[{type,"application/javascript"},{defer,"1"}],
 %%         "HTMLArea.replace('html_message');\n"},
 %         "HTMLArea.replaceAll();\n"},
         {body,[{bgcolor,silver},{marginheight,0},{link,"#000000"},
@@ -527,7 +527,7 @@ file_attachement(N) ->
 
 
 build_tabs(Tabs) ->
-    [{script,[{type,"text/javascript"}],
+    [{script,[{type,"application/javascript"}],
       ["tabCount = ",integer_to_list(length(Tabs)),";\n"]},
      {'div',
       [{align,"left"}],
@@ -1053,15 +1053,15 @@ session_server() ->
     end.
 
 session_manager_init() ->
-    session_manager([], now(), read_config()).
+    session_manager([], yaws:get_time_tuple(), read_config()).
 
 session_manager(C0, LastGC0, Cfg) ->
     %% Check GC first to avoid GC starvation.
-    GCDiff = diff(LastGC0,now()),
+    GCDiff = diff(LastGC0,yaws:get_time_tuple()),
     {LastGC, C} =
         if GCDiff > 5000 ->
                 C2 = session_manager_gc(C0, Cfg),
-                {now(), C2};
+                {yaws:get_time_tuple(), C2};
            true ->
                 {LastGC0, C0}
         end,
@@ -1076,16 +1076,16 @@ session_manager(C0, LastGC0, Cfg) ->
             end,
             session_manager(C, LastGC, Cfg);
         {new_session, Session, From} ->
-            Cookie = integer_to_list(bin2int(crypto:rand_bytes(16))),
+            Cookie = integer_to_list(bin2int(crypto:strong_rand_bytes(16))),
             From ! {session_manager, Cookie},
             session_manager([{Cookie, Session#session{cookie=Cookie},
-                              now()}|C], LastGC, Cfg);
+                              yaws:get_time_tuple()}|C], LastGC, Cfg);
         {tick_session, Cookie} ->
             case lists:keysearch(Cookie, 1, C) of
                 {value, {Cookie,Session,_}} ->
                     session_manager(
                       lists:keyreplace(Cookie,1,C,
-                                       {Cookie,Session,now()}), LastGC, Cfg);
+                                       {Cookie,Session,yaws:get_time_tuple()}), LastGC, Cfg);
                 false ->
                     session_manager(C, LastGC, Cfg)
             end;
@@ -1101,7 +1101,7 @@ session_manager(C0, LastGC0, Cfg) ->
                     S2 = Session#session{listing=Listing},
                     From ! {session_manager, listing_added},
                     session_manager(lists:keyreplace(
-                                      Cookie, 1, C, {Cookie, S2, now()}),
+                                      Cookie, 1, C, {Cookie, S2, yaws:get_time_tuple()}),
                                     LastGC, Cfg);
                 false ->
                     io:format("Error, no session found! ~p\n", [Cookie]),
@@ -1114,7 +1114,7 @@ session_manager(C0, LastGC0, Cfg) ->
                     S2 = Session#session{sorting=Sorting},
                     From ! {session_manager, sorting_added},
                     session_manager(lists:keyreplace(
-                                      Cookie, 1, C, {Cookie, S2, now()}),
+                                      Cookie, 1, C, {Cookie, S2, yaws:get_time_tuple()}),
                                     LastGC, Cfg);
                 false ->
                     io:format("Error, no session found! ~p\n", [Cookie]),
@@ -1130,7 +1130,7 @@ session_manager(C0, LastGC0, Cfg) ->
                     S2 = Session#session{attachments = [A|As]},
                     session_manager(lists:keyreplace(
                                       Cookie,1,C,
-                                      {Cookie,S2,now()}), LastGC, Cfg);
+                                      {Cookie,S2,yaws:get_time_tuple()}), LastGC, Cfg);
                 false ->
                     session_manager(C, LastGC, Cfg)
             end;
@@ -1152,7 +1152,7 @@ session_manager(C0, LastGC0, Cfg) ->
         5000 ->
             %% garbage collect sessions
             C3 = session_manager_gc(C, Cfg),
-            session_manager(C3, now(), Cfg)
+            session_manager(C3, yaws:get_time_tuple(), Cfg)
     end.
 
 add_att(Fname, Ctype, Data, Atts) ->
@@ -1175,7 +1175,7 @@ add_att(Fname, Ctype, Data, Atts) ->
 
 session_manager_gc(C, Cfg) ->
     lists:zf(fun(Entry={_Cookie,_Session,Time}) ->
-                     Diff = diff(Time,now()),
+                     Diff = diff(Time,yaws:get_time_tuple()),
                      TTL = Cfg#cfg.ttl,
                      if Diff > TTL ->
                              false;
@@ -1948,7 +1948,7 @@ dat2str_boundary([Y1,Y2, Mo, D, H, M, S | _Diff]) ->
     lists:flatten(
       io_lib:format("~s_~2.2.0w_~s_~w_~2.2.0w:~2.2.0w:~2.2.0w_~w",
                     [weekday(Y1,Y2,Mo,D), D, int_to_mt(Mo),
-                     y(Y1,Y2),H,M,S,bin2int(crypto:rand_bytes(4))])).
+                     y(Y1,Y2),H,M,S,bin2int(crypto:strong_rand_bytes(4))])).
 
 bin2int(Bin) ->
     lists:foldl(fun(N, Acc) -> Acc * 256 + N end, 0, binary_to_list(Bin)).

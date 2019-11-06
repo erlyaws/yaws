@@ -33,7 +33,6 @@
 
 %% for replacement xmerl_xml:
 -export([export/1]).
--import(xmerl_lib, [markup/3, empty_tag/2, export_text/1]).
 
 
 -ifdef(debug).
@@ -82,11 +81,13 @@ out(A) ->
             error_logger:error_msg(Msg),
             Response = [{'D:error',[{'xmlns:D',"DAV:"}],[Msg]}],
             status(500,{xml,Response});
-        _Error:Reason ->
-            error_logger:info_msg("unexpected error: ~p~n~p~n",
-                                  [Reason,erlang:get_stacktrace()]),
-            Response = [{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}],
-            status(500,{xml,Response})
+        ?MAKE_ST(_Error:Reason,ST,
+                 begin
+                     error_logger:info_msg("unexpected error: ~p~n~p~n",
+                                           [Reason, ST]),
+                     Response = [{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}],
+                     status(500,{xml,Response})
+                 end)
     end.
 
 %%------------------------------------------------------
@@ -520,7 +521,7 @@ temp_name(F) ->
 
 %% propfind response
 propfind_response(Props,A,R) ->
-    Url = yaws_api:url_encode(R#resource.name),
+    Url = R#resource.name,
     case Props of
         [allprop] ->
             AllProp = [ prop_get(N,A,R) || N <- allprops(R) ],
@@ -552,7 +553,7 @@ propfind_response(Props,A,R) ->
 
 %% proppatch response/
 proppatch_response(Update,A,R) ->
-    Url = yaws_api:url_encode(R#resource.name),
+    Url = R#resource.name,
     Results = proppatch_response(Update,A,R,[]),
     ResultsSorted = prop_sort(lists:flatten(Results)),
     [{'D:href', [], [Url]}|
@@ -1317,7 +1318,7 @@ export([]) ->
 export([#xmlComment{}|T]) -> % for now I skip comments
     export(T);
 export([#xmlText{type=text, value=Text}|T]) ->
-    [export_text(Text),export(T)];
+    [xmerl_lib:export_text(Text),export(T)];
 export([#xmlText{type=cdata, value=Text}|T]) ->
     ["<![CDATA[",Text,"]]>",export(T)];
 export([#xmlElement{name=Name,attributes=Attrs,content=Content}|T]) ->

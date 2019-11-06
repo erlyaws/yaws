@@ -17,7 +17,7 @@ if MINGW
 endif
 
 SUBDIRS += examples/src	examples/ebin examples/include \
-	   test doc man scripts www/code www/shoppingcart
+	   testsuite doc man scripts www/code www/shoppingcart
 
 EXTRA_DIST = ChangeLog known_dialyzer_warnings LICENSE			\
 	     README.md README.osx README.pkg-config 			\
@@ -90,29 +90,40 @@ doc:
 
 test: check
 
+list-checks:
+	$(AM_V_at)( cd testsuite && $(MAKE) list-checks )
+
 cleantest:
-	$(AM_V_at)( cd test && $(MAKE) clean )
+	$(AM_V_at)( cd testsuite && $(MAKE) clean )
 
 yaws.plt:
-	$(AM_V_GEN)dialyzer --build_plt -r ebin --output_plt yaws.plt	\
+	$(AM_V_GEN)$(DIALYZER) --build_plt -r ebin --output_plt yaws.plt\
 	  -r $(ERLANG_LIB_DIR_kernel) 					\
 	  -r $(ERLANG_LIB_DIR_stdlib) 					\
 	  -r $(ERLANG_LIB_DIR_sasl) 					\
 	  -r $(ERLANG_LIB_DIR_erts)					\
 	  -r $(ERLANG_LIB_DIR_compiler)					\
 	  -r $(ERLANG_LIB_DIR_crypto)					\
-	  -r $(ERLANG_LIB_DIR_xmerl)
+	  -r $(ERLANG_LIB_DIR_xmerl)					\
+	  -r $$(echo $(ERLANG_LIB_DIR_ssl)    | sed "s/not found//")	\
+	  -r $$(echo $(ERLANG_LIB_DIR_mnesia) | sed "s/not found//")	\
+	  -r $$(echo $(ERLANG_LIB_DIR_inets)  | sed "s/not found//")	\
+	  -r $$(echo $(ERLANG_LIB_DIR_xmlrpc) | sed "s/not found//")	\
+	  -r $$(echo $(ERLANG_LIB_DIR_erlsom) | sed "s/not found//")
 
 dialyzer: all yaws.plt
-	$(AM_V_at)$(DIALYZER) -q --plt yaws.plt -r ebin > dialyzer_warnings || true
-	$(AM_V_at)if diff -U0 @srcdir@/known_dialyzer_warnings dialyzer_warnings ; then	\
-	  echo dialyzer check passed ;							\
-	  exit 0 ; 									\
-	else 										\
-	  exit 1 ;									\
+	$(AM_V_at)$(DIALYZER) -q --plt yaws.plt -r ebin | \
+	    sed -e :a -e '$$!N;s/\n  *//;ta' -e 'P;D' > dialyzer_warnings || true
+	$(AM_V_at)dw=`wc -l dialyzer_warnings | awk '{print $$1}'`; \
+	kw=`wc -l known_dialyzer_warnings | awk '{print $$1}'`; \
+	if [ "$$dw" -ne "$$kw" ]; then \
+	    printf 'number of dialyzer warnings does not match the known_dialyzer_warnings file' ; \
+	    exit 1 ; \
 	fi
+	$(AM_V_at)python dialyzer_checker
+	$(AM_V_at)$(RM) dialyzer_warnings
 
-dist-hook:
+dist-hook: clean  cleantest cleanapps
 	$(AM_V_at)for a in $(APPDIRS); do			\
 	  $(INSTALL) -d $(distdir)/$$a;				\
 	  (cd $$a && $(MAKE) top_distdir=../../$(distdir)	\

@@ -1,0 +1,5 @@
+<erl>
+out(Arg) ->
+  SC = get(sc),
+  {html, ["servername: ", yaws:sconf_servername(SC)]}.
+</erl>

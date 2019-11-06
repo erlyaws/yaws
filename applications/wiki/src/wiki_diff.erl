@@ -13,8 +13,6 @@
 -export([diff/2, diff_files/2, patch/2, patchL/2]).
 -export([test/0]).
 
--import(lists, [foldl/3, reverse/1]).
-
 test() ->
     diff_files("diff.erl", "diff.erl.old").
 
@@ -38,7 +36,7 @@ check(Patch, New, Old) ->
     end.
 
 patchL(New, Patches) ->
-    foldl(fun(Patch, N) -> patch(N, Patch) end,        New, Patches).
+    lists:foldl(fun(Patch, N) -> patch(N, Patch) end, New, Patches).
 
 patch(New, Patch) ->
     sneaky_flatten(patch1(binary_to_term(Patch), str2lines(New))).
@@ -55,7 +53,7 @@ sneaky_flatten(L) ->
     binary_to_list(list_to_binary(L)).
 
 diff([], _, Patch) ->
-    term_to_binary(reverse(Patch));
+    term_to_binary(lists:reverse(Patch));
 diff(Old = [{_,Str}|T], New, Patch) ->
     case match(Old, New) of
         {yes, Ln, Ln, Old1} ->
@@ -82,11 +80,11 @@ str2lines(L) -> str2lines(L, 1, [], []).
 
 str2lines([H|T], Line, C, L) ->
     case H of
-        $\n -> str2lines(T, Line+1,[],[{Line,reverse([$\n|C])}|L]);
+        $\n -> str2lines(T, Line+1,[],[{Line,lists:reverse([$\n|C])}|L]);
         _   -> str2lines(T, Line,  [H|C], L)
     end;
 str2lines([], _Line, [], L) ->
-    reverse(L);
+    lists:reverse(L);
 str2lines([], Line, C, L) ->
-    reverse([{Line,reverse(C)}|L]).
+    lists:reverse([{Line,lists:reverse(C)}|L]).
 

@@ -1,0 +1,8 @@
+%% only check authorization for a.txt and b.txt
+{realm, "test10"}.
+{file, "a.txt"}.
+{file, "b.txt"}.
+{"foo", "bar"}.
+{"foo", "sha256", "szTXjROUAlPTDWcL0pxczKpZCGFPK0W5qa0EAkp8l5Q="}. %% sha256baz
+{"foo", "md5", "C5GxiXRrcq9Eih5W1CqNaA=="}. %% md5baz
+{"foo", "sha256", "WaKEFH0eG+l60yB2VpaIp+27flw6Hhm2NLrnV/mZopA=", "x0RbTgVEu0QiL/DRvtoXRYcU6hfX/Ir3LPkwVJLjwBw="}. %% sha256baz_with_salt

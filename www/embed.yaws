@@ -292,7 +292,11 @@ surrounding application, in this case, the <a
 href="code.yaws?file=/ybed.erl"><code>ybed.erl</code></a> module. Note also
 how the Yaws children are started under the same <a
 href="code.yaws?file=/ybed_sup.erl"><code>ybed_sup.erl</code></a>
-supervisor as the code in the <code>ybed</code> module itself.
+supervisor as the code in the <code>ybed</code> module itself. The
+<code>ybed</code> serves only to start the Yaws children that need to
+be run under its supervisor, after which it exits normally. For this reason,
+its child specification uses the <code>temporary</code> restart strategy,
+since it need run only once in the lifetime of its supervisor.
 
 <h2>The opaque field in the sconf structure </h2>
 

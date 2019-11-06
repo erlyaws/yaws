@@ -43,28 +43,29 @@ help()
 
     echo ""
     echo "       Auxiliary flags for the daemon: "
-    echo "            --id Id             --  set system id"
-    echo "            --debug             --  debug mode"
-    echo "            --nodebug           --  turn off debug mode"
-    echo "            --conf File         --  set config file"
-    echo "            --tracetraf         --  trace traffic"
-    echo "            --tracehttp         --  trace http traffic"
-    echo "            --traceout          --  trace output to stdout"
-    echo "            --version           --  print version"
-    echo "            --pa path           --  add load path"
-    echo "            --mnesiadir dir     --  start Mnesia in dir"
-    echo "            --proto_dist Mod    --  use Mod for distrib"
-    echo "            --sname xxx         --  start with sname xxx"
-    echo "            --name xxx          --  start with name xxx"
-    echo "            --runmod mod        --  call mod:start/0 at startup"
-    echo "            --heart             --  auto restart yaws if it crashes"
-    echo "            --heart-restart=C,T --  allow C heart restarts in T seconds"
-    echo "            --erlarg X          --  pass argument X to $erl"
-    echo "            --setcookie X       --  set an erlang cookie"
-    echo "            --run_erl X         --  use run_erl with pipe-id X"
-    echo "            --to_erl X          --  connect to pipe-id X"
-    echo "            --disable-kpoll     --  pass +K false to erlang"
-    echo "            --umask umaskval    --  set process umask to umaskval"
+    echo "            --id Id                   --  set system id"
+    echo "            --debug                   --  debug mode"
+    echo "            --nodebug                 --  turn off debug mode"
+    echo "            --conf File               --  set config file"
+    echo "            --tracetraf               --  trace traffic"
+    echo "            --tracehttp               --  trace http traffic"
+    echo "            --traceout                --  trace output to stdout"
+    echo "            --version                 --  print version"
+    echo "            --pa path                 --  add load path"
+    echo "            --mnesiadir dir           --  start Mnesia in dir"
+    echo "            --proto_dist Mod          --  use Mod for distrib"
+    echo "            --sname xxx               --  start with sname xxx"
+    echo "            --name xxx                --  start with name xxx"
+    echo "            --runmod mod              --  call mod:start/0 at startup"
+    echo "            --heart                   --  auto restart yaws if it crashes"
+    echo "            --heart-restart=C,T       --  allow C heart restarts in T seconds"
+    echo "            --erlarg X                --  pass argument X to $erl"
+    echo "            --setcookie X             --  set an erlang cookie"
+    echo "            --run_erl X               --  use run_erl with pipe-id X"
+    echo "            --to_erl X                --  connect to pipe-id X"
+    echo "            --disable-kpoll           --  pass +K false to erlang"
+    echo "            --umask umaskval          --  set process umask to umaskval"
+    echo "            --encoding latin1|unicode --  set the config file encoding (default: latin1)"
     echo ""
 
     echo "ctl functions ... "
@@ -74,12 +75,13 @@ help()
     echo "        yaws --status [--id ID]                               -- query the daemon status "
     echo "        yaws --load Modules                                   -- load modules "
     echo "        yaws --ls                                             -- list Yaws nodes and their status"
-    echo "        yaws --ctltrace traffic|http                          -- toggle trace of running daemon"
+    echo "        yaws --ctltrace traffic|http|off                      -- toggle trace of running daemon"
     echo "        yaws --check [--verbose] [--id ID] YawsFile [IncDirs] -- test compile YawsFile"
     echo "        yaws --configtest File [--verbose]                    -- test config file"
     echo "        yaws --wait-started[=secs] [--id ID]                  -- wait for daemon to be ready"
     echo "        yaws --wait-stopped[=secs] [--id ID]                  -- wait for daemon to be stopped"
     echo "        yaws --stats [--id ID]                                -- show daemon statistics"
+    echo "        yaws --auth USER [--algo ALGO]                        -- generate credential for a user"
     exit 1
 }
 
@@ -106,6 +108,10 @@ checkargs=""
 configtest=""
 configtestcmd=""
 verbose=""
+auth=""
+auth_user=""
+auth_algo="sha256"
+encoding="latin1"
 program=$0
 
 wait_started() {
@@ -224,15 +230,31 @@ while [ $# -gt 0 ]
           traceoutput=" -yaws traceoutput ";
           trace=" -yaws trace traffic ";;
       -M|--mnesiadir)
+          if [ -z "$1" ]; then
+              echo error: missing mnesia directory argument
+              help
+          fi
           mnesia=" -mnesia dir '\"$1\"' -run mnesia start"
           shift;;
       -c|--conf)
+          if [ -z "$1" ]; then
+              echo error: missing configuration file argument
+              help
+          fi
           conf=" -conf $1 "
           shift;;
       -pa|--pa)
+          if [ -z "$1" ]; then
+              echo error: missing path argument
+              help
+          fi
           xpath=" $xpath -pa $1 "
           shift;;
       -r|--runmod)
+          if [ -z "$1" ]; then
+              echo error: missing runmod argument
+              help
+          fi
           runmod=" -runmod $1 "
           shift;;
       -h|--hup)
@@ -256,15 +278,27 @@ while [ $# -gt 0 ]
           $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl debug_dump $ddid
           exit 0;;
       -j|--ctltrace)
+          if [ -z "$1" ]; then
+              echo error: missing trace argument
+              help
+          fi
           ex="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl trace $1"
           shift;;
       -v|--version)
           exec $erl -noshell -pa ${yawsdir}${delim}ebin -s yaws printversion;
           exit 0;;
       --sname|-sname)
+          if [ -z "$1" ]; then
+              echo error: missing sname argument
+              help
+          fi
           sname=" -sname $1 "
           shift;;
       -name|--name)
+          if [ -z "$1" ]; then
+              echo error: missing name argument
+              help
+          fi
           sname=" -name $1 "
           shift;;
       --disable-kpoll)
@@ -293,27 +327,51 @@ while [ $# -gt 0 ]
           IFS="$saveifs"
           heart=" -heart ";;
       -proto_dist|--proto_dist)
+          if [ -z "$1" ]; then
+              echo error: missing proto_dist argument
+              help
+          fi
           pdist=" -proto_dist $1 "
           shift;;
       -setcookie|--setcookie)
+          if [ -z "$1" ]; then
+              echo error: missing setcookie argument
+              help
+          fi
           erlarg="$erlarg -setcookie $1 "
           shift;;
       -erlarg|--erlarg)
+          if [ -z "$1" ]; then
+              echo error: missing erlarg argument
+              help
+          fi
           erlarg="$erlarg $1 "
           shift;;
       -check|--check)
           check="$erl -noshell -pa ${yawsdir}${delim}ebin $xpath -s yaws_ctl check";;
       -configtest|--configtest)
+          if [ -z "$1" ]; then
+              echo error: missing configtest argument
+              help
+          fi
           configtest="$erl -noshell -pa ${yawsdir}${delim}ebin $xpath"
           configtestcmd=" -s yaws_ctl configtest $1";
           shift;;
       --verbose)
           verbose=true;;
       --to_erl)
+          if [ -z "$1" ]; then
+              echo error: missing to_erl argument
+              help
+          fi
           TO_ERL=yes
           PIPE_DIR="${vardir}/run/yaws/pipe/$1"
           shift;;
       --run_erl)
+          if [ -z "$1" ]; then
+              echo error: missing run_erl argument
+              help
+          fi
           RUN_ERL=yes
           daemon=""
           PIPE_DIR="${vardir}/run/yaws/pipe/$1"
@@ -321,6 +379,34 @@ while [ $# -gt 0 ]
           shift;;
       --umask)
           umask $1
+          shift;;
+      -auth|--auth)
+          if [ -z "$1" ]; then
+              echo error: missing user argument
+              help
+          fi
+          auth="$erl -noshell -pa ${yawsdir}${delim}ebin -s yaws_ctl auth"
+          auth_user=$1
+          shift;;
+      -algo|--algo)
+          if [ -z "$1" ]; then
+              echo error: missing algo argument
+              help
+          fi
+          auth_algo="$1"
+          shift;;
+      --encoding)
+          if [ -z "$1" ]; then
+              echo error: missing encoding argument
+              help
+          elif [ "$1" == "latin1" ]; then
+              encoding="latin1";
+          elif [ "$1" == "unicode" ]; then
+              encoding="unicode";
+          else
+              echo error: unsupported encoding argument
+              help
+          fi
           shift;;
       *)
           if [ -z "$check" ]; then
@@ -340,10 +426,12 @@ export YAWS_HEART_COUNT YAWS_HEART_SECS
 
 if [ -n "$check" ]; then
     checkid=${id:-default}
+    if [ -z "$checkargs" ]; then
+        echo error: missing check argument
+        help
+    fi
     set $checkargs
     check="$check $checkid $checkargs"
-    mkdir ${HOME}/.yaws/yaws 2> /dev/null
-    mkdir ${HOME}/.yaws/yaws/$checkid 2> /dev/null
     if [ -n "$verbose" ]; then
         out=`exec $check`
         if [ "$?" = "0" ]; then
@@ -364,6 +452,16 @@ if [ -n "$configtest" ]; then
     else
         exec $configtest -eval "error_logger:tty(false)" $configtestcmd
     fi
+fi
+
+if [ -n "$auth" ]; then
+    echo "Enter user password:"
+    read passwd
+    if [ -z $passwd ]; then
+        echo error: empty password
+        exit 1
+    fi
+    exec $auth $auth_user $auth_algo $passwd
 fi
 
 if [ -n "$ex" ]; then
@@ -394,10 +492,12 @@ if [ -n "$id" ]; then
 fi
 
 trace="$trace $traceoutput"
+encoding="-yaws encoding $encoding"
 
 [ "$run_erl" = "eval" ] && [ -z "$daemon" ] && [ -z "$interactive" ] && help
 
-XEC="$daemon $heart +K $kpoll -pa ${yawsdir}${delim}ebin $xpath $sname $pdist $erlarg $debug -run yaws $trace $conf $runmod $mnesia $id"
+XEC="$daemon $heart +K $kpoll -pa ${yawsdir}${delim}ebin $xpath $sname $pdist $erlarg $debug \
+ -run yaws $trace $conf $runmod $mnesia $id $encoding"
 
 if [ -z "$heart" ] || [ -z "$daemon" ]; then
     unset HEART_COMMAND

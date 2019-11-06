@@ -1,0 +1,4 @@
+<erl>
+out(_A) ->
+    function_not_found().
+</erl>

@@ -15,16 +15,16 @@ NAME_VERSION="yaws-${YAWS_VSN}"
 (cd ${SRCDIR} && git tag -f -a -m "version ${YAWS_VSN}" "$TAG")
 
 # Create windows installer
-(cd ${BUILDDIR} && make mkinstaller INSTALL_BUILDER=${INSTALL_BUILDER} >/dev/null)
+#(cd ${BUILDDIR} && make mkinstaller INSTALL_BUILDER=${INSTALL_BUILDER} >/dev/null)
 
 # Create distribution tarball
 (cd ${BUILDDIR} && make dist > /dev/null)
 
 echo release resides in ${BUILDDIR}/$NAME_VERSION.tar.gz
-echo release resides in ${BUILDDIR}/Yaws-${YAWS_VSN}-windows-installer.exe
+#echo release resides in ${BUILDDIR}/Yaws-${YAWS_VSN}-windows-installer.exe
 
 echo "To push this do:"
 #echo "git push origin revs/tags/yaws-${version}:revs/tags/yaws-${version}"
-echo "ehhh or git push --tags"
+echo "git push --tags"
 
 exit 0

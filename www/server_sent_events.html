@@ -2,7 +2,7 @@
      See examples/src/server_side_events.erl for the server -->
 <html>
 <head>
-<script type="text/javascript">
+<script type="application/javascript">
     var es = new EventSource('/sse');
     es.onmessage = function(event) {
         var h2 = document.querySelector('#date-time');

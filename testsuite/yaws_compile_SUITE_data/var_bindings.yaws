@@ -1,0 +1,8 @@
+<erl>
+out(_A) ->
+    {bindings, [{"bold", "b"}, {"text", "binding_value"}]}.
+</erl>
+
+%%%%<%%bold%%>%%text%%</%%bold%%>%%%%
+
+%% %%not_a_binding %%

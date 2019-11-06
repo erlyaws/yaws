@@ -1,0 +1,5 @@
+<erl module="">
+%% empty module name
+out(_A) ->
+    ok.
+</erl>

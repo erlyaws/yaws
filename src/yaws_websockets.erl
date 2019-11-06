@@ -46,7 +46,7 @@
                  msg_fun_2,
                  info_fun}).
 
--export([start/3, send/2, close/2]).
+-export([start/3, start_link/3, send/2, close/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
@@ -91,7 +91,7 @@ start(Arg, CallbackMod, Opts) ->
 
     %% Start websocket process
     OwnerPid =
-        case gen_server:start(?MODULE, [Arg, CallbackMod, PrepdOpts], []) of
+        case supervisor:start_child(yaws_ws_sup, [Arg, CallbackMod, PrepdOpts]) of
             {ok, Pid} ->
                 Pid;
             {error, Reason1} ->
@@ -122,6 +122,8 @@ start(Arg, CallbackMod, Opts) ->
     end,
     exit(normal).
 
+start_link(Arg, CallbackMod, PrepdOpts) ->
+    gen_server:start_link(?MODULE, [Arg, CallbackMod, PrepdOpts], []).
 
 send(#ws_state{}=WSState, {Type, Data}) ->
     do_send(WSState, {Type, Data});
@@ -307,7 +309,6 @@ handle_info(timeout, #state{wait_pong_frame=false}=State) ->
 
 %% Grace period timeout
 handle_info(timeout, #state{wait_pong_frame=true}=State) ->
-    error_logger:error_msg("endpoint gone away !", []),
     State1 = State#state{wait_pong_frame=false},
     case get_opts(drop_on_timeout, State1#state.opts) of
         true  -> handle_abnormal_closure(State1);
@@ -1252,13 +1253,7 @@ query_header(HeaderName, Headers) ->
 query_header(Header, Headers, Default) ->
     yaws_api:get_header(Headers, Header, Default).
 
--ifdef(HAVE_CRYPTO_HASH).
--define(CRYPTO_HASH(V), crypto:hash(sha,V)).
--else.
--define(CRYPTO_HASH(V), crypto:sha(V)).
--endif.
-
 hash_nonce(Nonce) ->
     Salted = Nonce ++ "258EAFA5-E914-47DA-95CA-C5AB0DC85B11",
-    HashBin = ?CRYPTO_HASH(Salted),
+    HashBin = crypto:hash(sha, Salted),
     base64:encode_to_string(HashBin).

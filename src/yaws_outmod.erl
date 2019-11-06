@@ -95,10 +95,20 @@ not_found_body(Path, _GC, _SC) ->
 %% This function can only return an {ehtml, EH} or an {html, HTML}
 %% value, no status codes, no headers etc.
 crashmsg(_Arg, _SC, L) ->
-    error_logger:format("~s", [L]),
+    %% Hide user/password in auth structures
+    RE = "{\"[^\"]+\"\\\s*,\\\s*(md5|ripemd160|sha|sha224|sha256|sha384|sha512)\\\s*,\\\s*[^}]+}",
+    L1 = re:replace(L, RE, "#####", [global, noteol, {return, list}]),
+    error_logger:format("~s", [L1]),
     {ehtml,
-     [{h2, [], "Internal error, yaws code crashed"},
-      {br},
-      {hr},
-      {pre, [], yaws_api:htmlize(L)},
-      {hr}]}.
+     [{html, [],
+       [{body, [],
+         [{h2, [], "Internal error, yaws code crashed"},
+          {br},
+          {hr},
+          {pre, [], yaws_api:htmlize(L1)},
+          {hr}]
+        }
+       ]
+      }
+     ]
+    }.

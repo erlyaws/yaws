@@ -5,8 +5,6 @@
 %%% Created : 24 Jan 2002 by Claes Wikstrom <klacke@hyber.org>
 %%%----------------------------------------------------------------------
 
--author('klacke@hyber.org').
-
 -record(arg, {
           clisock,        % the socket leading to the peer client
           client_ip_port, % {ClientIp, ClientPort} tuple
@@ -34,9 +32,11 @@
                           %  ie http://some.host/<prepath>/<script-point>/d/e
                           % where <script-point> is an appmod mount point,
                           % or .yaws,.php,.cgi,.fcgi etc script file.
-          pathinfo        % Set to '/d/e' when calling c.yaws for the request
+          pathinfo,       % Set to '/d/e' when calling c.yaws for the request
                           % http://some.host/a/b/c.yaws/d/e
                           %  equiv of cgi PATH_INFO
+          appmod_name     % name of the appmod handling a request,
+                          % or undefined if not applicable
          }).
 
 

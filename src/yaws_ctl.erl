@@ -19,7 +19,7 @@
 -export([start/2, actl_trace/1]).
 -export([ls/1,hup/1,stop/1,status/1,load/1,
          check/1,trace/1, debug_dump/1, stats/1, running_config/1,
-         configtest/1]).
+         configtest/1, auth/1]).
 %% internal
 -export([run/1, aloop/3, handle_a/3]).
 
@@ -54,23 +54,9 @@ run(GC) ->
     end.
 
 rand() ->
-    case os:type() of
-        {win32, _} ->
-            {A1, A2, A3}=yaws:get_time_tuple(),
-            random:seed(A1, A2, A3),
-            random:uniform(1 bsl 64);
-        _ ->
-            try
-                crypto:start(),
-                crypto:rand_uniform(0, 1 bsl 64)
-            catch
-                _:_ ->
-                    error_logger:warning_msg("Running without crypto app\n"),
-                    {A1, A2, A3}=yaws:get_time_tuple(),
-                    random:seed(A1, A2, A3),
-                    random:uniform(1 bsl 64)
-            end
-    end.
+    {A1, A2, A3} = yaws:get_time_tuple(),
+    yaws_dynopts:random_seed(A1, A2, A3),
+    yaws_dynopts:random_uniform(1 bsl 64).
 
 
 
@@ -201,31 +187,31 @@ actl_trace(What) ->
         true ->
             {ok, GC, SCs} = yaws_api:getconf(),
             case GC#gconf.trace of
-                false when What /= off->
+                false when What /= off ->
                     yaws_api:setconf(GC#gconf{trace = {true, What}},SCs),
                     io_lib:format(
-                      "Turning on trace of ~p to file ~s~n",
+                      "Turning on trace of ~p to directory ~s~n",
                       [What,
                        filename:join([GC#gconf.logdir,
-                                      "trace." ++ atom_to_list(What)])]);
+                                      yaws_trace:get_tracedir()])]);
                 false when What == off ->
                     io_lib:format("Tracing is already turned off ~n",[]);
                 {true, _} when What == off ->
                     yaws_api:setconf(GC#gconf{trace = false},SCs),
                     "Turning trace off \n";
                 {true, What} ->
-                    io_lib:format("Trace of ~p is already turned on, ose 'off' "
+                    io_lib:format("Trace of ~p is already turned on, use 'off' "
                                   "to turn off~n", [What]);
                 {true, _Other} ->
                     yaws_api:setconf(GC#gconf{trace = {true, What}},SCs),
                     io_lib:format(
-                      "Turning on trace of ~p to file ~s~n",
+                      "Turning on trace of ~p to directory ~s~n",
                       [What,
                        filename:join([GC#gconf.logdir,
-                                      "trace." ++ atom_to_list(What)])])
+                                      yaws_trace:get_tracedir()])])
             end;
         false ->
-            "Need either http | traffic | off  as argument\n"
+            "error: need one of http | traffic | off as argument\n"
     end.
 
 
@@ -271,23 +257,8 @@ vsn(IP) when size(IP) =:= 4 ->
 vsn(IP) when size(IP) =:= 8 ->
     "(ipv6)".
 
--define(IPV4_FMT, "~p.~p.~p.~p").
--define(IPV6_FMT,
-        "~2.16.0b~2.16.0b:~2.16.0b~2.16.0b:~2.16.0b~2.16.0b:~2.16.0b~2.16.0b").
-
 format_ip(IP) ->
-    case size(IP) of
-        4 ->
-            {A, B, C, D} = IP,
-            io_lib:format(?IPV4_FMT,
-                          [A, B, C, D]);
-
-        8 ->
-            {A, B, C, D, E, F, G, H} = IP,
-            io_lib:format(?IPV6_FMT,
-                          [A, B, C, D, E, F, G, H])
-    end.
-
+    inet_parse:ntoa(IP).
 
 a_running_config(Sock) ->
     gen_tcp:send(Sock, a_running_config()).
@@ -547,17 +518,13 @@ load(X) ->
     actl(SID, {load, Modules}).
 
 check([Id, File| IncludeDirs]) ->
-    GC = yaws_config:make_default_gconf(false, undefined),
+    GC = yaws_config:make_default_gconf(false, atom_to_list(Id)),
     GC2 = GC#gconf{include_dir = lists:map(fun(X) -> atom_to_list(X) end,
-                                           IncludeDirs),
-                   id = atom_to_list(Id)
-                  },
-    yaws_server:setup_dirs(GC2),
-    put(sc, #sconf{}),
+                                           IncludeDirs)},
     put(gc, GC2),
-    put(use_yfile_name, true),
+    put(check_yaws_script, true),
     case yaws_compile:compile_file(atom_to_list(File)) of
-        {ok, [{errors, 0}| _Spec]} ->
+        {ok, 0, _Spec} ->
             timer:sleep(100),erlang:halt(0);
         _Other ->
             timer:sleep(100),erlang:halt(1)
@@ -576,7 +543,6 @@ running_config([SID]) ->
     actl(SID, running_config).
 
 configtest([File]) ->
-
     Env = #env{debug = false, conf  = {file, File}},
     case catch yaws_config:load(Env) of
         {ok, _GC, _SCs} ->
@@ -587,5 +553,29 @@ configtest([File]) ->
             timer:sleep(100),erlang:halt(1);
         Other ->
             io:format("Syntax error in file ~p:~n~p~n", [File, Other]),
+            timer:sleep(100),erlang:halt(1)
+    end.
+
+auth([User, Algo, Passwd]) ->
+    if
+        Algo == md5    orelse Algo == sha    orelse
+        Algo == sha224 orelse Algo == sha256 orelse
+        Algo == sha384 orelse Algo == sha512 orelse
+        Algo == ripemd160 ->
+            Salt    = crypto:strong_rand_bytes(32),
+            B64Salt = base64:encode(Salt),
+            Hash    = crypto:hash(Algo, [Salt, atom_to_list(Passwd)]),
+            B64Hash = base64:encode(Hash),
+            io:format("~nUser's credential successfully generated:~n", []),
+            io:format("\tPut this line in your Yaws config (in <auth> section):"
+                      " user = \"~s:{~s}$~s$~s\"~n~n",
+                      [atom_to_list(User),atom_to_list(Algo),B64Salt,B64Hash]),
+            io:format("\tOr in a .yaws_auth file:"
+                      " {\"~s\", \"~s\", \"~s\", \"~s\"}.~n",
+                      [atom_to_list(User),atom_to_list(Algo),B64Salt,B64Hash]),
+            timer:sleep(100),erlang:halt(0);
+        true ->
+            io:format("Unsupported Hash algorithm ~p~n"
+                      "\tUse: md5 | ripemd160 | sha | sha224 | sha256 | sha384 | sha512 ~n", [Algo]),
             timer:sleep(100),erlang:halt(1)
     end.
