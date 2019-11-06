@@ -3496,11 +3496,12 @@ eccs = "[sect571r1, sect571k1, secp521r1, brainpoolP512r1, sect409k1,
                  \item \verb+protocol_version = ProtocolList+ ---
                    Specifies the list of SSL protocols that will be
                    supported. If not set, defaults to all protocols
-                   supported by the \Erlang\  \verb+ssl+ application. For
-                   example, to support only TLS versions 1.2, 1.1, and 1:
+                   supported by the \Erlang\ \verb+ssl+
+                   application. For example, to support only TLS
+                   versions 1.3, 1.2, 1.1, and 1:
 
 \begin{verbatim}
-protocol_version = tlsv1.2, tlsv1.1, tlsv1
+protocol_version = tlsv1.3, tlsv1.2, tlsv1.1, tlsv1
 \end{verbatim}
 
                  \item \verb+require_sni = true | false+ ---

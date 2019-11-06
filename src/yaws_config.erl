@@ -583,7 +583,7 @@ validate_group(GC, List) ->
                      undefined -> proplists:get_value(available,ssl:versions());
                      L         -> L
                  end,
-            F = fun(V) -> lists:member(V, ['tlsv1.2','tlsv1.1',tlsv1]) end,
+            F = fun(V) -> lists:member(V, ['tlsv1.3','tlsv1.2','tlsv1.1',tlsv1]) end,
             case lists:any(F, Vs) of
                 true -> ok;
                 false ->

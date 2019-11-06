@@ -1232,12 +1232,13 @@ false, use the client's preference.
 .IP
 \fBprotocol_version = ProtocolList\fR
 .RS 12
-Specifies the list of SSL protocols that will be supported. If not set,
-defaults to all protocols supported by the erlang \fBssl\fR
-application. For example, to support only TLS versions 1.2, 1.1, and 1:
+Specifies the list of SSL protocols that will be supported. If not
+set, defaults to all protocols supported by the erlang \fBssl\fR
+application. For example, to support only TLS versions 1.3, 1.2, 1.1,
+and 1:
 .nf
 
-protocol_version = tlsv1.2, tlsv1.1, tlsv1
+protocol_version = tlsv1.3, tlsv1.2, tlsv1.1, tlsv1
 .fi
 .RE
 
