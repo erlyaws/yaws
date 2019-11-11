@@ -10,8 +10,6 @@
 -include_lib("kernel/include/file.hrl").
 
 
--export([behaviour_info/1]).
-
 %% API
 -export([
          open_log/3,
@@ -29,17 +27,40 @@
 -include("yaws_debug.hrl").
 
 
+-callback open_log(ServerName :: string(), Type :: auth | access,
+                   LogDir :: string()) ->
+    {true, State :: term()} |
+    false.
+-callback close_log(ServerName :: string(), Type :: auth | access,
+                    Data :: term()) ->
+    ok |
+    {error, Reason :: file:posix() | badarg | terminated}.
+-callback wrap_log(ServerName :: string(), Type :: auth | access,
+                   Data :: term(), LogWrapSize :: pos_integer()) ->
+    term().
+-callback write_log(ServerName :: string(), Type :: auth | access,
+                    Data :: term(),
+                    Infos :: {Ip :: inet:ip_address(),
+                              Req :: #http_request{},
+                              InH :: #headers{},
+                              OutH :: #outh{},
+                              Time :: non_neg_integer()} |
+                             {Ip :: inet:ip_address(),
+                              Path :: string(),
+                              Item :: {ok, User :: string()} |
+                                      403 |
+                                      {401, Realm :: string()} |
+                                      {401, User :: string(),
+                                       PWD :: string()} |
+                                      term()}) ->
+    ok.
+
+
 -record(log, {id, amod, data}).
 
 %%%----------------------------------------------------------------------
 %%% API
 %%%----------------------------------------------------------------------
-behaviour_info(callbacks) ->
-    [{open_log,3}, {close_log,3}, {wrap_log,4}, {write_log,4}];
-behaviour_info(_Other) ->
-    undefined.
-
-
 open_log(SConf, auth, Dir) when ?sc_has_auth_log(SConf) ->
     do_open_log(SConf, auth, Dir);
 open_log(SConf, access, Dir) when ?sc_has_access_log(SConf) ->
