@@ -89,11 +89,8 @@ UsrIncludeSecurity =
                                                          [exit_status, stderr_to_stdout]),
                                         Result(Port, [])
                                 end,
-                            {ok, PlatDir} = Run("/usr/bin/xcrun --show-sdk-platform-path"),
-                            FindCmd = "/usr/bin/find " ++ string:strip(PlatDir, right, $\n) ++
-                                " -type d -name MacOSX.sdk",
-                            {ok, FindResult} = Run(FindCmd),
-                            SdkDir = string:strip(FindResult, right, $\n),
+                            {ok, PlatDir} = Run("/usr/bin/xcrun --show-sdk-path"),
+                            SdkDir = string:strip(PlatDir, right, $\n),
                             SdkDir ++ DefaultUsrIncludeSecurity
                     end;
                 _ ->

@@ -299,9 +299,8 @@ case "$host_os" in
                     if ! test -d /usr/include; then
                        AC_CHECK_PROGS([XCRUN], [xcrun])
                        if test "x$XCRUN" != "x"; then
-                          AC_MSG_CHECKING([for $XCRUN --show-sdk-platform-path])
-                          platform_dir=`$XCRUN --show-sdk-platform-path`
-                          sdk_dir=`find $platform_dir -type d -name MacOSX.sdk 2>/dev/null`
+                          AC_MSG_CHECKING([for $XCRUN --show-sdk-path])
+                          sdk_dir=`$XCRUN --show-sdk-path`
                           if test "x$sdk_dir" != "x"; then
                              AC_MSG_RESULT([$sdk_dir])
                              EPAM_INCLUDE="$sdk_dir"
