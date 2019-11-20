@@ -11,7 +11,8 @@ all() ->
      yaws_type,
      erlang_type,
      gzip_with_charset,
-     multiple_accept_headers
+     multiple_accept_headers,
+     charset_for_404
     ].
 
 groups() ->
@@ -195,5 +196,19 @@ multiple_accept_headers(Config) ->
 
     AcceptHdrs9 = [{"Accept", ","}],
     {ok, {{_,400,_}, _, _}} = testsuite:http_get(Url1, AcceptHdrs9),
+
+    ok.
+
+charset_for_404(Config) ->
+    Port1 = testsuite:get_yaws_port(1, Config),
+    Port3 = testsuite:get_yaws_port(3, Config),
+    Url1  = testsuite:make_url(http, "127.0.0.1", Port1, "/404"),
+    Url3  = testsuite:make_url(http, "127.0.0.1", Port3, "/404"),
+
+    {ok, {{_,404,_}, Hdrs1, _}} = testsuite:http_get(Url1),
+    ?assertEqual("text/plain", proplists:get_value("content-type", Hdrs1)),
+
+    {ok, {{_,404,_}, Hdrs3, _}} = testsuite:http_get(Url3),
+    ?assertEqual("text/html; charset=UTF-8", proplists:get_value("content-type", Hdrs3)),
 
     ok.

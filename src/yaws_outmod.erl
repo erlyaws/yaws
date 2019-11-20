@@ -32,11 +32,21 @@ out404(Arg, GC, SC) ->
     Req = Arg#arg.orig_req,
     {abs_path, Path} = Req#http_request.path,
     B = not_found_body(Path, GC, SC),
+    ContentType = content_type(SC, "html", "text/html"),
     [{status, 404},
-     {header, {content_type, "text/html"}},
+     {header, {content_type, ContentType}},
      {header, {connection, "close"}},
      {html, B}].
 
+
+content_type(SC, Ext, Default) ->
+    try
+        {regular, MimeType} = mime_types:t(SC, Ext),
+        MimeType
+    catch
+        _:_ ->
+            Default
+    end.
 
 
 %% The default error 401 error delivery module
