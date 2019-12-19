@@ -3,6 +3,7 @@ sudo: false
 dist: trusty
 language: erlang
 otp_release:
+  - 22.1
   - 22.0
   - 21.3
   - 21.2
