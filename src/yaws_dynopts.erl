@@ -12,6 +12,7 @@
          have_erlang_now/0,
          have_rand/0,
          have_start_error_logger/0,
+         have_http_uri_parse/0,
 
          unique_triple/0,
          get_time_tuple/0,
@@ -21,6 +22,7 @@
          connection_information/2,
          ssl_handshake/2,
          start_error_logger/0,
+         http_uri_parse/1,
 
          generate/1,
          purge_old_code/0,
@@ -61,6 +63,10 @@ have_rand() ->
 %% error_logger is legacy as of release 21 (ERTS >= 10.0)
 have_start_error_logger() ->
     is_greater_or_equal(erlang:system_info(version), "10.0").
+
+%% http_uri is legacy as of release 23 (ERTS >= 11.0)
+have_http_uri_parse() ->
+    is_less(erlang:system_info(version), "11.0").
 
 unique_triple() ->
     case have_erlang_now() of
@@ -126,6 +132,46 @@ start_error_logger() ->
             end;
         false ->
             ok
+    end.
+
+http_uri_parse(Uri) ->
+    case have_http_uri_parse() of
+        true -> (fun http_uri:parse/2)(Uri);
+        false ->
+            case (fun uri_string:parse/1)(Uri) of
+                {error,_,_}=Error -> Error;
+                UriMap ->
+                    Scheme = case maps:find(scheme, UriMap) of
+                                 {ok, S} -> list_to_existing_atom(S);
+                                 error -> ''
+                             end,
+                    UserInfo = case maps:find(userinfo, UriMap) of
+                                   {ok, U} -> U;
+                                   error -> ""
+                               end,
+                    Host = case maps:find(host, UriMap) of
+                               {ok, H} -> H;
+                               error -> ""
+                           end,
+                    Port = case maps:find(port, UriMap) of
+                               {ok, Po} -> Po;
+                               error ->
+                                   case Scheme of
+                                       http -> 80;
+                                       https -> 443;
+                                       _ -> undefined
+                                   end
+                           end,
+                    Path = case maps:find(path, UriMap) of
+                               {ok, Pa} -> Pa;
+                               error -> ""
+                           end,
+                    Query = case maps:find(query, UriMap) of
+                                {ok, Q} -> [$?|Q];
+                                error -> ""
+                            end,
+                    {ok, {Scheme, UserInfo, Host, Port, Path, Query}}
+            end
     end.
 
 is_greater         (Vsn1, Vsn2) -> compare_version(Vsn1, Vsn2) == greater.
@@ -276,6 +322,11 @@ compile_options() ->
         case have_start_error_logger() of
             true  -> [{d, 'HAVE_START_ERROR_LOGGER'}];
             false -> []
+        end
+        ++
+        case have_http_uri_parse() of
+            true -> [{d, 'HAVE_HTTP_URI_PARSE'}];
+            false -> []
         end.
 
 source() ->
@@ -295,6 +346,7 @@ source() ->
            "    have_erlang_now/0,",
            "    have_rand/0,"
            "    have_start_error_logger/0,"
+           "    have_http_uri_parse/0,",
            "",
            "    unique_triple/0,",
            "    get_time_tuple/0,",
@@ -304,6 +356,7 @@ source() ->
            "    connection_information/2,",
            "    ssl_handshake/2,"
            "    start_error_logger/0,",
+           "    http_uri_parse/1,",
            "",
            "    generate/1,",
            "    purge_old_code/0,",
@@ -385,6 +438,47 @@ source() ->
            "-else.",
            "have_start_error_logger() -> false.",
            "start_error_logger() -> ok.",
+           "-endif.",
+           "-ifdef(HAVE_HTTP_URI_PARSE).",
+           "have_http_uri_parse() -> true.",
+           "http_uri_parse(Uri) -> http_uri:parse(Uri).",
+           "-else.",
+           "have_http_uri_parse() -> false.",
+           "http_uri_parse(Uri) ->",
+           "    case uri_string:parse(Uri) of",
+           "        {error,_,_}=Error -> Error;",
+           "        UriMap ->",
+           "            Scheme = case maps:find(scheme, UriMap) of",
+           "                         {ok, S} -> list_to_existing_atom(S);",
+           "                         error -> ''",
+           "                     end,",
+           "            UserInfo = case maps:find(userinfo, UriMap) of",
+           "                           {ok, U} -> U;",
+           "                           error -> []",
+           "                       end,",
+           "            Host = case maps:find(host, UriMap) of",
+           "                       {ok, H} -> H;",
+           "                       error -> []",
+           "                   end,",
+           "            Port = case maps:find(port, UriMap) of",
+           "                       {ok, Po} -> Po;",
+           "                       error ->",
+           "                           case Scheme of",
+           "                               http -> 80;",
+           "                               https -> 443;",
+           "                               _ -> undefined",
+           "                           end",
+           "                   end,",
+           "            Path = case maps:find(path, UriMap) of",
+           "                       {ok, Pa} -> Pa;",
+           "                       error -> []",
+           "                   end,",
+           "            Query = case maps:find(query, UriMap) of",
+           "                        {ok, Q} -> [$?|Q];",
+           "                        error -> []",
+           "                    end,",
+           "            {ok, {Scheme, UserInfo, Host, Port, Path, Query}}",
+           "    end.",
            "-endif."
           ],
     string:join(Src, "\n").

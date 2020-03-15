@@ -354,7 +354,7 @@ post_multi_same_content_length(Config) ->
 post_transfer_encoding(Config, TE, StatusCode) ->
     Port = testsuite:get_yaws_port(1, Config),
     Url  = testsuite:make_url(http, "127.0.0.1", Port, "/posttest/chunked/5"),
-    {ok, {Scheme, _, Host, Port, Path, _}} = http_uri:parse(Url),
+    {ok, {Scheme, _, Host, Port, Path, _}} = yaws_dynopts:http_uri_parse(Url),
     case testsuite:sock_connect(Scheme, Host, Port, [binary,{active,false}], infinity) of
         {ok, Sock} ->
             try
