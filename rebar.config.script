@@ -31,7 +31,8 @@ ok = file:write_file(filename:join(Dir, "src/yaws_charset.hrl"),
                      end),
 
 SoapDeps = [{erlsom, ".*", {git, "git://github.com/willemdj/erlsom.git", {tag, "1.4.0"}}},
-            {xmlrpc, ".*", {git, "git://github.com/rwbr/exmlrpc.git", {branch, "8813d049c9c426d86c57ac9f7325253255df9666"}}}],
+            {xmlrpc, ".*", {git, "git://github.com/rwbr/exmlrpc.git",
+                            {branch, "8813d049c9c426d86c57ac9f7325253255df9666"}}}],
 Cfg0 = case os:getenv("YAWS_SOAP") of
            false ->
                CONFIG;

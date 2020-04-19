@@ -12,7 +12,7 @@ SUITE_MODULES_DATADIR_MODS = $(SUITE_MODULES_DATADIR_MODS_BLA:@srcdir@/%=%)
 
 MODULES = $(SUITE_MODULES) $(SUITE_MODULES_DATADIR_MODS) testsuite.erl
 
-EBIN_DIR=@top_builddir@/testsuite
+EBIN_DIR=@top_builddir@/test
 EBIN_FILES=$(MODULES:%.erl=$(EBIN_DIR)/%.beam)
 
 LOG_DIR=@builddir@/logs

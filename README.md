@@ -45,7 +45,7 @@ command:
 
     xcode-select --install
 
-Finally, to run the testsuites, yaws need to install:
+Finally, to run the test suites, yaws need to install:
 
 * git
 * wget
@@ -54,7 +54,7 @@ Finally, to run the testsuites, yaws need to install:
 * erlang-inets
 * erlang-mnesia
 * erlang-ssl
-* cadaver
+* cadaver (optional)
 
 
 Build
