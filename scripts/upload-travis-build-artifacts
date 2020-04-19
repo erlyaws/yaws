@@ -4,7 +4,7 @@ if test ${TRAVIS} != true; then
     echo "WARNING: upload skipped: not a travis build"
     exit 0
 fi
-if ! test -d ${TRAVIS_BUILD_DIR}/testsuite/logs; then
+if ! test -d ${TRAVIS_BUILD_DIR}/test/logs; then
     echo "WARNING: Upload skipped: build artifacts not found"
     exit 0
 fi
@@ -32,7 +32,7 @@ ARCHIVE=${ARTIFACT}.tar.gz
 echo "  * Create ${ARCHIVE}"
 (
     cd /tmp
-    cp -r ${TRAVIS_BUILD_DIR}/testsuite/logs ${ARTIFACT}
+    cp -r ${TRAVIS_BUILD_DIR}/test/logs ${ARTIFACT}
     tar zcf ${ARCHIVE} ${ARTIFACT}
 )
 if ! test -f /tmp/${ARCHIVE}; then

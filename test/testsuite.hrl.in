@@ -7,8 +7,8 @@
 -define(top_builddir, "@abs_top_builddir@").
 -define(srcdir,       "@abs_top_srcdir@/src").
 -define(ebindir,      "@abs_top_builddir@/ebin").
--define(ts_srcdir,    "@abs_top_srcdir@/testsuite").
--define(ts_builddir,  "@abs_top_builddir@/testsuite").
+-define(ts_srcdir,    "@abs_top_srcdir@/test").
+-define(ts_builddir,  "@abs_top_builddir@/test").
 -define(wwwdir,       "@abs_top_srcdir@/www").
 -define(ssldir,       "@abs_top_srcdir@/ssl").
 -define(sslkeyfile,   "@abs_top_srcdir@/ssl/yaws-key.pem").

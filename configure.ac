@@ -20,7 +20,6 @@ AC_PREREQ([2.64])
 ECHO=echo
 COLORED_ECHO_INIT
 
-
 dnl ------------------------------------------------------------------
 dnl Compiler and other tools.
 dnl ------------------------------------------------------------------
@@ -36,14 +35,13 @@ AC_PROG_LD
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 AC_PROG_SED
-
+AC_PROG_MKDIR_P
 
 AM_DISABLE_STATIC
 AM_ENABLE_SHARED
 AM_PROG_LIBTOOL
 
 CFLAGS="-Werror -Wall -O3 $old_cflags"
-
 
 dnl ------------------------------------------------------------------
 dnl Handle configure options.
@@ -125,7 +123,7 @@ Erlang not found. Fill the ERL variable with erl(1) path or provide
 Erlang prefix with --with-erlang.])
 fi
 
-dnl escript(1) is used by the testsuite.
+dnl escript(1) is used by the test suite.
 AC_ARG_VAR([ESCRIPT], [Erlang/OTP interpreter command [autodetected]])
 
 if test "x${ESCRIPT}" = "x"; then
@@ -144,7 +142,7 @@ fi
 if test "x${ESCRIPT}" = "x"; then
         AC_MSG_WARN([
 escript(1) not found. Fill the ESCRIPT variable with escript(1) path if
-you want to use the testsuite.])
+you want to use the test suite.])
 fi
 
 
@@ -242,23 +240,23 @@ AC_ERLANG_CHECK_LIB([crypto],,   [AC_MSG_ERROR(["crypto" Erlang application not 
 AC_ERLANG_CHECK_LIB([xmerl],,    [AC_MSG_ERROR(["xmerl" Erlang application not found.])])
 
 AC_ERLANG_CHECK_LIB([public_key],, [AC_MSG_WARN(["public_key" Erlang application not found.
-It could be required to run Yaws or its testsuites.])])
+It could be required to run Yaws or its test suites.])])
 AC_ERLANG_CHECK_LIB([ssl],,        [AC_MSG_WARN(["ssl" Erlang application not found.
-It could be required to run Yaws or its testsuites.])])
+It could be required to run Yaws or its test suites.])])
 AC_ERLANG_CHECK_LIB([mnesia],,     [AC_MSG_WARN(["mnesia" Erlang application not found.
-It could be required to run Yaws or its testsuites.])])
+It could be required to run Yaws or its test suites.])])
 AC_ERLANG_CHECK_LIB([eunit],,      [AC_MSG_WARN(["eunit" Erlang application not found.
-It could be required to run Yaws or its testsuites.])])
+It could be required to run Yaws or its test suites.])])
 AC_ERLANG_CHECK_LIB([erlsom],,     [AC_MSG_WARN(["erlsom" Erlang application not found.
-It could be required to run Yaws or its testsuites.])])
+It could be required to run Yaws or its test suites.])])
 AC_ERLANG_CHECK_LIB([xmlrpc],,     [AC_MSG_WARN(["xmlrpc" Erlang application not found.
-It could be required to run Yaws or its testsuites.])])
+It could be required to run Yaws or its test suites.])])
 AC_ERLANG_CHECK_LIB([inets],,      [AC_MSG_WARN(["inets" Erlang application not found.
-It could be required to run Yaws or its testsuites.])])
+It could be required to run Yaws or its test suites.])])
 AC_ERLANG_CHECK_LIB([tools],,      [AC_MSG_WARN(["tools" Erlang application not found.
-It could be required to run Yaws or its testsuites.])])
+It could be required to run Yaws or its test suites.])])
 AC_ERLANG_CHECK_LIB([common_test],,[AC_MSG_WARN(["common_test" Erlang application not found.
-It could be required to run Yaws or its testsuites.])])
+It could be required to run Yaws or its test suites.])])
 
 cross_compiling=$tmp_cross_compiling
 
@@ -436,10 +434,10 @@ AC_SUBST([CONFIG_STATUS_DEPENDENCIES],
       $(top_srcdir)/erlang_deps.mk                      \
       $(top_srcdir)/include.mk                          \
       $(top_srcdir)/applications/yapp/vsn.mk            \
-      $(top_srcdir)/testsuite/run_common_test.in        \
-      $(top_srcdir)/testsuite/yaws.coverspec.in         \
-      $(top_srcdir)/testsuite/cover_to_html.sh.in       \
-      $(top_srcdir)/testsuite/analyze_coverdata.escript.in'])
+      $(top_srcdir)/test/run_common_test.in        \
+      $(top_srcdir)/test/yaws.coverspec.in         \
+      $(top_srcdir)/test/cover_to_html.sh.in       \
+      $(top_srcdir)/test/analyze_coverdata.escript.in'])
 
 AC_CONFIG_FILES([
         yaws.pc
@@ -452,16 +450,16 @@ AC_CONFIG_FILES([
         doc/Makefile
         scripts/Makefile
         src/Makefile
-        ebin/Makefile
+        ebin_src/Makefile
         examples/src/Makefile
         examples/ebin/Makefile
         examples/include/Makefile
         www/code/Makefile
         www/shoppingcart/Makefile
 
-        testsuite/Makefile
-        testsuite/${PACKAGE_NAME}.coverspec
-        testsuite/testsuite.hrl
+        test/Makefile
+        test/${PACKAGE_NAME}.coverspec
+        test/testsuite.hrl
 
         applications/chat/Makefile
         applications/chat/src/Makefile
@@ -480,9 +478,9 @@ AC_CONFIG_FILES([
         src/yaws_appdeps.hrl
 ])
 
-AC_CONFIG_FILES([testsuite/run_common_test],           [chmod +x testsuite/run_common_test])
-AC_CONFIG_FILES([testsuite/cover_to_html.sh],          [chmod +x testsuite/cover_to_html.sh])
-AC_CONFIG_FILES([testsuite/analyze_coverdata.escript], [chmod +x testsuite/analyze_coverdata.escript])
+AC_CONFIG_FILES([test/run_common_test],           [chmod +x test/run_common_test])
+AC_CONFIG_FILES([test/cover_to_html.sh],          [chmod +x test/cover_to_html.sh])
+AC_CONFIG_FILES([test/analyze_coverdata.escript], [chmod +x test/analyze_coverdata.escript])
 
 AC_CONFIG_FILES([scripts/make-release],                  [chmod +x scripts/make-release])
 AC_CONFIG_FILES([applications/wiki/scripts/addFile],     [chmod +x applications/wiki/scripts/addFile])
