@@ -40,7 +40,8 @@ keep_or_replace() {
 if [ "$1" = clean ]; then
     rm -f ${YAWS_DIR}/src/mime_types.erl  \
        ${YAWS_DIR}/src/yaws_generated.erl \
-       ${YAWS_DIR}/src/yaws_charset.hrl
+       ${YAWS_DIR}/src/yaws_charset.hrl \
+       ${YAWS_DIR}/test/testsuite.hrl
     exit 0
 fi
 
@@ -66,6 +67,11 @@ need_mime=yes
 if [ -f mime_types.erl ]; then
     need_mime=`find mime_type_c.erl -newer mime_types.erl -print`
 fi
+rm_ebin=
+if [ ! -d "${YAWS_DIR}/ebin" ]; then
+    mkdir "${YAWS_DIR}/ebin"
+    rm_ebin=yes
+fi
 if [ -n "$need_mime" ]; then
     set yaws yaws_generated mime_type_c
     for f; do
@@ -75,6 +81,7 @@ if [ -n "$need_mime" ]; then
     for f; do
         rm ${YAWS_DIR}/ebin/${f}.beam
     done
+    [ -n "$rm_ebin" ] && rm -rf ${YAWS_DIR}/ebin
 fi
 
 ## generate yaws scripts
@@ -100,5 +107,15 @@ else
     echo "--- Installing local config file at ${YAWS_ETCDIR}/yaws"
     keep_or_replace ${YAWS_ETCDIR}/yaws/yaws.conf $tmpgen
 fi
+
+## generate test suite files
+cd ${YAWS_DIR}/test
+srcdir=`echo "${YAWS_DIR}" | sed -e 's/\//\\\\\//g'`
+[ -n "${REBAR_BUILD_DIR}" ] && builddir="${REBAR_BUILD_DIR}" || builddir="${YAWS_DIR}"
+builddir=`echo "${builddir}" | sed -e 's/\//\\\\\//g'`
+tmpgen=`mktemp /tmp/${SCRIPT}.XXXXXX` || fail
+sed -e 's/@abs_top_srcdir@/'"${srcdir}"'/g' \
+    -e 's/@abs_top_builddir@/'"${builddir}"'/g' testsuite.hrl.in > $tmpgen || fail
+mv -f $tmpgen testsuite.hrl || fail
 
 exit 0

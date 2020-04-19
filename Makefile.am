@@ -1,7 +1,7 @@
 ACLOCAL_FLAGS = -I m4
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = src ebin include priv
+SUBDIRS = src ebin_src include priv
 
 APPDIRS = applications/chat applications/mail applications/wiki applications/yapp
 
@@ -17,12 +17,12 @@ if MINGW
 endif
 
 SUBDIRS += examples/src	examples/ebin examples/include \
-	   testsuite doc man scripts www/code www/shoppingcart
+	   test doc man scripts www/code www/shoppingcart
 
-EXTRA_DIST = ChangeLog known_dialyzer_warnings LICENSE			\
+EXTRA_DIST = ChangeLog known_dialyzer_warnings LICENSE 			\
 	     README.md README.osx README.pkg-config 			\
 	     rebar.config rebar.config.script two-mode-mode.el vsn.mk	\
-	     include.mk erlang_deps.mk ssl munin contrib www rel
+	     include.mk erlang_deps.mk ssl munin contrib www
 
 if !MINGW
 pkgconfigdir = $(libdir)/pkgconfig
@@ -91,10 +91,10 @@ doc:
 test: check
 
 list-checks:
-	$(AM_V_at)( cd testsuite && $(MAKE) list-checks )
+	$(AM_V_at)( cd test && $(MAKE) list-checks )
 
 cleantest:
-	$(AM_V_at)( cd testsuite && $(MAKE) clean )
+	$(AM_V_at)( cd test && $(MAKE) clean )
 
 yaws.plt:
 	$(AM_V_GEN)$(DIALYZER) --build_plt -r ebin --output_plt yaws.plt\
