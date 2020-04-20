@@ -69,7 +69,7 @@ out(A) ->
                   "and it is found under ",
                   {a,
                    [{href,
-                     "https://github.com/klacke/yaws/blob/master/www/jsolait/jsolait.js"}],
+                     "https://github.com/erlyaws/yaws/blob/master/www/jsolait/jsolait.js"}],
                    "\"www/jsolait/jsolait.js\""}, "."]}},
          {li,[],{p,[],"Second, the HTML code defines the name of a method, "
                  "i.e. the name of a server-side function that shall be "
@@ -268,7 +268,7 @@ lkup(Key, List, Def) ->
        " one for encoding and two for decoding. See source code ",
        {a,
         [{href,
-          "https://github.com/klacke/yaws/blob/master/src/json2.erl"}],
+          "https://github.com/erlyaws/yaws/blob/master/src/json2.erl"}],
         "json2.erl"},
        " for detailed instructions on usage."]}
 

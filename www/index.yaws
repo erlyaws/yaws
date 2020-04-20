@@ -41,8 +41,8 @@ out(A) ->
 
 
         {p,[], ["Code is on : ",
-                {a,[{href,"http://github.com/klacke/yaws"}],
-                  "http://github.com/klacke/yaws"}]},
+                {a,[{href,"http://github.com/erlyaws/yaws"}],
+                  "http://github.com/erlyaws/yaws"}]},
 
         {p, [], ["Travis test results at :",
                  {a, [{href, "https://travis-ci.org/klacke/yaws"}],
@@ -63,7 +63,7 @@ out(A) ->
          {h2, [], "News"},
          {p, [], ["To see all the most recent changes and activity in Yaws "
                   "development, please visit the ",
-                  {a, [{href, "https://github.com/klacke/yaws"}],
+                  {a, [{href, "https://github.com/erlyaws/yaws"}],
                    "Yaws github repository"}, "."]},
 
          gen_log(A)]}]},

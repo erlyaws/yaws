@@ -16,7 +16,7 @@ out(A) ->
   <h1>Build and install Yaws</h1>
   <p>
     Yaws is hosted at <a
-    href="http://github.com/klacke/yaws">http://github.com/klacke/yaws</a>. (Prior
+    href="http://github.com/erlyaws/yaws">http://github.com/erlyaws/yaws</a>. (Prior
     to release 1.81 Yaws was hosted at Sourceforge.)
   </p>
   <p>
@@ -100,7 +100,7 @@ out(A) ->
   </p>
   <div class="box">
     <pre>
-# git clone git://github.com/klacke/yaws.git
+# git clone git://github.com/erlyaws/yaws.git
     </pre>
   </div>
   <p>To build and to what is knows as a <em>local</em> install, e.g.

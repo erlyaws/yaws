@@ -90,7 +90,7 @@ out(A) ->
   HTML.</p>
 
   <p>Next, the server appmod code is here: <a
-  href="https://github.com/klacke/yaws/blob/master/examples/src/server_sent_events.erl">
+  href="https://github.com/erlyaws/yaws/blob/master/examples/src/server_sent_events.erl">
   server_sent_events.erl</a>. Its <code>out/1</code> function create a
   gen_server event generation process, returning the pid in a
   <code>streamcontent_from_pid</code> directive to Yaws along with suitable
