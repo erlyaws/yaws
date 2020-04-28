@@ -136,7 +136,7 @@ start_error_logger() ->
 
 http_uri_parse(Uri) ->
     case have_http_uri_parse() of
-        true -> (fun http_uri:parse/2)(Uri);
+        true -> (fun http_uri:parse/1)(Uri);
         false ->
             case (fun uri_string:parse/1)(Uri) of
                 {error,_,_}=Error -> Error;
