@@ -583,7 +583,7 @@ code_to_phrase(420) -> "Enhance Your Calm";
 code_to_phrase(422) -> "Unprocessable Entity";
 code_to_phrase(423) -> "Locked";
 code_to_phrase(424) -> "Failed Dependency";
-code_to_phrase(425) -> "Unordered Collection";
+code_to_phrase(425) -> "Too Early";
 code_to_phrase(426) -> "Upgrade Required";
 code_to_phrase(428) -> "Precondition Required";
 code_to_phrase(429) -> "Too Many Requests";
