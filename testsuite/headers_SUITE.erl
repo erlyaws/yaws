@@ -104,12 +104,13 @@ reformat_headers(_Config) ->
     Hdrs0 = create_headers(10),
     Hdrs1 = yaws_api:set_header(Hdrs0, "set-cookie", "user=joe"),
     Hdrs2 = yaws_api:set_header(Hdrs1, "Connection", "close"),
-    Hdrs3 = yaws_api:merge_header(Hdrs2, "set-cookie", "domain=erlang.org"),
-    Hdrs4 = yaws_api:reformat_header(Hdrs3),
-    ?assert(lists:all(fun(T) -> T end, [lists:flatten(H) == H || H <- Hdrs4])),
+    Hdrs3 = yaws_api:set_header(Hdrs2, 'X-Atom', 'an atom header/value'),
+    Hdrs4 = yaws_api:merge_header(Hdrs3, "set-cookie", "domain=erlang.org"),
+    Hdrs5 = yaws_api:reformat_header(Hdrs4),
+    ?assert(lists:all(fun(T) -> T end, [lists:flatten(H) == H || H <- Hdrs5])),
     %% Verify that a user-defined FormatFun that doesn't handle
     %% {multi, ValueList} as documented in yaws_api.5 still works
-    Hdrs5 = yaws_api:reformat_header(Hdrs3,
+    Hdrs6 = yaws_api:reformat_header(Hdrs4,
                                      fun(H, {multi, Vals}) ->
                                              %% return a list of strings
                                              [lists:flatten(
@@ -123,7 +124,17 @@ reformat_headers(_Config) ->
     %% Only one element of the Hdrs5 list should be a list: the one
     %% returned for the {multi, ValueList} tuple.
     Expected = [["Set-Cookie: user=joe", "Set-Cookie: domain=erlang.org"]],
-    ?assertEqual(Expected, lists:filter(fun(V) -> is_list(V) end, Hdrs5)),
+    ?assertEqual(Expected, lists:filter(fun(V) -> is_list(V) end, Hdrs6)),
+    %% Verify reformat_header options
+    Hdrs7 = yaws_api:reformat_header(Hdrs4,
+                                     fun(H, {multi, Vals}) when is_binary(H) ->
+                                             lists:all(fun erlang:is_binary/1, Vals);
+                                        (H, V) when is_binary(H), is_binary(V) ->
+                                             true;
+                                        (_, _) -> false
+                                     end,
+                                     [string, binary]),
+    ?assert(lists:all(fun(X) -> X end, Hdrs7)),
     ok.
 
 create_headers(N) ->

@@ -54,7 +54,8 @@
          embedded_start_conf/1, embedded_start_conf/2,
          embedded_start_conf/3, embedded_start_conf/4]).
 
--export([set_status_code/1, reformat_header/1, reformat_header/2,
+-export([set_status_code/1,
+	 reformat_header/1, reformat_header/2, reformat_header/3,
          reformat_request/1, reformat_response/1, reformat_url/1]).
 
 -export([set_trace/1,
@@ -1254,6 +1255,44 @@ reformat_header(H, FormatFun) ->
 		      fun({http_header,_,K,_,V}) ->
 			      FormatFun(K,V)
 		      end, H#headers.other)).
+%%% Options is a list of atoms indicating the form of data to pass to
+%%% FormatFun: either string or binary. Options later in the list
+%%% override those earlier in the list, so [string, binary] is the
+%%% same as [binary]. If the last value in Options specifies anything
+%%% other than string or binary, data are passed to FormatFun without
+%%% conversion.
+reformat_header(H, FormatFun, Options) ->
+    Fmt = lists:foldl(
+	    fun(string, _) ->
+		    fun(Hdr, Val) ->
+			    FormatFun(reformat_as_string(Hdr),
+				      reformat_as_string(Val))
+		    end;
+	       (binary, _) ->
+		    fun(Hdr, Val) ->
+			    FormatFun(reformat_as_binary(Hdr),
+				      reformat_as_binary(Val))
+		    end;
+	       (_, _) ->
+		    FormatFun
+	    end, FormatFun, Options),
+    reformat_header(H, Fmt).
+
+reformat_as_string({multi, Vals}) ->
+    {multi, [reformat_as_string(V) || V <- Vals]};
+reformat_as_string(Data) when is_atom(Data) ->
+    atom_to_list(Data);
+reformat_as_string(Data) when is_binary(Data) ->
+    binary_to_list(Data);
+reformat_as_string(Data) -> Data.
+
+reformat_as_binary({multi, Vals}) ->
+    {multi, [reformat_as_binary(V) || V <- Vals]};
+reformat_as_binary(Data) when is_atom(Data) ->
+    list_to_binary(atom_to_list(Data));
+reformat_as_binary(Data) when is_list(Data) ->
+    list_to_binary(Data);
+reformat_as_binary(Data) -> Data.
 
 set_header(#headers{}=Hdrs, {Header, Value}) ->
     set_header(Hdrs, Header, Value).
