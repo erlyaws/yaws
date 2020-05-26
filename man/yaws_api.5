@@ -566,11 +566,11 @@ by one of these older formatting functions.
 \fBreformat_header(H, FormatFun, Options)\fR
 Same as \fIreformat_header/2\fR except that header and value data
 passed to \fIFormatFun\fR are first converted to the data format
-specified in the \fIOptions\fR list. \fIOptions\fR is expected to be a
-list of atoms, either \fIstring\fR or \fIbinary\fR. If the list
-contains multiple items, options later in the list override those
-earlier in the list, so for example \fI[string, binary]\fR is the same
-as \fI[binary]\fR. If the last item in \fIOptions\fR specifies
+specified in \fIOptions\fR. \fIOptions\fR is expected to be either an
+atom or a list of atoms, either \fIstring\fR or \fIbinary\fR. If the
+list contains multiple items, options earlier in the list override
+those later in the list, so for example \fI[string, binary]\fR is the
+same as \fI[string]\fR. If the first item in \fIOptions\fR specifies
 anything other than \fIstring\fR or \fIbinary\fR, data are passed to
 \fIFormatFun\fR without conversion.
 

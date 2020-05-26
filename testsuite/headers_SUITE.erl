@@ -133,7 +133,7 @@ reformat_headers(_Config) ->
                                              true;
                                         (_, _) -> false
                                      end,
-                                     [string, binary]),
+                                     [binary, string]),
     ?assert(lists:all(fun(X) -> X end, Hdrs7)),
     ok.
 

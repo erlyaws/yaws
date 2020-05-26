@@ -1255,27 +1255,29 @@ reformat_header(H, FormatFun) ->
 		      fun({http_header,_,K,_,V}) ->
 			      FormatFun(K,V)
 		      end, H#headers.other)).
-%%% Options is a list of atoms indicating the form of data to pass to
-%%% FormatFun: either string or binary. Options later in the list
-%%% override those earlier in the list, so [string, binary] is the
-%%% same as [binary]. If the last value in Options specifies anything
-%%% other than string or binary, data are passed to FormatFun without
-%%% conversion.
+%%% Options is either an atom or list of atoms indicating the form of
+%%% data to pass to FormatFun: either string or binary. Options
+%%% earlier in the list override those later in the list, so [string,
+%%% binary] is the same as [string]. If the first value in Options
+%%% specifies anything other than string or binary, data are passed to
+%%% FormatFun without conversion.
+reformat_header(H, FormatFun, Option) when is_atom(Option) ->
+    reformat_header(H, FormatFun, [Option]);
 reformat_header(H, FormatFun, Options) ->
-    Fmt = lists:foldl(
-	    fun(string, _) ->
-		    fun(Hdr, Val) ->
-			    FormatFun(reformat_as_string(Hdr),
-				      reformat_as_string(Val))
-		    end;
-	       (binary, _) ->
-		    fun(Hdr, Val) ->
-			    FormatFun(reformat_as_binary(Hdr),
-				      reformat_as_binary(Val))
-		    end;
-	       (_, _) ->
-		    FormatFun
-	    end, FormatFun, Options),
+    Fmt = case Options of
+	      [string|_] ->
+		  fun(Hdr, Val) ->
+			  FormatFun(reformat_as_string(Hdr),
+				    reformat_as_string(Val))
+		  end;
+	      [binary|_] ->
+		  fun(Hdr, Val) ->
+			  FormatFun(reformat_as_binary(Hdr),
+				    reformat_as_binary(Val))
+		  end;
+	      _ ->
+		  FormatFun
+	  end,
     reformat_header(H, Fmt).
 
 reformat_as_string({multi, Vals}) ->
