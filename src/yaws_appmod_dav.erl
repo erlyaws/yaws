@@ -1168,10 +1168,20 @@ if_eval_locktoken(Target,Token,[H|T]) ->
 
 -define(CONTENT(X), X#xmlElement.content).
 
+event_handler(startDocument, _Location, _) -> [];
+event_handler(Event, _Location, _State) ->
+    io:format("EVENT: ~p\n", [Event]).
+parse_xml(XML) ->
+    io:format("START\n", []),
+    xmerl_sax_parser:stream(XML, [{event_fun, fun event_handler/3}]),
+    Res = xmerl_scan:string(XML, [{namespace_conformant, true}]),
+    io:format("RESULT: ~p\nEND\n", [Res]),
+    Res.
+
 %% Parameter is always list
 parse_propfind([]) -> [allprop]; % RFC4918: no body then allprop, is [] no body?
 parse_propfind(L) ->
-    case catch xmerl_scan:string(L, [{namespace_conformant, true}]) of
+    case catch parse_xml(L) of
         {?IS_PROPFIND(X),_} ->
             parse_propfind(?CONTENT(X),[]);
         _Z ->
@@ -1192,7 +1202,7 @@ parse_propfind([], R) ->
     R.
 
 parse_proppatch(L) ->
-    case catch xmerl_scan:string(L, [{namespace_conformant, true}]) of
+    case catch parse_xml(L) of
         {?IS_PROPERTYUPDATE(X),_} ->
             parse_proppatch(?CONTENT(X),[]);
         _Z ->
@@ -1241,7 +1251,7 @@ parse_prop([], L) ->
 parse_lockinfo([]) ->
     #lock{};
 parse_lockinfo(L) ->
-    case catch xmerl_scan:string(L, [{namespace_conformant, true}]) of
+    case catch parse_xml(L) of
         {?IS_LOCKINFO(X),_} ->
             parse_lockinfo(?CONTENT(X),#lock{});
         _Z ->
