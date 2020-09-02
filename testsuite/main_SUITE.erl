@@ -53,6 +53,7 @@ all() ->
      accept_ranges,
      status_and_content_length,
      encoded_url,
+     encoded_url_no_docroot_escape,
      header_order,
      extra_response_headers
     ].
@@ -876,6 +877,23 @@ encoded_url(Config) ->
     ?assertEqual(PathInfo, proplists:get_value("x-pathinfo", Hdrs)),
     ok.
 
+encoded_url_no_docroot_escape(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
+    Url1 = testsuite:make_url(http, "127.0.0.1", Port, "/..%2Fyaws.conf"),
+    {ok, {{_,404,_}, _, _}} = testsuite:http_get(Url1),
+    Url2 = testsuite:make_url(http, "127.0.0.1", Port, "/..%252Fyaws.conf"),
+    {ok, {{_,404,_}, _, _}} = testsuite:http_get(Url2),
+    Url3 = testsuite:make_url(http, "127.0.0.1", Port, "/%2E%2E/yaws.conf"),
+    {ok, {{_,404,_}, _, _}} = testsuite:http_get(Url3),
+    Url4 = testsuite:make_url(http, "127.0.0.1", Port, "/%252E%252E/yaws.conf"),
+    {ok, {{_,404,_}, _, _}} = testsuite:http_get(Url4),
+    %% the next two tests verify only one level of URL decoding occurs
+    Url5 = testsuite:make_url(http, "127.0.0.1", Port, "/%252fexisting-file"),
+    {ok, {{_,200,_}, _, _}} = testsuite:http_get(Url5),
+    Url6 = testsuite:make_url(http, "127.0.0.1", Port, "/%25252fexisting-file"),
+    {ok, {{_,200,_}, _, _}} = testsuite:http_get(Url6),
+    ok.
+
 %% RFC 7230 section 3.3.2 discusses header order, and its opening
 %% statement says that header order is not significant. But it then
 %% says that it's good practice to order general headers and control
@@ -934,6 +952,8 @@ prepare_docroots() ->
     ok = file:write_file(filename:join(WWW, "3000.txt"),  lists:duplicate(3000,  Data), [write]),
     ok = file:write_file(filename:join(WWW, "10000.txt"), lists:duplicate(10000, Data), [write]),
 
+    ok = file:write_file(filename:join(WWW, "%252fexisting-file"), "existing file", [write]),
+    ok = file:write_file(filename:join(WWW, "%2fexisting-file"), "existing file", [write]),
     ok.
 
 allow_connects([], _) ->

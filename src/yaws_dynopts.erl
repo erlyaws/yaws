@@ -13,6 +13,7 @@
          have_rand/0,
          have_start_error_logger/0,
          have_http_uri_parse/0,
+         have_safe_relative_path/0,
 
          unique_triple/0,
          get_time_tuple/0,
@@ -23,6 +24,7 @@
          ssl_handshake/2,
          start_error_logger/0,
          http_uri_parse/1,
+         safe_relative_path/2,
 
          generate/1,
          purge_old_code/0,
@@ -67,6 +69,10 @@ have_start_error_logger() ->
 %% http_uri is legacy as of release 23 (ERTS >= 11.0)
 have_http_uri_parse() ->
     is_less(erlang:system_info(version), "11.0").
+
+%% safe_relative_path was added in release 23 (ERTS >= 11.0)
+have_safe_relative_path() ->
+    is_greater_or_equal(erlang:system_info(version), "11.0").
 
 unique_triple() ->
     case have_erlang_now() of
@@ -174,6 +180,12 @@ http_uri_parse(Uri) ->
             end
     end.
 
+safe_relative_path(File, Cwd) ->
+    case have_safe_relative_path() of
+        true -> (fun filelib:safe_relative_path/2)(File, Cwd);
+        false -> yaws:safe_rel_path(File, Cwd)
+    end.
+
 is_greater         (Vsn1, Vsn2) -> compare_version(Vsn1, Vsn2) == greater.
 is_less            (Vsn1, Vsn2) -> compare_version(Vsn1, Vsn2) == less.
 is_greater_or_equal(Vsn1, Vsn2) -> not is_less(Vsn1, Vsn2).
@@ -237,8 +249,16 @@ purge_old_code() -> not_necessary.
 generate(GC) ->
     code:ensure_loaded(crypto),
     code:ensure_loaded(inet),
+    TmpDir = case os:getenv("TMPDIR") of
+                 false ->
+                     case os:getenv("TEMPDIR") of
+                         false -> "/tmp";
+                         Temp -> Temp
+                     end;
+                 Tmp -> Tmp
+             end,
     case {filelib:is_dir(yaws:id_dir(GC#gconf.id)),
-          filelib:is_dir(yaws:tmpdir("/tmp"))} of
+          filelib:is_dir(yaws:tmpdir(TmpDir))} of
         {true, _} ->
             File = filename:join(yaws:id_dir(GC#gconf.id), "yaws_dynopts.erl"),
             generate1(File);
@@ -327,6 +347,11 @@ compile_options() ->
         case have_http_uri_parse() of
             true -> [{d, 'HAVE_HTTP_URI_PARSE'}];
             false -> []
+        end
+        ++
+        case have_safe_relative_path() of
+            true -> [{d, 'HAVE_SAFE_RELATIVE_PATH'}];
+            false -> []
         end.
 
 source() ->
@@ -347,6 +372,7 @@ source() ->
            "    have_rand/0,"
            "    have_start_error_logger/0,"
            "    have_http_uri_parse/0,",
+           "    have_safe_relative_path/0,",
            "",
            "    unique_triple/0,",
            "    get_time_tuple/0,",
@@ -357,6 +383,7 @@ source() ->
            "    ssl_handshake/2,"
            "    start_error_logger/0,",
            "    http_uri_parse/1,",
+           "    safe_relative_path/2,",
            "",
            "    generate/1,",
            "    purge_old_code/0,",
@@ -479,6 +506,15 @@ source() ->
            "                    end,",
            "            {ok, {Scheme, UserInfo, Host, Port, Path, Query}}",
            "    end.",
+           "-endif.",
+           "-ifdef(HAVE_SAFE_RELATIVE_PATH).",
+           "have_safe_relative_path() -> true.",
+           "safe_relative_path(Filename, Cwd) ->",
+           "    filelib:safe_relative_path(Filename, Cwd).",
+           "-else.",
+           "have_safe_relative_path() -> false.",
+           "safe_relative_path(File, Cwd) ->",
+           "    yaws:safe_rel_path(File, Cwd).",
            "-endif."
           ],
     string:join(Src, "\n").

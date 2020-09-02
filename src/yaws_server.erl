@@ -2103,7 +2103,7 @@ is_auth(ARG, Req_dir, H, [Auth_methods|T], {_Ret, Auth_headers}) ->
             is_auth(ARG, Req_dir, H, T,
                     {{false, Auth_methods1, A#auth.realm}, L ++ Auth_headers});
         Is_auth -> %% true, {true, User} or false_403
-                    Is_auth
+            Is_auth
     end.
 
 handle_auth(#arg{client_ip_port={IP,_}}=ARG, Auth_H,
@@ -2435,22 +2435,20 @@ handle_ut(CliSock, ARG, UT = #urltype{type = error}, N) ->
     Req = ARG#arg.req,
     H = ARG#arg.headers,
     SC=get(sc),GC=get(gc),
-    case UT#urltype.type of
-        error when SC#sconf.xtra_docroots == [] ->
+    case SC#sconf.xtra_docroots of
+        [] ->
             yaws:outh_set_dyn_headers(Req, H, UT),
             deliver_dyn_part(CliSock,
                              0, "404",
                              N,
                              ARG,UT,
-                             fun(A)->(SC#sconf.errormod_404):
-                                         out404(A,GC,SC)
-                             end,
+                             fun(A)->(SC#sconf.errormod_404):out404(A,GC,SC) end,
                              fun(A)->finish_up_dyn_file(A, CliSock)
                              end
                             );
-        error ->
-            SC2 = SC#sconf{docroot = hd(SC#sconf.xtra_docroots),
-                           xtra_docroots = tl(SC#sconf.xtra_docroots)},
+        XtraDocroots ->
+            SC2 = SC#sconf{docroot = hd(XtraDocroots),
+                           xtra_docroots = tl(XtraDocroots)},
             put(sc, SC2),
 
             %%!todo - review & change. rewriting the docroot and xtra_docroots
@@ -2460,7 +2458,6 @@ handle_ut(CliSock, ARG, UT = #urltype{type = error}, N) ->
             ARG2 = ARG#arg{docroot = SC2#sconf.docroot},
             handle_request(CliSock, ARG2, N)
     end;
-
 
 handle_ut(CliSock, ARG, UT = #urltype{type = directory}, N) ->
     Req = ARG#arg.req,
@@ -4366,26 +4363,24 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
                                 _ ->
                                     %%Presence of RevFile indicates dir url
                                     %% had no trailing /
-                                    #urltype{
-                                  type = redir,
-                                  path = [GetPath, "/"]}
+                                    #urltype{type = redir,
+                                             path = [GetPath, "/"]}
                             end;
                         _Err ->
-                            %% Perhaps we have an encoded filename?
-                            DecodedPath = yaws_api:url_decode_with_encoding(
-                                            GetPath,
-                                            file:native_name_encoding()),
-                            case DecodedPath of
-                                GetPath ->
+                            RelPath = trim_front(GetPath, "/"),
+                            case yaws_dynopts:safe_relative_path(RelPath, ArgDocroot) of
+                                unsafe ->
+                                    #urltype{type=error};
+                                Safe ->
+                                    SafePath = unicode:characters_to_list([$/,Safe]),
+                                    {SafeComps, SafeRevFile} = comp_split(SafePath),
                                     %% non-optimal, on purpose
-                                    maybe_return_path_info(SC, Comps, RevFile,
-                                                           ArgDocroot, VirtualDir);
-                                _ ->
-                                    do_url_type(SC, DecodedPath, ArgDocroot, VirtualDir)
+                                    maybe_return_path_info(SC, SafeComps, SafeRevFile,
+                                                           ArgDocroot, VirtualDir)
                             end
                     end;
                 {ok, {Mount, Mod}} ->
-                    %% Remove appmod for this request to avoid an infinte loop
+                    %% Remove appmod for this request to avoid an infinite loop
                     %% in case of a reentrant call
                     put(sc, SC#sconf{appmods=lists:keydelete(
                                                Mount, 1, SC#sconf.appmods
@@ -4470,7 +4465,6 @@ do_url_type(SC, GetPath, ArgDocroot, VirtualDir) ->
             end
     end.
 
-
 %% comp_split/1 - split a path around "/" returning final segment as
 %% reversed string.
 %% return {Comps, RevPart} where Comps is a (possibly empty) list of path
@@ -4499,7 +4493,6 @@ do_comp_split([H|T], Comps, Part)  ->
 do_comp_split([], Comps, Part) ->
     {lists:reverse(Comps), Part}.
 
-
 %%active_appmod/2
 %%find longest appmod match for request. (ie 'most specific' appmod)
 %% - conceptually similar to the vdirpath scanning - but must also support
@@ -4513,7 +4506,6 @@ do_comp_split([], Comps, Part) ->
 %% whereas for the configuration entry </docs/stuff/myapp , myappAppmod>
 %% the request /otherpath/myapp will not trigger the appmod.
 %%
-
 active_appmod([], _RequestSegs) ->
     false;
 active_appmod(AppMods, RequestSegs) ->
@@ -4586,8 +4578,7 @@ active_appmod(AppMods, RequestSegs) ->
             false;
         {_RequestSegs, {Mount, Mod}} ->
             {ok, {Mount, Mod}}
-    end
-        .
+    end.
 
 is_excluded(_, []) ->
     false;
@@ -4861,7 +4852,7 @@ ret_user_dir(Upath)  ->
                             %% a rewrite mod author may reasonably expect to
                             %% be able to have influence here.
 
-                            redir_user(do_url_type(SC2, Path, DR2,""), User)
+                            redir_user(do_url_type(SC2, Path, DR2, ""), User)
                             %% recurse
                     end;
                 {redir_dir, User} ->
@@ -5168,4 +5159,14 @@ maybe_set_page_options() ->
                                 ?Debug("Got ~p in page option list.", [_Other])
                         end
               end, Options)
+    end.
+
+%% TODO move this to yaws_dynopts and use string:trim/3 where available
+trim_front(B, Chars) when is_binary(B) ->
+    list_to_binary(trim_front(binary_to_list(B), Chars));
+trim_front([], _Chars) -> [];
+trim_front(Str=[C|S], Chars) ->
+    case lists:member(C, Chars) of
+        true -> trim_front(S, Chars);
+        false -> Str
     end.

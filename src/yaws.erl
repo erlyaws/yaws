@@ -205,7 +205,7 @@
 
 %% Internal
 -export([local_time_as_gmt_string/1, universal_time_as_string/1,
-         stringdate_to_datetime/1]).
+         stringdate_to_datetime/1, safe_rel_path/2]).
 
 start() ->
     ok = start_app_deps(),
@@ -3357,3 +3357,83 @@ get_priv_dir() ->
 
 get_inc_dir() ->
     get_app_subdir(include).
+
+%% The safe_rel_path function here is used in yaws_dynopts for OTP
+%% versions that lack the filelib:safe_relative_path/2 function. The
+%% code takes two arguments: a relative pathname, and a directory to
+%% which the pathname should be relative. If the pathname does not
+%% escape the directory, return the safe relative pathname with all
+%% ".."  and "."  segments removed and symbolic links resolved;
+%% otherwise, return the atom unsafe.
+%%
+safe_rel_path(Path, Cwd) ->
+    case filename:pathtype(Path) of
+        relative -> safe_rel_path(filename:split(Path), Cwd, [], "");
+        _ -> unsafe
+    end.
+
+%% The safe_rel_path/4 function takes a list of pathname segments. For
+%% each segment, join it to any previously verified relative path in
+%% Acc, and then check that new path for relative safety. If safe,
+%% check it to see if it's a symbolic link; if so, read it and check
+%% it for safety, and track links in Prev to be sure we process each
+%% only once. Otherwise, promote the safe path to be the new Acc and
+%% recursively check the next segment.
+%%
+safe_rel_path([], _Cwd, _Prev, Acc) -> Acc;
+safe_rel_path([Seg|Segs], Cwd, Prev, Acc) ->
+    NewSeg = safe_join(Acc, Seg),
+    case safe_rel_path(NewSeg) of
+        unsafe -> unsafe;
+        Safe ->
+            case file:read_link(safe_join(Cwd, Safe)) of
+                {ok, Link} ->
+                    case lists:member(Link, Prev) of
+                        true -> unsafe;
+                        false ->
+                            case safe_rel_path(filename:split(Link), Cwd,
+                                               [Link|Prev], Acc) of
+                                unsafe -> unsafe;
+                                NAcc -> safe_rel_path(Segs, Cwd, [], NAcc)
+                            end
+                    end;
+                {error, _} ->
+                    safe_rel_path(Segs, Cwd, Prev, Safe)
+            end
+    end.
+safe_rel_path(F) ->
+    case filename:pathtype(F) of
+        relative ->
+            do_safe_rel_path(filename:split(F), []);
+        _ -> unsafe
+    end.
+
+%% The do_safe_rel_path/2 function takes a list of pathname segments
+%% and an accumulator list. It removes any "." path segments. For
+%% "..", it removes the segment, moves up a directory in the
+%% accumulator if possible, and continues the safety check.
+%%
+do_safe_rel_path([], []) -> [];
+do_safe_rel_path([], Acc) ->
+    filename:join(lists:reverse(Acc));
+do_safe_rel_path(["."|T], Acc) ->
+    do_safe_rel_path(T, Acc);
+do_safe_rel_path([<<".">>|T], Acc) ->
+    do_safe_rel_path(T, Acc);
+do_safe_rel_path([".."|T], Acc) ->
+    case Acc of
+        [] -> unsafe;
+        [_|A] -> do_safe_rel_path(T, A)
+    end;
+do_safe_rel_path([<<"..">>|T], Acc) ->
+    case Acc of
+        [] -> unsafe;
+        [_|A] -> do_safe_rel_path(T, A)
+    end;
+do_safe_rel_path([H|T], Acc) ->
+    do_safe_rel_path(T, [H|Acc]).
+
+%% safe_join/2 is like filename:join/2 but doesn't add a leading
+%% directory separator if the first argument is empty.
+safe_join([], F) -> F;
+safe_join(D, F) -> filename:join(D, F).

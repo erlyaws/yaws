@@ -863,17 +863,25 @@ rest_dir (N, Path, [  _H | T ] ) -> rest_dir (N    ,        Path  , T).
 %% url decode the path and return {Path, QueryPart}
 
 url_decode_q_split(Path) ->
+    url_decode_q_split(Path, {encoding, file:native_name_encoding()}).
+
+url_decode_q_split(Path, {encoding, Encoding}) ->
     {DecPath, QS} = url_decode_q_split(Path, []),
-    case io_lib:latin1_char_list(Path) of
-        true ->
+    case Encoding of
+        latin1 ->
             {DecPath, QS};
-        false ->
-            case unicode:characters_to_list(list_to_binary(DecPath)) of
+        _ ->
+            try unicode:characters_to_list(list_to_binary(DecPath)) of
                 UTF8DecPath when is_list(UTF8DecPath) -> {UTF8DecPath, QS};
                 _ -> {DecPath, QS}
-            end
-    end.
-
+	    catch
+		error:badarg ->
+		    case unicode:characters_to_list(DecPath, Encoding) of
+			UTF8DecPath when is_list(UTF8DecPath) -> UTF8DecPath;
+			_ -> DecPath
+		    end
+	    end
+    end;
 url_decode_q_split([$%, Hi, Lo | Tail], Ack) ->
     Hex = yaws:hex_to_integer([Hi, Lo]),
     if Hex == 0 -> exit(badurl);
