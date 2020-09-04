@@ -491,7 +491,6 @@ display_susp1(Fd, {Pid, Reds0, LM0}) ->
         Info ->
             Reds1 = fetch(reductions, Info),
             LM1 = fetch(message_queue_len, Info),
-            Msgs = fetch(messages, Info),
             Bt = case process_info(Pid, backtrace) of
                      {backtrace, Bin} ->
                          binary_to_list(Bin);
@@ -504,9 +503,6 @@ display_susp1(Fd, {Pid, Reds0, LM0}) ->
                                 "*** Suspicious *** : ~-12w, Qlen = ~4w/~-4w, "
                                 "Reds = ~12w/~-12w\n",
                                 [Pid, LM0, LM1, Reds0, Reds1]),
-                    lists:foreach(
-                      fun(Msg) -> sock_format(Fd, "  ~p\n",[Msg]) end,
-                      Msgs),
                     gen_sep(Fd),
                     sock_format(Fd, "\n\n\n\n*** Backtrace *** for ~w\n~s\n",
                                 [Pid,Bt]);
