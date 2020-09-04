@@ -892,6 +892,11 @@ encoded_url_no_docroot_escape(Config) ->
     {ok, {{_,200,_}, _, _}} = testsuite:http_get(Url5),
     Url6 = testsuite:make_url(http, "127.0.0.1", Port, "/%25252fexisting-file"),
     {ok, {{_,200,_}, _, _}} = testsuite:http_get(Url6),
+    %% path traversal with prepended directory
+    Url7 = testsuite:make_url(http, "127.0.0.1", Port, "/dir/../%25252fexisting-file"),
+    {ok, {{_,200,_}, _, _}} = testsuite:http_get(Url7),
+    Url8 = testsuite:make_url(http, "127.0.0.1", Port, "/dir/..%2F../yaws.conf"),
+    {ok, {{_,404,_}, _, _}} = testsuite:http_get(Url8),
     ok.
 
 %% RFC 7230 section 3.3.2 discusses header order, and its opening
