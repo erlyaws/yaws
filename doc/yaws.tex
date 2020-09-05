@@ -187,13 +187,13 @@ $ git clone https://github.com/erlyaws/yaws
 \end{verbatim}
 
 Released version of \Yaws\ are available at
-\url{http://yaws.hyber.org/download}.
+\url{https://github.com/erlyaws/yaws/releases}.
 
 \subsection{Compile and Install}
 
 To compile and install a \Yaws\  release
 one of the prerequisites is a properly installed \Erlang\  system. \Yaws\
-runs on \Erlang\/OTP releases R17 and newer. Get \Erlang\  from
+runs on \Erlang\/OTP releases 18.0 and newer. Get \Erlang\  from
 \url{http://www.erlang.org/}
 
 Compile and install is straight forward:
@@ -3489,9 +3489,6 @@ eccs = "[sect571r1, sect571k1, secp521r1, brainpoolP512r1, sect409k1,
                \item \verb+honor_cipher_order = true | false+ --- If true (the
                  default), use the server's preference for cipher selection. If
                  false, use the client's preference.
-
-                 \textbf{WARNING: This option was introduced in the SSL application
-                   in Erlang/OTP 17.0, so \Yaws\  ignores it for previous releases.}
 
                  \item \verb+protocol_version = ProtocolList+ ---
                    Specifies the list of SSL protocols that will be

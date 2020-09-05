@@ -1,8 +1,7 @@
 # Homebrew on OSX
 
-If you develop on OS X (Mavericks, Mountain Lion, Lion, Snow Leopard), the
-Yaws formula works correctly for users of Erlang/OTP R17 and above. To
-install please run:
+If you develop on OS X, the Yaws formula works correctly for users of
+Erlang/OTP 18.0 and above. To install please run:
 
     brew install yaws
 

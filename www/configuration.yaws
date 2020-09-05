@@ -16,13 +16,11 @@ out(A) ->
   <h1>Build and install Yaws</h1>
   <p>
     Yaws is hosted at <a
-    href="http://github.com/erlyaws/yaws">http://github.com/erlyaws/yaws</a>. (Prior
-    to release 1.81 Yaws was hosted at Sourceforge.)
+    href="https://github.com/erlyaws/yaws">https://github.com/erlyaws/yaws</a>.
   </p>
   <p>
     Tested releases are downloadable from the Yaws download directory
-    at <a href="http://yaws.hyber.org/download" >http://yaws.hyber.org/download
-  </a>
+    at <a href="https://github.com/erlyaws/yaws/releases" >https://github.com/erlyaws/yaws/releases</a>.
   </p>
 
   <p>
@@ -30,7 +28,7 @@ out(A) ->
     are required. (All code example below on Ubuntu)
   </p>
   <p>
-  <strong>NOTE: Erlang/OTP R17 or higher is required.</strong>
+  <strong>NOTE: Erlang/OTP 18.0 or higher is required.</strong>
   </p>
   <ul>
     <li>

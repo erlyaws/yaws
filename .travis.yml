@@ -3,6 +3,7 @@ sudo: false
 dist: trusty
 language: erlang
 otp_release:
+  - 23.0
   - 22.3
   - 22.2
   - 22.1
@@ -23,11 +24,6 @@ otp_release:
   - 18.2
   - 18.1
   - 18.0
-  - 17.5
-  - 17.4
-  - 17.3
-  - 17.1
-  - 17.0
 
 env:
   global:
