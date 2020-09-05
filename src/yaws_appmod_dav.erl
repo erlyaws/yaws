@@ -1170,7 +1170,7 @@ if_eval_locktoken(Target,Token,[H|T]) ->
 
 %% Reject attempts to fetch external reesources in order to guard
 %% against XXE attacks
-fetch_resource(Res, State) ->
+fetch_resource(_Res, State) ->
     {ok, not_fetched, State}.
 
 %% TODO convert this to use xmerl_sax_parser instead
