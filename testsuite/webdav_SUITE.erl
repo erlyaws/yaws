@@ -7,7 +7,8 @@
 
 all() ->
     [
-     webdav
+     webdav,
+     reject_entity
     ].
 
 groups() ->
@@ -52,11 +53,37 @@ webdav(_Config) ->
     ?assertCmdStatus(0, "sh "++Script),
     ok.
 
+%% This test ensure Yaws avoids processing external entities, which
+%% guards against XXE attacks.
+reject_entity(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
+    Url  = testsuite:make_url(http, "127.0.0.1", Port, "/"),
+    TstFile = tst_file(),
+    %% TstFile is added in an external entity in an attempt to fetch its
+    %% contents. The request should be rejected.
+    Body = ["<?xml version='1.0' encoding='utf-8' ?>",
+            "<!DOCTYPE r [",
+            "<!ELEMENT r ANY >",
+            "<!ENTITY sp SYSTEM 'file://" ++ TstFile ++ "'>",
+            "]>",
+            "<d:lockinfo xmlns:d='DAV:'>",
+            "<d:lockscope><d:exclusive/></d:lockscope>",
+            "<d:locktype><d:write/></d:locktype>",
+            "<d:owner>",
+            "<d:href><r>&sp;</r></d:href>",
+            "</d:owner>",
+            "</d:lockinfo>"],
+    ?assertMatch({ok, {{_,400,_}, _, _}}, testsuite:http_req(lock, Url, [], Body)),
+    ok.
+
 %%====================================================================
 prepare_docroots() ->
     WWW  = filename:join(?tempdir(?MODULE), "www"),
-    File = filename:join(?tempdir(?MODULE), "tst-file"),
+    TstFile = tst_file(),
     ok = testsuite:create_dir(WWW),
     ok = file:write_file(filename:join(WWW, "test"), <<"Hello World test!">>, [write]),
-    ok = file:write_file(File, <<"Hello World tst-file!">>, [write]),
+    ok = file:write_file(TstFile, <<"Hello World tst-file!">>, [write]),
     ok.
+
+tst_file() ->
+    filename:join(?tempdir(?MODULE), "tst-file").

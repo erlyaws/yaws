@@ -1168,15 +1168,15 @@ if_eval_locktoken(Target,Token,[H|T]) ->
 
 -define(CONTENT(X), X#xmlElement.content).
 
-event_handler(startDocument, _Location, _) -> [];
-event_handler(Event, _Location, _State) ->
-    io:format("EVENT: ~p\n", [Event]).
+%% Reject attempts to fetch external reesources in order to guard
+%% against XXE attacks
+fetch_resource(Res, State) ->
+    {ok, not_fetched, State}.
+
+%% TODO convert this to use xmerl_sax_parser instead
 parse_xml(XML) ->
-    io:format("START\n", []),
-    xmerl_sax_parser:stream(XML, [{event_fun, fun event_handler/3}]),
-    Res = xmerl_scan:string(XML, [{namespace_conformant, true}]),
-    io:format("RESULT: ~p\nEND\n", [Res]),
-    Res.
+    xmerl_scan:string(XML, [{namespace_conformant, true},
+                            {fetch_fun, fun fetch_resource/2}]).
 
 %% Parameter is always list
 parse_propfind([]) -> [allprop]; % RFC4918: no body then allprop, is [] no body?
