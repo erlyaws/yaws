@@ -31,6 +31,7 @@ all() ->
      expires,
      reentrant,
      cgi_redirect,
+     cgi_sanitize,
      php_handler,
      arg_rewrite_rewrite,
      arg_rewrite_redirect,
@@ -565,6 +566,30 @@ cgi_redirect(Config) ->
 
     {ok, {{_,302,_}, Hdrs, _}} = testsuite:http_get(Url),
     ?assert(proplists:is_defined("location", Hdrs)),
+    ok.
+
+%% This test attempts to launch a shell command via CGI that writes a
+%% file into the main_SUITE_data/www directory. First verify the file
+%% doesn't exist, then verify that the attempt to execute the command
+%% returns 403, then verify again that the file doesn't exist.
+cgi_sanitize(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
+    File = "you-got-hacked",
+    Filename = filename:join([?data_srcdir(?MODULE), "www", File]),
+    _ = file:delete(Filename),
+    ?assertEqual({error, enoent}, file:read_file_info(Filename)),
+    [_|FileSegments] = filename:split(Filename),
+    FileRejoined = yaws:join_sep(FileSegments, "$Z''"),
+    Path = lists:flatten(["/cgi-bin/%22%60Z=$(pwd%7Ccut%20-c1);echo%20ouch%3E$Z''",
+                          FileRejoined,
+                          "%60%22"]),
+    Url1 = testsuite:make_url(http, "127.0.0.1", Port, "/"++File),
+    Url2 = testsuite:make_url(http, "127.0.0.1", Port, Path),
+
+    ?assertMatch({ok, {{_,404,_}, _, _}}, testsuite:http_get(Url1)),
+    ?assertMatch({ok, {{_,403,_}, _, _}}, testsuite:http_get(Url2)),
+    ?assertMatch({ok, {{_,404,_}, _, _}}, testsuite:http_get(Url1)),
+    ?assertEqual({error, enoent}, file:read_file_info(Filename)),
     ok.
 
 php_handler(Config) ->

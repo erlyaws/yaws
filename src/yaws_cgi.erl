@@ -520,11 +520,19 @@ call_cgi(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv) ->
                     exit(normal)
             end;
         _ ->
-            WorkerPid = cgi_start_worker(Arg, Exefilename, Scriptfilename,
-                                      Pathinfo, ExtraEnv, get(sc)),
-            handle_clidata(Arg, WorkerPid)
+            case cgi_start_worker(Arg, Exefilename, Scriptfilename,
+                                  Pathinfo, ExtraEnv, get(sc)) of
+                {ok, WorkerPid} ->
+                    handle_clidata(Arg, WorkerPid);
+                {error, Error} ->
+                    Error
+            end
     end.
 
+%% Sanitize CGI executable
+exe_ok(Exe) ->
+    NotAllowed = [$$,$`,$(,$),$;,$|,$<,$>,$&],
+    not lists:any(fun(C) -> lists:member(C, NotAllowed) end, Exe).
 
 cgi_start_worker(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
     ExeFN = case Exefilename of
@@ -532,16 +540,19 @@ cgi_start_worker(Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
                 "" -> exeof(Scriptfilename);
                 FN -> FN
             end,
-    PI = case Pathinfo of
-             undefined -> Arg#arg.pathinfo;
-             OK -> OK
-         end,
-    WorkerPid = proc_lib:spawn(?MODULE, cgi_worker,
-                               [self(), Arg, ExeFN, Scriptfilename,
-                                PI, ExtraEnv, SC]),
-    WorkerPid.
-
-
+    case exe_ok(ExeFN) of
+        true ->
+            PI = case Pathinfo of
+                     undefined -> Arg#arg.pathinfo;
+                     OK -> OK
+                 end,
+            WorkerPid = proc_lib:spawn(?MODULE, cgi_worker,
+                                       [self(), Arg, ExeFN, Scriptfilename,
+                                        PI, ExtraEnv, SC]),
+            {ok, WorkerPid};
+        false ->
+            {error, {status, 403}}
+    end.
 
 cgi_worker(Parent, Arg, Exefilename, Scriptfilename, Pathinfo, ExtraEnv0, SC) ->
     ExtraEnv = lists:map(fun({K,V}) when is_binary(K), is_binary(V) ->
