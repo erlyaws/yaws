@@ -1,16 +1,38 @@
 #!/usr/bin/env python
-
+from __future__ import absolute_import, division, print_function
+import os
 import re
+import sys
 
+warnings = 'dialyzer_warnings'
 count = 0
-with open('dialyzer_warnings') as dw:
-   with open('known_dialyzer_warnings') as kw:
+checked = 0
+
+if not os.path.isfile(warnings):
+   print('%s: file %s does not exist, exiting' % (sys.argv[0], warnings))
+   exit(0)
+
+with open('known_dialyzer_warnings') as kw:
+   known = [line for line in [line.strip() for line in kw.readlines()] if line]
+
+try:
+   with open(warnings) as dw:
       for warn in dw:
          warn = warn.strip()
-         pat = kw.readline().strip()
-         if not pat:
+         if not warn:
             continue
-         if not re.match(pat, warn):
-            print '%s' % warn
+         matched = None
+         if known:
+            pat = known.pop(0)
+            matched = re.match(pat, warn)
+         if not matched:
+            print(warn)
             count += 1
+         checked += 1
+except Exception as e:
+    print('%s: unexpected error: %s' % (sys.argv[0], str(e)), file=sys.stderr)
+finally:
+   if checked and count == 0:
+      os.remove(warnings)
+
 exit(count)

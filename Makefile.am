@@ -114,14 +114,7 @@ yaws.plt:
 dialyzer: all yaws.plt
 	$(AM_V_at)$(DIALYZER) -q --plt yaws.plt -r ebin | \
 	    sed -e :a -e '$$!N;s/\n  *//;ta' -e 'P;D' > dialyzer_warnings || true
-	$(AM_V_at)dw=`wc -l dialyzer_warnings | awk '{print $$1}'`; \
-	kw=`wc -l known_dialyzer_warnings | awk '{print $$1}'`; \
-	if [ "$$dw" -ne "$$kw" ]; then \
-	    printf 'number of dialyzer warnings does not match the known_dialyzer_warnings file' ; \
-	    exit 1 ; \
-	fi
 	$(AM_V_at)python dialyzer_checker
-	$(AM_V_at)$(RM) dialyzer_warnings
 
 dist-hook: clean  cleantest cleanapps
 	$(AM_V_at)for a in $(APPDIRS); do			\
