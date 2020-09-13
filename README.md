@@ -171,3 +171,10 @@ http://yaws.hyber.org (Ubuntu server system)
     $> ./configure --sysconfdir=/etc
     $> make && make install
     $> /etc/init.d/yaws start
+
+
+Security Policy
+---------------
+
+To report security vulnerabilities or other security-related issues,
+please refer to the [Yaws security policy](SECURITY.md).
