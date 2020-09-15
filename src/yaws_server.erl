@@ -5162,8 +5162,6 @@ maybe_set_page_options() ->
     end.
 
 %% TODO move this to yaws_dynopts and use string:trim/3 where available
-trim_front(B, Chars) when is_binary(B) ->
-    list_to_binary(trim_front(binary_to_list(B), Chars));
 trim_front([], _Chars) -> [];
 trim_front(Str=[C|S], Chars) ->
     case lists:member(C, Chars) of
