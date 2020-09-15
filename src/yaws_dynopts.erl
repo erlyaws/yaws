@@ -182,9 +182,25 @@ http_uri_parse(Uri) ->
 
 safe_relative_path(File, Cwd) ->
     case have_safe_relative_path() of
-        true -> (fun filelib:safe_relative_path/2)(File, Cwd);
+        true -> filelib_safe_relative_path_2(File, Cwd);
         false -> yaws:safe_rel_path(File, Cwd)
     end.
+
+%% Make dialyzer happy, don't call filelib:safe_relative_path/2 for OTP < 23.
+-ifdef(OTP_RELEASE).
+  -if(?OTP_RELEASE >= 23).
+filelib_safe_relative_path_2(File, Cwd) ->
+    (fun filelib:safe_relative_path/2)(File, Cwd).
+  -else.
+%% This will never happen, but fallback if it happens anyway.
+filelib_safe_relative_path_2(File, Cwd) ->
+    yaws:safe_rel_path(File, Cwd).
+  -endif.
+-else.
+%% This will never happen, but fallback if it happens anyway.
+filelib_safe_relative_path_2(File, Cwd) ->
+    yaws:safe_rel_path(File, Cwd).
+-endif.
 
 is_greater         (Vsn1, Vsn2) -> compare_version(Vsn1, Vsn2) == greater.
 is_less            (Vsn1, Vsn2) -> compare_version(Vsn1, Vsn2) == less.

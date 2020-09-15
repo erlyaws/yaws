@@ -11,4 +11,3 @@ yaws_ctl.erl:\d+: Function debug_dump/1 has no local return
 yaws_ctl.erl:\d+: Function stats/1 has no local return
 yaws_ctl.erl:\d+: Function running_config/1 has no local return
 yaws_revproxy.erl:\d+: The pattern 'true' can never match the type 'false'
-yaws_server.erl:\d+: Guard test is_binary\(B :: string\(\)\) can never succeed
