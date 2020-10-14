@@ -3621,14 +3621,14 @@ protocol_version = tlsv1.3, tlsv1.2, tlsv1.1, tlsv1
                 user supplies the password \verb+Password+ in the popup dialogue
                 presented by the browser. It is also possible to provide a
                 hashed password, encoded in base64. In that case, the algorithm
-                used to hash the password must be set. \verb+Algo+ must be a one
+                used to hash the password must be set. \verb+Algo+ must be one
                 of the following algorithms:
 \begin{verbatim}
   md5 | ripemd160 | sha | sha224 | sha256 | sha384 | sha512
 \end{verbatim}
                 It is possible to use salted hashes. If so, the \verb+Salt+ must
-                be provided, encoded in base64. We can obviously have several of
-                these value inside a single <auth> </auth> pair.
+                be provided, encoded in base64. We can specify multiple users
+                inside a single <auth> </auth> pair.
 
               \item \verb+pam service = pam-service+ --- If the item \verb+pam+
                 is part of the auth structure, Yaws will also try to
