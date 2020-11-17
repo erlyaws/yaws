@@ -1243,10 +1243,10 @@ aloop(CliSock, {IP,Port}=IPPort, GS, Num) ->
                                          DispatchMod ->
                                              ARG = make_arg(SC, CliSock, IPPort,
                                                             H, Req, undefined),
-                                             ok = yaws:setopts(CliSock,
-                                                               [{packet, raw},
-                                                                {active, false}],
-                                                               yaws:is_ssl(SC)),
+                                             yaws:setopts(CliSock,
+                                                          [{packet, raw},
+                                                           {active, false}],
+                                                          yaws:is_ssl(SC)),
                                              DispatchMod:dispatch(ARG)
                                      end,
                     case DispatchResult of
@@ -1685,7 +1685,7 @@ call_method(Method, CliSock, IPPort, Req, H) ->
 
 not_implemented(CliSock, _IPPort, Req, Head) ->
     SC=get(sc),
-    ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
+    yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
     flush(CliSock, Head#headers.content_length,
           yaws:to_lower(Head#headers.transfer_encoding)),
     deliver_501(CliSock, Req, undefined).
@@ -1712,8 +1712,7 @@ not_implemented(CliSock, _IPPort, Req, Head) ->
     case ?sc_has_dav(SC) of
         true ->
             %% body is handled by yaws_dav:put/1
-            ok = yaws:setopts(CliSock, [{packet, raw}, binary],
-                              yaws:is_ssl(SC)),
+            yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
             ARG = make_arg(CliSock, IPPort, Head, Req, undefined),
             handle_request(CliSock, ARG, 0);
         false ->
@@ -1730,7 +1729,7 @@ not_implemented(CliSock, _IPPort, Req, Head) ->
 
 body_method(CliSock, IPPort, Req, Head) ->
     SC=get(sc),
-    ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
+    yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
     PPS = SC#sconf.partial_post_size,
     case yaws_api:get_header(Head, {lower, "expect"}) of
         undefined ->
@@ -1791,7 +1790,7 @@ body_method(CliSock, IPPort, Req, Head) ->
 
 no_body_method(CliSock, IPPort, Req, Head) ->
     SC=get(sc),
-    ok = yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
+    yaws:setopts(CliSock, [{packet, raw}, binary], yaws:is_ssl(SC)),
     flush(CliSock, Head#headers.content_length,
           yaws:to_lower(Head#headers.transfer_encoding)),
     Head1 = Head#headers{content_length=undefined, transfer_encoding=undefined},

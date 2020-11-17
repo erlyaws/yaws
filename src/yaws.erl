@@ -2647,9 +2647,9 @@ headers_to_str(Headers) ->
 
 
 setopts(Sock, Opts, nossl) ->
-    ok = inet:setopts(Sock, Opts);
+    inet:setopts(Sock, Opts);
 setopts(Sock, Opts, ssl) ->
-    ok = ssl:setopts(Sock, Opts).
+    (catch ssl:setopts(Sock, Opts)).
 
 do_http_get_headers(CliSock, SSL) ->
     case http_recv_request(CliSock,SSL) of
