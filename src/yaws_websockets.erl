@@ -123,7 +123,12 @@ start(Arg, CallbackMod, Opts) ->
     exit(normal).
 
 start_link(Arg, CallbackMod, PrepdOpts) ->
-    gen_server:start_link(?MODULE, [Arg, CallbackMod, PrepdOpts], []).
+    {WsOpts, SrvOpts} = case lists:keytake(hibernate_after, 1, PrepdOpts) of
+                            false -> {PrepdOpts, []};
+                            {value, HibernateAfter, OtherOpts} ->
+                                {OtherOpts, [HibernateAfter]}
+                        end,
+    gen_server:start_link(?MODULE, [Arg, CallbackMod, WsOpts], SrvOpts).
 
 send(#ws_state{}=WSState, {Type, Data}) ->
     do_send(WSState, {Type, Data});

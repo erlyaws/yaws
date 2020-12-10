@@ -4052,6 +4052,17 @@ The following options are available:
       Specify the maximum payload size of each fragment if
       \verb+AutoFragBoolean+ is true. \verb+OutFragSize+ is set to 1MB by
       default. This setting is ignored if \verb+AutoFragBoolean+ is false.
+
+    \item \verb+{hibernate_after, HibernateAfterTimeout}+ ---
+      If present, \Yaws\ passes this as an option to the underlying
+      websocket \verb+gen_server+. This option causes the
+      \verb+gen_server+ process to await a message for
+      \verb+HibernateAfterTimeout+ milliseconds and if no message is
+      received, the process goes into hibernation automatically. See
+      the Erlang/OTP \verb+gen_server+ documentation for more details.
+
+      Note that if the \verb+{keepalive, KeepAliveBoolean}+ option is
+      also specified, the \verb+gen_server+ will never hibernate.
 \end{itemize}
 
 \section{WebSocket Callback Modules}
