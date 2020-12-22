@@ -398,6 +398,17 @@ addSchemas([Xsd| Tail], AccModel, Options, ImportList) ->
 %%% Get a file from an URL spec.
 %%% --------------------------------------------------------------------
 get_url_file("http://"++_ = URL) ->
+    get_remote_url_file(URL);
+get_url_file("https://"++_ = URL) ->
+    get_remote_url_file(URL);
+get_url_file("file://"++Fname) ->
+    get_url_file(Fname);
+%% added this, since this is what is used in many WSDLs (i.e.: just a filename).
+get_url_file(Fname) ->
+    {ok, Bin} = file:read_file(Fname),
+    {ok, binary_to_list(Bin)}.
+
+get_remote_url_file(URL) ->
     case httpc:request(URL) of
         {ok,{{_HTTP,200,_OK}, _Headers, Body}} ->
             {ok, Body};
@@ -409,15 +420,7 @@ get_url_file("http://"++_ = URL) ->
             error_logger:error_msg("~p: http-request failed: ~p~n",
                                    [?MODULE, Reason]),
             {error, "failed to retrieve: "++URL}
-    end;
-get_url_file("file://"++Fname) ->
-    {ok, Bin} = file:read_file(Fname),
-    {ok, binary_to_list(Bin)};
-%% added this, since this is what is used in many WSDLs (i.e.: just a filename).
-get_url_file(Fname) ->
-    {ok, Bin} = file:read_file(Fname),
-    {ok, binary_to_list(Bin)}.
-
+    end.
 
 %%% --------------------------------------------------------------------
 %%% Make a HTTP Request
