@@ -52,12 +52,12 @@ We have the following python file called foo.cgi:
 <div class="box">        
       <verbatim>
 
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import cgi
 
-print "Content-type: text/html\n\n"
-print "<h1>hi there </h1>"
+print("Content-type: text/html\n\n")
+print("<h1>hi there </h1>")
       </verbatim>
 </div>
 <p>
