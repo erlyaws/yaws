@@ -2,7 +2,7 @@
 #
 # http://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types
 #
-# Updated 24 Aug 2019. Local modifications were also applied. The original text
+# Updated 23 Feb 2021. Local modifications were also applied. The original text
 # from the top of the Apache source file is below:
 #
 # This file maps Internet media types to unique file extension(s).
@@ -486,6 +486,7 @@ application/vnd.yellowriver-custom-menu		cmp
 application/vnd.zul				zir zirz
 application/vnd.zzazz.deck+xml			zaz
 application/voicexml+xml			vxml
+application/wasm				wasm
 application/widget				wgt
 application/winhlp				hlp
 application/wsdl+xml				wsdl
@@ -610,7 +611,7 @@ audio/basic					au snd
 audio/midi					mid midi kar rmi
 audio/mp4					m4a mp4a
 audio/mpeg					mpga mp2 mp2a mp3 m2a m3a
-audio/ogg					oga ogg spx
+audio/ogg					oga ogg spx opus
 audio/s3m					s3m
 audio/silk					sil
 audio/vnd.dece.audio				uva uvva
