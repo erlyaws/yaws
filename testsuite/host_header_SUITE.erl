@@ -9,7 +9,8 @@ all() ->
     [
      missing_host_header,
      multiple_host_headers,
-     wrong_host_header
+     wrong_host_header,
+     wildcard_server_name
     ].
 
 groups() ->
@@ -69,6 +70,23 @@ wrong_host_header(Config) ->
     Port = testsuite:get_yaws_port(1, Config),
 
     {ok, S} = gen_tcp:connect("127.0.0.1", Port, [binary, {active,false}]),
+    ?assertEqual(ok,
+                 testsuite:send_http_request(S, {get, "/", "HTTP/1.1"},
+                                             [{"Host", "foo"}])),
+    ?assertMatch({ok, {{_,400,_}, _, _}}, testsuite:receive_http_response(S)),
+    ?assertEqual(ok, gen_tcp:close(S)),
+    ok.
+
+wildcard_server_name(Config) ->
+    Port = testsuite:get_yaws_port(2, Config),
+
+    {ok, S} = gen_tcp:connect("127.0.0.1", Port, [binary, {active,false}]),
+    Host = "foo:"++integer_to_list(Port),
+    ?assertEqual(ok,
+                 testsuite:send_http_request(S, {get, "/", "HTTP/1.1"},
+                                             [{"Host", Host}])),
+    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:receive_http_response(S)),
+
     ?assertEqual(ok,
                  testsuite:send_http_request(S, {get, "/", "HTTP/1.1"},
                                              [{"Host", "foo"}])),

@@ -1502,6 +1502,8 @@ comp_sname([C1|T1], [C2|T2]) ->
 %%   - '?' matches one character unless that character is a period ('.')
 wildcomp_salias([], []) ->
     true;
+wildcomp_salias([$:|_], [$*,$:|_]) ->
+    true;
 wildcomp_salias([$:|_], [$:|_]) ->
     true;
 wildcomp_salias([$:|_], []) ->
@@ -1620,7 +1622,7 @@ pick_host(GC, Host, [SC|T], Group) ->
             SC;
         false ->
             Res = lists:any(fun(Alias) -> wildcomp_salias(Host, Alias) end,
-                            SC#sconf.serveralias),
+                            [SC#sconf.servername|SC#sconf.serveralias]),
             case Res of
                 true  -> SC;
                 false -> pick_host(GC, Host, T, Group)

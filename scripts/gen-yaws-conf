@@ -5,6 +5,15 @@
 
 set -e
 
+if [ ! -n "$PORT" ]; then
+    echo 'error: PORT environment variable must be set' >&2
+    exit 1
+fi
+if [ ! -n "$SSLPORT" ]; then
+    echo 'error: SSLPORT environment variable must be set' >&2
+    exit 1
+fi
+
 cat yaws.conf.template                  | \
     ./Subst %yawsdir% "$YAWSDIR"        | \
     ./Subst %logdir%  "$LOGDIR"         | \
