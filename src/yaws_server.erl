@@ -1187,7 +1187,7 @@ aloop(CliSock, {IP,Port}=IPPort, GS, Num) ->
     process_flag(trap_exit, false),
     init_db(),
     SSL = GS#gs.ssl,
-    Head = yaws:http_get_headers(CliSock, SSL),
+    Head = (catch yaws:http_get_headers(CliSock, SSL)),
     process_flag(trap_exit, true),
     ?Debug("Head = ~p~n", [Head]),
     NoArg = undefined,
