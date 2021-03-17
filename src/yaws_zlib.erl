@@ -24,35 +24,35 @@ gzipEnd(Z) ->
 
 
 gzipDeflate(Z, undefined, Bin, Flush) ->
-    Crc32 = zlib:crc32(Z),
+    Crc32 = 0,
     Head = <<
-                                                % ID
+             %% ID
              16#1f, 16#8b,
-                                                % deflate
+             %% deflate
              8:8,
-                                                % flags
+             %% flags
              0:8,
-                                                % mtime
+             %% mtime
              0:32,
-                                                % xflags
+             %% xflags
              0:8,
-                                                % OS_UNKNOWN
-                                                % Set to Unix instead?
+             %% OS_UNKNOWN
+             %% Set to Unix instead?
              255:8>>,
     {ok, Priv, Bs} = gzipDeflate(Z, {Crc32,0}, Bin, Flush),
     {ok, Priv, [Head | Bs]};
 
 gzipDeflate(Z, {Crc32,Size}, Bin, Flush) ->
     Bs = zlib:deflate(Z, Bin, Flush),
-    Crc1 = zlib:crc32(Z, Crc32, Bin),
+    Crc1 = erlang:crc32(Crc32, Bin),
     Size1 = Size+size(Bin),
     Data =
         if
             Flush == finish ->
-                                                % Appending should not
-                                                % hurt, so let's be a
-                                                % bit more consistent
-                                                % here.
+                %% Appending should not
+                %% hurt, so let's be a
+                %% bit more consistent
+                %% here.
                 Bs ++ [<<Crc1:32/little, Size1:32/little>>];
             true ->
                 Bs
