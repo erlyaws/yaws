@@ -1573,6 +1573,38 @@ Note that extra response headers do not apply to responses returned
 directly by any \fIDispatchModule\fR.
 .RE
 
+.TP
+\fBoptions_asterisk_methods = Methods\fR
+Setting \fIoptions_asterisk_methods\fR to a comma-separated list of
+HTTP \fIMethods\fR makes Yaws respond to an \fIOPTIONS\fR request that
+specifies a literal \fI*\fR as the target with a \fI200 OK\fR status
+and an \fIAllow\fR header listing the specified \fIMethods\fR. If the
+configuration does not explicitly specify
+\fIoptions_asterisk_methods\fR, Yaws defaults to responding to
+\fIOPTIONS *\fR requests with a \fI200 OK\fR status and an \fIAllow\fR
+header listing these HTTP methods:
+
+.nf
+  GET, HEAD, POST, PUT, DELETE, OPTIONS
+.fi
+
+RFC 7231 section 4.3 lists the standard HTTP method names:
+
+.nf
+  GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE
+.fi
+
+An \fIoptions_asterisk_methods\fR setting can include any of these
+HTTP method names as well as \fIPATCH\fR. \fIPATCH\fR is not mentioned
+in RFC 7231 but Yaws supports it. Yaws does not implement
+\fICONNECT\fR, but it supports it in \fIoptions_asterisk_methods\fR
+because it's possible to implement support for it using a
+\fIdispatchmod\fR.
+
+If \fIoptions_asterisk_methods\fR is set to an empty value, Yaws
+responds to \fIOPTIONS *\fR requests with status \fI400 Bad
+Request\fR.
+
 .SH EXAMPLES
 
 The following example defines a single server on port 80.

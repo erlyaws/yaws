@@ -1358,6 +1358,22 @@ fload(FD, extra_response_headers, GC, C, Lno, Chars) ->
             Err
     end;
 
+fload(FD, options_asterisk_methods, GC, C, Lno, Chars) ->
+    case toks(Lno, Chars) of
+        [] ->
+            C1 = C#sconf{options_asterisk_methods = []},
+            fload(FD, options_asterisk_methods, GC, C1, Lno+1, ?NEXTLINE);
+        [Methods] ->
+            C1 = C#sconf{options_asterisk_methods = Methods},
+            fload(FD, options_asterisk_methods, GC, C1, Lno+1, ?NEXTLINE);
+        ['<', "/options_asterisk_methods", '>'] ->
+            fload(FD, server, GC, C, Lno+1, ?NEXTLINE);
+        [H|T] ->
+            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
+        Err ->
+            Err
+    end;
+
 fload(FD, server, GC, C, Lno, eof) ->
     file:close(FD),
     {ok, GC, C, Lno, eof};
@@ -1857,6 +1873,25 @@ fload(FD, server, GC, C, Lno, Chars) ->
 
         ['<', "extra_response_headers", '>'] ->
             fload(FD, extra_response_headers, GC, C, Lno+1, ?NEXTLINE);
+
+        ["options_asterisk_methods", '=' | Methods] ->
+            case parse_options_asterisk_methods(Methods) of
+                {ok, []} ->
+                    C1 = C#sconf{options_asterisk_methods = []},
+                    fload(FD, server, GC, C1, Lno+1,
+                          ?NEXTLINE);
+                {ok, L} when C#sconf.options_asterisk_methods =:= undefined ->
+                    C1 = C#sconf{options_asterisk_methods = L},
+                    fload(FD, server, GC, C1, Lno+1,
+                          ?NEXTLINE);
+                {ok, L} ->
+                    C1 = C#sconf{options_asterisk_methods =
+                                     L ++ C#sconf.options_asterisk_methods},
+                    fload(FD, server, GC, C1, Lno+1,
+                          ?NEXTLINE);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
 
         ['<', "/server", '>'] ->
             {ok, GC, C, Lno, ['<', "/server", '>']};
@@ -3083,6 +3118,36 @@ parse_redirect(Path, [CodeOrUrl], Mode, Lno) ->
 parse_redirect(_Path, _, _Mode, Lno) ->
     {error, ?F("Bad redirect rule at line ~w", [Lno])}.
 
+parse_options_asterisk_methods(Methods) ->
+    parse_options(Methods, []).
+
+l2a(L) ->
+    list_to_atom(L).
+
+parse_options([], Acc) -> {ok, lists:reverse(Acc)};
+parse_options([','|Methods], Acc) ->
+    parse_options(Methods, Acc);
+parse_options(["GET"|Methods], Acc) ->
+    parse_options(Methods, [l2a("GET")|Acc]);
+parse_options(["HEAD"|Methods], Acc) ->
+    parse_options(Methods, [l2a("HEAD")|Acc]);
+parse_options(["POST"|Methods], Acc) ->
+    parse_options(Methods, [l2a("POST")|Acc]);
+parse_options(["PUT"|Methods], Acc) ->
+    parse_options(Methods, [l2a("PUT")|Acc]);
+parse_options(["DELETE"|Methods], Acc) ->
+    parse_options(Methods, [l2a("DELETE")|Acc]);
+parse_options(["CONNECT"|Methods], Acc) ->
+    parse_options(Methods, [l2a("CONNECT")|Acc]);
+parse_options(["OPTIONS"|Methods], Acc) ->
+    parse_options(Methods, [l2a("OPTIONS")|Acc]);
+parse_options(["TRACE"|Methods], Acc) ->
+    parse_options(Methods, [l2a("TRACE")|Acc]);
+parse_options(["PATCH"|Methods], Acc) ->
+    parse_options(Methods, [l2a("PATCH")|Acc]);
+parse_options(_,_) ->
+    {error, "Unsupported HTTP method"}.
+
 
 ssl_start() ->
     case catch ssl:start() of
@@ -3221,7 +3286,8 @@ eq_sconfs(S1,S2) ->
      S1#sconf.deflate_options == S2#sconf.deflate_options andalso
      S1#sconf.mime_types_info == S2#sconf.mime_types_info andalso
      S1#sconf.dispatch_mod == S2#sconf.dispatch_mod andalso
-     S1#sconf.extra_response_headers == S2#sconf.extra_response_headers).
+     S1#sconf.extra_response_headers == S2#sconf.extra_response_headers andalso
+     S1#sconf.options_asterisk_methods == S2#sconf.options_asterisk_methods).
 
 %% This is the version of setconf that performs a
 %% soft reconfig, it requires the args to be checked.

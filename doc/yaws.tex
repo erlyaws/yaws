@@ -3801,6 +3801,41 @@ protocol_version = tlsv1.3, tlsv1.2, tlsv1.1, tlsv1
               Note that extra response headers do not apply to
               responses returned directly by any
               \verb+DispatchModule+.
+
+\item       \verb+options_asterisk_methods = Methods+ ---
+              Setting \verb+options_asterisk_methods+ to a
+              comma-separated list of HTTP \verb+Methods+ makes
+              \Yaws\ respond to an \verb+OPTIONS+ request that
+              specifies a literal \verb+*+ as the target with a
+              \verb+200 OK+ status and an \verb+Allow+ header listing
+              the specified \verb+Methods+. If the server
+              configuration does not explicitly specify
+              \verb+options_asterisk_methods+, \Yaws\ defaults to
+              responding to \verb+OPTIONS *+ requests with a
+              \verb+200 OK+ status and an \verb+Allow+ header listing
+              these HTTP methods:
+
+\begin{verbatim}
+GET, HEAD, POST, PUT, DELETE, OPTIONS
+\end{verbatim}
+
+              RFC 7231 section 4.3 lists the standard HTTP method
+              names:
+\begin{verbatim}
+GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE
+\end{verbatim}
+              An \verb+options_asterisk_methods+ setting can include
+              any of these HTTP method names as well as
+              \verb+PATCH+. \verb+PATCH+ is not mentioned in RFC 7231
+              but \Yaws\ supports it. \Yaws\ does not implement
+              \verb+CONNECT+, but it supports it in
+              \verb+options_asterisk_methods+ because it's possible to
+              implement support for it using a \verb+dispatchmod+.
+
+              If \verb+options_asterisk_methods+ is set to an empty
+              value, \Yaws\ responds to \verb+OPTIONS *+ requests with
+              status \verb+400 Bad Request+.
+
 \end{itemize}
 
 \section{Directives included from .yaws\_auth files}

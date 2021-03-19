@@ -8,6 +8,7 @@
 all() ->
     [
      http_options,
+     options_asterisk_methods,
      http_head,
      slow_get,
      appmod,
@@ -110,6 +111,35 @@ http_options(Config) ->
     ?assert(proplists:is_defined("server", Hdrs)),
     ?assert(proplists:is_defined("date", Hdrs)),
     ?assertEqual(ok, gen_tcp:close(Sock)),
+    ok.
+
+options_asterisk_methods(Config) ->
+    %% Custom configured methods are returned for OPTIONS *
+    Port1 = testsuite:get_yaws_port(9, Config),
+    {ok, Sock1} = gen_tcp:connect("127.0.0.1", Port1, [binary, {active, false}]),
+    ?assertEqual(ok,
+                 testsuite:send_http_request(
+                   Sock1, {options, "*", "HTTP/1.1"},
+                   [{"Host", "127.0.0.1:"++integer_to_list(Port1)}]
+                  )),
+    {ok, {{_,200,_}, Hdrs1, <<>>}} = testsuite:receive_http_response(Sock1),
+
+    AllowRes = "GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH",
+    ?assertEqual("0", proplists:get_value("content-length", Hdrs1)),
+    ?assertEqual(AllowRes, proplists:get_value("allow", Hdrs1)),
+    ?assert(proplists:is_defined("server", Hdrs1)),
+    ?assert(proplists:is_defined("date", Hdrs1)),
+    ?assertEqual(ok, gen_tcp:close(Sock1)),
+
+    Port2 = testsuite:get_yaws_port(10, Config),
+    {ok, Sock2} = gen_tcp:connect("127.0.0.1", Port2, [binary, {active, false}]),
+    ?assertEqual(ok,
+                 testsuite:send_http_request(
+                   Sock2, {options, "*", "HTTP/1.1"},
+                   [{"Host", "127.0.0.1:"++integer_to_list(Port2)}]
+                  )),
+    {ok, {{_,400,_}, Hdrs2, _}} = testsuite:receive_http_response(Sock2),
+    ?assertEqual(ok, gen_tcp:close(Sock2)),
     ok.
 
 http_head(Config) ->
