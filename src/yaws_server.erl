@@ -1699,10 +1699,18 @@ not_implemented(CliSock, _IPPort, Req, Head) ->
 'OPTIONS'(CliSock, IPPort, Req, Head) ->
     case Req#http_request.path of
         '*' ->
-            ARG = make_arg(CliSock, IPPort, Head, Req, undefined),
             % Handle "*" as per RFC2616 section 5.1.2
-            deliver_options(CliSock, Req, ARG, ['GET', 'HEAD', 'OPTIONS',
-                                                'PUT', 'POST', 'DELETE']);
+            % If options_asterisk_methods is an empty list a 400 Bad Request is
+            % returned, otherwise the Allow header is populated with the parsed
+            % contents and delivered with a 200 OK.
+            SC=get(sc),
+            ARG = make_arg(CliSock, IPPort, Head, Req, undefined),
+            case SC#sconf.options_asterisk_methods of
+                [] ->
+                    deliver_400(CliSock, Req, ARG);
+                Methods ->
+                    deliver_options(CliSock, Req, ARG, Methods)
+            end;
         _ ->
             no_body_method(CliSock, IPPort, Req, Head)
     end.
@@ -2773,6 +2781,7 @@ deliver_xxx(CliSock, _Req, Arg, Code, ExtraHtml) ->
               doclose = true,
               chunked = false,
               server = Server,
+              date   = yaws:make_date_header(),
               connection = yaws:make_connection_close_header(true),
               content_length = yaws:make_content_length_header(Sz),
               contlen = Sz,

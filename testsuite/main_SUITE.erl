@@ -56,7 +56,8 @@ all() ->
      encoded_url,
      encoded_url_no_docroot_escape,
      header_order,
-     extra_response_headers
+     extra_response_headers,
+     options_asterisk_methods
     ].
 
 groups() ->
@@ -94,22 +95,39 @@ end_per_testcase(_Test, _Config) ->
 
 %%====================================================================
 http_options(Config) ->
-    Port = testsuite:get_yaws_port(1, Config),
-    AllowRes = "GET, HEAD, OPTIONS, PUT, POST, DELETE",
+    Port1 = testsuite:get_yaws_port(1, Config),
 
-    {ok, Sock} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
+    %% Default OPTIONS * returns an HTTP 400
+    {ok,Sock1} = gen_tcp:connect("127.0.0.1", Port1, [binary, {active, false}]),
     ?assertEqual(ok,
                  testsuite:send_http_request(
-                   Sock, {options, "*", "HTTP/1.1"},
-                   [{"Host", "127.0.0.1:"++integer_to_list(Port)}]
+                   Sock1, {options, "*", "HTTP/1.1"},
+                   [{"Host", "127.0.0.1:"++integer_to_list(Port1)}]
                   )),
-    {ok, {{_,200,_}, Hdrs, <<>>}} = testsuite:receive_http_response(Sock),
+    {ok, {{_,400,_}, Hdrs1, _}} = testsuite:receive_http_response(Sock1),
 
-    ?assertEqual("0", proplists:get_value("content-length", Hdrs)),
-    ?assertEqual(AllowRes, proplists:get_value("allow", Hdrs)),
-    ?assert(proplists:is_defined("server", Hdrs)),
-    ?assert(proplists:is_defined("date", Hdrs)),
-    ?assertEqual(ok, gen_tcp:close(Sock)),
+    ?assert(not proplists:is_defined("allow", Hdrs1)),
+    ?assert(proplists:is_defined("server", Hdrs1)),
+    ?assert(proplists:is_defined("date", Hdrs1)),
+    ?assertEqual(ok, gen_tcp:close(Sock1)),
+
+    %% Custom configured methods are returned for OPTIONS *
+    Port9 = testsuite:get_yaws_port(9, Config),
+    {ok,Sock2} = gen_tcp:connect("127.0.0.1", Port9, [binary, {active, false}]),
+    ?assertEqual(ok,
+                 testsuite:send_http_request(
+                   Sock2, {options, "*", "HTTP/1.1"},
+                   [{"Host", "127.0.0.1:"++integer_to_list(Port9)}]
+                  )),
+    {ok, {{_,200,_}, Hdrs2, <<>>}} = testsuite:receive_http_response(Sock2),
+
+    AllowRes = "GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH",
+    ?assertEqual("0", proplists:get_value("content-length", Hdrs2)),
+    ?assertEqual(AllowRes, proplists:get_value("allow", Hdrs2)),
+    ?assert(proplists:is_defined("server", Hdrs2)),
+    ?assert(proplists:is_defined("date", Hdrs2)),
+    ?assertEqual(ok, gen_tcp:close(Sock2)),
+
     ok.
 
 http_head(Config) ->

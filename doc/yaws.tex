@@ -3801,6 +3801,19 @@ protocol_version = tlsv1.3, tlsv1.2, tlsv1.1, tlsv1
               Note that extra response headers do not apply to
               responses returned directly by any
               \verb+DispatchModule+.
+
+\item       \verb+options_asterisk_methods = Methods+ ---
+              By default OPTIONS requests towards the * target responds with
+              400 Bad Request.
+
+              Setting the \verb+options_asterisk_methods = Methods+ to a comma
+              separated string with HTTP methods, makes Yaws respond with HTTP
+              200 and an Allow header with the configured \verb+Methods+.
+
+              Valid methods are:
+\begin{verbatim}
+GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH
+\end{verbatim}
 \end{itemize}
 
 \section{Directives included from .yaws\_auth files}

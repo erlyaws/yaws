@@ -265,7 +265,8 @@
           mime_types_info,              % undefined | #mime_types_info{}
                                         % if undefined, global config is used
           dispatch_mod,                 % custom dispatch module
-          extra_response_headers = []   % configured extra response headers
+          extra_response_headers = [],  % configured extra response headers
+          options_asterisk_methods = [] % OPTIONS * Allow header, [] -> HTTP 400
          }).
 
 
