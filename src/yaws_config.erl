@@ -2087,7 +2087,8 @@ fload(FD, ssl, GC, C, Lno, Chars) ->
         ["ciphers", '=', Val] ->
             try
                 L = str2term(Val),
-                Ciphers = ssl:cipher_suites(),
+                [TlsVer|_] = proplists:get_value(available, ssl:versions()),
+                Ciphers = ssl:cipher_suites(all, TlsVer),
                 case check_ciphers(L, Ciphers) of
                     ok ->
                         C1 = C#sconf{ssl = (C#sconf.ssl)#ssl{ciphers = L}},
@@ -3604,8 +3605,13 @@ str2term(Str0) ->
 
 check_ciphers([], _) ->
     ok;
-check_ciphers([Spec|Specs], L) ->
-    case lists:member(Spec, L) of
+%% Convert old ciphers format without prf to the new format
+check_ciphers([{Kex, Cipher, Mac}|Specs], L) ->
+    check_ciphers([{Kex, Cipher, Mac, default_prf}|Specs], L);
+check_ciphers([{Kex, Cipher, Mac, Prf} = Spec|Specs], L) ->
+    CipherMap = maps:from_list([{key_exchange, Kex}, {cipher, Cipher},
+                                {mac, Mac}, {prf, Prf}]),
+    case lists:member(CipherMap, L) of
         true ->
             check_ciphers(Specs, L);
         false ->
