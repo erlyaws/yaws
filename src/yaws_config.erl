@@ -1366,8 +1366,6 @@ fload(FD, options_asterisk_methods, GC, C, Lno, Chars) ->
         [Methods] ->
             C1 = C#sconf{options_asterisk_methods = Methods},
             fload(FD, options_asterisk_methods, GC, C1, Lno+1, ?NEXTLINE);
-        ['<', "/options_asterisk_methods", '>'] ->
-            fload(FD, server, GC, C, Lno+1, ?NEXTLINE);
         [H|T] ->
             {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
         Err ->

@@ -139,7 +139,11 @@ options_asterisk_methods(Config) ->
                    [{"Host", "127.0.0.1:"++integer_to_list(Port2)}]
                   )),
     {ok, {{_,400,_}, Hdrs2, _}} = testsuite:receive_http_response(Sock2),
+    ?assert(not proplists:is_defined("allow", Hdrs2)),
+    ?assert(proplists:is_defined("server", Hdrs2)),
+    ?assert(proplists:is_defined("date", Hdrs2)),
     ?assertEqual(ok, gen_tcp:close(Sock2)),
+
     ok.
 
 http_head(Config) ->
