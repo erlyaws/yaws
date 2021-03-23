@@ -3453,9 +3453,22 @@ The following directives are allowed inside a server definition.
                  encrypted on disk, this password is the 3des key to decrypt it.
 
                \item \verb+ciphers = String+ --- This string specifies the SSL
-                 cipher string.  The syntax of the SSL cipher string is a little
-                 horrible sub-language of its own.  It is documented in the SSL
-                 man page for "ciphers".
+                 cipher string. The syntax of the SSL cipher string is
+                 a 4-tuple representation of the map returned by
+                 \verb+ssl:cipher_suites/2,3+:
+                 \verb+{#{key_exchange}, #{cipher}, #{mac}, #{prf}}+.
+\begin{verbatim}
+ciphers = "[{dhe_rsa,aes_256_cbc,sha,default_prf},
+            {dhe_dss,aes_256_cbc,sha,default_prf}]"
+\end{verbatim}
+                 In older versions of Yaws, a cipher tuple lacked the
+                 \verb+#{prf}+ element. When Yaws reads a cipher of
+                 the old format from configuration, it attempts to
+                 convert it to a 4-tuple by adding \verb+default_prf+
+                 for the \verb+#{prf}+ element. Be aware that this may
+                 not work for all ciphers; if it fails, manual
+                 intervention is needed to properly configure the
+                 ciphers in the new format.
 
                \item \verb+eccs = String+ --- This string specifies the
                  supported Elliptic Curve Cryptography (ECC).
