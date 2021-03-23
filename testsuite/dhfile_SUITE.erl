@@ -50,7 +50,8 @@ ssl_with_valid_dhfile(Config) ->
     %% The server has its own Diffie-Hellman group. Try connecting with
     %% ephemeral DH and see if it works.
     SslOpts = [{versions, ['tlsv1.2']}|
-               [{ciphers, [C || {dhe_rsa, _, _}=C <- ssl:cipher_suites()]}]],
+               [{ciphers,[C || #{key_exchange := dhe_rsa}=C
+                                <- ssl:cipher_suites(all, 'tlsv1.2')]}]],
 
     ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:http_get(Url, [], [], SslOpts)),
     ok.
@@ -63,7 +64,8 @@ ssl_with_invalid_dhfile(Config) ->
     %% fails on ssl:ssl_accept/2. This sounds like a bug in ssl:listen/2 but
     %% that's how it works anyway.
     SslOpts = [{versions, ['tlsv1.2']}|
-               [{ciphers, [C || {dhe_rsa, _, _}=C <- ssl:cipher_suites()]}]],
+               [{ciphers, [C || #{key_exchange := dhe_rsa}=C
+                                 <- ssl:cipher_suites(all, 'tlsv1.2')]}]],
 
     ?assertMatch({error, _}, testsuite:http_get(Url, [], [], SslOpts)),
     ok.

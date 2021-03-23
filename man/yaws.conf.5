@@ -1173,13 +1173,21 @@ If the private key is encrypted on disc, this password is the
 .IP
 \fBciphers = String\fR
 .RS 12
-This string specifies the SSL cipher string. The syntax of the SSL cipher string
-is  an erlang term compliant with the output of ssl:cipher_suites().
+This string specifies the SSL cipher string. The syntax of the SSL
+cipher string is a 4-tuple representation of the map returned by
+ssl:cipher_suites/2,3: \fI{#{key_exchange}, #{cipher}, #{mac}, #{prf}}\fR.
 .nf
 
-ciphers = "[{dhe_rsa,aes_256_cbc,sha}, \\
-            {dhe_dss,aes_256_cbc,sha}]"
+ciphers = "[{dhe_rsa,aes_256_cbc,sha,default_prf}, \\
+            {dhe_dss,aes_256_cbc,sha,default_prf}]"
 .fi
+
+In older versions of Yaws, a cipher tuple lacked the \fI#{prf}\fR
+element. When Yaws reads a cipher of the old format from
+configuration, it attempts to convert it to a 4-tuple by adding
+\fIdefault_prf\fR for the \fI#{prf}\fR element. Be aware that this may
+not work for all ciphers; if it fails, manual intervention is needed
+to properly configure the ciphers in the new format.
 .RE
 
 .IP
