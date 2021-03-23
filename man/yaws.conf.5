@@ -1174,11 +1174,12 @@ If the private key is encrypted on disc, this password is the
 \fBciphers = String\fR
 .RS 12
 This string specifies the SSL cipher string. The syntax of the SSL cipher string
-is  an erlang term compliant with the output of ssl:cipher_suites().
+is an erlang tuple that matches the following tuple representation of the map
+returned by ssl:cipher_suites/2,3: {#{key_exchange}, #{cipher}, #{mac}, #{prf}}.
 .nf
 
-ciphers = "[{dhe_rsa,aes_256_cbc,sha}, \\
-            {dhe_dss,aes_256_cbc,sha}]"
+ciphers = "[{dhe_rsa,aes_256_cbc,sha,default_prf}, \\
+            {dhe_dss,aes_256_cbc,sha,default_prf}]"
 .fi
 .RE
 
