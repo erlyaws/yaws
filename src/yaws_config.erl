@@ -3621,6 +3621,9 @@ str2term(Str0) ->
 
 check_ciphers([], _) ->
     ok;
+%% Convert old ciphers format without prf to the new format
+check_ciphers([{Kex, Cipher, Mac} = Spec|Specs], L) ->
+    check_ciphers([{Kex, Cipher, Mac, default_prf}|Specs], L);
 check_ciphers([{Kex, Cipher, Mac, Prf} = Spec|Specs], L) ->
     CipherMap = maps:from_list([{key_exchange, Kex}, {cipher, Cipher},
                                 {mac, Mac}, {prf, Prf}]),

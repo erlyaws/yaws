@@ -1181,6 +1181,11 @@ returned by ssl:cipher_suites/2,3: {#{key_exchange}, #{cipher}, #{mac}, #{prf}}.
 ciphers = "[{dhe_rsa,aes_256_cbc,sha,default_prf}, \\
             {dhe_dss,aes_256_cbc,sha,default_prf}]"
 .fi
+
+The old format, which is a three tuple that doesn't contain PRF, will be
+converted to the new format using 'default_prf' for #{prf}. This will not work
+for all ciphers, and if it fails manual intervention is needed to properly
+configure the ciphers in the new format.
 .RE
 
 .IP
