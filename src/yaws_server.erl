@@ -1040,37 +1040,37 @@ acceptor0(GS, Top) ->
     Top ! {self(), next, X},
     case X of
         {ok, Client} ->
-            if
-                GS#gs.ssl == ssl ->
-                    SslTimeout = (GS#gs.gconf)#gconf.keepalive_timeout,
-                    %% TODO: the following should call the portability
-                    %% function yaws_dynopts:ssl_handshake/2 instead
-                    %% of performing a masked call to ssl_accept/2,
-                    %% since the latter is deprecated.
-                    case (fun ssl:ssl_accept/2)(Client, SslTimeout) of
-                        ok -> ok;
-                        {error, closed} ->
-                            Top ! {self(), decrement},
-                            exit(normal);
-                        {error, esslaccept} ->
-                            %% Don't log SSL esslaccept to error log since it
-                            %% seems this is what we get on portscans and
-                            %% similar
-                            ?Debug("SSL accept failed: ~p~n", [esslaccept]),
-                            Top ! {self(), decrement},
-                            exit(normal);
-                        {error, Reason} ->
-                            error_logger:format("SSL accept failed: ~p~n",
-                                                [Reason]),
-                            Top ! {self(), decrement},
-                            exit(normal)
-                    end;
-                true ->
-                    ok
-            end,
-            {IP,Port} = peername(Client, GS#gs.ssl),
+            NClient = if
+                          GS#gs.ssl == ssl ->
+                              SslTimeout = (GS#gs.gconf)#gconf.keepalive_timeout,
+                              %% TODO: the following should call the portability
+                              %% function yaws_dynopts:ssl_handshake/2 instead
+                              %% of performing a masked call to ssl_accept/2,
+                              %% since the latter is deprecated.
+                              case yaws_dynopts:ssl_handshake(Client, SslTimeout) of
+                                  {ok, SslSock} -> SslSock;
+                                  {error, closed} ->
+                                      Top ! {self(), decrement},
+                                      exit(normal);
+                                  {error, esslaccept} ->
+                                      %% Don't log SSL esslaccept to error log since it
+                                      %% seems this is what we get on portscans and
+                                      %% similar
+                                      ?Debug("SSL accept failed: ~p~n", [esslaccept]),
+                                      Top ! {self(), decrement},
+                                      exit(normal);
+                                  {error, Reason} ->
+                                      error_logger:format("SSL accept failed: ~p~n",
+                                                          [Reason]),
+                                      Top ! {self(), decrement},
+                                      exit(normal)
+                              end;
+                          true ->
+                              Client
+                      end,
+            {IP,Port} = peername(NClient, GS#gs.ssl),
             put(trace_filter, yaws_trace:get_filter()),
-            Res = (catch aloop(Client, {IP,Port}, GS,  0)),
+            Res = (catch aloop(NClient, {IP,Port}, GS,  0)),
             %% Skip closing the socket, as required by web sockets & stream
             %% processes.
             CloseSocket = (get(outh) =:= undefined) orelse
@@ -1080,9 +1080,9 @@ acceptor0(GS, Top) ->
                 true ->
                     if
                         GS#gs.ssl == nossl ->
-                            gen_tcp:close(Client);
+                            gen_tcp:close(NClient);
                         GS#gs.ssl == ssl ->
-                            ssl:close(Client)
+                            ssl:close(NClient)
                     end
             end,
             case Res of
