@@ -691,6 +691,8 @@ report_warnings(C, Ws0) ->
 format_warnings(F, SLine, [{none,Mod,E}|Es]) ->
     M = io_lib:format("~s: Warning: ~s~n", [F,Mod:format_error(E)]),
     [M|format_warnings(F, SLine, Es)];
+format_warnings(F, SLine, [{{Line0,_},Mod,E}|Es]) ->
+    format_warnings(F, SLine, [{Line0,Mod,E}|Es]);
 format_warnings(F, SLine, [{Line0,Mod,E}|Es]) ->
     Line = erlang:max(0, Line0 + SLine),
     M = io_lib:format("~s:~w: Warning: ~s~n", [F,Line,Mod:format_error(E)]),
@@ -704,6 +706,8 @@ format_warnings(_, _, []) ->
 format_errors(F, SLine, [{none,Mod,E}|Es]) ->
     M = io_lib:format("~s: ~s~n", [F,Mod:format_error(E)]),
     [M|format_errors(F, SLine, Es)];
+format_errors(F, SLine, [{{Line0,_},Mod,E}|Es]) ->
+    format_errors(F, SLine, [{Line0,Mod,E}|Es]);
 format_errors(F, SLine, [{Line0,Mod,E}|Es]) ->
     Line = erlang:max(0, Line0 + SLine),
     M = io_lib:format("~s:~w: ~s~n", [F,Line,Mod:format_error(E)]),
