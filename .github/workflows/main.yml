@@ -1,0 +1,51 @@
+name: Yaws-CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  make-check:
+    name: Check on OTP-${{matrix.otp}}
+    strategy:
+      fail-fast: false
+      matrix:
+        otp:
+          - "24.1"
+          - "24.0"
+          - "23.3"
+          - "23.2"
+          - "22.3"
+          - "22.2"
+          - "21.3"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+
+      - name: Setup Build
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get -y install autotools-dev build-essential make libpam0g-dev openssl wget curl cadaver #texlive-font-utils
+      - name: Build Yaws
+        run: |
+          autoreconf -vfi
+          ./configure
+          make all -j4
+      - name: Run test suite
+        run: |
+          make check -j4
+      # Currently not working steps
+      # - name: Try document generation
+      #   run: |
+      #     make docs
+      # - name: Run dialyzer
+      #   run: |
+      #     make dialyzer
