@@ -1,0 +1,51 @@
+name: Yaws-CI
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  workflow_dispatch:
+
+jobs:
+  make-check-23-2:
+    runs-on: ubuntu-latest
+    name: Check 23.2
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+      - name: Setup Erlang
+        uses: gleam-lang/setup-erlang@v1.1.2
+        with:
+          otp-version: 23.2
+      - name: Setup Build
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get -y install autotools-dev build-essential make libpam0g-dev openssl wget curl cadaver
+      - name: Check Yaws
+        run: |
+          autoreconf -vfi
+          ./configure
+          make all check -j4
+  make-check-23-1:
+    runs-on: ubuntu-latest
+    name: Check 23.1
+    needs: make-check-23-2
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+      - name: Setup Erlang
+        uses: gleam-lang/setup-erlang@v1.1.2
+        with:
+          otp-version: 23.1
+      - name: Setup Build
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get -y install autotools-dev build-essential make libpam0g-dev openssl wget curl cadaver
+      - name: Check Yaws
+        run: |
+          autoreconf -vfi
+          ./configure
+          make all check -j4

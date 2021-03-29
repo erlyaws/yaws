@@ -77,7 +77,7 @@ export BOLD_COLOR=$bold
 
 $CT_RUN -label ${LABEL}-${LABEL_BRANCH}-${LABEL_VSN}            \
         -logdir $LOG_DIR -dir $CUR_DIR $cover_opt               \
-        $suites_groups_and_cases -no_auto_compile               \
+        $suites_groups_and_cases -no_auto_compile -noshell      \
         -ct_hooks testsuite ["$traces_opt"] $debugger_opt       \
         -pa $EBIN_DIR -pa $CUR_DIR -include $INC_DIR > $LOG_FILE
 estatus=$?
