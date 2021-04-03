@@ -1358,20 +1358,6 @@ fload(FD, extra_response_headers, GC, C, Lno, Chars) ->
             Err
     end;
 
-fload(FD, options_asterisk_methods, GC, C, Lno, Chars) ->
-    case toks(Lno, Chars) of
-        [] ->
-            C1 = C#sconf{options_asterisk_methods = []},
-            fload(FD, options_asterisk_methods, GC, C1, Lno+1, ?NEXTLINE);
-        [Methods] ->
-            C1 = C#sconf{options_asterisk_methods = Methods},
-            fload(FD, options_asterisk_methods, GC, C1, Lno+1, ?NEXTLINE);
-        [H|T] ->
-            {error, ?F("Unexpected input ~p at line ~w", [[H|T], Lno])};
-        Err ->
-            Err
-    end;
-
 fload(FD, server, GC, C, Lno, eof) ->
     file:close(FD),
     {ok, GC, C, Lno, eof};
