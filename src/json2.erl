@@ -16,7 +16,7 @@
 
 -module(json2).
 -export([encode/1, decode_string/1, decode/2]).
--export([is_obj/1, obj_new/0, obj_fetch/2, obj_find/2, obj_is_key/2]).
+-export([is_obj/1, obj_new/0, obj_fetch/2, obj_fetch/3, obj_find/2, obj_is_key/2]).
 -export([obj_store/3, obj_from_list/1, obj_fold/3]).
 -export([test/0]).
 -author("Jim Larson <jalarson@amazon.com>, Robert Wai-Chi Chu <robchu@amazon.com>").
@@ -606,6 +606,19 @@ obj_fetch(Key, {struct, Props}) when is_list(Props) ->
         Value ->
             Value
     end.
+
+
+%% Fetch an object member's value, or return the default-value.
+%% Return value, if found, or default if no member found with that name.
+
+obj_fetch(Key, {struct, Props},Default) when is_list(Props) ->
+    case proplists:get_value(Key, Props) of
+        undefined ->
+            Default;
+        Value ->
+            Value
+    end.
+
 
 %% Fetch an object member's value, or indicate that there is no such member.
 %% Return {ok, Value} or 'error'.
