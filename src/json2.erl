@@ -468,13 +468,25 @@ first_continuation() ->
              (eof, Cs) ->
                  {done, eof, Cs};
              (T, Cs) ->
-                 Fun = fun(V, eof)   -> {done, {ok, V}, eof};
-                          (V, [])    -> {done, {ok, V}, []};
-                          (V, [eof]) -> {done, {ok, V}, [eof]};
-                          (_, Cs2)   -> {done, {error, invalid_trailing_data}, Cs2}
+                 Fun = fun CheckTrailer (V, eof) -> {done, {ok, V}, eof};
+                     CheckTrailer(V, []) -> {done, {ok, V}, []};
+                     CheckTrailer(V, [eof]) -> {done, {ok, V}, [eof]};
+
+                     % skip trailing whitespace
+                     CheckTrailer(V, [$\s | TrailingChars]) ->
+                         CheckTrailer(V, TrailingChars);
+                     CheckTrailer(V, [$\t | TrailingChars]) ->
+                         CheckTrailer(V, TrailingChars);
+                     CheckTrailer(V, [$\n | TrailingChars]) ->
+                         CheckTrailer(V, TrailingChars);
+                     CheckTrailer(V, [$\r | TrailingChars]) ->
+                         CheckTrailer(V, TrailingChars);
+
+                     CheckTrailer(_, TrailingChars) ->
+                         {done, {error, invalid_trailing_data}, TrailingChars}
                        end,
                  parse_value(T, Cs, Fun)
-    end}.
+         end}.
 
 %% Continuation Kt must accept (TokenOrEof, Chars)
 
