@@ -464,17 +464,22 @@ decode(Continuation, CharList) ->
     get_token(OldChars ++ CharList, Kt).
 
 first_continuation() ->
-    {[], fun
-             (eof, Cs) ->
+    {[], fun(eof, Cs) ->
                  {done, eof, Cs};
-             (T, Cs) ->
-                 Fun = fun(V, eof)   -> {done, {ok, V}, eof};
-                          (V, [])    -> {done, {ok, V}, []};
-                          (V, [eof]) -> {done, {ok, V}, [eof]};
-                          (_, Cs2)   -> {done, {error, invalid_trailing_data}, Cs2}
+            (T, Cs) ->
+                 Fun = fun CheckTrailer(V, eof) -> {done, {ok, V}, eof};
+                           CheckTrailer(V, []) -> {done, {ok, V}, []};
+                           CheckTrailer(V, [eof]) -> {done, {ok, V}, [eof]};
+                           %% skip trailing whitespace
+                           CheckTrailer(V, [$\s|Cs2]) -> CheckTrailer(V, Cs2);
+                           CheckTrailer(V, [$\t|Cs2]) -> CheckTrailer(V, Cs2);
+                           CheckTrailer(V, [$\n|Cs2]) -> CheckTrailer(V, Cs2);
+                           CheckTrailer(V, [$\r|Cs2]) -> CheckTrailer(V, Cs2);
+                           CheckTrailer(_, Cs2) ->
+                               {done, {error, invalid_trailing_data}, Cs2}
                        end,
                  parse_value(T, Cs, Fun)
-    end}.
+         end}.
 
 %% Continuation Kt must accept (TokenOrEof, Chars)
 
