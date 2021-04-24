@@ -56,6 +56,9 @@ setup_default_sconf(_Config) ->
     ?assertEqual(SC3, SC4),
     ?assertEqual({port, 8080}, get_sconf_attr(port, SC3)),
 
+    SC5 = #sconf{port=8080, docroot="/tmp"},
+    ?assertEqual({listen,  {127,0,0,1}}, get_sconf_attr(listen,  SC5)),
+
     ok.
 
 
