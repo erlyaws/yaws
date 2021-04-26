@@ -2822,7 +2822,7 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
             http_collect_headers(CliSock, Req, H,SSL, Count+1);
 
         %% auxiliary headers we don't have builtin support for
-        {ok, X} ->
+        {ok, {http_header, _Code, _Field, _UnmodifiedField, _Value} = X} ->
             ?Debug("OTHER header ~p~n", [X]),
             http_collect_headers(CliSock, Req,
                                  H#headers{other=[X|H#headers.other]},
