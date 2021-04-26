@@ -2689,6 +2689,8 @@ http_recv_request(CliSock, SSL) ->
             closed;
         {error, etimedout} ->
             closed;
+        {error, {tls_alert, _}} ->
+            closed;
         Other ->
             error_logger:format("Unhandled reply from yaws:do_recv(): ~p~n", [Other]),
             exit(normal)
