@@ -2819,10 +2819,10 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
             http_collect_headers(CliSock, Req, H,SSL, Count+1);
 
         %% auxiliary headers we don't have builtin support for
-        {ok, X} ->
-            ?Debug("OTHER header ~p~n", [X]),
+        {ok, {http_header, _Code, _Field, _UnmodifiedField, _Value}=OtherHdr} ->
+            ?Debug("OTHER header ~p~n", [OtherHdr]),
             http_collect_headers(CliSock, Req,
-                                 H#headers{other=[X|H#headers.other]},
+                                 H#headers{other=[OtherHdr|H#headers.other]},
                                  SSL, Count+1);
         Err ->
             error_logger:format("Unhandled reply from yaws:do_recv(): ~p~n", [Err]),
