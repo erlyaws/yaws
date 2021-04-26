@@ -1052,16 +1052,10 @@ acceptor0(GS, Top) ->
                                   {error, closed} ->
                                       Top ! {self(), decrement},
                                       exit(normal);
-                                  {error, esslaccept} ->
-                                      %% Don't log SSL esslaccept to error log since it
-                                      %% seems this is what we get on portscans and
-                                      %% similar
-                                      ?Debug("SSL accept failed: ~p~n", [esslaccept]),
-                                      Top ! {self(), decrement},
-                                      exit(normal);
                                   {error, Reason} ->
-                                      error_logger:format("SSL accept failed: ~p~n",
-                                                          [Reason]),
+                                      %% Since OTP21, TLS alerts are logged by
+                                      %% SSL application itself, when enabled
+                                      ?Debug("SSL accept failed: ~p~n", [Reason]),
                                       Top ! {self(), decrement},
                                       exit(normal)
                               end;
