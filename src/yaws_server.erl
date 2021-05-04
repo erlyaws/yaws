@@ -1003,10 +1003,7 @@ ssl_listen_opts(#sconf{ssl=SSL}) ->
             true ->
                  false
          end,
-         case yaws_dynopts:have_ssl_log_alert() of
-             true  -> {log_alert, false};
-             false -> false
-         end
+         {log_alert, false}
         ],
     [X || X <- L, X /= false].
 
@@ -1043,11 +1040,7 @@ acceptor0(GS, Top) ->
             NClient = if
                           GS#gs.ssl == ssl ->
                               SslTimeout = (GS#gs.gconf)#gconf.keepalive_timeout,
-                              %% TODO: the following should call the portability
-                              %% function yaws_dynopts:ssl_handshake/2 instead
-                              %% of performing a masked call to ssl_accept/2,
-                              %% since the latter is deprecated.
-                              case yaws_dynopts:ssl_handshake(Client, SslTimeout) of
+                              case ssl:handshake(Client, SslTimeout) of
                                   {ok, SslSock} -> SslSock;
                                   {error, closed} ->
                                       Top ! {self(), decrement},
@@ -1541,7 +1534,7 @@ pick_sconf({nossl, _}, GC, H, Group) ->
 pick_sconf({ssl, _}, #gconf{sni=disable}=GC, H, Group) ->
     pick_sconf(GC, H, Group);
 pick_sconf({ssl, Sock}, GC, H, Group) ->
-    SniHost = case yaws_dynopts:connection_information(Sock, [sni_hostname]) of
+    SniHost = case ssl:connection_information(Sock, [sni_hostname]) of
                   {ok, [{sni_hostname, SN}]} -> SN;
                   _                          -> undefined
               end,
@@ -4115,7 +4108,9 @@ send_file_range(CliSock, Fd, 0) ->
 crnl() ->
     "\r\n".
 
-now_secs() -> yaws_dynopts:now_secs().
+now_secs() ->
+    {M,S,_} = erlang:timestamp(),
+    (M*1000000)+S.
 
 %% a file cache,
 url_type(GetPath, ArgDocroot, VirtualDir) ->

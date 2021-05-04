@@ -193,7 +193,7 @@ Released version of \Yaws\ are available at
 
 To compile and install a \Yaws\  release
 one of the prerequisites is a properly installed \Erlang\  system. \Yaws\
-runs on \Erlang\/OTP releases 18.0 and newer. Get \Erlang\  from
+runs on \Erlang\/OTP releases 21.0 and newer. Get \Erlang\  from
 \url{http://www.erlang.org/}
 
 Compile and install is straight forward:
@@ -2715,10 +2715,6 @@ part where options for each virtual host is supplied.
               to mitigate this requirement.
 
               Default is \textit{disable}.
-
-              \textbf{WARNING: The SNI support was introduced in the SSL
-                application in Erlang/OTP 18.0, so Yaws ignores it for previous
-                releases.}
 \end{itemize}
 
 
@@ -3495,9 +3491,6 @@ eccs = "[sect571r1, sect571k1, secp521r1, brainpoolP512r1, sect409k1,
                  \verb+ssl+ manual page at
 
                  http://www.erlang.org/doc/man/ssl.html for more details.
-
-                 \textbf{WARNING: This option was introduced in the SSL application
-                   in Erlang/OTP 18.0, so \Yaws\  ignores it for previous releases.}
 
                \item \verb+honor_cipher_order = true | false+ --- If true (the
                  default), use the server's preference for cipher selection. If

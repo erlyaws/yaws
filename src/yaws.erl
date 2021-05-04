@@ -503,16 +503,8 @@ ssl_secure_renegotiate  (S, Bool)    -> S#ssl{secure_renegotiate   = Bool}.
 ssl_protocol_version    (S, Vsns)    -> S#ssl{protocol_version     = Vsns}.
 ssl_require_sni         (S, Bool)    -> S#ssl{require_sni          = Bool}.
 ssl_eccs                (S, ECCS)    -> S#ssl{eccs                 = ECCS}.
-ssl_honor_cipher_order  (S, Bool) ->
-    case yaws_dynopts:have_ssl_honor_cipher_order() of
-        true  -> S#ssl{honor_cipher_order   = Bool};
-        false -> S
-    end.
-ssl_client_renegotiation(S, Bool) ->
-    case yaws_dynopts:have_ssl_client_renegotiation() of
-        true  -> S#ssl{client_renegotiation = Bool};
-        false -> S
-    end.
+ssl_honor_cipher_order  (S, Bool)    -> S#ssl{honor_cipher_order   = Bool}.
+ssl_client_renegotiation(S, Bool)    -> S#ssl{client_renegotiation = Bool}.
 
 setup_ssl(SL, DefaultSSL) ->
     case lkup(ssl, SL, undefined) of
@@ -1211,10 +1203,13 @@ join_sep([H|T], Sep) ->
     H ++ lists:append([Sep ++ X || X <- T]).
 
 %% Provide a unique 3-tuple of positive integers.
-unique_triple() -> yaws_dynopts:unique_triple().
+unique_triple() ->
+    F = fun erlang:unique_integer/1,
+    {F([positive]), F([positive]), F([positive])}.
 
 %% Get a current time 3-tuple.
-get_time_tuple() -> yaws_dynopts:get_time_tuple().
+get_time_tuple() ->
+    erlang:timestamp().
 
 %% header parsing
 parse_qval(S) ->

@@ -4,10 +4,10 @@
 out(A) ->
     %% Create a random number
     {_A1, A2, A3} = now(),
-    yaws_dynopts:random_seed(erlang:phash(node(), 100000),
-                             erlang:phash(A2, A3),
-                             A3),
-    Sz = yaws_dynopts:random_uniform(100000),
+    rand:seed(exsplus, {erlang:phash(node(), 100000),
+                        erlang:phash(A2, A3),
+                        A3}),
+    Sz = rand:uniform(100000),
 
     Pid = spawn(fun() ->
                         %% Read random junk

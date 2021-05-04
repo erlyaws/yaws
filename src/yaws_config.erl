@@ -1215,17 +1215,9 @@ fload(FD, GC, Cs, Lno, Chars) ->
             if
                 Sni == "disable" ->
                     fload(FD, GC#gconf{sni=disable}, Cs, Lno+1, ?NEXTLINE);
-
                 Sni == "enable" orelse Sni == "strict" ->
-                    case yaws_dynopts:have_ssl_sni() of
-                        true ->
-                            fload(FD, GC#gconf{sni=list_to_atom(Sni)}, Cs, Lno+1,
-                                  ?NEXTLINE);
-                        _ ->
-                            error_logger:info_msg("Warning, sni option is not"
-                                                  " supported at line ~w~n", [Lno]),
-                            fload(FD, GC, Cs, Lno+1, ?NEXTLINE)
-                    end;
+                    fload(FD, GC#gconf{sni=list_to_atom(Sni)}, Cs, Lno+1,
+                          ?NEXTLINE);
                 true ->
                     {error, ?F("Expect disable|enable|strict at line ~w",[Lno])}
             end;
@@ -2123,39 +2115,23 @@ fload(FD, ssl, GC, C, Lno, Chars) ->
             end;
 
         ["client_renegotiation", '=', Bool] ->
-            case yaws_dynopts:have_ssl_client_renegotiation() of
-                true ->
-                    case is_bool(Bool) of
-                        {true, Val} ->
-                            C1 = C#sconf{ssl=(C#sconf.ssl)#ssl{client_renegotiation=Val}},
-                            fload(FD, ssl, GC, C1, Lno+1, ?NEXTLINE);
-                        false ->
-                            {error, ?F("Expect true|false at line ~w", [Lno])}
-                    end;
-                _ ->
-                    error_logger:info_msg("Warning, client_renegotiation SSL "
-                                          "option is not supported "
-                                          "at line ~w~n", [Lno]),
-                    fload(FD, ssl, GC, C, Lno+1, ?NEXTLINE)
+            case is_bool(Bool) of
+                {true, Val} ->
+                    C1 = C#sconf{ssl=(C#sconf.ssl)#ssl{client_renegotiation=Val}},
+                    fload(FD, ssl, GC, C1, Lno+1, ?NEXTLINE);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
 
         ["honor_cipher_order", '=', Bool] ->
-            case yaws_dynopts:have_ssl_honor_cipher_order() of
-                true ->
-                    case is_bool(Bool) of
-                        {true, Val} ->
-                            C2 = C#sconf{
-                                   ssl=(C#sconf.ssl)#ssl{honor_cipher_order=Val}
-                                  },
-                            fload(FD, ssl, GC, C2, Lno+1, ?NEXTLINE);
-                        false ->
-                            {error, ?F("Expect true|false at line ~w", [Lno])}
-                    end;
-                _ ->
-                    error_logger:info_msg("Warning, honor_cipher_order SSL "
-                                          "option is not supported "
-                                          "at line ~w~n", [Lno]),
-                    fload(FD, ssl, GC, C, Lno+1, ?NEXTLINE)
+            case is_bool(Bool) of
+                {true, Val} ->
+                    C2 = C#sconf{
+                           ssl=(C#sconf.ssl)#ssl{honor_cipher_order=Val}
+                          },
+                    fload(FD, ssl, GC, C2, Lno+1, ?NEXTLINE);
+                false ->
+                    {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
 
         ["protocol_version", '=' | Vsns0] ->

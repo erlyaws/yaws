@@ -55,30 +55,15 @@ end_per_group(_Group, _Config) ->
 init_per_testcase(sni_disabled, Config) ->
     restart_yaws("yaws_sni_disabled.conf", Config);
 init_per_testcase(sni_enabled, Config) ->
-    case yaws_dynopts:have_ssl_sni() of
-        true  -> restart_yaws("yaws_sni_enabled.conf", Config);
-        false -> {skip, "sni not supported on this Erlang/OTP release"}
-    end;
+    restart_yaws("yaws_sni_enabled.conf", Config);
 init_per_testcase(sni_strict, Config) ->
-    case yaws_dynopts:have_ssl_sni() of
-        true  -> restart_yaws("yaws_sni_strict.conf", Config);
-        false -> {skip, "sni not supported on this Erlang/OTP release"}
-    end;
+    restart_yaws("yaws_sni_strict.conf", Config);
 init_per_testcase(sni_required_on_vhost, Config) ->
-    case yaws_dynopts:have_ssl_sni() of
-        true  -> restart_yaws("yaws_sni_required_on_vhost.conf", Config);
-        false -> {skip, "sni not supported on this Erlang/OTP release"}
-    end;
+    restart_yaws("yaws_sni_required_on_vhost.conf", Config);
 init_per_testcase(sni_without_tls, Config) ->
-    case yaws_dynopts:have_ssl_sni() of
-        true  -> Config;
-        false -> {skip, "sni not supported on this Erlang/OTP release"}
-    end;
-init_per_testcase(sni_not_available, Config) ->
-    case yaws_dynopts:have_ssl_sni() of
-        true  -> {skip, "sni supported on this Erlang/OTP release"};
-        false -> Config
-    end;
+    Config;
+init_per_testcase(sni_not_available, _Config) ->
+    {skip, "sni supported on this Erlang/OTP release"};
 init_per_testcase(_Test, Config) ->
     Config.
 
@@ -90,21 +75,11 @@ sni_disabled(Config) ->
     Port  = testsuite:get_yaws_port(1, Config),
     Url   = testsuite:make_url(https, "127.0.0.1", Port, "/index.yaws"),
     SPort = integer_to_list(Port),
-    case yaws_dynopts:have_ssl_sni() of
-        true ->
-            ?assertEqual(ok, check_good_request(Url, "localhost:"++SPort, undefined, "localhost:"++SPort)),
-            ?assertEqual(ok, check_good_request(Url, "yaws.example.com:"++SPort, undefined, "yaws.example.com:"++SPort)),
-            ?assertEqual(ok, check_good_request(Url, "localhost:"++SPort, "alice.example.com", "localhost:"++SPort)),
-            ?assertEqual(ok, check_good_request(Url, "nomatch_servername:"++SPort, undefined, "localhost:"++SPort)),
-            ok;
-        false ->
-            ?assertEqual(ok, check_good_request(Url, "localhost:"++SPort, "localhost:"++SPort)),
-            ?assertEqual(ok, check_good_request(Url, "yaws.example.com:"++SPort, "yaws.example.com:"++SPort)),
-            ?assertEqual(ok, check_good_request(Url, "localhost:"++SPort, "localhost:"++SPort)),
-            ?assertEqual(ok, check_good_request(Url, "nomatch_servername:"++SPort, "localhost:"++SPort)),
-            ok
-    end.
-
+    ?assertEqual(ok, check_good_request(Url, "localhost:"++SPort, undefined, "localhost:"++SPort)),
+    ?assertEqual(ok, check_good_request(Url, "yaws.example.com:"++SPort, undefined, "yaws.example.com:"++SPort)),
+    ?assertEqual(ok, check_good_request(Url, "localhost:"++SPort, "alice.example.com", "localhost:"++SPort)),
+    ?assertEqual(ok, check_good_request(Url, "nomatch_servername:"++SPort, undefined, "localhost:"++SPort)),
+    ok.
 
 sni_enabled(Config) ->
     Port  = testsuite:get_yaws_port(1, Config),

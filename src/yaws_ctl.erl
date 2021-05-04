@@ -55,9 +55,8 @@ run(GC) ->
 
 rand() ->
     {A1, A2, A3} = yaws:get_time_tuple(),
-    yaws_dynopts:random_seed(A1, A2, A3),
-    yaws_dynopts:random_uniform(1 bsl 64).
-
+    rand:seed(exsplus, {A1, A2, A3}),
+    rand:uniform(1 bsl 64).
 
 
 ctl_args() ->

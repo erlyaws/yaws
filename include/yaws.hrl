@@ -118,14 +118,8 @@
           ciphers,
           cachetimeout,
           secure_renegotiate = false,
-          client_renegotiation = case yaws_dynopts:have_ssl_client_renegotiation() of
-                                     true  -> true;
-                                     false -> undefined
-                                 end,
-          honor_cipher_order = case yaws_dynopts:have_ssl_honor_cipher_order() of
-                                   true  -> true;
-                                   false -> undefined
-                               end,
+          client_renegotiation = true,
+          honor_cipher_order = true,
           protocol_version,
           require_sni = false,
           eccs
