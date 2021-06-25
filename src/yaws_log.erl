@@ -99,38 +99,44 @@ open_log(ServerName, Type, Dir) ->
                        ServerName
                end,
     A = filename:join([Dir, FileName ++ "." ++ atom_to_list(Type)]),
-    case file:open(A, [write, raw, append]) of
+    case open_logfile(A) of
         {ok, Fd} ->
-            {true, {Fd, A}};
+            {true, {Fd, A, safe_filesize(A)}};
         _Err ->
             error_logger:format("Cannot open ~p",[A]),
             false
     end.
 
-close_log(_ServerName, _Type, {Fd, _FileName}) ->
+close_log(_ServerName, _Type, {Fd, _FileName, _LastSize}) ->
     file:close(Fd).
 
-wrap_log(_ServerName, _Type, {Fd, FileName}, LogWrapSize) ->
-    case wrap_p(FileName, LogWrapSize) of
-        true ->
+wrap_log(_ServerName, _Type, {Fd, FileName, LastSize}, LogWrapSize) ->
+    case wrap_p(FileName, LastSize, LogWrapSize) of
+        need_wrap ->
             file:close(Fd),
             Old = [FileName, ".old"],
             file:delete(Old),
             file:rename(FileName, Old),
-            {ok, Fd2} = file:open(FileName, [write, raw]),
-            {Fd2, FileName};
+            {ok, Fd2} = open_logfile(FileName),
+            {Fd2, FileName, 0};
+        has_wrapped ->
+            error_logger:format("Logfile ~p externally wrapped - we reopen it",
+                                [FileName]),
+            file:close(Fd),
+            {ok, Fd2} = open_logfile(FileName),
+            {Fd2, FileName, safe_filesize(FileName)};
         false ->
-            {Fd, FileName};
+            {Fd, FileName, safe_filesize(FileName)};
         enoent ->
             %% Logfile disappeared,
             error_logger:format("Logfile ~p disappeared - we reopen it",
                                 [FileName]),
             file:close(Fd),
-            {ok, Fd2} = file:open(FileName, [write, raw]),
-            {Fd2, FileName}
+            {ok, Fd2} = open_logfile(FileName),
+            {Fd2, FileName, 0}
     end.
 
-write_log(ServerName, Type, {Fd, _FileName}, Infos) ->
+write_log(ServerName, Type, {Fd, _FileName, _LastSize}, Infos) ->
     gen_server:cast(yaws_log, {ServerName, Type, Fd, Infos}).
 
 %%%----------------------------------------------------------------------
@@ -370,21 +376,6 @@ handle_info({'EXIT', _, _}, State) ->
     {noreply, State}.
 
 
-
-wrap_p(Filename, LogWrapSize) ->
-    case file:read_file_info(Filename) of
-        {ok, FI} when FI#file_info.size > LogWrapSize, LogWrapSize > 0 ->
-            true;
-        {ok, _FI} ->
-            false;
-        {error, enoent} ->
-            enoent;
-        _ ->
-            false
-    end.
-
-
-
 %%----------------------------------------------------------------------
 %% Func: terminate/2
 %% Purpose: Shutdown the server
@@ -429,7 +420,6 @@ report_logger_config(File, RotateSize) ->
                    {fun yaws_log:error_logger_filter/2, log}}
                  ]}.
 
-
 error_logger_filter(#{meta := #{error_logger := #{tag := _}}} = Event, Action) ->
   case Action of
     log -> Event;
@@ -438,6 +428,27 @@ error_logger_filter(#{meta := #{error_logger := #{tag := _}}} = Event, Action) -
 error_logger_filter(_, _) ->
   ignore.
 
+wrap_p(Filename, LastSize, LogWrapSize) ->
+    case file:read_file_info(Filename) of
+        {ok, FI} when FI#file_info.size > LogWrapSize, LogWrapSize > 0 ->
+            need_wrap;
+        {ok, FI} when FI#file_info.size < LastSize ->
+            has_wrapped;
+        {ok, _FI} ->
+            false;
+        {error, enoent} ->
+            enoent;
+        _ ->
+            false
+    end.
+
+open_logfile(Filename) -> file:open(Filename, [append, raw]).
+
+safe_filesize(Filename) ->
+    case file:read_file_info(Filename) of
+        {ok, FI} -> FI#file_info.size;
+        _ -> 0
+    end.
 
 optional_header(Item) ->
     case Item of
