@@ -715,6 +715,9 @@ cookie_option(expires, UTC) when is_tuple(UTC) ->
 cookie_option(max_age, Age) when is_integer(Age) ->
     V = if Age < 0 -> "0"; true -> integer_to_list(Age) end,
     ["; Max-Age=" | V];
+cookie_option(same_site, lax) -> ["; SameSite=Lax"];
+cookie_option(same_site, none) -> ["; SameSite=None"];
+cookie_option(same_site, strict) -> ["; SameSite=Strict"];
 cookie_option(path, Path) when is_list(Path), Path =/= [] ->
     ["; Path=" | Path];
 cookie_option(domain, Domain) when is_list(Domain), Domain =/= [] ->
