@@ -1633,7 +1633,9 @@ reformat_request(Req) ->
                {abs_path, AbsPath} ->
                    AbsPath;
                {absoluteURI, _Scheme, _Host0, _Port, RawPath} ->
-                   RawPath
+                   RawPath;
+               '*' ->
+                   "*"
            end,
     {Maj, Min} = Req#http_request.version,
     [yaws:to_list(Req#http_request.method), " ", Path," HTTP/",
