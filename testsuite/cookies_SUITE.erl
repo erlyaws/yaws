@@ -16,7 +16,8 @@ all() ->
      set_cookie_expires,
      real_cookies,
      real_setcookies,
-     set_cookie
+     set_cookie,
+     set_cookie_duplicates
     ].
 
 groups() ->
@@ -327,6 +328,14 @@ set_cookie(_Config) ->
             lists:flatten(L)
         end).
 
+set_cookie_duplicates(_Config) ->
+    Cookie = "Cookie",
+    put(outh, #outh{}),
+    yaws:accumulate_header({set_cookie, Cookie}),
+    yaws:accumulate_header({"Set-Cookie", Cookie}),
+    yaws:accumulate_header({set_cookie, {multi, [Cookie, Cookie, Cookie]}}),
+    yaws:accumulate_header({"Set-Cookie", {multi, [Cookie, Cookie, Cookie]}}),
+    ?assertEqual([["Set-Cookie: ", Cookie, "\r\n"]], (get(outh))#outh.set_cookie).
 
 %%====================================================================
 parse_cookies(Io, eof, _) ->
