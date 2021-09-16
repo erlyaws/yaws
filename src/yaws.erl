@@ -2168,10 +2168,19 @@ accumulate_header({set_cookie, {multi, Values}}) ->
 accumulate_header({set_cookie, What}) ->
     O = get(outh),
     Old = case O#outh.set_cookie of
-              undefined -> "";
+              undefined -> [];
               X         -> X
           end,
-    put(outh, O#outh{set_cookie = [Old, "Set-Cookie: ", What, "\r\n"]});
+    New = ["Set-Cookie: ", What, "\r\n"],
+    %% Filter out identical cookies!
+    Res = case lists:member(New,Old) of
+              true  -> Old;
+              false ->
+                  %% NOTE: we want to retain the order of the Cookies;
+                  %% hence we do an append at the end of the list.
+                  Old ++ [New]
+          end,
+    put(outh, O#outh{set_cookie = Res});
 accumulate_header({"Set-Cookie", What}) ->
     accumulate_header({set_cookie, What});
 
