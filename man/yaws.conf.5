@@ -368,17 +368,17 @@ IP/Port) must share the same SSL configuration, especially the same SSL
 certificate. Only the HTTP Host header will be considered to find the right
 virtual server.
 
-When enabled, SSL configuration can be different from a virtual server to
-another, each one can have its own SSL certificate. In this case, if a client
+When enabled, SSL configuration can be different from one virtual server to
+another; each one can have its own SSL certificate. In this case, if a client
 provides a SNI hostname, it will be used to find the right virtual server. To
-accept the SNI information from the client, The first virtual server (the
-default one, see \fBpick_first_virthost_on_nomatch\fR) \fBmust\fR include TLS as
+accept the SNI information from the client, the first virtual server -- the
+default one, see \fBpick_first_virthost_on_nomatch\fR -- \fBmust\fR include TLS as
 a permitted protocol.
 
 If \fBsni\fR directive is set to \fIenable\fR, non SNI clients are allowed. For
 such clients, virtual servers are selected as if Yaws did not have SNI
-support. If it is set to \fIstrict\fR, SNI hostname is mandatary to access a SSL
-virtual server. But, in all cases, when SNI support is enabled, if a client
+support. If it is set to \fIstrict\fR, SNI hostname is mandatory to access a SSL
+virtual server. But in all cases, when SNI support is enabled, if a client
 provides a SNI hostname, it \fBmust\fR match the HTTP Host header (which is
 mandatory too).  Note that the first virtual server (the default one) will be
 used for any request where the provided SNI hostname doesn't match any of
@@ -387,8 +387,8 @@ most restrictive access control, otherwise clients can access restricted
 resources by sending a request for any unknown hostname. (This isn't actually
 any different from using virtual servers without SNI support.)
 
-The \fBsni\fR directive is a global one, so if you set it to \fIstrict\fR, non
-SNI clients will be refused for \fBall\fR SSL groups. See \fBrequire_sni\fR
+The \fBsni\fR directive is a global one, so if you set it to \fIstrict\fR,
+non-SNI clients will be refused for \fBall\fR SSL groups. See \fBrequire_sni\fR
 directive from the server part to mitigate this requirement.
 
 Default is \fIdisable\fR.

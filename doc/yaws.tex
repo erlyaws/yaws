@@ -2687,18 +2687,18 @@ part where options for each virtual host is supplied.
               especially the same SSL certificate. Only the HTTP Host header
               will be considered to find the right virtual server.
 
-              When enabled, SSL configuration can be different from a virtual
-              server to another, each one can have its own SSL certificate. In
+              When enabled, SSL configuration can be different from one virtual
+              server to another; each one can have its own SSL certificate. In
               this case, if a client provides a SNI hostname, it will be used to
               find the right virtual server. To accept the SNI information from
-              the client, The first virtual server (the default one, see
-              \verb+pick_first_virthost_on_nomatch+) \textbf{must} include TLS
-              as a permitted protocol.
+              the client, the first virtual server---the default one, see
+              \verb+pick_first_virthost_on_nomatch+---\textbf{must} include
+              TLS as a permitted protocol.
 
               If \verb+sni+ directive is set to \textit{enable}, non SNI clients
               are allowed. For such clients, virtual servers are selected as if
               Yaws did not have SNI support. If it is set to \textit{strict},
-              SNI hostname is mandatary to access a SSL virtual server. But, in
+              SNI hostname is mandatory to access a SSL virtual server. But in
               all cases, when SNI support is enabled, if a client provides a SNI
               hostname, it \textbf{must} match the HTTP Host header (which is
               mandatory too). Note that the first virtual server (the default
@@ -2710,7 +2710,7 @@ part where options for each virtual host is supplied.
               any different from using virtual servers without SNI support.)
 
               The \verb+sni+ directive is a global one, so if you set it to
-              \textit{strict}, non SNI clients will be refused for \textbf{all}
+              \textit{strict}, non-SNI clients will be refused for \textbf{all}
               SSL groups. See \verb+require_sni+ directive from the server part
               to mitigate this requirement.
 
