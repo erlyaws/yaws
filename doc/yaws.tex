@@ -1124,9 +1124,10 @@ this situation, it is complicated for \Yaws\ to present a valid SSL
 certificate to clients. Possible solutions are listed here:
 \url{http://wiki.cacert.org/VhostTaskForce}.
 
-By default, SNI is disabled in \Yaws\ to be backward compatible with old
-Erlang/OTP releases. But it can be enabled and fine tuned for each SSL
-servers. Here is a basic example:
+By default, SNI was originally disabled in \Yaws\ to be backward
+compatible with old Erlang/OTP releases; it remains disabled by
+default to remain compatible with older \Yaws\ releases. But it can be
+enabled and fine-tuned for each SSL server. Here is a basic example:
 
 
 \begin{verbatim}
@@ -1156,11 +1157,11 @@ sni = enable
 
 Depending on the SNI hostname provided by the client, the first or the
 second virtual host will be chosen, and the corresponding SSL
-certificate will be presented to the client. In this example, non SNI
+certificate will be presented to the client. In this example, non-SNI
 clients are still supported. For such clients, the SSL certificate of
 the first virtual server will be presented and the HTTP Host header will
-be then used to find the correct virtual server. Otherwise, it is
-possible to refuse non SNI clients, globally or per server.
+then be used to find the correct virtual server. Otherwise, it is
+possible to refuse non-SNI clients, globally or per server.
 
 
 \chapter{Applications}
@@ -2695,7 +2696,7 @@ part where options for each virtual host is supplied.
               \verb+pick_first_virthost_on_nomatch+---\textbf{must} include
               TLS as a permitted protocol.
 
-              If \verb+sni+ directive is set to \textit{enable}, non SNI clients
+              If the \verb+sni+ directive is set to \textit{enable}, non-SNI clients
               are allowed. For such clients, virtual servers are selected as if
               Yaws did not have SNI support. If it is set to \textit{strict},
               SNI hostname is mandatory to access a SSL virtual server. But in
@@ -2707,7 +2708,10 @@ part where options for each virtual host is supplied.
               that the first virtual server have the most restrictive access
               control, otherwise clients can access restricted resources by
               sending a request for any unknown hostname. (This isn't actually
-              any different from using virtual servers without SNI support.)
+              any different from using virtual servers without SNI support.) If
+              you're using self-signed certificates, be sure to also set the
+              \verb+depth+ configuration variable to 0 to avoid following
+              certificate chains.
 
               The \verb+sni+ directive is a global one, so if you set it to
               \textit{strict}, non-SNI clients will be refused for \textbf{all}
@@ -3441,9 +3445,10 @@ The following directives are allowed inside a server definition.
                \item \verb+depth = Int+ --- Specifies the depth of certificate
                  chains the server is prepared to follow when verifying client
                  certs. For the OTP new SSL implementation it is also used to
-                 specify how far the server, i.e. we, shall follow the SSL
-                 certificates we present to the clients. Hence, using self
-                 signed certs, we typically need to set this to 0.
+                 specify how far the server (\Yaws\ in our case) shall
+                 follow the SSL certificates we present to the clients. Hence,
+                 using self-signed certificates, we typically need to set this
+                 to 0.
 
                \item \verb+password = String+ --- If the private key is
                  encrypted on disk, this password is the 3des key to decrypt it.
@@ -3508,7 +3513,7 @@ protocol_version = tlsv1.3, tlsv1.2, tlsv1.1, tlsv1
 \end{verbatim}
 
                  \item \verb+require_sni = true | false+ ---
-                   If \textit{true}, the server will reject non SNI clients and
+                   If \textit{true}, the server will reject non-SNI clients and
                    clients providing an unknown SNI hostname (this last remark
                    is only relevant for the first virtual server of a SSL
                    group). This directive is ignored if SNI support is disabled

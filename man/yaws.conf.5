@@ -375,8 +375,8 @@ accept the SNI information from the client, the first virtual server -- the
 default one, see \fBpick_first_virthost_on_nomatch\fR -- \fBmust\fR include TLS as
 a permitted protocol.
 
-If \fBsni\fR directive is set to \fIenable\fR, non SNI clients are allowed. For
-such clients, virtual servers are selected as if Yaws did not have SNI
+If the \fBsni\fR directive is set to \fIenable\fR, non-SNI clients are allowed.
+For such clients, virtual servers are selected as if Yaws did not have SNI
 support. If it is set to \fIstrict\fR, SNI hostname is mandatory to access a SSL
 virtual server. But in all cases, when SNI support is enabled, if a client
 provides a SNI hostname, it \fBmust\fR match the HTTP Host header (which is
@@ -385,7 +385,9 @@ used for any request where the provided SNI hostname doesn't match any of
 virtual server names. So, it is important that the first virtual server have the
 most restrictive access control, otherwise clients can access restricted
 resources by sending a request for any unknown hostname. (This isn't actually
-any different from using virtual servers without SNI support.)
+any different from using virtual servers without SNI support.) If you're using
+self-signed certificates, be sure to also set the \fBdepth\fR configuration
+variable to 0 to avoid following certificate chains.
 
 The \fBsni\fR directive is a global one, so if you set it to \fIstrict\fR,
 non-SNI clients will be refused for \fBall\fR SSL groups. See \fBrequire_sni\fR
@@ -1155,8 +1157,8 @@ certificate is supplied (an empty certificate is considered valid).
 .RS 12
 Specifies the depth of certificate chains the server is prepared to follow when
 verifying client certs. For the OTP new SSL implementation it is also used to
-specify how far the server, i.e. we, shall follow the SSL certificates we
-present to the clients. Hence, using self-signed certs, we typically need to set
+specify how far the server (Yaws in our case) shall follow the SSL certificates
+we present to the clients. Hence, using self-signed certs, we typically need to set
 this to 0.
 .RE
 
@@ -1244,7 +1246,7 @@ protocol_version = tlsv1.3, tlsv1.2, tlsv1.1, tlsv1
 .IP
 \fBrequire_sni = true | false\fR
 .RS 12
-If \fItrue\fR,the server will reject non SNI clients and clients providing an
+If \fItrue\fR,the server will reject non-SNI clients and clients providing an
 unknown SNI hostname (this last remark is only relevant for the first virtual
 server of a SSL group). This directive is ignored if SNI support is disabled (or
 not supported).
