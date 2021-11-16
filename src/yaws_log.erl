@@ -182,7 +182,7 @@ handle_call({setup, GC, Sconfs}, _From, State)
                      copy_errlog = Copy,
                      resolve_hostnames = ?gc_log_has_resolve_hostname(GC)},
 
-    yaws:ticker(3000, secs3),
+    yaws:ticker(1000, sec1),
 
     if is_integer(GC#gconf.log_wrap_size) ->
             yaws:ticker(10 * 60 * 1000, minute10);
@@ -353,7 +353,7 @@ handle_cast({yaws_hupped, _}, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
-handle_info(secs3, State) ->
+handle_info(sec1, State) ->
     {noreply, State#state{now = fmtnow()}};
 
 %% once every 10 minutes, check log sizes
