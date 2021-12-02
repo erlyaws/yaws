@@ -21,7 +21,6 @@ STATIC_MODULES = yaws.erl			\
 		 yaws_outmod.erl		\
 		 yaws_revproxy.erl		\
 		 yaws_html.erl			\
-		 yaws_log_file_h.erl		\
 		 yaws_rss.erl			\
 		 yaws_appmod_dav.erl		\
 		 yaws_runmod_lock.erl		\

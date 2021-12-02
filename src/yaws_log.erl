@@ -36,6 +36,8 @@
          write_log/4
         ]).
 
+%% OTP logger helpers
+-export([error_logger_filter/2]).
 
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
@@ -163,8 +165,10 @@ handle_call({setup, GC, Sconfs}, _From, State)
     ?Debug("setup ~s~n", [Dir]),
     ElogFile = filename:join([Dir, "report.log"]),
     Copy = if ?gc_has_copy_errlog(GC) ->
-                   gen_event:add_handler(error_logger, yaws_log_file_h,
-                                         ElogFile),
+                   #{id := ElogId,
+                     module := ElogMod} = ElogConf =
+                       report_logger_config(ElogFile, GC#gconf.log_wrap_size),
+                   logger:add_handler(ElogId, ElogMod, ElogConf),
                    true;
               true ->
                    false
@@ -203,14 +207,16 @@ handle_call({setup, GC, Sconfs}, _From, State)
     Dir = State#state.dir,
     ElogFile = filename:join([Dir, "report.log"]),
     Copy = if ?gc_has_copy_errlog(GC), State#state.copy_errlog == false->
-                   gen_event:add_handler(error_logger, yaws_log_file_h,
-                                         ElogFile),
+                   #{id := ElogId,
+                     module := ElogMod} = ElogConf =
+                       report_logger_config(ElogFile, GC#gconf.log_wrap_size),
+                   logger:add_handler(ElogId, ElogMod, ElogConf),
                    true;
               ?gc_has_copy_errlog(GC) ->
                    true;
               State#state.copy_errlog == true ->
-                   gen_event:delete_handler(error_logger, yaws_log_file_h,
-                                            normal),
+                   #{id := ElogId} = report_logger_config(ElogFile, undefined),
+                   logger:remove_handler(ElogId),
                    false;
               true ->
                    false
@@ -359,16 +365,6 @@ handle_info(sec1, State) ->
 %% once every 10 minutes, check log sizes
 handle_info(minute10, State) ->
     yaws_logger:rotate(State#state.log_wrap_size),
-
-    case gen_event:call(error_logger, yaws_log_file_h, size, infinity) of
-        {ok, Size} when  State#state.log_wrap_size > 0,
-                       Size > State#state.log_wrap_size ->
-            gen_event:call(error_logger, yaws_log_file_h, wrap, infinity);
-        {error, enoent} ->
-            gen_event:call(error_logger, yaws_log_file_h, reopen, infinity);
-        _ ->
-            ok
-    end,
     {noreply, State};
 handle_info({'EXIT', _, _}, State) ->
     {noreply, State}.
@@ -395,7 +391,8 @@ wrap_p(Filename, LogWrapSize) ->
 %% Returns: any (ignored by gen_server)
 %%----------------------------------------------------------------------
 terminate(_Reason, _State) ->
-    gen_event:delete_handler(error_logger, yaws_log_file_h, normal),
+    #{id := ElogId} = report_logger_config("", undefined),
+    logger:remove_handler(ElogId),
     yaws_logger:close_logs(),
     ok.
 
@@ -411,6 +408,33 @@ code_change(_OldVsn, Data, _Extra) ->
 %%%----------------------------------------------------------------------
 %%% Internal functions
 %%%----------------------------------------------------------------------
+report_logger_config(File, RotateSize) ->
+    MaxSize = case is_integer(RotateSize) of
+                  true -> RotateSize;
+                  false -> infinity
+              end,
+    #{id => yaws_report_logger,
+      module => logger_std_h,
+      level => info,
+      config => #{file => File,
+                  max_no_bytes => MaxSize,
+                  max_no_files => 2
+                 },
+      filter_default => stop,
+      filters => [{allow_error_logger,
+                   {fun yaws_log:error_logger_filter/2, log}}
+                 ]}.
+
+
+error_logger_filter(#{meta := #{error_logger := #{tag := _}}} = Event, Action) ->
+  case Action of
+    log -> Event;
+    _ -> Action
+  end;
+error_logger_filter(_, _) ->
+  ignore.
+
+
 optional_header(Item) ->
     case Item of
         undefined -> "-";
