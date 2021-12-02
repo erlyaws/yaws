@@ -39,8 +39,8 @@ error_log_handler(_Config) ->
     SConf = yaws:create_sconf(".", []),
     ?assertEqual(ok, yaws_log:setup(GConf, [SConf])),
 
-    Handlers = gen_event:which_handlers(error_logger),
-    ?assert(lists:member(yaws_log_file_h, Handlers)),
+    Handlers = logger:get_handler_ids(),
+    ?assert(lists:member(yaws_report_logger, Handlers)),
 
     Dir = yaws:gconf_logdir(GConf),
     File = filename:join([Dir, "report.log"]),
