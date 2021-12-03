@@ -168,7 +168,7 @@ handle_call({setup, GC, Sconfs}, _From, State)
                    #{id := ElogId,
                      module := ElogMod} = ElogConf =
                        report_logger_config(ElogFile, GC#gconf.log_wrap_size),
-                   logger:add_handler(ElogId, ElogMod, ElogConf),
+                   ok = logger:add_handler(ElogId, ElogMod, ElogConf),
                    true;
               true ->
                    false
@@ -210,7 +210,7 @@ handle_call({setup, GC, Sconfs}, _From, State)
                    #{id := ElogId,
                      module := ElogMod} = ElogConf =
                        report_logger_config(ElogFile, GC#gconf.log_wrap_size),
-                   logger:add_handler(ElogId, ElogMod, ElogConf),
+                   ok = logger:add_handler(ElogId, ElogMod, ElogConf),
                    true;
               ?gc_has_copy_errlog(GC) ->
                    true;
@@ -409,17 +409,28 @@ code_change(_OldVsn, Data, _Extra) ->
 %%% Internal functions
 %%%----------------------------------------------------------------------
 report_logger_config(File, RotateSize) ->
-    MaxSize = case is_integer(RotateSize) of
-                  true -> RotateSize;
-                  false -> infinity
-              end,
+    StdConf =
+        case application:get_key(kernel, vsn) of
+            {ok, Vsn} when Vsn >= "6.3" ->
+                %% logger_std_h configuration format changed slightly in OTP-21.2 / kernel-6.3
+                RotateConf =
+                    case is_integer(RotateSize) of
+                        true ->
+                            #{
+                              max_no_bytes => RotateSize,
+                              max_no_files => 2
+                             };
+                        _ ->
+                            #{}
+                    end,
+                maps:merge(#{file => File}, RotateConf);
+            _ ->
+                #{type => {file, File}}
+        end,
     #{id => yaws_report_logger,
-      module => logger_std_h,
       level => info,
-      config => #{file => File,
-                  max_no_bytes => MaxSize,
-                  max_no_files => 2
-                 },
+      module => logger_std_h,
+      config => StdConf,
       filter_default => stop,
       filters => [{allow_error_logger,
                    {fun yaws_log:error_logger_filter/2, log}}
