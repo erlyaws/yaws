@@ -1,51 +1,51 @@
 name: Yaws-CI
+
 on:
   push:
     branches: [ master ]
   pull_request:
     branches: [ master ]
 
-  workflow_dispatch:
-
 jobs:
-  make-check-23-2:
+  make-check:
+    name: Check on OTP-${{matrix.otp}}
+    strategy:
+      fail-fast: false
+      matrix:
+        otp:
+          - "24.1"
+          - "24.0"
+          - "23.3"
+          - "23.2"
+          - "22.3"
+          - "22.2"
+          - "21.3"
     runs-on: ubuntu-latest
-    name: Check 23.2
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v2
-      - name: Setup Erlang
-        uses: gleam-lang/setup-erlang@v1.1.2
+
+      - uses: erlef/setup-beam@v1
         with:
-          otp-version: 23.2
+          otp-version: ${{matrix.otp}}
+
       - name: Setup Build
         run: |
           export DEBIAN_FRONTEND=noninteractive
           sudo apt-get update
-          sudo apt-get -y install autotools-dev build-essential make libpam0g-dev openssl wget curl cadaver
-      - name: Check Yaws
+          sudo apt-get -y install autotools-dev build-essential make libpam0g-dev openssl wget curl cadaver #texlive-font-utils
+      - name: Build Yaws
         run: |
           autoreconf -vfi
           ./configure
-          make all check -j4
-  make-check-23-1:
-    runs-on: ubuntu-latest
-    name: Check 23.1
-    needs: make-check-23-2
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v2
-      - name: Setup Erlang
-        uses: gleam-lang/setup-erlang@v1.1.2
-        with:
-          otp-version: 23.1
-      - name: Setup Build
+          make all -j4
+      - name: Run test suite
         run: |
-          export DEBIAN_FRONTEND=noninteractive
-          sudo apt-get update
-          sudo apt-get -y install autotools-dev build-essential make libpam0g-dev openssl wget curl cadaver
-      - name: Check Yaws
-        run: |
-          autoreconf -vfi
-          ./configure
-          make all check -j4
+          make check -j4
+      # Currently not working steps
+      # - name: Try document generation
+      #   run: |
+      #     make docs
+      # - name: Run dialyzer
+      #   run: |
+      #     make dialyzer
