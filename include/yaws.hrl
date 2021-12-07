@@ -122,7 +122,8 @@
           honor_cipher_order = true,
           protocol_version,
           require_sni = false,
-          eccs
+          eccs,
+          reneg_set=#{}
          }).
 
 

@@ -3483,19 +3483,28 @@ eccs = "[sect571r1, sect571k1, secp521r1, brainpoolP512r1, sect409k1,
          sect233r1, secp224k1, secp224r1]"
 \end{verbatim}
 
-               \item \verb+secure_renegotiate = true | false+ --- Specifies whether
-                 to reject renegotiation attempt that does not live up to RFC
-                 5746. By default \verb+secure_renegotiate+ is set to false
-                 i.e. secure renegotiation will be used if possible but it will
-                 fallback to unsecure renegotiation if the peer does not support
-                 RFC 5746.
+               \item \verb+secure_renegotiate = true | false | undefined+ ---
+                 Specifies whether to reject renegotiation attempt that does not
+                 live up to RFC 5746. By default \verb+secure_renegotiate+ is set
+                 to false for protocol versions that support it, i.e. secure
+                 renegotiation will be used if possible but it will fallback to
+                 unsecure renegotiation if the peer does not support RFC
+                 5746. Set it to \verb+undefined+ to use the \verb+ssl+ module
+                 default setting to avoid errors with protocol versions that
+                 don't support it, such as TLS version 1.3. For more details, see
+                 the \verb+ssl+ manual page at
 
-               \item \verb+client_renegotiation = true | false+ --- Enables or
-                 disables the Erlang/OTP SSL application client
-                 renegotiation option.  Defaults to true. See the
-                 \verb+ssl+ manual page at
+                 http://www.erlang.org/doc/man/ssl.html
 
-                 http://www.erlang.org/doc/man/ssl.html for more details.
+               \item \verb+client_renegotiation = true | false | undefined+ ---
+                 Enables or disables the Erlang/OTP SSL application client
+                 renegotiation option. Defaults to true for protocol versions
+                 that support it. Set it to \verb+undefined+ to use the
+                 \verb+ssl+ module default setting to avoid errors with protocol
+                 versions that don't support it, such as TLS version 1.3. For more
+                 details, see the \verb+ssl+ manual page at
+
+                 http://www.erlang.org/doc/man/ssl.html
 
                \item \verb+honor_cipher_order = true | false+ --- If true (the
                  default), use the server's preference for cipher selection. If

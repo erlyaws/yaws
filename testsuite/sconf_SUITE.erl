@@ -13,7 +13,8 @@ all() ->
      setup_deflate,
      setup_mime_types_info,
      comp_sname,
-     wildcomp_salias
+     wildcomp_salias,
+     ssl_renegotiation_config
     ].
 
 groups() ->
@@ -33,9 +34,31 @@ init_per_group(_Group, Config) ->
 end_per_group(_Group, _Config) ->
     ok.
 
+init_per_testcase(ssl_renegotiation_config, Config) ->
+    case tlsv13_supported() of
+        true ->
+            ok = prepare_docroots(),
+            Id = "testsuite-server",
+            YConf = filename:join(?tempdir(?MODULE), "yaws.conf"),
+            application:load(yaws),
+            application:set_env(yaws, id,   Id),
+            application:set_env(yaws, conf, YConf),
+            ok = yaws:start(),
+            [{yaws_id, Id}, {yaws_config, YConf} | Config];
+        false ->
+            Config
+    end;
 init_per_testcase(_Test, Config) ->
     Config.
 
+end_per_testcase(ssl_renegotiation_config, _Config) ->
+    case tlsv13_supported() of
+        true ->
+            ok = application:stop(yaws),
+            ok = application:unload(yaws);
+        false ->
+            ok
+    end;
 end_per_testcase(_Test, _Config) ->
     ok.
 
@@ -233,7 +256,33 @@ wildcomp_salias(_Config) ->
     ?assertNot(yaws_server:wildcomp_salias("yaws.hyber.hyber.fr", "yaws.*.hyber.???")),
     ok.
 
+ssl_renegotiation_config(_Config) ->
+    case tlsv13_supported() of
+        true ->
+            {ok, _, [[SC]]} = yaws_api:getconf(),
+            Ssl = yaws:sconf_ssl(SC),
+            ?assertEqual(Ssl#ssl.protocol_version, ['tlsv1.3']),
+            ?assertEqual(Ssl#ssl.secure_renegotiate, undefined),
+            ?assertEqual(Ssl#ssl.client_renegotiation, undefined),
+            ok;
+        false ->
+            {skip, "tlsv1.3 not available"}
+    end.
+
 %% =======================================================================
+tlsv13_supported() ->
+    case lists:keyfind(available, 1, ssl:versions()) of
+        {available, Available} ->
+            lists:member('tlsv1.3', Available);
+        false ->
+            false
+    end.
+
+prepare_docroots() ->
+    WWW = filename:join(?tempdir(?MODULE), "www"),
+    ok = testsuite:create_dir(WWW),
+    ok.
+
 get_sconf_attr(Name, SConf) ->
     Fun = list_to_atom("sconf_" ++ atom_to_list(Name)),
     {Name, yaws:Fun(SConf)}.

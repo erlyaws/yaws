@@ -507,26 +507,68 @@ format_compile_errs({File, [{L,M,E}|Rest]}, Acc) ->
 
 %% This is the function that arranges sconfs into
 %% different server groups
-validate_cs(GC, Cs) ->
-    L = lists:map(fun(#sconf{listen=IP0}=SC0) ->
-                          SC = case is_tuple(IP0) of
-                                   false ->
-                                       {ok, IP} = inet_parse:address(IP0),
-                                       SC0#sconf{listen=IP};
-                                   true ->
-                                       SC0
-                               end,
-                              {{SC#sconf.listen, SC#sconf.port}, SC}
-                  end, Cs),
-    L2 = lists:map(fun(X) -> element(2, X) end, lists:keysort(1,L)),
-    L3 = arrange(L2, start, [], []),
-    case validate_groups(GC, L3) of
-        ok ->
-            {ok, GC, L3};
+validate_cs(GC, Cs0) ->
+    case validate_ssl(Cs0) of
+        {ok, Cs} ->
+            L = lists:map(fun(#sconf{listen=IP0}=SC0) ->
+                                  SC = case is_tuple(IP0) of
+                                           false ->
+                                               {ok, IP} = inet_parse:address(IP0),
+                                               SC0#sconf{listen=IP};
+                                           true ->
+                                               SC0
+                                       end,
+                                  {{SC#sconf.listen, SC#sconf.port}, SC}
+                          end, Cs),
+            L2 = lists:map(fun(X) -> element(2, X) end, lists:keysort(1,L)),
+            L3 = arrange(L2, start, [], []),
+            case validate_groups(GC, L3) of
+                ok ->
+                    {ok, GC, L3};
+                Err ->
+                    Err
+            end;
         Err ->
             Err
     end.
 
+validate_ssl(Cs) ->
+    case (catch validate_ssl(Cs, [])) of
+        {ok, _}=Ok ->
+            Ok;
+        Err ->
+            Err
+    end.
+validate_ssl([], Cs) ->
+    {ok, lists:reverse(Cs)};
+validate_ssl([C|Cs], NewCs) when C#sconf.ssl == undefined ->
+    validate_ssl(Cs, [C|NewCs]);
+validate_ssl([C|Cs], NewCs) ->
+    Ssl = C#sconf.ssl,
+    Ssl1 = case Ssl#ssl.protocol_version of
+               ['tlsv1.3'] ->
+                   case maps:size(Ssl#ssl.reneg_set) of
+                       0 ->
+                           Ssl#ssl{secure_renegotiate=undefined,
+                                   client_renegotiation=undefined};
+                       _ ->
+                           Fold = fun(K, V, Acc) ->
+                                          Msg = lists:flatten(io_lib:format("~p=~p", [K, V])),
+                                          [Msg|Acc]
+                                  end,
+                           case maps:fold(Fold, [], Ssl#ssl.reneg_set) of
+                               [] -> Ssl;
+                               Msgs ->
+                                   Errors = yaws:join_sep(Msgs, ","),
+                                   throw({error,
+                                          ?F("~s not supported with tlsv1.3: ~s",
+                                             [Errors, C#sconf.servername])})
+                           end
+                   end;
+               _ ->
+                   Ssl
+           end,
+    validate_ssl(Cs, [C#sconf{ssl=Ssl1}|NewCs]).
 
 validate_groups(_, []) ->
     ok;
@@ -2105,19 +2147,37 @@ fload(FD, ssl, GC, C, Lno, Chars) ->
             catch _:_ ->
                     {error, ?F("Bad elliptic curves at line ~w", [Lno])}
             end;
-        ["secure_renegotiate", '=', Bool] ->
-            case is_bool(Bool) of
+        ["secure_renegotiate", '=', BoolOrUndef] ->
+            case is_bool_or_undef(BoolOrUndef) of
                 {true, Val} ->
-                    C1 = C#sconf{ssl=(C#sconf.ssl)#ssl{secure_renegotiate=Val}},
+                    Ssl = (C#sconf.ssl)#ssl{secure_renegotiate=Val},
+                    Ssl1 = case Val of
+                               undefined ->
+                                   Ssl#ssl{reneg_set=maps:remove(secure_renegotiate,
+                                                                 Ssl#ssl.reneg_set)};
+                               _ ->
+                                   Ssl#ssl{reneg_set=maps:put(secure_renegotiate, Val,
+                                                              Ssl#ssl.reneg_set)}
+                           end,
+                    C1 = C#sconf{ssl=Ssl1},
                     fload(FD, ssl, GC, C1, Lno+1, ?NEXTLINE);
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
             end;
 
-        ["client_renegotiation", '=', Bool] ->
-            case is_bool(Bool) of
+        ["client_renegotiation", '=', BoolOrUndef] ->
+            case is_bool_or_undef(BoolOrUndef) of
                 {true, Val} ->
-                    C1 = C#sconf{ssl=(C#sconf.ssl)#ssl{client_renegotiation=Val}},
+                    Ssl = (C#sconf.ssl)#ssl{client_renegotiation=Val},
+                    Ssl1 = case Val of
+                               undefined ->
+                                   Ssl#ssl{reneg_set=maps:remove(client_renegotiation,
+                                                                 Ssl#ssl.reneg_set)};
+                               _ ->
+                                   Ssl#ssl{reneg_set=maps:put(client_renegotiation, Val,
+                                                              Ssl#ssl.reneg_set)}
+                           end,
+                    C1 = C#sconf{ssl=Ssl1},
                     fload(FD, ssl, GC, C1, Lno+1, ?NEXTLINE);
                 false ->
                     {error, ?F("Expect true|false at line ~w", [Lno])}
@@ -2562,6 +2622,10 @@ is_bool("false") ->
 is_bool(_) ->
     false.
 
+is_bool_or_undef("undefined") ->
+    {true, undefined};
+is_bool_or_undef(B) ->
+    is_bool(B).
 
 warn_dir(Type, Dir) ->
     case is_dir(Dir) of
