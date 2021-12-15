@@ -42,7 +42,7 @@ jobs:
           make all -j4
       - name: Run test suite
         run: |
-          make check -j4
+          make check
       # Currently not working steps
       # - name: Try document generation
       #   run: |
