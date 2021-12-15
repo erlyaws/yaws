@@ -49,7 +49,8 @@ call(URL, Options, Payload) ->
         CallPayload = lists:flatten(CallPayloadDeep),
         {ok, Response} = httpc:request(
                            post,
-                           {URL,[{"Content-Length",length(CallPayload)}],
+                           {URL,[{"Content-Length",
+                                  integer_to_list(length(CallPayload))}],
                             "application/x-www-form-urlencoded",CallPayload},
                            Options, []),
 
