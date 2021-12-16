@@ -420,6 +420,24 @@ file_entry({ok, FI}, _DirName, Name, Qry, Descriptions) ->
     EncName  = file_display_name(Name),
     Description = get_description(Name,Descriptions),
 
+    %% URL-encode the filename. As far as URLs go, the filename is a
+    %% relative-path reference. RFC3986 section 4.2 states:
+    %%
+    %%  A path segment that contains a colon character (e.g.,
+    %%  "this:that") cannot be used as the first segment of a
+    %%  relative-path reference, as it would be mistaken for a scheme
+    %%  name. Such a segment must be preceded by a dot-segment (e.g.,
+    %%  "./this:that") to make a relative-path reference.
+    %%
+    %% To avoid encoding colon characters in file references, since
+    %% browsers won't treat them as references in that case, if
+    %% yaws_api:url_encode/2 indicates that only colon characters were
+    %% encoded for a filename, we use Name for the reference but
+    %% prepend "./" to it as per the RFC.
+    HRef = case yaws_api:url_encode(Name, return_encoded) of
+               {_, [$:]} -> "./" ++ Name;
+               {HRef0, _} -> HRef0
+           end,
     Entry =
         ?F("  <tr>\n"
            "    <td><img src=~p alt=~p/><a href=~p title=\"~ts\">~ts</a></td>\n"
@@ -429,7 +447,7 @@ file_entry({ok, FI}, _DirName, Name, Qry, Descriptions) ->
            "  </tr>\n",
            ["/icons/" ++ Gif,
             Alt,
-            yaws_api:url_encode(Name) ++ QryStr,
+            HRef ++ QryStr,
             list_to_binary(EncName),
             list_to_binary(trim(EncName,?FILE_LEN_SZ)),
             datestr(FI),

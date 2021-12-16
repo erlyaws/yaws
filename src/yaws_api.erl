@@ -30,7 +30,7 @@
          htmlize/1, htmlize_char/1, f/2, fl/1]).
 -export([find_cookie_val/2, secs/0,
          url_decode/1, url_decode_q_split/1, url_decode_with_encoding/2,
-         url_encode/1, parse_url/1, parse_url/2, format_url/1,
+         url_encode/1, url_encode/2, parse_url/1, parse_url/2, format_url/1,
          format_partial_url/2]).
 -export([is_absolute_URI/1]).
 -export([path_norm/1, path_norm_reverse/1,
@@ -910,18 +910,30 @@ url_decode_q_split([], Ack) ->
     {path_norm_reverse(Ack), []}.
 
 
-url_encode(URL) when is_list(URL) ->
+url_encode(URL) ->
+    {Res, _} = url_encode(URL, return_encoded),
+    Res.
+url_encode(URL, return_encoded) when is_list(URL) ->
     Bin = case io_lib:latin1_char_list(URL) of
               true  -> list_to_binary(URL);
               false -> unicode:characters_to_binary(URL)
           end,
-    url_encode(Bin);
-url_encode(URL) when is_binary(URL) ->
+    url_encode(Bin, return_encoded);
+url_encode(URL, return_encoded) when is_binary(URL) ->
     %% ReservedChars = "!*'();:@&=+$,/?%#[]",
     UnreservedChars = sets:from_list("ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                      "abcdefghijklmnopqrstuvwxyz"
                                      "0123456789-_.~"),
-    lists:flatten([url_encode_byte(Byte, UnreservedChars) || <<Byte>> <= URL]).
+    {Bytes, Encoded} = lists:foldl(
+			 fun(Byte, {Bytes, Encoded}) ->
+				 case url_encode_byte(Byte, UnreservedChars) of
+				     Byte ->
+					 {[Byte|Bytes], Encoded};
+				     Enc ->
+					 {[Enc|Bytes], sets:add_element(Byte, Encoded)}
+				 end
+			 end, {[], sets:new()}, [Byte || <<Byte>> <= URL]),
+    {lists:flatten(Bytes), sets:to_list(Encoded)}.
 
 url_encode_byte(Byte, UnreservedChars) ->
     case sets:is_element(Byte, UnreservedChars) of
