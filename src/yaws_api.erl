@@ -933,7 +933,7 @@ url_encode(URL, return_encoded) when is_binary(URL) ->
 					 {[Enc|Bytes], sets:add_element(Byte, Encoded)}
 				 end
 			 end, {[], sets:new()}, [Byte || <<Byte>> <= URL]),
-    {lists:flatten(Bytes), sets:to_list(Encoded)}.
+    {lists:flatten(lists:reverse(Bytes)), sets:to_list(Encoded)}.
 
 url_encode_byte(Byte, UnreservedChars) ->
     case sets:is_element(Byte, UnreservedChars) of
