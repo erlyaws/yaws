@@ -16,8 +16,14 @@
 
 version() -> "%VSN%".
 
-vardir() ->  "%VARDIR%".
+vardir() ->
+    case "%VARDIR%" of
+        "undefined" -> undefined;
+        VarDir -> VarDir
+    end.
 
-etcdir() -> "%ETCDIR%".
-
-
+etcdir() ->
+    case "%ETCDIR%" of
+        "undefined" -> undefined;
+        EtcDir -> EtcDir
+    end.

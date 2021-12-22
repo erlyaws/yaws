@@ -54,6 +54,10 @@ fi
 [ -d "${YAWS_VARDIR}/yaws/ebin" ] || mkdir "${YAWS_VARDIR}/yaws/ebin" || fail
 
 ## generate yaws_generated.erl module
+## For deterministic builds, which avoids embedding differing
+## pathnames in the yaws_generated beam file, set
+## YAWS_DETERMINISTIC_BUILD as an environment variable (any value will
+## do, the value is not used).
 cd ${YAWS_DIR}/src || fail
 tmpgen=`mktemp /tmp/${SCRIPT}.XXXXXX` || fail
 YAWS_VSN="${YAWS_VSN}" VARDIR="${YAWS_VARDIR}" ETCDIR="${YAWS_ETCDIR}"  \

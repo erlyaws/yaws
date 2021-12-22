@@ -34,13 +34,17 @@
 paths() ->
     case application:get_env(yaws, config) of
         undefined ->
+            EtcDir = case yaws_generated:etcdir() of
+                         undefined -> "/etc";
+                         EDir -> EDir
+                     end,
             case yaws:getuid() of
                 {ok, "0"} ->    %% root
-                    [yaws_generated:etcdir() ++ "/yaws/yaws.conf"];
+                    [filename:join(EtcDir, "yaws/yaws.conf")];
                 _ -> %% developer
-                    [filename:join([yaws:home(), "yaws.conf"]),
+                    [filename:join(yaws:home(), "yaws.conf"),
                      "./yaws.conf",
-                     yaws_generated:etcdir() ++ "/yaws/yaws.conf"]
+                     filename:join(EtcDir, "yaws/yaws.conf")]
             end;
         {ok, File} ->
             [File]
