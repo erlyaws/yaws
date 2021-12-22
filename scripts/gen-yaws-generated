@@ -5,9 +5,16 @@
 
 set -e
 
-cat yaws_generated.template                       | \
-    ../scripts/Subst %VSN%          "${YAWS_VSN}" | \
-    ../scripts/Subst %VARDIR%       "${VARDIR}"   | \
-    ../scripts/Subst %ETCDIR%       "${ETCDIR}"
+if [ x"$YAWS_DETERMINISTIC_BUILD" = x ]; then
+    subst_vardir="${VARDIR}"
+    subst_etcdir="${ETCDIR}"
+else
+    subst_vardir=undefined
+    subst_etcdir=undefined
+fi
+cat yaws_generated.template                           | \
+    ../scripts/Subst %VSN%          "${YAWS_VSN}"     | \
+    ../scripts/Subst %VARDIR%       "${subst_vardir}" | \
+    ../scripts/Subst %ETCDIR%       "${subst_etcdir}"
 
 exit 0
