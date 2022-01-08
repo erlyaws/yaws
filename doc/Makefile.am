@@ -44,8 +44,10 @@ install-data-local: doc
 
 endif
 
+# If set SOURCE_DATE_EPOCH replaces DVIPSSource date, for reproducible builds.
 yaws.ps: yaws.dvi
 	$(AM_V_GEN)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" $(DVIPS) -q -o $@ $<
+	$(AM_V_at) [ x"$(SOURCE_DATE_EPOCH)" != "x" ] && sed -i "s/^\(%DVIPSSource:\s*TeX output\).*/\1 $$(date --date=@$$SOURCE_DATE_EPOCH +%Y%m%d:%H%M)/g" $@ || true
 
 yaws.pdf: yaws.tex $(IMG_PDF)
 	$(AM_V_GEN)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" $(PDFLATEX) yaws.tex > /dev/null
