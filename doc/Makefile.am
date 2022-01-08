@@ -44,8 +44,19 @@ install-data-local: doc
 
 endif
 
+# For reproducible builds, SOURCE_DATE_EPOCH replaces DVIPSSource date if set
 yaws.ps: yaws.dvi
 	$(AM_V_GEN)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" $(DVIPS) -q -o $@ $<
+	$(AM_V_at)if [ x"$(SOURCE_DATE_EPOCH)" != "x" ]; then \
+	  code='{{Y,Mo,D},{H,Mi,S}} = calendar:system_time_to_local_time('$$SOURCE_DATE_EPOCH', 1),' ; \
+	  code="$$code "'io:format("~4.4w~2.2.0w~2.2.0w:~2.2.0w~2.2.0w~2.2.0w\n", [Y,Mo,D,H,Mi,S]).' ; \
+	  newdate=`$(ERL) -noshell -noinput -eval "$$code" -s init stop` || exit 1; \
+	  mv -f $@ $(@).tmp || exit 1 ; \
+	  sed "s/^\(%DVIPSSource:\s*TeX output\).*/\1 $$newdate/g" $(@).tmp > $@ ; \
+	  res=$$? ; \
+	  rm -f $(@).tmp ; \
+	  exit $$res ; \
+	fi
 
 yaws.pdf: yaws.tex $(IMG_PDF)
 	$(AM_V_GEN)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" $(PDFLATEX) yaws.tex > /dev/null

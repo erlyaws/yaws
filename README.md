@@ -110,6 +110,33 @@ Main make targets:
 * fullclean     : clean + cleantest + cleanapps + cleaninstaller
 
 
+Reproducible builds
+-------------------
+
+It is possible to build deterministically, thus enabling reproducible builds
+of YAWS.
+
+A deterministic build is enabled by setting the following environment
+variables when building:
+
+    $> export YAWS_DETERMINISTIC_BUILD=true # set to any value will enable
+    $> export SOURCE_DATE_EPOCH=$known_unix_timestamp
+    $> make all doc
+
+The above environment variables will generate a deterministic
+`yaws_generated.beam` and sets e.g. creation date in `yaws.ps` and
+`yaws.pdf` from the value of `$SOURCE_DATE_EPOCH`, which is expected to be
+an integer reflecting a number of seconds since the Unix epoch. (One way to
+get an epoch integer value is via the command `date '+%s'` on Linux or macOS,
+for example.)
+
+Note that various paths in configuration files, templates, examples etc. are
+generated from the configured installation prefix config files; thus they
+will vary if the installation prefix is different across builds. This can be
+mitigated by using DESTDIR when installing (see the Build section above for
+more details).
+
+
 Test your build
 ---------------
 
