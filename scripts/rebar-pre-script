@@ -71,9 +71,14 @@ if [ -f mime_types.erl ]; then
     need_mime=`find mime_type_c.erl -newer mime_types.erl -print`
 fi
 if [ -n "$need_mime" ]; then
+    if [ -n "$YAWS_DETERMINISTIC_BUILD" ]; then
+        flags='+deterministic -DDETERMINISTIC'
+    else
+        flags=+debug_info
+    fi
     set yaws yaws_generated mime_type_c
     for f; do
-        erlc +debug_info -o ${YAWS_DIR}/ebin ${f}.erl || fail
+        erlc "${flags}" -o ${YAWS_DIR}/ebin ${f}.erl || fail
     done
     erl -pa ${YAWS_DIR}/ebin -noshell -s mime_type_c generate || fail mime_types.erl
     for f; do

@@ -1,5 +1,6 @@
 IMG_EPS = a.eps b.eps layout.eps yaws_head.eps
 IMG_PDF = $(IMG_EPS:.eps=.pdf)
+SOURCE_DATE_EPOCH = @SOURCE_DATE_EPOCH@
 
 EXTRA_DIST = $(IMG_EPS) overview.edoc README.rss yaws.tex
 
@@ -46,9 +47,11 @@ endif
 
 # For reproducible builds, SOURCE_DATE_EPOCH replaces DVIPSSource date if set
 yaws.ps: yaws.dvi
-	$(AM_V_GEN)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" $(DVIPS) -q -o $@ $<
+	$(AM_V_GEN)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
+		$(DVIPS) -q -o $@ $<
 	$(AM_V_at)if [ x"$(SOURCE_DATE_EPOCH)" != "x" ]; then \
-	  code='{{Y,Mo,D},{H,Mi,S}} = calendar:system_time_to_local_time('$$SOURCE_DATE_EPOCH', 1),' ; \
+	  code='{{Y,Mo,D},{H,Mi,S}} = calendar:system_time_to_local_time('$(SOURCE_DATE_EPOCH)', 1),' ; \
 	  code="$$code "'io:format("~4.4w~2.2.0w~2.2.0w:~2.2.0w~2.2.0w~2.2.0w\n", [Y,Mo,D,H,Mi,S]).' ; \
 	  newdate=`$(ERL) -noshell -noinput -eval "$$code" -s init stop` || exit 1; \
 	  mv -f $@ $(@).tmp || exit 1 ; \
@@ -59,15 +62,24 @@ yaws.ps: yaws.dvi
 	fi
 
 yaws.pdf: yaws.tex $(IMG_PDF)
-	$(AM_V_GEN)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" $(PDFLATEX) yaws.tex > /dev/null
-	$(AM_V_at)TEXINPUTS="$${TEXTINPUTS}:@srcdir@"  $(PDFLATEX) yaws.tex > /dev/null
+	$(AM_V_GEN)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
+		$(PDFLATEX) yaws.tex > /dev/null
+	$(AM_V_at)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH)  \
+		$(PDFLATEX) yaws.tex > /dev/null
 
 yaws.dvi: yaws.tex $(IMG_EPS)
-	$(AM_V_GEN)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" $(DVILATEX) yaws.tex > /dev/null
-	$(AM_V_at)TEXINPUTS="$${TEXTINPUTS}:@srcdir@"  $(DVILATEX) yaws.tex > /dev/null
+	$(AM_V_GEN)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
+		$(DVILATEX) yaws.tex > /dev/null
+	$(AM_V_at)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
+		$(DVILATEX) yaws.tex > /dev/null
 
 .eps.pdf:
-	$(AM_V_GEN)$(EPSTOPDF) --outfile=$@ $< > /dev/null
+	$(AM_V_GEN)SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
+		$(EPSTOPDF) --outfile=$@ $< > /dev/null
 
 .NOTPARALLEL:
 # Local Variables:

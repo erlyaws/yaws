@@ -37,6 +37,19 @@ generate() ->
     end.
 
 
+%% Deterministic Yaws builds use hardcoded path. For tests to work the absolute
+%% generated path to the yaws source directory is needed.
+-ifdef(DETERMINISTIC).
+include_yaws_hrl() ->
+    "-include(\"../include/yaws.hrl\").".
+-else.
+include_yaws_hrl() ->
+    IncDir  = yaws:get_inc_dir(),
+    IncFile = filename:join(IncDir, "yaws.hrl"),
+    "-include(\""++IncFile++"\").".
+-endif.
+
+
 %% GInfo      ::= #mime_types_info{}
 %% SInfoMap   ::= [{{ServerName, Port}, #mime_types_info{}}]
 %% ServerName ::= string() | atom()
@@ -47,15 +60,12 @@ generate(ModFile, GInfo, SInfoMap) ->
                             {Name, Info} <- [{global, GInfo}|SInfoMap] ],
 
             %% Generate module Header
-            IncDir  = yaws:get_inc_dir(),
-            IncFile = filename:join(IncDir, "yaws.hrl"),
-            Include = "-include(\""++IncFile++"\").",
             io:format(Fd,
                       "-module(mime_types).~n~n"
                       "-export([default_type/0, default_type/1]).~n"
                       "-export([t/1, revt/1]).~n"
                       "-export([t/2, revt/2]).~n~n"
-                      "~s~n~n", [Include]),
+                      "~s~n~n", [include_yaws_hrl()]),
 
 
             %% Generate default_type/0, t/1 and revt/1

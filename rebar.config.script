@@ -39,9 +39,15 @@ Cfg0 = case os:getenv("YAWS_SOAP") of
                UpdateDeps(CONFIG, SoapDeps)
        end,
 
-ErlOpts = case lists:keyfind(erl_opts, 1, Cfg0) of
-              {erl_opts, EOpts} -> EOpts;
-              false             -> []
+ErlOpts0 = case lists:keyfind(erl_opts, 1, Cfg0) of
+               {erl_opts, EOpts} -> EOpts;
+               false             -> []
+           end,
+ErlOpts = case os:getenv("YAWS_DETERMINISTIC_BUILD") of
+              false ->
+                  ErlOpts0;
+              _ ->
+                  [deterministic,{d,DETERMINISTIC}|ErlOpts0]
           end,
 PortEnv0 = case lists:keyfind(port_env, 1, Cfg0) of
                {port_env, PEnv} -> PEnv;

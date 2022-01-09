@@ -92,6 +92,37 @@ if test "x$enable_compiler" = "xyes"; then
 fi
 AC_SUBST(APPDEPS)
 
+DEBUGINFO_OR_DETERMINISTIC=+debug_info
+DETERMINISTIC_MACRO=
+if test "x${YAWS_DETERMINISTIC_BUILD}" != "x"; then
+    DEBUGINFO_OR_DETERMINISTIC=+deterministic
+    DETERMINISTIC_MACRO=-DDETERMINISTIC
+fi
+AC_ARG_ENABLE(deterministic_build,
+        AS_HELP_STRING([--enable-deterministic-build],
+                [enable deterministic Yaws build]))
+if test "x${enable_deterministic_build}" = "xyes"; then
+    DEBUGINFO_OR_DETERMINISTIC=+deterministic
+    DETERMINISTIC_MACRO=-DDETERMINISTIC
+    YAWS_DETERMINISTIC_BUILD=true
+fi
+AC_SUBST(YAWS_DETERMINISTIC_BUILD)
+AC_SUBST(DETERMINISTIC_MACRO)
+AC_SUBST(DEBUGINFO_OR_DETERMINISTIC)
+
+if test "x${SOURCE_DATE_EPOCH}" = "x"; then
+    SOURCE_DATE_EPOCH=
+fi
+AC_ARG_WITH(source_date_epoch,
+        AS_HELP_STRING([--with-source-date-epoch=EPOCH],
+                [sets build timestamp to EPOCH]),
+        with_source_date_epoch=${withval},
+        with_source_date_epoch="")
+if test "x${with_source_date_epoch}" != "x"; then
+    SOURCE_DATE_EPOCH="${with_source_date_epoch}"
+fi
+AC_SUBST(SOURCE_DATE_EPOCH)
+
 
 dnl ------------------------------------------------------------------
 dnl Erlang environment.
@@ -434,7 +465,8 @@ dnl ------------------------------------------------------------------
 AC_SUBST([CONFIG_STATUS_DEPENDENCIES],
     ['$(top_srcdir)/vsn.mk                              \
       $(top_srcdir)/erlang_deps.mk                      \
-      $(top_srcdir)/include.mk                          \
+      $(top_srcdir)/include.mk.in                       \
+      $(top_srcdir)/scripts/gen-yaws-generated.in       \
       $(top_srcdir)/applications/yapp/vsn.mk            \
       $(top_srcdir)/testsuite/run_common_test.in        \
       $(top_srcdir)/testsuite/yaws.coverspec.in         \
@@ -445,6 +477,7 @@ AC_CONFIG_FILES([
         yaws.pc
 
         Makefile
+        include.mk
         c_src/Makefile
         win32/Makefile
         win32/build.xml
@@ -485,6 +518,7 @@ AC_CONFIG_FILES([testsuite/cover_to_html.sh],          [chmod +x testsuite/cover
 AC_CONFIG_FILES([testsuite/analyze_coverdata.escript], [chmod +x testsuite/analyze_coverdata.escript])
 
 AC_CONFIG_FILES([scripts/make-release],                  [chmod +x scripts/make-release])
+AC_CONFIG_FILES([scripts/gen-yaws-generated],            [chmod +x scripts/gen-yaws-generated])
 AC_CONFIG_FILES([applications/wiki/scripts/addFile],     [chmod +x applications/wiki/scripts/addFile])
 AC_CONFIG_FILES([applications/wiki/scripts/getPassword], [chmod +x applications/wiki/scripts/getPassword])
 AC_CONFIG_FILES([applications/wiki/scripts/importFiles], [chmod +x applications/wiki/scripts/importFiles])

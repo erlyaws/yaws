@@ -40,8 +40,25 @@ init_per_group(_Group, Config) ->
 end_per_group(_Group, _Config) ->
     ok.
 
+-ifdef(DETERMINISTIC).
+init_per_testcase(generated_module, _Config) ->
+    {skip, "generated_module test not supported for deterministic builds"};
+init_per_testcase(default_type, _Config) ->
+    {skip, "default_type test not supported for deterministic builds"};
+init_per_testcase(yaws_type, _Config) ->
+    {skip, "yaws_type test not supported for deterministic builds"};
+init_per_testcase(erlang_type, _Config) ->
+    {skip, "erlang_type test not supported for deterministic builds"};
+init_per_testcase(gzip_with_charset, _Config) ->
+    {skip, "gzip_with_charset test not supported for deterministic builds"};
+init_per_testcase(charset_for_404, _Config) ->
+    {skip, "charset_for_404 test not supported for deterministic builds"};
 init_per_testcase(_Test, Config) ->
     Config.
+-else.
+init_per_testcase(_Test, Config) ->
+    Config.
+-endif.
 
 end_per_testcase(_Test, _Config) ->
     ok.

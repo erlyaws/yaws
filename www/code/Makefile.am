@@ -1,4 +1,5 @@
 include @top_srcdir@/include.mk
+include @top_srcdir@/examples.mk
 
 MODULES = myappmod.erl
 

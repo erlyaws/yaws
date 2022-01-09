@@ -22,6 +22,7 @@ config.h*
 config.log*
 config.status*
 configure
+include.mk
 Makefile
 Makefile.in
 .deps
@@ -59,6 +60,7 @@ doc/yaws.ps
 doc/yaws.toc
 doc/yaws_head.pdf
 man/*.pdf
+scripts/gen-yaws-generated
 scripts/make-release
 win32/build.xml
 dialyzer_warnings
