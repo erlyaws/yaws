@@ -55,9 +55,10 @@ fi
 
 ## generate yaws_generated.erl module
 ## For deterministic builds, which avoids embedding differing
-## pathnames in the yaws_generated beam file, set
-## YAWS_DETERMINISTIC_BUILD as an environment variable (any value will
-## do, the value is not used).
+## pathnames in the yaws_generated beam file,
+## ./configure --enable-deterministic-bulid or set YAWS_DETERMINISTIC_BUILD as
+## an environment variable (any value will do, the value is not used) before
+## running ./configure.
 cd ${YAWS_DIR}/src || fail
 tmpgen=`mktemp /tmp/${SCRIPT}.XXXXXX` || fail
 YAWS_VSN="${YAWS_VSN}" VARDIR="${YAWS_VARDIR}" ETCDIR="${YAWS_ETCDIR}"  \

@@ -5,7 +5,7 @@
 
 set -e
 
-if [ x"$YAWS_DETERMINISTIC_BUILD" = x ]; then
+if [ x"@YAWS_DETERMINISTIC_BUILD@" = x ]; then
     subst_vardir="${VARDIR}"
     subst_etcdir="${ETCDIR}"
 else

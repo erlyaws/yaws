@@ -17,7 +17,8 @@ EBIN_FILES=$(MODULES:%.erl=$(EBIN_DIR)/%.beam)
 
 LOG_DIR=@builddir@/logs
 
-ERLC_FLAGS = $(ERLC_GENERIC_FLAGS) -DSHOW_LOG +nowarn_export_all
+ERLC_FLAGS = $(filter-out +deterministic,$(ERLC_GENERIC_FLAGS)) \
+			 -DSHOW_LOG +nowarn_export_all
 
 include @top_srcdir@/erlang_deps.mk
 

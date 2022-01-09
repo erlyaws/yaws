@@ -114,20 +114,33 @@ Reproducible builds
 -------------------
 
 It is possible to build deterministically, thus enabling reproducible builds
-of YAWS.
+of Yaws.
 
-A deterministic build is enabled by setting the following environment
-variables when building:
+A deterministic build is enabled either by running `configure` with options
+`--enable-deterministic-build` and `--with-source-date-epoch`
+
+    $> ./configure --enable-deterministic-build \
+                   --with-source-date-epoch=$known_unix_timestamp
+
+or by setting the environment variables `YAWS_DETERMINISTIC_BUILD` and
+`SOURCE_DATE_EPOCH` before running `autoreconf` and `configure`,
+respectively
 
     $> export YAWS_DETERMINISTIC_BUILD=true # set to any value will enable
+    %> autoreconf -fi
     $> export SOURCE_DATE_EPOCH=$known_unix_timestamp
+    $> ./configure
+
+After any of the two above configurations are done, build like normal
+
     $> make all doc
 
-The above environment variables will generate a deterministic
-`yaws_generated.beam` and sets e.g. creation date in `yaws.ps` and
-`yaws.pdf` from the value of `$SOURCE_DATE_EPOCH`, which is expected to be
-an integer reflecting a number of seconds since the Unix epoch. (One way to
-get an epoch integer value is via the command `date '+%s'` on Linux or macOS,
+The above configurations that enables deterministic builds will add the erlc
+flag `+deterministic` (and remove `+debug_info`), generate a deterministic
+`yaws_generated.beam`, and set e.g. creation date in `yaws.ps` and
+`yaws.pdf` from the value of `SOURCE_DATE_EPOCH`, which is expected to be an
+integer reflecting a number of seconds since the Unix epoch. (One way to get
+an epoch integer value is via the command `date '+%s'` on Linux or macOS,
 for example.)
 
 Note that various paths in configuration files, templates, examples etc. are
@@ -135,6 +148,8 @@ generated from the configured installation prefix config files; thus they
 will vary if the installation prefix is different across builds. This can be
 mitigated by using DESTDIR when installing (see the Build section above for
 more details).
+
+In order to run all tests correctly, deterministic build have to be disabled.
 
 
 Test your build

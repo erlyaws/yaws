@@ -8,7 +8,13 @@ am__v_ERLC_1 =
 #WARNINGS_AS_ERRORS = -Werror
 WARNINGS_AS_ERRORS =
 
-ERLC_GENERIC_FLAGS = $(WARNINGS_AS_ERRORS) +debug_info $(DEBUG_ERLC_FLAGS)		\
+DEBUGINFO_OR_DETERMINISTIC = @DEBUGINFO_OR_DETERMINISTIC@
+DETERMINISTIC_MACRO = @DETERMINISTIC_MACRO@
+SOURCE_DATE_EPOCH ?= @SOURCE_DATE_EPOCH@
+
+ERLC_GENERIC_FLAGS = $(WARNINGS_AS_ERRORS) \
+		     $(DEBUGINFO_OR_DETERMINISTIC) $(DEBUG_ERLC_FLAGS)		\
+		     $(DETERMINISTIC_MACRO) \
 		     -pa $(top_srcdir) -pa $(top_builddir) -pa $(top_builddir)/ebin	\
 		     -I $(top_srcdir)/include -I $(srcdir)/../include 			\
 		     -I $(top_builddir)/include -I $(builddir)/../include
