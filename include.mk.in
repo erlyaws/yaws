@@ -3,10 +3,7 @@ am__v_ERLC_ = $(am__v_ERLC_$(AM_DEFAULT_VERBOSITY))
 am__v_ERLC_0 = @echo "  ERLC    " $@;
 am__v_ERLC_1 =
 
-# TODO -Werror is turned off until the deprecated ssl:cipher_suites/0
-# can be fixed
-#WARNINGS_AS_ERRORS = -Werror
-WARNINGS_AS_ERRORS =
+WARNINGS_AS_ERRORS = -Werror
 
 DEBUGINFO_OR_DETERMINISTIC = @DEBUGINFO_OR_DETERMINISTIC@
 DETERMINISTIC_MACRO = @DETERMINISTIC_MACRO@
