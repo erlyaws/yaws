@@ -47,10 +47,26 @@ endif
 
 # For reproducible builds, SOURCE_DATE_EPOCH replaces DVIPSSource date if set
 yaws.ps: yaws.dvi
-	$(AM_V_GEN)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+	@if [ x"$(SOURCE_DATE_EPOCH)" == x ]; then \
+	  if [ x'$(AM_V_GEN)' != x ]; then \
+	    echo '  $(DVIPS)     $<' ; \
+	  else \
+	    echo TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		$(DVIPS) -q -o $@ $< ; \
+	  fi; \
+	  TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		$(DVIPS) -q -o $@ $< ; \
+	else \
+	  if [ x'$(AM_V_GEN)' != x ]; then \
+	    echo '  $(DVIPS)     $<' ; \
+	  else \
+	    echo TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
 		SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
-		$(DVIPS) -q -o $@ $<
-	$(AM_V_at)if [ x"$(SOURCE_DATE_EPOCH)" != "x" ]; then \
+		$(DVIPS) -q -o $@ $< ; \
+	  fi; \
+	  TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
+		$(DVIPS) -q -o $@ $< ; \
 	  code='{{Y,Mo,D},{H,Mi,S}} = calendar:system_time_to_local_time('$(SOURCE_DATE_EPOCH)', 1),' ; \
 	  code="$$code "'io:format("~4.4w~2.2.0w~2.2.0w:~2.2.0w~2.2.0w~2.2.0w\n", [Y,Mo,D,H,Mi,S]).' ; \
 	  newdate=`$(ERL) -noshell -noinput -eval "$$code" -s init stop` || exit 1; \
@@ -62,24 +78,75 @@ yaws.ps: yaws.dvi
 	fi
 
 yaws.pdf: yaws.tex $(IMG_PDF)
-	$(AM_V_GEN)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+	@if [ x"$(SOURCE_DATE_EPOCH)" != x ]; then \
+	  if [ x'$(AM_V_GEN)' != x ]; then \
+	    echo '  $(PDFLATEX)  $<' ; \
+	  else \
+	    echo TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
 		SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
-		$(PDFLATEX) yaws.tex > /dev/null
-	$(AM_V_at)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		$(PDFLATEX) $< ; \
+	  fi ; \
+	  TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
+		$(PDFLATEX) $< > /dev/null; \
+	  if [ x'$(AM_V_at)' = x ]; then \
+	    echo TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
 		SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH)  \
-		$(PDFLATEX) yaws.tex > /dev/null
+		$(PDFLATEX) $< ; \
+	  fi ; \
+	  TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH)  \
+		$(PDFLATEX) $< > /dev/null; \
+	else \
+	  if [ x'$(AM_V_GEN)' != x ]; then \
+	    echo '  $(PDFLATEX)  $<' ; \
+	  else \
+	    echo TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		$(PDFLATEX) $< ; \
+	  fi ; \
+	  TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		$(PDFLATEX) $< > /dev/null; \
+	  if [ x'$(AM_V_at)' = x ]; then \
+	    echo TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		$(PDFLATEX) $< ; \
+	  fi ; \
+	  TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		$(PDFLATEX) $< > /dev/null; \
+	fi
 
 yaws.dvi: yaws.tex $(IMG_EPS)
-	$(AM_V_GEN)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+	@if [ x"$(SOURCE_DATE_EPOCH)" != x ]; then \
+	  if [ x'$(AM_V_at)' = x ]; then \
+	    echo TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
 		SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
-		$(DVILATEX) yaws.tex > /dev/null
-	$(AM_V_at)TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		$(DVILATEX) $< ; \
+	  fi ; \
+	  TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
 		SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
-		$(DVILATEX) yaws.tex > /dev/null
+		$(DVILATEX) $< > /dev/null; \
+	else \
+	  if [ x'$(AM_V_at)' = x ]; then \
+	    echo TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		$(DVILATEX) $< ; \
+	  fi ; \
+	  TEXINPUTS="$${TEXTINPUTS}:@srcdir@" \
+		$(DVILATEX) $< > /dev/null; \
+	fi
 
 .eps.pdf:
-	$(AM_V_GEN)SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
-		$(EPSTOPDF) --outfile=$@ $< > /dev/null
+	@if [ x"$(SOURCE_DATE_EPOCH)" != x ]; then \
+	  if [ x'$(AM_V_at)' = x ]; then \
+	    echo SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
+		$(EPSTOPDF) --outfile=$@ $< ; \
+	  fi ; \
+	  SOURCE_DATE_EPOCH=$(SOURCE_DATE_EPOCH) \
+		$(EPSTOPDF) --outfile=$@ $< > /dev/null; \
+	else \
+	  if [ x'$(AM_V_at)' = x ]; then \
+	    echo $(EPSTOPDF) --outfile=$@ $< ; \
+	  fi ; \
+	  $(EPSTOPDF) --outfile=$@ $< > /dev/null; \
+	fi
 
 .NOTPARALLEL:
 # Local Variables:

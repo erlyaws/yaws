@@ -140,7 +140,10 @@ The above configurations for enabling deterministic builds add the erlc flag
 `yaws_generated.beam`, and set e.g. creation date in `yaws.ps` and `yaws.pdf`
 from the value of `SOURCE_DATE_EPOCH`, which is expected to be an integer
 reflecting a number of seconds since the Unix epoch. (One way to get an epoch
-integer value is via the command `date '+%s'` on Linux or macOS, for example.)
+integer value is via the command `date '+%s'` on Linux or macOS, for example.
+If you're using the bash shell version 4.2 or newer, `printf '%(%s)T\n' -1`
+gives an epoch integer value, and starting at version 5, the bash shell
+provides the `$EPOCHSECONDS` variable.)
 
 Note that various paths in configuration files, templates, examples etc. are
 generated from the configured installation prefix config files; thus they
