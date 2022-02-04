@@ -41,8 +41,8 @@ if [ "$1" = clean ]; then
     rm -f ${YAWS_DIR}/src/mime_types.erl  \
        ${YAWS_DIR}/src/yaws_generated.erl \
        ${YAWS_DIR}/src/yaws_charset.hrl \
-       ${YAWS_DIR}/scripts/gen-yaws-generated \
-       ${YAWS_DIR}/test/testsuite.hrl
+       ${YAWS_DIR}/test/testsuite.hrl \
+       ${YAWS_DIR}/scripts/gen-yaws-generated
     exit 0
 fi
 
