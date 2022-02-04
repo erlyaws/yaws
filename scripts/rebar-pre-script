@@ -40,7 +40,8 @@ keep_or_replace() {
 if [ "$1" = clean ]; then
     rm -f ${YAWS_DIR}/src/mime_types.erl  \
        ${YAWS_DIR}/src/yaws_generated.erl \
-       ${YAWS_DIR}/src/yaws_charset.hrl
+       ${YAWS_DIR}/src/yaws_charset.hrl \
+       ${YAWS_DIR}/scripts/gen-yaws-generated
     exit 0
 fi
 
@@ -53,11 +54,27 @@ fi
 [ -d "${YAWS_VARDIR}/yaws" ]      || mkdir "${YAWS_VARDIR}/yaws"      || fail
 [ -d "${YAWS_VARDIR}/yaws/ebin" ] || mkdir "${YAWS_VARDIR}/yaws/ebin" || fail
 
-## generate yaws_generated.erl module
 ## For deterministic builds, which avoids embedding differing
 ## pathnames in the yaws_generated beam file, set
 ## YAWS_DETERMINISTIC_BUILD as an environment variable (any value will
 ## do, the value is not used).
+if [ -n "$YAWS_DETERMINISTIC_BUILD" ]; then
+    flags=+deterministic
+    preproc=-DDETERMINISTIC
+else
+    flags=+debug_info
+    preproc=
+fi
+
+## generate gen-yaws-generated script
+cd ${YAWS_DIR}/scripts || fail
+tmpgen=`mktemp /tmp/${SCRIPT}.XXXXXX` || fail
+sed -e 's/@YAWS_DETERMINISTIC_BUILD@/'"${YAWS_DETERMINISTIC_BUILD}"'/g' \
+    gen-yaws-generated.in > $tmpgen || fail
+mv -f $tmpgen gen-yaws-generated || fail
+chmod a+x gen-yaws-generated || fail
+
+## generate yaws_generated.erl module
 cd ${YAWS_DIR}/src || fail
 tmpgen=`mktemp /tmp/${SCRIPT}.XXXXXX` || fail
 YAWS_VSN="${YAWS_VSN}" VARDIR="${YAWS_VARDIR}" ETCDIR="${YAWS_ETCDIR}"  \
@@ -71,14 +88,9 @@ if [ -f mime_types.erl ]; then
     need_mime=`find mime_type_c.erl -newer mime_types.erl -print`
 fi
 if [ -n "$need_mime" ]; then
-    if [ -n "$YAWS_DETERMINISTIC_BUILD" ]; then
-        flags='+deterministic -DDETERMINISTIC'
-    else
-        flags=+debug_info
-    fi
     set yaws yaws_generated mime_type_c
     for f; do
-        erlc "${flags}" -o ${YAWS_DIR}/ebin ${f}.erl || fail
+        erlc $flags $preproc -o ${YAWS_DIR}/ebin ${f}.erl || fail
     done
     erl -pa ${YAWS_DIR}/ebin -noshell -s mime_type_c generate || fail mime_types.erl
     for f; do

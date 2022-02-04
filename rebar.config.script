@@ -47,7 +47,7 @@ ErlOpts = case os:getenv("YAWS_DETERMINISTIC_BUILD") of
               false ->
                   ErlOpts0;
               _ ->
-                  [deterministic,{d,DETERMINISTIC}|ErlOpts0]
+                  [deterministic,{d,'DETERMINISTIC'}|ErlOpts0]
           end,
 PortEnv0 = case lists:keyfind(port_env, 1, Cfg0) of
                {port_env, PEnv} -> PEnv;
