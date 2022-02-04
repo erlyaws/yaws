@@ -1,13 +1,14 @@
 
-yaws.erl:\d+: Guard test Ret *:: *'file' == 'fd' can never succeed
-yaws.erl:\d+: Guard test Ret *:: *'file' == 'binfd' can never succeed
-yaws_api.erl:\d+: The pattern 'false' can never match the type 'true'
-yaws_ctl.erl:\d+: Function hup/1 has no local return
-yaws_ctl.erl:\d+: Function stop/1 has no local return
-yaws_ctl.erl:\d+: Function status/1 has no local return
-yaws_ctl.erl:\d+: Function load/1 has no local return
-yaws_ctl.erl:\d+: Function trace/1 has no local return
-yaws_ctl.erl:\d+: Function debug_dump/1 has no local return
-yaws_ctl.erl:\d+: Function stats/1 has no local return
-yaws_ctl.erl:\d+: Function running_config/1 has no local return
-yaws_revproxy.erl:\d+: The pattern 'true' can never match the type 'false'
+yaws.erl:\d+(:\d+)?: Guard test Ret *:: *'file' == 'fd' can never succeed
+yaws.erl:\d+(:\d+)?: Guard test Ret *:: *'file' == 'binfd' can never succeed
+yaws_api.erl:\d+(:\d+)?: The pattern 'false' can never match the type 'true'
+yaws_config.erl:\d+(:\d+)?: The pattern 'undefined' can never match the type \[47 \| 97 \| 99 \| 101 \| 108 \| 111 \| 114 \| 115 \| 116 \| 117, ...\]
+yaws_ctl.erl:\d+(:\d+)?: Function hup/1 has no local return
+yaws_ctl.erl:\d+(:\d+)?: Function stop/1 has no local return
+yaws_ctl.erl:\d+(:\d+)?: Function status/1 has no local return
+yaws_ctl.erl:\d+(:\d+)?: Function load/1 has no local return
+yaws_ctl.erl:\d+(:\d+)?: Function trace/1 has no local return
+yaws_ctl.erl:\d+(:\d+)?: Function debug_dump/1 has no local return
+yaws_ctl.erl:\d+(:\d+)?: Function stats/1 has no local return
+yaws_ctl.erl:\d+(:\d+)?: Function running_config/1 has no local return
+yaws_revproxy.erl:\d+(:\d+)?: The pattern 'true' can never match the type 'false'
