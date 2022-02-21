@@ -118,7 +118,7 @@ handle_payload(Args, Handler, Type) ->
     PL = unicode:characters_to_list(Args#arg.clidata),
     {Payload,DecodedStr} =
         case RpcType of
-            T when T==haxe; T==json ->
+            T when T==haxe ->
                 ?Debug("rpc ~p call ~p~n", [T, PL]),
                 {PL, yaws_api:url_decode(PL)};
             soap_dime ->
