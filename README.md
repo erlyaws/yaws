@@ -60,16 +60,17 @@ Finally, to run the testsuites, yaws need to install:
 Build
 -----
 
-You can build using rebar:
-
-    $> rebar get-deps compile
-
-or via autotools:
+You can build via autotools:
 
     $> ./configure --prefix=/usr/local
 
-If using rebar, you'll get a "local installation" with Yaws script in ./bin
-and the Yaws configuration file in ./etc/yaws.
+or via rebar3 on the `rebar3-support` branch:
+
+    $> git switch rebar3-support
+    $> rebar3 compile
+
+If using rebar3, you'll get a "local installation" that you can run
+via `rebar3 shell`.
 
 If using autotools, the build will be configured by default for installation
 under /usr/local. For more information about installation directories and
@@ -160,17 +161,17 @@ With autotools, to test the build, you should install it somewhere:
     $> ./configure --prefix=$PWD/_inst && make install
     $> $PWD/_inst/bin/yaws -i
 
-If you used rebar to compile Yaws, you can alternatively start Yaws with
+If you used rebar3 to build Yaws, you can alternatively start Yaws with
 
-    $> ./bin/yaws -i
+    $> rebar3 shell
 
 Either approach will start a webserver at http://0.0.0.0:8000
 Terminate through ^C, or ^G followed by q, or
 
     > init:stop()
 
-NOTE: If you've used rebar to build the system, none of the following
-directions apply. With rebar only "local installations" are supported.
+NOTE: If you've used rebar3 to build the system, none of the following
+directions apply.
 
 
 Install and run
@@ -206,8 +207,7 @@ This will start a daemon (--daemon) which will be autorestarted when/if it
 crashes or hangs (--heart).
 Also, for most unices, we create proper start scripts in ${sysconfdir}/init.d
 
-Example: Here is how I compile/start the yaws system that runs at
-http://yaws.hyber.org (Ubuntu server system)
+Example:
 
     $> autoreconf -fi
     $> ./configure --sysconfdir=/etc
