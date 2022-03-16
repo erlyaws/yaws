@@ -114,7 +114,7 @@ yaws.plt:
 dialyzer: all yaws.plt
 	$(AM_V_at)$(DIALYZER) -q --plt yaws.plt -r ebin | \
 	    sed -e :a -e '$$!N;s/\n  *//;ta' -e 'P;D' > dialyzer_warnings || true
-	$(AM_V_at)python dialyzer_checker
+	$(AM_V_at)python3 dialyzer_checker
 
 dist-hook: clean  cleantest cleanapps
 	$(AM_V_at)for a in $(APPDIRS); do			\
