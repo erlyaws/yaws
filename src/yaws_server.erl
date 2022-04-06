@@ -2194,20 +2194,18 @@ handle_auth(ARG, Auth_H, Auth_methods = #auth{mod = Mod}, Ret) when Mod /= [] ->
             maybe_auth_log(403, ARG),
             false_403
     catch
-        ?MAKE_ST(_:Reason,ST,
-                 begin
-                     L = ?F("authmod crashed ~n~p:auth(~p, ~n ~p) \n"
-                            "Reason: ~p~n"
-                            "Stack: ~p~n",
-                            [Mod, ARG, Auth_methods, Reason, ST]),
-                     handle_crash(ARG, L),
-                     CliSock = case yaws_api:get_sslsocket(ARG#arg.clisock) of
-                                   {ok, SslSock} -> SslSock;
-                                   undefined     -> ARG#arg.clisock
-                               end,
-                     deliver_accumulated(CliSock, ARG),
-                     exit(normal)
-                 end)
+        _:Reason:ST ->
+            L = ?F("authmod crashed ~n~p:auth(~p, ~n ~p) \n"
+                   "Reason: ~p~n"
+                   "Stack: ~p~n",
+                   [Mod, ARG, Auth_methods, Reason, ST]),
+            handle_crash(ARG, L),
+            CliSock = case yaws_api:get_sslsocket(ARG#arg.clisock) of
+                          {ok, SslSock} -> SslSock;
+                          undefined     -> ARG#arg.clisock
+                      end,
+            deliver_accumulated(CliSock, ARG),
+            exit(normal)
     end;
 
 %% if the headers are undefined we do not need to check Pam or Users
@@ -2922,9 +2920,9 @@ deliver_dyn_part(CliSock,                       % essential params
                    Res = YawsFun(Arg),
                    handle_out_reply(Res, LineNo, YawsFile, UT, Arg)
                catch
-                   ?MAKE_ST(Class:Exc,St,
-                            handle_out_reply({throw, Class, Exc, St}, LineNo,
-                                             YawsFile, UT, Arg))
+                   Class:Exc:St ->
+                        handle_out_reply({throw, Class, Exc, St}, LineNo,
+                                         YawsFile, UT, Arg)
                end,
     case OutReply of
         {get_more, Cont, State} when element(1, Arg#arg.clidata) == partial  ->

@@ -81,13 +81,11 @@ out(A) ->
             error_logger:error_msg(Msg),
             Response = [{'D:error',[{'xmlns:D',"DAV:"}],[Msg]}],
             status(500,{xml,Response});
-        ?MAKE_ST(_Error:Reason,ST,
-                 begin
-                     error_logger:info_msg("unexpected error: ~p~n~p~n",
-                                           [Reason, ST]),
-                     Response = [{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}],
-                     status(500,{xml,Response})
-                 end)
+        _Error:Reason:ST ->
+            error_logger:info_msg("unexpected error: ~p~n~p~n",
+                                  [Reason, ST]),
+            Response = [{'D:error',[{'xmlns:D',"DAV:"}],[Reason]}],
+            status(500,{xml,Response})
     end.
 
 %%------------------------------------------------------

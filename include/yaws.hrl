@@ -394,15 +394,7 @@
 
 %% Typically used in error printouts as in:
 %% error_logger:format("Err ~p at ~p~n", [Reason, ?stack()])
--ifdef(OTP_RELEASE).
 -define(stack(), try throw(1) catch _:_:ST -> ST end).
--define(MAKE_ST(CATCH,STVAR,BODY), CATCH:STVAR -> BODY).
--else.
--define(stack(), try throw(1) catch _:_ -> (fun erlang:get_stacktrace/0)() end).
--define(MAKE_ST(CATCH,STVAR,BODY),
-        CATCH -> STVAR = (fun erlang:get_stacktrace/0)(), BODY).
--endif.
-
 
 %%% The following is for emacs, do not remove
 %%% Local Variables:
