@@ -1,7 +1,7 @@
 # Homebrew on OSX
 
 If you develop on OS X, the Yaws formula works correctly for users of
-Erlang/OTP 21.3 and above. To install please run:
+Erlang/OTP 22.0 and above. To install please run:
 
     brew install yaws
 
