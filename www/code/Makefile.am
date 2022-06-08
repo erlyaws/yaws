@@ -1,5 +1,27 @@
 include @top_srcdir@/include.mk
-include @top_srcdir@/examples.mk
+
+# For reproducible builds. Neither of these are used.
+# This is a little bit hacky, but no one should need these to
+# use the examples.
+
+# Don't use build environments SHELL
+SHELL = /bin/sh
+
+# Omit build environment paths
+abs_builddir =
+abs_srcdir =
+abs_top_builddir =
+abs_top_srcdir =
+
+# Remove ac-aux/missing helper script from commands, contains absolute path.
+ACLOCAL = aclocal
+AUTOCONF = autoconf
+AUTOHEADER = autoheader
+AUTOMAKE = automake
+MAKEINFO = makeinfo
+
+# Remove ac-aux/install_sh helper script, contains absolute path.
+install_sh =
 
 MODULES = myappmod.erl
 
