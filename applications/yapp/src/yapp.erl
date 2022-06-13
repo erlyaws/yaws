@@ -48,25 +48,22 @@
 %%% <p><em>Note2:</em> The current available registry implementation uses Mnesia so you need
 %%% to create a mnesia schema (if not already done) for the node(s) you are running Yaws on.
 %%% <code>mnesia:create_schema([node()]).</code></p>
-%%%
-%%% @type yawsArg() = term(). This is the #arg record as defined
-%%% by yaws_api.hrl.
-%%%
-%%% @type yawsSconf() = term(). This is the #sconf record as defined
-%%% by yaws.hrl.
-%%%
-%%% @type yawsGconf() = term(). This is the #gconf record as defined
-%%% by yaws.hrl.
 
 -module(yapp).
 -author('mikael@creado.se').
 
--include("yaws_api.hrl").
 -export([arg_rewrite/1, start/0, prepath/1, insert/1, insert/2, remove/2,
          log/3,
          reset_yaws_conf/0, srv_id/1,
          get_bootstrap_yapps/0, get_yapps/0, get_server_ids/0]).
  %%     reload_yaws/0,
+
+-include("yaws_api.hrl").
+-include("yaws.hrl").
+
+-type yawsArg()   :: #arg{}.   %% The #arg record as defined by yaws_api.hrl.
+-type yawsSconf() :: #sconf{}. %% The #sconf record as defined by yaws.hrl.
+-type yawsGconf() :: #gconf{}. %% The #gconf record as defined by yaws.hrl.
 
 -define(prepath, yapp_prepath).
 -define(srv_id, "yapp_server_id").
@@ -90,7 +87,7 @@
 %% yapps is a list of {UrlPath, AppName} tuples
 %% UrlPath = string()
 %% Interface arg_rewrite_mod
-%% @spec arg_rewrite(Arg::yawsArg()) -> yawsArg()
+-spec arg_rewrite(Arg :: yawsArg()) -> yawsArg().
 %% @doc Interface function for a Yaws arg_rewrite_mod. If
 %% it finds a registered Yapp it will strip of the
 %% path up to the Yapp and redirect the docroot.
@@ -138,7 +135,7 @@ arg_rewrite(Arg) ->
 
 
 %% Interface run_mod
-%% @spec start() -> void()
+-spec start() -> ok | {error, Reason :: term()}.
 %% @doc Interface function for Yaws run_mod.
 %% This fun is spawned from Yaws so no return val is expected.
 %% All Yapps can expect mnesia to be started, so mnesia is ensured
@@ -172,7 +169,7 @@ wait_for_yaws(N) ->
     end.
 
 
-%% @spec prepath(Arg::yawsArg()) -> Path::string()
+-spec prepath(Arg :: yawsArg()) -> Path :: string().
 %% @doc Get the Yapp root-path. Can be called from a Yapp erl/1
 %% fun or an erl section in a .yaws file to get the Yapp root
 %% path.
@@ -180,9 +177,9 @@ prepath(Arg) ->
     Arg#arg.docroot_mount.
 
 
-%% @spec log(Level, FormatStr::string(), Args) -> void()
-%%   Level = error | warning | info | debug
-%%   Args = [term()]
+-spec log(Level, FormatStr :: string(), Args :: [term()]) -> ok
+  when
+    Level :: error | warning | info | debug.
 %% @doc Yapp interface to the error_logger.
 log(debug, FormatStr, Args) ->
     gen_event:notify(error_logger, {debug_msg, group_leader(), {self(), FormatStr, Args}});
@@ -364,23 +361,22 @@ reset_yaws_conf() ->
             Err
     end.
 
-%% @spec get_conf() -> {ok,yawsGconf(), Sconfs}
-%% Sconfs = [ yawsSconf() ]
+-spec get_conf() -> {ok, yawsGconf(), Sconfs :: [yawsSconf()]}.
 get_conf() ->
     yaws_api:getconf().
 %    yaws_config:load(yaws_sup:get_app_args()).
 
-%% @spec srv_id(Sconf) -> string() | undefined
-%%  Sconf = yawsSconf()
+-spec srv_id(Sconf :: yawsSconf()) -> string() | undefined.
 %% @doc Get the server id from an Sconf if available
 srv_id(SC) ->
     OP = yaws:sconf_opaque(SC),
     proplists:get_value(?srv_id, OP).
 
-%% @spec get_bootstrap_yapps() -> [{ ServerId, [ {Path, ApplicationName}]}]
-%%   ServerId = string()
-%%   Path = string()
-%%   Applicationame = atom()
+-spec get_bootstrap_yapps() -> [{ServerId, [{Path, ApplicationName}]}]
+  when
+    ServerId :: string(),
+    Path :: string(),
+    ApplicationName :: atom().
 %% @doc Gets the Yapps defined in each opaque
 %% "bootstrap_yapps = appname1, appname2" for every server id. (If available).
 %% Bootstrap yapps will get the same pathname as their application name
@@ -410,11 +406,13 @@ make_yapp_tuple(A) ->
     B = string:strip(A),
     {"/" ++ B, list_to_atom(B)}.
 
-%% @spec get_yapps() -> [{ServId,[{yapp, Urlpath, Docroot, Appname , Appmods}]}]
-%%  Urlpath = string()
-%%  Docroot = string()
-%%  Appname = atom()
-%%  Appmods = [atom()]
+-spec get_yapps() -> [{ServerId,[{yapp, Urlpath, Docroot, Appname , Appmods}]}]
+  when
+    ServerId :: string(),
+    Urlpath :: string(),
+    Docroot :: string(),
+    Appname :: atom(),
+    Appmods :: [atom()].
 %% @doc Gets all Yapps that are configured for the Yaws server.
 get_yapps() ->
     {ok, _Gconf, Sconfs} = yaws_api:getconf(),
@@ -425,7 +423,7 @@ get_yapps() ->
               end || SC <- lists:flatten(Sconfs)],
     [{S,Y} || {S,Y} <- Yapps1, Y =/= undefined, S =/= undefined].
 
-%% @spec get_server_ids() -> [string()]
+-spec get_server_ids() -> [ServerId :: string()].
 %% @doc Lists all server ids.
 get_server_ids() ->
     {ok, _Gconf, Sconfs} = get_conf(),
