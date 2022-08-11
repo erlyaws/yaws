@@ -1,9 +1,8 @@
-%% -*- coding: latin-1 -*-
 %%%----------------------------------------------------------------------
 %%% File    : exhtml.erl
-%%% Author  : Joakim Grebenö <jocke@tail-f.com>
+%%% Author  : Joakim GrebenÃ¶ <jocke@tail-f.com>
 %%% Purpose : Format ehtml as xhtml code with optional indentation support.
-%%% Created : 24 Apr 2006 by Joakim Grebenö <jocke@tail-f.com>
+%%% Created : 24 Apr 2006 by Joakim GrebenÃ¶ <jocke@tail-f.com>
 %%%----------------------------------------------------------------------
 
 -module(yaws_exhtml).

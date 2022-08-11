@@ -1,4 +1,3 @@
-%% -*- coding: latin-1 -*-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED
@@ -14,7 +13,7 @@
 %%% WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED
 %%% WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED WARNING DEPRECATED
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Copyright (C) 2003 Joakim Grebenö <jocke@gleipnir.com>.
+%% Copyright (C) 2003 Joakim GrebenÃ¶ <jocke@gleipnir.com>.
 %% All rights reserved.
 %%
 %% Copyright (C) 2006 Gaspar Chilingarov <nm@web.am>
