@@ -3449,12 +3449,13 @@ handle_out_reply(ok, _LineNo, _YawsFile, _UT, _ARG) ->
     ok;
 
 handle_out_reply({'EXIT', Err}, LineNo, YawsFile, _UT, ARG) ->
+    St = ?stack(),
     L = ?F("~n~nERROR erlang  code  crashed:~n "
            "File: ~s:~w~n"
            "Reason: ~p~nReq: ~p~n"
            "Stack: ~p~n",
-           [YawsFile, LineNo, Err, ARG#arg.req, ?stack()]),
-    handle_crash(ARG, L);
+           [YawsFile, LineNo, Err, ARG#arg.req, St]),
+    handle_crash(ARG, L, St);
 
 handle_out_reply({throw, Class, Exc, St}, LineNo, YawsFile, _UT, ARG) ->
     L = ?F("~n~nERROR erlang code threw an uncaught exception:~n "
@@ -3462,7 +3463,7 @@ handle_out_reply({throw, Class, Exc, St}, LineNo, YawsFile, _UT, ARG) ->
            "Class: ~p~nException: ~p~nReq: ~p~n"
            "Stack: ~p~n",
            [YawsFile, LineNo, Class, Exc, ARG#arg.req, St]),
-    handle_crash(ARG, L);
+    handle_crash(ARG, L, St);
 
 handle_out_reply({get_more, Cont, State}, _LineNo, _YawsFile, _UT, _ARG) ->
     {get_more, Cont, State};
