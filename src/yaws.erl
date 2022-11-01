@@ -2669,7 +2669,38 @@ do_http_get_headers(CliSock, SSL) ->
                 {error, _}=Error ->
                     Error;
                 H ->
-                    {R, H}
+                    %% According to RFC 9112 Section 6.1 Transfer-Encoding we
+                    %% select to process POST requests according to
+                    %% Transfer-Encoding only while ignoring Content-Length if
+                    %% both are supplied. It is also possible to reject these
+                    %% requests, but that would probably introduce backward
+                    %% incompatible behavior.
+                    %%
+                    %% If Transfer-Encoding is not set, we assert a valid
+                    %% Content-Length header. Note that http_collect_headers/5
+                    %% might have deferred the multiple_content_length_headers
+                    %% error to here, since we need to collect all headers
+                    %% before we can know if transfer encoding is used.
+
+                    TE = yaws_api:headers_transfer_encoding(H),
+                    CL = yaws_api:headers_content_length(H),
+
+                    case {TE, assert_content_length(CL)} of
+                        {TE, _} when is_list(TE) ->
+                            %% Ignore Content-Length, see above.
+                            {R, H#headers{content_length = undefined}};
+                        {_, {error, _} = Err} ->
+                            %% No transfer encoding so we return the deferred
+                            %% error frow http_collect_headers/5.
+                            Err;
+                        {_, false} ->
+                            {error, {invalid_content_length,
+                                     R#http_request{method = bad_request}}};
+                        {_, true} ->
+                            %% No transfer encoding and valid content length,
+                            %% proceed as normal.
+                            {R, H}
+                    end
             end
     end.
 
@@ -2764,14 +2795,28 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
             case H#headers.content_length of
                 undefined ->
                     http_collect_headers(CliSock, Req,
-                                         H#headers{content_length = X},SSL,
-                                         Count+1);
+                                         H#headers{content_length = X},
+                                         SSL, Count+1);
                 X ->
                     %% duplicate header, ignore it
                     http_collect_headers(CliSock, Req, H, SSL, Count+1);
+
+
+                %% Defer multiple content-length header error until we know if
+                %% transfer-encoding is used. If transfer-encoding is used we
+                %% ignore content-length, see RFC 9112 Section 6.1.
+                %%
+                %% We store the error in #headers.content_length and when
+                %% return it if transfer-encoding is not used.
+                {error, _} ->
+                    %% stored content-length error, continue
+                    http_collect_headers(CliSock, Req, H, SSL, Count+1);
                 _ ->
-                    {error, {multiple_content_length_headers,
-                             Req#http_request{method=bad_request}}}
+                    CLErr = {error, {multiple_content_length_headers,
+                                     Req#http_request{method=bad_request}}},
+                    http_collect_headers(CliSock, Req,
+                                         H#headers{content_length = CLErr},
+                                         SSL, Count+1)
             end;
         {ok, {http_header, _Num, 'Content-Type', _, X}} ->
             http_collect_headers(CliSock, Req,
@@ -2840,6 +2885,39 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
     end;
 http_collect_headers(_CliSock, Req, _H, _SSL, _Count)  ->
     {error, {too_many_headers, Req}}.
+
+
+%% @doc Assert valid Content-Length header value.
+%%
+%% Must be empty or non negative integer.
+%%
+%% If HTTP method is POST Content-Length MUST be set, if transfer-encoding
+%% is not chunked.
+%%
+%% Note that http_collect_headers/5 can have deferred the
+%% multiple_content_length_values error because all headers need to be
+%% collected before it can be known if transfer encoding is used.
+%% See do_http_get_headers/2.
+-spec assert_content_length(string() | Error) -> boolean() | Error when
+      Error :: {error, {atom(), #http_request{}}}.
+assert_content_length(CL)
+  when CL == undefined orelse CL == "" ->
+    true;
+assert_content_length({error, {multiple_content_length_headers,
+                               #http_request{method = bad_request}}} = Err) ->
+    Err;
+assert_content_length(X) ->
+    try
+        X2 = erlang:list_to_integer(X),
+        true = (0 =< X2)
+    catch
+        error:badarg ->
+            %% not a number
+            false;
+        error:{badmatch, false} ->
+            %% not non neg integer
+            false
+    end.
 
 
 %% @doc Filter out empty accept headers from list.

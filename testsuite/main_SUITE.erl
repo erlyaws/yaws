@@ -25,6 +25,7 @@ all() ->
      post_multi_same_content_length,
      post_bogus_transfer_encoding,
      post_bad_order_transfer_encoding,
+     post_content_length_transfer_encoding,
      flush_small_get,
      flush_large_get,
      flush_chunked_get,
@@ -54,6 +55,7 @@ all() ->
      exhtml,
      accept_ranges,
      status_and_content_length,
+     content_length_values,
      encoded_url,
      encoded_url_no_docroot_escape,
      header_order,
@@ -388,6 +390,9 @@ post_multi_same_content_length(Config) ->
     ok.
 
 post_transfer_encoding(Config, TE, StatusCode) ->
+    post_transfer_encoding(Config, TE, "", StatusCode).
+
+post_transfer_encoding(Config, TE, CL, StatusCode) ->
     Port = testsuite:get_yaws_port(1, Config),
     Url  = testsuite:make_url(http, "127.0.0.1", Port, "/posttest/chunked/5"),
     {ok, {Scheme, _, Host, Port, Path, _}} = yaws_dynopts:http_uri_parse(Url),
@@ -398,10 +403,12 @@ post_transfer_encoding(Config, TE, StatusCode) ->
                        "Host: " ++ Host ++ "\r\n",
                        "User-Agent: Yaws HTTP client\r\n",
                        "Transfer-Encoding: " ++ TE ++ "\r\n",
+                       CL,  %% Content-Length
                        "\r\n",
                        "5\r\n",
                        "hello\r\n",
-                       "0\r\n"],
+                       "0\r\n",
+                       "\r\n"],
                 ok = gen_tcp:send(Sock, Req),
                 ?assertMatch({ok,{{_,StatusCode,_},_,_}}, testsuite:receive_http_response(Sock))
             after
@@ -425,6 +432,18 @@ post_bad_order_transfer_encoding(Config) ->
     %% cannot be determined reliably; the server MUST respond with the
     %% 400 (Bad Request) status code and then close the connection."
     post_transfer_encoding(Config, "chunked, gzip", 400).
+
+post_content_length_transfer_encoding(Config) ->
+    %% RFC 9112 Section 6.1 Transfer-Encoding "A server MAY reject
+    %% a request that contains both Content-Length and Transfer-Encoding
+    %% or process such a request in accordance with the Transfer-Encoding
+    %% alone. Regardless, the server MUST close the connection after
+    %% responding to such a request to avoid the potential attacks."
+    post_transfer_encoding(Config, "chunked", "Content-Length: bogus\r\n", 200),
+    post_transfer_encoding(Config, "chunked",
+                           "Content-Length: bogus\r\n"
+                           "Content-Length: bogus2\r\n",
+                           200).
 
 flush_small_get(Config) ->
     File = filename:join(?tempdir(?MODULE), "www/1000.txt"),
@@ -922,6 +941,84 @@ status_and_content_length(Config) ->
     Url4 = testsuite:make_url(http, "127.0.0.1", Port, "/status?code=304"),
     {ok, {{_,304,_}, Hdrs4, _}} = testsuite:http_get(Url4),
     ?assertNot(proplists:is_defined("content-length", Hdrs4)),
+    ok.
+
+content_length_values(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
+    HostHdr = {"Host", "127.0.0.1:"++integer_to_list(Port)},
+
+    %% Positive tests
+
+    CLZeroHdr   = {"Content-Length", "0"},
+    CLEmptyHdr1 = {"Content-Length", ""},
+    CLEmptyHdr2 = {"Content-Length", "   "},
+
+    %% GET Content-Length: 0
+    {ok, Sock1} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
+    ?assertEqual(ok, testsuite:send_http_headers(Sock1, {get, "/", "HTTP/1.1"},
+                                                 [HostHdr, CLZeroHdr])),
+    {ok, {{_,200,_}, _}} = testsuite:receive_http_headers(Sock1),
+    ?assertEqual(ok, gen_tcp:close(Sock1)),
+
+    %% GET "Content-Length: "
+    {ok, Sock2} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
+    ?assertEqual(ok, testsuite:send_http_headers(Sock2, {get, "/", "HTTP/1.1"},
+                                                 [HostHdr, CLEmptyHdr1])),
+    {ok, {{_,200,_}, _}} = testsuite:receive_http_headers(Sock2),
+    ?assertEqual(ok, gen_tcp:close(Sock2)),
+
+    %% GET "Content-Length:    "
+    {ok, Sock3} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
+    ?assertEqual(ok, testsuite:send_http_headers(Sock3, {get, "/", "HTTP/1.1"},
+                                                 [HostHdr, CLEmptyHdr2])),
+    {ok, {{_,200,_}, _}} = testsuite:receive_http_headers(Sock3),
+    ?assertEqual(ok, gen_tcp:close(Sock3)),
+
+    %% Negative tests
+
+    %% "Content-Length: "
+    %% "Content-Length:     "
+    CLNegHdr = {"Content-Length", "-1"},
+    CLNanHdr = {"Content-Length", "abc"},
+
+    %% POST "Content-Length: "
+    {ok, Sock4} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
+    ?assertEqual(ok, testsuite:send_http_headers(Sock4, {post, "/", "HTTP/1.1"},
+                                                 [HostHdr, CLEmptyHdr1])),
+    {ok, {{_,411,_}, _}} = testsuite:receive_http_headers(Sock4),
+    ?assertEqual(ok, gen_tcp:close(Sock4)),
+
+    %% POST "Content-Length:    "
+    {ok, Sock5} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
+    ?assertEqual(ok, testsuite:send_http_headers(Sock5, {post, "/", "HTTP/1.1"},
+                                                 [HostHdr, CLEmptyHdr2])),
+    {ok, {{_,411,_}, _}} = testsuite:receive_http_headers(Sock5),
+    ?assertEqual(ok, gen_tcp:close(Sock5)),
+
+    %% Content-Length: -1
+    {ok, Sock6} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
+    ?assertEqual(ok, testsuite:send_http_headers(Sock6, {get, "/", "HTTP/1.1"},
+                                                 [HostHdr, CLNegHdr])),
+    {ok, {{_,400,_}, _}} = testsuite:receive_http_headers(Sock6),
+    ?assertEqual(ok, gen_tcp:close(Sock6)),
+    {ok, Sock7} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
+    ?assertEqual(ok, testsuite:send_http_headers(Sock7, {post, "/", "HTTP/1.1"},
+                                                 [HostHdr, CLNegHdr])),
+    {ok, {{_,400,_}, _}} = testsuite:receive_http_headers(Sock7),
+    ?assertEqual(ok, gen_tcp:close(Sock7)),
+
+    %% Content-Length: abc
+    {ok, Sock8} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
+    ?assertEqual(ok, testsuite:send_http_headers(Sock8, {get, "/", "HTTP/1.1"},
+                                                 [HostHdr, CLNanHdr])),
+    {ok, {{_,400,_}, _}} = testsuite:receive_http_headers(Sock8),
+    ?assertEqual(ok, gen_tcp:close(Sock8)),
+    {ok, Sock9} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
+    ?assertEqual(ok, testsuite:send_http_headers(Sock9, {post, "/", "HTTP/1.1"},
+                                                 [HostHdr, CLNanHdr])),
+    {ok, {{_,400,_}, _}} = testsuite:receive_http_headers(Sock9),
+    ?assertEqual(ok, gen_tcp:close(Sock9)),
+
     ok.
 
 encoded_url(Config) ->
