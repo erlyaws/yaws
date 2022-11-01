@@ -1202,6 +1202,17 @@ aloop(CliSock, {IP,Port}=IPPort, GS, Num) ->
                     deliver_431(CliSock, ReqTooMany, NoArg)
             end,
             {ok, Num+1};
+        {error, {invalid_content_length, ReqMultiCL}} ->
+            ?Debug("Invalid Content-Length header content~n", []),
+            case pick_sconf(GS#gs.gconf, #headers{}, GS#gs.group) of
+                undefined ->
+                    deliver_400(CliSock, ReqMultiCL, NoArg);
+                SC ->
+                    put(sc, SC),
+                    put(outh, #outh{}),
+                    deliver_400(CliSock, ReqMultiCL, NoArg)
+            end,
+            {ok, Num+1};
         {error, {multiple_content_length_headers, ReqMultiCL}} ->
             %% RFC 7230 status code 400
             ?Debug("Multiple Content-Length headers~n", []),
@@ -1764,6 +1775,8 @@ body_method(CliSock, IPPort, Req, Head) ->
                   end;
               {_, undefined} ->
                   <<>>;
+              {_, ""} ->
+                  {error, "Length Required", fun deliver_411/3};
               {_, Len} ->
                   Int_len = strip_list_to_integer(Len),
                   if
@@ -2795,6 +2808,9 @@ deliver_405(CliSock, Req, Arg, Methods) ->
                      yaws:join_sep([atom_to_list(M) || M <- Methods], ", "),
                      "</p>"]),
     deliver_xxx(CliSock, Req, Arg, 405, Methods_msg).
+
+deliver_411(CliSock, Req, Arg) ->
+    deliver_xxx(CliSock, Req, Arg, 411). % Length Required
 
 deliver_416(CliSock, _Req, Arg, Tot) ->
     B = ["<html><h1>416 ", yaws_api:code_to_phrase(416), "</h1></html>"],
@@ -4921,6 +4937,8 @@ flush(Sock, Pos, Sz, "chunked") ->
         _              -> Pos
     end;
 flush(_Sock, Pos, undefined, _) ->
+    Pos;
+flush(_Sock, Pos, "", _) ->
     Pos;
 flush(Sock, Pos, Sz, TE) when is_list(Sz) ->
     flush(Sock, Pos, strip_list_to_integer(Sz), TE);
