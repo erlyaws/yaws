@@ -12,7 +12,8 @@ all() ->
      redirect_url_encode,
      redirect_querystring,
      redirect_post,
-     bad_redirect
+     bad_redirect,
+     redirect_CRLF_injection
     ].
 
 groups() ->
@@ -261,3 +262,14 @@ bad_redirect(_Config) ->
     ?assertMatch({error, _}, yaws_config:load(Env3)),
     ?assertMatch({error, _}, yaws_config:load(Env4)),
     ok.
+
+redirect_CRLF_injection(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
+    Nasty_path = "/301_redirect1/%0D%0ASet-Cookie:crlfinjection=crlfinjection",
+    Url = testsuite:make_url(http, "127.0.0.1", Port, Nasty_path),
+    {ok, {{_, 301, _},
+          [{"server", _}, {"location", Location},
+           {"date", _}, {"content-length","0"}], _}} = testsuite:http_get(Url),
+    Expected = "http://127.0.0.1:" ++ integer_to_list(Port) ++
+        "/redir/301_redirect1/%0D%0ASet-Cookie:crlfinjection=crlfinjection",
+    ?assertEqual(Expected, Location).
