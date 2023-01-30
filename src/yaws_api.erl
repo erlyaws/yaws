@@ -891,6 +891,7 @@ url_decode_q_split([$%, Hi, Lo | Tail], Ack) ->
        %% RFC 3986 section 2.2 says that encoded reserved characters
        %% should not be decoded, otherwise the meaning of the URL data
        %% changes
+       Hex == $\r; Hex == $\n; %% prevent CRLF injection
        Hex == $:; Hex == $/; Hex == $?; Hex == $#;
        Hex == $[; Hex == $]; Hex == $@;
        Hex == $!; Hex == $$; Hex == $&; Hex == $';
