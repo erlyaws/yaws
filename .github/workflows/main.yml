@@ -49,6 +49,12 @@ jobs:
           autoreconf -vfi
           ./configure
           make all -j4
+      - name: Deterministically Build Yaws
+        run: |
+          autoreconf -vfi
+          ./configure --enable-deterministic-build --with-source-date-epoch=$EPOCHSECONDS
+          make all -j4
+          make all -j4
       - name: Run test suite
         run: |
           make check
