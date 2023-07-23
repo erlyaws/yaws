@@ -61,7 +61,7 @@ $(EBIN_DIR)/yapp.appup: @srcdir@/yapp.appup.src
 	$(AM_V_GEN)sed -e "s/%VSN%/@YAPP_VSN@/g" < $< > $@
 
 $(EBIN_DIR)/%.beam: %.erl
-	$(AM_V_at)$(ERLC) $(ERLC_FLAGS) -M -MF $(@:$(EBIN_DIR)/%.beam=$(DEPDIR)/%.Pbeam) -MT $@ $<
+	$(AM_V_at)$(ERLC) $(ERLC_FLAGS) -M $(PHONY_DEPS) -MF $(@:$(EBIN_DIR)/%.beam=$(DEPDIR)/%.Pbeam) -MT $@ $<
 	$(AM_V_ERLC)$(ERLC) $(ERLC_FLAGS) -o $(EBIN_DIR) $<
 
 

@@ -97,6 +97,7 @@ DETERMINISTIC_MACRO=
 if test "x${YAWS_DETERMINISTIC_BUILD}" != "x"; then
     DEBUGINFO_OR_DETERMINISTIC=+deterministic
     DETERMINISTIC_MACRO=-DDETERMINISTIC
+    PHONY_DEPS=-MP
 fi
 AC_ARG_ENABLE(deterministic_build,
         AS_HELP_STRING([--enable-deterministic-build],
@@ -104,11 +105,13 @@ AC_ARG_ENABLE(deterministic_build,
 if test "x${enable_deterministic_build}" = "xyes"; then
     DEBUGINFO_OR_DETERMINISTIC=+deterministic
     DETERMINISTIC_MACRO=-DDETERMINISTIC
+    PHONY_DEPS=-MP
     YAWS_DETERMINISTIC_BUILD=true
 fi
 AC_SUBST(YAWS_DETERMINISTIC_BUILD)
 AC_SUBST(DETERMINISTIC_MACRO)
 AC_SUBST(DEBUGINFO_OR_DETERMINISTIC)
+AC_SUBST(PHONY_DEPS)
 
 if test "x${SOURCE_DATE_EPOCH}" = "x"; then
     SOURCE_DATE_EPOCH=

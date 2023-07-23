@@ -42,7 +42,7 @@ clean-local:
 
 $(EBIN_DIR)/%.beam: %.erl
 	$(AM_V_at)$(MKDIR_P) $(shell dirname $@)
-	$(AM_V_at)$(ERLC) $(ERLC_FLAGS) -M -MF $(@:$(EBIN_DIR)/%.beam=$(DEPDIR)/%.Pbeam) -MT $@ $<
+	$(AM_V_at)$(ERLC) $(ERLC_FLAGS) -M $(PHONY_DEPS) -MF $(@:$(EBIN_DIR)/%.beam=$(DEPDIR)/%.Pbeam) -MT $@ $<
 	$(AM_V_ERLC)$(ERLC) $(ERLC_FLAGS) -o $(shell dirname $@) $<
 
 distclean-local:
