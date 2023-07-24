@@ -1564,7 +1564,9 @@ open(Host, Port) ->
     gen_tcp:connect(Host, Port, Opts).
 
 sslopen(Host, Port) ->
-    Opts = [{send_timeout, 2000}, binary, {packet, raw}, {active, false}],
+    Opts = [{send_timeout, 2000}, binary, {packet, raw}, {active, false},
+            %% TODO update test to use default verify option (verify_peer)
+            {verify, verify_none}],
     case ssl:connect(Host, Port, Opts) of
         {ok, Sock}      -> {ok, {ssl, Sock}};
         {error, Reason} -> {error, Reason}

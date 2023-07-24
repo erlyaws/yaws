@@ -12,8 +12,7 @@ all() ->
      sni_strict,
      sni_required_on_vhost,
      sni_not_enabled,
-     sni_without_tls,
-     sni_not_available
+     sni_without_tls
     ].
 
 groups() ->
@@ -62,8 +61,6 @@ init_per_testcase(sni_required_on_vhost, Config) ->
     restart_yaws("yaws_sni_required_on_vhost.conf", Config);
 init_per_testcase(sni_without_tls, Config) ->
     Config;
-init_per_testcase(sni_not_available, _Config) ->
-    {skip, "sni supported on this Erlang/OTP release"};
 init_per_testcase(_Test, Config) ->
     Config.
 
@@ -187,11 +184,6 @@ sni_not_enabled(_Config) ->
 
 sni_without_tls(_Config) ->
     Env = #env{debug=false, conf={file, ?tempdir(?MODULE) ++ "/yaws_sni_without_tls.conf"}},
-    ?assertMatch({error, _}, yaws_config:load(Env)),
-    ok.
-
-sni_not_available(_Config) ->
-    Env = #env{debug=false, conf={file, ?tempdir(?MODULE) ++ "/yaws_sni_not_available.conf"}},
     ?assertMatch({error, _}, yaws_config:load(Env)),
     ok.
 
