@@ -23,7 +23,7 @@ Create a new CA using
 
 Create a CSR
 
-# openssl req -new -config ./openssl.cnf -newkey rsa:1024 -nodes -keyout yaws.ppk -out yaws.csr
+# openssl req -new -config ./openssl.cnf -newkey rsa:2048 -nodes -keyout yaws.ppk -out yaws.csr
 
 Sign the csr
 
