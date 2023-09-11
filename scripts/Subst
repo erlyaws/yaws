@@ -3,7 +3,7 @@
 
 p=$1
 
-if [ `uname -a | fgrep -c Cygwin` != 0 ]; then
+if [ `uname -a | grep -F -c Cygwin` != 0 ]; then
     d=`cygpath -m "$2"`
 else
     d=$2
