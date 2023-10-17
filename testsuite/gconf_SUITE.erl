@@ -8,7 +8,8 @@ all() ->
     [
      setup_default_gconf,
      set_gc_flags,
-     setup_mime_types_info
+     setup_mime_types_info,
+     log_wrap_size_zero
     ].
 
 groups() ->
@@ -28,9 +29,23 @@ init_per_group(_Group, Config) ->
 end_per_group(_Group, _Config) ->
     ok.
 
+init_per_testcase(log_wrap_size_zero, Config) ->
+    WWW = filename:join(?tempdir(?MODULE), "www"),
+    ok = testsuite:create_dir(WWW),
+    Id    = "testsuite-server",
+    YConf = filename:join(?tempdir(?MODULE), "yaws.conf"),
+    application:load(yaws),
+    application:set_env(yaws, id,   Id),
+    application:set_env(yaws, conf, YConf),
+    ok = yaws:start(),
+    [{yaws_id, Id}, {yaws_config, YConf} | Config];
 init_per_testcase(_Test, Config) ->
     Config.
 
+end_per_testcase(log_wrap_size_zero, _Config) ->
+    ok = application:stop(yaws),
+    ok = application:unload(yaws),
+    ok;
 end_per_testcase(_Test, _Config) ->
     ok.
 
@@ -102,6 +117,12 @@ setup_mime_types_info(_Config) ->
     MI  = yaws:mime_types_info_mime_types_file(yaws:gconf_mime_types_info(GC2)),
 
     ?assertEqual("/etc/mime.types", MI),
+    ok.
+
+log_wrap_size_zero(_Config) ->
+    %% Nothing to do. If we get here, init succeeded, which means the
+    %% log_wrap_size configuration value of 0 was accepted. See bug
+    %% #473.
     ok.
 
 %% =======================================================================

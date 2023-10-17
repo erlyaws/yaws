@@ -401,8 +401,9 @@ code_change(_OldVsn, Data, _Extra) ->
 %%%----------------------------------------------------------------------
 report_logger_config(File, RotateSize) ->
     RotateConf =
-        case is_integer(RotateSize) of
-            true ->
+        case RotateSize of
+            0 -> #{max_no_bytes => infinity};
+            I when is_integer(I), I > 0 ->
                 #{
                   max_no_bytes => RotateSize,
                   max_no_files => 2
