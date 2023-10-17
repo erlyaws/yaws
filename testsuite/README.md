@@ -108,7 +108,7 @@ function calls can be expensive. So it important to reduce its scope as much as
 possible by selecting the rigth testsuite/testcase.
 
 
-# Writting a testsuite
+# Writing a testsuite
 
 Here, we assume that you know Erlang and you are familiar with the Common Test
 framework.
@@ -374,7 +374,7 @@ Here is the list of substituted variables:
 * `$data_builddir$`: The path `$ts_builddir$/<suite_name>_SUITE_data`.
 * `$templatedir$`: The path `$data_srcdir$/templates`.
 * `$tempdir$`: The path `$data_builddir$/temp`.
-* `$logdir$`: The private direcotry of the testsuite. It is equivalent to
+* `$logdir$`: The private directory of the testsuite. It is equivalent to
   `?config(priv_dir, Config)`.
 * `$yaws_port[1-20]$`: Reserved ports that can be used to configure Yaws.
 
