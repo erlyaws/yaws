@@ -2948,12 +2948,9 @@ parse_auth(Orig = "Basic " ++ Auth64) ->
         {error, _Err} ->
             {undefined, undefined, Orig};
         Auth ->
-            case string:tokens(Auth, ":") of
-                [User, Pass ] ->
-                    {User, Pass, Orig};
-                [User, Pass0 | Extra] ->
-                    %% password can contain :
-                    Pass = join_sep([Pass0 | Extra], ":"),
+            case string:split(Auth, ":") of
+                %% Password can contain colons, username cannot (RFC7617).
+                [User, Pass] when User /= [] ->
                     {User, Pass, Orig};
                 _ ->
                     {undefined, undefined, Orig}

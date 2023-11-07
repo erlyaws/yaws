@@ -53,7 +53,16 @@ end_per_testcase(_Test, _Config) ->
     ok.
 
 %%====================================================================
+check_auth_parsing(User, Password) ->
+    {_, Auth} = auth_header(User, Password),
+    ?assertMatch({User, Password, Auth}, yaws:parse_auth(Auth)).
+
 basic_auth(Config) ->
+    check_auth_parsing("foo", ""),
+    check_auth_parsing("foo", ":"),
+    check_auth_parsing("foo", "bar"),
+    check_auth_parsing("foo", "::bar:::frob::::"),
+
     Port  = testsuite:get_yaws_port(1, Config),
     Url   = testsuite:make_url(http, "127.0.0.1", Port, "/test1/a.txt"),
     Auth1 = auth_header("foo", "baz"),
