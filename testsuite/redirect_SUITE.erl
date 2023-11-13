@@ -7,6 +7,7 @@
 all() ->
     [
      redirect_default,
+     redirect_with_trailing_slash,
      redirect_301,
      redirect_404,
      redirect_url_encode,
@@ -74,6 +75,21 @@ redirect_default(Config) ->
     {ok, {{_,302,_}, Hdrs4, _}} = testsuite:http_get(Url4),
     ?assertEqual("http://yaws.hyber.org/",
                  proplists:get_value("location", Hdrs4)),
+    ok.
+
+redirect_with_trailing_slash(Config) ->
+    Port1 = testsuite:get_yaws_port(1, Config),
+    Url1 = testsuite:make_url(http, "127.0.0.1", Port1, "/default_redirect1/dir/"),
+    {ok, {{_,302,_}, Hdrs1, _}} = testsuite:http_get(Url1),
+    %% Verify trailing slash is kept on redirect
+    ?assertEqual(testsuite:make_url(http, "127.0.0.1", Port1, "/redir/default_redirect1/dir/"),
+                 proplists:get_value("location", Hdrs1)),
+
+    Port2 = testsuite:get_yaws_port(2, Config),
+    Url2 = testsuite:make_url(http, "localhost", Port2, "/"),
+    {ok, {{_,302,_}, Hdrs2, _}} = testsuite:http_get(Url2),
+    %% Verify no extra slashes are added on redirect
+    ?assertEqual("http://yaws.hyber.org/", proplists:get_value("location", Hdrs2)),
     ok.
 
 redirect_301(Config) ->

@@ -2686,6 +2686,18 @@ deliver_302(CliSock, _Req, Arg, Path) ->
     deliver_accumulated(CliSock, Arg),
     done_or_continue().
 
+%% For redirects in the deliver_redirect_map functions below,
+%% filename:join/1 is used to join path parts, but it has the unwanted
+%% side effect of dropping any trailing slash from the result. The
+%% preserve_trailing_slash/1 function checks if a path consisting of 2
+%% or more elements ends with a trailing slash, and if so, returns a
+%% slash, otherwise returns an empty string. We check for 2 or more
+%% elements so that the path "/" does not becomes "//".
+preserve_trailing_slash(Path) ->
+    case lists:reverse(Path) of
+        [$/,_|_] -> "/";
+        _ -> ""
+    end.
 
 deliver_redirect_map(CliSock, Req, Arg,
                      {_Prefix, Code, undefined, _Mode}, _N) ->
@@ -2698,7 +2710,8 @@ deliver_redirect_map(_CliSock, _Req, Arg,
     ?Debug("in redir ~p", [Code]),
     Path1 = if
                 Mode == append ->
-                    filename:join([Path ++ Arg#arg.server_path]);
+                    filename:join([Path ++ Arg#arg.server_path]) ++
+                        preserve_trailing_slash(Arg#arg.server_path);
                 true -> %% noappend
                     Path
             end,
@@ -2723,7 +2736,8 @@ deliver_redirect_map(CliSock, Req, Arg,
                 end,
     LocPath = if
                   Mode == append ->
-                      Path1   = filename:join([URL#url.path ++ Arg#arg.server_path]),
+                      Path1 = filename:join([URL#url.path ++ Arg#arg.server_path]) ++
+                          preserve_trailing_slash(Arg#arg.server_path),
                       yaws_api:format_partial_url(
                         URL#url{path=Path1,querypart=QueryData}, get(sc)
                        );
