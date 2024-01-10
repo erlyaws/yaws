@@ -15,15 +15,50 @@ groups() ->
     [
     ].
 
+%% Skip dhfile tests on broken OTP-26 releases.
+%% Guessing that OTP-26.2.2+ will be fixed.
+-define(OTP26_FIXED_DHFILE, <<"26.2.2">>).
+
+-ifdef(OTP_RELEASE).
+  -if(?OTP_RELEASE == 26).
+otp26_broken_dhfile() ->
+    case otp_release_version("26") of
+        {ok, OtpVsn}
+          when OtpVsn =< ?OTP26_FIXED_DHFILE ->
+            true;
+       _ ->
+            false
+    end.
+  -else.
+otp26_broken_dhfile() ->
+    false.
+  -endif.
+-endif.
+
+otp_release_version(Rel) ->
+    try
+        {ok, _OtpVsn} =
+            file:read_file(filename:join([code:root_dir(), "releases", Rel,
+                                          "OTP_VERSION"]))
+    catch
+        error:{badmatch, _} ->
+            file:read_file(filename:join([code:root_dir(), "OTP_VERSION"]))
+    end.
+
 %%====================================================================
 init_per_suite(Config) ->
-    Id    = "testsuite-server",
-    YConf = filename:join(?tempdir(?MODULE), "yaws.conf"),
-    application:load(yaws),
-    application:set_env(yaws, id,   Id),
-    application:set_env(yaws, conf, YConf),
-    ok = yaws:start(),
-    [{yaws_id, Id}, {yaws_config, YConf} | Config].
+    case otp26_broken_dhfile() of
+        true ->
+            {skip, otp26_broken_dhfile};
+        false ->
+            Id    = "testsuite-server",
+            YConf = filename:join(?tempdir(?MODULE), "yaws.conf"),
+            application:load(yaws),
+            application:set_env(yaws, id,   Id),
+            application:set_env(yaws, conf, YConf),
+            ok = yaws:start(),
+            [{yaws_id, Id}, {yaws_config, YConf} | Config]
+    end.
 
 end_per_suite(_Config) ->
     ok = application:stop(yaws),
