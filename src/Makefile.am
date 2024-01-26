@@ -64,7 +64,7 @@ ERLC_FLAGS = $(ERLC_GENERIC_FLAGS)
 
 include @top_srcdir@/erlang_deps.mk
 
-all-local: $(EBIN_DIR)/yaws.app $(EBIN_DIR)/yaws.appup $(EBIN_FILES)
+all-local: $(EBIN_DIR) $(EBIN_DIR)/yaws.app $(EBIN_DIR)/yaws.appup $(EBIN_FILES)
 
 tags: $(EBIN_DIR)/yaws_generated.beam $(EBIN_DIR)/yaws_debug.beam
 	$(AM_V_GEN)erl  -noshell -pa $(EBIN_DIR) -s yaws_debug mktags
@@ -91,6 +91,7 @@ mime_types.erl: @top_builddir@/priv/mime.types $(EBIN_DIR)/mime_type_c.beam \
 	$(AM_V_GEN)$(ERL) -noshell -pa $(EBIN_DIR) -s mime_type_c generate
 
 $(EBIN_DIR)/yaws.app: @srcdir@/yaws.app.src
+	$(AM_V_at)$(MKDIR_P) $(EBIN_DIR)
 	$(AM_V_GEN)$(AWK) -v src="$(MODULES)"				\
 	"/{vsn, *{cmd,/ { 						\
 		line = \$$0; 						\
@@ -129,12 +130,16 @@ $(EBIN_DIR)/yaws.app: @srcdir@/yaws.app.src
 	{ print; }" $< > $@
 
 $(EBIN_DIR)/yaws.appup: @srcdir@/yaws.appup.src
+	$(AM_V_at)$(MKDIR_P) $(EBIN_DIR)
 	$(AM_V_GEN)sed -e "s/%VSN%/@YAWS_VSN@/g" < $< > $@
 
 $(EBIN_DIR)/%.beam: %.erl
+	$(AM_V_at)$(MKDIR_P) $(EBIN_DIR)
 	$(AM_V_at)$(ERLC) $(ERLC_FLAGS) -M $(PHONY_DEPS) -MF $(@:$(EBIN_DIR)/%.beam=$(DEPDIR)/%.Pbeam) -MT $@ $<
 	$(AM_V_ERLC)$(ERLC) $(ERLC_FLAGS) -o $(EBIN_DIR) $<
 
+$(EBIN_DIR):
+	$(AM_V_at)$(MKDIR_P) $@
 
 distclean-local:
 	$(AM_V_at)rm -fr $(DEPDIR)
