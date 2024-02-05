@@ -19,53 +19,62 @@
 -export([is_greater/2, is_less/2,
          is_greater_or_equal/2, is_less_or_equal/2]).
 
-%% http_uri is legacy as of release 23 (ERTS >= 11.0)
-have_http_uri_parse() ->
-    is_less(erlang:system_info(version), "11.0").
-
 %% safe_relative_path was added in release 23 (ERTS >= 11.0)
 have_safe_relative_path() ->
     is_greater_or_equal(erlang:system_info(version), "11.0").
 
+%% TODO: remove this conditional once support for OTP < 23 is dropped
+-if(?OTP_RELEASE >= 23).
+
+%% http_uri is legacy as of release 23
+have_http_uri_parse() ->
+    false.
+
 http_uri_parse(Uri) ->
-    case have_http_uri_parse() of
-        true -> (fun http_uri:parse/1)(Uri);
-        false ->
-            case (fun uri_string:parse/1)(Uri) of
-                {error,_,_}=Error -> Error;
-                UriMap ->
-                    Scheme = case maps:find(scheme, UriMap) of
-                                 {ok, S} -> list_to_existing_atom(S);
-                                 error -> ''
-                             end,
-                    UserInfo = case maps:find(userinfo, UriMap) of
-                                   {ok, U} -> U;
-                                   error -> ""
-                               end,
-                    Host = case maps:find(host, UriMap) of
-                               {ok, H} -> H;
-                               error -> ""
-                           end,
-                    Port = case maps:find(port, UriMap) of
-                               {ok, Po} -> Po;
-                               error ->
-                                   case Scheme of
-                                       http -> 80;
-                                       https -> 443;
-                                       _ -> undefined
-                                   end
-                           end,
-                    Path = case maps:find(path, UriMap) of
-                               {ok, Pa} -> Pa;
-                               error -> ""
-                           end,
-                    Query = case maps:find(query, UriMap) of
-                                {ok, Q} -> [$?|Q];
-                                error -> ""
-                            end,
-                    {ok, {Scheme, UserInfo, Host, Port, Path, Query}}
-            end
+    case uri_string:parse(Uri) of
+        {error, _, _} = Error -> Error;
+        UriMap ->
+            Scheme = case maps:find(scheme, UriMap) of
+                         {ok, S} -> list_to_existing_atom(S);
+                         error -> ''
+                     end,
+            UserInfo = case maps:find(userinfo, UriMap) of
+                           {ok, U} -> U;
+                           error -> ""
+                       end,
+            Host = case maps:find(host, UriMap) of
+                       {ok, H} -> H;
+                       error -> ""
+                   end,
+            Port = case maps:find(port, UriMap) of
+                       {ok, Po} -> Po;
+                       error ->
+                           case Scheme of
+                               http -> 80;
+                               https -> 443;
+                               _ -> undefined
+                           end
+                   end,
+            Path = case maps:find(path, UriMap) of
+                       {ok, Pa} -> Pa;
+                       error -> ""
+                   end,
+            Query = case maps:find(query, UriMap) of
+                        {ok, Q} -> [$? | Q];
+                        error -> ""
+                    end,
+            {ok, {Scheme, UserInfo, Host, Port, Path, Query}}
     end.
+
+-else.
+
+have_http_uri_parse() ->
+    true.
+
+http_uri_parse(Uri) ->
+    http_uri:parse(Uri).
+
+-endif.
 
 safe_relative_path(File, Cwd) ->
     case have_safe_relative_path() of
