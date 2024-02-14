@@ -16,8 +16,8 @@ groups() ->
     ].
 
 %% Skip dhfile tests on broken OTP-26 releases.
-%% Guessing that OTP-26.2.2+ will be fixed.
--define(OTP26_FIXED_DHFILE, <<"26.2.2">>).
+%% The fix will be released in OTP-26.3.
+-define(OTP26_FIXED_DHFILE, <<"26.3">>).
 
 -ifdef(OTP_RELEASE).
   -if(?OTP_RELEASE == 26).
