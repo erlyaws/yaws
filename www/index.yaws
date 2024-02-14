@@ -49,7 +49,8 @@ out(A) ->
                  "https://travis-ci.org/klacke/yaws"}]},
 
         {p,[], ["A mailing list exists at: ",
-                {a,[{href,"https://lists.sourceforge.net/lists/listinfo/""erlyaws-list"}],
+                {a,[{href,"https://lists.sourceforge.net/lists/listinfo/"
+                          "erlyaws-list"}],
                  "https://lists.sourceforge.net/lists/listinfo/erlyaws-list"}]},
          {p, [], ["A lot of excellent"
                  " engineers have contributed to Yaws over the years, "
