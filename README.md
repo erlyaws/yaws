@@ -54,7 +54,7 @@ command:
 
     xcode-select --install
 
-Finally, to run the testsuites, yaws need to install:
+Finally, to run the test suites, yaws need to install:
 
 * git
 * wget
@@ -63,7 +63,7 @@ Finally, to run the testsuites, yaws need to install:
 * erlang-inets
 * erlang-mnesia
 * erlang-ssl
-* cadaver
+* cadaver (optional)
 
 
 Build
@@ -73,9 +73,8 @@ You can build via autotools:
 
     $> ./configure --prefix=/usr/local
 
-or via rebar3 on the `rebar3-support` branch:
+or via rebar3:
 
-    $> git switch rebar3-support
     $> rebar3 compile
 
 If using rebar3, you'll get a "local installation" that you can run
@@ -179,8 +178,8 @@ Terminate through ^C, or ^G followed by q, or
 
     > init:stop()
 
-NOTE: If you've used rebar3 to build the system, none of the following
-directions apply.
+_NOTE: If you've used rebar3 to build the system, none of the following
+directions apply._
 
 
 Install and run

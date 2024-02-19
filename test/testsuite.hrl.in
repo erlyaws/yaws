@@ -1,0 +1,38 @@
+-include_lib("common_test/include/ct.hrl").
+-include_lib("eunit/include/eunit.hrl").
+-include("yaws.hrl").
+-include("yaws_api.hrl").
+
+-define(top_srcdir,   "@abs_top_srcdir@").
+-define(top_builddir, "@abs_top_builddir@").
+-define(srcdir,       "@abs_top_srcdir@/src").
+-define(ebindir,      "@abs_top_builddir@/ebin").
+-define(ts_srcdir,    "@abs_top_srcdir@/test").
+-define(ts_builddir,  "@abs_top_builddir@/test").
+-define(wwwdir,       "@abs_top_srcdir@/www").
+-define(ssldir,       "@abs_top_srcdir@/ssl").
+-define(sslkeyfile,   "@abs_top_srcdir@/ssl/yaws-key.pem").
+-define(sslcertfile,  "@abs_top_srcdir@/ssl/yaws-cert.pem").
+
+-define(data_srcdir  (SuiteName), filename:join(?ts_srcdir,   atom_to_list(SuiteName) ++ "_data")).
+-define(data_builddir(SuiteName), filename:join(?ts_builddir, atom_to_list(SuiteName) ++ "_data")).
+
+-define(templatedir(SuiteName), filename:join(?data_srcdir(SuiteName),   "templates")).
+-define(tempdir    (SuiteName), filename:join(?data_builddir(SuiteName), "temp")).
+
+-ifdef(SHOW_LOG).
+
+-define(LOG(Fmt),       io:format(standard_error, Fmt, [])).
+-define(LOG(Fmt, Args), io:format(standard_error, Fmt, Args)).
+
+-else.
+
+-define(LOG(Fmt),       io_lib:format(Fmt, [])).
+-define(LOG(Fmt, Args), io_lib:format(Fmt, Args)).
+
+-endif.
+
+-define(GET_ENV(VarName), case os:getenv(VarName) of
+                              false -> "";
+                              _     -> os:getenv(VarName)
+                          end).
