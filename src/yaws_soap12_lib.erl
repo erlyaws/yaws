@@ -545,7 +545,8 @@ addSchemaFiles([Xsd| Tail], AccModel, Options, ImportList) ->
 %%% Get a file from an URL spec.
 %%% --------------------------------------------------------------------
 get_url_file("http://"++_ = URL) ->
-    case httpc:request(URL) of
+    HttpOptions = [{ssl, [{verify, verify_none}]}],
+    case httpc:request(get, {URL, []}, HttpOptions, []) of
         {ok,{{_HTTP,200,_OK}, _Headers, Body}} ->
             {ok, Body};
         {ok,{{_HTTP,RC,Emsg}, _Headers, _Body}} ->
@@ -596,11 +597,13 @@ inets_request(URL, Action, Request, Options, Headers, ContentType) ->
                  end,
     NewOptions = [{cookies, enabled}|Options],
     httpc:set_options(NewOptions),
+    HttpOptions = [{timeout,?HTTP_REQ_TIMEOUT},
+                   {ssl, [{verify, verify_none}]}],
     case httpc:request(post,
                        {URL,NewHeaders,
                         ContentType,
                         Request},
-                       [{timeout,?HTTP_REQ_TIMEOUT}],
+                       HttpOptions,
                        [{sync, true}, {full_result, true},
                         {body_format, string}]) of
         {ok,{{_HTTP,200,_OK},ResponseHeaders,ResponseBody}} ->
