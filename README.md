@@ -2,6 +2,13 @@ This is Yaws, a webserver for dynamic content written in Erlang.
 
 ![Build Status](https://github.com/erlyaws/yaws/actions/workflows/main.yml/badge.svg)
 
+Yaws Web Page
+-------------
+
+The
+[Yaws Web Page](https://erlyaws.github.io/) is available online with
+documentation and examples.
+
 Yaws Mailing List
 -----------------
 

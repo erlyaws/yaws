@@ -1,0 +1,48 @@
+#!/bin/sh
+
+set -e
+
+[ -f LICENSE ] || { echo "Not in source tree root"; exit 1; }
+
+YAWS_ROOT="$PWD"
+BUILD_ROOT="$YAWS_ROOT/build"
+mkdir -p "$BUILD_ROOT"
+BUILD_DIR="$(mktemp -d "$BUILD_ROOT/gh-pages.XXXX")"
+INST_DIR="$BUILD_DIR/_inst"
+REPO=erlyaws.github.io
+YAWS_ID=update-gh-pages-yaws-server-$(date +%s)
+
+# FIXME cleanup when automating this
+# cleanup upon exit
+trap "pkill -f $YAWS_ID; rm -rf \"$BUILD_ROOT\"" 0 1 2 3 15
+
+# build and install yaws
+cd "$YAWS_ROOT"
+mkdir -p "$INST_DIR"
+autoreconf -fiv
+./configure --prefix="$INST_DIR"
+make all install
+
+# start yaws
+# FIXME --id doesn't seem to work
+"$INST_DIR"/bin/yaws --daemon #--id $YAWS_ID
+"$INST_DIR"/bin/yaws --wait-started #--id $YAWS_ID
+
+# clone erlyaws.github.io gh-pages repo
+cd "$BUILD_DIR"
+git clone git@github.com:erlyaws/$REPO
+
+# mirror the site
+wget --mirror \
+     --max-redirect 0 \
+     --directory-prefix $REPO \
+     --no-host-directories \
+     localhost:8000
+
+# FIXME stop yaws
+
+# push updates
+cd $REPO
+git add .
+git commit -av -m "Update gh-pages"
+git push origin main
