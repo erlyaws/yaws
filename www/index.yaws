@@ -30,13 +30,13 @@ out(A) ->
          "well. Web applications don't have to be written in ugly ad hoc "
          "languages."},
 
-        {h2,[], "yaws.hyber.org"},
+        {h2,[], "erlyaws.github.io"},
 
         {p,[], ["The www page for Yaws is ",
-                {a ,[{href,"http://yaws.hyber.org"}], "yaws.hyber.org"},
+                {a ,[{href,"http://erlyaws.github.io"}], "erlyaws.github.io"},
                 ". The documentation, examples as well as releases can be "
                 "found there, and of course, ",
-                {a ,[{href,"http://yaws.hyber.org"}],"yaws.hyber.org"},
+                {a ,[{href,"http://erlyaws.github.io"}],"erlyaws.github.io"},
                 " is itself powered by Yaws."]},
 
 
@@ -45,8 +45,10 @@ out(A) ->
                   "http://github.com/erlyaws/yaws"}]},
 
         {p, [], ["Travis test results at :",
-                 {a, [{href, "https://travis-ci.org/klacke/yaws"}],
-                 "https://travis-ci.org/klacke/yaws"}]},
+                 {a, [{href, "https://github.com/erlyaws/yaws/actions"
+                             "/workflows/main.yml"}],
+                 "https://github.com/erlyaws/yaws/actions"
+                 "/workflows/main.yml"}]},
 
         {p,[], ["A mailing list exists at: ",
                 {a,[{href,"https://lists.sourceforge.net/lists/listinfo/"
