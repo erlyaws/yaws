@@ -769,14 +769,20 @@ setcookie(Name, Value, Path, Expire, Domain, Secure) ->
                              SetSecure, SetPath])}}.
 
 
-%% This function can be passed the cookie we get in the Arg#arg.headers.cookies
-%% to search for a specific cookie
+%% This function can be passed the cookie we get in the
+%% (Arg#arg.headers)#headers.cookie to search for a specific cookie
+%%
+%% Possible input is #arg{}, #headers{}, or a list of strings (cookies).
+%%
 %% return [] if not found
 %%        Str if found
-%% if several cookies with the same name are passed fron the browser,
-%% only the first match is returned
+%%
+%% If several cookies with the same name are passed, only the first
+%% match is returned.
 find_cookie_val(Name, #arg{}=A) ->
     find_cookie_val(Name, (A#arg.headers)#headers.cookie);
+find_cookie_val(Name, #headers{}=H) ->
+    find_cookie_val(Name, H#headers.cookie);
 find_cookie_val(Name, Cookies) ->
     find_cookie_val2(yaws:to_lower(Name), Cookies).
 

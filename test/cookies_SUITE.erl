@@ -253,15 +253,45 @@ format_cookies(_Config) ->
     ok.
 
 get_multiple_cookies(_Config) ->
-    ?assertEqual("1234", yaws_api:find_cookie_val("abc", ["abc=1234;def=5678"])),
-    ?assertEqual("5678", yaws_api:find_cookie_val("def", ["abc=1234;def=5678"])),
-    ?assertEqual([], yaws_api:find_cookie_val("ghij", ["abc=1234;def=5678"])),
+    Cookies = ["abc=1234;def=5678"],
+    Headers = #headers{cookie = Cookies},
+    Arg = #arg{headers = Headers},
+    %% Headers list as input
+    ?assertEqual("1234", yaws_api:find_cookie_val("abc", Cookies)),
+    ?assertEqual("5678", yaws_api:find_cookie_val("def", Cookies)),
+    ?assertEqual([], yaws_api:find_cookie_val("ghij", Cookies)),
+    %% #headers{} record as input
+    ?assertEqual("1234", yaws_api:find_cookie_val("abc", Headers)),
+    ?assertEqual("5678", yaws_api:find_cookie_val("def", Headers)),
+    ?assertEqual([], yaws_api:find_cookie_val("ghij", Headers)),
+    %% #arg{} record as input
+    ?assertEqual("1234", yaws_api:find_cookie_val("abc", Arg)),
+    ?assertEqual("5678", yaws_api:find_cookie_val("def", Arg)),
+    ?assertEqual([], yaws_api:find_cookie_val("ghij", Arg)),
     ok.
 
 cookie_key_case_insensitive(_Config) ->
-    ?assertEqual("1234", yaws_api:find_cookie_val("abc", ["abc=1234"])),
-    ?assertEqual("1234", yaws_api:find_cookie_val("abc", ["ABC=1234"])),
-    ?assertEqual("1234", yaws_api:find_cookie_val("AbC", ["aBc=1234"])),
+    Cookies1 = ["abc=1234"],
+    Cookies2 = ["ABC=1234"],
+    Cookies3 = ["aBc=1234"],
+    %% Headers list as input
+    ?assertEqual("1234", yaws_api:find_cookie_val("abc", Cookies1)),
+    ?assertEqual("1234", yaws_api:find_cookie_val("abc", Cookies2)),
+    ?assertEqual("1234", yaws_api:find_cookie_val("AbC", Cookies3)),
+    %% #headers{} record as input
+    ?assertEqual("1234",
+                 yaws_api:find_cookie_val("abc", #headers{cookie = Cookies1})),
+    ?assertEqual("1234",
+                 yaws_api:find_cookie_val("abc", #headers{cookie = Cookies2})),
+    ?assertEqual("1234",
+                 yaws_api:find_cookie_val("AbC", #headers{cookie = Cookies3})),
+    %% #arg{} record as input
+    Arg1 = #arg{headers = #headers{cookie = Cookies1}},
+    Arg2 = #arg{headers = #headers{cookie = Cookies2}},
+    Arg3 = #arg{headers = #headers{cookie = Cookies3}},
+    ?assertEqual("1234", yaws_api:find_cookie_val("abc", Arg1)),
+    ?assertEqual("1234", yaws_api:find_cookie_val("abc", Arg2)),
+    ?assertEqual("1234", yaws_api:find_cookie_val("AbC", Arg3)),
     ok.
 
 
