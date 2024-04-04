@@ -56,7 +56,7 @@ out(_A) ->
   redirects, once again, to google. Double redirects.
 </p>
 
-<p>While working with redirects, the tool <a href="http://curl.haxx.se/"> curl </a>
+<p>While working with redirects, the tool <a href="https://curl.haxx.se/"> curl </a>
 is an excellent way to troubleshoot the behaviour of your
 redirects. For example:</p>
 
@@ -76,7 +76,7 @@ redirects. For example:</p>
 
   <p>Where <tt> http://rubin.hyber.org:8000</tt> is where I am currently
     testing the <a href="redirect3.yaws"> redirect3.yaws </a> code.
-    Learn and use the <a href="http://curl.haxx.se/"> curl </a>
+    Learn and use the <a href="https://curl.haxx.se/"> curl </a>
     web client, it may not render pictures pretty, but it sure displays
     headers.
   </p>

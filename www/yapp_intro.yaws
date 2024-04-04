@@ -109,7 +109,7 @@ out(A) ->
          [ "In order to make a \"yapp\" we need to know how to make an ordinary Erlang "
            "application, that is we will need a directory layout as specified by the ",
 
-           {a,[{href, "http://www.erlang.org/doc/design_principles/des_princ.html"     }],
+           {a,[{href, "https://www.erlang.org/doc/design_principles/des_princ.html"     }],
             "design principles"},
            " and a proper appname.app file in the ebin directory. "
            "Yaws itself or yapp are standard applications and can serve as introductionary "
@@ -142,7 +142,7 @@ out(A) ->
         {p,[],[
              "In a similar way the yapp handler adds \"private\" opaques for a yapp "
              "with the the environment variable yapp_opaque. "
-             "As an example ", {a,[{href,"http://erlyweb.org/"}], "ErlyWeb "},
+             "As an example ", {a,[{href,"https://erlyweb.org/"}], "ErlyWeb "},
              "applications uses both appmods and opaques in yaws.conf. These can "
              "be put in the  .app file instead if one makes a yapp of it:"]},
          box("

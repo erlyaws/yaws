@@ -8,7 +8,7 @@ out(A) ->
 
   <p>
     WebSockets! The new kid in town! Joe
-    <a href="http://armstrongonsoftware.blogspot.com/2009/12/comet-is-dead-long-live-websockets.html">loves it</a>,
+    <a href="https://armstrongonsoftware.blogspot.com/2009/12/comet-is-dead-long-live-websockets.html">loves it</a>,
     maybe you should too?
   </p>
 
@@ -235,10 +235,10 @@ out(A) ->
       module is notified with the message <code>{close, Status, Reason}</code>,
       where <code>Status</code> is the numerical status code sent by the client
       or the value 1000
-      (see <a href="http://tools.ietf.org/html/rfc6455#section-7.4.1">RFC 6455 -
+      (see <a href="https://tools.ietf.org/html/rfc6455#section-7.4.1">RFC 6455 -
       Section 7.4.1</a>) if the client sent no status code. For an abnormal
       client closure, the status code is 1006 (as specified
-      by <a href="http://tools.ietf.org/html/rfc6455#section-7.1.5">RFC 6455 -
+      by <a href="https://tools.ietf.org/html/rfc6455#section-7.1.5">RFC 6455 -
       Section 7.1.5</a>). <code>Reason</code> is a binary containing any text
       the client sent to indicate the reason for closing the socket; this binary
       may be empty.
@@ -458,7 +458,7 @@ out(A) ->
       term <code>{fail_connection, Status, Reason}</code> is passed,
       where <code>Status</code> is the numerical status code corresponding to
       the error
-      (see <a href="http://tools.ietf.org/html/rfc6455#section-7.4.1">RFC 6455 -
+      (see <a href="https://tools.ietf.org/html/rfc6455#section-7.4.1">RFC 6455 -
       Section 7.4.1</a>) and <code>Reason</code> the binary containing optional
       information about it.
     </p>
@@ -484,7 +484,7 @@ out(A) ->
   <div class="box">
 <pre>
 %% Corresponds to the frame sections as in
-%% http://tools.ietf.org/html/rfc6455#section-5.2
+%% https://tools.ietf.org/html/rfc6455#section-5.2
 %% plus 'data' and 'ws_state'. Used for incoming frames.
 -record(ws_frame_info, {
           fin,

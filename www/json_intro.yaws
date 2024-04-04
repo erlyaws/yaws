@@ -40,7 +40,7 @@ out(A) ->
         ["The Yaws JSON-RPC binding is a way to have JavaScript code in the "
          "browser evaluate a remote procedure call (RPC) in the Yaws server. "
          "JSON itself as described at ",
-         {a, [{href, "http://www.json.org/"}], "http://www.json.org/ "},
+         {a, [{href, "https://www.json.org/"}], "https://www.json.org/ "},
          "is basically a simple marshaling format which can be used "
          "from a variety of different programming languages, and "
          "naturally it's completely straightforward to implement "
@@ -48,8 +48,8 @@ out(A) ->
          "supports, is described here:"]},
        {p, [],
         [{a, [{href,
-         "http://groups.google.com/group/json-rpc/web/json-rpc-2-0"}],
-         "http://groups.google.com/group/json-rpc/web/json-rpc-2-0"}]},
+         "https://groups.google.com/group/json-rpc/web/json-rpc-2-0"}],
+         "https://groups.google.com/group/json-rpc/web/json-rpc-2-0"}]},
        {p, [],
         "The Yaws JSON-RPC implementation consist of JavaScript clients and a "
         "server side library that must be explicitly invoked by Erlang "
@@ -109,7 +109,7 @@ out(A) ->
          "function we wish to implement. Note that the first atom in the "
          "request tuple will either be 'call' or 'notification' to indicate "
          "the type of request. As per the ",
-         {a,[{href,"http://groups.google.com/group/json-rpc/web/json-rpc-2-0"}],
+         {a,[{href,"https://groups.google.com/group/json-rpc/web/json-rpc-2-0"}],
           "JSON-RPC 2.0 specification"},
          ", a 'call' is a regular request-reply while a 'notification' is a "
          "one-way message that does not have a corresponding reply."]},
@@ -156,7 +156,7 @@ box("{array, [\"foo\", \"bar\"]}"),
        {p, [],
         ["Here is yet another example, stolen from ",
          {a,
-          [{href,"http://www.redhoterlang.com/entry/ac061493b201e3d1b4490cdc3f911068"}],
+          [{href,"https://www.redhoterlang.com/entry/ac061493b201e3d1b4490cdc3f911068"}],
           "Tobbe's blog."}
          ]},
         {h4, [], "Setup the DOM"},

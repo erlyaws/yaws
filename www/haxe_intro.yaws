@@ -33,11 +33,11 @@ out(A) ->
         ["The yaws_rpc module has a haXe remoting adapter that enables "
          "Yaws to respond to respond to "
          "RPC requests from a client written in ",
-         {a, [{href, "http://www.haxe.org"}], "haXe"},
+         {a, [{href, "https://www.haxe.org"}], "haXe"},
           ". haXe is a versatile open source language that compiles to "
           "Flash, Javascript and NekoVM. ",
           "For more information on haXe, visit ",
-          {a, [{href, "http://www.haxe.org/intro"}], "www.haxe.org/intro"}, "."]},
+          {a, [{href, "https://www.haxe.org/intro"}], "www.haxe.org/intro"}, "."]},
        {p, [],
         ["Implementing the server side of a haXe remoting interaction "
          "in Yaws is very similar to the one described in the ",

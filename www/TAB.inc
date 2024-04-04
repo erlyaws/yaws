@@ -28,7 +28,7 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <div class="%%index%%"> <a href="index.yaws" id="index" >Top Page</a> </div>
 <div class="%%configuration%%"> <a href="configuration.yaws" id="configuration">Build Config and Run</a></div>
 <div class="%%dynamic%%"> <a href="dynamic.yaws" id="dynamic" >Dynamic Content</a> </div>
-<div class="%%download%%"> <a href="http://github.com/erlyaws/yaws/releases/" id="download">Download </a> </div>
+<div class="%%download%%"> <a href="https://github.com/erlyaws/yaws/releases/" id="download">Download </a> </div>
 <div class="%%contact%%"> <a href="contact.yaws" id="contact">Contact </a> </div>
 <div class="%%doc%%"> <a href="doc.yaws" id="doc">Documentation</a>  </div>
 <div class="%%articles%%"> <a href="articles.yaws" id="resources">Articles</a> </div>

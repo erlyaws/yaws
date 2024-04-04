@@ -404,7 +404,7 @@ return "["+v.join(", ")+"]";
 };
 mod.__main__=function(){
 print("creating ServiceProxy object using introspection for method construction...\n");
-var s=new mod.ServiceProxy("http://jsolait.net/testj.py",["echo"]);
+var s=new mod.ServiceProxy("https://jsolait.net/testj.py",["echo"]);
 print("%s created\n".format(s));
 print("creating and marshalling test data:\n");
 var o=[1.234,5,{a:"Hello ' \" World",b:new Date()}];
