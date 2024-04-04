@@ -177,7 +177,7 @@ out(A) ->
          box("
 [{status, 303},
  {allheaders,
-     [{header, [\"Location: \",\"http://www.funky.org/\"]},
+     [{header, [\"Location: \",\"https://www.funky.org/\"]},
       {header, [\"Set-Cookie: \",\"namn=ruler;\"]}
      ]},
  {html,\"<html> Redirected to funky.org </html>\"}

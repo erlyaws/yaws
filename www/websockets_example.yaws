@@ -9,7 +9,7 @@ out(A) ->
     {content, "text/html", Body}.
 
 %% this html was copied from the basic example in
-%% http://github.com/davebryson/erlang_websocket/
+%% https://github.com/davebryson/erlang_websocket/
 html_body(WebSocketLocation) ->
 "<html>
 <head>

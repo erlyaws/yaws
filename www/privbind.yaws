@@ -76,8 +76,8 @@ $ setcap 'cap_net_bind_service=+ep' /usr/lib/erlang/erts-5.7.4/bin/beam
 <p>
   There are a couple
   of other options on Linux. One is to use an auxiliary program
-  like authbind <em>http://packages.debian.org/stable/authbind</em>
-  or privbind <em>http://sourceforge.net/projects/privbind/</em>
+  like authbind <em>https://packages.debian.org/stable/authbind</em>
+  or privbind <em>https://sourceforge.net/projects/privbind/</em>
 </p>
 <p>
   These programs are run by root. Yaws writes its temporary

@@ -19,7 +19,7 @@ When Yaws is running behind a HTTP reverse proxy, the source IP of a connection
 is always the proxy's IP address. It is also this IP address that you will find
 in your log files. In this situation, it may be desirable to log the real client
 IP address by extracting it from the "<a
-href="http://en.wikipedia.org/wiki/X-Forwarded-For"
+href="https://en.wikipedia.org/wiki/X-Forwarded-For"
 target="_blank">X-Forwarded-For</a>" header.
 </p>
 

@@ -30,7 +30,7 @@ out(A) ->
   protocol they share.</p></li>
 
   <li><p><a href="websockets.yaws">The WebSockets protocol</a> (<a
-  href="http://tools.ietf.org/html/rfc6455">RFC 6455</a>) allows web client
+  href="https://tools.ietf.org/html/rfc6455">RFC 6455</a>) allows web client
   and server to upgrade their TCP connection from using HTTP to using some
   other protocol they agree on. The protocol they choose can be
   bidirectional and can transmit whatever data transfer formats they wish
@@ -39,7 +39,7 @@ out(A) ->
   specialized protocols, framing, and data formats to be able to
   communicate successfully.</p></li>
 
-  <li><p><a href="http://www.w3.org/TR/eventsource/">Server-Sent Events</a>
+  <li><p><a href="https://www.w3.org/TR/eventsource/">Server-Sent Events</a>
   (SSE) is a W3C working draft that unlike long polling is on a path to
   standardization and unlike WebSockets is pretty simple. Despite being a
   working draft, it's already fairly widely used. With SSE, a client sends a
@@ -102,7 +102,7 @@ out(A) ->
 
   <p>The <code>yaws_sse</code> module supplies all the SSE primitives
   required for formatting event data, event identifiers, and event retry
-  settings. See the <a href="http://www.w3.org/TR/eventsource/">Server-Sent
+  settings. See the <a href="https://www.w3.org/TR/eventsource/">Server-Sent
   Events</a> working draft for more details on using these features.</p>
 
   <p>The <code>yaws_sse</code> module also supplies functions for

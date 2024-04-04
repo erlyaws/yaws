@@ -50,7 +50,7 @@ out(A) ->
 
        {p,[],"To install 'erlsom' do:"},
 
-       box("git clone http://github.com/willemdj/erlsom.git\n"
+       box("git clone https://github.com/willemdj/erlsom.git\n"
            "cd erlsom; chmod a+x configure; ./configure; make\n"
            "sudo make install        # iff you want to install as root\n"
           ),
@@ -62,7 +62,7 @@ out(A) ->
            "RPC binding style. Also, only the <i>'literal'</i> encoding is supported "
            "There is no support for <i>'soap-encoding'</i>. For an explanation of the differences "
            "between these concepts, see this "
-           "<a href=\"http://www-128.ibm.com/developerworks/webservices/library/ws-whichwsdl/\">description</a>."},
+           "<a href=\"https://www-128.ibm.com/developerworks/webservices/library/ws-whichwsdl/\">description</a>."},
 
 
           {h2, [], "The SOAP client side"},
@@ -81,8 +81,8 @@ out(A) ->
         ["As an example, lets have a look at a public SOAP service that "
          "returns some weather data for the location we send to it. "
          "The WSDL specification can be found here: ",
-         {a, [{href, "http://www.webservicex.net/WeatherForecast.asmx?WSDL"}],
-          "http://www.webservicex.net/WeatherForecast.asmx?WSDL "}
+         {a, [{href, "https://www.webservicex.net/WeatherForecast.asmx?WSDL"}],
+          "https://www.webservicex.net/WeatherForecast.asmx?WSDL "}
          ]},
 
        {p,[],
@@ -135,7 +135,7 @@ out(A) ->
        box("1> inets:start().\n"
            "ok\n"
            "2> yaws_soap_lib:call(\n"
-           "      \"http://www.webservicex.net/WeatherForecast.asmx?WSDL\",\n"
+           "      \"https://www.webservicex.net/WeatherForecast.asmx?WSDL\",\n"
            "      \"GetWeatherByPlaceName\",\n"
            "      [\"Boston\"]).\n"
            "{ok,undefined,\n"
@@ -172,7 +172,7 @@ out(A) ->
        box("1> inets:start().\n"
            "ok\n"
            "2> Wsdl = yaws_soap_lib:initModel(\n"
-           "      \"http://www.webservicex.net/WeatherForecast.asmx?WSDL\").\n"
+           "      \"https://www.webservicex.net/WeatherForecast.asmx?WSDL\").\n"
            "...\n"
            "3> yaws_soap_lib:call(\n"
            "      Wsdl,\n"
@@ -220,7 +220,7 @@ out(A) ->
         ["Some final notes:",
          {ul, [],
           [{li, [],
-            "The \"http://...\" URL given as the first argument to the "
+            "The \"https://...\" URL given as the first argument to the "
             "functions above may as well be a local file, and thus written as \"file://....\". "},
            {li, [],
             "When we retrieve a HTTP located file, we will use 'ibrowse' if it exist "
@@ -248,7 +248,7 @@ out(A) ->
        box("8> Ops = yaws_soap_lib:wsdl_operations(Wsdl).\n"
            "9> {ok,Op} = yaws_soap_lib:get_operation(Ops, \"GetWeatherByPlaceName\").\n"
            "10> yaws_soap_lib:wsdl_op_address(Op).\n"
-           "\"http://www.webservicex.net/WeatherForecast.asmx\"\n"
+           "\"https://www.webservicex.net/WeatherForecast.asmx\"\n"
           ),
 
        {p,[],
@@ -258,7 +258,7 @@ out(A) ->
        box("<wsdl:service name=\"WeatherForecast\">\n"
            "  <documentation xmlns=......\n"
             "  <wsdl:port name=\"WeatherForecastSoap\".....\n"
-           "    <soap:address location=\"http://localhost:8181/WeatherForecast.yaws\" />\n"
+           "    <soap:address location=\"https://localhost:8181/WeatherForecast.yaws\" />\n"
            "  </wsdl:port>\n"
            ".....\n"
           ),
@@ -308,7 +308,7 @@ out(A) ->
            "    WeatherData =\n"
            "    #'p:WeatherData'{anyAttribs = [],\n"
            "             'Day' = \"Sunday, December 10, 2006\",\n"
-           "             'WeatherImage' = \"http://www.nws.noaa.gov/weather/images/fcicons/nfew.jpg\",\n"
+           "             'WeatherImage' = \"https://www.nws.noaa.gov/weather/images/fcicons/nfew.jpg\",\n"
            "             'MaxTemperatureF' = \"51\",\n"
            "             'MinTemperatureF' = \"28\",\n"
            "             'MaxTemperatureC' = \"11\",\n"

@@ -20,7 +20,7 @@ out(A) ->
             "another Erlang application."}}
          ]},
         {p,[], ["Yaws is entirely written in ",
-                {a, [{href, "http://www.erlang.org"}],  "Erlang"},
+                {a, [{href, "https://www.erlang.org"}],  "Erlang"},
                 ", and furthermore it is a multithreaded webserver where one "
                 "Erlang lightweight process is used to handle each client."]},
         {p,[], "The main advantages of Yaws compared to other Web technologies"
@@ -33,16 +33,16 @@ out(A) ->
         {h2,[], "erlyaws.github.io"},
 
         {p,[], ["The www page for Yaws is ",
-                {a ,[{href,"http://erlyaws.github.io"}], "erlyaws.github.io"},
+                {a ,[{href,"https://erlyaws.github.io"}], "erlyaws.github.io"},
                 ". The documentation, examples as well as releases can be "
                 "found there, and of course, ",
-                {a ,[{href,"http://erlyaws.github.io"}],"erlyaws.github.io"},
+                {a ,[{href,"https://erlyaws.github.io"}],"erlyaws.github.io"},
                 " is itself powered by Yaws."]},
 
 
         {p,[], ["Code is on : ",
-                {a,[{href,"http://github.com/erlyaws/yaws"}],
-                  "http://github.com/erlyaws/yaws"}]},
+                {a,[{href,"https://github.com/erlyaws/yaws"}],
+                  "https://github.com/erlyaws/yaws"}]},
 
         {p, [], ["Travis test results at :",
                  {a, [{href, "https://github.com/erlyaws/yaws/actions"
