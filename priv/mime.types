@@ -44,6 +44,7 @@ application/font-tdpfr				pfr
 application/gml+xml				gml
 application/gpx+xml				gpx
 application/gxf					gxf
+application/gzip				gz
 application/hyperstudio				stk
 application/inkml+xml				ink inkml
 application/ipfix				ipfix
