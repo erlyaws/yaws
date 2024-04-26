@@ -96,6 +96,9 @@ list-checks:
 cleantest:
 	$(AM_V_at)( cd test && $(MAKE) clean )
 
+# If dialyzer exits with status 2, it means it emitted warnings. In
+# that case, exit with status 0 instead of failing the build, since
+# warnings are typically inconsequential.
 yaws.plt:
 	$(AM_V_GEN)$(DIALYZER) --build_plt -r ebin --output_plt yaws.plt\
 	  -r $(ERLANG_LIB_DIR_kernel) 					\
@@ -109,7 +112,8 @@ yaws.plt:
 	  -r $$(echo $(ERLANG_LIB_DIR_mnesia) | sed "s/not found//")	\
 	  -r $$(echo $(ERLANG_LIB_DIR_inets)  | sed "s/not found//")	\
 	  -r $$(echo $(ERLANG_LIB_DIR_xmlrpc) | sed "s/not found//")	\
-	  -r $$(echo $(ERLANG_LIB_DIR_erlsom) | sed "s/not found//")
+	  -r $$(echo $(ERLANG_LIB_DIR_erlsom) | sed "s/not found//") ;  \
+	[ $$? -eq 2 ] && exit 0 || exit $$?
 
 dialyzer: all yaws.plt
 	$(AM_V_at)$(DIALYZER) -q --plt yaws.plt -r ebin | \

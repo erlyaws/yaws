@@ -11,4 +11,5 @@ yaws_ctl.erl:\d+(:\d+)?: Function trace/1 has no local return
 yaws_ctl.erl:\d+(:\d+)?: Function debug_dump/1 has no local return
 yaws_ctl.erl:\d+(:\d+)?: Function stats/1 has no local return
 yaws_ctl.erl:\d+(:\d+)?: Function running_config/1 has no local return
+yaws_dynopts.erl:\d+(:\d+)?: The pattern 'true' can never match the type 'false'
 yaws_revproxy.erl:\d+(:\d+)?: The pattern 'true' can never match the type 'false'
