@@ -2548,14 +2548,24 @@ get_nslookup_pref([], Result) ->
 %% http/tcp send receive functions
 %%
 %%
-do_recv(Sock, Num, nossl) ->
-    gen_tcp:recv(Sock, Num, (get(gc))#gconf.keepalive_timeout);
-do_recv(Sock, Num, ssl) ->
-    ssl:recv(Sock, Num, (get(gc))#gconf.keepalive_timeout).
-do_recv(Sock, Num, nossl, Timeout) ->
+-define(MaxPacketSize, 8 * 1024 * 1024).
+
+do_recv(Sock, Num, SSL) ->
+    do_recv(Sock, Num, SSL, (get(gc))#gconf.keepalive_timeout).
+
+do_recv(Sock, Num, nossl, Timeout) when Num =< ?MaxPacketSize ->
     gen_tcp:recv(Sock, Num, Timeout);
-do_recv(Sock, Num, ssl, Timeout) ->
-    ssl:recv(Sock, Num, Timeout).
+do_recv(Sock, Num, ssl, Timeout) when Num =< ?MaxPacketSize ->
+    ssl:recv(Sock, Num, Timeout);
+do_recv(Sock, Num, SSL, Timeout) when Num > ?MaxPacketSize ->
+    case do_recv(Sock, ?MaxPacketSize, SSL, Timeout) of
+	{error, Reason} -> {error, Reason};
+	{ok, Data1} ->
+	    case do_recv(Sock, Num - ?MaxPacketSize, SSL, Timeout) of
+		{error, Reason} -> {error, Reason};
+		{ok, Data2} -> {ok, <<Data1/binary, Data2/binary>>}
+	    end
+    end.
 
 cli_recv(S, Num, SslBool) ->
     Res = do_recv(S, Num, SslBool),
