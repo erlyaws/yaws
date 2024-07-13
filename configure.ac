@@ -235,10 +235,10 @@ dnl Get ERTS version.
 ERLANG_CHECK_ERTS
 ERLANG_CHECK_RELEASE
 
-dnl Require Erlang >=22.0 (ERTS 10.4) is required.
-AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [10.4],
+dnl Require Erlang >=23.0 (ERTS 11.0) is required.
+AX_COMPARE_VERSION([${ERLANG_ERTS_VER}], [ge], [11.0],
     [],
-    [AC_MSG_ERROR([Erlang 22.0 or higher is required but only Erlang $ERLANG_RELEASE was found!])])
+    [AC_MSG_ERROR([Erlang 23.0 or higher is required but only Erlang $ERLANG_RELEASE was found!])])
 
 dnl Determine directories for installation.
 if test "x${prefix}" != "xNONE" -a "x${ERLANG_INSTALL_LIB_DIR}" = "x"; then
