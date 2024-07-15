@@ -26,7 +26,7 @@ out(A) ->
        {p, [],
         ["Appmods are a way to let the application programmer take control over the URL path.  Or put in another way, to let the application programmer fake real paths in URLs where in reality an Erlang module is executing. Possibly an example will make this easy to understand. Say we have the following URL"]},
 
-       box("http://yaws.hyber.org/pathelem/foo/bar/x.pdf"),
+       box("http://www.example.org/pathelem/foo/bar/x.pdf"),
        
        {p,[],["With the above URL, the webserver would try to deliver the file \"/pathelem/foo/bar/x.pdf\" relative to the docroot. However if we had specified \"pathelem\" as an appmod, the server would stop processing the URL after seeing the \"pathelem\" part of the URL. Say we had the following in our yaws.conf configuration file"]},
 
@@ -56,7 +56,7 @@ out(A) ->
 
        {p,[],
         "Thus the following URL"},
-       box("http://yaws.hyber.org/zap/pathelem/foo/bar/x.pdf?a=b"),
+       box("http://www.example.org/zap/pathelem/foo/bar/x.pdf?a=b"),
        {p,[],
         "Produces the following output:"},
        box("

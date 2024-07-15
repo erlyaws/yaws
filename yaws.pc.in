@@ -10,6 +10,6 @@ includedir=${prefix}/lib/yaws/include
 Name: yaws
 Description: Yet Another Web Server
 Version: @YAWS_VSN@
-URL: http://yaws.hyber.org/
+URL: https://erlyaws.github.io/
 Libs: -pa ${libdir}
 Cflags: -I${includedir}

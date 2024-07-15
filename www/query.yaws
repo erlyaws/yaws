@@ -18,7 +18,7 @@ out(A) ->
 
   <p>We show how to work with the query part of the url through
     an example, if we have a URL on the form of
-    <a href="man.yaws?page=cat">http://yaws.hyber.org/man.yaws?page=cat</a>
+    <a href="man.yaws?page=cat">http://www.example.org/man.yaws?page=cat</a>
     a key/value pair is passed to the page.
     In the above example, we have key=page and its value "cat".
     The code in the page man.yaws, will read these key/value pairs

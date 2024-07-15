@@ -63,18 +63,18 @@ redirects. For example:</p>
 <div class="box">
   <verbatim>
 
-    # curl -I http://rubin.hyber.org:8000/redirect3.yaws
+    # curl -I http://www.example.org:8000/redirect3.yaws
 
     HTTP/1.1 302 Found
     Server: Yaws/1.49 Yet Another Web Server
-    Location: http://rubin.hyber.org:8000/redirect2.yaws
+    Location: http://www.example.org:8000/redirect2.yaws
     Date: Tue, 16 Nov 2004 20:16:01 GMT
     Content-Type: text/html
 
   </verbatim>
 </div>
 
-  <p>Where <tt> http://rubin.hyber.org:8000</tt> is where I am currently
+  <p>Where <tt> http://www.example.org:8000</tt> is where I am currently
     testing the <a href="redirect3.yaws"> redirect3.yaws </a> code.
     Learn and use the <a href="https://curl.haxx.se/"> curl </a>
     web client, it may not render pictures pretty, but it sure displays

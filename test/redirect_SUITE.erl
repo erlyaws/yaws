@@ -67,14 +67,14 @@ redirect_default(Config) ->
     ?assertEqual(testsuite:make_url(http, "127.0.0.1", Port, "/redir"),
                  proplists:get_value("location", Hdrs2)),
 
-    %% /default_redirect3 ->  http://yaws.hyber.org (absolute-url + append)
+    %% /default_redirect3 ->  http://www.example.org (absolute-url + append)
     {ok, {{_,302,_}, Hdrs3, _}} = testsuite:http_get(Url3),
-    ?assertEqual("http://yaws.hyber.org/default_redirect3/index.html",
+    ?assertEqual("http://www.example.org/default_redirect3/index.html",
                  proplists:get_value("location", Hdrs3)),
 
-    %% /default_redirect4 -> http://yaws.hyber.org (absolute-url + noappend)
+    %% /default_redirect4 -> http://www.example.org (absolute-url + noappend)
     {ok, {{_,302,_}, Hdrs4, _}} = testsuite:http_get(Url4),
-    ?assertEqual("http://yaws.hyber.org/",
+    ?assertEqual("http://www.example.org/",
                  proplists:get_value("location", Hdrs4)),
     ok.
 
@@ -90,7 +90,7 @@ redirect_with_trailing_slash(Config) ->
     Url2 = testsuite:make_url(http, "localhost", Port2, "/"),
     {ok, {{_,302,_}, Hdrs2, _}} = testsuite:http_get(Url2),
     %% Verify no extra slashes are added on redirect
-    ?assertEqual("http://yaws.hyber.org/", proplists:get_value("location", Hdrs2)),
+    ?assertEqual("http://www.example.org/", proplists:get_value("location", Hdrs2)),
     ok.
 
 redirect_301(Config) ->
@@ -110,14 +110,14 @@ redirect_301(Config) ->
     ?assertEqual(testsuite:make_url(http, "127.0.0.1", Port, "/redir"),
                  proplists:get_value("location", Hdrs2)),
 
-    %% /301_redirect3 ->  http://yaws.hyber.org (absolute-url + append)
+    %% /301_redirect3 ->  http://www.example.org (absolute-url + append)
     {ok, {{_,301,_}, Hdrs3, _}} = testsuite:http_get(Url3),
-    ?assertEqual("http://yaws.hyber.org/301_redirect3/index.html",
+    ?assertEqual("http://www.example.org/301_redirect3/index.html",
                  proplists:get_value("location", Hdrs3)),
 
-    %% /301_redirect4 -> http://yaws.hyber.org (absolute-url + noappend)
+    %% /301_redirect4 -> http://www.example.org (absolute-url + noappend)
     {ok, {{_,301,_}, Hdrs4, _}} = testsuite:http_get(Url4),
-    ?assertEqual("http://yaws.hyber.org/",
+    ?assertEqual("http://www.example.org/",
                  proplists:get_value("location", Hdrs4)),
     ok.
 
@@ -186,14 +186,14 @@ redirect_querystring(Config) ->
     ?assertEqual(testsuite:make_url(http, "127.0.0.1", Port, "/redir?a=b&c=d"),
                  proplists:get_value("location", Hdrs2)),
 
-    %% /default_redirect3 ->  http://yaws.hyber.org (absolute-url + append)
+    %% /default_redirect3 ->  http://www.example.org (absolute-url + append)
     {ok, {{_,302,_}, Hdrs3, _}} = testsuite:http_get(Url3),
-    ?assertEqual("http://yaws.hyber.org/default_redirect3/index.html?a=b&c=d",
+    ?assertEqual("http://www.example.org/default_redirect3/index.html?a=b&c=d",
                  proplists:get_value("location", Hdrs3)),
 
-    %% /default_redirect4 -> http://yaws.hyber.org (absolute-url + noappend)
+    %% /default_redirect4 -> http://www.example.org (absolute-url + noappend)
     {ok, {{_,302,_}, Hdrs4, _}} = testsuite:http_get(Url4),
-    ?assertEqual("http://yaws.hyber.org/?a=b&c=d",
+    ?assertEqual("http://www.example.org/?a=b&c=d",
                  proplists:get_value("location", Hdrs4)),
 
     %% /404_redirect3 -> /error404.yaws (append)

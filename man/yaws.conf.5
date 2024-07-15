@@ -747,7 +747,7 @@ specify
 .fi
 
 Assume for example that we have the URL
-http://www.hyber.org/myapp/foo/bar/baz?user=joe while we have the module foo
+http://www.example.org/myapp/foo/bar/baz?user=joe while we have the module foo
 defined as an appmod, the function foo:out(Arg) will be invoked instead of
 searching the filesystems below the point foo.
 .br
@@ -901,10 +901,10 @@ and \fIUrl\fB argument is a URL pointing to a website we want to "mount"
 under the \fIPrefix\fR path. This example:
 
 .nf
-  revproxy = /tmp/foo http://yaws.hyber.org
+  revproxy = /tmp/foo http://www.example.org
 .fi
 
-makes the hyber website appear under \fI/tmp/foo\fR.
+makes the \fIexample\fR website appear under \fI/tmp/foo\fR.
 
 It is possible to have multiple reverse proxies inside the same server.
 

@@ -110,7 +110,7 @@ nested_mfa(_Config) ->
     ok.
 
 get_link() ->
-    "http://yaws.hyber.org/".
+    "http://www.example.org/".
 
 simple_attr(_Config) ->
     Link = "link",

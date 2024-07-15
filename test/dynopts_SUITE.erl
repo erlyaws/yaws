@@ -72,8 +72,8 @@ generated_dynopts(_Config) ->
 
 %%====================================================================
 check_have_http_uri_parse(_Config) ->
-    ?assertEqual({ok,{http,[],"yaws.hyber.org",80,"/",[]}},
-                 yaws_dynopts:http_uri_parse("http://yaws.hyber.org/")),
+    ?assertEqual({ok,{http,[],"www.example.org",80,"/",[]}},
+                 yaws_dynopts:http_uri_parse("http://www.example.org/")),
     case yaws_dynopts:have_http_uri_parse() of
         true ->
             {file, _} = code:is_loaded(http_uri),

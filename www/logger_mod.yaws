@@ -31,7 +31,7 @@ overridden by using the directive "logger_mod" in yaws.conf:
 
 <div class="box">
      <verbatim>
-<server www.hyber.org>
+<server www.example.org>
         port       = 80
         listen     = 0.0.0.0
         logger_mod = simple_logger

@@ -27,7 +27,7 @@ out(A) ->
 <div class="box">        
       <verbatim>
 
-<server www.hyber.org>
+<server www.example.org>
         port = 80
         listen = 0.0.0.0
         allowed_scripts = php yaws cgi

@@ -593,7 +593,7 @@ allprops(R) ->
     C = get(compatibility),
     %% default property set
     P1 = [
-          {'http://yaws.hyber.org/',access},    % sample Yaws extension
+          {'http://www.example.org/',access},    % sample Yaws extension
           {'DAV:',creationdate},
           %%{'DAV:',getcontentlanguage},        % not supported in GET
                                                 % so omitted here as well
@@ -637,10 +637,10 @@ allprops(R) ->
          end,
     P1++P2++P3.
 
-prop_get({'http://yaws.hyber.org/',access},_A,R) ->
+prop_get({'http://www.example.org/',access},_A,R) ->
     F = R#resource.info,
     A = F#file_info.access,
-    P = {access, [{xmlns,'http://yaws.hyber.org/'}], [atom_to_list(A)]},
+    P = {access, [{xmlns,'http://www.example.org/'}], [atom_to_list(A)]},
     {200, P};
 prop_get({'DAV:',childcount},A,_R) ->
     Path=davpath(A),

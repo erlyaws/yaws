@@ -1557,7 +1557,7 @@ fields in the config file:
     <opaque>
         foo = bar
         somefile = /var/myapp/db
-        myname = hyber
+        myname = example
     </opaque>
 </server>
 \end{verbatim}
@@ -1573,7 +1573,7 @@ field will have the value:
 
 [{foo, "bar"},
  {somefile, "/var/myapp/db"},
- {myname, "hyber"}
+ {myname, "example"}
 ]
 
 \end{verbatim}
@@ -3069,7 +3069,7 @@ The following directives are allowed inside a server definition.
   appmods = <Path1, Module1> <Path2, Modules2> ...
 \end{verbatim}
              Assume for example that we have the URL
-             \url{http://www.hyber.org/myapp/foo/bar?user=joe} while we
+             \url{http://www.example.org/myapp/foo/bar?user=joe} while we
              have the module \verb+foo+ defined as an appmod, the function
              \verb+foo:out(Arg)+ will be invoked instead of searching the
              filesystems below the point \verb+foo+.
@@ -3204,9 +3204,9 @@ The following directives are allowed inside a server definition.
               docroot and \verb+Url+ is a URL pointing to a website we
               want to "mount" under the \verb+Prefix+ path. For example:
 
-              \verb+revproxy = /tmp/foo http://yaws.hyber.org+
+              \verb+revproxy = /tmp/foo http://www.example.org+
 
-              This makes the hyber website appear under \verb+/tmp/foo+.
+              This makes the \verb+example+ website appear under \verb+/tmp/foo+.
 
               It is possible to have multiple reverse proxies inside the same
               server by supplying multiple \verb+revproxy+ directives.
