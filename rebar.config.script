@@ -29,7 +29,7 @@ YawsCharsetContent = case os:getenv("YAWS_CHARSET") of
                             erlang:iolist_to_binary([<<"-define(YAWS_CHARSET, \"">>,
                                Charset, <<"\").\n">>])
                      end,
-ok = case file:read_file(Filename) of
+ok = case file:read_file(YawsCharsetFile) of
     {ok, YawsCharsetContent} -> ok;
     {ok, _} -> file:write_file(YawsCharsetFile, YawsCharsetContent);
     {error, _} -> file:write_file(YawsCharsetFile, YawsCharsetContent)
