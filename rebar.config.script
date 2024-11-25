@@ -21,14 +21,19 @@ ErtsVsn = case string:tokens(erlang:system_info(version), ".") of
           end.
 
 %% generate a charset include file
-ok = file:write_file(filename:join(Dir, "src/yaws_charset.hrl"),
-                     case os:getenv("YAWS_CHARSET") of
+YawsCharsetFile = filename:join(Dir, "src/yaws_charset.hrl"),
+YawsCharsetContent = case os:getenv("YAWS_CHARSET") of
                          false ->
                              <<"-define(YAWS_CHARSET, undefined).\n">>;
                          Charset ->
-                             [<<"-define(YAWS_CHARSET, \"">>,
-                               Charset, <<"\").\n">>]
-                     end),
+                            erlang:iolist_to_binary([<<"-define(YAWS_CHARSET, \"">>,
+                               Charset, <<"\").\n">>])
+                     end,
+ok = case file:read_file(Filename) of
+    {ok, YawsCharsetContent} -> ok;
+    {ok, _} -> file:write_file(YawsCharsetFile, YawsCharsetContent);
+    {error, _} -> file:write_file(YawsCharsetFile, YawsCharsetContent)
+end,
 
 SoapDeps = [{erlsom, ".*", {git, "git://github.com/willemdj/erlsom.git", {tag, "1.4.0"}}},
             {xmlrpc, ".*", {git, "git://github.com/rwbr/exmlrpc.git",
