@@ -2704,8 +2704,11 @@ deliver_redirect_map(CliSock, Req, Arg,
     %% Here Code is 1xx, 2xx, 4xx or 5xx
     ?Debug("in redir ~p", [Code]),
     deliver_xxx(CliSock, Req, Arg, Code);
-deliver_redirect_map(_CliSock, _Req, Arg,
-                     {_Prefix, Code, Path, Mode}, N) when is_list(Path) ->
+deliver_redirect_map(_CliSock, #http_request{path = {abs_path, ReqPath}}, Arg,
+                     {Prefix, Code, Path, Mode}, N)
+  when is_list(Path) andalso
+       %% Stop redirect loops
+       ReqPath /= Prefix ->
     %% Here Code is 1xx, 2xx, 4xx or 5xx
     ?Debug("in redir ~p", [Code]),
     Path1 = if
@@ -2725,8 +2728,13 @@ deliver_redirect_map(_CliSock, _Req, Arg,
     put(yaws_arg, Arg),
     put(client_data_pos, N),
     {page, {[{status, Code}], Page}};
-deliver_redirect_map(CliSock, Req, Arg,
-                     {_Prefix, Code, URL, Mode}, N) when is_record(URL, url) ->
+deliver_redirect_map(CliSock,
+                     #http_request{path = {abs_path, ReqPath}} = Req, Arg,
+                     {Prefix, Code, URL, Mode}, N)
+  when is_record(URL, url)
+       andalso
+       %% Stop redirect loops
+       ReqPath == Prefix ->
     %% Here Code is 3xx
     ?Debug("in redir ~p", [Code]),
     H = get(outh),
