@@ -50,8 +50,7 @@ out(A) ->
                     L = yaws_api:parse_post(A),
                     {Cbox, Rest} = extract_cbox(L),
                     Name = lk("tablename", Rest),
-                    Ls = select_fields(Rest),
-                    Sp = (catch select_pattern(Name, Ls)),
+                    Sp = ?MNESIA(table_info, [l2a(Name), wild_pattern]),
                     case catch table(Cbox, Sp, l2a(Name)) of
                         {'EXIT', Reason} ->
                             ?elog("Error , reason: ~p~n", [Reason]),
@@ -65,51 +64,6 @@ out(A) ->
         _ ->
             return_top_page()
     end.
-
-%%% Get the fields to be part of the select
-select_fields([{"tablename",_}|T]) -> select_fields(T);
-select_fields([{_,undefined}|T])   -> select_fields(T);
-select_fields([H|T])               -> [H|select_fields(T)];
-select_fields([])                  -> [].
-
-select_pattern(Name, Ls) ->
-    Wp = ?MNESIA(table_info, [l2a(Name), wild_pattern]),
-    mk_select_pattern(lists:map(fun(A) -> a2l(A) end,get_attributes(l2a(Name))),
-                      Ls, Wp, 2).
-
-mk_select_pattern([A|As], [{A,V}|T], Wp, N) ->
-    mk_select_pattern(As, T, setelement(N, Wp, be_smart(V)), N+1);
-mk_select_pattern([_|As], L, Wp, N) ->
-    mk_select_pattern(As, L, Wp, N+1);
-mk_select_pattern([], [], Wp, _) ->
-    Wp.
-
-%%% Try to be intelligent and convert the Key to the datatype that
-%%% could be expected. Note: atom is anything between single quotes.
-be_smart([$'|T])     -> l2a(eat_until($', T));
-be_smart([$[|_] = L) -> str2term(L);
-be_smart([${|_] = L) -> str2term(L);
-be_smart(L) ->
-    case be_smart(L, false) of
-        integer -> list_to_integer(L);
-        float   -> list_to_float(L);
-        _       -> L
-    end.
-
-eat_until(H, [H|_]) -> [];
-eat_until(X, [H|T]) -> [H|eat_until(X,T)].
-
-
-be_smart([H|T], false) when H>$0, H=<$9 ->
-    be_smart(T, integer);
-be_smart([H|T], integer) when H>$0, H=<$9 ->
-    be_smart(T, integer);
-be_smart([H|T], integer) when H>$. ->
-    be_smart(T, float);
-be_smart([_|T], _) ->
-    be_smart(T, list);
-be_smart([], Type) ->
-    Type.
 
 return_top_page() ->
     {ehtml,
@@ -279,26 +233,4 @@ t2l(L) ->
 
 tail([]) -> [];
 tail(L)  -> tl(L).
-
-
-str2term(Str) ->
-    hd(str2terms(Str ++ ". ")).
-
-%% str2tokens:str2terms("{hello,23}. [arne,43]. 5.6. {5.5,1.0}. ").
-%%   ==> [{hello,23},[arne,43],5.60000,{5.50000,1.00000}]
-str2terms(String) ->
-    tokenlists2terms(str2tokenlists(String)).
-
-str2tokenlists("")     -> [];
-str2tokenlists(String) ->
-    case erl_scan:tokens([], String, 1) of
-        {done, {ok, Tokens, _}, Rest} ->
-            [Tokens | str2tokenlists(Rest)]
-    end.
-
-tokenlists2terms(Lists) ->
-    lists:map(fun(L) ->
-                      {ok, Term} = erl_parse:parse_term(L),
-                      Term
-              end, Lists).
 
