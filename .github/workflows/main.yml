@@ -14,6 +14,8 @@ jobs:
       fail-fast: false
       matrix:
         otp:
+          - "28.2"
+          - "28.1"
           - "28.0"
           - "27.2"
           - "27.1"
