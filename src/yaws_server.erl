@@ -401,6 +401,15 @@ handle_call({update_gconf, GC}, _From, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %%----------------------------------------------------------------------
+handle_cast({update_trace, Trace}, State) ->
+    GC = State#state.gc,
+    NewGC = GC#gconf{trace = Trace},
+    lists:foreach(fun({Pid, _Group}) ->
+                          Pid ! {update_gconf, NewGC}
+                  end, State#state.pairs),
+    put(gc, NewGC),
+    {noreply, State#state{gc = NewGC}};
+
 handle_cast(_Msg, State) ->
     {noreply, State}.
 

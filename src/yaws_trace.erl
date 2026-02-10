@@ -32,7 +32,8 @@
                 type      = false,
                 traces    = dict:new(),
                 tty_trace = false,
-                filter}).
+                filter,
+                gc}).
 
 %%====================================================================
 %% API
@@ -68,55 +69,11 @@ write(Pid, Tag, Data) ->
     gen_server:cast(?MODULE, {write, Pid, Tag, Data}).
 
 
-disable_trace(infinity) ->
-    {ok, GC, Groups} = yaws_server:getconf(),
-    case GC#gconf.trace of
-        false ->
-            error_logger:info_msg("Trace already disabled~n", []);
-        {true, _} ->
-            yaws_api:setconf(GC#gconf{trace=false}, Groups),
-            error_logger:info_msg("Trace disabled~n", [])
-    end;
 disable_trace(Time) ->
-    {ok, GC, Groups} = yaws_server:getconf(),
-    case GC#gconf.trace of
-        false ->
-            error_logger:info_msg("Trace already disabled~n", []);
-        {true, CurType} ->
-            yaws_api:setconf(GC#gconf{trace=false}, Groups),
-            timer:apply_after(Time, ?MODULE, enable_trace, [CurType, infinity]),
-            error_logger:info_msg("Trace disabled for ~w milliseconds~n",[Time])
-    end.
+    gen_server:call(?MODULE, {disable_trace, Time}, infinity).
 
-
-enable_trace(Type, infinity) when Type =:= http; Type =:= traffic ->
-    {ok, GC, Groups} = yaws_server:getconf(),
-    case GC#gconf.trace of
-        {true, Type} ->
-            error_logger:info_msg("~p trace already enabled~n", [Type]);
-        {true, _} ->
-            yaws_api:setconf(GC#gconf{trace={true, Type}}, Groups),
-            error_logger:info_msg("~p trace enabled~n", [Type]);
-        false ->
-            yaws_api:setconf(GC#gconf{trace={true, Type}}, Groups),
-            error_logger:info_msg("~p trace enabled~n", [Type])
-    end;
 enable_trace(Type, Time) when Type =:= http; Type =:= traffic ->
-    {ok, GC, Groups} = yaws_server:getconf(),
-    case GC#gconf.trace of
-        {true, Type} ->
-            error_logger:info_msg("~p trace already enabled~n", [Type]);
-        {true, CurType} ->
-            yaws_api:setconf(GC#gconf{trace={true, Type}}, Groups),
-            timer:apply_after(Time, ?MODULE, enable_trace, [CurType, infinity]),
-            error_logger:info_msg("~p trace enabled for ~w milliseconds~n",
-                                  [Type, Time]);
-        false ->
-            yaws_api:setconf(GC#gconf{trace={true, Type}}, Groups),
-            timer:apply_after(Time, ?MODULE, disable_trace, [infinity]),
-            error_logger:info_msg("~p trace enabled for ~w milliseconds~n",
-                                  [Type, Time])
-    end.
+    gen_server:call(?MODULE, {enable_trace, Type, Time}, infinity).
 
 get_tracedir() ->
     gen_server:call(?MODULE, get_tracedir, infinity).
@@ -172,6 +129,68 @@ handle_call(get_filter, _From, State) ->
     {reply, State#state.filter, State};
 handle_call(get_tracedir, _From, State) ->
     {reply, State#state.tracedir, State};
+
+handle_call({disable_trace, infinity}, _From, State) ->
+    GC = State#state.gc,
+    case GC#gconf.trace of
+        false ->
+            error_logger:info_msg("Trace already disabled~n", []),
+            {reply, ok, State};
+        {true, _} ->
+            NewGC = GC#gconf{trace=false},
+            gen_server:cast(yaws_server, {update_trace, NewGC#gconf.trace}),
+            error_logger:info_msg("Trace disabled~n", []),
+            {reply, ok, State#state{gc=NewGC, type=false}}
+    end;
+handle_call({disable_trace, Time}, _From, State) ->
+    GC = State#state.gc,
+    case GC#gconf.trace of
+        false ->
+            error_logger:info_msg("Trace already disabled~n", []),
+            {reply, ok, State};
+        {true, CurType} ->
+            NewGC = GC#gconf{trace=false},
+            gen_server:cast(yaws_server, {update_trace, NewGC#gconf.trace}),
+            timer:apply_after(Time, ?MODULE, enable_trace, [CurType, infinity]),
+            error_logger:info_msg("Trace disabled for ~w milliseconds~n",
+                                  [Time]),
+            {reply, ok, State#state{gc=NewGC, type=false}}
+    end;
+
+handle_call({enable_trace, Type, infinity}, _From, State) ->
+    GC = State#state.gc,
+    case GC#gconf.trace of
+        {true, Type} ->
+            error_logger:info_msg("~p trace already enabled~n", [Type]),
+            {reply, ok, State};
+        _ ->
+            NewGC = GC#gconf{trace={true, Type}},
+            gen_server:cast(yaws_server, {update_trace, NewGC#gconf.trace}),
+            error_logger:info_msg("~p trace enabled~n", [Type]),
+            {reply, ok, State#state{gc=NewGC, type=Type}}
+    end;
+handle_call({enable_trace, Type, Time}, _From, State) ->
+    GC = State#state.gc,
+    case GC#gconf.trace of
+        {true, Type} ->
+            error_logger:info_msg("~p trace already enabled~n", [Type]),
+            {reply, ok, State};
+        {true, CurType} ->
+            NewGC = GC#gconf{trace={true, Type}},
+            gen_server:cast(yaws_server, {update_trace, NewGC#gconf.trace}),
+            timer:apply_after(Time, ?MODULE, enable_trace, [CurType, infinity]),
+            error_logger:info_msg("~p trace enabled for ~w milliseconds~n",
+                                  [Type, Time]),
+            {reply, ok, State#state{gc=NewGC, type=Type}};
+        false ->
+            NewGC = GC#gconf{trace={true, Type}},
+            gen_server:cast(yaws_server, {update_trace, NewGC#gconf.trace}),
+            timer:apply_after(Time, ?MODULE, disable_trace, [infinity]),
+            error_logger:info_msg("~p trace enabled for ~w milliseconds~n",
+                                  [Type, Time]),
+            {reply, ok, State#state{gc=NewGC, type=Type}}
+    end;
+
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -180,7 +199,7 @@ handle_call(_Request, _From, State) ->
 %% ----
 handle_cast({setup, #gconf{trace=false}=GC}, State) ->
     Bool = ?gc_has_tty_trace(GC),
-    {noreply, State#state{type=false, tty_trace=Bool, tracedir=undefined}};
+    {noreply, State#state{type=false, tty_trace=Bool, tracedir=undefined, gc=GC}};
 handle_cast({setup, GC}, State) ->
     {true, Type} = GC#gconf.trace,
     Bool = ?gc_has_tty_trace(GC),
@@ -188,11 +207,11 @@ handle_cast({setup, GC}, State) ->
     case file:make_dir(Dir) of
         ok ->
             error_logger:info_msg("Trace directory ~p created~n", [Dir]),
-            {noreply, State#state{type=Type, tty_trace=Bool, tracedir=Dir}};
+            {noreply, State#state{type=Type, tty_trace=Bool, tracedir=Dir, gc=GC}};
         {error, Reason} ->
             error_logger:error_msg("Failed to create trace directory ~p: ~p~n",
                                    [Dir, file:format_error(Reason)]),
-            {noreply, State#state{type=false, tty_trace=Bool}}
+            {noreply, State#state{type=false, tty_trace=Bool, gc=GC}}
     end;
 
 handle_cast({tty_trace, Bool}, State) ->
