@@ -28,10 +28,9 @@ groups() ->
 init_per_suite(Config) ->
     _ = application:load(yaws),
     Dir = ?tempdir(?MODULE),
-    ok = filelib:ensure_dir(filename:join([Dir, "log", "dummy"])),
     ok = filelib:ensure_dir(filename:join([Dir, "www", "dummy"])),
     ok = filelib:ensure_dir(filename:join([Dir, "rss", "dummy"])),
-    ConfPath = write_rss_conf(Dir),
+    ConfPath = filename:join(Dir, "yaws.conf"),
     [{conf_path, ConfPath} | Config].
 
 end_per_suite(_Config) ->
@@ -131,28 +130,6 @@ sup_starts_rss_before_server(_Config) ->
 %%====================================================================
 %% Helpers
 %%====================================================================
-
-%% Write a minimal yaws.conf with an RSS section. Returns the path.
-write_rss_conf(Dir) ->
-    LogDir   = filename:join(Dir, "log"),
-    WwwDir   = filename:join(Dir, "www"),
-    RssDir   = filename:join(Dir, "rss"),
-    ConfPath = filename:join(Dir, "yaws.conf"),
-    Content = io_lib:format(
-        "logdir = ~s~n"
-        "~n"
-        "<server localhost>~n"
-        "    port = 8099~n"
-        "    listen = 127.0.0.1~n"
-        "    docroot = ~s~n"
-        "    <rss>~n"
-        "        rss_id = test_feed~n"
-        "        rss_dir = ~s~n"
-        "    </rss>~n"
-        "</server>~n",
-        [LogDir, WwwDir, RssDir]),
-    ok = file:write_file(ConfPath, Content),
-    ConfPath.
 
 index_of(Elem, List) ->
     index_of(Elem, List, 1).
