@@ -47,6 +47,12 @@ otp_release_version(Rel) ->
     end.
 
 %%====================================================================
+%% Skip tests on OTP releases 28 and newer.
+-ifdef(OTP_RELEASE).
+  -if(?OTP_RELEASE >= 28).
+init_per_suite(_Config) ->
+    {skip, otp28_or_newer}.
+  -else.
 init_per_suite(Config) ->
     case otp26_broken_dhfile() of
         true ->
@@ -60,6 +66,8 @@ init_per_suite(Config) ->
             ok = yaws:start(),
             [{yaws_id, Id}, {yaws_config, YConf} | Config]
     end.
+  -endif.
+-endif.
 
 end_per_suite(_Config) ->
     ok = application:stop(yaws),

@@ -7,6 +7,10 @@ on:
     branches: [ master ]
   workflow_dispatch:
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   make-check:
     name: Check on OTP-${{matrix.otp}}
@@ -59,6 +63,10 @@ jobs:
       - name: Run test suite
         run: |
           make check
+          if (( $(find . -name erl_crash.dump | wc -l) != 0 )); then \
+            echo FAILED: erl_crash.dump file found; \
+            exit 1; \
+          fi
       # Currently not working steps
       # - name: Try document generation
       #   run: |
