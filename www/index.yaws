@@ -1,5 +1,6 @@
 <erl>
 
+-compile('nowarn_deprecated_catch').
 
 out(A) ->
     [{ssi, "TAB.inc","%%",[{"index", "choosen"}]},
@@ -128,16 +129,16 @@ dlog(Last, Prev, Dir) ->
         git(Dir,
             ["git --no-pager log --abbrev-commit --no-merges --pretty=medium ",
              Prev, "..", Last, " | cat"]),
-    Str2 = lists:zf(fun(I) ->
-                            if I == $< ->
-                                    %% XSS
-                                    false;
-                                0<I, I<255 ->
-                                    {true, I};
-                               true ->
-                                    false
-                            end
-                    end, Str),
+    Str2 = lists:filtermap(fun(I) ->
+                                   if I == $< ->
+                                           %% XSS
+                                           false;
+                                       0<I, I<255 ->
+                                           {true, I};
+                                      true ->
+                                           false
+                                   end
+                           end, Str),
     Lines = string:tokens(Str2, "\n"),
     lists:map(
       fun(Line) ->

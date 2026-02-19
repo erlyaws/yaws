@@ -1,5 +1,6 @@
 <erl>
 %% inspired from upload.yaws, slightly simplified.
+-compile('nowarn_deprecated_catch').
 
 -record(state, {acc,
                 last

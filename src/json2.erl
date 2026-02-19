@@ -23,6 +23,8 @@
 -author("Gaspar Chilingarov <nm@web.am>, Gurgen Tumanyan <barbarian@armkb.com>").
 -author("Steve Vinoski <vinoski@ieee.org>").
 
+-compile('nowarn_deprecated_catch').
+
 %%% JavaScript Object Notation ("JSON", http://www.json.org) is a simple
 %%% data syntax meant as a lightweight alternative to other representations,
 %%% such as XML.  JSON is natively supported by JavaScript, but many

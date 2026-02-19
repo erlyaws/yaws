@@ -1,5 +1,7 @@
 -module(testsuite).
 
+-compile('nowarn_deprecated_catch').
+
 -include("testsuite.hrl").
 
 %% Testsuite API

@@ -76,6 +76,8 @@
 
 -module(authmod_gssapi).
 
+-compile('nowarn_deprecated_catch').
+
 -export([
          start/1,
          stop/0,

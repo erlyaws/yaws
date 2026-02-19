@@ -7,6 +7,8 @@
 %%%-------------------------------------------------------------------
 -module(yaws_revproxy).
 
+-compile('nowarn_deprecated_catch').
+
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").

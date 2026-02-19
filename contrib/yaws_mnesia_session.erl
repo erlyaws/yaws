@@ -15,6 +15,8 @@
 
 -module (yaws_mnesia_session).
 
+-compile('nowarn_deprecated_catch').
+
 -export ([init_backend/1, stop_backend/0]).
 -export ([list/0, insert/1, lookup/1, delete/1]).
 -export ([traverse/1, cleanup/0]).

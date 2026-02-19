@@ -18,6 +18,8 @@
 
 -module(bench).
 
+-compile('nowarn_deprecated_catch').
+
 %% User interface
 -export([run/0]).
 

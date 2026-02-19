@@ -8,6 +8,7 @@
 -module(yaws_session_server).
 -author('klacke@hyber.org').
 
+-compile('nowarn_deprecated_catch').
 
 -behaviour(gen_server).
 

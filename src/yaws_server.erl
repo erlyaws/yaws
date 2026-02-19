@@ -8,6 +8,8 @@
 -module(yaws_server).
 -author('klacke@hyber.org').
 
+-compile('nowarn_deprecated_catch').
+
 -behaviour(gen_server).
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
@@ -236,8 +238,8 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
     yaws_dynopts:purge_old_code(),
     yaws_log:setup(GC, Sconfs),
     yaws_trace:setup(GC),
-    L2 = lists:zf(fun(Group) -> start_group(GC, Group) end,
-                  yaws_config:load_mime_types_module(GC, Sconfs)),
+    L2 = lists:filtermap(fun(Group) -> start_group(GC, Group) end,
+                         yaws_config:load_mime_types_module(GC, Sconfs)),
     {ok, #state{gc       = GC,
                 pairs    = L2,
                 embedded = Embedded}}.

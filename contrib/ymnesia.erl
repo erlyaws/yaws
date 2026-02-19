@@ -27,6 +27,8 @@
 %%%-------------------------------------------------------------------
 -module(ymnesia).
 
+-compile('nowarn_deprecated_catch').
+
 -export([out/1]).
 
 -include("../include/yaws_api.hrl").

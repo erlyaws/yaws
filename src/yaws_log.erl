@@ -10,6 +10,7 @@
 -include_lib("kernel/include/file.hrl").
 -include_lib("kernel/include/inet.hrl").
 
+-compile('nowarn_deprecated_catch').
 
 -behaviour(gen_server).
 

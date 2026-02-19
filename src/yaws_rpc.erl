@@ -40,6 +40,8 @@
 -modified_by("Yariv Sadan <yarivvv@gmail.com>").
 -modified_by("Steve Vinoski <vinoski@ieee.org>").
 
+-compile('nowarn_deprecated_catch').
+
 -export([handler/2]).
 -export([handler_session/2, handler_session/3]).
 

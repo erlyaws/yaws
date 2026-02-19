@@ -10,6 +10,8 @@
 -module(yaws_ls).
 -author('klacke@hyber.org').
 
+-compile('nowarn_deprecated_catch').
+
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
@@ -29,7 +31,7 @@ list_directory(Arg, CliSock, List, DirName, Req, DoAllZip) ->
 
     Descriptions = read_descriptions(DirName),
 
-    L0 = lists:zf(
+    L0 = lists:filtermap(
            fun(F) ->
                    File = DirName ++ [$/|F],
                    FI = file:read_file_info(File),
@@ -462,8 +464,8 @@ file_entry(_Err, _, _Name, _, _) ->
 
 trim(L,N) ->
     trim(L,N,[]).
-trim([_H1,_H2,_H3]=[H|T], 3=I, Acc) ->
-    trim(T, I-1, [H|Acc]);
+trim([H1,H2,H3], 3=I, Acc) ->
+    trim([H2,H3], I-1, [H1|Acc]);
 trim([H1,H2,H3|_T], 3=_I, Acc) when H1 < 128, H2 < 128, H3 < 128 ->
     lists:reverse(Acc) ++ "..&gt;";
 trim([H1,H2,H3|_T], 3=_I, [H0|Acc]) ->

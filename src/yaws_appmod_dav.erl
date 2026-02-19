@@ -28,6 +28,8 @@
 
 -module(yaws_appmod_dav).
 
+-compile('nowarn_deprecated_catch').
+
 %% for appmod:
 -export([out/1]).
 

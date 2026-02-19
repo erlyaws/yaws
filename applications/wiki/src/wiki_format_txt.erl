@@ -1,5 +1,7 @@
 -module(wiki_format_txt).
 
+-compile('nowarn_deprecated_catch').
+
 %% File    : wiki_format_txt.erl
 %% Author  : Joe Armstrong (joe@bluetail.com)
 %%         : Johan Bevemyr, minor modifications (jb@bevemyr.com)

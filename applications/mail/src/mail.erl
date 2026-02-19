@@ -11,6 +11,8 @@
 -module('mail').
 -author('jb@trut.bluetail.com').
 
+-compile('nowarn_deprecated_catch').
+
 -export([parse_headers/1, list/2, list/3, ploop/5,pop_request/4, diff/2,
          session_manager_init/0, check_cookie/1, check_session/1,
          login/2, display_login/2, stat/3, showmail/2, compose/1, compose/7,
@@ -1174,15 +1176,15 @@ add_att(Fname, Ctype, Data, Atts) ->
 
 
 session_manager_gc(C, Cfg) ->
-    lists:zf(fun(Entry={_Cookie,_Session,Time}) ->
-                     Diff = diff(Time,yaws:get_time_tuple()),
-                     TTL = Cfg#cfg.ttl,
-                     if Diff > TTL ->
-                             false;
-                        true ->
-                             {true, Entry}
-                     end
-             end, C).
+    lists:filtermap(fun(Entry={_Cookie,_Session,Time}) ->
+                            Diff = diff(Time,yaws:get_time_tuple()),
+                            TTL = Cfg#cfg.ttl,
+                            if Diff > TTL ->
+                                    false;
+                               true ->
+                                    {true, Entry}
+                            end
+                    end, C).
 
 sm_reply(ttl, From, Cfg) ->
     From ! {session_manager, Cfg#cfg.ttl};

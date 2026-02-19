@@ -22,6 +22,8 @@
 -module('wiki').
 -author('jb@son.bevemyr.com').
 
+-compile('nowarn_deprecated_catch').
+
 -export([showPage/3, createNewPage/3, showHistory/3, allPages/3,
          lastEdited/3, wikiZombies/3, editPage/3, editFiles/3,
          previewNewPage/3, allRefsToMe/3, deletePage/3,

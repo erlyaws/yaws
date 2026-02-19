@@ -7,6 +7,8 @@
 -module(shopcart).
 -author('klacke@hyber.org').
 
+-compile('nowarn_deprecated_catch').
+
 -include("../../include/yaws_api.hrl").
 -include_lib("kernel/include/inet.hrl").
 
