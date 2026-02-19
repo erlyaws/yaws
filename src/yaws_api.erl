@@ -1168,7 +1168,8 @@ reformat_header(H, FormatFun) ->
 		   (Hdr, Acc) ->
 			[Hdr|Acc]
 		end, [],
-		lists:zf(fun({Hname, Str}) ->
+		lists:filtermap(
+                         fun({Hname, Str}) ->
 				 I =  FormatFun(Hname, Str),
 				 {true, I};
 			    (undefined) ->

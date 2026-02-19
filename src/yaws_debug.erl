@@ -205,7 +205,7 @@ xref([Dir]) ->
 
 
 pids() ->
-    lists:zf(
+    lists:filtermap(
       fun(P) ->
               case process_info(P) of
                   L when is_list(L) ->

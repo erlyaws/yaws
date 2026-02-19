@@ -375,7 +375,8 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
         Extra_CGI_Vars.
 
 other_headers(Headers) ->
-    lists:zf(fun({http_header,_,Var,_,Val}) ->
+    lists:filtermap(
+            fun({http_header,_,Var,_,Val}) ->
                      case tohttp(Var) of
                          "HTTP_PROXY" ->
                              %% See http://httpoxy.org/
