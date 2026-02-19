@@ -2,6 +2,8 @@
 -author('carsten@codimi.de').
 -author('brunorijsman@hotmail.com').         %% Added support for FastCGI
 
+-compile('nowarn_deprecated_catch').
+
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 -include("../include/yaws.hrl").

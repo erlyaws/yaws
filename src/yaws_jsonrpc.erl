@@ -49,6 +49,8 @@
 -export([handler/2]).
 -export([handler_session/2, handler_session/3]).
 
+-compile('nowarn_deprecated_catch').
+
 %%-define(debug, 1).
 -include("yaws_debug.hrl").
 

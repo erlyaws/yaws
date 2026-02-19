@@ -7,6 +7,8 @@
 -module(yaws_sse).
 -author('vinoski@ieee.org').
 
+-compile('nowarn_deprecated_catch').
+
 -export([headers/1,
          event/0, event/1,
          data/0, data/1, data/2,

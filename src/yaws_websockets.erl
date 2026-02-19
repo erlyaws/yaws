@@ -11,6 +11,8 @@
 -author('jbothma@gmail.com').
 -behaviour(gen_server).
 
+-compile('nowarn_deprecated_catch').
+
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 

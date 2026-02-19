@@ -5,6 +5,8 @@
 %%%-------------------------------------------------------------------
 -module(yaws_soap_srv).
 
+-compile('nowarn_deprecated_catch').
+
 -behaviour(gen_server).
 
 %% API

@@ -11,6 +11,8 @@
 -module(yaws_ctl).
 -author('klacke@bluetail.com').
 
+-compile('nowarn_deprecated_catch').
+
 -include_lib("kernel/include/file.hrl").
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").

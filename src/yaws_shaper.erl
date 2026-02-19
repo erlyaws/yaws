@@ -8,6 +8,7 @@
 -module(yaws_shaper).
 -author('christopher@yakaz.com').
 
+-compile('nowarn_deprecated_catch').
 
 -export([behaviour_info/1]).
 

@@ -1,5 +1,7 @@
 -module(yaws_vdir).
 
+-compile('nowarn_deprecated_catch').
+
 -export([arg_rewrite/1]).
 
 -include("../include/yaws_api.hrl").

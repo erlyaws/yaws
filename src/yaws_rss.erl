@@ -13,6 +13,8 @@
 
 -behaviour(gen_server).
 
+-compile('nowarn_deprecated_catch').
+
 %% External exports
 -export([start/0, start_link/0, open/1, open/2, close/0, close/2,
          insert/5, insert/6, insert/7, retrieve/2]).

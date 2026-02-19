@@ -9,6 +9,7 @@
 -author('christopher@yakaz.com').
 -include_lib("kernel/include/file.hrl").
 
+-compile('nowarn_deprecated_catch').
 
 %% API
 -export([

@@ -8,6 +8,7 @@
 -module(yaws_config).
 -author('klacke@bluetail.com').
 
+-compile('nowarn_deprecated_catch').
 
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").

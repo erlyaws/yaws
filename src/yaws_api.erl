@@ -8,6 +8,8 @@
 -module(yaws_api).
 -author('klacke@hyber.org').
 
+-compile('nowarn_deprecated_catch').
+
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
