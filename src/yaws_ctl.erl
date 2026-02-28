@@ -11,8 +11,6 @@
 -module(yaws_ctl).
 -author('klacke@bluetail.com').
 
--compile('nowarn_deprecated_catch').
-
 -include_lib("kernel/include/file.hrl").
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
@@ -106,21 +104,16 @@ e(Fmt, Args) ->
 %% That way we're making sure different users
 %% cannot manipulate each others webservers
 w_ctl_file(Sid, Port, Key) ->
-    case catch
-             begin
-                 F = yaws:ctl_file(Sid),
-                 error_logger:info_msg("Ctlfile : ~s~n", [F]),
-                 file:write_file(F, io_lib:format("~w.", [{Port,Key}])),
-                 {ok, FI} = file:read_file_info(F),
-                 ok = file:write_file_info(F, FI#file_info{mode = 8#00600})
-             end of
-             {'EXIT', _} ->
-                 error;
-             _ ->
-                 ok
-         end.
-
-
+    try
+        F = yaws:ctl_file(Sid),
+        error_logger:info_msg("Ctlfile : ~s~n", [F]),
+        file:write_file(F, io_lib:format("~w.", [{Port,Key}])),
+        {ok, FI} = file:read_file_info(F),
+        ok = file:write_file_info(F, FI#file_info{mode = 8#00600})
+    catch
+        _:_ ->
+            error
+    end.
 
 aloop(L, GC, Key) ->
     case gen_tcp:accept(L) of
@@ -137,7 +130,7 @@ aloop(L, GC, Key) ->
 handle_a(A, GC, Key) ->
     case gen_tcp:recv(A, 0) of
         {ok, Data} ->
-            case catch binary_to_term(Data) of
+            try binary_to_term(Data) of
                 {hup, Key} ->
                     Res = yaws:dohup(A),
                     Res;
@@ -175,7 +168,9 @@ handle_a(A, GC, Key) ->
                     gen_tcp:close(A);
                 _Other ->
                     gen_tcp:close(A)
-
+            catch
+                _:_Other ->
+                    gen_tcp:close(A)
             end;
         {error, _} ->
             gen_tcp:close(A)
@@ -545,7 +540,7 @@ running_config([SID]) ->
 
 configtest([File]) ->
     Env = #env{debug = false, conf  = {file, File}},
-    case catch yaws_config:load(Env) of
+    try yaws_config:load(Env) of
         {ok, _GC, _SCs} ->
             io:format("Syntax OK~n"),
             timer:sleep(100),erlang:halt(0);
@@ -553,6 +548,10 @@ configtest([File]) ->
             io:format("Syntax error in file ~p:~n~s~n", [File, Error]),
             timer:sleep(100),erlang:halt(1);
         Other ->
+            io:format("Syntax error in file ~p:~n~p~n", [File, Other]),
+            timer:sleep(100),erlang:halt(1)
+    catch
+        _:Other ->
             io:format("Syntax error in file ~p:~n~p~n", [File, Other]),
             timer:sleep(100),erlang:halt(1)
     end.

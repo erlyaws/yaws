@@ -28,8 +28,6 @@
 
 -module(yaws_appmod_dav).
 
--compile('nowarn_deprecated_catch').
-
 %% for appmod:
 -export([out/1]).
 
@@ -958,9 +956,11 @@ h_timeout(A) ->
         {value, {_,_,"Timeout",_,T}} ->
             case T of
                 "Second-"++TimeoutVal ->
-                    Val = case catch list_to_integer(TimeoutVal) of
-                              I when is_integer(I) -> I;
-                              _ -> ?LOCK_LIFETIME
+                    Val = try list_to_integer(TimeoutVal) of
+                              I when is_integer(I) -> I
+                          catch
+                              _:_ ->
+                                  ?LOCK_LIFETIME
                           end,
                     erlang:min(Val,?LOCK_LIFETIME);
                 _ -> ?LOCK_LIFETIME
@@ -1181,10 +1181,11 @@ parse_xml(XML) ->
 %% Parameter is always list
 parse_propfind([]) -> [allprop]; % RFC4918: no body then allprop, is [] no body?
 parse_propfind(L) ->
-    case catch parse_xml(L) of
+    try parse_xml(L) of
         {?IS_PROPFIND(X),_} ->
-            parse_propfind(?CONTENT(X),[]);
-        _Z ->
+            parse_propfind(?CONTENT(X),[])
+    catch
+        _:_ ->
             throw(400)
     end.
 parse_propfind([?IS_PROPNAME(_H)|_T], _R) ->
@@ -1202,10 +1203,11 @@ parse_propfind([], R) ->
     R.
 
 parse_proppatch(L) ->
-    case catch parse_xml(L) of
+    try parse_xml(L) of
         {?IS_PROPERTYUPDATE(X),_} ->
-            parse_proppatch(?CONTENT(X),[]);
-        _Z ->
+            parse_proppatch(?CONTENT(X),[])
+    catch
+        _:_ ->
             throw(400)
     end.
 parse_proppatch([?IS_SET(H)|T],R) ->
@@ -1251,10 +1253,11 @@ parse_prop([], L) ->
 parse_lockinfo([]) ->
     #lock{};
 parse_lockinfo(L) ->
-    case catch parse_xml(L) of
+    try parse_xml(L) of
         {?IS_LOCKINFO(X),_} ->
-            parse_lockinfo(?CONTENT(X),#lock{});
-        _Z ->
+            parse_lockinfo(?CONTENT(X),#lock{})
+    catch
+        _:_ ->
             throw(400)
     end.
 parse_lockinfo([?IS_LOCKSCOPE(H)|T], D) ->

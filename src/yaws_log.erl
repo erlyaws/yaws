@@ -10,8 +10,6 @@
 -include_lib("kernel/include/file.hrl").
 -include_lib("kernel/include/inet.hrl").
 
--compile('nowarn_deprecated_catch').
-
 -behaviour(gen_server).
 
 %% External exports
@@ -72,10 +70,20 @@ del_sconf(SConf) ->
     gen_server:call(yaws_log, {soft_del_sc, SConf}, infinity).
 
 accesslog(SConf, Ip, Req, InH, OutH, Time) ->
-    catch yaws_logger:accesslog(SConf, Ip, Req, InH, OutH, Time).
+    try
+        yaws_logger:accesslog(SConf, Ip, Req, InH, OutH, Time)
+    catch
+        C:E ->
+            {C, E}
+    end.
 
 authlog(SConf, IP, Path, Item) ->
-    catch yaws_logger:authlog(SConf, IP, Path, Item).
+    try
+        yaws_logger:authlog(SConf, IP, Path, Item)
+    catch
+        C:E ->
+            {C, E}
+    end.
 
 rotate(Res) ->
     gen_server:cast(?MODULE, {yaws_hupped, Res}).
@@ -478,19 +486,24 @@ no_ctl([]) ->
 fmt_ip(IP, State) when is_tuple(IP) ->
     case State#state.resolve_hostnames of
         true ->
-            case catch inet:gethostbyaddr(IP) of
+            try inet:gethostbyaddr(IP) of
                 {ok, HE} ->
-                    HE#hostent.h_name;
-                _ ->
-                    case catch inet_parse:ntoa(IP) of
-                        {'EXIT', _} -> "unknownip";
-                        Addr        -> Addr
+                    HE#hostent.h_name
+            catch
+                _:_ ->
+                    try
+                        inet_parse:ntoa(IP)
+                    catch
+                        _:_ ->
+                            "unknownip"
                     end
             end;
         false ->
-            case catch inet_parse:ntoa(IP) of
-                {'EXIT', _} -> "unknownip";
-                Addr        -> Addr
+            try
+                inet_parse:ntoa(IP)
+            catch
+                _:_ ->
+                    "unknownip"
             end
     end;
 fmt_ip(unknown, _) ->

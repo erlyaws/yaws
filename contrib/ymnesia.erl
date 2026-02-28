@@ -27,8 +27,6 @@
 %%%-------------------------------------------------------------------
 -module(ymnesia).
 
--compile('nowarn_deprecated_catch').
-
 -export([out/1]).
 
 -include("../include/yaws_api.hrl").
@@ -53,13 +51,13 @@ out(A) ->
                     {Cbox, Rest} = extract_cbox(L),
                     Name = lk("tablename", Rest),
                     Ls = select_fields(Rest),
-                    Sp = (catch select_pattern(Name, Ls)),
-                    case catch table(Cbox, Sp, l2a(Name)) of
-                        {'EXIT', Reason} ->
+                    try
+                        Sp = select_pattern(Name, Ls),
+                        table(Cbox, Sp, l2a(Name))
+                    catch
+                        _:Reason ->
                             ?elog("Error , reason: ~p~n", [Reason]),
-                            error_page("table not found: "++Name);
-                        Else ->
-                            Else
+                            error_page("table not found: "++Name)
                     end;
                 false ->
                     return_top_page()
@@ -147,7 +145,7 @@ style() ->
 
 %%% Build the result page.
 table(Cbox, Sp, Table) when is_atom(Table) ->
-    case catch ?MNESIA(table_info, [Table, attributes]) of
+    try ?MNESIA(table_info, [Table, attributes]) of
         Headers when is_list(Headers) ->
             Vp = view_pattern(Cbox, lists:map(fun(X) -> a2l(X) end, Headers)),
             {Q, Result} = do_query(Sp),
@@ -160,8 +158,9 @@ table(Cbox, Sp, Table) when is_atom(Table) ->
                  {p, [], "Query: "++Q}},
                 {'div', [],
                  {p, [], "Table: "++a2l(Table)}} |
-                mk_tab(Vp, Headers, t2l(Result))]}]};
-        Else ->
+                mk_tab(Vp, Headers, t2l(Result))]}]}
+    catch
+        _:Else ->
             Else
     end.
 

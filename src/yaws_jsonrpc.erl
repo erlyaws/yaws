@@ -49,8 +49,6 @@
 -export([handler/2]).
 -export([handler_session/2, handler_session/3]).
 
--compile('nowarn_deprecated_catch').
-
 %%-define(debug, 1).
 -include("yaws_debug.hrl").
 
@@ -145,10 +143,7 @@ eval_payload(Args, {M, F}, Payload, {session, CookieName},ID) ->
                 end
         end,
 
-    case catch M:F(Args#arg.state, Payload, SessionValue) of
-        {'EXIT', Reason} ->
-            ?ERROR_LOG({M, F, {'EXIT', Reason}}),
-            send(Args, 500);
+    try M:F(Args#arg.state, Payload, SessionValue) of
         {error, Reason} ->
             ?ERROR_LOG({M, F, Reason}),
             send(Args, 500);
@@ -178,16 +173,17 @@ eval_payload(Args, {M, F}, Payload, {session, CookieName},ID) ->
                          end
                  end,
             encode_send(Args, 200, ResponsePayload, CO, ID)
+    catch
+        _:Reason ->
+            ?ERROR_LOG({M, F, {'EXIT', Reason}}),
+            send(Args, 500)
     end;
 
 %%%
 %%% call handler/2 without session support
 %%%
 eval_payload(Args, {M, F}, Payload, simple, ID) ->
-    case catch M:F(Args#arg.state, Payload) of
-        {'EXIT', Reason} ->
-            ?ERROR_LOG({M, F, {'EXIT', Reason}}),
-            send(Args, 500);
+    try M:F(Args#arg.state, Payload) of
         {error, Reason} ->
             ?ERROR_LOG({M, F, Reason}),
             send(Args, 500);
@@ -195,6 +191,10 @@ eval_payload(Args, {M, F}, Payload, simple, ID) ->
             encode_send(Args, 200, ResponsePayload, [],ID);
         {true, _NewTimeout, _NewState, ResponsePayload} ->
             encode_send(Args, 200, ResponsePayload, [],ID)
+    catch
+        _:Reason ->
+            ?ERROR_LOG({M, F, {'EXIT', Reason}}),
+            send(Args, 500)
     end.
 
 

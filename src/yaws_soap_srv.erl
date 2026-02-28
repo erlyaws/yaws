@@ -5,8 +5,6 @@
 %%%-------------------------------------------------------------------
 -module(yaws_soap_srv).
 
--compile('nowarn_deprecated_catch').
-
 -behaviour(gen_server).
 
 %% API
@@ -175,28 +173,34 @@ code_change(_OldVsn, State, _Extra) ->
 
 request(Model, {M,F}, {Req, Attachments}, SessionValue, Action) ->
     %%error_logger:info_report([?MODULE, {payload, Req}]),
-    case catch yaws_soap_lib:parseMessage(Req, Model) of
+    try yaws_soap_lib:parseMessage(Req, Model) of
         {ok, Header, Body} ->
             %% call function
-            result(Model, catch apply(M, F, [Header, Body,
-                                             Action, SessionValue,
-					     Attachments]));
+            result(Model, try apply(M, F, [Header, Body,
+					   Action, SessionValue,
+					   Attachments])
+			  catch C:E -> {C, E } end);
         {error, Error} ->
-            cli_error(Error);
-        OtherError ->
+            cli_error(Error)
+    catch
+	_:OtherError ->
             srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))
     end;
 request(Model, {M,F}, Req, SessionValue, Action) ->
     %%error_logger:info_report([?MODULE, {payload, Req}]),
-    Umsg = (catch erlsom_lib:toUnicode(Req)),
-    case catch yaws_soap_lib:parseMessage(Umsg, Model) of
-        {ok, Header, Body} ->
-            %% call function
-            result(Model, catch apply(M, F, [Header, Body,
-                                             Action, SessionValue]));
-        {error, Error} ->
-            cli_error(Error);
-        OtherError ->
+    try
+	Umsg = erlsom_lib:toUnicode(Req),
+	case yaws_soap_lib:parseMessage(Umsg, Model) of
+	    {ok, Header, Body} ->
+		%% call function
+		result(Model, try apply(M, F, [Header, Body,
+					       Action, SessionValue])
+			  catch C:E -> {C, E } end);
+	    {error, Error} ->
+		cli_error(Error)
+	end
+    catch
+        _:OtherError ->
             srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))
     end.
 
@@ -227,7 +231,7 @@ return(Model, ResHeader, ResBody, ResCode, SessVal, Files) ->
               end,
     Envelope = #'soap:Envelope'{'Body' =  #'soap:Body'{choice = ResBody},
                                 'Header' = Header2},
-    case catch erlsom:write(Envelope, Model) of
+    try erlsom:write(Envelope, Model) of
         {ok, XmlDoc} ->
 	    case Files of
 		undefined ->
@@ -237,8 +241,9 @@ return(Model, ResHeader, ResBody, ResCode, SessVal, Files) ->
 		    {ok, DIME, ResCode, SessVal}
 	    end;
         {error, WriteError} ->
-            srv_error(f("Error writing XML: ~p", [WriteError]));
-        OtherWriteError ->
+            srv_error(f("Error writing XML: ~p", [WriteError]))
+    catch
+        _:OtherWriteError ->
             error_logger:error_msg("~p(~p): OtherWriteError=~p~n",
                                    [?MODULE, ?LINE, OtherWriteError]),
             srv_error(f("Error writing XML: ~p", [OtherWriteError]))

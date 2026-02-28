@@ -13,8 +13,6 @@
 
 -behaviour(gen_server).
 
--compile('nowarn_deprecated_catch').
-
 %% External exports
 -export([start/0, start_link/0, open/1, open/2, close/0, close/2,
          insert/5, insert/6, insert/7, retrieve/2]).
@@ -229,7 +227,8 @@ handle_call({close, DB}, _From, State) ->
     {reply, ok, State};
 %%
 handle_call({close, DBMod, DBname}, _From, State) ->
-    catch apply(DBMod, close, [DBname]),
+    try apply(DBMod, close, [DBname])
+    catch _:_ -> ignore end,
     {reply, ok, State};
 %%
 handle_call({insert, Args}, _From, State) ->
@@ -294,7 +293,7 @@ do_open_dir(State, App, Opts) ->
                 false ->
                     {State, {error, "not a proper dets file"}};
                 _     ->
-                    case catch dets:open_file(?DB, [{file, File}]) of
+                    try dets:open_file(?DB, [{file, File}]) of
                         {ok,DB} = Res   ->
                             {State#s{
                                open_apps = u_insert(App, State#s.open_apps),
@@ -306,10 +305,14 @@ do_open_dir(State, App, Opts) ->
                              Res};
                         {error, _Reason} ->
                             {State, {error, "open dets file"}}
+                    catch
+                        _:_ ->
+                            {State, {error, "open dets file"}}
                     end
             end;
         DBmod ->
-            {State, catch apply(DBmod, open, Opts)}
+            {State, try apply(DBmod, open, Opts)
+                    catch C:E -> {C,E} end}
     end.
 
 get_db_file(Opts) ->
@@ -326,8 +329,9 @@ set_counter(DB, N) ->
     dets:insert(DB, {counter, N}).
 
 do_insert(State, {App, {DbMod,Tag}, Title, Link, Desc, Creator, GregSecs}) ->
-    {State, catch apply(DbMod, insert, [App, Tag,Title,Link,
-                                        Desc,Creator,GregSecs])};
+    {State, try apply(DbMod, insert, [App, Tag,Title,Link,
+                                      Desc,Creator,GregSecs])
+            catch C:E -> {C,E} end};
 do_insert(State, {App, Tag, Title, Link, Desc, Creator, GregSecs}) ->
     case lists:member(App, State#s.open_apps) of
         true ->
@@ -346,7 +350,8 @@ do_insert(State, {App, Tag, Title, Link, Desc, Creator, GregSecs}) ->
 
 
 do_retrieve(State, App, {DbMod,Tag}) ->
-    {State, catch apply(DbMod, retrieve, [App, Tag])};
+    {State, try apply(DbMod, retrieve, [App, Tag])
+            catch C:E -> {C,E} end};
 do_retrieve(State, App, Tag) ->
     case lists:member(App, State#s.open_apps) of
         true ->
