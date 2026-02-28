@@ -11,8 +11,6 @@
 -module('mail').
 -author('jb@trut.bluetail.com').
 
--compile('nowarn_deprecated_catch').
-
 -export([parse_headers/1, list/2, list/3, ploop/5,pop_request/4, diff/2,
          session_manager_init/0, check_cookie/1, check_session/1,
          login/2, display_login/2, stat/3, showmail/2, compose/1, compose/7,
@@ -170,23 +168,25 @@ send(Session, A) ->
     State = prepare_send_state(A#arg.state, Session),
     case yaws_api:parse_multipart_post(A) of
          {cont, Cont, Res} ->
-            case catch sendChunk(Res, State) of
+            try sendChunk(Res, State) of
                 {done, Result} ->
                     Result;
                 {cont, NewState} ->
-                    {get_more, Cont, NewState};
-                {error, Reason} ->
+                    {get_more, Cont, NewState}
+            catch
+                _:Reason ->
                     {ehtml,
                      format_error("Failed to send email. Reason: "++
                                   to_string(Reason))}
             end;
         {result, Res} ->
-            case catch sendChunk(Res, State#send{last=true}) of
+            try sendChunk(Res, State#send{last=true}) of
                 {done, Result} ->
                     Result;
                 {cont, _} ->
-                    {ehtml,format_error("Failed to send email.")};
-                {error, Reason} ->
+                    {ehtml,format_error("Failed to send email.")}
+            catch
+                _:Reason ->
                     {ehtml,
                      format_error("Failed to send email. Reason: "++
                                   to_string(Reason))}
@@ -887,26 +887,29 @@ decode_q([], Acc) ->
 decode_q([$?,$=|Rest], Acc) ->
     decode(Rest, Acc);
 decode_q([$=,H1,H2|Rest], Acc) ->
-    case catch yaws:hex_to_integer([H1,H2]) of
-        {'EXIT',_} ->
-            decode_q(Rest, [H2,H1,$=|Acc]);
+    try yaws:hex_to_integer([H1,H2]) of
         C ->
             decode_q(Rest, [C|Acc])
+    catch
+        _:_ ->
+            decode_q(Rest, [H2,H1,$=|Acc]);
     end;
 decode_q([C|Cs], Acc) ->
     decode_q(Cs, [C|Acc]).
 
 decode_b64([],Acc) ->
     Str = lists:reverse(Acc),
-    case catch base64_2_str(Str) of
-        {'EXIT',_} -> Str;
+    try base64_2_str(Str) of
         Dec -> Dec
+    catch
+        _:_ -> Str;
     end;
 decode_b64([$?,$=|Rest],Acc) ->
     Str = lists:reverse(Acc),
-    case catch base64_2_str(Str) of
-        {'EXIT',_} -> Str++decode(Rest);
+    try base64_2_str(Str) of
         Dec -> Dec ++ decode(Rest)
+    catch
+        _:_ -> Str++decode(Rest);
     end;
 decode_b64([C|Rest], Acc) ->
     decode_b64(Rest,[C|Acc]).
@@ -1767,12 +1770,13 @@ smtp_send_b64_final(State) ->
     gen_tcp:send(State#send.port, B64).
 
 smtp_send(Server, Session, Recipients, Message) ->
-    case catch smtp_send2(Server, Session, Recipients, Message) of
+    try smtp_send2(Server, Session, Recipients, Message) of
         ok ->
             ok;
         {error, Reason} ->
-            {error, Reason};
-        _ ->
+            {error, Reason}
+    catch
+        _:_ ->
             {error, "Failed to send message."}
     end.
 
@@ -2410,16 +2414,19 @@ extraxt_h_info(H) ->
 decode_message("7bit"++_, Msg) -> Msg;
 decode_message("8bit"++_, Msg) -> Msg;
 decode_message("base64"++_, Msg) ->
-    case catch base64_2_str(lists:flatten(Msg)) of
-        {'EXIT', _} -> Msg;
+    try base64_2_str(lists:flatten(Msg)) of
         Decoded -> Decoded
+    catch
+        _:_ ->
+            Msg
     end;
 decode_message("quoted-printable"++_, Msg) ->
-    case catch quoted_2_str(lists:flatten(Msg)) of
-        {'EXIT', Reason} ->
-            io:format("failed to decode quoted-printable ~p\n", [Reason]),
-            Msg;
+    try quoted_2_str(lists:flatten(Msg)) of
         Decoded -> Decoded
+    catch
+        _:_ ->
+            io:format("failed to decode quoted-printable ~p\n", [Reason]),
+            Msg
     end;
 decode_message(_, Msg) -> Msg.
 
@@ -2432,11 +2439,12 @@ quoted_2_str([], Acc) ->
 quoted_2_str([$=,$\r,$\n|Rest], Acc) ->
     quoted_2_str_scan(Rest,Acc);
 quoted_2_str([$=,H1,H2|Rest], Acc) ->
-    case catch yaws:hex_to_integer([H1,H2]) of
-        {'EXIT', _} ->
-            quoted_2_str(Rest, [H2,H1,$=|Acc]);
+    try yaws:hex_to_integer([H1,H2]) of
         C ->
             quoted_2_str(Rest, [C|Acc])
+    catch
+        _:_ ->
+            quoted_2_str(Rest, [H2,H1,$=|Acc])
     end;
 quoted_2_str([$\r,$\n|Rest], Acc) ->
     quoted_2_str_scan(Rest, [$\n|Acc]);
@@ -2605,13 +2613,14 @@ read_config(FD, Cfg, Lno, Chars) ->
         [] ->
             read_config(FD, Cfg, Lno+1, Next);
         ["ttl", '=', IntList] ->
-            case (catch list_to_integer(IntList)) of
-                {'EXIT', _} ->
-                    error_logger:info_msg("Yaws webmail:  expect integer at "
-                                          "line ~p", [Lno]),
-                    read_config(FD, Cfg, Lno+1, Next);
+            try list_to_integer(IntList) of
                 Int ->
                     read_config(FD, Cfg#cfg{ttl = Int}, Lno+1, Next)
+            catch
+                _:_ ->
+                    error_logger:info_msg("Yaws webmail:  expect integer at "
+                                          "line ~p", [Lno]),
+                    read_config(FD, Cfg, Lno+1, Next)
             end;
         ["popserver", '=', Server] ->
             read_config(FD, Cfg#cfg{popserver = Server}, Lno+1, Next);
@@ -2621,13 +2630,14 @@ read_config(FD, Cfg, Lno, Chars) ->
         ["maildomain", '=', Domain] ->
             read_config(FD, Cfg#cfg{maildomain = Domain}, Lno+1, Next);
         ["sendtimeout", '=', IntList] ->
-            case (catch list_to_integer(IntList)) of
-                {'EXIT', _} ->
-                    error_logger:info_msg("Yaws webmail:  expect integer at "
-                                          "line ~p", [Lno]),
-                    read_config(FD, Cfg, Lno+1, Next);
+            try list_to_integer(IntList) of
                 Int ->
                     read_config(FD, Cfg#cfg{sendtimeout = Int}, Lno+1, Next)
+            catch
+                _:_ ->
+                    error_logger:info_msg("Yaws webmail:  expect integer at "
+                                          "line ~p", [Lno]),
+                    read_config(FD, Cfg, Lno+1, Next)
             end;
         [H|_] ->
             error_logger:info_msg("Yaws webmail: Unexpected tokens ~p at "
@@ -2736,12 +2746,14 @@ parse_time(Time) ->
                 {Seconds,R3}      = get_number(R2, 0),
                 {Hour, Minutes, Seconds, R3}
         end,
-    case catch F() of
+    try F() of
         {Hour, Minutes, Seconds, Rest} when is_integer(Hour),
                                       is_integer(Minutes),
                                       is_integer(Seconds) ->
-            {Hour, Minutes, Seconds, Rest};
-        _ -> error
+            {Hour, Minutes, Seconds, Rest}
+    catch
+        _:_ ->
+            error
     end.
 
 format_date({{Year,Month,Day},{Hour,Minutes,Seconds}}) ->

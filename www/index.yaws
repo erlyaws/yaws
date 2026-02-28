@@ -1,7 +1,5 @@
 <erl>
 
--compile('nowarn_deprecated_catch').
-
 out(A) ->
     [{ssi, "TAB.inc","%%",[{"index", "choosen"}]},
      {ehtml,
@@ -45,7 +43,7 @@ out(A) ->
                 {a,[{href,"https://github.com/erlyaws/yaws"}],
                   "https://github.com/erlyaws/yaws"}]},
 
-        {p, [], ["Travis test results at :",
+        {p, [], ["Yaws CI test results at :",
                  {a, [{href, "https://github.com/erlyaws/yaws/actions"
                              "/workflows/main.yml"}],
                  "https://github.com/erlyaws/yaws/actions"
@@ -78,15 +76,16 @@ is_proper(10) ->
     false;
 is_proper(Tag) ->
     case string:tokens(Tag, "-") of
-        ["yaws", Rel] -> 
+        ["yaws", Rel] ->
             IntList = string:tokens(Rel, "."),
             case lists:filter(
                    fun(IntStr) ->
-                           case catch list_to_integer(IntStr) of
-                               {'EXIT', _} ->
-                                   true;
-                               _ ->
-                                   false
+                           try
+                               list_to_integer(IntStr),
+                               false
+                           catch
+                               _:_ ->
+                                   true
                            end
                    end, IntList) of
                 [] ->

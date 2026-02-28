@@ -1,7 +1,5 @@
 -module(wiki_format_txt).
 
--compile('nowarn_deprecated_catch').
-
 %% File    : wiki_format_txt.erl
 %% Author  : Joe Armstrong (joe@bluetail.com)
 %%         : Johan Bevemyr, minor modifications (jb@bevemyr.com)
@@ -407,12 +405,16 @@ parse_time(Time) ->
                 {Seconds,R3}      = get_number(R2, 0),
                 {Hour, Minutes, Seconds, R3}
         end,
-    case catch F() of
+    try F() of
         {Hour, Minutes, Seconds, Rest} when is_integer(Hour),
                                       is_integer(Minutes),
                                       is_integer(Seconds) ->
             {Hour, Minutes, Seconds, Rest};
-        _ -> error
+        _ ->
+            throw(error)
+    catch
+        _:_ ->
+            error
     end.
 
 note(T, Env, L, Doc) ->
@@ -565,9 +567,11 @@ plugin(Data, Page) ->
 exec_plugin(Name, Page, ArgStrings) ->
    exec_plugin(Name, Page, ArgStrings, []).
 exec_plugin(Name, Page, [], ArgsList) ->
-   case catch apply(list_to_atom("wiki_plugin_" ++ Name),run, [Page, ArgsList]) of
-       {'EXIT', Reason} -> io_lib:format("Plugin error: ~p", [Reason]);
+   try apply(list_to_atom("wiki_plugin_" ++ Name),run, [Page, ArgsList]) of
        Result -> Result
+   catch
+       _:Reason ->
+           io_lib:format("Plugin error: ~p", [Reason])
    end;
 exec_plugin(Name, Page, [ArgString|ArgStrings], Acc) ->
    [Key,Val] = string:tokens(ArgString, "="),

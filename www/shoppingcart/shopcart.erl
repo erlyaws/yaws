@@ -7,8 +7,6 @@
 -module(shopcart).
 -author('klacke@hyber.org').
 
--compile('nowarn_deprecated_catch').
-
 -include("../../include/yaws_api.hrl").
 -include_lib("kernel/include/inet.hrl").
 
@@ -218,10 +216,11 @@ formupdate(A) ->
 handle_l([], Items) ->
     Items;
 handle_l([{Str, Num} | Tail], Items) ->
-    case catch list_to_integer(Num) of
+    try list_to_integer(Num) of
         Int when is_integer(Int) ->
-            handle_l(Tail, [{Str, Int} | lists:keydelete(Str,1, Items)]);
-        _ ->
+            handle_l(Tail, [{Str, Int} | lists:keydelete(Str,1, Items)])
+    catch
+        error:badarg ->
             handle_l(Tail, Items)
     end.
 

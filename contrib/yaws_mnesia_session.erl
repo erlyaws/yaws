@@ -15,8 +15,6 @@
 
 -module (yaws_mnesia_session).
 
--compile('nowarn_deprecated_catch').
-
 -export ([init_backend/1, stop_backend/0]).
 -export ([list/0, insert/1, lookup/1, delete/1]).
 -export ([traverse/1, cleanup/0]).
@@ -33,19 +31,21 @@ init_backend(Fields) ->
         _ ->
             ok
     end,
-    case catch mnesia:table_info(schema, where_to_write) of
+    try mnesia:table_info(schema, where_to_write) of
         Nodes when is_list(Nodes) ->
-            case catch mnesia:table_info(?TABLE, where_to_write) of
-                {'EXIT', {aborted, {no_exists, ?TABLE, where_to_write}}} ->
+            try mnesia:table_info(?TABLE, where_to_write) of
+                List when is_list (List) ->
+                    ok = mnesia:wait_for_tables([?TABLE], 60000)
+            catch
+                _:{aborted, {no_exists, ?TABLE, where_to_write}}} ->
                     Nodes = mnesia:system_info(running_db_nodes),
                     Options = [{disc_copies, Nodes}, {type, set},
                                {attributes, Fields}],
                     {atomic, ok} = mnesia: create_table (?TABLE, Options),
-                    ok;
-                List when is_list (List) ->
-                    ok = mnesia:wait_for_tables([?TABLE], 60000)
-            end;
-        {'EXIT',{aborted,{no_exists,schema,where_to_write}}} ->
+                    ok
+            end
+    catch
+        _:{aborted,{no_exists,schema,where_to_write}}} ->
             application:stop(mnesia),
             mnesia:create_schema([node()]),
             ok = application:start(mnesia),

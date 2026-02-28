@@ -52,8 +52,6 @@
 -module(yapp).
 -author('mikael@creado.se').
 
--compile('nowarn_deprecated_catch').
-
 -export([arg_rewrite/1, start/0, prepath/1, insert/1, insert/2, remove/2,
          log/3,
          reset_yaws_conf/0, srv_id/1,
@@ -221,7 +219,8 @@ insert([]) ->
     ok;
 insert(Yapps) when is_list(Yapps) ->
     {ok, Gconf, Sconfs} = get_conf(),
-    NewSconfs = (catch insert_yapps_in_sconfs(Yapps, Sconfs)),
+    NewSconfs = try insert_yapps_in_sconfs(Yapps, Sconfs))
+                catch _:_ -> Sconfs end,
     yaws_api:setconf(Gconf, NewSconfs).
 %% @hidden
 insert(SrvId, Yapp)->
@@ -356,12 +355,8 @@ remove_yapp_from_yapp_list(RegPath, [H | T]) ->
 
 %% by tobbe@tornkvist.org
 reset_yaws_conf() ->
-    case catch yaws_config:load(yaws_sup:get_app_args()) of
-        {ok, Gconf, Sconfs} ->
-            yaws_api:setconf(Gconf, Sconfs);
-        Err ->
-            Err
-    end.
+    {ok, Gconf, Sconfs} = yaws_config:load(yaws_sup:get_app_args()),
+    yaws_api:setconf(Gconf, Sconfs).
 
 -spec get_conf() -> {ok, yawsGconf(), Sconfs :: [yawsSconf()]}.
 get_conf() ->

@@ -69,14 +69,7 @@
 %%  The authmod_gssapi module depends on egssapi
 %%  from: http://www.hem.za.org/egssapi/
 
-
-
-
-
-
 -module(authmod_gssapi).
-
--compile('nowarn_deprecated_catch').
 
 -export([
          start/1,
@@ -141,10 +134,7 @@ auth(Arg, _Auth) ->
             ?INFO("Negotiate~n", []),
             Bin = base64:decode(Data),
 
-             case catch spnego:accept_sec_context(?SERVER, Bin) of
-                {'EXIT', Reason} ->
-                    ?ERROR("spnego failed EXIT:~p~n", [Reason]),
-                     throw(Reason);
+	    try spnego:accept_sec_context(?SERVER, Bin) of
                 {error, Reason} ->
                     ?ERROR("spnego failed error:~p~n", [Reason]),
                     throw(Reason);
@@ -155,6 +145,10 @@ auth(Arg, _Auth) ->
                 E ->
                     ?ERROR("spnego error ~p~n", [E]),
                     throw(error)
+	    catch
+		_:Reason ->
+                    ?ERROR("spnego failed EXIT:~p~n", [Reason]),
+                     throw(Reason)
             end;
         _ ->
             ?INFO("Request auth~n"),

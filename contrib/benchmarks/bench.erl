@@ -18,8 +18,6 @@
 
 -module(bench).
 
--compile('nowarn_deprecated_catch').
-
 %% User interface
 -export([run/0]).
 
@@ -145,12 +143,15 @@ bm_compile(FileName, OptionsList) ->
 %% functions for the module <Module>.
 %%---------------------------------------------------------------------------
 bm_cases(Module) ->
-    case catch Module:benchmarks() of
+    try Module:benchmarks() of
         {Iter, BmList} when is_integer(Iter), is_list(BmList) ->
             {Module, Iter, BmList};
+        Other ->
+            throw(Other)
+    catch
         %% The benchmark is incorrect implemented there is no point in
         %% trying to continue
-        Other ->
+        throw:Other ->
             Reason =
                 lists:flatten(
                   io_lib:format("Incorrect return value: ~p "
@@ -237,7 +238,7 @@ bm_run(Module, BmTest, Iter) ->
 %%---------------------------------------------------------------------------
 measure(Parent, Module, BmTest, Iter) ->
     statistics(runtime),
-    Res = (catch apply(Module, BmTest, [Iter])),
+    Res = apply(Module, BmTest, [Iter]),
     {_TotalRunTime, TimeSinceLastCall} = statistics(runtime),
     Parent ! {TimeSinceLastCall, Res}.
 

@@ -1,6 +1,5 @@
 <erl>
 %% inspired from upload.yaws, slightly simplified.
--compile('nowarn_deprecated_catch').
 
 -record(state, {acc,
                 last
@@ -9,19 +8,25 @@
 out(A) ->
     %% make sure it is post method
     'POST' = yaws_api:http_request_method(yaws_api:arg_req(A)),
-    case catch get_props(A) of
+    try get_props(A) of
         {ok, AllParts} ->
             Boundary = "3e9876546ecf",
             RspCType = "multipart/form-data; boundary=" ++ Boundary,
-            case catch format_output(AllParts, Boundary, []) of
+            try format_output(AllParts, Boundary, []) of
                 {ok, Html} ->
                     [{content,RspCType,Html},break];
                 Else ->
+                    throw(Else)
+            catch
+                _:Else ->
                     [{status,400},{html,io_lib:format("Error: ~p~n", [Else])}]
             end;
         {get_more, Cont, NewState} = GetMore ->
             GetMore;
         Else ->
+            throw(Else)
+    catch
+        _:Else ->
             [{status,400},{html,io_lib:format("Error: ~p~n", [Else])}]
     end.
 

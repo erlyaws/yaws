@@ -22,8 +22,6 @@
 -module('wiki').
 -author('jb@son.bevemyr.com').
 
--compile('nowarn_deprecated_catch').
-
 -export([showPage/3, createNewPage/3, showHistory/3, allPages/3,
          lastEdited/3, wikiZombies/3, editPage/3, editFiles/3,
          previewNewPage/3, allRefsToMe/3, deletePage/3,
@@ -410,9 +408,7 @@ storeTagged(Params, Root, Prefix) ->
     Tag  = getopt("tag", Params),
     Txt0 = getopt("txt", Params),
 
-    case catch list_to_integer(Tag) of
-        {'EXIT', _Reason} ->
-	    show({no_such_tag, Tag}, Root);
+    try list_to_integer(Tag) of
         ITag when is_integer(ITag) ->
 	    Txt = zap_cr(urlencoded2str(Txt0)),
 	    {File,_FileDir} = page2filename(Page, Root),
@@ -436,6 +432,9 @@ storeTagged(Params, Root, Prefix) ->
 		_ ->
 		    show({no_such_page,Page}, Root)
 	    end
+   catch
+       _:_Reason ->
+	    show({no_such_tag, Tag}, Root)
    end.
 
 
@@ -1075,9 +1074,7 @@ showOldPage(Params, Root, _Prefix) ->
     Page = getnode(Params),
     Nt = getopt("index", Params),
 
-    case catch list_to_integer(Nt) of
-        {'EXIT', _Reason} ->
-            show({no_such_index, Nt}, Root);
+    try list_to_integer(Nt) of
         Index when is_integer(Index) ->
 	    {File,FileDir} = page2filename(Page, Root),
 	    case file:read_file(File) of
@@ -1101,6 +1098,9 @@ showOldPage(Params, Root, _Prefix) ->
 		_ ->
 		    show({no_such_page, Page}, Root)
 	    end
+    catch
+        _:_Reason ->
+            show({no_such_index, Nt}, Root)
     end.
 
 take(0, _) -> [];
@@ -1553,21 +1553,27 @@ slideShow(Params, Root, Prefix) ->
         {undefined, undefined, undefined} ->
             nextSlide(1, next, Page, Root, Prefix);
         {undefined, undefined, _} ->
-            Index = case catch list_to_integer(AutoArg) of
-                        {'EXIT', _Reason} -> 1;
+            Index = try list_to_integer(AutoArg) of
                         Num when is_integer(Num) -> Num
+		    catch
+                        _:_ ->
+			    1
                     end,
             nextSlide(Index, auto, Page, Root, Prefix);
         {undefined, _, undefined} ->
-            Index = case catch list_to_integer(PrevArg) of
-                        {'EXIT', _Reason} -> 1;
+            Index = try list_to_integer(PrevArg) of
                         Num when is_integer(Num) -> Num
+		    catch
+			_:_ ->
+			    1
                     end,
             nextSlide(Index, prev, Page, Root, Prefix);
         {_, undefined, undefined} ->
-            Index = case catch list_to_integer(NextArg) of
-                        {'EXIT', _Reason} -> 1;
+            Index = try list_to_integer(NextArg) of
                         Num when is_integer(Num) -> Num
+		    catch
+                        _:_ ->
+			    1
                     end,
             nextSlide(Index, next, Page, Root, Prefix)
     end.
@@ -1710,9 +1716,7 @@ pict_suffix(File) ->
                  [".gif", ".jpeg", ".jpe", ".jpg"]).
 
 get_img(Index, Direction, Files) ->
-    case catch lists:nth(Index, Files) of
-        {'EXIT', _} ->
-            false;
+    try lists:nth(Index, Files) of
         PictFile ->
             FileName = element(2, PictFile),
             case lowercase(lists:reverse(FileName)) of
@@ -1731,6 +1735,9 @@ get_img(Index, Direction, Files) ->
                             get_img(Index-1, Direction, Files)
                     end
             end
+    catch
+        _:_ ->
+            false
     end.
 
 
@@ -1738,9 +1745,7 @@ editTag(Params, Root, _Prefix) ->
     Page = getnode(Params),
     Tag = getopt("tag", Params),
 
-    case catch list_to_integer(Tag) of
-        {'EXIT', _Reason} ->
-	    show({no_such_tag, Tag}, Root);
+    try list_to_integer(Tag) of
         ITag when is_integer(ITag) ->
 	    {File,_FileDir} = page2filename(Page, Root),
 	    case file:read_file(File) of
@@ -1767,6 +1772,9 @@ editTag(Params, Root, _Prefix) ->
 		_Error ->
 		    show({no_such_page, Page}, Root)
 	    end
+    catch
+        _:_ ->
+	    show({no_such_tag, Tag}, Root);
     end.
 
 changePassword(Params, Root, _Prefix) ->

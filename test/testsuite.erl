@@ -1,7 +1,5 @@
 -module(testsuite).
 
--compile('nowarn_deprecated_catch').
-
 -include("testsuite.hrl").
 
 %% Testsuite API
@@ -584,8 +582,10 @@ pre_init_per_suite(SuiteName, Config, State) ->
 
 post_end_per_suite(SuiteName, Config, Return, State) ->
     %% Be sure Yaws is stopped and unloaded
-    (catch application:stop(yaws)),
-    (catch application:unload(yaws)),
+    try application:stop(yaws)
+    catch _:_ -> ignore end,
+    try application:unload(yaws)
+    catch _:_ -> ignore end,
     unload_suite_modules(SuiteName),
 
     Suite = State#ct_state.current_suite,
