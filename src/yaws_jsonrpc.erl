@@ -174,8 +174,8 @@ eval_payload(Args, {M, F}, Payload, {session, CookieName},ID) ->
                  end,
             encode_send(Args, 200, ResponsePayload, CO, ID)
     catch
-        _:Reason ->
-            ?ERROR_LOG({M, F, {'EXIT', Reason}}),
+        C:Reason ->
+            ?ERROR_LOG({M, F, {C, Reason}}),
             send(Args, 500)
     end;
 

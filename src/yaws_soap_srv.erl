@@ -181,7 +181,9 @@ request(Model, {M,F}, {Req, Attachments}, SessionValue, Action) ->
 					   Attachments])
 			  catch C:E -> {C, E } end);
         {error, Error} ->
-            cli_error(Error)
+            cli_error(Error);
+	OtherError ->
+            srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))
     catch
 	_:OtherError ->
             srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))
@@ -241,7 +243,11 @@ return(Model, ResHeader, ResBody, ResCode, SessVal, Files) ->
 		    {ok, DIME, ResCode, SessVal}
 	    end;
         {error, WriteError} ->
-            srv_error(f("Error writing XML: ~p", [WriteError]))
+            srv_error(f("Error writing XML: ~p", [WriteError]));
+        OtherWriteError ->
+            error_logger:error_msg("~p(~p): OtherWriteError=~p~n",
+                                   [?MODULE, ?LINE, OtherWriteError]),
+            srv_error(f("Error writing XML: ~p", [OtherWriteError]))
     catch
         _:OtherWriteError ->
             error_logger:error_msg("~p(~p): OtherWriteError=~p~n",

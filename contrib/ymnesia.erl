@@ -158,10 +158,12 @@ table(Cbox, Sp, Table) when is_atom(Table) ->
                  {p, [], "Query: "++Q}},
                 {'div', [],
                  {p, [], "Table: "++a2l(Table)}} |
-                mk_tab(Vp, Headers, t2l(Result))]}]}
-    catch
-        _:Else ->
+                mk_tab(Vp, Headers, t2l(Result))]}]};
+        Else ->
             Else
+    catch
+        C:Err ->
+            {C, Err}
     end.
 
 %%% Create a pattern denoting which fields to show in the result.

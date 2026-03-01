@@ -410,8 +410,7 @@ parse_time(Time) ->
                                       is_integer(Minutes),
                                       is_integer(Seconds) ->
             {Hour, Minutes, Seconds, Rest};
-        _ ->
-            throw(error)
+        _ -> error
     catch
         _:_ ->
             error

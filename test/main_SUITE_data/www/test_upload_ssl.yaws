@@ -16,7 +16,7 @@ out(A) ->
                 {ok, Html} ->
                     [{content,RspCType,Html},break];
                 Else ->
-                    throw(Else)
+                    [{status,400},{html,io_lib:format("Error: ~p~n", [Else])}]
             catch
                 _:Else ->
                     [{status,400},{html,io_lib:format("Error: ~p~n", [Else])}]
@@ -24,7 +24,7 @@ out(A) ->
         {get_more, Cont, NewState} = GetMore ->
             GetMore;
         Else ->
-            throw(Else)
+            [{status,400},{html,io_lib:format("Error: ~p~n", [Else])}]
     catch
         _:Else ->
             [{status,400},{html,io_lib:format("Error: ~p~n", [Else])}]

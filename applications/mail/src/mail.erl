@@ -2750,7 +2750,8 @@ parse_time(Time) ->
         {Hour, Minutes, Seconds, Rest} when is_integer(Hour),
                                       is_integer(Minutes),
                                       is_integer(Seconds) ->
-            {Hour, Minutes, Seconds, Rest}
+            {Hour, Minutes, Seconds, Rest};
+        _ -> error
     catch
         _:_ ->
             error

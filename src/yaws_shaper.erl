@@ -38,7 +38,9 @@ check(#sconf{shaper=Mod}, IP) ->
         allow ->
             allow;
         {deny, Status, Msg} ->
-            {deny, Status, Msg}
+            {deny, Status, Msg};
+        _ ->
+            allow
     catch
         _:_ ->
             allow

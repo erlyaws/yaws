@@ -488,7 +488,9 @@ fmt_ip(IP, State) when is_tuple(IP) ->
         true ->
             try inet:gethostbyaddr(IP) of
                 {ok, HE} ->
-                    HE#hostent.h_name
+                    HE#hostent.h_name;
+                _ ->
+                    inet_parse:ntoa(IP)
             catch
                 _:_ ->
                     try

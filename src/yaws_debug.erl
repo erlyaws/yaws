@@ -8,8 +8,6 @@
 -module(yaws_debug).
 -author('klacke@hyber.org').
 
--compile('nowarn_deprecated_catch').
-
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
@@ -106,9 +104,12 @@ assert(interval,X,{Min,Max},_) when is_integer(X), is_integer(Min),
                                     X>=Min, Max>=X ->
     ok;
 assert('fun', Fun, _, Failure) ->
-    case catch Fun() of
+    try Fun() of
         true -> ok;
         _Other -> fail(Failure)
+    catch
+        _:_ ->
+            fail(Failure)
     end;
 
 assert(in,X,L,Failure) when is_list(L) ->
@@ -134,21 +135,29 @@ fail({{debug,Fstr}, File,Line,Fmt, Args}) ->
                           [Fstr, node(), filename:basename(File),
                            Line, self()])),
 
-    case (catch debug_format(user, Str ++ Fmt ++ "~n", Args)) of
+    try debug_format(user, Str ++ Fmt ++ "~n", Args) of
         ok -> ok;
         _ -> debug_format(user, "ERROR ~p:~p: Pid ~w: (bad format)~n~p,~p~n",
                        [File, Line, self(), Fmt, Args]),
-
+             ok
+    catch
+        _:_ ->
+            debug_format(user, "ERROR ~p:~p: Pid ~w: (bad format)~n~p,~p~n",
+                       [File, Line, self(), Fmt, Args]),
              ok
     end;
 
 fail({format, File,Line,Fmt,Args}) ->
-    case (catch debug_format(user, Fmt,Args)) of
+    try debug_format(user, Fmt,Args) of
         ok -> ok;
         _ ->
             debug_format(user, "ERROR ~p:~p: Pid ~w: (bad format)~n~p,~p~n",
                       [File, Line, self(), Fmt, Args]),
-
+            ok
+    catch
+        _:_ ->
+            debug_format(user, "ERROR ~p:~p: Pid ~w: (bad format)~n~p,~p~n",
+                      [File, Line, self(), Fmt, Args]),
             ok
     end.
 
@@ -156,14 +165,16 @@ debug_format(_, F, D) ->
     debug_format(F, D).
 
 debug_format(F, A) ->
-    Str = case catch io_lib:format("yaws debug: " ++ F, A) of
-        {'EXIT', Reason} ->
-            io_lib:format("yaws debug: F=~s A=~p (failed to format: ~p)",
-                [F, A, Reason]);
-        Ok -> Ok
-    end,
+    Str = try
+              io_lib:format("yaws debug: " ++ F, A)
+          catch
+              _:Reason ->
+                  io_lib:format("yaws debug: F=~s A=~p (failed to format: ~p)",
+                                [F, A, Reason])
+          end,
     error_logger:info_msg(Str),
-    catch io:format(F, A),
+    try io:format(F, A)
+    catch _:_ -> ignore end,
     ok.
 
 format(F, A) ->
@@ -311,12 +322,12 @@ bad_other(L) ->
 
 
 nobin(X) ->
-    case catch xnobin(X) of
-        {'EXIT', Reason} ->
+    try
+        xnobin(X)
+    catch
+        _:Reason ->
             error_logger:format("~p~n~p~n", [X, Reason]),
-            erlang:error(Reason);
-        Res ->
-            Res
+            erlang:error(Reason)
     end.
 
 

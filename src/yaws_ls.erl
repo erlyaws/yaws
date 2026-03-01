@@ -10,8 +10,6 @@
 -module(yaws_ls).
 -author('klacke@hyber.org').
 
--compile('nowarn_deprecated_catch').
-
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
@@ -242,11 +240,12 @@ allzip() ->
 is_user_dir(SP) ->
     case SP of
         [$/,$~ | T] -> User = string:sub_word(T,1,$/),
-                       case catch yaws:user_to_home(User) of
-                           {'EXIT', _} ->
-                               false;
+                       try yaws:user_to_home(User) of
                            Home ->
                                {true,Home}
+                       catch
+                           _:_ ->
+                               false
                        end;
         _ -> false
     end.

@@ -1183,7 +1183,9 @@ parse_propfind([]) -> [allprop]; % RFC4918: no body then allprop, is [] no body?
 parse_propfind(L) ->
     try parse_xml(L) of
         {?IS_PROPFIND(X),_} ->
-            parse_propfind(?CONTENT(X),[])
+            parse_propfind(?CONTENT(X),[]);
+        _Z ->
+            throw(400)
     catch
         _:_ ->
             throw(400)
@@ -1205,7 +1207,9 @@ parse_propfind([], R) ->
 parse_proppatch(L) ->
     try parse_xml(L) of
         {?IS_PROPERTYUPDATE(X),_} ->
-            parse_proppatch(?CONTENT(X),[])
+            parse_proppatch(?CONTENT(X),[]);
+        _Z ->
+            throw(400)
     catch
         _:_ ->
             throw(400)
@@ -1255,7 +1259,9 @@ parse_lockinfo([]) ->
 parse_lockinfo(L) ->
     try parse_xml(L) of
         {?IS_LOCKINFO(X),_} ->
-            parse_lockinfo(?CONTENT(X),#lock{})
+            parse_lockinfo(?CONTENT(X),#lock{});
+        _Z ->
+            throw(400)
     catch
         _:_ ->
             throw(400)

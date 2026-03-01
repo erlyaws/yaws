@@ -146,9 +146,9 @@ auth(Arg, _Auth) ->
                     ?ERROR("spnego error ~p~n", [E]),
                     throw(error)
 	    catch
-		_:Reason ->
-                    ?ERROR("spnego failed EXIT:~p~n", [Reason]),
-                     throw(Reason)
+		C:Reason ->
+                    ?ERROR("spnego failed ~p:~p~n", [C, Reason]),
+		    throw(Reason)
             end;
         _ ->
             ?INFO("Request auth~n"),

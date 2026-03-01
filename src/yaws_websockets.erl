@@ -11,8 +11,6 @@
 -author('jbothma@gmail.com').
 -behaviour(gen_server).
 
--compile('nowarn_deprecated_catch').
-
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 
@@ -625,9 +623,11 @@ basic_messages([FrameInfo|Rest],
             Res = case CbInfo#cbinfo.msg_fun_2 of
                       undefined ->
                           MsgFun1 = CbInfo#cbinfo.msg_fun_1,
-                          catch CbMod:MsgFun1(Message);
+                          try CbMod:MsgFun1(Message)
+                          catch C:E -> {C,E} end;
                       MsgFun2 ->
-                          catch CbMod:MsgFun2(Message, CbState)
+                          try CbMod:MsgFun2(Message, CbState)
+                          catch C:E -> {C,E} end
                   end,
             IsCloseFrame = case Message of
                                {close, _, _} -> true;
@@ -806,7 +806,8 @@ advanced_messages([FrameInfo|Rest],
                   _Tout) ->
     CbMod   = CbInfo#cbinfo.module,
     MsgFun2 = CbInfo#cbinfo.msg_fun_2,
-    Res     = (catch CbMod:MsgFun2(FrameInfo, CbState)),
+    Res     = try CbMod:MsgFun2(FrameInfo, CbState)
+              catch C:E -> {C,E} end,
     IsCloseFrame = case FrameInfo of
                        #ws_frame_info{opcode=close} -> true;
                        _                            -> false
@@ -1060,7 +1061,7 @@ unframe(WSState, FirstPacket, Opts) ->
 
 %% -> {#ws_frame_info, RestBin} | {fail_connection, Reason}
 unframe_one(WSState, FirstPacket, Opts) ->
-    case catch ws_frame_info(WSState, FirstPacket, Opts) of
+    try ws_frame_info(WSState, FirstPacket, Opts) of
         {FrameInfo = #ws_frame_info{}, RestBin} ->
             Unmasked = mask(FrameInfo#ws_frame_info.masking_key,
                             FrameInfo#ws_frame_info.payload),
@@ -1091,6 +1092,9 @@ unframe_one(WSState, FirstPacket, Opts) ->
                             data        = ClosePayload,
                             ws_state    = CloseWSState}, <<>>};
         Else ->
+            Else
+    catch
+        _:Else ->
             Else
     end.
 
