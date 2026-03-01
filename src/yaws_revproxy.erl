@@ -7,8 +7,6 @@
 %%%-------------------------------------------------------------------
 -module(yaws_revproxy).
 
--compile('nowarn_deprecated_catch').
-
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
@@ -81,7 +79,7 @@ out(#arg{state=#revproxy{}=RPState}=Arg)
                             undefined ->
                                 {Req, Hdrs};
                             InterceptMod ->
-                                case catch InterceptMod:rewrite_request(
+                                try InterceptMod:rewrite_request(
                                              Req, Hdrs) of
                                     {ok, NewReq0, NewHdrs0} ->
                                         {NewReq0, NewHdrs0};
@@ -90,6 +88,13 @@ out(#arg{state=#revproxy{}=RPState}=Arg)
                                           "revproxy intercept module ~p:"
                                           "rewrite_request failed: ~p~n",
                                           [InterceptMod, InterceptError]),
+                                        exit({error, intercept_mod})
+                                catch
+                                    _:Error ->
+                                        error_logger:error_msg(
+                                          "revproxy intercept module ~p:"
+                                          "rewrite_request failed: ~p~n",
+                                          [InterceptMod, Error]),
                                         exit({error, intercept_mod})
                                 end
                         end,
@@ -217,7 +222,7 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvheaders ->
                     undefined ->
                         {Resp0, RespHdrs0};
                     InterceptMod ->
-                        case catch InterceptMod:rewrite_response(
+                        try InterceptMod:rewrite_response(
                                      Resp0, RespHdrs0) of
                             {ok, NewResp, NewRespHdrs} ->
                                 {NewResp, NewRespHdrs};
@@ -226,6 +231,13 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvheaders ->
                                   "revproxy intercept module ~p:"
                                   "rewrite_response failure: ~p~n",
                                   [InterceptMod, InterceptError]),
+                                exit({error, intercept_mod})
+                        catch
+                            _:Error ->
+                                error_logger:error_msg(
+                                  "revproxy intercept module ~p:"
+                                  "rewrite_response failure: ~p~n",
+                                  [InterceptMod, Error]),
                                 exit({error, intercept_mod})
                         end
                 end,
@@ -713,7 +725,7 @@ rewrite_server_headers(RPState) ->
                   undefined;
               L ->
                   ?Debug("parse_url(~p)~n", [L]),
-                  LocUrl   = (catch yaws_api:parse_url(L)),
+                  LocUrl   = yaws_api:parse_url(L),
                   ProxyUrl = RPState#revproxy.url,
                   if
                       LocUrl#url.scheme == ProxyUrl#url.scheme andalso

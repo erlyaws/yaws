@@ -2,8 +2,6 @@
 -author('carsten@codimi.de').
 -author('brunorijsman@hotmail.com').         %% Added support for FastCGI
 
--compile('nowarn_deprecated_catch').
-
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
 -include("../include/yaws.hrl").
@@ -207,7 +205,8 @@ build_env(Arg, Scriptfilename, Pathinfo, ExtraEnv, SC) ->
     PeerAddr = get_socket_peername(Arg#arg.clisock),
     LocalAddr = get_socket_sockname(Arg#arg.clisock),
 
-    Scheme = (catch yaws:redirect_scheme(SC)),
+    Scheme = try yaws:redirect_scheme(SC)
+             catch C:E -> {C,E} end,
     %% Needed by trac, for redirs after POST
     HttpsEnv  = case Scheme of
                     "https://" -> [{"HTTPS", "1"}];
@@ -1221,13 +1220,14 @@ fcgi_add_resp(WorkerState, OldData) ->
 
 fcgi_stream_data_loop(WorkerState) ->
     YawsWorkerPid = WorkerState#fcgi_worker_state.yaws_worker_pid,
-    case catch fcgi_get_output(WorkerState) of
+    try fcgi_get_output(WorkerState) of
         {data, Data} ->
             yaws_api:stream_chunk_deliver_blocking(YawsWorkerPid, Data),
             fcgi_stream_data_loop(WorkerState);
         {exit_status, _Status} ->
-            yaws_api:stream_chunk_end(YawsWorkerPid);
-        {'EXIT', _Reason} ->
+            yaws_api:stream_chunk_end(YawsWorkerPid)
+    catch
+        _:_Reason ->
             yaws_api:stream_chunk_end(YawsWorkerPid)
     end.
 

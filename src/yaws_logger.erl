@@ -9,8 +9,6 @@
 -author('christopher@yakaz.com').
 -include_lib("kernel/include/file.hrl").
 
--compile('nowarn_deprecated_catch').
-
 %% API
 -export([
          open_log/3,
@@ -94,7 +92,8 @@ rotate(LogWrapSize) ->
 accesslog(#sconf{servername=Srv}, Ip, Req, InH, OutH, Time) ->
     case ets:lookup(yaws_log, {access, Srv}) of
         [#log{amod=Mod, data=Data}] ->
-            catch Mod:write_log(Srv, access, Data, {Ip, Req, InH, OutH, Time});
+            try Mod:write_log(Srv, access, Data, {Ip, Req, InH, OutH, Time})
+            catch C:E -> {C,E} end;
         _ ->
             ok
     end.
@@ -102,7 +101,8 @@ accesslog(#sconf{servername=Srv}, Ip, Req, InH, OutH, Time) ->
 authlog(#sconf{servername=Srv}, IP, Path, Item) ->
     case ets:lookup(yaws_log, {auth, Srv}) of
         [#log{amod=Mod, data=Data}] ->
-            catch Mod:write_log(Srv, auth, Data, {IP, Path, Item});
+            try Mod:write_log(Srv, auth, Data, {IP, Path, Item})
+            catch C:E -> {C,E} end;
         _ ->
             ok
     end.
@@ -115,12 +115,15 @@ do_open_log(#sconf{servername=Srv, logger_mod=Mod}, Type, Dir) ->
     Id = {Type, Srv},
     case ets:lookup(yaws_log, Id) of
         [] ->
-            case catch Mod:open_log(Srv, Type, Dir) of
+            try Mod:open_log(Srv, Type, Dir) of
                 {true, Data} ->
                     AL = #log{id={Type, Srv}, amod=Mod, data=Data},
                     ets:insert(yaws_log, AL),
                     true;
                 _ ->
+                    false
+            catch
+                _:_ ->
                     false
             end;
         _ ->
@@ -131,8 +134,8 @@ do_open_log(#sconf{servername=Srv, logger_mod=Mod}, Type, Dir) ->
 
 
 do_close_log(#log{id={Type, Srv}, amod=Mod, data=Data}) ->
-    catch Mod:close_log(Srv, Type, Data).
-
+    try Mod:close_log(Srv, Type, Data)
+    catch C:E -> {C,E} end.
 
 do_close_logs('$end_of_table') ->
     ok;
