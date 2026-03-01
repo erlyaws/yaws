@@ -37,7 +37,7 @@ init_backend(Fields) ->
                 List when is_list (List) ->
                     ok = mnesia:wait_for_tables([?TABLE], 60000)
             catch
-                _:{aborted, {no_exists, ?TABLE, where_to_write}}} ->
+                exit:{aborted, {no_exists, ?TABLE, where_to_write}} ->
                     Nodes = mnesia:system_info(running_db_nodes),
                     Options = [{disc_copies, Nodes}, {type, set},
                                {attributes, Fields}],
@@ -45,7 +45,7 @@ init_backend(Fields) ->
                     ok
             end
     catch
-        _:{aborted,{no_exists,schema,where_to_write}}} ->
+        exit:{aborted,{no_exists,schema,where_to_write}} ->
             application:stop(mnesia),
             mnesia:create_schema([node()]),
             ok = application:start(mnesia),
