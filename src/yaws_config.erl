@@ -8,8 +8,6 @@
 -module(yaws_config).
 -author('klacke@bluetail.com').
 
--compile('nowarn_deprecated_catch').
-
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
@@ -143,9 +141,12 @@ load_yaws_auth_from_docroot(Docroot, _) ->
                   SP  = string:sub_string(Path, length(Docroot)+1),
                   Dir = filename:dirname(SP),
                   A = #auth{docroot=Docroot, dir=Dir},
-                  case catch load_yaws_auth_file(Path, A) of
+                  try load_yaws_auth_file(Path, A) of
                       {ok, L} -> L ++ Acc;
                       _Other  -> Acc
+                  catch
+                      _:_ ->
+                          Acc
                   end
           end,
     filelib:fold_files(Docroot, "^.yaws_auth$", true, Fun, []).
@@ -192,9 +193,12 @@ load_yaws_auth_from_authdir(Docroot, Auth) ->
               _        -> Auth#auth.dir
           end,
     Path = filename:join([Docroot, Dir, ".yaws_auth"]),
-    case catch load_yaws_auth_file(Path, Auth) of
+    try load_yaws_auth_file(Path, Auth) of
         {ok, Auths} -> Auths;
         _           -> [Auth]
+    catch
+        _:_ ->
+            [Auth]
     end.
 
 
@@ -458,7 +462,7 @@ compile_and_load_src_dir(Dir, [Entry0|Rest], Opts) ->
 
 
 compile_module_src_dir(File, Opts) ->
-    case catch compile:file(File, Opts) of
+    try compile:file(File, Opts) of
         {ok, Mod, Bin} ->
             error_logger:info_msg("Compiled ~p~n", [File]),
             load_src_dir(File, Mod, Bin);
@@ -483,8 +487,9 @@ compile_module_src_dir(File, Opts) ->
                                 "[~p Errors - ~p Warnings]~n~s~s",
                                 [File,length(EsMsg),length(WsMsg),EsMsg,WsMsg]);
         error ->
-            error_logger:format("Failed to compile ~p~n", [File]);
-        {'EXIT', Reason} ->
+            error_logger:format("Failed to compile ~p~n", [File])
+    catch
+        _:Reason ->
             error_logger:format("Failed to compile ~p: ~p~n", [File, Reason])
     end.
 
@@ -538,11 +543,14 @@ validate_cs(GC, Cs0) ->
     end.
 
 validate_ssl(Cs) ->
-    case (catch validate_ssl(Cs, [])) of
+    try validate_ssl(Cs, []) of
         {ok, _}=Ok ->
             Ok;
         Err ->
             Err
+    catch
+        _:Error ->
+            Error
     end.
 validate_ssl([], Cs) ->
     {ok, lists:reverse(Cs)};
@@ -578,11 +586,14 @@ validate_ssl([C|Cs], NewCs) ->
 validate_groups(_, []) ->
     ok;
 validate_groups(GC, [H|T]) ->
-    case (catch validate_group(GC, H)) of
+    try validate_group(GC, H) of
         ok ->
             validate_groups(GC, T);
         Err ->
             Err
+    catch
+        _:Error ->
+            Error
     end.
 
 validate_group(GC, List) ->
@@ -696,12 +707,13 @@ set_server(SC) ->
 add_port(SC, Port) ->
     case string:tokens(SC#sconf.servername, ":") of
         [Srv, Prt] ->
-            case (catch list_to_integer(Prt)) of
-                {'EXIT', _} ->
-                    SC#sconf{servername =
-                                 Srv ++ [$:|integer_to_list(Port)]};
+            try list_to_integer(Prt) of
                 _Int ->
                     SC
+            catch
+                _:_ ->
+                    SC#sconf{servername =
+                                 Srv ++ [$:|integer_to_list(Port)]}
             end;
         [Srv] ->
             SC#sconf{servername =   Srv ++ [$:|integer_to_list(Port)]}
@@ -791,9 +803,12 @@ string_to_node_mod_fun(String) ->
 
 %% two states, global, server
 fload({FD, ConfFile}, GC) ->
-    case catch fload({FD, ConfFile}, GC, [], 1, ?NEXTLINE) of
+    try fload({FD, ConfFile}, GC, [], 1, ?NEXTLINE) of
         {ok, GC1, Cs} -> {ok, GC1, lists:reverse(Cs)};
         Err           -> Err
+    catch
+        _:Error ->
+            Error
     end.
 
 
@@ -913,13 +928,16 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
             end;
 
         ["max_connections", '=', Int] ->
-            case (catch list_to_integer(Int)) of
+            try list_to_integer(Int) of
                 I when is_integer(I) ->
                     fload({FD, ConfFile}, GC#gconf{max_connections = I}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ when Int == "nolimit" ->
                     fload({FD, ConfFile}, GC, Cs, Lno+1, ?NEXTLINE);
                 _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            catch
+                _:_ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
@@ -933,11 +951,14 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
             end;
 
         ["large_file_chunk_size", '=', Int] ->
-            case (catch list_to_integer(Int)) of
+            try list_to_integer(Int) of
                 I when is_integer(I) ->
                     fload({FD, ConfFile}, GC#gconf{large_file_chunk_size = I}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            catch
+                _:_ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
@@ -950,20 +971,26 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
             end;
 
         ["acceptor_pool_size", '=', Int] ->
-            case catch list_to_integer(Int) of
+            try list_to_integer(Int) of
                 I when is_integer(I), I >= 0 ->
                     fload({FD, ConfFile}, GC#gconf{acceptor_pool_size = I}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ ->
                     {error, ?F("Expect integer >= 0 at line ~w", [Lno])}
+            catch
+                _:_ ->
+                    {error, ?F("Expect integer >= 0 at line ~w", [Lno])}
             end;
 
         ["log_wrap_size", '=', Int] ->
-            case (catch list_to_integer(Int)) of
+            try list_to_integer(Int) of
                 I when is_integer(I) ->
                     fload({FD, ConfFile}, GC#gconf{log_wrap_size = I}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            catch
+                _:_ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
@@ -1016,7 +1043,7 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
 
         ["keepalive_timeout", '=', Val] ->
             %% keep this bugger for backward compat for a while
-            case (catch list_to_integer(Val)) of
+            try list_to_integer(Val) of
                 I when is_integer(I) ->
                     fload({FD, ConfFile}, GC#gconf{keepalive_timeout = I}, Cs,
                           Lno+1, ?NEXTLINE);
@@ -1025,10 +1052,13 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
                           Lno+1, ?NEXTLINE);
                 _ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
+            catch
+                _:_ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
         ["keepalive_maxuses", '=', Int] ->
-            case (catch list_to_integer(Int)) of
+            try list_to_integer(Int) of
                 I when is_integer(I) ->
                     fload({FD, ConfFile}, GC#gconf{keepalive_maxuses = I}, Cs,
                           Lno+1, ?NEXTLINE);
@@ -1036,6 +1066,9 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
                     %% nolimit is the default
                     fload({FD, ConfFile}, GC, Cs, Lno+1, ?NEXTLINE);
                 _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            catch
+                _:_ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
@@ -1058,40 +1091,52 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
             fload({FD, ConfFile}, GC, Cs, Lno+1, ?NEXTLINE);
 
         ["max_num_cached_files", '=', Val] ->
-            case (catch list_to_integer(Val)) of
+            try list_to_integer(Val) of
                 I when is_integer(I) ->
                     fload({FD, ConfFile}, GC#gconf{max_num_cached_files = I}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
+            catch
+                _:_ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
 
         ["max_num_cached_bytes", '=', Val] ->
-            case (catch list_to_integer(Val)) of
+            try list_to_integer(Val) of
                 I when is_integer(I) ->
                     fload({FD, ConfFile}, GC#gconf{max_num_cached_bytes = I}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
+            catch
+                _:_ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
 
         ["max_size_cached_file", '=', Val] ->
-            case (catch list_to_integer(Val)) of
+            try list_to_integer(Val) of
                 I when is_integer(I) ->
                     fload({FD, ConfFile}, GC#gconf{max_size_cached_file = I}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
+            catch
+                _:_ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
         ["cache_refresh_secs", '=', Val] ->
-            case (catch list_to_integer(Val)) of
+            try list_to_integer(Val) of
                 I when is_integer(I), I >= 0 ->
                     fload({FD, ConfFile}, GC#gconf{cache_refresh_secs = I}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ ->
+                    {error, ?F("Expect 0 or positive integer at line ~w",[Lno])}
+            catch
+                _:_ ->
                     {error, ?F("Expect 0 or positive integer at line ~w",[Lno])}
             end;
 
@@ -1174,20 +1219,26 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
                   Lno+1, ?NEXTLINE);
 
         ["ysession_idle_timeout", '=', YsessionIdle] ->
-            case (catch list_to_integer(YsessionIdle)) of
+            try list_to_integer(YsessionIdle) of
                 I when is_integer(I), I > 0 ->
                     fload({FD, ConfFile}, GC#gconf{ysession_idle_timeout = I}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ ->
                     {error, ?F("Expect positive integer at line ~w",[Lno])}
+            catch
+                _:_ ->
+                    {error, ?F("Expect positive integer at line ~w",[Lno])}
             end;
 
         ["ysession_long_timeout", '=', YsessionLong] ->
-            case (catch list_to_integer(YsessionLong)) of
+            try list_to_integer(YsessionLong) of
                 I when is_integer(I), I > 0 ->
                     fload({FD, ConfFile}, GC#gconf{ysession_long_timeout = I}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ ->
+                    {error, ?F("Expect positive integer at line ~w",[Lno])}
+            catch
+                _:_ ->
                     {error, ?F("Expect positive integer at line ~w",[Lno])}
             end;
 
@@ -1526,11 +1577,14 @@ fload({FD, ConfFile}, server, GC, C, Lno, Chars) ->
             end;
 
         ["port", '=', Val] ->
-            case (catch list_to_integer(Val)) of
+            try list_to_integer(Val) of
                 I when is_integer(I) ->
                     C1 = C#sconf{port = I},
                     fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            catch
+                _:_ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
@@ -1571,11 +1625,14 @@ fload({FD, ConfFile}, server, GC, C, Lno, Chars) ->
             end;
 
         ["listen_backlog", '=', Val] ->
-            case (catch list_to_integer(Val)) of
+            try list_to_integer(Val) of
                 B when is_integer(B) ->
                     C1 = update_soptions(C, listen_opts, backlog, B),
                     fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            catch
+                _:_ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
@@ -1625,11 +1682,16 @@ fload({FD, ConfFile}, server, GC, C, Lno, Chars) ->
                     C1 = C#sconf{partial_post_size = nolimit},
                     fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE);
                 Val ->
-                    case (catch list_to_integer(Val)) of
+                    try list_to_integer(Val) of
                         I when is_integer(I) ->
                             C1 = C#sconf{partial_post_size = I},
                             fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE);
                         _ ->
+                            {error,
+                             ?F("Expect integer or 'nolimit' at line ~w",
+                                [Lno])}
+                    catch
+                        _:_ ->
                             {error,
                              ?F("Expect integer or 'nolimit' at line ~w",
                                 [Lno])}
@@ -1932,11 +1994,14 @@ fload({FD, ConfFile}, listen_opts, GC, C, Lno, Chars) ->
             fload({FD, ConfFile}, listen_opts, GC, C, Lno+1, ?NEXTLINE);
 
         ["buffer", '=', Int] ->
-            case (catch list_to_integer(Int)) of
+            try list_to_integer(Int) of
                 B when is_integer(B) ->
                     C1 = update_soptions(C, listen_opts, buffer, B),
                     fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
+            catch
+                _:_ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
@@ -1950,7 +2015,7 @@ fload({FD, ConfFile}, listen_opts, GC, C, Lno, Chars) ->
             end;
 
         ["linger", '=', Val] ->
-            case (catch list_to_integer(Val)) of
+            try list_to_integer(Val) of
                 I when is_integer(I) ->
                     C1 = update_soptions(C, listen_opts, linger, {true, I}),
                     fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
@@ -1958,6 +2023,9 @@ fload({FD, ConfFile}, listen_opts, GC, C, Lno, Chars) ->
                     C1 = update_soptions(C, listen_opts, linger, {false, 0}),
                     fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
+                    {error, ?F("Expect integer|false at line ~w", [Lno])}
+            catch
+                _:_ ->
                     {error, ?F("Expect integer|false at line ~w", [Lno])}
             end;
 
@@ -1971,34 +2039,43 @@ fload({FD, ConfFile}, listen_opts, GC, C, Lno, Chars) ->
             end;
 
         ["priority", '=', Int] ->
-            case (catch list_to_integer(Int)) of
+            try list_to_integer(Int) of
                 P when is_integer(P) ->
                     C1 = update_soptions(C, listen_opts, priority, P),
                     fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
+            catch
+                _:_ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
         ["sndbuf", '=', Int] ->
-            case (catch list_to_integer(Int)) of
+            try list_to_integer(Int) of
                 I when is_integer(I) ->
                     C1 = update_soptions(C, listen_opts, sndbuf, I),
                     fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
+            catch
+                _:_ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
         ["recbuf", '=', Int] ->
-            case (catch list_to_integer(Int)) of
+            try list_to_integer(Int) of
                 I when is_integer(I) ->
                     C1 = update_soptions(C, listen_opts, recbuf, I),
                     fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
+            catch
+                _:_ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
         ["send_timeout", '=', Val] ->
-            case (catch list_to_integer(Val)) of
+            try list_to_integer(Val) of
                 I when is_integer(I) ->
                     C1 = update_soptions(C, listen_opts, send_timeout, I),
                     fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
@@ -2007,6 +2084,9 @@ fload({FD, ConfFile}, listen_opts, GC, C, Lno, Chars) ->
                                          infinity),
                     fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
+                    {error, ?F("Expect integer|infinity at line ~w", [Lno])}
+            catch
+                _:_ ->
                     {error, ?F("Expect integer|infinity at line ~w", [Lno])}
             end;
 
@@ -2110,13 +2190,18 @@ fload({FD, ConfFile}, ssl, GC, C, Lno, Chars) ->
             end;
 
         ["depth", '=', Val0] ->
-            Val = (catch list_to_integer(Val0)),
-            case lists:member(Val, [0, 1,2,3,4,5,6,7]) of
-                true ->
-                    C1 = C#sconf{ssl = (C#sconf.ssl)#ssl{depth = Val}},
-                    fload({FD, ConfFile}, ssl, GC, C1, Lno+1, ?NEXTLINE);
-                _ ->
-                    {error, ?F("Expect integer 0..7 at line ~w", [Lno])}
+            try
+                Val = list_to_integer(Val0),
+                case lists:member(Val, [0, 1,2,3,4,5,6,7]) of
+                    true ->
+                        C1 = C#sconf{ssl = (C#sconf.ssl)#ssl{depth = Val}},
+                        fload({FD, ConfFile}, ssl, GC, C1, Lno+1, ?NEXTLINE);
+                    _ ->
+                        {error, ?F("Expect integer 0..7 at line ~w", [Lno])}
+                end
+            catch
+                _:_ ->
+                    {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
         ["password", '=', Val] ->
@@ -2135,7 +2220,8 @@ fload({FD, ConfFile}, ssl, GC, C, Lno, Chars) ->
                     Err ->
                         Err
                 end
-            catch _:_ ->
+            catch
+                _:_ ->
                     {error, ?F("Bad cipherspec at line ~w", [Lno])}
             end;
         ["eccs", '=', Val] ->
@@ -2149,7 +2235,8 @@ fload({FD, ConfFile}, ssl, GC, C, Lno, Chars) ->
                     Err ->
                         Err
                 end
-            catch _:_ ->
+            catch
+                _:_ ->
                     {error, ?F("Bad elliptic curves at line ~w", [Lno])}
             end;
         ["secure_renegotiate", '=', BoolOrUndef] ->
@@ -2206,7 +2293,8 @@ fload({FD, ConfFile}, ssl, GC, C, Lno, Chars) ->
                        ssl=(C#sconf.ssl)#ssl{protocol_version=Vsns}
                       },
                 fload({FD, ConfFile}, ssl, GC, C1, Lno+1, ?NEXTLINE)
-            catch _:_ ->
+            catch
+                _:_ ->
                     {error, ?F("Bad ssl protocol_version at line ~w", [Lno])}
             end;
 
@@ -2265,7 +2353,8 @@ fload({FD, ConfFile}, server_auth, GC, C, Lno, Chars) ->
             %% Add the auth header for the mod
             H = try
                     Mod1:get_header() ++ Auth#auth.headers
-                catch _:_ ->
+                catch
+                    _:_ ->
                         error_logger:format("Failed to ~p:get_header() \n",
                                             [Mod1]),
                         Auth#auth.headers
@@ -2420,7 +2509,7 @@ fload({FD, ConfFile}, server_deflate, GC, C, Lno, Chars) ->
             fload({FD, ConfFile}, server_deflate, GC, C, Lno+1, ?NEXTLINE);
 
         ["min_compress_size", '=', CSize] ->
-            case (catch list_to_integer(CSize)) of
+            try list_to_integer(CSize) of
                 I when is_integer(I), I > 0 ->
                     Deflate1 = Deflate#deflate{min_compress_size=I},
                     C1 = C#sconf{deflate_options=Deflate1},
@@ -2430,6 +2519,9 @@ fload({FD, ConfFile}, server_deflate, GC, C, Lno, Chars) ->
                     C1 = C#sconf{deflate_options=Deflate1},
                     fload({FD, ConfFile}, server_deflate, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
+                    {error, ?F("Expect integer > 0 at line ~w", [Lno])}
+            catch
+                _:_ ->
                     {error, ?F("Expect integer > 0 at line ~w", [Lno])}
             end;
 
@@ -2447,7 +2539,8 @@ fload({FD, ConfFile}, server_deflate, GC, C, Lno, Chars) ->
         ["compression_level", '=', CLevel] ->
             L = try
                     list_to_integer(CLevel)
-                catch error:badarg ->
+                catch
+                    error:badarg ->
                         list_to_atom(CLevel)
                 end,
             if
@@ -2465,7 +2558,7 @@ fload({FD, ConfFile}, server_deflate, GC, C, Lno, Chars) ->
             end;
 
         ["window_size", '=', WSize] ->
-            case (catch list_to_integer(WSize)) of
+            try list_to_integer(WSize) of
                 I when is_integer(I), I > 8, I < 16 ->
                     Deflate1 = Deflate#deflate{window_size=I * -1},
                     C1 = C#sconf{deflate_options=Deflate1},
@@ -2474,15 +2567,23 @@ fload({FD, ConfFile}, server_deflate, GC, C, Lno, Chars) ->
                     {error,
                      ?F("Expect integer between 9..15 at line ~w",
                         [Lno])}
+            catch
+                _:_ ->
+                    {error,
+                     ?F("Expect integer between 9..15 at line ~w",
+                        [Lno])}
             end;
 
         ["mem_level", '=', MLevel] ->
-            case (catch list_to_integer(MLevel)) of
+            try list_to_integer(MLevel) of
                 I when is_integer(I), I >= 1, I =< 9 ->
                     Deflate1 = Deflate#deflate{mem_level=I},
                     C1 = C#sconf{deflate_options=Deflate1},
                     fload({FD, ConfFile}, server_deflate, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
+                    {error, ?F("Expect integer between 1..9 at line ~w", [Lno])}
+            catch
+                _:_ ->
                     {error, ?F("Expect integer between 1..9 at line ~w", [Lno])}
             end;
 
@@ -2871,9 +2972,7 @@ parse_revproxy(_Other) ->
     {error, syntax}.
 
 parse_revproxy_url(Prefix, Url) ->
-    case (catch yaws_api:parse_url(Url)) of
-        {'EXIT', _} ->
-            {error, url};
+    try yaws_api:parse_url(Url) of
         URL when URL#url.path == "/" ->
             P = case lists:reverse(Prefix) of
                     [$/|_Tail] ->
@@ -2884,6 +2983,9 @@ parse_revproxy_url(Prefix, Url) ->
             {ok, #proxy_cfg{prefix=P, url=URL}};
         _URL ->
             {error, "Can't revproxy to a URL with a path "}
+    catch
+        _:_ ->
+            {error, url}
     end.
 
 
@@ -2893,11 +2995,26 @@ parse_expires(['<', MimeType, ',' , Expire, '>' | Tail], Acc) ->
             ["always"] ->
                 {always, 0};
             [Secs] ->
-                {access, (catch list_to_integer(Secs))};
+                try
+                    {access, list_to_integer(Secs)}
+                catch
+                    _:_ ->
+                        {error, "Bad expires syntax"}
+                end;
             ["access", Secs] ->
-                {access, (catch list_to_integer(Secs))};
+                try
+                    {access, list_to_integer(Secs)}
+                catch
+                    _:_ ->
+                        {error, "Bad expires syntax"}
+                end;
             ["modify", Secs] ->
-                {modify, (catch list_to_integer(Secs))};
+                try
+                    {modify, list_to_integer(Secs)}
+                catch
+                    _:_ ->
+                        {error, "Bad expires syntax"}
+                end;
             _ ->
                 {error, "Bad expires syntax"}
         end,
@@ -3105,12 +3222,13 @@ parse_nslookup_pref([Invalid | _], [Family | _]) ->
 
 
 parse_redirect(Path, [Code, URL], Mode, Lno) ->
-    case catch list_to_integer(Code) of
+    try list_to_integer(Code) of
         I when is_integer(I), I >= 300, I =< 399 ->
             try yaws_api:parse_url(URL, sloppy) of
                 U when is_record(U, url) ->
                     {Path, I, U, Mode}
-            catch _:_ ->
+            catch
+                _:_ ->
                     {error, ?F("Bad redirect URL ~p at line ~w", [URL, Lno])}
             end;
         I when is_integer(I), I >= 100, I =< 599 ->
@@ -3121,26 +3239,32 @@ parse_redirect(Path, [Code, URL], Mode, Lno) ->
                 #url{} ->
                     {error, ?F("Bad redirect rule at line ~w: "
                                " Absolute URL is forbidden here", [Lno])}
-            catch _:_ ->
+            catch
+                _:_ ->
                     {error, ?F("Bad redirect URL ~p at line ~w", [URL, Lno])}
             end;
         _ ->
             {error, ?F("Bad status code ~p at line ~w", [Code, Lno])}
+    catch
+        _:_ ->
+            {error, ?F("Bad status code ~p at line ~w", [Code, Lno])}
     end;
 parse_redirect(Path, [CodeOrUrl], Mode, Lno) ->
-    case catch list_to_integer(CodeOrUrl) of
+    try list_to_integer(CodeOrUrl) of
         I when is_integer(I), I >= 300, I =< 399 ->
             {error, ?F("Bad redirect rule at line ~w: "
                        "URL to redirect to is missing ", [Lno])};
         I when is_integer(I), I >= 100, I =< 599 ->
             {Path, I, undefined, Mode};
         I when is_integer(I) ->
-            {error, ?F("Bad status code ~p at line ~w", [CodeOrUrl, Lno])};
-        _ ->
+            {error, ?F("Bad status code ~p at line ~w", [CodeOrUrl, Lno])}
+    catch
+        _:_ ->
             try yaws_api:parse_url(CodeOrUrl, sloppy) of
                 #url{}=U ->
                     {Path, 302, U, Mode}
-            catch _:_ ->
+            catch
+                _:_ ->
                     {error, ?F("Bad redirect URL ~p at line ~w",
                                [CodeOrUrl, Lno])}
             end
@@ -3180,13 +3304,16 @@ parse_options(_,_) ->
 
 
 ssl_start() ->
-    case catch ssl:start() of
+    try ssl:start() of
         ok ->
             ok;
         {error,{already_started,ssl}} ->
             ok;
         Err ->
             error_logger:format("Failed to start ssl: ~p~n", [Err])
+    catch
+        Error ->
+            error_logger:format("Failed to start ssl: ~p~n", [Error])
     end.
 
 
@@ -3480,10 +3607,13 @@ verify_upgrade_args(GC, Groups0) when is_record(GC, gconf) ->
                                             end,
                                             SC#sconf.appmods)}
                      end, SCs0),
-            case catch validate_cs(GC, SCs1) of
+            try validate_cs(GC, SCs1) of
                 {ok, GC, Groups1} -> {GC, Groups1};
                 {error, Reason}   -> erlang:error(Reason);
                 _                 -> erlang:error(badgroups)
+            catch
+                _:_ ->
+                    erlang:error(badgroups)
             end;
         false ->
             erlang:error(badgroups)
@@ -3516,7 +3646,8 @@ parse_auth_ips([Str|Rest], Result) ->
     try
         parse_auth_ips(Rest, [yaws:parse_ipmask(Str)|Result])
     catch
-        _:_ -> parse_auth_ips(Rest, Result)
+        _:_ ->
+            parse_auth_ips(Rest, Result)
     end.
 
 parse_auth_user(User, Lno) ->
@@ -3556,7 +3687,8 @@ parse_auth_user(User, Algo, B64Salt, B64Hash) ->
                 {error, bad_algo}
         end
     catch
-        _:_ -> {error, bad_user}
+        _:_ ->
+            {error, bad_user}
     end.
 
 
@@ -3608,11 +3740,16 @@ fload_subconfigfiles([File|Files], global, GC, Cs) ->
     error_logger:info_msg("Yaws: Using global subconfig file ~s~n", [File]),
     case file:open(File, [read]) of
         {ok, FD} ->
-            R = (catch fload({FD, File}, GC, Cs, 1, ?NEXTLINE)),
-            ?Debug("FLOAD(~s): ~p", [File, R]),
-            case R of
-                {ok, GC1, Cs1} -> fload_subconfigfiles(Files, global, GC1, Cs1);
-                Err            -> Err
+            try
+                R = fload({FD, File}, GC, Cs, 1, ?NEXTLINE),
+                ?Debug("FLOAD(~s): ~p", [File, R]),
+                case R of
+                    {ok, GC1, Cs1} -> fload_subconfigfiles(Files, global, GC1, Cs1);
+                    Err            -> Err
+                end
+            catch
+                Error ->
+                    {error, ?F("Can't load subconfig file ~s: ~p", [File,Error])}
             end;
         Err ->
             {error, ?F("Can't open subconfig file ~s: ~p", [File,Err])}
@@ -3623,16 +3760,21 @@ fload_subconfigfiles([File|Files], server, GC, C) ->
     error_logger:info_msg("Yaws: Using server subconfig file ~s~n", [File]),
     case file:open(File, [read]) of
         {ok, FD} ->
-            R = (catch fload({FD, File}, server, GC, C, 1, ?NEXTLINE)),
-            ?Debug("FLOAD(~s): ~p", [File, R]),
-            case R of
-                {ok, GC1, C1, _, eof} ->
-                    fload_subconfigfiles(Files, server, GC1, C1);
-                {ok, _, _, Lno, ['<', "/server", '>']} ->
-                    {error, ?F("Unexpected closing tag in subconfgile ~s"
-                               " at line ~w ", [File, Lno])};
-                Err ->
-                    Err
+            try
+                R = fload({FD, File}, server, GC, C, 1, ?NEXTLINE),
+                ?Debug("FLOAD(~s): ~p", [File, R]),
+                case R of
+                    {ok, GC1, C1, _, eof} ->
+                        fload_subconfigfiles(Files, server, GC1, C1);
+                    {ok, _, _, Lno, ['<', "/server", '>']} ->
+                        {error, ?F("Unexpected closing tag in subconfgile ~s"
+                                   " at line ~w ", [File, Lno])};
+                    Err ->
+                        Err
+                end
+            catch
+                Error ->
+                    {error, ?F("Can't load subconfig file ~s: ~p", [File,Error])}
             end;
         Err ->
             {error, ?F("Can't open subconfig file ~s: ~p", [File,Err])}

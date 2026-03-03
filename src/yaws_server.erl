@@ -8,8 +8,6 @@
 -module(yaws_server).
 -author('klacke@hyber.org').
 
--compile('nowarn_deprecated_catch').
-
 -behaviour(gen_server).
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
@@ -149,37 +147,40 @@ init(Env) -> %% #env{Trace, TraceOut, Conf, RunMod, Embedded, Id}) ->
     put(start_time, calendar:local_time()),  %% for uptime
     case Env#env.embedded of
         false ->
-            Config = (catch yaws_config:load(Env)),
-            case Config of
-                {ok, Gconf, Sconfs} ->
-                    erase(logdir),
-                    ?Debug("GC = ~s~n", [?format_record(Gconf, gconf)]),
-                    lists:foreach(
-                      fun(Group) ->
-                              lists:foreach(
-                                fun(_SC) ->
-                                        ?Debug("SC = ~s~n",
-                                               [?format_record(_SC, sconf)])
-                                end, Group)
-                      end, Sconfs),
-                    init2(Gconf, Sconfs, Env#env.runmod, Env#env.embedded, true);
-                {error, E} ->
-                    case erase(logdir) of
-                        undefined ->
-                            error_logger:error_msg("Yaws: Bad conf: ~p~n",[E]),
-                            init:stop(),
-                            {stop, E};
-                        Dir ->
-                            GC = yaws_config:make_default_gconf(true,
-                                                                Env#env.id),
-                            yaws_log:setup(GC#gconf{logdir = Dir}, []),
-                            error_logger:error_msg("Yaws: bad conf: ~s "
-                                                   "terminating~n",[E]),
-                            init:stop(),
-                            {stop, E}
-                    end;
-                EXIT ->
-                    error_logger:format("FATAL ~p~n", [EXIT]),
+            try
+                Config = yaws_config:load(Env),
+                case Config of
+                    {ok, Gconf, Sconfs} ->
+                        erase(logdir),
+                        ?Debug("GC = ~s~n", [?format_record(Gconf, gconf)]),
+                        lists:foreach(
+                          fun(Group) ->
+                                  lists:foreach(
+                                    fun(_SC) ->
+                                            ?Debug("SC = ~s~n",
+                                                   [?format_record(_SC, sconf)])
+                                    end, Group)
+                          end, Sconfs),
+                        init2(Gconf, Sconfs, Env#env.runmod, Env#env.embedded, true);
+                    {error, E} ->
+                        case erase(logdir) of
+                            undefined ->
+                                error_logger:error_msg("Yaws: Bad conf: ~p~n",[E]),
+                                init:stop(),
+                                {stop, E};
+                            Dir ->
+                                GC = yaws_config:make_default_gconf(true,
+                                                                    Env#env.id),
+                                yaws_log:setup(GC#gconf{logdir = Dir}, []),
+                                error_logger:error_msg("Yaws: bad conf: ~s "
+                                                       "terminating~n",[E]),
+                                init:stop(),
+                                {stop, E}
+                        end
+                end
+            catch
+                Error ->
+                    error_logger:format("FATAL ~p~n", [Error]),
                     erlang:error(badconf)
             end;
         true ->
@@ -522,12 +523,12 @@ gserv(Top, GC, Group0) ->
               [inet_parse:ntoa((hd(Group))#sconf.listen),
                (hd(Group))#sconf.port,
                length(Group),
-               catch lists:map(
-                       fun(S) ->
-                               io_lib:format("~n - ~s under ~s",
-                                             [yaws:sconf_to_srvstr(S),
-                                              S#sconf.docroot])
-                       end, Group)
+               lists:map(
+                 fun(S) ->
+                         io_lib:format("~n - ~s under ~s",
+                                       [yaws:sconf_to_srvstr(S),
+                                        S#sconf.docroot])
+                 end, Group)
               ]),
             proc_lib:init_ack({self(), Group}),
             GS = #gs{gconf = GC,
@@ -1068,7 +1069,8 @@ acceptor0(GS, Top) ->
                       end,
             {IP,Port} = peername(NClient, GS#gs.ssl),
             put(trace_filter, yaws_trace:get_filter()),
-            Res = (catch aloop(NClient, {IP,Port}, GS,  0)),
+            Res = try aloop(NClient, {IP,Port}, GS,  0)
+                  catch C:E -> {C,E} end,
             %% Skip closing the socket, as required by web sockets & stream
             %% processes.
             CloseSocket = (get(outh) =:= undefined) orelse
@@ -1086,32 +1088,32 @@ acceptor0(GS, Top) ->
             case Res of
                 {ok, Int} when is_integer(Int) ->
                     Top ! {self(), done_client, Int};
-                {'EXIT', normal} ->
+                {exit, normal} ->
                     Top ! {self(), decrement},
                     exit(normal);
-                {'EXIT', shutdown} ->
+                {exit, shutdown} ->
                     exit(shutdown);
-                {'EXIT', {error, einval}} ->
+                {exit, {error, einval}} ->
                     %% Typically clients that close their end of the socket
                     %% don't log. Happens all the time.
                     Top ! {self(), decrement},
                     exit(normal);
-                {'EXIT', {{error, einval}, _}} ->
+                {exit, {{error, einval}, _}} ->
                     Top ! {self(), decrement},
                     exit(normal);
-                {'EXIT', {{badmatch, {error, einval}}, _}} ->
+                {exit, {{badmatch, {error, einval}}, _}} ->
                     Top ! {self(), decrement},
                     exit(normal);
-                {'EXIT', {error, closed}} ->
+                {exit, {error, closed}} ->
                     Top ! {self(), decrement},
                     exit(normal);
-                {'EXIT', {{error, closed}, _}} ->
+                {exit, {{error, closed}, _}} ->
                     Top ! {self(), decrement},
                     exit(normal);
-                {'EXIT', {{error, econnreset},_}} ->
+                {exit, {{error, econnreset},_}} ->
                     Top ! {self(), decrement},
                     exit(normal);
-                {'EXIT', Reason2} ->
+                {exit, Reason2} ->
                     error_logger:error_msg("Yaws process died: ~p~n",
                                            [Reason2]),
                     Top ! {self(), decrement},
@@ -1185,7 +1187,8 @@ aloop(CliSock, {IP,Port}=IPPort, GS, Num) ->
     process_flag(trap_exit, false),
     init_db(),
     SSL = GS#gs.ssl,
-    Head = (catch yaws:http_get_headers(CliSock, SSL)),
+    Head = try yaws:http_get_headers(CliSock, SSL)
+           catch C:E -> {C,E} end,
     process_flag(trap_exit, true),
     ?Debug("Head = ~p~n", [Head]),
     NoArg = undefined,
@@ -1902,9 +1905,7 @@ handle_request(CliSock, ARG, N) ->
     ?Debug("SrvReq=~s~n",[?format_record(Req, http_request)]),
     case Req#http_request.path of
         {abs_path, RawPath} ->
-            case (catch yaws_api:url_decode_q_split(RawPath)) of
-                {'EXIT', _} ->   %% weird broken cracker requests
-                    deliver_400(CliSock, Req, ARG);
+            try yaws_api:url_decode_q_split(RawPath) of
                 {DecPath, QueryPart} ->
                     %% http://<server><port><DecPath>?<QueryPart>
                     %% DecPath is stored in arg.server_path and is equiv to
@@ -1996,6 +1997,9 @@ handle_request(CliSock, ARG, N) ->
                             handle_normal_request(CliSock, ARG1, UT,
                                                   SC#sconf.authdirs, N)
                     end
+            catch
+                _:_ -> %% weird broken cracker requests
+                    deliver_400(CliSock, Req, ARG)
             end;
         {scheme, _Scheme, _RequestString} ->
             deliver_501(CliSock, Req, ARG);
@@ -2095,12 +2099,13 @@ is_auth(ARG, L) ->
 is_orig_req_auth(#arg{orig_req=OrigReq, headers=H}=ARG, Auths, Ret) ->
     case OrigReq#http_request.path of
         {abs_path, RawPath} ->
-            case (catch yaws_api:url_decode_q_split(RawPath)) of
-                {'EXIT', _} ->
-                    Ret;
+            try yaws_api:url_decode_q_split(RawPath) of
                 {DecPath, _} ->
                     is_auth(ARG, DecPath, H, filter_auths(Auths, DecPath),
                             {true, []})
+            catch
+                _:_ ->
+                    Ret
             end;
         _ ->
             Ret
@@ -2443,14 +2448,14 @@ handle_ut(CliSock, ARG, UT = #urltype{type = {unauthorized, Auth, Realm}}, N) ->
     Outmod = get_unauthorized_outmod(UT#urltype.path, Auth,
                                      SC#sconf.errormod_401),
     OutFun = fun (A) ->
-                     case catch Outmod:out401(A, Auth, Realm) of
-                         {'EXIT', {undef, _}} ->
+                     try
+                         Outmod:out401(A, Auth, Realm)
+                     catch
+                         _:undef ->
                              %% Possibly a deprecated warning
                              Outmod:out(A);
-                         {'EXIT', Reason} ->
-                             exit(Reason);
-                         Result ->
-                             Result
+                         _:Reason ->
+                             exit(Reason)
                      end
              end,
     DeliverFun = fun (A) -> finish_up_dyn_file(A, CliSock) end,
@@ -3629,11 +3634,11 @@ ssi(File, Delimiter, Bindings0, UT, ARG, SC) ->
     Mtime = path_to_mtime(FullPath),
     case ets:lookup(SC#sconf.ets, Key) of
         [{_, Parts, Mtime}] ->
-            case (catch expand_parts(Parts, Bindings, [])) of
-                {'EXIT', ErrStr} ->
-                    {error, ErrStr};
-                Value ->
-                    Value
+            try
+                expand_parts(Parts, Bindings, [])
+            catch
+                _:ErrStr ->
+                    {error, ErrStr}
             end;
         _ ->
             case prim_file:read_file(FullPath) of
@@ -3730,7 +3735,7 @@ handle_crash(ARG, L) ->
     ?Debug("handle_crash(~p)~n", [L]),
     SC=get(sc),
     yaws:outh_set_status_code(500),
-    case catch apply(SC#sconf.errormod_crash, crashmsg, [ARG, SC, L]) of
+    try apply(SC#sconf.errormod_crash, crashmsg, [ARG, SC, L]) of
         {content,MimeType,Cont} ->
             yaws:outh_set_content_type(MimeType),
             accumulate_content(Cont),
@@ -3757,7 +3762,13 @@ handle_crash(ARG, L) ->
                   {p, [], "Customized crash display code returned bad val"}],
             accumulate_content(yaws_api:ehtml_expand(T2)),
             break
-
+    catch
+        Other ->
+            yaws:elog("Bad return value from errmod_crash ~n~p~n",[Other]),
+            T2 = [{h2, [], "Internal error"}, {hr},
+                  {p, [], "Customized crash display code returned bad val"}],
+            accumulate_content(yaws_api:ehtml_expand(T2)),
+            break
     end.
 
 %% Ret: true | false | {data, Data}
@@ -3990,10 +4001,11 @@ ut_read(UT) ->
 
 
 parse_range(L, Tot) ->
-    case catch parse_range_throw(L, Tot) of
-        {'EXIT', _} ->
-            error;
-        R -> R
+    try
+        parse_range_throw(L, Tot)
+    catch
+        _:_ ->
+            error
     end.
 
 parse_range_throw(L, Tot) ->
@@ -4202,12 +4214,12 @@ url_type(GetPath, ArgDocroot, VirtualDir) ->
                             cache_file(SC, GC, GetPath, UT2);
                         false ->
                             ?Debug("Using unchanged cached version~n", []),
-                            (catch ets:update_counter(E, {urlc, GetPath}, 1)),
+                            ets:update_counter(E, {urlc, GetPath}, 1),
                             UT
                     end;
                 true ->
                     ?Debug("Serve page from cache ~p", [{When , N, N-When}]),
-                    (catch ets:update_counter(E, {urlc, GetPath}, 1)),
+                    ets:update_counter(E, {urlc, GetPath}, 1),
                     UT
             end
     end.
@@ -4879,9 +4891,7 @@ ret_user_dir(Upath)  ->
                     %% FIXME doesn't work if passwd contains ::
                     %% also this is unix only
                     %% and it ain't the fastest code around.
-                    case catch yaws:user_to_home(User) of
-                        {'EXIT', _} ->
-                            #urltype{type=error};
+                    try yaws:user_to_home(User) of
                         Home ->
                             DR2 = Home ++ "/public_html/",
                             SC2 = SC#sconf{
@@ -4899,6 +4909,9 @@ ret_user_dir(Upath)  ->
 
                             redir_user(do_url_type(SC2, Path, DR2, ""), User)
                             %% recurse
+                    catch
+                        _:_ ->
+                            #urltype{type=error}
                     end;
                 {redir_dir, User} ->
                     #urltype {type = redir,
@@ -4982,11 +4995,11 @@ flush(Sock, Pos, Sz, SSL, PPS) ->
 
 
 strip_list_to_integer(L) ->
-    case catch list_to_integer(L) of
-        {'EXIT', _} ->
-            list_to_integer(string:strip(L, both));
-        Int ->
-            Int
+    try
+        list_to_integer(L)
+    catch
+        _:_ ->
+            list_to_integer(string:strip(L, both))
     end.
 
 
@@ -5019,11 +5032,12 @@ load_and_run(Mod, Debug) ->
 
 
 safe_ehtml_expand(X) ->
-    case (catch yaws_api:ehtml_expand(X)) of
-        {'EXIT', R} ->
-            {error, err_pre(R)};
+    try yaws_api:ehtml_expand(X) of
         Val ->
             {ok, Val}
+    catch
+        _:R ->
+            {error, err_pre(R)}
     end.
 
 err_pre(R) ->

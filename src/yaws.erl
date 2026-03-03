@@ -8,8 +8,6 @@
 -module(yaws).
 -author('klacke@bluetail.com').
 
--compile('nowarn_deprecated_catch').
-
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_appdeps.hrl").
@@ -264,14 +262,18 @@ create_sconf(DocRoot, SL) when is_list(DocRoot), is_list(SL) ->
 
 start_app_deps() ->
     Deps = split_sep(?YAWS_APPDEPS, $,),
-    catch lists:foldl(fun(App0, Acc) ->
-                              App = list_to_existing_atom(App0),
-                              case application:start(App, permanent) of
-                                  ok -> Acc;
-                                  {error,{already_started,App}} -> Acc;
-                                  Else -> throw(Else)
-                              end
-                      end, ok, Deps).
+    try lists:foldl(fun(App0, Acc) ->
+                            App = list_to_existing_atom(App0),
+                            case application:start(App, permanent) of
+                                ok -> Acc;
+                                {error,{already_started,App}} -> Acc;
+                                Else -> throw(Else)
+                            end
+                    end, ok, Deps)
+    catch
+        _:Error ->
+            Error
+    end.
 
 %%% Access functions for the GCONF and SCONF records.
 %% Getters
@@ -894,9 +896,11 @@ to_list(A) when is_atom(A) -> atom_to_list(A).
 
 
 integer_to_hex(I) ->
-    case catch erlang:integer_to_list(I, 16) of
-        {'EXIT', _} -> old_integer_to_hex(I);
-        Int         -> Int
+    try
+        erlang:integer_to_list(I, 16)
+    catch
+        _:_ ->
+            old_integer_to_hex(I)
     end.
 
 
@@ -1010,12 +1014,13 @@ stringdate_to_datetime2([M1, M2, M3, $\s , Y1, Y2, Y3, Y4, $\s,
 
 %% used by If-Modified-Since header code
 is_modified_p(FI, UTC_string) ->
-    case catch stringdate_to_datetime(UTC_string) of
-        {'EXIT', _ } ->
-            true;
+    try stringdate_to_datetime(UTC_string) of
         UTC ->
             MtimeUTC = erlang:localtime_to_universaltime(FI#file_info.mtime),
             (MtimeUTC > UTC)
+    catch
+        _:_ ->
+            true
     end.
 
 
@@ -1310,9 +1315,11 @@ tokenize_ua([C|T], Acc) ->
     tokenize_ua(T, [C|Acc]).
 
 parse_ua(Line) ->
-    case catch parse_ua_l(tokenize_ua(Line, [])) of
-        {'EXIT', _} -> [];
-        Res         -> Res
+    try
+        parse_ua_l(tokenize_ua(Line, []))
+    catch
+        _:_ ->
+            []
     end.
 
 parse_ua_l(Line) ->
@@ -2586,9 +2593,12 @@ gen_tcp_send(S, Data) ->
     SC = get(sc),
     Res = case SC of
               undefined ->
-                  case catch ssl:sockname(S) of
+                  try ssl:sockname(S) of
                       {ok, _} -> ssl:send(S, Data);
                       _ -> gen_tcp:send(S, Data)
+                  catch
+                      _:_ ->
+                          gen_tcp:send(S, Data)
                   end;
               _ ->
                   case SC#sconf.ssl of
@@ -2655,7 +2665,8 @@ headers_to_str(Headers) ->
 setopts(Sock, Opts, nossl) ->
     inet:setopts(Sock, Opts);
 setopts(Sock, Opts, ssl) ->
-    (catch ssl:setopts(Sock, Opts)).
+    try ssl:setopts(Sock, Opts)
+    catch C:E -> {C,E} end.
 
 do_http_get_headers(CliSock, SSL) ->
     case http_recv_request(CliSock,SSL) of
@@ -3337,13 +3348,19 @@ integer_to_ip(_, _) ->
     throw({error, einval}).
 
 netmask_to_integer(Type, NetMask) ->
-    case catch erlang:list_to_integer(NetMask) of
+    try erlang:list_to_integer(NetMask) of
         I when is_integer(I) ->
             case Type of
                 ipv4 -> (1 bsl ?MAXBITS_IPV4) - (1 bsl (?MAXBITS_IPV4 - I));
                 ipv6 -> (1 bsl ?MAXBITS_IPV6) - (1 bsl (?MAXBITS_IPV6 - I))
             end;
         _ ->
+            case ip_to_integer(NetMask) of
+                {Type, MaskInt} -> MaskInt;
+                _               -> throw({error, einval})
+            end
+    catch
+        _:_ ->
             case ip_to_integer(NetMask) of
                 {Type, MaskInt} -> MaskInt;
                 _               -> throw({error, einval})

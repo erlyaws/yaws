@@ -8,8 +8,6 @@
 -module(yaws_api).
 -author('klacke@hyber.org').
 
--compile('nowarn_deprecated_catch').
-
 -include("../include/yaws.hrl").
 -include("../include/yaws_api.hrl").
 -include("yaws_debug.hrl").
@@ -1576,7 +1574,8 @@ get_header(#headers{other = Other}, {lower, Header}) ->
                  (_, false, Acc) ->
                       Acc
               end,
-    catch fold_others(Header, Handler, Other, undefined);
+    try fold_others(Header, Handler, Other, undefined)
+    catch throw:Val -> Val end;
 get_header(#headers{}=Hdrs, Header) ->
     get_header(Hdrs, {lower, string:to_lower(Header)}).
 
