@@ -40,8 +40,6 @@
 -modified_by("Yariv Sadan <yarivvv@gmail.com>").
 -modified_by("Steve Vinoski <vinoski@ieee.org>").
 
--compile('nowarn_deprecated_catch').
-
 -export([handler/2]).
 -export([handler_session/2, handler_session/3]).
 
@@ -232,18 +230,7 @@ eval_payload(Args, {M, F}, Payload, {session, CookieName}, ID, RpcType) ->
                 end
         end,
     CbackFun = callback_fun(M, F, Args, Payload, SessionValue, RpcType),
-    case catch CbackFun() of
-        {'EXIT', {function_clause, _}} when RpcType == json ->
-            case ID of
-                undefined ->
-                    %% empty HTTP reply for notification
-                    empty;
-                _ ->
-                    {result, 200, json_error(-32601, ID)}
-            end;
-        {'EXIT', Reason} ->
-            ?ERROR_LOG({M, F, {'EXIT', Reason}}),
-            {send, send(Args, 500, RpcType)};
+    try CbackFun() of
         {error, Reason} ->
             ?ERROR_LOG({M, F, Reason}),
             {send, send(Args, 500, RpcType)};
@@ -269,16 +256,25 @@ eval_payload(Args, {M, F}, Payload, {session, CookieName}, ID, RpcType) ->
                                NewSessionValue, M, F),
             {send, encode_send(Args, RespCode,
                                ResponsePayload, CO, ID, RpcType)}
+    catch
+        _:function_clause when RpcType == json ->
+            case ID of
+                undefined ->
+                    %% empty HTTP reply for notification
+                    empty;
+                _ ->
+                    {result, 200, json_error(-32601, ID)}
+            end;
+        C:Reason ->
+            ?ERROR_LOG({M, F, {C, Reason}}),
+            {send, send(Args, 500, RpcType)}
     end;
 
 %%%
 %%% call handler/2 without session support
 %%%
 eval_payload(Args, {M, F}, Payload, simple, ID, RpcType) ->
-    case catch M:F(Args#arg.state, Payload) of
-        {'EXIT', Reason} ->
-            ?ERROR_LOG({M, F, {'EXIT', Reason}}),
-            {send, send(Args, 500)};
+    try M:F(Args#arg.state, Payload) of
         {error, Reason} ->
             ?ERROR_LOG({M, F, Reason}),
             {send, send(Args, 500)};
@@ -288,6 +284,10 @@ eval_payload(Args, {M, F}, Payload, simple, ID, RpcType) ->
             {send, send(Args, 200, RpcType)};
         {true, _NewTimeout, _NewState, ResponsePayload} ->
             {send, encode_send(Args, 200, ResponsePayload, [], ID, RpcType)}
+    catch
+        C:Reason ->
+            ?ERROR_LOG({M, F, {C, Reason}}),
+            {send, send(Args, 500)}
     end.
 
 handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue, M, F) ->
@@ -318,9 +318,12 @@ handle_cookie(Cookie, CookieName, SessionValue, NewSessionValue, M, F) ->
 
 %%% Make it possible for callback module to set Cookie Expire string!
 get_expire(M, F) ->
-    case catch M:F(cookie_expire) of
+    try M:F(cookie_expire) of
         Expire when is_list(Expire) -> Expire;
         _                        -> false
+    catch
+        _ ->
+            false
     end.
 
 callback_fun(M, F, Args, Payload, SessionValue, RpcType)

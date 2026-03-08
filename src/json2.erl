@@ -23,8 +23,6 @@
 -author("Gaspar Chilingarov <nm@web.am>, Gurgen Tumanyan <barbarian@armkb.com>").
 -author("Steve Vinoski <vinoski@ieee.org>").
 
--compile('nowarn_deprecated_catch').
-
 %%% JavaScript Object Notation ("JSON", http://www.json.org) is a simple
 %%% data syntax meant as a lightweight alternative to other representations,
 %%% such as XML.  JSON is natively supported by JavaScript, but many
@@ -689,21 +687,31 @@ test() ->
     Failures =
         lists:foldl(
           fun({E, J}, Fs) ->
-                  case (catch test_e2j(E, J)) of
+                  try test_e2j(E, J) of
                       ok ->
-                          case (catch round_trip(E)) of
+                          try round_trip(E) of
                               ok ->
-                                  case (catch round_trip_one_char(E)) of
+                                  try round_trip_one_char(E) of
                                       ok ->
                                           Fs;
                                       Reason ->
                                           [{round_trip_one_char, E, Reason} |
                                            Fs]
+                                  catch
+                                      _:Reason ->
+                                          [{round_trip_one_char, E, Reason} |
+                                           Fs]
                                   end;
                               Reason ->
                                   [{round_trip, E, Reason} | Fs]
+                          catch
+                              _:Reason ->
+                                  [{round_trip, E, Reason} | Fs]
                           end;
                       Reason ->
+                          [{erlang_to_json, E, J, Reason} | Fs]
+                  catch
+                      _:Reason ->
                           [{erlang_to_json, E, J, Reason} | Fs]
                   end;
              (end_of_tests, Fs) ->

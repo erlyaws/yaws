@@ -8,8 +8,6 @@
 -module(yaws_session_server).
 -author('klacke@hyber.org').
 
--compile('nowarn_deprecated_catch').
-
 -behaviour(gen_server).
 
 %% External exports
@@ -72,25 +70,13 @@ stop() ->
 %% proper ysession_server backend.
 get_yaws_session_server_backend() ->
     #gconf{ysession_mod = DefaultBackend} = #gconf{},
-    case yaws_server:getconf() of
+    try get_server_conf() of
         {ok, #gconf{ysession_mod = Backend}, _} -> Backend;
         _ ->
-            case application:get_env(yaws, embedded) of
-                {ok, true} ->
-                    case application:get_env(yaws, embedded_conf) of
-                        {ok, L} when is_list(L) ->
-                            case lists:keyfind(gc, 1, L) of
-                                {_, #gconf{ysession_mod = Backend}} ->
-                                    Backend;
-                                _ ->
-                                    DefaultBackend
-                            end;
-                        _ ->
-                            DefaultBackend
-                    end;
-                _ ->
-                    DefaultBackend
-            end
+            check_embedded_for_backend(DefaultBackend)
+    catch
+        _:_ ->
+            check_embedded_for_backend(DefaultBackend)
     end.
 
 
@@ -157,11 +143,15 @@ handle_call({new_session, Opaque, undefined, Cleanup, Cookie}, From, State) ->
     handle_call({new_session, Opaque, ?TTL, Cleanup, Cookie}, From, State);
 
 handle_call({new_session, Opaque, TTL, Cleanup, undefined}, From, State) ->
-    Cookie = case catch yaws_server:getconf() of
+    Cookie = try get_server_conf() of
                  {ok, #gconf{ysession_cookiegen = CookieGen}, _}
                    when CookieGen =/= undefined ->
                      CookieGen:new_cookie();
                  _ ->
+                     N = bin2int(crypto:strong_rand_bytes(16)),
+                     atom_to_list(node()) ++ [$-|integer_to_list(N)]
+             catch
+                 _:_ ->
                      N = bin2int(crypto:strong_rand_bytes(16)),
                      atom_to_list(node()) ++ [$-|integer_to_list(N)]
              end,
@@ -298,7 +288,7 @@ start_long_timer() ->
 
 long_to() ->
     Default = 60 * 60 * 1000,
-    try yaws_server:getconf() of
+    try get_server_conf() of
         {ok, #gconf{ysession_long_timeout = LongTO}, _} ->
             LongTO;
         _ ->
@@ -327,26 +317,14 @@ long_to() ->
 %% timeout if the server is idle for more than 2 minutes.
 to() ->
     Default = 2 * 60 * 1000,
-    case catch yaws_server:getconf() of
+    try get_server_conf() of
         {ok, #gconf{ysession_idle_timeout = IdleTO}, _} ->
             IdleTO;
         _ ->
-            case application:get_env(yaws, embedded) of
-                {ok, true} ->
-                    case application:get_env(yaws, embedded_conf) of
-                        {ok, L} when is_list(L) ->
-                            case lists:keyfind(gc, 1, L) of
-                                {_, #gconf{ysession_idle_timeout = IdleTO}} ->
-                                    IdleTO;
-                                _ ->
-                                    Default
-                            end;
-                        _ ->
-                            Default
-                    end;
-                _ ->
-                    Default
-            end
+            check_embedded_for_to(Default)
+    catch
+        _:_ ->
+            check_embedded_for_to(Default)
     end.
 
 gnow() ->
@@ -422,3 +400,46 @@ traverse(N, Key) ->
             traverse(N, ets:next(?MODULE, Key))
     end.
 
+get_server_conf() ->
+    case whereis(yaws_server) of
+        undefined ->
+            undefined;
+        _ ->
+            yaws_server:getconf()
+    end.
+
+check_embedded_for_to(Default) ->
+    case application:get_env(yaws, embedded) of
+        {ok, true} ->
+            case application:get_env(yaws, embedded_conf) of
+                {ok, L} when is_list(L) ->
+                    case lists:keyfind(gc, 1, L) of
+                        {_, #gconf{ysession_idle_timeout = IdleTO}} ->
+                            IdleTO;
+                        _ ->
+                            Default
+                    end;
+                _ ->
+                    Default
+            end;
+        _ ->
+            Default
+    end.
+
+check_embedded_for_backend(DefaultBackend) ->
+    case application:get_env(yaws, embedded) of
+        {ok, true} ->
+            case application:get_env(yaws, embedded_conf) of
+                {ok, L} when is_list(L) ->
+                    case lists:keyfind(gc, 1, L) of
+                        {_, #gconf{ysession_mod = Backend}} ->
+                            Backend;
+                        _ ->
+                            DefaultBackend
+                    end;
+                _ ->
+                    DefaultBackend
+            end;
+        _ ->
+            DefaultBackend
+    end.
