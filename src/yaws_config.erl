@@ -928,17 +928,19 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
             end;
 
         ["max_connections", '=', Int] ->
-            try list_to_integer(Int) of
-                I when is_integer(I) ->
-                    fload({FD, ConfFile}, GC#gconf{max_connections = I}, Cs,
-                          Lno+1, ?NEXTLINE);
-                _ when Int == "nolimit" ->
+            case Int of
+                "nolimit" ->
                     fload({FD, ConfFile}, GC, Cs, Lno+1, ?NEXTLINE);
                 _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
-            catch
-                _:_ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                    try
+                        I = list_to_integer(Int),
+                        fload({FD, ConfFile}, GC#gconf{max_connections = I}, Cs,
+                                  Lno+1, ?NEXTLINE)
+                    catch
+                        _:_ ->
+                            {error, ?F("Expect integer or 'nolimit' at line ~w",
+                                       [Lno])}
+                    end
             end;
 
         ["process_options", '=', POpts] ->
@@ -1058,18 +1060,20 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
             end;
 
         ["keepalive_maxuses", '=', Int] ->
-            try list_to_integer(Int) of
-                I when is_integer(I) ->
-                    fload({FD, ConfFile}, GC#gconf{keepalive_maxuses = I}, Cs,
-                          Lno+1, ?NEXTLINE);
-                _ when Int == "nolimit" ->
+            case Int of
+                "nolimit" ->
                     %% nolimit is the default
                     fload({FD, ConfFile}, GC, Cs, Lno+1, ?NEXTLINE);
                 _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
-            catch
-                _:_ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                    try
+                        I = list_to_integer(Int),
+                        fload({FD, ConfFile}, GC#gconf{keepalive_maxuses = I}, Cs,
+                              Lno+1, ?NEXTLINE)
+                    catch
+                        _:_ ->
+                            {error, ?F("Expect integer or 'nolimit' at line ~w",
+                                       [Lno])}
+                    end
             end;
 
         ["php_exe_path", '=' , PhpPath] ->
@@ -1681,15 +1685,11 @@ fload({FD, ConfFile}, server, GC, C, Lno, Chars) ->
                 "nolimit" ->
                     C1 = C#sconf{partial_post_size = nolimit},
                     fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE);
-                Val ->
-                    try list_to_integer(Val) of
-                        I when is_integer(I) ->
-                            C1 = C#sconf{partial_post_size = I},
-                            fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE);
-                        _ ->
-                            {error,
-                             ?F("Expect integer or 'nolimit' at line ~w",
-                                [Lno])}
+                _ ->
+                    try
+                        I = list_to_integer(Size),
+                        C1 = C#sconf{partial_post_size = I},
+                        fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE)
                     catch
                         _:_ ->
                             {error,
@@ -2509,20 +2509,24 @@ fload({FD, ConfFile}, server_deflate, GC, C, Lno, Chars) ->
             fload({FD, ConfFile}, server_deflate, GC, C, Lno+1, ?NEXTLINE);
 
         ["min_compress_size", '=', CSize] ->
-            try list_to_integer(CSize) of
-                I when is_integer(I), I > 0 ->
-                    Deflate1 = Deflate#deflate{min_compress_size=I},
-                    C1 = C#sconf{deflate_options=Deflate1},
-                    fload({FD, ConfFile}, server_deflate, GC, C1, Lno+1, ?NEXTLINE);
-                _ when CSize == "nolimit" ->
+            case CSize of
+                "nolimit" ->
                     Deflate1 = Deflate#deflate{min_compress_size=nolimit},
                     C1 = C#sconf{deflate_options=Deflate1},
                     fload({FD, ConfFile}, server_deflate, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
-                    {error, ?F("Expect integer > 0 at line ~w", [Lno])}
-            catch
-                _:_ ->
-                    {error, ?F("Expect integer > 0 at line ~w", [Lno])}
+                    try
+                        case list_to_integer(CSize) of
+                            I when I > 0 ->
+                                Deflate1 = Deflate#deflate{min_compress_size=I},
+                                C1 = C#sconf{deflate_options=Deflate1},
+                                fload({FD, ConfFile}, server_deflate, GC, C1, Lno+1, ?NEXTLINE);
+                            IBad -> throw(IBad)
+                        end
+                    catch
+                        _:_ ->
+                            {error, ?F("Expect integer > 0 at line ~w", [Lno])}
+                    end
             end;
 
         ["mime_types", '=' | MimeTypes] ->
