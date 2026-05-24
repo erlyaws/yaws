@@ -94,7 +94,7 @@ Another way to find a bug is to trace function calls. To do so, you must define
 
 ```erlang
 TRACES  ::= "[PATTERN,...]"
-PATTERN ::= Module | {Module, Function} | {Module, Function, Artiy}
+PATTERN ::= Module | {Module, Function} | {Module, Function, Arity}
 ```
 
 For example:
