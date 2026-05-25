@@ -35,10 +35,10 @@ jobs:
           - "25.2"
           - "25.1"
           - "25.0"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - uses: erlef/setup-beam@v1
         with:
