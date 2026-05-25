@@ -117,7 +117,7 @@
           dhfile,
           ciphers,
           cachetimeout,
-          secure_renegotiate = false,
+          secure_renegotiate = yaws_dynopts:secure_renegotiate_default(),
           client_renegotiation = true,
           honor_cipher_order = true,
           protocol_version,

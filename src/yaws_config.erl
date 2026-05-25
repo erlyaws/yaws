@@ -543,11 +543,8 @@ validate_cs(GC, Cs0) ->
     end.
 
 validate_ssl(Cs) ->
-    try validate_ssl(Cs, []) of
-        {ok, _}=Ok ->
-            Ok;
-        Err ->
-            Err
+    try
+        validate_ssl(Cs, [])
     catch
         _:Error ->
             Error
@@ -586,11 +583,9 @@ validate_ssl([C|Cs], NewCs) ->
 validate_groups(_, []) ->
     ok;
 validate_groups(GC, [H|T]) ->
-    try validate_group(GC, H) of
-        ok ->
-            validate_groups(GC, T);
-        Err ->
-            Err
+    try
+        validate_group(GC, H),
+        validate_groups(GC, T)
     catch
         _:Error ->
             Error
@@ -711,7 +706,7 @@ add_port(SC, Port) ->
                 _Int ->
                     SC
             catch
-                _:_ ->
+                error:badarg ->
                     SC#sconf{servername =
                                  Srv ++ [$:|integer_to_list(Port)]}
             end;
@@ -932,14 +927,13 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
                 "nolimit" ->
                     fload({FD, ConfFile}, GC, Cs, Lno+1, ?NEXTLINE);
                 _ ->
-                    try
-                        I = list_to_integer(Int),
-                        fload({FD, ConfFile}, GC#gconf{max_connections = I}, Cs,
+                    try list_to_integer(Int) of
+                        I ->
+                            fload({FD, ConfFile}, GC#gconf{max_connections = I}, Cs,
                                   Lno+1, ?NEXTLINE)
                     catch
-                        _:_ ->
-                            {error, ?F("Expect integer or 'nolimit' at line ~w",
-                                       [Lno])}
+                        error:badarg ->
+                            {error, ?F("Expect integer or nolimit at line ~w", [Lno])}
                     end
             end;
 
@@ -954,13 +948,11 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
 
         ["large_file_chunk_size", '=', Int] ->
             try list_to_integer(Int) of
-                I when is_integer(I) ->
+                I ->
                     fload({FD, ConfFile}, GC#gconf{large_file_chunk_size = I}, Cs,
-                          Lno+1, ?NEXTLINE);
-                _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                          Lno+1, ?NEXTLINE)
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
@@ -974,25 +966,23 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
 
         ["acceptor_pool_size", '=', Int] ->
             try list_to_integer(Int) of
-                I when is_integer(I), I >= 0 ->
+                I when I >= 0 ->
                     fload({FD, ConfFile}, GC#gconf{acceptor_pool_size = I}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ ->
                     {error, ?F("Expect integer >= 0 at line ~w", [Lno])}
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect integer >= 0 at line ~w", [Lno])}
             end;
 
         ["log_wrap_size", '=', Int] ->
             try list_to_integer(Int) of
-                I when is_integer(I) ->
+                I ->
                     fload({FD, ConfFile}, GC#gconf{log_wrap_size = I}, Cs,
-                          Lno+1, ?NEXTLINE);
-                _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                          Lno+1, ?NEXTLINE)
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
@@ -1044,19 +1034,19 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
             fload({FD, ConfFile}, GC, Cs, Lno+1, ?NEXTLINE);
 
         ["keepalive_timeout", '=', Val] ->
-            %% keep this bugger for backward compat for a while
-            try list_to_integer(Val) of
-                I when is_integer(I) ->
-                    fload({FD, ConfFile}, GC#gconf{keepalive_timeout = I}, Cs,
-                          Lno+1, ?NEXTLINE);
-                _ when Val == "infinity" ->
+            case Val of
+                "infinity" ->
                     fload({FD, ConfFile}, GC#gconf{keepalive_timeout = infinity}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
-            catch
-                _:_ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                    try list_to_integer(Val) of
+                        I ->
+                            fload({FD, ConfFile}, GC#gconf{keepalive_timeout = I}, Cs,
+                                  Lno+1, ?NEXTLINE)
+                    catch
+                        error:badarg ->
+                            {error, ?F("Expect integer or infinity at line ~w", [Lno])}
+                    end
             end;
 
         ["keepalive_maxuses", '=', Int] ->
@@ -1065,14 +1055,13 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
                     %% nolimit is the default
                     fload({FD, ConfFile}, GC, Cs, Lno+1, ?NEXTLINE);
                 _ ->
-                    try
-                        I = list_to_integer(Int),
-                        fload({FD, ConfFile}, GC#gconf{keepalive_maxuses = I}, Cs,
-                              Lno+1, ?NEXTLINE)
+                    try list_to_integer(Int) of
+                        I ->
+                            fload({FD, ConfFile}, GC#gconf{keepalive_maxuses = I}, Cs,
+                                  Lno+1, ?NEXTLINE)
                     catch
-                        _:_ ->
-                            {error, ?F("Expect integer or 'nolimit' at line ~w",
-                                       [Lno])}
+                        error:badarg ->
+                            {error, ?F("Expect integer or nolimit at line ~w", [Lno])}
                     end
             end;
 
@@ -1096,51 +1085,45 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
 
         ["max_num_cached_files", '=', Val] ->
             try list_to_integer(Val) of
-                I when is_integer(I) ->
+                I ->
                     fload({FD, ConfFile}, GC#gconf{max_num_cached_files = I}, Cs,
-                          Lno+1, ?NEXTLINE);
-                _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                          Lno+1, ?NEXTLINE)
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
 
         ["max_num_cached_bytes", '=', Val] ->
             try list_to_integer(Val) of
-                I when is_integer(I) ->
+                I ->
                     fload({FD, ConfFile}, GC#gconf{max_num_cached_bytes = I}, Cs,
-                          Lno+1, ?NEXTLINE);
-                _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                          Lno+1, ?NEXTLINE)
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
 
         ["max_size_cached_file", '=', Val] ->
             try list_to_integer(Val) of
-                I when is_integer(I) ->
+                I ->
                     fload({FD, ConfFile}, GC#gconf{max_size_cached_file = I}, Cs,
-                          Lno+1, ?NEXTLINE);
-                _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                          Lno+1, ?NEXTLINE)
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
         ["cache_refresh_secs", '=', Val] ->
             try list_to_integer(Val) of
-                I when is_integer(I), I >= 0 ->
+                I when I >= 0 ->
                     fload({FD, ConfFile}, GC#gconf{cache_refresh_secs = I}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ ->
                     {error, ?F("Expect 0 or positive integer at line ~w",[Lno])}
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect 0 or positive integer at line ~w",[Lno])}
             end;
 
@@ -1224,25 +1207,25 @@ fload({FD, ConfFile}, GC, Cs, Lno, Chars) ->
 
         ["ysession_idle_timeout", '=', YsessionIdle] ->
             try list_to_integer(YsessionIdle) of
-                I when is_integer(I), I > 0 ->
+                I when I > 0 ->
                     fload({FD, ConfFile}, GC#gconf{ysession_idle_timeout = I}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ ->
                     {error, ?F("Expect positive integer at line ~w",[Lno])}
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect positive integer at line ~w",[Lno])}
             end;
 
         ["ysession_long_timeout", '=', YsessionLong] ->
             try list_to_integer(YsessionLong) of
-                I when is_integer(I), I > 0 ->
+                I when I > 0 ->
                     fload({FD, ConfFile}, GC#gconf{ysession_long_timeout = I}, Cs,
                           Lno+1, ?NEXTLINE);
                 _ ->
                     {error, ?F("Expect positive integer at line ~w",[Lno])}
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect positive integer at line ~w",[Lno])}
             end;
 
@@ -1582,13 +1565,11 @@ fload({FD, ConfFile}, server, GC, C, Lno, Chars) ->
 
         ["port", '=', Val] ->
             try list_to_integer(Val) of
-                I when is_integer(I) ->
+                I ->
                     C1 = C#sconf{port = I},
-                    fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE);
-                _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                    fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE)
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
@@ -1630,13 +1611,11 @@ fload({FD, ConfFile}, server, GC, C, Lno, Chars) ->
 
         ["listen_backlog", '=', Val] ->
             try list_to_integer(Val) of
-                B when is_integer(B) ->
+                B ->
                     C1 = update_soptions(C, listen_opts, backlog, B),
-                    fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE);
-                _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                    fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE)
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
@@ -1686,14 +1665,14 @@ fload({FD, ConfFile}, server, GC, C, Lno, Chars) ->
                     C1 = C#sconf{partial_post_size = nolimit},
                     fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
-                    try
-                        I = list_to_integer(Size),
-                        C1 = C#sconf{partial_post_size = I},
-                        fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE)
+                    try list_to_integer(Size) of
+                        I ->
+                            C1 = C#sconf{partial_post_size = I},
+                            fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE)
                     catch
-                        _:_ ->
+                        error:badarg ->
                             {error,
-                             ?F("Expect integer or 'nolimit' at line ~w",
+                             ?F("Expect integer or nolimit at line ~w",
                                 [Lno])}
                     end
             end;
@@ -1995,13 +1974,11 @@ fload({FD, ConfFile}, listen_opts, GC, C, Lno, Chars) ->
 
         ["buffer", '=', Int] ->
             try list_to_integer(Int) of
-                B when is_integer(B) ->
+                B ->
                     C1 = update_soptions(C, listen_opts, buffer, B),
-                    fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
-                _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                    fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE)
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
@@ -2015,18 +1992,19 @@ fload({FD, ConfFile}, listen_opts, GC, C, Lno, Chars) ->
             end;
 
         ["linger", '=', Val] ->
-            try list_to_integer(Val) of
-                I when is_integer(I) ->
-                    C1 = update_soptions(C, listen_opts, linger, {true, I}),
-                    fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
-                _ when Val == "false" ->
+            case Val of
+                "false" ->
                     C1 = update_soptions(C, listen_opts, linger, {false, 0}),
                     fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
-                    {error, ?F("Expect integer|false at line ~w", [Lno])}
-            catch
-                _:_ ->
-                    {error, ?F("Expect integer|false at line ~w", [Lno])}
+                    try list_to_integer(Val) of
+                        I ->
+                            C1 = update_soptions(C, listen_opts, linger, {true, I}),
+                            fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE)
+                    catch
+                        error:badarg ->
+                            {error, ?F("Expect integer|false at line ~w", [Lno])}
+                    end
             end;
 
         ["nodelay", '=', Bool] ->
@@ -2040,54 +2018,49 @@ fload({FD, ConfFile}, listen_opts, GC, C, Lno, Chars) ->
 
         ["priority", '=', Int] ->
             try list_to_integer(Int) of
-                P when is_integer(P) ->
+                P ->
                     C1 = update_soptions(C, listen_opts, priority, P),
-                    fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
-                _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                    fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE)
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
         ["sndbuf", '=', Int] ->
             try list_to_integer(Int) of
-                I when is_integer(I) ->
+                I ->
                     C1 = update_soptions(C, listen_opts, sndbuf, I),
-                    fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
-                _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                    fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE)
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
         ["recbuf", '=', Int] ->
             try list_to_integer(Int) of
-                I when is_integer(I) ->
+                I ->
                     C1 = update_soptions(C, listen_opts, recbuf, I),
-                    fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
-                _ ->
-                    {error, ?F("Expect integer at line ~w", [Lno])}
+                    fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE)
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
         ["send_timeout", '=', Val] ->
-            try list_to_integer(Val) of
-                I when is_integer(I) ->
-                    C1 = update_soptions(C, listen_opts, send_timeout, I),
-                    fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
-                _ when Val == "infinity" ->
+            case Val of
+                "infinity" ->
                     C1 = update_soptions(C, listen_opts, send_timeout,
                                          infinity),
                     fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
-                    {error, ?F("Expect integer|infinity at line ~w", [Lno])}
-            catch
-                _:_ ->
-                    {error, ?F("Expect integer|infinity at line ~w", [Lno])}
+                    try list_to_integer(Val) of
+                        I ->
+                            C1 = update_soptions(C, listen_opts, send_timeout, I),
+                            fload({FD, ConfFile}, listen_opts, GC, C1, Lno+1, ?NEXTLINE)
+                    catch
+                        error:badarg ->
+                            {error, ?F("Expect integer|infinity at line ~w", [Lno])}
+                    end
             end;
 
         ["send_timeout_close", '=', Bool] ->
@@ -2154,18 +2127,20 @@ fload({FD, ConfFile}, ssl, GC, C, Lno, Chars) ->
 
         ["verify", '=', Val0] ->
             Fail0 = (C#sconf.ssl)#ssl.fail_if_no_peer_cert,
-            {Val, Fail} = try
-                              case list_to_integer(Val0) of
-                                  0 -> {verify_none, Fail0};
-                                  1 -> {verify_peer, false};
-                                  2 -> {verify_peer, true};
-                                  _ -> {error, Fail0}
-                              end
-                          catch error:badarg ->
-                                  case list_to_atom(Val0) of
+            {Val, Fail} = try list_to_integer(Val0) of
+                              0 -> {verify_none, Fail0};
+                              1 -> {verify_peer, false};
+                              2 -> {verify_peer, true};
+                              _ -> {error, Fail0}
+                          catch
+                              error:badarg ->
+                                  try list_to_existing_atom(Val0) of
                                       verify_none -> {verify_none, Fail0};
                                       verify_peer -> {verify_peer, Fail0};
                                       _           -> {error, Fail0}
+                                  catch
+                                      error:badarg ->
+                                          {error, Fail0}
                                   end
                           end,
             case Val of
@@ -2190,17 +2165,17 @@ fload({FD, ConfFile}, ssl, GC, C, Lno, Chars) ->
             end;
 
         ["depth", '=', Val0] ->
-            try
-                Val = list_to_integer(Val0),
-                case lists:member(Val, [0, 1,2,3,4,5,6,7]) of
-                    true ->
-                        C1 = C#sconf{ssl = (C#sconf.ssl)#ssl{depth = Val}},
-                        fload({FD, ConfFile}, ssl, GC, C1, Lno+1, ?NEXTLINE);
-                    _ ->
-                        {error, ?F("Expect integer 0..7 at line ~w", [Lno])}
-                end
+            try list_to_integer(Val0) of
+                Val ->
+                    case lists:member(Val, [0,1,2,3,4,5,6,7]) of
+                        true ->
+                            C1 = C#sconf{ssl = (C#sconf.ssl)#ssl{depth = Val}},
+                            fload({FD, ConfFile}, ssl, GC, C1, Lno+1, ?NEXTLINE);
+                        _ ->
+                            {error, ?F("Expect integer 0..7 at line ~w", [Lno])}
+                    end
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect integer at line ~w", [Lno])}
             end;
 
@@ -2240,8 +2215,13 @@ fload({FD, ConfFile}, ssl, GC, C, Lno, Chars) ->
                     {error, ?F("Bad elliptic curves at line ~w", [Lno])}
             end;
         ["secure_renegotiate", '=', BoolOrUndef] ->
-            case is_bool_or_undef(BoolOrUndef) of
-                {true, Val} ->
+            case {is_bool_or_undef(BoolOrUndef),
+                  yaws_dynopts:secure_renegotiate_default()} of
+                {false, _} ->
+                    {error, ?F("Expect true|false|undefined at line ~w", [Lno])};
+                {{true, Val}, undefined} when Val /= undefined ->
+                    {error, ?F("set secure_renegotiate at line ~w to undefined for Erlang/OTP 29.0 and newer", [Lno])};
+                {{true, Val}, _} ->
                     Ssl = (C#sconf.ssl)#ssl{secure_renegotiate=Val},
                     Ssl1 = case Val of
                                undefined ->
@@ -2252,9 +2232,7 @@ fload({FD, ConfFile}, ssl, GC, C, Lno, Chars) ->
                                                               Ssl#ssl.reneg_set)}
                            end,
                     C1 = C#sconf{ssl=Ssl1},
-                    fload({FD, ConfFile}, ssl, GC, C1, Lno+1, ?NEXTLINE);
-                false ->
-                    {error, ?F("Expect true|false at line ~w", [Lno])}
+                    fload({FD, ConfFile}, ssl, GC, C1, Lno+1, ?NEXTLINE)
             end;
 
         ["client_renegotiation", '=', BoolOrUndef] ->
@@ -2272,7 +2250,7 @@ fload({FD, ConfFile}, ssl, GC, C, Lno, Chars) ->
                     C1 = C#sconf{ssl=Ssl1},
                     fload({FD, ConfFile}, ssl, GC, C1, Lno+1, ?NEXTLINE);
                 false ->
-                    {error, ?F("Expect true|false at line ~w", [Lno])}
+                    {error, ?F("Expect true|false|undefined at line ~w", [Lno])}
             end;
 
         ["honor_cipher_order", '=', Bool] ->
@@ -2515,17 +2493,16 @@ fload({FD, ConfFile}, server_deflate, GC, C, Lno, Chars) ->
                     C1 = C#sconf{deflate_options=Deflate1},
                     fload({FD, ConfFile}, server_deflate, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
-                    try
-                        case list_to_integer(CSize) of
-                            I when I > 0 ->
-                                Deflate1 = Deflate#deflate{min_compress_size=I},
-                                C1 = C#sconf{deflate_options=Deflate1},
-                                fload({FD, ConfFile}, server_deflate, GC, C1, Lno+1, ?NEXTLINE);
-                            IBad -> throw(IBad)
-                        end
+                    try list_to_integer(CSize) of
+                        I when I > 0 ->
+                            Deflate1 = Deflate#deflate{min_compress_size=I},
+                            C1 = C#sconf{deflate_options=Deflate1},
+                            fload({FD, ConfFile}, server_deflate, GC, C1, Lno+1, ?NEXTLINE);
+                        _ ->
+                            {error, ?F("Expect integer > 0 or nolimit at line ~w", [Lno])}
                     catch
-                        _:_ ->
-                            {error, ?F("Expect integer > 0 at line ~w", [Lno])}
+                        error:badarg ->
+                            {error, ?F("Expect integer > 0 or nolimit at line ~w", [Lno])}
                     end
             end;
 
@@ -2563,7 +2540,7 @@ fload({FD, ConfFile}, server_deflate, GC, C, Lno, Chars) ->
 
         ["window_size", '=', WSize] ->
             try list_to_integer(WSize) of
-                I when is_integer(I), I > 8, I < 16 ->
+                I when I > 8, I < 16 ->
                     Deflate1 = Deflate#deflate{window_size=I * -1},
                     C1 = C#sconf{deflate_options=Deflate1},
                     fload({FD, ConfFile}, server_deflate, GC, C1, Lno+1, ?NEXTLINE);
@@ -2572,7 +2549,7 @@ fload({FD, ConfFile}, server_deflate, GC, C, Lno, Chars) ->
                      ?F("Expect integer between 9..15 at line ~w",
                         [Lno])}
             catch
-                _:_ ->
+                error:badarg ->
                     {error,
                      ?F("Expect integer between 9..15 at line ~w",
                         [Lno])}
@@ -2580,14 +2557,14 @@ fload({FD, ConfFile}, server_deflate, GC, C, Lno, Chars) ->
 
         ["mem_level", '=', MLevel] ->
             try list_to_integer(MLevel) of
-                I when is_integer(I), I >= 1, I =< 9 ->
+                I when I >= 1, I =< 9 ->
                     Deflate1 = Deflate#deflate{mem_level=I},
                     C1 = C#sconf{deflate_options=Deflate1},
                     fload({FD, ConfFile}, server_deflate, GC, C1, Lno+1, ?NEXTLINE);
                 _ ->
                     {error, ?F("Expect integer between 1..9 at line ~w", [Lno])}
             catch
-                _:_ ->
+                error:badarg ->
                     {error, ?F("Expect integer between 1..9 at line ~w", [Lno])}
             end;
 
@@ -3227,7 +3204,7 @@ parse_nslookup_pref([Invalid | _], [Family | _]) ->
 
 parse_redirect(Path, [Code, URL], Mode, Lno) ->
     try list_to_integer(Code) of
-        I when is_integer(I), I >= 300, I =< 399 ->
+        I when I >= 300, I =< 399 ->
             try yaws_api:parse_url(URL, sloppy) of
                 U when is_record(U, url) ->
                     {Path, I, U, Mode}
@@ -3235,7 +3212,7 @@ parse_redirect(Path, [Code, URL], Mode, Lno) ->
                 _:_ ->
                     {error, ?F("Bad redirect URL ~p at line ~w", [URL, Lno])}
             end;
-        I when is_integer(I), I >= 100, I =< 599 ->
+        I when I >= 100, I =< 599 ->
             %% Only relative path are authorized here
             try yaws_api:parse_url(URL, sloppy) of
                 #url{scheme=undefined, host=[], port=undefined, path=P} ->
@@ -3250,20 +3227,20 @@ parse_redirect(Path, [Code, URL], Mode, Lno) ->
         _ ->
             {error, ?F("Bad status code ~p at line ~w", [Code, Lno])}
     catch
-        _:_ ->
+        error:badarg ->
             {error, ?F("Bad status code ~p at line ~w", [Code, Lno])}
     end;
 parse_redirect(Path, [CodeOrUrl], Mode, Lno) ->
     try list_to_integer(CodeOrUrl) of
-        I when is_integer(I), I >= 300, I =< 399 ->
+        I when I >= 300, I =< 399 ->
             {error, ?F("Bad redirect rule at line ~w: "
                        "URL to redirect to is missing ", [Lno])};
-        I when is_integer(I), I >= 100, I =< 599 ->
+        I when I >= 100, I =< 599 ->
             {Path, I, undefined, Mode};
-        I when is_integer(I) ->
+        _ ->
             {error, ?F("Bad status code ~p at line ~w", [CodeOrUrl, Lno])}
     catch
-        _:_ ->
+        error:badarg ->
             try yaws_api:parse_url(CodeOrUrl, sloppy) of
                 #url{}=U ->
                     {Path, 302, U, Mode}

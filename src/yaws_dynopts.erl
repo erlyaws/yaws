@@ -10,6 +10,8 @@
          http_uri_parse/1,
          safe_relative_path/2,
 
+         secure_renegotiate_default/0,
+
          start_error_logger/0,
          generate/1,
          purge_old_code/0,
@@ -18,6 +20,14 @@
 
 -export([is_greater/2, is_less/2,
          is_greater_or_equal/2, is_less_or_equal/2]).
+
+-if(?OTP_RELEASE >= 29).
+secure_renegotiate_default() ->
+    undefined.
+-else.
+secure_renegotiate_default() ->
+    false.
+-endif.
 
 %% safe_relative_path was added in release 23 (ERTS >= 11.0)
 have_safe_relative_path() ->
@@ -261,6 +271,8 @@ source() ->
            "    http_uri_parse/1,",
            "    safe_relative_path/2,",
            "",
+           "    secure_renegotiate_default/0,",
+           "",
            "    start_error_logger/0,",
            "    generate/1,",
            "    purge_old_code/0,",
@@ -279,6 +291,14 @@ source() ->
            "generate(_) -> ok.",
            "purge_old_code() -> code:soft_purge(?MODULE).",
            "is_generated() -> true.",
+           "",
+           "-if(?OTP_RELEASE >= 29).",
+           "secure_renegotiate_default() ->",
+           "    undefined.",
+           "-else.",
+           "secure_renegotiate_default() ->",
+           "    false.",
+           "-endif.",
            "",
            "-ifdef(HAVE_HTTP_URI_PARSE).",
            "have_http_uri_parse() -> true.",

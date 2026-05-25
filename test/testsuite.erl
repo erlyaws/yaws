@@ -530,9 +530,9 @@ init(_Id, Opts) ->
 
     MatchSpec = [{'_',[],[message,{return_trace},{exception_trace}]}],
     [case Trace of
-         {Mod,Fun,Artity} -> dbg:tpl(Mod,Fun,Artity,MatchSpec);
-         {Mod,Fun}        -> dbg:tpl(Mod,Fun,MatchSpec);
-         Mod              -> dbg:tpl(Mod,MatchSpec)
+         {Mod,Fun,Arity} -> dbg:tpl(Mod,Fun,Arity,MatchSpec);
+         {Mod,Fun}       -> dbg:tpl(Mod,Fun,MatchSpec);
+         Mod             -> dbg:tpl(Mod,MatchSpec)
      end || Trace <- proplists:get_value(traces, Opts, [])],
 
     PvPorts = lists:map(fun(_) -> {ok, P} = yaws:find_private_port(), P end,
