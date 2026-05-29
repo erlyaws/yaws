@@ -219,7 +219,7 @@ insert([]) ->
     ok;
 insert(Yapps) when is_list(Yapps) ->
     {ok, Gconf, Sconfs} = get_conf(),
-    NewSconfs = try insert_yapps_in_sconfs(Yapps, Sconfs))
+    NewSconfs = try insert_yapps_in_sconfs(Yapps, Sconfs)
                 catch _:_ -> Sconfs end,
     yaws_api:setconf(Gconf, NewSconfs).
 %% @hidden

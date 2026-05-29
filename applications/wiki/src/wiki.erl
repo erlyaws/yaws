@@ -1774,7 +1774,7 @@ editTag(Params, Root, _Prefix) ->
 	    end
     catch
         _:_ ->
-	    show({no_such_tag, Tag}, Root);
+	    show({no_such_tag, Tag}, Root)
     end.
 
 changePassword(Params, Root, _Prefix) ->

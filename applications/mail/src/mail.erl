@@ -892,7 +892,7 @@ decode_q([$=,H1,H2|Rest], Acc) ->
             decode_q(Rest, [C|Acc])
     catch
         _:_ ->
-            decode_q(Rest, [H2,H1,$=|Acc]);
+            decode_q(Rest, [H2,H1,$=|Acc])
     end;
 decode_q([C|Cs], Acc) ->
     decode_q(Cs, [C|Acc]).
@@ -902,14 +902,14 @@ decode_b64([],Acc) ->
     try base64_2_str(Str) of
         Dec -> Dec
     catch
-        _:_ -> Str;
+        _:_ -> Str
     end;
 decode_b64([$?,$=|Rest],Acc) ->
     Str = lists:reverse(Acc),
     try base64_2_str(Str) of
         Dec -> Dec ++ decode(Rest)
     catch
-        _:_ -> Str++decode(Rest);
+        _:_ -> Str++decode(Rest)
     end;
 decode_b64([C|Rest], Acc) ->
     decode_b64(Rest,[C|Acc]).
@@ -2424,7 +2424,7 @@ decode_message("quoted-printable"++_, Msg) ->
     try quoted_2_str(lists:flatten(Msg)) of
         Decoded -> Decoded
     catch
-        _:_ ->
+        _:Reason ->
             io:format("failed to decode quoted-printable ~p\n", [Reason]),
             Msg
     end;
