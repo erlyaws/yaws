@@ -64,7 +64,10 @@ child_specs() ->
              {yaws_ws_sup, start_link, []},
              transient, infinity, supervisor, [yaws_ws_sup]},
 
-    [YawsLog, YawsTrace, YawsServ, Sup, WSSup].
+    %% Sup (yaws_sup_restarts) must start before YawsServ because
+    %% yaws_server:init may call yaws_rss:open/2 during config loading,
+    %% and yaws_rss is a child of yaws_sup_restarts.
+    [YawsLog, YawsTrace, Sup, YawsServ, WSSup].
 
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------
