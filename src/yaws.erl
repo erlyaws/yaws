@@ -56,7 +56,7 @@
          sconf_errormod_404/1, sconf_arg_rewrite_mode/1, sconf_logger_mod/1,
          sconf_opaque/1, sconf_start_mod/1, sconf_allowed_scripts/1,
          sconf_tilde_allowed_scripts/1, sconf_index_files/1, sconf_revproxy/1,
-         sconf_spotions/1, sconf_extra_cgi_vars/1, sconf_stats/1,
+         sconf_soptions/1, sconf_extra_cgi_vars/1, sconf_stats/1,
          sconf_fcgi_app_server/1, sconf_php_handler/1, sconf_shaper/1,
          sconf_deflate_options/1, sconf_mime_types_info/1,
          sconf_dispatch_mod/1, sconf_extra_resp_headers/1]).
@@ -69,7 +69,7 @@
          sconf_errormod_404/2, sconf_arg_rewrite_mode/2, sconf_logger_mod/2,
          sconf_opaque/2, sconf_start_mod/2, sconf_allowed_scripts/2,
          sconf_tilde_allowed_scripts/2, sconf_index_files/2, sconf_revproxy/2,
-         sconf_spotions/2, sconf_extra_cgi_vars/2, sconf_stats/2,
+         sconf_soptions/2, sconf_extra_cgi_vars/2, sconf_stats/2,
          sconf_fcgi_app_server/2, sconf_php_handler/2, sconf_shaper/2,
          sconf_deflate_options/2, sconf_mime_types_info/2,
          sconf_dispatch_mod/2, sconf_extra_resp_headers/2]).
@@ -372,7 +372,7 @@ sconf_allowed_scripts      (#sconf{allowed_scripts       = X}) -> X.
 sconf_tilde_allowed_scripts(#sconf{tilde_allowed_scripts = X}) -> X.
 sconf_index_files          (#sconf{index_files           = X}) -> X.
 sconf_revproxy             (#sconf{revproxy              = X}) -> X.
-sconf_spotions             (#sconf{soptions              = X}) -> X.
+sconf_soptions             (#sconf{soptions              = X}) -> X.
 sconf_extra_cgi_vars       (#sconf{extra_cgi_vars        = X}) -> X.
 sconf_stats                (#sconf{stats                 = X}) -> X.
 sconf_fcgi_app_server      (#sconf{fcgi_app_server       = X}) -> X.
@@ -411,7 +411,7 @@ sconf_allowed_scripts      (S, X) -> S#sconf{allowed_scripts       = X}.
 sconf_tilde_allowed_scripts(S, X) -> S#sconf{tilde_allowed_scripts = X}.
 sconf_index_files          (S, X) -> S#sconf{index_files           = X}.
 sconf_revproxy             (S, X) -> S#sconf{revproxy              = X}.
-sconf_spotions             (S, X) -> S#sconf{soptions              = X}.
+sconf_soptions             (S, X) -> S#sconf{soptions              = X}.
 sconf_extra_cgi_vars       (S, X) -> S#sconf{extra_cgi_vars        = X}.
 sconf_stats                (S, X) -> S#sconf{stats                 = X}.
 sconf_fcgi_app_server      (S, X) -> S#sconf{fcgi_app_server       = X}.
