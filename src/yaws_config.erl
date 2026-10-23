@@ -593,11 +593,14 @@ validate_groups(GC, [H|T]) ->
 
 validate_group(GC, List) ->
     [SC0|SCs] = List,
+    %% Remove netns and vrf from listen_opts, because they don't need to be
+    %% unique for all servers.
+    ListenOpts0 = get_listen_opts_no_netns_vrf(SC0),
 
-    %% all servers with the same IP/Port must share the same tcp configuration
+    %% All servers with the same IP/Port must share the same tcp configuration,
+    %% except the netns and vrf options.
     case lists:all(fun(SC) ->
-                           lists:keyfind(listen_opts, 1, SC#sconf.soptions) ==
-                               lists:keyfind(listen_opts, 1, SC0#sconf.soptions)
+                           ListenOpts0 == get_listen_opts_no_netns_vrf(SC)
                    end, SCs) of
         true ->
             ok;
@@ -645,9 +648,30 @@ validate_group(GC, List) ->
             end
     end,
 
-    %% all servernames in a group must be unique
-    SN = lists:sort([yaws:to_lower(X#sconf.servername) || X <- List]),
+    %% all servernames/netns/vrf in a group must be unique
+    SN = lists:sort([{yaws:to_lower(X#sconf.servername), get_netns_vrf(X)}
+                     || X <- List]),
     no_two_same(SN).
+
+
+get_listen_opts_no_netns_vrf(#sconf{soptions = SOpts}) ->
+    case lists:keyfind(listen_opts, 1, SOpts) of
+        {listen_opts, LOpts} ->
+            %% Remove netns and vrf from listen_opts
+            [{K, V} || {K, V} <- LOpts, K =/= netns, K =/= bind_to_device];
+        _ ->
+            []
+    end.
+
+
+get_netns_vrf(#sconf{soptions = SOpts}) ->
+    case lists:keyfind(listen_opts, 1, SOpts) of
+        {listen_opts, LOpts} ->
+            [{K, V} || {K, V} <- LOpts, K == netns orelse K == bind_to_device];
+        _ ->
+            []
+    end.
+
 
 no_two_same([H,H|_]) ->
     throw({error,
