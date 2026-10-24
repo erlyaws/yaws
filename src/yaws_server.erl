@@ -21,6 +21,7 @@
 %% External exports
 -export([start_link/1]).
 -export([safe_path/1]).
+-export([listen_defs/2, gserver/4, gservers/4]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -233,6 +234,7 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
             ok
     end,
 
+    yaws_acceptor_sup:start_link(),
     runmod(RunMod, GC),
     yaws_config:compile_and_load_src_dir(GC),
     yaws_dynopts:generate(GC),
@@ -249,7 +251,7 @@ init2(GC, Sconfs, RunMod, Embedded, FirstTime) ->
 
 start_group(GC, Group) ->
     FailOnBind = ?gc_fail_on_bind_err(GC),
-    case proc_lib:start_link(?MODULE, gserv, [self(), GC, Group]) of
+    case yaws_acceptor_sup:new_acceptors(self(), GC, Group) of
         {error, F, A} when FailOnBind == false ->
             error_logger:error_msg(F, A),
             false;
@@ -262,8 +264,22 @@ start_group(GC, Group) ->
         {error, Reason} ->
             error_logger:error_msg("FATAL: ~p~n", [Reason]),
             erlang:error(badbind);
-        {Pid, SCs} ->
-            {true, {Pid, SCs}};
+        Pairs when is_list(Pairs) ->
+            %% Pairs = [{pid(), [#sconf{}]}]
+            Errors = lists:filter(fun({Pid, _}) -> not is_pid(Pid) end,
+                                  Pairs),
+            case {FailOnBind, Errors} of
+                {_, []} ->
+                    {true, {ok, Pairs}};
+                {true, _} ->
+                    Reason = badbind,
+                    error_logger:error_msg("FATAL: ~p~n", [Reason]),
+                    erlang:error(badbind);
+                {false, _} ->
+                    Reason = badbind,
+                    error_logger:error_msg("FATAL: ~p~n", [Reason]),
+                    {true, {ok, Pairs -- Errors}}
+            end;
         none ->
             false
     end.
@@ -361,6 +377,7 @@ handle_call({delete_sconf, Sc}, From, State) ->
 
 handle_call({add_sconf, Pos, Sc}, From, State) ->
     case yaws_config:search_group(State#state.gc, Sc, State#state.pairs) of
+        %% FIXME
         [{Pid, _Group}] ->
             Pid ! {add_sconf, From, Pos, Sc, self()},
             receive
@@ -380,8 +397,8 @@ handle_call({add_sconf, Pos, Sc}, From, State) ->
             case start_group(GC, [Sc]) of
                 false ->
                     {reply, {ok, Sc}, State};
-                {true, {_,[Sc2]}=Pair} ->
-                    P2 = [Pair | State#state.pairs],
+                {true, {ok, [{_,[Sc2]} | _] = Pairs}} ->
+                    P2 = Pairs ++ State#state.pairs,
                     {reply, {ok, Sc2}, State#state{pairs = P2}}
             end
     end;
@@ -424,7 +441,7 @@ handle_cast(_Msg, State) ->
 %%----------------------------------------------------------------------
 handle_info({Pid, certchanged},  State) ->
     {noreply, State#state{pairs = lists:keydelete(Pid, 1, State#state.pairs)}};
-handle_info({'EXIT', Pid, Reason},  State) ->
+handle_info({'EXIT', Pid, _Reason},  State) ->
     case lists:keysearch(Pid, 1, State#state.pairs) of
         {value, _} ->
             %% one of our gservs died
@@ -448,19 +465,6 @@ handle_info(_Msg, State) ->
 terminate(_Reason, State) ->
     lists:foreach(fun({Pid, _GP}) -> gserv_stop(Pid) end, State#state.pairs),
     ok.
-
-do_listen(GC, [SC0|_]=Group) ->
-    case SC0#sconf.ssl of
-        undefined ->
-            {nossl, undefined,
-             gen_tcp_listen(SC0#sconf.port, tcp_listen_opts(SC0))};
-        _ ->
-            CertInfo = lists:foldl(fun(#sconf{servername=SN, ssl=SSL}, Acc) ->
-                                           [{SN, certinfo(SSL)}|Acc]
-                                   end, [], Group),
-            {ssl, lists:reverse(CertInfo),
-             ssl_listen(SC0#sconf.port, ssl_listen_opts(GC, Group))}
-    end.
 
 certinfo(SSL=#ssl{}) ->
     #certinfo{
@@ -496,10 +500,12 @@ certinfo(SSL=#ssl{}) ->
                     end
       }.
 
+%% Start a listener per sconf
 gen_tcp_listen(Port, Opts) ->
     ?Debug("TCP Listen ~p:~p~n", [Port, Opts]),
     gen_tcp:listen(Port, Opts).
 
+%% Start a listener per sconf
 ssl_listen(Port, Opts) ->
     ?Debug("SSL Listen ~p:~p~n", [Port, Opts]),
     ssl:listen(Port, Opts).
@@ -507,16 +513,49 @@ ssl_listen(Port, Opts) ->
 gserv(_Top, _, []) ->
     proc_lib:init_ack(none);
 
-%% One server per IP we listen to
-gserv(Top, GC, Group0) ->
+%% One server per IP/netns/vrf we listen to
+gserv(Top, GC, Group) ->
+    proc_lib:init_ack({self(), Group}),
+    yaws_acceptor_sup:new_acceptors(Top, GC, Group).
+
+
+listen_defs(GC, [SC0|_]=Group) ->
+    case SC0#sconf.ssl of
+        undefined ->
+            [{nossl, undefined, {SC0#sconf.port, LOpts}}
+             || LOpts <- tcp_listen_opts(Group)];
+        _ ->
+            CertInfo = lists:foldl(fun(#sconf{servername=SN, ssl=SSL}, Acc) ->
+                                           [{SN, certinfo(SSL)}|Acc]
+                                   end, [], Group),
+            [{ssl, lists:reverse(CertInfo), {SC0#sconf.port, LOpts}}
+             || LOpts <- ssl_listen_opts(GC, Group)]
+    end.
+
+
+do_listen2(nossl, Port, ListenOpts) ->
+    gen_tcp_listen(Port, ListenOpts);
+do_listen2(ssl, Port, ListenOpts) ->
+    ssl_listen(Port, ListenOpts).
+
+
+gservers([], _, _, _) ->
+    ok;
+gservers([ListenDef | ListenDefs], Top, GC, Group) ->
+    proc_lib:start_link(?MODULE, gserver, [ListenDef, Top, GC, Group]),
+    gservers(ListenDefs, Top, GC, Group).
+
+
+gserver({SSLBOOL, CertInfo, {Port, ListenOpts}}, Top, GC, Group0) ->
     process_flag(trap_exit, true),
     ?TC([{record, GC, gconf}]),
     put(gc, GC),
     put(top, Top),
     Group1 = lists:map(fun(SC) -> setup_ets(SC) end, Group0),
     Group = lists:map(fun(SC) -> start_stats(SC) end, Group1),
-    case do_listen(GC, Group) of
-        {SSLBOOL, CertInfo, {ok, Listen}} ->
+
+    case do_listen2(SSLBOOL, Port, ListenOpts) of
+        {ok, Listen} ->
             lists:foreach(fun(SC) -> call_start_mod(SC) end, Group),
             error_logger:info_msg(
               "Yaws: Listening to ~s:~w for <~p> virtual servers:~s~n",
@@ -703,7 +742,14 @@ gserv_loop(GS, Ready, Rnum, Last) ->
             lists:foreach(fun(SC) -> stop_stats(SC) end, GS#gs.group),
 
             %% Close softly all opened connections
-            {links, Ls1} = process_info(self(), links),
+            {links, Ls0} = process_info(self(), links),
+            %% Remove acceptor supervisor, we don't want to wait for it to
+            %% shutdown since it is start/stopped in the yaws_server process.
+            Ls1 = lists:filter(fun(X) ->
+                                       {registered_name, yaws_acceptor_sup}
+                                           =/= process_info(X, registered_name)
+                               end,
+                               Ls0),
             lists:foreach(fun(X) when is_pid(X) ->
                                   unlink(X),
                                   X ! {self(), suspend},
@@ -898,10 +944,14 @@ listen_opts(SC) ->
      | proplists:get_value(listen_opts, SC#sconf.soptions, [])
     ] ++ InetType.
 
-tcp_listen_opts(SC) ->
+%% All the TCP listen options for all the sconfs, otherwise the netns and vrf
+%% options won't be propagated.
+tcp_listen_opts([]) ->
+    [];
+tcp_listen_opts([SC|SCs]) ->
     Opts = listen_opts(SC),
     ?Debug("tcp listen options: ~p", [Opts]),
-    Opts.
+    [Opts | tcp_listen_opts(SCs)].
 
 check_sni_servername(_, [], Default) ->
     Default;
@@ -928,15 +978,20 @@ ssl_sni_opts(Group, DefaultSSLOpts) ->
              end,
     [{sni_fun, SniFun}].
 
+%% All the SSL listen options for all the sconfs, otherwise the netns and vrf
+%% options won't be propagated.
 ssl_listen_opts(GC, [SC0|_]=Group) ->
     DefaultSSLOpts = ssl_listen_opts(SC0),
-    Opts0 = listen_opts(SC0) ++ DefaultSSLOpts,
-    Opts = case GC#gconf.sni of
-               disable -> Opts0;
-               _       -> Opts0 ++ ssl_sni_opts(Group, DefaultSSLOpts)
-           end,
-    ?Debug("ssl listen options: ~p", [Opts]),
-    Opts.
+    [begin
+     Opts0 = listen_opts(SC) ++ DefaultSSLOpts,
+     Opts = case GC#gconf.sni of
+                disable -> Opts0;
+                _       -> Opts0 ++ ssl_sni_opts(Group, DefaultSSLOpts)
+            end,
+     ?Debug("ssl listen options: ~p", [Opts]),
+     Opts
+     end
+     || SC <- Group].
 
 ssl_listen_opts(#sconf{ssl=SSL}) ->
     L = [if SSL#ssl.keyfile /= undefined ->

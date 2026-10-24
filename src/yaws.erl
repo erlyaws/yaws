@@ -3083,7 +3083,8 @@ deepmap(_Fun, []) ->
 
 
 sconf_to_srvstr(SC) ->
-    redirect_scheme(SC) ++ redirect_host(SC,undefined).
+    redirect_scheme(SC) ++ redirect_host(SC,undefined) ++
+    fmt_netns(SC) ++ fmt_vrf(SC).
 
 redirect_scheme(SC) ->
     case {SC#sconf.ssl,SC#sconf.rmethod} of
@@ -3123,6 +3124,30 @@ redirect_scheme_port(SC) ->
     Scheme   = redirect_scheme(SC),
     PortPart = redirect_port(SC),
     {Scheme, PortPart}.
+
+fmt_netns(SC) ->
+    case lists:keysearch(listen_opts, 1, sconf_soptions(SC)) of
+        {value, {listen_opts, ListenOpts}} ->
+            case lists:keysearch(netns, 1, ListenOpts) of
+                {value, {netns, <<>>}} -> [];
+                {value, {netns, NetNs}} -> " in " ++ NetNs;
+                _ -> []
+            end;
+        _ ->
+            []
+    end.
+
+fmt_vrf(SC) ->
+    case lists:keysearch(listen_opts, 1, sconf_soptions(SC)) of
+        {value, {listen_opts, ListenOpts}} ->
+            case lists:keysearch(vrf, 1, ListenOpts) of
+                {value, {bind_to_device, <<>>}} -> [];
+                {value, {bind_to_device, Vrf}} -> " on " ++ Vrf;
+                _ -> []
+            end;
+        _ ->
+            []
+    end.
 
 tmpdir() ->
     tmpdir(filename:join([home(), ".yaws"])).
