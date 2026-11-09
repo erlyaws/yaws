@@ -29,6 +29,9 @@
          can_hard_gc/2, can_soft_setconf/4,
          can_soft_gc/2, verify_upgrade_args/2, toks/2]).
 
+%% Exports for EUNIT.
+-export([validate_cs/2]).
+
 %% where to look for yaws.conf
 paths() ->
     case application:get_env(yaws, config) of
@@ -528,7 +531,8 @@ validate_cs(GC, Cs0) ->
                                            true ->
                                                SC0
                                        end,
-                                  {{SC#sconf.listen, SC#sconf.port}, SC}
+                                  {{SC#sconf.listen, SC#sconf.port,
+                                    yaws:get_netns_vrf(SC)}, SC}
                           end, Cs),
             L2 = lists:map(fun(X) -> element(2, X) end, lists:keysort(1,L)),
             L3 = arrange(L2, start, [], []),
@@ -658,7 +662,6 @@ no_two_same([]) ->
     ok.
 
 
-
 arrange([C|Tail], start, [], B) ->
     C1 = set_server(C),
     arrange(Tail, {in, C1}, [C1], B);
@@ -668,9 +671,12 @@ arrange([], _, A, B) ->
     [lists:reverse(A) | B];
 arrange([C|Tail], {in, C0}, A, B) ->
     C1 = set_server(C),
+    EqualNetnsVrf = eq_netns_vrf(C, C0),
     if
+        %% listen, port, netns, vrf/bind_to_device are equal
         C1#sconf.listen == C0#sconf.listen,
-        C1#sconf.port == C0#sconf.port ->
+        C1#sconf.port == C0#sconf.port,
+        EqualNetnsVrf ->
             arrange(Tail, {in, C0}, [C1|A], B);
         true ->
             arrange(Tail, {in, C1}, [C1], [lists:reverse(A)|B])
@@ -3376,13 +3382,16 @@ delete_sconf(Gc, OldSc, Pairs) ->
 
 same_virt_srv(Gc, S, NewSc) when S#sconf.listen == NewSc#sconf.listen,
                                  S#sconf.port == NewSc#sconf.port ->
+    SameNetnsVrf = eq_netns_vrf(S, NewSc),
     if
         Gc#gconf.sni == disable orelse
         S#sconf.ssl == undefined orelse
         NewSc#sconf.ssl == undefined ->
-            (S#sconf.ssl == NewSc#sconf.ssl);
+            (S#sconf.ssl == NewSc#sconf.ssl)
+            andalso
+            SameNetnsVrf;
         true ->
-            true
+            SameNetnsVrf
     end;
 same_virt_srv(_,_,_) ->
     false.
@@ -3397,6 +3406,7 @@ eq_sconfs(S1,S2) ->
      S1#sconf.docroot == S2#sconf.docroot andalso
      S1#sconf.xtra_docroots == S2#sconf.xtra_docroots andalso
      S1#sconf.listen == S2#sconf.listen andalso
+     eq_netns_vrf(S1, S2) andalso
      S1#sconf.servername == S2#sconf.servername andalso
      S1#sconf.yaws == S2#sconf.yaws andalso
      S1#sconf.ssl == S2#sconf.ssl andalso
@@ -3426,6 +3436,11 @@ eq_sconfs(S1,S2) ->
      S1#sconf.dispatch_mod == S2#sconf.dispatch_mod andalso
      S1#sconf.extra_response_headers == S2#sconf.extra_response_headers andalso
      S1#sconf.options_asterisk_methods == S2#sconf.options_asterisk_methods).
+
+
+eq_netns_vrf(S1, S2) ->
+     yaws:get_netns_vrf(S1) == yaws:get_netns_vrf(S2).
+
 
 %% This is the version of setconf that performs a
 %% soft reconfig, it requires the args to be checked.
