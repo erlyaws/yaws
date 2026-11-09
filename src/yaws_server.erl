@@ -519,9 +519,11 @@ gserv(Top, GC, Group0) ->
         {SSLBOOL, CertInfo, {ok, Listen}} ->
             lists:foreach(fun(SC) -> call_start_mod(SC) end, Group),
             error_logger:info_msg(
-              "Yaws: Listening to ~s:~w for <~p> virtual servers:~s~n",
+              "Yaws: Listening to ~s:~w~s~s for <~p> virtual servers:~s~n",
               [inet_parse:ntoa((hd(Group))#sconf.listen),
                (hd(Group))#sconf.port,
+               yaws:fmt_netns(hd(Group)),
+               yaws:fmt_vrf(hd(Group)),
                length(Group),
                lists:map(
                  fun(S) ->
@@ -539,9 +541,12 @@ gserv(Top, GC, Group0) ->
             Last = initial_acceptor(GS),
             gserv_loop(GS#gs{sessions = 1}, [], 0, Last);
         {_,_,Err} ->
-            error_logger:format("Yaws: Failed to listen ~s:~w  : ~p~n",
+            error_logger:format("Yaws: Failed to listen ~s:~w~s~s  : ~p~n",
                                 [inet_parse:ntoa((hd(Group))#sconf.listen),
-                                 (hd(Group))#sconf.port, Err]),
+                                 (hd(Group))#sconf.port,
+                                 yaws:fmt_nets(hd(Group)),
+                                 yaws:fmt_vrf(hd(Group)),
+                                 Err]),
             proc_lib:init_ack({error, "Can't listen to socket: ~p ",[Err]}),
             exit(normal)
     end.
