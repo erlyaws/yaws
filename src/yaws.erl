@@ -74,6 +74,8 @@
          sconf_deflate_options/2, sconf_mime_types_info/2,
          sconf_dispatch_mod/2, sconf_extra_resp_headers/2]).
 
+-export([get_netns_vrf/1, fmt_netns/1, fmt_vrf/1]).
+
 -export([new_auth/0,
          auth_dir/1, auth_dir/2,
          auth_docroot/1, auth_docroot/2,
@@ -382,6 +384,17 @@ sconf_deflate_options      (#sconf{deflate_options       = X}) -> X.
 sconf_mime_types_info      (#sconf{mime_types_info       = X}) -> X.
 sconf_dispatch_mod         (#sconf{dispatch_mod          = X}) -> X.
 sconf_extra_resp_headers   (#sconf{extra_response_headers= X}) -> X.
+
+
+get_netns_vrf(#sconf{soptions = SOpts}) ->
+    case lists:keyfind(listen_opts, 1, SOpts) of
+        {listen_opts, LOpts} ->
+            lists:sort([{K, V} || {K, V} <- LOpts,
+                                  K == netns orelse K == bind_to_device]);
+        _ ->
+            []
+    end.
+
 
 %% Setters
 sconf_port                 (S, X) -> S#sconf{port                  = X}.
@@ -3083,7 +3096,8 @@ deepmap(_Fun, []) ->
 
 
 sconf_to_srvstr(SC) ->
-    redirect_scheme(SC) ++ redirect_host(SC,undefined).
+    redirect_scheme(SC) ++ redirect_host(SC,undefined) ++
+    fmt_netns(SC) ++ fmt_vrf(SC).
 
 redirect_scheme(SC) ->
     case {SC#sconf.ssl,SC#sconf.rmethod} of
@@ -3123,6 +3137,24 @@ redirect_scheme_port(SC) ->
     Scheme   = redirect_scheme(SC),
     PortPart = redirect_port(SC),
     {Scheme, PortPart}.
+
+fmt_netns(SC) ->
+    case lists:keysearch(netns, 1, get_netns_vrf(SC)) of
+        {value, {netns, NetNs}}
+          when is_list(NetNs) andalso NetNs /= [] ->
+            " in " ++ NetNs;
+        _ ->
+            []
+    end.
+
+fmt_vrf(SC) ->
+    case lists:keysearch(bind_to_device, 1, get_netns_vrf(SC)) of
+        {value, {bind_to_device, Vrf}}
+          when is_binary(Vrf) andalso Vrf /= <<>> ->
+            " on " ++ binary_to_list(Vrf);
+        _ ->
+            []
+    end.
 
 tmpdir() ->
     tmpdir(filename:join([home(), ".yaws"])).
