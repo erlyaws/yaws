@@ -143,7 +143,7 @@ or by setting the environment variables `YAWS_DETERMINISTIC_BUILD` and
 respectively:
 
     $> export YAWS_DETERMINISTIC_BUILD=true # set to any value will enable
-    %> autoreconf -fi
+    $> autoreconf -fi
     $> export SOURCE_DATE_EPOCH=$known_unix_timestamp
     $> ./configure
 
