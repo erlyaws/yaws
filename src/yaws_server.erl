@@ -1092,6 +1092,10 @@ acceptor0(GS, Top) ->
                     Top ! {self(), decrement},
                     exit(normal);
                 {exit, shutdown} ->
+                    %% gserv treats an exit with reason shutdown as already
+                    %% decremented, and an unlinked acceptor's exit is not
+                    %% seen at all.
+                    Top ! {self(), decrement},
                     exit(shutdown);
                 {exit, {error, einval}} ->
                     %% Typically clients that close their end of the socket
@@ -1127,6 +1131,13 @@ acceptor0(GS, Top) ->
                 {Top, stop} ->
                     exit(normal);
                 {Top, accept} ->
+                    %% aloop/4 left us trapping exits. Stop that before
+                    %% accepting again, like a new acceptor, so the exit
+                    %% from stop_ready/2 terminates us instead of leaving
+                    %% an unlinked acceptor whose connections are never
+                    %% decremented. An exit that already arrived as a
+                    %% message is handled by erase_transients/0.
+                    process_flag(trap_exit, false),
                     erase_transients(),
                     acceptor0(GS, Top)
             end;
@@ -1143,6 +1154,9 @@ acceptor0(GS, Top) ->
                 {Top, stop} ->
                     exit(normal);
                 {Top, accept} ->
+                    %% A reused acceptor may still trap exits; see above.
+                    process_flag(trap_exit, false),
+                    erase_transients(),
                     acceptor0(GS, Top)
             end;
         {error, closed} ->
