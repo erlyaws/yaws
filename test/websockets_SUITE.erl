@@ -96,8 +96,10 @@ groups() ->
        advanced_fragmented_valid_utf8_text,
        basic_unfragmented_invalid_utf8_text,
        basic_fragmented_invalid_utf8_text,
+       basic_fragmented_invalid_utf8_before_fin,
        advanced_unfragmented_invalid_utf8_text,
        advanced_fragmented_invalid_utf8_text,
+       advanced_fragmented_invalid_utf8_before_fin,
        basic_2_closes,
        basic_close_ping,
        basic_close_text,
@@ -493,9 +495,8 @@ toolong_payload_ping(Config) ->
     SndFrame = #frame{opcode=?WS_OPCODE_PING, payload=Payload},
     ?assertEqual(ok, send_frame(Sock, SndFrame, all)),
 
-    {ok, Frames} = wsflush(Sock, false),
+    {ok, Frames} = wsflush(Sock, true),
     ?assert(is_valid_close_frame(Frames, [?WS_STATUS_PROTO_ERROR])),
-    ?assertEqual({ok, []}, wsflush(Sock, true)),
     ?assertEqual(ok, close(Sock)),
     ok.
 
@@ -619,9 +620,8 @@ badrsv(Config, WSPath, Type, Rsv) ->
     SndFrame = #frame{rsv=Rsv, opcode=Type, payload=Payload},
     ?assertEqual(ok, send_frame(Sock, SndFrame, all)),
 
-    {ok, Frames} = wsflush(Sock, false),
+    {ok, Frames} = wsflush(Sock, true),
     ?assert(is_valid_close_frame(Frames, [?WS_STATUS_PROTO_ERROR])),
-    ?assertEqual({ok, []}, wsflush(Sock, true)),
     ?assertEqual(ok, close(Sock)),
     ok.
 
@@ -643,14 +643,20 @@ badrsv_complex(Config, BlockSz) ->
     SndFrame3 = #frame{opcode=?WS_OPCODE_PING, payload=Payload},
 
     ?assertEqual(ok, send_frame(Sock, SndFrame1, BlockSz)),
+    EarlyFrames = case BlockSz of
+                      all -> [];
+                      _   ->
+                          {ok, Echo} = read_frame(Sock),
+                          [Echo]
+                  end,
     ?assertEqual(ok, send_frame(Sock, SndFrame2, BlockSz)),
     ?assertEqual(ok, send_frame(Sock, SndFrame3, BlockSz)),
 
-    {ok, [Frame1|Frames]} = wsflush(Sock, false),
+    {ok, Frames} = wsflush(Sock, true),
+    [Frame1|CloseFrames] = EarlyFrames ++ Frames,
     ?assertEqual(?WS_OPCODE_TEXT, Frame1#frame.opcode),
     ?assertEqual(Payload, Frame1#frame.payload),
-    ?assert(is_valid_close_frame(Frames, [?WS_STATUS_PROTO_ERROR])),
-    ?assertEqual({ok, []}, wsflush(Sock, true)),
+    ?assert(is_valid_close_frame(CloseFrames, [?WS_STATUS_PROTO_ERROR])),
     ?assertEqual(ok, close(Sock)),
     ok.
 
@@ -668,9 +674,8 @@ badopcodes(Config, Opcode) ->
     SndFrame = #frame{opcode=Opcode},
     ?assertEqual(ok, send_frame(Sock, SndFrame, all)),
 
-    {ok, Frames} = wsflush(Sock, false),
+    {ok, Frames} = wsflush(Sock, true),
     ?assert(is_valid_close_frame(Frames, [?WS_STATUS_PROTO_ERROR])),
-    ?assertEqual({ok, []}, wsflush(Sock, true)),
     ?assertEqual(ok, close(Sock)),
     ok.
 
@@ -822,9 +827,8 @@ invalid_fragmented(Config, WSPath, Type) ->
     ?assertEqual(ok, send_frame(Sock, SndFrame1, all)),
     ?assertEqual(ok, send_frame(Sock, SndFrame2, all)),
 
-    {ok, Frames} = wsflush(Sock, false),
+    {ok, Frames} = wsflush(Sock, true),
     ?assert(is_valid_close_frame(Frames, [?WS_STATUS_PROTO_ERROR])),
-    ?assertEqual({ok, []}, wsflush(Sock, true)),
     ?assertEqual(ok, close(Sock)),
     ok.
 
@@ -916,9 +920,8 @@ badfragmented(Config, WSPath, Fin) ->
     ?assertEqual(ok, send_frame(Sock, SndFrame1, all)),
     ?assertEqual(ok, send_frame(Sock, SndFrame2, all)),
 
-    {ok, Frames} = wsflush(Sock, false),
+    {ok, Frames} = wsflush(Sock, true),
     ?assert(is_valid_close_frame(Frames, [?WS_STATUS_PROTO_ERROR])),
-    ?assertEqual({ok, []}, wsflush(Sock, true)),
     ?assertEqual(ok, close(Sock)),
     ok.
 
@@ -942,9 +945,8 @@ badfragmented_nocontinuation(Config, WSPath) ->
     ?assertEqual(ok, send_frame(Sock, SndFrame1, all)),
     ?assertEqual(ok, send_frame(Sock, SndFrame2, all)),
 
-    {ok, Frames} = wsflush(Sock, false),
+    {ok, Frames} = wsflush(Sock, true),
     ?assert(is_valid_close_frame(Frames, [?WS_STATUS_PROTO_ERROR])),
-    ?assertEqual({ok, []}, wsflush(Sock, true)),
     ?assertEqual(ok, close(Sock)),
     ok.
 
@@ -1067,9 +1069,8 @@ unfragmented_invalid_utf8(Config, WSPath, BlockSz) ->
                   SndFrame = #frame{opcode=?WS_OPCODE_TEXT, payload=Payload},
                   ?assertEqual(ok, send_frame(Sock, SndFrame, BlockSz)),
 
-                  {ok, Frames} = wsflush(Sock, false),
+                  {ok, Frames} = wsflush(Sock, true),
                   ?assert(is_valid_close_frame(Frames, [?WS_STATUS_INVALID_PAYLOAD])),
-                  ?assertEqual({ok, []}, wsflush(Sock, true)),
                   ?assertEqual(ok, close(Sock))
           end,
 
@@ -1103,19 +1104,30 @@ unfragmented_invalid_utf8(Config, WSPath, BlockSz) ->
     ok.
 
 basic_fragmented_invalid_utf8_text(Config) ->
-    fragmented_invalid_utf8(Config, "/websockets_example_endpoint.yaws", all),
-    fragmented_invalid_utf8(Config, "/websockets_example_endpoint.yaws", 1),
-    ok.
+    fragmented_invalid_utf8(Config, "/websockets_example_endpoint.yaws", true).
+
+basic_fragmented_invalid_utf8_before_fin(Config) ->
+    fragmented_invalid_utf8(Config, "/websockets_example_endpoint.yaws", false).
 
 advanced_fragmented_invalid_utf8_text(Config) ->
-    fragmented_invalid_utf8(Config, "/websockets_autobahn_endpoint.yaws", all),
-    fragmented_invalid_utf8(Config, "/websockets_autobahn_endpoint.yaws", 1),
+    fragmented_invalid_utf8(Config, "/websockets_autobahn_endpoint.yaws", true).
+
+advanced_fragmented_invalid_utf8_before_fin(Config) ->
+    fragmented_invalid_utf8(Config, "/websockets_autobahn_endpoint.yaws", false).
+
+fragmented_invalid_utf8(Config, WSPath, Fin) ->
+    fragmented_invalid_utf8(Config, WSPath, all, Fin),
+    fragmented_invalid_utf8(Config, WSPath, 1, Fin),
     ok.
 
-fragmented_invalid_utf8(Config, WSPath, FragSz) ->
+fragmented_invalid_utf8(Config, WSPath, FragSz, Fin) ->
     Key      = "dGhlIHNhbXBsZSBub25jZQ==",
     Payload1 = <<16#ce,16#ba,16#e1,16#bd,16#b9,16#cf,16#83,16#ce,16#bc,16#ce>>,
-    Payload2 = <<16#b5,16#ed,16#a0,16#80,16#65,16#64,16#69,16#74,16#65,16#64>>,
+    IncompleteTail = <<16#b5,16#e1,16#bd>>,
+    Payload2 = case Fin of
+                   true  -> IncompleteTail;
+                   false -> <<IncompleteTail/binary,$A>>
+               end,
 
     {ok, Sock} = open("localhost", testsuite:get_yaws_port(1, Config)),
     ?assertMatch({ok, {101, _}}, wsopen(Sock, Key, WSPath, "http://localhost", 13)),
@@ -1127,7 +1139,7 @@ fragmented_invalid_utf8(Config, WSPath, FragSz) ->
     [Last|Rest1]  = lists:reverse(Rest0),
     Middles       = lists:reverse(Rest1),
     FirstFrame    = #frame{fin=false, opcode=?WS_OPCODE_TEXT, payload=First},
-    LastFrame     = #frame{opcode=?WS_OPCODE_CONTINUATION, payload=Last},
+    LastFrame     = #frame{fin=Fin, opcode=?WS_OPCODE_CONTINUATION, payload=Last},
     MiddleFrames  = lists:map(fun(P) ->
                                       #frame{fin=false,
                                              opcode=?WS_OPCODE_CONTINUATION,
@@ -1140,9 +1152,10 @@ fragmented_invalid_utf8(Config, WSPath, FragSz) ->
                   end, MiddleFrames),
     ?assertEqual(ok, send_frame(Sock, LastFrame, all)),
 
-    {ok, Frames} = wsflush(Sock, false),
-    ?assert(is_valid_close_frame(Frames, [?WS_STATUS_INVALID_PAYLOAD])),
-    ?assertEqual({ok, []}, wsflush(Sock, true)),
+    {ok, Frames} = wsflush(Sock, true),
+    ?assertMatch([#frame{opcode=?WS_OPCODE_CLOSE,
+                         payload = <<?WS_STATUS_INVALID_PAYLOAD:16, _/binary>>}],
+                 Frames),
     ?assertEqual(ok, close(Sock)),
     ok.
 
@@ -1666,7 +1679,8 @@ is_valid_close_frame([#frame{opcode=?WS_OPCODE_CLOSE, payload=Payload}|Rest],
                     end
             end;
         _  ->
-            io:format("    ERROR: Remaining frames after the Close frame~n")
+            io:format("    ERROR: Remaining frames after the Close frame~n"),
+            false
     end;
 is_valid_close_frame([#frame{opcode=OpCode}|_], _) ->
     io:format("    ERROR: Not a close frame: opcode=~p~n", [OpCode]),
