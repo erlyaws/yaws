@@ -69,6 +69,7 @@ out(A) ->
 %%% Get the fields to be part of the select
 select_fields([{"tablename",_}|T]) -> select_fields(T);
 select_fields([{_,undefined}|T])   -> select_fields(T);
+select_fields([{_,[]}|T])          -> select_fields(T);
 select_fields([H|T])               -> [H|select_fields(T)];
 select_fields([])                  -> [].
 
