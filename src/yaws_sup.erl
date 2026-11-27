@@ -50,6 +50,10 @@ child_specs() ->
     YawsTrace = {yaws_trace, {yaws_trace, start_link, []},
                  permanent, 5000, worker, [yaws_trace]},
 
+    RSSSup = {yaws_rss_sup,
+              {yaws_sup_restarts, start_rss_link, []},
+              transient, infinity, supervisor, [yaws_sup_restarts]},
+
     YawsServArgs = [_Env = get_app_args()],
     YawsServ = {yaws_server, {yaws_server, start_link, YawsServArgs},
                 permanent, 120000, worker, [yaws_server]},
@@ -64,7 +68,7 @@ child_specs() ->
              {yaws_ws_sup, start_link, []},
              transient, infinity, supervisor, [yaws_ws_sup]},
 
-    [YawsLog, YawsTrace, YawsServ, Sup, WSSup].
+    [YawsLog, YawsTrace, RSSSup, YawsServ, Sup, WSSup].
 
 %%----------------------------------------------------------------------
 %%----------------------------------------------------------------------
