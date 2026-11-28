@@ -692,10 +692,10 @@ when Yaws starts up. Defaults to \fIfalse\fR.
 
 .TP
 \fBpartial_post_size = Integer | nolimit\fR
-For request bodies such as \fBPOST\fR and \fBQUERY\fR, this parameter
-sets the amount of data delivered in each partial read. The default
-value is \fI10240\fR. Setting
-it to nolimit is potentially dangerous.
+For request bodies such as \fBPOST\fR, \fBPATCH\fR, and \fBQUERY\fR,
+this parameter sets the amount of data delivered in each partial read.
+The default value is \fI10240\fR. Setting it to nolimit is potentially
+dangerous.
 
 
 .TP
@@ -1653,13 +1653,13 @@ RFC 7231 section 4.3 lists the standard HTTP method names:
 
 An \fIoptions_asterisk_methods\fR setting can include any of these
 HTTP method names as well as \fIPATCH\fR and \fIQUERY\fR. Listing
-\fIQUERY\fR here only changes this virtual host's \fIOPTIONS *\fR
-response; it neither enables \fIQUERY\fR on any resource nor changes the
-default response for other configurations. \fIPATCH\fR is not mentioned
-in RFC 7231 but Yaws supports it. Yaws does not implement
-\fICONNECT\fR, but it supports it in \fIoptions_asterisk_methods\fR
-because it's possible to implement support for it using a
-\fIdispatchmod\fR.
+a method here only changes this virtual host's \fIOPTIONS *\fR
+response; it neither enables the method on any resource nor changes the
+default response for other configurations. The application implements
+\fIPATCH\fR semantics (RFC 5789), for example in an appmod.
+Yaws does not implement \fICONNECT\fR, but it supports it in
+\fIoptions_asterisk_methods\fR because it's possible to implement support
+for it using a \fIdispatchmod\fR.
 
 If \fIoptions_asterisk_methods\fR is set to an empty value, Yaws
 responds to \fIOPTIONS *\fR requests with status \fI400 Bad

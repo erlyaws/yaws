@@ -120,6 +120,16 @@ is \fB{partial, Binary}\fR, return \fB{get_more, Cont, State}\fR to read
 more of the body. \fB#arg.querydata\fR and \fBparse_query/1\fR refer
 only to the URL query string, not to the \fBQUERY\fR request body.
 
+.PP
+For a \fBPATCH\fR request, an appmod receives the method as the atom
+\fB'PATCH'\fR and reads the body the same way. The appmod implements
+the patch format, evaluates preconditions such as \fBIf-Match\fR, and
+applies changes atomically (RFC 5789). It can advertise \fBPATCH\fR
+in \fBAllow\fR and the patch media types in \fBAccept-Patch\fR on a
+targeted \fBOPTIONS\fR response, and return 415 with \fBAccept-Patch\fR
+for an unsupported media type. See \fBpatch_counter.erl\fR in the Yaws
+source tree for an example.
+
 .SH API
 
 .TP

@@ -19,6 +19,7 @@ all() ->
      query_page_discovery,
      query_page_methods,
      query_page_authorization,
+     patch_appmod,
      http_head,
      slow_get,
      appmod,
@@ -419,6 +420,78 @@ query_page_request(Sock, Host, Method, Target, Headers, Body) ->
     Request = Method ++ " " ++ Target ++ " HTTP/1.1",
     ok = testsuite:send_http_request(Sock, Request, [Host | Headers], Body),
     testsuite:receive_http_response(unknown, Sock, 5000).
+
+patch_appmod(Config) ->
+    Source = filename:join([?top_srcdir, "examples", "src", "patch_counter.erl"]),
+    Include = filename:join(?top_srcdir, "include"),
+    {ok, patch_counter, Binary} = compile:file(Source, [binary, {i, Include}]),
+    {module, patch_counter} = code:load_binary(patch_counter, Source, Binary),
+    try
+        Port = testsuite:get_yaws_port(12, Config),
+        Type = "application/vnd.example.counter-patch",
+        with_patch_socket(Port, fun patch_appmod_requests/3, Type),
+        with_patch_socket(Port, fun patch_unsupported_media/3, Type)
+    after
+        case whereis(patch_counter) of
+            undefined -> ok;
+            Pid -> gen_server:stop(Pid)
+        end,
+        code:delete(patch_counter),
+        code:purge(patch_counter)
+    end.
+
+with_patch_socket(Port, Test, Type) ->
+    {ok, Sock} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
+    try Test(Sock, {"Host", "localhost:" ++ integer_to_list(Port)}, Type)
+    after gen_tcp:close(Sock)
+    end.
+
+patch_appmod_requests(Sock, Host, Type) ->
+    ok = testsuite:send_http_request(Sock, {options, "/counter", "HTTP/1.1"}, [Host]),
+    {ok, {{_,200,_}, Options, <<>>}} = testsuite:receive_http_response(unknown, Sock, 5000),
+    ?assertEqual("GET, HEAD, OPTIONS, PATCH", proplists:get_value("allow", Options)),
+    ?assertEqual(Type, proplists:get_value("accept-patch", Options)),
+    InitialTag = patch_counter_value(Sock, Host, <<"0\n">>),
+    ?assertEqual("\"0\"", InitialTag),
+    ok = testsuite:send_http_request(Sock, {head, "/counter", "HTTP/1.1"}, [Host]),
+    {ok, {{_,200,_}, Head, <<>>}} = testsuite:receive_http_response(head, Sock, 5000),
+    ?assertEqual(InitialTag, proplists:get_value("etag", Head)),
+
+    Body = <<"set 10\nadd 2\n">>,
+    Match = {"If-Match", InitialTag},
+    {ok, {{_,428,_}, Required, <<>>}} = patch_counter_request(Sock, [Host], Type, Body),
+    ?assertEqual("no-store", proplists:get_value("cache-control", Required)),
+    ?assertMatch({ok, {{_,412,_}, _, <<>>}},
+                 patch_counter_request(Sock, [Host, {"If-Match", "W/" ++ InitialTag}], Type, Body)),
+
+    TagList = {"If-Match", "\"other,tag\", " ++ InitialTag},
+    ok = testsuite:send_http_request(Sock, "PATCH /counter HTTP/1.1", [Host, TagList], {Type, Body}),
+    {ok, {{_,204,_}, Patched}} = testsuite:receive_http_headers(Sock),
+    UpdatedTag = patch_counter_value(Sock, Host, <<"12\n">>),
+    ?assertNotEqual(InitialTag, UpdatedTag),
+    ?assertEqual(UpdatedTag, proplists:get_value("etag", Patched)),
+
+    ?assertMatch({ok, {{_,412,_}, _, <<>>}},
+                 patch_counter_request(Sock, [Host, Match], Type, Body)),
+    Chunked = {chunks, <<"6\r\nadd 5\n\r\n7\r\nset -1\n\r\n0\r\n\r\n">>},
+    ?assertMatch({ok, {{_,422,_}, _, <<>>}},
+                 patch_counter_request(Sock, [Host, {"If-Match", UpdatedTag}], Type, Chunked)),
+    ?assertEqual(UpdatedTag, patch_counter_value(Sock, Host, <<"12\n">>)).
+
+patch_unsupported_media(Sock, Host, Type) ->
+    {ok, {{_,415,_}, Headers, <<>>}} =
+        patch_counter_request(Sock, [Host, {"If-Match", "*"}], "text/plain", <<"set 10\nadd 2\n">>),
+    ?assertEqual(Type, proplists:get_value("accept-patch", Headers)),
+    ?assertEqual("close", proplists:get_value("connection", Headers)).
+
+patch_counter_request(Sock, Headers, Type, Body) ->
+    ok = testsuite:send_http_request(Sock, "PATCH /counter HTTP/1.1", Headers, {Type, Body}),
+    testsuite:receive_http_response(patch, Sock, 5000).
+
+patch_counter_value(Sock, Host, ExpectedBody) ->
+    ok = testsuite:send_http_request(Sock, {get, "/counter", "HTTP/1.1"}, [Host]),
+    {ok, {{_,200,_}, Headers, ExpectedBody}} = testsuite:receive_http_response(get, Sock, 5000),
+    proplists:get_value("etag", Headers).
 
 query_page_types() -> "application/json, application/vnd.example+json".
 

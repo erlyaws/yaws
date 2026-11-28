@@ -595,7 +595,7 @@ request such as:
 \item All the HTTP headers -- parsed into a \verb+#headers+ record
 \item The HTTP request -- parsed into a \verb+#http_request+ record
 \item \verb+clidata+ -- the request body, for methods such as
-  \verb+POST+ and \verb+QUERY+
+  \verb+POST+, \verb+PATCH+, and \verb+QUERY+
 \item \verb+querydata+ -- this is the remainder of the URL following
   the first occurrence of a '?' character, if any.
 \item \verb+docroot+ -- the absolute path to the docroot of the
@@ -1653,6 +1653,74 @@ A targeted \verb+OPTIONS+ request does not run the page. Its response
 lists \verb+QUERY+ in \verb+Allow+ and the configured types in
 \verb+Accept-Query+. \Yaws\ also sends \verb+Accept-Query+ with a 415
 response if the request's media type is not configured for that page.
+
+\subsection{HTTP PATCH}
+
+\Yaws\ recognizes the HTTP \verb+PATCH+ method (RFC 5789). An appmod
+receives \verb+'PATCH'+ as the request method and the body in
+\verb+Arg#arg.clidata+. If the body is \verb+{partial, Binary}+, the
+appmod can return \verb+{get_more, Cont, State}+ to read more. \Yaws\
+does not enable \verb+PATCH+ for static files or ordinary \verb+.yaws+
+pages, and does not interpret or apply patch documents.
+
+The appmod chooses the patch document format, evaluates any
+preconditions, and applies the entire set of changes atomically. In
+particular, readers must not see intermediate changes, and if any
+operation fails the original resource must remain unchanged. A targeted
+\verb+OPTIONS+ response can advertise \verb+PATCH+ in \verb+Allow+
+and list supported patch media types in \verb+Accept-Patch+. For an
+unsupported media type, return 415 with \verb+Accept-Patch+.
+
+\subsubsection{Counter appmod example}
+
+The \verb+examples/src/patch_counter.erl+ example holds a single
+in-memory counter per Erlang VM. From a built Yaws source tree, compile
+the example with the following command:
+
+\begin{verbatim}
+erlc -I include -o examples/ebin examples/src/patch_counter.erl
+\end{verbatim}
+
+Add the absolute path to \verb+examples/ebin+ as a global
+\verb+ebin_dir+ setting, then mount the appmod in a virtual host:
+
+\begin{verbatim}
+appmods = </counter, patch_counter>
+\end{verbatim}
+
+The only patch media type is
+\verb+application/vnd.example.counter-patch+, with no parameters. The
+document contains one or more newline-separated \verb+set N+ or
+\verb+add N+ operations, where \verb+N+ is a signed decimal integer.
+Empty lines are ignored. Each operation must leave the count in the
+range 0 through 1,000,000. The example returns 400 for malformed
+instructions, 422 for a value outside the range, and 413 if the patch
+document exceeds 4096 bytes. If the appmod rejects a request before
+reading the entire body, it closes the connection rather than leaving
+unread bytes on a persistent connection.
+
+\verb+GET+ returns the current value and a strong \verb+ETag+;
+\verb+HEAD+ returns the tag without the body. Send the tag in
+\verb+If-Match+ to patch the representation you read. The example
+returns 428 if the precondition is missing and 412 if no tag matches
+strongly (a weak tag never matches). It also accepts \verb+If-Match: *+
+to test only for existence. A single process checks the precondition
+and applies the operations to a tentative value, storing it only on
+success. A successful patch returns 204 with the resulting tag.
+
+For example, with the appmod mounted on port 8080 and a fresh counter,
+the following patch changes the counter from 0 to 12. Replace
+\verb+"0"+ in the request with the tag returned by your \verb+GET+:
+
+\begin{verbatim}
+url=http://localhost:8080/counter
+curl -i -X OPTIONS "$url"
+curl -i "$url"
+printf 'set 10\nadd 2\n' | curl -i -X PATCH \
+  -H 'Content-Type: application/vnd.example.counter-patch' \
+  -H 'If-Match: "0"' --data-binary @- "$url"
+curl -i "$url"
+\end{verbatim}
 
 
 \section{The opaque data}
@@ -3117,9 +3185,10 @@ The following directives are allowed inside a server definition.
               docroot is quite large and the time to search it is
               prohibitive when \Yaws\  starts up. Defaults to false.
 
-\item       \verb+partial_post_size = Integer+ ---
-              When a \Yaws\ file receives large \verb+POST+s, the amount of
-              data received in each chunk is determined by this parameter.
+\item       \verb+partial_post_size = Integer | nolimit+ ---
+              For request bodies such as \verb+POST+, \verb+PATCH+, and
+              \verb+QUERY+, this parameter sets how much data the handler
+              receives in each partial read.
               The default value is 10240. Setting it to nolimit is
               potentially dangerous.
 
@@ -3996,12 +4065,12 @@ GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE
               An \verb+options_asterisk_methods+ setting can include
               any of these HTTP method names as well as
               \verb+PATCH+ and \verb+QUERY+.
-              Listing \verb+QUERY+ here only changes this virtual
+              Listing a method here only changes this virtual
               host's \verb+OPTIONS *+ response; it does not enable
-              \verb+QUERY+ on any resource or change the default
+              the method on any resource or change the default
               response for other configurations.
-              \verb+PATCH+ is not mentioned in RFC 9110.
-              but \Yaws\ supports it. \Yaws\ does not implement
+              \verb+PATCH+ semantics (RFC 5789) are implemented by the
+              application, for example by an appmod. \Yaws\ does not implement
               \verb+CONNECT+, but it supports it in
               \verb+options_asterisk_methods+ because it's possible to
               implement support for it using a \verb+dispatchmod+.

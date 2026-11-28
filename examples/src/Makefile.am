@@ -4,6 +4,7 @@ MODULES = advanced_echo_callback.erl		\
 	  authmod_gssapi.erl 			\
 	  basic_echo_callback.erl		\
 	  basic_echo_callback_extended.erl 	\
+	  patch_counter.erl			\
 	  server_sent_events.erl
 
 EXTRA_DIST = $(MODULES)
