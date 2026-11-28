@@ -693,23 +693,16 @@ test() ->
                               ok ->
                                   try round_trip_one_char(E) of
                                       ok ->
-                                          Fs;
-                                      Reason ->
-                                          [{round_trip_one_char, E, Reason} |
-                                           Fs]
+                                          Fs
                                   catch
                                       _:Reason ->
                                           [{round_trip_one_char, E, Reason} |
                                            Fs]
-                                  end;
-                              Reason ->
-                                  [{round_trip, E, Reason} | Fs]
+                                  end
                           catch
                               _:Reason ->
                                   [{round_trip, E, Reason} | Fs]
-                          end;
-                      Reason ->
-                          [{erlang_to_json, E, J, Reason} | Fs]
+                          end
                   catch
                       _:Reason ->
                           [{erlang_to_json, E, J, Reason} | Fs]

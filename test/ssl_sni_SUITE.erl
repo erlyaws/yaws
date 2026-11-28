@@ -13,7 +13,8 @@ all() ->
      sni_strict,
      sni_required_on_vhost,
      sni_not_enabled,
-     sni_without_tls
+     sni_without_tls,
+     send_without_server_config
     ].
 
 groups() ->
@@ -62,6 +63,8 @@ init_per_testcase(sni_required_on_vhost, Config) ->
     restart_yaws("yaws_sni_required_on_vhost.conf", Config);
 init_per_testcase(sni_without_tls, Config) ->
     Config;
+init_per_testcase(send_without_server_config, Config) ->
+    restart_yaws("yaws_sni_disabled.conf", Config);
 init_per_testcase(_Test, Config) ->
     Config.
 
@@ -187,6 +190,24 @@ sni_without_tls(_Config) ->
     Env = #env{debug=false, conf={file, ?tempdir(?MODULE) ++ "/yaws_sni_without_tls.conf"}},
     ?assertMatch({error, _}, yaws_config:load(Env)),
     ok.
+
+send_without_server_config(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
+    Opts = [binary, {active, false}, {verify, verify_none}],
+    {ok, Socket} = ssl:connect({127,0,0,1}, Port, Opts, 5000),
+    undefined = get(sc),
+    put(gc, #gconf{}),
+    try
+        Req = "GET /index.yaws HTTP/1.1\r\nHost: localhost\r\n\r\n",
+        ?assertEqual(ok, yaws:gen_tcp_send(Socket, Req)),
+        ?assertMatch({ok, {{_,200,_}, _, _}},
+                     testsuite:receive_http_response(get, Socket, 5000)),
+        ?assertEqual(ok, ssl:close(Socket)),
+        ?assertExit(normal, yaws:gen_tcp_send(Socket, Req))
+    after
+        erase(gc),
+        ssl:close(Socket)
+    end.
 
 %%====================================================================
 restart_yaws(File, Config)->

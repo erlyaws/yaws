@@ -126,6 +126,7 @@ groups() ->
        advanced_close_invalid_utf8,
        advanced_close_valid_codes,
        advanced_close_invalid_codes,
+       truncated_frame,
        close_timeout,
        keepalive_timeout,
        too_big_frame,
@@ -1432,6 +1433,26 @@ close_invalid_code(Config, WSPath, Code) ->
     ?assert(is_valid_close_frame(Frames, [?WS_STATUS_PROTO_ERROR])),
     ?assertEqual(ok, close(Sock)),
     ok.
+
+truncated_frame(Config) ->
+    Key    = "dGhlIHNhbXBsZSBub25jZQ==",
+    WSPath = "/websockets_example_endpoint.yaws",
+    Children = supervisor:which_children(yaws_ws_sup),
+    {ok, Sock} = open("localhost", testsuite:get_yaws_port(1, Config)),
+    try
+        ?assertMatch({ok, {101, _}}, wsopen(Sock, Key, WSPath, "http://localhost", 13)),
+        [{_, Owner, worker, _}] = supervisor:which_children(yaws_ws_sup) -- Children,
+        Ref = monitor(process, Owner),
+        ?assertEqual(ok, gen_tcp:send(Sock, <<16#81, 5, "x">>)),
+        ?assertEqual(ok, gen_tcp:shutdown(Sock, write)),
+        receive
+            {'DOWN', Ref, process, Owner, Reason} -> ?assertEqual(normal, Reason)
+        after 5000 ->
+            ct:fail(websocket_did_not_stop)
+        end
+    after
+        close(Sock)
+    end.
 
 close_timeout(Config) ->
     Key    = "dGhlIHNhbXBsZSBub25jZQ==",

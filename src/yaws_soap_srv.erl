@@ -181,9 +181,7 @@ request(Model, {M,F}, {Req, Attachments}, SessionValue, Action) ->
 					   Attachments])
 			  catch C:E -> {C, E } end);
         {error, Error} ->
-            cli_error(Error);
-	OtherError ->
-            srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))
+            cli_error(Error)
     catch
 	_:OtherError ->
             srv_error(io_lib:format("Error parsing message: ~p", [OtherError]))

@@ -558,21 +558,8 @@ handle_callback_info(Info, #state{cbinfo=CbInfo}=State) ->
     end.
 
 handle_abnormal_closure(#state{wsstate=WSState}=State) ->
-    %% The only way we should get here is due to an abnormal close. Section
-    %% 7.1.5 of RFC 6455 specifies 1006 as the connection close code for
-    %% abnormal closure. It's also described in section 7.4.1.
-    CloseStatus    = ?WS_STATUS_ABNORMAL_CLOSURE,
-    ClosePayload   = <<CloseStatus:16/big>>,
-    CloseWSState   = WSState#ws_state{sock=undefined,frag_type=none},
-    CloseFrameInfo = #ws_frame_info{fin         = 1,
-                                    rsv         = 0,
-                                    opcode      = close,
-                                    masked      = 0,
-                                    masking_key = <<>>,
-                                    length      = 2,
-                                    payload     = ClosePayload,
-                                    data        = ClosePayload,
-                                    ws_state    = CloseWSState},
+    CloseFrameInfo = abnormal_close_frame(WSState),
+    CloseWSState   = CloseFrameInfo#ws_frame_info.ws_state,
     Result = case State#state.cbtype of
                  basic ->
                      basic_messages([CloseFrameInfo],
@@ -585,6 +572,23 @@ handle_abnormal_closure(#state{wsstate=WSState}=State) ->
         {ok, State1, _} -> {stop, normal, State1};
         {stop, State1}  -> {stop, normal, State1}
     end.
+
+abnormal_close_frame(WSState) ->
+    %% The only way we should get here is due to an abnormal close. Section
+    %% 7.1.5 of RFC 6455 specifies 1006 as the connection close code for
+    %% abnormal closure. It's also described in section 7.4.1.
+    CloseStatus    = ?WS_STATUS_ABNORMAL_CLOSURE,
+    ClosePayload   = <<CloseStatus:16/big>>,
+    CloseWSState   = WSState#ws_state{sock=undefined,frag_type=none},
+    #ws_frame_info{fin         = 1,
+                   rsv         = 0,
+                   opcode      = close,
+                   masked      = 0,
+                   masking_key = <<>>,
+                   length      = 2,
+                   payload     = ClosePayload,
+                   data        = ClosePayload,
+                   ws_state    = CloseWSState}.
 
 
 %% ----
@@ -1076,24 +1080,12 @@ unframe_one(WSState, FirstPacket, Opts) ->
                 Else ->
                     Else
             end;
-        {tcp_error, Reason} ->
-            %% FIXME: close the connection ?
-            error_logger:error_msg("Abnormal Closure: ~p", [Reason]),
-            CloseStatus    = ?WS_STATUS_ABNORMAL_CLOSURE,
-            ClosePayload   = <<CloseStatus:16/big>>,
-            CloseWSState   = WSState#ws_state{sock=undefined,frag_type=none},
-            {#ws_frame_info{fin         = 1,
-                            rsv         = 0,
-                            opcode      = close,
-                            masked      = 0,
-                            masking_key = 0,
-                            length      = 2,
-                            payload     = ClosePayload,
-                            data        = ClosePayload,
-                            ws_state    = CloseWSState}, <<>>};
         Else ->
             Else
     catch
+        throw:{tcp_error, Reason} ->
+            error_logger:error_msg("Abnormal Closure: ~p", [Reason]),
+            {abnormal_close_frame(WSState), <<>>};
         _:Else ->
             Else
     end.

@@ -4114,12 +4114,8 @@ parse_range_throw(L, Tot) ->
 
 %% This is not exactly what the RFC describes, but we do not want to
 %% deal with multipart/byteranges.
-unite_ranges(all, _) ->
-    all;
 unite_ranges(error, R) ->
     R;
-unite_ranges(_, all) ->
-    all;
 unite_ranges(R, error) ->
     R;
 unite_ranges({fromto, F0, T0, Tot},{fromto,F1,T1, Tot}) ->

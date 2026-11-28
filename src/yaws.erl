@@ -2613,14 +2613,10 @@ cli_recv_trace(Trace, Res) ->
 gen_tcp_send(S, Data) ->
     SC = get(sc),
     Res = case SC of
+              undefined when element(1, S) =:= sslsocket ->
+                  ssl:send(S, Data);
               undefined ->
-                  try ssl:sockname(S) of
-                      {ok, _} -> ssl:send(S, Data);
-                      _ -> gen_tcp:send(S, Data)
-                  catch
-                      _:_ ->
-                          gen_tcp:send(S, Data)
-                  end;
+                  gen_tcp:send(S, Data);
               _ ->
                   case SC#sconf.ssl of
                       undefined -> gen_tcp:send(S, Data);
@@ -3428,15 +3424,10 @@ integer_to_ip(_, _) ->
 
 netmask_to_integer(Type, NetMask) ->
     try erlang:list_to_integer(NetMask) of
-        I when is_integer(I) ->
+        I ->
             case Type of
                 ipv4 -> (1 bsl ?MAXBITS_IPV4) - (1 bsl (?MAXBITS_IPV4 - I));
                 ipv6 -> (1 bsl ?MAXBITS_IPV6) - (1 bsl (?MAXBITS_IPV6 - I))
-            end;
-        _ ->
-            case ip_to_integer(NetMask) of
-                {Type, MaskInt} -> MaskInt;
-                _               -> throw({error, einval})
             end
     catch
         _:_ ->

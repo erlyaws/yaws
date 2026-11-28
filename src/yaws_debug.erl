@@ -135,11 +135,7 @@ fail({{debug,Fstr}, File,Line,Fmt, Args}) ->
                           [Fstr, node(), filename:basename(File),
                            Line, self()])),
 
-    try debug_format(user, Str ++ Fmt ++ "~n", Args) of
-        ok -> ok;
-        _ -> debug_format(user, "ERROR ~p:~p: Pid ~w: (bad format)~n~p,~p~n",
-                       [File, Line, self(), Fmt, Args]),
-             ok
+    try debug_format(user, Str ++ Fmt ++ "~n", Args)
     catch
         _:_ ->
             debug_format(user, "ERROR ~p:~p: Pid ~w: (bad format)~n~p,~p~n",
@@ -148,12 +144,7 @@ fail({{debug,Fstr}, File,Line,Fmt, Args}) ->
     end;
 
 fail({format, File,Line,Fmt,Args}) ->
-    try debug_format(user, Fmt,Args) of
-        ok -> ok;
-        _ ->
-            debug_format(user, "ERROR ~p:~p: Pid ~w: (bad format)~n~p,~p~n",
-                      [File, Line, self(), Fmt, Args]),
-            ok
+    try debug_format(user, Fmt,Args)
     catch
         _:_ ->
             debug_format(user, "ERROR ~p:~p: Pid ~w: (bad format)~n~p,~p~n",
