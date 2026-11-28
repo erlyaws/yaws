@@ -3343,6 +3343,21 @@ The following directives are allowed inside a server definition.
               It is possible to have multiple reverse proxies inside the same
               server by supplying multiple \verb+revproxy+ directives.
 
+              The upstream server decides whether it supports \verb+QUERY+
+              and which media types it accepts. The local
+              \verb+query_resource+ settings do not apply. \Yaws\ forwards
+              the request body, URL query string, and conditional headers
+              and relays the upstream status and discovery headers such as
+              \verb+Accept-Query+. If \Yaws\ already sent
+              \verb+100 Continue+, it does not forward that expectation or
+              relay an upstream \verb+100 Continue+ response.
+
+              \Yaws\ does not follow upstream redirects. It resolves
+              relative \verb+Location+ and \verb+Content-Location+ references
+              against the upstream request URL. References to the upstream
+              origin are mapped to the public proxy mount, preserving their
+              query strings. External references are passed through unchanged.
+
               If the optional keyword \verb+intercept_mod+ and
               \verb+Module+ are supplied in the \verb+revproxy+ directive,
               then \verb+Module+ indicates a proxy request and response

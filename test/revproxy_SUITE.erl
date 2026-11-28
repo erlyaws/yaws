@@ -22,6 +22,10 @@ all() ->
      failed_req_interception,
      failed_resp_interception,
      good_interception,
+     query_framing,
+     query_expect_continue,
+     query_conditional_and_discovery,
+     query_result_locations,
      fwdproxy,
      ipv6_address
     ].
@@ -260,6 +264,117 @@ good_interception(Config) ->
     ?assertEqual("true", proplists:get_value("x-test-interception", Hdrs)),
     ?assertEqual(Res, Body),
     ok.
+
+query_framing(Config) ->
+    Type = "application/vnd.example.query; format=binary",
+    Encoded = zlib:gzip(list_to_binary(lists:seq(0, 255))),
+    Headers = [{"Content-Type", Type}, {"Content-Encoding", "gzip"},
+               {"If-Match", "\"current\""}, {"If-None-Match", "\"other\""}],
+    with_query_proxy(
+      Config,
+      fun(Sock, Host) ->
+              {ok, {{_,200,_}, _, Fixed}} =
+                  query_proxy_request(Sock, Host, query, "/search?view=a%2Bb+1&limit=2", Headers, Encoded),
+              ?assertEqual({'QUERY', "/?view=a%2Bb+1&limit=2",
+                            [Type, "gzip", "\"current\"", "\"other\"",
+                             integer_to_list(byte_size(Encoded)), undefined, undefined], Encoded},
+                           binary_to_term(Fixed, [safe])),
+              <<First:13/binary, Last/binary>> = Encoded,
+              ChunkedBody = {Type, {chunks, ["D\r\n", First, "\r\n",
+                                             integer_to_list(byte_size(Last), 16), "\r\n",
+                                             Last, "\r\n0\r\n\r\n"]}},
+              {ok, {{_,200,_}, _, Chunked}} =
+                  query_proxy_request(Sock, Host, query, "/search/jobs/echo?format=raw%2fdata",
+                                      Headers, ChunkedBody),
+              ?assertEqual({'QUERY', "/jobs/echo?format=raw%2fdata",
+                            [Type, "gzip", "\"current\"", "\"other\"", undefined, "chunked", undefined],
+                            Encoded}, binary_to_term(Chunked, [safe]))
+      end).
+
+query_expect_continue(Config) ->
+    with_query_proxy(
+      Config,
+      fun(Sock, Host) ->
+              Type = "application/vnd.example.query",
+              Body = <<0, 128, 255, 13, 10>>,
+              Size = integer_to_list(byte_size(Body)),
+              ok = testsuite:send_http_headers(Sock, {query, "/search/jobs/continue", "HTTP/1.1"},
+                                              [Host, {"Content-Type", Type}, {"Content-Length", Size},
+                                               {"Expect", "100-CoNtInUe"}]),
+              {ok, {{_,100,_}, _, <<>>}} = testsuite:receive_http_response(head, Sock, 5000),
+              ok = testsuite:send_http_body(Sock, Body),
+              {ok, {{_,200,_}, _, Response}} = testsuite:receive_http_response(unknown, Sock, 5000),
+              ?assertEqual({'QUERY', "/jobs/continue",
+                            [Type, undefined, undefined, undefined, Size, undefined, undefined], Body},
+                           binary_to_term(Response, [safe]))
+      end).
+
+query_conditional_and_discovery(Config) ->
+    Type = "application/vnd.example.query",
+    with_query_proxy(
+      Config,
+      fun(Sock, Host) ->
+              Cases = [{options, "/search/jobs/conditional", [], 200},
+                       {query, "/search/jobs/conditional", [{"Content-Type", Type},
+                                                            {"If-Match", "\"stale\""}], 412},
+                       {query, "/search/jobs/unsupported", [{"Content-Type", "text/plain"}], 415}],
+              lists:foreach(
+                fun({Method, Target, RequestHeaders, Status}) ->
+                        {ok, {{_,Status,_}, Headers, <<>>}} =
+                            query_proxy_request(Sock, Host, Method, Target, RequestHeaders, <<>>),
+                        ?assertEqual(Type, proplists:get_value("accept-query", Headers)),
+                        case Method of
+                            options -> ?assertEqual("OPTIONS, QUERY", proplists:get_value("allow", Headers));
+                            query -> ok
+                        end
+                end, Cases)
+      end).
+
+query_result_locations(Config) ->
+    with_query_proxy(
+      Config,
+      fun(Sock, {"Host", Authority} = Host) ->
+              Type = [{"Content-Type", "application/vnd.example.query"}],
+              Origin = "http://" ++ Authority,
+              Redirects = [{"/search/jobs/relative", "/result?view=a%2Bb+1&limit=2"},
+                           {"/search/jobs/absolute", "/result?view=absolute%26ref"},
+                           {"/search/jobs/query-only?view=old", "/jobs/query-only?view=new%20value"}],
+              lists:foreach(
+                fun({Request, Result}) ->
+                        {ok, {{_,303,_}, Headers, <<>>}} = query_proxy_request(Sock, Host, query, Request, Type, <<>>),
+                        Location = proplists:get_value("location", Headers),
+                        ?assertEqual(Origin ++ "/search" ++ Result, Location),
+                        ?assertEqual(list_to_binary("GET " ++ Result), follow_query_location(Location))
+                end, Redirects),
+              Contents = [{"/search/jobs/content", "/result?view=content%2Fref"},
+                          {"/search/jobs/content-absolute", "/result?view=absolute%26ref"}],
+              lists:foreach(
+                fun({Request, Result}) ->
+                        {ok, {{_,200,_}, Headers, Body}} = query_proxy_request(Sock, Host, query, Request, Type, <<>>),
+                        ContentLocation = proplists:get_value("content-location", Headers),
+                        ?assertEqual(Origin ++ "/search" ++ Result, ContentLocation),
+                        ?assertEqual(Body, follow_query_location(ContentLocation))
+                end, Contents),
+              {ok, {{_,303,_}, External, <<>>}} =
+                  query_proxy_request(Sock, Host, query, "/search/jobs/external", Type, <<>>),
+              ?assertEqual("https://example.invalid/result?view=elsewhere", proplists:get_value("location", External)),
+              ?assertEqual("//example.invalid/result?view=elsewhere", proplists:get_value("content-location", External))
+      end).
+
+with_query_proxy(Config, Test) ->
+    Port = testsuite:get_yaws_port(8, Config),
+    {ok, Sock} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
+    try Test(Sock, {"Host", "127.0.0.1:" ++ integer_to_list(Port)})
+    after gen_tcp:close(Sock)
+    end.
+
+query_proxy_request(Sock, Host, Method, Target, Headers, Body) ->
+    ok = testsuite:send_http_request(Sock, {Method, Target, "HTTP/1.1"}, [Host | Headers], Body),
+    testsuite:receive_http_response(unknown, Sock, 5000).
+
+follow_query_location(Location) ->
+    {ok, {{_,200,_}, _, Body}} = testsuite:http_get(Location),
+    Body.
 
 
 fwdproxy(Config) ->

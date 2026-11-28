@@ -941,6 +941,18 @@ makes the \fIexample\fR website appear under \fI/tmp/foo\fR.
 
 It is possible to have multiple reverse proxies inside the same server.
 
+The upstream server decides whether it supports \fIQUERY\fR and which
+media types it accepts; local \fIquery_resource\fR settings do not apply.
+Yaws forwards the request body, URL query string, and conditional headers,
+and relays the upstream status and discovery headers such as
+\fIAccept-Query\fR. If Yaws has already sent \fI100 Continue\fR, it does
+not forward that expectation or relay another \fI100 Continue\fR.
+
+Yaws does not follow upstream redirects. It resolves relative
+\fILocation\fR and \fIContent-Location\fR references against the upstream
+request URL and maps references to the upstream origin to the public proxy
+mount, preserving their query strings. External references are unchanged.
+
 You can optionally configure an interception module for each reverse proxy,
 allowing your application to examine and modify requests and HTTP headers
 as they pass through the proxy from client to backend server and also

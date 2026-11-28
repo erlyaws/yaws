@@ -28,6 +28,7 @@
                                     %%   terminate
                    prefix,          %% The prefix to strip and add
                    url,             %% the url we're proxying to
+                   upstream_target,
                    r_meth,          %% what req method are we processing
                    r_host,          %%   and value of Host: for the cli request
 
@@ -99,17 +100,22 @@ out(#arg{state=#revproxy{}=RPState}=Arg)
                                 end
                         end,
     ReqStr  = yaws_api:reformat_request(NewReq),
-    HdrsStr = yaws:headers_to_str(NewHdrs),
+    OutHdrs = case get(expect_continue_sent) of
+                  true -> yaws_api:delete_header(NewHdrs, {lower, "expect"});
+                  _ -> NewHdrs
+              end,
+    HdrsStr = yaws:headers_to_str(OutHdrs),
     case send(RPState, [ReqStr, "\r\n", HdrsStr, "\r\n"]) of
         ok ->
+            SentState = RPState#revproxy{upstream_target = upstream_target(NewReq)},
             TEHdrs = lists:reverse(yaws:split_sep(
                                      yaws:to_lower(Hdrs#headers.transfer_encoding), $,)),
             case TEHdrs of
                 ["chunked"|_] ->
                     ?Debug("Request content is chunked~n", []),
-                    out(Arg#arg{state=RPState#revproxy{state=sendchunk}});
+                    out(Arg#arg{state=SentState#revproxy{state=sendchunk}});
                 _ ->
-                    out(Arg#arg{state=RPState#revproxy{state=sendcontent}})
+                    out(Arg#arg{state=SentState#revproxy{state=sendcontent}})
             end;
         {error, Reason} ->
             ?Debug("TCP error: ~p~n", [Reason]),
@@ -212,6 +218,9 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvheaders ->
             close(RPState),
             outXXX(500, Arg);
 
+        {#http_response{status=100}, _} ->
+            out(Arg);
+
         {Resp0, RespHdrs0} when is_record(Resp0, http_response) ->
             ?Debug("Response headers received from backend server:~n"
                    " - ~s~n - ~s~n", [?format_record(Resp0, http_response),
@@ -255,7 +264,6 @@ out(#arg{state=RPState}=Arg) when RPState#revproxy.state == recvheaders ->
                     RPState2 = RPState1#revproxy{state=terminate},
                     out(Arg#arg{state=RPState2});
 
-                Resp#http_response.status =:= 100 orelse
                 Resp#http_response.status =:= 204 orelse
                 Resp#http_response.status =:= 205 orelse
                 Resp#http_response.status =:= 304 orelse
@@ -695,9 +703,13 @@ get_connection_status(Version, ReqHdrs, RespHdrs) ->
 rewrite_request(RPState, Req) ->
     ?Debug("Request path to rewrite:  ~p~n", [Req#http_request.path]),
     {abs_path, Path} = Req#http_request.path,
-    NewPath = strip_prefix(Path, RPState#revproxy.prefix),
+    NewPath = slash_append("/", strip_prefix(Path, RPState#revproxy.prefix)),
     ?Debug("New Request path: ~p~n", [NewPath]),
     Req#http_request{path = {abs_path, NewPath}}.
+
+upstream_target(#http_request{path = {abs_path, Path}}) -> Path;
+upstream_target(#http_request{path = {absoluteURI, _, _, _, Path}}) -> Path;
+upstream_target(_) -> "/".
 
 
 rewrite_client_headers(RPState, Hdrs) ->
@@ -718,51 +730,59 @@ rewrite_client_headers(RPState, Hdrs) ->
 
 
 rewrite_server_headers(RPState) ->
-    Hdrs = RPState#revproxy.headers,
-    ?Debug("Location header to rewrite:  ~p~n", [Hdrs#headers.location]),
-    Loc = case Hdrs#headers.location of
-              undefined ->
-                  undefined;
-              L ->
-                  ?Debug("parse_url(~p)~n", [L]),
-                  LocUrl   = yaws_api:parse_url(L),
-                  ProxyUrl = RPState#revproxy.url,
-                  if
-                      LocUrl#url.scheme == ProxyUrl#url.scheme andalso
-                      LocUrl#url.host   == ProxyUrl#url.host   andalso
-                      LocUrl#url.port   == ProxyUrl#url.port ->
-                          rewrite_loc_url(RPState, LocUrl);
+    Hdrs = (RPState#revproxy.headers)#headers{connection = RPState#revproxy.cliconn_status},
+    SC = get(sc),
+    case ?sc_forward_proxy(SC) of
+        true -> Hdrs;
+        false ->
+            lists:foldl(fun(Header, Acc) -> rewrite_result_header(Header, Acc, RPState, SC) end,
+                        Hdrs, [location, {lower, "content-location"}])
+    end.
 
-                      element(1, L) == 'EXIT' ->
-                          rewrite_loc_rel(RPState, L);
+rewrite_result_header(Header, Hdrs, RPState, SC) ->
+    case yaws_api:get_header(Hdrs, Header) of
+        undefined -> Hdrs;
+        Value ->
+            case rewrite_result_reference(Value, RPState, SC) of
+                Value -> Hdrs;
+                Public -> yaws_api:set_header(Hdrs, Header, Public)
+            end
+    end.
 
-                      true ->
-                          L
-                  end
-          end,
-    ?Debug("New Location header: ~p~n", [Loc]),
+rewrite_result_reference(Value, RPState, SC) ->
+    Base = uri_chars([yaws_api:reformat_url(RPState#revproxy.url), RPState#revproxy.upstream_target]),
+    case uri_string:parse(Base) of
+        #{scheme := _, host := _} = BaseUri ->
+            case uri_string:resolve(uri_chars(Value), BaseUri, [return_map]) of
+                #{scheme := _, host := _, path := Path} = Uri ->
+                    case same_origin(Uri, BaseUri) of
+                        true ->
+                            PublicPath = slash_append(RPState#revproxy.prefix, Path),
+                            Suffix = (maps:with([query, fragment], Uri))#{path => []},
+                            yaws:redirect_scheme(SC) ++
+                                yaws:redirect_host(SC, RPState#revproxy.r_host) ++
+                                PublicPath ++ uri_string:recompose(Suffix);
+                        false -> Value
+                    end;
+                _ -> Value
+            end;
+        _ -> Value
+    end.
 
-    %% FIXME: And we also should do cookies here ...
+uri_chars(Value) ->
+    binary_to_list(iolist_to_binary(Value)).
 
-    Hdrs#headers{location = Loc, connection = RPState#revproxy.cliconn_status}.
+same_origin(Uri, Base) ->
+    not maps:is_key(userinfo, Uri) andalso uri_origin(Uri) =:= uri_origin(Base).
 
-
-%% Rewrite a properly formatted location redir
-rewrite_loc_url(RPState, LocUrl) ->
-    SC=get(sc),
-    Scheme    = yaws:redirect_scheme(SC),
-    RedirHost = yaws:redirect_host(SC, RPState#revproxy.r_host),
-    [Scheme, RedirHost, slash_append(RPState#revproxy.prefix, LocUrl#url.path)].
-
-
-%% This is the case for broken webservers that reply with
-%% Location: /path
-%% or even worse, Location: path
-rewrite_loc_rel(RPState, Loc) ->
-    SC=get(sc),
-    Scheme    = yaws:redirect_scheme(SC),
-    RedirHost = yaws:redirect_host(SC, RPState#revproxy.r_host),
-    [Scheme, RedirHost, Loc].
+uri_origin(#{scheme := Scheme, host := Host} = Uri) ->
+    LowerScheme = yaws:to_lower(Scheme),
+    Port = case maps:get(port, Uri, undefined) of
+               undefined when LowerScheme =:= "http" -> 80;
+               undefined when LowerScheme =:= "https" -> 443;
+               Other -> Other
+           end,
+    {LowerScheme, yaws:to_lower(Host), Port}.
 
 
 

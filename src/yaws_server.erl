@@ -1802,7 +1802,8 @@ body_method(CliSock, IPPort, Req, Head) ->
             case yaws:to_lower(Value) of
                 "100-continue" ->
                     Arg = make_arg(CliSock, IPPort, Head, Req, undefined),
-                    deliver_100(CliSock, Arg);
+                    deliver_100(CliSock, Arg),
+                    put(expect_continue_sent, true);
                 _ -> ok
             end
     end,
