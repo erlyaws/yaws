@@ -2835,6 +2835,8 @@ deliver_100(CliSock, Arg) ->
 deliver_xxx(CliSock, _Req, Arg, Code) ->
     deliver_xxx(CliSock, _Req, Arg, Code, "").
 deliver_xxx(CliSock, _Req, Arg, Code, ExtraHtml) ->
+    deliver_xxx(CliSock, _Req, Arg, Code, ExtraHtml, undefined).
+deliver_xxx(CliSock, _Req, Arg, Code, ExtraHtml, Allow) ->
     B = ["<html><h1>", integer_to_list(Code), $\ ,
          yaws_api:code_to_phrase(Code), "</h1>", ExtraHtml, "</html>"],
     Sz = iolist_size(B),
@@ -2847,6 +2849,7 @@ deliver_xxx(CliSock, _Req, Arg, Code, ExtraHtml) ->
               chunked = false,
               server = Server,
               date = yaws:make_date_header(),
+              allow = Allow,
               connection = yaws:make_connection_close_header(true),
               content_length = yaws:make_content_length_header(Sz),
               contlen = Sz,
@@ -2867,7 +2870,8 @@ deliver_405(CliSock, Req, Arg, Methods) ->
                     ["<p>This resource allows ",
                      yaws:join_sep([atom_to_list(M) || M <- Methods], ", "),
                      "</p>"]),
-    deliver_xxx(CliSock, Req, Arg, 405, Methods_msg).
+    deliver_xxx(CliSock, Req, Arg, 405, Methods_msg,
+                yaws:make_allow_header(Methods)).
 
 deliver_411(CliSock, Req, Arg) ->
     deliver_xxx(CliSock, Req, Arg, 411). % Length Required

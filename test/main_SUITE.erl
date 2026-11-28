@@ -10,6 +10,7 @@ all() ->
     [
      http_options,
      options_asterisk_methods,
+     method_not_allowed,
      http_head,
      slow_get,
      appmod,
@@ -148,6 +149,31 @@ options_asterisk_methods(Config) ->
     ?assertEqual(ok, gen_tcp:close(Sock2)),
 
     ok.
+
+method_not_allowed(Config) ->
+    Port = testsuite:get_yaws_port(1, Config),
+    Headers = [{"Host", "127.0.0.1:" ++ integer_to_list(Port)}],
+    Resources = [{"/hello.txt", "GET, HEAD, OPTIONS"},
+                 {"/exhtml.yaws", "GET, POST, HEAD, OPTIONS"}],
+    lists:foreach(
+      fun({Path, Allow}) ->
+              {ok, Sock} = gen_tcp:connect("127.0.0.1", Port,
+                                           [binary, {active, false}]),
+              try
+                  ok = testsuite:send_http_request(Sock,
+                                                  {patch, Path, "HTTP/1.1"},
+                                                  Headers),
+                  {ok, {{_,405,_}, Hdrs, Body}} =
+                      testsuite:receive_http_response(patch, Sock, 5000),
+                  ?assertEqual(Allow, proplists:get_value("allow", Hdrs)),
+                  ?assertEqual("close", proplists:get_value("connection", Hdrs)),
+                  MethodsMsg = list_to_binary("This resource allows " ++ Allow),
+                  ?assertMatch({_, _}, binary:match(Body, MethodsMsg)),
+                  ?assertEqual({error, closed}, gen_tcp:recv(Sock, 0, 5000))
+              after
+                  gen_tcp:close(Sock)
+              end
+      end, Resources).
 
 http_head(Config) ->
     Port = testsuite:get_yaws_port(1, Config),
