@@ -22,7 +22,8 @@ SUBDIRS += examples/src	examples/ebin examples/include \
 EXTRA_DIST = ChangeLog dialyzer_checker known_dialyzer_warnings LICENSE 	\
 	     README.md README.osx README.pkg-config 			\
 	     rebar.config rebar.config.script two-mode-mode.el vsn.mk	\
-	     include.mk erlang_deps.mk ssl munin contrib www
+	     include.mk erlang_deps.mk ssl munin contrib www 			\
+	     test/test_dialyzer_checker.py
 
 CLEANFILES = dialyzer_warnings dialyzer_warnings.log
 DISTCLEANFILES = yaws.plt yaws.plt.tmp

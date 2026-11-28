@@ -132,6 +132,9 @@ again after switching Erlang/OTP installations or installing optional dependenci
 Calls to missing optional dependencies are still reported as unknown. The full
 warning report, before filtering, is saved in `dialyzer_warnings.log`.
 
+The checker matches whole warnings against `known_dialyzer_warnings`, regardless
+of order. Run its regression tests with `python3 test/test_dialyzer_checker.py`.
+
 
 Reproducible builds
 -------------------
