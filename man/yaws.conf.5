@@ -767,6 +767,29 @@ except any file found in directories 'icons', 'js' and 'top/static' relative to
 the docroot.
 
 .TP
+\fBquery_resource = Path MediaType ...\fR
+Opt an authorized \fI.yaws\fR page into \fIQUERY\fR. By default, no
+pages accept \fIQUERY\fR. This directive may appear multiple times in
+a virtual host, but a path may be listed only once. For example:
+.nf
+  query_resource = /reports.yaws application/json application/vnd.example+json
+.fi
+.IP
+Use the exact normalized URL path after rewriting, without the URL query
+string. This includes any path-info suffix. The directive does not apply
+to other paths, other virtual hosts, or resources not resolved as
+\fI.yaws\fR pages, and does not bypass normal authorization.
+.IP
+Supply at least one space-separated bare type/subtype that can be
+represented as a Structured Fields token, without parameters or
+wildcards such as \fIapplication/*\fR. Matching is case-insensitive;
+the original \fIContent-Type\fR and its parameters reach the page.
+Targeted \fIOPTIONS\fR returns \fIAllow\fR including \fIQUERY\fR and
+\fIAccept-Query\fR listing all configured types without running the page.
+An unsupported media type results in \fI415 Unsupported Media Type\fR
+with the same \fIAccept-Query\fR header.
+
+.TP
 \fBdispatchmod = DispatchModule\fR
 Set \fIDispatchModule\fR as a server-specific request dispatching
 module. Yaws expects \fIDispatchModule\fR to export a \fIdispatch/1\fR
@@ -1617,7 +1640,10 @@ RFC 7231 section 4.3 lists the standard HTTP method names:
 .fi
 
 An \fIoptions_asterisk_methods\fR setting can include any of these
-HTTP method names as well as \fIPATCH\fR. \fIPATCH\fR is not mentioned
+HTTP method names as well as \fIPATCH\fR and \fIQUERY\fR. Listing
+\fIQUERY\fR here only changes this virtual host's \fIOPTIONS *\fR
+response; it neither enables \fIQUERY\fR on any resource nor changes the
+default response for other configurations. \fIPATCH\fR is not mentioned
 in RFC 7231 but Yaws supports it. Yaws does not implement
 \fICONNECT\fR, but it supports it in \fIoptions_asterisk_methods\fR
 because it's possible to implement support for it using a

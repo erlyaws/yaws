@@ -15,6 +15,10 @@ all() ->
      query_chunked,
      query_content_type,
      query_appmod_discovery,
+     query_page_config,
+     query_page_discovery,
+     query_page_methods,
+     query_page_authorization,
      http_head,
      slow_get,
      appmod,
@@ -132,7 +136,7 @@ options_asterisk_methods(Config) ->
                   )),
     {ok, {{_,200,_}, Hdrs1, <<>>}} = testsuite:receive_http_response(Sock1),
 
-    AllowRes = "GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH",
+    AllowRes = "GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH, QUERY",
     ?assertEqual("0", proplists:get_value("content-length", Hdrs1)),
     ?assertEqual(AllowRes, proplists:get_value("allow", Hdrs1)),
     ?assert(proplists:is_defined("server", Hdrs1)),
@@ -286,10 +290,144 @@ query_appmod_discovery(Config) ->
               expect_query_keepalive(Sock, Host)
       end).
 
+query_page_config(Config) ->
+    Path = "/reports.yaws",
+    Type = "application/json",
+    Resources = [{Path, [Type]}],
+    Docroot = filename:join(?data_srcdir(?MODULE), "www"),
+    GC = yaws:create_gconf([], "query-page-config"),
+    SC = yaws:create_sconf(Docroot, [{query_resources, Resources}]),
+    ?assertEqual(Resources, yaws:sconf_query_resources(SC)),
+    ?assertMatch({ok, _, [[_]]}, yaws_config:validate_cs(GC, [SC])),
+    Default = yaws:sconf_query_resources(SC, []),
+    ?assertNot(yaws_config:eq_sconfs(SC, Default)),
+    Invalid = [{[{Path, []}], ["query_resource = /reports.yaws\n"]},
+               {[{Path, ["application/*"]}], ["query_resource = /reports.yaws application/*\n"]},
+               {[{Path, ["noslash"]}], ["query_resource = /reports.yaws noslash\n"]},
+               {[{Path, ["1example/json"]}], ["query_resource = /reports.yaws 1example/json\n"]},
+               {[{Path, ["application/json; charset=UTF-8"]}],
+                ["query_resource = /reports.yaws \"application/json; charset=UTF-8\"\n"]},
+               {[{Path ++ "?view=weekly", [Type]}],
+                ["query_resource = /reports.yaws?view=weekly application/json\n"]},
+               {Resources ++ Resources, ["query_resource = /reports.yaws application/json\n",
+                                          "query_resource = /reports.yaws text/plain\n"]}],
+    ConfigFile = filename:join(?config(priv_dir, Config), "query-resource.conf"),
+    lists:foreach(
+      fun({Embedded, Directives}) ->
+              ?assertMatch({error, _}, yaws_config:validate_cs(
+                                        GC, [yaws:sconf_query_resources(SC, Embedded)])),
+              ok = file:write_file(ConfigFile,
+                                   ["<server localhost>\nport = 8000\ndocroot = \"",
+                                    Docroot, "\"\n", Directives, "</server>\n"]),
+              Env = #env{conf = {file, ConfigFile}, id = "query-page-config", debug = false},
+              {error, Message} = yaws_config:load(Env),
+              ?assert(string:str(Message, "query_resource") > 0)
+      end, Invalid).
+
+query_page_discovery(Config) ->
+    with_query_socket(
+      Config,
+      fun(Sock, Host) ->
+              lists:foreach(
+                fun({Target, TargetHost, Allow, Accept}) ->
+                        {ok, {{_,200,_}, Headers, <<>>}} =
+                            query_page_request(Sock, TargetHost, "OPTIONS", Target, [], <<>>),
+                        ?assertEqual(Allow, proplists:get_value("allow", Headers)),
+                        ?assertEqual(Accept, proplists:get_value("accept-query", Headers))
+                end,
+                [{"/reports.yaws?view=weekly", Host, query_page_allow(), query_page_types()},
+                 {"/query-page-alias", Host, query_page_allow(), query_page_types()},
+                 {"/reports.yaws/extra", Host, "GET, POST, HEAD, OPTIONS", undefined},
+                 {"/reports.yaws", {"Host", "query-disabled.localhost"},
+                  "GET, POST, HEAD, OPTIONS", undefined},
+                 {"/hello.txt", Host, "GET, HEAD, OPTIONS", undefined}])
+      end).
+
+query_page_methods(Config) ->
+    with_query_socket(
+      Config,
+      fun(Sock, Host) ->
+              Type = "aPpLiCaTiOn/JsOn; charset=UTF-8; x=\"a;b\"",
+              Bytes = <<"{\"view\":\"weekly\"}">>,
+              {ok, {{_,200,_}, _, Payload}} =
+                  query_page_request(Sock, Host, "QUERY", "/query-page-alias",
+                                     [{"Content-Type", Type}], Bytes),
+              ?assertEqual({Type, "view=weekly", [8, 8], Bytes}, binary_to_term(Payload, [safe])),
+              SecondType = "application/vnd.example+json",
+              {ok, {{_,200,_}, _, SecondPayload}} =
+                  query_page_request(Sock, Host, "QUERY", "/reports.yaws",
+                                     [{"Content-Type", SecondType}], <<"{}">>),
+              ?assertEqual({SecondType, undefined, [], <<"{}">>},
+                           binary_to_term(SecondPayload, [safe])),
+              expect_query_keepalive(Sock, Host),
+              ok = gen_tcp:send(Sock, ["QUERY /reports.yaws HTTP/1.1\r\nHost: ", element(2, Host),
+                                       "\r\nContent-Type: text/plain\r\nContent-Length: 20\r\n\r\n",
+                                       "12345678"]),
+              {ok, {{_,415,_}, Rejection, _}} = testsuite:receive_http_response(unknown, Sock, 5000),
+              ?assertEqual(query_page_types(), proplists:get_value("accept-query", Rejection)),
+              ?assertEqual("close", proplists:get_value("connection", Rejection)),
+              ?assertEqual({error, closed}, gen_tcp:recv(Sock, 0, 5000))
+      end),
+    lists:foreach(
+      fun({Method, Target, OtherHost, Allow}) ->
+              with_query_socket(
+                Config,
+                fun(Sock, Host) ->
+                        TargetHost = case OtherHost of undefined -> Host; _ -> OtherHost end,
+                        {ok, {{_,405,_}, Rejection, _}} =
+                            query_page_request(Sock, TargetHost, Method, Target,
+                                               [{"Content-Type", "application/json"}], <<"{}">>),
+                        ?assertEqual(Allow, proplists:get_value("allow", Rejection)),
+                        ?assertNot(proplists:is_defined("accept-query", Rejection))
+                end)
+      end, [{"QUERY", "/exhtml.yaws", undefined, "GET, POST, HEAD, OPTIONS"},
+            {"QUERY", "/reports.yaws?redispatch", undefined, "GET, POST, HEAD, OPTIONS"},
+            {"QUERY", "/reports.yaws/extra", undefined, "GET, POST, HEAD, OPTIONS"},
+            {"QUERY", "/reports.yaws", {"Host", "query-disabled.localhost"}, "GET, POST, HEAD, OPTIONS"},
+            {"QUERY", "/hello.txt", undefined, "GET, HEAD, OPTIONS"},
+            {"PATCH", "/reports.yaws", undefined, query_page_allow()}]).
+
+query_page_authorization(Config) ->
+    lists:foreach(
+      fun(Method) ->
+              with_query_socket(
+                Config,
+                fun(Sock, Host) ->
+                        {ok, {{_,401,_}, Headers, _}} =
+                            query_page_request(Sock, Host, Method, "/secure-query/reports.yaws",
+                                               [{"Content-Type", "text/plain"}], <<>>),
+                        ?assertNot(proplists:is_defined("accept-query", Headers))
+                end)
+      end, ["OPTIONS", "QUERY"]),
+    with_query_socket(
+      Config,
+      fun(Sock, Host) ->
+              {ok, {{_,200,_}, Headers, <<>>}} =
+                  query_page_request(Sock, Host, "OPTIONS", "/secure-query/reports.yaws",
+                                     [{"Authorization", "Basic Zm9vOmJhcg=="}], <<>>),
+              ?assertEqual(query_page_allow(), proplists:get_value("allow", Headers)),
+              ?assertEqual("application/json", proplists:get_value("accept-query", Headers)),
+              {ok, {{_,200,_}, _, Payload}} =
+                  query_page_request(Sock, Host, "QUERY", "/secure-query/reports.yaws",
+                                     [{"Authorization", "Basic Zm9vOmJhcg=="},
+                                      {"Content-Type", "application/json"}], <<"{}">>),
+              ?assertEqual({"application/json", undefined, [], <<"{}">>},
+                           binary_to_term(Payload, [safe]))
+      end).
+
+query_page_request(Sock, Host, Method, Target, Headers, Body) ->
+    Request = Method ++ " " ++ Target ++ " HTTP/1.1",
+    ok = testsuite:send_http_request(Sock, Request, [Host | Headers], Body),
+    testsuite:receive_http_response(unknown, Sock, 5000).
+
+query_page_types() -> "application/json, application/vnd.example+json".
+
+query_page_allow() -> "GET, POST, HEAD, OPTIONS, QUERY".
+
 with_query_socket(Config, Test) ->
     Port = testsuite:get_yaws_port(11, Config),
     {ok, Sock} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
-    try Test(Sock, {"Host", "127.0.0.1:" ++ integer_to_list(Port)})
+    try Test(Sock, {"Host", "localhost:" ++ integer_to_list(Port)})
     after gen_tcp:close(Sock)
     end.
 

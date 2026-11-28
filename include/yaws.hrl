@@ -261,7 +261,8 @@
                                         % if undefined, global config is used
           dispatch_mod,                 % custom dispatch module
           extra_response_headers = [],  % configured extra response headers
-          options_asterisk_methods      % OPTIONS * Allow header
+          options_asterisk_methods,     % OPTIONS * Allow header
+          query_resources = []
          }).
 
 

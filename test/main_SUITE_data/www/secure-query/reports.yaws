@@ -1,0 +1,3 @@
+<erl>
+out(Arg) -> query_appmod_test:page(Arg).
+</erl>

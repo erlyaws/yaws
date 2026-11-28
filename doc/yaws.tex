@@ -1546,7 +1546,7 @@ describes a query, not a request to change server state. \Yaws\ rejects
 a request with a missing, repeated, or malformed \verb+Content-Type+
 with status 400 before dispatch or any \verb+100 Continue+ response.
 An appmod receives the body in \verb+Arg#arg.clidata+ and the original
-media type and parameters in \verb+(Arg#arg.headers)#headers.content_type+.a
+media type and parameters in \verb+(Arg#arg.headers)#headers.content_type+.
 The URL query string remains separate in \verb+Arg#arg.querydata+;
 \verb+yaws_api:parse_query/1+ does not read the request body.
 
@@ -1614,6 +1614,45 @@ with \verb+Location+. When returning the result directly,
 \verb+Content-Location+ can identify a resource that serves the equivalent
 representation. \Yaws\ does not create result resources or cache
 \verb+QUERY+ responses.
+
+\subsubsection{Enabling QUERY on .yaws pages}
+
+\Yaws\ does not enable \verb+QUERY+ on \verb+.yaws+ pages by default.
+To opt in, add a \verb+query_resource+ directive inside the virtual
+host's \verb+<server>+ block. For example:
+
+\begin{verbatim}
+query_resource = /reports.yaws application/json application/vnd.example+json
+query_resource = /search.yaws application/json
+\end{verbatim}
+
+Use the exact normalized URL path, as seen in \verb+Arg#arg.server_path+
+after rewriting, without the URL query string. Include any path-info
+suffix you intend to allow; configuring a path does not opt in child
+paths or other virtual hosts. The setting applies only if the request
+resolves to a \verb+.yaws+ page and passes normal authorization. In
+embedded mode, use the \verb+query_resources+ server property (or the
+\verb+#sconf.query_resources+ field), which defaults to \verb+[]+:
+
+\begin{verbatim}
+{query_resources, [{"/reports.yaws",
+                    ["application/json", "application/vnd.example+json"]},
+                   {"/search.yaws", ["application/json"]}]}
+\end{verbatim}
+
+Each path may occur only once per virtual host and must have one or
+more space-separated media types. Use bare type/subtype values that can
+be represented as Structured Fields tokens; do not include parameters
+or ranges such as \verb+application/*+. \Yaws\ matches the request
+type/subtype case-insensitively and leaves the original
+\verb+Content-Type+, including parameters, available to \verb+out/1+.
+The handler receives the \verb+QUERY+ body in \verb+Arg#arg.clidata+
+and can request more body data just as an appmod can.
+
+A targeted \verb+OPTIONS+ request does not run the page. Its response
+lists \verb+QUERY+ in \verb+Allow+ and the configured types in
+\verb+Accept-Query+. \Yaws\ also sends \verb+Accept-Query+ with a 415
+response if the request's media type is not configured for that page.
 
 
 \section{The opaque data}
@@ -3164,6 +3203,12 @@ The following directives are allowed inside a server definition.
              on everything except any file found in directories \verb+icons+,
              \verb+js+ and \verb+top/static+ relative to the docroot.
 
+\item       \verb+query_resource = Path MediaType ...+ ---
+              Opt an authorized \verb+.yaws+ resource into \verb+QUERY+
+              at an exact normalized URL path on this virtual host.
+              See ``Enabling QUERY on .yaws pages'' under Appmods for
+              configuration and discovery details.
+
 \item       \verb+dispatchmod = DispatchModule+ ---
               Set \verb+DispatchModule+ as a server-specific request
               dispatching module. \Yaws\  expects \verb+DispatchModule+ to
@@ -3928,14 +3973,19 @@ protocol_version = tlsv1.3, tlsv1.2, tlsv1.1, tlsv1
 GET, HEAD, POST, PUT, DELETE, OPTIONS
 \end{verbatim}
 
-              RFC 7231 section 4.3 lists the standard HTTP method
+              RFC 9110 section 9.1 lists the standard HTTP method
               names:
 \begin{verbatim}
 GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE
 \end{verbatim}
               An \verb+options_asterisk_methods+ setting can include
               any of these HTTP method names as well as
-              \verb+PATCH+. \verb+PATCH+ is not mentioned in RFC 7231
+              \verb+PATCH+ and \verb+QUERY+.
+              Listing \verb+QUERY+ here only changes this virtual
+              host's \verb+OPTIONS *+ response; it does not enable
+              \verb+QUERY+ on any resource or change the default
+              response for other configurations.
+              \verb+PATCH+ is not mentioned in RFC 9110.
               but \Yaws\ supports it. \Yaws\ does not implement
               \verb+CONNECT+, but it supports it in
               \verb+options_asterisk_methods+ because it's possible to

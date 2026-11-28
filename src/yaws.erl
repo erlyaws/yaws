@@ -59,7 +59,8 @@
          sconf_soptions/1, sconf_extra_cgi_vars/1, sconf_stats/1,
          sconf_fcgi_app_server/1, sconf_php_handler/1, sconf_shaper/1,
          sconf_deflate_options/1, sconf_mime_types_info/1,
-         sconf_dispatch_mod/1, sconf_extra_resp_headers/1]).
+         sconf_dispatch_mod/1, sconf_extra_resp_headers/1,
+         sconf_query_resources/1]).
 
 -export([sconf_port/2, sconf_flags/2, sconf_redirect_map/2, sconf_rhost/2,
          sconf_rmethod/2, sconf_docroot/2, sconf_xtra_docroots/2,
@@ -72,7 +73,8 @@
          sconf_soptions/2, sconf_extra_cgi_vars/2, sconf_stats/2,
          sconf_fcgi_app_server/2, sconf_php_handler/2, sconf_shaper/2,
          sconf_deflate_options/2, sconf_mime_types_info/2,
-         sconf_dispatch_mod/2, sconf_extra_resp_headers/2]).
+         sconf_dispatch_mod/2, sconf_extra_resp_headers/2,
+         sconf_query_resources/2]).
 
 -export([get_netns_vrf/1, fmt_netns/1, fmt_vrf/1]).
 
@@ -384,6 +386,7 @@ sconf_deflate_options      (#sconf{deflate_options       = X}) -> X.
 sconf_mime_types_info      (#sconf{mime_types_info       = X}) -> X.
 sconf_dispatch_mod         (#sconf{dispatch_mod          = X}) -> X.
 sconf_extra_resp_headers   (#sconf{extra_response_headers= X}) -> X.
+sconf_query_resources      (#sconf{query_resources       = X}) -> X.
 
 
 get_netns_vrf(#sconf{soptions = SOpts}) ->
@@ -434,6 +437,7 @@ sconf_deflate_options      (S, X) -> S#sconf{deflate_options       = X}.
 sconf_mime_types_info      (S, X) -> S#sconf{mime_types_info       = X}.
 sconf_dispatch_mod         (S, X) -> S#sconf{dispatch_mod          = X}.
 sconf_extra_resp_headers   (S, X) -> S#sconf{extra_response_headers= X}.
+sconf_query_resources      (S, X) -> S#sconf{query_resources       = X}.
 
 %% Access functions for the AUTH record.
 new_auth() -> #auth{}.
@@ -791,7 +795,11 @@ setup_sconf(SL, SC) ->
                                     ),
            dispatch_mod          = lkup(dispatchmod, SL, SC#sconf.dispatch_mod),
            extra_response_headers= lkup(extra_response_headers, SL,
-                                        SC#sconf.extra_response_headers)
+                                        SC#sconf.extra_response_headers),
+           options_asterisk_methods = lkup(options_asterisk_methods, SL,
+                                           SC#sconf.options_asterisk_methods),
+           query_resources       = lkup(query_resources, SL,
+                                        SC#sconf.query_resources)
           }.
 
 set_sc_flags([{access_log, Bool}|T], Flags) ->

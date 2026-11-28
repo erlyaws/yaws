@@ -521,6 +521,12 @@ format_compile_errs({File, [{L,M,E}|Rest]}, Acc) ->
 %% This is the function that arranges sconfs into
 %% different server groups
 validate_cs(GC, Cs0) ->
+    case validate_query_servers(Cs0) of
+        ok -> validate_cs_ssl(GC, Cs0);
+        Err -> Err
+    end.
+
+validate_cs_ssl(GC, Cs0) ->
     case validate_ssl(Cs0) of
         {ok, Cs} ->
             L = lists:map(fun(#sconf{listen=IP0}=SC0) ->
@@ -1944,6 +1950,15 @@ fload({FD, ConfFile}, server, GC, C, Lno, Chars) ->
         ['<', "extra_response_headers", '>'] ->
             fload({FD, ConfFile}, extra_response_headers, GC, C, Lno+1, ?NEXTLINE);
 
+        ["query_resource", '=', Path | Types] ->
+            case add_query_resource(Path, Types, C#sconf.query_resources) of
+                {ok, Resources} ->
+                    C1 = C#sconf{query_resources = Resources},
+                    fload({FD, ConfFile}, server, GC, C1, Lno+1, ?NEXTLINE);
+                {error, Str} ->
+                    {error, ?F("~s at line ~w", [Str, Lno])}
+            end;
+
         ["options_asterisk_methods", '=' | Methods] ->
             case parse_options_asterisk_methods(Methods) of
                 {ok, []} ->
@@ -3286,8 +3301,66 @@ parse_options(["TRACE"|Methods], Acc) ->
     parse_options(Methods, [l2a("TRACE")|Acc]);
 parse_options(["PATCH"|Methods], Acc) ->
     parse_options(Methods, [l2a("PATCH")|Acc]);
+parse_options(["QUERY"|Methods], Acc) ->
+    parse_options(Methods, ['QUERY'|Acc]);
 parse_options(_,_) ->
     {error, "Unsupported HTTP method"}.
+
+
+validate_query_servers([]) ->
+    ok;
+validate_query_servers([#sconf{query_resources = Resources} | Rest]) ->
+    case validate_query_resources(Resources, []) of
+        {ok, _} -> validate_query_servers(Rest);
+        Err -> Err
+    end.
+
+validate_query_resources([], Seen) ->
+    {ok, Seen};
+validate_query_resources([{Path, Types} | Rest], Seen) ->
+    case add_query_resource(Path, Types, Seen) of
+        {ok, More} -> validate_query_resources(Rest, More);
+        Err -> Err
+    end;
+validate_query_resources(_, _) ->
+    {error, "Invalid query_resources: expected a list of {Path, Types} pairs"}.
+
+add_query_resource(Path, Types, Resources) ->
+    case valid_query_path(Path) of
+        false ->
+            {error, ?F("Invalid query_resource path ~p", [Path])};
+        true ->
+            case lists:keymember(Path, 1, Resources) of
+                true ->
+                    {error, ?F("Duplicate query_resource path ~p", [Path])};
+                false ->
+                    case Types =/= [] andalso valid_query_types(Types) of
+                        true -> {ok, [{Path, Types} | Resources]};
+                        false ->
+                            {error, ?F("Invalid query_resource media types for ~p",
+                                       [Path])}
+                    end
+            end
+    end.
+
+valid_query_path([$/ | _] = Path) ->
+    io_lib:printable_unicode_list(Path) andalso
+        not lists:any(fun(Char) -> Char < 32 orelse Char =:= $? orelse
+                                       Char =:= $# end, Path) andalso
+        yaws_api:path_norm(Path) =:= Path;
+valid_query_path(_) ->
+    false.
+
+valid_query_types([]) ->
+    true;
+valid_query_types([Type | Rest]) ->
+    Pattern = <<"\\A[A-Za-z][!#$%&'*+.^_`|~0-9A-Za-z-]*/(?!\\*\\z)"
+                "[!#$%&'*+.^_`|~0-9A-Za-z-]+\\z">>,
+    io_lib:char_list(Type) andalso
+        re:run(Type, Pattern, [{capture, none}]) =:= match andalso
+        valid_query_types(Rest);
+valid_query_types(_) ->
+    false.
 
 
 ssl_start() ->
@@ -3435,7 +3508,8 @@ eq_sconfs(S1,S2) ->
      S1#sconf.mime_types_info == S2#sconf.mime_types_info andalso
      S1#sconf.dispatch_mod == S2#sconf.dispatch_mod andalso
      S1#sconf.extra_response_headers == S2#sconf.extra_response_headers andalso
-     S1#sconf.options_asterisk_methods == S2#sconf.options_asterisk_methods).
+     S1#sconf.options_asterisk_methods == S2#sconf.options_asterisk_methods andalso
+     S1#sconf.query_resources == S2#sconf.query_resources).
 
 
 eq_netns_vrf(S1, S2) ->
@@ -3621,9 +3695,14 @@ add_sconf(SC) ->
     add_sconf(-1, SC).
 
 add_sconf(Pos, SC0) ->
-    {ok, SC1} = gen_server:call(yaws_server, {add_sconf, Pos, SC0}, infinity),
-    ok = yaws_log:add_sconf(SC1),
-    {ok, SC1}.
+    case validate_query_servers([SC0]) of
+        ok ->
+            {ok, SC1} = gen_server:call(yaws_server, {add_sconf, Pos, SC0}, infinity),
+            ok = yaws_log:add_sconf(SC1),
+            {ok, SC1};
+        Err ->
+            Err
+    end.
 
 update_sconf(Pos, SC) ->
     gen_server:call(yaws_server, {update_sconf, Pos, SC}, infinity).

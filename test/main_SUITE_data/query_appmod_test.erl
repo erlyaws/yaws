@@ -1,10 +1,12 @@
 -module(query_appmod_test).
--export([arg_rewrite/1, dispatch/1, out/1]).
+-export([arg_rewrite/1, dispatch/1, out/1, page/1]).
 
 -include("yaws_api.hrl").
 
 -define(QUERY_TYPE, "application/octet-stream").
 
+arg_rewrite(#arg{req = #http_request{path = {abs_path, "/query-page-alias"}} = Req} = Arg) ->
+    Arg#arg{req = Req#http_request{path = {abs_path, "/./hidden/../reports.yaws?view=weekly"}}};
 arg_rewrite(#arg{req = #http_request{method = Method}} = Arg) ->
     put(query_rewrite_method, Method),
     Arg.
@@ -42,3 +44,18 @@ fragments(Cont) -> Cont.
 
 accept_query() ->
     {header, {"Accept-Query", ?QUERY_TYPE}}.
+
+page(#arg{req = #http_request{method = 'QUERY'},
+          clidata = {partial, Bytes}, cont = Cont}) ->
+    {get_more, [Bytes | fragments(Cont)], undefined};
+page(#arg{req = #http_request{method = 'QUERY'}, querydata = "redispatch"}) ->
+    {page, "/exhtml.yaws"};
+page(#arg{req = #http_request{method = 'QUERY'}, headers = Headers,
+          querydata = Query, clidata = Bytes, cont = Cont}) ->
+    Parts = lists:reverse(fragments(Cont)),
+    Body = iolist_to_binary([Parts, Bytes]),
+    Type = yaws_api:headers_content_type(Headers),
+    Payload = {Type, Query, lists:map(fun byte_size/1, Parts), Body},
+    {content, "application/octet-stream", term_to_binary(Payload)};
+page(_) ->
+    {status, 500}.

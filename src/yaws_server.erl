@@ -2454,21 +2454,15 @@ handle_ut(CliSock, ARG, UT = #urltype{type = regular}, _N) ->
 
 handle_ut(CliSock, ARG, UT = #urltype{type = yaws}, N) ->
     Req = ARG#arg.req,
-    H = ARG#arg.headers,
 
     ?Debug("UT = ~s~n", [?format_record(UT, urltype)]),
-    Yaws_allowed = ['GET', 'POST', 'HEAD', 'OPTIONS'],
     if
         Req#http_request.method == 'GET';
         Req#http_request.method == 'POST';
         Req#http_request.method == 'HEAD' ->
-            yaws:outh_set_dyn_headers(Req, H, UT),
-            maybe_set_page_options(),
-            do_yaws(CliSock, ARG, UT, N);
-        Req#http_request.method == 'OPTIONS' ->
-            deliver_options(CliSock, Req, ARG, Yaws_allowed);
+            serve_yaws_page(CliSock, ARG, UT, N);
         true ->
-            deliver_405(CliSock, Req, ARG, Yaws_allowed)
+            handle_yaws_page_method(CliSock, ARG, UT, N)
     end;
 
 handle_ut(CliSock, ARG, UT = #urltype{type = {unauthorized, Auth, Realm}}, N) ->
@@ -2815,13 +2809,56 @@ deliver_redirect_map(CliSock, Req, Arg,
     done_or_continue().
 
 
-deliver_options(CliSock, _Req, Arg, Options) ->
+serve_yaws_page(CliSock, Arg, UT, N) ->
+    yaws:outh_set_dyn_headers(Arg#arg.req, Arg#arg.headers, UT),
+    maybe_set_page_options(),
+    do_yaws(CliSock, Arg, UT, N).
+
+handle_yaws_page_method(CliSock, Arg, UT, N) ->
+    Req = Arg#arg.req,
+    SC = get(sc),
+    Default = ['GET', 'POST', 'HEAD', 'OPTIONS'],
+    case lists:keyfind(Arg#arg.server_path, 1, SC#sconf.query_resources) of
+        {_, Types} ->
+            Allowed = Default ++ ['QUERY'],
+            case Req#http_request.method of
+                'OPTIONS' ->
+                    deliver_options(CliSock, Req, Arg, Allowed,
+                                    accept_query_header(Types));
+                'QUERY' ->
+                    ContentType = (Arg#arg.headers)#headers.content_type,
+                    [MediaType | _] = string:split(ContentType, ";"),
+                    BareType = yaws:to_lower(string:trim(MediaType, both, " \t")),
+                    case lists:any(fun(Type) -> yaws:to_lower(Type) =:= BareType end,
+                                   Types) of
+                        true -> serve_yaws_page(CliSock, Arg, UT, N);
+                        false ->
+                            deliver_xxx(CliSock, Req, Arg, 415, "", undefined,
+                                        accept_query_header(Types))
+                    end;
+                _ ->
+                    deliver_405(CliSock, Req, Arg, Allowed)
+            end;
+        false when Req#http_request.method =:= 'OPTIONS' ->
+            deliver_options(CliSock, Req, Arg, Default);
+        false ->
+            deliver_405(CliSock, Req, Arg, Default)
+    end.
+
+accept_query_header(Types) ->
+    ["Accept-Query: ", lists:join(", ", Types), "\r\n"].
+
+deliver_options(CliSock, Req, Arg, Options) ->
+    deliver_options(CliSock, Req, Arg, Options, undefined).
+
+deliver_options(CliSock, _Req, Arg, Options, Other) ->
     H = #outh{status = 200,
               doclose = false,
               chunked = false,
               server = yaws:make_server_header(),
               date = yaws:make_date_header(),
-              allow = yaws:make_allow_header(Options)},
+              allow = yaws:make_allow_header(Options),
+              other = Other},
     put(outh, H),
     deliver_accumulated(CliSock, Arg),
     continue.
@@ -2841,7 +2878,9 @@ deliver_xxx(CliSock, _Req, Arg, Code) ->
     deliver_xxx(CliSock, _Req, Arg, Code, "").
 deliver_xxx(CliSock, _Req, Arg, Code, ExtraHtml) ->
     deliver_xxx(CliSock, _Req, Arg, Code, ExtraHtml, undefined).
-deliver_xxx(CliSock, _Req, Arg, Code, ExtraHtml, Allow) ->
+deliver_xxx(CliSock, Req, Arg, Code, ExtraHtml, Allow) ->
+    deliver_xxx(CliSock, Req, Arg, Code, ExtraHtml, Allow, undefined).
+deliver_xxx(CliSock, _Req, Arg, Code, ExtraHtml, Allow, Other) ->
     B = ["<html><h1>", integer_to_list(Code), $\ ,
          yaws_api:code_to_phrase(Code), "</h1>", ExtraHtml, "</html>"],
     Sz = iolist_size(B),
@@ -2855,6 +2894,7 @@ deliver_xxx(CliSock, _Req, Arg, Code, ExtraHtml, Allow) ->
               server = Server,
               date = yaws:make_date_header(),
               allow = Allow,
+              other = Other,
               connection = yaws:make_connection_close_header(true),
               content_length = yaws:make_content_length_header(Sz),
               contlen = Sz,
