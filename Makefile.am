@@ -19,10 +19,13 @@ endif
 SUBDIRS += examples/src	examples/ebin examples/include \
 	   test doc man scripts www/code www/shoppingcart
 
-EXTRA_DIST = ChangeLog known_dialyzer_warnings LICENSE 			\
+EXTRA_DIST = ChangeLog dialyzer_checker known_dialyzer_warnings LICENSE 	\
 	     README.md README.osx README.pkg-config 			\
 	     rebar.config rebar.config.script two-mode-mode.el vsn.mk	\
 	     include.mk erlang_deps.mk ssl munin contrib www
+
+CLEANFILES = dialyzer_warnings dialyzer_warnings.log
+DISTCLEANFILES = yaws.plt yaws.plt.tmp
 
 if !MINGW
 pkgconfigdir = $(libdir)/pkgconfig
@@ -30,8 +33,6 @@ pkgconfig_DATA = yaws.pc
 endif
 
 all-local:
-clean-local:
-	$(AM_V_at)rm -f dialyzer_warnings
 
 install-data-local: all
 	$(AM_V_at)$(INSTALL) -d $(DESTDIR)$(wwwdir)
@@ -96,29 +97,44 @@ list-checks:
 cleantest:
 	$(AM_V_at)( cd test && $(MAKE) clean )
 
-# If dialyzer exits with status 2, it means it emitted warnings. In
-# that case, exit with status 0 instead of failing the build, since
-# warnings are typically inconsequential.
-yaws.plt:
-	$(AM_V_GEN)$(DIALYZER) --build_plt -r ebin --output_plt yaws.plt\
-	  -r $(ERLANG_LIB_DIR_kernel) 					\
-	  -r $(ERLANG_LIB_DIR_stdlib) 					\
-	  -r $(ERLANG_LIB_DIR_sasl) 					\
-	  -r $(ERLANG_LIB_DIR_erts)					\
-	  -r $(ERLANG_LIB_DIR_compiler)					\
-	  -r $(ERLANG_LIB_DIR_crypto)					\
-	  -r $(ERLANG_LIB_DIR_xmerl)					\
-	  -r $$(echo $(ERLANG_LIB_DIR_ssl)    | sed "s/not found//")	\
-	  -r $$(echo $(ERLANG_LIB_DIR_mnesia) | sed "s/not found//")	\
-	  -r $$(echo $(ERLANG_LIB_DIR_inets)  | sed "s/not found//")	\
-	  -r $$(echo $(ERLANG_LIB_DIR_xmlrpc) | sed "s/not found//")	\
-	  -r $$(echo $(ERLANG_LIB_DIR_erlsom) | sed "s/not found//") ;  \
-	[ $$? -eq 2 ] && exit 0 || exit $$?
+DIALYZER_OTP_APPS = erts kernel stdlib sasl compiler crypto xmerl \
+	ssl mnesia inets public_key asn1 tools runtime_tools parsetools
+
+yaws.plt: Makefile
+	$(AM_V_GEN)set -- $(DIALYZER_OTP_APPS); \
+	for app in "erlsom:$(ERLANG_LIB_DIR_erlsom)" \
+	           "ibrowse:$(ERLANG_LIB_DIR_ibrowse)" \
+	           "xmlrpc:$(ERLANG_LIB_DIR_xmlrpc)"; do \
+	  libdir=$${app#*:}; \
+	  case "$$libdir" in \
+	    ''|'not found') echo "Dialyzer PLT: optional dependency $${app%%:*} not found" >&2 ;; \
+	    *) set -- "$$@" "$$libdir/ebin" ;; \
+	  esac; \
+	done; \
+	rm -f "$@.tmp" && { \
+	  trap 'rm -f "$@.tmp"' 0; \
+	  status=0; \
+	  $(DIALYZER) --build_plt --output_plt "$@.tmp" --apps "$$@" || status=$$?; \
+	  case "$$status" in \
+	    0|2) mv -f "$@.tmp" "$@" ;; \
+	    *) exit "$$status" ;; \
+	  esac; \
+	}
 
 dialyzer: all yaws.plt
-	$(AM_V_at)$(DIALYZER) -q --plt yaws.plt -r ebin | \
-	    sed -e :a -e '$$!N;s/\n  *//;ta' -e 'P;D' > dialyzer_warnings || true
-	$(AM_V_at)python3 dialyzer_checker
+	$(AM_V_at)rm -f dialyzer_warnings dialyzer_warnings.log
+	$(AM_V_at)status=0; \
+	$(DIALYZER) --plt yaws.plt -Wunknown -r ebin -o dialyzer_warnings.log || status=$$?; \
+	case "$$status" in \
+	  0) rm -f dialyzer_warnings.log ;; \
+	  2) if test ! -s dialyzer_warnings.log; then \
+	       echo 'Dialyzer reported warnings but produced no warning report' >&2; \
+	       exit 1; \
+	     fi; \
+	     sed -e :a -e '$$!N;s/\n  *//;ta' -e 'P;D' dialyzer_warnings.log > dialyzer_warnings && \
+	     python3 "$(srcdir)/dialyzer_checker" ;; \
+	  *) exit "$$status" ;; \
+	esac
 
 dist-hook: clean  cleantest cleanapps
 	$(AM_V_at)for a in $(APPDIRS); do			\
@@ -194,7 +210,7 @@ fulluninstall: uninstall uninstallapps
 
 fullclean: clean cleantest cleaninstaller cleanapps
 
-.PHONY: test doc $(APPDIRS)
+.PHONY: test doc dialyzer $(APPDIRS)
 
 # Local Variables:
 #    tab-width: 8

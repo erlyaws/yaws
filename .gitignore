@@ -32,6 +32,7 @@ c_src/*.d
 erl_crash.dump
 yaws.pc
 yaws.plt
+yaws.plt.tmp
 src/mime_types.erl
 src/yaws_generated.erl
 src/yaws_charset.hrl
@@ -64,6 +65,7 @@ scripts/gen-yaws-generated
 scripts/make-release
 win32/build.xml
 dialyzer_warnings
+dialyzer_warnings.log
 rel/yaws
 deps
 etc/

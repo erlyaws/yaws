@@ -125,6 +125,13 @@ Main make targets:
 * fullinstall   : install + installapps
 * fullclean     : clean + cleantest + cleanapps + cleaninstaller
 
+`make dialyzer` caches Erlang/OTP and any available optional dependencies in
+`yaws.plt`, then analyzes the compiled Yaws modules separately. Run `./configure`
+again after switching Erlang/OTP installations or installing optional dependencies
+(`erlsom`, `ibrowse`, or `xmlrpc`) to rebuild the cache with the new configuration.
+Calls to missing optional dependencies are still reported as unknown. The full
+warning report, before filtering, is saved in `dialyzer_warnings.log`.
+
 
 Reproducible builds
 -------------------

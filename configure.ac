@@ -283,6 +283,8 @@ AC_ERLANG_CHECK_LIB([eunit],,      [AC_MSG_WARN(["eunit" Erlang application not 
 It could be required to run Yaws or its test suites.])])
 AC_ERLANG_CHECK_LIB([erlsom],,     [AC_MSG_WARN(["erlsom" Erlang application not found.
 It could be required to run Yaws or its test suites.])])
+AC_ERLANG_CHECK_LIB([ibrowse],,    [AC_MSG_WARN(["ibrowse" Erlang application not found.
+It is an optional dependency for SOAP support.])])
 AC_ERLANG_CHECK_LIB([xmlrpc],,     [AC_MSG_WARN(["xmlrpc" Erlang application not found.
 It could be required to run Yaws or its test suites.])])
 AC_ERLANG_CHECK_LIB([inets],,      [AC_MSG_WARN(["inets" Erlang application not found.
