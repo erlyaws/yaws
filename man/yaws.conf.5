@@ -692,8 +692,9 @@ when Yaws starts up. Defaults to \fIfalse\fR.
 
 .TP
 \fBpartial_post_size = Integer | nolimit\fR
-When a Yaws file receives large POSTs, the amount of data received in each chunk
-is determined by this parameter.  The default value is \fI10240\fR. Setting
+For request bodies such as \fBPOST\fR and \fBQUERY\fR, this parameter
+sets the amount of data delivered in each partial read. The default
+value is \fI10240\fR. Setting
 it to nolimit is potentially dangerous.
 
 
@@ -784,6 +785,15 @@ the connection
 \fBcontinue\fR - the dispatch module has decided not to handle the request,
 and instead wants Yaws to perform its regular request dispatching
 .RE
+
+.IP
+For \fBQUERY\fR, Yaws validates \fBContent-Type\fR before invoking
+\fBdispatch/1\fR. The method is the atom \fB'QUERY'\fR rather than the
+string \fB"QUERY"\fR, and \fB#arg.clidata\fR is still \fBundefined\fR.
+A module returning \fBcontinue\fR must leave the body unread for Yaws.
+A module that handles the request itself owns body framing and
+\fBExpect: 100-continue\fR. It must consume the body before returning
+\fBdone\fR, or close the connection and return \fBclosed\fR.
 
 .IP
 Note that when \fIDispatchModule\fR handles a request itself, Yaws does not

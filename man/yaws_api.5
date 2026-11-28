@@ -48,7 +48,7 @@ We have the following relevant record definitions:
           headers,        % headers
           req,            % request (possibly rewritten)
           orig_req,       % original request
-          clidata,        % The client data (as a binary in POST requests)
+          clidata,        % Request body as a binary or {partial, Binary}
           server_path,    % The normalized server path
                           % (pre-querystring part of URI)
           querydata,      % For URIs of the form ...?querydata
@@ -113,6 +113,12 @@ The headers argument is also a record:
 The \fBout/1\fR function can use the Arg to generate any content
 it likes. We have the following functions to aid that generation.
 
+.PP
+For a \fBQUERY\fR request, an appmod receives the method as the atom
+\fB'QUERY'\fR and the request body in \fB#arg.clidata\fR. If the value
+is \fB{partial, Binary}\fR, return \fB{get_more, Cont, State}\fR to read
+more of the body. \fB#arg.querydata\fR and \fBparse_query/1\fR refer
+only to the URL query string, not to the \fBQUERY\fR request body.
 
 .SH API
 
@@ -369,7 +375,7 @@ sent it a message telling it to proceed with data delivery.
 .TP
 \fBparse_query(Arg)\fR
 This function will parse the query part of the URL. It will return a {Key,
-Value} list.
+Value} list. It does not parse the body of an HTTP \fBQUERY\fR request.
 
 .TP
 \fBqueryvar(Arg, VarName)\fR
@@ -981,8 +987,8 @@ currently are executing in.
 
 .TP
 \fB{get_more, Cont, State}\fR
-When we are receiving large POSTs we can return this value
-and be invoked again when more Data arrives.
+When the request body is partial (for example with \fBPOST\fR or
+\fBQUERY\fR), return this value to be invoked again when more data arrives.
 
 
 .TP

@@ -594,7 +594,8 @@ request such as:
 \item The actual socket leading back to the HTTP client
 \item All the HTTP headers -- parsed into a \verb+#headers+ record
 \item The HTTP request -- parsed into a \verb+#http_request+ record
-\item \verb+clidata+ -- data which is \verb+POST+ed by the client
+\item \verb+clidata+ -- the request body, for methods such as
+  \verb+POST+ and \verb+QUERY+
 \item \verb+querydata+ -- this is the remainder of the URL following
   the first occurrence of a '?' character, if any.
 \item \verb+docroot+ -- the absolute path to the docroot of the
@@ -611,7 +612,7 @@ request such as:
           headers,        % headers
           req,            % request (possibly rewritten)
           orig_req,       % original request
-          clidata,        % The client data (as a binary in POST requests)
+          clidata,        % Request body as a binary or {partial, Binary}
           server_path,    % The normalized server path
                           % (pre-querystring part of URI)
           querydata,      % For URIs of the form ...?querydata
@@ -747,7 +748,7 @@ The functions used are:
 
 \section{POSTs}
 
-\subsection{Queries}
+\subsection{URL query strings}
 
 The user can supply data to the server in many ways. The most
 common is to give the data in the actual URL.
@@ -1538,6 +1539,82 @@ redirect, but it removes an extra round trip, and is thus faster.
 Appmods can also be used to fake entire directory hierarchies
 that don't exist on disk.
 
+\subsection{HTTP QUERY}
+
+\verb+QUERY+ (RFC 10008) is a safe, idempotent HTTP method: its body
+describes a query, not a request to change server state. \Yaws\ rejects
+a request with a missing, repeated, or malformed \verb+Content-Type+
+with status 400 before dispatch or any \verb+100 Continue+ response.
+An appmod receives the body in \verb+Arg#arg.clidata+ and the original
+media type and parameters in \verb+(Arg#arg.headers)#headers.content_type+.a
+The URL query string remains separate in \verb+Arg#arg.querydata+;
+\verb+yaws_api:parse_query/1+ does not read the request body.
+
+Appmods that already handle the extension method \verb+"QUERY"+ must match
+the atom \verb+'QUERY'+ instead. The appmod decides what formats it accepts
+and can advertise them with \verb+Accept-Query+ (a Structured Fields List
+of media ranges represented as tokens or strings), and list \verb+QUERY+ in
+\verb+Allow+ on a targeted \verb+OPTIONS+ request. Return 415 for an
+unsupported format or content that does not match the stated format. Use
+422 for a query in a recognized format that cannot be processed.
+
+This example serves a read-only catalogue query. Save it as
+\verb+catalog_query.erl+, compile it with the \Yaws\ include directory and
+place the beam file on the server's code path. Add
+\verb+appmods = </catalog, catalog_query>+ to the virtual host.
+
+\begin{verbatim}
+-module(catalog_query).
+-export([out/1]).
+-include("yaws_api.hrl").
+
+-define(QUERY_TYPE, "application/vnd.example.catalog-query").
+
+out(#arg{req = #http_request{method = 'OPTIONS'}}) ->
+    [{status, 200}, allow(), accept_query()];
+out(#arg{req = #http_request{method = 'QUERY'},
+         clidata = {partial, Bytes}, cont = Cont}) ->
+    {get_more, [Bytes | parts(Cont)], undefined};
+out(#arg{req = #http_request{method = 'QUERY'},
+         headers = #headers{content_type = Type},
+         clidata = Bytes, cont = Cont}) ->
+    [MediaType | _] = string:split(Type, ";"),
+    case string:lowercase(string:trim(MediaType)) of
+        ?QUERY_TYPE -> run(iolist_to_binary([lists:reverse(parts(Cont)), Bytes]));
+        _ -> unsupported()
+    end;
+out(_) ->
+    [{status, 405}, allow()].
+
+run(Body) ->
+    case unicode:characters_to_binary(Body, utf8, utf8) of
+        <<"count">> -> {content, "text/plain", <<"2\n">>};
+        <<"names">> -> {content, "text/plain", <<"apples\npears\n">>};
+        Text when is_binary(Text) -> {status, 422};
+        _ -> unsupported()
+    end.
+
+parts(undefined) -> [];
+parts(Cont) -> Cont.
+
+allow() -> {header, {allow, "OPTIONS, QUERY"}}.
+accept_query() -> {header, {"Accept-Query", ?QUERY_TYPE}}.
+unsupported() -> [{status, 415}, accept_query()].
+\end{verbatim}
+
+\begin{verbatim}
+curl -X QUERY --data-binary count \
+     -H 'Content-Type: application/vnd.example.catalog-query' \
+     http://localhost:8000/catalog
+\end{verbatim}
+
+The application owns conditional request handling for its query results. To
+direct a client to retrieve an existing result with \verb+GET+, return 303
+with \verb+Location+. When returning the result directly,
+\verb+Content-Location+ can identify a resource that serves the equivalent
+representation. \Yaws\ does not create result resources or cache
+\verb+QUERY+ responses.
+
 
 \section{The opaque data}
 
@@ -1883,9 +1960,9 @@ detect a \verb+Content-Length+ header.
   the status code. The default for a redirect is 302 but 301, 303 and
   307 are also valid redirect status codes.
 
-\item \verb+{get_more, Cont, State}+ When we are receiving large
-  \verb+POST+s we can return this value and be invoked again when more
-  data arrives.
+\item \verb+{get_more, Cont, State}+ When the request body is partial,
+  for example for \verb+POST+ or \verb+QUERY+, return this value to be
+  invoked again when more data arrives.
 
 \item \verb+{page, Page}+ Make \Yaws\ returns a different local page than the
   one being requested. \verb+Page+ is a Request-URI, so it must be url-encoded
@@ -3105,6 +3182,16 @@ The following directives are allowed inside a server definition.
                   not to handle the request, and instead wants \Yaws\  to
                   perform its regular request dispatching
               \end{itemize}
+              For \verb+QUERY+, \Yaws\ validates \verb+Content-Type+
+              before calling \verb+dispatch/1+. The method is the atom
+              \verb+'QUERY'+ rather than the string \verb+"QUERY"+;
+              \verb+#arg.clidata+ is still \verb+undefined+.
+              A module returning \verb+continue+ must leave the body
+              unread for \Yaws. A module handling the request itself
+              owns body framing and \verb+Expect: 100-continue+. It must
+              consume the body before returning \verb+done+, or close
+              the connection and return \verb+closed+.
+
               Note that when \verb+DispatchModule+ handles a request itself,
               \Yaws\  does not support tracing, increment statistics
               counters or allow traffic shaping for that request. It does

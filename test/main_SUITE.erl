@@ -11,6 +11,10 @@ all() ->
      http_options,
      options_asterisk_methods,
      method_not_allowed,
+     query_fixed_length,
+     query_chunked,
+     query_content_type,
+     query_appmod_discovery,
      http_head,
      slow_get,
      appmod,
@@ -174,6 +178,136 @@ method_not_allowed(Config) ->
                   gen_tcp:close(Sock)
               end
       end, Resources).
+
+query_fixed_length(Config) ->
+    with_query_socket(
+      Config,
+      fun(Sock, Host) ->
+              Small = <<0, 255, 128, 13, 10>>,
+              Type = "Application/Octet-Stream; token=value; note=\"a,b;\\\"c\\\\d\"",
+              ok = testsuite:send_http_request(
+                     Sock, "QUERY /query?view=weekly HTTP/1.1",
+                     [Host, {"Content-Type", Type}], Small),
+              expect_query_response(Sock, 'QUERY', Type, [], Small),
+
+              Large = <<Small/binary, Small/binary, Small/binary, 0, 255>>,
+              ok = testsuite:send_http_headers(
+                     Sock, "QUERY /query?view=weekly HTTP/1.1",
+                     [Host, {"Content-Type", Type}, {"Expect", "100-continue"},
+                      {"Content-Length", integer_to_list(byte_size(Large))}]),
+              {ok, {{_,100,_}, _}} = testsuite:receive_http_headers(Sock),
+              ok = gen_tcp:send(Sock, Large),
+              expect_query_response(Sock, 'QUERY', Type, [8, 8], Large),
+
+              lists:foreach(
+                fun(Method) ->
+                        ok = testsuite:send_http_request(
+                               Sock, [Method, " /query?view=weekly HTTP/1.1"],
+                               [Host], Small),
+                        expect_query_response(Sock, Method, undefined, [], Small)
+                end, ["query", "Query"]),
+              expect_query_keepalive(Sock, Host)
+      end).
+
+query_chunked(Config) ->
+    with_query_socket(
+      Config,
+      fun(Sock, Host) ->
+              Type = "application/octet-stream",
+              First = <<128, 0, 13, 10>>,
+              Second = <<0, 255, 128, 13, 10, 1, 2, 3, 4, 5, 6, 7, 8>>,
+              ok = testsuite:send_http_headers(
+                     Sock, "QUERY /query?view=weekly HTTP/1.1",
+                     [Host, {"Content-Type", Type}, {"Transfer-Encoding", "chunked"}]),
+              ok = gen_tcp:send(Sock, [<<"4\r\n">>, First, <<"\r\nD\r\n">>, Second,
+                                       <<"\r\n0\r\n\r\n">>]),
+              expect_query_response(Sock, 'QUERY', Type, [4, 8, 5],
+                                    <<First/binary, Second/binary>>),
+              expect_query_keepalive(Sock, Host)
+      end).
+
+query_content_type(Config) ->
+    with_query_socket(
+      Config,
+      fun(Sock, Host) ->
+              ok = testsuite:send_http_request(
+                     Sock, "QUERY /query/dispatch-probe HTTP/1.1",
+                     [Host, {"Content-Type", "application/octet-stream"}]),
+              {ok, {{_,204,_}, _, <<>>}} = testsuite:receive_http_response(unknown, Sock, 5000)
+      end),
+    Invalid = [[], [{"Content-Type", ""}],
+               [{"Content-Type", "text/plain"}, {"cOnTeNt-TyPe", "text/plain"}],
+               [{"Content-Type", "text"}], [{"Content-Type", "text /plain"}],
+               [{"Content-Type", "text/plain, application/json"}],
+               [{"Content-Type", "text/plain; charset"}],
+               [{"Content-Type", "text/plain; charset =utf-8"}],
+               [{"Content-Type", "text/plain; charset="}],
+               [{"Content-Type", "text/plain; note=\"unclosed"}],
+               [{"Content-Type", "text/plain; note=\"ok\"extra"}]],
+    lists:foreach(
+      fun(Fields) ->
+              with_query_socket(
+                Config,
+                fun(Sock, Host) ->
+                        ok = testsuite:send_http_headers(
+                               Sock, "QUERY /query/dispatch-probe HTTP/1.1",
+                               [Host, {"Expect", "100-continue"}, {"Content-Length", "4"} | Fields]),
+                        expect_query_rejection(Sock, [closed])
+                end)
+      end, Invalid),
+    with_query_socket(
+      Config,
+      fun(Sock, {"Host", Host}) ->
+              Body = ["GET /hello.txt HTTP/1.1\r\nHost: ", Host, "\r\n\r\n"],
+              ok = gen_tcp:send(Sock, ["QUERY /query HTTP/1.1\r\nHost: ", Host,
+                                       "\r\nContent-Length: ", integer_to_list(iolist_size(Body)),
+                                       "\r\n\r\n", Body]),
+              expect_query_rejection(Sock, [closed, econnreset])
+      end).
+
+query_appmod_discovery(Config) ->
+    with_query_socket(
+      Config,
+      fun(Sock, Host) ->
+              Type = "application/octet-stream",
+              ok = testsuite:send_http_headers(Sock, {options, "/query", "HTTP/1.1"}, [Host]),
+              {ok, {{_,200,_}, Options, <<>>}} =
+                  testsuite:receive_http_response(unknown, Sock, 5000),
+              ?assertEqual("OPTIONS, QUERY", proplists:get_value("allow", Options)),
+              ?assertEqual(Type, proplists:get_value("accept-query", Options)),
+              ok = testsuite:send_http_request(
+                     Sock, "QUERY /query HTTP/1.1", [Host, {"Content-Type", "text/plain"}], <<"?">>),
+              {ok, {{_,415,_}, Unsupported, <<>>}} =
+                  testsuite:receive_http_response(unknown, Sock, 5000),
+              ?assertEqual(Type, proplists:get_value("accept-query", Unsupported)),
+              ok = testsuite:send_http_request(
+                     Sock, "QUERY /query HTTP/1.1", [Host, {"Content-Type", Type}], <<"!">>),
+              {ok, {{_,422,_}, _, <<>>}} = testsuite:receive_http_response(unknown, Sock, 5000),
+              expect_query_keepalive(Sock, Host)
+      end).
+
+with_query_socket(Config, Test) ->
+    Port = testsuite:get_yaws_port(11, Config),
+    {ok, Sock} = gen_tcp:connect("127.0.0.1", Port, [binary, {active, false}]),
+    try Test(Sock, {"Host", "127.0.0.1:" ++ integer_to_list(Port)})
+    after gen_tcp:close(Sock)
+    end.
+
+expect_query_response(Sock, Method, Type, PartialSizes, Body) ->
+    {ok, {{_,200,_}, _, Response}} = testsuite:receive_http_response(unknown, Sock, 5000),
+    ?assertEqual({Method, {Method, Method}, Type, PartialSizes,
+                  "view=weekly", [{"view", "weekly"}], Body},
+                 binary_to_term(Response, [safe])).
+
+expect_query_rejection(Sock, CloseReasons) ->
+    {ok, {{_,400,_}, Headers, _}} = testsuite:receive_http_response(unknown, Sock, 5000),
+    ?assertEqual("close", proplists:get_value("connection", Headers)),
+    {error, Reason} = gen_tcp:recv(Sock, 0, 5000),
+    ?assert(lists:member(Reason, CloseReasons)).
+
+expect_query_keepalive(Sock, Host) ->
+    ok = testsuite:send_http_headers(Sock, {get, "/hello.txt", "HTTP/1.1"}, [Host]),
+    ?assertMatch({ok, {{_,200,_}, _, _}}, testsuite:receive_http_response(unknown, Sock, 5000)).
 
 http_head(Config) ->
     Port = testsuite:get_yaws_port(1, Config),

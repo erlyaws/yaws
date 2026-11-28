@@ -50,7 +50,8 @@
          'OPTIONS'/4,
          'PUT'/4,
          'DELETE'/4,
-         'PATCH'/4]).
+         'PATCH'/4,
+         'QUERY'/4]).
 
 -record(gs, {gconf,
              group,         %% list of #sconf{} s
@@ -1235,15 +1236,16 @@ aloop(CliSock, {IP,Port}=IPPort, GS, Num) ->
                     deliver_431(CliSock, ReqTooMany, NoArg)
             end,
             {ok, Num+1};
-        {error, {invalid_content_length, ReqMultiCL}} ->
-            ?Debug("Invalid Content-Length header content~n", []),
+        {error, {Reason, ReqInvalid}} when Reason =:= invalid_content_length;
+                                          Reason =:= invalid_query_content_type ->
+            ?Debug("Invalid request header: ~p~n", [Reason]),
             case pick_sconf(GS#gs.gconf, #headers{}, GS#gs.group) of
                 undefined ->
-                    deliver_400(CliSock, ReqMultiCL, NoArg);
+                    deliver_400(CliSock, ReqInvalid, NoArg);
                 SC ->
                     put(sc, SC),
                     put(outh, #outh{}),
-                    deliver_400(CliSock, ReqMultiCL, NoArg)
+                    deliver_400(CliSock, ReqInvalid, NoArg)
             end,
             {ok, Num+1};
         {error, {multiple_content_length_headers, ReqMultiCL}} ->
@@ -1784,6 +1786,9 @@ not_implemented(CliSock, _IPPort, Req, Head) ->
 'PATCH'(CliSock, IPPort, Req, Head) ->
     ?Debug("PATCH Req=~p~n H=~p~n", [?format_record(Req, http_request),
                                      ?format_record(Head, headers)]),
+    body_method(CliSock, IPPort, Req, Head).
+
+'QUERY'(CliSock, IPPort, Req, Head) ->
     body_method(CliSock, IPPort, Req, Head).
 
 body_method(CliSock, IPPort, Req, Head) ->

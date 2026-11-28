@@ -2734,6 +2734,8 @@ do_http_get_headers(CliSock, SSL) ->
 http_recv_request(CliSock, SSL) ->
     setopts(CliSock, [{packet, http}, {packet_size, 16#4000}], SSL),
     case do_recv(CliSock, 0,  SSL) of
+        {ok, #http_request{method = "QUERY"} = R} ->
+            R#http_request{method = 'QUERY'};
         {ok, R} when is_record(R, http_request) ->
             R;
         {ok, R} when is_record(R, http_response) ->
@@ -2844,6 +2846,11 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
                                          H#headers{content_length = CLErr},
                                          SSL, Count+1)
             end;
+        {ok, {http_header, _Num, 'Content-Type', _, _}}
+          when is_record(Req, http_request), Req#http_request.method =:= 'QUERY',
+               H#headers.content_type =/= undefined ->
+            http_collect_headers(CliSock, Req,
+                                 H#headers{content_type = duplicate}, SSL, Count+1);
         {ok, {http_header, _Num, 'Content-Type', _, X}} ->
             http_collect_headers(CliSock, Req,
                                  H#headers{content_type = X},SSL, Count+1);
@@ -2895,7 +2902,7 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
                 {error, empty_accept_header_list = Err} ->
                     {error, {Err, Req#http_request{method = bad_request}}};
                 AcceptHdrs ->
-                    H#headers{accept = AcceptHdrs}
+                    validate_query_content_type(Req, H#headers{accept = AcceptHdrs})
             end;
 
         %% these are here to be a little forgiving to
@@ -2918,6 +2925,31 @@ http_collect_headers(CliSock, Req, H, SSL, Count) when Count < 1000 ->
     end;
 http_collect_headers(_CliSock, Req, _H, _SSL, _Count)  ->
     {error, {too_many_headers, Req}}.
+
+
+validate_query_content_type(#http_request{method = 'QUERY'} = Req, H) ->
+    case H#headers.content_type of
+        Value when is_list(Value) ->
+            case valid_media_type(Value) of
+                true  -> H;
+                false -> {error, {invalid_query_content_type, Req}}
+            end;
+        _ ->
+            {error, {invalid_query_content_type, Req}}
+    end;
+validate_query_content_type(_Req, H) ->
+    H.
+
+
+valid_media_type(Value) ->
+    Ows = "[ \\t]*+",
+    Token = "[!#$%&'*+.^_`|~0-9A-Za-z-]++",
+    Quoted = "\"(?:[\\x09\\x20-\\x21\\x23-\\x5b\\x5d-\\x7e\\x80-\\xff]"
+             "|\\\\[\\x09\\x20-\\x7e\\x80-\\xff])*+\"",
+    Param = [Token, "=(?:", Token, "|", Quoted, ")"],
+    Pattern = iolist_to_binary(["\\A", Ows, Token, "/", Token, Ows,
+                               "(?:;", Ows, "(?:", Param, ")?", Ows, ")*+\\z"]),
+    re:run(Value, Pattern, [{capture, none}]) =:= match.
 
 
 %% @doc Assert valid Content-Length header value.
